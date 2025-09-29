@@ -18,6 +18,8 @@ This repository contains a simple Lean 4 project that demonstrates:
 - `Main.lean` - Main executable entry point 
 - `LeantestAfp.lean` - Main library module
 - `LeantestAfp/Basic.lean` - Basic examples and proofs
+- `LeantestAfp/Advanced.lean` - More advanced examples with inductive types
+- `LeantestAfp/Tutorial.lean` - Step-by-step tutorial for beginners
 
 ## Prerequisites
 
@@ -51,18 +53,23 @@ lake exe leantest-afp
 
 ## Examples Included
 
-### Basic Theorems
+### Tutorial (`LeantestAfp/Tutorial.lean`)
+- Step-by-step introduction to Lean 4 concepts
+- Simple function definitions
+- Working with structures and custom types
+- Basic proof techniques
+
+### Basic Examples (`LeantestAfp/Basic.lean`)
 - Addition commutativity: `a + b = b + a`
 - Additive identity: `n + 0 = n`
-- Successor addition properties
+- Point structure with distance calculations
+- List operations with mapping functions
 
-### Data Structures
-- Point structure with x, y coordinates
-- Distance function between points
-
-### List Operations
-- List mapping functions
-- Proof that mapping preserves list length
+### Advanced Examples (`LeantestAfp/Advanced.lean`)
+- Inductive type definitions (Color enum)
+- Recursive functions (factorial)
+- Dependent types (vectors)
+- Proofs by induction
 
 ## Learning Resources
 
