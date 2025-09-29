@@ -1,5 +1,5 @@
 -- Main entry point for leantest-afp basic Lean 4 example
-import IO
+import Std
 import LeantestAfp
 
 def main : IO Unit := do

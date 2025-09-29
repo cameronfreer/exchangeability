@@ -4,7 +4,7 @@ namespace Advanced
 -- Example of a simple inductive type
 inductive Color where
   | red
-  | green  
+  | green
   | blue
 
 -- Pattern matching function
@@ -27,12 +27,14 @@ def factorial (n : Nat) : Nat :=
 theorem factorial_positive (n : Nat) : factorial n > 0 := by
   induction n with
   | zero => simp [factorial]
-  | succ n ih => 
-    simp [factorial]
-    exact Nat.mul_pos (Nat.succ_pos n) ih
+  | succ n ih =>
+    have ih' : 0 < factorial n := by
+      simpa using ih
+    have pos := Nat.mul_pos (Nat.succ_pos n) ih'
+    simpa [factorial] using pos
 
 -- Example of dependent types
-def vector (α : Type) (n : Nat) : Type := 
+def vector (α : Type) (n : Nat) : Type :=
   { l : List α // l.length = n }
 
 -- Helper function to create a vector

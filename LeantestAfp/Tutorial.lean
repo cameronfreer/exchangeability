@@ -9,7 +9,7 @@ def double (n : Nat) : Nat := n * 2
 -- Test it:
 #eval double 5  -- Should output 10
 
--- 2. BASIC TYPES AND STRUCTURES  
+-- 2. BASIC TYPES AND STRUCTURES
 -- You can define custom types using 'structure'
 
 structure Student where
@@ -38,7 +38,7 @@ theorem my_add_comm (a b : Nat) : a + b = b + a := by
 
 def describe_age (age : Nat) : String :=
   if age < 13 then "child"
-  else if age < 20 then "teenager" 
+  else if age < 20 then "teenager"
   else "adult"
 
 #eval describe_age 15  -- Should output "teenager"
@@ -71,7 +71,11 @@ theorem add_zero_right (n : Nat) : n + 0 = n := by
   -- This is built into Lean, but we could prove it by induction:
   induction n with
   | zero => rfl  -- Base case: 0 + 0 = 0
-  | succ n ih => simp [Nat.add_succ, ih]  -- Inductive step
+  | succ n ih =>
+    calc
+      Nat.succ n + 0 = Nat.succ (n + 0) := by simp [Nat.succ_add]
+      _ = Nat.succ n := by
+        exact congrArg Nat.succ ih
 
 -- This is a template for you to try your own proofs!
 -- Try proving: theorem double_add (n : Nat) : n + n = 2 * n
