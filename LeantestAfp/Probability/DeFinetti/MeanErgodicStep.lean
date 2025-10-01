@@ -136,11 +136,24 @@ theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
     Tendsto (fun n => birkhoffAverage ℝ (koopman shift hσ) _root_.id n f)
       atTop
       (𝓝 (condexpL2 shiftInvariantSigma f)) := by
-  sorry
-  -- Proof:
-  -- 1. By birkhoffAverage_tendsto_fixedSpace, averages → P f for some projection P
-  -- 2. By proj_eq_condexp, P = condexpL2 shiftInvariantSigma
-  -- 3. Combine to get the desired convergence
+  -- Step 1: Get the projection from the Mean Ergodic Theorem
+  obtain ⟨P, hP_fixed, hP_tendsto⟩ := birkhoffAverage_tendsto_fixedSpace shift hσ f
+  
+  -- Step 2: Get the identification of projection with conditional expectation
+  obtain ⟨Q, hQ_fixed, hQ_condexp⟩ := proj_eq_condexp hσ
+  
+  -- Step 3: Show P = Q by uniqueness of projections
+  -- Both P and Q are projections onto the fixed subspace with the same properties
+  have hPQ : P f = Q f := by
+    sorry
+    -- This requires showing that P and Q are the same projection
+    -- They're both orthogonal projections onto fixedSubspace hσ
+    -- So they must be equal by uniqueness of orthogonal projections
+  
+  -- Step 4: Combine to get convergence to condexpL2
+  rw [hQ_condexp] at hPQ
+  rw [← hPQ]
+  exact hP_tendsto
 
 /-- Specialization to cylinder functions: the core case for de Finetti. -/
 theorem birkhoffCylinder_tendsto_condexp
