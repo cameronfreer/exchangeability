@@ -145,10 +145,22 @@ theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
   -- Step 3: Show P = Q by uniqueness of projections
   -- Both P and Q are projections onto the fixed subspace with the same properties
   have hPQ : P f = Q f := by
+    -- Key observation: Both P and Q are the identity on fixedSubspace hσ
+    -- This means P and Q are both orthogonal projections onto the same subspace
+    -- 
+    -- Strategy: Show P f and Q f are both in fixedSubspace, and for any such
+    -- element, P and Q agree (they both return the element itself)
+    
+    -- First, we need to know that P f and Q f are in the fixed subspace
+    -- This follows from the fact that P and Q are projections onto that subspace
     sorry
-    -- This requires showing that P and Q are the same projection
-    -- They're both orthogonal projections onto fixedSubspace hσ
-    -- So they must be equal by uniqueness of orthogonal projections
+    -- TODO: Complete by showing:
+    -- 1. P f ∈ fixedSubspace hσ (P projects onto the fixed subspace)
+    -- 2. Q f ∈ fixedSubspace hσ (Q projects onto the fixed subspace)  
+    -- 3. For any h ∈ fixedSubspace: P h = h and Q h = h (from hP_fixed, hQ_fixed)
+    -- 4. Therefore: P(Q f) = Q f and Q(P f) = P f
+    -- 5. But also: P(Q f) = P f and Q(P f) = Q f (linearity + idempotence)
+    -- 6. Hence: P f = Q f
   
   -- Step 4: Combine to get convergence to condexpL2
   rw [hQ_condexp] at hPQ
