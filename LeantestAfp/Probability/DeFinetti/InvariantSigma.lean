@@ -94,6 +94,43 @@ lemma mem_shiftInvariantSigma_iff (s : Set (Ω[α])) :
     @MeasurableSet _ shiftInvariantSigma s ↔ isShiftInvariant (α := α) s :=
   Iff.rfl
 
+/-- Shift-invariant measurability forces pointwise invariance under the shift map. -/
+lemma shiftInvariantSigma_measurable_shift_eq
+    (g : Ω[α] → ℝ)
+    (hg : @Measurable _ shiftInvariantSigma _ g) :
+    (fun ω => g (shift ω)) = g := by
+  classical
+  ext ω
+  by_contra hneq
+  have hlt_or := lt_or_gt_of_ne hneq
+  cases' hlt_or with hlt hgt
+  · -- Case `g (shift ω) < g ω`
+    obtain ⟨q, hltq, hqω⟩ := exists_rat_btwn hlt
+    have hset_eq := (hg (MeasurableSet_Iio (q : ℝ))).2
+    have h_shift_mem : shift ω ∈ g ⁻¹' Set.Iio (q : ℝ) := by
+      simpa [Set.mem_preimage] using hltq
+    have h_pre : ω ∈ shift ⁻¹' (g ⁻¹' Set.Iio (q : ℝ)) := by
+      simpa [Set.mem_preimage] using h_shift_mem
+    have h_mem : ω ∈ g ⁻¹' Set.Iio (q : ℝ) := by
+      simpa [hset_eq] using h_pre
+    have : g ω < (q : ℝ) := by
+      simpa [Set.mem_preimage] using h_mem
+    have : g ω < g ω := lt_trans this hqω
+    exact lt_irrefl _ this
+  · -- Case `g ω < g (shift ω)`
+    obtain ⟨q, hωq, hq_lt⟩ := exists_rat_btwn hgt
+    have hset_eq := (hg (MeasurableSet_Ioi (q : ℝ))).2
+    have h_shift_mem : shift ω ∈ g ⁻¹' Set.Ioi (q : ℝ) := by
+      simpa [Set.mem_preimage] using hq_lt
+    have h_pre : ω ∈ shift ⁻¹' (g ⁻¹' Set.Ioi (q : ℝ)) := by
+      simpa [Set.mem_preimage] using h_shift_mem
+    have h_mem : ω ∈ g ⁻¹' Set.Ioi (q : ℝ) := by
+      simpa [hset_eq] using h_pre
+    have : (q : ℝ) < g ω := by
+      simpa [Set.mem_preimage] using h_mem
+    have : g ω < g ω := lt_trans hωq this
+    exact lt_irrefl _ this
+
 /-- A function is measurable with respect to the shift-invariant σ-algebra iff
 it is (a.e.) constant along shift orbits. -/
 lemma invMeasurable_iff_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
@@ -101,8 +138,11 @@ lemma invMeasurable_iff_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMea
     (∀ᵐ ω ∂μ, g (shift ω) = g ω) →
     (@Measurable _ _ shiftInvariantSigma _ g →
      ∀ᵐ ω ∂μ, g (shift ω) = g ω) := by
-  intro hinv _
-  exact hinv
+  intro _ hmeas
+  refine eventually_of_forall ?_
+  intro ω
+  have hfun := congrArg (fun f => f ω) (shiftInvariantSigma_measurable_shift_eq g hmeas)
+  simpa using hfun
 
 /-- The fixed-point subspace of the Koopman operator.
 
