@@ -128,8 +128,29 @@ lemma shiftInvariantSigma_measurable_shift_eq
       simpa [hset_eq] using h_pre
     have : (q : ℝ) < g ω := by
       simpa [Set.mem_preimage] using h_mem
-    have : g ω < g ω := lt_trans hωq this
-    exact lt_irrefl _ this
+  have : g ω < g ω := lt_trans hωq this
+  exact lt_irrefl _ this
+
+/-- **Auxiliary goal**: construct an invariant representative.
+
+Once `g : Ω[α] → ℝ` is strongly measurable and agrees a.e. with its shift, we expect to
+modify it on a null set so that it becomes literally invariant under `shift` while remaining
+measurable with respect to `shiftInvariantSigma`.  Filling in this lemma (or a closely related
+variant) will let us finish `aestronglyMeasurable_shiftInvariant_of_koopman`. -/
+lemma exists_shiftInvariantRepresentative
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ)
+    (g : Ω[α] → ℝ)
+    (hg : AEStronglyMeasurable g μ)
+    (hinv : (fun ω => g (shift ω)) =ᵐ[μ] g) :
+    ∃ g',
+      AEStronglyMeasurable[shiftInvariantSigma (α := α)] g' μ ∧
+      (∀ᵐ ω ∂μ, g' ω = g ω) ∧
+      (∀ ω, g' (shift ω) = g' ω) := by
+  -- TODO: implement the null-set modification described in the main proof sketch.
+  -- The construction is outlined in the comments inside
+  -- `aestronglyMeasurable_shiftInvariant_of_koopman`.
+  sorry
 
 /-- A function is measurable with respect to the shift-invariant σ-algebra iff
 it is (a.e.) constant along shift orbits. -/
@@ -270,32 +291,13 @@ lemma aestronglyMeasurable_shiftInvariant_of_koopman
       simpa [Function.iterate_succ] using hmem
     · have := Set.mem_iInter.mp hω 0
       simpa [Function.iterate_zero] using this
-  -- TODO: Show that `S∞` is invariant under `shift` and use it to modify `g` into a
-  -- pointwise shift-invariant representative.
-  -- TODO: show that `S` is measurable and construct the iterated invariant set `S∞`.
-  -- TODO: Continue by modifying a representative of `f` on a null set to obtain a pointwise
-  -- shift-invariant function and use it to show `f` is measurable w.r.t. `shiftInvariantSigma`.
-  -- In particular, for each Borel set `T` consider
-  --   `A_T := g ⁻¹' T` and `A_T^∞ := ⋂ n, (shift^[n]) ⁻¹' A_T`.
-  -- The previous steps ensure `μ (A_T ∆ A_T^∞) = 0` and `A_T^∞` is exactly shift-invariant.
-  -- Taking `g'` whose preimages are `A_T^∞` will give the desired measurable representative.
-  -- Implementing this will likely require a dedicated lemma such as
-  --
-  -- ```lean
-  -- lemma exists_shiftInvariantRepresentative
-  --     (hσ : MeasurePreserving shift μ μ) (g : Ω[α] → ℝ)
-  --     (hg : AEStronglyMeasurable g μ)
-  --     (hinv : (fun ω => g (shift ω)) =ᵐ[μ] g) :
-  --     ∃ g', (∀ᵐ ω ∂μ, g' ω = g ω) ∧
-  --       AEStronglyMeasurable[shiftInvariantSigma (α := α)] g' μ ∧
-  --       (∀ ω, g' (shift ω) = g' ω)
-  -- ```
-  --
-  -- together with a companion result showing that replacing the representative in an
-  -- `Lp` class preserves measurability.  Once such an auxiliary lemma is in place the
-  -- present proof can be closed by taking `g'` and pushing it back to `f` via
-  -- `AEEq`.
-  sorry
+  obtain ⟨g', hg'_meas, hAEgg, hshift_g'⟩ :=
+    exists_shiftInvariantRepresentative (μ := μ) hσ g hg_meas hshift_g
+  have hAEgg' : (fun ω => g' ω) =ᵐ[μ] g := hAEgg
+  have hAEgf : (fun ω => g' ω) =ᵐ[μ] f := hAEgg'.trans hfg
+  have hf_meas : AEStronglyMeasurable[shiftInvariantSigma (α := α)] f μ :=
+    (AEStronglyMeasurable.congr hg'_meas hAEgf)
+  exact hf_meas
 
 /-- The fixed-point subspace of the Koopman operator.
 
