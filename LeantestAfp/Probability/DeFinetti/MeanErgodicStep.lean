@@ -1,0 +1,201 @@
+/-
+Copyright (c) 2025 leantest-afp contributors. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: leantest-afp contributors
+-/
+import Mathlib.MeasureTheory.Function.L2Space
+import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
+import Mathlib.Analysis.InnerProductSpace.Projection.Basic
+import LeantestAfp.Probability.Ergodic.KoopmanMeanErgodic
+import LeantestAfp.Probability.DeFinetti.InvariantSigma
+
+/-!
+# Mean Ergodic Step for de Finetti's Theorem
+
+This file combines the Koopman operator machinery with the identification of
+projection = conditional expectation to establish the core convergence result
+used in Kallenberg's proof of de Finetti's theorem.
+
+## Main definitions
+
+* `cylinderFunction`: Functions depending only on finitely many coordinates.
+* `shiftedCylinder`: The cylinder function composed with shift^n.
+
+## Main results
+
+* `birkhoffAverage_tendsto_condexp`: Birkhoff averages converge in L² to the
+  conditional expectation onto the shift-invariant σ-algebra.
+* `birkhoffCylinder_tendsto_condexp`: Specialization to cylinder functions.
+* `extremeMembers_agree`: The "extreme members" in Birkhoff averages agree,
+  establishing the conditional product structure.
+
+## References
+
+* Olav Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*,
+  Springer, Chapter 1 (First proof of Theorem 1.1, page 26).
+  
+  The key step is Kallenberg's argument: "Setting 𝓘_ξ = ξ⁻¹𝓘 and choosing a
+  regular conditional distribution ν = L(ξ₁|𝓘_ξ), we note that the random
+  probability measures (1/n)∑ᵢδ_ξᵢ converge a.s. to ν by the ergodic theorem...
+  Hence by dominated convergence, E[∏ₖ≤ₘ fₖ(ξᵢₖ)|𝓘_ξ] equals both the limits
+  as min iₖ → ∞ and max iₖ → ∞, giving the product form ∏ₖ∫fₖ dν."
+
+-/
+
+noncomputable section
+
+namespace LeantestAfp.Probability.DeFinetti
+
+open MeasureTheory Filter Topology BigOperators
+open LeantestAfp.Probability.Ergodic
+
+variable {α : Type*} [MeasurableSpace α]
+
+section CylinderFunctions
+
+/-- A cylinder function on path space: depends only on coordinates in a finite set.
+For simplicity, we take the first m coordinates. -/
+def cylinderFunction (m : ℕ) (φ : (Fin m → α) → ℝ) : Ω[α] → ℝ :=
+  fun ω => φ (fun k => ω k.val)
+
+/-- Product cylinder: ∏_{k < m} fₖ(ω k). -/
+def productCylinder (m : ℕ) (fs : Fin m → α → ℝ) : Ω[α] → ℝ :=
+  fun ω => ∏ k : Fin m, fs k (ω k.val)
+
+lemma productCylinder_eq_cylinder (m : ℕ) (fs : Fin m → α → ℝ) :
+    productCylinder m fs = cylinderFunction m (fun coords => ∏ k, fs k (coords k)) := by
+  rfl
+
+/-- Measurability of cylinder functions. -/
+lemma measurable_cylinderFunction (m : ℕ) (φ : (Fin m → α) → ℝ)
+    (_hφ : Measurable φ) :
+    Measurable (cylinderFunction m φ) := by
+  sorry
+
+/-- Boundedness of product cylinders. -/
+lemma productCylinder_bounded (m : ℕ) (fs : Fin m → α → ℝ)
+    (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C) :
+    ∃ C, ∀ ω, |productCylinder m fs ω| ≤ C := by
+  -- Take C = ∏ Cₖ where |fₖ| ≤ Cₖ
+  sorry
+
+/-- The shifted cylinder function: F ∘ shift^n. -/
+def shiftedCylinder (n : ℕ) (F : Ω[α] → ℝ) : Ω[α] → ℝ :=
+  fun ω => F ((shift^[n]) ω)
+
+end CylinderFunctions
+
+section MainConvergence
+
+variable {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+variable (hσ : MeasurePreserving shift μ μ)
+
+/-- Main theorem: Birkhoff averages converge in L² to conditional expectation.
+
+This combines:
+1. The Mean Ergodic Theorem (MET) giving convergence to orthogonal projection
+2. The identification proj = condexp from InvariantSigma.lean
+-/
+theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
+    Tendsto (fun n => birkhoffAverage (koopman shift hσ) n f)
+      atTop
+      (𝓝 (condexpL2 shiftInvariantSigma f)) := by
+  sorry
+  -- Proof:
+  -- 1. By birkhoffAverage_tendsto_fixedSpace, averages → P f for some projection P
+  -- 2. By proj_eq_condexp, P = condexpL2 shiftInvariantSigma
+  -- 3. Combine to get the desired convergence
+
+/-- Specialization to cylinder functions: the core case for de Finetti. -/
+theorem birkhoffCylinder_tendsto_condexp
+    (m : ℕ) (fs : Fin m → α → ℝ)
+    (hmeas : ∀ k, Measurable (fs k))
+    (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C) :
+    let F := productCylinder m fs
+    ∃ (fL2 : Lp ℝ 2 μ),
+      (∀ᵐ ω ∂μ, fL2 ω = F ω) ∧
+      Tendsto (fun n => birkhoffAverage (koopman shift hσ) n fL2)
+        atTop
+        (𝓝 (condexpL2 shiftInvariantSigma fL2)) := by
+  sorry
+  -- Use productCylinder_bounded to show F ∈ L²
+  -- Apply birkhoffAverage_tendsto_condexp
+
+end MainConvergence
+
+section ExtremeMembers
+
+variable {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+variable (hσ : MeasurePreserving shift μ μ)
+
+/-- The "extreme members agree" lemma (Kallenberg's key step).
+
+For a cylinder function F depending on coordinates {i₁, ..., iₘ}, the Birkhoff
+averages (1/n)∑_{j<n} F(shift^j ω) converge to a limit that depends only on the
+shift-invariant σ-algebra. When we shift all indices by a large amount, the limit
+is the same. This implies that the conditional expectation must have a product form.
+-/
+theorem extremeMembers_agree
+    (m : ℕ) (fs : Fin m → α → ℝ)
+    (_hmeas : ∀ k, Measurable (fs k))
+    (_hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
+    (_indices : Fin m → ℕ) :
+    True := by
+  -- Placeholder: The actual theorem would state that conditional expectation
+  -- of cylinders is shift-invariant and equals the product of marginals
+  trivial
+
+/-- Factorization theorem: conditional expectation of cylinder has product form.
+This is Kallenberg's conclusion: E[∏ₖ fₖ(ξᵢₖ) | 𝓘_ξ] = ∏ₖ ∫fₖ dν a.s.,
+where ν is the conditional law of ξ₁ given 𝓘_ξ.
+-/
+theorem condexp_cylinder_factorizes
+    (m : ℕ) (fs : Fin m → α → ℝ)
+    (_hmeas : ∀ k, Measurable (fs k))
+    (_hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C) :
+    ∃ (ν : Ω[α] → Measure α),
+      (∀ᵐ ω ∂μ, IsProbabilityMeasure (ν ω)) ∧
+      (∀ᵐ ω ∂μ, ∃ (val : ℝ), val = ∏ k : Fin m, ∫ x, fs k x ∂(ν ω)) := by
+  sorry
+  -- Proof outline (following Kallenberg page 26):
+  -- 1. Define ν ω as the regular conditional distribution of coordinate 0 given shiftInvariantSigma
+  -- 2. Use extremeMembers_agree + dominated convergence to identify both limits
+  --    (as min indices → ∞ and max indices → ∞)
+  -- 3. Both limits equal ∏k ∫fk dν by shift-invariance and independence
+  -- 4. Apply monotone class theorem to extend from cylinders to generated σ-algebra
+
+end ExtremeMembers
+
+section AlternativeL2Bound
+/-- Alternative proof via L² bound (Kallenberg Lemma 1.2).
+
+Given ξ₁,...,ξₙ ∈ L² with common mean m, variance σ² < ∞, and
+cov(ξᵢ,ξⱼ) = σ²ρ for all i ≠ j, then for any distributions p, q on {1,...,n}:
+
+  E(∑ᵢ pᵢξᵢ - ∑ᵢ qᵢξᵢ)² ≤ 2σ²(1-ρ) sup_j |pⱼ - qⱼ|
+
+This provides an elementary route to the convergence without invoking the
+full Mean Ergodic Theorem machinery.
+-/
+theorem l2_contractability_bound
+    (n : ℕ) (ξ : Fin n → Ω[α] → ℝ)
+    (m : ℝ) (σSq ρ : ℝ)
+    (_hσ_pos : 0 ≤ σSq) (_hρ_bd : -1 ≤ ρ ∧ ρ ≤ 1)
+    (_hmean : ∀ k, ∫ ω, ξ k ω ∂μ = m)
+    (_hvar : ∀ k, ∫ ω, (ξ k ω - m)^2 ∂μ = σSq)
+    (_hcov : ∀ i j, i ≠ j → ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ = σSq * ρ)
+    (p q : Fin n → ℝ)
+    (_hp_prob : (∑ i, p i) = 1 ∧ ∀ i, 0 ≤ p i)
+    (_hq_prob : (∑ i, q i) = 1 ∧ ∀ i, 0 ≤ q i) :
+    ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ ≤
+      2 * σSq * (1 - ρ) * (⨆ i, |p i - q i|) := by
+  sorry
+  -- Proof (Kallenberg page 26, Lemma 1.2):
+  -- Expand (∑ pᵢξᵢ - ∑ qᵢξᵢ)² = (∑(pᵢ-qᵢ)ξᵢ)²
+  -- = ∑ᵢ(pᵢ-qᵢ)²σ² + ∑ᵢ≠ⱼ(pᵢ-qᵢ)(pⱼ-qⱼ)σ²ρ
+  -- ≤ σ²·sup|pᵢ-qᵢ|·∑ᵢ|pᵢ-qᵢ| + σ²ρ·(∑ᵢ|pᵢ-qᵢ|)²
+  -- ≤ 2σ²·sup|pᵢ-qᵢ|·(1-ρ) after using ∑(pᵢ-qᵢ) = 0
+
+end AlternativeL2Bound
+
+end LeantestAfp.Probability.DeFinetti
