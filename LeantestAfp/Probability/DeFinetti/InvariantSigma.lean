@@ -216,6 +216,26 @@ lemma aestronglyMeasurable_shiftInvariant_of_koopman
   have hshift : (fun ω => f (shift ω)) =ᵐ[μ] f := by
     have := congrArg (fun g : Lp ℝ 2 μ => g) hfix
     exact this
+  -- STEP 2. Choose a strongly measurable representative of `f`.
+  have hf_base : AEStronglyMeasurable f μ := by
+    simpa using (Lp.aestronglyMeasurable (μ := μ) (p := (2 : ℝ≥0∞)) f)
+  obtain ⟨g, hg_meas, hfg⟩ := hf_base
+  -- Transport the a.e. invariance to the chosen representative.
+  have hshift_g : (fun ω => g (shift ω)) =ᵐ[μ] g := by
+    have hcomp := (hσ.quasiMeasurePreserving.ae_eq_comp hfg)
+    have hcomp' : (fun ω => g (shift ω)) =ᵐ[μ] (fun ω => f (shift ω)) := by
+      simpa using hcomp
+    have hshift' : (fun ω => f (shift ω)) =ᵐ[μ] g := hshift.trans hfg
+    exact hcomp'.trans hshift'
+  -- STEP 3. Record the full-measure set on which the representative is pointwise invariant.
+  let S : Set (Ω[α]) := {ω | g (shift ω) = g ω}
+  have hS_ae : ∀ᵐ ω ∂μ, ω ∈ S := by
+    simpa [S, Set.mem_setOf_eq] using hshift_g
+  have hS_null : μ Sᶜ = 0 := by
+    simpa [ae_iff, S, Set.mem_setOf_eq] using hS_ae
+  -- TODO: Define `S∞ := ⋂ n, (shift^[n]) ⁻¹' S` and prove it has full μ-measure using the
+  -- measure-preserving property of the iterates of `shift`.
+  -- TODO: show that `S` is measurable and construct the iterated invariant set `S∞`.
   -- TODO: Continue by modifying a representative of `f` on a null set to obtain a pointwise
   -- shift-invariant function and use it to show `f` is measurable w.r.t. `shiftInvariantSigma`.
   sorry
