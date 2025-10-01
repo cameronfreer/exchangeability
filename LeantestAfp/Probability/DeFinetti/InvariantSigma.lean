@@ -144,6 +144,44 @@ lemma invMeasurable_iff_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMea
   have hfun := congrArg (fun f => f ω) (shiftInvariantSigma_measurable_shift_eq g hmeas)
   simpa using hfun
 
+/-- Functions that are `AEStronglyMeasurable` with respect to the invariant σ-algebra are
+almost everywhere fixed by the shift. -/
+lemma shiftInvariantSigma_aestronglyMeasurable_ae_shift_eq
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ) {f : Ω[α] → ℝ}
+    (hf : AEStronglyMeasurable[shiftInvariantSigma (α := α)] f μ) :
+    (fun ω => f (shift ω)) =ᵐ[μ] f := by
+  classical
+  rcases hf with ⟨g, hg_meas, hfg⟩
+  have hcomp :=
+    (hσ.quasiMeasurePreserving).ae_eq_comp (μ := μ) (ν := μ)
+      (f := shift (α := α)) (g := fun ω => f ω) (g' := fun ω => g ω) hfg
+  have hshift : (fun ω => g (shift ω)) =ᵐ[μ] g :=
+    EventuallyEq.of_eq (shiftInvariantSigma_measurable_shift_eq g hg_meas.measurable)
+  exact hcomp.trans <| hshift.trans hfg.symm
+
+/-- If an `Lp` function is measurable with respect to the invariant σ-algebra, the Koopman
+operator fixes it. -/
+lemma koopman_eq_self_of_shiftInvariant
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ)
+    {f : Lp ℝ 2 μ}
+    (hf : AEStronglyMeasurable[shiftInvariantSigma (α := α)] f μ) :
+    koopman shift hσ f = f := by
+  classical
+  have hcomp :
+      (koopman shift hσ f) =ᵐ[μ]
+        (fun ω => f (shift ω)) := by
+    change MeasureTheory.Lp.compMeasurePreserving (shift (α := α)) hσ f =ᵐ[μ]
+        fun ω => f (shift ω)
+    simpa [koopman]
+      using
+        (MeasureTheory.Lp.coeFn_compMeasurePreserving (μ := μ) (μb := μ)
+            (p := (2 : ℝ≥0∞)) f hσ)
+  have hshift := shiftInvariantSigma_aestronglyMeasurable_ae_shift_eq (μ := μ) hσ hf
+  have hfinal : (koopman shift hσ f) =ᵐ[μ] f := hcomp.trans hshift
+  exact Lp.ext hfinal
+
 /-- The fixed-point subspace of the Koopman operator.
 
 This is the closed subspace of L²(μ) consisting of equivalence classes of functions
@@ -240,15 +278,17 @@ lemma range_condexp_eq_fixedSubspace {μ : Measure (Ω[α])} [IsProbabilityMeasu
     rw [← hg]
     -- condexpL2 g is measurable w.r.t. shiftInvariantSigma
     -- hence invariant under shift, so Koopman fixes it
-    /-
-    Outline:
-    1. Apply the measurability statement from the sketch above to conclude that
-       `condexpL2 shiftInvariantSigma g` has a representative that is
-       `shiftInvariantSigma`-measurable.
-    2. Invoke the forward inclusion lemma to deduce Koopman invariance, and then
-       restate it as membership in `fixedSubspace hσ` via `mem_fixedSubspace_iff`.
-    -/
-    sorry
+    classical
+    have hmeas :
+        AEStronglyMeasurable[shiftInvariantSigma (α := α)]
+          (condexpL2 shiftInvariantSigma g : Ω[α] → ℝ) μ := by
+      simpa using
+        (lpMeas.aestronglyMeasurable
+          (MeasureTheory.condExpL2 ℝ ℝ (shiftInvariantSigma_le (α := α)) g))
+    have hkoop :=
+      koopman_eq_self_of_shiftInvariant (hσ := hσ) hmeas
+    exact (mem_fixedSubspace_iff (hσ := hσ)
+        (f := condexpL2 shiftInvariantSigma g)).mpr hkoop
   · -- (⊇) fixedSubspace ⊆ Range of condexpL2
     intro hf
     -- If f is fixed by Koopman, then f is shift-invariant a.e.
