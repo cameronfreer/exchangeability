@@ -110,8 +110,9 @@ that conditionally on the tail σ-algebra, the sequence becomes i.i.d. with law 
 Theorem 1.1 (page 26).
 -/
 theorem deFinetti
-    -- Standard assumptions on the spaces
-    {Ω α : Type*} [MeasurableSpace Ω] [TopologicalSpace α] [MeasurableSpace α] [BorelSpace α]
+    -- Standard assumptions on the spaces  
+    -- Note: BorelSpace requires both TopologicalSpace and MeasurableSpace to be in scope
+    {Ω α : Type*} [MeasurableSpace Ω] [TopologicalSpace α] [inst : MeasurableSpace α] [BorelSpace α]
     -- The base measure is a probability measure
     (μ : Measure Ω) [IsProbabilityMeasure μ]
     -- The process X with measurability and exchangeability
