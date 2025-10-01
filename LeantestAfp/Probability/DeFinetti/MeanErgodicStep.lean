@@ -288,9 +288,13 @@ theorem l2_contractability_bound
   
   -- and ∑ⱼ |cⱼ| ≤ 2
   have hc_abs_sum : ∑ j, |c j| ≤ 2 := by
+    -- Write cⱼ = cⱼ⁺ - cⱼ⁻ where cⱼ⁺ = max(cⱼ, 0) and cⱼ⁻ = max(-cⱼ, 0)
+    -- Then |cⱼ| = cⱼ⁺ + cⱼ⁻
+    -- Since ∑cⱼ = 0, we have ∑cⱼ⁺ = ∑cⱼ⁻
+    -- Also, ∑cⱼ⁺ ≤ ∑pⱼ = 1 and ∑cⱼ⁻ ≤ ∑qⱼ = 1
+    -- Therefore ∑|cⱼ| = ∑cⱼ⁺ + ∑cⱼ⁻ = 2·∑cⱼ⁺ ≤ 2
     sorry
-    -- Since ∑pⱼ = ∑qⱼ = 1, we have |∑(pⱼ-qⱼ)⁺ - ∑(pⱼ-qⱼ)⁻| ≤ 1
-    -- Therefore ∑|pⱼ-qⱼ| = 2·∑(pⱼ-qⱼ)⁺ ≤ 2
+    -- TODO: Need lemmas about positive/negative parts of finite sums
   
   -- Step 1: E(∑cᵢξᵢ)² = E(∑cᵢ(ξᵢ-m))² using ∑cⱼ = 0
   have step1 : ∫ ω, (∑ i, c i * ξ i ω)^2 ∂μ =
@@ -329,8 +333,27 @@ theorem l2_contractability_bound
   
   -- Step 5: ≤ σ²(1-ρ)∑|cᵢ| sup|cⱼ| since cᵢ² ≤ |cᵢ| sup|cⱼ|
   have step5 : ∑ i, (c i)^2 ≤ ∑ i, |c i| * (⨆ j, |c j|) := by
-    sorry
     -- Each cᵢ² = |cᵢ|² ≤ |cᵢ| · sup|cⱼ|
+    apply Finset.sum_le_sum
+    intro i _
+    have h_sq : (c i)^2 = |c i|^2 := sq_abs (c i)
+    rw [h_sq]
+    have h_le : |c i| ≤ ⨆ j, |c j| := by
+      apply le_ciSup
+      sorry -- Bounded above: use Finset.univ is finite
+      sorry -- i is in the index set
+    calc |c i|^2 = |c i| * |c i| := sq _
+       _ ≤ |c i| * (⨆ j, |c j|) := mul_le_mul_of_nonneg_left h_le (abs_nonneg _)
+  
+  -- Nonnegativity lemmas
+  have hσ_1ρ_nonneg : 0 ≤ σSq * (1 - ρ) := by
+    apply mul_nonneg _hσ_pos
+    linarith [_hρ_bd.2]  -- ρ ≤ 1 implies 0 ≤ 1 - ρ
+  
+  have hsup_nonneg : 0 ≤ ⨆ j, |c j| := by
+    sorry
+    -- Supremum of nonnegative values is nonnegative
+    -- Could use ciSup_nonneg or similar
   
   -- Step 6: ≤ 2σ²(1-ρ) sup|cⱼ| since ∑|cᵢ| ≤ 2
   calc ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ
@@ -340,14 +363,11 @@ theorem l2_contractability_bound
     _ = σSq * ρ * (∑ i, c i)^2 + σSq * (1 - ρ) * ∑ i, (c i)^2 := step3
     _ = σSq * (1 - ρ) * ∑ i, (c i)^2 := step4
     _ ≤ σSq * (1 - ρ) * (∑ i, |c i| * (⨆ j, |c j|)) := by
-        apply mul_le_mul_of_nonneg_left step5
-        sorry -- 0 ≤ σSq * (1 - ρ) from _hσ_pos and _hρ_bd
+        apply mul_le_mul_of_nonneg_left step5 hσ_1ρ_nonneg
     _ = σSq * (1 - ρ) * ((∑ i, |c i|) * (⨆ j, |c j|)) := by
         rw [Finset.sum_mul]
     _ ≤ σSq * (1 - ρ) * (2 * (⨆ j, |c j|)) := by
-        apply mul_le_mul_of_nonneg_left (mul_le_mul_of_nonneg_right hc_abs_sum _)
-        sorry -- 0 ≤ σSq * (1 - ρ)
-        sorry -- 0 ≤ ⨆ j, |c j|
+        apply mul_le_mul_of_nonneg_left (mul_le_mul_of_nonneg_right hc_abs_sum hsup_nonneg) hσ_1ρ_nonneg
     _ = 2 * σSq * (1 - ρ) * (⨆ i, |p i - q i|) := by ring_nf; rfl
 
 end AlternativeL2Bound
