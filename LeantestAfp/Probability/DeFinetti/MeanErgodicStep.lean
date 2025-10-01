@@ -160,14 +160,20 @@ theorem birkhoffCylinder_tendsto_condexp
   have hFmeas : Measurable (productCylinder m fs) :=
     measurable_productCylinder m fs hmeas
   -- F is in L² since it's bounded
-  have hFinL2 : Memℒp (productCylinder m fs) 2 μ := by
-    refine ⟨hFmeas.aestronglyMeasurable, ?_⟩
-    sorry -- bounded functions are in Lp
+  have hFinL2 : MeasureTheory.MemLp (productCylinder m fs) 2 μ := by
+    classical
+    refine MeasureTheory.MemLp.of_bound (μ := μ) (p := 2)
+      hFmeas.aestronglyMeasurable ?C ?hBound
+    · exact C
+    · have hpoint : ∀ ω, ‖productCylinder m fs ω‖ ≤ C := by
+        intro ω
+        simpa [Real.norm_eq_abs] using hC ω
+      exact eventually_of_forall hpoint
   -- Convert to Lp element
   let fL2 := hFinL2.toLp (productCylinder m fs)
   use fL2
   constructor
-  · exact Memℒp.coeFn_toLp hFinL2
+  · exact MeasureTheory.MemLp.coeFn_toLp hFinL2
   · exact birkhoffAverage_tendsto_condexp hσ fL2
 
 end MainConvergence
