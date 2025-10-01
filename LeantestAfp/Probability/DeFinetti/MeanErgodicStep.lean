@@ -77,6 +77,17 @@ lemma measurable_cylinderFunction (m : ℕ) (φ : (Fin m → α) → ℝ)
     simpa using (measurable_pi_apply (k.val))
   simpa [cylinderFunction] using _hφ.comp hproj
 
+/-- Measurability of product cylinders. -/
+lemma measurable_productCylinder (m : ℕ) (fs : Fin m → α → ℝ)
+    (hmeas : ∀ k, Measurable (fs k)) :
+    Measurable (productCylinder m fs) := by
+  classical
+  unfold productCylinder
+  -- Product of measurable functions is measurable
+  apply Finset.measurable_prod'
+  intro k _
+  exact (hmeas k).comp (measurable_pi_apply k.val)
+
 /-- Boundedness of product cylinders. -/
 lemma productCylinder_bounded (m : ℕ) (fs : Fin m → α → ℝ)
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C) :
@@ -143,9 +154,22 @@ theorem birkhoffCylinder_tendsto_condexp
       Tendsto (fun n => birkhoffAverage (koopman shift hσ) n fL2)
         atTop
         (𝓝 (condexpL2 shiftInvariantSigma fL2)) := by
-  sorry
-  -- Use productCylinder_bounded to show F ∈ L²
-  -- Apply birkhoffAverage_tendsto_condexp
+  classical
+  -- F is bounded by productCylinder_bounded
+  obtain ⟨C, hC⟩ := productCylinder_bounded m fs hbd
+  -- F is measurable (product of measurable functions)
+  have hFmeas : Measurable (productCylinder m fs) :=
+    measurable_productCylinder m fs hmeas
+  -- F is in L² since it's bounded
+  have hFinL2 : Memℒp (productCylinder m fs) 2 μ := by
+    refine ⟨hFmeas.aestronglyMeasurable, ?_⟩
+    sorry -- bounded functions are in Lp
+  -- Convert to Lp element
+  let fL2 := hFinL2.toLp (productCylinder m fs)
+  use fL2
+  constructor
+  · exact Memℒp.coeFn_toLp hFinL2
+  · exact birkhoffAverage_tendsto_condexp hσ fL2
 
 end MainConvergence
 

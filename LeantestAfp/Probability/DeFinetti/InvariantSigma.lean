@@ -174,7 +174,21 @@ lemma range_condexp_eq_fixedSubspace {μ : Measure (Ω[α])} [IsProbabilityMeasu
     (hσ : MeasurePreserving shift μ μ) :
     Set.range (condexpL2 shiftInvariantSigma) =
     (fixedSubspace hσ : Set (Lp ℝ 2 μ)) := by
-  sorry
-  -- Both sides consist of L² functions that are a.e. measurable w.r.t. shiftInvariantSigma
+  classical
+  ext f
+  constructor
+  · -- (⊆) Range of condexpL2 ⊆ fixedSubspace
+    intro ⟨g, hg⟩
+    rw [← hg]
+    -- condexpL2 g is measurable w.r.t. shiftInvariantSigma
+    -- hence invariant under shift, so Koopman fixes it
+    sorry
+  · -- (⊇) fixedSubspace ⊆ Range of condexpL2
+    intro hf
+    -- If f is fixed by Koopman, then f is shift-invariant a.e.
+    -- hence measurable w.r.t. shiftInvariantSigma
+    -- so f = condexpL2 f
+    use f
+    sorry
 
 end LeantestAfp.Probability.DeFinetti
