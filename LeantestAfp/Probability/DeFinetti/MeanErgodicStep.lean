@@ -344,15 +344,38 @@ theorem l2_contractability_bound
     have h_offdiag : ∑ i, ∑ j in (Finset.univ.filter (· ≠ i)), 
                      c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ =
                      σSq * ρ * ∑ i, ∑ j in (Finset.univ.filter (· ≠ i)), c i * c j := by
-      sorry
       -- Apply _hcov to each off-diagonal term
+      rw [← Finset.sum_mul]
+      congr 1
+      apply Finset.sum_congr rfl
+      intro i _
+      rw [← Finset.sum_mul]
+      congr 1
+      apply Finset.sum_congr rfl
+      intro j hj
+      have hj_ne : j ≠ i := Finset.mem_filter.mp hj |>.2
+      have hcov_ij := _hcov i j hj_ne
+      calc c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ
+          = c i * c j * (σSq * ρ) := by rw [hcov_ij]
+        _ = σSq * ρ * (c i * c j) := by ring
     
     -- Relate off-diagonal sum to (∑cᵢ)²
     have h_offdiag_expand : ∑ i, ∑ j in (Finset.univ.filter (· ≠ i)), c i * c j =
                             (∑ i, c i)^2 - ∑ i, (c i)^2 := by
-      sorry
-      -- Use Finset.sum_mul_sum to get (∑cᵢ)² = ∑ᵢⱼ cᵢcⱼ
-      -- Then separate diagonal from off-diagonal
+      -- Use (∑cᵢ)² = ∑ᵢⱼ cᵢcⱼ = (∑ᵢ cᵢ²) + (∑ᵢ≠ⱼ cᵢcⱼ)
+      have h_sq_expand : (∑ i, c i)^2 = ∑ i, ∑ j, c i * c j := by
+        rw [Finset.sum_mul_sum]
+        rfl
+      -- Split into diagonal and off-diagonal
+      have h_split : ∑ i, ∑ j, c i * c j = 
+                     (∑ i, c i * c i) + (∑ i, ∑ j in (Finset.univ.filter (· ≠ i)), c i * c j) := by
+        conv_lhs => rw [← Finset.sum_filter_add_sum_filter_not Finset.univ (fun j => j = i) (fun j => c i * c j)]
+        sorry -- Simplify filter (j = i) and filter (j ≠ i)
+      calc ∑ i, ∑ j in (Finset.univ.filter (· ≠ i)), c i * c j
+          = (∑ i, c i)^2 - ∑ i, c i * c i := by
+            rw [h_sq_expand, h_split]; ring
+        _ = (∑ i, c i)^2 - ∑ i, (c i)^2 := by
+            congr 1; ext i; ring
     
     -- Combine diagonal and off-diagonal
     sorry
