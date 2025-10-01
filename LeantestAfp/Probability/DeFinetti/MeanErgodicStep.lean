@@ -314,16 +314,24 @@ theorem l2_contractability_bound
   have step2 : ∫ ω, (∑ i, c i * (ξ i ω - m))^2 ∂μ =
                ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ := by
     -- Expand (∑ᵢ cᵢ(ξᵢ-m))² = ∑ᵢⱼ cᵢcⱼ(ξᵢ-m)(ξⱼ-m)
-    rw [Finset.sum_pow_two]
-    -- Now we have: ∫ (∑ᵢ (cᵢ(ξᵢ-m))² + ∑ᵢ≠ⱼ cᵢ(ξᵢ-m)·cⱼ(ξⱼ-m))
-    -- Rewrite as double sum
-    have h_expand : (∑ i, c i * (ξ i ω - m))^2 =
-                    ∑ i, ∑ j, c i * (ξ i ω - m) * (c j * (ξ j ω - m)) := by
-      sorry
-      -- Use Finset.sum_mul_sum or similar
+    conv_lhs => 
+      arg 1; ext ω
+      rw [sq]
+      rw [Finset.sum_mul_sum]
+    -- Simplify the product structure
+    conv_lhs =>
+      arg 1; ext ω
+      apply Finset.sum_congr rfl
+      intro i _
+      apply Finset.sum_congr rfl
+      intro j _
+      ring
+    -- Now: ∫ (∑ᵢⱼ cᵢcⱼ(ξᵢ-m)(ξⱼ-m))
+    -- Apply integral_finset_sum twice to pull sums outside
     sorry
-    -- Then: ∫ ∑ᵢⱼ cᵢcⱼ(ξᵢ-m)(ξⱼ-m) = ∑ᵢⱼ cᵢcⱼ ∫(ξᵢ-m)(ξⱼ-m)
-    -- This needs: integral_finset_sum and mul_comm for constants
+    -- This needs: ∫ ∑ᵢⱼ f(i,j,ω) = ∑ᵢⱼ ∫ f(i,j,ω)
+    -- Each term c_i * c_j * (ξ_i - m) * (ξ_j - m) is integrable
+    -- Can use integral_finset_sum from MeasureTheory
   
   -- Step 3: = σ²ρ(∑cᵢ)² + σ²(1-ρ)∑cᵢ² by separating i=j from i≠j
   have step3 : ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ =
