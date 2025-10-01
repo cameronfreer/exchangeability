@@ -261,11 +261,24 @@ lemma aestronglyMeasurable_shiftInvariant_of_koopman
     intro n
     have := hSinf_mem (ω := ω) hω (n + 1)
     simpa [Function.iterate_succ] using this
+  have hSinf_preimage : shift ⁻¹' S∞ = S∞ := by
+    classical
+    ext ω; constructor <;> intro hω
+    · refine Set.mem_iInter.mpr ?_
+      intro n
+      have hmem := Set.mem_iInter.mp hω (n + 1)
+      simpa [Function.iterate_succ] using hmem
+    · have := Set.mem_iInter.mp hω 0
+      simpa [Function.iterate_zero] using this
   -- TODO: Show that `S∞` is invariant under `shift` and use it to modify `g` into a
   -- pointwise shift-invariant representative.
   -- TODO: show that `S` is measurable and construct the iterated invariant set `S∞`.
   -- TODO: Continue by modifying a representative of `f` on a null set to obtain a pointwise
   -- shift-invariant function and use it to show `f` is measurable w.r.t. `shiftInvariantSigma`.
+  -- In particular, for each Borel set `T` consider
+  --   `A_T := g ⁻¹' T` and `A_T^∞ := ⋂ n, (shift^[n]) ⁻¹' A_T`.
+  -- The previous steps ensure `μ (A_T ∆ A_T^∞) = 0` and `A_T^∞` is exactly shift-invariant.
+  -- Taking `g'` whose preimages are `A_T^∞` will give the desired measurable representative.
   sorry
 
 /-- The fixed-point subspace of the Koopman operator.
