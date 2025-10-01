@@ -279,6 +279,22 @@ lemma aestronglyMeasurable_shiftInvariant_of_koopman
   --   `A_T := g ⁻¹' T` and `A_T^∞ := ⋂ n, (shift^[n]) ⁻¹' A_T`.
   -- The previous steps ensure `μ (A_T ∆ A_T^∞) = 0` and `A_T^∞` is exactly shift-invariant.
   -- Taking `g'` whose preimages are `A_T^∞` will give the desired measurable representative.
+  -- Implementing this will likely require a dedicated lemma such as
+  --
+  -- ```lean
+  -- lemma exists_shiftInvariantRepresentative
+  --     (hσ : MeasurePreserving shift μ μ) (g : Ω[α] → ℝ)
+  --     (hg : AEStronglyMeasurable g μ)
+  --     (hinv : (fun ω => g (shift ω)) =ᵐ[μ] g) :
+  --     ∃ g', (∀ᵐ ω ∂μ, g' ω = g ω) ∧
+  --       AEStronglyMeasurable[shiftInvariantSigma (α := α)] g' μ ∧
+  --       (∀ ω, g' (shift ω) = g' ω)
+  -- ```
+  --
+  -- together with a companion result showing that replacing the representative in an
+  -- `Lp` class preserves measurability.  Once such an auxiliary lemma is in place the
+  -- present proof can be closed by taking `g'` and pushing it back to `f` via
+  -- `AEEq`.
   sorry
 
 /-- The fixed-point subspace of the Koopman operator.
