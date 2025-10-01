@@ -41,7 +41,12 @@ namespace LeantestAfp.Probability.Ergodic
 
 open MeasureTheory Filter Topology
 
+open scoped ENNReal
+
 variable {α : Type*} [MeasurableSpace α]
+variable [Fact (1 ≤ (2 : ℝ≥0∞))]
+
+attribute [local instance] fact_one_le_two_ennreal
 
 /-- Path space: sequences indexed by ℕ taking values in α. -/
 abbrev PathSpace (α : Type*) := ℕ → α
@@ -76,8 +81,10 @@ def koopman {μ : Measure Ω} [IsProbabilityMeasure μ] (T : Ω → Ω) (hT : Me
 /-- The Koopman operator is a linear isometry. -/
 lemma koopman_isometry {μ : Measure Ω} [IsProbabilityMeasure μ] (T : Ω → Ω) (hT : MeasurePreserving T μ μ) :
     Isometry (koopman T hT) := by
-  -- The Koopman operator comes from a LinearIsometryEquiv
-  sorry
+  classical
+  let L := MeasureTheory.Lp.compMeasurePreservingₗᵢ ℝ T hT
+  have hL : Isometry fun f : Lp ℝ 2 μ => L f := L.isometry
+  simpa [koopman, L] using hL
 
 /-- The Birkhoff average of a continuous linear operator.
 

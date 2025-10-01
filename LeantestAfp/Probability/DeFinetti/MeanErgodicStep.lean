@@ -70,14 +70,40 @@ lemma productCylinder_eq_cylinder (m : ℕ) (fs : Fin m → α → ℝ) :
 lemma measurable_cylinderFunction (m : ℕ) (φ : (Fin m → α) → ℝ)
     (_hφ : Measurable φ) :
     Measurable (cylinderFunction m φ) := by
-  sorry
+  classical
+  have hproj : Measurable fun ω : Ω[α] => fun k : Fin m => ω k.val := by
+    refine measurable_pi_lambda _ ?_
+    intro k
+    simpa using (measurable_pi_apply (k.val))
+  simpa [cylinderFunction] using _hφ.comp hproj
 
 /-- Boundedness of product cylinders. -/
 lemma productCylinder_bounded (m : ℕ) (fs : Fin m → α → ℝ)
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C) :
     ∃ C, ∀ ω, |productCylinder m fs ω| ≤ C := by
   -- Take C = ∏ Cₖ where |fₖ| ≤ Cₖ
-  sorry
+  classical
+  classical
+  choose bound hbound using hbd
+  let C : Fin m → ℝ := fun k => max (bound k) 1
+  refine ⟨∏ k : Fin m, C k, ?_⟩
+  intro ω
+  have h_abs_le : ∀ k : Fin m, |fs k (ω k.val)| ≤ C k := by
+    intro k
+    have := hbound k (ω k.val)
+    exact this.trans (le_max_left _ _)
+  have h_nonneg : ∀ k : Fin m, 0 ≤ |fs k (ω k.val)| := fun _ => abs_nonneg _
+  have hprod : ∏ k : Fin m, |fs k (ω k.val)| ≤ ∏ k : Fin m, C k := by
+    simpa using
+      (Finset.prod_le_prod (s := Finset.univ)
+        (f := fun k : Fin m => |fs k (ω k.val)|)
+        (g := fun k : Fin m => C k)
+        (fun k _ => h_nonneg k)
+        (fun k _ => h_abs_le k))
+  have habs_eq : |productCylinder m fs ω| = ∏ k : Fin m, |fs k (ω k.val)| := by
+    simp [productCylinder, Finset.abs_prod]
+  exact (by
+    simpa [habs_eq] using hprod)
 
 /-- The shifted cylinder function: F ∘ shift^n. -/
 def shiftedCylinder (n : ℕ) (F : Ω[α] → ℝ) : Ω[α] → ℝ :=
