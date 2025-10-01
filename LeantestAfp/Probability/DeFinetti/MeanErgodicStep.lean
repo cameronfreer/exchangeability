@@ -198,8 +198,8 @@ variable (hσ : MeasurePreserving shift μ μ)
 
 /-- The "extreme members agree" lemma (Kallenberg's key step).
 
-For a cylinder function F depending on coordinates {i₁, ..., iₘ}, the Birkhoff
-averages (1/n)∑_{j<n} F(shift^j ω) converge to a limit that depends only on the
+For a cylinder function F depending on coordinates i₁, ..., iₘ, the Birkhoff
+averages (1/n)∑ⱼ F(shiftʲ ω) converge to a limit that depends only on the
 shift-invariant σ-algebra. When we shift all indices by a large amount, the limit
 is the same. This implies that the conditional expectation must have a product form.
 -/
