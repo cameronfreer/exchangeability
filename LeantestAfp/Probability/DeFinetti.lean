@@ -4,9 +4,9 @@ Copyright
 This file is part of the leantest-afp project.
 -/
 import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
-import Mathlib.MeasureTheory.Measure.Typeclasses.Probability
 import Mathlib.Probability.IdentDistrib
 import Mathlib.Probability.Kernel.Basic
+import Mathlib.MeasureTheory.Constructions.BorelSpace.Basic
 import LeantestAfp.Probability.Exchangeability
 
 /-!
@@ -55,52 +55,73 @@ def tailSigmaAlgebra (X : ℕ → Ω → α) : MeasurableSpace Ω :=
 ## Directing measures and conditional laws
 -/
 
-/-- Placeholder predicate expressing that `X` is conditionally i.i.d. given the
-tail `σ`-algebra with conditional law `K`.  The precise formulation will be
-specified once the surrounding theory is available. -/
-def ConditionallyIID (μ : Measure Ω) (X : ℕ → Ω → α)
-    (K : Ω → ProbabilityMeasure α) : Prop :=
-  True
+/-- A sequence of random variables `X` is conditionally independent and identically
+distributed given a sub-σ-algebra with conditional law given by the kernel `K`.
 
+This is a placeholder definition. The full definition should express:
+1. K is a Markov kernel measurable with respect to the sub-σ-algebra
+2. The sequence {Xₙ} is conditionally independent given the sub-σ-algebra  
+3. The conditional distribution of each Xₙ is given by K
 
-/-- A *directing measure* for an exchangeable process assigns to almost every
-sample point `ω` a probability measure on `α` such that conditionally on the tail
-`σ`-algebra the process becomes i.i.d.  We model it as a kernel
-`Ω → ProbabilityMeasure α`.
-
-`TODO`: define this in terms of `ProbabilityTheory.ConditionalIndependence` once
-all prerequisites are in place.
+For de Finetti's theorem, the sub-σ-algebra will be the tail σ-algebra.
 -/
-structure DirectingMeasure (Ω α : Type*) [MeasurableSpace Ω] [MeasurableSpace α]
-    (μ : Measure Ω) where
-  kernel : Ω → ProbabilityMeasure α
-  -- TODO: record measurability and tail invariance properties of the kernel
-  -- For example: `AEStronglyMeasurable kernel μ` once the definition is in place.
+def ConditionallyIID (μ : Measure Ω) [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → α) (K : ProbabilityTheory.Kernel Ω α) : Prop :=
+  -- Placeholder - full definition requires conditional independence infrastructure
+  ProbabilityTheory.IsMarkovKernel K ∧ sorry
 
-/-- The empirical measures associated with the first `n` coordinates of the
-process.  We will show that they converge almost surely and in `L¹` to the
-random directing measure.
+/-- A directing measure for a process `X` is a tail-measurable Markov kernel.
 
-`TODO`: express the empirical measure using `Measure.map` and `Counting measure`.
+This bundles the kernel with its key properties needed for de Finetti's theorem.
 -/
-def empiricalMeasure (X : ℕ → Ω → α) (n : ℕ) : Ω → ProbabilityMeasure α :=
-  sorry
+structure DirectingMeasure (μ : Measure Ω) [IsProbabilityMeasure μ] (X : ℕ → Ω → α) where
+  kernel : ProbabilityTheory.Kernel Ω α
+  is_markov : ProbabilityTheory.IsMarkovKernel kernel
+  is_tail_measurable : sorry
+    -- TODO: @AEStronglyMeasurable' _ _ (tailSigmaAlgebra X) _ _ (fun ω ↦ kernel ω) μ
+
+/-- The empirical measure of the first `n` terms of the process `X`.
+
+For `n = 0`, we define it as the Dirac measure on an arbitrary default value.
+For `n > 0`, this is the uniform measure on `{X 0 ω, X 1 ω, ..., X (n-1) ω}`.
+-/
+def empiricalMeasure [Inhabited α] (X : ℕ → Ω → α) (n : ℕ) (ω : Ω) :
+    ProbabilityMeasure α :=
+  if h : n = 0 then
+    sorry  -- ProbabilityMeasure.dirac default (need the right API)
+  else
+    sorry
+    -- TODO: Implement using ProbabilityMeasure.uniform on Finset (Fin n)
+    -- and ProbabilityMeasure.map with (fun i ↦ X i.val ω)
 
 /-!
 ## Statement of de Finetti's theorem
 -/
 
-/-- Draft statement for de Finetti's theorem.  The final statement will show
-that every exchangeable process is conditionally i.i.d. given a directing
-measure.  At present this is just a placeholder so that downstream lemmas can
-refer to it.
+/-- **De Finetti's theorem**: An infinite exchangeable sequence of random variables
+on a Borel measurable space is conditionally independent and identically distributed,
+given the tail σ-algebra.
+
+We work with Borel measurable spaces (rather than Polish spaces) following Kallenberg's
+approach. The theorem asserts the existence of a tail-measurable Markov kernel `K` such
+that conditionally on the tail σ-algebra, the sequence becomes i.i.d. with law `K`.
+
+**Reference**: Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*,
+Theorem 1.1 (page 26).
 -/
 theorem deFinetti
-    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    -- Standard assumptions on the spaces
+    {Ω α : Type*} [MeasurableSpace Ω] [TopologicalSpace α] [MeasurableSpace α] [BorelSpace α]
+    -- The base measure is a probability measure
     (μ : Measure Ω) [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → α) (hX : Exchangeable μ X) :
-    ∃ (ξ : DirectingMeasure Ω α μ),
-      ConditionallyIID μ X ξ.kernel :=
+    -- The process X with measurability and exchangeability
+    (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i)) (hX_exch : Exchangeable μ X) :
+    -- There exists a Markov kernel with the required properties
+    ∃ (K : ProbabilityTheory.Kernel Ω α),
+      -- K is tail-measurable
+      sorry ∧  -- @AEStronglyMeasurable' _ _ (tailSigmaAlgebra X) _ _ (fun ω ↦ K ω) μ
+      -- X is conditionally i.i.d. given the tail σ-algebra with law K
+      ConditionallyIID μ X K :=
   sorry
 
 end Probability
