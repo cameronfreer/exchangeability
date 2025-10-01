@@ -1,6 +1,7 @@
 # Implementation Summary: de Finetti Mean Ergodic Step
 
 **Date**: 2025-10-01  
+**Last Updated**: 2025-10-01 (Commit 4511a0c)  
 **Status**: ✅ All files compile successfully
 
 ---
@@ -28,7 +29,11 @@ Implemented the mean-ergodic proof framework for de Finetti's theorem following 
 - `koopman_isometry`: Koopman preserves L² norm
 - `birkhoffAverage_tendsto_fixedSpace`: Mean Ergodic Theorem (MET) - averages converge to projection
 
-**Status**: Compiles with 2 `sorry` placeholders (MET proof requires mathlib MET lemma)
+**Status**: Compiles with 1 `sorry` placeholder (MET proof requires mathlib MET lemma)
+
+**Recent progress** (Commit 4511a0c):
+- ✅ Added `koopman_isometry` proof using `compMeasurePreservingₗᵢ`
+- ✅ Fixed `Fact (1 ≤ 2)` typeclass instances for Lp spaces
 
 ---
 

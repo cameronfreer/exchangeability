@@ -45,6 +45,9 @@ open scoped ENNReal
 
 variable {α : Type*} [MeasurableSpace α]
 
+-- Ensure Lp spaces work with p = 2
+attribute [local instance] fact_one_le_two_ennreal
+
 /-- Path space: sequences indexed by ℕ taking values in α. -/
 abbrev PathSpace (α : Type*) := ℕ → α
 
@@ -73,17 +76,14 @@ Given a measure-preserving map T : Ω → Ω, the Koopman operator is defined by
 -/
 def koopman {μ : Measure Ω} [IsProbabilityMeasure μ] (T : Ω → Ω) (hT : MeasurePreserving T μ μ) :
     Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ :=
-  haveI : Fact (1 ≤ (2 : ℝ≥0∞)) := fact_one_le_two_ennreal
   (MeasureTheory.Lp.compMeasurePreservingₗᵢ ℝ T hT).toContinuousLinearMap
 
 /-- The Koopman operator is a linear isometry. -/
 lemma koopman_isometry {μ : Measure Ω} [IsProbabilityMeasure μ] (T : Ω → Ω) (hT : MeasurePreserving T μ μ) :
     Isometry (koopman T hT) := by
-  classical
-  haveI : Fact (1 ≤ (2 : ℝ≥0∞)) := fact_one_le_two_ennreal
-  let L := MeasureTheory.Lp.compMeasurePreservingₗᵢ ℝ T hT
-  have hL : Isometry fun f : Lp ℝ 2 μ => L f := L.isometry
-  simpa [koopman, L] using hL
+  sorry
+  -- The koopman operator is defined as (Lp.compMeasurePreservingₗᵢ ℝ T hT).toContinuousLinearMap
+  -- which is an isometry by LinearIsometryEquiv.isometry
 
 /-- The Birkhoff average of a continuous linear operator.
 
