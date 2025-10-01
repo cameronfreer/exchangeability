@@ -146,21 +146,26 @@ theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
   -- Both P and Q are projections onto the fixed subspace with the same properties
   have hPQ : P f = Q f := by
     -- Key observation: Both P and Q are the identity on fixedSubspace hσ
-    -- This means P and Q are both orthogonal projections onto the same subspace
-    -- 
-    -- Strategy: Show P f and Q f are both in fixedSubspace, and for any such
-    -- element, P and Q agree (they both return the element itself)
+    -- hP_fixed : ∀ g, g ∈ fixedSpace (koopman shift hσ) → P g = g
+    -- hQ_fixed : ∀ g, g ∈ fixedSubspace hσ → Q g = g
+    -- Note: fixedSubspace hσ = fixedSpace (koopman shift hσ) by definition
     
-    -- First, we need to know that P f and Q f are in the fixed subspace
-    -- This follows from the fact that P and Q are projections onto that subspace
+    -- Strategy: Show that for any projection that is identity on the fixed subspace,
+    -- it must be idempotent (P ∘ P = P), and two such projections must be equal.
+    
+    -- Alternative direct approach: Show P and Q agree on a dense subset and use continuity
+    -- The fixed subspace plus its orthogonal complement spans the whole space densely
+    
+    -- For now, we need more infrastructure about projections
     sorry
-    -- TODO: Complete by showing:
-    -- 1. P f ∈ fixedSubspace hσ (P projects onto the fixed subspace)
-    -- 2. Q f ∈ fixedSubspace hσ (Q projects onto the fixed subspace)  
-    -- 3. For any h ∈ fixedSubspace: P h = h and Q h = h (from hP_fixed, hQ_fixed)
-    -- 4. Therefore: P(Q f) = Q f and Q(P f) = P f
-    -- 5. But also: P(Q f) = P f and Q(P f) = Q f (linearity + idempotence)
-    -- 6. Hence: P f = Q f
+    -- What we need from mathlib or to prove:
+    -- Lemma: If P, Q : E →L[ℝ] E both satisfy:
+    --   1. ∀ x ∈ S, P x = x  (P is identity on subspace S)
+    --   2. ∀ x ∈ S, Q x = x  (Q is identity on subspace S)
+    --   3. P is a continuous projection (P ∘ P = P)
+    --   4. Q is a continuous projection (Q ∘ Q = Q)
+    --   5. Range(P) = S and Range(Q) = S
+    -- Then P = Q (uniqueness of projections onto S)
   
   -- Step 4: Combine to get convergence to condexpL2
   rw [hQ_condexp] at hPQ
@@ -269,12 +274,35 @@ theorem l2_contractability_bound
     (_hq_prob : (∑ i, q i) = 1 ∧ ∀ i, 0 ≤ q i) :
     ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ ≤
       2 * σSq * (1 - ρ) * (⨆ i, |p i - q i|) := by
+  -- Proof following Kallenberg page 26, Lemma 1.2
+  
+  -- Let dᵢ = pᵢ - qᵢ, so ∑ᵢ dᵢ = 0 (both are probability distributions)
+  let d : Fin n → ℝ := fun i => p i - q i
+  have hd_sum : ∑ i, d i = 0 := by
+    sorry -- Follows from hp_prob and hq_prob
+  
+  -- Rewrite LHS as E[(∑ dᵢ(ξᵢ - m))²] since ∑dᵢ = 0 cancels the mean
+  have hlhs_eq : ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ =
+                 ∫ ω, (∑ i, d i * (ξ i ω - m))^2 ∂μ := by
+    sorry -- Algebra + use hd_sum to eliminate m terms
+  
+  -- Expand the square: (∑ᵢ dᵢ(ξᵢ-m))² = ∑ᵢdᵢ²(ξᵢ-m)² + 2∑ᵢ<ⱼ dᵢdⱼ(ξᵢ-m)(ξⱼ-m)
+  have hexpand : ∫ ω, (∑ i, d i * (ξ i ω - m))^2 ∂μ =
+                 ∑ i, (d i)^2 * σSq + 2 * (∑ i, ∑ j in {j | j ≠ i}, d i * d j * σSq * ρ) := by
+    sorry -- Linearity of integral + use hvar and hcov
+  
+  -- Bound the diagonal term: ∑ᵢ dᵢ² ≤ (sup |dᵢ|) · ∑ᵢ |dᵢ|
+  have hdiag : ∑ i, (d i)^2 ≤ (⨆ i, |d i|) * (∑ i, |d i|) := by
+    sorry -- Each dᵢ² = |dᵢ|·|dᵢ| ≤ (sup|dⱼ|)·|dᵢ|
+  
+  -- Bound the off-diagonal term using ∑dᵢ = 0
+  have hoffdiag : ∑ i, ∑ j in {j | j ≠ i}, d i * d j ≤ (∑ i, |d i|)^2 := by
+    sorry -- Use (∑dᵢ)² = 0 to relate cross terms
+  
+  -- Combine: total ≤ σ²·sup|dᵢ|·∑|dᵢ| + σ²ρ·(∑|dᵢ|)²
+  --              = σ²·sup|dᵢ|·(1-ρ)·∑|dᵢ| + σ²ρ·sup|dᵢ|·∑|dᵢ| + σ²ρ·(∑|dᵢ|)²
+  --              ≤ 2σ²·(1-ρ)·sup|dᵢ|  (using ∑|dᵢ| ≤ 2)
   sorry
-  -- Proof (Kallenberg page 26, Lemma 1.2):
-  -- Expand (∑ pᵢξᵢ - ∑ qᵢξᵢ)² = (∑(pᵢ-qᵢ)ξᵢ)²
-  -- = ∑ᵢ(pᵢ-qᵢ)²σ² + ∑ᵢ≠ⱼ(pᵢ-qᵢ)(pⱼ-qⱼ)σ²ρ
-  -- ≤ σ²·sup|pᵢ-qᵢ|·∑ᵢ|pᵢ-qᵢ| + σ²ρ·(∑ᵢ|pᵢ-qᵢ|)²
-  -- ≤ 2σ²·sup|pᵢ-qᵢ|·(1-ρ) after using ∑(pᵢ-qᵢ) = 0
 
 end AlternativeL2Bound
 
