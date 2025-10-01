@@ -288,13 +288,17 @@ theorem l2_contractability_bound
   
   -- and ∑ⱼ |cⱼ| ≤ 2
   have hc_abs_sum : ∑ j, |c j| ≤ 2 := by
-    -- Write cⱼ = cⱼ⁺ - cⱼ⁻ where cⱼ⁺ = max(cⱼ, 0) and cⱼ⁻ = max(-cⱼ, 0)
-    -- Then |cⱼ| = cⱼ⁺ + cⱼ⁻
-    -- Since ∑cⱼ = 0, we have ∑cⱼ⁺ = ∑cⱼ⁻
-    -- Also, ∑cⱼ⁺ ≤ ∑pⱼ = 1 and ∑cⱼ⁻ ≤ ∑qⱼ = 1
-    -- Therefore ∑|cⱼ| = ∑cⱼ⁺ + ∑cⱼ⁻ = 2·∑cⱼ⁺ ≤ 2
+    -- Key insight: For distributions p, q with ∑pⱼ = ∑qⱼ = 1 and cⱼ = pⱼ - qⱼ:
+    -- Let J₊ = {j : cⱼ ≥ 0} and J₋ = {j : cⱼ < 0}
+    -- Then ∑ⱼ∈J₊ cⱼ = -∑ⱼ∈J₋ cⱼ (since ∑cⱼ = 0)
+    -- Also ∑ⱼ∈J₊ cⱼ ≤ ∑ⱼ∈J₊ pⱼ ≤ 1 (since qⱼ ≥ 0)
+    -- So ∑|cⱼ| = ∑ⱼ∈J₊ cⱼ + ∑ⱼ∈J₋ |cⱼ| = 2·∑ⱼ∈J₊ cⱼ ≤ 2
     sorry
-    -- TODO: Need lemmas about positive/negative parts of finite sums
+    -- TODO: Formalize using Finset.sum_filter on nonneg/neg parts
+    -- Key lemmas needed:
+    --   1. Split sum by sign: ∑f = ∑(f on {x : f x ≥ 0}) + ∑(f on {x : f x < 0})
+    --   2. Balance: ∑cⱼ = 0 implies positive part = negative part
+    --   3. Bound: ∑ⱼ∈J₊ cⱼ = ∑ⱼ∈J₊ (pⱼ - qⱼ) ≤ ∑ⱼ∈J₊ pⱼ ≤ 1
   
   -- Step 1: E(∑cᵢξᵢ)² = E(∑cᵢ(ξᵢ-m))² using ∑cⱼ = 0
   have step1 : ∫ ω, (∑ i, c i * ξ i ω)^2 ∂μ =
@@ -399,15 +403,14 @@ theorem l2_contractability_bound
             congr 1; ext i; ring
     
     -- Combine diagonal and off-diagonal
-    -- We need to show the LHS equals σ²ρ(∑cᵢ)² + σ²(1-ρ)∑cᵢ²
-    -- Strategy: split the double sum into diagonal and off-diagonal, apply formulas
+    -- Split the double sum: ∑ᵢⱼ = ∑ᵢ(i=j) + ∑ᵢⱼ(i≠j)
     sorry
-    -- Need to show: ∑ᵢⱼ cᵢcⱼ∫(ξᵢ-m)(ξⱼ-m) = σ²(∑cᵢ²) + σ²ρ((∑cᵢ)² - ∑cᵢ²)
-    -- Which simplifies to: σ²ρ(∑cᵢ)² + σ²(1-ρ)∑cᵢ²
-    -- This follows from:
-    --   - Diagonal part: h_diag gives σ²∑cᵢ²
-    --   - Off-diagonal: h_offdiag + h_offdiag_expand gives σ²ρ((∑cᵢ)² - ∑cᵢ²)
-    --   - Combine: σ²∑cᵢ² + σ²ρ((∑cᵢ)² - ∑cᵢ²) = σ²ρ(∑cᵢ)² + σ²(1-ρ)∑cᵢ²
+    -- TODO: Use Finset.sum_filter_add_sum_filter_not to split
+    -- Then apply h_diag and h_offdiag + h_offdiag_expand
+    -- Final algebra:
+    --   σ²∑cᵢ² + σ²ρ((∑cᵢ)² - ∑cᵢ²) 
+    --   = σ²∑cᵢ² + σ²ρ(∑cᵢ)² - σ²ρ∑cᵢ²
+    --   = σ²ρ(∑cᵢ)² + σ²(1-ρ)∑cᵢ²
   
   -- Step 4: = σ²(1-ρ)∑cᵢ² since (∑cᵢ)² = 0
   have step4 : σSq * ρ * (∑ i, c i)^2 + σSq * (1 - ρ) * ∑ i, (c i)^2 =
