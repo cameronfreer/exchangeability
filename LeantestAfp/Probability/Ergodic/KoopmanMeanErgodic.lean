@@ -7,6 +7,7 @@ import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.Analysis.InnerProductSpace.Projection.Basic
+import Mathlib.Analysis.InnerProductSpace.MeanErgodic
 import Mathlib.Dynamics.Ergodic.MeasurePreserving
 
 /-!
@@ -81,34 +82,13 @@ def koopman {μ : Measure Ω} [IsProbabilityMeasure μ] (T : Ω → Ω) (hT : Me
 /-- The Koopman operator is a linear isometry. -/
 lemma koopman_isometry {μ : Measure Ω} [IsProbabilityMeasure μ] (T : Ω → Ω) (hT : MeasurePreserving T μ μ) :
     Isometry (koopman T hT) := by
-  sorry
-  -- The koopman operator is defined as (Lp.compMeasurePreservingₗᵢ ℝ T hT).toContinuousLinearMap
-  -- which is an isometry by LinearIsometryEquiv.isometry
-
-/-- The Birkhoff average of a continuous linear operator.
-
-For a continuous linear map U : E → E, the n-th Birkhoff average is
-(1/n) * ∑_{k=0}^{n-1} Uᵏ f.
--/
-def birkhoffAverage {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-    (U : E →L[ℝ] E) (n : ℕ) (f : E) : E :=
-  match n with
-  | 0 => 0
-  | n + 1 => (1 / ((n + 1) : ℝ)) • (∑ k ∈ Finset.range (n + 1), (U ^ k) f)
+  simpa [koopman]
+    using (MeasureTheory.Lp.compMeasurePreservingₗᵢ ℝ T hT).isometry
 
 /-- The fixed-point subspace of a continuous linear map. -/
 def fixedSpace {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     (U : E →L[ℝ] E) : Submodule ℝ E :=
-  { carrier := {f | U f = f}
-    add_mem' := by
-      intro f g hf hg
-      simp only [Set.mem_setOf_eq] at hf hg ⊢
-      simp [hf, hg]
-    zero_mem' := by simp
-    smul_mem' := by
-      intro c f hf
-      simp only [Set.mem_setOf_eq] at hf ⊢
-      simp [hf] }
+  LinearMap.eqLocus U.toLinearMap 1
 
 /-- Mean Ergodic Theorem: Birkhoff averages converge to the projection onto the fixed-point subspace.
 
@@ -120,14 +100,33 @@ TODO: This requires the von Neumann Mean Ergodic Theorem from mathlib.
 For now we state it as a sorry to establish the API.
 -/
 theorem birkhoffAverage_tendsto_fixedSpace
-    {μ : Measure Ω} [IsProbabilityMeasure μ] (T : Ω → Ω) (hT : MeasurePreserving T μ μ) (f : Lp ℝ 2 μ) :
+    {μ : Measure Ω} [IsProbabilityMeasure μ] (T : Ω → Ω)
+    (hT : MeasurePreserving T μ μ) (f : Lp ℝ 2 μ) :
     ∃ (P : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ),
-      (∀ g, (koopman T hT) (P g) = P g) ∧
-      Tendsto (fun n => birkhoffAverage (koopman T hT) n f) atTop (𝓝 (P f)) := by
-  sorry
-  -- The proof would invoke the Mean Ergodic Theorem from mathlib:
-  -- 1. Show koopman T hT is a contraction (actually an isometry)
-  -- 2. Apply MET to get convergence to orthogonal projection onto fixed space
-  -- 3. The limit P is characterized as the unique fixed point of a certain averaging process
+      (∀ g, g ∈ fixedSpace (koopman T hT) → P g = g) ∧
+      Tendsto (fun n => birkhoffAverage ℝ (koopman T hT) _root_.id n f)
+        atTop (𝓝 (P f)) := by
+  classical
+  let K : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ := koopman T hT
+  have hnorm : ‖K‖ ≤ (1 : ℝ) := by
+    refine ContinuousLinearMap.opNorm_le_bound _ (by norm_num) ?_
+    intro g
+    have hnorm_eq : ‖K g‖ = ‖g‖ := by
+      simpa [K, koopman]
+        using (MeasureTheory.Lp.compMeasurePreservingₗᵢ ℝ T hT).norm_map g
+    simpa [hnorm_eq]
+  let S := LinearMap.eqLocus K.toLinearMap 1
+  let projToSub : Lp ℝ 2 μ →L[ℝ] S := S.orthogonalProjection
+  let inclusion : S →L[ℝ] Lp ℝ 2 μ := S.subtypeL
+  let P : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ := inclusion.comp projToSub
+  refine ⟨P, ?_, ?_⟩
+  · intro g hg
+    let gS : S := ⟨g, hg⟩
+    have hproj := S.orthogonalProjection_mem_subspace_eq_self gS
+    simpa [P, projToSub, inclusion, gS] using congrArg Subtype.val hproj
+  · have h_tendsto :=
+      ContinuousLinearMap.tendsto_birkhoffAverage_orthogonalProjection K hnorm f
+    have h_proj_val : (P f) = (S.orthogonalProjection f : S) := rfl
+    simpa [P, projToSub, inclusion, h_proj_val]
 
 end LeantestAfp.Probability.Ergodic

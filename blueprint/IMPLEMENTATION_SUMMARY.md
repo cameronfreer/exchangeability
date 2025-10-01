@@ -21,7 +21,6 @@ Implemented the mean-ergodic proof framework for de Finetti's theorem following 
 **Key Definitions**:
 - `shift`: Left shift on path space (shift ω) n = ω (n+1)
 - `koopman`: Koopman operator on L²(μ) as linear isometry
-- `birkhoffAverage`: Birkhoff averages (1/n)∑ U^k f
 - `fixedSpace`: Fixed-point subspace {f | U f = f}
 
 **Key Results**:
@@ -29,11 +28,13 @@ Implemented the mean-ergodic proof framework for de Finetti's theorem following 
 - `koopman_isometry`: Koopman preserves L² norm
 - `birkhoffAverage_tendsto_fixedSpace`: Mean Ergodic Theorem (MET) - averages converge to projection
 
-**Status**: Compiles with 1 `sorry` placeholder (MET proof requires mathlib MET lemma)
+**Status**: Compiles with zero `sorry` placeholders (MET instantiated via mathlib)
 
-**Recent progress** (Commit 4511a0c):
-- ✅ Added `koopman_isometry` proof using `compMeasurePreservingₗᵢ`
-- ✅ Fixed `Fact (1 ≤ 2)` typeclass instances for Lp spaces
+**Recent progress** (Commit 1edc4c3 → HEAD):
+- ✅ Proved `koopman_isometry`
+- ✅ Applied mathlib's `ContinuousLinearMap.tendsto_birkhoffAverage_orthogonalProjection`
+  to obtain `birkhoffAverage_tendsto_fixedSpace`
+- ✅ `fixedSpace` now wraps `LinearMap.eqLocus`
 
 ---
 
@@ -55,7 +56,7 @@ Implemented the mean-ergodic proof framework for de Finetti's theorem following 
 
 **Status**: Compiles with 3 `sorry` placeholders (requires sub-σ-algebra infrastructure from mathlib)
 
-**Note**: Used `axiom` declarations for `shiftInvariantSigma` and `condexpL2` pending proper mathlib integration
+**Note**: Concrete implementations provided for `shiftInvariantSigma` and `condexpL2`
 
 ---
 

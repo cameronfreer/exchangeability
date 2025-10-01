@@ -94,7 +94,6 @@ lemma productCylinder_bounded (m : ℕ) (fs : Fin m → α → ℝ)
     ∃ C, ∀ ω, |productCylinder m fs ω| ≤ C := by
   -- Take C = ∏ Cₖ where |fₖ| ≤ Cₖ
   classical
-  classical
   choose bound hbound using hbd
   let C : Fin m → ℝ := fun k => max (bound k) 1
   refine ⟨∏ k : Fin m, C k, ?_⟩
@@ -134,7 +133,7 @@ This combines:
 2. The identification proj = condexp from InvariantSigma.lean
 -/
 theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
-    Tendsto (fun n => birkhoffAverage (koopman shift hσ) n f)
+    Tendsto (fun n => birkhoffAverage ℝ (koopman shift hσ) _root_.id n f)
       atTop
       (𝓝 (condexpL2 shiftInvariantSigma f)) := by
   sorry
@@ -151,7 +150,7 @@ theorem birkhoffCylinder_tendsto_condexp
     let F := productCylinder m fs
     ∃ (fL2 : Lp ℝ 2 μ),
       (∀ᵐ ω ∂μ, fL2 ω = F ω) ∧
-      Tendsto (fun n => birkhoffAverage (koopman shift hσ) n fL2)
+      Tendsto (fun n => birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2)
         atTop
         (𝓝 (condexpL2 shiftInvariantSigma fL2)) := by
   classical

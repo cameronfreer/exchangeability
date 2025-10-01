@@ -64,65 +64,40 @@ Successfully implemented the mean-ergodic framework for de Finetti's theorem wit
 
 ---
 
-## Recent Progress (Commits 1edc4c3 → 12b40f1)
+## Recent Progress (Commits 1edc4c3 → HEAD)
 
 ### Major Achievements
-1. **Replaced axioms with definitions**:
-   - `shiftInvariantSigma`: Now a proper `MeasurableSpace` structure
-   - `condexpL2`: Uses mathlib's `condExpL2` with `lpMeas` composition
-
+1. **Integrated mathlib MET** via `ContinuousLinearMap.tendsto_birkhoffAverage_orthogonalProjection`.
 2. **Completed proofs**:
-   - `fixedSubspace_closed`: Preimage of closed singleton under continuous map
-   - `measurable_cylinderFunction`: Composition of measurable projections
-   - `productCylinder_bounded`: Explicit product bound construction
-   - `measurable_productCylinder`: Using `Finset.measurable_prod'`
-
-3. **Proof structures**:
-   - `birkhoffCylinder_tendsto_condexp`: Full outline with measurability, boundedness, Memℒp
-   - `range_condexp_eq_fixedSubspace`: Bidirectional inclusion structure
-
-4. **Build fixes**:
-   - Added `attribute [local instance] fact_one_le_two_ennreal` for Lp spaces
-   - Resolved import dependencies
+   - `koopman_isometry`
+   - `birkhoffAverage_tendsto_fixedSpace`
+   - `measurable_productCylinder`
+3. **Implemented concrete structures** for `shiftInvariantSigma` and `condexpL2` (no axioms).
 
 ### Technical Decisions
-- **Typeclass handling**: Used local instance attribute for `Fact (1 ≤ 2)` rather than per-declaration `haveI`
-- **koopman_isometry**: Kept as `sorry` to avoid typeclass resolution loops (proof strategy documented)
-- **Structure over completion**: Prioritized well-structured proof outlines over forcing incomplete proofs
+- Lean on global instances for `Fact (1 ≤ 2)` in `Lp`
+- Compose mathlib orthogonal projections with submodule inclusions to obtain
+  a global projection operator in L²
+- Keep remaining `sorry`s localized to conditional expectation comparisons
 
 ---
 
 ## Remaining Work
 
 ### High Priority (to enable progress)
-1. **Locate mathlib MET**: Find von Neumann Mean Ergodic Theorem
-   - Likely in `Mathlib.Analysis.InnerProductSpace.*` or `Mathlib.Dynamics.Ergodic.*`
-   - Needed for: `birkhoffAverage_tendsto_fixedSpace`
-
-2. **Memℒp bound lemma**: Prove bounded measurable functions are in Lp
+1. **Memℒp bound lemma**: Prove bounded measurable functions are in Lp
    - Required for: `birkhoffCylinder_tendsto_condexp`
-   - Should be straightforward from measure theory API
-
-3. **Typeclass resolution**: Fix `koopman_isometry`  
-   - Issue: `Fact (1 ≤ ?m.31)` metavariable
-   - Strategy: Use `LinearIsometryEquiv.isometry` directly
+2. **proj_eq_condexp**: Identify projection with conditional expectation to
+   bridge ergodic and probabilistic formulations
 
 ### Medium Priority (proof completion)
-4. **proj_eq_condexp**: Show orthogonal projection equals conditional expectation
-   - Requires: Sub-σ-algebra orthogonal projection theory
-   - Strategy: Both are projections onto same closed subspace
-
-5. **range_condexp_eq_fixedSubspace**: Complete bidirectional inclusions
-   - Forward: condexp output is shift-invariant → Koopman-fixed
-   - Backward: Koopman-fixed → shift-invariant → in range of condexp
-
-6. **Regular conditional distribution**: Formalize ν = Law(ξ₁ | 𝓘_ξ)
-   - Use mathlib's `ProbabilityTheory.condDistrib` for standard Borel spaces
+3. **range_condexp_eq_fixedSubspace**: Complete bidirectional inclusions
+4. **Regular conditional distribution**: Formalize ν = Law(ξ₁ | 𝓘_ξ)
 
 ### Long-term (full theorem)
-7. **extremeMembers_agree**: Formalize "extreme indices" convergence
-8. **condexp_cylinder_factorizes**: Product form via dominated convergence
-9. **Monotone class extension**: From cylinders to generated σ-algebra
+5. **extremeMembers_agree**: Formalize "extreme indices" convergence
+6. **condexp_cylinder_factorizes**: Product form via dominated convergence
+7. **Monotone class extension**: From cylinders to generated σ-algebra
 
 ---
 
@@ -130,8 +105,8 @@ Successfully implemented the mean-ergodic framework for de Finetti's theorem wit
 
 - **Total definitions**: 15
 - **Total theorems/lemmas**: 18  
-- **Completed proofs**: 10 (56%)
-- **Sorry count**: 8
+- **Completed proofs**: 12 (67%)
+- **Sorry count**: 6
 - **Documentation coverage**: 100% (all declarations have docstrings)
 - **Naming convention**: ✅ Consistent camelCase throughout
 - **Build status**: ✅ Zero errors, expected warnings only
@@ -175,8 +150,8 @@ Current progress: Steps 1-3 structured, steps 4-6 pending
 ### External (mathlib)
 - `MeasureTheory.Function.ConditionalExpectation.CondexpL2`
 - `MeasureTheory.Lp.compMeasurePreservingₗᵢ`
+- `Analysis.InnerProductSpace.MeanErgodic`
 - `Analysis.InnerProductSpace.Projection`
-- Mean Ergodic Theorem (to locate)
 
 ### Internal
 ```
@@ -193,11 +168,9 @@ All imports resolve correctly.
 
 ## Next Session Goals
 
-1. ✅ Locate mathlib's Mean Ergodic Theorem (priority 1)
-2. ✅ Complete `birkhoffCylinder_tendsto_condexp` (add Memℒp bound lemma)
-3. ✅ Fix `koopman_isometry` typeclass issue
-4. Start `proj_eq_condexp` proof (bridge to probability theory)
-5. Update documentation with new progress
+1. Establish `proj_eq_condexp` and `range_condexp_eq_fixedSubspace`
+2. Prove the bounded-to-L² lemma for cylinder functions
+3. Push convergence results from cylinders to general events (monotone class step)
 
 ---
 
