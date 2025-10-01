@@ -111,11 +111,25 @@ lemma FullyExchangeable.exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
   -- Extend σ : Perm (Fin n) to π : Perm ℕ by fixing all i ≥ n
   let π := extendFinPerm n σ
   have hπ := hX π
-  -- The map for π agrees with the map for σ on Fin n coordinates
-  sorry
-  -- Proof outline:
-  -- 1. Show that composing with π on ℕ is the same as composing with σ on Fin n
-  -- 2. Project to the first n coordinates to get the desired equality
+  -- Key: The map (fun ω i => X (σ i) ω) factors through (fun ω i => X (π i) ω)
+  -- via the embedding Fin n ↪ ℕ, since π extends σ
+  have h_agree : ∀ (i : Fin n), π i.val = (σ i).val := by
+    intro i
+    simp [π, extendFinPerm]
+  -- Define the projection ℕ → α to Fin n → α
+  let proj : (ℕ → α) → (Fin n → α) := fun f => fun i => f i.val
+  -- The composition gives us what we want
+  calc Measure.map (fun ω => fun i : Fin n => X (σ i) ω) μ
+      = Measure.map (fun ω => fun i : Fin n => X (π i.val) ω) μ := by
+          congr 1; ext ω i; rw [h_agree]
+    _ = Measure.map (proj ∘ (fun ω => fun i : ℕ => X (π i) ω)) μ := rfl
+    _ = Measure.map proj (Measure.map (fun ω => fun i : ℕ => X (π i) ω) μ) := by
+          rw [Measure.map_map]; sorry; sorry  -- measurability conditions
+    _ = Measure.map proj (Measure.map (fun ω => fun i : ℕ => X i ω) μ) := by
+          rw [hπ]
+    _ = Measure.map (proj ∘ (fun ω => fun i : ℕ => X i ω)) μ := by
+          rw [Measure.map_map]; sorry; sorry  -- measurability conditions
+    _ = Measure.map (fun ω => fun i : Fin n => X i ω) μ := rfl
 
 /-- Exchangeability implies full exchangeability (Kolmogorov extension theorem).
 
