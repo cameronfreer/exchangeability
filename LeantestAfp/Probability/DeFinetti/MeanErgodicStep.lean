@@ -274,35 +274,81 @@ theorem l2_contractability_bound
     (_hq_prob : (∑ i, q i) = 1 ∧ ∀ i, 0 ≤ q i) :
     ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ ≤
       2 * σSq * (1 - ρ) * (⨆ i, |p i - q i|) := by
-  -- Proof following Kallenberg page 26, Lemma 1.2
+  -- Proof following Kallenberg page 26, Lemma 1.2 exactly
   
-  -- Let dᵢ = pᵢ - qᵢ, so ∑ᵢ dᵢ = 0 (both are probability distributions)
-  let d : Fin n → ℝ := fun i => p i - q i
-  have hd_sum : ∑ i, d i = 0 := by
-    sorry -- Follows from hp_prob and hq_prob
+  -- Put cⱼ = pⱼ - qⱼ
+  let c : Fin n → ℝ := fun i => p i - q i
   
-  -- Rewrite LHS as E[(∑ dᵢ(ξᵢ - m))²] since ∑dᵢ = 0 cancels the mean
-  have hlhs_eq : ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ =
-                 ∫ ω, (∑ i, d i * (ξ i ω - m))^2 ∂μ := by
-    sorry -- Algebra + use hd_sum to eliminate m terms
+  -- Note that ∑ⱼ cⱼ = 0
+  have hc_sum : ∑ j, c j = 0 := by
+    simp only [c]
+    have hp := _hp_prob.1
+    have hq := _hq_prob.1
+    simp [← Finset.sum_sub_distrib, hp, hq]
   
-  -- Expand the square: (∑ᵢ dᵢ(ξᵢ-m))² = ∑ᵢdᵢ²(ξᵢ-m)² + 2∑ᵢ<ⱼ dᵢdⱼ(ξᵢ-m)(ξⱼ-m)
-  have hexpand : ∫ ω, (∑ i, d i * (ξ i ω - m))^2 ∂μ =
-                 ∑ i, (d i)^2 * σSq + 2 * (∑ i, ∑ j in {j | j ≠ i}, d i * d j * σSq * ρ) := by
-    sorry -- Linearity of integral + use hvar and hcov
+  -- and ∑ⱼ |cⱼ| ≤ 2
+  have hc_abs_sum : ∑ j, |c j| ≤ 2 := by
+    sorry
+    -- Since ∑pⱼ = ∑qⱼ = 1, we have |∑(pⱼ-qⱼ)⁺ - ∑(pⱼ-qⱼ)⁻| ≤ 1
+    -- Therefore ∑|pⱼ-qⱼ| = 2·∑(pⱼ-qⱼ)⁺ ≤ 2
   
-  -- Bound the diagonal term: ∑ᵢ dᵢ² ≤ (sup |dᵢ|) · ∑ᵢ |dᵢ|
-  have hdiag : ∑ i, (d i)^2 ≤ (⨆ i, |d i|) * (∑ i, |d i|) := by
-    sorry -- Each dᵢ² = |dᵢ|·|dᵢ| ≤ (sup|dⱼ|)·|dᵢ|
+  -- Step 1: E(∑cᵢξᵢ)² = E(∑cᵢ(ξᵢ-m))² using ∑cⱼ = 0
+  have step1 : ∫ ω, (∑ i, c i * ξ i ω)^2 ∂μ =
+               ∫ ω, (∑ i, c i * (ξ i ω - m))^2 ∂μ := by
+    congr 1
+    ext ω
+    have : ∑ i, c i * ξ i ω = ∑ i, c i * (ξ i ω - m) := by
+      rw [← Finset.sum_sub_distrib]
+      simp only [mul_sub]
+      rw [Finset.sum_sub_distrib, sub_eq_self]
+      calc ∑ i, c i * m = (∑ i, c i) * m := Finset.sum_mul.symm
+         _ = 0 * m := by rw [hc_sum]
+         _ = 0 := zero_mul _
+    exact congrArg (· ^ 2) this
   
-  -- Bound the off-diagonal term using ∑dᵢ = 0
-  have hoffdiag : ∑ i, ∑ j in {j | j ≠ i}, d i * d j ≤ (∑ i, |d i|)^2 := by
-    sorry -- Use (∑dᵢ)² = 0 to relate cross terms
+  -- Step 2: = ∑ᵢⱼ cᵢcⱼ cov(ξᵢ, ξⱼ) by expanding square and linearity
+  have step2 : ∫ ω, (∑ i, c i * (ξ i ω - m))^2 ∂μ =
+               ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ := by
+    sorry
+    -- Expand (∑ᵢ cᵢ(ξᵢ-m))² = ∑ᵢⱼ cᵢcⱼ(ξᵢ-m)(ξⱼ-m)
+    -- Use linearity of integral
   
-  -- Combine: total ≤ σ²·sup|dᵢ|·∑|dᵢ| + σ²ρ·(∑|dᵢ|)²
-  --              = σ²·sup|dᵢ|·(1-ρ)·∑|dᵢ| + σ²ρ·sup|dᵢ|·∑|dᵢ| + σ²ρ·(∑|dᵢ|)²
-  --              ≤ 2σ²·(1-ρ)·sup|dᵢ|  (using ∑|dᵢ| ≤ 2)
-  sorry
+  -- Step 3: = σ²ρ(∑cᵢ)² + σ²(1-ρ)∑cᵢ² by separating i=j from i≠j
+  have step3 : ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ =
+               σSq * ρ * (∑ i, c i)^2 + σSq * (1 - ρ) * ∑ i, (c i)^2 := by
+    sorry
+    -- Split into diagonal (i=j) using _hvar and off-diagonal (i≠j) using _hcov
+    -- Diagonal: ∑ᵢ cᵢ² · σ²
+    -- Off-diagonal: ∑ᵢ≠ⱼ cᵢcⱼ · σ²ρ = σ²ρ·((∑cᵢ)² - ∑cᵢ²)
+  
+  -- Step 4: = σ²(1-ρ)∑cᵢ² since (∑cᵢ)² = 0
+  have step4 : σSq * ρ * (∑ i, c i)^2 + σSq * (1 - ρ) * ∑ i, (c i)^2 =
+               σSq * (1 - ρ) * ∑ i, (c i)^2 := by
+    rw [hc_sum]
+    simp [zero_pow (Nat.succ_ne_zero 1)]
+  
+  -- Step 5: ≤ σ²(1-ρ)∑|cᵢ| sup|cⱼ| since cᵢ² ≤ |cᵢ| sup|cⱼ|
+  have step5 : ∑ i, (c i)^2 ≤ ∑ i, |c i| * (⨆ j, |c j|) := by
+    sorry
+    -- Each cᵢ² = |cᵢ|² ≤ |cᵢ| · sup|cⱼ|
+  
+  -- Step 6: ≤ 2σ²(1-ρ) sup|cⱼ| since ∑|cᵢ| ≤ 2
+  calc ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ
+      = ∫ ω, (∑ i, c i * ξ i ω)^2 ∂μ := by congr; ext; simp [c]
+    _ = ∫ ω, (∑ i, c i * (ξ i ω - m))^2 ∂μ := step1
+    _ = ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ := step2
+    _ = σSq * ρ * (∑ i, c i)^2 + σSq * (1 - ρ) * ∑ i, (c i)^2 := step3
+    _ = σSq * (1 - ρ) * ∑ i, (c i)^2 := step4
+    _ ≤ σSq * (1 - ρ) * (∑ i, |c i| * (⨆ j, |c j|)) := by
+        apply mul_le_mul_of_nonneg_left step5
+        sorry -- 0 ≤ σSq * (1 - ρ) from _hσ_pos and _hρ_bd
+    _ = σSq * (1 - ρ) * ((∑ i, |c i|) * (⨆ j, |c j|)) := by
+        rw [Finset.sum_mul]
+    _ ≤ σSq * (1 - ρ) * (2 * (⨆ j, |c j|)) := by
+        apply mul_le_mul_of_nonneg_left (mul_le_mul_of_nonneg_right hc_abs_sum _)
+        sorry -- 0 ≤ σSq * (1 - ρ)
+        sorry -- 0 ≤ ⨆ j, |c j|
+    _ = 2 * σSq * (1 - ρ) * (⨆ i, |p i - q i|) := by ring_nf; rfl
 
 end AlternativeL2Bound
 
