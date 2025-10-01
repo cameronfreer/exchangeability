@@ -182,6 +182,38 @@ lemma koopman_eq_self_of_shiftInvariant
   have hfinal : (koopman shift hσ f) =ᵐ[μ] f := hcomp.trans hshift
   exact Lp.ext hfinal
 
+/-- A Koopman-fixed function should be measurable with respect to the invariant σ-algebra.
+
+The key step is to modify a representative of `f` on a null set so that it becomes
+pointwise invariant under the shift; the resulting function will then be
+`shiftInvariantSigma`-measurable by construction. -/
+lemma aestronglyMeasurable_shiftInvariant_of_koopman
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ)
+    {f : Lp ℝ 2 μ}
+    (hfix : koopman shift hσ f = f) :
+    AEStronglyMeasurable[shiftInvariantSigma (α := α)] f μ := by
+  classical
+  /-
+  Proof strategy sketch:
+  1. Unfold the equality `koopman shift hσ f = f` to obtain the almost-everywhere
+     identity `(fun ω => f (shift ω)) =ᵐ[μ] f`.
+  2. Choose a strongly measurable representative `g` of `f`.
+  3. Modify `g` on the μ-null set where the shift invariance fails to build a
+     pointwise invariant function `g'` with `g' = g` almost everywhere.
+  4. Perform the null-set modification inductively along the orbit to ensure
+     `g' ∘ shift = g'` on the nose.
+  5. Conclude that the preimage of any Borel set under `g'` is shift-invariant,
+     hence belongs to `shiftInvariantSigma` by definition, giving the desired
+     measurability.
+  6. Finally transport this back to the original `f` using the `AE` equality.
+
+  Implementing steps (3)–(5) will likely require a bespoke lemma about
+  modifying functions on null sets to enforce invariance; this will be filled in
+  later.
+  -/
+  sorry
+
 /-- The fixed-point subspace of the Koopman operator.
 
 This is the closed subspace of L²(μ) consisting of equivalence classes of functions
