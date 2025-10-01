@@ -178,8 +178,14 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω} {X : ℕ → Ω →
     let μ_Xπ := Measure.map (fun ω => fun n : ℕ => X (π n) ω) μ
     
     -- Step 2: Both are probability measures on ℕ → α
-    have hμ_X : IsProbabilityMeasure μ_X := sorry
-    have hμ_Xπ : IsProbabilityMeasure μ_Xπ := sorry
+    have hμ_X : IsProbabilityMeasure μ_X := by
+      sorry
+      -- Pushforward of probability measure is probability measure (instance)
+      -- Requires: AEMeasurable (fun ω => fun n => X n ω) μ
+    have hμ_Xπ : IsProbabilityMeasure μ_Xπ := by
+      sorry
+      -- Pushforward of probability measure is probability measure (instance)
+      -- Requires: AEMeasurable (fun ω => fun n => X (π n) ω) μ
     
     -- Step 3: Show finite-dimensional marginals agree
     -- For any n and any measurable set S ⊆ (Fin n → α):
@@ -187,12 +193,22 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω} {X : ℕ → Ω →
         μ_X.map (fun f : ℕ → α => fun i : Fin n => f i) S =
         μ_Xπ.map (fun f : ℕ → α => fun i : Fin n => f i) S := by
       intro n S hS
-      -- This follows from exchangeability hexch applied to π restricted to Fin n
+      -- Unwinding the measure maps:
+      -- μ_X.map proj S = μ (proj⁻¹ ∘ (fun ω => X · ω))⁻¹' S
+      --                = μ {ω | (fun i : Fin n => X i ω) ∈ S}
+      -- μ_Xπ.map proj S = μ {ω | (fun i : Fin n => X (π i) ω) ∈ S}
+      --
+      -- Define σ : Perm (Fin n) that captures π's action on {0,...,n-1}:
+      -- For i : Fin n, let σ(i) be the Fin n index corresponding to π(i.val) mod ordering
+      -- 
+      -- By exchangeability hexch applied to σ:
+      --   Measure.map (fun ω i => X (σ i) ω) μ = Measure.map (fun ω i => X i ω) μ
+      -- This gives us the required equality after relating σ to π's restriction
       sorry
-      -- Detailed proof:
-      -- a) π restricts to a bijection Fin n → Fin n (up to reindexing)
-      -- b) By exchangeability hexch, permuting the first n indices preserves the law
-      -- c) Therefore the marginals on Fin n → α coincide
+      -- Technical steps:
+      -- 1. Construct σ from π (may need choice/sorting to map π's image to Fin n)
+      -- 2. Apply hexch to σ
+      -- 3. Show the preimages coincide modulo the σ ↔ π correspondence
     
     -- Step 4: By Ionescu-Tulcea/Kolmogorov extension theorem, measures on ℕ → α
     -- are uniquely determined by their finite-dimensional marginals
