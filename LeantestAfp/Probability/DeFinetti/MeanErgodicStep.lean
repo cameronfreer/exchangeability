@@ -369,8 +369,21 @@ theorem l2_contractability_bound
       -- Split into diagonal and off-diagonal
       have h_split : ∑ i, ∑ j, c i * c j = 
                      (∑ i, c i * c i) + (∑ i, ∑ j in (Finset.univ.filter (· ≠ i)), c i * c j) := by
-        conv_lhs => rw [← Finset.sum_filter_add_sum_filter_not Finset.univ (fun j => j = i) (fun j => c i * c j)]
-        sorry -- Simplify filter (j = i) and filter (j ≠ i)
+        apply Finset.sum_congr rfl
+        intro i _
+        -- For each i, split the inner sum over j into j=i and j≠i
+        conv_lhs => 
+          rw [← Finset.sum_filter_add_sum_filter_not Finset.univ (fun j => j = i) (fun j => c i * c j)]
+        congr 1
+        · -- The filter (j = i) gives just the singleton {i}
+          have : Finset.filter (fun j => j = i) Finset.univ = {i} := by
+            ext j
+            simp [Finset.mem_filter, Finset.mem_singleton]
+          rw [this, Finset.sum_singleton]
+        · -- The filter (j ≠ i) is what we want
+          congr 1
+          ext j
+          simp [Finset.mem_filter]
       calc ∑ i, ∑ j in (Finset.univ.filter (· ≠ i)), c i * c j
           = (∑ i, c i)^2 - ∑ i, c i * c i := by
             rw [h_sq_expand, h_split]; ring
@@ -378,9 +391,15 @@ theorem l2_contractability_bound
             congr 1; ext i; ring
     
     -- Combine diagonal and off-diagonal
+    -- We need to show the LHS equals σ²ρ(∑cᵢ)² + σ²(1-ρ)∑cᵢ²
+    -- Strategy: split the double sum into diagonal and off-diagonal, apply formulas
     sorry
-    -- Use h_diag, h_offdiag, and h_offdiag_expand
-    -- Algebra to rearrange into σ²ρ(∑cᵢ)² + σ²(1-ρ)∑cᵢ²
+    -- Need to show: ∑ᵢⱼ cᵢcⱼ∫(ξᵢ-m)(ξⱼ-m) = σ²(∑cᵢ²) + σ²ρ((∑cᵢ)² - ∑cᵢ²)
+    -- Which simplifies to: σ²ρ(∑cᵢ)² + σ²(1-ρ)∑cᵢ²
+    -- This follows from:
+    --   - Diagonal part: h_diag gives σ²∑cᵢ²
+    --   - Off-diagonal: h_offdiag + h_offdiag_expand gives σ²ρ((∑cᵢ)² - ∑cᵢ²)
+    --   - Combine: σ²∑cᵢ² + σ²ρ((∑cᵢ)² - ∑cᵢ²) = σ²ρ(∑cᵢ)² + σ²(1-ρ)∑cᵢ²
   
   -- Step 4: = σ²(1-ρ)∑cᵢ² since (∑cᵢ)² = 0
   have step4 : σSq * ρ * (∑ i, c i)^2 + σSq * (1 - ρ) * ∑ i, (c i)^2 =
