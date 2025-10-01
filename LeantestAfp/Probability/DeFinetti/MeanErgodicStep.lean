@@ -313,17 +313,51 @@ theorem l2_contractability_bound
   -- Step 2: = ∑ᵢⱼ cᵢcⱼ cov(ξᵢ, ξⱼ) by expanding square and linearity
   have step2 : ∫ ω, (∑ i, c i * (ξ i ω - m))^2 ∂μ =
                ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ := by
-    sorry
     -- Expand (∑ᵢ cᵢ(ξᵢ-m))² = ∑ᵢⱼ cᵢcⱼ(ξᵢ-m)(ξⱼ-m)
-    -- Use linearity of integral
+    rw [Finset.sum_pow_two]
+    -- Now we have: ∫ (∑ᵢ (cᵢ(ξᵢ-m))² + ∑ᵢ≠ⱼ cᵢ(ξᵢ-m)·cⱼ(ξⱼ-m))
+    -- Rewrite as double sum
+    have h_expand : (∑ i, c i * (ξ i ω - m))^2 =
+                    ∑ i, ∑ j, c i * (ξ i ω - m) * (c j * (ξ j ω - m)) := by
+      sorry
+      -- Use Finset.sum_mul_sum or similar
+    sorry
+    -- Then: ∫ ∑ᵢⱼ cᵢcⱼ(ξᵢ-m)(ξⱼ-m) = ∑ᵢⱼ cᵢcⱼ ∫(ξᵢ-m)(ξⱼ-m)
+    -- This needs: integral_finset_sum and mul_comm for constants
   
   -- Step 3: = σ²ρ(∑cᵢ)² + σ²(1-ρ)∑cᵢ² by separating i=j from i≠j
   have step3 : ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ =
                σSq * ρ * (∑ i, c i)^2 + σSq * (1 - ρ) * ∑ i, (c i)^2 := by
+    -- Split the double sum into diagonal (i=j) and off-diagonal (i≠j)
+    -- Diagonal terms: ∑ᵢ cᵢ² ∫(ξᵢ-m)² = ∑ᵢ cᵢ² · σ²
+    have h_diag : ∑ i in Finset.univ, c i * c i * ∫ ω, (ξ i ω - m) * (ξ i ω - m) ∂μ =
+                  σSq * ∑ i, (c i)^2 := by
+      rw [← Finset.sum_mul]
+      congr 1
+      ext i
+      have hvar_i := _hvar i
+      calc c i * c i * ∫ ω, (ξ i ω - m) * (ξ i ω - m) ∂μ
+          = (c i)^2 * ∫ ω, (ξ i ω - m)^2 ∂μ := by ring_nf; rfl
+        _ = (c i)^2 * σSq := by rw [hvar_i]
+    
+    -- Off-diagonal: ∑ᵢ≠ⱼ cᵢcⱼ ∫(ξᵢ-m)(ξⱼ-m) = ∑ᵢ≠ⱼ cᵢcⱼ · σ²ρ
+    have h_offdiag : ∑ i, ∑ j in (Finset.univ.filter (· ≠ i)), 
+                     c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ =
+                     σSq * ρ * ∑ i, ∑ j in (Finset.univ.filter (· ≠ i)), c i * c j := by
+      sorry
+      -- Apply _hcov to each off-diagonal term
+    
+    -- Relate off-diagonal sum to (∑cᵢ)²
+    have h_offdiag_expand : ∑ i, ∑ j in (Finset.univ.filter (· ≠ i)), c i * c j =
+                            (∑ i, c i)^2 - ∑ i, (c i)^2 := by
+      sorry
+      -- Use Finset.sum_mul_sum to get (∑cᵢ)² = ∑ᵢⱼ cᵢcⱼ
+      -- Then separate diagonal from off-diagonal
+    
+    -- Combine diagonal and off-diagonal
     sorry
-    -- Split into diagonal (i=j) using _hvar and off-diagonal (i≠j) using _hcov
-    -- Diagonal: ∑ᵢ cᵢ² · σ²
-    -- Off-diagonal: ∑ᵢ≠ⱼ cᵢcⱼ · σ²ρ = σ²ρ·((∑cᵢ)² - ∑cᵢ²)
+    -- Use h_diag, h_offdiag, and h_offdiag_expand
+    -- Algebra to rearrange into σ²ρ(∑cᵢ)² + σ²(1-ρ)∑cᵢ²
   
   -- Step 4: = σ²(1-ρ)∑cᵢ² since (∑cᵢ)² = 0
   have step4 : σSq * ρ * (∑ i, c i)^2 + σSq * (1 - ρ) * ∑ i, (c i)^2 =
@@ -340,8 +374,13 @@ theorem l2_contractability_bound
     rw [h_sq]
     have h_le : |c i| ≤ ⨆ j, |c j| := by
       apply le_ciSup
-      sorry -- Bounded above: use Finset.univ is finite
-      sorry -- i is in the index set
+      · -- Bounded above: Finset.univ is finite
+        use (Finset.univ.image (fun j => |c j|)).sup id
+        intro y ⟨j, hj⟩
+        rw [← hj]
+        exact Finset.le_sup (Finset.mem_image.mpr ⟨j, Finset.mem_univ j, rfl⟩)
+      · -- i is in the index set (always true for Fin n)
+        exact Finset.mem_univ i
     calc |c i|^2 = |c i| * |c i| := sq _
        _ ≤ |c i| * (⨆ j, |c j|) := mul_le_mul_of_nonneg_left h_le (abs_nonneg _)
   
@@ -351,9 +390,10 @@ theorem l2_contractability_bound
     linarith [_hρ_bd.2]  -- ρ ≤ 1 implies 0 ≤ 1 - ρ
   
   have hsup_nonneg : 0 ≤ ⨆ j, |c j| := by
-    sorry
     -- Supremum of nonnegative values is nonnegative
-    -- Could use ciSup_nonneg or similar
+    apply ciSup_nonneg
+    intro j
+    exact abs_nonneg _
   
   -- Step 6: ≤ 2σ²(1-ρ) sup|cⱼ| since ∑|cᵢ| ≤ 2
   calc ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ
