@@ -93,13 +93,25 @@ def extendFinPerm (n : ℕ) (σ : Equiv.Perm (Fin n)) : Equiv.Perm ℕ where
     intro i
     by_cases h : i < n
     · simp only [h, dite_true]
-      sorry -- Need to show σ.symm (σ ⟨i, h⟩) returns i
+      -- Need to show: if σ⟨i,h⟩ < n then σ.symm (σ ⟨i, h⟩).val else σ⟨i,h⟩.val = i
+      have hσi : (σ ⟨i, h⟩).val < n := (σ ⟨i, h⟩).isLt
+      simp only [hσi, dite_true]
+      -- Now: σ.symm ⟨(σ ⟨i, h⟩).val, hσi⟩ = i
+      have : (σ.symm ⟨(σ ⟨i, h⟩).val, hσi⟩ : Fin n) = ⟨i, h⟩ := by
+        simp [Fin.ext_iff]
+      exact congrArg Fin.val this
     · simp [h]
   right_inv := by
     intro i
     by_cases h : i < n
     · simp only [h, dite_true]
-      sorry -- Need to show σ (σ.symm ⟨i, h⟩) returns i
+      -- Need to show: if σ.symm⟨i,h⟩ < n then σ (σ.symm ⟨i, h⟩).val else (σ.symm⟨i,h⟩).val = i
+      have hσi : (σ.symm ⟨i, h⟩).val < n := (σ.symm ⟨i, h⟩).isLt
+      simp only [hσi, dite_true]
+      -- Now: σ ⟨(σ.symm ⟨i, h⟩).val, hσi⟩ = i
+      have : (σ ⟨(σ.symm ⟨i, h⟩).val, hσi⟩ : Fin n) = ⟨i, h⟩ := by
+        simp [Fin.ext_iff]
+      exact congrArg Fin.val this
     · simp [h]
 
 /-- Full exchangeability implies exchangeability.
