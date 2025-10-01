@@ -160,13 +160,31 @@ theorem proj_eq_condexp {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     ∃ (P : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ),
       (∀ f, f ∈ fixedSubspace hσ → P f = f) ∧
       (∀ f, P f = condexpL2 shiftInvariantSigma f) := by
+  /-
+  Sketch of proof:
+  1. Let `P₀ := (lpMeas …).orthogonalProjection`. Observe that our definition of `condexpL2`
+     is `subtypeL.comp P₀`, so showing `P₀` equals the orthogonal projection onto
+     `fixedSubspace hσ` is enough.
+  2. Build the equivalence of subspaces.
+     * (Forward) If `g` is `shiftInvariantSigma`-measurable, then `g ∘ shift = g` a.e.
+       Produce a lemma
+         `lemma shiftInvariantSigma_measurable_aestronglyMeasurable
+             (hg : AEStronglyMeasurable[m] g μ) : g ∘ shift =ᵐ μ g`.
+       This will use that measurable sets in `shiftInvariantSigma` are invariant by the
+       definition of the σ-algebra, together with the fact that evaluation maps on `Ω[α]`
+       generate the σ-algebra.
+     * (Reverse) If `koopman shift hσ f = f`, then `f` is invariant a.e.  Use the
+       representatives lemma for `Lp` to get an a.e. equal function `g`. Show that `g` is
+       measurable w.r.t. `shiftInvariantSigma` by proving that its level sets belong to
+       the invariant σ-algebra.  A convenient way is to start with simple functions,
+       use stability of the invariant σ-algebra under limits, and appeal to the
+       dominated convergence theorem.
+  3. Once the two closed subspaces agree, uniqueness of orthogonal projections yields the
+     desired statement (cf. `Submodule.orthogonalProjection_eq_self_of_subset`).
+  4. Finally, wrap up: choose `P := condexpL2 shiftInvariantSigma` and show it satisfies the
+     two characterising properties using the two inclusions from step 2.
+  -/
   sorry
-  -- Proof outline:
-  -- 1. Both operators are orthogonal projections onto closed subspaces
-  -- 2. Show the target subspaces are equal:
-  --    (a) If f is shiftInvariantSigma-measurable, then koopman shift hσ f = f
-  --    (b) If koopman shift hσ f = f, then f is a.e. measurable w.r.t. shiftInvariantSigma
-  -- 3. Orthogonal projections onto the same closed subspace are unique
 
 /-- The range of conditional expectation onto the invariant σ-algebra equals
 the fixed-point subspace. -/
@@ -182,6 +200,14 @@ lemma range_condexp_eq_fixedSubspace {μ : Measure (Ω[α])} [IsProbabilityMeasu
     rw [← hg]
     -- condexpL2 g is measurable w.r.t. shiftInvariantSigma
     -- hence invariant under shift, so Koopman fixes it
+    /-
+    Outline:
+    1. Apply the measurability statement from the sketch above to conclude that
+       `condexpL2 shiftInvariantSigma g` has a representative that is
+       `shiftInvariantSigma`-measurable.
+    2. Invoke the forward inclusion lemma to deduce Koopman invariance, and then
+       restate it as membership in `fixedSubspace hσ` via `mem_fixedSubspace_iff`.
+    -/
     sorry
   · -- (⊇) fixedSubspace ⊆ Range of condexpL2
     intro hf
@@ -189,6 +215,15 @@ lemma range_condexp_eq_fixedSubspace {μ : Measure (Ω[α])} [IsProbabilityMeasu
     -- hence measurable w.r.t. shiftInvariantSigma
     -- so f = condexpL2 f
     use f
+    /-
+    Outline:
+    1. Starting from `hf : f ∈ fixedSubspace hσ`, use `mem_fixedSubspace_iff` to get the
+       almost everywhere invariance of `f` under `shift`.
+    2. Produce a representative that is strictly invariant on a μ-a.e. invariant set,
+       then prove it is `shiftInvariantSigma`-measurable (reverse inclusion lemma).
+    3. Invoke the defining property of conditional expectation on `Lp` to conclude that
+       `condexpL2 shiftInvariantSigma f = f`.
+    -/
     sorry
 
 end LeantestAfp.Probability.DeFinetti
