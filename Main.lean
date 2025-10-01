@@ -1,21 +1,18 @@
--- Main entry point for leantest-afp basic Lean 4 example
+-- Main entry point for the leantest-afp project.
 import Std
 import LeantestAfp
 
 def main : IO Unit := do
   IO.println "========================================="
-  IO.println "  Welcome to leantest-afp!"
-  IO.println "  Basic Lean 4 Example Project"
+  IO.println "  Welcome to leantest-afp"
+  IO.println "  Towards a formal de Finetti theorem"
   IO.println "========================================="
   IO.println ""
-  IO.println "This project demonstrates:"
-  IO.println "• Basic function definitions"
-  IO.println "• Simple theorems and proofs"
-  IO.println "• Type definitions (structures)"
-  IO.println "• List operations"
-  IO.println "• Mathematical computations"
+  IO.println "This project focuses on developing the infrastructure needed"
+  IO.println "for a Lean 4 proof of de Finetti's theorem."
   IO.println ""
-  IO.println "Check out the source files in LeantestAfp/ to see examples!"
+  IO.println "Key files:"
+  IO.println "• `LeantestAfp/Probability/DeFinetti.lean`"
+  IO.println "• `blueprint/deFinetti.md`"
   IO.println ""
-  IO.println "Run 'lake build' to build the project"
-  IO.println "Run 'lean --run LeantestAfp/Basic.lean' to see the #eval outputs"
+  IO.println "Run 'lake build' to build the project."
