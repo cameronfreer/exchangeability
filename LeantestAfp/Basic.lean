@@ -10,11 +10,11 @@ def distance (p1 p2 : Point) : Float :=
   Float.sqrt ((p1.x - p2.x)^2 + (p1.y - p2.y)^2)
 
 -- Simple theorem: addition is commutative
-theorem add_comm (a b : Nat) : a + b = b + a := by
+theorem add_comm_example (a b : Nat) : a + b = b + a := by
   exact Nat.add_comm a b
 
 -- Simple theorem: zero is the additive identity
-theorem add_zero (n : Nat) : n + 0 = n := by
+theorem add_zero_example (n : Nat) : n + 0 = n := by
   exact Nat.add_zero n
 
 -- Example of list operations

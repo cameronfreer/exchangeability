@@ -24,7 +24,7 @@ def alice : Student := ⟨"Alice", 20, "A"⟩
 -- Theorems are propositions that we prove to be true
 
 -- This theorem says that for any number n, n + 0 equals n
-theorem zero_add (n : Nat) : n + 0 = n := by
+theorem zero_add_example (n : Nat) : n + 0 = n := by
   -- Lean knows this is true, so we can use 'rfl' (reflexivity)
   rfl
 
@@ -67,7 +67,7 @@ def countdown (n : Nat) : List Nat :=
 -- 7. SIMPLE PROOFS BY INDUCTION
 -- Many theorems about natural numbers are proved by induction
 
-theorem add_zero_right (n : Nat) : n + 0 = n := by
+theorem add_zero_right_example (n : Nat) : n + 0 = n := by
   -- This is built into Lean, but we could prove it by induction:
   induction n with
   | zero => rfl  -- Base case: 0 + 0 = 0
