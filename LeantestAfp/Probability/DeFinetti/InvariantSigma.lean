@@ -233,8 +233,36 @@ lemma aestronglyMeasurable_shiftInvariant_of_koopman
     simpa [S, Set.mem_setOf_eq] using hshift_g
   have hS_null : μ Sᶜ = 0 := by
     simpa [ae_iff, S, Set.mem_setOf_eq] using hS_ae
-  -- TODO: Define `S∞ := ⋂ n, (shift^[n]) ⁻¹' S` and prove it has full μ-measure using the
-  -- measure-preserving property of the iterates of `shift`.
+  -- STEP 4. Upgrade to a set that encodes invariance along the entire orbit.
+  classical
+  let S∞ : Set (Ω[α]) := ⋂ n : ℕ, (shift^[n]) ⁻¹' S
+  have hSinf_null : μ S∞ᶜ = 0 := by
+    have hcompl : S∞ᶜ = ⋃ n : ℕ, (shift^[n]) ⁻¹' Sᶜ := by
+      classical
+      simpa [S∞, Set.preimage_compl] using
+        (Set.compl_iInter (fun n : ℕ => (shift^[n]) ⁻¹' S))
+    have hpreimage_null : ∀ n : ℕ, μ ((shift^[n]) ⁻¹' Sᶜ) = 0 := by
+      intro n
+      simpa using ((MeasurePreserving.iterate hσ n).preimage_null hS_null)
+    simpa [hcompl] using measure_iUnion_null hpreimage_null
+  have hSinf_ae : ∀ᵐ ω ∂μ, ω ∈ S∞ := by
+    simpa [ae_iff, S∞] using hSinf_null
+  have hSinf_mem : ∀ {ω}, ω ∈ S∞ → ∀ n : ℕ, shift^[n] ω ∈ S := by
+    intro ω hω n
+    have hmem := Set.mem_iInter.mp hω n
+    exact hmem
+  have hSinf_one_step : ∀ {ω}, ω ∈ S∞ → g (shift ω) = g ω := by
+    intro ω hω
+    have := hSinf_mem (ω := ω) hω 0
+    simpa [S] using this
+  have hSinf_forward : ∀ {ω}, ω ∈ S∞ → shift ω ∈ S∞ := by
+    intro ω hω
+    refine Set.mem_iInter.mpr ?_
+    intro n
+    have := hSinf_mem (ω := ω) hω (n + 1)
+    simpa [Function.iterate_succ] using this
+  -- TODO: Show that `S∞` is invariant under `shift` and use it to modify `g` into a
+  -- pointwise shift-invariant representative.
   -- TODO: show that `S` is measurable and construct the iterated invariant set `S∞`.
   -- TODO: Continue by modifying a representative of `f` on a null set to obtain a pointwise
   -- shift-invariant function and use it to show `f` is measurable w.r.t. `shiftInvariantSigma`.
