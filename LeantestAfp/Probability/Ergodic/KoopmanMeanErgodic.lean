@@ -92,12 +92,8 @@ def fixedSpace {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 
 /-- Mean Ergodic Theorem: Birkhoff averages converge to the projection onto the fixed-point subspace.
 
-This is the key theorem connecting dynamics to functional analysis. For a contraction
-(or isometry) U on a Hilbert space, the Birkhoff averages converge strongly to the
-orthogonal projection onto the fixed-point subspace.
-
-TODO: This requires the von Neumann Mean Ergodic Theorem from mathlib.
-For now we state it as a sorry to establish the API.
+This specializes the von Neumann Mean Ergodic Theorem from mathlib to the Koopman
+operator on `Lp` and packages the limiting projection as a continuous linear map.
 -/
 theorem birkhoffAverage_tendsto_fixedSpace
     {μ : Measure Ω} [IsProbabilityMeasure μ] (T : Ω → Ω)
