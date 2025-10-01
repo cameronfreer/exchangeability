@@ -44,32 +44,42 @@ open MeasureTheory Filter
 
 /-!
 ## Exchangeable families
+
+**Note on terminology**: There are three related notions:
+1. **Exchangeability** for infinite sequences (defined here): invariance under finite permutations
+2. **Full exchangeability** for infinite sequences: invariance under all permutations of ℕ
+3. Exchangeability for **finite** sequences: a separate notion for fixed-length tuples
+
+This file focuses on notions (1) and (2) for infinite sequences. The finite-sequence
+case has its own de Finetti-type results but is conceptually distinct.
 -/
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
-/-- An infinite family of random variables `X : ℕ → Ω → α` is **finitely exchangeable**
+/-- An infinite family of random variables `X : ℕ → Ω → α` is **exchangeable**
 if the finite-dimensional distributions are invariant under permutations of finitely
 many indices. Concretely, the joint law of `X 0, …, X (n-1)` coincides with the
 law of `X σ 0, …, X σ (n-1)` for every permutation `σ` of `Fin n`.
 
-This is the standard operational definition of exchangeability.
+This is the standard operational definition of exchangeability for infinite sequences.
+It is also called "finitely exchangeable" in some texts to distinguish it from full
+exchangeability (see `FullyExchangeable`).
 -/
-def FinitelyExchangeable (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
+def Exchangeable (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
   ∀ n (σ : Equiv.Perm (Fin n)),
     Measure.map (fun ω => fun i : Fin n => X (σ i) ω) μ =
       Measure.map (fun ω => fun i : Fin n => X i ω) μ
 
-/-- An infinite family of random variables `X : ℕ → Ω → α` is **(fully) exchangeable**
+/-- An infinite family of random variables `X : ℕ → Ω → α` is **fully exchangeable**
 if the joint distribution is invariant under all permutations of ℕ (not just finite ones).
 
 That is, for any permutation `π : Equiv.Perm ℕ`, the process `X ∘ π` has the same
 law as `X`.
 
-This is a stronger notion than finite exchangeability, but by the Kolmogorov extension
-theorem they are equivalent for consistent families.
+This is formally stronger than exchangeability, but by the Kolmogorov extension
+theorem they are equivalent for consistent families (see `exchangeable_iff_fullyExchangeable`).
 -/
-def Exchangeable (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
+def FullyExchangeable (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
   ∀ (π : Equiv.Perm ℕ),
     Measure.map (fun ω => fun i : ℕ => X (π i) ω) μ =
       Measure.map (fun ω => fun i : ℕ => X i ω) μ
@@ -91,12 +101,12 @@ def extendFinPerm (n : ℕ) (σ : Equiv.Perm (Fin n)) : Equiv.Perm ℕ where
       sorry -- Need to show σ (σ.symm ⟨i, h⟩) returns i
     · simp [h]
 
-/-- Full exchangeability implies finite exchangeability.
+/-- Full exchangeability implies exchangeability.
 
 This is immediate since every finite permutation extends to a permutation of ℕ.
 -/
-lemma Exchangeable.finitelyExchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
-    (hX : Exchangeable μ X) : FinitelyExchangeable μ X := by
+lemma FullyExchangeable.exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
+    (hX : FullyExchangeable μ X) : Exchangeable μ X := by
   intro n σ
   -- Extend σ : Perm (Fin n) to π : Perm ℕ by fixing all i ≥ n
   let π := extendFinPerm n σ
@@ -107,9 +117,9 @@ lemma Exchangeable.finitelyExchangeable {μ : Measure Ω} {X : ℕ → Ω → α
   -- 1. Show that composing with π on ℕ is the same as composing with σ on Fin n
   -- 2. Project to the first n coordinates to get the desired equality
 
-/-- Finite exchangeability implies full exchangeability (Kolmogorov extension theorem).
+/-- Exchangeability implies full exchangeability (Kolmogorov extension theorem).
 
-For a finitely exchangeable family `X`, the finite-dimensional distributions satisfy
+For an exchangeable family `X`, the finite-dimensional distributions satisfy
 the consistency conditions required by Kolmogorov's extension theorem. This allows us
 to construct a unique probability measure on the infinite product space such that
 the process is fully exchangeable.
@@ -120,18 +130,18 @@ the process is fully exchangeable.
 
 **TODO**: Requires Kolmogorov extension theorem from mathlib or a formalization thereof.
 -/
-theorem finitelyExchangeable_iff_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
+theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
     [IsProbabilityMeasure μ] :
-    FinitelyExchangeable μ X ↔ Exchangeable μ X := by
+    Exchangeable μ X ↔ FullyExchangeable μ X := by
   constructor
-  · intro hfin
+  · intro hexch
     -- Forward direction uses Kolmogorov extension
     sorry
     -- Proof outline:
     -- 1. Show finite-dimensional distributions satisfy consistency
     -- 2. Apply Kolmogorov extension to get unique measure on ℕ → α
     -- 3. Show this measure is invariant under all permutations
-  · exact Exchangeable.finitelyExchangeable
+  · exact FullyExchangeable.exchangeable
 
 /-- The tail `σ`-algebra generated by the tails of the process `X`.  It is the
 intersection of the `σ`-algebras generated by the coordinates from `n`
