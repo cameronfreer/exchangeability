@@ -100,9 +100,8 @@ lake build
 ```
 
 **Warnings** (expected):
-- 12 `sorry` placeholders across 3 new files
-- 1 unused section variable warning (cosmetic)
-- All are documented with TODOs indicating required mathlib lemmas
+- 8 `sorry` placeholders across 3 new files (down from 12)
+- All are documented with TODOs indicating required mathlib lemmas or proof strategies
 
 ---
 
