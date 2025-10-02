@@ -86,16 +86,46 @@ lemma measure_map_comp_perm {μ : Measure Ω} {n : ℕ} (f g : Ω → Fin n → 
     (h : Measure.map f μ = Measure.map g μ) :
     Measure.map (fun ω i => f ω (σ i)) μ = Measure.map (fun ω i => g ω (σ i)) μ := by
   -- The key is that composing with σ on the right is the same as
-  -- applying σ⁻¹ to the measure on the left
-  have : (fun ω i => f ω (σ i)) = (fun h => h ∘ σ) ∘ f := by
+  -- applying a measurable map to the measure
+  
+  -- Define the permutation map on (Fin n → α)
+  let perm_map : (Fin n → α) → (Fin n → α) := fun h => h ∘ σ
+  
+  -- We have: (fun ω i => f ω (σ i)) = perm_map ∘ f
+  have hf : (fun ω i => f ω (σ i)) = perm_map ∘ f := by
     ext ω i
     rfl
-  have : (fun ω i => g ω (σ i)) = (fun h => h ∘ σ) ∘ g := by
+  
+  have hg : (fun ω i => g ω (σ i)) = perm_map ∘ g := by
     ext ω i
     rfl
-  -- Now we need: map ((· ∘ σ) ∘ f) μ = map ((· ∘ σ) ∘ g) μ
-  -- This follows from map_map and the hypothesis
+  
+  -- Rewrite using these equalities
+  rw [hf, hg]
+  
+  -- Now we need: map (perm_map ∘ f) μ = map (perm_map ∘ g) μ
+  -- By map_map (if perm_map is measurable):
+  -- map (perm_map ∘ f) μ = map perm_map (map f μ)
+  -- map (perm_map ∘ g) μ = map perm_map (map g μ)
+  -- Since map f μ = map g μ, we get the result
+  
+  -- The issue: we need perm_map to be measurable
+  -- This requires the product σ-algebra structure
   sorry
+
+/-- Special case: The identity function on Fin n is strictly monotone when
+viewed as a function to ℕ. -/
+lemma fin_val_strictMono (n : ℕ) : StrictMono (fun i : Fin n => i.val) := by
+  intro i j hij
+  exact hij
+
+/-- For a permutation σ on Fin n, the range {σ(0), ..., σ(n-1)} equals {0, ..., n-1}. -/
+lemma perm_range_eq (n : ℕ) (σ : Equiv.Perm (Fin n)) :
+    Finset.image (fun i : Fin n => σ i) Finset.univ = Finset.univ := by
+  ext x
+  simp only [Finset.mem_image, Finset.mem_univ, true_and, iff_true]
+  use σ.symm x
+  simp
 
 /-- **Theorem 1.1 (de Finetti-Ryll-Nardzewski)**: Every exchangeable sequence is contractable.
 
@@ -138,19 +168,23 @@ theorem exchangeable_of_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
   -- Key insight: {σ(0), ..., σ(n-1)} = {0, ..., n-1} as sets (σ is a bijection)
   -- So both are just reorderings of the same n variables.
   
-  -- Step 1: Define the sorted version of σ
-  -- sort_σ : Fin n → ℕ maps i to the i-th smallest element of {σ(0), ..., σ(n-1)}
-  -- Since σ is a bijection on Fin n, we have {σ(0), ..., σ(n-1)} = {0, ..., n-1}
-  -- So sort_σ is just the identity: sort_σ(i) = i
+  -- Step 1: Observe that σ permutes Fin n, so {σ(0), ..., σ(n-1)} = {0, ..., n-1}
+  have h_range : Finset.image (fun i : Fin n => σ i) Finset.univ = Finset.univ := 
+    perm_range_eq n σ
   
-  -- Step 2: There exists a permutation τ such that σ = sort_σ ∘ τ
-  -- In other words, σ(i) = sort_σ(τ(i)) for all i
+  -- Step 2: The sorted version of {σ(0), ..., σ(n-1)} is just {0, ..., n-1}
+  -- So we're comparing (X_{σ(0)}, ..., X_{σ(n-1)}) with (X_0, ..., X_{n-1})
   
-  -- Step 3: Apply contractability to sort_σ and id
-  have h_sorted : Measure.map (fun ω i => X i ω) μ = Measure.map (fun ω i => X i ω) μ := rfl
+  -- Step 3: Both can be viewed as selecting n elements from X
+  -- The identity map i ↦ i is strictly monotone
+  have h_id_mono : StrictMono (fun i : Fin n => i.val) := fin_val_strictMono n
   
-  -- Step 4: Use measure_map_comp_perm to permute by τ
-  -- This would give us the result, but we need to construct τ and sort_σ properly
+  -- Step 4: By contractability, any strictly monotone selection of n elements
+  -- has the same distribution as (X_0, ..., X_{n-1})
+  -- But σ is not necessarily monotone, so we can't apply contractability directly
+  
+  -- The key issue: we need to relate σ (a permutation) to monotone selections
+  -- This requires decomposing σ or using a different approach
   
   sorry
 
