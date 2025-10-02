@@ -81,57 +81,65 @@ theorem l2_contractability_bound
   
   -- and ∑ⱼ |cⱼ| ≤ 2
   have hc_abs_sum : ∑ j, |c j| ≤ 2 := by
-    -- Split indices by sign of c j
+    classical
     let Pos := Finset.univ.filter fun j : Fin n => 0 ≤ c j
     let Neg := Finset.univ.filter fun j : Fin n => c j < 0
-    
-    -- Split the sum ∑c_j = 0 into positive and negative parts
+
     have hsplit_c : ∑ j ∈ Pos, c j + ∑ j ∈ Neg, c j = 0 := by
-      have h := Finset.sum_filter_add_sum_filter_not Finset.univ (fun j => 0 ≤ c j) (fun j => c j)
-      have : Finset.univ.filter (fun j => ¬0 ≤ c j) = Neg := by
-        ext j; simp [Neg]; tauto
-      simpa [Pos, this, hc_sum] using h
-    
-    -- Therefore ∑_{j∈Pos} c_j = -∑_{j∈Neg} c_j
-    have hbalance : ∑ j ∈ Pos, c j = -∑ j ∈ Neg, c j := by linarith [hsplit_c]
-    
-    -- Split ∑|c_j| into positive and negative parts
-    have hsplit_abs : ∑ j, |c j| = ∑ j ∈ Pos, c j + (-∑ j ∈ Neg, c j) := by
-      have h := Finset.sum_filter_add_sum_filter_not Finset.univ (fun j => 0 ≤ c j) (fun j => |c j|)
-      have hneg_filter : Finset.univ.filter (fun j => ¬0 ≤ c j) = Neg := by
-        ext j; simp [Neg]; tauto
-      have habs_pos : ∀ j ∈ Pos, |c j| = c j := fun j hj => abs_of_nonneg (Finset.mem_filter.mp hj).2
-      have habs_neg : ∀ j ∈ Neg, |c j| = -(c j) := fun j hj => abs_of_neg (Finset.mem_filter.mp hj).2
-      calc ∑ j, |c j|
-          = ∑ j ∈ Pos, |c j| + ∑ j ∈ Neg, |c j| := by simpa [Pos, hneg_filter] using h
-        _ = ∑ j ∈ Pos, c j + ∑ j ∈ Neg, (-(c j)) := by
-            congr 1
-            · exact Finset.sum_congr rfl habs_pos
-            · exact Finset.sum_congr rfl habs_neg
-        _ = ∑ j ∈ Pos, c j + (-∑ j ∈ Neg, c j) := by simp [Finset.sum_neg_distrib]
-    
-    -- So ∑|c_j| = 2·∑_{j∈Pos} c_j using the balance
+      have h := Finset.sum_filter_add_sum_filter_not (s := Finset.univ)
+        (p := fun j : Fin n => 0 ≤ c j) (f := fun j => c j)
+      have hsum_univ : ∑ j ∈ (Finset.univ : Finset (Fin n)), c j = 0 := by
+        simpa using hc_sum
+      simpa [Pos, Neg, hsum_univ]
+        using h
+
+    have hbalance : ∑ j ∈ Pos, c j = -∑ j ∈ Neg, c j :=
+      eq_neg_of_add_eq_zero_left hsplit_c
+
+    have hsplit_abs : ∑ j, |c j| = ∑ j ∈ Pos, |c j| + ∑ j ∈ Neg, |c j| := by
+      have h := Finset.sum_filter_add_sum_filter_not (s := Finset.univ)
+        (p := fun j : Fin n => 0 ≤ c j) (f := fun j => |c j|)
+      simpa [Pos, Neg] using h.symm
+
+    have habs_pos : ∑ j ∈ Pos, |c j| = ∑ j ∈ Pos, c j := by
+      refine Finset.sum_congr rfl ?_
+      intro j hj
+      exact abs_of_nonneg (Finset.mem_filter.mp hj).2
+
+    have habs_neg : ∑ j ∈ Neg, |c j| = -∑ j ∈ Neg, c j := by
+      have hterm : ∀ j ∈ Neg, |c j| = -c j := fun j hj => abs_of_neg (Finset.mem_filter.mp hj).2
+      calc ∑ j ∈ Neg, |c j|
+          = ∑ j ∈ Neg, (-c j) := Finset.sum_congr rfl hterm
+      _ = -∑ j ∈ Neg, c j := by simp [Finset.sum_neg_distrib]
+
     have hdouble : ∑ j, |c j| = 2 * ∑ j ∈ Pos, c j := by
-      rw [hsplit_abs, hbalance]; ring
-    
-    -- Bound: ∑_{j∈Pos} c_j ≤ ∑_{j∈Pos} p_j ≤ 1
+      calc ∑ j, |c j|
+          = ∑ j ∈ Pos, |c j| + ∑ j ∈ Neg, |c j| := hsplit_abs
+      _ = ∑ j ∈ Pos, c j + (-∑ j ∈ Neg, c j) := by
+            simpa [habs_pos, habs_neg]
+      _ = ∑ j ∈ Pos, c j + ∑ j ∈ Pos, c j := by simpa [hbalance]
+      _ = 2 * ∑ j ∈ Pos, c j := by ring
+
     have hle_p : ∑ j ∈ Pos, c j ≤ ∑ j ∈ Pos, p j := by
-      apply Finset.sum_le_sum
+      refine Finset.sum_le_sum ?_
       intro j _
       have hq_nn : 0 ≤ q j := _hq_prob.2 j
       calc c j = p j - q j := rfl
-         _ ≤ p j - 0 := by linarith
-         _ = p j := by ring
-    
+         _ ≤ p j := sub_le_self _ hq_nn
+
+    have hsubset : Pos ⊆ (Finset.univ : Finset (Fin n)) := by
+      intro j hj; exact Finset.mem_univ j
+
     have hle_one : ∑ j ∈ Pos, p j ≤ 1 := by
-      have := Finset.sum_le_sum_of_subset_of_nonneg (s₁ := Pos) (s₂ := Finset.univ)
-        (by intro j _; exact Finset.mem_univ j) (fun j _ _ => _hp_prob.2 j)
-      simpa [_hp_prob.1] using this
-    
+      have hsum_le := Finset.sum_le_sum_of_subset_of_nonneg hsubset (fun j _ => _hp_prob.2 j)
+      simpa [_hp_prob.1] using hsum_le
+
     calc ∑ j, |c j|
         = 2 * ∑ j ∈ Pos, c j := hdouble
-      _ ≤ 2 * ∑ j ∈ Pos, p j := by linarith [hle_p]
-      _ ≤ 2 * 1 := by linarith [hle_one]
+      _ ≤ 2 * ∑ j ∈ Pos, p j := by
+            exact (mul_le_mul_of_nonneg_left hle_p (by norm_num))
+      _ ≤ 2 * 1 := by
+            exact (mul_le_mul_of_nonneg_left hle_one (by norm_num))
       _ = 2 := by ring
   
   -- Step 1: E(∑cᵢξᵢ)² = E(∑cᵢ(ξᵢ-m))² using ∑cⱼ = 0
