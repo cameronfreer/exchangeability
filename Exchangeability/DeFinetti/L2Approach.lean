@@ -159,25 +159,14 @@ theorem l2_contractability_bound
   -- Step 2: = ∑ᵢⱼ cᵢcⱼ cov(ξᵢ, ξⱼ) by expanding square and linearity
   have step2 : ∫ ω, (∑ i, c i * (ξ i ω - m))^2 ∂μ =
                ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ := by
-    -- Expand (∑ᵢ cᵢ(ξᵢ-m))² = ∑ᵢⱼ cᵢcⱼ(ξᵢ-m)(ξⱼ-m)
-    conv_lhs => 
-      arg 1; ext ω
-      rw [sq]
-      rw [Finset.sum_mul_sum]
-    -- Simplify the product structure
-    conv_lhs =>
-      arg 1; ext ω
-      apply Finset.sum_congr rfl
-      intro i _
-      apply Finset.sum_congr rfl
-      intro j _
-      ring
-    -- Now: ∫ (∑ᵢⱼ cᵢcⱼ(ξᵢ-m)(ξⱼ-m))
-    -- Apply integral_finset_sum twice to pull sums outside
+    -- The variance/covariance assumptions imply these integrals exist and are finite.
+    -- Therefore the product (ξ i - m) * (ξ j - m) is integrable for all i, j.
+    -- This follows from Cauchy-Schwarz: product of two L² functions is L¹.
     sorry
-    -- This needs: ∫ ∑ᵢⱼ f(i,j,ω) = ∑ᵢⱼ ∫ f(i,j,ω)
-    -- Each term c_i * c_j * (ξ_i - m) * (ξ_j - m) is integrable
-    -- Can use integral_finset_sum from MeasureTheory
+    -- TODO: This requires proving:
+    --   1. Each (ξ k - m) is in MemLp μ 2 (from _hvar assumption)
+    --   2. Product of L² functions is integrable (MemLp.integrable_mul)
+    --   3. Apply integral_finset_sum twice to pull sums outside
   
   -- Step 3: = σ²ρ(∑cᵢ)² + σ²(1-ρ)∑cᵢ² by separating i=j from i≠j
   have step3 : ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ =
