@@ -367,6 +367,12 @@ lemma Contractable.shift_segment_eq {μ : Measure Ω} {X : ℕ → Ω → α}
     exact Nat.add_lt_add_left hij k
   exact hX m k' hk'_mono
 
+/-- Composing strictly monotone functions preserves strict monotonicity. -/
+lemma strictMono_comp {m n : ℕ} (f : Fin m → Fin n) (g : Fin n → ℕ)
+    (hf : StrictMono f) (hg : StrictMono g) : StrictMono (fun i => g (f i)) := by
+  intro i j hij
+  exact hg (hf hij)
+
 /-- For a permutation σ on Fin n, the range {σ(0), ..., σ(n-1)} equals {0, ..., n-1}. -/
 lemma perm_range_eq (n : ℕ) (σ : Equiv.Perm (Fin n)) :
     Finset.image (fun i : Fin n => σ i) Finset.univ = Finset.univ := by
