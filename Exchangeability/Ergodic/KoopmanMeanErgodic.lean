@@ -38,7 +38,7 @@ the L²-convergence of Birkhoff averages.
 
 noncomputable section
 
-namespace Exchangeability.Probability.Ergodic
+namespace Exchangeability.Ergodic
 
 open MeasureTheory Filter Topology
 
@@ -125,4 +125,4 @@ theorem birkhoffAverage_tendsto_fixedSpace
     have h_proj_val : (P f) = (S.orthogonalProjection f : S) := rfl
     simpa [P, projToSub, inclusion, h_proj_val]
 
-end Exchangeability.Probability.Ergodic
+end Exchangeability.Ergodic

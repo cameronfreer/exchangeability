@@ -1,4 +1,4 @@
-import Exchangeability.Probability.DeFinetti
+import Exchangeability.DeFinetti
 
 /-!
 This project is centred on the formalisation of de Finetti's theorem.  The

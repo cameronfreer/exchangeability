@@ -41,7 +41,7 @@ case has its own de Finetti-type results but is conceptually distinct.
 noncomputable section
 open scoped BigOperators MeasureTheory Topology Classical
 
-namespace Exchangeability.Probability
+namespace Exchangeability
 
 open MeasureTheory Filter
 
@@ -251,4 +251,4 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω} {X : ℕ → Ω →
       
   · exact FullyExchangeable.exchangeable
 
-end Exchangeability.Probability
+end Exchangeability
