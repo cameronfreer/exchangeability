@@ -170,12 +170,16 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω} {X : ℕ → Ω →
     -- Step 2: Both are probability measures on ℕ → α
     have hμ_X : IsProbabilityMeasure μ_X := by
       -- Pushforward of probability measure is probability measure
-      -- This requires showing measurability which follows from hX_meas
-      sorry
+      constructor
+      show μ_X Set.univ = 1
+      simp only [μ_X, Measure.map_apply (measurable_pi_lambda _ (fun i => hX_meas i)) MeasurableSet.univ]
+      simp
     have hμ_Xπ : IsProbabilityMeasure μ_Xπ := by
       -- Pushforward of probability measure is probability measure
-      -- This requires showing measurability which follows from hX_meas
-      sorry
+      constructor
+      show μ_Xπ Set.univ = 1
+      simp only [μ_Xπ, Measure.map_apply (measurable_pi_lambda _ (fun i => hX_meas (π i))) MeasurableSet.univ]
+      simp
     
     -- Step 3: Show finite-dimensional marginals agree
     -- For any n and any measurable set S ⊆ (Fin n → α):
