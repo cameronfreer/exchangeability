@@ -192,6 +192,12 @@ lemma exists_shiftInvariantRepresentative
     have hmem := congrArg (fun s => ω ∈ s) hSinf_preimage
     simpa [Set.mem_preimage] using hmem
   let g' : Ω[α] → ℝ := fun ω => if ω ∈ S∞ then g0 ω else 0
+  have g'_def : g' = Set.indicator S∞ g0 := by
+    classical
+    funext ω
+    by_cases hω : ω ∈ S∞
+    · simp [g', hω, Set.indicator_of_mem]
+    · simp [g', hω, Set.indicator_of_not_mem]
   have hg'_ae_eq_g0 : (fun ω => g' ω) =ᵐ[μ] g0 := by
     filter_upwards [hSinf_ae] with ω hω
     simp [g', hω]
@@ -207,10 +213,39 @@ lemma exists_shiftInvariantRepresentative
     · have hshiftω : shift ω ∉ S∞ := by
         exact (not_congr (hSinf_equiv ω)).1 hω
       simp [g', hω, hshiftω]
-  -- TODO: implement the measurability proof for `g'` with respect to `shiftInvariantSigma`.
+  -- measurability of the invariant representative
   refine ⟨g', ?_, hg'_ae_eq_g, hshift_g'⟩
-  · -- show `g'` is measurable with respect to the invariant σ-algebra
-    sorry
+  · -- `g'` is measurable with respect to the invariant σ-algebra
+    have hshift_meas : Measurable fun ω => g0 (shift ω) :=
+      hg0_sm.measurable.comp measurable_shift
+    have hS_meas : MeasurableSet S := by
+      classical
+      have hdiff_meas : Measurable fun ω => g0 (shift ω) - g0 ω :=
+        hshift_meas.sub hg0_sm.measurable
+      have hset_eq : S = (fun ω => g0 (shift ω) - g0 ω) ⁻¹' {0} := by
+        ext ω; simp [S]
+      simpa [hset_eq] using hdiff_meas measurableSet_singleton
+    have hshift_iter_meas : ∀ n : ℕ, Measurable fun ω => shift^[n] ω := by
+      intro n
+      induction' n with n ih
+      · simpa using measurable_id
+      · simpa [Function.iterate_succ, Function.comp] using measurable_shift.comp ih
+    have hSinf_meas : MeasurableSet S∞ := by
+      classical
+      refine MeasurableSet.iInter fun n => ?_
+      simpa [S∞] using (hshift_iter_meas n) hS_meas
+    have hg0_meas : Measurable g0 := hg0_sm.measurable
+    have hg'_meas : Measurable g' := by
+      classical
+      simpa [g'_def] using hg0_meas.indicator hSinf_meas
+    have hg'_meas_shift : Measurable[shiftInvariantSigma] g' := by
+      classical
+      intro t ht
+      have hset_meas : MeasurableSet (g' ⁻¹' t) := hg'_meas ht
+      have hset_inv : shift ⁻¹' (g' ⁻¹' t) = g' ⁻¹' t := by
+        ext ω; simp [Set.mem_preimage, hshift_g']
+      exact (mem_shiftInvariantSigma_iff (g' ⁻¹' t)).mpr ⟨hset_meas, hset_inv⟩
+    exact hg'_meas_shift.aestronglyMeasurable
 
 /-- A function is measurable with respect to the shift-invariant σ-algebra iff
 it is (a.e.) constant along shift orbits. -/
