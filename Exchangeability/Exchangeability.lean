@@ -55,6 +55,11 @@ law of `X σ 0, …, X σ (n-1)` for every permutation `σ` of `Fin n`.
 This is the standard operational definition of exchangeability for infinite sequences.
 It is also called "finitely exchangeable" in some texts to distinguish it from full
 exchangeability (see `FullyExchangeable`).
+
+**Note (Kallenberg)**: Exchangeability is equivalent to **contractability** for infinite
+sequences, where contractability only requires that increasing subsequences of equal length
+have the same distribution. See `Contractability.lean` for the de Finetti-Ryll-Nardzewski
+theorem establishing this equivalence.
 -/
 def Exchangeable (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
   ∀ n (σ : Equiv.Perm (Fin n)),
