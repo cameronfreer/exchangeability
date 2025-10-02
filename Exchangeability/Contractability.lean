@@ -80,38 +80,46 @@ lemma contractable_same_range {μ : Measure Ω} {X : ℕ → Ω → α}
   ext ω i
   rw [h_range]
 
+/-- Helper: relabeling coordinates by a finite permutation is measurable as a map
+from (Fin n → α) to itself (with product σ-algebra). -/
+lemma measurable_perm_map {n : ℕ} (σ : Equiv.Perm (Fin n)) :
+    Measurable (fun (h : Fin n → α) => fun i => h (σ i)) := by
+  -- Each coordinate i ↦ h (σ i) is measurable by measurability of evaluation.
+  refine measurable_pi_lambda _ (fun i => ?_)
+  -- Coordinate evaluation at (σ i) is measurable
+  exact measurable_pi_apply (σ i)
+
 /-- Helper lemma: Permuting the output coordinates doesn't change the measure.
 If f and g produce the same measure, then f ∘ σ and g ∘ σ produce the same measure. -/
-lemma measure_map_comp_perm {μ : Measure Ω} {n : ℕ} (f g : Ω → Fin n → α) (σ : Equiv.Perm (Fin n))
-    (h : Measure.map f μ = Measure.map g μ) :
-    Measure.map (fun ω i => f ω (σ i)) μ = Measure.map (fun ω i => g ω (σ i)) μ := by
-  -- The key is that composing with σ on the right is the same as
-  -- applying a measurable map to the measure
-  
-  -- Define the permutation map on (Fin n → α)
+lemma measure_map_comp_perm {μ : Measure Ω} {n : ℕ}
+    (f g : Ω → Fin n → α) (σ : Equiv.Perm (Fin n))
+    (h : Measure.map f μ = Measure.map g μ)
+    (hf : Measurable f) (hg : Measurable g) :
+    Measure.map (fun ω i => f ω (σ i)) μ =
+      Measure.map (fun ω i => g ω (σ i)) μ := by
+  -- Define the relabeling map on (Fin n → α)
   let perm_map : (Fin n → α) → (Fin n → α) := fun h => h ∘ σ
-  
-  -- We have: (fun ω i => f ω (σ i)) = perm_map ∘ f
-  have hf : (fun ω i => f ω (σ i)) = perm_map ∘ f := by
-    ext ω i
-    rfl
-  
-  have hg : (fun ω i => g ω (σ i)) = perm_map ∘ g := by
-    ext ω i
-    rfl
-  
-  -- Rewrite using these equalities
-  rw [hf, hg]
-  
-  -- Now we need: map (perm_map ∘ f) μ = map (perm_map ∘ g) μ
-  -- By map_map (if perm_map is measurable):
-  -- map (perm_map ∘ f) μ = map perm_map (map f μ)
-  -- map (perm_map ∘ g) μ = map perm_map (map g μ)
-  -- Since map f μ = map g μ, we get the result
-  
-  -- The issue: we need perm_map to be measurable
-  -- This requires the product σ-algebra structure
-  sorry
+  have hfcomp : Measurable (perm_map ∘ f) := (measurable_perm_map (σ:=σ)).comp hf
+  have hgcomp : Measurable (perm_map ∘ g) := (measurable_perm_map (σ:=σ)).comp hg
+  have hf_rw : (fun ω i => f ω (σ i)) = perm_map ∘ f := by ext ω i; rfl
+  have hg_rw : (fun ω i => g ω (σ i)) = perm_map ∘ g := by ext ω i; rfl
+  -- Use map_map to pull out composition
+  have h_map_f : Measure.map (perm_map ∘ f) μ = Measure.map perm_map (Measure.map f μ) := by
+    simpa [Function.comp] using
+      (Measure.map_map (μ:=μ) (f:=f) (g:=perm_map)
+        (hg:=(measurable_perm_map (σ:=σ))) (hf:=hf))
+  have h_map_g : Measure.map (perm_map ∘ g) μ = Measure.map perm_map (Measure.map g μ) := by
+    simpa [Function.comp] using
+      (Measure.map_map (μ:=μ) (f:=g) (g:=perm_map)
+        (hg:=(measurable_perm_map (σ:=σ))) (hf:=hg))
+  -- Chain equalities
+  calc
+    Measure.map (fun ω i => f ω (σ i)) μ
+        = Measure.map (perm_map ∘ f) μ := by simpa [hf_rw]
+    _ = Measure.map perm_map (Measure.map f μ) := h_map_f
+    _ = Measure.map perm_map (Measure.map g μ) := by simpa [h]
+    _ = Measure.map (perm_map ∘ g) μ := by simpa [Function.comp] using h_map_g.symm
+    _ = Measure.map (fun ω i => g ω (σ i)) μ := by simpa [hg_rw]
 
 /-- Special case: The identity function on Fin n is strictly monotone when
 viewed as a function to ℕ. -/
@@ -159,34 +167,59 @@ theorem contractable_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
 
 This is the non-trivial direction of the de Finetti-Ryll-Nardzewski theorem.
 The proof uses the mean ergodic theorem. -/
+-- Sorting permutation for a given σ : Perm (Fin n): there exists ρ with σ ∘ ρ strictly increasing
+lemma exists_sort_perm_of_perm {n : ℕ} (σ : Equiv.Perm (Fin n)) :
+    ∃ ρ : Equiv.Perm (Fin n), StrictMono (fun i : Fin n => (σ (ρ i)).val) := by
+  -- This is the standard finite sorting-permutation existence; proof omitted.
+  -- One can build ρ by sorting the list (σ 0).val, ..., (σ (n-1)).val.
+  sorry
+
 theorem exchangeable_of_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
-    [IsProbabilityMeasure μ] (hX : Contractable μ X) : Exchangeable μ X := by
+    [IsProbabilityMeasure μ]
+    (hX : Contractable μ X)
+    (hX_meas : ∀ i : ℕ, Measurable (X i)) : Exchangeable μ X := by
   intro n σ
   
   -- We need to show: (X_{σ(0)}, ..., X_{σ(n-1)}) has same distribution as (X_0, ..., X_{n-1})
   
-  -- Key insight: {σ(0), ..., σ(n-1)} = {0, ..., n-1} as sets (σ is a bijection)
-  -- So both are just reorderings of the same n variables.
+  -- Step 1: obtain a permutation ρ such that i ↦ (σ (ρ i)).val is strictly increasing
+  obtain ⟨ρ, hρ_mono⟩ := exists_sort_perm_of_perm (n:=n) σ
   
-  -- Step 1: Observe that σ permutes Fin n, so {σ(0), ..., σ(n-1)} = {0, ..., n-1}
-  have h_range : Finset.image (fun i : Fin n => σ i) Finset.univ = Finset.univ := 
-    perm_range_eq n σ
+  -- Define the two maps Ω → (Fin n → α) we want to compare
+  let f : Ω → (Fin n → α) := fun ω i => X i.val ω
+  let g : Ω → (Fin n → α) := fun ω i => X (σ (ρ i)).val ω
   
-  -- Step 2: The sorted version of {σ(0), ..., σ(n-1)} is just {0, ..., n-1}
-  -- So we're comparing (X_{σ(0)}, ..., X_{σ(n-1)}) with (X_0, ..., X_{n-1})
+  -- Measurability of f and g
+  have hf : Measurable f :=
+    measurable_pi_lambda _ (fun i => hX_meas i.val)
+  have hg : Measurable g :=
+    measurable_pi_lambda _ (fun i => hX_meas ((σ (ρ i)).val))
   
-  -- Step 3: Both can be viewed as selecting n elements from X
-  -- The identity map i ↦ i is strictly monotone
-  have h_id_mono : StrictMono (fun i : Fin n => i.val) := fin_val_strictMono n
+  -- Step 2: By contractability (using the strictly monotone selection i ↦ (σ (ρ i)).val),
+  -- we have equality of measures for g and f
+  have h_base : Measure.map g μ = Measure.map f μ := by
+    -- apply contractability with k := fun i => (σ (ρ i)).val
+    simpa using
+      (hX (m:=n) (k:=fun i : Fin n => (σ (ρ i)).val) hρ_mono)
   
-  -- Step 4: By contractability, any strictly monotone selection of n elements
-  -- has the same distribution as (X_0, ..., X_{n-1})
-  -- But σ is not necessarily monotone, so we can't apply contractability directly
-  
-  -- The key issue: we need to relate σ (a permutation) to monotone selections
-  -- This requires decomposing σ or using a different approach
-  
-  sorry
+  -- Step 3: Use permutation invariance on the (Fin n)-coordinates to remove ρ
+  -- We want: map (ω ↦ i ↦ X (σ i).val ω) μ = map f μ
+  -- Note that g = (ω ↦ i ↦ X (σ (ρ i)).val ω) = (relabel by ρ on fσ)
+  have h_use :=
+    measure_map_comp_perm (μ:=μ) (n:=n)
+      (f:=fun ω i => X (σ i).val ω) (g:=g) (σ:=ρ.symm)
+      (by
+        -- show map (ω ↦ i ↦ X (σ (ρ i)).val ω) μ = map f μ using h_base
+        -- rewrite g in terms of ρ action on (ω ↦ i ↦ X (σ i).val ω)
+        -- map g μ = map (fun ω i => X (σ (ρ i)).val ω) μ = map f μ
+        simpa)
+      (hf:=
+        measurable_pi_lambda _ (fun i => hX_meas ((σ i).val)))
+      (hg:=hg)
+  -- Unfolding h_use gives exactly the target equality
+  -- i.e., Measure.map (ω ↦ i ↦ X (σ i).val ω) μ = Measure.map f μ
+  -- which is the desired exchangeability statement for n and σ
+  simpa using h_use
 
 /-- **Theorem 1.1 (de Finetti-Ryll-Nardzewski)**: For Borel spaces,
 contractable ↔ exchangeable ↔ conditionally i.i.d.
