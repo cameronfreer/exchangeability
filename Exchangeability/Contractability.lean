@@ -152,22 +152,28 @@ def Contractable (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
 a random probability measure ν such that P[ξ ∈ · | ℱ] = ν^∞ a.s.
 
 In other words, ν is a probability kernel from (Ω, 𝒜) to S, or equivalently,
-a random element in the space ℳ₁(S) of probability measures on S. -/
+a random element in the space ℳ₁(S) of probability measures on S.
+
+TODO: Full definition requires conditional probability P[· | ℱ], product measures ν^∞,
+and measurability of ω ↦ ν(ω). For now, we use a simplified placeholder. -/
 def ConditionallyIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
   ∃ (ℱ : MeasurableSpace Ω) (ν : Ω → Measure α),
     (∀ ω, IsProbabilityMeasure (ν ω)) ∧
-    -- The conditional distribution given ℱ equals the product measure ν^∞
-    sorry -- Requires conditional expectation and product measures
+    -- Placeholder: full definition needs conditional expectation machinery from mathlib
+    True
 
 /-- A random sequence ξ is **mixed i.i.d.** if its distribution is a mixture of
 i.i.d. distributions: P{ξ ∈ ·} = E[ν^∞] = ∫ m^∞ P(ν ∈ dm).
 
-This is obtained by taking expectations in the conditionally i.i.d. definition. -/
+This is obtained by taking expectations in the conditionally i.i.d. definition.
+
+TODO: Full definition requires integration over the space of measures and
+product measure construction. For now, we use a simplified placeholder. -/
 def MixedIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
   ∃ (ν : Measure (Measure α)),
     IsProbabilityMeasure ν ∧
-    -- The distribution of X is a mixture of product measures
-    sorry -- Requires integration over measures
+    -- Placeholder: full definition needs integration over measure spaces
+    True
 
 /-- Helper lemma: If two index sequences are pointwise equal, then the corresponding
 subsequences have the same distribution. -/
@@ -362,13 +368,20 @@ theorem contractable_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
     exact hproj_eq
 
 /-- Conditionally i.i.d. implies exchangeable.
-If X is conditionally i.i.d., then permutations preserve the distribution. -/
+If X is conditionally i.i.d., then permutations preserve the distribution.
+
+The proof would use:
+1. P[ξ ∈ · | ℱ] = ν^∞ a.s. (by ConditionallyIID assumption)
+2. For any permutation σ: P[ξ ∘ σ ∈ · | ℱ] = (ν^∞) ∘ σ = ν^∞ a.s.
+   (product measures are permutation invariant via constantProduct_comp_perm)
+3. Taking expectations: P[ξ ∈ ·] = E[ν^∞] = E[(ν^∞) ∘ σ] = P[ξ ∘ σ ∈ ·]
+
+Since ConditionallyIID is currently a placeholder definition, we leave this as sorry.
+TODO: Complete once ConditionallyIID is properly defined. -/
 theorem exchangeable_of_conditionallyIID {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX : ConditionallyIID μ X) : Exchangeable μ X := by
   intro n σ
-  -- If P[ξ ∈ · | ℱ] = ν^∞ a.s., then for any permutation σ,
-  -- P[ξ ∘ σ ∈ · | ℱ] = (ν^∞) ∘ σ = ν^∞ a.s. (product measures are permutation invariant)
-  -- Taking expectations: P[ξ ∈ ·] = E[ν^∞] and P[ξ ∘ σ ∈ ·] = E[ν^∞]
-  sorry -- TODO: Use constantProduct_comp_perm axiom
+  -- With the current placeholder definition of ConditionallyIID, we cannot proceed
+  sorry
 
 end Exchangeability
