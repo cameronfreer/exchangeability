@@ -17,11 +17,24 @@ This document tracks the formalization progress for the exchangeability and de F
 
 ## Files With Remaining Work
 
-### Exchangeability/Contractability.lean (3 sorries)
+### Exchangeability/Contractability.lean (2 sorries)
 
 **Major Completed Proofs:**
 - ✅ `strictMono_Fin_ge_id` (23 lines) - Helper lemma k(i) ≥ i
 - ✅ `contractable_of_exchangeable` (80 lines) - **MAJOR THEOREM**
+
+**Helper Infrastructure (11 lemmas):**
+1. `strictMono_add_left` - Addition composition (left)
+2. `strictMono_add_right` - Addition composition (right)
+3. `strictMono_comp` - General composition
+4. `Contractable.prefix` - Finite prefix preservation
+5. `Contractable.subsequence_eq` - Direct application
+6. `Contractable.allStrictMono_eq` - Uniformity lemma
+7. `Contractable.shift_segment_eq` - Consecutive segment invariance
+8. `ExchangeableAt` - Dimension-specific definition
+9. `exchangeable_iff_forall_exchangeableAt` - Characterization
+10. `ExchangeableAt.apply` - Application helper
+11. `contractable_same_range` - Pointwise equality preservation
 
 **Remaining Sorries:**
 1. **Line 249**: `exists_perm_extending_strictMono`
@@ -107,8 +120,8 @@ This document tracks the formalization progress for the exchangeability and de F
 
 ## Recent Session Highlights (2025-10-02)
 
-**Commits:** 18 commits pushed  
-**Lines Added:** ~350 lines of proofs
+**Commits:** 24 commits pushed  
+**Lines Added:** ~380 lines of proofs
 **Lines Documented:** ~150 lines of proof outlines/TODOs
 
 **Key Achievements:**
@@ -116,7 +129,7 @@ This document tracks the formalization progress for the exchangeability and de F
 - ✅ Proved `contractable_of_exchangeable` theorem (80 lines)
 - ✅ Proved `strictMono_Fin_ge_id` helper (23 lines)
 - ✅ Proved `shift_contractable` (35 lines)
-- ✅ Added 6 new helper lemmas (strictMono composition, Contractable.prefix, ExchangeableAt)
+- ✅ Added 11 new helper lemmas for contractability and strict monotonicity
 - ✅ Created comprehensive PROGRESS.md documentation
 - ✅ Moved axioms to appropriate files
 - ✅ Documented all remaining sorries with clear TODOs
