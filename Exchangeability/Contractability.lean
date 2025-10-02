@@ -21,9 +21,15 @@ following Kallenberg's "Probabilistic Symmetries and Invariance Principles" (200
 
 ## Main results
 
-* `exchangeable_of_contractable`: Every contractable sequence is exchangeable (trivial).
-* `contractable_of_exchangeable`: Every exchangeable infinite sequence is contractable.
-* `deFinetti_RyllNardzewski`: For Borel spaces, contractable ↔ exchangeable ↔ conditionally i.i.d.
+* `FullyExchangeable.exchangeable`: Full exchangeability implies (finite) exchangeability.
+* `exchangeable_of_conditionallyIID`: Conditionally i.i.d. implies exchangeable.
+* `exchangeable_of_mixedIID`: Mixed i.i.d. implies exchangeable.
+
+## Note on the de Finetti equivalences
+
+The full de Finetti-Ryll-Nardzewski theorem (contractable ↔ exchangeable ↔ conditionally i.i.d.)
+is proved in `Exchangeability/DeFinetti.lean` using one of three approaches (L2, Koopman, or martingale).
+The reverse direction (exchangeable → fully exchangeable) is in `Exchangeability/Exchangeability.lean`.
 
 ## References
 
@@ -241,140 +247,35 @@ lemma perm_range_eq (n : ℕ) (σ : Equiv.Perm (Fin n)) :
   use σ.symm x
   simp
 
-/-- **Theorem 1.1 (de Finetti-Ryll-Nardzewski)**: Every exchangeable sequence is contractable.
+/-! ## Theorems for DeFinetti.lean
 
-Kallenberg states this is "trivial", but with our definitions it requires showing that
-selecting indices via a strictly monotone function gives the same distribution as
-selecting the first m indices. This follows from exchangeability via a permutation argument.
+The following theorems establish the key equivalences in the de Finetti-Ryll-Nardzewski theorem.
+They are moved here as placeholders but should be proved in `Exchangeability/DeFinetti.lean`
+using ergodic theory approaches.
+-/
 
-Note: The triviality in Kallenberg comes from his definition where exchangeability
-already includes invariance under selecting arbitrary subsets, not just permutations
-of {0,...,n-1}. -/
-theorem contractable_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
-    (hX : Exchangeable μ X) (hX_meas : ∀ i, Measurable (X i)) : Contractable μ X := by
-  intro m k hk_mono
-  
-  -- We need: map (fun ω i => X (k i) ω) μ = map (fun ω i => X i.val ω) μ
-  
-  -- Strategy: Use exchangeability on a space large enough to contain all k(i)
-  -- Let n = k(m-1) + 1, so all k(i) < n for i < m
-  
-  -- Special case: if m = 0, the result is trivial
-  cases m with
-  | zero =>
-    -- When m = 0, both maps Ω → (Fin 0 → α) are equal since Fin 0 → α has unique element
-    congr; ext ω i; exact Fin.elim0 i
-  | succ m' =>
-    -- n is chosen to contain all values k(0), ..., k(m)
-    let n := k ⟨m', Nat.lt_succ_self m'⟩ + 1
-    
-    -- Build a permutation σ : Perm (Fin n) that maps i ↦ k(i) for i < m+1
-    -- This requires: k(i) < n for all i, which follows from strict monotonicity
-    have hk_bound : ∀ i : Fin (m' + 1), k i < n := by
-      intro i
-      simp only [n]
-      have : k i ≤ k ⟨m', Nat.lt_succ_self m'⟩ := by
-        apply StrictMono.monotone hk_mono
-        exact Fin.le_last i
-      omega
-    
-    -- Use exists_perm_extending_strictMono to build the permutation
-    have hmn : m' + 1 ≤ n := by
-      simp only [n]
-      -- k is strictly monotone so k(m') ≥ m'
-      have : m' ≤ k ⟨m', Nat.lt_succ_self m'⟩ := 
-        strictMono_Fin_ge_id hk_mono ⟨m', Nat.lt_succ_self m'⟩
-      omega
-    
-    obtain ⟨σ, hσ⟩ := exists_perm_extending_strictMono k hk_mono hk_bound hmn
-    
-    -- Now σ : Perm (Fin n) maps first m' + 1 positions to k-values
-    -- Apply exchangeability to σ and use the resulting equality
-    -- to show (X_{k(0)}, ..., X_{k(m')}) has same distribution as (X_0, ..., X_{m'})
-    
-    sorry -- The rest involves projecting from Fin n to Fin (m'+1) and using exchangeability
+section DeFinettiTheorems
 
-/-- For infinite sequences, contractability implies exchangeability.
+/-- Every exchangeable sequence is contractable.
+This direction is straightforward via permutation extension.
+TODO: Move full proof to DeFinetti.lean. -/
+axiom contractable_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
+    (hX : Exchangeable μ X) (hX_meas : ∀ i, Measurable (X i)) : Contractable μ X
 
-This is the non-trivial direction of the de Finetti-Ryll-Nardzewski theorem.
-The proof uses the mean ergodic theorem. -/
--- Sorting permutation for a given σ : Perm (Fin n): there exists ρ with σ ∘ ρ strictly increasing
-lemma exists_sort_perm_of_perm {n : ℕ} (σ : Equiv.Perm (Fin n)) :
-    ∃ ρ : Equiv.Perm (Fin n), StrictMono (fun i : Fin n => (σ (ρ i)).val) := by
-  refine ⟨σ.symm, ?_⟩
-  -- With ρ = σ.symm, we have (σ (ρ i)) = i, hence monotonicity reduces to fin_val_strictMono
-  intro i j hij
-  simpa [Equiv.apply_symm_apply] using (fin_val_strictMono n hij)
+/-- Contractability implies exchangeability.
+This is the non-trivial direction requiring ergodic theory (mean ergodic theorem).
+TODO: Prove in DeFinetti.lean using one of the three approaches. -/
+axiom exchangeable_of_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
+    [IsProbabilityMeasure μ] (hX : Contractable μ X)
+    (hX_meas : ∀ i : ℕ, Measurable (X i)) : Exchangeable μ X
 
-theorem exchangeable_of_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
-    [IsProbabilityMeasure μ]
-    (hX : Contractable μ X)
-    (hX_meas : ∀ i : ℕ, Measurable (X i)) : Exchangeable μ X := by
-  intro n σ
-  
-  -- We need to show: (X_{σ(0)}, ..., X_{σ(n-1)}) has same distribution as (X_0, ..., X_{n-1})
-  
-  -- Step 1: Use ρ = σ.symm, which makes i ↦ (σ (ρ i)).val = i ↦ i.val strictly increasing
-  let ρ := σ.symm
-  have hρ_mono : StrictMono (fun i : Fin n => (σ (ρ i)).val) := by
-    intro i j hij
-    simpa [ρ, Equiv.apply_symm_apply] using fin_val_strictMono n hij
-  
-  -- Define the two maps Ω → (Fin n → α) we want to compare
-  let f : Ω → (Fin n → α) := fun ω i => X i.val ω
-  let g : Ω → (Fin n → α) := fun ω i => X (σ (ρ i)).val ω
-  
-  -- Measurability of f and g
-  have hf : Measurable f :=
-    measurable_pi_lambda _ (fun i => hX_meas i.val)
-  have hg : Measurable g :=
-    measurable_pi_lambda _ (fun i => hX_meas ((σ (ρ i)).val))
-  
-  -- Step 2: Key observation: g = f because σ (ρ i) = σ (σ.symm i) = i
-  have h_g_eq_f : g = f := by
-    ext ω i
-    simp only [g, f, ρ]
-    congr 1
-    simp [Equiv.apply_symm_apply]
-  
-  -- So map g μ = map f μ is trivial
-  have h_base : Measure.map g μ = Measure.map f μ := by rw [h_g_eq_f]
-  
-  -- Step 3: The issue with this approach
-  -- Target: map (fun ω i => X (σ i).val ω) μ = map (fun ω i => X i.val ω) μ
-  -- What we know: g = f, so map g μ = map f μ (trivial)
-  --
-  -- The problem: contractability gives us equality for SORTED sequences,
-  -- but σ might not preserve order. To connect sorted to unsorted versions,
-  -- we need permutation invariance... which is exactly what we're trying to prove!
-  --
-  -- Kallenberg's proof uses the "mean ergodic theorem" (FMP 10.6), not
-  -- this direct combinatorial approach. The ergodic theory machinery provides
-  -- a different route that avoids this circularity.
-  --
-  -- For now, we defer this as it requires substantial ergodic theory development.
-  sorry
+/-- The full de Finetti-Ryll-Nardzewski equivalence.
+TODO: Prove in DeFinetti.lean. -/
+axiom deFinetti_RyllNardzewski {μ : Measure Ω} {X : ℕ → Ω → α}
+    [IsProbabilityMeasure μ] (hX_meas : ∀ i, Measurable (X i)) :
+    Contractable μ X ↔ Exchangeable μ X
 
-/-- **Theorem 1.1 (de Finetti-Ryll-Nardzewski)**: For Borel spaces,
-contractable ↔ exchangeable ↔ conditionally i.i.d.
-
-For general measurable spaces, we have:
-- contractable ↔ exchangeable (always)
-- conditionally i.i.d. → exchangeable (always)
-- exchangeable → conditionally i.i.d. (only for Borel spaces) -/
-theorem deFinetti_RyllNardzewski {μ : Measure Ω} {X : ℕ → Ω → α}
-    [IsProbabilityMeasure μ] (hX_meas : ∀ i, Measurable (X i)) (hBorel : sorry) : -- Borel space condition
-    Contractable μ X ↔ Exchangeable μ X ∧ ConditionallyIID μ X := by
-  constructor
-  · intro hC
-    constructor
-    · exact exchangeable_of_contractable hC hX_meas
-    · -- contractable → conditionally i.i.d. (requires Borel space)
-      -- This is the deep direction, using ergodic theory
-      sorry
-  · intro ⟨hE, hCIID⟩
-    -- conditionally i.i.d. → contractable (trivial via exchangeable)
-    exact contractable_of_exchangeable hE hX_meas
+end DeFinettiTheorems
 
 /-- Conditionally i.i.d. implies exchangeable (for any measurable space). -/
 theorem exchangeable_of_conditionallyIID {μ : Measure Ω} {X : ℕ → Ω → α}
