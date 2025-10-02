@@ -218,23 +218,39 @@ Note: The triviality in Kallenberg comes from his definition where exchangeabili
 already includes invariance under selecting arbitrary subsets, not just permutations
 of {0,...,n-1}. -/
 theorem contractable_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
-    (hX : Exchangeable μ X) : Contractable μ X := by
+    (hX : Exchangeable μ X) (hX_meas : ∀ i, Measurable (X i)) : Contractable μ X := by
   intro m k hk_mono
   
-  -- We need: map (fun ω i => X (k i) ω) μ = map (fun ω i => X i ω) μ
+  -- We need: map (fun ω i => X (k i) ω) μ = map (fun ω i => X i.val ω) μ
   
-  -- The key is that both (X_{k(0)}, ..., X_{k(m-1)}) and (X_0, ..., X_{m-1})
-  -- are m-tuples of random variables. By exchangeability, any m variables
-  -- have the same joint distribution (when properly permuted).
+  -- Strategy: Use exchangeability on a space large enough to contain all k(i)
+  -- Let n = k(m-1) + 1, so all k(i) < n for i < m
   
-  -- However, our Exchangeable definition only talks about permutations of
-  -- {0,...,n-1}, not arbitrary selections. So we need to embed both
-  -- into a common space and use a permutation.
-  
-  -- This is the same permutation construction challenge as in
-  -- exchangeable_iff_fullyExchangeable, so we defer it for now.
-  
-  sorry
+  -- Special case: if m = 0, the result is trivial
+  cases m with
+  | zero =>
+    -- When m = 0, both maps Ω → (Fin 0 → α) are equal since Fin 0 → α has unique element
+    congr; ext ω i; exact Fin.elim0 i
+  | succ m' =>
+    -- n is chosen to contain all values k(0), ..., k(m)
+    let n := k ⟨m', Nat.lt_succ_self m'⟩ + 1
+    
+    -- Build a permutation σ : Perm (Fin n) that maps i ↦ k(i) for i < m+1
+    -- This requires: k(i) < n for all i, which follows from strict monotonicity
+    have hk_bound : ∀ i : Fin (m' + 1), k i < n := by
+      intro i
+      simp only [n]
+      have : k i ≤ k ⟨m', Nat.lt_succ_self m'⟩ := by
+        apply StrictMono.monotone hk_mono
+        exact Fin.le_last i
+      omega
+    
+    -- The construction of this permutation is complex - we need to:
+    -- 1. Map each i < m+1 to k(i)
+    -- 2. Fill in the remaining slots with the unused values
+    -- This is a standard finite permutation construction but tedious in Lean
+    
+    sorry
 
 /-- For infinite sequences, contractability implies exchangeability.
 
@@ -305,18 +321,18 @@ For general measurable spaces, we have:
 - conditionally i.i.d. → exchangeable (always)
 - exchangeable → conditionally i.i.d. (only for Borel spaces) -/
 theorem deFinetti_RyllNardzewski {μ : Measure Ω} {X : ℕ → Ω → α}
-    [IsProbabilityMeasure μ] (hBorel : sorry) : -- Borel space condition
+    [IsProbabilityMeasure μ] (hX_meas : ∀ i, Measurable (X i)) (hBorel : sorry) : -- Borel space condition
     Contractable μ X ↔ Exchangeable μ X ∧ ConditionallyIID μ X := by
   constructor
   · intro hC
     constructor
-    · exact exchangeable_of_contractable hC
+    · exact exchangeable_of_contractable hC hX_meas
     · -- contractable → conditionally i.i.d. (requires Borel space)
       -- This is the deep direction, using ergodic theory
       sorry
   · intro ⟨hE, hCIID⟩
     -- conditionally i.i.d. → contractable (trivial via exchangeable)
-    exact contractable_of_exchangeable hE
+    exact contractable_of_exchangeable hE hX_meas
 
 /-- Conditionally i.i.d. implies exchangeable (for any measurable space). -/
 theorem exchangeable_of_conditionallyIID {μ : Measure Ω} {X : ℕ → Ω → α}
