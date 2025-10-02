@@ -58,15 +58,27 @@ def extendFinPerm (n : ℕ) (σ : Equiv.Perm (Fin n)) : Equiv.Perm ℕ where
   left_inv := by
     intro i
     by_cases h : i < n
-    · have hσ : (σ ⟨i, h⟩).1 < n := (σ ⟨i, h⟩).isLt
-      simp [h, hσ, extendFinPerm]
-    · simp [h, extendFinPerm]
+    · -- Case: i < n, so toFun i = (σ ⟨i, h⟩).1
+      simp only [h, dif_pos]
+      -- Need to show: invFun (σ ⟨i, h⟩).1 = i
+      have hσ : (σ ⟨i, h⟩).1 < n := (σ ⟨i, h⟩).isLt
+      simp only [hσ, dif_pos]
+      -- Now: (σ.symm ⟨(σ ⟨i, h⟩).1, hσ⟩).1 = i
+      simp [Fin.eta, Equiv.symm_apply_apply]
+    · -- Case: i ≥ n, so toFun i = i
+      simp only [h, dif_neg, not_false_eq_true]
   right_inv := by
     intro i
     by_cases h : i < n
-    · have hσ : (σ.symm ⟨i, h⟩).1 < n := (σ.symm ⟨i, h⟩).isLt
-      simp [h, hσ, extendFinPerm]
-    · simp [h, extendFinPerm]
+    · -- Case: i < n, so invFun i = (σ.symm ⟨i, h⟩).1
+      simp only [h, dif_pos]
+      -- Need to show: toFun (σ.symm ⟨i, h⟩).1 = i
+      have hσ : (σ.symm ⟨i, h⟩).1 < n := (σ.symm ⟨i, h⟩).isLt
+      simp only [hσ, dif_pos]
+      -- Now: (σ ⟨(σ.symm ⟨i, h⟩).1, hσ⟩).1 = i
+      simp [Fin.eta, Equiv.apply_symm_apply]
+    · -- Case: i ≥ n, so invFun i = i
+      simp only [h, dif_neg, not_false_eq_true]
 
 /-- Full exchangeability implies exchangeability. -/
 lemma FullyExchangeable.exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
