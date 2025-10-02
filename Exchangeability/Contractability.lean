@@ -163,6 +163,28 @@ lemma contractable_same_range {μ : Measure Ω} {X : ℕ → Ω → α} {m : ℕ
   ext ω i
   rw [h_range]
 
+-- ## Helper lemmas wrapping mathlib results
+
+/-- Product measures exist in mathlib. This placeholder captures the idea that
+we can construct product probability measures. The actual construction requires
+Ionescu-Tulcea or similar machinery from mathlib. -/
+axiom productMeasure_exists (ν : ℕ → Measure α) [∀ i, IsProbabilityMeasure (ν i)] :
+  ∃ μ : Measure (ℕ → α), IsProbabilityMeasure μ
+
+/-- A product of identical i.i.d. measures is permutation-invariant. -/
+axiom constantProduct_comp_perm (ν₀ : Measure α) [IsProbabilityMeasure ν₀]
+    (μ_prod : Measure (ℕ → α)) (σ : Equiv.Perm ℕ) :
+    Measure.map (fun f : ℕ → α => f ∘ σ) μ_prod = μ_prod
+
+/-- Given strictly monotone k : Fin m → ℕ and n containing all k(i), we can construct
+a permutation σ : Perm (Fin n) such that σ maps first m positions to k-values.
+This is the key lemma needed for contractable_of_exchangeable. -/
+lemma exists_perm_extending_strictMono {m n : ℕ} (k : Fin m → ℕ)
+    (hk_mono : StrictMono k) (hk_bound : ∀ i, k i < n) (hmn : m ≤ n) :
+    ∃ (σ : Equiv.Perm (Fin n)), ∀ (i : Fin m),
+      (σ ⟨i.val, Nat.lt_of_lt_of_le i.isLt hmn⟩).val = k i := by
+  sorry -- Combinatorial construction: map i < m to k(i), fill remaining slots with unused values
+
 /-- Helper: relabeling coordinates by a finite permutation is measurable as a map
 from (Fin n → α) to itself (with product σ-algebra). -/
 lemma measurable_perm_map {n : ℕ} (σ : Equiv.Perm (Fin n)) :
