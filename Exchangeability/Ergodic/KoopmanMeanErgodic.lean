@@ -108,7 +108,7 @@ theorem birkhoffAverage_tendsto_fixedSpace
     refine ContinuousLinearMap.opNorm_le_bound _ (by norm_num) ?_
     intro g
     have hnorm_eq : ‖K g‖ = ‖g‖ := by
-      simp [K, koopman] using
+      simpa [K, koopman] using
         (MeasureTheory.Lp.compMeasurePreservingₗᵢ ℝ T hT).norm_map g
     simp [hnorm_eq]
   let S := LinearMap.eqLocus K.toLinearMap 1
