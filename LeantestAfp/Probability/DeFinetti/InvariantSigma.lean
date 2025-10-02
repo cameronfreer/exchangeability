@@ -147,9 +147,69 @@ lemma exists_shiftInvariantRepresentative
       AEStronglyMeasurable[shiftInvariantSigma (α := α)] g' μ ∧
       (∀ᵐ ω ∂μ, g' ω = g ω) ∧
       (∀ ω, g' (shift ω) = g' ω) := by
-  -- TODO: implement the null-set modification described in the main proof sketch.
-  -- The construction is outlined in the comments inside
-  -- `aestronglyMeasurable_shiftInvariant_of_koopman`.
+  classical
+  rcases hg with ⟨g0, hg0_sm, hAEg0⟩
+  have hcomp :=
+    (hσ.quasiMeasurePreserving.ae_eq_comp (μ := μ) (ν := μ)
+      (f := shift (α := α)) (g := fun ω => g ω) (g' := fun ω => g0 ω) hAEg0)
+  have hshift0 : (fun ω => g0 (shift ω)) =ᵐ[μ] g0 :=
+    hcomp.trans (hinv.trans hAEg0)
+  let S : Set (Ω[α]) := {ω | g0 (shift ω) = g0 ω}
+  have hS_ae : ∀ᵐ ω ∂μ, ω ∈ S := by
+    simpa [S, Set.mem_setOf_eq] using hshift0
+  have hS_null : μ Sᶜ = 0 := by
+    simpa [ae_iff, S, Set.mem_setOf_eq] using hS_ae
+  let S∞ : Set (Ω[α]) := ⋂ n : ℕ, (shift^[n]) ⁻¹' S
+  have hSinf_null : μ S∞ᶜ = 0 := by
+    have hcompl : S∞ᶜ = ⋃ n : ℕ, (shift^[n]) ⁻¹' Sᶜ := by
+      classical
+      simpa [S∞, Set.preimage_compl]
+        using (Set.compl_iInter (fun n : ℕ => (shift^[n]) ⁻¹' S))
+    have hpreimage_null : ∀ n : ℕ, μ ((shift^[n]) ⁻¹' Sᶜ) = 0 := by
+      intro n
+      simpa using ((MeasurePreserving.iterate hσ n).preimage_null hS_null)
+    simpa [hcompl] using measure_iUnion_null hpreimage_null
+  have hSinf_ae : ∀ᵐ ω ∂μ, ω ∈ S∞ := by
+    simpa [ae_iff, S∞] using hSinf_null
+  have hSinf_preimage : shift ⁻¹' S∞ = S∞ := by
+    classical
+    ext ω
+    constructor
+    · intro hω
+      refine Set.mem_iInter.mpr ?_
+      intro n
+      have := Set.mem_iInter.mp hω (n + 1)
+      simpa [Function.iterate_succ] using this
+    · intro hω
+      have : shift ω ∈ S∞ := by
+        refine Set.mem_iInter.mpr ?_
+        intro n
+        have := Set.mem_iInter.mp hω n
+        simpa [Function.iterate_succ, Function.comp] using this
+      simpa [Set.mem_preimage] using this
+  have hSinf_equiv : ∀ ω, ω ∈ S∞ ↔ shift ω ∈ S∞ := by
+    intro ω
+    have hmem := congrArg (fun s => ω ∈ s) hSinf_preimage
+    simpa [Set.mem_preimage] using hmem
+  let g' : Ω[α] → ℝ := fun ω => if ω ∈ S∞ then g0 ω else 0
+  have hg'_ae_eq_g0 : (fun ω => g' ω) =ᵐ[μ] g0 := by
+    filter_upwards [hSinf_ae] with ω hω
+    simp [g', hω]
+  have hg'_ae_eq_g : (fun ω => g' ω) =ᵐ[μ] g :=
+    hg'_ae_eq_g0.trans hAEg0
+  have hshift_g' : ∀ ω, g' (shift ω) = g' ω := by
+    intro ω
+    by_cases hω : ω ∈ S∞
+    · have hshiftω : shift ω ∈ S∞ := (hSinf_equiv ω).1 hω
+      have hSω : ω ∈ S := by
+        simpa [S] using Set.mem_iInter.mp hω 0
+      simp [g', hω, hshiftω, S, hSω]
+    · have hshiftω : shift ω ∉ S∞ := by
+        exact (not_congr (hSinf_equiv ω)).1 hω
+      simp [g', hω, hshiftω]
+  -- TODO: implement the measurability proof for `g'` with respect to `shiftInvariantSigma`.
+  refine ⟨g', ?_, hg'_ae_eq_g, hshift_g'⟩
+  sorry
   sorry
 
 /-- A function is measurable with respect to the shift-invariant σ-algebra iff
