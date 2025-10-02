@@ -8,6 +8,7 @@ import Mathlib.Probability.IdentDistrib
 import Mathlib.Probability.Kernel.Basic
 import Mathlib.MeasureTheory.Constructions.BorelSpace.Basic
 import Exchangeability.Exchangeability
+import Exchangeability.Contractability
 import Exchangeability.DeFinetti.KoopmanApproach
 import Exchangeability.DeFinetti.L2Approach
 import Exchangeability.DeFinetti.MartingaleApproach
@@ -110,6 +111,33 @@ def empiricalMeasure [Inhabited α] (X : ℕ → Ω → α) (n : ℕ) (ω : Ω) 
     sorry
     -- TODO: Implement using ProbabilityMeasure.uniform on Finset (Fin n)
     -- and ProbabilityMeasure.map with (fun i ↦ X i.val ω)
+
+/-!
+## Main theorems to be proved
+
+The following theorems establish the de Finetti-Ryll-Nardzewski equivalences.
+They should be proved using one of the three approaches below.
+-/
+
+/-- Contractability implies exchangeability.
+This is the non-trivial direction requiring ergodic theory (mean ergodic theorem).
+TODO: Prove using one of the three approaches. -/
+axiom exchangeable_of_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
+    [IsProbabilityMeasure μ] (hX : Contractable μ X)
+    (hX_meas : ∀ i : ℕ, Measurable (X i)) : Exchangeable μ X
+
+/-- Exchangeable implies conditionally i.i.d. (for Borel spaces).
+This is the deep direction requiring ergodic theory and Borel space structure.
+TODO: Prove using ergodic decomposition. -/
+axiom conditionallyIID_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
+    [IsProbabilityMeasure μ] (hX : Exchangeable μ X)
+    (hX_meas : ∀ i, Measurable (X i)) (hBorel : True) : ConditionallyIID μ X
+
+/-- The full de Finetti-Ryll-Nardzewski equivalence.
+TODO: Prove by combining the individual directions. -/
+axiom deFinetti_RyllNardzewski {μ : Measure Ω} {X : ℕ → Ω → α}
+    [IsProbabilityMeasure μ] (hX_meas : ∀ i, Measurable (X i)) :
+    Contractable μ X ↔ Exchangeable μ X ∧ ConditionallyIID μ X
 
 /-!
 ## Statement of de Finetti's theorem
