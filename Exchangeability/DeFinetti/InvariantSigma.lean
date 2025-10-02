@@ -450,31 +450,23 @@ theorem proj_eq_condexp {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     ∃ (P : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ),
       (∀ f, f ∈ fixedSubspace hσ → P f = f) ∧
       (∀ f, P f = condexpL2 shiftInvariantSigma f) := by
-  /-
-  Sketch of proof:
-  1. Let `P₀ := (lpMeas …).orthogonalProjection`. Observe that our definition of `condexpL2`
-     is `subtypeL.comp P₀`, so showing `P₀` equals the orthogonal projection onto
-     `fixedSubspace hσ` is enough.
-  2. Build the equivalence of subspaces.
-     * (Forward) If `g` is `shiftInvariantSigma`-measurable, then `g ∘ shift = g` a.e.
-       Produce a lemma
-         `lemma shiftInvariantSigma_measurable_aestronglyMeasurable
-             (hg : AEStronglyMeasurable[m] g μ) : g ∘ shift =ᵐ μ g`.
-       This will use that measurable sets in `shiftInvariantSigma` are invariant by the
-       definition of the σ-algebra, together with the fact that evaluation maps on `Ω[α]`
-       generate the σ-algebra.
-     * (Reverse) If `koopman shift hσ f = f`, then `f` is invariant a.e.  Use the
-       representatives lemma for `Lp` to get an a.e. equal function `g`. Show that `g` is
-       measurable w.r.t. `shiftInvariantSigma` by proving that its level sets belong to
-       the invariant σ-algebra.  A convenient way is to start with simple functions,
-       use stability of the invariant σ-algebra under limits, and appeal to the
-       dominated convergence theorem.
-  3. Once the two closed subspaces agree, uniqueness of orthogonal projections yields the
-     desired statement (cf. `Submodule.orthogonalProjection_eq_self_of_subset`).
-  4. Finally, wrap up: choose `P := condexpL2 shiftInvariantSigma` and show it satisfies the
-     two characterising properties using the two inclusions from step 2.
-  -/
-  sorry
+  refine ⟨condexpL2 shiftInvariantSigma, ?_, ?_⟩
+  · intro f hf
+    have hfix : koopman shift hσ f = f :=
+      (mem_fixedSubspace_iff (hσ := hσ) (f := f)).1 hf
+    have hmeas : AEStronglyMeasurable[shiftInvariantSigma (α := α)] f μ :=
+      aestronglyMeasurable_shiftInvariant_of_koopman (hσ := hσ) hfix
+    have hf_mem : f ∈ lpMeas ℝ ℝ (shiftInvariantSigma (α := α)) 2 μ := by
+      exact (MeasureTheory.mem_lpMeas_iff_aestronglyMeasurable (m := shiftInvariantSigma)
+        (m0 := inferInstance) (μ := μ) (p := (2 : ℝ≥0∞)) (f := f)).mpr hmeas
+    let fSub : lpMeas ℝ ℝ (shiftInvariantSigma (α := α)) 2 μ := ⟨f, hf_mem⟩
+    have hproj :
+        MeasureTheory.condExpL2 ℝ ℝ (shiftInvariantSigma_le (α := α)) f = fSub := by
+      simpa [MeasureTheory.condExpL2, fSub]
+        using Submodule.orthogonalProjection_mem_subspace_eq_self fSub
+    unfold condexpL2
+    simpa [fSub, hproj]
+  · intro f; rfl
 
 /-- The range of conditional expectation onto the invariant σ-algebra equals
 the fixed-point subspace. -/
@@ -507,15 +499,19 @@ lemma range_condexp_eq_fixedSubspace {μ : Measure (Ω[α])} [IsProbabilityMeasu
     -- hence measurable w.r.t. shiftInvariantSigma
     -- so f = condexpL2 f
     use f
-    /-
-    Outline:
-    1. Starting from `hf : f ∈ fixedSubspace hσ`, use `mem_fixedSubspace_iff` to get the
-       almost everywhere invariance of `f` under `shift`.
-    2. Produce a representative that is strictly invariant on a μ-a.e. invariant set,
-       then prove it is `shiftInvariantSigma`-measurable (reverse inclusion lemma).
-    3. Invoke the defining property of conditional expectation on `Lp` to conclude that
-       `condexpL2 shiftInvariantSigma f = f`.
-    -/
-    sorry
+    have hfix : koopman shift hσ f = f :=
+      (mem_fixedSubspace_iff (hσ := hσ) (f := f)).1 hf
+    have hmeas : AEStronglyMeasurable[shiftInvariantSigma (α := α)] f μ :=
+      aestronglyMeasurable_shiftInvariant_of_koopman (hσ := hσ) hfix
+    have hf_mem : f ∈ lpMeas ℝ ℝ (shiftInvariantSigma (α := α)) 2 μ :=
+      (MeasureTheory.mem_lpMeas_iff_aestronglyMeasurable (m := shiftInvariantSigma)
+        (m0 := inferInstance) (μ := μ) (p := (2 : ℝ≥0∞)) (f := f)).mpr hmeas
+    let fSub : lpMeas ℝ ℝ (shiftInvariantSigma (α := α)) 2 μ := ⟨f, hf_mem⟩
+    have hproj :
+        MeasureTheory.condExpL2 ℝ ℝ (shiftInvariantSigma_le (α := α)) f = fSub := by
+      simpa [MeasureTheory.condExpL2, fSub]
+        using Submodule.orthogonalProjection_mem_subspace_eq_self fSub
+    unfold condexpL2
+    simp [fSub, hproj]
 
 end Exchangeability.DeFinetti
