@@ -354,6 +354,19 @@ lemma fin_val_strictMono (n : ℕ) : StrictMono (fun i : Fin n => i.val) := by
   intro i j hij
   exact hij
 
+/-- Contractability implies the first m variables have the same joint distribution
+regardless of which m consecutive variables we pick (starting from position k). -/
+lemma Contractable.shift_segment_eq {μ : Measure Ω} {X : ℕ → Ω → α}
+    (hX : Contractable μ X) (m k : ℕ) :
+    Measure.map (fun ω (i : Fin m) => X (k + i.val) ω) μ =
+      Measure.map (fun ω (i : Fin m) => X i.val ω) μ := by
+  let k' : Fin m → ℕ := fun i => k + i.val
+  have hk'_mono : StrictMono k' := by
+    intro i j hij
+    simp only [k']
+    exact Nat.add_lt_add_left hij k
+  exact hX m k' hk'_mono
+
 /-- For a permutation σ on Fin n, the range {σ(0), ..., σ(n-1)} equals {0, ..., n-1}. -/
 lemma perm_range_eq (n : ℕ) (σ : Equiv.Perm (Fin n)) :
     Finset.image (fun i : Fin n => σ i) Finset.univ = Finset.univ := by
