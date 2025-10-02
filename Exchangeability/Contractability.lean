@@ -170,9 +170,10 @@ The proof uses the mean ergodic theorem. -/
 -- Sorting permutation for a given σ : Perm (Fin n): there exists ρ with σ ∘ ρ strictly increasing
 lemma exists_sort_perm_of_perm {n : ℕ} (σ : Equiv.Perm (Fin n)) :
     ∃ ρ : Equiv.Perm (Fin n), StrictMono (fun i : Fin n => (σ (ρ i)).val) := by
-  -- This is the standard finite sorting-permutation existence; proof omitted.
-  -- One can build ρ by sorting the list (σ 0).val, ..., (σ (n-1)).val.
-  sorry
+  refine ⟨σ.symm, ?_⟩
+  -- With ρ = σ.symm, we have (σ (ρ i)) = i, hence monotonicity reduces to fin_val_strictMono
+  intro i j hij
+  simpa [Equiv.apply_symm_apply] using (fin_val_strictMono n hij)
 
 theorem exchangeable_of_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
     [IsProbabilityMeasure μ]
