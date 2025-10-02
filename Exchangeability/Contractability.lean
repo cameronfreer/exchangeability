@@ -224,12 +224,29 @@ lemma strictMono_Fin_ge_id {m : ℕ} {k : Fin m → ℕ} (hk : StrictMono k) (i 
 
 /-- Given strictly monotone k : Fin m → ℕ and n containing all k(i), we can construct
 a permutation σ : Perm (Fin n) such that σ maps first m positions to k-values.
-This is the key lemma needed for contractable_of_exchangeable. -/
+This is the key lemma needed for contractable_of_exchangeable.
+
+Construction outline:
+1. Image: Im = {k(0), ..., k(m-1)} ⊆ Fin n (size m, by injectivity of k)
+2. Complement: Compl = Fin n \ Im (size n - m)
+3. Domain1 = {0, ..., m-1} ⊆ Fin n (first m positions)
+4. Domain2 = Fin n \ Domain1 (last n - m positions)
+5. Define σ : Fin n → Fin n as:
+   - σ(i) = k(i) for i < m (maps Domain1 to Im)
+   - σ bijectively maps Domain2 to Compl (any bijection works, e.g., via enumeration)
+6. Verify σ is a bijection using:
+   - Domain1 ∪ Domain2 = Fin n (disjoint union)
+   - Im ∪ Compl = Fin n (disjoint union)
+   - |Domain1| = |Im| = m
+   - |Domain2| = |Compl| = n - m
+
+TODO: This requires Finset/Fintype lemmas about cardinalities and Equiv.ofBijective.
+Can potentially use Equiv.Perm.extendSubtype or build from Finset.image operations. -/
 lemma exists_perm_extending_strictMono {m n : ℕ} (k : Fin m → ℕ)
     (hk_mono : StrictMono k) (hk_bound : ∀ i, k i < n) (hmn : m ≤ n) :
     ∃ (σ : Equiv.Perm (Fin n)), ∀ (i : Fin m),
       (σ ⟨i.val, Nat.lt_of_lt_of_le i.isLt hmn⟩).val = k i := by
-  sorry -- Combinatorial construction: map i < m to k(i), fill remaining slots with unused values
+  sorry
 
 /-- Helper: relabeling coordinates by a finite permutation is measurable as a map
 from (Fin n → α) to itself (with product σ-algebra). -/
