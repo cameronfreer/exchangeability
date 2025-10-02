@@ -311,13 +311,13 @@ lemma exists_perm_extending_strictMono {m n : ℕ} (k : Fin m → ℕ)
       (σ ⟨i.val, Nat.lt_of_lt_of_le i.isLt hmn⟩).val = k i := by
   classical
   -- Embed `Fin m` into `Fin n` via the initial segment.
-  let ι : Fin m → Fin n := Fin.castLEEmb hmn
+  let ι : Fin m → Fin n := fun i => ⟨i.val, Nat.lt_of_lt_of_le i.isLt hmn⟩
   let p : Fin n → Prop := fun x => x.val < m
   let q : Fin n → Prop := fun x => ∃ i : Fin m, x = ⟨k i, hk_bound i⟩
   have hι_mem : ∀ i : Fin m, p (ι i) := by
     intro i
-    dsimp [p, ι, Fin.castLEEmb]
-    simpa using i.is_lt
+    dsimp [p, ι]
+    exact i.isLt
   let kFin : Fin m → Fin n := fun i => ⟨k i, hk_bound i⟩
   have hk_mem : ∀ i : Fin m, q (kFin i) := fun i => ⟨i, rfl⟩
   haveI : DecidablePred p := fun x => inferInstance
@@ -326,33 +326,40 @@ lemma exists_perm_extending_strictMono {m n : ℕ} (k : Fin m → ℕ)
   let e_dom : {x : Fin n // p x} ≃ Fin m :=
     { toFun := fun x => ⟨x.1.val, x.2⟩
       , invFun := fun i => ⟨ι i, by
-          dsimp [p, ι, Fin.castLEEmb]
-          simpa using i.is_lt⟩
+          dsimp [p, ι]
+          exact i.isLt⟩
       , left_inv := by
           rintro ⟨x, hx⟩
           apply Subtype.ext
           apply Fin.ext
-          simp [ι, Fin.castLEEmb]
+          simp [ι]
       , right_inv := by
           intro i
-          cases' i with i hi
-          simp [e_dom, ι, Fin.castLEEmb] }
+          cases i with
+          | mk i hi =>
+            simp [ι] }
   -- Equivalence between the image of `k` and `Fin m`.
+  -- For injectivity of k, we use that it's strictly monotone
+  have hk_inj : Function.Injective kFin := by
+    intro i j hij
+    have : k i = k j := by
+      have := Fin.ext_iff.mp hij
+      simpa [kFin] using this
+    exact hk_mono.injective this
   let e_cod : Fin m ≃ {x : Fin n // q x} :=
     { toFun := fun i => ⟨kFin i, hk_mem i⟩
-      , invFun := fun y =>
-          classical
-          Classical.choose y.2
+      , invFun := fun y => Classical.choose y.2
       , left_inv := by
           intro i
-          have : Classical.choose (hk_mem i) = i := by
-            simp [hk_mem]
-          simpa [e_cod, this]
+          have h_spec := Classical.choose_spec (hk_mem i)
+          have : k (Classical.choose (hk_mem i)) = k i := by
+            simpa [kFin] using (Fin.ext_iff.mp h_spec).symm
+          exact hk_mono.injective this
       , right_inv := by
           rintro ⟨y, hy⟩
-          rcases hy with ⟨i, rfl⟩
-          ext
-          simp [e_cod, kFin] }
+          apply Subtype.ext
+          simp only [kFin]
+          exact (Classical.choose_spec hy).symm }
   -- Equivalence between the subtypes describing the first `m` coordinates and the image of `k`.
   let e : {x : Fin n // p x} ≃ {x : Fin n // q x} := e_dom.trans e_cod
   -- Extend this equivalence to a permutation of `Fin n`.
@@ -368,7 +375,7 @@ lemma exists_perm_extending_strictMono {m n : ℕ} (k : Fin m → ℕ)
   intro i
   have hi_eq : (⟨i.val, Nat.lt_of_lt_of_le i.isLt hmn⟩ : Fin n) = ι i := by
     apply Fin.ext
-    simp [ι, Fin.castLEEmb]
+    simp [ι]
   have hσ_val : (σ (ι i)).val = k i := by
     have := congrArg Fin.val (hσ_apply i)
     simpa [kFin] using this
