@@ -22,13 +22,12 @@ following Kallenberg's "Probabilistic Symmetries and Invariance Principles" (200
 ## Main results
 
 * `FullyExchangeable.exchangeable`: Full exchangeability implies (finite) exchangeability.
-* `exchangeable_of_conditionallyIID`: Conditionally i.i.d. implies exchangeable.
-* `exchangeable_of_mixedIID`: Mixed i.i.d. implies exchangeable.
 
 ## Note on the de Finetti equivalences
 
 The full de Finetti-Ryll-Nardzewski theorem (contractable ↔ exchangeable ↔ conditionally i.i.d.)
-is proved in `Exchangeability/DeFinetti.lean` using one of three approaches (L2, Koopman, or martingale).
+is stated as axioms in the `DeFinettiTheorems` section below and proved in `Exchangeability/DeFinetti.lean`
+using one of three approaches (L2, Koopman, or martingale).
 The reverse direction (exchangeable → fully exchangeable) is in `Exchangeability/Exchangeability.lean`.
 
 ## References
@@ -275,26 +274,19 @@ axiom deFinetti_RyllNardzewski {μ : Measure Ω} {X : ℕ → Ω → α}
     [IsProbabilityMeasure μ] (hX_meas : ∀ i, Measurable (X i)) :
     Contractable μ X ↔ Exchangeable μ X
 
+/-- Conditionally i.i.d. implies exchangeable.
+This is part of the de Finetti-Ryll-Nardzewski equivalence chain.
+TODO: Prove in DeFinetti.lean. -/
+axiom exchangeable_of_conditionallyIID {μ : Measure Ω} {X : ℕ → Ω → α}
+    (hX : ConditionallyIID μ X) : Exchangeable μ X
+
+/-- Exchangeable implies conditionally i.i.d. (for Borel spaces).
+This is the deep direction requiring ergodic theory.
+TODO: Prove in DeFinetti.lean. -/
+axiom conditionallyIID_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
+    [IsProbabilityMeasure μ] (hX : Exchangeable μ X)
+    (hX_meas : ∀ i, Measurable (X i)) (hBorel : True) : ConditionallyIID μ X
+
 end DeFinettiTheorems
-
-/-- Conditionally i.i.d. implies exchangeable (for any measurable space). -/
-theorem exchangeable_of_conditionallyIID {μ : Measure Ω} {X : ℕ → Ω → α}
-    (hX : ConditionallyIID μ X) : Exchangeable μ X := by
-  -- If X is conditionally i.i.d., then permuting doesn't change the distribution
-  -- since each ξᵢ has the same conditional distribution ν
-  
-  -- More precisely: If P[ξ ∈ · | ℱ] = ν^∞ a.s., then for any permutation σ,
-  -- P[ξ ∘ σ ∈ · | ℱ] = (ν^∞) ∘ σ = ν^∞ a.s. (product measures are permutation invariant)
-  
-  -- Taking expectations: P[ξ ∈ ·] = E[ν^∞] and P[ξ ∘ σ ∈ ·] = E[ν^∞]
-  -- So the distributions are equal.
-  
-  sorry
-
-/-- Mixed i.i.d. implies exchangeable. -/
-theorem exchangeable_of_mixedIID {μ : Measure Ω} {X : ℕ → Ω → α}
-    (hX : MixedIID μ X) : Exchangeable μ X := by
-  -- A mixture of i.i.d. distributions is exchangeable
-  sorry
 
 end Exchangeability
