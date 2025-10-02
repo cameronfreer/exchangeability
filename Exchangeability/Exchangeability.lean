@@ -169,13 +169,13 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω} {X : ℕ → Ω →
     
     -- Step 2: Both are probability measures on ℕ → α
     have hμ_X : IsProbabilityMeasure μ_X := by
+      -- Pushforward of probability measure is probability measure
+      -- This requires showing measurability which follows from hX_meas
       sorry
-      -- Pushforward of probability measure is probability measure (instance)
-      -- Requires: AEMeasurable (fun ω => fun n => X n ω) μ
     have hμ_Xπ : IsProbabilityMeasure μ_Xπ := by
+      -- Pushforward of probability measure is probability measure
+      -- This requires showing measurability which follows from hX_meas
       sorry
-      -- Pushforward of probability measure is probability measure (instance)
-      -- Requires: AEMeasurable (fun ω => fun n => X (π n) ω) μ
     
     -- Step 3: Show finite-dimensional marginals agree
     -- For any n and any measurable set S ⊆ (Fin n → α):
@@ -205,10 +205,10 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω} {X : ℕ → Ω →
         -- 1. Assume X is defined on a product space where we can directly apply hexch
         -- 2. Use a more general exchangeability that works with arbitrary index sets
         -- 3. Show that the preimage sets are equal by a careful combinatorial argument
-      · sorry  -- Measurable: (fun i : Fin n => f i)
-      · sorry  -- AEMeasurable: (fun ω => fun i : ℕ => X (π i) ω)
-      · sorry  -- Measurable: (fun i : Fin n => f i)  
-      · sorry  -- AEMeasurable: (fun ω => fun i : ℕ => X i ω)
+      · exact measurable_pi_lambda _ (fun i => measurable_pi_apply _)
+      · exact measurable_pi_lambda _ (fun i => hX_meas (π i))
+      · exact measurable_pi_lambda _ (fun i => measurable_pi_apply _)
+      · exact measurable_pi_lambda _ (fun i => hX_meas i)
     
     -- Step 4: By Ionescu-Tulcea/Kolmogorov extension theorem, measures on ℕ → α
     -- are uniquely determined by their finite-dimensional marginals
