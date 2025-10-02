@@ -438,6 +438,19 @@ lemma Contractable.shift_segment_eq {μ : Measure Ω} {X : ℕ → Ω → α}
     exact Nat.add_lt_add_left hij k
   exact hX m k' hk'_mono
 
+/-- Contractable sequences are invariant under taking strictly increasing subsequences
+with offsets. -/
+lemma Contractable.shift_and_select {μ : Measure Ω} {X : ℕ → Ω → α}
+    (hX : Contractable μ X) (m : ℕ) (k : Fin m → ℕ) (offset : ℕ) (hk : StrictMono k) :
+    Measure.map (fun ω i => X (offset + k i) ω) μ =
+      Measure.map (fun ω i => X i.val ω) μ := by
+  let k' : Fin m → ℕ := fun i => offset + k i
+  have hk'_mono : StrictMono k' := by
+    intro i j hij
+    simp only [k']
+    exact Nat.add_lt_add_left (hk hij) offset
+  exact hX m k' hk'_mono
+
 /-- Composing strictly monotone functions preserves strict monotonicity. -/
 lemma strictMono_comp {m n : ℕ} (f : Fin m → Fin n) (g : Fin n → ℕ)
     (hf : StrictMono f) (hg : StrictMono g) : StrictMono (fun i => g (f i)) := by
