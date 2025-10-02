@@ -309,7 +309,70 @@ lemma exists_perm_extending_strictMono {m n : ℕ} (k : Fin m → ℕ)
     (hk_mono : StrictMono k) (hk_bound : ∀ i, k i < n) (hmn : m ≤ n) :
     ∃ (σ : Equiv.Perm (Fin n)), ∀ (i : Fin m),
       (σ ⟨i.val, Nat.lt_of_lt_of_le i.isLt hmn⟩).val = k i := by
-  sorry
+  classical
+  -- Embed `Fin m` into `Fin n` via the initial segment.
+  let ι : Fin m → Fin n := Fin.castLEEmb hmn
+  let p : Fin n → Prop := fun x => x.val < m
+  let q : Fin n → Prop := fun x => ∃ i : Fin m, x = ⟨k i, hk_bound i⟩
+  have hι_mem : ∀ i : Fin m, p (ι i) := by
+    intro i
+    dsimp [p, ι, Fin.castLEEmb]
+    simpa using i.is_lt
+  let kFin : Fin m → Fin n := fun i => ⟨k i, hk_bound i⟩
+  have hk_mem : ∀ i : Fin m, q (kFin i) := fun i => ⟨i, rfl⟩
+  haveI : DecidablePred p := fun x => inferInstance
+  haveI : DecidablePred q := fun x => inferInstance
+  -- Equivalence between the first `m` coordinates and `Fin m`.
+  let e_dom : {x : Fin n // p x} ≃ Fin m :=
+    { toFun := fun x => ⟨x.1.val, x.2⟩
+      , invFun := fun i => ⟨ι i, by
+          dsimp [p, ι, Fin.castLEEmb]
+          simpa using i.is_lt⟩
+      , left_inv := by
+          rintro ⟨x, hx⟩
+          apply Subtype.ext
+          apply Fin.ext
+          simp [ι, Fin.castLEEmb]
+      , right_inv := by
+          intro i
+          cases' i with i hi
+          simp [e_dom, ι, Fin.castLEEmb] }
+  -- Equivalence between the image of `k` and `Fin m`.
+  let e_cod : Fin m ≃ {x : Fin n // q x} :=
+    { toFun := fun i => ⟨kFin i, hk_mem i⟩
+      , invFun := fun y =>
+          classical
+          Classical.choose y.2
+      , left_inv := by
+          intro i
+          have : Classical.choose (hk_mem i) = i := by
+            simp [hk_mem]
+          simpa [e_cod, this]
+      , right_inv := by
+          rintro ⟨y, hy⟩
+          rcases hy with ⟨i, rfl⟩
+          ext
+          simp [e_cod, kFin] }
+  -- Equivalence between the subtypes describing the first `m` coordinates and the image of `k`.
+  let e : {x : Fin n // p x} ≃ {x : Fin n // q x} := e_dom.trans e_cod
+  -- Extend this equivalence to a permutation of `Fin n`.
+  let σ : Equiv.Perm (Fin n) := Equiv.extendSubtype e
+  have hσ_apply : ∀ i : Fin m, σ (ι i) = kFin i := by
+    intro i
+    have hmem : p (ι i) := hι_mem i
+    have h_apply := Equiv.extendSubtype_apply_of_mem (e:=e) (x:=ι i) hmem
+    -- Evaluate the right-hand side explicitly.
+    dsimp [σ, e, Equiv.trans, e_dom, e_cod, ι, Fin.castLEEmb, kFin] at h_apply
+    simpa using h_apply
+  refine ⟨σ, ?_⟩
+  intro i
+  have hi_eq : (⟨i.val, Nat.lt_of_lt_of_le i.isLt hmn⟩ : Fin n) = ι i := by
+    apply Fin.ext
+    simp [ι, Fin.castLEEmb]
+  have hσ_val : (σ (ι i)).val = k i := by
+    have := congrArg Fin.val (hσ_apply i)
+    simpa [kFin] using this
+  simpa [hi_eq] using hσ_val
 
 /-- Helper: relabeling coordinates by a finite permutation is measurable as a map
 from (Fin n → α) to itself (with product σ-algebra). -/
