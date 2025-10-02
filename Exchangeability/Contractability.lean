@@ -95,6 +95,17 @@ def extendFinPerm (n : ℕ) (σ : Equiv.Perm (Fin n)) : Equiv.Perm ℕ where
     · -- Case: i ≥ n, so invFun i = i
       simp only [h, dif_neg, not_false_eq_true]
 
+/-- Exchangeability at a specific dimension n. -/
+def ExchangeableAt (μ : Measure Ω) (X : ℕ → Ω → α) (n : ℕ) : Prop :=
+  ∀ (σ : Equiv.Perm (Fin n)),
+    Measure.map (fun ω => fun i : Fin n => X (σ i) ω) μ =
+      Measure.map (fun ω => fun i : Fin n => X i ω) μ
+
+/-- Exchangeability is equivalent to being exchangeable at every dimension. -/
+lemma exchangeable_iff_forall_exchangeableAt {μ : Measure Ω} {X : ℕ → Ω → α} :
+    Exchangeable μ X ↔ ∀ n, ExchangeableAt μ X n := by
+  rfl
+
 /-- Full exchangeability implies exchangeability. -/
 lemma FullyExchangeable.exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX_meas : ∀ i, Measurable (X i)) (hX : FullyExchangeable μ X) : Exchangeable μ X := by
@@ -199,6 +210,12 @@ lemma Contractable.prefix {μ : Measure Ω} {X : ℕ → Ω → α}
     exact hk_mono hij
   -- Apply contractability
   exact hX m k' hk'_mono
+
+/-- Exchangeable at dimension n means permuting the first n indices preserves distribution. -/
+lemma ExchangeableAt.apply {μ : Measure Ω} {X : ℕ → Ω → α} {n : ℕ}
+    (hX : ExchangeableAt μ X n) (σ : Equiv.Perm (Fin n)) :
+    Measure.map (fun ω i => X (σ i).val ω) μ = Measure.map (fun ω i => X i.val ω) μ :=
+  hX σ
 
 -- ## Helper lemmas wrapping mathlib results
 
