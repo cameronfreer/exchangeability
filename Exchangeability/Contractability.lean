@@ -183,8 +183,11 @@ theorem exchangeable_of_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
   
   -- We need to show: (X_{σ(0)}, ..., X_{σ(n-1)}) has same distribution as (X_0, ..., X_{n-1})
   
-  -- Step 1: obtain a permutation ρ such that i ↦ (σ (ρ i)).val is strictly increasing
-  obtain ⟨ρ, hρ_mono⟩ := exists_sort_perm_of_perm (n:=n) σ
+  -- Step 1: Use ρ = σ.symm, which makes i ↦ (σ (ρ i)).val = i ↦ i.val strictly increasing
+  let ρ := σ.symm
+  have hρ_mono : StrictMono (fun i : Fin n => (σ (ρ i)).val) := by
+    intro i j hij
+    simpa [ρ, Equiv.apply_symm_apply] using fin_val_strictMono n hij
   
   -- Define the two maps Ω → (Fin n → α) we want to compare
   let f : Ω → (Fin n → α) := fun ω i => X i.val ω
@@ -196,31 +199,30 @@ theorem exchangeable_of_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
   have hg : Measurable g :=
     measurable_pi_lambda _ (fun i => hX_meas ((σ (ρ i)).val))
   
-  -- Step 2: By contractability (using the strictly monotone selection i ↦ (σ (ρ i)).val),
-  -- we have equality of measures for g and f
-  have h_base : Measure.map g μ = Measure.map f μ := by
-    -- apply contractability with k := fun i => (σ (ρ i)).val
-    simpa using
-      (hX (m:=n) (k:=fun i : Fin n => (σ (ρ i)).val) hρ_mono)
+  -- Step 2: Key observation: g = f because σ (ρ i) = σ (σ.symm i) = i
+  have h_g_eq_f : g = f := by
+    ext ω i
+    simp only [g, f, ρ]
+    congr 1
+    simp [Equiv.apply_symm_apply]
   
-  -- Step 3: Use permutation invariance on the (Fin n)-coordinates to remove ρ
-  -- We want: map (ω ↦ i ↦ X (σ i).val ω) μ = map f μ
-  -- Note that g = (ω ↦ i ↦ X (σ (ρ i)).val ω) = (relabel by ρ on fσ)
-  have h_use :=
-    measure_map_comp_perm (μ:=μ) (n:=n)
-      (f:=fun ω i => X (σ i).val ω) (g:=g) (σ:=ρ.symm)
-      (by
-        -- show map (ω ↦ i ↦ X (σ (ρ i)).val ω) μ = map f μ using h_base
-        -- rewrite g in terms of ρ action on (ω ↦ i ↦ X (σ i).val ω)
-        -- map g μ = map (fun ω i => X (σ (ρ i)).val ω) μ = map f μ
-        simpa)
-      (hf:=
-        measurable_pi_lambda _ (fun i => hX_meas ((σ i).val)))
-      (hg:=hg)
-  -- Unfolding h_use gives exactly the target equality
-  -- i.e., Measure.map (ω ↦ i ↦ X (σ i).val ω) μ = Measure.map f μ
-  -- which is the desired exchangeability statement for n and σ
-  simpa using h_use
+  -- So map g μ = map f μ is trivial
+  have h_base : Measure.map g μ = Measure.map f μ := by rw [h_g_eq_f]
+  
+  -- Step 3: The issue with this approach
+  -- Target: map (fun ω i => X (σ i).val ω) μ = map (fun ω i => X i.val ω) μ
+  -- What we know: g = f, so map g μ = map f μ (trivial)
+  --
+  -- The problem: contractability gives us equality for SORTED sequences,
+  -- but σ might not preserve order. To connect sorted to unsorted versions,
+  -- we need permutation invariance... which is exactly what we're trying to prove!
+  --
+  -- Kallenberg's proof uses the "mean ergodic theorem" (FMP 10.6), not
+  -- this direct combinatorial approach. The ergodic theory machinery provides
+  -- a different route that avoids this circularity.
+  --
+  -- For now, we defer this as it requires substantial ergodic theory development.
+  sorry
 
 /-- **Theorem 1.1 (de Finetti-Ryll-Nardzewski)**: For Borel spaces,
 contractable ↔ exchangeable ↔ conditionally i.i.d.
