@@ -154,12 +154,10 @@ def MixedIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
     -- The distribution of X is a mixture of product measures
     sorry -- Requires integration over measures
 
-/-- Helper lemma: If we have two increasing sequences that index the same set,
-then the corresponding subsequences have the same distribution (by contractability). -/
-lemma contractable_same_range {μ : Measure Ω} {X : ℕ → Ω → α}
-    (hX : Contractable μ X) {m : ℕ} (k₁ k₂ : Fin m → ℕ)
-    (hk₁ : StrictMono k₁) (hk₂ : StrictMono k₂)
-    (h_range : ∀ i, k₁ i = k₂ i) :
+/-- Helper lemma: If two index sequences are pointwise equal, then the corresponding
+subsequences have the same distribution. -/
+lemma contractable_same_range {μ : Measure Ω} {X : ℕ → Ω → α} {m : ℕ}
+    (k₁ k₂ : Fin m → ℕ) (h_range : ∀ i, k₁ i = k₂ i) :
     Measure.map (fun ω i => X (k₁ i) ω) μ = Measure.map (fun ω i => X (k₂ i) ω) μ := by
   congr 1
   ext ω i
