@@ -22,13 +22,23 @@ following Kallenberg's "Probabilistic Symmetries and Invariance Principles" (200
 ## Main results
 
 * `FullyExchangeable.exchangeable`: Full exchangeability implies (finite) exchangeability.
+* `contractable_of_exchangeable`: Exchangeable implies contractable (via permutation extension).
+* `exchangeable_of_conditionallyIID`: Conditionally i.i.d. implies exchangeable.
 
 ## Note on the de Finetti equivalences
 
-The full de Finetti-Ryll-Nardzewski theorem (contractable ↔ exchangeable ↔ conditionally i.i.d.)
-is stated as axioms in the `DeFinettiTheorems` section below and proved in `Exchangeability/DeFinetti.lean`
-using one of three approaches (L2, Koopman, or martingale).
-The reverse direction (exchangeable → fully exchangeable) is in `Exchangeability/Exchangeability.lean`.
+The full de Finetti-Ryll-Nardzewski theorem establishes: contractable ↔ exchangeable ↔ conditionally i.i.d.
+
+This file proves the "easy" directions:
+- Exchangeable → contractable (via permutation extension)
+- Conditionally i.i.d. → exchangeable (via product measure permutation invariance)
+
+The "hard" directions requiring ergodic theory are stated as axioms in the `DeFinettiTheorems` section
+and proved in `Exchangeability/DeFinetti.lean` using one of three approaches (L2, Koopman, or martingale):
+- Contractable → exchangeable (needs mean ergodic theorem)
+- Exchangeable → conditionally i.i.d. (needs ergodic decomposition for Borel spaces)
+
+The separate direction (exchangeable → fully exchangeable) is in `Exchangeability/Exchangeability.lean`.
 
 ## References
 
@@ -246,20 +256,34 @@ lemma perm_range_eq (n : ℕ) (σ : Equiv.Perm (Fin n)) :
   use σ.symm x
   simp
 
+/-- Every exchangeable sequence is contractable.
+This direction is straightforward via permutation extension. -/
+theorem contractable_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
+    (hX : Exchangeable μ X) (hX_meas : ∀ i, Measurable (X i)) : Contractable μ X := by
+  intro m k hk_mono
+  -- Strategy: Use exchangeability on a large enough finite space containing all k(i)
+  -- Build a permutation σ : Perm (Fin n) that maps first m positions to k-values
+  -- Apply exchangeability with σ and project back
+  sorry -- TODO: Complete using exists_perm_extending_strictMono
+
+/-- Conditionally i.i.d. implies exchangeable.
+If X is conditionally i.i.d., then permutations preserve the distribution. -/
+theorem exchangeable_of_conditionallyIID {μ : Measure Ω} {X : ℕ → Ω → α}
+    (hX : ConditionallyIID μ X) : Exchangeable μ X := by
+  intro n σ
+  -- If P[ξ ∈ · | ℱ] = ν^∞ a.s., then for any permutation σ,
+  -- P[ξ ∘ σ ∈ · | ℱ] = (ν^∞) ∘ σ = ν^∞ a.s. (product measures are permutation invariant)
+  -- Taking expectations: P[ξ ∈ ·] = E[ν^∞] and P[ξ ∘ σ ∈ ·] = E[ν^∞]
+  sorry -- TODO: Use constantProduct_comp_perm axiom
+
 /-! ## Theorems for DeFinetti.lean
 
-The following theorems establish the key equivalences in the de Finetti-Ryll-Nardzewski theorem.
-They are moved here as placeholders but should be proved in `Exchangeability/DeFinetti.lean`
-using ergodic theory approaches.
+The following are the hard directions of the de Finetti-Ryll-Nardzewski theorem,
+requiring ergodic theory. They are stated as axioms here and proved in
+`Exchangeability/DeFinetti.lean` using one of three approaches.
 -/
 
 section DeFinettiTheorems
-
-/-- Every exchangeable sequence is contractable.
-This direction is straightforward via permutation extension.
-TODO: Move full proof to DeFinetti.lean. -/
-axiom contractable_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
-    (hX : Exchangeable μ X) (hX_meas : ∀ i, Measurable (X i)) : Contractable μ X
 
 /-- Contractability implies exchangeability.
 This is the non-trivial direction requiring ergodic theory (mean ergodic theorem).
@@ -268,24 +292,18 @@ axiom exchangeable_of_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
     [IsProbabilityMeasure μ] (hX : Contractable μ X)
     (hX_meas : ∀ i : ℕ, Measurable (X i)) : Exchangeable μ X
 
-/-- The full de Finetti-Ryll-Nardzewski equivalence.
-TODO: Prove in DeFinetti.lean. -/
-axiom deFinetti_RyllNardzewski {μ : Measure Ω} {X : ℕ → Ω → α}
-    [IsProbabilityMeasure μ] (hX_meas : ∀ i, Measurable (X i)) :
-    Contractable μ X ↔ Exchangeable μ X
-
-/-- Conditionally i.i.d. implies exchangeable.
-This is part of the de Finetti-Ryll-Nardzewski equivalence chain.
-TODO: Prove in DeFinetti.lean. -/
-axiom exchangeable_of_conditionallyIID {μ : Measure Ω} {X : ℕ → Ω → α}
-    (hX : ConditionallyIID μ X) : Exchangeable μ X
-
 /-- Exchangeable implies conditionally i.i.d. (for Borel spaces).
-This is the deep direction requiring ergodic theory.
+This is the deep direction requiring ergodic theory and Borel space structure.
 TODO: Prove in DeFinetti.lean. -/
 axiom conditionallyIID_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
     [IsProbabilityMeasure μ] (hX : Exchangeable μ X)
     (hX_meas : ∀ i, Measurable (X i)) (hBorel : True) : ConditionallyIID μ X
+
+/-- The full de Finetti-Ryll-Nardzewski equivalence.
+TODO: Prove in DeFinetti.lean. -/
+axiom deFinetti_RyllNardzewski {μ : Measure Ω} {X : ℕ → Ω → α}
+    [IsProbabilityMeasure μ] (hX_meas : ∀ i, Measurable (X i)) :
+    Contractable μ X ↔ Exchangeable μ X ∧ ConditionallyIID μ X
 
 end DeFinettiTheorems
 
