@@ -99,7 +99,9 @@ def extendFinPerm (n : ℕ) (σ : Equiv.Perm (Fin n)) : Equiv.Perm ℕ where
 /-- Full exchangeability implies exchangeability.
 
 This is immediate since every finite permutation extends to a permutation of ℕ.
-    (hX : FullyExchangeable μ X) : Exchangeable μ X := by
+-/
+lemma FullyExchangeable.exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
+    (hX_meas : ∀ i, Measurable (X i)) (hX : FullyExchangeable μ X) : Exchangeable μ X := by
   intro n σ
   -- Extend σ : Perm (Fin n) to π : Perm ℕ by fixing all i ≥ n
   let π := extendFinPerm n σ
@@ -118,14 +120,18 @@ This is immediate since every finite permutation extends to a permutation of ℕ
     _ = Measure.map (proj ∘ (fun ω => fun i : ℕ => X (π i) ω)) μ := rfl
     _ = Measure.map proj (Measure.map (fun ω => fun i : ℕ => X (π i) ω) μ) := by
           rw [Measure.map_map]
-          · sorry  -- Measurable proj (projection is measurable)
-          · sorry  -- AEMeasurable (fun ω i => X (π i) ω) μ
+          · -- proj is measurable as a finite product of coordinate projections
+            exact measurable_pi_lambda _ (fun i => measurable_pi_apply _)
+          · -- (fun ω i => X (π i) ω) is measurable
+            exact measurable_pi_lambda _ (fun i => hX_meas (π i))
     _ = Measure.map proj (Measure.map (fun ω => fun i : ℕ => X i ω) μ) := by
           rw [hπ]
     _ = Measure.map (proj ∘ (fun ω => fun i : ℕ => X i ω)) μ := by
           rw [Measure.map_map]
-          · sorry  -- Measurable proj (same as above)
-          · sorry  -- AEMeasurable (fun ω i => X i ω) μ
+          · -- proj is measurable as a finite product of coordinate projections
+            exact measurable_pi_lambda _ (fun i => measurable_pi_apply _)
+          · -- (fun ω i => X i ω) is measurable
+            exact measurable_pi_lambda _ (fun i => hX_meas i)
     _ = Measure.map (fun ω => fun i : Fin n => X i ω) μ := rfl
 
 /-- Exchangeability implies full exchangeability (Kolmogorov extension theorem).
@@ -150,7 +156,7 @@ is invariant under all permutations.
 - Mathlib: `ProbabilityTheory.Kernel.traj` in `Probability.Kernel.IonescuTulcea.Traj`
 -/
 theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
-    [IsProbabilityMeasure μ] :
+    [IsProbabilityMeasure μ] (hX_meas : ∀ i, Measurable (X i)) :
     Exchangeable μ X ↔ FullyExchangeable μ X := by
   constructor
   · intro hexch
@@ -239,6 +245,7 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω} {X : ℕ → Ω →
       _ = μ_X := h_unique.symm
       _ = Measure.map (fun ω => fun i : ℕ => X i ω) μ := rfl
       
-  · exact FullyExchangeable.exchangeable
+  · intro hX_full
+    exact FullyExchangeable.exchangeable hX_meas hX_full
 
 end Exchangeability
