@@ -14,7 +14,7 @@ Implemented the mean-ergodic proof framework for de Finetti's theorem following 
 
 ## Files Created
 
-### 1. `/LeantestAfp/Probability/Ergodic/KoopmanMeanErgodic.lean`
+### 1. `/Exchangeability/Ergodic/KoopmanMeanErgodic.lean`
 
 **Purpose**: Foundation for ergodic-theoretic approach
 
@@ -38,7 +38,7 @@ Implemented the mean-ergodic proof framework for de Finetti's theorem following 
 
 ---
 
-### 2. `/LeantestAfp/Probability/DeFinetti/InvariantSigma.lean`
+### 2. `/Exchangeability/DeFinetti/InvariantSigma.lean`
 
 **Purpose**: Bridge between ergodic theory and probability via conditional expectation
 
@@ -60,7 +60,7 @@ Implemented the mean-ergodic proof framework for de Finetti's theorem following 
 
 ---
 
-### 3. `/LeantestAfp/Probability/DeFinetti/MeanErgodicStep.lean`
+### 3. `/Exchangeability/DeFinetti/MeanErgodicStep.lean`
 
 **Purpose**: Apply MET to cylinder functions and derive conditional product structure
 
@@ -180,14 +180,14 @@ All key steps documented with inline citations to Kallenberg.
 
 ## Project Integration
 
-Updated root file `/LeantestAfp.lean`:
+Updated root file `/Exchangeability.lean`:
 ```lean
-import LeantestAfp.Probability.Ergodic.KoopmanMeanErgodic
-import LeantestAfp.Probability.DeFinetti.InvariantSigma
-import LeantestAfp.Probability.DeFinetti.MeanErgodicStep
+import Exchangeability.Ergodic.KoopmanMeanErgodic
+import Exchangeability.DeFinetti.InvariantSigma
+import Exchangeability.DeFinetti.MeanErgodicStep
 ```
 
-All modules integrate cleanly with existing `/LeantestAfp/Probability/DeFinetti.lean` structure.
+All modules integrate cleanly with existing `/Exchangeability/DeFinetti.lean` structure.
 
 ---
 

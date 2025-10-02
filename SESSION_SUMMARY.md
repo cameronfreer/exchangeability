@@ -49,20 +49,20 @@
 
 ### Core Files
 
-**LeantestAfp/Probability/DeFinetti.lean** (277 lines)
+**Exchangeability/DeFinetti.lean** (277 lines)
 - Definitions: `Exchangeable`, `FullyExchangeable`, `extendFinPerm`
 - Theorems: `FullyExchangeable.exchangeable`, `exchangeable_iff_fullyExchangeable`
 - Status: 8 `sorry` placeholders (mostly measurability conditions)
 
-**LeantestAfp/Probability/Ergodic/KoopmanMeanErgodic.lean**
+**Exchangeability/Ergodic/KoopmanMeanErgodic.lean**
 - Koopman operator, Birkhoff averages, Mean Ergodic Theorem
 - Status: Fully proven using mathlib's `tendsto_birkhoffAverage_orthogonalProjection`
 
-**LeantestAfp/Probability/DeFinetti/InvariantSigma.lean**
+**Exchangeability/DeFinetti/InvariantSigma.lean**
 - Shift-invariant σ-algebra, conditional expectation
 - Status: 3 `sorry`s on projection-condexp identification
 
-**LeantestAfp/Probability/DeFinetti/MeanErgodicStep.lean**
+**Exchangeability/DeFinetti/MeanErgodicStep.lean**
 - Cylinder functions, Birkhoff convergence for cylinders
 - Status: 3 `sorry`s on L² membership and extremeMembers lemmas
 

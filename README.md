@@ -16,10 +16,10 @@ This repository contains a simple Lean 4 project that demonstrates:
 
 - `lakefile.lean` - Lake project configuration
 - `Main.lean` - Main executable entry point 
-- `LeantestAfp.lean` - Main library module
-- `LeantestAfp/Basic.lean` - Basic examples and proofs
-- `LeantestAfp/Advanced.lean` - More advanced examples with inductive types
-- `LeantestAfp/Tutorial.lean` - Step-by-step tutorial for beginners
+- `Exchangeability.lean` - Main library module
+- `Exchangeability/Basic.lean` - Basic examples and proofs
+- `Exchangeability/Advanced.lean` - More advanced examples with inductive types
+- `Exchangeability/Tutorial.lean` - Step-by-step tutorial for beginners
 
 ## Prerequisites
 
@@ -53,19 +53,19 @@ lake exe exchangeability
 
 ## Examples Included
 
-### Tutorial (`LeantestAfp/Tutorial.lean`)
+### Tutorial (`Exchangeability/Tutorial.lean`)
 - Step-by-step introduction to Lean 4 concepts
 - Simple function definitions
 - Working with structures and custom types
 - Basic proof techniques
 
-### Basic Examples (`LeantestAfp/Basic.lean`)
+### Basic Examples (`Exchangeability/Basic.lean`)
 - Addition commutativity: `a + b = b + a`
 - Additive identity: `n + 0 = n`
 - Point structure with distance calculations
 - List operations with mapping functions
 
-### Advanced Examples (`LeantestAfp/Advanced.lean`)
+### Advanced Examples (`Exchangeability/Advanced.lean`)
 - Inductive type definitions (Color enum)
 - Recursive functions (factorial)
 - Dependent types (vectors)

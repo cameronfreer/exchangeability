@@ -1,7 +1,7 @@
 # Blueprint: de Finetti's Theorem
 
 This document sketches the route for formalising de Finetti's theorem in
-`LeantestAfp/Probability/DeFinetti.lean`.  It pairs each conceptual step with a
+`Exchangeability/DeFinetti.lean`.  It pairs each conceptual step with a
 proposed Lean statement so that we can track progress and delegate tasks.
 
 ## Statement
