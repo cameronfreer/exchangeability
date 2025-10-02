@@ -10,6 +10,7 @@ import Mathlib.MeasureTheory.Constructions.BorelSpace.Basic
 import Exchangeability.Exchangeability
 import Exchangeability.DeFinetti.KoopmanApproach
 import Exchangeability.DeFinetti.L2Approach
+import Exchangeability.DeFinetti.MartingaleApproach
 
 /-!
 # De Finetti's Theorem
@@ -22,18 +23,23 @@ exchangeable sequences.
 * `deFinetti`: An infinite exchangeable sequence on a Borel space is conditionally
   i.i.d. given the tail σ-algebra.
 
-## Two proof approaches (Kallenberg 2005)
+## Three proof approaches (Kallenberg 2005)
 
-This formalization includes both proofs from Kallenberg's Theorem 1.1 (pages 26-27):
+This formalization keeps track of all proofs of Theorem 1.1 highlighted by
+Kallenberg:
 
-1. **First proof** (KoopmanApproach): Uses the Mean Ergodic Theorem via the Koopman
-   operator on L²(μ). The key insight is that Birkhoff averages converge to the
-   conditional expectation onto the shift-invariant σ-algebra, which can be shown
-   to have product form.
+1. **First proof** (`KoopmanApproach`): Uses the Mean Ergodic Theorem via the
+   Koopman operator on L²(μ). The key insight is that Birkhoff averages converge
+   to the conditional expectation onto the shift-invariant σ-algebra, which can be
+   shown to have product form.
 
-2. **Second proof** (L2Approach): Uses an elementary L² contractability bound
+2. **Second proof** (`L2Approach`): Uses an elementary L² contractability bound
    (Lemma 1.2) that directly shows convergence of empirical distributions without
    invoking the full ergodic theory machinery.
+
+3. **Third proof** (`MartingaleApproach`): Follows Aldous' martingale argument,
+   relying on a contraction/independence lemma and reverse martingale convergence
+   for the tail σ-algebra. The current file provides scaffolding for this route.
 
 ## References
 

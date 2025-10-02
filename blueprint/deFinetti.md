@@ -57,6 +57,21 @@ behaviour with respect to a directing measure.
    - [ ] Translate the probabilistic conclusion into the Lean predicate
          `CondIID μ X ξ` and finish the proof of `deFinetti`.
 
+### Alternative proofs tracked in code
+
+Kallenberg lists three proofs of Theorem 1.1.  The blueprint primarily follows
+the ergodic/martingale structure above, but the Lean development keeps the
+additional arguments in separate files:
+
+1. `Exchangeability/DeFinetti/KoopmanApproach.lean` – mean ergodic proof.
+2. `Exchangeability/DeFinetti/L2Approach.lean` – L² contractability bound.
+3. `Exchangeability/DeFinetti/MartingaleApproach.lean` – Aldous' martingale
+   proof (new scaffold).
+
+Project B in `EXCHANGEABILITY_TASKS.md` records the infrastructure needed to
+complete the martingale proof, notably the contraction/independence lemma and
+the conditional i.i.d. construction from tail limits.
+
 ## Intermediate Lemmas and TODOs
 
 | Label | Description | Lean placeholder |
