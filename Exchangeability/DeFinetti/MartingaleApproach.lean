@@ -59,10 +59,39 @@ def tailSigma (X : ℕ → Ω → α) : MeasurableSpace Ω :=
 /-- If `X` is contractable, then so is each of its shifts `θₘ X`. -/
 lemma shift_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX : Contractable μ X) (m : ℕ) : Contractable μ (shiftProcess X m) := by
-  -- TODO: unwind `Contractable` and translate strict monotonicity through the shift.
-  -- The key observation is that composing a strictly monotone map with `fun i => m + i`
-  -- remains strictly monotone, so the required joint laws agree by `hX`.
-  sorry
+  -- Unwind contractability: for any strictly monotone k : Fin n → ℕ,
+  -- the distribution of (X (k i))ᵢ equals that of (X i)ᵢ
+  intro n k hk_mono
+  -- Define the shifted index function k' i = m + k i
+  let k' : Fin n → ℕ := fun i => m + k i
+  -- k' is strictly monotone since k is
+  have hk'_mono : StrictMono k' := by
+    intro i j hij
+    simp only [k']
+    exact Nat.add_lt_add_left (hk_mono hij) m
+  -- Apply contractability of X to k'
+  have := hX n k' hk'_mono
+  -- The LHS equals (X (k' i))ᵢ = (X (m + k i))ᵢ = (shiftProcess X m (k i))ᵢ
+  -- The RHS equals (X i)ᵢ
+  -- We need to show: (shiftProcess X m (k i))ᵢ ~ (shiftProcess X m i)ᵢ
+  -- This follows from: (X (m + k i))ᵢ ~ (X (m + i))ᵢ
+  
+  -- Rewrite the goal in terms of X
+  have hlhs : (fun ω i => shiftProcess X m (k i) ω) = (fun ω i => X (m + k i) ω) := by
+    ext ω i
+    simp only [shiftProcess]
+  
+  have hrhs : (fun ω i => shiftProcess X m i ω) = (fun ω i => X (m + i) ω) := by
+    ext ω i
+    simp only [shiftProcess]
+  
+  rw [hlhs, hrhs]
+  
+  -- Now we need: (X (m + k i))ᵢ ~ (X (m + i))ᵢ
+  -- This is exactly hX applied to k' where k' i = m + k i
+  convert this using 2
+  ext ω i
+  simp only [k']
 
 /-- **Lemma (contraction and independence).**
 
