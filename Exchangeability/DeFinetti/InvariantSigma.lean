@@ -209,8 +209,8 @@ lemma exists_shiftInvariantRepresentative
       simp [g', hω, hshiftω]
   -- TODO: implement the measurability proof for `g'` with respect to `shiftInvariantSigma`.
   refine ⟨g', ?_, hg'_ae_eq_g, hshift_g'⟩
-  sorry
-  sorry
+  · -- show `g'` is measurable with respect to the invariant σ-algebra
+    sorry
 
 /-- A function is measurable with respect to the shift-invariant σ-algebra iff
 it is (a.e.) constant along shift orbits. -/
