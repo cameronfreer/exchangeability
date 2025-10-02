@@ -229,12 +229,31 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω} {X : ℕ → Ω →
         --     (using decidable equality and choice to map remaining elements)
         -- (c) Proving the result is indeed a permutation
         
-        -- Construction approach:
-        -- - Define σ on Fin m by cases
-        -- - Prove it's bijective
-        -- - Package as Equiv.Perm (Fin m)
+        -- Construction approach using classical choice:
+        -- Let A = {0,...,n-1} ⊆ Fin m
+        -- Let B = {π(0),...,π(n-1)} ⊆ Fin m
+        -- We have |A| = |B| = n (π is injective on the first n values)
+        --
+        -- Define σ : Fin m → Fin m by:
+        --   σ(i) = π(i)  if i < n
+        --   σ(i) = some bijection from (Fin m \ A) to (Fin m \ B)  if i ≥ n
+        --
+        -- The bijection on the complement exists because:
+        -- |(Fin m \ A)| = m - n = |(Fin m \ B)|
+        --
+        -- In Lean, we would:
+        -- 1. Use Fintype.card to show the cardinalities match
+        -- 2. Use Fintype.equivOfCardEq to get an equivalence on complements
+        -- 3. Combine the two partial functions into σ
+        -- 4. Prove σ is a permutation
+        --
+        -- Then apply: hexch m σ to get the measure equality
+        -- Finally, restrict to first n coordinates to extract the result
         
-        -- For now, this combinatorial construction is complex and omitted:
+        -- This construction is feasible but requires careful bookkeeping of:
+        -- - Finset membership proofs
+        -- - Injectivity of π on finite sets
+        -- - Combining partial bijections
         sorry
       · exact measurable_pi_lambda _ (fun i => measurable_pi_apply _)
       · exact measurable_pi_lambda _ (fun i => hX_meas (π i))
