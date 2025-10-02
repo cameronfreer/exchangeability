@@ -176,6 +176,11 @@ axiom constantProduct_comp_perm (ν₀ : Measure α) [IsProbabilityMeasure ν₀
     (μ_prod : Measure (ℕ → α)) (σ : Equiv.Perm ℕ) :
     Measure.map (fun f : ℕ → α => f ∘ σ) μ_prod = μ_prod
 
+/-- For a strictly monotone function k : Fin m → ℕ, we have k(i) ≥ i for all i. -/
+lemma strictMono_Fin_ge_id {m : ℕ} {k : Fin m → ℕ} (hk : StrictMono k) (i : Fin m) :
+    i.val ≤ k i := by
+  sorry -- Induction: k injective and Fin m has m elements, so k maps into at least m distinct values
+
 /-- Given strictly monotone k : Fin m → ℕ and n containing all k(i), we can construct
 a permutation σ : Perm (Fin n) such that σ maps first m positions to k-values.
 This is the key lemma needed for contractable_of_exchangeable. -/
@@ -273,12 +278,21 @@ theorem contractable_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
         exact Fin.le_last i
       omega
     
-    -- The construction of this permutation is complex - we need to:
-    -- 1. Map each i < m+1 to k(i)
-    -- 2. Fill in the remaining slots with the unused values
-    -- This is a standard finite permutation construction but tedious in Lean
+    -- Use exists_perm_extending_strictMono to build the permutation
+    have hmn : m' + 1 ≤ n := by
+      simp only [n]
+      -- k is strictly monotone so k(m') ≥ m'
+      have : m' ≤ k ⟨m', Nat.lt_succ_self m'⟩ := 
+        strictMono_Fin_ge_id hk_mono ⟨m', Nat.lt_succ_self m'⟩
+      omega
     
-    sorry
+    obtain ⟨σ, hσ⟩ := exists_perm_extending_strictMono k hk_mono hk_bound hmn
+    
+    -- Now σ : Perm (Fin n) maps first m' + 1 positions to k-values
+    -- Apply exchangeability to σ and use the resulting equality
+    -- to show (X_{k(0)}, ..., X_{k(m')}) has same distribution as (X_0, ..., X_{m'})
+    
+    sorry -- The rest involves projecting from Fin n to Fin (m'+1) and using exchangeability
 
 /-- For infinite sequences, contractability implies exchangeability.
 
