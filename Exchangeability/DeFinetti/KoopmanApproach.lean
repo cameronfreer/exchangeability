@@ -134,42 +134,19 @@ This combines:
 -/
 theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
     Tendsto (fun n => birkhoffAverage ℝ (koopman shift hσ) _root_.id n f)
-      atTop
-      (𝓝 (condexpL2 shiftInvariantSigma f)) := by
+      atTop (𝓝 (condexpL2 shiftInvariantSigma f)) := by
   -- Step 1: Get the projection from the Mean Ergodic Theorem
   obtain ⟨P, hP_fixed, hP_tendsto⟩ := birkhoffAverage_tendsto_fixedSpace shift hσ f
+  have hP_proj : P = (fixedSubspace hσ).starProjection := rfl
   
   -- Step 2: Get the identification of projection with conditional expectation
   obtain ⟨Q, hQ_fixed, hQ_condexp⟩ := proj_eq_condexp hσ
+  have hQ_proj : Q = (fixedSubspace hσ).starProjection := by
+    ext g
+    simpa [hQ_condexp]
   
-  -- Step 3: Show P = Q by uniqueness of projections
-  -- Both P and Q are projections onto the fixed subspace with the same properties
-  have hPQ : P f = Q f := by
-    -- Key observation: Both P and Q are the identity on fixedSubspace hσ
-    -- hP_fixed : ∀ g, g ∈ fixedSpace (koopman shift hσ) → P g = g
-    -- hQ_fixed : ∀ g, g ∈ fixedSubspace hσ → Q g = g
-    -- Note: fixedSubspace hσ = fixedSpace (koopman shift hσ) by definition
-    
-    -- Strategy: Show that for any projection that is identity on the fixed subspace,
-    -- it must be idempotent (P ∘ P = P), and two such projections must be equal.
-    
-    -- Alternative direct approach: Show P and Q agree on a dense subset and use continuity
-    -- The fixed subspace plus its orthogonal complement spans the whole space densely
-    
-    -- For now, we need more infrastructure about projections
-    sorry
-    -- What we need from mathlib or to prove:
-    -- Lemma: If P, Q : E →L[ℝ] E both satisfy:
-    --   1. ∀ x ∈ S, P x = x  (P is identity on subspace S)
-    --   2. ∀ x ∈ S, Q x = x  (Q is identity on subspace S)
-    --   3. P is a continuous projection (P ∘ P = P)
-    --   4. Q is a continuous projection (Q ∘ Q = Q)
-    --   5. Range(P) = S and Range(Q) = S
-    -- Then P = Q (uniqueness of projections onto S)
-  
-  -- Step 4: Combine to get convergence to condexpL2
-  rw [hQ_condexp] at hPQ
-  rw [← hPQ]
+  -- Step 3 & 4: Combine to get convergence to condexpL2
+  simp [hP_proj, hQ_proj, hQ_condexp] at hP_tendsto
   exact hP_tendsto
 
 /-- Specialization to cylinder functions: the core case for de Finetti. -/
