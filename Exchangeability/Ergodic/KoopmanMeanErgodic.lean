@@ -111,18 +111,15 @@ theorem birkhoffAverage_tendsto_fixedSpace
       simpa [K, koopman]
         using (MeasureTheory.Lp.compMeasurePreservingₗᵢ ℝ T hT).norm_map g
     simpa [hnorm_eq]
-  let S := LinearMap.eqLocus K.toLinearMap 1
-  let projToSub : Lp ℝ 2 μ →L[ℝ] S := S.orthogonalProjection
-  let inclusion : S →L[ℝ] Lp ℝ 2 μ := S.subtypeL
-  let P : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ := inclusion.comp projToSub
+  let S : Submodule ℝ (Lp ℝ 2 μ) := LinearMap.eqLocus K.toLinearMap 1
+  let P : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ := S.starProjection
   refine ⟨P, ?_, ?_⟩
   · intro g hg
     let gS : S := ⟨g, hg⟩
     have hproj := S.orthogonalProjection_mem_subspace_eq_self gS
-    simpa [P, projToSub, inclusion, gS] using congrArg Subtype.val hproj
+    simpa [P, Submodule.starProjection_apply, gS] using congrArg Subtype.val hproj
   · have h_tendsto :=
       ContinuousLinearMap.tendsto_birkhoffAverage_orthogonalProjection K hnorm f
-    have h_proj_val : (P f) = (S.orthogonalProjection f : S) := rfl
-    simpa [P, projToSub, inclusion, h_proj_val]
+    simpa [P, Submodule.starProjection_apply]
 
 end Exchangeability.Ergodic
