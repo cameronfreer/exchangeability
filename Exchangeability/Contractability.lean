@@ -184,6 +184,22 @@ lemma contractable_same_range {μ : Measure Ω} {X : ℕ → Ω → α} {m : ℕ
   ext ω i
   rw [h_range]
 
+/-- Contractability is preserved under prefix: if X is contractable, so is any finite prefix. -/
+lemma Contractable.prefix {μ : Measure Ω} {X : ℕ → Ω → α}
+    (hX : Contractable μ X) (n : ℕ) :
+    ∀ (m : ℕ) (k : Fin m → Fin n), StrictMono k →
+      Measure.map (fun ω i => X (k i).val ω) μ =
+        Measure.map (fun ω i => X i.val ω) μ := by
+  intro m k hk_mono
+  -- Lift k to a function Fin m → ℕ
+  let k' : Fin m → ℕ := fun i => (k i).val
+  have hk'_mono : StrictMono k' := by
+    intro i j hij
+    simp only [k']
+    exact hk_mono hij
+  -- Apply contractability
+  exact hX m k' hk'_mono
+
 -- ## Helper lemmas wrapping mathlib results
 
 /-- Product measures exist in mathlib. This placeholder captures the idea that
@@ -196,6 +212,20 @@ axiom productMeasure_exists (ν : ℕ → Measure α) [∀ i, IsProbabilityMeasu
 axiom constantProduct_comp_perm (ν₀ : Measure α) [IsProbabilityMeasure ν₀]
     (μ_prod : Measure (ℕ → α)) (σ : Equiv.Perm ℕ) :
     Measure.map (fun f : ℕ → α => f ∘ σ) μ_prod = μ_prod
+
+/-- Composing strictly monotone functions with addition preserves strict monotonicity. -/
+lemma strictMono_add_left {m : ℕ} (k : Fin m → ℕ) (hk : StrictMono k) (c : ℕ) :
+    StrictMono (fun i => c + k i) := by
+  intro i j hij
+  simp only
+  exact Nat.add_lt_add_left (hk hij) c
+
+/-- Composing strictly monotone functions with addition preserves strict monotonicity. -/
+lemma strictMono_add_right {m : ℕ} (k : Fin m → ℕ) (hk : StrictMono k) (c : ℕ) :
+    StrictMono (fun i => k i + c) := by
+  intro i j hij
+  simp only
+  exact Nat.add_lt_add_right (hk hij) c
 
 /-- For a strictly monotone function `k : Fin m → ℕ`, the values dominate the indices. -/
 lemma strictMono_Fin_ge_id {m : ℕ} {k : Fin m → ℕ} (hk : StrictMono k) (i : Fin m) :
