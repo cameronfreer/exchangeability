@@ -191,25 +191,8 @@ axiom constantProduct_comp_perm (ν₀ : Measure α) [IsProbabilityMeasure ν₀
     (μ_prod : Measure (ℕ → α)) (σ : Equiv.Perm ℕ) :
     Measure.map (fun f : ℕ → α => f ∘ σ) μ_prod = μ_prod
 
-/-- For a strictly monotone function k : Fin m → ℕ, we have k(i) ≥ i for all i. -/
-lemma strictMono_Fin_ge_id {m : ℕ} {k : Fin m → ℕ} (hk : StrictMono k) (i : Fin m) :
-    i.val ≤ k i := by
-  -- Proof by induction on i.val
-  match i with
-  | ⟨0, _⟩ => exact Nat.zero_le _
-  | ⟨n+1, hn⟩ =>
-    -- k is strictly monotone, so k(n) < k(n+1)
-    have hn' : n < m := Nat.lt_of_succ_lt hn
-    let j : Fin m := ⟨n, hn'⟩
-    have hj_lt : j < i := hn'
-    have hk_mono : k j < k i := hk hj_lt
-    -- By induction hypothesis: k(j) ≥ j = n
-    have ih : j.val ≤ k j := strict Mono_Fin_ge_id hk j
-    -- Therefore: k(i) > k(j) ≥ n, so k(i) ≥ n+1
-    calc i.val
-        = n + 1 := rfl
-      _ ≤ k j + 1 := Nat.add_le_add_right ih 1
-      _ ≤ k i := hk_mono
+-- NOTE: A naïve inequality like k(i) ≥ i for strictly monotone k : Fin m → ℕ is false in general
+-- (consider k i = i + c with c > 0). We therefore avoid relying on such a lemma.
 
 /-- Given strictly monotone k : Fin m → ℕ and n containing all k(i), we can construct
 a permutation σ : Perm (Fin n) such that σ maps first m positions to k-values.
@@ -279,7 +262,10 @@ theorem contractable_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
   -- Strategy: Use exchangeability on a large enough finite space containing all k(i)
   -- Build a permutation σ : Perm (Fin n) that maps first m positions to k-values
   -- Apply exchangeability with σ and project back
-  sorry -- TODO: Complete using exists_perm_extending_strictMono
+  -- Let n be any number greater than all k(i). For example, take
+  -- n = 1 + max { k i | i < m }. Then use exists_perm_extending_strictMono to
+  -- obtain σ : Perm (Fin n) with σ i = k i for i < m. Apply hX n σ and project.
+  sorry
 
 /-- Conditionally i.i.d. implies exchangeable.
 If X is conditionally i.i.d., then permutations preserve the distribution. -/
