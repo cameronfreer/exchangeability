@@ -189,22 +189,18 @@ lemma measure_map_comp_perm {μ : Measure Ω} {n : ℕ}
   have hf_rw : (fun ω i => f ω (σ i)) = perm_map ∘ f := by ext ω i; rfl
   have hg_rw : (fun ω i => g ω (σ i)) = perm_map ∘ g := by ext ω i; rfl
   -- Use map_map to pull out composition
-  have h_map_f : Measure.map (perm_map ∘ f) μ = Measure.map perm_map (Measure.map f μ) := by
-    simpa [Function.comp] using
-      (Measure.map_map (μ:=μ) (f:=f) (g:=perm_map)
-        (hg:=(measurable_perm_map (σ:=σ))) (hf:=hf))
-  have h_map_g : Measure.map (perm_map ∘ g) μ = Measure.map perm_map (Measure.map g μ) := by
-    simpa [Function.comp] using
-      (Measure.map_map (μ:=μ) (f:=g) (g:=perm_map)
-        (hg:=(measurable_perm_map (σ:=σ))) (hf:=hg))
+  have h_map_f : Measure.map (perm_map ∘ f) μ = Measure.map perm_map (Measure.map f μ) :=
+    (Measure.map_map (measurable_perm_map (σ:=σ)) hf).symm
+  have h_map_g : Measure.map (perm_map ∘ g) μ = Measure.map perm_map (Measure.map g μ) :=
+    (Measure.map_map (measurable_perm_map (σ:=σ)) hg).symm
   -- Chain equalities
   calc
     Measure.map (fun ω i => f ω (σ i)) μ
-        = Measure.map (perm_map ∘ f) μ := by simpa [hf_rw]
+        = Measure.map (perm_map ∘ f) μ := by rw [hf_rw]
     _ = Measure.map perm_map (Measure.map f μ) := h_map_f
-    _ = Measure.map perm_map (Measure.map g μ) := by simpa [h]
-    _ = Measure.map (perm_map ∘ g) μ := by simpa [Function.comp] using h_map_g.symm
-    _ = Measure.map (fun ω i => g ω (σ i)) μ := by simpa [hg_rw]
+    _ = Measure.map perm_map (Measure.map g μ) := by rw [h]
+    _ = Measure.map (perm_map ∘ g) μ := h_map_g.symm
+    _ = Measure.map (fun ω i => g ω (σ i)) μ := by rw [hg_rw]
 
 /-- Special case: The identity function on Fin n is strictly monotone when
 viewed as a function to ℕ. -/
