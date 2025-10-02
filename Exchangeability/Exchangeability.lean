@@ -83,32 +83,22 @@ def extendFinPerm (n : ℕ) (σ : Equiv.Perm (Fin n)) : Equiv.Perm ℕ where
     intro i
     by_cases h : i < n
     · simp only [h, dite_true]
-      -- Need to show: if σ⟨i,h⟩ < n then σ.symm (σ ⟨i, h⟩).val else σ⟨i,h⟩.val = i
       have hσi : (σ ⟨i, h⟩).val < n := (σ ⟨i, h⟩).isLt
       simp only [hσi, dite_true]
-      -- Now: σ.symm ⟨(σ ⟨i, h⟩).val, hσi⟩ = i
-      have : (σ.symm ⟨(σ ⟨i, h⟩).val, hσi⟩ : Fin n) = ⟨i, h⟩ := by
-        simp [Fin.ext_iff]
-      exact congrArg Fin.val this
+      rw [Equiv.symm_apply_apply]
     · simp [h]
   right_inv := by
     intro i
     by_cases h : i < n
     · simp only [h, dite_true]
-      -- Need to show: if σ.symm⟨i,h⟩ < n then σ (σ.symm ⟨i, h⟩).val else (σ.symm⟨i,h⟩).val = i
       have hσi : (σ.symm ⟨i, h⟩).val < n := (σ.symm ⟨i, h⟩).isLt
       simp only [hσi, dite_true]
-      -- Now: σ ⟨(σ.symm ⟨i, h⟩).val, hσi⟩ = i
-      have : (σ ⟨(σ.symm ⟨i, h⟩).val, hσi⟩ : Fin n) = ⟨i, h⟩ := by
-        simp [Fin.ext_iff]
-      exact congrArg Fin.val this
+      rw [Equiv.apply_symm_apply]
     · simp [h]
 
 /-- Full exchangeability implies exchangeability.
 
 This is immediate since every finite permutation extends to a permutation of ℕ.
--/
-lemma FullyExchangeable.exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX : FullyExchangeable μ X) : Exchangeable μ X := by
   intro n σ
   -- Extend σ : Perm (Fin n) to π : Perm ℕ by fixing all i ≥ n
