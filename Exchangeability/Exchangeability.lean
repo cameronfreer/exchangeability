@@ -317,7 +317,15 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω} {X : ℕ → Ω →
         have h_card_compl : (Finset.univ \ A).card = (Finset.univ \ B).card := by
           have h_AB_eq : A.card = B.card := by rw [h_card_A, h_card_B]
           -- Both complements have card = m - n
-          sorry -- Provable using Finset.card_sdiff, but requires careful typing
+          have hA : (Finset.univ \ A).card = Fintype.card (Fin m) - A.card := by
+            rw [Finset.card_sdiff]
+            · simp
+            · exact Finset.subset_univ A
+          have hB : (Finset.univ \ B).card = Fintype.card (Fin m) - B.card := by
+            rw [Finset.card_sdiff]
+            · simp
+            · exact Finset.subset_univ B
+          rw [hA, hB, h_AB_eq]
         
         -- To construct σ : Equiv.Perm (Fin m), we would:
         -- 1. Define a bijection from A to B (given by i ↦ π i)
