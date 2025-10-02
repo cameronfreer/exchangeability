@@ -1,15 +1,15 @@
 import Lake
 open Lake DSL
 
-package «leantest-afp» where
+package «exchangeability» where
   -- add package configuration options here
 
 require mathlib from git
   "https://github.com/leanprover-community/mathlib4.git"
 
-lean_lib «LeantestAfp» where
+lean_lib «Exchangeability» where
   -- add library configuration options here
 
 @[default_target]
-lean_exe «leantest-afp» where
+lean_exe «exchangeability» where
   root := `Main

@@ -6,7 +6,7 @@ Authors: leantest-afp contributors
 import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.Analysis.InnerProductSpace.Projection.Basic
-import LeantestAfp.Probability.Ergodic.KoopmanMeanErgodic
+import Exchangeability.Probability.Ergodic.KoopmanMeanErgodic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.CondexpL2
 
 /-!
@@ -44,10 +44,10 @@ noncomputable section
 
 open scoped Classical
 
-namespace LeantestAfp.Probability.DeFinetti
+namespace Exchangeability.Probability.DeFinetti
 
 open MeasureTheory Filter Topology
-open LeantestAfp.Probability.Ergodic
+open Exchangeability.Probability.Ergodic
 
 variable {α : Type*} [MeasurableSpace α]
 
@@ -483,4 +483,4 @@ lemma range_condexp_eq_fixedSubspace {μ : Measure (Ω[α])} [IsProbabilityMeasu
     -/
     sorry
 
-end LeantestAfp.Probability.DeFinetti
+end Exchangeability.Probability.DeFinetti

@@ -1,6 +1,6 @@
 -- Main entry point for the leantest-afp project.
 import Std
-import LeantestAfp
+import Exchangeability
 
 def main : IO Unit := do
   IO.println "========================================="
@@ -12,7 +12,7 @@ def main : IO Unit := do
   IO.println "for a Lean 4 proof of de Finetti's theorem."
   IO.println ""
   IO.println "Key files:"
-  IO.println "• `LeantestAfp/Probability/DeFinetti.lean`"
+  IO.println "• `Exchangeability/Probability/DeFinetti.lean`"
   IO.println "• `blueprint/deFinetti.md`"
   IO.println ""
   IO.println "Run 'lake build' to build the project."

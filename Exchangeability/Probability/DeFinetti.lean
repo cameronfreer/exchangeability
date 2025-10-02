@@ -7,7 +7,7 @@ import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
 import Mathlib.Probability.IdentDistrib
 import Mathlib.Probability.Kernel.Basic
 import Mathlib.MeasureTheory.Constructions.BorelSpace.Basic
-import LeantestAfp.Probability.Exchangeability
+import Exchangeability.Probability.Exchangeability
 
 /-!
 # De Finetti's theorem (draft blueprint)
@@ -38,7 +38,7 @@ At this early stage we record the key definitions and intermediate lemmas as
 noncomputable section
 open scoped BigOperators MeasureTheory Topology Classical
 
-namespace LeantestAfp
+namespace Exchangeability
 namespace Probability
 
 open MeasureTheory Filter
@@ -126,4 +126,4 @@ theorem deFinetti
   sorry
 
 end Probability
-end LeantestAfp
+end Exchangeability

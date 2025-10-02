@@ -6,8 +6,8 @@ Authors: leantest-afp contributors
 import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.Analysis.InnerProductSpace.Projection.Basic
-import LeantestAfp.Probability.Ergodic.KoopmanMeanErgodic
-import LeantestAfp.Probability.DeFinetti.InvariantSigma
+import Exchangeability.Probability.Ergodic.KoopmanMeanErgodic
+import Exchangeability.Probability.DeFinetti.InvariantSigma
 
 /-!
 # Mean Ergodic Step for de Finetti's Theorem
@@ -44,10 +44,10 @@ used in Kallenberg's proof of de Finetti's theorem.
 
 noncomputable section
 
-namespace LeantestAfp.Probability.DeFinetti
+namespace Exchangeability.Probability.DeFinetti
 
 open MeasureTheory Filter Topology BigOperators
-open LeantestAfp.Probability.Ergodic
+open Exchangeability.Probability.Ergodic
 
 variable {α : Type*} [MeasurableSpace α]
 
@@ -478,4 +478,4 @@ theorem l2_contractability_bound
 
 end AlternativeL2Bound
 
-end LeantestAfp.Probability.DeFinetti
+end Exchangeability.Probability.DeFinetti
