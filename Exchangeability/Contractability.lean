@@ -147,6 +147,19 @@ lemma FullyExchangeable.exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
     _ = Measure.map (proj ∘ fun ω i => X i ω) μ := hmap₂
     _ = Measure.map (fun ω i => X i.val ω) μ := by rw [hprojid]
 
+/-- Exchangeability is preserved under composition of permutations. -/
+lemma Exchangeable.comp {μ : Measure Ω} {X : ℕ → Ω → α} {n : ℕ}
+    (hX : Exchangeable μ X) (σ τ : Equiv.Perm (Fin n)) :
+    Measure.map (fun ω i => X ((σ.trans τ) i).val ω) μ =
+      Measure.map (fun ω i => X i.val ω) μ :=
+  hX n (σ.trans τ)
+
+/-- The identity permutation preserves the distribution (trivially). -/
+lemma Exchangeable.refl {μ : Measure Ω} {X : ℕ → Ω → α} (n : ℕ) :
+    Measure.map (fun ω (i : Fin n) => X (Equiv.refl (Fin n) i).val ω) μ =
+      Measure.map (fun ω (i : Fin n) => X i.val ω) μ := by
+  congr
+
 /-- A finite or infinite random sequence ξ is **contractable** if all increasing subsequences
 of equal length have the same distribution.
 
