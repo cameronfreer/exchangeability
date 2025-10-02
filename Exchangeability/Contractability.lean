@@ -5,6 +5,7 @@ Authors: Cameron Freer
 -/
 import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
 import Mathlib.MeasureTheory.Measure.Typeclasses.Probability
+import Mathlib.MeasureTheory.Measure.GiryMonad
 
 /-!
 # Contractability and the de Finetti-Ryll-Nardzewski Theorem
@@ -159,19 +160,19 @@ def Contractable (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
     Measure.map (fun ω i => X (k i) ω) μ =
       Measure.map (fun ω i => X i.val ω) μ
 
-/-- A random sequence ξ is **conditionally i.i.d.** if there exists a σ-field ℱ and
-a random probability measure ν such that P[ξ ∈ · | ℱ] = ν^∞ a.s.
+/-- A random sequence `X` is **conditionally i.i.d.** (with respect to `μ`) if there exists a
+probability kernel assigning to each base point `ω : Ω` a distribution `ν ω : Measure α` such
+that, for every finite selection of indices, the joint law of the corresponding coordinates of
+`X` is obtained by averaging the product measure built from `ν ω`.
 
-In other words, ν is a probability kernel from (Ω, 𝒜) to S, or equivalently,
-a random element in the space ℳ₁(S) of probability measures on S.
-
-TODO: Full definition requires conditional probability P[· | ℱ], product measures ν^∞,
-and measurability of ω ↦ ν(ω). For now, we use a simplified placeholder. -/
+This formulation expresses that, conditionally on the value of the kernel, the coordinates of
+`X` are independent and share the common conditional law `ν ω`. -/
 def ConditionallyIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
-  ∃ (ℱ : MeasurableSpace Ω) (ν : Ω → Measure α),
+  ∃ ν : Ω → Measure α,
     (∀ ω, IsProbabilityMeasure (ν ω)) ∧
-    -- Placeholder: full definition needs conditional expectation machinery from mathlib
-    True
+      ∀ (m : ℕ) (k : Fin m → ℕ) (hk : StrictMono k),
+        Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
+          = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)
 
 /-- A random sequence ξ is **mixed i.i.d.** if its distribution is a mixture of
 i.i.d. distributions: P{ξ ∈ ·} = E[ν^∞] = ∫ m^∞ P(ν ∈ dm).
@@ -537,20 +538,16 @@ theorem contractable_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
     exact hproj_eq
 
 /-- Conditionally i.i.d. implies exchangeable.
-If X is conditionally i.i.d., then permutations preserve the distribution.
+If `X` is conditionally i.i.d., then permutations preserve the distribution.
 
-The proof would use:
-1. P[ξ ∈ · | ℱ] = ν^∞ a.s. (by ConditionallyIID assumption)
-2. For any permutation σ: P[ξ ∘ σ ∈ · | ℱ] = (ν^∞) ∘ σ = ν^∞ a.s.
-   (product measures are permutation invariant via constantProduct_comp_perm)
-3. Taking expectations: P[ξ ∈ ·] = E[ν^∞] = E[(ν^∞) ∘ σ] = P[ξ ∘ σ ∈ ·]
-
-Since ConditionallyIID is currently a placeholder definition, we leave this as sorry.
-TODO: Complete once ConditionallyIID is properly defined. -/
+Sketch: by the definition of `ConditionallyIID`, the finite-dimensional distributions of `X`
+are given by mixtures of product measures.  Finite permutations act trivially on the product
+measure, hence also on the mixture, so the push-forward measures agree.  Filling in the details
+requires bookkeeping lemmas on `Measure.bind` and `Measure.pi`, which are still TODO. -/
 theorem exchangeable_of_conditionallyIID {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX : ConditionallyIID μ X) : Exchangeable μ X := by
   intro n σ
-  -- With the current placeholder definition of ConditionallyIID, we cannot proceed
+  -- The formalisation of the sketch above is left for future work.
   sorry
 
 end Exchangeability
