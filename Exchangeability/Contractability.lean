@@ -223,6 +223,16 @@ lemma Contractable.subsequence_eq {μ : Measure Ω} {X : ℕ → Ω → α}
     Measure.map (fun ω i => X (k i) ω) μ = Measure.map (fun ω i => X i.val ω) μ :=
   hX m k hk
 
+/-- Any two strictly monotone sequences of the same length have equal distributions
+if the underlying process is contractable. -/
+lemma Contractable.allStrictMono_eq {μ : Measure Ω} {X : ℕ → Ω → α}
+    (hX : Contractable μ X) (m : ℕ) (k₁ k₂ : Fin m → ℕ) 
+    (hk₁ : StrictMono k₁) (hk₂ : StrictMono k₂) :
+    Measure.map (fun ω i => X (k₁ i) ω) μ = Measure.map (fun ω i => X (k₂ i) ω) μ := by
+  calc Measure.map (fun ω i => X (k₁ i) ω) μ
+      = Measure.map (fun ω i => X i.val ω) μ := hX m k₁ hk₁
+    _ = Measure.map (fun ω i => X (k₂ i) ω) μ := (hX m k₂ hk₂).symm
+
 -- ## Helper lemmas wrapping mathlib results
 
 /-- Product measures exist in mathlib. This placeholder captures the idea that
