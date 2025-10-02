@@ -185,20 +185,22 @@ theorem l2_contractability_bound
                σSq * ρ * (∑ i, c i)^2 + σSq * (1 - ρ) * ∑ i, (c i)^2 := by
     -- Split the double sum into diagonal (i=j) and off-diagonal (i≠j)
     -- Diagonal terms: ∑ᵢ cᵢ² ∫(ξᵢ-m)² = ∑ᵢ cᵢ² · σ²
-    have h_diag : ∑ i in Finset.univ, c i * c i * ∫ ω, (ξ i ω - m) * (ξ i ω - m) ∂μ =
+    have h_diag : ∑ i, c i * c i * ∫ ω, (ξ i ω - m) * (ξ i ω - m) ∂μ =
                   σSq * ∑ i, (c i)^2 := by
-      rw [← Finset.sum_mul]
-      congr 1
-      ext i
-      have hvar_i := _hvar i
-      calc c i * c i * ∫ ω, (ξ i ω - m) * (ξ i ω - m) ∂μ
-          = (c i)^2 * ∫ ω, (ξ i ω - m)^2 ∂μ := by ring_nf; rfl
-        _ = (c i)^2 * σSq := by rw [hvar_i]
+      trans (∑ i, (c i)^2 * σSq)
+      · congr 1; ext i
+        have hvar_i := _hvar i
+        have h_sq : (fun ω => (ξ i ω - m) * (ξ i ω - m)) = (fun ω => (ξ i ω - m)^2) := by
+          funext ω; ring
+        calc c i * c i * ∫ ω, (ξ i ω - m) * (ξ i ω - m) ∂μ
+            = (c i)^2 * ∫ ω, (ξ i ω - m)^2 ∂μ := by rw [h_sq]; ring
+          _ = (c i)^2 * σSq := by rw [hvar_i]
+      · rw [← Finset.sum_mul]; ring
     
     -- Off-diagonal: ∑ᵢ≠ⱼ cᵢcⱼ ∫(ξᵢ-m)(ξⱼ-m) = ∑ᵢ≠ⱼ cᵢcⱼ · σ²ρ
-    have h_offdiag : ∑ i, ∑ j in (Finset.univ.filter (· ≠ i)), 
+    have h_offdiag : ∑ i, ∑ j ∈ (Finset.univ.filter (· ≠ i)), 
                      c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ =
-                     σSq * ρ * ∑ i, ∑ j in (Finset.univ.filter (· ≠ i)), c i * c j := by
+                     σSq * ρ * ∑ i, ∑ j ∈ (Finset.univ.filter (· ≠ i)), c i * c j := by
       -- Apply _hcov to each off-diagonal term
       rw [← Finset.sum_mul]
       congr 1
