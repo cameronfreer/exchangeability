@@ -214,9 +214,9 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω} {X : ℕ → Ω →
         -- Restricting to the first n coordinates gives the result.
         
         -- The construction steps:
-        -- 1. Compute m = max index needed
-        let m := Finset.sup (Finset.range n) (fun i => π i) + 1
-        -- Now we have: ∀ i < n, π i < m and i < m (since i < n ≤ m)
+        -- 1. Compute m = max index needed (must contain both source and target indices)
+        let m := max n (Finset.sup (Finset.range n) (fun i => π i) + 1)
+        -- Now we have: ∀ i < n, both i < m and π i < m
         
         -- 2. Build σ : Perm (Fin m) such that:
         --    - For i < n: σ(i) = π(i)
@@ -254,6 +254,48 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω} {X : ℕ → Ω →
         -- - Finset membership proofs
         -- - Injectivity of π on finite sets
         -- - Combining partial bijections
+        
+        -- First, establish basic facts about m:
+        have h_n_le_m : n ≤ m := by
+          simp only [m]
+          exact Nat.le_max_left n _
+        
+        have h_i_lt_m : ∀ i < n, i < m := by
+          intro i hi
+          calc i < n := hi
+            _ ≤ m := h_n_le_m
+        
+        have h_pi_lt_m : ∀ i < n, π i < m := by
+          intro i hi
+          simp only [m]
+          have : π i ≤ Finset.sup (Finset.range n) (fun j => π j) := by
+            apply Finset.le_sup
+            simp [Finset.mem_range, hi]
+          calc π i ≤ Finset.sup (Finset.range n) (fun j => π j) := this
+            _ < Finset.sup (Finset.range n) (fun j => π j) + 1 := Nat.lt_succ_self _
+            _ ≤ max n (Finset.sup (Finset.range n) (fun j => π j) + 1) := Nat.le_max_right _ _
+        
+        -- Now we can embed indices as elements of Fin m:
+        -- For i < n, we have both ⟨i, h_i_lt_m i hi⟩ : Fin m
+        --               and ⟨π i, h_pi_lt_m i hi⟩ : Fin m
+        
+        -- To construct σ : Equiv.Perm (Fin m), we need to show:
+        -- 1. The map i ↦ π i (for i < n) can be extended to a bijection on Fin m
+        -- 2. This requires showing {0,...,n-1} and {π 0,...,π(n-1)} have the same size
+        -- 3. And extending the map on the complement
+        
+        -- Key lemma needed: If π is a permutation of ℕ, then π restricted to
+        -- any finite initial segment gives an injection (which π provides).
+        
+        -- With σ : Equiv.Perm (Fin m) constructed, we would have:
+        --   hexch m σ : Measure.map (fun ω i => X (σ i) ω) μ 
+        --                = Measure.map (fun ω i => X i ω) μ
+        --
+        -- Then restrict both sides to (Fin n → α) via the projection map,
+        -- and use that σ i = π i for i < n to get the desired equality.
+        
+        -- The remaining work is the finite combinatorics of constructing σ
+        -- and manipulating the measure equalities. This is routine but tedious.
         sorry
       · exact measurable_pi_lambda _ (fun i => measurable_pi_apply _)
       · exact measurable_pi_lambda _ (fun i => hX_meas (π i))
