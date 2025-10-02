@@ -312,9 +312,18 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω} {X : ℕ → Ω →
             have : a.val = b.val := h_π_inj this
             exact Fin.ext this
         
-        -- To construct σ : Equiv.Perm (Fin m), we'll combine:
-        -- 1. A bijection from A to B (given by the map i ↦ π i)
-        -- 2. A bijection on the complement Aᶜ → Bᶜ (exists by equal cardinality)
+        -- The complements also have equal cardinality:
+        have h_card_compl : (Finset.univ \ A).card = (Finset.univ \ B).card := by
+          have h_AB_eq : A.card = B.card := by rw [h_card_A, h_card_B]
+          simp only [Finset.card_sdiff (Finset.subset_univ A), 
+                     Finset.card_sdiff (Finset.subset_univ B), 
+                     Finset.card_univ, Fintype.card_fin, h_AB_eq]
+        
+        -- To construct σ : Equiv.Perm (Fin m), we would:
+        -- 1. Define a bijection from A to B (given by i ↦ π i)
+        -- 2. Get a bijection on Aᶜ → Bᶜ using Fintype.equivOfCardEq from h_card_compl
+        -- 3. Combine these using Equiv.sumCongr or similar to get σ on all of Fin m
+        -- 4. Package this as an Equiv.Perm (Fin m)
         
         -- With σ : Equiv.Perm (Fin m) constructed, we would have:
         --   hexch m σ : Measure.map (fun ω i => X (σ i) ω) μ 

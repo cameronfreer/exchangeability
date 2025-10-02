@@ -60,6 +60,7 @@ theorem l2_contractability_bound
     (m : ℝ) (σSq ρ : ℝ)
     (_hσ_pos : 0 ≤ σSq) (_hρ_bd : -1 ≤ ρ ∧ ρ ≤ 1)
     (_hmean : ∀ k, ∫ ω, ξ k ω ∂μ = m)
+    (_hL2 : ∀ k, MemLp (fun ω => ξ k ω - m) 2 μ)
     (_hvar : ∀ k, ∫ ω, (ξ k ω - m)^2 ∂μ = σSq)
     (_hcov : ∀ i j, i ≠ j → ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ = σSq * ρ)
     (p q : Fin n → ℝ)
@@ -159,8 +160,12 @@ theorem l2_contractability_bound
                ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ := by
     -- The products are integrable because their integrals exist (given by _hvar and _hcov)
     have h_integrable : ∀ i j, Integrable (fun ω => (ξ i ω - m) * (ξ j ω - m)) μ := by
+      classical
       intro i j
-      sorry  -- This follows from the fact that the integral exists and equals either σSq or σSq*ρ
+      have h_mul : MemLp (fun ω => (ξ i ω - m) * (ξ j ω - m)) 1 μ :=
+        (MemLp.mul' (hf := _hL2 j) (hφ := _hL2 i) : _)
+      simpa [memLp_one_iff_integrable]
+        using h_mul
     
     -- Now expand the square and apply linearity
     calc ∫ ω, (∑ i, c i * (ξ i ω - m))^2 ∂μ
