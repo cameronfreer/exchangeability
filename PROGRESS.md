@@ -24,7 +24,7 @@ This document tracks the formalization progress for the exchangeability and de F
 - ✅ `contractable_of_exchangeable` (80 lines) - **MAJOR THEOREM**
 - ✅ `exists_perm_extending_strictMono` (70 lines) - **KEY COMBINATORIAL LEMMA** 🆕
 
-**Helper Infrastructure (11 lemmas):**
+**Helper Infrastructure (15 lemmas):**
 1. `strictMono_add_left` - Addition composition (left)
 2. `strictMono_add_right` - Addition composition (right)
 3. `strictMono_comp` - General composition
@@ -32,10 +32,14 @@ This document tracks the formalization progress for the exchangeability and de F
 5. `Contractable.subsequence_eq` - Direct application
 6. `Contractable.allStrictMono_eq` - Uniformity lemma
 7. `Contractable.shift_segment_eq` - Consecutive segment invariance
-8. `ExchangeableAt` - Dimension-specific definition
-9. `exchangeable_iff_forall_exchangeableAt` - Characterization
-10. `ExchangeableAt.apply` - Application helper
-11. `contractable_same_range` - Pointwise equality preservation
+8. `Contractable.shift_and_select` - Offset + selection invariance 🆕
+9. `Exchangeable.comp` - Composition of permutations 🆕
+10. `Exchangeable.refl` - Identity permutation 🆕
+11. `ExchangeableAt` - Dimension-specific definition
+12. `exchangeable_iff_forall_exchangeableAt` - Characterization
+13. `ExchangeableAt.apply` - Application helper
+14. `contractable_same_range` - Pointwise equality preservation
+15. `fin_val_strictMono` - Identity function monotonicity
 
 **Remaining Sorry:**
 1. **Line ~480**: `exchangeable_of_conditionallyIID`
@@ -115,19 +119,21 @@ This document tracks the formalization progress for the exchangeability and de F
 
 ## Recent Session Highlights (2025-10-02)
 
-**Commits:** 24 commits pushed  
-**Lines Added:** ~380 lines of proofs
+**Commits:** 29 commits pushed  
+**Lines Added:** ~450 lines of proofs
 **Lines Documented:** ~150 lines of proof outlines/TODOs
 
 **Key Achievements:**
 - ✅ Completed Kolmogorov uniqueness proof (45 lines)
 - ✅ Proved `contractable_of_exchangeable` theorem (80 lines)
 - ✅ Proved `strictMono_Fin_ge_id` helper (23 lines)
+- ✅ **Proved `exists_perm_extending_strictMono`** (70 lines) - **MAJOR MILESTONE!**
 - ✅ Proved `shift_contractable` (35 lines)
-- ✅ Added 11 new helper lemmas for contractability and strict monotonicity
+- ✅ Added 15 helper lemmas for contractability and strict monotonicity
 - ✅ Created comprehensive PROGRESS.md documentation
 - ✅ Moved axioms to appropriate files
 - ✅ Documented all remaining sorries with clear TODOs
+- ✅ **ALL combinatorial constructions complete!**
 
 ## File-by-File Progress
 
