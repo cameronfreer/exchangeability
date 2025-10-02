@@ -199,8 +199,22 @@ theorem l2_contractability_bound
     calc ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ
         = (∑ i, c i * c i * ∫ ω, (ξ i ω - m) * (ξ i ω - m) ∂μ) + 
           (∑ i, ∑ j in (Finset.univ.filter (· ≠ i)), c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ) := by
-            sorry
             -- Split using sum_filter_add_sum_filter_not on inner sum
+            apply Finset.sum_congr rfl
+            intro i _
+            conv_lhs =>
+              rw [← Finset.sum_filter_add_sum_filter_not Finset.univ (fun j => j = i) 
+                    (fun j => c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ)]
+            congr 1
+            · -- The filter (j = i) gives just the singleton {i}
+              have : Finset.filter (fun j => j = i) Finset.univ = {i} := by
+                ext j
+                simp [Finset.mem_filter, Finset.mem_singleton]
+              rw [this, Finset.sum_singleton]
+            · -- The filter (j ≠ i) is what we want
+              congr 1
+              ext j
+              simp [Finset.mem_filter]
       _ = σSq * ∑ i, (c i)^2 + σSq * ρ * ∑ i, ∑ j in (Finset.univ.filter (· ≠ i)), c i * c j := by
             rw [h_diag, h_offdiag]
       _ = σSq * ∑ i, (c i)^2 + σSq * ρ * ((∑ i, c i)^2 - ∑ i, (c i)^2) := by
