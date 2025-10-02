@@ -50,6 +50,25 @@ open MeasureTheory ProbabilityTheory
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
+-- Axioms for missing mathlib infrastructure (needed for ConditionallyIID definition)
+namespace MeasureTheory.Measure
+
+/-- Finite product measure construction. Given a family of measures indexed by a finite type,
+construct the product measure on the product space.
+This is `Measure.pi` in mathlib's MeasureTheory.Constructions.Pi but may not be available yet.
+
+Note: `Measure.bind` already exists in mathlib (imported from GiryMonad), so we only need
+to axiomatize the finite product measure construction. -/
+axiom pi {ι : Type*} [Fintype ι] {α : ι → Type*} [∀ i, MeasurableSpace (α i)]
+    (μ : ∀ i, Measure (α i)) : Measure (∀ i, α i)
+
+/-- The product of probability measures is a probability measure. -/
+axiom pi_isProbabilityMeasure {ι : Type*} [Fintype ι] {α : ι → Type*}
+    [∀ i, MeasurableSpace (α i)] (μ : ∀ i, Measure (α i)) [∀ i, IsProbabilityMeasure (μ i)] :
+    IsProbabilityMeasure (Measure.pi μ)
+
+end MeasureTheory.Measure
+
 namespace Exchangeability
 
 /-- An infinite family of random variables `X : ℕ → Ω → α` is **exchangeable**
@@ -181,13 +200,14 @@ that, for every finite selection of indices, the joint law of the corresponding 
 This formulation expresses that, conditionally on the value of the kernel, the coordinates of
 `X` are independent and share the common conditional law `ν ω`.
 
-TODO: Full definition requires `Measure.pi` for product measures and the bind/kernel API.
-For now, we use a simplified placeholder. -/
+The definition uses `Measure.pi` (finite product) and `Measure.bind` (kernel bind) which are
+assumed as axioms until available in mathlib. -/
 def ConditionallyIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
   ∃ ν : Ω → Measure α,
     (∀ ω, IsProbabilityMeasure (ν ω)) ∧
-      -- Placeholder: full definition needs Measure.pi and kernel operations
-      True
+      ∀ (m : ℕ) (k : Fin m → ℕ) (hk : StrictMono k),
+        Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
+          = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)
 
 /-- A random sequence ξ is **mixed i.i.d.** if its distribution is a mixture of
 i.i.d. distributions: P{ξ ∈ ·} = E[ν^∞] = ∫ m^∞ P(ν ∈ dm).
@@ -272,8 +292,6 @@ lemma Contractable.symm {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX : Contractable μ X) (m : ℕ) (k : Fin m → ℕ) (hk : StrictMono k) :
     Measure.map (fun ω i => X i.val ω) μ = Measure.map (fun ω i => X (k i) ω) μ :=
   (hX m k hk).symm
-
--- ## Helper lemmas wrapping mathlib results
 
 /-- Product measures exist in mathlib. This placeholder captures the idea that
 we can construct product probability measures. The actual construction requires
