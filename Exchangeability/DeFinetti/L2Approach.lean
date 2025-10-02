@@ -157,14 +157,28 @@ theorem l2_contractability_bound
   -- Step 2: = ∑ᵢⱼ cᵢcⱼ cov(ξᵢ, ξⱼ) by expanding square and linearity
   have step2 : ∫ ω, (∑ i, c i * (ξ i ω - m))^2 ∂μ =
                ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ := by
-    -- The variance/covariance assumptions imply these integrals exist and are finite.
-    -- Therefore the product (ξ i - m) * (ξ j - m) is integrable for all i, j.
-    -- This follows from Cauchy-Schwarz: product of two L² functions is L¹.
-    sorry
-    -- TODO: This requires proving:
-    --   1. Each (ξ k - m) is in MemLp μ 2 (from _hvar assumption)
-    --   2. Product of L² functions is integrable (MemLp.integrable_mul)
-    --   3. Apply integral_finset_sum twice to pull sums outside
+    -- The products are integrable because their integrals exist (given by _hvar and _hcov)
+    have h_integrable : ∀ i j, Integrable (fun ω => (ξ i ω - m) * (ξ j ω - m)) μ := by
+      intro i j
+      sorry  -- This follows from the fact that the integral exists and equals either σSq or σSq*ρ
+    
+    -- Now expand the square and apply linearity
+    calc ∫ ω, (∑ i, c i * (ξ i ω - m))^2 ∂μ
+        = ∫ ω, ∑ i, ∑ j, (c i * c j) * ((ξ i ω - m) * (ξ j ω - m)) ∂μ := by
+            congr 1; ext ω
+            rw [sq, Finset.sum_mul_sum]
+            apply Finset.sum_congr rfl
+            intro i _; apply Finset.sum_congr rfl
+            intro j _; ring
+      _ = ∑ i, ∑ j, ∫ ω, (c i * c j) * ((ξ i ω - m) * (ξ j ω - m)) ∂μ := by
+            rw [integral_finset_sum _ (fun i _ => ?_)]
+            congr 1; ext i
+            rw [integral_finset_sum _ (fun j _ => ?_)]
+            · exact (h_integrable i j).const_mul (c i * c j)
+            · exact integrable_finset_sum _ (fun j _ => (h_integrable i j).const_mul _)
+      _ = ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ := by
+            congr 1; ext i; congr 1; ext j
+            rw [integral_const_mul]
   
   -- Step 3: = σ²ρ(∑cᵢ)² + σ²(1-ρ)∑cᵢ² by separating i=j from i≠j
   have step3 : ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ =
