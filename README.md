@@ -4,11 +4,16 @@ Formalization project for **exchangeability** and **de Finetti's theorem** in Le
 
 ## Overview
 
-The repository hosts work-in-progress formal proofs guided by detailed blueprints:
+The repository hosts work-in-progress formal proofs guided by detailed blueprints.  Each
+proof direction from Kallenberg (2005) has its own Lean file and documentation:
 
 - 📘 *Blueprint: Exchangeability* – high-level plan for definitions, lemmas, and proofs.
-- 🔁 *Koopman approach* – Mean Ergodic Theorem route to de Finetti.
-- 📉 *L² approach* – contractability argument for an alternative proof.
+- 🔁 *Koopman approach* – Mean Ergodic Theorem route to de Finetti (`DeFinetti/KoopmanApproach.lean`).
+- 📉 *L² approach* – contractability bound and Step 3 in Kallenberg’s proof (`DeFinetti/L2Approach.lean`).
+- 🔄 *Contractability* – algebraic relationship between exchangeability and contractability
+  (`Contractability.lean`), containing the easy implication `contractable → exchangeable`
+  and the harder converse used by both blueprints.
+- 📈 *Martingale approach* – Aldous’ third proof scaffold (`DeFinetti/MartingaleApproach.lean`).
 
 See `blueprint/` for the full roadmap and status reports.
 
@@ -37,7 +42,5 @@ To build the project:
 lake build
 ```
 
-To run the main executable:
-```bash
-lake exe exchangeability
-```
+For a task-oriented overview (including the contractability lemmas), see the files in
+`blueprint/` and the roadmap `EXCHANGEABILITY_TASKS.md`.

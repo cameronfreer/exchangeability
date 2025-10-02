@@ -37,6 +37,11 @@ behaviour with respect to a directing measure.
          the kernel and tail measurability constraints.
    - [ ] Interprete empirical measures `empiricalMeasure X n` and relate them to
          the process.
+   - ✓ The algebraic implications `contractable → exchangeable` and
+     `exchangeable → contractable` are staged in
+     `Exchangeability/Contractability.lean`.  The "easy" direction uses a
+     permutation argument; completing these lemmas finishes the (i) ⇔ (ii) part
+     of Theorem 1.1 independently of the probabilistic machinery.
 
 2. **Martingale and convergence tools**
    - [ ] Show that the empirical measures form a reverse martingale with respect
@@ -67,6 +72,8 @@ additional arguments in separate files:
 2. `Exchangeability/DeFinetti/L2Approach.lean` – L² contractability bound.
 3. `Exchangeability/DeFinetti/MartingaleApproach.lean` – Aldous' martingale
    proof (new scaffold).
+4. `Exchangeability/Contractability.lean` – equivalence between contractability
+   and exchangeability used by all approaches.
 
 Project B in `EXCHANGEABILITY_TASKS.md` records the infrastructure needed to
 complete the martingale proof, notably the contraction/independence lemma and

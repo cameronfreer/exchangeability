@@ -58,6 +58,10 @@ Alternative elementary route to L² contractability.
 1. **`Prob/Ergodic/KoopmanMeanErgodic.lean`**: Shift, Koopman, MET
 2. **`Prob/DeFinetti/InvariantSigma.lean`**: Shift-invariant σ-algebra, projection = condexp
 3. **`Prob/DeFinetti/MeanErgodicStep.lean`**: Cylinder functions, main convergence results
+4. **`Exchangeability/Contractability.lean`**: Algebraic backbone proving the
+   easy implication `contractable → exchangeable` and its converse via
+   permutation arguments.  These lemmas plug into every proof strategy for
+   Kallenberg’s Theorem 1.1.
 
 ---
 

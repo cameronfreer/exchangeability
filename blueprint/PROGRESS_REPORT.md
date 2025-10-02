@@ -8,7 +8,7 @@
 
 ## Summary
 
-Successfully implemented the mean-ergodic framework for de Finetti's theorem with 3 Lean modules, comprehensive documentation, and structured proof outlines. All files compile with well-documented `sorry` placeholders marking remaining work.
+Successfully implemented the mean-ergodic framework for de Finetti's theorem with 3 Lean modules, comprehensive documentation, and structured proof outlines. All files compile with well-documented `sorry` placeholders marking remaining work.  The companion file `Exchangeability/Contractability.lean` now tracks the algebraic equivalence `(i) ⇔ (ii)` in Kallenberg’s Theorem 1.1 (contractable ↔ exchangeable); once its permutation arguments are filled in, the "easy" direction becomes available to every blueprint.
 
 ---
 
@@ -93,11 +93,14 @@ Successfully implemented the mean-ergodic framework for de Finetti's theorem wit
 ### Medium Priority (proof completion)
 3. **range_condexp_eq_fixedSubspace**: Complete bidirectional inclusions
 4. **Regular conditional distribution**: Formalize ν = Law(ξ₁ | 𝓘_ξ)
+5. **Exchangeability ↔ contractability**: Finish the permutation arguments in
+   `Exchangeability/Contractability.lean` (`contractable_of_exchangeable` and
+   `exchangeable_of_contractable`).
 
 ### Long-term (full theorem)
-5. **extremeMembers_agree**: Formalize "extreme indices" convergence
-6. **condexp_cylinder_factorizes**: Product form via dominated convergence
-7. **Monotone class extension**: From cylinders to generated σ-algebra
+6. **extremeMembers_agree**: Formalize "extreme indices" convergence
+7. **condexp_cylinder_factorizes**: Product form via dominated convergence
+8. **Monotone class extension**: From cylinders to generated σ-algebra
 
 ---
 
