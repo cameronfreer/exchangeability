@@ -191,8 +191,39 @@ axiom constantProduct_comp_perm (ν₀ : Measure α) [IsProbabilityMeasure ν₀
     (μ_prod : Measure (ℕ → α)) (σ : Equiv.Perm ℕ) :
     Measure.map (fun f : ℕ → α => f ∘ σ) μ_prod = μ_prod
 
--- NOTE: A naïve inequality like k(i) ≥ i for strictly monotone k : Fin m → ℕ is false in general
--- (consider k i = i + c with c > 0). We therefore avoid relying on such a lemma.
+/-- For a strictly monotone function `k : Fin m → ℕ`, the values dominate the indices. -/
+lemma strictMono_Fin_ge_id {m : ℕ} {k : Fin m → ℕ} (hk : StrictMono k) (i : Fin m) :
+    i.val ≤ k i := by
+  classical
+  cases hm : m with
+  | zero => cases i
+  | succ m' =>
+      subst hm
+      -- Work with `Fin (m' + 1)` using the standard induction principle.
+      let p : Fin (m' + 1) → Prop := fun j => j.val ≤ k j
+      have h : ∀ j, p j :=
+        Fin.induction (m := m') (C := p)
+          (by
+            have : (k 0) ≥ 0 := Nat.zero_le _
+            simpa [p]
+            using this)
+          (by
+            intro j hj
+            -- `hj` provides the inequality for the predecessor `castSucc j`.
+            have hj' : (Fin.castSucc j).val ≤ k (Fin.castSucc j) := by
+              simpa [p] using hj
+            have hlt : k (Fin.castSucc j) < k (Fin.succ j) :=
+              hk (Fin.castSucc_lt_succ j)
+            have h₁ : j.val + 1 ≤ k (Fin.castSucc j) + 1 :=
+              Nat.add_le_add_right hj' 1
+            have h₂ : k (Fin.castSucc j) + 1 ≤ k (Fin.succ j) :=
+              Nat.succ_le_of_lt hlt
+            have : (Fin.succ j).val ≤ k (Fin.succ j) := by
+              -- `Fin.succ j` has value `j.val + 1`.
+              simpa [Fin.succ, Nat.succ_eq_add_one]
+                using (Nat.le_trans h₁ h₂)
+            simpa [p] using this)
+      simpa [p] using h i
 
 /-- Given strictly monotone k : Fin m → ℕ and n containing all k(i), we can construct
 a permutation σ : Perm (Fin n) such that σ maps first m positions to k-values.
