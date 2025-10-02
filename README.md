@@ -1,4 +1,4 @@
-# leantest-afp
+# exchangeability
 
 A basic Lean 4 example project demonstrating fundamental concepts and proofs.
 
@@ -48,7 +48,7 @@ lake build
 
 To run the main executable:
 ```bash
-lake exe leantest-afp
+lake exe exchangeability
 ```
 
 ## Examples Included

@@ -1,10 +1,10 @@
--- Main entry point for the leantest-afp project.
+-- Main entry point for the exchangeability project.
 import Std
 import Exchangeability
 
 def main : IO Unit := do
   IO.println "========================================="
-  IO.println "  Welcome to leantest-afp"
+  IO.println "  Welcome to exchangeability"
   IO.println "  Towards a formal de Finetti theorem"
   IO.println "========================================="
   IO.println ""

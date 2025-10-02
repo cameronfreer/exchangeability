@@ -1,7 +1,7 @@
 /-
 Copyright
 
-This file is part of the leantest-afp project.
+This file is part of the exchangeability project.
 -/
 import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
 import Mathlib.MeasureTheory.Measure.Typeclasses.Probability

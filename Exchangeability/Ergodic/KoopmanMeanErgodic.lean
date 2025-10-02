@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2025 leantest-afp contributors. All rights reserved.
+Copyright (c) 2025 exchangeability contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: leantest-afp contributors
+Authors: exchangeability contributors
 -/
 import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
