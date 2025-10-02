@@ -81,17 +81,58 @@ theorem l2_contractability_bound
   
   -- and ∑ⱼ |cⱼ| ≤ 2
   have hc_abs_sum : ∑ j, |c j| ≤ 2 := by
-    -- Key insight: For distributions p, q with ∑pⱼ = ∑qⱼ = 1 and cⱼ = pⱼ - qⱼ:
-    -- Let J₊ = {j : cⱼ ≥ 0} and J₋ = {j : cⱼ < 0}
-    -- Then ∑ⱼ∈J₊ cⱼ = -∑ⱼ∈J₋ cⱼ (since ∑cⱼ = 0)
-    -- Also ∑ⱼ∈J₊ cⱼ ≤ ∑ⱼ∈J₊ pⱼ ≤ 1 (since qⱼ ≥ 0)
-    -- So ∑|cⱼ| = ∑ⱼ∈J₊ cⱼ + ∑ⱼ∈J₋ |cⱼ| = 2·∑ⱼ∈J₊ cⱼ ≤ 2
-    sorry
-    -- TODO: Formalize using Finset.sum_filter on nonneg/neg parts
-    -- Key lemmas needed:
-    --   1. Split sum by sign: ∑f = ∑(f on {x : f x ≥ 0}) + ∑(f on {x : f x < 0})
-    --   2. Balance: ∑cⱼ = 0 implies positive part = negative part
-    --   3. Bound: ∑ⱼ∈J₊ cⱼ = ∑ⱼ∈J₊ (pⱼ - qⱼ) ≤ ∑ⱼ∈J₊ pⱼ ≤ 1
+    -- Split indices by sign of c j
+    let Pos := Finset.univ.filter fun j : Fin n => 0 ≤ c j
+    let Neg := Finset.univ.filter fun j : Fin n => c j < 0
+    
+    -- Split the sum ∑c_j = 0 into positive and negative parts
+    have hsplit_c : ∑ j ∈ Pos, c j + ∑ j ∈ Neg, c j = 0 := by
+      have h := Finset.sum_filter_add_sum_filter_not Finset.univ (fun j => 0 ≤ c j) (fun j => c j)
+      have : Finset.univ.filter (fun j => ¬0 ≤ c j) = Neg := by
+        ext j; simp [Neg]; tauto
+      simpa [Pos, this, hc_sum] using h
+    
+    -- Therefore ∑_{j∈Pos} c_j = -∑_{j∈Neg} c_j
+    have hbalance : ∑ j ∈ Pos, c j = -∑ j ∈ Neg, c j := by linarith [hsplit_c]
+    
+    -- Split ∑|c_j| into positive and negative parts
+    have hsplit_abs : ∑ j, |c j| = ∑ j ∈ Pos, c j + (-∑ j ∈ Neg, c j) := by
+      have h := Finset.sum_filter_add_sum_filter_not Finset.univ (fun j => 0 ≤ c j) (fun j => |c j|)
+      have hneg_filter : Finset.univ.filter (fun j => ¬0 ≤ c j) = Neg := by
+        ext j; simp [Neg]; tauto
+      have habs_pos : ∀ j ∈ Pos, |c j| = c j := fun j hj => abs_of_nonneg (Finset.mem_filter.mp hj).2
+      have habs_neg : ∀ j ∈ Neg, |c j| = -(c j) := fun j hj => abs_of_neg (Finset.mem_filter.mp hj).2
+      calc ∑ j, |c j|
+          = ∑ j ∈ Pos, |c j| + ∑ j ∈ Neg, |c j| := by simpa [Pos, hneg_filter] using h
+        _ = ∑ j ∈ Pos, c j + ∑ j ∈ Neg, (-(c j)) := by
+            congr 1
+            · exact Finset.sum_congr rfl habs_pos
+            · exact Finset.sum_congr rfl habs_neg
+        _ = ∑ j ∈ Pos, c j + (-∑ j ∈ Neg, c j) := by simp [Finset.sum_neg_distrib]
+    
+    -- So ∑|c_j| = 2·∑_{j∈Pos} c_j using the balance
+    have hdouble : ∑ j, |c j| = 2 * ∑ j ∈ Pos, c j := by
+      rw [hsplit_abs, hbalance]; ring
+    
+    -- Bound: ∑_{j∈Pos} c_j ≤ ∑_{j∈Pos} p_j ≤ 1
+    have hle_p : ∑ j ∈ Pos, c j ≤ ∑ j ∈ Pos, p j := by
+      apply Finset.sum_le_sum
+      intro j _
+      have hq_nn : 0 ≤ q j := _hq_prob.2 j
+      calc c j = p j - q j := rfl
+         _ ≤ p j - 0 := by linarith
+         _ = p j := by ring
+    
+    have hle_one : ∑ j ∈ Pos, p j ≤ 1 := by
+      have := Finset.sum_le_sum_of_subset_of_nonneg (s₁ := Pos) (s₂ := Finset.univ)
+        (by intro j _; exact Finset.mem_univ j) (fun j _ _ => _hp_prob.2 j)
+      simpa [_hp_prob.1] using this
+    
+    calc ∑ j, |c j|
+        = 2 * ∑ j ∈ Pos, c j := hdouble
+      _ ≤ 2 * ∑ j ∈ Pos, p j := by linarith [hle_p]
+      _ ≤ 2 * 1 := by linarith [hle_one]
+      _ = 2 := by ring
   
   -- Step 1: E(∑cᵢξᵢ)² = E(∑cᵢ(ξᵢ-m))² using ∑cⱼ = 0
   have step1 : ∫ ω, (∑ i, c i * ξ i ω)^2 ∂μ =
