@@ -279,13 +279,42 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω} {X : ℕ → Ω →
         -- For i < n, we have both ⟨i, h_i_lt_m i hi⟩ : Fin m
         --               and ⟨π i, h_pi_lt_m i hi⟩ : Fin m
         
-        -- To construct σ : Equiv.Perm (Fin m), we need to show:
-        -- 1. The map i ↦ π i (for i < n) can be extended to a bijection on Fin m
-        -- 2. This requires showing {0,...,n-1} and {π 0,...,π(n-1)} have the same size
-        -- 3. And extending the map on the complement
+        -- Key fact: π is injective (since it's a permutation)
+        have h_π_inj : Function.Injective π := π.injective
         
-        -- Key lemma needed: If π is a permutation of ℕ, then π restricted to
-        -- any finite initial segment gives an injection (which π provides).
+        -- This means the image {π(0), ..., π(n-1)} has exactly n elements
+        have h_image_card : (Finset.image (fun i => π i) (Finset.range n)).card = n := by
+          rw [Finset.card_image_of_injective (Finset.range n) h_π_inj]
+          simp
+        
+        -- Define the source and target sets in Fin m:
+        -- A = {0, 1, ..., n-1} ⊆ Fin m
+        let A : Finset (Fin m) := Finset.image (fun i : Fin n => ⟨i.val, h_i_lt_m i.val i.isLt⟩) Finset.univ
+        
+        -- B = {π(0), π(1), ..., π(n-1)} ⊆ Fin m  
+        let B : Finset (Fin m) := Finset.image (fun i : Fin n => ⟨π i.val, h_pi_lt_m i.val i.isLt⟩) Finset.univ
+        
+        -- Both have cardinality n:
+        have h_card_A : A.card = n := by
+          simp [A]
+          rw [Finset.card_image_of_injective]
+          · simp
+          · intro a b hab
+            ext
+            simpa using hab
+        
+        have h_card_B : B.card = n := by
+          simp [B]
+          rw [Finset.card_image_of_injective]
+          · simp
+          · intro a b hab
+            have : π a.val = π b.val := by simpa using hab
+            have : a.val = b.val := h_π_inj this
+            exact Fin.ext this
+        
+        -- To construct σ : Equiv.Perm (Fin m), we'll combine:
+        -- 1. A bijection from A to B (given by the map i ↦ π i)
+        -- 2. A bijection on the complement Aᶜ → Bᶜ (exists by equal cardinality)
         
         -- With σ : Equiv.Perm (Fin m) constructed, we would have:
         --   hexch m σ : Measure.map (fun ω i => X (σ i) ω) μ 
