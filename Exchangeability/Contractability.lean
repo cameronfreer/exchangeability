@@ -195,35 +195,26 @@ axiom constantProduct_comp_perm (ν₀ : Measure α) [IsProbabilityMeasure ν₀
 lemma strictMono_Fin_ge_id {m : ℕ} {k : Fin m → ℕ} (hk : StrictMono k) (i : Fin m) :
     i.val ≤ k i := by
   classical
-  cases hm : m with
-  | zero => cases i
-  | succ m' =>
-      subst hm
-      -- Work with `Fin (m' + 1)` using the standard induction principle.
-      let p : Fin (m' + 1) → Prop := fun j => j.val ≤ k j
-      have h : ∀ j, p j :=
-        Fin.induction (m := m') (C := p)
-          (by
-            have : (k 0) ≥ 0 := Nat.zero_le _
-            simpa [p]
-            using this)
-          (by
-            intro j hj
-            -- `hj` provides the inequality for the predecessor `castSucc j`.
-            have hj' : (Fin.castSucc j).val ≤ k (Fin.castSucc j) := by
-              simpa [p] using hj
-            have hlt : k (Fin.castSucc j) < k (Fin.succ j) :=
-              hk (Fin.castSucc_lt_succ j)
-            have h₁ : j.val + 1 ≤ k (Fin.castSucc j) + 1 :=
-              Nat.add_le_add_right hj' 1
-            have h₂ : k (Fin.castSucc j) + 1 ≤ k (Fin.succ j) :=
-              Nat.succ_le_of_lt hlt
-            have : (Fin.succ j).val ≤ k (Fin.succ j) := by
-              -- `Fin.succ j` has value `j.val + 1`.
-              simpa [Fin.succ, Nat.succ_eq_add_one]
-                using (Nat.le_trans h₁ h₂)
-            simpa [p] using this)
-      simpa [p] using h i
+  -- Proof by strong induction on i.val
+  have : ∀ n (hn : n < m), n ≤ k ⟨n, hn⟩ := by
+    intro n
+    induction n with
+    | zero => intro _; exact Nat.zero_le _
+    | succ n ih =>
+        intro hn
+        have hn' : n < m := Nat.lt_of_succ_lt hn
+        let j : Fin m := ⟨n, hn'⟩
+        let j_succ : Fin m := ⟨n.succ, hn⟩
+        have hlt : j < j_succ := by
+          simp only [Fin.lt_iff_val_lt_val, j, j_succ]
+          exact Nat.lt_succ_self n
+        have hk_lt : k j < k j_succ := hk hlt
+        have ih' : n ≤ k j := ih hn'
+        calc n.succ
+            = n + 1 := rfl
+          _ ≤ k j + 1 := Nat.add_le_add_right ih' 1
+          _ ≤ k j_succ := Nat.succ_le_of_lt hk_lt
+  exact this i.val i.isLt
 
 /-- Given strictly monotone k : Fin m → ℕ and n containing all k(i), we can construct
 a permutation σ : Perm (Fin n) such that σ maps first m positions to k-values.
@@ -290,13 +281,85 @@ This direction is straightforward via permutation extension. -/
 theorem contractable_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX : Exchangeable μ X) (hX_meas : ∀ i, Measurable (X i)) : Contractable μ X := by
   intro m k hk_mono
-  -- Strategy: Use exchangeability on a large enough finite space containing all k(i)
-  -- Build a permutation σ : Perm (Fin n) that maps first m positions to k-values
-  -- Apply exchangeability with σ and project back
-  -- Let n be any number greater than all k(i). For example, take
-  -- n = 1 + max { k i | i < m }. Then use exists_perm_extending_strictMono to
-  -- obtain σ : Perm (Fin n) with σ i = k i for i < m. Apply hX n σ and project.
-  sorry
+  -- Special case: m = 0 is trivial
+  cases m with
+  | zero =>
+    -- Both sides map to (Fin 0 → α), which has a unique element
+    congr
+    ext ω i
+    exact Fin.elim0 i
+  | succ m' =>
+    -- Choose n large enough to contain all k(i)
+    -- We need n > k(m'-1) since k is strictly monotone
+    let n := k ⟨m', Nat.lt_succ_self m'⟩ + 1
+    
+    -- Verify that all k(i) < n
+    have hk_bound : ∀ i : Fin (m' + 1), k i < n := by
+      intro i
+      simp only [n]
+      have : k i ≤ k ⟨m', Nat.lt_succ_self m'⟩ := by
+        apply StrictMono.monotone hk_mono
+        exact Fin.le_last i
+      omega
+    
+    -- We need m ≤ n to apply exists_perm_extending_strictMono
+    have hmn : m' + 1 ≤ n := by
+      simp only [n]
+      have : m' ≤ k ⟨m', Nat.lt_succ_self m'⟩ := by
+        have h := strictMono_Fin_ge_id hk_mono ⟨m', Nat.lt_succ_self m'⟩
+        simpa using h
+      omega
+    
+    -- Get the permutation extending k
+    obtain ⟨σ, hσ⟩ := exists_perm_extending_strictMono k hk_mono hk_bound hmn
+    
+    -- Define the embedding Fin (m'+1) → Fin n
+    let ι : Fin (m' + 1) → Fin n := fun i => ⟨i.val, Nat.lt_of_lt_of_le i.isLt hmn⟩
+    
+    -- Apply exchangeability to get equality of distributions on Fin n → α
+    have hexch := hX n σ
+    
+    -- Define projection from Fin n → α to Fin (m'+1) → α
+    let proj : (Fin n → α) → (Fin (m' + 1) → α) := fun f i => f (ι i)
+    
+    -- Push forward both sides of hexch by proj
+    have hproj_meas : Measurable proj := by
+      apply measurable_pi_lambda
+      intro i
+      exact measurable_pi_apply (ι i)
+    
+    -- The map X on Ω → Fin n → α
+    let f_id : Ω → (Fin n → α) := fun ω j => X j.val ω
+    let f_perm : Ω → (Fin n → α) := fun ω j => X (σ j).val ω
+    
+    have hf_id_meas : Measurable f_id := measurable_pi_lambda _ (fun j => hX_meas j.val)
+    have hf_perm_meas : Measurable f_perm := measurable_pi_lambda _ (fun j => hX_meas (σ j).val)
+    
+    -- Push forward hexch by proj
+    have hproj_eq := congrArg (Measure.map proj) hexch
+    
+    -- Simplify using map_map
+    have hlhs : Measure.map proj (Measure.map f_perm μ) = Measure.map (proj ∘ f_perm) μ :=
+      Measure.map_map hproj_meas hf_perm_meas
+    have hrhs : Measure.map proj (Measure.map f_id μ) = Measure.map (proj ∘ f_id) μ :=
+      Measure.map_map hproj_meas hf_id_meas
+    
+    rw [hlhs, hrhs] at hproj_eq
+    
+    -- Now show that proj ∘ f_perm = (fun ω i => X (k i) ω)
+    -- and proj ∘ f_id = (fun ω i => X i.val ω)
+    have hlhs_eq : (proj ∘ f_perm) = (fun ω i => X (k i) ω) := by
+      ext ω i
+      simp only [proj, f_perm, Function.comp_apply, ι]
+      have : (σ ⟨i.val, Nat.lt_of_lt_of_le i.isLt hmn⟩).val = k i := hσ i
+      rw [this]
+    
+    have hrhs_eq : (proj ∘ f_id) = (fun ω i => X i.val ω) := by
+      ext ω i
+      simp only [proj, f_id, Function.comp_apply, ι]
+    
+    rw [hlhs_eq, hrhs_eq] at hproj_eq
+    exact hproj_eq
 
 /-- Conditionally i.i.d. implies exchangeable.
 If X is conditionally i.i.d., then permutations preserve the distribution. -/
