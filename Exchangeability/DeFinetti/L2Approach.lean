@@ -116,8 +116,8 @@ theorem l2_contractability_bound
       calc ∑ j, |c j|
           = ∑ j ∈ Pos, |c j| + ∑ j ∈ Neg, |c j| := hsplit_abs
       _ = ∑ j ∈ Pos, c j + (-∑ j ∈ Neg, c j) := by
-            simpa [habs_pos, habs_neg]
-      _ = ∑ j ∈ Pos, c j + ∑ j ∈ Pos, c j := by simpa [hbalance]
+            simp [habs_pos, habs_neg]
+      _ = ∑ j ∈ Pos, c j + ∑ j ∈ Pos, c j := by simp [hbalance]
       _ = 2 * ∑ j ∈ Pos, c j := by ring
 
     have hle_p : ∑ j ∈ Pos, c j ≤ ∑ j ∈ Pos, p j := by
