@@ -131,7 +131,7 @@ theorem l2_contractability_bound
       intro j hj; exact Finset.mem_univ j
 
     have hle_one : ∑ j ∈ Pos, p j ≤ 1 := by
-      have hsum_le := Finset.sum_le_sum_of_subset_of_nonneg hsubset (fun j _ => _hp_prob.2 j)
+      have hsum_le := Finset.sum_le_sum_of_subset_of_nonneg hsubset (fun j _ _ => _hp_prob.2 j)
       simpa [_hp_prob.1] using hsum_le
 
     calc ∑ j, |c j|
@@ -148,12 +148,10 @@ theorem l2_contractability_bound
     congr 1
     ext ω
     have : ∑ i, c i * ξ i ω = ∑ i, c i * (ξ i ω - m) := by
-      rw [← Finset.sum_sub_distrib]
-      simp only [mul_sub]
-      rw [Finset.sum_sub_distrib, sub_eq_self]
-      calc ∑ i, c i * m = (∑ i, c i) * m := Finset.sum_mul.symm
-         _ = 0 * m := by rw [hc_sum]
-         _ = 0 := zero_mul _
+      conv_lhs => arg 2; ext i; rw [show ξ i ω = (ξ i ω - m) + m by ring]
+      simp only [mul_add, Finset.sum_add_distrib]
+      rw [add_eq_left]
+      simp [← Finset.sum_mul, hc_sum]
     exact congrArg (· ^ 2) this
   
   -- Step 2: = ∑ᵢⱼ cᵢcⱼ cov(ξᵢ, ξⱼ) by expanding square and linearity

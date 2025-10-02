@@ -41,20 +41,19 @@ the Koopman operator and Mean Ergodic Theorem.
 * Olav Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*,
   Springer, Chapter 1, pages 26-27 (First proof of Theorem 1.1).
 
--/
 
 noncomputable section
 
 namespace Exchangeability.DeFinetti.KoopmanApproach
 
-open MeasureTheory Filter Topology BigOperators
-open Exchangeability.Probability.Ergodic
+open MeasureTheory Filter Topology
+open Exchangeability.Ergodic
 
 variable {α : Type*} [MeasurableSpace α]
 
 section CylinderFunctions
 
-/-- A cylinder function on path space: depends only on coordinates in a finite set.
+{{ ... }}
 For simplicity, we take the first m coordinates. -/
 def cylinderFunction (m : ℕ) (φ : (Fin m → α) → ℝ) : Ω[α] → ℝ :=
   fun ω => φ (fun k => ω k.val)

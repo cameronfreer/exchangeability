@@ -47,7 +47,7 @@ open scoped Classical
 namespace Exchangeability.DeFinetti
 
 open MeasureTheory Filter Topology
-open Exchangeability.Probability.Ergodic
+open Exchangeability.Ergodic
 
 variable {α : Type*} [MeasurableSpace α]
 
