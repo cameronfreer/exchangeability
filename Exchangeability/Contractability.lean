@@ -217,6 +217,12 @@ lemma ExchangeableAt.apply {μ : Measure Ω} {X : ℕ → Ω → α} {n : ℕ}
     Measure.map (fun ω i => X (σ i).val ω) μ = Measure.map (fun ω i => X i.val ω) μ :=
   hX σ
 
+/-- Contractability implies any subsequence has the same distribution as the initial segment. -/
+lemma Contractable.subsequence_eq {μ : Measure Ω} {X : ℕ → Ω → α}
+    (hX : Contractable μ X) (m : ℕ) (k : Fin m → ℕ) (hk : StrictMono k) :
+    Measure.map (fun ω i => X (k i) ω) μ = Measure.map (fun ω i => X i.val ω) μ :=
+  hX m k hk
+
 -- ## Helper lemmas wrapping mathlib results
 
 /-- Product measures exist in mathlib. This placeholder captures the idea that
