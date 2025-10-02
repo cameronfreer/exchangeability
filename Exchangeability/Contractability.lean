@@ -97,10 +97,17 @@ lemma FullyExchangeable.exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
     simp [Function.comp, proj, π, extendFinPerm, Fin.is_lt]
   have hprojid :
       proj ∘ (fun ω => fun i : ℕ => X i ω)
-        = fun ω => fun i : Fin n => X i ω := rfl
+        = fun ω => fun i : Fin n => X i.val ω := by
+    ext ω i
+    rfl
   -- Project both laws to the first n coordinates and compare
-  have := congrArg (fun ν => Measure.map proj ν) hπ
-  simpa [hmap₁.symm, hmap₂.symm, hprojσ, hprojid, Function.comp]
+  calc Measure.map (fun ω i => X (σ i).val ω) μ
+      = Measure.map (proj ∘ fun ω i => X (π i) ω) μ := by rw [hprojσ]
+    _ = Measure.map proj (Measure.map (fun ω i => X (π i) ω) μ) := hmap₁.symm
+    _ = Measure.map proj (Measure.map (fun ω i => X i ω) μ) := by rw [hπ]
+    _ = Measure.map (proj ∘ fun ω i => X i ω) μ := hmap₂
+    _ = Measure.map (fun ω i => X i.val ω) μ := by rw [hprojid]
+
 /-- A finite or infinite random sequence ξ is **contractable** if all increasing subsequences
 of equal length have the same distribution.
 
@@ -112,7 +119,7 @@ not just increasing sequences. -/
 def Contractable (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
   ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
     Measure.map (fun ω i => X (k i) ω) μ =
-      Measure.map (fun ω i => X i ω) μ
+      Measure.map (fun ω i => X i.val ω) μ
 
 /-- A random sequence ξ is **conditionally i.i.d.** if there exists a σ-field ℱ and
 a random probability measure ν such that P[ξ ∈ · | ℱ] = ν^∞ a.s.
