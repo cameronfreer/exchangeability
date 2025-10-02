@@ -220,8 +220,8 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω} {X : ℕ → Ω →
         have h_eq := h_marginals m S' hS'
         simpa [h_eval, h_evalπ] using h_eq
       ·
-        have hμX_univ : μ_X Set.univ = 1 := (IsProbabilityMeasure.measure_univ (μ:=μ_X))
-        have hμXπ_univ : μ_Xπ Set.univ = 1 := (IsProbabilityMeasure.measure_univ (μ:=μ_Xπ))
+        have hμX_univ : μ_X Set.univ = 1 := hμ_X.measure_univ
+        have hμXπ_univ : μ_Xπ Set.univ = 1 := hμ_Xπ.measure_univ
         simpa [hμX_univ, hμXπ_univ]
 
     -- Step 5: Conclude equal laws
