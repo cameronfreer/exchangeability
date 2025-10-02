@@ -403,14 +403,27 @@ theorem l2_contractability_bound
             congr 1; ext i; ring
     
     -- Combine diagonal and off-diagonal
-    -- Split the double sum: ∑ᵢⱼ = ∑ᵢ(i=j) + ∑ᵢⱼ(i≠j)
-    sorry
-    -- TODO: Use Finset.sum_filter_add_sum_filter_not to split
-    -- Then apply h_diag and h_offdiag + h_offdiag_expand
-    -- Final algebra:
-    --   σ²∑cᵢ² + σ²ρ((∑cᵢ)² - ∑cᵢ²) 
-    --   = σ²∑cᵢ² + σ²ρ(∑cᵢ)² - σ²ρ∑cᵢ²
-    --   = σ²ρ(∑cᵢ)² + σ²(1-ρ)∑cᵢ²
+    -- We have:
+    --   h_diag: diagonal part = σ²∑cᵢ²
+    --   h_offdiag: off-diagonal = σ²ρ·∑ᵢ≠ⱼ cᵢcⱼ
+    --   h_offdiag_expand: ∑ᵢ≠ⱼ cᵢcⱼ = (∑cᵢ)² - ∑cᵢ²
+    
+    -- Combine them algebraically
+    calc ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ
+        = (∑ i, c i * c i * ∫ ω, (ξ i ω - m) * (ξ i ω - m) ∂μ) + 
+          (∑ i, ∑ j in (Finset.univ.filter (· ≠ i)), c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ) := by
+            sorry
+            -- Split using sum_filter_add_sum_filter_not on inner sum
+      _ = σSq * ∑ i, (c i)^2 + σSq * ρ * ∑ i, ∑ j in (Finset.univ.filter (· ≠ i)), c i * c j := by
+            rw [h_diag, h_offdiag]
+      _ = σSq * ∑ i, (c i)^2 + σSq * ρ * ((∑ i, c i)^2 - ∑ i, (c i)^2) := by
+            rw [h_offdiag_expand]
+      _ = σSq * ∑ i, (c i)^2 + σSq * ρ * (∑ i, c i)^2 - σSq * ρ * ∑ i, (c i)^2 := by
+            ring
+      _ = σSq * ρ * (∑ i, c i)^2 + (σSq - σSq * ρ) * ∑ i, (c i)^2 := by
+            ring
+      _ = σSq * ρ * (∑ i, c i)^2 + σSq * (1 - ρ) * ∑ i, (c i)^2 := by
+            ring
   
   -- Step 4: = σ²(1-ρ)∑cᵢ² since (∑cᵢ)² = 0
   have step4 : σSq * ρ * (∑ i, c i)^2 + σSq * (1 - ρ) * ∑ i, (c i)^2 =
