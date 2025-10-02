@@ -194,7 +194,22 @@ axiom constantProduct_comp_perm (ν₀ : Measure α) [IsProbabilityMeasure ν₀
 /-- For a strictly monotone function k : Fin m → ℕ, we have k(i) ≥ i for all i. -/
 lemma strictMono_Fin_ge_id {m : ℕ} {k : Fin m → ℕ} (hk : StrictMono k) (i : Fin m) :
     i.val ≤ k i := by
-  sorry -- Induction: k injective and Fin m has m elements, so k maps into at least m distinct values
+  -- Proof by induction on i.val
+  match i with
+  | ⟨0, _⟩ => exact Nat.zero_le _
+  | ⟨n+1, hn⟩ =>
+    -- k is strictly monotone, so k(n) < k(n+1)
+    have hn' : n < m := Nat.lt_of_succ_lt hn
+    let j : Fin m := ⟨n, hn'⟩
+    have hj_lt : j < i := hn'
+    have hk_mono : k j < k i := hk hj_lt
+    -- By induction hypothesis: k(j) ≥ j = n
+    have ih : j.val ≤ k j := strict Mono_Fin_ge_id hk j
+    -- Therefore: k(i) > k(j) ≥ n, so k(i) ≥ n+1
+    calc i.val
+        = n + 1 := rfl
+      _ ≤ k j + 1 := Nat.add_le_add_right ih 1
+      _ ≤ k i := hk_mono
 
 /-- Given strictly monotone k : Fin m → ℕ and n containing all k(i), we can construct
 a permutation σ : Perm (Fin n) such that σ maps first m positions to k-values.
