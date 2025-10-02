@@ -107,17 +107,19 @@ This document tracks the formalization progress for the exchangeability and de F
 
 ## Recent Session Highlights (2025-10-02)
 
-**Commits:** 14 commits pushed
-**Lines Added:** ~300 lines of proofs
+**Commits:** 18 commits pushed  
+**Lines Added:** ~350 lines of proofs
 **Lines Documented:** ~150 lines of proof outlines/TODOs
 
 **Key Achievements:**
-- Completed Kolmogorov uniqueness proof (45 lines)
-- Proved `contractable_of_exchangeable` theorem (80 lines)
-- Proved `strictMono_Fin_ge_id` helper (23 lines)
-- Proved `shift_contractable` (35 lines)
-- Moved axioms to appropriate files
-- Documented all remaining sorries with clear TODOs
+- ✅ Completed Kolmogorov uniqueness proof (45 lines)
+- ✅ Proved `contractable_of_exchangeable` theorem (80 lines)
+- ✅ Proved `strictMono_Fin_ge_id` helper (23 lines)
+- ✅ Proved `shift_contractable` (35 lines)
+- ✅ Added 6 new helper lemmas (strictMono composition, Contractable.prefix, ExchangeableAt)
+- ✅ Created comprehensive PROGRESS.md documentation
+- ✅ Moved axioms to appropriate files
+- ✅ Documented all remaining sorries with clear TODOs
 
 ## File-by-File Progress
 
