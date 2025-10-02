@@ -201,10 +201,42 @@ theorem extremeMembers_agree
     (_hmeas : ∀ k, Measurable (fs k))
     (_hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
     (_indices : Fin m → ℕ) :
-    True := by
-  -- Placeholder: The actual theorem would state that conditional expectation
-  -- of cylinders is shift-invariant and equals the product of marginals
-  trivial
+    let F := productCylinder m fs
+    let fL2 : Lp ℝ 2 μ :=
+      (productCylinder_bounded m fs _hbd |> fun ⟨C, hC⟩ =>
+        let hFmeas : Measurable (productCylinder m fs) :=
+          measurable_productCylinder m fs _hmeas
+        have hFinL2 : MeasureTheory.MemLp (productCylinder m fs) 2 μ := by
+          classical
+          refine MeasureTheory.MemLp.of_bound (μ := μ) (p := 2)
+            hFmeas.aestronglyMeasurable C ?_
+          exact (eventually_of_forall fun ω => by
+            simpa [Real.norm_eq_abs] using hC ω)
+        hFinL2.toLp (productCylinder m fs))
+    koopman shift hσ (condexpL2 shiftInvariantSigma fL2) =
+      condexpL2 shiftInvariantSigma fL2 := by
+  classical
+  -- unpack the `let` bindings
+  obtain ⟨C, hC⟩ := productCylinder_bounded m fs _hbd
+  have hFmeas : Measurable (productCylinder m fs) :=
+    measurable_productCylinder m fs _hmeas
+  have hFinL2 : MeasureTheory.MemLp (productCylinder m fs) 2 μ := by
+    refine MeasureTheory.MemLp.of_bound (μ := μ) (p := 2)
+      hFmeas.aestronglyMeasurable C ?_
+    exact (eventually_of_forall fun ω => by
+      simpa [Real.norm_eq_abs] using hC ω)
+  let fL2 := hFinL2.toLp (productCylinder m fs)
+  have hRange : condexpL2 shiftInvariantSigma fL2 ∈
+      Set.range (condexpL2 shiftInvariantSigma) := ⟨fL2, rfl⟩
+  have hMemSet : condexpL2 shiftInvariantSigma fL2 ∈
+      (fixedSubspace hσ : Set (Lp ℝ 2 μ)) := by
+    simpa [range_condexp_eq_fixedSubspace (μ := μ) hσ]
+      using hRange
+  have hMem : condexpL2 shiftInvariantSigma fL2 ∈ fixedSubspace hσ := hMemSet
+  have hFixed :=
+    (mem_fixedSubspace_iff (hσ := hσ)
+      (f := condexpL2 shiftInvariantSigma fL2)).1 hMem
+  simpa using hFixed
 
 /-- Factorization theorem: conditional expectation of cylinder has product form.
 
