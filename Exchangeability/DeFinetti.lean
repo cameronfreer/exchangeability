@@ -8,30 +8,41 @@ import Mathlib.Probability.IdentDistrib
 import Mathlib.Probability.Kernel.Basic
 import Mathlib.MeasureTheory.Constructions.BorelSpace.Basic
 import Exchangeability.Exchangeability
+import Exchangeability.DeFinetti.KoopmanApproach
+import Exchangeability.DeFinetti.L2Approach
 
 /-!
-# De Finetti's theorem (draft blueprint)
+# De Finetti's Theorem
 
-This module sketches the high-level interfaces that will be used in the
-formalization of de Finetti's theorem.  The goal is to organise the
-probability-theoretic ingredients in a way that matches the accompanying
-blueprint document.
+This module contains the formalization of de Finetti's theorem for infinite
+exchangeable sequences.
 
-The main theorem to be formalised asserts that an infinite exchangeable
-sequence of real-valued random variables is conditionally i.i.d. given a
-random probability measure (the directing measure).  The proof will follow
-the classical path: construct the tail $\sigma$-algebra, use martingale
-convergence for the empirical measures, and show that the directing measure
-recovers the joint moments of the sequence.
+## Main theorem
 
-At this early stage we record the key definitions and intermediate lemmas as
-`TODO`s so that the blueprint can reference them.
+* `deFinetti`: An infinite exchangeable sequence on a Borel space is conditionally
+  i.i.d. given the tail σ-algebra.
+
+## Two proof approaches (Kallenberg 2005)
+
+This formalization includes both proofs from Kallenberg's Theorem 1.1 (pages 26-27):
+
+1. **First proof** (KoopmanApproach): Uses the Mean Ergodic Theorem via the Koopman
+   operator on L²(μ). The key insight is that Birkhoff averages converge to the
+   conditional expectation onto the shift-invariant σ-algebra, which can be shown
+   to have product form.
+
+2. **Second proof** (L2Approach): Uses an elementary L² contractability bound
+   (Lemma 1.2) that directly shows convergence of empirical distributions without
+   invoking the full ergodic theory machinery.
 
 ## References
-* Bruno De Finetti, *La prévision : ses lois logiques, ses sources
-  subjectives*, Annales de l'institut Henri Poincaré (1937).
-* David Aldous, *Exchangeability and related topics*, École d'Été de
-  Probabilités de Saint-Flour XIII (1983).
+
+* Olav Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*,
+  Springer, Chapter 1 (Theorem 1.1, pages 26-27).
+* Bruno De Finetti (1937), *La prévision : ses lois logiques, ses sources
+  subjectives*, Annales de l'institut Henri Poincaré.
+* David Aldous (1983), *Exchangeability and related topics*, École d'Été de
+  Probabilités de Saint-Flour XIII.
 
 -/
 
