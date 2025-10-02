@@ -167,6 +167,8 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω} {X : ℕ → Ω →
     let μ_Xπ := Measure.map (fun ω => fun n : ℕ => X (π n) ω) μ
     
     -- Step 2: Both are probability measures on ℕ → α
+    -- Note: These instances would be needed for some approaches to proving h_unique,
+    -- but are currently unused since h_unique is a sorry.
     have hμ_X : IsProbabilityMeasure μ_X := by
       -- Pushforward of probability measure is probability measure
       constructor
@@ -182,6 +184,8 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω} {X : ℕ → Ω →
     
     -- Step 3: Show finite-dimensional marginals agree
     -- For any n and any measurable set S ⊆ (Fin n → α):
+    -- Note: This would be the key ingredient for proving h_unique, but is currently
+    -- unused since both this proof and h_unique contain sorries.
     have h_marginals : ∀ (n : ℕ) (S : Set (Fin n → α)) (_hS : MeasurableSet S),
         μ_X.map (fun f : ℕ → α => fun i : Fin n => f i) S =
         μ_Xπ.map (fun f : ℕ → α => fun i : Fin n => f i) S := by
@@ -247,13 +251,19 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω} {X : ℕ → Ω →
       -- 3. Use h_marginals to show μ_X and μ_Xπ agree on all cylinders
       -- 4. Apply uniqueness of measure extension (π-λ theorem / Carathéodory)
       --
-      -- Mathlib may have this as: MeasureTheory.pi_eq_generateFrom or similar,
-      -- but applying it requires careful handling of the product σ-algebra structure.
+      -- Relevant mathlib theorems to investigate:
+      -- - `MeasurableSpace.ae_induction_on_inter` for induction on generating π-systems
+      -- - `Measure.ext` combined with π-system arguments
+      -- - Potentially theorems in `Mathlib.MeasureTheory.Constructions.Pi`
+      -- - `IsPiSystem` typeclass and related theorems
       --
-      -- This is a fundamental theorem in probability theory and requires either:
-      -- - Finding the right mathlib lemma for product measure uniqueness
-      -- - Reproving a specialized version for countable products
-      -- - Using Ionescu-Tulcea theorem machinery if available
+      -- The standard approach would be:
+      -- 1. Identify the π-system of cylinder sets generating the product σ-algebra
+      -- 2. Show μ_X and μ_Xπ agree on this π-system (using h_marginals)
+      -- 3. Apply a Dynkin system / π-λ theorem to extend to all measurable sets
+      --
+      -- This is a fundamental theorem in probability theory (Kolmogorov extension).
+      -- Without the full machinery in mathlib, this requires substantial formalization.
       sorry
     
     -- Step 5: Conclude that X and X ∘ π have the same law
