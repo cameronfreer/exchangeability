@@ -247,6 +247,30 @@ lemma Contractable.allStrictMono_eq {μ : Measure Ω} {X : ℕ → Ω → α}
       = Measure.map (fun ω i => X i.val ω) μ := hX m k₁ hk₁
     _ = Measure.map (fun ω i => X (k₂ i) ω) μ := (hX m k₂ hk₂).symm
 
+/-- Contractability implies that the distribution is determined by the marginal distributions
+of increasing selections. -/
+lemma Contractable.determined_by_increasing {μ : Measure Ω} {X : ℕ → Ω → α}
+    (hX : Contractable μ X) :
+    ∀ m : ℕ, ∃! ν : Measure (Fin m → α),
+      ∀ k : Fin m → ℕ, StrictMono k →
+        Measure.map (fun ω i => X (k i) ω) μ = ν := by
+  intro m
+  use Measure.map (fun ω i => X i.val ω) μ
+  constructor
+  · intro k hk
+    exact hX m k hk
+  · intro ν' hν'
+    have hid : StrictMono (fun i : Fin m => i.val) := fun i j hij => hij
+    have h := hν' (fun i => i.val) hid
+    exact h.symm
+
+/-- Contractability is symmetric: if (X_{k(0)}, ..., X_{k(m-1)}) has the same distribution
+as the initial segment, then the converse also holds. -/
+lemma Contractable.symm {μ : Measure Ω} {X : ℕ → Ω → α}
+    (hX : Contractable μ X) (m : ℕ) (k : Fin m → ℕ) (hk : StrictMono k) :
+    Measure.map (fun ω i => X i.val ω) μ = Measure.map (fun ω i => X (k i) ω) μ :=
+  (hX m k hk).symm
+
 -- ## Helper lemmas wrapping mathlib results
 
 /-- Product measures exist in mathlib. This placeholder captures the idea that
