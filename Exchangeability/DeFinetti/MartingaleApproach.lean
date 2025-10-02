@@ -49,6 +49,21 @@ open MeasureTheory Filter
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
+/-- `shiftProcess X m` is the process `n ↦ X (m + n)` (Kallenberg's θₘ ξ). -/
+def shiftProcess (X : ℕ → Ω → α) (m : ℕ) : ℕ → Ω → α := fun n ω => X (m + n) ω
+
+/-- Re-export the tail σ-algebra used in the other de Finetti files for ease of reference. -/
+def tailSigma (X : ℕ → Ω → α) : MeasurableSpace Ω :=
+  Exchangeability.Probability.tailSigmaAlgebra X
+
+/-- If `X` is contractable, then so is each of its shifts `θₘ X`. -/
+lemma shift_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
+    (hX : Contractable μ X) (m : ℕ) : Contractable μ (shiftProcess X m) := by
+  -- TODO: unwind `Contractable` and translate strict monotonicity through the shift.
+  -- The key observation is that composing a strictly monotone map with `fun i => m + i`
+  -- remains strictly monotone, so the required joint laws agree by `hX`.
+  sorry
+
 /-- **Lemma (contraction and independence).**
 
 If `(ξ, η)` and `(ξ, ζ)` have the same distribution and the σ-algebra generated
@@ -68,6 +83,25 @@ lemma contraction_independence
   --  * For each measurable set `B`, define μ₁ = P[ξ ∈ B | η] and μ₂ = P[ξ ∈ B | ζ].
   --  * Show `(μ₁, μ₂)` is a bounded martingale with identical marginals.
   --  * Conclude μ₁ = μ₂ almost surely to deduce conditional independence.
+  sorry
+
+/-- The *extreme members* (Kallenberg's terminology) agree almost surely after
+conditioning on the tail σ-algebra.  This will later yield conditional
+independence and identical conditional laws. -/
+theorem extreme_members_agree
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {X : ℕ → Ω → α} (hX : Contractable μ X) :
+    ∀ (m k : ℕ) (hk : k ≤ m) (B : Set α) (hB : MeasurableSet B),
+      ProbabilityTheory.condexp μ
+          ((fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (X m ω)))) (tailSigma X)
+        = ProbabilityTheory.condexp μ
+            ((fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (X k ω)))) (tailSigma X) := by
+  -- TODO:
+  --  * Invoke `contraction_independence` on the pairs `(X m, shiftProcess X m)`
+  --    and `(X k, shiftProcess X m)`.
+  --  * Pass to the limit using reverse martingale convergence with respect to
+  --    the decreasing tail σ-algebras.
+  --  * Rewrite the conditional expectations through the indicator formulation.
   sorry
 
 /-- **Aldous' martingale proof of de Finetti's theorem (skeleton).**
