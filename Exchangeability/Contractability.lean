@@ -3,7 +3,8 @@ Copyright (c) 2025 The Exchangeability Project. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
-import Exchangeability.Exchangeability
+import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
+import Mathlib.MeasureTheory.Measure.Typeclasses.Probability
 
 /-!
 # Contractability and the de Finetti-Ryll-Nardzewski Theorem
@@ -35,6 +36,71 @@ variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
 namespace Exchangeability
 
+/-- An infinite family of random variables `X : ℕ → Ω → α` is **exchangeable**
+if the finite-dimensional distributions are invariant under permutations of finitely
+many indices. -/
+def Exchangeable (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
+  ∀ n (σ : Equiv.Perm (Fin n)),
+    Measure.map (fun ω => fun i : Fin n => X (σ i) ω) μ =
+      Measure.map (fun ω => fun i : Fin n => X i ω) μ
+
+/-- An infinite family of random variables `X : ℕ → Ω → α` is **fully exchangeable**
+if the joint distribution is invariant under all permutations of ℕ. -/
+def FullyExchangeable (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
+  ∀ (π : Equiv.Perm ℕ),
+    Measure.map (fun ω => fun i : ℕ => X (π i) ω) μ =
+      Measure.map (fun ω => fun i : ℕ => X i ω) μ
+
+/-- Extend a permutation of `Fin n` to a permutation of ℕ by fixing all `i ≥ n`. -/
+def extendFinPerm (n : ℕ) (σ : Equiv.Perm (Fin n)) : Equiv.Perm ℕ where
+  toFun i := if h : i < n then (σ ⟨i, h⟩).1 else i
+  invFun i := if h : i < n then (σ.symm ⟨i, h⟩).1 else i
+  left_inv := by
+    intro i
+    by_cases h : i < n
+    · have hσ : (σ ⟨i, h⟩).1 < n := (σ ⟨i, h⟩).isLt
+      simp [h, hσ, extendFinPerm]
+    · simp [h, extendFinPerm]
+  right_inv := by
+    intro i
+    by_cases h : i < n
+    · have hσ : (σ.symm ⟨i, h⟩).1 < n := (σ.symm ⟨i, h⟩).isLt
+      simp [h, hσ, extendFinPerm]
+    · simp [h, extendFinPerm]
+
+/-- Full exchangeability implies exchangeability. -/
+lemma FullyExchangeable.exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
+    (hX_meas : ∀ i, Measurable (X i)) (hX : FullyExchangeable μ X) : Exchangeable μ X := by
+  classical
+  intro n σ
+  let π := extendFinPerm n σ
+  have hπ := hX π
+  let proj : (ℕ → α) → (Fin n → α) := fun f i => f i.val
+  have hproj_meas : Measurable proj :=
+    measurable_pi_lambda _ (fun i => measurable_pi_apply i.val)
+  have hmap₁ :=
+    Measure.map_map (μ:=μ)
+      (f:=fun ω => fun i : ℕ => X (π i) ω)
+      (g:=proj)
+      hproj_meas
+      (measurable_pi_lambda _ (fun i => hX_meas (π i)))
+  have hmap₂ :=
+    Measure.map_map (μ:=μ)
+      (f:=fun ω => fun i : ℕ => X i ω)
+      (g:=proj)
+      hproj_meas
+      (measurable_pi_lambda _ (fun i => hX_meas i))
+  have hprojσ :
+      proj ∘ (fun ω => fun i : ℕ => X (π i) ω)
+        = fun ω => fun i : Fin n => X (σ i) ω := by
+    funext ω i
+    simp [Function.comp, proj, π, extendFinPerm, Fin.is_lt]
+  have hprojid :
+      proj ∘ (fun ω => fun i : ℕ => X i ω)
+        = fun ω => fun i : Fin n => X i ω := rfl
+  -- Project both laws to the first n coordinates and compare
+  have := congrArg (fun ν => Measure.map proj ν) hπ
+  simpa [hmap₁.symm, hmap₂.symm, hprojσ, hprojid, Function.comp]
 /-- A finite or infinite random sequence ξ is **contractable** if all increasing subsequences
 of equal length have the same distribution.
 
