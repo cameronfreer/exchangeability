@@ -80,6 +80,23 @@ lemma contractable_same_range {μ : Measure Ω} {X : ℕ → Ω → α}
   ext ω i
   rw [h_range]
 
+/-- Helper lemma: Permuting the output coordinates doesn't change the measure.
+If f and g produce the same measure, then f ∘ σ and g ∘ σ produce the same measure. -/
+lemma measure_map_comp_perm {μ : Measure Ω} {n : ℕ} (f g : Ω → Fin n → α) (σ : Equiv.Perm (Fin n))
+    (h : Measure.map f μ = Measure.map g μ) :
+    Measure.map (fun ω i => f ω (σ i)) μ = Measure.map (fun ω i => g ω (σ i)) μ := by
+  -- The key is that composing with σ on the right is the same as
+  -- applying σ⁻¹ to the measure on the left
+  have : (fun ω i => f ω (σ i)) = (fun h => h ∘ σ) ∘ f := by
+    ext ω i
+    rfl
+  have : (fun ω i => g ω (σ i)) = (fun h => h ∘ σ) ∘ g := by
+    ext ω i
+    rfl
+  -- Now we need: map ((· ∘ σ) ∘ f) μ = map ((· ∘ σ) ∘ g) μ
+  -- This follows from map_map and the hypothesis
+  sorry
+
 /-- **Theorem 1.1 (de Finetti-Ryll-Nardzewski)**: Every exchangeable sequence is contractable.
 
 Kallenberg states this is "trivial", but with our definitions it requires showing that
@@ -121,18 +138,19 @@ theorem exchangeable_of_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
   -- Key insight: {σ(0), ..., σ(n-1)} = {0, ..., n-1} as sets (σ is a bijection)
   -- So both are just reorderings of the same n variables.
   
-  -- Let sort_σ be the increasing rearrangement of (σ(0), ..., σ(n-1))
-  -- Let sort_id be the increasing rearrangement of (0, ..., n-1) = (0, ..., n-1)
+  -- Step 1: Define the sorted version of σ
+  -- sort_σ : Fin n → ℕ maps i to the i-th smallest element of {σ(0), ..., σ(n-1)}
+  -- Since σ is a bijection on Fin n, we have {σ(0), ..., σ(n-1)} = {0, ..., n-1}
+  -- So sort_σ is just the identity: sort_σ(i) = i
   
-  -- By contractability:
-  --   (X_{sort_σ(0)}, ..., X_{sort_σ(n-1)}) has same dist as (X_{sort_id(0)}, ..., X_{sort_id(n-1)})
-  --   i.e., (X_{sort_σ(0)}, ..., X_{sort_σ(n-1)}) has same dist as (X_0, ..., X_{n-1})
+  -- Step 2: There exists a permutation τ such that σ = sort_σ ∘ τ
+  -- In other words, σ(i) = sort_σ(τ(i)) for all i
   
-  -- But (X_{σ(0)}, ..., X_{σ(n-1)}) is a permutation of (X_{sort_σ(0)}, ..., X_{sort_σ(n-1)})
-  -- So we need: permuting coordinates preserves "has same distribution as"
+  -- Step 3: Apply contractability to sort_σ and id
+  have h_sorted : Measure.map (fun ω i => X i ω) μ = Measure.map (fun ω i => X i ω) μ := rfl
   
-  -- This requires showing that if f and g give the same measure, then f ∘ τ and g ∘ τ
-  -- give the same measure for any permutation τ.
+  -- Step 4: Use measure_map_comp_perm to permute by τ
+  -- This would give us the result, but we need to construct τ and sort_σ properly
   
   sorry
 
@@ -162,6 +180,13 @@ theorem exchangeable_of_conditionallyIID {μ : Measure Ω} {X : ℕ → Ω → �
     (hX : ConditionallyIID μ X) : Exchangeable μ X := by
   -- If X is conditionally i.i.d., then permuting doesn't change the distribution
   -- since each ξᵢ has the same conditional distribution ν
+  
+  -- More precisely: If P[ξ ∈ · | ℱ] = ν^∞ a.s., then for any permutation σ,
+  -- P[ξ ∘ σ ∈ · | ℱ] = (ν^∞) ∘ σ = ν^∞ a.s. (product measures are permutation invariant)
+  
+  -- Taking expectations: P[ξ ∈ ·] = E[ν^∞] and P[ξ ∘ σ ∈ ·] = E[ν^∞]
+  -- So the distributions are equal.
+  
   sorry
 
 /-- Mixed i.i.d. implies exchangeable. -/
