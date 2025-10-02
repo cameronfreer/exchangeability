@@ -18,6 +18,60 @@ open MeasureTheory Filter
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
+/-- Auxiliary lemma: probability measures on path space are determined by their
+finite-dimensional marginals. -/
+lemma measure_eq_of_fin_marginals_eq {μ ν : Measure (ℕ → α)}
+    [IsProbabilityMeasure μ] [IsProbabilityMeasure ν]
+    (h : ∀ (n : ℕ) (S : Set (Fin n → α)) (hS : MeasurableSet S),
+        Measure.map (fun f : ℕ → α => fun i : Fin n => f i) μ S =
+          Measure.map (fun f : ℕ → α => fun i : Fin n => f i) ν S) :
+    μ = ν := by
+  classical
+  refine Measure.ext_of_generate_finite (measurableCylinders fun _ : ℕ => α)
+    generateFrom_measurableCylinders.symm isPiSystem_measurableCylinders ?_ ?_
+  · intro T hT
+    obtain ⟨I, S, hS, rfl⟩ := (mem_measurableCylinders _).mp hT
+    let bound : ℕ := I.sup id
+    let m : ℕ := bound + 1
+    have hlt_of_mem : ∀ {i : ℕ}, i ∈ I → i < m := by
+      intro i hi
+      have : i ≤ bound := Finset.le_sup hi
+      exact Nat.lt_of_le_of_lt this (Nat.lt_succ_self _)
+    let emb : I → Fin m := fun i => ⟨i.1, hlt_of_mem i.2⟩
+    let restrictToI : (Fin m → α) → (∀ i : I, α) := fun g i => g (emb i)
+    have h_restrict_meas : Measurable restrictToI :=
+      measurable_pi_lambda _ (fun i => measurable_pi_apply (emb i))
+    let S' : Set (Fin m → α) := restrictToI ⁻¹' S
+    have hS' : MeasurableSet S' := hS.preimage h_restrict_meas
+    have hcyl : cylinder I S
+        = (fun f : ℕ → α => fun i : Fin m => f i) ⁻¹' S' := by
+      ext f; constructor
+      · intro hf
+        have : I.restrict f ∈ S := by simpa [cylinder] using hf
+        have hrestrict : restrictToI (fun i : Fin m => f i) = I.restrict f := by
+          ext i; simp [restrictToI, emb]
+        simpa [S', hrestrict]
+      · intro hf
+        have hrestrict : restrictToI (fun i : Fin m => f i) = I.restrict f := by
+          ext i; simp [restrictToI, emb]
+        have : restrictToI (fun i : Fin m => f i) ∈ S := by
+          simpa [S', hrestrict] using hf
+        simpa [cylinder] using this
+    have hproj : Measurable fun f : ℕ → α => fun i : Fin m => f i :=
+      measurable_pi_lambda _ (fun i => measurable_pi_apply i)
+    have h_evalμ : μ (cylinder I S)
+        = Measure.map (fun f : ℕ → α => fun i : Fin m => f i) μ S' := by
+      simpa [hcyl, S', Measure.map_apply hproj hS']
+    have h_evalν : ν (cylinder I S)
+        = Measure.map (fun f : ℕ → α => fun i : Fin m => f i) ν S' := by
+      simpa [hcyl, S', Measure.map_apply hproj hS']
+    have h_eq := h m S' hS'
+    simpa [h_evalμ, h_evalν]
+  ·
+    have hμ : μ Set.univ = 1 := IsProbabilityMeasure.measure_univ (μ:=μ)
+    have hν : ν Set.univ = 1 := IsProbabilityMeasure.measure_univ (μ:=ν)
+    simpa [hμ, hν]
+
 /-- Exchangeability implies full exchangeability (Kolmogorov extension theorem).
 
 For an exchangeable family `X`, the finite-dimensional distributions satisfy the
@@ -177,52 +231,8 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω} {X : ℕ → Ω →
       simpa using this
 
     -- Step 4: Kolmogorov uniqueness via π-λ theorem
-    have h_unique : μ_X = μ_Xπ := by
-      classical
-      refine Measure.ext_of_generate_finite (measurableCylinders fun _ : ℕ => α)
-        generateFrom_measurableCylinders.symm isPiSystem_measurableCylinders ?_ ?_
-      · intro T hT
-        obtain ⟨I, S, hS, rfl⟩ := (mem_measurableCylinders _).mp hT
-        let bound : ℕ := I.sup id
-        let m : ℕ := bound + 1
-        have hlt_of_mem : ∀ {i : ℕ}, i ∈ I → i < m := by
-          intro i hi
-          have : i ≤ bound := Finset.le_sup hi
-          exact Nat.lt_of_le_of_lt this (Nat.lt_succ_self _)
-        let emb : I → Fin m := fun i => ⟨i.1, hlt_of_mem i.2⟩
-        let restrictToI : (Fin m → α) → (∀ i : I, α) := fun g i => g (emb i)
-        have h_restrict_meas : Measurable restrictToI :=
-          measurable_pi_lambda _ (fun i => measurable_pi_apply (emb i))
-        let S' : Set (Fin m → α) := restrictToI ⁻¹' S
-        have hS' : MeasurableSet S' := hS.preimage h_restrict_meas
-        have hcyl : cylinder I S
-            = (fun f : ℕ → α => fun i : Fin m => f i) ⁻¹' S' := by
-          ext f; constructor
-          · intro hf
-            have : I.restrict f ∈ S := by simpa [cylinder] using hf
-            have hrestrict : restrictToI (fun i : Fin m => f i) = I.restrict f := by
-              ext i; simp [restrictToI, emb]
-            simpa [S', hrestrict]
-          · intro hf
-            have hrestrict : restrictToI (fun i : Fin m => f i) = I.restrict f := by
-              ext i; simp [restrictToI, emb]
-            have : restrictToI (fun i : Fin m => f i) ∈ S := by
-              simpa [S', hrestrict] using hf
-            simpa [cylinder] using this
-        have hproj : Measurable fun f : ℕ → α => fun i : Fin m => f i :=
-          measurable_pi_lambda _ (fun i => measurable_pi_apply i)
-        have h_eval : μ_X (cylinder I S)
-            = (Measure.map (fun f : ℕ → α => fun i : Fin m => f i) μ_X) S' := by
-          simpa [hcyl, S', Measure.map_apply hproj hS']
-        have h_evalπ : μ_Xπ (cylinder I S)
-            = (Measure.map (fun f : ℕ → α => fun i : Fin m => f i) μ_Xπ) S' := by
-          simpa [hcyl, S', Measure.map_apply hproj hS']
-        have h_eq := h_marginals m S' hS'
-        simpa [h_eval, h_evalπ] using h_eq
-      ·
-        have hμX_univ : μ_X Set.univ = 1 := hμ_X.measure_univ
-        have hμXπ_univ : μ_Xπ Set.univ = 1 := hμ_Xπ.measure_univ
-        simpa [hμX_univ, hμXπ_univ]
+    have h_unique : μ_X = μ_Xπ :=
+      measure_eq_of_fin_marginals_eq (μ:=μ_X) (ν:=μ_Xπ) (h:=h_marginals)
 
     -- Step 5: Conclude equal laws
     calc
