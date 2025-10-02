@@ -82,27 +82,30 @@ lemma contractable_same_range {μ : Measure Ω} {X : ℕ → Ω → α}
 
 /-- **Theorem 1.1 (de Finetti-Ryll-Nardzewski)**: Every exchangeable sequence is contractable.
 
-This is the trivial direction: if the distribution is invariant under all permutations,
-it's certainly invariant under increasing subsequences. -/
+Kallenberg states this is "trivial", but with our definitions it requires showing that
+selecting indices via a strictly monotone function gives the same distribution as
+selecting the first m indices. This follows from exchangeability via a permutation argument.
+
+Note: The triviality in Kallenberg comes from his definition where exchangeability
+already includes invariance under selecting arbitrary subsets, not just permutations
+of {0,...,n-1}. -/
 theorem contractable_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX : Exchangeable μ X) : Contractable μ X := by
   intro m k hk_mono
   
-  -- The key insight: we want to show that (X_{k(0)}, ..., X_{k(m-1)}) 
-  -- has the same distribution as (X_0, ..., X_{m-1})
+  -- We need: map (fun ω i => X (k i) ω) μ = map (fun ω i => X i ω) μ
   
-  -- Since k is strictly monotone, we have k(0) < k(1) < ... < k(m-1)
-  -- Let n = k(m-1) + 1, so all k(i) < n
+  -- The key is that both (X_{k(0)}, ..., X_{k(m-1)}) and (X_0, ..., X_{m-1})
+  -- are m-tuples of random variables. By exchangeability, any m variables
+  -- have the same joint distribution (when properly permuted).
   
-  let n := k (m - 1).succ + 1  -- Upper bound containing all k(i)
+  -- However, our Exchangeable definition only talks about permutations of
+  -- {0,...,n-1}, not arbitrary selections. So we need to embed both
+  -- into a common space and use a permutation.
   
-  -- Build a permutation σ : Perm (Fin n) that maps i to k(i) for i < m
-  -- and permutes the remaining elements
+  -- This is the same permutation construction challenge as in
+  -- exchangeable_iff_fullyExchangeable, so we defer it for now.
   
-  -- This is similar to the construction in exchangeable_iff_fullyExchangeable
-  -- but we need to be more careful about the types
-  
-  -- For now, the construction is routine but tedious
   sorry
 
 /-- For infinite sequences, contractability implies exchangeability.
@@ -115,23 +118,21 @@ theorem exchangeable_of_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
   
   -- We need to show: (X_{σ(0)}, ..., X_{σ(n-1)}) has same distribution as (X_0, ..., X_{n-1})
   
-  -- Key observation: For any permutation σ of {0,...,n-1}, we can write it as
-  -- a composition of transpositions. By contractability, swapping two indices
-  -- doesn't change the distribution (since we can view it as selecting an
-  -- increasing subsequence).
+  -- Key insight: {σ(0), ..., σ(n-1)} = {0, ..., n-1} as sets (σ is a bijection)
+  -- So both are just reorderings of the same n variables.
   
-  -- More directly: Both (X_{σ(0)}, ..., X_{σ(n-1)}) and (X_0, ..., X_{n-1})
-  -- are increasing subsequences of X when we order the indices appropriately.
+  -- Let sort_σ be the increasing rearrangement of (σ(0), ..., σ(n-1))
+  -- Let sort_id be the increasing rearrangement of (0, ..., n-1) = (0, ..., n-1)
   
-  -- Let k₁ < k₂ < ... < kₙ be the sorted version of {σ(0), ..., σ(n-1)}
-  -- and let ℓ₁ < ℓ₂ < ... < ℓₙ be the sorted version of {0, ..., n-1}
+  -- By contractability:
+  --   (X_{sort_σ(0)}, ..., X_{sort_σ(n-1)}) has same dist as (X_{sort_id(0)}, ..., X_{sort_id(n-1)})
+  --   i.e., (X_{sort_σ(0)}, ..., X_{sort_σ(n-1)}) has same dist as (X_0, ..., X_{n-1})
   
-  -- By contractability: (X_{k₁}, ..., X_{kₙ}) has same dist as (X_{ℓ₁}, ..., X_{ℓₙ})
-  -- But (X_{σ(0)}, ..., X_{σ(n-1)}) is just a permutation of (X_{k₁}, ..., X_{kₙ})
-  -- and (X_0, ..., X_{n-1}) is just (X_{ℓ₁}, ..., X_{ℓₙ}) in order
+  -- But (X_{σ(0)}, ..., X_{σ(n-1)}) is a permutation of (X_{sort_σ(0)}, ..., X_{sort_σ(n-1)})
+  -- So we need: permuting coordinates preserves "has same distribution as"
   
-  -- The issue: we need to show that permuting a tuple doesn't change whether
-  -- two distributions are equal. This is trivial but requires the right setup.
+  -- This requires showing that if f and g give the same measure, then f ∘ τ and g ∘ τ
+  -- give the same measure for any permutation τ.
   
   sorry
 
