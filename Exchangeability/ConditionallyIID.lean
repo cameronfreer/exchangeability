@@ -95,7 +95,7 @@ This is obtained by taking expectations in the conditionally i.i.d. definition.
 
 TODO: Full definition requires integration over the space of measures and
 product measure construction. For now, we use a simplified placeholder. -/
-def MixtureOfIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
+def MixtureOfIID (_μ : Measure Ω) (_X : ℕ → Ω → α) : Prop :=
   ∃ (ν : Measure (Measure α)),
     IsProbabilityMeasure ν ∧
     -- Placeholder: full definition needs integration over measure spaces
