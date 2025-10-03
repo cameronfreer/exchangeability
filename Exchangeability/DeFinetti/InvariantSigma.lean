@@ -83,9 +83,21 @@ def shiftInvariantSigma : MeasurableSpace (Ω[α]) where
     intro f hf
     refine ⟨MeasurableSet.iUnion fun n => (hf n).left, ?_⟩
     simp only [Set.preimage_iUnion]
-    congr 1
-    ext i
-    exact (hf i).2
+    ext ω
+    simp only [Set.mem_iUnion, Set.mem_preimage]
+    constructor
+    · intro ⟨i, hi⟩
+      use i
+      -- hi : shift ω ∈ f i
+      -- By (hf i), f i is shift-invariant: shift ω ∈ f i ↔ ω ∈ f i
+      have := (isShiftInvariant_iff (f i)).1 (hf i)
+      exact (this.2 ω).1 hi
+    · intro ⟨i, hi⟩
+      use i
+      -- hi : ω ∈ f i
+      -- By (hf i), f i is shift-invariant: shift ω ∈ f i ↔ ω ∈ f i
+      have := (isShiftInvariant_iff (f i)).1 (hf i)
+      exact (this.2 ω).2 hi
 
 lemma shiftInvariantSigma_le :
     shiftInvariantSigma ≤ (inferInstance : MeasurableSpace (Ω[α])) := by
