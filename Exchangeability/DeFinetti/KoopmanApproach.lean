@@ -168,7 +168,7 @@ This combines:
 -/
 theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
     Tendsto (fun n => birkhoffAverage ℝ (koopman shift hσ) _root_.id n f)
-      atTop (𝓝 (condexpL2 shiftInvariantSigma f)) := by
+      atTop (𝓝 (condexpL2 (μ := μ) f)) := by
   -- Step 1: Get the projection from the Mean Ergodic Theorem
   obtain ⟨P, hP_fixed, hP_tendsto⟩ := birkhoffAverage_tendsto_fixedSpace shift hσ f
   have hP_proj : P = (fixedSubspace hσ).starProjection := rfl
@@ -193,7 +193,7 @@ theorem birkhoffCylinder_tendsto_condexp
       (∀ᵐ ω ∂μ, fL2 ω = F ω) ∧
       Tendsto (fun n => birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2)
         atTop
-        (𝓝 (condexpL2 shiftInvariantSigma fL2)) := by
+        (𝓝 (condexpL2 (μ := μ) fL2)) := by
   classical
   let fL2 := productCylinderLp (m := m) (fs := fs) hmeas hbd
   refine ⟨fL2, ?_, ?_⟩
@@ -223,21 +223,21 @@ theorem extremeMembers_agree
     (_indices : Fin m → ℕ) :
     let F := productCylinder m fs
     let fL2 : Lp ℝ 2 μ := productCylinderLp (m := m) (fs := fs) hmeas hbd
-    koopman shift hσ (condexpL2 shiftInvariantSigma fL2) =
-      condexpL2 shiftInvariantSigma fL2 := by
+    koopman shift hσ (condexpL2 (μ := μ) fL2) =
+      condexpL2 (μ := μ) fL2 := by
   classical
   -- unpack the `let` bindings
   let fL2 := productCylinderLp (m := m) (fs := fs) hmeas hbd
-  have hRange : condexpL2 shiftInvariantSigma fL2 ∈
-      Set.range (condexpL2 shiftInvariantSigma) := ⟨fL2, rfl⟩
-  have hMemSet : condexpL2 shiftInvariantSigma fL2 ∈
+  have hRange : condexpL2 (μ := μ) fL2 ∈
+      Set.range (condexpL2 (μ := μ)) := ⟨fL2, rfl⟩
+  have hMemSet : condexpL2 (μ := μ) fL2 ∈
       (fixedSubspace hσ : Set (Lp ℝ 2 μ)) := by
     simpa [range_condexp_eq_fixedSubspace (μ := μ) hσ]
       using hRange
-  have hMem : condexpL2 shiftInvariantSigma fL2 ∈ fixedSubspace hσ := hMemSet
+  have hMem : condexpL2 (μ := μ) fL2 ∈ fixedSubspace hσ := hMemSet
   have hFixed :=
     (mem_fixedSubspace_iff (hσ := hσ)
-      (f := condexpL2 shiftInvariantSigma fL2)).1 hMem
+      (f := condexpL2 (μ := μ) fL2)).1 hMem
   simpa using hFixed
 
 /-- Factorization theorem: conditional expectation of cylinder has product form.
