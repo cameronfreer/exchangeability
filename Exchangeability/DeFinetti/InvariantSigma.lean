@@ -151,13 +151,10 @@ lemma shiftInvariantSigma_measurable_shift_eq
       have : g ω < g ω := lt_trans hωq this
       exact lt_irrefl _ this
 
-/-- Helper: Measurability of iterated shifts. -/
+-- Helper: Measurability of iterated shifts follows from measurability of `shift`.
 private lemma shift_iterate_measurable (n : ℕ) :
     Measurable (shift^[n] : Ω[α] → Ω[α]) := by
-  induction' n with n ih
-  · exact measurable_id
-  · rw [Function.iterate_succ, Function.comp]
-    exact measurable_shift.comp ih
+  simpa using measurable_shift.iterate n
 
 /-- Helper: The indicator function on a shift-invariant set is pointwise shift-invariant. -/
 private lemma indicator_shiftInvariant_set {S : Set (Ω[α])} {g0 : Ω[α] → ℝ}
@@ -166,15 +163,18 @@ private lemma indicator_shiftInvariant_set {S : Set (Ω[α])} {g0 : Ω[α] → �
   intro ω
   by_cases hω : ω ∈ S
   · have hshift : shift ω ∈ S := by
-      rw [← Set.mem_preimage, hS_inv]
-      exact hω
-    rw [Set.indicator_of_mem hshift, Set.indicator_of_mem hω, hS_shift ω hω]
+      have : ω ∈ shift ⁻¹' S := by
+        simpa [hS_inv] using hω
+      simpa [Set.mem_preimage] using this
+    have hg : g0 (shift ω) = g0 ω := hS_shift _ hω
+    simp [Set.indicator, hω, hshift, hg]
   · have hshift : shift ω ∉ S := by
       intro h
-      apply hω
-      rw [← hS_inv, Set.mem_preimage]
-      exact h
-    rw [Set.indicator_of_notMem hshift, Set.indicator_of_notMem hω]
+      have : ω ∈ shift ⁻¹' S := by
+        simpa [Set.mem_preimage] using h
+      have : ω ∈ S := by simpa [hS_inv] using this
+      exact hω this
+    simp [Set.indicator, hω, hshift]
 
 /-- **Auxiliary goal**: construct an invariant representative.
 
@@ -227,11 +227,15 @@ lemma exists_shiftInvariantRepresentative
       simp [g', hω]
     exact hg'_ae_eq_g0.trans hAEg0
   have hshift_g' : ∀ ω, g' (shift ω) = g' ω := by
-    have hS_shift : ∀ ω ∈ S, g0 (shift ω) = g0 ω := fun ω hω => hω
+    have hS_shift : ∀ ω ∈ S, g0 (shift ω) = g0 ω := by
+      intro ω hω
+      simpa [S, Set.mem_setOf_eq] using hω
     have hSinf_shift : ∀ ω ∈ S∞, g0 (shift ω) = g0 ω := by
       intro ω hω
-      have : ω ∈ S := Set.mem_iInter.mp hω 0
-      exact this
+      have hωS : ω ∈ S := by
+        have := Set.mem_iInter.mp hω 0
+        simpa [S∞] using this
+      exact hS_shift _ hωS
     exact indicator_shiftInvariant_set hSinf_preimage hSinf_shift
   refine ⟨g', ?_, hg'_ae_eq_g, hshift_g'⟩
   have hS_meas : MeasurableSet S := by
