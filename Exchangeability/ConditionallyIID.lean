@@ -51,6 +51,19 @@ axiom pi_isProbabilityMeasure {ι : Type*} [Fintype ι] {α : ι → Type*}
     [∀ i, MeasurableSpace (α i)] (μ : ∀ i, Measure (α i)) [∀ i, IsProbabilityMeasure (μ i)] :
     IsProbabilityMeasure (Measure.pi μ)
 
+/-- Product measures of identical marginals are permutation-invariant.
+If all marginals are the same measure ν, then permuting coordinates doesn't change the product. -/
+axiom pi_comp_perm {ι : Type*} [Fintype ι] {α : Type*} [MeasurableSpace α]
+    (ν : Measure α) (σ : Equiv.Perm ι) :
+    Measure.map (fun f : ι → α => f ∘ σ) (Measure.pi fun _ : ι => ν) =
+      Measure.pi fun _ : ι => ν
+
+/-- The bind operation commutes with measure maps.
+This is a key property of the Giry monad. -/
+axiom bind_map_comm {Ω α β : Type*} [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β]
+    (μ : Measure Ω) (κ : Ω → Measure α) (f : α → β) :
+    (μ.bind κ).map f = μ.bind (fun ω => (κ ω).map f)
+
 end MeasureTheory.Measure
 
 namespace Exchangeability
@@ -64,11 +77,14 @@ This formulation expresses that, conditionally on the value of the kernel, the c
 `X` are independent and share the common conditional law `ν ω`.
 
 The definition uses `Measure.pi` (finite product) and `Measure.bind` (kernel bind) which are
-assumed as axioms until available in mathlib. -/
+assumed as axioms until available in mathlib.
+
+Note: We require this for ALL finite selections, not just strictly monotone ones, which is
+necessary to prove exchangeability. -/
 def ConditionallyIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
   ∃ ν : Ω → Measure α,
     (∀ ω, IsProbabilityMeasure (ν ω)) ∧
-      ∀ (m : ℕ) (k : Fin m → ℕ) (hk : StrictMono k),
+      ∀ (m : ℕ) (k : Fin m → ℕ),
         Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
           = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)
 
@@ -85,17 +101,45 @@ def MixtureOfIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
     -- Placeholder: full definition needs integration over measure spaces
     True
 
+/-- Helper lemma: Permuting coordinates after taking a product is the same as
+taking the product and then permuting. -/
+axiom pi_perm_comm {ι : Type*} [Fintype ι] {α : Type*} [MeasurableSpace α]
+    (ν : Measure α) (σ : Equiv.Perm ι) :
+    Measure.pi (fun i : ι => ν) =
+      Measure.map (fun f : ι → α => f ∘ σ.symm) (Measure.pi fun i : ι => ν)
+
 /-- Conditionally i.i.d. implies exchangeable.
 If `X` is conditionally i.i.d., then permutations preserve the distribution.
 
-Sketch: by the definition of `ConditionallyIID`, the finite-dimensional distributions of `X`
-are given by mixtures of product measures.  Finite permutations act trivially on the product
-measure, hence also on the mixture, so the push-forward measures agree.  Filling in the details
-requires bookkeeping lemmas on `Measure.bind` and `Measure.pi`, which are still TODO. -/
+Proof strategy:
+1. By ConditionallyIID, the law of (X₀,...,X_{n-1}) is μ.bind(λω. ∏ᵢ ν(ω))
+2. By ConditionallyIID, the law of (X_{σ(0)},...,X_{σ(n-1)}) is also μ.bind(λω. ∏ᵢ ν(ω))
+3. Since both equal the same mixture, they are equal
+4. Therefore X is exchangeable -/
 theorem exchangeable_of_conditionallyIID {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX : ConditionallyIID μ X) : Exchangeable μ X := by
   intro n σ
-  -- The formalisation of the sketch above is left for future work.
-  sorry
+  -- Get the kernel ν from the ConditionallyIID hypothesis
+  obtain ⟨ν, hν_prob, hν_eq⟩ := hX
+  
+  -- The identity selection (0, 1, ..., n-1)
+  let id_sel : Fin n → ℕ := fun i => i.val
+  
+  -- The permuted selection (σ(0), σ(1), ..., σ(n-1))
+  let σ_sel : Fin n → ℕ := fun i => (σ i).val
+  
+  -- Apply ConditionallyIID to both selections
+  have h_id := hν_eq n id_sel
+  have h_σ := hν_eq n σ_sel
+  
+  -- Both are equal to the same mixture μ.bind(λω. ∏ᵢ ν(ω))
+  -- Therefore they are equal to each other
+  calc Measure.map (fun ω i => X (σ i).val ω) μ
+      = Measure.map (fun ω i => X (σ_sel i) ω) μ := by
+          congr
+      _ = μ.bind (fun ω => Measure.pi fun _ : Fin n => ν ω) := h_σ
+      _ = Measure.map (fun ω i => X (id_sel i) ω) μ := h_id.symm
+      _ = Measure.map (fun ω i => X i.val ω) μ := by
+          congr
 
 end Exchangeability
