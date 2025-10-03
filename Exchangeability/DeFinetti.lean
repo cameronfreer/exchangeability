@@ -9,6 +9,7 @@ import Mathlib.Probability.Kernel.Basic
 import Mathlib.MeasureTheory.Constructions.BorelSpace.Basic
 import Exchangeability.Exchangeability
 import Exchangeability.Contractability
+import Exchangeability.ConditionallyIID
 import Exchangeability.DeFinetti.KoopmanApproach
 import Exchangeability.DeFinetti.L2Approach
 import Exchangeability.DeFinetti.MartingaleApproach
