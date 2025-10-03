@@ -121,7 +121,9 @@ lemma shiftInvariantSigma_measurable_shift_eq
   | inl hlt =>
       -- Case `g (shift ω) < g ω`
       obtain ⟨q, hltq, hqω⟩ := exists_rat_btwn hlt
-      have hset_eq := (hg (MeasurableSet_Iio (q : ℝ))).2
+      have hmeas : MeasurableSet (Set.Iio (q : ℝ)) :=
+        (isOpen_Iio : IsOpen (Set.Iio (q : ℝ))).measurableSet
+      have hset_eq := (hg hmeas).2
       have h_shift_mem : shift ω ∈ g ⁻¹' Set.Iio (q : ℝ) := by
         simpa [Set.mem_preimage] using hltq
       have h_pre : ω ∈ shift ⁻¹' (g ⁻¹' Set.Iio (q : ℝ)) := by
@@ -135,7 +137,9 @@ lemma shiftInvariantSigma_measurable_shift_eq
   | inr hgt =>
       -- Case `g ω < g (shift ω)`
       obtain ⟨q, hωq, hq_lt⟩ := exists_rat_btwn hgt
-      have hset_eq := (hg (MeasurableSet_Ioi (q : ℝ))).2
+      have hmeas : MeasurableSet (Set.Ioi (q : ℝ)) :=
+        (isOpen_Ioi : IsOpen (Set.Ioi (q : ℝ))).measurableSet
+      have hset_eq := (hg hmeas).2
       have h_shift_mem : shift ω ∈ g ⁻¹' Set.Ioi (q : ℝ) := by
         simpa [Set.mem_preimage] using hq_lt
       have h_pre : ω ∈ shift ⁻¹' (g ⁻¹' Set.Ioi (q : ℝ)) := by
