@@ -172,8 +172,9 @@ lemma exists_shiftInvariantRepresentative
   have hcomp :=
     (hσ.quasiMeasurePreserving.ae_eq_comp (μ := μ) (ν := μ)
       (f := shift (α := α)) (g := fun ω => g ω) (g' := fun ω => g0 ω) hAEg0)
-  have hshift0 : (fun ω => g0 (shift ω)) =ᵐ[μ] g0 :=
-    hcomp.trans (hinv.trans hAEg0)
+  have hshift0 : (fun ω => g0 (shift ω)) =ᵐ[μ] g0 := by
+    refine hcomp.symm.trans ?_
+    exact hinv.trans hAEg0
   let S : Set (Ω[α]) := {ω | g0 (shift ω) = g0 ω}
   have hS_ae : ∀ᵐ ω ∂μ, ω ∈ S := by
     simpa [S, Set.mem_setOf_eq] using hshift0
