@@ -208,23 +208,38 @@ private lemma exists_shiftInvariantFullMeasureSet
 
   -- Prove S has full measure from the assumption
   have hS_full : μ Sᶜ = 0 := by
-    sorry -- From hinv
+    simpa [ae_iff, S, Set.mem_setOf_eq] using hinv
 
   -- Prove Sinf has full measure
   have hSinf_full : μ Sinfᶜ = 0 := by
-    sorry -- Union of null sets under measure-preserving maps
+    have hcompl : Sinfᶜ = ⋃ n : ℕ, (shift^[n]) ⁻¹' Sᶜ := by
+      simp only [Sinf, Set.preimage_compl, Set.compl_iInter]
+    have hpreimage_null : ∀ n : ℕ, μ ((shift^[n]) ⁻¹' Sᶜ) = 0 := fun n =>
+      (MeasurePreserving.iterate hσ n).preimage_null hS_full
+    simpa [hcompl] using measure_iUnion_null hpreimage_null
 
   -- Prove Sinf is shift-invariant
   have hSinf_inv : shift ⁻¹' Sinf = Sinf := by
-    sorry -- By construction of intersection
+    sorry -- Complex proof involving iterate properties
 
   -- Prove Sinf is measurable
   have hSinf_meas : MeasurableSet Sinf := by
-    sorry -- Intersection of measurable sets
+    have hS_meas : MeasurableSet S := by
+      have hdiff : Measurable (fun ω => g (shift ω) - g ω) :=
+        (hg.comp measurable_shift).sub hg
+      have : S = (fun ω => g (shift ω) - g ω) ⁻¹' {(0:ℝ)} := by
+        ext ω
+        simp only [S, Set.mem_setOf_eq, Set.mem_preimage, Set.mem_singleton_iff, sub_eq_zero]
+      rw [this]
+      exact hdiff (measurableSet_singleton (0:ℝ))
+    refine MeasurableSet.iInter fun n => ?_
+    exact (shift_iterate_measurable n) hS_meas
 
   -- Prove pointwise invariance on Sinf
   have hpointwise : ∀ ω ∈ Sinf, g (shift ω) = g ω := by
-    sorry -- From definition of S and Sinf
+    intro ω hω
+    have := Set.mem_iInter.mp hω 0
+    simpa [S, Set.mem_setOf_eq] using this
 
   exact ⟨Sinf, hSinf_meas, hSinf_inv, hSinf_full, hpointwise⟩
 
