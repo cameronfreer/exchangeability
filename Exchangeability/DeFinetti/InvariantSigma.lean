@@ -205,20 +205,14 @@ lemma exists_shiftInvariantRepresentative
       have : shift ω ∈ S∞ := by
         refine Set.mem_iInter.mpr ?_
         intro n
-        have := Set.mem_iInter.mp hω n
+        have := Set.mem_iInter.mp hω (n + 1)
         simpa [Function.iterate_succ, Function.comp] using this
       simpa [Set.mem_preimage] using this
   have hSinf_equiv : ∀ ω, ω ∈ S∞ ↔ shift ω ∈ S∞ := by
     intro ω
     have hmem := congrArg (fun s => ω ∈ s) hSinf_preimage
     simpa [Set.mem_preimage] using hmem
-  let g' : Ω[α] → ℝ := fun ω => if ω ∈ S∞ then g0 ω else 0
-  have g'_def : g' = Set.indicator S∞ g0 := by
-    classical
-    funext ω
-    by_cases hω : ω ∈ S∞
-    · simp [g', hω, Set.indicator_of_mem]
-    · simp [g', hω, Set.indicator_of_not_mem]
+  let g' : Ω[α] → ℝ := Set.indicator S∞ g0
   have hg'_ae_eq_g0 : (fun ω => g' ω) =ᵐ[μ] g0 := by
     filter_upwards [hSinf_ae] with ω hω
     simp [g', hω]
@@ -258,7 +252,7 @@ lemma exists_shiftInvariantRepresentative
     have hg0_meas : Measurable g0 := hg0_sm.measurable
     have hg'_meas : Measurable g' := by
       classical
-      simpa [g'_def] using hg0_meas.indicator hSinf_meas
+      simpa [g'] using hg0_meas.indicator hSinf_meas
     have hg'_meas_shift : Measurable[shiftInvariantSigma] g' := by
       classical
       intro t ht
