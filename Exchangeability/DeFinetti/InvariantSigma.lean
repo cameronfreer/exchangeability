@@ -183,7 +183,7 @@ modify it on a null set so that it becomes literally invariant under `shift` whi
 measurable with respect to `shiftInvariantSigma`.  Filling in this lemma (or a closely related
 variant) will let us finish `aestronglyMeasurable_shiftInvariant_of_koopman`. -/
 structure ShiftInvariantData (μ : Measure (Ω[α]))
-    (hσ : MeasurePreserving shift μ μ) (g0 : Ω[α] → ℝ) :=
+    (hσ : MeasurePreserving shift μ μ) (g0 : Ω[α] → ℝ) where
   (support : Set (Ω[α]) := {ω | g0 (shift ω) = g0 ω})
   (support_null : μ supportᶜ = 0)
   (support_limit : Set (Ω[α]) := ⋂ n : ℕ, (shift^[n]) ⁻¹' support)
@@ -194,11 +194,10 @@ structure ShiftInvariantData (μ : Measure (Ω[α]))
   (support_meas : MeasurableSet support)
   (support_limit_meas : MeasurableSet support_limit)
 
-attribute [nolint unusedSectionVars] ShiftInvariantData
 
 private def buildShiftInvariantData
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    (hσ : MeasurePreserving shift μ μ) (g0 : Ω[α] → ℝ)
+    (hσ : MeasurePreserving shift μ μ) (g0 : Ω[α] → ℝ) (hg0 : Measurable g0)
     (hAE : (fun ω => g0 (shift ω)) =ᵐ[μ] g0) :
     ShiftInvariantData μ hσ g0 := by
   classical
@@ -230,17 +229,15 @@ private def buildShiftInvariantData
         ((MeasurePreserving.iterate hσ n).preimage_null hS_null)
     simpa [hS, hcompl] using measure_iUnion_null hpreimage_null
   · ext ω
-    simp only [Set.mem_preimage, Set.mem_iInter]
+    simp only [Set.mem_preimage, Set.mem_iInter, Set.mem_setOf]
     constructor
     · intro h n
-      simpa [Function.iterate_succ, Function.comp]
-        using h (n + 1)
+      have : shift ω ∈ shift^[n] ⁻¹' S := h n
+      simp only [Set.mem_preimage, Set.mem_setOf] at this ⊢
+      exact this
     · intro h n
-      cases n with
-      | zero => simpa using h 0
-      | succ n =>
-        simpa [Function.iterate_succ, Function.comp]
-          using h n
+      simp only [Set.mem_preimage, Set.mem_setOf]
+      exact h (n + 1)
   · intro ω hω
     simpa using hω
   · intro ω hω
@@ -251,64 +248,48 @@ private def buildShiftInvariantData
       Set.mem_iInter.mp hmem 0
     simpa using this
   · set S := {ω | g0 (shift ω) = g0 ω} with hS
-    have hshift_meas :
-        Measurable fun ω => g0 (shift ω) :=
-      (by infer_instance : Measurable fun ω => g0 (shift ω))
-    have hdiff_meas :
-        Measurable fun ω => g0 (shift ω) - g0 ω :=
-      hshift_meas.sub
-        (by infer_instance : Measurable fun ω => g0 ω)
-    have hset_eq : S =
-        (fun ω => g0 (shift ω) - g0 ω) ⁻¹'
-          ({0} : Set ℝ) := by
+    have hshift_meas : Measurable fun ω => g0 (shift ω) :=
+      hg0.comp measurable_shift
+    have hdiff_meas : Measurable fun ω => g0 (shift ω) - g0 ω :=
+      hshift_meas.sub hg0
+    have hset_eq : S = (fun ω => g0 (shift ω) - g0 ω) ⁻¹' ({0} : Set ℝ) := by
       ext ω
-      simp [S]
-    simpa [hS, hset_eq]
-      using hdiff_meas measurableSet_singleton
+      simp only [S, Set.mem_setOf, Set.mem_preimage, Set.mem_singleton_iff, sub_eq_zero]
+    simp only [hS]
+    rw [hset_eq]
+    exact hdiff_meas measurableSet_singleton
   · set S := {ω | g0 (shift ω) = g0 ω} with hS
     have hS_meas : MeasurableSet S := by
-      have hshift_meas :
-          Measurable fun ω => g0 (shift ω) :=
-        (by infer_instance : Measurable fun ω => g0 (shift ω))
-      have hdiff_meas :
-          Measurable fun ω => g0 (shift ω) - g0 ω :=
-        hshift_meas.sub
-          (by infer_instance : Measurable fun ω => g0 ω)
-      have hset_eq : S =
-          (fun ω => g0 (shift ω) - g0 ω) ⁻¹'
-            ({0} : Set ℝ) := by
-        ext ω; simp [S]
-      simpa [hS, hset_eq]
-        using hdiff_meas measurableSet_singleton
-    have hshift_iter_meas :
-        ∀ n : ℕ, Measurable fun ω => shift^[n] ω :=
-      by
-      intro n; simpa using measurable_shift.iterate n
+      have hshift_meas : Measurable fun ω => g0 (shift ω) :=
+        hg0.comp measurable_shift
+      have hdiff_meas : Measurable fun ω => g0 (shift ω) - g0 ω :=
+        hshift_meas.sub hg0
+      have hset_eq : S = (fun ω => g0 (shift ω) - g0 ω) ⁻¹' ({0} : Set ℝ) := by
+        ext ω
+        simp only [S, Set.mem_setOf, Set.mem_preimage, Set.mem_singleton_iff, sub_eq_zero]
+      simp only [hS]
+      rw [hset_eq]
+      exact hdiff_meas measurableSet_singleton
     refine MeasurableSet.iInter fun n => ?_
-    simpa [shiftInvariantSupport, shiftInvariantSupportLimit]
-      using hshift_iter_meas n hS_meas
+    exact (shift_iterate_measurable n) hS_meas
 
 /-- The indicator representative built from shift-invariant data. -/
 private def shiftInvariantRepresentative
+    {μ : Measure (Ω[α])} {hσ : MeasurePreserving shift μ μ} {g0 : Ω[α] → ℝ}
     (data : ShiftInvariantData μ hσ g0) : Ω[α] → ℝ :=
   Set.indicator data.support_limit g0
 
 /-- Establish the required properties of the constructed representative. -/
 private lemma shiftInvariantRepresentative_spec
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    (hσ : MeasurePreserving shift μ μ) (g0 : Ω[α] → ℝ)
-    (hAE : (fun ω => g0 (shift ω)) =ᵐ[μ] g0) :
-    let data := buildShiftInvariantData (μ := μ) hσ g0 hAE
-    in (∀ᵐ ω ∂μ, shiftInvariantRepresentative (μ := μ) (hσ := hσ)
-        (g0 := g0) data ω = g0 ω) ∧
-       (∀ ω, shiftInvariantRepresentative (μ := μ) (hσ := hσ)
-        (g0 := g0) data (shift ω) =
-          shiftInvariantRepresentative (μ := μ) (hσ := hσ)
-            (g0 := g0) data ω) ∧
-       Measurable[shiftInvariantSigma] (shiftInvariantRepresentative
-        (μ := μ) (hσ := hσ) (g0 := g0) data) := by
+    (hσ : MeasurePreserving shift μ μ) (g0 : Ω[α] → ℝ) (hg0 : Measurable g0)
+    (hAE : (fun ω => g0 (shift ω)) =ᵐ[μ] g0)
+    (data : ShiftInvariantData μ hσ g0) :
+    (∀ᵐ ω ∂μ, shiftInvariantRepresentative data ω = g0 ω) ∧
+    (∀ ω, shiftInvariantRepresentative data (shift ω) =
+      shiftInvariantRepresentative data ω) ∧
+    Measurable[shiftInvariantSigma] (shiftInvariantRepresentative data) := by
   classical
-  intro data
   have hg'_ae_eq_g0 : (fun ω =>
       shiftInvariantRepresentative (μ := μ) (hσ := hσ)
         (g0 := g0) data ω) =ᵐ[μ] g0 := by
@@ -322,17 +303,14 @@ private lemma shiftInvariantRepresentative_spec
         (g0 := g0) data (shift ω) =
         shiftInvariantRepresentative (μ := μ) (hσ := hσ)
           (g0 := g0) data ω := by
-    refine indicator_shiftInvariant_set
-      data.support_limit_inv ?_
+    exact indicator_shiftInvariant_set
+      data.support_limit_inv data.support_limit_shift
   guard_hyp hg'_ae_eq_g0
   have hg'_meas :
       Measurable (shiftInvariantRepresentative (μ := μ)
         (hσ := hσ) (g0 := g0) data) := by
-    have hg0_meas :
-        Measurable g0 := by infer_instance
-    simpa [shiftInvariantRepresentative]
-      using hg0_meas.indicator
-        data.support_limit_meas
+    simp only [shiftInvariantRepresentative]
+    exact hg0.indicator data.support_limit_meas
   have hg'_meas_shift : Measurable[shiftInvariantSigma]
       (shiftInvariantRepresentative (μ := μ) (hσ := hσ)
         (g0 := g0) data) := by
