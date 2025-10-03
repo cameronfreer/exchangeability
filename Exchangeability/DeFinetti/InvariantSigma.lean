@@ -151,6 +151,31 @@ lemma shiftInvariantSigma_measurable_shift_eq
       have : g ω < g ω := lt_trans hωq this
       exact lt_irrefl _ this
 
+/-- Helper: Measurability of iterated shifts. -/
+private lemma shift_iterate_measurable (n : ℕ) :
+    Measurable (shift^[n] : Ω[α] → Ω[α]) := by
+  induction' n with n ih
+  · exact measurable_id
+  · rw [Function.iterate_succ, Function.comp]
+    exact measurable_shift.comp ih
+
+/-- Helper: The indicator function on a shift-invariant set is pointwise shift-invariant. -/
+private lemma indicator_shiftInvariant_set {S : Set (Ω[α])} {g0 : Ω[α] → ℝ}
+    (hS_inv : shift ⁻¹' S = S) (hS_shift : ∀ ω ∈ S, g0 (shift ω) = g0 ω) :
+    ∀ ω, Set.indicator S g0 (shift ω) = Set.indicator S g0 ω := by
+  intro ω
+  by_cases hω : ω ∈ S
+  · have hshift : shift ω ∈ S := by
+      rw [← Set.mem_preimage, hS_inv]
+      exact hω
+    rw [Set.indicator_of_mem hshift, Set.indicator_of_mem hω, hS_shift ω hω]
+  · have hshift : shift ω ∉ S := by
+      intro h
+      apply hω
+      rw [← hS_inv, Set.mem_preimage]
+      exact h
+    rw [Set.indicator_of_notMem hshift, Set.indicator_of_notMem hω]
+
 /-- **Auxiliary goal**: construct an invariant representative.
 
 Once `g : Ω[α] → ℝ` is strongly measurable and agrees a.e. with its shift, we expect to
@@ -168,99 +193,64 @@ lemma exists_shiftInvariantRepresentative
       (∀ᵐ ω ∂μ, g' ω = g ω) ∧
       (∀ ω, g' (shift ω) = g' ω) := by
   classical
-  rcases hg with ⟨g0, hg0_sm, hAEg0⟩
+  obtain ⟨g0, hg0_sm, hAEg0⟩ := hg
   have hcomp :=
     (hσ.quasiMeasurePreserving.ae_eq_comp (μ := μ) (ν := μ)
       (f := shift (α := α)) (g := fun ω => g ω) (g' := fun ω => g0 ω) hAEg0)
-  have hshift0 : (fun ω => g0 (shift ω)) =ᵐ[μ] g0 := by
-    refine hcomp.symm.trans ?_
-    exact hinv.trans hAEg0
+  have hshift0 : (fun ω => g0 (shift ω)) =ᵐ[μ] g0 := hcomp.symm.trans (hinv.trans hAEg0)
   let S : Set (Ω[α]) := {ω | g0 (shift ω) = g0 ω}
-  have hS_ae : ∀ᵐ ω ∂μ, ω ∈ S := by
-    simpa [S, Set.mem_setOf_eq] using hshift0
   have hS_null : μ Sᶜ = 0 := by
+    have hS_ae : ∀ᵐ ω ∂μ, ω ∈ S := by simpa [S, Set.mem_setOf_eq] using hshift0
     simpa [ae_iff, S, Set.mem_setOf_eq] using hS_ae
   let S∞ : Set (Ω[α]) := ⋂ n : ℕ, (shift^[n]) ⁻¹' S
   have hSinf_null : μ S∞ᶜ = 0 := by
     have hcompl : S∞ᶜ = ⋃ n : ℕ, (shift^[n]) ⁻¹' Sᶜ := by
-      classical
-      simpa [S∞, Set.preimage_compl]
-        using (Set.compl_iInter (fun n : ℕ => (shift^[n]) ⁻¹' S))
-    have hpreimage_null : ∀ n : ℕ, μ ((shift^[n]) ⁻¹' Sᶜ) = 0 := by
-      intro n
-      simpa using ((MeasurePreserving.iterate hσ n).preimage_null hS_null)
+      simpa [S∞, Set.preimage_compl] using Set.compl_iInter fun n => (shift^[n]) ⁻¹' S
+    have hpreimage_null : ∀ n : ℕ, μ ((shift^[n]) ⁻¹' Sᶜ) = 0 := fun n =>
+      (MeasurePreserving.iterate hσ n).preimage_null hS_null
     simpa [hcompl] using measure_iUnion_null hpreimage_null
-  have hSinf_ae : ∀ᵐ ω ∂μ, ω ∈ S∞ := by
-    simpa [ae_iff, S∞] using hSinf_null
+  have hSinf_ae : ∀ᵐ ω ∂μ, ω ∈ S∞ := by simpa [ae_iff, S∞] using hSinf_null
   have hSinf_preimage : shift ⁻¹' S∞ = S∞ := by
-    classical
     ext ω
+    simp only [Set.mem_preimage, Set.mem_iInter]
     constructor
-    · intro hω
-      refine Set.mem_iInter.mpr ?_
-      intro n
-      have := Set.mem_iInter.mp hω (n + 1)
-      simpa [Function.iterate_succ] using this
-    · intro hω
-      have : shift ω ∈ S∞ := by
-        refine Set.mem_iInter.mpr ?_
-        intro n
-        have := Set.mem_iInter.mp hω (n + 1)
-        simpa [Function.iterate_succ, Function.comp] using this
-      simpa [Set.mem_preimage] using this
-  have hSinf_equiv : ∀ ω, ω ∈ S∞ ↔ shift ω ∈ S∞ := by
-    intro ω
-    have hmem := congrArg (fun s => ω ∈ s) hSinf_preimage
-    simpa [Set.mem_preimage] using hmem
+    · intro h n
+      simpa [Function.iterate_succ, Function.comp] using h (n + 1)
+    · intro h n
+      cases n with
+      | zero => simpa using h 0
+      | succ n => simpa [Function.iterate_succ, Function.comp] using h n
   let g' : Ω[α] → ℝ := Set.indicator S∞ g0
-  have hg'_ae_eq_g0 : (fun ω => g' ω) =ᵐ[μ] g0 := by
-    filter_upwards [hSinf_ae] with ω hω
-    simp [g', hω]
-  have hg'_ae_eq_g : (fun ω => g' ω) =ᵐ[μ] g :=
-    hg'_ae_eq_g0.trans hAEg0
+  have hg'_ae_eq_g : (fun ω => g' ω) =ᵐ[μ] g := by
+    have hg'_ae_eq_g0 : (fun ω => g' ω) =ᵐ[μ] g0 := by
+      filter_upwards [hSinf_ae] with ω hω
+      simp [g', hω]
+    exact hg'_ae_eq_g0.trans hAEg0
   have hshift_g' : ∀ ω, g' (shift ω) = g' ω := by
-    intro ω
-    by_cases hω : ω ∈ S∞
-    · have hshiftω : shift ω ∈ S∞ := (hSinf_equiv ω).1 hω
-      have hSω : ω ∈ S := by
-        simpa [S] using Set.mem_iInter.mp hω 0
-      simp [g', hω, hshiftω, S, hSω]
-    · have hshiftω : shift ω ∉ S∞ := by
-        exact (not_congr (hSinf_equiv ω)).1 hω
-      simp [g', hω, hshiftω]
-  -- measurability of the invariant representative
+    have hS_shift : ∀ ω ∈ S, g0 (shift ω) = g0 ω := fun ω hω => hω
+    have hSinf_shift : ∀ ω ∈ S∞, g0 (shift ω) = g0 ω := by
+      intro ω hω
+      have : ω ∈ S := Set.mem_iInter.mp hω 0
+      exact this
+    exact indicator_shiftInvariant_set hSinf_preimage hSinf_shift
   refine ⟨g', ?_, hg'_ae_eq_g, hshift_g'⟩
-  · -- `g'` is measurable with respect to the invariant σ-algebra
-    have hshift_meas : Measurable fun ω => g0 (shift ω) :=
-      hg0_sm.measurable.comp measurable_shift
-    have hS_meas : MeasurableSet S := by
-      classical
-      have hdiff_meas : Measurable fun ω => g0 (shift ω) - g0 ω :=
-        hshift_meas.sub hg0_sm.measurable
-      have hset_eq : S = (fun ω => g0 (shift ω) - g0 ω) ⁻¹' {0} := by
-        ext ω; simp [S]
-      simpa [hset_eq] using hdiff_meas measurableSet_singleton
-    have hshift_iter_meas : ∀ n : ℕ, Measurable fun ω => shift^[n] ω := by
-      intro n
-      induction' n with n ih
-      · simpa using measurable_id
-      · simpa [Function.iterate_succ, Function.comp] using measurable_shift.comp ih
-    have hSinf_meas : MeasurableSet S∞ := by
-      classical
-      refine MeasurableSet.iInter fun n => ?_
-      simpa [S∞] using (hshift_iter_meas n) hS_meas
-    have hg0_meas : Measurable g0 := hg0_sm.measurable
-    have hg'_meas : Measurable g' := by
-      classical
-      simpa [g'] using hg0_meas.indicator hSinf_meas
-    have hg'_meas_shift : Measurable[shiftInvariantSigma] g' := by
-      classical
-      intro t ht
-      have hset_meas : MeasurableSet (g' ⁻¹' t) := hg'_meas ht
-      have hset_inv : shift ⁻¹' (g' ⁻¹' t) = g' ⁻¹' t := by
-        ext ω; simp [Set.mem_preimage, hshift_g']
-      exact (mem_shiftInvariantSigma_iff (g' ⁻¹' t)).mpr ⟨hset_meas, hset_inv⟩
-    exact hg'_meas_shift.aestronglyMeasurable
+  have hS_meas : MeasurableSet S := by
+    have hdiff_meas : Measurable fun ω => g0 (shift ω) - g0 ω :=
+      (hg0_sm.measurable.comp measurable_shift).sub hg0_sm.measurable
+    have hset_eq : S = (fun ω => g0 (shift ω) - g0 ω) ⁻¹' {0} := by ext ω; simp [S]
+    simpa [hset_eq] using hdiff_meas measurableSet_singleton
+  have hSinf_meas : MeasurableSet S∞ := by
+    refine MeasurableSet.iInter fun n => ?_
+    simpa [S∞] using (shift_iterate_measurable n) hS_meas
+  have hg'_meas : Measurable g' := by
+    simpa [g'] using hg0_sm.measurable.indicator hSinf_meas
+  have hg'_meas_shift : Measurable[shiftInvariantSigma] g' := by
+    intro t ht
+    have hset_meas : MeasurableSet (g' ⁻¹' t) := hg'_meas ht
+    have hset_inv : shift ⁻¹' (g' ⁻¹' t) = g' ⁻¹' t := by
+      ext ω; simp [Set.mem_preimage, hshift_g']
+    exact (mem_shiftInvariantSigma_iff (g' ⁻¹' t)).mpr ⟨hset_meas, hset_inv⟩
+  exact hg'_meas_shift.aestronglyMeasurable
 
 /-- A pointwise shift-invariant function that is ambient-measurable is measurable with
 respect to the shift-invariant σ-algebra. -/
