@@ -111,7 +111,7 @@ lemma mem_shiftInvariantSigma_iff (s : Set (Ω[α])) :
 /-- Shift-invariant measurability forces pointwise invariance under the shift map. -/
 lemma shiftInvariantSigma_measurable_shift_eq
     (g : Ω[α] → ℝ)
-    (hg : @Measurable _ shiftInvariantSigma _ g) :
+    (hg : Measurable[shiftInvariantSigma] g) :
     (fun ω => g (shift ω)) = g := by
   classical
   ext ω
@@ -265,7 +265,7 @@ lemma exists_shiftInvariantRepresentative
 respect to the shift-invariant σ-algebra. -/
 lemma measurable_shiftInvariant_of_pointwise (g : Ω[α] → ℝ)
     (hmeas : Measurable g) (hinv : ∀ ω, g (shift ω) = g ω) :
-    @Measurable _ shiftInvariantSigma _ g := by
+    Measurable[shiftInvariantSigma] g := by
   classical
   intro s hs
   have hset_meas : MeasurableSet (g ⁻¹' s) := hmeas hs
