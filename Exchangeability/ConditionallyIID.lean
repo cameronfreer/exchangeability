@@ -105,8 +105,8 @@ def MixtureOfIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
 taking the product and then permuting. -/
 axiom pi_perm_comm {ι : Type*} [Fintype ι] {α : Type*} [MeasurableSpace α]
     (ν : Measure α) (σ : Equiv.Perm ι) :
-    Measure.pi (fun i : ι => ν) =
-      Measure.map (fun f : ι → α => f ∘ σ.symm) (Measure.pi fun i : ι => ν)
+    Measure.pi (fun _ : ι => ν) =
+      Measure.map (fun f : ι → α => f ∘ σ.symm) (Measure.pi fun _ : ι => ν)
 
 /-- Conditionally i.i.d. implies exchangeable.
 If `X` is conditionally i.i.d., then permutations preserve the distribution.
