@@ -157,22 +157,23 @@ private lemma shift_iterate_measurable (n : ℕ) :
   simpa using measurable_shift.iterate n
 
 /-- Helper: The indicator function on a shift-invariant set is pointwise shift-invariant. -/
-private lemma indicator_shiftInvariant_set {S : Set (Ω[α])} {g0 : Ω[α] → ℝ}
+private lemma indicator_shiftInvariant_set
+    {Ω : Type*} {shift : Ω → Ω} {S : Set Ω} {g0 : Ω → ℝ}
     (hS_inv : shift ⁻¹' S = S) (hS_shift : ∀ ω ∈ S, g0 (shift ω) = g0 ω) :
     ∀ ω, Set.indicator S g0 (shift ω) = Set.indicator S g0 ω := by
   intro ω
   by_cases hω : ω ∈ S
   · have hshift : shift ω ∈ S := by
-      have : ω ∈ shift ⁻¹' S := by
+      have hpre : ω ∈ shift ⁻¹' S := by
         simpa [hS_inv] using hω
-      simpa [Set.mem_preimage] using this
+      simpa [Set.mem_preimage] using hpre
     have hg : g0 (shift ω) = g0 ω := hS_shift _ hω
     simp [Set.indicator, hω, hshift, hg]
   · have hshift : shift ω ∉ S := by
       intro h
-      have : ω ∈ shift ⁻¹' S := by
+      have hpre : ω ∈ shift ⁻¹' S := by
         simpa [Set.mem_preimage] using h
-      have : ω ∈ S := by simpa [hS_inv] using this
+      have : ω ∈ S := by simpa [hS_inv] using hpre
       exact hω this
     simp [Set.indicator, hω, hshift]
 
@@ -215,11 +216,14 @@ lemma exists_shiftInvariantRepresentative
     simp only [Set.mem_preimage, Set.mem_iInter]
     constructor
     · intro h n
-      simpa [Function.iterate_succ, Function.comp] using h (n + 1)
+      have := h (n + 1)
+      simpa [Function.iterate_succ, Function.comp] using this
     · intro h n
       cases n with
       | zero => simpa using h 0
-      | succ n => simpa [Function.iterate_succ, Function.comp] using h n
+      | succ n =>
+        have := h n
+        simpa [Function.iterate_succ, Function.comp] using this
   let g' : Ω[α] → ℝ := Set.indicator S∞ g0
   have hg'_ae_eq_g : (fun ω => g' ω) =ᵐ[μ] g := by
     have hg'_ae_eq_g0 : (fun ω => g' ω) =ᵐ[μ] g0 := by
@@ -252,8 +256,10 @@ lemma exists_shiftInvariantRepresentative
     intro t ht
     have hset_meas : MeasurableSet (g' ⁻¹' t) := hg'_meas ht
     have hset_inv : shift ⁻¹' (g' ⁻¹' t) = g' ⁻¹' t := by
-      ext ω; simp [Set.mem_preimage, hshift_g']
+      ext ω
+      simp [Set.mem_preimage, hshift_g']
     exact (mem_shiftInvariantSigma_iff (g' ⁻¹' t)).mpr ⟨hset_meas, hset_inv⟩
+  -- TODO: ensure the final measurability statement follows
   exact hg'_meas_shift.aestronglyMeasurable
 
 /-- A pointwise shift-invariant function that is ambient-measurable is measurable with
