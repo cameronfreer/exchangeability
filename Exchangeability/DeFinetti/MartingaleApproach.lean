@@ -7,6 +7,7 @@ import Mathlib.Probability.ConditionalExpectation
 import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
 import Mathlib.Probability.Martingale.Basic
 import Exchangeability.Contractability
+import Exchangeability.Probability.CondExp
 
 /-!
 # Third proof of de Finetti via a martingale argument (Aldous)
