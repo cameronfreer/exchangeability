@@ -247,18 +247,17 @@ lemma exists_shiftInvariantRepresentative
       exact (mem_shiftInvariantSigma_iff (g' ⁻¹' t)).mpr ⟨hset_meas, hset_inv⟩
     exact hg'_meas_shift.aestronglyMeasurable
 
-/-- A function is measurable with respect to the shift-invariant σ-algebra iff
-it is (a.e.) constant along shift orbits. -/
-lemma invMeasurable_iff_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    (_hσ : MeasurePreserving shift μ μ) (g : Ω[α] → ℝ) :
-    (∀ᵐ ω ∂μ, g (shift ω) = g ω) →
-    (@Measurable _ _ shiftInvariantSigma _ g →
-     ∀ᵐ ω ∂μ, g (shift ω) = g ω) := by
-  intro _ hmeas
-  refine eventually_of_forall ?_
-  intro ω
-  have hfun := congrArg (fun f => f ω) (shiftInvariantSigma_measurable_shift_eq g hmeas)
-  simpa using hfun
+/-- A pointwise shift-invariant function that is ambient-measurable is measurable with
+respect to the shift-invariant σ-algebra. -/
+lemma measurable_shiftInvariant_of_pointwise (g : Ω[α] → ℝ)
+    (hmeas : Measurable g) (hinv : ∀ ω, g (shift ω) = g ω) :
+    @Measurable _ shiftInvariantSigma _ g := by
+  classical
+  intro s hs
+  have hset_meas : MeasurableSet (g ⁻¹' s) := hmeas hs
+  have hset_eq : shift ⁻¹' (g ⁻¹' s) = g ⁻¹' s := by
+    ext ω; simp [Set.mem_preimage, hinv ω]
+  exact (mem_shiftInvariantSigma_iff (g ⁻¹' s)).mpr ⟨hset_meas, hset_eq⟩
 
 /-- Functions that are `AEStronglyMeasurable` with respect to the invariant σ-algebra are
 almost everywhere fixed by the shift. -/
