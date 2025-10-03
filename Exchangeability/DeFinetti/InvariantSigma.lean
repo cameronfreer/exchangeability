@@ -117,33 +117,35 @@ lemma shiftInvariantSigma_measurable_shift_eq
   ext ω
   by_contra hneq
   have hlt_or := lt_or_gt_of_ne hneq
-  cases' hlt_or with hlt hgt
-  · -- Case `g (shift ω) < g ω`
-    obtain ⟨q, hltq, hqω⟩ := exists_rat_btwn hlt
-    have hset_eq := (hg (MeasurableSet_Iio (q : ℝ))).2
-    have h_shift_mem : shift ω ∈ g ⁻¹' Set.Iio (q : ℝ) := by
-      simpa [Set.mem_preimage] using hltq
-    have h_pre : ω ∈ shift ⁻¹' (g ⁻¹' Set.Iio (q : ℝ)) := by
-      simpa [Set.mem_preimage] using h_shift_mem
-    have h_mem : ω ∈ g ⁻¹' Set.Iio (q : ℝ) := by
-      simpa [hset_eq] using h_pre
-    have : g ω < (q : ℝ) := by
-      simpa [Set.mem_preimage] using h_mem
-    have : g ω < g ω := lt_trans this hqω
-    exact lt_irrefl _ this
-  · -- Case `g ω < g (shift ω)`
-    obtain ⟨q, hωq, hq_lt⟩ := exists_rat_btwn hgt
-    have hset_eq := (hg (MeasurableSet_Ioi (q : ℝ))).2
-    have h_shift_mem : shift ω ∈ g ⁻¹' Set.Ioi (q : ℝ) := by
-      simpa [Set.mem_preimage] using hq_lt
-    have h_pre : ω ∈ shift ⁻¹' (g ⁻¹' Set.Ioi (q : ℝ)) := by
-      simpa [Set.mem_preimage] using h_shift_mem
-    have h_mem : ω ∈ g ⁻¹' Set.Ioi (q : ℝ) := by
-      simpa [hset_eq] using h_pre
-    have : (q : ℝ) < g ω := by
-      simpa [Set.mem_preimage] using h_mem
-    have : g ω < g ω := lt_trans hωq this
-    exact lt_irrefl _ this
+  cases hlt_or with
+  | inl hlt =>
+      -- Case `g (shift ω) < g ω`
+      obtain ⟨q, hltq, hqω⟩ := exists_rat_btwn hlt
+      have hset_eq := (hg (MeasurableSet_Iio (q : ℝ))).2
+      have h_shift_mem : shift ω ∈ g ⁻¹' Set.Iio (q : ℝ) := by
+        simpa [Set.mem_preimage] using hltq
+      have h_pre : ω ∈ shift ⁻¹' (g ⁻¹' Set.Iio (q : ℝ)) := by
+        simpa [Set.mem_preimage] using h_shift_mem
+      have h_mem : ω ∈ g ⁻¹' Set.Iio (q : ℝ) := by
+        simpa [hset_eq] using h_pre
+      have : g ω < (q : ℝ) := by
+        simpa [Set.mem_preimage] using h_mem
+      have : g ω < g ω := lt_trans this hqω
+      exact lt_irrefl _ this
+  | inr hgt =>
+      -- Case `g ω < g (shift ω)`
+      obtain ⟨q, hωq, hq_lt⟩ := exists_rat_btwn hgt
+      have hset_eq := (hg (MeasurableSet_Ioi (q : ℝ))).2
+      have h_shift_mem : shift ω ∈ g ⁻¹' Set.Ioi (q : ℝ) := by
+        simpa [Set.mem_preimage] using hq_lt
+      have h_pre : ω ∈ shift ⁻¹' (g ⁻¹' Set.Ioi (q : ℝ)) := by
+        simpa [Set.mem_preimage] using h_shift_mem
+      have h_mem : ω ∈ g ⁻¹' Set.Ioi (q : ℝ) := by
+        simpa [hset_eq] using h_pre
+      have : (q : ℝ) < g ω := by
+        simpa [Set.mem_preimage] using h_mem
+      have : g ω < g ω := lt_trans hωq this
+      exact lt_irrefl _ this
 
 /-- **Auxiliary goal**: construct an invariant representative.
 
