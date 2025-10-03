@@ -114,6 +114,41 @@ lemma productCylinder_bounded (m : ℕ) (fs : Fin m → α → ℝ)
     simp [productCylinder, Finset.abs_prod]
   exact (by simpa [habs_eq] using hprod)
 
+/-- Membership of product cylinders in `L²`. -/
+lemma productCylinder_memLp
+    (m : ℕ) (fs : Fin m → α → ℝ)
+    (hmeas : ∀ k, Measurable (fs k))
+    (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] :
+    MeasureTheory.MemLp (productCylinder m fs) 2 μ := by
+  classical
+  obtain ⟨C, hC⟩ := productCylinder_bounded m fs hbd
+  have hFmeas : Measurable (productCylinder m fs) :=
+    measurable_productCylinder m fs hmeas
+  refine MeasureTheory.MemLp.of_bound (μ := μ) (p := 2)
+    hFmeas.aestronglyMeasurable C ?_
+  exact eventually_of_forall fun ω => by
+    simpa [Real.norm_eq_abs] using hC ω
+
+/-- `Lp` representative associated to a bounded product cylinder. -/
+noncomputable def productCylinderLp
+    (m : ℕ) (fs : Fin m → α → ℝ)
+    (hmeas : ∀ k, Measurable (fs k))
+    (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] : Lp ℝ 2 μ :=
+  (productCylinder_memLp (m := m) (fs := fs) hmeas hbd).toLp (productCylinder m fs)
+
+lemma productCylinderLp_ae_eq
+    (m : ℕ) (fs : Fin m → α → ℝ)
+    (hmeas : ∀ k, Measurable (fs k))
+    (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] :
+    (∀ᵐ ω ∂μ, productCylinderLp (m := m) (fs := fs) hmeas hbd ω =
+      productCylinder m fs ω) := by
+  classical
+  exact MeasureTheory.MemLp.coeFn_toLp
+    (productCylinder_memLp (m := m) (fs := fs) hmeas hbd)
+
 /-- The shifted cylinder function: F ∘ shift^n. -/
 def shiftedCylinder (n : ℕ) (F : Ω[α] → ℝ) : Ω[α] → ℝ :=
   fun ω => F ((shift^[n]) ω)
@@ -160,26 +195,11 @@ theorem birkhoffCylinder_tendsto_condexp
         atTop
         (𝓝 (condexpL2 shiftInvariantSigma fL2)) := by
   classical
-  -- F is bounded by productCylinder_bounded
-  obtain ⟨C, hC⟩ := productCylinder_bounded m fs hbd
-  -- F is measurable (product of measurable functions)
-  have hFmeas : Measurable (productCylinder m fs) :=
-    measurable_productCylinder m fs hmeas
-  -- F is in L² since it's bounded
-  have hFinL2 : MeasureTheory.MemLp (productCylinder m fs) 2 μ := by
-    classical
-    refine MeasureTheory.MemLp.of_bound (μ := μ) (p := 2)
-      hFmeas.aestronglyMeasurable ?C ?hBound
-    · exact C
-    · have hpoint : ∀ ω, ‖productCylinder m fs ω‖ ≤ C := by
-        intro ω
-        simpa [Real.norm_eq_abs] using hC ω
-      exact eventually_of_forall hpoint
-  -- Convert to Lp element
-  let fL2 := hFinL2.toLp (productCylinder m fs)
-  use fL2
+  let fL2 := productCylinderLp (m := m) (fs := fs) hmeas hbd
+  refine ⟨fL2, ?_, ?_⟩
   constructor
-  · exact MeasureTheory.MemLp.coeFn_toLp hFinL2
+  · simpa [F] using
+      (productCylinderLp_ae_eq (m := m) (fs := fs) hmeas hbd (μ := μ))
   · exact birkhoffAverage_tendsto_condexp hσ fL2
 
 end MainConvergence
@@ -198,34 +218,16 @@ is the same. This implies that the conditional expectation must have a product f
 -/
 theorem extremeMembers_agree
     (m : ℕ) (fs : Fin m → α → ℝ)
-    (_hmeas : ∀ k, Measurable (fs k))
-    (_hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
+    (hmeas : ∀ k, Measurable (fs k))
+    (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
     (_indices : Fin m → ℕ) :
     let F := productCylinder m fs
-    let fL2 : Lp ℝ 2 μ :=
-      (productCylinder_bounded m fs _hbd |> fun ⟨C, hC⟩ =>
-        let hFmeas : Measurable (productCylinder m fs) :=
-          measurable_productCylinder m fs _hmeas
-        have hFinL2 : MeasureTheory.MemLp (productCylinder m fs) 2 μ := by
-          classical
-          refine MeasureTheory.MemLp.of_bound (μ := μ) (p := 2)
-            hFmeas.aestronglyMeasurable C ?_
-          exact (eventually_of_forall fun ω => by
-            simpa [Real.norm_eq_abs] using hC ω)
-        hFinL2.toLp (productCylinder m fs))
+    let fL2 : Lp ℝ 2 μ := productCylinderLp (m := m) (fs := fs) hmeas hbd
     koopman shift hσ (condexpL2 shiftInvariantSigma fL2) =
       condexpL2 shiftInvariantSigma fL2 := by
   classical
   -- unpack the `let` bindings
-  obtain ⟨C, hC⟩ := productCylinder_bounded m fs _hbd
-  have hFmeas : Measurable (productCylinder m fs) :=
-    measurable_productCylinder m fs _hmeas
-  have hFinL2 : MeasureTheory.MemLp (productCylinder m fs) 2 μ := by
-    refine MeasureTheory.MemLp.of_bound (μ := μ) (p := 2)
-      hFmeas.aestronglyMeasurable C ?_
-    exact (eventually_of_forall fun ω => by
-      simpa [Real.norm_eq_abs] using hC ω)
-  let fL2 := hFinL2.toLp (productCylinder m fs)
+  let fL2 := productCylinderLp (m := m) (fs := fs) hmeas hbd
   have hRange : condexpL2 shiftInvariantSigma fL2 ∈
       Set.range (condexpL2 shiftInvariantSigma) := ⟨fL2, rfl⟩
   have hMemSet : condexpL2 shiftInvariantSigma fL2 ∈

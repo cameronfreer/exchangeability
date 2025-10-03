@@ -11,14 +11,15 @@ import Exchangeability.Contractability
 /-!
 # Conditionally i.i.d. Sequences
 
-This file defines conditionally i.i.d. and mixed i.i.d. sequences, and establishes the
-relationship with exchangeability.
+This file defines conditionally i.i.d. sequences and mixtures of i.i.d. sequences, and establishes
+the relationship with exchangeability.
 
 ## Main definitions
 
 * `ConditionallyIID`: A sequence is conditionally i.i.d. if there exists a probability kernel
   such that coordinates are independent given the kernel value.
-* `MixedIID`: A sequence is mixed i.i.d. if its distribution is a mixture of i.i.d. distributions.
+* `MixtureOfIID`: A sequence is a mixture of i.i.d. sequences if its distribution is a mixture
+  of i.i.d. distributions.
 
 ## Main results
 
@@ -71,14 +72,14 @@ def ConditionallyIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
         Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
           = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)
 
-/-- A random sequence ξ is **mixed i.i.d.** if its distribution is a mixture of
+/-- A random sequence ξ is a **mixture of i.i.d.** sequences if its distribution is a mixture of
 i.i.d. distributions: P{ξ ∈ ·} = E[ν^∞] = ∫ m^∞ P(ν ∈ dm).
 
 This is obtained by taking expectations in the conditionally i.i.d. definition.
 
 TODO: Full definition requires integration over the space of measures and
 product measure construction. For now, we use a simplified placeholder. -/
-def MixedIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
+def MixtureOfIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
   ∃ (ν : Measure (Measure α)),
     IsProbabilityMeasure ν ∧
     -- Placeholder: full definition needs integration over measure spaces
