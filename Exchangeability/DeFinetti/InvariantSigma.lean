@@ -185,7 +185,7 @@ private lemma shiftAgreementSet_preimage {μ : Measure (Ω[α])} [IsProbabilityM
     (hσ : MeasurePreserving shift μ μ)
     (g : Ω[α] → ℝ) (hg : Measurable g) :
     let S := {ω | g (shift ω) = g ω}
-    μ ((shift ⁻¹' S) △ S) = 0 := by
+    μ (symmDiff (shift ⁻¹' S) S) = 0 := by
   sorry -- Proof: Use that shift preserves measure and S is defined by a shift-invariant condition
 
 /-- Given a function that agrees with its shift a.e., we can find a shift-invariant set
@@ -195,55 +195,54 @@ private lemma exists_shiftInvariantFullMeasureSet
     (hσ : MeasurePreserving shift μ μ)
     (g : Ω[α] → ℝ) (hg : Measurable g)
     (hinv : (fun ω => g (shift ω)) =ᵐ[μ] g) :
-    ∃ S∞ : Set (Ω[α]),
-      MeasurableSet S∞ ∧
-      shift ⁻¹' S∞ = S∞ ∧
-      μ S∞ᶜ = 0 ∧
-      ∀ ω ∈ S∞, g (shift ω) = g ω := by
+    ∃ Sinf : Set (Ω[α]),
+      MeasurableSet Sinf ∧
+      shift ⁻¹' Sinf = Sinf ∧
+      μ Sinfᶜ = 0 ∧
+      ∀ ω ∈ Sinf, g (shift ω) = g ω := by
   classical
   -- Define the set where g agrees with its shift
   let S := {ω | g (shift ω) = g ω}
-  -- S∞ is the intersection of all preimages under shift iterates
-  let S∞ := ⋂ n : ℕ, (shift^[n]) ⁻¹' S
+  -- Sinf is the intersection of all preimages under shift iterates
+  let Sinf := ⋂ n : ℕ, (shift^[n]) ⁻¹' S
 
   -- Prove S has full measure from the assumption
   have hS_full : μ Sᶜ = 0 := by
     sorry -- From hinv
 
-  -- Prove S∞ has full measure
-  have hS∞_full : μ S∞ᶜ = 0 := by
+  -- Prove Sinf has full measure
+  have hSinf_full : μ Sinfᶜ = 0 := by
     sorry -- Union of null sets under measure-preserving maps
 
-  -- Prove S∞ is shift-invariant
-  have hS∞_inv : shift ⁻¹' S∞ = S∞ := by
+  -- Prove Sinf is shift-invariant
+  have hSinf_inv : shift ⁻¹' Sinf = Sinf := by
     sorry -- By construction of intersection
 
-  -- Prove S∞ is measurable
-  have hS∞_meas : MeasurableSet S∞ := by
+  -- Prove Sinf is measurable
+  have hSinf_meas : MeasurableSet Sinf := by
     sorry -- Intersection of measurable sets
 
-  -- Prove pointwise invariance on S∞
-  have hpointwise : ∀ ω ∈ S∞, g (shift ω) = g ω := by
-    sorry -- From definition of S and S∞
+  -- Prove pointwise invariance on Sinf
+  have hpointwise : ∀ ω ∈ Sinf, g (shift ω) = g ω := by
+    sorry -- From definition of S and Sinf
 
-  exact ⟨S∞, hS∞_meas, hS∞_inv, hS∞_full, hpointwise⟩
+  exact ⟨Sinf, hSinf_meas, hSinf_inv, hSinf_full, hpointwise⟩
 
 /-- Indicator functions on shift-invariant sets preserve shift-invariance properties. -/
 private lemma indicator_preserves_shiftInvariance
-    {S : Set (Ω[α])} (hS_inv : shift ⁻¹' S = S)
-    (g : Ω[α] → ℝ) (hg_inv : ∀ ω ∈ S, g (shift ω) = g ω) :
+    {Ω : Type*} {shift : Ω → Ω} {S : Set Ω} {g : Ω → ℝ}
+    (hS_inv : shift ⁻¹' S = S) (hg_inv : ∀ ω ∈ S, g (shift ω) = g ω) :
     ∀ ω, Set.indicator S g (shift ω) = Set.indicator S g ω := by
   intro ω
   by_cases hω : ω ∈ S
   · have hshift : shift ω ∈ S := by
-      rw [← hS_inv, Set.mem_preimage]
-      exact hω
+      have hpre : ω ∈ shift ⁻¹' S := by simpa [hS_inv] using hω
+      simpa [Set.mem_preimage] using hpre
     simp [Set.indicator, hω, hshift, hg_inv ω hω]
   · have hshift : shift ω ∉ S := by
       intro h
-      have : ω ∈ S := by
-        rw [← hS_inv, Set.mem_preimage] at h
-        exact h
+      have hpre : ω ∈ shift ⁻¹' S := by simpa [Set.mem_preimage] using h
+      have : ω ∈ S := by simpa [hS_inv] using hpre
       contradiction
     simp [Set.indicator, hω, hshift]
 
@@ -269,10 +268,6 @@ private lemma aestronglyMeasurable_of_ae_eq
     AEStronglyMeasurable[𝒢] g' μ := by
   sorry -- Standard measure theory result
 
-/-- Once `g : Ω[α] → ℝ` is strongly measurable and agrees a.e. with its shift, we expect to
-modify it on a null set so that it becomes literally invariant under `shift` while remaining
-measurable with respect to `shiftInvariantSigma`.  Filling in this lemma (or a closely related
-variant) will let us finish `aestronglyMeasurable_shiftInvariant_of_koopman`. -/
 /-- Main construction: given a function that agrees with its shift a.e.,
     produce a shift-invariant representative. -/
 lemma exists_shiftInvariantRepresentative
@@ -294,23 +289,23 @@ lemma exists_shiftInvariantRepresentative
     sorry -- Use measure-preserving property and the given invariances
 
   -- Step 3: Find a shift-invariant set of full measure
-  obtain ⟨S∞, hS∞_meas, hS∞_inv, hS∞_full, hS∞_pointwise⟩ :=
+  obtain ⟨Sinf, hSinf_meas, hSinf_inv, hSinf_full, hSinf_pointwise⟩ :=
     exists_shiftInvariantFullMeasureSet hσ g0 hg0_sm.measurable hg0_shift
 
-  -- Step 4: Define g' as the indicator on S∞
-  let g' := Set.indicator S∞ g0
+  -- Step 4: Define g' as the indicator on Sinf
+  let g' := Set.indicator Sinf g0
 
   -- Step 5: Prove g' has the required properties
   have hg'_shift : ∀ ω, g' (shift ω) = g' ω :=
-    indicator_preserves_shiftInvariance hS∞_inv g0 hS∞_pointwise
+    indicator_preserves_shiftInvariance hSinf_inv hSinf_pointwise
 
   have hg'_ae_g : g' =ᵐ[μ] g := by
     have : g' =ᵐ[μ] g0 := by
-      sorry -- From hS∞_full: g' = g0 on S∞ which has full measure
-    exact this.trans hg0_ae
+      sorry -- From hSinf_full: g' = g0 on Sinf which has full measure
+    exact this.trans hg0_ae.symm
 
   have hg'_meas : Measurable g' := by
-    exact hg0_sm.measurable.indicator hS∞_meas
+    exact hg0_sm.measurable.indicator hSinf_meas
 
   have hg'_shiftInv_meas : Measurable[shiftInvariantSigma] g' :=
     shiftInvariant_implies_shiftInvariantMeasurable g' hg'_meas hg'_shift
