@@ -312,8 +312,7 @@ lemma koopman_eq_self_of_shiftInvariant
         fun ω => f (shift ω)
     simpa [koopman]
       using
-        (MeasureTheory.Lp.coeFn_compMeasurePreserving (μ := μ) (μb := μ)
-            (p := (2 : ℝ≥0∞)) f hσ)
+        (MeasureTheory.Lp.coeFn_compMeasurePreserving f hσ)
   have hshift := shiftInvariantSigma_aestronglyMeasurable_ae_shift_eq (μ := μ) hσ hf
   have hfinal : (koopman shift hσ f) =ᵐ[μ] f := hcomp.trans hshift
   exact Lp.ext hfinal
