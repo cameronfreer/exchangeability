@@ -346,25 +346,31 @@ lemma aestronglyMeasurable_shiftInvariant_of_koopman
   later.
   -/
   -- STEP 1. Extract the a.e. invariance statement from `koopman` equality.
+  have hcomp : (koopman shift hσ f) =ᵐ[μ] fun ω => f (shift ω) := by
+    change MeasureTheory.Lp.compMeasurePreserving (shift (α := α)) hσ f =ᵐ[μ]
+        fun ω => f (shift ω)
+    simpa [koopman]
+      using
+        (MeasureTheory.Lp.coeFn_compMeasurePreserving f hσ)
+  have hfixAE : (koopman shift hσ f) =ᵐ[μ] f := by
+    simp [hfix]
   have hshift : (fun ω => f (shift ω)) =ᵐ[μ] f := by
-    have := congrArg (fun g : Lp ℝ 2 μ => g) hfix
-    exact this
+    exact hcomp.symm.trans hfixAE
   -- STEP 2. Choose a strongly measurable representative of `f`.
   have hf_base : AEStronglyMeasurable f μ := by
-    simpa using (Lp.aestronglyMeasurable (μ := μ) (p := (2 : ℝ≥0∞)) f)
+    exact Lp.aestronglyMeasurable f
   obtain ⟨g, hg_meas, hfg⟩ := hf_base
   -- Transport the a.e. invariance to the chosen representative.
   have hshift_g : (fun ω => g (shift ω)) =ᵐ[μ] g := by
     have hcomp := (hσ.quasiMeasurePreserving.ae_eq_comp hfg)
-    have hcomp' : (fun ω => g (shift ω)) =ᵐ[μ] (fun ω => f (shift ω)) := by
-      simpa using hcomp
+    have hcomp' : (fun ω => g (shift ω)) =ᵐ[μ] (fun ω => f (shift ω)) := hcomp.symm
     have hshift' : (fun ω => f (shift ω)) =ᵐ[μ] g := hshift.trans hfg
     exact hcomp'.trans hshift'
   -- STEP 3. Produce a shift-invariant representative and relate it to `f`.
   obtain ⟨g', hg'_meas, hAEgg, _⟩ :=
-    exists_shiftInvariantRepresentative (μ := μ) hσ g hg_meas hshift_g
+    exists_shiftInvariantRepresentative (μ := μ) hσ g hg_meas.aestronglyMeasurable hshift_g
   have hAEgg' : (fun ω => g' ω) =ᵐ[μ] g := hAEgg
-  have hAEgf : (fun ω => g' ω) =ᵐ[μ] f := hAEgg'.trans hfg
+  have hAEgf : (fun ω => g' ω) =ᵐ[μ] f := hAEgg'.trans hfg.symm
   have hf_meas : AEStronglyMeasurable[shiftInvariantSigma (α := α)] f μ :=
     (AEStronglyMeasurable.congr hg'_meas hAEgf)
   exact hf_meas
@@ -393,7 +399,8 @@ lemma fixedSubspace_closed {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
   have hset : (fixedSubspace hσ : Set (Lp ℝ 2 μ)) =
       (fun f : Lp ℝ 2 μ => T f - f) ⁻¹' ({0} : Set (Lp ℝ 2 μ)) := by
     ext f
-    rfl
+    unfold fixedSubspace fixedSpace
+    simp [T, LinearMap.mem_eqLocus, sub_eq_zero]
   have hcont : Continuous fun f : Lp ℝ 2 μ => T f - f :=
     (T.continuous.sub continuous_id)
   have hclosed : IsClosed ((fun f : Lp ℝ 2 μ => T f - f) ⁻¹'
