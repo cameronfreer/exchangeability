@@ -248,27 +248,19 @@ theorem l2_contractability_bound
           c i * c i + ∑ j with j ≠ i, c i * c j := by
         intro i
         classical
-        have hi : i ∈ (Finset.univ : Finset (Fin n)) := Finset.mem_univ _
-        simpa [Finset.erase_eq_filter, hi] using
-          (Finset.sum_eq_add_sum_diff_singleton
-            (s := (Finset.univ : Finset (Fin n)))
-            (f := fun j => c i * c j) hi)
+        conv_lhs => rw [← Finset.sum_filter_add_sum_filter_not Finset.univ (fun j => j = i)]
+        congr 1
+        · have : Finset.filter (fun j => j = i) Finset.univ = {i} := by
+            ext j; simp [eq_comm]
+          simp [this]
       have h_split : ∑ i, ∑ j, c i * c j =
           ∑ i, c i * c i + ∑ i, ∑ j with j ≠ i, c i * c j := by
-        classical
-        have h := Finset.sum_congr rfl (fun i _ => h_inner_split i)
-        have h_sum := calc
-          ∑ i, ∑ j, c i * c j
-              = ∑ i, (c i * c i + ∑ j with j ≠ i, c i * c j) := by simpa using h
-          _ = ∑ i, c i * c i + ∑ i, ∑ j with j ≠ i, c i * c j := by
-              simp [Finset.sum_add_distrib]
-        exact h_sum
+        simp_rw [h_inner_split]
+        simp [Finset.sum_add_distrib]
       -- Rearranging gives the desired identity.
       have h_offdiag_eq : ∑ i, ∑ j with j ≠ i, c i * c j =
           ∑ i, ∑ j, c i * c j - ∑ i, c i * c i := by
-        classical
-        have := congrArg (fun x => x - ∑ i, c i * c i) h_split
-        simpa [sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using this
+        linarith [h_split]
       calc
         ∑ i, ∑ j with j ≠ i, c i * c j
             = ∑ i, ∑ j, c i * c j - ∑ i, c i * c i := h_offdiag_eq
@@ -286,34 +278,23 @@ theorem l2_contractability_bound
               ∑ j with j ≠ i, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ := by
         intro i
         classical
-        have hi : i ∈ (Finset.univ : Finset (Fin n)) := Finset.mem_univ _
-        simpa [Finset.erase_eq_filter, hi]
-          using (Finset.sum_eq_add_sum_diff_singleton
-            (s := (Finset.univ : Finset (Fin n)))
-            (f := fun j => c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ) hi)
+        conv_lhs => rw [← Finset.sum_filter_add_sum_filter_not Finset.univ (fun j => j = i)]
+        congr 1
+        · have : Finset.filter (fun j => j = i) Finset.univ = {i} := by
+            ext j; simp [eq_comm]
+          simp [this]
       have h_split : ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ =
           ∑ i, c i * c i * ∫ ω, (ξ i ω - m) * (ξ i ω - m) ∂μ +
             ∑ i, ∑ j with j ≠ i, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ := by
-        classical
-        have h := Finset.sum_congr rfl (fun i _ => h_inner_split i)
-        have h_sum := calc
-          ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ
-              = ∑ i,
-                  (c i * c i * ∫ ω, (ξ i ω - m) * (ξ i ω - m) ∂μ +
-                    ∑ j with j ≠ i, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ) := by
-                    simpa using h
-          _ = ∑ i, c i * c i * ∫ ω, (ξ i ω - m) * (ξ i ω - m) ∂μ +
-                  ∑ i, ∑ j with j ≠ i, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ := by
-                    simp [Finset.sum_add_distrib]
-        exact h_sum
+        simp_rw [h_inner_split]
+        simp [Finset.sum_add_distrib]
       -- Apply diagonal and off-diagonal evaluations.
       calc
         ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ
             = ∑ i, c i * c i * ∫ ω, (ξ i ω - m) * (ξ i ω - m) ∂μ +
                 ∑ i, ∑ j with j ≠ i, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ := h_split
         _ = σSq * ∑ i, (c i)^2 + σSq * ρ * ((∑ i, c i)^2 - ∑ i, (c i)^2) := by
-              -- Use previously established identities.
-              simpa [h_diag, h_offdiag, h_offdiag_expand, sq, pow_two, mul_comm, mul_left_comm, mul_assoc]
+              rw [h_diag, h_offdiag, h_offdiag_expand]
         _ = σSq * ρ * (∑ i, c i)^2 + σSq * (1 - ρ) * ∑ i, (c i)^2 := by ring
     exact this
   
@@ -325,7 +306,17 @@ theorem l2_contractability_bound
   
   -- Step 5: ≤ σ²(1-ρ)∑|cᵢ| sup|cⱼ| since cᵢ² ≤ |cᵢ| sup|cⱼ|
   have step5 : ∑ i, (c i)^2 ≤ ∑ i, |c i| * (⨆ j, |c j|) := by
-    sorry -- Use supremum bound on each cᵢ²
+    apply Finset.sum_le_sum
+    intro i _
+    have h_sq : (c i)^2 = |c i|^2 := (sq_abs _).symm
+    rw [h_sq]
+    have hbdd : BddAbove (Set.range fun j : Fin n => |c j|) := ⟨∑ k, |c k|, by
+      intro y ⟨k, hk⟩
+      rw [← hk]
+      exact Finset.single_le_sum (fun i _ => abs_nonneg (c i)) (Finset.mem_univ k)⟩
+    have h_le : |c i| ≤ ⨆ j, |c j| := le_ciSup hbdd i
+    calc |c i|^2 = |c i| * |c i| := sq _
+       _ ≤ |c i| * (⨆ j, |c j|) := mul_le_mul_of_nonneg_left h_le (abs_nonneg _)
   
   -- Nonnegativity lemmas
   have hσ_1ρ_nonneg : 0 ≤ σSq * (1 - ρ) := by
@@ -333,7 +324,16 @@ theorem l2_contractability_bound
     linarith [_hρ_bd.2]  -- ρ ≤ 1 implies 0 ≤ 1 - ρ
   
   have hsup_nonneg : 0 ≤ ⨆ j, |c j| := by
-    sorry  -- Supremum of nonnegative values - needs careful API work
+    have hbdd : BddAbove (Set.range fun j : Fin n => |c j|) := ⟨∑ k, |c k|, by
+      intro y ⟨k, hk⟩
+      rw [← hk]
+      exact Finset.single_le_sum (fun i _ => abs_nonneg (c i)) (Finset.mem_univ k)⟩
+    by_cases h : Nonempty (Fin n)
+    · obtain ⟨j0⟩ := h
+      calc (0 : ℝ)
+          ≤ |c j0| := abs_nonneg _
+        _ ≤ ⨆ j, |c j| := le_ciSup hbdd j0
+    · sorry  -- Empty case: when Fin n is empty, all sums are 0
   
   -- Step 6: ≤ 2σ²(1-ρ) sup|cⱼ| since ∑|cᵢ| ≤ 2
   calc ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ
