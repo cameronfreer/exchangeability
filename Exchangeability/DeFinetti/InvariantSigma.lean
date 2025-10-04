@@ -231,10 +231,6 @@ private lemma exists_shiftInvariantFullMeasureSet
     rw [h_set_eq]
     exact hf_n_meas (measurableSet_singleton 0)
 
-  -- Prove Sinf is measurable (intersection of measurable sets)
-  have hSinf_meas : MeasurableSet Sinf := by
-    exact hSinf_meas.inter (hσ.measurable hSinf_meas)
-
   -- Prove Sinf is shift-invariant
   have hSinf_inv : shift ⁻¹' Sinf = Sinf := by
     ext ω
