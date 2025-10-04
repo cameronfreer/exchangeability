@@ -83,26 +83,42 @@ theorem conditional_iid_from_directing_measure
     (hX_meas : ∀ i, Measurable (X i))
     (ν : Ω → Measure α)
     (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
-    -- ν is tail-measurable (placeholder type - needs proper tail σ-algebra definition)
-    (hν_tail : True)
+    (hν_meas : Measurable ν)  -- ν is measurable (i.e., a kernel)
     -- For all bounded measurable f and all i:
     -- E[f(X_i) | tail σ-algebra] = ∫ f dν a.e.
+    -- This is the key property from the directing measure construction
     (hν_cond : ∀ (f : α → ℝ) (_hf_meas : Measurable f) (_hf_bdd : ∃ M, ∀ x, |f x| ≤ M),
-      ∀ (_i : ℕ), True) :  -- Placeholder: E[f(X_i) | tail] = ∫ f dν
+      ∀ (_i : ℕ), True) :  -- Placeholder: E[f(X_i) | tail] = ∫ f dν a.e.
     ConditionallyIID μ X := by
-      -- Outline of the missing proof:
-      -- 1. Define the kernel `K` by setting `K ω := ν ω` and show it is a Markov kernel
-      --    using `hν_prob` together with tail measurability `hν_tail` (cf. FMP 10.3/10.4).
-      -- 2. For each bounded measurable `f`, the assumption `hν_cond` gives
-      --      `∫ f (X i ω) dμ = ∫ (∫ f d(K ω)) dμ`, i.e. `E[f(X_i) | tail] = ∫ f d(K ω)`.
-      -- 3. Package these identities into the `ConditionallyIID` structure—formalising
-      --    the mixture-of-i.i.d. representation alluded to in Kallenberg.
-      -- 4. Once `ConditionallyIID μ X` is established, `exchangeable_of_conditionallyIID`
-      --    (from `Exchangeability/ConditionallyIID.lean`) can be reused to recover
-      --    exchangeability; together with the previous steps this gives the full
-      --    conditional i.i.d. description required for the common ending.
+      -- Proof outline:
+      -- 1. We have ν : Ω → Measure α which is measurable (a kernel) with hν_prob.
+      -- 2. To show ConditionallyIID, we need to prove:
+      --    ∀ (m : ℕ) (k : Fin m → ℕ),
+      --      Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
+      --        = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)
       --
-      -- The full formalisation is left as future work.
+      -- Strategy:
+      -- a. Use hν_cond to establish E[f(X_i) | tail] = ∫ f d(ν ω) for bounded f
+      -- b. Extend to products using monotone_class_theorem:
+      --    - Start with indicator functions of measurable sets
+      --    - Extend to bounded measurable functions via approximation
+      --    - Extend to product sets via π-λ theorem
+      -- c. This gives the finite-dimensional distributions match
+      --
+      -- Key mathlib tools available:
+      -- - Kernel type and IsMarkovKernel from Mathlib.Probability.Kernel.Defs
+      -- - MeasurableSpace.induction_on_inter for π-λ theorem
+      -- - Measure.bind from Mathlib.MeasureTheory.Measure.GiryMonad
+      --
+      -- The full proof requires:
+      -- - Proper formalization of tail σ-algebra (see FMP 10.3-10.4)
+      -- - Conditional expectation machinery from mathlib
+      -- - Monotone convergence and approximation theorems
+      use ν, hν_prob
+      intro m k
+      -- Need to show: Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
+      --                = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)
+      -- This requires showing the finite-dimensional distributions match
       sorry
 
 /-- **FMP 1.1: Monotone Class Theorem (Sierpiński)** = Dynkin's π-λ theorem.
@@ -135,7 +151,7 @@ Then C holds on all measurable sets in σ(𝒞).
 - `induction_on_inter`: The π-λ theorem as an induction principle
   (Mathlib/MeasureTheory/PiSystem.lean)
 
-TODO: Adapt mathlib's `induction_on_inter` to our setting.
+This theorem is now a direct wrapper around mathlib's `induction_on_inter`.
 -/
 theorem monotone_class_theorem
     {m : MeasurableSpace Ω} {C : ∀ s : Set Ω, MeasurableSet s → Prop}
@@ -150,8 +166,9 @@ theorem monotone_class_theorem
     {t : Set Ω} (htm : MeasurableSet t) :
     C t htm := by
   -- This is exactly mathlib's induction_on_inter
-  -- TODO: Adapt the signatures properly - for now leave as sorry
-  sorry
+  refine MeasurableSpace.induction_on_inter h_eq h_inter empty basic compl ?_ t htm
+  intro f hf_disj hfm hC
+  exact iUnion f (fun i j hij => hf_disj hij) hfm hC
 
 /-- The monotone class extension argument for conditional independence:
 if a property holds for products of bounded measurable functions,
@@ -190,14 +207,21 @@ theorem complete_from_directing_measure
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
     (hX_contract : Contractable μ X)
     (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
-    (hν_tail : True)  -- Placeholder: ν is tail-measurable
-    (hν_dir : ∀ (f : α → ℝ), Measurable f → (∃ M, ∀ x, |f x| ≤ M) → ∀ i, True) :  -- Placeholder: E[f(X_i) | tail] = ∫ f dν for bounded f
+    (hν_meas : Measurable ν)  -- Changed from placeholder: ν is measurable (i.e., a kernel)
+    (hν_dir : ∀ (f : α → ℝ), Measurable f → (∃ M, ∀ x, |f x| ≤ M) → ∀ (i : ℕ), True) :  -- Placeholder: E[f(X_i) | tail] = ∫ f dν for bounded f
     ∃ (K : Kernel Ω α),
       IsMarkovKernel K ∧
       True ∧  -- Placeholder: K tail-measurable
       ConditionallyIID μ X := by  -- X conditionally i.i.d. with law K
-  -- Apply the conditional_iid_from_directing_measure
-  -- TODO: construct K from ν and apply conditional_iid_from_directing_measure
-  sorry
+  -- Construct the kernel K from ν
+  let K : Kernel Ω α := ⟨ν, hν_meas⟩
+  use K
+  constructor
+  · -- Show K is a Markov kernel
+    exact ⟨hν_prob⟩
+  constructor
+  · trivial
+  · -- Apply conditional_iid_from_directing_measure
+    exact conditional_iid_from_directing_measure X hX_meas ν hν_prob hν_meas hν_dir
 
 end Exchangeability.DeFinetti.CommonEnding
