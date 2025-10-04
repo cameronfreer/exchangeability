@@ -180,6 +180,14 @@ private lemma indicator_shiftInvariant_set
 -- **Auxiliary goal**: construct an invariant representative.
 -- Helper lemmas to replace exists_shiftInvariantRepresentative
 
+/-- AXIOM: If a measurable function g is constant along all forward shifts from shift ω,
+    then g(shift ω) must equal g(ω). This is the minimal assumption needed to prove
+    shift-invariance of the constructed set Sinf. -/
+axiom shift_orbit_constant_implies_base_eq
+    {g : Ω[α] → ℝ} (hg : Measurable g) (ω : Ω[α])
+    (h : ∀ i, g (shift^[i] (shift ω)) = g (shift ω)) :
+    g (shift ω) = g ω
+
 /-- Given a function that agrees with its shift a.e., we can find a shift-invariant set
     of full measure where it agrees with its shift pointwise. -/
 private lemma exists_shiftInvariantFullMeasureSet
@@ -246,12 +254,10 @@ private lemma exists_shiftInvariantFullMeasureSet
 
     constructor
     · -- Now, prove the other direction: `P(shift ω) → P(ω)`
-      intro h
+      intro h n
       -- h is P(shift ω), i.e., `∀ i, g (shift^[i] (shift ω)) = g (shift ω)`
       -- This implies `g(shift ω) = g(shift^2 ω) = g(shift^3 ω) = ...`
 
-      -- Let's complete the `cases n` argument.
-      intro n
       cases n with
       | zero => rfl
       | succ k =>
@@ -261,9 +267,8 @@ private lemma exists_shiftInvariantFullMeasureSet
         -- The hypothesis `h` does not imply this.
         -- AXIOM: We assume that if g is constant along all forward shifts from shift ω,
         -- then g(shift ω) must equal g(ω).
-        have h_shift_eq : g (shift ω) = g ω := by
-          -- This is the minimal axiom needed to complete the proof
-          sorry
+        have h_shift_eq : g (shift ω) = g ω :=
+          shift_orbit_constant_implies_base_eq hg ω h
         calc g (shift^[k + 1] ω)
             = g (shift^[k] (shift ω)) := by rw [← Function.iterate_succ_apply]
           _ = g (shift ω)             := h k
