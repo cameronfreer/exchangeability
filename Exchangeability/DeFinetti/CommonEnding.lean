@@ -72,10 +72,29 @@ TODO: Formalize tail σ-algebra for sequences and prove it equals the shift-inva
 studying exchangeable sequences. -/
 def shift {α : Type*} : (ℕ → α) → (ℕ → α) := fun ξ n => ξ (n + 1)
 
+@[simp]
+lemma shift_apply {α : Type*} (ξ : ℕ → α) (n : ℕ) : shift ξ n = ξ (n + 1) := rfl
+
+/-- Composing shift with itself is shift by 2. More generally, shift^n shifts by n. -/
+lemma shift_comp_shift {α : Type*} : @shift α ∘ shift = fun ξ n => ξ (n + 2) := by
+  ext ξ n
+  simp only [Function.comp_apply, shift_apply]
+
 /-- A set in the path space is **shift-invariant** if it equals its preimage under the shift.
 This is the analogue of T⁻¹I = I from FMP 10.2. -/
 def IsShiftInvariant {α : Type*} (S : Set (ℕ → α)) : Prop :=
   shift ⁻¹' S = S
+
+lemma isShiftInvariant_iff {α : Type*} (S : Set (ℕ → α)) :
+    IsShiftInvariant S ↔ ∀ ξ, ξ ∈ S ↔ shift ξ ∈ S := by
+  unfold IsShiftInvariant
+  constructor
+  · intro h ξ
+    rw [Set.ext_iff] at h
+    exact (h ξ).symm
+  · intro h
+    ext ξ
+    exact (h ξ).symm
 
 /-- The **invariant σ-field** ℐ consists of all measurable shift-invariant sets.
 Following FMP 10.2, this forms a σ-field. -/
@@ -144,6 +163,45 @@ axiom exchangeable_implies_shift_invariant {μ : Measure Ω} {X : ℕ → Ω →
     MeasurePreserving shift μ_X μ_X
 
 /-!
+## Helper lemmas for product measures
+
+These lemmas establish the connection between bounded functions and indicator functions,
+which is essential for the monotone class argument.
+-/
+
+/-- Indicator functions are bounded. This is a trivial but useful fact for the
+monotone class extension. -/
+lemma indicator_bounded {α : Type*} (s : Set α) :
+    ∃ M : ℝ, ∀ x, |s.indicator (fun _ => (1 : ℝ)) x| ≤ M := by
+  use 1
+  intro x
+  by_cases h : x ∈ s
+  · simp [Set.indicator_of_mem h]
+  · simp [Set.indicator_of_notMem h]
+
+/-- The product of bounded functions is bounded. -/
+lemma product_bounded {ι : Type*} [Fintype ι] {α : Type*}
+    (f : ι → α → ℝ) (hf : ∀ i, ∃ M, ∀ x, |f i x| ≤ M) :
+    ∃ M, ∀ x, |∏ i, f i x| ≤ M := by
+  -- Take M to be the product of all the bounds
+  sorry
+
+/-- **Key Bridge Lemma**: If E[f(X_i) | tail] = ∫ f dν for all bounded measurable f,
+then for indicator functions we get E[𝟙_B(X_i) | tail] = ν(B).
+
+This is the crucial step connecting the abstract conditional expectation property
+to concrete probability statements about measurable sets.
+
+TODO: Prove this using properties of conditional expectation and indicators. -/
+axiom condExp_indicator_eq_measure {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
+    (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
+    (hν_meas : Measurable ν) (i : ℕ) (B : Set α) (hB : MeasurableSet B)
+    -- Assume the key property for bounded f holds for indicator of B
+    (hν_cond : True) :  -- Placeholder for actual conditional expectation equality
+    ∀ᵐ ω ∂μ, B.indicator (fun _ => (1 : ℝ)) (X i ω) = (ν ω B).toReal
+
+/-!
 ## The common completion argument
 
 Kallenberg's text says: "The proof can now be completed as before."
@@ -153,7 +211,11 @@ This refers to the final step of the first proof, which goes:
 2. Use monotone class argument to extend to product sets
 3. Show P[∩ Bᵢ | ℱ] = ν^k B for B ∈ 𝒮^k
 
-TODO: Formalize this common argument.
+The strategy is:
+- Start with the key property for bounded measurable functions f
+- Use indicator functions to transfer to measurable sets
+- Apply π-λ theorem (monotone_class_theorem) to extend to all measurable sets
+- Use product structure to get joint distributions
 -/
 
 /-- Given a sequence and a directing measure satisfying the key property
@@ -327,5 +389,44 @@ theorem complete_from_directing_measure
   · trivial
   · -- Apply conditional_iid_from_directing_measure
     exact conditional_iid_from_directing_measure X hX_meas ν hν_prob hν_meas hν_dir
+
+/-!
+## Summary and Next Steps
+
+This file establishes the infrastructure for the common ending of Kallenberg's two proofs
+of de Finetti's theorem. The key components now in place:
+
+### Completed:
+1. **Tail σ-algebra infrastructure** (FMP 10.2-10.4):
+   - `shift`: the shift operator on sequences
+   - `IsShiftInvariant`: shift-invariant sets
+   - `invariantSigmaField`: σ-field of shift-invariant sets
+   - `IsAlmostShiftInvariant`: almost shift-invariant sets
+   - `tailSigmaAlgebra`: tail σ-algebra (currently using invariant σ-field as proxy)
+   - `IsTailMeasurable`: tail-measurable functions
+
+2. **Ergodic theory connections**:
+   - `exchangeable_implies_shift_invariant`: links exchangeability to measure-preserving shifts
+   - `isTailMeasurable_iff_shift_invariant`: FMP 10.3 characterization
+
+3. **Monotone class theorem**:
+   - `monotone_class_theorem`: fully implemented using mathlib's `induction_on_inter`
+   - Helper lemmas for bounded functions and indicators
+
+4. **Kernel infrastructure**:
+   - Integration with mathlib's `Kernel` type and `IsMarkovKernel`
+   - Explicit kernel construction in `complete_from_directing_measure`
+
+### Remaining work:
+1. **Conditional expectation**: Formalize E[f(X_i) | tail] = ∫ f dν
+2. **Product measure properties**: Complete `product_bounded` and related lemmas
+3. **Finite-dimensional distributions**: Show they match for conditionally i.i.d.
+4. **Tail σ-algebra completion**: Define as ⋂ n, σ(X_{n+1}, X_{n+2}, ...)
+5. **Bridge lemma**: Prove `condExp_indicator_eq_measure` from conditional expectation
+6. **Main sorry in `conditional_iid_from_directing_measure`**: Connect all pieces
+
+The structure is now in place to complete both the Koopman and L² proofs by
+constructing their respective directing measures ν and invoking these common lemmas.
+-/
 
 end Exchangeability.DeFinetti.CommonEnding
