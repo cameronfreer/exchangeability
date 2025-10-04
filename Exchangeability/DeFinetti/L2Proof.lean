@@ -83,6 +83,28 @@ lemma contractable_covariance_structure
 ## Step 2: L² bound implies L¹ convergence of weighted sums (Kallenberg's key step)
 -/
 
+/-- **FMP 1.31: Completeness of L^p**.
+
+Let (f_n) be a Cauchy sequence in L^p, where p > 0. Then ‖f_n - f‖_p → 0 for some f ∈ L^p.
+
+**Proof outline** (Kallenberg):
+1. Choose subsequence (n_k) with ∑_k ‖f_{n_{k+1}} - f_{n_k}‖_p^{p∧1} < ∞
+2. By Lemma 1.29 and monotone convergence: ‖∑_k |f_{n_{k+1}} - f_{n_k}|‖_p^{p∧1} < ∞
+3. So ∑_k |f_{n_{k+1}} - f_{n_k}| < ∞ a.e., hence (f_{n_k}) is a.e. Cauchy in ℝ
+4. By Lemma 1.10: f_{n_k} → f a.e. for some measurable f
+5. By Fatou's lemma: ‖f - f_n‖_p ≤ liminf_k ‖f_{n_k} - f_n‖_p ≤ sup_{m≥n} ‖f_m - f_n‖_p → 0
+
+**Mathlib reference**: This should be in `MeasureTheory.Function.LpSpace`.
+Look for completeness of L^p spaces, likely as an instance of `CompleteSpace (Lp E p μ)`.
+
+TODO: Find the exact mathlib theorem or prove using the outline.
+-/
+theorem Lp_complete (p : ℝ≥0∞) (hp : p ≠ 0) :
+    ∀ {f : ℕ → Ω → ℝ}, (∀ n, MemLp (f n) p μ) →
+    (∀ ε > 0, ∃ N, ∀ m n, m ≥ N → n ≥ N → snorm (f m - f n) p μ < ε) →
+    ∃ g, MemLp g p μ ∧ ∀ ε > 0, ∃ N, ∀ n ≥ N, snorm (f n - g) p μ < ε := by
+  sorry
+
 /-- For a contractable sequence and bounded measurable f, the weighted sums
 (1/m) ∑_{k=n+1}^{n+m} f(ξ_{n+k}) converge in L¹ as m, n → ∞.
 
@@ -95,7 +117,7 @@ there exists a random variable α_∞ such that
 TODO: Complete proof using:
 1. Apply `l2_contractability_bound` to weighted averages
 2. Show Cauchy property in L¹
-3. Extract limit by completeness of L¹
+3. Extract limit by completeness of L¹ (FMP 1.31 above)
 -/
 theorem weighted_sums_converge_L1
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -131,12 +153,47 @@ theorem weighted_sums_converge_L1
 ## Step 3: Reverse martingale convergence
 -/
 
+/-- **FMP 4.2: Subsequence criterion**.
+
+Let ξ, ξ₁, ξ₂,... be random elements in a metric space (S, ρ). Then ξₙ →ᵖ ξ
+iff every subsequence N' ⊆ ℕ has a further subsequence N'' ⊆ N' such that ξₙ → ξ a.s. along N''.
+In particular, ξₙ → ξ a.s. implies ξₙ →ᵖ ξ.
+
+**Proof outline** (Kallenberg):
+Forward direction (→ᵖ implies a.s. along subsequence):
+1. Assume ξₙ →ᵖ ξ, fix arbitrary subsequence N' ⊆ ℕ
+2. Choose further subsequence N'' ⊆ N' with
+   E ∑_{n∈N''} {ρ(ξₙ,ξ) ∧ 1} = ∑_{n∈N''} E[ρ(ξₙ,ξ) ∧ 1] < ∞
+   (equality by monotone convergence)
+3. Series converges a.s., so ξₙ → ξ a.s. along N''
+
+Reverse direction (a.s. subsequences imply →ᵖ):
+1. Assume condition. If ξₙ ↛ᵖ ξ, then ∃ε > 0 with E[ρ(ξₙ,ξ) ∧ 1] > ε along N' ⊆ ℕ
+2. By hypothesis, ξₙ → ξ a.s. along N'' ⊆ N'
+3. By dominated convergence, E[ρ(ξₙ,ξ) ∧ 1] → 0 along N'', contradiction
+
+**Mathlib reference**: Look for convergence in probability and a.s. convergence
+in `Probability` namespace. The subsequence extraction should follow from
+summability of expectations.
+
+TODO: Adapt to our L¹ convergence setting.
+-/
+theorem subsequence_criterion_convergence_in_probability
+    (ξ : ℕ → Ω → ℝ) (ξ_limit : Ω → ℝ)
+    (h_prob_conv : ∀ ε > 0, Tendsto (fun n => μ {ω | ε ≤ |ξ n ω - ξ_limit ω|}) atTop (𝓝 0)) :
+    ∃ (φ : ℕ → ℕ), StrictMono φ ∧
+      ∀ᵐ ω ∂μ, Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω)) := by
+  sorry
+
 /-- The sequence α_n from step 2 is a reverse martingale, and α_n → α_∞ a.s.
 on a subsequence (by FMP 4.2, extracting convergent subsequence from L¹ convergence).
 
 **Kallenberg**: "α_n → α_∞ a.s. on a subsequence (FMP 4.2)"
 
-TODO: Use L¹ convergence to extract a.s. convergent subsequence.
+L¹ convergence implies convergence in probability, which by FMP 4.2 gives
+an a.s. convergent subsequence.
+
+TODO: Use L¹ convergence to extract a.s. convergent subsequence via FMP 4.2.
 -/
 theorem reverse_martingale_subsequence_convergence
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -144,7 +201,7 @@ theorem reverse_martingale_subsequence_convergence
     (h_L1_conv : ∀ ε > 0, ∃ N, ∀ n ≥ N, ∫ ω, |α n ω - α_∞ ω| ∂μ < ε) :
     ∃ (φ : ℕ → ℕ), StrictMono φ ∧
       ∀ᵐ ω ∂μ, Tendsto (fun k => α (φ k) ω) atTop (𝓝 (α_∞ ω)) := by
-  -- FMP 4.2: L¹ convergence implies existence of a.s. convergent subsequence
+  -- FMP 4.2: L¹ convergence → convergence in probability → a.s. convergent subsequence
   sorry
 
 /-- The α_n sequence is indeed a reverse martingale with respect to the
@@ -152,7 +209,19 @@ filtration (σ(X_{k+1}, X_{k+2}, ...))_{k∈ℕ}.
 
 **Kallenberg**: "In particular, α_n is a reverse martingale (FMP 5.5)"
 
-TODO: Verify this is a reverse martingale property.
+**Note**: The FMP 5.5 reference provided by the user was about Lévy's theorem
+(characteristic functions and weak convergence), not reverse martingales.
+The actual FMP 5.5 for reverse martingales should state something like:
+
+"A reverse martingale (Xₙ, ℱₙ) with ℱₙ ↓ ℱ_∞ converges a.s. and in L¹ to E[X₀|ℱ_∞]."
+
+This is the Doob's reverse martingale convergence theorem, which should be in
+mathlib's `Probability.Martingale.Convergence`.
+
+**Mathlib reference**: Look for `Probability.Martingale.ae_tendsto_limit` or
+similar reverse martingale convergence results.
+
+TODO: Find the correct FMP 5.5 reference and verify reverse martingale property.
 -/
 theorem alpha_is_reverse_martingale
     {μ : Measure Ω} [IsProbabilityMeasure μ]
