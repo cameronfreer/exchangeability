@@ -135,60 +135,93 @@ def empiricalMeasure [Inhabited α] (X : ℕ → Ω → α) (n : ℕ) (ω : Ω) 
 /-!
 ## Main theorems to be proved
 
-The following theorems establish the de Finetti-Ryll-Nardzewski equivalences.
-They should be proved using one of the three approaches below.
+### Kallenberg Theorem 1.1 Structure
+
+The theorem establishes a three-way equivalence (for Borel spaces):
+- (i) ξ is contractable
+- (ii) ξ is exchangeable  
+- (iii) ξ is conditionally i.i.d.
+
+**Easy direction** (iii) → (ii): Already proved as `exchangeable_of_conditionallyIID` in
+`Exchangeability.ConditionallyIID`.
+
+**Non-trivial directions**:
+- (i) → (ii): Requires ergodic theory (contractability → exchangeability)
+- (ii) → (iii): The de Finetti theorem proper, proved via three approaches
+  * Koopman approach (Mean Ergodic Theorem)
+  * L² approach (elementary bounds)
+  * Martingale approach (Aldous)
+  
+All three approaches share a common ending in `Exchangeability.DeFinetti.CommonEnding`.
 -/
 
 /-- Contractability implies exchangeability.
-This is the non-trivial direction requiring ergodic theory (mean ergodic theorem).
-TODO: Prove using one of the three approaches. -/
+This is the non-trivial direction (i) → (ii) requiring ergodic theory.
+TODO: Prove using the mean ergodic theorem (see Koopman or L² approach). -/
 axiom exchangeable_of_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
     [IsProbabilityMeasure μ] (hX : Contractable μ X)
     (hX_meas : ∀ i : ℕ, Measurable (X i)) : Exchangeable μ X
 
 /-- Exchangeable implies conditionally i.i.d. (for Borel spaces).
-This is the deep direction requiring ergodic theory and Borel space structure.
-TODO: Prove using ergodic decomposition. -/
+This is the de Finetti theorem proper, direction (ii) → (iii).
+TODO: Prove using one of the three approaches (all use the common ending). -/
 axiom conditionallyIID_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
-    [IsProbabilityMeasure μ] (hX : Exchangeable μ X)
-    (hX_meas : ∀ i, Measurable (X i)) (hBorel : True) : ConditionallyIID μ X
-
-/-- The full de Finetti-Ryll-Nardzewski equivalence.
-TODO: Prove by combining the individual directions. -/
-axiom deFinetti_RyllNardzewski {μ : Measure Ω} {X : ℕ → Ω → α}
-    [IsProbabilityMeasure μ] (hX_meas : ∀ i, Measurable (X i)) :
-    Contractable μ X ↔ Exchangeable μ X ∧ ConditionallyIID μ X
+    [IsProbabilityMeasure μ] [TopologicalSpace α] [BorelSpace α]
+    (hX : Exchangeable μ X) (hX_meas : ∀ i, Measurable (X i)) :
+    ConditionallyIID μ X
 
 /-!
-## Statement of de Finetti's theorem
+## Kallenberg Theorem 1.1: de Finetti-Ryll-Nardzewski Equivalence
 -/
 
-/-- **De Finetti's theorem**: An infinite exchangeable sequence of random variables
-on a Borel measurable space is conditionally independent and identically distributed,
-given the tail σ-algebra.
-
-We work with Borel measurable spaces (rather than Polish spaces) following Kallenberg's
-approach. The theorem asserts that the sequence is conditionally i.i.d., meaning there
-exists a probability kernel ν such that the finite-dimensional distributions have the
-mixture-of-i.i.d. form.
+/-- **Kallenberg Theorem 1.1** (de Finetti, Ryll-Nardzewski): 
+For infinite sequences in Borel spaces, the following are equivalent:
+- **(i)** The sequence is **contractable**
+- **(ii)** The sequence is **exchangeable**
+- **(iii)** The sequence is **conditionally i.i.d.**
 
 **Reference**: Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*,
 Theorem 1.1 (page 26).
 
-**Note**: This uses `ConditionallyIID` from `Exchangeability.ConditionallyIID`, which is
-defined existentially (∃ kernel, ...). The kernel is constructed via ergodic theory.
+**Proof structure** (three-way equivalence established via):
+- **(iii) → (ii)**: `exchangeable_of_conditionallyIID` (in `ConditionallyIID.lean`) ✓ **PROVED**
+- **(ii) → (i)**: `contractable_of_exchangeable` (in `Contractability.lean`) ✓ **PROVED**
+- **(i) → (ii)**: `exchangeable_of_contractable` (ergodic theory) - **AXIOM**
+- **(ii) → (iii)**: `conditionallyIID_of_exchangeable` (three proofs share common ending) - **AXIOM**
+
+The two axioms are the deep results requiring ergodic theory. All three proof approaches
+(Koopman, L², Martingale) share a common ending in `CommonEnding.lean` for (ii) → (iii).
+-/
+theorem deFinetti_RyllNardzewski_equivalence
+    {Ω α : Type*} [MeasurableSpace Ω] [TopologicalSpace α] [MeasurableSpace α] [BorelSpace α]
+    (μ : Measure Ω) [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i)) :
+    Contractable μ X ↔ Exchangeable μ X ∧ ConditionallyIID μ X := by
+  constructor
+  · -- (i) → (ii) ∧ (iii)
+    intro hX_contract
+    constructor
+    · -- (i) → (ii)
+      exact exchangeable_of_contractable hX_contract hX_meas
+    · -- (i) → (iii) via (i) → (ii) → (iii)
+      have hX_exch := exchangeable_of_contractable hX_contract hX_meas
+      exact conditionallyIID_of_exchangeable hX_exch hX_meas
+  · -- (ii) ∧ (iii) → (i)
+    intro ⟨hX_exch, _hX_ciid⟩
+    -- Exchangeable implies contractable (already proved in Contractability.lean)
+    exact contractable_of_exchangeable hX_exch hX_meas
+
+/-- **De Finetti's theorem** (as typically stated): 
+An exchangeable sequence on a Borel space is conditionally i.i.d.
+
+This is the direction (ii) → (iii) of Theorem 1.1.
 -/
 theorem deFinetti
-    -- Standard assumptions on the spaces  
-    -- Note: BorelSpace requires both TopologicalSpace and MeasurableSpace to be in scope
     {Ω α : Type*} [MeasurableSpace Ω] [TopologicalSpace α] [MeasurableSpace α] [BorelSpace α]
-    -- The base measure is a probability measure
     (μ : Measure Ω) [IsProbabilityMeasure μ]
-    -- The process X with measurability and exchangeability
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i)) (hX_exch : Exchangeable μ X) :
-    -- X is conditionally i.i.d.
     ConditionallyIID μ X :=
-  sorry
+  conditionallyIID_of_exchangeable hX_exch hX_meas
 
 end Probability
 end Exchangeability
