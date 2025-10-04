@@ -5,6 +5,7 @@ Authors: exchangeability contributors
 -/
 import Mathlib.Probability.ConditionalExpectation
 import Mathlib.Probability.Independence.Basic
+import Mathlib.Probability.Independence.Conditional
 import Mathlib.Probability.Martingale.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 
@@ -82,13 +83,24 @@ axiom condProb_integral_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [IsProb
     (m : MeasurableSpace Ω) (A B : Set Ω) (hB : MeasurableSet[m] B) :
     ∫ ω in B, condProb μ m A ω ∂μ = (μ (A ∩ B)).toReal
 
-/-! ### Conditional Independence (Doob's Characterization) -/
+/-! ### Conditional Independence (Doob's Characterization)
 
-/-- Conditional independence of σ-algebras given a third σ-algebra.
+## Mathlib Integration
 
-TODO: This should use mathlib's independence API once we find the correct definition. -/
-axiom CondIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
-    (ℱ 𝒢 ℋ : MeasurableSpace Ω) : Prop
+Conditional independence is now available in mathlib as `ProbabilityTheory.CondIndep` from
+`Mathlib.Probability.Independence.Conditional`.
+
+For two σ-algebras m₁ and m₂ to be conditionally independent given m' with respect to μ,
+we require that for any sets t₁ ∈ m₁ and t₂ ∈ m₂:
+  μ⟦t₁ ∩ t₂ | m'⟧ =ᵐ[μ] μ⟦t₁ | m'⟧ * μ⟦t₂ | m'⟧
+
+To use: `open ProbabilityTheory` to access `CondIndep`, or use `ProbabilityTheory.CondIndep` directly.
+
+Related definitions also available in mathlib:
+- `ProbabilityTheory.CondIndepSet`: conditional independence of sets
+- `ProbabilityTheory.CondIndepFun`: conditional independence of functions  
+- `ProbabilityTheory.iCondIndep`: conditional independence of families
+-/
 
 /-- **Doob's characterization of conditional independence (FMP 6.6).**
 
@@ -97,7 +109,9 @@ For σ-algebras 𝒻, 𝒢, ℋ, we have 𝒻 ⊥⊥_𝒢 ℋ if and only if
 P[H | 𝒻 ∨ 𝒢] = P[H | 𝒢] a.s. for all H ∈ ℋ
 ```
 
-This is the key characterization used in Aldous's martingale proof. -/
+This is the key characterization used in Aldous's martingale proof.
+TODO: State this properly using mathlib's `ProbabilityTheory.CondIndep`.
+-/
 axiom condIndep_iff_condexp_eq : True
 
 /-- If conditional probabilities agree a.s. for a π-system generating ℋ,
