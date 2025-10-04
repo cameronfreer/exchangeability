@@ -231,31 +231,39 @@ private lemma exists_shiftInvariantFullMeasureSet
   have hSinf_inv : shift ⁻¹' Sinf = Sinf := by
     ext ω
     simp only [Sinf, Set.mem_preimage, Set.mem_iInter, Set.mem_setOf_eq]
-    constructor
-    · -- Prove: `shift ⁻¹' Sinf ⊆ Sinf`
+
+    -- Let P(x) be the property `∀ n, g(shift^[n] x) = g(x)`.
+    -- The goal is `P(shift ω) ↔ P(ω)`.
+
+    -- Let's first prove the implication `P(ω) → P(shift ω)`, which is straightforward.
+    -- This shows that being in Sinf implies g(ω) = g(shift ω).
+    have P_implies_P_shift : (∀ n, g (shift^[n] ω) = g ω) → (∀ n, g (shift^[n] (shift ω)) = g (shift ω)) := by
       intro h n
-      -- h: ∀ i, g(shift^[i] (shift ω)) = g(shift ω)
-      -- Need: g(shift^[n] ω) = g ω
+      calc g (shift^[n] (shift ω))
+        = g (shift^[n+1] ω) := by rw [← Function.iterate_succ_apply]
+        _ = g ω             := h (n+1)
+        _ = g (shift ω)     := (h 1).symm
+
+    constructor
+    · -- Now, prove the other direction: `P(shift ω) → P(ω)`
+      intro h
+      -- h is P(shift ω), i.e., `∀ i, g (shift^[i] (shift ω)) = g (shift ω)`
+      -- This implies `g(shift ω) = g(shift^2 ω) = g(shift^3 ω) = ...`
+
+      -- Let's complete the `cases n` argument.
+      intro n
       cases n with
       | zero => rfl
-      | succ n =>
-        -- Need: g(shift^[n+1] ω) = g ω
-        -- From h with i=n: g(shift^[n] (shift ω)) = g(shift ω)
-        -- Note: shift^[n] (shift ω) = shift^[n+1] ω
-        have h1 : g (shift^[n+1] ω) = g (shift ω) := by
-          have := h n
-          rw [← Function.iterate_succ_apply] at this
-          exact this
-        -- We still need g(shift ω) = g ω... which we cannot deduce
+      | succ k =>
+        -- Goal is `g (shift^[k + 1] ω) = g ω`.
+        -- From `h k`, we have `g (shift^[k + 1] ω) = g (shift ω)`.
+        -- So the entire proof boils down to showing `g (shift ω) = g ω`.
+        -- The hypothesis `h` does not imply this.
+        -- This requires a different definition of `Sinf`.
         sorry
-    · -- Prove: `Sinf ⊆ shift ⁻¹' Sinf`
-      intro h n
-      -- h: ∀ i, g(shift^[i] ω) = g ω
-      -- Need: g(shift^[n] (shift ω)) = g(shift ω)
-      calc g (shift^[n] (shift ω))
-          = g (shift^[n+1] ω) := by rw [← Function.iterate_succ_apply]
-        _ = g ω               := h (n+1)
-        _ = g (shift ω)       := (h 1).symm
+    
+    · -- The backward direction: `P(ω) → P(shift ω)`
+      exact P_implies_P_shift
 
   -- Prove pointwise invariance on Sinf
   have hpointwise : ∀ ω ∈ Sinf, g (shift ω) = g ω := by
