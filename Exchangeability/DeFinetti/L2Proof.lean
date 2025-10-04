@@ -207,21 +207,24 @@ theorem reverse_martingale_subsequence_convergence
 /-- The α_n sequence is indeed a reverse martingale with respect to the
 filtration (σ(X_{k+1}, X_{k+2}, ...))_{k∈ℕ}.
 
-**Kallenberg**: "In particular, α_n is a reverse martingale (FMP 5.5)"
+**Kallenberg's Second proof**: "We have α_n → α_∞ a.s. on a subsequence (FMP 4.2).
+In particular, α_n is a reverse martingale (FMP 5.5)."
 
-**Note**: The FMP 5.5 reference provided by the user was about Lévy's theorem
-(characteristic functions and weak convergence), not reverse martingales.
-The actual FMP 5.5 for reverse martingales should state something like:
+So FMP 5.5 is cited to justify that **α_n IS a reverse martingale**, not for
+convergence. This should be a definition or characterization of reverse martingales.
 
-"A reverse martingale (Xₙ, ℱₙ) with ℱₙ ↓ ℱ_∞ converges a.s. and in L¹ to E[X₀|ℱ_∞]."
+**Expected FMP 5.5**: Probably something like:
+"A sequence (Xₙ, ℱₙ) is a reverse martingale if ℱₙ ↓ ℱ_∞ and E[Xₙ | ℱ_{n+1}] = X_{n+1}."
 
-This is the Doob's reverse martingale convergence theorem, which should be in
-mathlib's `Probability.Martingale.Convergence`.
+Or possibly: "If Xₙ = E[X | ℱₙ] where ℱₙ ↓ ℱ_∞, then (Xₙ, ℱₙ) is a reverse martingale."
 
-**Mathlib reference**: Look for `Probability.Martingale.ae_tendsto_limit` or
-similar reverse martingale convergence results.
+**Note**: The FMP 5.5 text provided was about Lévy's theorem (characteristic functions),
+which doesn't fit this context. Need the correct FMP 5.5 for reverse martingale definition.
 
-TODO: Find the correct FMP 5.5 reference and verify reverse martingale property.
+**Mathlib reference**: Look for reverse martingale definitions in
+`Probability.Martingale` or `Probability.ConditionalExpectation`.
+
+TODO: Find correct FMP 5.5 and verify that α_n = E[f(X_{n+1}) | ℱ_n] forms a reverse martingale.
 -/
 theorem alpha_is_reverse_martingale
     {μ : Measure Ω} [IsProbabilityMeasure μ]
