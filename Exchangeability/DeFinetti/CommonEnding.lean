@@ -83,12 +83,12 @@ theorem conditional_iid_from_directing_measure
     (hX_meas : ∀ i, Measurable (X i))
     (ν : Ω → Measure α)
     (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
-    -- ν is tail-measurable
-    (hν_tail : sorry)
+    -- ν is tail-measurable (placeholder type - needs proper tail σ-algebra definition)
+    (hν_tail : True)
     -- For all bounded measurable f and all i:
     -- E[f(X_i) | tail σ-algebra] = ∫ f dν a.e.
-    (hν_cond : ∀ (f : α → ℝ) (hf_meas : Measurable f) (hf_bdd : ∃ M, ∀ x, |f x| ≤ M),
-      ∀ (i : ℕ), sorry) :  -- E[f(X_i) | tail] = ∫ f dν
+    (hν_cond : ∀ (f : α → ℝ) (_hf_meas : Measurable f) (_hf_bdd : ∃ M, ∀ x, |f x| ≤ M),
+      ∀ (_i : ℕ), True) :  -- Placeholder: E[f(X_i) | tail] = ∫ f dν
     ConditionallyIID μ X := by
       -- Outline of the missing proof:
       -- 1. Define the kernel `K` by setting `K ω := ν ω` and show it is a Markov kernel
@@ -163,18 +163,18 @@ TODO: Apply monotone_class_theorem to the conditional independence setting.
 -/
 theorem monotone_class_product_extension
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
-    (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
+    (X : ℕ → Ω → α) (_hX_meas : ∀ i, Measurable (X i))
+    (ν : Ω → Measure α) (_hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
     (k : ℕ)
     -- If the property holds for products of bounded functions
-    (h_prod : ∀ (f : Fin k → α → ℝ),
+    (_h_prod : ∀ (f : Fin k → α → ℝ),
       (∀ i, Measurable (f i)) →
       (∀ i, ∃ M, ∀ x, |f i x| ≤ M) →
       True) :  -- Placeholder: E[∏ f_i(X_i) | tail] = ∏ ∫ f_i dν
     -- Then it holds for all product measurable sets
     ∀ (B : Fin k → Set α), (∀ i, MeasurableSet (B i)) → True := by  -- Placeholder: P[∩ X_i ∈ B_i | tail] = ∏ ν(B_i)
   -- TODO: apply `monotone_class_theorem` once the predicate is fixed.
-  intro B hB
+  intro _B _hB
   trivial
 
 /-- Package the common ending as a reusable theorem.
@@ -190,13 +190,14 @@ theorem complete_from_directing_measure
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
     (hX_contract : Contractable μ X)
     (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
-    (hν_tail : sorry)  -- tail-measurable
-    (hν_dir : sorry) :  -- E[f(X_i) | tail] = ∫ f dν for bounded f
+    (hν_tail : True)  -- Placeholder: ν is tail-measurable
+    (hν_dir : ∀ (f : α → ℝ), Measurable f → (∃ M, ∀ x, |f x| ≤ M) → ∀ i, True) :  -- Placeholder: E[f(X_i) | tail] = ∫ f dν for bounded f
     ∃ (K : Kernel Ω α),
       IsMarkovKernel K ∧
-      sorry ∧  -- K tail-measurable
-      sorry := by  -- X conditionally i.i.d. with law K
+      True ∧  -- Placeholder: K tail-measurable
+      ConditionallyIID μ X := by  -- X conditionally i.i.d. with law K
   -- Apply the conditional_iid_from_directing_measure
+  -- TODO: construct K from ν and apply conditional_iid_from_directing_measure
   sorry
 
 end Exchangeability.DeFinetti.CommonEnding
