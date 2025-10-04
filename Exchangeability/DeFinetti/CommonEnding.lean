@@ -49,18 +49,32 @@ This refers to the final step of the first proof, which goes:
 1. Have directing measure ν with E[f(ξ_i) | ℱ] = ν^f
 2. Use monotone class argument to extend to product sets
 3. Show P[∩ Bᵢ | ℱ] = ν^k B for B ∈ 𝒮^k
-4. This establishes conditional independence
 
 TODO: Formalize this common argument.
 -/
 
 /-- Given a sequence and a directing measure satisfying the key property
-E[f(ξ_i) | ℱ] = ν^f for bounded measurable functions, we can establish
+`E[f (ξᵢ) ∣ ℱ] = ν^f` for bounded measurable functions, we can establish
 conditional independence.
 
-This is the "completed as before" step referenced in the Second proof.
+This is the "completed As before" step referenced in the Second proof.
 
-TODO: Complete proof using monotone class argument.
+Outline (to be implemented):
+
+  • **From directing measure to conditional kernels**: build the kernel
+    `K : Kernel Ω α` given by `ω ↦ ν ω`, verifying tail measurability using
+    FMP 10.3/10.4 (almost invariant σ-fields).
+  • **Recover conditional i.i.d.**: for bounded measurable `f`, use the
+    hypothesis to show that `E[f (Xᵢ) ∣ tail] = ∫ f d(K ω)`.
+  • **Invoke `exchangeable_of_conditionallyIID`** (see
+    `Exchangeability/ConditionallyIID.lean`) once the `conditionallyIID` record
+    is built from `K`. That lemma already yields exchangeability; combining it
+    with the converse direction gives conditional independence.
+  • **Monotone class / π-λ argument**: extend equality from bounded measurable
+    functions to cylinder sets, finishing the conditional independence proof.
+
+The implementation will mirror Kallenberg's argument but reframed so this common
+lemma serves both the Koopman and L² approaches.
 -/
 theorem conditional_iid_from_directing_measure
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -74,9 +88,21 @@ theorem conditional_iid_from_directing_measure
     -- E[f(X_i) | tail σ-algebra] = ∫ f dν a.e.
     (hν_cond : ∀ (f : α → ℝ) (hf_meas : Measurable f) (hf_bdd : ∃ M, ∀ x, |f x| ≤ M),
       ∀ i, sorry) :  -- E[f(X_i) | tail] = ∫ f dν
-    -- Then X is conditionally i.i.d. given tail with law ν
-    sorry := by  -- ConditionallyIID μ X (kernel from ν)
-  sorry
+    ConditionallyIID μ X := by
+      -- Outline of the missing proof:
+      -- 1. Define the kernel `K` by setting `K ω := ν ω` and show it is a Markov kernel
+      --    using `hν_prob` together with tail measurability `hν_tail` (cf. FMP 10.3/10.4).
+      -- 2. For each bounded measurable `f`, the assumption `hν_cond` gives
+      --      `∫ f (X i ω) dμ = ∫ (∫ f d(K ω)) dμ`, i.e. `E[f(X_i) | tail] = ∫ f d(K ω)`.
+      -- 3. Package these identities into the `ConditionallyIID` structure—formalising
+      --    the mixture-of-i.i.d. representation alluded to in Kallenberg.
+      -- 4. Once `ConditionallyIID μ X` is established, `exchangeable_of_conditionallyIID`
+      --    (from `Exchangeability/ConditionallyIID.lean`) can be reused to recover
+      --    exchangeability; together with the previous steps this gives the full
+      --    conditional i.i.d. description required for the common ending.
+      --
+      -- The full formalisation is left as future work.
+      sorry
 
 /-- **FMP 1.1: Monotone Class Theorem (Sierpiński)** = Dynkin's π-λ theorem.
 
