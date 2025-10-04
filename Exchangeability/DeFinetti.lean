@@ -72,24 +72,51 @@ def tailSigmaAlgebra (X : ℕ → Ω → α) : MeasurableSpace Ω :=
   ⨅ n : ℕ, MeasurableSpace.comap (fun ω => fun k : ℕ => X (n + k) ω) inferInstance
 
 /-!
-## Directing measures and conditional laws
+## Conditionally i.i.d. sequences
 
-**Note**: The definition of `ConditionallyIID` is in `Exchangeability.ConditionallyIID`.
-It is defined existentially: there exists a probability kernel ν such that coordinates
-are conditionally independent.
+### Definition from `Exchangeability.ConditionallyIID`
 
-For de Finetti's theorem, the kernel is constructed via ergodic theory and is tail-measurable.
+A sequence `X : ℕ → Ω → α` is **conditionally i.i.d.** with respect to measure `μ` if:
+```lean
+∃ ν : Ω → Measure α,
+  (∀ ω, IsProbabilityMeasure (ν ω)) ∧
+  ∀ (m : ℕ) (k : Fin m → ℕ),
+    Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
+      = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)
+```
+
+This expresses that:
+1. There exists a probability kernel `ν : Ω → Measure α`
+2. For every finite selection of indices `k : Fin m → ℕ`
+3. The joint distribution of `(X (k 0), ..., X (k (m-1)))` equals
+4. The mixture `μ.bind (ν ↦ ν^⊗m)` of i.i.d. product measures
+
+### Key Properties
+
+- **From mathlib**: Uses `Measure.pi` (finite products) and `Measure.bind` (Giry monad)
+- **Proved in ConditionallyIID.lean**: `exchangeable_of_conditionallyIID`
+- **For de Finetti**: The kernel is tail-measurable (constructed via ergodic theory)
+
+### DirectingMeasure structure
+
+An alternative bundled formulation that explicitly carries the kernel and its properties.
 -/
 
 /-- A directing measure for a process `X` is a tail-measurable Markov kernel.
 
 This bundles the kernel with its key properties needed for de Finetti's theorem.
+
+**Note**: This is an alternative formulation that explicitly carries the kernel.
+The main `ConditionallyIID` definition is existential and doesn't expose the kernel.
 -/
 structure DirectingMeasure (μ : Measure Ω) [IsProbabilityMeasure μ] (X : ℕ → Ω → α) where
+  /-- The probability kernel -/
   kernel : ProbabilityTheory.Kernel Ω α
+  /-- The kernel is a Markov kernel (maps to probability measures) -/
   is_markov : ProbabilityTheory.IsMarkovKernel kernel
-  is_tail_measurable : sorry
-    -- TODO: @AEStronglyMeasurable' _ _ (tailSigmaAlgebra X) _ _ (fun ω ↦ kernel ω) μ
+  -- Tail measurability would be expressed as:
+  -- is_tail_measurable : @AEStronglyMeasurable' _ _ (tailSigmaAlgebra X) _ _ (fun ω ↦ kernel ω) μ
+  -- TODO: Add this once we have proper tail σ-algebra infrastructure
 
 /-- The empirical measure of the first `n` terms of the process `X`.
 
@@ -141,11 +168,15 @@ on a Borel measurable space is conditionally independent and identically distrib
 given the tail σ-algebra.
 
 We work with Borel measurable spaces (rather than Polish spaces) following Kallenberg's
-approach. The theorem asserts the existence of a tail-measurable Markov kernel `K` such
-that conditionally on the tail σ-algebra, the sequence becomes i.i.d. with law `K`.
+approach. The theorem asserts that the sequence is conditionally i.i.d., meaning there
+exists a probability kernel ν such that the finite-dimensional distributions have the
+mixture-of-i.i.d. form.
 
 **Reference**: Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*,
 Theorem 1.1 (page 26).
+
+**Note**: This uses `ConditionallyIID` from `Exchangeability.ConditionallyIID`, which is
+defined existentially (∃ kernel, ...). The kernel is constructed via ergodic theory.
 -/
 theorem deFinetti
     -- Standard assumptions on the spaces  
@@ -155,12 +186,8 @@ theorem deFinetti
     (μ : Measure Ω) [IsProbabilityMeasure μ]
     -- The process X with measurability and exchangeability
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i)) (hX_exch : Exchangeable μ X) :
-    -- There exists a Markov kernel with the required properties
-    ∃ (K : ProbabilityTheory.Kernel Ω α),
-      -- K is tail-measurable
-      sorry ∧  -- @AEStronglyMeasurable' _ _ (tailSigmaAlgebra X) _ _ (fun ω ↦ K ω) μ
-      -- X is conditionally i.i.d. given the tail σ-algebra with law K
-      ConditionallyIID μ X K :=
+    -- X is conditionally i.i.d.
+    ConditionallyIID μ X :=
   sorry
 
 end Probability
