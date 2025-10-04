@@ -53,14 +53,25 @@ instance pi_isProbabilityMeasure {ι : Type*} [Fintype ι] {α : ι → Type*}
   simp [measure_univ]
 
 /-- Product measures of identical marginals are permutation-invariant.
-If all marginals are the same measure ν, then permuting coordinates doesn't change the product. -/
+If all marginals are the same measure ν, then permuting coordinates doesn't change the product.
+
+TODO: Prove using mathlib's `pi_map_piCongrLeft` from `Mathlib.MeasureTheory.Constructions.Pi`.
+The strategy is to show that permutations are measurable equivalences and use the fact that
+mapping by a measurable equivalence preserves the product structure.
+-/
 axiom pi_comp_perm {ι : Type*} [Fintype ι] {α : Type*} [MeasurableSpace α]
     (ν : Measure α) (σ : Equiv.Perm ι) :
     Measure.map (fun f : ι → α => f ∘ σ) (Measure.pi fun _ : ι => ν) =
       Measure.pi fun _ : ι => ν
 
 /-- The bind operation commutes with measure maps.
-This is a key property of the Giry monad. -/
+This is a key property of the Giry monad.
+
+Note: Mathlib has `bind_dirac_eq_map` showing `m.bind (fun x ↦ dirac (f x)) = m.map f`,
+but the general bind-map commutativity requires additional conditions.
+
+TODO: Prove or find appropriate mathlib lemma.
+-/
 axiom bind_map_comm {Ω α β : Type*} [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β]
     (μ : Measure Ω) (κ : Ω → Measure α) (f : α → β) :
     (μ.bind κ).map f = μ.bind (fun ω => (κ ω).map f)

@@ -73,22 +73,13 @@ def tailSigmaAlgebra (X : ℕ → Ω → α) : MeasurableSpace Ω :=
 
 /-!
 ## Directing measures and conditional laws
+
+**Note**: The definition of `ConditionallyIID` is in `Exchangeability.ConditionallyIID`.
+It is defined existentially: there exists a probability kernel ν such that coordinates
+are conditionally independent.
+
+For de Finetti's theorem, the kernel is constructed via ergodic theory and is tail-measurable.
 -/
-
-/-- A sequence of random variables `X` is conditionally independent and identically
-distributed given a sub-σ-algebra with conditional law given by the kernel `K`.
-
-This is a placeholder definition. The full definition should express:
-1. K is a Markov kernel measurable with respect to the sub-σ-algebra
-2. The sequence {Xₙ} is conditionally independent given the sub-σ-algebra  
-3. The conditional distribution of each Xₙ is given by K
-
-For de Finetti's theorem, the sub-σ-algebra will be the tail σ-algebra.
--/
-def ConditionallyIID (μ : Measure Ω) [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → α) (K : ProbabilityTheory.Kernel Ω α) : Prop :=
-  -- Placeholder - full definition requires conditional independence infrastructure
-  ProbabilityTheory.IsMarkovKernel K ∧ sorry
 
 /-- A directing measure for a process `X` is a tail-measurable Markov kernel.
 
