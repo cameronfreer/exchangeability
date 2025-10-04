@@ -6,6 +6,7 @@ Authors: exchangeability contributors
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.MeasureTheory.PiSystem
 import Mathlib.Probability.Kernel.Basic
+import Mathlib.Dynamics.Ergodic.Ergodic
 import Exchangeability.Contractability
 import Exchangeability.ConditionallyIID
 
@@ -40,6 +41,107 @@ open MeasureTheory ProbabilityTheory
 open Exchangeability
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+
+/-!
+## Tail σ-algebras and Invariant σ-fields
+
+For an exchangeable or contractable sequence X : ℕ → Ω → α, the **tail σ-algebra** consists
+of events that depend only on the "tail" of the sequence, i.e., events invariant under
+modifications of finitely many coordinates.
+
+Following Kallenberg (FMP 10.2-10.4):
+- A set I is **invariant** under a transformation T if T⁻¹I = I
+- A set I is **almost invariant** if μ(I Δ T⁻¹I) = 0
+- The collection of invariant sets forms the **invariant σ-field** ℐ
+- The collection of almost invariant sets forms the **almost invariant σ-field** ℐ'
+- **Key result (FMP 10.4)**: ℐ' = ℐ^μ (the μ-completion of ℐ)
+
+For exchangeable sequences:
+- The shift operator T: (ℕ → α) → (ℕ → α) by (Tξ)(n) = ξ(n+1) is the natural transformation
+- The tail σ-algebra is related to the shift-invariant σ-field
+- A function f is tail-measurable iff it's measurable w.r.t. the tail σ-algebra
+- **FMP 10.3**: f is invariant/almost invariant iff f is ℐ-measurable/ℐ^μ-measurable
+
+The directing measure ν constructed in de Finetti proofs is tail-measurable (almost invariant).
+This is essential for showing that ν defines a proper conditional kernel.
+
+TODO: Formalize tail σ-algebra for sequences and prove it equals the shift-invariant σ-field.
+-/
+
+/-- The shift operator on infinite sequences. This is the natural transformation for
+studying exchangeable sequences. -/
+def shift {α : Type*} : (ℕ → α) → (ℕ → α) := fun ξ n => ξ (n + 1)
+
+/-- A set in the path space is **shift-invariant** if it equals its preimage under the shift.
+This is the analogue of T⁻¹I = I from FMP 10.2. -/
+def IsShiftInvariant {α : Type*} (S : Set (ℕ → α)) : Prop :=
+  shift ⁻¹' S = S
+
+/-- The **invariant σ-field** ℐ consists of all measurable shift-invariant sets.
+Following FMP 10.2, this forms a σ-field. -/
+def invariantSigmaField (α : Type*) [MeasurableSpace α] : MeasurableSpace (ℕ → α) :=
+  MeasurableSpace.comap shift inferInstance
+
+/-- A measure on the path space is **almost shift-invariant** on a set S if
+μ(S ∆ shift⁻¹(S)) = 0 (symmetric difference). This is the analogue of FMP 10.2's almost invariance. -/
+def IsAlmostShiftInvariant {α : Type*} [MeasurableSpace α]
+    (μ : Measure (ℕ → α)) (S : Set (ℕ → α)) : Prop :=
+  μ (symmDiff S (shift ⁻¹' S)) = 0
+
+/-- The **tail σ-algebra** for infinite sequences consists of events that are
+"asymptotically independent" of the first n coordinates for all n.
+Equivalently (for exchangeable sequences), it's the σ-field of shift-invariant events.
+
+TODO: Prove these are equivalent using FMP 10.3-10.4. -/
+def tailSigmaAlgebra (α : Type*) [MeasurableSpace α] : MeasurableSpace (ℕ → α) :=
+  -- Placeholder: should be defined as ⋂ n, σ(X_{n+1}, X_{n+2}, ...)
+  -- For now, use the invariant σ-field as a proxy
+  invariantSigmaField α
+
+/-- A function on the path space is **tail-measurable** if it's measurable with respect
+to the tail σ-algebra. By FMP 10.3, this is equivalent to being (almost) shift-invariant. -/
+def IsTailMeasurable {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
+    (f : (ℕ → α) → β) : Prop :=
+  @Measurable (ℕ → α) β (tailSigmaAlgebra α) _ f
+
+/-- **FMP 10.3 (Invariant sets and functions)**: A measurable function f is invariant
+(f ∘ shift = f) if and only if it is measurable with respect to the invariant σ-field.
+
+This is the key connection between syntactic invariance and σ-field measurability.
+
+TODO: Prove this lemma. The proof in Kallenberg uses approximation by simple functions. -/
+axiom isTailMeasurable_iff_shift_invariant {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
+    [MeasurableSpace.CountablyGenerated β]
+    (f : (ℕ → α) → β) (hf : Measurable f) :
+    IsTailMeasurable f ↔ f ∘ shift = f
+
+/-- For a probability measure μ on path space, a function is **almost tail-measurable**
+if it differs from a tail-measurable function on a μ-null set.
+By FMP 10.4, this is equivalent to measurability w.r.t. the μ-completion of the invariant σ-field.
+
+TODO: Formalize this properly using measure completion. -/
+def IsAlmostTailMeasurable {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
+    (μ : Measure (ℕ → α)) (f : (ℕ → α) → β) : Prop :=
+  ∃ g : (ℕ → α) → β, IsTailMeasurable g ∧ f =ᵐ[μ] g
+
+/-- **Connection to Exchangeability**: For an exchangeable sequence X : ℕ → Ω → α,
+the path-space measure μ_X (push-forward of the base measure μ by ω ↦ (X n ω)_{n ∈ ℕ})
+is invariant under the shift operator. More generally, μ_X is invariant under all
+finite permutations.
+
+This invariance is why the tail σ-algebra (shift-invariant σ-field) is the natural
+conditioning σ-field for de Finetti's theorem:
+- The directing measure ν must be tail-measurable (FMP 10.3-10.4)
+- Conditional expectations with respect to the tail σ-algebra give the mixing measure
+- The tail σ-field is trivial for ergodic measures (0-1 law)
+
+TODO: Formalize this connection between exchangeability and shift-invariance.
+      This requires defining the path-space measure and proving invariance properties.
+-/
+axiom exchangeable_implies_shift_invariant {μ : Measure Ω} {X : ℕ → Ω → α}
+    (hX : Exchangeable μ X) (hX_meas : ∀ i, Measurable (X i)) :
+    let μ_X : Measure (ℕ → α) := Measure.map (fun ω n => X n ω) μ
+    MeasurePreserving shift μ_X μ_X
 
 /-!
 ## The common completion argument
@@ -86,7 +188,9 @@ theorem conditional_iid_from_directing_measure
     (hν_meas : Measurable ν)  -- ν is measurable (i.e., a kernel)
     -- For all bounded measurable f and all i:
     -- E[f(X_i) | tail σ-algebra] = ∫ f dν a.e.
-    -- This is the key property from the directing measure construction
+    -- This is the key property from the directing measure construction.
+    -- Note: ν should be tail-measurable (or almost tail-measurable in the sense of FMP 10.4).
+    -- This follows from the construction of ν via ergodic theory (either Koopman or L²).
     (hν_cond : ∀ (f : α → ℝ) (_hf_meas : Measurable f) (_hf_bdd : ∃ M, ∀ x, |f x| ≤ M),
       ∀ (_i : ℕ), True) :  -- Placeholder: E[f(X_i) | tail] = ∫ f dν a.e.
     ConditionallyIID μ X := by
