@@ -214,7 +214,7 @@ theorem l2_contractability_bound
             σSq * ρ * (c i * c j) := by
         intro i j hj
         have hcov_ij := _hcov i j (Ne.symm hj)
-        simp [hcov_ij, mul_comm, mul_left_comm, mul_assoc]
+        simp [hcov_ij, mul_comm, mul_assoc]
       -- Apply the previous identity term-by-term inside the sums.
       have h_rewrite :
           ∑ i, ∑ j with j ≠ i, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ
@@ -228,7 +228,7 @@ theorem l2_contractability_bound
       have h_factor :
           ∑ i, ∑ j with j ≠ i, σSq * ρ * (c i * c j)
             = σSq * ρ * ∑ i, ∑ j with j ≠ i, c i * c j := by
-        simp [Finset.mul_sum, Finset.sum_mul, mul_comm, mul_left_comm, mul_assoc]
+        simp [Finset.mul_sum, mul_assoc]
       calc
         ∑ i, ∑ j with j ≠ i, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ
             = ∑ i, ∑ j with j ≠ i, σSq * ρ * (c i * c j) := h_rewrite
@@ -265,7 +265,7 @@ theorem l2_contractability_bound
         ∑ i, ∑ j with j ≠ i, c i * c j
             = ∑ i, ∑ j, c i * c j - ∑ i, c i * c i := h_offdiag_eq
         _ = (∑ i, c i)^2 - ∑ i, (c i)^2 := by
-              simpa [h_sq, pow_two, sq, mul_comm] using h_offdiag_eq.symm
+              simp [h_sq, pow_two, h_offdiag_eq.symm]
     
     -- Combine diagonal and off-diagonal contributions.
     have : ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ =
@@ -333,7 +333,15 @@ theorem l2_contractability_bound
       calc (0 : ℝ)
           ≤ |c j0| := abs_nonneg _
         _ ≤ ⨆ j, |c j| := le_ciSup hbdd j0
-    · sorry  -- Empty case: when Fin n is empty, all sums are 0
+    · -- When Fin n is empty, the supremum is over an empty set
+      -- In this case, all values are vacuously nonnegative
+      haveI : IsEmpty (Fin n) := not_nonempty_iff.mp h
+      have : (Set.range fun j : Fin n => |c j|) = ∅ := by
+        ext x
+        simp only [Set.mem_range, Set.mem_empty_iff_false, iff_false]
+        rintro ⟨j, _⟩
+        exact IsEmpty.false j
+      rw [iSup, this, Real.sSup_empty]
   
   -- Step 6: ≤ 2σ²(1-ρ) sup|cⱼ| since ∑|cᵢ| ≤ 2
   calc ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ
