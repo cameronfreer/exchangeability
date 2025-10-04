@@ -1,10 +1,12 @@
 import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
 import Exchangeability.Contractability
 
-/-- Exchangeability for infinite sequences (axiomatic stub).
+/-!
+# Exchangeability (axiomatic stub)
 
 To keep other parts of the project compiling while the full development is in
-progress, we record the main results here as axioms. -/
+progress, we record the main results here as axioms together with proof
+sketches. -/
 
 noncomputable section
 
@@ -27,8 +29,9 @@ measures on path space agree. Along the way, FMP 10.3 and 10.4 (relating
 invariant and almost invariant σ-fields, ergodicity) are expected to control the
 tail σ-field appearing in the extension argument. -/
 axiom measure_eq_of_fin_marginals_eq {μ ν : Measure (ℕ → α)}
-    (h : ∀ n (S : Set (Fin n → α)) (hS : MeasurableSet S),
+    (h : ∀ n (S : Set (Fin n → α)) (_hS : MeasurableSet S),
         Measure.map (fun f : ℕ → α => fun i : Fin n => f i) μ S =
+        Measure.map (fun f : ℕ → α => fun i : Fin n => f i) ν S) : μ = ν
 
 
 /-- **Axiom**: exchangeability is equivalent to full exchangeability.
