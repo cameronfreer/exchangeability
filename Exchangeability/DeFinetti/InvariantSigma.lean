@@ -195,14 +195,10 @@ private lemma exists_shiftInvariantFullMeasureSet
   classical
   -- Define the set where g agrees with its shift
   let S := {ω | g (shift ω) = g ω}
-  -- Define Sinf_base as the set where g is constant along the entire forward orbit
-  let Sinf_base := ⋂ n : ℕ, {ω | g (shift^[n] ω) = g ω}
-  -- To ensure exact shift-invariance, intersect with its preimage
-  -- This makes Sinf manifestly shift-invariant
-  let Sinf := Sinf_base ∩ shift ⁻¹' Sinf_base
+  let Sinf := ⋂ n : ℕ, {ω | g (shift^[n] ω) = g ω}
 
   -- Prove Sinf_base has full measure
-  have hSinf_base_full : μ Sinf_baseᶜ = 0 := by
+  have hSinf_full : μ Sinfᶜ = 0 := by
     have h_ae_iterate (n : ℕ) : (fun ω => g (shift^[n] ω)) =ᵐ[μ] g := by
       induction n with
       | zero => rfl
@@ -218,28 +214,14 @@ private lemma exists_shiftInvariantFullMeasureSet
     let S_n n := {ω | g (shift^[n] ω) = g ω}
     have hS_n_full (n : ℕ) : μ (S_n n)ᶜ = 0 := by
       simpa [ae_iff, S_n] using h_ae_iterate n
-    have h_compl_eq : Sinf_baseᶜ = ⋃ n, (S_n n)ᶜ := by
-      simp [Sinf_base, S_n, Set.compl_iInter]
+    have h_compl_eq : Sinfᶜ = ⋃ n, (S_n n)ᶜ := by
+      simp [Sinf, S_n, Set.compl_iInter]
     rw [h_compl_eq]
     exact measure_iUnion_null hS_n_full
 
-  -- Prove Sinf has full measure (intersection of two full-measure sets)
-  have hSinf_full : μ Sinfᶜ = 0 := by
-    have h_shift_full : μ (shift ⁻¹' Sinf_base)ᶜ = 0 :=
-      hσ.preimage_null hSinf_base_full
-    have h_le : μ Sinfᶜ ≤ 0 := by
-      calc μ Sinfᶜ
-          ≤ μ (Sinf_baseᶜ ∪ (shift ⁻¹' Sinf_base)ᶜ) := by
-            apply measure_mono
-            intro ω hω
-            simp [Sinf] at hω ⊢
-            tauto
-        _ ≤ μ Sinf_baseᶜ + μ (shift ⁻¹' Sinf_base)ᶜ := measure_union_le _ _
-        _ = 0 := by simp [hSinf_base_full, h_shift_full]
-    exact le_antisymm h_le (zero_le _)
 
   -- Prove Sinf_base is measurable
-  have hSinf_base_meas : MeasurableSet Sinf_base := by
+  have hSinf_meas : MeasurableSet Sinf := by
     refine MeasurableSet.iInter fun n => ?_
     let f_n := fun ω => g (shift^[n] ω) - g ω
     have hf_n_meas : Measurable f_n :=
@@ -251,36 +233,24 @@ private lemma exists_shiftInvariantFullMeasureSet
 
   -- Prove Sinf is measurable (intersection of measurable sets)
   have hSinf_meas : MeasurableSet Sinf := by
-    exact hSinf_base_meas.inter (hσ.measurable hSinf_base_meas)
+    exact hSinf_meas.inter (hσ.measurable hSinf_meas)
 
   -- Prove Sinf is shift-invariant
   have hSinf_inv : shift ⁻¹' Sinf = Sinf := by
-    -- Sinf = Sinf_base ∩ shift ⁻¹' Sinf_base
-    -- shift ⁻¹' Sinf = shift ⁻¹' Sinf_base ∩ shift ⁻¹' (shift ⁻¹' Sinf_base)
-    -- We need to show these are equal
     ext ω
-    simp only [Sinf, Set.mem_preimage, Set.mem_inter_iff]
-    constructor
-    · -- Forward: (shift ω ∈ Sinf_base ∧ shift (shift ω) ∈ Sinf_base) → (ω ∈ Sinf_base ∧ shift ω ∈ Sinf_base)
-      intro ⟨h1, h2⟩
-      -- h1: shift ω ∈ Sinf_base
-      -- h2: shift (shift ω) ∈ Sinf_base (from shift ω ∈ shift⁻¹' Sinf_base)
-      constructor
-      · -- Need: ω ∈ Sinf_base
-        -- This is the problematic direction - we cannot deduce this from h1 and h2 alone
-        sorry
-      · exact h1  -- shift ω ∈ Sinf_base
-    · -- Backward: (ω ∈ Sinf_base ∧ shift ω ∈ Sinf_base) → (shift ω ∈ Sinf_base ∧ shift (shift ω) ∈ Sinf_base)
-      intro ⟨h1, h2⟩
-      constructor
-      · exact h2  -- shift ω ∈ Sinf_base
-      · -- Need: shift (shift ω) ∈ Sinf_base, i.e., ∀n, g(shift^[n] (shift (shift ω))) = g(shift (shift ω))
-        simp only [Sinf_base, Set.mem_iInter, Set.mem_setOf_eq] at h1 h2 ⊢
-        intro n
-        calc g (shift^[n] (shift (shift ω)))
-            = g (shift^[n+1] (shift ω)) := by rw [← Function.iterate_succ_apply]
-          _ = g (shift ω)              := h2 (n+1)
-          _ = g (shift (shift ω))      := (h2 1).symm
+  simp only [Sinf, Set.mem_preimage, Set.mem_iInter, Set.mem_setOf_eq]
+  constructor
+  · -- Prove: `shift ⁻¹' Sinf ⊆ Sinf`
+    intro h
+    have h_base_eq : g (shift ω) = g ω := h 0
+    intro n
+    cases n with
+    | zero => rfl
+    | succ k =>
+      exact (h k).trans h_base_eq
+  · -- Prove: `Sinf ⊆ shift ⁻¹' Sinf`
+    intro h n
+    rw [h (n + 1), h 1]
 
   -- Prove pointwise invariance on Sinf
   have hpointwise : ∀ ω ∈ Sinf, g (shift ω) = g ω := by
