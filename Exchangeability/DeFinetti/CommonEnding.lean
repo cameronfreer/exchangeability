@@ -6,7 +6,6 @@ Authors: exchangeability contributors
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.MeasureTheory.PiSystem
 import Mathlib.Probability.Kernel.Basic
-import Exchangeability.Exchangeability
 import Exchangeability.Contractability
 
 /-!

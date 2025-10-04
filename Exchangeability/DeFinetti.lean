@@ -7,7 +7,6 @@ import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
 import Mathlib.Probability.IdentDistrib
 import Mathlib.Probability.Kernel.Basic
 import Mathlib.MeasureTheory.Constructions.BorelSpace.Basic
-import Exchangeability.Exchangeability
 import Exchangeability.Contractability
 import Exchangeability.ConditionallyIID
 import Exchangeability.DeFinetti.KoopmanApproach

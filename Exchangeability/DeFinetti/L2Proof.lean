@@ -5,7 +5,6 @@ Authors: exchangeability contributors
 -/
 import Exchangeability.DeFinetti.L2Approach
 import Exchangeability.DeFinetti.CommonEnding
-import Exchangeability.Exchangeability
 import Exchangeability.Contractability
 import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
