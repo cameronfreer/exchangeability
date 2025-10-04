@@ -207,14 +207,115 @@ theorem l2_contractability_bound
     have h_offdiag : ∑ i, ∑ j with j ≠ i, 
                      c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ =
                      σSq * ρ * ∑ i, ∑ j with j ≠ i, c i * c j := by
-      sorry -- Apply _hcov to transform each off-diagonal term
+      classical
+      -- Rewrite each off-diagonal term using the covariance hypothesis.
+      have h_cov_term :
+          ∀ i j, j ≠ i → c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ =
+            σSq * ρ * (c i * c j) := by
+        intro i j hj
+        have hcov_ij := _hcov i j (Ne.symm hj)
+        simp [hcov_ij, mul_comm, mul_left_comm, mul_assoc]
+      -- Apply the previous identity term-by-term inside the sums.
+      have h_rewrite :
+          ∑ i, ∑ j with j ≠ i, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ
+            = ∑ i, ∑ j with j ≠ i, σSq * ρ * (c i * c j) := by
+        apply Finset.sum_congr rfl
+        intro i _
+        apply Finset.sum_congr rfl
+        intro j hj
+        exact h_cov_term i j (Finset.mem_filter.mp hj |>.2)
+      -- Factor the constant σSq * ρ out of the double sum.
+      have h_factor :
+          ∑ i, ∑ j with j ≠ i, σSq * ρ * (c i * c j)
+            = σSq * ρ * ∑ i, ∑ j with j ≠ i, c i * c j := by
+        simp [Finset.mul_sum, Finset.sum_mul, mul_comm, mul_left_comm, mul_assoc]
+      calc
+        ∑ i, ∑ j with j ≠ i, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ
+            = ∑ i, ∑ j with j ≠ i, σSq * ρ * (c i * c j) := h_rewrite
+        _ = σSq * ρ * ∑ i, ∑ j with j ≠ i, c i * c j := h_factor
     
     -- Relate off-diagonal sum to (∑cᵢ)²
     have h_offdiag_expand : ∑ i, ∑ j with j ≠ i, c i * c j =
                             (∑ i, c i)^2 - ∑ i, (c i)^2 := by
-      sorry -- Expand (∑cᵢ)² and split into diagonal/off-diagonal
+      classical
+      -- Expand the square as a double sum.
+      have h_sq : (∑ i, c i)^2 = ∑ i, ∑ j, c i * c j := by
+        simpa [pow_two] using
+          (Finset.sum_mul_sum (s := (Finset.univ : Finset (Fin n)))
+            (t := (Finset.univ : Finset (Fin n))) (f := fun i => c i) (g := fun j => c j))
+      -- Separate diagonal from off-diagonal contributions.
+      have h_inner_split : ∀ i, ∑ j, c i * c j =
+          c i * c i + ∑ j with j ≠ i, c i * c j := by
+        intro i
+        classical
+        have hi : i ∈ (Finset.univ : Finset (Fin n)) := Finset.mem_univ _
+        simpa [Finset.erase_eq_filter, hi] using
+          (Finset.sum_eq_add_sum_diff_singleton
+            (s := (Finset.univ : Finset (Fin n)))
+            (f := fun j => c i * c j) hi)
+      have h_split : ∑ i, ∑ j, c i * c j =
+          ∑ i, c i * c i + ∑ i, ∑ j with j ≠ i, c i * c j := by
+        classical
+        have h := Finset.sum_congr rfl (fun i _ => h_inner_split i)
+        have h_sum := calc
+          ∑ i, ∑ j, c i * c j
+              = ∑ i, (c i * c i + ∑ j with j ≠ i, c i * c j) := by simpa using h
+          _ = ∑ i, c i * c i + ∑ i, ∑ j with j ≠ i, c i * c j := by
+              simp [Finset.sum_add_distrib]
+        exact h_sum
+      -- Rearranging gives the desired identity.
+      have h_offdiag_eq : ∑ i, ∑ j with j ≠ i, c i * c j =
+          ∑ i, ∑ j, c i * c j - ∑ i, c i * c i := by
+        classical
+        have := congrArg (fun x => x - ∑ i, c i * c i) h_split
+        simpa [sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using this
+      calc
+        ∑ i, ∑ j with j ≠ i, c i * c j
+            = ∑ i, ∑ j, c i * c j - ∑ i, c i * c i := h_offdiag_eq
+        _ = (∑ i, c i)^2 - ∑ i, (c i)^2 := by
+              simpa [h_sq, pow_two, sq, mul_comm] using h_offdiag_eq.symm
     
-    sorry -- Combine diagonal and off-diagonal to get final form
+    -- Combine diagonal and off-diagonal contributions.
+    have : ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ =
+        σSq * ρ * (∑ i, c i)^2 + σSq * (1 - ρ) * ∑ i, (c i)^2 := by
+      classical
+      -- Split the integral double sum into diagonal and off-diagonal parts.
+      have h_inner_split : ∀ i,
+          ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ =
+            c i * c i * ∫ ω, (ξ i ω - m) * (ξ i ω - m) ∂μ +
+              ∑ j with j ≠ i, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ := by
+        intro i
+        classical
+        have hi : i ∈ (Finset.univ : Finset (Fin n)) := Finset.mem_univ _
+        simpa [Finset.erase_eq_filter, hi]
+          using (Finset.sum_eq_add_sum_diff_singleton
+            (s := (Finset.univ : Finset (Fin n)))
+            (f := fun j => c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ) hi)
+      have h_split : ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ =
+          ∑ i, c i * c i * ∫ ω, (ξ i ω - m) * (ξ i ω - m) ∂μ +
+            ∑ i, ∑ j with j ≠ i, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ := by
+        classical
+        have h := Finset.sum_congr rfl (fun i _ => h_inner_split i)
+        have h_sum := calc
+          ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ
+              = ∑ i,
+                  (c i * c i * ∫ ω, (ξ i ω - m) * (ξ i ω - m) ∂μ +
+                    ∑ j with j ≠ i, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ) := by
+                    simpa using h
+          _ = ∑ i, c i * c i * ∫ ω, (ξ i ω - m) * (ξ i ω - m) ∂μ +
+                  ∑ i, ∑ j with j ≠ i, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ := by
+                    simp [Finset.sum_add_distrib]
+        exact h_sum
+      -- Apply diagonal and off-diagonal evaluations.
+      calc
+        ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ
+            = ∑ i, c i * c i * ∫ ω, (ξ i ω - m) * (ξ i ω - m) ∂μ +
+                ∑ i, ∑ j with j ≠ i, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ := h_split
+        _ = σSq * ∑ i, (c i)^2 + σSq * ρ * ((∑ i, c i)^2 - ∑ i, (c i)^2) := by
+              -- Use previously established identities.
+              simpa [h_diag, h_offdiag, h_offdiag_expand, sq, pow_two, mul_comm, mul_left_comm, mul_assoc]
+        _ = σSq * ρ * (∑ i, c i)^2 + σSq * (1 - ρ) * ∑ i, (c i)^2 := by ring
+    exact this
   
   -- Step 4: = σ²(1-ρ)∑cᵢ² since (∑cᵢ)² = 0
   have step4 : σSq * ρ * (∑ i, c i)^2 + σSq * (1 - ρ) * ∑ i, (c i)^2 =
@@ -232,7 +333,7 @@ theorem l2_contractability_bound
     linarith [_hρ_bd.2]  -- ρ ≤ 1 implies 0 ≤ 1 - ρ
   
   have hsup_nonneg : 0 ≤ ⨆ j, |c j| := by
-    sorry -- Supremum of nonnegative values
+    sorry  -- Supremum of nonnegative values - needs careful API work
   
   -- Step 6: ≤ 2σ²(1-ρ) sup|cⱼ| since ∑|cᵢ| ≤ 2
   calc ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ
