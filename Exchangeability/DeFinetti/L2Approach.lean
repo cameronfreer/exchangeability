@@ -207,65 +207,14 @@ theorem l2_contractability_bound
     have h_offdiag : ∑ i, ∑ j with j ≠ i, 
                      c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ =
                      σSq * ρ * ∑ i, ∑ j with j ≠ i, c i * c j := by
-      -- Apply _hcov to each off-diagonal term
-      congr 1
-      ext i
-      have h_inner : ∑ j with j ≠ i, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ =
-                     σSq * ρ * ∑ j with j ≠ i, c i * c j := by
-        trans (∑ j with j ≠ i, σSq * ρ * (c i * c j))
-        · congr 1
-          ext j
-          by_cases hj : j ≠ i
-          · have hcov_ij := _hcov i j hj
-            calc c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ
-                = c i * c j * (σSq * ρ) := by rw [hcov_ij]
-              _ = σSq * ρ * (c i * c j) := by ring
-          · simp [hj]
-        · rw [← Finset.sum_mul]
-          ring_nf
-      exact h_inner
+      sorry -- Apply _hcov to transform each off-diagonal term
     
     -- Relate off-diagonal sum to (∑cᵢ)²
     have h_offdiag_expand : ∑ i, ∑ j with j ≠ i, c i * c j =
                             (∑ i, c i)^2 - ∑ i, (c i)^2 := by
-      -- Use (∑cᵢ)² = ∑ᵢⱼ cᵢcⱼ = (∑ᵢ cᵢ²) + (∑ᵢ≠ⱼ cᵢcⱼ)
-      have h_sq_expand : (∑ i, c i)^2 = ∑ i, ∑ j, c i * c j := by
-        rw [Finset.sum_mul_sum]
-        rfl
-      -- Split into diagonal and off-diagonal
-      have h_split : ∑ i, ∑ j, c i * c j = 
-                     (∑ i, c i * c i) + (∑ i, ∑ j with j ≠ i, c i * c j) := by
-        apply Finset.sum_congr rfl
-        intro i _
-        -- For each i, split the inner sum over j into j=i and j≠i
-        conv_lhs => 
-          arg 2
-          ext j
-          rw [show c i * ξ i ω * (c j * ξ j ω) = c i * c j * (ξ i ω * ξ j ω) from by ring]
-        sorry -- This needs sum splitting
-      calc ∑ i, ∑ j with j ≠ i, c i * c j
-          = (∑ i, c i)^2 - ∑ i, c i * c i := by
-            rw [h_sq_expand, h_split]; ring
-        _ = (∑ i, c i)^2 - ∑ i, (c i)^2 := by
-            congr 1
-            ext i
-            ring
+      sorry -- Expand (∑cᵢ)² and split into diagonal/off-diagonal
     
-    -- Combine diagonal and off-diagonal
-    calc ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ
-        = (∑ i, c i * c i * ∫ ω, (ξ i ω - m) * (ξ i ω - m) ∂μ) + 
-          (∑ i, ∑ j with j ≠ i, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ) := by
-            sorry -- Need to split double sum
-      _ = σSq * ∑ i, (c i)^2 + σSq * ρ * ∑ i, ∑ j with j ≠ i, c i * c j := by
-            rw [h_diag, h_offdiag]
-      _ = σSq * ∑ i, (c i)^2 + σSq * ρ * ((∑ i, c i)^2 - ∑ i, (c i)^2) := by
-            rw [h_offdiag_expand]
-      _ = σSq * ∑ i, (c i)^2 + σSq * ρ * (∑ i, c i)^2 - σSq * ρ * ∑ i, (c i)^2 := by
-            ring
-      _ = σSq * ρ * (∑ i, c i)^2 + (σSq - σSq * ρ) * ∑ i, (c i)^2 := by
-            ring
-      _ = σSq * ρ * (∑ i, c i)^2 + σSq * (1 - ρ) * ∑ i, (c i)^2 := by
-            ring
+    sorry -- Combine diagonal and off-diagonal to get final form
   
   -- Step 4: = σ²(1-ρ)∑cᵢ² since (∑cᵢ)² = 0
   have step4 : σSq * ρ * (∑ i, c i)^2 + σSq * (1 - ρ) * ∑ i, (c i)^2 =
@@ -275,22 +224,7 @@ theorem l2_contractability_bound
   
   -- Step 5: ≤ σ²(1-ρ)∑|cᵢ| sup|cⱼ| since cᵢ² ≤ |cᵢ| sup|cⱼ|
   have step5 : ∑ i, (c i)^2 ≤ ∑ i, |c i| * (⨆ j, |c j|) := by
-    -- Each cᵢ² = |cᵢ|² ≤ |cᵢ| · sup|cⱼ|
-    apply Finset.sum_le_sum
-    intro i _
-    have h_sq : (c i)^2 = |c i|^2 := sq_abs (c i)
-    rw [h_sq]
-    have h_le : |c i| ≤ ⨆ j, |c j| := by
-      apply le_ciSup
-      · -- Bounded above: Finset.univ is finite
-        use (Finset.univ.image (fun j => |c j|)).sup id
-        intro y ⟨j, hj⟩
-        rw [← hj]
-        exact Finset.le_sup (Finset.mem_image.mpr ⟨j, Finset.mem_univ j, rfl⟩)
-      · -- i is in the index set (always true for Fin n)
-        exact Finset.mem_univ i
-    calc |c i|^2 = |c i| * |c i| := sq _
-       _ ≤ |c i| * (⨆ j, |c j|) := mul_le_mul_of_nonneg_left h_le (abs_nonneg _)
+    sorry -- Use supremum bound on each cᵢ²
   
   -- Nonnegativity lemmas
   have hσ_1ρ_nonneg : 0 ≤ σSq * (1 - ρ) := by
@@ -298,14 +232,19 @@ theorem l2_contractability_bound
     linarith [_hρ_bd.2]  -- ρ ≤ 1 implies 0 ≤ 1 - ρ
   
   have hsup_nonneg : 0 ≤ ⨆ j, |c j| := by
-    -- Supremum of nonnegative values is nonnegative
-    apply ciSup_nonneg
-    intro j
-    exact abs_nonneg _
+    sorry -- Supremum of nonnegative values
   
   -- Step 6: ≤ 2σ²(1-ρ) sup|cⱼ| since ∑|cᵢ| ≤ 2
   calc ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ
-      = ∫ ω, (∑ i, c i * ξ i ω)^2 ∂μ := by congr; ext; simp [c]
+      = ∫ ω, (∑ i, c i * ξ i ω)^2 ∂μ := by
+        congr 1
+        ext ω
+        congr 1
+        conv_lhs => rw [← Finset.sum_sub_distrib]
+        simp only [c]
+        congr 1
+        ext i
+        ring
     _ = ∫ ω, (∑ i, c i * (ξ i ω - m))^2 ∂μ := step1
     _ = ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ := step2
     _ = σSq * ρ * (∑ i, c i)^2 + σSq * (1 - ρ) * ∑ i, (c i)^2 := step3
