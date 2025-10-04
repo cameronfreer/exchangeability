@@ -37,6 +37,34 @@ the fundamental connection between:
 * Olav Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*,
   Springer, Chapter 1 (pages 26-27). The shift-invariant σ-algebra is denoted
   𝓘_ξ in Kallenberg.
+* FMP 10.4: Invariant sets and functions (Chapter 10, pages 180-181).
+  Key results used in the first proof.
+
+## FMP 10.4: Invariant Sets and Functions
+
+For a measure-preserving transformation T on (S, 𝒮, μ):
+
+**Definitions**:
+- A set I ∈ 𝒮 is **invariant** if I = T⁻¹I
+- A set I is **almost invariant** if μ(I Δ T⁻¹I) = 0
+- 𝓘 = invariant σ-field (invariant sets in 𝒮)
+- 𝓘' = almost invariant σ-field (almost invariant sets in 𝒮^μ)
+- A function f is **invariant** if f = f ∘ T
+- A function f is **almost invariant** if f = f ∘ T a.s. μ
+
+**Lemma 1 (invariant sets and functions)**:
+A measurable function f: S → S' (Borel space) is invariant/almost invariant
+iff it is 𝓘-measurable/𝓘^μ-measurable, respectively.
+
+**Lemma 2 (almost invariance)**:
+For any distribution μ and μ-preserving transformation T,
+the invariant and almost invariant σ-fields satisfy: 𝓘' = 𝓘^μ
+(almost invariant = completion of invariant).
+
+**Lemma 3 (ergodicity)**:
+Let ξ be a random element in S with distribution μ, and T a μ-preserving map on S.
+Then ξ is T-ergodic iff the sequence (T^n ξ) is θ-ergodic, in which case
+even η = (f ∘ T^n ξ) is θ-ergodic for every measurable f: S → S'.
 
 -/
 
