@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: exchangeability contributors
 -/
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
+import Mathlib.MeasureTheory.PiSystem
 import Mathlib.Probability.Kernel.Basic
 import Exchangeability.Exchangeability
 import Exchangeability.Contractability
@@ -78,12 +79,59 @@ theorem conditional_iid_from_directing_measure
     sorry := by  -- ConditionallyIID μ X (kernel from ν)
   sorry
 
-/-- The monotone class extension argument: if a property holds for bounded
-measurable functions, it extends to product σ-algebras.
+/-- **FMP 1.1: Monotone Class Theorem (Sierpiński)** = Dynkin's π-λ theorem.
 
-This is referenced as "FMP 1.1" in Kallenberg.
+Let 𝒞 be a π-system and 𝒟 a λ-system in some space Ω such that 𝒞 ⊆ 𝒟.
+Then σ(𝒞) ⊆ 𝒟.
 
-TODO: Either find this in mathlib or prove it.
+**Proof outline** (Kallenberg):
+1. Assume 𝒟 = λ(𝒞) (smallest λ-system containing 𝒞)
+2. Show 𝒟 is a π-system (then it's a σ-field)
+3. Two-step extension:
+   - Fix B ∈ 𝒞, define 𝒜_B = {A : A ∩ B ∈ 𝒟}, show 𝒜_B is λ-system ⊇ 𝒞
+   - Fix A ∈ 𝒟, define ℬ_A = {B : A ∩ B ∈ 𝒟}, show ℬ_A is λ-system ⊇ 𝒞
+
+**Mathlib version**: `MeasurableSpace.induction_on_inter`
+
+Mathlib's version is stated as an induction principle: if a predicate C holds on:
+- The empty set
+- All sets in the π-system 𝒞
+- Is closed under complements
+- Is closed under countable disjoint unions
+
+Then C holds on all measurable sets in σ(𝒞).
+
+**Definitions in mathlib**:
+- `IsPiSystem`: A collection closed under binary non-empty intersections
+  (Mathlib/MeasureTheory/PiSystem.lean)
+- `DynkinSystem`: A structure containing ∅, closed under complements and
+  countable disjoint unions (Mathlib/MeasureTheory/PiSystem.lean)
+- `induction_on_inter`: The π-λ theorem as an induction principle
+  (Mathlib/MeasureTheory/PiSystem.lean)
+
+TODO: Adapt mathlib's `induction_on_inter` to our setting.
+-/
+theorem monotone_class_theorem
+    {m : MeasurableSpace Ω} {C : ∀ s : Set Ω, MeasurableSet s → Prop}
+    {s : Set (Set Ω)} (h_eq : m = MeasurableSpace.generateFrom s)
+    (h_inter : IsPiSystem s)
+    (empty : C ∅ .empty)
+    (basic : ∀ t (ht : t ∈ s), C t <| h_eq ▸ .basic t ht)
+    (compl : ∀ t (htm : MeasurableSet t), C t htm → C tᶜ htm.compl)
+    (iUnion : ∀ f : ℕ → Set Ω, Pairwise (Disjoint on f) → (∀ i, MeasurableSet (f i)) →
+      (∀ i, C (f i) ‹_›) → C (⋃ i, f i) (MeasurableSet.iUnion ‹_›))
+    {t : Set Ω} (htm : MeasurableSet t) :
+    C t htm := by
+  -- This is exactly mathlib's induction_on_inter
+  exact MeasurableSpace.induction_on_inter h_eq h_inter empty basic compl iUnion htm
+
+/-- The monotone class extension argument for conditional independence:
+if a property holds for products of bounded measurable functions,
+it extends to product σ-algebras.
+
+This is the application of FMP 1.1 mentioned in Kallenberg's proofs.
+
+TODO: Apply monotone_class_theorem to the conditional independence setting.
 -/
 theorem monotone_class_product_extension
     {μ : Measure Ω} [IsProbabilityMeasure μ]
