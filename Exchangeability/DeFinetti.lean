@@ -12,6 +12,7 @@ import Exchangeability.Contractability
 import Exchangeability.ConditionallyIID
 import Exchangeability.DeFinetti.KoopmanApproach
 import Exchangeability.DeFinetti.L2Approach
+import Exchangeability.DeFinetti.L2Proof
 import Exchangeability.DeFinetti.MartingaleApproach
 
 /-!
