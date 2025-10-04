@@ -39,12 +39,22 @@ de Finetti proofs.
 
 ## Implementation Status
 
-This file currently provides:
-- Type signatures and statements for required API
-- Documentation of proof strategies
-- TODOs for full implementations
+This file integrates mathlib's probability theory infrastructure and provides a specialized API:
 
-The goal is to incrementally build out this API as needed by the de Finetti proofs.
+**Implemented using mathlib:**
+- `condProb`: Defined using mathlib's `condExp` notation `μ[f|m]`
+- `CondIndep`: Available as `ProbabilityTheory.CondIndep` from mathlib
+- Documented mathlib's martingale theory (`Martingale`, `Supermartingale`, etc.)
+- Documented key conditional expectation lemmas (`setIntegral_condExp`, `condExp_indicator`, etc.)
+
+**Remaining as axioms with proof strategies:**
+- `condProb_ae_nonneg_le_one`: Bounds on conditional probability
+- `condProb_integral_eq`: Averaging property (proof strategy documented)
+- `condIndep_iff_condexp_eq`: Doob's characterization
+- `reverse_martingale_convergence`: Requires martingale convergence theory
+- `condexp_same_dist`: Distributional invariance under change of conditioning
+
+The goal is to incrementally replace axioms with proofs as needed by the de Finetti development.
 
 ## References
 
@@ -78,10 +88,18 @@ axiom condProb_ae_nonneg_le_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [I
     ∀ᵐ ω ∂μ, 0 ≤ condProb μ m A ω ∧ condProb μ m A ω ≤ 1
 
 /-- Conditional probability satisfies the averaging property.
-TODO: Prove this from the defining property of conditional expectation. -/
+This follows from mathlib's `setIntegral_condExp`.
+TODO: Complete the proof using mathlib lemmas for indicator integrals.
+-/
 axiom condProb_integral_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (m : MeasurableSpace Ω) (A B : Set Ω) (hB : MeasurableSet[m] B) :
+    (hm : m ≤ m₀) [SigmaFinite (μ.trim hm)]
+    {A B : Set Ω} (hA : MeasurableSet A) (hB : MeasurableSet[m] B) :
     ∫ ω in B, condProb μ m A ω ∂μ = (μ (A ∩ B)).toReal
+-- Proof strategy:
+-- 1. Unfold condProb to get conditional expectation of indicator
+-- 2. Use setIntegral_condExp to move conditional expectation out
+-- 3. Use integral_indicator to evaluate the indicator integral
+-- 4. Simplify using Measure.restrict_apply
 
 /-! ### Conditional Independence (Doob's Characterization)
 
@@ -188,16 +206,33 @@ axiom condIndep_of_condProb_eq : True
 
 end Exchangeability.Probability
 
-/-! ### Re-exports and Aliases from Mathlib -/
+/-! ### Re-exports and Aliases from Mathlib
 
--- Mathlib's conditional expectation is available via the notation μ[f|m]
--- which expands to `MeasureTheory.condExp m μ f`
--- 
--- Key lemmas available in mathlib:
--- - `condexp_const`: E[c | m] = c for constants
--- - `condexp_ae_eq_condexpL2`: connection to L² conditional expectation
--- - Properties of conditional expectation are in 
---   `Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic`
+## Conditional Expectation
+
+Mathlib's conditional expectation is available via the notation `μ[f|m]`
+which expands to `MeasureTheory.condExp m μ f`.
+
+Key lemmas available in mathlib (`Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic`):
+- `condExp_const`: E[c | m] = c for constants
+- `setIntegral_condExp`: ∫ x in s, μ[f|m] x ∂μ = ∫ x in s, f x ∂μ for m-measurable s
+- `integral_condExp`: ∫ x, μ[f|m] x ∂μ = ∫ x, f x ∂μ
+- `condExp_indicator`: μ[s.indicator f|m] =ᵐ[μ] s.indicator (μ[f|m]) for m-measurable s
+- `condExp_add`, `condExp_smul`: linearity properties
+
+## Martingales
+
+Mathlib provides martingale theory in `Mathlib.Probability.Martingale.Basic`:
+- `Martingale f ℱ μ`: f is adapted to ℱ and E[f_j | ℱ_i] = f_i for i ≤ j
+- `Supermartingale`, `Submartingale`: ordered variants
+- `martingale_condExp`: the sequence (E[f | ℱ_i]) is a martingale
+- `Martingale.setIntegral_eq`: integrals over ℱ_i-measurable sets are preserved
+
+Optional sampling and convergence theorems are in:
+- `Mathlib.Probability.Martingale.OptionalSampling`
+- `Mathlib.Probability.Martingale.Convergence` (if available)
+
+-/
 
 namespace MeasureTheory
 
