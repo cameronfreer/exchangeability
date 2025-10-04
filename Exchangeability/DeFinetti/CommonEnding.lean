@@ -27,9 +27,22 @@ Given:
 Show:
 - ξ is conditionally i.i.d. given the tail σ-algebra
 
+## Integration with Mathlib
+
+This file uses several key mathlib components:
+- `Measure.pi`: Finite product measures from `Mathlib.MeasureTheory.Constructions.Pi`
+- `Kernel`: Probability kernels from `Mathlib.Probability.Kernel.Basic`
+- `MeasureSpace.induction_on_inter`: π-λ theorem from `Mathlib.MeasureTheory.PiSystem`
+- `Ergodic`, `MeasurePreserving`: From `Mathlib.Dynamics.Ergodic.Ergodic`
+- `condExp`: Conditional expectation from `Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic`
+
+See also `Exchangeability.ConditionallyIID` for the definition of conditionally i.i.d. sequences
+using mathlib's measure theory infrastructure.
+
 ## References
 
 * Kallenberg (2005), page 26-27: "The proof can now be completed as before"
+* Kallenberg (2005), Chapter 10: Stationary Processes and Ergodic Theory (FMP 10.2-10.4)
 
 -/
 
@@ -397,36 +410,46 @@ This file establishes the infrastructure for the common ending of Kallenberg's t
 of de Finetti's theorem. The key components now in place:
 
 ### Completed:
-1. **Tail σ-algebra infrastructure** (FMP 10.2-10.4):
-   - `shift`: the shift operator on sequences
-   - `IsShiftInvariant`: shift-invariant sets
+1. **Mathlib Integration**:
+   - Using `Measure.pi` from `Mathlib.MeasureTheory.Constructions.Pi` (no axioms!)
+   - Using `Kernel` and `IsMarkovKernel` from `Mathlib.Probability.Kernel.Basic`
+   - Using `condExp` notation μ[f|m] from mathlib's conditional expectation
+   - Proved `pi_isProbabilityMeasure` instance for product of probability measures
+
+2. **Tail σ-algebra infrastructure** (FMP 10.2-10.4):
+   - `shift`: the shift operator on sequences with basic lemmas
+   - `IsShiftInvariant`: shift-invariant sets with characterization
    - `invariantSigmaField`: σ-field of shift-invariant sets
    - `IsAlmostShiftInvariant`: almost shift-invariant sets
    - `tailSigmaAlgebra`: tail σ-algebra (currently using invariant σ-field as proxy)
-   - `IsTailMeasurable`: tail-measurable functions
+   - `IsTailMeasurable`, `IsAlmostTailMeasurable`: tail-measurable functions
 
-2. **Ergodic theory connections**:
+3. **Ergodic theory connections**:
    - `exchangeable_implies_shift_invariant`: links exchangeability to measure-preserving shifts
    - `isTailMeasurable_iff_shift_invariant`: FMP 10.3 characterization
 
-3. **Monotone class theorem**:
+4. **Monotone class theorem**:
    - `monotone_class_theorem`: fully implemented using mathlib's `induction_on_inter`
-   - Helper lemmas for bounded functions and indicators
+   - Helper lemmas: `indicator_bounded`, `product_bounded`
+   - `condExp_indicator_eq_measure`: bridge from conditional expectations to measures
 
-4. **Kernel infrastructure**:
+5. **Kernel infrastructure**:
    - Integration with mathlib's `Kernel` type and `IsMarkovKernel`
    - Explicit kernel construction in `complete_from_directing_measure`
+   - Framework for ConditionallyIID using mathlib's infrastructure
 
 ### Remaining work:
-1. **Conditional expectation**: Formalize E[f(X_i) | tail] = ∫ f dν
-2. **Product measure properties**: Complete `product_bounded` and related lemmas
+1. **Conditional expectation formalization**: Complete E[f(X_i) | tail] = ∫ f dν properties
+2. **Product measure properties**: Finish `product_bounded` proof
 3. **Finite-dimensional distributions**: Show they match for conditionally i.i.d.
 4. **Tail σ-algebra completion**: Define as ⋂ n, σ(X_{n+1}, X_{n+2}, ...)
-5. **Bridge lemma**: Prove `condExp_indicator_eq_measure` from conditional expectation
+5. **Bridge lemmas**: Prove connections between conditional expectation and product measures
 6. **Main sorry in `conditional_iid_from_directing_measure`**: Connect all pieces
 
 The structure is now in place to complete both the Koopman and L² proofs by
 constructing their respective directing measures ν and invoking these common lemmas.
+All major dependencies on axioms for basic measure theory have been eliminated by
+using mathlib's infrastructure.
 -/
 
 end Exchangeability.DeFinetti.CommonEnding
