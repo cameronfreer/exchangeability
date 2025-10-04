@@ -6,6 +6,7 @@ Authors: Cameron Freer
 import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
 import Mathlib.MeasureTheory.Measure.Typeclasses.Probability
 import Mathlib.MeasureTheory.Measure.GiryMonad
+import Mathlib.MeasureTheory.Constructions.Pi
 import Exchangeability.Contractability
 
 /-!
@@ -34,22 +35,22 @@ open MeasureTheory ProbabilityTheory
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
--- Axioms for missing mathlib infrastructure
+-- Re-export Measure.pi from mathlib for discoverability
 namespace MeasureTheory.Measure
 
-/-- Finite product measure construction. Given a family of measures indexed by a finite type,
-construct the product measure on the product space.
-This is `Measure.pi` in mathlib's MeasureTheory.Constructions.Pi but may not be available yet.
-
-Note: `Measure.bind` already exists in mathlib (imported from GiryMonad), so we only need
-to axiomatize the finite product measure construction. -/
-axiom pi {ι : Type*} [Fintype ι] {α : ι → Type*} [∀ i, MeasurableSpace (α i)]
-    (μ : ∀ i, Measure (α i)) : Measure (∀ i, α i)
+-- Measure.pi is already defined in Mathlib.MeasureTheory.Constructions.Pi
+-- We just need to prove that the product of probability measures is a probability measure
 
 /-- The product of probability measures is a probability measure. -/
-axiom pi_isProbabilityMeasure {ι : Type*} [Fintype ι] {α : ι → Type*}
-    [∀ i, MeasurableSpace (α i)] (μ : ∀ i, Measure (α i)) [∀ i, IsProbabilityMeasure (μ i)] :
-    IsProbabilityMeasure (Measure.pi μ)
+instance pi_isProbabilityMeasure {ι : Type*} [Fintype ι] {α : ι → Type*}
+    [∀ i, MeasurableSpace (α i)] (μ : ∀ i, Measure (α i)) 
+    [∀ i, IsProbabilityMeasure (μ i)] [∀ i, SigmaFinite (μ i)] :
+    IsProbabilityMeasure (Measure.pi μ) := by
+  constructor
+  have h : (Set.univ : Set (∀ i, α i)) = Set.univ.pi (fun (_ : ι) => Set.univ) := by
+    ext x; simp
+  rw [h, Measure.pi_pi]
+  simp [measure_univ]
 
 /-- Product measures of identical marginals are permutation-invariant.
 If all marginals are the same measure ν, then permuting coordinates doesn't change the product. -/
@@ -76,8 +77,9 @@ that, for every finite selection of indices, the joint law of the corresponding 
 This formulation expresses that, conditionally on the value of the kernel, the coordinates of
 `X` are independent and share the common conditional law `ν ω`.
 
-The definition uses `Measure.pi` (finite product) and `Measure.bind` (kernel bind) which are
-assumed as axioms until available in mathlib.
+The definition uses:
+- `Measure.pi`: finite product measure from `Mathlib.MeasureTheory.Constructions.Pi`
+- `Measure.bind`: kernel bind (Giry monad) from `Mathlib.MeasureTheory.Measure.GiryMonad`
 
 Note: We require this for ALL finite selections, not just strictly monotone ones, which is
 necessary to prove exchangeability. -/

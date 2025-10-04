@@ -64,20 +64,23 @@ variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 /-- Conditional probability of an event `A` given a σ-algebra `m`.
 This is the conditional expectation of the indicator function of `A`.
 
-TODO: This should be defined using `condexpL2` or the general `condexp` from mathlib
-once we understand the correct API. -/
-axiom condProb (μ : Measure Ω) [IsProbabilityMeasure μ] (m : MeasurableSpace Ω)
-    (A : Set Ω) : Ω → ℝ
+We define it using mathlib's `condexp` applied to the indicator function.
+-/
+noncomputable def condProb {m₀ : MeasurableSpace Ω} (μ : Measure Ω) [IsProbabilityMeasure μ] 
+    (m : MeasurableSpace Ω) (A : Set Ω) : Ω → ℝ :=
+  μ[A.indicator (fun _ => (1 : ℝ)) | m]
 
-/-- Conditional probability takes values in [0, 1] almost everywhere. -/
-axiom condProb_ae_nonneg_le_one {μ : Measure Ω} [IsProbabilityMeasure μ] 
+/-- Conditional probability takes values in [0, 1] almost everywhere.
+TODO: Prove this from properties of conditional expectation and indicators. -/
+axiom condProb_ae_nonneg_le_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ] 
     (m : MeasurableSpace Ω) (A : Set Ω) :
-    True
+    ∀ᵐ ω ∂μ, 0 ≤ condProb μ m A ω ∧ condProb μ m A ω ≤ 1
 
-/-- Conditional probability satisfies the averaging property. -/
-axiom condProb_integral_eq {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (m : MeasurableSpace Ω) (A B : Set Ω) :
-    True
+/-- Conditional probability satisfies the averaging property.
+TODO: Prove this from the defining property of conditional expectation. -/
+axiom condProb_integral_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (m : MeasurableSpace Ω) (A B : Set Ω) (hB : MeasurableSet[m] B) :
+    ∫ ω in B, condProb μ m A ω ∂μ = (μ (A ∩ B)).toReal
 
 /-! ### Conditional Independence (Doob's Characterization) -/
 
@@ -171,14 +174,20 @@ axiom condIndep_of_condProb_eq : True
 
 end Exchangeability.Probability
 
-/-! ### Re-exports from Mathlib -/
+/-! ### Re-exports and Aliases from Mathlib -/
+
+-- Mathlib's conditional expectation is available via the notation μ[f|m]
+-- which expands to `MeasureTheory.condExp m μ f`
+-- 
+-- Key lemmas available in mathlib:
+-- - `condexp_const`: E[c | m] = c for constants
+-- - `condexp_ae_eq_condexpL2`: connection to L² conditional expectation
+-- - Properties of conditional expectation are in 
+--   `Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic`
+
 namespace MeasureTheory
 
--- These are already in mathlib, we just make them more discoverable
--- export condexp
--- export condexp_ae_eq_restrict
--- export condexp_const
--- export condexp_indicator
--- Additional re-exports as needed...
+-- The main conditional expectation function is already exported from mathlib
+-- as `condExp` with notation `μ[f|m]`
 
 end MeasureTheory
