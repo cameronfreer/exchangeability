@@ -138,36 +138,39 @@ def empiricalMeasure [Inhabited α] (X : ℕ → Ω → α) (n : ℕ) (ω : Ω) 
 ### Kallenberg Theorem 1.1 Structure
 
 The theorem establishes a three-way equivalence (for Borel spaces):
-- (i) ξ is contractable
-- (ii) ξ is exchangeable  
-- (iii) ξ is conditionally i.i.d.
+- **(i)** ξ is **contractable**
+- **(ii)** ξ is **exchangeable**  
+- **(iii)** ξ is **conditionally i.i.d.**
 
-**Easy direction** (iii) → (ii): Already proved as `exchangeable_of_conditionallyIID` in
-`Exchangeability.ConditionallyIID`.
+**Key insight from Kallenberg**: All three proofs start with contractability (i) and 
+directly establish conditionally i.i.d. (iii), with exchangeability (ii) coming along
+automatically.
 
-**Non-trivial directions**:
-- (i) → (ii): Requires ergodic theory (contractability → exchangeability)
-- (ii) → (iii): The de Finetti theorem proper, proved via three approaches
-  * Koopman approach (Mean Ergodic Theorem)
-  * L² approach (elementary bounds)
-  * Martingale approach (Aldous)
-  
-All three approaches share a common ending in `Exchangeability.DeFinetti.CommonEnding`.
+**Proof cycle**:
+- **(i) → (iii)**: The three approaches (Koopman, L², Martingale) all prove this directly
+  - First proof (page 26): "If ξ is contractable..." uses mean ergodic theorem
+  - Second proof (page 27): "If ξ is contractable..." uses L² bounds
+  - Third proof (page 27): "If ξ is contractable, then..." uses martingale convergence
+  - All three share the common ending in `Exchangeability.DeFinetti.CommonEnding`
+- **(iii) → (ii)**: `exchangeable_of_conditionallyIID` ✓ **PROVED** in `ConditionallyIID.lean`
+- **(ii) → (i)**: `contractable_of_exchangeable` ✓ **PROVED** in `Contractability.lean`
 -/
 
-/-- Contractability implies exchangeability.
-This is the non-trivial direction (i) → (ii) requiring ergodic theory.
-TODO: Prove using the mean ergodic theorem (see Koopman or L² approach). -/
-axiom exchangeable_of_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
-    [IsProbabilityMeasure μ] (hX : Contractable μ X)
-    (hX_meas : ∀ i : ℕ, Measurable (X i)) : Exchangeable μ X
+/-- **Contractable implies conditionally i.i.d.** (for Borel spaces).
+This is the main result that all three proof approaches establish.
 
-/-- Exchangeable implies conditionally i.i.d. (for Borel spaces).
-This is the de Finetti theorem proper, direction (ii) → (iii).
-TODO: Prove using one of the three approaches (all use the common ending). -/
-axiom conditionallyIID_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
+The three approaches:
+1. **Koopman approach**: Mean Ergodic Theorem via L² convergence
+2. **L² approach**: Elementary contractability bounds (Lemma 1.2)  
+3. **Martingale approach**: Aldous' argument via reverse martingale convergence (Lemma 1.3)
+
+All three share the common ending in `CommonEnding.lean` that constructs the
+directing measure and applies the monotone class theorem.
+
+TODO: Prove using one of the three approaches. -/
+axiom conditionallyIID_of_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
     [IsProbabilityMeasure μ] [TopologicalSpace α] [BorelSpace α]
-    (hX : Exchangeable μ X) (hX_meas : ∀ i, Measurable (X i)) :
+    (hX : Contractable μ X) (hX_meas : ∀ i, Measurable (X i)) :
     ConditionallyIID μ X
 
 /-!
