@@ -4,38 +4,44 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: exchangeability contributors
 -/
 import Exchangeability.DeFinetti.L2Approach
+import Exchangeability.DeFinetti.CommonEnding
 import Exchangeability.Exchangeability
 import Exchangeability.Contractability
 import Mathlib.MeasureTheory.Function.L2Space
+import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.Probability.Kernel.Basic
 
 /-!
-# De Finetti's Theorem via L² Contractability
+# De Finetti's Theorem via L² Contractability (Kallenberg's Second Proof)
 
-This file proves de Finetti's theorem using the elementary L² contractability bound
-(Kallenberg's "Second proof", Lemma 1.2).
+This file implements Kallenberg's "Second proof" of de Finetti's Theorem 1.1,
+which uses the elementary L² contractability bound (Lemma 1.2) combined with
+reverse martingale convergence.
 
-## Main approach
+## Kallenberg's Second Proof Structure
 
-The L² bound shows that for exchangeable sequences with bounded variance and
-correlation ρ, the empirical distributions contract at rate 2σ²(1-ρ). By showing
-that exchangeable sequences satisfy the covariance structure, we can deduce:
+Starting from a **contractable** sequence ξ:
 
-1. Empirical measures converge (in L²) as n → ∞
-2. The limit is tail-measurable (invariant under finite permutations)
-3. The sequence is conditionally i.i.d. with this limiting distribution
+1. Fix a bounded measurable function f ∈ L¹
+2. Use Lemma 1.2 (L² bound) and completeness of L¹ to show:
+   ‖E_m ∑_{k=n+1}^{n+m} (f(ξ_{n+k}) - α_{k-1})‖₁² → 0
+3. Extract limit α_∞ = lim_n α_n in L¹
+4. Show α_n is a reverse martingale (subsequence convergence a.s.)
+5. Use contractability + dominated convergence:
+   E[f(ξ_i); ∩I_k] = E[α_{k-1}; ∩I_k] → E[α_∞; ∩I_k]
+6. Conclude α_n = E_n f(ξ_{n+1}) = ν^f a.s.
+7. Complete using the common ending (monotone class argument)
 
 ## Main results
 
-* `exchangeable_covariance_structure`: Exchangeable L² sequences have the required
-  covariance structure for the L² bound
-* `empirical_measure_converges`: The L² bound implies convergence of empirical measures
-* `deFinetti_via_L2`: De Finetti's theorem via the L² approach
+* `contractable_covariance_structure`: Contractable sequences have uniform covariance
+* `weighted_sums_converge_L1`: L² bound implies L¹ convergence of weighted sums
+* `reverse_martingale_limit`: Extract tail-measurable limit via reverse martingale
+* `deFinetti_second_proof`: De Finetti via contractability + L² bound
 
 ## References
 
-* Olav Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*,
-  Springer, Chapter 1 (Theorem 1.1, page 26-27, "Second proof").
+* Kallenberg (2005), page 26-27: "Second proof of Theorem 1.1"
 
 -/
 
@@ -49,17 +55,18 @@ open Exchangeability
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
 /-!
-## Step 1: Exchangeable sequences have uniform covariance structure
+## Step 1: Contractable sequences have uniform covariance structure
 -/
 
-/-- For an exchangeable sequence of real-valued random variables in L², all pairs
-have the same covariance. This is a consequence of the exchangeability property.
+/-- For a contractable sequence of real-valued random variables in L², all pairs
+have the same covariance. This follows from contractability implying that all
+increasing subsequences of length 2 have the same joint distribution.
 
-TODO: Complete proof using exchangeability and the definition of covariance.
+TODO: Complete proof using contractability and the definition of covariance.
 -/
-lemma exchangeable_covariance_structure
+lemma contractable_covariance_structure
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_exch : Exchangeable μ X)
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
     (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
     ∃ (m σSq ρ : ℝ),
@@ -67,48 +74,49 @@ lemma exchangeable_covariance_structure
       (∀ k, ∫ ω, (X k ω - m)^2 ∂μ = σSq) ∧
       (∀ i j, i ≠ j → ∫ ω, (X i ω - m) * (X j ω - m) ∂μ = σSq * ρ) ∧
       0 ≤ σSq ∧ -1 ≤ ρ ∧ ρ ≤ 1 := by
-  -- All X_i have the same distribution by exchangeability at dimension 1
-  -- So they have the same mean m and variance σ²
+  -- All X_i have the same marginal distribution by contractability
+  -- All pairs (X_i, X_j) with i < j have the same joint distribution
+  -- Therefore common mean m, variance σ², and covariance σ²ρ
   sorry
 
 /-!
-## Step 2: L² bound implies convergence of empirical distributions
+## Step 2: L² bound implies L¹ convergence of weighted sums (Kallenberg's key step)
 -/
 
-/-- The empirical distribution of the first n observations, viewed as a probability
-measure on α. For a finite sequence x₀,...,x_{n-1}, this is the uniform measure
-on this multiset.
+/-- For a contractable sequence and bounded measurable f, the weighted sums
+(1/m) ∑_{k=n+1}^{n+m} f(ξ_{n+k}) converge in L¹ as m, n → ∞.
 
-TODO: Implement using the atomic measure construction.
+This is Kallenberg's key application of the L² bound (Lemma 1.2).
+
+**Kallenberg's statement**: "Using Lemma 1.2 and the completeness of L¹ (FMP 1.31),
+there exists a random variable α_∞ such that
+  ‖E_m ∑_{k=n+1}^{n+m} (f(ξ_{n+k}) - α_{k-1})‖₁² → 0, m, n → ∞."
+
+TODO: Complete proof using:
+1. Apply `l2_contractability_bound` to weighted averages
+2. Show Cauchy property in L¹
+3. Extract limit by completeness of L¹
 -/
-def empiricalDistribution (n : ℕ) (x : Fin n → α) : Measure α :=
-  sorry
-
-/-- The L² contractability bound implies that empirical measures of an exchangeable
-sequence converge in L². This is the key step showing that the directing measure exists.
-
-The proof strategy:
-1. Apply `l2_contractability_bound` to show ‖μₙ - μₘ‖₂² ≤ 2σ²(1-ρ)/n
-2. This shows {μₙ} is Cauchy in L²
-3. By completeness, it converges to some limit μ_∞
-
-TODO: Complete using the L2 bound and Cauchy sequence convergence.
--/
-theorem empirical_measure_converges
+theorem weighted_sums_converge_L1
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_exch : Exchangeable μ X)
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-    ∃ (ν : Ω → Measure ℝ),
-      -- The limit exists (in some appropriate sense, e.g., weak convergence)
-      ∀ ω, IsProbabilityMeasure (ν ω) ∧
-      -- The limit is tail-measurable (up to null sets)
-      sorry ∧  -- AE measurable w.r.t. tail σ-algebra
-      -- Convergence: empirical measures converge to ν
-      sorry := by  -- ∀ ε > 0, ∃ N, ∀ n ≥ N, ‖μₙ - ν‖ < ε a.e.
-  -- Obtain the covariance structure
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (f : ℝ → ℝ) (hf_meas : Measurable f)
+    (hf_bdd : ∃ M, ∀ x, |f x| ≤ M) :
+    ∃ (α : ℕ → Ω → ℝ),
+      -- The sequence α_n exists
+      (∀ n, Measurable (α n)) ∧
+      (∀ n, MemLp (α n) 1 μ) ∧
+      -- α_n converges in L¹ to some limit α_∞
+      (∃ (α_∞ : Ω → ℝ), Measurable α_∞ ∧ MemLp α_∞ 1 μ ∧
+        ∀ ε > 0, ∃ N, ∀ n ≥ N, ∫ ω, |α n ω - α_∞ ω| ∂μ < ε) ∧
+      -- The weighted sums converge to α_n in L¹
+      (∀ n, ∀ ε > 0, ∃ M, ∀ m ≥ M,
+        ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω) - α n ω| ∂μ < ε) := by
+  -- Obtain covariance structure
   obtain ⟨m, σSq, ρ, hmean, hvar, hcov, hσ_pos, hρ_lower, hρ_upper⟩ :=
-    exchangeable_covariance_structure X hX_exch hX_meas hX_L2
+    contractable_covariance_structure X hX_contract hX_meas hX_L2
   
   -- For each n, consider the empirical distribution on the first n coordinates
   -- Apply l2_contractability_bound to pairs (m, n) to show Cauchy property
@@ -120,129 +128,152 @@ theorem empirical_measure_converges
   sorry
 
 /-!
-## Step 3: The limiting distribution gives conditional i.i.d.
+## Step 3: Reverse martingale convergence
 -/
 
-/-- The limiting distribution from the L² approach is a Markov kernel that
-makes the sequence conditionally i.i.d.
+/-- The sequence α_n from step 2 is a reverse martingale, and α_n → α_∞ a.s.
+on a subsequence (by FMP 4.2, extracting convergent subsequence from L¹ convergence).
 
-This requires showing:
-1. The kernel is tail-measurable
-2. Conditional on the tail σ-algebra, the sequence becomes i.i.d.
+**Kallenberg**: "α_n → α_∞ a.s. on a subsequence (FMP 4.2)"
 
-TODO: Complete using martingale convergence and the ergodic decomposition.
+TODO: Use L¹ convergence to extract a.s. convergent subsequence.
 -/
-theorem limit_is_conditional_kernel
+theorem reverse_martingale_subsequence_convergence
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_exch : Exchangeable μ X)
+    (α : ℕ → Ω → ℝ) (α_∞ : Ω → ℝ)
+    (h_L1_conv : ∀ ε > 0, ∃ N, ∀ n ≥ N, ∫ ω, |α n ω - α_∞ ω| ∂μ < ε) :
+    ∃ (φ : ℕ → ℕ), StrictMono φ ∧
+      ∀ᵐ ω ∂μ, Tendsto (fun k => α (φ k) ω) atTop (𝓝 (α_∞ ω)) := by
+  -- FMP 4.2: L¹ convergence implies existence of a.s. convergent subsequence
+  sorry
+
+/-- The α_n sequence is indeed a reverse martingale with respect to the
+filtration (σ(X_{k+1}, X_{k+2}, ...))_{k∈ℕ}.
+
+**Kallenberg**: "In particular, α_n is a reverse martingale (FMP 5.5)"
+
+TODO: Verify this is a reverse martingale property.
+-/
+theorem alpha_is_reverse_martingale
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
-    (ν : Ω → Measure ℝ) (hν : ∀ ω, IsProbabilityMeasure (ν ω)) :
-    ∃ (K : Kernel Ω ℝ),
-      IsMarkovKernel K ∧
-      -- K is tail-measurable
+    (α : ℕ → Ω → ℝ)
+    (f : ℝ → ℝ) (hf_meas : Measurable f) :
+    -- α_n is ℱ_n-measurable where ℱ_n = σ(X_{n+1}, X_{n+2}, ...)
+    sorry := by  -- E[α_n | ℱ_{n+1}] = α_{n+1}
+  sorry
+
+/-!
+## Step 4: Contractability + dominated convergence gives conditional expectation formula
+-/
+
+/-- Using contractability and dominated convergence, we get:
+E[f(X_i) ; ∩I_k] = E[α_{k-1} ; ∩I_k] → E[α_∞ ; ∩I_k]
+
+**Kallenberg**: "By the contractability of ξ and dominated convergence we get, a.s. along ℕ
+for any i ∈ I:
+  E[f(ξ_i); ∩I_k] = E[α_{k-1}; ∩I_k] → E[α_∞; ∩I_k]"
+
+TODO: Use contractability to relate different time points.
+-/
+theorem contractability_conditional_expectation
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (f : ℝ → ℝ) (hf_meas : Measurable f)
+    (α : ℕ → Ω → ℝ) (α_∞ : Ω → ℝ)
+    (I_k : Set Ω)  -- Event ∩I_k in tail σ-algebra
+    (h_conv : ∀ᵐ ω ∂μ, Tendsto (fun n => α n ω) atTop (𝓝 (α_∞ ω))) :
+    ∀ i, sorry := by  -- E[f(X_i) ; I_k] = E[α_∞ ; I_k]
+  sorry
+
+/-!
+## Step 5: α_n = E_n f(X_{n+1}) = ν^f
+-/
+
+/-- The limit α_n satisfies α_n = E_n f(X_{n+1}) where E_n is conditional
+expectation on σ(X_{n+1}, X_{n+2}, ...).
+
+Moreover, α_n = ν^f a.s. for some directing measure ν.
+
+**Kallenberg**: "which implies α_n = E_n f(ξ_{n+1}) = ν^f a.s."
+
+TODO: Show this characterizes α_n as the conditional expectation.
+-/
+theorem alpha_is_conditional_expectation
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (f : ℝ → ℝ) (hf_meas : Measurable f)
+    (α : ℕ → Ω → ℝ) :
+    ∃ (ν : Ω → Measure ℝ),
+      (∀ ω, IsProbabilityMeasure (ν ω)) ∧
+      -- ν is tail-measurable
       sorry ∧
-      -- The sequence is conditionally i.i.d. with law K
-      sorry := by
+      -- α_n = ∫ f dν a.s.
+      (∀ n, ∀ᵐ ω ∂μ, α n ω = ∫ x, f x ∂(ν ω)) := by
   sorry
 
 /-!
 ## Main theorem: de Finetti via L² approach
 -/
 
-/-- **De Finetti's theorem via L² contractability**: An infinite exchangeable sequence
-of real-valued random variables with bounded second moments is conditionally i.i.d.
-given the tail σ-algebra.
+/-- **Kallenberg's Second Proof of de Finetti's Theorem 1.1**:
+Starting from a **contractable** sequence ξ in ℝ with L² bounds,
+we prove it is conditionally i.i.d. given the tail σ-algebra.
 
-This version restricts to ℝ-valued sequences with L² bounds, which simplifies the proof
-compared to the general Borel space version. The key tool is Kallenberg's L² contractability
-bound (Lemma 1.2).
+**Kallenberg's proof structure** (page 26-27, "Second proof"):
+1. Fix bounded measurable f ∈ L¹
+2. Use Lemma 1.2 (L² bound) + completeness of L¹ to get α_n → α_∞
+3. Show α_n is reverse martingale with a.s. convergent subsequence
+4. Use contractability + dominated convergence to get conditional expectation formula
+5. Conclude α_n = E_n f(ξ_{n+1}) = ν^f a.s.
+6. "The proof can now be completed as before" (common ending)
 
-**Proof outline**:
-1. Show exchangeable L² sequences have uniform covariance structure (ρ-covariance)
-2. Apply the L² bound to show empirical distributions are Cauchy
-3. Extract the limiting distribution as a tail-measurable kernel
-4. Verify the conditional i.i.d. property
-
-**Reference**: Kallenberg (2005), Theorem 1.1 (page 26), "Second proof".
+**Reference**: Kallenberg (2005), Theorem 1.1 (page 26-27), "Second proof".
 -/
-theorem deFinetti_via_L2
+theorem deFinetti_second_proof
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
+    (hX_contract : Contractable μ X)  -- NOTE: Starts with CONTRACTABLE, not exchangeable!
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+    ∃ (K : Kernel Ω ℝ),
+      IsMarkovKernel K ∧
+      -- K is tail-measurable
+      sorry ∧
+      -- X is conditionally i.i.d. given tail σ-algebra with law K
+      sorry := by
+  -- For each bounded measurable f, apply the L² convergence argument
+  -- Step 1-5: Get directing measure ν with E[f(X_i) | tail] = ν^f
+  -- This constructs ν such that α_n = ∫ f dν
+  
+  -- Step 6: "The proof can now be completed as before"
+  -- Use CommonEnding.complete_from_directing_measure
+  sorry
+
+/-!
+## Connection to exchangeability (for completeness)
+-/
+
+/-- Since exchangeable implies contractable (proved in Contractability.lean),
+we can also state de Finetti starting from exchangeability.
+
+This combines `contractable_of_exchangeable` with `deFinetti_second_proof`.
+-/
+theorem deFinetti_from_exchangeable
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
     (hX_exch : Exchangeable μ X)
     (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
     ∃ (K : Kernel Ω ℝ),
       IsMarkovKernel K ∧
-      -- K is tail-measurable (up to null sets)
-      sorry ∧
-      -- X is conditionally i.i.d. given tail σ-algebra with law K
-      sorry := by
-  -- Step 1: Get the limiting distribution from L² convergence
-  obtain ⟨ν, hν_prob, _hν_tail, _hν_conv⟩ := empirical_measure_converges X hX_exch hX_meas hX_L2
-  
-  -- Step 2: Show this gives a conditional kernel
-  obtain ⟨K, hK_markov, hK_tail, hK_cond⟩ := limit_is_conditional_kernel X hX_exch hX_meas hX_L2 ν hν_prob
-  
-  -- Step 3: Package the result
-  exact ⟨K, hK_markov, hK_tail, hK_cond⟩
-
-/-!
-## Corollaries and simplified versions
--/
-
-/-- Simplified version: For bounded exchangeable sequences, the empirical averages
-converge to a limit that is tail-measurable.
-
-This is the main content that can be proved using only the L² bound, without
-requiring the full conditional i.i.d. structure.
--/
-theorem empirical_averages_converge
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
-    (hX_exch : Exchangeable μ X)
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-    ∃ (Y : Ω → ℝ),
-      Measurable Y ∧
-      MemLp Y 2 μ ∧
-      -- Y is tail-measurable
-      sorry ∧
-      -- The empirical averages (1/n)∑ᵢ₌₁ⁿ Xᵢ converge to Y in L²
-      ∀ ε > 0, ∃ N, ∀ n ≥ N,
-        ∫ ω, ((1/(n:ℝ)) * ∑ i : Fin n, X i ω - Y ω)^2 ∂μ < ε := by
-  sorry
-
-/-- The L² bound directly shows that exchangeable sequences are contractable
-in an L² sense, even without the full de Finetti decomposition.
--/
-theorem exchangeable_L2_contractable
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_exch : Exchangeable μ X)
-    (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
-    (n : ℕ) (p q : Fin n → ℝ)
-    (hp_prob : (∑ i, p i) = 1 ∧ ∀ i, 0 ≤ p i)
-    (hq_prob : (∑ i, q i) = 1 ∧ ∀ i, 0 ≤ q i) :
-    ∃ (σSq ρ : ℝ),
-      0 ≤ σSq ∧ -1 ≤ ρ ∧ ρ ≤ 1 ∧
-      ∫ ω, (∑ i, p i * X i ω - ∑ i, q i * X i ω)^2 ∂μ ≤
-        2 * σSq * (1 - ρ) * (⨆ i, |p i - q i|) := by
-  -- Get the covariance structure
-  obtain ⟨m, σSq, ρ, hmean, hvar, hcov, hσ_pos, hρ_lower, hρ_upper⟩ :=
-    exchangeable_covariance_structure X hX_exch hX_meas hX_L2
-  
-  -- Define the centered variables
-  let ξ : Fin n → Ω → ℝ := fun i => X i
-  
-  -- Package the variance/covariance hypotheses for l2_contractability_bound
-  have hL2_centered : ∀ k, MemLp (fun ω => ξ k ω - m) 2 μ := by
-    intro k
-    sorry  -- Follows from hX_L2
-  
-  -- Apply the L² bound
-  have h_bound := L2Approach.l2_contractability_bound
-    n ξ m σSq ρ hσ_pos ⟨hρ_lower, hρ_upper⟩ hmean hL2_centered hvar hcov p q hp_prob hq_prob
-  
-  exact ⟨σSq, ρ, hσ_pos, hρ_lower, hρ_upper, h_bound⟩
+      sorry ∧  -- K tail-measurable
+      sorry := by  -- X conditionally i.i.d. with law K
+  -- First show exchangeable → contractable
+  have hX_contract : Contractable μ X := contractable_of_exchangeable hX_exch hX_meas
+  -- Then apply the Second proof
+  exact deFinetti_second_proof X hX_meas hX_contract hX_L2
 
 end Exchangeability.DeFinetti.L2Proof
 
