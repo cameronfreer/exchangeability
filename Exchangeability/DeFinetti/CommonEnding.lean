@@ -358,10 +358,8 @@ theorem monotone_class_theorem
         C (⋃ i, f i) (MeasurableSet.iUnion hf))
     {t : Set Ω} (htm : MeasurableSet t) :
     C t htm := by
-  -- This is exactly mathlib's induction_on_inter
-  refine MeasurableSpace.induction_on_inter h_eq h_inter empty basic compl ?_ t htm
-  intro f hf_disj hfm hC
-  exact iUnion f (fun i j hij => hf_disj hij) hfm hC
+  -- Direct application of mathlib's π-λ theorem (induction_on_inter)
+  exact MeasurableSpace.induction_on_inter h_eq h_inter empty basic compl iUnion t htm
 
 /-- The monotone class extension argument for conditional independence:
 if a property holds for products of bounded measurable functions,
