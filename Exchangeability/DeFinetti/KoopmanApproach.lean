@@ -40,7 +40,7 @@ the Koopman operator and Mean Ergodic Theorem.
 
 * Olav Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*,
   Springer, Chapter 1, pages 26-27 (First proof of Theorem 1.1).
-
+-/
 
 noncomputable section
 
@@ -53,7 +53,7 @@ variable {α : Type*} [MeasurableSpace α]
 
 section CylinderFunctions
 
-{{ ... }}
+/-- Cylinder function: a function on path space depending only on finitely many coordinates.
 For simplicity, we take the first m coordinates. -/
 def cylinderFunction (m : ℕ) (φ : (Fin m → α) → ℝ) : Ω[α] → ℝ :=
   fun ω => φ (fun k => ω k.val)
@@ -84,7 +84,7 @@ lemma measurable_productCylinder (m : ℕ) (fs : Fin m → α → ℝ)
   classical
   unfold productCylinder
   -- Product of measurable functions is measurable
-  apply Finset.measurable_prod'
+  apply Finset.measurable_prod
   intro k _
   exact (hmeas k).comp (measurable_pi_apply k.val)
 
@@ -127,8 +127,8 @@ lemma productCylinder_memLp
     measurable_productCylinder m fs hmeas
   refine MeasureTheory.MemLp.of_bound (μ := μ) (p := 2)
     hFmeas.aestronglyMeasurable C ?_
-  exact eventually_of_forall fun ω => by
-    simpa [Real.norm_eq_abs] using hC ω
+  filter_upwards with ω
+  simpa [Real.norm_eq_abs] using hC ω
 
 /-- `Lp` representative associated to a bounded product cylinder. -/
 noncomputable def productCylinderLp
@@ -143,11 +143,11 @@ lemma productCylinderLp_ae_eq
     (hmeas : ∀ k, Measurable (fs k))
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] :
-    (∀ᵐ ω ∂μ, productCylinderLp (m := m) (fs := fs) hmeas hbd ω =
+    (∀ᵐ ω ∂μ, productCylinderLp (μ := μ) (m := m) (fs := fs) hmeas hbd ω =
       productCylinder m fs ω) := by
   classical
   exact MeasureTheory.MemLp.coeFn_toLp
-    (productCylinder_memLp (m := m) (fs := fs) hmeas hbd)
+    (productCylinder_memLp (μ := μ) (m := m) (fs := fs) hmeas hbd)
 
 /-- The shifted cylinder function: F ∘ shift^n. -/
 def shiftedCylinder (n : ℕ) (F : Ω[α] → ℝ) : Ω[α] → ℝ :=
@@ -185,11 +185,9 @@ theorem birkhoffCylinder_tendsto_condexp
         atTop
         (𝓝 (condexpL2 (μ := μ) fL2)) := by
   classical
-  let fL2 := productCylinderLp (m := m) (fs := fs) hmeas hbd
+  let fL2 := productCylinderLp (μ := μ) (m := m) (fs := fs) hmeas hbd
   refine ⟨fL2, ?_, ?_⟩
-  constructor
-  · simpa [F] using
-      (productCylinderLp_ae_eq (m := m) (fs := fs) hmeas hbd (μ := μ))
+  · exact productCylinderLp_ae_eq (m := m) (fs := fs) hmeas hbd (μ := μ)
   · exact birkhoffAverage_tendsto_condexp hσ fL2
 
 end MainConvergence
@@ -212,12 +210,12 @@ theorem extremeMembers_agree
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
     (_indices : Fin m → ℕ) :
     let F := productCylinder m fs
-    let fL2 : Lp ℝ 2 μ := productCylinderLp (m := m) (fs := fs) hmeas hbd
+    let fL2 : Lp ℝ 2 μ := productCylinderLp (μ := μ) (m := m) (fs := fs) hmeas hbd
     koopman shift hσ (condexpL2 (μ := μ) fL2) =
       condexpL2 (μ := μ) fL2 := by
   classical
   -- unpack the `let` bindings
-  let fL2 := productCylinderLp (m := m) (fs := fs) hmeas hbd
+  let fL2 := productCylinderLp (μ := μ) (m := m) (fs := fs) hmeas hbd
   have hRange : condexpL2 (μ := μ) fL2 ∈
       Set.range (condexpL2 (μ := μ)) := ⟨fL2, rfl⟩
   have hMemSet : condexpL2 (μ := μ) fL2 ∈
@@ -282,7 +280,8 @@ The proof combines:
 4. Shift-invariance of the tail σ-algebra
 
 This completes Kallenberg's "First proof" approach using the mean ergodic theorem. -/
-theorem condexp_cylinder_factorizes
+theorem condexp_cylinder_factorizes {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ)
     (m : ℕ) (fs : Fin m → α → ℝ)
     (hmeas : ∀ k, Measurable (fs k))
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C) :
