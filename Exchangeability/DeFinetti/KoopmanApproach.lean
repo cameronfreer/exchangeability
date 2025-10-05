@@ -172,21 +172,71 @@ theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
       atTop (𝓝 (condexpL2 (μ := μ) f)) := by
   -- Step 1: Get convergence to projection P onto fixedSpace from MET
   obtain ⟨P, hP_fixed, hP_tendsto⟩ := birkhoffAverage_tendsto_fixedSpace shift hσ f
-  
+
   -- Step 2: Show P = condexpL2 by showing they're both projections onto the same subspace
   have hP_eq : P = condexpL2 (μ := μ) := by
     -- Both P and condexpL2 are orthogonal projections onto fixedSubspace hσ
     -- We'll show they're equal by showing they agree on all elements
     ext g
-    -- Key facts:
-    -- (1) P projects onto fixedSubspace (from hP_fixed)
-    -- (2) condexpL2 projects onto fixedSubspace (from range_condexp_eq_fixedSubspace)
-    -- (3) Both act as identity on fixedSubspace
-    -- (4) Orthogonal projection onto a closed subspace is unique
-    sorry  -- TODO: complete using orthogonal projection uniqueness
-    -- Strategy: Use that P g - condexpL2 g is orthogonal to fixedSubspace
-    -- and also in fixedSubspace, hence must be zero
-  
+    -- Strategy: Show both P g and condexpL2 g are in fixedSubspace, and both equal
+    -- the unique element of fixedSubspace closest to g
+    
+    -- Key insight: For orthogonal projections onto a subspace S:
+    -- If P₁ and P₂ both satisfy:
+    --   (a) range = S
+    --   (b) act as identity on S
+    -- Then P₁ = P₂
+    
+    -- We have from hP_fixed that P acts as identity on fixedSubspace
+    -- We need to show condexpL2 also acts as identity on fixedSubspace
+    -- and that both have range = fixedSubspace
+    
+    have h_range_P : Set.range P ⊆ (fixedSubspace hσ : Set (Lp ℝ 2 μ)) := by
+      intro x hx
+      obtain ⟨y, rfl⟩ := hx
+      -- Need: P y ∈ fixedSubspace
+      -- From MET construction, P projects onto fixedSubspace
+      sorry
+    
+    have h_range_condexp : Set.range (condexpL2 (μ := μ)) = (fixedSubspace hσ : Set (Lp ℝ 2 μ)) :=
+      range_condexp_eq_fixedSubspace hσ
+    
+    -- Both P g and condexpL2 g are in fixedSubspace
+    have hPg_in : P g ∈ (fixedSubspace hσ : Set (Lp ℝ 2 μ)) := h_range_P ⟨g, rfl⟩
+    have hcondexp_in : condexpL2 (μ := μ) g ∈ (fixedSubspace hσ : Set (Lp ℝ 2 μ)) := by
+      rw [← h_range_condexp]
+      exact ⟨g, rfl⟩
+    
+    -- Apply hP_fixed to both (they're both in fixedSubspace, so P fixes them)
+    have hP_idem_Pg : P (P g) = P g := hP_fixed (P g) hPg_in
+    have hP_fixes_condexp : P (condexpL2 (μ := μ) g) = condexpL2 (μ := μ) g := hP_fixed _ hcondexp_in
+    
+    -- condexpL2 also acts as identity on fixedSubspace (property of conditional expectation)
+    -- This is a key property: conditional expectation onto a sub-σ-algebra fixes functions
+    -- that are already measurable with respect to that sub-σ-algebra
+    have hcondexp_fixes_P : condexpL2 (μ := μ) (P g) = P g := by
+      -- P g ∈ fixedSubspace, so condexpL2 fixes it
+      -- TODO: Need lemma that condexpL2 acts as identity on fixedSubspace
+      sorry
+    
+    -- Final step: show P g = condexpL2 g using the fact that they satisfy the same system
+    -- Both P g and condexpL2 g are elements of fixedSubspace that satisfy:
+    --   P (condexpL2 g) = condexpL2 g
+    --   condexpL2 (P g) = P g
+    -- 
+    -- The key insight is that for orthogonal projections onto the same space,
+    -- if P₁ x₁ = x₁ and P₂ x₂ = x₂ where x₁, x₂ are in the subspace,
+    -- and if P₁ = P₂ as projections, then x₁ = x₂ when they're both projections of the same g
+    -- 
+    -- Proof sketch:
+    -- P (P g - condexpL2 g) = P (P g) - P (condexpL2 g) = P g - condexpL2 g
+    -- condexpL2 (P g - condexpL2 g) = condexpL2 (P g) - condexpL2 (condexpL2 g) = P g - condexpL2 g
+    -- So P g - condexpL2 g is fixed by both projections
+    -- But also P g - condexpL2 g ∈ fixedSubspace (since both P g and condexpL2 g are)
+    -- For a vector in the subspace, being fixed by the projection just means it's in the subspace
+    -- We need orthogonality: (P g - condexpL2 g) ⊥ (P g - condexpL2 g) forces it to be 0
+    sorry
+
   -- Step 3: Conclude using equality
   rw [← hP_eq]
   exact hP_tendsto
@@ -306,7 +356,7 @@ theorem condexp_cylinder_factorizes {μ : Measure (Ω[α])} [IsProbabilityMeasur
       (∀ᵐ ω ∂μ, ∃ (val : ℝ), val = ∏ k : Fin m, ∫ x, fs k x ∂(ν ω)) := by
   -- Get the regular conditional distribution from ergodic decomposition
   obtain ⟨ν, hν_prob, hν_inv, _hν_meas⟩ := exists_regular_condDistrib hσ
-  
+
   use ν
   constructor
   · -- Almost every ω has a probability measure
