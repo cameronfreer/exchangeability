@@ -56,12 +56,32 @@ variable {α : Type*} [MeasurableSpace α]
 
 /-- The infinite i.i.d. product measure `ν^ℕ` on `ℕ → α`.
 
-TODO: Complete construction using Ionescu-Tulcea. The implementation should:
-1. Define constant kernels `κ n : Kernel (Π i : Iic n, α) α` returning `ν`
-2. Apply `Kernel.traj` to get a kernel from initial conditions to trajectories  
-3. Show the result is independent of the initial condition (by i.i.d. property)
+TODO: Complete construction using Ionescu-Tulcea (mathlib's `Kernel.traj`):
 
-For now this is axiomatized to unblock downstream development. -/
+**Step 1: Define constant kernels**
+For each n, define `iidKernel ν n : Kernel (Π i : Iic n, α) α` as `Kernel.const _ ν`.
+This represents the i.i.d. property: next coordinate is independent of history.
+
+**Step 2: Apply Ionescu-Tulcea**
+Use `ProbabilityTheory.Kernel.traj (fun n => iidKernel ν n) 0` to get a kernel
+from initial conditions `(Π i : Iic 0, α)` to full trajectories `(Π n, α)`.
+This is a dependent type `Kernel (Π i : Iic 0, α) (ℕ → α)`.
+
+**Step 3: Choose initial condition**
+Evaluate the kernel at any point in `(Π i : Iic 0, α)` to get the measure.
+Since the kernels are constant (i.i.d.), the result is independent of this choice.
+
+**Step 4: Handle universe levels**
+The main technical challenge is matching universe levels between:
+- mathlib's `Kernel.traj` which works with type families `X : ℕ → Type*`
+- our constant family where `X n = α` for all n
+
+Possible approaches:
+a) Use `abbrev constFamily (α : Type*) : ℕ → Type* := fun _ => α`
+b) Provide measurable space instances for products
+c) Use `MeasurableEquiv` to transport the construction
+
+For now axiomatized to unblock downstream development. -/
 axiom iidProduct (ν : Measure α) [IsProbabilityMeasure ν] : Measure (ℕ → α)
 
 axiom iidProduct_isProbability (ν : Measure α) [IsProbabilityMeasure ν] :
@@ -84,10 +104,28 @@ instance : IsProbabilityMeasure (iidProduct ν) := iidProduct_isProbability ν
 /-- Invariance under arbitrary permutations of coordinates.
 This uses permutation invariance of finite products and uniqueness via cylinder sets.
 
-TODO: Complete the proof using:
-1. Show finite-dimensional marginals are invariant via `pi_map_piCongrLeft`
-2. Use `Measure.ext_of_generate_finite` to extend to the whole measure
--/
+TODO: Complete proof strategy:
+
+**Step 1: Finite-dimensional invariance**
+For any n : ℕ, show that restricting to the first n coordinates commutes with permutation:
+```lean
+(iidProduct ν).map (fun f => (fun i : Fin n => f (σ i))) = Measure.pi fun _ => ν
+```
+This follows from:
+- `cylinder_fintype`: finite marginals of `iidProduct ν` are `Measure.pi`
+- `measurePreserving_piCongrLeft` or `pi_map_piCongrLeft`: `Measure.pi` is permutation-invariant
+
+**Step 2: Uniqueness on cylinder σ-algebra**
+Apply `Measure.ext_of_generate_finite` (mathlib's uniqueness for finite measures):
+- Both `(iidProduct ν).map (f ∘ σ)` and `iidProduct ν` are probability measures
+- They agree on cylinders (from Step 1)
+- Cylinders form a π-system generating the product σ-algebra
+- Therefore they are equal
+
+**Key lemma needed**: `MeasurableSpace.generateFrom_iUnion_measurableCylinders` or similar
+to show cylinders generate the standard σ-algebra on `ℕ → α`.
+
+For now axiomatized to enable downstream development. -/
 axiom perm_eq (σ : Equiv.Perm ℕ) :
     (iidProduct ν).map (fun f => f ∘ σ) = iidProduct ν
 

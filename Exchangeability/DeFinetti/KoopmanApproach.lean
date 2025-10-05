@@ -167,8 +167,14 @@ This combines:
 1. The Mean Ergodic Theorem (MET) giving convergence to orthogonal projection
 2. The identification proj = condexp (axiomatized via range_condexp_eq_fixedSubspace)
 
-TODO: Complete by showing the projection from MET equals condexpL2.
-For now the statement is axiomatized to enable downstream development.
+TODO: Complete proof strategy:
+Step 1: Apply `birkhoffAverage_tendsto_fixedSpace` from KoopmanMeanErgodic.lean to get
+        convergence to projection P onto fixedSubspace hσ
+Step 2: Use `range_condexp_eq_fixedSubspace` to show that condexpL2 has the same range
+Step 3: Since both are orthogonal projections onto the same closed subspace, they are equal
+Step 4: Conclude the Birkhoff averages converge to condexpL2
+
+For now axiomatized to enable downstream development.
 -/
 axiom birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
     Tendsto (fun n => birkhoffAverage ℝ (koopman shift hσ) _root_.id n f)

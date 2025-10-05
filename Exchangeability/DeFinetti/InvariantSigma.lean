@@ -526,12 +526,34 @@ lemma fixedSubspace_closed {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
 /-- Conditional expectation on L² with respect to the shift-invariant σ-algebra.
 
 This is the orthogonal projection onto the subspace of shift-invariant L² functions,
-implemented using mathlib's `condExpL2`. -/
+implemented using mathlib's `condExpL2`.
+
+TODO: Complete implementation:
+
+**Step 1: Verify shift-invariant σ-algebra is a sub-σ-algebra**
+Show `shiftInvariantSigma α ≤ (inferInstance : MeasurableSpace (Ω[α]))`
+This should follow from the definition of `shiftInvariantSigma`.
+
+**Step 2: Apply mathlib's `MeasureTheory.condExpL2`**
+Use `MeasureTheory.condExpL2 ℝ ℝ (shiftInvariantSigma α ≤ ·) μ`
+This gives: `Lp ℝ 2 μ →L[ℝ] lpMeas ℝ ℝ (shiftInvariantSigma α) 2 μ`
+
+**Step 3: Compose with subtype inclusion**
+The result from Step 2 lands in `lpMeas`, the subspace of shift-invariant functions.
+Compose with `lpMeas.subtypeL` to get back to `Lp ℝ 2 μ`:
+```lean
+(lpMeas ℝ ℝ (shiftInvariantSigma α) 2 μ).subtypeL.comp 
+  (condExpL2 ℝ ℝ (...) μ)
+```
+
+**Step 4: Verify this is an orthogonal projection**
+By mathlib, `condExpL2` is already the orthogonal projection onto `lpMeas`.
+Composing with the isometric inclusion preserves this property.
+
+For now returns `sorry` to enable downstream development. -/
 noncomputable def condexpL2 {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] :
     Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ :=
-  -- Use mathlib's condExpL2 for the shift-invariant σ-algebra
-  -- The composition `lpMeas.subtype ∘ condExpL2 ℝ ℝ` gives the inclusion back into Lp
-  sorry  -- TODO: Wire up mathlib's condExpL2 with shiftInvariantSigma
+  sorry  -- TODO: Implement as described above
 
 /-- The conditional expectation equals the orthogonal projection onto the fixed-point subspace.
 
