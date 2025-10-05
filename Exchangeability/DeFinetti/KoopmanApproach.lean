@@ -62,6 +62,7 @@ def cylinderFunction (m : ℕ) (φ : (Fin m → α) → ℝ) : Ω[α] → ℝ :=
 def productCylinder (m : ℕ) (fs : Fin m → α → ℝ) : Ω[α] → ℝ :=
   fun ω => ∏ k : Fin m, fs k (ω k.val)
 
+omit [MeasurableSpace α] in
 lemma productCylinder_eq_cylinder (m : ℕ) (fs : Fin m → α → ℝ) :
     productCylinder m fs = cylinderFunction m (fun coords => ∏ k, fs k (coords k)) := by
   rfl
@@ -209,12 +210,10 @@ theorem extremeMembers_agree
     (hmeas : ∀ k, Measurable (fs k))
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
     (_indices : Fin m → ℕ) :
-    let F := productCylinder m fs
     let fL2 : Lp ℝ 2 μ := productCylinderLp (μ := μ) (m := m) (fs := fs) hmeas hbd
     koopman shift hσ (condexpL2 (μ := μ) fL2) =
       condexpL2 (μ := μ) fL2 := by
   classical
-  -- unpack the `let` bindings
   let fL2 := productCylinderLp (μ := μ) (m := m) (fs := fs) hmeas hbd
   have hRange : condexpL2 (μ := μ) fL2 ∈
       Set.range (condexpL2 (μ := μ)) := ⟨fL2, rfl⟩
