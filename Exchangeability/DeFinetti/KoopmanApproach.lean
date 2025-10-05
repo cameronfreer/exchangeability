@@ -191,12 +191,22 @@ theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
     -- We need to show condexpL2 also acts as identity on fixedSubspace
     -- and that both have range = fixedSubspace
     
-    have h_range_P : Set.range P ⊆ (fixedSubspace hσ : Set (Lp ℝ 2 μ)) := by
-      intro x hx
-      obtain ⟨y, rfl⟩ := hx
-      -- Need: P y ∈ fixedSubspace
-      -- From MET construction, P projects onto fixedSubspace
+    -- Key observation: fixedSubspace hσ = fixedSpace (koopman shift hσ) by definition
+    -- So hP_fixed says P acts as identity on fixedSubspace
+    
+    -- From MET construction: P = inclusion ∘ orthogonalProjection
+    -- where orthogonalProjection : Lp → fixedSubspace and inclusion : fixedSubspace → Lp
+    -- Therefore range P = fixedSubspace
+    have h_range_P_eq : Set.range P = (fixedSubspace hσ : Set (Lp ℝ 2 μ)) := by
+      -- This follows from the construction of P in birkhoffAverage_tendsto_fixedSpace
+      -- P is defined as inclusion.comp projToSub where:
+      -- - projToSub is the orthogonal projection onto S = fixedSpace
+      -- - inclusion is subtypeL : S →L[ℝ] Lp
+      -- The range of this composition is exactly S = fixedSpace = fixedSubspace
       sorry
+    
+    have h_range_P : Set.range P ⊆ (fixedSubspace hσ : Set (Lp ℝ 2 μ)) :=
+      h_range_P_eq.subset
     
     have h_range_condexp : Set.range (condexpL2 (μ := μ)) = (fixedSubspace hσ : Set (Lp ℝ 2 μ)) :=
       range_condexp_eq_fixedSubspace hσ
@@ -215,26 +225,44 @@ theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
     -- This is a key property: conditional expectation onto a sub-σ-algebra fixes functions
     -- that are already measurable with respect to that sub-σ-algebra
     have hcondexp_fixes_P : condexpL2 (μ := μ) (P g) = P g := by
-      -- P g ∈ fixedSubspace, so condexpL2 fixes it
-      -- TODO: Need lemma that condexpL2 acts as identity on fixedSubspace
+      -- P g ∈ fixedSubspace means P g is shift-invariant
+      -- condexpL2 is conditional expectation onto the shift-invariant σ-algebra
+      -- So condexpL2 should fix P g
+      -- 
+      -- This follows from the tower property of conditional expectation:
+      -- If f is m-measurable and m ≤ m₀, then E[f | m] = f
+      -- 
+      -- Need to show: P g ∈ lpMeas (the subspace of shiftInvariantSigma-measurable functions)
+      -- Then mathlib's condExpL2 will fix it
       sorry
     
-    -- Final step: show P g = condexpL2 g using the fact that they satisfy the same system
-    -- Both P g and condexpL2 g are elements of fixedSubspace that satisfy:
-    --   P (condexpL2 g) = condexpL2 g
-    --   condexpL2 (P g) = P g
-    -- 
-    -- The key insight is that for orthogonal projections onto the same space,
-    -- if P₁ x₁ = x₁ and P₂ x₂ = x₂ where x₁, x₂ are in the subspace,
-    -- and if P₁ = P₂ as projections, then x₁ = x₂ when they're both projections of the same g
-    -- 
-    -- Proof sketch:
-    -- P (P g - condexpL2 g) = P (P g) - P (condexpL2 g) = P g - condexpL2 g
-    -- condexpL2 (P g - condexpL2 g) = condexpL2 (P g) - condexpL2 (condexpL2 g) = P g - condexpL2 g
-    -- So P g - condexpL2 g is fixed by both projections
-    -- But also P g - condexpL2 g ∈ fixedSubspace (since both P g and condexpL2 g are)
-    -- For a vector in the subspace, being fixed by the projection just means it's in the subspace
-    -- We need orthogonality: (P g - condexpL2 g) ⊥ (P g - condexpL2 g) forces it to be 0
+    -- Final step: show P g = condexpL2 g using uniqueness of orthogonal projections
+    --
+    -- We have established:
+    -- 1. range P = fixedSubspace (from h_range_P_eq)
+    -- 2. range condexpL2 = fixedSubspace (from h_range_condexp)
+    -- 3. P acts as identity on fixedSubspace (from hP_fixed)
+    -- 4. condexpL2 acts as identity on fixedSubspace (from hcondexp_fixes_P)
+    --
+    -- Theorem: If T₁, T₂ : E →L[ℝ] E are continuous linear maps such that:
+    -- (a) range T₁ = range T₂ = S (a closed subspace)
+    -- (b) T₁ acts as identity on S
+    -- (c) T₂ acts as identity on S
+    -- (d) T₁ and T₂ are both orthogonal projections (self-adjoint and idempotent)
+    -- Then T₁ = T₂
+    --
+    -- Proof: For any x, both T₁ x and T₂ x are in S.
+    -- T₁ (T₂ x) = T₂ x (since T₂ x ∈ S and T₁ fixes S)
+    -- But also T₁ (T₂ x) = T₁ x (by uniqueness of orthogonal projection)
+    -- Wait, that's not quite right...
+    --
+    -- Better approach: Use that orthogonal projection onto a closed subspace is unique.
+    -- Both P and condexpL2 satisfy the characterization:
+    -- - T x ∈ S
+    -- - (x - T x) ⊥ S
+    -- Therefore P = condexpL2
+    --
+    -- This requires showing orthogonality, which needs inner product arguments
     sorry
 
   -- Step 3: Conclude using equality
