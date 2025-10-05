@@ -89,7 +89,6 @@ lemma measurable_productCylinder (m : ℕ) (fs : Fin m → α → ℝ)
   intro k _
   exact (hmeas k).comp (measurable_pi_apply k.val)
 
-set_option linter.unusedSectionVars false in
 /-- Boundedness of product cylinders. -/
 lemma productCylinder_bounded (m : ℕ) (fs : Fin m → α → ℝ)
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C) :
