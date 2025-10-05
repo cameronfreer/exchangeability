@@ -8,6 +8,8 @@ import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
 import Mathlib.MeasureTheory.Constructions.ProjectiveFamilyContent
 import Mathlib.Probability.Kernel.IonescuTulcea.Traj
 import Mathlib.Topology.Basic
+import Mathlib.MeasureTheory.Constructions.Cylinders
+import Mathlib.MeasureTheory.Measure.Typeclasses.Finite
 
 /-!
 # Infinite Products of Identically Distributed Measures
@@ -99,28 +101,37 @@ instance : IsProbabilityMeasure (iidProduct ν) := iidProduct_isProbability ν
 /-- Invariance under arbitrary permutations of coordinates.
 This uses permutation invariance of finite products and uniqueness via cylinder sets.
 
-TODO: Complete proof strategy:
+TODO: Complete proof using mathlib lemmas:
 
 **Step 1: Finite-dimensional invariance**
-For any n : ℕ, show that restricting to the first n coordinates commutes with permutation:
+For any finset s : Finset ℕ and cylinder C based on s, show:
 ```lean
-(iidProduct ν).map (fun f => (fun i : Fin n => f (σ i))) = Measure.pi fun _ => ν
+((iidProduct ν).map (fun f => f ∘ σ)) C = (iidProduct ν) C
 ```
-This follows from:
-- `cylinder_fintype`: finite marginals of `iidProduct ν` are `Measure.pi`
-- `measurePreserving_piCongrLeft` or `pi_map_piCongrLeft`: `Measure.pi` is permutation-invariant
+Use mathlib's `MeasureTheory.pi_map_piCongrLeft` from Constructions/Pi.lean:
+```lean
+lemma pi_map_piCongrLeft (e : ι ≃ ι') (μ : (i : ι') → Measure (β i)) :
+    (Measure.pi fun i ↦ μ (e i)).map (MeasurableEquiv.piCongrLeft (fun i ↦ β i) e) = Measure.pi μ
+```
+Combined with `cylinder_fintype`, this shows agreement on cylinder sets.
 
-**Step 2: Uniqueness on cylinder σ-algebra**
-Apply `Measure.ext_of_generate_finite` (mathlib's uniqueness for finite measures):
-- Both `(iidProduct ν).map (f ∘ σ)` and `iidProduct ν` are probability measures
-- They agree on cylinders (from Step 1)
-- Cylinders form a π-system generating the product σ-algebra
-- Therefore they are equal
+**Step 2: Extend to whole σ-algebra**
+Apply `MeasureTheory.ext_of_generate_finite` from Measure/Typeclasses/Finite.lean:
+```lean
+theorem ext_of_generate_finite (C : Set (Set α)) (hA : m0 = generateFrom C) (hC : IsPiSystem C)
+    [IsFiniteMeasure μ] (hμν : ∀ s ∈ C, μ s = ν s) (h_univ : μ univ = ν univ) : μ = ν
+```
+Use `MeasureTheory.measurableCylinders` as the π-system C.
 
-**Key lemma needed**: `MeasurableSpace.generateFrom_iUnion_measurableCylinders` or similar
-to show cylinders generate the standard σ-algebra on `ℕ → α`.
+**Step 3: Show cylinders generate**
+Use `MeasureTheory.generateFrom_measurableCylinders` from Constructions/Cylinders.lean:
+```lean
+theorem generateFrom_measurableCylinders : 
+    generateFrom measurableCylinders = MeasurableSpace.pi
+```
 
-For now axiomatized to enable downstream development. -/
+All required lemmas exist in mathlib! Implementation pending.
+-/
 axiom perm_eq (σ : Equiv.Perm ℕ) :
     (iidProduct ν).map (fun f => f ∘ σ) = iidProduct ν
 
