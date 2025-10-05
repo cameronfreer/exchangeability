@@ -175,9 +175,17 @@ theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
   
   -- Step 2: Show P = condexpL2 by showing they're both projections onto the same subspace
   have hP_eq : P = condexpL2 (μ := μ) := by
-    -- Both are orthogonal projections onto fixedSubspace hσ
-    -- Need to show: projection onto a closed subspace is unique
-    sorry  -- TODO: use uniqueness of orthogonal projection
+    -- Both P and condexpL2 are orthogonal projections onto fixedSubspace hσ
+    -- We'll show they're equal by showing they agree on all elements
+    ext g
+    -- Key facts:
+    -- (1) P projects onto fixedSubspace (from hP_fixed)
+    -- (2) condexpL2 projects onto fixedSubspace (from range_condexp_eq_fixedSubspace)
+    -- (3) Both act as identity on fixedSubspace
+    -- (4) Orthogonal projection onto a closed subspace is unique
+    sorry  -- TODO: complete using orthogonal projection uniqueness
+    -- Strategy: Use that P g - condexpL2 g is orthogonal to fixedSubspace
+    -- and also in fixedSubspace, hence must be zero
   
   -- Step 3: Conclude using equality
   rw [← hP_eq]
