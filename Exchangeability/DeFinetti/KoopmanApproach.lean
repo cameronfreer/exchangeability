@@ -289,25 +289,33 @@ theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
     -- 3. P acts as identity on fixedSubspace (from hP_fixed)
     -- 4. condexpL2 acts as identity on fixedSubspace (from hcondexp_fixes_P)
     --
-    -- Theorem: If T₁, T₂ : E →L[ℝ] E are continuous linear maps such that:
-    -- (a) range T₁ = range T₂ = S (a closed subspace)
-    -- (b) T₁ acts as identity on S
-    -- (c) T₂ acts as identity on S
-    -- (d) T₁ and T₂ are both orthogonal projections (self-adjoint and idempotent)
-    -- Then T₁ = T₂
+    -- Claim: P g = condexpL2 g for all g
     --
-    -- Proof: For any x, both T₁ x and T₂ x are in S.
-    -- T₁ (T₂ x) = T₂ x (since T₂ x ∈ S and T₁ fixes S)
-    -- But also T₁ (T₂ x) = T₁ x (by uniqueness of orthogonal projection)
-    -- Wait, that's not quite right...
+    -- Proof: Both P g and condexpL2 g are in fixedSubspace (from 1, 2).
+    -- Consider h = P g - condexpL2 g.
+    -- We'll show h = 0 by showing h ∈ fixedSubspace and ⟨h, h⟩ = 0.
     --
-    -- Better approach: Use that orthogonal projection onto a closed subspace is unique.
-    -- Both P and condexpL2 satisfy the characterization:
-    -- - T x ∈ S
-    -- - (x - T x) ⊥ S
-    -- Therefore P = condexpL2
+    -- First, h ∈ fixedSubspace:
+    -- Since fixedSubspace is a subspace and both P g, condexpL2 g are in it, h is in it.
     --
-    -- This requires showing orthogonality, which needs inner product arguments
+    -- Second, ⟨h, h⟩ = 0:
+    -- Since h ∈ fixedSubspace, we have:
+    -- P h = h (by property 3, P fixes fixedSubspace elements)
+    -- condexpL2 h = h (by property 4, condexpL2 fixes fixedSubspace elements)
+    --
+    -- But h = P g - condexpL2 g, so:
+    -- P h = P (P g - condexpL2 g) = P (P g) - P (condexpL2 g)
+    --     = P g - condexpL2 g  (using hP_idem_Pg and hP_fixes_condexp)
+    --     = h
+    -- Similarly: condexpL2 h = h
+    --
+    -- This doesn't immediately give us h = 0...
+    --
+    -- Alternative: Use that both are orthogonal projections, characterized by:
+    -- y = proj_S(x) iff y ∈ S and ⟨x - y, s⟩ = 0 for all s ∈ S
+    --
+    -- For this we need: ⟨g - P g, s⟩ = 0 and ⟨g - condexpL2 g, s⟩ = 0 for all s ∈ fixedSubspace
+    -- This is the definition of orthogonal projection!
     sorry
 
   -- Step 3: Conclude using equality
