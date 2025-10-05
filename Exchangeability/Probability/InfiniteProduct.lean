@@ -56,32 +56,27 @@ variable {α : Type*} [MeasurableSpace α]
 
 /-- The infinite i.i.d. product measure `ν^ℕ` on `ℕ → α`.
 
-TODO: Complete construction using Ionescu-Tulcea (mathlib's `Kernel.traj`):
+**Implementation via Ionescu-Tulcea (current technical obstacle)**:
 
-**Step 1: Define constant kernels**
-For each n, define `iidKernel ν n : Kernel (Π i : Iic n, α) α` as `Kernel.const _ ν`.
-This represents the i.i.d. property: next coordinate is independent of history.
+The natural approach is:
+1. Define `iidKernel ν n : Kernel ((i : Finset.Iic n) → α) α := Kernel.const _ ν`
+2. Apply `Kernel.traj (fun n => iidKernel ν n) 0` to get a kernel on the empty history
+3. Evaluate at the unique element of `(i : Finset.Iic 0) → α`
 
-**Step 2: Apply Ionescu-Tulcea**
-Use `ProbabilityTheory.Kernel.traj (fun n => iidKernel ν n) 0` to get a kernel
-from initial conditions `(Π i : Iic 0, α)` to full trajectories `(Π n, α)`.
-This is a dependent type `Kernel (Π i : Iic 0, α) (ℕ → α)`.
+**Technical challenges**:
+- Universe level management: mathlib's `Kernel.traj` expects `X : ℕ → Type*` with
+  universe flexibility, but our constant family `fun _ => α` creates universe constraints
+- Measurable space instances: need `MeasurableSpace ((i : Finset.Iic n) → α)` instances
+  that mathlib may not provide automatically for constant families
+- Type family encoding: `Kernel.traj` is designed for varying types at each index,
+  not constant families
 
-**Step 3: Choose initial condition**
-Evaluate the kernel at any point in `(Π i : Iic 0, α)` to get the measure.
-Since the kernels are constant (i.i.d.), the result is independent of this choice.
+**Alternative approaches to explore**:
+1. Use `Measure.pi` with infinite index sets (if available in mathlib)
+2. Define as projective limit of finite products explicitly
+3. Provide manual universe-polymorphic wrapper around `Kernel.traj`
 
-**Step 4: Handle universe levels**
-The main technical challenge is matching universe levels between:
-- mathlib's `Kernel.traj` which works with type families `X : ℕ → Type*`
-- our constant family where `X n = α` for all n
-
-Possible approaches:
-a) Use `abbrev constFamily (α : Type*) : ℕ → Type* := fun _ => α`
-b) Provide measurable space instances for products
-c) Use `MeasurableEquiv` to transport the construction
-
-For now axiomatized to unblock downstream development. -/
+For now axiomatized pending resolution of these technical issues. -/
 axiom iidProduct (ν : Measure α) [IsProbabilityMeasure ν] : Measure (ℕ → α)
 
 axiom iidProduct_isProbability (ν : Measure α) [IsProbabilityMeasure ν] :
