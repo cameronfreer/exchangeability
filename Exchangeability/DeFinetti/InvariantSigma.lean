@@ -535,6 +535,35 @@ noncomputable def condexpL2 {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] :
   -- Compose with subtype inclusion to get back to full Lp space
   (lpMeas ℝ ℝ shiftInvariantSigma 2 μ).subtypeL.comp ce
 
+/-- A function measurable with respect to the shift-invariant σ-algebra is fixed by Koopman.
+
+TODO: Complete proof strategy:
+1. Use that f is shiftInvariantSigma-measurable
+2. This means f⁻¹(B) is shift-invariant for all measurable B
+3. By definition of shift-invariant sets, shift⁻¹(f⁻¹(B)) = f⁻¹(B) a.e.
+4. This implies (f ∘ shift)⁻¹(B) = f⁻¹(B) a.e. for all B
+5. Therefore f ∘ shift = f a.e., which is exactly koopman f = f in Lp
+-/
+axiom koopman_fixed_of_shiftInvariant_measurable
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ)
+    (f : Lp ℝ 2 μ)
+    (hf : AEStronglyMeasurable[shiftInvariantSigma (α := α)] f μ) :
+    koopman shift hσ f = f
+
+/-- lpMeas functions are exactly the Koopman-fixed functions.
+
+TODO: Complete proof using:
+- Forward direction: koopman_fixed_of_shiftInvariant_measurable (axiomatized above)
+- Backward direction: aestronglyMeasurable_shiftInvariant_of_koopman (already proven)
+Need to handle the coercion from lpMeas to Lp properly using mathlib's lpMeas API.
+-/
+axiom lpMeas_eq_fixedSubspace
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ) :
+    (Set.range (lpMeas ℝ ℝ shiftInvariantSigma 2 μ).subtypeL : Set (Lp ℝ 2 μ)) =
+    (fixedSubspace hσ : Set (Lp ℝ 2 μ))
+
 /-- The conditional expectation equals the orthogonal projection onto the fixed-point subspace.
 
 This fundamental connection links:
@@ -542,15 +571,11 @@ This fundamental connection links:
 - Functional analysis: orthogonal projection in Hilbert space
 - Ergodic theory: fixed-point subspace of the Koopman operator
 
-With our implementation of `condexpL2`, the proof strategy is now:
-1. Show `Set.range condexpL2 = Set.range (lpMeas shiftInvariantSigma).subtypeL`
-   (follows from composition structure)
-2. Show `Set.range (lpMeas shiftInvariantSigma).subtypeL = fixedSubspace hσ`
-   (requires proving f is Koopman-fixed ↔ f is shiftInvariantSigma-measurable)
-
-Step 2 is the key: need to establish that shift-invariant measurability
-coincides with being fixed by the Koopman operator. This follows from the
-characterization that f is fixed by shift ↔ f⁻¹(B) is shift-invariant for all B.
+TODO: Complete proof using:
+1. Unfold condexpL2 definition
+2. Use that range of composition equals image of range
+3. Show condExpL2 is surjective (orthogonal projection onto closed subspace)
+4. Apply lpMeas_eq_fixedSubspace to conclude
 -/
 axiom range_condexp_eq_fixedSubspace {μ : Measure (Ω[α])}
     [IsProbabilityMeasure μ]

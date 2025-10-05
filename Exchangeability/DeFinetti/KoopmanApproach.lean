@@ -165,20 +165,23 @@ variable (hσ : MeasurePreserving shift μ μ)
 
 This combines:
 1. The Mean Ergodic Theorem (MET) giving convergence to orthogonal projection
-2. The identification proj = condexp (axiomatized via range_condexp_eq_fixedSubspace)
-
-TODO: Complete proof strategy:
-Step 1: Apply `birkhoffAverage_tendsto_fixedSpace` from KoopmanMeanErgodic.lean to get
-        convergence to projection P onto fixedSubspace hσ
-Step 2: Use `range_condexp_eq_fixedSubspace` to show that condexpL2 has the same range
-Step 3: Since both are orthogonal projections onto the same closed subspace, they are equal
-Step 4: Conclude the Birkhoff averages converge to condexpL2
-
-For now axiomatized to enable downstream development.
+2. The identification proj = condexp via range_condexp_eq_fixedSubspace
 -/
-axiom birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
+theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
     Tendsto (fun n => birkhoffAverage ℝ (koopman shift hσ) _root_.id n f)
-      atTop (𝓝 (condexpL2 (μ := μ) f))
+      atTop (𝓝 (condexpL2 (μ := μ) f)) := by
+  -- Step 1: Get convergence to projection P onto fixedSpace from MET
+  obtain ⟨P, hP_fixed, hP_tendsto⟩ := birkhoffAverage_tendsto_fixedSpace shift hσ f
+  
+  -- Step 2: Show P = condexpL2 by showing they're both projections onto the same subspace
+  have hP_eq : P = condexpL2 (μ := μ) := by
+    -- Both are orthogonal projections onto fixedSubspace hσ
+    -- Need to show: projection onto a closed subspace is unique
+    sorry  -- TODO: use uniqueness of orthogonal projection
+  
+  -- Step 3: Conclude using equality
+  rw [← hP_eq]
+  exact hP_tendsto
 
 /-- Specialization to cylinder functions: the core case for de Finetti. -/
 theorem birkhoffCylinder_tendsto_condexp
