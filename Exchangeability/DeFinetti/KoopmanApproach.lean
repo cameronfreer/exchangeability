@@ -199,11 +199,36 @@ lemma condexpL2_fixes_fixedSubspace {g : Lp ℝ 2 μ}
     condexpL2 (μ := μ) g = g := by
   -- g ∈ fixedSubspace means koopman (g) = g, i.e., g ∘ shift = g a.e.
   -- This means g is shift-invariant, hence measurable w.r.t. shiftInvariantSigma
-  -- By lpMeas_eq_fixedSubspace, g ∈ lpMeas
-  -- condexpL2 = subtypeL ∘ condExpL2 onto lpMeas
-  -- Since g ∈ lpMeas, orthogonal projection fixes it: condExpL2 g = g
-  -- Therefore condexpL2 g = subtypeL g = g
-  sorry
+  
+  -- Strategy: Use lpMeas_eq_fixedSubspace to convert fixedSubspace membership to lpMeas
+  -- Then use that orthogonal projection fixes elements of the subspace
+  
+  -- lpMeas_eq_fixedSubspace says: Set.range subtypeL = fixedSubspace
+  -- Since g ∈ fixedSubspace, there exists x : lpMeas such that subtypeL x = g
+  have h_equiv := lpMeas_eq_fixedSubspace hσ
+  have : g ∈ (Set.range (lpMeas ℝ ℝ shiftInvariantSigma 2 μ).subtypeL) := by
+    rw [h_equiv]
+    exact hg
+  
+  obtain ⟨gₘ, hgₘ : (lpMeas ℝ ℝ shiftInvariantSigma 2 μ).subtypeL gₘ = g⟩ := this
+  
+  -- Now condexpL2 g = subtypeL (condExpL2 g)
+  -- Since g = subtypeL gₘ where gₘ ∈ lpMeas,
+  -- condExpL2 should map g back to gₘ (it projects onto lpMeas, and g is already there)
+  -- Then subtypeL gₘ = g
+  
+  unfold condexpL2
+  simp only [ContinuousLinearMap.coe_comp', Function.comp_apply]
+  
+  -- The key: condExpL2 (subtypeL gₘ) = gₘ because gₘ is already in lpMeas
+  -- This uses orthogonalProjection_mem_subspace_eq_self from mathlib
+  have : MeasureTheory.condExpL2 ℝ ℝ shiftInvariantSigma_le g = gₘ := by
+    rw [← hgₘ]
+    -- Need: condExpL2 is defined as orthogonal projection, and we can apply
+    -- orthogonalProjection_mem_subspace_eq_self
+    sorry
+  
+  rw [this, hgₘ]
 
 /-- Two continuous linear maps that both act as orthogonal projections onto the same
 closed subspace must be equal.
@@ -223,13 +248,43 @@ lemma orthogonal_projections_same_range_eq
     (hP_fixes : ∀ g ∈ S, P g = g)
     (hQ_fixes : ∀ g ∈ S, Q g = g) :
     P = Q := by
-  ext g
-  -- Both P g and Q g are in S and satisfy orthogonality conditions
-  -- By uniqueness of orthogonal projection, P g = Q g
-  -- 
-  -- Approach: Show both satisfy the characterization:
-  -- y = proj_S(x) iff y ∈ S and ⟨x - y, s⟩ = 0 for all s ∈ S
-  sorry
+  -- Use ContinuousLinearMap.ext (equality of continuous linear maps)
+  apply ContinuousLinearMap.ext
+  intro g
+  
+  -- Strategy: Show P g = Q g by using that both fix elements of S
+  -- Both P g and Q g are in S
+  have hPg : P g ∈ (S : Set (Lp ℝ 2 μ)) := by
+    rw [← hP_range]
+    exact ⟨g, rfl⟩
+  have hQg : Q g ∈ (S : Set (Lp ℝ 2 μ)) := by
+    rw [← hQ_range]
+    exact ⟨g, rfl⟩
+  
+  -- Apply the fixing property
+  have hP_fixes_Qg : P (Q g) = Q g := hP_fixes (Q g) hQg
+  have hQ_fixes_Pg : Q (P g) = P g := hQ_fixes (P g) hPg
+  
+  -- The key: both P and Q are "projecting" g onto S, and they fix elements of S
+  -- So P g and Q g must be equal
+  --
+  -- Proof: We show P g = Q (P g) = P (Q (P g)) = P (P g) = P g
+  -- But also P (Q (P g)) = P (P g) because Q (P g) = P g
+  -- This establishes P g ∈ S is fixed by Q, and Q g ∈ S is fixed by P
+  --
+  -- More directly: Q (P g) = P g and P (Q g) = Q g
+  -- We want: P g = Q g
+  --
+  -- Since Q (P g) = P g, we have P g is a fixed point of Q
+  -- Since P g ∈ S and Q fixes all of S, this is expected
+  --
+  -- The key insight: both P g and Q g are projections of g onto S
+  -- For uniqueness, we need: if x ∈ S, then P x = x and Q x = x
+  -- So P (Q g) = Q g (since Q g ∈ S)
+  -- And Q (P g) = P g (since P g ∈ S)
+  --
+  -- Now: P g = Q (P g) would give us P g equals what Q sees, but we need more
+  sorry  -- TODO: Need to use that projections onto same space with same fixing property are unique
 
 /-- Main theorem: Birkhoff averages converge in L² to conditional expectation.
 
