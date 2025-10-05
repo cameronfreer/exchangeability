@@ -5,6 +5,7 @@ Authors: Cameron Freer
 -/
 import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
 import Mathlib.MeasureTheory.Measure.Typeclasses.Probability
+import Exchangeability.Probability.InfiniteProduct
 
 /-!
 # Contractability and Exchangeability
@@ -243,16 +244,20 @@ lemma Contractable.symm {μ : Measure Ω} {X : ℕ → Ω → α}
     Measure.map (fun ω i => X i.val ω) μ = Measure.map (fun ω i => X (k i) ω) μ :=
   (hX m k hk).symm
 
-/-- Product measures exist in mathlib. This placeholder captures the idea that
-we can construct product probability measures. The actual construction requires
-Ionescu-Tulcea or similar machinery from mathlib. -/
-axiom productMeasure_exists (ν : ℕ → Measure α) [∀ i, IsProbabilityMeasure (ν i)] :
-  ∃ μ : Measure (ℕ → α), IsProbabilityMeasure μ
+/-- The infinite i.i.d. product measure exists for any probability measure.
+Constructed via Ionescu-Tulcea in `Exchangeability.Probability.InfiniteProduct`. -/
+lemma iidProduct_exists (ν₀ : Measure α) [IsProbabilityMeasure ν₀] :
+    ∃ μ : Measure (ℕ → α), IsProbabilityMeasure μ :=
+  ⟨Exchangeability.Probability.iidProduct ν₀, inferInstance⟩
 
-/-- A product of identical i.i.d. measures is permutation-invariant. -/
-axiom constantProduct_comp_perm (ν₀ : Measure α) [IsProbabilityMeasure ν₀]
-    (μ_prod : Measure (ℕ → α)) (σ : Equiv.Perm ℕ) :
-    Measure.map (fun f : ℕ → α => f ∘ σ) μ_prod = μ_prod
+/-- The i.i.d. product of identical measures is permutation-invariant.
+This is a consequence of the construction via Ionescu-Tulcea. -/
+lemma iidProduct_perm_invariant (ν₀ : Measure α) [IsProbabilityMeasure ν₀]
+    (σ : Equiv.Perm ℕ) :
+    Measure.map (fun f : ℕ → α => f ∘ σ)
+      (Exchangeability.Probability.iidProduct ν₀) =
+      Exchangeability.Probability.iidProduct ν₀ :=
+  Exchangeability.Probability.iidProduct.perm_eq ν₀ σ
 
 /-- Composing strictly monotone functions with addition preserves strict monotonicity. -/
 lemma strictMono_add_left {m : ℕ} (k : Fin m → ℕ) (hk : StrictMono k) (c : ℕ) :
