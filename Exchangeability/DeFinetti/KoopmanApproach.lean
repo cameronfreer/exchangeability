@@ -161,6 +161,76 @@ section MainConvergence
 variable {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
 variable (hσ : MeasurePreserving shift μ μ)
 
+/-- The projection P from the Mean Ergodic Theorem has range equal to fixedSubspace.
+
+This follows from the construction in `birkhoffAverage_tendsto_fixedSpace` where
+P = inclusion.comp orthogonalProjection. The range of this composition is the subspace itself.
+
+TODO: Prove using properties of `Submodule.subtypeL` and orthogonal projection.
+Key lemma needed: `range_subtypeL_comp_orthogonalProjection`.
+-/
+lemma range_MET_projection_eq_fixedSubspace
+    {P : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ}
+    (hP_fixed : ∀ g ∈ fixedSubspace hσ, P g = g) :
+    Set.range P = (fixedSubspace hσ : Set (Lp ℝ 2 μ)) := by
+  rw [fixedSubspace]
+  ext x
+  constructor
+  · intro ⟨y, hy⟩
+    rw [← hy]
+    -- Forward direction: x ∈ range P → x ∈ fixedSpace
+    -- From MET construction: P = inclusion ∘ orthogonalProjection
+    -- Need lemma: range (S.subtypeL.comp S.orthogonalProjection) = S
+    sorry
+  · intro hx
+    -- Backward direction: x ∈ fixedSpace → x ∈ range P
+    use x
+    exact hP_fixed x hx
+
+/-- Conditional expectation onto shift-invariant σ-algebra fixes elements of fixedSubspace.
+
+This is a consequence of the tower property of conditional expectation:
+if f is already measurable with respect to the sub-σ-algebra, then E[f|σ] = f.
+
+TODO: Prove using `lpMeas_eq_fixedSubspace` and tower property of `condExpL2`.
+-/
+lemma condexpL2_fixes_fixedSubspace {g : Lp ℝ 2 μ}
+    (hg : g ∈ fixedSubspace hσ) :
+    condexpL2 (μ := μ) g = g := by
+  -- g ∈ fixedSubspace means koopman (g) = g, i.e., g ∘ shift = g a.e.
+  -- This means g is shift-invariant, hence measurable w.r.t. shiftInvariantSigma
+  -- By lpMeas_eq_fixedSubspace, g ∈ lpMeas
+  -- condexpL2 = subtypeL ∘ condExpL2 onto lpMeas
+  -- Since g ∈ lpMeas, orthogonal projection fixes it: condExpL2 g = g
+  -- Therefore condexpL2 g = subtypeL g = g
+  sorry
+
+/-- Two continuous linear maps that both act as orthogonal projections onto the same
+closed subspace must be equal.
+
+This is the uniqueness of orthogonal projections. The key characterization is:
+P is the orthogonal projection onto S iff:
+- P x ∈ S for all x
+- ⟨x - P x, s⟩ = 0 for all s ∈ S
+
+TODO: Prove using inner product characterization of orthogonal projections.
+-/
+lemma orthogonal_projections_same_range_eq
+    (P Q : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ)
+    (S : Submodule ℝ (Lp ℝ 2 μ))
+    (hP_range : Set.range P = (S : Set (Lp ℝ 2 μ)))
+    (hQ_range : Set.range Q = (S : Set (Lp ℝ 2 μ)))
+    (hP_fixes : ∀ g ∈ S, P g = g)
+    (hQ_fixes : ∀ g ∈ S, Q g = g) :
+    P = Q := by
+  ext g
+  -- Both P g and Q g are in S and satisfy orthogonality conditions
+  -- By uniqueness of orthogonal projection, P g = Q g
+  -- 
+  -- Approach: Show both satisfy the characterization:
+  -- y = proj_S(x) iff y ∈ S and ⟨x - y, s⟩ = 0 for all s ∈ S
+  sorry
+
 /-- Main theorem: Birkhoff averages converge in L² to conditional expectation.
 
 This combines:
@@ -173,159 +243,18 @@ theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
   -- Step 1: Get convergence to projection P onto fixedSpace from MET
   obtain ⟨P, hP_fixed, hP_tendsto⟩ := birkhoffAverage_tendsto_fixedSpace shift hσ f
 
-  -- Step 2: Show P = condexpL2 by showing they're both projections onto the same subspace
+  -- Step 2: Show P = condexpL2 using the factored lemmas
   have hP_eq : P = condexpL2 (μ := μ) := by
     -- Both P and condexpL2 are orthogonal projections onto fixedSubspace hσ
-    -- We'll show they're equal by showing they agree on all elements
-    ext g
-    -- Strategy: Show both P g and condexpL2 g are in fixedSubspace, and both equal
-    -- the unique element of fixedSubspace closest to g
-    
-    -- Key insight: For orthogonal projections onto a subspace S:
-    -- If P₁ and P₂ both satisfy:
-    --   (a) range = S
-    --   (b) act as identity on S
-    -- Then P₁ = P₂
-    
-    -- We have from hP_fixed that P acts as identity on fixedSubspace
-    -- We need to show condexpL2 also acts as identity on fixedSubspace
-    -- and that both have range = fixedSubspace
-    
-    -- Key observation: fixedSubspace hσ = fixedSpace (koopman shift hσ) by definition
-    -- So hP_fixed says P acts as identity on fixedSubspace
-    
-    -- From MET construction: P = inclusion ∘ orthogonalProjection
-    -- where orthogonalProjection : Lp → fixedSubspace and inclusion : fixedSubspace → Lp
-    -- Therefore range P = fixedSubspace
-    have h_range_P_eq : Set.range P = (fixedSubspace hσ : Set (Lp ℝ 2 μ)) := by
-      -- This follows from the construction of P in birkhoffAverage_tendsto_fixedSpace
-      -- P is defined as inclusion.comp projToSub where:
-      -- - projToSub : Lp →L[ℝ] S is orthogonal projection onto S = fixedSpace (koopman shift hσ)
-      -- - inclusion : S →L[ℝ] Lp is S.subtypeL
-      -- The range of this composition is exactly S
-      
-      -- By definition: fixedSubspace hσ = fixedSpace (koopman shift hσ)
-      rw [fixedSubspace]
-      
-      -- Now need to show: Set.range P = Set.range inclusion
-      -- Since projToSub is surjective onto S, range (inclusion ∘ projToSub) = range inclusion
-      
-      -- The range of subtypeL is the subspace itself (as a set)
-      -- This is because subtypeL : S → E embeds S into E
-      
-      ext x
-      constructor
-      · intro ⟨y, hy⟩
-        -- x = P y for some y
-        rw [← hy]
-        -- Need: P y ∈ fixedSpace (koopman shift hσ)
-        -- 
-        -- From the MET construction in KoopmanMeanErgodic:
-        -- P = inclusion.comp projToSub
-        -- where projToSub = S.orthogonalProjection and S = fixedSpace (koopman shift hσ)
-        -- and inclusion = S.subtypeL
-        --
-        -- The key property we need is: for any z in the range of P,
-        -- z ∈ fixedSpace (koopman shift hσ)
-        --
-        -- This follows from the fact that P is constructed as the composition
-        -- of orthogonal projection onto S followed by subtype inclusion.
-        -- The range of this composition is exactly S.
-        --
-        -- Mathematical fact: If P = subtype ∘ proj where proj : E → S,
-        -- then range P = S (as a subset of E)
-        --
-        -- This is a standard property in functional analysis:
-        -- the range of an orthogonal projection composed with inclusion is the subspace
-        --
-        -- For now, we need a lemma like:
-        -- lemma range_subtypeL_comp_orthogonalProjection (S : Submodule ℝ E) :
-        --   Set.range (S.subtypeL.comp S.orthogonalProjection) = (S : Set E)
-        sorry
-      · intro hx
-        -- x ∈ fixedSpace (koopman shift hσ)
-        -- Need to show x ∈ range P
-        -- Since x ∈ S, we have x = inclusion ⟨x, hx⟩
-        -- Also ⟨x, hx⟩ = projToSub x (since x ∈ S and projection fixes elements of S)
-        -- Therefore x = inclusion (projToSub x) = P x
-        use x
-        -- Need: P x = x
-        -- This follows from hP_fixed when x ∈ fixedSpace
-        exact hP_fixed x hx
-    
-    have h_range_P : Set.range P ⊆ (fixedSubspace hσ : Set (Lp ℝ 2 μ)) :=
-      h_range_P_eq.subset
-    
+    -- Use uniqueness of orthogonal projections
+    have h_range_P : Set.range P = (fixedSubspace hσ : Set (Lp ℝ 2 μ)) :=
+      @range_MET_projection_eq_fixedSubspace α _ μ _ hσ P hP_fixed
     have h_range_condexp : Set.range (condexpL2 (μ := μ)) = (fixedSubspace hσ : Set (Lp ℝ 2 μ)) :=
       range_condexp_eq_fixedSubspace hσ
-    
-    -- Both P g and condexpL2 g are in fixedSubspace
-    have hPg_in : P g ∈ (fixedSubspace hσ : Set (Lp ℝ 2 μ)) := h_range_P ⟨g, rfl⟩
-    have hcondexp_in : condexpL2 (μ := μ) g ∈ (fixedSubspace hσ : Set (Lp ℝ 2 μ)) := by
-      rw [← h_range_condexp]
-      exact ⟨g, rfl⟩
-    
-    -- Apply hP_fixed to both (they're both in fixedSubspace, so P fixes them)
-    have hP_idem_Pg : P (P g) = P g := hP_fixed (P g) hPg_in
-    have hP_fixes_condexp : P (condexpL2 (μ := μ) g) = condexpL2 (μ := μ) g := hP_fixed _ hcondexp_in
-    
-    -- condexpL2 also acts as identity on fixedSubspace (property of conditional expectation)
-    -- This is a key property: conditional expectation onto a sub-σ-algebra fixes functions
-    -- that are already measurable with respect to that sub-σ-algebra
-    have hcondexp_fixes_P : condexpL2 (μ := μ) (P g) = P g := by
-      -- P g ∈ fixedSubspace means koopman shift hσ (P g) = P g
-      -- This means (P g) ∘ shift = P g almost everywhere
-      -- By koopman_fixed_of_shiftInvariant_measurable (axiomatized), this implies
-      -- P g is measurable with respect to shiftInvariantSigma
-      -- 
-      -- condexpL2 is defined as: subtypeL ∘ (condExpL2 onto lpMeas)
-      -- where lpMeas is the subspace of shiftInvariantSigma-measurable functions
-      --
-      -- If P g ∈ lpMeas, then:
-      -- condExpL2 (P g) = P g (orthogonal projection fixes elements of the subspace)
-      -- Therefore condexpL2 (P g) = subtypeL (condExpL2 (P g)) = subtypeL (P g) = P g
-      --
-      -- Need two facts:
-      -- 1. P g ∈ lpMeas (follows from lpMeas_eq_fixedSubspace)
-      -- 2. Orthogonal projection fixes elements of the subspace
-      sorry
-    
-    -- Final step: show P g = condexpL2 g using uniqueness of orthogonal projections
-    --
-    -- We have established:
-    -- 1. range P = fixedSubspace (from h_range_P_eq)
-    -- 2. range condexpL2 = fixedSubspace (from h_range_condexp)
-    -- 3. P acts as identity on fixedSubspace (from hP_fixed)
-    -- 4. condexpL2 acts as identity on fixedSubspace (from hcondexp_fixes_P)
-    --
-    -- Claim: P g = condexpL2 g for all g
-    --
-    -- Proof: Both P g and condexpL2 g are in fixedSubspace (from 1, 2).
-    -- Consider h = P g - condexpL2 g.
-    -- We'll show h = 0 by showing h ∈ fixedSubspace and ⟨h, h⟩ = 0.
-    --
-    -- First, h ∈ fixedSubspace:
-    -- Since fixedSubspace is a subspace and both P g, condexpL2 g are in it, h is in it.
-    --
-    -- Second, ⟨h, h⟩ = 0:
-    -- Since h ∈ fixedSubspace, we have:
-    -- P h = h (by property 3, P fixes fixedSubspace elements)
-    -- condexpL2 h = h (by property 4, condexpL2 fixes fixedSubspace elements)
-    --
-    -- But h = P g - condexpL2 g, so:
-    -- P h = P (P g - condexpL2 g) = P (P g) - P (condexpL2 g)
-    --     = P g - condexpL2 g  (using hP_idem_Pg and hP_fixes_condexp)
-    --     = h
-    -- Similarly: condexpL2 h = h
-    --
-    -- This doesn't immediately give us h = 0...
-    --
-    -- Alternative: Use that both are orthogonal projections, characterized by:
-    -- y = proj_S(x) iff y ∈ S and ⟨x - y, s⟩ = 0 for all s ∈ S
-    --
-    -- For this we need: ⟨g - P g, s⟩ = 0 and ⟨g - condexpL2 g, s⟩ = 0 for all s ∈ fixedSubspace
-    -- This is the definition of orthogonal projection!
-    sorry
+    have hQ_fixes : ∀ g ∈ fixedSubspace hσ, condexpL2 (μ := μ) g = g :=
+      fun g hg => @condexpL2_fixes_fixedSubspace α _ μ _ hσ g hg
+    exact @orthogonal_projections_same_range_eq α _ μ _ P (condexpL2 (μ := μ)) (fixedSubspace hσ)
+      h_range_P h_range_condexp hP_fixed hQ_fixes
 
   -- Step 3: Conclude using equality
   rw [← hP_eq]
