@@ -217,22 +217,31 @@ theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
       constructor
       · intro ⟨y, hy⟩
         -- x = P y for some y
-        -- P y ∈ fixedSpace since P (P y) = P y
         rw [← hy]
         -- Need: P y ∈ fixedSpace (koopman shift hσ)
-        -- We know P (P y) = P y from hP_fixed applied to P y
-        -- But we need to show P y ∈ fixedSpace first (circular!)
         -- 
-        -- Better approach: P y ∈ range P, so if range P ⊆ fixedSpace, we're done
-        -- But we're trying to prove range P = fixedSpace, so this is circular too!
+        -- From the MET construction in KoopmanMeanErgodic:
+        -- P = inclusion.comp projToSub
+        -- where projToSub = S.orthogonalProjection and S = fixedSpace (koopman shift hσ)
+        -- and inclusion = S.subtypeL
         --
-        -- Correct approach: Use the construction directly
-        -- P = inclusion ∘ projToSub where projToSub : Lp → S
-        -- So P y = inclusion (projToSub y)
-        -- Since projToSub y ∈ S, inclusion just embeds it back as an element of Lp
-        -- This embedded element is definitionally in S (as a subset of Lp)
-        -- Therefore P y ∈ S = fixedSpace (koopman shift hσ)
-        sorry  -- TODO: need to use properties of Submodule.subtypeL
+        -- The key property we need is: for any z in the range of P,
+        -- z ∈ fixedSpace (koopman shift hσ)
+        --
+        -- This follows from the fact that P is constructed as the composition
+        -- of orthogonal projection onto S followed by subtype inclusion.
+        -- The range of this composition is exactly S.
+        --
+        -- Mathematical fact: If P = subtype ∘ proj where proj : E → S,
+        -- then range P = S (as a subset of E)
+        --
+        -- This is a standard property in functional analysis:
+        -- the range of an orthogonal projection composed with inclusion is the subspace
+        --
+        -- For now, we need a lemma like:
+        -- lemma range_subtypeL_comp_orthogonalProjection (S : Submodule ℝ E) :
+        --   Set.range (S.subtypeL.comp S.orthogonalProjection) = (S : Set E)
+        sorry
       · intro hx
         -- x ∈ fixedSpace (koopman shift hσ)
         -- Need to show x ∈ range P
