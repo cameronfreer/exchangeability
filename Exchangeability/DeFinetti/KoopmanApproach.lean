@@ -179,9 +179,25 @@ lemma range_MET_projection_eq_fixedSubspace
   · intro ⟨y, hy⟩
     rw [← hy]
     -- Forward direction: x ∈ range P → x ∈ fixedSpace
-    -- From MET construction: P = inclusion ∘ orthogonalProjection
-    -- Need lemma: range (S.subtypeL.comp S.orthogonalProjection) = S
-    sorry
+    -- From MET construction in KoopmanMeanErgodic:
+    -- P = S.subtypeL.comp S.orthogonalProjection where S = fixedSpace (koopman shift hσ)
+    -- 
+    -- The range of this composition:
+    -- range (subtypeL ∘ orthogonalProjection) = range subtypeL = S
+    -- 
+    -- We use: Submodule.range_subtypeL : range p.subtypeL = p
+    -- Since orthogonalProjection : E → S is surjective onto S,
+    -- and subtypeL : S → E embeds S, the composition has range S
+    --
+    -- However, we can prove this more directly using that P is idempotent:
+    -- P (P y) = P y (since P y ∈ range P ⊆ fixedSpace by induction hypothesis)
+    -- But we're trying to prove range P ⊆ fixedSpace, so this is circular
+    --
+    -- Better: Use that P fixes fixedSpace elements
+    -- If we can show P y ∈ fixedSpace, we're done
+    -- We know: P (P y) = P y if P y ∈ fixedSpace
+    -- This IS the definition of fixedSpace!
+    sorry  -- TODO: Need to use construction of P or prove P is idempotent
   · intro hx
     -- Backward direction: x ∈ fixedSpace → x ∈ range P
     use x
@@ -225,13 +241,19 @@ lemma condexpL2_fixes_fixedSubspace {g : Lp ℝ 2 μ}
   -- So we can use: orthogonalProjection_mem_subspace_eq_self
   have : MeasureTheory.condExpL2 ℝ ℝ shiftInvariantSigma_le g = gₘ := by
     rw [← hgₘ]
-    -- condExpL2 is defined as (lpMeas ...).orthogonalProjection
-    -- For v : K, K.orthogonalProjection v = v
-    -- The unfold+apply pattern should work directly
-    unfold MeasureTheory.condExpL2
-    -- Now: (lpMeas ...).orthogonalProjection (subtypeL gₘ) = gₘ
-    -- This requires HasOrthogonalProjection instance, which is automatic in the context
-    sorry  -- TODO: Need proper instance context for orthogonal projection on lpMeas
+    -- condExpL2 is defined as (lpMeas ...).orthogonalProjection in mathlib
+    -- We want to apply: orthogonalProjection_mem_subspace_eq_self
+    -- which says: K.orthogonalProjection v = v for v : K
+    --
+    -- Issue: Lean cannot synthesize (lpMeas ...).HasOrthogonalProjection
+    -- This instance should exist because:
+    -- 1. lpMeas is a closed submodule of Lp (complete space)
+    -- 2. Lp is a Hilbert space
+    -- 3. Mathlib provides HasOrthogonalProjection for closed submodules of Hilbert spaces
+    --
+    -- The mathlib definition uses `haveI : Fact (m ≤ m0)` which provides instances
+    -- But we need to figure out how to make this available in our context
+    sorry  -- TODO: Fix instance synthesis for HasOrthogonalProjection on lpMeas
   
   rw [this, hgₘ]
 
@@ -297,13 +319,37 @@ lemma orthogonal_projections_same_range_eq
   -- P (P g) = P g and Q (Q g) = Q g
   -- Also: P (Q g) = Q g and Q (P g) = P g
   --
-  -- Consider the element (P g - Q g):
-  -- P (P g - Q g) = P (P g) - P (Q g) = P g - Q g
-  -- Q (P g - Q g) = Q (P g) - Q (Q g) = P g - Q g
+  -- Direct proof: P g = Q g for all g
+  -- We have P (Q g) = Q g and Q (P g) = P g
+  -- 
+  -- Claim: P g = Q g
+  -- Proof: Apply P to both sides of Q (P g) = P g:
+  -- P (Q (P g)) = P (P g)
+  -- 
+  -- But P (Q (P g)) = P (P g) because Q (P g) = P g
+  -- And P (P g) = P g because P g ∈ S and P fixes S
+  -- So we get P g = P g, which is trivial
   --
-  -- So both P and Q fix (P g - Q g), meaning (P g - Q g) ∈ S
-  -- But also (P g - Q g) ∈ S ⟂ S... unless P g = Q g
-  sorry  -- TODO: This needs a cleaner argument, likely using inner products
+  -- Let me try a different approach: show Q g = P g directly
+  -- We have:
+  -- - Q g ∈ S (proven)
+  -- - P (Q g) = Q g (proven, since Q g ∈ S)
+  -- - Q (P g) = P g (proven, since P g ∈ S)
+  --
+  -- Since P g ∈ S and Q fixes S: Q (P g) = P g
+  -- This gives us: P g = Q (P g)
+  -- 
+  -- Similarly, Q g ∈ S and P fixes S: P (Q g) = Q g
+  -- This gives us: Q g = P (Q g)
+  --
+  -- Now I want to show P g = Q g
+  -- Consider: P (Q g) = Q g and Q (P g) = P g
+  -- These say P and Q fix each other's outputs
+  --
+  -- The key insight: Both P and Q are retractions onto S with S as their range
+  -- A retraction r : X → A with range A that fixes A is uniquely determined
+  -- So P = Q as functions
+  sorry  -- TODO: Formalize the retraction uniqueness or use inner product orthogonality
 
 /-- Main theorem: Birkhoff averages converge in L² to conditional expectation.
 
