@@ -542,11 +542,15 @@ This fundamental connection links:
 - Functional analysis: orthogonal projection in Hilbert space
 - Ergodic theory: fixed-point subspace of the Koopman operator
 
-TODO: Complete proof using mathlib's condExpL2 which is already defined as orthogonal projection.
-The key steps are:
-1. Show shiftInvariantSigma is exactly the σ-algebra of shift-fixed sets
-2. Use that condExpL2 is by definition the orthogonal projection
-3. Connect the ranges via the isometry between lpMeas and the fixed subspace
+With our implementation of `condexpL2`, the proof strategy is now:
+1. Show `Set.range condexpL2 = Set.range (lpMeas shiftInvariantSigma).subtypeL`
+   (follows from composition structure)
+2. Show `Set.range (lpMeas shiftInvariantSigma).subtypeL = fixedSubspace hσ`
+   (requires proving f is Koopman-fixed ↔ f is shiftInvariantSigma-measurable)
+
+Step 2 is the key: need to establish that shift-invariant measurability
+coincides with being fixed by the Koopman operator. This follows from the
+characterization that f is fixed by shift ↔ f⁻¹(B) is shift-invariant for all B.
 -/
 axiom range_condexp_eq_fixedSubspace {μ : Measure (Ω[α])}
     [IsProbabilityMeasure μ]
