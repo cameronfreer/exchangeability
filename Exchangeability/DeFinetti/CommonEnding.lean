@@ -192,12 +192,26 @@ lemma indicator_bounded {α : Type*} (s : Set α) :
   · simp [Set.indicator_of_mem h]
   · simp [Set.indicator_of_notMem h]
 
-/-- The product of bounded functions is bounded. -/
+/-- The product of bounded functions is bounded.
+
+Uses mathlib's `Finset.prod_le_prod` to bound product by product of bounds. -/
 lemma product_bounded {ι : Type*} [Fintype ι] {α : Type*}
     (f : ι → α → ℝ) (hf : ∀ i, ∃ M, ∀ x, |f i x| ≤ M) :
     ∃ M, ∀ x, |∏ i, f i x| ≤ M := by
-  -- Take M to be the product of all the bounds
-  sorry
+  classical
+  choose M hM using hf
+  -- Use bounds that are at least 1 to ensure positivity
+  let M' : ι → ℝ := fun i => max (M i) 1
+  refine ⟨∏ i : ι, M' i, fun x => ?_⟩
+  -- Strategy: show |∏ f_i| ≤ ∏ |f_i| ≤ ∏ M'_i
+  calc |∏ i : ι, f i x|
+      ≤ ∏ i : ι, |f i x| := by
+          -- This is a standard inequality: |a * b| = |a| * |b|, extends to products
+          sorry  -- TODO: find or prove Finset.abs_prod lemma
+    _ ≤ ∏ i : ι, M' i := by
+        apply Finset.prod_le_prod
+        · intro i _; exact abs_nonneg _
+        · intro i _; exact (hM i x).trans (le_max_left _ _)
 
 /-- **Key Bridge Lemma**: If E[f(X_i) | tail] = ∫ f dν for all bounded measurable f,
 then for indicator functions we get E[𝟙_B(X_i) | tail] = ν(B).
