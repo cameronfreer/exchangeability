@@ -221,12 +221,17 @@ lemma condexpL2_fixes_fixedSubspace {g : Lp ℝ 2 μ}
   simp only [ContinuousLinearMap.coe_comp', Function.comp_apply]
   
   -- The key: condExpL2 (subtypeL gₘ) = gₘ because gₘ is already in lpMeas
-  -- This uses orthogonalProjection_mem_subspace_eq_self from mathlib
+  -- condExpL2 is DEFINED as orthogonalProjection in mathlib
+  -- So we can use: orthogonalProjection_mem_subspace_eq_self
   have : MeasureTheory.condExpL2 ℝ ℝ shiftInvariantSigma_le g = gₘ := by
     rw [← hgₘ]
-    -- Need: condExpL2 is defined as orthogonal projection, and we can apply
-    -- orthogonalProjection_mem_subspace_eq_self
-    sorry
+    -- condExpL2 is defined as (lpMeas ...).orthogonalProjection
+    -- For v : K, K.orthogonalProjection v = v
+    -- The unfold+apply pattern should work directly
+    unfold MeasureTheory.condExpL2
+    -- Now: (lpMeas ...).orthogonalProjection (subtypeL gₘ) = gₘ
+    -- This requires HasOrthogonalProjection instance, which is automatic in the context
+    sorry  -- TODO: Need proper instance context for orthogonal projection on lpMeas
   
   rw [this, hgₘ]
 
@@ -238,7 +243,12 @@ P is the orthogonal projection onto S iff:
 - P x ∈ S for all x
 - ⟨x - P x, s⟩ = 0 for all s ∈ S
 
-TODO: Prove using inner product characterization of orthogonal projections.
+The proof strategy uses that both P and Q fix all elements of S.
+For any g, both P g and Q g are in S. Since P fixes S, P(Q g) = Q g.
+Since Q fixes S, Q(P g) = P g. This gives us P g = Q(P g) and Q g = Q(P g) = P g.
+
+TODO: Complete using that fixing S implies they're both the identity map restricted to S,
+and use mathlib's `eq_orthogonalProjectionFn_of_mem_of_inner_eq_zero` for uniqueness.
 -/
 lemma orthogonal_projections_same_range_eq
     (P Q : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ)
@@ -265,26 +275,35 @@ lemma orthogonal_projections_same_range_eq
   have hP_fixes_Qg : P (Q g) = Q g := hP_fixes (Q g) hQg
   have hQ_fixes_Pg : Q (P g) = P g := hQ_fixes (P g) hPg
   
-  -- The key: both P and Q are "projecting" g onto S, and they fix elements of S
-  -- So P g and Q g must be equal
+  -- Key observation: Both P and Q fix elements of S and have range = S
+  -- This means they act as the identity on S
+  -- 
+  -- For any g, both P g and Q g are in S
+  -- Apply Q to P g: Q (P g) = P g (since P g ∈ S and Q fixes S)
+  -- Apply P to Q g: P (Q g) = Q g (since Q g ∈ S and P fixes S)
   --
-  -- Proof: We show P g = Q (P g) = P (Q (P g)) = P (P g) = P g
-  -- But also P (Q (P g)) = P (P g) because Q (P g) = P g
-  -- This establishes P g ∈ S is fixed by Q, and Q g ∈ S is fixed by P
+  -- Now the clever part: use that P and Q commute when composing with elements of S
+  -- P g = Q (P g) = Q (P (Q g)) = Q (Q g) = Q g
   --
-  -- More directly: Q (P g) = P g and P (Q g) = Q g
-  -- We want: P g = Q g
+  -- Step by step:
+  -- 1. P g = Q (P g) by hQ_fixes_Pg
+  -- 2. We want to show this equals Q g
+  -- 3. Key: P g = P (Q g) because both are "the projection of g onto S"
+  --    But we need to be more careful...
   --
-  -- Since Q (P g) = P g, we have P g is a fixed point of Q
-  -- Since P g ∈ S and Q fixes all of S, this is expected
+  -- Alternative: Directly use idempotence
+  -- P g ∈ S and Q g ∈ S
+  -- Since both P and Q fix all of S, we have:
+  -- P (P g) = P g and Q (Q g) = Q g
+  -- Also: P (Q g) = Q g and Q (P g) = P g
   --
-  -- The key insight: both P g and Q g are projections of g onto S
-  -- For uniqueness, we need: if x ∈ S, then P x = x and Q x = x
-  -- So P (Q g) = Q g (since Q g ∈ S)
-  -- And Q (P g) = P g (since P g ∈ S)
+  -- Consider the element (P g - Q g):
+  -- P (P g - Q g) = P (P g) - P (Q g) = P g - Q g
+  -- Q (P g - Q g) = Q (P g) - Q (Q g) = P g - Q g
   --
-  -- Now: P g = Q (P g) would give us P g equals what Q sees, but we need more
-  sorry  -- TODO: Need to use that projections onto same space with same fixing property are unique
+  -- So both P and Q fix (P g - Q g), meaning (P g - Q g) ∈ S
+  -- But also (P g - Q g) ∈ S ⟂ S... unless P g = Q g
+  sorry  -- TODO: This needs a cleaner argument, likely using inner products
 
 /-- Main theorem: Birkhoff averages converge in L² to conditional expectation.
 
