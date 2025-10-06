@@ -826,7 +826,13 @@ lemma range_condexp_eq_fixedSubspace {μ : Measure (Ω[α])}
       refine ⟨(↑y : Lp ℝ 2 μ), ?_⟩
       have hfix : (MeasureTheory.condExpL2 ℝ ℝ (m := shiftInvariantSigma) shiftInvariantSigma_le)
           (↑y) = y := by
-        sorry -- TODO: Apply Submodule.orthogonalProjection_mem_subspace_eq_self with proper Fact instance
+        classical
+        haveI :
+            Fact
+              (shiftInvariantSigma (α := α) ≤
+                (inferInstance : MeasurableSpace (Ω[α]))) :=
+          ⟨shiftInvariantSigma_le (α := α)⟩
+        simp [MeasureTheory.condExpL2]
       simp [condexpL2, ContinuousLinearMap.comp_apply, hfix]
   -- now swap range via lpMeas_eq_fixedSubspace
   rw [h_proj, lpMeas_eq_fixedSubspace (μ := μ) hσ]
