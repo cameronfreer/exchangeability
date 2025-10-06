@@ -302,6 +302,25 @@ lemma prod_le_one_of_le_one {ι : Type*} [Fintype ι] (f : ι → ENNReal)
   · intro i _
     exact hf i
 
+/-- Products of measurable ENNReal-valued functions are measurable. -/
+lemma measurable_prod_ennreal {ι : Type*} [Fintype ι] {Ω : Type*} [MeasurableSpace Ω]
+    (f : ι → Ω → ENNReal) (hf : ∀ i, Measurable (f i)) :
+    Measurable fun ω => ∏ i, f i ω := by
+  apply Finset.measurable_prod
+  intro i _
+  exact hf i
+
+/-- The ENNReal indicator function composed with a measurable function is measurable. -/
+lemma measurable_indicator_comp {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (f : Ω → α) (hf : Measurable f) (s : Set α) (hs : MeasurableSet s) :
+    Measurable fun ω => ENNReal.ofReal (s.indicator (fun _ => (1 : ℝ)) (f ω)) := by
+  -- The indicator function is measurable when composed with a measurable function
+  have : Measurable fun ω => s.indicator (fun _ => (1 : ℝ)) (f ω) := by
+    apply Measurable.indicator
+    · exact measurable_const
+    · exact hf hs
+  exact ENNReal.measurable_ofReal.comp this
+
 /-- The product of bounded functions is bounded.
 
 Uses mathlib's `Finset.prod_le_prod` to bound product by product of bounds. -/
