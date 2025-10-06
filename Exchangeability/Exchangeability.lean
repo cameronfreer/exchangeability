@@ -42,6 +42,7 @@ space, and they generate the product σ-algebra on `ℕ → α`.
 def prefixProj (α : Type*) (n : ℕ) (x : ℕ → α) : Fin n → α :=
   fun i => x i
 
+omit [MeasurableSpace α] in
 @[simp]
 lemma prefixProj_apply (n : ℕ) (x : ℕ → α) (i : Fin n) :
     prefixProj (α:=α) n x i = x i := rfl
@@ -56,15 +57,18 @@ lemma measurable_prefixProj (n : ℕ) :
 def prefixCylinder (n : ℕ) (S : Set (Fin n → α)) : Set (ℕ → α) :=
   (prefixProj (α:=α) n) ⁻¹' S
 
+omit [MeasurableSpace α] in
 @[simp]
 lemma mem_prefixCylinder {n : ℕ} {S : Set (Fin n → α)} {x : ℕ → α} :
     x ∈ prefixCylinder (α:=α) n S ↔ prefixProj (α:=α) n x ∈ S := Iff.rfl
 
+omit [MeasurableSpace α] in
 @[simp]
 lemma prefixCylinder_univ (n : ℕ) :
     prefixCylinder (α:=α) n (Set.univ : Set (Fin n → α)) = (Set.univ) := by
   ext x; simp [prefixCylinder]
 
+omit [MeasurableSpace α] in
 @[simp]
 lemma prefixCylinder_empty (n : ℕ) :
     prefixCylinder (α:=α) n (∅ : Set (Fin n → α)) = (∅) := rfl
@@ -95,6 +99,7 @@ variable {m n : ℕ}
 def takePrefix (hmn : m ≤ n) (x : Fin n → α) : Fin m → α :=
   fun i => x (Fin.castLE hmn i)
 
+omit [MeasurableSpace α] in
 @[simp]
 lemma takePrefix_apply (hmn : m ≤ n) (x : Fin n → α) (i : Fin m) :
     takePrefix (α:=α) hmn x i = x (Fin.castLE hmn i) := rfl
