@@ -58,27 +58,19 @@ variable {α : Type*} [MeasurableSpace α]
 
 /-- The infinite i.i.d. product measure `ν^ℕ` on `ℕ → α`.
 
-**Implementation via Ionescu-Tulcea (current technical obstacle)**:
+**Current implementation**: Axiomatized pending mathlib support for infinite products.
 
-The natural approach is:
-1. Define `iidKernel ν n : Kernel ((i : Finset.Iic n) → α) α := Kernel.const _ ν`
-2. Apply `Kernel.traj (fun n => iidKernel ν n) 0` to get a kernel on the empty history
-3. Evaluate at the unique element of `(i : Finset.Iic 0) → α`
+**Future implementation path**: Once mathlib extends `Measure.pi` to work without `Fintype ι`,
+this can be defined as:
+```lean
+def iidProduct (ν : Measure α) [SigmaFinite ν] : Measure (ℕ → α) :=
+  Measure.pi (fun _ : ℕ => ν)
+```
 
-**Technical challenges**:
-- Universe level management: mathlib's `Kernel.traj` expects `X : ℕ → Type*` with
-  universe flexibility, but our constant family `fun _ => α` creates universe constraints
-- Measurable space instances: need `MeasurableSpace ((i : Finset.Iic n) → α)` instances
-  that mathlib may not provide automatically for constant families
-- Type family encoding: `Kernel.traj` is designed for varying types at each index,
-  not constant families
-
-**Alternative approaches to explore**:
-1. Use `Measure.pi` with infinite index sets (if available in mathlib)
-2. Define as projective limit of finite products explicitly
-3. Provide manual universe-polymorphic wrapper around `Kernel.traj`
-
-For now axiomatized pending resolution of these technical issues. -/
+The current mathlib (as of January 2025) requires `Fintype ι` for `Measure.pi`, but the
+mathematical construction via outer measures works for countable index sets. The axioms below
+specify the properties this measure must satisfy and can be replaced with actual definitions
+once mathlib infrastructure is available. -/
 axiom iidProduct (ν : Measure α) [IsProbabilityMeasure ν] : Measure (ℕ → α)
 
 axiom iidProduct_isProbability (ν : Measure α) [IsProbabilityMeasure ν] :
@@ -88,49 +80,36 @@ namespace iidProduct
 
 variable (ν : Measure α) [IsProbabilityMeasure ν]
 
-/-- Finite-dimensional distributions of `iidProduct ν` are the expected product measures.
+/-- The measure `iidProduct ν` is a probability measure. -/
+instance : IsProbabilityMeasure (iidProduct ν) := iidProduct_isProbability ν
 
-TODO: Prove using the projective property of the Ionescu-Tulcea construction. -/
+/-- Finite-dimensional distributions indexed by `Fin n`.
+
+This states that the marginal distribution on the first `n` coordinates equals the
+finite product measure `ν^n`. This is the defining projective property of the infinite
+product measure.
+
+**Proof strategy (once `iidProduct` is properly defined)**:
+Use mathlib's `Measure.pi_map_restrict` or build from cylinder characterization. -/
 axiom cylinder_fintype (n : ℕ) :
     (iidProduct ν).map (fun f : ℕ → α => fun i : Fin n => f i) =
       Measure.pi fun _ : Fin n => ν
 
-/-- The measure `iidProduct ν` is a probability measure. -/
-instance : IsProbabilityMeasure (iidProduct ν) := iidProduct_isProbability ν
-
 /-- Invariance under arbitrary permutations of coordinates.
-This uses permutation invariance of finite products and uniqueness via cylinder sets.
 
-TODO: Complete proof using mathlib lemmas:
+This states that `iidProduct ν` is invariant under any permutation of `ℕ`. This is a
+consequence of the fact that the measure is characterized by its finite-dimensional
+marginals, all of which are symmetric.
 
-**Step 1: Finite-dimensional invariance**
-For any finset s : Finset ℕ and cylinder C based on s, show:
-```lean
-((iidProduct ν).map (fun f => f ∘ σ)) C = (iidProduct ν) C
-```
-Use mathlib's `MeasureTheory.pi_map_piCongrLeft` from Constructions/Pi.lean:
-```lean
-lemma pi_map_piCongrLeft (e : ι ≃ ι') (μ : (i : ι') → Measure (β i)) :
-    (Measure.pi fun i ↦ μ (e i)).map (MeasurableEquiv.piCongrLeft (fun i ↦ β i) e) = Measure.pi μ
-```
-Combined with `cylinder_fintype`, this shows agreement on cylinder sets.
+**Proof strategy (once `iidProduct` is properly defined)**:
+1. Use cylinder sets to show agreement on a π-system that generates the product σ-algebra
+2. Apply `ext_of_generate_finite` to extend to the whole σ-algebra
+3. Key ingredient: finite permutations preserve finite products (mathlib's `pi_map_piCongrLeft`)
 
-**Step 2: Extend to whole σ-algebra**
-Apply `MeasureTheory.ext_of_generate_finite` from Measure/Typeclasses/Finite.lean:
-```lean
-theorem ext_of_generate_finite (C : Set (Set α)) (hA : m0 = generateFrom C) (hC : IsPiSystem C)
-    [IsFiniteMeasure μ] (hμν : ∀ s ∈ C, μ s = ν s) (h_univ : μ univ = ν univ) : μ = ν
-```
-Use `MeasureTheory.measurableCylinders` as the π-system C.
-
-**Step 3: Show cylinders generate**
-Use `MeasureTheory.generateFrom_measurableCylinders` from Constructions/Cylinders.lean:
-```lean
-theorem generateFrom_measurableCylinders : 
-    generateFrom measurableCylinders = MeasurableSpace.pi
-```
-
-All required lemmas exist in mathlib! Implementation pending.
+The full proof requires mathlib lemmas from:
+- `Mathlib/MeasureTheory/Constructions/Cylinders.lean` (cylinder sets)
+- `Mathlib/MeasureTheory/Constructions/Projective.lean` (projective limits)
+- `Mathlib/MeasureTheory/Constructions/Pi.lean` (finite product invariance)
 -/
 axiom perm_eq (σ : Equiv.Perm ℕ) :
     (iidProduct ν).map (fun f => f ∘ σ) = iidProduct ν
