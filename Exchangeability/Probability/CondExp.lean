@@ -134,8 +134,8 @@ lemma condProb_integral_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         (f := fun _ : Ω => (1 : ℝ)) hA
   -- Evaluate the integral of 1 over the set.
   have h_const : ∫ ω in B ∩ A, (1 : ℝ) ∂μ = (μ (B ∩ A)).toReal := by
-    simpa [Measure.real_def, Set.inter_comm]
-      using (setIntegral_one_eq_measureReal (μ := μ) (s := B ∩ A))
+    simp [Measure.real_def, Set.inter_comm,
+      setIntegral_one_eq_measureReal (μ := μ) (s := B ∩ A)]
   -- Put everything together and clean up intersections.
   simpa [condProb, h_indicator, h_const, Set.inter_comm, Set.inter_left_comm, Set.inter_assoc]
     using h_condexp
