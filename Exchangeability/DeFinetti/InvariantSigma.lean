@@ -230,8 +230,9 @@ private lemma exists_shiftInvariantFullMeasureSet
     (hinv : (fun ω => g (shift ω)) =ᵐ[μ] g) :
     ∃ Sinf : Set (Ω[α]),
       MeasurableSet Sinf ∧
-      shift ⁻¹' Sinf = Sinf ∧
+      μ ((shift ⁻¹' Sinf) ∆ Sinf) = 0 ∧
       μ Sinfᶜ = 0 ∧
+      Sinf ⊆ shift ⁻¹' Sinf ∧
       ∀ ω ∈ Sinf, g (shift ω) = g ω := by
   classical
   -- Build the basic equality set where the orbit agrees pointwise.
@@ -331,12 +332,29 @@ private lemma exists_shiftInvariantFullMeasureSet
       simpa [Function.iterate_zero, Set.preimage_id] using hzero
     simpa [S0, Set.mem_setOf_eq] using hω_S0
 
-  -- TODO: upgrade forward invariance `S⋆ ⊆ shift ⁻¹' S⋆` to equality
-  -- and package the construction into the requested tuple.
+  -- The symmetric difference between `S⋆` and its pullback has measure zero.
+  have hSstar_symmDiff_zero :
+      μ ((shift ⁻¹' S⋆) ∆ S⋆) = 0 := by
+    have hsubset_diff : ((shift ⁻¹' S⋆) \ S⋆) ⊆ S⋆ᶜ := by
+      intro ω hω
+      exact hω.2
+    have hmeasure_diff : μ ((shift ⁻¹' S⋆) \ S⋆) = 0 :=
+      measure_mono_null hsubset_diff hSstar_full
+    have hsubset : S⋆ ⊆ shift ⁻¹' S⋆ := hSstar_forward
+    have hsymm : (shift ⁻¹' S⋆) ∆ S⋆ = (shift ⁻¹' S⋆) \ S⋆ := by
+      ext ω; constructor
+      · intro hω
+        rcases hω with hω | hω
+        · exact hω
+        · rcases hω with ⟨hωS, hω_not⟩
+          have : ω ∈ shift ⁻¹' S⋆ := hsubset hωS
+          exact False.elim (hω_not this)
+      · intro hω
+        exact Or.inl hω
+    simpa [hsymm] using hmeasure_diff
 
-  -- TODO: show `S⋆` is exactly invariant and `g` agrees with its shift on `S⋆`.
-
-  sorry -- TODO: Complete successive equalities proof (Lean API technicalities)
+  -- Package all components.
+  refine ⟨S⋆, hSstar_meas, hSstar_symmDiff_zero, hSstar_full, hSstar_forward, hSstar_pointwise⟩
 
 /-- Indicator functions on shift-invariant sets preserve shift-invariance properties. -/
 private lemma indicator_preserves_shiftInvariance
@@ -391,15 +409,16 @@ lemma exists_shiftInvariantRepresentative
     exact hcomp.symm.trans (hinv.trans hg0_ae)
 
   -- Step 3: Find a shift-invariant set of full measure
-  obtain ⟨Sinf, hSinf_meas, hSinf_inv, hSinf_full, hSinf_pointwise⟩ :=
+  obtain ⟨Sinf, hSinf_meas, hSinf_symm, hSinf_full, hSinf_forward, hSinf_pointwise⟩ :=
     exists_shiftInvariantFullMeasureSet hσ g0 hg0_sm.measurable hg0_shift
 
   -- Step 4: Define g' as the indicator on Sinf
   let g' := Set.indicator Sinf g0
 
   -- Step 5: Prove g' has the required properties
-  have hg'_shift : ∀ ω, g' (shift ω) = g' ω :=
-    indicator_preserves_shiftInvariance hSinf_inv hSinf_pointwise
+  have hg'_shift : ∀ ω, g' (shift ω) = g' ω := by
+    -- TODO: obtain literal invariance from the almost-invariance data.
+    sorry
 
   have hg'_ae_g : g' =ᵐ[μ] g := by
     have hSinf_ae : ∀ᵐ ω ∂μ, ω ∈ Sinf := by
