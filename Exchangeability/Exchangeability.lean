@@ -18,16 +18,20 @@ variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
 /-- **Axiom**: measures on path space are determined by their finite-dimensional marginals.
 
-Sketch (to be formalised later): choose the cylinder σ-algebra and use the
-π-λ/Dynkin theorem (`MeasurableSpace.induction_on_inter`) to reduce the problem
-to cylinder sets. Then revisit the measurability gymnastics from the previous
-implementation to compare the push-forwards `Measure.map` along the restriction
-maps to finite coordinates, carefully tracking the finite index embeddings.
-Finally, invoke uniqueness for the kernels produced by the Ionescu–Tulcea
-construction (`ProbabilityTheory.Kernel.traj`) to conclude that the induced
-measures on path space agree. Along the way, FMP 10.3 and 10.4 (relating
-invariant and almost invariant σ-fields, ergodicity) are expected to control the
-tail σ-field appearing in the extension argument. -/
+Planned proof sketch (to be formalised here eventually):
+- Set up `prefixProj n : (ℕ → α) → (Fin n → α)` and the cylinder family
+  `prefixCylinders α := { (prefixProj n) ⁻¹' S | S measurable }`.
+- Verify cylinders form a π-system by enlarging to
+  `k = max m n` and restricting along `Fin.castLE`; measurability is inherited via
+  `measurable_pi_apply`.
+- Show `generateFrom prefixCylinders = ‹MeasurableSpace (ℕ → α)›` using the product
+  σ-algebra characterisation (either
+  `MeasurableSpace.pi_eq_generateFrom_projections` or
+  `generateFrom_measurableCylinders`).
+- With `IsFiniteMeasure μ` and `ν`, apply `Measure.ext_of_generate_finite` to the
+  property `P A := μ A = ν A`; the hypothesis handles cylinders, while closure
+  under complements and disjoint unions uses finiteness of μ, ν.
+- No Ionescu–Tulcea machinery is required once this argument is written down. -/
 axiom measure_eq_of_fin_marginals_eq {μ ν : Measure (ℕ → α)}
     (h : ∀ n (S : Set (Fin n → α)) (_hS : MeasurableSet S),
         Measure.map (fun f : ℕ → α => fun i : Fin n => f i) μ S =
@@ -36,14 +40,20 @@ axiom measure_eq_of_fin_marginals_eq {μ ν : Measure (ℕ → α)}
 
 /-- **Axiom**: exchangeability is equivalent to full exchangeability.
 
-Sketch (to mirror Kallenberg's second proof): define the path-space measures
-`μ_X` and `μ_Xπ` as push-forwards of the base measure by `ω ↦ (X n ω)` and
-`ω ↦ (X (π n) ω)`. Using exchangeability (and the invariant σ-field facts from
-FMP 10.3/10.4) show that their finite-dimensional marginals agree; then apply
-`measure_eq_of_fin_marginals_eq` to deduce `μ_X = μ_Xπ`. Finally evaluate back
-along the coordinate map to obtain
-`Measure.map (ω ↦ X (π i) ω) μ = Measure.map (ω ↦ X i ω) μ`, i.e. full
-exchangeability. -/
+Implementation outline:
+1. Form the path law `μ_X := map (ω ↦ fun i => X i ω) μ`. Finitary invariance
+   from `Exchangeable μ X` says `map (reindex τ) μ_X = μ_X` for every permutation τ
+   with finite support.
+2. For a general permutation `π`, build `τₙ` agreeing with `π` on the first `n`
+   coordinates. The construction can use `Equiv.Perm.extendSubtype` on the finite
+   set `(range n) ∪ π '' (range n)`.
+3. Push the equality for `τₙ` forward via each prefix projection to see that all
+   finite-dimensional marginals of `μ_X` and `map (reindex π) μ_X` match.
+4. Apply `measure_eq_of_fin_marginals_eq` to conclude
+   `μ_X = map (reindex π) μ_X` and unravel the definition to obtain full
+   exchangeability.
+5. The reverse direction is immediate: specialise full invariance to finitary
+   permutations and, if necessary, project onto the relevant coordinates. -/
 axiom exchangeable_iff_fullyExchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX_meas : ∀ i, Measurable (X i)) : Exchangeable μ X ↔ FullyExchangeable μ X
 
