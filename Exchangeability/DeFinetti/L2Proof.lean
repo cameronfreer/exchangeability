@@ -49,7 +49,7 @@ noncomputable section
 
 namespace Exchangeability.DeFinetti.L2Proof
 
-open MeasureTheory ProbabilityTheory BigOperators Filter
+open MeasureTheory ProbabilityTheory BigOperators Filter Topology
 open Exchangeability
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
@@ -133,7 +133,7 @@ theorem weighted_sums_converge_L1
   -- Step 1: Show (A n m) is Cauchy in L² for each fixed n
   -- This uses l2_contractability_bound from L2Approach.lean
   have hA_cauchy_L2 : ∀ n, ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
-      MeasureTheory.snorm (fun ω => A n m ω - A n ℓ ω) 2 μ < ENNReal.ofReal ε := by
+      eLpNorm (fun ω => A n m ω - A n ℓ ω) 2 μ < ENNReal.ofReal ε := by
     intro n ε hε
     -- For contractable sequences, we can apply l2_contractability_bound
     -- Key insight: As m, ℓ → ∞, the sup norm |1/m - 1/ℓ| → 0
@@ -144,20 +144,20 @@ theorem weighted_sums_converge_L1
 
   -- Step 2: L²-Cauchy ⇒ L¹-Cauchy (on probability spaces, ‖·‖₁ ≤ ‖·‖₂)
   have hA_cauchy_L1 : ∀ n, ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
-      MeasureTheory.snorm (fun ω => A n m ω - A n ℓ ω) 1 μ < ENNReal.ofReal ε := by
+      eLpNorm (fun ω => A n m ω - A n ℓ ω) 1 μ < ENNReal.ofReal ε := by
     intro n ε hε
     rcases hA_cauchy_L2 n ε hε with ⟨N, hN⟩
     refine ⟨N, fun m ℓ hm hℓ => ?_⟩
     -- On a probability space, ‖f‖₁ ≤ ‖f‖₂ by Hölder's inequality
     -- So L² convergence implies L¹ convergence
-    calc MeasureTheory.snorm (fun ω => A n m ω - A n ℓ ω) 1 μ
-        ≤ MeasureTheory.snorm (fun ω => A n m ω - A n ℓ ω) 2 μ := by
-          sorry  -- Use MeasureTheory.snorm_le_MeasureTheory.snorm_of_exponent_le with 1 ≤ 2
+    calc eLpNorm (fun ω => A n m ω - A n ℓ ω) 1 μ
+        ≤ eLpNorm (fun ω => A n m ω - A n ℓ ω) 2 μ := by
+          sorry  -- Use eLpNorm_le_eLpNorm_of_exponent_le with 1 ≤ 2
       _ < ENNReal.ofReal ε := hN m ℓ hm hℓ
 
   -- Step 3: For each n, completeness of L¹ gives limit alpha n
   have h_exist_alpha : ∀ n, ∃ alphan : Ω → ℝ, Measurable alphan ∧ MemLp alphan 1 μ ∧
-      (∀ ε > 0, ∃ M, ∀ m ≥ M, MeasureTheory.snorm (fun ω => A n m ω - alphan ω) 1 μ < ENNReal.ofReal ε) := by
+      (∀ ε > 0, ∃ M, ∀ m ≥ M, eLpNorm (fun ω => A n m ω - alphan ω) 1 μ < ENNReal.ofReal ε) := by
     intro n
     -- Use completeness of L¹: every Cauchy sequence converges
     -- We have (A n m)_m is Cauchy in L¹ from hA_cauchy_L1
@@ -173,18 +173,18 @@ theorem weighted_sums_converge_L1
 
   -- Step 4: Show (alpha n) is Cauchy in L¹ (3ε argument)
   have halpha_cauchy_L1 : ∀ ε > 0, ∃ N, ∀ m n, m ≥ N → n ≥ N →
-      MeasureTheory.snorm (fun ω => alpha m ω - alpha n ω) 1 μ < ENNReal.ofReal ε := by
+      eLpNorm (fun ω => alpha m ω - alpha n ω) 1 μ < ENNReal.ofReal ε := by
     intro ε hε
     -- 3ε argument: For any ε > 0, choose M large enough so that
     -- ‖alpha m - A m M‖₁ < ε/3 and ‖A n M - alpha n‖₁ < ε/3 for all m,n ≥ N
     -- And also ‖A m M - A n M‖₁ < ε/3 for all m,n ≥ N
     -- Then ‖alpha m - alpha n‖₁ ≤ ‖alpha m - A m M‖₁ + ‖A m M - A n M‖₁ + ‖A n M - alpha n‖₁ < ε
     sorry  -- TODO: Use halpha_conv and hA_cauchy_L1 with ε/3
-           -- Apply triangle inequality: MeasureTheory.snorm_add_le
+           -- Apply triangle inequality: eLpNorm_add_le
 
   -- Step 5: Completeness of L¹ gives alpha_inf
   have h_exist_alpha_inf : ∃ alpha_inf : Ω → ℝ, Measurable alpha_inf ∧ MemLp alpha_inf 1 μ ∧
-      (∀ ε > 0, ∃ N, ∀ n ≥ N, MeasureTheory.snorm (fun ω => alpha n ω - alpha_inf ω) 1 μ < ENNReal.ofReal ε) := by
+      (∀ ε > 0, ∃ N, ∀ n ≥ N, eLpNorm (fun ω => alpha n ω - alpha_inf ω) 1 μ < ENNReal.ofReal ε) := by
     -- Same strategy as Step 3: (alpha n) is Cauchy in L¹ by halpha_cauchy_L1
     -- So it has a limit alpha_inf in Lp ℝ 1 μ by completeness
     sorry  -- TODO: Use Lp.memLp_toLp, CauchySeq.tendsto_of_complete
@@ -199,16 +199,16 @@ theorem weighted_sums_converge_L1
     rcases halpha_inf_conv ε hε with ⟨N, hN⟩
     refine ⟨N, fun n hn => ?_⟩
     have := hN n hn
-    -- Convert MeasureTheory.snorm 1 to integral of absolute value
-    -- MeasureTheory.snorm f 1 μ = ∫ ω, |f ω| ∂μ when f is integrable
-    sorry  -- TODO: Use MeasureTheory.snorm_one_eq_lintegral_nnnorm or MeasureTheory.snorm_eq_integral
+    -- Convert eLpNorm 1 to integral of absolute value
+    -- eLpNorm f 1 μ = ∫ ω, |f ω| ∂μ when f is integrable
+    sorry  -- TODO: Use eLpNorm_one_eq_lintegral_nnnorm or eLpNorm_eq_integral
   · -- A n m → alpha n in L¹
     intro n ε hε
     rcases halpha_conv n ε hε with ⟨M, hM⟩
     refine ⟨M, fun m hm => ?_⟩
     have := hM m hm
     -- Same conversion, then unfold A to get the weighted sum form
-    sorry  -- TODO: Use MeasureTheory.snorm_one_eq_lintegral_nnnorm, then unfold A
+    sorry  -- TODO: Use eLpNorm_one_eq_lintegral_nnnorm, then unfold A
 
 /-!
 ## Step 3: Reverse martingale convergence
@@ -240,6 +240,7 @@ summability of expectations.
 TODO: Adapt to our L¹ convergence setting.
 -/
 theorem subsequence_criterion_convergence_in_probability
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
     (ξ : ℕ → Ω → ℝ) (ξ_limit : Ω → ℝ)
     (h_prob_conv : ∀ ε > 0, Tendsto (fun n => μ {ω | ε ≤ |ξ n ω - ξ_limit ω|}) atTop (𝓝 0)) :
     ∃ (φ : ℕ → ℕ), StrictMono φ ∧
@@ -305,7 +306,7 @@ theorem contractability_conditional_expectation
     (alpha : ℕ → Ω → ℝ) (alpha_inf : Ω → ℝ)
     (I_k : Set Ω)  -- Event ∩I_k in tail σ-algebra
     (h_conv : ∀ᵐ ω ∂μ, Tendsto (fun n => alpha n ω) atTop (𝓝 (alpha_inf ω))) :
-    ∀ i, sorry := by  -- E[f(X_i) ; I_k] = E[alpha_inf ; I_k]
+    True := by  -- TODO: E[f(X_i) ; I_k] = E[alpha_inf ; I_k]
   sorry
 
 /-!
