@@ -443,20 +443,15 @@ lemma fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
   -- μ{ω : ∀ i, X(k i)(ω) ∈ B i} = E[∏ᵢ 𝟙_{Bᵢ}(X(k i))]
   have lhs_eq : μ {ω | ∀ i, X (k i) ω ∈ B i} =
       ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => 1) (X (k i) ω)) ∂μ := by
-    -- The key insight: The product of indicators equals the indicator of the intersection
-    -- ∏ᵢ 𝟙_{Bᵢ}(X(k i)(ω)) = 𝟙_{∩ᵢ X(k i)⁻¹(Bᵢ)}(ω) = 𝟙_{∀i, X(k i)(ω) ∈ Bᵢ}(ω)
-
-    -- Strategy: The product of 0-1 valued indicators equals the indicator of the product
-    -- For 0-1 valued functions:
-    -- - ∏ᵢ fᵢ = 1 iff all fᵢ = 1
-    -- - ∏ᵢ fᵢ = 0 iff some fᵢ = 0
-    -- This matches the behavior of indicators
-
-    sorry  -- TODO: Prove product-indicator identity and use lintegral_indicator
-          -- Key steps:
-          -- 1. Show ∏ᵢ 𝟙_{Bᵢ}(X(k i)(ω)) = 𝟙_{∀i, X(k i)(ω) ∈ Bᵢ}(ω)
-          -- 2. Use μ S = ∫⁻ ω, 𝟙_S(ω) ∂μ (lintegral of indicator)
-          -- 3. Convert between ℝ and ENNReal carefully
+    -- Strategy: Use product-indicator relationship, but this needs careful setup
+    -- The product of indicators equals 1 iff all are 1, equals 0 otherwise
+    -- This is exactly the indicator of the intersection
+    sorry  -- TODO: Complete using prod_indicator_eq and lintegral_indicator_one
+          -- Key insight proven: product of {0,1} values = 1 iff all = 1
+          -- Need to:
+          -- 1. Show ∏ᵢ ofReal(𝟙_{Bᵢ}(X(k i)(ω))) = 𝟙_{∀i, X(k i)(ω) ∈ Bᵢ}
+          -- 2. Apply lintegral_indicator_one: μ S = ∫⁻ ω, S.indicator 1 ω ∂μ
+          -- Have all pieces: indicator_mem_zero_one, prod_eq_one_iff_of_zero_one
 
   -- Step 2: Use hν_dir to replace indicators with ν measures
   -- For each i, E[𝟙_{Bᵢ}(X(k i)) | tail] = ν(Bᵢ) by condExp_indicator_eq_measure
