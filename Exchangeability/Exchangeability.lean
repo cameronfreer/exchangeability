@@ -438,18 +438,19 @@ lemma marginals_perm_eq {μ : Measure Ω} (X : ℕ → Ω → α)
         (f:=fun ω => fun i : Fin m => X i ω)
         (g:=takePrefix (α:=α) hm) hproj hX₁
     have hσ' := congrArg (fun ν => Measure.map (takePrefix (α:=α) hm) ν) hσ
-    have hgoal := by simpa [hmap₁, hmap₂] using hσ'
+    simp only [hmap₁, hmap₂] at hσ'
     have hcomp₁ :
-        (takePrefix (α:=α) hm) ∘ fun ω => fun i : Fin m => X (σ i) ω
+        (fun ω => takePrefix (α:=α) hm (fun i : Fin m => X (σ i) ω))
           = fun ω => fun i : Fin n => X (π i) ω := by
-      funext ω i
-      simp [Function.comp, takePrefix,
-        approxPerm_apply_cast (π:=π) (n:=n) i]
+      ext ω i
+      simp only [takePrefix, approxPerm_apply_cast (π:=π) (n:=n) i]
     have hcomp₂ :
-        (takePrefix (α:=α) hm) ∘ fun ω => fun i : Fin m => X i ω
+        (fun ω => takePrefix (α:=α) hm (fun i : Fin m => X i ω))
           = fun ω => fun i : Fin n => X i ω := by
-      funext ω i; simp [Function.comp, takePrefix]
-    simpa [hcomp₁, hcomp₂] using hgoal
+      ext ω i
+      simp only [takePrefix]
+    simp only [hcomp₁, hcomp₂] at hσ'
+    exact hσ'
 
 /-- Exchangeability and full exchangeability coincide for probability measures. -/
 theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω}
