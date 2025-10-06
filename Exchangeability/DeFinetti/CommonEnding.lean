@@ -270,32 +270,64 @@ axiom fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
     μ {ω | ∀ i, X (k i) ω ∈ B i} = ∫⁻ ω, (Measure.pi fun i : Fin m => ν ω) {x | ∀ i, x i ∈ B i} ∂μ
 
 /-- Pushforward of a measure through coordinate selection equals the marginal distribution.
-This connects the map in the ConditionallyIID definition to the probability of events. -/
-axiom map_coords_apply {μ : Measure Ω} (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
+This connects the map in the ConditionallyIID definition to the probability of events.
+
+This is a direct application of `Measure.map_apply` from mathlib. -/
+lemma map_coords_apply {μ : Measure Ω} (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
     (m : ℕ) (k : Fin m → ℕ) (B : Set (Fin m → α)) (hB : MeasurableSet B) :
-    (Measure.map (fun ω i => X (k i) ω) μ) B = μ {ω | (fun i => X (k i) ω) ∈ B}
+    (Measure.map (fun ω i => X (k i) ω) μ) B = μ {ω | (fun i => X (k i) ω) ∈ B} := by
+  -- The function (fun ω i => X (k i) ω) is measurable as a composition of measurable functions
+  have h_meas : Measurable (fun ω i => X (k i) ω) := by
+    -- Use measurable_pi_iff: a function to a pi type is measurable iff each component is
+    rw [measurable_pi_iff]
+    intro i
+    exact hX_meas (k i)
+  -- Apply Measure.map_apply
+  rw [Measure.map_apply h_meas hB]
+  -- The preimage is definitionally equal to the set we want
+  rfl
 
 /-- The bind of a probability measure with the product measure kernel equals the integral
 of the product measure. This is the other side of the ConditionallyIID equation.
 
-Note: We use lintegral (∫⁻) for measure-valued integrals since measures are ENNReal-valued. -/
-axiom bind_pi_apply {μ : Measure Ω} [IsProbabilityMeasure μ]
+Note: We use lintegral (∫⁻) for measure-valued integrals since measures are ENNReal-valued.
+
+This is a direct application of `Measure.bind_apply` from mathlib's Giry monad. -/
+lemma bind_pi_apply {μ : Measure Ω} [IsProbabilityMeasure μ]
     (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
     (hν_meas : ∀ s, Measurable (fun ω => ν ω s))
     (m : ℕ) (B : Set (Fin m → α)) (hB : MeasurableSet B) :
     (μ.bind fun ω => Measure.pi fun _ : Fin m => ν ω) B =
-      ∫⁻ ω, (Measure.pi fun _ : Fin m => ν ω) B ∂μ
+      ∫⁻ ω, (Measure.pi fun _ : Fin m => ν ω) B ∂μ := by
+  -- Need to show the kernel (fun ω => Measure.pi fun _ => ν ω) is AE-measurable
+  have h_ae_meas : AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ := by
+    -- The pi measure is measurable when the component measures are
+    -- This requires showing: ∀ B, Measurable (fun ω => (Measure.pi fun _ => ν ω) B)
+    -- which follows from hν_meas and properties of Measure.pi
+    sorry  -- TODO: This requires a measureability lemma for Measure.pi
+  -- Now apply Measure.bind_apply
+  exact Measure.bind_apply hB h_ae_meas
 
 /-- Two finite measures are equal if they agree on a π-system that generates the σ-algebra.
 This is the key uniqueness result from Dynkin's π-λ theorem.
 
-In mathlib this is typically `MeasureTheory.FiniteMeasure.ext_of_generateFrom_of_cover`. -/
-axiom measure_eq_of_agree_on_pi_system {Ω : Type*} [MeasurableSpace Ω]
+This is mathlib's `Measure.ext_of_generate_finite` from
+`Mathlib.MeasureTheory.Measure.Typeclasses.Finite`. -/
+lemma measure_eq_of_agree_on_pi_system {Ω : Type*} [MeasurableSpace Ω]
     (μ ν : Measure Ω) [IsFiniteMeasure μ] [IsFiniteMeasure ν]
     (C : Set (Set Ω)) (hC_pi : IsPiSystem C)
     (hC_gen : ‹MeasurableSpace Ω› = MeasurableSpace.generateFrom C)
     (h_agree : ∀ s ∈ C, μ s = ν s) :
-    μ = ν
+    μ = ν := by
+  -- We also need μ univ = ν univ, which follows from the generating set containing univ
+  -- For now, we can derive it if univ is measurable (which it always is)
+  have h_univ : μ Set.univ = ν Set.univ := by
+    -- If univ ∈ C, use h_agree directly
+    -- Otherwise, use measure_univ for probability measures
+    -- For general finite measures, this requires more care
+    sorry  -- TODO: Either assume univ ∈ C or derive from finiteness
+  -- ext_of_generate_finite is in the root namespace for measures
+  exact ext_of_generate_finite C hC_gen hC_pi h_agree h_univ
 
 /-!
 ## The common completion argument
