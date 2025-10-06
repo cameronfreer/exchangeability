@@ -174,19 +174,16 @@ lemma condexpL2_fixes_fixedSubspace {g : Lp ℝ 2 μ}
     (hg : g ∈ fixedSubspace hσ) :
     condexpL2 (μ := μ) g = g := by
   classical
-  -- g ∈ fixedSubspace ⇒ g ∈ range subtypeL by lpMeas_eq_fixedSubspace
-  have h_range : g ∈ Set.range (lpMeas ℝ ℝ shiftInvariantSigma 2 μ).subtypeL := by
-    rw [lpMeas_eq_fixedSubspace (μ := μ) hσ]
-    exact hg
-  rcases h_range with ⟨y, rfl⟩
-  -- condExpL2 fixes y: orthogonal projection fixes elements of the subspace
-  have hfix : (MeasureTheory.condExpL2 ℝ ℝ (m := shiftInvariantSigma) shiftInvariantSigma_le) y = y := by
-    classical
-    haveI : Fact
-        (shiftInvariantSigma (α := α) ≤ (inferInstance : MeasurableSpace (Ω[α]))) :=
-      ⟨shiftInvariantSigma_le (α := α)⟩
-    simp [MeasureTheory.condExpL2]
-  simp [condexpL2, ContinuousLinearMap.comp_apply, hfix]
+  have h_range : Set.range (condexpL2 (μ := μ)) =
+      (fixedSubspace hσ : Set (Lp ℝ 2 μ)) :=
+    range_condexp_eq_fixedSubspace (μ := μ) hσ
+  have hg_range : g ∈ Set.range (condexpL2 (μ := μ)) := by
+    simpa [h_range] using (show g ∈ (fixedSubspace hσ : Set (Lp ℝ 2 μ)) from hg)
+  obtain ⟨f, hf⟩ := hg_range
+  change condexpL2 (μ := μ) f = g at hf
+  subst hf
+  have h_idem := congrArg (fun T => T f) (condexpL2_idem (μ := μ))
+  simpa [ContinuousLinearMap.comp_apply] using h_idem
 
 /-- Main theorem: Birkhoff averages converge in L² to conditional expectation.
 
@@ -216,14 +213,8 @@ theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
     have hQ_fixes : ∀ g ∈ fixedSubspace hσ, condexpL2 (μ := μ) g = g :=
       fun g hg => condexpL2_fixes_fixedSubspace (hσ := hσ) hg
     have hP_idem : P.comp P = P := METProjection_idem (μ := μ) hσ
-    have hQ_idem : (condexpL2 (μ := μ)).comp (condexpL2 (μ := μ)) = condexpL2 (μ := μ) := by
-      apply ContinuousLinearMap.ext
-      intro f
-      have : condexpL2 (μ := μ) f ∈ fixedSubspace hσ := by
-        rw [← SetLike.mem_coe, ← h_range_condexp]
-        exact ⟨f, rfl⟩
-      simp only [ContinuousLinearMap.coe_comp', Function.comp_apply]
-      exact hQ_fixes (condexpL2 (μ := μ) f) this
+    have hQ_idem : (condexpL2 (μ := μ)).comp (condexpL2 (μ := μ)) = condexpL2 (μ := μ) :=
+      condexpL2_idem (μ := μ)
     have hP_sym : P.IsSymmetric := METProjection_isSymmetric (μ := μ) hσ
     have hQ_sym : (condexpL2 (μ := μ)).IsSymmetric := by
       intro f g
@@ -296,6 +287,13 @@ theorem extremeMembers_agree
 /-- The projection onto the first coordinate. -/
 def π0 : Ω[α] → α := fun ω => ω 0
 
+
+lemma measurable_pi0 : Measurable (π0 (α := α)) := by
+  classical
+  simpa using (measurable_pi_apply (0 : ℕ) :
+    Measurable fun ω : Ω[α] => ω 0)
+
+
 /-- Regular conditional distribution kernel constructed via condExpKernel.
 
 This is the kernel giving the conditional distribution of the first coordinate
@@ -304,34 +302,42 @@ given the tail σ-algebra.
 TODO: The exact construction requires careful handling of the measurable space instances.
 For now we axiomatize it as a placeholder. -/
 noncomputable def rcdKernel {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    [StandardBorelSpace (Ω[α])] : Kernel (Ω[α]) α :=
-  sorry -- TODO: (condExpKernel μ (shiftInvariantSigma (α := α))).map π0 with correct instances
+    [StandardBorelSpace α] : Kernel[shiftInvariantSigma (α := α)] (Ω[α]) α :=
+  Kernel.map (condExpKernel μ (shiftInvariantSigma (α := α))) (π0 (α := α))
 
 /-- The regular conditional distribution as a function assigning to each point
-a probability measure on α. -/
+ a probability measure on α. -/
 noncomputable def ν {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    [StandardBorelSpace (Ω[α])] : Ω[α] → Measure α :=
+    [StandardBorelSpace α] : Ω[α] → Measure α :=
   fun ω => (rcdKernel (μ := μ)) ω
 
 /-- The kernel ν gives probability measures. -/
 instance ν_isProbabilityMeasure {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    [StandardBorelSpace (Ω[α])] (ω : Ω[α]) :
+    [StandardBorelSpace α] (ω : Ω[α]) :
     IsProbabilityMeasure (ν (μ := μ) ω) := by
+  classical
   unfold ν
-  sorry -- TODO: Derive from Kernel.IsMarkovKernel instance once rcdKernel is constructed
+  have hMk : IsMarkovKernel (rcdKernel (μ := μ) (α := α)) := by
+    simpa [rcdKernel] using
+      (ProbabilityTheory.Kernel.IsMarkovKernel.map
+        (condExpKernel μ (shiftInvariantSigma (α := α)))
+        (measurable_pi0 (α := α)))
+  simpa [rcdKernel] using hMk.isProbabilityMeasure ω
 
-/-- The kernel ν is measurable. -/
-lemma ν_measurable {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    [StandardBorelSpace (Ω[α])] :
-    Measurable (ν (μ := μ)) := by
-  sorry -- TODO: Derive from Kernel.measurable once rcdKernel is constructed
+/-- The kernel `ν` is measurable with respect to the tail σ-algebra. -/
+lemma ν_measurable_tail {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    [StandardBorelSpace α] :
+    Measurable[shiftInvariantSigma (α := α)] (ν (μ := μ)) := by
+  classical
+  unfold ν
+  simpa [rcdKernel] using (rcdKernel (μ := μ) (α := α)).measurable
 
 /-- A.e. shift-invariance of the conditional distribution kernel.
 
 Because the tail σ-algebra is shift-invariant and condExpKernel is characterized
 a.e. by the conditional expectation equation, the kernel is a.e. shift-invariant. -/
 lemma ν_ae_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    [StandardBorelSpace (Ω[α])] (hσ : MeasurePreserving shift μ μ) :
+    [StandardBorelSpace α] [StandardBorelSpace (Ω[α])] (hσ : MeasurePreserving shift μ μ) :
     ∀ᵐ ω ∂μ, ∀ k : ℕ, ν (μ := μ) (shift^[k] ω) = ν (μ := μ) ω := by
   sorry -- TODO: Use shift-invariance of shiftInvariantSigma and uniqueness of condExpKernel
 
@@ -340,7 +346,7 @@ lemma ν_ae_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
 This states that the push-forward of condExpKernel by the k-th coordinate projection
 equals ν for all k, a.e. in ω. -/
 lemma identicalConditionalMarginals {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    [StandardBorelSpace (Ω[α])] (hσ : MeasurePreserving shift μ μ) (k : ℕ) :
+    [StandardBorelSpace α] [StandardBorelSpace (Ω[α])] (hσ : MeasurePreserving shift μ μ) (k : ℕ) :
     ∀ᵐ ω ∂μ, ((condExpKernel μ (shiftInvariantSigma (α := α))).map (fun y : Ω[α] => y k)) ω
       = ν (μ := μ) ω := by
   sorry -- TODO: Use condExp_ae_eq_integral_condExpKernel on indicators and shift-invariance
@@ -351,7 +357,7 @@ Assuming conditional independence of coordinates given the tail σ-algebra,
 the conditional expectation of a product equals the product of integrals
 against the conditional distribution ν. -/
 theorem condexp_product_factorization
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace (Ω[α])]
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [StandardBorelSpace (Ω[α])]
     (hσ : MeasurePreserving shift μ μ)
     (m : ℕ) (fs : Fin m → α → ℝ)
     (hmeas : ∀ k, Measurable (fs k))
@@ -375,7 +381,7 @@ The proof combines:
 
 This completes Kallenberg's "First proof" approach using the mean ergodic theorem. -/
 theorem condexp_cylinder_factorizes {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    [StandardBorelSpace (Ω[α])]
+    [StandardBorelSpace α] [StandardBorelSpace (Ω[α])]
     (hσ : MeasurePreserving shift μ μ)
     (m : ℕ) (fs : Fin m → α → ℝ)
     (hmeas : ∀ k, Measurable (fs k))
@@ -389,7 +395,7 @@ theorem condexp_cylinder_factorizes {μ : Measure (Ω[α])} [IsProbabilityMeasur
   use ν (μ := μ)
   constructor
   · -- Almost every ω has a probability measure
-    exact ae_of_all μ (fun ω => ν_isProbabilityMeasure ω)
+    exact ae_of_all μ (fun ω => ν_isProbabilityMeasure (μ := μ) (α := α) ω)
   · -- Factorization property from conditional independence
     have hfact := condexp_product_factorization hσ m fs hmeas hbd hciid
     filter_upwards [hfact] with ω hω
