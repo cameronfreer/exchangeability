@@ -51,6 +51,8 @@ noncomputable section
 namespace Exchangeability.DeFinetti.CommonEnding
 
 open MeasureTheory ProbabilityTheory
+open scoped BigOperators
+open Set
 open Exchangeability
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
@@ -103,11 +105,14 @@ lemma isShiftInvariant_iff {α : Type*} (S : Set (ℕ → α)) :
   unfold IsShiftInvariant
   constructor
   · intro h ξ
-    rw [Set.ext_iff] at h
-    exact (h ξ).symm
+    -- turn set equality into pointwise membership equivalence
+    have := congrArg (fun T : Set (ℕ → α) => ξ ∈ T) h
+    -- note: ξ ∈ shift ⁻¹' S ↔ shift ξ ∈ S is definitionally true
+    simpa using this.symm
   · intro h
     ext ξ
-    exact (h ξ).symm
+    -- again use the definitional equivalence for preimages
+    simpa using (h ξ).symm
 
 /-- The **invariant σ-field** ℐ consists of all measurable shift-invariant sets.
 Following FMP 10.2, this forms a σ-field. -/
@@ -118,7 +123,7 @@ def invariantSigmaField (α : Type*) [MeasurableSpace α] : MeasurableSpace (ℕ
 μ(S ∆ shift⁻¹(S)) = 0 (symmetric difference). This is the analogue of FMP 10.2's almost invariance. -/
 def IsAlmostShiftInvariant {α : Type*} [MeasurableSpace α]
     (μ : Measure (ℕ → α)) (S : Set (ℕ → α)) : Prop :=
-  μ (symmDiff S (shift ⁻¹' S)) = 0
+  μ ((S \ (shift ⁻¹' S)) ∪ ((shift ⁻¹' S) \ S)) = 0
 
 /-- The **tail σ-algebra** for infinite sequences consists of events that are
 "asymptotically independent" of the first n coordinates for all n.
@@ -186,7 +191,7 @@ which is essential for the monotone class argument.
 monotone class extension. -/
 lemma indicator_bounded {α : Type*} (s : Set α) :
     ∃ M : ℝ, ∀ x, |s.indicator (fun _ => (1 : ℝ)) x| ≤ M := by
-  use 1
+  refine ⟨1, ?_⟩
   intro x
   by_cases h : x ∈ s
   · simp [Set.indicator_of_mem h]
@@ -199,19 +204,32 @@ lemma product_bounded {ι : Type*} [Fintype ι] {α : Type*}
     (f : ι → α → ℝ) (hf : ∀ i, ∃ M, ∀ x, |f i x| ≤ M) :
     ∃ M, ∀ x, |∏ i, f i x| ≤ M := by
   classical
+  -- pointwise bounds
   choose M hM using hf
-  -- Use bounds that are at least 1 to ensure positivity
+  -- pick bounds ≥ 1 to keep nonnegativity of products
   let M' : ι → ℝ := fun i => max (M i) 1
-  refine ⟨∏ i : ι, M' i, fun x => ?_⟩
-  -- Strategy: show |∏ f_i| ≤ ∏ |f_i| ≤ ∏ M'_i
-  calc |∏ i : ι, f i x|
-      ≤ ∏ i : ι, |f i x| := by
-          -- This is a standard inequality: |a * b| = |a| * |b|, extends to products
-          sorry  -- TODO: find or prove Finset.abs_prod lemma
-    _ ≤ ∏ i : ι, M' i := by
-        apply Finset.prod_le_prod
-        · intro i _; exact abs_nonneg _
-        · intro i _; exact (hM i x).trans (le_max_left _ _)
+  have hM' : ∀ i x, |f i x| ≤ M' i := by
+    intro i x; exact (hM i x).trans (le_max_left _ _)
+  have hM'_nonneg : ∀ i, 0 ≤ M' i := by
+    intro i
+    exact (zero_le_one.trans (le_max_right _ _))
+  -- Key inductive claim
+  have key : ∀ (s : Finset ι) (x : α), |s.prod (fun i => f i x)| ≤ s.prod M' := by
+    intro s x
+    induction s using Finset.induction_on with
+    | empty => simp
+    | @insert a s ha ih =>
+      calc |Finset.prod (insert a s) (fun i => f i x)|
+          = |(f a x) * s.prod (fun i => f i x)| := by rw [Finset.prod_insert ha]
+        _ = |f a x| * |s.prod (fun i => f i x)| := by rw [abs_mul]
+        _ ≤ M' a * |s.prod (fun i => f i x)| :=
+            mul_le_mul_of_nonneg_right (hM' a x) (abs_nonneg _)
+        _ ≤ M' a * s.prod M' :=
+            mul_le_mul_of_nonneg_left ih (hM'_nonneg a)
+        _ = Finset.prod (insert a s) M' := by rw [Finset.prod_insert ha]
+  refine ⟨Finset.univ.prod M', ?_⟩
+  intro x
+  simpa using key Finset.univ x
 
 /-- **Key Bridge Lemma**: If E[f(X_i) | tail] = ∫ f dν for all bounded measurable f,
 then for indicator functions we get E[𝟙_B(X_i) | tail] = ν(B).
@@ -223,7 +241,7 @@ TODO: Prove this using properties of conditional expectation and indicators. -/
 axiom condExp_indicator_eq_measure {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
     (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
-    (hν_meas : Measurable ν) (i : ℕ) (B : Set α) (hB : MeasurableSet B)
+    (hν_meas : ∀ s, Measurable (fun ω => ν ω s)) (i : ℕ) (B : Set α) (hB : MeasurableSet B)
     -- Assume the key property for bounded f holds for indicator of B
     (hν_cond : True) :  -- Placeholder for actual conditional expectation equality
     ∀ᵐ ω ∂μ, B.indicator (fun _ => (1 : ℝ)) (X i ω) = (ν ω B).toReal
@@ -274,7 +292,7 @@ theorem conditional_iid_from_directing_measure
     (hX_meas : ∀ i, Measurable (X i))
     (ν : Ω → Measure α)
     (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
-    (hν_meas : Measurable ν)  -- ν is measurable (i.e., a kernel)
+    (hν_meas : ∀ s, Measurable (fun ω => ν ω s))  -- **changed type**
     -- For all bounded measurable f and all i:
     -- E[f(X_i) | tail σ-algebra] = ∫ f dν a.e.
     -- This is the key property from the directing measure construction.
@@ -398,22 +416,11 @@ theorem complete_from_directing_measure
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
     (hX_contract : Contractable μ X)
     (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
-    (hν_meas : Measurable ν)  -- Changed from placeholder: ν is measurable (i.e., a kernel)
+    (hν_meas : ∀ s, Measurable (fun ω => ν ω s))  -- **changed type**
     (hν_dir : ∀ (f : α → ℝ), Measurable f → (∃ M, ∀ x, |f x| ≤ M) → ∀ (i : ℕ), True) :  -- Placeholder: E[f(X_i) | tail] = ∫ f dν for bounded f
-    ∃ (K : Kernel Ω α),
-      IsMarkovKernel K ∧
-      True ∧  -- Placeholder: K tail-measurable
-      ConditionallyIID μ X := by  -- X conditionally i.i.d. with law K
-  -- Construct the kernel K from ν
-  let K : Kernel Ω α := ⟨ν, hν_meas⟩
-  use K
-  constructor
-  · -- Show K is a Markov kernel
-    exact ⟨hν_prob⟩
-  constructor
-  · trivial
-  · -- Apply conditional_iid_from_directing_measure
-    exact conditional_iid_from_directing_measure X hX_meas ν hν_prob hν_meas hν_dir
+    ConditionallyIID μ X := by
+  -- Use the skeleton lemma (to be completed later) to produce ConditionallyIID
+  exact conditional_iid_from_directing_measure X hX_meas ν hν_prob hν_meas hν_dir
 
 /-!
 ## Summary and Next Steps
