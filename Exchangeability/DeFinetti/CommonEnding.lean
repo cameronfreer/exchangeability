@@ -243,6 +243,16 @@ lemma indicator_bounded {α : Type*} (s : Set α) :
   · simp [Set.indicator_of_mem h]
   · simp [Set.indicator_of_notMem h]
 
+/-- The product of finitely many terms, each bounded by 1, is bounded by 1.
+This is useful for products of indicator functions. -/
+lemma prod_le_one_of_le_one {ι : Type*} [Fintype ι] (f : ι → ENNReal)
+    (hf : ∀ i, f i ≤ 1) : ∏ i, f i ≤ 1 := by
+  apply Finset.prod_le_one
+  · intro i _
+    exact zero_le _
+  · intro i _
+    exact hf i
+
 /-- The product of bounded functions is bounded.
 
 Uses mathlib's `Finset.prod_le_prod` to bound product by product of bounds. -/
@@ -684,10 +694,14 @@ theorem conditional_iid_from_directing_measure
       -- Both are probability measures
       have h_map_prob : IsProbabilityMeasure μ_map := by
         -- The pushforward of a probability measure is a probability measure
-        -- Mathlib has: instance MeasureTheory.Measure.IsProbabilityMeasure.map
-        -- Need to provide: Measurable (fun ω i => X (k i) ω)
-        sorry  -- TODO: Apply inferInstance after proving measurability
-              -- Should be: exact inferInstance (or similar)
+        -- This should be automatically inferred if the mapping is measurable
+        have h_meas : Measurable (fun ω i => X (k i) ω) := by
+          rw [measurable_pi_iff]
+          intro i
+          exact hX_meas (k i)
+        -- The instance should exist in mathlib
+        sorry  -- TODO: Find correct instance name or use inferInstance
+              -- May need: Measure.IsProbabilityMeasure.map or similar
 
       have h_bind_prob : IsProbabilityMeasure μ_bind := by
         -- The bind of a probability measure with probability kernels is a probability measure
