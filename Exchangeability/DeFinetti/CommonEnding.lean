@@ -95,6 +95,20 @@ lemma shift_comp_shift {α : Type*} : @shift α ∘ shift = fun ξ n => ξ (n + 
   ext ξ n
   simp only [Function.comp_apply, shift_apply]
 
+/-- The shift operator is measurable.
+
+Proof: shift is measurable iff for all i, the composition (shift ξ) i is measurable.
+Since (shift ξ) i = ξ (i + 1), this is the projection onto coordinate (i + 1),
+which is measurable by definition of the product σ-algebra.
+-/
+lemma shift_measurable {α : Type*} [MeasurableSpace α] : Measurable (@shift α) := by
+  -- A function to a pi type is measurable iff each component is measurable
+  rw [measurable_pi_iff]
+  intro i
+  -- The i-th component of shift ξ is ξ (i + 1)
+  -- This is just the projection onto coordinate (i + 1)
+  exact measurable_pi_apply (i + 1)
+
 /-- A set in the path space is **shift-invariant** if it equals its preimage under the shift.
 This is the analogue of T⁻¹I = I from FMP 10.2. -/
 def IsShiftInvariant {α : Type*} (S : Set (ℕ → α)) : Prop :=
@@ -840,9 +854,11 @@ of de Finetti's theorem. The key components now in place:
 
 **Recent Progress (this session):**
 ✅ **Completed `measure_eq_of_agree_on_pi_system`**: Full proof for probability measures
-✅ **Completed `aemeasurable_measure_pi` axiom extraction**: Isolated AE-measurability concern
-✅ **Added proof skeletons**: `fidi_eq_avg_product`, `integral_prod_eq_prod_integral` have detailed structure
-✅ **Converted axioms to lemmas**: All major helper axioms now have proof outlines with sorries
+✅ **Completed `rectangles_isPiSystem`**: Full proof that rectangles form π-system
+✅ **Completed `shift_measurable`**: Full proof that shift operator is measurable
+✅ **Added `rectangles_generate_pi_sigma`**: Structure for σ-algebra generation (1 sorry)
+✅ **Expanded probability measure proofs**: Structured with clear dependencies (4 sorries)
+✅ **Converted axioms to lemmas**: All major helper axioms now have proof outlines
 
 **High Priority - Core Proof Steps:**
 1. **Fill main sorry in `conditional_iid_from_directing_measure`** (line ~493):
