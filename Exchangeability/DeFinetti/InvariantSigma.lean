@@ -299,6 +299,41 @@ private lemma exists_shiftInvariantFullMeasureSet
       simpa [S⋆, hSstar_def, Set.mem_iInter] using (ae_all_iff.mpr h_forall)
     simpa [ae_iff] using hSstar_ae
 
+  -- Membership in `S⋆` ensures all forward iterates land back in `S∞`.
+  have hSstar_mem_S∞ : ∀ {ω}, ω ∈ S⋆ → ω ∈ S∞ := by
+    intro ω hω
+    have hmem : ∀ k : ℕ, ω ∈ (shift^[k]) ⁻¹' S∞ := by
+      simpa [S⋆, hSstar_def, Set.mem_iInter] using hω
+    have hzero : ω ∈ (shift^[0]) ⁻¹' S∞ := hmem 0
+    simpa [Function.iterate_zero, Set.preimage_id] using hzero
+
+  -- Forward invariance: points in `S⋆` stay inside under the shift.
+  have hSstar_forward : S⋆ ⊆ shift ⁻¹' S⋆ := by
+    intro ω hω
+    have hmem : ∀ k : ℕ, shift^[k] ω ∈ S∞ := by
+      simpa [S⋆, hSstar_def, Set.mem_iInter, Set.mem_preimage] using hω
+    have hshift_mem : ∀ k : ℕ, shift^[k] (shift ω) ∈ S∞ := by
+      intro k
+      simpa [Function.iterate_succ_apply] using hmem (k + 1)
+    have hshift : shift ω ∈ S⋆ := by
+      simpa [S⋆, hSstar_def, Set.mem_iInter, Set.mem_preimage, Function.iterate_succ_apply]
+        using hshift_mem
+    simpa [Set.mem_preimage] using hshift
+
+  -- Pointwise equality holds on `S⋆` thanks to the base case in `S∞`.
+  have hSstar_pointwise : ∀ ω ∈ S⋆, g (shift ω) = g ω := by
+    intro ω hω
+    have hω_S∞ : ω ∈ S∞ := hSstar_mem_S∞ hω
+    have hω_S0 : ω ∈ S0 := by
+      have hmem : ∀ n : ℕ, ω ∈ (shift^[n]) ⁻¹' S0 := by
+        simpa [S∞, hS∞_def, Set.mem_iInter] using hω_S∞
+      have hzero : ω ∈ (shift^[0]) ⁻¹' S0 := hmem 0
+      simpa [Function.iterate_zero, Set.preimage_id] using hzero
+    simpa [S0, Set.mem_setOf_eq] using hω_S0
+
+  -- TODO: upgrade forward invariance `S⋆ ⊆ shift ⁻¹' S⋆` to equality
+  -- and package the construction into the requested tuple.
+
   -- TODO: show `S⋆` is exactly invariant and `g` agrees with its shift on `S⋆`.
 
   sorry -- TODO: Complete successive equalities proof (Lean API technicalities)
