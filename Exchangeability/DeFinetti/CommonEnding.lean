@@ -387,12 +387,17 @@ lemma fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
     -- The key insight: The product of indicators equals the indicator of the intersection
     -- ∏ᵢ 𝟙_{Bᵢ}(X(k i)(ω)) = 𝟙_{∩ᵢ X(k i)⁻¹(Bᵢ)}(ω) = 𝟙_{∀i, X(k i)(ω) ∈ Bᵢ}(ω)
 
-    -- This is because:
-    -- - If all X(k i)(ω) ∈ B i, each indicator = 1, so product = 1
-    -- - If any X(k i)(ω) ∉ B i, that indicator = 0, so product = 0
+    -- Strategy: The product of 0-1 valued indicators equals the indicator of the product
+    -- For 0-1 valued functions:
+    -- - ∏ᵢ fᵢ = 1 iff all fᵢ = 1
+    -- - ∏ᵢ fᵢ = 0 iff some fᵢ = 0
+    -- This matches the behavior of indicators
 
-    -- The measure of a set equals ∫⁻ of its indicator function
-    sorry  -- TODO: Use lintegral_indicator_one or prove product-indicator relationship
+    sorry  -- TODO: Prove product-indicator identity and use lintegral_indicator
+          -- Key steps:
+          -- 1. Show ∏ᵢ 𝟙_{Bᵢ}(X(k i)(ω)) = 𝟙_{∀i, X(k i)(ω) ∈ Bᵢ}(ω)
+          -- 2. Use μ S = ∫⁻ ω, 𝟙_S(ω) ∂μ (lintegral of indicator)
+          -- 3. Convert between ℝ and ENNReal carefully
 
   -- Step 2: Use hν_dir to replace indicators with ν measures
   -- For each i, E[𝟙_{Bᵢ}(X(k i)) | tail] = ν(Bᵢ) by condExp_indicator_eq_measure
@@ -412,18 +417,24 @@ lemma fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
   -- ∏ᵢ ν(Bᵢ) = (Measure.pi ν){x : ∀ i, x i ∈ Bᵢ} by definition of product measure
   have rhs_eq : ∫⁻ ω, ∏ i : Fin m, ν ω (B i) ∂μ =
       ∫⁻ ω, (Measure.pi fun i : Fin m => ν ω) {x | ∀ i, x i ∈ B i} ∂μ := by
-    -- For product measures, the measure of a rectangle equals the product of marginals:
-    -- (Measure.pi ν) {x | ∀ i, x i ∈ Bᵢ} = (Measure.pi ν) (∏ᵢ Bᵢ) = ∏ᵢ ν(Bᵢ)
-    -- where ∏ᵢ Bᵢ denotes the product set {x | ∀ i, x i ∈ Bᵢ}
+    -- For product measures, the measure of a rectangle equals the product of marginals
+    -- The set {x | ∀ i, x i ∈ B i} is a measurable rectangle (product set)
 
-    -- The equality under the integral sign:
+    -- Key fact: For a product measure Measure.pi μ on a finite product,
+    -- the measure of a rectangle ∏ᵢ Bᵢ equals ∏ᵢ μᵢ(Bᵢ)
+
+    -- Strategy: Show the integrands are equal pointwise
     congr 1
-    ext ω
-    -- Need to show: ∏ᵢ ν ω (B i) = (Measure.pi (fun i => ν ω)) {x | ∀ i, x i ∈ B i}
+    funext ω
 
-    -- This is the defining property of product measures on measurable rectangles
-    -- In mathlib, this should be Measure.pi_pi or similar
-    sorry  -- TODO: Apply Measure.pi_pi for rectangles or prove directly
+    -- Define the product set as a pi-set
+    let piSet := {x : Fin m → α | ∀ i, x i ∈ B i}
+
+    -- This should follow from Measure.pi_pi or Measure.pi_univ_pi
+    -- The product measure on rectangles is the product of the marginals
+    sorry  -- TODO: Use Measure.pi.pi or similar for finite products
+          -- In mathlib: MeasureTheory.Measure.pi_pi or pi_univ_pi
+          -- Should state: (Measure.pi ν) (Set.pi univ B) = ∏ i, ν i (B i)
 
   -- Combine all steps
   rw [lhs_eq, prod_eq, rhs_eq]
