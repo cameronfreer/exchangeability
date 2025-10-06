@@ -233,6 +233,74 @@ private lemma exists_shiftInvariantFullMeasureSet
       shift ⁻¹' Sinf = Sinf ∧
       μ Sinfᶜ = 0 ∧
       ∀ ω ∈ Sinf, g (shift ω) = g ω := by
+  classical
+  -- Build the basic equality set where the orbit agrees pointwise.
+  set S0 : Set (Ω[α]) := {ω | g (shift ω) = g ω} with hS0_def
+
+  -- This set is measurable because it arises as the `{0}`-preimage of a measurable function.
+  have hS0_meas : MeasurableSet S0 := by
+    have hdiff : Measurable fun ω => g (shift ω) - g ω :=
+      (hg.comp measurable_shift).sub hg
+    have hsingleton : MeasurableSet ({0} : Set ℝ) := by
+      simpa using (measurableSet_singleton (0 : ℝ))
+    have :
+        MeasurableSet ((fun ω => g (shift ω) - g ω) ⁻¹' ({0} : Set ℝ)) :=
+      hdiff hsingleton
+    simpa [S0, Set.preimage, Set.mem_setOf_eq, Set.mem_singleton_iff, sub_eq_zero] using this
+
+  -- `S0` has full measure thanks to the `ae` equality.
+  have hS0_full : μ S0ᶜ = 0 := by
+    have hS0_ae : ∀ᵐ ω ∂μ, g (shift ω) = g ω := hinv
+    simpa [S0, ae_iff] using hS0_ae
+
+  -- All forward preimages of `S0` also have full measure via measure-preservation.
+  have hpre_full : ∀ n : ℕ, μ (((shift^[n]) ⁻¹' S0)ᶜ) = 0 := by
+    intro n
+    have hσn : MeasurePreserving (shift^[n]) μ μ := hσ.iterate n
+    have hpre : μ ((shift^[n]) ⁻¹' S0ᶜ) = μ S0ᶜ := by
+      simpa using hσn.measure_preimage (measurableSet := hS0_meas.compl)
+    simpa [Set.preimage_compl] using hpre.trans hS0_full
+
+  -- Intersect the forward preimages to obtain a forward-invariant full-measure set.
+  set S∞ : Set (Ω[α]) := ⋂ n : ℕ, (shift^[n]) ⁻¹' S0 with hS∞_def
+
+  have hS∞_meas : MeasurableSet S∞ := by
+    refine MeasurableSet.iInter ?_;
+    intro n
+    simpa using (shift_iterate_measurable (α := α) n) hS0_meas
+
+  have hS∞_full : μ S∞ᶜ = 0 := by
+    have h_forall : ∀ n : ℕ, ∀ᵐ ω ∂μ, ω ∈ (shift^[n]) ⁻¹' S0 := by
+      intro n
+      have : μ (((shift^[n]) ⁻¹' S0)ᶜ) = 0 := hpre_full n
+      simpa [ae_iff] using this
+    have hS∞_ae : ∀ᵐ ω ∂μ, ω ∈ S∞ := by
+      simpa [S∞, hS∞_def, Set.mem_iInter] using (ae_all_iff.mpr h_forall)
+    simpa [ae_iff] using hS∞_ae
+
+  -- Close the forward-invariant set under further pullbacks to target exact invariance.
+  set S⋆ : Set (Ω[α]) := ⋂ k : ℕ, (shift^[k]) ⁻¹' S∞ with hSstar_def
+
+  have hSstar_meas : MeasurableSet S⋆ := by
+    refine MeasurableSet.iInter ?_;
+    intro k
+    simpa using (shift_iterate_measurable (α := α) k) hS∞_meas
+
+  have hSstar_full : μ S⋆ᶜ = 0 := by
+    have h_forall : ∀ k : ℕ, ∀ᵐ ω ∂μ, ω ∈ (shift^[k]) ⁻¹' S∞ := by
+      intro k
+      have hσk : MeasurePreserving (shift^[k]) μ μ := hσ.iterate k
+      have hpre : μ ((shift^[k]) ⁻¹' S∞ᶜ) = μ S∞ᶜ := by
+        simpa using hσk.measure_preimage (measurableSet := hS∞_meas.compl)
+      have : μ (((shift^[k]) ⁻¹' S∞)ᶜ) = 0 := by
+        simpa [Set.preimage_compl] using hpre.trans hS∞_full
+      simpa [ae_iff] using this
+    have hSstar_ae : ∀ᵐ ω ∂μ, ω ∈ S⋆ := by
+      simpa [S⋆, hSstar_def, Set.mem_iInter] using (ae_all_iff.mpr h_forall)
+    simpa [ae_iff] using hSstar_ae
+
+  -- TODO: show `S⋆` is exactly invariant and `g` agrees with its shift on `S⋆`.
+
   sorry -- TODO: Complete successive equalities proof (Lean API technicalities)
 
 /-- Indicator functions on shift-invariant sets preserve shift-invariance properties. -/
