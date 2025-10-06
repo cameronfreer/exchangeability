@@ -28,7 +28,7 @@ open Equiv MeasureTheory Set
 
 namespace Exchangeability
 
-variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+variable {Ω α : Type*}
 
 /-!
 ## π-system of prefix cylinders
@@ -39,18 +39,12 @@ space, and they generate the product σ-algebra on `ℕ → α`.
 -/
 
 /-- Projection to the first `n` coordinates. -/
-def prefixProj (α : Type*) [MeasurableSpace α] (n : ℕ) (x : ℕ → α) : Fin n → α :=
+def prefixProj (α : Type*) (n : ℕ) (x : ℕ → α) : Fin n → α :=
   fun i => x i
 
 @[simp]
 lemma prefixProj_apply (n : ℕ) (x : ℕ → α) (i : Fin n) :
     prefixProj (α:=α) n x i = x i := rfl
-
-lemma measurable_prefixProj (n : ℕ) :
-    Measurable (prefixProj (α:=α) n) := by
-  classical
-  refine measurable_pi_lambda _ (fun i => ?_)
-  exact measurable_pi_apply (i : ℕ)
 
 /-- Cylinder determined by the first `n` coordinates belonging to a measurable set. -/
 def prefixCylinder (n : ℕ) (S : Set (Fin n → α)) : Set (ℕ → α) :=
@@ -99,13 +93,6 @@ def takePrefix (hmn : m ≤ n) (x : Fin n → α) : Fin m → α :=
 lemma takePrefix_apply (hmn : m ≤ n) (x : Fin n → α) (i : Fin m) :
     takePrefix (α:=α) hmn x i = x (Fin.castLE hmn i) := rfl
 
-lemma takePrefix_measurable (hmn : m ≤ n) :
-    Measurable (takePrefix (α:=α) hmn) := by
-  classical
-  refine measurable_pi_lambda _ (fun i => ?_)
-  change Measurable fun x : Fin n → α => x (Fin.castLE hmn i)
-  exact measurable_pi_apply _
-
 @[simp]
 lemma takePrefix_prefixProj (hmn : m ≤ n) (x : ℕ → α) :
     takePrefix (α:=α) hmn (prefixProj (α:=α) n x) = prefixProj (α:=α) m x := by
@@ -121,11 +108,6 @@ lemma castLE_coe_nat (hmn : m ≤ n) (i : Fin m) :
 extra coordinates. -/
 def extendSet (hmn : m ≤ n) (S : Set (Fin m → α)) : Set (Fin n → α) :=
   {x | takePrefix (α:=α) hmn x ∈ S}
-
-lemma extendSet_measurable {hmn : m ≤ n} {S : Set (Fin m → α)}
-    (hS : MeasurableSet S) : MeasurableSet (extendSet (α:=α) hmn S) := by
-  classical
-  exact (takePrefix_measurable (α:=α) hmn) hS
 
 lemma prefixCylinder_inter {m n : ℕ} {S : Set (Fin m → α)} {T : Set (Fin n → α)} :
     prefixCylinder (α:=α) m S ∩ prefixCylinder (α:=α) n T =
@@ -148,6 +130,28 @@ lemma prefixCylinder_inter {m n : ℕ} {S : Set (Fin m → α)} {T : Set (Fin n 
 
 end Extend
 
+section Measurable
+
+variable [MeasurableSpace α]
+
+lemma measurable_prefixProj (n : ℕ) :
+    Measurable (prefixProj (α:=α) n) := by
+  classical
+  refine measurable_pi_lambda _ (fun i => ?_)
+  exact measurable_pi_apply (i : ℕ)
+
+lemma takePrefix_measurable {m n : ℕ} (hmn : m ≤ n) :
+    Measurable (takePrefix (α:=α) hmn) := by
+  classical
+  refine measurable_pi_lambda _ (fun i => ?_)
+  change Measurable fun x : Fin n → α => x (Fin.castLE hmn i)
+  exact measurable_pi_apply _
+
+lemma extendSet_measurable {m n : ℕ} {S : Set (Fin m → α)} {hmn : m ≤ n}
+    (hS : MeasurableSet S) : MeasurableSet (extendSet (α:=α) hmn S) := by
+  classical
+  exact (takePrefix_measurable (α:=α) hmn) hS
+
 lemma isPiSystem_prefixCylinders :
     IsPiSystem (prefixCylinders (α:=α)) := by
   classical
@@ -157,8 +161,8 @@ lemma isPiSystem_prefixCylinders :
       extendSet (α:=α) (Nat.le_max_right m n) T
   constructor
   · exact MeasurableSet.inter
-      (extendSet_measurable (α:=α) hS)
-      (extendSet_measurable (α:=α) hT)
+      (extendSet_measurable (α:=α) (hmn:=Nat.le_max_left m n) hS)
+      (extendSet_measurable (α:=α) (hmn:=Nat.le_max_right m n) hT)
   · exact prefixCylinder_inter (α:=α)
 
 /-- Helper: any cylinder determined by a finite set of coordinates belongs to the
@@ -185,10 +189,14 @@ lemma cylinder_subset_prefixCylinders {s : Finset ℕ} {S : Set (∀ i : s, α)}
       MeasureTheory.cylinder (α:=fun _ : ℕ => α) s S =
         prefixCylinder (α:=α) N (pull ⁻¹' S) := by
     ext x
-    simp [MeasureTheory.cylinder, pull, prefixCylinder, prefixProj, Finset.restrict,
-      Function.comp, h_mem]
+    classical
+    have hpull : pull (prefixProj (α:=α) N x) = s.restrict x := by
+      funext y
+      rcases y with ⟨y, hy⟩
+      simp [pull, prefixProj, Finset.restrict, h_mem hy]
+    simp [MeasureTheory.cylinder, prefixCylinder, hpull]
   refine hs_eq ▸ prefixCylinder_mem_prefixCylinders (α:=α) ?_
-  exact hpull_meas hS
+  simpa using hpull_meas.measurableSet_preimage hS
 
 lemma generateFrom_prefixCylinders :
     MeasurableSpace.generateFrom (prefixCylinders (α:=α)) =
@@ -221,14 +229,15 @@ theorem measure_eq_of_fin_marginals_eq {μ ν : Measure (ℕ → α)}
     simpa [Measure.map_apply_of_aemeasurable
       ((measurable_prefixProj (α:=α) 1).aemeasurable)]
       using h 1 Set.univ MeasurableSet.univ
-  apply MeasureTheory.ext_of_generate_finite (C:=prefixCylinders (α:=α))
+  apply Measure.ext_of_generate_finite (C:=prefixCylinders (α:=α))
   · simpa [generateFrom_prefixCylinders (α:=α)]
   · exact isPiSystem_prefixCylinders (α:=α)
   · intro A hA
     rcases hA with ⟨n, S, hS, rfl⟩
-    simp only [prefixCylinder]
-    simp only [Measure.map_apply_of_aemeasurable ((measurable_prefixProj (α:=α) n).aemeasurable) hS]
-    exact h n S hS
+    have hmap := h n S hS
+    simpa [prefixCylinder,
+      Measure.map_apply_of_aemeasurable
+        ((measurable_prefixProj (α:=α) n).aemeasurable)] using hmap
   · simpa using h_univ
 
 /-- Convenience wrapper of `measure_eq_of_fin_marginals_eq` for probability measures. -/
@@ -240,12 +249,18 @@ theorem measure_eq_of_fin_marginals_eq_prob {μ ν : Measure (ℕ → α)}
   classical
   exact measure_eq_of_fin_marginals_eq (α:=α) (μ:=μ) (ν:=ν) h
 
+end Measurable
+
 /-!
 ## Exchangeability versus full exchangeability
 
 We leverage the previous uniqueness result to upgrade exchangeability under
 finite permutations to invariance under all permutations of `ℕ`.
 -/
+
+section Probability
+
+variable [MeasurableSpace Ω] [MeasurableSpace α]
 
 /-- Reindex paths by a permutation of `ℕ`. -/
 def reindex (π : Equiv.Perm ℕ) (x : ℕ → α) : ℕ → α := fun i => x (π i)
@@ -520,5 +535,7 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω}
     simpa [hmap₁, hmap₂] using hEq.symm
   · intro hFull
     exact FullyExchangeable.exchangeable (μ:=μ) (X:=X) hX hFull
+
+end Probability
 
 end Exchangeability
