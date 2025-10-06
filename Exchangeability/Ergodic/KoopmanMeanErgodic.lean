@@ -89,23 +89,26 @@ def fixedSpace {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     (U : E →L[ℝ] E) : Submodule ℝ E :=
   LinearMap.eqLocus U.toLinearMap 1
 
-/-- Birkhoff averages converge in L² to the projection onto the fixed-point subspace.
+/-- The Mean Ergodic Theorem projection: orthogonal projection onto the fixed-point subspace. -/
+noncomputable def metProjection {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (T : Ω → Ω) (hT : MeasurePreserving T μ μ) : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ := by
+  classical
+  let S := fixedSpace (koopman T hT)
+  let K := koopman T hT
+  have hS_closed : IsClosed (S : Set (Lp ℝ 2 μ)) := by
+    have hset : (S : Set (Lp ℝ 2 μ)) = (fun x => K x - x) ⁻¹' ({0} : Set (Lp ℝ 2 μ)) := by
+      ext x; simp [S, fixedSpace, LinearMap.mem_eqLocus, K, sub_eq_zero]
+    simpa [hset] using isClosed_singleton.preimage (K.continuous.sub continuous_id)
+  haveI : CompleteSpace S := hS_closed.completeSpace_coe
+  haveI : S.HasOrthogonalProjection := Submodule.HasOrthogonalProjection.ofCompleteSpace S
+  exact S.subtypeL.comp S.orthogonalProjection
 
-This specializes the von Neumann Mean Ergodic Theorem from mathlib to the Koopman
-operator on `Lp` and packages the limiting projection as a continuous linear map.
-
-The projection P satisfies:
-- P fixes all elements in the fixed-point subspace
-- Birkhoff averages converge to P f
-- P has the form S.subtypeL ∘ S.orthogonalProjection where S is the fixed-point subspace
--/
-theorem birkhoffAverage_tendsto_fixedSpace
+/-- Birkhoff averages converge in L² to the MET projection onto the fixed-point subspace. -/
+theorem birkhoffAverage_tendsto_metProjection
     {μ : Measure Ω} [IsProbabilityMeasure μ] (T : Ω → Ω)
     (hT : MeasurePreserving T μ μ) (f : Lp ℝ 2 μ) :
-    ∃ (P : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ),
-      (∀ g, g ∈ fixedSpace (koopman T hT) → P g = g) ∧
-      Tendsto (fun n => birkhoffAverage ℝ (koopman T hT) _root_.id n f)
-        atTop (𝓝 (P f)) := by
+    Tendsto (fun n => birkhoffAverage ℝ (koopman T hT) _root_.id n f)
+      atTop (𝓝 (metProjection T hT f)) := by
   classical
   let K : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ := koopman T hT
   have hnorm : ‖K‖ ≤ (1 : ℝ) := by
