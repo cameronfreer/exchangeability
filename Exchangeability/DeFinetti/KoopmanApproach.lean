@@ -162,20 +162,6 @@ section MainConvergence
 variable {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
 variable (hσ : MeasurePreserving shift μ μ)
 
-/-- The projection P from the Mean Ergodic Theorem has range equal to fixedSubspace.
-
-This wraps the proven theorem `Exchangeability.Ergodic.range_projection_eq_fixedSpace`.
-The full proof requires the construction witness P = S.subtypeL ∘ S.orthogonalProjection,
-which is available in the MET proof but not exposed in the API.
-
-AXIOM STATUS: This is proven in KoopmanMeanErgodic.lean with construction access.
-The axiom here is just an API convenience to avoid exposing internal construction details.
--/
-axiom range_MET_projection_eq_fixedSubspace
-    {P : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ}
-    (hP_fixed : ∀ g ∈ fixedSubspace hσ, P g = g) :
-    Set.range P = (fixedSubspace hσ : Set (Lp ℝ 2 μ))
-
 /-- Conditional expectation onto shift-invariant σ-algebra fixes elements of fixedSubspace.
 
 This is the tower property of conditional expectation: E[f|σ] = f when f is σ-measurable.
@@ -195,77 +181,6 @@ axiom condexpL2_fixes_fixedSubspace {g : Lp ℝ 2 μ}
     (hg : g ∈ fixedSubspace hσ) :
     condexpL2 (μ := μ) g = g
 
-/-- The projection from the Mean Ergodic Theorem is symmetric (self-adjoint).
-
-The MET constructs P as S.subtypeL ∘ S.orthogonalProjection where S is the fixed-point subspace.
-We prove P is symmetric by showing it equals the standard orthogonal projection, which is symmetric.
--/
-theorem met_projection_isSymmetric 
-    {P : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ}
-    (hP_fixed : ∀ g ∈ fixedSubspace hσ, P g = g)
-    (hP_range : Set.range P = (fixedSubspace hσ : Set (Lp ℝ 2 μ)))
-    (hP_idem : P.comp P = P) :
-    P.IsSymmetric := by
-  -- Set up the orthogonal projection instance
-  haveI : (fixedSubspace hσ).HasOrthogonalProjection := by
-    have hclosed := fixedSubspace_closed hσ
-    have : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
-    exact Submodule.HasOrthogonalProjection.ofCompleteSpace (fixedSubspace hσ)
-  
-  -- Strategy: Prove P = subtypeL ∘ orthogonalProjection by showing both are 
-  -- idempotent projections with the same range and fixed points
-  -- Then use that this composition is symmetric
-  
-  -- First, we show P and the standard orthogonal projection agree on all points
-  have h_eq : P = (fixedSubspace hσ).subtypeL.comp (fixedSubspace hσ).orthogonalProjection := by
-    -- Both are idempotent continuous linear maps with range = fixedSubspace
-    -- and both fix fixedSubspace
-    -- For idempotent maps, this uniquely determines the map
-    apply ContinuousLinearMap.ext
-    intro x
-    
-    -- Both P x and (subtypeL ∘ orthProj) x are the unique element y ∈ fixedSubspace
-    -- such that x - y is orthogonal to fixedSubspace
-    -- We'll show this by using that both satisfy the same characterizing properties
-    
-    -- Key property: For projections onto a subspace, they're uniquely determined by:
-    -- P y = y for all y ∈ S, and P (P x) = P x (idempotence)
-    
-    -- Since both P and subtypeL ∘ orthogonalProjection satisfy these properties
-    -- and have the same range, they must be equal on all points
-    
-    -- Use the fact that P x ∈ fixedSubspace and (subtypeL ∘ orthProj) x ∈ fixedSubspace
-    have hPx_mem : P x ∈ fixedSubspace hσ := by
-      rw [← SetLike.mem_coe, ← hP_range]
-      exact ⟨x, rfl⟩
-    
-    have hOrthProjx_mem : ((fixedSubspace hσ).subtypeL.comp (fixedSubspace hσ).orthogonalProjection) x ∈ 
-        fixedSubspace hσ := by
-      simp only [ContinuousLinearMap.coe_comp', Function.comp_apply]
-      exact ((fixedSubspace hσ).orthogonalProjection x).property
-    
-    -- Both P x and orthProj x are fixed by P (since they're in fixedSubspace)
-    have hP_Px : P (P x) = P x := by
-      have h := congrFun (congrArg DFunLike.coe hP_idem) x
-      simpa using h
-    
-    have hP_orthProj : P ((fixedSubspace hσ).subtypeL ((fixedSubspace hσ).orthogonalProjection x)) =
-        (fixedSubspace hσ).subtypeL ((fixedSubspace hσ).orthogonalProjection x) := by
-      exact hP_fixed _ hOrthProjx_mem
-    
-    -- For the uniqueness, we use that any idempotent projection is uniquely determined by
-    -- its action on its range. Since P and orthProj have the same range and P fixes its range,
-    -- we need to show that x - P x is the same as x - orthProj x
-    --
-    -- This requires showing they're both orthogonal to fixedSubspace, which needs the
-    -- orthogonality characterization of projections
-    --
-    -- For now, this step requires more work with the orthogonality characterization
-    sorry
-    
-  rw [h_eq]
-  exact @subtypeL_comp_orthogonalProjection_isSymmetric ℝ (Lp ℝ 2 μ) _ _ _ _ (fixedSubspace hσ) _
-
 /-- Main theorem: Birkhoff averages converge in L² to conditional expectation.
 
 This combines:
@@ -276,31 +191,24 @@ theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
     Tendsto (fun n => birkhoffAverage ℝ (koopman shift hσ) _root_.id n f)
       atTop (𝓝 (condexpL2 (μ := μ) f)) := by
   -- Step 1: Get convergence to projection P onto fixedSpace from MET
-  obtain ⟨P, hP_fixed, hP_tendsto⟩ := birkhoffAverage_tendsto_fixedSpace shift hσ f
+  classical
+  -- Use the canonical mean ergodic projection from `InvariantSigma`
+  let P := METProjection (μ := μ) hσ
+  have hP_tendsto := METProjection_tendsto (μ := μ) hσ f
+  have hP_fixed : ∀ g ∈ fixedSubspace hσ, P g = g :=
+    METProjection_fixes_fixedSubspace (μ := μ) hσ
 
   -- Step 2: Show P = condexpL2 using the factored lemmas
   have hP_eq : P = condexpL2 (μ := μ) := by
-    -- Both P and condexpL2 are orthogonal projections onto fixedSubspace hσ
-    -- Use uniqueness of orthogonal projections
+    -- Both P and condexpL2 are orthogonal projections onto the fixed subspace
+    -- Use uniqueness of symmetric idempotent projections with the same range
     have h_range_P : Set.range P = (fixedSubspace hσ : Set (Lp ℝ 2 μ)) :=
-      range_MET_projection_eq_fixedSubspace hσ hP_fixed
-    have h_range_condexp : Set.range (condexpL2 (μ := μ)) = (fixedSubspace hσ : Set (Lp ℝ 2 μ)) :=
-      range_condexp_eq_fixedSubspace hσ
+      METProjection_range_fixedSubspace (μ := μ) hσ
+    have h_range_condexp : Set.range (condexpL2 (μ := μ)) =
+        (fixedSubspace hσ : Set (Lp ℝ 2 μ)) := range_condexp_eq_fixedSubspace hσ
     have hQ_fixes : ∀ g ∈ fixedSubspace hσ, condexpL2 (μ := μ) g = g :=
       fun g hg => condexpL2_fixes_fixedSubspace (hσ := hσ) hg
-    
-    -- Projections from MET and conditional expectation are idempotent
-    -- P is a projection: P ∘ P = P (since P fixes all elements in its range)
-    have hP_idem : P.comp P = P := by
-      apply ContinuousLinearMap.ext
-      intro f
-      have : P f ∈ fixedSubspace hσ := by
-        rw [← SetLike.mem_coe, ← h_range_P]
-        exact ⟨f, rfl⟩
-      simp only [ContinuousLinearMap.coe_comp', Function.comp_apply]
-      exact hP_fixed (P f) this
-    
-    -- condexpL2 is idempotent: E[E[·|ℱ]|ℱ] = E[·|ℱ] (tower property)
+    have hP_idem : P.comp P = P := METProjection_idem (μ := μ) hσ
     have hQ_idem : (condexpL2 (μ := μ)).comp (condexpL2 (μ := μ)) = condexpL2 (μ := μ) := by
       apply ContinuousLinearMap.ext
       intro f
@@ -309,31 +217,15 @@ theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
         exact ⟨f, rfl⟩
       simp only [ContinuousLinearMap.coe_comp', Function.comp_apply]
       exact hQ_fixes (condexpL2 (μ := μ) f) this
-    
-    -- Both are symmetric (self-adjoint) as orthogonal projections
-    -- P is symmetric: ⟨P f, g⟩ = ⟨f, P g⟩ (property of orthogonal projections)
-    -- This follows from the construction of P as an orthogonal projection in the MET
-    have hP_sym : P.IsSymmetric := met_projection_isSymmetric hσ hP_fixed h_range_P hP_idem
-    
-    -- condexpL2 is symmetric: ⟨E[f|ℱ], g⟩ = ⟨f, E[g|ℱ]⟩ (self-adjointness of cond. exp.)
-    -- This is in mathlib as inner_condExpL2_left_eq_right
+    have hP_sym : P.IsSymmetric := METProjection_isSymmetric (μ := μ) hσ
     have hQ_sym : (condexpL2 (μ := μ)).IsSymmetric := by
       intro f g
-      -- condexpL2 = subtypeL ∘ condExpL2
-      -- The composition preserves symmetry because subtypeL is just a coercion
       unfold condexpL2
-      -- condexpL2 is composition of subtypeL and condExpL2
-      -- The inner product through the coercion is preserved
-      -- This is exactly what inner_condExpL2_left_eq_right gives us
       exact MeasureTheory.inner_condExpL2_left_eq_right shiftInvariantSigma_le
-    
-    -- The fixedSubspace has an orthogonal projection (it's a closed subspace)
-    -- The fixedSubspace is closed as the kernel of (koopman - id), a continuous map
     haveI : (fixedSubspace hσ).HasOrthogonalProjection := by
       have hclosed := fixedSubspace_closed hσ
       have : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
       exact Submodule.HasOrthogonalProjection.ofCompleteSpace (fixedSubspace hσ)
-    
     exact orthogonalProjections_same_range_eq P (condexpL2 (μ := μ)) (fixedSubspace hσ)
       h_range_P h_range_condexp hP_fixed hQ_fixes hP_idem hQ_idem hP_sym hQ_sym
 
