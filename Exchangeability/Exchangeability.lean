@@ -39,7 +39,7 @@ space, and they generate the product σ-algebra on `ℕ → α`.
 -/
 
 /-- Projection to the first `n` coordinates. -/
-def prefixProj (α : Type*) [MeasurableSpace α] (n : ℕ) (x : ℕ → α) : Fin n → α :=
+def prefixProj (α : Type*) (n : ℕ) (x : ℕ → α) : Fin n → α :=
   fun i => x i
 
 @[simp]
@@ -99,27 +99,21 @@ def takePrefix (hmn : m ≤ n) (x : Fin n → α) : Fin m → α :=
 lemma takePrefix_apply (hmn : m ≤ n) (x : Fin n → α) (i : Fin m) :
     takePrefix (α:=α) hmn x i = x (Fin.castLE hmn i) := rfl
 
-lemma takePrefix_measurable (hmn : m ≤ n) :
-    Measurable (takePrefix (α:=α) hmn) := by
-  classical
-  refine measurable_pi_lambda _ (fun i => ?_)
-  change Measurable fun x : Fin n → α => x (Fin.castLE hmn i)
-  exact measurable_pi_apply _
-
 @[simp]
 lemma takePrefix_prefixProj (hmn : m ≤ n) (x : ℕ → α) :
     takePrefix (α:=α) hmn (prefixProj (α:=α) n x) = prefixProj (α:=α) m x := by
   ext i; simp [takePrefix]
 
+@[simp]
+lemma castLE_coe_nat (hmn : m ≤ n) (i : Fin m) :
+    ((Fin.castLE hmn i : Fin n) : ℕ) = i := by
+  cases i
+  rfl
+
 /-- Extend a measurable set on `Fin m → α` to one on `Fin n → α` by ignoring the
 extra coordinates. -/
 def extendSet (hmn : m ≤ n) (S : Set (Fin m → α)) : Set (Fin n → α) :=
   {x | takePrefix (α:=α) hmn x ∈ S}
-
-lemma extendSet_measurable {hmn : m ≤ n} {S : Set (Fin m → α)}
-    (hS : MeasurableSet S) : MeasurableSet (extendSet (α:=α) hmn S) := by
-  classical
-  exact (takePrefix_measurable (α:=α) hmn) hS
 
 lemma prefixCylinder_inter {m n : ℕ} {S : Set (Fin m → α)} {T : Set (Fin n → α)} :
     prefixCylinder (α:=α) m S ∩ prefixCylinder (α:=α) n T =
@@ -142,6 +136,22 @@ lemma prefixCylinder_inter {m n : ℕ} {S : Set (Fin m → α)} {T : Set (Fin n 
 
 end Extend
 
+section Measurable
+
+variable [MeasurableSpace α]
+
+lemma takePrefix_measurable {m n : ℕ} (hmn : m ≤ n) :
+    Measurable (takePrefix (α:=α) hmn) := by
+  classical
+  refine measurable_pi_lambda _ (fun i => ?_)
+  change Measurable fun x : Fin n → α => x (Fin.castLE hmn i)
+  exact measurable_pi_apply _
+
+lemma extendSet_measurable {m n : ℕ} {S : Set (Fin m → α)} {hmn : m ≤ n}
+    (hS : MeasurableSet S) : MeasurableSet (extendSet (α:=α) hmn S) := by
+  classical
+  exact (takePrefix_measurable (α:=α) hmn) hS
+
 lemma isPiSystem_prefixCylinders :
     IsPiSystem (prefixCylinders (α:=α)) := by
   classical
@@ -151,8 +161,8 @@ lemma isPiSystem_prefixCylinders :
       extendSet (α:=α) (Nat.le_max_right m n) T
   constructor
   · exact MeasurableSet.inter
-      (extendSet_measurable (α:=α) hS)
-      (extendSet_measurable (α:=α) hT)
+      (extendSet_measurable (α:=α) (hmn:=Nat.le_max_left m n) hS)
+      (extendSet_measurable (α:=α) (hmn:=Nat.le_max_right m n) hT)
   · exact prefixCylinder_inter (α:=α)
 
 /-- Helper: any cylinder determined by a finite set of coordinates belongs to the
@@ -179,8 +189,13 @@ lemma cylinder_subset_prefixCylinders {s : Finset ℕ} {S : Set (∀ i : s, α)}
       MeasureTheory.cylinder (α:=fun _ : ℕ => α) s S =
         prefixCylinder (α:=α) N (pull ⁻¹' S) := by
     ext x
-    simp [MeasureTheory.cylinder, pull, prefixCylinder, prefixProj, Finset.restrict,
-      Function.comp, h_mem]
+    classical
+    have hpull : pull (prefixProj (α:=α) N x) = s.restrict x := by
+      funext y
+      rcases y with ⟨y, hy⟩
+      simp only [pull, prefixProj, Finset.restrict]
+      rfl
+    simp [MeasureTheory.cylinder, prefixCylinder, hpull]
   refine hs_eq ▸ prefixCylinder_mem_prefixCylinders (α:=α) ?_
   exact hpull_meas hS
 
@@ -221,7 +236,8 @@ theorem measure_eq_of_fin_marginals_eq {μ ν : Measure (ℕ → α)}
   · intro A hA
     rcases hA with ⟨n, S, hS, rfl⟩
     simp only [prefixCylinder]
-    simp only [Measure.map_apply_of_aemeasurable ((measurable_prefixProj (α:=α) n).aemeasurable) hS]
+    rw [← Measure.map_apply_of_aemeasurable ((measurable_prefixProj (α:=α) n).aemeasurable) hS,
+        ← Measure.map_apply_of_aemeasurable ((measurable_prefixProj (α:=α) n).aemeasurable) hS]
     exact h n S hS
   · simpa using h_univ
 
@@ -234,12 +250,18 @@ theorem measure_eq_of_fin_marginals_eq_prob {μ ν : Measure (ℕ → α)}
   classical
   exact measure_eq_of_fin_marginals_eq (α:=α) (μ:=μ) (ν:=ν) h
 
+end Measurable
+
 /-!
 ## Exchangeability versus full exchangeability
 
 We leverage the previous uniqueness result to upgrade exchangeability under
 finite permutations to invariance under all permutations of `ℕ`.
 -/
+
+section Probability
+
+variable [MeasurableSpace Ω] [MeasurableSpace α]
 
 /-- Reindex paths by a permutation of `ℕ`. -/
 def reindex (π : Equiv.Perm ℕ) (x : ℕ → α) : ℕ → α := fun i => x (π i)
@@ -409,6 +431,15 @@ lemma approxPerm_apply_cast (i : Fin n) :
       hmem
   simpa using this
 
+@[simp]
+lemma approxPerm_apply_cast_coe (i : Fin n) :
+    ((approxPerm (π:=π) (n:=n)
+        (Fin.castLE (le_permBound (π:=π) (n:=n)) i)) : ℕ) = π i := by
+  classical
+  have := congrArg (fun x : Fin (permBound π n) => (x : ℕ))
+    (approxPerm_apply_cast (π:=π) (n:=n) i)
+  simpa using this
+
 end Approximation
 
 /-- Finite-dimensional marginals of `X` are invariant under arbitrary permutations. -/
@@ -438,19 +469,22 @@ lemma marginals_perm_eq {μ : Measure Ω} (X : ℕ → Ω → α)
         (f:=fun ω => fun i : Fin m => X i ω)
         (g:=takePrefix (α:=α) hm) hproj hX₁
     have hσ' := congrArg (fun ν => Measure.map (takePrefix (α:=α) hm) ν) hσ
-    simp only [hmap₁, hmap₂] at hσ'
+    have hσ'' :
+        Measure.map ((takePrefix (α:=α) hm) ∘ fun ω => fun i : Fin m => X (σ i) ω) μ =
+          Measure.map ((takePrefix (α:=α) hm) ∘ fun ω => fun i : Fin m => X i ω) μ := by
+      simpa [hmap₁, hmap₂] using hσ'
     have hcomp₁ :
-        (fun ω => takePrefix (α:=α) hm (fun i : Fin m => X (σ i) ω))
+        ((takePrefix (α:=α) hm) ∘ fun ω => fun i : Fin m => X (σ i) ω)
           = fun ω => fun i : Fin n => X (π i) ω := by
-      ext ω i
-      simp only [takePrefix, approxPerm_apply_cast (π:=π) (n:=n) i]
+      funext ω i
+      simp [Function.comp, takePrefix, hσ_def,
+        approxPerm_apply_cast_coe (π:=π) (n:=n) i]
     have hcomp₂ :
-        (fun ω => takePrefix (α:=α) hm (fun i : Fin m => X i ω))
+        ((takePrefix (α:=α) hm) ∘ fun ω => fun i : Fin m => X i ω)
           = fun ω => fun i : Fin n => X i ω := by
-      ext ω i
-      simp only [takePrefix]
-    simp only [hcomp₁, hcomp₂] at hσ'
-    exact hσ'
+      funext ω i
+      simp [Function.comp, takePrefix, castLE_coe_nat]
+    simpa [Function.comp, hcomp₁, hcomp₂] using hσ''
 
 /-- Exchangeability and full exchangeability coincide for probability measures. -/
 theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω}
@@ -502,5 +536,7 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω}
     simpa [hmap₁, hmap₂] using hEq.symm
   · intro hFull
     exact FullyExchangeable.exchangeable (μ:=μ) (X:=X) hX hFull
+
+end Probability
 
 end Exchangeability
