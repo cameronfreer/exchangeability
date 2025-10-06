@@ -624,7 +624,7 @@ lemma METProjection_idem
   apply ContinuousLinearMap.ext
   intro f
   have hf_mem := METProjection_mem (μ := μ) hσ f
-  simpa [ContinuousLinearMap.coe_comp', Function.comp_apply,
+  simp [ContinuousLinearMap.coe_comp', Function.comp_apply,
     METProjection_fixed (μ := μ) hσ hf_mem]
 
 lemma METProjection_range
@@ -665,9 +665,10 @@ lemma METProjection_tendsto
   have hnorm : ‖K‖ ≤ (1 : ℝ) := by
     refine ContinuousLinearMap.opNorm_le_bound _ (by norm_num) ?_
     intro g
+    have hiso : Isometry (koopman shift hσ) := koopman_isometry shift hσ
     have hg : ‖K g‖ = ‖g‖ := by
-      simpa [K, koopman] using (koopman_isometry (μ := μ) shift hσ g).dist_eq
-    simpa [hg]
+      simpa [K] using Isometry.norm_map_of_map_zero hiso (map_zero _) g
+    simp [hg]
   have hclosed := fixedSubspace_closed (μ := μ) hσ
   haveI : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
   haveI : (fixedSubspace hσ).HasOrthogonalProjection := 
