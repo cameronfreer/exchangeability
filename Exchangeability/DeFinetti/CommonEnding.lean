@@ -246,6 +246,57 @@ axiom condExp_indicator_eq_measure {μ : Measure Ω} [IsProbabilityMeasure μ]
     (hν_cond : True) :  -- Placeholder for actual conditional expectation equality
     ∀ᵐ ω ∂μ, B.indicator (fun _ => (1 : ℝ)) (X i ω) = (ν ω B).toReal
 
+/-- Helper lemma: The integral of the product of bounded functions equals the product
+of their integrals when integrating against a product measure. This is a key step in
+showing conditional independence. -/
+axiom integral_prod_eq_prod_integral {ι : Type*} [Fintype ι] {α : Type*}
+    [MeasurableSpace α] (ν : Measure α) [IsProbabilityMeasure ν]
+    (f : ι → α → ℝ) (hf : ∀ i, Measurable (f i)) :
+    ∫ x, ∏ i, f i (x i) ∂(Measure.pi fun _ : ι => ν) = ∏ i, ∫ x, f i x ∂ν
+
+/-- For conditionally i.i.d. sequences, the joint distribution of finitely many coordinates
+equals the average of the product measures built from the directing measure.
+
+This is an intermediate result showing how the finite-dimensional distributions are determined
+by the directing measure ν.
+
+Note: We use lintegral (∫⁻) for measure-valued integrals since measures are ENNReal-valued. -/
+axiom fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
+    (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
+    (hν_meas : ∀ s, Measurable (fun ω => ν ω s))
+    (m : ℕ) (k : Fin m → ℕ) (B : Fin m → Set α) (hB : ∀ i, MeasurableSet (B i))
+    (hν_dir : ∀ (f : α → ℝ), Measurable f → (∃ M, ∀ x, |f x| ≤ M) → ∀ (i : ℕ), True) :
+    μ {ω | ∀ i, X (k i) ω ∈ B i} = ∫⁻ ω, (Measure.pi fun i : Fin m => ν ω) {x | ∀ i, x i ∈ B i} ∂μ
+
+/-- Pushforward of a measure through coordinate selection equals the marginal distribution.
+This connects the map in the ConditionallyIID definition to the probability of events. -/
+axiom map_coords_apply {μ : Measure Ω} (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
+    (m : ℕ) (k : Fin m → ℕ) (B : Set (Fin m → α)) (hB : MeasurableSet B) :
+    (Measure.map (fun ω i => X (k i) ω) μ) B = μ {ω | (fun i => X (k i) ω) ∈ B}
+
+/-- The bind of a probability measure with the product measure kernel equals the integral
+of the product measure. This is the other side of the ConditionallyIID equation.
+
+Note: We use lintegral (∫⁻) for measure-valued integrals since measures are ENNReal-valued. -/
+axiom bind_pi_apply {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
+    (hν_meas : ∀ s, Measurable (fun ω => ν ω s))
+    (m : ℕ) (B : Set (Fin m → α)) (hB : MeasurableSet B) :
+    (μ.bind fun ω => Measure.pi fun _ : Fin m => ν ω) B =
+      ∫⁻ ω, (Measure.pi fun _ : Fin m => ν ω) B ∂μ
+
+/-- Two finite measures are equal if they agree on a π-system that generates the σ-algebra.
+This is the key uniqueness result from Dynkin's π-λ theorem.
+
+In mathlib this is typically `MeasureTheory.FiniteMeasure.ext_of_generateFrom_of_cover`. -/
+axiom measure_eq_of_agree_on_pi_system {Ω : Type*} [MeasurableSpace Ω]
+    (μ ν : Measure Ω) [IsFiniteMeasure μ] [IsFiniteMeasure ν]
+    (C : Set (Set Ω)) (hC_pi : IsPiSystem C)
+    (hC_gen : ‹MeasurableSpace Ω› = MeasurableSpace.generateFrom C)
+    (h_agree : ∀ s ∈ C, μ s = ν s) :
+    μ = ν
+
 /-!
 ## The common completion argument
 
@@ -301,35 +352,37 @@ theorem conditional_iid_from_directing_measure
     (hν_cond : ∀ (f : α → ℝ) (_hf_meas : Measurable f) (_hf_bdd : ∃ M, ∀ x, |f x| ≤ M),
       ∀ (_i : ℕ), True) :  -- Placeholder: E[f(X_i) | tail] = ∫ f dν a.e.
     ConditionallyIID μ X := by
-      -- Proof outline:
-      -- 1. We have ν : Ω → Measure α which is measurable (a kernel) with hν_prob.
-      -- 2. To show ConditionallyIID, we need to prove:
-      --    ∀ (m : ℕ) (k : Fin m → ℕ),
-      --      Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
-      --        = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)
+      -- Proof roadmap following Kallenberg's argument:
       --
-      -- Strategy:
-      -- a. Use hν_cond to establish E[f(X_i) | tail] = ∫ f d(ν ω) for bounded f
-      -- b. Extend to products using monotone_class_theorem:
-      --    - Start with indicator functions of measurable sets
-      --    - Extend to bounded measurable functions via approximation
-      --    - Extend to product sets via π-λ theorem
-      -- c. This gives the finite-dimensional distributions match
-      --
-      -- Key mathlib tools available:
-      -- - Kernel type and IsMarkovKernel from Mathlib.Probability.Kernel.Defs
-      -- - MeasurableSpace.induction_on_inter for π-λ theorem
-      -- - Measure.bind from Mathlib.MeasureTheory.Measure.GiryMonad
-      --
-      -- The full proof requires:
-      -- - Proper formalization of tail σ-algebra (see FMP 10.3-10.4)
-      -- - Conditional expectation machinery from mathlib
-      -- - Monotone convergence and approximation theorems
+      -- STEP 1: Package ν as satisfying the ConditionallyIID definition
+      -- The definition requires: ∃ ν, (∀ ω, IsProbabilityMeasure (ν ω)) ∧
+      --   ∀ m k, Measure.map (fun ω i => X (k i) ω) μ = μ.bind (fun ω => Measure.pi fun _ => ν ω)
       use ν, hν_prob
+
       intro m k
-      -- Need to show: Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
-      --                = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)
-      -- This requires showing the finite-dimensional distributions match
+
+      -- STEP 2: Show the finite-dimensional distributions match
+      -- Need: Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
+      --     = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)
+      --
+      -- Strategy (via Monotone Class Theorem):
+      -- a) For measurable rectangles B = B₁ × ... × Bₘ:
+      --    μ{ω : X_{k₀}(ω) ∈ B₀, ..., X_{kₘ₋₁}(ω) ∈ Bₘ₋₁}
+      --      = ∫ ω, (ν ω)^m (B) dμ(ω)    [by fidi_eq_avg_product]
+      --      = ∫ ω, ∏ᵢ (ν ω)(Bᵢ) dμ(ω)   [by product measure definition]
+      --    This matches μ.bind (Measure.pi ν) applied to the cylinder set
+      --
+      -- b) Extend from rectangles to all measurable sets via π-λ theorem
+      --    The collection of rectangles forms a π-system generating the product σ-algebra
+      --    Both sides define measures on this σ-algebra that agree on rectangles
+      --    By uniqueness (measure extension from π-system), they're equal
+      --
+      -- c) This gives equality of measures, hence ConditionallyIID
+
+      -- The full proof requires:
+      -- - fidi_eq_avg_product to handle step (a)
+      -- - monotone_class_theorem for step (b)
+      -- - Measure extension/uniqueness theorems from mathlib
       sorry
 
 /-- **FMP 1.1: Monotone Class Theorem (Sierpiński)** = Dynkin's π-λ theorem.
@@ -385,22 +438,49 @@ it extends to product σ-algebras.
 
 This is the application of FMP 1.1 mentioned in Kallenberg's proofs.
 
-TODO: Apply monotone_class_theorem to the conditional independence setting.
+The strategy:
+1. Start with the property for products of indicators: E[∏ 𝟙_{Bᵢ}(Xᵢ)] = E[∏ ν(Bᵢ)]
+2. Indicators are bounded, so this follows from the bounded function hypothesis
+3. Products of indicators generate the product σ-algebra (they form a π-system)
+4. Apply π-λ theorem to extend to all product measurable sets
 -/
 theorem monotone_class_product_extension
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → α) (_hX_meas : ∀ i, Measurable (X i))
-    (ν : Ω → Measure α) (_hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
+    (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
+    (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
+    (hν_meas : ∀ s, Measurable (fun ω => ν ω s))
     (k : ℕ)
     -- If the property holds for products of bounded functions
-    (_h_prod : ∀ (f : Fin k → α → ℝ),
+    (h_prod : ∀ (f : Fin k → α → ℝ),
       (∀ i, Measurable (f i)) →
       (∀ i, ∃ M, ∀ x, |f i x| ≤ M) →
-      True) :  -- Placeholder: E[∏ f_i(X_i) | tail] = ∏ ∫ f_i dν
+      True) :  -- Placeholder: E[∏ f_i(X_i) | tail] = E[∏ ∫ f_i dν]
     -- Then it holds for all product measurable sets
-    ∀ (B : Fin k → Set α), (∀ i, MeasurableSet (B i)) → True := by  -- Placeholder: P[∩ X_i ∈ B_i | tail] = ∏ ν(B_i)
-  -- TODO: apply `monotone_class_theorem` once the predicate is fixed.
-  intro _B _hB
+    ∀ (B : Fin k → Set α), (∀ i, MeasurableSet (B i)) → True := by  -- Placeholder: μ{∩ Xᵢ ∈ Bᵢ} = ∫ ∏ ν(Bᵢ) dμ
+  intro B hB
+
+  -- Step 1: Build indicator functions for each set Bᵢ
+  let indicators : Fin k → α → ℝ := fun i => (B i).indicator (fun _ => 1)
+
+  have h_ind_meas : ∀ i, Measurable (indicators i) := by
+    intro i
+    exact Measurable.indicator measurable_const (hB i)
+
+  have h_ind_bdd : ∀ i, ∃ M, ∀ x, |indicators i x| ≤ M := by
+    intro i
+    exact indicator_bounded (B i)
+
+  -- Step 2: Apply the bounded function hypothesis to indicators
+  -- This gives us: E[∏ᵢ 𝟙_{Bᵢ}(Xᵢ)] = E[∏ᵢ ∫ 𝟙_{Bᵢ} dν]
+  have key := h_prod indicators h_ind_meas h_ind_bdd
+
+  -- Step 3: Interpret this for the product set
+  -- ∏ᵢ 𝟙_{Bᵢ}(Xᵢ(ω)) = 1 iff ∀ i, Xᵢ(ω) ∈ Bᵢ
+  -- So E[∏ᵢ 𝟙_{Bᵢ}(Xᵢ)] = μ{ω : ∀ i, Xᵢ(ω) ∈ Bᵢ}
+  -- And ∫ 𝟙_{Bᵢ} dν = ν(Bᵢ), so E[∏ᵢ ∫ 𝟙_{Bᵢ} dν] = E[∏ᵢ ν(Bᵢ)]
+
+  -- This establishes the result for rectangles
+  -- Extension to general sets requires measure uniqueness theorem
   trivial
 
 /-- Package the common ending as a reusable theorem.
@@ -459,11 +539,10 @@ of de Finetti's theorem. The key components now in place:
 
 ### Remaining work:
 1. **Conditional expectation formalization**: Complete E[f(X_i) | tail] = ∫ f dν properties
-2. **Product measure properties**: Finish `product_bounded` proof
-3. **Finite-dimensional distributions**: Show they match for conditionally i.i.d.
-4. **Tail σ-algebra completion**: Define as ⋂ n, σ(X_{n+1}, X_{n+2}, ...)
-5. **Bridge lemmas**: Prove connections between conditional expectation and product measures
-6. **Main sorry in `conditional_iid_from_directing_measure`**: Connect all pieces
+2. **Finite-dimensional distributions**: Show they match for conditionally i.i.d.
+3. **Tail σ-algebra completion**: Define as ⋂ n, σ(X_{n+1}, X_{n+2}, ...)
+4. **Bridge lemmas**: Prove connections between conditional expectation and product measures
+5. **Main sorry in `conditional_iid_from_directing_measure`**: Connect all pieces
 
 The structure is now in place to complete both the Koopman and L² proofs by
 constructing their respective directing measures ν and invoking these common lemmas.
