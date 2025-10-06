@@ -127,6 +127,15 @@ theorem weighted_sums_converge_L1
   let A : ℕ → ℕ → Ω → ℝ :=
     fun n m ω => (1 / (m : ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω)
 
+  -- A n m is measurable for all n, m
+  have hA_meas : ∀ n m, Measurable (A n m) := by
+    intro n m
+    simp only [A]
+    apply Measurable.const_mul
+    apply Finset.measurable_sum
+    intro k _
+    exact hf_meas.comp (hX_meas _)
+
   -- Key fact: for each fixed n, the family (A n m)_m is Cauchy in L² by the
   -- L² contractability bound (Lemma 1.2), hence Cauchy in L¹ (since μ is probability)
 
@@ -152,7 +161,9 @@ theorem weighted_sums_converge_L1
     -- So L² convergence implies L¹ convergence
     calc eLpNorm (fun ω => A n m ω - A n ℓ ω) 1 μ
         ≤ eLpNorm (fun ω => A n m ω - A n ℓ ω) 2 μ := by
-          sorry  -- Use eLpNorm_le_eLpNorm_of_exponent_le with 1 ≤ 2
+          apply eLpNorm_le_eLpNorm_of_exponent_le
+          · norm_num  -- 1 ≤ 2
+          · exact (hA_meas n m).sub (hA_meas n ℓ) |>.aestronglyMeasurable
       _ < ENNReal.ofReal ε := hN m ℓ hm hℓ
 
   -- Step 3: For each n, completeness of L¹ gives limit alpha n
@@ -198,10 +209,15 @@ theorem weighted_sums_converge_L1
     intro ε hε
     rcases halpha_inf_conv ε hε with ⟨N, hN⟩
     refine ⟨N, fun n hn => ?_⟩
-    have := hN n hn
+    have h_elpnorm := hN n hn
     -- Convert eLpNorm 1 to integral of absolute value
-    -- eLpNorm f 1 μ = ∫ ω, |f ω| ∂μ when f is integrable
-    sorry  -- TODO: Use eLpNorm_one_eq_lintegral_nnnorm or eLpNorm_eq_integral
+    -- For p=1: eLpNorm f 1 μ = ENNReal.ofReal (∫ a, ‖f a‖ ∂μ)
+    have h_memLp : MemLp (fun ω => alpha n ω - alpha_inf ω) 1 μ := by
+      sorry  -- This follows from halpha_mem and halpha_inf_mem
+    rw [MemLp.eLpNorm_eq_integral_rpow_norm (by norm_num : (1 : ℝ≥0∞) ≠ 0)
+        (by norm_num : (1 : ℝ≥0∞) ≠ ∞) h_memLp] at h_elpnorm
+    simp only [ENNReal.toReal_one, one_div_one, Real.rpow_one, ENNReal.one_toReal] at h_elpnorm
+    sorry  -- Convert from ENNReal.ofReal (∫ ...) < ENNReal.ofReal ε to integral inequality
   · -- A n m → alpha n in L¹
     intro n ε hε
     rcases halpha_conv n ε hε with ⟨M, hM⟩
