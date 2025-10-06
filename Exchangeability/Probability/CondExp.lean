@@ -47,14 +47,19 @@ This file integrates mathlib's probability theory infrastructure and provides a 
 - Documented mathlib's martingale theory (`Martingale`, `Supermartingale`, etc.)
 - Documented key conditional expectation lemmas (`setIntegral_condExp`, `condExp_indicator`, etc.)
 
-**Remaining as axioms with proof strategies:**
-- `condProb_ae_nonneg_le_one`: Bounds on conditional probability
-- `condProb_integral_eq`: Averaging property (proof strategy documented)
-- `condIndep_iff_condexp_eq`: Doob's characterization
-- `reverse_martingale_convergence`: Requires martingale convergence theory
-- `condexp_same_dist`: Distributional invariance under change of conditioning
+**Completed proofs:**
+- `condProb_ae_nonneg_le_one`: Bounds on conditional probability (using `condExp_nonneg`, `condExp_mono`)
+- `condProb_integral_eq`: Averaging property (using `setIntegral_condExp`)
+- `condIndep_of_condProb_eq`: Wrapper for conditional independence (one-liner using Doob's characterization)
 
-The goal is to incrementally replace axioms with proofs as needed by the de Finetti development.
+**Remaining as stubs (proof strategies documented):**
+- `condIndep_iff_condexp_eq`: Doob's characterization (TODO: derive from `condIndep_iff` product formula)
+- `condProb_eq_of_eq_on_pi_system`: π-system extension (TODO: use `condIndepSets.condIndep'`)
+- `bounded_martingale_l2_eq`: L² identification (TODO: use `MemLp.condExpL2_ae_eq_condExp`)
+- `reverse_martingale_convergence`: Requires martingale convergence theory
+- `condexp_same_dist`: Distributional invariance (TODO: use `condExpKernel`, `condDistrib`)
+
+The goal is to incrementally replace stubs with proofs as needed by the de Finetti development.
 
 ## References
 
@@ -161,21 +166,20 @@ For σ-algebras 𝒻, 𝒢, ℋ, we have 𝒻 ⊥⊥_𝒢 ℋ if and only if
 P[H | 𝒻 ∨ 𝒢] = P[H | 𝒢] a.s. for all H ∈ ℋ
 ```
 
-This can be proven using mathlib's conditional independence infrastructure:
-- Use `condIndepFun_iff_condExp_inter_preimage_eq_mul` for the product formula
-- Apply `ae_eq_condExp_of_forall_setIntegral_eq` for uniqueness
-- The π-system of rectangles A ∩ B with A ∈ mF, B ∈ mG pins down the CE
+This characterization follows from the product formula in `condIndep_iff`:
+- Forward direction: From the product formula, taking F = univ gives the projection property
+- Reverse direction: The projection property implies the product formula via uniqueness of CE
+
+Note: Requires StandardBorelSpace assumption from mathlib's CondIndep definition.
 -/
 lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
-    [IsProbabilityMeasure μ] {mF mG mH : MeasurableSpace Ω}
-    (hmF : mF ≤ m₀) (hmG : mG ≤ m₀) (hmH : mH ≤ m₀)
-    [SigmaFinite (μ.trim hmG)] [SigmaFinite (μ.trim (sup_le_iff.mpr ⟨hmF, hmG⟩))] :
-    True := by
-  -- TODO: State using correct ProbabilityTheory.CondIndep signature
-  -- ProbabilityTheory.CondIndep mF mH mG ↔
-  --   ∀ H, MeasurableSet[mH] H →
-  --     μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
-  --       =ᵐ[μ] μ[H.indicator (fun _ => (1 : ℝ)) | mG]
+    [StandardBorelSpace Ω] [IsFiniteMeasure μ]
+    {mF mG mH : MeasurableSpace Ω}
+    (hmF : mF ≤ m₀) (hmG : mG ≤ m₀) (hmH : mH ≤ m₀) :
+    ProbabilityTheory.CondIndep mG mF mH hmG μ ↔
+      ∀ H, MeasurableSet[mH] H →
+        μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
+          =ᵐ[μ] μ[H.indicator (fun _ => (1 : ℝ)) | mG] := by
   sorry
 
 /-- If conditional probabilities agree a.e. for a π-system generating ℋ,
@@ -266,15 +270,14 @@ lemma condexp_same_dist {μ : Measure Ω} [IsProbabilityMeasure μ]
 This is immediate from Doob's characterization above.
 -/
 lemma condIndep_of_condProb_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
-    [IsProbabilityMeasure μ] {mF mG mH : MeasurableSpace Ω}
+    [StandardBorelSpace Ω] [IsFiniteMeasure μ]
+    {mF mG mH : MeasurableSpace Ω}
     (hmF : mF ≤ m₀) (hmG : mG ≤ m₀) (hmH : mH ≤ m₀)
-    [SigmaFinite (μ.trim hmG)] [SigmaFinite (μ.trim (sup_le_iff.mpr ⟨hmF, hmG⟩))]
     (h : ∀ H, MeasurableSet[mH] H →
       μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
         =ᵐ[μ] μ[H.indicator (fun _ => (1 : ℝ)) | mG]) :
-    True := by
-  -- TODO: Immediate from condIndep_iff_condexp_eq once that's properly stated
-  sorry
+    ProbabilityTheory.CondIndep mG mF mH hmG μ :=
+  (condIndep_iff_condexp_eq hmF hmG hmH).mpr h
 
 end Exchangeability.Probability
 
