@@ -450,7 +450,11 @@ lemma marginals_perm_eq {μ : Measure Ω} (X : ℕ → Ω → α)
       Measure.map (fun ω => fun i : Fin n => X i ω) μ := by
   classical
   by_cases hn : n = 0
-  · subst hn; simp
+  · subst hn
+    congr
+    funext ω
+    ext i
+    exact Fin.elim0 i
   · set m := permBound (π:=π) n with hm_def
     have hm : n ≤ m := le_permBound (π:=π) (n:=n)
     set σ := approxPerm (π:=π) (n:=n) with hσ_def
@@ -472,7 +476,8 @@ lemma marginals_perm_eq {μ : Measure Ω} (X : ℕ → Ω → α)
     have hσ'' :
         Measure.map ((takePrefix (α:=α) hm) ∘ fun ω => fun i : Fin m => X (σ i) ω) μ =
           Measure.map ((takePrefix (α:=α) hm) ∘ fun ω => fun i : Fin m => X i ω) μ := by
-      simpa [hmap₁, hmap₂] using hσ'
+      rw [← hmap₁, ← hmap₂]
+      exact hσ'
     have hcomp₁ :
         ((takePrefix (α:=α) hm) ∘ fun ω => fun i : Fin m => X (σ i) ω)
           = fun ω => fun i : Fin n => X (π i) ω := by
@@ -495,13 +500,13 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω}
   constructor
   · intro hEx π
     let μX := pathLaw (α:=α) μ X
-    have hμ_univ : μ Set.univ = (1 : ℝ≥0∞) := measure_univ
-    have hμX_univ : μX Set.univ = (1 : ℝ≥0∞) := by
+    have hμ_univ : μ Set.univ = 1 := measure_univ
+    have hμX_univ : μX Set.univ = 1 := by
       simp [μX, pathLaw, Measure.map_apply_of_aemeasurable,
         (measurable_pi_lambda _ (fun i => hX i)).aemeasurable, hμ_univ]
     haveI : IsProbabilityMeasure μX := ⟨by simpa using hμX_univ⟩
     have hμXπ_univ :
-        Measure.map (reindex (α:=α) π) μX Set.univ = (1 : ℝ≥0∞) := by
+        Measure.map (reindex (α:=α) π) μX Set.univ = 1 := by
       simp [Measure.map_apply_of_aemeasurable,
         (measurable_reindex (α:=α) π).aemeasurable, hμX_univ]
     haveI : IsProbabilityMeasure (Measure.map (reindex (α:=α) π) μX) :=
@@ -521,16 +526,18 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω}
           Measure.map (prefixProj (α:=α) n)
               (Measure.map (reindex (α:=α) π) μX) =
             Measure.map (fun ω => fun i : Fin n => X (π i) ω) μ := h2
-      simpa [hlhs, hrhs] using congrArg (fun ν => ν S) hperm
+      rw [hlhs, hrhs]
+      exact (congrArg (fun ν => ν S) hperm).symm
     have hEq :=
       measure_eq_of_fin_marginals_eq_prob (α:=α)
         (μ:=μX) (ν:=Measure.map (reindex (α:=α) π) μX) hMarg
     have hmap₁ :
         Measure.map (fun ω => fun i : ℕ => X (π i) ω) μ =
           Measure.map (reindex (α:=α) π) μX := by
-      simp [μX, pathLaw, Measure.map_map,
-        (measurable_reindex (α:=α) π),
+      simp only [μX, pathLaw]
+      rw [Measure.map_map (measurable_reindex (α:=α) π)
         (measurable_pi_lambda _ (fun i => hX i))]
+      rfl
     have hmap₂ : Measure.map (fun ω => fun i : ℕ => X i ω) μ = μX := by
       simp [μX, pathLaw]
     simpa [hmap₁, hmap₂] using hEq.symm
