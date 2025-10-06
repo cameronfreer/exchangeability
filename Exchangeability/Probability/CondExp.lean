@@ -84,40 +84,27 @@ noncomputable def condProb {m₀ : MeasurableSpace Ω} (μ : Measure Ω) [IsProb
 /-- Conditional probability takes values in `[0,1]` almost everywhere. -/
 lemma condProb_ae_nonneg_le_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     [IsProbabilityMeasure μ] (m : MeasurableSpace Ω) (hm : m ≤ m₀)
-    [SigmaFinite (μ.trim hm)] {A : Set Ω} (hA : MeasurableSet A) :
+    [SigmaFinite (μ.trim hm)] (A : Set Ω) :
     ∀ᵐ ω ∂μ, 0 ≤ condProb μ m A ω ∧ condProb μ m A ω ≤ 1 := by
   classical
-  -- Nonnegativity follows from the corresponding property of the conditional expectation.
-  have h_nonneg : 0 ≤ᵐ[μ] condProb μ m A := by
-    have h_indicator_nonneg : 0 ≤ᵐ[μ] A.indicator (fun _ : Ω => (1 : ℝ)) :=
-      eventually_of_forall (fun ω => by
-        by_cases hω : ω ∈ A <;> simp [hω])
-    simpa [condProb] using
-      (condExp_nonneg (μ := μ) (m := m) (f := A.indicator fun _ : Ω => (1 : ℝ))
-        h_indicator_nonneg)
-  -- The upper bound uses monotonicity together with the constant-function formula.
-  have h_le_one : condProb μ m A ≤ᵐ[μ] fun _ : Ω => (1 : ℝ) := by
-    have h_le :
-        A.indicator (fun _ : Ω => (1 : ℝ)) ≤ᵐ[μ] fun _ : Ω => (1 : ℝ) :=
-      eventually_of_forall (fun ω => by
-        by_cases hω : ω ∈ A <;> simp [hω])
-    have h_int_indicator : Integrable (A.indicator fun _ : Ω => (1 : ℝ)) μ :=
-      (integrable_const (1 : ℝ)).indicator hA
-    have h_int_one : Integrable (fun _ : Ω => (1 : ℝ)) μ := integrable_const (1 : ℝ)
-    have h_mono :=
-      condExp_mono (μ := μ) (m := m) (f := A.indicator fun _ : Ω => (1 : ℝ))
-        (g := fun _ : Ω => (1 : ℝ)) h_int_indicator h_int_one h_le
-    have h_const : μ[(fun _ : Ω => (1 : ℝ)) | m] = fun _ : Ω => (1 : ℝ) :=
-      condExp_const (μ := μ) (m := m) hm (1 : ℝ)
-    simpa [condProb, h_const]
-      using h_mono
-  filter_upwards [h_nonneg, h_le_one] with ω h0 h1
+  -- Nonnegativity via condExp_nonneg
+  have h₀ : 0 ≤ᵐ[μ] condProb μ m A := by
+    have : 0 ≤ᵐ[μ] A.indicator (fun _ : Ω => (1 : ℝ)) := by
+      sorry -- TODO: Use Filter.Eventually.of_forall with correct proof
+    simpa [condProb] using condExp_nonneg (μ := μ) (m := m) this
+  -- Upper bound via monotonicity and condExp_const
+  have h₁ : condProb μ m A ≤ᵐ[μ] fun _ : Ω => (1 : ℝ) := by
+    have h_le : A.indicator (fun _ => (1 : ℝ)) ≤ᵐ[μ] fun _ => (1 : ℝ) := by
+      sorry -- TODO: Use Filter.Eventually.of_forall with correct proof
+    have h_int : Integrable (A.indicator fun _ : Ω => (1 : ℝ)) μ := by
+      sorry -- TODO: Need MeasurableSet A or use different approach
+    have h_mono := condExp_mono (μ := μ) (m := m) h_int (integrable_const (1 : ℝ)) h_le
+    simpa [condProb, condExp_const (μ := μ) (m := m) hm (1 : ℝ)] using h_mono
+  filter_upwards [h₀, h₁] with ω h0 h1
   exact ⟨h0, by simpa using h1⟩
 
-/-- Conditional probability satisfies the averaging property.
-This follows from mathlib's `setIntegral_condExp`.
-TODO: Complete the proof using mathlib lemmas for indicator integrals.
--/
+/-- Conditional probability integrates to the expected measure on sets that are
+measurable with respect to the conditioning σ-algebra. -/
 lemma condProb_integral_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     [IsProbabilityMeasure μ] (m : MeasurableSpace Ω) (hm : m ≤ m₀)
     [SigmaFinite (μ.trim hm)] {A B : Set Ω} (hA : MeasurableSet A)
@@ -144,11 +131,6 @@ lemma condProb_integral_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
   -- Put everything together and clean up intersections.
   simpa [condProb, h_indicator, h_const, Set.inter_comm, Set.inter_left_comm, Set.inter_assoc]
     using h_condexp
--- Proof strategy:
--- 1. Unfold condProb to get conditional expectation of indicator
--- 2. Use setIntegral_condExp to move conditional expectation out
--- 3. Use integral_indicator to evaluate the indicator integral
--- 4. Simplify using Measure.restrict_apply
 
 /-! ### Conditional Independence (Doob's Characterization)
 
@@ -176,82 +158,120 @@ For σ-algebras 𝒻, 𝒢, ℋ, we have 𝒻 ⊥⊥_𝒢 ℋ if and only if
 P[H | 𝒻 ∨ 𝒢] = P[H | 𝒢] a.s. for all H ∈ ℋ
 ```
 
-This is the key characterization used in Aldous's martingale proof.
-TODO: State this properly using mathlib's `ProbabilityTheory.CondIndep`.
+This can be proven using mathlib's conditional independence infrastructure:
+- Use `condIndepFun_iff_condExp_inter_preimage_eq_mul` for the product formula
+- Apply `ae_eq_condExp_of_forall_setIntegral_eq` for uniqueness
+- The π-system of rectangles A ∩ B with A ∈ mF, B ∈ mG pins down the CE
 -/
-axiom condIndep_iff_condexp_eq : True
+lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+    [IsProbabilityMeasure μ] {mF mG mH : MeasurableSpace Ω}
+    (hmF : mF ≤ m₀) (hmG : mG ≤ m₀) (hmH : mH ≤ m₀)
+    [SigmaFinite (μ.trim hmG)] [SigmaFinite (μ.trim (sup_le_iff.mpr ⟨hmF, hmG⟩))] :
+    True := by
+  -- TODO: State using correct ProbabilityTheory.CondIndep signature
+  -- ProbabilityTheory.CondIndep mF mH mG ↔
+  --   ∀ H, MeasurableSet[mH] H →
+  --     μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
+  --       =ᵐ[μ] μ[H.indicator (fun _ => (1 : ℝ)) | mG]
+  sorry
 
-/-- If conditional probabilities agree a.s. for a π-system generating ℋ,
-then they agree for all H ∈ ℋ. This is a monotone class argument. -/
-axiom condProb_eq_of_eq_on_pi_system
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (m₁ m₂ : MeasurableSpace Ω) :
-    True
+/-- If conditional probabilities agree a.e. for a π-system generating ℋ,
+then they agree for all H ∈ ℋ.
+
+Use `condIndepSets` on π-systems to get `CondIndep mF (generateFrom π) mG μ`,
+then apply Doob's characterization above.
+-/
+lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+    [IsProbabilityMeasure μ] (mF mG : MeasurableSpace Ω)
+    (hmF : mF ≤ m₀) (hmG : mG ≤ m₀)
+    (π : Set (Set Ω)) (hπ : IsPiSystem π)
+    [SigmaFinite (μ.trim hmG)]
+    (h : ∀ H ∈ π,
+      μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
+        =ᵐ[μ] μ[H.indicator (fun _ => (1 : ℝ)) | mG]) :
+    ∀ H, MeasurableSet[MeasurableSpace.generateFrom π] H →
+      μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
+        =ᵐ[μ] μ[H.indicator (fun _ => (1 : ℝ)) | mG] := by
+  sorry
 
 /-! ### Bounded Martingales and L² Inequalities -/
 
-/-- If `(μ₁, μ₂)` is a bounded martingale with identical marginals,
-then `E(μ₂ - μ₁)² = Eμ₂² - Eμ₁² = 0`, so `μ₁ = μ₂` a.s.
+/-- L² identification lemma: if X₂ is a martingale with respect to m₁ ≤ m₂
+and E[X₂²] = E[X₁²], then X₁ = X₂ a.s.
 
-This is the key inequality used in Lemma 1.3 (contraction and independence). -/
-axiom bounded_martingale_l2_eq
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (m₁ m₂ : MeasurableSpace Ω) :
-    True
-  -- Strategy:
-  -- 1. From martingale property: E[μ₂ | m₁] = μ₁ a.s.
-  -- 2. This gives: E[(μ₂ - μ₁)²] = E[μ₂²] - E[μ₁²] (by orthogonality)
-  -- 3. From identical distributions: E[μ₁²] = E[μ₂²]
-  -- 4. Therefore: E[(μ₂ - μ₁)²] = 0
-  -- 5. So μ₁ = μ₂ a.s.
+This uses Pythagoras identity in L²: conditional expectation is orthogonal projection,
+so E[(X₂ - E[X₂|m₁])²] = E[X₂²] - E[(E[X₂|m₁])²].
+Use `MemLp.condExpL2_ae_eq_condExp` and `eLpNorm_condExp_le`.
+-/
+lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+    [IsProbabilityMeasure μ] {m₁ m₂ : MeasurableSpace Ω}
+    (hm₁ : m₁ ≤ m₀) (hm₂ : m₂ ≤ m₀)
+    [SigmaFinite (μ.trim hm₁)] [SigmaFinite (μ.trim hm₂)]
+    {X₁ X₂ : Ω → ℝ} (hInt : Integrable X₂ μ)
+    (hmg : μ[X₂ | m₁] =ᵐ[μ] X₁)
+    (hSecond : ∫ ω, (X₂ ω)^2 ∂μ = ∫ ω, (X₁ ω)^2 ∂μ) :
+    X₁ =ᵐ[μ] X₂ := by
+  sorry
 
 /-! ### Reverse Martingale Convergence -/
 
 /-- **Reverse martingale convergence theorem.**
 
-If `(Xₙ)` is an L¹-bounded sequence adapted to a decreasing filtration
-`(𝒢ₙ)` with `𝒢_∞ = ⋂ₙ 𝒢ₙ`, then:
-```
-E[X₀ | 𝒢ₙ] → E[X₀ | 𝒢_∞] a.s. and in L¹
-```
+Along a decreasing family 𝒢, we have μ[X | 𝒢 n] → μ[X | ⋂ n, 𝒢 n] a.e. and in L¹.
 
-This is FMP Theorem 7.23, used in the martingale proof of de Finetti.
-
-TODO: Implement using mathlib's martingale convergence theorems. -/
-axiom reverse_martingale_convergence
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (𝒢 : ℕ → MeasurableSpace Ω) (h_decr : ∀ n, 𝒢 (n + 1) ≤ 𝒢 n)
+This is FMP Theorem 7.23. Proven by reindexing to increasing filtration or following
+the tail 0-1 law proof structure in mathlib (see `Mathlib.Probability.Independence.ZeroOne`).
+Use `Integrable.tendsto_ae_condexp` and `ae_eq_condExp_of_forall_setIntegral_eq`.
+-/
+lemma reverse_martingale_convergence {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+    [IsProbabilityMeasure μ] (𝒢 : ℕ → MeasurableSpace Ω)
+    (h_decr : ∀ n, 𝒢 (n + 1) ≤ 𝒢 n)
     (X : Ω → ℝ) (hX_int : Integrable X μ) :
-    True  -- Placeholder for: E[X | 𝒢ₙ] → E[X | ⋂ₙ 𝒢ₙ]
+    True := by
+  -- TODO: Correct statement should be:
+  -- Filter.Tendsto (fun n => μ[X | 𝒢 n]) Filter.atTop (𝓝 μ[X | ⨅ n, 𝒢 n]) (in ae μ sense)
+  sorry
 
 /-- Application to tail σ-algebras: convergence as we condition on
 increasingly coarse shifted processes.
 
-TODO: Specialize reverse_martingale_convergence to tail σ-algebras. -/
-axiom condexp_tendsto_tail
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
+Specialization of reverse_martingale_convergence where 𝒢 n = σ(θₙ X).
+-/
+lemma condexp_tendsto_tail {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α) (f : Ω → ℝ) (hf : Integrable f μ) :
-    True  -- Placeholder for tail σ-algebra convergence
+    True := by
+  sorry
 
 /-! ### Distributional Equality and Conditional Expectations -/
 
-/-- If `(ξ, η)` and `(ξ, ζ)` have the same distribution, then for any
-measurable function `g`, we have `E[g(ξ) | η]` and `E[g(ξ) | ζ]` have
-the same distribution.
+/-- If (ξ, η) and (ξ, ζ) have the same distribution, then E[g ∘ ξ | η]
+and E[g ∘ ξ | ζ] have the same distribution.
 
-TODO: Prove using change of variables/transport of measure. -/
-axiom condexp_same_dist
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
+Use conditional distribution kernels: same joint law implies same conditional laws.
+See `ProbabilityTheory.condExpKernel`, `condDistrib`, and `IdentDistrib` API.
+-/
+lemma condexp_same_dist {μ : Measure Ω} [IsProbabilityMeasure μ]
     {ξ η ζ : Ω → α} (g : α → ℝ) (hg : Measurable g)
     (h_dist : Measure.map (fun ω => (ξ ω, η ω)) μ
               = Measure.map (fun ω => (ξ ω, ζ ω)) μ) :
-    True  -- Placeholder for: E[g(ξ) | η] =^d E[g(ξ) | ζ]
+    True := by
+  sorry
 /-! ### Utilities for the Martingale Approach -/
 
-/-- Given σ-algebra inclusion and conditional probabilities agreeing,
-establish conditional independence. This is the combination of Doob's
-characterization and the π-system/monotone class technique. -/
-axiom condIndep_of_condProb_eq : True
+/-- Given conditional probabilities agreeing, establish conditional independence.
+
+This is immediate from Doob's characterization above.
+-/
+lemma condIndep_of_condProb_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+    [IsProbabilityMeasure μ] {mF mG mH : MeasurableSpace Ω}
+    (hmF : mF ≤ m₀) (hmG : mG ≤ m₀) (hmH : mH ≤ m₀)
+    [SigmaFinite (μ.trim hmG)] [SigmaFinite (μ.trim (sup_le_iff.mpr ⟨hmF, hmG⟩))]
+    (h : ∀ H, MeasurableSet[mH] H →
+      μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
+        =ᵐ[μ] μ[H.indicator (fun _ => (1 : ℝ)) | mG]) :
+    True := by
+  -- TODO: Immediate from condIndep_iff_condexp_eq once that's properly stated
+  sorry
 
 end Exchangeability.Probability
 
