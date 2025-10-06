@@ -165,7 +165,8 @@ lemma cylinder_subset_prefixCylinders {s : Finset ℕ} {S : Set (∀ i : s, α)}
   let N := s.sup id + 1
   have h_mem : ∀ i ∈ s, i < N := by
     intro i hi
-    have hle : i ≤ s.sup id := Finset.le_sup hi
+    have hle : i ≤ s.sup id := by
+      convert Finset.le_sup (f := id) hi
     exact Nat.lt_of_le_of_lt hle (Nat.lt_succ_self _)
   -- Transport `S` along the inclusion into the initial segment.
   let ι : s → Fin N := fun x => ⟨x.1, h_mem x.1 x.2⟩
@@ -219,10 +220,9 @@ theorem measure_eq_of_fin_marginals_eq {μ ν : Measure (ℕ → α)}
   · exact isPiSystem_prefixCylinders (α:=α)
   · intro A hA
     rcases hA with ⟨n, S, hS, rfl⟩
-    have hmap := h n S hS
-    simpa [prefixCylinder,
-      Measure.map_apply_of_aemeasurable
-        ((measurable_prefixProj (α:=α) n).aemeasurable)] using hmap
+    simp only [prefixCylinder]
+    simp only [Measure.map_apply_of_aemeasurable ((measurable_prefixProj (α:=α) n).aemeasurable) hS]
+    exact h n S hS
   · simpa using h_univ
 
 /-- Convenience wrapper of `measure_eq_of_fin_marginals_eq` for probability measures. -/
@@ -284,22 +284,17 @@ lemma pathLaw_map_prefix_perm (μ : Measure Ω) (X : ℕ → Ω → α)
       Measurable fun x : ℕ → α => reindex (α:=α) π x := measurable_reindex (α:=α) π
   have hmeas : Measurable fun ω => fun i : ℕ => X i ω :=
     measurable_pi_lambda _ (fun i => hX i)
-  have hcomp :
-      Measure.map (prefixProj (α:=α) n)
-          (Measure.map (reindex (α:=α) π) (pathLaw (α:=α) μ X)) =
-        Measure.map ((prefixProj (α:=α) n) ∘ reindex (α:=α) π)
-          (pathLaw (α:=α) μ X) :=
-    (Measure.map_map (μ:=pathLaw (α:=α) μ X)
-      (measurable_prefixProj (α:=α) n) hreindex).symm
-  have hcomp' :
-      Measure.map ((prefixProj (α:=α) n) ∘ reindex (α:=α) π) (pathLaw (α:=α) μ X) =
-        Measure.map (fun ω => fun i : Fin n => X (π i) ω) μ := by
-    have hgoal := Measure.map_map (μ:=μ) (measurable_prefixProj (α:=α) n)
-      ((measurable_reindex (α:=α) π).comp hmeas)
-    simp [pathLaw, Function.comp, reindex_apply, prefixProj_apply] at hgoal
-    exact hgoal
-  simp [hcomp] at hcomp'
-  exact hcomp'
+  calc
+    Measure.map (prefixProj (α:=α) n)
+        (Measure.map (reindex (α:=α) π) (pathLaw (α:=α) μ X))
+      = Measure.map (prefixProj (α:=α) n ∘ reindex (α:=α) π) (pathLaw (α:=α) μ X) :=
+        (Measure.map_map (measurable_prefixProj (α:=α) n) hreindex).symm
+    _ = Measure.map (prefixProj (α:=α) n ∘ reindex (α:=α) π)
+        (Measure.map (fun ω => fun i : ℕ => X i ω) μ) := by rw [pathLaw]
+    _ = Measure.map ((prefixProj (α:=α) n ∘ reindex (α:=α) π) ∘ fun ω => fun i : ℕ => X i ω) μ :=
+        Measure.map_map ((measurable_prefixProj (α:=α) n).comp hreindex) hmeas
+    _ = Measure.map (fun ω => fun i : Fin n => X (π i) ω) μ := by
+        congr 1; ext ω i; simp [Function.comp, reindex_apply, prefixProj_apply]
 
 /-- Full exchangeability is equivalent to invariance of the path law under reindexing. -/
 lemma fullyExchangeable_iff_pathLaw_invariant {μ : Measure Ω}
@@ -321,8 +316,9 @@ lemma fullyExchangeable_iff_pathLaw_invariant {μ : Measure Ω}
     have hpath : pathLaw (α:=α) μ X =
         Measure.map (fun ω => fun i : ℕ => X i ω) μ := by
       simp [pathLaw]
-    simp [hmap, hpath] at hFull
-    exact hFull π
+    have := hFull π
+    rw [hmap, hpath] at this
+    exact this
   · intro hPath π
     have hmap :
         Measure.map (reindex (α:=α) π) (pathLaw (α:=α) μ X)
@@ -334,8 +330,9 @@ lemma fullyExchangeable_iff_pathLaw_invariant {μ : Measure Ω}
     have hpath : pathLaw (α:=α) μ X =
         Measure.map (fun ω => fun i : ℕ => X i ω) μ := by
       simp [pathLaw]
-    simp [hmap, hpath] at hPath
-    exact hPath π
+    have := hPath π
+    rw [hmap, hpath] at this
+    exact this
 
 /-!
 ### Auxiliary combinatorics on finite prefixes
