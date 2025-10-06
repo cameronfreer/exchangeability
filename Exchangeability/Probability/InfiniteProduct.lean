@@ -125,18 +125,14 @@ The marginal distribution on the first `n` coordinates equals the finite product
 lemma cylinder_fintype (n : ℕ) :
     (iidProduct ν).map (fun f : ℕ → α => fun i : Fin n => f i) =
       Measure.pi fun _ : Fin n => ν := by
-  -- Strategy: compose cylinder_finset with a reindexing equivalence
-  -- The map (fun f i : Fin n => f i) is (Finset.range n).restrict composed with an equivalence
+  -- Strategy: Use measure uniqueness on rectangles (Measure.pi_eq)
+  -- For each rectangle {f | ∀ i, f i ∈ s i}, show both measures assign the same value
+  -- This follows from:
+  -- 1. LHS: Use infinitePi properties and the fact that Fin n ≃ Finset.range n
+  -- 2. RHS: Direct from Measure.pi_pi
+  -- Both give ∏ i, ν (s i)
 
-  -- First get the result for Finset.range n
-  have h := cylinder_finset ν (Finset.range n)
-
-  -- The function (fun f => fun i : Fin n => f i) equals
-  -- MeasurableEquiv.piCongrLeft ∘ (Finset.range n).restrict
-  -- where the equiv is Fin n ≃ (Finset.range n)
-
-  -- For now, leave as sorry - needs careful handling of the equivalence
-  sorry  -- TODO: Use Measure.map composition and pi_map_piCongrLeft
+  sorry  -- TODO: Apply Measure.pi_eq and show agreement on rectangles
 
 /-- Invariance under arbitrary permutations of coordinates.
 
@@ -150,10 +146,12 @@ because `μ (σ i) = ν = μ i` for all `i`.
 lemma perm_eq (σ : Equiv.Perm ℕ) :
     (iidProduct ν).map (fun f => f ∘ σ) = iidProduct ν := by
   unfold iidProduct
-  -- Strategy: Use infinitePi_map_piCongrLeft which states that
-  -- (infinitePi (fun i => μ (e i))).map (piCongrLeft X e) = infinitePi μ
-  -- For constant families, μ (σ.symm i) = ν = μ i, so this gives us what we need
-  sorry  -- TODO: Show (fun f => f ∘ σ) = piCongrLeft σ.symm, then apply infinitePi_map_piCongrLeft
+  -- For constant families, infinitePi_map_piCongrLeft gives us what we need
+  -- Since (fun _ => ν) ∘ σ.symm = (fun _ => ν), we have the invariance
+
+  -- The hard part is showing (fun f => f ∘ σ) = MeasurableEquiv.piCongrLeft σ.symm
+  -- This is a definitional obstacle - leave as sorry with clear strategy
+  sorry  -- TODO: Use Measure.infinitePi_map_piCongrLeft after showing function equality
 
 end iidProduct
 
