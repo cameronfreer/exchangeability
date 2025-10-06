@@ -3,9 +3,11 @@ Copyright (c) 2025 exchangeability contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: exchangeability contributors
 -/
+import Mathlib.Data.EReal.Basic
 import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.Analysis.InnerProductSpace.Projection.Basic
+import Mathlib.Topology.Algebra.Order.LiminfLimsup
 import Exchangeability.Ergodic.KoopmanMeanErgodic
 import Exchangeability.DeFinetti.ProjectionLemmas
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.CondexpL2
@@ -192,8 +194,59 @@ private lemma shift_iterate_measurable (n : ℕ) :
 -- Tail limsup construction for pointwise invariant representatives.
 section LimsupConstruction
 
+/-- EReal limsup along the shift orbit. -/
+private def gLimsupE (g0 : Ω[α] → ℝ) (ω : Ω[α]) : EReal :=
+  limsup (fun n : ℕ => (g0 (shift^[n] ω) : EReal)) atTop
+
+/-- The shift-invariant representative (pulled back to `ℝ` via `toReal`). -/
 private def gRep (g0 : Ω[α] → ℝ) : Ω[α] → ℝ :=
-  fun ω => limsup (fun n : ℕ => g0 (shift^[n] ω)) atTop
+  fun ω => (gLimsupE g0 ω).toReal
+
+
+private lemma gRep_measurable (g0 : Ω[α] → ℝ) (hg0 : Measurable g0) :
+    Measurable (gRep g0) := by
+  have hstep : ∀ n : ℕ, Measurable fun ω => (g0 (shift^[n] ω) : EReal) := by
+    intro n
+    have hreal : Measurable fun ω => g0 (shift^[n] ω) :=
+      hg0.comp (shift_iterate_measurable (α := α) n)
+    exact measurable_coe_real_ereal.comp hreal
+  have h_meas_ereal : Measurable fun ω => gLimsupE g0 ω := by
+    simpa [gLimsupE] using (Measurable.limsup hstep)
+  simpa [gRep, gLimsupE] using measurable_ereal_toReal.comp h_meas_ereal
+
+set_option linter.unusedSectionVars false in
+private lemma gRep_shiftInvariant (g0 : Ω[α] → ℝ) :
+    ∀ ω, gRep g0 (shift ω) = gRep g0 ω := by
+  intro ω
+  have hlimsupEq :
+      limsup (fun n : ℕ => (g0 (shift^[n + 1] ω) : EReal)) atTop
+        = limsup (fun n : ℕ => (g0 (shift^[n] ω) : EReal)) atTop := by
+    simpa [Function.iterate_succ_apply, Nat.succ_eq_add_one]
+      using (limsup_nat_add (fun n => (g0 (shift^[n] ω) : EReal)) 1)
+  simpa [gRep, gLimsupE, Function.iterate_succ_apply, Nat.succ_eq_add_one]
+    using congrArg EReal.toReal hlimsupEq
+
+set_option linter.unusedSectionVars false in
+private lemma gRep_eq_of_constant_orbit (g0 : Ω[α] → ℝ) {ω : Ω[α]}
+    (hconst : ∀ n : ℕ, g0 (shift^[n] ω) = g0 ω) :
+    gRep g0 ω = g0 ω := by
+  have hlim :
+      limsup (fun n : ℕ => (g0 (shift^[n] ω) : EReal)) atTop
+        = (g0 ω : EReal) := by
+    have hfunext :
+        (fun n : ℕ => (g0 (shift^[n] ω) : EReal))
+          = fun _ => (g0 ω : EReal) := by
+      funext n; simpa using congrArg (fun y : ℝ => (y : EReal)) (hconst n)
+    simpa [hfunext] using (limsup_const (f := atTop) (a := (g0 ω : EReal)))
+  simpa [gRep, gLimsupE] using congrArg EReal.toReal hlim
+
+private lemma gRep_ae_eq_of_constant_orbit (g0 : Ω[α] → ℝ)
+    {μ : Measure (Ω[α])}
+    (hconst : ∀ᵐ ω ∂μ, ∀ n : ℕ, g0 (shift^[n] ω) = g0 ω) :
+    gRep g0 =ᵐ[μ] g0 := by
+  classical
+  filter_upwards [hconst] with ω hω
+  exact gRep_eq_of_constant_orbit (g0 := g0) hω
 
 end LimsupConstruction
 
@@ -416,76 +469,47 @@ lemma exists_shiftInvariantRepresentative
     have hcomp := hσ.quasiMeasurePreserving.ae_eq_comp (f := shift) hg0_ae
     exact hcomp.symm.trans (hinv.trans hg0_ae)
 
-  -- Step 3: Find a shift-invariant set of full measure
-  obtain ⟨Sinf, hSinf_meas, hSinf_symm, hSinf_full, hSinf_forward, hSinf_pointwise⟩ :=
-    exists_shiftInvariantFullMeasureSet hσ g0 hg0_sm.measurable hg0_shift
-
-  -- Step 4: Tail limsup representative on the orbit of `shift`.
+  -- Step 3: Tail limsup representative on the orbit of `shift`.
   let g' := gRep g0
 
-  have hg'_meas : Measurable g' := by
-    have hstep : ∀ n, Measurable fun ω => g0 (shift^[n] ω) := by
-      intro n; exact hg0_sm.measurable.comp (shift_iterate_measurable (α := α) n)
-    simpa [gRep] using Measurable.limsup hstep
+  have hg'_meas : Measurable g' :=
+    gRep_measurable g0 hg0_sm.measurable
 
   -- Tail limsup is strictly shift-invariant.
-  have hg'_shift : ∀ ω, g' (shift ω) = g' ω := by
-    intro ω
-    have hlimsupEq :
-        limsup (fun n : ℕ => g0 (shift^[n + 1] ω)) atTop
-          = limsup (fun n : ℕ => g0 (shift^[n] ω)) atTop := by
-      simpa [Function.iterate_succ_apply, Nat.succ_eq_add_one]
-        using (limsup_nat_add (f := fun n => g0 (shift^[n] ω)) 1)
-    simpa [gRep, Function.iterate_succ_apply, Nat.succ_eq_add_one] using hlimsupEq
-
-  -- On the full-measure invariant set, the tail values are constant.
-  have hSinf_constant : ∀ ω ∈ Sinf, g' ω = g0 ω := by
-    intro ω hω
-    have hmem : ∀ n, shift^[n] ω ∈ Sinf := by
-      refine Nat.rec (by simpa [Function.iterate_zero] using hω) (fun k hk => ?_)
-      have hk_pre : shift (shift^[k] ω) ∈ Sinf := by
-        simpa [Set.mem_preimage] using hSinf_forward hk
-      simpa [Function.iterate_succ_apply, Nat.succ_eq_add_one] using hk_pre
-    have hconst : ∀ n, g0 (shift^[n] ω) = g0 ω := by
-      refine Nat.rec (by simp [Function.iterate_zero]) (fun k hk => ?_)
-      have hx := hSinf_pointwise (shift^[k] ω) (hmem k)
-      have hx' : g0 (shift^[Nat.succ k] ω) = g0 (shift^[k] ω) := by
-        simpa [Function.iterate_succ_apply] using hx
-      have hx_succ : g0 (shift^[Nat.succ k] ω) = g0 ω := hx'.trans hk
-      simpa [Nat.succ_eq_add_one, Function.iterate_succ_apply] using hx_succ
-    have hseq : (fun n : ℕ => g0 (shift^[n] ω)) = fun _ : ℕ => g0 ω := by
-      funext n; exact hconst n
-    have hlimsupEq : limsup (fun n : ℕ => g0 (shift^[n] ω)) atTop = g0 ω := by
-      simpa [hseq] using (limsup_const (β := ℝ) (f := atTop) (b := g0 ω))
-    simpa [gRep] using hlimsupEq
+  have hg'_shift : ∀ ω, g' (shift ω) = g' ω :=
+    gRep_shiftInvariant g0
 
   -- Hence g' coincides a.e. with g0 (and therefore with g).
   have hg'_ae_g0 : g' =ᵐ[μ] g0 := by
-    have hstep : ∀ n,
+    have hpair : ∀ n,
         (fun ω => g0 (shift^[n + 1] ω)) =ᵐ[μ] (fun ω => g0 (shift^[n] ω)) := by
       intro n
-      simpa [Function.iterate_succ_apply, Nat.succ_eq_add_one] using
-        ((hσ.iterate n).quasiMeasurePreserving.ae_eq_comp hg0_shift)
+      have h := ((hσ.iterate n).quasiMeasurePreserving.ae_eq_comp hg0_shift)
+      have hleft_eq : (fun ω => g0 (shift^[n + 1] ω))
+          =ᵐ[μ] ((fun ω => g0 (shift ω)) ∘ shift^[n]) := by
+        refine Filter.EventuallyEq.of_eq ?_
+        funext ω
+        have hs : shift (shift^[n] ω) = shift^[n + 1] ω := by
+          simpa [Function.iterate_succ_apply']
+            using (Function.iterate_succ_apply' (f := shift) n ω).symm
+        simp [Function.comp, hs]
+      have hright_eq : (fun ω => g0 (shift^[n] ω))
+          =ᵐ[μ] g0 ∘ shift^[n] := by
+        refine Filter.EventuallyEq.of_eq ?_
+        funext ω; simp [Function.comp]
+      exact hleft_eq.trans (h.trans hright_eq.symm)
     have hconst : ∀ᵐ ω ∂μ, ∀ n, g0 (shift^[n] ω) = g0 ω := by
-      have hchain : ∀ᵐ ω ∂μ, ∀ n, g0 (shift^[n + 1] ω) = g0 (shift^[n] ω) :=
-        (ae_all_iff.mpr hstep)
+      have hchain : ∀ᵐ ω ∂μ, ∀ n,
+          g0 (shift^[n + 1] ω) = g0 (shift^[n] ω) := (ae_all_iff.mpr hpair)
       filter_upwards [hchain] with ω hω
-      intro n
-      refine Nat.rec (by simp [Function.iterate_zero]) (fun k hk => ?_) n
-      have hk_step := hω k
-      have hk_succ : g0 (shift^[k + 1] ω) = g0 ω := by
-        calc
-          g0 (shift^[k + 1] ω)
-              = g0 (shift^[k] ω) := by
-                simpa [Function.iterate_succ_apply, Nat.succ_eq_add_one] using hk_step
-          _ = g0 ω := hk
-      simpa [Nat.succ_eq_add_one, Function.iterate_succ_apply] using hk_succ
-    filter_upwards [hconst] with ω hω
-    have hseq : (fun n : ℕ => g0 (shift^[n] ω)) = fun _ : ℕ => g0 ω := by
-      funext n; exact hω n
-    have hlimsupEq : limsup (fun n : ℕ => g0 (shift^[n] ω)) atTop = g0 ω := by
-      simpa [hseq] using (limsup_const (β := ℝ) (f := atTop) (b := g0 ω))
-    simpa [gRep] using hlimsupEq
+      have hconst' : ∀ n, g0 (shift^[n] ω) = g0 ω := by
+        refine Nat.rec (by simp [Function.iterate_zero]) (fun k hk => ?_)
+        have hk_step : g0 (shift^[k + 1] ω) = g0 (shift^[k] ω) := by
+          simpa [Function.iterate_succ_apply'] using hω k
+        have hk_succ : g0 (shift^[k + 1] ω) = g0 ω := hk_step.trans hk
+        simpa [Function.iterate_succ_apply'] using hk_succ
+      exact hconst'
+    exact gRep_ae_eq_of_constant_orbit (g0 := g0) hconst
 
   have hg'_ae_g : g' =ᵐ[μ] g := hg'_ae_g0.trans hg0_ae.symm
 
@@ -777,6 +801,26 @@ noncomputable def condexpL2 {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] :
 
 
 /-- lpMeas functions are exactly the Koopman-fixed functions. -/
+
+lemma condexpL2_idem {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] :
+    (condexpL2 (μ := μ)).comp (condexpL2 (μ := μ)) = condexpL2 (μ := μ) := by
+  classical
+  apply ContinuousLinearMap.ext
+  intro f
+  simp only [condexpL2, ContinuousLinearMap.coe_comp', Function.comp_apply]
+  haveI :
+      Fact
+        (shiftInvariantSigma (α := α) ≤
+          (inferInstance : MeasurableSpace (Ω[α]))) :=
+    ⟨shiftInvariantSigma_le (α := α)⟩
+  have hfix :=
+    Submodule.orthogonalProjection_mem_subspace_eq_self
+      (K := lpMeas ℝ ℝ shiftInvariantSigma 2 μ)
+      (MeasureTheory.condExpL2 ℝ ℝ (m := shiftInvariantSigma)
+        shiftInvariantSigma_le f)
+  simpa [MeasureTheory.condExpL2]
+    using congrArg Subtype.val hfix
+
 lemma lpMeas_eq_fixedSubspace
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) :
@@ -826,9 +870,13 @@ lemma range_condexp_eq_fixedSubspace {μ : Measure (Ω[α])}
       refine ⟨(↑y : Lp ℝ 2 μ), ?_⟩
       have hfix : (MeasureTheory.condExpL2 ℝ ℝ (m := shiftInvariantSigma) shiftInvariantSigma_le)
           (↑y) = y := by
-        simpa [MeasureTheory.condExpL2]
-          using Submodule.orthogonalProjection_mem_subspace_eq_self
-            (y : lpMeas ℝ ℝ shiftInvariantSigma 2 μ)
+        classical
+        haveI :
+            Fact
+              (shiftInvariantSigma (α := α) ≤
+                (inferInstance : MeasurableSpace (Ω[α]))) :=
+          ⟨shiftInvariantSigma_le (α := α)⟩
+        simp [MeasureTheory.condExpL2]
       simp [condexpL2, ContinuousLinearMap.comp_apply, hfix]
   -- now swap range via lpMeas_eq_fixedSubspace
   rw [h_proj, lpMeas_eq_fixedSubspace (μ := μ) hσ]

@@ -8,7 +8,6 @@ import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
 import Mathlib.Probability.Martingale.Basic
 import Exchangeability.Contractability
 import Exchangeability.Probability.CondExp
-import Exchangeability.DeFinetti
 
 /-!
 # Third proof of de Finetti via a martingale argument (Aldous)
@@ -62,9 +61,9 @@ variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 /-- `shiftProcess X m` is the process `n ↦ X (m + n)` (Kallenberg's θₘ ξ). -/
 def shiftProcess (X : ℕ → Ω → α) (m : ℕ) : ℕ → Ω → α := fun n ω => X (m + n) ω
 
-/-- Re-export the tail σ-algebra used in the other de Finetti files for ease of reference. -/
+/-- The tail σ-algebra for a process X: ⋂ₙ σ(Xₙ, Xₙ₊₁, ...). -/
 def tailSigma (X : ℕ → Ω → α) : MeasurableSpace Ω :=
-  Exchangeability.DeFinetti.tailSigmaAlgebra X
+  ⨅ n : ℕ, MeasurableSpace.comap (fun ω => fun k : ℕ => X (n + k) ω) inferInstance
 
 /-- If `X` is contractable, then so is each of its shifts `θₘ X`. -/
 lemma shift_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
@@ -91,10 +90,10 @@ lemma shift_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
     ext ω i
     simp only [shiftProcess]
   
-  have hrhs : (fun ω i => shiftProcess X m i ω) = (fun ω i => X (m + i) ω) := by
+  have hrhs : (fun ω i => shiftProcess X m (↑i) ω) = (fun ω i => X (m + ↑i) ω) := by
     ext ω i
     simp only [shiftProcess]
-  
+
   rw [hlhs, hrhs]
   
   -- Now we need: (X (m + k i))ᵢ ~ (X (m + i))ᵢ
