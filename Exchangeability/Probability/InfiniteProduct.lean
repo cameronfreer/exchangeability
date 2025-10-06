@@ -125,14 +125,48 @@ The marginal distribution on the first `n` coordinates equals the finite product
 lemma cylinder_fintype (n : ℕ) :
     (iidProduct ν).map (fun f : ℕ → α => fun i : Fin n => f i) =
       Measure.pi fun _ : Fin n => ν := by
-  -- Strategy: Use measure uniqueness on rectangles (Measure.pi_eq)
-  -- For each rectangle {f | ∀ i, f i ∈ s i}, show both measures assign the same value
-  -- This follows from:
-  -- 1. LHS: Use infinitePi properties and the fact that Fin n ≃ Finset.range n
-  -- 2. RHS: Direct from Measure.pi_pi
-  -- Both give ∏ i, ν (s i)
+  -- Show both measures agree on all measurable rectangles
+  symm
+  apply Measure.pi_eq
+  intro s hs
 
-  sorry  -- TODO: Apply Measure.pi_eq and show agreement on rectangles
+  -- Compute the LHS: (iidProduct ν).map (...) applied to rectangle Set.univ.pi s
+  have h_meas : Measurable (fun f : ℕ → α => fun i : Fin n => f i) :=
+    measurable_pi_lambda _ (fun _ => measurable_pi_apply _)
+
+  calc (iidProduct ν).map (fun f : ℕ → α => fun i : Fin n => f i) (Set.univ.pi s)
+      = iidProduct ν ((fun f : ℕ → α => fun i : Fin n => f i) ⁻¹' (Set.univ.pi s)) := by
+        rw [Measure.map_apply h_meas (.univ_pi hs)]
+    _ = iidProduct ν {f : ℕ → α | ∀ i : Fin n, f i ∈ s i} := by
+        congr 1
+        ext f
+        simp [Set.pi]
+    _ = iidProduct ν (Set.pi (Finset.range n) fun i : ℕ => if h : i < n then s ⟨i, h⟩ else Set.univ) := by
+        congr 1
+        ext f
+        simp only [Set.mem_setOf_eq, Set.mem_pi, true_and]
+        constructor
+        · intro hf i (hi : i ∈ Finset.range n)
+          have hi' : i < n := Finset.mem_range.mp hi
+          simp only [hi', dite_true]
+          exact hf ⟨i, hi'⟩
+        · intro hf ⟨i, hi⟩
+          have hi' : i ∈ Finset.range n := Finset.mem_range.mpr hi
+          specialize hf i hi'
+          simp only [hi, dite_true] at hf
+          exact hf
+    _ = ∏ i ∈ Finset.range n, ν (if h : i < n then s ⟨i, h⟩ else Set.univ) := by
+        unfold iidProduct
+        rw [Measure.infinitePi_pi]
+        intro i hi
+        have hi' : i < n := Finset.mem_range.mp hi
+        simp only [hi', dite_true]
+        exact hs ⟨i, hi'⟩
+    _ = ∏ i : Fin n, ν (s i) := by
+        rw [← Fin.prod_univ_eq_prod_range]
+        congr 1
+        funext i
+        simp [i.isLt]
 
 /-- Invariance under arbitrary permutations of coordinates.
 
