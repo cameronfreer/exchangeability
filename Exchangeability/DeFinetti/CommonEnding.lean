@@ -307,11 +307,33 @@ This refers to the final step of the first proof, which goes:
 2. Use monotone class argument to extend to product sets
 3. Show P[∩ Bᵢ | ℱ] = ν^k B for B ∈ 𝒮^k
 
-The strategy is:
-- Start with the key property for bounded measurable functions f
-- Use indicator functions to transfer to measurable sets
-- Apply π-λ theorem (monotone_class_theorem) to extend to all measurable sets
-- Use product structure to get joint distributions
+### Proof Strategy Overview
+
+The key insight is to connect three equivalent characterizations of conditional i.i.d.:
+
+**A. Bounded Functions** (what we have from ergodic theory):
+   For all bounded measurable f and all i:
+   E[f(Xᵢ) | tail] = ∫ f d(ν ω) almost everywhere
+
+**B. Indicator Functions** (intermediate step):
+   For all measurable sets B and all i:
+   E[𝟙_B(Xᵢ) | tail] = ν(B) almost everywhere
+
+**C. Product Sets** (what we need for ConditionallyIID):
+   For all m, k, and measurable rectangles B₀ × ... × Bₘ₋₁:
+   μ{ω : ∀ i < m, X_{kᵢ}(ω) ∈ Bᵢ} = ∫ ∏ᵢ ν(Bᵢ) dμ
+
+The progression:
+- **A → B**: Apply A to indicator functions (they're bounded)
+- **B → C**: Use product structure and independence
+  - ∏ᵢ 𝟙_{Bᵢ}(Xᵢ) = 𝟙_{B₀×...×Bₘ₋₁}(X₀,...,Xₘ₋₁)
+  - E[∏ᵢ 𝟙_{Bᵢ}(Xᵢ)] = ∏ᵢ E[𝟙_{Bᵢ}(Xᵢ)] = ∏ᵢ ν(Bᵢ) (conditional independence!)
+- **C → ConditionallyIID**: π-λ theorem
+  - Rectangles form a π-system generating the product σ-algebra
+  - Both `Measure.map` and `μ.bind (Measure.pi ν)` agree on rectangles
+  - By uniqueness of measure extension, they're equal everywhere
+
+This modular structure makes each step verifiable and connects to standard measure theory results.
 -/
 
 /-- Given a sequence and a directing measure satisfying the key property
@@ -537,17 +559,49 @@ of de Finetti's theorem. The key components now in place:
    - Explicit kernel construction in `complete_from_directing_measure`
    - Framework for ConditionallyIID using mathlib's infrastructure
 
-### Remaining work:
-1. **Conditional expectation formalization**: Complete E[f(X_i) | tail] = ∫ f dν properties
-2. **Finite-dimensional distributions**: Show they match for conditionally i.i.d.
-3. **Tail σ-algebra completion**: Define as ⋂ n, σ(X_{n+1}, X_{n+2}, ...)
-4. **Bridge lemmas**: Prove connections between conditional expectation and product measures
-5. **Main sorry in `conditional_iid_from_directing_measure`**: Connect all pieces
+### Remaining work (prioritized):
 
-The structure is now in place to complete both the Koopman and L² proofs by
-constructing their respective directing measures ν and invoking these common lemmas.
-All major dependencies on axioms for basic measure theory have been eliminated by
-using mathlib's infrastructure.
+**High Priority - Core Proof Steps:**
+1. **Replace axioms with mathlib lemmas**:
+   - `map_coords_apply` → likely `Measure.map_apply` from mathlib
+   - `bind_pi_apply` → should follow from `Measure.bind_apply` and Giry monad laws
+   - `measure_eq_of_agree_on_pi_system` → `FiniteMeasure.ext_of_generateFrom_of_cover`
+
+2. **Fill main sorry in `conditional_iid_from_directing_measure`**:
+   - Apply `fidi_eq_avg_product` to get equality on rectangles
+   - Use `measure_eq_of_agree_on_pi_system` to extend to all measurable sets
+   - This completes the core theorem
+
+**Medium Priority - Supporting Infrastructure:**
+3. **Prove/refine helper axioms**:
+   - `fidi_eq_avg_product`: Requires conditional expectation + product measure properties
+   - `integral_prod_eq_prod_integral`: Fubini's theorem variant
+   - `condExp_indicator_eq_measure`: Follows from conditional expectation linearity
+
+4. **Tail σ-algebra formalization**:
+   - Define proper tail σ-algebra as ⋂ n, σ(X_{n+1}, X_{n+2}, ...)
+   - Prove equivalence with shift-invariant σ-field (FMP 10.3-10.4)
+   - Show directing measure ν is tail-measurable
+
+**Low Priority - Cleanup:**
+5. **Improve monotone_class_product_extension**: Complete the proof sketch
+6. **Add more examples and documentation**: Help future users understand the flow
+
+### Current Status
+
+The file provides a **complete proof architecture** for deriving conditional i.i.d. from a
+directing measure. All major steps are:
+- ✅ **Identified and documented** with clear roadmaps
+- ✅ **Structured modularly** so each piece can be completed independently
+- ✅ **Connected to standard tools** (π-λ theorem, measure uniqueness, Fubini)
+- ⚠️  **Not yet executed** - main proofs still contain `sorry` or `axiom`
+
+The design separates **infrastructure** (this file) from **construction** (Koopman/L² files),
+allowing both approaches to share the final completion argument. This matches Kallenberg's
+presentation where both proofs say "The proof can now be completed as before."
+
+Next steps: Start with High Priority items, replacing axioms with actual mathlib lemmas and
+filling in the main proof using the helper functions we've established.
 -/
 
 end Exchangeability.DeFinetti.CommonEnding
