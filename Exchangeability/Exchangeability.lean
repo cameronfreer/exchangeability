@@ -111,6 +111,12 @@ lemma takePrefix_prefixProj (hmn : m ≤ n) (x : ℕ → α) :
     takePrefix (α:=α) hmn (prefixProj (α:=α) n x) = prefixProj (α:=α) m x := by
   ext i; simp [takePrefix]
 
+@[simp]
+lemma castLE_coe_nat (hmn : m ≤ n) (i : Fin m) :
+    ((Fin.castLE hmn i : Fin n) : ℕ) = i := by
+  cases i
+  rfl
+
 /-- Extend a measurable set on `Fin m → α` to one on `Fin n → α` by ignoring the
 extra coordinates. -/
 def extendSet (hmn : m ≤ n) (S : Set (Fin m → α)) : Set (Fin n → α) :=
@@ -409,6 +415,15 @@ lemma approxPerm_apply_cast (i : Fin n) :
       hmem
   simpa using this
 
+@[simp]
+lemma approxPerm_apply_cast_coe (i : Fin n) :
+    ((approxPerm (π:=π) (n:=n)
+        (Fin.castLE (le_permBound (π:=π) (n:=n)) i)) : ℕ) = π i := by
+  classical
+  have := congrArg (fun x : Fin (permBound π n) => (x : ℕ))
+    (approxPerm_apply_cast (π:=π) (n:=n) i)
+  simpa using this
+
 end Approximation
 
 /-- Finite-dimensional marginals of `X` are invariant under arbitrary permutations. -/
@@ -438,19 +453,22 @@ lemma marginals_perm_eq {μ : Measure Ω} (X : ℕ → Ω → α)
         (f:=fun ω => fun i : Fin m => X i ω)
         (g:=takePrefix (α:=α) hm) hproj hX₁
     have hσ' := congrArg (fun ν => Measure.map (takePrefix (α:=α) hm) ν) hσ
-    simp only [hmap₁, hmap₂] at hσ'
+    have hσ'' :
+        Measure.map ((takePrefix (α:=α) hm) ∘ fun ω => fun i : Fin m => X (σ i) ω) μ =
+          Measure.map ((takePrefix (α:=α) hm) ∘ fun ω => fun i : Fin m => X i ω) μ := by
+      simpa [hmap₁, hmap₂] using hσ'
     have hcomp₁ :
-        (fun ω => takePrefix (α:=α) hm (fun i : Fin m => X (σ i) ω))
+        ((takePrefix (α:=α) hm) ∘ fun ω => fun i : Fin m => X (σ i) ω)
           = fun ω => fun i : Fin n => X (π i) ω := by
-      ext ω i
-      simp only [takePrefix, approxPerm_apply_cast (π:=π) (n:=n) i]
+      funext ω i
+      simp [Function.comp, takePrefix, hσ_def,
+        approxPerm_apply_cast_coe (π:=π) (n:=n) i]
     have hcomp₂ :
-        (fun ω => takePrefix (α:=α) hm (fun i : Fin m => X i ω))
+        ((takePrefix (α:=α) hm) ∘ fun ω => fun i : Fin m => X i ω)
           = fun ω => fun i : Fin n => X i ω := by
-      ext ω i
-      simp only [takePrefix]
-    simp only [hcomp₁, hcomp₂] at hσ'
-    exact hσ'
+      funext ω i
+      simp [Function.comp, takePrefix, castLE_coe_nat]
+    simpa [Function.comp, hcomp₁, hcomp₂] using hσ''
 
 /-- Exchangeability and full exchangeability coincide for probability measures. -/
 theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω}
