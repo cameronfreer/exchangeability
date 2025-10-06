@@ -304,8 +304,10 @@ lemma pathLaw_map_prefix_perm (μ : Measure Ω) (X : ℕ → Ω → α)
       (g:=prefixProj (α:=α) n)
       (measurable_prefixProj (α:=α) n)
       ((measurable_reindex (α:=α) π).comp hmeas)
-    simpa [Function.comp, reindex_apply, prefixProj_apply] using hgoal
-  simpa [hcomp] using hcomp'
+    simp [Function.comp, reindex_apply, prefixProj_apply] at hgoal
+    exact hgoal
+  simp [hcomp] at hcomp'
+  exact hcomp'
 
 /-- Full exchangeability is equivalent to invariance of the path law under reindexing. -/
 lemma fullyExchangeable_iff_pathLaw_invariant {μ : Measure Ω}
@@ -320,30 +322,34 @@ lemma fullyExchangeable_iff_pathLaw_invariant {μ : Measure Ω}
     have hmap :
         Measure.map (reindex (α:=α) π) (pathLaw (α:=α) μ X)
           = Measure.map (fun ω => fun i : ℕ => X (π i) ω) μ := by
-      simpa [pathLaw, Function.comp, reindex_apply] using
-        Measure.map_map (μ:=μ)
+      have := Measure.map_map (μ:=μ)
           (f:=fun ω => fun i : ℕ => X i ω)
           (g:=reindex (α:=α) π)
           (measurable_reindex (α:=α) π)
           (measurable_pi_lambda _ (fun i => hX i))
+      simp [pathLaw, Function.comp, reindex_apply] at this
+      exact this
     have hpath : pathLaw (α:=α) μ X =
         Measure.map (fun ω => fun i : ℕ => X i ω) μ := by
       simp [pathLaw]
-    simpa [hmap, hpath] using hFull π
+    simp [hmap, hpath] at hFull
+    exact hFull π
   · intro hPath π
     have hmap :
         Measure.map (reindex (α:=α) π) (pathLaw (α:=α) μ X)
           = Measure.map (fun ω => fun i : ℕ => X (π i) ω) μ := by
-      simpa [pathLaw, Function.comp, reindex_apply] using
-        Measure.map_map (μ:=μ)
+      have := Measure.map_map (μ:=μ)
           (f:=fun ω => fun i : ℕ => X i ω)
           (g:=reindex (α:=α) π)
           (measurable_reindex (α:=α) π)
           (measurable_pi_lambda _ (fun i => hX i))
+      simp [pathLaw, Function.comp, reindex_apply] at this
+      exact this
     have hpath : pathLaw (α:=α) μ X =
         Measure.map (fun ω => fun i : ℕ => X i ω) μ := by
       simp [pathLaw]
-    simpa [hmap, hpath] using hPath π
+    simp [hmap, hpath] at hPath
+    exact hPath π
 
 /-!
 ### Auxiliary combinatorics on finite prefixes
