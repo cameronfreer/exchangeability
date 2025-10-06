@@ -174,22 +174,51 @@ martingale convergence. -/
 -- TODO: The following theorems require conditional expectation API that is not yet
 -- fully developed in this codebase. The proof structure is documented for future work.
 
-axiom condexp_convergence
+lemma condexp_convergence
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {X : ℕ → Ω → α} (hX : Contractable μ X) (k m : ℕ) (hk : k ≤ m)
     (B : Set α) (hB : MeasurableSet B) :
     -- P[X_m ∈ B | θ_m X] = P[X_k ∈ B | θ_m X]
     -- Step 1: Apply contraction_independence to get X_m ⊥⊥_{θ_m X} (X_k, θ_m X)
     -- Step 2: This gives the equality of conditional probabilities
-    True
+    True := by
+  -- Proof strategy:
+  -- 1. From contractable_dist_eq: (X_m, θ_m X) =^d (X_k, θ_m X)
+  -- 2. Note that σ(θ_m X) is the same in both, so trivially σ(θ_m X) ⊆ σ(θ_m X)
+  -- 3. Apply contraction_independence to conclude X_m ⊥⊥_{θ_m X} (X_k, θ_m X)
+  -- 4. By definition of conditional independence:
+  --    P[X_m ∈ B | θ_m X] = P[X_m ∈ B]
+  --    But we also have P[X_k ∈ B | θ_m X] must equal this same value
+  -- 5. Therefore P[X_m ∈ B | θ_m X] = P[X_k ∈ B | θ_m X]
+  --
+  -- This requires:
+  -- - Conditional expectation API (condExp)
+  -- - Conditional independence characterization
+  -- - Distributional equality → conditional probability equality
+  sorry
 
-axiom extreme_members_equal_on_tail
+lemma extreme_members_equal_on_tail
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {X : ℕ → Ω → α} (hX : Contractable μ X) (m : ℕ) (B : Set α) (hB : MeasurableSet B) :
     -- P[X_m ∈ B | 𝒯_X] = P[X_1 ∈ B | 𝒯_X]
     -- Apply condexp_convergence and reverse martingale convergence
     -- as σ(θ_n X) ↓ 𝒯_X
-    True
+    True := by
+  -- Proof strategy:
+  -- 1. From condexp_convergence: P[X_m ∈ B | θ_n X] = P[X_1 ∈ B | θ_n X] for all n ≥ m
+  -- 2. Define the reverse martingale M_n := P[X_m ∈ B | θ_n X]
+  -- 3. As n → ∞, σ(θ_n X) ↓ 𝒯_X (tail σ-algebra)
+  -- 4. By reverse martingale convergence (Lévy's downward theorem):
+  --    M_n → P[X_m ∈ B | 𝒯_X] a.s. and in L¹
+  -- 5. Similarly for X_1: P[X_1 ∈ B | θ_n X] → P[X_1 ∈ B | 𝒯_X]
+  -- 6. Since M_n are all equal (from step 1), their limits are equal
+  -- 7. Therefore P[X_m ∈ B | 𝒯_X] = P[X_1 ∈ B | 𝒯_X]
+  --
+  -- This requires:
+  -- - Reverse martingale convergence theorem
+  -- - σ-algebra convergence σ(θ_n X) ↓ tailSigma X
+  -- - Conditional expectation convergence
+  sorry
 
 /-- **Aldous' third proof of de Finetti's theorem.**
 
