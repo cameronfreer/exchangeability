@@ -84,20 +84,23 @@ noncomputable def condProb {m₀ : MeasurableSpace Ω} (μ : Measure Ω) [IsProb
 /-- Conditional probability takes values in `[0,1]` almost everywhere. -/
 lemma condProb_ae_nonneg_le_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     [IsProbabilityMeasure μ] (m : MeasurableSpace Ω) (hm : m ≤ m₀)
-    [SigmaFinite (μ.trim hm)] (A : Set Ω) :
+    [SigmaFinite (μ.trim hm)] {A : Set Ω} (hA : MeasurableSet[m₀] A) :
     ∀ᵐ ω ∂μ, 0 ≤ condProb μ m A ω ∧ condProb μ m A ω ≤ 1 := by
   classical
   -- Nonnegativity via condExp_nonneg
   have h₀ : 0 ≤ᵐ[μ] condProb μ m A := by
-    have : 0 ≤ᵐ[μ] A.indicator (fun _ : Ω => (1 : ℝ)) := by
-      sorry -- TODO: Use Filter.Eventually.of_forall with correct proof
+    have : 0 ≤ᵐ[μ] A.indicator (fun _ : Ω => (1 : ℝ)) :=
+      ae_of_all _ fun ω => by
+        by_cases hω : ω ∈ A <;> simp [Set.indicator, hω]
     simpa [condProb] using condExp_nonneg (μ := μ) (m := m) this
   -- Upper bound via monotonicity and condExp_const
   have h₁ : condProb μ m A ≤ᵐ[μ] fun _ : Ω => (1 : ℝ) := by
-    have h_le : A.indicator (fun _ => (1 : ℝ)) ≤ᵐ[μ] fun _ => (1 : ℝ) := by
-      sorry -- TODO: Use Filter.Eventually.of_forall with correct proof
-    have h_int : Integrable (A.indicator fun _ : Ω => (1 : ℝ)) μ := by
-      sorry -- TODO: Need MeasurableSet A or use different approach
+    have h_le : A.indicator (fun _ => (1 : ℝ)) ≤ᵐ[μ] fun _ => (1 : ℝ) :=
+      ae_of_all _ fun ω => by
+        by_cases hω : ω ∈ A <;> simp [Set.indicator, hω]
+    -- Indicator of measurable set with integrable constant is integrable
+    have h_int : Integrable (A.indicator fun _ : Ω => (1 : ℝ)) μ :=
+      (integrable_const (1 : ℝ)).indicator hA
     have h_mono := condExp_mono (μ := μ) (m := m) h_int (integrable_const (1 : ℝ)) h_le
     simpa [condProb, condExp_const (μ := μ) (m := m) hm (1 : ℝ)] using h_mono
   filter_upwards [h₀, h₁] with ω h0 h1
@@ -107,7 +110,7 @@ lemma condProb_ae_nonneg_le_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
 measurable with respect to the conditioning σ-algebra. -/
 lemma condProb_integral_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     [IsProbabilityMeasure μ] (m : MeasurableSpace Ω) (hm : m ≤ m₀)
-    [SigmaFinite (μ.trim hm)] {A B : Set Ω} (hA : MeasurableSet A)
+    [SigmaFinite (μ.trim hm)] {A B : Set Ω} (hA : MeasurableSet[m₀] A)
     (hB : MeasurableSet[m] B) :
     ∫ ω in B, condProb μ m A ω ∂μ = (μ (A ∩ B)).toReal := by
   classical
