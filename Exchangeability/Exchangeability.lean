@@ -235,10 +235,10 @@ theorem measure_eq_of_fin_marginals_eq {μ ν : Measure (ℕ → α)}
   · exact isPiSystem_prefixCylinders (α:=α)
   · intro A hA
     rcases hA with ⟨n, S, hS, rfl⟩
-    have hmap := h n S hS
-    simpa [prefixCylinder,
-      Measure.map_apply_of_aemeasurable
-        ((measurable_prefixProj (α:=α) n).aemeasurable)] using hmap
+    simp only [prefixCylinder]
+    rw [← Measure.map_apply_of_aemeasurable ((measurable_prefixProj (α:=α) n).aemeasurable) hS,
+        ← Measure.map_apply_of_aemeasurable ((measurable_prefixProj (α:=α) n).aemeasurable) hS]
+    exact h n S hS
   · simpa using h_univ
 
 /-- Convenience wrapper of `measure_eq_of_fin_marginals_eq` for probability measures. -/
