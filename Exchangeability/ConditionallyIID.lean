@@ -52,29 +52,49 @@ instance pi_isProbabilityMeasure {ι : Type*} [Fintype ι] {α : ι → Type*}
   rw [h, Measure.pi_pi]
   simp [measure_univ]
 
-/-- Product measures of identical marginals are permutation-invariant.
-If all marginals are the same measure ν, then permuting coordinates doesn't change the product.
-
-TODO: Prove using mathlib's `pi_map_piCongrLeft` from `Mathlib.MeasureTheory.Constructions.Pi`.
-The strategy is to show that permutations are measurable equivalences and use the fact that
-mapping by a measurable equivalence preserves the product structure.
--/
-axiom pi_comp_perm {ι : Type*} [Fintype ι] {α : Type*} [MeasurableSpace α]
-    (ν : Measure α) (σ : Equiv.Perm ι) :
+/-- Product measures of identical marginals are invariant under permutations of the index set. -/
+theorem pi_comp_perm {ι : Type*} [Fintype ι] {α : Type*} [MeasurableSpace α]
+    (ν : Measure α) [SigmaFinite ν] (σ : Equiv.Perm ι) :
     Measure.map (fun f : ι → α => f ∘ σ) (Measure.pi fun _ : ι => ν) =
-      Measure.pi fun _ : ι => ν
+      Measure.pi fun _ : ι => ν := by
+  classical
+  have h :=
+    (MeasureTheory.measurePreserving_piCongrLeft
+      (α:=fun _ : ι => α) (μ:=fun _ : ι => ν) (f:=σ.symm)).map_eq
+  -- Simplify the map of the measurable equivalence to the concrete reindexing function
+  have hfun :
+      (fun f : ι → α => f ∘ σ)
+        = (MeasurableEquiv.piCongrLeft (fun _ : ι => α) σ.symm : (ι → α) → (ι → α)) := by
+    funext g i
+    have hgi :
+        (Equiv.piCongrLeft (fun _ : ι => α) σ.symm) g i = g (σ i) := by
+      simpa using Equiv.piCongrLeft_apply (P:=fun _ : ι => α) (e:=σ.symm) g i
+    simpa [Function.comp, MeasurableEquiv.coe_piCongrLeft] using hgi.symm
+  simpa [hfun]
 
-/-- The bind operation commutes with measure maps.
-This is a key property of the Giry monad.
-
-Note: Mathlib has `bind_dirac_eq_map` showing `m.bind (fun x ↦ dirac (f x)) = m.map f`,
-but the general bind-map commutativity requires additional conditions.
-
-TODO: Prove or find appropriate mathlib lemma.
--/
-axiom bind_map_comm {Ω α β : Type*} [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β]
-    (μ : Measure Ω) (κ : Ω → Measure α) (f : α → β) :
-    (μ.bind κ).map f = μ.bind (fun ω => (κ ω).map f)
+/-- Mapping after a bind is the same as binding the mapped measures (Giry monad functoriality). -/
+theorem bind_map_comm {Ω α β : Type*} [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β]
+    (μ : Measure Ω) {κ : Ω → Measure α} (hκ : Measurable κ) {f : α → β}
+    (hf : Measurable f) :
+    (μ.bind κ).map f = μ.bind (fun ω => (κ ω).map f) := by
+  classical
+  -- unfold bind and use functoriality of `map` with respect to `join`
+  have hcomp :
+      Measure.map (fun η : Measure α => η.map f) (Measure.map κ μ)
+        = Measure.map (fun ω => (κ ω).map f) μ := by
+    simpa [Function.comp] using
+      (Measure.map_map (μ:=μ) (g:=fun η : Measure α => η.map f) (f:=κ)
+        (MeasureTheory.Measure.measurable_map (α:=α) (β:=β) f hf) hκ)
+  -- Use the Giry monad identities for `join`
+  have hjoin := Measure.join_map_map hf (Measure.map κ μ)
+  calc
+    (μ.bind κ).map f
+        = Measure.map f (Measure.join (Measure.map κ μ)) := rfl
+    _ = Measure.join (Measure.map (fun η : Measure α => η.map f) (Measure.map κ μ)) := by
+          simpa [Measure.bind] using hjoin.symm
+    _ = Measure.join (Measure.map (fun ω => (κ ω).map f) μ) := by
+          simpa [hcomp]
+    _ = μ.bind (fun ω => (κ ω).map f) := rfl
 
 end MeasureTheory.Measure
 
@@ -114,12 +134,14 @@ def MixtureOfIID (_μ : Measure Ω) (_X : ℕ → Ω → α) : Prop :=
     -- Placeholder: full definition needs integration over measure spaces
     True
 
-/-- Helper lemma: Permuting coordinates after taking a product is the same as
-taking the product and then permuting. -/
-axiom pi_perm_comm {ι : Type*} [Fintype ι] {α : Type*} [MeasurableSpace α]
-    (ν : Measure α) (σ : Equiv.Perm ι) :
+/-- Helper lemma: Permuting coordinates after taking a product is the same as taking the product
+and then permuting. -/
+theorem pi_perm_comm {ι : Type*} [Fintype ι] {α : Type*} [MeasurableSpace α]
+    (ν : Measure α) [SigmaFinite ν] (σ : Equiv.Perm ι) :
     Measure.pi (fun _ : ι => ν) =
-      Measure.map (fun f : ι → α => f ∘ σ.symm) (Measure.pi fun _ : ι => ν)
+      Measure.map (fun f : ι → α => f ∘ σ.symm) (Measure.pi fun _ : ι => ν) := by
+  classical
+  simpa using (MeasureTheory.Measure.pi_comp_perm (ν:=ν) (σ:=σ.symm)).symm
 
 /-- Conditionally i.i.d. implies exchangeable.
 If `X` is conditionally i.i.d., then permutations preserve the distribution.
