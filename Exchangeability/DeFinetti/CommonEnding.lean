@@ -95,6 +95,20 @@ lemma shift_comp_shift {α : Type*} : @shift α ∘ shift = fun ξ n => ξ (n + 
   ext ξ n
   simp only [Function.comp_apply, shift_apply]
 
+/-- The shift operator is measurable.
+
+Proof: shift is measurable iff for all i, the composition (shift ξ) i is measurable.
+Since (shift ξ) i = ξ (i + 1), this is the projection onto coordinate (i + 1),
+which is measurable by definition of the product σ-algebra.
+-/
+lemma shift_measurable {α : Type*} [MeasurableSpace α] : Measurable (@shift α) := by
+  -- A function to a pi type is measurable iff each component is measurable
+  rw [measurable_pi_iff]
+  intro i
+  -- The i-th component of shift ξ is ξ (i + 1)
+  -- This is just the projection onto coordinate (i + 1)
+  exact measurable_pi_apply (i + 1)
+
 /-- A set in the path space is **shift-invariant** if it equals its preimage under the shift.
 This is the analogue of T⁻¹I = I from FMP 10.2. -/
 def IsShiftInvariant {α : Type*} (S : Set (ℕ → α)) : Prop :=
@@ -228,6 +242,65 @@ lemma indicator_bounded {α : Type*} (s : Set α) :
   by_cases h : x ∈ s
   · simp [Set.indicator_of_mem h]
   · simp [Set.indicator_of_notMem h]
+
+/-- The ENNReal value of an indicator function is either 0 or 1. -/
+lemma indicator_mem_zero_one {α : Type*} (s : Set α) (x : α) :
+    ENNReal.ofReal (s.indicator (fun _ => (1 : ℝ)) x) ∈ ({0, 1} : Set ENNReal) := by
+  by_cases h : x ∈ s
+  · simp [Set.indicator_of_mem h, ENNReal.ofReal_one]
+  · simp [Set.indicator_of_not_mem h, ENNReal.ofReal_zero]
+
+/-- The ENNReal value of an indicator function is at most 1. -/
+lemma indicator_le_one {α : Type*} (s : Set α) (x : α) :
+    ENNReal.ofReal (s.indicator (fun _ => (1 : ℝ)) x) ≤ 1 := by
+  by_cases h : x ∈ s
+  · simp [Set.indicator_of_mem h, ENNReal.ofReal_one]
+  · simp [Set.indicator_of_not_mem h, ENNReal.ofReal_zero]
+
+/-- A product of ENNReal values equals 0 iff at least one factor is 0. -/
+lemma prod_eq_zero_iff {ι : Type*} [Fintype ι] (f : ι → ENNReal) :
+    ∏ i, f i = 0 ↔ ∃ i, f i = 0 := by
+  constructor
+  · intro h
+    by_contra h_all_nonzero
+    push_neg at h_all_nonzero
+    have : ∀ i, f i ≠ 0 := h_all_nonzero
+    have prod_ne_zero : ∏ i, f i ≠ 0 := Finset.prod_ne_zero_iff.mpr fun i _ => this i
+    exact prod_ne_zero h
+  · intro ⟨i, hi⟩
+    apply Finset.prod_eq_zero (Finset.mem_univ i)
+    exact hi
+
+/-- For values in {0, 1}, the product equals 1 iff all factors equal 1. -/
+lemma prod_eq_one_iff_of_zero_one {ι : Type*} [Fintype ι] (f : ι → ENNReal)
+    (hf : ∀ i, f i ∈ ({0, 1} : Set ENNReal)) :
+    ∏ i, f i = 1 ↔ ∀ i, f i = 1 := by
+  constructor
+  · intro h i
+    have mem := hf i
+    simp at mem
+    cases mem with
+    | inl h0 =>
+      -- If any f i = 0, then product = 0, contradicting h
+      exfalso
+      have : ∏ j, f j = 0 := by
+        apply Finset.prod_eq_zero (Finset.mem_univ i)
+        exact h0
+      rw [this] at h
+      norm_num at h
+    | inr h1 => exact h1
+  · intro h
+    simp [h]
+
+/-- The product of finitely many terms, each bounded by 1, is bounded by 1.
+This is useful for products of indicator functions. -/
+lemma prod_le_one_of_le_one {ι : Type*} [Fintype ι] (f : ι → ENNReal)
+    (hf : ∀ i, f i ≤ 1) : ∏ i, f i ≤ 1 := by
+  apply Finset.prod_le_one
+  · intro i _
+    exact zero_le _
+  · intro i _
+    exact hf i
 
 /-- The product of bounded functions is bounded.
 
@@ -373,12 +446,17 @@ lemma fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
     -- The key insight: The product of indicators equals the indicator of the intersection
     -- ∏ᵢ 𝟙_{Bᵢ}(X(k i)(ω)) = 𝟙_{∩ᵢ X(k i)⁻¹(Bᵢ)}(ω) = 𝟙_{∀i, X(k i)(ω) ∈ Bᵢ}(ω)
 
-    -- This is because:
-    -- - If all X(k i)(ω) ∈ B i, each indicator = 1, so product = 1
-    -- - If any X(k i)(ω) ∉ B i, that indicator = 0, so product = 0
+    -- Strategy: The product of 0-1 valued indicators equals the indicator of the product
+    -- For 0-1 valued functions:
+    -- - ∏ᵢ fᵢ = 1 iff all fᵢ = 1
+    -- - ∏ᵢ fᵢ = 0 iff some fᵢ = 0
+    -- This matches the behavior of indicators
 
-    -- The measure of a set equals ∫⁻ of its indicator function
-    sorry  -- TODO: Use lintegral_indicator_one or prove product-indicator relationship
+    sorry  -- TODO: Prove product-indicator identity and use lintegral_indicator
+          -- Key steps:
+          -- 1. Show ∏ᵢ 𝟙_{Bᵢ}(X(k i)(ω)) = 𝟙_{∀i, X(k i)(ω) ∈ Bᵢ}(ω)
+          -- 2. Use μ S = ∫⁻ ω, 𝟙_S(ω) ∂μ (lintegral of indicator)
+          -- 3. Convert between ℝ and ENNReal carefully
 
   -- Step 2: Use hν_dir to replace indicators with ν measures
   -- For each i, E[𝟙_{Bᵢ}(X(k i)) | tail] = ν(Bᵢ) by condExp_indicator_eq_measure
@@ -398,21 +476,87 @@ lemma fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
   -- ∏ᵢ ν(Bᵢ) = (Measure.pi ν){x : ∀ i, x i ∈ Bᵢ} by definition of product measure
   have rhs_eq : ∫⁻ ω, ∏ i : Fin m, ν ω (B i) ∂μ =
       ∫⁻ ω, (Measure.pi fun i : Fin m => ν ω) {x | ∀ i, x i ∈ B i} ∂μ := by
-    -- For product measures, the measure of a rectangle equals the product of marginals:
-    -- (Measure.pi ν) {x | ∀ i, x i ∈ Bᵢ} = (Measure.pi ν) (∏ᵢ Bᵢ) = ∏ᵢ ν(Bᵢ)
-    -- where ∏ᵢ Bᵢ denotes the product set {x | ∀ i, x i ∈ Bᵢ}
+    -- For product measures, the measure of a rectangle equals the product of marginals
+    -- The set {x | ∀ i, x i ∈ B i} is a measurable rectangle (product set)
 
-    -- The equality under the integral sign:
+    -- Show the integrands are equal pointwise
     congr 1
-    ext ω
-    -- Need to show: ∏ᵢ ν ω (B i) = (Measure.pi (fun i => ν ω)) {x | ∀ i, x i ∈ B i}
+    funext ω
 
-    -- This is the defining property of product measures on measurable rectangles
-    -- In mathlib, this should be Measure.pi_pi or similar
-    sorry  -- TODO: Apply Measure.pi_pi for rectangles or prove directly
+    -- Rewrite the set as a pi-set
+    have set_eq : {x : Fin m → α | ∀ i, x i ∈ B i} = Set.univ.pi fun i => B i := by
+      ext x
+      simp [Set.pi, Set.mem_univ]
+
+    rw [set_eq, Measure.pi_pi]
 
   -- Combine all steps
   rw [lhs_eq, prod_eq, rhs_eq]
+
+/-- The collection of measurable rectangles in a product space forms a π-system.
+
+A rectangle in (Fin m → α) is a set of the form {x | ∀ i, x i ∈ Bᵢ} for measurable sets Bᵢ.
+
+Proof strategy:
+- Need to show: if R₁, R₂ are rectangles and R₁ ∩ R₂ ≠ ∅, then R₁ ∩ R₂ is a rectangle
+- If R₁ = {x | ∀ i, x i ∈ B¹ᵢ} and R₂ = {x | ∀ i, x i ∈ B²ᵢ}
+- Then R₁ ∩ R₂ = {x | ∀ i, x i ∈ B¹ᵢ ∩ B²ᵢ}
+- Since B¹ᵢ ∩ B²ᵢ is measurable, this is a rectangle
+-/
+lemma rectangles_isPiSystem {m : ℕ} {α : Type*} [MeasurableSpace α] :
+    IsPiSystem {S : Set (Fin m → α) | ∃ (B : Fin m → Set α),
+      (∀ i, MeasurableSet (B i)) ∧ S = {x | ∀ i, x i ∈ B i}} := by
+  intro S₁ hS₁ S₂ hS₂ _hne
+  -- S₁ and S₂ are rectangles
+  obtain ⟨B₁, hB₁_meas, rfl⟩ := hS₁
+  obtain ⟨B₂, hB₂_meas, rfl⟩ := hS₂
+  -- Their intersection is also a rectangle
+  use fun i => B₁ i ∩ B₂ i
+  constructor
+  · intro i
+    exact (hB₁_meas i).inter (hB₂_meas i)
+  · ext x
+    simp only [Set.mem_inter_iff, Set.mem_setOf_eq]
+    constructor
+    · intro ⟨h₁, h₂⟩ i
+      exact ⟨h₁ i, h₂ i⟩
+    · intro h
+      exact ⟨fun i => (h i).1, fun i => (h i).2⟩
+
+/-- The product σ-algebra on (Fin m → α) is generated by measurable rectangles.
+
+This is a fundamental result in product measure theory: the σ-algebra on a finite
+product equals the σ-algebra generated by measurable rectangles.
+
+Proof strategy:
+- The product σ-algebra is the smallest σ-algebra making all projections measurable
+- A set is in this σ-algebra iff it's in the σ-algebra generated by cylinder sets
+- Cylinder sets are finite intersections of preimages of projections
+- These are exactly the rectangles
+
+In mathlib, this should follow from the definition of Pi.measurableSpace and
+properties of generateFrom.
+-/
+lemma rectangles_generate_pi_sigma {m : ℕ} {α : Type*} [MeasurableSpace α] :
+    (inferInstance : MeasurableSpace (Fin m → α)) =
+    MeasurableSpace.generateFrom {S : Set (Fin m → α) | ∃ (B : Fin m → Set α),
+      (∀ i, MeasurableSet (B i)) ∧ S = {x | ∀ i, x i ∈ B i}} := by
+  -- The product σ-algebra on finite products is Pi.measurableSpace
+  -- This is defined as the coarsest σ-algebra making all projections measurable
+
+  -- For finite products, the σ-algebra is generated by cylinder sets:
+  -- Sets of the form {x | x i ∈ B} for measurable B and fixed i
+  -- Finite intersections of cylinders give rectangles
+
+  -- In mathlib, Pi.measurableSpace uses generateFrom of cylinder sets
+  -- The σ-algebra generated by rectangles equals the σ-algebra from cylinders
+  -- because rectangles are exactly finite intersections of cylinders
+
+  sorry  -- TODO: Use Pi.measurableSpace_eq or similar from mathlib
+        -- For finite index, may need to show:
+        -- 1. Pi.measurableSpace = generateFrom (cylinder sets)
+        -- 2. generateFrom (cylinders) = generateFrom (rectangles)
+        -- 3. Step 2 uses: rectangles = finite intersections of cylinders
 
 /-- Pushforward of a measure through coordinate selection equals the marginal distribution.
 This connects the map in the ConditionallyIID definition to the probability of events.
@@ -598,10 +742,30 @@ theorem conditional_iid_from_directing_measure
 
       -- Both are probability measures
       have h_map_prob : IsProbabilityMeasure μ_map := by
-        sorry  -- TODO: Prove pushforward of probability measure is probability
+        -- The pushforward of a probability measure is a probability measure
+        -- This should be automatically inferred if the mapping is measurable
+        have h_meas : Measurable (fun ω i => X (k i) ω) := by
+          rw [measurable_pi_iff]
+          intro i
+          exact hX_meas (k i)
+        -- The instance should exist in mathlib
+        sorry  -- TODO: Find correct instance name or use inferInstance
+              -- May need: Measure.IsProbabilityMeasure.map or similar
 
       have h_bind_prob : IsProbabilityMeasure μ_bind := by
-        sorry  -- TODO: Prove bind of probability measures is probability
+        -- The bind of a probability measure with probability kernels is a probability measure
+        -- For each ω, Measure.pi (fun _ => ν ω) is a probability measure
+        have h_pi_prob : ∀ ω, IsProbabilityMeasure (Measure.pi fun _ : Fin m => ν ω) := by
+          intro ω
+          -- Product of probability measures is a probability measure
+          -- Following the pattern from ConditionallyIID.lean (pi_isProbabilityMeasure)
+          constructor
+          have h : (Set.univ : Set (Fin m → α)) = Set.univ.pi (fun (_ : Fin m) => Set.univ) := by
+            ext x; simp
+          rw [h, Measure.pi_pi]
+          simp [measure_univ]
+        sorry  -- TODO: Use MeasureTheory.IsProbabilityMeasure.bind or similar
+              -- Mathlib should have an instance for bind with probability kernels
 
       -- Strategy outline:
       -- 1. Define π-system C of measurable rectangles
@@ -776,9 +940,11 @@ of de Finetti's theorem. The key components now in place:
 
 **Recent Progress (this session):**
 ✅ **Completed `measure_eq_of_agree_on_pi_system`**: Full proof for probability measures
-✅ **Completed `aemeasurable_measure_pi` axiom extraction**: Isolated AE-measurability concern
-✅ **Added proof skeletons**: `fidi_eq_avg_product`, `integral_prod_eq_prod_integral` have detailed structure
-✅ **Converted axioms to lemmas**: All major helper axioms now have proof outlines with sorries
+✅ **Completed `rectangles_isPiSystem`**: Full proof that rectangles form π-system
+✅ **Completed `shift_measurable`**: Full proof that shift operator is measurable
+✅ **Added `rectangles_generate_pi_sigma`**: Structure for σ-algebra generation (1 sorry)
+✅ **Expanded probability measure proofs**: Structured with clear dependencies (4 sorries)
+✅ **Converted axioms to lemmas**: All major helper axioms now have proof outlines
 
 **High Priority - Core Proof Steps:**
 1. **Fill main sorry in `conditional_iid_from_directing_measure`** (line ~493):
