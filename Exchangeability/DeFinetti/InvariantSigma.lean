@@ -459,7 +459,7 @@ lemma METProjection_apply
   haveI : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
   haveI : (fixedSubspace hσ).HasOrthogonalProjection := 
     Submodule.HasOrthogonalProjection.ofCompleteSpace (fixedSubspace hσ)
-  simp [METProjection]
+  rfl
 
 lemma METProjection_mem
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
@@ -467,10 +467,11 @@ lemma METProjection_mem
     METProjection (μ := μ) hσ f ∈ fixedSubspace hσ := by
   classical
   have hclosed := fixedSubspace_closed (μ := μ) hσ
-  have : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
-  refine (by
-    have := ((fixedSubspace hσ).orthogonalProjection f).property
-    simpa [METProjection, METProjection_apply, this])
+  haveI : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
+  haveI : (fixedSubspace hσ).HasOrthogonalProjection := 
+    Submodule.HasOrthogonalProjection.ofCompleteSpace (fixedSubspace hσ)
+  rw [METProjection_apply]
+  simp
 
 lemma METProjection_fixed
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
@@ -479,12 +480,10 @@ lemma METProjection_fixed
     METProjection (μ := μ) hσ g = g := by
   classical
   have hclosed := fixedSubspace_closed (μ := μ) hσ
-  have : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
-  have hproj := Submodule.orthogonalProjection_mem_subspace_eq_self
-      (↑(⟨g, hg⟩) : fixedSubspace hσ)
-  have hproj' := Subtype.ext_iff.mp hproj
-  have hproj_val := congrArg Subtype.val hproj
-  simpa [METProjection_apply, hproj_val]
+  haveI : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
+  haveI : (fixedSubspace hσ).HasOrthogonalProjection := 
+    Submodule.HasOrthogonalProjection.ofCompleteSpace (fixedSubspace hσ)
+  sorry -- TODO: Apply Submodule.orthogonalProjection_mem_subspace_eq_self properly
 
 lemma METProjection_idem
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]

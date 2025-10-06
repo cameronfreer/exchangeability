@@ -81,20 +81,69 @@ noncomputable def condProb {m₀ : MeasurableSpace Ω} (μ : Measure Ω) [IsProb
     (m : MeasurableSpace Ω) (A : Set Ω) : Ω → ℝ :=
   μ[A.indicator (fun _ => (1 : ℝ)) | m]
 
-/-- Conditional probability takes values in [0, 1] almost everywhere.
-TODO: Prove this from properties of conditional expectation and indicators. -/
-axiom condProb_ae_nonneg_le_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ] 
-    (m : MeasurableSpace Ω) (A : Set Ω) :
-    ∀ᵐ ω ∂μ, 0 ≤ condProb μ m A ω ∧ condProb μ m A ω ≤ 1
+/-- Conditional probability takes values in `[0,1]` almost everywhere. -/
+lemma condProb_ae_nonneg_le_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+    [IsProbabilityMeasure μ] (m : MeasurableSpace Ω) (hm : m ≤ m₀)
+    [SigmaFinite (μ.trim hm)] {A : Set Ω} (hA : MeasurableSet A) :
+    ∀ᵐ ω ∂μ, 0 ≤ condProb μ m A ω ∧ condProb μ m A ω ≤ 1 := by
+  classical
+  -- Nonnegativity follows from the corresponding property of the conditional expectation.
+  have h_nonneg : 0 ≤ᵐ[μ] condProb μ m A := by
+    have h_indicator_nonneg : 0 ≤ᵐ[μ] A.indicator (fun _ : Ω => (1 : ℝ)) :=
+      eventually_of_forall (fun ω => by
+        by_cases hω : ω ∈ A <;> simp [hω])
+    simpa [condProb] using
+      (condExp_nonneg (μ := μ) (m := m) (f := A.indicator fun _ : Ω => (1 : ℝ))
+        h_indicator_nonneg)
+  -- The upper bound uses monotonicity together with the constant-function formula.
+  have h_le_one : condProb μ m A ≤ᵐ[μ] fun _ : Ω => (1 : ℝ) := by
+    have h_le :
+        A.indicator (fun _ : Ω => (1 : ℝ)) ≤ᵐ[μ] fun _ : Ω => (1 : ℝ) :=
+      eventually_of_forall (fun ω => by
+        by_cases hω : ω ∈ A <;> simp [hω])
+    have h_int_indicator : Integrable (A.indicator fun _ : Ω => (1 : ℝ)) μ :=
+      (integrable_const (1 : ℝ)).indicator hA
+    have h_int_one : Integrable (fun _ : Ω => (1 : ℝ)) μ := integrable_const (1 : ℝ)
+    have h_mono :=
+      condExp_mono (μ := μ) (m := m) (f := A.indicator fun _ : Ω => (1 : ℝ))
+        (g := fun _ : Ω => (1 : ℝ)) h_int_indicator h_int_one h_le
+    have h_const : μ[(fun _ : Ω => (1 : ℝ)) | m] = fun _ : Ω => (1 : ℝ) :=
+      condExp_const (μ := μ) (m := m) hm (1 : ℝ)
+    simpa [condProb, h_const]
+      using h_mono
+  filter_upwards [h_nonneg, h_le_one] with ω h0 h1
+  exact ⟨h0, by simpa using h1⟩
 
 /-- Conditional probability satisfies the averaging property.
 This follows from mathlib's `setIntegral_condExp`.
 TODO: Complete the proof using mathlib lemmas for indicator integrals.
 -/
-axiom condProb_integral_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (hm : m ≤ m₀) [SigmaFinite (μ.trim hm)]
-    {A B : Set Ω} (hA : MeasurableSet A) (hB : MeasurableSet[m] B) :
-    ∫ ω in B, condProb μ m A ω ∂μ = (μ (A ∩ B)).toReal
+lemma condProb_integral_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+    [IsProbabilityMeasure μ] (m : MeasurableSpace Ω) (hm : m ≤ m₀)
+    [SigmaFinite (μ.trim hm)] {A B : Set Ω} (hA : MeasurableSet A)
+    (hB : MeasurableSet[m] B) :
+    ∫ ω in B, condProb μ m A ω ∂μ = (μ (A ∩ B)).toReal := by
+  classical
+  have h_int : Integrable (A.indicator fun _ : Ω => (1 : ℝ)) μ :=
+    (integrable_const (1 : ℝ)).indicator hA
+  -- Use the defining property of the conditional expectation on the set `B`.
+  have h_condexp :=
+    setIntegral_condExp (μ := μ) (m := m) (hm := hm)
+      (f := A.indicator fun _ : Ω => (1 : ℝ)) h_int hB
+  -- Rewrite as an integral over `B ∩ A` of the constant 1.
+  have h_indicator :
+      ∫ ω in B, A.indicator (fun _ : Ω => (1 : ℝ)) ω ∂μ
+        = ∫ ω in B ∩ A, (1 : ℝ) ∂μ := by
+    simpa [Set.inter_comm, Set.inter_left_comm, Set.inter_assoc]
+      using setIntegral_indicator (μ := μ) (s := B) (t := A)
+        (f := fun _ : Ω => (1 : ℝ)) hA
+  -- Evaluate the integral of 1 over the set.
+  have h_const : ∫ ω in B ∩ A, (1 : ℝ) ∂μ = (μ (B ∩ A)).toReal := by
+    simpa [Measure.real_def, Set.inter_comm]
+      using (setIntegral_one_eq_measureReal (μ := μ) (s := B ∩ A))
+  -- Put everything together and clean up intersections.
+  simpa [condProb, h_indicator, h_const, Set.inter_comm, Set.inter_left_comm, Set.inter_assoc]
+    using h_condexp
 -- Proof strategy:
 -- 1. Unfold condProb to get conditional expectation of indicator
 -- 2. Use setIntegral_condExp to move conditional expectation out
