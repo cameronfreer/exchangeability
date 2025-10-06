@@ -257,6 +257,41 @@ lemma indicator_le_one {α : Type*} (s : Set α) (x : α) :
   · simp [Set.indicator_of_mem h, ENNReal.ofReal_one]
   · simp [Set.indicator_of_not_mem h, ENNReal.ofReal_zero]
 
+/-- A product of ENNReal values equals 0 iff at least one factor is 0. -/
+lemma prod_eq_zero_iff {ι : Type*} [Fintype ι] (f : ι → ENNReal) :
+    ∏ i, f i = 0 ↔ ∃ i, f i = 0 := by
+  constructor
+  · intro h
+    by_contra h_all_nonzero
+    push_neg at h_all_nonzero
+    have : ∀ i, f i ≠ 0 := h_all_nonzero
+    have prod_ne_zero : ∏ i, f i ≠ 0 := Finset.prod_ne_zero_iff.mpr fun i _ => this i
+    exact prod_ne_zero h
+  · intro ⟨i, hi⟩
+    apply Finset.prod_eq_zero (Finset.mem_univ i)
+    exact hi
+
+/-- For values in {0, 1}, the product equals 1 iff all factors equal 1. -/
+lemma prod_eq_one_iff_of_zero_one {ι : Type*} [Fintype ι] (f : ι → ENNReal)
+    (hf : ∀ i, f i ∈ ({0, 1} : Set ENNReal)) :
+    ∏ i, f i = 1 ↔ ∀ i, f i = 1 := by
+  constructor
+  · intro h i
+    have mem := hf i
+    simp at mem
+    cases mem with
+    | inl h0 =>
+      -- If any f i = 0, then product = 0, contradicting h
+      exfalso
+      have : ∏ j, f j = 0 := by
+        apply Finset.prod_eq_zero (Finset.mem_univ i)
+        exact h0
+      rw [this] at h
+      norm_num at h
+    | inr h1 => exact h1
+  · intro h
+    simp [h]
+
 /-- The product of finitely many terms, each bounded by 1, is bounded by 1.
 This is useful for products of indicator functions. -/
 lemma prod_le_one_of_le_one {ι : Type*} [Fintype ι] (f : ι → ENNReal)
