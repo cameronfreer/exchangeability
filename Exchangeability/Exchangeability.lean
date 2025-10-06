@@ -28,7 +28,7 @@ open Equiv MeasureTheory Set
 
 namespace Exchangeability
 
-variable {Ω α : Type*}
+variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
 /-!
 ## π-system of prefix cylinders
@@ -45,6 +45,12 @@ def prefixProj (α : Type*) (n : ℕ) (x : ℕ → α) : Fin n → α :=
 @[simp]
 lemma prefixProj_apply (n : ℕ) (x : ℕ → α) (i : Fin n) :
     prefixProj (α:=α) n x i = x i := rfl
+
+lemma measurable_prefixProj (n : ℕ) :
+    Measurable (prefixProj (α:=α) n) := by
+  classical
+  refine measurable_pi_lambda _ (fun i => ?_)
+  exact measurable_pi_apply (i : ℕ)
 
 /-- Cylinder determined by the first `n` coordinates belonging to a measurable set. -/
 def prefixCylinder (n : ℕ) (S : Set (Fin n → α)) : Set (ℕ → α) :=
@@ -133,12 +139,6 @@ end Extend
 section Measurable
 
 variable [MeasurableSpace α]
-
-lemma measurable_prefixProj (n : ℕ) :
-    Measurable (prefixProj (α:=α) n) := by
-  classical
-  refine measurable_pi_lambda _ (fun i => ?_)
-  exact measurable_pi_apply (i : ℕ)
 
 lemma takePrefix_measurable {m n : ℕ} (hmn : m ≤ n) :
     Measurable (takePrefix (α:=α) hmn) := by
