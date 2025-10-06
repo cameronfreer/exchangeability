@@ -178,28 +178,26 @@ lemma range_MET_projection_eq_fixedSubspace
   constructor
   · intro ⟨y, hy⟩
     rw [← hy]
-    -- Forward direction: x ∈ range P → x ∈ fixedSpace
-    -- From MET construction in KoopmanMeanErgodic:
-    -- P = S.subtypeL.comp S.orthogonalProjection where S = fixedSpace (koopman shift hσ)
+    -- Forward direction: x ∈ range P → x ∈ fixedSpace (koopman shift hσ)
     -- 
-    -- The range of this composition:
-    -- range (subtypeL ∘ orthogonalProjection) = range subtypeL = S
+    -- From MET construction (KoopmanMeanErgodic.lean:128):
+    -- P = S.subtypeL ∘ S.orthogonalProjection where S = fixedSpace (koopman shift hσ)
     -- 
-    -- We use: Submodule.range_subtypeL : range p.subtypeL = p
-    -- Since orthogonalProjection : E → S is surjective onto S,
-    -- and subtypeL : S → E embeds S, the composition has range S
-    --
-    -- However, we can prove this more directly using that P is idempotent:
-    -- P (P y) = P y (since P y ∈ range P ⊆ fixedSpace by induction hypothesis)
-    -- But we're trying to prove range P ⊆ fixedSpace, so this is circular
-    --
-    -- Better: Use that P fixes fixedSpace elements
-    -- If we can show P y ∈ fixedSpace, we're done
-    -- We know: P (P y) = P y if P y ∈ fixedSpace
-    -- This IS the definition of fixedSpace!
-    sorry  -- TODO: Need to use construction of P or prove P is idempotent
+    -- Therefore:
+    -- - P y = subtypeL (orthogonalProjection y)
+    -- - orthogonalProjection y : S (an element of the submodule S)
+    -- - subtypeL embeds S back into Lp
+    -- - By Submodule.range_subtypeL: range subtypeL = S
+    -- - So P y ∈ S = fixedSpace (koopman shift hσ) ✓
+    -- 
+    -- This proof needs access to the construction, which we don't have
+    -- as a hypothesis here. The lemma should either:
+    -- (a) Be proven in KoopmanMeanErgodic where construction is available
+    -- (b) Take P = S.subtypeL ∘ S.orthogonalProjection as a hypothesis
+    -- (c) Be accepted as an axiom linking MET to our setting
+    sorry  -- TODO: Requires MET construction property or should be proven alongside MET
   · intro hx
-    -- Backward direction: x ∈ fixedSpace → x ∈ range P
+    -- Backward direction: x ∈ fixedSpace → x ∈ range P ✅ PROVEN
     use x
     exact hP_fixed x hx
 
