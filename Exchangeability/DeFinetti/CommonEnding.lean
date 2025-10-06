@@ -146,7 +146,24 @@ def IsTailMeasurable {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
 
 This is the key connection between syntactic invariance and σ-field measurability.
 
-TODO: Prove this lemma. The proof in Kallenberg uses approximation by simple functions. -/
+Proof strategy (following Kallenberg FMP 10.3):
+1. (⇒) Assume f ∘ shift = f
+   - Need to show f is measurable w.r.t. invariantSigmaField α
+   - The invariant σ-field is defined as MeasurableSpace.comap shift inferInstance
+   - A function g is measurable w.r.t. comap shift iff g ∘ shift⁻¹ is measurable
+   - Since f is shift-invariant: f = f ∘ shift ∘ shift⁻¹ (where shift⁻¹ exists on range)
+   - This gives the required measurability
+
+2. (⇐) Assume f is measurable w.r.t. invariantSigmaField α
+   - By definition of comap, f⁻¹(B) ∈ invariantSigmaField for all measurable B
+   - This means shift⁻¹(f⁻¹(B)) = f⁻¹(B)
+   - Equivalently: (f ∘ shift)⁻¹(B) = f⁻¹(B) for all measurable B
+   - Since β is countably generated, this implies f ∘ shift = f almost everywhere
+   - For deterministic functions on ℕ → α, a.e. equality is actual equality
+
+The proof requires careful handling of the comap construction and the countably
+generated assumption to move from set-level equality to function equality.
+-/
 axiom isTailMeasurable_iff_shift_invariant {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
     [MeasurableSpace.CountablyGenerated β]
     (f : (ℕ → α) → β) (hf : Measurable f) :
@@ -172,8 +189,23 @@ conditioning σ-field for de Finetti's theorem:
 - Conditional expectations with respect to the tail σ-algebra give the mixing measure
 - The tail σ-field is trivial for ergodic measures (0-1 law)
 
-TODO: Formalize this connection between exchangeability and shift-invariance.
-      This requires defining the path-space measure and proving invariance properties.
+Proof strategy:
+1. Define path-space measure: μ_X = Measure.map (fun ω n => X n ω) μ
+2. Show shift is measurable: shift : (ℕ → α) → (ℕ → α) is measurable
+3. Prove measure-preserving property:
+   - For any measurable B ⊆ (ℕ → α), need: μ_X(shift⁻¹(B)) = μ_X(B)
+   - Since X is exchangeable, finite permutations preserve the distribution
+   - The shift is the limit of finite permutations (shift by 1)
+   - For exchangeable sequences, the distribution is invariant under all permutations
+   - In particular: μ_X{paths | shift(path) ∈ B} = μ_X(B)
+
+4. The key insight: exchangeability = invariance under finite coordinate swaps
+   - Shift can be approximated by swapping coordinates 0↔1, 1↔2, 2↔3, ...
+   - Each swap preserves the distribution by exchangeability
+   - The limit preserves the distribution by continuity of measures
+
+This connects the combinatorial property (exchangeability) to the dynamical
+property (shift-invariance), which is the bridge to ergodic theory.
 -/
 axiom exchangeable_implies_shift_invariant {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX : Exchangeable μ X) (hX_meas : ∀ i, Measurable (X i)) :
@@ -366,7 +398,18 @@ lemma fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
   -- ∏ᵢ ν(Bᵢ) = (Measure.pi ν){x : ∀ i, x i ∈ Bᵢ} by definition of product measure
   have rhs_eq : ∫⁻ ω, ∏ i : Fin m, ν ω (B i) ∂μ =
       ∫⁻ ω, (Measure.pi fun i : Fin m => ν ω) {x | ∀ i, x i ∈ B i} ∂μ := by
-    sorry  -- TODO: Use Measure.pi_pi (product measure on rectangles)
+    -- For product measures, the measure of a rectangle equals the product of marginals:
+    -- (Measure.pi ν) {x | ∀ i, x i ∈ Bᵢ} = (Measure.pi ν) (∏ᵢ Bᵢ) = ∏ᵢ ν(Bᵢ)
+    -- where ∏ᵢ Bᵢ denotes the product set {x | ∀ i, x i ∈ Bᵢ}
+
+    -- The equality under the integral sign:
+    congr 1
+    ext ω
+    -- Need to show: ∏ᵢ ν ω (B i) = (Measure.pi (fun i => ν ω)) {x | ∀ i, x i ∈ B i}
+
+    -- This is the defining property of product measures on measurable rectangles
+    -- In mathlib, this should be Measure.pi_pi or similar
+    sorry  -- TODO: Apply Measure.pi_pi for rectangles or prove directly
 
   -- Combine all steps
   rw [lhs_eq, prod_eq, rhs_eq]
@@ -547,25 +590,35 @@ theorem conditional_iid_from_directing_measure
       -- Need: Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
       --     = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)
       --
-      -- Strategy (via Monotone Class Theorem):
-      -- a) For measurable rectangles B = B₁ × ... × Bₘ:
-      --    μ{ω : X_{k₀}(ω) ∈ B₀, ..., X_{kₘ₋₁}(ω) ∈ Bₘ₋₁}
-      --      = ∫ ω, (ν ω)^m (B) dμ(ω)    [by fidi_eq_avg_product]
-      --      = ∫ ω, ∏ᵢ (ν ω)(Bᵢ) dμ(ω)   [by product measure definition]
-      --    This matches μ.bind (Measure.pi ν) applied to the cylinder set
-      --
-      -- b) Extend from rectangles to all measurable sets via π-λ theorem
-      --    The collection of rectangles forms a π-system generating the product σ-algebra
-      --    Both sides define measures on this σ-algebra that agree on rectangles
-      --    By uniqueness (measure extension from π-system), they're equal
-      --
-      -- c) This gives equality of measures, hence ConditionallyIID
+      -- Strategy: Use measure_eq_of_agree_on_pi_system with rectangles as the π-system
 
-      -- The full proof requires:
-      -- - fidi_eq_avg_product to handle step (a)
-      -- - monotone_class_theorem for step (b)
-      -- - Measure extension/uniqueness theorems from mathlib
-      sorry
+      -- Define the two measures we want to prove equal
+      let μ_map := Measure.map (fun ω i => X (k i) ω) μ
+      let μ_bind := μ.bind fun ω => Measure.pi fun _ : Fin m => ν ω
+
+      -- Both are probability measures
+      have h_map_prob : IsProbabilityMeasure μ_map := by
+        sorry  -- TODO: Prove pushforward of probability measure is probability
+
+      have h_bind_prob : IsProbabilityMeasure μ_bind := by
+        sorry  -- TODO: Prove bind of probability measures is probability
+
+      -- Strategy outline:
+      -- 1. Define π-system C of measurable rectangles
+      -- 2. Show both measures agree on C using fidi_eq_avg_product
+      -- 3. Apply measure_eq_of_agree_on_pi_system for extension
+
+      -- For now, we outline the structure:
+      sorry  -- TODO: Complete the π-system argument with these steps:
+             -- a) Prove both μ_map and μ_bind are probability measures
+             -- b) Define C = {measurable rectangles}
+             -- c) Show C is a π-system
+             -- d) Show C generates the product σ-algebra
+             -- e) For each rectangle S ∈ C:
+             --    - Use map_coords_apply for LHS
+             --    - Use bind_pi_apply for RHS
+             --    - Apply fidi_eq_avg_product to show equality
+             -- f) Conclude by measure_eq_of_agree_on_pi_system
 
 /-- **FMP 1.1: Monotone Class Theorem (Sierpiński)** = Dynkin's π-λ theorem.
 
