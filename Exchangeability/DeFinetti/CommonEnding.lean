@@ -420,21 +420,16 @@ lemma fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
     -- For product measures, the measure of a rectangle equals the product of marginals
     -- The set {x | ∀ i, x i ∈ B i} is a measurable rectangle (product set)
 
-    -- Key fact: For a product measure Measure.pi μ on a finite product,
-    -- the measure of a rectangle ∏ᵢ Bᵢ equals ∏ᵢ μᵢ(Bᵢ)
-
-    -- Strategy: Show the integrands are equal pointwise
+    -- Show the integrands are equal pointwise
     congr 1
     funext ω
 
-    -- Define the product set as a pi-set
-    let piSet := {x : Fin m → α | ∀ i, x i ∈ B i}
+    -- Rewrite the set as a pi-set
+    have set_eq : {x : Fin m → α | ∀ i, x i ∈ B i} = Set.univ.pi fun i => B i := by
+      ext x
+      simp [Set.pi, Set.mem_univ]
 
-    -- This should follow from Measure.pi_pi or Measure.pi_univ_pi
-    -- The product measure on rectangles is the product of the marginals
-    sorry  -- TODO: Use Measure.pi.pi or similar for finite products
-          -- In mathlib: MeasureTheory.Measure.pi_pi or pi_univ_pi
-          -- Should state: (Measure.pi ν) (Set.pi univ B) = ∏ i, ν i (B i)
+    rw [set_eq, Measure.pi_pi]
 
   -- Combine all steps
   rw [lhs_eq, prod_eq, rhs_eq]
