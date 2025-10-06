@@ -230,7 +230,7 @@ theorem measure_eq_of_fin_marginals_eq {μ ν : Measure (ℕ → α)}
     simpa [Measure.map_apply_of_aemeasurable
       ((measurable_prefixProj (α:=α) 1).aemeasurable)]
       using h 1 Set.univ MeasurableSet.univ
-  apply Measure.ext_of_generate_finite (C:=prefixCylinders (α:=α))
+  apply MeasureTheory.ext_of_generate_finite (C:=prefixCylinders (α:=α))
   · simpa [generateFrom_prefixCylinders (α:=α)]
   · exact isPiSystem_prefixCylinders (α:=α)
   · intro A hA
