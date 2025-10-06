@@ -8,6 +8,7 @@ import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.Analysis.InnerProductSpace.Projection.Basic
 import Exchangeability.Ergodic.KoopmanMeanErgodic
 import Exchangeability.DeFinetti.InvariantSigma
+import Exchangeability.DeFinetti.ProjectionLemmas
 
 /-!
 # First Proof of de Finetti via Mean Ergodic Theorem
@@ -194,32 +195,6 @@ axiom condexpL2_fixes_fixedSubspace {g : Lp ℝ 2 μ}
     (hg : g ∈ fixedSubspace hσ) :
     condexpL2 (μ := μ) g = g
 
-/-- Two continuous linear maps that both act as orthogonal projections onto the same
-closed subspace must be equal.
-
-MATHEMATICAL CONTENT:
-The uniqueness of orthogonal projections. In a Hilbert space, the orthogonal projection
-onto a closed subspace S is uniquely characterized by:
-- P x ∈ S for all x
-- ⟨x - P x, s⟩ = 0 for all s ∈ S (orthogonality)
-
-If P and Q both have range S and fix all elements of S, they must be the same orthogonal
-projection. This follows from the uniqueness characterization in mathlib.
-
-AXIOM STATUS: Wraps mathlib's uniqueness of orthogonal projections.
-The full proof requires using the orthogonality condition ⟨x - P x, s⟩ = 0,
-which follows from the construction of orthogonal projections in mathlib.
-Key mathlib lemma: eq_orthogonalProjectionFn_of_mem_of_inner_eq_zero.
--/
-axiom orthogonal_projections_same_range_eq
-    (P Q : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ)
-    (S : Submodule ℝ (Lp ℝ 2 μ))
-    (hP_range : Set.range P = (S : Set (Lp ℝ 2 μ)))
-    (hQ_range : Set.range Q = (S : Set (Lp ℝ 2 μ)))
-    (hP_fixes : ∀ g ∈ S, P g = g)
-    (hQ_fixes : ∀ g ∈ S, Q g = g) :
-    P = Q
-
 /-- Main theorem: Birkhoff averages converge in L² to conditional expectation.
 
 This combines:
@@ -242,8 +217,60 @@ theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
       range_condexp_eq_fixedSubspace hσ
     have hQ_fixes : ∀ g ∈ fixedSubspace hσ, condexpL2 (μ := μ) g = g :=
       fun g hg => condexpL2_fixes_fixedSubspace (hσ := hσ) hg
-    exact orthogonal_projections_same_range_eq P (condexpL2 (μ := μ)) (fixedSubspace hσ)
-      h_range_P h_range_condexp hP_fixed hQ_fixes
+    
+    -- Projections from MET and conditional expectation are idempotent
+    -- P is a projection: P ∘ P = P (since P fixes all elements in its range)
+    have hP_idem : P.comp P = P := by
+      apply ContinuousLinearMap.ext
+      intro f
+      have : P f ∈ fixedSubspace hσ := by
+        rw [← SetLike.mem_coe, ← h_range_P]
+        exact ⟨f, rfl⟩
+      simp only [ContinuousLinearMap.coe_comp', Function.comp_apply]
+      exact hP_fixed (P f) this
+    
+    -- condexpL2 is idempotent: E[E[·|ℱ]|ℱ] = E[·|ℱ] (tower property)
+    have hQ_idem : (condexpL2 (μ := μ)).comp (condexpL2 (μ := μ)) = condexpL2 (μ := μ) := by
+      apply ContinuousLinearMap.ext
+      intro f
+      have : condexpL2 (μ := μ) f ∈ fixedSubspace hσ := by
+        rw [← SetLike.mem_coe, ← h_range_condexp]
+        exact ⟨f, rfl⟩
+      simp only [ContinuousLinearMap.coe_comp', Function.comp_apply]
+      exact hQ_fixes (condexpL2 (μ := μ) f) this
+    
+    -- Both are symmetric (self-adjoint) as orthogonal projections
+    -- P is symmetric: ⟨P f, g⟩ = ⟨f, P g⟩ (property of orthogonal projections)
+    -- This follows from the construction of P as an orthogonal projection in the MET
+    have hP_sym : P.IsSymmetric := by
+      intro f g
+      -- P was constructed as subtypeL ∘ orthogonalProjection in the MET
+      -- Orthogonal projections are self-adjoint
+      sorry  -- Requires access to the construction details from MET
+    
+    -- condexpL2 is symmetric: ⟨E[f|ℱ], g⟩ = ⟨f, E[g|ℱ]⩾ (self-adjointness of cond. exp.)
+    -- This is in mathlib as inner_condExpL2_left_eq_right
+    have hQ_sym : (condexpL2 (μ := μ)).IsSymmetric := by
+      intro f g
+      -- mathlib defines condExpL2 as an orthogonal projection, which is self-adjoint
+      sorry  -- API details for condexpL2 symmetry
+    
+    -- The fixedSubspace has an orthogonal projection (it's a closed subspace)
+    -- The fixedSubspace is closed as the kernel of (koopman - id), a continuous map
+    haveI : (fixedSubspace hσ).HasOrthogonalProjection := by
+      apply Submodule.HasOrthogonalProjection.ofCompleteSpace
+      -- fixedSubspace is closed as the equalizer of continuous maps
+      have : IsClosed (fixedSubspace hσ : Set (Lp ℝ 2 μ)) := by
+        have : (fixedSubspace hσ : Set (Lp ℝ 2 μ)) = 
+            {f | koopman shift hσ f = f} := by
+          ext f
+          simp [fixedSubspace, LinearMap.eqLocus, Exchangeability.Ergodic.fixedSpace]
+        rw [this]
+        exact isClosed_eq (koopman shift hσ).continuous continuous_id
+      exact this.completeSpace_coe
+    
+    exact orthogonalProjections_same_range_eq P (condexpL2 (μ := μ)) (fixedSubspace hσ)
+      h_range_P h_range_condexp hP_fixed hQ_fixes hP_idem hQ_idem hP_sym hQ_sym
 
   -- Step 3: Conclude using equality
   rw [← hP_eq]
