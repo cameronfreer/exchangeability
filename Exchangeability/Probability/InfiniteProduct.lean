@@ -56,63 +56,89 @@ namespace Probability
 
 variable {α : Type*} [MeasurableSpace α]
 
+/-- The projective family of finite product measures for the i.i.d. construction.
+
+For each finite subset `I : Finset ℕ`, this gives the product measure on `∀ i : I, α`. -/
+def iidProjectiveFamily (ν : Measure α) [IsProbabilityMeasure ν] :
+    ∀ I : Finset ℕ, Measure (∀ _ : I, α) :=
+  fun I => Measure.pi (fun (_ : I) => ν)
+
+/-- The projective family is indeed projective: projections preserve the measure.
+
+**Proof strategy**: Use mathlib's `Measure.pi_map_piCongrLeft` or similar reindexing lemmas
+to show that restricting the index set from I to J ⊆ I gives the product measure on J. -/
+lemma iidProjectiveFamily_projective (ν : Measure α) [IsProbabilityMeasure ν] :
+    @IsProjectiveMeasureFamily ℕ (fun _ => α) (fun _ => inferInstance) (iidProjectiveFamily ν) := by
+  intro I J hJI
+  -- Need to show: (Measure.pi (fun _ : I => ν)).map (Finset.restrict₂ hJI) = Measure.pi (fun _ : J => ν)
+  sorry  -- TODO: Prove using Measure.pi_map and reindexing lemmas
+
 /-- The infinite i.i.d. product measure `ν^ℕ` on `ℕ → α`.
 
-**Current implementation**: Axiomatized pending mathlib support for infinite products.
+This is constructed as the projective limit of the family of finite product measures.
+While mathlib's `Measure.pi` requires `Fintype ι`, the projective limit construction
+works for any index set, giving us the infinite product measure.
 
-**Future implementation path**: Once mathlib extends `Measure.pi` to work without `Fintype ι`,
-this can be defined as:
-```lean
-def iidProduct (ν : Measure α) [SigmaFinite ν] : Measure (ℕ → α) :=
-  Measure.pi (fun _ : ℕ => ν)
-```
+**Construction**:
+1. Define `iidProjectiveFamily ν` giving finite product measures
+2. Take the projective limit (which exists and is unique by Kolmogorov extension)
+3. The limit is characterized by: for all finite `I`, the marginal on `I` equals `ν^I`
 
-The current mathlib (as of January 2025) requires `Fintype ι` for `Measure.pi`, but the
-mathematical construction via outer measures works for countable index sets. The axioms below
-specify the properties this measure must satisfy and can be replaced with actual definitions
-once mathlib infrastructure is available. -/
+Note: The actual construction of the projective limit measure requires the Kolmogorov
+extension theorem, which is axiomatized here pending full formalization. -/
 axiom iidProduct (ν : Measure α) [IsProbabilityMeasure ν] : Measure (ℕ → α)
 
-axiom iidProduct_isProbability (ν : Measure α) [IsProbabilityMeasure ν] :
-    IsProbabilityMeasure (iidProduct ν)
+/-- The constructed measure is the projective limit of the finite products. -/
+axiom iidProduct_isProjectiveLimit (ν : Measure α) [IsProbabilityMeasure ν] :
+    @IsProjectiveLimit ℕ (fun _ => α) (fun _ => inferInstance) (iidProduct ν) (iidProjectiveFamily ν)
 
 namespace iidProduct
 
 variable (ν : Measure α) [IsProbabilityMeasure ν]
 
-/-- The measure `iidProduct ν` is a probability measure. -/
-instance : IsProbabilityMeasure (iidProduct ν) := iidProduct_isProbability ν
+/-- The measure `iidProduct ν` is a probability measure.
+
+This follows from the projective limit characterization: each finite product is a
+probability measure, so the projective limit is too. -/
+instance : IsProbabilityMeasure (iidProduct ν) := by
+  have : ∀ I : Finset ℕ, IsProbabilityMeasure (iidProjectiveFamily ν I) := fun I => by
+    show IsProbabilityMeasure (Measure.pi (fun (_ : I) => ν))
+    infer_instance
+  exact @IsProjectiveLimit.isProbabilityMeasure ℕ (fun _ => α) (fun _ => inferInstance)
+    (iidProjectiveFamily ν) (iidProduct ν) this (iidProduct_isProjectiveLimit ν)
+
+/-- Marginal distributions on finite subsets.
+
+For any finite subset `I : Finset ℕ`, the marginal distribution of `iidProduct ν`
+on the coordinates in `I` equals the finite product measure `ν^I`. -/
+lemma cylinder_finset (I : Finset ℕ) :
+    (iidProduct ν).map I.restrict = Measure.pi fun _ : I => ν := by
+  exact iidProduct_isProjectiveLimit ν I
 
 /-- Finite-dimensional distributions indexed by `Fin n`.
 
-This states that the marginal distribution on the first `n` coordinates equals the
-finite product measure `ν^n`. This is the defining projective property of the infinite
-product measure.
-
-**Proof strategy (once `iidProduct` is properly defined)**:
-Use mathlib's `Measure.pi_map_restrict` or build from cylinder characterization. -/
-axiom cylinder_fintype (n : ℕ) :
+The marginal distribution on the first `n` coordinates equals the finite product measure `ν^n`. -/
+lemma cylinder_fintype (n : ℕ) :
     (iidProduct ν).map (fun f : ℕ → α => fun i : Fin n => f i) =
-      Measure.pi fun _ : Fin n => ν
+      Measure.pi fun _ : Fin n => ν := by
+  -- Use cylinder_finset with I = Finset.univ : Finset (Fin n)
+  -- Need to show the two restriction maps are equal
+  sorry  -- TODO: Show (fun f => fun i : Fin n => f i) equals (Finset.univ : Finset (Fin n)).restrict up to reindexing
 
 /-- Invariance under arbitrary permutations of coordinates.
 
-This states that `iidProduct ν` is invariant under any permutation of `ℕ`. This is a
-consequence of the fact that the measure is characterized by its finite-dimensional
-marginals, all of which are symmetric.
+This is a consequence of the projective limit characterization: finite products are
+invariant under permutations, and this extends to the infinite product by uniqueness.
 
-**Proof strategy (once `iidProduct` is properly defined)**:
-1. Use cylinder sets to show agreement on a π-system that generates the product σ-algebra
-2. Apply `ext_of_generate_finite` to extend to the whole σ-algebra
-3. Key ingredient: finite permutations preserve finite products (mathlib's `pi_map_piCongrLeft`)
-
-The full proof requires mathlib lemmas from:
-- `Mathlib/MeasureTheory/Constructions/Cylinders.lean` (cylinder sets)
-- `Mathlib/MeasureTheory/Constructions/Projective.lean` (projective limits)
-- `Mathlib/MeasureTheory/Constructions/Pi.lean` (finite product invariance)
+**Proof strategy**:
+1. Define a new projective family via σ: `P' I := (iidProduct ν).map ((σ.restrict I) ∘ I.restrict)`
+2. Show P' is projective
+3. Show P' I = iidProjectiveFamily ν I for all finite I (using finite product permutation invariance)
+4. By uniqueness of projective limits: (iidProduct ν).map (· ∘ σ) = iidProduct ν
 -/
-axiom perm_eq (σ : Equiv.Perm ℕ) :
-    (iidProduct ν).map (fun f => f ∘ σ) = iidProduct ν
+lemma perm_eq (σ : Equiv.Perm ℕ) :
+    (iidProduct ν).map (fun f => f ∘ σ) = iidProduct ν := by
+  sorry  -- TODO: Prove using projective limit uniqueness and finite permutation invariance
 
 end iidProduct
 
