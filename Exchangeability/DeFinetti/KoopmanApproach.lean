@@ -181,7 +181,11 @@ lemma condexpL2_fixes_fixedSubspace {g : Lp ℝ 2 μ}
   rcases h_range with ⟨y, rfl⟩
   -- condExpL2 fixes y: orthogonal projection fixes elements of the subspace
   have hfix : (MeasureTheory.condExpL2 ℝ ℝ (m := shiftInvariantSigma) shiftInvariantSigma_le) y = y := by
-    sorry -- TODO: Apply Submodule.orthogonalProjection_mem_subspace_eq_self with proper Fact instance
+    classical
+    haveI : Fact
+        (shiftInvariantSigma (α := α) ≤ (inferInstance : MeasurableSpace (Ω[α]))) :=
+      ⟨shiftInvariantSigma_le (α := α)⟩
+    simp [MeasureTheory.condExpL2]
   simp [condexpL2, ContinuousLinearMap.comp_apply, hfix]
 
 /-- Main theorem: Birkhoff averages converge in L² to conditional expectation.
