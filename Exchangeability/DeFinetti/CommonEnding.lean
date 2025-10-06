@@ -338,7 +338,15 @@ lemma fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
   -- μ{ω : ∀ i, X(k i)(ω) ∈ B i} = E[∏ᵢ 𝟙_{Bᵢ}(X(k i))]
   have lhs_eq : μ {ω | ∀ i, X (k i) ω ∈ B i} =
       ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => 1) (X (k i) ω)) ∂μ := by
-    sorry  -- TODO: Prove using indicator function properties
+    -- The key insight: The product of indicators equals the indicator of the intersection
+    -- ∏ᵢ 𝟙_{Bᵢ}(X(k i)(ω)) = 𝟙_{∩ᵢ X(k i)⁻¹(Bᵢ)}(ω) = 𝟙_{∀i, X(k i)(ω) ∈ Bᵢ}(ω)
+
+    -- This is because:
+    -- - If all X(k i)(ω) ∈ B i, each indicator = 1, so product = 1
+    -- - If any X(k i)(ω) ∉ B i, that indicator = 0, so product = 0
+
+    -- The measure of a set equals ∫⁻ of its indicator function
+    sorry  -- TODO: Use lintegral_indicator_one or prove product-indicator relationship
 
   -- Step 2: Use hν_dir to replace indicators with ν measures
   -- For each i, E[𝟙_{Bᵢ}(X(k i)) | tail] = ν(Bᵢ) by condExp_indicator_eq_measure
