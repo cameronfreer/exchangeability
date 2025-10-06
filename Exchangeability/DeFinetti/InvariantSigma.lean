@@ -588,8 +588,8 @@ lemma lpMeas_eq_fixedSubspace
   · -- → direction: range subtypeL ⊆ fixedSubspace
     intro f hf
     rcases hf with ⟨g, rfl⟩
-    have hg : AEStronglyMeasurable[shiftInvariantSigma (α := α)] (g : Ω[α] → ℝ) μ :=
-      Lp.aestronglyMeasurable g
+    have hg : AEStronglyMeasurable[shiftInvariantSigma (α := α)] ((lpMeas ℝ ℝ shiftInvariantSigma 2 μ).subtypeL g : Ω[α] → ℝ) μ :=
+      lpMeas.aestronglyMeasurable g
     -- Koopman fixes `g`:
     have := koopman_eq_self_of_shiftInvariant (μ := μ) hσ (f := (lpMeas ℝ ℝ shiftInvariantSigma 2 μ).subtypeL g) hg
     simpa [fixedSubspace, fixedSpace] using this
@@ -626,12 +626,11 @@ lemma range_condexp_eq_fixedSubspace {μ : Measure (Ω[α])}
       exact ⟨(MeasureTheory.condExpL2 ℝ ℝ (m := shiftInvariantSigma) shiftInvariantSigma_le) x, rfl⟩
     · intro f hf
       rcases hf with ⟨y, rfl⟩
-      -- use that ce fixes lpMeas: ce y = y
+      -- use that ce fixes lpMeas: ce y = y (orthogonal projection fixes elements of subspace)
       have hfix : (MeasureTheory.condExpL2 ℝ ℝ (m := shiftInvariantSigma) shiftInvariantSigma_le) y = y := by
-        -- standard lemma: conditional expectation is identity on m-measurable functions
-        exact MeasureTheory.condExpL2_subspace_id shiftInvariantSigma_le y
+        sorry -- TODO: Apply Submodule.orthogonalProjection_mem_subspace_eq_self with proper Fact instance
       simpa [condexpL2, ContinuousLinearMap.comp_apply, hfix]
   -- now swap range via lpMeas_eq_fixedSubspace
-  simpa [h_proj, lpMeas_eq_fixedSubspace (μ := μ) hσ]
+  rw [h_proj, lpMeas_eq_fixedSubspace (μ := μ) hσ]
 
 end Exchangeability.DeFinetti
