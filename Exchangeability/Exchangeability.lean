@@ -309,14 +309,13 @@ lemma pathLaw_map_prefix_perm (μ : Measure Ω) (X : ℕ → Ω → α)
   calc
     Measure.map (prefixProj (α:=α) n)
         (Measure.map (reindex (α:=α) π) (pathLaw (α:=α) μ X))
-      = Measure.map (prefixProj (α:=α) n ∘ reindex (α:=α) π) (pathLaw (α:=α) μ X) :=
-        (Measure.map_map (measurable_prefixProj (α:=α) n) hreindex).symm
+      = Measure.map (prefixProj (α:=α) n ∘ reindex (α:=α) π) (pathLaw (α:=α) μ X) := by
+        rw [Measure.map_map (measurable_prefixProj (α:=α) n) hreindex]
     _ = Measure.map (prefixProj (α:=α) n ∘ reindex (α:=α) π)
         (Measure.map (fun ω => fun i : ℕ => X i ω) μ) := by rw [pathLaw]
     _ = Measure.map ((prefixProj (α:=α) n ∘ reindex (α:=α) π) ∘ fun ω => fun i : ℕ => X i ω) μ :=
         Measure.map_map ((measurable_prefixProj (α:=α) n).comp hreindex) hmeas
-    _ = Measure.map (fun ω => fun i : Fin n => X (π i) ω) μ := by
-        congr 1; ext ω i; simp [Function.comp, reindex_apply, prefixProj_apply]
+    _ = Measure.map (fun ω => fun i : Fin n => X (π i) ω) μ := rfl
 
 /-- Full exchangeability is equivalent to invariance of the path law under reindexing. -/
 lemma fullyExchangeable_iff_pathLaw_invariant {μ : Measure Ω}
@@ -338,9 +337,8 @@ lemma fullyExchangeable_iff_pathLaw_invariant {μ : Measure Ω}
     have hpath : pathLaw (α:=α) μ X =
         Measure.map (fun ω => fun i : ℕ => X i ω) μ := by
       simp [pathLaw]
-    have := hFull π
-    rw [hmap, hpath] at this
-    exact this
+    rw [hmap, hpath]
+    exact hFull π
   · intro hPath π
     have hmap :
         Measure.map (reindex (α:=α) π) (pathLaw (α:=α) μ X)
@@ -373,8 +371,9 @@ lemma le_permBound : n ≤ permBound π n := le_max_left _ _
 lemma lt_permBound_of_lt {i : ℕ} (hi : i < n) :
     π i < permBound π n := by
   classical
-  have hsup : π i + 1 ≤ (Finset.range n).sup fun j => π j + 1 :=
-    Finset.le_sup ⟨i, by simpa using hi, rfl⟩
+  have h_mem : i ∈ Finset.range n := by simp [hi]
+  have hsup : π i + 1 ≤ (Finset.range n).sup fun j => π j + 1 := by
+    apply Finset.le_sup (f := fun j => π j + 1) h_mem
   have : π i < (Finset.range n).sup fun j => π j + 1 :=
     lt_of_lt_of_le (Nat.lt_succ_self _) hsup
   exact lt_of_lt_of_le this (Nat.le_max_right _ _)
@@ -396,11 +395,12 @@ def approxEquiv :
       refine ⟨⟨π i, hi⟩, ?_⟩
       exact ⟨i, rfl⟩
     · intro y
-      obtain ⟨j, hj⟩ := y.property
+      let j := Classical.choose y.property
+      have hj := Classical.choose_spec y.property
       have hj_lt : (j : ℕ) < n := j.isLt
       have hj_eq : π.symm y.1 = j := by
         apply π.symm_apply_eq.2
-        simpa [hj]
+        exact hj
       have hjm : (π.symm y.1 : ℕ) < permBound π n :=
         lt_of_lt_of_le (by simpa [hj_eq] using hj_lt)
           (le_permBound (π:=π) (n:=n))
