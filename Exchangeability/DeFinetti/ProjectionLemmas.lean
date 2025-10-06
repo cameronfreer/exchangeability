@@ -3,7 +3,8 @@ Copyright (c) 2025 exchangeability contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: exchangeability contributors
 -/
-import Mathlib.Analysis.InnerProductSpace.Projection
+import Mathlib.Analysis.InnerProductSpace.Projection.Basic
+import Mathlib.Analysis.InnerProductSpace.Symmetric
 
 /-!
 # Helper lemmas for orthogonal projections
@@ -102,7 +103,7 @@ theorem orthogonalProjections_same_range_eq
   -- Symmetric projections with the same range agree
   have h_toLinear_eq : P.toLinearMap = Q.toLinearMap :=
     LinearMap.IsSymmetricProjection.ext hP_symproj hQ_symproj <|
-      by simpa [hP_range_submodule, hQ_range_submodule]
+      by simp [hP_range_submodule, hQ_range_submodule]
 
   ext x
   simpa using congrArg (fun f : E →ₗ[𝕜] E => f x) h_toLinear_eq
