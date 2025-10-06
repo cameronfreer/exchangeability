@@ -411,7 +411,7 @@ lemma approxPerm_apply_cast (i : Fin n) :
 
 end Approximation
 
--/-- Finite-dimensional marginals of `X` are invariant under arbitrary permutations. -/
+/-- Finite-dimensional marginals of `X` are invariant under arbitrary permutations. -/
 lemma marginals_perm_eq {μ : Measure Ω} (X : ℕ → Ω → α)
     (hX : ∀ i, Measurable (X i)) (hμ : Exchangeable μ X)
     (π : Equiv.Perm ℕ) (n : ℕ) :
@@ -420,36 +420,36 @@ lemma marginals_perm_eq {μ : Measure Ω} (X : ℕ → Ω → α)
   classical
   by_cases hn : n = 0
   · subst hn; simp
-  set m := permBound (π:=π) n with hm_def
-  have hm : n ≤ m := le_permBound (π:=π) (n:=n)
-  set σ := approxPerm (π:=π) (n:=n) with hσ_def
-  have hσ := hμ m σ
-  have hX₁ : Measurable fun ω => fun i : Fin m => X i ω :=
-    measurable_pi_lambda _ (fun i => hX i)
-  have hX₂ : Measurable fun ω => fun i : Fin m => X (σ i) ω :=
-    measurable_pi_lambda _ (fun i => hX _)
-  have hproj : Measurable (takePrefix (α:=α) hm) := takePrefix_measurable (α:=α) hm
-  have hmap₁ :=
-    Measure.map_map (μ:=μ)
-      (f:=fun ω => fun i : Fin m => X (σ i) ω)
-      (g:=takePrefix (α:=α) hm) hproj hX₂
-  have hmap₂ :=
-    Measure.map_map (μ:=μ)
-      (f:=fun ω => fun i : Fin m => X i ω)
-      (g:=takePrefix (α:=α) hm) hproj hX₁
-  have hσ' := congrArg (fun ν => Measure.map (takePrefix (α:=α) hm) ν) hσ
-  have hgoal := by simpa [hmap₁, hmap₂] using hσ'
-  have hcomp₁ :
-      (takePrefix (α:=α) hm) ∘ fun ω => fun i : Fin m => X (σ i) ω
-        = fun ω => fun i : Fin n => X (π i) ω := by
-    funext ω i
-    simp [Function.comp, takePrefix,
-      approxPerm_apply_cast (π:=π) (n:=n) i]
-  have hcomp₂ :
-      (takePrefix (α:=α) hm) ∘ fun ω => fun i : Fin m => X i ω
-        = fun ω => fun i : Fin n => X i ω := by
-    funext ω i; simp [Function.comp, takePrefix]
-  simpa [hcomp₁, hcomp₂] using hgoal
+  · set m := permBound (π:=π) n with hm_def
+    have hm : n ≤ m := le_permBound (π:=π) (n:=n)
+    set σ := approxPerm (π:=π) (n:=n) with hσ_def
+    have hσ := hμ m σ
+    have hX₁ : Measurable fun ω => fun i : Fin m => X i ω :=
+      measurable_pi_lambda _ (fun i => hX i)
+    have hX₂ : Measurable fun ω => fun i : Fin m => X (σ i) ω :=
+      measurable_pi_lambda _ (fun i => hX _)
+    have hproj : Measurable (takePrefix (α:=α) hm) := takePrefix_measurable (α:=α) hm
+    have hmap₁ :=
+      Measure.map_map (μ:=μ)
+        (f:=fun ω => fun i : Fin m => X (σ i) ω)
+        (g:=takePrefix (α:=α) hm) hproj hX₂
+    have hmap₂ :=
+      Measure.map_map (μ:=μ)
+        (f:=fun ω => fun i : Fin m => X i ω)
+        (g:=takePrefix (α:=α) hm) hproj hX₁
+    have hσ' := congrArg (fun ν => Measure.map (takePrefix (α:=α) hm) ν) hσ
+    have hgoal := by simpa [hmap₁, hmap₂] using hσ'
+    have hcomp₁ :
+        (takePrefix (α:=α) hm) ∘ fun ω => fun i : Fin m => X (σ i) ω
+          = fun ω => fun i : Fin n => X (π i) ω := by
+      funext ω i
+      simp [Function.comp, takePrefix,
+        approxPerm_apply_cast (π:=π) (n:=n) i]
+    have hcomp₂ :
+        (takePrefix (α:=α) hm) ∘ fun ω => fun i : Fin m => X i ω
+          = fun ω => fun i : Fin n => X i ω := by
+      funext ω i; simp [Function.comp, takePrefix]
+    simpa [hcomp₁, hcomp₂] using hgoal
 
 /-- Exchangeability and full exchangeability coincide for probability measures. -/
 theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω}
@@ -460,7 +460,7 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω}
   constructor
   · intro hEx π
     let μX := pathLaw (α:=α) μ X
-    have hμ_univ : μ Set.univ = (1 : ℝ≥0∞) := by simpa using measure_univ (μ:=μ)
+    have hμ_univ : μ Set.univ = (1 : ℝ≥0∞) := measure_univ
     have hμX_univ : μX Set.univ = (1 : ℝ≥0∞) := by
       simp [μX, pathLaw, Measure.map_apply_of_aemeasurable,
         (measurable_pi_lambda _ (fun i => hX i)).aemeasurable, hμ_univ]
