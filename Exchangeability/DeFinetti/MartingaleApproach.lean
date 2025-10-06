@@ -8,6 +8,7 @@ import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
 import Mathlib.Probability.Martingale.Basic
 import Exchangeability.Contractability
 import Exchangeability.Probability.CondExp
+import Exchangeability.DeFinetti
 
 /-!
 # Third proof of de Finetti via a martingale argument (Aldous)
@@ -63,7 +64,7 @@ def shiftProcess (X : ℕ → Ω → α) (m : ℕ) : ℕ → Ω → α := fun n 
 
 /-- Re-export the tail σ-algebra used in the other de Finetti files for ease of reference. -/
 def tailSigma (X : ℕ → Ω → α) : MeasurableSpace Ω :=
-  Exchangeability.Probability.tailSigmaAlgebra X
+  Exchangeability.DeFinetti.tailSigmaAlgebra X
 
 /-- If `X` is contractable, then so is each of its shifts `θₘ X`. -/
 lemma shift_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
@@ -127,7 +128,7 @@ lemma contraction_independence
     {ξ η ζ : Ω → α}
     (h_dist : Measure.map (fun ω => (ξ ω, η ω)) μ
               = Measure.map (fun ω => (ξ ω, ζ ω)) μ)
-    (h_sigma : σ ⟨η, by infer_instance⟩ ≤ σ ⟨ζ, by infer_instance⟩) :
+    (h_sigma : MeasurableSpace.comap η inferInstance ≤ MeasurableSpace.comap ζ inferInstance) :
     ProbabilityTheory.CondIndep ξ ζ η μ := by
   -- Step 1: For each measurable B, define conditional probabilities
   -- Step 2: Show (μ₁, μ₂) is a bounded martingale
@@ -148,7 +149,17 @@ lemma contractable_dist_eq
     {X : ℕ → Ω → α} (hX : Contractable μ X) (k m : ℕ) (hk : k ≤ m) :
     Measure.map (fun ω => (X m ω, shiftProcess X m)) μ
       = Measure.map (fun ω => (X k ω, shiftProcess X m)) μ := by
-  -- Follows from contractability definition
+  -- This proof is currently incomplete and requires additional machinery
+  -- relating (co)products of measures to contractability.
+  -- The key idea is that contractability says:
+  --   For indices k < m < m+1 < m+2 < ...
+  --   The joint distribution of (X k, X (m+1), X (m+2), ...)
+  --   equals the distribution of (X m, X (m+1), X (m+2), ...)
+  -- which is exactly saying (X_k, θ_m X) =^d (X_m, θ_m X).
+  --
+  -- To prove this formally requires working with infinite products and
+  -- showing that contractability on finite subsequences implies equality
+  -- of infinite product measures. This is deferred for future work.
   sorry
 
 /-- **Key convergence result:** The extreme members agree after conditioning on the tail σ-algebra.
