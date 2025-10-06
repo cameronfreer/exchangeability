@@ -7,6 +7,7 @@ import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.Analysis.InnerProductSpace.Projection.Basic
 import Exchangeability.Ergodic.KoopmanMeanErgodic
+import Exchangeability.DeFinetti.ProjectionLemmas
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.CondexpL2
 
 /-!
@@ -498,6 +499,129 @@ f such that f ∘ shift = f almost everywhere.
 def fixedSubspace {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) : Submodule ℝ (Lp ℝ 2 μ) :=
   fixedSpace (koopman shift hσ)
+
+/-- The mean ergodic projection onto the fixed subspace. -/
+noncomputable def METProjection
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ) : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ := by
+  classical
+  let S := fixedSubspace hσ
+  have hclosed := fixedSubspace_closed (μ := μ) hσ
+  have : CompleteSpace S := hclosed.completeSpace_coe
+  exact (S.subtypeL).comp S.orthogonalProjection
+
+lemma METProjection_apply
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ) (f : Lp ℝ 2 μ) :
+    METProjection (μ := μ) hσ f =
+      (fixedSubspace hσ).subtypeL ((fixedSubspace hσ).orthogonalProjection f) := by
+  classical
+  have hclosed := fixedSubspace_closed (μ := μ) hσ
+  have : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
+  simp [METProjection, this]
+
+lemma METProjection_mem
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ) (f : Lp ℝ 2 μ) :
+    METProjection (μ := μ) hσ f ∈ fixedSubspace hσ := by
+  classical
+  have hclosed := fixedSubspace_closed (μ := μ) hσ
+  have : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
+  refine (by
+    have := ((fixedSubspace hσ).orthogonalProjection f).property
+    simpa [METProjection, METProjection_apply, this])
+
+lemma METProjection_fixed
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ) {g : Lp ℝ 2 μ}
+    (hg : g ∈ fixedSubspace hσ) :
+    METProjection (μ := μ) hσ g = g := by
+  classical
+  have hclosed := fixedSubspace_closed (μ := μ) hσ
+  have : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
+  have hproj := Submodule.orthogonalProjection_mem_subspace_eq_self
+      (↑(⟨g, hg⟩) : fixedSubspace hσ)
+  have hproj' := Subtype.ext_iff.mp hproj
+  have hproj_val := congrArg Subtype.val hproj
+  simpa [METProjection_apply, hproj_val]
+
+lemma METProjection_idem
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ) :
+    (METProjection (μ := μ) hσ).comp (METProjection (μ := μ) hσ) =
+      METProjection (μ := μ) hσ := by
+  classical
+  apply ContinuousLinearMap.ext
+  intro f
+  have hf_mem := METProjection_mem (μ := μ) hσ f
+  simpa [ContinuousLinearMap.coe_comp', Function.comp_apply,
+    METProjection_fixed (μ := μ) hσ hf_mem]
+
+lemma METProjection_range
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ) :
+    Set.range (METProjection (μ := μ) hσ) =
+      (fixedSubspace hσ : Set (Lp ℝ 2 μ)) := by
+  classical
+  have hclosed := fixedSubspace_closed (μ := μ) hσ
+  have : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
+  ext x
+  constructor
+  · intro hx
+    rcases hx with ⟨f, rfl⟩
+    exact METProjection_mem (μ := μ) hσ f
+  · intro hx
+    refine ⟨x, ?_⟩
+    simpa using METProjection_fixed (μ := μ) hσ hx
+
+lemma METProjection_isSymmetric
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ) :
+    (METProjection (μ := μ) hσ).IsSymmetric := by
+  classical
+  have hclosed := fixedSubspace_closed (μ := μ) hσ
+  have : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
+  simpa [METProjection] using
+    (subtypeL_comp_orthogonalProjection_isSymmetric
+      (fixedSubspace hσ : Submodule ℝ (Lp ℝ 2 μ)))
+
+lemma METProjection_tendsto
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ) (f : Lp ℝ 2 μ) :
+    Tendsto (fun n => birkhoffAverage ℝ (koopman shift hσ) _root_.id n f)
+      atTop (𝓝 (METProjection (μ := μ) hσ f)) := by
+  classical
+  let K : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ := koopman shift hσ
+  have hnorm : ‖K‖ ≤ (1 : ℝ) := by
+    refine ContinuousLinearMap.opNorm_le_bound _ (by norm_num) ?_
+    intro g
+    have hg : ‖K g‖ = ‖g‖ := by
+      simpa [K, koopman] using (koopman_isometry (μ := μ) shift hσ g).dist_eq
+    simpa [hg]
+  have hlimit :=
+    ContinuousLinearMap.tendsto_birkhoffAverage_orthogonalProjection ℝ K hnorm f
+  have hclosed := fixedSubspace_closed (μ := μ) hσ
+  have : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
+  convert hlimit using 1
+  have hS : (LinearMap.eqLocus K.toLinearMap 1) = fixedSubspace hσ := by
+    rfl
+  simp [METProjection, METProjection_apply, hS]
+
+/-- The range of `METProjection` equals the fixed subspace. -/
+lemma METProjection_range_fixedSubspace
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ) :
+    Set.range (METProjection (μ := μ) hσ) =
+      (fixedSubspace hσ : Set (Lp ℝ 2 μ)) :=
+  METProjection_range (μ := μ) hσ
+
+/-- `METProjection` fixes elements of the fixed subspace. -/
+lemma METProjection_fixes_fixedSubspace
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ) {g : Lp ℝ 2 μ}
+    (hg : g ∈ fixedSubspace hσ) :
+    METProjection (μ := μ) hσ g = g :=
+  METProjection_fixed (μ := μ) hσ hg
 
 /-- Functions in the fixed-point subspace are exactly those that are a.e. invariant under shift. -/
 lemma mem_fixedSubspace_iff {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
