@@ -165,21 +165,19 @@ variable (hσ : MeasurePreserving shift μ μ)
 /-- Conditional expectation onto shift-invariant σ-algebra fixes elements of fixedSubspace.
 
 This is the tower property of conditional expectation: E[f|σ] = f when f is σ-measurable.
-
-MATHEMATICAL CONTENT:
-- If g ∈ fixedSubspace, then g is shift-invariant
-- By lpMeas_eq_fixedSubspace, g ∈ lpMeas (shift-invariant σ-algebra)
-- condExpL2 is the orthogonal projection onto lpMeas
-- Orthogonal projections fix elements of their target subspace
-- Therefore condexpL2 g = g
-
-AXIOM STATUS: Wraps mathlib's orthogonalProjection_mem_subspace_eq_self.
-Blocked by HasOrthogonalProjection instance synthesis issue when unfolding condExpL2.
-The mathematics is standard measure theory (tower property).
 -/
-axiom condexpL2_fixes_fixedSubspace {g : Lp ℝ 2 μ}
+lemma condexpL2_fixes_fixedSubspace {g : Lp ℝ 2 μ}
     (hg : g ∈ fixedSubspace hσ) :
-    condexpL2 (μ := μ) g = g
+    condexpL2 (μ := μ) g = g := by
+  classical
+  -- g ∈ fixedSubspace ⇒ g ∈ range subtypeL by lpMeas_eq_fixedSubspace
+  have h_range : g ∈ Set.range (lpMeas ℝ ℝ shiftInvariantSigma 2 μ).subtypeL := by
+    simpa [← lpMeas_eq_fixedSubspace (μ := μ) hσ] using hg
+  rcases h_range with ⟨y, rfl⟩
+  -- condExpL2 fixes y, and subtypeL is injective
+  have hfix : (MeasureTheory.condExpL2 ℝ ℝ (m := shiftInvariantSigma) shiftInvariantSigma_le) y = y := by
+    exact MeasureTheory.condExpL2_subspace_id shiftInvariantSigma_le y
+  simpa [condexpL2, ContinuousLinearMap.comp_apply, hfix]
 
 /-- Main theorem: Birkhoff averages converge in L² to conditional expectation.
 

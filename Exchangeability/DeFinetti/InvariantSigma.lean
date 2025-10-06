@@ -209,16 +209,11 @@ private lemma indicator_shiftInvariant_set
 -- **Auxiliary goal**: construct an invariant representative.
 -- Helper lemmas to replace exists_shiftInvariantRepresentative
 
-/-- AXIOM: If a measurable function g is constant along all forward shifts from shift ω,
-    then g(shift ω) must equal g(ω). This is the minimal assumption needed to prove
-    shift-invariance of the constructed set Sinf. -/
-axiom shift_orbit_constant_implies_base_eq
-    {g : Ω[α] → ℝ} (hg : Measurable g) (ω : Ω[α])
-    (h : ∀ i, g (shift^[i] (shift ω)) = g (shift ω)) :
-    g (shift ω) = g ω
-
 /-- Given a function that agrees with its shift a.e., we can find a shift-invariant set
-    of full measure where it agrees with its shift pointwise. -/
+    of full measure where it agrees with its shift pointwise.
+    
+    The proof uses successive equalities: Sinf is the intersection of all sets where
+    g(shift^[n+1] ω) = g(shift^[n] ω). This avoids needing any axiom about orbits. -/
 private lemma exists_shiftInvariantFullMeasureSet
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ)
@@ -230,92 +225,65 @@ private lemma exists_shiftInvariantFullMeasureSet
       μ Sinfᶜ = 0 ∧
       ∀ ω ∈ Sinf, g (shift ω) = g ω := by
   classical
-  -- Define Sinf as the set where g is constant along the entire forward orbit
-  let Sinf := ⋂ n : ℕ, {ω | g (shift^[n] ω) = g ω}
-
-  -- Prove Sinf has full measure
-  have hSinf_full : μ Sinfᶜ = 0 := by
-    have h_ae_iterate (n : ℕ) : (fun ω => g (shift^[n] ω)) =ᵐ[μ] g := by
+  -- stepwise equality sets: g(shift^[n+1] ω) = g(shift^[n] ω)
+  let S (n : ℕ) : Set (Ω[α]) := {ω | g (shift^[n+1] ω) = g (shift^[n] ω)}
+  
+  -- each S n has full measure
+  have hS_full : ∀ n, μ (S n)ᶜ = 0 := by
+    intro n
+    have h_ae : (fun ω => g (shift^[n+1] ω)) =ᵐ[μ] (fun ω => g (shift^[n] ω)) := by
+      induction n with
+      | zero => exact hinv
+      | succ n hn =>
+        calc (fun ω => g (shift^[n+2] ω))
+          = (fun ω => g (shift (shift^[n+1] ω))) := by funext; simp [Function.iterate_succ_apply']
+          _ =ᵐ[μ] (fun ω => g (shift (shift^[n] ω))) := hσ.quasiMeasurePreserving.ae_eq_comp hn
+          _ = (fun ω => g (shift^[n+1] ω)) := by funext; simp [Function.iterate_succ_apply']
+    rw [ae_iff] at h_ae
+    convert h_ae using 1
+    ext; simp [S]
+  
+  -- intersect all S n
+  let Sinf := ⋂ n, S n
+  
+  refine ⟨Sinf, ?_, ?_, ?_, ?_⟩
+  
+  · -- measurability
+    refine MeasurableSet.iInter (fun n => ?_)
+    have : Measurable (fun ω => g (shift^[n+1] ω) - g (shift^[n] ω)) :=
+      (hg.comp (measurable_shift.iterate (n+1))).sub (hg.comp (measurable_shift.iterate n))
+    convert this (measurableSet_singleton 0) using 1
+    ext; simp [S, sub_eq_zero]
+  
+  · -- shift-invariance
+    ext ω
+    simp only [Set.mem_preimage, Sinf, S, Set.mem_iInter, Set.mem_setOf_eq]
+    constructor <;> intro h n
+    · -- forward direction: use that g(shift^[n+2] ω) = g(shift^[n+1] (shift ω)) = g(shift^[n] (shift ω))...
+      have : g (shift^[n+1] (shift ω)) = g (shift^[n] (shift ω)) := h n
+      rw [Function.iterate_succ_apply, Function.iterate_succ_apply] at this
+      exact this
+    · -- backward direction: reindex from n+1
+      have : g (shift^[n+2] ω) = g (shift^[n+1] ω) := h (n+1)
+      rw [Function.iterate_succ_apply, Function.iterate_succ_apply]
+      exact this
+  
+  · -- full measure
+    rw [Set.compl_iInter]
+    exact measure_iUnion_null hS_full
+  
+  · -- pointwise invariance: telescope the equalities
+    intro ω hω
+    simp only [Sinf, S, Set.mem_iInter, Set.mem_setOf_eq] at hω
+    have : ∀ n, g (shift^[n] ω) = g ω := by
+      intro n
       induction n with
       | zero => rfl
-      | succ n hn =>
-        have h_comp : (fun ω => g (shift^[n] (shift ω))) =ᵐ[μ] (fun ω => g (shift ω)) :=
-          hσ.quasiMeasurePreserving.ae_eq_comp hn
-        calc (fun ω => g (shift^[n+1] ω))
-            = (fun ω => g (shift^[n] (shift ω))) := by funext ω; rw [Function.iterate_succ_apply]
-          _ =ᵐ[μ] (fun ω => g (shift ω))        := h_comp
-          _ =ᵐ[μ] g                           := hinv
-    let S_n n := {ω | g (shift^[n] ω) = g ω}
-    have hS_n_full (n : ℕ) : μ (S_n n)ᶜ = 0 := by
-      simpa [ae_iff, S_n] using h_ae_iterate n
-    have h_compl_eq : Sinfᶜ = ⋃ n, (S_n n)ᶜ := by
-      simp [Sinf, S_n, Set.compl_iInter]
-    rw [h_compl_eq]
-    exact measure_iUnion_null hS_n_full
-
-  -- Prove Sinf is measurable
-  have hSinf_meas : MeasurableSet Sinf := by
-    refine MeasurableSet.iInter fun n => ?_
-    let f_n := fun ω => g (shift^[n] ω) - g ω
-    have hf_n_meas : Measurable f_n :=
-      (hg.comp (shift_iterate_measurable n)).sub hg
-    have h_set_eq : {ω | g (shift^[n] ω) = g ω} = f_n ⁻¹' {(0:ℝ)} := by
-      ext ω; simp [f_n, sub_eq_zero]
-    rw [h_set_eq]
-    exact hf_n_meas (measurableSet_singleton 0)
-
-  -- Prove Sinf is shift-invariant
-  have hSinf_inv : shift ⁻¹' Sinf = Sinf := by
-    ext ω
-    simp only [Sinf, Set.mem_preimage, Set.mem_iInter, Set.mem_setOf_eq]
-
-    -- Let P(x) be the property `∀ n, g(shift^[n] x) = g(x)`.
-    -- The goal is `P(shift ω) ↔ P(ω)`.
-
-    -- Let's first prove the implication `P(ω) → P(shift ω)`, which is straightforward.
-    -- This shows that being in Sinf implies g(ω) = g(shift ω).
-    have P_implies_P_shift : (∀ n, g (shift^[n] ω) = g ω) → (∀ n, g (shift^[n] (shift ω)) = g (shift ω)) := by
-      intro h n
-      calc g (shift^[n] (shift ω))
-        = g (shift^[n+1] ω) := by rw [← Function.iterate_succ_apply]
-        _ = g ω             := h (n+1)
-        _ = g (shift ω)     := (h 1).symm
-
-    constructor
-    · -- Now, prove the other direction: `P(shift ω) → P(ω)`
-      intro h n
-      -- h is P(shift ω), i.e., `∀ i, g (shift^[i] (shift ω)) = g (shift ω)`
-      -- This implies `g(shift ω) = g(shift^2 ω) = g(shift^3 ω) = ...`
-
-      cases n with
-      | zero => rfl
-      | succ k =>
-        -- Goal is `g (shift^[k + 1] ω) = g ω`.
-        -- From `h k`, we have `g (shift^[k + 1] ω) = g (shift ω)`.
-        -- So the entire proof boils down to showing `g (shift ω) = g ω`.
-        -- The hypothesis `h` does not imply this.
-        -- AXIOM: We assume that if g is constant along all forward shifts from shift ω,
-        -- then g(shift ω) must equal g(ω).
-        have h_shift_eq : g (shift ω) = g ω :=
-          shift_orbit_constant_implies_base_eq hg ω h
-        calc g (shift^[k + 1] ω)
-            = g (shift^[k] (shift ω)) := by rw [← Function.iterate_succ_apply]
-          _ = g (shift ω)             := h k
-          _ = g ω                     := h_shift_eq
-    
-    · -- The backward direction: `P(ω) → P(shift ω)`
-      exact P_implies_P_shift
-
-  -- Prove pointwise invariance on Sinf
-  have hpointwise : ∀ ω ∈ Sinf, g (shift ω) = g ω := by
-    intro ω hω
-    -- Sinf = ⋂ n, {ω | g(shift^[n] ω) = g ω}
-    -- hω: ∀ n, g(shift^[n] ω) = g ω
-    simp only [Sinf, Set.mem_iInter, Set.mem_setOf_eq] at hω
-    -- Taking n=1: g(shift ω) = g ω
-    exact hω 1
-
-  exact ⟨Sinf, hSinf_meas, hSinf_inv, hSinf_full, hpointwise⟩
+      | succ k ih =>
+        calc g (shift^[k+1] ω)
+          = g (shift^[k] ω) := (hω k).symm
+          _ = g ω := ih
+    exact this 1
 
 /-- Indicator functions on shift-invariant sets preserve shift-invariance properties. -/
 private lemma indicator_preserves_shiftInvariance
@@ -659,34 +627,30 @@ noncomputable def condexpL2 {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] :
   -- Compose with subtype inclusion to get back to full Lp space
   (lpMeas ℝ ℝ shiftInvariantSigma 2 μ).subtypeL.comp ce
 
-/-- A function measurable with respect to the shift-invariant σ-algebra is fixed by Koopman.
 
-TODO: Complete proof strategy:
-1. Use that f is shiftInvariantSigma-measurable
-2. This means f⁻¹(B) is shift-invariant for all measurable B
-3. By definition of shift-invariant sets, shift⁻¹(f⁻¹(B)) = f⁻¹(B) a.e.
-4. This implies (f ∘ shift)⁻¹(B) = f⁻¹(B) a.e. for all B
-5. Therefore f ∘ shift = f a.e., which is exactly koopman f = f in Lp
--/
-axiom koopman_fixed_of_shiftInvariant_measurable
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    (hσ : MeasurePreserving shift μ μ)
-    (f : Lp ℝ 2 μ)
-    (hf : AEStronglyMeasurable[shiftInvariantSigma (α := α)] f μ) :
-    koopman shift hσ f = f
-
-/-- lpMeas functions are exactly the Koopman-fixed functions.
-
-TODO: Complete proof using:
-- Forward direction: koopman_fixed_of_shiftInvariant_measurable (axiomatized above)
-- Backward direction: aestronglyMeasurable_shiftInvariant_of_koopman (already proven)
-Need to handle the coercion from lpMeas to Lp properly using mathlib's lpMeas API.
--/
-axiom lpMeas_eq_fixedSubspace
+/-- lpMeas functions are exactly the Koopman-fixed functions. -/
+lemma lpMeas_eq_fixedSubspace
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) :
     (Set.range (lpMeas ℝ ℝ shiftInvariantSigma 2 μ).subtypeL : Set (Lp ℝ 2 μ)) =
-    (fixedSubspace hσ : Set (Lp ℝ 2 μ))
+    (fixedSubspace hσ : Set (Lp ℝ 2 μ)) := by
+  classical
+  apply Set.Subset.antisymm
+  · -- → direction: range subtypeL ⊆ fixedSubspace
+    intro f hf
+    rcases hf with ⟨g, rfl⟩
+    have hg : AEStronglyMeasurable[shiftInvariantSigma (α := α)] (g : Ω[α] → ℝ) μ :=
+      Lp.aestronglyMeasurable g
+    -- Koopman fixes `g`:
+    have := koopman_eq_self_of_shiftInvariant (μ := μ) hσ (f := (lpMeas ℝ ℝ shiftInvariantSigma 2 μ).subtypeL g) hg
+    simpa [fixedSubspace, fixedSpace] using this
+  · -- ← direction: fixedSubspace ⊆ range subtypeL
+    intro f hf
+    -- obtain a shift-invariant measurable representative
+    have hmeas := aestronglyMeasurable_shiftInvariant_of_koopman (μ := μ) hσ
+      (f := f) (by simpa [fixedSubspace, fixedSpace] using hf)
+    -- put it in range of subtypeL
+    exact ⟨⟨f, hmeas⟩, rfl⟩
 
 /-- The conditional expectation equals the orthogonal projection onto the fixed-point subspace.
 
@@ -694,16 +658,31 @@ This fundamental connection links:
 - Probability theory: conditional expectation with respect to shift-invariant σ-algebra  
 - Functional analysis: orthogonal projection in Hilbert space
 - Ergodic theory: fixed-point subspace of the Koopman operator
-
-TODO: Complete proof using:
-1. Unfold condexpL2 definition
-2. Use that range of composition equals image of range
-3. Show condExpL2 is surjective (orthogonal projection onto closed subspace)
-4. Apply lpMeas_eq_fixedSubspace to conclude
 -/
-axiom range_condexp_eq_fixedSubspace {μ : Measure (Ω[α])}
+lemma range_condexp_eq_fixedSubspace {μ : Measure (Ω[α])}
     [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) :
     Set.range (condexpL2 (μ := μ)) =
-    (fixedSubspace hσ : Set (Lp ℝ 2 μ))
+    (fixedSubspace hσ : Set (Lp ℝ 2 μ)) := by
+  classical
+  -- Range of the composition is the image of lpMeas
+  have h_proj :
+      Set.range (condexpL2 (μ := μ))
+        = Set.range (lpMeas ℝ ℝ shiftInvariantSigma 2 μ).subtypeL := by
+    -- `condExpL2` is identity on `lpMeas`, so `subtypeL (ce y) = subtypeL y`
+    -- which yields equality of ranges.
+    apply Set.Subset.antisymm
+    · intro f hf
+      rcases hf with ⟨x, rfl⟩
+      exact ⟨(MeasureTheory.condExpL2 ℝ ℝ (m := shiftInvariantSigma) shiftInvariantSigma_le) x, rfl⟩
+    · intro f hf
+      rcases hf with ⟨y, rfl⟩
+      -- use that ce fixes lpMeas: ce y = y
+      have hfix : (MeasureTheory.condExpL2 ℝ ℝ (m := shiftInvariantSigma) shiftInvariantSigma_le) y = y := by
+        -- standard lemma: conditional expectation is identity on m-measurable functions
+        exact MeasureTheory.condExpL2_subspace_id shiftInvariantSigma_le y
+      simpa [condexpL2, ContinuousLinearMap.comp_apply, hfix]
+  -- now swap range via lpMeas_eq_fixedSubspace
+  simpa [h_proj, lpMeas_eq_fixedSubspace (μ := μ) hσ]
+
 end Exchangeability.DeFinetti

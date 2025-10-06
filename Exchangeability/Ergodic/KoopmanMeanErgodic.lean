@@ -130,18 +130,11 @@ theorem birkhoffAverage_tendsto_metProjection
     simpa [hset] using hclosed
   haveI : CompleteSpace S := hS_closed.completeSpace_coe
   haveI : S.HasOrthogonalProjection := Submodule.HasOrthogonalProjection.ofCompleteSpace S
-  let projToSub : Lp ℝ 2 μ →L[ℝ] S := S.orthogonalProjection
-  let inclusion : S →L[ℝ] Lp ℝ 2 μ := S.subtypeL
-  let P : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ := inclusion.comp projToSub
-  refine ⟨P, ?_, ?_⟩
-  · intro g hg
-    let gS : S := ⟨g, hg⟩
-    have hproj := S.orthogonalProjection_mem_subspace_eq_self gS
-    simpa [P, projToSub, inclusion, gS] using congrArg Subtype.val hproj
-  · have h_tendsto :=
-      ContinuousLinearMap.tendsto_birkhoffAverage_orthogonalProjection K hnorm f
-    have h_proj_val : (P f) = (S.orthogonalProjection f : S) := rfl
-    simpa [P, projToSub, inclusion, h_proj_val]
+  have h_tendsto :=
+    ContinuousLinearMap.tendsto_birkhoffAverage_orthogonalProjection K hnorm f
+  have hS_eq : S = fixedSpace (koopman T hT) := rfl
+  simp only [metProjection]
+  convert h_tendsto using 2
 
 /-- The range of the projection from the Mean Ergodic Theorem equals the fixed-point subspace.
 
