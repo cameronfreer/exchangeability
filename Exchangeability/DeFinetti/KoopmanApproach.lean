@@ -6,6 +6,8 @@ Authors: exchangeability contributors
 import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.Analysis.InnerProductSpace.Projection.Basic
+import Mathlib.Probability.Kernel.Condexp
+import Mathlib.Probability.Independence.Kernel
 import Exchangeability.Ergodic.KoopmanMeanErgodic
 import Exchangeability.DeFinetti.InvariantSigma
 import Exchangeability.DeFinetti.ProjectionLemmas
@@ -47,8 +49,9 @@ noncomputable section
 
 namespace Exchangeability.DeFinetti.KoopmanApproach
 
-open MeasureTheory Filter Topology
+open MeasureTheory Filter Topology ProbabilityTheory
 open Exchangeability.Ergodic
+open scoped BigOperators
 
 variable {α : Type*} [MeasurableSpace α]
 
@@ -285,45 +288,74 @@ theorem extremeMembers_agree
       (f := condexpL2 (μ := μ) fL2)).1 hMem
   simpa using hFixed
 
-/-- Axiom: Regular conditional distributions exist for standard Borel spaces.
+/-- The projection onto the first coordinate. -/
+def π0 : Ω[α] → α := fun ω => ω 0
 
-This is a deep theorem in measure theory stating that for Polish (standard Borel) spaces,
-one can construct regular conditional distributions. In mathlib, this will eventually be
-available via `ProbabilityTheory.condDistrib` or a similar API.
+/-- Regular conditional distribution kernel constructed via condExpKernel.
 
-For now, we axiomatize the existence of a measurable kernel assigning to each point
-in the base space a probability measure on the coordinate space that serves as the
-conditional distribution given the tail σ-algebra. -/
-axiom exists_regular_condDistrib
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    (hσ : MeasurePreserving shift μ μ) :
-    ∃ (ν : Ω[α] → Measure α),
-      (∀ ω, IsProbabilityMeasure (ν ω)) ∧
-      (∀ ω, ∀ (k : ℕ), ν (shift^[k] ω) = ν ω) ∧
-      Measurable ν
+This is the kernel giving the conditional distribution of the first coordinate
+given the tail σ-algebra.
 
-/-- Axiom: Conditional expectation factorizes through the regular conditional distribution.
+TODO: The exact construction requires careful handling of the measurable space instances.
+For now we axiomatize it as a placeholder. -/
+noncomputable def rcdKernel {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    [StandardBorelSpace (Ω[α])] : Kernel (Ω[α]) α :=
+  sorry -- TODO: (condExpKernel μ (shiftInvariantSigma (α := α))).map π0 with correct instances
 
-This axiom states that the conditional expectation of a product of coordinate projections
-equals the product of integrals against the conditional distribution. This is the key
-property needed for the factorization theorem.
+/-- The regular conditional distribution as a function assigning to each point
+a probability measure on α. -/
+noncomputable def ν {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    [StandardBorelSpace (Ω[α])] : Ω[α] → Measure α :=
+  fun ω => (rcdKernel (μ := μ)) ω
 
-In a full formalization, this would follow from:
-1. Definition of conditional expectation as Radon-Nikodym derivative
-2. Properties of regular conditional distributions
-3. Fubini's theorem for iterated integration
-4. Independence properties of the ergodic decomposition -/
-axiom condexp_product_factorizes
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+/-- The kernel ν gives probability measures. -/
+instance ν_isProbabilityMeasure {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    [StandardBorelSpace (Ω[α])] (ω : Ω[α]) :
+    IsProbabilityMeasure (ν (μ := μ) ω) := by
+  unfold ν
+  sorry -- TODO: Derive from Kernel.IsMarkovKernel instance once rcdKernel is constructed
+
+/-- The kernel ν is measurable. -/
+lemma ν_measurable {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    [StandardBorelSpace (Ω[α])] :
+    Measurable (ν (μ := μ)) := by
+  sorry -- TODO: Derive from Kernel.measurable once rcdKernel is constructed
+
+/-- A.e. shift-invariance of the conditional distribution kernel.
+
+Because the tail σ-algebra is shift-invariant and condExpKernel is characterized
+a.e. by the conditional expectation equation, the kernel is a.e. shift-invariant. -/
+lemma ν_ae_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    [StandardBorelSpace (Ω[α])] (hσ : MeasurePreserving shift μ μ) :
+    ∀ᵐ ω ∂μ, ∀ k : ℕ, ν (μ := μ) (shift^[k] ω) = ν (μ := μ) ω := by
+  sorry -- TODO: Use shift-invariance of shiftInvariantSigma and uniqueness of condExpKernel
+
+/-- Identical conditional marginals: all coordinates have the same conditional law given tail.
+
+This states that the push-forward of condExpKernel by the k-th coordinate projection
+equals ν for all k, a.e. in ω. -/
+lemma identicalConditionalMarginals {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    [StandardBorelSpace (Ω[α])] (hσ : MeasurePreserving shift μ μ) (k : ℕ) :
+    ∀ᵐ ω ∂μ, ((condExpKernel μ (shiftInvariantSigma (α := α))).map (fun y : Ω[α] => y k)) ω
+      = ν (μ := μ) ω := by
+  sorry -- TODO: Use condExp_ae_eq_integral_condExpKernel on indicators and shift-invariance
+
+/-- Conditional expectation factorizes through the regular conditional distribution.
+
+Assuming conditional independence of coordinates given the tail σ-algebra,
+the conditional expectation of a product equals the product of integrals
+against the conditional distribution ν. -/
+theorem condexp_product_factorization
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace (Ω[α])]
     (hσ : MeasurePreserving shift μ μ)
-    (ν : Ω[α] → Measure α)
-    (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
-    (hν_inv : ∀ ω k, ν (shift^[k] ω) = ν ω)
     (m : ℕ) (fs : Fin m → α → ℝ)
     (hmeas : ∀ k, Measurable (fs k))
-    (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C) :
-    ∀ᵐ ω ∂μ, ∃ (val : ℝ),
-      val = ∏ k : Fin m, ∫ x, fs k x ∂(ν ω)
+    (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
+    -- Conditional independence of coordinates given tail:
+    (hciid : True) : -- TODO: Replace with proper Kernel.iIndepFun signature
+    μ[fun ω => ∏ k, fs k (ω (k : ℕ)) | shiftInvariantSigma (α := α)]
+      =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω)) := by
+  sorry -- TODO: Apply condExp_ae_eq_integral_condExpKernel, factor by hciid, use identicalConditionalMarginals
 
 /-- Factorization theorem: conditional expectation of cylinder has product form.
 
@@ -338,22 +370,25 @@ The proof combines:
 
 This completes Kallenberg's "First proof" approach using the mean ergodic theorem. -/
 theorem condexp_cylinder_factorizes {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    [StandardBorelSpace (Ω[α])]
     (hσ : MeasurePreserving shift μ μ)
     (m : ℕ) (fs : Fin m → α → ℝ)
     (hmeas : ∀ k, Measurable (fs k))
-    (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C) :
-    ∃ (ν : Ω[α] → Measure α),
-      (∀ᵐ ω ∂μ, IsProbabilityMeasure (ν ω)) ∧
-      (∀ᵐ ω ∂μ, ∃ (val : ℝ), val = ∏ k : Fin m, ∫ x, fs k x ∂(ν ω)) := by
-  -- Get the regular conditional distribution from ergodic decomposition
-  obtain ⟨ν, hν_prob, hν_inv, _hν_meas⟩ := exists_regular_condDistrib hσ
-
-  use ν
+    (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
+    -- Conditional independence hypothesis:
+    (hciid : True) : -- TODO: Replace with proper Kernel.iIndepFun signature
+    ∃ (ν_result : Ω[α] → Measure α),
+      (∀ᵐ ω ∂μ, IsProbabilityMeasure (ν_result ω)) ∧
+      (∀ᵐ ω ∂μ, ∃ (val : ℝ), val = ∏ k : Fin m, ∫ x, fs k x ∂(ν_result ω)) := by
+  -- Use the concrete ν constructed from condExpKernel
+  use ν (μ := μ)
   constructor
   · -- Almost every ω has a probability measure
-    exact ae_of_all μ hν_prob
-  · -- Factorization property
-    exact condexp_product_factorizes hσ ν hν_prob hν_inv m fs hmeas hbd
+    exact ae_of_all μ (fun ω => ν_isProbabilityMeasure ω)
+  · -- Factorization property from conditional independence
+    have hfact := condexp_product_factorization hσ m fs hmeas hbd hciid
+    filter_upwards [hfact] with ω hω
+    exact ⟨∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω), rfl⟩
 
 end ExtremeMembers
 
