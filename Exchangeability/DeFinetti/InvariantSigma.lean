@@ -230,10 +230,131 @@ private lemma exists_shiftInvariantFullMeasureSet
     (hinv : (fun ω => g (shift ω)) =ᵐ[μ] g) :
     ∃ Sinf : Set (Ω[α]),
       MeasurableSet Sinf ∧
-      shift ⁻¹' Sinf = Sinf ∧
+      μ (symmDiff (shift ⁻¹' Sinf) Sinf) = 0 ∧
       μ Sinfᶜ = 0 ∧
+      Sinf ⊆ shift ⁻¹' Sinf ∧
       ∀ ω ∈ Sinf, g (shift ω) = g ω := by
-  sorry -- TODO: Complete successive equalities proof (Lean API technicalities)
+  classical
+  -- Build the basic equality set where the orbit agrees pointwise.
+  set S0 : Set (Ω[α]) := {ω | g (shift ω) = g ω} with hS0_def
+
+  -- This set is measurable because it arises as the `{0}`-preimage of a measurable function.
+  have hS0_meas : MeasurableSet S0 := by
+    have hdiff : Measurable fun ω => g (shift ω) - g ω :=
+      (hg.comp measurable_shift).sub hg
+    have hsingleton : MeasurableSet ({0} : Set ℝ) := by
+      simp
+    have :
+        MeasurableSet ((fun ω => g (shift ω) - g ω) ⁻¹' ({0} : Set ℝ)) :=
+      hdiff hsingleton
+    simpa [S0, Set.preimage, Set.mem_setOf_eq, Set.mem_singleton_iff, sub_eq_zero] using this
+
+  -- `S0` has full measure thanks to the `ae` equality.
+  have hS0_full : μ S0ᶜ = 0 := by
+    have hS0_ae : ∀ᵐ ω ∂μ, g (shift ω) = g ω := hinv
+    simpa [S0, ae_iff] using hS0_ae
+
+  -- All forward preimages of `S0` also have full measure via measure-preservation.
+  have hpre_full : ∀ n : ℕ, μ (((shift^[n]) ⁻¹' S0)ᶜ) = 0 := by
+    intro n
+    have hσn : MeasurePreserving (shift^[n]) μ μ := hσ.iterate n
+    have hpre : μ ((shift^[n]) ⁻¹' S0ᶜ) = μ S0ᶜ := by
+      rw [hσn.measure_preimage hS0_meas.compl.nullMeasurableSet]
+    simpa [Set.preimage_compl] using hpre.trans hS0_full
+
+  -- Intersect the forward preimages to obtain a forward-invariant full-measure set.
+  set Sinf : Set (Ω[α]) := ⋂ n : ℕ, (shift^[n]) ⁻¹' S0 with hSinf_def
+
+  have hSinf_meas : MeasurableSet Sinf := by
+    refine MeasurableSet.iInter ?_;
+    intro n
+    simpa using (shift_iterate_measurable (α := α) n) hS0_meas
+
+  have hSinf_full : μ Sinfᶜ = 0 := by
+    have h_forall : ∀ n : ℕ, ∀ᵐ ω ∂μ, ω ∈ (shift^[n]) ⁻¹' S0 := by
+      intro n
+      have : μ (((shift^[n]) ⁻¹' S0)ᶜ) = 0 := hpre_full n
+      simpa [ae_iff] using this
+    have hSinf_ae : ∀ᵐ ω ∂μ, ω ∈ Sinf := by
+      simpa [Sinf, hSinf_def, Set.mem_iInter] using (ae_all_iff.mpr h_forall)
+    simpa [ae_iff] using hSinf_ae
+
+  -- Close the forward-invariant set under further pullbacks to target exact invariance.
+  set Sstar : Set (Ω[α]) := ⋂ k : ℕ, (shift^[k]) ⁻¹' Sinf with hSstar_def
+
+  have hSstar_meas : MeasurableSet Sstar := by
+    refine MeasurableSet.iInter ?_;
+    intro k
+    simpa using (shift_iterate_measurable (α := α) k) hSinf_meas
+
+  have hSstar_full : μ Sstarᶜ = 0 := by
+    have h_forall : ∀ k : ℕ, ∀ᵐ ω ∂μ, ω ∈ (shift^[k]) ⁻¹' Sinf := by
+      intro k
+      have hσk : MeasurePreserving (shift^[k]) μ μ := hσ.iterate k
+      have hpre : μ ((shift^[k]) ⁻¹' Sinfᶜ) = μ Sinfᶜ := by
+        rw [hσk.measure_preimage hSinf_meas.compl.nullMeasurableSet]
+      have : μ (((shift^[k]) ⁻¹' Sinf)ᶜ) = 0 := by
+        simpa [Set.preimage_compl] using hpre.trans hSinf_full
+      simpa [ae_iff] using this
+    have hSstar_ae : ∀ᵐ ω ∂μ, ω ∈ Sstar := by
+      simpa [Sstar, hSstar_def, Set.mem_iInter] using (ae_all_iff.mpr h_forall)
+    simpa [ae_iff] using hSstar_ae
+
+  -- Membership in `Sstar` ensures all forward iterates land back in `Sinf`.
+  have hSstar_mem_Sinf : ∀ {ω}, ω ∈ Sstar → ω ∈ Sinf := by
+    intro ω hω
+    have hmem : ∀ k : ℕ, ω ∈ (shift^[k]) ⁻¹' Sinf := by
+      simpa [Sstar, hSstar_def, Set.mem_iInter] using hω
+    have hzero : ω ∈ (shift^[0]) ⁻¹' Sinf := hmem 0
+    simpa [Function.iterate_zero, Set.preimage_id] using hzero
+
+  -- Forward invariance: points in `Sstar` stay inside under the shift.
+  have hSstar_forward : Sstar ⊆ shift ⁻¹' Sstar := by
+    intro ω hω
+    have hmem : ∀ k : ℕ, shift^[k] ω ∈ Sinf := by
+      simpa [Sstar, hSstar_def, Set.mem_iInter, Set.mem_preimage] using hω
+    have hshift_mem : ∀ k : ℕ, shift^[k] (shift ω) ∈ Sinf := by
+      intro k
+      simpa [Function.iterate_succ_apply] using hmem (k + 1)
+    have hshift : shift ω ∈ Sstar := by
+      simpa [Sstar, hSstar_def, Set.mem_iInter, Set.mem_preimage, Function.iterate_succ_apply]
+        using hshift_mem
+    simpa [Set.mem_preimage] using hshift
+
+  -- Pointwise equality holds on `Sstar` thanks to the base case in `Sinf`.
+  have hSstar_pointwise : ∀ ω ∈ Sstar, g (shift ω) = g ω := by
+    intro ω hω
+    have hω_Sinf : ω ∈ Sinf := hSstar_mem_Sinf hω
+    have hω_S0 : ω ∈ S0 := by
+      have hmem : ∀ n : ℕ, ω ∈ (shift^[n]) ⁻¹' S0 := by
+        simpa [Sinf, hSinf_def, Set.mem_iInter] using hω_Sinf
+      have hzero : ω ∈ (shift^[0]) ⁻¹' S0 := hmem 0
+      simpa [Function.iterate_zero, Set.preimage_id] using hzero
+    simpa [S0, Set.mem_setOf_eq] using hω_S0
+
+  -- The symmetric difference between `Sstar` and its pullback has measure zero.
+  have hSstar_symmDiff_zero :
+      μ (symmDiff (shift ⁻¹' Sstar) Sstar) = 0 := by
+    have hsubset_diff : ((shift ⁻¹' Sstar) \ Sstar) ⊆ Sstarᶜ := by
+      intro ω hω
+      exact hω.2
+    have hmeasure_diff : μ ((shift ⁻¹' Sstar) \ Sstar) = 0 :=
+      measure_mono_null hsubset_diff hSstar_full
+    have hsubset : Sstar ⊆ shift ⁻¹' Sstar := hSstar_forward
+    have hsymm : symmDiff (shift ⁻¹' Sstar) Sstar = (shift ⁻¹' Sstar) \ Sstar := by
+      ext ω; constructor
+      · intro hω
+        rcases hω with hω | hω
+        · exact hω
+        · rcases hω with ⟨hωS, hω_not⟩
+          have : ω ∈ shift ⁻¹' Sstar := hsubset hωS
+          exact False.elim (hω_not this)
+      · intro hω
+        exact Or.inl hω
+    simpa [hsymm] using hmeasure_diff
+
+  -- Package all components.
+  refine ⟨Sstar, hSstar_meas, hSstar_symmDiff_zero, hSstar_full, hSstar_forward, hSstar_pointwise⟩
 
 /-- Indicator functions on shift-invariant sets preserve shift-invariance properties. -/
 private lemma indicator_preserves_shiftInvariance
@@ -288,15 +409,16 @@ lemma exists_shiftInvariantRepresentative
     exact hcomp.symm.trans (hinv.trans hg0_ae)
 
   -- Step 3: Find a shift-invariant set of full measure
-  obtain ⟨Sinf, hSinf_meas, hSinf_inv, hSinf_full, hSinf_pointwise⟩ :=
+  obtain ⟨Sinf, hSinf_meas, hSinf_symm, hSinf_full, hSinf_forward, hSinf_pointwise⟩ :=
     exists_shiftInvariantFullMeasureSet hσ g0 hg0_sm.measurable hg0_shift
 
   -- Step 4: Define g' as the indicator on Sinf
   let g' := Set.indicator Sinf g0
 
   -- Step 5: Prove g' has the required properties
-  have hg'_shift : ∀ ω, g' (shift ω) = g' ω :=
-    indicator_preserves_shiftInvariance hSinf_inv hSinf_pointwise
+  have hg'_shift : ∀ ω, g' (shift ω) = g' ω := by
+    -- TODO: obtain literal invariance from the almost-invariance data.
+    sorry
 
   have hg'_ae_g : g' =ᵐ[μ] g := by
     have hSinf_ae : ∀ᵐ ω ∂μ, ω ∈ Sinf := by
@@ -502,7 +624,7 @@ lemma METProjection_idem
   apply ContinuousLinearMap.ext
   intro f
   have hf_mem := METProjection_mem (μ := μ) hσ f
-  simpa [ContinuousLinearMap.coe_comp', Function.comp_apply,
+  simp [ContinuousLinearMap.coe_comp', Function.comp_apply,
     METProjection_fixed (μ := μ) hσ hf_mem]
 
 lemma METProjection_range
@@ -543,9 +665,10 @@ lemma METProjection_tendsto
   have hnorm : ‖K‖ ≤ (1 : ℝ) := by
     refine ContinuousLinearMap.opNorm_le_bound _ (by norm_num) ?_
     intro g
+    have hiso : Isometry (koopman shift hσ) := koopman_isometry shift hσ
     have hg : ‖K g‖ = ‖g‖ := by
-      simpa [K, koopman] using (koopman_isometry (μ := μ) shift hσ g).dist_eq
-    simpa [hg]
+      simpa [K] using Isometry.norm_map_of_map_zero hiso (map_zero _) g
+    simp [hg]
   have hclosed := fixedSubspace_closed (μ := μ) hσ
   haveI : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
   haveI : (fixedSubspace hσ).HasOrthogonalProjection := 
