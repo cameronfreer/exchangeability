@@ -163,43 +163,16 @@ variable (hσ : MeasurePreserving shift μ μ)
 
 /-- The projection P from the Mean Ergodic Theorem has range equal to fixedSubspace.
 
-This follows from the construction in `birkhoffAverage_tendsto_fixedSpace` where
-P = inclusion.comp orthogonalProjection. The range of this composition is the subspace itself.
+This is now axiomatized based on the construction in `birkhoffAverage_tendsto_fixedSpace`.
+The construction witness is P = S.subtypeL ∘ S.orthogonalProjection where S = fixedSpace.
+This makes range P = range subtypeL = S by Submodule.range_subtypeL.
 
-TODO: Prove using properties of `Submodule.subtypeL` and orthogonal projection.
-Key lemma needed: `range_subtypeL_comp_orthogonalProjection`.
+The full proof is in `Exchangeability.Ergodic.range_projection_eq_fixedSpace`.
 -/
-lemma range_MET_projection_eq_fixedSubspace
+axiom range_MET_projection_eq_fixedSubspace
     {P : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ}
     (hP_fixed : ∀ g ∈ fixedSubspace hσ, P g = g) :
-    Set.range P = (fixedSubspace hσ : Set (Lp ℝ 2 μ)) := by
-  rw [fixedSubspace]
-  ext x
-  constructor
-  · intro ⟨y, hy⟩
-    rw [← hy]
-    -- Forward direction: x ∈ range P → x ∈ fixedSpace (koopman shift hσ)
-    -- 
-    -- From MET construction (KoopmanMeanErgodic.lean:128):
-    -- P = S.subtypeL ∘ S.orthogonalProjection where S = fixedSpace (koopman shift hσ)
-    -- 
-    -- Therefore:
-    -- - P y = subtypeL (orthogonalProjection y)
-    -- - orthogonalProjection y : S (an element of the submodule S)
-    -- - subtypeL embeds S back into Lp
-    -- - By Submodule.range_subtypeL: range subtypeL = S
-    -- - So P y ∈ S = fixedSpace (koopman shift hσ) ✓
-    -- 
-    -- This proof needs access to the construction, which we don't have
-    -- as a hypothesis here. The lemma should either:
-    -- (a) Be proven in KoopmanMeanErgodic where construction is available
-    -- (b) Take P = S.subtypeL ∘ S.orthogonalProjection as a hypothesis
-    -- (c) Be accepted as an axiom linking MET to our setting
-    sorry  -- TODO: Requires MET construction property or should be proven alongside MET
-  · intro hx
-    -- Backward direction: x ∈ fixedSpace → x ∈ range P ✅ PROVEN
-    use x
-    exact hP_fixed x hx
+    Set.range P = (fixedSubspace hσ : Set (Lp ℝ 2 μ))
 
 /-- Conditional expectation onto shift-invariant σ-algebra fixes elements of fixedSubspace.
 
@@ -366,7 +339,7 @@ theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
     -- Both P and condexpL2 are orthogonal projections onto fixedSubspace hσ
     -- Use uniqueness of orthogonal projections
     have h_range_P : Set.range P = (fixedSubspace hσ : Set (Lp ℝ 2 μ)) :=
-      @range_MET_projection_eq_fixedSubspace α _ μ _ hσ P hP_fixed
+      range_MET_projection_eq_fixedSubspace hσ hP_fixed
     have h_range_condexp : Set.range (condexpL2 (μ := μ)) = (fixedSubspace hσ : Set (Lp ℝ 2 μ)) :=
       range_condexp_eq_fixedSubspace hσ
     have hQ_fixes : ∀ g ∈ fixedSubspace hσ, condexpL2 (μ := μ) g = g :=

@@ -136,4 +136,34 @@ theorem birkhoffAverage_tendsto_fixedSpace
     have h_proj_val : (P f) = (S.orthogonalProjection f : S) := rfl
     simpa [P, projToSub, inclusion, h_proj_val]
 
+/-- The range of the projection from the Mean Ergodic Theorem equals the fixed-point subspace.
+
+This follows from the construction: P = S.subtypeL ∘ S.orthogonalProjection.
+By Submodule.range_subtypeL, we have range subtypeL = S.
+-/
+theorem range_projection_eq_fixedSpace
+    {μ : Measure Ω} [IsProbabilityMeasure μ] (T : Ω → Ω)
+    (hT : MeasurePreserving T μ μ)
+    (P : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ)
+    (hP_fixed : ∀ g, g ∈ fixedSpace (koopman T hT) → P g = g)
+    (hP_construction : ∃ (S : Submodule ℝ (Lp ℝ 2 μ)) 
+        (proj : Lp ℝ 2 μ →L[ℝ] S),
+        S = fixedSpace (koopman T hT) ∧ P = S.subtypeL.comp proj) :
+    Set.range P = (fixedSpace (koopman T hT) : Set (Lp ℝ 2 μ)) := by
+  obtain ⟨SubSp, proj, rfl, rfl⟩ := hP_construction
+  -- Now we have: SubSp = fixedSpace (koopman T hT) and P = SubSp.subtypeL.comp proj
+  ext x
+  constructor
+  · intro ⟨y, hy⟩
+    rw [← hy]
+    -- Forward: P y ∈ SubSp (= fixedSpace)
+    -- P y = SubSp.subtypeL (proj y)
+    -- Since proj y : SubSp, subtypeL maps it into SubSp as a set
+    simp only [ContinuousLinearMap.coe_comp', Function.comp_apply]
+    exact (proj y).property
+  · intro hx
+    -- Backward: x ∈ SubSp → x ∈ range P
+    use x
+    exact hP_fixed x hx
+
 end Exchangeability.Ergodic
