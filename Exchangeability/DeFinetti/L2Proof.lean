@@ -127,6 +127,15 @@ theorem weighted_sums_converge_L1
   let A : ℕ → ℕ → Ω → ℝ :=
     fun n m ω => (1 / (m : ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω)
 
+  -- A n m is measurable for all n, m
+  have hA_meas : ∀ n m, Measurable (A n m) := by
+    intro n m
+    simp only [A]
+    apply Measurable.const_mul
+    apply Finset.measurable_sum
+    intro k _
+    exact hf_meas.comp (hX_meas _)
+
   -- Key fact: for each fixed n, the family (A n m)_m is Cauchy in L² by the
   -- L² contractability bound (Lemma 1.2), hence Cauchy in L¹ (since μ is probability)
 
@@ -152,7 +161,9 @@ theorem weighted_sums_converge_L1
     -- So L² convergence implies L¹ convergence
     calc eLpNorm (fun ω => A n m ω - A n ℓ ω) 1 μ
         ≤ eLpNorm (fun ω => A n m ω - A n ℓ ω) 2 μ := by
-          sorry  -- Use eLpNorm_le_eLpNorm_of_exponent_le with 1 ≤ 2
+          apply eLpNorm_le_eLpNorm_of_exponent_le
+          · norm_num  -- 1 ≤ 2
+          · exact (hA_meas n m).sub (hA_meas n ℓ) |>.aestronglyMeasurable
       _ < ENNReal.ofReal ε := hN m ℓ hm hℓ
 
   -- Step 3: For each n, completeness of L¹ gives limit alpha n
@@ -179,8 +190,15 @@ theorem weighted_sums_converge_L1
     -- ‖alpha m - A m M‖₁ < ε/3 and ‖A n M - alpha n‖₁ < ε/3 for all m,n ≥ N
     -- And also ‖A m M - A n M‖₁ < ε/3 for all m,n ≥ N
     -- Then ‖alpha m - alpha n‖₁ ≤ ‖alpha m - A m M‖₁ + ‖A m M - A n M‖₁ + ‖A n M - alpha n‖₁ < ε
-    sorry  -- TODO: Use halpha_conv and hA_cauchy_L1 with ε/3
-           -- Apply triangle inequality: eLpNorm_add_le
+
+    -- First, get N₁ such that for all n ≥ N₁, there exists M_n with A n M_n close to alpha n
+    have hε3_pos : 0 < ε / 3 := by linarith
+
+    -- We need to pick a uniform M that works for checking A m M vs A n M are close
+    -- And also ensures alpha m is close to A m M and alpha n is close to A n M
+    sorry  -- TODO: Complete 3ε argument
+           -- Need to carefully choose N and use triangle inequality
+           -- ‖alpha m - alpha n‖₁ ≤ ‖alpha m - A m M‖₁ + ‖A m M - A n M‖₁ + ‖A n M - alpha n‖₁
 
   -- Step 5: Completeness of L¹ gives alpha_inf
   have h_exist_alpha_inf : ∃ alpha_inf : Ω → ℝ, Measurable alpha_inf ∧ MemLp alpha_inf 1 μ ∧
@@ -198,10 +216,13 @@ theorem weighted_sums_converge_L1
     intro ε hε
     rcases halpha_inf_conv ε hε with ⟨N, hN⟩
     refine ⟨N, fun n hn => ?_⟩
-    have := hN n hn
+    have h_elpnorm := hN n hn
     -- Convert eLpNorm 1 to integral of absolute value
-    -- eLpNorm f 1 μ = ∫ ω, |f ω| ∂μ when f is integrable
-    sorry  -- TODO: Use eLpNorm_one_eq_lintegral_nnnorm or eLpNorm_eq_integral
+    -- For p=1: eLpNorm f 1 μ = ENNReal.ofReal (∫ a, ‖f a‖ ∂μ)
+    -- We have: eLpNorm (fun ω => alpha n ω - alpha_inf ω) 1 μ < ENNReal.ofReal ε
+    -- Need to show: ∫ ω, |alpha n ω - alpha_inf ω| ∂μ < ε
+    sorry  -- TODO: Use eLpNorm_one_eq_lintegral_enorm and convert lintegral to integral
+           -- Then use ENNReal.ofReal_lt_ofReal_iff
   · -- A n m → alpha n in L¹
     intro n ε hε
     rcases halpha_conv n ε hε with ⟨M, hM⟩

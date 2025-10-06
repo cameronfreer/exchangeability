@@ -801,6 +801,26 @@ noncomputable def condexpL2 {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] :
 
 
 /-- lpMeas functions are exactly the Koopman-fixed functions. -/
+
+lemma condexpL2_idem {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] :
+    (condexpL2 (μ := μ)).comp (condexpL2 (μ := μ)) = condexpL2 (μ := μ) := by
+  classical
+  apply ContinuousLinearMap.ext
+  intro f
+  simp only [condexpL2, ContinuousLinearMap.coe_comp', Function.comp_apply]
+  haveI :
+      Fact
+        (shiftInvariantSigma (α := α) ≤
+          (inferInstance : MeasurableSpace (Ω[α]))) :=
+    ⟨shiftInvariantSigma_le (α := α)⟩
+  have hfix :=
+    Submodule.orthogonalProjection_mem_subspace_eq_self
+      (K := lpMeas ℝ ℝ shiftInvariantSigma 2 μ)
+      (MeasureTheory.condExpL2 ℝ ℝ (m := shiftInvariantSigma)
+        shiftInvariantSigma_le f)
+  simpa [MeasureTheory.condExpL2]
+    using congrArg Subtype.val hfix
+
 lemma lpMeas_eq_fixedSubspace
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) :
