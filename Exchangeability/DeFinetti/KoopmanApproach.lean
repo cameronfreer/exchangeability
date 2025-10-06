@@ -172,12 +172,13 @@ lemma condexpL2_fixes_fixedSubspace {g : Lp ℝ 2 μ}
   classical
   -- g ∈ fixedSubspace ⇒ g ∈ range subtypeL by lpMeas_eq_fixedSubspace
   have h_range : g ∈ Set.range (lpMeas ℝ ℝ shiftInvariantSigma 2 μ).subtypeL := by
-    simpa [← lpMeas_eq_fixedSubspace (μ := μ) hσ] using hg
+    rw [lpMeas_eq_fixedSubspace (μ := μ) hσ]
+    exact hg
   rcases h_range with ⟨y, rfl⟩
-  -- condExpL2 fixes y, and subtypeL is injective
+  -- condExpL2 fixes y: orthogonal projection fixes elements of the subspace
   have hfix : (MeasureTheory.condExpL2 ℝ ℝ (m := shiftInvariantSigma) shiftInvariantSigma_le) y = y := by
-    exact MeasureTheory.condExpL2_subspace_id shiftInvariantSigma_le y
-  simpa [condexpL2, ContinuousLinearMap.comp_apply, hfix]
+    sorry -- TODO: Apply orthogonal projection identity for elements in the subspace
+  simp [condexpL2, ContinuousLinearMap.comp_apply, hfix]
 
 /-- Main theorem: Birkhoff averages converge in L² to conditional expectation.
 
@@ -194,7 +195,7 @@ theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
   let P := METProjection (μ := μ) hσ
   have hP_tendsto := METProjection_tendsto (μ := μ) hσ f
   have hP_fixed : ∀ g ∈ fixedSubspace hσ, P g = g :=
-    METProjection_fixes_fixedSubspace (μ := μ) hσ
+    fun g hg => METProjection_fixes_fixedSubspace (μ := μ) hσ hg
 
   -- Step 2: Show P = condexpL2 using the factored lemmas
   have hP_eq : P = condexpL2 (μ := μ) := by

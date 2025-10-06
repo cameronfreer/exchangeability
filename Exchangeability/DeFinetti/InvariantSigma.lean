@@ -456,6 +456,10 @@ noncomputable def METProjection
 lemma METProjection_apply
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) (f : Lp ℝ 2 μ) :
+    let hclosed := fixedSubspace_closed (μ := μ) hσ
+    haveI : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
+    haveI : (fixedSubspace hσ).HasOrthogonalProjection := 
+      Submodule.HasOrthogonalProjection.ofCompleteSpace (fixedSubspace hσ)
     METProjection (μ := μ) hσ f =
       (fixedSubspace hσ).subtypeL ((fixedSubspace hσ).orthogonalProjection f) := by
   classical
@@ -542,14 +546,18 @@ lemma METProjection_tendsto
     have hg : ‖K g‖ = ‖g‖ := by
       simpa [K, koopman] using (koopman_isometry (μ := μ) shift hσ g).dist_eq
     simpa [hg]
-  have hlimit :=
-    ContinuousLinearMap.tendsto_birkhoffAverage_orthogonalProjection ℝ K hnorm f
   have hclosed := fixedSubspace_closed (μ := μ) hσ
-  have : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
+  haveI : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
+  haveI : (fixedSubspace hσ).HasOrthogonalProjection := 
+    Submodule.HasOrthogonalProjection.ofCompleteSpace (fixedSubspace hσ)
+  have hS : (LinearMap.eqLocus K.toLinearMap 1) = fixedSubspace hσ := rfl
+  -- Set up the instance context for the eqLocus subspace
+  have : CompleteSpace (LinearMap.eqLocus K.toLinearMap 1) := by
+    rw [hS]; exact hclosed.completeSpace_coe
+  have : (LinearMap.eqLocus K.toLinearMap 1).HasOrthogonalProjection := by
+    rw [hS]; exact Submodule.HasOrthogonalProjection.ofCompleteSpace (fixedSubspace hσ)
+  have hlimit := ContinuousLinearMap.tendsto_birkhoffAverage_orthogonalProjection K hnorm f
   convert hlimit using 1
-  have hS : (LinearMap.eqLocus K.toLinearMap 1) = fixedSubspace hσ := by
-    rfl
-  simp [METProjection, METProjection_apply, hS]
 
 /-- The range of `METProjection` equals the fixed subspace. -/
 lemma METProjection_range_fixedSubspace
@@ -632,7 +640,7 @@ lemma range_condexp_eq_fixedSubspace {μ : Measure (Ω[α])}
       -- use that ce fixes lpMeas: ce y = y (orthogonal projection fixes elements of subspace)
       have hfix : (MeasureTheory.condExpL2 ℝ ℝ (m := shiftInvariantSigma) shiftInvariantSigma_le) y = y := by
         sorry -- TODO: Apply Submodule.orthogonalProjection_mem_subspace_eq_self with proper Fact instance
-      simpa [condexpL2, ContinuousLinearMap.comp_apply, hfix]
+      sorry -- TODO: conclude using hfix and unfolding condexpL2
   -- now swap range via lpMeas_eq_fixedSubspace
   rw [h_proj, lpMeas_eq_fixedSubspace (μ := μ) hσ]
 
