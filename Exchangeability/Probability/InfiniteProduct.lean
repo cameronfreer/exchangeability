@@ -10,6 +10,7 @@ import Mathlib.Probability.Kernel.IonescuTulcea.Traj
 import Mathlib.Topology.Basic
 import Mathlib.MeasureTheory.Constructions.Cylinders
 import Mathlib.MeasureTheory.Measure.Typeclasses.Finite
+import Mathlib.Probability.ProductMeasure
 
 /-!
 # Infinite Products of Identically Distributed Measures
@@ -65,32 +66,36 @@ def iidProjectiveFamily (ν : Measure α) [IsProbabilityMeasure ν] :
 
 /-- The projective family is indeed projective: projections preserve the measure.
 
-**Proof strategy**: Use mathlib's `Measure.pi_map_piCongrLeft` or similar reindexing lemmas
-to show that restricting the index set from I to J ⊆ I gives the product measure on J. -/
+This is a special case of mathlib's `isProjectiveMeasureFamily_pi` for constant families. -/
 lemma iidProjectiveFamily_projective (ν : Measure α) [IsProbabilityMeasure ν] :
     @IsProjectiveMeasureFamily ℕ (fun _ => α) (fun _ => inferInstance) (iidProjectiveFamily ν) := by
-  intro I J hJI
-  -- Need to show: (Measure.pi (fun _ : I => ν)).map (Finset.restrict₂ hJI) = Measure.pi (fun _ : J => ν)
-  sorry  -- TODO: Prove using Measure.pi_map and reindexing lemmas
+  -- Use mathlib's isProjectiveMeasureFamily_pi which works for any family of probability measures
+  have : @IsProjectiveMeasureFamily ℕ (fun _ => α) (fun _ => inferInstance)
+    (fun I : Finset ℕ => Measure.pi (fun i : I => ν)) :=
+    @isProjectiveMeasureFamily_pi ℕ (fun _ => α) (fun _ => inferInstance) (fun _ => ν) (fun _ => inferInstance)
+  exact this
 
 /-- The infinite i.i.d. product measure `ν^ℕ` on `ℕ → α`.
 
-This is constructed as the projective limit of the family of finite product measures.
-While mathlib's `Measure.pi` requires `Fintype ι`, the projective limit construction
-works for any index set, giving us the infinite product measure.
+This is defined using mathlib's `Measure.infinitePi`, which constructs the projective limit
+of the family of finite product measures via Kolmogorov's extension theorem.
 
-**Construction**:
-1. Define `iidProjectiveFamily ν` giving finite product measures
-2. Take the projective limit (which exists and is unique by Kolmogorov extension)
-3. The limit is characterized by: for all finite `I`, the marginal on `I` equals `ν^I`
+The construction:
+1. Defines finite product measures for each `Finset ℕ`
+2. Shows they form a projective family (projections preserve measure)
+3. Extends to the whole σ-algebra via Carathéodory's extension theorem
+4. The result is the unique probability measure with the correct finite-dimensional marginals -/
+def iidProduct (ν : Measure α) [IsProbabilityMeasure ν] : Measure (ℕ → α) :=
+  Measure.infinitePi (fun _ : ℕ => ν)
 
-Note: The actual construction of the projective limit measure requires the Kolmogorov
-extension theorem, which is axiomatized here pending full formalization. -/
-axiom iidProduct (ν : Measure α) [IsProbabilityMeasure ν] : Measure (ℕ → α)
+/-- The constructed measure is the projective limit of the finite products.
 
-/-- The constructed measure is the projective limit of the finite products. -/
-axiom iidProduct_isProjectiveLimit (ν : Measure α) [IsProbabilityMeasure ν] :
-    @IsProjectiveLimit ℕ (fun _ => α) (fun _ => inferInstance) (iidProduct ν) (iidProjectiveFamily ν)
+This is mathlib's `isProjectiveLimit_infinitePi` specialized to constant families. -/
+lemma iidProduct_isProjectiveLimit (ν : Measure α) [IsProbabilityMeasure ν] :
+    @IsProjectiveLimit ℕ (fun _ => α) (fun _ => inferInstance) (iidProduct ν) (iidProjectiveFamily ν) := by
+  intro I
+  unfold iidProduct iidProjectiveFamily
+  exact Measure.infinitePi_map_restrict (fun _ : ℕ => ν)
 
 namespace iidProduct
 
@@ -121,9 +126,18 @@ The marginal distribution on the first `n` coordinates equals the finite product
 lemma cylinder_fintype (n : ℕ) :
     (iidProduct ν).map (fun f : ℕ → α => fun i : Fin n => f i) =
       Measure.pi fun _ : Fin n => ν := by
-  -- Use cylinder_finset with I = Finset.univ : Finset (Fin n)
-  -- Need to show the two restriction maps are equal
-  sorry  -- TODO: Show (fun f => fun i : Fin n => f i) equals (Finset.univ : Finset (Fin n)).restrict up to reindexing
+  -- Strategy: compose cylinder_finset with a reindexing equivalence
+  -- The map (fun f i : Fin n => f i) is (Finset.range n).restrict composed with an equivalence
+
+  -- First get the result for Finset.range n
+  have h := cylinder_finset ν (Finset.range n)
+
+  -- The function (fun f => fun i : Fin n => f i) equals
+  -- MeasurableEquiv.piCongrLeft ∘ (Finset.range n).restrict
+  -- where the equiv is Fin n ≃ (Finset.range n)
+
+  -- For now, leave as sorry - needs careful handling of the equivalence
+  sorry  -- TODO: Use Measure.map composition and pi_map_piCongrLeft
 
 /-- Invariance under arbitrary permutations of coordinates.
 
