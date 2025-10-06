@@ -108,4 +108,62 @@ theorem orthogonalProjections_same_range_eq
   ext x
   simpa using congrArg (fun f : E →ₗ[𝕜] E => f x) h_toLinear_eq
 
+/-- The composition of subtypeL and orthogonalProjection is symmetric.
+
+This shows that if you project onto a closed subspace and then include back into the
+ambient space, the resulting operator is self-adjoint. This is used to show projections
+from the Mean Ergodic Theorem are symmetric.
+-/
+theorem subtypeL_comp_orthogonalProjection_isSymmetric
+    [CompleteSpace E]
+    (S : Submodule 𝕜 E) [S.HasOrthogonalProjection] :
+    (S.subtypeL.comp S.orthogonalProjection).IsSymmetric := by
+  intro x y
+  -- Expand the composition: (subtypeL ∘ orthogonalProjection) x = ↑(orthogonalProjection x)
+  -- orthogonalProjection is symmetric, and subtypeL is just the coercion
+  exact Submodule.inner_starProjection_left_eq_right S x y
+
+/-- A projection that fixes a subspace S and has range S equals the orthogonal projection
+when it's symmetric and idempotent. -/
+theorem projection_eq_orthogonalProjection_of_properties
+    [CompleteSpace E]
+    (P : E →L[𝕜] E)
+    (S : Submodule 𝕜 E) [S.HasOrthogonalProjection]
+    (hP_range : Set.range P = (S : Set E))
+    (hP_fixes : ∀ g ∈ S, P g = g)
+    (hP_idem : P.comp P = P)
+    (hP_sym : P.IsSymmetric) :
+    P = S.subtypeL.comp S.orthogonalProjection := by
+  -- Both are symmetric projections onto S, so they're equal by uniqueness
+  apply orthogonalProjections_same_range_eq P (S.subtypeL.comp S.orthogonalProjection) S
+  · exact hP_range
+  · -- range of subtypeL ∘ orthogonalProjection = S
+    ext x
+    constructor
+    · intro ⟨y, hy⟩
+      simp only [ContinuousLinearMap.coe_comp', Function.comp_apply] at hy
+      rw [← hy]
+      exact (S.orthogonalProjection y).property
+    · intro hx
+      use x
+      simp only [ContinuousLinearMap.coe_comp', Function.comp_apply]
+      have h := Submodule.orthogonalProjection_mem_subspace_eq_self (⟨x, hx⟩ : S)
+      simpa using congrArg Subtype.val h
+  · exact hP_fixes
+  · -- subtypeL ∘ orthogonalProjection fixes S
+    intro g hg
+    simp only [ContinuousLinearMap.coe_comp', Function.comp_apply]
+    have h := Submodule.orthogonalProjection_mem_subspace_eq_self (⟨g, hg⟩ : S)
+    simpa using congrArg Subtype.val h
+  · exact hP_idem
+  · -- idempotence of subtypeL ∘ orthogonalProjection
+    apply ContinuousLinearMap.ext
+    intro x
+    simp only [ContinuousLinearMap.coe_comp', Function.comp_apply]
+    -- orthogonalProjection is idempotent: projecting twice = projecting once
+    have h := Submodule.orthogonalProjection_mem_subspace_eq_self (S.orthogonalProjection x)
+    simpa using congrArg Subtype.val h
+  · exact hP_sym
+  · exact subtypeL_comp_orthogonalProjection_isSymmetric S
+
 end
