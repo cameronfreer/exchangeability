@@ -163,16 +163,18 @@ variable (hσ : MeasurePreserving shift μ μ)
 
 /-- The projection P from the Mean Ergodic Theorem has range equal to fixedSubspace.
 
-This is now axiomatized based on the construction in `birkhoffAverage_tendsto_fixedSpace`.
-The construction witness is P = S.subtypeL ∘ S.orthogonalProjection where S = fixedSpace.
-This makes range P = range subtypeL = S by Submodule.range_subtypeL.
-
-The full proof is in `Exchangeability.Ergodic.range_projection_eq_fixedSpace`.
+This is proven in `Exchangeability.Ergodic.range_projection_eq_fixedSpace` using the
+construction details. We provide the construction witness from the MET proof.
 -/
-axiom range_MET_projection_eq_fixedSubspace
+lemma range_MET_projection_eq_fixedSubspace
     {P : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ}
     (hP_fixed : ∀ g ∈ fixedSubspace hσ, P g = g) :
-    Set.range P = (fixedSubspace hσ : Set (Lp ℝ 2 μ))
+    Set.range P = (fixedSubspace hσ : Set (Lp ℝ 2 μ)) := by
+  -- The construction witness comes from birkhoffAverage_tendsto_fixedSpace
+  -- In that proof, P is constructed as S.subtypeL.comp S.orthogonalProjection
+  -- We use the proven theorem with this witness
+  sorry  -- TODO: Extract construction witness from birkhoffAverage_tendsto_fixedSpace
+         -- or prove directly that any P with hP_fixed has this property
 
 /-- Conditional expectation onto shift-invariant σ-algebra fixes elements of fixedSubspace.
 
@@ -264,63 +266,42 @@ lemma orthogonal_projections_same_range_eq
     rw [← hQ_range]
     exact ⟨g, rfl⟩
   
-  -- Apply the fixing property
+  -- Apply the fixing property: both P and Q fix elements that are in S
   have hP_fixes_Qg : P (Q g) = Q g := hP_fixes (Q g) hQg
   have hQ_fixes_Pg : Q (P g) = P g := hQ_fixes (P g) hPg
   
-  -- Key observation: Both P and Q fix elements of S and have range = S
-  -- This means they act as the identity on S
+  -- Since both P and Q fix all elements of S, they are idempotent on their ranges
+  have hP_idem : P (P g) = P g := hP_fixes (P g) hPg
+  have hQ_idem : Q (Q g) = Q g := hQ_fixes (Q g) hQg
+  
+  -- Now we can show P g = Q g:
+  -- Note that P (Q g) = Q g means P acts as identity on Q g
+  -- And P g ∈ S, so by symmetry we should have P g = Q g
   -- 
-  -- For any g, both P g and Q g are in S
-  -- Apply Q to P g: Q (P g) = P g (since P g ∈ S and Q fixes S)
-  -- Apply P to Q g: P (Q g) = Q g (since Q g ∈ S and P fixes S)
-  --
-  -- Now the clever part: use that P and Q commute when composing with elements of S
-  -- P g = Q (P g) = Q (P (Q g)) = Q (Q g) = Q g
-  --
-  -- Step by step:
-  -- 1. P g = Q (P g) by hQ_fixes_Pg
-  -- 2. We want to show this equals Q g
-  -- 3. Key: P g = P (Q g) because both are "the projection of g onto S"
-  --    But we need to be more careful...
-  --
-  -- Alternative: Directly use idempotence
-  -- P g ∈ S and Q g ∈ S
-  -- Since both P and Q fix all of S, we have:
-  -- P (P g) = P g and Q (Q g) = Q g
-  -- Also: P (Q g) = Q g and Q (P g) = P g
-  --
-  -- Direct proof: P g = Q g for all g
-  -- We have P (Q g) = Q g and Q (P g) = P g
+  -- Here's the key: both P g and Q g project g onto S
+  -- Since P fixes S and Q g ∈ S, we have P (Q g) = Q g
+  -- Since Q fixes S and P g ∈ S, we have Q (P g) = P g
   -- 
-  -- Claim: P g = Q g
-  -- Proof: Apply P to both sides of Q (P g) = P g:
-  -- P (Q (P g)) = P (P g)
-  -- 
-  -- But P (Q (P g)) = P (P g) because Q (P g) = P g
-  -- And P (P g) = P g because P g ∈ S and P fixes S
-  -- So we get P g = P g, which is trivial
+  -- To show P g = Q g, observe:
+  -- P (Q g) = Q g, so if we can show P g = P (Q g), we're done
+  -- Similarly, Q (P g) = P g, so if we can show Q g = Q (P g), we're done
   --
-  -- Let me try a different approach: show Q g = P g directly
-  -- We have:
-  -- - Q g ∈ S (proven)
-  -- - P (Q g) = Q g (proven, since Q g ∈ S)
-  -- - Q (P g) = P g (proven, since P g ∈ S)
+  -- But actually, let's think differently:
+  -- Consider P (P g - Q g):
+  -- P (P g - Q g) = P (P g) - P (Q g) = P g - Q g
+  -- So (P g - Q g) is a fixed point of P
+  -- But also, Q (P g - Q g) = Q (P g) - Q (Q g) = P g - Q g
+  -- So (P g - Q g) is also a fixed point of Q
   --
-  -- Since P g ∈ S and Q fixes S: Q (P g) = P g
-  -- This gives us: P g = Q (P g)
-  -- 
-  -- Similarly, Q g ∈ S and P fixes S: P (Q g) = Q g
-  -- This gives us: Q g = P (Q g)
+  -- Since P g - Q g is fixed by both P and Q, and both have range S,
+  -- we have P g - Q g ∈ S
+  -- But then P (P g - Q g) = P g - Q g (since P fixes S)
+  -- And we showed P (P g - Q g) = P g - Q g
+  -- So this is consistent
   --
-  -- Now I want to show P g = Q g
-  -- Consider: P (Q g) = Q g and Q (P g) = P g
-  -- These say P and Q fix each other's outputs
-  --
-  -- The key insight: Both P and Q are retractions onto S with S as their range
-  -- A retraction r : X → A with range A that fixes A is uniquely determined
-  -- So P = Q as functions
-  sorry  -- TODO: Formalize the retraction uniqueness or use inner product orthogonality
+  -- The key: if P g ≠ Q g, then P g - Q g is a nonzero element of S
+  -- But then... we need more structure to derive a contradiction
+  sorry  -- TODO: Need to use that these are ORTHOGONAL projections, not just retractions
 
 /-- Main theorem: Birkhoff averages converge in L² to conditional expectation.
 
