@@ -10,40 +10,40 @@ import Mathlib.Probability.Kernel.IonescuTulcea.Traj
 import Mathlib.Topology.Basic
 import Mathlib.MeasureTheory.Constructions.Cylinders
 import Mathlib.MeasureTheory.Measure.Typeclasses.Finite
+import Mathlib.Probability.ProductMeasure
 
 /-!
 # Infinite Products of Identically Distributed Measures
 
 This file constructs the infinite product measure `ν^ℕ` on `ℕ → α` for a given
-probability measure `ν : Measure α`. We follow the strategy used in mathlib's
-Ionescu–Tulcea development for kernels (`ProbabilityTheory.Kernel.IonescuTulcea.Traj`),
-specialised to the case of constant kernels coming from an i.i.d. sequence.
-
-Our goal is twofold:
-
-1. Build a probability measure `iidProduct ν` on `ℕ → α` whose finite-dimensional
-   marginals coincide with the finite product measures `Measure.pi` on `Fin n → α`.
-2. Show that the resulting measure is invariant under finite permutations of the indices.
-
-These results replace the axioms `productMeasure_exists` and
-`constantProduct_comp_perm` previously assumed in `Exchangeability.Contractability`. They
-provide the projective limit and symmetry properties required for the Kolmogorov
-extension step in the contractability → exchangeability proof.
+probability measure `ν : Measure α`. The construction uses mathlib's `Measure.infinitePi`,
+which implements the Kolmogorov extension theorem via projective limits.
 
 ## Main definitions
 
-* `iidKernel ν`: constant Markov kernel used to iterate via Ionescu–Tulcea.
-* `iidTraj ν`: kernel on `Unit` taking value `ν^ℕ` as a kernel.
-* `iidProduct ν`: the probability measure on `ℕ → α` obtained by evaluating `iidTraj ν` at `()`. 
+* `iidProjectiveFamily ν`: The projective family of finite product measures indexed by `Finset ℕ`.
+  For each finite `I`, gives `Measure.pi (fun i : I => ν)`.
+* `iidProduct ν`: The probability measure on `ℕ → α` defined as `Measure.infinitePi (fun _ : ℕ => ν)`.
+  This is the unique measure whose finite-dimensional marginals are the i.i.d. products.
 
 ## Main statements
 
-* `iidProduct_projective`: finite-dimensional marginals of `iidProduct ν` agree with
-  the product measure `Measure.pi (fun _ : Fin n => ν)`.
-* `iidProduct_perm`: `iidProduct ν` is invariant under any permutation of `ℕ` with finite support.
+* `iidProjectiveFamily_projective`: The finite products form a projective family.
+* `iidProduct_isProjectiveLimit`: `iidProduct ν` is the projective limit of `iidProjectiveFamily ν`.
+* `cylinder_finset`: Marginals on finite subsets equal the corresponding finite products.
+* `cylinder_fintype`: Marginals on `Fin n` equal the n-fold product (TODO).
+* `perm_eq`: The measure is invariant under permutations of ℕ (TODO).
 
-We keep the more general machinery in a standalone file so that other developments can
-import it if needed.
+## Implementation notes
+
+The construction is completely axiom-free, using:
+1. `Measure.pi` for finite products (requires `Fintype`)
+2. `isProjectiveMeasureFamily_pi` to show projectivity
+3. `Measure.infinitePi` for the infinite product (Kolmogorov extension)
+4. `infinitePi_map_restrict` for marginal characterization
+
+This replaces previous axiomatizations and provides a fully formalized construction
+of infinite i.i.d. product measures.
 -/
 
 noncomputable section
@@ -65,32 +65,36 @@ def iidProjectiveFamily (ν : Measure α) [IsProbabilityMeasure ν] :
 
 /-- The projective family is indeed projective: projections preserve the measure.
 
-**Proof strategy**: Use mathlib's `Measure.pi_map_piCongrLeft` or similar reindexing lemmas
-to show that restricting the index set from I to J ⊆ I gives the product measure on J. -/
+This is a special case of mathlib's `isProjectiveMeasureFamily_pi` for constant families. -/
 lemma iidProjectiveFamily_projective (ν : Measure α) [IsProbabilityMeasure ν] :
     @IsProjectiveMeasureFamily ℕ (fun _ => α) (fun _ => inferInstance) (iidProjectiveFamily ν) := by
-  intro I J hJI
-  -- Need to show: (Measure.pi (fun _ : I => ν)).map (Finset.restrict₂ hJI) = Measure.pi (fun _ : J => ν)
-  sorry  -- TODO: Prove using Measure.pi_map and reindexing lemmas
+  -- Use mathlib's isProjectiveMeasureFamily_pi which works for any family of probability measures
+  have : @IsProjectiveMeasureFamily ℕ (fun _ => α) (fun _ => inferInstance)
+    (fun I : Finset ℕ => Measure.pi (fun i : I => ν)) :=
+    @isProjectiveMeasureFamily_pi ℕ (fun _ => α) (fun _ => inferInstance) (fun _ => ν) (fun _ => inferInstance)
+  exact this
 
 /-- The infinite i.i.d. product measure `ν^ℕ` on `ℕ → α`.
 
-This is constructed as the projective limit of the family of finite product measures.
-While mathlib's `Measure.pi` requires `Fintype ι`, the projective limit construction
-works for any index set, giving us the infinite product measure.
+This is defined using mathlib's `Measure.infinitePi`, which constructs the projective limit
+of the family of finite product measures via Kolmogorov's extension theorem.
 
-**Construction**:
-1. Define `iidProjectiveFamily ν` giving finite product measures
-2. Take the projective limit (which exists and is unique by Kolmogorov extension)
-3. The limit is characterized by: for all finite `I`, the marginal on `I` equals `ν^I`
+The construction:
+1. Defines finite product measures for each `Finset ℕ`
+2. Shows they form a projective family (projections preserve measure)
+3. Extends to the whole σ-algebra via Carathéodory's extension theorem
+4. The result is the unique probability measure with the correct finite-dimensional marginals -/
+def iidProduct (ν : Measure α) [IsProbabilityMeasure ν] : Measure (ℕ → α) :=
+  Measure.infinitePi (fun _ : ℕ => ν)
 
-Note: The actual construction of the projective limit measure requires the Kolmogorov
-extension theorem, which is axiomatized here pending full formalization. -/
-axiom iidProduct (ν : Measure α) [IsProbabilityMeasure ν] : Measure (ℕ → α)
+/-- The constructed measure is the projective limit of the finite products.
 
-/-- The constructed measure is the projective limit of the finite products. -/
-axiom iidProduct_isProjectiveLimit (ν : Measure α) [IsProbabilityMeasure ν] :
-    @IsProjectiveLimit ℕ (fun _ => α) (fun _ => inferInstance) (iidProduct ν) (iidProjectiveFamily ν)
+This is mathlib's `isProjectiveLimit_infinitePi` specialized to constant families. -/
+lemma iidProduct_isProjectiveLimit (ν : Measure α) [IsProbabilityMeasure ν] :
+    @IsProjectiveLimit ℕ (fun _ => α) (fun _ => inferInstance) (iidProduct ν) (iidProjectiveFamily ν) := by
+  intro I
+  unfold iidProduct iidProjectiveFamily
+  exact Measure.infinitePi_map_restrict (fun _ : ℕ => ν)
 
 namespace iidProduct
 
@@ -121,24 +125,33 @@ The marginal distribution on the first `n` coordinates equals the finite product
 lemma cylinder_fintype (n : ℕ) :
     (iidProduct ν).map (fun f : ℕ → α => fun i : Fin n => f i) =
       Measure.pi fun _ : Fin n => ν := by
-  -- Use cylinder_finset with I = Finset.univ : Finset (Fin n)
-  -- Need to show the two restriction maps are equal
-  sorry  -- TODO: Show (fun f => fun i : Fin n => f i) equals (Finset.univ : Finset (Fin n)).restrict up to reindexing
+  -- Strategy: Use measure uniqueness on rectangles (Measure.pi_eq)
+  -- For each rectangle {f | ∀ i, f i ∈ s i}, show both measures assign the same value
+  -- This follows from:
+  -- 1. LHS: Use infinitePi properties and the fact that Fin n ≃ Finset.range n
+  -- 2. RHS: Direct from Measure.pi_pi
+  -- Both give ∏ i, ν (s i)
+
+  sorry  -- TODO: Apply Measure.pi_eq and show agreement on rectangles
 
 /-- Invariance under arbitrary permutations of coordinates.
 
-This is a consequence of the projective limit characterization: finite products are
-invariant under permutations, and this extends to the infinite product by uniqueness.
+This follows from mathlib's `infinitePi_map_piCongrLeft`: mapping the infinite product
+by a permutation gives back the same measure when the family is constant.
 
-**Proof strategy**:
-1. Define a new projective family via σ: `P' I := (iidProduct ν).map ((σ.restrict I) ∘ I.restrict)`
-2. Show P' is projective
-3. Show P' I = iidProjectiveFamily ν I for all finite I (using finite product permutation invariance)
-4. By uniqueness of projective limits: (iidProduct ν).map (· ∘ σ) = iidProduct ν
+For constant families `μ i = ν` for all `i`, we have:
+`(infinitePi (fun _ => ν)).map (piCongrLeft σ) = infinitePi (fun _ => ν)`
+because `μ (σ i) = ν = μ i` for all `i`.
 -/
 lemma perm_eq (σ : Equiv.Perm ℕ) :
     (iidProduct ν).map (fun f => f ∘ σ) = iidProduct ν := by
-  sorry  -- TODO: Prove using projective limit uniqueness and finite permutation invariance
+  unfold iidProduct
+  -- For constant families, infinitePi_map_piCongrLeft gives us what we need
+  -- Since (fun _ => ν) ∘ σ.symm = (fun _ => ν), we have the invariance
+
+  -- The hard part is showing (fun f => f ∘ σ) = MeasurableEquiv.piCongrLeft σ.symm
+  -- This is a definitional obstacle - leave as sorry with clear strategy
+  sorry  -- TODO: Use Measure.infinitePi_map_piCongrLeft after showing function equality
 
 end iidProduct
 
