@@ -767,14 +767,11 @@ theorem conditional_iid_from_directing_measure
       -- Both are probability measures
       have h_map_prob : IsProbabilityMeasure μ_map := by
         -- The pushforward of a probability measure is a probability measure
-        -- This should be automatically inferred if the mapping is measurable
         have h_meas : Measurable (fun ω i => X (k i) ω) := by
           rw [measurable_pi_iff]
           intro i
           exact hX_meas (k i)
-        -- The instance should exist in mathlib
-        sorry  -- TODO: Find correct instance name or use inferInstance
-              -- May need: Measure.IsProbabilityMeasure.map or similar
+        exact IsProbabilityMeasure.map h_meas
 
       have h_bind_prob : IsProbabilityMeasure μ_bind := by
         -- The bind of a probability measure with probability kernels is a probability measure
@@ -788,8 +785,13 @@ theorem conditional_iid_from_directing_measure
             ext x; simp
           rw [h, Measure.pi_pi]
           simp [measure_univ]
-        sorry  -- TODO: Use MeasureTheory.IsProbabilityMeasure.bind or similar
-              -- Mathlib should have an instance for bind with probability kernels
+        -- Prove measure_univ = 1 directly using bind_apply
+        constructor
+        have h_meas : ∀ ω, Measurable (Measure.pi fun _ : Fin m => ν ω) := by
+          intro ω
+          sorry  -- TODO: Prove measurability of product measure
+        rw [Measure.bind_apply .univ (ae_of_all _ h_meas)]
+        simp [measure_univ, h_pi_prob]
 
       -- Strategy outline:
       -- 1. Define π-system C of measurable rectangles
