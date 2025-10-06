@@ -766,12 +766,12 @@ lemma range_condexp_eq_fixedSubspace {μ : Measure (Ω[α])}
       exact ⟨(MeasureTheory.condExpL2 ℝ ℝ (m := shiftInvariantSigma) shiftInvariantSigma_le) x, rfl⟩
     · intro f hf
       rcases hf with ⟨y, rfl⟩
-      -- use that ce fixes lpMeas: ce y = y (orthogonal projection fixes elements of subspace)
-      have hfix : (MeasureTheory.condExpL2 ℝ ℝ (m := shiftInvariantSigma)
-          shiftInvariantSigma_le) y = y := by
-        simpa [MeasureTheory.condExpL2] using
-          Submodule.orthogonalProjection_mem_subspace_eq_self y
-      simpa [condexpL2, ContinuousLinearMap.comp_apply, hfix]
+      -- The witness is just ↑y itself since condExpL2 projects onto lpMeas
+      -- and y is already in lpMeas, so condexpL2 (↑y) = ↑y
+      use ↑y
+      -- condExpL2 is orthogonal projection, which fixes elements in the subspace
+      -- This is the same pattern as in mathlib's condExpL2_indicatorConst
+      sorry -- TODO: Apply Submodule.orthogonalProjection_mem_subspace_eq_self with proper Fact instance context
   -- now swap range via lpMeas_eq_fixedSubspace
   rw [h_proj, lpMeas_eq_fixedSubspace (μ := μ) hσ]
 
