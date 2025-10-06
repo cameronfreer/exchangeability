@@ -237,7 +237,20 @@ then for indicator functions we get E[𝟙_B(X_i) | tail] = ν(B).
 This is the crucial step connecting the abstract conditional expectation property
 to concrete probability statements about measurable sets.
 
-TODO: Prove this using properties of conditional expectation and indicators. -/
+Proof outline:
+1. The indicator function 𝟙_B : α → ℝ is bounded (by 1) and measurable
+2. By hypothesis hν_cond, we have: E[𝟙_B(Xᵢ) | tail] = ∫ 𝟙_B d(ν ω)
+3. The RHS simplifies: ∫ 𝟙_B d(ν ω) = ν(ω)(B) (by definition of indicator integral)
+4. The LHS is exactly what we want: E[𝟙_B(Xᵢ) | tail](ω)
+5. Converting to ℝ gives: (ν ω B).toReal
+
+The actual hypothesis hν_cond should be:
+  ∀ f : α → ℝ, Measurable f → (∃ M, ∀ x, |f x| ≤ M) →
+    ∀ᵐ ω ∂μ, μ[f ∘ (X i)|tail] ω = ∫ x, f x ∂(ν ω)
+
+TODO: Replace True placeholder with actual conditional expectation hypothesis
+      and prove the result using indicator integral formula.
+-/
 axiom condExp_indicator_eq_measure {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
     (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
@@ -248,7 +261,23 @@ axiom condExp_indicator_eq_measure {μ : Measure Ω} [IsProbabilityMeasure μ]
 
 /-- Helper lemma: The integral of the product of bounded functions equals the product
 of their integrals when integrating against a product measure. This is a key step in
-showing conditional independence. -/
+showing conditional independence.
+
+This is a Fubini-type theorem for product measures. The general strategy:
+- For two variables: ∫ f(x,y) d(μ × ν) = ∫ (∫ f(x,y) dν(y)) dμ(x)
+- For products of functions: ∫ (f₁(x₁) · f₂(x₂)) = (∫ f₁) · (∫ f₂) by independence
+- Extend to finite products by induction
+
+In mathlib, relevant lemmas include:
+- `MeasureTheory.lintegral_prod` for Lebesgue integration on product spaces
+- Fubini theorem variants in `Mathlib.MeasureTheory.Constructions.Prod`
+- Product measure characterization in `Mathlib.MeasureTheory.Constructions.Pi`
+
+TODO: This needs careful handling of:
+1. Converting between ∫ (integral) and ∫⁻ (lintegral) for ℝ-valued functions
+2. Measurability and integrability conditions
+3. Induction structure for finite products
+-/
 axiom integral_prod_eq_prod_integral {ι : Type*} [Fintype ι] {α : Type*}
     [MeasurableSpace α] (ν : Measure α) [IsProbabilityMeasure ν]
     (f : ι → α → ℝ) (hf : ∀ i, Measurable (f i)) :
@@ -260,7 +289,22 @@ equals the average of the product measures built from the directing measure.
 This is an intermediate result showing how the finite-dimensional distributions are determined
 by the directing measure ν.
 
-Note: We use lintegral (∫⁻) for measure-valued integrals since measures are ENNReal-valued. -/
+Note: We use lintegral (∫⁻) for measure-valued integrals since measures are ENNReal-valued.
+
+Proof strategy:
+1. Start from hν_dir: E[f(Xᵢ) | tail] = ∫ f d(ν ω) for bounded measurable f
+2. Apply to indicator functions: E[𝟙_Bᵢ(Xᵢ)] = E[ν(Bᵢ)]
+3. Use conditional independence to get products:
+   E[∏ᵢ 𝟙_Bᵢ(Xᵢ)] = E[∏ᵢ ν(Bᵢ)]
+4. The LHS = μ{ω : ∀i, Xᵢ(ω) ∈ Bᵢ} (by definition of product of indicators)
+5. The RHS = ∫⁻ ω, ∏ᵢ ν(Bᵢ)(ω) dμ = ∫⁻ ω, (Measure.pi ν)(B) dμ
+   where B = {x : ∀i, xᵢ ∈ Bᵢ} is the product set
+
+The key step (3) requires proving conditional independence, which comes from
+the monotone class argument extending from bounded functions to product sets.
+
+TODO: This is the heart of the proof and needs the full conditional expectation machinery.
+-/
 axiom fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
     (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
@@ -300,11 +344,22 @@ lemma bind_pi_apply {μ : Measure Ω} [IsProbabilityMeasure μ]
     (μ.bind fun ω => Measure.pi fun _ : Fin m => ν ω) B =
       ∫⁻ ω, (Measure.pi fun _ : Fin m => ν ω) B ∂μ := by
   -- Need to show the kernel (fun ω => Measure.pi fun _ => ν ω) is AE-measurable
+  -- This is the standard measurability of product measures as a function of parameters
   have h_ae_meas : AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ := by
-    -- The pi measure is measurable when the component measures are
-    -- This requires showing: ∀ B, Measurable (fun ω => (Measure.pi fun _ => ν ω) B)
-    -- which follows from hν_meas and properties of Measure.pi
-    sorry  -- TODO: This requires a measureability lemma for Measure.pi
+    -- Strategy: Show measurability of ω ↦ (Measure.pi fun _ => ν ω)
+    -- This requires proving: for all measurable sets B,
+    --   ω ↦ (Measure.pi fun _ => ν ω) B is measurable
+    --
+    -- For product measures, this follows from:
+    -- (Measure.pi μs) B = ∫⁻ x₀, (μ₀ ×ₚ ...) B[x₀/·] ∂μ₀
+    -- where the RHS is measurable by induction when each μᵢ is measurable
+    --
+    -- The key mathlib ingredient is likely a lemma like:
+    -- "measurable_measure_pi" or similar from MeasureTheory.Constructions.Pi
+    -- showing that pi preserves measurability of measure-valued functions
+    --
+    -- For now, this is the main technical gap requiring a specialized lemma
+    sorry  -- TODO: Find/prove measurability of Measure.pi for parameterized measures
   -- Now apply Measure.bind_apply
   exact Measure.bind_apply hB h_ae_meas
 
@@ -320,12 +375,17 @@ lemma measure_eq_of_agree_on_pi_system {Ω : Type*} [MeasurableSpace Ω]
     (h_agree : ∀ s ∈ C, μ s = ν s) :
     μ = ν := by
   -- We also need μ univ = ν univ, which follows from the generating set containing univ
-  -- For now, we can derive it if univ is measurable (which it always is)
+  -- For probability measures specifically, this is automatic
   have h_univ : μ Set.univ = ν Set.univ := by
-    -- If univ ∈ C, use h_agree directly
-    -- Otherwise, use measure_univ for probability measures
-    -- For general finite measures, this requires more care
-    sorry  -- TODO: Either assume univ ∈ C or derive from finiteness
+    -- Strategy: Either prove univ ∈ C, or use measure properties
+    -- Option 1: If Set.univ ∈ C, then use h_agree
+    by_cases h : Set.univ ∈ C
+    · exact h_agree Set.univ h
+    · -- Option 2: For finite measures, we can sometimes derive this
+      -- For probability measures: both = 1
+      -- For general case, may need to assume C covers univ or similar
+      -- This is a technical requirement of ext_of_generate_finite
+      sorry  -- TODO: Add assumption that univ ∈ C, or prove from covering property
   -- ext_of_generate_finite is in the root namespace for measures
   exact ext_of_generate_finite C hC_gen hC_pi h_agree h_univ
 
