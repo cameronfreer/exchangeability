@@ -59,63 +59,52 @@ theorem orthogonalProjections_same_range_eq
     (hP_sym : P.IsSymmetric)
     (hQ_sym : Q.IsSymmetric) :
     P = Q := by
-  -- Convert idempotence to LinearMap level
-  have hP_idem_lm : IsIdempotentElem P.toLinearMap := by
-    rw [IsIdempotentElem]
-    ext x
-    show (P.toLinearMap * P.toLinearMap) x = P.toLinearMap x
-    simp only [LinearMap.mul_apply]
-    exact congrFun (congrArg DFunLike.coe hP_idem) x
-  
-  have hQ_idem_lm : IsIdempotentElem Q.toLinearMap := by
-    rw [IsIdempotentElem]
-    ext x  
-    show (Q.toLinearMap * Q.toLinearMap) x = Q.toLinearMap x
-    simp only [LinearMap.mul_apply]
-    exact congrFun (congrArg DFunLike.coe hQ_idem) x
-  
-  -- Build symmetric projection structures
-  have hP_symproj : P.toLinearMap.IsSymmetricProjection := ⟨hP_idem_lm, hP_sym⟩
-  have hQ_symproj : Q.toLinearMap.IsSymmetricProjection := ⟨hQ_idem_lm, hQ_sym⟩
-  
-  -- Prove that the LinearMap range of P equals S
+  classical
+  -- Convert idempotence on continuous linear maps to the linear level
+  have hP_idem_elem : IsIdempotentElem P := by
+    change P * P = P
+    simpa [ContinuousLinearMap.mul_def] using hP_idem
+  have hQ_idem_elem : IsIdempotentElem Q := by
+    change Q * Q = Q
+    simpa [ContinuousLinearMap.mul_def] using hQ_idem
+  have hP_symproj : P.toLinearMap.IsSymmetricProjection :=
+    ⟨ContinuousLinearMap.IsIdempotentElem.toLinearMap hP_idem_elem, hP_sym⟩
+  have hQ_symproj : Q.toLinearMap.IsSymmetricProjection :=
+    ⟨ContinuousLinearMap.IsIdempotentElem.toLinearMap hQ_idem_elem, hQ_sym⟩
+
+  -- Identify the ranges with the target subspace `S`
   have hP_range_submodule : LinearMap.range P.toLinearMap = S := by
     ext x
     constructor
-    · intro ⟨y, hy⟩
-      rw [← hy, ← hP_range]
-      exact ⟨y, rfl⟩
+    · intro hx
+      rcases hx with ⟨y, rfl⟩
+      have : P y ∈ Set.range P := ⟨y, rfl⟩
+      simpa [hP_range] using this
     · intro hx
       have : x ∈ Set.range P := by
-        rw [hP_range]
-        exact hx
-      obtain ⟨y, hy⟩ := this
-      exact ⟨y, hy⟩
-  
+        simpa [hP_range] using (show x ∈ (S : Set E) from hx)
+      rcases this with ⟨y, hy⟩
+      exact ⟨y, by simpa using hy⟩
+
   have hQ_range_submodule : LinearMap.range Q.toLinearMap = S := by
     ext x
     constructor
-    · intro ⟨y, hy⟩
-      rw [← hy, ← hQ_range]
-      exact ⟨y, rfl⟩
+    · intro hx
+      rcases hx with ⟨y, rfl⟩
+      have : Q y ∈ Set.range Q := ⟨y, rfl⟩
+      simpa [hQ_range] using this
     · intro hx
       have : x ∈ Set.range Q := by
-        rw [hQ_range]
-        exact hx
-      obtain ⟨y, hy⟩ := this
-      exact ⟨y, hy⟩
-  
-  -- Use mathlib's theorem that symmetric projections equal starProjection of their range
-  obtain ⟨_, hP_eq⟩ := (LinearMap.isSymmetricProjection_iff_eq_coe_starProjection_range).mp hP_symproj
-  obtain ⟨_, hQ_eq⟩ := (LinearMap.isSymmetricProjection_iff_eq_coe_starProjection_range).mp hQ_symproj
-  
-  -- Convert back to ContinuousLinearMap
+        simpa [hQ_range] using (show x ∈ (S : Set E) from hx)
+      rcases this with ⟨y, hy⟩
+      exact ⟨y, by simpa using hy⟩
+
+  -- Symmetric projections with the same range agree
+  have h_toLinear_eq : P.toLinearMap = Q.toLinearMap :=
+    LinearMap.IsSymmetricProjection.ext hP_symproj hQ_symproj <|
+      by simpa [hP_range_submodule, hQ_range_submodule]
+
   ext x
-  calc P x = P.toLinearMap x := rfl
-    _ = (LinearMap.range P.toLinearMap).starProjection x := by rw [hP_eq]
-    _ = S.starProjection x := by rw [hP_range_submodule]
-    _ = (LinearMap.range Q.toLinearMap).starProjection x := by rw [← hQ_range_submodule]
-    _ = Q.toLinearMap x := by rw [← hQ_eq]
-    _ = Q x := rfl
+  simpa using congrArg (fun f : E →ₗ[𝕜] E => f x) h_toLinear_eq
 
 end
