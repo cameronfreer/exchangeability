@@ -566,21 +566,23 @@ lemma rectangles_generate_pi_sigma {m : ℕ} {α : Type*} [MeasurableSpace α] :
     constructor
     · intro ⟨B, hB_meas, hS⟩
       use fun i => B i
-      simp [Set.pi] at hS ⊢
+      simp only [Set.mem_image, Set.mem_pi, Set.mem_univ, Set.mem_setOf_eq]
       constructor
-      · intro i _
-        exact hB_meas i
-      · exact hS
+      · intro i _; exact hB_meas i
+      · have : univ.pi (fun i => B i) = {x | ∀ i, x i ∈ B i} := by
+          ext x; simp [Set.pi]
+        rw [this]; exact hS.symm
     · intro ⟨B, hB_mem, hS⟩
-      simp [Set.pi] at hS ⊢
+      simp only [Set.mem_pi, Set.mem_univ, Set.mem_setOf_eq] at hB_mem hS
       use B
       constructor
-      · intro i
-        exact hB_mem i (Set.mem_univ i)
-      · exact hS
+      · exact fun i => hB_mem i (Set.mem_univ i)
+      · have : univ.pi (fun i => B i) = {x | ∀ i, x i ∈ B i} := by
+          ext x; simp [Set.pi]
+        rw [← this]; exact hS.symm
 
   rw [set_eq]
-  exact MeasurableSpace.generateFrom_pi.symm
+  exact generateFrom_pi.symm
 
 /-- Pushforward of a measure through coordinate selection equals the marginal distribution.
 This connects the map in the ConditionallyIID definition to the probability of events.
@@ -771,7 +773,7 @@ theorem conditional_iid_from_directing_measure
           rw [measurable_pi_iff]
           intro i
           exact hX_meas (k i)
-        exact IsProbabilityMeasure.map h_meas
+        exact Measure.isProbabilityMeasure_map h_meas.aemeasurable
 
       have h_bind_prob : IsProbabilityMeasure μ_bind := by
         -- The bind of a probability measure with probability kernels is a probability measure
@@ -787,28 +789,57 @@ theorem conditional_iid_from_directing_measure
           simp [measure_univ]
         -- Prove measure_univ = 1 directly using bind_apply
         constructor
-        have h_meas : ∀ ω, Measurable (Measure.pi fun _ : Fin m => ν ω) := by
-          intro ω
-          sorry  -- TODO: Prove measurability of product measure
-        rw [Measure.bind_apply .univ (ae_of_all _ h_meas)]
+        have h_ae_meas : AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ :=
+          aemeasurable_measure_pi ν hν_meas
+        rw [Measure.bind_apply .univ h_ae_meas]
         simp [measure_univ, h_pi_prob]
 
-      -- Strategy outline:
-      -- 1. Define π-system C of measurable rectangles
-      -- 2. Show both measures agree on C using fidi_eq_avg_product
-      -- 3. Apply measure_eq_of_agree_on_pi_system for extension
+      -- Define the π-system of measurable rectangles
+      let C : Set (Set (Fin m → α)) := {S | ∃ (B : Fin m → Set α),
+        (∀ i, MeasurableSet (B i)) ∧ S = {x | ∀ i, x i ∈ B i}}
 
-      -- For now, we outline the structure:
-      sorry  -- TODO: Complete the π-system argument with these steps:
-             -- a) Prove both μ_map and μ_bind are probability measures
-             -- b) Define C = {measurable rectangles}
-             -- c) Show C is a π-system
-             -- d) Show C generates the product σ-algebra
-             -- e) For each rectangle S ∈ C:
-             --    - Use map_coords_apply for LHS
-             --    - Use bind_pi_apply for RHS
-             --    - Apply fidi_eq_avg_product to show equality
-             -- f) Conclude by measure_eq_of_agree_on_pi_system
+      -- Show C is a π-system (already proved)
+      have hC_pi : IsPiSystem C := rectangles_isPiSystem
+
+      -- Show C generates the product σ-algebra (already proved)
+      have hC_gen : (inferInstance : MeasurableSpace (Fin m → α)) =
+          MeasurableSpace.generateFrom C := rectangles_generate_pi_sigma
+
+      -- Apply measure_eq_of_agree_on_pi_system
+      apply measure_eq_of_agree_on_pi_system μ_map μ_bind C hC_pi hC_gen
+
+      -- Show both measures agree on rectangles
+      intro S hS
+      -- S is a rectangle, so S = {x | ∀ i, x i ∈ B i} for some B
+      obtain ⟨B, hB_meas, rfl⟩ := hS
+
+      -- LHS: μ_map {x | ∀ i, x i ∈ B i}
+      have lhs_eq : μ_map {x | ∀ i, x i ∈ B i} = μ {ω | ∀ i, X (k i) ω ∈ B i} := by
+        -- This follows from map_coords_apply
+        have hB : MeasurableSet {x : Fin m → α | ∀ i, x i ∈ B i} := by
+          have : {x : Fin m → α | ∀ i, x i ∈ B i} = Set.univ.pi fun i => B i := by
+            ext x; simp [Set.pi]
+          rw [this]
+          exact MeasurableSet.univ_pi hB_meas
+        exact map_coords_apply X hX_meas m k _ hB
+
+      -- RHS: μ_bind {x | ∀ i, x i ∈ B i}
+      have rhs_eq : μ_bind {x | ∀ i, x i ∈ B i} =
+          ∫⁻ ω, (Measure.pi fun i : Fin m => ν ω) {x | ∀ i, x i ∈ B i} ∂μ := by
+        -- This follows from bind_pi_apply
+        have hB : MeasurableSet {x : Fin m → α | ∀ i, x i ∈ B i} := by
+          have : {x : Fin m → α | ∀ i, x i ∈ B i} = Set.univ.pi fun i => B i := by
+            ext x; simp [Set.pi]
+          rw [this]
+          exact MeasurableSet.univ_pi hB_meas
+        exact bind_pi_apply ν hν_prob hν_meas m _ hB
+
+      -- Both equal by fidi_eq_avg_product
+      rw [lhs_eq, rhs_eq]
+
+      -- Apply fidi_eq_avg_product (which currently has a sorry)
+      -- This is where the directing measure property hν_cond is used
+      exact fidi_eq_avg_product X hX_meas ν hν_prob hν_meas m k B hB_meas hν_cond
 
 /-- **FMP 1.1: Monotone Class Theorem (Sierpiński)** = Dynkin's π-λ theorem.
 
