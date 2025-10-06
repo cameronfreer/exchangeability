@@ -84,16 +84,20 @@ lemma koopman_isometry {μ : Measure Ω} [IsProbabilityMeasure μ] (T : Ω → �
     Isometry (koopman T hT) := by
   simpa [koopman]
     using (MeasureTheory.Lp.compMeasurePreservingₗᵢ ℝ T hT).isometry
-
 /-- The fixed-point subspace of a continuous linear map. -/
 def fixedSpace {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     (U : E →L[ℝ] E) : Submodule ℝ E :=
   LinearMap.eqLocus U.toLinearMap 1
 
-/-- Mean Ergodic Theorem: Birkhoff averages converge to the projection onto the fixed-point subspace.
+/-- Birkhoff averages converge in L² to the projection onto the fixed-point subspace.
 
 This specializes the von Neumann Mean Ergodic Theorem from mathlib to the Koopman
 operator on `Lp` and packages the limiting projection as a continuous linear map.
+
+The projection P satisfies:
+- P fixes all elements in the fixed-point subspace
+- Birkhoff averages converge to P f
+- P has the form S.subtypeL ∘ S.orthogonalProjection where S is the fixed-point subspace
 -/
 theorem birkhoffAverage_tendsto_fixedSpace
     {μ : Measure Ω} [IsProbabilityMeasure μ] (T : Ω → Ω)
