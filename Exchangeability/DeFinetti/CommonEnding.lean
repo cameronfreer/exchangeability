@@ -243,6 +243,20 @@ lemma indicator_bounded {α : Type*} (s : Set α) :
   · simp [Set.indicator_of_mem h]
   · simp [Set.indicator_of_notMem h]
 
+/-- The ENNReal value of an indicator function is either 0 or 1. -/
+lemma indicator_mem_zero_one {α : Type*} (s : Set α) (x : α) :
+    ENNReal.ofReal (s.indicator (fun _ => (1 : ℝ)) x) ∈ ({0, 1} : Set ENNReal) := by
+  by_cases h : x ∈ s
+  · simp [Set.indicator_of_mem h, ENNReal.ofReal_one]
+  · simp [Set.indicator_of_not_mem h, ENNReal.ofReal_zero]
+
+/-- The ENNReal value of an indicator function is at most 1. -/
+lemma indicator_le_one {α : Type*} (s : Set α) (x : α) :
+    ENNReal.ofReal (s.indicator (fun _ => (1 : ℝ)) x) ≤ 1 := by
+  by_cases h : x ∈ s
+  · simp [Set.indicator_of_mem h, ENNReal.ofReal_one]
+  · simp [Set.indicator_of_not_mem h, ENNReal.ofReal_zero]
+
 /-- The product of finitely many terms, each bounded by 1, is bounded by 1.
 This is useful for products of indicator functions. -/
 lemma prod_le_one_of_le_one {ι : Type*} [Fintype ι] (f : ι → ENNReal)
@@ -709,9 +723,12 @@ theorem conditional_iid_from_directing_measure
         have h_pi_prob : ∀ ω, IsProbabilityMeasure (Measure.pi fun _ : Fin m => ν ω) := by
           intro ω
           -- Product of probability measures is a probability measure
-          -- See pi_isProbabilityMeasure in ConditionallyIID.lean lines 45-53
-          -- Need SigmaFinite instances for components
-          sorry  -- TODO: Apply inferInstance or prove manually like in ConditionallyIID
+          -- Following the pattern from ConditionallyIID.lean (pi_isProbabilityMeasure)
+          constructor
+          have h : (Set.univ : Set (Fin m → α)) = Set.univ.pi (fun (_ : Fin m) => Set.univ) := by
+            ext x; simp
+          rw [h, Measure.pi_pi]
+          simp [measure_univ]
         sorry  -- TODO: Use MeasureTheory.IsProbabilityMeasure.bind or similar
               -- Mathlib should have an instance for bind with probability kernels
 
