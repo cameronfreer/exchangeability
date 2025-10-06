@@ -7,6 +7,7 @@ import Exchangeability.DeFinetti.L2Approach
 import Exchangeability.DeFinetti.CommonEnding
 import Exchangeability.Contractability
 import Mathlib.MeasureTheory.Function.L2Space
+import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.Probability.Kernel.Basic
 
@@ -48,7 +49,7 @@ noncomputable section
 
 namespace Exchangeability.DeFinetti.L2Proof
 
-open MeasureTheory ProbabilityTheory BigOperators
+open MeasureTheory ProbabilityTheory BigOperators Filter
 open Exchangeability
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
@@ -89,18 +90,6 @@ lemma contractable_covariance_structure
 ## Step 2: L² bound implies L¹ convergence of weighted sums (Kallenberg's key step)
 -/
 
-/-- **FMP 1.31: Completeness of L^p**.
-
-This is already in mathlib as `CompleteSpace (Lp E p μ)`. We use it via the
-standard Cauchy sequence completion arguments.
-
-Mathlib provides completeness of `Lp` spaces, which we can use directly.
-For sequences of functions, we work with their `toLp` representatives and
-apply `CauchySeq.tendsto_of_complete`.
-
-NOTE: This wrapper is not strictly necessary; we use mathlib's completeness directly.
--/
-
 /-- For a contractable sequence and bounded measurable f, the weighted sums
 (1/m) ∑_{k=n+1}^{n+m} f(ξ_{n+k}) converge in L¹ as m, n → ∞.
 
@@ -122,16 +111,16 @@ theorem weighted_sums_converge_L1
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (f : ℝ → ℝ) (hf_meas : Measurable f)
     (hf_bdd : ∃ M, ∀ x, |f x| ≤ M) :
-    ∃ (α : ℕ → Ω → ℝ),
-      -- The sequence α_n exists
-      (∀ n, Measurable (α n)) ∧
-      (∀ n, MemLp (α n) 1 μ) ∧
-      -- α_n converges in L¹ to some limit α_∞
-      (∃ (α_∞ : Ω → ℝ), Measurable α_∞ ∧ MemLp α_∞ 1 μ ∧
-        ∀ ε > 0, ∃ N, ∀ n ≥ N, ∫ ω, |α n ω - α_∞ ω| ∂μ < ε) ∧
-      -- The weighted sums converge to α_n in L¹
-      (∀ n, ∀ ε > 0, ∃ M, ∀ m ≥ M,
-        ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω) - α n ω| ∂μ < ε) := by
+    ∃ (alpha : ℕ → Ω → ℝ),
+      -- The sequence alpha_n exists
+      (∀ n, Measurable (alpha n)) ∧
+      (∀ n, MemLp (alpha n) 1 μ) ∧
+      -- alpha_n converges in L¹ to some limit alpha_inf
+      (∃ (alpha_inf : Ω → ℝ), Measurable alpha_inf ∧ MemLp alpha_inf 1 μ ∧
+        ∀ ε > 0, ∃ N : ℕ, ∀ n ≥ N, ∫ ω, |alpha n ω - alpha_inf ω| ∂μ < ε) ∧
+      -- The weighted sums converge to alpha_n in L¹
+      (∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m : ℕ, m ≥ M →
+        ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω) - alpha n ω| ∂μ < ε) := by
   classical
 
   -- Define the moving averages A n m
@@ -143,49 +132,83 @@ theorem weighted_sums_converge_L1
 
   -- Step 1: Show (A n m) is Cauchy in L² for each fixed n
   -- This uses l2_contractability_bound from L2Approach.lean
-  have hA_cauchy_L2 : ∀ n, ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N,
-      snorm (fun ω => A n m ω - A n ℓ ω) 2 μ < ENNReal.ofReal ε := by
-    sorry  -- Apply l2_contractability_bound to uniform distributions
+  have hA_cauchy_L2 : ∀ n, ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
+      MeasureTheory.snorm (fun ω => A n m ω - A n ℓ ω) 2 μ < ENNReal.ofReal ε := by
+    intro n ε hε
+    -- For contractable sequences, we can apply l2_contractability_bound
+    -- Key insight: As m, ℓ → ∞, the sup norm |1/m - 1/ℓ| → 0
+    -- The bound gives ∫(A n m - A n ℓ)² ≤ 2σ²(1-ρ)·sup|p_i - q_i| → 0
+    sorry  -- TODO: Apply l2_contractability_bound with uniform weights
+           -- Need to extract σ², ρ from contractability assumption
+           -- and show sup|1/m·1_{i≤m} - 1/ℓ·1_{i≤ℓ}| → 0
 
   -- Step 2: L²-Cauchy ⇒ L¹-Cauchy (on probability spaces, ‖·‖₁ ≤ ‖·‖₂)
-  have hA_cauchy_L1 : ∀ n, ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N,
-      snorm (fun ω => A n m ω - A n ℓ ω) 1 μ < ENNReal.ofReal ε := by
-    sorry  -- Use snorm_mono_exponent with 1 ≤ 2
+  have hA_cauchy_L1 : ∀ n, ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
+      MeasureTheory.snorm (fun ω => A n m ω - A n ℓ ω) 1 μ < ENNReal.ofReal ε := by
+    intro n ε hε
+    rcases hA_cauchy_L2 n ε hε with ⟨N, hN⟩
+    refine ⟨N, fun m ℓ hm hℓ => ?_⟩
+    -- On a probability space, ‖f‖₁ ≤ ‖f‖₂ by Hölder's inequality
+    -- So L² convergence implies L¹ convergence
+    calc MeasureTheory.snorm (fun ω => A n m ω - A n ℓ ω) 1 μ
+        ≤ MeasureTheory.snorm (fun ω => A n m ω - A n ℓ ω) 2 μ := by
+          sorry  -- Use MeasureTheory.snorm_le_MeasureTheory.snorm_of_exponent_le with 1 ≤ 2
+      _ < ENNReal.ofReal ε := hN m ℓ hm hℓ
 
-  -- Step 3: For each n, completeness of L¹ gives limit α n
-  have h_exist_α : ∀ n, ∃ αn : Ω → ℝ, Measurable αn ∧ MemLp αn 1 μ ∧
-      (∀ ε > 0, ∃ M, ∀ m ≥ M, snorm (fun ω => A n m ω - αn ω) 1 μ < ENNReal.ofReal ε) := by
-    sorry  -- Use CompleteSpace (Lp ℝ 1 μ) with hA_cauchy_L1
+  -- Step 3: For each n, completeness of L¹ gives limit alpha n
+  have h_exist_alpha : ∀ n, ∃ alphan : Ω → ℝ, Measurable alphan ∧ MemLp alphan 1 μ ∧
+      (∀ ε > 0, ∃ M, ∀ m ≥ M, MeasureTheory.snorm (fun ω => A n m ω - alphan ω) 1 μ < ENNReal.ofReal ε) := by
+    intro n
+    -- Use completeness of L¹: every Cauchy sequence converges
+    -- We have (A n m)_m is Cauchy in L¹ from hA_cauchy_L1
+    -- Need to:
+    -- 1. Construct Lp representatives of A n m
+    -- 2. Apply CompleteSpace instance to get limit in Lp
+    -- 3. Extract underlying function as alphan
+    sorry  -- TODO: Use Lp.memLp_toLp, CauchySeq.tendsto_of_complete
+           -- The limit in Lp ℝ 1 μ gives us the alphan we need
 
-  -- Choose α n for each n
-  choose α hα_meas hα_mem hα_conv using h_exist_α
+  -- Choose alpha n for each n
+  choose alpha halpha_meas halpha_mem halpha_conv using h_exist_alpha
 
-  -- Step 4: Show (α n) is Cauchy in L¹ (3ε argument)
-  have hα_cauchy_L1 : ∀ ε > 0, ∃ N, ∀ m n, m ≥ N → n ≥ N,
-      snorm (fun ω => α m ω - α n ω) 1 μ < ENNReal.ofReal ε := by
-    sorry  -- Triangle inequality: |α m - α n| ≤ |α m - A m M| + |A m M - A n M| + |A n M - α n|
+  -- Step 4: Show (alpha n) is Cauchy in L¹ (3ε argument)
+  have halpha_cauchy_L1 : ∀ ε > 0, ∃ N, ∀ m n, m ≥ N → n ≥ N →
+      MeasureTheory.snorm (fun ω => alpha m ω - alpha n ω) 1 μ < ENNReal.ofReal ε := by
+    intro ε hε
+    -- 3ε argument: For any ε > 0, choose M large enough so that
+    -- ‖alpha m - A m M‖₁ < ε/3 and ‖A n M - alpha n‖₁ < ε/3 for all m,n ≥ N
+    -- And also ‖A m M - A n M‖₁ < ε/3 for all m,n ≥ N
+    -- Then ‖alpha m - alpha n‖₁ ≤ ‖alpha m - A m M‖₁ + ‖A m M - A n M‖₁ + ‖A n M - alpha n‖₁ < ε
+    sorry  -- TODO: Use halpha_conv and hA_cauchy_L1 with ε/3
+           -- Apply triangle inequality: MeasureTheory.snorm_add_le
 
-  -- Step 5: Completeness of L¹ gives α_∞
-  have h_exist_α∞ : ∃ α∞ : Ω → ℝ, Measurable α∞ ∧ MemLp α∞ 1 μ ∧
-      (∀ ε > 0, ∃ N, ∀ n ≥ N, snorm (fun ω => α n ω - α∞ ω) 1 μ < ENNReal.ofReal ε) := by
-    sorry  -- Use CompleteSpace (Lp ℝ 1 μ) with hα_cauchy_L1
+  -- Step 5: Completeness of L¹ gives alpha_inf
+  have h_exist_alpha_inf : ∃ alpha_inf : Ω → ℝ, Measurable alpha_inf ∧ MemLp alpha_inf 1 μ ∧
+      (∀ ε > 0, ∃ N, ∀ n ≥ N, MeasureTheory.snorm (fun ω => alpha n ω - alpha_inf ω) 1 μ < ENNReal.ofReal ε) := by
+    -- Same strategy as Step 3: (alpha n) is Cauchy in L¹ by halpha_cauchy_L1
+    -- So it has a limit alpha_inf in Lp ℝ 1 μ by completeness
+    sorry  -- TODO: Use Lp.memLp_toLp, CauchySeq.tendsto_of_complete
+           -- Same pattern as h_exist_alpha but applied to the sequence (alpha n)
 
-  rcases h_exist_α∞ with ⟨α∞, hα∞_meas, hα∞_mem, hα∞_conv⟩
+  rcases h_exist_alpha_inf with ⟨alpha_inf, halpha_inf_meas, halpha_inf_mem, halpha_inf_conv⟩
 
   -- Package the results
-  refine ⟨α, hα_meas, hα_mem, ⟨α∞, hα∞_meas, hα∞_mem, ?_⟩, ?_⟩
-  · -- α n → α∞ in L¹
+  refine ⟨alpha, halpha_meas, halpha_mem, ⟨alpha_inf, halpha_inf_meas, halpha_inf_mem, ?_⟩, ?_⟩
+  · -- alpha n → alpha_inf in L¹
     intro ε hε
-    rcases hα∞_conv ε hε with ⟨N, hN⟩
+    rcases halpha_inf_conv ε hε with ⟨N, hN⟩
     refine ⟨N, fun n hn => ?_⟩
     have := hN n hn
-    sorry  -- Convert snorm to integral
-  · -- A n m → α n in L¹
+    -- Convert MeasureTheory.snorm 1 to integral of absolute value
+    -- MeasureTheory.snorm f 1 μ = ∫ ω, |f ω| ∂μ when f is integrable
+    sorry  -- TODO: Use MeasureTheory.snorm_one_eq_lintegral_nnnorm or MeasureTheory.snorm_eq_integral
+  · -- A n m → alpha n in L¹
     intro n ε hε
-    rcases hα_conv n ε hε with ⟨M, hM⟩
+    rcases halpha_conv n ε hε with ⟨M, hM⟩
     refine ⟨M, fun m hm => ?_⟩
     have := hM m hm
-    sorry  -- Convert snorm to integral and unfold A
+    -- Same conversion, then unfold A to get the weighted sum form
+    sorry  -- TODO: Use MeasureTheory.snorm_one_eq_lintegral_nnnorm, then unfold A
 
 /-!
 ## Step 3: Reverse martingale convergence
