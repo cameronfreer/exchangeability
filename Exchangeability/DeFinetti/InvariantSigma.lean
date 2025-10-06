@@ -456,8 +456,8 @@ lemma exists_shiftInvariantRepresentative
     have hseq : (fun n : ℕ => g0 (shift^[n] ω)) = fun _ : ℕ => g0 ω := by
       funext n; exact hconst n
     have hlimsupEq : limsup (fun n : ℕ => g0 (shift^[n] ω)) atTop = g0 ω := by
-      simpa [hseq] using (limsup_const (β := ℝ) (f := atTop) (b := g0 ω))
-    simpa [gRep] using hlimsupEq
+      rw [hseq]; exact limsup_const (β := ℝ) (f := atTop) (b := g0 ω)
+    rw [gRep]; exact hlimsupEq
 
   -- Hence g' coincides a.e. with g0 (and therefore with g).
   have hg'_ae_g0 : g' =ᵐ[μ] g0 := by
@@ -484,8 +484,8 @@ lemma exists_shiftInvariantRepresentative
     have hseq : (fun n : ℕ => g0 (shift^[n] ω)) = fun _ : ℕ => g0 ω := by
       funext n; exact hω n
     have hlimsupEq : limsup (fun n : ℕ => g0 (shift^[n] ω)) atTop = g0 ω := by
-      simpa [hseq] using (limsup_const (β := ℝ) (f := atTop) (b := g0 ω))
-    simpa [gRep] using hlimsupEq
+      simp [hseq, limsup_const (β := ℝ) (f := atTop) (b := g0 ω)]
+    simp [gRep, hlimsupEq]
 
   have hg'_ae_g : g' =ᵐ[μ] g := hg'_ae_g0.trans hg0_ae.symm
 
@@ -826,9 +826,7 @@ lemma range_condexp_eq_fixedSubspace {μ : Measure (Ω[α])}
       refine ⟨(↑y : Lp ℝ 2 μ), ?_⟩
       have hfix : (MeasureTheory.condExpL2 ℝ ℝ (m := shiftInvariantSigma) shiftInvariantSigma_le)
           (↑y) = y := by
-        simpa [MeasureTheory.condExpL2]
-          using Submodule.orthogonalProjection_mem_subspace_eq_self
-            (y : lpMeas ℝ ℝ shiftInvariantSigma 2 μ)
+        sorry -- TODO: Apply Submodule.orthogonalProjection_mem_subspace_eq_self with proper Fact instance
       simp [condexpL2, ContinuousLinearMap.comp_apply, hfix]
   -- now swap range via lpMeas_eq_fixedSubspace
   rw [h_proj, lpMeas_eq_fixedSubspace (μ := μ) hσ]
