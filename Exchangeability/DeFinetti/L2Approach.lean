@@ -301,7 +301,7 @@ cost of requiring finite variance.
 -/
 theorem l2_contractability_bound
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (n : ℕ) (ξ : Fin n → Ω → ℝ)
+    {n : ℕ} (ξ : Fin n → Ω → ℝ)
     (m : ℝ) (σ ρ : ℝ)
     (_hρ_bd : -1 ≤ ρ ∧ ρ ≤ 1)
     (_hmean : ∀ k, ∫ ω, ξ k ω ∂μ = m)
