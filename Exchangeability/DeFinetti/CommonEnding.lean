@@ -235,7 +235,7 @@ which is essential for the monotone class argument.
 
 /-- Indicator functions are bounded. This is a trivial but useful fact for the
 monotone class extension. -/
-lemma indicator_bounded {α : Type*} (s : Set α) :
+lemma indicator_bounded {α : Type*} {s : Set α} :
     ∃ M : ℝ, ∀ x, |s.indicator (fun _ => (1 : ℝ)) x| ≤ M := by
   refine ⟨1, ?_⟩
   intro x
@@ -244,21 +244,21 @@ lemma indicator_bounded {α : Type*} (s : Set α) :
   · simp [Set.indicator_of_notMem h]
 
 /-- The ENNReal value of an indicator function is either 0 or 1. -/
-lemma indicator_mem_zero_one {α : Type*} (s : Set α) (x : α) :
+lemma indicator_mem_zero_one {α : Type*} {s : Set α} {x : α} :
     ENNReal.ofReal (s.indicator (fun _ => (1 : ℝ)) x) ∈ ({0, 1} : Set ENNReal) := by
   by_cases h : x ∈ s
   · simp [Set.indicator_of_mem h, ENNReal.ofReal_one]
   · simp [Set.indicator_of_not_mem h, ENNReal.ofReal_zero]
 
 /-- The ENNReal value of an indicator function is at most 1. -/
-lemma indicator_le_one {α : Type*} (s : Set α) (x : α) :
+lemma indicator_le_one {α : Type*} {s : Set α} {x : α} :
     ENNReal.ofReal (s.indicator (fun _ => (1 : ℝ)) x) ≤ 1 := by
   by_cases h : x ∈ s
   · simp [Set.indicator_of_mem h, ENNReal.ofReal_one]
   · simp [Set.indicator_of_not_mem h, ENNReal.ofReal_zero]
 
 /-- A product of ENNReal values equals 0 iff at least one factor is 0. -/
-lemma prod_eq_zero_iff {ι : Type*} [Fintype ι] (f : ι → ENNReal) :
+lemma prod_eq_zero_iff {ι : Type*} [Fintype ι] {f : ι → ENNReal} :
     ∏ i, f i = 0 ↔ ∃ i, f i = 0 := by
   constructor
   · intro h
@@ -272,7 +272,7 @@ lemma prod_eq_zero_iff {ι : Type*} [Fintype ι] (f : ι → ENNReal) :
     exact hi
 
 /-- For values in {0, 1}, the product equals 1 iff all factors equal 1. -/
-lemma prod_eq_one_iff_of_zero_one {ι : Type*} [Fintype ι] (f : ι → ENNReal)
+lemma prod_eq_one_iff_of_zero_one {ι : Type*} [Fintype ι] {f : ι → ENNReal}
     (hf : ∀ i, f i ∈ ({0, 1} : Set ENNReal)) :
     ∏ i, f i = 1 ↔ ∀ i, f i = 1 := by
   constructor
@@ -294,7 +294,7 @@ lemma prod_eq_one_iff_of_zero_one {ι : Type*} [Fintype ι] (f : ι → ENNReal)
 
 /-- The product of finitely many terms, each bounded by 1, is bounded by 1.
 This is useful for products of indicator functions. -/
-lemma prod_le_one_of_le_one {ι : Type*} [Fintype ι] (f : ι → ENNReal)
+lemma prod_le_one_of_le_one {ι : Type*} [Fintype ι] {f : ι → ENNReal}
     (hf : ∀ i, f i ≤ 1) : ∏ i, f i ≤ 1 := by
   apply Finset.prod_le_one
   · intro i _
