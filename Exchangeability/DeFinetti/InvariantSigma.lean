@@ -199,11 +199,11 @@ private def gLimsupE (g0 : Ω[α] → ℝ) (ω : Ω[α]) : EReal :=
   limsup (fun n : ℕ => (g0 (shift^[n] ω) : EReal)) atTop
 
 /-- The shift-invariant representative (pulled back to `ℝ` via `toReal`). -/
-private def gRep (g0 : Ω[α] → ℝ) : Ω[α] → ℝ :=
+def gRep (g0 : Ω[α] → ℝ) : Ω[α] → ℝ :=
   fun ω => (gLimsupE g0 ω).toReal
 
 
-private lemma gRep_measurable (g0 : Ω[α] → ℝ) (hg0 : Measurable g0) :
+lemma gRep_measurable (g0 : Ω[α] → ℝ) (hg0 : Measurable g0) :
     Measurable (gRep g0) := by
   have hstep : ∀ n : ℕ, Measurable fun ω => (g0 (shift^[n] ω) : EReal) := by
     intro n
@@ -215,7 +215,7 @@ private lemma gRep_measurable (g0 : Ω[α] → ℝ) (hg0 : Measurable g0) :
   simpa [gRep, gLimsupE] using measurable_ereal_toReal.comp h_meas_ereal
 
 set_option linter.unusedSectionVars false in
-private lemma gRep_shiftInvariant (g0 : Ω[α] → ℝ) :
+lemma gRep_shiftInvariant (g0 : Ω[α] → ℝ) :
     ∀ ω, gRep g0 (shift ω) = gRep g0 ω := by
   intro ω
   have hlimsupEq :
@@ -227,7 +227,7 @@ private lemma gRep_shiftInvariant (g0 : Ω[α] → ℝ) :
     using congrArg EReal.toReal hlimsupEq
 
 set_option linter.unusedSectionVars false in
-private lemma gRep_eq_of_constant_orbit (g0 : Ω[α] → ℝ) {ω : Ω[α]}
+lemma gRep_eq_of_constant_orbit (g0 : Ω[α] → ℝ) {ω : Ω[α]}
     (hconst : ∀ n : ℕ, g0 (shift^[n] ω) = g0 ω) :
     gRep g0 ω = g0 ω := by
   have hlim :
@@ -240,7 +240,7 @@ private lemma gRep_eq_of_constant_orbit (g0 : Ω[α] → ℝ) {ω : Ω[α]}
     simpa [hfunext] using (limsup_const (f := atTop) (a := (g0 ω : EReal)))
   simpa [gRep, gLimsupE] using congrArg EReal.toReal hlim
 
-private lemma gRep_ae_eq_of_constant_orbit (g0 : Ω[α] → ℝ)
+lemma gRep_ae_eq_of_constant_orbit (g0 : Ω[α] → ℝ)
     {μ : Measure (Ω[α])}
     (hconst : ∀ᵐ ω ∂μ, ∀ n : ℕ, g0 (shift^[n] ω) = g0 ω) :
     gRep g0 =ᵐ[μ] g0 := by
@@ -257,53 +257,60 @@ lemma ae_shift_invariance_on_rep
     (hshift : (fun ω => f (shift ω)) =ᵐ[μ] f) :
     (fun ω => g (shift ω)) =ᵐ[μ] g := by
   classical
-  have hcomp := (hσ.quasiMeasurePreserving).ae_eq_comp hfg
-  exact hcomp.symm.trans (hshift.trans hfg)
+  have h1 : (fun ω => g (shift ω)) =ᵐ[μ] fun ω => f (shift ω) := by
+    simpa [Function.comp] using
+      (hσ.quasiMeasurePreserving.ae_eq_comp (μ := μ) (ν := μ)
+        (f := shift) (g := g) (g' := f) hfg)
+  have h2 : (fun ω => f (shift ω)) =ᵐ[μ] f := by
+    simpa [Function.comp] using hshift
+  have h3 : f =ᵐ[μ] g := hfg.symm
+  exact h1.trans (h2.trans h3)
 
 lemma mkShiftInvariantRep
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ)
-    {g : Ω[α] → ℝ}
-    (hg_meas : AEStronglyMeasurable g μ)
+    (g : Ω[α] → ℝ) (hg : AEStronglyMeasurable g μ)
     (hshift : (fun ω => g (shift ω)) =ᵐ[μ] g) :
     ∃ g',
       AEStronglyMeasurable[shiftInvariantSigma (α := α)] g' μ ∧
-      (g' =ᵐ[μ] g) ∧
+      (∀ᵐ ω ∂μ, g' ω = g ω) ∧
       (∀ ω, g' (shift ω) = g' ω) := by
   classical
-  obtain ⟨g0, hg0_sm, hg0_eq⟩ := hg_meas
+  obtain ⟨g0, hg0_sm, hg0_ae⟩ := hg.exists_stronglyMeasurable_eq
   have hshift_g0 : (fun ω => g0 (shift ω)) =ᵐ[μ] g0 :=
-    ae_shift_invariance_on_rep (μ := μ) (α := α) hσ hg0_eq hshift
-  -- show orbit values are eventually constant a.e.
+    ae_shift_invariance_on_rep (μ := μ) hσ hg0_ae hshift
+  have hg0_meas : Measurable g0 := hg0_sm.measurable
+  obtain ⟨S, hS_meas, _hSymm, hS_null, hS_subset, hS_point⟩ :=
+    exists_shiftInvariantFullMeasureSet (μ := μ) hσ g0 hg0_meas hshift_g0
+  have hforward : ∀ ω ∈ S, shift ω ∈ S := by
+    intro ω hω
+    have : ω ∈ shift ⁻¹' S := hS_subset hω
+    simpa [Set.mem_preimage] using this
+  have hS_ae : ∀ᵐ ω ∂μ, ω ∈ S := by
+    simpa [ae_iff] using hS_null
+  have hconst_on_S : ∀ ω ∈ S, ∀ n : ℕ, g0 (shift^[n] ω) = g0 ω := by
+    intro ω hω
+    have hmem : ∀ n : ℕ, shift^[n] ω ∈ S := by
+      refine Nat.rec (by simpa [Function.iterate_zero_apply] using hω) ?_
+      intro n hn
+      have hnext : shift (shift^[n] ω) ∈ S := hforward _ hn
+      simpa [Function.iterate_succ_apply] using hnext
+    refine Nat.rec (by simpa [Function.iterate_zero_apply]) ?_
+    intro n ih
+    have hstep : g0 (shift^[n.succ] ω) = g0 (shift^[n] ω) := by
+      have := hS_point (shift^[n] ω) (hmem n)
+      simpa [Function.iterate_succ_apply] using this
+    exact hstep.trans ih
   have hconst : ∀ᵐ ω ∂μ, ∀ n : ℕ, g0 (shift^[n] ω) = g0 ω := by
-    -- use iterative invariance obtained from contractibility argument in the original proof
-    -- replicate existing reasoning from `exists_shiftInvariantRepresentative`
-    have hstep : ∀ n,
-        (fun ω => g0 (shift^[n + 1] ω)) =ᵐ[μ] (fun ω => g0 (shift^[n] ω)) := by
-      intro n
-      simpa [Function.iterate_succ_apply, Nat.succ_eq_add_one]
-        using ((hσ.iterate n).quasiMeasurePreserving.ae_eq_comp hshift_g0)
-    have hchain : ∀ᵐ ω ∂μ, ∀ n, g0 (shift^[n + 1] ω) = g0 (shift^[n] ω) :=
-      (ae_all_iff.mpr hstep)
-    filter_upwards [hchain] with ω hω
-    intro n
-    refine Nat.rec (by simp [Function.iterate_zero]) (fun k hk => ?_) n
-    have hk_step := hω k
-    have hk_succ : g0 (shift^[k + 1] ω) = g0 ω := by
-      calc
-        g0 (shift^[k + 1] ω)
-            = g0 (shift^[k] ω) := by
-              simpa [Function.iterate_succ_apply, Nat.succ_eq_add_one] using hk_step
-        _ = g0 ω := hk
-    simpa [Function.iterate_succ_apply, Nat.succ_eq_add_one] using hk_succ
+    filter_upwards [hS_ae] with ω hω using hconst_on_S ω hω
   let g' := gRep g0
-  have hg'_meas : Measurable g' := gRep_measurable g0 hg0_sm.measurable
+  have hg'_meas : Measurable g' := gRep_measurable g0 hg0_meas
   have hg'_ae_g0 : g' =ᵐ[μ] g0 := gRep_ae_eq_of_constant_orbit (g0 := g0) hconst
-  have hg'_ae_g : g' =ᵐ[μ] g := hg'_ae_g0.trans hg0_eq.symm
   have hg'_inv : ∀ ω, g' (shift ω) = g' ω := gRep_shiftInvariant g0
-  have hg'_I : Measurable[shiftInvariantSigma] g' :=
+  have hg'_tail : Measurable[shiftInvariantSigma (α := α)] g' :=
     shiftInvariant_implies_shiftInvariantMeasurable g' hg'_meas hg'_inv
-  exact ⟨g', hg'_I.aestronglyMeasurable, hg'_ae_g, hg'_inv⟩
+  refine ⟨g', hg'_tail.aestronglyMeasurable, ?_, hg'_inv⟩
+  exact hg'_ae_g0.trans hg0_ae
 
 end LimsupConstruction
 
@@ -518,34 +525,7 @@ lemma exists_shiftInvariantRepresentative
       (∀ᵐ ω ∂μ, g' ω = g ω) ∧
       (∀ ω, g' (shift ω) = g' ω) := by
   classical
-  simpa using mkShiftInvariantRep (μ := μ) (α := α) hσ (g := g) hg hinv
-            using (Function.iterate_succ_apply' (f := shift) n ω).symm
-        simp [Function.comp, hs]
-      have hright_eq : (fun ω => g0 (shift^[n] ω))
-          =ᵐ[μ] g0 ∘ shift^[n] := by
-        refine Filter.EventuallyEq.of_eq ?_
-        funext ω; simp [Function.comp]
-      exact hleft_eq.trans (h.trans hright_eq.symm)
-    have hconst : ∀ᵐ ω ∂μ, ∀ n, g0 (shift^[n] ω) = g0 ω := by
-      have hchain : ∀ᵐ ω ∂μ, ∀ n,
-          g0 (shift^[n + 1] ω) = g0 (shift^[n] ω) := (ae_all_iff.mpr hpair)
-      filter_upwards [hchain] with ω hω
-      have hconst' : ∀ n, g0 (shift^[n] ω) = g0 ω := by
-        refine Nat.rec (by simp [Function.iterate_zero]) (fun k hk => ?_)
-        have hk_step : g0 (shift^[k + 1] ω) = g0 (shift^[k] ω) := by
-          simpa [Function.iterate_succ_apply'] using hω k
-        have hk_succ : g0 (shift^[k + 1] ω) = g0 ω := hk_step.trans hk
-        simpa [Function.iterate_succ_apply'] using hk_succ
-      exact hconst'
-    exact gRep_ae_eq_of_constant_orbit (g0 := g0) hconst
-
-  have hg'_ae_g : g' =ᵐ[μ] g := hg'_ae_g0.trans hg0_ae.symm
-
-  -- Shift invariance yields measurability in the invariant σ-algebra.
-  have hg'_shiftInv_meas : Measurable[shiftInvariantSigma] g' :=
-    shiftInvariant_implies_shiftInvariantMeasurable g' hg'_meas hg'_shift
-
-  exact ⟨g', hg'_shiftInv_meas.aestronglyMeasurable, hg'_ae_g, hg'_shift⟩
+  simpa using mkShiftInvariantRep (μ := μ) hσ g hg hinv
 
 
 /-- Functions that are `AEStronglyMeasurable` with respect to the invariant σ-algebra are
