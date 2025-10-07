@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Cameron Freer. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Cameron Freer
+-/
 import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.Analysis.InnerProductSpace.Basic
 
@@ -132,7 +137,8 @@ lemma double_sum_covariance_formula {n : ℕ} (c : Fin n → ℝ) (σSq ρ : ℝ
   have h_offdiag_sum : ∑ i, ∑ j with j ≠ i, c i * c j * cov_offdiag =
       σSq * ρ * ∑ i, ∑ j with j ≠ i, c i * c j := by
     simp [h_offdiag, Finset.mul_sum, mul_assoc, mul_comm]
-  have h_offdiag_expand : ∑ i, ∑ j with j ≠ i, c i * c j = (∑ i, c i)^2 - ∑ i, (c i)^2 := by
+  have h_offdiag_expand :
+      ∑ i, ∑ j with j ≠ i, c i * c j = (∑ i, c i)^2 - ∑ i, (c i)^2 := by
     classical
     have h_sq : (∑ i, c i)^2 = ∑ i, ∑ j, c i * c j := by
       rw [pow_two, Finset.sum_mul_sum (s := (Finset.univ : Finset (Fin n)))
@@ -143,7 +149,8 @@ lemma double_sum_covariance_formula {n : ℕ} (c : Fin n → ℝ) (σSq ρ : ℝ
       congr 1
       have : Finset.filter (fun j => j = i) Finset.univ = {i} := by ext j; simp [eq_comm]
       simp [this]
-    have h_split : ∑ i, ∑ j, c i * c j = ∑ i, c i * c i + ∑ i, ∑ j with j ≠ i, c i * c j := by
+    have h_split :
+        ∑ i, ∑ j, c i * c j = ∑ i, c i * c i + ∑ i, ∑ j with j ≠ i, c i * c j := by
       simp_rw [h_inner_split]; simp [Finset.sum_add_distrib]
     calc ∑ i, ∑ j with j ≠ i, c i * c j
         = ∑ i, ∑ j, c i * c j - ∑ i, c i * c i := by linarith [h_split]
@@ -179,7 +186,8 @@ lemma covariance_formula_zero_sum {n : ℕ} (c : Fin n → ℝ) (σSq ρ : ℝ)
 lemma sum_sq_le_sum_abs_mul_sup {n : ℕ} (c : Fin n → ℝ) :
     ∑ i, (c i)^2 ≤ ∑ i, |c i| * (⨆ j, |c j|) := by
   have hbdd : BddAbove (Set.range fun j : Fin n => |c j|) := ⟨∑ k, |c k|, by
-    intro y ⟨k, hk⟩; rw [← hk]; exact Finset.single_le_sum (fun i _ => abs_nonneg (c i)) (Finset.mem_univ k)⟩
+    intro y ⟨k, hk⟩; rw [← hk]
+    exact Finset.single_le_sum (fun i _ => abs_nonneg (c i)) (Finset.mem_univ k)⟩
   apply Finset.sum_le_sum; intro i _
   calc (c i)^2 = |c i|^2 := (sq_abs _).symm
      _ = |c i| * |c i| := sq _
@@ -194,7 +202,8 @@ lemma l2_bound_from_steps {n : ℕ} (c p q : Fin n → ℝ) (σSq ρ : ℝ)
     (step5 : ∑ i, (c i)^2 ≤ ∑ i, |c i| * (⨆ j, |c j|)) :
     σSq * (1 - ρ) * ∑ i, (c i)^2 ≤ 2 * σSq * (1 - ρ) * (⨆ i, |p i - q i|) := by
   have hbdd : BddAbove (Set.range fun j : Fin n => |c j|) := ⟨∑ k, |c k|, by
-    intro y ⟨k, hk⟩; rw [← hk]; exact Finset.single_le_sum (fun i _ => abs_nonneg (c i)) (Finset.mem_univ k)⟩
+    intro y ⟨k, hk⟩; rw [← hk]
+    exact Finset.single_le_sum (fun i _ => abs_nonneg (c i)) (Finset.mem_univ k)⟩
   have hσ_1ρ_nonneg : 0 ≤ σSq * (1 - ρ) := mul_nonneg hσSq_nonneg (by linarith)
   have hsup_nonneg : 0 ≤ ⨆ j, |c j| := by
     by_cases h : Nonempty (Fin n)
@@ -211,7 +220,8 @@ lemma l2_bound_from_steps {n : ℕ} (c p q : Fin n → ℝ) (σSq ρ : ℝ)
           mul_le_mul_of_nonneg_left step5 hσ_1ρ_nonneg
     _ = σSq * (1 - ρ) * ((∑ i, |c i|) * (⨆ j, |c j|)) := by rw [Finset.sum_mul]
     _ ≤ σSq * (1 - ρ) * (2 * (⨆ j, |c j|)) :=
-          mul_le_mul_of_nonneg_left (mul_le_mul_of_nonneg_right hc_abs_sum hsup_nonneg) hσ_1ρ_nonneg
+          mul_le_mul_of_nonneg_left
+            (mul_le_mul_of_nonneg_right hc_abs_sum hsup_nonneg) hσ_1ρ_nonneg
     _ = 2 * σSq * (1 - ρ) * (⨆ j, |c j|) := by ring
     _ = 2 * σSq * (1 - ρ) * (⨆ i, |p i - q i|) := by simp [hc_def]
 
@@ -257,13 +267,16 @@ Applying this lemma shows:
 
 2. **Expand the square:** Use linearity of expectation to expand:
    ```
-   E[(∑ cᵢ(ξᵢ-m))²] = ∑ᵢⱼ cᵢcⱼ E[(ξᵢ-m)(ξⱼ-m)] = ∑ᵢⱼ cᵢcⱼ Cov(ξᵢ,ξⱼ)
+   E[(∑ cᵢ(ξᵢ-m))²] = ∑ᵢⱼ cᵢcⱼ E[(ξᵢ-m)(ξⱼ-m)]
+                    = ∑ᵢⱼ cᵢcⱼ Cov(ξᵢ,ξⱼ)
    ```
 
 3. **Separate diagonal from off-diagonal:**
    ```
-   = ∑ᵢ cᵢ² σ² + ∑ᵢ≠ⱼ cᵢcⱼ σ²ρ  (using Var(ξᵢ) = σ², Cov(ξᵢ,ξⱼ) = σ²ρ)
-   = σ²∑cᵢ² + σ²ρ(∑ᵢcᵢ)² - σ²ρ∑cᵢ²  (since ∑ᵢ≠ⱼ cᵢcⱼ = (∑cᵢ)² - ∑cᵢ²)
+   = ∑ᵢ cᵢ² σ² + ∑ᵢ≠ⱼ cᵢcⱼ σ²ρ
+     (using Var(ξᵢ) = σ², Cov(ξᵢ,ξⱼ) = σ²ρ)
+   = σ²∑cᵢ² + σ²ρ(∑ᵢcᵢ)² - σ²ρ∑cᵢ²
+     (since ∑ᵢ≠ⱼ cᵢcⱼ = (∑cᵢ)² - ∑cᵢ²)
    = σ²(1-ρ)∑cᵢ²  (using ∑cᵢ = 0)
    ```
 
@@ -330,11 +343,14 @@ theorem l2_contractability_bound
       simpa [Pos, Neg] using h.symm
 
     have habs_pos : ∑ j ∈ Pos, |c j| = ∑ j ∈ Pos, c j :=
-      Finset.sum_congr rfl (fun j hj => abs_of_nonneg (Finset.mem_filter.mp hj).2)
+      Finset.sum_congr rfl
+        (fun j hj => abs_of_nonneg (Finset.mem_filter.mp hj).2)
 
     have habs_neg : ∑ j ∈ Neg, |c j| = -∑ j ∈ Neg, c j :=
       calc ∑ j ∈ Neg, |c j|
-          = ∑ j ∈ Neg, (-c j) := Finset.sum_congr rfl (fun j hj => abs_of_neg (Finset.mem_filter.mp hj).2)
+          = ∑ j ∈ Neg, (-c j) :=
+              Finset.sum_congr rfl
+                (fun j hj => abs_of_neg (Finset.mem_filter.mp hj).2)
         _ = -∑ j ∈ Neg, c j := by simp [Finset.sum_neg_distrib]
 
     have hdouble : ∑ j, |c j| = 2 * ∑ j ∈ Pos, c j :=
@@ -349,7 +365,8 @@ theorem l2_contractability_bound
 
     have hle_one : ∑ j ∈ Pos, p j ≤ 1 :=
       calc ∑ j ∈ Pos, p j ≤ ∑ j, p j :=
-            Finset.sum_le_sum_of_subset_of_nonneg (fun j _ => Finset.mem_univ j) (fun j _ _ => _hp_prob.2 j)
+            Finset.sum_le_sum_of_subset_of_nonneg (fun j _ => Finset.mem_univ j)
+              (fun j _ _ => _hp_prob.2 j)
         _ = 1 := _hp_prob.1
 
     calc ∑ j, |c j|
@@ -364,7 +381,8 @@ theorem l2_contractability_bound
     integral_sq_weighted_sum_eq_centered n ξ c m hc_sum
   
   -- Step 2: = ∑ᵢⱼ cᵢcⱼ cov(ξᵢ, ξⱼ) by expanding square and linearity
-  have h_integrable : ∀ i j, Integrable (fun ω => (ξ i ω - m) * (ξ j ω - m)) μ := fun i j => by
+  have h_integrable :
+      ∀ i j, Integrable (fun ω => (ξ i ω - m) * (ξ j ω - m)) μ := fun i j => by
     classical
     have h_mul : MemLp (fun ω => (ξ i ω - m) * (ξ j ω - m)) 1 μ :=
       (MemLp.mul' (hf := _hL2 j) (hφ := _hL2 i) : _)
@@ -377,13 +395,16 @@ theorem l2_contractability_bound
   have step3 : ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ =
                σSq * ρ * (∑ i, c i)^2 + σSq * (1 - ρ) * ∑ i, (c i)^2 := by
     have hvar : ∀ k, ∫ ω, (ξ k ω - m)^2 ∂μ = σSq := fun k => _hvar k
-    have hcov : ∀ i j, i ≠ j → ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ = σSq * ρ :=
+    have hcov :
+        ∀ i j, i ≠ j → ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ = σSq * ρ :=
       fun i j hij => _hcov i j hij
     trans (∑ i, ∑ j, c i * c j * (if i = j then σSq else σSq * ρ))
     · congr 1; ext i; congr 1; ext j
       split_ifs with h
       · subst h
-        have h_sq : (fun ω => (ξ i ω - m) * (ξ i ω - m)) = (fun ω => (ξ i ω - m)^2) := by funext ω; ring
+        have h_sq :
+            (fun ω => (ξ i ω - m) * (ξ i ω - m)) = (fun ω => (ξ i ω - m)^2) := by
+          funext ω; ring
         rw [h_sq]; exact congr_arg (c i * c i * ·) (hvar i)
       · exact congr_arg (c i * c j * ·) (hcov i j h)
     · exact double_sum_covariance_formula (n:=n) c σSq ρ σSq (σSq * ρ) rfl rfl

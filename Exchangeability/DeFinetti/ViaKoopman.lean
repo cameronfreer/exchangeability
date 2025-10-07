@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2025 exchangeability contributors. All rights reserved.
+Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: exchangeability contributors
+Authors: Cameron Freer
 -/
 import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
@@ -534,8 +534,10 @@ lemma ν_ae_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
 This states that the push-forward of condExpKernel by the k-th coordinate projection
 equals ν for all k, a.e. in ω. -/
 lemma identicalConditionalMarginals {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    [StandardBorelSpace α] [StandardBorelSpace (Ω[α])] (hσ : MeasurePreserving shift μ μ) (k : ℕ) :
-    ∀ᵐ ω ∂μ, ((condExpKernel μ (shiftInvariantSigma (α := α))).map (fun y : Ω[α] => y k)) ω
+    [StandardBorelSpace α] [StandardBorelSpace (Ω[α])]
+    (hσ : MeasurePreserving shift μ μ) (k : ℕ) :
+    ∀ᵐ ω ∂μ,
+      ((condExpKernel μ (shiftInvariantSigma (α := α))).map (fun y : Ω[α] => y k)) ω
       = ν (μ := μ) ω := by
   sorry -- TODO: Use condExp_ae_eq_integral_condExpKernel on indicators and shift-invariance
 
@@ -545,8 +547,8 @@ Assuming conditional independence of coordinates given the tail σ-algebra,
 the conditional expectation of a product equals the product of integrals
 against the conditional distribution ν. -/
 theorem condexp_product_factorization
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [StandardBorelSpace (Ω[α])]
-    (hσ : MeasurePreserving shift μ μ)
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    [StandardBorelSpace (Ω[α])] (hσ : MeasurePreserving shift μ μ)
     (m : ℕ) (fs : Fin m → α → ℝ)
     (hmeas : ∀ k, Measurable (fs k))
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
@@ -554,7 +556,9 @@ theorem condexp_product_factorization
     (hciid : True) : -- TODO: Replace with proper Kernel.iIndepFun signature
     μ[fun ω => ∏ k, fs k (ω (k : ℕ)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω)) := by
-  sorry -- TODO: Apply condExp_ae_eq_integral_condExpKernel, factor by hciid, use identicalConditionalMarginals
+  sorry
+  -- TODO: Apply condExp_ae_eq_integral_condExpKernel, factor by hciid,
+  -- use identicalConditionalMarginals
 
 /-- Factorization theorem: conditional expectation of cylinder has product form.
 

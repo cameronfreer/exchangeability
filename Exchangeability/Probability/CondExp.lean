@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2025 exchangeability contributors. All rights reserved.
+Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: exchangeability contributors
+Authors: Cameron Freer
 -/
 import Mathlib.Probability.ConditionalExpectation
 import Mathlib.Probability.Independence.Basic
@@ -48,12 +48,15 @@ This file integrates mathlib's probability theory infrastructure and provides a 
 - Documented key conditional expectation lemmas (`setIntegral_condExp`, `condExp_indicator`, etc.)
 
 **Completed proofs:**
-- `condProb_ae_nonneg_le_one`: Bounds on conditional probability (using `condExp_nonneg`, `condExp_mono`)
+- `condProb_ae_nonneg_le_one`: Bounds on conditional probability
+  (using `condExp_nonneg`, `condExp_mono`)
 - `condProb_integral_eq`: Averaging property (using `setIntegral_condExp`)
-- `condIndep_of_condProb_eq`: Wrapper for conditional independence (one-liner using Doob's characterization)
+- `condIndep_of_condProb_eq`: Wrapper for conditional independence
+  (one-liner using Doob's characterization)
 
 **Remaining as stubs (proof strategies documented):**
-- `condIndep_iff_condexp_eq`: Doob's characterization (TODO: derive from `condIndep_iff` product formula)
+- `condIndep_iff_condexp_eq`: Doob's characterization
+  (TODO: derive from `condIndep_iff` product formula)
 - `condProb_eq_of_eq_on_pi_system`: π-system extension (TODO: use `condIndepSets.condIndep'`)
 - `bounded_martingale_l2_eq`: L² identification (TODO: use `MemLp.condExpL2_ae_eq_condExp`)
 - `reverse_martingale_convergence`: Requires martingale convergence theory
@@ -151,7 +154,8 @@ For two σ-algebras m₁ and m₂ to be conditionally independent given m' with 
 we require that for any sets t₁ ∈ m₁ and t₂ ∈ m₂:
   μ⟦t₁ ∩ t₂ | m'⟧ =ᵐ[μ] μ⟦t₁ | m'⟧ * μ⟦t₂ | m'⟧
 
-To use: `open ProbabilityTheory` to access `CondIndep`, or use `ProbabilityTheory.CondIndep` directly.
+To use: `open ProbabilityTheory` to access `CondIndep`, or use
+`ProbabilityTheory.CondIndep` directly.
 
 Related definitions also available in mathlib:
 - `ProbabilityTheory.CondIndepSet`: conditional independence of sets
@@ -236,7 +240,8 @@ lemma reverse_martingale_convergence {m₀ : MeasurableSpace Ω} {μ : Measure �
     (X : Ω → ℝ) (hX_int : Integrable X μ) :
     True := by
   -- TODO: Correct statement should be:
-  -- Filter.Tendsto (fun n => μ[X | 𝒢 n]) Filter.atTop (𝓝 μ[X | ⨅ n, 𝒢 n]) (in ae μ sense)
+  -- Filter.Tendsto (fun n => μ[X | 𝒢 n]) Filter.atTop (𝓝 μ[X | ⨅ n, 𝒢 n])
+  -- (in ae μ sense)
   sorry
 
 /-- Application to tail σ-algebras: convergence as we condition on

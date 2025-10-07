@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Cameron Freer. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Cameron Freer
+-/
 import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
 import Mathlib.MeasureTheory.Measure.Typeclasses.Probability
 import Mathlib.MeasureTheory.Measure.GiryMonad
