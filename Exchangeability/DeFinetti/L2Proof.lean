@@ -191,14 +191,26 @@ theorem weighted_sums_converge_L1
     -- And also ‖A m M - A n M‖₁ < ε/3 for all m,n ≥ N
     -- Then ‖alpha m - alpha n‖₁ ≤ ‖alpha m - A m M‖₁ + ‖A m M - A n M‖₁ + ‖A n M - alpha n‖₁ < ε
 
-    -- First, get N₁ such that for all n ≥ N₁, there exists M_n with A n M_n close to alpha n
     have hε3_pos : 0 < ε / 3 := by linarith
 
-    -- We need to pick a uniform M that works for checking A m M vs A n M are close
-    -- And also ensures alpha m is close to A m M and alpha n is close to A n M
-    sorry  -- TODO: Complete 3ε argument
-           -- Need to carefully choose N and use triangle inequality
-           -- ‖alpha m - alpha n‖₁ ≤ ‖alpha m - A m M‖₁ + ‖A m M - A n M‖₁ + ‖A n M - alpha n‖₁
+    -- The key insight: We'll show both (A n m)_m and (alpha n)_n are Cauchy
+    -- For the 3ε argument, we want:
+    -- 1. A n M close to alpha n (for all n, when M is large) - from halpha_conv
+    -- 2. A m M close to A n M (for m,n large, fixed M) - from hA_cauchy_L1
+
+    -- However, halpha_conv gives convergence for each fixed n separately
+    -- We can't directly get uniform convergence
+    -- The argument works as follows: pick M_start large
+
+    -- Get N such that A m M_start and A n M_start are ε/3-close for m,n ≥ N
+    -- Note: hA_cauchy_L1 takes ε > 0 as input, we use ε/3
+    rcases hA_cauchy_L1 0 (ε / 3) hε3_pos with ⟨N_mid, hN_mid⟩
+
+    -- For this specific N_mid, get M such that for all n ≤ N_mid, A n M is close to alpha n
+    -- We'll pick a large M that works for finitely many n ∈ {0,...,N_mid}
+    sorry -- TODO: This needs a more sophisticated argument
+          -- The issue is halpha_conv gives ∀ n, ∃ M, ... not ∃ M, ∀ n, ...
+          -- We need diagonal argument or different approach
 
   -- Step 5: Completeness of L¹ gives alpha_inf
   have h_exist_alpha_inf : ∃ alpha_inf : Ω → ℝ, Measurable alpha_inf ∧ MemLp alpha_inf 1 μ ∧
@@ -219,10 +231,24 @@ theorem weighted_sums_converge_L1
     have h_elpnorm := hN n hn
     -- Convert eLpNorm 1 to integral of absolute value
     -- For p=1: eLpNorm f 1 μ = ENNReal.ofReal (∫ a, ‖f a‖ ∂μ)
-    -- We have: eLpNorm (fun ω => alpha n ω - alpha_inf ω) 1 μ < ENNReal.ofReal ε
-    -- Need to show: ∫ ω, |alpha n ω - alpha_inf ω| ∂μ < ε
-    sorry  -- TODO: Use eLpNorm_one_eq_lintegral_enorm and convert lintegral to integral
-           -- Then use ENNReal.ofReal_lt_ofReal_iff
+    have h_memLp : MemLp (fun ω => alpha n ω - alpha_inf ω) 1 μ := by
+      -- alpha n and alpha_inf are both in L¹, so their difference is too
+      apply MemLp.sub
+      · exact halpha_mem n
+      · exact halpha_inf_mem
+    -- Use the conversion theorem for p=1
+    rw [MemLp.eLpNorm_eq_integral_rpow_norm one_ne_zero ENNReal.coe_ne_top h_memLp] at h_elpnorm
+    -- Simplify: p.toReal = 1, so we get ∫ ‖f‖^1 = ∫ ‖f‖, and (...)^(1⁻¹) = ...^1 = ...
+    simp only [ENNReal.one_toReal, Real.rpow_one] at h_elpnorm
+    -- After simplification: h_elpnorm : ENNReal.ofReal ((∫ a, ‖...‖ ∂μ)^1) < ENNReal.ofReal ε
+    -- Simplify the ^1
+    norm_num at h_elpnorm
+    -- Now h_elpnorm : ENNReal.ofReal (∫ a, ‖...‖ ∂μ) < ENNReal.ofReal ε
+    -- Apply ofReal_lt_ofReal_iff
+    rw [ENNReal.ofReal_lt_ofReal_iff hε] at h_elpnorm
+    -- For real-valued functions, ‖x - y‖ = |x - y|
+    -- The integral already has norm which equals absolute value for reals
+    convert h_elpnorm using 1
   · -- A n m → alpha n in L¹
     intro n ε hε
     rcases halpha_conv n ε hε with ⟨M, hM⟩
