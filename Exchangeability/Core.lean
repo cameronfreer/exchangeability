@@ -156,9 +156,8 @@ lemma takePrefix_prefixProj {hmn : m ≤ n} (x : ℕ → α) :
 
 @[simp]
 lemma castLE_coe_nat {hmn : m ≤ n} (i : Fin m) :
-    ((Fin.castLE hmn i : Fin n) : ℕ) = i := by
-  cases i
-  rfl
+    ((Fin.castLE hmn i : Fin n) : ℕ) = i :=
+  Eq.refl i.1
 
 /--
 Extend a set from `Fin m → α` to `Fin n → α` by ignoring extra coordinates.
