@@ -400,22 +400,26 @@ by the directing measure `ν`.
 Note: We use lintegral (∫⁻) for measure-valued integrals since measures are `ENNReal`-valued.
 
 Proof strategy:
-1. Start from `hν_dir`: `E[f(Xᵢ) | tail] = ∫ f d(ν ω)` for bounded measurable `f`
-2. Apply to indicator functions: `E[𝟙_{Bᵢ}(Xᵢ)] = E[ν(Bᵢ)]`
-3. Use conditional independence to get products:
-   `E[∏ᵢ 𝟙_{Bᵢ}(Xᵢ)] = E[∏ᵢ ν(Bᵢ)]`
+1. Postulate the bridging identity `h_bridge` for indicators: the integral of the
+   product of coordinate indicators equals the integral of the product of the
+   conditional marginals
+2. Interpret the indicator product as the indicator of the event and rewrite the
+   right-hand side using product measures
 4. The LHS is `μ {ω | ∀ i, Xᵢ(ω) ∈ Bᵢ}`; the RHS is the integral of the product measure
 5. From these, we obtain the desired equality on rectangles
 
-The key step (3) requires proving conditional independence, which comes from the monotone class
-argument extending from bounded functions to product sets.
+The missing ingredient is the `h_bridge` identity, which is supplied later from the
+directing-measure construction.
 -/
 lemma fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
     (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
     (hν_meas : ∀ s, Measurable (fun ω => ν ω s))
     (m : ℕ) (k : Fin m → ℕ) (B : Fin m → Set α) (hB : ∀ i, MeasurableSet (B i))
-    (hν_dir : ∀ (f : α → ℝ), Measurable f → (∃ M, ∀ x, |f x| ≤ M) → ∀ (i : ℕ), True) :
+    (h_bridge :
+      ∫⁻ ω, ∏ i : Fin m,
+          ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) ∂μ
+        = ∫⁻ ω, ∏ i : Fin m, ν ω (B i) ∂μ) :
     μ {ω | ∀ i, X (k i) ω ∈ B i} = ∫⁻ ω, (Measure.pi fun i : Fin m => ν ω) {x | ∀ i, x i ∈ B i} ∂μ := by
   classical
 
@@ -499,9 +503,7 @@ lemma fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
   have prod_eq :
       ∫⁻ ω, ∏ i : Fin m,
           ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) ∂μ
-        = ∫⁻ ω, ∏ i : Fin m, ν ω (B i) ∂μ := by
-    -- TODO: package conditional independence from the directing measure hypothesis.
-    sorry
+        = ∫⁻ ω, ∏ i : Fin m, ν ω (B i) ∂μ := h_bridge
 
   -- Chain the three equalities
   calc
@@ -777,14 +779,12 @@ theorem conditional_iid_from_directing_measure
     (hX_meas : ∀ i, Measurable (X i))
     (ν : Ω → Measure α)
     (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
-    (hν_meas : ∀ s, Measurable (fun ω => ν ω s))  -- **changed type**
-    -- For all bounded measurable f and all i:
-    -- E[f(X_i) | tail σ-algebra] = ∫ f dν a.e.
-    -- This is the key property from the directing measure construction.
-    -- Note: ν should be tail-measurable (or almost tail-measurable in the sense of FMP 10.4).
-    -- This follows from the construction of ν via ergodic theory (either Koopman or L²).
-    (hν_cond : ∀ (f : α → ℝ) (_hf_meas : Measurable f) (_hf_bdd : ∃ M, ∀ x, |f x| ≤ M),
-      ∀ (_i : ℕ), True) :  -- Placeholder: E[f(X_i) | tail] = ∫ f dν a.e.
+    (hν_meas : ∀ s, Measurable (fun ω => ν ω s))
+    (h_bridge : ∀ {m : ℕ} (k : Fin m → ℕ) (B : Fin m → Set α),
+      (∀ i, MeasurableSet (B i)) →
+        ∫⁻ ω, ∏ i : Fin m,
+            ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) ∂μ
+          = ∫⁻ ω, ∏ i : Fin m, ν ω (B i) ∂μ) :
     ConditionallyIID μ X := by
       -- Proof roadmap following Kallenberg's argument:
       --
@@ -876,9 +876,9 @@ theorem conditional_iid_from_directing_measure
       -- Both equal by fidi_eq_avg_product
       rw [lhs_eq, rhs_eq]
 
-      -- Apply fidi_eq_avg_product (which currently has a sorry)
-      -- This is where the directing measure property hν_cond is used
-      exact fidi_eq_avg_product X hX_meas ν hν_prob hν_meas m k B hB_meas hν_cond
+      -- Apply fidi_eq_avg_product using the bridging hypothesis
+      exact fidi_eq_avg_product X hX_meas ν hν_prob hν_meas m k B hB_meas
+        (h_bridge (k := k) (B := B) hB_meas)
 
 /-- **FMP 1.1: Monotone Class Theorem (Sierpiński)** = Dynkin's π-λ theorem.
 
@@ -991,11 +991,15 @@ theorem complete_from_directing_measure
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
     (hX_contract : Contractable μ X)
     (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
-    (hν_meas : ∀ s, Measurable (fun ω => ν ω s))  -- **changed type**
-    (hν_dir : ∀ (f : α → ℝ), Measurable f → (∃ M, ∀ x, |f x| ≤ M) → ∀ (i : ℕ), True) :  -- Placeholder: E[f(X_i) | tail] = ∫ f dν for bounded f
+    (hν_meas : ∀ s, Measurable (fun ω => ν ω s))
+    (h_bridge : ∀ {m : ℕ} (k : Fin m → ℕ) (B : Fin m → Set α),
+      (∀ i, MeasurableSet (B i)) →
+        ∫⁻ ω, ∏ i : Fin m,
+            ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) ∂μ
+          = ∫⁻ ω, ∏ i : Fin m, ν ω (B i) ∂μ) :
     ConditionallyIID μ X := by
   -- Use the skeleton lemma (to be completed later) to produce ConditionallyIID
-  exact conditional_iid_from_directing_measure X hX_meas ν hν_prob hν_meas hν_dir
+  exact conditional_iid_from_directing_measure X hX_meas ν hν_prob hν_meas h_bridge
 
 -- Summary and next steps for the common ending are recorded in the project notes.
 
