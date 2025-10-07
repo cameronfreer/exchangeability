@@ -3,7 +3,7 @@ import Exchangeability.DeFinetti.ViaL2
 /-!
 # de Finetti's Theorem - Public API
 
-This file provides the **canonical entry point** for de Finetti's theorem,
+This file provides the **standard entry point** for de Finetti's theorem,
 with a single stable theorem name that is independent of the proof method.
 
 ## Main theorem
@@ -50,7 +50,7 @@ import Exchangeability.DeFinetti.ViaMartingale
 
 namespace Exchangeability.Probability
 
--- Re-export the L² proof under the canonical name
+-- Re-export the L² proof under the standard name
 -- Users who import this module get the stable `deFinetti` name
 -- without needing to know which proof is used
 

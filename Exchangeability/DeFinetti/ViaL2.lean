@@ -618,8 +618,8 @@ theorem deFinetti_from_exchangeable
   have := deFinetti_viaL2 X hX_meas hX_contract hX_L2
   sorry  -- Type mismatch due to different sorry locations; will fix when sorries are filled
 
-/-- **Canonical name** for de Finetti's theorem.
-This is an alias for `deFinetti_viaL2` (the L² proof). -/
+/-- **Standard name** for de Finetti's theorem.
+This is an alias for `deFinetti_from_exchangeable` (the L² proof). -/
 theorem deFinetti := @deFinetti_from_exchangeable
 
 end Exchangeability.DeFinetti.ViaL2

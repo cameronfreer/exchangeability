@@ -70,7 +70,7 @@ Exchangeability/
 │   ├── InfiniteProduct.lean
 │   └── CondExp.lean
 ├── DeFinetti/                   # Three proofs of de Finetti
-│   ├── Theorem.lean            # Public API (canonical theorem)
+│   ├── Theorem.lean            # Public API (standard theorem)
 │   ├── ViaL2.lean              # L² proof (default)
 │   ├── ViaKoopman.lean         # Ergodic proof
 │   ├── ViaMartingale.lean      # Martingale proof
