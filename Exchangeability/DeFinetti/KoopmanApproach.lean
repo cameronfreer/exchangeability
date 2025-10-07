@@ -409,6 +409,24 @@ lemma ν_ae_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     {ω | ∀ s ∈ countableBasis α,
         ν (μ := μ) (shift ω) s = ν (μ := μ) ω s}
   have h_good : ∀ᵐ ω ∂μ, ω ∈ good := h_basis
+  -- Placeholder for the upcoming measure-extensionality argument.
+  -- Once proved, `h_measure_eq` will assert that almost every `ω ∈ good` witnesses
+  -- equality of the full conditional measures.  It should follow by invoking
+  -- `Measure.ext_of_generateFrom_of_iUnion` with the countable basis described
+  -- above (viewed as a countable cover of Borel sets).
+  have h_measure_eq : ∀ᵐ ω ∂μ, ω ∈ good →
+      ν (μ := μ) (shift ω) = ν (μ := μ) ω := by
+    -- TODO: instantiate `Measure.ext_of_generateFrom_of_iUnion` here.
+    -- The intended proof outline is:
+    --   * enumerate `countableBasis α` by `(enumerate n)` using the
+    --     `Encodable` instance provided by `encodableCountableBasis`;
+    --   * apply the extensionality lemma with
+    --       `C := countableBasis α`
+    --       `B n := (countableBasis α).choose_some n`
+    --       `μ₁ := ν (shift ω)` and `μ₂ := ν ω`;
+    --   * use `good` to discharge the equality-on-generators hypothesis.
+    -- For now we simply record the goal.
+    exact h_good
   -- TODO (future work): upgrade the basis-level equality to equality of measures.
   --    * Use that `countableBasis α` generates the Borel σ-algebra and apply
   --      something like `Measure.ext_of_generateFrom_of_iUnion` (or another
