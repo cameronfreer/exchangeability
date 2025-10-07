@@ -296,7 +296,7 @@ lemma iidProduct_perm_invariant {ν₀ : Measure α} [IsProbabilityMeasure ν₀
     Measure.map (fun f : ℕ → α => f ∘ σ)
       (Exchangeability.Probability.iidProduct ν₀) =
       Exchangeability.Probability.iidProduct ν₀ :=
-  Exchangeability.Probability.iidProduct.perm_eq ν₀ σ
+  Exchangeability.Probability.iidProduct.perm_eq (ν:=ν₀) (σ:=σ)
 
 /-- Composing strictly monotone functions with addition preserves strict monotonicity. -/
 lemma strictMono_add_left {m : ℕ} (k : Fin m → ℕ) (hk : StrictMono k) (c : ℕ) :

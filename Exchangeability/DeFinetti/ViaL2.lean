@@ -97,7 +97,7 @@ private lemma measurable_eval_fin2 {i : Fin 2} :
 
 /-- For a contractable sequence, the law of each coordinate agrees with the law
 of `X 0`. -/
-lemma contractable_map_single (i : ℕ) :
+lemma contractable_map_single {i : ℕ} :
     Measure.map (fun ω => X i ω) μ = Measure.map (fun ω => X 0 ω) μ := by
   classical
   -- `k` selects the singleton subsequence `{i}`.

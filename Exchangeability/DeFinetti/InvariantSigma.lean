@@ -90,7 +90,7 @@ def tailSigma : MeasurableSpace (Ω[α]) :=
 def isShiftInvariant (s : Set (Ω[α])) : Prop :=
   MeasurableSet s ∧ shift ⁻¹' s = s
 
-lemma isShiftInvariant_iff (s : Set (Ω[α])) :
+lemma isShiftInvariant_iff {s : Set (Ω[α])} :
     isShiftInvariant s ↔ MeasurableSet s ∧ ∀ ω, shift ω ∈ s ↔ ω ∈ s := by
   constructor
   · intro ⟨hm, heq⟩
@@ -139,7 +139,7 @@ lemma shiftInvariantSigma_le :
   intro s hs
   exact (hs : isShiftInvariant (α := α) s).1
 
-lemma mem_shiftInvariantSigma_iff (s : Set (Ω[α])) :
+lemma mem_shiftInvariantSigma_iff {s : Set (Ω[α])} :
     @MeasurableSet _ shiftInvariantSigma s ↔ isShiftInvariant (α := α) s :=
   Iff.rfl
 
@@ -203,7 +203,7 @@ def gRep (g0 : Ω[α] → ℝ) : Ω[α] → ℝ :=
   fun ω => (gLimsupE g0 ω).toReal
 
 
-lemma gRep_measurable (g0 : Ω[α] → ℝ) (hg0 : Measurable g0) :
+lemma gRep_measurable {g0 : Ω[α] → ℝ} (hg0 : Measurable g0) :
     Measurable (gRep g0) := by
   have hstep : ∀ n : ℕ, Measurable fun ω => (g0 (shift^[n] ω) : EReal) := by
     intro n
@@ -215,7 +215,7 @@ lemma gRep_measurable (g0 : Ω[α] → ℝ) (hg0 : Measurable g0) :
   simpa [gRep, gLimsupE] using measurable_ereal_toReal.comp h_meas_ereal
 
 set_option linter.unusedSectionVars false in
-lemma gRep_shiftInvariant (g0 : Ω[α] → ℝ) :
+lemma gRep_shiftInvariant {g0 : Ω[α] → ℝ} :
     ∀ ω, gRep g0 (shift ω) = gRep g0 ω := by
   intro ω
   have hlimsupEq :
@@ -227,7 +227,7 @@ lemma gRep_shiftInvariant (g0 : Ω[α] → ℝ) :
     using congrArg EReal.toReal hlimsupEq
 
 set_option linter.unusedSectionVars false in
-lemma gRep_eq_of_constant_orbit (g0 : Ω[α] → ℝ) {ω : Ω[α]}
+lemma gRep_eq_of_constant_orbit {g0 : Ω[α] → ℝ} {ω : Ω[α]}
     (hconst : ∀ n : ℕ, g0 (shift^[n] ω) = g0 ω) :
     gRep g0 ω = g0 ω := by
   have hlim :
@@ -240,7 +240,7 @@ lemma gRep_eq_of_constant_orbit (g0 : Ω[α] → ℝ) {ω : Ω[α]}
     simpa [hfunext] using (limsup_const (f := atTop) (a := (g0 ω : EReal)))
   simpa [gRep, gLimsupE] using congrArg EReal.toReal hlim
 
-lemma gRep_ae_eq_of_constant_orbit (g0 : Ω[α] → ℝ)
+lemma gRep_ae_eq_of_constant_orbit {g0 : Ω[α] → ℝ}
     {μ : Measure (Ω[α])}
     (hconst : ∀ᵐ ω ∂μ, ∀ n : ℕ, g0 (shift^[n] ω) = g0 ω) :
     gRep g0 =ᵐ[μ] g0 := by
@@ -510,7 +510,7 @@ private lemma shiftInvariant_implies_shiftInvariantMeasurable
   have hinv_preimage : shift ⁻¹' (g ⁻¹' t) = g ⁻¹' t := by
     ext ω
     simp [Set.mem_preimage, hinv ω]
-  exact (mem_shiftInvariantSigma_iff _).mpr ⟨hpreimage, hinv_preimage⟩
+  exact (mem_shiftInvariantSigma_iff (s:=g ⁻¹' t)).mpr ⟨hpreimage, hinv_preimage⟩
 
 /-- Main construction: given a function that agrees with its shift a.e.,
     produce a shift-invariant representative. -/
