@@ -10,6 +10,7 @@ import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.Probability.Kernel.Basic
+import Canonical
 
 /-!
 # de Finetti's Theorem via L² Contractability
@@ -102,7 +103,7 @@ lemma contractable_map_single (i : ℕ) :
   -- `k` selects the singleton subsequence `{i}`.
   let k : Fin 1 → ℕ := fun _ => i
   have hk : StrictMono k := by
-    intro a b hlt; cases hlt
+    canonical
   have h_map := hX_contract 1 k hk
   let eval : (Fin 1 → ℝ) → ℝ := fun g => g fin1Zero
   have h_eval_meas : Measurable eval := measurable_eval_fin1
