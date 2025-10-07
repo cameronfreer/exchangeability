@@ -68,18 +68,33 @@ def path (X : ℕ → Ω → α) : Ω → (ℕ → α) := fun ω n => X n ω
 def shiftRV (X : ℕ → Ω → α) (m : ℕ) : Ω → (ℕ → α) :=
   fun ω n => X (m + n) ω
 
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
 @[simp]
 lemma path_apply (X : ℕ → Ω → α) (ω n) :
     path X ω n = X n ω := rfl
 
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
 @[simp]
 lemma shiftRV_apply (X : ℕ → Ω → α) (m ω n) :
     shiftRV X m ω n = X (m + n) ω := rfl
 
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
+@[simp]
+lemma shiftRV_zero (X : ℕ → Ω → α) : shiftRV X 0 = path X := by
+  funext ω n; simp [shiftRV, path]
+
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
+@[simp]
+lemma shiftRV_comp_shiftProcess (X : ℕ → Ω → α) (m k : ℕ) :
+    shiftRV (shiftProcess X m) k = shiftRV X (m + k) := by
+  funext ω n; simp [shiftRV, shiftProcess, Nat.add_assoc]
+
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
 @[simp]
 lemma shiftProcess_zero (X : ℕ → Ω → α) : shiftProcess X 0 = X := by
   funext n ω; simp [shiftProcess]
 
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
 @[simp]
 lemma shiftProcess_add (X : ℕ → Ω → α) (m k : ℕ) :
     shiftProcess (shiftProcess X m) k = shiftProcess X (m + k) := by
@@ -89,10 +104,17 @@ lemma shiftProcess_add (X : ℕ → Ω → α) (m k : ℕ) :
 abbrev revFiltration (X : ℕ → Ω → α) (m : ℕ) : MeasurableSpace Ω :=
   MeasurableSpace.comap (shiftRV X m) inferInstance
 
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
+@[simp]
+lemma revFiltration_zero (X : ℕ → Ω → α) :
+    revFiltration X 0 = MeasurableSpace.comap (path X) inferInstance := by
+  simp [revFiltration]
+
 /-- The tail σ-algebra for a process X: ⋂ₙ σ(Xₙ, Xₙ₊₁, ...). -/
 def tailSigma (X : ℕ → Ω → α) : MeasurableSpace Ω :=
   ⨅ m, revFiltration X m
 
+omit [MeasurableSpace Ω] in
 @[simp]
 lemma tailSigma_eq_iInf_rev (X : ℕ → Ω → α) :
     tailSigma X = ⨅ m, revFiltration X m := rfl
@@ -187,11 +209,18 @@ lemma contraction_independence
               = Measure.map (fun ω => (ξ ω, ζ ω)) μ)
     (h_sigma : MeasurableSpace.comap η inferInstance ≤ MeasurableSpace.comap ζ inferInstance) :
     ProbabilityTheory.CondIndep ξ ζ η μ := by
-  -- Step 1: For each measurable B, define conditional probabilities
-  -- Step 2: Show (μ₁, μ₂) is a bounded martingale
-  -- Step 3: Use distributional equality to get E(μ₂ - μ₁)² = 0
-  -- Step 4: Conclude μ₁ = μ₂ a.s. for all B
-  -- Step 5: Apply Doob's characterization (FMP 6.6)
+  -- Proof strategy (wrapper around condexp_indicator_eq_of_dist_eq_and_le):
+  -- Step 1: For each measurable B, apply condexp_indicator_eq_of_dist_eq_and_le
+  --         to get: P[ξ ∈ B | η] = P[ξ ∈ B | ζ] a.s.
+  -- Step 2: This shows that ξ and ζ have the same conditional distribution given η
+  -- Step 3: Since σ(η) ⊆ σ(ζ), this implies ξ ⊥⊥_η ζ by Doob's characterization (FMP 6.6)
+  --
+  -- The key insight: condexp_indicator_eq_of_dist_eq_and_le gives the conditional
+  -- expectation equality directly, which is exactly what we need for conditional independence.
+  --
+  -- TODO: Once CondIndep API is clarified in mathlib, formalize using:
+  -- - condexp_indicator_eq_of_dist_eq_and_le (already stated above)
+  -- - Doob's characterization of conditional independence
   sorry
 
 /-- If `(ξ,η)` and `(ξ,ζ)` have the same law and `σ(η) ≤ σ(ζ)`,
@@ -224,6 +253,34 @@ lemma condexp_indicator_eq_of_dist_eq_and_le
   -- - ae_eq_of_L2_norm_eq_zero: ‖f‖₂ = 0 ⇒ f = 0 a.e.
   sorry
 
+/-- Cylinder version: contractability implies measure equality on finite cylinders.
+
+For any finite index set and measurable sets, the measures of the corresponding
+cylinders agree when comparing `(X_m, shiftRV X m)` and `(X_k, shiftRV X m)`. -/
+lemma contractable_dist_eq_on_cylinders
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {X : ℕ → Ω → α} (hX : Contractable μ X) (k m : ℕ) (hk : k ≤ m)
+    (B : Set α) (hB : MeasurableSet B)
+    (s : Finset ℕ) (t : ∀ i ∈ s, Set α) (ht : ∀ i (hi : i ∈ s), MeasurableSet (t i hi)) :
+    μ {ω | X m ω ∈ B ∧ ∀ i (hi : i ∈ s), X (m + i) ω ∈ t i hi}
+      = μ {ω | X k ω ∈ B ∧ ∀ i (hi : i ∈ s), X (m + i) ω ∈ t i hi} := by
+  -- Proof strategy:
+  -- 1. Rewrite both sides using Measure.map and the product cylinder sets
+  -- 2. The LHS is μ[X_m ∈ B, X_{m+i} ∈ t_i for i ∈ s]
+  --    This equals μ[joint distribution of (X_m, X_{m+1}, X_{m+2}, ...) on (B, t₁, t₂, ...)]
+  -- 3. The RHS is μ[X_k ∈ B, X_{m+i} ∈ t_i for i ∈ s]
+  --    This equals μ[joint distribution of (X_k, X_{m+1}, X_{m+2}, ...) on (B, t₁, t₂, ...)]
+  -- 4. Define the index function: j : Fin (s.card + 1) → ℕ
+  --    where j 0 = m (resp. k) and j (i+1) = m + (s-element i)
+  -- 5. Both j are strictly monotone with k < m < all other indices
+  -- 6. Apply contractability: the joint distribution of (X_{j i})_i is invariant
+  -- 7. This gives the desired equality
+  --
+  -- Key lemma needed: reformulation of contractability for non-contiguous indices
+  -- (This may require extending the Contractable definition or proving it's equivalent
+  -- to invariance under *any* strictly monotone reindexing, not just k : Fin n → ℕ)
+  sorry
+
 /-- Helper lemma: contractability gives the key distributional equality.
 
 If `X` is contractable, then for any `k ≤ m`:
@@ -236,15 +293,18 @@ lemma contractable_dist_eq
     {X : ℕ → Ω → α} (hX : Contractable μ X) (k m : ℕ) (hk : k ≤ m) :
     Measure.map (fun ω => (X m ω, shiftRV X m ω)) μ
       = Measure.map (fun ω => (X k ω, shiftRV X m ω)) μ := by
-  -- This proof requires working with infinite product measures.
-  -- The key idea: contractability says for indices k < m < m+1 < m+2 < ...
-  -- the joint distribution of (X k, X (m+1), X (m+2), ...)
-  -- equals the distribution of (X m, X (m+1), X (m+2), ...)
-  -- which is exactly: (X_k, shiftRV X m) =^d (X_m, shiftRV X m).
+  -- Strategy: Use contractable_dist_eq_on_cylinders to show equality on cylinder sets,
+  -- then extend to all measurable sets via the π-λ theorem.
   --
-  -- Strategy: Prove equality on cylinder sets (see contractable_dist_eq_on_cylinders),
-  -- then extend to all measurable sets via the π-λ theorem since cylinders generate
-  -- the product σ-algebra.
+  -- 1. Cylinder sets of the form {(a, f) | a ∈ B, f(i) ∈ t_i for i ∈ s} generate
+  --    the product σ-algebra on α × (ℕ → α)
+  -- 2. By contractable_dist_eq_on_cylinders, both measures agree on all such cylinders
+  -- 3. Apply Measure.ext_of_generateFrom_of_cover (π-λ theorem) to conclude equality
+  --
+  -- Required API:
+  -- - MeasureTheory.generate_from_prod_cylinder: cylinders generate product σ-algebra
+  -- - Measure.ext_of_generateFrom_of_cover: π-λ theorem for measures
+  -- - Formalization of cylinder sets in the product space
   sorry
 
 /-- **Key convergence result:** The extreme members agree after conditioning on the tail σ-algebra.
