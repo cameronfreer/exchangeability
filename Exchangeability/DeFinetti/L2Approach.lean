@@ -177,22 +177,14 @@ theorem l2_contractability_bound
   -- Record σ² as a convenient abbreviation
   set σSq : ℝ := σ ^ 2
 
-  have hσSq_nonneg : 0 ≤ σSq := by
-    simpa [σSq] using sq_nonneg σ
-
-  have hvar : ∀ k, ∫ ω, (ξ k ω - m)^2 ∂μ = σSq := by
-    intro k; simpa [σSq] using _hvar k
-
-  have hcov : ∀ i j, i ≠ j → ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ = σSq * ρ := by
-    intro i j hij; simpa [σSq] using _hcov i j hij
+  have hσSq_nonneg : 0 ≤ σSq := sq_nonneg σ
+  have hvar : ∀ k, ∫ ω, (ξ k ω - m)^2 ∂μ = σSq := fun k => _hvar k
+  have hcov : ∀ i j, i ≠ j → ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ = σSq * ρ :=
+    fun i j hij => _hcov i j hij
   
   -- Note that ∑ⱼ cⱼ = 0
   have hc_sum : ∑ j, c j = 0 := by
-    simp only [c]
-    have hp := _hp_prob.1
-    have hq := _hq_prob.1
-    rw [Finset.sum_sub_distrib, hp, hq]
-    ring
+    simp only [c, Finset.sum_sub_distrib, _hp_prob.1, _hq_prob.1]; ring
   
   -- and ∑ⱼ |cⱼ| ≤ 2
   have hc_abs_sum : ∑ j, |c j| ≤ 2 := by
@@ -222,9 +214,8 @@ theorem l2_contractability_bound
       exact abs_of_nonneg (Finset.mem_filter.mp hj).2
 
     have habs_neg : ∑ j ∈ Neg, |c j| = -∑ j ∈ Neg, c j := by
-      have hterm : ∀ j ∈ Neg, |c j| = -c j := fun j hj => abs_of_neg (Finset.mem_filter.mp hj).2
       calc ∑ j ∈ Neg, |c j|
-          = ∑ j ∈ Neg, (-c j) := Finset.sum_congr rfl hterm
+          = ∑ j ∈ Neg, (-c j) := Finset.sum_congr rfl (fun j hj => abs_of_neg (Finset.mem_filter.mp hj).2)
       _ = -∑ j ∈ Neg, c j := by simp [Finset.sum_neg_distrib]
 
     have hdouble : ∑ j, |c j| = 2 * ∑ j ∈ Pos, c j := by
@@ -260,14 +251,11 @@ theorem l2_contractability_bound
   -- Step 1: E(∑cᵢξᵢ)² = E(∑cᵢ(ξᵢ-m))² using ∑cⱼ = 0
   have step1 : ∫ ω, (∑ i, c i * ξ i ω)^2 ∂μ =
                ∫ ω, (∑ i, c i * (ξ i ω - m))^2 ∂μ := by
+    congr 1; ext ω
     congr 1
-    ext ω
-    have : ∑ i, c i * ξ i ω = ∑ i, c i * (ξ i ω - m) := by
-      conv_lhs => arg 2; ext i; rw [show ξ i ω = (ξ i ω - m) + m by ring]
-      simp only [mul_add, Finset.sum_add_distrib]
-      rw [add_eq_left]
-      simp [← Finset.sum_mul, hc_sum]
-    exact congrArg (· ^ 2) this
+    conv_lhs => arg 2; ext i; rw [show ξ i ω = (ξ i ω - m) + m by ring]
+    simp only [mul_add, Finset.sum_add_distrib, add_eq_left, ← Finset.sum_mul, hc_sum]
+    ring
   
   -- Step 2: = ∑ᵢⱼ cᵢcⱼ cov(ξᵢ, ξⱼ) by expanding square and linearity
   have step2 : ∫ ω, (∑ i, c i * (ξ i ω - m))^2 ∂μ =
@@ -306,46 +294,29 @@ theorem l2_contractability_bound
     -- Diagonal terms: ∑ᵢ cᵢ² ∫(ξᵢ-m)² = ∑ᵢ cᵢ² · σ²
     have h_diag : ∑ i, c i * c i * ∫ ω, (ξ i ω - m) * (ξ i ω - m) ∂μ =
                   σSq * ∑ i, (c i)^2 := by
-      trans (∑ i, (c i)^2 * σSq)
-      · congr 1; ext i
-        have hvar_i := hvar i
-        have h_sq : (fun ω => (ξ i ω - m) * (ξ i ω - m)) = (fun ω => (ξ i ω - m)^2) := by
-          funext ω; ring
-        calc c i * c i * ∫ ω, (ξ i ω - m) * (ξ i ω - m) ∂μ
-            = (c i)^2 * ∫ ω, (ξ i ω - m)^2 ∂μ := by rw [h_sq]; ring
-          _ = (c i)^2 * σSq := by rw [hvar_i]
-      · rw [← Finset.sum_mul]; ring
+      calc ∑ i, c i * c i * ∫ ω, (ξ i ω - m) * (ξ i ω - m) ∂μ
+          = ∑ i, (c i)^2 * σSq := by
+              congr 1; ext i
+              have h_sq : (fun ω => (ξ i ω - m) * (ξ i ω - m)) = (fun ω => (ξ i ω - m)^2) := by
+                funext ω; ring
+              calc c i * c i * ∫ ω, (ξ i ω - m) * (ξ i ω - m) ∂μ
+                  = (c i)^2 * ∫ ω, (ξ i ω - m)^2 ∂μ := by rw [h_sq]; ring
+                _ = (c i)^2 * σSq := by rw [hvar i]
+        _ = σSq * ∑ i, (c i)^2 := by rw [← Finset.sum_mul]; ring
     
     -- Off-diagonal: ∑ᵢ≠ⱼ cᵢcⱼ ∫(ξᵢ-m)(ξⱼ-m) = ∑ᵢ≠ⱼ cᵢcⱼ · σ²ρ
-    have h_offdiag : ∑ i, ∑ j with j ≠ i, 
+    have h_offdiag : ∑ i, ∑ j with j ≠ i,
                      c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ =
                      σSq * ρ * ∑ i, ∑ j with j ≠ i, c i * c j := by
       classical
-      -- Rewrite each off-diagonal term using the covariance hypothesis.
-      have h_cov_term :
-          ∀ i j, j ≠ i → c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ =
-            σSq * ρ * (c i * c j) := by
-        intro i j hj
-        have hcov_ij := hcov i j (Ne.symm hj)
-        simp [hcov_ij, mul_comm, mul_assoc]
-      -- Apply the previous identity term-by-term inside the sums.
-      have h_rewrite :
-          ∑ i, ∑ j with j ≠ i, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ
-            = ∑ i, ∑ j with j ≠ i, σSq * ρ * (c i * c j) := by
-        apply Finset.sum_congr rfl
-        intro i _
-        apply Finset.sum_congr rfl
-        intro j hj
-        exact h_cov_term i j (Finset.mem_filter.mp hj |>.2)
-      -- Factor the constant σSq * ρ out of the double sum.
-      have h_factor :
-          ∑ i, ∑ j with j ≠ i, σSq * ρ * (c i * c j)
-            = σSq * ρ * ∑ i, ∑ j with j ≠ i, c i * c j := by
-        simp [Finset.mul_sum, mul_assoc]
-      calc
-        ∑ i, ∑ j with j ≠ i, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ
-            = ∑ i, ∑ j with j ≠ i, σSq * ρ * (c i * c j) := h_rewrite
-        _ = σSq * ρ * ∑ i, ∑ j with j ≠ i, c i * c j := h_factor
+      calc ∑ i, ∑ j with j ≠ i, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ
+          = ∑ i, ∑ j with j ≠ i, σSq * ρ * (c i * c j) := by
+              apply Finset.sum_congr rfl; intro i _
+              apply Finset.sum_congr rfl; intro j hj
+              have hcov_ij := hcov i j (Ne.symm (Finset.mem_filter.mp hj).2)
+              simp [hcov_ij, mul_comm, mul_assoc]
+        _ = σSq * ρ * ∑ i, ∑ j with j ≠ i, c i * c j := by
+              simp [Finset.mul_sum, mul_assoc]
     
     -- Relate off-diagonal sum to (∑cᵢ)²
     have h_offdiag_expand : ∑ i, ∑ j with j ≠ i, c i * c j =
@@ -353,9 +324,8 @@ theorem l2_contractability_bound
       classical
       -- Expand the square as a double sum.
       have h_sq : (∑ i, c i)^2 = ∑ i, ∑ j, c i * c j := by
-        simpa [pow_two] using
-          (Finset.sum_mul_sum (s := (Finset.univ : Finset (Fin n)))
-            (t := (Finset.univ : Finset (Fin n))) (f := fun i => c i) (g := fun j => c j))
+        rw [pow_two, Finset.sum_mul_sum (s := (Finset.univ : Finset (Fin n)))
+          (t := (Finset.univ : Finset (Fin n))) (f := fun i => c i) (g := fun j => c j)]
       -- Separate diagonal from off-diagonal contributions.
       have h_inner_split : ∀ i, ∑ j, c i * c j =
           c i * c i + ∑ j with j ≠ i, c i * c j := by
@@ -418,42 +388,27 @@ theorem l2_contractability_bound
     simp [zero_pow (Nat.succ_ne_zero 1)]
   
   -- Step 5: ≤ σ²(1-ρ)∑|cᵢ| sup|cⱼ| since cᵢ² ≤ |cᵢ| sup|cⱼ|
+  have hbdd : BddAbove (Set.range fun j : Fin n => |c j|) := ⟨∑ k, |c k|, by
+    intro y ⟨k, hk⟩; rw [← hk]; exact Finset.single_le_sum (fun i _ => abs_nonneg (c i)) (Finset.mem_univ k)⟩
   have step5 : ∑ i, (c i)^2 ≤ ∑ i, |c i| * (⨆ j, |c j|) := by
-    apply Finset.sum_le_sum
-    intro i _
-    have h_sq : (c i)^2 = |c i|^2 := (sq_abs _).symm
-    rw [h_sq]
-    have hbdd : BddAbove (Set.range fun j : Fin n => |c j|) := ⟨∑ k, |c k|, by
-      intro y ⟨k, hk⟩
-      rw [← hk]
-      exact Finset.single_le_sum (fun i _ => abs_nonneg (c i)) (Finset.mem_univ k)⟩
-    have h_le : |c i| ≤ ⨆ j, |c j| := le_ciSup hbdd i
-    calc |c i|^2 = |c i| * |c i| := sq _
-       _ ≤ |c i| * (⨆ j, |c j|) := mul_le_mul_of_nonneg_left h_le (abs_nonneg _)
+    apply Finset.sum_le_sum; intro i _
+    calc (c i)^2 = |c i|^2 := (sq_abs _).symm
+       _ = |c i| * |c i| := sq _
+       _ ≤ |c i| * (⨆ j, |c j|) := mul_le_mul_of_nonneg_left (le_ciSup hbdd i) (abs_nonneg _)
   
   -- Nonnegativity lemmas
-  have hσ_1ρ_nonneg : 0 ≤ σSq * (1 - ρ) := by
-    apply mul_nonneg hσSq_nonneg
-    linarith [_hρ_bd.2]  -- ρ ≤ 1 implies 0 ≤ 1 - ρ
-  
+  have hσ_1ρ_nonneg : 0 ≤ σSq * (1 - ρ) :=
+    mul_nonneg hσSq_nonneg (by linarith [_hρ_bd.2])
+
   have hsup_nonneg : 0 ≤ ⨆ j, |c j| := by
-    have hbdd : BddAbove (Set.range fun j : Fin n => |c j|) := ⟨∑ k, |c k|, by
-      intro y ⟨k, hk⟩
-      rw [← hk]
-      exact Finset.single_le_sum (fun i _ => abs_nonneg (c i)) (Finset.mem_univ k)⟩
     by_cases h : Nonempty (Fin n)
     · obtain ⟨j0⟩ := h
-      calc (0 : ℝ)
-          ≤ |c j0| := abs_nonneg _
+      calc (0 : ℝ) ≤ |c j0| := abs_nonneg _
         _ ≤ ⨆ j, |c j| := le_ciSup hbdd j0
-    · -- When Fin n is empty, the supremum is over an empty set
-      -- In this case, all values are vacuously nonnegative
-      haveI : IsEmpty (Fin n) := not_nonempty_iff.mp h
+    · haveI : IsEmpty (Fin n) := not_nonempty_iff.mp h
       have : (Set.range fun j : Fin n => |c j|) = ∅ := by
-        ext x
-        simp only [Set.mem_range, Set.mem_empty_iff_false, iff_false]
-        rintro ⟨j, _⟩
-        exact IsEmpty.false j
+        ext x; simp only [Set.mem_range, Set.mem_empty_iff_false, iff_false]
+        rintro ⟨j, _⟩; exact IsEmpty.false j
       rw [iSup, this, Real.sSup_empty]
   
   -- Step 6: ≤ 2σ²(1-ρ) sup|cⱼ| since ∑|cᵢ| ≤ 2
