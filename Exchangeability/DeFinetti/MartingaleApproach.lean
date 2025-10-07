@@ -85,8 +85,8 @@ lemma measurable_shiftSeq (d : ℕ) :
   refine measurable_pi_iff.mpr ?_
   intro n
   -- Evaluation at `n + d` is measurable in the product σ-algebra.
-  have h := (Pi.measurable_eval (fun _ : ℕ => β) (n + d))
-  simpa [shiftSeq] using h
+  simp only [shiftSeq]
+  exact Pi.measurable_eval _ (n + d)
 
 lemma forall_mem_erase {γ : Type*} [DecidableEq γ]
     {s : Finset γ} {a : γ} {P : γ → Prop} (ha : a ∈ s) :
@@ -203,7 +203,7 @@ lemma revFiltration_antitone (X : ℕ → Ω → α) :
   intro m k hmk
   classical
   have hcomp :
-      shiftRV X k = (shiftSeq (α:=α) (k - m)) ∘ shiftRV X m := by
+      shiftRV X k = (shiftSeq (β:=α) (k - m)) ∘ shiftRV X m := by
     funext ω n
     have hkm : m + (k - m) = k := by
       simpa [Nat.add_comm] using (Nat.sub_add_cancel hmk)
@@ -219,7 +219,7 @@ lemma revFiltration_antitone (X : ℕ → Ω → α) :
   intro s hs
   simp [revFiltration, hcomp, Set.preimage_preimage, Function.comp] at hs ⊢
   rcases hs with ⟨t, ht, rfl⟩
-  refine ⟨_, (measurable_shiftSeq (α:=α) (k - m)).measurableSet_preimage ht, rfl⟩
+  exact ⟨_, (measurable_shiftSeq (β:=α) (k - m)) ht, rfl⟩
 
 /-- If `X` is contractable, then so is each of its shifts `θₘ X`. -/
 lemma shift_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
@@ -370,15 +370,16 @@ lemma contractable_dist_eq_on_cylinders
           simpa [t0, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using htail'
       · rcases h with ⟨hB0_mem, htail⟩
         have hBm : X m ω ∈ B := by
-          have := hB0_mem
-          simpa [B0, h0] using this.1
+          simp only [B0, h0, Set.mem_inter_iff] at hB0_mem
+          exact hB0_mem.1
         have h0_tail : X (m + 0) ω ∈ t 0 h0 := by
-          have := hB0_mem
-          simpa [B0, h0, Nat.add_zero] using this.2
+          simp only [B0, h0, Set.mem_inter_iff, Nat.add_zero] at hB0_mem
+          exact hB0_mem.2
         refine ⟨hBm, ?_⟩
         intro i hi
         by_cases hi0 : i = 0
-        · simpa [hi0, Nat.add_zero] using h0_tail
+        · subst hi0
+          convert h0_tail using 2
         · have hi_mem : i ∈ s0 := Finset.mem_erase.mpr ⟨hi0, hi⟩
           have := htail i hi_mem
           simpa [t0, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using this
@@ -406,15 +407,16 @@ lemma contractable_dist_eq_on_cylinders
           simpa [t0, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using htail'
       · rcases h with ⟨hB0_mem, htail⟩
         have hBk : X k ω ∈ B := by
-          have := hB0_mem
-          simpa [B0, h0] using this.1
+          simp only [B0, h0, Set.mem_inter_iff] at hB0_mem
+          exact hB0_mem.1
         have h0_tail : X (m + 0) ω ∈ t 0 h0 := by
-          have := hB0_mem
-          simpa [B0, h0, Nat.add_zero] using this.2
+          simp only [B0, h0, Set.mem_inter_iff, Nat.add_zero] at hB0_mem
+          exact hB0_mem.2
         refine ⟨hBk, ?_⟩
         intro i hi
         by_cases hi0 : i = 0
-        · simpa [hi0, Nat.add_zero] using h0_tail
+        · subst hi0
+          convert h0_tail using 2
         · have hi_mem : i ∈ s0 := Finset.mem_erase.mpr ⟨hi0, hi⟩
           have := htail i hi_mem
           simpa [t0, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using this
