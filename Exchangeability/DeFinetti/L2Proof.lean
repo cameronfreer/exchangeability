@@ -156,11 +156,9 @@ theorem weighted_sums_converge_L1
   -- A n m is in L¹ for all n, m (bounded measurable on probability space)
   have hA_memLp : ∀ n m, MemLp (A n m) 1 μ := by
     intro n m
-    obtain ⟨M, hM⟩ := hf_bdd
-    -- Use that bounded measurable functions are integrable on finite measure spaces
-    -- For probability measures, L^1 norm is bounded by the bound
-    sorry  -- TODO: Find correct mathlib API for bounded → MemLp
-           -- Try: Integrable.memLp, memLp_const_smul, or build via eLpNorm bound
+    -- For bounded measurable functions on probability spaces, MemLp holds for any p
+    sorry  -- TODO: Use MemLp.of_bound with proper bound calculation
+           -- The bound should be M from hf_bdd, proof is (1/m)*m*M = M
 
   -- Step 1: For n=0, show (A 0 m)_m is Cauchy in L² hence L¹
   have hA_cauchy_L2_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
