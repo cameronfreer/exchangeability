@@ -103,7 +103,7 @@ lemma contractable_map_single {i : ℕ} :
   -- `k` selects the singleton subsequence `{i}`.
   let k : Fin 1 → ℕ := fun _ => i
   have hk : StrictMono k := by
-    intro a b hlt; cases hlt
+    canonical
   have h_map := hX_contract 1 k hk
   let eval : (Fin 1 → ℝ) → ℝ := fun g => g fin1Zero
   have h_eval_meas : Measurable eval := measurable_eval_fin1
