@@ -175,19 +175,8 @@ lemma prefixCylinder_inter {m n : ℕ} {S : Set (Fin m → α)} {T : Set (Fin n 
       prefixCylinder (α:=α) (max m n)
         (extendSet (α:=α) (Nat.le_max_left _ _) S ∩
           extendSet (α:=α) (Nat.le_max_right _ _) T) := by
-  ext x; constructor <;> intro hx
-  · rcases hx with ⟨hxS, hxT⟩
-    refine ⟨?_, ?_⟩
-    · change takePrefix (α:=α) (Nat.le_max_left m n) (prefixProj (α:=α) (max m n) x) ∈ S
-      simpa [takePrefix_prefixProj] using hxS
-    · change takePrefix (α:=α) (Nat.le_max_right m n) (prefixProj (α:=α) (max m n) x) ∈ T
-      simpa [takePrefix_prefixProj] using hxT
-  · rcases hx with ⟨hxS, hxT⟩
-    constructor
-    · change takePrefix (α:=α) (Nat.le_max_left m n) (prefixProj (α:=α) (max m n) x) ∈ S
-      simpa [takePrefix_prefixProj] using hxS
-    · change takePrefix (α:=α) (Nat.le_max_right m n) (prefixProj (α:=α) (max m n) x) ∈ T
-      simpa [takePrefix_prefixProj] using hxT
+  ext x
+  simp only [Set.mem_inter_iff, mem_prefixCylinder, extendSet, Set.mem_setOf_eq, takePrefix_prefixProj]
 
 end Extend
 
@@ -316,10 +305,9 @@ theorem measure_eq_of_fin_marginals_eq {μ ν : Measure (ℕ → α)}
   · simp [generateFrom_prefixCylinders (α:=α)]
   · exact isPiSystem_prefixCylinders (α:=α)
   · intro A hA
-    rcases hA with ⟨n, S, hS, rfl⟩
-    simp only [prefixCylinder]
-    rw [← Measure.map_apply_of_aemeasurable ((measurable_prefixProj (α:=α) n).aemeasurable) hS,
-        ← Measure.map_apply_of_aemeasurable ((measurable_prefixProj (α:=α) n).aemeasurable) hS]
+    obtain ⟨n, S, hS, rfl⟩ := hA
+    simp only [prefixCylinder, ← Measure.map_apply_of_aemeasurable
+      ((measurable_prefixProj (α:=α) n).aemeasurable) hS]
     exact h n S hS
   · simpa using h_univ
 
@@ -437,34 +425,16 @@ lemma fullyExchangeable_iff_pathLaw_invariant {μ : Measure Ω}
       ∀ π, Measure.map (reindex (α:=α) π) (pathLaw (α:=α) μ X)
         = pathLaw (α:=α) μ X := by
   classical
+  simp only [pathLaw]
   constructor
   · intro hFull π
-    have hmap :
-        Measure.map (reindex (α:=α) π) (pathLaw (α:=α) μ X)
-          = Measure.map (fun ω => fun i : ℕ => X (π i) ω) μ := by
-      have := Measure.map_map (μ:=μ) (measurable_reindex (α:=α) π)
-          (measurable_pi_lambda _ (fun i => hX i))
-      simp at this
-      exact this
-    have hpath : pathLaw (α:=α) μ X =
-        Measure.map (fun ω => fun i : ℕ => X i ω) μ := by
-      simp [pathLaw]
-    rw [hmap, hpath]
+    rw [Measure.map_map (measurable_reindex (α:=α) π)
+      (measurable_pi_lambda _ (fun i => hX i))]
     exact hFull π
   · intro hPath π
-    have hmap :
-        Measure.map (reindex (α:=α) π) (pathLaw (α:=α) μ X)
-          = Measure.map (fun ω => fun i : ℕ => X (π i) ω) μ := by
-      have := Measure.map_map (μ:=μ) (measurable_reindex (α:=α) π)
-          (measurable_pi_lambda _ (fun i => hX i))
-      simp at this
-      exact this
-    have hpath : pathLaw (α:=α) μ X =
-        Measure.map (fun ω => fun i : ℕ => X i ω) μ := by
-      simp [pathLaw]
     have := hPath π
-    rw [hmap, hpath] at this
-    exact this
+    rwa [Measure.map_map (measurable_reindex (α:=α) π)
+      (measurable_pi_lambda _ (fun i => hX i))] at this
 
 /-!
 ### Auxiliary combinatorics: approximating infinite permutations
