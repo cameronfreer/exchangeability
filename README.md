@@ -103,7 +103,7 @@ Exchangeability/
 
 ### Primary Sources
 
-- **Kallenberg, Olav** (2005). *Probabilistic Symmetries and Invariance Principles*. Probability and Its Applications. Springer-Verlag, New York. ISBN 978-0-387-25115-8. [Chapter 1, Theorem 1.1]
+- **Kallenberg, Olav** (2005). *Probabilistic Symmetries and Invariance Principles*. Probability and Its Applications. Springer-Verlag, New York. [https://doi.org/10.1007/0-387-28861-9](https://doi.org/10.1007/0-387-28861-9) [Chapter 1, Theorem 1.1]
 
 - **De Finetti, Bruno** (1937). "La prévision : ses lois logiques, ses sources subjectives." *Annales de l'Institut Henri Poincaré* 7 (1): 1–68. [[English translation: "Foresight: Its Logical Laws, Its Subjective Sources" (1964) in *Studies in Subjective Probability*, H. E. Kyburg and H. E. Smokler, eds.]](https://www.numdam.org/item/AIHP_1937__7_1_1_0/)
 
@@ -127,8 +127,6 @@ This is an active research project. See [`WorkPlans/`](WorkPlans/) for current t
 
 This formalization was developed with assistance from:
 - **Claude Sonnet 4.5** (Anthropic) - Code generation, refactoring, and proof development
-- **GPT-o1** (OpenAI) - Mathematical reasoning and proof strategy
+- **GPT-5-Codex** (OpenAI) - Mathematical reasoning and proof strategy
 
 Built with [Lean 4](https://leanprover.github.io/) and [Mathlib](https://github.com/leanprover-community/mathlib4).
-
-Special thanks to the Lean community for the powerful theorem proving infrastructure and extensive mathematical library.
