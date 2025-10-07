@@ -312,6 +312,16 @@ noncomputable def ν {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] : Ω[α] → Measure α :=
   fun ω => (rcdKernel (μ := μ)) ω
 
+/-- Convenient rewrite for evaluating the kernel `ν` on a measurable set. -/
+lemma ν_apply {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (ω : Ω[α]) (s : Set α) :
+    ν (μ := μ) ω s
+      = (condExpKernel μ (shiftInvariantSigma (α := α)) ω)
+          ((fun y : Ω[α] => y 0) ⁻¹' s) := by
+  classical
+  unfold ν rcdKernel
+  simp [Kernel.map, π0]
+
 /-- The kernel ν gives probability measures. -/
 instance ν_isProbabilityMeasure {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] (ω : Ω[α]) :
@@ -337,10 +347,66 @@ lemma ν_measurable_tail {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
 
 Because the tail σ-algebra is shift-invariant and condExpKernel is characterized
 a.e. by the conditional expectation equation, the kernel is a.e. shift-invariant. -/
+lemma ν_shift_eq_on_basis {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    [StandardBorelSpace α] [StandardBorelSpace (Ω[α])] (hσ : MeasurePreserving shift μ μ) :
+    ∀ᵐ ω ∂μ, ∀ s ∈ countableBasis α,
+      ν (μ := μ) (shift ω) s = ν (μ := μ) ω s := by
+  classical
+  letI := upgradeStandardBorel α
+  -- any basis element gives a tail-measurable evaluation functional
+  have h_meas : ∀ s ∈ countableBasis α,
+      AEStronglyMeasurable[shiftInvariantSigma (α := α)]
+        (fun ω => ν (μ := μ) ω s) μ := by
+    intro s hs
+    have hs_meas : MeasurableSet s :=
+      (isBasis_countableBasis α).isOpen hs |>.measurableSet
+    have hcond :=
+      measurable_condExpKernel
+        (μ := μ) (m := shiftInvariantSigma (α := α))
+        ((fun y : Ω[α] => y 0) ⁻¹' s)
+        (by
+          have : Measurable fun y : Ω[α] => y 0 := measurable_pi_apply 0
+          exact hs_meas.preimage this)
+    have h_meas' : Measurable[shiftInvariantSigma (α := α)]
+        (fun ω => ν (μ := μ) ω s) := by
+      simpa [ν_apply] using hcond
+    exact h_meas'.aestronglyMeasurable
+  -- apply shift-invariance lemma and bundle over the countable family
+  have h_single : ∀ s : {t // t ∈ countableBasis α},
+      ∀ᵐ ω ∂μ, ν (μ := μ) (shift ω) s.1 = ν (μ := μ) ω s.1 := by
+    intro s
+    have := shiftInvariantSigma_aestronglyMeasurable_ae_shift_eq
+      (μ := μ) (hσ := hσ)
+      (f := fun ω => ν (μ := μ) ω s.1)
+      (hf := h_meas s.1 s.2)
+    simpa [Function.comp, ν_apply] using this
+  have h_all := ae_all_iff.mpr h_single
+  refine h_all.mono ?_
+  intro ω hω s hs
+  exact hω ⟨s, hs⟩
+
+/-- *Work in progress.*  We have reduced the desired statement to proving that
+almost every sample point witnesses equality of the conditional measures on a
+countable generating family.  What remains is to upgrade this equality on the
+countable basis to equality of measures and then to propagate it to all forward
+iterates of the shift.
+
+Steps still to be filled in:
+1. Use `ν_shift_eq_on_basis` together with `Measure.ext_of_generateFrom`
+   (and the fact that `countableBasis α` generates the Borel σ-algebra) to show
+   `∀ᵐ ω, ν (shift ω) = ν ω` as measures on `α`.
+2. Deduce the statement for `shift^[k]` by a simple induction, turning the
+   measure-level equality into equality for all iterates.
+-/
 lemma ν_ae_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] [StandardBorelSpace (Ω[α])] (hσ : MeasurePreserving shift μ μ) :
     ∀ᵐ ω ∂μ, ∀ k : ℕ, ν (μ := μ) (shift^[k] ω) = ν (μ := μ) ω := by
-  sorry -- TODO: Use shift-invariance of shiftInvariantSigma and uniqueness of condExpKernel
+  classical
+  -- Step 1: equality on the countable topological basis (done).
+  have h_basis := ν_shift_eq_on_basis (μ := μ) (α := α) hσ
+  -- TODO: upgrade `h_basis` to measure equality and then conclude by induction on `k`.
+  -- See the note above for the remaining tasks.
+  sorry
 
 /-- Identical conditional marginals: all coordinates have the same conditional law given tail.
 
