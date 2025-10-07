@@ -417,76 +417,99 @@ lemma fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
     (m : ℕ) (k : Fin m → ℕ) (B : Fin m → Set α) (hB : ∀ i, MeasurableSet (B i))
     (hν_dir : ∀ (f : α → ℝ), Measurable f → (∃ M, ∀ x, |f x| ≤ M) → ∀ (i : ℕ), True) :
     μ {ω | ∀ i, X (k i) ω ∈ B i} = ∫⁻ ω, (Measure.pi fun i : Fin m => ν ω) {x | ∀ i, x i ∈ B i} ∂μ := by
-  -- Step 1: Rewrite LHS using indicator function
-  -- μ{ω : ∀ i, X(k i)(ω) ∈ B i} = E[∏ᵢ 𝟙_{Bᵢ}(X(k i))]
-  have lhs_eq : μ {ω | ∀ i, X (k i) ω ∈ B i} =
-      ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => 1) (X (k i) ω)) ∂μ := by
+  classical
+
+  -- Shorthand for the target measurable set
+  set E : Set Ω := {ω | ∀ i : Fin m, X (k i) ω ∈ B i}
+
+  have hEvtMeas : MeasurableSet E := by
+    have : E = ⋂ i : Fin m, {ω | X (k i) ω ∈ B i} := by
+      ext ω; simp [E]
+    simpa [this] using
+      MeasurableSet.iInter fun i => (hX_meas (k i)) (hB i)
+
+  -- Product of {0,1}-valued indicators collapses to the indicator of E
+  have hProdEqIndicator :
+      (fun ω : Ω => ∏ i : Fin m,
+        ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)))
+        = Set.indicator E (fun _ : Ω => (1 : ℝ≥0∞)) := by
     classical
-    let E : Set Ω := {ω | ∀ i : Fin m, X (k i) ω ∈ B i}
-    have hE_meas : MeasurableSet E := by
-      have : E = ⋂ i : Fin m, {ω | X (k i) ω ∈ B i} := by
-        ext ω; simp [E]
-      simpa [this] using
-        MeasurableSet.iInter (fun i => (hX_meas (k i)) (hB i))
-    have hprod_indicator :
-        (fun ω => ∏ i : Fin m,
-            ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)))
-          = Set.indicator E (fun _ => (1 : ℝ≥0∞)) := by
-      funext ω
-      by_cases hmem : ω ∈ E
-      · have hmem' : ∀ i, X (k i) ω ∈ B i := by simpa [E] using hmem
-        have : ∀ i : Fin m,
-            ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) = 1 := by
-          intro i; simp [Set.indicator, hmem' i]
-        simp [Set.indicator, E, Finset.prod_const_one, hmem, this]
-      · obtain ⟨i₀, hi₀⟩ := by
-          classical
-          have : ¬ ∀ i : Fin m, X (k i) ω ∈ B i := by simpa [E] using hmem
-          exact not_forall.mp this
-        have hzero : ENNReal.ofReal ((B i₀).indicator (fun _ => (1 : ℝ)) (X (k i₀) ω)) = 0 := by
-          simp [Set.indicator, hi₀]
-        have himem : (i₀ : Fin m) ∈ (Finset.univ : Finset (Fin m)) := by simp
-        have hprod_zero : ∏ i : Fin m,
-            ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) = 0 :=
-          Finset.prod_eq_zero himem hzero
-        simp [Set.indicator, E, hmem, hprod_zero]
+    funext ω
+    classical
+    by_cases hω : ω ∈ E
+    · have h1 : ∀ i, (B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω) = 1 := by
+        intro i
+        have Hi : X (k i) ω ∈ B i := by simpa [E] using (hω i)
+        simpa [Set.indicator, Hi]
+      have : ∀ i : Fin m,
+          ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) = 1 := by
+        intro i; simp [h1 i]
+      have hprod :
+          ∏ i : Fin m,
+              ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) = 1 := by
+        simpa [this] using
+          Finset.prod_const_one (s := (Finset.univ : Finset (Fin m))) (a := (1 : ℝ≥0∞))
+      simpa [Set.indicator, E, hω, hprod]
+    · have hnot : ω ∉ E := hω
+      have hzero : ∃ j : Fin m,
+          ENNReal.ofReal ((B j).indicator (fun _ => (1 : ℝ)) (X (k j) ω)) = 0 := by
+        classical
+        have : ¬∀ i : Fin m, X (k i) ω ∈ B i := by simpa [E] using hnot
+        rcases not_forall.mp this with ⟨j, hj⟩
+        refine ⟨j, ?_⟩
+        simp [Set.indicator, hj]
+      rcases hzero with ⟨j, hj⟩
+      have hjmem : (j : Fin m) ∈ (Finset.univ : Finset (Fin m)) := by simp
+      have hprod :
+          ∏ i : Fin m,
+              ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) = 0 :=
+        Finset.prod_eq_zero hjmem hj
+      simpa [Set.indicator, hnot, hprod]
+
+  -- Evaluate μ(E) via the lintegral of its indicator
+  have lhs_eq : μ E
+      = ∫⁻ ω, ∏ i : Fin m,
+          ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) ∂μ := by
+    classical
     have hlin :=
-      lintegral_indicator (μ := μ) E hE_meas (fun _ : Ω => (1 : ℝ≥0∞))
+      lintegral_indicator (μ := μ) (s := E)
+        (f := fun _ : Ω => (1 : ℝ≥0∞)) hEvtMeas
     have hconst := lintegral_const (μ := μ.restrict E) (c := (1 : ℝ≥0∞))
     have hconst' : ∫⁻ ω, (1 : ℝ≥0∞) ∂μ.restrict E = μ E := by
-      simpa [Measure.restrict_apply, hE_meas, mul_comm] using hconst
-    have hμE : μ E = ∫⁻ ω, Set.indicator E (fun _ => (1 : ℝ≥0∞)) ω ∂μ := by
+      simpa [Measure.restrict_apply, hEvtMeas, mul_comm] using hconst
+    have hμE : μ E = ∫⁻ ω, Set.indicator E (fun _ : Ω => (1 : ℝ≥0∞)) ω ∂μ := by
       simpa [hconst'] using hlin.symm
-    simpa [E, hprod_indicator] using hμE
+    simpa [hProdEqIndicator] using hμE
 
-  -- Step 2: Use hν_dir to replace indicators with ν measures
-  -- For each i, E[𝟙_{Bᵢ}(X(k i)) | tail] = ν(Bᵢ) by condExp_indicator_eq_measure
-  -- This is the key bridge from conditional expectation to measures
-
-  -- Step 3: Apply conditional independence
-  -- E[∏ᵢ 𝟙_{Bᵢ}(X(k i))] = E[∏ᵢ ν(Bᵢ)]
-  -- This requires the monotone class argument:
-  -- - Indicators are bounded measurable functions
-  -- - hν_dir gives the result for each indicator separately
-  -- - Conditional independence extends this to products
-  have prod_eq : ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => 1) (X (k i) ω)) ∂μ =
-      ∫⁻ ω, ∏ i : Fin m, ν ω (B i) ∂μ := by
-    sorry  -- TODO: Use condExp_indicator_eq_measure and conditional independence
-
-  -- Step 4: Recognize RHS as product measure
-  -- ∏ᵢ ν(Bᵢ) = (Measure.pi ν){x : ∀ i, x i ∈ Bᵢ} by definition of product measure
-  have rhs_eq : ∫⁻ ω, ∏ i : Fin m, ν ω (B i) ∂μ =
-      ∫⁻ ω, (Measure.pi fun i : Fin m => ν ω) {x | ∀ i, x i ∈ B i} ∂μ := by
-    classical
-    congr 1
-    funext ω
-    have hset : {x : Fin m → α | ∀ i, x i ∈ B i}
+  -- Rewrite the integrand on the right via product measures on rectangles
+  have rhs_eq :
+      ∫⁻ ω, ∏ i : Fin m, ν ω (B i) ∂μ
+        = ∫⁻ ω, (Measure.pi fun i : Fin m => ν ω)
+            {x : Fin m → α | ∀ i, x i ∈ B i} ∂μ := by
+    have set_eq : {x : Fin m → α | ∀ i, x i ∈ B i}
         = Set.univ.pi fun i => B i := by
       ext x; simp [Set.pi]
-    simp [hset, Measure.pi_pi]
+    have hpt : (fun ω => ∏ i : Fin m, ν ω (B i))
+        = fun ω => (Measure.pi fun i : Fin m => ν ω)
+            {x : Fin m → α | ∀ i, x i ∈ B i} := by
+      funext ω; simp [set_eq, Measure.pi_pi]
+    simpa [hpt]
 
-  -- Combine all steps
-  rw [lhs_eq, prod_eq, rhs_eq]
+  -- Structural bridge: indicators versus conditional product measures
+  have prod_eq :
+      ∫⁻ ω, ∏ i : Fin m,
+          ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) ∂μ
+        = ∫⁻ ω, ∏ i : Fin m, ν ω (B i) ∂μ := by
+    -- TODO: package conditional independence from the directing measure hypothesis.
+    sorry
+
+  -- Chain the three equalities
+  calc
+    μ {ω | ∀ i, X (k i) ω ∈ B i} = μ E := rfl
+    _ = ∫⁻ ω, ∏ i : Fin m,
+          ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) ∂μ := lhs_eq
+    _ = ∫⁻ ω, ∏ i : Fin m, ν ω (B i) ∂μ := prod_eq
+    _ = ∫⁻ ω, (Measure.pi fun i : Fin m => ν ω) {x | ∀ i, x i ∈ B i} ∂μ := rhs_eq
 
 /-- The collection of measurable rectangles in a product space forms a π-system.
 
@@ -603,48 +626,51 @@ lemma aemeasurable_measure_pi {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSp
     (hν_meas : ∀ s, Measurable (fun ω => ν ω s)) :
     AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ := by
   classical
-  -- It suffices to show actual measurability
-  apply Measurable.aemeasurable
-  -- Define the collection of measurable rectangles
-  let rectangles : Set (Set (Fin m → α)) :=
+  -- Abbreviation for the product kernel
+  let κ : Ω → Measure (Fin m → α) := fun ω => Measure.pi fun _ : Fin m => ν ω
+  -- Rectangular generator and π-system for the product σ-algebra
+  let 𝒞 : Set (Set (Fin m → α)) :=
     {S | ∃ (B : Fin m → Set α), (∀ i, MeasurableSet (B i)) ∧
-      S = {x : Fin m → α | ∀ i, x i ∈ B i}}
-  have hpi : IsPiSystem rectangles := rectangles_isPiSystem (m := m) (α := α)
-  have hgen :
-      (inferInstance : MeasurableSpace (Fin m → α))
-        = MeasurableSpace.generateFrom rectangles :=
+        S = {x | ∀ i, x i ∈ B i}}
+
+  have h_gen : (inferInstance : MeasurableSpace (Fin m → α))
+      = MeasurableSpace.generateFrom 𝒞 :=
     rectangles_generate_pi_sigma (m := m) (α := α)
-  -- Show measurability on rectangles
-  have h_basic : ∀ S ∈ rectangles,
-      Measurable fun ω => (Measure.pi (fun _ : Fin m => ν ω)) S := by
-    intro S hS
-    rcases hS with ⟨B, hB, rfl⟩
-    have hset :
-        {x : Fin m → α | ∀ i, x i ∈ B i} =
-          Set.univ.pi fun i => B i := by
-      ext x; simp [Set.pi]
-    have hprod :
-        (fun ω => (Measure.pi (fun _ : Fin m => ν ω)) {x : Fin m → α | ∀ i, x i ∈ B i})
-          = fun ω => ∏ i : Fin m, ν ω (B i) := by
+  have h_pi : IsPiSystem 𝒞 := rectangles_isPiSystem (m := m) (α := α)
+
+  -- Values on rectangles are measurable
+  have h_basic : ∀ t ∈ 𝒞, Measurable fun ω => κ ω t := by
+    intro t ht
+    rcases ht with ⟨B, hB, rfl⟩
+    have rect : (fun ω => κ ω {x : Fin m → α | ∀ i, x i ∈ B i})
+        = fun ω => ∏ i : Fin m, ν ω (B i) := by
       funext ω
-      simp [hset, Measure.pi_pi]
+      have : {x : Fin m → α | ∀ i, x i ∈ B i}
+          = Set.univ.pi fun i => B i := by
+        ext x; simp [Set.pi]
+      simp [κ, this, Measure.pi_pi]
+    have hfac : ∀ i, Measurable fun ω => ν ω (B i) := by
+      intro i; simpa using hν_meas (B i)
     have hmeas : Measurable fun ω => ∏ i : Fin m, ν ω (B i) :=
-      measurable_prod_ennreal (fun i ω => ν ω (B i))
-        (fun i => hν_meas (B i))
-    simpa [hprod]
-  -- Register probability instances for product measures
-  haveI : ∀ ω, IsProbabilityMeasure (Measure.pi fun _ : Fin m => ν ω) :=
-    fun ω => by
-      classical
-      haveI : IsProbabilityMeasure (ν ω) := hν_prob ω
-      simpa using (Measure.pi.instIsProbabilityMeasure
-        (μ := fun _ : Fin m => ν ω))
-  -- Apply the π-λ theorem
-  have h_meas : Measurable (fun ω => Measure.pi fun _ : Fin m => ν ω) :=
-    Measurable.measure_of_isPiSystem_of_isProbabilityMeasure
-      (μ := fun ω => Measure.pi fun _ : Fin m => ν ω)
-      (S := rectangles) hgen hpi h_basic
-  exact h_meas
+      measurable_prod_ennreal (fun i ω => ν ω (B i)) hfac
+    simpa [κ, rect]
+
+  -- Each product measure is a probability measure
+  have hκ_prob : ∀ ω, IsProbabilityMeasure (κ ω) := by
+    intro ω
+    classical
+    haveI : ∀ _ : Fin m, IsProbabilityMeasure (ν ω) := fun _ => hν_prob ω
+    simpa [κ] using Measure.pi.instIsProbabilityMeasure
+
+  -- Obtain measurability and downgrade to AE-measurability
+  have hκ_meas : Measurable κ := by
+    classical
+    haveI : ∀ ω, IsProbabilityMeasure (κ ω) := hκ_prob
+    refine
+      Measurable.measure_of_isPiSystem_of_isProbabilityMeasure
+        (μ := κ) h_gen h_pi ?_
+    intro t ht; exact h_basic t ht
+  exact hκ_meas.aemeasurable
 
 /-- The bind of a probability measure with the product measure kernel equals the integral
 of the product measure. This is the other side of the ConditionallyIID equation.
