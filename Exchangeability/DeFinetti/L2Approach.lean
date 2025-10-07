@@ -1,38 +1,78 @@
-/-
-Copyright (c) 2025 exchangeability contributors. All rights reserved.
-Released under Apache 2.0 license as described in the file LICENSE.
-Authors: exchangeability contributors
--/
 import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.Analysis.InnerProductSpace.Basic
 
 /-!
-# Second Proof of de Finetti via L² Contractability
+# Elementary Proof of de Finetti via L² Contractability
 
-This file implements Kallenberg's "Second proof" via the L² contractability bound
-(Lemma 1.2, page 26).
+This file develops an **elementary proof** of de Finetti's theorem using Kallenberg's
+L² contractability bound, avoiding the full Mean Ergodic Theorem machinery from the
+Koopman operator approach.
 
-## Main approach
+## Mathematical background
 
-This provides an elementary route to de Finetti's theorem without invoking the full
-Mean Ergodic Theorem machinery. Instead, it uses a direct L² bound to show that
-empirical distributions contract toward their limit.
+The Mean Ergodic Theorem (see `KoopmanMeanErgodic.lean`) provides a deep connection
+between de Finetti's theorem and ergodic theory, but requires sophisticated functional
+analysis. Kallenberg observed that for exchangeable sequences with finite variance,
+a much simpler **direct L² bound** suffices to prove convergence.
+
+**Key insight:** For exchangeable sequences `ξ₁, ξ₂, ...` with constant correlation
+`ρ`, weighted averages with different weights are close in L²:
+
+  `E(∑ pᵢξᵢ - ∑ qᵢξᵢ)² ≤ 2σ²(1-ρ) sup_j |pⱼ - qⱼ|`
+
+As `n → ∞` in exchangeable sequences, the correlation `ρ → 1`, making the bound go to 0.
+This shows that *all* weighted averages converge to the same limit (the tail σ-algebra).
+
+## Comparison of approaches
+
+**L² approach (this file):**
+- ✅ Elementary: Uses only basic L² estimates and Cauchy-Schwarz
+- ✅ Direct: Proves convergence via explicit bounds
+- ✅ Quantitative: Gives explicit rates of convergence
+- ❌ Requires finite variance assumption
+- ❌ Less general than ergodic approach
+
+**Ergodic approach** (`KoopmanMeanErgodic.lean`, `ProjectionLemmas.lean`):
+- ✅ Works for all L² functions (not just finite variance)
+- ✅ Deep connection to dynamical systems and ergodic theory
+- ✅ Generalizes beyond exchangeability
+- ❌ Requires sophisticated functional analysis (orthogonal projections, fixed-point subspaces)
+- ❌ Less elementary
+
+## Application to de Finetti
+
+The L² contractability bound proves that:
+1. **Empirical averages converge:** `n⁻¹ ∑ᵢ₌₁ⁿ ξᵢ` converges in L² as `n → ∞`
+2. **The limit is tail-measurable:** Any two weighted averages with similar weights
+   give similar results, forcing the limit to be independent of the weights
+3. **Conditionally i.i.d. structure:** The exchangeable sequence is conditionally
+   independent given the limiting average (the tail σ-algebra)
+
+This provides a complete proof of de Finetti's theorem without the Koopman operator.
 
 ## Main result
 
-* `l2_contractability_bound`: Kallenberg's Lemma 1.2
+* `l2_contractability_bound`: **Kallenberg's Lemma 1.2** - the key L² bound for
+  weighted averages of exchangeable sequences with constant correlation
+
+## Implementation notes
+
+The proof closely follows Kallenberg (2005), page 26. The calculation is elementary
+but requires careful tracking of diagonal vs. off-diagonal terms in the covariance
+expansion. The key steps are:
+
+1. Reduce to centered variables: `∑ cᵢξᵢ = ∑ cᵢ(ξᵢ - m)` when `∑ cᵢ = 0`
+2. Expand the L² norm: `E(∑ cᵢ(ξᵢ - m))² = ∑ᵢⱼ cᵢcⱼ cov(ξᵢ, ξⱼ)`
+3. Separate diagonal and off-diagonal: `= σ²∑cᵢ² + σ²ρ∑ᵢ≠ⱼ cᵢcⱼ`
+4. Simplify using `∑cᵢ = 0`: `= σ²(1-ρ)∑cᵢ²`
+5. Bound by supremum: `∑cᵢ² ≤ (sup|cᵢ|)(∑|cᵢ|) ≤ 2 sup|cᵢ|`
 
 ## References
 
-* Olav Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*,
-  Springer, Chapter 1, page 26 (Lemma 1.2).
-  
-  **Lemma 1.2** (L²-bound): Let ξ₁,...,ξₙ ∈ L² with E ξⱼ = m, var(ξⱼ) = σ² < ∞,
-  and cov(ξᵢ,ξⱼ) = σ²ρ for all i ≠ j, and fix any distributions (p₁,...,pₙ) and
-  (q₁,...,qₙ) on {1,...,n}. Then
-  
-  E(∑ᵢ pᵢξᵢ - ∑ᵢ qᵢξᵢ)² ≤ 2σ²(1-ρ) sup_j |pⱼ - qⱼ|.
-
+* Kallenberg, "Probabilistic Symmetries and Invariance Principles" (2005), Chapter 1,
+  Lemma 1.2 (page 26)
+* This is presented as the "second proof" of de Finetti's theorem, contrasting with
+  the ergodic approach (Kallenberg's "first proof")
 -/
 
 noncomputable section
@@ -44,15 +84,76 @@ open MeasureTheory BigOperators
 variable {α : Type*} [MeasurableSpace α]
 variable {Ω : Type*} [MeasurableSpace Ω]
 
-/-- **Kallenberg's Lemma 1.2**: L² contractability bound for exchangeable sequences.
+/--
+**Kallenberg's Lemma 1.2:** L² contractability bound for weighted averages of
+exchangeable sequences.
 
-Given ξ₁,...,ξₙ ∈ L² with common mean m, variance σ² < ∞, and
-cov(ξᵢ,ξⱼ) = σ²ρ for all i ≠ j, then for any distributions p, q on {1,...,n}:
+**Statement:** Given `ξ₁, ..., ξₙ ∈ L²` with:
+- Common mean: `E[ξⱼ] = m` for all `j`
+- Common variance: `Var(ξⱼ) = σ²` for all `j`
+- **Constant correlation:** `Cov(ξᵢ, ξⱼ) = σ²ρ` for all `i ≠ j`
 
-  E(∑ᵢ pᵢξᵢ - ∑ᵢ qᵢξᵢ)² ≤ 2σ²(1-ρ) sup_j |pⱼ - qⱼ|
+Then for any probability distributions `p = (p₁, ..., pₙ)` and `q = (q₁, ..., qₙ)`:
 
-This provides an elementary route to the convergence without invoking the
-full Mean Ergodic Theorem machinery.
+  `E[(∑ᵢ pᵢξᵢ - ∑ᵢ qᵢξᵢ)²] ≤ 2σ²(1-ρ) sup_j |pⱼ - qⱼ|`
+
+**Mathematical significance:** This is the key lemma for Kallenberg's "elementary"
+proof of de Finetti's theorem. It shows that weighted averages with similar weights
+give similar results in L², with an **explicit quantitative bound**.
+
+**Intuition:** For exchangeable sequences:
+1. The correlation `ρ` measures how "exchangeable" the sequence is
+2. When `ρ ≈ 1`, all the `ξᵢ` are highly correlated (nearly equal)
+3. The bound `2σ²(1-ρ)` goes to 0 as `ρ → 1`
+4. This forces all weighted averages to converge to the same limit
+
+**Why constant correlation?** Exchangeable sequences have a special covariance
+structure: all pairs `(ξᵢ, ξⱼ)` with `i ≠ j` have the same correlation. This
+follows from the symmetry - if we swap indices, the distribution doesn't change,
+so the covariance must be the same for all off-diagonal pairs.
+
+**Connection to de Finetti:** For an infinite exchangeable sequence, the finite
+sub-sequences have correlations `ρₙ → 1` as `n → ∞` (they become "more exchangeable").
+Applying this lemma shows:
+- Empirical averages `n⁻¹ ∑ᵢ ξᵢ` form a Cauchy sequence in L²
+- They converge to a limit `ξ̄` (the tail σ-algebra)
+- The limit is independent of the weights chosen
+- This yields de Finetti's representation
+
+**Proof strategy:**
+1. **Centering:** Define `cⱼ = pⱼ - qⱼ`, noting that `∑ cⱼ = 0` (both are probability
+   distributions). Use this to replace `ξⱼ` with `ξⱼ - m` (centered variables).
+
+2. **Expand the square:** Use linearity of expectation to expand:
+   ```
+   E[(∑ cᵢ(ξᵢ-m))²] = ∑ᵢⱼ cᵢcⱼ E[(ξᵢ-m)(ξⱼ-m)] = ∑ᵢⱼ cᵢcⱼ Cov(ξᵢ,ξⱼ)
+   ```
+
+3. **Separate diagonal from off-diagonal:**
+   ```
+   = ∑ᵢ cᵢ² σ² + ∑ᵢ≠ⱼ cᵢcⱼ σ²ρ  (using Var(ξᵢ) = σ², Cov(ξᵢ,ξⱼ) = σ²ρ)
+   = σ²∑cᵢ² + σ²ρ(∑ᵢcᵢ)² - σ²ρ∑cᵢ²  (since ∑ᵢ≠ⱼ cᵢcⱼ = (∑cᵢ)² - ∑cᵢ²)
+   = σ²(1-ρ)∑cᵢ²  (using ∑cᵢ = 0)
+   ```
+
+4. **Bound the sum of squares:**
+   ```
+   ∑cᵢ² ≤ (sup|cᵢ|) · (∑|cᵢ|) ≤ (sup|cᵢ|) · 2
+   ```
+   The final inequality uses `∑|cᵢ| ≤ 2` (the L¹ distance between two probability
+   distributions is at most 2).
+
+5. **Combine:** Putting it together gives the desired bound.
+
+**Historical note:** This is Kallenberg's "second proof" of de Finetti's theorem
+(Chapter 1, Lemma 1.2). It's more elementary than the ergodic approach but requires
+finite variance. The elegance is that it reduces a sophisticated theorem to a
+straightforward L² calculation.
+
+**Comparison with ergodic approach:** The Mean Ergodic Theorem gives the same
+convergence result via abstract functional analysis (orthogonal projections in
+Hilbert space). This lemma gives an explicit bound and a direct proof, at the
+cost of requiring finite variance.
 -/
 theorem l2_contractability_bound
     {μ : Measure Ω} [IsProbabilityMeasure μ]

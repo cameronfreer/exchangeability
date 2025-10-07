@@ -156,9 +156,21 @@ theorem weighted_sums_converge_L1
   -- A n m is in L¹ for all n, m (bounded measurable on probability space)
   have hA_memLp : ∀ n m, MemLp (A n m) 1 μ := by
     intro n m
-    -- For bounded measurable functions on probability spaces, MemLp holds for any p
-    sorry  -- TODO: Use MemLp.of_bound with proper bound calculation
-           -- The bound should be M from hf_bdd, proof is (1/m)*m*M = M
+    obtain ⟨M, hM⟩ := hf_bdd
+    -- On probability spaces, the integral of |A n m| is bounded by M
+    -- since |A n m ω| ≤ M for all ω and μ is a probability measure
+    have hA_ae_bdd : ∀ᵐ ω ∂μ, ‖A n m ω‖ ≤ M := by
+      filter_upwards with ω
+      simp only [A, Real.norm_eq_abs]
+      -- Average of values bounded by M is bounded by M
+      calc |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω)|
+          ≤ (1 / (m : ℝ)) * ∑ k : Fin m, |f (X (n + k.val + 1) ω)| := by
+            sorry  -- Triangle + convexity: |avg| ≤ avg |·|
+        _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, M := by
+            sorry  -- Apply hM to each term
+        _ ≤ M := by
+            sorry  -- (1/m) * m * M = M
+    exact MemLp.of_bound (hA_meas n m).aestronglyMeasurable M hA_ae_bdd
 
   -- Step 1: For n=0, show (A 0 m)_m is Cauchy in L² hence L¹
   have hA_cauchy_L2_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
@@ -266,15 +278,14 @@ theorem subsequence_criterion_convergence_in_probability
       ∀ᵐ ω ∂μ, Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω)) := by
   sorry
 
-/-- The sequence α_n from step 2 is a reverse martingale, and α_n → α_∞ a.s.
-on a subsequence (by FMP 4.2, extracting convergent subsequence from L¹ convergence).
+/-- **OBSOLETE with refactored approach**: This theorem is no longer needed.
 
-**Kallenberg**: "α_n → α_∞ a.s. on a subsequence (FMP 4.2)"
+With the refactored `weighted_sums_converge_L1`, we get a single `alpha : Ω → ℝ`
+that is independent of the starting index. There is no sequence `alpha_n` to
+take a subsequence of.
 
-L¹ convergence implies convergence in probability, which by FMP 4.2 gives
-an a.s. convergent subsequence.
-
-TODO: Use L¹ convergence to extract a.s. convergent subsequence via FMP 4.2.
+The original Kallenberg approach had `alpha_n → alpha_∞`, but our refactored
+proof shows `alpha_n = alpha` for all n directly.
 -/
 theorem reverse_martingale_subsequence_convergence
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -282,7 +293,8 @@ theorem reverse_martingale_subsequence_convergence
     (h_L1_conv : ∀ ε > 0, ∃ N, ∀ n ≥ N, ∫ ω, |alpha n ω - alpha_inf ω| ∂μ < ε) :
     ∃ (φ : ℕ → ℕ), StrictMono φ ∧
       ∀ᵐ ω ∂μ, Tendsto (fun k => alpha (φ k) ω) atTop (𝓝 (alpha_inf ω)) := by
-  -- FMP 4.2: L¹ convergence → convergence in probability → a.s. convergent subsequence
+  -- NOTE: With refactored approach, this is unnecessary
+  -- The identity subsequence φ = id works trivially since alpha is constant
   sorry
 
 /-- The α_n sequence is a reverse martingale with respect to the tail filtration.
@@ -359,17 +371,26 @@ theorem alpha_is_conditional_expectation
 ## Main theorem: de Finetti via L² approach
 -/
 
-/-- **Kallenberg's Second Proof of de Finetti's Theorem 1.1**:
+/-- **Kallenberg's Second Proof of de Finetti's Theorem 1.1** (refactored):
 Starting from a **contractable** sequence ξ in ℝ with L² bounds,
 we prove it is conditionally i.i.d. given the tail σ-algebra.
 
-**Kallenberg's proof structure** (page 26-27, "Second proof"):
+**Original Kallenberg structure** (page 26-27):
 1. Fix bounded measurable f ∈ L¹
 2. Use Lemma 1.2 (L² bound) + completeness of L¹ to get α_n → α_∞
 3. Show α_n is reverse martingale with a.s. convergent subsequence
-4. Use contractability + dominated convergence to get conditional expectation formula
+4. Use contractability + dominated convergence
 5. Conclude α_n = E_n f(ξ_{n+1}) = ν^f a.s.
 6. "The proof can now be completed as before" (common ending)
+
+**Refactored approach** (with single α):
+1. For each bounded f, use `weighted_sums_converge_L1` to get single α
+2. Show α = E[f(X_1) | tail] by contractability (no subsequence needed!)
+3. Define directing measure ν from α via disintegration
+4. Complete using CommonEnding.complete_from_directing_measure
+
+**Key simplification**: No reverse martingale convergence needed since α is
+already the limit (not a sequence)!
 
 **Reference**: Kallenberg (2005), Theorem 1.1 (page 26-27), "Second proof".
 -/
@@ -384,13 +405,12 @@ theorem deFinetti_second_proof
       sorry ∧
       -- X is conditionally i.i.d. given tail σ-algebra with law K
       sorry := by
-  -- For each bounded measurable f, apply the L² convergence argument
-  -- Step 1-5: Get directing measure ν with E[f(X_i) | tail] = ν^f
-  -- This constructs ν such that α_n = ∫ f dν
-  
-  -- Step 6: "The proof can now be completed as before"
-  -- Use CommonEnding.complete_from_directing_measure
-  sorry
+  -- Strategy with refactored weighted_sums_converge_L1:
+  -- 1. For each bounded f, get single alpha from weighted_sums_converge_L1
+  -- 2. Show alpha = E[f(X_1) | tail] using contractability
+  -- 3. Use disintegration to build directing measure ν
+  -- 4. Apply CommonEnding.complete_from_directing_measure
+  sorry  -- TODO: Implement refactored proof flow
 
 /-!
 ## Connection to exchangeability (for completeness)
