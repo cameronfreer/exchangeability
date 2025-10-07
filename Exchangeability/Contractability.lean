@@ -10,40 +10,56 @@ import Exchangeability.Probability.InfiniteProduct
 /-!
 # Contractability and Exchangeability
 
-This file establishes the relationship between exchangeability and contractability,
-following Kallenberg's "Probabilistic Symmetries and Invariance Principles" (2005).
+This file establishes the relationship between **exchangeability** and **contractability**
+for infinite sequences of random variables, following Kallenberg's "Probabilistic
+Symmetries and Invariance Principles" (2005).
 
 ## Main definitions
 
-* `Exchangeable`: A sequence is exchangeable if finite-dimensional distributions are
-  invariant under finite permutations.
-* `FullyExchangeable`: A sequence is fully exchangeable if invariant under all permutations
-  of the index set.
-* `Contractable`: A sequence is contractable if all increasing subsequences of equal length
-  have the same distribution.
+* `Exchangeable μ X`: The sequence `X` is exchangeable under measure `μ` if its
+  finite-dimensional distributions are invariant under finite permutations.
+* `FullyExchangeable μ X`: The sequence is fully exchangeable if invariant under
+  *all* permutations of ℕ (not just finite ones).
+* `Contractable μ X`: The sequence is contractable if all strictly increasing
+  subsequences of equal length have the same distribution.
 
 ## Main results
 
 * `FullyExchangeable.exchangeable`: Full exchangeability implies (finite) exchangeability.
-* `contractable_of_exchangeable`: Exchangeable implies contractable (via permutation extension).
-* `exists_perm_extending_strictMono`: Key combinatorial lemma extending strictly monotone
-  selections to permutations.
+* `contractable_of_exchangeable`: **Exchangeable ⇒ contractable** (via permutation extension).
+* `exists_perm_extending_strictMono`: Key combinatorial lemma showing that any strictly
+  monotone function `k : Fin m → ℕ` can be extended to a permutation of `Fin n`.
 
-## Note on de Finetti's theorem
+## The de Finetti-Ryll-Nardzewski equivalence
 
-The full de Finetti-Ryll-Nardzewski theorem establishes the equivalence:
+The full theorem establishes the equivalence for infinite sequences:
   **contractable ↔ exchangeable ↔ conditionally i.i.d.**
 
-This file proves: **exchangeable → contractable** (via permutation extension).
+This file proves the implication **exchangeable → contractable** using a permutation
+extension argument.
 
-The other directions are in separate files:
-- Conditionally i.i.d. → exchangeable: see `Exchangeability/ConditionallyIID.lean`
-- Contractable → exchangeable: see `Exchangeability/DeFinetti/*.lean` (ergodic theory)
-- Exchangeable → fully exchangeable: see `Exchangeability/Exchangeability.lean` (Kolmogorov)
+### The complete picture
+
+- **Exchangeable → contractable** (this file): Any strictly increasing subsequence
+  can be realized as the image of the first m coordinates under some permutation.
+- **Contractable → exchangeable** (`Exchangeability/DeFinetti/*.lean`): Uses ergodic
+  theory and the martingale convergence approach.
+- **Exchangeable ↔ fully exchangeable** (`Exchangeability/Exchangeability.lean`):
+  Uses π-system uniqueness and finite approximation of infinite permutations.
+- **Conditionally i.i.d. → exchangeable** (`Exchangeability/ConditionallyIID.lean`):
+  Directly from the definition.
+
+## Implementation notes
+
+The key technical challenge is constructing permutations that extend strictly monotone
+selections. Given `k : Fin m → ℕ` with `k(0) < k(1) < ... < k(m-1)`, we construct
+a permutation `σ : Perm (Fin n)` such that `σ(i) = k(i)` for `i < m`. This uses
+`Equiv.extendSubtype` to extend a bijection between subtypes to a full permutation.
 
 ## References
 
 * Kallenberg, "Probabilistic Symmetries and Invariance Principles" (2005), Theorem 1.1
+* Kallenberg, "Foundations of Modern Probability" (2002), Theorem 11.10
 -/
 
 open MeasureTheory ProbabilityTheory
@@ -52,22 +68,43 @@ variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
 namespace Exchangeability
 
-/-- An infinite family of random variables `X : ℕ → Ω → α` is **exchangeable**
-if the finite-dimensional distributions are invariant under permutations of finitely
-many indices. -/
+/--
+A sequence of random variables is **exchangeable** if permuting finitely many indices
+preserves the joint distribution.
+
+Formally, for every `n` and every permutation `σ` of `Fin n`, the distribution of
+`(X_{σ(0)}, ..., X_{σ(n-1)})` equals the distribution of `(X_0, ..., X_{n-1})`.
+
+This is the central notion in de Finetti's theorem.
+-/
 def Exchangeable (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
   ∀ n (σ : Equiv.Perm (Fin n)),
     Measure.map (fun ω => fun i : Fin n => X (σ i) ω) μ =
       Measure.map (fun ω => fun i : Fin n => X i ω) μ
 
-/-- An infinite family of random variables `X : ℕ → Ω → α` is **fully exchangeable**
-if the joint distribution is invariant under all permutations of ℕ. -/
+/--
+A sequence is **fully exchangeable** if permuting *any* indices preserves the distribution.
+
+This is stronger than `Exchangeable` because it requires invariance under *all*
+permutations of ℕ, not just finite ones. However, `Exchangeability.lean` proves
+that these notions are equivalent for probability measures.
+
+Formally, for every permutation `π : Perm ℕ`, the distribution of the reindexed
+sequence `(X_{π(0)}, X_{π(1)}, ...)` equals the distribution of `(X_0, X_1, ...)`.
+-/
 def FullyExchangeable (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
   ∀ (π : Equiv.Perm ℕ),
     Measure.map (fun ω => fun i : ℕ => X (π i) ω) μ =
       Measure.map (fun ω => fun i : ℕ => X i ω) μ
 
-/-- Extend a permutation of `Fin n` to a permutation of ℕ by fixing all `i ≥ n`. -/
+/--
+Extend a finite permutation to a permutation of ℕ by fixing points ≥ n.
+
+Given a permutation `σ` of `Fin n`, this produces a permutation of ℕ that acts
+as σ on `{0, ..., n-1}` and fixes all `i ≥ n`.
+
+This is used to connect full exchangeability with finite exchangeability.
+-/
 def extendFinPerm (n : ℕ) (σ : Equiv.Perm (Fin n)) : Equiv.Perm ℕ where
   toFun i := if h : i < n then (σ ⟨i, h⟩).1 else i
   invFun i := if h : i < n then (σ.symm ⟨i, h⟩).1 else i
@@ -107,7 +144,13 @@ lemma exchangeable_iff_forall_exchangeableAt {μ : Measure Ω} {X : ℕ → Ω �
     Exchangeable μ X ↔ ∀ n, ExchangeableAt μ X n := by
   rfl
 
-/-- Full exchangeability implies exchangeability. -/
+/--
+Full exchangeability implies exchangeability.
+
+If a sequence is invariant under all permutations of ℕ, it is certainly invariant
+under finite permutations. The proof uses `extendFinPerm` to view a finite
+permutation as an infinite one.
+-/
 lemma FullyExchangeable.exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX_meas : ∀ i, Measurable (X i)) (hX : FullyExchangeable μ X) : Exchangeable μ X := by
   classical
@@ -160,14 +203,25 @@ lemma Exchangeable.refl {μ : Measure Ω} {X : ℕ → Ω → α} (n : ℕ) :
       Measure.map (fun ω (i : Fin n) => X i.val ω) μ := by
   congr
 
-/-- A finite or infinite random sequence ξ is **contractable** if all increasing subsequences
-of equal length have the same distribution.
+/--
+A sequence is **contractable** if all strictly increasing subsequences of equal
+length have the same distribution.
 
-That is, (ξ_{k₁}, ..., ξ_{kₘ}) has the same distribution for any choice of
-k₁ < k₂ < ... < kₘ.
+**Definition:** For any `m` and any strictly increasing function `k : Fin m → ℕ`,
+the distribution of `(X_{k(0)}, ..., X_{k(m-1)})` equals the distribution of
+`(X_0, ..., X_{m-1})`.
 
-This is weaker than exchangeability, which requires equality for all permutations,
-not just increasing sequences. -/
+**Intuition:** Contractability is weaker than exchangeability. While exchangeability
+requires invariance under all permutations, contractability only requires invariance
+under "order-preserving selections" - we can choose any m indices as long as they
+are in increasing order.
+
+**Example:** For i.i.d. sequences, any increasing subsequence has the same
+distribution as the initial segment, so contractability holds.
+
+This is a key property in de Finetti's theorem, equivalent to both exchangeability
+and conditional independence.
+-/
 def Contractable (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
   ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
     Measure.map (fun ω i => X (k i) ω) μ =
@@ -204,16 +258,29 @@ lemma ExchangeableAt.apply {μ : Measure Ω} {X : ℕ → Ω → α} {n : ℕ}
     Measure.map (fun ω i => X (σ i).val ω) μ = Measure.map (fun ω i => X i.val ω) μ :=
   hX σ
 
-/-- Contractability implies any subsequence has the same distribution as the initial segment. -/
+/--
+Contractability implies any strictly increasing subsequence matches the initial segment.
+
+This is just a restatement of the definition for clarity.
+-/
 lemma Contractable.subsequence_eq {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX : Contractable μ X) (m : ℕ) (k : Fin m → ℕ) (hk : StrictMono k) :
     Measure.map (fun ω i => X (k i) ω) μ = Measure.map (fun ω i => X i.val ω) μ :=
   hX m k hk
 
-/-- Any two strictly monotone sequences of the same length have equal distributions
-if the underlying process is contractable. -/
+/--
+Any two strictly increasing subsequences of the same length have equal distributions.
+
+For a contractable sequence, `(X_{k₁(0)}, ..., X_{k₁(m-1)})` and
+`(X_{k₂(0)}, ..., X_{k₂(m-1)})` have the same distribution whenever both `k₁` and
+`k₂` are strictly increasing, regardless of which specific indices are chosen.
+
+This is the key property that makes contractability useful: the distribution
+depends only on the length of the subsequence, not on which increasing subsequence
+is selected.
+-/
 lemma Contractable.allStrictMono_eq {μ : Measure Ω} {X : ℕ → Ω → α}
-    (hX : Contractable μ X) (m : ℕ) (k₁ k₂ : Fin m → ℕ) 
+    (hX : Contractable μ X) (m : ℕ) (k₁ k₂ : Fin m → ℕ)
     (hk₁ : StrictMono k₁) (hk₂ : StrictMono k₂) :
     Measure.map (fun ω i => X (k₁ i) ω) μ = Measure.map (fun ω i => X (k₂ i) ω) μ := by
   calc Measure.map (fun ω i => X (k₁ i) ω) μ
@@ -298,26 +365,27 @@ lemma strictMono_Fin_ge_id {m : ℕ} {k : Fin m → ℕ} (hk : StrictMono k) (i 
           _ ≤ k j_succ := Nat.succ_le_of_lt hk_lt
   exact this i.val i.isLt
 
-/-- Given strictly monotone k : Fin m → ℕ and n containing all k(i), we can construct
-a permutation σ : Perm (Fin n) such that σ maps first m positions to k-values.
-This is the key lemma needed for contractable_of_exchangeable.
+/--
+Any strictly increasing function can be extended to a permutation.
 
-Construction outline:
-1. Image: Im = {k(0), ..., k(m-1)} ⊆ Fin n (size m, by injectivity of k)
-2. Complement: Compl = Fin n \ Im (size n - m)
-3. Domain1 = {0, ..., m-1} ⊆ Fin n (first m positions)
-4. Domain2 = Fin n \ Domain1 (last n - m positions)
-5. Define σ : Fin n → Fin n as:
-   - σ(i) = k(i) for i < m (maps Domain1 to Im)
-   - σ bijectively maps Domain2 to Compl (any bijection works, e.g., via enumeration)
-6. Verify σ is a bijection using:
-   - Domain1 ∪ Domain2 = Fin n (disjoint union)
-   - Im ∪ Compl = Fin n (disjoint union)
-   - |Domain1| = |Im| = m
-   - |Domain2| = |Compl| = n - m
+**Statement:** Given a strictly increasing `k : Fin m → ℕ` with all values `< n`
+and `m ≤ n`, there exists a permutation `σ : Perm (Fin n)` such that
+`σ(i) = k(i)` for all `i < m`.
 
-TODO: This requires Finset/Fintype lemmas about cardinalities and Equiv.ofBijective.
-Can potentially use Equiv.Perm.extendSubtype or build from Finset.image operations. -/
+**Intuition:** We want to build a permutation that "realizes" the selection `k`
+as the image of the first `m` positions. Since `k` is strictly increasing, it's
+injective, so its image has cardinality `m`. We can extend this to a full
+permutation by arbitrarily pairing up the remaining elements.
+
+**Construction outline:**
+1. **Domain partition:** `{0,...,m-1}` ∪ `{m,...,n-1}` = `Fin n`
+2. **Codomain partition:** `{k(0),...,k(m-1)}` ∪ `complement` = `Fin n`
+3. Map first `m` positions to `k`-values: `σ(i) = k(i)` for `i < m`
+4. Extend arbitrarily to remaining positions using `Equiv.extendSubtype`
+
+This is the key combinatorial lemma enabling `contractable_of_exchangeable`:
+any strictly increasing subsequence can be realized via a permutation.
+-/
 lemma exists_perm_extending_strictMono {m n : ℕ} (k : Fin m → ℕ)
     (hk_mono : StrictMono k) (hk_bound : ∀ i, k i < n) (hmn : m ≤ n) :
     ∃ (σ : Equiv.Perm (Fin n)), ∀ (i : Fin m),
@@ -477,8 +545,27 @@ lemma perm_range_eq (n : ℕ) (σ : Equiv.Perm (Fin n)) :
   use σ.symm x
   simp
 
-/-- Every exchangeable sequence is contractable.
-This direction is straightforward via permutation extension. -/
+/--
+**Main theorem:** Every exchangeable sequence is contractable.
+
+**Statement:** If `X` is exchangeable, then any strictly increasing subsequence
+has the same distribution as the initial segment.
+
+**Proof strategy:**
+1. Given a strictly increasing `k : Fin m → ℕ`, choose `n` large enough to
+   contain all `k(i)` values.
+2. Use `exists_perm_extending_strictMono` to construct a permutation `σ : Perm (Fin n)`
+   such that `σ(i) = k(i)` for `i < m`.
+3. Apply exchangeability: the distributions under `σ` and the identity are equal.
+4. Project both sides to the first `m` coordinates to conclude that
+   `(X_{k(0)}, ..., X_{k(m-1)})` has the same distribution as `(X_0, ..., X_{m-1})`.
+
+**Mathematical significance:** This shows that exchangeability (invariance under
+all finite permutations) implies contractability (invariance under increasing
+selections). The converse requires ergodic theory and is much deeper.
+
+This is one direction of de Finetti's theorem.
+-/
 theorem contractable_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX : Exchangeable μ X) (hX_meas : ∀ i, Measurable (X i)) : Contractable μ X := by
   intro m k hk_mono
