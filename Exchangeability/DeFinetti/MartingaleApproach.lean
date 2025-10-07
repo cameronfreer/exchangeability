@@ -85,8 +85,8 @@ lemma measurable_shiftSeq (d : ℕ) :
   refine measurable_pi_iff.mpr ?_
   intro n
   -- Evaluation at `n + d` is measurable in the product σ-algebra.
-  have h := (Pi.measurable_eval (fun _ : ℕ => β) (n + d))
-  simpa [shiftSeq] using h
+  simp only [shiftSeq]
+  exact measurable_pi_apply (n + d)
 
 lemma forall_mem_erase {γ : Type*} [DecidableEq γ]
     {s : Finset γ} {a : γ} {P : γ → Prop} (ha : a ∈ s) :
@@ -203,7 +203,7 @@ lemma revFiltration_antitone (X : ℕ → Ω → α) :
   intro m k hmk
   classical
   have hcomp :
-      shiftRV X k = (shiftSeq (α:=α) (k - m)) ∘ shiftRV X m := by
+      shiftRV X k = (shiftSeq (β:=α) (k - m)) ∘ shiftRV X m := by
     funext ω n
     have hkm : m + (k - m) = k := by
       simpa [Nat.add_comm] using (Nat.sub_add_cancel hmk)
@@ -219,7 +219,7 @@ lemma revFiltration_antitone (X : ℕ → Ω → α) :
   intro s hs
   simp [revFiltration, hcomp, Set.preimage_preimage, Function.comp] at hs ⊢
   rcases hs with ⟨t, ht, rfl⟩
-  refine ⟨_, (measurable_shiftSeq (α:=α) (k - m)).measurableSet_preimage ht, rfl⟩
+  exact ⟨_, (measurable_shiftSeq (β:=α) (k - m)) ht, rfl⟩
 
 /-- If `X` is contractable, then so is each of its shifts `θₘ X`. -/
 lemma shift_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
@@ -343,84 +343,87 @@ lemma contractable_dist_eq_on_cylinders
   have ht0 : ∀ i (hi : i ∈ s0), MeasurableSet (t0 i hi) := by
     intro i hi
     simpa [t0] using ht i (hs0_subset hi)
-  let B0 : Set α :=
-    if h0 : 0 ∈ s then B ∩ t 0 h0 else B
-  have hB0 : MeasurableSet B0 := by
-    classical
-    by_cases h0 : 0 ∈ s
-    · have h0_meas := ht 0 h0
-      simpa [B0, h0, hB] using hB.inter h0_meas
-    · simpa [B0, h0, hB]
-  -- The event can be rewritten using the adjusted σ-algebra data.
+  -- Separate the zero-coordinate constraint from the positive tail.
+  let zeroConstraint : Ω → Prop :=
+    fun ω => if h0 : 0 ∈ s then X m ω ∈ t 0 h0 else True
+  let tailCondition : Ω → Prop :=
+    fun ω => ∀ i (hi : i ∈ s0), X (m + i) ω ∈ t0 i hi
+  -- Re-express the events in terms of the decomposed tail conditions.
   have h_event_rewrite :
       {ω | X m ω ∈ B ∧ ∀ i (hi : i ∈ s), X (m + i) ω ∈ t i hi}
         =
-      {ω | X m ω ∈ B0 ∧ ∀ i (hi : i ∈ s0), X (m + i) ω ∈ t0 i hi} := by
+      {ω | X m ω ∈ B ∧ zeroConstraint ω ∧ tailCondition ω} := by
     classical
     by_cases h0 : 0 ∈ s
-    · -- With `0` present we fold its constraint into `B0`.
+    · -- With `0` present we keep its constraint separate.
       ext ω; constructor <;> intro h
       · rcases h with ⟨hBm, htail⟩
-        have h0_tail := htail 0 h0
-        refine ⟨?_, ?_⟩
-        · simpa [B0, h0, Nat.add_zero] using And.intro hBm h0_tail
+        refine ⟨hBm, ?_, ?_⟩
+        · dsimp [zeroConstraint]
+          have := htail 0 h0
+          simpa [h0, Nat.add_zero] using this
         · intro i hi
           have hi_mem := hs0_subset hi
           have htail' := htail i hi_mem
-          simpa [t0, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using htail'
-      · rcases h with ⟨hB0_mem, htail⟩
-        have hBm : X m ω ∈ B := by
-          have := hB0_mem
-          simpa [B0, h0] using this.1
-        have h0_tail : X (m + 0) ω ∈ t 0 h0 := by
-          have := hB0_mem
-          simpa [B0, h0, Nat.add_zero] using this.2
+          simpa [t0] using htail'
+      · rcases h with ⟨hBm, hz, htTail⟩
         refine ⟨hBm, ?_⟩
         intro i hi
         by_cases hi0 : i = 0
-        · simpa [hi0, Nat.add_zero] using h0_tail
+        · subst hi0
+          dsimp [zeroConstraint] at hz
+          simpa [h0] using hz
         · have hi_mem : i ∈ s0 := Finset.mem_erase.mpr ⟨hi0, hi⟩
-          have := htail i hi_mem
-          simpa [t0, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using this
-    · -- Without `0`, nothing changes.
+          have := htTail i hi_mem
+          simpa [t0] using this
+    · -- Without `0`, nothing changes (the auxiliary predicates are trivial/identical).
       have hs0_eq : s0 = s := by
         simpa [s0, h0] using Finset.erase_eq_of_not_mem h0
-      simp [B0, h0, hs0_eq, t0]
+      ext ω; constructor <;> intro h
+      · rcases h with ⟨hBm, htail⟩
+        refine ⟨hBm, ?_, ?_⟩
+        · dsimp [zeroConstraint]; simp [h0]
+        · simpa [tailCondition, hs0_eq, t0] using htail
+      · rcases h with ⟨hBm, _, htail⟩
+        refine ⟨hBm, ?_⟩
+        simpa [tailCondition, hs0_eq, t0] using htail
   -- Same rewrite for the `k`-version.
   have h_event_rewrite_k :
       {ω | X k ω ∈ B ∧ ∀ i (hi : i ∈ s), X (m + i) ω ∈ t i hi}
         =
-      {ω | X k ω ∈ B0 ∧ ∀ i (hi : i ∈ s0), X (m + i) ω ∈ t0 i hi} := by
+      {ω | X k ω ∈ B ∧ zeroConstraint ω ∧ tailCondition ω} := by
     classical
     by_cases h0 : 0 ∈ s
     · ext ω; constructor <;> intro h
       · rcases h with ⟨hBk, htail⟩
-        have h0_tail := htail 0 h0
-        refine ⟨?_, ?_⟩
-        · have : X k ω ∈ B ∧ X (m + 0) ω ∈ t 0 h0 :=
-            ⟨hBk, by simpa [Nat.add_zero] using h0_tail⟩
-          simpa [B0, h0] using this
+        refine ⟨hBk, ?_, ?_⟩
+        · dsimp [zeroConstraint]
+          have := htail 0 h0
+          simpa [h0, Nat.add_zero] using this
         · intro i hi
           have hi_mem := hs0_subset hi
           have htail' := htail i hi_mem
-          simpa [t0, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using htail'
-      · rcases h with ⟨hB0_mem, htail⟩
-        have hBk : X k ω ∈ B := by
-          have := hB0_mem
-          simpa [B0, h0] using this.1
-        have h0_tail : X (m + 0) ω ∈ t 0 h0 := by
-          have := hB0_mem
-          simpa [B0, h0, Nat.add_zero] using this.2
+          simpa [t0] using htail'
+      · rcases h with ⟨hBk, hz, htTail⟩
         refine ⟨hBk, ?_⟩
         intro i hi
         by_cases hi0 : i = 0
-        · simpa [hi0, Nat.add_zero] using h0_tail
+        · subst hi0
+          dsimp [zeroConstraint] at hz
+          simpa [h0] using hz
         · have hi_mem : i ∈ s0 := Finset.mem_erase.mpr ⟨hi0, hi⟩
-          have := htail i hi_mem
-          simpa [t0, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using this
+          have := htTail i hi_mem
+          simpa [t0] using this
     · have hs0_eq : s0 = s := by
         simpa [s0, h0] using Finset.erase_eq_of_not_mem h0
-      simp [B0, h0, hs0_eq, t0]
+      ext ω; constructor <;> intro h
+      · rcases h with ⟨hBk, htail⟩
+        refine ⟨hBk, ?_, ?_⟩
+        · dsimp [zeroConstraint]; simp [h0]
+        · simpa [tailCondition, hs0_eq, t0] using htail
+      · rcases h with ⟨hBk, _, htail⟩
+        refine ⟨hBk, ?_⟩
+        simpa [tailCondition, hs0_eq, t0] using htail
   -- Work with the enumerated tail coordinates.
   let n := s0.card
   let tail : Fin n → ℕ := fun i => s0.orderEmbOfFin rfl i
@@ -438,14 +441,50 @@ lemma contractable_dist_eq_on_cylinders
   let k_m : Fin (n + 1) → ℕ :=
     Fin.cases 0 (fun i => tail i)
   let k_map_m : Fin (n + 1) → ℕ := fun i => m + k_m i
-  let k_map_k : Fin (n + 1) → ℕ := fun i =>
-    match i with
-    | ⟨0, _⟩ => k
-    | Fin.succ i' => m + tail i'
-  -- TODO: prove `StrictMono k_m` and `StrictMono k_map_m`, `StrictMono k_map_k`,
-  -- then use `Contractable.allStrictMono_eq` to compare the push-forward measures.
-  -- The desired cylinders can be expressed as preimages of a measurable set of
-  -- `(Fin (n + 1) → α)` under these maps.
+  let k_map_k : Fin (n + 1) → ℕ :=
+    Fin.cases k (fun i => m + tail i)
+
+  -- Prove strict monotonicity of k_m
+  have hk_m_mono : StrictMono k_m := by
+    intro i j hij
+    simp only [k_m]
+    match i, j with
+    | ⟨0, _⟩, ⟨j'+1, _⟩ =>
+      simp [Fin.cases]
+      exact htail_pos ⟨j', by omega⟩
+    | ⟨i'+1, _⟩, ⟨j'+1, _⟩ =>
+      simp [Fin.cases]
+      apply htail_mono
+      omega
+
+  -- Prove strict monotonicity of k_map_m
+  have hk_map_m_mono : StrictMono k_map_m := by
+    intro i j hij
+    simp only [k_map_m]
+    exact Nat.add_lt_add_left (hk_m_mono hij) m
+
+  -- Prove strict monotonicity of k_map_k
+  have hk_map_k_mono : StrictMono k_map_k := by
+    intro i j hij
+    simp only [k_map_k]
+    match i, j with
+    | ⟨0, _⟩, ⟨j'+1, _⟩ =>
+      -- k < m + tail ⟨j', _⟩
+      calc k ≤ m := hk
+        _ < m + tail ⟨j', by omega⟩ := by
+          have := htail_pos ⟨j', by omega⟩
+          omega
+    | ⟨i'+1, _⟩, ⟨j'+1, _⟩ =>
+      -- m + tail i' < m + tail j'
+      apply Nat.add_lt_add_left
+      apply htail_mono
+      omega
+
+  -- TODO: express the event `{ω | zeroConstraint ω ∧ tailCondition ω}` as the preimage
+  -- then express the event `{ω | zeroConstraint ω ∧ tailCondition ω}` as the preimage
+  -- of a measurable cylinder in `(Fin (n + 1) → α)` under the maps defined above.
+  -- Once that identification is in place, contractability gives the desired measure
+  -- equality between the `k`- and `m`-versions.
   --
   -- Required sub-lemmas:
   -- * `StrictMono (Fin.cases 0 (fun i => tail i))`

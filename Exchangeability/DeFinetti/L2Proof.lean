@@ -57,13 +57,135 @@ variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 /-!
 ## Step 1: L² bound is the key tool
 
-We don't actually need the full covariance structure. The L² contractability bound
-from `L2Approach.lean` (Lemma 1.2) is sufficient for showing Cauchy convergence
-of the empirical averages.
-
-The contractable_covariance_structure lemma below is postponed as it's not needed
-for the main proof.
+Before tackling the quantitative L² estimates we record two basic consequences of
+contractability: (1) all single coordinates share the same law, and (2) any pair
+of coordinates has the same joint distribution as `(X 0, X 1)`.  These facts are
+packaged below and will later feed into the uniform covariance statement.
 -/
+
+open scoped BigOperators
+
+section CovarianceHelpers
+
+variable {μ : Measure Ω} [IsProbabilityMeasure μ]
+variable (X : ℕ → Ω → ℝ)
+variable (hX_contract : Contractable μ X)
+variable (hX_meas : ∀ i, Measurable (X i))
+
+private def fin1Zero : Fin 1 := ⟨0, by decide⟩
+private def fin2Zero : Fin 2 := ⟨0, by decide⟩
+private def fin2One : Fin 2 := ⟨1, by decide⟩
+
+private lemma measurable_eval_fin1 :
+    Measurable fun g : (Fin 1 → ℝ) => g (fin1Zero) :=
+  measurable_pi_apply _
+
+private lemma measurable_eval_fin2 {i : Fin 2} :
+    Measurable fun g : (Fin 2 → ℝ) => g i :=
+  measurable_pi_apply _
+
+/-- For a contractable sequence, the law of each coordinate agrees with the law
+of `X 0`. -/
+lemma contractable_map_single (i : ℕ) :
+    Measure.map (fun ω => X i ω) μ = Measure.map (fun ω => X 0 ω) μ := by
+  classical
+  -- `k` selects the singleton subsequence `{i}`.
+  let k : Fin 1 → ℕ := fun _ => i
+  have hk : StrictMono k := by
+    intro a b hlt; cases hlt
+  have h_map := hX_contract 1 k hk
+  let eval : (Fin 1 → ℝ) → ℝ := fun g => g fin1Zero
+  have h_eval_meas : Measurable eval := measurable_eval_fin1
+  have h_meas_k : Measurable fun ω => fun j : Fin 1 => X (k j) ω := by
+    refine measurable_pi_lambda _ ?_
+    intro j
+    simpa [k] using hX_meas (k j)
+  have h_meas_std : Measurable fun ω => fun j : Fin 1 => X j.val ω := by
+    refine measurable_pi_lambda _ ?_
+    intro j
+    simpa using hX_meas j.val
+  have h_left := (Measure.map_map h_eval_meas h_meas_k).symm
+  have h_right := Measure.map_map h_eval_meas h_meas_std
+  have h_eval := congrArg (Measure.map eval) h_map
+  have h_comp := h_left.trans (h_eval.trans h_right)
+  -- Evaluate the compositions explicitly.
+  have h_comp_simp :
+      (fun ω => eval (fun j : Fin 1 => X (k j) ω)) = fun ω => X i ω := by
+    funext ω
+    simp [eval, k, fin1Zero]
+  have h_comp_simp' :
+      (fun ω => eval (fun j : Fin 1 => X j.val ω)) = fun ω => X 0 ω := by
+    funext ω
+    simp [eval, fin1Zero]
+  simpa [Function.comp, h_comp_simp, h_comp_simp'] using h_comp
+
+/-- Helper lemma: the strict monotonicity condition for two-point selections. -/
+private lemma strictMono_two {i j : ℕ} (hij : i < j) :
+    StrictMono fun t : Fin 2 => if t = fin2Zero then i else j := by
+  classical
+  intro a b hlt
+  -- Reduce the strict inequality on `Fin 2` to natural numbers.
+  have hval : a.val < b.val := Fin.lt_iff_val_lt_val.mp hlt
+  -- `b` must be the second coordinate.
+  have hb_val_le : b.val ≤ 1 := Nat.lt_succ_iff.mp (show b.val < 2 by simpa using b.is_lt)
+  have hb_ne_zero : b.val ≠ 0 := by
+    intro hb
+    have : a.val < 0 := by simpa [hb] using hval
+    exact Nat.not_lt_zero _ this
+  have hb_pos : 0 < b.val := Nat.pos_of_ne_zero hb_ne_zero
+  have hb_ge_one : 1 ≤ b.val := Nat.succ_le_of_lt hb_pos
+  have hb_val : b.val = 1 := le_antisymm hb_val_le hb_ge_one
+  -- Consequently `a` is the first coordinate.
+  have ha_lt_one : a.val < 1 := by simpa [hb_val] using hval
+  have ha_val : a.val = 0 := Nat.lt_one_iff.mp ha_lt_one
+  -- Rewrite the conclusion using these identifications.
+  have ha : a = fin2Zero := by ext; simpa [fin2Zero, ha_val]
+  have hb : b = fin2One := by ext; simpa [fin2One, hb_val]
+  subst ha; subst hb
+  simp [fin2Zero, fin2One, hij]
+
+/-- For a contractable sequence, every increasing pair `(i,j)` with `i < j`
+has the same joint law as `(X 0, X 1)`. -/
+lemma contractable_map_pair {i j : ℕ} (hij : i < j) :
+    Measure.map (fun ω => (X i ω, X j ω)) μ =
+      Measure.map (fun ω => (X 0 ω, X 1 ω)) μ := by
+  classical
+  -- Define the two-point subsequence.
+  let k : Fin 2 → ℕ := fun t => if t = fin2Zero then i else j
+  have hk : StrictMono k := strictMono_two hij
+  have h_map := hX_contract 2 k hk
+  let eval : (Fin 2 → ℝ) → ℝ × ℝ :=
+    fun g => (g fin2Zero, g fin2One)
+  have h_eval_meas : Measurable eval := by
+    refine (measurable_eval_fin2 (i := fin2Zero)).prod_mk ?_
+    exact measurable_eval_fin2 (i := fin2One)
+  have h_meas_k : Measurable fun ω => fun t : Fin 2 => X (k t) ω := by
+    refine measurable_pi_lambda _ ?_
+    intro t
+    by_cases ht : t = fin2Zero
+    · have : k t = i := by simpa [k, ht]
+      simpa [this] using hX_meas i
+    · have : k t = j := by simpa [k, ht] using if_neg ht
+      simpa [this] using hX_meas j
+  have h_meas_std : Measurable fun ω => fun t : Fin 2 => X t.val ω := by
+    refine measurable_pi_lambda _ ?_
+    intro t
+    simpa using hX_meas t.val
+  have h_left := (Measure.map_map h_eval_meas h_meas_k).symm
+  have h_right := Measure.map_map h_eval_meas h_meas_std
+  have h_eval := congrArg (Measure.map eval) h_map
+  have h_comp := h_left.trans (h_eval.trans h_right)
+  have h_comp_simp :
+      (fun ω => eval (fun t : Fin 2 => X (k t) ω)) = fun ω => (X i ω, X j ω) := by
+    funext ω
+    simp [eval, k, fin2Zero, fin2One]
+  have h_comp_simp' :
+      (fun ω => eval (fun t : Fin 2 => X t.val ω)) = fun ω => (X 0 ω, X 1 ω) := by
+    funext ω
+    simp [eval, fin2Zero, fin2One]
+  simpa [Function.comp, h_comp_simp, h_comp_simp'] using h_comp
+
+end CovarianceHelpers
 
 /-- For a contractable sequence of real-valued random variables in L², all pairs
 have the same covariance. This follows from contractability implying that all

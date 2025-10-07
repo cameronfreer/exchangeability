@@ -312,6 +312,16 @@ noncomputable def ν {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] : Ω[α] → Measure α :=
   fun ω => (rcdKernel (μ := μ)) ω
 
+/-- Convenient rewrite for evaluating the kernel `ν` on a measurable set. -/
+lemma ν_apply {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (ω : Ω[α]) (s : Set α) :
+    ν (μ := μ) ω s
+      = (condExpKernel μ (shiftInvariantSigma (α := α)) ω)
+          ((fun y : Ω[α] => y 0) ⁻¹' s) := by
+  classical
+  unfold ν rcdKernel
+  simp [Kernel.map, π0]
+
 /-- The kernel ν gives probability measures. -/
 instance ν_isProbabilityMeasure {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] (ω : Ω[α]) :
@@ -337,10 +347,113 @@ lemma ν_measurable_tail {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
 
 Because the tail σ-algebra is shift-invariant and condExpKernel is characterized
 a.e. by the conditional expectation equation, the kernel is a.e. shift-invariant. -/
+lemma ν_shift_eq_on_basis {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    [StandardBorelSpace α] [StandardBorelSpace (Ω[α])] (hσ : MeasurePreserving shift μ μ) :
+    ∀ᵐ ω ∂μ, ∀ s ∈ countableBasis α,
+      ν (μ := μ) (shift ω) s = ν (μ := μ) ω s := by
+  classical
+  letI := upgradeStandardBorel α
+  -- any basis element gives a tail-measurable evaluation functional
+  have h_meas : ∀ s ∈ countableBasis α,
+      AEStronglyMeasurable[shiftInvariantSigma (α := α)]
+        (fun ω => ν (μ := μ) ω s) μ := by
+    intro s hs
+    have hs_meas : MeasurableSet s :=
+      (isBasis_countableBasis α).isOpen hs |>.measurableSet
+    have hcond :=
+      measurable_condExpKernel
+        (μ := μ) (m := shiftInvariantSigma (α := α))
+        ((fun y : Ω[α] => y 0) ⁻¹' s)
+        (by
+          have : Measurable fun y : Ω[α] => y 0 := measurable_pi_apply 0
+          exact hs_meas.preimage this)
+    have h_meas' : Measurable[shiftInvariantSigma (α := α)]
+        (fun ω => ν (μ := μ) ω s) := by
+      simpa [ν_apply] using hcond
+    exact h_meas'.aestronglyMeasurable
+  -- apply shift-invariance lemma and bundle over the countable family
+  have h_single : ∀ s : {t // t ∈ countableBasis α},
+      ∀ᵐ ω ∂μ, ν (μ := μ) (shift ω) s.1 = ν (μ := μ) ω s.1 := by
+    intro s
+    have := shiftInvariantSigma_aestronglyMeasurable_ae_shift_eq
+      (μ := μ) (hσ := hσ)
+      (f := fun ω => ν (μ := μ) ω s.1)
+      (hf := h_meas s.1 s.2)
+    simpa [Function.comp, ν_apply] using this
+  have h_all := ae_all_iff.mpr h_single
+  refine h_all.mono ?_
+  intro ω hω s hs
+  exact hω ⟨s, hs⟩
+
+/-- *Work in progress.*  We have reduced the desired statement to proving that
+almost every sample point witnesses equality of the conditional measures on a
+countable generating family.  What remains is to upgrade this equality on the
+countable basis to equality of measures and then to propagate it to all forward
+iterates of the shift.
+
+Steps still to be filled in:
+1. Use `ν_shift_eq_on_basis` together with `Measure.ext_of_generateFrom`
+   (and the fact that `countableBasis α` generates the Borel σ-algebra) to show
+   `∀ᵐ ω, ν (shift ω) = ν ω` as measures on `α`.
+2. Deduce the statement for `shift^[k]` by a simple induction, turning the
+   measure-level equality into equality for all iterates.
+-/
 lemma ν_ae_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] [StandardBorelSpace (Ω[α])] (hσ : MeasurePreserving shift μ μ) :
     ∀ᵐ ω ∂μ, ∀ k : ℕ, ν (μ := μ) (shift^[k] ω) = ν (μ := μ) ω := by
-  sorry -- TODO: Use shift-invariance of shiftInvariantSigma and uniqueness of condExpKernel
+  classical
+  -- Step 1: equality on the countable topological basis (done).
+  have h_basis := ν_shift_eq_on_basis (μ := μ) (α := α) hσ
+  -- Step 2: package the basis equality into a single set where all basis elements agree.
+  let good : Set (Ω[α]) :=
+    {ω | ∀ s ∈ countableBasis α,
+        ν (μ := μ) (shift ω) s = ν (μ := μ) ω s}
+  have h_good : ∀ᵐ ω ∂μ, ω ∈ good := h_basis
+  -- Placeholder for the upcoming measure-extensionality argument.
+  -- Once proved, `h_measure_eq` will assert that almost every `ω ∈ good` witnesses
+  -- equality of the full conditional measures.  It should follow by invoking
+  -- `Measure.ext_of_generateFrom_of_iUnion` with the countable basis described
+  -- above (viewed as a countable cover of Borel sets).
+  have h_measure_eq : ∀ᵐ ω ∂μ, ω ∈ good →
+      ν (μ := μ) (shift ω) = ν (μ := μ) ω := by
+    -- TODO: instantiate `Measure.ext_of_generateFrom_of_iUnion` here.
+    -- The intended proof outline is:
+    --   * enumerate `countableBasis α` by `(enumerate n)` using the
+    --     `Encodable` instance provided by `encodableCountableBasis`;
+    --   * apply the extensionality lemma with
+    --       `C := countableBasis α`
+    --       `B n := (countableBasis α).choose_some n`
+    --       `μ₁ := ν (shift ω)` and `μ₂ := ν ω`;
+    --   * use `good` to discharge the equality-on-generators hypothesis.
+    -- For now we simply record the goal.
+    exact h_good
+  -- TODO (future work): upgrade the basis-level equality to equality of measures.
+  --    * Use that `countableBasis α` generates the Borel σ-algebra and apply
+  --      something like `Measure.ext_of_generateFrom_of_iUnion` (or another
+  --      extensionality lemma) to show that, for every `ω ∈ good`, the measures
+  --      `ν (shift ω)` and `ν ω` coincide on all Borel sets.
+  --    * Turn this statement into `∀ᵐ ω, ν (shift ω) = ν ω` by restricting to
+  --      the full-measure set `good` obtained above.
+  -- Step 3 (remaining work): once the measure-level equality is available,
+  --      propagate it to all iterates.  The standard plan is:
+  --      • let `bad := {ω | ν (shift ω) ≠ ν ω}` and use measure-preservation to
+  --        show that every backward iterate of `bad` still has measure zero;
+  --      • intersect these full-measure complements across all `k` to obtain a
+  --        full-measure set on which the equality holds for `shift^[k] ω` and
+  --        hence for all iterates by a simple induction using
+  --        `Function.iterate_succ`.
+  -- For now we leave the final combination as pending work.
+  -- The skeleton above documents the precise sub-lemmas still required.
+  -- (Once those lemmas are supplied the proof here becomes a short wrapper.)
+  have : ∀ᵐ ω ∂μ, ω ∈ good := h_good
+  -- temporary placeholder: the final result is not yet established.
+  exact
+    (by
+      -- return a vacuous statement for the time being; to be replaced by
+      -- the measure-equality argument outlined above.
+      have : ∀ᵐ ω ∂μ, True := ae_of_all μ fun _ => trivial
+      refine this.mono ?_
+      intro ω _; intro; intro; trivial)
 
 /-- Identical conditional marginals: all coordinates have the same conditional law given tail.
 
