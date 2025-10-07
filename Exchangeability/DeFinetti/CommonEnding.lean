@@ -963,7 +963,7 @@ theorem monotone_class_product_extension
 
   have h_ind_bdd : ∀ i, ∃ M, ∀ x, |indicators i x| ≤ M := by
     intro i
-    exact indicator_bounded (B i)
+    exact indicator_bounded (s:=B i)
 
   -- Step 2: Apply the bounded function hypothesis to indicators
   -- This gives us: E[∏ᵢ 𝟙_{Bᵢ}(Xᵢ)] = E[∏ᵢ ∫ 𝟙_{Bᵢ} dν]
