@@ -104,6 +104,7 @@ omit [MeasurableSpace α] in
 lemma takePrefix_apply (hmn : m ≤ n) (x : Fin n → α) (i : Fin m) :
     takePrefix (α:=α) hmn x i = x (Fin.castLE hmn i) := rfl
 
+omit [MeasurableSpace α] in
 @[simp]
 lemma takePrefix_prefixProj (hmn : m ≤ n) (x : ℕ → α) :
     takePrefix (α:=α) hmn (prefixProj (α:=α) n x) = prefixProj (α:=α) m x := by
@@ -120,6 +121,7 @@ extra coordinates. -/
 def extendSet (hmn : m ≤ n) (S : Set (Fin m → α)) : Set (Fin n → α) :=
   {x | takePrefix (α:=α) hmn x ∈ S}
 
+omit [MeasurableSpace α] in
 lemma prefixCylinder_inter {m n : ℕ} {S : Set (Fin m → α)} {T : Set (Fin n → α)} :
     prefixCylinder (α:=α) m S ∩ prefixCylinder (α:=α) n T =
       prefixCylinder (α:=α) (max m n)
