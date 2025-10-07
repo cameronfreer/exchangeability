@@ -510,13 +510,21 @@ lemma contractable_dist_eq_on_cylinders
         have : tail i' < tail j' := htail_mono (Fin.succ_lt_succ_iff.mp hij)
         omega
 
-  -- Define the target cylinder set in (Fin (n+1) → α)
-  -- This encodes: first coordinate in B (with zero constraint if present), tail coordinates in their respective sets
+  sorry
+  -- TODO: Complete the cylinder set identification.
+  -- The challenge: when 0 ∈ s, the zero constraint X m ∈ t 0 appears in both events.
+  -- For k_map_m, this is captured by f(0) = X m being in B ∩ t 0.
+  -- For k_map_k, we have f(0) = X k ∈ B, but X m ∈ t 0 is a separate constraint.
+  -- Possible approaches:
+  -- 1. Split into cases 0 ∈ s and 0 ∉ s
+  -- 2. Use a larger index set that includes both k and m explicitly
+  -- 3. Use conditional probability / factorization
+
+  /-
+  -- Previous attempt (has type errors):
   let T : Set (Fin (n + 1) → α) :=
     {f | (if h0 : 0 ∈ s then f 0 ∈ B ∩ t 0 h0 else f 0 ∈ B) ∧
          ∀ i : Fin n, f (Fin.succ i) ∈ t0 (tail i) (htail_mem i)}
-
-  -- Key identifications: both events are preimages of T under their respective index maps
   have h_m_event : {ω | X m ω ∈ B ∧ zeroConstraint ω ∧ tailCondition ω} =
                    {ω | (fun ω i => X (k_map_m i) ω) ω ∈ T} := by
     ext ω
