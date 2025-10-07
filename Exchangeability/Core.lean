@@ -473,7 +473,7 @@ lemma lt_permBound_of_lt {i : ℕ} (hi : i < n) :
     lt_of_lt_of_le (Nat.lt_succ_self _) hsup
   exact lt_of_lt_of_le this (Nat.le_max_right _ _)
 
-lemma lt_permBound_fin (i : Fin n) :
+lemma lt_permBound_fin {i : Fin n} :
     π i < permBound π n := lt_permBound_of_lt (π:=π) (n:=n) i.isLt
 
 def approxEquiv :
@@ -486,7 +486,7 @@ def approxEquiv :
     · intro x
       have hx := x.property
       let i : Fin n := ⟨x.1, hx⟩
-      have hi : (π i : ℕ) < permBound π n := lt_permBound_fin (π:=π) (n:=n) i
+      have hi : (π i : ℕ) < permBound π n := lt_permBound_fin (π:=π) (n:=n) (i:=i)
       refine ⟨⟨π i, hi⟩, ?_⟩
       exact ⟨i, rfl⟩
     · intro y
@@ -520,10 +520,10 @@ outside the range of π restricted to `{0,...,n-1}`.
 def approxPerm : Equiv.Perm (Fin (permBound π n)) :=
   (approxEquiv (π:=π) (n:=n)).extendSubtype
 
-lemma approxPerm_apply_cast (i : Fin n) :
+lemma approxPerm_apply_cast {i : Fin n} :
     approxPerm (π:=π) (n:=n)
         (Fin.castLE (le_permBound (π:=π) (n:=n)) i)
-      = ⟨π i, lt_permBound_fin (π:=π) (n:=n) i⟩ := by
+      = ⟨π i, lt_permBound_fin (π:=π) (n:=n) (i:=i)⟩ := by
   classical
   have hmem : ((Fin.castLE (le_permBound (π:=π) (n:=n)) i) : ℕ) < n := by
     simp [i.isLt]
@@ -534,12 +534,12 @@ lemma approxPerm_apply_cast (i : Fin n) :
   simpa using this
 
 @[simp]
-lemma approxPerm_apply_cast_coe (i : Fin n) :
+lemma approxPerm_apply_cast_coe {i : Fin n} :
     ((approxPerm (π:=π) (n:=n)
         (Fin.castLE (le_permBound (π:=π) (n:=n)) i)) : ℕ) = π i := by
   classical
   have := congrArg (fun x : Fin (permBound π n) => (x : ℕ))
-    (approxPerm_apply_cast (π:=π) (n:=n) i)
+    (approxPerm_apply_cast (π:=π) (n:=n) (i:=i))
   simpa using this
 
 end Approximation
@@ -596,7 +596,7 @@ lemma marginals_perm_eq {μ : Measure Ω} (X : ℕ → Ω → α)
           = fun ω => fun i : Fin n => X (π i) ω := by
       funext ω i
       simp [Function.comp, takePrefix, hσ_def,
-        approxPerm_apply_cast_coe (π:=π) (n:=n) i]
+        approxPerm_apply_cast_coe (π:=π) (n:=n) (i:=i)]
     have hcomp₂ :
         ((takePrefix (α:=α) hm) ∘ fun ω => fun i : Fin m => X i ω)
           = fun ω => fun i : Fin n => X i ω := by

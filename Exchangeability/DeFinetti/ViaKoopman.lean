@@ -105,12 +105,12 @@ def productCylinder (m : ℕ) (fs : Fin m → α → ℝ) : Ω[α] → ℝ :=
   fun ω => ∏ k : Fin m, fs k (ω k.val)
 
 omit [MeasurableSpace α] in
-lemma productCylinder_eq_cylinder (m : ℕ) (fs : Fin m → α → ℝ) :
+lemma productCylinder_eq_cylinder {m : ℕ} (fs : Fin m → α → ℝ) :
     productCylinder m fs = cylinderFunction m (fun coords => ∏ k, fs k (coords k)) := by
   rfl
 
 /-- Measurability of cylinder functions. -/
-lemma measurable_cylinderFunction (m : ℕ) (φ : (Fin m → α) → ℝ)
+lemma measurable_cylinderFunction {m : ℕ} {φ : (Fin m → α) → ℝ}
     (_hφ : Measurable φ) :
     Measurable (cylinderFunction m φ) := by
   classical
@@ -121,7 +121,7 @@ lemma measurable_cylinderFunction (m : ℕ) (φ : (Fin m → α) → ℝ)
   simpa [cylinderFunction] using _hφ.comp hproj
 
 /-- Measurability of product cylinders. -/
-lemma measurable_productCylinder (m : ℕ) (fs : Fin m → α → ℝ)
+lemma measurable_productCylinder {m : ℕ} {fs : Fin m → α → ℝ}
     (hmeas : ∀ k, Measurable (fs k)) :
     Measurable (productCylinder m fs) := by
   classical
@@ -133,7 +133,7 @@ lemma measurable_productCylinder (m : ℕ) (fs : Fin m → α → ℝ)
 
 omit [MeasurableSpace α] in
 /-- Boundedness of product cylinders. -/
-lemma productCylinder_bounded (m : ℕ) (fs : Fin m → α → ℝ)
+lemma productCylinder_bounded {m : ℕ} {fs : Fin m → α → ℝ}
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C) :
     ∃ C, ∀ ω, |productCylinder m fs ω| ≤ C := by
   -- Take C = ∏ Cₖ where |fₖ| ≤ Cₖ
