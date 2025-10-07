@@ -109,7 +109,7 @@ permutation map is measure-preserving for product measures.
 This is the key technical lemma enabling `exchangeable_of_conditionallyIID`.
 -/
 theorem pi_comp_perm {ι : Type*} [Fintype ι] {α : Type*} [MeasurableSpace α]
-    (ν : Measure α) [SigmaFinite ν] (σ : Equiv.Perm ι) :
+    {ν : Measure α} [SigmaFinite ν] (σ : Equiv.Perm ι) :
     Measure.map (fun f : ι → α => f ∘ σ) (Measure.pi fun _ : ι => ν) =
       Measure.pi fun _ : ι => ν := by
   classical
@@ -141,7 +141,7 @@ mapped kernel `f₊κ(ω)`.
 we can push permutations through the conditional distribution.
 -/
 theorem bind_map_comm {Ω α β : Type*} [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β]
-    (μ : Measure Ω) {κ : Ω → Measure α} (hκ : Measurable κ) {f : α → β}
+    {μ : Measure Ω} {κ : Ω → Measure α} (hκ : Measurable κ) {f : α → β}
     (hf : Measurable f) :
     (μ.bind κ).map f = μ.bind (fun ω => (κ ω).map f) := by
   classical
@@ -209,7 +209,7 @@ def MixtureOfIID (_μ : Measure Ω) (_X : ℕ → Ω → α) : Prop :=
 /-- Helper lemma: Permuting coordinates after taking a product is the same as taking the product
 and then permuting. -/
 theorem pi_perm_comm {ι : Type*} [Fintype ι] {α : Type*} [MeasurableSpace α]
-    (ν : Measure α) [SigmaFinite ν] (σ : Equiv.Perm ι) :
+    {ν : Measure α} [SigmaFinite ν] (σ : Equiv.Perm ι) :
     Measure.pi (fun _ : ι => ν) =
       Measure.map (fun f : ι → α => f ∘ σ.symm) (Measure.pi fun _ : ι => ν) := by
   classical

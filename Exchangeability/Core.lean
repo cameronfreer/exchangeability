@@ -74,10 +74,10 @@ def prefixProj (α : Type*) (n : ℕ) (x : ℕ → α) : Fin n → α :=
 
 omit [MeasurableSpace α] in
 @[simp]
-lemma prefixProj_apply (n : ℕ) (x : ℕ → α) (i : Fin n) :
+lemma prefixProj_apply {n : ℕ} (x : ℕ → α) (i : Fin n) :
     prefixProj (α:=α) n x i = x i := by canonical
 
-lemma measurable_prefixProj (n : ℕ) :
+lemma measurable_prefixProj {n : ℕ} :
     Measurable (prefixProj (α:=α) n) := by
   classical
   refine measurable_pi_lambda _ (fun i => ?_)
@@ -99,13 +99,13 @@ lemma mem_prefixCylinder {n : ℕ} {S : Set (Fin n → α)} {x : ℕ → α} :
 
 omit [MeasurableSpace α] in
 @[simp]
-lemma prefixCylinder_univ (n : ℕ) :
+lemma prefixCylinder_univ {n : ℕ} :
     prefixCylinder (α:=α) n (Set.univ : Set (Fin n → α)) = (Set.univ) := by
   ext x; simp [prefixCylinder]
 
 omit [MeasurableSpace α] in
 @[simp]
-lemma prefixCylinder_empty (n : ℕ) :
+lemma prefixCylinder_empty {n : ℕ} :
     prefixCylinder (α:=α) n (∅ : Set (Fin n → α)) = (∅) := rfl
 
 /--
@@ -129,7 +129,7 @@ lemma measurable_of_mem_prefixCylinders {A : Set (ℕ → α)}
     (hA : A ∈ prefixCylinders (α:=α)) : MeasurableSet A := by
   classical
   rcases hA with ⟨n, S, hS, rfl⟩
-  exact (measurable_prefixProj (α:=α) n) hS
+  exact (measurable_prefixProj (α:=α) (n:=n)) hS
 
 section Extend
 
@@ -146,17 +146,17 @@ def takePrefix (hmn : m ≤ n) (x : Fin n → α) : Fin m → α :=
 
 omit [MeasurableSpace α] in
 @[simp]
-lemma takePrefix_apply (hmn : m ≤ n) (x : Fin n → α) (i : Fin m) :
+lemma takePrefix_apply {hmn : m ≤ n} (x : Fin n → α) (i : Fin m) :
     takePrefix (α:=α) hmn x i = x (Fin.castLE hmn i) := by canonical
 
 omit [MeasurableSpace α] in
 @[simp]
-lemma takePrefix_prefixProj (hmn : m ≤ n) (x : ℕ → α) :
+lemma takePrefix_prefixProj {hmn : m ≤ n} (x : ℕ → α) :
     takePrefix (α:=α) hmn (prefixProj (α:=α) n x) = prefixProj (α:=α) m x := by
   ext i; simp [takePrefix]
 
 @[simp]
-lemma castLE_coe_nat (hmn : m ≤ n) (i : Fin m) :
+lemma castLE_coe_nat {hmn : m ≤ n} (i : Fin m) :
     ((Fin.castLE hmn i : Fin n) : ℕ) = i := by
   cases i
   rfl
@@ -300,7 +300,7 @@ theorem measure_eq_of_fin_marginals_eq {μ ν : Measure (ℕ → α)}
   classical
   have h_univ : μ Set.univ = ν Set.univ := by
     simpa [Measure.map_apply_of_aemeasurable
-      ((measurable_prefixProj (α:=α) 1).aemeasurable)]
+      ((measurable_prefixProj (α:=α) (n:=1)).aemeasurable)]
       using h 1 Set.univ MeasurableSet.univ
   apply MeasureTheory.ext_of_generate_finite (C:=prefixCylinders (α:=α))
   · simp [generateFrom_prefixCylinders (α:=α)]
@@ -308,7 +308,7 @@ theorem measure_eq_of_fin_marginals_eq {μ ν : Measure (ℕ → α)}
   · intro A hA
     obtain ⟨n, S, hS, rfl⟩ := hA
     simp only [prefixCylinder, ← Measure.map_apply_of_aemeasurable
-      ((measurable_prefixProj (α:=α) n).aemeasurable) hS]
+      ((measurable_prefixProj (α:=α) (n:=n)).aemeasurable) hS]
     exact h n S hS
   · simpa using h_univ
 
@@ -356,10 +356,10 @@ Given a permutation `π` of ℕ and a sequence `x : ℕ → α`, returns the seq
 def reindex (π : Equiv.Perm ℕ) (x : ℕ → α) : ℕ → α := fun i => x (π i)
 
 @[simp]
-lemma reindex_apply (π : Equiv.Perm ℕ) (x : ℕ → α) (i : ℕ) :
+lemma reindex_apply {π : Equiv.Perm ℕ} (x : ℕ → α) (i : ℕ) :
     reindex (α:=α) π x i = x (π i) := by canonical
 
-lemma measurable_reindex (π : Equiv.Perm ℕ) :
+lemma measurable_reindex {π : Equiv.Perm ℕ} :
     Measurable (reindex (α:=α) π) := by
   classical
   refine measurable_pi_lambda _ (fun i => ?_)
@@ -388,7 +388,7 @@ lemma pathLaw_map_prefix (μ : Measure Ω) (X : ℕ → Ω → α)
   refine Measure.map_map (μ:=μ)
     (f:=fun ω => fun i : ℕ => X i ω)
     (g:=prefixProj (α:=α) n)
-    (measurable_prefixProj (α:=α) n)
+    (measurable_prefixProj (α:=α) (n:=n))
     hmeas
 
 lemma pathLaw_map_prefix_perm (μ : Measure Ω) (X : ℕ → Ω → α)
@@ -398,18 +398,18 @@ lemma pathLaw_map_prefix_perm (μ : Measure Ω) (X : ℕ → Ω → α)
       Measure.map (fun ω => fun i : Fin n => X (π i) ω) μ := by
   classical
   have hreindex :
-      Measurable fun x : ℕ → α => reindex (α:=α) π x := measurable_reindex (α:=α) π
+      Measurable fun x : ℕ → α => reindex (α:=α) π x := measurable_reindex (α:=α) (π:=π)
   have hmeas : Measurable fun ω => fun i : ℕ => X i ω :=
     measurable_pi_lambda _ (fun i => hX i)
   calc
     Measure.map (prefixProj (α:=α) n)
         (Measure.map (reindex (α:=α) π) (pathLaw (α:=α) μ X))
       = Measure.map (prefixProj (α:=α) n ∘ reindex (α:=α) π) (pathLaw (α:=α) μ X) := by
-        rw [Measure.map_map (measurable_prefixProj (α:=α) n) hreindex]
+        rw [Measure.map_map (measurable_prefixProj (α:=α) (n:=n)) hreindex]
     _ = Measure.map (prefixProj (α:=α) n ∘ reindex (α:=α) π)
         (Measure.map (fun ω => fun i : ℕ => X i ω) μ) := by rw [pathLaw]
     _ = Measure.map ((prefixProj (α:=α) n ∘ reindex (α:=α) π) ∘ fun ω => fun i : ℕ => X i ω) μ :=
-        Measure.map_map ((measurable_prefixProj (α:=α) n).comp hreindex) hmeas
+        Measure.map_map ((measurable_prefixProj (α:=α) (n:=n)).comp hreindex) hmeas
     _ = Measure.map (fun ω => fun i : Fin n => X (π i) ω) μ := rfl
 
 /--
@@ -429,12 +429,12 @@ lemma fullyExchangeable_iff_pathLaw_invariant {μ : Measure Ω}
   simp only [pathLaw]
   constructor
   · intro hFull π
-    rw [Measure.map_map (measurable_reindex (α:=α) π)
+    rw [Measure.map_map (measurable_reindex (α:=α) (π:=π))
       (measurable_pi_lambda _ (fun i => hX i))]
     exact hFull π
   · intro hPath π
     have := hPath π
-    rwa [Measure.map_map (measurable_reindex (α:=α) π)
+    rwa [Measure.map_map (measurable_reindex (α:=α) (π:=π))
       (measurable_pi_lambda _ (fun i => hX i))] at this
 
 /-!
@@ -638,7 +638,7 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω}
     have hμXπ_univ :
         Measure.map (reindex (α:=α) π) μX Set.univ = 1 := by
       simp [Measure.map_apply_of_aemeasurable,
-        (measurable_reindex (α:=α) π).aemeasurable, hμX_univ]
+        (measurable_reindex (α:=α) (π:=π)).aemeasurable, hμX_univ]
     haveI : IsProbabilityMeasure (Measure.map (reindex (α:=α) π) μX) :=
       ⟨by simpa using hμXπ_univ⟩
     have hMarg : ∀ n (S : Set (Fin n → α)) (hS : MeasurableSet S),
@@ -665,7 +665,7 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω}
         Measure.map (fun ω => fun i : ℕ => X (π i) ω) μ =
           Measure.map (reindex (α:=α) π) μX := by
       simp only [μX, pathLaw]
-      rw [Measure.map_map (measurable_reindex (α:=α) π)
+      rw [Measure.map_map (measurable_reindex (α:=α) (π:=π))
         (measurable_pi_lambda _ (fun i => hX i))]
       rfl
     have hmap₂ : Measure.map (fun ω => fun i : ℕ => X i ω) μ = μX := by
