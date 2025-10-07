@@ -90,19 +90,41 @@ lemma contractable_covariance_structure
 ## Step 2: L² bound implies L¹ convergence of weighted sums (Kallenberg's key step)
 -/
 
+/-- **L² bound wrapper for two starting windows**.
+
+For contractable sequences, the L² difference between averages starting at different
+indices n and m is uniformly small. This gives us the key uniform bound we need.
+
+Using `l2_contractability_bound` with appropriate weights shows that for large windows,
+the starting index doesn't matter.
+-/
+lemma l2_bound_two_windows
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (f : ℝ → ℝ) (hf_meas : Measurable f)
+    (hf_bdd : ∃ M, ∀ x, |f x| ≤ M)
+    (n m : ℕ) (k : ℕ) (hk : k > 0) :
+    ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
+          (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ ≤
+      (4 : ℝ) * (max n m : ℝ) / k := by
+  sorry  -- TODO: Apply l2_contractability_bound
+         -- The weights are p_i = 1/k for i ≤ k (starting at n+1)
+         -- and q_i = 1/k for i ≤ k (starting at m+1)
+         -- The sup |p_i - q_i| for shifted indices gives the bound
+
 /-- For a contractable sequence and bounded measurable f, the weighted sums
-(1/m) ∑_{k=n+1}^{n+m} f(ξ_{n+k}) converge in L¹ as m, n → ∞.
+(1/m) ∑_{k=n+1}^{n+m} f(ξ_{n+k}) converge to a **single** function α (independent of n).
 
 This is Kallenberg's key application of the L² bound (Lemma 1.2).
 
-**Kallenberg's statement**: "Using Lemma 1.2 and the completeness of L¹ (FMP 1.31),
-there exists a random variable α_∞ such that
-  ‖E_m ∑_{k=n+1}^{n+m} (f(ξ_{n+k}) - α_{k-1})‖₁² → 0, m, n → ∞."
+**Key insight**: Using the uniform two-window bound, we show that the limit α_n is
+actually **independent of n**. For any n, m and large window k:
+  ‖α_n - α_m‖₁ ≤ ‖α_n - A n k‖₁ + ‖A n k - A m k‖₂ + ‖A m k - α_m‖₁
+where the middle term is bounded by O(1/k) uniformly in n,m by `l2_bound_two_windows`.
 
-TODO: Complete proof using:
-1. Apply `l2_contractability_bound` to weighted averages
-2. Show Cauchy property in L¹
-3. Extract limit by completeness of L¹ (FMP 1.31 above)
+This eliminates the 3ε uniformity problem!
 -/
 theorem weighted_sums_converge_L1
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -111,16 +133,11 @@ theorem weighted_sums_converge_L1
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (f : ℝ → ℝ) (hf_meas : Measurable f)
     (hf_bdd : ∃ M, ∀ x, |f x| ≤ M) :
-    ∃ (alpha : ℕ → Ω → ℝ),
-      -- The sequence alpha_n exists
-      (∀ n, Measurable (alpha n)) ∧
-      (∀ n, MemLp (alpha n) 1 μ) ∧
-      -- alpha_n converges in L¹ to some limit alpha_inf
-      (∃ (alpha_inf : Ω → ℝ), Measurable alpha_inf ∧ MemLp alpha_inf 1 μ ∧
-        ∀ ε > 0, ∃ N : ℕ, ∀ n ≥ N, ∫ ω, |alpha n ω - alpha_inf ω| ∂μ < ε) ∧
-      -- The weighted sums converge to alpha_n in L¹
+    ∃ (alpha : Ω → ℝ),  -- SINGLE alpha, not a sequence!
+      Measurable alpha ∧ MemLp alpha 1 μ ∧
+      -- The weighted sums converge to alpha in L¹ (for ANY starting index n)
       (∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m : ℕ, m ≥ M →
-        ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω) - alpha n ω| ∂μ < ε) := by
+        ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω) - alpha ω| ∂μ < ε) := by
   classical
 
   -- Define the moving averages A n m
@@ -136,126 +153,61 @@ theorem weighted_sums_converge_L1
     intro k _
     exact hf_meas.comp (hX_meas _)
 
-  -- Key fact: for each fixed n, the family (A n m)_m is Cauchy in L² by the
-  -- L² contractability bound (Lemma 1.2), hence Cauchy in L¹ (since μ is probability)
+  -- Step 1: For n=0, show (A 0 m)_m is Cauchy in L² hence L¹
+  have hA_cauchy_L2_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
+      eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ < ENNReal.ofReal ε := by
+    intro ε hε
+    sorry  -- TODO: Apply l2_contractability_bound for fixed starting index
 
-  -- Step 1: Show (A n m) is Cauchy in L² for each fixed n
-  -- This uses l2_contractability_bound from L2Approach.lean
-  have hA_cauchy_L2 : ∀ n, ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
-      eLpNorm (fun ω => A n m ω - A n ℓ ω) 2 μ < ENNReal.ofReal ε := by
-    intro n ε hε
-    -- For contractable sequences, we can apply l2_contractability_bound
-    -- Key insight: As m, ℓ → ∞, the sup norm |1/m - 1/ℓ| → 0
-    -- The bound gives ∫(A n m - A n ℓ)² ≤ 2σ²(1-ρ)·sup|p_i - q_i| → 0
-    sorry  -- TODO: Apply l2_contractability_bound with uniform weights
-           -- Need to extract σ², ρ from contractability assumption
-           -- and show sup|1/m·1_{i≤m} - 1/ℓ·1_{i≤ℓ}| → 0
-
-  -- Step 2: L²-Cauchy ⇒ L¹-Cauchy (on probability spaces, ‖·‖₁ ≤ ‖·‖₂)
-  have hA_cauchy_L1 : ∀ n, ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
-      eLpNorm (fun ω => A n m ω - A n ℓ ω) 1 μ < ENNReal.ofReal ε := by
-    intro n ε hε
-    rcases hA_cauchy_L2 n ε hε with ⟨N, hN⟩
+  have hA_cauchy_L1_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
+      eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ < ENNReal.ofReal ε := by
+    intro ε hε
+    rcases hA_cauchy_L2_0 ε hε with ⟨N, hN⟩
     refine ⟨N, fun m ℓ hm hℓ => ?_⟩
-    -- On a probability space, ‖f‖₁ ≤ ‖f‖₂ by Hölder's inequality
-    -- So L² convergence implies L¹ convergence
-    calc eLpNorm (fun ω => A n m ω - A n ℓ ω) 1 μ
-        ≤ eLpNorm (fun ω => A n m ω - A n ℓ ω) 2 μ := by
+    calc eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ
+        ≤ eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ := by
           apply eLpNorm_le_eLpNorm_of_exponent_le
-          · norm_num  -- 1 ≤ 2
-          · exact (hA_meas n m).sub (hA_meas n ℓ) |>.aestronglyMeasurable
+          · norm_num
+          · exact (hA_meas 0 m).sub (hA_meas 0 ℓ) |>.aestronglyMeasurable
       _ < ENNReal.ofReal ε := hN m ℓ hm hℓ
 
-  -- Step 3: For each n, completeness of L¹ gives limit alpha n
-  have h_exist_alpha : ∀ n, ∃ alphan : Ω → ℝ, Measurable alphan ∧ MemLp alphan 1 μ ∧
-      (∀ ε > 0, ∃ M, ∀ m ≥ M, eLpNorm (fun ω => A n m ω - alphan ω) 1 μ < ENNReal.ofReal ε) := by
-    intro n
-    -- Use completeness of L¹: every Cauchy sequence converges
-    -- We have (A n m)_m is Cauchy in L¹ from hA_cauchy_L1
-    -- Need to:
-    -- 1. Construct Lp representatives of A n m
-    -- 2. Apply CompleteSpace instance to get limit in Lp
-    -- 3. Extract underlying function as alphan
-    sorry  -- TODO: Use Lp.memLp_toLp, CauchySeq.tendsto_of_complete
-           -- The limit in Lp ℝ 1 μ gives us the alphan we need
+  -- Step 2: Completeness of L¹ gives alpha_0
+  have h_exist_alpha_0 : ∃ alpha_0 : Ω → ℝ, Measurable alpha_0 ∧ MemLp alpha_0 1 μ ∧
+      (∀ ε > 0, ∃ M, ∀ m ≥ M, eLpNorm (fun ω => A 0 m ω - alpha_0 ω) 1 μ < ENNReal.ofReal ε) := by
+    sorry  -- TODO: Use CompleteSpace (Lp ℝ 1 μ) as before
 
-  -- Choose alpha n for each n
-  choose alpha halpha_meas halpha_mem halpha_conv using h_exist_alpha
+  obtain ⟨alpha_0, halpha_0_meas, halpha_0_mem, halpha_0_conv⟩ := h_exist_alpha_0
 
-  -- Step 4: Show (alpha n) is Cauchy in L¹ (3ε argument)
-  have halpha_cauchy_L1 : ∀ ε > 0, ∃ N, ∀ m n, m ≥ N → n ≥ N →
-      eLpNorm (fun ω => alpha m ω - alpha n ω) 1 μ < ENNReal.ofReal ε := by
-    intro ε hε
-    -- 3ε argument: For any ε > 0, choose M large enough so that
-    -- ‖alpha m - A m M‖₁ < ε/3 and ‖A n M - alpha n‖₁ < ε/3 for all m,n ≥ N
-    -- And also ‖A m M - A n M‖₁ < ε/3 for all m,n ≥ N
-    -- Then ‖alpha m - alpha n‖₁ ≤ ‖alpha m - A m M‖₁ + ‖A m M - A n M‖₁ + ‖A n M - alpha n‖₁ < ε
-
-    have hε3_pos : 0 < ε / 3 := by linarith
-
-    -- The key insight: We'll show both (A n m)_m and (alpha n)_n are Cauchy
-    -- For the 3ε argument, we want:
-    -- 1. A n M close to alpha n (for all n, when M is large) - from halpha_conv
-    -- 2. A m M close to A n M (for m,n large, fixed M) - from hA_cauchy_L1
-
-    -- However, halpha_conv gives convergence for each fixed n separately
-    -- We can't directly get uniform convergence
-    -- The argument works as follows: pick M_start large
-
-    -- Get N such that A m M_start and A n M_start are ε/3-close for m,n ≥ N
-    -- Note: hA_cauchy_L1 takes ε > 0 as input, we use ε/3
-    rcases hA_cauchy_L1 0 (ε / 3) hε3_pos with ⟨N_mid, hN_mid⟩
-
-    -- For this specific N_mid, get M such that for all n ≤ N_mid, A n M is close to alpha n
-    -- We'll pick a large M that works for finitely many n ∈ {0,...,N_mid}
-    sorry -- TODO: This needs a more sophisticated argument
-          -- The issue is halpha_conv gives ∀ n, ∃ M, ... not ∃ M, ∀ n, ...
-          -- We need diagonal argument or different approach
-
-  -- Step 5: Completeness of L¹ gives alpha_inf
-  have h_exist_alpha_inf : ∃ alpha_inf : Ω → ℝ, Measurable alpha_inf ∧ MemLp alpha_inf 1 μ ∧
-      (∀ ε > 0, ∃ N, ∀ n ≥ N, eLpNorm (fun ω => alpha n ω - alpha_inf ω) 1 μ < ENNReal.ofReal ε) := by
-    -- Same strategy as Step 3: (alpha n) is Cauchy in L¹ by halpha_cauchy_L1
-    -- So it has a limit alpha_inf in Lp ℝ 1 μ by completeness
-    sorry  -- TODO: Use Lp.memLp_toLp, CauchySeq.tendsto_of_complete
-           -- Same pattern as h_exist_alpha but applied to the sequence (alpha n)
-
-  rcases h_exist_alpha_inf with ⟨alpha_inf, halpha_inf_meas, halpha_inf_mem, halpha_inf_conv⟩
-
-  -- Package the results
-  refine ⟨alpha, halpha_meas, halpha_mem, ⟨alpha_inf, halpha_inf_meas, halpha_inf_mem, ?_⟩, ?_⟩
-  · -- alpha n → alpha_inf in L¹
-    intro ε hε
-    rcases halpha_inf_conv ε hε with ⟨N, hN⟩
-    refine ⟨N, fun n hn => ?_⟩
-    have h_elpnorm := hN n hn
-    -- Convert eLpNorm 1 to integral of absolute value
-    -- For p=1: eLpNorm f 1 μ = ENNReal.ofReal (∫ a, ‖f a‖ ∂μ)
-    have h_memLp : MemLp (fun ω => alpha n ω - alpha_inf ω) 1 μ := by
-      -- alpha n and alpha_inf are both in L¹, so their difference is too
-      apply MemLp.sub
-      · exact halpha_mem n
-      · exact halpha_inf_mem
-    -- Use the conversion theorem for p=1
-    rw [MemLp.eLpNorm_eq_integral_rpow_norm one_ne_zero ENNReal.coe_ne_top h_memLp] at h_elpnorm
-    -- Simplify: p.toReal = 1, so we get ∫ ‖f‖^1 = ∫ ‖f‖, and (...)^(1⁻¹) = ...^1 = ...
-    simp only [ENNReal.one_toReal, Real.rpow_one] at h_elpnorm
-    -- After simplification: h_elpnorm : ENNReal.ofReal ((∫ a, ‖...‖ ∂μ)^1) < ENNReal.ofReal ε
-    -- Simplify the ^1
-    norm_num at h_elpnorm
-    -- Now h_elpnorm : ENNReal.ofReal (∫ a, ‖...‖ ∂μ) < ENNReal.ofReal ε
-    -- Apply ofReal_lt_ofReal_iff
-    rw [ENNReal.ofReal_lt_ofReal_iff hε] at h_elpnorm
-    -- For real-valued functions, ‖x - y‖ = |x - y|
-    -- The integral already has norm which equals absolute value for reals
-    convert h_elpnorm using 1
-  · -- A n m → alpha n in L¹
+  -- Step 3: KEY - Prove alpha_0 works for ALL starting indices n
+  -- For any n, show A n m → alpha_0 using the uniform two-window bound
+  have halpha_0_univ : ∀ n, ∀ ε > 0, ∃ M, ∀ m ≥ M,
+      eLpNorm (fun ω => A n m ω - alpha_0 ω) 1 μ < ENNReal.ofReal ε := by
     intro n ε hε
-    rcases halpha_conv n ε hε with ⟨M, hM⟩
-    refine ⟨M, fun m hm => ?_⟩
-    have := hM m hm
-    -- Same conversion, then unfold A to get the weighted sum form
-    sorry  -- TODO: Use eLpNorm_one_eq_lintegral_nnnorm, then unfold A
+    -- Triangle: ‖A n m - alpha_0‖₁ ≤ ‖A n m - A 0 m‖₂ + ‖A 0 m - alpha_0‖₁
+    -- The first term is O(n/m) by l2_bound_two_windows
+    -- The second term → 0 as m → ∞ by halpha_0_conv
+    sorry  -- TODO: 3ε argument with uniform bound from l2_bound_two_windows
+           -- Choose M large so both terms < ε/2
+
+  -- Step 4: Package the result - alpha_0 is our answer!
+  refine ⟨alpha_0, halpha_0_meas, halpha_0_mem, ?_⟩
+
+  -- Convert eLpNorm convergence to integral convergence
+  intro n ε hε
+  rcases halpha_0_univ n ε hε with ⟨M, hM⟩
+  refine ⟨M, fun m hm => ?_⟩
+  have h_elpnorm := hM m hm
+  -- Convert eLpNorm 1 to integral
+  have h_memLp : MemLp (fun ω => A n m ω - alpha_0 ω) 1 μ := by
+    apply MemLp.sub
+    · -- A n m is in L¹: bounded measurable on probability space → Lp for any p
+      sorry  -- TODO: Prove MemLp (A n m) 1 μ from boundedness of f
+    · exact halpha_0_mem
+  rw [MemLp.eLpNorm_eq_integral_rpow_norm one_ne_zero ENNReal.coe_ne_top h_memLp] at h_elpnorm
+  simp only [ENNReal.toReal_one, Real.rpow_one] at h_elpnorm
+  norm_num at h_elpnorm
+  rw [ENNReal.ofReal_lt_ofReal_iff hε] at h_elpnorm
+  convert h_elpnorm using 1
 
 /-!
 ## Step 3: Reverse martingale convergence
