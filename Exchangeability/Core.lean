@@ -529,8 +529,8 @@ lemma approxPerm_apply_cast {i : Fin n} :
         (Fin.castLE (le_permBound (π:=π) (n:=n)) i)
       = ⟨π i, lt_permBound_fin (π:=π) (n:=n) (i:=i)⟩ := by
   classical
-  have hmem : ((Fin.castLE (le_permBound (π:=π) (n:=n)) i) : ℕ) < n := by
-    simp [i.isLt]
+  have hmem : ((Fin.castLE (le_permBound (π:=π) (n:=n)) i) : ℕ) < n :=
+    i.2
   have := Equiv.extendSubtype_apply_of_mem
       (e:=approxEquiv (π:=π) (n:=n))
       (x:=Fin.castLE (le_permBound (π:=π) (n:=n)) i)
