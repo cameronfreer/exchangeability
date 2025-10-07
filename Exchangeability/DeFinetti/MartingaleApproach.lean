@@ -448,14 +448,20 @@ lemma contractable_dist_eq_on_cylinders
   have hk_m_mono : StrictMono k_m := by
     intro i j hij
     simp only [k_m]
-    match i, j with
-    | ⟨0, _⟩, ⟨j'+1, _⟩ =>
-      simp [Fin.cases]
-      exact htail_pos ⟨j', by omega⟩
-    | ⟨i'+1, _⟩, ⟨j'+1, _⟩ =>
-      simp [Fin.cases]
-      apply htail_mono
-      omega
+    cases i using Fin.cases with
+    | zero =>
+      cases j using Fin.cases with
+      | zero => exact absurd hij (Nat.lt_irrefl 0)
+      | succ j' =>
+        simp [Fin.cases]
+        exact htail_pos j'
+    | succ i' =>
+      cases j using Fin.cases with
+      | zero => exact absurd hij (Nat.not_lt.mpr (Nat.zero_le _))
+      | succ j' =>
+        simp [Fin.cases]
+        apply htail_mono
+        exact Fin.succ_lt_succ_iff.mp hij
 
   -- Prove strict monotonicity of k_map_m
   have hk_map_m_mono : StrictMono k_map_m := by
@@ -467,18 +473,23 @@ lemma contractable_dist_eq_on_cylinders
   have hk_map_k_mono : StrictMono k_map_k := by
     intro i j hij
     simp only [k_map_k]
-    match i, j with
-    | ⟨0, _⟩, ⟨j'+1, _⟩ =>
-      -- k < m + tail ⟨j', _⟩
-      calc k ≤ m := hk
-        _ < m + tail ⟨j', by omega⟩ := by
-          have := htail_pos ⟨j', by omega⟩
-          omega
-    | ⟨i'+1, _⟩, ⟨j'+1, _⟩ =>
-      -- m + tail i' < m + tail j'
-      apply Nat.add_lt_add_left
-      apply htail_mono
-      omega
+    cases i using Fin.cases with
+    | zero =>
+      cases j using Fin.cases with
+      | zero => exact absurd hij (Nat.lt_irrefl 0)
+      | succ j' =>
+        simp [Fin.cases]
+        calc k ≤ m := hk
+          _ < m + tail j' := by
+            have := htail_pos j'
+            omega
+    | succ i' =>
+      cases j using Fin.cases with
+      | zero => exact absurd hij (Nat.not_lt.mpr (Nat.zero_le _))
+      | succ j' =>
+        simp [Fin.cases]
+        have : tail i' < tail j' := htail_mono (Fin.succ_lt_succ_iff.mp hij)
+        omega
 
   -- TODO: express the event `{ω | zeroConstraint ω ∧ tailCondition ω}` as the preimage
   -- then express the event `{ω | zeroConstraint ω ∧ tailCondition ω}` as the preimage
