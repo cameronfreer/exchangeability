@@ -22,14 +22,25 @@ equivalent for probability measures on sequence spaces.
 
 ## Technical approach
 
-The proof uses the π-system uniqueness theorem for finite measures. We show that:
+The proof uses the **π-system uniqueness theorem** for finite measures rather than
+directly invoking Kolmogorov extension or Ionescu-Tulcea. While mathlib provides
+these powerful tools (`Measure.infinitePi` for Kolmogorov extension and
+`ProbabilityTheory.Kernel.traj` for Ionescu-Tulcea), applying them here would
+require first constructing the measure from exchangeability data, which is
+circular when proving that finite exchangeability implies full exchangeability.
+
+Instead, we use a **uniqueness-based approach**:
 
 1. Cylinder sets determined by initial segments form a π-system that generates
    the product σ-algebra on `ℕ → α`.
-2. Two measures with matching finite marginals must be equal.
-3. Any finite permutation extends to a permutation of ℕ that agrees on a
+2. Two measures with matching finite marginals must be equal (by π-system
+   uniqueness, `Measure.ext_of_generate_finite`).
+3. Any infinite permutation can be approximated by a finite permutation on a
    sufficiently large initial segment, allowing us to transfer exchangeability
-   to full exchangeability.
+   to full exchangeability via the uniqueness result.
+
+This approach directly proves the equivalence without requiring measure
+construction machinery.
 -/
 
 noncomputable section
