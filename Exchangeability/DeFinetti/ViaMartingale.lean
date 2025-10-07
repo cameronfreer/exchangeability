@@ -84,10 +84,10 @@ variable {β : Type*} [MeasurableSpace β]
 def shiftSeq (d : ℕ) (f : ℕ → β) : ℕ → β := fun n => f (n + d)
 
 @[simp]
-lemma shiftSeq_apply (d : ℕ) (f : ℕ → β) (n : ℕ) :
+lemma shiftSeq_apply {d : ℕ} (f : ℕ → β) (n : ℕ) :
     shiftSeq d f n = f (n + d) := rfl
 
-lemma measurable_shiftSeq (d : ℕ) :
+lemma measurable_shiftSeq {d : ℕ} :
     Measurable (shiftSeq (β:=β) d) := by
   classical
   refine measurable_pi_iff.mpr ?_
@@ -117,24 +117,24 @@ section FinsetOrder
 
 open Finset
 
-lemma orderEmbOfFin_strictMono (s : Finset ℕ) :
+lemma orderEmbOfFin_strictMono {s : Finset ℕ} :
     StrictMono fun i : Fin s.card => s.orderEmbOfFin rfl i := by
   classical
   simpa using (s.orderEmbOfFin rfl).strictMono
 
-lemma orderEmbOfFin_mem (s : Finset ℕ) (i : Fin s.card) :
+lemma orderEmbOfFin_mem {s : Finset ℕ} {i : Fin s.card} :
     s.orderEmbOfFin rfl i ∈ s := by
   classical
   simpa using Finset.orderEmbOfFin_mem (s:=s) (h:=rfl) i
 
-lemma orderEmbOfFin_surj (s : Finset ℕ) (x : ℕ) (hx : x ∈ s) :
+lemma orderEmbOfFin_surj {s : Finset ℕ} {x : ℕ} (hx : x ∈ s) :
     ∃ i : Fin s.card, s.orderEmbOfFin rfl i = x := by
   classical
   -- orderEmbOfFin is an order isomorphism, hence bijective onto s
   -- Use the fact that it's an injective function from a finite type to itself
   have h_inj : Function.Injective (s.orderEmbOfFin rfl : Fin s.card → ℕ) :=
     (s.orderEmbOfFin rfl).injective
-  have h_range_sub : ∀ i, s.orderEmbOfFin rfl i ∈ s := orderEmbOfFin_mem s
+  have h_range_sub : ∀ i, s.orderEmbOfFin rfl i ∈ s := orderEmbOfFin_mem (s:=s)
   -- Define a function to s viewed as a subtype
   let f : Fin s.card → s := fun i => ⟨s.orderEmbOfFin rfl i, h_range_sub i⟩
   have hf_inj : Function.Injective f := by
@@ -216,7 +216,7 @@ lemma measurable_path (hX : ∀ n, Measurable (X n)) :
   classical
   simpa [path] using measurable_pi_iff.mpr hX
 
-lemma measurable_shiftRV (hX : ∀ n, Measurable (X n)) (m : ℕ) :
+lemma measurable_shiftRV (hX : ∀ n, Measurable (X n)) {m : ℕ} :
     Measurable (shiftRV X m) := by
   classical
   simpa [shiftRV] using

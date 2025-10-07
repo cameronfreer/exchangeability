@@ -9,7 +9,6 @@ import Mathlib.MeasureTheory.Constructions.Cylinders
 import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
 import Mathlib.MeasureTheory.Measure.Typeclasses.Finite
 import Exchangeability.Contractability
-import Canonical
 
 /-!
 # Exchangeability and Full Exchangeability
@@ -80,7 +79,7 @@ def prefixProj (α : Type*) (n : ℕ) (x : ℕ → α) : Fin n → α :=
 omit [MeasurableSpace α] in
 @[simp]
 lemma prefixProj_apply {n : ℕ} (x : ℕ → α) (i : Fin n) :
-    prefixProj (α:=α) n x i = x i := by canonical
+    prefixProj (α:=α) n x i = x i := rfl
 
 lemma measurable_prefixProj {n : ℕ} :
     Measurable (prefixProj (α:=α) n) := by
@@ -152,7 +151,7 @@ def takePrefix (hmn : m ≤ n) (x : Fin n → α) : Fin m → α :=
 omit [MeasurableSpace α] in
 @[simp]
 lemma takePrefix_apply {hmn : m ≤ n} (x : Fin n → α) (i : Fin m) :
-    takePrefix (α:=α) hmn x i = x (Fin.castLE hmn i) := by canonical
+    takePrefix (α:=α) hmn x i = x (Fin.castLE hmn i) := rfl
 
 omit [MeasurableSpace α] in
 @[simp]
@@ -162,9 +161,8 @@ lemma takePrefix_prefixProj {hmn : m ≤ n} (x : ℕ → α) :
 
 @[simp]
 lemma castLE_coe_nat {hmn : m ≤ n} (i : Fin m) :
-    ((Fin.castLE hmn i : Fin n) : ℕ) = i := by
-  cases i
-  rfl
+    ((Fin.castLE hmn i : Fin n) : ℕ) = i :=
+  Eq.refl i.1
 
 /--
 Extend a set from `Fin m → α` to `Fin n → α` by ignoring extra coordinates.
@@ -362,7 +360,7 @@ def reindex (π : Equiv.Perm ℕ) (x : ℕ → α) : ℕ → α := fun i => x (�
 
 @[simp]
 lemma reindex_apply {π : Equiv.Perm ℕ} (x : ℕ → α) (i : ℕ) :
-    reindex (α:=α) π x i = x (π i) := by canonical
+    reindex (α:=α) π x i = x (π i) := rfl
 
 lemma measurable_reindex {π : Equiv.Perm ℕ} :
     Measurable (reindex (α:=α) π) := by
@@ -479,7 +477,7 @@ lemma lt_permBound_of_lt {i : ℕ} (hi : i < n) :
     lt_of_lt_of_le (Nat.lt_succ_self _) hsup
   exact lt_of_lt_of_le this (Nat.le_max_right _ _)
 
-lemma lt_permBound_fin (i : Fin n) :
+lemma lt_permBound_fin {i : Fin n} :
     π i < permBound π n := lt_permBound_of_lt (π:=π) (n:=n) i.isLt
 
 def approxEquiv :
@@ -492,7 +490,7 @@ def approxEquiv :
     · intro x
       have hx := x.property
       let i : Fin n := ⟨x.1, hx⟩
-      have hi : (π i : ℕ) < permBound π n := lt_permBound_fin (π:=π) (n:=n) i
+      have hi : (π i : ℕ) < permBound π n := lt_permBound_fin (π:=π) (n:=n) (i:=i)
       refine ⟨⟨π i, hi⟩, ?_⟩
       exact ⟨i, rfl⟩
     · intro y
@@ -526,10 +524,10 @@ outside the range of π restricted to `{0,...,n-1}`.
 def approxPerm : Equiv.Perm (Fin (permBound π n)) :=
   (approxEquiv (π:=π) (n:=n)).extendSubtype
 
-lemma approxPerm_apply_cast (i : Fin n) :
+lemma approxPerm_apply_cast {i : Fin n} :
     approxPerm (π:=π) (n:=n)
         (Fin.castLE (le_permBound (π:=π) (n:=n)) i)
-      = ⟨π i, lt_permBound_fin (π:=π) (n:=n) i⟩ := by
+      = ⟨π i, lt_permBound_fin (π:=π) (n:=n) (i:=i)⟩ := by
   classical
   have hmem : ((Fin.castLE (le_permBound (π:=π) (n:=n)) i) : ℕ) < n := by
     simp [i.isLt]
@@ -540,12 +538,12 @@ lemma approxPerm_apply_cast (i : Fin n) :
   simpa using this
 
 @[simp]
-lemma approxPerm_apply_cast_coe (i : Fin n) :
+lemma approxPerm_apply_cast_coe {i : Fin n} :
     ((approxPerm (π:=π) (n:=n)
         (Fin.castLE (le_permBound (π:=π) (n:=n)) i)) : ℕ) = π i := by
   classical
   have := congrArg (fun x : Fin (permBound π n) => (x : ℕ))
-    (approxPerm_apply_cast (π:=π) (n:=n) i)
+    (approxPerm_apply_cast (π:=π) (n:=n) (i:=i))
   simpa using this
 
 end Approximation
@@ -602,7 +600,7 @@ lemma marginals_perm_eq {μ : Measure Ω} (X : ℕ → Ω → α)
           = fun ω => fun i : Fin n => X (π i) ω := by
       funext ω i
       simp [Function.comp, takePrefix, hσ_def,
-        approxPerm_apply_cast_coe (π:=π) (n:=n) i]
+        approxPerm_apply_cast_coe (π:=π) (n:=n) (i:=i)]
     have hcomp₂ :
         ((takePrefix (α:=α) hm) ∘ fun ω => fun i : Fin m => X i ω)
           = fun ω => fun i : Fin n => X i ω := by
