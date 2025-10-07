@@ -159,7 +159,7 @@ theorem l2_contractability_bound
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (n : ℕ) (ξ : Fin n → Ω → ℝ)
     (m : ℝ) (σ ρ : ℝ)
-    (_hσ_nonneg : 0 ≤ σ) (_hρ_bd : -1 ≤ ρ ∧ ρ ≤ 1)
+    (_hρ_bd : -1 ≤ ρ ∧ ρ ≤ 1)
     (_hmean : ∀ k, ∫ ω, ξ k ω ∂μ = m)
     (_hL2 : ∀ k, MemLp (fun ω => ξ k ω - m) 2 μ)
     (_hvar : ∀ k, ∫ ω, (ξ k ω - m)^2 ∂μ = σ ^ 2)
