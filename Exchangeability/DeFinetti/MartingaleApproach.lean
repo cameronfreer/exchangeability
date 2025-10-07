@@ -194,6 +194,36 @@ lemma contraction_independence
   -- Step 5: Apply Doob's characterization (FMP 6.6)
   sorry
 
+/-- If `(ξ,η)` and `(ξ,ζ)` have the same law and `σ(η) ≤ σ(ζ)`,
+then for all measurable `B`, the conditional expectations of `1_{ξ∈B}` coincide.
+
+This is the key technical lemma that converts distributional equality into
+conditional expectation equality. It's used to prove `condexp_convergence`. -/
+lemma condexp_indicator_eq_of_dist_eq_and_le
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {ξ : Ω → α} {η ζ : Ω → (ℕ → α)}
+    (h_dist : Measure.map (fun ω => (ξ ω, η ω)) μ
+            = Measure.map (fun ω => (ξ ω, ζ ω)) μ)
+    (hσ : MeasurableSpace.comap η inferInstance ≤ MeasurableSpace.comap ζ inferInstance)
+    (B : Set α) (hB : MeasurableSet B) :
+    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ | MeasurableSpace.comap η inferInstance]
+      =ᵐ[μ]
+    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ | MeasurableSpace.comap ζ inferInstance] := by
+  -- Proof sketch to implement in CondExp.lean:
+  -- 1. Both sides are in [0,1] and in L² (indicators are bounded)
+  -- 2. By hσ and tower property: E[(RHS - LHS) · g] = 0 for any g measurable w.r.t. σ(η)
+  -- 3. Using h_dist, compare second moments:
+  --    ∫ RHS² = ∫ LHS² (by distributional equality)
+  --    Therefore ∫ (RHS - LHS)² = 0
+  -- 4. Conclude RHS = LHS almost everywhere
+  --
+  -- Required lemmas from CondExp.lean:
+  -- - condexp_tower: tower property for conditional expectation
+  -- - condexp_L2_norm: ‖E[f|𝔾]‖₂ ≤ ‖f‖₂
+  -- - indicator_L2: indicators are in L²
+  -- - ae_eq_of_L2_norm_eq_zero: ‖f‖₂ = 0 ⇒ f = 0 a.e.
+  sorry
+
 /-- Helper lemma: contractability gives the key distributional equality.
 
 If `X` is contractable, then for any `k ≤ m`:
@@ -268,6 +298,31 @@ lemma extreme_members_equal_on_tail
   -- - Reverse martingale convergence (condexp_tendsto_condexp_iInf)
   -- - Dominated convergence for L¹ functions
   sorry
+
+section reverse_martingale
+
+variable {μ : Measure Ω} [IsProbabilityMeasure μ]
+variable {X : ℕ → Ω → α}
+
+/-- 𝔽ₘ = σ(θₘ X). -/
+abbrev 𝔽 (X : ℕ → Ω → α) (m : ℕ) : MeasurableSpace Ω := revFiltration X m
+
+/-- Mₘ := 𝔼[1_{Xₖ∈B} | 𝔽ₘ].
+The reverse martingale sequence for the indicator of X_k in B. -/
+def M (μ : Measure Ω) [IsProbabilityMeasure μ] (X : ℕ → Ω → α) (k : ℕ) (B : Set α) (m : ℕ) : Ω → ℝ :=
+  μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | revFiltration X m]
+
+-- TODO (see CondExp.lean):
+-- (1) 0 ≤ M k B m ≤ 1 a.s.
+--     Lemma: condexp_indicator_bounds
+-- (2) For m ≤ n, M k B n is 𝔽ₙ-measurable and E[M k B n | 𝔽ₘ] = M k B m a.s.
+--     Lemmas: stronglyMeasurable_condexp, condexp_tower
+-- (3) If (X m, θₘ X) =^d (X k, θₘ X), then M m B m = M k B m a.s.
+--     Lemma: condexp_indicator_eq_of_dist_eq_and_le (already stated above)
+-- (4) (M k B m)ₘ is a reverse martingale, so M k B m → 𝔼[1_{Xₖ∈B} | tailSigma X] a.s./L¹.
+--     Lemma: condexp_tendsto_condexp_iInf (Lévy's downward theorem)
+
+end reverse_martingale
 
 /-- **Aldous' third proof of de Finetti's theorem.**
 
