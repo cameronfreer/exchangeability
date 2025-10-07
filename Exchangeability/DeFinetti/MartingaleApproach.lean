@@ -270,21 +270,23 @@ lemma contractable_dist_eq_on_cylinders
     (s : Finset ℕ) (t : ∀ i ∈ s, Set α) (ht : ∀ i (hi : i ∈ s), MeasurableSet (t i hi)) :
     μ {ω | X m ω ∈ B ∧ ∀ i (hi : i ∈ s), X (m + i) ω ∈ t i hi}
       = μ {ω | X k ω ∈ B ∧ ∀ i (hi : i ∈ s), X (m + i) ω ∈ t i hi} := by
-  -- Proof strategy:
-  -- 1. Rewrite both sides using Measure.map and the product cylinder sets
-  -- 2. The LHS is μ[X_m ∈ B, X_{m+i} ∈ t_i for i ∈ s]
-  --    This equals μ[joint distribution of (X_m, X_{m+1}, X_{m+2}, ...) on (B, t₁, t₂, ...)]
-  -- 3. The RHS is μ[X_k ∈ B, X_{m+i} ∈ t_i for i ∈ s]
-  --    This equals μ[joint distribution of (X_k, X_{m+1}, X_{m+2}, ...) on (B, t₁, t₂, ...)]
-  -- 4. Define the index function: j : Fin (s.card + 1) → ℕ
-  --    where j 0 = m (resp. k) and j (i+1) = m + (s-element i)
-  -- 5. Both j are strictly monotone with k < m < all other indices
-  -- 6. Apply contractability: the joint distribution of (X_{j i})_i is invariant
-  -- 7. This gives the desired equality
+  -- Proof sketch:
+  -- The cylinder event involves coordinates at positions m, m+i₁, m+i₂, ... (for i in s)
+  -- and k, m+i₁, m+i₂, ... respectively.
   --
-  -- Key lemma needed: reformulation of contractability for non-contiguous indices
-  -- (This may require extending the Contractable definition or proving it's equivalent
-  -- to invariance under *any* strictly monotone reindexing, not just k : Fin n → ℕ)
+  -- Key steps:
+  -- 1. Convert finset s to a sorted list to get strict ordering
+  -- 2. Build index functions j_m and j_k : Fin (s.card + 1) → ℕ where:
+  --    j_m(0) = m, j_m(i+1) = m + s.sort(i)
+  --    j_k(0) = k, j_k(i+1) = m + s.sort(i)
+  -- 3. Show both j_m and j_k are strictly monotone (uses k ≤ m and s.sort ordering)
+  -- 4. Express both cylinder sets as preimages under (fun ω i => X (j i) ω)
+  -- 5. Apply contractability: both distributions equal the canonical distribution
+  --
+  -- Required API:
+  -- - Finset.sort: convert finset to sorted list
+  -- - Connection between set membership and Measure.map preimages
+  -- - Product cylinder set lemmas
   sorry
 
 /-- Helper lemma: contractability gives the key distributional equality.
