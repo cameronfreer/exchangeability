@@ -68,6 +68,28 @@ def path (X : ℕ → Ω → α) : Ω → (ℕ → α) := fun ω n => X n ω
 def shiftRV (X : ℕ → Ω → α) (m : ℕ) : Ω → (ℕ → α) :=
   fun ω n => X (m + n) ω
 
+section SequenceShift
+
+variable {β : Type*} [MeasurableSpace β]
+
+/-- Shift a sequence by dropping the first `d` entries. -/
+def shiftSeq (d : ℕ) (f : ℕ → β) : ℕ → β := fun n => f (n + d)
+
+@[simp]
+lemma shiftSeq_apply (d : ℕ) (f : ℕ → β) (n : ℕ) :
+    shiftSeq d f n = f (n + d) := rfl
+
+lemma measurable_shiftSeq (d : ℕ) :
+    Measurable (shiftSeq (β:=β) d) := by
+  classical
+  refine measurable_pi_iff.mpr ?_
+  intro n
+  -- Evaluation at `n + d` is measurable in the product σ-algebra.
+  have h := (Pi.measurable_eval (fun _ : ℕ => β) (n + d))
+  simpa [shiftSeq] using h
+
+end SequenceShift
+
 omit [MeasurableSpace Ω] [MeasurableSpace α] in
 @[simp]
 lemma path_apply (X : ℕ → Ω → α) (ω n) :
@@ -147,23 +169,26 @@ end Measurability
 lemma revFiltration_antitone (X : ℕ → Ω → α) :
     Antitone (revFiltration X) := by
   -- Goal: m ≤ k ⇒ revFiltration X k ≤ revFiltration X m (i.e., σ(θₖX) ⊆ σ(θₘX)).
-  -- Key: shiftRV X k = (fun f n => f (k - m + n)) ∘ (shiftRV X m)
   intro m k hmk
-  simp only [revFiltration]
-  -- Show: comap (shiftRV X k) ≤ comap (shiftRV X m)
-  -- Define the "drop" function that shifts a sequence
-  let drop : (ℕ → α) → (ℕ → α) := fun f n => f (k - m + n)
-  -- Key equality: shiftRV X k = drop ∘ shiftRV X m
-  have h_eq : shiftRV X k = drop ∘ shiftRV X m := by
-    ext ω n
-    simp [shiftRV, drop]
-    congr 1
-    omega
-  rw [h_eq]
-  -- comap (drop ∘ shiftRV X m) = comap (shiftRV X m) (comap drop)
-  -- and comap (shiftRV X m) (comap drop) ≤ comap (shiftRV X m) ⊤
-  erw [MeasurableSpace.comap_comp]
-  exact MeasurableSpace.comap_mono le_top
+  classical
+  have hcomp :
+      shiftRV X k = (shiftSeq (α:=α) (k - m)) ∘ shiftRV X m := by
+    funext ω n
+    have hkm : m + (k - m) = k := by
+      simpa [Nat.add_comm] using (Nat.sub_add_cancel hmk)
+    have hsum :
+        m + (n + (k - m)) = k + n := by
+      calc
+        m + (n + (k - m))
+            = n + (m + (k - m)) := by
+                simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
+        _ = n + k := by simpa [hkm]
+        _ = k + n := Nat.add_comm _ _
+    simp [shiftSeq, shiftRV, Function.comp, hsum]
+  intro s hs
+  simp [revFiltration, hcomp, Set.preimage_preimage, Function.comp] at hs ⊢
+  rcases hs with ⟨t, ht, rfl⟩
+  refine ⟨_, (measurable_shiftSeq (α:=α) (k - m)).measurableSet_preimage ht, rfl⟩
 
 /-- If `X` is contractable, then so is each of its shifts `θₘ X`. -/
 lemma shift_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
@@ -382,22 +407,26 @@ variable {μ : Measure Ω} [IsProbabilityMeasure μ]
 variable {X : ℕ → Ω → α}
 
 /-- 𝔽ₘ = σ(θₘ X). -/
-abbrev 𝔽 (X : ℕ → Ω → α) (m : ℕ) : MeasurableSpace Ω := revFiltration X m
+abbrev 𝔽 (m : ℕ) : MeasurableSpace Ω := revFiltration X m
 
 /-- Mₘ := 𝔼[1_{Xₖ∈B} | 𝔽ₘ].
 The reverse martingale sequence for the indicator of X_k in B. -/
-def M (μ : Measure Ω) [IsProbabilityMeasure μ] (X : ℕ → Ω → α) (k : ℕ) (B : Set α) (m : ℕ) : Ω → ℝ :=
-  μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | revFiltration X m]
+def M (k : ℕ) (B : Set α) : ℕ → Ω → ℝ :=
+  fun m ω =>
+    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | 𝔽 m] ω
 
--- TODO (see CondExp.lean):
--- (1) 0 ≤ M k B m ≤ 1 a.s.
---     Lemma: condexp_indicator_bounds
--- (2) For m ≤ n, M k B n is 𝔽ₙ-measurable and E[M k B n | 𝔽ₘ] = M k B m a.s.
---     Lemmas: stronglyMeasurable_condexp, condexp_tower
--- (3) If (X m, θₘ X) =^d (X k, θₘ X), then M m B m = M k B m a.s.
---     Lemma: condexp_indicator_eq_of_dist_eq_and_le (already stated above)
--- (4) (M k B m)ₘ is a reverse martingale, so M k B m → 𝔼[1_{Xₖ∈B} | tailSigma X] a.s./L¹.
---     Lemma: condexp_tendsto_condexp_iInf (Lévy's downward theorem)
+-- TODO (CondExp.lean milestones):
+-- (1) `0 ≤ M k B m ω ≤ 1` a.s.
+--     API: `condexp_indicator_bounds`.
+-- (2) For `m ≤ n`, `M k B n` is `𝔽 n`-measurable and
+--     `μ[fun ω => M k B n ω | 𝔽 m] =ᵐ[μ] M k B m`.
+--     API: `condexp_tower`, `condexp_stronglyMeasurable`.
+-- (3) If `(X m, θₘ X) =^d (X k, θₘ X)`, then
+--     `M m B m =ᵐ[μ] M k B m`.
+--     API: `condexp_indicator_eq_of_dist_eq_and_le`.
+-- (4) `(fun n => M k B n ω)` is a reverse martingale that converges
+--     to `μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | tailSigma X] ω`.
+--     API: `condexp_tendsto_condexp_iInf` (Lévy's downward theorem).
 
 end reverse_martingale
 
