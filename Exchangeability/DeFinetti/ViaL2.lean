@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2025 exchangeability contributors. All rights reserved.
+Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: exchangeability contributors
+Authors: Cameron Freer
 -/
 import Exchangeability.DeFinetti.L2Approach
 import Exchangeability.DeFinetti.CommonEnding
@@ -379,7 +379,8 @@ theorem weighted_sums_converge_L1
 
   -- Step 2: Completeness of L¹ gives alpha_0
   have h_exist_alpha_0 : ∃ alpha_0 : Ω → ℝ, Measurable alpha_0 ∧ MemLp alpha_0 1 μ ∧
-      (∀ ε > 0, ∃ M, ∀ m ≥ M, eLpNorm (fun ω => A 0 m ω - alpha_0 ω) 1 μ < ENNReal.ofReal ε) := by
+      (∀ ε > 0, ∃ M, ∀ m ≥ M,
+        eLpNorm (fun ω => A 0 m ω - alpha_0 ω) 1 μ < ENNReal.ofReal ε) := by
     sorry  -- TODO: Use CompleteSpace (Lp ℝ 1 μ) as before
 
   obtain ⟨alpha_0, halpha_0_meas, halpha_0_mem, halpha_0_conv⟩ := h_exist_alpha_0
@@ -431,7 +432,8 @@ theorem weighted_sums_converge_L1
 /-- **FMP 4.2: Subsequence criterion**.
 
 Let ξ, ξ₁, ξ₂,... be random elements in a metric space (S, ρ). Then ξₙ →ᵖ ξ
-iff every subsequence N' ⊆ ℕ has a further subsequence N'' ⊆ N' such that ξₙ → ξ a.s. along N''.
+iff every subsequence N' ⊆ ℕ has a further subsequence N'' ⊆ N' such that
+ξₙ → ξ a.s. along N''.
 In particular, ξₙ → ξ a.s. implies ξₙ →ᵖ ξ.
 
 **Proof outline** (Kallenberg):

@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2025 exchangeability contributors. All rights reserved.
+Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: exchangeability contributors
+Authors: Cameron Freer
 -/
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.MeasureTheory.PiSystem
@@ -34,7 +34,8 @@ This file uses several key mathlib components:
 - `Kernel`: Probability kernels from `Mathlib.Probability.Kernel.Basic`
 - `MeasureSpace.induction_on_inter`: π-λ theorem from `Mathlib.MeasureTheory.PiSystem`
 - `Ergodic`, `MeasurePreserving`: From `Mathlib.Dynamics.Ergodic.Ergodic`
-- `condExp`: Conditional expectation from `Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic`
+- `condExp`: Conditional expectation from
+  `Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic`
 
 See also `Exchangeability.ConditionallyIID` for the definition of conditionally i.i.d. sequences
 using mathlib's measure theory infrastructure.
@@ -72,7 +73,8 @@ Following Kallenberg (FMP 10.2-10.4):
 - **Key result (FMP 10.4)**: ℐ' = ℐ^μ (the μ-completion of ℐ)
 
 For exchangeable sequences:
-- The shift operator T: (ℕ → α) → (ℕ → α) by (Tξ)(n) = ξ(n+1) is the natural transformation
+- The shift operator T: (ℕ → α) → (ℕ → α) by (Tξ)(n) = ξ(n+1) is the natural
+  transformation
 - The tail σ-algebra is related to the shift-invariant σ-field
 - A function f is tail-measurable iff it's measurable w.r.t. the tail σ-algebra
 - **FMP 10.3**: f is invariant/almost invariant iff f is ℐ-measurable/ℐ^μ-measurable
@@ -134,7 +136,8 @@ def invariantSigmaField (α : Type*) [MeasurableSpace α] : MeasurableSpace (ℕ
   MeasurableSpace.comap shift inferInstance
 
 /-- A measure on the path space is **almost shift-invariant** on a set S if
-μ(S ∆ shift⁻¹(S)) = 0 (symmetric difference). This is the analogue of FMP 10.2's almost invariance. -/
+μ(S ∆ shift⁻¹(S)) = 0 (symmetric difference). This is the analogue of FMP 10.2's
+almost invariance. -/
 def IsAlmostShiftInvariant {α : Type*} [MeasurableSpace α]
     (μ : Measure (ℕ → α)) (S : Set (ℕ → α)) : Prop :=
   μ ((S \ (shift ⁻¹' S)) ∪ ((shift ⁻¹' S) \ S)) = 0
@@ -420,7 +423,8 @@ lemma fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
       ∫⁻ ω, ∏ i : Fin m,
           ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) ∂μ
         = ∫⁻ ω, ∏ i : Fin m, ν ω (B i) ∂μ) :
-    μ {ω | ∀ i, X (k i) ω ∈ B i} = ∫⁻ ω, (Measure.pi fun i : Fin m => ν ω) {x | ∀ i, x i ∈ B i} ∂μ := by
+    μ {ω | ∀ i, X (k i) ω ∈ B i} =
+      ∫⁻ ω, (Measure.pi fun i : Fin m => ν ω) {x | ∀ i, x i ∈ B i} ∂μ := by
   classical
 
   -- Shorthand for the target measurable set
@@ -515,7 +519,8 @@ lemma fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
 
 /-- The collection of measurable rectangles in a product space forms a π-system.
 
-A rectangle in (Fin m → α) is a set of the form {x | ∀ i, x i ∈ Bᵢ} for measurable sets Bᵢ.
+A rectangle in (Fin m → α) is a set of the form {x | ∀ i, x i ∈ Bᵢ} for
+measurable sets Bᵢ.
 
 Proof strategy:
 - Need to show: if R₁, R₂ are rectangles and R₁ ∩ R₂ ≠ ∅, then R₁ ∩ R₂ is a rectangle
@@ -741,7 +746,8 @@ The progression:
 - **A → B**: Apply A to indicator functions (they're bounded)
 - **B → C**: Use product structure and independence
   - ∏ᵢ 𝟙_{Bᵢ}(Xᵢ) = 𝟙_{B₀×...×Bₘ₋₁}(X₀,...,Xₘ₋₁)
-  - E[∏ᵢ 𝟙_{Bᵢ}(Xᵢ)] = ∏ᵢ E[𝟙_{Bᵢ}(Xᵢ)] = ∏ᵢ ν(Bᵢ) (conditional independence!)
+  - E[∏ᵢ 𝟙_{Bᵢ}(Xᵢ)] = ∏ᵢ E[𝟙_{Bᵢ}(Xᵢ)] = ∏ᵢ ν(Bᵢ)
+    (conditional independence!)
 - **C → ConditionallyIID**: π-λ theorem
   - Rectangles form a π-system generating the product σ-algebra
   - Both `Measure.map` and `μ.bind (Measure.pi ν)` agree on rectangles
@@ -790,7 +796,8 @@ theorem conditional_iid_from_directing_measure
       --
       -- STEP 1: Package ν as satisfying the ConditionallyIID definition
       -- The definition requires: ∃ ν, (∀ ω, IsProbabilityMeasure (ν ω)) ∧
-      --   ∀ m k, Measure.map (fun ω i => X (k i) ω) μ = μ.bind (fun ω => Measure.pi fun _ => ν ω)
+      --   ∀ m k, Measure.map (fun ω i => X (k i) ω) μ =
+      --     μ.bind (fun ω => Measure.pi fun _ => ν ω)
       use ν, hν_prob
 
       intro m k
@@ -951,7 +958,8 @@ theorem monotone_class_product_extension
       (∀ i, ∃ M, ∀ x, |f i x| ≤ M) →
       True) :  -- Placeholder: E[∏ f_i(X_i) | tail] = E[∏ ∫ f_i dν]
     -- Then it holds for all product measurable sets
-    ∀ (B : Fin k → Set α), (∀ i, MeasurableSet (B i)) → True := by  -- Placeholder: μ{∩ Xᵢ ∈ Bᵢ} = ∫ ∏ ν(Bᵢ) dμ
+    ∀ (B : Fin k → Set α), (∀ i, MeasurableSet (B i)) → True := by
+      -- Placeholder: μ{∩ Xᵢ ∈ Bᵢ} = ∫ ∏ ν(Bᵢ) dμ
   intro B hB
 
   -- Step 1: Build indicator functions for each set Bᵢ

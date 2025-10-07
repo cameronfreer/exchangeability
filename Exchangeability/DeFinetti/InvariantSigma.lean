@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2025 exchangeability contributors. All rights reserved.
+Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: exchangeability contributors
+Authors: Cameron Freer
 -/
 import Mathlib.Data.EReal.Basic
 import Mathlib.MeasureTheory.Function.L2Space
@@ -479,7 +479,8 @@ private lemma exists_shiftInvariantFullMeasureSet
     simpa [hsymm] using hmeasure_diff
 
   -- Package all components.
-  refine ⟨Sstar, hSstar_meas, hSstar_symmDiff_zero, hSstar_full, hSstar_forward, hSstar_pointwise⟩
+  refine ⟨Sstar, hSstar_meas, hSstar_symmDiff_zero, hSstar_full, hSstar_forward,
+    hSstar_pointwise⟩
 
 /-- Indicator functions on shift-invariant sets preserve shift-invariance properties. -/
 private lemma indicator_preserves_shiftInvariance
@@ -839,10 +840,12 @@ lemma lpMeas_eq_fixedSubspace
   · -- → direction: range subtypeL ⊆ fixedSubspace
     intro f hf
     rcases hf with ⟨g, rfl⟩
-    have hg : AEStronglyMeasurable[shiftInvariantSigma (α := α)] ((lpMeas ℝ ℝ shiftInvariantSigma 2 μ).subtypeL g : Ω[α] → ℝ) μ :=
+    have hg : AEStronglyMeasurable[shiftInvariantSigma (α := α)]
+        ((lpMeas ℝ ℝ shiftInvariantSigma 2 μ).subtypeL g : Ω[α] → ℝ) μ :=
       lpMeas.aestronglyMeasurable g
     -- Koopman fixes `g`:
-    have := koopman_eq_self_of_shiftInvariant (μ := μ) hσ (f := (lpMeas ℝ ℝ shiftInvariantSigma 2 μ).subtypeL g) hg
+    have := koopman_eq_self_of_shiftInvariant (μ := μ) hσ
+      (f := (lpMeas ℝ ℝ shiftInvariantSigma 2 μ).subtypeL g) hg
     simpa [fixedSubspace, fixedSpace] using this
   · -- ← direction: fixedSubspace ⊆ range subtypeL
     intro f hf
@@ -872,11 +875,13 @@ lemma range_condexp_eq_fixedSubspace {μ : Measure (Ω[α])}
     apply Set.Subset.antisymm
     · intro f hf
       rcases hf with ⟨x, rfl⟩
-      exact ⟨(MeasureTheory.condExpL2 ℝ ℝ (m := shiftInvariantSigma) shiftInvariantSigma_le) x, rfl⟩
+      exact ⟨(MeasureTheory.condExpL2 ℝ ℝ (m := shiftInvariantSigma)
+        shiftInvariantSigma_le) x, rfl⟩
     · intro f hf
       rcases hf with ⟨y, rfl⟩
       refine ⟨(↑y : Lp ℝ 2 μ), ?_⟩
-      have hfix : (MeasureTheory.condExpL2 ℝ ℝ (m := shiftInvariantSigma) shiftInvariantSigma_le)
+      have hfix : (MeasureTheory.condExpL2 ℝ ℝ (m := shiftInvariantSigma)
+        shiftInvariantSigma_le)
           (↑y) = y := by
         classical
         haveI :

@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2025 exchangeability contributors. All rights reserved.
+Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: exchangeability contributors
+Authors: Cameron Freer
 -/
 import Mathlib.Probability.ConditionalExpectation
 import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
@@ -288,7 +288,8 @@ If `(ξ, η) =^d (ξ, ζ)` and `σ(η) ⊆ σ(ζ)`, then `ξ ⊥⊥_η ζ`.
 - `μ₁ = P[ξ ∈ B | η]`
 - `μ₂ = P[ξ ∈ B | ζ]`
 
-Since `σ(η) ⊆ σ(ζ)`, we have that `μ₁` is `σ(η)`-measurable and `μ₂` is `σ(ζ)`-measurable,
+Since `σ(η) ⊆ σ(ζ)`, we have that `μ₁` is `σ(η)`-measurable and `μ₂` is
+`σ(ζ)`-measurable,
 making `(μ₁, μ₂)` a bounded martingale. From the distributional equality
 `(ξ, η) =^d (ξ, ζ)`, we get `μ₁ =^d μ₂`, so:
 
@@ -311,7 +312,8 @@ lemma contraction_independence
   -- Step 1: For each measurable B, apply condexp_indicator_eq_of_dist_eq_and_le
   --         to get: P[ξ ∈ B | η] = P[ξ ∈ B | ζ] a.s.
   -- Step 2: This shows that ξ and ζ have the same conditional distribution given η
-  -- Step 3: Since σ(η) ⊆ σ(ζ), this implies ξ ⊥⊥_η ζ by Doob's characterization (FMP 6.6)
+  -- Step 3: Since σ(η) ⊆ σ(ζ), this implies ξ ⊥⊥_η ζ by Doob's
+  -- characterization (FMP 6.6)
   --
   -- The key insight: condexp_indicator_eq_of_dist_eq_and_le gives the conditional
   -- expectation equality directly, which is exactly what we need for conditional independence.
@@ -685,7 +687,8 @@ lemma extreme_members_equal_on_tail
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] := by
   -- Proof strategy:
-  -- 1. From condexp_convergence: 𝔼[1_{X_m∈B} | 𝔽ₙ] = 𝔼[1_{X_0∈B} | 𝔽ₙ] for all n ≥ m
+  -- 1. From condexp_convergence:
+  --    𝔼[1_{X_m∈B} | 𝔽ₙ] = 𝔼[1_{X_0∈B} | 𝔽ₙ] for all n ≥ m
   -- 2. Define reverse martingale: Mₙ := 𝔼[1_{X_m∈B} | 𝔽ₙ]
   -- 3. As n → ∞, 𝔽ₙ = revFiltration X n ↓ tailSigma X (by revFiltration_antitone)
   -- 4. By reverse martingale convergence (Lévy's downward theorem):
