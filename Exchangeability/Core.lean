@@ -4,6 +4,7 @@ import Mathlib.MeasureTheory.Constructions.Cylinders
 import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
 import Mathlib.MeasureTheory.Measure.Typeclasses.Finite
 import Exchangeability.Contractability
+import Canonical
 
 /-!
 # Exchangeability and Full Exchangeability
@@ -74,7 +75,7 @@ def prefixProj (α : Type*) (n : ℕ) (x : ℕ → α) : Fin n → α :=
 omit [MeasurableSpace α] in
 @[simp]
 lemma prefixProj_apply (n : ℕ) (x : ℕ → α) (i : Fin n) :
-    prefixProj (α:=α) n x i = x i := rfl
+    prefixProj (α:=α) n x i = x i := by canonical
 
 lemma measurable_prefixProj (n : ℕ) :
     Measurable (prefixProj (α:=α) n) := by
@@ -146,7 +147,7 @@ def takePrefix (hmn : m ≤ n) (x : Fin n → α) : Fin m → α :=
 omit [MeasurableSpace α] in
 @[simp]
 lemma takePrefix_apply (hmn : m ≤ n) (x : Fin n → α) (i : Fin m) :
-    takePrefix (α:=α) hmn x i = x (Fin.castLE hmn i) := rfl
+    takePrefix (α:=α) hmn x i = x (Fin.castLE hmn i) := by canonical
 
 omit [MeasurableSpace α] in
 @[simp]
@@ -356,7 +357,7 @@ def reindex (π : Equiv.Perm ℕ) (x : ℕ → α) : ℕ → α := fun i => x (�
 
 @[simp]
 lemma reindex_apply (π : Equiv.Perm ℕ) (x : ℕ → α) (i : ℕ) :
-    reindex (α:=α) π x i = x (π i) := rfl
+    reindex (α:=α) π x i = x (π i) := by canonical
 
 lemma measurable_reindex (π : Equiv.Perm ℕ) :
     Measurable (reindex (α:=α) π) := by
