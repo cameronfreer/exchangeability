@@ -6,20 +6,22 @@ Formalization of **exchangeability** and **de Finetti's theorem** in Lean 4.
 
 ## Overview
 
-This project formalizes de Finetti's theorem, which states that an infinite exchangeable sequence is conditionally i.i.d. (independent and identically distributed given the tail σ-algebra).
+This project formalizes the **de Finetti-Ryll-Nardzewski theorem** (Kallenberg's Theorem 1.1), which establishes a three-way equivalence for infinite sequences on Borel spaces:
 
-We implement **all three proofs** from Kallenberg (2005):
+**(i) Contractable** ⟺ **(ii) Exchangeable** ⟺ **(iii) Conditionally i.i.d.**
 
-1. **L² Approach** (Elementary) - Uses L² contractability bounds
-   - ✅ Lightest dependencies
-   - Default proof in the public API
+We implement **all three proofs** from Kallenberg (2005) of the key implication **contractable → conditionally i.i.d.**:
+
+1. **L² Approach** (Kallenberg's "second proof") - Elementary L² contractability bounds
+   - ✅ **Lightest dependencies** (no ergodic theory required)
+   - ✅ Default proof in the public API
    - File: [`Exchangeability/DeFinetti/ViaL2.lean`](Exchangeability/DeFinetti/ViaL2.lean)
 
-2. **Koopman Approach** (Ergodic Theory) - Via Mean Ergodic Theorem
-   - Deep connection to dynamical systems
+2. **Koopman Approach** (Kallenberg's "first proof") - Mean Ergodic Theorem
+   - Deep connection to dynamical systems and ergodic theory
    - File: [`Exchangeability/DeFinetti/ViaKoopman.lean`](Exchangeability/DeFinetti/ViaKoopman.lean)
 
-3. **Martingale Approach** (Aldous) - Via reverse martingale convergence
+3. **Martingale Approach** (Kallenberg's "third proof", after Aldous) - Reverse martingales
    - Elegant probabilistic argument
    - File: [`Exchangeability/DeFinetti/ViaMartingale.lean`](Exchangeability/DeFinetti/ViaMartingale.lean)
 
@@ -91,16 +93,27 @@ Exchangeability/
 - `exchangeable_iff_fullyExchangeable` - Finite and infinite exchangeability are equivalent
 - `measure_eq_of_fin_marginals_eq` - Measures determined by finite marginals
 
-### de Finetti's Theorem
-- `deFinetti` - Exchangeable sequences are conditionally i.i.d. (three independent proofs)
+### de Finetti's Theorem (Three-way Equivalence)
+- `deFinetti` - Exchangeable sequences are conditionally i.i.d.
+- `conditionallyIID_of_contractable` - **Contractable implies conditionally i.i.d.** (three independent proofs via L², Koopman, and martingale approaches)
 - `contractable_of_exchangeable` - Exchangeability implies contractability
 - `exchangeable_of_conditionallyIID` - Conditionally i.i.d. implies exchangeability
 
 ## References
 
-- Olav Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*, Springer
-- Bruno De Finetti (1937), *La prévision : ses lois logiques, ses sources subjectives*
-- David Aldous (1983), *Exchangeability and related topics*
+### Primary Sources
+
+- **Kallenberg, Olav** (2005). *Probabilistic Symmetries and Invariance Principles*. Probability and Its Applications. Springer-Verlag, New York. ISBN 978-0-387-25115-8. [Chapter 1, Theorem 1.1]
+
+- **De Finetti, Bruno** (1937). "La prévision : ses lois logiques, ses sources subjectives." *Annales de l'Institut Henri Poincaré* 7 (1): 1–68. [[English translation: "Foresight: Its Logical Laws, Its Subjective Sources" (1964) in *Studies in Subjective Probability*, H. E. Kyburg and H. E. Smokler, eds.]](https://www.numdam.org/item/AIHP_1937__7_1_1_0/)
+
+- **Aldous, David J.** (1985). "Exchangeability and related topics." In *École d'Été de Probabilités de Saint-Flour XIII—1983*, Lecture Notes in Mathematics 1117, pp. 1–198. Springer-Verlag, Berlin. [https://doi.org/10.1007/BFb0099421](https://doi.org/10.1007/BFb0099421)
+
+### Related Work
+
+- **Hewitt, Edwin and Savage, Leonard J.** (1955). "Symmetric measures on Cartesian products." *Transactions of the American Mathematical Society* 80 (2): 470–501.
+
+- **Diaconis, Persi and Freedman, David** (1980). "Finite exchangeable sequences." *The Annals of Probability* 8 (4): 745–764.
 
 ## Contributing
 
@@ -112,4 +125,10 @@ This is an active research project. See [`WorkPlans/`](WorkPlans/) for current t
 
 ## Acknowledgments
 
+This formalization was developed with assistance from:
+- **Claude Sonnet 4.5** (Anthropic) - Code generation, refactoring, and proof development
+- **GPT-o1** (OpenAI) - Mathematical reasoning and proof strategy
+
 Built with [Lean 4](https://leanprover.github.io/) and [Mathlib](https://github.com/leanprover-community/mathlib4).
+
+Special thanks to the Lean community for the powerful theorem proving infrastructure and extensive mathematical library.
