@@ -106,7 +106,7 @@ as σ on `{0, ..., n-1}` and fixes all `i ≥ n`.
 
 This is used to connect full exchangeability with finite exchangeability.
 -/
-def extendFinPerm (n : ℕ) (σ : Equiv.Perm (Fin n)) : Equiv.Perm ℕ where
+def extendFinPerm {n : ℕ} (σ : Equiv.Perm (Fin n)) : Equiv.Perm ℕ where
   toFun i := if h : i < n then (σ ⟨i, h⟩).1 else i
   invFun i := if h : i < n then (σ.symm ⟨i, h⟩).1 else i
   left_inv i := by
@@ -136,7 +136,7 @@ lemma FullyExchangeable.exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX_meas : ∀ i, Measurable (X i)) (hX : FullyExchangeable μ X) : Exchangeable μ X := by
   classical
   intro n σ
-  let π := extendFinPerm n σ
+  let π := extendFinPerm σ
   have hπ := hX π
   let proj : (ℕ → α) → (Fin n → α) := fun f i => f i.val
   have hproj_meas : Measurable proj :=
