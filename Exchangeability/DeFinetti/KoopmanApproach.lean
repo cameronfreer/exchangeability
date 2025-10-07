@@ -302,8 +302,9 @@ given the tail σ-algebra.
 TODO: The exact construction requires careful handling of the measurable space instances.
 For now we axiomatize it as a placeholder. -/
 noncomputable def rcdKernel {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    [StandardBorelSpace α] : Kernel[shiftInvariantSigma (α := α)] (Ω[α]) α :=
-  Kernel.map (condExpKernel μ (shiftInvariantSigma (α := α))) (π0 (α := α))
+    [StandardBorelSpace α] : Kernel (Ω[α]) α :=
+  (condExpKernel μ (shiftInvariantSigma (α := α))).map
+    (π0 (α := α)) (measurable_pi0 (α := α))
 
 /-- The regular conditional distribution as a function assigning to each point
  a probability measure on α. -/
