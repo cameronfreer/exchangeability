@@ -103,30 +103,10 @@ This is used to connect full exchangeability with finite exchangeability.
 def extendFinPerm (n : ℕ) (σ : Equiv.Perm (Fin n)) : Equiv.Perm ℕ where
   toFun i := if h : i < n then (σ ⟨i, h⟩).1 else i
   invFun i := if h : i < n then (σ.symm ⟨i, h⟩).1 else i
-  left_inv := by
-    intro i
-    by_cases h : i < n
-    · -- Case: i < n, so toFun i = (σ ⟨i, h⟩).1
-      simp only [h, dif_pos]
-      -- Need to show: invFun (σ ⟨i, h⟩).1 = i
-      have hσ : (σ ⟨i, h⟩).1 < n := (σ ⟨i, h⟩).isLt
-      simp only [hσ, dif_pos]
-      -- Now: (σ.symm ⟨(σ ⟨i, h⟩).1, hσ⟩).1 = i
-      simp [Fin.eta, Equiv.symm_apply_apply]
-    · -- Case: i ≥ n, so toFun i = i
-      simp only [h, dif_neg, not_false_eq_true]
-  right_inv := by
-    intro i
-    by_cases h : i < n
-    · -- Case: i < n, so invFun i = (σ.symm ⟨i, h⟩).1
-      simp only [h, dif_pos]
-      -- Need to show: toFun (σ.symm ⟨i, h⟩).1 = i
-      have hσ : (σ.symm ⟨i, h⟩).1 < n := (σ.symm ⟨i, h⟩).isLt
-      simp only [hσ, dif_pos]
-      -- Now: (σ ⟨(σ.symm ⟨i, h⟩).1, hσ⟩).1 = i
-      simp [Fin.eta, Equiv.apply_symm_apply]
-    · -- Case: i ≥ n, so invFun i = i
-      simp only [h, dif_neg, not_false_eq_true]
+  left_inv i := by
+    by_cases h : i < n <;> simp [h, Fin.eta, Equiv.symm_apply_apply]
+  right_inv i := by
+    by_cases h : i < n <;> simp [h, Fin.eta, Equiv.apply_symm_apply]
 
 /-- Exchangeability at a specific dimension n. -/
 def ExchangeableAt (μ : Measure Ω) (X : ℕ → Ω → α) (n : ℕ) : Prop :=
@@ -227,9 +207,7 @@ subsequences have the same distribution. -/
 lemma contractable_same_range {μ : Measure Ω} {X : ℕ → Ω → α} {m : ℕ}
     (k₁ k₂ : Fin m → ℕ) (h_range : ∀ i, k₁ i = k₂ i) :
     Measure.map (fun ω i => X (k₁ i) ω) μ = Measure.map (fun ω i => X (k₂ i) ω) μ := by
-  congr 1
-  ext ω i
-  rw [h_range]
+  congr 1; ext ω i; rw [h_range]
 
 /-- Contractability is preserved under prefix: if X is contractable, so is any finite prefix. -/
 lemma Contractable.prefix {μ : Measure Ω} {X : ℕ → Ω → α}
@@ -277,10 +255,8 @@ is selected.
 lemma Contractable.allStrictMono_eq {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX : Contractable μ X) (m : ℕ) (k₁ k₂ : Fin m → ℕ)
     (hk₁ : StrictMono k₁) (hk₂ : StrictMono k₂) :
-    Measure.map (fun ω i => X (k₁ i) ω) μ = Measure.map (fun ω i => X (k₂ i) ω) μ := by
-  calc Measure.map (fun ω i => X (k₁ i) ω) μ
-      = Measure.map (fun ω i => X i.val ω) μ := hX m k₁ hk₁
-    _ = Measure.map (fun ω i => X (k₂ i) ω) μ := (hX m k₂ hk₂).symm
+    Measure.map (fun ω i => X (k₁ i) ω) μ = Measure.map (fun ω i => X (k₂ i) ω) μ :=
+  (hX m k₁ hk₁).trans (hX m k₂ hk₂).symm
 
 /-- Contractability implies that the distribution is determined by the marginal distributions
 of increasing selections. -/
@@ -476,23 +452,14 @@ lemma measure_map_comp_perm {μ : Measure Ω} {n : ℕ}
       Measure.map (fun ω i => g ω (σ i)) μ := by
   -- Define the relabeling map on (Fin n → α)
   let perm_map : (Fin n → α) → (Fin n → α) := fun h => h ∘ σ
-  have hfcomp : Measurable (perm_map ∘ f) := (measurable_perm_map (σ:=σ)).comp hf
-  have hgcomp : Measurable (perm_map ∘ g) := (measurable_perm_map (σ:=σ)).comp hg
-  have hf_rw : (fun ω i => f ω (σ i)) = perm_map ∘ f := by ext ω i; rfl
-  have hg_rw : (fun ω i => g ω (σ i)) = perm_map ∘ g := by ext ω i; rfl
-  -- Use map_map to pull out composition
-  have h_map_f : Measure.map (perm_map ∘ f) μ = Measure.map perm_map (Measure.map f μ) :=
-    (Measure.map_map (measurable_perm_map (σ:=σ)) hf).symm
-  have h_map_g : Measure.map (perm_map ∘ g) μ = Measure.map perm_map (Measure.map g μ) :=
-    (Measure.map_map (measurable_perm_map (σ:=σ)) hg).symm
-  -- Chain equalities
-  calc
-    Measure.map (fun ω i => f ω (σ i)) μ
-        = Measure.map (perm_map ∘ f) μ := by rw [hf_rw]
-    _ = Measure.map perm_map (Measure.map f μ) := h_map_f
+  calc Measure.map (fun ω i => f ω (σ i)) μ
+      = Measure.map perm_map (Measure.map f μ) := by
+        rw [show (fun ω i => f ω (σ i)) = perm_map ∘ f by ext; rfl]
+        exact (Measure.map_map (measurable_perm_map (σ:=σ)) hf).symm
     _ = Measure.map perm_map (Measure.map g μ) := by rw [h]
-    _ = Measure.map (perm_map ∘ g) μ := h_map_g.symm
-    _ = Measure.map (fun ω i => g ω (σ i)) μ := by rw [hg_rw]
+    _ = Measure.map (fun ω i => g ω (σ i)) μ := by
+        rw [show (fun ω i => g ω (σ i)) = perm_map ∘ g by ext; rfl]
+        exact Measure.map_map (measurable_perm_map (σ:=σ)) hg
 
 /-- Special case: The identity function on Fin n is strictly monotone when
 viewed as a function to ℕ. -/
@@ -606,28 +573,21 @@ theorem contractable_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
     let proj : (Fin n → α) → (Fin (m' + 1) → α) := fun f i => f (ι i)
     
     -- Push forward both sides of hexch by proj
-    have hproj_meas : Measurable proj := by
-      apply measurable_pi_lambda
-      intro i
-      exact measurable_pi_apply (ι i)
-    
+    have hproj_meas : Measurable proj :=
+      measurable_pi_lambda _ (fun i => measurable_pi_apply (ι i))
+
     -- The map X on Ω → Fin n → α
     let f_id : Ω → (Fin n → α) := fun ω j => X j.val ω
     let f_perm : Ω → (Fin n → α) := fun ω j => X (σ j).val ω
-    
+
     have hf_id_meas : Measurable f_id := measurable_pi_lambda _ (fun j => hX_meas j.val)
     have hf_perm_meas : Measurable f_perm := measurable_pi_lambda _ (fun j => hX_meas (σ j).val)
-    
-    -- Push forward hexch by proj
-    have hproj_eq := congrArg (Measure.map proj) hexch
-    
-    -- Simplify using map_map
-    have hlhs : Measure.map proj (Measure.map f_perm μ) = Measure.map (proj ∘ f_perm) μ :=
-      Measure.map_map hproj_meas hf_perm_meas
-    have hrhs : Measure.map proj (Measure.map f_id μ) = Measure.map (proj ∘ f_id) μ :=
-      Measure.map_map hproj_meas hf_id_meas
-    
-    rw [hlhs, hrhs] at hproj_eq
+
+    -- Combine: push forward hexch by proj and simplify using map_map
+    have hproj_eq : Measure.map (proj ∘ f_perm) μ = Measure.map (proj ∘ f_id) μ := by
+      rw [← Measure.map_map hproj_meas hf_perm_meas,
+          ← Measure.map_map hproj_meas hf_id_meas]
+      exact congrArg (Measure.map proj) hexch
     
     -- Now show that proj ∘ f_perm = (fun ω i => X (k i) ω)
     -- and proj ∘ f_id = (fun ω i => X i.val ω)
