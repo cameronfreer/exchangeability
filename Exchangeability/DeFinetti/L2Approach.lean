@@ -185,6 +185,36 @@ lemma sum_sq_le_sum_abs_mul_sup (n : ℕ) (c : Fin n → ℝ) :
      _ = |c i| * |c i| := sq _
      _ ≤ |c i| * (⨆ j, |c j|) := mul_le_mul_of_nonneg_left (le_ciSup hbdd i) (abs_nonneg _)
 
+/-- **Step 6:** Combine all steps into final bound. Takes the chain of equalities and
+inequalities from the previous steps and produces the final L² contractability bound. -/
+lemma l2_bound_from_steps (n : ℕ) (c p q : Fin n → ℝ) (σSq ρ : ℝ)
+    (hσSq_nonneg : 0 ≤ σSq) (hρ_bd : ρ ≤ 1)
+    (hc_def : c = fun i => p i - q i)
+    (hc_abs_sum : ∑ i, |c i| ≤ 2)
+    (step5 : ∑ i, (c i)^2 ≤ ∑ i, |c i| * (⨆ j, |c j|)) :
+    σSq * (1 - ρ) * ∑ i, (c i)^2 ≤ 2 * σSq * (1 - ρ) * (⨆ i, |p i - q i|) := by
+  have hbdd : BddAbove (Set.range fun j : Fin n => |c j|) := ⟨∑ k, |c k|, by
+    intro y ⟨k, hk⟩; rw [← hk]; exact Finset.single_le_sum (fun i _ => abs_nonneg (c i)) (Finset.mem_univ k)⟩
+  have hσ_1ρ_nonneg : 0 ≤ σSq * (1 - ρ) := mul_nonneg hσSq_nonneg (by linarith)
+  have hsup_nonneg : 0 ≤ ⨆ j, |c j| := by
+    by_cases h : Nonempty (Fin n)
+    · obtain ⟨j0⟩ := h
+      calc (0 : ℝ) ≤ |c j0| := abs_nonneg _
+        _ ≤ ⨆ j, |c j| := le_ciSup hbdd j0
+    · haveI : IsEmpty (Fin n) := not_nonempty_iff.mp h
+      have : (Set.range fun j : Fin n => |c j|) = ∅ := by
+        ext x; simp only [Set.mem_range, Set.mem_empty_iff_false, iff_false]
+        rintro ⟨j, _⟩; exact IsEmpty.false j
+      rw [iSup, this, Real.sSup_empty]
+  calc σSq * (1 - ρ) * ∑ i, (c i)^2
+      ≤ σSq * (1 - ρ) * (∑ i, |c i| * (⨆ j, |c j|)) :=
+          mul_le_mul_of_nonneg_left step5 hσ_1ρ_nonneg
+    _ = σSq * (1 - ρ) * ((∑ i, |c i|) * (⨆ j, |c j|)) := by rw [Finset.sum_mul]
+    _ ≤ σSq * (1 - ρ) * (2 * (⨆ j, |c j|)) :=
+          mul_le_mul_of_nonneg_left (mul_le_mul_of_nonneg_right hc_abs_sum hsup_nonneg) hσ_1ρ_nonneg
+    _ = 2 * σSq * (1 - ρ) * (⨆ j, |c j|) := by ring
+    _ = 2 * σSq * (1 - ρ) * (⨆ i, |p i - q i|) := by simp [hc_def]
+
 /--
 **Kallenberg's Lemma 1.2:** L² contractability bound for weighted averages of
 exchangeable sequences.
@@ -272,18 +302,12 @@ theorem l2_contractability_bound
       2 * σ ^ 2 * (1 - ρ) * (⨆ i, |p i - q i|) := by
   -- Proof following Kallenberg page 26, Lemma 1.2 exactly
   
-  -- Put cⱼ = pⱼ - qⱼ
   classical
   let c : Fin n → ℝ := fun i => p i - q i
-  -- Record σ² as a convenient abbreviation
   set σSq : ℝ := σ ^ 2
-  have hσSq_nonneg : 0 ≤ σSq := sq_nonneg σ
 
-  -- Note that ∑ⱼ cⱼ = 0
   have hc_sum : ∑ j, c j = 0 := by
     simp only [c, Finset.sum_sub_distrib, _hp_prob.1, _hq_prob.1]; ring
-
-  -- and ∑ⱼ |cⱼ| ≤ 2
   have hc_abs_sum : ∑ j, |c j| ≤ 2 := by
     classical
     let Pos := Finset.univ.filter fun j : Fin n => 0 ≤ c j
@@ -305,44 +329,33 @@ theorem l2_contractability_bound
         (p := fun j : Fin n => 0 ≤ c j) (f := fun j => |c j|)
       simpa [Pos, Neg] using h.symm
 
-    have habs_pos : ∑ j ∈ Pos, |c j| = ∑ j ∈ Pos, c j := by
-      refine Finset.sum_congr rfl ?_
-      intro j hj
-      exact abs_of_nonneg (Finset.mem_filter.mp hj).2
+    have habs_pos : ∑ j ∈ Pos, |c j| = ∑ j ∈ Pos, c j :=
+      Finset.sum_congr rfl (fun j hj => abs_of_nonneg (Finset.mem_filter.mp hj).2)
 
-    have habs_neg : ∑ j ∈ Neg, |c j| = -∑ j ∈ Neg, c j := by
+    have habs_neg : ∑ j ∈ Neg, |c j| = -∑ j ∈ Neg, c j :=
       calc ∑ j ∈ Neg, |c j|
           = ∑ j ∈ Neg, (-c j) := Finset.sum_congr rfl (fun j hj => abs_of_neg (Finset.mem_filter.mp hj).2)
-      _ = -∑ j ∈ Neg, c j := by simp [Finset.sum_neg_distrib]
+        _ = -∑ j ∈ Neg, c j := by simp [Finset.sum_neg_distrib]
 
-    have hdouble : ∑ j, |c j| = 2 * ∑ j ∈ Pos, c j := by
+    have hdouble : ∑ j, |c j| = 2 * ∑ j ∈ Pos, c j :=
       calc ∑ j, |c j|
           = ∑ j ∈ Pos, |c j| + ∑ j ∈ Neg, |c j| := hsplit_abs
-      _ = ∑ j ∈ Pos, c j + (-∑ j ∈ Neg, c j) := by
-            simp [habs_pos, habs_neg]
-      _ = ∑ j ∈ Pos, c j + ∑ j ∈ Pos, c j := by simp [hbalance]
-      _ = 2 * ∑ j ∈ Pos, c j := by ring
+        _ = ∑ j ∈ Pos, c j + (-∑ j ∈ Neg, c j) := by simp [habs_pos, habs_neg]
+        _ = ∑ j ∈ Pos, c j + ∑ j ∈ Pos, c j := by simp [hbalance]
+        _ = 2 * ∑ j ∈ Pos, c j := by ring
 
-    have hle_p : ∑ j ∈ Pos, c j ≤ ∑ j ∈ Pos, p j := by
-      refine Finset.sum_le_sum ?_
-      intro j _
-      have hq_nn : 0 ≤ q j := _hq_prob.2 j
-      calc c j = p j - q j := rfl
-         _ ≤ p j := sub_le_self _ hq_nn
+    have hle_p : ∑ j ∈ Pos, c j ≤ ∑ j ∈ Pos, p j :=
+      Finset.sum_le_sum fun j _ => sub_le_self _ (_hq_prob.2 j)
 
-    have hsubset : Pos ⊆ (Finset.univ : Finset (Fin n)) := by
-      intro j hj; exact Finset.mem_univ j
-
-    have hle_one : ∑ j ∈ Pos, p j ≤ 1 := by
-      have hsum_le := Finset.sum_le_sum_of_subset_of_nonneg hsubset (fun j _ _ => _hp_prob.2 j)
-      simpa [_hp_prob.1] using hsum_le
+    have hle_one : ∑ j ∈ Pos, p j ≤ 1 :=
+      calc ∑ j ∈ Pos, p j ≤ ∑ j, p j :=
+            Finset.sum_le_sum_of_subset_of_nonneg (fun j _ => Finset.mem_univ j) (fun j _ _ => _hp_prob.2 j)
+        _ = 1 := _hp_prob.1
 
     calc ∑ j, |c j|
         = 2 * ∑ j ∈ Pos, c j := hdouble
-      _ ≤ 2 * ∑ j ∈ Pos, p j := by
-            exact (mul_le_mul_of_nonneg_left hle_p (by norm_num))
-      _ ≤ 2 * 1 := by
-            exact (mul_le_mul_of_nonneg_left hle_one (by norm_num))
+      _ ≤ 2 * ∑ j ∈ Pos, p j := mul_le_mul_of_nonneg_left hle_p (by norm_num)
+      _ ≤ 2 * 1 := mul_le_mul_of_nonneg_left hle_one (by norm_num)
       _ = 2 := by ring
   
   -- Step 1: E(∑cᵢξᵢ)² = E(∑cᵢ(ξᵢ-m))² using ∑cⱼ = 0
@@ -380,50 +393,22 @@ theorem l2_contractability_bound
                σSq * (1 - ρ) * ∑ i, (c i)^2 :=
     covariance_formula_zero_sum n c σSq ρ hc_sum
 
-  -- Step 5: ≤ σ²(1-ρ)∑|cᵢ| sup|cⱼ| since cᵢ² ≤ |cᵢ| sup|cⱼ|
-  have hbdd : BddAbove (Set.range fun j : Fin n => |c j|) := ⟨∑ k, |c k|, by
-    intro y ⟨k, hk⟩; rw [← hk]; exact Finset.single_le_sum (fun i _ => abs_nonneg (c i)) (Finset.mem_univ k)⟩
+  -- Steps 5-6: Combine inequalities to get final bound
   have step5 : ∑ i, (c i)^2 ≤ ∑ i, |c i| * (⨆ j, |c j|) :=
     sum_sq_le_sum_abs_mul_sup n c
-  
-  -- Nonnegativity lemmas
-  have hσ_1ρ_nonneg : 0 ≤ σSq * (1 - ρ) :=
-    mul_nonneg hσSq_nonneg (by linarith [_hρ_bd.2])
 
-  have hsup_nonneg : 0 ≤ ⨆ j, |c j| := by
-    by_cases h : Nonempty (Fin n)
-    · obtain ⟨j0⟩ := h
-      calc (0 : ℝ) ≤ |c j0| := abs_nonneg _
-        _ ≤ ⨆ j, |c j| := le_ciSup hbdd j0
-    · haveI : IsEmpty (Fin n) := not_nonempty_iff.mp h
-      have : (Set.range fun j : Fin n => |c j|) = ∅ := by
-        ext x; simp only [Set.mem_range, Set.mem_empty_iff_false, iff_false]
-        rintro ⟨j, _⟩; exact IsEmpty.false j
-      rw [iSup, this, Real.sSup_empty]
-  
-  -- Step 6: ≤ 2σ²(1-ρ) sup|cⱼ| since ∑|cᵢ| ≤ 2
   calc ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ
       = ∫ ω, (∑ i, c i * ξ i ω)^2 ∂μ := by
-        congr 1
-        ext ω
-        congr 1
-        conv_lhs => rw [← Finset.sum_sub_distrib]
-        simp only [c]
-        congr 1
-        ext i
-        ring
+          congr 1; ext ω; congr 1
+          conv_lhs => rw [← Finset.sum_sub_distrib]
+          simp only [c]; congr 1; ext i; ring
     _ = ∫ ω, (∑ i, c i * (ξ i ω - m))^2 ∂μ := step1
     _ = ∑ i, ∑ j, c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ := step2
     _ = σSq * ρ * (∑ i, c i)^2 + σSq * (1 - ρ) * ∑ i, (c i)^2 := step3
     _ = σSq * (1 - ρ) * ∑ i, (c i)^2 := step4
-    _ ≤ σSq * (1 - ρ) * (∑ i, |c i| * (⨆ j, |c j|)) := by
-        apply mul_le_mul_of_nonneg_left step5 hσ_1ρ_nonneg
-    _ = σSq * (1 - ρ) * ((∑ i, |c i|) * (⨆ j, |c j|)) := by
-        rw [Finset.sum_mul]
-    _ ≤ σSq * (1 - ρ) * (2 * (⨆ j, |c j|)) := by
-        apply mul_le_mul_of_nonneg_left (mul_le_mul_of_nonneg_right hc_abs_sum hsup_nonneg) hσ_1ρ_nonneg
-    _ = 2 * σSq * (1 - ρ) * (⨆ i, |p i - q i|) := by ring_nf; rfl
+    _ ≤ 2 * σSq * (1 - ρ) * (⨆ i, |p i - q i|) :=
+          l2_bound_from_steps n c p q σSq ρ (sq_nonneg σ) _hρ_bd.2 rfl hc_abs_sum step5
     _ = 2 * σ ^ 2 * (1 - ρ) * (⨆ i, |p i - q i|) := by
-        simp [σSq, pow_two, mul_comm, mul_left_comm, mul_assoc]
+          simp [σSq, pow_two, mul_comm, mul_left_comm, mul_assoc]
 
 end Exchangeability.DeFinetti.L2Approach
