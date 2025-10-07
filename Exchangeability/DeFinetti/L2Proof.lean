@@ -153,11 +153,24 @@ theorem weighted_sums_converge_L1
     intro k _
     exact hf_meas.comp (hX_meas _)
 
+  -- A n m is in L¹ for all n, m (bounded measurable on probability space)
+  have hA_memLp : ∀ n m, MemLp (A n m) 1 μ := by
+    intro n m
+    obtain ⟨M, hM⟩ := hf_bdd
+    -- Use that bounded measurable functions are integrable on finite measure spaces
+    -- For probability measures, L^1 norm is bounded by the bound
+    sorry  -- TODO: Find correct mathlib API for bounded → MemLp
+           -- Try: Integrable.memLp, memLp_const_smul, or build via eLpNorm bound
+
   -- Step 1: For n=0, show (A 0 m)_m is Cauchy in L² hence L¹
   have hA_cauchy_L2_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
       eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ < ENNReal.ofReal ε := by
     intro ε hε
-    sorry  -- TODO: Apply l2_contractability_bound for fixed starting index
+    -- For contractable sequences, A 0 m - A 0 ℓ converges to 0 in L²
+    -- This uses l2_contractability_bound: different weight distributions give small L² diff
+    -- The weights p = (1/m, ..., 1/m) vs q = (1/ℓ, ..., 1/ℓ) satisfy sup|p_i - q_i| → 0
+    sorry  -- TODO: Apply l2_contractability_bound with p,q being uniform on different windows
+           -- The sup difference is max(1/m, 1/ℓ) which → 0 as m,ℓ → ∞
 
   have hA_cauchy_L1_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
       eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ < ENNReal.ofReal ε := by
@@ -183,11 +196,21 @@ theorem weighted_sums_converge_L1
   have halpha_0_univ : ∀ n, ∀ ε > 0, ∃ M, ∀ m ≥ M,
       eLpNorm (fun ω => A n m ω - alpha_0 ω) 1 μ < ENNReal.ofReal ε := by
     intro n ε hε
-    -- Triangle: ‖A n m - alpha_0‖₁ ≤ ‖A n m - A 0 m‖₂ + ‖A 0 m - alpha_0‖₁
-    -- The first term is O(n/m) by l2_bound_two_windows
-    -- The second term → 0 as m → ∞ by halpha_0_conv
-    sorry  -- TODO: 3ε argument with uniform bound from l2_bound_two_windows
-           -- Choose M large so both terms < ε/2
+    -- Triangle inequality: ‖A n m - alpha_0‖₁ ≤ ‖A n m - A 0 m‖₂ + ‖A 0 m - alpha_0‖₁
+    -- Term 1: ‖A n m - A 0 m‖₂ bounded by l2_bound_two_windows, goes to 0 as m → ∞
+    -- Term 2: ‖A 0 m - alpha_0‖₁ → 0 as m → ∞ by halpha_0_conv
+
+    have hε2_pos : 0 < ε / 2 := by linarith
+
+    -- Get M₁ such that ‖A 0 m - alpha_0‖₁ < ε/2 for m ≥ M₁
+    rcases halpha_0_conv (ε / 2) hε2_pos with ⟨M₁, hM₁⟩
+
+    -- Choose M large enough that:
+    -- 1. M ≥ M₁ (so term 2 < ε/2)
+    -- 2. O(n/M) < ε/2 (so term 1 < ε/2 via l2_bound_two_windows)
+    -- For now, we just need M large (the exact calculation uses l2_bound_two_windows)
+    sorry  -- TODO: Complete with explicit M calculation using l2_bound_two_windows bound
+           -- refine ⟨max M₁ (2*n), fun m hm => ?_⟩ and apply triangle + both bounds
 
   -- Step 4: Package the result - alpha_0 is our answer!
   refine ⟨alpha_0, halpha_0_meas, halpha_0_mem, ?_⟩
@@ -200,8 +223,7 @@ theorem weighted_sums_converge_L1
   -- Convert eLpNorm 1 to integral
   have h_memLp : MemLp (fun ω => A n m ω - alpha_0 ω) 1 μ := by
     apply MemLp.sub
-    · -- A n m is in L¹: bounded measurable on probability space → Lp for any p
-      sorry  -- TODO: Prove MemLp (A n m) 1 μ from boundedness of f
+    · exact hA_memLp n m
     · exact halpha_0_mem
   rw [MemLp.eLpNorm_eq_integral_rpow_norm one_ne_zero ENNReal.coe_ne_top h_memLp] at h_elpnorm
   simp only [ENNReal.toReal_one, Real.rpow_one] at h_elpnorm
