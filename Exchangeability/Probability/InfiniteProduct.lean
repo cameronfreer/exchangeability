@@ -1,8 +1,3 @@
-/-
-Copyright (c) 2025 The Exchangeability Project. All rights reserved.
-Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Cameron Freer, Cascade
--/
 import Mathlib.MeasureTheory.Constructions.Pi
 import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
 import Mathlib.MeasureTheory.Constructions.ProjectiveFamilyContent
