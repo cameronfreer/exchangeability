@@ -90,9 +90,8 @@ instance pi_isProbabilityMeasure {ι : Type*} [Fintype ι] {α : ι → Type*}
     [∀ i, IsProbabilityMeasure (μ i)] [∀ i, SigmaFinite (μ i)] :
     IsProbabilityMeasure (Measure.pi μ) := by
   constructor
-  have h : (Set.univ : Set (∀ i, α i)) = Set.univ.pi (fun (_ : ι) => Set.univ) := by
-    ext x; simp
-  rw [h, Measure.pi_pi]
+  rw [show (Set.univ : Set (∀ i, α i)) = Set.univ.pi (fun _ => Set.univ) by ext; simp,
+      Measure.pi_pi]
   simp [measure_univ]
 
 /--
@@ -114,18 +113,14 @@ theorem pi_comp_perm {ι : Type*} [Fintype ι] {α : Type*} [MeasurableSpace α]
     Measure.map (fun f : ι → α => f ∘ σ) (Measure.pi fun _ : ι => ν) =
       Measure.pi fun _ : ι => ν := by
   classical
-  have h :=
-    (MeasureTheory.measurePreserving_piCongrLeft
-      (α:=fun _ : ι => α) (μ:=fun _ : ι => ν) (f:=σ.symm)).map_eq
-  -- Simplify the map of the measurable equivalence to the concrete reindexing function
-  have hfun :
-      (fun f : ι → α => f ∘ σ)
-        = (MeasurableEquiv.piCongrLeft (fun _ : ι => α) σ.symm : (ι → α) → (ι → α)) := by
-    funext g i
-    have hgi :
-        (Equiv.piCongrLeft (fun _ : ι => α) σ.symm) g i = g (σ i) := by
-      simpa using Equiv.piCongrLeft_apply (P:=fun _ : ι => α) (e:=σ.symm) g i
-    simpa [Function.comp, MeasurableEquiv.coe_piCongrLeft] using hgi.symm
+  have h := (MeasureTheory.measurePreserving_piCongrLeft
+    (α:=fun _ : ι => α) (μ:=fun _ : ι => ν) (f:=σ.symm)).map_eq
+  -- Show that (fun f => f ∘ σ) equals the measurable equiv
+  have hfun : (fun f : ι → α => f ∘ σ) =
+      (MeasurableEquiv.piCongrLeft (fun _ : ι => α) σ.symm : (ι → α) → (ι → α)) := by
+    ext g i
+    simp [Function.comp, MeasurableEquiv.coe_piCongrLeft,
+          Equiv.piCongrLeft_apply (P:=fun _ : ι => α) (e:=σ.symm)]
   simpa [hfun]
 
 /--
@@ -150,22 +145,14 @@ theorem bind_map_comm {Ω α β : Type*} [MeasurableSpace Ω] [MeasurableSpace �
     (hf : Measurable f) :
     (μ.bind κ).map f = μ.bind (fun ω => (κ ω).map f) := by
   classical
-  -- unfold bind and use functoriality of `map` with respect to `join`
-  have hcomp :
-      Measure.map (fun η : Measure α => η.map f) (Measure.map κ μ)
-        = Measure.map (fun ω => (κ ω).map f) μ := by
-    simpa [Function.comp] using
-      (Measure.map_map (μ:=μ) (g:=fun η : Measure α => η.map f) (f:=κ)
-        (MeasureTheory.Measure.measurable_map (α:=α) (β:=β) f hf) hκ)
-  -- Use the Giry monad identities for `join`
-  have hjoin := Measure.join_map_map hf (Measure.map κ μ)
-  calc
-    (μ.bind κ).map f
-        = Measure.map f (Measure.join (Measure.map κ μ)) := rfl
-    _ = Measure.join (Measure.map (fun η : Measure α => η.map f) (Measure.map κ μ)) := by
-          simpa [Measure.bind] using hjoin.symm
-    _ = Measure.join (Measure.map (fun ω => (κ ω).map f) μ) := by
-          rw [hcomp]
+  have hcomp : Measure.map (fun η : Measure α => η.map f) (Measure.map κ μ) =
+      Measure.map (fun ω => (κ ω).map f) μ := by
+    rw [Measure.map_map (MeasureTheory.Measure.measurable_map f hf) hκ]
+    rfl
+  calc (μ.bind κ).map f
+      = Measure.join (Measure.map (fun η => η.map f) (Measure.map κ μ)) := by
+        simp only [Measure.bind, Measure.join_map_map hf]
+    _ = Measure.join (Measure.map (fun ω => (κ ω).map f) μ) := by rw [hcomp]
     _ = μ.bind (fun ω => (κ ω).map f) := rfl
 
 end MeasureTheory.Measure
@@ -255,27 +242,12 @@ This is the "easy" direction because we're given the mixing measure `ν` explici
 theorem exchangeable_of_conditionallyIID {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX : ConditionallyIID μ X) : Exchangeable μ X := by
   intro n σ
-  -- Get the kernel ν from the ConditionallyIID hypothesis
   obtain ⟨ν, hν_prob, hν_eq⟩ := hX
-  
-  -- The identity selection (0, 1, ..., n-1)
-  let id_sel : Fin n → ℕ := fun i => i.val
-  
-  -- The permuted selection (σ(0), σ(1), ..., σ(n-1))
-  let σ_sel : Fin n → ℕ := fun i => (σ i).val
-  
-  -- Apply ConditionallyIID to both selections
-  have h_id := hν_eq n id_sel
-  have h_σ := hν_eq n σ_sel
-  
-  -- Both are equal to the same mixture μ.bind(λω. ∏ᵢ ν(ω))
-  -- Therefore they are equal to each other
+  -- Both identity and permuted selections equal the same mixture
+  have h_id := hν_eq n (fun i => i.val)
+  have h_σ := hν_eq n (fun i => (σ i).val)
   calc Measure.map (fun ω i => X (σ i).val ω) μ
-      = Measure.map (fun ω i => X (σ_sel i) ω) μ := by
-          congr
-      _ = μ.bind (fun ω => Measure.pi fun _ : Fin n => ν ω) := h_σ
-      _ = Measure.map (fun ω i => X (id_sel i) ω) μ := h_id.symm
-      _ = Measure.map (fun ω i => X i.val ω) μ := by
-          congr
+      = μ.bind (fun ω => Measure.pi fun _ : Fin n => ν ω) := h_σ
+    _ = Measure.map (fun ω i => X i.val ω) μ := h_id.symm
 
 end Exchangeability
