@@ -1,28 +1,39 @@
 # Work Plans and Development Notes
 
-This directory contains working documents, progress reports, and development notes for the exchangeability formalization project.
+This directory contains active work plans, progress tracking, and development resources for the exchangeability formalization project.
 
-## Contents
+## Active Documents
 
-### Progress Tracking
-- **[PROGRESS.md](PROGRESS.md)** - Overall project progress and completed tasks
-- **[PROGRESS_REPORT.md](PROGRESS_REPORT.md)** - Detailed progress report from blueprint implementation
-- **[SESSION_SUMMARY.md](SESSION_SUMMARY.md)** - Summary of recent development sessions
+### Current Analysis
+- **[AXIOMS_REPORT.md](AXIOMS_REPORT.md)** - Detailed analysis of axioms and sorry statements (updated Oct 6, 2025)
+- **[AXIOMS_SUMMARY.md](AXIOMS_SUMMARY.md)** - Summary of axiom usage across the codebase (updated Oct 6, 2025)
 
-### Implementation Plans
-- **[EXCHANGEABILITY_TASKS.md](EXCHANGEABILITY_TASKS.md)** - Task-oriented roadmap for exchangeability proofs
-- **[L2Proof_ROADMAP.md](L2Proof_ROADMAP.md)** - Roadmap for the L² proof approach
-- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Summary of implementation strategy
+### Development Roadmap
+- **[L2Proof_ROADMAP.md](L2Proof_ROADMAP.md)** - Roadmap for the L² proof approach (ViaL2.lean)
 
-### Technical Reports
-- **[AXIOMS_REPORT.md](AXIOMS_REPORT.md)** - Detailed analysis of axioms and sorry statements
-- **[AXIOMS_SUMMARY.md](AXIOMS_SUMMARY.md)** - Summary of axiom usage across the codebase
-- **[CIRCULARITY_SOLUTION_SUMMARY.md](CIRCULARITY_SOLUTION_SUMMARY.md)** - Solution to circular dependency issues
-- **[PROJECTION_LEMMA_COMPLETION.md](PROJECTION_LEMMA_COMPLETION.md)** - Completion notes for projection lemmas
-
-### Mathlib Resources
+### Resources
 - **[MATHLIB_RESOURCES_FOR_EXCHANGEABILITY.md](MATHLIB_RESOURCES_FOR_EXCHANGEABILITY.md)** - Catalog of relevant mathlib lemmas and theories
 
-## Note
+## Deprecated Documents
 
-These are working documents that evolve as the project progresses. For the stable mathematical blueprint, see the [`blueprint/`](../blueprint/) directory. For the current state of the codebase, see the main [`README.md`](../README.md).
+Historical work plans and completed task summaries have been moved to [`Deprecated/`](Deprecated/):
+- Completed task reports (circularity solution, projection lemma)
+- Old session notes and progress reports
+- Superseded implementation plans
+
+See [`Deprecated/README.md`](Deprecated/README.md) for details.
+
+## Current Project Structure
+
+After the recent refactor (Oct 7, 2025):
+- **Module naming**: `Exchangeability.Core` (was `Exchangeability.Exchangeability`)
+- **Proof organization**: `ViaL2`, `ViaKoopman`, `ViaMartingale` (idiomatic multiple-proof pattern)
+- **Public API**: `Exchangeability/DeFinetti/Theorem.lean` provides canonical `deFinetti` theorem
+
+## Using This Directory
+
+- For **current axiom status**: See AXIOMS_REPORT.md
+- For **mathlib resources**: See MATHLIB_RESOURCES_FOR_EXCHANGEABILITY.md
+- For **historical context**: See Deprecated/
+- For **project overview**: See main [README](../README.md)
+- For **formal blueprint**: See [blueprint/](../blueprint/)
