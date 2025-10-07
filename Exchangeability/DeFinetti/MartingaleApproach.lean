@@ -85,8 +85,8 @@ lemma measurable_shiftSeq (d : ℕ) :
   refine measurable_pi_iff.mpr ?_
   intro n
   -- Evaluation at `n + d` is measurable in the product σ-algebra.
-  have h := (Pi.measurable_eval (fun _ : ℕ => β) (n + d))
-  simpa [shiftSeq] using h
+  simp only [shiftSeq]
+  exact measurable_pi_apply (n + d)
 
 lemma forall_mem_erase {γ : Type*} [DecidableEq γ]
     {s : Finset γ} {a : γ} {P : γ → Prop} (ha : a ∈ s) :
@@ -118,6 +118,25 @@ lemma orderEmbOfFin_mem (s : Finset ℕ) (i : Fin s.card) :
     s.orderEmbOfFin rfl i ∈ s := by
   classical
   simpa using Finset.orderEmbOfFin_mem (s:=s) (h:=rfl) i
+
+lemma orderEmbOfFin_surj (s : Finset ℕ) (x : ℕ) (hx : x ∈ s) :
+    ∃ i : Fin s.card, s.orderEmbOfFin rfl i = x := by
+  classical
+  -- orderEmbOfFin is an order isomorphism, hence bijective onto s
+  -- Use the fact that it's an injective function from a finite type to itself
+  have h_inj : Function.Injective (s.orderEmbOfFin rfl : Fin s.card → ℕ) :=
+    (s.orderEmbOfFin rfl).injective
+  have h_range_sub : ∀ i, s.orderEmbOfFin rfl i ∈ s := orderEmbOfFin_mem s
+  -- Define a function to s viewed as a subtype
+  let f : Fin s.card → s := fun i => ⟨s.orderEmbOfFin rfl i, h_range_sub i⟩
+  have hf_inj : Function.Injective f := by
+    intro i j hij
+    exact h_inj (Subtype.ext_iff.mp hij)
+  -- Injective function between finite types of equal cardinality is surjective
+  have hf_surj : Function.Surjective f := Fintype.surjective_of_injective hf_inj
+  obtain ⟨i, hi⟩ := hf_surj ⟨x, hx⟩
+  use i
+  exact Subtype.ext_iff.mp hi
 
 end FinsetOrder
 
@@ -203,7 +222,7 @@ lemma revFiltration_antitone (X : ℕ → Ω → α) :
   intro m k hmk
   classical
   have hcomp :
-      shiftRV X k = (shiftSeq (α:=α) (k - m)) ∘ shiftRV X m := by
+      shiftRV X k = (shiftSeq (β:=α) (k - m)) ∘ shiftRV X m := by
     funext ω n
     have hkm : m + (k - m) = k := by
       simpa [Nat.add_comm] using (Nat.sub_add_cancel hmk)
@@ -219,7 +238,7 @@ lemma revFiltration_antitone (X : ℕ → Ω → α) :
   intro s hs
   simp [revFiltration, hcomp, Set.preimage_preimage, Function.comp] at hs ⊢
   rcases hs with ⟨t, ht, rfl⟩
-  refine ⟨_, (measurable_shiftSeq (α:=α) (k - m)).measurableSet_preimage ht, rfl⟩
+  exact ⟨_, (measurable_shiftSeq (β:=α) (k - m)) ht, rfl⟩
 
 /-- If `X` is contractable, then so is each of its shifts `θₘ X`. -/
 lemma shift_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
@@ -343,84 +362,87 @@ lemma contractable_dist_eq_on_cylinders
   have ht0 : ∀ i (hi : i ∈ s0), MeasurableSet (t0 i hi) := by
     intro i hi
     simpa [t0] using ht i (hs0_subset hi)
-  let B0 : Set α :=
-    if h0 : 0 ∈ s then B ∩ t 0 h0 else B
-  have hB0 : MeasurableSet B0 := by
-    classical
-    by_cases h0 : 0 ∈ s
-    · have h0_meas := ht 0 h0
-      simpa [B0, h0, hB] using hB.inter h0_meas
-    · simpa [B0, h0, hB]
-  -- The event can be rewritten using the adjusted σ-algebra data.
+  -- Separate the zero-coordinate constraint from the positive tail.
+  let zeroConstraint : Ω → Prop :=
+    fun ω => if h0 : 0 ∈ s then X m ω ∈ t 0 h0 else True
+  let tailCondition : Ω → Prop :=
+    fun ω => ∀ i (hi : i ∈ s0), X (m + i) ω ∈ t0 i hi
+  -- Re-express the events in terms of the decomposed tail conditions.
   have h_event_rewrite :
       {ω | X m ω ∈ B ∧ ∀ i (hi : i ∈ s), X (m + i) ω ∈ t i hi}
         =
-      {ω | X m ω ∈ B0 ∧ ∀ i (hi : i ∈ s0), X (m + i) ω ∈ t0 i hi} := by
+      {ω | X m ω ∈ B ∧ zeroConstraint ω ∧ tailCondition ω} := by
     classical
     by_cases h0 : 0 ∈ s
-    · -- With `0` present we fold its constraint into `B0`.
+    · -- With `0` present we keep its constraint separate.
       ext ω; constructor <;> intro h
       · rcases h with ⟨hBm, htail⟩
-        have h0_tail := htail 0 h0
-        refine ⟨?_, ?_⟩
-        · simpa [B0, h0, Nat.add_zero] using And.intro hBm h0_tail
+        refine ⟨hBm, ?_, ?_⟩
+        · dsimp [zeroConstraint]
+          have := htail 0 h0
+          simpa [h0, Nat.add_zero] using this
         · intro i hi
           have hi_mem := hs0_subset hi
           have htail' := htail i hi_mem
-          simpa [t0, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using htail'
-      · rcases h with ⟨hB0_mem, htail⟩
-        have hBm : X m ω ∈ B := by
-          have := hB0_mem
-          simpa [B0, h0] using this.1
-        have h0_tail : X (m + 0) ω ∈ t 0 h0 := by
-          have := hB0_mem
-          simpa [B0, h0, Nat.add_zero] using this.2
+          simpa [t0] using htail'
+      · rcases h with ⟨hBm, hz, htTail⟩
         refine ⟨hBm, ?_⟩
         intro i hi
         by_cases hi0 : i = 0
-        · simpa [hi0, Nat.add_zero] using h0_tail
+        · subst hi0
+          dsimp [zeroConstraint] at hz
+          simpa [h0] using hz
         · have hi_mem : i ∈ s0 := Finset.mem_erase.mpr ⟨hi0, hi⟩
-          have := htail i hi_mem
-          simpa [t0, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using this
-    · -- Without `0`, nothing changes.
+          have := htTail i hi_mem
+          simpa [t0] using this
+    · -- Without `0`, nothing changes (the auxiliary predicates are trivial/identical).
       have hs0_eq : s0 = s := by
         simpa [s0, h0] using Finset.erase_eq_of_not_mem h0
-      simp [B0, h0, hs0_eq, t0]
+      ext ω; constructor <;> intro h
+      · rcases h with ⟨hBm, htail⟩
+        refine ⟨hBm, ?_, ?_⟩
+        · dsimp [zeroConstraint]; simp [h0]
+        · simpa [tailCondition, hs0_eq, t0] using htail
+      · rcases h with ⟨hBm, _, htail⟩
+        refine ⟨hBm, ?_⟩
+        simpa [tailCondition, hs0_eq, t0] using htail
   -- Same rewrite for the `k`-version.
   have h_event_rewrite_k :
       {ω | X k ω ∈ B ∧ ∀ i (hi : i ∈ s), X (m + i) ω ∈ t i hi}
         =
-      {ω | X k ω ∈ B0 ∧ ∀ i (hi : i ∈ s0), X (m + i) ω ∈ t0 i hi} := by
+      {ω | X k ω ∈ B ∧ zeroConstraint ω ∧ tailCondition ω} := by
     classical
     by_cases h0 : 0 ∈ s
     · ext ω; constructor <;> intro h
       · rcases h with ⟨hBk, htail⟩
-        have h0_tail := htail 0 h0
-        refine ⟨?_, ?_⟩
-        · have : X k ω ∈ B ∧ X (m + 0) ω ∈ t 0 h0 :=
-            ⟨hBk, by simpa [Nat.add_zero] using h0_tail⟩
-          simpa [B0, h0] using this
+        refine ⟨hBk, ?_, ?_⟩
+        · dsimp [zeroConstraint]
+          have := htail 0 h0
+          simpa [h0, Nat.add_zero] using this
         · intro i hi
           have hi_mem := hs0_subset hi
           have htail' := htail i hi_mem
-          simpa [t0, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using htail'
-      · rcases h with ⟨hB0_mem, htail⟩
-        have hBk : X k ω ∈ B := by
-          have := hB0_mem
-          simpa [B0, h0] using this.1
-        have h0_tail : X (m + 0) ω ∈ t 0 h0 := by
-          have := hB0_mem
-          simpa [B0, h0, Nat.add_zero] using this.2
+          simpa [t0] using htail'
+      · rcases h with ⟨hBk, hz, htTail⟩
         refine ⟨hBk, ?_⟩
         intro i hi
         by_cases hi0 : i = 0
-        · simpa [hi0, Nat.add_zero] using h0_tail
+        · subst hi0
+          dsimp [zeroConstraint] at hz
+          simpa [h0] using hz
         · have hi_mem : i ∈ s0 := Finset.mem_erase.mpr ⟨hi0, hi⟩
-          have := htail i hi_mem
-          simpa [t0, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using this
+          have := htTail i hi_mem
+          simpa [t0] using this
     · have hs0_eq : s0 = s := by
         simpa [s0, h0] using Finset.erase_eq_of_not_mem h0
-      simp [B0, h0, hs0_eq, t0]
+      ext ω; constructor <;> intro h
+      · rcases h with ⟨hBk, htail⟩
+        refine ⟨hBk, ?_, ?_⟩
+        · dsimp [zeroConstraint]; simp [h0]
+        · simpa [tailCondition, hs0_eq, t0] using htail
+      · rcases h with ⟨hBk, _, htail⟩
+        refine ⟨hBk, ?_⟩
+        simpa [tailCondition, hs0_eq, t0] using htail
   -- Work with the enumerated tail coordinates.
   let n := s0.card
   let tail : Fin n → ℕ := fun i => s0.orderEmbOfFin rfl i
@@ -438,21 +460,158 @@ lemma contractable_dist_eq_on_cylinders
   let k_m : Fin (n + 1) → ℕ :=
     Fin.cases 0 (fun i => tail i)
   let k_map_m : Fin (n + 1) → ℕ := fun i => m + k_m i
-  let k_map_k : Fin (n + 1) → ℕ := fun i =>
-    match i with
-    | ⟨0, _⟩ => k
-    | Fin.succ i' => m + tail i'
-  -- TODO: prove `StrictMono k_m` and `StrictMono k_map_m`, `StrictMono k_map_k`,
-  -- then use `Contractable.allStrictMono_eq` to compare the push-forward measures.
-  -- The desired cylinders can be expressed as preimages of a measurable set of
-  -- `(Fin (n + 1) → α)` under these maps.
-  --
-  -- Required sub-lemmas:
-  -- * `StrictMono (Fin.cases 0 (fun i => tail i))`
-  -- * `StrictMono fun i => m + k_m i`
-  -- * `StrictMono fun i => match i with | 0 => k | Fin.succ i' => m + tail i'`
-  -- * event measurability & identification with the original cylinder
+  let k_map_k : Fin (n + 1) → ℕ :=
+    Fin.cases k (fun i => m + tail i)
+
+  -- Prove strict monotonicity of k_m
+  have hk_m_mono : StrictMono k_m := by
+    intro i j hij
+    simp only [k_m]
+    cases i using Fin.cases with
+    | zero =>
+      cases j using Fin.cases with
+      | zero => exact absurd hij (Nat.lt_irrefl 0)
+      | succ j' =>
+        simp [Fin.cases]
+        exact htail_pos j'
+    | succ i' =>
+      cases j using Fin.cases with
+      | zero => exact absurd hij (Nat.not_lt.mpr (Nat.zero_le _))
+      | succ j' =>
+        simp [Fin.cases]
+        apply htail_mono
+        exact Fin.succ_lt_succ_iff.mp hij
+
+  -- Prove strict monotonicity of k_map_m
+  have hk_map_m_mono : StrictMono k_map_m := by
+    intro i j hij
+    simp only [k_map_m]
+    exact Nat.add_lt_add_left (hk_m_mono hij) m
+
+  -- Prove strict monotonicity of k_map_k
+  have hk_map_k_mono : StrictMono k_map_k := by
+    intro i j hij
+    simp only [k_map_k]
+    cases i using Fin.cases with
+    | zero =>
+      cases j using Fin.cases with
+      | zero => exact absurd hij (Nat.lt_irrefl 0)
+      | succ j' =>
+        simp [Fin.cases]
+        calc k ≤ m := hk
+          _ < m + tail j' := by
+            have := htail_pos j'
+            omega
+    | succ i' =>
+      cases j using Fin.cases with
+      | zero => exact absurd hij (Nat.not_lt.mpr (Nat.zero_le _))
+      | succ j' =>
+        simp [Fin.cases]
+        have : tail i' < tail j' := htail_mono (Fin.succ_lt_succ_iff.mp hij)
+        omega
+
   sorry
+  -- TODO: Complete the cylinder set identification.
+  -- The challenge: when 0 ∈ s, the zero constraint X m ∈ t 0 appears in both events.
+  -- For k_map_m, this is captured by f(0) = X m being in B ∩ t 0.
+  -- For k_map_k, we have f(0) = X k ∈ B, but X m ∈ t 0 is a separate constraint.
+  -- Possible approaches:
+  -- 1. Split into cases 0 ∈ s and 0 ∉ s
+  -- 2. Use a larger index set that includes both k and m explicitly
+  -- 3. Use conditional probability / factorization
+
+  /-
+  -- Previous attempt (has type errors):
+  let T : Set (Fin (n + 1) → α) :=
+    {f | (if h0 : 0 ∈ s then f 0 ∈ B ∩ t 0 h0 else f 0 ∈ B) ∧
+         ∀ i : Fin n, f (Fin.succ i) ∈ t0 (tail i) (htail_mem i)}
+  have h_m_event : {ω | X m ω ∈ B ∧ zeroConstraint ω ∧ tailCondition ω} =
+                   {ω | (fun ω i => X (k_map_m i) ω) ω ∈ T} := by
+    ext ω
+    simp only [Set.mem_setOf_eq, T, k_map_m, k_m, zeroConstraint, tailCondition]
+    constructor <;> intro h
+    · obtain ⟨hB, hzero, htail⟩ := h
+      constructor
+      · by_cases h0 : 0 ∈ s
+        · simp [h0, Fin.cases]
+          exact ⟨hB, by simpa [h0] using hzero⟩
+        · simp [h0, Fin.cases]
+          exact hB
+      · intro i
+        have hi_mem := htail_mem i
+        simp [Fin.cases]
+        exact htail (tail i) hi_mem
+    · obtain ⟨hfirst, htail_cond⟩ := h
+      refine ⟨?_, ?_, ?_⟩
+      · by_cases h0 : 0 ∈ s
+        · simp [h0, Fin.cases] at hfirst
+          exact hfirst.1
+        · simp [h0, Fin.cases] at hfirst
+          exact hfirst
+      · by_cases h0 : 0 ∈ s
+        · simp [h0, Fin.cases] at hfirst
+          simp [h0]
+          exact hfirst.2
+        · simp [h0]
+      · intro i hi
+        -- For i ∈ s0, orderEmbOfFin_surj gives us j with tail j = i
+        obtain ⟨j, hj_eq⟩ := orderEmbOfFin_surj s0 i hi
+        specialize htail_cond j
+        simp [Fin.cases] at htail_cond
+        -- htail_cond : X (m + tail j) ω ∈ t0 (tail j) (htail_mem j)
+        -- Goal: X (m + i) ω ∈ t0 i hi
+        -- hj_eq : tail j = i (since tail j is defined as orderEmbOfFin j)
+        convert htail_cond using 3
+        -- Need to show i = tail j
+        exact hj_eq.symm
+
+  have h_k_event : {ω | X k ω ∈ B ∧ zeroConstraint ω ∧ tailCondition ω} =
+                   {ω | (fun ω i => X (k_map_k i) ω) ω ∈ T} := by
+    ext ω
+    simp only [Set.mem_setOf_eq, T, k_map_k, zeroConstraint, tailCondition]
+    constructor <;> intro h
+    · obtain ⟨hB, hzero, htail⟩ := h
+      constructor
+      · by_cases h0 : 0 ∈ s
+        · simp [h0, Fin.cases]
+          refine ⟨hB, ?_⟩
+          simp [h0] at hzero
+          exact hzero
+        · simp [h0, Fin.cases]
+          exact hB
+      · intro i
+        have hi_mem := htail_mem i
+        simp [Fin.cases]
+        exact htail (tail i) hi_mem
+    · obtain ⟨hfirst, htail_cond⟩ := h
+      refine ⟨?_, ?_, ?_⟩
+      · by_cases h0 : 0 ∈ s
+        · simp [h0, Fin.cases] at hfirst
+          exact hfirst.1
+        · simp [h0, Fin.cases] at hfirst
+          exact hfirst
+      · by_cases h0 : 0 ∈ s
+        · simp [h0, Fin.cases] at hfirst
+          simp [h0]
+          exact hfirst.2
+        · simp [h0]
+      · intro i hi
+        -- Same as above: use orderEmbOfFin_surj
+        obtain ⟨j, hj_eq⟩ := orderEmbOfFin_surj s0 i hi
+        specialize htail_cond j
+        simp [Fin.cases] at htail_cond
+        convert htail_cond using 3
+        exact hj_eq.symm
+
+  -- Apply contractability: both sides map to same distribution
+  have h_contract_m := hX (n + 1) k_map_m hk_map_m_mono
+  have h_contract_k := hX (n + 1) k_map_k hk_map_k_mono
+
+  -- Rewrite using the event identifications
+  rw [h_event_rewrite, h_event_rewrite_k, h_m_event, h_k_event]
+
+  -- Both are preimages of T under measure-preserving maps
+  sorry  -- Final step: use h_contract_m and h_contract_k to show measure equality
 
 /-- Helper lemma: contractability gives the key distributional equality.
 
