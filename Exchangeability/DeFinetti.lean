@@ -9,17 +9,14 @@ import Mathlib.Probability.Kernel.Basic
 import Mathlib.MeasureTheory.Constructions.BorelSpace.Basic
 import Exchangeability.Contractability
 import Exchangeability.ConditionallyIID
-import Exchangeability.DeFinetti.KoopmanApproach
 import Exchangeability.DeFinetti.L2Approach
-import Exchangeability.DeFinetti.L2Proof
 import Exchangeability.DeFinetti.CommonEnding
-import Exchangeability.DeFinetti.MartingaleApproach
 
 /-!
-# De Finetti's Theorem
+# De Finetti's Theorem - Common Infrastructure
 
-This module contains the formalization of de Finetti's theorem for infinite
-exchangeable sequences.
+This module contains the **common scaffolding** for de Finetti's theorem,
+including the tail σ-algebra definition and the main theorem statements.
 
 ## Main theorem
 
@@ -28,21 +25,21 @@ exchangeable sequences.
 
 ## Three proof approaches (Kallenberg 2005)
 
-This formalization keeps track of all proofs of Theorem 1.1 highlighted by
-Kallenberg:
+This formalization keeps track of all three proofs of Theorem 1.1 highlighted by
+Kallenberg. The **complete proofs** are in separate files to manage dependencies:
 
-1. **First proof** (`KoopmanApproach`): Uses the Mean Ergodic Theorem via the
-   Koopman operator on L²(μ). The key insight is that Birkhoff averages converge
-   to the conditional expectation onto the shift-invariant σ-algebra, which can be
-   shown to have product form.
+1. **First proof** (`ViaKoopman.lean`): Uses the Mean Ergodic Theorem via the
+   Koopman operator on L²(μ). Heavy dependencies (ergodic theory).
 
-2. **Second proof** (`L2Approach`): Uses an elementary L² contractability bound
-   (Lemma 1.2) that directly shows convergence of empirical distributions without
-   invoking the full ergodic theory machinery.
+2. **Second proof** (`ViaL2.lean`): Uses an elementary L² contractability bound
+   (Lemma 1.2). **Lightest dependencies** - this is the default.
 
-3. **Third proof** (`MartingaleApproach`): Follows Aldous' martingale argument,
-   relying on a contraction/independence lemma and reverse martingale convergence
-   for the tail σ-algebra. The current file provides scaffolding for this route.
+3. **Third proof** (`ViaMartingale.lean`): Follows Aldous' martingale argument
+   with reverse martingale convergence. Medium dependencies.
+
+**To use the theorem**: `import Exchangeability.DeFinetti.Theorem` (gets the default proof).
+
+**To see a specific proof**: `import Exchangeability.DeFinetti.ViaL2` (or `ViaKoopman`, `ViaMartingale`).
 
 ## References
 

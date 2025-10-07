@@ -13,42 +13,52 @@ import Mathlib.Probability.Kernel.Basic
 import Canonical
 
 /-!
-# De Finetti's Theorem via L² Contractability (Kallenberg's Second Proof)
+# de Finetti's Theorem via L² Contractability
 
-This file implements Kallenberg's "Second proof" of de Finetti's Theorem 1.1,
-which uses the elementary L² contractability bound (Lemma 1.2) combined with
-reverse martingale convergence.
+**Kallenberg's "second proof"** of de Finetti's theorem using the elementary
+L² contractability bound (Lemma 1.2). This is the **lightest-dependency proof**.
 
-## Kallenberg's Second Proof Structure
+## Proof approach
 
 Starting from a **contractable** sequence ξ:
 
 1. Fix a bounded measurable function f ∈ L¹
-2. Use Lemma 1.2 (L² bound) and completeness of L¹ to show:
-   ‖E_m ∑_{k=n+1}^{n+m} (f(ξ_{n+k}) - α_{k-1})‖₁² → 0
+2. Use Lemma 1.2 (L² contractability bound) and completeness of L¹:
+   - Show ‖E_m ∑_{k=n+1}^{n+m} (f(ξ_{n+k}) - α_{k-1})‖₁² → 0
 3. Extract limit α_∞ = lim_n α_n in L¹
 4. Show α_n is a reverse martingale (subsequence convergence a.s.)
 5. Use contractability + dominated convergence:
-   E[f(ξ_i); ∩I_k] = E[α_{k-1}; ∩I_k] → E[α_∞; ∩I_k]
+   - E[f(ξ_i); ∩I_k] = E[α_{k-1}; ∩I_k] → E[α_∞; ∩I_k]
 6. Conclude α_n = E_n f(ξ_{n+1}) = ν^f a.s.
 7. Complete using the common ending (monotone class argument)
 
 ## Main results
 
-* `contractable_covariance_structure`: Contractable sequences have uniform covariance
-* `weighted_sums_converge_L1`: L² bound implies L¹ convergence of weighted sums
-* `reverse_martingale_limit`: Extract tail-measurable limit via reverse martingale
-* `deFinetti_second_proof`: De Finetti via contractability + L² bound
+* `deFinetti_viaL2`: **Main theorem** - contractable implies conditionally i.i.d.
+* `deFinetti`: **Canonical name** (alias for `deFinetti_viaL2`)
+
+Supporting lemmas:
+* `contractable_covariance_structure`: Uniform covariance structure
+* `weighted_sums_converge_L1`: L² bound implies L¹ convergence
+* `reverse_martingale_limit`: Tail-measurable limit via reverse martingale
+
+## Why this proof is default
+
+✅ **Elementary** - Only uses basic L² space theory and Cauchy-Schwarz
+✅ **Direct** - Proves convergence via explicit bounds
+✅ **Quantitative** - Gives explicit rates of convergence
+✅ **Lightest dependencies** - No ergodic theory required
 
 ## References
 
-* Kallenberg (2005), page 26-27: "Second proof of Theorem 1.1"
+* Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*,
+  Chapter 1, pages 26-27: "Second proof of Theorem 1.1"
 
 -/
 
 noncomputable section
 
-namespace Exchangeability.DeFinetti.L2Proof
+namespace Exchangeability.DeFinetti.ViaL2
 
 open MeasureTheory ProbabilityTheory BigOperators Filter Topology
 open Exchangeability
@@ -567,7 +577,7 @@ already the limit (not a sequence)!
 
 **Reference**: Kallenberg (2005), Theorem 1.1 (page 26-27), "Second proof".
 -/
-theorem deFinetti_second_proof
+theorem deFinetti_viaL2
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
     (hX_contract : Contractable μ X)  -- NOTE: Starts with CONTRACTABLE, not exchangeable!
@@ -606,7 +616,11 @@ theorem deFinetti_from_exchangeable
   -- First show exchangeable → contractable
   have hX_contract : Contractable μ X := contractable_of_exchangeable hX_exch hX_meas
   -- Then apply the Second proof
-  have := deFinetti_second_proof X hX_meas hX_contract hX_L2
+  have := deFinetti_viaL2 X hX_meas hX_contract hX_L2
   sorry  -- Type mismatch due to different sorry locations; will fix when sorries are filled
 
-end Exchangeability.DeFinetti.L2Proof
+/-- **Standard name** for de Finetti's theorem.
+This is an alias for `deFinetti_from_exchangeable` (the L² proof). -/
+theorem deFinetti := @deFinetti_from_exchangeable
+
+end Exchangeability.DeFinetti.ViaL2
