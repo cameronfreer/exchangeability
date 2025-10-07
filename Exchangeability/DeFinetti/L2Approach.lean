@@ -158,21 +158,33 @@ cost of requiring finite variance.
 theorem l2_contractability_bound
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (n : ℕ) (ξ : Fin n → Ω → ℝ)
-    (m : ℝ) (σSq ρ : ℝ)
-    (_hσ_pos : 0 ≤ σSq) (_hρ_bd : -1 ≤ ρ ∧ ρ ≤ 1)
+    (m : ℝ) (σ ρ : ℝ)
+    (_hσ_nonneg : 0 ≤ σ) (_hρ_bd : -1 ≤ ρ ∧ ρ ≤ 1)
     (_hmean : ∀ k, ∫ ω, ξ k ω ∂μ = m)
     (_hL2 : ∀ k, MemLp (fun ω => ξ k ω - m) 2 μ)
-    (_hvar : ∀ k, ∫ ω, (ξ k ω - m)^2 ∂μ = σSq)
-    (_hcov : ∀ i j, i ≠ j → ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ = σSq * ρ)
+    (_hvar : ∀ k, ∫ ω, (ξ k ω - m)^2 ∂μ = σ ^ 2)
+    (_hcov : ∀ i j, i ≠ j → ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ = σ ^ 2 * ρ)
     (p q : Fin n → ℝ)
     (_hp_prob : (∑ i, p i) = 1 ∧ ∀ i, 0 ≤ p i)
     (_hq_prob : (∑ i, q i) = 1 ∧ ∀ i, 0 ≤ q i) :
     ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ ≤
-      2 * σSq * (1 - ρ) * (⨆ i, |p i - q i|) := by
+      2 * σ ^ 2 * (1 - ρ) * (⨆ i, |p i - q i|) := by
   -- Proof following Kallenberg page 26, Lemma 1.2 exactly
   
   -- Put cⱼ = pⱼ - qⱼ
+  classical
   let c : Fin n → ℝ := fun i => p i - q i
+  -- Record σ² as a convenient abbreviation
+  set σSq : ℝ := σ ^ 2
+
+  have hσSq_nonneg : 0 ≤ σSq := by
+    simpa [σSq] using sq_nonneg σ
+
+  have hvar : ∀ k, ∫ ω, (ξ k ω - m)^2 ∂μ = σSq := by
+    intro k; simpa [σSq] using _hvar k
+
+  have hcov : ∀ i j, i ≠ j → ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ = σSq * ρ := by
+    intro i j hij; simpa [σSq] using _hcov i j hij
   
   -- Note that ∑ⱼ cⱼ = 0
   have hc_sum : ∑ j, c j = 0 := by
@@ -296,7 +308,7 @@ theorem l2_contractability_bound
                   σSq * ∑ i, (c i)^2 := by
       trans (∑ i, (c i)^2 * σSq)
       · congr 1; ext i
-        have hvar_i := _hvar i
+        have hvar_i := hvar i
         have h_sq : (fun ω => (ξ i ω - m) * (ξ i ω - m)) = (fun ω => (ξ i ω - m)^2) := by
           funext ω; ring
         calc c i * c i * ∫ ω, (ξ i ω - m) * (ξ i ω - m) ∂μ
@@ -314,7 +326,7 @@ theorem l2_contractability_bound
           ∀ i j, j ≠ i → c i * c j * ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ =
             σSq * ρ * (c i * c j) := by
         intro i j hj
-        have hcov_ij := _hcov i j (Ne.symm hj)
+        have hcov_ij := hcov i j (Ne.symm hj)
         simp [hcov_ij, mul_comm, mul_assoc]
       -- Apply the previous identity term-by-term inside the sums.
       have h_rewrite :
@@ -421,7 +433,7 @@ theorem l2_contractability_bound
   
   -- Nonnegativity lemmas
   have hσ_1ρ_nonneg : 0 ≤ σSq * (1 - ρ) := by
-    apply mul_nonneg _hσ_pos
+    apply mul_nonneg hσSq_nonneg
     linarith [_hρ_bd.2]  -- ρ ≤ 1 implies 0 ≤ 1 - ρ
   
   have hsup_nonneg : 0 ≤ ⨆ j, |c j| := by
@@ -466,5 +478,7 @@ theorem l2_contractability_bound
     _ ≤ σSq * (1 - ρ) * (2 * (⨆ j, |c j|)) := by
         apply mul_le_mul_of_nonneg_left (mul_le_mul_of_nonneg_right hc_abs_sum hsup_nonneg) hσ_1ρ_nonneg
     _ = 2 * σSq * (1 - ρ) * (⨆ i, |p i - q i|) := by ring_nf; rfl
+    _ = 2 * σ ^ 2 * (1 - ρ) * (⨆ i, |p i - q i|) := by
+        simp [σSq, pow_two, mul_comm, mul_left_comm, mul_assoc]
 
 end Exchangeability.DeFinetti.L2Approach
