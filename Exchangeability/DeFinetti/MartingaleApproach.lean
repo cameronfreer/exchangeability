@@ -100,6 +100,15 @@ lemma shiftProcess_add (X : ℕ → Ω → α) (m k : ℕ) :
     shiftProcess (shiftProcess X m) k = shiftProcess X (m + k) := by
   funext n ω; simp [shiftProcess, Nat.add_assoc]
 
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
+lemma path_eq_shiftRV_zero (X : ℕ → Ω → α) : path X = shiftRV X 0 :=
+  (shiftRV_zero X).symm
+
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
+lemma shiftProcess_apply (X : ℕ → Ω → α) (m n ω) :
+    shiftProcess X m n ω = X (m + n) ω := by
+  rfl
+
 /-- 𝔽ₘ := σ(θₘ X) = σ(ω ↦ (n ↦ X (m+n) ω)). -/
 abbrev revFiltration (X : ℕ → Ω → α) (m : ℕ) : MeasurableSpace Ω :=
   MeasurableSpace.comap (shiftRV X m) inferInstance
@@ -153,7 +162,7 @@ lemma revFiltration_antitone (X : ℕ → Ω → α) :
   rw [h_eq]
   -- comap (drop ∘ shiftRV X m) = comap (shiftRV X m) (comap drop)
   -- and comap (shiftRV X m) (comap drop) ≤ comap (shiftRV X m) ⊤
-  conv_lhs => rw [MeasurableSpace.comap_comp]
+  erw [MeasurableSpace.comap_comp]
   exact MeasurableSpace.comap_mono le_top
 
 /-- If `X` is contractable, then so is each of its shifts `θₘ X`. -/
