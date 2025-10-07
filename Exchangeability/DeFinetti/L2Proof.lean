@@ -165,11 +165,61 @@ theorem weighted_sums_converge_L1
       -- Average of values bounded by M is bounded by M
       calc |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω)|
           ≤ (1 / (m : ℝ)) * ∑ k : Fin m, |f (X (n + k.val + 1) ω)| := by
-            sorry  -- Triangle + convexity: |avg| ≤ avg |·|
+            classical
+            by_cases hm : m = 0
+            · simp [hm]
+            · have hm_pos : 0 < (m : ℝ) := by exact_mod_cast Nat.pos_of_ne_zero hm
+              have h_inv_pos : 0 < 1 / (m : ℝ) := by
+                exact div_pos (by norm_num) hm_pos
+              have h_abs_sum :
+                  |∑ k : Fin m, f (X (n + k.val + 1) ω)|
+                    ≤ ∑ k : Fin m, |f (X (n + k.val + 1) ω)| := by
+                simpa using
+                  (Finset.abs_sum_le_sum_abs
+                    (fun k : Fin m => f (X (n + k.val + 1) ω)))
+              have h_inv_abs : |1 / (m : ℝ)| = 1 / (m : ℝ) :=
+                abs_of_pos h_inv_pos
+              calc
+                |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω)|
+                    = (1 / (m : ℝ)) *
+                        |∑ k : Fin m, f (X (n + k.val + 1) ω)| := by
+                      simpa [abs_mul, h_inv_abs]
+                _ ≤ (1 / (m : ℝ)) *
+                        ∑ k : Fin m, |f (X (n + k.val + 1) ω)| := by
+                      exact
+                        (mul_le_mul_of_nonneg_left h_abs_sum
+                          (le_of_lt h_inv_pos))
         _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, M := by
-            sorry  -- Apply hM to each term
+            classical
+            by_cases hm : m = 0
+            · simp [hm]
+            · have h_inv_nonneg : 0 ≤ 1 / (m : ℝ) := by
+                have hm_pos : 0 < (m : ℝ) := by exact_mod_cast Nat.pos_of_ne_zero hm
+                exact le_of_lt (div_pos (by norm_num) hm_pos)
+              have h_sum_le :
+                  ∑ k : Fin m, |f (X (n + k.val + 1) ω)|
+                    ≤ ∑ k : Fin m, M := by
+                refine Finset.sum_le_sum ?_
+                intro k _
+                exact hM _
+              exact (mul_le_mul_of_nonneg_left h_sum_le h_inv_nonneg)
         _ ≤ M := by
-            sorry  -- (1/m) * m * M = M
+            classical
+            by_cases hm : m = 0
+            · have hM_nonneg : 0 ≤ M :=
+                (le_trans (abs_nonneg _) (hM 0))
+              simp [hm, hM_nonneg]
+            · have hm_pos : 0 < (m : ℝ) := by exact_mod_cast Nat.pos_of_ne_zero hm
+              have hm_ne_zero : (m : ℝ) ≠ 0 := ne_of_gt hm_pos
+              have h_inv_mul : (1 / (m : ℝ)) * (m : ℝ) = (1 : ℝ) := by
+                simpa [one_div] using inv_mul_cancel hm_ne_zero
+              have : ∑ k : Fin m, M = (m : ℝ) * M := by
+                simp [Finset.sum_const, mul_comm, mul_left_comm, mul_assoc]
+              calc
+                (1 / (m : ℝ)) * ∑ k : Fin m, M
+                    = (1 / (m : ℝ)) * ((m : ℝ) * M) := by simpa [this]
+                _ = ((1 / (m : ℝ)) * (m : ℝ)) * M := by ring
+                _ = M := by simpa [h_inv_mul]
     exact MemLp.of_bound (hA_meas n m).aestronglyMeasurable M hA_ae_bdd
 
   -- Step 1: For n=0, show (A 0 m)_m is Cauchy in L² hence L¹
@@ -437,4 +487,3 @@ theorem deFinetti_from_exchangeable
   sorry  -- Type mismatch due to different sorry locations; will fix when sorries are filled
 
 end Exchangeability.DeFinetti.L2Proof
-
