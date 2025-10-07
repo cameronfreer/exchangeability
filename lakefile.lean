@@ -7,6 +7,9 @@ package «exchangeability» where
 require mathlib from git
   "https://github.com/leanprover-community/mathlib4.git"
 
+require Canonical from git
+  "https://github.com/chasenorman/CanonicalLean.git"
+
 lean_lib «Exchangeability» where
   -- add library configuration options here
 

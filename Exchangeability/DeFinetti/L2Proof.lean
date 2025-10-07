@@ -10,6 +10,7 @@ import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.Probability.Kernel.Basic
+import Canonical
 
 /-!
 # De Finetti's Theorem via L² Contractability (Kallenberg's Second Proof)
