@@ -418,6 +418,47 @@ lemma ν_shift_eq_on_basis {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
   intro ω hω s hs
   exact hω ⟨s, hs⟩
 
+/-- The set of sample points whose conditional measures agree with their shift on
+the entire countable basis. -/
+def goodSet (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α] :
+    Set (Ω[α]) :=
+  {ω | ∀ s ∈ countableBasis α,
+      ν (μ := μ) (shift ω) s = ν (μ := μ) ω s}
+
+lemma goodSet_ae {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    [StandardBorelSpace α] [StandardBorelSpace (Ω[α])] (hσ : MeasurePreserving shift μ μ) :
+    ∀ᵐ ω ∂μ, ω ∈ goodSet (μ := μ) (α := α) := by
+  classical
+  simpa [goodSet] using ν_shift_eq_on_basis (μ := μ) (α := α) hσ
+
+/-- TODO: Equality on the countable basis should imply full measure equality.
+
+This will combine the lemmas in `CountableBasisPiSystem` with `goodSet`.  Given
+`ω ∈ goodSet`, we want to prove that the measures `ν (shift ω)` and
+`ν ω` coincide on the generating π-system and therefore on all Borel sets.
+-/
+lemma goodSet_measure_eq {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    [StandardBorelSpace α] [StandardBorelSpace (Ω[α])] {ω : Ω[α]}
+    (hω : ω ∈ goodSet (μ := μ) (α := α)) :
+    ν (μ := μ) (shift ω) = ν (μ := μ) ω := by
+  -- TODO: apply `Measure.ext_of_generateFrom_of_iUnion` (or similar) using the
+  -- countable π-system from `CountableBasisPiSystem`.  The hypothesis `hω`
+  -- supplies equality on each member of the basis.
+  sorry
+
+/-- TODO: Once equality for a single shift is available, deduce equality for all
+iterates on a full-measure set.  A standard argument shows that the set of ω
+where `ν (shift ω) = ν ω` is shift-invariant, hence equality propagates along
+`shift^[k]`.
+-/
+lemma goodSet_iterate_eq {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    [StandardBorelSpace α] [StandardBorelSpace (Ω[α])] {ω : Ω[α]}
+    (hω : ω ∈ goodSet (μ := μ) (α := α)) :
+    ∀ k : ℕ, ν (μ := μ) (shift^[k] ω) = ν (μ := μ) ω := by
+  -- TODO: combine `goodSet_measure_eq` with the shift-invariance supplied by
+  -- the Koopman operator (`hσ`).  The proof will proceed by induction on `k`.
+  sorry
+
 /-- *Work in progress.*  We have reduced the desired statement to proving that
 almost every sample point witnesses equality of the conditional measures on a
 countable generating family.  What remains is to upgrade this equality on the
@@ -436,18 +477,13 @@ lemma ν_ae_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     ∀ᵐ ω ∂μ, ∀ k : ℕ, ν (μ := μ) (shift^[k] ω) = ν (μ := μ) ω := by
   classical
   -- Step 1: equality on the countable topological basis (done).
-  have h_basis := ν_shift_eq_on_basis (μ := μ) (α := α) hσ
-  -- Step 2: package the basis equality into a single set where all basis elements agree.
-  let good : Set (Ω[α]) :=
-    {ω | ∀ s ∈ countableBasis α,
-        ν (μ := μ) (shift ω) s = ν (μ := μ) ω s}
-  have h_good : ∀ᵐ ω ∂μ, ω ∈ good := h_basis
+  have h_good := goodSet_ae (μ := μ) (α := α) hσ
   -- Placeholder for the upcoming measure-extensionality argument.
   -- Once proved, `h_measure_eq` will assert that almost every `ω ∈ good` witnesses
   -- equality of the full conditional measures.  It should follow by invoking
   -- `Measure.ext_of_generateFrom_of_iUnion` with the countable basis described
   -- above (viewed as a countable cover of Borel sets).
-  have h_measure_eq : ∀ᵐ ω ∂μ, ω ∈ good →
+  have h_measure_eq : ∀ᵐ ω ∂μ, ω ∈ goodSet (μ := μ) (α := α) →
       ν (μ := μ) (shift ω) = ν (μ := μ) ω := by
     -- TODO: instantiate `Measure.ext_of_generateFrom_of_iUnion` here.
     -- The intended proof outline is:
