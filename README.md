@@ -111,9 +111,9 @@ Exchangeability/
 
 ### Related Work
 
-- **Hewitt, Edwin and Savage, Leonard J.** (1955). "Symmetric measures on Cartesian products." *Transactions of the American Mathematical Society* 80 (2): 470–501.
+- **Hewitt, Edwin and Savage, Leonard J.** (1955). "Symmetric measures on Cartesian products." *Transactions of the American Mathematical Society* 80 (2): 470–501. [https://doi.org/10.1090/S0002-9947-1955-0076206-8](https://doi.org/10.1090/S0002-9947-1955-0076206-8)
 
-- **Diaconis, Persi and Freedman, David** (1980). "Finite exchangeable sequences." *The Annals of Probability* 8 (4): 745–764.
+- **Diaconis, Persi and Freedman, David** (1980). "Finite exchangeable sequences." *The Annals of Probability* 8 (4): 745–764. [https://doi.org/10.1214/aop/1176994663](https://doi.org/10.1214/aop/1176994663)
 
 ## Contributing
 
@@ -126,7 +126,7 @@ This is an active research project. See [`WorkPlans/`](WorkPlans/) for current t
 ## Acknowledgments
 
 This formalization was developed with assistance from:
-- **Claude Sonnet 4.5** (Anthropic) - Code generation, refactoring, and proof development
-- **GPT-5-Codex** (OpenAI) - Mathematical reasoning and proof strategy
+- **Claude Sonnet 4.5**
+- **GPT-5-Codex**
 
 Built with [Lean 4](https://leanprover.github.io/) and [Mathlib](https://github.com/leanprover-community/mathlib4).
