@@ -10,25 +10,65 @@ import Mathlib.MeasureTheory.Constructions.Pi
 import Exchangeability.Contractability
 
 /-!
-# Conditionally i.i.d. Sequences
+# Conditionally i.i.d. Sequences and de Finetti's Theorem
 
-This file defines conditionally i.i.d. sequences and mixtures of i.i.d. sequences, and establishes
-the relationship with exchangeability.
+This file defines **conditionally i.i.d. sequences** and proves that they are
+exchangeable. This establishes one direction of de Finetti's representation theorem:
+**conditionally i.i.d. ⇒ exchangeable**.
 
 ## Main definitions
 
-* `ConditionallyIID`: A sequence is conditionally i.i.d. if there exists a probability kernel
-  such that coordinates are independent given the kernel value.
-* `MixtureOfIID`: A sequence is a mixture of i.i.d. sequences if its distribution is a mixture
-  of i.i.d. distributions.
+* `ConditionallyIID μ X`: A sequence `X` is conditionally i.i.d. under measure `μ` if
+  there exists a probability kernel `ν : Ω → Measure α` such that coordinates are
+  independent given `ν(ω)`, with each coordinate distributed as `ν(ω)`.
+* `MixtureOfIID`: A sequence whose distribution is a mixture of i.i.d. distributions
+  (placeholder for future development).
 
 ## Main results
 
-* `exchangeable_of_conditionallyIID`: Conditionally i.i.d. implies exchangeable.
+* `pi_comp_perm`: Product measures are invariant under permutations of indices.
+* `bind_map_comm`: Giry monad functoriality - mapping after bind equals binding mapped measures.
+* `exchangeable_of_conditionallyIID`: **Conditionally i.i.d. ⇒ exchangeable**.
+
+## The de Finetti-Ryll-Nardzewski theorem
+
+The complete equivalence for infinite sequences is:
+  **contractable ↔ exchangeable ↔ conditionally i.i.d.**
+
+This file proves: **conditionally i.i.d. ⇒ exchangeable**
+
+### The complete picture
+
+- **Conditionally i.i.d. ⇒ exchangeable** (this file): Direct from definition using
+  permutation invariance of product measures.
+- **Exchangeable ⇒ contractable** (`Contractability.lean`): Via permutation extension.
+- **Contractable ⇒ exchangeable** (`DeFinetti/*.lean`): Deep result using ergodic theory.
+- **Exchangeable ⇒ conditionally i.i.d.** (de Finetti's theorem): The hard direction,
+  requiring the existence of a random measure (the de Finetti measure).
+
+## Mathematical intuition
+
+**Conditionally i.i.d.** means: "There exists a random probability measure `ν`, and
+given the value of `ν`, the sequence is i.i.d. with distribution `ν`."
+
+**Why this is exchangeable:** If we permute the indices, we're still sampling i.i.d.
+from the same random distribution `ν`, so the joint distribution is unchanged.
+
+**Example:** Pólya's urn - drawing balls with replacement where the replacement
+probability depends on the urn composition. Conditionally on the limiting proportion,
+the draws are i.i.d. Bernoulli.
+
+## Implementation notes
+
+This file uses the Giry monad structure (`Measure.bind`) to express conditioning.
+The key technical ingredient is showing that permuting coordinates of a product
+measure gives the same measure, which follows from `measurePreserving_piCongrLeft`.
 
 ## References
 
 * Kallenberg, "Probabilistic Symmetries and Invariance Principles" (2005), Theorem 1.1
+* Kallenberg, "Foundations of Modern Probability" (2002), Theorem 11.10 (de Finetti)
+* Diaconis & Freedman, "Finite Exchangeable Sequences" (1980)
 -/
 
 open MeasureTheory ProbabilityTheory
@@ -41,9 +81,17 @@ namespace MeasureTheory.Measure
 -- Measure.pi is already defined in Mathlib.MeasureTheory.Constructions.Pi
 -- We just need to prove that the product of probability measures is a probability measure
 
-/-- The product of probability measures is a probability measure. -/
+/--
+The product of probability measures is a probability measure.
+
+This is a basic fact about product measures: if each marginal `μ i` has total mass 1,
+then the product measure `∏ᵢ μ i` also has total mass 1.
+
+**Proof:** The measure of the whole space `∏ᵢ αᵢ` equals the product of the measures
+of the marginal spaces, which is `∏ᵢ 1 = 1`.
+-/
 instance pi_isProbabilityMeasure {ι : Type*} [Fintype ι] {α : ι → Type*}
-    [∀ i, MeasurableSpace (α i)] (μ : ∀ i, Measure (α i)) 
+    [∀ i, MeasurableSpace (α i)] (μ : ∀ i, Measure (α i))
     [∀ i, IsProbabilityMeasure (μ i)] [∀ i, SigmaFinite (μ i)] :
     IsProbabilityMeasure (Measure.pi μ) := by
   constructor
@@ -52,7 +100,20 @@ instance pi_isProbabilityMeasure {ι : Type*} [Fintype ι] {α : ι → Type*}
   rw [h, Measure.pi_pi]
   simp [measure_univ]
 
-/-- Product measures of identical marginals are invariant under permutations of the index set. -/
+/--
+Product measures with identical marginals are invariant under permutations.
+
+**Statement:** If we have a product measure where each coordinate is distributed as `ν`,
+and we permute the coordinates by `σ`, we get the same measure back.
+
+**Mathematical content:** For i.i.d. sequences, permuting the indices doesn't change
+the distribution because all coordinates have the same marginal and are independent.
+
+**Proof:** Uses mathlib's `measurePreserving_piCongrLeft`, which shows that the
+permutation map is measure-preserving for product measures.
+
+This is the key technical lemma enabling `exchangeable_of_conditionallyIID`.
+-/
 theorem pi_comp_perm {ι : Type*} [Fintype ι] {α : Type*} [MeasurableSpace α]
     (ν : Measure α) [SigmaFinite ν] (σ : Equiv.Perm ι) :
     Measure.map (fun f : ι → α => f ∘ σ) (Measure.pi fun _ : ι => ν) =
@@ -72,7 +133,23 @@ theorem pi_comp_perm {ι : Type*} [Fintype ι] {α : Type*} [MeasurableSpace α]
     simpa [Function.comp, MeasurableEquiv.coe_piCongrLeft] using hgi.symm
   simpa [hfun]
 
-/-- Mapping after a bind is the same as binding the mapped measures (Giry monad functoriality). -/
+/--
+Giry monad functoriality: mapping commutes with binding.
+
+**Statement:** Mapping a function `f` after binding a kernel `κ` is the same as
+binding the kernel obtained by mapping `f` through `κ`.
+
+**Category theory:** This expresses functoriality of the Giry monad: the `map`
+operation interacts properly with the monadic `bind` operation. In categorical
+terms: `fmap f ∘ join = join ∘ fmap (fmap f)`.
+
+**Probabilistic interpretation:** If we first sample `ω ~ μ`, then sample `x ~ κ(ω)`,
+then apply `f`, this is the same as first sampling `ω ~ μ`, then sampling from the
+mapped kernel `f₊κ(ω)`.
+
+**Application:** This is used to show that conditioning preserves exchangeability -
+we can push permutations through the conditional distribution.
+-/
 theorem bind_map_comm {Ω α β : Type*} [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β]
     (μ : Measure Ω) {κ : Ω → Measure α} (hκ : Measurable κ) {f : α → β}
     (hf : Measurable f) :
@@ -100,20 +177,33 @@ end MeasureTheory.Measure
 
 namespace Exchangeability
 
-/-- A random sequence `X` is **conditionally i.i.d.** (with respect to `μ`) if there exists a
-probability kernel assigning to each base point `ω : Ω` a distribution `ν ω : Measure α` such
-that, for every finite selection of indices, the joint law of the corresponding coordinates of
-`X` is obtained by averaging the product measure built from `ν ω`.
+/--
+A sequence is **conditionally i.i.d.** if there exists a random probability measure
+making the coordinates independent.
 
-This formulation expresses that, conditionally on the value of the kernel, the coordinates of
-`X` are independent and share the common conditional law `ν ω`.
+**Definition:** `X` is conditionally i.i.d. if there exists a probability kernel
+`ν : Ω → Measure α` such that for every finite selection of indices `k : Fin m → ℕ`,
+the joint law of `(X_{k(0)}, ..., X_{k(m-1)})` equals `𝔼[ν^m]`, where `ν^m` is the
+m-fold product of `ν`.
 
-The definition uses:
-- `Measure.pi`: finite product measure from `Mathlib.MeasureTheory.Constructions.Pi`
-- `Measure.bind`: kernel bind (Giry monad) from `Mathlib.MeasureTheory.Measure.GiryMonad`
+**Intuition:** There exists a random distribution `ν`, and conditionally on `ν`, the
+sequence is i.i.d. with marginal distribution `ν`. Different sample paths may have
+different `ν` values, but for each fixed `ν`, the coordinates are independent with
+that distribution.
 
-Note: We require this for ALL finite selections, not just strictly monotone ones, which is
-necessary to prove exchangeability. -/
+**Example:** Pólya's urn - drawing colored balls with replacement where we add a ball
+of the drawn color each time. The limiting proportion of colors is random, and
+conditionally on this proportion, the draws are i.i.d. Bernoulli.
+
+**Mathematical formulation:** For each finite selection, we have:
+  `P{(X_{k(0)}, ..., X_{k(m-1)}) ∈ ·} = ∫ ν(ω)^m μ(dω)`
+
+**Implementation:** Uses mathlib's `Measure.bind` (Giry monad) and `Measure.pi`
+(product measure) to express the mixture of i.i.d. distributions.
+
+**Note:** We require this for ALL finite selections, not just increasing ones, to
+prove exchangeability directly.
+-/
 def ConditionallyIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
   ∃ ν : Ω → Measure α,
     (∀ ω, IsProbabilityMeasure (ν ω)) ∧
@@ -143,14 +233,30 @@ theorem pi_perm_comm {ι : Type*} [Fintype ι] {α : Type*} [MeasurableSpace α]
   classical
   simpa using (MeasureTheory.Measure.pi_comp_perm (ν:=ν) (σ:=σ.symm)).symm
 
-/-- Conditionally i.i.d. implies exchangeable.
-If `X` is conditionally i.i.d., then permutations preserve the distribution.
+/--
+**Main theorem:** Conditionally i.i.d. sequences are exchangeable.
 
-Proof strategy:
-1. By ConditionallyIID, the law of (X₀,...,X_{n-1}) is μ.bind(λω. ∏ᵢ ν(ω))
-2. By ConditionallyIID, the law of (X_{σ(0)},...,X_{σ(n-1)}) is also μ.bind(λω. ∏ᵢ ν(ω))
-3. Since both equal the same mixture, they are equal
-4. Therefore X is exchangeable -/
+**Statement:** If `X` is conditionally i.i.d., then it is exchangeable (invariant
+under finite permutations).
+
+**Proof strategy:**
+1. By `ConditionallyIID`, the law of `(X_0, ..., X_{n-1})` is `μ.bind(λω. ν(ω)^n)`
+2. By `ConditionallyIID`, the law of `(X_{σ(0)}, ..., X_{σ(n-1)})` is also `μ.bind(λω. ν(ω)^n)`
+3. Both equal the same mixture because permuting a product measure `ν^n` gives `ν^n` back
+   (by `pi_comp_perm`)
+4. Therefore `X` is exchangeable
+
+**Intuition:** Permuting the indices doesn't change the distribution because:
+- We're still integrating over the same random measure `ν`
+- For each fixed `ν`, permuting i.i.d. samples gives the same distribution
+
+**Mathematical significance:** This proves one direction of de Finetti's theorem.
+The converse (exchangeable ⇒ conditionally i.i.d.) is the deep content of de Finetti's
+representation theorem and requires constructing the de Finetti measure from the
+tail σ-algebra.
+
+This is the "easy" direction because we're given the mixing measure `ν` explicitly.
+-/
 theorem exchangeable_of_conditionallyIID {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX : ConditionallyIID μ X) : Exchangeable μ X := by
   intro n σ
