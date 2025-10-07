@@ -119,6 +119,25 @@ lemma orderEmbOfFin_mem (s : Finset ℕ) (i : Fin s.card) :
   classical
   simpa using Finset.orderEmbOfFin_mem (s:=s) (h:=rfl) i
 
+lemma orderEmbOfFin_surj (s : Finset ℕ) (x : ℕ) (hx : x ∈ s) :
+    ∃ i : Fin s.card, s.orderEmbOfFin rfl i = x := by
+  classical
+  -- orderEmbOfFin is an order isomorphism, hence bijective onto s
+  -- Use the fact that it's an injective function from a finite type to itself
+  have h_inj : Function.Injective (s.orderEmbOfFin rfl : Fin s.card → ℕ) :=
+    (s.orderEmbOfFin rfl).injective
+  have h_range_sub : ∀ i, s.orderEmbOfFin rfl i ∈ s := orderEmbOfFin_mem s
+  -- Define a function to s viewed as a subtype
+  let f : Fin s.card → s := fun i => ⟨s.orderEmbOfFin rfl i, h_range_sub i⟩
+  have hf_inj : Function.Injective f := by
+    intro i j hij
+    exact h_inj (Subtype.ext_iff.mp hij)
+  -- Injective function between finite types of equal cardinality is surjective
+  have hf_surj : Function.Surjective f := Fintype.surjective_of_injective hf_inj
+  obtain ⟨i, hi⟩ := hf_surj ⟨x, hx⟩
+  use i
+  exact Subtype.ext_iff.mp hi
+
 end FinsetOrder
 
 omit [MeasurableSpace Ω] [MeasurableSpace α] in
@@ -491,18 +510,100 @@ lemma contractable_dist_eq_on_cylinders
         have : tail i' < tail j' := htail_mono (Fin.succ_lt_succ_iff.mp hij)
         omega
 
-  -- TODO: express the event `{ω | zeroConstraint ω ∧ tailCondition ω}` as the preimage
-  -- then express the event `{ω | zeroConstraint ω ∧ tailCondition ω}` as the preimage
-  -- of a measurable cylinder in `(Fin (n + 1) → α)` under the maps defined above.
-  -- Once that identification is in place, contractability gives the desired measure
-  -- equality between the `k`- and `m`-versions.
-  --
-  -- Required sub-lemmas:
-  -- * `StrictMono (Fin.cases 0 (fun i => tail i))`
-  -- * `StrictMono fun i => m + k_m i`
-  -- * `StrictMono fun i => match i with | 0 => k | Fin.succ i' => m + tail i'`
-  -- * event measurability & identification with the original cylinder
-  sorry
+  -- Define the target cylinder set in (Fin (n+1) → α)
+  -- This encodes: first coordinate in B (with zero constraint if present), tail coordinates in their respective sets
+  let T : Set (Fin (n + 1) → α) :=
+    {f | (if h0 : 0 ∈ s then f 0 ∈ B ∩ t 0 h0 else f 0 ∈ B) ∧
+         ∀ i : Fin n, f (Fin.succ i) ∈ t0 (tail i) (htail_mem i)}
+
+  -- Key identifications: both events are preimages of T under their respective index maps
+  have h_m_event : {ω | X m ω ∈ B ∧ zeroConstraint ω ∧ tailCondition ω} =
+                   {ω | (fun ω i => X (k_map_m i) ω) ω ∈ T} := by
+    ext ω
+    simp only [Set.mem_setOf_eq, T, k_map_m, k_m, zeroConstraint, tailCondition]
+    constructor <;> intro h
+    · obtain ⟨hB, hzero, htail⟩ := h
+      constructor
+      · by_cases h0 : 0 ∈ s
+        · simp [h0, Fin.cases]
+          exact ⟨hB, by simpa [h0] using hzero⟩
+        · simp [h0, Fin.cases]
+          exact hB
+      · intro i
+        have hi_mem := htail_mem i
+        simp [Fin.cases]
+        exact htail (tail i) hi_mem
+    · obtain ⟨hfirst, htail_cond⟩ := h
+      refine ⟨?_, ?_, ?_⟩
+      · by_cases h0 : 0 ∈ s
+        · simp [h0, Fin.cases] at hfirst
+          exact hfirst.1
+        · simp [h0, Fin.cases] at hfirst
+          exact hfirst
+      · by_cases h0 : 0 ∈ s
+        · simp [h0, Fin.cases] at hfirst
+          simp [h0]
+          exact hfirst.2
+        · simp [h0]
+      · intro i hi
+        -- For i ∈ s0, orderEmbOfFin_surj gives us j with tail j = i
+        obtain ⟨j, hj_eq⟩ := orderEmbOfFin_surj s0 i hi
+        specialize htail_cond j
+        simp [Fin.cases] at htail_cond
+        -- htail_cond : X (m + tail j) ω ∈ t0 (tail j) (htail_mem j)
+        -- Goal: X (m + i) ω ∈ t0 i hi
+        -- hj_eq : tail j = i (since tail j is defined as orderEmbOfFin j)
+        convert htail_cond using 3
+        -- Need to show i = tail j
+        exact hj_eq.symm
+
+  have h_k_event : {ω | X k ω ∈ B ∧ zeroConstraint ω ∧ tailCondition ω} =
+                   {ω | (fun ω i => X (k_map_k i) ω) ω ∈ T} := by
+    ext ω
+    simp only [Set.mem_setOf_eq, T, k_map_k, zeroConstraint, tailCondition]
+    constructor <;> intro h
+    · obtain ⟨hB, hzero, htail⟩ := h
+      constructor
+      · by_cases h0 : 0 ∈ s
+        · simp [h0, Fin.cases]
+          refine ⟨hB, ?_⟩
+          simp [h0] at hzero
+          exact hzero
+        · simp [h0, Fin.cases]
+          exact hB
+      · intro i
+        have hi_mem := htail_mem i
+        simp [Fin.cases]
+        exact htail (tail i) hi_mem
+    · obtain ⟨hfirst, htail_cond⟩ := h
+      refine ⟨?_, ?_, ?_⟩
+      · by_cases h0 : 0 ∈ s
+        · simp [h0, Fin.cases] at hfirst
+          exact hfirst.1
+        · simp [h0, Fin.cases] at hfirst
+          exact hfirst
+      · by_cases h0 : 0 ∈ s
+        · simp [h0, Fin.cases] at hfirst
+          simp [h0]
+          exact hfirst.2
+        · simp [h0]
+      · intro i hi
+        -- Same as above: use orderEmbOfFin_surj
+        obtain ⟨j, hj_eq⟩ := orderEmbOfFin_surj s0 i hi
+        specialize htail_cond j
+        simp [Fin.cases] at htail_cond
+        convert htail_cond using 3
+        exact hj_eq.symm
+
+  -- Apply contractability: both sides map to same distribution
+  have h_contract_m := hX (n + 1) k_map_m hk_map_m_mono
+  have h_contract_k := hX (n + 1) k_map_k hk_map_k_mono
+
+  -- Rewrite using the event identifications
+  rw [h_event_rewrite, h_event_rewrite_k, h_m_event, h_k_event]
+
+  -- Both are preimages of T under measure-preserving maps
+  sorry  -- Final step: use h_contract_m and h_contract_k to show measure equality
 
 /-- Helper lemma: contractability gives the key distributional equality.
 
