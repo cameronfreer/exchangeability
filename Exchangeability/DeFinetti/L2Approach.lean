@@ -356,7 +356,7 @@ theorem l2_contractability_bound
         = 2 * ∑ j ∈ Pos, c j := hdouble
       _ ≤ 2 * ∑ j ∈ Pos, p j := mul_le_mul_of_nonneg_left hle_p (by norm_num)
       _ ≤ 2 * 1 := mul_le_mul_of_nonneg_left hle_one (by norm_num)
-      _ = 2 := by ring
+      _ = 2 := by norm_num
   
   -- Step 1: E(∑cᵢξᵢ)² = E(∑cᵢ(ξᵢ-m))² using ∑cⱼ = 0
   have step1 : ∫ ω, (∑ i, c i * ξ i ω)^2 ∂μ =

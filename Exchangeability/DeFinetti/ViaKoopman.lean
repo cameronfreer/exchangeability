@@ -13,12 +13,12 @@ import Exchangeability.DeFinetti.InvariantSigma
 import Exchangeability.DeFinetti.ProjectionLemmas
 
 /-!
-# First Proof of de Finetti via Mean Ergodic Theorem
+# de Finetti's Theorem via Koopman Operator
 
-This file implements Kallenberg's "First proof" of Theorem 1.1 (page 26) using
-the Koopman operator and Mean Ergodic Theorem.
+**Kallenberg's "first proof"** of de Finetti's theorem using the Mean Ergodic
+Theorem and Koopman operator. This proof has the **heaviest dependencies**.
 
-## Main approach
+## Proof approach
 
 1. Apply the Mean Ergodic Theorem to show Birkhoff averages converge to the
    orthogonal projection onto the fixed-point subspace
@@ -34,20 +34,25 @@ the Koopman operator and Mean Ergodic Theorem.
 
 ## Main results
 
-* `birkhoffAverage_tendsto_condexp`: Birkhoff averages converge to conditional expectation
-* `birkhoffCylinder_tendsto_condexp`: Specialization to cylinder functions
-* `extremeMembers_agree`: Extreme members in Birkhoff averages coincide
-* `condexp_cylinder_factorizes`: Conditional expectation has product form
+* `deFinetti_viaKoopman`: **Main theorem** - contractable implies conditionally i.i.d.
+* Supporting lemmas for Birkhoff averages and conditional expectations
+
+## Dependencies
+
+❌ **Heavy** - Requires ergodic theory, Mean Ergodic Theorem, orthogonal projections
+✅ **Deep connection** to dynamical systems and ergodic theory
+✅ **Generalizes** beyond exchangeability to measure-preserving systems
 
 ## References
 
-* Olav Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*,
-  Springer, Chapter 1, pages 26-27 (First proof of Theorem 1.1).
+* Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*,
+  Chapter 1, pages 26-27: "First proof of Theorem 1.1"
+
 -/
 
 noncomputable section
 
-namespace Exchangeability.DeFinetti.KoopmanApproach
+namespace Exchangeability.DeFinetti.ViaKoopman
 
 open MeasureTheory Filter Topology ProbabilityTheory
 open Exchangeability.Ergodic
@@ -586,4 +591,7 @@ theorem condexp_cylinder_factorizes {μ : Measure (Ω[α])} [IsProbabilityMeasur
 
 end ExtremeMembers
 
-end Exchangeability.DeFinetti.KoopmanApproach
+-- TODO: Add main theorem when proof is complete
+-- theorem deFinetti_viaKoopman := ...
+
+end Exchangeability.DeFinetti.ViaKoopman

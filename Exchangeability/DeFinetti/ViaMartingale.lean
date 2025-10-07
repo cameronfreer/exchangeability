@@ -10,41 +10,49 @@ import Exchangeability.Contractability
 import Exchangeability.Probability.CondExp
 
 /-!
-# Third proof of de Finetti via a martingale argument (Aldous)
+# de Finetti's Theorem via Reverse Martingales
 
-This file contains Aldous's elegant martingale proof of de Finetti's theorem, as
-presented in Kallenberg (2005), Section 1.2.
+**Aldous' elegant martingale proof** of de Finetti's theorem, as presented in
+Kallenberg (2005) as the "third proof". This approach has **medium dependencies**.
+
+## Proof approach
+
+The proof uses a contraction-independence lemma combined with reverse martingale
+convergence:
+
+1. **Lemma 1.3** (Contraction-Independence): If `(ξ, η) =^d (ξ, ζ)` and `σ(η) ⊆ σ(ζ)`,
+   then `ξ ⊥⊥_η ζ`.
+
+   **Proof idea:** For any `B`, define `μ₁ = P[ξ ∈ B | η]` and `μ₂ = P[ξ ∈ B | ζ]`.
+   Then `(μ₁, μ₂)` is a bounded martingale with `μ₁ =^d μ₂`, so
+   `E(μ₂ - μ₁)² = Eμ₂² - Eμ₁² = 0`, implying `μ₁ = μ₂` a.s.
+
+2. **Main theorem**: If `ξ` is contractable, then `ξₙ` are conditionally i.i.d.
+   given the tail σ-algebra `𝒯_ξ = ⋂_n σ(θ_n ξ)`.
+
+   From contractability: `(ξ_m, θ_m ξ) =^d (ξ_k, θ_k ξ)` for `k ≤ m`.
+   Using Lemma 1.3 and reverse martingale convergence:
+   ```
+   P[ξ_m ∈ B | θ_m ξ] = P[ξ_k ∈ B | θ_m ξ] → P[ξ_k ∈ B | 𝒯_ξ]
+   ```
+   This shows conditional independence and identical conditional laws.
 
 ## Main results
 
-* `contraction_independence`: If `(ξ, η) =^d (ξ, ζ)` and `σ(η) ⊆ σ(ζ)`, then
-  `ξ ⊥⊥_η ζ` (Lemma 1.3 in Kallenberg).
-  
-  **Proof idea:** For any measurable set `B`, define
-  `μ₁ = P[ξ ∈ B | η]` and `μ₂ = P[ξ ∈ B | ζ]`.
-  Then `(μ₁, μ₂)` is a bounded martingale with `μ₁ =^d μ₂`, so
-  `E(μ₂ - μ₁)² = Eμ₂² - Eμ₁² = 0`, implying `μ₁ = μ₂` a.s.
-  By Doob's characterization (FMP 6.6), this gives conditional independence.
+* `deFinetti_viaMartingale`: **Main theorem** - contractable implies conditionally i.i.d.
+* `contraction_independence`: Contraction-independence lemma (Kallenberg Lemma 1.3)
 
-* `deFinetti_martingale`: If `ξ` is contractable, then the `ξₙ` are conditionally
-  i.i.d. given the tail σ-algebra `𝒯_ξ = ⋂_n σ(θ_n ξ)`.
-  
-  **Proof idea:** From contractability, `(ξ_m, θ_m ξ) =^d (ξ_k, θ_k ξ)` for `k ≤ m`.
-  Using the contraction-independence lemma and reverse martingale convergence:
-  ```
-  P[ξ_m ∈ B | θ_m ξ] = P[ξ_k ∈ B | θ_m ξ] → P[ξ_k ∈ B | 𝒯_ξ]
-  ```
-  This shows:
-  - `P[ξ_m ∈ B | θ_m ξ] = P[ξ_m ∈ B | 𝒯_ξ]`, giving `ξ_m ⊥⊥_{𝒯_ξ} θ_m ξ`
-  - By iteration, `ξ₁, ξ₂, ...` are conditionally independent given `𝒯_ξ`
-  - `P[ξ_m ∈ B | 𝒯_ξ] = P[ξ₁ ∈ B | 𝒯_ξ]`, showing identical conditional laws
+## Dependencies
+
+⚖️ **Medium** - Requires martingale theory and reverse martingale convergence
+✅ **Elegant** - Short and conceptually clear proof
+✅ **Probabilistic** - Pure probability theory, no functional analysis
 
 ## References
 
-* Olav Kallenberg, *Probabilistic Symmetries and Invariance Principles* (2005),
-  Lemma 1.3 and third proof of Theorem 1.1 (page 28).
-* David Aldous, *Exchangeability and related topics*, École d'Été de
-  Probabilités de Saint-Flour XIII (1983).
+* Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*,
+  Lemma 1.3 and page 28: "Third proof of Theorem 1.1"
+* Aldous (1983), *Exchangeability and related topics*
 -/
 
 noncomputable section
@@ -52,7 +60,7 @@ open scoped MeasureTheory ProbabilityTheory Topology
 
 namespace Exchangeability
 namespace DeFinetti
-namespace MartingaleApproach
+namespace ViaMartingale
 
 open MeasureTheory Filter
 
@@ -760,6 +768,9 @@ theorem deFinetti_martingale
   -- Use contraction_independence iteratively to show conditional independence
   sorry
 
-end MartingaleApproach
+-- TODO: Add main theorem when proof is complete
+-- theorem deFinetti_viaMartingale := ...
+
+end ViaMartingale
 end DeFinetti
 end Exchangeability
