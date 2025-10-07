@@ -91,7 +91,7 @@ according to `ν`.
 Kolmogorov's extension theorem. We will show that this family is projective
 (consistent under marginalization) and then extend it to an infinite product.
 -/
-def iidProjectiveFamily (ν : Measure α) [IsProbabilityMeasure ν] :
+def iidProjectiveFamily {ν : Measure α} [IsProbabilityMeasure ν] :
     ∀ I : Finset ℕ, Measure (∀ _ : I, α) :=
   fun I => Measure.pi (fun (_ : I) => ν)
 
@@ -109,8 +109,8 @@ coordinate is independently distributed.
 which proves projectivity for any family of probability measures. For constant
 families (same measure on each coordinate), the result is immediate.
 -/
-lemma iidProjectiveFamily_projective (ν : Measure α) [IsProbabilityMeasure ν] :
-    @IsProjectiveMeasureFamily ℕ (fun _ => α) (fun _ => inferInstance) (iidProjectiveFamily ν) :=
+lemma iidProjectiveFamily_projective {ν : Measure α} [IsProbabilityMeasure ν] :
+    @IsProjectiveMeasureFamily ℕ (fun _ => α) (fun _ => inferInstance) (iidProjectiveFamily (ν:=ν)) :=
   @isProjectiveMeasureFamily_pi ℕ (fun _ => α) (fun _ => inferInstance) (fun _ => ν) (fun _ => inferInstance)
 
 /--
@@ -150,8 +150,8 @@ coordinates in `I`, we recover the finite product measure `ν^I`.
 
 This is the defining property from Kolmogorov's extension theorem.
 -/
-lemma iidProduct_isProjectiveLimit (ν : Measure α) [IsProbabilityMeasure ν] :
-    @IsProjectiveLimit ℕ (fun _ => α) (fun _ => inferInstance) (iidProduct ν) (iidProjectiveFamily ν) :=
+lemma iidProduct_isProjectiveLimit {ν : Measure α} [IsProbabilityMeasure ν] :
+    @IsProjectiveLimit ℕ (fun _ => α) (fun _ => inferInstance) (iidProduct ν) (iidProjectiveFamily (ν:=ν)) :=
   fun I => by simp only [iidProduct, iidProjectiveFamily, Measure.infinitePi_map_restrict]
 
 namespace iidProduct
@@ -163,11 +163,11 @@ variable (ν : Measure α) [IsProbabilityMeasure ν]
 This follows from the projective limit characterization: each finite product is a
 probability measure, so the projective limit is too. -/
 instance : IsProbabilityMeasure (iidProduct ν) := by
-  have : ∀ I : Finset ℕ, IsProbabilityMeasure (iidProjectiveFamily ν I) := fun I => by
+  have : ∀ I : Finset ℕ, IsProbabilityMeasure (iidProjectiveFamily (ν:=ν) I) := fun I => by
     show IsProbabilityMeasure (Measure.pi (fun (_ : I) => ν))
     infer_instance
   exact @IsProjectiveLimit.isProbabilityMeasure ℕ (fun _ => α) (fun _ => inferInstance)
-    (iidProjectiveFamily ν) (iidProduct ν) this (iidProduct_isProjectiveLimit ν)
+    (iidProjectiveFamily (ν:=ν)) (iidProduct ν) this (iidProduct_isProjectiveLimit (ν:=ν))
 
 /--
 Marginal distributions on arbitrary finite subsets match the finite products.
@@ -180,9 +180,9 @@ we get a finite i.i.d. sample with the same marginal distribution.
 
 This is a direct consequence of the projective limit characterization.
 -/
-lemma cylinder_finset (I : Finset ℕ) :
+lemma cylinder_finset {I : Finset ℕ} :
     (iidProduct ν).map I.restrict = Measure.pi fun _ : I => ν :=
-  iidProduct_isProjectiveLimit ν I
+  iidProduct_isProjectiveLimit (ν:=ν) I
 
 /--
 The distribution on the first `n` coordinates is the n-fold product `ν^n`.
@@ -197,7 +197,7 @@ sample of size `n`.
 (sets of the form `∏ᵢ Sᵢ`). This uses `Measure.pi_eq` and the characterization
 of `iidProduct` via `infinitePi_pi`.
 -/
-lemma cylinder_fintype (n : ℕ) :
+lemma cylinder_fintype {n : ℕ} :
     (iidProduct ν).map (fun f : ℕ → α => fun i : Fin n => f i) =
       Measure.pi fun _ : Fin n => ν := by
   -- Show both measures agree on all measurable rectangles
@@ -268,7 +268,7 @@ the product over `s` by permutation of the product.
 that i.i.d. ⇒ fully exchangeable ⇒ exchangeable, completing one direction of
 de Finetti's equivalence.
 -/
-lemma perm_eq (σ : Equiv.Perm ℕ) :
+lemma perm_eq {σ : Equiv.Perm ℕ} :
     (iidProduct ν).map (fun f => f ∘ σ) = iidProduct ν := by
   unfold iidProduct
 
