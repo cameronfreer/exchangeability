@@ -236,7 +236,7 @@ theorem measure_eq_of_fin_marginals_eq {μ ν : Measure (ℕ → α)}
       ((measurable_prefixProj (α:=α) 1).aemeasurable)]
       using h 1 Set.univ MeasurableSet.univ
   apply MeasureTheory.ext_of_generate_finite (C:=prefixCylinders (α:=α))
-  · simpa [generateFrom_prefixCylinders (α:=α)]
+  · simp [generateFrom_prefixCylinders (α:=α)]
   · exact isPiSystem_prefixCylinders (α:=α)
   · intro A hA
     rcases hA with ⟨n, S, hS, rfl⟩
@@ -337,7 +337,7 @@ lemma fullyExchangeable_iff_pathLaw_invariant {μ : Measure Ω}
           = Measure.map (fun ω => fun i : ℕ => X (π i) ω) μ := by
       have := Measure.map_map (μ:=μ) (measurable_reindex (α:=α) π)
           (measurable_pi_lambda _ (fun i => hX i))
-      simp [pathLaw, Function.comp, reindex_apply] at this
+      simp at this
       exact this
     have hpath : pathLaw (α:=α) μ X =
         Measure.map (fun ω => fun i : ℕ => X i ω) μ := by
@@ -350,7 +350,7 @@ lemma fullyExchangeable_iff_pathLaw_invariant {μ : Measure Ω}
           = Measure.map (fun ω => fun i : ℕ => X (π i) ω) μ := by
       have := Measure.map_map (μ:=μ) (measurable_reindex (α:=α) π)
           (measurable_pi_lambda _ (fun i => hX i))
-      simp [pathLaw, Function.comp, reindex_apply] at this
+      simp at this
       exact this
     have hpath : pathLaw (α:=α) μ X =
         Measure.map (fun ω => fun i : ℕ => X i ω) μ := by
@@ -407,10 +407,10 @@ def approxEquiv :
         apply π.symm_apply_eq.2
         exact hj
       have hjm : (π.symm y.1 : ℕ) < permBound π n :=
-        lt_of_lt_of_le (by simpa [hj_eq] using hj_lt)
+        lt_of_lt_of_le (by simp [hj_eq, hj_lt])
           (le_permBound (π:=π) (n:=n))
       refine ⟨⟨π.symm y.1, hjm⟩, ?_⟩
-      simpa [hj_eq]
+      simp [hj_eq]
     · intro x
       ext
       simp
@@ -429,7 +429,7 @@ lemma approxPerm_apply_cast (i : Fin n) :
       = ⟨π i, lt_permBound_fin (π:=π) (n:=n) i⟩ := by
   classical
   have hmem : ((Fin.castLE (le_permBound (π:=π) (n:=n)) i) : ℕ) < n := by
-    simpa using i.isLt
+    simp [i.isLt]
   have := Equiv.extendSubtype_apply_of_mem
       (e:=approxEquiv (π:=π) (n:=n))
       (x:=Fin.castLE (le_permBound (π:=π) (n:=n)) i)
@@ -493,7 +493,7 @@ lemma marginals_perm_eq {μ : Measure Ω} (X : ℕ → Ω → α)
         ((takePrefix (α:=α) hm) ∘ fun ω => fun i : Fin m => X i ω)
           = fun ω => fun i : Fin n => X i ω := by
       funext ω i
-      simp [Function.comp, takePrefix, castLE_coe_nat]
+      simp [Function.comp, takePrefix]
     simpa [Function.comp, hcomp₁, hcomp₂] using hσ''
 
 /-- Exchangeability and full exchangeability coincide for probability measures. -/
