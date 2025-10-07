@@ -68,6 +68,59 @@ def path (X : ℕ → Ω → α) : Ω → (ℕ → α) := fun ω n => X n ω
 def shiftRV (X : ℕ → Ω → α) (m : ℕ) : Ω → (ℕ → α) :=
   fun ω n => X (m + n) ω
 
+section SequenceShift
+
+variable {β : Type*} [MeasurableSpace β]
+
+/-- Shift a sequence by dropping the first `d` entries. -/
+def shiftSeq (d : ℕ) (f : ℕ → β) : ℕ → β := fun n => f (n + d)
+
+@[simp]
+lemma shiftSeq_apply (d : ℕ) (f : ℕ → β) (n : ℕ) :
+    shiftSeq d f n = f (n + d) := rfl
+
+lemma measurable_shiftSeq (d : ℕ) :
+    Measurable (shiftSeq (β:=β) d) := by
+  classical
+  refine measurable_pi_iff.mpr ?_
+  intro n
+  -- Evaluation at `n + d` is measurable in the product σ-algebra.
+  have h := (Pi.measurable_eval (fun _ : ℕ => β) (n + d))
+  simpa [shiftSeq] using h
+
+lemma forall_mem_erase {γ : Type*} [DecidableEq γ]
+    {s : Finset γ} {a : γ} {P : γ → Prop} (ha : a ∈ s) :
+    (∀ x ∈ s, P x) ↔ P a ∧ ∀ x ∈ s.erase a, P x := by
+  constructor
+  · intro h
+    refine ⟨h _ ha, ?_⟩
+    intro x hx
+    exact h _ (Finset.mem_of_mem_erase hx)
+  · rintro ⟨haP, hrest⟩ x hx
+    by_cases hxa : x = a
+    · simpa [hxa] using haP
+    · have hx' : x ∈ s.erase a := by
+        exact Finset.mem_erase.mpr ⟨hxa, hx⟩
+      exact hrest _ hx'
+
+end SequenceShift
+
+section FinsetOrder
+
+open Finset
+
+lemma orderEmbOfFin_strictMono (s : Finset ℕ) :
+    StrictMono fun i : Fin s.card => s.orderEmbOfFin rfl i := by
+  classical
+  simpa using (s.orderEmbOfFin rfl).strictMono
+
+lemma orderEmbOfFin_mem (s : Finset ℕ) (i : Fin s.card) :
+    s.orderEmbOfFin rfl i ∈ s := by
+  classical
+  simpa using Finset.orderEmbOfFin_mem (s:=s) (h:=rfl) i
+
+end FinsetOrder
+
 omit [MeasurableSpace Ω] [MeasurableSpace α] in
 @[simp]
 lemma path_apply (X : ℕ → Ω → α) (ω n) :
@@ -147,23 +200,26 @@ end Measurability
 lemma revFiltration_antitone (X : ℕ → Ω → α) :
     Antitone (revFiltration X) := by
   -- Goal: m ≤ k ⇒ revFiltration X k ≤ revFiltration X m (i.e., σ(θₖX) ⊆ σ(θₘX)).
-  -- Key: shiftRV X k = (fun f n => f (k - m + n)) ∘ (shiftRV X m)
   intro m k hmk
-  simp only [revFiltration]
-  -- Show: comap (shiftRV X k) ≤ comap (shiftRV X m)
-  -- Define the "drop" function that shifts a sequence
-  let drop : (ℕ → α) → (ℕ → α) := fun f n => f (k - m + n)
-  -- Key equality: shiftRV X k = drop ∘ shiftRV X m
-  have h_eq : shiftRV X k = drop ∘ shiftRV X m := by
-    ext ω n
-    simp [shiftRV, drop]
-    congr 1
-    omega
-  rw [h_eq]
-  -- comap (drop ∘ shiftRV X m) = comap (shiftRV X m) (comap drop)
-  -- and comap (shiftRV X m) (comap drop) ≤ comap (shiftRV X m) ⊤
-  erw [MeasurableSpace.comap_comp]
-  exact MeasurableSpace.comap_mono le_top
+  classical
+  have hcomp :
+      shiftRV X k = (shiftSeq (α:=α) (k - m)) ∘ shiftRV X m := by
+    funext ω n
+    have hkm : m + (k - m) = k := by
+      simpa [Nat.add_comm] using (Nat.sub_add_cancel hmk)
+    have hsum :
+        m + (n + (k - m)) = k + n := by
+      calc
+        m + (n + (k - m))
+            = n + (m + (k - m)) := by
+                simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
+        _ = n + k := by simpa [hkm]
+        _ = k + n := Nat.add_comm _ _
+    simp [shiftSeq, shiftRV, Function.comp, hsum]
+  intro s hs
+  simp [revFiltration, hcomp, Set.preimage_preimage, Function.comp] at hs ⊢
+  rcases hs with ⟨t, ht, rfl⟩
+  refine ⟨_, (measurable_shiftSeq (α:=α) (k - m)).measurableSet_preimage ht, rfl⟩
 
 /-- If `X` is contractable, then so is each of its shifts `θₘ X`. -/
 lemma shift_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
@@ -279,23 +335,123 @@ lemma contractable_dist_eq_on_cylinders
     (s : Finset ℕ) (t : ∀ i ∈ s, Set α) (ht : ∀ i (hi : i ∈ s), MeasurableSet (t i hi)) :
     μ {ω | X m ω ∈ B ∧ ∀ i (hi : i ∈ s), X (m + i) ω ∈ t i hi}
       = μ {ω | X k ω ∈ B ∧ ∀ i (hi : i ∈ s), X (m + i) ω ∈ t i hi} := by
-  -- Proof sketch:
-  -- The cylinder event involves coordinates at positions m, m+i₁, m+i₂, ... (for i in s)
-  -- and k, m+i₁, m+i₂, ... respectively.
+  classical
+  -- Remove the `0`-coordinate from the tail and fold it into the base set.
+  set s0 : Finset ℕ := s.erase 0
+  have hs0_subset : s0 ⊆ s := Finset.erase_subset _ _
+  let t0 : ∀ i ∈ s0, Set α := fun i hi => t i (hs0_subset hi)
+  have ht0 : ∀ i (hi : i ∈ s0), MeasurableSet (t0 i hi) := by
+    intro i hi
+    simpa [t0] using ht i (hs0_subset hi)
+  let B0 : Set α :=
+    if h0 : 0 ∈ s then B ∩ t 0 h0 else B
+  have hB0 : MeasurableSet B0 := by
+    classical
+    by_cases h0 : 0 ∈ s
+    · have h0_meas := ht 0 h0
+      simpa [B0, h0, hB] using hB.inter h0_meas
+    · simpa [B0, h0, hB]
+  -- The event can be rewritten using the adjusted σ-algebra data.
+  have h_event_rewrite :
+      {ω | X m ω ∈ B ∧ ∀ i (hi : i ∈ s), X (m + i) ω ∈ t i hi}
+        =
+      {ω | X m ω ∈ B0 ∧ ∀ i (hi : i ∈ s0), X (m + i) ω ∈ t0 i hi} := by
+    classical
+    by_cases h0 : 0 ∈ s
+    · -- With `0` present we fold its constraint into `B0`.
+      ext ω; constructor <;> intro h
+      · rcases h with ⟨hBm, htail⟩
+        have h0_tail := htail 0 h0
+        refine ⟨?_, ?_⟩
+        · simpa [B0, h0, Nat.add_zero] using And.intro hBm h0_tail
+        · intro i hi
+          have hi_mem := hs0_subset hi
+          have htail' := htail i hi_mem
+          simpa [t0, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using htail'
+      · rcases h with ⟨hB0_mem, htail⟩
+        have hBm : X m ω ∈ B := by
+          have := hB0_mem
+          simpa [B0, h0] using this.1
+        have h0_tail : X (m + 0) ω ∈ t 0 h0 := by
+          have := hB0_mem
+          simpa [B0, h0, Nat.add_zero] using this.2
+        refine ⟨hBm, ?_⟩
+        intro i hi
+        by_cases hi0 : i = 0
+        · simpa [hi0, Nat.add_zero] using h0_tail
+        · have hi_mem : i ∈ s0 := Finset.mem_erase.mpr ⟨hi0, hi⟩
+          have := htail i hi_mem
+          simpa [t0, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using this
+    · -- Without `0`, nothing changes.
+      have hs0_eq : s0 = s := by
+        simpa [s0, h0] using Finset.erase_eq_of_not_mem h0
+      simp [B0, h0, hs0_eq, t0]
+  -- Same rewrite for the `k`-version.
+  have h_event_rewrite_k :
+      {ω | X k ω ∈ B ∧ ∀ i (hi : i ∈ s), X (m + i) ω ∈ t i hi}
+        =
+      {ω | X k ω ∈ B0 ∧ ∀ i (hi : i ∈ s0), X (m + i) ω ∈ t0 i hi} := by
+    classical
+    by_cases h0 : 0 ∈ s
+    · ext ω; constructor <;> intro h
+      · rcases h with ⟨hBk, htail⟩
+        have h0_tail := htail 0 h0
+        refine ⟨?_, ?_⟩
+        · have : X k ω ∈ B ∧ X (m + 0) ω ∈ t 0 h0 :=
+            ⟨hBk, by simpa [Nat.add_zero] using h0_tail⟩
+          simpa [B0, h0] using this
+        · intro i hi
+          have hi_mem := hs0_subset hi
+          have htail' := htail i hi_mem
+          simpa [t0, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using htail'
+      · rcases h with ⟨hB0_mem, htail⟩
+        have hBk : X k ω ∈ B := by
+          have := hB0_mem
+          simpa [B0, h0] using this.1
+        have h0_tail : X (m + 0) ω ∈ t 0 h0 := by
+          have := hB0_mem
+          simpa [B0, h0, Nat.add_zero] using this.2
+        refine ⟨hBk, ?_⟩
+        intro i hi
+        by_cases hi0 : i = 0
+        · simpa [hi0, Nat.add_zero] using h0_tail
+        · have hi_mem : i ∈ s0 := Finset.mem_erase.mpr ⟨hi0, hi⟩
+          have := htail i hi_mem
+          simpa [t0, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using this
+    · have hs0_eq : s0 = s := by
+        simpa [s0, h0] using Finset.erase_eq_of_not_mem h0
+      simp [B0, h0, hs0_eq, t0]
+  -- Work with the enumerated tail coordinates.
+  let n := s0.card
+  let tail : Fin n → ℕ := fun i => s0.orderEmbOfFin rfl i
+  have htail_mono : StrictMono tail := orderEmbOfFin_strictMono s0
+  have htail_mem : ∀ i, tail i ∈ s0 := orderEmbOfFin_mem s0
+  -- Tail indices are strictly positive (since 0 was erased).
+  have htail_pos : ∀ i, 0 < tail i := by
+    intro i
+    have hi_mem := htail_mem i
+    have : tail i ≠ 0 := by
+      have hi := Finset.mem_erase.mp hi_mem
+      exact hi.1
+    exact Nat.pos_of_ne_zero this
+  -- Build the strictly monotone index lists for the contractability lemma.
+  let k_m : Fin (n + 1) → ℕ :=
+    Fin.cases 0 (fun i => tail i)
+  let k_map_m : Fin (n + 1) → ℕ := fun i => m + k_m i
+  let k_map_k : Fin (n + 1) → ℕ := fun i =>
+    match i with
+    | ⟨0, _⟩ => k
+    | Fin.succ i' => m + tail i'
+  -- TODO: prove `StrictMono k_m` and `StrictMono k_map_m`, `StrictMono k_map_k`,
+  -- then use `Contractable.allStrictMono_eq` to compare the push-forward measures.
+  -- The desired cylinders can be expressed as preimages of a measurable set of
+  -- `(Fin (n + 1) → α)` under these maps.
   --
-  -- Key steps:
-  -- 1. Convert finset s to a sorted list to get strict ordering
-  -- 2. Build index functions j_m and j_k : Fin (s.card + 1) → ℕ where:
-  --    j_m(0) = m, j_m(i+1) = m + s.sort(i)
-  --    j_k(0) = k, j_k(i+1) = m + s.sort(i)
-  -- 3. Show both j_m and j_k are strictly monotone (uses k ≤ m and s.sort ordering)
-  -- 4. Express both cylinder sets as preimages under (fun ω i => X (j i) ω)
-  -- 5. Apply contractability: both distributions equal the canonical distribution
-  --
-  -- Required API:
-  -- - Finset.sort: convert finset to sorted list
-  -- - Connection between set membership and Measure.map preimages
-  -- - Product cylinder set lemmas
+  -- Required sub-lemmas:
+  -- * `StrictMono (Fin.cases 0 (fun i => tail i))`
+  -- * `StrictMono fun i => m + k_m i`
+  -- * `StrictMono fun i => match i with | 0 => k | Fin.succ i' => m + tail i'`
+  -- * event measurability & identification with the original cylinder
   sorry
 
 /-- Helper lemma: contractability gives the key distributional equality.
@@ -382,22 +538,32 @@ variable {μ : Measure Ω} [IsProbabilityMeasure μ]
 variable {X : ℕ → Ω → α}
 
 /-- 𝔽ₘ = σ(θₘ X). -/
-abbrev 𝔽 (X : ℕ → Ω → α) (m : ℕ) : MeasurableSpace Ω := revFiltration X m
+abbrev 𝔽 (m : ℕ) : MeasurableSpace Ω := revFiltration X m
+
+/-- The reverse filtration is decreasing; packaged for the martingale API. -/
+lemma filtration_antitone : Antitone 𝔽 := by
+  intro m n hmn
+  simpa [𝔽] using revFiltration_antitone X hmn
 
 /-- Mₘ := 𝔼[1_{Xₖ∈B} | 𝔽ₘ].
 The reverse martingale sequence for the indicator of X_k in B. -/
-def M (μ : Measure Ω) [IsProbabilityMeasure μ] (X : ℕ → Ω → α) (k : ℕ) (B : Set α) (m : ℕ) : Ω → ℝ :=
-  μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | revFiltration X m]
+def M (k : ℕ) (B : Set α) : ℕ → Ω → ℝ :=
+  fun m ω =>
+    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | 𝔽 m] ω
 
--- TODO (see CondExp.lean):
--- (1) 0 ≤ M k B m ≤ 1 a.s.
---     Lemma: condexp_indicator_bounds
--- (2) For m ≤ n, M k B n is 𝔽ₙ-measurable and E[M k B n | 𝔽ₘ] = M k B m a.s.
---     Lemmas: stronglyMeasurable_condexp, condexp_tower
--- (3) If (X m, θₘ X) =^d (X k, θₘ X), then M m B m = M k B m a.s.
---     Lemma: condexp_indicator_eq_of_dist_eq_and_le (already stated above)
--- (4) (M k B m)ₘ is a reverse martingale, so M k B m → 𝔼[1_{Xₖ∈B} | tailSigma X] a.s./L¹.
---     Lemma: condexp_tendsto_condexp_iInf (Lévy's downward theorem)
+-- TODO (CondExp.lean milestones):
+-- (1) `0 ≤ M k B m ω ≤ 1` a.s.
+--     API: `condexp_indicator_bounds`.
+-- (2) For `m ≤ n`, `M k B n` is `𝔽 n`-measurable and
+--     `μ[fun ω => M k B n ω | 𝔽 m] =ᵐ[μ] M k B m`.
+--     API: `condexp_tower`, `condexp_stronglyMeasurable`.
+-- (3) If `(X m, θₘ X) =^d (X k, θₘ X)`, then
+--     `M m B m =ᵐ[μ] M k B m`.
+--     API: `condexp_indicator_eq_of_dist_eq_and_le`.
+-- (4) `(fun n => M k B n ω)` is a reverse martingale that converges
+--     to `μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | tailSigma X] ω`.
+--     API: `condexp_tendsto_condexp_iInf` (Lévy's downward theorem) together with
+--     `filtration_antitone` and `tailSigma_eq_iInf_rev`.
 
 end reverse_martingale
 

@@ -149,9 +149,8 @@ This follows from measure-preservation: if `T` preserves the measure, then compo
 with `T` preserves the L² norm.
 -/
 lemma koopman_isometry {μ : Measure Ω} [IsProbabilityMeasure μ] (T : Ω → Ω) (hT : MeasurePreserving T μ μ) :
-    Isometry (koopman T hT) := by
-  simpa [koopman]
-    using (MeasureTheory.Lp.compMeasurePreservingₗᵢ ℝ T hT).isometry
+    Isometry (koopman T hT) :=
+  (MeasureTheory.Lp.compMeasurePreservingₗᵢ ℝ T hT).isometry
 /--
 The fixed-point subspace of a continuous linear map.
 
@@ -215,9 +214,12 @@ noncomputable def metProjection {μ : Measure Ω} [IsProbabilityMeasure μ]
   let S := fixedSpace (koopman T hT)
   let K := koopman T hT
   have hS_closed : IsClosed (S : Set (Lp ℝ 2 μ)) := by
-    have hset : (S : Set (Lp ℝ 2 μ)) = (fun x => K x - x) ⁻¹' ({0} : Set (Lp ℝ 2 μ)) := by
-      ext x; simp [S, fixedSpace, LinearMap.mem_eqLocus, K, sub_eq_zero]
-    simpa [hset] using isClosed_singleton.preimage (K.continuous.sub continuous_id)
+    have hset : (S : Set (Lp ℝ 2 μ)) = (fun x => K x - x) ⁻¹' {0} := by
+      ext x
+      simp only [Set.mem_preimage, Set.mem_singleton_iff, SetLike.mem_coe, sub_eq_zero]
+      rfl
+    rw [hset]
+    exact isClosed_singleton.preimage (K.continuous.sub continuous_id)
   haveI : CompleteSpace S := hS_closed.completeSpace_coe
   haveI : S.HasOrthogonalProjection := Submodule.HasOrthogonalProjection.ofCompleteSpace S
   exact S.subtypeL.comp S.orthogonalProjection
@@ -276,15 +278,12 @@ theorem birkhoffAverage_tendsto_metProjection
     simp [hnorm_eq]
   let S := LinearMap.eqLocus K.toLinearMap 1
   have hS_closed : IsClosed (S : Set (Lp ℝ 2 μ)) := by
-    classical
-    have hset : (S : Set (Lp ℝ 2 μ)) = (fun x => K x - x) ⁻¹' ({0} : Set (Lp ℝ 2 μ)) := by
+    have hset : (S : Set (Lp ℝ 2 μ)) = (fun x => K x - x) ⁻¹' {0} := by
       ext x
-      simp [S, LinearMap.eqLocus, sub_eq_zero]
-    have hcont : Continuous fun x => K x - x :=
-      K.continuous.sub continuous_id
-    have hclosed : IsClosed ((fun x => K x - x) ⁻¹' ({0} : Set (Lp ℝ 2 μ))) :=
-      isClosed_singleton.preimage hcont
-    simpa [hset] using hclosed
+      simp only [Set.mem_preimage, Set.mem_singleton_iff, SetLike.mem_coe, sub_eq_zero]
+      rfl
+    rw [hset]
+    exact isClosed_singleton.preimage (K.continuous.sub continuous_id)
   haveI : CompleteSpace S := hS_closed.completeSpace_coe
   haveI : S.HasOrthogonalProjection := Submodule.HasOrthogonalProjection.ofCompleteSpace S
   have h_tendsto :=
@@ -329,25 +328,14 @@ theorem range_projection_eq_fixedSpace
     {μ : Measure Ω} [IsProbabilityMeasure μ] (T : Ω → Ω)
     (hT : MeasurePreserving T μ μ)
     (P : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ)
-    (hP_fixed : ∀ g, g ∈ fixedSpace (koopman T hT) → P g = g)
-    (hP_construction : ∃ (S : Submodule ℝ (Lp ℝ 2 μ)) 
+    (hP_construction : ∃ (S : Submodule ℝ (Lp ℝ 2 μ))
         (proj : Lp ℝ 2 μ →L[ℝ] S),
-        S = fixedSpace (koopman T hT) ∧ P = S.subtypeL.comp proj) :
+        S = fixedSpace (koopman T hT) ∧ P = S.subtypeL.comp proj ∧
+        (∀ g ∈ S, P g = g)) :
     Set.range P = (fixedSpace (koopman T hT) : Set (Lp ℝ 2 μ)) := by
-  obtain ⟨SubSp, proj, rfl, rfl⟩ := hP_construction
-  -- Now we have: SubSp = fixedSpace (koopman T hT) and P = SubSp.subtypeL.comp proj
+  obtain ⟨SubSp, proj, rfl, rfl, hP_fixed⟩ := hP_construction
   ext x
-  constructor
-  · intro ⟨y, hy⟩
-    rw [← hy]
-    -- Forward: P y ∈ SubSp (= fixedSpace)
-    -- P y = SubSp.subtypeL (proj y)
-    -- Since proj y : SubSp, subtypeL maps it into SubSp as a set
-    simp only [ContinuousLinearMap.coe_comp', Function.comp_apply]
-    exact (proj y).property
-  · intro hx
-    -- Backward: x ∈ SubSp → x ∈ range P
-    use x
-    exact hP_fixed x hx
+  simp only [Set.mem_range, SetLike.mem_coe, ContinuousLinearMap.coe_comp', Function.comp_apply]
+  exact ⟨fun ⟨y, hy⟩ => hy ▸ (proj y).property, fun hx => ⟨x, hP_fixed x hx⟩⟩
 
 end Exchangeability.Ergodic

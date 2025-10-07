@@ -209,16 +209,12 @@ theorem projection_eq_orthogonalProjection_of_properties
   · -- subtypeL ∘ orthogonalProjection fixes S
     intro g hg
     simp only [ContinuousLinearMap.coe_comp', Function.comp_apply]
-    have h := Submodule.orthogonalProjection_mem_subspace_eq_self (⟨g, hg⟩ : S)
-    simpa using congrArg Subtype.val h
+    exact congrArg Subtype.val (Submodule.orthogonalProjection_mem_subspace_eq_self (⟨g, hg⟩ : S))
   · exact hP_idem
   · -- idempotence of subtypeL ∘ orthogonalProjection
-    apply ContinuousLinearMap.ext
-    intro x
+    ext x
     simp only [ContinuousLinearMap.coe_comp', Function.comp_apply]
-    -- orthogonalProjection is idempotent: projecting twice = projecting once
-    have h := Submodule.orthogonalProjection_mem_subspace_eq_self (S.orthogonalProjection x)
-    simpa using congrArg Subtype.val h
+    exact congrArg Subtype.val (Submodule.orthogonalProjection_mem_subspace_eq_self (S.orthogonalProjection x))
   · exact hP_sym
   · exact subtypeL_comp_orthogonalProjection_isSymmetric S
 
