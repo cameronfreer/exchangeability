@@ -144,9 +144,14 @@ theorem weighted_sums_converge_L1
   have hA_cauchy_L2 : ∀ n, ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
       eLpNorm (fun ω => A n m ω - A n ℓ ω) 2 μ < ENNReal.ofReal ε := by
     intro n ε hε
-    -- For contractable sequences, we can apply l2_contractability_bound
-    -- Key insight: As m, ℓ → ∞, the sup norm |1/m - 1/ℓ| → 0
-    -- The bound gives ∫(A n m - A n ℓ)² ≤ 2σ²(1-ρ)·sup|p_i - q_i| → 0
+    -- The key insight: for contractable sequences with bounded f,
+    -- the difference A n m - A n ℓ = (1/m)∑f(X_{n+k}) - (1/ℓ)∑f(X_{n+k})
+    -- can be bounded using the L² contractability bound.
+    -- As m,ℓ → ∞, sup|1/m·1_{k≤m} - 1/ℓ·1_{k≤ℓ}| → 0
+
+    -- For now, we'll use the simpler fact that contractability + boundedness
+    -- gives uniform L² bounds, which implies Cauchy convergence.
+    -- The detailed application of l2_contractability_bound is deferred.
     sorry  -- TODO: Apply l2_contractability_bound with uniform weights
            -- Need to extract σ², ρ from contractability assumption
            -- and show sup|1/m·1_{i≤m} - 1/ℓ·1_{i≤ℓ}| → 0
@@ -172,12 +177,15 @@ theorem weighted_sums_converge_L1
     intro n
     -- Use completeness of L¹: every Cauchy sequence converges
     -- We have (A n m)_m is Cauchy in L¹ from hA_cauchy_L1
-    -- Need to:
-    -- 1. Construct Lp representatives of A n m
-    -- 2. Apply CompleteSpace instance to get limit in Lp
-    -- 3. Extract underlying function as alphan
-    sorry  -- TODO: Use Lp.memLp_toLp, CauchySeq.tendsto_of_complete
-           -- The limit in Lp ℝ 1 μ gives us the alphan we need
+
+    -- The key fact: (A n m)_m is Cauchy in L¹, so it converges in Lp ℝ 1 μ by completeness
+    -- This step requires:
+    -- 1. Lift each A n m to Lp using MemLp.toLp (need to prove A n m ∈ L¹)
+    -- 2. Show the sequence is Cauchy in the Lp metric
+    -- 3. Apply CompleteSpace (Lp ℝ 1 μ) to get limit
+    -- 4. Extract the representative function as alphan
+    sorry  -- TODO: Detailed Lp API implementation
+           -- Use: MemLp.toLp, dist_toLp, CauchySeq.tendsto_of_complete, Lp.coeFn_of_mem
 
   -- Choose alpha n for each n
   choose alpha halpha_meas halpha_mem halpha_conv using h_exist_alpha
@@ -239,7 +247,7 @@ theorem weighted_sums_converge_L1
     -- Use the conversion theorem for p=1
     rw [MemLp.eLpNorm_eq_integral_rpow_norm one_ne_zero ENNReal.coe_ne_top h_memLp] at h_elpnorm
     -- Simplify: p.toReal = 1, so we get ∫ ‖f‖^1 = ∫ ‖f‖, and (...)^(1⁻¹) = ...^1 = ...
-    simp only [ENNReal.one_toReal, Real.rpow_one] at h_elpnorm
+    simp only [ENNReal.toReal_one, Real.rpow_one] at h_elpnorm
     -- After simplification: h_elpnorm : ENNReal.ofReal ((∫ a, ‖...‖ ∂μ)^1) < ENNReal.ofReal ε
     -- Simplify the ^1
     norm_num at h_elpnorm
@@ -253,9 +261,20 @@ theorem weighted_sums_converge_L1
     intro n ε hε
     rcases halpha_conv n ε hε with ⟨M, hM⟩
     refine ⟨M, fun m hm => ?_⟩
-    have := hM m hm
-    -- Same conversion, then unfold A to get the weighted sum form
-    sorry  -- TODO: Use eLpNorm_one_eq_lintegral_nnnorm, then unfold A
+    have h_elpnorm := hM m hm
+    -- Convert eLpNorm 1 to integral (same pattern as above)
+    have h_memLp : MemLp (fun ω => A n m ω - alpha n ω) 1 μ := by
+      apply MemLp.sub
+      · -- A n m is in L¹: bounded measurable on probability space → Lp for any p
+        sorry  -- TODO: Prove MemLp (A n m) 1 μ from boundedness of f
+               -- Use memLp_of_bounded or similar with bound M from hf_bdd
+      · exact halpha_mem n
+    rw [MemLp.eLpNorm_eq_integral_rpow_norm one_ne_zero ENNReal.coe_ne_top h_memLp] at h_elpnorm
+    simp only [ENNReal.toReal_one, Real.rpow_one] at h_elpnorm
+    norm_num at h_elpnorm
+    rw [ENNReal.ofReal_lt_ofReal_iff hε] at h_elpnorm
+    -- Now unfold A to get the weighted sum form
+    convert h_elpnorm using 1
 
 /-!
 ## Step 3: Reverse martingale convergence
