@@ -1,20 +1,48 @@
-/-
-Copyright (c) 2025 exchangeability contributors. All rights reserved.
-Released under Apache 2.0 license as described in the file LICENSE.
-Authors: exchangeability contributors
--/
 import Mathlib.Analysis.InnerProductSpace.Projection.Basic
 import Mathlib.Analysis.InnerProductSpace.Symmetric
 
 /-!
-# Helper lemmas for orthogonal projections
+# Orthogonal Projection Lemmas for de Finetti's Theorem
 
-This file contains helper lemmas about orthogonal projections that are used in the
-Koopman approach to de Finetti. These wrap and apply mathlib's projection theory.
+This file establishes key properties of orthogonal projections in Hilbert spaces that
+are used in the Koopman operator approach to de Finetti's theorem.
+
+## Mathematical background
+
+In the ergodic approach to de Finetti, we use the **Mean Ergodic Theorem** to show that
+Birkhoff averages converge to a projection onto the fixed-point subspace of the Koopman
+operator. The key technical challenge is identifying this projection and showing uniqueness.
+
+**Orthogonal projection:** For a closed subspace `S` of a Hilbert space `E`, the
+orthogonal projection `P : E → S` is the unique operator satisfying:
+1. **Range:** `P(E) = S`
+2. **Idempotence:** `P² = P` (projecting twice = projecting once)
+3. **Symmetry:** `P` is self-adjoint: `⟨Px, y⟩ = ⟨x, Py⟩`
+4. **Minimality:** `Px` is the closest point in `S` to `x`
 
 ## Main results
 
-* `orthogonalProjections_same_range_eq` : Uniqueness of orthogonal projections
+* `orthogonalProjections_same_range_eq`: **Uniqueness** - Two symmetric idempotent
+  operators with the same range must be equal. This identifies projections from the
+  Mean Ergodic Theorem.
+* `subtypeL_comp_orthogonalProjection_isSymmetric`: The composition of subtype
+  inclusion and orthogonal projection is symmetric.
+* `projection_eq_orthogonalProjection_of_properties`: A symmetric idempotent
+  operator with range `S` equals the orthogonal projection onto `S`.
+
+## Application to de Finetti
+
+In the ergodic proof of de Finetti:
+1. The Koopman operator `U` acts on `L²(μ)` by composition: `(Uf)(ω) = f(shift ω)`
+2. The Mean Ergodic Theorem gives convergence to the fixed-point subspace:
+   `n⁻¹ ∑ᵢ Uⁱf → Pf` where `P` projects onto `{f : Uf = f}`
+3. These lemmas show `P` is the conditional expectation onto the tail σ-algebra
+4. De Finetti's representation follows from this identification
+
+## References
+
+* Kallenberg, "Probabilistic Symmetries and Invariance Principles" (2005), Chapter 1
+* Krengel, "Ergodic Theorems" (1985), Chapter 1 (Mean Ergodic Theorem)
 -/
 
 noncomputable section
@@ -25,27 +53,35 @@ variable {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E] [InnerProductSpac
 
 local notation "⟪" x ", " y "⟫" => inner 𝕜 x y
 
-/-- Two continuous linear maps that both act as orthogonal projections onto the same
-closed subspace must be equal.
+/--
+**Uniqueness of orthogonal projections:** Symmetric idempotent operators with the same
+range are equal.
 
-**Mathematical Content:**
-The uniqueness of orthogonal projections in an inner product space. If `P` and `Q` are both
-symmetric (`IsSymmetric`) and idempotent (`P ∘ P = P`), they are the orthogonal projections
-onto their respective ranges. If their ranges are the same subspace `S`, then `P` and `Q` must
-be equal to the unique orthogonal projection onto `S`.
+**Statement:** If `P` and `Q` are both symmetric (self-adjoint) and idempotent (`P² = P`)
+continuous linear operators with the same range `S`, then `P = Q`.
 
-**Proof Strategy:**
-1. Use `ContinuousLinearMap.IsSymmetric.isIdempotent_iff_eq_orthogonalProjection` which states
-   that a symmetric operator `P` is idempotent if and only if it equals the orthogonal projection
-   onto its range (`orthogonalProjection (P.range)`).
-2. Apply this to both `P` and `Q`, using the hypotheses `hP_sym` and `hP_idem` (and similarly
-   for `Q`). This gives `P = orthogonalProjection P.range` and `Q = orthogonalProjection Q.range`.
-3. Use the hypotheses `hP_range` and `hQ_range` to show `P.range = S` and `Q.range = S`.
-4. Substitute these equalities to get `P = orthogonalProjection S` and `Q = orthogonalProjection S`.
-5. Conclude `P = Q`.
+**Mathematical significance:** This establishes uniqueness of orthogonal projections.
+In Hilbert space theory, there is exactly one orthogonal projection onto any given
+closed subspace. This is crucial for identifying the limiting projection in the Mean
+Ergodic Theorem.
 
-Note: The hypotheses `hP_fixes` and `hQ_fixes` are not needed for the proof, as they are
-consequences of the other properties of an orthogonal projection.
+**Intuition:** An orthogonal projection onto `S` is characterized by three properties:
+- **Idempotence:** Once you project onto `S`, projecting again does nothing
+- **Symmetry:** The projection respects the inner product structure
+- **Range:** The projection hits exactly `S`
+
+If two operators satisfy all three properties for the same `S`, they must be the same
+operator - there's only one way to project orthogonally onto a subspace.
+
+**Application to de Finetti:** The Mean Ergodic Theorem tells us Birkhoff averages
+converge to *some* projection onto the fixed-point subspace. This lemma identifies
+that projection as the unique orthogonal projection, which can then be recognized as
+the conditional expectation onto the tail σ-algebra.
+
+**Proof strategy:**
+1. Use mathlib's characterization: symmetric + idempotent ⟹ orthogonal projection
+2. Both `P` and `Q` equal `orthogonalProjection(range)`
+3. Since `range(P) = range(Q) = S`, we get `P = Q = orthogonalProjection(S)`
 -/
 theorem orthogonalProjections_same_range_eq
     [CompleteSpace E]
@@ -108,11 +144,20 @@ theorem orthogonalProjections_same_range_eq
   ext x
   simpa using congrArg (fun f : E →ₗ[𝕜] E => f x) h_toLinear_eq
 
-/-- The composition of subtypeL and orthogonalProjection is symmetric.
+/--
+The composition of subtype inclusion and orthogonal projection is symmetric.
 
-This shows that if you project onto a closed subspace and then include back into the
-ambient space, the resulting operator is self-adjoint. This is used to show projections
-from the Mean Ergodic Theorem are symmetric.
+**Statement:** If `S` is a closed subspace with orthogonal projection, then the operator
+`subtypeL ∘ orthogonalProjection : E → E` (project onto `S`, then include back into `E`)
+is self-adjoint.
+
+**Intuition:** This says that "project onto `S` and include back" is a symmetric operator
+on the ambient space. This is not obvious from the definition but follows from the
+orthogonality of the projection.
+
+**Why this matters:** When we identify projections from the Mean Ergodic Theorem, we need
+to verify they are symmetric. This lemma provides that verification for projections
+constructed via orthogonal projection onto a subspace.
 -/
 theorem subtypeL_comp_orthogonalProjection_isSymmetric
     [CompleteSpace E]
@@ -123,8 +168,19 @@ theorem subtypeL_comp_orthogonalProjection_isSymmetric
   -- orthogonalProjection is symmetric, and subtypeL is just the coercion
   exact Submodule.inner_starProjection_left_eq_right S x y
 
-/-- A projection that fixes a subspace S and has range S equals the orthogonal projection
-when it's symmetric and idempotent. -/
+/--
+A symmetric idempotent operator with the right properties is the orthogonal projection.
+
+**Statement:** If `P` is a symmetric idempotent operator that fixes `S` and has range `S`,
+then `P` equals the orthogonal projection `subtypeL ∘ orthogonalProjection`.
+
+**Intuition:** This identifies an abstract projection (given by properties) as the
+concrete orthogonal projection. If an operator has all the right properties (symmetric,
+idempotent, correct range), it must be *the* orthogonal projection.
+
+**Application:** This is the bridge between the abstract projection from the Mean Ergodic
+Theorem and the concrete orthogonal projection we can work with in de Finetti's proof.
+-/
 theorem projection_eq_orthogonalProjection_of_properties
     [CompleteSpace E]
     (P : E →L[𝕜] E)
