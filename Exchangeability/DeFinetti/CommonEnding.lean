@@ -355,10 +355,10 @@ lemma product_bounded {ι : Type*} [Fintype ι] {α : Type*}
   intro x
   simpa using key Finset.univ x
 
-/-- **Key Bridge Lemma**: If E[f(X_i) | tail] = ∫ f dν for all bounded measurable f,
-then for indicator functions we get E[𝟙_B(X_i) | tail] = ν(B).
-
-/-- This is the crucial step connecting the abstract conditional expectation property
+/-- **Key Bridge Lemma**: If `E[f(Xᵢ) | tail] = ∫ f dν` for all bounded measurable `f`,
+then for indicator functions we get `E[𝟙_B(Xᵢ) | tail] = ν(B)`. This is the crucial
+step connecting the abstract conditional expectation property to concrete
+probability statements about measurable sets.
 to concrete probability statements about measurable sets.
 
 Proof outline:
@@ -971,40 +971,6 @@ theorem complete_from_directing_measure
   -- Use the skeleton lemma (to be completed later) to produce ConditionallyIID
   exact conditional_iid_from_directing_measure X hX_meas ν hν_prob hν_meas hν_dir
 
-/-!
-## Summary and Next Steps
-
-This file establishes the infrastructure for the common ending of Kallenberg's two proofs
-of de Finetti's theorem. The key components now in place:
-
-### Completed:
-1. **Mathlib Integration**:
-   - Using `Measure.pi` from `Mathlib.MeasureTheory.Constructions.Pi` (no axioms!)
-   - Using `Kernel` and `IsMarkovKernel` from `Mathlib.Probability.Kernel.Basic`
-   - Using `condExp` notation μ[f|m] from mathlib's conditional expectation
-   - Proved `pi_isProbabilityMeasure` instance for product of probability measures
-
-2. **Tail σ-algebra infrastructure** (FMP 10.2-10.4):
-   - `shift`: the shift operator on sequences with basic lemmas
-   - `IsShiftInvariant`: shift-invariant sets with characterization
-   - `invariantSigmaField`: σ-field of shift-invariant sets
-   - `IsAlmostShiftInvariant`: almost shift-invariant sets
-   - `tailSigmaAlgebra`: tail σ-algebra (currently using invariant σ-field as proxy)
-   - `IsTailMeasurable`, `IsAlmostTailMeasurable`: tail-measurable functions
-
-3. **Ergodic theory connections**:
-   - `exchangeable_implies_shift_invariant`: links exchangeability to measure-preserving shifts
-   - `isTailMeasurable_iff_shift_invariant`: FMP 10.3 characterization
-
-4. **Monotone class theorem**:
-   - `monotone_class_theorem`: fully implemented using mathlib's `induction_on_inter`
-   - Helper lemmas: `indicator_bounded`, `product_bounded`
-   - `condExp_indicator_eq_measure`: bridge from conditional expectations to measures
-
-5. **Kernel infrastructure**:
-   - Integration with mathlib's `Kernel` type and `IsMarkovKernel`
-   - Explicit kernel construction in `complete_from_directing_measure`
-   - Framework for ConditionallyIID using mathlib's infrastructure
-
+-- Summary and next steps for the common ending are recorded in the project notes.
 
 end Exchangeability.DeFinetti.CommonEnding
