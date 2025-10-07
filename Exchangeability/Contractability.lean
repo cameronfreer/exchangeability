@@ -285,13 +285,13 @@ lemma Contractable.symm {μ : Measure Ω} {X : ℕ → Ω → α}
 
 /-- The infinite i.i.d. product measure exists for any probability measure.
 Constructed via Ionescu-Tulcea in `Exchangeability.Probability.InfiniteProduct`. -/
-lemma iidProduct_exists (ν₀ : Measure α) [IsProbabilityMeasure ν₀] :
+lemma iidProduct_exists {ν₀ : Measure α} [IsProbabilityMeasure ν₀] :
     ∃ μ : Measure (ℕ → α), IsProbabilityMeasure μ :=
   ⟨Exchangeability.Probability.iidProduct ν₀, inferInstance⟩
 
 /-- The i.i.d. product of identical measures is permutation-invariant.
 This is a consequence of the construction via Ionescu-Tulcea. -/
-lemma iidProduct_perm_invariant (ν₀ : Measure α) [IsProbabilityMeasure ν₀]
+lemma iidProduct_perm_invariant {ν₀ : Measure α} [IsProbabilityMeasure ν₀]
     (σ : Equiv.Perm ℕ) :
     Measure.map (fun f : ℕ → α => f ∘ σ)
       (Exchangeability.Probability.iidProduct ν₀) =
@@ -460,7 +460,7 @@ lemma measure_map_comp_perm {μ : Measure Ω} {n : ℕ}
 
 /-- Special case: The identity function on Fin n is strictly monotone when
 viewed as a function to ℕ. -/
-lemma fin_val_strictMono (n : ℕ) : StrictMono (fun i : Fin n => i.val) := by
+lemma fin_val_strictMono {n : ℕ} : StrictMono (fun i : Fin n => i.val) := by
   intro i j hij
   exact hij
 
@@ -496,7 +496,7 @@ lemma strictMono_comp {m n : ℕ} (f : Fin m → Fin n) (g : Fin n → ℕ)
   fun ⦃a b⦄ a_1 ↦ hg (hf a_1)
 
 /-- For a permutation σ on Fin n, the range {σ(0), ..., σ(n-1)} equals {0, ..., n-1}. -/
-lemma perm_range_eq (n : ℕ) (σ : Equiv.Perm (Fin n)) :
+lemma perm_range_eq {n : ℕ} (σ : Equiv.Perm (Fin n)) :
     Finset.image (fun i : Fin n => σ i) Finset.univ = Finset.univ := by
   ext x
   simp only [Finset.mem_image, Finset.mem_univ, true_and, iff_true]

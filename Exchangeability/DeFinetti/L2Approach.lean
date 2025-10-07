@@ -120,7 +120,7 @@ lemma integral_sq_weighted_sum_eq_double_sum {μ : Measure Ω}
           rw [integral_const_mul]
 
 /-- **Step 3:** Separate diagonal from off-diagonal terms in covariance expansion. -/
-lemma double_sum_covariance_formula (n : ℕ) (c : Fin n → ℝ) (σSq ρ : ℝ)
+lemma double_sum_covariance_formula {n : ℕ} (c : Fin n → ℝ) (σSq ρ : ℝ)
     (cov_diag : ℝ) (cov_offdiag : ℝ)
     (h_diag : cov_diag = σSq)
     (h_offdiag : cov_offdiag = σSq * ρ) :
@@ -169,14 +169,14 @@ lemma double_sum_covariance_formula (n : ℕ) (c : Fin n → ℝ) (σSq ρ : ℝ
     _ = σSq * ρ * (∑ i, c i)^2 + σSq * (1 - ρ) * ∑ i, (c i)^2 := by ring
 
 /-- **Step 4:** When coefficients sum to zero, the correlation term vanishes. -/
-lemma covariance_formula_zero_sum (n : ℕ) (c : Fin n → ℝ) (σSq ρ : ℝ)
+lemma covariance_formula_zero_sum {n : ℕ} (c : Fin n → ℝ) (σSq ρ : ℝ)
     (hc_sum : ∑ i, c i = 0) :
     σSq * ρ * (∑ i, c i)^2 + σSq * (1 - ρ) * ∑ i, (c i)^2 =
     σSq * (1 - ρ) * ∑ i, (c i)^2 := by
   rw [hc_sum]; simp [zero_pow (Nat.succ_ne_zero 1)]
 
 /-- **Step 5:** Sum of squares bounded by L¹ norm times supremum. -/
-lemma sum_sq_le_sum_abs_mul_sup (n : ℕ) (c : Fin n → ℝ) :
+lemma sum_sq_le_sum_abs_mul_sup {n : ℕ} (c : Fin n → ℝ) :
     ∑ i, (c i)^2 ≤ ∑ i, |c i| * (⨆ j, |c j|) := by
   have hbdd : BddAbove (Set.range fun j : Fin n => |c j|) := ⟨∑ k, |c k|, by
     intro y ⟨k, hk⟩; rw [← hk]; exact Finset.single_le_sum (fun i _ => abs_nonneg (c i)) (Finset.mem_univ k)⟩
@@ -187,7 +187,7 @@ lemma sum_sq_le_sum_abs_mul_sup (n : ℕ) (c : Fin n → ℝ) :
 
 /-- **Step 6:** Combine all steps into final bound. Takes the chain of equalities and
 inequalities from the previous steps and produces the final L² contractability bound. -/
-lemma l2_bound_from_steps (n : ℕ) (c p q : Fin n → ℝ) (σSq ρ : ℝ)
+lemma l2_bound_from_steps {n : ℕ} (c p q : Fin n → ℝ) (σSq ρ : ℝ)
     (hσSq_nonneg : 0 ≤ σSq) (hρ_bd : ρ ≤ 1)
     (hc_def : c = fun i => p i - q i)
     (hc_abs_sum : ∑ i, |c i| ≤ 2)
@@ -386,16 +386,16 @@ theorem l2_contractability_bound
         have h_sq : (fun ω => (ξ i ω - m) * (ξ i ω - m)) = (fun ω => (ξ i ω - m)^2) := by funext ω; ring
         rw [h_sq]; exact congr_arg (c i * c i * ·) (hvar i)
       · exact congr_arg (c i * c j * ·) (hcov i j h)
-    · exact double_sum_covariance_formula n c σSq ρ σSq (σSq * ρ) rfl rfl
+    · exact double_sum_covariance_formula (n:=n) c σSq ρ σSq (σSq * ρ) rfl rfl
   
   -- Step 4: = σ²(1-ρ)∑cᵢ² since (∑cᵢ)² = 0
   have step4 : σSq * ρ * (∑ i, c i)^2 + σSq * (1 - ρ) * ∑ i, (c i)^2 =
                σSq * (1 - ρ) * ∑ i, (c i)^2 :=
-    covariance_formula_zero_sum n c σSq ρ hc_sum
+    covariance_formula_zero_sum (n:=n) c σSq ρ hc_sum
 
   -- Steps 5-6: Combine inequalities to get final bound
   have step5 : ∑ i, (c i)^2 ≤ ∑ i, |c i| * (⨆ j, |c j|) :=
-    sum_sq_le_sum_abs_mul_sup n c
+    sum_sq_le_sum_abs_mul_sup (n:=n) c
 
   calc ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ
       = ∫ ω, (∑ i, c i * ξ i ω)^2 ∂μ := by
@@ -407,7 +407,7 @@ theorem l2_contractability_bound
     _ = σSq * ρ * (∑ i, c i)^2 + σSq * (1 - ρ) * ∑ i, (c i)^2 := step3
     _ = σSq * (1 - ρ) * ∑ i, (c i)^2 := step4
     _ ≤ 2 * σSq * (1 - ρ) * (⨆ i, |p i - q i|) :=
-          l2_bound_from_steps n c p q σSq ρ (sq_nonneg σ) _hρ_bd.2 rfl hc_abs_sum step5
+          l2_bound_from_steps (n:=n) c p q σSq ρ (sq_nonneg σ) _hρ_bd.2 rfl hc_abs_sum step5
     _ = 2 * σ ^ 2 * (1 - ρ) * (⨆ i, |p i - q i|) := by
           simp [σSq, pow_two, mul_comm, mul_left_comm, mul_assoc]
 
