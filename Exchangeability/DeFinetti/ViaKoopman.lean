@@ -97,22 +97,22 @@ section CylinderFunctions
 
 /-- Cylinder function: a function on path space depending only on finitely many coordinates.
 For simplicity, we take the first m coordinates. -/
-def cylinderFunction (m : ℕ) (φ : (Fin m → α) → ℝ) : Ω[α] → ℝ :=
+def cylinderFunction {m : ℕ} (φ : (Fin m → α) → ℝ) : Ω[α] → ℝ :=
   fun ω => φ (fun k => ω k.val)
 
 /-- Product cylinder: ∏_{k < m} fₖ(ω k). -/
-def productCylinder (m : ℕ) (fs : Fin m → α → ℝ) : Ω[α] → ℝ :=
+def productCylinder {m : ℕ} (fs : Fin m → α → ℝ) : Ω[α] → ℝ :=
   fun ω => ∏ k : Fin m, fs k (ω k.val)
 
 omit [MeasurableSpace α] in
 lemma productCylinder_eq_cylinder {m : ℕ} (fs : Fin m → α → ℝ) :
-    productCylinder m fs = cylinderFunction m (fun coords => ∏ k, fs k (coords k)) := by
+    productCylinder fs = cylinderFunction (fun coords => ∏ k, fs k (coords k)) := by
   rfl
 
 /-- Measurability of cylinder functions. -/
 lemma measurable_cylinderFunction {m : ℕ} {φ : (Fin m → α) → ℝ}
     (_hφ : Measurable φ) :
-    Measurable (cylinderFunction m φ) := by
+    Measurable (cylinderFunction φ) := by
   classical
   have hproj : Measurable fun ω : Ω[α] => fun k : Fin m => ω k.val := by
     refine measurable_pi_lambda _ ?_
@@ -123,7 +123,7 @@ lemma measurable_cylinderFunction {m : ℕ} {φ : (Fin m → α) → ℝ}
 /-- Measurability of product cylinders. -/
 lemma measurable_productCylinder {m : ℕ} {fs : Fin m → α → ℝ}
     (hmeas : ∀ k, Measurable (fs k)) :
-    Measurable (productCylinder m fs) := by
+    Measurable (productCylinder fs) := by
   classical
   unfold productCylinder
   -- Product of measurable functions is measurable
@@ -135,7 +135,7 @@ omit [MeasurableSpace α] in
 /-- Boundedness of product cylinders. -/
 lemma productCylinder_bounded {m : ℕ} {fs : Fin m → α → ℝ}
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C) :
-    ∃ C, ∀ ω, |productCylinder m fs ω| ≤ C := by
+    ∃ C, ∀ ω, |productCylinder fs ω| ≤ C := by
   -- Take C = ∏ Cₖ where |fₖ| ≤ Cₖ
   classical
   choose bound hbound using hbd
@@ -154,21 +154,21 @@ lemma productCylinder_bounded {m : ℕ} {fs : Fin m → α → ℝ}
         (g := fun k : Fin m => C k)
         (fun k _ => h_nonneg k)
         (fun k _ => h_abs_le k))
-  have habs_eq : |productCylinder m fs ω| = ∏ k : Fin m, |fs k (ω k.val)| := by
+  have habs_eq : |productCylinder fs ω| = ∏ k : Fin m, |fs k (ω k.val)| := by
     simp [productCylinder, Finset.abs_prod]
   exact (by simpa [habs_eq] using hprod)
 
 /-- Membership of product cylinders in `L²`. -/
 lemma productCylinder_memLp
-    (m : ℕ) (fs : Fin m → α → ℝ)
+    {m : ℕ} (fs : Fin m → α → ℝ)
     (hmeas : ∀ k, Measurable (fs k))
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] :
-    MeasureTheory.MemLp (productCylinder m fs) 2 μ := by
+    MeasureTheory.MemLp (productCylinder fs) 2 μ := by
   classical
-  obtain ⟨C, hC⟩ := productCylinder_bounded m fs hbd
-  have hFmeas : Measurable (productCylinder m fs) :=
-    measurable_productCylinder m fs hmeas
+  obtain ⟨C, hC⟩ := productCylinder_bounded (fs:=fs) hbd
+  have hFmeas : Measurable (productCylinder fs) :=
+    measurable_productCylinder (fs:=fs) hmeas
   refine MeasureTheory.MemLp.of_bound (μ := μ) (p := 2)
     hFmeas.aestronglyMeasurable C ?_
   filter_upwards with ω
@@ -176,22 +176,22 @@ lemma productCylinder_memLp
 
 /-- `Lp` representative associated to a bounded product cylinder. -/
 noncomputable def productCylinderLp
-    (m : ℕ) (fs : Fin m → α → ℝ)
+    {m : ℕ} (fs : Fin m → α → ℝ)
     (hmeas : ∀ k, Measurable (fs k))
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] : Lp ℝ 2 μ :=
-  (productCylinder_memLp (m := m) (fs := fs) hmeas hbd).toLp (productCylinder m fs)
+  (productCylinder_memLp (fs := fs) hmeas hbd).toLp (productCylinder fs)
 
 lemma productCylinderLp_ae_eq
-    (m : ℕ) (fs : Fin m → α → ℝ)
+    {m : ℕ} (fs : Fin m → α → ℝ)
     (hmeas : ∀ k, Measurable (fs k))
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] :
-    (∀ᵐ ω ∂μ, productCylinderLp (μ := μ) (m := m) (fs := fs) hmeas hbd ω =
-      productCylinder m fs ω) := by
+    (∀ᵐ ω ∂μ, productCylinderLp (μ := μ) (fs := fs) hmeas hbd ω =
+      productCylinder fs ω) := by
   classical
   exact MeasureTheory.MemLp.coeFn_toLp
-    (productCylinder_memLp (μ := μ) (m := m) (fs := fs) hmeas hbd)
+    (productCylinder_memLp (μ := μ) (fs := fs) hmeas hbd)
 
 /-- The shifted cylinder function: F ∘ shift^n. -/
 def shiftedCylinder (n : ℕ) (F : Ω[α] → ℝ) : Ω[α] → ℝ :=
@@ -271,10 +271,10 @@ theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
 
 /-- Specialization to cylinder functions: the core case for de Finetti. -/
 theorem birkhoffCylinder_tendsto_condexp
-    (m : ℕ) (fs : Fin m → α → ℝ)
+    {m : ℕ} (fs : Fin m → α → ℝ)
     (hmeas : ∀ k, Measurable (fs k))
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C) :
-    let F := productCylinder m fs
+    let F := productCylinder fs
     ∃ (fL2 : Lp ℝ 2 μ),
       (∀ᵐ ω ∂μ, fL2 ω = F ω) ∧
       Tendsto (fun n => birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2)
