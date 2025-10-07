@@ -441,11 +441,46 @@ lemma contractable_dist_eq_on_cylinders
   let k_m : Fin (n + 1) → ℕ :=
     Fin.cases 0 (fun i => tail i)
   let k_map_m : Fin (n + 1) → ℕ := fun i => m + k_m i
-  let k_map_k : Fin (n + 1) → ℕ := fun i =>
-    match i with
-    | ⟨0, _⟩ => k
-    | Fin.succ i' => m + tail i'
-  -- TODO: prove `StrictMono k_m` as well as `StrictMono k_map_m` and `StrictMono k_map_k`,
+  let k_map_k : Fin (n + 1) → ℕ :=
+    Fin.cases k (fun i => m + tail i)
+
+  -- Prove strict monotonicity of k_m
+  have hk_m_mono : StrictMono k_m := by
+    intro i j hij
+    simp only [k_m]
+    match i, j with
+    | ⟨0, _⟩, ⟨j'+1, _⟩ =>
+      simp [Fin.cases]
+      exact htail_pos ⟨j', by omega⟩
+    | ⟨i'+1, _⟩, ⟨j'+1, _⟩ =>
+      simp [Fin.cases]
+      apply htail_mono
+      omega
+
+  -- Prove strict monotonicity of k_map_m
+  have hk_map_m_mono : StrictMono k_map_m := by
+    intro i j hij
+    simp only [k_map_m]
+    exact Nat.add_lt_add_left (hk_m_mono hij) m
+
+  -- Prove strict monotonicity of k_map_k
+  have hk_map_k_mono : StrictMono k_map_k := by
+    intro i j hij
+    simp only [k_map_k]
+    match i, j with
+    | ⟨0, _⟩, ⟨j'+1, _⟩ =>
+      -- k < m + tail ⟨j', _⟩
+      calc k ≤ m := hk
+        _ < m + tail ⟨j', by omega⟩ := by
+          have := htail_pos ⟨j', by omega⟩
+          omega
+    | ⟨i'+1, _⟩, ⟨j'+1, _⟩ =>
+      -- m + tail i' < m + tail j'
+      apply Nat.add_lt_add_left
+      apply htail_mono
+      omega
+
+  -- TODO: express the event `{ω | zeroConstraint ω ∧ tailCondition ω}` as the preimage
   -- then express the event `{ω | zeroConstraint ω ∧ tailCondition ω}` as the preimage
   -- of a measurable cylinder in `(Fin (n + 1) → α)` under the maps defined above.
   -- Once that identification is in place, contractability gives the desired measure
