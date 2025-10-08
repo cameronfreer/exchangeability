@@ -198,6 +198,10 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
       simpa [g] using h_sm.aestronglyMeasurable
     -- Specialize the product formula from condIndep_iff
     have h_prod := (ProbabilityTheory.condIndep_iff mG mF mH hmG hmF hmH μ).1 hCond
+    -- Integrability and measurability facts we'll need
+    have hH' : MeasurableSet[m₀] H := hmH _ hH
+    have hH_int : Integrable (H.indicator fun _ : Ω => (1 : ℝ)) μ :=
+      (integrable_const (1 : ℝ)).indicator hH'
     have h_rect :
         ∀ {F} (hF : MeasurableSet[mF] F) {G} (hG : MeasurableSet[mG] G),
           ∫ ω in F ∩ G, g ω ∂μ
@@ -206,23 +210,23 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
       -- Lift mF/mG measurability to ambient m₀
       have hF' : MeasurableSet[m₀] F := hmF _ hF
       have hG' : MeasurableSet[m₀] G := hmG _ hG
-      have hH' : MeasurableSet[m₀] H := hmH _ hH
-      -- Integrability of the indicator
-      have hH_int : Integrable (H.indicator fun _ : Ω => (1 : ℝ)) μ :=
-        (integrable_const (1 : ℝ)).indicator hH'
-      -- TODO: Complete the rectangle proof using the product formula
-      -- Strategy:
-      -- 1. Use h_prod F hF H hH to get: μ⟦F ∩ H | mG⟧ =ᵐ[μ] μ⟦F | mG⟧ * μ⟦H | mG⟧
-      -- 2. Integrate both sides over G using setIntegral_condExp
-      -- 3. Use indicator manipulation (Set.indicator_mul_left/right) to show:
-      --    ∫ in G, (F ∩ H).indicator 1 = ∫ in G, F.indicator 1 * H.indicator 1
-      --    Which simplifies to: μ(F ∩ G ∩ H) on both sides
-      -- 4. The key is that ∫ over F ∩ G equals ∫ F.indicator over G
+      -- TODO: Complete using product formula and pull-out property
+      -- The key steps are:
+      -- 1. h_prod F hF H hH gives: μ[(F∩H).indicator 1 | mG] =ᵐ μ[F.indicator 1 | mG] * g
+      -- 2. Integrate over G: ∫_G (F∩H).indicator = ∫_G μ[F.indicator | mG] * g
+      -- 3. Use pull-out/tower to show: ∫_G μ[F.indicator | mG] * g = ∫_G F.indicator * g
+      -- 4. Convert: ∫_G (F∩H).indicator = ∫_{F∩G∩H} 1 and ∫_G F.indicator * g = ∫_{F∩G} g
+      -- 5. Similarly for H.indicator side
+      --
+      -- The main difficulty is step 3, which requires a pull-out lemma for conditional expectations
+      -- that may not be directly available. An alternative is to use the tower property combined
+      -- with measurability arguments.
       sorry
     have h_dynkin :
         ∀ {S} (hS : MeasurableSet[mF ⊔ mG] S),
           ∫ ω in S, g ω ∂μ
             = ∫ ω in S, (H.indicator fun _ : Ω => (1 : ℝ)) ω ∂μ := by
+      intro S hS
       -- TODO: Extend h_rect via Dynkin's π-λ theorem
       -- Strategy:
       -- 1. Define the Dynkin system D := {S | ∫ in S, g = ∫ in S, H.indicator 1}
@@ -230,19 +234,29 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
       -- 3. Show D contains all rectangles F ∩ G (from h_rect)
       -- 4. The rectangles form a π-system generating mF ⊔ mG
       -- 5. Apply MeasurableSpace.induction_on_inter or similar to conclude D = all mF ⊔ mG sets
+      -- For now, this requires significant measure theory machinery
       sorry
     have h_proj :
         μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
           =ᵐ[μ] g := by
-      -- TODO: Apply ae_eq_condExp_of_forall_setIntegral_eq using h_dynkin
-      -- Strategy:
-      -- 1. h_dynkin gives: ∀ S ∈ mF ⊔ mG, ∫ in S, g = ∫ in S, H.indicator 1
-      -- 2. Need to show: μ[H.indicator 1 | mF ⊔ mG] =ᵐ[μ] g
-      -- 3. This is exactly what ae_eq_condExp_of_forall_setIntegral_eq says:
-      --    if integrals agree on all measurable sets, then they're a.e. equal
-      -- 4. May need to verify g is mF ⊔ mG-measurable (it's only mG-measurable)
-      --    - Actually, we're showing the condExp equals g, so this should work
-      sorry
+      -- Apply ae_eq_condExp_of_forall_setIntegral_eq
+      have hmFG : mF ⊔ mG ≤ m₀ := sup_le hmF hmG
+      -- σ-finiteness follows from μ being a finite measure
+      haveI : SigmaFinite (μ.trim hmFG) := by
+        -- Trimmed finite measures are σ-finite
+        have : IsFiniteMeasure (μ.trim hmFG) := inferInstance
+        exact IsFiniteMeasure.toSigmaFinite _
+      refine (ae_eq_condExp_of_forall_setIntegral_eq hmFG ?_ ?_ ?_ ?_).symm
+      -- 1. H.indicator is integrable
+      · exact hH_int
+      -- 2. g is integrable on all finite measure sets
+      · intro s hs hμs
+        exact hg_int.integrableOn
+      -- 3. Integrals agree (from h_dynkin)
+      · intro s hs hμs
+        exact h_dynkin hs
+      -- 4. g is mG-measurable, hence mF ⊔ mG-measurable
+      · exact hg_meas.mono (le_sup_right : mG ≤ mF ⊔ mG)
     simpa [g] using h_proj
   · intro hProj
     refine (ProbabilityTheory.condIndep_iff mG mF mH hmG hmF hmH μ).2 ?_
