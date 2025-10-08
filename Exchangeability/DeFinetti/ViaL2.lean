@@ -103,7 +103,11 @@ lemma contractable_map_single {i : ℕ} :
   -- `k` selects the singleton subsequence `{i}`.
   let k : Fin 1 → ℕ := fun _ => i
   have hk : StrictMono k := by
-    canonical
+    intro a b hab
+    -- In Fin 1, both a and b must be 0, so a < b is impossible
+    have : a = 0 := Fin.eq_zero a
+    have : b = 0 := Fin.eq_zero b
+    simp_all
   have h_map := hX_contract 1 k hk
   let eval : (Fin 1 → ℝ) → ℝ := fun g => g fin1Zero
   have h_eval_meas : Measurable eval := measurable_eval_fin1
@@ -265,7 +269,7 @@ lemma contractable_covariance_structure
       0 ≤ σSq ∧ -1 ≤ ρ ∧ ρ ≤ 1 := by
   classical
   have hX_L1 : ∀ i, Integrable (X i) μ := fun i =>
-    MemLp.integrable (μ:=μ) (q:=(2 : ℝ≥0∞)) (hq1:=by norm_num) (hX_L2 i)
+    MemLp.integrable (hq1 := by norm_num) (hX_L2 i)
   set m := ∫ ω, X 0 ω ∂μ with hm_def
   have hconst_memLp : MemLp (fun _ : Ω => m) 2 μ := by
     simpa using (memLp_const (μ:=μ) (p:=2) m)
@@ -278,8 +282,7 @@ lemma contractable_covariance_structure
     simpa [Real.norm_eq_abs, sq_abs] using h
   have hmean : ∀ k, ∫ ω, X k ω ∂μ = m := by
     intro k
-    have hmap := contractable_map_single (μ:=μ) (X:=X) (hX_contract:=hX_contract)
-      (hX_meas:=hX_meas) (i:=k)
+    have hmap := contractable_map_single (i:=k)
     have hInt_k :=
       MeasureTheory.integral_map (μ:=μ) (φ:=fun ω => X k ω)
         ((hX_meas k).aemeasurable) measurable_id.aestronglyMeasurable
@@ -310,8 +313,7 @@ lemma contractable_covariance_structure
     exact integral_nonneg_of_ae h_nonneg
   have hvar : ∀ k, ∫ ω, (X k ω - m) ^ 2 ∂μ = σSq := by
     intro k
-    have hmap := contractable_map_single (μ:=μ) (X:=X) (hX_contract:=hX_contract)
-      (hX_meas:=hX_meas) (i:=k)
+    have hmap := contractable_map_single (i:=k)
     have hInt_k :=
       MeasureTheory.integral_map (μ:=μ) (φ:=fun ω => X k ω)
         ((hX_meas k).aemeasurable)
@@ -362,8 +364,7 @@ lemma contractable_covariance_structure
           ∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ := by
     intro i j hij
     let g : ℝ × ℝ → ℝ := fun p => (p.1 - m) * (p.2 - m)
-    have hmap := contractable_map_pair (μ:=μ) (X:=X) (hX_contract:=hX_contract)
-      (hX_meas:=hX_meas) hij
+    have hmap := contractable_map_pair hij
     have hφ :=
       ((hX_meas i).prod_mk (hX_meas j)).aemeasurable
     have hφ0 :=
@@ -615,8 +616,7 @@ lemma l2_bound_two_windows
     exact (MemLp.of_bound (μ:=μ) (p:=2) (f:=Y i)
       (hY_meas i).aestronglyMeasurable M hbound)
   have hY_contract : Contractable μ Y :=
-    contractable_comp (μ:=μ) (X:=X) (hX_contract:=hX_contract)
-      (hX_meas:=hX_meas) f hf_meas
+    contractable_comp (X:=X) f hf_meas
   -- Extract the covariance data for the sequence `Y`.
   obtain ⟨mY, σSq, ρ, hY_mean, hY_var, hY_cov, hσ_nonneg, hρ_lb, hρ_ub⟩ :=
     contractable_covariance_structure (μ:=μ) (X:=Y)
@@ -650,37 +650,29 @@ lemma l2_bound_two_windows
 
     -- Prove weight hypotheses
     have hp_sum : ∑ i, p i = 1 := by
-      have h_split : ∑ i : Fin twoK, p i =
-          ∑ i : Fin twoK with i.val < k, 1 / (k : ℝ) := by
-        apply Finset.sum_bij (i := fun i _ => i) (hi := fun i hi => hi)
-          (ha := fun i hi => by simp [p, (Finset.mem_filter.mp hi).2])
-        · intro i j _ _ h; exact h
-        · intro b hb; use b, hb; simp [p]
-      calc ∑ i, p i
-          = ∑ i with i.val < k, 1 / (k : ℝ) := h_split
-        _ = (k : ℝ) * (1 / (k : ℝ)) := by simp [Finset.sum_const, card_fin_lt_k, mul_comm]
-        _ = 1 := by field_simp; ring
+      trans (∑ i ∈ Finset.univ.filter (fun i : Fin twoK => i.val < k), 1 / (k : ℝ))
+      · congr 1; ext i
+        simp only [Finset.sum_ite, p]
+        rw [Finset.sum_filter]
+      · rw [Finset.sum_const, card_fin_lt_k, nsmul_eq_mul]
+        field_simp; ring
 
     have hp_nonneg : ∀ i, 0 ≤ p i := by
       intro i; simp [p]; split_ifs <;> [exact div_nonneg (by norm_num) (by exact_mod_cast Nat.zero_le _), norm_num]
 
     have hq_sum : ∑ i, q i = 1 := by
-      have h_split : ∑ i : Fin twoK, q i =
-          ∑ i : Fin twoK with k ≤ i.val, 1 / (k : ℝ) := by
-        apply Finset.sum_bij (i := fun i _ => i) (hi := fun i hi => hi)
-          (ha := fun i hi => by simp [q, (Finset.mem_filter.mp hi).2])
-        · intro i j _ _ h; exact h
-        · intro b hb; use b, hb; simp [q, (Finset.mem_filter.mp hb).2]
       have h_card : (Finset.univ.filter (fun i : Fin twoK => k ≤ i.val)).card = k := by
         have h_compl : Finset.univ.filter (fun i : Fin twoK => k ≤ i.val) =
             (Finset.univ.filter (fun i : Fin twoK => i.val < k))ᶜ := by
           ext i; simp; omega
         rw [h_compl, Finset.card_compl, card_fin_lt_k]
         simp [twoK]
-      calc ∑ i, q i
-          = ∑ i with k ≤ i.val, 1 / (k : ℝ) := h_split
-        _ = (k : ℝ) * (1 / (k : ℝ)) := by simp [Finset.sum_const, h_card, mul_comm]
-        _ = 1 := by field_simp; ring
+      trans (∑ i ∈ Finset.univ.filter (fun i : Fin twoK => k ≤ i.val), 1 / (k : ℝ))
+      · congr 1; ext i
+        simp only [Finset.sum_ite, q]
+        rw [Finset.sum_filter]
+      · rw [Finset.sum_const, h_card, nsmul_eq_mul]
+        field_simp; ring
 
     have hq_nonneg : ∀ i, 0 ≤ q i := by
       intro i; simp [q]; split_ifs <;> [norm_num, exact div_nonneg (by norm_num) (by exact_mod_cast Nat.zero_le _)]
