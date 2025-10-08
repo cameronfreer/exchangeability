@@ -359,25 +359,16 @@ lemma ν_apply {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelS
     ν (μ := μ) ω s
       = (condExpKernel μ (shiftInvariantSigma (α := α)) ω)
           ((fun y : Ω[α] => y 0) ⁻¹' s) := by
-  classical
   unfold ν rcdKernel
-  rw [Kernel.map_apply]
-  · simp [π0]
-  · exact hs
+  rw [Kernel.map_apply _ _ hs]
+  simp [π0]
 
 /-- The kernel ν gives probability measures. -/
 instance ν_isProbabilityMeasure {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] (ω : Ω[α]) :
     IsProbabilityMeasure (ν (μ := μ) ω) := by
-  classical
   unfold ν rcdKernel
-  have : IsMarkovKernel (condExpKernel μ (shiftInvariantSigma (α := α))) :=
-    inferInstance
-  have hMk : IsMarkovKernel (Kernel.map (condExpKernel μ (shiftInvariantSigma (α := α)))
-      (π0 (α := α)) (measurable_pi0 (α := α))) :=
-    Kernel.IsMarkovKernel.map (condExpKernel μ (shiftInvariantSigma (α := α)))
-      (measurable_pi0 (α := α))
-  exact hMk.isProbabilityMeasure ω
+  infer_instance
 
 /-- The kernel `ν` is measurable with respect to the tail σ-algebra. -/
 lemma ν_measurable_tail {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
@@ -509,9 +500,8 @@ lemma identicalConditionalMarginals {μ : Measure (Ω[α])} [IsProbabilityMeasur
     [StandardBorelSpace α] (hσ : MeasurePreserving shift μ μ) (k : ℕ) :
     ∀ᵐ ω ∂μ,
       (Kernel.map (condExpKernel μ (shiftInvariantSigma (α := α)))
-        (fun y : Ω[α] => y k) (measurable_pi_apply k)) ω
+        (fun y : Ω[α] => y k) (measurable_pi_apply k) : Kernel (Ω[α]) α) ω
       = ν (μ := μ) ω := by
-  classical
   -- TODO: Complete using Kernel.ae_eq_of_forall_integral_eq
   -- The strategy is to show that both kernels give the same integrals for all bounded
   -- measurable test functions by using conditional expectation characterizations.
