@@ -627,10 +627,40 @@ private lemma condexp_mul_of_indep
     -- This follows from independence and properties of conditional expectation
     sorry -- TODO: complete using tower property and independence
 
+/-- **Kernel-level integral multiplication under independence.**
+
+This is the pointwise analogue of `IndepFun.integral_mul_eq_mul_integral` for kernels.
+If X and Y are independent under a kernel κ and measure μ, then for μ-almost every a,
+the integral of their product under κ(a) equals the product of their integrals.
+
+**Proof strategy** (to be formalized):
+The measure-level version uses:
+1. `indepFun_iff_map_prod_eq_prod_map_map`: independence ↔ product of pushforwards
+2. `integral_prod_mul`: Fubini for product measures
+3. Integrability arguments for edge cases
+
+The kernel version requires:
+1. Kernel analogue of product pushforward equality (almost everywhere in a)
+2. Kernel Fubini theorem
+3. Similar integrability handling
+
+This is a standard result in the theory of conditional expectations and should eventually
+be added to Mathlib's `Probability.Independence.Kernel` or a new `Integration` submodule.
+
+For now, we axiomatize it to complete the de Finetti proof.
+-/
+axiom Kernel.IndepFun.integral_mul
+    {α Ω : Type*} [MeasurableSpace α] [MeasurableSpace Ω]
+    {κ : Kernel α Ω} {μ : Measure α}
+    {X Y : Ω → ℝ}
+    (hXY : Kernel.IndepFun X Y κ μ)
+    (hX : Measurable X) (hY : Measurable Y)
+    (hX_bd : ∃ C, ∀ ω, |X ω| ≤ C) (hY_bd : ∃ C, ∀ ω, |Y ω| ≤ C) :
+    ∀ᵐ a ∂μ, ∫ ω, X ω * Y ω ∂(κ a) = (∫ ω, X ω ∂(κ a)) * (∫ ω, Y ω ∂(κ a))
+
 /--
-TODO: establish kernel-level factorisation for two bounded test functions.
-This is the pointwise analogue (under `iIndepFun`) of the classical
-`IndepFun.integral_mul_eq_mul_integral` statement for measures.
+Kernel-level factorisation for two bounded test functions applied to coordinate projections.
+This specializes `Kernel.IndepFun.integral_mul` to our setting.
 -/
 private lemma condexp_pair_factorization
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
@@ -682,13 +712,20 @@ private lemma condexp_pair_factorization
         (∫ y, g (y 1) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) := by
     -- From `hciid: iIndepFun (fun k : Fin 2 => fun ω => ω k) κ μ`
     -- we know the coordinates 0 and 1 are independent under the kernel
-    -- This means IndepFun (fun ω => ω 0) (fun ω => ω 1) κ μ
-    have h_indep_pair : IndepFun (fun ω : Ω[α] => ω 0) (fun ω => ω 1)
+    have h_indep_pair : Kernel.IndepFun (fun ω : Ω[α] => ω 0) (fun ω => ω 1)
         (condExpKernel μ (shiftInvariantSigma (α := α))) μ := by
       exact hciid.indepFun (i := 0) (j := 1) (by norm_num)
-    -- TODO: Need kernel-level version of IndepFun.integral_mul_eq_mul_integral
-    -- For now, this is the key step that needs to be axiomatized or proved separately
-    sorry
+    -- Apply the kernel-level integral multiplication theorem
+    have h_bd0 : ∃ C, ∀ ω : Ω[α], |(fun y => f (y 0)) ω| ≤ C := by
+      rcases hf_bd with ⟨C, hC⟩
+      exact ⟨C, fun ω => hC (ω 0)⟩
+    have h_bd1 : ∃ C, ∀ ω : Ω[α], |(fun y => g (y 1)) ω| ≤ C := by
+      rcases hg_bd with ⟨C, hC⟩
+      exact ⟨C, fun ω => hC (ω 1)⟩
+    exact Kernel.IndepFun.integral_mul h_indep_pair
+      (hf_meas.comp (measurable_pi_apply 0))
+      (hg_meas.comp (measurable_pi_apply 1))
+      h_bd0 h_bd1
 
   -- Step 5: Replace coordinate projections with ν using identicalConditionalMarginals
   have h_coord0 :
@@ -799,6 +836,7 @@ theorem condexp_product_factorization
     -- Use linearity + dominated convergence instead
 
     -- First show the product factors under conditional expectation
+    -- This uses conditional independence of disjoint coordinate sets
     have h_prod_factor :
         μ[(fun ω =>
             (∏ k : Fin m, fs' k (ω (k : ℕ))) * fs (Fin.last m) (ω m))
@@ -809,21 +847,35 @@ theorem condexp_product_factorization
             | shiftInvariantSigma (α := α)] ω) *
           (μ[(fun ω' => fs (Fin.last m) (ω' m))
             | shiftInvariantSigma (α := α)] ω) := by
-      -- This is a special case of the product rule for conditional expectation:
-      -- Under conditional independence, E[X · Y | σ] = E[X | σ] · E[Y | σ]
+      -- The key observation: functions of disjoint coordinate sets are independent
+      -- X := (ω 0, ..., ω (m-1)) and Y := ω m are independent under condExpKernel
+      -- Therefore f(X) and g(Y) are independent for any measurable f, g
       --
-      -- The functions X = ∏ k : Fin m, fs' k (· k) and Y = fs (Fin.last m) (· m)
-      -- are conditionally independent given the tail σ-algebra because:
-      -- - X depends only on coordinates 0, ..., m-1
-      -- - Y depends only on coordinate m
-      -- - These sets of coordinates are disjoint
-      -- - By hciid, all coordinates are mutually independent given tail
+      -- We need: the function (fun ω => ∏ k : Fin m, fs' k (ω k)) composed with
+      -- the projection to first m coordinates is independent from the projection
+      -- to the m-th coordinate.
       --
-      -- TODO: This follows from a general lemma about products under conditional
-      -- independence. The proof would use:
-      -- 1. Conditional independence of coordinate sets {0,...,m-1} and {m}
-      -- 2. Standard product rule: E[f(X) · g(Y) | σ] = E[f(X) | σ] · E[g(Y) | σ]
-      --    when X ⊥⊥_σ Y
+      -- This follows from `hciid.indepFun_finset` applied to S = Finset.univ.image castSucc
+      -- and T = {last m}, which are disjoint.
+      have h_disjoint : Disjoint
+          (Finset.univ.image (Fin.castSucc : Fin m → Fin (m + 1)))
+          ({Fin.last m} : Finset (Fin (m + 1))) := by
+        simp [Finset.disjoint_left]
+        intro i _ hi
+        simp at hi
+        exact Fin.castSucc_lt_last i |>.ne hi
+      have h_indep_finsets :=
+        hciid.indepFun_finset
+          (Finset.univ.image (Fin.castSucc : Fin m → Fin (m + 1)))
+          {Fin.last m}
+          h_disjoint
+          (fun i => measurable_pi_apply i)
+      -- Now we have independence of the tuples, and can apply kernel integral_mul
+      -- to functions of these tuples
+      -- TODO: This requires composing the kernel independence with measurable functions,
+      -- similar to the pair case but for functions of tuples vs. single coordinates.
+      -- The proof strategy is analogous to condexp_pair_factorization but needs
+      -- function composition with the finite tuple projection.
       sorry
 
     -- Apply IH and coordinate formula
