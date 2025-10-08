@@ -351,7 +351,7 @@ lemma ν_measurable_tail {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
 /-!
 Helper lemmas establishing the stability of the conditional expectation and the
 regular conditional distribution under compositions with shift iterates.
--/-
+-/
 
 private lemma condexp_precomp_iterate_eq
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
@@ -719,15 +719,42 @@ lemma Kernel.IndepFun.integral_mul
   -- ⇒ AE a, IndepFun X Y (κ a)
 
   have h_indep_ae : ∀ᵐ a ∂μ, IndepFun X Y (κ a) := by
-    -- Use the characterization: kernel independence ⇒ measure factorization on all measurable sets
-    -- The key is to restrict to a countable generating π-system and use ae_all_iff
-    sorry  -- TODO: Implement countable π-system + monotone class argument (~30 lines)
-    -- Outline:
-    -- 1. Let S be the π-system of rational intervals Iio q, q ∈ ℚ
-    -- 2. For each q₁, q₂ ∈ ℚ: hXY.measure_inter_preimage_eq_mul gives AE equality
-    -- 3. Use ae_all_iff twice (countability of ℚ × ℚ) to get AE a, ∀ q₁ q₂, factorization
-    -- 4. Extend from π-system to σ-algebra using monotone class theorem
-    -- 5. This gives IndepFun X Y (κ a) for a.e. a
+    -- Strategy: restrict to countable π-system generating the Borel σ-algebra,
+    -- use ae_all_iff to swap quantifiers, then extend to full σ-algebra
+
+    -- Step 2a: For rational intervals, we have a.e. factorization
+    have h_rat_factor : ∀ q₁ q₂ : ℚ, ∀ᵐ a ∂μ,
+        κ a (X ⁻¹' Set.Iio (q₁ : ℝ) ∩ Y ⁻¹' Set.Iio (q₂ : ℝ))
+          = κ a (X ⁻¹' Set.Iio (q₁ : ℝ)) * κ a (Y ⁻¹' Set.Iio (q₂ : ℝ)) := by
+      intro q₁ q₂
+      exact hXY.measure_inter_preimage_eq_mul (Set.Iio (q₁ : ℝ)) (Set.Iio (q₂ : ℝ))
+        (measurableSet_Iio) (measurableSet_Iio)
+
+    -- Step 2b: Swap quantifiers using countability
+    have h_ae_all_rats : ∀ᵐ a ∂μ, ∀ q₁ q₂ : ℚ,
+        κ a (X ⁻¹' Set.Iio (q₁ : ℝ) ∩ Y ⁻¹' Set.Iio (q₂ : ℝ))
+          = κ a (X ⁻¹' Set.Iio (q₁ : ℝ)) * κ a (Y ⁻¹' Set.Iio (q₂ : ℝ)) := by
+      rw [ae_all_iff]
+      intro q₁
+      rw [ae_all_iff]
+      intro q₂
+      exact h_rat_factor q₁ q₂
+
+    -- Step 2c: Extend from π-system to σ-algebra
+    refine h_ae_all_rats.mono (fun a ha => ?_)
+
+    -- Use the product measure characterization of independence
+    rw [ProbabilityTheory.indepFun_iff_map_prod_eq_prod_map_map hX.aemeasurable hY.aemeasurable]
+
+    -- We need to show: (κ a).map (fun ω => (X ω, Y ω)) = ((κ a).map X).prod ((κ a).map Y)
+    -- Both are finite measures on ℝ × ℝ, and they agree on a generating π-system by ha
+
+    sorry -- TODO: Complete π-λ extension (~20 lines total)
+    -- Remaining steps:
+    -- 1. Show the two measures agree on rectangles Set.Iio q₁ ×ˢ Set.Iio q₂ (use ha)
+    -- 2. These rectangles form a π-system generating borel (ℝ × ℝ)
+    -- 3. Apply Measure.ext_of_generateFrom_of_iUnion
+    -- This is standard measure theory but requires careful bookkeeping
 
   -- Step 3: Apply measure-level factorization pointwise
   refine h_indep_ae.mono (fun a ha => ?_)
@@ -813,7 +840,7 @@ private lemma condexp_pair_factorization
       fun ω => ∫ x, f x ∂(ν (μ := μ) ω) := by
     filter_upwards [h_marg0] with ω hω
     have : (fun y : Ω[α] => f (y 0)) = f ∘ (fun y => y 0) := rfl
-    rw [this, MeasureTheory.integral_map (measurable_pi_apply 0) hf_meas]
+    rw [this, MeasureTheory.integral_map (measurable_pi_apply 0).aemeasurable hf_meas.aestronglyMeasurable]
     congr 1
     exact hω.symm
 
@@ -823,7 +850,7 @@ private lemma condexp_pair_factorization
       fun ω => ∫ x, g x ∂(ν (μ := μ) ω) := by
     filter_upwards [h_marg1] with ω hω
     have : (fun y : Ω[α] => g (y 1)) = g ∘ (fun y => y 1) := rfl
-    rw [this, MeasureTheory.integral_map (measurable_pi_apply 1) hg_meas]
+    rw [this, MeasureTheory.integral_map (measurable_pi_apply 1).aemeasurable hg_meas.aestronglyMeasurable]
     congr 1
     exact hω.symm
 
