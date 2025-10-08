@@ -332,34 +332,38 @@ noncomputable def ν {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
 
 /-- Convenient rewrite for evaluating the kernel `ν` on a measurable set. -/
 lemma ν_apply {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
-    (ω : Ω[α]) (s : Set α) :
+    (ω : Ω[α]) (s : Set α) (hs : MeasurableSet s) :
     ν (μ := μ) ω s
       = (condExpKernel μ (shiftInvariantSigma (α := α)) ω)
           ((fun y : Ω[α] => y 0) ⁻¹' s) := by
   classical
   unfold ν rcdKernel
-  simp [Kernel.map, π0]
+  rw [Kernel.map_apply]
+  · simp [π0]
+  · exact hs
 
 /-- The kernel ν gives probability measures. -/
 instance ν_isProbabilityMeasure {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] (ω : Ω[α]) :
     IsProbabilityMeasure (ν (μ := μ) ω) := by
   classical
-  unfold ν
-  have hMk : IsMarkovKernel (rcdKernel (μ := μ) (α := α)) := by
-    simpa [rcdKernel] using
-      (ProbabilityTheory.Kernel.IsMarkovKernel.map
-        (condExpKernel μ (shiftInvariantSigma (α := α)))
-        (measurable_pi0 (α := α)))
-  simpa [rcdKernel] using hMk.isProbabilityMeasure ω
+  unfold ν rcdKernel
+  have : IsMarkovKernel (condExpKernel μ (shiftInvariantSigma (α := α))) :=
+    inferInstance
+  have hMk : IsMarkovKernel (Kernel.map (condExpKernel μ (shiftInvariantSigma (α := α)))
+      (π0 (α := α)) (measurable_pi0 (α := α))) :=
+    Kernel.IsMarkovKernel.map (condExpKernel μ (shiftInvariantSigma (α := α)))
+      (measurable_pi0 (α := α))
+  exact hMk.isProbabilityMeasure ω
 
 /-- The kernel `ν` is measurable with respect to the tail σ-algebra. -/
 lemma ν_measurable_tail {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] :
     Measurable[shiftInvariantSigma (α := α)] (ν (μ := μ)) := by
   classical
-  unfold ν
-  simpa [rcdKernel] using (rcdKernel (μ := μ) (α := α)).measurable
+  unfold ν rcdKernel
+  exact (Kernel.map (condExpKernel μ (shiftInvariantSigma (α := α)))
+    (π0 (α := α)) (measurable_pi0 (α := α))).measurable
 
 /-!
 Helper lemmas establishing the stability of the conditional expectation and the
