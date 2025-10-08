@@ -740,25 +740,21 @@ lemma Kernel.IndepFun.integral_mul
       intro q₂
       exact h_rat_factor q₁ q₂
 
-    -- Step 2c: Extend from π-system to σ-algebra using the product measure characterization
+    -- Step 2c: Extend from π-system to σ-algebra
     refine h_ae_all_rats.mono (fun a ha => ?_)
-    -- Use the map-prod characterization of independence
+
+    -- Use the product measure characterization of independence
     rw [ProbabilityTheory.indepFun_iff_map_prod_eq_prod_map_map hX.aemeasurable hY.aemeasurable]
 
-    -- We need: (κ a).map (fun ω => (X ω, Y ω)) = ((κ a).map X).prod ((κ a).map Y)
-    -- This follows from ha: the two measures agree on the product π-system
+    -- We need to show: (κ a).map (fun ω => (X ω, Y ω)) = ((κ a).map X).prod ((κ a).map Y)
+    -- Both are finite measures on ℝ × ℝ, and they agree on a generating π-system by ha
 
-    -- The π-system of rectangles Iio q₁ × Iio q₂ generates the product Borel σ-algebra
-    have h_gen : (borel (ℝ × ℝ)) = MeasurableSpace.generateFrom
-        {Set.prod (Set.Iio (q₁ : ℝ)) (Set.Iio (q₂ : ℝ)) | (q₁ : ℚ) (q₂ : ℚ)} := by
-      rw [borel_prod, borel_eq_generateFrom_Iio_rat, borel_eq_generateFrom_Iio_rat]
-      -- The product of two generateFrom is generateFrom of products
-      sorry -- Standard: product σ-algebra generation (~5 lines)
-
-    -- Apply measure extension: two finite measures equal on π-system ⇒ equal
-    refine Measure.ext fun s hs => ?_
-    -- Use ext_of_generateFrom_of_iUnion or a direct π-λ argument
-    sorry -- TODO: ~10 lines to apply ha to show the two measures agree
+    sorry -- TODO: Complete π-λ extension (~20 lines total)
+    -- Remaining steps:
+    -- 1. Show the two measures agree on rectangles Set.Iio q₁ ×ˢ Set.Iio q₂ (use ha)
+    -- 2. These rectangles form a π-system generating borel (ℝ × ℝ)
+    -- 3. Apply Measure.ext_of_generateFrom_of_iUnion
+    -- This is standard measure theory but requires careful bookkeeping
 
   -- Step 3: Apply measure-level factorization pointwise
   refine h_indep_ae.mono (fun a ha => ?_)
