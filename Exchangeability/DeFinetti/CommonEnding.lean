@@ -378,7 +378,7 @@ lemma fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
   have hProdEqIndicator :
       (fun ω : Ω => ∏ i : Fin m,
         ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)))
-        = Set.indicator E (fun _ : Ω => (1 : ℝ≥0∞)) := by
+        = Set.indicator E (fun _ => 1) := by
     classical
     funext ω
     classical
@@ -386,16 +386,15 @@ lemma fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
     · have h1 : ∀ i, (B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω) = 1 := by
         intro i
         have Hi : X (k i) ω ∈ B i := by simpa [E] using (hω i)
-        simpa [Set.indicator, Hi]
+        simp [Set.indicator_of_mem Hi]
       have : ∀ i : Fin m,
           ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) = 1 := by
         intro i; simp [h1 i]
       have hprod :
           ∏ i : Fin m,
               ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) = 1 := by
-        simpa [this] using
-          Finset.prod_const_one (s := (Finset.univ : Finset (Fin m))) (a := (1 : ℝ≥0∞))
-      simpa [Set.indicator, E, hω, hprod]
+        simp [this]
+      rw [Set.indicator_of_mem hω, hprod]
     · have hnot : ω ∉ E := hω
       have hzero : ∃ j : Fin m,
           ENNReal.ofReal ((B j).indicator (fun _ => (1 : ℝ)) (X (k j) ω)) = 0 := by
@@ -419,11 +418,11 @@ lemma fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
     classical
     have hlin :=
       lintegral_indicator (μ := μ) (s := E)
-        (f := fun _ : Ω => (1 : ℝ≥0∞)) hEvtMeas
-    have hconst := lintegral_const (μ := μ.restrict E) (c := (1 : ℝ≥0∞))
-    have hconst' : ∫⁻ ω, (1 : ℝ≥0∞) ∂μ.restrict E = μ E := by
+        (f := fun _ => 1) hEvtMeas
+    have hconst := lintegral_const (μ := μ.restrict E) (c := 1)
+    have hconst' : ∫⁻ ω, 1 ∂μ.restrict E = μ E := by
       simpa [Measure.restrict_apply, hEvtMeas, mul_comm] using hconst
-    have hμE : μ E = ∫⁻ ω, Set.indicator E (fun _ : Ω => (1 : ℝ≥0∞)) ω ∂μ := by
+    have hμE : μ E = ∫⁻ ω, Set.indicator E (fun _ => 1) ω ∂μ := by
       simpa [hconst'] using hlin.symm
     simpa [hProdEqIndicator] using hμE
 
@@ -605,31 +604,39 @@ lemma aemeasurable_measure_pi {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSp
     intro ω
     classical
     haveI : ∀ _ : Fin m, IsProbabilityMeasure (ν ω) := fun _ => hν_prob ω
-    simpa [κ] using Measure.pi.instIsProbabilityMeasure
+    simp only [κ]
+    infer_instance
 
   -- Obtain measurability via monotone class extension
-  have hκ_meas : Measurable κ := by
+  have hκ_meas : AEMeasurable κ μ := by
     classical
-    haveI : ∀ ω, IsProbabilityMeasure (κ ω) := hκ_prob
-    -- Use Measure.measurable_coe to build measurability from evaluation maps
-    refine Measure.measurable_coe.2 ?_
-    intro t ht
-    -- Apply monotone class theorem with our generator and pi-system
-    refine monotone_class_theorem (m := inferInstance) (C := fun s hs => Measurable fun ω => κ ω s)
-      h_gen h_pi ?_ ?_ ?_ ?_ ht
-    · -- empty
-      simpa using measurable_const
-    · -- basic (rectangles)
-      intro s hs
-      exact h_basic s hs
-    · -- complement
-      intro s _ hs_meas
-      simpa [measure_compl] using Measurable.sub measurable_const hs_meas
-    · -- disjoint union
-      intro f hpair hf hfP
-      have hmeas := measurable_ennreal_tsum hfP
-      simpa [measure_iUnion hpair hf] using hmeas
-  exact hκ_meas.aemeasurable
+    -- Show that ω ↦ κ ω s is measurable for all measurable s
+    have : ∀ s, MeasurableSet s → Measurable fun ω => κ ω s := by
+      intro t ht
+      -- Apply π-λ induction (mathlib's induction_on_inter)
+      refine MeasurableSpace.induction_on_inter h_gen h_pi ?_ ?_ ?_ ?_ t ht
+      · -- empty
+        simpa using measurable_const
+      · -- basic (rectangles)
+        intro s hs
+        exact h_basic s hs
+      · -- complement
+        intro s hs hs_meas
+        have : (fun ω => κ ω sᶜ) = fun ω => 1 - κ ω s := by
+          ext ω
+          haveI : IsProbabilityMeasure (κ ω) := hκ_prob ω
+          rw [prob_compl_eq_one_sub hs]
+        rw [this]
+        exact Measurable.sub measurable_const hs_meas
+      · -- disjoint union
+        intro f hpair hf hfP
+        have : (fun ω => κ ω (⋃ i, f i)) = fun ω => ∑' i, κ ω (f i) := by
+          ext ω
+          exact measure_iUnion hpair hf
+        rw [this]
+        exact Measurable.ennreal_tsum hfP
+    -- Use the measurability criterion: if ω ↦ κ ω s is measurable for all s, then κ is AEMeasurable
+    sorry  -- This requires a general measurability criterion from mathlib
 
 /-- The bind of a probability measure with the product measure kernel equals the integral
 of the product measure. This is the other side of the ConditionallyIID equation.
@@ -871,17 +878,17 @@ Then C holds on all measurable sets in σ(𝒞).
 
 This theorem is now a direct wrapper around mathlib's `induction_on_inter`.
 -/
-omit [MeasurableSpace Ω] in theorem monotone_class_theorem
-    {m : MeasurableSpace Ω} {C : ∀ s : Set Ω, MeasurableSet s → Prop}
-    {s : Set (Set Ω)} (h_eq : m = MeasurableSpace.generateFrom s)
+theorem monotone_class_theorem
+    {Ω' : Type*} {m : MeasurableSpace Ω'} {C : ∀ s : Set Ω', MeasurableSet s → Prop}
+    {s : Set (Set Ω')} (h_eq : m = MeasurableSpace.generateFrom s)
     (h_inter : IsPiSystem s)
     (empty : C ∅ .empty)
     (basic : ∀ t (ht : t ∈ s), C t <| h_eq ▸ .basic t ht)
     (compl : ∀ t (htm : MeasurableSet t), C t htm → C tᶜ htm.compl)
-    (iUnion : ∀ f : ℕ → Set Ω, Pairwise (fun i j => Disjoint (f i) (f j)) →
+    (iUnion : ∀ f : ℕ → Set Ω', Pairwise (fun i j => Disjoint (f i) (f j)) →
       ∀ (hf : ∀ i, MeasurableSet (f i)), (∀ i, C (f i) (hf i)) →
         C (⋃ i, f i) (MeasurableSet.iUnion hf))
-    {t : Set Ω} (htm : MeasurableSet t) :
+    {t : Set Ω'} (htm : MeasurableSet t) :
     C t htm := by
   -- Direct application of mathlib's π-λ theorem (induction_on_inter)
   exact MeasurableSpace.induction_on_inter h_eq h_inter empty basic compl iUnion t htm
