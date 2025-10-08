@@ -719,15 +719,46 @@ lemma Kernel.IndepFun.integral_mul
   -- ⇒ AE a, IndepFun X Y (κ a)
 
   have h_indep_ae : ∀ᵐ a ∂μ, IndepFun X Y (κ a) := by
-    -- Use the characterization: kernel independence ⇒ measure factorization on all measurable sets
-    -- The key is to restrict to a countable generating π-system and use ae_all_iff
-    sorry  -- TODO: Implement countable π-system + monotone class argument (~30 lines)
-    -- Outline:
-    -- 1. Let S be the π-system of rational intervals Iio q, q ∈ ℚ
-    -- 2. For each q₁, q₂ ∈ ℚ: hXY.measure_inter_preimage_eq_mul gives AE equality
-    -- 3. Use ae_all_iff twice (countability of ℚ × ℚ) to get AE a, ∀ q₁ q₂, factorization
-    -- 4. Extend from π-system to σ-algebra using monotone class theorem
-    -- 5. This gives IndepFun X Y (κ a) for a.e. a
+    -- Strategy: restrict to countable π-system generating the Borel σ-algebra,
+    -- use ae_all_iff to swap quantifiers, then extend to full σ-algebra
+
+    -- Step 2a: For rational intervals, we have a.e. factorization
+    have h_rat_factor : ∀ q₁ q₂ : ℚ, ∀ᵐ a ∂μ,
+        κ a (X ⁻¹' Set.Iio (q₁ : ℝ) ∩ Y ⁻¹' Set.Iio (q₂ : ℝ))
+          = κ a (X ⁻¹' Set.Iio (q₁ : ℝ)) * κ a (Y ⁻¹' Set.Iio (q₂ : ℝ)) := by
+      intro q₁ q₂
+      exact hXY.measure_inter_preimage_eq_mul (Set.Iio (q₁ : ℝ)) (Set.Iio (q₂ : ℝ))
+        (measurableSet_Iio) (measurableSet_Iio)
+
+    -- Step 2b: Swap quantifiers using countability
+    have h_ae_all_rats : ∀ᵐ a ∂μ, ∀ q₁ q₂ : ℚ,
+        κ a (X ⁻¹' Set.Iio (q₁ : ℝ) ∩ Y ⁻¹' Set.Iio (q₂ : ℝ))
+          = κ a (X ⁻¹' Set.Iio (q₁ : ℝ)) * κ a (Y ⁻¹' Set.Iio (q₂ : ℝ)) := by
+      rw [ae_all_iff]
+      intro q₁
+      rw [ae_all_iff]
+      intro q₂
+      exact h_rat_factor q₁ q₂
+
+    -- Step 2c: Extend from π-system to σ-algebra using the product measure characterization
+    refine h_ae_all_rats.mono (fun a ha => ?_)
+    -- Use the map-prod characterization of independence
+    rw [ProbabilityTheory.indepFun_iff_map_prod_eq_prod_map_map hX.aemeasurable hY.aemeasurable]
+
+    -- We need: (κ a).map (fun ω => (X ω, Y ω)) = ((κ a).map X).prod ((κ a).map Y)
+    -- This follows from ha: the two measures agree on the product π-system
+
+    -- The π-system of rectangles Iio q₁ × Iio q₂ generates the product Borel σ-algebra
+    have h_gen : (borel (ℝ × ℝ)) = MeasurableSpace.generateFrom
+        {Set.prod (Set.Iio (q₁ : ℝ)) (Set.Iio (q₂ : ℝ)) | (q₁ : ℚ) (q₂ : ℚ)} := by
+      rw [borel_prod, borel_eq_generateFrom_Iio_rat, borel_eq_generateFrom_Iio_rat]
+      -- The product of two generateFrom is generateFrom of products
+      sorry -- Standard: product σ-algebra generation (~5 lines)
+
+    -- Apply measure extension: two finite measures equal on π-system ⇒ equal
+    refine Measure.ext fun s hs => ?_
+    -- Use ext_of_generateFrom_of_iUnion or a direct π-λ argument
+    sorry -- TODO: ~10 lines to apply ha to show the two measures agree
 
   -- Step 3: Apply measure-level factorization pointwise
   refine h_indep_ae.mono (fun a ha => ?_)
