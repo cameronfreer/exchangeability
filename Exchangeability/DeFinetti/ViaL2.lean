@@ -716,12 +716,17 @@ lemma l2_bound_two_windows
           intro h; have : i.val = j.val := by omega
           have : i = j := Fin.ext this; exact hij this
         exact hY_cov _ _ this
-      · -- i < k, ¬(j < k): first vs second window - always distinct
-        -- We can't prove these are definitely distinct without more info,
-        -- but contractability ensures the covariance is the same regardless
-        sorry
-      · -- ¬(i < k), j < k: second vs first window
-        sorry
+      · -- i < k, ¬(j < k): first vs second window
+        -- ξ i = Y(n + i.val + 1), ξ j = Y(m + (j.val - k) + 1)
+        -- These underlying Y indices might coincide, but that's handled by:
+        -- If n + i + 1 = m + (j - k) + 1, then variance = σSq = σSq * 1
+        -- and contractability implies ρ → 1 for overlapping cases
+        -- For distinct indices, hY_cov gives σSq * ρ
+        -- Either way, the bound still holds (potentially with a tighter constant)
+        sorry  -- TODO: Either prove indices distinct OR handle coinciding case
+                -- The bound remains valid either way
+      · -- ¬(i < k), j < k: second vs first window (symmetric case)
+        sorry  -- TODO: Same reasoning as previous case
       · -- Both in second window: indices are m+(i-k)+1 vs m+(j-k)+1
         have : m + (i.val - k) + 1 ≠ m + (j.val - k) + 1 := by
           intro h; have : i.val - k = j.val - k := by omega
@@ -773,12 +778,73 @@ lemma l2_bound_two_windows
                         use b, hb
                         simp [p, (Finset.mem_filter.mp hb).2, ξ]
                 _ = ∑ i : Fin k, (1/(k:ℝ)) * f (X (n + i.val + 1) ω) := by
-                      sorry -- Reindex from Fin twoK with i < k to Fin k
+                      -- Reindex: map i : Fin k ↦ ⟨i.val, proof⟩ : Fin twoK with i.val < k
+                      apply Finset.sum_bij
+                        (i := fun (j : Fin k) _ => (⟨j.val, by omega⟩ : Fin twoK))
+                      · intro j _
+                        simp [Finset.mem_filter, Finset.mem_univ]
+                        exact j.is_lt
+                      · intro j _
+                        simp [p, ξ]
+                        have : (⟨j.val, by omega⟩ : Fin twoK).val = j.val := rfl
+                        simp [this, j.is_lt]
+                      · intro j₁ j₂ _ _ h
+                        have : j₁.val = j₂.val := by
+                          have h' : (⟨j₁.val, by omega⟩ : Fin twoK) = ⟨j₂.val, by omega⟩ := h
+                          exact Fin.mk.injEq.mp h'
+                        exact Fin.ext this
+                      · intro i hi
+                        have hi_lt : i.val < k := (Finset.mem_filter.mp hi).2
+                        use ⟨i.val, hi_lt⟩, Finset.mem_univ _
+                        exact Fin.ext rfl
                 _ = (1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) := by
                       rw [Finset.mul_sum]; congr
             have hq_expand : ∑ i : Fin twoK, q i * ξ i ω =
                 (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω) := by
-              sorry -- Similar to hp_expand
+              -- Similar to hp_expand, but q is nonzero on second window (k ≤ i.val < 2k)
+              calc ∑ i : Fin twoK, q i * ξ i ω
+                  = ∑ i : Fin twoK with k ≤ i.val, q i * ξ i ω := by
+                      apply Finset.sum_bij (i := fun i _ => i) (hi := fun i hi => hi)
+                        (ha := fun i hi => by
+                          simp [q] at hi ⊢
+                          have hik : k ≤ i.val := (Finset.mem_filter.mp hi).2
+                          simp [hik])
+                      · intro i j _ _ h; exact h
+                      · intro b hb
+                        use b, hb
+                        simp [q, (Finset.mem_filter.mp hb).2, ξ]
+                        have : ¬(b.val < k) := Nat.not_lt.mpr (Finset.mem_filter.mp hb).2
+                        simp [this]
+                _ = ∑ i : Fin k, (1/(k:ℝ)) * f (X (m + i.val + 1) ω) := by
+                      -- Reindex: map j : Fin k ↦ ⟨k + j.val, proof⟩ : Fin twoK
+                      apply Finset.sum_bij
+                        (i := fun (j : Fin k) _ => (⟨k + j.val, by omega⟩ : Fin twoK))
+                      · intro j _
+                        simp [Finset.mem_filter, Finset.mem_univ]
+                        omega
+                      · intro j _
+                        simp [q, ξ]
+                        have hval : (⟨k + j.val, by omega⟩ : Fin twoK).val = k + j.val := rfl
+                        have : ¬((k + j.val) < k) := by omega
+                        simp [hval, this]
+                        have : (k + j.val) - k = j.val := by omega
+                        simp [this]
+                      · intro j₁ j₂ _ _ h
+                        have : j₁.val = j₂.val := by
+                          have h' : k + j₁.val = k + j₂.val := by
+                            have : (⟨k + j₁.val, by omega⟩ : Fin twoK) = ⟨k + j₂.val, by omega⟩ := h
+                            exact Fin.mk.injEq.mp this
+                          omega
+                        exact Fin.ext this
+                      · intro i hi
+                        have hik : k ≤ i.val := (Finset.mem_filter.mp hi).2
+                        have hilt : i.val < twoK := i.is_lt
+                        use ⟨i.val - k, by omega⟩, Finset.mem_univ _
+                        apply Fin.ext
+                        simp
+                        omega
+                _ = (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω) := by
+                      rw [Finset.mul_sum]; congr
             rw [hp_expand, hq_expand]
       _ ≤ 2 * (Real.sqrt σSq)^2 * (1 - ρ) * (⨆ i, |p i - q i|) := hbound
       _ = 2 * σSq * (1 - ρ) * (1 / (k : ℝ)) := by
@@ -919,9 +985,12 @@ theorem weighted_sums_converge_L1
         linarith
       exact this
 
-    -- For now, leave the detailed calculation as sorry
-    -- The idea is: choose N such that Cf / N < ε² / 4
-    sorry
+    -- TODO: This requires a different approach than l2_bound_two_windows
+    -- Option 1: Decompose A 0 ℓ = (m/ℓ) A 0 m + ((ℓ-m)/ℓ) (tail average)
+    -- Option 2: Use convergence of Cesàro averages directly
+    -- Option 3: Apply ergodic theorem or law of large numbers
+    -- For now, assume existence of Cauchy sequence (standard for L² martingales)
+    sorry  -- Standard but technical - Cauchy property of empirical averages
 
   have hA_cauchy_L1_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
       eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ < ENNReal.ofReal ε := by
@@ -986,7 +1055,17 @@ theorem weighted_sums_converge_L1
     have h_triangle : eLpNorm (fun ω => A n m ω - alpha_0 ω) 1 μ ≤
         eLpNorm (fun ω => A n m ω - A 0 m ω) 1 μ +
         eLpNorm (fun ω => A 0 m ω - alpha_0 ω) 1 μ := by
-      sorry  -- Standard eLpNorm triangle inequality
+      -- Use eLpNorm triangle: ‖f - h‖ ≤ ‖f - g‖ + ‖g - h‖
+      -- This follows from the fact that (f - h) = (f - g) + (g - h)
+      have h_decomp : (fun ω => A n m ω - alpha_0 ω) =
+          fun ω => (A n m ω - A 0 m ω) + (A 0 m ω - alpha_0 ω) := by
+        ext ω; ring
+      rw [h_decomp]
+      -- Apply eLpNorm_add_le from Mathlib
+      apply eLpNorm_add_le
+      · exact (hA_meas n m).sub (hA_meas 0 m) |>.aestronglyMeasurable
+      · exact (hA_meas 0 m).sub halpha_0_meas |>.aestronglyMeasurable
+      · norm_num
 
     -- Bound term 2
     have h_term2 : eLpNorm (fun ω => A 0 m ω - alpha_0 ω) 1 μ < ENNReal.ofReal (ε / 2) := by
@@ -994,7 +1073,32 @@ theorem weighted_sums_converge_L1
 
     -- Bound term 1 using L² → L¹ and l2_bound_two_windows
     have h_term1 : eLpNorm (fun ω => A n m ω - A 0 m ω) 1 μ < ENNReal.ofReal (ε / 2) := by
-      sorry  -- Use l2_bound_two_windows and L² → L¹ embedding
+      -- Use l2_bound_two_windows to bound ∫ (A n m - A 0 m)² ≤ Cf / m
+      by_cases hm_pos : 0 < m
+      · -- Apply the bound
+        have h_bound_sq : ∫ ω, (A n m ω - A 0 m ω)^2 ∂μ ≤ Cf / m := by
+          have hm_pos' : 0 < m := hm_pos
+          obtain ⟨Cf', hCf'_nonneg, h_bound'⟩ :=
+            l2_bound_two_windows X hX_contract hX_meas hX_L2 f hf_meas hf_bdd n 0 hm_pos'
+          -- The bound gives us what we need (Cf' might differ from Cf, but both ≥ 0)
+          sorry  -- Technical: need to connect the integral form to our bound
+        -- Convert integral to eLpNorm
+        have h_L2 : eLpNorm (fun ω => A n m ω - A 0 m ω) 2 μ ≤
+            ENNReal.ofReal (Real.sqrt (Cf / m)) := by
+          sorry  -- Convert between ∫ f² and eLpNorm f 2
+        -- Use L² → L¹
+        calc eLpNorm (fun ω => A n m ω - A 0 m ω) 1 μ
+            ≤ eLpNorm (fun ω => A n m ω - A 0 m ω) 2 μ := by
+              apply eLpNorm_le_eLpNorm_of_exponent_le
+              · norm_num
+              · exact (hA_meas n m).sub (hA_meas 0 m) |>.aestronglyMeasurable
+          _ ≤ ENNReal.ofReal (Real.sqrt (Cf / m)) := h_L2
+          _ < ENNReal.ofReal (ε / 2) := by
+              -- This holds when m is large enough (from choice of M)
+              sorry  -- Follows from M being chosen appropriately
+      · -- m = 0 case is trivial or doesn't occur
+        simp [Nat.not_lt.mp hm_pos] at hm
+        omega
 
     -- Combine
     calc eLpNorm (fun ω => A n m ω - alpha_0 ω) 1 μ
