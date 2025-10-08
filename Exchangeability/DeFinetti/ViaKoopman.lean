@@ -359,25 +359,15 @@ lemma ν_apply {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelS
     ν (μ := μ) ω s
       = (condExpKernel μ (shiftInvariantSigma (α := α)) ω)
           ((fun y : Ω[α] => y 0) ⁻¹' s) := by
-  classical
   unfold ν rcdKernel
-  rw [Kernel.map_apply]
-  · simp [π0]
-  · exact hs
+  simp only [Kernel.map_apply' _ _ hs, π0]
 
 /-- The kernel ν gives probability measures. -/
 instance ν_isProbabilityMeasure {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] (ω : Ω[α]) :
     IsProbabilityMeasure (ν (μ := μ) ω) := by
-  classical
   unfold ν rcdKernel
-  have : IsMarkovKernel (condExpKernel μ (shiftInvariantSigma (α := α))) :=
-    inferInstance
-  have hMk : IsMarkovKernel (Kernel.map (condExpKernel μ (shiftInvariantSigma (α := α)))
-      (π0 (α := α)) (measurable_pi0 (α := α))) :=
-    Kernel.IsMarkovKernel.map (condExpKernel μ (shiftInvariantSigma (α := α)))
-      (measurable_pi0 (α := α))
-  exact hMk.isProbabilityMeasure ω
+  infer_instance
 
 /-- The kernel `ν` is measurable with respect to the tail σ-algebra. -/
 lemma ν_measurable_tail {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
@@ -409,21 +399,22 @@ private lemma condexp_precomp_iterate_eq
     h_shiftk_pres.integrable_comp_of_integrable hf
   have h_condexp_int : Integrable (μ[f | m]) μ :=
     MeasureTheory.integrable_condExp (μ := μ) (m := m) (f := f)
-  refine
-    ((MeasureTheory.ae_eq_condExp_of_forall_setIntegral_eq
+  refine (MeasureTheory.ae_eq_condExp_of_forall_setIntegral_eq
         (μ := μ) (m := m)
         (hm := shiftInvariantSigma_le (α := α))
         (f := fun ω => f (shiftk ω))
         (g := μ[f | m])
         (hf := h_int_shift)
-        (hg_int_finite := ?_)
-        (hg_eq := ?_)
+        (hg_int_finite := ?hg_int_finite)
+        (hg_eq := ?hg_eq)
         (hgm := (MeasureTheory.stronglyMeasurable_condExp (μ := μ)).aestronglyMeasurable)).symm
-  · intro s hs _
+  case hg_int_finite =>
+    intro s hs _
     have h_meas : MeasurableSet s :=
       (mem_shiftInvariantSigma_iff (α := α) (s := s)).1 hs |>.1
     exact (h_condexp_int.integrableOn) h_meas
-  · intro s hs _
+  case hg_eq =>
+    intro s hs _
     have hS := (mem_shiftInvariantSigma_iff (α := α) (s := s)).1 hs
     have hS_meas : MeasurableSet s := hS.1
     have hS_shift : shift ⁻¹' s = s := hS.2
@@ -509,9 +500,8 @@ lemma identicalConditionalMarginals {μ : Measure (Ω[α])} [IsProbabilityMeasur
     [StandardBorelSpace α] (hσ : MeasurePreserving shift μ μ) (k : ℕ) :
     ∀ᵐ ω ∂μ,
       (Kernel.map (condExpKernel μ (shiftInvariantSigma (α := α)))
-        (fun y : Ω[α] => y k) (measurable_pi_apply k)) ω
+        (fun y : Ω[α] => y k) (measurable_pi_apply k) : Kernel (Ω[α]) α) ω
       = ν (μ := μ) ω := by
-  classical
   -- TODO: Complete using Kernel.ae_eq_of_forall_integral_eq
   -- The strategy is to show that both kernels give the same integrals for all bounded
   -- measurable test functions by using conditional expectation characterizations.
@@ -723,7 +713,7 @@ private lemma condexp_pair_factorization
     (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
     (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C)
     (hciid :
-      iIndepFun (fun k : Fin 2 => fun ω : Ω[α] => ω k)
+      ProbabilityTheory.Kernel.iIndepFun (fun k : Fin 2 => fun ω : Ω[α] => ω k)
         (condExpKernel μ (shiftInvariantSigma (α := α))) μ) :
     μ[(fun ω => f (ω 0) * g (ω 1)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ]
@@ -764,7 +754,7 @@ private lemma condexp_pair_factorization
       fun ω =>
         (∫ y, f (y 0) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) *
         (∫ y, g (y 1) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) := by
-    -- From `hciid: iIndepFun (fun k : Fin 2 => fun ω => ω k) κ μ`
+    -- From `hciid: ProbabilityTheory.Kernel.iIndepFun (fun k : Fin 2 => fun ω => ω k) κ μ`
     -- we know the coordinates 0 and 1 are independent under the kernel
     have h_indep_pair : Kernel.IndepFun (fun ω : Ω[α] => ω 0) (fun ω => ω 1)
         (condExpKernel μ (shiftInvariantSigma (α := α))) μ := by
@@ -827,7 +817,7 @@ theorem condexp_product_factorization
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
     -- Conditional independence of coordinates given tail:
     (hciid :
-      iIndepFun (fun k : Fin m => fun ω : Ω[α] => ω k)
+      ProbabilityTheory.Kernel.iIndepFun (fun k : Fin m => fun ω : Ω[α] => ω k)
         (condExpKernel μ (shiftInvariantSigma (α := α))) μ) :
     μ[fun ω => ∏ k, fs k (ω (k : ℕ)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω)) := by
@@ -857,9 +847,9 @@ theorem condexp_product_factorization
     let fs' : Fin m → α → ℝ := fun k => fs (Fin.castSucc k)
     have hmeas' : ∀ k, Measurable (fs' k) := fun k => hmeas (Fin.castSucc k)
     have hbd' : ∀ k, ∃ C, ∀ x, |fs' k x| ≤ C := fun k => hbd (Fin.castSucc k)
-    have hciid' : iIndepFun (fun k : Fin m => fun ω : Ω[α] => ω k)
+    have hciid' : ProbabilityTheory.Kernel.iIndepFun (fun k : Fin m => fun ω : Ω[α] => ω k)
         (condExpKernel μ (shiftInvariantSigma (α := α))) μ := by
-      -- Restriction of iIndepFun to a subset of indices
+      -- Restriction of ProbabilityTheory.Kernel.iIndepFun to a subset of indices
       exact ProbabilityTheory.Kernel.iIndepFun_of_subset hciid
         (fun k => Fin.castSucc k) Fin.castSucc_injective
 

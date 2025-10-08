@@ -3,46 +3,70 @@ Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
-import Exchangeability.DeFinetti.ViaL2
-import Exchangeability.DeFinetti.CommonEnding
+import Exchangeability.DeFinetti.TheoremViaL2
 
 /-!
-# de Finetti's Theorem - Completed Proof
+# de Finetti's Theorem - Default Export
 
-This file **completes** the de Finetti proof by combining:
-- `ViaL2`: Proves convergence A_n_m → α for each bounded f
-- `CommonEnding`: Builds the kernel K from the map f ↦ α
+This file re-exports the **L² proof** of de Finetti's theorem as the default.
 
-## Proof flow
+The L² approach (Kallenberg's "second proof") is chosen as the default because
+it has the **lightest dependencies** - it requires only elementary L² bounds
+and Lp completeness, avoiding the heavy machinery of ergodic theory or
+martingale theory.
 
-1. `ViaL2.weighted_sums_converge_L1` gives: ∃α, ∀n. A_n_m → α in L¹
-2. Show α is tail-measurable (contractability argument)
-3. `CommonEnding` machinery:
-   - Build kernel K : Ω → Measure α from f ↦ α_f
-   - Monotone class theorem extends to all measurables
-   - Prove conditional i.i.d. property
+## Available proofs
 
-## Alternative proofs
+Three complete proofs of Kallenberg Theorem 1.1 are (or will be) available:
 
-Each Via* file should eventually complete its own proof this way:
-- `ViaKoopman.lean` + `CommonEnding` → full proof via ergodic theory
-- `ViaMartingale.lean` + `CommonEnding` → full proof via martingales
+1. **L² proof** (default, re-exported here):
+   - `import Exchangeability.DeFinetti.TheoremViaL2`
+   - Uses elementary L² contractability bounds (Lemma 1.2)
+   - **Lightest dependencies**: Only Lp spaces and basic measure theory
+   - Reference: Kallenberg (2005), page 27, "Second proof"
 
-## Current status
+2. **Koopman/Ergodic proof** (future):
+   - `import Exchangeability.DeFinetti.TheoremViaKoopman`
+   - Uses Mean Ergodic Theorem via Koopman operator
+   - Heavy dependencies: ergodic theory
+   - Reference: Kallenberg (2005), page 26, "First proof"
 
-TODO: Once CommonEnding compiles, implement the completion here.
-For now this file documents the intended architecture.
+3. **Martingale proof** (future):
+   - `import Exchangeability.DeFinetti.TheoremViaMartingale`
+   - Uses reverse martingale convergence (Lemma 1.3)
+   - Medium dependencies: martingale theory
+   - Reference: Kallenberg (2005), page 27, "Third proof"
+
+## Usage
+
+For most users:
+```lean
+import Exchangeability.DeFinetti.Theorem  -- Gets the L² proof by default
+```
+
+For a specific proof approach:
+```lean
+import Exchangeability.DeFinetti.TheoremViaL2         -- Explicit L² proof
+import Exchangeability.DeFinetti.TheoremViaKoopman    -- Ergodic theory proof
+import Exchangeability.DeFinetti.TheoremViaMartingale -- Martingale proof
+```
+
+## Main theorems (re-exported)
+
+All theorems from `TheoremViaL2` are available in this namespace:
+- `deFinetti_RyllNardzewski_equivalence`: The full three-way equivalence
+- `deFinetti`: Standard statement (Exchangeable ⇒ ConditionallyIID)
+- `conditionallyIID_of_contractable`: Direct from contractability
 
 ## References
 
-* Kallenberg (2005), Theorem 1.1 (pages 26-27)
+* Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*,
+  Theorem 1.1 (pages 26-27)
 -/
 
+-- Re-export all theorems from the L² proof
 namespace Exchangeability.DeFinetti
-
-open MeasureTheory ProbabilityTheory
-
--- TODO: Complete the proof
--- theorem deFinetti_viaL2 := ViaL2.weighted_sums_converge_L1 + CommonEnding machinery
-
+  export Exchangeability.DeFinetti.deFinetti_RyllNardzewski_equivalence
+  export Exchangeability.DeFinetti.deFinetti
+  export Exchangeability.DeFinetti.conditionallyIID_of_contractable
 end Exchangeability.DeFinetti
