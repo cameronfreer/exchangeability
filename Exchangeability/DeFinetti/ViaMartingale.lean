@@ -76,6 +76,20 @@ def path (X : ℕ → Ω → α) : Ω → (ℕ → α) := fun ω n => X n ω
 def shiftRV (X : ℕ → Ω → α) (m : ℕ) : Ω → (ℕ → α) :=
   fun ω n => X (m + n) ω
 
+section ComapTools
+
+/-- If `g` is measurable, then `comap (g ∘ f) ≤ comap f`. -/
+lemma comap_comp_le
+    {X Y Z : Type*} [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpace Z]
+    (f : X → Y) (g : Y → Z) (hg : Measurable g) :
+    MeasurableSpace.comap (g ∘ f) (inferInstance : MeasurableSpace Z)
+      ≤ MeasurableSpace.comap f (inferInstance : MeasurableSpace Y) := by
+  intro s hs
+  refine ⟨g ⁻¹' s, ?_, by ext x; rfl⟩
+  exact hg hs
+
+end ComapTools
+
 section SequenceShift
 
 variable {β : Type*} [MeasurableSpace β]
@@ -145,6 +159,27 @@ lemma orderEmbOfFin_surj {s : Finset ℕ} {x : ℕ} (hx : x ∈ s) :
   obtain ⟨i, hi⟩ := hf_surj ⟨x, hx⟩
   use i
   exact Subtype.ext_iff.mp hi
+
+/-- If `f : Fin n → ℕ` is strictly monotone and `a < f i` for all `i`,
+then `Fin.cases a f : Fin (n+1) → ℕ` is strictly monotone. -/
+lemma strictMono_fin_cases
+    {n : ℕ} {f : Fin n → ℕ} (hf : StrictMono f) {a : ℕ}
+    (ha : ∀ i, a < f i) :
+    StrictMono (Fin.cases a (fun i => f i)) := by
+  intro i j hij
+  classical
+  cases' i using Fin.cases with _ i
+  · cases' j using Fin.cases with _ j
+    · exact False.elim ((lt_irrefl (0 : Fin (n + 1))) hij)
+    · simpa using ha j
+  · cases' j using Fin.cases with _ j
+    ·
+      have : ((Fin.succ i : Fin (n + 1)).1) < 0 := by
+        simpa [Fin.lt_iff_val_lt_val] using hij
+      exact False.elim ((Nat.not_lt.mpr (Nat.zero_le _)) this)
+    ·
+      have hij' : i < j := (Fin.succ_lt_succ_iff).1 hij
+      simpa using hf hij'
 
 end FinsetOrder
 
@@ -226,27 +261,19 @@ end Measurability
 
 lemma revFiltration_antitone (X : ℕ → Ω → α) :
     Antitone (revFiltration X) := by
-  -- Goal: m ≤ k ⇒ revFiltration X k ≤ revFiltration X m (i.e., σ(θₖX) ⊆ σ(θₘX)).
   intro m k hmk
-  classical
-  have hcomp :
-      shiftRV X k = (shiftSeq (β:=α) (k - m)) ∘ shiftRV X m := by
+  have hcomp : shiftRV X k = (shiftSeq (β:=α) (k - m)) ∘ shiftRV X m := by
     funext ω n
     have hkm : m + (k - m) = k := by
-      simpa [Nat.add_comm] using (Nat.sub_add_cancel hmk)
-    have hsum :
-        m + (n + (k - m)) = k + n := by
-      calc
-        m + (n + (k - m))
-            = n + (m + (k - m)) := by
-                simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
-        _ = n + k := by simpa [hkm]
-        _ = k + n := Nat.add_comm _ _
-    simp [shiftSeq, shiftRV, Function.comp, hsum]
-  intro s hs
-  simp [revFiltration, hcomp, Set.preimage_preimage, Function.comp] at hs ⊢
-  rcases hs with ⟨t, ht, rfl⟩
-  exact ⟨_, (measurable_shiftSeq (β:=α) (k - m)) ht, rfl⟩
+      simpa using Nat.add_sub_of_le hmk
+    have : m + (n + (k - m)) = k + n := by
+      have : m + (n + (k - m)) = (m + (k - m)) + n := by
+        simpa [Nat.add_comm, Nat.add_left_comm, Nat.add_assoc]
+      simpa [this, hkm, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc]
+    simp [shiftRV, shiftSeq, Function.comp, this]
+  have hmeas := measurable_shiftSeq (β:=α) (k - m)
+  simpa [revFiltration, hcomp, Function.comp] using
+    comap_comp_le (shiftRV X m) (shiftSeq (β:=α) (k - m)) hmeas
 
 /-- If `X` is contractable, then so is each of its shifts `θₘ X`. -/
 lemma shift_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
@@ -353,178 +380,90 @@ lemma condexp_indicator_eq_of_dist_eq_and_le
   -- - ae_eq_of_L2_norm_eq_zero: ‖f‖₂ = 0 ⇒ f = 0 a.e.
   sorry
 
-/-- Cylinder version: contractability implies measure equality on finite cylinders.
+/-- Finite-dimensional (cylinder) equality:
+for any `r`, base set `B` and measurable sets on the first `r` tail coordinates,
+the probabilities agree when comparing `(X m, θₘ X)` vs `(X k, θₘ X)`.
 
-For any finite index set and measurable sets, the measures of the corresponding
-cylinders agree when comparing `(X_m, shiftRV X m)` and `(X_k, shiftRV X m)`. -/
-lemma contractable_dist_eq_on_cylinders
+This is the exact finite-dimensional marginal needed for the martingale step. -/
+lemma contractable_dist_eq_on_first_r_tail
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {X : ℕ → Ω → α} (hX : Contractable μ X) (k m : ℕ) (hk : k ≤ m)
+    {X : ℕ → Ω → α} (hX : Contractable μ X)
+    (k m r : ℕ) (hk : k ≤ m)
     (B : Set α) (hB : MeasurableSet B)
-    (s : Finset ℕ) (t : ∀ i ∈ s, Set α) (ht : ∀ i (hi : i ∈ s), MeasurableSet (t i hi)) :
-    μ {ω | X m ω ∈ B ∧ ∀ i (hi : i ∈ s), X (m + i) ω ∈ t i hi}
-      = μ {ω | X k ω ∈ B ∧ ∀ i (hi : i ∈ s), X (m + i) ω ∈ t i hi} := by
+    (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i)) :
+    μ {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
+      = μ {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
   classical
-  -- Remove the `0`-coordinate from the tail and fold it into the base set.
-  set s0 : Finset ℕ := s.erase 0
-  have hs0_subset : s0 ⊆ s := Finset.erase_subset _ _
-  let t0 : ∀ i ∈ s0, Set α := fun i hi => t i (hs0_subset hi)
-  have ht0 : ∀ i (hi : i ∈ s0), MeasurableSet (t0 i hi) := by
-    intro i hi
-    simpa [t0] using ht i (hs0_subset hi)
-  -- Separate the zero-coordinate constraint from the positive tail.
-  let zeroConstraint : Ω → Prop :=
-    fun ω => if h0 : 0 ∈ s then X m ω ∈ t 0 h0 else True
-  let tailCondition : Ω → Prop :=
-    fun ω => ∀ i (hi : i ∈ s0), X (m + i) ω ∈ t0 i hi
-  -- Re-express the events in terms of the decomposed tail conditions.
-  have h_event_rewrite :
-      {ω | X m ω ∈ B ∧ ∀ i (hi : i ∈ s), X (m + i) ω ∈ t i hi}
-        =
-      {ω | X m ω ∈ B ∧ zeroConstraint ω ∧ tailCondition ω} := by
+  -- reindex vectors of length r+1
+  let κ_tail : Fin r → ℕ := fun i => m + (i.1 + 1)
+  have h_tail : StrictMono κ_tail := by
+    intro i j hij
+    have hij' : i.1 < j.1 := by
+      simpa [Fin.lt_iff_val_lt_val] using hij
+    have : i.1 + 1 < j.1 + 1 := Nat.succ_lt_succ hij'
+    simpa [κ_tail, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using
+      Nat.add_lt_add_left this m
+
+  -- whole index vectors (head+tail)
+  let κ₁ : Fin (r + 1) → ℕ := Fin.cases m (fun i : Fin r => κ_tail i)
+  let κ₂ : Fin (r + 1) → ℕ := Fin.cases k (fun i : Fin r => κ_tail i)
+  have hκ₁ : StrictMono κ₁ :=
+    strictMono_fin_cases (f := κ_tail) h_tail (by
+      intro i
+      simpa [κ_tail, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using
+        Nat.lt_add_of_pos_right (Nat.succ_pos (i.1)))
+  have hκ₂ : StrictMono κ₂ :=
+    strictMono_fin_cases (f := κ_tail) h_tail (by
+      intro i
+      have hm : m < m + (i.1 + 1) := Nat.lt_add_of_pos_right (Nat.succ_pos (i.1))
+      exact lt_of_le_of_lt hk
+        (by
+          simpa [κ_tail, Nat.add_comm, Nat.add_assoc, Nat.add_left_comm] using hm))
+
+  -- evaluation maps to the (r+1)-vector
+  let φ₁ : Ω → (Fin (r + 1) → α) :=
+    fun ω => Fin.cases (X m ω) (fun i : Fin r => X (κ_tail i) ω)
+  let φ₂ : Ω → (Fin (r + 1) → α) :=
+    fun ω => Fin.cases (X k ω) (fun i : Fin r => X (κ_tail i) ω)
+
+  -- cylinder set in `(Fin (r+1) → α)`
+  let A : Set (Fin (r + 1) → α) :=
+    {y | y 0 ∈ B ∧ ∀ i : Fin r, y (Fin.succ i) ∈ C i}
+
+  -- identify events as preimages of A
+  have hE₁ :
+      {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} = φ₁ ⁻¹' A := by
+    ext ω; rfl
+  have hE₂ :
+      {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} = φ₂ ⁻¹' A := by
+    ext ω; rfl
+
+  -- contractability gives: both pushforwards = law of the canonical vector (X 0, X 1, …, X r)
+  have hpush₁ :
+      Measure.map φ₁ μ = Measure.map (fun ω (i : Fin (r + 1)) => X i.1 ω) μ := by
+    simpa [φ₁] using hX (r + 1) κ₁ hκ₁
+  have hpush₂ :
+      Measure.map φ₂ μ = Measure.map (fun ω (i : Fin (r + 1)) => X i.1 ω) μ := by
+    simpa [φ₂] using hX (r + 1) κ₂ hκ₂
+
+  -- measurable A (so we can evaluate measures)
+  have hA : MeasurableSet A := by
     classical
-    by_cases h0 : 0 ∈ s
-    · -- With `0` present we keep its constraint separate.
-      ext ω; constructor <;> intro h
-      · rcases h with ⟨hBm, htail⟩
-        refine ⟨hBm, ?_, ?_⟩
-        · dsimp [zeroConstraint]
-          have := htail 0 h0
-          simpa [h0, Nat.add_zero] using this
-        · intro i hi
-          have hi_mem := hs0_subset hi
-          have htail' := htail i hi_mem
-          simpa [t0] using htail'
-      · rcases h with ⟨hBm, hz, htTail⟩
-        refine ⟨hBm, ?_⟩
-        intro i hi
-        by_cases hi0 : i = 0
-        · subst hi0
-          dsimp [zeroConstraint] at hz
-          simpa [h0] using hz
-        · have hi_mem : i ∈ s0 := Finset.mem_erase.mpr ⟨hi0, hi⟩
-          have := htTail i hi_mem
-          simpa [t0] using this
-    · -- Without `0`, nothing changes (the auxiliary predicates are trivial/identical).
-      have hs0_eq : s0 = s := by
-        simpa [s0, h0] using Finset.erase_eq_of_not_mem h0
-      ext ω; constructor <;> intro h
-      · rcases h with ⟨hBm, htail⟩
-        refine ⟨hBm, ?_, ?_⟩
-        · dsimp [zeroConstraint]; simp [h0]
-        · simpa [tailCondition, hs0_eq, t0] using htail
-      · rcases h with ⟨hBm, _, htail⟩
-        refine ⟨hBm, ?_⟩
-        simpa [tailCondition, hs0_eq, t0] using htail
-  -- Same rewrite for the `k`-version.
-  have h_event_rewrite_k :
-      {ω | X k ω ∈ B ∧ ∀ i (hi : i ∈ s), X (m + i) ω ∈ t i hi}
-        =
-      {ω | X k ω ∈ B ∧ zeroConstraint ω ∧ tailCondition ω} := by
-    classical
-    by_cases h0 : 0 ∈ s
-    · ext ω; constructor <;> intro h
-      · rcases h with ⟨hBk, htail⟩
-        refine ⟨hBk, ?_, ?_⟩
-        · dsimp [zeroConstraint]
-          have := htail 0 h0
-          simpa [h0, Nat.add_zero] using this
-        · intro i hi
-          have hi_mem := hs0_subset hi
-          have htail' := htail i hi_mem
-          simpa [t0] using htail'
-      · rcases h with ⟨hBk, hz, htTail⟩
-        refine ⟨hBk, ?_⟩
-        intro i hi
-        by_cases hi0 : i = 0
-        · subst hi0
-          dsimp [zeroConstraint] at hz
-          simpa [h0] using hz
-        · have hi_mem : i ∈ s0 := Finset.mem_erase.mpr ⟨hi0, hi⟩
-          have := htTail i hi_mem
-          simpa [t0] using this
-    · have hs0_eq : s0 = s := by
-        simpa [s0, h0] using Finset.erase_eq_of_not_mem h0
-      ext ω; constructor <;> intro h
-      · rcases h with ⟨hBk, htail⟩
-        refine ⟨hBk, ?_, ?_⟩
-        · dsimp [zeroConstraint]; simp [h0]
-        · simpa [tailCondition, hs0_eq, t0] using htail
-      · rcases h with ⟨hBk, _, htail⟩
-        refine ⟨hBk, ?_⟩
-        simpa [tailCondition, hs0_eq, t0] using htail
-  -- Work with the enumerated tail coordinates.
-  let n := s0.card
-  let tail : Fin n → ℕ := fun i => s0.orderEmbOfFin rfl i
-  have htail_mono : StrictMono tail := orderEmbOfFin_strictMono s0
-  have htail_mem : ∀ i, tail i ∈ s0 := orderEmbOfFin_mem s0
-  -- Tail indices are strictly positive (since 0 was erased).
-  have htail_pos : ∀ i, 0 < tail i := by
+    have h0 : Measurable (fun y : (Fin (r + 1) → α) => y 0) := measurable_pi_apply 0
+    have hS : ∀ i, Measurable (fun y : (Fin (r + 1) → α) => y (Fin.succ i)) :=
+      fun i => measurable_pi_apply (Fin.succ i)
+    refine (h0 hB).and ?_
+    refine MeasurableSet.iInter ?_
     intro i
-    have hi_mem := htail_mem i
-    have : tail i ≠ 0 := by
-      have hi := Finset.mem_erase.mp hi_mem
-      exact hi.1
-    exact Nat.pos_of_ne_zero this
-  -- Build the strictly monotone index lists for the contractability lemma.
-  let k_m : Fin (n + 1) → ℕ :=
-    Fin.cases 0 (fun i => tail i)
-  let k_map_m : Fin (n + 1) → ℕ := fun i => m + k_m i
-  let k_map_k : Fin (n + 1) → ℕ :=
-    Fin.cases k (fun i => m + tail i)
+    simpa using (hS i (hC i))
 
-  -- Prove strict monotonicity of k_m
-  have hk_m_mono : StrictMono k_m := by
-    intro i j hij
-    simp only [k_m]
-    cases i using Fin.cases with
-    | zero =>
-      cases j using Fin.cases with
-      | zero => exact absurd hij (Nat.lt_irrefl 0)
-      | succ j' =>
-        simp [Fin.cases]
-        exact htail_pos j'
-    | succ i' =>
-      cases j using Fin.cases with
-      | zero => exact absurd hij (Nat.not_lt.mpr (Nat.zero_le _))
-      | succ j' =>
-        simp [Fin.cases]
-        apply htail_mono
-        exact Fin.succ_lt_succ_iff.mp hij
+  -- take measures of A under both pushforwards
+  have : (Measure.map φ₁ μ) A = (Measure.map φ₂ μ) A := by
+    -- both equal the canonical pushforward's measure of A
+    simpa [hpush₁] using congrArg (fun ν => ν A) hpush₂.symm
 
-  -- Prove strict monotonicity of k_map_m
-  have hk_map_m_mono : StrictMono k_map_m := by
-    intro i j hij
-    simp only [k_map_m]
-    exact Nat.add_lt_add_left (hk_m_mono hij) m
-
-  -- Prove strict monotonicity of k_map_k
-  have hk_map_k_mono : StrictMono k_map_k := by
-    intro i j hij
-    simp only [k_map_k]
-    cases i using Fin.cases with
-    | zero =>
-      cases j using Fin.cases with
-      | zero => exact absurd hij (Nat.lt_irrefl 0)
-      | succ j' =>
-        simp [Fin.cases]
-        calc k ≤ m := hk
-          _ < m + tail j' := by
-            have := htail_pos j'
-            omega
-    | succ i' =>
-      cases j using Fin.cases with
-      | zero => exact absurd hij (Nat.not_lt.mpr (Nat.zero_le _))
-      | succ j' =>
-        simp [Fin.cases]
-        have : tail i' < tail j' := htail_mono (Fin.succ_lt_succ_iff.mp hij)
-        omega
-
-  sorry
-  -- TODO: Complete the cylinder set identification.
-  -- The challenge: when 0 ∈ s, the zero constraint X m ∈ t 0 appears in both events.
-  -- For k_map_m, this is captured by f(0) = X m being in B ∩ t 0.
-  -- For k_map_k, we have f(0) = X k ∈ B, but X m ∈ t 0 is a separate constraint.
+  -- unfold and conclude
+  simpa [hE₁, hE₂, Measure.map_apply, hA] using this
   -- Possible approaches:
   -- 1. Split into cases 0 ∈ s and 0 ∉ s
   -- 2. Use a larger index set that includes both k and m explicitly
