@@ -585,12 +585,14 @@ the conditional expectation of a product equals the product of integrals
 against the conditional distribution ν. -/
 theorem condexp_product_factorization
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
-    [StandardBorelSpace (Ω[α])] (hσ : MeasurePreserving shift μ μ)
+    (hσ : MeasurePreserving shift μ μ)
     (m : ℕ) (fs : Fin m → α → ℝ)
     (hmeas : ∀ k, Measurable (fs k))
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
     -- Conditional independence of coordinates given tail:
-    (hciid : True) : -- TODO: Replace with proper Kernel.iIndepFun signature
+    (hciid : iIndepFun
+      (fun k : Fin m => fun ω : Ω[α] => ω k)
+      (condExpKernel μ (shiftInvariantSigma (α := α))) μ) :
     μ[fun ω => ∏ k, fs k (ω (k : ℕ)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω)) := by
   sorry
@@ -610,13 +612,15 @@ The proof combines:
 
 This completes Kallenberg's "First proof" approach using the mean ergodic theorem. -/
 theorem condexp_cylinder_factorizes {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    [StandardBorelSpace α] [StandardBorelSpace (Ω[α])]
+    [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
     (m : ℕ) (fs : Fin m → α → ℝ)
     (hmeas : ∀ k, Measurable (fs k))
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
     -- Conditional independence hypothesis:
-    (hciid : True) : -- TODO: Replace with proper Kernel.iIndepFun signature
+    (hciid : iIndepFun
+      (fun k : Fin m => fun ω : Ω[α] => ω k)
+      (condExpKernel μ (shiftInvariantSigma (α := α))) μ) :
     ∃ (ν_result : Ω[α] → Measure α),
       (∀ᵐ ω ∂μ, IsProbabilityMeasure (ν_result ω)) ∧
       (∀ᵐ ω ∂μ, ∃ (val : ℝ), val = ∏ k : Fin m, ∫ x, fs k x ∂(ν_result ω)) := by
