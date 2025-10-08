@@ -1058,9 +1058,11 @@ theorem weighted_sums_converge_L1
           fun ω => (A n m ω - A 0 m ω) + (A 0 m ω - alpha_0 ω) := by
         ext ω; ring
       rw [h_decomp]
-      -- Now apply the standard eLpNorm triangle inequality for addition
-      sorry  -- TODO: Find the right Mathlib lemma name
-             -- Should be something like eLpNorm_add_le or similar
+      -- Apply eLpNorm_add_le from Mathlib
+      apply eLpNorm_add_le
+      · exact (hA_meas n m).sub (hA_meas 0 m) |>.aestronglyMeasurable
+      · exact (hA_meas 0 m).sub halpha_0_meas |>.aestronglyMeasurable
+      · norm_num
 
     -- Bound term 2
     have h_term2 : eLpNorm (fun ω => A 0 m ω - alpha_0 ω) 1 μ < ENNReal.ofReal (ε / 2) := by
@@ -1068,7 +1070,32 @@ theorem weighted_sums_converge_L1
 
     -- Bound term 1 using L² → L¹ and l2_bound_two_windows
     have h_term1 : eLpNorm (fun ω => A n m ω - A 0 m ω) 1 μ < ENNReal.ofReal (ε / 2) := by
-      sorry  -- Use l2_bound_two_windows and L² → L¹ embedding
+      -- Use l2_bound_two_windows to bound ∫ (A n m - A 0 m)² ≤ Cf / m
+      by_cases hm_pos : 0 < m
+      · -- Apply the bound
+        have h_bound_sq : ∫ ω, (A n m ω - A 0 m ω)^2 ∂μ ≤ Cf / m := by
+          have hm_pos' : 0 < m := hm_pos
+          obtain ⟨Cf', hCf'_nonneg, h_bound'⟩ :=
+            l2_bound_two_windows X hX_contract hX_meas hX_L2 f hf_meas hf_bdd n 0 hm_pos'
+          -- The bound gives us what we need (Cf' might differ from Cf, but both ≥ 0)
+          sorry  -- Technical: need to connect the integral form to our bound
+        -- Convert integral to eLpNorm
+        have h_L2 : eLpNorm (fun ω => A n m ω - A 0 m ω) 2 μ ≤
+            ENNReal.ofReal (Real.sqrt (Cf / m)) := by
+          sorry  -- Convert between ∫ f² and eLpNorm f 2
+        -- Use L² → L¹
+        calc eLpNorm (fun ω => A n m ω - A 0 m ω) 1 μ
+            ≤ eLpNorm (fun ω => A n m ω - A 0 m ω) 2 μ := by
+              apply eLpNorm_le_eLpNorm_of_exponent_le
+              · norm_num
+              · exact (hA_meas n m).sub (hA_meas 0 m) |>.aestronglyMeasurable
+          _ ≤ ENNReal.ofReal (Real.sqrt (Cf / m)) := h_L2
+          _ < ENNReal.ofReal (ε / 2) := by
+              -- This holds when m is large enough (from choice of M)
+              sorry  -- Follows from M being chosen appropriately
+      · -- m = 0 case is trivial or doesn't occur
+        simp [Nat.not_lt.mp hm_pos] at hm
+        omega
 
     -- Combine
     calc eLpNorm (fun ω => A n m ω - alpha_0 ω) 1 μ
