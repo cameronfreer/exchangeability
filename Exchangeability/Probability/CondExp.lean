@@ -401,7 +401,25 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     (hmg : μ[X₂ | m₁] =ᵐ[μ] X₁)
     (hSecond : ∫ ω, (X₂ ω)^2 ∂μ = ∫ ω, (X₁ ω)^2 ∂μ) :
     X₁ =ᵐ[μ] X₂ := by
-  sorry
+  -- Strategy: Use Pythagoras identity in L²
+  -- Since X₁ = μ[X₂ | m₁], we have ‖X₂‖² = ‖X₁‖² + ‖X₂ - X₁‖²
+  -- Combined with ∫ X₂² = ∫ X₁² gives ‖X₂ - X₁‖² = 0
+
+  -- First, establish that X₁ is integrable (follows from being a conditional expectation)
+  have hX₁_int : Integrable X₁ μ := by
+    -- X₁ =ᵐ μ[X₂ | m₁] and conditional expectations are integrable
+    have : Integrable (μ[X₂ | m₁]) μ := integrable_condExp
+    exact Integrable.congr this hmg
+
+  -- Key: Show ∫ (X₂ - X₁)² = 0
+  -- By Pythagoras: ∫ X₂² = ∫ X₁² + ∫ (X₂ - X₁)²
+  -- Since ∫ X₂² = ∫ X₁² by hypothesis, we get ∫ (X₂ - X₁)² = 0
+
+  sorry  -- TODO: Complete using:
+  -- 1. Expand ∫ (X₂ - X₁)² using integral_sub_sq or similar
+  -- 2. Use hmg to show ∫ X₁ * X₂ = ∫ X₁² (via setIntegral_condExp)
+  -- 3. Combine with hSecond to get ∫ (X₂ - X₁)² = 0
+  -- 4. Apply integral_sq_eq_zero to conclude X₁ =ᵐ X₂
 
 /-! ### Reverse Martingale Convergence -/
 
