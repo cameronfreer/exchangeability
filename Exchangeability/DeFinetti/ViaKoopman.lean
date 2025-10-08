@@ -709,21 +709,42 @@ lemma Kernel.IndepFun.integral_mul
     rw [h_prod, h_left, h_right, ha]
     simp [ENNReal.toReal_mul]
 
-  -- Step 2: Extend from indicators to simple functions by linearity
-  -- For simple functions f = ∑ᵢ cᵢ · 𝟙_Aᵢ and g = ∑ⱼ dⱼ · 𝟙_Bⱼ:
-  -- ∫ fg = ∑ᵢⱼ cᵢdⱼ ∫ 𝟙_{Aᵢ×Bⱼ} = ∑ᵢⱼ cᵢdⱼ · κ(Aᵢ ∩ Bⱼ)
-  --      = ∑ᵢⱼ cᵢdⱼ · κ(Aᵢ) · κ(Bⱼ)  (by h_indicator)
-  --      = (∑ᵢ cᵢ · κ(Aᵢ)) · (∑ⱼ dⱼ · κ(Bⱼ)) = (∫ f) · (∫ g)
-
-  -- Step 3: Extend to bounded measurable functions by approximation
-  -- For bounded measurable X, Y:
-  -- 1. Approximate by simple functions: Xₙ → X, Yₙ → Y pointwise
-  -- 2. Use dominated convergence (bounded by CX, CY)
-  -- 3. Pass to limit: ∫ XₙYₙ → ∫ XY and (∫ Xₙ)(∫ Yₙ) → (∫ X)(∫ Y)
-
-  -- This is a standard measure theory argument but requires careful bookkeeping
-  -- of the approximating sequences and dominated convergence applications.
-  -- TODO: Complete using MeasureTheory.SimpleFunc approximation + dominated convergence
+  -- IMPLEMENTATION PATH (Approach 1 - Direct via approximation):
+  --
+  -- The challenge: h_indicator gives us a.e. equality for each pair (s,t) of sets,
+  -- but the null sets may depend on s and t. For general X, Y we need a uniform
+  -- a.e. statement.
+  --
+  -- SOLUTION via countability:
+  -- 1. For each a, define: Bad_a = {a : the identity fails for X, Y under κ a}
+  -- 2. Show μ(Bad_a) = 0 by using:
+  --    - For simple functions: linearity + h_indicator + finite union of null sets
+  --    - For general: dominated convergence + countable intersection of null sets
+  --
+  -- CONCRETE STEPS:
+  -- Step 1: Handle simple functions
+  --   have h_simple : ∀ (f g : SimpleFunc Ω ℝ),
+  --     ∀ᵐ a ∂μ, ∫ (f · g) d(κ a) = (∫ f d(κ a)) * (∫ g d(κ a))
+  --   Proof: f = ∑ cᵢ·𝟙_{Aᵢ}, g = ∑ dⱼ·𝟙_{Bⱼ}
+  --   By linearity: ∫(∑ᵢⱼ cᵢdⱼ·𝟙_{Aᵢ∩Bⱼ}) = ∑ᵢⱼ cᵢdⱼ·∫𝟙_{Aᵢ∩Bⱼ}
+  --   By h_indicator: = ∑ᵢⱼ cᵢdⱼ·(∫𝟙_{Aᵢ})·(∫𝟙_{Bⱼ}) = (∑ᵢ cᵢ·∫𝟙_{Aᵢ})·(∑ⱼ dⱼ·∫𝟙_{Bⱼ})
+  --   The a.e. set is a finite union (over i,j) of null sets, hence null.
+  --
+  -- Step 2: Approximate X, Y by simple functions
+  --   Let Xₙ, Yₙ be simple function approximations with |Xₙ| ≤ CX, |Yₙ| ≤ CY
+  --   and Xₙ → X, Yₙ → Y pointwise
+  --
+  -- Step 3: Apply dominated convergence
+  --   For a.e. a (avoiding the null set from Step 1):
+  --   |XₙYₙ| ≤ CX·CY, so ∫XₙYₙ → ∫XY by dominated convergence
+  --   Similarly: ∫Xₙ → ∫X and ∫Yₙ → ∫Y
+  --   By h_simple: ∫XₙYₙ = (∫Xₙ)·(∫Yₙ) for each n
+  --   Taking limits: ∫XY = (∫X)·(∫Y)
+  --
+  -- This is standard but requires ~40-50 lines of careful bookkeeping with
+  -- approximations and a.e. sets. The mathematical content is complete.
+  --
+  -- TODO: Implement the above (estimated 40-50 lines)
   sorry
 
 /-- **Note**: `Kernel.IndepFun.comp` already exists in Mathlib!

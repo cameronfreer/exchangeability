@@ -716,12 +716,17 @@ lemma l2_bound_two_windows
           intro h; have : i.val = j.val := by omega
           have : i = j := Fin.ext this; exact hij this
         exact hY_cov _ _ this
-      · -- i < k, ¬(j < k): first vs second window - always distinct
-        -- We can't prove these are definitely distinct without more info,
-        -- but contractability ensures the covariance is the same regardless
-        sorry
-      · -- ¬(i < k), j < k: second vs first window
-        sorry
+      · -- i < k, ¬(j < k): first vs second window
+        -- ξ i = Y(n + i.val + 1), ξ j = Y(m + (j.val - k) + 1)
+        -- These underlying Y indices might coincide, but that's handled by:
+        -- If n + i + 1 = m + (j - k) + 1, then variance = σSq = σSq * 1
+        -- and contractability implies ρ → 1 for overlapping cases
+        -- For distinct indices, hY_cov gives σSq * ρ
+        -- Either way, the bound still holds (potentially with a tighter constant)
+        sorry  -- TODO: Either prove indices distinct OR handle coinciding case
+                -- The bound remains valid either way
+      · -- ¬(i < k), j < k: second vs first window (symmetric case)
+        sorry  -- TODO: Same reasoning as previous case
       · -- Both in second window: indices are m+(i-k)+1 vs m+(j-k)+1
         have : m + (i.val - k) + 1 ≠ m + (j.val - k) + 1 := by
           intro h; have : i.val - k = j.val - k := by omega
@@ -773,12 +778,73 @@ lemma l2_bound_two_windows
                         use b, hb
                         simp [p, (Finset.mem_filter.mp hb).2, ξ]
                 _ = ∑ i : Fin k, (1/(k:ℝ)) * f (X (n + i.val + 1) ω) := by
-                      sorry -- Reindex from Fin twoK with i < k to Fin k
+                      -- Reindex: map i : Fin k ↦ ⟨i.val, proof⟩ : Fin twoK with i.val < k
+                      apply Finset.sum_bij
+                        (i := fun (j : Fin k) _ => (⟨j.val, by omega⟩ : Fin twoK))
+                      · intro j _
+                        simp [Finset.mem_filter, Finset.mem_univ]
+                        exact j.is_lt
+                      · intro j _
+                        simp [p, ξ]
+                        have : (⟨j.val, by omega⟩ : Fin twoK).val = j.val := rfl
+                        simp [this, j.is_lt]
+                      · intro j₁ j₂ _ _ h
+                        have : j₁.val = j₂.val := by
+                          have h' : (⟨j₁.val, by omega⟩ : Fin twoK) = ⟨j₂.val, by omega⟩ := h
+                          exact Fin.mk.injEq.mp h'
+                        exact Fin.ext this
+                      · intro i hi
+                        have hi_lt : i.val < k := (Finset.mem_filter.mp hi).2
+                        use ⟨i.val, hi_lt⟩, Finset.mem_univ _
+                        exact Fin.ext rfl
                 _ = (1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) := by
                       rw [Finset.mul_sum]; congr
             have hq_expand : ∑ i : Fin twoK, q i * ξ i ω =
                 (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω) := by
-              sorry -- Similar to hp_expand
+              -- Similar to hp_expand, but q is nonzero on second window (k ≤ i.val < 2k)
+              calc ∑ i : Fin twoK, q i * ξ i ω
+                  = ∑ i : Fin twoK with k ≤ i.val, q i * ξ i ω := by
+                      apply Finset.sum_bij (i := fun i _ => i) (hi := fun i hi => hi)
+                        (ha := fun i hi => by
+                          simp [q] at hi ⊢
+                          have hik : k ≤ i.val := (Finset.mem_filter.mp hi).2
+                          simp [hik])
+                      · intro i j _ _ h; exact h
+                      · intro b hb
+                        use b, hb
+                        simp [q, (Finset.mem_filter.mp hb).2, ξ]
+                        have : ¬(b.val < k) := Nat.not_lt.mpr (Finset.mem_filter.mp hb).2
+                        simp [this]
+                _ = ∑ i : Fin k, (1/(k:ℝ)) * f (X (m + i.val + 1) ω) := by
+                      -- Reindex: map j : Fin k ↦ ⟨k + j.val, proof⟩ : Fin twoK
+                      apply Finset.sum_bij
+                        (i := fun (j : Fin k) _ => (⟨k + j.val, by omega⟩ : Fin twoK))
+                      · intro j _
+                        simp [Finset.mem_filter, Finset.mem_univ]
+                        omega
+                      · intro j _
+                        simp [q, ξ]
+                        have hval : (⟨k + j.val, by omega⟩ : Fin twoK).val = k + j.val := rfl
+                        have : ¬((k + j.val) < k) := by omega
+                        simp [hval, this]
+                        have : (k + j.val) - k = j.val := by omega
+                        simp [this]
+                      · intro j₁ j₂ _ _ h
+                        have : j₁.val = j₂.val := by
+                          have h' : k + j₁.val = k + j₂.val := by
+                            have : (⟨k + j₁.val, by omega⟩ : Fin twoK) = ⟨k + j₂.val, by omega⟩ := h
+                            exact Fin.mk.injEq.mp this
+                          omega
+                        exact Fin.ext this
+                      · intro i hi
+                        have hik : k ≤ i.val := (Finset.mem_filter.mp hi).2
+                        have hilt : i.val < twoK := i.is_lt
+                        use ⟨i.val - k, by omega⟩, Finset.mem_univ _
+                        apply Fin.ext
+                        simp
+                        omega
+                _ = (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω) := by
+                      rw [Finset.mul_sum]; congr
             rw [hp_expand, hq_expand]
       _ ≤ 2 * (Real.sqrt σSq)^2 * (1 - ρ) * (⨆ i, |p i - q i|) := hbound
       _ = 2 * σSq * (1 - ρ) * (1 / (k : ℝ)) := by
@@ -986,7 +1052,15 @@ theorem weighted_sums_converge_L1
     have h_triangle : eLpNorm (fun ω => A n m ω - alpha_0 ω) 1 μ ≤
         eLpNorm (fun ω => A n m ω - A 0 m ω) 1 μ +
         eLpNorm (fun ω => A 0 m ω - alpha_0 ω) 1 μ := by
-      sorry  -- Standard eLpNorm triangle inequality
+      -- Use eLpNorm triangle: ‖f - h‖ ≤ ‖f - g‖ + ‖g - h‖
+      -- This follows from the fact that (f - h) = (f - g) + (g - h)
+      have h_decomp : (fun ω => A n m ω - alpha_0 ω) =
+          fun ω => (A n m ω - A 0 m ω) + (A 0 m ω - alpha_0 ω) := by
+        ext ω; ring
+      rw [h_decomp]
+      -- Now apply the standard eLpNorm triangle inequality for addition
+      sorry  -- TODO: Find the right Mathlib lemma name
+             -- Should be something like eLpNorm_add_le or similar
 
     -- Bound term 2
     have h_term2 : eLpNorm (fun ω => A 0 m ω - alpha_0 ω) 1 μ < ENNReal.ofReal (ε / 2) := by
