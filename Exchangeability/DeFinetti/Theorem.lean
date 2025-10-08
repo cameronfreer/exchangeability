@@ -3,54 +3,60 @@ Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
-import Exchangeability.DeFinetti.ViaL2
-import Exchangeability.DeFinetti.CommonEnding
+import Exchangeability.DeFinetti.TheoremViaL2
 
 /-!
-# de Finetti's Theorem - Completed Proofs
+# de Finetti's Theorem - Default Export
 
-This file provides the **completed proofs** of de Finetti's theorem by combining:
-- `ViaL2`: Proves convergence A_n_m → α for each bounded f (Kallenberg Lemma 1.2)
-- `CommonEnding`: Builds the kernel K from the map f ↦ α and completes the proof
+This file re-exports the **L² proof** of de Finetti's theorem as the default.
 
-## Proof architecture
+The L² approach (Kallenberg's "second proof") is chosen as the default because
+it has the **lightest dependencies** - it requires only elementary L² bounds
+and Lp completeness, avoiding the heavy machinery of ergodic theory or
+martingale theory.
 
-The L² approach (Kallenberg's "second proof", pages 26-27) follows this structure:
+## Available proofs
 
-1. **ViaL2.weighted_sums_converge_L1**: For contractable sequences X and bounded f,
-   the weighted averages `A_n_m(f∘X) = (1/m) Σᵢ f(X_{n+i+1})` converge in L¹ to
-   a limit α_f : Ω → ℝ
+Three complete proofs of Kallenberg Theorem 1.1 are (or will be) available:
 
-2. **Tail measurability** (to be proved): Each α_f is tail-measurable, i.e.,
-   measurable with respect to the tail σ-algebra
+1. **L² proof** (default, re-exported here):
+   - `import Exchangeability.DeFinetti.TheoremViaL2`
+   - Uses elementary L² contractability bounds (Lemma 1.2)
+   - **Lightest dependencies**: Only Lp spaces and basic measure theory
+   - Reference: Kallenberg (2005), page 27, "Second proof"
 
-3. **CommonEnding.conditional_iid_from_directing_measure**: Given the family
-   {α_f}, construct a directing measure ν : Ω → Measure ℝ such that
-   - ν is a probability kernel
-   - ν is tail-measurable
-   - X is conditionally i.i.d. given ν
+2. **Koopman/Ergodic proof** (future):
+   - `import Exchangeability.DeFinetti.TheoremViaKoopman`
+   - Uses Mean Ergodic Theorem via Koopman operator
+   - Heavy dependencies: ergodic theory
+   - Reference: Kallenberg (2005), page 26, "First proof"
 
-This yields the three-way equivalence (Kallenberg Theorem 1.1):
-- (i) X is contractable
-- (ii) X is exchangeable
-- (iii) X is conditionally i.i.d.
+3. **Martingale proof** (future):
+   - `import Exchangeability.DeFinetti.TheoremViaMartingale`
+   - Uses reverse martingale convergence (Lemma 1.3)
+   - Medium dependencies: martingale theory
+   - Reference: Kallenberg (2005), page 27, "Third proof"
 
-## Alternative proofs (future)
+## Usage
 
-- `ViaKoopman.lean` + `CommonEnding` → proof via mean ergodic theorem
-- `ViaMartingale.lean` + `CommonEnding` → proof via reverse martingale convergence
+For most users:
+```lean
+import Exchangeability.DeFinetti.Theorem  -- Gets the L² proof by default
+```
 
-## Current status
+For a specific proof approach:
+```lean
+import Exchangeability.DeFinetti.TheoremViaL2         -- Explicit L² proof
+import Exchangeability.DeFinetti.TheoremViaKoopman    -- Ergodic theory proof
+import Exchangeability.DeFinetti.TheoremViaMartingale -- Martingale proof
+```
 
-**Implementation note**: The actual completion of `deFinetti_viaL2` that calls
-CommonEnding is currently in ViaL2.lean itself (lines 1547-1563) as a sorry.
-The completion requires:
-1. Implementing the limit operator Λ : (bounded f) ↦ α_f
-2. Proving tail-measurability of α_f
-3. Building ν from the conditional expectation structure
-4. Calling CommonEnding.conditional_iid_from_directing_measure
+## Main theorems (re-exported)
 
-This file re-exports the main theorems for easy access.
+All theorems from `TheoremViaL2` are available in this namespace:
+- `deFinetti_RyllNardzewski_equivalence`: The full three-way equivalence
+- `deFinetti`: Standard statement (Exchangeable ⇒ ConditionallyIID)
+- `conditionallyIID_of_contractable`: Direct from contractability
 
 ## References
 
@@ -58,87 +64,9 @@ This file re-exports the main theorems for easy access.
   Theorem 1.1 (pages 26-27)
 -/
 
-noncomputable section
-open scoped BigOperators MeasureTheory Topology Classical
-
+-- Re-export all theorems from the L² proof
 namespace Exchangeability.DeFinetti
-
-open MeasureTheory ProbabilityTheory
-open Exchangeability.Contractability
-open Exchangeability.ConditionallyIID
-
-variable {Ω : Type*} [MeasurableSpace Ω]
-
-/-!
-## Main theorems (L² proof)
-
-These are the user-facing theorems that complete Kallenberg Theorem 1.1.
-The actual proofs are in ViaL2.lean.
--/
-
-/-- **Kallenberg Theorem 1.1 (via L²)**: Contractable ⇔ (Exchangeable ∧ ConditionallyIID).
-
-This is the completed three-way equivalence for real-valued sequences.
-
-**Proof structure**:
-- (i) → (iii): ViaL2 (L² contractability bounds) + CommonEnding
-- (iii) → (ii): `exchangeable_of_conditionallyIID` (in ConditionallyIID.lean)
-- (ii) → (i): `contractable_of_exchangeable` (in Contractability.lean)
-
-**Reference**: Kallenberg (2005), Theorem 1.1 (pages 26-27), "Second proof".
--/
-theorem deFinetti_RyllNardzewski_equivalence
-    (μ : Measure Ω) [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-    Contractable μ X ↔ Exchangeable μ X ∧ ConditionallyIID μ X := by
-  constructor
-  · intro hContract
-    constructor
-    · -- (i) → (ii): Contractable → Exchangeable
-      exact exchangeable_of_contractable hContract hX_meas
-    · -- (i) → (iii): Contractable → ConditionallyIID
-      -- This is the deep result proved via ViaL2 + CommonEnding
-      -- Currently ViaL2.deFinetti_viaL2 has the proof structure but with sorries
-      -- Once those are filled, we can call it here
-      sorry  -- TODO: Call ViaL2.deFinetti_viaL2 once CommonEnding integration is complete
-  · intro ⟨hExch, _hCIID⟩
-    -- (ii) → (i): Exchangeable → Contractable (already proved)
-    exact contractable_of_exchangeable hExch hX_meas
-
-/-- **De Finetti's Theorem (L² proof)**: Exchangeable ⇒ ConditionallyIID.
-
-This is the standard statement of de Finetti's theorem for real-valued sequences.
-
-**Proof**: Exchangeable → Contractable → ConditionallyIID via the L² approach.
-
-**Reference**: Kallenberg (2005), Theorem 1.1.
--/
-theorem deFinetti
-    (μ : Measure Ω) [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
-    (hX_exch : Exchangeable μ X)
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-    ConditionallyIID μ X := by
-  -- Exchangeable → Contractable (proved in Contractability.lean)
-  have hContract := contractable_of_exchangeable hX_exch hX_meas
-  -- Contractable → ConditionallyIID (ViaL2 + CommonEnding)
-  exact (deFinetti_RyllNardzewski_equivalence μ X hX_meas hX_L2).mp hContract |>.2
-
-/-- **Contractable implies conditionally i.i.d.** (direct statement).
-
-This is sometimes called the "contractable de Finetti" theorem.
-
-**Proof**: Via L² bounds (Kallenberg Lemma 1.2) + CommonEnding.
-
-**Reference**: Kallenberg (2005), page 27, "Second proof".
--/
-theorem conditionallyIID_of_contractable
-    (μ : Measure Ω) [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
-    (hContract : Contractable μ X)
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-    ConditionallyIID μ X := by
-  exact (deFinetti_RyllNardzewski_equivalence μ X hX_meas hX_L2).mp hContract |>.2
-
+  export Exchangeability.DeFinetti.deFinetti_RyllNardzewski_equivalence
+  export Exchangeability.DeFinetti.deFinetti
+  export Exchangeability.DeFinetti.conditionallyIID_of_contractable
 end Exchangeability.DeFinetti
