@@ -233,7 +233,20 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
             congr 1 with ω
             by_cases h : ω ∈ F <;> simp [Set.indicator, h]
         _ = ∫ ω in G, (F.indicator (fun _ => (1 : ℝ)) ω) * (H.indicator (fun _ => (1 : ℝ)) ω) ∂μ := by
-            sorry -- Use product formula from h_prod and setIntegral_condExp
+            -- TODO: This requires showing ∫ in G, F.indicator * g = ∫ in G, F.indicator * H.indicator
+            --
+            -- Approach: Use Fubini-like reasoning or the product formula from h_prod
+            -- The product formula states: μ⟦F ∩ H | mG⟧ =ᵐ[μ] μ⟦F | mG⟧ * μ⟦H | mG⟧
+            --
+            -- Strategy:
+            -- 1. Both integrals equal ∫ in F ∩ G, (respective function)
+            -- 2. Use that g = μ[H.indicator | mG]
+            -- 3. The equality ∫ in F ∩ G, g = ∫ in F ∩ G, H.indicator follows from
+            --    properties of conditional expectation and the product formula
+            --
+            -- This is subtle and may require appeal to the full power of the product formula
+            -- or a more sophisticated argument using conditional expectation properties.
+            sorry
         _ = ∫ ω in G, (F ∩ H).indicator (fun _ => (1 : ℝ)) ω ∂μ := by
             congr 1 with ω
             simp only [Set.indicator]
