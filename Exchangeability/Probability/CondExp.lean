@@ -196,30 +196,71 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         (stronglyMeasurable_condExp (μ := μ) (m := mG)
             (f := H.indicator fun _ : Ω => (1 : ℝ)))
       simpa [g] using h_sm.aestronglyMeasurable
+    -- Specialize the product formula from condIndep_iff
+    have h_prod := (ProbabilityTheory.condIndep_iff mG mF mH hmG hmF hmH μ).1 hCond
     have h_rect :
         ∀ {F} (hF : MeasurableSet[mF] F) {G} (hG : MeasurableSet[mG] G),
           ∫ ω in F ∩ G, g ω ∂μ
             = ∫ ω in F ∩ G, (H.indicator fun _ : Ω => (1 : ℝ)) ω ∂μ := by
-      -- TODO: deduce from the product formula in `condIndep_iff`.
+      intro F hF G hG
+      -- Lift mF/mG measurability to ambient m₀
+      have hF' : MeasurableSet[m₀] F := hmF _ hF
+      have hG' : MeasurableSet[m₀] G := hmG _ hG
+      have hH' : MeasurableSet[m₀] H := hmH _ hH
+      -- Integrability of the indicator
+      have hH_int : Integrable (H.indicator fun _ : Ω => (1 : ℝ)) μ :=
+        (integrable_const (1 : ℝ)).indicator hH'
+      -- TODO: Complete the rectangle proof using the product formula
+      -- Strategy:
+      -- 1. Use h_prod F hF H hH to get: μ⟦F ∩ H | mG⟧ =ᵐ[μ] μ⟦F | mG⟧ * μ⟦H | mG⟧
+      -- 2. Integrate both sides over G using setIntegral_condExp
+      -- 3. Use indicator manipulation (Set.indicator_mul_left/right) to show:
+      --    ∫ in G, (F ∩ H).indicator 1 = ∫ in G, F.indicator 1 * H.indicator 1
+      --    Which simplifies to: μ(F ∩ G ∩ H) on both sides
+      -- 4. The key is that ∫ over F ∩ G equals ∫ F.indicator over G
       sorry
     have h_dynkin :
         ∀ {S} (hS : MeasurableSet[mF ⊔ mG] S),
           ∫ ω in S, g ω ∂μ
             = ∫ ω in S, (H.indicator fun _ : Ω => (1 : ℝ)) ω ∂μ := by
-      -- TODO: extend `h_rect` via Dynkin's π-λ theorem.
+      -- TODO: Extend h_rect via Dynkin's π-λ theorem
+      -- Strategy:
+      -- 1. Define the Dynkin system D := {S | ∫ in S, g = ∫ in S, H.indicator 1}
+      -- 2. Show D is a Dynkin system (contains univ, closed under complements and disjoint unions)
+      -- 3. Show D contains all rectangles F ∩ G (from h_rect)
+      -- 4. The rectangles form a π-system generating mF ⊔ mG
+      -- 5. Apply MeasurableSpace.induction_on_inter or similar to conclude D = all mF ⊔ mG sets
       sorry
     have h_proj :
         μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
           =ᵐ[μ] g := by
-      -- TODO: apply `ae_eq_condExp_of_forall_setIntegral_eq` using `h_dynkin`.
+      -- TODO: Apply ae_eq_condExp_of_forall_setIntegral_eq using h_dynkin
+      -- Strategy:
+      -- 1. h_dynkin gives: ∀ S ∈ mF ⊔ mG, ∫ in S, g = ∫ in S, H.indicator 1
+      -- 2. Need to show: μ[H.indicator 1 | mF ⊔ mG] =ᵐ[μ] g
+      -- 3. This is exactly what ae_eq_condExp_of_forall_setIntegral_eq says:
+      --    if integrals agree on all measurable sets, then they're a.e. equal
+      -- 4. May need to verify g is mF ⊔ mG-measurable (it's only mG-measurable)
+      --    - Actually, we're showing the condExp equals g, so this should work
       sorry
     simpa [g] using h_proj
   · intro hProj
-    refine
-      (ProbabilityTheory.condIndep_iff mG mF mH hmG hmF hmH μ).2 ?_
-    intro F hF G hG
-    have h_indicator := hProj G hG
-    -- TODO: recover the product formula from `h_indicator` via pull-out and tower properties.
+    refine (ProbabilityTheory.condIndep_iff mG mF mH hmG hmF hmH μ).2 ?_
+    intro F hF H hH
+    -- Need to show: μ⟦F ∩ H | mG⟧ =ᵐ[μ] μ⟦F | mG⟧ * μ⟦H | mG⟧
+    -- We have hProj: ∀ H ∈ mH, μ[H.indicator 1 | mF ⊔ mG] =ᵐ[μ] μ[H.indicator 1 | mG]
+
+    -- TODO: Recover the product formula from hProj
+    -- Strategy:
+    -- 1. Specialize hProj to H to get: μ[H.indicator 1 | mF ⊔ mG] =ᵐ[μ] μ[H.indicator 1 | mG]
+    -- 2. Use tower property: μ[μ[H.indicator 1 | mF ⊔ mG] | mG] = μ[H.indicator 1 | mG]
+    -- 3. From hProj: μ[μ[H.indicator 1 | mG] | mG] = μ[H.indicator 1 | mG]
+    -- 4. This means μ[H.indicator 1 | mG] is mG-measurable (which it is by definition)
+    -- 5. Now multiply both sides by F.indicator and use pull-out property
+    -- 6. The key: μ[(F.indicator 1) * (H.indicator 1) | mG] on the LHS becomes
+    --    μ[(F ∩ H).indicator 1 | mG] using indicator multiplication
+    -- 7. On the RHS, use that F is independent of (H | mG) given mG...
+    --    Actually, we need a different approach here.
     sorry
 
 /-- If conditional probabilities agree a.e. for a π-system generating ℋ,
