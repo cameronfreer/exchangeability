@@ -9,8 +9,6 @@ import Mathlib.Probability.Kernel.Basic
 import Mathlib.MeasureTheory.Constructions.BorelSpace.Basic
 import Exchangeability.Contractability
 import Exchangeability.ConditionallyIID
-import Exchangeability.DeFinetti.L2Approach
-import Exchangeability.DeFinetti.CommonEnding
 
 /-!
 # De Finetti's Theorem - Common Infrastructure
@@ -130,20 +128,20 @@ def empiricalMeasure [Inhabited α] (X : ℕ → Ω → α) (n : ℕ) (ω : Ω) 
     -- and ProbabilityMeasure.map with (fun i ↦ X i.val ω)
 
 /-!
-## Main theorems to be proved
+## Main theorem statements
 
 ### Kallenberg Theorem 1.1 Structure
 
 The theorem establishes a three-way equivalence (for Borel spaces):
 - **(i)** ξ is **contractable**
-- **(ii)** ξ is **exchangeable**  
+- **(ii)** ξ is **exchangeable**
 - **(iii)** ξ is **conditionally i.i.d.**
 
-**Key insight from Kallenberg**: All three proofs start with contractability (i) and 
+**Key insight from Kallenberg**: All three proofs start with contractability (i) and
 directly establish conditionally i.i.d. (iii), with exchangeability (ii) coming along
 automatically.
 
-**Proof cycle**:
+**Proof structure**:
 - **(i) → (iii)**: The three approaches (Koopman, L², Martingale) all prove this directly
   - First proof (page 26): "If ξ is contractable..." uses mean ergodic theorem
   - Second proof (page 27): "If ξ is contractable..." uses L² bounds
@@ -151,77 +149,10 @@ automatically.
   - All three share the common ending in `Exchangeability.DeFinetti.CommonEnding`
 - **(iii) → (ii)**: `exchangeable_of_conditionallyIID` ✓ **PROVED** in `ConditionallyIID.lean`
 - **(ii) → (i)**: `contractable_of_exchangeable` ✓ **PROVED** in `Contractability.lean`
+
+**Main theorems are proved in `Exchangeability.DeFinetti.Theorem`** (default L² proof).
+Import that file to use the completed theorems.
 -/
-
-/-- **Contractable implies conditionally i.i.d.** (for Borel spaces).
-This is the main result that all three proof approaches establish.
-
-The three approaches:
-1. **Koopman approach**: Mean Ergodic Theorem via L² convergence
-2. **L² approach**: Elementary contractability bounds (Lemma 1.2)  
-3. **Martingale approach**: Aldous' argument via reverse martingale convergence (Lemma 1.3)
-
-All three share the common ending in `CommonEnding.lean` that constructs the
-directing measure and applies the monotone class theorem.
-
-TODO: Prove using one of the three approaches. -/
-axiom conditionallyIID_of_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
-    [IsProbabilityMeasure μ] [TopologicalSpace α] [BorelSpace α]
-    (hX : Contractable μ X) (hX_meas : ∀ i, Measurable (X i)) :
-    ConditionallyIID μ X
-
-/-!
-## Kallenberg Theorem 1.1: de Finetti-Ryll-Nardzewski Equivalence
--/
-
-/-- **Kallenberg Theorem 1.1** (de Finetti, Ryll-Nardzewski): 
-For infinite sequences in Borel spaces, the following are equivalent:
-- **(i)** The sequence is **contractable**
-- **(ii)** The sequence is **exchangeable**
-- **(iii)** The sequence is **conditionally i.i.d.**
-
-**Reference**: Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*,
-Theorem 1.1 (page 26).
-
-**Proof structure** (three-way equivalence established via):
-- **(iii) → (ii)**: `exchangeable_of_conditionallyIID` (in `ConditionallyIID.lean`) ✓ **PROVED**
-- **(ii) → (i)**: `contractable_of_exchangeable` (in `Contractability.lean`) ✓ **PROVED**
-- **(i) → (ii)**: `exchangeable_of_contractable` (ergodic theory) - **AXIOM**
-- **(ii) → (iii)**: `conditionallyIID_of_exchangeable` (three proofs share common ending) - **AXIOM**
-
-The two axioms are the deep results requiring ergodic theory. All three proof approaches
-(Koopman, L², Martingale) share a common ending in `CommonEnding.lean` for (ii) → (iii).
--/
-theorem deFinetti_RyllNardzewski_equivalence
-    {Ω α : Type*} [MeasurableSpace Ω] [TopologicalSpace α] [MeasurableSpace α] [BorelSpace α]
-    (μ : Measure Ω) [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i)) :
-    Contractable μ X ↔ Exchangeable μ X ∧ ConditionallyIID μ X := by
-  constructor
-  · -- (i) → (ii) ∧ (iii)
-    intro hX_contract
-    constructor
-    · -- (i) → (ii)
-      exact exchangeable_of_contractable hX_contract hX_meas
-    · -- (i) → (iii) via (i) → (ii) → (iii)
-      have hX_exch := exchangeable_of_contractable hX_contract hX_meas
-      exact conditionallyIID_of_exchangeable hX_exch hX_meas
-  · -- (ii) ∧ (iii) → (i)
-    intro ⟨hX_exch, _hX_ciid⟩
-    -- Exchangeable implies contractable (already proved in Contractability.lean)
-    exact contractable_of_exchangeable hX_exch hX_meas
-
-/-- **De Finetti's theorem** (as typically stated): 
-An exchangeable sequence on a Borel space is conditionally i.i.d.
-
-This is the direction (ii) → (iii) of Theorem 1.1.
--/
-theorem deFinetti
-    {Ω α : Type*} [MeasurableSpace Ω] [TopologicalSpace α] [MeasurableSpace α] [BorelSpace α]
-    (μ : Measure Ω) [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i)) (hX_exch : Exchangeable μ X) :
-    ConditionallyIID μ X :=
-  conditionallyIID_of_exchangeable hX_exch hX_meas
 
 end Probability
 end Exchangeability

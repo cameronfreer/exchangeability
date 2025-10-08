@@ -1588,6 +1588,6 @@ theorem deFinetti_from_exchangeable
 
 /-- **Standard name** for de Finetti's theorem.
 This is an alias for `deFinetti_from_exchangeable` (the L² proof). -/
-theorem deFinetti := @deFinetti_from_exchangeable
+abbrev deFinetti := @deFinetti_from_exchangeable
 
 end Exchangeability.DeFinetti.ViaL2
