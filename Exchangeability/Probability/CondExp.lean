@@ -8,6 +8,7 @@ import Mathlib.Probability.Independence.Basic
 import Mathlib.Probability.Independence.Conditional
 import Mathlib.Probability.Martingale.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
+import Mathlib.MeasureTheory.PiSystem
 
 /-!
 # Conditional Expectation API for Exchangeability Proofs
@@ -220,14 +221,22 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         rw [setIntegral_indicator hH']
         simp [Measure.real_def, Set.inter_assoc]
 
-      -- LHS: since g = μ[H.indicator 1 | mG] and F ∩ G ⊆ univ with F ∩ G m₀-measurable
+      -- LHS: Show ∫ in F ∩ G, g = (μ (F ∩ G ∩ H)).toReal
       rw [rhs_eq]
 
-      -- Now we need: ∫ in F ∩ G, g = (μ (F ∩ G ∩ H)).toReal
-      -- Since g = μ[H.indicator | mG], we use setIntegral_condExp
-      -- But F ∩ G is not mG-measurable, so we need a different approach
-
-      -- Alternative: use that ∫ g = ∫ H.indicator on mG-measurable sets, then extend
+      -- TODO: This proof requires:
+      -- 1. Use h_prod: μ⟦F ∩ H | mG⟧ =ᵐ[μ] μ⟦F | mG⟧ * μ⟦H | mG⟧
+      -- 2. Integrate both sides over G using setIntegral_condExp
+      -- 3. Key step: show ∫ in G, F.indicator ω * g ω ∂μ = ∫ in G, (F ∩ H).indicator
+      --
+      -- Mathlib lemmas needed:
+      -- - setIntegral_condExp (to relate ∫ in G, g and ∫ in G, H.indicator)
+      -- - integral_congr_ae (to use the a.e. equality from h_prod)
+      -- - integral_mul_indicator or similar for indicator manipulation
+      --
+      -- The key insight: both LHS and RHS equal μ(F ∩ G ∩ H).toReal
+      -- - RHS is immediate from definition of indicator integral
+      -- - LHS follows from integrating the product formula over G
       sorry
     have h_dynkin :
         ∀ {S} (hS : MeasurableSet[mF ⊔ mG] S),
@@ -243,7 +252,14 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         MeasurableSet[mF] F ∧ MeasurableSet[mG] G ∧ s = F ∩ G}
 
       -- Rectangles form a π-system
-      have h_pi : IsPiSystem rects := by sorry
+      have h_pi : IsPiSystem rects := by
+        intro s1 hs1 s2 hs2 _
+        obtain ⟨F1, G1, hF1, hG1, rfl⟩ := hs1
+        obtain ⟨F2, G2, hF2, hG2, rfl⟩ := hs2
+        refine ⟨F1 ∩ F2, G1 ∩ G2, ?_, ?_, ?_⟩
+        · exact MeasurableSet.inter hF1 hF2
+        · exact MeasurableSet.inter hG1 hG2
+        · ext ω; simp [Set.mem_inter_iff]; tauto
 
       -- The property holds on rectangles (this is h_rect)
       have h_rects : ∀ s ∈ rects, ∫ ω in s, g ω ∂μ = ∫ ω in s, H.indicator (fun _ => (1 : ℝ)) ω ∂μ := by
@@ -251,8 +267,29 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         obtain ⟨F, G, hF, hG, rfl⟩ := hs
         exact h_rect hF hG
 
-      -- The property forms a Dynkin system
-      -- (contains ∅, closed under complements and countable disjoint unions with equal integrals)
+      -- TODO: Apply Dynkin π-λ theorem using induction_on_inter
+      --
+      -- Strategy: Use induction_on_inter with C(S) := "∫ in S, g = ∫ in S, H.indicator"
+      --
+      -- Required steps:
+      -- 1. Prove: mF ⊔ mG = generateFrom rects
+      --    (Rectangles generate the product σ-algebra)
+      --    Mathlib lemma: May need product σ-algebra characterization
+      --
+      -- 2. Verify C holds on ∅: ∫ in ∅, g = ∫ in ∅, H.indicator = 0 (trivial)
+      --
+      -- 3. Verify C holds on rects: this is h_rects above ✓
+      --
+      -- 4. Prove C closed under complements:
+      --    If ∫ in S, g = ∫ in S, H.indicator, then ∫ in Sᶜ, g = ∫ in Sᶜ, H.indicator
+      --    Use: ∫ in univ = ∫ in S + ∫ in Sᶜ and both g and H.indicator have same total integral
+      --    Mathlib: integral_add_compl, measure_theory integrability lemmas
+      --
+      -- 5. Prove C closed under countable disjoint unions:
+      --    If ∫ in fᵢ, g = ∫ in fᵢ, H.indicator for all i, and fᵢ disjoint,
+      --    then ∫ in ⋃ᵢ fᵢ, g = ∫ in ⋃ᵢ fᵢ, H.indicator
+      --    Use: lintegral_iUnion for disjoint unions (monotone convergence)
+      --    Mathlib: MeasureTheory.lintegral_iUnion, integral_iUnion
       sorry
     have h_proj :
         μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
@@ -278,21 +315,54 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     simpa [g] using h_proj
   · intro hProj
     refine (ProbabilityTheory.condIndep_iff mG mF mH hmG hmF hmH μ).2 ?_
-    intro F hF H hH
-    -- Need to show: μ⟦F ∩ H | mG⟧ =ᵐ[μ] μ⟦F | mG⟧ * μ⟦H | mG⟧
-    -- We have hProj: ∀ H ∈ mH, μ[H.indicator 1 | mF ⊔ mG] =ᵐ[μ] μ[H.indicator 1 | mG]
+    intro t1 t2 ht1 ht2
+    -- Need to show: μ⟦t1 ∩ t2 | mG⟧ =ᵐ[μ] μ⟦t1 | mG⟧ * μ⟦t2 | mG⟧
+    -- where t1 is mF-measurable and t2 is mH-measurable
 
-    -- TODO: Recover the product formula from hProj
-    -- Strategy:
-    -- 1. Specialize hProj to H to get: μ[H.indicator 1 | mF ⊔ mG] =ᵐ[μ] μ[H.indicator 1 | mG]
-    -- 2. Use tower property: μ[μ[H.indicator 1 | mF ⊔ mG] | mG] = μ[H.indicator 1 | mG]
-    -- 3. From hProj: μ[μ[H.indicator 1 | mG] | mG] = μ[H.indicator 1 | mG]
-    -- 4. This means μ[H.indicator 1 | mG] is mG-measurable (which it is by definition)
-    -- 5. Now multiply both sides by F.indicator and use pull-out property
-    -- 6. The key: μ[(F.indicator 1) * (H.indicator 1) | mG] on the LHS becomes
-    --    μ[(F ∩ H).indicator 1 | mG] using indicator multiplication
-    -- 7. On the RHS, use that F is independent of (H | mG) given mG...
-    --    Actually, we need a different approach here.
+    -- Key insight: The projection property gives us that conditioning on mF doesn't change
+    -- the conditional expectation of H given mG. We need to use this to derive the product formula.
+
+    -- The strategy is to use the uniqueness of conditional expectation:
+    -- We show that μ⟦t1 | mG⟧ * μ⟦t2 | mG⟧ satisfies the defining
+    -- properties of μ⟦t1 ∩ t2 | mG⟧
+
+    -- Step 1: Specialize projection property for t2
+    have hProjt2 : μ[t2.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
+        =ᵐ[μ] μ[t2.indicator (fun _ => (1 : ℝ)) | mG] := hProj t2 ht2
+
+    -- Step 2: Key observation - (t1 ∩ t2).indicator = t1.indicator * t2.indicator
+    have indicator_prod : ∀ ω, (t1 ∩ t2).indicator (fun _ => (1 : ℝ)) ω
+        = t1.indicator (fun _ => (1 : ℝ)) ω * t2.indicator (fun _ => (1 : ℝ)) ω := by
+      intro ω
+      by_cases h1 : ω ∈ t1
+      · by_cases h2 : ω ∈ t2
+        · simp [Set.indicator, h1, h2]
+        · simp [Set.indicator, h1, h2]
+      · simp [Set.indicator, h1]
+
+    -- TODO: Complete reverse direction
+    --
+    -- Goal: Show μ⟦t1 ∩ t2 | mG⟧ =ᵐ[μ] μ⟦t1 | mG⟧ * μ⟦t2 | mG⟧
+    -- Given: hProjt2: μ[t2.indicator | mF ⊔ mG] =ᵐ[μ] μ[t2.indicator | mG]
+    --
+    -- Strategy outline:
+    -- 1. Use indicator_prod: (t1 ∩ t2).indicator = t1.indicator * t2.indicator ✓
+    -- 2. Apply condExp to both sides: μ[(t1 ∩ t2).indicator | mG] = μ[t1.indicator * t2.indicator | mG]
+    -- 3. Key issue: t1.indicator is mF-measurable, not mG-measurable
+    --    Cannot directly pull out t1.indicator from the conditional expectation
+    --
+    -- Alternative approach needed:
+    -- - Use tower property: μ[· | mG] = μ[μ[· | mF ⊔ mG] | mG]
+    -- - Apply hProjt2 to relate t2 conditioning
+    -- - May need uniqueness of conditional expectation
+    --
+    -- This direction is subtle and may require showing that the projection property
+    -- characterizes conditional independence in a different way.
+    --
+    -- Mathlib lemmas potentially needed:
+    -- - condExp_condExp_of_le (tower property)
+    -- - condExp_stronglyMeasurable (for mF-measurable functions)
+    -- - ae_eq_condExp_of_forall_setIntegral_eq (uniqueness)
     sorry
 
 /-- If conditional probabilities agree a.e. for a π-system generating ℋ,
@@ -331,7 +401,25 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     (hmg : μ[X₂ | m₁] =ᵐ[μ] X₁)
     (hSecond : ∫ ω, (X₂ ω)^2 ∂μ = ∫ ω, (X₁ ω)^2 ∂μ) :
     X₁ =ᵐ[μ] X₂ := by
-  sorry
+  -- Strategy: Use Pythagoras identity in L²
+  -- Since X₁ = μ[X₂ | m₁], we have ‖X₂‖² = ‖X₁‖² + ‖X₂ - X₁‖²
+  -- Combined with ∫ X₂² = ∫ X₁² gives ‖X₂ - X₁‖² = 0
+
+  -- First, establish that X₁ is integrable (follows from being a conditional expectation)
+  have hX₁_int : Integrable X₁ μ := by
+    -- X₁ =ᵐ μ[X₂ | m₁] and conditional expectations are integrable
+    have : Integrable (μ[X₂ | m₁]) μ := integrable_condExp
+    exact Integrable.congr this hmg
+
+  -- Key: Show ∫ (X₂ - X₁)² = 0
+  -- By Pythagoras: ∫ X₂² = ∫ X₁² + ∫ (X₂ - X₁)²
+  -- Since ∫ X₂² = ∫ X₁² by hypothesis, we get ∫ (X₂ - X₁)² = 0
+
+  sorry  -- TODO: Complete using:
+  -- 1. Expand ∫ (X₂ - X₁)² using integral_sub_sq or similar
+  -- 2. Use hmg to show ∫ X₁ * X₂ = ∫ X₁² (via setIntegral_condExp)
+  -- 3. Combine with hSecond to get ∫ (X₂ - X₁)² = 0
+  -- 4. Apply integral_sq_eq_zero to conclude X₁ =ᵐ X₂
 
 /-! ### Reverse Martingale Convergence -/
 

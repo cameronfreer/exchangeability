@@ -384,11 +384,17 @@ instance ν_isProbabilityMeasure {μ : Measure (Ω[α])} [IsProbabilityMeasure �
   -- rcdKernel is a Markov kernel (composition of map and comap preserves this)
   exact IsMarkovKernel.isProbabilityMeasure ω
 
-/-- The kernel `ν` is measurable with respect to the tail σ-algebra. -/
+/-- The kernel `ν` is measurable with respect to the tail σ-algebra.
+
+Note: This property should follow from the construction via condExpKernel, but requires
+careful handling of measurable space parameters. The condExpKernel is defined as
+`@Kernel Ω Ω m mΩ`, i.e., measurable w.r.t. the sub-σ-algebra m on the source.
+However, map and comap operations may not preserve this explicit typing.
+This lemma may not be needed for the main results. -/
 lemma ν_measurable_tail {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] :
     Measurable[shiftInvariantSigma (α := α)] (ν (μ := μ)) := by
-  sorry  -- TODO: Need comap measurability w.r.t. source σ-algebra
+  sorry  -- TODO: Requires reformulation or may not be necessary
 
 /-!
 Helper lemmas establishing the stability of the conditional expectation and the
@@ -401,11 +407,8 @@ private lemma condexp_precomp_iterate_eq
     {f : Ω[α] → ℝ} (hf : Integrable f μ) :
     μ[(fun ω => f ((shift (α := α))^[k] ω)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] μ[f | shiftInvariantSigma (α := α)] := by
-  sorry
-  /-
   classical
-  let m := shiftInvariantSigma (α := α)
-  let shiftk := (shift (α := α))^[k]
+  set shiftk := (shift (α := α))^[k] with hshiftk_def
   have h_shiftk_pres : MeasurePreserving shiftk μ μ := hσ.iterate k
   have h_shiftk_meas : AEMeasurable shiftk μ :=
     (measurable_shift (α := α)).iterate k |>.aemeasurable
@@ -424,16 +427,21 @@ private lemma condexp_precomp_iterate_eq
         (hgm := (MeasureTheory.stronglyMeasurable_condExp (μ := μ)).aestronglyMeasurable)).symm
   case hg_int_finite =>
     intro s hs _
-    exact integrable_condExp.integrableOn hs
+    have h_int : Integrable (μ[f | shiftInvariantSigma (α := α)]) μ := integrable_condExp
+    exact h_int.integrableOn
   case hg_eq =>
     intro s hs _
     have hS := (mem_shiftInvariantSigma_iff (α := α) (s := s)).1 hs
     have hS_meas : MeasurableSet s := hS.1
     have hS_shift : shift ⁻¹' s = s := hS.2
     have hS_iter : shiftk ⁻¹' s = s := by
+      rw [hshiftk_def]
+      clear hshiftk_def shiftk h_shiftk_pres h_shiftk_meas h_int_shift h_condexp_int
       induction k with
       | zero => rfl
-      | succ k hk => simp [Function.iterate_succ', Set.preimage_comp, hk, hS_shift]
+      | succ k hk =>
+        rw [Function.iterate_succ']
+        simp only [Set.preimage_comp, hk, hS_shift]
     have h_indicator_int : Integrable (s.indicator f) μ :=
       hf.indicator hS_meas
     have h_indicator_meas :
@@ -476,22 +484,18 @@ private lemma condexp_precomp_iterate_eq
         ∫ ω, s.indicator f ω ∂μ
           = ∫ ω, s.indicator (fun ω => f (shiftk ω)) ω ∂μ :=
       h_indicator_comp.trans h_indicator_comp'
-    have h_set :=
-      MeasureTheory.setIntegral_indicator (μ := μ) (s := s) (f := f) hS_meas
-    have h_set_shift :=
-      MeasureTheory.setIntegral_indicator
-        (μ := μ) (s := s) (f := fun ω => f (shiftk ω)) hS_meas
     calc
-      ∫ ω in s, μ[f | m] ω ∂μ
+      ∫ ω in s, μ[f | shiftInvariantSigma (α := α)] ω ∂μ
           = ∫ ω in s, f ω ∂μ :=
             MeasureTheory.setIntegral_condExp
-              (μ := μ) (m := m)
+              (μ := μ) (m := shiftInvariantSigma (α := α))
               (hm := shiftInvariantSigma_le (α := α))
               (hf := hf) (hs := hs)
-      _ = ∫ ω, s.indicator f ω ∂μ := h_set
+      _ = ∫ ω, s.indicator f ω ∂μ :=
+            (MeasureTheory.integral_indicator hS_meas).symm
       _ = ∫ ω, s.indicator (fun ω => f (shiftk ω)) ω ∂μ := h_indicator_eq
-      _ = ∫ ω in s, (fun ω => f (shiftk ω)) ω ∂μ := h_set_shift.symm
-  -/
+      _ = ∫ ω in s, (fun ω => f (shiftk ω)) ω ∂μ :=
+            MeasureTheory.integral_indicator hS_meas
 
 /-- Almost-everywhere shift-invariance of the regular conditional distribution. -/
 lemma ν_ae_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
@@ -500,10 +504,63 @@ lemma ν_ae_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
   classical
   refine (ae_all_iff).2 ?_
   intro k
-  -- TODO: Complete this proof using Kernel.ae_eq_of_forall_integral_eq once it's properly defined
-  -- The strategy is to show that ν(shift^[k] ω) and ν(ω) give the same integrals for all
-  -- bounded measurable test functions, then apply the kernel uniqueness lemma.
-  sorry
+  -- Strategy: Define two kernels κ₁(ω) = ν(shift^[k] ω) and κ₂(ω) = ν(ω)
+  -- Show they have equal integrals a.e., then apply uniqueness axiom
+  let κ₁ : Kernel (Ω[α]) α := (rcdKernel (μ := μ)).comap ((shift (α := α))^[k])
+    ((measurable_shift (α := α)).iterate k)
+  let κ₂ : Kernel (Ω[α]) α := rcdKernel (μ := μ)
+  -- Apply the kernel uniqueness axiom
+  have h_eq := ProbabilityTheory.Kernel.ae_eq_of_forall_integral_eq
+    (κ := κ₁) (η := κ₂) (μ := μ) (mα := MeasurableSpace.pi) (mβ := inferInstance)
+  apply h_eq
+  intro f hf hf_bd
+  -- Show that integrals agree a.e.
+  simp only [κ₁, κ₂, Kernel.comap_apply]
+  -- The two sides are: ∫ f dν(shift^[k] ω) and ∫ f dν(ω)
+  -- Both are determined by conditional expectation which is shift-invariant
+
+  -- Need integrability of f ∘ π₀
+  have h_int : Integrable (fun ω => f (ω 0)) μ := by
+    obtain ⟨C, hC⟩ := hf_bd
+    exact MeasureTheory.integrable_of_bounded (hf.comp (measurable_pi_apply 0)) ⟨C, fun ω => hC (ω 0)⟩
+
+  -- Both integrals equal the conditional expectation of f ∘ π₀ via the kernel relationship
+  -- For the RHS: ∫ f dν(ω) = ∫ f d((condExpKernel ω) ∘ map π₀)
+  --                       = conditional expectation of f ∘ π₀ at ω
+  -- For the LHS: ∫ f dν(shift^[k] ω) = same conditional expectation at shift^[k] ω
+  -- But conditional expectation w.r.t. shift-invariant σ-algebra is preserved by shift^[k]
+
+  -- The key insight: ν(ω) is defined via condExpKernel composed with map π₀
+  -- So ∫ f dν(ω) = ∫ f d((condExpKernel ω).map π₀)
+  --              = ∫ (f ∘ π₀) d(condExpKernel ω)
+  -- And condExpKernel at ω is measurable w.r.t. shiftInvariantSigma
+
+  -- Since functions measurable w.r.t. shiftInvariantSigma are shift-invariant,
+  -- condExpKernel (shift^[k] ω) should equal condExpKernel ω
+  -- This would give us that the integrals are equal
+
+  -- However, this requires a lemma about condExpKernel being shift-invariant,
+  -- which is essentially what we're trying to prove here
+  sorry  -- TODO: This is circular - need a different approach or accept as axiom
+
+/-- Helper: shift^[k] y n = y (n + k) -/
+lemma shift_iterate_apply (k n : ℕ) (y : Ω[α]) :
+    (shift (α := α))^[k] y n = y (n + k) := by
+  induction k generalizing n with
+  | zero => simp
+  | succ k ih =>
+    rw [Function.iterate_succ_apply']
+    simp only [shift]
+    rw [ih]
+    ring_nf
+
+/-- The k-th coordinate equals the 0-th coordinate after k shifts. -/
+lemma coord_k_eq_coord_0_shift_k (k : ℕ) :
+    (fun y : Ω[α] => y k) = (fun y => y 0) ∘ (shift (α := α))^[k] := by
+  funext y
+  simp only [Function.comp_apply]
+  rw [shift_iterate_apply]
+  simp
 
 /-- Identical conditional marginals: each coordinate shares the same
 regular conditional distribution given the shift-invariant σ-algebra. -/
@@ -518,9 +575,17 @@ lemma identicalConditionalMarginals {μ : Measure (Ω[α])} [IsProbabilityMeasur
   -- the same integrals for all bounded measurable test functions
   apply ProbabilityTheory.Kernel.ae_eq_of_forall_integral_eq
   intro f hf hf_bd
-  -- Both kernels integrate f the same way almost everywhere
-  -- This follows from conditional expectation being shift-invariant
-  sorry  -- TODO: Complete by showing integrals agree via condexp_precomp_iterate_eq
+  -- The integral of f under the k-th marginal equals the integral under the 0-th marginal (ν)
+  -- via the correspondence: ∫f∘πₖ = μ[f∘πₖ | tail] =ᵐ μ[f∘π₀ | tail] = ∫f∘π₀
+  -- where the middle equality uses shift-invariance (condexp_precomp_iterate_eq)
+
+  -- Strategy: Both integrals can be expressed via integral_map using coordinate projections
+  -- Then use that y k = (shift^[k] y) 0, so the conditional expectations are related by shift-invariance
+  -- Use the key coordinate shift equality
+  rw [coord_k_eq_coord_0_shift_k k]
+  -- Now both kernels involve y 0, just at different points (ω vs shift^[k] ω)
+  -- This is exactly the shift-invariance property we proved in ν_ae_shiftInvariant
+  sorry  -- TODO: Use ν_ae_shiftInvariant (once completed) or condexp_precomp_iterate_eq
 
 /-- **Kernel-level integral multiplication under independence.**
 
@@ -1057,7 +1122,57 @@ theorem condexp_cylinder_factorizes {μ : Measure (Ω[α])} [IsProbabilityMeasur
 
 end ExtremeMembers
 
--- TODO: Add main theorem when proof is complete
--- theorem deFinetti_viaKoopman := ...
+/-- **de Finetti's Theorem via Koopman Operator (Main Result)**
+
+For an exchangeable sequence on a standard Borel space, there exists a random
+probability measure ν such that, conditioned on the tail σ-algebra, the sequence
+is i.i.d. with law ν.
+
+**Statement**: If (ξₙ) is an exchangeable sequence of random variables taking values
+in a standard Borel space α, then there exists a regular conditional distribution
+ν : Ω[α] → Measure α such that:
+
+1. ν(ω) is a probability measure for μ-a.e. ω
+2. Conditional on the tail σ-algebra, the coordinates are i.i.d. with law ν(ω)
+3. The marginal distribution μ equals ∫ ν(ω)^⊗ℕ dμ(ω)
+
+**Proof strategy** (Kallenberg's "first proof"):
+1. Use shift-invariance to apply Mean Ergodic Theorem
+2. Construct regular conditional distribution ν via condExpKernel
+3. Show ν is shift-invariant (extremeMembers_agree)
+4. Prove conditional independence via factorization (condexp_cylinder_factorizes)
+5. Apply monotone class theorem to extend from cylinders to full σ-algebra
+
+**Current status**: Main infrastructure in place, remaining gaps:
+- Conditional independence establishment (needs `Kernel.iIndepFun` development)
+- Shift-invariance circularity resolution
+- Several large proofs requiring mathlib additions
+
+**References**:
+- Kallenberg (2005), "Probabilistic Symmetries and Invariance Principles", Theorem 1.1
+  "First proof" approach, pages 26-27
+-/
+theorem deFinetti_viaKoopman
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ) :
+    ∃ (ν : Ω[α] → Measure α),
+      (∀ᵐ ω ∂μ, IsProbabilityMeasure (ν ω)) ∧
+      (∀ (m : ℕ) (fs : Fin m → α → ℝ),
+        (∀ k, Measurable (fs k)) →
+        (∀ k, ∃ C, ∀ x, |fs k x| ≤ C) →
+        μ[fun ω => ∏ k, fs k (ω k) | shiftInvariantSigma (α := α)]
+          =ᵐ[μ] fun ω => ∏ k, ∫ x, fs k x ∂(ν ω)) := by
+  -- Use the regular conditional distribution constructed via condExpKernel
+  use ν (μ := μ)
+  constructor
+  · -- ν(ω) is a probability measure a.e.
+    apply ae_of_all
+    intro ω
+    exact ν_isProbabilityMeasure (μ := μ) ω
+  · -- Conditional factorization
+    intro m fs hmeas hbd
+    -- This follows from condexp_product_factorization
+    -- which requires conditional independence
+    sorry  -- TODO: Complete using condexp_product_factorization
 
 end Exchangeability.DeFinetti.ViaKoopman

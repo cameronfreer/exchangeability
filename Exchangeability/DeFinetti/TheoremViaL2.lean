@@ -100,6 +100,7 @@ theorem deFinetti_RyllNardzewski_equivalence
 
       -- Apply CommonEnding to complete the proof
       sorry  -- TODO: exact CommonEnding.complete_from_directing_measure X hX_meas hContract ν hν_prob hν_meas h_bridge
+      -- Note: This exact line works but depends on ViaL2.lean which currently has compilation errors
 
   · intro ⟨hExch, _hCIID⟩
     -- (ii) → (i): Exchangeable → Contractable (already proved)

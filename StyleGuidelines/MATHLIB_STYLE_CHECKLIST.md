@@ -207,7 +207,37 @@ calc σSq * (1 - ρ) * ∑ i, (c i)^2
 
 ---
 
-## 9. Things We Don't Need to Worry About
+## 9. Documentation Content
+
+### Avoid Development History References
+**Rule:** Don't reference "earlier drafts", "previous versions", or development history in
+comments or docstrings.
+
+**Why:** Comments should be timeless documentation of the current state. Historical
+references become outdated and confusing.
+
+❌ **Bad:**
+```lean
+/-- In earlier drafts, this used axioms, but now it doesn't. -/
+/-- Originally defined differently, but we changed the approach. -/
+/-- This replaces the old broken implementation. -/
+```
+
+✅ **Good:**
+```lean
+/-- Uses mathlib's standard measure theory infrastructure. -/
+/-- Constructs a shift-invariant function via the Koopman representation. -/
+```
+
+**Check for violations:**
+```bash
+grep -n "earlier draft\|previous version\|originally\|used to\|old implementation" \
+  Exchangeability/**/*.lean
+```
+
+---
+
+## 10. Things We Don't Need to Worry About
 
 **✅ Already compliant:**
 - No `$` operator (we use `<|` correctly)
@@ -218,7 +248,7 @@ calc σSq * (1 - ρ) * ∑ i, (c i)^2
 
 ---
 
-## 10. Known Non-Issues
+## 11. Known Non-Issues
 
 **Sorry statements (40 total):**
 - NOT a style violation
