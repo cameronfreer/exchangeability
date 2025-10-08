@@ -93,11 +93,31 @@ theorem deFinetti_RyllNardzewski_equivalence
     constructor
     · -- (i) → (ii): Contractable → Exchangeable
       exact exchangeable_of_contractable hContract hX_meas
-    · -- (i) → (iii): Contractable → ConditionallyIID
-      -- This is the deep result proved via ViaL2 + CommonEnding
-      -- Currently ViaL2.deFinetti_viaL2 has the proof structure but with sorries
-      -- Once those are filled, we can call it here
-      sorry  -- TODO: Call ViaL2.deFinetti_viaL2 once CommonEnding integration is complete
+    · -- (i) → (iii): Contractable → ConditionallyIID via L² + CommonEnding
+      -- Build the directing measure ν from ViaL2 infrastructure
+      let ν := ViaL2.directing_measure X hContract hX_meas hX_L2
+
+      -- Verify the three requirements for CommonEnding.complete_from_directing_measure
+      have hν_prob : ∀ ω, IsProbabilityMeasure (ν ω) := by
+        intro ω
+        exact ViaL2.directing_measure_isProbabilityMeasure X hContract hX_meas hX_L2 ω
+
+      have hν_meas : ∀ (s : Set ℝ), MeasurableSet s →
+          Measurable (fun ω => ν ω s) := by
+        intro s hs
+        exact ViaL2.directing_measure_measurable X hContract hX_meas hX_L2 s hs
+
+      have h_bridge : ∀ {m : ℕ} (k : Fin m → ℕ) (B : Fin m → Set ℝ),
+          (∀ i, MeasurableSet (B i)) →
+            ∫⁻ ω, ∏ i : Fin m,
+                ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) ∂μ
+              = ∫⁻ ω, ∏ i : Fin m, ν ω (B i) ∂μ := by
+        intro m k B hB
+        exact ViaL2.directing_measure_bridge X hContract hX_meas hX_L2 k B hB
+
+      -- Apply CommonEnding to complete the proof
+      sorry  -- TODO: Apply CommonEnding.complete_from_directing_measure once its sorries are filled
+
   · intro ⟨hExch, _hCIID⟩
     -- (ii) → (i): Exchangeable → Contractable (already proved)
     exact contractable_of_exchangeable hExch hX_meas

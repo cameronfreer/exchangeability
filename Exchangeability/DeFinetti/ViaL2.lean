@@ -4,7 +4,6 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
 import Exchangeability.DeFinetti.L2Approach
-import Exchangeability.DeFinetti.CommonEnding
 import Exchangeability.Contractability
 import Exchangeability.ConditionallyIID
 import Mathlib.MeasureTheory.Function.L2Space
@@ -1677,35 +1676,18 @@ theorem deFinetti_viaL2
     (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
     ConditionallyIID μ X := by
   -- Construct the directing measure ν
-  let ν := directing_measure X hX_contract hX_meas hX_L2
+  -- This will be wired to CommonEnding.complete_from_directing_measure in TheoremViaL2.lean
 
-  -- Verify ν satisfies the requirements for complete_from_directing_measure:
-  -- 1. ν(ω) is a probability measure for each ω
-  have hν_prob : ∀ ω, IsProbabilityMeasure (ν ω) := by
-    intro ω
-    exact directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+  -- The proof structure:
+  -- 1. Build ν from the α limits via directing_measure
+  -- 2. Verify ν(ω) is a probability measure (directing_measure_isProbabilityMeasure)
+  -- 3. Verify ω ↦ ν(ω)(s) is measurable (directing_measure_measurable)
+  -- 4. Verify the bridge property (directing_measure_bridge)
+  -- 5. Apply CommonEnding.complete_from_directing_measure
 
-  -- 2. For each set s, ω ↦ ν(ω)(s) is measurable
-  have hν_meas : ∀ (s : Set ℝ), Measurable (fun ω => ν ω s) := by
-    intro s
-    -- For measurable sets, use directing_measure_measurable
-    -- For non-measurable sets, ν(ω)(s) = 0 by outer regularity
-    by_cases hs : MeasurableSet s
-    · exact directing_measure_measurable X hX_contract hX_meas hX_L2 s hs
-    · -- Non-measurable sets have measure 0, so the function is constant (hence measurable)
-      sorry
-
-  -- 3. The bridge property holds
-  have h_bridge : ∀ {m : ℕ} (k : Fin m → ℕ) (B : Fin m → Set ℝ),
-      (∀ i, MeasurableSet (B i)) →
-        ∫⁻ ω, ∏ i : Fin m,
-            ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) ∂μ
-          = ∫⁻ ω, ∏ i : Fin m, ν ω (B i) ∂μ := by
-    intro m k B hB
-    exact directing_measure_bridge X hX_contract hX_meas hX_L2 k B hB
-
-  -- Apply complete_from_directing_measure
-  exact CommonEnding.complete_from_directing_measure X hX_meas hX_contract ν hν_prob hν_meas h_bridge
+  -- This sorry represents the call to CommonEnding, which will be done in TheoremViaL2.lean
+  -- to maintain the correct import structure (ViaL2 should not import CommonEnding)
+  sorry
 
 /-!
 ## Connection to exchangeability (for completeness)
