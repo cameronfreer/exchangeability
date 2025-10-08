@@ -635,12 +635,15 @@ lemma aemeasurable_measure_pi {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSp
           exact measure_iUnion hpair hf
         rw [this]
         exact Measurable.ennreal_tsum hfP
-    -- For measure-valued functions, measurability of all evaluation maps
-    -- should imply AEMeasurable. This is a standard result but the exact
-    -- mathlib API is unclear. We leave this as a technical gap.
-    -- The mathematical content (measurability on rectangles extending to all sets)
-    -- is complete via the π-λ induction above.
-    sorry
+    -- Upgrade the measurability on rectangles to measurability of the whole measure-valued map
+    have h_meas : Measurable κ := by
+      classical
+      -- Use the Giry-monad lemma about measure-valued measurability
+      haveI : ∀ ω, IsProbabilityMeasure (κ ω) := hκ_prob
+      exact
+        (Measurable.measure_of_isPiSystem_of_isProbabilityMeasure
+          (μ := κ) (S := 𝒞) h_gen h_pi h_basic)
+    exact h_meas.aemeasurable
 
   -- κ is definitionally equal to the goal, so hκ_meas gives the result
   exact hκ_meas
