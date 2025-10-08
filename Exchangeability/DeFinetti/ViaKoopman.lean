@@ -543,6 +543,25 @@ lemma ν_ae_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
   -- which is essentially what we're trying to prove here
   sorry  -- TODO: This is circular - need a different approach or accept as axiom
 
+/-- Helper: shift^[k] y n = y (n + k) -/
+lemma shift_iterate_apply (k n : ℕ) (y : Ω[α]) :
+    (shift (α := α))^[k] y n = y (n + k) := by
+  induction k generalizing n with
+  | zero => simp
+  | succ k ih =>
+    rw [Function.iterate_succ_apply']
+    simp only [shift]
+    rw [ih]
+    ring_nf
+
+/-- The k-th coordinate equals the 0-th coordinate after k shifts. -/
+lemma coord_k_eq_coord_0_shift_k (k : ℕ) :
+    (fun y : Ω[α] => y k) = (fun y => y 0) ∘ (shift (α := α))^[k] := by
+  funext y
+  simp only [Function.comp_apply]
+  rw [shift_iterate_apply]
+  simp
+
 /-- Identical conditional marginals: each coordinate shares the same
 regular conditional distribution given the shift-invariant σ-algebra. -/
 lemma identicalConditionalMarginals {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
@@ -562,9 +581,11 @@ lemma identicalConditionalMarginals {μ : Measure (Ω[α])} [IsProbabilityMeasur
 
   -- Strategy: Both integrals can be expressed via integral_map using coordinate projections
   -- Then use that y k = (shift^[k] y) 0, so the conditional expectations are related by shift-invariance
-  -- The key observation: (fun y => y k) = (fun y => y 0) ∘ (shift^[k])
-  -- This follows from the definition of shift on sequences
-  sorry  -- TODO: Use coordinate shift equality, integral_map, and condexp_precomp_iterate_eq
+  -- Use the key coordinate shift equality
+  rw [coord_k_eq_coord_0_shift_k k]
+  -- Now both kernels involve y 0, just at different points (ω vs shift^[k] ω)
+  -- This is exactly the shift-invariance property we proved in ν_ae_shiftInvariant
+  sorry  -- TODO: Use ν_ae_shiftInvariant (once completed) or condexp_precomp_iterate_eq
 
 /-- **Kernel-level integral multiplication under independence.**
 
