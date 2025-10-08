@@ -4,52 +4,61 @@ This document describes style conventions specific to the Exchangeability projec
 
 ## Documentation Style
 
-### Comments About Implementation Choices
+### Comments About Lean `axiom` Declarations
 
-**Avoid discussing axioms or choice principles in comments.** Do not include commentary
-about whether constructions are "axiom-free", "avoid Choice", or similar remarks.
+**Avoid discussing Lean `axiom` declarations in comments after they've been replaced with proofs.**
 
-❌ **Bad:**
+The Lean `axiom` keyword is used for unproved declarations. During development, we use
+`axiom` declarations as placeholders for theorems that will be proved later. Once a
+theorem has been proved (removing the `axiom` keyword), avoid comments highlighting
+that the code no longer uses `axiom` declarations.
+
+❌ **Bad (after development is complete):**
+```lean
+/-- This construction is completely **axiom-free** and uses only standard mathlib. -/
+```
+
 ```lean
 /-- Build a shift-invariant full-measure set, *without* appealing to additional axioms. -/
 ```
 
-```lean
-/-- This construction is completely **axiom-free** and uses only mathlib's standard
-measure theory infrastructure. -/
-```
-
-```lean
-/-- This avoids the Axiom of Choice by using a canonical limit process. -/
-```
-
 ✅ **Good:**
-```lean
-/-- Build a shift-invariant full-measure set on which `g ∘ shift = g` holds pointwise. -/
-```
-
 ```lean
 /-- This construction uses only mathlib's standard measure theory infrastructure. -/
 ```
 
 ```lean
-/-- This construction uses a canonical limit process rather than selecting arbitrary
-representatives from equivalence classes. -/
+/-- Build a shift-invariant full-measure set on which `g ∘ shift = g` holds pointwise. -/
 ```
 
-**Rationale:** Whether a construction uses particular axioms is an implementation detail
-that may change over time. Focus on what the code does, not on what axioms it does or
-doesn't use.
+**Rationale:** Once development has matured past using `axiom` placeholders, the absence
+of `axiom` declarations is the expected state. Highlighting it in comments is unnecessary
+and may become outdated if code is refactored.
 
-### Exception: `axiom` Declarations
+### Exception: During Development
 
-When using `axiom` declarations as temporary placeholders for unfinished proofs, it's
-appropriate to document them as axioms:
+When using `axiom` declarations as temporary placeholders, it's appropriate to document
+them:
 
-✅ **Good:**
+✅ **Good (during development):**
 ```lean
 /-- Key lemma for the martingale proof. For now, accepting as axiom. -/
 axiom conditionallyIID_of_exchangeable : ...
+```
+
+### Mathematical Axioms (Choice, etc.)
+
+Discussion of mathematical axioms like the Axiom of Choice is perfectly acceptable in
+comments when mathematically relevant:
+
+✅ **Good:**
+```lean
+/-- This construction avoids the Axiom of Choice by using a canonical limit process
+rather than selecting arbitrary representatives. -/
+```
+
+```lean
+/-- Using Choice, we can construct a selector function for each equivalence class. -/
 ```
 
 ## Mathematical Documentation

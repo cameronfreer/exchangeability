@@ -218,8 +218,8 @@ Taking the limsup gives a well-defined function that is:
 2. **Measurable**: Inherits measurability from `g0`
 3. **Almost equal**: `gRep g0 =ᵐ[μ] g0` when `g0` is almost invariant
 
-This construction uses a canonical limit process rather than selecting arbitrary
-representatives from equivalence classes.
+This construction avoids the Axiom of Choice by using a canonical limit process rather than
+selecting arbitrary representatives from equivalence classes.
 
 **Key property**: If `g0 (shift^[n] ω) = g0 ω` for all `n`, then `gRep g0 ω = g0 ω`.
 -/
@@ -333,7 +333,8 @@ equality `g ∘ shift =ᵐ[μ] g` doesn't immediately give a pointwise invariant
 2. Use `gRep` to construct a pointwise invariant representative
 3. Prove the representative agrees with `g` almost everywhere
 
-The canonical `gRep` construction is used instead of selecting arbitrary representatives.
+This avoids Choice by using the canonical `gRep` construction instead of selecting
+arbitrary representatives.
 -/
 
 /-- **Existence of shift-invariant full-measure sets.**
