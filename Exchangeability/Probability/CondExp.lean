@@ -448,26 +448,33 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
   -- By Pythagoras: ∫ X₂² = ∫ X₁² + ∫ (X₂ - X₁)²
   -- Since ∫ X₂² = ∫ X₁² by hypothesis, we get ∫ (X₂ - X₁)² = 0
 
-  sorry  -- TODO: Complete using L² orthogonality - all key lemmas now identified:
+  sorry  -- TODO: Complete using L² orthogonality - all key lemmas verified:
   --
-  -- Core mathlib lemmas (verified in search):
+  -- Core mathlib lemmas:
   -- 1. Lp.eq_zero_iff_ae_eq_zero : (f : Lp E p μ) = 0 ↔ f =ᵐ[μ] 0
-  --    (from MeasureTheory.Function.LpSpace.Basic)
-  -- 2. norm_sub_sq_real (x y : F) : ‖x - y‖² = ‖x‖² - 2⟪x,y⟫ + ‖y‖²
-  --    (from Analysis.InnerProductSpace.Basic)
-  -- 3. inner_condExpL2_left_eq_right : ⟪condExpL2 f, g⟫ = ⟪f, condExpL2 g⟫
-  --    (orthogonality of conditional expectation projection)
-  -- 4. integral_inner_eq_sq_eLpNorm (f : α →₂[μ] E) : ∫ ⟪f,f⟫ = ENNReal.toReal (∫⁻ ‖f‖₊²)
-  --    (from MeasureTheory.Function.L2Space)
-  -- 5. MemLp.condExpL2_ae_eq_condExp : converts between μ[·|m] and condExpL2
-  --    (from ConditionalExpectation.Basic)
+  --    (MeasureTheory.Function.LpSpace.Basic:298)
+  --
+  -- 2. norm_sub_sq : ‖x - y‖² = ‖x‖² - 2 * re ⟪x,y⟫ + ‖y‖²
+  --    (Analysis.InnerProductSpace.Basic:409)
+  --    For real inner products: ‖x - y‖² = ‖x‖² - 2⟪x,y⟫ + ‖y‖²
+  --
+  -- 3. inner_condExpL2_left_eq_right (hm : m ≤ m0) {f g : α →₂[μ] E} :
+  --      ⟪condExpL2 𝕜 E hm f, g⟫ = ⟪f, condExpL2 𝕜 E hm g⟫
+  --    (ConditionalExpectation.CondexpL2:103)
+  --    Key orthogonality: projection property of conditional expectation
+  --
+  -- 4. eLpNorm_eq_zero_iff {f : α → ε} (hf : AEStronglyMeasurable f μ) (h0 : p ≠ 0) :
+  --      eLpNorm f p μ = 0 ↔ f =ᵐ[μ] 0
+  --    (Function.LpSeminorm.Basic:993)
   --
   -- Strategy:
-  -- - Convert X₁, X₂ to L²[μ] using MemLp (we have hX₁_int, hInt)
-  -- - Apply norm_sub_sq_real: ‖X₂ - X₁‖² = ‖X₂‖² - 2⟪X₂,X₁⟫ + ‖X₁‖²
-  -- - Use inner_condExpL2: since X₁ = condExpL2(X₂), we have ⟪X₂,X₁⟫ = ⟪X₂,condExpL2 X₂⟫ = ⟪condExpL2 X₂,condExpL2 X₂⟫ = ‖X₁‖²
-  -- - Substitute: ‖X₂ - X₁‖² = ‖X₂‖² - 2‖X₁‖² + ‖X₁‖² = ‖X₂‖² - ‖X₁‖² = 0 (by hSecond)
-  -- - Apply Lp.eq_zero_iff_ae_eq_zero: X₂ - X₁ = 0 ae, so X₁ =ᵐ X₂
+  -- - Convert X₁, X₂ to L²[μ] using MemLp (we have hX₁_int, hInt and μ is probability)
+  -- - Let X₁' := condExpL2(X₂) so X₁ =ᵐ X₁' by hmg and MemLp.condExpL2_ae_eq_condExp
+  -- - Apply norm_sub_sq: ‖X₂ - X₁'‖² = ‖X₂‖² - 2⟪X₂,X₁'⟫ + ‖X₁'‖²
+  -- - Use inner_condExpL2_left_eq_right with g = X₁':
+  --     ⟪X₂, X₁'⟫ = ⟪X₂, condExpL2 X₂⟫ = ⟪condExpL2 X₂, condExpL2 X₂⟫ = ‖X₁'‖²
+  -- - Substitute: ‖X₂ - X₁'‖² = ‖X₂‖² - 2‖X₁'‖² + ‖X₁'‖² = ‖X₂‖² - ‖X₁'‖² = 0 (by hSecond)
+  -- - Apply Lp.eq_zero_iff_ae_eq_zero: X₂ - X₁' =ᵐ 0, thus X₁ =ᵐ X₂
 
 /-! ### Reverse Martingale Convergence -/
 
