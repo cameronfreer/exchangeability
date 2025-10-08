@@ -497,51 +497,57 @@ private lemma condexp_precomp_iterate_eq
       _ = ∫ ω in s, (fun ω => f (shiftk ω)) ω ∂μ :=
             MeasureTheory.integral_indicator hS_meas
 
-/-- Almost-everywhere shift-invariance of the regular conditional distribution. -/
+/-- Almost-everywhere shift-invariance of the regular conditional distribution.
+
+**Proof strategy** (no circularity, no kernel uniqueness axiom needed):
+1. For each measurable set s ⊆ α, prove ν(shift^[k] ω)(s) = ν(ω)(s) a.e.
+   using condexp_precomp_iterate_eq and condExp_ae_eq_integral_condExpKernel
+2. Use a countable π-system generating Borel(α) and swap quantifiers via ae_all_iff
+3. Extend from the π-system to all Borel sets via measure extension
+
+This avoids assuming condExpKernel is shift-invariant; we only use that
+conditional expectation commutes with shift for functions measurable w.r.t.
+shift-invariant σ-algebra.
+-/
 lemma ν_ae_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] (hσ : MeasurePreserving shift μ μ) :
     ∀ᵐ ω ∂μ, ∀ k : ℕ, ν (μ := μ) ((shift (α := α))^[k] ω) = ν (μ := μ) ω := by
   classical
   refine (ae_all_iff).2 ?_
   intro k
-  -- Strategy: Define two kernels κ₁(ω) = ν(shift^[k] ω) and κ₂(ω) = ν(ω)
-  -- Show they have equal integrals a.e., then apply uniqueness axiom
-  let κ₁ : Kernel (Ω[α]) α := (rcdKernel (μ := μ)).comap ((shift (α := α))^[k])
-    ((measurable_shift (α := α)).iterate k)
-  let κ₂ : Kernel (Ω[α]) α := rcdKernel (μ := μ)
-  -- Apply the kernel uniqueness axiom
-  have h_eq := ProbabilityTheory.Kernel.ae_eq_of_forall_integral_eq
-    (κ := κ₁) (η := κ₂) (μ := μ) (mα := MeasurableSpace.pi) (mβ := inferInstance)
-  apply h_eq
-  intro f hf hf_bd
-  -- Show that integrals agree a.e.
-  simp only [κ₁, κ₂, Kernel.comap_apply]
-  -- The two sides are: ∫ f dν(shift^[k] ω) and ∫ f dν(ω)
-  -- Both are determined by conditional expectation which is shift-invariant
 
-  -- Need integrability of f ∘ π₀
-  have h_int : Integrable (fun ω => f (ω 0)) μ := by
-    obtain ⟨C, hC⟩ := hf_bd
-    exact MeasureTheory.integrable_of_bounded (hf.comp (measurable_pi_apply 0)) ⟨C, fun ω => hC (ω 0)⟩
+  -- For each Borel set s ⊆ α, we'll show ν(shift^[k] ω)(s) = ν(ω)(s) a.e.
+  -- Then use ae_all_iff over a countable π-system + measure extension
 
-  -- Both integrals equal the conditional expectation of f ∘ π₀ via the kernel relationship
-  -- For the RHS: ∫ f dν(ω) = ∫ f d((condExpKernel ω) ∘ map π₀)
-  --                       = conditional expectation of f ∘ π₀ at ω
-  -- For the LHS: ∫ f dν(shift^[k] ω) = same conditional expectation at shift^[k] ω
-  -- But conditional expectation w.r.t. shift-invariant σ-algebra is preserved by shift^[k]
+  -- Define the indicator function F_s(y) = 𝟙_s(y 0) for a measurable set s ⊆ α
+  -- By definition of ν via Kernel.map and Kernel.comap:
+  -- ν(ω)(s) = (condExpKernel μ tail ω)(π₀⁻¹(s))
+  --         = ∫ 𝟙_s(y 0) ∂(condExpKernel μ tail ω)
+  --         = μ[𝟙_s ∘ π₀ | tail](ω)  (by condExp_ae_eq_integral_condExpKernel)
 
-  -- The key insight: ν(ω) is defined via condExpKernel composed with map π₀
-  -- So ∫ f dν(ω) = ∫ f d((condExpKernel ω).map π₀)
-  --              = ∫ (f ∘ π₀) d(condExpKernel ω)
-  -- And condExpKernel at ω is measurable w.r.t. shiftInvariantSigma
+  -- Similarly: ν(shift^[k] ω)(s) = μ[𝟙_s ∘ π₀ | tail](shift^[k] ω)
 
-  -- Since functions measurable w.r.t. shiftInvariantSigma are shift-invariant,
-  -- condExpKernel (shift^[k] ω) should equal condExpKernel ω
-  -- This would give us that the integrals are equal
+  -- Key observation: The function F_s := 𝟙_s ∘ π₀ : Ω → ℝ satisfies:
+  -- F_s(shift^[k] y) = 𝟙_s((shift^[k] y) 0) = 𝟙_s(y k)
+  --                  = ((𝟙_s ∘ πₖ) ∘ shift^[-k])(y)  (conceptually)
 
-  -- However, this requires a lemma about condExpKernel being shift-invariant,
-  -- which is essentially what we're trying to prove here
-  sorry  -- TODO: This is circular - need a different approach or accept as axiom
+  -- But π₀ is NOT shift-invariant. Instead, we use:
+  -- By condexp_precomp_iterate_eq applied to the indicator of {y : y k ∈ s}:
+  --   μ[𝟙_s(y k) | tail] = μ[𝟙_s((shift^[k] y) 0) | tail]
+  --                       = μ[(𝟙_s ∘ π₀) ∘ shift^[k] | tail]
+  --                       =ᵐ μ[𝟙_s ∘ π₀ | tail]  (by condexp_precomp_iterate_eq)
+  -- where the last equality uses that 𝟙_s ∘ π₀ is measurable w.r.t. cylinders,
+  -- which are "shift-invariant up to coordinate permutation"
+
+  -- TODO: This requires careful setup with the right measurability conditions
+  -- The challenge is that π₀ itself is NOT shift-invariant, but the *distribution*
+  -- of π₀ under the conditional measure IS shift-invariant
+
+  -- Alternative approach: Work directly with the kernel equality
+  -- Show that for a.e. ω, the map k ↦ ν((shift^[k]) ω) is constant
+  -- by showing it's shift-invariant pointwise a.e.
+
+  sorry  -- TODO: Implement using condExp_ae_eq_integral_condExpKernel + condexp_precomp_iterate_eq
 
 /-- Helper: shift^[k] y n = y (n + k) -/
 lemma shift_iterate_apply (k n : ℕ) (y : Ω[α]) :
@@ -563,7 +569,18 @@ lemma coord_k_eq_coord_0_shift_k (k : ℕ) :
   simp
 
 /-- Identical conditional marginals: each coordinate shares the same
-regular conditional distribution given the shift-invariant σ-algebra. -/
+regular conditional distribution given the shift-invariant σ-algebra.
+
+**Proof strategy** (using π-system approach, no kernel uniqueness axiom):
+We show that the k-th marginal kernel equals ν by using the coordinate-shift relation
+y k = (shift^[k] y) 0 and the shift-invariance of ν.
+
+Key steps:
+1. The k-th marginal is the pushforward of condExpKernel via πₖ
+2. By coord_k_eq_coord_0_shift_k: πₖ = π₀ ∘ shift^[k]
+3. So the k-th marginal at ω equals ν(shift^[k] ω)
+4. By ν_ae_shiftInvariant: ν(shift^[k] ω) = ν(ω) a.e.
+-/
 lemma identicalConditionalMarginals {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] (hσ : MeasurePreserving shift μ μ) (k : ℕ) :
     ∀ᵐ ω ∂μ,
@@ -571,21 +588,19 @@ lemma identicalConditionalMarginals {μ : Measure (Ω[α])} [IsProbabilityMeasur
         (fun y : Ω[α] => y k)) id (measurable_id'' (shiftInvariantSigma_le (α := α)))
         : Kernel (Ω[α]) α) ω
       = ν (μ := μ) ω := by
-  -- Use the kernel uniqueness axiom: two kernels are a.e. equal if they give
-  -- the same integrals for all bounded measurable test functions
-  apply ProbabilityTheory.Kernel.ae_eq_of_forall_integral_eq
-  intro f hf hf_bd
-  -- The integral of f under the k-th marginal equals the integral under the 0-th marginal (ν)
-  -- via the correspondence: ∫f∘πₖ = μ[f∘πₖ | tail] =ᵐ μ[f∘π₀ | tail] = ∫f∘π₀
-  -- where the middle equality uses shift-invariance (condexp_precomp_iterate_eq)
+  -- The k-th marginal kernel is the pushforward via πₖ
+  -- By definition of ν, the 0-th marginal kernel is the pushforward via π₀
+  -- Using coord_k_eq_coord_0_shift_k: πₖ = π₀ ∘ shift^[k]
 
-  -- Strategy: Both integrals can be expressed via integral_map using coordinate projections
-  -- Then use that y k = (shift^[k] y) 0, so the conditional expectations are related by shift-invariance
-  -- Use the key coordinate shift equality
-  rw [coord_k_eq_coord_0_shift_k k]
-  -- Now both kernels involve y 0, just at different points (ω vs shift^[k] ω)
-  -- This is exactly the shift-invariance property we proved in ν_ae_shiftInvariant
-  sorry  -- TODO: Use ν_ae_shiftInvariant (once completed) or condexp_precomp_iterate_eq
+  -- The key insight: the k-th marginal at ω is ν(shift^[k] ω)
+  -- By ν_ae_shiftInvariant, ν(shift^[k] ω) = ν(ω) a.e.
+
+  -- First, express the LHS in terms of ν evaluated at shifted points
+  -- have h_lhs : ∀ᵐ ω ∂μ, (LHS kernel) ω = ν(shift^[k] ω) := by ...
+
+  -- Then apply ν_ae_shiftInvariant to get ν(shift^[k] ω) = ν(ω)
+
+  sorry  -- TODO: Show LHS = ν(shift^[k] ω), then use ν_ae_shiftInvariant
 
 /-- **Kernel-level integral multiplication under independence.**
 
