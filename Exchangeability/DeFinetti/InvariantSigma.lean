@@ -247,7 +247,7 @@ lemma gRep_measurable {g0 : Ω[α] → ℝ} (hg0 : Measurable g0) :
     simpa [gLimsupE] using (Measurable.limsup hstep)
   simpa [gRep, gLimsupE] using measurable_ereal_toReal.comp h_meas_ereal
 
-set_option linter.unusedSectionVars false in
+omit [MeasurableSpace α] in
 lemma gRep_shiftInvariant {g0 : Ω[α] → ℝ} :
     ∀ ω, gRep g0 (shift ω) = gRep g0 ω := by
   intro ω
@@ -259,7 +259,7 @@ lemma gRep_shiftInvariant {g0 : Ω[α] → ℝ} :
   simpa [gRep, gLimsupE, Function.iterate_succ_apply, Nat.succ_eq_add_one]
     using congrArg EReal.toReal hlimsupEq
 
-set_option linter.unusedSectionVars false in
+omit [MeasurableSpace α] in
 lemma gRep_eq_of_constant_orbit {g0 : Ω[α] → ℝ} {ω : Ω[α]}
     (hconst : ∀ n : ℕ, g0 (shift^[n] ω) = g0 ω) :
     gRep g0 ω = g0 ω := by

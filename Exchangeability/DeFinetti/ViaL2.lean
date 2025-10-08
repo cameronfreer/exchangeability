@@ -1088,9 +1088,33 @@ theorem weighted_sums_converge_L1
           -- Use MemLp.eLpNorm_eq_integral_rpow_norm to convert ∫ f² to eLpNorm f 2
           -- For p = 2: eLpNorm f 2 μ = ENNReal.ofReal ((∫ ‖f‖²)^(1/2))
           have hf_memLp : MemLp (fun ω => A n m ω - A 0 m ω) 2 μ := by
-            -- A n m and A 0 m are bounded, hence in L² on probability space
-            -- Since L¹ ⊆ L² on probability spaces and A n m are bounded
-            sorry  -- Standard: bounded functions on probability spaces are in all Lp
+            -- A n m and A 0 m are bounded by M, hence in L²
+            obtain ⟨M, hM⟩ := hf_bdd
+            apply MemLp.of_bound
+              ((hA_meas n m).sub (hA_meas 0 m) |>.aestronglyMeasurable)
+              (2 * M)
+            filter_upwards with ω
+            calc ‖A n m ω - A 0 m ω‖
+                ≤ ‖A n m ω‖ + ‖A 0 m ω‖ := norm_sub_le _ _
+              _ ≤ M + M := by
+                  have h1 : ‖A n m ω‖ ≤ M := by
+                    simp [A, Real.norm_eq_abs]
+                    by_cases hm' : m = 0
+                    · simp [hm']; exact le_trans (abs_nonneg _) (hM 0)
+                    · have hm_pos : 0 < (m : ℝ) := by exact_mod_cast Nat.pos_of_ne_zero hm'
+                      calc |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω)|
+                          ≤ (1 / (m : ℝ)) * ∑ k : Fin m, |f (X (n + k.val + 1) ω)| := by
+                            sorry  -- Standard: |average| ≤ average of |·|
+                        _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, M := by
+                            sorry  -- Each |f(X i)| ≤ M by hM
+                        _ = M := by sorry  -- Arithmetic: (1/m) * m * M = M
+                  have h2 : ‖A 0 m ω‖ ≤ M := by
+                    simp [A, Real.norm_eq_abs]
+                    by_cases hm' : m = 0
+                    · simp [hm']; exact le_trans (abs_nonneg _) (hM 0)
+                    · sorry  -- Same argument as h1
+                  exact add_le_add h1 h2
+              _ = 2 * M := by ring
           have h_eq := hf_memLp.eLpNorm_eq_integral_rpow_norm
             (by norm_num : (2 : ℝ≥0∞) ≠ 0)
             (by norm_num : (2 : ℝ≥0∞) ≠ ∞)
