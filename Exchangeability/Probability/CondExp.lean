@@ -229,11 +229,15 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
       calc ∫ ω in F ∩ G, g ω ∂μ
           = ∫ ω in G ∩ F, g ω ∂μ := by rw [Set.inter_comm]
         _ = ∫ ω in G, (F.indicator (fun _ => (1 : ℝ)) ω) * g ω ∂μ := by
-            sorry -- Use setIntegral with indicator: ∫ in G ∩ F = ∫ in G, F.indicator
+            rw [← setIntegral_indicator hF']
+            congr 1 with ω
+            by_cases h : ω ∈ F <;> simp [Set.indicator, h]
         _ = ∫ ω in G, (F.indicator (fun _ => (1 : ℝ)) ω) * (H.indicator (fun _ => (1 : ℝ)) ω) ∂μ := by
             sorry -- Use product formula from h_prod and setIntegral_condExp
         _ = ∫ ω in G, (F ∩ H).indicator (fun _ => (1 : ℝ)) ω ∂μ := by
-            sorry -- Use inter_indicator_one
+            congr 1 with ω
+            simp only [Set.indicator]
+            by_cases hF : ω ∈ F <;> by_cases hH : ω ∈ H <;> simp [hF, hH, Set.mem_inter_iff]
         _ = ∫ ω in G ∩ (F ∩ H), (1 : ℝ) ∂μ := by
             rw [setIntegral_indicator (MeasurableSet.inter hF' hH')]
         _ = (μ (G ∩ (F ∩ H))).toReal := by simp [Measure.real_def]
