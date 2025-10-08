@@ -503,10 +503,10 @@ theorem weighted_sums_converge_L1
                 exact div_pos (by norm_num) hm_pos
               have h_abs_sum :
                   |∑ k : Fin m, f (X (n + k.val + 1) ω)|
-                    ≤ ∑ k : Fin m, |f (X (n + k.val + 1) ω)| := by
-                simpa using
-                  (Finset.abs_sum_le_sum_abs
-                    (fun k : Fin m => f (X (n + k.val + 1) ω)))
+                    ≤ ∑ k : Fin m, |f (X (n + k.val + 1) ω)| :=
+                Finset.abs_sum_le_sum_abs
+                  (fun k : Fin m => f (X (n + k.val + 1) ω))
+                  Finset.univ
               have h_inv_abs : |1 / (m : ℝ)| = 1 / (m : ℝ) :=
                 abs_of_pos h_inv_pos
               calc
@@ -542,7 +542,7 @@ theorem weighted_sums_converge_L1
             · have hm_pos : 0 < (m : ℝ) := by exact_mod_cast Nat.pos_of_ne_zero hm
               have hm_ne_zero : (m : ℝ) ≠ 0 := ne_of_gt hm_pos
               have h_inv_mul : (1 / (m : ℝ)) * (m : ℝ) = (1 : ℝ) := by
-                simpa [one_div] using inv_mul_cancel hm_ne_zero
+                field_simp
               have : ∑ k : Fin m, M = (m : ℝ) * M := by
                 simp [Finset.sum_const, mul_comm, mul_left_comm, mul_assoc]
               calc
@@ -584,8 +584,10 @@ theorem weighted_sums_converge_L1
     -- Use common length k = min m ℓ
     let k := min m ℓ
     have hk_pos : 0 < k := by
-      have : 0 < N := hN_pos
-      have : N ≤ min m ℓ := min_le_iff.mpr (Or.inl hm)
+      have : N ≤ min m ℓ := by
+        apply le_min
+        · exact hm
+        · exact hℓ
       exact Nat.lt_of_lt_of_le hN_pos this
 
     -- Triangle inequality via common length
@@ -596,10 +598,23 @@ theorem weighted_sums_converge_L1
                    = (fun ω => (A 0 m ω - A 0 k ω) + (A 0 k ω - A 0 ℓ ω)) := by
         ext ω; ring
       rw [hdecomp]
-      apply eLpNorm_add_le
-      · exact (hA_meas 0 m).sub (hA_meas 0 k) |>.aestronglyMeasurable
-      · exact (hA_meas 0 k).sub (hA_meas 0 ℓ) |>.aestronglyMeasurable
-      · norm_num
+      calc eLpNorm (fun ω => A 0 m ω - A 0 k ω + (A 0 k ω - A 0 ℓ ω)) 2 μ
+          ≤ eLpNorm (fun ω => A 0 m ω - A 0 k ω) 2 μ +
+              eLpNorm (fun ω => A 0 k ω - A 0 ℓ ω) 2 μ := by
+            apply eLpNorm_add_le
+            · exact (hA_meas 0 m).sub (hA_meas 0 k) |>.aestronglyMeasurable
+            · exact (hA_meas 0 k).sub (hA_meas 0 ℓ) |>.aestronglyMeasurable
+            · norm_num
+        _ = eLpNorm (fun ω => A 0 m ω - A 0 k ω) 2 μ +
+              eLpNorm (fun ω => A 0 ℓ ω - A 0 k ω) 2 μ := by
+            congr 1
+            -- eLpNorm (A 0 k - A 0 ℓ) = eLpNorm (A 0 ℓ - A 0 k)
+            have h : eLpNorm (fun ω => A 0 k ω - A 0 ℓ ω) 2 μ =
+                     eLpNorm (fun ω => -(A 0 k ω - A 0 ℓ ω)) 2 μ :=
+              (eLpNorm_neg _ _ _).symm
+            convert h using 2
+            ext ω
+            ring
 
     -- Each term bounded by √(Cf/k) via uniform bound
     have hCf_k_nn : 0 ≤ Cf / k := div_nonneg hCf_nonneg (Nat.cast_nonneg k)
