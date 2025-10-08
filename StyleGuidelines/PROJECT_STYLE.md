@@ -109,6 +109,40 @@ equality `g ∘ shift =ᵐ[μ] g` doesn't immediately give a pointwise invariant
 Follow mathlib naming conventions as documented in
 [MATHLIB_STYLE_CHECKLIST.md](MATHLIB_STYLE_CHECKLIST.md).
 
+## Development Tools
+
+### Using the Canonical Tactic
+
+The [Canonical](https://github.com/chasenorman/Canonical) tactic exhaustively searches
+for proof terms and can be helpful during development. However, it should be used as a
+temporary development aid, not as a permanent dependency.
+
+**Development workflow:**
+
+1. **During proof development**: Use `by canonical` to find proofs
+2. **After proof is found**: Expand the canonical proof inline and refactor for clarity
+3. **Before committing**: Remove `import Canonical` from files that no longer use it
+4. **Project completion**: Remove Canonical from `lakefile.lean` dependencies once all
+   files have been cleaned up
+
+**Example:**
+
+```lean
+-- During development:
+lemma foo : x + y = y + x := by canonical
+
+-- After refactoring (preferred final form):
+lemma foo : x + y = y + x := by
+  rw [Nat.add_comm]
+```
+
+**Rationale:** Canonical is a powerful tool for finding proofs, but explicit proofs are
+more maintainable, easier to understand, and don't require external dependencies. The
+final formalization should be self-contained with minimal dependencies.
+
+**Current status:** ViaL2.lean still has a dependency on Canonical that should be
+investigated and removed if possible. See [ViaL2.lean](../Exchangeability/DeFinetti/ViaL2.lean).
+
 ## Related Documents
 
 - [MATHLIB_STYLE_CHECKLIST.md](MATHLIB_STYLE_CHECKLIST.md): Mathlib style checklist
