@@ -204,14 +204,46 @@ private lemma shiftInvariant_implies_shiftInvariantMeasurable
     simp [Set.mem_preimage, hinv ω]
   exact (mem_shiftInvariantSigma_iff (s:=g ⁻¹' t)).mpr ⟨hpreimage, hinv_preimage⟩
 
--- Tail limsup construction for pointwise invariant representatives.
+/-! ### Limsup construction for shift-invariant representatives
+
+Given a function `g0 : Ω[α] → ℝ` that is almost shift-invariant (i.e., `g0 ∘ shift = g0` a.e.),
+we construct a pointwise shift-invariant representative `gRep g0` using a limsup along the orbit.
+
+**Mathematical idea**: For each `ω`, consider the orbit sequence `g0(ω), g0(shift ω), g0(shift² ω), ...`
+If `g0` is almost invariant, then this sequence is eventually constant on a full-measure set.
+Taking the limsup gives a well-defined function that is:
+1. **Shift-invariant**: `gRep g0 (shift ω) = gRep g0 ω` for all `ω` (not just a.e.)
+2. **Measurable**: Inherits measurability from `g0`
+3. **Almost equal**: `gRep g0 =ᵐ[μ] g0` when `g0` is almost invariant
+
+This construction avoids the Axiom of Choice by using a canonical limit process rather than
+selecting arbitrary representatives from equivalence classes.
+
+**Key property**: If `g0 (shift^[n] ω) = g0 ω` for all `n`, then `gRep g0 ω = g0 ω`.
+-/
 section LimsupConstruction
 
-/-- EReal limsup along the shift orbit. -/
+/-- **Limsup along shift orbit (extended real valued).**
+
+For a function `g0 : Ω[α] → ℝ`, this computes the limsup of the sequence
+`g0(ω), g0(shift ω), g0(shift² ω), ...` in the extended reals.
+
+This is the first step in constructing a shift-invariant representative.
+-/
 private def gLimsupE (g0 : Ω[α] → ℝ) (ω : Ω[α]) : EReal :=
   limsup (fun n : ℕ => (g0 (shift^[n] ω) : EReal)) atTop
 
-/-- The shift-invariant representative (pulled back to `ℝ` via `toReal`). -/
+/-- **Canonical shift-invariant representative via limsup.**
+
+Given `g0 : Ω[α] → ℝ`, this constructs a shift-invariant function `gRep g0` by taking
+the limsup along the shift orbit and converting back to ℝ.
+
+**Properties**:
+- If `g0` is measurable, so is `gRep g0` (see `gRep_measurable`)
+- `gRep g0 (shift ω) = gRep g0 ω` for all `ω` (see `gRep_shiftInvariant`)
+- If `g0 (shift^[n] ω) = g0 ω` for all `n`, then `gRep g0 ω = g0 ω` (see `gRep_eq_of_constant_orbit`)
+- If `g0 ∘ shift =ᵐ[μ] g0`, then `gRep g0 =ᵐ[μ] g0` (see `gRep_ae_eq_of_constant_orbit`)
+-/
 def gRep (g0 : Ω[α] → ℝ) : Ω[α] → ℝ :=
   fun ω => (gLimsupE g0 ω).toReal
 
@@ -281,10 +313,28 @@ lemma ae_shift_invariance_on_rep
 
 end LimsupConstruction
 
--- **Auxiliary goal**: construct an invariant representative.
--- Helper lemmas to replace exists_shiftInvariantRepresentative
+/-! ### Construction of shift-invariant representatives
 
-/-- Build a shift-invariant full-measure set on which `g ∘ shift = g` holds pointwise,
+The main challenge in working with shift-invariant functions is that almost-everywhere
+equality `g ∘ shift =ᵐ[μ] g` doesn't immediately give a pointwise invariant function.
+
+**Goal**: Given `g : Ω[α] → ℝ` with `g ∘ shift =ᵐ[μ] g`, construct `g' : Ω[α] → ℝ` such that:
+1. `g' (shift ω) = g' ω` for ALL `ω` (pointwise, not just a.e.)
+2. `g' =ᵐ[μ] g` (almost equal to the original)
+3. `g'` is measurable with respect to `shiftInvariantSigma`
+
+**Strategy**:
+1. Find a shift-invariant full-measure set `S` where `g` is constant along orbits
+2. Use `gRep` to construct a pointwise invariant representative
+3. Prove the representative agrees with `g` almost everywhere
+
+This avoids Choice by using the canonical `gRep` construction instead of selecting
+arbitrary representatives.
+-/
+
+/-- **Existence of shift-invariant full-measure sets.**
+
+Build a shift-invariant full-measure set on which `g ∘ shift = g` holds pointwise,
     *without* appealing to additional axioms. The construction iterates the
     equality set and intersects all pullbacks to obtain a forward-invariant set
     on which the equality holds everywhere. -/
@@ -575,10 +625,37 @@ lemma aestronglyMeasurable_shiftInvariant_of_koopman
     (AEStronglyMeasurable.congr hg'_meas hAE)
   exact hf_meas
 
-/-- The fixed-point subspace of the Koopman operator.
+/-! ### The Mean Ergodic Theorem and conditional expectation
+
+This section establishes the key connection between:
+1. The **Koopman operator** `U : L²(μ) → L²(μ)` given by `(Uf)(ω) = f(shift ω)`
+2. The **fixed-point subspace** `{f : Uf = f}` (shift-invariant functions)
+3. The **conditional expectation** `E[·|ℐ]` onto the shift-invariant σ-algebra
+
+**Main theorem** (`proj_eq_condexp`): The orthogonal projection onto the fixed-point
+subspace equals the conditional expectation onto the shift-invariant σ-algebra.
+
+**Mathematical background**:
+- The Mean Ergodic Theorem states that Cesàro averages `n⁻¹ ∑ᵢ₌₀ⁿ⁻¹ Uⁱf` converge
+  in L² to the orthogonal projection onto the fixed-point subspace
+- Conditional expectation `E[f|ℐ]` is also characterized as an orthogonal projection
+  (onto functions measurable w.r.t. ℐ)
+- Both projections are idempotent and symmetric, with the same range
+- By uniqueness of orthogonal projections (`orthogonalProjections_same_range_eq`),
+  they must be equal
+
+**Application to de Finetti**: This identification allows us to use ergodic theory
+(Koopman operator, Mean Ergodic Theorem) to prove facts about conditional expectations,
+which are central to the probabilistic formulation of de Finetti's theorem.
+-/
+
+/-- **The fixed-point subspace of the Koopman operator.**
 
 This is the closed subspace of L²(μ) consisting of equivalence classes of functions
 f such that f ∘ shift = f almost everywhere.
+
+In the ergodic approach to de Finetti, this is the target space of the limiting
+projection from the Mean Ergodic Theorem.
 -/
 def fixedSubspace {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) : Submodule ℝ (Lp ℝ 2 μ) :=
@@ -608,7 +685,22 @@ lemma fixedSubspace_closed {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     IsClosed.preimage hcont isClosed_singleton
   simpa [hset]
 
-/-- The mean ergodic projection onto the fixed subspace. -/
+/-- **Orthogonal projection onto the fixed-point subspace (MET projection).**
+
+This is the orthogonal projection `P : L²(μ) → fixedSubspace` arising from the
+Mean Ergodic Theorem (MET). It is defined as the composition of:
+1. Orthogonal projection onto the fixed-point subspace (as an abstract subspace)
+2. The subtype inclusion back into L²(μ)
+
+**Properties** (established in subsequent lemmas):
+- `METProjection_idem`: Idempotent (`P² = P`)
+- `METProjection_isSymmetric`: Symmetric/self-adjoint
+- `METProjection_range`: Range equals the fixed-point subspace
+- `METProjection_tendsto`: Limit of Cesàro averages (Mean Ergodic Theorem)
+
+**Key theorem**: `proj_eq_condexp` shows this projection equals conditional expectation
+onto the shift-invariant σ-algebra.
+-/
 noncomputable def METProjection
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ := by
@@ -845,5 +937,56 @@ lemma range_condexp_eq_fixedSubspace {μ : Measure (Ω[α])}
       simp [condexpL2, ContinuousLinearMap.comp_apply, hfix]
   -- now swap range via lpMeas_eq_fixedSubspace
   rw [h_proj, lpMeas_eq_fixedSubspace (μ := μ) hσ]
+
+/-- **Main theorem: Orthogonal projection equals conditional expectation.**
+
+The orthogonal projection onto the fixed-point subspace of the Koopman operator
+equals the conditional expectation onto the shift-invariant σ-algebra.
+
+**Statement**: `METProjection = condexpL2`
+
+**Significance**: This theorem bridges three major areas:
+1. **Ergodic theory**: The Mean Ergodic Theorem provides convergence of Cesàro averages
+   to `METProjection`
+2. **Functional analysis**: `METProjection` is the orthogonal projection in the Hilbert
+   space L²(μ)
+3. **Probability theory**: `condexpL2` is the L² conditional expectation operator
+
+**Proof strategy**:
+- Both operators are symmetric, idempotent, continuous linear maps
+- Both have the same range (the fixed-point subspace = shift-invariant L² functions)
+- By uniqueness of orthogonal projections (`orthogonalProjections_same_range_eq`),
+  they must be equal
+
+**Applications**:
+- Allows using the Mean Ergodic Theorem to prove convergence properties of conditional
+  expectations
+- Key step in the ergodic/Koopman operator proof of de Finetti's theorem
+- Connects shift-invariance (algebraic) to conditional independence (probabilistic)
+-/
+theorem proj_eq_condexp {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ) :
+    METProjection hσ = condexpL2 (μ := μ) := by
+  classical
+  -- Both are symmetric idempotent operators with the same range
+  have h_idem_MET : METProjection hσ * METProjection hσ = METProjection hσ :=
+    METProjection_idem hσ
+  have h_symm_MET : (METProjection hσ).IsSymmetric :=
+    METProjection_isSymmetric hσ
+  have h_range_MET : Set.range (METProjection hσ) = (fixedSubspace hσ : Set (Lp ℝ 2 μ)) :=
+    METProjection_range_fixedSubspace hσ
+
+  have h_idem_cond : condexpL2 (μ := μ) * condexpL2 (μ := μ) = condexpL2 (μ := μ) :=
+    condexpL2_idem (μ := μ)
+  have h_symm_cond : (condexpL2 (μ := μ)).IsSymmetric := by
+    sorry  -- Requires conditional expectation symmetry from mathlib
+  have h_range_cond : Set.range (condexpL2 (μ := μ)) = (fixedSubspace hσ : Set (Lp ℝ 2 μ)) :=
+    range_condexp_eq_fixedSubspace hσ
+
+  -- Apply uniqueness of orthogonal projections
+  have h_range_eq : Set.range (METProjection hσ) = Set.range (condexpL2 (μ := μ)) := by
+    rw [h_range_MET, h_range_cond]
+
+  sorry  -- Needs orthogonalProjections_same_range_eq from ProjectionLemmas
 
 end Exchangeability.DeFinetti

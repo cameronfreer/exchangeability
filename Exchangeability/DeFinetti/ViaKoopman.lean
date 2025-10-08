@@ -624,8 +624,25 @@ private lemma condexp_mul_of_indep
   · -- Show the integrals agree on all σ-measurable sets
     intro s hs _
     -- Need: ∫_s XY dμ = ∫_s E[X|σ]·E[Y|σ] dμ
-    -- This follows from independence and properties of conditional expectation
-    sorry -- TODO: complete using tower property and independence
+
+    -- This is a standard result in conditional expectation theory:
+    -- If X, Y are independent given σ, then E[XY|σ] = E[X|σ]·E[Y|σ]
+    --
+    -- Proof strategy:
+    -- 1. For σ-measurable s: ∫_s XY dμ = ∫ XY d(μ.trim hσ_le).restrict s
+    -- 2. Apply IndepFun.integral_mul_eq_mul_integral to (μ.trim hσ_le).restrict s
+    -- 3. Convert back using tower property: ∫ X d(μ.trim hσ_le).restrict s = ∫_s E[X|σ] dμ
+    --
+    -- This requires:
+    -- - Independence under restricted measures (follows from h_indep)
+    -- - Tower property for conditional expectation
+    -- - Integrability on restricted measures
+    --
+    -- These are all standard results but the full proof is ~30-40 lines of bookkeeping
+
+    sorry -- TODO: Implement conditional independence product rule (~35 lines)
+    -- This is a well-known result that should eventually be added to mathlib's
+    -- conditional expectation API
 
 /-- **Kernel-level integral multiplication under independence.**
 
@@ -747,14 +764,72 @@ lemma Kernel.IndepFun.integral_mul
     rw [ProbabilityTheory.indepFun_iff_map_prod_eq_prod_map_map hX.aemeasurable hY.aemeasurable]
 
     -- We need to show: (κ a).map (fun ω => (X ω, Y ω)) = ((κ a).map X).prod ((κ a).map Y)
-    -- Both are finite measures on ℝ × ℝ, and they agree on a generating π-system by ha
+    -- Both are finite measures on ℝ × ℝ. We'll show they agree on a generating π-system.
 
-    sorry -- TODO: Complete π-λ extension (~20 lines total)
-    -- Remaining steps:
-    -- 1. Show the two measures agree on rectangles Set.Iio q₁ ×ˢ Set.Iio q₂ (use ha)
-    -- 2. These rectangles form a π-system generating borel (ℝ × ℝ)
-    -- 3. Apply Measure.ext_of_generateFrom_of_iUnion
-    -- This is standard measure theory but requires careful bookkeeping
+    -- Define the two measures for clarity
+    let μ₁ := (κ a).map (fun ω => (X ω, Y ω))
+    let μ₂ := ((κ a).map X).prod ((κ a).map Y)
+
+    -- The generating π-system: rectangles of rational intervals
+    let C := {s : Set (ℝ × ℝ) | ∃ (q₁ q₂ : ℚ), s = Set.Iio (q₁ : ℝ) ×ˢ Set.Iio (q₂ : ℝ)}
+
+    -- Step 1: Verify the two measures agree on the π-system
+    have h_agree_on_pi : ∀ s ∈ C, μ₁ s = μ₂ s := by
+      intro s ⟨q₁, q₂, rfl⟩
+      -- μ₁ (Iio q₁ ×ˢ Iio q₂) = (κ a).map (X, Y) (Iio q₁ ×ˢ Iio q₂)
+      --                        = κ a ((X, Y)⁻¹' (Iio q₁ ×ˢ Iio q₂))
+      --                        = κ a (X⁻¹' Iio q₁ ∩ Y⁻¹' Iio q₂)
+      -- μ₂ (Iio q₁ ×ˢ Iio q₂) = ((κ a).map X).prod ((κ a).map Y) (Iio q₁ ×ˢ Iio q₂)
+      --                        = ((κ a).map X) (Iio q₁) * ((κ a).map Y) (Iio q₂)
+      --                        = κ a (X⁻¹' Iio q₁) * κ a (Y⁻¹' Iio q₂)
+      -- These are equal by ha q₁ q₂
+      simp only [μ₁, μ₂]
+      rw [Measure.map_apply (hX.prod_mk hY) (measurableSet_Iio.prod measurableSet_Iio)]
+      rw [Measure.prod_prod]
+      · rw [Measure.map_apply hX measurableSet_Iio, Measure.map_apply hY measurableSet_Iio]
+        simp only [Set.mk_preimage_prod, Set.preimage_id_eq, Set.id_eq]
+        exact ha q₁ q₂
+      · exact measurableSet_Iio
+      · exact measurableSet_Iio
+
+    -- Step 2: Show C is a π-system and generates the Borel σ-algebra
+    have h_pi : IsPiSystem C := by
+      intro s₁ ⟨q₁, q₂, rfl⟩ s₂ ⟨q₁', q₂', rfl⟩ _
+      use min q₁ q₁', min q₂ q₂'
+      ext ⟨x, y⟩
+      simp [Set.mem_prod, Set.mem_Iio, min_lt_iff]
+
+    have h_gen : borel (ℝ × ℝ) = MeasurableSpace.generateFrom C := by
+      rw [borel_prod]
+      rw [borel_eq_generateFrom_Iio_rat, borel_eq_generateFrom_Iio_rat]
+      -- Show: product of generateFrom equals generateFrom of products
+      conv_lhs => rw [MeasurableSpace.prod_eq_generateFrom]
+      congr 1
+      ext s
+      simp only [Set.mem_image2, C]
+      constructor
+      · intro ⟨s₁, ⟨q₁, rfl⟩, s₂, ⟨q₂, rfl⟩, rfl⟩
+        exact ⟨q₁, q₂, rfl⟩
+      · intro ⟨q₁, q₂, rfl⟩
+        refine ⟨Set.Iio (q₁ : ℝ), ⟨q₁, rfl⟩, Set.Iio (q₂ : ℝ), ⟨q₂, rfl⟩, rfl⟩
+
+    -- Step 3: Apply measure extension theorem
+    -- We need a covering sequence for ext_of_generateFrom_of_iUnion
+    refine Measure.ext_of_generateFrom_of_iUnion C (fun n => Set.Iio (n : ℝ) ×ˢ Set.Iio (n : ℝ))
+      h_gen h_pi ?_ ?_ ?_ h_agree_on_pi
+    -- Show ⋃ n, Iio n ×ˢ Iio n = univ
+    · ext ⟨x, y⟩
+      simp only [Set.mem_iUnion, Set.mem_prod, Set.mem_Iio, Set.mem_univ, iff_true]
+      obtain ⟨n, hn⟩ := exists_nat_gt (max x y)
+      use n
+      constructor <;> exact lt_of_le_of_lt (le_max_left _ _) hn <;> exact lt_of_le_of_lt (le_max_right _ _) hn
+    -- Show each Iio n ×ˢ Iio n ∈ C
+    · intro n
+      exact ⟨n, n, rfl⟩
+    -- Show μ₁ (Iio n ×ˢ Iio n) ≠ ∞
+    · intro n
+      simp only [μ₁]
+      exact measure_ne_top _ _
 
   -- Step 3: Apply measure-level factorization pointwise
   refine h_indep_ae.mono (fun a ha => ?_)
