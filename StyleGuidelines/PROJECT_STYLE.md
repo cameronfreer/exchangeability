@@ -47,6 +47,40 @@ them:
 axiom conditionallyIID_of_exchangeable : ...
 ```
 
+### Avoid References to Development History
+
+**Don't reference earlier drafts, previous versions, or development history in comments.**
+
+Documentation should describe what the code *is* and *does*, not what it *was* or how it
+evolved during development. References to "earlier drafts", "previous versions", or
+"originally" make comments outdated and confusing.
+
+❌ **Bad:**
+```lean
+/-- In earlier drafts, this used a custom axiom, but now uses standard mathlib. -/
+```
+
+```lean
+/-- Originally this was defined differently, but we changed the approach. -/
+```
+
+```lean
+/-- This replaces the old implementation that had performance issues. -/
+```
+
+✅ **Good:**
+```lean
+/-- This construction uses mathlib's standard measure theory infrastructure. -/
+```
+
+```lean
+/-- Uses a direct construction via the Koopman representation. -/
+```
+
+**Rationale:** Code comments should be timeless documentation of the current state.
+Development history belongs in git commits, not in source comments. Historical references
+become confusing over time and add no value to understanding the code.
+
 ### Mathematical Axioms (Choice, etc.)
 
 Discussion of mathematical axioms like the Axiom of Choice is perfectly acceptable in
@@ -142,6 +176,81 @@ final formalization should be self-contained with minimal dependencies.
 
 **Current status:** ViaL2.lean still has a dependency on Canonical that should be
 investigated and removed if possible. See [ViaL2.lean](../Exchangeability/DeFinetti/ViaL2.lean).
+
+## Code Quality and Placeholders
+
+### Avoid Placeholder Proofs
+
+**Never use placeholder proofs in committed code.**
+
+During development, it's acceptable to use `sorry` or `admit` as temporary scaffolding.
+However, before committing, all proofs must be complete.
+
+❌ **Bad (in committed code):**
+```lean
+lemma helper : x = y := by trivial  -- placeholder when x ≠ y in general
+lemma unused_stub : True := trivial  -- educational stub in API namespace
+```
+
+✅ **Good:**
+```lean
+-- If you need educational examples, use `example` instead of `lemma/theorem`:
+example : True := trivial  -- doesn't enter the namespace
+
+-- For actual helpers, provide real proofs or mark as private:
+private lemma internal_helper : x = y := by
+  -- actual proof here
+```
+
+### Keep Public API Clean
+
+Make internal helpers `private` or place them in a dedicated internal section to minimize
+the public surface area:
+
+```lean
+/-! ### Internal helpers -/
+
+private lemma indicator_bounded : ... := by ...
+private lemma intermediate_step : ... := by ...
+
+/-! ### Public API -/
+
+theorem main_result : ... := by ...
+```
+
+### Periodic Verification
+
+Before finalizing a module, verify code quality:
+
+1. **Search for placeholders:**
+   ```bash
+   grep -r "sorry" Exchangeability/
+   grep -r "admit" Exchangeability/
+   grep -r ": True :=" Exchangeability/
+   ```
+
+2. **Check for axioms:**
+   ```lean
+   #print axioms YourModule.main_theorem
+   ```
+   Should show only standard mathlib axioms (propext, quot.sound, choice).
+
+3. **Run linter:**
+   ```lean
+   #lint
+   ```
+   Should show no unused declarations or missing docstrings on public API.
+
+### Optional: Simp Lemmas
+
+If a helper lemma is rewritten frequently across multiple proofs, consider marking it
+`@[simp]`. However, don't add `@[simp]` speculatively—only when there's clear evidence
+of repeated use:
+
+```lean
+@[simp]
+lemma frequently_used : f (g x) = h x := by ...
+```
 
 ## Related Documents
 
