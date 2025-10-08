@@ -51,7 +51,7 @@ Kallenberg. The **complete proofs** are in separate files to manage dependencies
 -/
 
 noncomputable section
-open scoped BigOperators MeasureTheory Topology Classical
+open scoped BigOperators MeasureTheory Topology Classical ENNReal
 
 namespace Exchangeability
 namespace Probability
@@ -121,11 +121,31 @@ For `n > 0`, this is the uniform measure on `{X 0 ω, X 1 ω, ..., X (n-1) ω}`.
 def empiricalMeasure [Inhabited α] (X : ℕ → Ω → α) (n : ℕ) (ω : Ω) :
     ProbabilityMeasure α :=
   if h : n = 0 then
-    sorry  -- ProbabilityMeasure.dirac default (need the right API)
+    by
+      classical
+      simpa [h] using
+        (⟨Measure.dirac (default : α), Measure.dirac.isProbabilityMeasure⟩ : ProbabilityMeasure α)
   else
-    sorry
-    -- TODO: Implement using ProbabilityMeasure.uniform on Finset (Fin n)
-    -- and ProbabilityMeasure.map with (fun i ↦ X i.val ω)
+    by
+      classical
+      have hn0 : n ≠ 0 := h
+      let μ : Measure α :=
+        (n : ℝ≥0∞)⁻¹ • ∑ i : Fin n, Measure.dirac (X (i : ℕ) ω)
+      refine ⟨μ, ?_⟩
+      have h_sum_dirac :
+          (∑ i : Fin n, Measure.dirac (X (i : ℕ) ω)) Set.univ
+            = (n : ℝ≥0∞) := by
+        simp [Finset.sum_const]
+      have hn0' : (n : ℝ≥0∞) ≠ 0 :=
+        (ne_of_gt (by exact_mod_cast (Nat.pos_of_ne_zero hn0 : 0 < n)))
+      have hfinite : (n : ℝ≥0∞) ≠ ∞ := by simp
+      refine ⟨by
+        have hcalc : μ Set.univ = (n : ℝ≥0∞)⁻¹ * (n : ℝ≥0∞) :=
+          by simp [μ, h_sum_dirac]
+        have hprod : (n : ℝ≥0∞)⁻¹ * (n : ℝ≥0∞) = 1 :=
+          ENNReal.inv_mul_cancel hn0' hfinite
+        exact hcalc.trans hprod
+      ⟩
 
 /-!
 ## Main theorem statements

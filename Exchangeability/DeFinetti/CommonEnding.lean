@@ -355,14 +355,14 @@ directing-measure construction.
 lemma fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
     (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
-    (hν_meas : ∀ s, Measurable (fun ω => ν ω s))
+    (_hν_meas : ∀ s, Measurable (fun ω => ν ω s))
     (m : ℕ) (k : Fin m → ℕ) (B : Fin m → Set α) (hB : ∀ i, MeasurableSet (B i))
     (h_bridge :
       ∫⁻ ω, ∏ i : Fin m,
           ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) ∂μ
         = ∫⁻ ω, ∏ i : Fin m, ν ω (B i) ∂μ) :
     μ {ω | ∀ i, X (k i) ω ∈ B i} =
-      ∫⁻ ω, (Measure.pi fun i : Fin m => ν ω) {x | ∀ i, x i ∈ B i} ∂μ := by
+      ∫⁻ ω, (Measure.pi fun _ : Fin m => ν ω) {x | ∀ i, x i ∈ B i} ∂μ := by
   classical
 
   -- Shorthand for the target measurable set
@@ -421,10 +421,10 @@ lemma fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
         (f := fun _ => 1) hEvtMeas
     have hconst := lintegral_const (μ := μ.restrict E) (c := 1)
     have hconst' : ∫⁻ ω, 1 ∂μ.restrict E = μ E := by
-      simpa [Measure.restrict_apply, hEvtMeas, mul_comm] using hconst
+      simp [Measure.restrict_apply, hconst]
     have hμE : μ E = ∫⁻ ω, Set.indicator E (fun _ => 1) ω ∂μ := by
       simpa [hconst'] using hlin.symm
-    simpa [hProdEqIndicator] using hμE
+    simp [hProdEqIndicator, hμE]
 
   -- Rewrite the integrand on the right via product measures on rectangles
   have rhs_eq :
@@ -438,7 +438,7 @@ lemma fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
         = fun ω => (Measure.pi fun i : Fin m => ν ω)
             {x : Fin m → α | ∀ i, x i ∈ B i} := by
       funext ω; simp [set_eq, Measure.pi_pi]
-    simpa [hpt]
+    simp [hpt]
 
   -- Structural bridge: indicators versus conditional product measures
   have prod_eq :
@@ -514,7 +514,7 @@ lemma rectangles_generate_pi_sigma {m : ℕ} {α : Type*} [MeasurableSpace α] :
     constructor
     · intro ⟨B, hB_meas, hS⟩
       use fun i => B i
-      simp only [Set.mem_image, Set.mem_pi, Set.mem_univ, Set.mem_setOf_eq]
+      simp only [Set.mem_pi]
       constructor
       · intro i _; exact hB_meas i
       · have : univ.pi (fun i => B i) = {x | ∀ i, x i ∈ B i} := by
@@ -616,7 +616,7 @@ lemma aemeasurable_measure_pi {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSp
       -- Apply π-λ induction (mathlib's induction_on_inter)
       refine MeasurableSpace.induction_on_inter h_gen h_pi ?_ ?_ ?_ ?_ t ht
       · -- empty
-        simpa using measurable_const
+        simp [measurable_const]
       · -- basic (rectangles)
         intro s hs
         exact h_basic s hs
