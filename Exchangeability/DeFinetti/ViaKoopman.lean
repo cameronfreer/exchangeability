@@ -580,6 +580,9 @@ lemma identicalConditionalMarginals {μ : Measure (Ω[α])} [IsProbabilityMeasur
 
 /-- Helper: product rule for conditional expectation under independence.
 If X and Y are conditionally independent given σ, then E[XY | σ] = E[X | σ] · E[Y | σ].
+
+This adapts the standard measure-level result `IndepFun.integral_mul_eq_mul_integral` to
+the conditional setting using the tower property of conditional expectation.
 -/
 private lemma condexp_mul_of_indep
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
@@ -590,11 +593,39 @@ private lemma condexp_mul_of_indep
     (h_indep : IndepFun X Y (μ.trim hσ_le)) :
     μ[(fun ω => X ω * Y ω) | σ] =ᵐ[μ]
       fun ω => (μ[X | σ] ω) * (μ[Y | σ] ω) := by
-  -- This is a standard result in probability theory
-  -- The proof uses the defining property of conditional expectation:
-  -- ∫_A (XY) dμ = ∫_A E[X|σ]·E[Y|σ] dμ for all σ-measurable A
-  -- Under independence, E[XY | σ] = E[X | σ] · E[Y | σ]
-  sorry
+  classical
+  -- Integrability from boundedness
+  rcases hX_bd with ⟨CX, hCX⟩
+  rcases hY_bd with ⟨CY, hCY⟩
+  have hX_int : Integrable X μ := by
+    refine MeasureTheory.integrable_of_bounded (hmeas := hX_meas) (μ := μ) ⟨CX, hCX⟩
+  have hY_int : Integrable Y μ := by
+    refine MeasureTheory.integrable_of_bounded (hmeas := hY_meas) (μ := μ) ⟨CY, hCY⟩
+  have hXY_int : Integrable (X * Y) μ := by
+    refine MeasureTheory.integrable_of_bounded
+      (hmeas := hX_meas.mul hY_meas) (μ := μ) ⟨CX * CY, ?_⟩
+    intro ω
+    calc |(X * Y) ω| = |X ω * Y ω| := rfl
+      _ = |X ω| * |Y ω| := abs_mul _ _
+      _ ≤ CX * CY := mul_le_mul (hCX ω) (hCY ω) (abs_nonneg _) (by linarith [hCX ω])
+
+  -- Use the characterization of conditional expectation via the defining property:
+  -- For any σ-measurable set A, ∫_A E[XY|σ] dμ = ∫_A XY dμ
+  -- We want to show: ∫_A E[XY|σ] dμ = ∫_A E[X|σ]·E[Y|σ] dμ for all σ-measurable A
+
+  -- The key is to use conditional expectation properties
+  refine MeasureTheory.ae_eq_condexp_of_forall_set_integral_eq
+    (hm := σ) (hf := (hX_meas.mul hY_meas).aestronglyMeasurable) hXY_int ?_ ?_
+
+  · -- E[X|σ] · E[Y|σ] is σ-measurable
+    exact ((MeasureTheory.stronglyMeasurable_condexp.of_le hσ_le).mul
+      (MeasureTheory.stronglyMeasurable_condexp.of_le hσ_le)).aestronglyMeasurable
+
+  · -- Show the integrals agree on all σ-measurable sets
+    intro s hs _
+    -- Need: ∫_s XY dμ = ∫_s E[X|σ]·E[Y|σ] dμ
+    -- This follows from independence and properties of conditional expectation
+    sorry -- TODO: complete using tower property and independence
 
 /--
 TODO: establish kernel-level factorisation for two bounded test functions.
@@ -649,14 +680,15 @@ private lemma condexp_pair_factorization
       fun ω =>
         (∫ y, f (y 0) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) *
         (∫ y, g (y 1) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) := by
-    -- This follows from the kernel-level independence `hciid`
-    -- The standard result: for independent random variables X, Y under kernel κ,
-    -- ∫ f(X) * g(Y) dκ = (∫ f(X) dκ) * (∫ g(Y) dκ)
-    refine (ProbabilityTheory.Kernel.integral_mul_of_iIndepFun
-      hciid hf_meas hg_meas hf_bd hg_bd).mono ?_
-    intro ω hω
-    simp only [Fin.sum_univ_two, Fin.cons_zero, Fin.cons_one] at hω ⊢
-    exact hω
+    -- From `hciid: iIndepFun (fun k : Fin 2 => fun ω => ω k) κ μ`
+    -- we know the coordinates 0 and 1 are independent under the kernel
+    -- This means IndepFun (fun ω => ω 0) (fun ω => ω 1) κ μ
+    have h_indep_pair : IndepFun (fun ω : Ω[α] => ω 0) (fun ω => ω 1)
+        (condExpKernel μ (shiftInvariantSigma (α := α))) μ := by
+      exact hciid.indepFun (i := 0) (j := 1) (by norm_num)
+    -- TODO: Need kernel-level version of IndepFun.integral_mul_eq_mul_integral
+    -- For now, this is the key step that needs to be axiomatized or proved separately
+    sorry
 
   -- Step 5: Replace coordinate projections with ν using identicalConditionalMarginals
   have h_coord0 :
@@ -777,9 +809,21 @@ theorem condexp_product_factorization
             | shiftInvariantSigma (α := α)] ω) *
           (μ[(fun ω' => fs (Fin.last m) (ω' m))
             | shiftInvariantSigma (α := α)] ω) := by
-      -- This requires a general "product rule" for conditional expectation
-      -- Under independence, E[X · Y | σ] = E[X | σ] · E[Y | σ]
-      -- TODO: This needs a helper lemma for products under conditional expectation
+      -- This is a special case of the product rule for conditional expectation:
+      -- Under conditional independence, E[X · Y | σ] = E[X | σ] · E[Y | σ]
+      --
+      -- The functions X = ∏ k : Fin m, fs' k (· k) and Y = fs (Fin.last m) (· m)
+      -- are conditionally independent given the tail σ-algebra because:
+      -- - X depends only on coordinates 0, ..., m-1
+      -- - Y depends only on coordinate m
+      -- - These sets of coordinates are disjoint
+      -- - By hciid, all coordinates are mutually independent given tail
+      --
+      -- TODO: This follows from a general lemma about products under conditional
+      -- independence. The proof would use:
+      -- 1. Conditional independence of coordinate sets {0,...,m-1} and {m}
+      -- 2. Standard product rule: E[f(X) · g(Y) | σ] = E[f(X) | σ] · E[g(Y) | σ]
+      --    when X ⊥⊥_σ Y
       sorry
 
     -- Apply IH and coordinate formula
