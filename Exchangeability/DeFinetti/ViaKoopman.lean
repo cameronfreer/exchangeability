@@ -709,21 +709,30 @@ lemma Kernel.IndepFun.integral_mul
     rw [h_prod, h_left, h_right, ha]
     simp [ENNReal.toReal_mul]
 
-  -- Step 2: Extend from indicators to simple functions by linearity
-  -- For simple functions f = ∑ᵢ cᵢ · 𝟙_Aᵢ and g = ∑ⱼ dⱼ · 𝟙_Bⱼ:
-  -- ∫ fg = ∑ᵢⱼ cᵢdⱼ ∫ 𝟙_{Aᵢ×Bⱼ} = ∑ᵢⱼ cᵢdⱼ · κ(Aᵢ ∩ Bⱼ)
-  --      = ∑ᵢⱼ cᵢdⱼ · κ(Aᵢ) · κ(Bⱼ)  (by h_indicator)
-  --      = (∑ᵢ cᵢ · κ(Aᵢ)) · (∑ⱼ dⱼ · κ(Bⱼ)) = (∫ f) · (∫ g)
-
-  -- Step 3: Extend to bounded measurable functions by approximation
-  -- For bounded measurable X, Y:
-  -- 1. Approximate by simple functions: Xₙ → X, Yₙ → Y pointwise
-  -- 2. Use dominated convergence (bounded by CX, CY)
-  -- 3. Pass to limit: ∫ XₙYₙ → ∫ XY and (∫ Xₙ)(∫ Yₙ) → (∫ X)(∫ Y)
-
-  -- This is a standard measure theory argument but requires careful bookkeeping
-  -- of the approximating sequences and dominated convergence applications.
-  -- TODO: Complete using MeasureTheory.SimpleFunc approximation + dominated convergence
+  -- REMAINING WORK: Extension from indicators to general bounded measurable functions
+  --
+  -- APPROACH 1: Via simple functions (most direct)
+  -- 1. For simple functions f = ∑ᵢ cᵢ·𝟙_{Aᵢ}, g = ∑ⱼ dⱼ·𝟙_{Bⱼ}:
+  --    By linearity of integration and h_indicator:
+  --    ∫ fg = ∑ᵢⱼ cᵢdⱼ · ∫𝟙_{Aᵢ}·𝟙_{Bⱼ} = ∑ᵢⱼ cᵢdⱼ · (∫𝟙_{Aᵢ})·(∫𝟙_{Bⱼ})
+  --         = (∑ᵢ cᵢ·∫𝟙_{Aᵢ}) · (∑ⱼ dⱼ·∫𝟙_{Bⱼ}) = (∫f)·(∫g)
+  -- 2. For bounded measurable X, Y:
+  --    - Use `StronglyMeasurable.approx` to get Xₙ → X, Yₙ → Y pointwise
+  --    - Apply dominated convergence (|XₙYₙ| ≤ CX·CY, |Xₙ| ≤ CX, |Yₙ| ≤ CY)
+  --    - Take limit: ∫XₙYₙ → ∫XY and (∫Xₙ)·(∫Yₙ) → (∫X)·(∫Y)
+  --
+  -- APPROACH 2: Via monotone class theorem for functions
+  -- Apply function-level monotone class on the set of (X,Y) pairs satisfying the identity,
+  -- using h_indicator as the base case
+  --
+  -- APPROACH 3: Via measure theory (most general)
+  -- Use `ae_eq_of_forall_setLIntegral_eq` to show the two functions agree a.e.
+  -- by checking they have same integrals on all measurable sets
+  --
+  -- All approaches are standard, well-documented measure theory.
+  -- The mathematical content (independence → indicator factorization) is complete above.
+  --
+  -- TODO: Implement one of these approaches (recommend Approach 1, ~30-40 lines)
   sorry
 
 /-- **Note**: `Kernel.IndepFun.comp` already exists in Mathlib!
