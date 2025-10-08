@@ -518,7 +518,20 @@ lemma ν_ae_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
   simp only [κ₁, κ₂, Kernel.comap_apply]
   -- The two sides are: ∫ f dν(shift^[k] ω) and ∫ f dν(ω)
   -- Both are determined by conditional expectation which is shift-invariant
-  sorry  -- TODO: Use ν_apply and condexp_precomp_iterate_eq to complete
+
+  -- Need integrability of f ∘ π₀
+  have h_int : Integrable (fun ω => f (ω 0)) μ := by
+    obtain ⟨C, hC⟩ := hf_bd
+    exact MeasureTheory.integrable_of_bounded (hf.comp (measurable_pi_apply 0)) ⟨C, fun ω => hC (ω 0)⟩
+
+  -- Both integrals equal the conditional expectation of f ∘ π₀ via the kernel relationship
+  -- For the RHS: ∫ f dν(ω) = ∫ f d((condExpKernel ω) ∘ map π₀)
+  --                       = conditional expectation of f ∘ π₀ at ω
+  -- For the LHS: ∫ f dν(shift^[k] ω) = same conditional expectation at shift^[k] ω
+  -- But conditional expectation w.r.t. shift-invariant σ-algebra is preserved by shift^[k]
+
+  sorry  -- TODO: Express both sides using condExp_ae_eq_integral_condExpKernel
+        -- and apply condexp_precomp_iterate_eq
 
 /-- Identical conditional marginals: each coordinate shares the same
 regular conditional distribution given the shift-invariant σ-algebra. -/
@@ -536,7 +549,12 @@ lemma identicalConditionalMarginals {μ : Measure (Ω[α])} [IsProbabilityMeasur
   -- The integral of f under the k-th marginal equals the integral under the 0-th marginal (ν)
   -- via the correspondence: ∫f∘πₖ = μ[f∘πₖ | tail] =ᵐ μ[f∘π₀ | tail] = ∫f∘π₀
   -- where the middle equality uses shift-invariance (condexp_precomp_iterate_eq)
-  sorry  -- TODO: Use condExp_ae_eq_integral_condExpKernel and condexp_precomp_iterate_eq
+
+  -- Strategy: Both integrals can be expressed via integral_map using coordinate projections
+  -- Then use that y k = (shift^[k] y) 0, so the conditional expectations are related by shift-invariance
+  -- The key observation: (fun y => y k) = (fun y => y 0) ∘ (shift^[k])
+  -- This follows from the definition of shift on sequences
+  sorry  -- TODO: Use coordinate shift equality, integral_map, and condexp_precomp_iterate_eq
 
 /-- **Kernel-level integral multiplication under independence.**
 
