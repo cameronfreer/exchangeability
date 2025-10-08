@@ -206,11 +206,13 @@ private lemma shiftInvariant_implies_shiftInvariantMeasurable
 
 /-! ### Limsup construction for shift-invariant representatives
 
-Given a function `g0 : Ω[α] → ℝ` that is almost shift-invariant (i.e., `g0 ∘ shift = g0` a.e.),
-we construct a pointwise shift-invariant representative `gRep g0` using a limsup along the orbit.
+Given a function `g0 : Ω[α] → ℝ` that is almost shift-invariant
+(i.e., `g0 ∘ shift = g0` a.e.), we construct a pointwise shift-invariant
+representative `gRep g0` using a limsup along the orbit.
 
-**Mathematical idea**: For each `ω`, consider the orbit sequence `g0(ω), g0(shift ω), g0(shift² ω), ...`
-If `g0` is almost invariant, then this sequence is eventually constant on a full-measure set.
+**Mathematical idea**: For each `ω`, consider the orbit sequence
+`g0(ω), g0(shift ω), g0(shift² ω), ...`. If `g0` is almost invariant, then this
+sequence is eventually constant on a full-measure set.
 Taking the limsup gives a well-defined function that is:
 1. **Shift-invariant**: `gRep g0 (shift ω) = gRep g0 ω` for all `ω` (not just a.e.)
 2. **Measurable**: Inherits measurability from `g0`
@@ -241,8 +243,10 @@ the limsup along the shift orbit and converting back to ℝ.
 **Properties**:
 - If `g0` is measurable, so is `gRep g0` (see `gRep_measurable`)
 - `gRep g0 (shift ω) = gRep g0 ω` for all `ω` (see `gRep_shiftInvariant`)
-- If `g0 (shift^[n] ω) = g0 ω` for all `n`, then `gRep g0 ω = g0 ω` (see `gRep_eq_of_constant_orbit`)
-- If `g0 ∘ shift =ᵐ[μ] g0`, then `gRep g0 =ᵐ[μ] g0` (see `gRep_ae_eq_of_constant_orbit`)
+- If `g0 (shift^[n] ω) = g0 ω` for all `n`, then `gRep g0 ω = g0 ω`
+  (see `gRep_eq_of_constant_orbit`)
+- If `g0 ∘ shift =ᵐ[μ] g0`, then `gRep g0 =ᵐ[μ] g0`
+  (see `gRep_ae_eq_of_constant_orbit`)
 -/
 def gRep (g0 : Ω[α] → ℝ) : Ω[α] → ℝ :=
   fun ω => (gLimsupE g0 ω).toReal
@@ -318,7 +322,8 @@ end LimsupConstruction
 The main challenge in working with shift-invariant functions is that almost-everywhere
 equality `g ∘ shift =ᵐ[μ] g` doesn't immediately give a pointwise invariant function.
 
-**Goal**: Given `g : Ω[α] → ℝ` with `g ∘ shift =ᵐ[μ] g`, construct `g' : Ω[α] → ℝ` such that:
+**Goal**: Given `g : Ω[α] → ℝ` with `g ∘ shift =ᵐ[μ] g`, construct
+`g' : Ω[α] → ℝ` such that:
 1. `g' (shift ω) = g' ω` for ALL `ω` (pointwise, not just a.e.)
 2. `g' =ᵐ[μ] g` (almost equal to the original)
 3. `g'` is measurable with respect to `shiftInvariantSigma`
@@ -1004,7 +1009,8 @@ theorem proj_eq_condexp {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
   have h_idem_MET_comp : (METProjection hσ).comp (METProjection hσ) = METProjection hσ := by
     simp only [ContinuousLinearMap.mul_def] at h_idem_MET
     exact h_idem_MET
-  have h_idem_cond_comp : (condexpL2 (μ := μ)).comp (condexpL2 (μ := μ)) = condexpL2 (μ := μ) := by
+  have h_idem_cond_comp :
+      (condexpL2 (μ := μ)).comp (condexpL2 (μ := μ)) = condexpL2 (μ := μ) := by
     simp only [ContinuousLinearMap.mul_def] at h_idem_cond
     exact h_idem_cond
 
