@@ -97,7 +97,7 @@ private lemma measurable_eval_fin2 {i : Fin 2} :
 
 /-- For a contractable sequence, the law of each coordinate agrees with the law
 of `X 0`. -/
-lemma contractable_map_single {i : ℕ} :
+lemma contractable_map_single (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i)) {i : ℕ} :
     Measure.map (fun ω => X i ω) μ = Measure.map (fun ω => X 0 ω) μ := by
   classical
   -- `k` selects the singleton subsequence `{i}`.
@@ -119,8 +119,8 @@ lemma contractable_map_single {i : ℕ} :
     refine measurable_pi_lambda _ ?_
     intro j
     simpa using hX_meas j.val
-  have h_left := (Measure.map_map h_eval_meas h_meas_k).symm
-  have h_right := Measure.map_map h_eval_meas h_meas_std
+  have h_left := (Measure.map_map h_eval_meas h_meas_k (μ := μ)).symm
+  have h_right := Measure.map_map h_eval_meas h_meas_std (μ := μ)
   have h_eval := congrArg (Measure.map eval) h_map
   have h_comp := h_left.trans (h_eval.trans h_right)
   -- Evaluate the compositions explicitly.
@@ -161,7 +161,7 @@ private lemma strictMono_two {i j : ℕ} (hij : i < j) :
 
 /-- For a contractable sequence, every increasing pair `(i,j)` with `i < j`
 has the same joint law as `(X 0, X 1)`. -/
-lemma contractable_map_pair {i j : ℕ} (hij : i < j) :
+lemma contractable_map_pair (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i)) {i j : ℕ} (hij : i < j) :
     Measure.map (fun ω => (X i ω, X j ω)) μ =
       Measure.map (fun ω => (X 0 ω, X 1 ω)) μ := by
   classical
@@ -186,8 +186,8 @@ lemma contractable_map_pair {i j : ℕ} (hij : i < j) :
     refine measurable_pi_lambda _ ?_
     intro t
     simpa using hX_meas t.val
-  have h_left := (Measure.map_map h_eval_meas h_meas_k).symm
-  have h_right := Measure.map_map h_eval_meas h_meas_std
+  have h_left := (Measure.map_map h_eval_meas h_meas_k (μ := μ)).symm
+  have h_right := Measure.map_map h_eval_meas h_meas_std (μ := μ)
   have h_eval := congrArg (Measure.map eval) h_map
   have h_comp := h_left.trans (h_eval.trans h_right)
   have h_comp_simp :
@@ -201,7 +201,7 @@ lemma contractable_map_pair {i j : ℕ} (hij : i < j) :
   simpa [Function.comp, h_comp_simp, h_comp_simp'] using h_comp
 
 /-- Postcompose a contractable sequence with a measurable function. -/
-lemma contractable_comp
+lemma contractable_comp (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i))
     (f : ℝ → ℝ) (hf_meas : Measurable f) :
     Contractable μ (fun n ω => f (X n ω)) := by
   intro n k hk
@@ -220,8 +220,8 @@ lemma contractable_comp
     refine measurable_pi_lambda _ ?_
     intro i
     simpa using hX_meas i.val
-  have h_left := (Measure.map_map hΦ_meas h_meas_k).symm
-  have h_right := Measure.map_map hΦ_meas h_meas_std
+  have h_left := (Measure.map_map hΦ_meas h_meas_k (μ := μ)).symm
+  have h_right := Measure.map_map hΦ_meas h_meas_std (μ := μ)
   have h_apply := congrArg (Measure.map Φ) h_base
   -- Evaluate the compositions explicitly.
   have h_left_eval :
@@ -727,7 +727,7 @@ lemma l2_bound_two_windows
     exact (MemLp.of_bound (μ:=μ) (p:=2) (f:=Y i)
       (hY_meas i).aestronglyMeasurable M hbound)
   have hY_contract : Contractable μ Y :=
-    contractable_comp (X:=X) f hf_meas
+    @contractable_comp _ _ μ _ X hX_contract hX_meas f hf_meas
   -- Extract the covariance data for the sequence `Y`.
   obtain ⟨mY, σSq, ρ, hY_mean, hY_var, hY_cov, hσ_nonneg, hρ_lb, hρ_ub⟩ :=
     contractable_covariance_structure (μ:=μ) (X:=Y)
@@ -762,14 +762,18 @@ lemma l2_bound_two_windows
     -- Prove weight hypotheses
     have hp_sum : ∑ i, p i = 1 := by
       trans (∑ i ∈ Finset.univ.filter (fun i : Fin twoK => i.val < k), 1 / (k : ℝ))
-      · congr 1; ext i
-        simp only [Finset.sum_ite, p]
-        rw [Finset.sum_filter]
+      · simp only [p]
+        rw [← Finset.sum_filter]
+        congr 1
+        ext i
+        simp
       · rw [Finset.sum_const, card_fin_lt_k, nsmul_eq_mul]
         field_simp; ring
 
     have hp_nonneg : ∀ i, 0 ≤ p i := by
-      intro i; simp [p]; split_ifs <;> [exact div_nonneg (by norm_num) (by exact_mod_cast Nat.zero_le _), norm_num]
+      intro i
+      simp [p]
+      split_ifs <;> [exact div_nonneg (by norm_num) (by exact_mod_cast Nat.zero_le _); norm_num]
 
     have hq_sum : ∑ i, q i = 1 := by
       have h_card : (Finset.univ.filter (fun i : Fin twoK => k ≤ i.val)).card = k := by
