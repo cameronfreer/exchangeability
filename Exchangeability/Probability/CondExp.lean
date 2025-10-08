@@ -428,6 +428,39 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
     ∀ H, MeasurableSet[MeasurableSpace.generateFrom π] H →
       μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
         =ᵐ[μ] μ[H.indicator (fun _ => (1 : ℝ)) | mG] := by
+  -- TODO: Apply Dynkin π-λ theorem to extend from π to generateFrom π
+  --
+  -- Strategy: Use induction_on_inter with property C(H) := "μ[H.indicator | mF ⊔ mG] =ᵐ μ[H.indicator | mG]"
+  --
+  -- Key mathlib lemmas:
+  -- 1. induction_on_inter : The Dynkin π-λ theorem
+  --    (MeasureTheory.PiSystem:674)
+  --    Given m = generateFrom s and IsPiSystem s, extend property from s to all measurable sets
+  --
+  -- 2. ae_eq_trans : Transitivity of almost everywhere equality
+  --    Chain ae equalities together
+  --
+  -- Steps:
+  -- 1. Apply induction_on_inter with s = π, h_eq : generateFrom π = generateFrom π (rfl)
+  --
+  -- 2. Verify C on empty set: Both condExp of zero indicator are zero a.e.
+  --
+  -- 3. Verify C on basic sets (H ∈ π): This is the hypothesis h
+  --
+  -- 4. Verify C closed under complements:
+  --    If μ[H.indicator | mF ⊔ mG] =ᵐ μ[H.indicator | mG], show same for Hᶜ
+  --    Use: Hᶜ.indicator 1 = 1 - H.indicator 1
+  --    Apply linearity of condExp: μ[1 - H.indicator | m] =ᵐ 1 - μ[H.indicator | m]
+  --    Use hypothesis on H to get result for Hᶜ
+  --
+  -- 5. Verify C closed under countable disjoint unions:
+  --    If μ[fᵢ.indicator | mF ⊔ mG] =ᵐ μ[fᵢ.indicator | mG] for disjoint fᵢ
+  --    Show: μ[(⋃ᵢ fᵢ).indicator | mF ⊔ mG] =ᵐ μ[(⋃ᵢ fᵢ).indicator | mG]
+  --    Use: (⋃ᵢ fᵢ).indicator = ∑ᵢ fᵢ.indicator (for disjoint union)
+  --    Apply: condExp of series equals series of condExp (monotone convergence)
+  --    Use inductive hypothesis on each fᵢ
+  --
+  -- This extends the projection property from π to all sets in generateFrom π.
   sorry
 
 /-! ### Bounded Martingales and L² Inequalities -/
