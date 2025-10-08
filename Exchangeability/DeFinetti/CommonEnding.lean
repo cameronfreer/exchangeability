@@ -158,34 +158,6 @@ def IsTailMeasurable {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
     (f : (ℕ → α) → β) : Prop :=
   @Measurable (ℕ → α) β (tailSigmaAlgebra α) _ f
 
-/-- **FMP 10.3 (Invariant sets and functions)**: A measurable function f is invariant
-(f ∘ shift = f) if and only if it is measurable with respect to the invariant σ-field.
-
-This is the key connection between syntactic invariance and σ-field measurability.
-
-Proof strategy (following Kallenberg FMP 10.3):
-1. (⇒) Assume f ∘ shift = f
-   - Need to show f is measurable w.r.t. invariantSigmaField α
-   - The invariant σ-field is defined as MeasurableSpace.comap shift inferInstance
-   - A function g is measurable w.r.t. comap shift iff g ∘ shift⁻¹ is measurable
-   - Since f is shift-invariant: f = f ∘ shift ∘ shift⁻¹ (where shift⁻¹ exists on range)
-   - This gives the required measurability
-
-2. (⇐) Assume f is measurable w.r.t. invariantSigmaField α
-   - By definition of comap, f⁻¹(B) ∈ invariantSigmaField for all measurable B
-   - This means shift⁻¹(f⁻¹(B)) = f⁻¹(B)
-   - Equivalently: (f ∘ shift)⁻¹(B) = f⁻¹(B) for all measurable B
-   - Since β is countably generated, this implies f ∘ shift = f almost everywhere
-   - For deterministic functions on ℕ → α, a.e. equality is actual equality
-
-The proof requires careful handling of the comap construction and the countably
-generated assumption to move from set-level equality to function equality.
--/
-axiom isTailMeasurable_iff_shift_invariant {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
-    [MeasurableSpace.CountablyGenerated β]
-    (f : (ℕ → α) → β) (hf : Measurable f) :
-    IsTailMeasurable f ↔ f ∘ shift = f
-
 /-- For a probability measure μ on path space, a function is **almost tail-measurable**
 if it differs from a tail-measurable function on a μ-null set.
 By FMP 10.4, this is equivalent to measurability w.r.t. the μ-completion of the invariant σ-field.
@@ -194,40 +166,6 @@ TODO: Formalize this properly using measure completion. -/
 def IsAlmostTailMeasurable {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
     (μ : Measure (ℕ → α)) (f : (ℕ → α) → β) : Prop :=
   ∃ g : (ℕ → α) → β, IsTailMeasurable g ∧ f =ᵐ[μ] g
-
-/-- **Connection to Exchangeability**: For an exchangeable sequence X : ℕ → Ω → α,
-the path-space measure μ_X (push-forward of the base measure μ by ω ↦ (X n ω)_{n ∈ ℕ})
-is invariant under the shift operator. More generally, μ_X is invariant under all
-finite permutations.
-
-This invariance is why the tail σ-algebra (shift-invariant σ-field) is the natural
-conditioning σ-field for de Finetti's theorem:
-- The directing measure ν must be tail-measurable (FMP 10.3-10.4)
-- Conditional expectations with respect to the tail σ-algebra give the mixing measure
-- The tail σ-field is trivial for ergodic measures (0-1 law)
-
-Proof strategy:
-1. Define path-space measure: μ_X = Measure.map (fun ω n => X n ω) μ
-2. Show shift is measurable: shift : (ℕ → α) → (ℕ → α) is measurable
-3. Prove measure-preserving property:
-   - For any measurable B ⊆ (ℕ → α), need: μ_X(shift⁻¹(B)) = μ_X(B)
-   - Since X is exchangeable, finite permutations preserve the distribution
-   - The shift is the limit of finite permutations (shift by 1)
-   - For exchangeable sequences, the distribution is invariant under all permutations
-   - In particular: μ_X{paths | shift(path) ∈ B} = μ_X(B)
-
-4. The key insight: exchangeability = invariance under finite coordinate swaps
-   - Shift can be approximated by swapping coordinates 0↔1, 1↔2, 2↔3, ...
-   - Each swap preserves the distribution by exchangeability
-   - The limit preserves the distribution by continuity of measures
-
-This connects the combinatorial property (exchangeability) to the dynamical
-property (shift-invariance), which is the bridge to ergodic theory.
--/
-axiom exchangeable_implies_shift_invariant {μ : Measure Ω} {X : ℕ → Ω → α}
-    (hX : Exchangeable μ X) (hX_meas : ∀ i, Measurable (X i)) :
-    let μ_X : Measure (ℕ → α) := Measure.map (fun ω n => X n ω) μ
-    MeasurePreserving shift μ_X μ_X
 
 /-!
 ## Helper lemmas for product measures
@@ -669,14 +607,28 @@ lemma aemeasurable_measure_pi {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSp
     haveI : ∀ _ : Fin m, IsProbabilityMeasure (ν ω) := fun _ => hν_prob ω
     simpa [κ] using Measure.pi.instIsProbabilityMeasure
 
-  -- Obtain measurability and downgrade to AE-measurability
+  -- Obtain measurability via monotone class extension
   have hκ_meas : Measurable κ := by
     classical
     haveI : ∀ ω, IsProbabilityMeasure (κ ω) := hκ_prob
-    refine
-      Measurable.measure_of_isPiSystem_of_isProbabilityMeasure
-        (μ := κ) h_gen h_pi ?_
-    intro t ht; exact h_basic t ht
+    -- Use Measure.measurable_coe to build measurability from evaluation maps
+    refine Measure.measurable_coe.2 ?_
+    intro t ht
+    -- Apply monotone class theorem with our generator and pi-system
+    refine monotone_class_theorem (m := inferInstance) (C := fun s hs => Measurable fun ω => κ ω s)
+      h_gen h_pi ?_ ?_ ?_ ?_ ht
+    · -- empty
+      simpa using measurable_const
+    · -- basic (rectangles)
+      intro s hs
+      exact h_basic s hs
+    · -- complement
+      intro s _ hs_meas
+      simpa [measure_compl] using Measurable.sub measurable_const hs_meas
+    · -- disjoint union
+      intro f hpair hf hfP
+      have hmeas := measurable_ennreal_tsum hfP
+      simpa [measure_iUnion hpair hf] using hmeas
   exact hκ_meas.aemeasurable
 
 /-- The bind of a probability measure with the product measure kernel equals the integral

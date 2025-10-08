@@ -578,6 +578,28 @@ lemma identicalConditionalMarginals {μ : Measure (Ω[α])} [IsProbabilityMeasur
   have h_eq := (h_precomp.trans hCEk).trans (h_invariance.trans hν.symm)
   simpa using h_eq
 
+/--
+TODO: establish kernel-level factorisation for two bounded test functions.
+This is the pointwise analogue (under `iIndepFun`) of the classical
+`IndepFun.integral_mul_eq_mul_integral` statement for measures.
+-/
+private lemma condexp_pair_factorization
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    [StandardBorelSpace α] (hσ : MeasurePreserving shift μ μ)
+    (f g : α → ℝ)
+    (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
+    (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C)
+    (hciid :
+      iIndepFun (fun k : Fin 2 => fun ω : Ω[α] => ω k)
+        (condExpKernel μ (shiftInvariantSigma (α := α))) μ) :
+    μ[(fun ω => f (ω 0) * g (ω 1)) | shiftInvariantSigma (α := α)]
+      =ᵐ[μ]
+    fun ω =>
+      (∫ x, f x ∂(ν (μ := μ) ω)) * (∫ x, g x ∂(ν (μ := μ) ω)) := by
+  -- TODO: extend the indicator-level identity provided by `hciid` to bounded
+  -- measurable test functions via a simple-function / monotone-class argument.
+  sorry
+
 /-- Conditional expectation factorizes through the regular conditional distribution.
 
 Assuming conditional independence of coordinates given the tail σ-algebra,
@@ -590,14 +612,26 @@ theorem condexp_product_factorization
     (hmeas : ∀ k, Measurable (fs k))
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
     -- Conditional independence of coordinates given tail:
-    (hciid : iIndepFun
-      (fun k : Fin m => fun ω : Ω[α] => ω k)
-      (condExpKernel μ (shiftInvariantSigma (α := α))) μ) :
+    (hciid :
+      iIndepFun (fun k : Fin m => fun ω : Ω[α] => ω k)
+        (condExpKernel μ (shiftInvariantSigma (α := α))) μ) :
     μ[fun ω => ∏ k, fs k (ω (k : ℕ)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω)) := by
-  sorry
-  -- TODO: Apply condExp_ae_eq_integral_condExpKernel, factor by hciid,
-  -- use identicalConditionalMarginals
+  classical
+  induction' m with m ih generalizing fs
+  · have h_const :
+        μ[(fun _ : Ω[α] => (1 : ℝ)) | shiftInvariantSigma (α := α)]
+          = fun _ : Ω[α] => (1 : ℝ) :=
+      MeasureTheory.condExp_const (μ := μ)
+        (m := shiftInvariantSigma (α := α))
+        (hm := shiftInvariantSigma_le (α := α)) (c := (1 : ℝ))
+    refine Filter.EventuallyEq.of_forall ?_
+    intro ω
+    simp [h_const]
+  · -- TODO: handle the inductive step by splitting off the last coordinate,
+    -- reducing to the two-factor case (`condexp_pair_factorization`) and the
+    -- induction hypothesis `ih`.
+    sorry
 
 /-- Factorization theorem: conditional expectation of cylinder has product form.
 
