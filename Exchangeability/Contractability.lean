@@ -306,12 +306,12 @@ lemma iidProduct_perm_invariant {ν₀ : Measure α} [IsProbabilityMeasure ν₀
 /-- Composing strictly monotone functions with addition preserves strict monotonicity. -/
 lemma strictMono_add_left {m : ℕ} (k : Fin m → ℕ) (hk : StrictMono k) (c : ℕ) :
     StrictMono (fun i => c + k i) :=
-  fun ⦃a b⦄ a_1 ↦ Nat.add_lt_add_left (hk a_1) c
+  fun ⦃_ _⦄ hab ↦ Nat.add_lt_add_left (hk hab) c
 
 /-- Composing strictly monotone functions with addition preserves strict monotonicity. -/
 lemma strictMono_add_right {m : ℕ} (k : Fin m → ℕ) (hk : StrictMono k) (c : ℕ) :
     StrictMono (fun i => k i + c) :=
-  fun ⦃a b⦄ a_1 ↦ Nat.add_lt_add_right (hk a_1) c
+  fun ⦃_ _⦄ hab ↦ Nat.add_lt_add_right (hk hab) c
 
 /-- For a strictly monotone function `k : Fin m → ℕ`, the values dominate the indices. -/
 lemma strictMono_Fin_ge_id {m : ℕ} {k : Fin m → ℕ} (hk : StrictMono k) (i : Fin m) :
@@ -498,7 +498,7 @@ lemma Contractable.shift_and_select {μ : Measure Ω} {X : ℕ → Ω → α}
 /-- Composing strictly monotone functions preserves strict monotonicity. -/
 lemma strictMono_comp {m n : ℕ} (f : Fin m → Fin n) (g : Fin n → ℕ)
     (hf : StrictMono f) (hg : StrictMono g) : StrictMono (fun i => g (f i)) :=
-  fun ⦃a b⦄ a_1 ↦ hg (hf a_1)
+  fun ⦃_ _⦄ hab ↦ hg (hf hab)
 
 /-- For a permutation σ on Fin n, the range {σ(0), ..., σ(n-1)} equals {0, ..., n-1}. -/
 lemma perm_range_eq {n : ℕ} (σ : Equiv.Perm (Fin n)) :

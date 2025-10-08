@@ -189,14 +189,14 @@ lemma indicator_mem_zero_one {α : Type*} {s : Set α} {x : α} :
     ENNReal.ofReal (s.indicator (fun _ => (1 : ℝ)) x) ∈ ({0, 1} : Set ENNReal) := by
   by_cases h : x ∈ s
   · simp [Set.indicator_of_mem h, ENNReal.ofReal_one]
-  · simp [Set.indicator_of_not_mem h, ENNReal.ofReal_zero]
+  · simp [Set.indicator_of_notMem h, ENNReal.ofReal_zero]
 
 /-- The ENNReal value of an indicator function is at most 1. -/
 lemma indicator_le_one {α : Type*} {s : Set α} {x : α} :
     ENNReal.ofReal (s.indicator (fun _ => (1 : ℝ)) x) ≤ 1 := by
   by_cases h : x ∈ s
   · simp [Set.indicator_of_mem h, ENNReal.ofReal_one]
-  · simp [Set.indicator_of_not_mem h, ENNReal.ofReal_zero]
+  · simp [Set.indicator_of_notMem h, ENNReal.ofReal_zero]
 
 /-- A product of ENNReal values equals 0 iff at least one factor is 0. -/
 lemma prod_eq_zero_iff {ι : Type*} [Fintype ι] {f : ι → ENNReal} :
@@ -310,13 +310,13 @@ Proof outline:
 5. Converting to `ℝ` gives the desired identity.
 -/
 lemma condExp_indicator_eq_measure {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
-    (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
-    (hν_meas : ∀ s, Measurable (fun ω => ν ω s)) (i : ℕ) (B : Set α) (hB : MeasurableSet B)
+    (_X : ℕ → Ω → α) (_hX_meas : ∀ i, Measurable (_X i))
+    (_ν : Ω → Measure α) (_hν_prob : ∀ ω, IsProbabilityMeasure (_ν ω))
+    (_hν_meas : ∀ s, Measurable (fun ω => _ν ω s)) (_i : ℕ) (_B : Set α) (_hB : MeasurableSet _B)
     -- The key directing measure property: E[f(X_i) | ℱ] = ∫ f dν for bounded f
     -- where ℱ is the tail σ-field (represented as a sub-σ-algebra of Ω)
-    (tail : Set (Set Ω))  -- The tail σ-field as a collection of sets
-    (hν_cond : ∀ (f : α → ℝ), Measurable f → (∃ M, ∀ x, |f x| ≤ M) → True) :
+    (_tail : Set (Set Ω))  -- The tail σ-field as a collection of sets
+    (_hν_cond : ∀ (f : α → ℝ), Measurable f → (∃ M, ∀ x, |f x| ≤ M) → True) :
     -- Placeholder for the actual property involving conditional expectation
     True := by
   -- This lemma needs a proper formulation of the tail σ-field in the base space Ω
@@ -790,7 +790,7 @@ theorem conditional_iid_from_directing_measure
         have h_ae_meas : AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ :=
           aemeasurable_measure_pi ν hν_prob hν_meas
         rw [Measure.bind_apply .univ h_ae_meas]
-        simp [measure_univ, h_pi_prob]
+        simp [measure_univ]
 
       -- Define the π-system of measurable rectangles
       let C : Set (Set (Fin m → α)) := {S | ∃ (B : Fin m → Set α),
@@ -871,7 +871,7 @@ Then C holds on all measurable sets in σ(𝒞).
 
 This theorem is now a direct wrapper around mathlib's `induction_on_inter`.
 -/
-theorem monotone_class_theorem
+omit [MeasurableSpace Ω] in theorem monotone_class_theorem
     {m : MeasurableSpace Ω} {C : ∀ s : Set Ω, MeasurableSet s → Prop}
     {s : Set (Set Ω)} (h_eq : m = MeasurableSpace.generateFrom s)
     (h_inter : IsPiSystem s)
@@ -900,9 +900,9 @@ The strategy:
 -/
 theorem monotone_class_product_extension
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
-    (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
-    (hν_meas : ∀ s, Measurable (fun ω => ν ω s))
+    (_X : ℕ → Ω → α) (_hX_meas : ∀ i, Measurable (_X i))
+    (_ν : Ω → Measure α) (_hν_prob : ∀ ω, IsProbabilityMeasure (_ν ω))
+    (_hν_meas : ∀ s, Measurable (fun ω => _ν ω s))
     (k : ℕ)
     -- If the property holds for products of bounded functions
     (h_prod : ∀ (f : Fin k → α → ℝ),
@@ -949,7 +949,7 @@ This encapsulates the "completed as before" step.
 theorem complete_from_directing_measure
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
-    (hX_contract : Contractable μ X)
+    (_hX_contract : Contractable μ X)
     (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
     (hν_meas : ∀ s, Measurable (fun ω => ν ω s))
     (h_bridge : ∀ {m : ℕ} (k : Fin m → ℕ) (B : Fin m → Set α),
