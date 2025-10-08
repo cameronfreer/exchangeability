@@ -270,7 +270,7 @@ lemma gRep_eq_of_constant_orbit {g0 : Ω[α] → ℝ} {ω : Ω[α]}
         (fun n : ℕ => (g0 (shift^[n] ω) : EReal))
           = fun _ => (g0 ω : EReal) := by
       funext n; simpa using congrArg (fun y : ℝ => (y : EReal)) (hconst n)
-    simpa [hfunext] using (limsup_const (f := atTop) (a := (g0 ω : EReal)))
+    simp [hfunext, limsup_const]
   simpa [gRep, gLimsupE] using congrArg EReal.toReal hlim
 
 lemma gRep_ae_eq_of_constant_orbit {g0 : Ω[α] → ℝ}
@@ -519,15 +519,18 @@ lemma mkShiftInvariantRep
     intro ω hω
     have hmem : ∀ n : ℕ, shift^[n] ω ∈ S := by
       intro n
-      induction' n with n ih
-      · simpa [Function.iterate_zero_apply] using hω
-      · have := hforward _ ih
-        simpa [Function.iterate_succ_apply, Nat.succ_eq_add_one] using this
-    refine Nat.rec (by simpa [Function.iterate_zero_apply]) ?_
+      induction n with
+      | zero => simp [Function.iterate_zero_apply]; exact hω
+      | succ n ih =>
+        have := hforward _ ih
+        simp only [Function.iterate_succ_apply']
+        exact this
+    refine Nat.rec (by simp [Function.iterate_zero_apply]) ?_
     intro n ih
     have hstep : g0 (shift^[n.succ] ω) = g0 (shift^[n] ω) := by
       have := hS_point (shift^[n] ω) (hmem n)
-      simpa [Function.iterate_succ_apply, Nat.succ_eq_add_one] using this
+      simp only [Function.iterate_succ_apply']
+      exact this
     exact hstep.trans ih
   have hconst : ∀ᵐ ω ∂μ, ∀ n : ℕ, g0 (shift^[n] ω) = g0 ω := by
     filter_upwards [hS_ae] with ω hω using hconst_on_S ω hω
