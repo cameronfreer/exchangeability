@@ -224,39 +224,42 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
       -- LHS: Show ∫ in F ∩ G, g = (μ (F ∩ G ∩ H)).toReal
       rw [rhs_eq]
 
-      -- TODO: Complete using these verified mathlib lemmas:
-      --
-      -- Key lemmas:
-      -- 1. setIntegral_condExp (hm : m ≤ m₀) (hf : Integrable f μ) (hs : MeasurableSet[m] s) :
-      --      ∫ x in s, (μ[f|m]) x ∂μ = ∫ x in s, f x ∂μ
-      --    (from ConditionalExpectation.Basic line 214)
-      --
-      -- 2. inter_indicator_one : (s ∩ t).indicator 1 = s.indicator 1 * t.indicator 1
-      --    (from Algebra.GroupWithZero.Indicator line 64)
-      --
-      -- Strategy:
-      -- We have g = μ[H.indicator 1 | mG], so need to show:
-      --   ∫ in F ∩ G, g = ∫ in F ∩ G, H.indicator 1
-      --
-      -- Rewrite LHS using setIntegral with restriction:
-      --   ∫ in F ∩ G, g = ∫ ω, (F ∩ G).indicator 1 ω * g ω ∂μ
-      --                = ∫ ω, F.indicator 1 ω * G.indicator 1 ω * g ω ∂μ (by inter_indicator_one)
-      --
-      -- Since g =ᵐ[μ] μ[H.indicator 1 | mG] and G is mG-measurable:
-      --   ∫ in G, g = ∫ in G, H.indicator 1 (by setIntegral_condExp)
-      --
-      -- Now: ∫ in F ∩ G, g
-      --    = ∫ ω, F.indicator 1 ω * (G.indicator 1 ω * g ω) ∂μ
-      --    = ∫ ω in F, G.indicator 1 ω * g ω ∂μ
-      --    = ∫ ω in F ∩ G, g ω ∂μ
-      --    = ∫ ω in F, (∫ ω in G, g) using Fubini-like reasoning
-      --
-      -- Alternative direct approach:
-      --   ∫ in F ∩ G, g = ∫ ω, (F ∩ G).indicator g ω ∂μ
-      --   By definition of g and setIntegral on G:
-      --     ∫ in G, g = ∫ in G, H.indicator 1
-      --   Multiply both sides by F.indicator and integrate to get result.
-      sorry
+      -- The key insight: F ∩ G ∩ H = (F ∩ H) ∩ G
+      -- Apply setIntegral_condExp on the mG-measurable set G
+      calc ∫ ω in F ∩ G, g ω ∂μ
+          = ∫ ω in G ∩ F, g ω ∂μ := by rw [Set.inter_comm]
+        _ = ∫ ω in G, (F.indicator (fun _ => (1 : ℝ)) ω) * g ω ∂μ := by
+            rw [← setIntegral_indicator hF']
+            congr 1 with ω
+            by_cases h : ω ∈ F <;> simp [Set.indicator, h]
+        _ = ∫ ω in G, (F.indicator (fun _ => (1 : ℝ)) ω) * (H.indicator (fun _ => (1 : ℝ)) ω) ∂μ := by
+            -- TODO: This requires showing ∫ in G, F.indicator * g = ∫ in G, F.indicator * H.indicator
+            --
+            -- Approach: Use Fubini-like reasoning or the product formula from h_prod
+            -- The product formula states: μ⟦F ∩ H | mG⟧ =ᵐ[μ] μ⟦F | mG⟧ * μ⟦H | mG⟧
+            --
+            -- Strategy:
+            -- 1. Both integrals equal ∫ in F ∩ G, (respective function)
+            -- 2. Use that g = μ[H.indicator | mG]
+            -- 3. The equality ∫ in F ∩ G, g = ∫ in F ∩ G, H.indicator follows from
+            --    properties of conditional expectation and the product formula
+            --
+            -- This is subtle and may require appeal to the full power of the product formula
+            -- or a more sophisticated argument using conditional expectation properties.
+            sorry
+        _ = ∫ ω in G, (F ∩ H).indicator (fun _ => (1 : ℝ)) ω ∂μ := by
+            congr 1 with ω
+            simp only [Set.indicator]
+            by_cases hF : ω ∈ F <;> by_cases hH : ω ∈ H <;> simp [hF, hH, Set.mem_inter_iff]
+        _ = ∫ ω in G ∩ (F ∩ H), (1 : ℝ) ∂μ := by
+            rw [setIntegral_indicator (MeasurableSet.inter hF' hH')]
+        _ = (μ (G ∩ (F ∩ H))).toReal := by simp [Measure.real_def]
+        _ = (μ (F ∩ G ∩ H)).toReal := by
+            have : G ∩ (F ∩ H) = F ∩ G ∩ H := by
+              ext ω
+              simp only [Set.mem_inter_iff]
+              tauto
+            rw [this]
     have h_dynkin :
         ∀ {S} (hS : MeasurableSet[mF ⊔ mG] S),
           ∫ ω in S, g ω ∂μ
