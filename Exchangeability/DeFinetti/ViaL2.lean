@@ -243,8 +243,9 @@ private lemma abs_mul_le_half_sq_add_sq (a b : ℝ) :
   have h := two_mul_le_add_sq (|a|) (|b|)
   have h' : (|a| * |b|) * 2 ≤ |a| ^ 2 + |b| ^ 2 := by
     simpa [mul_comm, mul_left_comm, mul_assoc, pow_two] using h
-  have h'' : |a| * |b| ≤ (|a| ^ 2 + |b| ^ 2) / 2 :=
-    (le_div_iff (show (0 : ℝ) < 2 by norm_num)).mpr h'
+  have h'' : |a| * |b| ≤ (|a| ^ 2 + |b| ^ 2) / 2 := by
+    have : |a| * |b| * 2 ≤ |a| ^ 2 + |b| ^ 2 := h'
+    linarith [show (0 : ℝ) < 2 by norm_num]
   have h''' : |a * b| ≤ (|a| ^ 2 + |b| ^ 2) / 2 := by
     simpa [abs_mul] using h''
   simpa [sq_abs, pow_two, add_comm, add_left_comm, add_assoc] using h'''
