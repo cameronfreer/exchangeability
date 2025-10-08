@@ -605,65 +605,6 @@ lemma identicalConditionalMarginals {μ : Measure (Ω[α])} [IsProbabilityMeasur
   have h_eq := (h_precomp.trans hCEk).trans (h_invariance.trans hν.symm)
   simpa using h_eq
 
-/-- Helper: product rule for conditional expectation under kernel independence.
-If X and Y are conditionally independent given σ (in the kernel sense),
-then E[XY | σ] = E[X | σ] · E[Y | σ].
-
-This is a direct application of `Kernel.IndepFun.integral_mul` composed with
-`condExp_ae_eq_integral_condExpKernel`.
--/
-private lemma condexp_mul_of_kernel_indep
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    (σ : MeasurableSpace (Ω[α])) (hσ_le : σ ≤ inferInstance)
-    (X Y : Ω[α] → ℝ)
-    (hX_meas : Measurable X) (hY_meas : Measurable Y)
-    (hX_bd : ∃ C, ∀ ω, |X ω| ≤ C) (hY_bd : ∃ C, ∀ ω, |Y ω| ≤ C)
-    (h_kernel_indep : Kernel.IndepFun X Y (condExpKernel μ σ) μ) :
-    μ[(fun ω => X ω * Y ω) | σ] =ᵐ[μ]
-      fun ω => (μ[X | σ] ω) * (μ[Y | σ] ω) := by
-  classical
-  -- Integrability from boundedness
-  rcases hX_bd with ⟨CX, hCX⟩
-  rcases hY_bd with ⟨CY, hCY⟩
-  have hX_int : Integrable X μ := by
-    refine MeasureTheory.integrable_of_bounded (hmeas := hX_meas) (μ := μ) ⟨CX, hCX⟩
-  have hY_int : Integrable Y μ := by
-    refine MeasureTheory.integrable_of_bounded (hmeas := hY_meas) (μ := μ) ⟨CY, hCY⟩
-  have hXY_int : Integrable (X * Y) μ := by
-    refine MeasureTheory.integrable_of_bounded
-      (hmeas := hX_meas.mul hY_meas) (μ := μ) ⟨CX * CY, ?_⟩
-    intro ω
-    calc |(X * Y) ω| = |X ω * Y ω| := rfl
-      _ = |X ω| * |Y ω| := abs_mul _ _
-      _ ≤ CX * CY := mul_le_mul (hCX ω) (hCY ω) (abs_nonneg _) (by linarith [hCX ω])
-
-  -- Step 1: Express conditional expectations via condExpKernel
-  have h_XY_kernel : μ[(X * Y) | σ] =ᵐ[μ]
-      fun ω => ∫ y, X y * Y y ∂(condExpKernel μ σ ω) :=
-    ProbabilityTheory.condExp_ae_eq_integral_condExpKernel hσ_le hXY_int
-
-  have h_X_kernel : μ[X | σ] =ᵐ[μ]
-      fun ω => ∫ y, X y ∂(condExpKernel μ σ ω) :=
-    ProbabilityTheory.condExp_ae_eq_integral_condExpKernel hσ_le hX_int
-
-  have h_Y_kernel : μ[Y | σ] =ᵐ[μ]
-      fun ω => ∫ y, Y y ∂(condExpKernel μ σ ω) :=
-    ProbabilityTheory.condExp_ae_eq_integral_condExpKernel hσ_le hY_int
-
-  -- Step 2: Apply Kernel.IndepFun.integral_mul
-  have h_factor : ∀ᵐ ω ∂μ,
-      ∫ y, X y * Y y ∂(condExpKernel μ σ ω) =
-      (∫ y, X y ∂(condExpKernel μ σ ω)) * (∫ y, Y y ∂(condExpKernel μ σ ω)) :=
-    Kernel.IndepFun.integral_mul h_kernel_indep hX_meas hY_meas hX_bd hY_bd
-
-  -- Step 3: Combine via a.e. transitivity
-  calc μ[(X * Y) | σ]
-      =ᵐ[μ] (fun ω => ∫ y, X y * Y y ∂(condExpKernel μ σ ω)) := h_XY_kernel
-    _ =ᵐ[μ] (fun ω => (∫ y, X y ∂(condExpKernel μ σ ω)) * (∫ y, Y y ∂(condExpKernel μ σ ω))) := h_factor
-    _ =ᵐ[μ] (fun ω => μ[X | σ] ω * μ[Y | σ] ω) := by
-        filter_upwards [h_X_kernel, h_Y_kernel] with ω hX hY
-        rw [← hX, ← hY]
-
 /-- **Kernel-level integral multiplication under independence.**
 
 This is the pointwise analogue of `IndepFun.integral_mul_eq_mul_integral` for kernels.
