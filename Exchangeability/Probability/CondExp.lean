@@ -188,11 +188,14 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
   · intro hCond H hH
     set g : Ω → ℝ := μ[H.indicator (fun _ => (1 : ℝ)) | mG]
     have hg_int : Integrable g μ := by
-      -- TODO: `integrable_condExp` with the chosen function.
-      sorry
+      simpa [g] using
+        (integrable_condExp (μ := μ) (m := mG)
+          (f := H.indicator fun _ : Ω => (1 : ℝ)))
     have hg_meas : AEStronglyMeasurable[mG] g μ := by
-      -- TODO: `stronglyMeasurable_condExp` for the chosen function.
-      sorry
+      have h_sm :=
+        (stronglyMeasurable_condExp (μ := μ) (m := mG)
+            (f := H.indicator fun _ : Ω => (1 : ℝ)))
+      simpa [g] using h_sm.aestronglyMeasurable
     have h_rect :
         ∀ {F} (hF : MeasurableSet[mF] F) {G} (hG : MeasurableSet[mG] G),
           ∫ ω in F ∩ G, g ω ∂μ
@@ -210,7 +213,7 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
           =ᵐ[μ] g := by
       -- TODO: apply `ae_eq_condExp_of_forall_setIntegral_eq` using `h_dynkin`.
       sorry
-    simpa [g] using h_proj.symm
+    simpa [g] using h_proj
   · intro hProj
     refine
       (ProbabilityTheory.condIndep_iff mG mF mH hmG hmF hmH μ).2 ?_
