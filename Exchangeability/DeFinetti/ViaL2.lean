@@ -710,15 +710,34 @@ lemma l2_bound_two_windows
         exact hY_cov _ _ this
       · -- i < k, ¬(j < k): first vs second window
         -- ξ i = Y(n + i.val + 1), ξ j = Y(m + (j.val - k) + 1)
-        -- These underlying Y indices might coincide, but that's handled by:
-        -- If n + i + 1 = m + (j - k) + 1, then variance = σSq = σSq * 1
-        -- and contractability implies ρ → 1 for overlapping cases
-        -- For distinct indices, hY_cov gives σSq * ρ
-        -- Either way, the bound still holds (potentially with a tighter constant)
-        sorry  -- TODO: Either prove indices distinct OR handle coinciding case
-                -- The bound remains valid either way
+        by_cases heq : n + i.val + 1 = m + (j.val - k) + 1
+        · -- Indices coincide: use variance formula
+          have : Y (n + i.val + 1) = Y (m + (j.val - k) + 1) := by rw [heq]
+          simp only [this]
+          have : ∫ ω, (Y (m + (j.val - k) + 1) ω - mY) * (Y (m + (j.val - k) + 1) ω - mY) ∂μ = σSq := by
+            have := hY_var (m + (j.val - k) + 1)
+            simpa [sq] using this
+          -- σSq = σSq * 1 ≥ σSq * ρ since ρ ≤ 1
+          have : σSq * ρ ≤ σSq := by
+            have : ρ ≤ 1 := hρ_ub
+            nlinarith [hσ_nonneg]
+          linarith
+        · -- Indices distinct: use covariance formula
+          exact hY_cov _ _ heq
       · -- ¬(i < k), j < k: second vs first window (symmetric case)
-        sorry  -- TODO: Same reasoning as previous case
+        by_cases heq : m + (i.val - k) + 1 = n + j.val + 1
+        · -- Indices coincide
+          have : Y (m + (i.val - k) + 1) = Y (n + j.val + 1) := by rw [heq]
+          simp only [this]
+          have : ∫ ω, (Y (n + j.val + 1) ω - mY) * (Y (n + j.val + 1) ω - mY) ∂μ = σSq := by
+            have := hY_var (n + j.val + 1)
+            simpa [sq] using this
+          have : σSq * ρ ≤ σSq := by
+            have : ρ ≤ 1 := hρ_ub
+            nlinarith [hσ_nonneg]
+          linarith
+        · -- Indices distinct
+          exact hY_cov _ _ heq
       · -- Both in second window: indices are m+(i-k)+1 vs m+(j-k)+1
         have : m + (i.val - k) + 1 ≠ m + (j.val - k) + 1 := by
           intro h; have : i.val - k = j.val - k := by omega
