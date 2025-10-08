@@ -1575,22 +1575,33 @@ lemma directing_measure_isProbabilityMeasure
     IsProbabilityMeasure (directing_measure X hX_contract hX_meas hX_L2 ω) := by
   sorry
 
-/-- For each Borel set B, the map ω ↦ ν(ω)(B) is measurable.
+/-- For each set s, the map ω ↦ ν(ω)(s) is measurable.
 
 This is the key measurability property needed for complete_from_directing_measure.
-Uses monotone class theorem: prove for intervals, extend to Borel sets.
+
+For measurable sets: Uses monotone class theorem (π-λ theorem) - prove for intervals,
+extend to all Borel sets.
+
+For non-measurable sets: The measure is 0 by outer regularity, so the function is
+the constant zero function (hence measurable).
 -/
 lemma directing_measure_measurable
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
-    (B : Set ℝ) (hB : MeasurableSet B) :
-    Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω B) := by
-  -- Strategy: Use MeasurableSpace.induction_on_inter
-  -- 1. For intervals (-∞, t], this follows from measurability of cdf_from_alpha
-  -- 2. Extend to all Borel sets via π-λ theorem
-  sorry
+    (s : Set ℝ) :
+    Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω s) := by
+  -- For measurable sets: Use π-λ theorem (intervals → Borel sets)
+  -- For non-measurable sets: measure is 0, so constant function
+  by_cases hs : MeasurableSet s
+  · -- Measurable case: prove for intervals, extend via monotone class
+    -- Step 1: For intervals (-∞, t], this follows from measurability of cdf_from_alpha
+    -- Step 2: Extend to all Borel sets via π-λ theorem (MeasurableSpace.induction_on_inter)
+    sorry
+  · -- Non-measurable case: ν(ω)(s) = 0 for all ω (by outer regularity)
+    -- Therefore fun ω => ν ω s is the constant zero function
+    sorry
 
 /-- The directing measure integrates to give α_f.
 
@@ -1643,74 +1654,51 @@ lemma directing_measure_bridge
   sorry
 
 /-!
-## Main theorem: de Finetti via L² approach
+## Infrastructure for directing measure construction (used by TheoremViaL2)
+
+The following theorems provide the building blocks for constructing the directing
+measure ν and verifying its properties. The actual completion via CommonEnding
+happens in TheoremViaL2.lean to maintain proper import separation.
 -/
 
-/-- **Kallenberg's Second Proof of de Finetti's Theorem 1.1** (refactored):
-Starting from a **contractable** sequence ξ in ℝ with L² bounds,
-we prove it is conditionally i.i.d. given the tail σ-algebra.
+/-- **L² convergence establishes directing measure requirements**.
 
-**Original Kallenberg structure** (page 26-27):
-1. Fix bounded measurable f ∈ L¹
-2. Use Lemma 1.2 (L² bound) + completeness of L¹ to get α_n → α_∞
-3. Show α_n is reverse martingale with a.s. convergent subsequence
-4. Use contractability + dominated convergence
-5. Conclude α_n = E_n f(ξ_{n+1}) = ν^f a.s.
-6. "The proof can now be completed as before" (common ending)
+This theorem packages the L² approach infrastructure, showing that for a contractable
+sequence with L² bounds, we can construct a directing measure ν that satisfies all
+the requirements needed for the CommonEnding completion.
 
-**Refactored approach** (with single α):
-1. For each bounded f, use `weighted_sums_converge_L1` to get single α
-2. Show α = E[f(X_1) | tail] by contractability (no subsequence needed!)
-3. Define directing measure ν from α via disintegration
-4. Complete using CommonEnding.complete_from_directing_measure
+**What this provides**:
+- Existence of directing measure ν via `directing_measure`
+- ν(ω) is a probability measure
+- ω ↦ ν(ω)(B) is measurable for Borel B
+- Bridge property: E[∏ᵢ 𝟙_{Bᵢ}(X_{k(i)})] = E[∏ᵢ ν(·)(Bᵢ)]
 
-**Key simplification**: No reverse martingale convergence needed since α is
-already the limit (not a sequence)!
+**What remains**: Applying `CommonEnding.complete_from_directing_measure` to get
+ConditionallyIID. This happens in TheoremViaL2.lean.
 
 **Reference**: Kallenberg (2005), Theorem 1.1 (page 26-27), "Second proof".
 -/
-theorem deFinetti_viaL2
+theorem directing_measure_satisfies_requirements
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
-    (hX_contract : Contractable μ X)  -- NOTE: Starts with CONTRACTABLE, not exchangeable!
+    (hX_contract : Contractable μ X)
     (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-    ConditionallyIID μ X := by
-  -- Construct the directing measure ν
-  -- This will be wired to CommonEnding.complete_from_directing_measure in TheoremViaL2.lean
-
-  -- The proof structure:
-  -- 1. Build ν from the α limits via directing_measure
-  -- 2. Verify ν(ω) is a probability measure (directing_measure_isProbabilityMeasure)
-  -- 3. Verify ω ↦ ν(ω)(s) is measurable (directing_measure_measurable)
-  -- 4. Verify the bridge property (directing_measure_bridge)
-  -- 5. Apply CommonEnding.complete_from_directing_measure
-
-  -- This sorry represents the call to CommonEnding, which will be done in TheoremViaL2.lean
-  -- to maintain the correct import structure (ViaL2 should not import CommonEnding)
-  sorry
-
-/-!
-## Connection to exchangeability (for completeness)
--/
-
-/-- Since exchangeable implies contractable (proved in Contractability.lean),
-we can also state de Finetti starting from exchangeability.
-
-This combines `contractable_of_exchangeable` with `deFinetti_viaL2`.
--/
-theorem deFinetti_from_exchangeable
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
-    (hX_exch : Exchangeable μ X)
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-    ConditionallyIID μ X := by
-  -- First show exchangeable → contractable
-  have hX_contract : Contractable μ X := contractable_of_exchangeable hX_exch hX_meas
-  -- Then apply the L² proof
-  exact deFinetti_viaL2 X hX_meas hX_contract hX_L2
-
-/-- **Standard name** for de Finetti's theorem.
-This is an alias for `deFinetti_from_exchangeable` (the L² proof). -/
-abbrev deFinetti := @deFinetti_from_exchangeable
+    ∃ (ν : Ω → Measure ℝ),
+      (∀ ω, IsProbabilityMeasure (ν ω)) ∧
+      (∀ s, Measurable (fun ω => ν ω s)) ∧
+      (∀ {m : ℕ} (k : Fin m → ℕ) (B : Fin m → Set ℝ),
+        (∀ i, MeasurableSet (B i)) →
+          ∫⁻ ω, ∏ i : Fin m,
+              ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) ∂μ
+            = ∫⁻ ω, ∏ i : Fin m, ν ω (B i) ∂μ) := by
+  use directing_measure X hX_contract hX_meas hX_L2
+  constructor
+  · intro ω
+    exact directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+  constructor
+  · intro s
+    exact directing_measure_measurable X hX_contract hX_meas hX_L2 s
+  · intro m k B hB
+    exact directing_measure_bridge X hX_contract hX_meas hX_L2 k B hB
 
 end Exchangeability.DeFinetti.ViaL2
