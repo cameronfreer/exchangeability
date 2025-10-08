@@ -703,14 +703,17 @@ theorem weighted_sums_converge_L1
       exact this
 
     -- Completeness of L¹ gives a limit
-    obtain ⟨G, hG⟩ := CauchySeq.tendsto_of_complete hCauchy
+    -- New API: CompleteSpace.complete instead of CauchySeq.tendsto_of_complete
+    rcases CompleteSpace.complete (show Cauchy (atTop.map F) from hCauchy) with ⟨G, hG⟩
+    -- hG : atTop.map F ≤ 𝓝 G (defeq: Tendsto F atTop (𝓝 G))
+    have hG' : Tendsto F atTop (𝓝 G) := hG
 
     -- Extract measurable representative
     refine ⟨G, G.aestronglyMeasurable.measurable_mk, G.memℒp, ?_⟩
     intro ε hε
     -- Use convergence of F to G
     have : ∃ M, ∀ m ≥ M, dist (F m) G < ε := by
-      exact Metric.tendsto_atTop.mp hG ε hε
+      exact Metric.tendsto_atTop.mp hG' ε hε
     obtain ⟨M, hM⟩ := this
     refine ⟨M, fun m hm => ?_⟩
     -- Convert dist back to eLpNorm
