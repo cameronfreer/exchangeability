@@ -347,6 +347,10 @@ noncomputable def rcdKernel {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
   Kernel.comap ((condExpKernel μ (shiftInvariantSigma (α := α))).map (π0 (α := α)))
     id (measurable_id'' (shiftInvariantSigma_le (α := α)))
 
+instance rcdKernel_isMarkovKernel {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    [StandardBorelSpace α] : IsMarkovKernel (rcdKernel (μ := μ)) := by
+  sorry  -- TODO: Prove that comap of map of IsMarkovKernel preserves IsMarkovKernel
+
 /-- The regular conditional distribution as a function assigning to each point
  a probability measure on α. -/
 noncomputable def ν {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
@@ -365,7 +369,9 @@ lemma ν_apply {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelS
 instance ν_isProbabilityMeasure {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] (ω : Ω[α]) :
     IsProbabilityMeasure (ν (μ := μ) ω) := by
-  sorry
+  unfold ν
+  -- rcdKernel is a Markov kernel (composition of map and comap preserves this)
+  exact IsMarkovKernel.isProbabilityMeasure ω
 
 /-- The kernel `ν` is measurable with respect to the tail σ-algebra. -/
 lemma ν_measurable_tail {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
