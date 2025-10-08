@@ -349,7 +349,14 @@ noncomputable def rcdKernel {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
 
 instance rcdKernel_isMarkovKernel {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] : IsMarkovKernel (rcdKernel (μ := μ)) := by
-  sorry  -- TODO: Prove that comap of map of IsMarkovKernel preserves IsMarkovKernel
+  unfold rcdKernel
+  -- First, condExpKernel is a Markov kernel
+  have h1 : IsMarkovKernel (condExpKernel μ (shiftInvariantSigma (α := α))) := inferInstance
+  -- Second, map preserves IsMarkovKernel
+  have h2 : IsMarkovKernel ((condExpKernel μ (shiftInvariantSigma (α := α))).map (π0 (α := α))) :=
+    Kernel.IsMarkovKernel.map _ (measurable_pi0 (α := α))
+  -- Third, comap preserves IsMarkovKernel (this is an instance)
+  exact Kernel.IsMarkovKernel.comap _ (measurable_id'' (shiftInvariantSigma_le (α := α)))
 
 /-- The regular conditional distribution as a function assigning to each point
  a probability measure on α. -/
