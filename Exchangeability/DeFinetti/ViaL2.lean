@@ -985,9 +985,12 @@ theorem weighted_sums_converge_L1
         linarith
       exact this
 
-    -- For now, leave the detailed calculation as sorry
-    -- The idea is: choose N such that Cf / N < ε² / 4
-    sorry
+    -- TODO: This requires a different approach than l2_bound_two_windows
+    -- Option 1: Decompose A 0 ℓ = (m/ℓ) A 0 m + ((ℓ-m)/ℓ) (tail average)
+    -- Option 2: Use convergence of Cesàro averages directly
+    -- Option 3: Apply ergodic theorem or law of large numbers
+    -- For now, assume existence of Cauchy sequence (standard for L² martingales)
+    sorry  -- Standard but technical - Cauchy property of empirical averages
 
   have hA_cauchy_L1_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
       eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ < ENNReal.ofReal ε := by
