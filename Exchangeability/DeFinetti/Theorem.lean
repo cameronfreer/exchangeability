@@ -7,57 +7,42 @@ import Exchangeability.DeFinetti.ViaL2
 import Exchangeability.DeFinetti.CommonEnding
 
 /-!
-# de Finetti's Theorem - Public API
+# de Finetti's Theorem - Completed Proof
 
-This file provides the **standard entry point** for de Finetti's theorem,
-with a single stable theorem name that is independent of the proof method.
+This file **completes** the de Finetti proof by combining:
+- `ViaL2`: Proves convergence A_n_m → α for each bounded f
+- `CommonEnding`: Builds the kernel K from the map f ↦ α
 
-## Main theorem
+## Proof flow
 
-* `deFinetti`: An exchangeable sequence on a Borel space is conditionally i.i.d.
-
-This defaults to the **L² proof** (lightest dependencies). The theorem name remains
-stable regardless of which proof is used as the default.
+1. `ViaL2.weighted_sums_converge_L1` gives: ∃α, ∀n. A_n_m → α in L¹
+2. Show α is tail-measurable (contractability argument)
+3. `CommonEnding` machinery:
+   - Build kernel K : Ω → Measure α from f ↦ α_f
+   - Monotone class theorem extends to all measurables
+   - Prove conditional i.i.d. property
 
 ## Alternative proofs
 
-Three complete proofs are available in separate files:
+Each Via* file should eventually complete its own proof this way:
+- `ViaKoopman.lean` + `CommonEnding` → full proof via ergodic theory
+- `ViaMartingale.lean` + `CommonEnding` → full proof via martingales
 
-1. **`ViaL2.lean`** - Elementary proof using L² contractability bounds
-   (Kallenberg's "second proof", Lemma 1.2)
-   - ✅ **Lightest dependencies** - only basic L² space theory
-   - ✅ Elementary and direct
-   - ✅ **Default proof**
+## Current status
 
-2. **`ViaKoopman.lean`** - Proof via Koopman operator and Mean Ergodic Theorem
-   (Kallenberg's "first proof")
-   - ❌ Heavy dependencies - requires ergodic theory
-   - ✅ Deep connection to dynamical systems
-
-3. **`ViaMartingale.lean`** - Proof via reverse martingale convergence
-   (Aldous' approach, Kallenberg's "third proof")
-   - ⚖️ Medium dependencies - requires martingale theory
-   - ✅ Elegant probabilistic argument
-
-To use a specific proof, import the corresponding file directly:
-```lean
-import Exchangeability.DeFinetti.ViaL2        -- or
-import Exchangeability.DeFinetti.ViaKoopman   -- or
-import Exchangeability.DeFinetti.ViaMartingale
-```
+TODO: Once CommonEnding compiles, implement the completion here.
+For now this file documents the intended architecture.
 
 ## References
 
-* Olav Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*,
-  Chapter 1, Theorem 1.1 (pages 26-27)
-* Bruno De Finetti (1937), *La prévision : ses lois logiques, ses sources subjectives*
-* David Aldous (1983), *Exchangeability and related topics*
+* Kallenberg (2005), Theorem 1.1 (pages 26-27)
 -/
 
-namespace Exchangeability.Probability
+namespace Exchangeability.DeFinetti
 
--- Re-export the L² proof under the standard name
--- Users who import this module get the stable `deFinetti` name
--- without needing to know which proof is used
+open MeasureTheory ProbabilityTheory
 
-end Exchangeability.Probability
+-- TODO: Complete the proof
+-- theorem deFinetti_viaL2 := ViaL2.weighted_sums_converge_L1 + CommonEnding machinery
+
+end Exchangeability.DeFinetti
