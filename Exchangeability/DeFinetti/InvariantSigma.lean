@@ -317,27 +317,6 @@ lemma mkShiftInvariantRep
 
 end LimsupConstruction
 
-/-- Helper: The indicator function on a shift-invariant set is pointwise shift-invariant. -/
-private lemma indicator_shiftInvariant_set
-    {Ω : Type*} {shift : Ω → Ω} {S : Set Ω} {g0 : Ω → ℝ}
-    (hS_inv : shift ⁻¹' S = S) (hS_shift : ∀ ω ∈ S, g0 (shift ω) = g0 ω) :
-    ∀ ω, Set.indicator S g0 (shift ω) = Set.indicator S g0 ω := by
-  intro ω
-  by_cases hω : ω ∈ S
-  · have hshift : shift ω ∈ S := by
-      have hpre : ω ∈ shift ⁻¹' S := by
-        simpa [hS_inv] using hω
-      simpa [Set.mem_preimage] using hpre
-    have hg : g0 (shift ω) = g0 ω := hS_shift _ hω
-    simp [Set.indicator, hω, hshift, hg]
-  · have hshift : shift ω ∉ S := by
-      intro h
-      have hpre : ω ∈ shift ⁻¹' S := by
-        simpa [Set.mem_preimage] using h
-      have : ω ∈ S := by simpa [hS_inv] using hpre
-      exact hω this
-    simp [Set.indicator, hω, hshift]
-
 -- **Auxiliary goal**: construct an invariant representative.
 -- Helper lemmas to replace exists_shiftInvariantRepresentative
 
