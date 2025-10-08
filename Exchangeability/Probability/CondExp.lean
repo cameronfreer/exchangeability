@@ -90,7 +90,7 @@ noncomputable def condProb {m₀ : MeasurableSpace Ω} (μ : Measure Ω) [IsProb
   μ[A.indicator (fun _ => (1 : ℝ)) | m]
 
 /-- Conditional probability takes values in `[0,1]` almost everywhere. -/
-lemma condProb_ae_nonneg_le_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+omit [MeasurableSpace Ω] in lemma condProb_ae_nonneg_le_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     [IsProbabilityMeasure μ] (m : MeasurableSpace Ω) (hm : m ≤ m₀)
     [SigmaFinite (μ.trim hm)] {A : Set Ω} (hA : MeasurableSet[m₀] A) :
     ∀ᵐ ω ∂μ, 0 ≤ condProb μ m A ω ∧ condProb μ m A ω ≤ 1 := by
@@ -116,7 +116,7 @@ lemma condProb_ae_nonneg_le_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
 
 /-- Conditional probability integrates to the expected measure on sets that are
 measurable with respect to the conditioning σ-algebra. -/
-lemma condProb_integral_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+omit [MeasurableSpace Ω] in lemma condProb_integral_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     [IsProbabilityMeasure μ] (m : MeasurableSpace Ω) (hm : m ≤ m₀)
     [SigmaFinite (μ.trim hm)] {A B : Set Ω} (hA : MeasurableSet[m₀] A)
     (hB : MeasurableSet[m] B) :
@@ -137,8 +137,7 @@ lemma condProb_integral_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         (f := fun _ : Ω => (1 : ℝ)) hA
   -- Evaluate the integral of 1 over the set.
   have h_const : ∫ ω in B ∩ A, (1 : ℝ) ∂μ = (μ (B ∩ A)).toReal := by
-    simp [Measure.real_def, Set.inter_comm,
-      setIntegral_one_eq_measureReal (μ := μ) (s := B ∩ A)]
+    simp [Measure.real_def, Set.inter_comm]
   -- Put everything together and clean up intersections.
   simpa [condProb, h_indicator, h_const, Set.inter_comm, Set.inter_left_comm, Set.inter_assoc]
     using h_condexp
@@ -274,7 +273,7 @@ lemma condexp_same_dist {μ : Measure Ω} [IsProbabilityMeasure μ]
 
 This is immediate from Doob's characterization above.
 -/
-lemma condIndep_of_condProb_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+omit [MeasurableSpace Ω] in lemma condIndep_of_condProb_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     [StandardBorelSpace Ω] [IsFiniteMeasure μ]
     {mF mG mH : MeasurableSpace Ω}
     (hmF : mF ≤ m₀) (hmG : mG ≤ m₀) (hmH : mH ≤ m₀)
