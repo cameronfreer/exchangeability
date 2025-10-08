@@ -709,30 +709,42 @@ lemma Kernel.IndepFun.integral_mul
     rw [h_prod, h_left, h_right, ha]
     simp [ENNReal.toReal_mul]
 
-  -- REMAINING WORK: Extension from indicators to general bounded measurable functions
+  -- IMPLEMENTATION PATH (Approach 1 - Direct via approximation):
   --
-  -- APPROACH 1: Via simple functions (most direct)
-  -- 1. For simple functions f = ∑ᵢ cᵢ·𝟙_{Aᵢ}, g = ∑ⱼ dⱼ·𝟙_{Bⱼ}:
-  --    By linearity of integration and h_indicator:
-  --    ∫ fg = ∑ᵢⱼ cᵢdⱼ · ∫𝟙_{Aᵢ}·𝟙_{Bⱼ} = ∑ᵢⱼ cᵢdⱼ · (∫𝟙_{Aᵢ})·(∫𝟙_{Bⱼ})
-  --         = (∑ᵢ cᵢ·∫𝟙_{Aᵢ}) · (∑ⱼ dⱼ·∫𝟙_{Bⱼ}) = (∫f)·(∫g)
-  -- 2. For bounded measurable X, Y:
-  --    - Use `StronglyMeasurable.approx` to get Xₙ → X, Yₙ → Y pointwise
-  --    - Apply dominated convergence (|XₙYₙ| ≤ CX·CY, |Xₙ| ≤ CX, |Yₙ| ≤ CY)
-  --    - Take limit: ∫XₙYₙ → ∫XY and (∫Xₙ)·(∫Yₙ) → (∫X)·(∫Y)
+  -- The challenge: h_indicator gives us a.e. equality for each pair (s,t) of sets,
+  -- but the null sets may depend on s and t. For general X, Y we need a uniform
+  -- a.e. statement.
   --
-  -- APPROACH 2: Via monotone class theorem for functions
-  -- Apply function-level monotone class on the set of (X,Y) pairs satisfying the identity,
-  -- using h_indicator as the base case
+  -- SOLUTION via countability:
+  -- 1. For each a, define: Bad_a = {a : the identity fails for X, Y under κ a}
+  -- 2. Show μ(Bad_a) = 0 by using:
+  --    - For simple functions: linearity + h_indicator + finite union of null sets
+  --    - For general: dominated convergence + countable intersection of null sets
   --
-  -- APPROACH 3: Via measure theory (most general)
-  -- Use `ae_eq_of_forall_setLIntegral_eq` to show the two functions agree a.e.
-  -- by checking they have same integrals on all measurable sets
+  -- CONCRETE STEPS:
+  -- Step 1: Handle simple functions
+  --   have h_simple : ∀ (f g : SimpleFunc Ω ℝ),
+  --     ∀ᵐ a ∂μ, ∫ (f · g) d(κ a) = (∫ f d(κ a)) * (∫ g d(κ a))
+  --   Proof: f = ∑ cᵢ·𝟙_{Aᵢ}, g = ∑ dⱼ·𝟙_{Bⱼ}
+  --   By linearity: ∫(∑ᵢⱼ cᵢdⱼ·𝟙_{Aᵢ∩Bⱼ}) = ∑ᵢⱼ cᵢdⱼ·∫𝟙_{Aᵢ∩Bⱼ}
+  --   By h_indicator: = ∑ᵢⱼ cᵢdⱼ·(∫𝟙_{Aᵢ})·(∫𝟙_{Bⱼ}) = (∑ᵢ cᵢ·∫𝟙_{Aᵢ})·(∑ⱼ dⱼ·∫𝟙_{Bⱼ})
+  --   The a.e. set is a finite union (over i,j) of null sets, hence null.
   --
-  -- All approaches are standard, well-documented measure theory.
-  -- The mathematical content (independence → indicator factorization) is complete above.
+  -- Step 2: Approximate X, Y by simple functions
+  --   Let Xₙ, Yₙ be simple function approximations with |Xₙ| ≤ CX, |Yₙ| ≤ CY
+  --   and Xₙ → X, Yₙ → Y pointwise
   --
-  -- TODO: Implement one of these approaches (recommend Approach 1, ~30-40 lines)
+  -- Step 3: Apply dominated convergence
+  --   For a.e. a (avoiding the null set from Step 1):
+  --   |XₙYₙ| ≤ CX·CY, so ∫XₙYₙ → ∫XY by dominated convergence
+  --   Similarly: ∫Xₙ → ∫X and ∫Yₙ → ∫Y
+  --   By h_simple: ∫XₙYₙ = (∫Xₙ)·(∫Yₙ) for each n
+  --   Taking limits: ∫XY = (∫X)·(∫Y)
+  --
+  -- This is standard but requires ~40-50 lines of careful bookkeeping with
+  -- approximations and a.e. sets. The mathematical content is complete.
+  --
+  -- TODO: Implement the above (estimated 40-50 lines)
   sorry
 
 /-- **Note**: `Kernel.IndepFun.comp` already exists in Mathlib!
