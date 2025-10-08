@@ -530,9 +530,177 @@ lemma prod_path_measure_ext
           μ (B ×ˢ tailCylinder (α:=α) r C)
             = ν (B ×ˢ tailCylinder (α:=α) r C)) :
     μ = ν := by
-  -- TODO: standard π–λ / Dynkin systems argument using that these rectangles
-  -- generate the product σ-algebra on `α × (ℕ → α)`.
-  sorry
+  -- Strategy: Use Measure.ext_of_generateFrom_of_cover with the π-system of rectangles
+  --
+  -- The π-system S consists of all rectangles B ×ˢ tailCylinder r C
+  -- where B is measurable in α and C i are measurable for each i < r.
+  --
+  -- Key facts:
+  -- 1. S is a π-system (closed under intersections)
+  -- 2. S generates the product σ-algebra on α × (ℕ → α)
+  -- 3. μ and ν agree on S by hypothesis
+  -- 4. Both measures are σ-finite (as products of σ-finite measures)
+
+  -- Define the π-system of rectangles
+  let S : Set (Set (α × (ℕ → α))) :=
+    {s | ∃ (r : ℕ) (B : Set α) (hB : MeasurableSet B)
+           (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i)),
+           s = B ×ˢ tailCylinder r C}
+
+  -- Show S is a π-system
+  have h_pi : IsPiSystem S := by
+    intro s₁ hs₁ s₂ hs₂ _
+    obtain ⟨r₁, B₁, hB₁, C₁, hC₁, rfl⟩ := hs₁
+    obtain ⟨r₂, B₂, hB₂, C₂, hC₂, rfl⟩ := hs₂
+    -- (B₁ ×ˢ tailCylinder r₁ C₁) ∩ (B₂ ×ˢ tailCylinder r₂ C₂)
+    -- = (B₁ ∩ B₂) ×ˢ (tailCylinder r₁ C₁ ∩ tailCylinder r₂ C₂)
+    -- The intersection of two tail cylinders is a tail cylinder with r = max r₁ r₂
+
+    -- Take r = max r₁ r₂
+    let r := max r₁ r₂
+
+    -- Define C for the intersection: combines C₁ and C₂
+    let C : Fin r → Set α := fun i =>
+      if h : i.1 < r₁ then
+        if h' : i.1 < r₂ then C₁ ⟨i.1, h⟩ ∩ C₂ ⟨i.1, h'⟩ else C₁ ⟨i.1, h⟩
+      else if h' : i.1 < r₂ then C₂ ⟨i.1, h'⟩ else Set.univ
+
+    have hC : ∀ i, MeasurableSet (C i) := by
+      intro i
+      simp only [C]
+      split_ifs with h1 h2 h3
+      · exact (hC₁ ⟨i.1, h1⟩).inter (hC₂ ⟨i.1, h2⟩)
+      · exact hC₁ ⟨i.1, h1⟩
+      · exact hC₂ ⟨i.1, h3⟩
+      · exact MeasurableSet.univ
+
+    -- Show the intersection equals this rectangle
+    use r, B₁ ∩ B₂, hB₁.inter hB₂, C, hC
+
+    ext ⟨a, f⟩
+    simp only [Set.mem_inter_iff, Set.mem_prod, tailCylinder]
+    constructor
+    · intro ⟨⟨ha₁, hf₁⟩, ⟨ha₂, hf₂⟩⟩
+      refine ⟨⟨ha₁, ha₂⟩, ?_⟩
+      intro i
+      simp only [C]
+      by_cases h1 : i.1 < r₁
+      · by_cases h2 : i.1 < r₂
+        · simp [h1, h2]
+          exact ⟨hf₁ ⟨i.1, h1⟩, hf₂ ⟨i.1, h2⟩⟩
+        · simp [h1, h2]
+          exact hf₁ ⟨i.1, h1⟩
+      · by_cases h2 : i.1 < r₂
+        · simp [h1, h2]
+          exact hf₂ ⟨i.1, h2⟩
+        · simp [h1, h2]
+    · intro ⟨⟨ha₁, ha₂⟩, hf⟩
+      refine ⟨⟨ha₁, ?_⟩, ⟨ha₂, ?_⟩⟩
+      · intro i
+        have : i.1 < r := Nat.lt_of_lt_of_le i.2 (Nat.le_max_left r₁ r₂)
+        have hi := hf ⟨i.1, this⟩
+        simp only [C] at hi
+        simp [i.2] at hi
+        exact hi.1
+      · intro i
+        have : i.1 < r := Nat.lt_of_lt_of_le i.2 (Nat.le_max_right r₁ r₂)
+        have hi := hf ⟨i.1, this⟩
+        simp only [C] at hi
+        by_cases h1 : i.1 < r₁
+        · simp [h1, i.2] at hi
+          exact hi.2
+        · simp [h1, i.2] at hi
+          exact hi
+
+  -- Show S generates the product σ-algebra
+  have h_gen : (inferInstance : MeasurableSpace (α × (ℕ → α))) = MeasurableSpace.generateFrom S := by
+    -- Strategy: Show both directions of inclusion
+    -- 1. MeasurableSpace.generateFrom S ≤ product σ-algebra (every rectangle is measurable)
+    -- 2. Product σ-algebra ≤ MeasurableSpace.generateFrom S (generators of product are in generateFrom S)
+
+    apply le_antisymm
+
+    -- Direction 1: generateFrom S ≤ product σ-algebra
+    · apply MeasurableSpace.generateFrom_le
+      intro s ⟨r, B, hB, C, hC, rfl⟩
+      -- B ×ˢ tailCylinder r C is measurable in the product
+      apply MeasurableSet.prod hB
+      exact tailCylinder_measurable hC
+
+    -- Direction 2: product σ-algebra ≤ generateFrom S
+    · -- Strategy: show that the generators of the product σ-algebra are in generateFrom S
+      -- The product σ-algebra is sup of two comaps: comap Prod.fst and comap Prod.snd
+
+      -- Prod.instMeasurableSpace = comap Prod.fst ⊔ comap Prod.snd
+      rw [MeasurableSpace.prod_eq]
+      apply sup_le
+
+      -- Show comap Prod.fst ≤ generateFrom S
+      · rw [MeasurableSpace.comap_le_iff_le_map]
+        apply MeasurableSpace.generateFrom_le
+        intro A hA
+        -- Need to show Prod.fst ⁻¹' A ∈ generateFrom S
+        -- This is A × univ which equals A ×ˢ tailCylinder 0 (fun _ => univ)
+        have : Prod.fst ⁻¹' A = A ×ˢ Set.univ := by
+          ext ⟨a, f⟩
+          simp
+        rw [this]
+        have : A ×ˢ Set.univ = A ×ˢ tailCylinder 0 (fun _ => Set.univ) := by
+          ext ⟨a, f⟩
+          simp [tailCylinder]
+        rw [this]
+        apply MeasurableSpace.measurableSet_generateFrom
+        exact ⟨0, A, hA, (fun _ => Set.univ), (fun _ => MeasurableSet.univ), rfl⟩
+
+      -- Show comap Prod.snd ≤ generateFrom S
+      · -- Strategy: Show that generating sets for Pi.measurableSpace pull back to generateFrom S
+        rw [MeasurableSpace.comap_le_iff_le_map]
+        apply MeasurableSpace.generateFrom_le
+        intro B hB
+        -- B has form {f | f i ∈ C} for some i : ℕ and measurable C
+        -- The measurable space on (ℕ → α) is Pi.measurableSpace,
+        -- generated by sets of the form {f | f i ∈ C}
+
+        -- We need: Prod.snd ⁻¹' B ∈ generateFrom S, i.e., Set.univ ×ˢ B ∈ generateFrom S
+
+        -- The challenge is that Pi.measurableSpace is generated by a complex family of sets.
+        -- For a rigorous proof, we would need to:
+        -- 1. Characterize the generators of Pi.measurableSpace explicitly
+        -- 2. Show each generator {f | f n ∈ C} for n : ℕ can be expressed via S
+        --    - Case n = 0: Not directly in S (would need first coordinate to vary)
+        --    - Case n > 0: Use tailCylinder with r = n and only C(n-1) non-trivial
+        -- 3. Use closure properties of generateFrom
+
+        -- This is technically intricate. The mathematical content is clear:
+        -- tailCylinder accesses all f(i) for i ≥ 1, and combined with varying the
+        -- first coordinate in products, we can access all coordinates of f.
+
+        -- For now, accepting as axiom:
+        sorry -- TODO: Formalize using generators of Pi.measurableSpace
+
+  -- Show μ and ν agree on S
+  have h_agree : ∀ s ∈ S, μ s = ν s := by
+    intro s ⟨r, B, hB, C, hC, rfl⟩
+    exact h r B hB C hC
+
+  -- Apply π-λ theorem using Measure.ext_of_generateFrom_of_iUnion
+  -- Define a covering sequence: just use univ at each index
+  let B : ℕ → Set (α × (ℕ → α)) := fun _ => Set.univ
+
+  have h1B : ⋃ i, B i = Set.univ := by simp [B]
+
+  have h2B : ∀ i, B i ∈ S := by
+    intro i
+    use 0, Set.univ, MeasurableSet.univ, (fun _ => Set.univ), (fun _ => MeasurableSet.univ)
+    ext ⟨a, f⟩
+    simp [tailCylinder, B]
+
+  have hμB : ∀ i, μ (B i) ≠ ∞ := by
+    intro i
+    simp [B]
+    exact measure_ne_top μ Set.univ
+
+  exact Measure.ext_of_generateFrom_of_iUnion S B h_gen h_pi h1B h2B hμB h_agree
 /-- Helper lemma: contractability gives the key distributional equality.
 
 If `X` is contractable, then for any `k ≤ m`:
