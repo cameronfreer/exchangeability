@@ -477,24 +477,6 @@ private lemma exists_shiftInvariantFullMeasureSet
   refine ⟨Sstar, hSstar_meas, hSstar_symmDiff_zero, hSstar_full, hSstar_forward,
     hSstar_pointwise⟩
 
-/-- Indicator functions on shift-invariant sets preserve shift-invariance properties. -/
-private lemma indicator_preserves_shiftInvariance
-    {Ω : Type*} {shift : Ω → Ω} {S : Set Ω} {g : Ω → ℝ}
-    (hS_inv : shift ⁻¹' S = S) (hg_inv : ∀ ω ∈ S, g (shift ω) = g ω) :
-    ∀ ω, Set.indicator S g (shift ω) = Set.indicator S g ω := by
-  intro ω
-  by_cases hω : ω ∈ S
-  · have hshift : shift ω ∈ S := by
-      have hpre : ω ∈ shift ⁻¹' S := by simpa [hS_inv] using hω
-      simpa [Set.mem_preimage] using hpre
-    simp [Set.indicator, hω, hshift, hg_inv ω hω]
-  · have hshift : shift ω ∉ S := by
-      intro h
-      have hpre : ω ∈ shift ⁻¹' S := by simpa [Set.mem_preimage] using h
-      have : ω ∈ S := by simpa [hS_inv] using hpre
-      contradiction
-    simp [Set.indicator, hω, hshift]
-
 /-- A function that is pointwise shift-invariant and measurable is
     measurable with respect to the shift-invariant σ-algebra. -/
 private lemma shiftInvariant_implies_shiftInvariantMeasurable
