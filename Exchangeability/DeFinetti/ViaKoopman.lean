@@ -578,10 +578,161 @@ lemma identicalConditionalMarginals {μ : Measure (Ω[α])} [IsProbabilityMeasur
   have h_eq := (h_precomp.trans hCEk).trans (h_invariance.trans hν.symm)
   simpa using h_eq
 
+/-- Helper: product rule for conditional expectation under independence.
+If X and Y are conditionally independent given σ, then E[XY | σ] = E[X | σ] · E[Y | σ].
+
+This adapts the standard measure-level result `IndepFun.integral_mul_eq_mul_integral` to
+the conditional setting using the tower property of conditional expectation.
+-/
+private lemma condexp_mul_of_indep
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (σ : MeasurableSpace (Ω[α])) (hσ_le : σ ≤ inferInstance)
+    (X Y : Ω[α] → ℝ)
+    (hX_meas : Measurable X) (hY_meas : Measurable Y)
+    (hX_bd : ∃ C, ∀ ω, |X ω| ≤ C) (hY_bd : ∃ C, ∀ ω, |Y ω| ≤ C)
+    (h_indep : IndepFun X Y (μ.trim hσ_le)) :
+    μ[(fun ω => X ω * Y ω) | σ] =ᵐ[μ]
+      fun ω => (μ[X | σ] ω) * (μ[Y | σ] ω) := by
+  classical
+  -- Integrability from boundedness
+  rcases hX_bd with ⟨CX, hCX⟩
+  rcases hY_bd with ⟨CY, hCY⟩
+  have hX_int : Integrable X μ := by
+    refine MeasureTheory.integrable_of_bounded (hmeas := hX_meas) (μ := μ) ⟨CX, hCX⟩
+  have hY_int : Integrable Y μ := by
+    refine MeasureTheory.integrable_of_bounded (hmeas := hY_meas) (μ := μ) ⟨CY, hCY⟩
+  have hXY_int : Integrable (X * Y) μ := by
+    refine MeasureTheory.integrable_of_bounded
+      (hmeas := hX_meas.mul hY_meas) (μ := μ) ⟨CX * CY, ?_⟩
+    intro ω
+    calc |(X * Y) ω| = |X ω * Y ω| := rfl
+      _ = |X ω| * |Y ω| := abs_mul _ _
+      _ ≤ CX * CY := mul_le_mul (hCX ω) (hCY ω) (abs_nonneg _) (by linarith [hCX ω])
+
+  -- Use the characterization of conditional expectation via the defining property:
+  -- For any σ-measurable set A, ∫_A E[XY|σ] dμ = ∫_A XY dμ
+  -- We want to show: ∫_A E[XY|σ] dμ = ∫_A E[X|σ]·E[Y|σ] dμ for all σ-measurable A
+
+  -- The key is to use conditional expectation properties
+  refine MeasureTheory.ae_eq_condexp_of_forall_set_integral_eq
+    (hm := σ) (hf := (hX_meas.mul hY_meas).aestronglyMeasurable) hXY_int ?_ ?_
+
+  · -- E[X|σ] · E[Y|σ] is σ-measurable
+    exact ((MeasureTheory.stronglyMeasurable_condexp.of_le hσ_le).mul
+      (MeasureTheory.stronglyMeasurable_condexp.of_le hσ_le)).aestronglyMeasurable
+
+  · -- Show the integrals agree on all σ-measurable sets
+    intro s hs _
+    -- Need: ∫_s XY dμ = ∫_s E[X|σ]·E[Y|σ] dμ
+    -- This follows from independence and properties of conditional expectation
+    sorry -- TODO: complete using tower property and independence
+
+/-- **Kernel-level integral multiplication under independence.**
+
+This is the pointwise analogue of `IndepFun.integral_mul_eq_mul_integral` for kernels.
+If X and Y are independent under a kernel κ and measure μ, then for μ-almost every a,
+the integral of their product under κ(a) equals the product of their integrals.
+
+**Proof strategy** (to be formalized):
+The measure-level version uses:
+1. `indepFun_iff_map_prod_eq_prod_map_map`: independence ↔ product of pushforwards
+2. `integral_prod_mul`: Fubini for product measures
+3. Integrability arguments for edge cases
+
+The kernel version requires:
+1. Kernel analogue of product pushforward equality (almost everywhere in a)
+2. Kernel Fubini theorem
+3. Similar integrability handling
+
+This is a standard result in the theory of conditional expectations and should eventually
+be added to Mathlib's `Probability.Independence.Kernel` or a new `Integration` submodule.
+
+For now, we axiomatize it to complete the de Finetti proof.
+-/
+/-- **Proof attempt for Kernel.IndepFun.integral_mul**
+
+The strategy is to use the characterization of independence via compProd and then
+apply the measure-level integral_mul result.
+
+Key steps:
+1. Use `indepFun_iff_compProd_map_prod_eq_compProd_prod_map_map` to get measure equality
+2. Apply integral to both sides
+3. Use Fubini/kernel composition to separate the integrals
+4. Get pointwise equality a.e.
+
+The difficulty is that the compProd characterization gives us equality of measures
+`μ ⊗ₘ κ`, not pointwise for each `κ a`. We need to "decondition" to get the
+pointwise statement.
+-/
+lemma Kernel.IndepFun.integral_mul
+    {α Ω : Type*} [MeasurableSpace α] [MeasurableSpace Ω]
+    {κ : Kernel α Ω} {μ : Measure α}
+    [IsFiniteMeasure μ] [IsMarkovKernel κ]
+    {X Y : Ω → ℝ}
+    (hXY : Kernel.IndepFun X Y κ μ)
+    (hX : Measurable X) (hY : Measurable Y)
+    (hX_bd : ∃ C, ∀ ω, |X ω| ≤ C) (hY_bd : ∃ C, ∀ ω, |Y ω| ≤ C) :
+    ∀ᵐ a ∂μ, ∫ ω, X ω * Y ω ∂(κ a) = (∫ ω, X ω ∂(κ a)) * (∫ ω, Y ω ∂(κ a)) := by
+  classical
+  -- Integrability
+  rcases hX_bd with ⟨CX, hCX⟩
+  rcases hY_bd with ⟨CY, hCY⟩
+
+  -- Step 1: For indicators, use the independence characterization
+  have h_indicator : ∀ (s t : Set ℝ) (hs : MeasurableSet s) (ht : MeasurableSet t),
+      ∀ᵐ a ∂μ, ∫ ω, (s.indicator (fun _ => 1) (X ω)) * (t.indicator (fun _ => 1) (Y ω)) ∂(κ a)
+        = (∫ ω, s.indicator (fun _ => 1) (X ω) ∂(κ a)) *
+          (∫ ω, t.indicator (fun _ => 1) (Y ω) ∂(κ a)) := by
+    intro s t hs ht
+    have h_ae := hXY.measure_inter_preimage_eq_mul s t hs ht
+    filter_upwards [h_ae] with a ha
+    -- Convert set measures to indicator integrals
+    have h_prod : ∫ ω, (s.indicator (fun _ => 1) (X ω)) * (t.indicator (fun _ => 1) (Y ω)) ∂(κ a)
+        = (κ a (X ⁻¹' s ∩ Y ⁻¹' t)).toReal := by
+      rw [← ENNReal.toReal_ofReal (by norm_num : (0 : ℝ) ≤ 1)]
+      congr 1
+      rw [← MeasureTheory.lintegral_indicator_const_comp]
+      · congr with ω
+        simp [Set.indicator, Set.mem_inter_iff, Set.mem_preimage]
+        by_cases hx : X ω ∈ s <;> by_cases hy : Y ω ∈ t <;> simp [hx, hy]
+      · exact (hs.preimage hX).inter (ht.preimage hY)
+    have h_left : ∫ ω, s.indicator (fun _ => 1) (X ω) ∂(κ a)
+        = (κ a (X ⁻¹' s)).toReal := by
+      rw [← ENNReal.toReal_ofReal (by norm_num : (0 : ℝ) ≤ 1)]
+      congr 1
+      exact MeasureTheory.lintegral_indicator_const_comp (hs.preimage hX) measurableSet_univ
+    have h_right : ∫ ω, t.indicator (fun _ => 1) (Y ω) ∂(κ a)
+        = (κ a (Y ⁻¹' t)).toReal := by
+      rw [← ENNReal.toReal_ofReal (by norm_num : (0 : ℝ) ≤ 1)]
+      congr 1
+      exact MeasureTheory.lintegral_indicator_const_comp (ht.preimage hY) measurableSet_univ
+    rw [h_prod, h_left, h_right, ha]
+    simp [ENNReal.toReal_mul]
+
+  -- Step 2: Extend from indicators to simple functions by linearity
+  -- For simple functions f = ∑ᵢ cᵢ · 𝟙_Aᵢ and g = ∑ⱼ dⱼ · 𝟙_Bⱼ:
+  -- ∫ fg = ∑ᵢⱼ cᵢdⱼ ∫ 𝟙_{Aᵢ×Bⱼ} = ∑ᵢⱼ cᵢdⱼ · κ(Aᵢ ∩ Bⱼ)
+  --      = ∑ᵢⱼ cᵢdⱼ · κ(Aᵢ) · κ(Bⱼ)  (by h_indicator)
+  --      = (∑ᵢ cᵢ · κ(Aᵢ)) · (∑ⱼ dⱼ · κ(Bⱼ)) = (∫ f) · (∫ g)
+
+  -- Step 3: Extend to bounded measurable functions by approximation
+  -- For bounded measurable X, Y:
+  -- 1. Approximate by simple functions: Xₙ → X, Yₙ → Y pointwise
+  -- 2. Use dominated convergence (bounded by CX, CY)
+  -- 3. Pass to limit: ∫ XₙYₙ → ∫ XY and (∫ Xₙ)(∫ Yₙ) → (∫ X)(∫ Y)
+
+  -- This is a standard measure theory argument but requires careful bookkeeping
+  -- of the approximating sequences and dominated convergence applications.
+  -- TODO: Complete using MeasureTheory.SimpleFunc approximation + dominated convergence
+  sorry
+
+/-- **Note**: `Kernel.IndepFun.comp` already exists in Mathlib!
+See `Mathlib.Probability.Independence.Kernel`, line ~976.
+We use it directly without re-axiomatizing. -/
+
 /--
-TODO: establish kernel-level factorisation for two bounded test functions.
-This is the pointwise analogue (under `iIndepFun`) of the classical
-`IndepFun.integral_mul_eq_mul_integral` statement for measures.
+Kernel-level factorisation for two bounded test functions applied to coordinate projections.
+This specializes `Kernel.IndepFun.integral_mul` to our setting.
 -/
 private lemma condexp_pair_factorization
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
@@ -596,9 +747,90 @@ private lemma condexp_pair_factorization
       =ᵐ[μ]
     fun ω =>
       (∫ x, f x ∂(ν (μ := μ) ω)) * (∫ x, g x ∂(ν (μ := μ) ω)) := by
-  -- TODO: extend the indicator-level identity provided by `hciid` to bounded
-  -- measurable test functions via a simple-function / monotone-class argument.
-  sorry
+  classical
+  -- Step 1: Both coordinates have the same conditional law (from identicalConditionalMarginals)
+  have h_marg0 := identicalConditionalMarginals (μ := μ) (α := α) hσ 0
+  have h_marg1 := identicalConditionalMarginals (μ := μ) (α := α) hσ 1
+
+  -- Step 2: Integrability of the product
+  rcases hf_bd with ⟨Cf, hCf⟩
+  rcases hg_bd with ⟨Cg, hCg⟩
+  have h_int : Integrable (fun ω : Ω[α] => f (ω 0) * g (ω 1)) μ := by
+    refine MeasureTheory.integrable_of_bounded
+      (hmeas := (hf_meas.comp (measurable_pi_apply 0)).mul
+        (hg_meas.comp (measurable_pi_apply 1)))
+      (μ := μ) ⟨Cf * Cg, ?_⟩
+    intro ω
+    calc |f (ω 0) * g (ω 1)| = |f (ω 0)| * |g (ω 1)| := abs_mul _ _
+      _ ≤ Cf * Cg := mul_le_mul (hCf _) (hCg _) (abs_nonneg _) (by linarith [hCf (ω 0)])
+
+  -- Step 3: Apply conditional expectation via condExpKernel
+  have h_via_kernel :
+      μ[(fun ω => f (ω 0) * g (ω 1)) | shiftInvariantSigma (α := α)]
+        =ᵐ[μ]
+      fun ω => ∫ y, f (y 0) * g (y 1) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω) := by
+    exact ProbabilityTheory.condExp_ae_eq_integral_condExpKernel
+      (μ := μ) (m := shiftInvariantSigma (α := α))
+      (f := fun ω => f (ω 0) * g (ω 1))
+      (hf := (hf_meas.comp (measurable_pi_apply 0)).mul
+        (hg_meas.comp (measurable_pi_apply 1)))
+
+  -- Step 4: Use conditional independence to factor the integral
+  have h_factor :
+      (fun ω => ∫ y, f (y 0) * g (y 1) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω))
+        =ᵐ[μ]
+      fun ω =>
+        (∫ y, f (y 0) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) *
+        (∫ y, g (y 1) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) := by
+    -- From `hciid: iIndepFun (fun k : Fin 2 => fun ω => ω k) κ μ`
+    -- we know the coordinates 0 and 1 are independent under the kernel
+    have h_indep_pair : Kernel.IndepFun (fun ω : Ω[α] => ω 0) (fun ω => ω 1)
+        (condExpKernel μ (shiftInvariantSigma (α := α))) μ := by
+      exact hciid.indepFun (i := 0) (j := 1) (by norm_num)
+    -- Apply the kernel-level integral multiplication theorem
+    have h_bd0 : ∃ C, ∀ ω : Ω[α], |(fun y => f (y 0)) ω| ≤ C := by
+      rcases hf_bd with ⟨C, hC⟩
+      exact ⟨C, fun ω => hC (ω 0)⟩
+    have h_bd1 : ∃ C, ∀ ω : Ω[α], |(fun y => g (y 1)) ω| ≤ C := by
+      rcases hg_bd with ⟨C, hC⟩
+      exact ⟨C, fun ω => hC (ω 1)⟩
+    exact Kernel.IndepFun.integral_mul h_indep_pair
+      (hf_meas.comp (measurable_pi_apply 0))
+      (hg_meas.comp (measurable_pi_apply 1))
+      h_bd0 h_bd1
+
+  -- Step 5: Replace coordinate projections with ν using identicalConditionalMarginals
+  have h_coord0 :
+      (fun ω => ∫ y, f (y 0) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω))
+        =ᵐ[μ]
+      fun ω => ∫ x, f x ∂(ν (μ := μ) ω) := by
+    filter_upwards [h_marg0] with ω hω
+    have : (fun y : Ω[α] => f (y 0)) = f ∘ (fun y => y 0) := rfl
+    rw [this, MeasureTheory.integral_map (measurable_pi_apply 0) hf_meas]
+    congr 1
+    exact hω.symm
+
+  have h_coord1 :
+      (fun ω => ∫ y, g (y 1) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω))
+        =ᵐ[μ]
+      fun ω => ∫ x, g x ∂(ν (μ := μ) ω) := by
+    filter_upwards [h_marg1] with ω hω
+    have : (fun y : Ω[α] => g (y 1)) = g ∘ (fun y => y 1) := rfl
+    rw [this, MeasureTheory.integral_map (measurable_pi_apply 1) hg_meas]
+    congr 1
+    exact hω.symm
+
+  -- Step 6: Chain all the equalities
+  calc μ[(fun ω => f (ω 0) * g (ω 1)) | shiftInvariantSigma (α := α)]
+      =ᵐ[μ] fun ω => ∫ y, f (y 0) * g (y 1) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω) :=
+        h_via_kernel
+    _ =ᵐ[μ] fun ω =>
+        (∫ y, f (y 0) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) *
+        (∫ y, g (y 1) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) :=
+        h_factor
+    _ =ᵐ[μ] fun ω => (∫ x, f x ∂(ν (μ := μ) ω)) * (∫ x, g x ∂(ν (μ := μ) ω)) := by
+        filter_upwards [h_coord0, h_coord1] with ω h0 h1
+        rw [h0, h1]
 
 /-- Conditional expectation factorizes through the regular conditional distribution.
 
@@ -628,10 +860,211 @@ theorem condexp_product_factorization
     refine Filter.EventuallyEq.of_forall ?_
     intro ω
     simp [h_const]
-  · -- TODO: handle the inductive step by splitting off the last coordinate,
-    -- reducing to the two-factor case (`condexp_pair_factorization`) and the
-    -- induction hypothesis `ih`.
-    sorry
+  · -- Inductive step: split product into (product of first m factors) * (last factor)
+    -- Reindex: product over Fin (m + 1) splits into product over Fin m and the m-th term
+    have h_split_prod :
+        (fun ω => ∏ k : Fin (m + 1), fs k (ω (k : ℕ)))
+          = fun ω =>
+            (∏ k : Fin m, fs (Fin.castSucc k) (ω (k : ℕ))) *
+            fs (Fin.last m) (ω m) := by
+      funext ω
+      rw [Fin.prod_univ_castSucc]
+      simp only [Fin.coe_castSucc, Fin.val_last]
+
+    -- Apply IH to the first m factors
+    let fs' : Fin m → α → ℝ := fun k => fs (Fin.castSucc k)
+    have hmeas' : ∀ k, Measurable (fs' k) := fun k => hmeas (Fin.castSucc k)
+    have hbd' : ∀ k, ∃ C, ∀ x, |fs' k x| ≤ C := fun k => hbd (Fin.castSucc k)
+    have hciid' : iIndepFun (fun k : Fin m => fun ω : Ω[α] => ω k)
+        (condExpKernel μ (shiftInvariantSigma (α := α))) μ := by
+      -- Restriction of iIndepFun to a subset of indices
+      exact ProbabilityTheory.Kernel.iIndepFun_of_subset hciid
+        (fun k => Fin.castSucc k) Fin.castSucc_injective
+
+    have h_ih := ih fs' hmeas' hbd' hciid'
+
+    -- The last factor's conditional expectation
+    have h_last :=
+      condexp_coordinate_via_ν (μ := μ) (α := α) hσ
+        (ψ := fs (Fin.last m))
+        (hψ := hmeas (Fin.last m))
+        (hbd := hbd (Fin.last m))
+        (k := m)
+
+    -- Product structure under conditional expectation
+    have h_prod_condexp :
+        μ[(fun ω => ∏ k : Fin (m + 1), fs k (ω (k : ℕ)))
+          | shiftInvariantSigma (α := α)]
+          =ᵐ[μ]
+        μ[(fun ω =>
+            (∏ k : Fin m, fs' k (ω (k : ℕ))) * fs (Fin.last m) (ω m))
+          | shiftInvariantSigma (α := α)] := by
+      refine Filter.EventuallyEq.condExp (Filter.EventuallyEq.of_forall ?_)
+      intro ω
+      exact congrFun h_split_prod ω
+
+    -- This is a product of two "functions" - apply pair factorization
+    -- But we need to be more careful: one factor is already a product, not atomic
+    -- Use linearity + dominated convergence instead
+
+    -- First show the product factors under conditional expectation
+    -- This uses conditional independence of disjoint coordinate sets
+    have h_prod_factor :
+        μ[(fun ω =>
+            (∏ k : Fin m, fs' k (ω (k : ℕ))) * fs (Fin.last m) (ω m))
+          | shiftInvariantSigma (α := α)]
+          =ᵐ[μ]
+        fun ω =>
+          (μ[(fun ω' => ∏ k : Fin m, fs' k (ω' (k : ℕ)))
+            | shiftInvariantSigma (α := α)] ω) *
+          (μ[(fun ω' => fs (Fin.last m) (ω' m))
+            | shiftInvariantSigma (α := α)] ω) := by
+      -- The key observation: functions of disjoint coordinate sets are independent
+      -- X := (ω 0, ..., ω (m-1)) and Y := ω m are independent under condExpKernel
+      -- Therefore f(X) and g(Y) are independent for any measurable f, g
+      --
+      -- We need: the function (fun ω => ∏ k : Fin m, fs' k (ω k)) composed with
+      -- the projection to first m coordinates is independent from the projection
+      -- to the m-th coordinate.
+      --
+      -- This follows from `hciid.indepFun_finset` applied to S = Finset.univ.image castSucc
+      -- and T = {last m}, which are disjoint.
+      have h_disjoint : Disjoint
+          (Finset.univ.image (Fin.castSucc : Fin m → Fin (m + 1)))
+          ({Fin.last m} : Finset (Fin (m + 1))) := by
+        simp [Finset.disjoint_left]
+        intro i _ hi
+        simp at hi
+        exact Fin.castSucc_lt_last i |>.ne hi
+      have h_indep_finsets :=
+        hciid.indepFun_finset
+          (Finset.univ.image (Fin.castSucc : Fin m → Fin (m + 1)))
+          {Fin.last m}
+          h_disjoint
+          (fun i => measurable_pi_apply i)
+      -- Now we have independence of tuples:
+      -- X := (fun ω i => ω (castSucc i)) and Y := (fun ω i => ω (last m))
+      -- We need independence of: f(X) := ∏ fs' k (ω k) and g(Y) := fs (last m) (ω m)
+
+      -- The conditional expectation via kernel equals the integral
+      have h_via_kernel :
+          μ[(fun ω => (∏ k : Fin m, fs' k (ω (k : ℕ))) * fs (Fin.last m) (ω m))
+            | shiftInvariantSigma (α := α)]
+            =ᵐ[μ]
+          fun ω => ∫ y, (∏ k : Fin m, fs' k (y (k : ℕ))) * fs (Fin.last m) (y m)
+            ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω) := by
+        exact ProbabilityTheory.condExp_ae_eq_integral_condExpKernel
+          (μ := μ) (m := shiftInvariantSigma (α := α))
+          (f := fun ω => (∏ k : Fin m, fs' k (ω (k : ℕ))) * fs (Fin.last m) (ω m))
+          (hf := by
+            apply Measurable.mul
+            · exact Finset.measurable_prod _ (fun k _ => (hmeas' k).comp (measurable_pi_apply k))
+            · exact (hmeas (Fin.last m)).comp (measurable_pi_apply m))
+
+      -- Apply Kernel.IndepFun.integral_mul to the composite functions
+      -- We use h_indep_finsets composed with the product function and single evaluation
+      have h_kernel_mul :
+          (fun ω => ∫ y, (∏ k : Fin m, fs' k (y (k : ℕ))) * fs (Fin.last m) (y m)
+            ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω))
+            =ᵐ[μ]
+          fun ω =>
+            (∫ y, ∏ k : Fin m, fs' k (y (k : ℕ))
+              ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) *
+            (∫ y, fs (Fin.last m) (y m)
+              ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) := by
+        -- Apply the axiomatized kernel integral multiplication
+        -- The independence h_indep_finsets gives us independence of the tuple vs. singleton
+        -- We compose with the product function and evaluation function
+        have h_indep_composed : Kernel.IndepFun
+            (fun ω : Ω[α] => ∏ k : Fin m, fs' k (ω (k : ℕ)))
+            (fun ω => fs (Fin.last m) (ω m))
+            (condExpKernel μ (shiftInvariantSigma (α := α))) μ := by
+          -- h_indep_finsets gives independence of tuple vs. singleton
+          -- We compose with measurable functions to get independence of f(tuple) vs. g(singleton)
+          refine Kernel.IndepFun.comp h_indep_finsets ?_ ?_
+          · -- Product function is measurable
+            exact measurable_pi_lambda _ fun i =>
+              (hmeas' i).comp (measurable_pi_apply (Finset.univ.image Fin.castSucc).toSet.restrict _)
+          · -- Evaluation at m is measurable
+            exact measurable_pi_lambda _ fun _ =>
+              (hmeas (Fin.last m)).comp (measurable_pi_apply m)
+        exact Kernel.IndepFun.integral_mul h_indep_composed
+          (Finset.measurable_prod _ (fun k _ => (hmeas' k).comp (measurable_pi_apply k)))
+          ((hmeas (Fin.last m)).comp (measurable_pi_apply m))
+          (by
+            -- Boundedness of product
+            choose bounds hbounds using hbd'
+            refine ⟨∏ k, bounds k, ?_⟩
+            intro ω
+            calc |(∏ k : Fin m, fs' k (ω (k : ℕ)))|
+                = ∏ k, |fs' k (ω (k : ℕ))| := by simp [abs_prod]
+              _ ≤ ∏ k, bounds k := Finset.prod_le_prod (fun _ _ => abs_nonneg _)
+                  (fun k _ => hbounds k (ω k)))
+          (hbd (Fin.last m))
+
+      -- Separate conditional expectations
+      have h_sep_prod :
+          (fun ω => ∫ y, ∏ k : Fin m, fs' k (y (k : ℕ))
+            ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω))
+            =ᵐ[μ]
+          fun ω => μ[(fun ω' => ∏ k : Fin m, fs' k (ω' (k : ℕ)))
+            | shiftInvariantSigma (α := α)] ω := by
+        refine (ProbabilityTheory.condExp_ae_eq_integral_condExpKernel
+          (μ := μ) (m := shiftInvariantSigma (α := α))
+          (f := fun ω => ∏ k : Fin m, fs' k (ω (k : ℕ)))
+          (hf := Finset.measurable_prod _ (fun k _ => (hmeas' k).comp (measurable_pi_apply k)))).symm
+
+      have h_sep_last :
+          (fun ω => ∫ y, fs (Fin.last m) (y m)
+            ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω))
+            =ᵐ[μ]
+          fun ω => μ[(fun ω' => fs (Fin.last m) (ω' m))
+            | shiftInvariantSigma (α := α)] ω := by
+        refine (ProbabilityTheory.condExp_ae_eq_integral_condExpKernel
+          (μ := μ) (m := shiftInvariantSigma (α := α))
+          (f := fun ω => fs (Fin.last m) (ω m))
+          (hf := (hmeas (Fin.last m)).comp (measurable_pi_apply m))).symm
+
+      -- Chain the equalities
+      calc μ[(fun ω => (∏ k : Fin m, fs' k (ω (k : ℕ))) * fs (Fin.last m) (ω m))
+            | shiftInvariantSigma (α := α)]
+          =ᵐ[μ] fun ω => ∫ y, (∏ k : Fin m, fs' k (y (k : ℕ))) * fs (Fin.last m) (y m)
+            ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω) := h_via_kernel
+        _ =ᵐ[μ] fun ω =>
+            (∫ y, ∏ k : Fin m, fs' k (y (k : ℕ))
+              ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) *
+            (∫ y, fs (Fin.last m) (y m)
+              ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) := h_kernel_mul
+        _ =ᵐ[μ] fun ω =>
+            (μ[(fun ω' => ∏ k : Fin m, fs' k (ω' (k : ℕ)))
+              | shiftInvariantSigma (α := α)] ω) *
+            (μ[(fun ω' => fs (Fin.last m) (ω' m))
+              | shiftInvariantSigma (α := α)] ω) := by
+          filter_upwards [h_sep_prod, h_sep_last] with ω hp hl
+          rw [hp, hl]
+
+    -- Apply IH and coordinate formula
+    calc μ[(fun ω => ∏ k : Fin (m + 1), fs k (ω (k : ℕ)))
+          | shiftInvariantSigma (α := α)]
+        =ᵐ[μ] μ[(fun ω =>
+            (∏ k : Fin m, fs' k (ω (k : ℕ))) * fs (Fin.last m) (ω m))
+          | shiftInvariantSigma (α := α)] := h_prod_condexp
+      _ =ᵐ[μ] fun ω =>
+          (μ[(fun ω' => ∏ k : Fin m, fs' k (ω' (k : ℕ)))
+            | shiftInvariantSigma (α := α)] ω) *
+          (μ[(fun ω' => fs (Fin.last m) (ω' m))
+            | shiftInvariantSigma (α := α)] ω) := h_prod_factor
+      _ =ᵐ[μ] fun ω =>
+          (∏ k : Fin m, ∫ x, fs' k x ∂(ν (μ := μ) ω)) *
+          (∫ x, fs (Fin.last m) x ∂(ν (μ := μ) ω)) := by
+            filter_upwards [h_ih, h_last] with ω hih hlast
+            rw [hih, hlast]
+      _ =ᵐ[μ] fun ω => ∏ k : Fin (m + 1), ∫ x, fs k x ∂(ν (μ := μ) ω) := by
+            refine Filter.EventuallyEq.of_forall ?_
+            intro ω
+            rw [Fin.prod_univ_castSucc]
+            simp only [Fin.coe_castSucc, Fin.val_last]
+            rfl
 
 /-- Factorization theorem: conditional expectation of cylinder has product form.
 
