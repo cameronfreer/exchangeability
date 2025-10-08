@@ -8,6 +8,7 @@ import Mathlib.Probability.Independence.Basic
 import Mathlib.Probability.Independence.Conditional
 import Mathlib.Probability.Martingale.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
+import Mathlib.MeasureTheory.PiSystem
 
 /-!
 # Conditional Expectation API for Exchangeability Proofs
@@ -220,14 +221,19 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         rw [setIntegral_indicator hH']
         simp [Measure.real_def, Set.inter_assoc]
 
-      -- LHS: since g = μ[H.indicator 1 | mG] and F ∩ G ⊆ univ with F ∩ G m₀-measurable
+      -- Strategy for LHS: Show ∫ in F ∩ G, g = (μ (F ∩ G ∩ H)).toReal
+      -- where g = μ[H.indicator 1 | mG]
+      --
+      -- Approach: Use the product formula from h_prod.
+      -- h_prod tells us: μ⟦F ∩ H | mG⟧ =ᵐ[μ] μ⟦F | mG⟧ * μ⟦H | mG⟧
+      --
+      -- Key steps needed:
+      -- 1. Rewrite LHS as ∫ in G, F.indicator ω * g ω ∂μ (F.indicator pulls out of G-integral)
+      -- 2. Use that g = μ[H.indicator 1 | mG] and apply setIntegral_condExp on G
+      -- 3. Get ∫ in G, F.indicator * H.indicator ∂μ = μ(F ∩ G ∩ H) using product formula
+      --
+      -- TODO: Complete using setIntegral_condExp and product formula manipulation
       rw [rhs_eq]
-
-      -- Now we need: ∫ in F ∩ G, g = (μ (F ∩ G ∩ H)).toReal
-      -- Since g = μ[H.indicator | mG], we use setIntegral_condExp
-      -- But F ∩ G is not mG-measurable, so we need a different approach
-
-      -- Alternative: use that ∫ g = ∫ H.indicator on mG-measurable sets, then extend
       sorry
     have h_dynkin :
         ∀ {S} (hS : MeasurableSet[mF ⊔ mG] S),
@@ -243,7 +249,14 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         MeasurableSet[mF] F ∧ MeasurableSet[mG] G ∧ s = F ∩ G}
 
       -- Rectangles form a π-system
-      have h_pi : IsPiSystem rects := by sorry
+      have h_pi : IsPiSystem rects := by
+        intro s1 hs1 s2 hs2 _
+        obtain ⟨F1, G1, hF1, hG1, rfl⟩ := hs1
+        obtain ⟨F2, G2, hF2, hG2, rfl⟩ := hs2
+        refine ⟨F1 ∩ F2, G1 ∩ G2, ?_, ?_, ?_⟩
+        · exact MeasurableSet.inter hF1 hF2
+        · exact MeasurableSet.inter hG1 hG2
+        · ext ω; simp [Set.mem_inter_iff]; tauto
 
       -- The property holds on rectangles (this is h_rect)
       have h_rects : ∀ s ∈ rects, ∫ ω in s, g ω ∂μ = ∫ ω in s, H.indicator (fun _ => (1 : ℝ)) ω ∂μ := by
@@ -251,8 +264,17 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         obtain ⟨F, G, hF, hG, rfl⟩ := hs
         exact h_rect hF hG
 
-      -- The property forms a Dynkin system
-      -- (contains ∅, closed under complements and countable disjoint unions with equal integrals)
+      -- Strategy: Apply Dynkin π-λ theorem (induction_on_inter from PiSystem.lean)
+      -- with the property C(S) := "∫ in S, g = ∫ in S, H.indicator"
+      --
+      -- Need to verify:
+      -- 1. mF ⊔ mG = generateFrom rects (rects generates the product σ-algebra)
+      -- 2. C holds on ∅ (trivial)
+      -- 3. C holds on rects (this is h_rects above)
+      -- 4. C is closed under complements (use integral additivity)
+      -- 5. C is closed under countable disjoint unions (use monotone convergence)
+      --
+      -- TODO: Complete using induction_on_inter from Mathlib.MeasureTheory.PiSystem
       sorry
     have h_proj :
         μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
@@ -278,21 +300,37 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     simpa [g] using h_proj
   · intro hProj
     refine (ProbabilityTheory.condIndep_iff mG mF mH hmG hmF hmH μ).2 ?_
-    intro F hF H hH
-    -- Need to show: μ⟦F ∩ H | mG⟧ =ᵐ[μ] μ⟦F | mG⟧ * μ⟦H | mG⟧
-    -- We have hProj: ∀ H ∈ mH, μ[H.indicator 1 | mF ⊔ mG] =ᵐ[μ] μ[H.indicator 1 | mG]
+    intro t1 t2 ht1 ht2
+    -- Need to show: μ⟦t1 ∩ t2 | mG⟧ =ᵐ[μ] μ⟦t1 | mG⟧ * μ⟦t2 | mG⟧
+    -- where t1 is mF-measurable and t2 is mH-measurable
 
-    -- TODO: Recover the product formula from hProj
-    -- Strategy:
-    -- 1. Specialize hProj to H to get: μ[H.indicator 1 | mF ⊔ mG] =ᵐ[μ] μ[H.indicator 1 | mG]
-    -- 2. Use tower property: μ[μ[H.indicator 1 | mF ⊔ mG] | mG] = μ[H.indicator 1 | mG]
-    -- 3. From hProj: μ[μ[H.indicator 1 | mG] | mG] = μ[H.indicator 1 | mG]
-    -- 4. This means μ[H.indicator 1 | mG] is mG-measurable (which it is by definition)
-    -- 5. Now multiply both sides by F.indicator and use pull-out property
-    -- 6. The key: μ[(F.indicator 1) * (H.indicator 1) | mG] on the LHS becomes
-    --    μ[(F ∩ H).indicator 1 | mG] using indicator multiplication
-    -- 7. On the RHS, use that F is independent of (H | mG) given mG...
-    --    Actually, we need a different approach here.
+    -- Key insight: The projection property gives us that conditioning on mF doesn't change
+    -- the conditional expectation of H given mG. We need to use this to derive the product formula.
+
+    -- The strategy is to use the uniqueness of conditional expectation:
+    -- We show that μ⟦t1 | mG⟧ * μ⟦t2 | mG⟧ satisfies the defining
+    -- properties of μ⟦t1 ∩ t2 | mG⟧
+
+    -- Step 1: Specialize projection property for t2
+    have hProjt2 : μ[t2.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
+        =ᵐ[μ] μ[t2.indicator (fun _ => (1 : ℝ)) | mG] := hProj t2 ht2
+
+    -- Step 2: Key observation - (t1 ∩ t2).indicator = t1.indicator * t2.indicator
+    have indicator_prod : ∀ ω, (t1 ∩ t2).indicator (fun _ => (1 : ℝ)) ω
+        = t1.indicator (fun _ => (1 : ℝ)) ω * t2.indicator (fun _ => (1 : ℝ)) ω := by
+      intro ω
+      by_cases h1 : ω ∈ t1
+      · by_cases h2 : ω ∈ t2
+        · simp [Set.indicator, h1, h2]
+        · simp [Set.indicator, h1, h2]
+      · simp [Set.indicator, h1]
+
+    -- Step 3: Use that t1.indicator is mF-measurable, hence mF ⊔ mG-measurable
+    -- TODO: Complete using pull-out property and tower property
+    -- The key is to show:
+    -- μ[(t1 ∩ t2).indicator | mG] = μ[t1.indicator * t2.indicator | mG]
+    --                               = t1.indicator * μ[t2.indicator | mG]  (pull-out, since t1.indicator is mF ⊔ mG-meas)
+    --                               = μ[t1.indicator | mG] * μ[t2.indicator | mG]  (need to justify this step)
     sorry
 
 /-- If conditional probabilities agree a.e. for a π-system generating ℋ,
