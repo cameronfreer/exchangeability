@@ -384,11 +384,17 @@ instance ν_isProbabilityMeasure {μ : Measure (Ω[α])} [IsProbabilityMeasure �
   -- rcdKernel is a Markov kernel (composition of map and comap preserves this)
   exact IsMarkovKernel.isProbabilityMeasure ω
 
-/-- The kernel `ν` is measurable with respect to the tail σ-algebra. -/
+/-- The kernel `ν` is measurable with respect to the tail σ-algebra.
+
+Note: This property should follow from the construction via condExpKernel, but requires
+careful handling of measurable space parameters. The condExpKernel is defined as
+`@Kernel Ω Ω m mΩ`, i.e., measurable w.r.t. the sub-σ-algebra m on the source.
+However, map and comap operations may not preserve this explicit typing.
+This lemma may not be needed for the main results. -/
 lemma ν_measurable_tail {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] :
     Measurable[shiftInvariantSigma (α := α)] (ν (μ := μ)) := by
-  sorry  -- TODO: Need comap measurability w.r.t. source σ-algebra
+  sorry  -- TODO: Requires reformulation or may not be necessary
 
 /-!
 Helper lemmas establishing the stability of the conditional expectation and the
@@ -401,11 +407,8 @@ private lemma condexp_precomp_iterate_eq
     {f : Ω[α] → ℝ} (hf : Integrable f μ) :
     μ[(fun ω => f ((shift (α := α))^[k] ω)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] μ[f | shiftInvariantSigma (α := α)] := by
-  sorry
-  /-
   classical
-  let m := shiftInvariantSigma (α := α)
-  let shiftk := (shift (α := α))^[k]
+  set shiftk := (shift (α := α))^[k] with hshiftk_def
   have h_shiftk_pres : MeasurePreserving shiftk μ μ := hσ.iterate k
   have h_shiftk_meas : AEMeasurable shiftk μ :=
     (measurable_shift (α := α)).iterate k |>.aemeasurable
@@ -424,16 +427,21 @@ private lemma condexp_precomp_iterate_eq
         (hgm := (MeasureTheory.stronglyMeasurable_condExp (μ := μ)).aestronglyMeasurable)).symm
   case hg_int_finite =>
     intro s hs _
-    exact integrable_condExp.integrableOn hs
+    have h_int : Integrable (μ[f | shiftInvariantSigma (α := α)]) μ := integrable_condExp
+    exact h_int.integrableOn
   case hg_eq =>
     intro s hs _
     have hS := (mem_shiftInvariantSigma_iff (α := α) (s := s)).1 hs
     have hS_meas : MeasurableSet s := hS.1
     have hS_shift : shift ⁻¹' s = s := hS.2
     have hS_iter : shiftk ⁻¹' s = s := by
+      rw [hshiftk_def]
+      clear hshiftk_def shiftk h_shiftk_pres h_shiftk_meas h_int_shift h_condexp_int
       induction k with
       | zero => rfl
-      | succ k hk => simp [Function.iterate_succ', Set.preimage_comp, hk, hS_shift]
+      | succ k hk =>
+        rw [Function.iterate_succ']
+        simp only [Set.preimage_comp, hk, hS_shift]
     have h_indicator_int : Integrable (s.indicator f) μ :=
       hf.indicator hS_meas
     have h_indicator_meas :
@@ -476,22 +484,18 @@ private lemma condexp_precomp_iterate_eq
         ∫ ω, s.indicator f ω ∂μ
           = ∫ ω, s.indicator (fun ω => f (shiftk ω)) ω ∂μ :=
       h_indicator_comp.trans h_indicator_comp'
-    have h_set :=
-      MeasureTheory.setIntegral_indicator (μ := μ) (s := s) (f := f) hS_meas
-    have h_set_shift :=
-      MeasureTheory.setIntegral_indicator
-        (μ := μ) (s := s) (f := fun ω => f (shiftk ω)) hS_meas
     calc
-      ∫ ω in s, μ[f | m] ω ∂μ
+      ∫ ω in s, μ[f | shiftInvariantSigma (α := α)] ω ∂μ
           = ∫ ω in s, f ω ∂μ :=
             MeasureTheory.setIntegral_condExp
-              (μ := μ) (m := m)
+              (μ := μ) (m := shiftInvariantSigma (α := α))
               (hm := shiftInvariantSigma_le (α := α))
               (hf := hf) (hs := hs)
-      _ = ∫ ω, s.indicator f ω ∂μ := h_set
+      _ = ∫ ω, s.indicator f ω ∂μ :=
+            (MeasureTheory.integral_indicator hS_meas).symm
       _ = ∫ ω, s.indicator (fun ω => f (shiftk ω)) ω ∂μ := h_indicator_eq
-      _ = ∫ ω in s, (fun ω => f (shiftk ω)) ω ∂μ := h_set_shift.symm
-  -/
+      _ = ∫ ω in s, (fun ω => f (shiftk ω)) ω ∂μ :=
+            MeasureTheory.integral_indicator hS_meas
 
 /-- Almost-everywhere shift-invariance of the regular conditional distribution. -/
 lemma ν_ae_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
@@ -500,10 +504,21 @@ lemma ν_ae_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
   classical
   refine (ae_all_iff).2 ?_
   intro k
-  -- TODO: Complete this proof using Kernel.ae_eq_of_forall_integral_eq once it's properly defined
-  -- The strategy is to show that ν(shift^[k] ω) and ν(ω) give the same integrals for all
-  -- bounded measurable test functions, then apply the kernel uniqueness lemma.
-  sorry
+  -- Strategy: Define two kernels κ₁(ω) = ν(shift^[k] ω) and κ₂(ω) = ν(ω)
+  -- Show they have equal integrals a.e., then apply uniqueness axiom
+  let κ₁ : Kernel (Ω[α]) α := (rcdKernel (μ := μ)).comap ((shift (α := α))^[k])
+    ((measurable_shift (α := α)).iterate k)
+  let κ₂ : Kernel (Ω[α]) α := rcdKernel (μ := μ)
+  -- Apply the kernel uniqueness axiom
+  have h_eq := ProbabilityTheory.Kernel.ae_eq_of_forall_integral_eq
+    (κ := κ₁) (η := κ₂) (μ := μ) (mα := MeasurableSpace.pi) (mβ := inferInstance)
+  apply h_eq
+  intro f hf hf_bd
+  -- Show that integrals agree a.e.
+  simp only [κ₁, κ₂, Kernel.comap_apply]
+  -- The two sides are: ∫ f dν(shift^[k] ω) and ∫ f dν(ω)
+  -- Both are determined by conditional expectation which is shift-invariant
+  sorry  -- TODO: Use ν_apply and condexp_precomp_iterate_eq to complete
 
 /-- Identical conditional marginals: each coordinate shares the same
 regular conditional distribution given the shift-invariant σ-algebra. -/
@@ -518,9 +533,10 @@ lemma identicalConditionalMarginals {μ : Measure (Ω[α])} [IsProbabilityMeasur
   -- the same integrals for all bounded measurable test functions
   apply ProbabilityTheory.Kernel.ae_eq_of_forall_integral_eq
   intro f hf hf_bd
-  -- Both kernels integrate f the same way almost everywhere
-  -- This follows from conditional expectation being shift-invariant
-  sorry  -- TODO: Complete by showing integrals agree via condexp_precomp_iterate_eq
+  -- The integral of f under the k-th marginal equals the integral under the 0-th marginal (ν)
+  -- via the correspondence: ∫f∘πₖ = μ[f∘πₖ | tail] =ᵐ μ[f∘π₀ | tail] = ∫f∘π₀
+  -- where the middle equality uses shift-invariance (condexp_precomp_iterate_eq)
+  sorry  -- TODO: Use condExp_ae_eq_integral_condExpKernel and condexp_precomp_iterate_eq
 
 /-- **Kernel-level integral multiplication under independence.**
 
