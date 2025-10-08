@@ -625,15 +625,54 @@ private lemma condexp_mul_of_indep
     intro s hs _
     -- Need: ∫_s XY dμ = ∫_s E[X|σ]·E[Y|σ] dμ
 
-    -- Key insight: This follows from independence and the defining property of conditional expectation
-    -- We'll use the fact that E[X|σ] and E[Y|σ] are σ-measurable and "pull them out" appropriately
+    -- Step 1: LHS = ∫_s XY dμ = ∫ XY d((μ.trim hσ_le).restrict s) by the trim-restrict lemma
+    rw [MeasureTheory.set_integral_trim hσ_le hs (hX_meas.mul hY_meas)]
 
-    -- The calculation involves several steps with trimmed measures and independence
-    -- This is a well-known result but requires careful bookkeeping
-    sorry -- TODO: Complete final integration step (~15 lines)
-    -- The missing piece is showing that on a σ-measurable set with trimmed measure,
-    -- (∫ E[X|σ]) * (∫ E[Y|σ]) = ∫ (E[X|σ] * E[Y|σ])
-    -- This follows from the tower property and σ-measurability but needs careful application
+    -- Step 2: Apply independence to get ∫ XY = (∫ X)(∫ Y) on the trimmed restricted measure
+    have h_indep_restrict : IndepFun X Y ((μ.trim hσ_le).restrict s) :=
+      h_indep.restrict hs
+
+    have h_prod : ∫ ω, X ω * Y ω ∂((μ.trim hσ_le).restrict s) =
+        (∫ ω, X ω ∂((μ.trim hσ_le).restrict s)) * (∫ ω, Y ω ∂((μ.trim hσ_le).restrict s)) :=
+      IndepFun.integral_mul_eq_mul_integral h_indep_restrict
+        hX_meas.aestronglyMeasurable hY_meas.aestronglyMeasurable
+
+    -- Step 3: Convert each integral back using tower property
+    have h_tower_X : ∫ ω, X ω ∂((μ.trim hσ_le).restrict s) = ∫ ω in s, μ[X | σ] ω ∂μ := by
+      rw [← MeasureTheory.set_integral_trim hσ_le hs hX_meas]
+      exact MeasureTheory.set_integral_condexp (hm := σ) hX_int hs
+
+    have h_tower_Y : ∫ ω, Y ω ∂((μ.trim hσ_le).restrict s) = ∫ ω in s, μ[Y | σ] ω ∂μ := by
+      rw [← MeasureTheory.set_integral_trim hσ_le hs hY_meas]
+      exact MeasureTheory.set_integral_condexp (hm := σ) hY_int hs
+
+    -- Step 4: RHS = ∫_s E[X|σ]·E[Y|σ] dμ = ∫ E[X|σ]·E[Y|σ] d((μ.trim hσ_le).restrict s)
+    rw [MeasureTheory.set_integral_trim hσ_le hs
+      ((MeasureTheory.stronglyMeasurable_condexp.of_le hσ_le).mul
+       (MeasureTheory.stronglyMeasurable_condexp.of_le hσ_le)).measurable]
+
+    -- Step 5: Combine everything
+    calc ∫ ω, X ω * Y ω ∂((μ.trim hσ_le).restrict s)
+        = (∫ ω, X ω ∂((μ.trim hσ_le).restrict s)) * (∫ ω, Y ω ∂((μ.trim hσ_le).restrict s)) := h_prod
+      _ = (∫ ω in s, μ[X | σ] ω ∂μ) * (∫ ω in s, μ[Y | σ] ω ∂μ) := by rw [h_tower_X, h_tower_Y]
+      _ = ∫ ω, μ[X | σ] ω * μ[Y | σ] ω ∂((μ.trim hσ_le).restrict s) := by
+          -- ERROR: This step tries to prove (∫ f)(∫ g) = ∫(f·g) which is FALSE in general!
+          -- Even though f, g are σ-measurable, this doesn't hold.
+          -- Counterexample: f=g=id on [0,1], then (1/2)² ≠ 1/3.
+          --
+          -- CORRECT APPROACH (per user guidance):
+          -- This lemma may not be needed at all - the main de Finetti proof should use
+          -- kernel-based conditional independence directly via condExpKernel, avoiding
+          -- this auxiliary result entirely.
+          --
+          -- If this lemma IS needed, the right approach is:
+          -- Use the kernel characterization directly with condExpKernel to show
+          -- that for κ = condExpKernel μ σ, we have Kernel.IndepFun X Y κ μ, and then
+          -- apply Kernel.IndepFun.integral_mul (which we've already proved!) to get
+          -- the factorization ∀ᵐ ω, ∫ XY dκ(ω) = (∫ X dκ(ω))(∫ Y dκ(ω)).
+          -- This gives E[XY|σ] = E[X|σ]·E[Y|σ] directly without trying to prove
+          -- impossible product-of-integrals identities.
+          sorry -- This proof approach is fundamentally flawed; needs kernel-based rewrite
 
 /-- **Kernel-level integral multiplication under independence.**
 
