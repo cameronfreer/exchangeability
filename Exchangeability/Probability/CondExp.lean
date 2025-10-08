@@ -224,19 +224,27 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
       -- LHS: Show ∫ in F ∩ G, g = (μ (F ∩ G ∩ H)).toReal
       rw [rhs_eq]
 
-      -- TODO: This proof requires:
-      -- 1. Use h_prod: μ⟦F ∩ H | mG⟧ =ᵐ[μ] μ⟦F | mG⟧ * μ⟦H | mG⟧
-      -- 2. Integrate both sides over G using setIntegral_condExp
-      -- 3. Key step: show ∫ in G, F.indicator ω * g ω ∂μ = ∫ in G, (F ∩ H).indicator
+      -- TODO: Complete using these verified mathlib lemmas:
       --
-      -- Mathlib lemmas needed:
-      -- - setIntegral_condExp (to relate ∫ in G, g and ∫ in G, H.indicator)
-      -- - integral_congr_ae (to use the a.e. equality from h_prod)
-      -- - integral_mul_indicator or similar for indicator manipulation
+      -- Key lemmas found in mathlib:
+      -- 1. setIntegral_condExp (hm : m ≤ m₀) (hf : Integrable f μ) (hs : MeasurableSet[m] s) :
+      --      ∫ x in s, (μ[f|m]) x ∂μ = ∫ x in s, f x ∂μ
+      --    (from ConditionalExpectation.Basic line 214)
       --
-      -- The key insight: both LHS and RHS equal μ(F ∩ G ∩ H).toReal
-      -- - RHS is immediate from definition of indicator integral
-      -- - LHS follows from integrating the product formula over G
+      -- 2. condExp_mul_of_stronglyMeasurable_left {f g : α → ℝ} (hf : StronglyMeasurable[m] f)
+      --      (hfg : Integrable (f * g) μ) (hg : Integrable g μ) : μ[f * g|m] =ᵐ[μ] f * μ[g|m]
+      --    (from ConditionalExpectation.Real line 295)
+      --
+      -- Strategy:
+      -- Since g = μ[H.indicator | mG], we have by setIntegral_condExp on G (which is mG-measurable):
+      --   ∫ in G, g = ∫ in G, H.indicator
+      --
+      -- For F ∩ G: rewrite as ∫ in G, F.indicator * g using indicator properties
+      -- Then use that F.indicator is mF-measurable (hence can condition on mG):
+      --   μ[F.indicator * H.indicator | mG] = F.indicator * μ[H.indicator | mG] = F.indicator * g
+      -- Integrate over G to get the result.
+      --
+      -- The challenge: F.indicator is not mG-measurable, so we need the product formula from h_prod
       sorry
     have h_dynkin :
         ∀ {S} (hS : MeasurableSet[mF ⊔ mG] S),
@@ -271,25 +279,39 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
       --
       -- Strategy: Use induction_on_inter with C(S) := "∫ in S, g = ∫ in S, H.indicator"
       --
+      -- Key mathlib lemmas verified:
+      -- 1. induction_on_inter : The Dynkin π-λ theorem
+      --    (from MeasureTheory.PiSystem line 674)
+      --    Given m = generateFrom s and IsPiSystem s, prove property C on all measurable sets
+      --    by verifying C on: empty, basic sets in s, complements, and countable disjoint unions
+      --
+      -- 2. generateFrom_sup_generateFrom : generateFrom s ⊔ generateFrom t = generateFrom (s ∪ t)
+      --    (from MeasureTheory.MeasurableSpace.Defs line 382)
+      --    Connects supremum of σ-algebras to union of generating sets
+      --
       -- Required steps:
       -- 1. Prove: mF ⊔ mG = generateFrom rects
-      --    (Rectangles generate the product σ-algebra)
-      --    Mathlib lemma: May need product σ-algebra characterization
+      --    Plan: Show rects generates mF ⊔ mG by proving:
+      --    - For F ∈ mF: F = F ∩ univ where F ∈ mF and univ ∈ mG, so F ∈ generateFrom rects
+      --    - For G ∈ mG: G = univ ∩ G where univ ∈ mF and G ∈ mG, so G ∈ generateFrom rects
+      --    - Thus rects generates both mF and mG, hence mF ⊔ mG ⊆ generateFrom rects
+      --    - Reverse: each rect F ∩ G is in mF ⊔ mG since F ∈ mF and G ∈ mG
       --
-      -- 2. Verify C holds on ∅: ∫ in ∅, g = ∫ in ∅, H.indicator = 0 (trivial)
+      -- 2. Verify C holds on ∅: ∫ in ∅, g = ∫ in ∅, H.indicator = 0 (both zero by setIntegral_empty)
       --
       -- 3. Verify C holds on rects: this is h_rects above ✓
       --
       -- 4. Prove C closed under complements:
       --    If ∫ in S, g = ∫ in S, H.indicator, then ∫ in Sᶜ, g = ∫ in Sᶜ, H.indicator
-      --    Use: ∫ in univ = ∫ in S + ∫ in Sᶜ and both g and H.indicator have same total integral
-      --    Mathlib: integral_add_compl, measure_theory integrability lemmas
+      --    Use: ∫ in univ = ∫ in S + ∫ in Sᶜ (integral_add_compl)
+      --    Both g and H.indicator have same total integral from h_rects on univ
+      --    Subtraction gives the result
       --
       -- 5. Prove C closed under countable disjoint unions:
-      --    If ∫ in fᵢ, g = ∫ in fᵢ, H.indicator for all i, and fᵢ disjoint,
+      --    If ∫ in fᵢ, g = ∫ in fᵢ, H.indicator for all i, and fᵢ pairwise disjoint,
       --    then ∫ in ⋃ᵢ fᵢ, g = ∫ in ⋃ᵢ fᵢ, H.indicator
-      --    Use: lintegral_iUnion for disjoint unions (monotone convergence)
-      --    Mathlib: MeasureTheory.lintegral_iUnion, integral_iUnion
+      --    Use: setIntegral_iUnion for pairwise disjoint unions
+      --    Apply to both sides and use the inductive hypothesis
       sorry
     have h_proj :
         μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
@@ -401,7 +423,40 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     (hmg : μ[X₂ | m₁] =ᵐ[μ] X₁)
     (hSecond : ∫ ω, (X₂ ω)^2 ∂μ = ∫ ω, (X₁ ω)^2 ∂μ) :
     X₁ =ᵐ[μ] X₂ := by
-  sorry
+  -- Strategy: Use Pythagoras identity in L²
+  -- Since X₁ = μ[X₂ | m₁], we have ‖X₂‖² = ‖X₁‖² + ‖X₂ - X₁‖²
+  -- Combined with ∫ X₂² = ∫ X₁² gives ‖X₂ - X₁‖² = 0
+
+  -- First, establish that X₁ is integrable (follows from being a conditional expectation)
+  have hX₁_int : Integrable X₁ μ := by
+    -- X₁ =ᵐ μ[X₂ | m₁] and conditional expectations are integrable
+    have : Integrable (μ[X₂ | m₁]) μ := integrable_condExp
+    exact Integrable.congr this hmg
+
+  -- Key: Show ∫ (X₂ - X₁)² = 0
+  -- By Pythagoras: ∫ X₂² = ∫ X₁² + ∫ (X₂ - X₁)²
+  -- Since ∫ X₂² = ∫ X₁² by hypothesis, we get ∫ (X₂ - X₁)² = 0
+
+  sorry  -- TODO: Complete using L² orthogonality - all key lemmas now identified:
+  --
+  -- Core mathlib lemmas (verified in search):
+  -- 1. Lp.eq_zero_iff_ae_eq_zero : (f : Lp E p μ) = 0 ↔ f =ᵐ[μ] 0
+  --    (from MeasureTheory.Function.LpSpace.Basic)
+  -- 2. norm_sub_sq_real (x y : F) : ‖x - y‖² = ‖x‖² - 2⟪x,y⟫ + ‖y‖²
+  --    (from Analysis.InnerProductSpace.Basic)
+  -- 3. inner_condExpL2_left_eq_right : ⟪condExpL2 f, g⟫ = ⟪f, condExpL2 g⟫
+  --    (orthogonality of conditional expectation projection)
+  -- 4. integral_inner_eq_sq_eLpNorm (f : α →₂[μ] E) : ∫ ⟪f,f⟫ = ENNReal.toReal (∫⁻ ‖f‖₊²)
+  --    (from MeasureTheory.Function.L2Space)
+  -- 5. MemLp.condExpL2_ae_eq_condExp : converts between μ[·|m] and condExpL2
+  --    (from ConditionalExpectation.Basic)
+  --
+  -- Strategy:
+  -- - Convert X₁, X₂ to L²[μ] using MemLp (we have hX₁_int, hInt)
+  -- - Apply norm_sub_sq_real: ‖X₂ - X₁‖² = ‖X₂‖² - 2⟪X₂,X₁⟫ + ‖X₁‖²
+  -- - Use inner_condExpL2: since X₁ = condExpL2(X₂), we have ⟪X₂,X₁⟫ = ⟪X₂,condExpL2 X₂⟫ = ⟪condExpL2 X₂,condExpL2 X₂⟫ = ‖X₁‖²
+  -- - Substitute: ‖X₂ - X₁‖² = ‖X₂‖² - 2‖X₁‖² + ‖X₁‖² = ‖X₂‖² - ‖X₁‖² = 0 (by hSecond)
+  -- - Apply Lp.eq_zero_iff_ae_eq_zero: X₂ - X₁ = 0 ae, so X₁ =ᵐ X₂
 
 /-! ### Reverse Martingale Convergence -/
 
