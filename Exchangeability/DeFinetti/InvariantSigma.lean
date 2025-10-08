@@ -266,6 +266,9 @@ lemma ae_shift_invariance_on_rep
   have h3 : f =ᵐ[μ] g := hfg.symm
   exact h1.trans (h2.trans h3)
 
+/-- Given an `AEStronglyMeasurable` function whose shift agrees with it almost
+everywhere, construct a representative that is literally shift-invariant and
+measurable with respect to the invariant σ-algebra. -/
 lemma mkShiftInvariantRep
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ)
@@ -339,15 +342,9 @@ private lemma indicator_shiftInvariant_set
 -- Helper lemmas to replace exists_shiftInvariantRepresentative
 
 /-- Build a shift-invariant full-measure set on which `g ∘ shift = g` holds pointwise,
-    *without* any extra axiom.
-    
-    TODO: Complete the successive equalities proof. The mathematical idea is sound:
-    - Define S_n = {ω | g(shift^[n+1] ω) = g(shift^[n] ω)}
-    - Each S_n has full measure by induction using measure-preservingness
-    - Sinf = ⋂ S_n is shift-invariant by telescoping equalities
-    - On Sinf, g(shift ω) = g ω follows from taking n=0 in the telescoping chain
-    
-    This proof pattern avoids any axiom about orbit constants. -/
+    *without* appealing to additional axioms. The construction iterates the
+    equality set and intersects all pullbacks to obtain a forward-invariant set
+    on which the equality holds everywhere. -/
 private lemma exists_shiftInvariantFullMeasureSet
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ)
@@ -461,22 +458,20 @@ private lemma exists_shiftInvariantFullMeasureSet
   have hSstar_symmDiff_zero :
       μ (symmDiff (shift ⁻¹' Sstar) Sstar) = 0 := by
     have hsubset_diff : ((shift ⁻¹' Sstar) \ Sstar) ⊆ Sstarᶜ := by
-      intro ω hω
-      exact hω.2
+      intro ω hω; exact hω.2
     have hmeasure_diff : μ ((shift ⁻¹' Sstar) \ Sstar) = 0 :=
       measure_mono_null hsubset_diff hSstar_full
     have hsubset : Sstar ⊆ shift ⁻¹' Sstar := hSstar_forward
-    have hsymm : symmDiff (shift ⁻¹' Sstar) Sstar = (shift ⁻¹' Sstar) \ Sstar := by
+    have hzero : Sstar \ shift ⁻¹' Sstar = (∅ : Set (Ω[α])) := by
       ext ω; constructor
       · intro hω
-        rcases hω with hω | hω
-        · exact hω
-        · rcases hω with ⟨hωS, hω_not⟩
-          have : ω ∈ shift ⁻¹' Sstar := hsubset hωS
-          exact False.elim (hω_not this)
-      · intro hω
-        exact Or.inl hω
-    simpa [hsymm] using hmeasure_diff
+        have : ω ∈ shift ⁻¹' Sstar := hsubset hω.1
+        exact False.elim (hω.2 this)
+      · intro hω; simpa using hω.elim
+    have hsymm :
+        symmDiff (shift ⁻¹' Sstar) Sstar
+          = ((shift ⁻¹' Sstar) \ Sstar) ∪ (Sstar \ shift ⁻¹' Sstar) := rfl
+    simpa [hsymm, hzero] using hmeasure_diff
 
   -- Package all components.
   refine ⟨Sstar, hSstar_meas, hSstar_symmDiff_zero, hSstar_full, hSstar_forward,
@@ -566,11 +561,12 @@ lemma koopman_eq_self_of_shiftInvariant
   have hfinal : (koopman shift hσ f) =ᵐ[μ] f := hcomp.trans hshift
   exact Lp.ext hfinal
 
-/-- A Koopman-fixed function should be measurable with respect to the invariant σ-algebra.
+/-- A Koopman-fixed function is automatically measurable with respect to the
+invariant σ-algebra.
 
-The key step is to modify a representative of `f` on a null set so that it becomes
-pointwise invariant under the shift; the resulting function will then be
-`shiftInvariantSigma`-measurable by construction. -/
+Starting from the a.e. identity `f ∘ shift = f`, the previous lemma replaces a
+representative of `f` by an actual shift-invariant function, and the resulting
+measurability is transported back to `f`. -/
 lemma aestronglyMeasurable_shiftInvariant_of_koopman
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ)
