@@ -60,6 +60,22 @@ open scoped BigOperators
 
 variable {α : Type*} [MeasurableSpace α]
 
+namespace MeasureTheory
+
+/-- Helper lemma: A measurable function bounded in absolute value is integrable. -/
+theorem integrable_of_bounded {Ω E : Type*} [MeasurableSpace Ω]
+    [MeasurableSpace E] [NormedAddCommGroup E] [BorelSpace E]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {f : Ω → E} (hmeas : Measurable f) (hbd : ∃ C, ∀ ω, ‖f ω‖ ≤ C) :
+    Integrable f μ := by
+  rcases hbd with ⟨C, hC⟩
+  refine ⟨hmeas.aestronglyMeasurable, ?_⟩
+  refine HasFiniteIntegral.of_bounded ?_
+  refine ae_of_all μ fun ω => ?_
+  exact (hC ω).trans (le_max_right _ _)
+
+end MeasureTheory
+
 section CylinderFunctions
 
 /-- Cylinder function: a function on path space depending only on finitely many coordinates.
@@ -578,19 +594,20 @@ lemma identicalConditionalMarginals {μ : Measure (Ω[α])} [IsProbabilityMeasur
   have h_eq := (h_precomp.trans hCEk).trans (h_invariance.trans hν.symm)
   simpa using h_eq
 
-/-- Helper: product rule for conditional expectation under independence.
-If X and Y are conditionally independent given σ, then E[XY | σ] = E[X | σ] · E[Y | σ].
+/-- Helper: product rule for conditional expectation under kernel independence.
+If X and Y are conditionally independent given σ (in the kernel sense),
+then E[XY | σ] = E[X | σ] · E[Y | σ].
 
-This adapts the standard measure-level result `IndepFun.integral_mul_eq_mul_integral` to
-the conditional setting using the tower property of conditional expectation.
+This is a direct application of `Kernel.IndepFun.integral_mul` composed with
+`condExp_ae_eq_integral_condExpKernel`.
 -/
-private lemma condexp_mul_of_indep
+private lemma condexp_mul_of_kernel_indep
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (σ : MeasurableSpace (Ω[α])) (hσ_le : σ ≤ inferInstance)
     (X Y : Ω[α] → ℝ)
     (hX_meas : Measurable X) (hY_meas : Measurable Y)
     (hX_bd : ∃ C, ∀ ω, |X ω| ≤ C) (hY_bd : ∃ C, ∀ ω, |Y ω| ≤ C)
-    (h_indep : IndepFun X Y (μ.trim hσ_le)) :
+    (h_kernel_indep : Kernel.IndepFun X Y (condExpKernel μ σ) μ) :
     μ[(fun ω => X ω * Y ω) | σ] =ᵐ[μ]
       fun ω => (μ[X | σ] ω) * (μ[Y | σ] ω) := by
   classical
@@ -609,70 +626,32 @@ private lemma condexp_mul_of_indep
       _ = |X ω| * |Y ω| := abs_mul _ _
       _ ≤ CX * CY := mul_le_mul (hCX ω) (hCY ω) (abs_nonneg _) (by linarith [hCX ω])
 
-  -- Use the characterization of conditional expectation via the defining property:
-  -- For any σ-measurable set A, ∫_A E[XY|σ] dμ = ∫_A XY dμ
-  -- We want to show: ∫_A E[XY|σ] dμ = ∫_A E[X|σ]·E[Y|σ] dμ for all σ-measurable A
+  -- Step 1: Express conditional expectations via condExpKernel
+  have h_XY_kernel : μ[(X * Y) | σ] =ᵐ[μ]
+      fun ω => ∫ y, X y * Y y ∂(condExpKernel μ σ ω) :=
+    ProbabilityTheory.condExp_ae_eq_integral_condExpKernel hσ_le hXY_int
 
-  -- The key is to use conditional expectation properties
-  refine MeasureTheory.ae_eq_condexp_of_forall_set_integral_eq
-    (hm := σ) (hf := (hX_meas.mul hY_meas).aestronglyMeasurable) hXY_int ?_ ?_
+  have h_X_kernel : μ[X | σ] =ᵐ[μ]
+      fun ω => ∫ y, X y ∂(condExpKernel μ σ ω) :=
+    ProbabilityTheory.condExp_ae_eq_integral_condExpKernel hσ_le hX_int
 
-  · -- E[X|σ] · E[Y|σ] is σ-measurable
-    exact ((MeasureTheory.stronglyMeasurable_condexp.of_le hσ_le).mul
-      (MeasureTheory.stronglyMeasurable_condexp.of_le hσ_le)).aestronglyMeasurable
+  have h_Y_kernel : μ[Y | σ] =ᵐ[μ]
+      fun ω => ∫ y, Y y ∂(condExpKernel μ σ ω) :=
+    ProbabilityTheory.condExp_ae_eq_integral_condExpKernel hσ_le hY_int
 
-  · -- Show the integrals agree on all σ-measurable sets
-    intro s hs _
-    -- Need: ∫_s XY dμ = ∫_s E[X|σ]·E[Y|σ] dμ
+  -- Step 2: Apply Kernel.IndepFun.integral_mul
+  have h_factor : ∀ᵐ ω ∂μ,
+      ∫ y, X y * Y y ∂(condExpKernel μ σ ω) =
+      (∫ y, X y ∂(condExpKernel μ σ ω)) * (∫ y, Y y ∂(condExpKernel μ σ ω)) :=
+    Kernel.IndepFun.integral_mul h_kernel_indep hX_meas hY_meas hX_bd hY_bd
 
-    -- Step 1: LHS = ∫_s XY dμ = ∫ XY d((μ.trim hσ_le).restrict s) by the trim-restrict lemma
-    rw [MeasureTheory.set_integral_trim hσ_le hs (hX_meas.mul hY_meas)]
-
-    -- Step 2: Apply independence to get ∫ XY = (∫ X)(∫ Y) on the trimmed restricted measure
-    have h_indep_restrict : IndepFun X Y ((μ.trim hσ_le).restrict s) :=
-      h_indep.restrict hs
-
-    have h_prod : ∫ ω, X ω * Y ω ∂((μ.trim hσ_le).restrict s) =
-        (∫ ω, X ω ∂((μ.trim hσ_le).restrict s)) * (∫ ω, Y ω ∂((μ.trim hσ_le).restrict s)) :=
-      IndepFun.integral_mul_eq_mul_integral h_indep_restrict
-        hX_meas.aestronglyMeasurable hY_meas.aestronglyMeasurable
-
-    -- Step 3: Convert each integral back using tower property
-    have h_tower_X : ∫ ω, X ω ∂((μ.trim hσ_le).restrict s) = ∫ ω in s, μ[X | σ] ω ∂μ := by
-      rw [← MeasureTheory.set_integral_trim hσ_le hs hX_meas]
-      exact MeasureTheory.set_integral_condexp (hm := σ) hX_int hs
-
-    have h_tower_Y : ∫ ω, Y ω ∂((μ.trim hσ_le).restrict s) = ∫ ω in s, μ[Y | σ] ω ∂μ := by
-      rw [← MeasureTheory.set_integral_trim hσ_le hs hY_meas]
-      exact MeasureTheory.set_integral_condexp (hm := σ) hY_int hs
-
-    -- Step 4: RHS = ∫_s E[X|σ]·E[Y|σ] dμ = ∫ E[X|σ]·E[Y|σ] d((μ.trim hσ_le).restrict s)
-    rw [MeasureTheory.set_integral_trim hσ_le hs
-      ((MeasureTheory.stronglyMeasurable_condexp.of_le hσ_le).mul
-       (MeasureTheory.stronglyMeasurable_condexp.of_le hσ_le)).measurable]
-
-    -- Step 5: Combine everything
-    calc ∫ ω, X ω * Y ω ∂((μ.trim hσ_le).restrict s)
-        = (∫ ω, X ω ∂((μ.trim hσ_le).restrict s)) * (∫ ω, Y ω ∂((μ.trim hσ_le).restrict s)) := h_prod
-      _ = (∫ ω in s, μ[X | σ] ω ∂μ) * (∫ ω in s, μ[Y | σ] ω ∂μ) := by rw [h_tower_X, h_tower_Y]
-      _ = ∫ ω, μ[X | σ] ω * μ[Y | σ] ω ∂((μ.trim hσ_le).restrict s) := by
-          -- ERROR: This step tries to prove (∫ f)(∫ g) = ∫(f·g) which is FALSE in general!
-          -- Even though f, g are σ-measurable, this doesn't hold.
-          -- Counterexample: f=g=id on [0,1], then (1/2)² ≠ 1/3.
-          --
-          -- CORRECT APPROACH (per user guidance):
-          -- This lemma may not be needed at all - the main de Finetti proof should use
-          -- kernel-based conditional independence directly via condExpKernel, avoiding
-          -- this auxiliary result entirely.
-          --
-          -- If this lemma IS needed, the right approach is:
-          -- Use the kernel characterization directly with condExpKernel to show
-          -- that for κ = condExpKernel μ σ, we have Kernel.IndepFun X Y κ μ, and then
-          -- apply Kernel.IndepFun.integral_mul (which we've already proved!) to get
-          -- the factorization ∀ᵐ ω, ∫ XY dκ(ω) = (∫ X dκ(ω))(∫ Y dκ(ω)).
-          -- This gives E[XY|σ] = E[X|σ]·E[Y|σ] directly without trying to prove
-          -- impossible product-of-integrals identities.
-          sorry -- This proof approach is fundamentally flawed; needs kernel-based rewrite
+  -- Step 3: Combine via a.e. transitivity
+  calc μ[(X * Y) | σ]
+      =ᵐ[μ] (fun ω => ∫ y, X y * Y y ∂(condExpKernel μ σ ω)) := h_XY_kernel
+    _ =ᵐ[μ] (fun ω => (∫ y, X y ∂(condExpKernel μ σ ω)) * (∫ y, Y y ∂(condExpKernel μ σ ω))) := h_factor
+    _ =ᵐ[μ] (fun ω => μ[X | σ] ω * μ[Y | σ] ω) := by
+        filter_upwards [h_X_kernel, h_Y_kernel] with ω hX hY
+        rw [← hX, ← hY]
 
 /-- **Kernel-level integral multiplication under independence.**
 
@@ -694,7 +673,7 @@ The kernel version requires:
 This is a standard result in the theory of conditional expectations and should eventually
 be added to Mathlib's `Probability.Independence.Kernel` or a new `Integration` submodule.
 
-For now, we axiomatize it to complete the de Finetti proof.
+This is proved below using a π-λ system argument.
 -/
 /-- **Proof attempt for Kernel.IndepFun.integral_mul**
 
