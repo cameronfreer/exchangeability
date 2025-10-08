@@ -349,7 +349,14 @@ noncomputable def rcdKernel {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
 
 instance rcdKernel_isMarkovKernel {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] : IsMarkovKernel (rcdKernel (μ := μ)) := by
-  sorry  -- TODO: Prove that comap of map of IsMarkovKernel preserves IsMarkovKernel
+  unfold rcdKernel
+  -- First, condExpKernel is a Markov kernel
+  have h1 : IsMarkovKernel (condExpKernel μ (shiftInvariantSigma (α := α))) := inferInstance
+  -- Second, map preserves IsMarkovKernel
+  have h2 : IsMarkovKernel ((condExpKernel μ (shiftInvariantSigma (α := α))).map (π0 (α := α))) :=
+    Kernel.IsMarkovKernel.map _ (measurable_pi0 (α := α))
+  -- Third, comap preserves IsMarkovKernel (this is an instance)
+  exact Kernel.IsMarkovKernel.comap _ (measurable_id'' (shiftInvariantSigma_le (α := α)))
 
 /-- The regular conditional distribution as a function assigning to each point
  a probability measure on α. -/
@@ -363,7 +370,11 @@ lemma ν_apply {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelS
     ν (μ := μ) ω s
       = (condExpKernel μ (shiftInvariantSigma (α := α)) ω)
           ((fun y : Ω[α] => y 0) ⁻¹' s) := by
-  sorry
+  unfold ν rcdKernel
+  -- Unfold comap and map applications
+  rw [Kernel.comap_apply, Kernel.map_apply' _ (measurable_pi0 (α := α)) _ hs]
+  -- π0 is defined as (fun y => y 0), so the preimages are equal
+  rfl
 
 /-- The kernel ν gives probability measures. -/
 instance ν_isProbabilityMeasure {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
@@ -377,7 +388,7 @@ instance ν_isProbabilityMeasure {μ : Measure (Ω[α])} [IsProbabilityMeasure �
 lemma ν_measurable_tail {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] :
     Measurable[shiftInvariantSigma (α := α)] (ν (μ := μ)) := by
-  sorry
+  sorry  -- TODO: Need comap measurability w.r.t. source σ-algebra
 
 /-!
 Helper lemmas establishing the stability of the conditional expectation and the
@@ -503,10 +514,13 @@ lemma identicalConditionalMarginals {μ : Measure (Ω[α])} [IsProbabilityMeasur
         (fun y : Ω[α] => y k)) id (measurable_id'' (shiftInvariantSigma_le (α := α)))
         : Kernel (Ω[α]) α) ω
       = ν (μ := μ) ω := by
-  -- TODO: Complete using Kernel.ae_eq_of_forall_integral_eq
-  -- The strategy is to show that both kernels give the same integrals for all bounded
-  -- measurable test functions by using conditional expectation characterizations.
-  sorry
+  -- Use the kernel uniqueness axiom: two kernels are a.e. equal if they give
+  -- the same integrals for all bounded measurable test functions
+  apply ProbabilityTheory.Kernel.ae_eq_of_forall_integral_eq
+  intro f hf hf_bd
+  -- Both kernels integrate f the same way almost everywhere
+  -- This follows from conditional expectation being shift-invariant
+  sorry  -- TODO: Complete by showing integrals agree via condexp_precomp_iterate_eq
 
 /-- **Kernel-level integral multiplication under independence.**
 
