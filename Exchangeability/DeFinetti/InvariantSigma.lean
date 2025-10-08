@@ -979,14 +979,47 @@ theorem proj_eq_condexp {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
   have h_idem_cond : condexpL2 (μ := μ) * condexpL2 (μ := μ) = condexpL2 (μ := μ) :=
     condexpL2_idem (μ := μ)
   have h_symm_cond : (condexpL2 (μ := μ)).IsSymmetric := by
-    sorry  -- Requires conditional expectation symmetry from mathlib
+    intro f g
+    unfold condexpL2
+    exact MeasureTheory.inner_condExpL2_left_eq_right shiftInvariantSigma_le
   have h_range_cond : Set.range (condexpL2 (μ := μ)) = (fixedSubspace hσ : Set (Lp ℝ 2 μ)) :=
     range_condexp_eq_fixedSubspace hσ
 
-  -- Apply uniqueness of orthogonal projections
-  have h_range_eq : Set.range (METProjection hσ) = Set.range (condexpL2 (μ := μ)) := by
-    rw [h_range_MET, h_range_cond]
+  -- Both projections fix elements of the fixed subspace
+  have h_fixes_MET : ∀ g ∈ fixedSubspace hσ, METProjection hσ g = g :=
+    fun g hg => METProjection_fixes_fixedSubspace hσ hg
+  have h_fixes_cond : ∀ g ∈ fixedSubspace hσ, condexpL2 (μ := μ) g = g := by
+    intro g hg
+    -- g is in the range of condexpL2, so applying condexpL2 again gives g
+    have : g ∈ Set.range (condexpL2 (μ := μ)) := by
+      rw [h_range_cond]
+      exact hg
+    -- Since condexpL2 is idempotent and g is in its range, condexpL2 g = g
+    rcases this with ⟨f, rfl⟩
+    -- Apply idempotence
+    change (condexpL2 (μ := μ) * condexpL2 (μ := μ)) f = condexpL2 (μ := μ) f
+    rw [h_idem_cond]
 
-  sorry  -- Needs orthogonalProjections_same_range_eq from ProjectionLemmas
+  -- Convert idempotence to composition form
+  have h_idem_MET_comp : (METProjection hσ).comp (METProjection hσ) = METProjection hσ := by
+    simp only [ContinuousLinearMap.mul_def] at h_idem_MET
+    exact h_idem_MET
+  have h_idem_cond_comp : (condexpL2 (μ := μ)).comp (condexpL2 (μ := μ)) = condexpL2 (μ := μ) := by
+    simp only [ContinuousLinearMap.mul_def] at h_idem_cond
+    exact h_idem_cond
+
+  -- Ensure we have the orthogonal projection structure
+  haveI : (fixedSubspace hσ).HasOrthogonalProjection := by
+    have hclosed := fixedSubspace_closed hσ
+    have : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
+    exact Submodule.HasOrthogonalProjection.ofCompleteSpace (fixedSubspace hσ)
+
+  -- Apply uniqueness theorem
+  exact orthogonalProjections_same_range_eq
+    (METProjection hσ) (condexpL2 (μ := μ)) (fixedSubspace hσ)
+    h_range_MET h_range_cond
+    h_fixes_MET h_fixes_cond
+    h_idem_MET_comp h_idem_cond_comp
+    h_symm_MET h_symm_cond
 
 end Exchangeability.DeFinetti
