@@ -664,6 +664,17 @@ The difficulty is that the compProd characterization gives us equality of measur
 `μ ⊗ₘ κ`, not pointwise for each `κ a`. We need to "decondition" to get the
 pointwise statement.
 -/
+/-- Kernel-level multiplicativity of integrals under independence.
+
+This is proved by reducing to the measure-level lemma `IndepFun.integral_mul_eq_mul_integral`
+via a countable π-system + quantifier swap argument.
+
+**Strategy:**
+1. Bounded ⇒ integrable for all parameters (since κ a is a probability measure)
+2. Convert kernel independence to pointwise (a.e. in a) measure-level independence
+   using a countable π-system + monotone class argument to swap quantifiers
+3. Apply the measure-level `IndepFun.integral_mul_eq_mul_integral` pointwise
+-/
 lemma Kernel.IndepFun.integral_mul
     {α Ω : Type*} [MeasurableSpace α] [MeasurableSpace Ω]
     {κ : Kernel α Ω} {μ : Measure α}
@@ -674,78 +685,53 @@ lemma Kernel.IndepFun.integral_mul
     (hX_bd : ∃ C, ∀ ω, |X ω| ≤ C) (hY_bd : ∃ C, ∀ ω, |Y ω| ≤ C) :
     ∀ᵐ a ∂μ, ∫ ω, X ω * Y ω ∂(κ a) = (∫ ω, X ω ∂(κ a)) * (∫ ω, Y ω ∂(κ a)) := by
   classical
-  -- Integrability
+
+  -- Step 1: Bounded ⇒ integrable for all parameters
   rcases hX_bd with ⟨CX, hCX⟩
   rcases hY_bd with ⟨CY, hCY⟩
+  have hX_int : ∀ a, Integrable X (κ a) := fun a => by
+    refine ⟨hX.aestronglyMeasurable, ?_⟩
+    have : ∫⁻ ω, ‖X ω‖₊ ∂(κ a) ≤ ∫⁻ ω, CX ∂(κ a) := by
+      apply lintegral_mono
+      intro ω
+      simp [ENNReal.ofReal_le_ofReal, Real.norm_eq_abs, hCX ω]
+    calc ∫⁻ ω, ‖X ω‖₊ ∂(κ a)
+        ≤ ∫⁻ ω, CX ∂(κ a) := this
+      _ = CX * κ a Set.univ := by simp [lintegral_const]
+      _ = CX := by simp [measure_univ]
+      _ < ⊤ := ENNReal.coe_lt_top
+  have hY_int : ∀ a, Integrable Y (κ a) := fun a => by
+    refine ⟨hY.aestronglyMeasurable, ?_⟩
+    have : ∫⁻ ω, ‖Y ω‖₊ ∂(κ a) ≤ ∫⁻ ω, CY ∂(κ a) := by
+      apply lintegral_mono
+      intro ω
+      simp [ENNReal.ofReal_le_ofReal, Real.norm_eq_abs, hCY ω]
+    calc ∫⁻ ω, ‖Y ω‖₊ ∂(κ a)
+        ≤ ∫⁻ ω, CY ∂(κ a) := this
+      _ = CY * κ a Set.univ := by simp [lintegral_const]
+      _ = CY := by simp [measure_univ]
+      _ < ⊤ := ENNReal.coe_lt_top
 
-  -- Step 1: For indicators, use the independence characterization
-  have h_indicator : ∀ (s t : Set ℝ) (hs : MeasurableSet s) (ht : MeasurableSet t),
-      ∀ᵐ a ∂μ, ∫ ω, (s.indicator (fun _ => 1) (X ω)) * (t.indicator (fun _ => 1) (Y ω)) ∂(κ a)
-        = (∫ ω, s.indicator (fun _ => 1) (X ω) ∂(κ a)) *
-          (∫ ω, t.indicator (fun _ => 1) (Y ω) ∂(κ a)) := by
-    intro s t hs ht
-    have h_ae := hXY.measure_inter_preimage_eq_mul s t hs ht
-    filter_upwards [h_ae] with a ha
-    -- Convert set measures to indicator integrals
-    have h_prod : ∫ ω, (s.indicator (fun _ => 1) (X ω)) * (t.indicator (fun _ => 1) (Y ω)) ∂(κ a)
-        = (κ a (X ⁻¹' s ∩ Y ⁻¹' t)).toReal := by
-      rw [← ENNReal.toReal_ofReal (by norm_num : (0 : ℝ) ≤ 1)]
-      congr 1
-      rw [← MeasureTheory.lintegral_indicator_const_comp]
-      · congr with ω
-        simp [Set.indicator, Set.mem_inter_iff, Set.mem_preimage]
-        by_cases hx : X ω ∈ s <;> by_cases hy : Y ω ∈ t <;> simp [hx, hy]
-      · exact (hs.preimage hX).inter (ht.preimage hY)
-    have h_left : ∫ ω, s.indicator (fun _ => 1) (X ω) ∂(κ a)
-        = (κ a (X ⁻¹' s)).toReal := by
-      rw [← ENNReal.toReal_ofReal (by norm_num : (0 : ℝ) ≤ 1)]
-      congr 1
-      exact MeasureTheory.lintegral_indicator_const_comp (hs.preimage hX) measurableSet_univ
-    have h_right : ∫ ω, t.indicator (fun _ => 1) (Y ω) ∂(κ a)
-        = (κ a (Y ⁻¹' t)).toReal := by
-      rw [← ENNReal.toReal_ofReal (by norm_num : (0 : ℝ) ≤ 1)]
-      congr 1
-      exact MeasureTheory.lintegral_indicator_const_comp (ht.preimage hY) measurableSet_univ
-    rw [h_prod, h_left, h_right, ha]
-    simp [ENNReal.toReal_mul]
+  -- Step 2: From kernel independence to pointwise measure-level independence
+  -- We use a countable π-system (rational intervals) + monotone class to swap quantifiers:
+  -- ∀ sets s t, AE a, κ a (X⁻¹ s ∩ Y⁻¹ t) = κ a (X⁻¹ s) * κ a (Y⁻¹ t)
+  -- ⇒ AE a, ∀ sets s t, κ a (X⁻¹ s ∩ Y⁻¹ t) = κ a (X⁻¹ s) * κ a (Y⁻¹ t)
+  -- ⇒ AE a, IndepFun X Y (κ a)
 
-  -- IMPLEMENTATION PATH (Approach 1 - Direct via approximation):
-  --
-  -- The challenge: h_indicator gives us a.e. equality for each pair (s,t) of sets,
-  -- but the null sets may depend on s and t. For general X, Y we need a uniform
-  -- a.e. statement.
-  --
-  -- SOLUTION via countability:
-  -- 1. For each a, define: Bad_a = {a : the identity fails for X, Y under κ a}
-  -- 2. Show μ(Bad_a) = 0 by using:
-  --    - For simple functions: linearity + h_indicator + finite union of null sets
-  --    - For general: dominated convergence + countable intersection of null sets
-  --
-  -- CONCRETE STEPS:
-  -- Step 1: Handle simple functions
-  --   have h_simple : ∀ (f g : SimpleFunc Ω ℝ),
-  --     ∀ᵐ a ∂μ, ∫ (f · g) d(κ a) = (∫ f d(κ a)) * (∫ g d(κ a))
-  --   Proof: f = ∑ cᵢ·𝟙_{Aᵢ}, g = ∑ dⱼ·𝟙_{Bⱼ}
-  --   By linearity: ∫(∑ᵢⱼ cᵢdⱼ·𝟙_{Aᵢ∩Bⱼ}) = ∑ᵢⱼ cᵢdⱼ·∫𝟙_{Aᵢ∩Bⱼ}
-  --   By h_indicator: = ∑ᵢⱼ cᵢdⱼ·(∫𝟙_{Aᵢ})·(∫𝟙_{Bⱼ}) = (∑ᵢ cᵢ·∫𝟙_{Aᵢ})·(∑ⱼ dⱼ·∫𝟙_{Bⱼ})
-  --   The a.e. set is a finite union (over i,j) of null sets, hence null.
-  --
-  -- Step 2: Approximate X, Y by simple functions
-  --   Let Xₙ, Yₙ be simple function approximations with |Xₙ| ≤ CX, |Yₙ| ≤ CY
-  --   and Xₙ → X, Yₙ → Y pointwise
-  --
-  -- Step 3: Apply dominated convergence
-  --   For a.e. a (avoiding the null set from Step 1):
-  --   |XₙYₙ| ≤ CX·CY, so ∫XₙYₙ → ∫XY by dominated convergence
-  --   Similarly: ∫Xₙ → ∫X and ∫Yₙ → ∫Y
-  --   By h_simple: ∫XₙYₙ = (∫Xₙ)·(∫Yₙ) for each n
-  --   Taking limits: ∫XY = (∫X)·(∫Y)
-  --
-  -- This is standard but requires ~40-50 lines of careful bookkeeping with
-  -- approximations and a.e. sets. The mathematical content is complete.
-  --
-  -- TODO: Implement the above (estimated 40-50 lines)
-  sorry
+  have h_indep_ae : ∀ᵐ a ∂μ, IndepFun X Y (κ a) := by
+    -- Use the characterization: kernel independence ⇒ measure factorization on all measurable sets
+    -- The key is to restrict to a countable generating π-system and use ae_all_iff
+    sorry  -- TODO: Implement countable π-system + monotone class argument (~30 lines)
+    -- Outline:
+    -- 1. Let S be the π-system of rational intervals Iio q, q ∈ ℚ
+    -- 2. For each q₁, q₂ ∈ ℚ: hXY.measure_inter_preimage_eq_mul gives AE equality
+    -- 3. Use ae_all_iff twice (countability of ℚ × ℚ) to get AE a, ∀ q₁ q₂, factorization
+    -- 4. Extend from π-system to σ-algebra using monotone class theorem
+    -- 5. This gives IndepFun X Y (κ a) for a.e. a
+
+  -- Step 3: Apply measure-level factorization pointwise
+  refine h_indep_ae.mono (fun a ha => ?_)
+  exact IndepFun.integral_mul_eq_mul_integral ha hX.aestronglyMeasurable hY.aestronglyMeasurable
 
 /-- **Note**: `Kernel.IndepFun.comp` already exists in Mathlib!
 See `Mathlib.Probability.Independence.Kernel`, line ~976.
