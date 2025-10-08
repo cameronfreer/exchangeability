@@ -62,17 +62,28 @@ variable {α : Type*} [MeasurableSpace α]
 
 namespace MeasureTheory
 
-/-- Helper lemma: A measurable function bounded in absolute value is integrable. -/
-theorem integrable_of_bounded {Ω E : Type*} [MeasurableSpace Ω]
-    [MeasurableSpace E] [NormedAddCommGroup E] [BorelSpace E]
+/-- Helper lemma: A measurable real-valued function bounded in absolute value is integrable
+under a probability measure. -/
+theorem integrable_of_bounded {Ω : Type*} [MeasurableSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {f : Ω → E} (hmeas : Measurable f) (hbd : ∃ C, ∀ ω, ‖f ω‖ ≤ C) :
+    {f : Ω → ℝ} (hmeas : Measurable f) (hbd : ∃ C, ∀ ω, |f ω| ≤ C) :
     Integrable f μ := by
   rcases hbd with ⟨C, hC⟩
+  have hC_nn : 0 ≤ C := by
+    by_cases h : ∃ ω, True
+    · obtain ⟨ω⟩ := h
+      exact (abs_nonneg (f ω)).trans (hC ω)
+    · exact le_refl 0
   refine ⟨hmeas.aestronglyMeasurable, ?_⟩
-  refine HasFiniteIntegral.of_bounded ?_
-  refine ae_of_all μ fun ω => ?_
-  exact (hC ω).trans (le_max_right _ _)
+  calc ∫⁻ ω, ‖f ω‖₊ ∂μ
+      ≤ ∫⁻ ω, C.toNNReal ∂μ := by
+        apply lintegral_mono
+        intro ω
+        simp [ENNReal.coe_le_coe, Real.toNNReal_of_nonpos, Real.toNNReal_le_iff_le_coe]
+        exact (Real.norm_eq_abs (f ω)).le.trans (hC ω)
+    _ = C.toNNReal * μ Set.univ := by simp [lintegral_const]
+    _ = C.toNNReal := by simp [measure_univ]
+    _ < ⊤ := ENNReal.coe_lt_top
 
 end MeasureTheory
 
