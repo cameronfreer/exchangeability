@@ -93,11 +93,14 @@ theorem deFinetti_RyllNardzewski_equivalence
     constructor
     · -- (i) → (ii): Contractable → Exchangeable
       exact exchangeable_of_contractable hContract hX_meas
-    · -- (i) → (iii): Contractable → ConditionallyIID
-      -- This is the deep result proved via ViaL2 + CommonEnding
-      -- Currently ViaL2.deFinetti_viaL2 has the proof structure but with sorries
-      -- Once those are filled, we can call it here
-      sorry  -- TODO: Call ViaL2.deFinetti_viaL2 once CommonEnding integration is complete
+    · -- (i) → (iii): Contractable → ConditionallyIID via L² + CommonEnding
+      -- Get the directing measure and its properties from ViaL2
+      obtain ⟨ν, hν_prob, hν_meas, h_bridge⟩ :=
+        ViaL2.directing_measure_satisfies_requirements X hX_meas hContract hX_L2
+
+      -- Apply CommonEnding to complete the proof
+      sorry  -- TODO: exact CommonEnding.complete_from_directing_measure X hX_meas hContract ν hν_prob hν_meas h_bridge
+
   · intro ⟨hExch, _hCIID⟩
     -- (ii) → (i): Exchangeable → Contractable (already proved)
     exact contractable_of_exchangeable hExch hX_meas
