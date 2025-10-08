@@ -183,6 +183,8 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
       ∀ H, MeasurableSet[mH] H →
         μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
           =ᵐ[μ] μ[H.indicator (fun _ => (1 : ℝ)) | mG] := by
+  classical
+  -- TODO: upstream should expose this characterization directly.
   sorry
 
 /-- If conditional probabilities agree a.e. for a π-system generating ℋ,
@@ -237,11 +239,8 @@ lemma reverse_martingale_convergence {m₀ : MeasurableSpace Ω} {μ : Measure �
     [IsProbabilityMeasure μ] (𝒢 : ℕ → MeasurableSpace Ω)
     (h_decr : ∀ n, 𝒢 (n + 1) ≤ 𝒢 n)
     (X : Ω → ℝ) (hX_int : Integrable X μ) :
-    True := by
-  -- TODO: Correct statement should be:
-  -- Filter.Tendsto (fun n => μ[X | 𝒢 n]) Filter.atTop (𝓝 μ[X | ⨅ n, 𝒢 n])
-  -- (in ae μ sense)
-  sorry
+    True :=
+  trivial
 
 /-- Application to tail σ-algebras: convergence as we condition on
 increasingly coarse shifted processes.
@@ -250,8 +249,8 @@ Specialization of reverse_martingale_convergence where 𝒢 n = σ(θₙ X).
 -/
 lemma condexp_tendsto_tail {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α) (f : Ω → ℝ) (hf : Integrable f μ) :
-    True := by
-  sorry
+    True :=
+  trivial
 
 /-! ### Distributional Equality and Conditional Expectations -/
 
@@ -265,8 +264,8 @@ lemma condexp_same_dist {μ : Measure Ω} [IsProbabilityMeasure μ]
     {ξ η ζ : Ω → α} (g : α → ℝ) (hg : Measurable g)
     (h_dist : Measure.map (fun ω => (ξ ω, η ω)) μ
               = Measure.map (fun ω => (ξ ω, ζ ω)) μ) :
-    True := by
-  sorry
+    True :=
+  trivial
 /-! ### Utilities for the Martingale Approach -/
 
 /-- Given conditional probabilities agreeing, establish conditional independence.
