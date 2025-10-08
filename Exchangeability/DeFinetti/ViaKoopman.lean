@@ -311,6 +311,29 @@ lemma measurable_pi0 : Measurable (π0 (α := α)) := by
   simpa using (measurable_pi_apply (0 : ℕ) :
     Measurable fun ω : Ω[α] => ω 0)
 
+namespace ProbabilityTheory.Kernel
+
+/-- **TODO**: Add to Mathlib.
+
+Two kernels from α to β are equal μ-almost everywhere if they give the same integrals
+for all bounded measurable test functions.
+
+This is the kernel analogue of `Measure.ext_of_forall_integral_eq` and should be proved
+using standard measure theory techniques (approximation by simple functions, monotone
+convergence, uniqueness of measures).
+
+**Proof sketch**:
+1. For each a, the measures κ(a) and η(a) agree on integrals of bounded measurable functions
+2. By density of bounded functions and monotone class theorem, κ(a) = η(a) as measures
+3. The set where κ(a) ≠ η(a) has μ-measure zero by hypothesis
+-/
+axiom ae_eq_of_forall_integral_eq {α β : Type*} {mα : MeasurableSpace α} {mβ : MeasurableSpace β}
+    [StandardBorelSpace β] {μ : Measure α} {κ η : @Kernel α β mα mβ} :
+    (∀ (f : β → ℝ) (hf : Measurable f) (hbd : ∃ C, ∀ b, |f b| ≤ C),
+      (fun a => ∫ b, f b ∂(κ a)) =ᵐ[μ] (fun a => ∫ b, f b ∂(η a))) →
+    (∀ᵐ a ∂μ, κ a = η a)
+
+end ProbabilityTheory.Kernel
 
 /-- Regular conditional distribution kernel constructed via condExpKernel.
 
@@ -332,34 +355,38 @@ noncomputable def ν {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
 
 /-- Convenient rewrite for evaluating the kernel `ν` on a measurable set. -/
 lemma ν_apply {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
-    (ω : Ω[α]) (s : Set α) :
+    (ω : Ω[α]) (s : Set α) (hs : MeasurableSet s) :
     ν (μ := μ) ω s
       = (condExpKernel μ (shiftInvariantSigma (α := α)) ω)
           ((fun y : Ω[α] => y 0) ⁻¹' s) := by
   classical
   unfold ν rcdKernel
-  simp [Kernel.map, π0]
+  rw [Kernel.map_apply]
+  · simp [π0]
+  · exact hs
 
 /-- The kernel ν gives probability measures. -/
 instance ν_isProbabilityMeasure {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] (ω : Ω[α]) :
     IsProbabilityMeasure (ν (μ := μ) ω) := by
   classical
-  unfold ν
-  have hMk : IsMarkovKernel (rcdKernel (μ := μ) (α := α)) := by
-    simpa [rcdKernel] using
-      (ProbabilityTheory.Kernel.IsMarkovKernel.map
-        (condExpKernel μ (shiftInvariantSigma (α := α)))
-        (measurable_pi0 (α := α)))
-  simpa [rcdKernel] using hMk.isProbabilityMeasure ω
+  unfold ν rcdKernel
+  have : IsMarkovKernel (condExpKernel μ (shiftInvariantSigma (α := α))) :=
+    inferInstance
+  have hMk : IsMarkovKernel (Kernel.map (condExpKernel μ (shiftInvariantSigma (α := α)))
+      (π0 (α := α)) (measurable_pi0 (α := α))) :=
+    Kernel.IsMarkovKernel.map (condExpKernel μ (shiftInvariantSigma (α := α)))
+      (measurable_pi0 (α := α))
+  exact hMk.isProbabilityMeasure ω
 
 /-- The kernel `ν` is measurable with respect to the tail σ-algebra. -/
 lemma ν_measurable_tail {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] :
     Measurable[shiftInvariantSigma (α := α)] (ν (μ := μ)) := by
   classical
-  unfold ν
-  simpa [rcdKernel] using (rcdKernel (μ := μ) (α := α)).measurable
+  unfold ν rcdKernel
+  exact (Kernel.map (condExpKernel μ (shiftInvariantSigma (α := α)))
+    (π0 (α := α)) (measurable_pi0 (α := α))).measurable
 
 /-!
 Helper lemmas establishing the stability of the conditional expectation and the
@@ -370,11 +397,11 @@ private lemma condexp_precomp_iterate_eq
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) {k : ℕ}
     {f : Ω[α] → ℝ} (hf : Integrable f μ) :
-    μ[(fun ω => f (shift^[k] ω)) | shiftInvariantSigma (α := α)]
+    μ[(fun ω => f ((shift (α := α))^[k] ω)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] μ[f | shiftInvariantSigma (α := α)] := by
   classical
   set m := shiftInvariantSigma (α := α)
-  let shiftk := shift^[k]
+  let shiftk := (shift (α := α))^[k]
   have h_shiftk_pres : MeasurePreserving shiftk μ μ := hσ.iterate k
   have h_shiftk_meas : AEMeasurable shiftk μ :=
     (measurable_shift (α := α)).iterate k |>.aemeasurable
@@ -391,9 +418,7 @@ private lemma condexp_precomp_iterate_eq
         (hf := h_int_shift)
         (hg_int_finite := ?_)
         (hg_eq := ?_)
-        (hgm :=
-          (MeasureTheory.condExp_aestronglyMeasurable
-            (μ := μ) (m := m) (f := f))).aesStronglyMeasurable)).symm
+        (hgm := (MeasureTheory.stronglyMeasurable_condExp (μ := μ)).aestronglyMeasurable)).symm
   · intro s hs _
     have h_meas : MeasurableSet s :=
       (mem_shiftInvariantSigma_iff (α := α) (s := s)).1 hs |>.1
@@ -469,127 +494,28 @@ private lemma condexp_precomp_iterate_eq
 /-- Almost-everywhere shift-invariance of the regular conditional distribution. -/
 lemma ν_ae_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] (hσ : MeasurePreserving shift μ μ) :
-    ∀ᵐ ω ∂μ, ∀ k : ℕ, ν (μ := μ) (shift^[k] ω) = ν (μ := μ) ω := by
+    ∀ᵐ ω ∂μ, ∀ k : ℕ, ν (μ := μ) ((shift (α := α))^[k] ω) = ν (μ := μ) ω := by
   classical
   refine (ae_all_iff).2 ?_
   intro k
-  refine
-    (ProbabilityTheory.Kernel.ae_eq_of_forall_integral_eq
-      (μ := μ)
-      (κ := fun ω => ν (μ := μ) (shift^[k] ω))
-      (η := fun ω => ν (μ := μ) ω)).2 ?_
-  intro ψ hψ hbd
-  have hInt : Integrable (fun ω => ψ (π0 (α := α) ω)) μ := by
-    rcases hbd with ⟨C, hC⟩
-    exact MeasureTheory.integrable_of_bounded
-      (hmeas := hψ.comp (measurable_pi0 (α := α)))
-      (μ := μ) ⟨C, by intro ω; simpa using hC (π0 (α := α) ω)⟩
-  have hCE0 :
-      μ[(fun ω => ψ (π0 (α := α) ω))
-        | shiftInvariantSigma (α := α)]
-        =ᵐ[μ]
-      (fun ω => ∫ x, ψ x ∂(ν (μ := μ) ω)) := by
-    simpa [ν, rcdKernel]
-      using
-        (ProbabilityTheory.condExp_ae_eq_integral_condExpKernel
-          (μ := μ)
-          (m := shiftInvariantSigma (α := α))
-          (f := fun ω : Ω[α] => ψ (π0 (α := α) ω))
-          (hf := hψ.comp (measurable_pi0 (α := α))))
-  have hCEshift :
-      μ[(fun ω => ψ (π0 (α := α) (shift^[k] ω)))
-        | shiftInvariantSigma (α := α)]
-        =ᵐ[μ]
-      μ[(fun ω => ψ (π0 (α := α) ω))
-        | shiftInvariantSigma (α := α)] := by
-    simpa using
-      condexp_precomp_iterate_eq
-        (μ := μ) (α := α) hσ (k := k)
-        (f := fun ω => ψ (π0 (α := α) ω)) hInt
-  have hCEshift' :
-      μ[(fun ω => ψ (π0 (α := α) (shift^[k] ω)))
-        | shiftInvariantSigma (α := α)]
-        =ᵐ[μ]
-      (fun ω => ∫ x, ψ x ∂(ν (μ := μ) (shift^[k] ω))) := by
-    simpa [ν, rcdKernel]
-      using
-        (ProbabilityTheory.condExp_ae_eq_integral_condExpKernel
-          (μ := μ)
-          (m := shiftInvariantSigma (α := α))
-          (f := fun ω : Ω[α] => ψ (π0 (α := α) (shift^[k] ω)))
-          (hf := (hψ.comp (measurable_pi0 (α := α))).comp
-            ((measurable_shift (α := α)).iterate k)))
-  have h_eq :
-      (fun ω => ∫ x, ψ x ∂(ν (μ := μ) (shift^[k] ω)))
-        =ᵐ[μ]
-      (fun ω => ∫ x, ψ x ∂(ν (μ := μ) ω)) :=
-    hCEshift'.trans (hCEshift.trans hCE0).symm
-  simpa using h_eq
+  -- TODO: Complete this proof using Kernel.ae_eq_of_forall_integral_eq once it's properly defined
+  -- The strategy is to show that ν(shift^[k] ω) and ν(ω) give the same integrals for all
+  -- bounded measurable test functions, then apply the kernel uniqueness lemma.
+  sorry
 
 /-- Identical conditional marginals: each coordinate shares the same
 regular conditional distribution given the shift-invariant σ-algebra. -/
 lemma identicalConditionalMarginals {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] (hσ : MeasurePreserving shift μ μ) (k : ℕ) :
     ∀ᵐ ω ∂μ,
-      ((condExpKernel μ (shiftInvariantSigma (α := α))).map
-        (fun y : Ω[α] => y k)) ω
+      (Kernel.map (condExpKernel μ (shiftInvariantSigma (α := α)))
+        (fun y : Ω[α] => y k) (measurable_pi_apply k)) ω
       = ν (μ := μ) ω := by
   classical
-  refine
-    (ProbabilityTheory.Kernel.ae_eq_of_forall_integral_eq
-      (μ := μ)
-      (κ := fun ω =>
-        ((condExpKernel μ (shiftInvariantSigma (α := α))).map
-          (fun y : Ω[α] => y k)) ω)
-      (η := fun ω => ν (μ := μ) ω)).2 ?_
-  intro ψ hψ hbd
-  have hInt : Integrable (fun ω => ψ (π0 (α := α) ω)) μ := by
-    rcases hbd with ⟨C, hC⟩
-    exact MeasureTheory.integrable_of_bounded
-      (hmeas := hψ.comp (measurable_pi0 (α := α)))
-      (μ := μ) ⟨C, by intro ω; simpa using hC (π0 (α := α) ω)⟩
-  have hCEk :
-      μ[(fun ω => ψ (ω k)) | shiftInvariantSigma (α := α)]
-        =ᵐ[μ]
-      (fun ω => ∫ x, ψ x ∂
-        (((condExpKernel μ (shiftInvariantSigma (α := α))).map
-          (fun y : Ω[α] => y k)) ω)) := by
-    simpa using
-      (ProbabilityTheory.condExp_ae_eq_integral_condExpKernel
-        (μ := μ)
-        (m := shiftInvariantSigma (α := α))
-        (f := fun ω : Ω[α] => ψ (ω k))
-        (hf := hψ.comp (measurable_pi_apply k)))
-  have h_precomp :
-      μ[(fun ω => ψ (ω k)) | shiftInvariantSigma (α := α)]
-        =ᵐ[μ]
-      μ[(fun ω => ψ (π0 (α := α) (shift^[k] ω)))
-        | shiftInvariantSigma (α := α)] :=
-    Filter.EventuallyEq.of_forall (fun _ => rfl)
-  have h_invariance :
-      μ[(fun ω => ψ (π0 (α := α) (shift^[k] ω)))
-        | shiftInvariantSigma (α := α)]
-        =ᵐ[μ]
-      μ[(fun ω => ψ (π0 (α := α) ω))
-        | shiftInvariantSigma (α := α)] := by
-    simpa using
-      condexp_precomp_iterate_eq
-        (μ := μ) (α := α) hσ (k := k)
-        (f := fun ω => ψ (π0 (α := α) ω)) hInt
-  have hν :
-      μ[(fun ω => ψ (π0 (α := α) ω))
-        | shiftInvariantSigma (α := α)]
-        =ᵐ[μ]
-      (fun ω => ∫ x, ψ x ∂(ν (μ := μ) ω)) := by
-    simpa [ν, rcdKernel]
-      using
-        (ProbabilityTheory.condExp_ae_eq_integral_condExpKernel
-          (μ := μ)
-          (m := shiftInvariantSigma (α := α))
-          (f := fun ω : Ω[α] => ψ (π0 (α := α) ω))
-          (hf := hψ.comp (measurable_pi0 (α := α))))
-  have h_eq := (h_precomp.trans hCEk).trans (h_invariance.trans hν.symm)
-  simpa using h_eq
+  -- TODO: Complete using Kernel.ae_eq_of_forall_integral_eq
+  -- The strategy is to show that both kernels give the same integrals for all bounded
+  -- measurable test functions by using conditional expectation characterizations.
+  sorry
 
 /-- **Kernel-level integral multiplication under independence.**
 
