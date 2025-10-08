@@ -360,8 +360,7 @@ lemma ν_apply {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelS
       = (condExpKernel μ (shiftInvariantSigma (α := α)) ω)
           ((fun y : Ω[α] => y 0) ⁻¹' s) := by
   unfold ν rcdKernel
-  rw [Kernel.map_apply _ _ hs]
-  simp [π0]
+  simp only [Kernel.map_apply' _ _ hs, π0]
 
 /-- The kernel ν gives probability measures. -/
 instance ν_isProbabilityMeasure {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
