@@ -415,11 +415,22 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
   -- By Pythagoras: ∫ X₂² = ∫ X₁² + ∫ (X₂ - X₁)²
   -- Since ∫ X₂² = ∫ X₁² by hypothesis, we get ∫ (X₂ - X₁)² = 0
 
-  sorry  -- TODO: Complete using:
-  -- 1. Expand ∫ (X₂ - X₁)² using integral_sub_sq or similar
-  -- 2. Use hmg to show ∫ X₁ * X₂ = ∫ X₁² (via setIntegral_condExp)
-  -- 3. Combine with hSecond to get ∫ (X₂ - X₁)² = 0
-  -- 4. Apply integral_sq_eq_zero to conclude X₁ =ᵐ X₂
+  sorry  -- TODO: Complete using L² orthogonality:
+  -- Mathlib lemmas identified:
+  -- 1. norm_sub_sq_real (x y : F) : ‖x - y‖² = ‖x‖² - 2⟪x,y⟫ + ‖y‖²
+  --    (from Mathlib.Analysis.InnerProductSpace.Basic)
+  -- 2. inner_condExpL2_left_eq_right : ⟪condExpL2 f, g⟫ = ⟪f, condExpL2 g⟫
+  --    (orthogonality of conditional expectation projection)
+  -- 3. eLpNorm_condExp_le : eLpNorm (μ[f|m]) 2 μ ≤ eLpNorm f 2 μ
+  --    (from ConditionalExpectation.Basic line 360)
+  -- 4. MemLp.condExpL2_ae_eq_condExp : converts between μ[·|m] and condExpL2
+  --
+  -- Strategy:
+  -- - Work in L²[μ]: use that X₁ = condExpL2(X₂) (orthogonal projection)
+  -- - Apply norm_sub_sq: ‖X₂ - X₁‖² = ‖X₂‖² - 2⟪X₂,X₁⟫ + ‖X₁‖²
+  -- - Use orthogonality: ⟪X₂ - X₁, X₁⟫ = 0 gives ⟪X₂,X₁⟫ = ⟪X₁,X₁⟫ = ‖X₁‖²
+  -- - Substitute: ‖X₂ - X₁‖² = ‖X₂‖² - ‖X₁‖² = 0 (by hSecond)
+  -- - Conclude X₁ =ᵐ X₂ from ‖X₂ - X₁‖² = 0 in L²
 
 /-! ### Reverse Martingale Convergence -/
 
