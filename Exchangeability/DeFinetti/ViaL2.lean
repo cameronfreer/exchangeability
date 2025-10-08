@@ -709,26 +709,39 @@ theorem weighted_sums_converge_L1
     have hG' : Tendsto F atTop (𝓝 G) := hG
 
     -- Extract measurable representative
-    refine ⟨G, G.aestronglyMeasurable.measurable_mk, G.memℒp, ?_⟩
-    intro ε hε
-    -- Use convergence of F to G
-    have : ∃ M, ∀ m ≥ M, dist (F m) G < ε := by
-      exact Metric.tendsto_atTop.mp hG' ε hε
-    obtain ⟨M, hM⟩ := this
-    refine ⟨M, fun m hm => ?_⟩
-    -- Convert dist back to eLpNorm
-    have hdist : dist (F m) G = ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - G ω) 1 μ) := by
-      simpa [F] using
-        dist_toLp_eq_eLpNorm_sub (hp0 := one_ne_zero) (hptop := ENNReal.coe_ne_top)
-          (hA_memLp 0 m) G.memℒp
-    rw [← hdist] at hM
-    have hreal : ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - G ω) 1 μ) < ε := hM m hm
-    have hfin : eLpNorm (fun ω => A 0 m ω - G ω) 1 μ ≠ ⊤ := by
-      exact (MemLp.sub (hA_memLp 0 m) G.memℒp).eLpNorm_ne_top
-    calc eLpNorm (fun ω => A 0 m ω - G ω) 1 μ
-        < ENNReal.ofReal (ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - G ω) 1 μ)) := by
-          rw [ENNReal.ofReal_toReal hfin]
-        _ < ENNReal.ofReal ε := by exact ENNReal.ofReal_lt_ofReal_iff hε |>.mpr hreal
+    -- G : Lp ℝ 1 μ, coerces to Ω → ℝ via ae-equivalence class
+    -- We need a genuinely measurable representative
+    let alpha := (Lp.aestronglyMeasurable G).mk G
+    have h_alpha_ae : G =ᵐ[μ] alpha := (Lp.aestronglyMeasurable G).ae_eq_mk
+    refine ⟨alpha, (Lp.aestronglyMeasurable G).measurable_mk, ?_, ?_⟩
+    · -- MemLp alpha 1 μ
+      -- mk preserves MemLp via ae-equality
+      exact MemLp.ae_eq h_alpha_ae (Lp.memLp G)
+    · -- Convergence: need to show A 0 m → alpha in L¹
+      intro ε hε
+      -- Use convergence of F to G in Lp metric
+      have : ∃ M, ∀ m ≥ M, dist (F m) G < ε := Metric.tendsto_atTop.mp hG' ε hε
+      obtain ⟨M, hM⟩ := this
+      refine ⟨M, fun m hm => ?_⟩
+      -- Convert: dist (F m) G relates to eLpNorm of A 0 m - G
+      -- Then use G =ᵐ[μ] alpha to get A 0 m - alpha
+      calc eLpNorm (fun ω => A 0 m ω - alpha ω) 1 μ
+          = eLpNorm (fun ω => A 0 m ω - G ω) 1 μ := by
+            apply eLpNorm_congr_ae
+            filter_upwards [h_alpha_ae] with ω hω
+            rw [hω]
+        _ < ENNReal.ofReal ε := by
+            -- dist (F m) G < ε, and dist equals eLpNorm.toReal
+            have hdist : dist (F m) G = ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - G ω) 1 μ) := by
+              simpa [F] using
+                dist_toLp_eq_eLpNorm_sub (hp0 := one_ne_zero) (hptop := ENNReal.coe_ne_top)
+                  (hA_memLp 0 m) (Lp.memLp G)
+            have hfin : eLpNorm (fun ω => A 0 m ω - G ω) 1 μ ≠ ⊤ := by
+              exact (MemLp.sub (hA_memLp 0 m) (Lp.memLp G)).eLpNorm_ne_top
+            have hdist_lt : dist (F m) G < ε := hM m hm
+            rw [hdist] at hdist_lt
+            -- Now hdist_lt : ENNReal.toReal (eLpNorm ...) < ε
+            exact ENNReal.lt_ofReal_iff_toReal_lt hfin hε |>.mpr hdist_lt
 
   obtain ⟨alpha_0, halpha_0_meas, halpha_0_mem, halpha_0_conv⟩ := h_exist_alpha_0
 
