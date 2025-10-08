@@ -4,8 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
 import Exchangeability.DeFinetti.L2Approach
-import Exchangeability.DeFinetti.CommonEnding
 import Exchangeability.Contractability
+-- NOTE: CommonEnding should be imported AFTER this file, not by it
+-- The architecture is: ViaL2 → intermediate result → CommonEnding → final theorem
 import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
