@@ -384,17 +384,19 @@ instance ν_isProbabilityMeasure {μ : Measure (Ω[α])} [IsProbabilityMeasure �
   -- rcdKernel is a Markov kernel (composition of map and comap preserves this)
   exact IsMarkovKernel.isProbabilityMeasure ω
 
-/-- The kernel `ν` is measurable with respect to the tail σ-algebra.
+/- The kernel `ν` is measurable with respect to the tail σ-algebra.
 
 Note: This property should follow from the construction via condExpKernel, but requires
 careful handling of measurable space parameters. The condExpKernel is defined as
 `@Kernel Ω Ω m mΩ`, i.e., measurable w.r.t. the sub-σ-algebra m on the source.
 However, map and comap operations may not preserve this explicit typing.
-This lemma may not be needed for the main results. -/
+This lemma may not be needed for the main results, so it's commented out for now. -/
+/-
 lemma ν_measurable_tail {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] :
     Measurable[shiftInvariantSigma (α := α)] (ν (μ := μ)) := by
   sorry  -- TODO: Requires reformulation or may not be necessary
+-/
 
 /-!
 Helper lemmas establishing the stability of the conditional expectation and the
