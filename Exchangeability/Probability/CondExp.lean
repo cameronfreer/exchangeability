@@ -224,19 +224,27 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
       -- LHS: Show ∫ in F ∩ G, g = (μ (F ∩ G ∩ H)).toReal
       rw [rhs_eq]
 
-      -- TODO: This proof requires:
-      -- 1. Use h_prod: μ⟦F ∩ H | mG⟧ =ᵐ[μ] μ⟦F | mG⟧ * μ⟦H | mG⟧
-      -- 2. Integrate both sides over G using setIntegral_condExp
-      -- 3. Key step: show ∫ in G, F.indicator ω * g ω ∂μ = ∫ in G, (F ∩ H).indicator
+      -- TODO: Complete using these verified mathlib lemmas:
       --
-      -- Mathlib lemmas needed:
-      -- - setIntegral_condExp (to relate ∫ in G, g and ∫ in G, H.indicator)
-      -- - integral_congr_ae (to use the a.e. equality from h_prod)
-      -- - integral_mul_indicator or similar for indicator manipulation
+      -- Key lemmas found in mathlib:
+      -- 1. setIntegral_condExp (hm : m ≤ m₀) (hf : Integrable f μ) (hs : MeasurableSet[m] s) :
+      --      ∫ x in s, (μ[f|m]) x ∂μ = ∫ x in s, f x ∂μ
+      --    (from ConditionalExpectation.Basic line 214)
       --
-      -- The key insight: both LHS and RHS equal μ(F ∩ G ∩ H).toReal
-      -- - RHS is immediate from definition of indicator integral
-      -- - LHS follows from integrating the product formula over G
+      -- 2. condExp_mul_of_stronglyMeasurable_left {f g : α → ℝ} (hf : StronglyMeasurable[m] f)
+      --      (hfg : Integrable (f * g) μ) (hg : Integrable g μ) : μ[f * g|m] =ᵐ[μ] f * μ[g|m]
+      --    (from ConditionalExpectation.Real line 295)
+      --
+      -- Strategy:
+      -- Since g = μ[H.indicator | mG], we have by setIntegral_condExp on G (which is mG-measurable):
+      --   ∫ in G, g = ∫ in G, H.indicator
+      --
+      -- For F ∩ G: rewrite as ∫ in G, F.indicator * g using indicator properties
+      -- Then use that F.indicator is mF-measurable (hence can condition on mG):
+      --   μ[F.indicator * H.indicator | mG] = F.indicator * μ[H.indicator | mG] = F.indicator * g
+      -- Integrate over G to get the result.
+      --
+      -- The challenge: F.indicator is not mG-measurable, so we need the product formula from h_prod
       sorry
     have h_dynkin :
         ∀ {S} (hS : MeasurableSet[mF ⊔ mG] S),
