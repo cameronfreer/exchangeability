@@ -1122,7 +1122,57 @@ theorem condexp_cylinder_factorizes {μ : Measure (Ω[α])} [IsProbabilityMeasur
 
 end ExtremeMembers
 
--- TODO: Add main theorem when proof is complete
--- theorem deFinetti_viaKoopman := ...
+/-- **de Finetti's Theorem via Koopman Operator (Main Result)**
+
+For an exchangeable sequence on a standard Borel space, there exists a random
+probability measure ν such that, conditioned on the tail σ-algebra, the sequence
+is i.i.d. with law ν.
+
+**Statement**: If (ξₙ) is an exchangeable sequence of random variables taking values
+in a standard Borel space α, then there exists a regular conditional distribution
+ν : Ω[α] → Measure α such that:
+
+1. ν(ω) is a probability measure for μ-a.e. ω
+2. Conditional on the tail σ-algebra, the coordinates are i.i.d. with law ν(ω)
+3. The marginal distribution μ equals ∫ ν(ω)^⊗ℕ dμ(ω)
+
+**Proof strategy** (Kallenberg's "first proof"):
+1. Use shift-invariance to apply Mean Ergodic Theorem
+2. Construct regular conditional distribution ν via condExpKernel
+3. Show ν is shift-invariant (extremeMembers_agree)
+4. Prove conditional independence via factorization (condexp_cylinder_factorizes)
+5. Apply monotone class theorem to extend from cylinders to full σ-algebra
+
+**Current status**: Main infrastructure in place, remaining gaps:
+- Conditional independence establishment (needs `Kernel.iIndepFun` development)
+- Shift-invariance circularity resolution
+- Several large proofs requiring mathlib additions
+
+**References**:
+- Kallenberg (2005), "Probabilistic Symmetries and Invariance Principles", Theorem 1.1
+  "First proof" approach, pages 26-27
+-/
+theorem deFinetti_viaKoopman
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ) :
+    ∃ (ν : Ω[α] → Measure α),
+      (∀ᵐ ω ∂μ, IsProbabilityMeasure (ν ω)) ∧
+      (∀ (m : ℕ) (fs : Fin m → α → ℝ),
+        (∀ k, Measurable (fs k)) →
+        (∀ k, ∃ C, ∀ x, |fs k x| ≤ C) →
+        μ[fun ω => ∏ k, fs k (ω k) | shiftInvariantSigma (α := α)]
+          =ᵐ[μ] fun ω => ∏ k, ∫ x, fs k x ∂(ν ω)) := by
+  -- Use the regular conditional distribution constructed via condExpKernel
+  use ν (μ := μ)
+  constructor
+  · -- ν(ω) is a probability measure a.e.
+    apply ae_of_all
+    intro ω
+    exact ν_isProbabilityMeasure (μ := μ) ω
+  · -- Conditional factorization
+    intro m fs hmeas hbd
+    -- This follows from condexp_product_factorization
+    -- which requires conditional independence
+    sorry  -- TODO: Complete using condexp_product_factorization
 
 end Exchangeability.DeFinetti.ViaKoopman
