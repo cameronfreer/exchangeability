@@ -530,8 +530,18 @@ lemma ν_ae_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
   -- For the LHS: ∫ f dν(shift^[k] ω) = same conditional expectation at shift^[k] ω
   -- But conditional expectation w.r.t. shift-invariant σ-algebra is preserved by shift^[k]
 
-  sorry  -- TODO: Express both sides using condExp_ae_eq_integral_condExpKernel
-        -- and apply condexp_precomp_iterate_eq
+  -- The key insight: ν(ω) is defined via condExpKernel composed with map π₀
+  -- So ∫ f dν(ω) = ∫ f d((condExpKernel ω).map π₀)
+  --              = ∫ (f ∘ π₀) d(condExpKernel ω)
+  -- And condExpKernel at ω is measurable w.r.t. shiftInvariantSigma
+
+  -- Since functions measurable w.r.t. shiftInvariantSigma are shift-invariant,
+  -- condExpKernel (shift^[k] ω) should equal condExpKernel ω
+  -- This would give us that the integrals are equal
+
+  -- However, this requires a lemma about condExpKernel being shift-invariant,
+  -- which is essentially what we're trying to prove here
+  sorry  -- TODO: This is circular - need a different approach or accept as axiom
 
 /-- Identical conditional marginals: each coordinate shares the same
 regular conditional distribution given the shift-invariant σ-algebra. -/
