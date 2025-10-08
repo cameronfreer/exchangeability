@@ -47,6 +47,40 @@ them:
 axiom conditionallyIID_of_exchangeable : ...
 ```
 
+### Avoid References to Development History
+
+**Don't reference earlier drafts, previous versions, or development history in comments.**
+
+Documentation should describe what the code *is* and *does*, not what it *was* or how it
+evolved during development. References to "earlier drafts", "previous versions", or
+"originally" make comments outdated and confusing.
+
+❌ **Bad:**
+```lean
+/-- In earlier drafts, this used a custom axiom, but now uses standard mathlib. -/
+```
+
+```lean
+/-- Originally this was defined differently, but we changed the approach. -/
+```
+
+```lean
+/-- This replaces the old implementation that had performance issues. -/
+```
+
+✅ **Good:**
+```lean
+/-- This construction uses mathlib's standard measure theory infrastructure. -/
+```
+
+```lean
+/-- Uses a direct construction via the Koopman representation. -/
+```
+
+**Rationale:** Code comments should be timeless documentation of the current state.
+Development history belongs in git commits, not in source comments. Historical references
+become confusing over time and add no value to understanding the code.
+
 ### Mathematical Axioms (Choice, etc.)
 
 Discussion of mathematical axioms like the Axiom of Choice is perfectly acceptable in
