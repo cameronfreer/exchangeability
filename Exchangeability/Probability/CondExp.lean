@@ -207,33 +207,52 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
           ∫ ω in F ∩ G, g ω ∂μ
             = ∫ ω in F ∩ G, (H.indicator fun _ : Ω => (1 : ℝ)) ω ∂μ := by
       intro F hF G hG
-      -- TODO: Complete the rectangle proof
-      -- Strategy (partially implemented):
-      -- 1. Product formula h_prod F hF H hH gives:
-      --    μ[(F ∩ H).indicator 1 | mG] =ᵐ μ[F.indicator 1 | mG] * g
-      -- 2. Integrate over G and use setIntegral_condExp:
-      --    ∫_G (F ∩ H).indicator = ∫_G μ[(F ∩ H).indicator | mG]
-      --                          = ∫_G μ[F.indicator | mG] * g (by product formula)
-      -- 3. The key missing step: show ∫_G μ[F.indicator | mG] * g = ∫_G F.indicator * g
-      --    This requires either:
-      --    a) A pull-out lemma: ∫ h * μ[f | m] = ∫ μ[h * f | m] when h is m-measurable
-      --    b) Tower property: use that we can condition on mF ⊔ mG, then on mG
-      -- 4. Similarly show ∫_G F.indicator * g = ∫_{F ∩ G} g
-      -- 5. And ∫_G (F ∩ H).indicator = ∫_{F ∩ G ∩ H} 1 = ∫_{F ∩ G} H.indicator
+      -- Since g = μ[H.indicator 1 | mG], we have by setIntegral_condExp:
+      -- ∫ in S, g = ∫ in S, H.indicator for any mG-measurable S
+      -- But F ∩ G is not mG-measurable. However, we can show the equality directly.
+
+      -- The key: both sides equal (μ (F ∩ G ∩ H)).toReal
+      have hF' : MeasurableSet[m₀] F := hmF _ hF
+      have hG' : MeasurableSet[m₀] G := hmG _ hG
+
+      -- RHS is straightforward
+      have rhs_eq : ∫ ω in F ∩ G, H.indicator (fun _ => (1 : ℝ)) ω ∂μ = (μ (F ∩ G ∩ H)).toReal := by
+        rw [setIntegral_indicator hH']
+        simp [Measure.real_def, Set.inter_assoc]
+
+      -- LHS: since g = μ[H.indicator 1 | mG] and F ∩ G ⊆ univ with F ∩ G m₀-measurable
+      rw [rhs_eq]
+
+      -- Now we need: ∫ in F ∩ G, g = (μ (F ∩ G ∩ H)).toReal
+      -- Since g = μ[H.indicator | mG], we use setIntegral_condExp
+      -- But F ∩ G is not mG-measurable, so we need a different approach
+
+      -- Alternative: use that ∫ g = ∫ H.indicator on mG-measurable sets, then extend
       sorry
     have h_dynkin :
         ∀ {S} (hS : MeasurableSet[mF ⊔ mG] S),
           ∫ ω in S, g ω ∂μ
             = ∫ ω in S, (H.indicator fun _ : Ω => (1 : ℝ)) ω ∂μ := by
       intro S hS
-      -- TODO: Extend h_rect via Dynkin's π-λ theorem
-      -- Strategy:
-      -- 1. Define the Dynkin system D := {S | ∫ in S, g = ∫ in S, H.indicator 1}
-      -- 2. Show D is a Dynkin system (contains univ, closed under complements and disjoint unions)
-      -- 3. Show D contains all rectangles F ∩ G (from h_rect)
-      -- 4. The rectangles form a π-system generating mF ⊔ mG
-      -- 5. Apply MeasurableSpace.induction_on_inter or similar to conclude D = all mF ⊔ mG sets
-      -- For now, this requires significant measure theory machinery
+      -- Apply induction_on_inter: the property C(S) := "∫ in S, g = ∫ in S, H.indicator 1"
+      -- satisfies the Dynkin system properties and holds on rectangles F ∩ G
+      have hmFG : mF ⊔ mG ≤ m₀ := sup_le hmF hmG
+
+      -- Define the rectangles: {F ∩ G | F ∈ mF, G ∈ mG}
+      let rects : Set (Set Ω) := {s | ∃ (F : Set Ω) (G : Set Ω),
+        MeasurableSet[mF] F ∧ MeasurableSet[mG] G ∧ s = F ∩ G}
+
+      -- Rectangles form a π-system
+      have h_pi : IsPiSystem rects := by sorry
+
+      -- The property holds on rectangles (this is h_rect)
+      have h_rects : ∀ s ∈ rects, ∫ ω in s, g ω ∂μ = ∫ ω in s, H.indicator (fun _ => (1 : ℝ)) ω ∂μ := by
+        intro s hs
+        obtain ⟨F, G, hF, hG, rfl⟩ := hs
+        exact h_rect hF hG
+
+      -- The property forms a Dynkin system
+      -- (contains ∅, closed under complements and countable disjoint unions with equal integrals)
       sorry
     have h_proj :
         μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
