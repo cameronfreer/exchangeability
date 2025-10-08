@@ -127,6 +127,29 @@ lemma forall_mem_erase {γ : Type*} [DecidableEq γ]
 
 end SequenceShift
 
+section TailCylinders
+
+variable {α}
+
+/-- Cylinder on the first `r` tail coordinates (shifted by one). -/
+def tailCylinder (r : ℕ) (C : Fin r → Set α) : Set (ℕ → α) :=
+  {f | ∀ i : Fin r, f (i.1 + 1) ∈ C i}
+
+variable [MeasurableSpace α]
+
+/-- Basic measurability for tail cylinders. -/
+lemma tailCylinder_measurable {r : ℕ} {C : Fin r → Set α}
+    (hC : ∀ i, MeasurableSet (C i)) :
+    MeasurableSet (tailCylinder (α:=α) r C) := by
+  classical
+  refine MeasurableSet.iInter ?_
+  intro i
+  have hi : Measurable fun f : ℕ → α => f (i.1 + 1) :=
+    measurable_pi_apply (i.1 + 1)
+  simpa [tailCylinder] using hi (hC i)
+
+end TailCylinders
+
 section FinsetOrder
 
 open Finset
@@ -464,104 +487,52 @@ lemma contractable_dist_eq_on_first_r_tail
 
   -- unfold and conclude
   simpa [hE₁, hE₂, Measure.map_apply, hA] using this
-  -- Possible approaches:
-  -- 1. Split into cases 0 ∈ s and 0 ∉ s
-  -- 2. Use a larger index set that includes both k and m explicitly
-  -- 3. Use conditional probability / factorization
 
-  /-
-  -- Previous attempt (has type errors):
-  let T : Set (Fin (n + 1) → α) :=
-    {f | (if h0 : 0 ∈ s then f 0 ∈ B ∩ t 0 h0 else f 0 ∈ B) ∧
-         ∀ i : Fin n, f (Fin.succ i) ∈ t0 (tail i) (htail_mem i)}
-  have h_m_event : {ω | X m ω ∈ B ∧ zeroConstraint ω ∧ tailCondition ω} =
-                   {ω | (fun ω i => X (k_map_m i) ω) ω ∈ T} := by
-    ext ω
-    simp only [Set.mem_setOf_eq, T, k_map_m, k_m, zeroConstraint, tailCondition]
-    constructor <;> intro h
-    · obtain ⟨hB, hzero, htail⟩ := h
-      constructor
-      · by_cases h0 : 0 ∈ s
-        · simp [h0, Fin.cases]
-          exact ⟨hB, by simpa [h0] using hzero⟩
-        · simp [h0, Fin.cases]
-          exact hB
-      · intro i
-        have hi_mem := htail_mem i
-        simp [Fin.cases]
-        exact htail (tail i) hi_mem
-    · obtain ⟨hfirst, htail_cond⟩ := h
-      refine ⟨?_, ?_, ?_⟩
-      · by_cases h0 : 0 ∈ s
-        · simp [h0, Fin.cases] at hfirst
-          exact hfirst.1
-        · simp [h0, Fin.cases] at hfirst
-          exact hfirst
-      · by_cases h0 : 0 ∈ s
-        · simp [h0, Fin.cases] at hfirst
-          simp [h0]
-          exact hfirst.2
-        · simp [h0]
-      · intro i hi
-        -- For i ∈ s0, orderEmbOfFin_surj gives us j with tail j = i
-        obtain ⟨j, hj_eq⟩ := orderEmbOfFin_surj s0 i hi
-        specialize htail_cond j
-        simp [Fin.cases] at htail_cond
-        -- htail_cond : X (m + tail j) ω ∈ t0 (tail j) (htail_mem j)
-        -- Goal: X (m + i) ω ∈ t0 i hi
-        -- hj_eq : tail j = i (since tail j is defined as orderEmbOfFin j)
-        convert htail_cond using 3
-        -- Need to show i = tail j
-        exact hj_eq.symm
+/-- Equality of pushforward measures on basic rectangles using the first-tail cylinders. -/
+lemma contractable_dist_eq_on_rectangles
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {X : ℕ → Ω → α} (hX : Contractable μ X)
+    (k m : ℕ) (hk : k ≤ m) :
+    ∀ (r : ℕ) (B : Set α) (hB : MeasurableSet B)
+      (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i)),
+      (Measure.map (fun ω => (X m ω, shiftRV X m ω)) μ)
+          (B ×ˢ tailCylinder (α:=α) r C)
+        =
+      (Measure.map (fun ω => (X k ω, shiftRV X m ω)) μ)
+          (B ×ˢ tailCylinder (α:=α) r C) := by
+  classical
+  intro r B hB C hC
+  let ψ₁ : Ω → α × (ℕ → α) := fun ω => (X m ω, shiftRV X m ω)
+  let ψ₂ : Ω → α × (ℕ → α) := fun ω => (X k ω, shiftRV X m ω)
+  have hmeas :
+      MeasurableSet (B ×ˢ tailCylinder (α:=α) r C) :=
+    hB.prod (tailCylinder_measurable (α:=α) hC)
+  have hpre₁ :
+      ψ₁ ⁻¹' (B ×ˢ tailCylinder (α:=α) r C)
+        = {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
+    ext ω; simp [ψ₁, tailCylinder, shiftRV, Set.mem_prod, Set.preimage,
+      Set.mem_setOf_eq]
+  have hpre₂ :
+      ψ₂ ⁻¹' (B ×ˢ tailCylinder (α:=α) r C)
+        = {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
+    ext ω; simp [ψ₂, tailCylinder, shiftRV, Set.mem_prod, Set.preimage,
+      Set.mem_setOf_eq]
+  have h :=
+    contractable_dist_eq_on_first_r_tail (μ:=μ) (X:=X) hX k m r hk B hB C hC
+  simpa [ψ₁, ψ₂, Measure.map_apply, hmeas, hpre₁, hpre₂] using h
 
-  have h_k_event : {ω | X k ω ∈ B ∧ zeroConstraint ω ∧ tailCondition ω} =
-                   {ω | (fun ω i => X (k_map_k i) ω) ω ∈ T} := by
-    ext ω
-    simp only [Set.mem_setOf_eq, T, k_map_k, zeroConstraint, tailCondition]
-    constructor <;> intro h
-    · obtain ⟨hB, hzero, htail⟩ := h
-      constructor
-      · by_cases h0 : 0 ∈ s
-        · simp [h0, Fin.cases]
-          refine ⟨hB, ?_⟩
-          simp [h0] at hzero
-          exact hzero
-        · simp [h0, Fin.cases]
-          exact hB
-      · intro i
-        have hi_mem := htail_mem i
-        simp [Fin.cases]
-        exact htail (tail i) hi_mem
-    · obtain ⟨hfirst, htail_cond⟩ := h
-      refine ⟨?_, ?_, ?_⟩
-      · by_cases h0 : 0 ∈ s
-        · simp [h0, Fin.cases] at hfirst
-          exact hfirst.1
-        · simp [h0, Fin.cases] at hfirst
-          exact hfirst
-      · by_cases h0 : 0 ∈ s
-        · simp [h0, Fin.cases] at hfirst
-          simp [h0]
-          exact hfirst.2
-        · simp [h0]
-      · intro i hi
-        -- Same as above: use orderEmbOfFin_surj
-        obtain ⟨j, hj_eq⟩ := orderEmbOfFin_surj s0 i hi
-        specialize htail_cond j
-        simp [Fin.cases] at htail_cond
-        convert htail_cond using 3
-        exact hj_eq.symm
-
-  -- Apply contractability: both sides map to same distribution
-  have h_contract_m := hX (n + 1) k_map_m hk_map_m_mono
-  have h_contract_k := hX (n + 1) k_map_k hk_map_k_mono
-
-  -- Rewrite using the event identifications
-  rw [h_event_rewrite, h_event_rewrite_k, h_m_event, h_k_event]
-
-  -- Both are preimages of T under measure-preserving maps
-  sorry  -- Final step: use h_contract_m and h_contract_k to show measure equality
-
+/-- If two measures on `α × (ℕ → α)` agree on rectangles coming from the first-tail
+coordinates, then they are equal. -/
+lemma prod_path_measure_ext
+    {μ ν : Measure (α × (ℕ → α))}
+    (h : ∀ (r : ℕ) (B : Set α) (hB : MeasurableSet B)
+          (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i)),
+          μ (B ×ˢ tailCylinder (α:=α) r C)
+            = ν (B ×ˢ tailCylinder (α:=α) r C)) :
+    μ = ν := by
+  -- TODO: standard π–λ / Dynkin systems argument using that these rectangles
+  -- generate the product σ-algebra on `α × (ℕ → α)`.
+  sorry
 /-- Helper lemma: contractability gives the key distributional equality.
 
 If `X` is contractable, then for any `k ≤ m`:
@@ -574,19 +545,14 @@ lemma contractable_dist_eq
     {X : ℕ → Ω → α} (hX : Contractable μ X) (k m : ℕ) (hk : k ≤ m) :
     Measure.map (fun ω => (X m ω, shiftRV X m ω)) μ
       = Measure.map (fun ω => (X k ω, shiftRV X m ω)) μ := by
-  -- Strategy: Use contractable_dist_eq_on_cylinders to show equality on cylinder sets,
-  -- then extend to all measurable sets via the π-λ theorem.
-  --
-  -- 1. Cylinder sets of the form {(a, f) | a ∈ B, f(i) ∈ t_i for i ∈ s} generate
-  --    the product σ-algebra on α × (ℕ → α)
-  -- 2. By contractable_dist_eq_on_cylinders, both measures agree on all such cylinders
-  -- 3. Apply Measure.ext_of_generateFrom_of_cover (π-λ theorem) to conclude equality
-  --
-  -- Required API:
-  -- - MeasureTheory.generate_from_prod_cylinder: cylinders generate product σ-algebra
-  -- - Measure.ext_of_generateFrom_of_cover: π-λ theorem for measures
-  -- - Formalization of cylinder sets in the product space
-  sorry
+  classical
+  have hrect :=
+    contractable_dist_eq_on_rectangles (μ:=μ) (X:=X) hX k m hk
+  refine prod_path_measure_ext
+    (μ:=Measure.map (fun ω => (X m ω, shiftRV X m ω)) μ)
+    (ν:=Measure.map (fun ω => (X k ω, shiftRV X m ω)) μ) ?_
+  intro r B hB C hC
+  simpa using hrect r B hB C hC
 
 /-- **Key convergence result:** The extreme members agree after conditioning on the tail σ-algebra.
 
