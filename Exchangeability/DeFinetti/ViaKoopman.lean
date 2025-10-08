@@ -1168,8 +1168,8 @@ theorem deFinetti_viaKoopman
     exact ν_isProbabilityMeasure (μ := μ) ω
   · -- Conditional factorization
     intro m fs hmeas hbd
-    -- This follows from condexp_product_factorization
-    -- which requires conditional independence
-    sorry  -- TODO: Complete using condexp_product_factorization
+    -- Apply condexp_product_factorization
+    -- (which currently has sorry, pending conditional independence setup)
+    exact condexp_product_factorization hσ m fs hmeas hbd True.intro
 
 end Exchangeability.DeFinetti.ViaKoopman
