@@ -221,19 +221,22 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         rw [setIntegral_indicator hH']
         simp [Measure.real_def, Set.inter_assoc]
 
-      -- Strategy for LHS: Show ∫ in F ∩ G, g = (μ (F ∩ G ∩ H)).toReal
-      -- where g = μ[H.indicator 1 | mG]
-      --
-      -- Approach: Use the product formula from h_prod.
-      -- h_prod tells us: μ⟦F ∩ H | mG⟧ =ᵐ[μ] μ⟦F | mG⟧ * μ⟦H | mG⟧
-      --
-      -- Key steps needed:
-      -- 1. Rewrite LHS as ∫ in G, F.indicator ω * g ω ∂μ (F.indicator pulls out of G-integral)
-      -- 2. Use that g = μ[H.indicator 1 | mG] and apply setIntegral_condExp on G
-      -- 3. Get ∫ in G, F.indicator * H.indicator ∂μ = μ(F ∩ G ∩ H) using product formula
-      --
-      -- TODO: Complete using setIntegral_condExp and product formula manipulation
+      -- LHS: Show ∫ in F ∩ G, g = (μ (F ∩ G ∩ H)).toReal
       rw [rhs_eq]
+
+      -- TODO: This proof requires:
+      -- 1. Use h_prod: μ⟦F ∩ H | mG⟧ =ᵐ[μ] μ⟦F | mG⟧ * μ⟦H | mG⟧
+      -- 2. Integrate both sides over G using setIntegral_condExp
+      -- 3. Key step: show ∫ in G, F.indicator ω * g ω ∂μ = ∫ in G, (F ∩ H).indicator
+      --
+      -- Mathlib lemmas needed:
+      -- - setIntegral_condExp (to relate ∫ in G, g and ∫ in G, H.indicator)
+      -- - integral_congr_ae (to use the a.e. equality from h_prod)
+      -- - integral_mul_indicator or similar for indicator manipulation
+      --
+      -- The key insight: both LHS and RHS equal μ(F ∩ G ∩ H).toReal
+      -- - RHS is immediate from definition of indicator integral
+      -- - LHS follows from integrating the product formula over G
       sorry
     have h_dynkin :
         ∀ {S} (hS : MeasurableSet[mF ⊔ mG] S),
@@ -264,17 +267,29 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         obtain ⟨F, G, hF, hG, rfl⟩ := hs
         exact h_rect hF hG
 
-      -- Strategy: Apply Dynkin π-λ theorem (induction_on_inter from PiSystem.lean)
-      -- with the property C(S) := "∫ in S, g = ∫ in S, H.indicator"
+      -- TODO: Apply Dynkin π-λ theorem using induction_on_inter
       --
-      -- Need to verify:
-      -- 1. mF ⊔ mG = generateFrom rects (rects generates the product σ-algebra)
-      -- 2. C holds on ∅ (trivial)
-      -- 3. C holds on rects (this is h_rects above)
-      -- 4. C is closed under complements (use integral additivity)
-      -- 5. C is closed under countable disjoint unions (use monotone convergence)
+      -- Strategy: Use induction_on_inter with C(S) := "∫ in S, g = ∫ in S, H.indicator"
       --
-      -- TODO: Complete using induction_on_inter from Mathlib.MeasureTheory.PiSystem
+      -- Required steps:
+      -- 1. Prove: mF ⊔ mG = generateFrom rects
+      --    (Rectangles generate the product σ-algebra)
+      --    Mathlib lemma: May need product σ-algebra characterization
+      --
+      -- 2. Verify C holds on ∅: ∫ in ∅, g = ∫ in ∅, H.indicator = 0 (trivial)
+      --
+      -- 3. Verify C holds on rects: this is h_rects above ✓
+      --
+      -- 4. Prove C closed under complements:
+      --    If ∫ in S, g = ∫ in S, H.indicator, then ∫ in Sᶜ, g = ∫ in Sᶜ, H.indicator
+      --    Use: ∫ in univ = ∫ in S + ∫ in Sᶜ and both g and H.indicator have same total integral
+      --    Mathlib: integral_add_compl, measure_theory integrability lemmas
+      --
+      -- 5. Prove C closed under countable disjoint unions:
+      --    If ∫ in fᵢ, g = ∫ in fᵢ, H.indicator for all i, and fᵢ disjoint,
+      --    then ∫ in ⋃ᵢ fᵢ, g = ∫ in ⋃ᵢ fᵢ, H.indicator
+      --    Use: lintegral_iUnion for disjoint unions (monotone convergence)
+      --    Mathlib: MeasureTheory.lintegral_iUnion, integral_iUnion
       sorry
     have h_proj :
         μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
@@ -325,12 +340,29 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         · simp [Set.indicator, h1, h2]
       · simp [Set.indicator, h1]
 
-    -- Step 3: Use that t1.indicator is mF-measurable, hence mF ⊔ mG-measurable
-    -- TODO: Complete using pull-out property and tower property
-    -- The key is to show:
-    -- μ[(t1 ∩ t2).indicator | mG] = μ[t1.indicator * t2.indicator | mG]
-    --                               = t1.indicator * μ[t2.indicator | mG]  (pull-out, since t1.indicator is mF ⊔ mG-meas)
-    --                               = μ[t1.indicator | mG] * μ[t2.indicator | mG]  (need to justify this step)
+    -- TODO: Complete reverse direction
+    --
+    -- Goal: Show μ⟦t1 ∩ t2 | mG⟧ =ᵐ[μ] μ⟦t1 | mG⟧ * μ⟦t2 | mG⟧
+    -- Given: hProjt2: μ[t2.indicator | mF ⊔ mG] =ᵐ[μ] μ[t2.indicator | mG]
+    --
+    -- Strategy outline:
+    -- 1. Use indicator_prod: (t1 ∩ t2).indicator = t1.indicator * t2.indicator ✓
+    -- 2. Apply condExp to both sides: μ[(t1 ∩ t2).indicator | mG] = μ[t1.indicator * t2.indicator | mG]
+    -- 3. Key issue: t1.indicator is mF-measurable, not mG-measurable
+    --    Cannot directly pull out t1.indicator from the conditional expectation
+    --
+    -- Alternative approach needed:
+    -- - Use tower property: μ[· | mG] = μ[μ[· | mF ⊔ mG] | mG]
+    -- - Apply hProjt2 to relate t2 conditioning
+    -- - May need uniqueness of conditional expectation
+    --
+    -- This direction is subtle and may require showing that the projection property
+    -- characterizes conditional independence in a different way.
+    --
+    -- Mathlib lemmas potentially needed:
+    -- - condExp_condExp_of_le (tower property)
+    -- - condExp_stronglyMeasurable (for mF-measurable functions)
+    -- - ae_eq_condExp_of_forall_setIntegral_eq (uniqueness)
     sorry
 
 /-- If conditional probabilities agree a.e. for a π-system generating ℋ,
