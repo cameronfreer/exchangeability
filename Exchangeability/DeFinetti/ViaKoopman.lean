@@ -574,15 +574,22 @@ lemma identicalConditionalMarginals {μ : Measure (Ω[α])} [IsProbabilityMeasur
   -- By definition of ν, the 0-th marginal kernel is the pushforward via π₀
   -- Using coord_k_eq_coord_0_shift_k: πₖ = π₀ ∘ shift^[k]
 
-  -- The key insight: the k-th marginal at ω is ν(shift^[k] ω)
-  -- By ν_ae_shiftInvariant, ν(shift^[k] ω) = ν(ω) a.e.
+  -- Rewrite using the coordinate equality
+  have h_coord : (fun y : Ω[α] => y k) = (fun y => y 0) ∘ (shift (α := α))^[k] :=
+    coord_k_eq_coord_0_shift_k k
 
-  -- First, express the LHS in terms of ν evaluated at shifted points
-  -- have h_lhs : ∀ᵐ ω ∂μ, (LHS kernel) ω = ν(shift^[k] ω) := by ...
+  -- This would allow us to rewrite the kernel.map
+  -- Then use that composing with shift corresponds to evaluating at shifted point
+  -- Finally apply ν_ae_shiftInvariant
 
-  -- Then apply ν_ae_shiftInvariant to get ν(shift^[k] ω) = ν(ω)
+  -- However, this requires showing:
+  -- (condExpKernel ω).map πₖ = (condExpKernel ω).map (π₀ ∘ shift^[k])
+  --                          = ((condExpKernel ω).map π₀).comap shift^[k]  (if this holds)
+  --                          = ν(ω).comap shift^[k]                        (by definition of ν)
+  -- But this isn't quite right since condExpKernel is evaluated at ω, not composed with shift
 
-  sorry  -- TODO: Show LHS = ν(shift^[k] ω), then use ν_ae_shiftInvariant
+  -- The correct approach needs to use that condExpKernel respects shift-invariance
+  sorry  -- TODO: Needs careful kernel composition reasoning or use ν_ae_shiftInvariant directly
 
 /-- **Kernel-level integral multiplication under independence.**
 
@@ -739,19 +746,24 @@ theorem condexp_product_factorization
     (hciid : True) :
     μ[fun ω => ∏ k, fs k (ω (k : ℕ)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω)) := by
-  sorry
-  /-
   classical
-  induction' m with m ih generalizing fs
-  · have h_const :
-        μ[(fun _ : Ω[α] => (1 : ℝ)) | shiftInvariantSigma (α := α)]
-          = fun _ : Ω[α] => (1 : ℝ) :=
-      MeasureTheory.condExp_const (μ := μ)
-        (m := shiftInvariantSigma (α := α))
-        (hm := shiftInvariantSigma_le (α := α)) (c := (1 : ℝ))
-    refine Filter.EventuallyEq.of_forall ?_
-    intro ω
-    simp [h_const]
+  induction m with
+  | zero =>
+    -- Base case: m = 0, product is 1
+    -- When m = 0, both sides are constant 1
+    simp only [Finset.univ_eq_empty, Finset.prod_empty]
+    rw [MeasureTheory.condExp_const (μ := μ) (m := shiftInvariantSigma (α := α))
+      (hm := shiftInvariantSigma_le (α := α)) (c := (1 : ℝ))]
+  | succ m ih =>
+    -- Inductive step: needs conditional independence and condexp_pair_factorization
+    sorry
+    -- Full inductive proof requires:
+    -- - Splitting product into first m terms and last term
+    -- - Applying IH to first m terms
+    -- - Using condexp_pair_factorization for the product structure
+    -- - Conditional independence for factorization
+    -- See commented code below for full strategy
+  /-
   · -- Inductive step: split product into (product of first m factors) * (last factor)
     -- Reindex: product over Fin (m + 1) splits into product over Fin m and the m-th term
     have h_split_prod :
