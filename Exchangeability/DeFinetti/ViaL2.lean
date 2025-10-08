@@ -196,6 +196,43 @@ lemma contractable_map_pair {i j : ℕ} (hij : i < j) :
     simp [eval, fin2Zero, fin2One]
   simpa [Function.comp, h_comp_simp, h_comp_simp'] using h_comp
 
+/-- Postcompose a contractable sequence with a measurable function. -/
+lemma contractable_comp
+    (f : ℝ → ℝ) (hf_meas : Measurable f) :
+    Contractable μ (fun n ω => f (X n ω)) := by
+  intro n k hk
+  classical
+  have h_base := hX_contract n k hk
+  set Φ : (Fin n → ℝ) → (Fin n → ℝ) := fun g i => f (g i)
+  have hΦ_meas : Measurable Φ := by
+    refine measurable_pi_lambda _ ?_
+    intro i
+    simpa [Φ] using hf_meas.comp (measurable_pi_apply i)
+  have h_meas_k : Measurable fun ω => fun i : Fin n => X (k i) ω := by
+    refine measurable_pi_lambda _ ?_
+    intro i
+    simpa using hX_meas (k i)
+  have h_meas_std : Measurable fun ω => fun i : Fin n => X i.val ω := by
+    refine measurable_pi_lambda _ ?_
+    intro i
+    simpa using hX_meas i.val
+  have h_left := (Measure.map_map hΦ_meas h_meas_k).symm
+  have h_right := Measure.map_map hΦ_meas h_meas_std
+  have h_apply := congrArg (Measure.map Φ) h_base
+  -- Evaluate the compositions explicitly.
+  have h_left_eval :
+      (fun ω => Φ (fun i : Fin n => X (k i) ω)) =
+        fun ω => fun i : Fin n => f (X (k i) ω) := by
+    funext ω i
+    simp [Φ]
+  have h_right_eval :
+      (fun ω => Φ (fun i : Fin n => X i.val ω)) =
+        fun ω => fun i : Fin n => f (X i.val ω) := by
+    funext ω i
+    simp [Φ]
+  simpa [Function.comp, Φ, h_left_eval, h_right_eval] using
+    h_left.trans (h_apply.trans h_right)
+
 /-- Elementary inequality used to dominate products by squares. -/
 private lemma abs_mul_le_half_sq_add_sq (a b : ℝ) :
     |a * b| ≤ ((a ^ 2) + (b ^ 2)) / 2 := by
@@ -510,7 +547,39 @@ lemma l2_bound_two_windows
   classical
   have hk_ne : (k : ℝ) ≠ 0 := by
     exact_mod_cast (Nat.ne_of_gt hk)
-  sorry
+  have hk_pos : 0 < (k : ℝ) := by exact_mod_cast hk
+  obtain ⟨M, hM⟩ := hf_bdd
+  -- Work with the post-composed sequence `Y i = f (X i)`.
+  let Y : ℕ → Ω → ℝ := fun i ω => f (X i ω)
+  have hY_meas : ∀ i, Measurable (Y i) := fun i => hf_meas.comp (hX_meas _)
+  have hY_L2 : ∀ i, MemLp (Y i) 2 μ := by
+    intro i
+    have hbound : ∀ᵐ ω ∂μ, ‖Y i ω‖ ≤ M := by
+      refine Eventually.of_forall fun ω => ?_
+      simpa [Y, Real.norm_eq_abs] using hM _
+    exact (MemLp.of_bound (μ:=μ) (p:=2) (f:=Y i)
+      (hY_meas i).aestronglyMeasurable M hbound)
+  have hY_contract : Contractable μ Y :=
+    contractable_comp (μ:=μ) (X:=X) (hX_contract:=hX_contract)
+      (hX_meas:=hX_meas) f hf_meas
+  -- Extract the covariance data for the sequence `Y`.
+  obtain ⟨mY, σSq, ρ, hY_mean, hY_var, hY_cov, hσ_nonneg, hρ_lb, hρ_ub⟩ :=
+    contractable_covariance_structure (μ:=μ) (X:=Y)
+      hY_contract hY_meas hY_L2
+  let Cf : ℝ := 2 * σSq * (1 - ρ)
+  have hCf_nonneg : 0 ≤ Cf := by
+    have h1 : 0 ≤ σSq := hσ_nonneg
+    have h2 : 0 ≤ 1 - ρ := sub_nonneg.mpr hρ_ub
+    have h3 : 0 ≤ (2 : ℝ) := by norm_num
+    exact mul_nonneg (mul_nonneg h3 h1) h2
+  -- TODO: apply `l2_contractability_bound` with carefully chosen weights.
+  have hgoal :
+      ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
+            (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
+        ≤ Cf / k := by
+    -- Implementation pending.
+    sorry
+  exact ⟨Cf, hCf_nonneg, hgoal⟩
 
 /-- For a contractable sequence and bounded measurable f, the weighted sums
 (1/m) ∑_{k=n+1}^{n+m} f(ξ_{n+k}) converge to a **single** function α (independent of n).
