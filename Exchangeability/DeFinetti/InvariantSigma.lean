@@ -125,25 +125,33 @@ def shiftInvariantSigma : MeasurableSpace (Ω[α]) where
       use i
       -- hi : shift ω ∈ f i
       -- By (hf i), f i is shift-invariant: shift ω ∈ f i ↔ ω ∈ f i
+<<<<<<< HEAD
+      have := isShiftInvariant_iff.1 (hf i)
+=======
       have : isShiftInvariant (α := α) (f i) := (hf i)
       have := (isShiftInvariant_iff (α := α) (s := f i)).1 this
+>>>>>>> 4e8f38e93f9f062dccf1119d5ffdf54126d2081e
       exact (this.2 ω).1 hi
     · intro ⟨i, hi⟩
       use i
       -- hi : ω ∈ f i
       -- By (hf i), f i is shift-invariant: shift ω ∈ f i ↔ ω ∈ f i
+<<<<<<< HEAD
+      have := isShiftInvariant_iff.1 (hf i)
+=======
       have : isShiftInvariant (α := α) (f i) := (hf i)
       have := (isShiftInvariant_iff (α := α) (s := f i)).1 this
+>>>>>>> 4e8f38e93f9f062dccf1119d5ffdf54126d2081e
       exact (this.2 ω).2 hi
 
 lemma shiftInvariantSigma_le :
     shiftInvariantSigma ≤ (inferInstance : MeasurableSpace (Ω[α])) := by
   intro s hs
-  exact (hs : isShiftInvariant (α := α) s).1
+  exact hs.1
 
 lemma mem_shiftInvariantSigma_iff {s : Set (Ω[α])} :
-    @MeasurableSet _ shiftInvariantSigma s ↔ isShiftInvariant (α := α) s :=
-  Iff.rfl
+    @MeasurableSet _ shiftInvariantSigma s ↔ isShiftInvariant (α := α) s := by
+  rfl
 
 /-- Shift-invariant measurability forces pointwise invariance under the shift map. -/
 lemma shiftInvariantSigma_measurable_shift_eq
@@ -160,8 +168,12 @@ lemma shiftInvariantSigma_measurable_shift_eq
       obtain ⟨q, hltq, hqω⟩ := exists_rat_btwn hlt
       have hmeas : MeasurableSet (Set.Iio (q : ℝ)) :=
         (isOpen_Iio : IsOpen (Set.Iio (q : ℝ))).measurableSet
+<<<<<<< HEAD
+      have hset_eq := (hg hmeas : isShiftInvariant (g ⁻¹' Set.Iio ↑q)).2
+=======
       have hset : isShiftInvariant (α := α) (g ⁻¹' Set.Iio (q : ℝ)) := hg hmeas
       have hset_eq := hset.2
+>>>>>>> 4e8f38e93f9f062dccf1119d5ffdf54126d2081e
       have h_shift_mem : shift ω ∈ g ⁻¹' Set.Iio (q : ℝ) := by
         simpa [Set.mem_preimage] using hltq
       have h_pre : ω ∈ shift ⁻¹' (g ⁻¹' Set.Iio (q : ℝ)) := by
@@ -177,8 +189,12 @@ lemma shiftInvariantSigma_measurable_shift_eq
       obtain ⟨q, hωq, hq_lt⟩ := exists_rat_btwn hgt
       have hmeas : MeasurableSet (Set.Ioi (q : ℝ)) :=
         (isOpen_Ioi : IsOpen (Set.Ioi (q : ℝ))).measurableSet
+<<<<<<< HEAD
+      have hset_eq := (hg hmeas : isShiftInvariant (g ⁻¹' Set.Ioi ↑q)).2
+=======
       have hset : isShiftInvariant (α := α) (g ⁻¹' Set.Ioi (q : ℝ)) := hg hmeas
       have hset_eq := hset.2
+>>>>>>> 4e8f38e93f9f062dccf1119d5ffdf54126d2081e
       have h_shift_mem : shift ω ∈ g ⁻¹' Set.Ioi (q : ℝ) := by
         simpa [Set.mem_preimage] using hq_lt
       have h_pre : ω ∈ shift ⁻¹' (g ⁻¹' Set.Ioi (q : ℝ)) := by
@@ -283,6 +299,55 @@ lemma ae_shift_invariance_on_rep
   have h3 : f =ᵐ[μ] g := hfg.symm
   exact h1.trans (h2.trans h3)
 
+<<<<<<< HEAD
+lemma mkShiftInvariantRep
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ)
+    (g : Ω[α] → ℝ) (hg : AEStronglyMeasurable g μ)
+    (hshift : (fun ω => g (shift ω)) =ᵐ[μ] g) :
+    ∃ g',
+      AEStronglyMeasurable[shiftInvariantSigma (α := α)] g' μ ∧
+      (∀ᵐ ω ∂μ, g' ω = g ω) ∧
+      (∀ ω, g' (shift ω) = g' ω) := by
+  classical
+  obtain ⟨g0, hg0_sm, hg0_ae⟩ := hg
+  have hshift_g0 : (fun ω => g0 (shift ω)) =ᵐ[μ] g0 :=
+    ae_shift_invariance_on_rep (μ := μ) hσ hg0_ae hshift
+  have hg0_meas : Measurable g0 := hg0_sm.measurable
+  obtain ⟨S, hS_meas, _hSymm, hS_null, hS_subset, hS_point⟩ :=
+    exists_shiftInvariantFullMeasureSet (μ := μ) hσ g0 hg0_meas hshift_g0
+  have hforward : ∀ ω ∈ S, shift ω ∈ S := by
+    intro ω hω
+    have : ω ∈ shift ⁻¹' S := hS_subset hω
+    simpa [Set.mem_preimage] using this
+  have hS_ae : ∀ᵐ ω ∂μ, ω ∈ S := by
+    simpa [ae_iff] using hS_null
+  have hconst_on_S : ∀ ω ∈ S, ∀ n : ℕ, g0 (shift^[n] ω) = g0 ω := by
+    intro ω hω
+    have hmem : ∀ n : ℕ, shift^[n] ω ∈ S := by
+      refine Nat.rec (by simpa [Function.iterate_zero_apply] using hω) ?_
+      intro n hn
+      have hnext : shift (shift^[n] ω) ∈ S := hforward _ hn
+      simpa [Function.iterate_succ_apply] using hnext
+    refine Nat.rec (by simpa [Function.iterate_zero_apply]) ?_
+    intro n ih
+    have hstep : g0 (shift^[n.succ] ω) = g0 (shift^[n] ω) := by
+      have := hS_point (shift^[n] ω) (hmem n)
+      simpa [Function.iterate_succ_apply] using this
+    exact hstep.trans ih
+  have hconst : ∀ᵐ ω ∂μ, ∀ n : ℕ, g0 (shift^[n] ω) = g0 ω := by
+    filter_upwards [hS_ae] with ω hω using hconst_on_S ω hω
+  let g' := gRep g0
+  have hg'_meas : Measurable g' := gRep_measurable g0 hg0_meas
+  have hg'_ae_g0 : g' =ᵐ[μ] g0 := gRep_ae_eq_of_constant_orbit (g0 := g0) hconst
+  have hg'_inv : ∀ ω, g' (shift ω) = g' ω := gRep_shiftInvariant g0
+  have hg'_tail : Measurable[shiftInvariantSigma (α := α)] g' :=
+    shiftInvariant_implies_shiftInvariantMeasurable g' hg'_meas hg'_inv
+  refine ⟨g', hg'_tail.aestronglyMeasurable, ?_, hg'_inv⟩
+  exact hg'_ae_g0.trans hg0_ae
+
+=======
+>>>>>>> 4e8f38e93f9f062dccf1119d5ffdf54126d2081e
 end LimsupConstruction
 
 -- **Auxiliary goal**: construct an invariant representative.
