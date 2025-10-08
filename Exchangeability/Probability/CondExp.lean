@@ -188,11 +188,14 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
   · intro hCond H hH
     set g : Ω → ℝ := μ[H.indicator (fun _ => (1 : ℝ)) | mG]
     have hg_int : Integrable g μ := by
-      -- TODO: `integrable_condExp` with the chosen function.
-      sorry
+      have h_int : Integrable (H.indicator (fun _ : Ω => (1 : ℝ))) μ :=
+        (integrable_const (1 : ℝ)).indicator hH
+      simpa [g] using (integrable_condExp (μ := μ) (m := mG) (hm := hmG) (hf := h_int))
     have hg_meas : AEStronglyMeasurable[mG] g μ := by
-      -- TODO: `stronglyMeasurable_condExp` for the chosen function.
-      sorry
+      have h_int : Integrable (H.indicator (fun _ : Ω => (1 : ℝ))) μ :=
+        (integrable_const (1 : ℝ)).indicator hH
+      simpa [g] using (stronglyMeasurable_condExp (μ := μ) (m := mG) (hm := hmG)
+        (hf := h_int))
     have h_rect :
         ∀ {F} (hF : MeasurableSet[mF] F) {G} (hG : MeasurableSet[mG] G),
           ∫ ω in F ∩ G, g ω ∂μ
