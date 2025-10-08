@@ -1104,15 +1104,52 @@ theorem weighted_sums_converge_L1
                     · have hm_pos : 0 < (m : ℝ) := by exact_mod_cast Nat.pos_of_ne_zero hm'
                       calc |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω)|
                           ≤ (1 / (m : ℝ)) * ∑ k : Fin m, |f (X (n + k.val + 1) ω)| := by
-                            sorry  -- Standard: |average| ≤ average of |·|
+                            -- |average| ≤ average of |·|
+                            have h_inv_pos : 0 ≤ 1 / (m : ℝ) := by
+                              apply div_nonneg; norm_num; exact_mod_cast Nat.zero_le m
+                            calc |(1 / (m : ℝ)) * ∑ k, f (X (n + k.val + 1) ω)|
+                                = (1 / (m : ℝ)) * |∑ k, f (X (n + k.val + 1) ω)| := by
+                                  rw [abs_mul, abs_of_nonneg h_inv_pos]
+                              _ ≤ (1 / (m : ℝ)) * ∑ k, |f (X (n + k.val + 1) ω)| := by
+                                  apply mul_le_mul_of_nonneg_left _ h_inv_pos
+                                  exact Finset.abs_sum_le_sum_abs _ _
                         _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, M := by
-                            sorry  -- Each |f(X i)| ≤ M by hM
-                        _ = M := by sorry  -- Arithmetic: (1/m) * m * M = M
+                            apply mul_le_mul_of_nonneg_left _ (by linarith : 0 ≤ 1 / (m : ℝ))
+                            apply Finset.sum_le_sum
+                            intro k _
+                            exact hM _
+                        _ = M := by
+                            have : ∑ k : Fin m, M = (m : ℝ) * M := by
+                              simp [Finset.sum_const, Finset.card_fin]
+                            simp [this]
+                            field_simp
+                            ring
                   have h2 : ‖A 0 m ω‖ ≤ M := by
                     simp [A, Real.norm_eq_abs]
                     by_cases hm' : m = 0
                     · simp [hm']; exact le_trans (abs_nonneg _) (hM 0)
-                    · sorry  -- Same argument as h1
+                    · have hm_pos : 0 < (m : ℝ) := by exact_mod_cast Nat.pos_of_ne_zero hm'
+                      calc |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (0 + k.val + 1) ω)|
+                          ≤ (1 / (m : ℝ)) * ∑ k : Fin m, |f (X (0 + k.val + 1) ω)| := by
+                            have h_inv_pos : 0 ≤ 1 / (m : ℝ) := by
+                              apply div_nonneg; norm_num; exact_mod_cast Nat.zero_le m
+                            calc |(1 / (m : ℝ)) * ∑ k, f (X (0 + k.val + 1) ω)|
+                                = (1 / (m : ℝ)) * |∑ k, f (X (0 + k.val + 1) ω)| := by
+                                  rw [abs_mul, abs_of_nonneg h_inv_pos]
+                              _ ≤ (1 / (m : ℝ)) * ∑ k, |f (X (0 + k.val + 1) ω)| := by
+                                  apply mul_le_mul_of_nonneg_left _ h_inv_pos
+                                  exact Finset.abs_sum_le_sum_abs _ _
+                        _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, M := by
+                            apply mul_le_mul_of_nonneg_left _ (by linarith : 0 ≤ 1 / (m : ℝ))
+                            apply Finset.sum_le_sum
+                            intro k _
+                            exact hM _
+                        _ = M := by
+                            have : ∑ k : Fin m, M = (m : ℝ) * M := by
+                              simp [Finset.sum_const, Finset.card_fin]
+                            simp [this]
+                            field_simp
+                            ring
                   exact add_le_add h1 h2
               _ = 2 * M := by ring
           have h_eq := hf_memLp.eLpNorm_eq_integral_rpow_norm
