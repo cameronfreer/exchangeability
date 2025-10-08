@@ -213,7 +213,7 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
           =ᵐ[μ] g := by
       -- TODO: apply `ae_eq_condExp_of_forall_setIntegral_eq` using `h_dynkin`.
       sorry
-    simpa [g] using h_proj.symm
+    simpa [g] using h_proj
   · intro hProj
     refine
       (ProbabilityTheory.condIndep_iff mG mF mH hmG hmF hmH μ).2 ?_
