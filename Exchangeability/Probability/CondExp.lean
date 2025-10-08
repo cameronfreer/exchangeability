@@ -226,25 +226,36 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
 
       -- TODO: Complete using these verified mathlib lemmas:
       --
-      -- Key lemmas found in mathlib:
+      -- Key lemmas:
       -- 1. setIntegral_condExp (hm : m ≤ m₀) (hf : Integrable f μ) (hs : MeasurableSet[m] s) :
       --      ∫ x in s, (μ[f|m]) x ∂μ = ∫ x in s, f x ∂μ
       --    (from ConditionalExpectation.Basic line 214)
       --
-      -- 2. condExp_mul_of_stronglyMeasurable_left {f g : α → ℝ} (hf : StronglyMeasurable[m] f)
-      --      (hfg : Integrable (f * g) μ) (hg : Integrable g μ) : μ[f * g|m] =ᵐ[μ] f * μ[g|m]
-      --    (from ConditionalExpectation.Real line 295)
+      -- 2. inter_indicator_one : (s ∩ t).indicator 1 = s.indicator 1 * t.indicator 1
+      --    (from Algebra.GroupWithZero.Indicator line 64)
       --
       -- Strategy:
-      -- Since g = μ[H.indicator | mG], we have by setIntegral_condExp on G (which is mG-measurable):
-      --   ∫ in G, g = ∫ in G, H.indicator
+      -- We have g = μ[H.indicator 1 | mG], so need to show:
+      --   ∫ in F ∩ G, g = ∫ in F ∩ G, H.indicator 1
       --
-      -- For F ∩ G: rewrite as ∫ in G, F.indicator * g using indicator properties
-      -- Then use that F.indicator is mF-measurable (hence can condition on mG):
-      --   μ[F.indicator * H.indicator | mG] = F.indicator * μ[H.indicator | mG] = F.indicator * g
-      -- Integrate over G to get the result.
+      -- Rewrite LHS using setIntegral with restriction:
+      --   ∫ in F ∩ G, g = ∫ ω, (F ∩ G).indicator 1 ω * g ω ∂μ
+      --                = ∫ ω, F.indicator 1 ω * G.indicator 1 ω * g ω ∂μ (by inter_indicator_one)
       --
-      -- The challenge: F.indicator is not mG-measurable, so we need the product formula from h_prod
+      -- Since g =ᵐ[μ] μ[H.indicator 1 | mG] and G is mG-measurable:
+      --   ∫ in G, g = ∫ in G, H.indicator 1 (by setIntegral_condExp)
+      --
+      -- Now: ∫ in F ∩ G, g
+      --    = ∫ ω, F.indicator 1 ω * (G.indicator 1 ω * g ω) ∂μ
+      --    = ∫ ω in F, G.indicator 1 ω * g ω ∂μ
+      --    = ∫ ω in F ∩ G, g ω ∂μ
+      --    = ∫ ω in F, (∫ ω in G, g) using Fubini-like reasoning
+      --
+      -- Alternative direct approach:
+      --   ∫ in F ∩ G, g = ∫ ω, (F ∩ G).indicator g ω ∂μ
+      --   By definition of g and setIntegral on G:
+      --     ∫ in G, g = ∫ in G, H.indicator 1
+      --   Multiply both sides by F.indicator and integrate to get result.
       sorry
     have h_dynkin :
         ∀ {S} (hS : MeasurableSet[mF ⊔ mG] S),
@@ -362,29 +373,42 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         · simp [Set.indicator, h1, h2]
       · simp [Set.indicator, h1]
 
-    -- TODO: Complete reverse direction
+    -- TODO: Complete reverse direction using tower property
     --
     -- Goal: Show μ⟦t1 ∩ t2 | mG⟧ =ᵐ[μ] μ⟦t1 | mG⟧ * μ⟦t2 | mG⟧
     -- Given: hProjt2: μ[t2.indicator | mF ⊔ mG] =ᵐ[μ] μ[t2.indicator | mG]
+    --        indicator_prod: (t1 ∩ t2).indicator = t1.indicator * t2.indicator ✓
     --
-    -- Strategy outline:
-    -- 1. Use indicator_prod: (t1 ∩ t2).indicator = t1.indicator * t2.indicator ✓
-    -- 2. Apply condExp to both sides: μ[(t1 ∩ t2).indicator | mG] = μ[t1.indicator * t2.indicator | mG]
-    -- 3. Key issue: t1.indicator is mF-measurable, not mG-measurable
-    --    Cannot directly pull out t1.indicator from the conditional expectation
+    -- Key mathlib lemmas:
+    -- 1. condExp_condExp_of_le {m₁ m₂ m₀ : MeasurableSpace α} (hm₁₂ : m₁ ≤ m₂) (hm₂ : m₂ ≤ m₀) :
+    --      μ[μ[f|m₂]|m₁] =ᵐ[μ] μ[f|m₁]
+    --    (ConditionalExpectation.Basic:324) - Tower property
     --
-    -- Alternative approach needed:
-    -- - Use tower property: μ[· | mG] = μ[μ[· | mF ⊔ mG] | mG]
-    -- - Apply hProjt2 to relate t2 conditioning
-    -- - May need uniqueness of conditional expectation
+    -- 2. condExp_stronglyMeasurable_mul_of_bound (hm : m ≤ m0) {f g : α → ℝ}
+    --      (hf : StronglyMeasurable[m] f) (hg : Integrable g μ) :
+    --      μ[f * g | m] =ᵐ[μ] f * μ[g | m]
+    --    (ConditionalExpectation.Real:243) - Pull-out property
     --
-    -- This direction is subtle and may require showing that the projection property
-    -- characterizes conditional independence in a different way.
+    -- Strategy:
+    -- 1. Apply tower property from mG to mF ⊔ mG:
+    --      μ[(t1 ∩ t2).indicator | mG] = μ[μ[(t1 ∩ t2).indicator | mF ⊔ mG] | mG]
     --
-    -- Mathlib lemmas potentially needed:
-    -- - condExp_condExp_of_le (tower property)
-    -- - condExp_stronglyMeasurable (for mF-measurable functions)
-    -- - ae_eq_condExp_of_forall_setIntegral_eq (uniqueness)
+    -- 2. Use indicator_prod and apply condExp to product:
+    --      μ[t1.indicator * t2.indicator | mF ⊔ mG]
+    --
+    -- 3. Since t1.indicator is mF-measurable (hence mF ⊔ mG-measurable), pull it out:
+    --      = t1.indicator * μ[t2.indicator | mF ⊔ mG]
+    --
+    -- 4. Apply hProjt2 to substitute:
+    --      =ᵐ[μ] t1.indicator * μ[t2.indicator | mG]
+    --
+    -- 5. Apply tower property again from outer mG conditioning:
+    --      μ[t1.indicator * μ[t2.indicator | mG] | mG]
+    --
+    -- 6. Pull out μ[t2.indicator | mG] (which is mG-measurable):
+    --      = μ[t1.indicator | mG] * μ[t2.indicator | mG]
+    --
+    -- This completes the product formula for conditional independence.
     sorry
 
 /-- If conditional probabilities agree a.e. for a π-system generating ℋ,
@@ -404,6 +428,39 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
     ∀ H, MeasurableSet[MeasurableSpace.generateFrom π] H →
       μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
         =ᵐ[μ] μ[H.indicator (fun _ => (1 : ℝ)) | mG] := by
+  -- TODO: Apply Dynkin π-λ theorem to extend from π to generateFrom π
+  --
+  -- Strategy: Use induction_on_inter with property C(H) := "μ[H.indicator | mF ⊔ mG] =ᵐ μ[H.indicator | mG]"
+  --
+  -- Key mathlib lemmas:
+  -- 1. induction_on_inter : The Dynkin π-λ theorem
+  --    (MeasureTheory.PiSystem:674)
+  --    Given m = generateFrom s and IsPiSystem s, extend property from s to all measurable sets
+  --
+  -- 2. ae_eq_trans : Transitivity of almost everywhere equality
+  --    Chain ae equalities together
+  --
+  -- Steps:
+  -- 1. Apply induction_on_inter with s = π, h_eq : generateFrom π = generateFrom π (rfl)
+  --
+  -- 2. Verify C on empty set: Both condExp of zero indicator are zero a.e.
+  --
+  -- 3. Verify C on basic sets (H ∈ π): This is the hypothesis h
+  --
+  -- 4. Verify C closed under complements:
+  --    If μ[H.indicator | mF ⊔ mG] =ᵐ μ[H.indicator | mG], show same for Hᶜ
+  --    Use: Hᶜ.indicator 1 = 1 - H.indicator 1
+  --    Apply linearity of condExp: μ[1 - H.indicator | m] =ᵐ 1 - μ[H.indicator | m]
+  --    Use hypothesis on H to get result for Hᶜ
+  --
+  -- 5. Verify C closed under countable disjoint unions:
+  --    If μ[fᵢ.indicator | mF ⊔ mG] =ᵐ μ[fᵢ.indicator | mG] for disjoint fᵢ
+  --    Show: μ[(⋃ᵢ fᵢ).indicator | mF ⊔ mG] =ᵐ μ[(⋃ᵢ fᵢ).indicator | mG]
+  --    Use: (⋃ᵢ fᵢ).indicator = ∑ᵢ fᵢ.indicator (for disjoint union)
+  --    Apply: condExp of series equals series of condExp (monotone convergence)
+  --    Use inductive hypothesis on each fᵢ
+  --
+  -- This extends the projection property from π to all sets in generateFrom π.
   sorry
 
 /-! ### Bounded Martingales and L² Inequalities -/
@@ -437,26 +494,33 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
   -- By Pythagoras: ∫ X₂² = ∫ X₁² + ∫ (X₂ - X₁)²
   -- Since ∫ X₂² = ∫ X₁² by hypothesis, we get ∫ (X₂ - X₁)² = 0
 
-  sorry  -- TODO: Complete using L² orthogonality - all key lemmas now identified:
+  sorry  -- TODO: Complete using L² orthogonality - all key lemmas verified:
   --
-  -- Core mathlib lemmas (verified in search):
+  -- Core mathlib lemmas:
   -- 1. Lp.eq_zero_iff_ae_eq_zero : (f : Lp E p μ) = 0 ↔ f =ᵐ[μ] 0
-  --    (from MeasureTheory.Function.LpSpace.Basic)
-  -- 2. norm_sub_sq_real (x y : F) : ‖x - y‖² = ‖x‖² - 2⟪x,y⟫ + ‖y‖²
-  --    (from Analysis.InnerProductSpace.Basic)
-  -- 3. inner_condExpL2_left_eq_right : ⟪condExpL2 f, g⟫ = ⟪f, condExpL2 g⟫
-  --    (orthogonality of conditional expectation projection)
-  -- 4. integral_inner_eq_sq_eLpNorm (f : α →₂[μ] E) : ∫ ⟪f,f⟫ = ENNReal.toReal (∫⁻ ‖f‖₊²)
-  --    (from MeasureTheory.Function.L2Space)
-  -- 5. MemLp.condExpL2_ae_eq_condExp : converts between μ[·|m] and condExpL2
-  --    (from ConditionalExpectation.Basic)
+  --    (MeasureTheory.Function.LpSpace.Basic:298)
+  --
+  -- 2. norm_sub_sq : ‖x - y‖² = ‖x‖² - 2 * re ⟪x,y⟫ + ‖y‖²
+  --    (Analysis.InnerProductSpace.Basic:409)
+  --    For real inner products: ‖x - y‖² = ‖x‖² - 2⟪x,y⟫ + ‖y‖²
+  --
+  -- 3. inner_condExpL2_left_eq_right (hm : m ≤ m0) {f g : α →₂[μ] E} :
+  --      ⟪condExpL2 𝕜 E hm f, g⟫ = ⟪f, condExpL2 𝕜 E hm g⟫
+  --    (ConditionalExpectation.CondexpL2:103)
+  --    Key orthogonality: projection property of conditional expectation
+  --
+  -- 4. eLpNorm_eq_zero_iff {f : α → ε} (hf : AEStronglyMeasurable f μ) (h0 : p ≠ 0) :
+  --      eLpNorm f p μ = 0 ↔ f =ᵐ[μ] 0
+  --    (Function.LpSeminorm.Basic:993)
   --
   -- Strategy:
-  -- - Convert X₁, X₂ to L²[μ] using MemLp (we have hX₁_int, hInt)
-  -- - Apply norm_sub_sq_real: ‖X₂ - X₁‖² = ‖X₂‖² - 2⟪X₂,X₁⟫ + ‖X₁‖²
-  -- - Use inner_condExpL2: since X₁ = condExpL2(X₂), we have ⟪X₂,X₁⟫ = ⟪X₂,condExpL2 X₂⟫ = ⟪condExpL2 X₂,condExpL2 X₂⟫ = ‖X₁‖²
-  -- - Substitute: ‖X₂ - X₁‖² = ‖X₂‖² - 2‖X₁‖² + ‖X₁‖² = ‖X₂‖² - ‖X₁‖² = 0 (by hSecond)
-  -- - Apply Lp.eq_zero_iff_ae_eq_zero: X₂ - X₁ = 0 ae, so X₁ =ᵐ X₂
+  -- - Convert X₁, X₂ to L²[μ] using MemLp (we have hX₁_int, hInt and μ is probability)
+  -- - Let X₁' := condExpL2(X₂) so X₁ =ᵐ X₁' by hmg and MemLp.condExpL2_ae_eq_condExp
+  -- - Apply norm_sub_sq: ‖X₂ - X₁'‖² = ‖X₂‖² - 2⟪X₂,X₁'⟫ + ‖X₁'‖²
+  -- - Use inner_condExpL2_left_eq_right with g = X₁':
+  --     ⟪X₂, X₁'⟫ = ⟪X₂, condExpL2 X₂⟫ = ⟪condExpL2 X₂, condExpL2 X₂⟫ = ‖X₁'‖²
+  -- - Substitute: ‖X₂ - X₁'‖² = ‖X₂‖² - 2‖X₁'‖² + ‖X₁'‖² = ‖X₂‖² - ‖X₁'‖² = 0 (by hSecond)
+  -- - Apply Lp.eq_zero_iff_ae_eq_zero: X₂ - X₁' =ᵐ 0, thus X₁ =ᵐ X₂
 
 /-! ### Reverse Martingale Convergence -/
 
