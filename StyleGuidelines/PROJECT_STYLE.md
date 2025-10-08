@@ -24,16 +24,17 @@ that the code no longer uses `axiom` declarations.
 
 ✅ **Good:**
 ```lean
-/-- This construction uses only mathlib's standard measure theory infrastructure. -/
+/-- This construction uses mathlib's standard measure theory infrastructure. -/
 ```
 
 ```lean
 /-- Build a shift-invariant full-measure set on which `g ∘ shift = g` holds pointwise. -/
 ```
 
-**Rationale:** Once development has matured past using `axiom` placeholders, the absence
-of `axiom` declarations is the expected state. Highlighting it in comments is unnecessary
-and may become outdated if code is refactored.
+**Rationale:** Not adding custom `axiom` declarations is the expected/default state once
+development is complete. Highlighting it is unnecessary and may become outdated if code
+is refactored. The phrase "axiom-free" in this context typically means "only uses mathlib",
+which is just stating the default.
 
 ### Exception: During Development
 

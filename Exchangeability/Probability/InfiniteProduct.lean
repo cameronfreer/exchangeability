@@ -60,8 +60,7 @@ scratch:
 4. **Marginal characterization** (`infinitePi_map_restrict`): The extended measure
    has the correct finite-dimensional marginals
 
-This construction is completely **axiom-free** and uses only mathlib's standard
-measure theory infrastructure.
+This construction uses mathlib's standard measure theory infrastructure.
 
 ## Relation to other files
 
