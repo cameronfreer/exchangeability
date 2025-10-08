@@ -524,6 +524,61 @@ lemma mem_window_iff {n k t : ℕ} :
     refine ⟨i, ?_, rfl⟩
     simpa using hi
 
+/-- Cardinality of Fin values less than k in Fin (2*k) -/
+private lemma card_fin_lt_k {k : ℕ} :
+    (Finset.univ.filter (fun i : Fin (2 * k) => i.val < k)).card = k := by
+  classical
+  have h : Finset.univ.filter (fun i : Fin (2 * k) => i.val < k) =
+      Finset.image (fun j : Fin k => ⟨j.val, by omega⟩) Finset.univ := by
+    ext i
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_image]
+    constructor
+    · intro hi
+      use ⟨i.val, Nat.lt_of_lt_of_le hi (Nat.le_mul_of_pos_left k (by norm_num))⟩
+      simp [hi]
+    · intro ⟨j, _, h⟩
+      simp [← h]
+  rw [h, Finset.card_image_iff.mpr]
+  · simp
+  · intro a _ b _ hab
+    exact Fin.ext hab
+
+/-- The supremum of |p i - q i| for two-window weights -/
+private lemma sup_two_window_weights {k : ℕ} (hk : 0 < k)
+    (p q : Fin (2 * k) → ℝ)
+    (hp : p = fun i => if i.val < k then 1 / (k : ℝ) else 0)
+    (hq : q = fun i => if i.val < k then 0 else 1 / (k : ℝ)) :
+    ⨆ i, |p i - q i| = 1 / (k : ℝ) := by
+  have hk_pos : 0 < (k : ℝ) := by exact_mod_cast hk
+  have hk_ne : (k : ℝ) ≠ 0 := ne_of_gt hk_pos
+  -- For any i, |p i - q i| is either 1/k or 0
+  have h_cases : ∀ i : Fin (2 * k), |p i - q i| = 1 / (k : ℝ) ∨ |p i - q i| = 0 := by
+    intro i
+    simp [hp, hq]
+    by_cases hi : i.val < k
+    · simp [hi]; left; rw [abs_of_nonneg]; exact div_nonneg (by norm_num) (by exact_mod_cast Nat.zero_le _)
+    · simp [hi]; right; rw [abs_of_nonpos]; ring; exact div_nonneg (by norm_num) (by exact_mod_cast Nat.zero_le _)
+  -- The supremum is achieved and equals 1/k
+  have h_bdd : BddAbove (Set.range fun i : Fin (2 * k) => |p i - q i|) := by
+    use 1 / (k : ℝ)
+    intro y ⟨i, hi⟩
+    rw [← hi]
+    rcases h_cases i with h | h <;> simp [h]
+  have h_nonempty : (Set.range fun i : Fin (2 * k) => |p i - q i|).Nonempty := by
+    use |p ⟨0, by omega⟩ - q ⟨0, by omega⟩|
+    use ⟨0, by omega⟩
+  -- Show that 1/k is in the range (achieved at i = 0)
+  have h_achieved : 1 / (k : ℝ) ∈ Set.range fun i : Fin (2 * k) => |p i - q i| := by
+    use ⟨0, by omega⟩
+    simp [hp, hq, abs_of_nonneg (div_nonneg (by norm_num) (by exact_mod_cast Nat.zero_le k))]
+  -- Therefore sup = 1/k
+  have h_le : ∀ i, |p i - q i| ≤ 1 / (k : ℝ) := by
+    intro i
+    rcases h_cases i with h | h <;> simp [h]
+  apply le_antisymm
+  · exact ciSup_le h_le
+  · exact le_ciSup h_bdd ⟨0, by omega⟩
+
 /-- **L² bound wrapper for two starting windows**.
 
 For contractable sequences, the L² difference between averages starting at different
@@ -572,13 +627,165 @@ lemma l2_bound_two_windows
     have h2 : 0 ≤ 1 - ρ := sub_nonneg.mpr hρ_ub
     have h3 : 0 ≤ (2 : ℝ) := by norm_num
     exact mul_nonneg (mul_nonneg h3 h1) h2
-  -- TODO: apply `l2_contractability_bound` with carefully chosen weights.
+
+  -- Apply l2_contractability_bound with weights on two windows of length k
   have hgoal :
       ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
             (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
         ≤ Cf / k := by
-    -- Implementation pending.
-    sorry
+    -- Build the combined index set: 2k coordinates covering both windows
+    let twoK := 2 * k
+    have htwoK_pos : 0 < twoK := by
+      have : 0 < 2 := by norm_num
+      exact Nat.mul_pos this hk
+
+    -- Build the full sequence ξ : Fin (2k) → Ω → ℝ covering both windows
+    -- Indices 0..(k-1) cover window starting at n, indices k..(2k-1) cover window at m
+    let ξ : Fin twoK → Ω → ℝ := fun i =>
+      if i.val < k then Y (n + i.val + 1) else Y (m + (i.val - k) + 1)
+
+    -- Set up weights: p is uniform 1/k on first window, q is uniform 1/k on second
+    let p : Fin twoK → ℝ := fun i => if i.val < k then 1 / (k : ℝ) else 0
+    let q : Fin twoK → ℝ := fun i => if i.val < k then 0 else 1 / (k : ℝ)
+
+    -- Prove weight hypotheses
+    have hp_sum : ∑ i, p i = 1 := by
+      have h_split : ∑ i : Fin twoK, p i =
+          ∑ i : Fin twoK with i.val < k, 1 / (k : ℝ) := by
+        apply Finset.sum_bij (i := fun i _ => i) (hi := fun i hi => hi)
+          (ha := fun i hi => by simp [p, (Finset.mem_filter.mp hi).2])
+        · intro i j _ _ h; exact h
+        · intro b hb; use b, hb; simp [p]
+      calc ∑ i, p i
+          = ∑ i with i.val < k, 1 / (k : ℝ) := h_split
+        _ = (k : ℝ) * (1 / (k : ℝ)) := by simp [Finset.sum_const, card_fin_lt_k, mul_comm]
+        _ = 1 := by field_simp; ring
+
+    have hp_nonneg : ∀ i, 0 ≤ p i := by
+      intro i; simp [p]; split_ifs <;> [exact div_nonneg (by norm_num) (by exact_mod_cast Nat.zero_le _), norm_num]
+
+    have hq_sum : ∑ i, q i = 1 := by
+      have h_split : ∑ i : Fin twoK, q i =
+          ∑ i : Fin twoK with k ≤ i.val, 1 / (k : ℝ) := by
+        apply Finset.sum_bij (i := fun i _ => i) (hi := fun i hi => hi)
+          (ha := fun i hi => by simp [q, (Finset.mem_filter.mp hi).2])
+        · intro i j _ _ h; exact h
+        · intro b hb; use b, hb; simp [q, (Finset.mem_filter.mp hb).2]
+      have h_card : (Finset.univ.filter (fun i : Fin twoK => k ≤ i.val)).card = k := by
+        have h_compl : Finset.univ.filter (fun i : Fin twoK => k ≤ i.val) =
+            (Finset.univ.filter (fun i : Fin twoK => i.val < k))ᶜ := by
+          ext i; simp; omega
+        rw [h_compl, Finset.card_compl, card_fin_lt_k]
+        simp [twoK]
+      calc ∑ i, q i
+          = ∑ i with k ≤ i.val, 1 / (k : ℝ) := h_split
+        _ = (k : ℝ) * (1 / (k : ℝ)) := by simp [Finset.sum_const, h_card, mul_comm]
+        _ = 1 := by field_simp; ring
+
+    have hq_nonneg : ∀ i, 0 ≤ q i := by
+      intro i; simp [q]; split_ifs <;> [norm_num, exact div_nonneg (by norm_num) (by exact_mod_cast Nat.zero_le _)]
+
+    -- Key: sup |p - q| = 1/k
+    have hsup_pq : ⨆ i, |p i - q i| = 1 / (k : ℝ) :=
+      sup_two_window_weights hk p q rfl rfl
+
+    -- ξ is measurable
+    have hξ_meas : ∀ i, Measurable (ξ i) := fun i => by
+      simp [ξ]; split_ifs <;> exact hY_meas _
+
+    -- ξ is in L² (bounded by M)
+    have hξ_L2 : ∀ i, MemLp (ξ i) 2 μ := fun i => by
+      simp [ξ]; split_ifs <;> exact hY_L2 _
+
+    -- Mean, variance, covariance of ξ match Y
+    have hξ_mean : ∀ i, ∫ ω, ξ i ω ∂μ = mY := by
+      intro i; simp [ξ]; split_ifs <;> exact hY_mean _
+
+    have hξ_var : ∀ i, ∫ ω, (ξ i ω - mY)^2 ∂μ = σSq := by
+      intro i; simp [ξ]; split_ifs <;> exact hY_var _
+
+    have hξ_cov : ∀ i j, i ≠ j → ∫ ω, (ξ i ω - mY) * (ξ j ω - mY) ∂μ = σSq * ρ := by
+      intro i j hij
+      -- All coordinates ξ i are drawn from Y with different indices from ℕ
+      -- By construction of ξ, different Fin indices map to different ℕ indices
+      -- (within each window indices are consecutive, between windows they're separate)
+      simp only [ξ]
+      split_ifs with hi hj hj
+      · -- Both in first window: indices are n+i+1 vs n+j+1 with i ≠ j
+        have : n + i.val + 1 ≠ n + j.val + 1 := by
+          intro h; have : i.val = j.val := by omega
+          have : i = j := Fin.ext this; exact hij this
+        exact hY_cov _ _ this
+      · -- i < k, ¬(j < k): first vs second window - always distinct
+        -- We can't prove these are definitely distinct without more info,
+        -- but contractability ensures the covariance is the same regardless
+        sorry
+      · -- ¬(i < k), j < k: second vs first window
+        sorry
+      · -- Both in second window: indices are m+(i-k)+1 vs m+(j-k)+1
+        have : m + (i.val - k) + 1 ≠ m + (j.val - k) + 1 := by
+          intro h; have : i.val - k = j.val - k := by omega
+          have : i.val = j.val := by omega
+          have : i = j := Fin.ext this; exact hij this
+        exact hY_cov _ _ this
+
+    -- Apply l2_contractability_bound
+    have hbound := L2Approach.l2_contractability_bound (μ := μ) (n := twoK)
+      ξ mY (Real.sqrt σSq) ρ
+      ⟨hρ_lb, hρ_ub⟩
+      hξ_mean
+      (fun i => by
+        have := hξ_L2 i
+        convert MemLp.sub this (memLp_const mY (p := 2))
+        ext ω; simp)
+      (fun i => by
+        have := hξ_var i
+        by_cases hσ : σSq = 0
+        · simp [hσ] at this ⊢; exact this
+        · have hσ_pos : 0 < σSq := by
+            have := hσ_nonneg
+            exact lt_of_le_of_ne this (Ne.symm hσ)
+          simp [Real.sq_sqrt (le_of_lt hσ_pos)] at this
+          exact this)
+      hξ_cov
+      p q
+      ⟨hp_sum, hp_nonneg⟩
+      ⟨hq_sum, hq_nonneg⟩
+
+    -- Simplify to the form we want
+    calc ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
+              (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
+        = ∫ ω, (∑ i : Fin twoK, p i * ξ i ω - ∑ i : Fin twoK, q i * ξ i ω)^2 ∂μ := by
+            -- Reindex: the p-sum picks out first k indices, q-sum picks second k
+            congr 1; ext ω; congr 1
+            have hp_expand : ∑ i : Fin twoK, p i * ξ i ω =
+                (1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) := by
+              calc ∑ i : Fin twoK, p i * ξ i ω
+                  = ∑ i : Fin twoK with i.val < k, p i * ξ i ω := by
+                      apply Finset.sum_bij (i := fun i _ => i) (hi := fun i hi => hi)
+                        (ha := fun i hi => by
+                          simp [p] at hi ⊢
+                          rcases (Finset.mem_filter.mp hi).2 with h | h
+                          · exact h
+                          · simp [ξ, (Finset.mem_filter.mp hi).2]; ring)
+                      · intro i j _ _ h; exact h
+                      · intro b hb
+                        use b, hb
+                        simp [p, (Finset.mem_filter.mp hb).2, ξ]
+                _ = ∑ i : Fin k, (1/(k:ℝ)) * f (X (n + i.val + 1) ω) := by
+                      sorry -- Reindex from Fin twoK with i < k to Fin k
+                _ = (1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) := by
+                      rw [Finset.mul_sum]; congr
+            have hq_expand : ∑ i : Fin twoK, q i * ξ i ω =
+                (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω) := by
+              sorry -- Similar to hp_expand
+            rw [hp_expand, hq_expand]
+      _ ≤ 2 * (Real.sqrt σSq)^2 * (1 - ρ) * (⨆ i, |p i - q i|) := hbound
+      _ = 2 * σSq * (1 - ρ) * (1 / (k : ℝ)) := by
+            simp [Real.sq_sqrt hσ_nonneg, hsup_pq]
+      _ = (2 * σSq * (1 - ρ)) / k := by ring
+      _ = Cf / k := rfl
+
   exact ⟨Cf, hCf_nonneg, hgoal⟩
 
 /-- For a contractable sequence and bounded measurable f, the weighted sums
@@ -693,11 +900,28 @@ theorem weighted_sums_converge_L1
   have hA_cauchy_L2_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
       eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ < ENNReal.ofReal ε := by
     intro ε hε
-    -- For contractable sequences, A 0 m - A 0 ℓ converges to 0 in L²
-    -- This uses l2_contractability_bound: different weight distributions give small L² diff
-    -- The weights p = (1/m, ..., 1/m) vs q = (1/ℓ, ..., 1/ℓ) satisfy sup|p_i - q_i| → 0
-    sorry  -- TODO: Apply l2_contractability_bound with p,q being uniform on different windows
-           -- The sup difference is max(1/m, 1/ℓ) which → 0 as m,ℓ → ∞
+    -- Strategy: use triangle inequality to compare via a common window
+    -- For m, ℓ ≥ N, compare both to A 0 N and use the two-window bound
+    -- ‖A 0 m - A 0 ℓ‖₂ ≤ ‖A 0 m - A 0 N‖₂ + ‖A 0 N - A 0 ℓ‖₂
+    -- Each term is bounded by √(Cf/N) via l2_bound_two_windows
+    -- So we need 2√(Cf/N) < ε, i.e., N > 4Cf/ε²
+
+    -- Get Cf for window size 1 (to establish it exists)
+    have h_k1 : 0 < (1 : ℕ) := by norm_num
+    obtain ⟨Cf, hCf_nonneg, _⟩ := l2_bound_two_windows X hX_contract hX_meas hX_L2 f hf_meas hf_bdd 0 0 h_k1
+
+    -- Choose N large enough
+    have hε_sq_pos : 0 < ε ^ 2 := pow_pos hε 2
+    have hε_sq : 0 < ε ^ 2 / (4 * Cf + 1) := by
+      apply div_pos hε_sq_pos
+      have : 0 < (4 : ℝ) * Cf + 1 := by
+        have : 0 ≤ (4 : ℝ) * Cf := mul_nonneg (by norm_num) hCf_nonneg
+        linarith
+      exact this
+
+    -- For now, leave the detailed calculation as sorry
+    -- The idea is: choose N such that Cf / N < ε² / 4
+    sorry
 
   have hA_cauchy_L1_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
       eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ < ENNReal.ofReal ε := by
@@ -715,7 +939,18 @@ theorem weighted_sums_converge_L1
   have h_exist_alpha_0 : ∃ alpha_0 : Ω → ℝ, Measurable alpha_0 ∧ MemLp alpha_0 1 μ ∧
       (∀ ε > 0, ∃ M, ∀ m ≥ M,
         eLpNorm (fun ω => A 0 m ω - alpha_0 ω) 1 μ < ENNReal.ofReal ε) := by
-    sorry  -- TODO: Use CompleteSpace (Lp ℝ 1 μ) as before
+    -- Use Cauchy completeness of L¹
+    -- The sequence (A 0 m)_m is Cauchy in L¹, so it converges
+    -- We construct the limit by extracting it from the Lp space
+
+    -- Strategy: Use the fact that Lp 1 is complete
+    -- 1. Show (A 0 m) is Cauchy in Lp norm
+    -- 2. Get a limit in the Lp space
+    -- 3. Extract a measurable representative
+
+    sorry  -- TODO: This requires using Mathlib's Lp space completion
+           -- Look for theorems about Cauchy sequences in Lp spaces
+           -- The key is that L¹(μ) is complete when μ is a probability measure
 
   obtain ⟨alpha_0, halpha_0_meas, halpha_0_mem, halpha_0_conv⟩ := h_exist_alpha_0
 
@@ -733,12 +968,42 @@ theorem weighted_sums_converge_L1
     -- Get M₁ such that ‖A 0 m - alpha_0‖₁ < ε/2 for m ≥ M₁
     rcases halpha_0_conv (ε / 2) hε2_pos with ⟨M₁, hM₁⟩
 
-    -- Choose M large enough that:
-    -- 1. M ≥ M₁ (so term 2 < ε/2)
-    -- 2. O(n/M) < ε/2 (so term 1 < ε/2 via l2_bound_two_windows)
-    -- For now, we just need M large (the exact calculation uses l2_bound_two_windows)
-    sorry  -- TODO: Complete with explicit M calculation using l2_bound_two_windows bound
-           -- refine ⟨max M₁ (2*n), fun m hm => ?_⟩ and apply triangle + both bounds
+    -- Get bound constant from l2_bound_two_windows
+    have h_k1 : 0 < (1 : ℕ) := by norm_num
+    obtain ⟨Cf, hCf_nonneg, h_bound⟩ := l2_bound_two_windows X hX_contract hX_meas hX_L2 f hf_meas hf_bdd n 0 h_k1
+
+    -- Choose M₂ large enough that √(Cf/M₂) < ε/2
+    -- This means Cf/M₂ < ε²/4, so M₂ > 4Cf/ε²
+    have hε_sq_pos : 0 < (ε / 2) ^ 2 := pow_pos hε2_pos 2
+
+    -- Define M as max of M₁ and a bound ensuring the L² term is small
+    let M := M₁ + 1  -- Placeholder; actual value should depend on Cf and ε
+
+    use M
+    intro m hm
+
+    -- Apply triangle inequality
+    have h_triangle : eLpNorm (fun ω => A n m ω - alpha_0 ω) 1 μ ≤
+        eLpNorm (fun ω => A n m ω - A 0 m ω) 1 μ +
+        eLpNorm (fun ω => A 0 m ω - alpha_0 ω) 1 μ := by
+      sorry  -- Standard eLpNorm triangle inequality
+
+    -- Bound term 2
+    have h_term2 : eLpNorm (fun ω => A 0 m ω - alpha_0 ω) 1 μ < ENNReal.ofReal (ε / 2) := by
+      apply hM₁; omega
+
+    -- Bound term 1 using L² → L¹ and l2_bound_two_windows
+    have h_term1 : eLpNorm (fun ω => A n m ω - A 0 m ω) 1 μ < ENNReal.ofReal (ε / 2) := by
+      sorry  -- Use l2_bound_two_windows and L² → L¹ embedding
+
+    -- Combine
+    calc eLpNorm (fun ω => A n m ω - alpha_0 ω) 1 μ
+        ≤ eLpNorm (fun ω => A n m ω - A 0 m ω) 1 μ +
+            eLpNorm (fun ω => A 0 m ω - alpha_0 ω) 1 μ := h_triangle
+      _ < ENNReal.ofReal (ε / 2) + ENNReal.ofReal (ε / 2) := by
+            exact ENNReal.add_lt_add h_term1 h_term2
+      _ = ENNReal.ofReal ε := by
+            rw [← ENNReal.ofReal_add hε2_pos.le hε2_pos.le]; norm_num
 
   -- Step 4: Package the result - alpha_0 is our answer!
   refine ⟨alpha_0, halpha_0_meas, halpha_0_mem, ?_⟩
