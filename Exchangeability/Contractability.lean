@@ -6,7 +6,6 @@ Authors: Cameron Freer
 import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
 import Mathlib.MeasureTheory.Measure.Typeclasses.Probability
 import Exchangeability.Probability.InfiniteProduct
-import Canonical
 
 /-!
 # Contractability and Exchangeability
