@@ -344,8 +344,8 @@ TODO: The exact construction requires careful handling of the measurable space i
 For now we axiomatize it as a placeholder. -/
 noncomputable def rcdKernel {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] : Kernel (Ω[α]) α :=
-  Kernel.map (condExpKernel μ (shiftInvariantSigma (α := α)))
-    (π0 (α := α)) (measurable_pi0 (α := α))
+  Kernel.comap ((condExpKernel μ (shiftInvariantSigma (α := α))).map (π0 (α := α)))
+    id (measurable_id'' (shiftInvariantSigma_le (α := α)))
 
 /-- The regular conditional distribution as a function assigning to each point
  a probability measure on α. -/
@@ -360,7 +360,8 @@ lemma ν_apply {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelS
       = (condExpKernel μ (shiftInvariantSigma (α := α)) ω)
           ((fun y : Ω[α] => y 0) ⁻¹' s) := by
   unfold ν rcdKernel
-  simp only [Kernel.map_apply' _ _ hs, π0]
+  simp only [Kernel.comap_apply, Function.comp_apply, id_eq]
+  rw [Kernel.map_apply' _ (measurable_pi0 (α := α)) _ hs, π0]
 
 /-- The kernel ν gives probability measures. -/
 instance ν_isProbabilityMeasure {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
@@ -375,8 +376,7 @@ lemma ν_measurable_tail {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     Measurable[shiftInvariantSigma (α := α)] (ν (μ := μ)) := by
   classical
   unfold ν rcdKernel
-  exact (Kernel.map (condExpKernel μ (shiftInvariantSigma (α := α)))
-    (π0 (α := α)) (measurable_pi0 (α := α))).measurable
+  exact ((condExpKernel μ (shiftInvariantSigma (α := α))).map (π0 (α := α))).measurable
 
 /-!
 Helper lemmas establishing the stability of the conditional expectation and the
@@ -390,29 +390,27 @@ private lemma condexp_precomp_iterate_eq
     μ[(fun ω => f ((shift (α := α))^[k] ω)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] μ[f | shiftInvariantSigma (α := α)] := by
   classical
-  set m := shiftInvariantSigma (α := α)
+  let m := shiftInvariantSigma (α := α)
   let shiftk := (shift (α := α))^[k]
   have h_shiftk_pres : MeasurePreserving shiftk μ μ := hσ.iterate k
   have h_shiftk_meas : AEMeasurable shiftk μ :=
     (measurable_shift (α := α)).iterate k |>.aemeasurable
   have h_int_shift : Integrable (fun ω => f (shiftk ω)) μ :=
     h_shiftk_pres.integrable_comp_of_integrable hf
-  have h_condexp_int : Integrable (μ[f | m]) μ :=
-    MeasureTheory.integrable_condExp (μ := μ) (m := m) (f := f)
+  have h_condexp_int : Integrable (μ[f | shiftInvariantSigma (α := α)]) μ :=
+    MeasureTheory.integrable_condExp (μ := μ) (m := shiftInvariantSigma (α := α)) (f := f)
   refine (MeasureTheory.ae_eq_condExp_of_forall_setIntegral_eq
-        (μ := μ) (m := m)
+        (μ := μ) (m := shiftInvariantSigma (α := α))
         (hm := shiftInvariantSigma_le (α := α))
         (f := fun ω => f (shiftk ω))
-        (g := μ[f | m])
+        (g := μ[f | shiftInvariantSigma (α := α)])
         (hf := h_int_shift)
         (hg_int_finite := ?hg_int_finite)
         (hg_eq := ?hg_eq)
         (hgm := (MeasureTheory.stronglyMeasurable_condExp (μ := μ)).aestronglyMeasurable)).symm
   case hg_int_finite =>
     intro s hs _
-    have h_meas : MeasurableSet s :=
-      (mem_shiftInvariantSigma_iff (α := α) (s := s)).1 hs |>.1
-    exact (h_condexp_int.integrableOn) h_meas
+    exact h_condexp_int.integrableOn hs
   case hg_eq =>
     intro s hs _
     have hS := (mem_shiftInvariantSigma_iff (α := α) (s := s)).1 hs
@@ -420,10 +418,8 @@ private lemma condexp_precomp_iterate_eq
     have hS_shift : shift ⁻¹' s = s := hS.2
     have hS_iter : shiftk ⁻¹' s = s := by
       induction k with
-      | zero => simp [shiftk]
-      | succ k hk =>
-          dsimp [shiftk, Function.iterate] at hk ⊢
-          simpa [hk, Set.preimage_preimage, hS_shift]
+      | zero => rfl
+      | succ k hk => simp [Function.iterate_succ', Set.preimage_comp, hk, hS_shift]
     have h_indicator_int : Integrable (s.indicator f) μ :=
       hf.indicator hS_meas
     have h_indicator_meas :
@@ -499,8 +495,9 @@ regular conditional distribution given the shift-invariant σ-algebra. -/
 lemma identicalConditionalMarginals {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] (hσ : MeasurePreserving shift μ μ) (k : ℕ) :
     ∀ᵐ ω ∂μ,
-      (Kernel.map (condExpKernel μ (shiftInvariantSigma (α := α)))
-        (fun y : Ω[α] => y k) (measurable_pi_apply k) : Kernel (Ω[α]) α) ω
+      (Kernel.comap ((condExpKernel μ (shiftInvariantSigma (α := α))).map
+        (fun y : Ω[α] => y k)) id (measurable_id'' (shiftInvariantSigma_le (α := α)))
+        : Kernel (Ω[α]) α) ω
       = ν (μ := μ) ω := by
   -- TODO: Complete using Kernel.ae_eq_of_forall_integral_eq
   -- The strategy is to show that both kernels give the same integrals for all bounded
@@ -509,51 +506,20 @@ lemma identicalConditionalMarginals {μ : Measure (Ω[α])} [IsProbabilityMeasur
 
 /-- **Kernel-level integral multiplication under independence.**
 
-This is the pointwise analogue of `IndepFun.integral_mul_eq_mul_integral` for kernels.
 If X and Y are independent under a kernel κ and measure μ, then for μ-almost every a,
 the integral of their product under κ(a) equals the product of their integrals.
-
-**Proof strategy** (to be formalized):
-The measure-level version uses:
-1. `indepFun_iff_map_prod_eq_prod_map_map`: independence ↔ product of pushforwards
-2. `integral_prod_mul`: Fubini for product measures
-3. Integrability arguments for edge cases
-
-The kernel version requires:
-1. Kernel analogue of product pushforward equality (almost everywhere in a)
-2. Kernel Fubini theorem
-3. Similar integrability handling
-
-This is a standard result in the theory of conditional expectations and should eventually
-be added to Mathlib's `Probability.Independence.Kernel` or a new `Integration` submodule.
-
-This is proved below using a π-λ system argument.
--/
-/-- **Proof attempt for Kernel.IndepFun.integral_mul**
-
-The strategy is to use the characterization of independence via compProd and then
-apply the measure-level integral_mul result.
-
-Key steps:
-1. Use `indepFun_iff_compProd_map_prod_eq_compProd_prod_map_map` to get measure equality
-2. Apply integral to both sides
-3. Use Fubini/kernel composition to separate the integrals
-4. Get pointwise equality a.e.
-
-The difficulty is that the compProd characterization gives us equality of measures
-`μ ⊗ₘ κ`, not pointwise for each `κ a`. We need to "decondition" to get the
-pointwise statement.
--/
-/-- Kernel-level multiplicativity of integrals under independence.
 
 This is proved by reducing to the measure-level lemma `IndepFun.integral_mul_eq_mul_integral`
 via a countable π-system + quantifier swap argument.
 
-**Strategy:**
+**Proof strategy:**
 1. Bounded ⇒ integrable for all parameters (since κ a is a probability measure)
 2. Convert kernel independence to pointwise (a.e. in a) measure-level independence
    using a countable π-system + monotone class argument to swap quantifiers
 3. Apply the measure-level `IndepFun.integral_mul_eq_mul_integral` pointwise
+
+This is a standard result in the theory of conditional expectations and should eventually
+be added to Mathlib's `Probability.Independence.Kernel` or a new `Integration` submodule.
 -/
 lemma Kernel.IndepFun.integral_mul
     {α Ω : Type*} [MeasurableSpace α] [MeasurableSpace Ω]
@@ -571,26 +537,30 @@ lemma Kernel.IndepFun.integral_mul
   rcases hY_bd with ⟨CY, hCY⟩
   have hX_int : ∀ a, Integrable X (κ a) := fun a => by
     refine ⟨hX.aestronglyMeasurable, ?_⟩
-    have : ∫⁻ ω, ‖X ω‖₊ ∂(κ a) ≤ ∫⁻ ω, CX ∂(κ a) := by
+    have : ∫⁻ ω, ‖X ω‖₊ ∂(κ a) ≤ ∫⁻ ω, ENNReal.ofReal CX ∂(κ a) := by
       apply lintegral_mono
       intro ω
-      simp [ENNReal.ofReal_le_ofReal, Real.norm_eq_abs, hCX ω]
+      have : (‖X ω‖₊ : ℝ≥0∞) = ENNReal.ofReal ‖X ω‖ := by simp [ENNReal.ofReal]
+      rw [this]
+      exact ENNReal.ofReal_le_ofReal (le_trans (Real.norm_eq_abs _).le (hCX ω))
     calc ∫⁻ ω, ‖X ω‖₊ ∂(κ a)
-        ≤ ∫⁻ ω, CX ∂(κ a) := this
-      _ = CX * κ a Set.univ := by simp [lintegral_const]
-      _ = CX := by simp [measure_univ]
-      _ < ⊤ := ENNReal.coe_lt_top
+        ≤ ∫⁻ ω, ENNReal.ofReal CX ∂(κ a) := this
+      _ = ENNReal.ofReal CX * κ a Set.univ := by simp [lintegral_const]
+      _ = ENNReal.ofReal CX := by simp [measure_univ]
+      _ < ⊤ := ENNReal.ofReal_lt_top
   have hY_int : ∀ a, Integrable Y (κ a) := fun a => by
     refine ⟨hY.aestronglyMeasurable, ?_⟩
-    have : ∫⁻ ω, ‖Y ω‖₊ ∂(κ a) ≤ ∫⁻ ω, CY ∂(κ a) := by
+    have : ∫⁻ ω, ‖Y ω‖₊ ∂(κ a) ≤ ∫⁻ ω, ENNReal.ofReal CY ∂(κ a) := by
       apply lintegral_mono
       intro ω
-      simp [ENNReal.ofReal_le_ofReal, Real.norm_eq_abs, hCY ω]
+      have : (‖Y ω‖₊ : ℝ≥0∞) = ENNReal.ofReal ‖Y ω‖ := by simp [ENNReal.ofReal]
+      rw [this]
+      exact ENNReal.ofReal_le_ofReal (le_trans (Real.norm_eq_abs _).le (hCY ω))
     calc ∫⁻ ω, ‖Y ω‖₊ ∂(κ a)
-        ≤ ∫⁻ ω, CY ∂(κ a) := this
-      _ = CY * κ a Set.univ := by simp [lintegral_const]
-      _ = CY := by simp [measure_univ]
-      _ < ⊤ := ENNReal.coe_lt_top
+        ≤ ∫⁻ ω, ENNReal.ofReal CY ∂(κ a) := this
+      _ = ENNReal.ofReal CY * κ a Set.univ := by simp [lintegral_const]
+      _ = ENNReal.ofReal CY := by simp [measure_univ]
+      _ < ⊤ := ENNReal.ofReal_lt_top
 
   -- Step 2: From kernel independence to pointwise measure-level independence
   -- We use a countable π-system (rational intervals) + monotone class to swap quantifiers:
@@ -698,13 +668,12 @@ lemma Kernel.IndepFun.integral_mul
   refine h_indep_ae.mono (fun a ha => ?_)
   exact IndepFun.integral_mul_eq_mul_integral ha hX.aestronglyMeasurable hY.aestronglyMeasurable
 
-/-- **Note**: `Kernel.IndepFun.comp` already exists in Mathlib!
-See `Mathlib.Probability.Independence.Kernel`, line ~976.
-We use it directly without re-axiomatizing. -/
+/-- Kernel-level factorisation for two bounded test functions applied to coordinate projections.
 
-/--
-Kernel-level factorisation for two bounded test functions applied to coordinate projections.
 This specializes `Kernel.IndepFun.integral_mul` to our setting.
+
+**Note**: `Kernel.IndepFun.comp` already exists in Mathlib!
+See `Mathlib.Probability.Independence.Kernel`, line ~976.
 -/
 private lemma condexp_pair_factorization
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
@@ -714,7 +683,7 @@ private lemma condexp_pair_factorization
     (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C)
     (hciid :
       ProbabilityTheory.Kernel.iIndepFun (fun k : Fin 2 => fun ω : Ω[α] => ω k)
-        (condExpKernel μ (shiftInvariantSigma (α := α))) μ) :
+        (condExpKernel μ (shiftInvariantSigma (α := α)))) :
     μ[(fun ω => f (ω 0) * g (ω 1)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ]
     fun ω =>
@@ -757,7 +726,7 @@ private lemma condexp_pair_factorization
     -- From `hciid: ProbabilityTheory.Kernel.iIndepFun (fun k : Fin 2 => fun ω => ω k) κ μ`
     -- we know the coordinates 0 and 1 are independent under the kernel
     have h_indep_pair : Kernel.IndepFun (fun ω : Ω[α] => ω 0) (fun ω => ω 1)
-        (condExpKernel μ (shiftInvariantSigma (α := α))) μ := by
+        (condExpKernel μ (shiftInvariantSigma (α := α))) := by
       exact hciid.indepFun (i := 0) (j := 1) (by norm_num)
     -- Apply the kernel-level integral multiplication theorem
     have h_bd0 : ∃ C, ∀ ω : Ω[α], |(fun y => f (y 0)) ω| ≤ C := by
@@ -818,7 +787,7 @@ theorem condexp_product_factorization
     -- Conditional independence of coordinates given tail:
     (hciid :
       ProbabilityTheory.Kernel.iIndepFun (fun k : Fin m => fun ω : Ω[α] => ω k)
-        (condExpKernel μ (shiftInvariantSigma (α := α))) μ) :
+        (condExpKernel μ (shiftInvariantSigma (α := α)))) :
     μ[fun ω => ∏ k, fs k (ω (k : ℕ)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω)) := by
   classical
