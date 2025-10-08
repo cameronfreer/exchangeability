@@ -561,23 +561,11 @@ lemma aestronglyMeasurable_shiftInvariant_of_koopman
     simp [hfix]
   have hshift : (fun ω => f (shift ω)) =ᵐ[μ] f := by
     exact hcomp.symm.trans hfixAE
-  -- STEP 2. Choose a strongly measurable representative of `f`.
-  have hf_base : AEStronglyMeasurable f μ := by
-    exact Lp.aestronglyMeasurable f
-  obtain ⟨g, hg_meas, hfg⟩ := hf_base
-  -- Transport the a.e. invariance to the chosen representative.
-  have hshift_g : (fun ω => g (shift ω)) =ᵐ[μ] g := by
-    have hcomp := (hσ.quasiMeasurePreserving.ae_eq_comp hfg)
-    have hcomp' : (fun ω => g (shift ω)) =ᵐ[μ] (fun ω => f (shift ω)) := hcomp.symm
-    have hshift' : (fun ω => f (shift ω)) =ᵐ[μ] g := hshift.trans hfg
-    exact hcomp'.trans hshift'
-  -- STEP 3. Produce a shift-invariant representative and relate it to `f`.
-  obtain ⟨g', hg'_meas, hAEgg, _⟩ :=
-    exists_shiftInvariantRepresentative (μ := μ) hσ g hg_meas.aestronglyMeasurable hshift_g
-  have hAEgg' : (fun ω => g' ω) =ᵐ[μ] g := hAEgg
-  have hAEgf : (fun ω => g' ω) =ᵐ[μ] f := hAEgg'.trans hfg.symm
+  have hf_base : AEStronglyMeasurable f μ := Lp.aestronglyMeasurable f
+  obtain ⟨g', hg'_meas, hAE, _⟩ :=
+    mkShiftInvariantRep (μ := μ) hσ (fun ω => f ω) hf_base hshift
   have hf_meas : AEStronglyMeasurable[shiftInvariantSigma (α := α)] f μ :=
-    (AEStronglyMeasurable.congr hg'_meas hAEgf)
+    (AEStronglyMeasurable.congr hg'_meas hAE)
   exact hf_meas
 
 /-- The fixed-point subspace of the Koopman operator.
