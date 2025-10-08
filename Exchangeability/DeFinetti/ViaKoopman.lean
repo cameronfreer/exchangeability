@@ -678,12 +678,52 @@ lemma Kernel.IndepFun.integral_mul
   rcases hX_bd with ⟨CX, hCX⟩
   rcases hY_bd with ⟨CY, hCY⟩
 
-  -- Use the key characterization: independence via measure equality on product
-  -- This gives us: for all measurable sets S, T,
-  -- ∫⁻ a, κ a (X⁻¹(S) ∩ Y⁻¹(T)) ∂μ = (∫⁻ a, κ a (X⁻¹(S)) ∂μ) * (∫⁻ a, κ a (Y⁻¹(T)) ∂μ)
+  -- Step 1: For indicators, use the independence characterization
+  have h_indicator : ∀ (s t : Set ℝ) (hs : MeasurableSet s) (ht : MeasurableSet t),
+      ∀ᵐ a ∂μ, ∫ ω, (s.indicator (fun _ => 1) (X ω)) * (t.indicator (fun _ => 1) (Y ω)) ∂(κ a)
+        = (∫ ω, s.indicator (fun _ => 1) (X ω) ∂(κ a)) *
+          (∫ ω, t.indicator (fun _ => 1) (Y ω) ∂(κ a)) := by
+    intro s t hs ht
+    have h_ae := hXY.measure_inter_preimage_eq_mul s t hs ht
+    filter_upwards [h_ae] with a ha
+    -- Convert set measures to indicator integrals
+    have h_prod : ∫ ω, (s.indicator (fun _ => 1) (X ω)) * (t.indicator (fun _ => 1) (Y ω)) ∂(κ a)
+        = (κ a (X ⁻¹' s ∩ Y ⁻¹' t)).toReal := by
+      rw [← ENNReal.toReal_ofReal (by norm_num : (0 : ℝ) ≤ 1)]
+      congr 1
+      rw [← MeasureTheory.lintegral_indicator_const_comp]
+      · congr with ω
+        simp [Set.indicator, Set.mem_inter_iff, Set.mem_preimage]
+        by_cases hx : X ω ∈ s <;> by_cases hy : Y ω ∈ t <;> simp [hx, hy]
+      · exact (hs.preimage hX).inter (ht.preimage hY)
+    have h_left : ∫ ω, s.indicator (fun _ => 1) (X ω) ∂(κ a)
+        = (κ a (X ⁻¹' s)).toReal := by
+      rw [← ENNReal.toReal_ofReal (by norm_num : (0 : ℝ) ≤ 1)]
+      congr 1
+      exact MeasureTheory.lintegral_indicator_const_comp (hs.preimage hX) measurableSet_univ
+    have h_right : ∫ ω, t.indicator (fun _ => 1) (Y ω) ∂(κ a)
+        = (κ a (Y ⁻¹' t)).toReal := by
+      rw [← ENNReal.toReal_ofReal (by norm_num : (0 : ℝ) ≤ 1)]
+      congr 1
+      exact MeasureTheory.lintegral_indicator_const_comp (ht.preimage hY) measurableSet_univ
+    rw [h_prod, h_left, h_right, ha]
+    simp [ENNReal.toReal_mul]
 
-  -- The standard approach: use ae_eq_of_forall_setLIntegral_eq
-  -- We want to show two functions are ae equal by showing their integrals agree on all sets
+  -- Step 2: Extend from indicators to simple functions by linearity
+  -- For simple functions f = ∑ᵢ cᵢ · 𝟙_Aᵢ and g = ∑ⱼ dⱼ · 𝟙_Bⱼ:
+  -- ∫ fg = ∑ᵢⱼ cᵢdⱼ ∫ 𝟙_{Aᵢ×Bⱼ} = ∑ᵢⱼ cᵢdⱼ · κ(Aᵢ ∩ Bⱼ)
+  --      = ∑ᵢⱼ cᵢdⱼ · κ(Aᵢ) · κ(Bⱼ)  (by h_indicator)
+  --      = (∑ᵢ cᵢ · κ(Aᵢ)) · (∑ⱼ dⱼ · κ(Bⱼ)) = (∫ f) · (∫ g)
+
+  -- Step 3: Extend to bounded measurable functions by approximation
+  -- For bounded measurable X, Y:
+  -- 1. Approximate by simple functions: Xₙ → X, Yₙ → Y pointwise
+  -- 2. Use dominated convergence (bounded by CX, CY)
+  -- 3. Pass to limit: ∫ XₙYₙ → ∫ XY and (∫ Xₙ)(∫ Yₙ) → (∫ X)(∫ Y)
+
+  -- This is a standard measure theory argument but requires careful bookkeeping
+  -- of the approximating sequences and dominated convergence applications.
+  -- TODO: Complete using MeasureTheory.SimpleFunc approximation + dominated convergence
   sorry
 
 /-- **Note**: `Kernel.IndepFun.comp` already exists in Mathlib!
