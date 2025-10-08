@@ -93,24 +93,24 @@ Cylinder set determined by the first `n` coordinates.
 Given a set `S ⊆ Fin n → α`, the prefix cylinder `prefixCylinder n S` is the
 set of all sequences `x : ℕ → α` whose first `n` coordinates lie in `S`.
 -/
-def prefixCylinder (n : ℕ) (S : Set (Fin n → α)) : Set (ℕ → α) :=
+def prefixCylinder {n : ℕ} (S : Set (Fin n → α)) : Set (ℕ → α) :=
   (prefixProj (α:=α) n) ⁻¹' S
 
 omit [MeasurableSpace α] in
 @[simp]
 lemma mem_prefixCylinder {n : ℕ} {S : Set (Fin n → α)} {x : ℕ → α} :
-    x ∈ prefixCylinder (α:=α) n S ↔ prefixProj (α:=α) n x ∈ S := Iff.rfl
+    x ∈ prefixCylinder (α:=α) S ↔ prefixProj (α:=α) n x ∈ S := Iff.rfl
 
 omit [MeasurableSpace α] in
 @[simp]
 lemma prefixCylinder_univ {n : ℕ} :
-    prefixCylinder (α:=α) n (Set.univ : Set (Fin n → α)) = (Set.univ) := by
+    prefixCylinder (α:=α) (Set.univ : Set (Fin n → α)) = (Set.univ) := by
   ext x; simp [prefixCylinder]
 
 omit [MeasurableSpace α] in
 @[simp]
 lemma prefixCylinder_empty {n : ℕ} :
-    prefixCylinder (α:=α) n (∅ : Set (Fin n → α)) = (∅) := rfl
+    prefixCylinder (α:=α) (∅ : Set (Fin n → α)) = (∅) := rfl
 
 /--
 The collection of all prefix cylinders.
@@ -122,11 +122,11 @@ for some `n`.
 **Key property:** This forms a π-system that generates the product σ-algebra.
 -/
 def prefixCylinders : Set (Set (ℕ → α)) :=
-  {A | ∃ n, ∃ S : Set (Fin n → α), MeasurableSet S ∧ A = prefixCylinder (α:=α) n S}
+  {A | ∃ n, ∃ S : Set (Fin n → α), MeasurableSet S ∧ A = prefixCylinder (α:=α) S}
 
 lemma prefixCylinder_mem_prefixCylinders {n : ℕ} {S : Set (Fin n → α)}
     (hS : MeasurableSet S) :
-    prefixCylinder (α:=α) n S ∈ prefixCylinders (α:=α) :=
+    prefixCylinder (α:=α) S ∈ prefixCylinders (α:=α) :=
   ⟨n, S, hS, rfl⟩
 
 lemma measurable_of_mem_prefixCylinders {A : Set (ℕ → α)}
@@ -175,8 +175,8 @@ def extendSet (hmn : m ≤ n) (S : Set (Fin m → α)) : Set (Fin n → α) :=
 
 omit [MeasurableSpace α] in
 lemma prefixCylinder_inter {m n : ℕ} {S : Set (Fin m → α)} {T : Set (Fin n → α)} :
-    prefixCylinder (α:=α) m S ∩ prefixCylinder (α:=α) n T =
-      prefixCylinder (α:=α) (max m n)
+    prefixCylinder (α:=α) S ∩ prefixCylinder (α:=α) T =
+      prefixCylinder (α:=α)
         (extendSet (α:=α) (Nat.le_max_left _ _) S ∩
           extendSet (α:=α) (Nat.le_max_right _ _) T) := by
   ext x
@@ -247,7 +247,7 @@ lemma cylinder_subset_prefixCylinders {s : Finset ℕ} {S : Set (∀ _ : s, α)}
     exact measurable_pi_apply _
   have hs_eq :
       MeasureTheory.cylinder (α:=fun _ : ℕ => α) s S =
-        prefixCylinder (α:=α) N (pull ⁻¹' S) := by
+        prefixCylinder (α:=α) (pull ⁻¹' S) := by
     ext x
     classical
     have hpull : pull (prefixProj (α:=α) N x) = s.restrict x := by
