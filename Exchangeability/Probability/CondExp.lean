@@ -373,29 +373,42 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         · simp [Set.indicator, h1, h2]
       · simp [Set.indicator, h1]
 
-    -- TODO: Complete reverse direction
+    -- TODO: Complete reverse direction using tower property
     --
     -- Goal: Show μ⟦t1 ∩ t2 | mG⟧ =ᵐ[μ] μ⟦t1 | mG⟧ * μ⟦t2 | mG⟧
     -- Given: hProjt2: μ[t2.indicator | mF ⊔ mG] =ᵐ[μ] μ[t2.indicator | mG]
+    --        indicator_prod: (t1 ∩ t2).indicator = t1.indicator * t2.indicator ✓
     --
-    -- Strategy outline:
-    -- 1. Use indicator_prod: (t1 ∩ t2).indicator = t1.indicator * t2.indicator ✓
-    -- 2. Apply condExp to both sides: μ[(t1 ∩ t2).indicator | mG] = μ[t1.indicator * t2.indicator | mG]
-    -- 3. Key issue: t1.indicator is mF-measurable, not mG-measurable
-    --    Cannot directly pull out t1.indicator from the conditional expectation
+    -- Key mathlib lemmas:
+    -- 1. condExp_condExp_of_le {m₁ m₂ m₀ : MeasurableSpace α} (hm₁₂ : m₁ ≤ m₂) (hm₂ : m₂ ≤ m₀) :
+    --      μ[μ[f|m₂]|m₁] =ᵐ[μ] μ[f|m₁]
+    --    (ConditionalExpectation.Basic:324) - Tower property
     --
-    -- Alternative approach needed:
-    -- - Use tower property: μ[· | mG] = μ[μ[· | mF ⊔ mG] | mG]
-    -- - Apply hProjt2 to relate t2 conditioning
-    -- - May need uniqueness of conditional expectation
+    -- 2. condExp_stronglyMeasurable_mul_of_bound (hm : m ≤ m0) {f g : α → ℝ}
+    --      (hf : StronglyMeasurable[m] f) (hg : Integrable g μ) :
+    --      μ[f * g | m] =ᵐ[μ] f * μ[g | m]
+    --    (ConditionalExpectation.Real:243) - Pull-out property
     --
-    -- This direction is subtle and may require showing that the projection property
-    -- characterizes conditional independence in a different way.
+    -- Strategy:
+    -- 1. Apply tower property from mG to mF ⊔ mG:
+    --      μ[(t1 ∩ t2).indicator | mG] = μ[μ[(t1 ∩ t2).indicator | mF ⊔ mG] | mG]
     --
-    -- Mathlib lemmas potentially needed:
-    -- - condExp_condExp_of_le (tower property)
-    -- - condExp_stronglyMeasurable (for mF-measurable functions)
-    -- - ae_eq_condExp_of_forall_setIntegral_eq (uniqueness)
+    -- 2. Use indicator_prod and apply condExp to product:
+    --      μ[t1.indicator * t2.indicator | mF ⊔ mG]
+    --
+    -- 3. Since t1.indicator is mF-measurable (hence mF ⊔ mG-measurable), pull it out:
+    --      = t1.indicator * μ[t2.indicator | mF ⊔ mG]
+    --
+    -- 4. Apply hProjt2 to substitute:
+    --      =ᵐ[μ] t1.indicator * μ[t2.indicator | mG]
+    --
+    -- 5. Apply tower property again from outer mG conditioning:
+    --      μ[t1.indicator * μ[t2.indicator | mG] | mG]
+    --
+    -- 6. Pull out μ[t2.indicator | mG] (which is mG-measurable):
+    --      = μ[t1.indicator | mG] * μ[t2.indicator | mG]
+    --
+    -- This completes the product formula for conditional independence.
     sorry
 
 /-- If conditional probabilities agree a.e. for a π-system generating ℋ,
