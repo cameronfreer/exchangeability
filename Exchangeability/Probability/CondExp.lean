@@ -184,8 +184,40 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
           =ᵐ[μ] μ[H.indicator (fun _ => (1 : ℝ)) | mG] := by
   classical
-  -- TODO: upstream should expose this characterization directly.
-  sorry
+  constructor
+  · intro hCond H hH
+    set g : Ω → ℝ := μ[H.indicator (fun _ => (1 : ℝ)) | mG]
+    have hg_int : Integrable g μ := by
+      -- TODO: `integrable_condExp` with the chosen function.
+      sorry
+    have hg_meas : AEStronglyMeasurable[mG] g μ := by
+      -- TODO: `stronglyMeasurable_condExp` for the chosen function.
+      sorry
+    have h_rect :
+        ∀ {F} (hF : MeasurableSet[mF] F) {G} (hG : MeasurableSet[mG] G),
+          ∫ ω in F ∩ G, g ω ∂μ
+            = ∫ ω in F ∩ G, (H.indicator fun _ : Ω => (1 : ℝ)) ω ∂μ := by
+      -- TODO: deduce from the product formula in `condIndep_iff`.
+      sorry
+    have h_dynkin :
+        ∀ {S} (hS : MeasurableSet[mF ⊔ mG] S),
+          ∫ ω in S, g ω ∂μ
+            = ∫ ω in S, (H.indicator fun _ : Ω => (1 : ℝ)) ω ∂μ := by
+      -- TODO: extend `h_rect` via Dynkin's π-λ theorem.
+      sorry
+    have h_proj :
+        μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
+          =ᵐ[μ] g := by
+      -- TODO: apply `ae_eq_condExp_of_forall_setIntegral_eq` using `h_dynkin`.
+      sorry
+    simpa [g] using h_proj.symm
+  · intro hProj
+    refine
+      (ProbabilityTheory.condIndep_iff mG mF mH hmG hmF hmH μ).2 ?_
+    intro F hF G hG
+    have h_indicator := hProj G hG
+    -- TODO: recover the product formula from `h_indicator` via pull-out and tower properties.
+    sorry
 
 /-- If conditional probabilities agree a.e. for a π-system generating ℋ,
 then they agree for all H ∈ ℋ.
