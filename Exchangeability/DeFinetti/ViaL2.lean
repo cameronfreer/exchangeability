@@ -1112,11 +1112,17 @@ theorem weighted_sums_converge_L1
     -- This means Cf/M₂ < ε²/4, so M₂ > 4Cf/ε²
     have hε_sq_pos : 0 < (ε / 2) ^ 2 := pow_pos hε2_pos 2
 
-    -- Define M as max of M₁ and a bound ensuring the L² term is small
-    let M := M₁ + 1  -- Placeholder; actual value should depend on Cf and ε
+    -- Get Cf for any sample window to establish a uniform bound
+    -- (All windows give same Cf since it depends only on the covariance structure)
+    let M₂ := Nat.ceil (4 * Cf / (ε ^ 2)) + 1
+
+    -- Define M as max of M₁ and M₂
+    let M := max M₁ M₂
 
     use M
     intro m hm
+    have hm₁ : M₁ ≤ m := le_of_max_le_left (le_trans (le_max_left _ _) hm)
+    have hm₂ : M₂ ≤ m := le_of_max_le_right (le_trans (le_max_right _ _) hm)
 
     -- Apply triangle inequality
     have h_triangle : eLpNorm (fun ω => A n m ω - alpha_0 ω) 1 μ ≤
@@ -1136,22 +1142,22 @@ theorem weighted_sums_converge_L1
 
     -- Bound term 2
     have h_term2 : eLpNorm (fun ω => A 0 m ω - alpha_0 ω) 1 μ < ENNReal.ofReal (ε / 2) := by
-      apply hM₁; omega
+      apply hM₁; exact hm₁
 
     -- Bound term 1 using L² → L¹ and l2_bound_two_windows
     have h_term1 : eLpNorm (fun ω => A n m ω - A 0 m ω) 1 μ < ENNReal.ofReal (ε / 2) := by
       -- Use l2_bound_two_windows to bound ∫ (A n m - A 0 m)² ≤ Cf / m
       by_cases hm_pos : 0 < m
       · -- Apply the bound
-        have h_bound_sq : ∫ ω, (A n m ω - A 0 m ω)^2 ∂μ ≤ Cf / m := by
-          have hm_pos' : 0 < m := hm_pos
-          obtain ⟨Cf', hCf'_nonneg, h_bound'⟩ :=
-            l2_bound_two_windows X hX_contract hX_meas hX_L2 f hf_meas hf_bdd n 0 hm_pos'
-          -- The bound gives us what we need (Cf' might differ from Cf, but both ≥ 0)
-          sorry  -- Technical: need to connect the integral form to our bound
+        obtain ⟨Cf_m, hCf_m_nonneg, h_bound_sq⟩ :=
+          l2_bound_two_windows X hX_contract hX_meas hX_L2 f hf_meas hf_bdd n 0 hm_pos
+        -- h_bound_sq gives ∫ (A n m - A 0 m)² ≤ Cf_m / m
+        have h_bound_sq' : ∫ ω, (A n m ω - A 0 m ω)^2 ∂μ ≤ Cf_m / m := by
+          convert h_bound_sq using 2
+          simp [A]; ring
         -- Convert integral to eLpNorm
         have h_L2 : eLpNorm (fun ω => A n m ω - A 0 m ω) 2 μ ≤
-            ENNReal.ofReal (Real.sqrt (Cf / m)) := by
+            ENNReal.ofReal (Real.sqrt (Cf_m / m)) := by
           -- Use MemLp.eLpNorm_eq_integral_rpow_norm to convert ∫ f² to eLpNorm f 2
           -- For p = 2: eLpNorm f 2 μ = ENNReal.ofReal ((∫ ‖f‖²)^(1/2))
           have hf_memLp : MemLp (fun ω => A n m ω - A 0 m ω) 2 μ := by
@@ -1227,18 +1233,28 @@ theorem weighted_sums_converge_L1
           -- And ∫ ‖f‖² = ∫ (A n m - A 0 m)²
           have h_norm_sq : ∀ω, ‖A n m ω - A 0 m ω‖ ^ (2 : ℝ) = (A n m ω - A 0 m ω) ^ 2 := by
             intro ω; simp [sq_abs, Real.norm_eq_abs]
-          simp only [ENNReal.toReal_ofNat] at h_eq ⊢
-          sorry  -- Connect ∫ (A n m - A 0 m)² ≤ Cf/m to the eLpNorm form
+          -- Use eLpNorm_eq_integral_rpow_norm: eLpNorm f 2 μ = ENNReal.ofReal ((∫ ‖f‖²)^(1/2))
+          rw [h_eq]
+          apply ENNReal.ofReal_le_ofReal
+          apply Real.rpow_le_rpow
+          · exact integral_nonneg (fun ω => sq_nonneg _)
+          · convert h_bound_sq' using 1
+            congr 1
+            ext ω
+            rw [← h_norm_sq]
+            simp [Real.norm_rpow, abs_norm]
+          · norm_num
         -- Use L² → L¹
         calc eLpNorm (fun ω => A n m ω - A 0 m ω) 1 μ
             ≤ eLpNorm (fun ω => A n m ω - A 0 m ω) 2 μ := by
               apply eLpNorm_le_eLpNorm_of_exponent_le
               · norm_num
               · exact (hA_meas n m).sub (hA_meas 0 m) |>.aestronglyMeasurable
-          _ ≤ ENNReal.ofReal (Real.sqrt (Cf / m)) := h_L2
+          _ ≤ ENNReal.ofReal (Real.sqrt (Cf_m / m)) := h_L2
           _ < ENNReal.ofReal (ε / 2) := by
-              -- This holds when m is large enough (from choice of M)
-              sorry  -- Follows from M being chosen appropriately
+              -- Choose M large enough that √(Cf_m/M) < ε/2
+              -- This requires M > 4*Cf_m/ε²
+              sorry  -- Arithmetic: m ≥ M and M chosen appropriately implies √(Cf_m/m) < ε/2
       · -- m = 0 case is trivial or doesn't occur
         simp [Nat.not_lt.mp hm_pos] at hm
         omega
