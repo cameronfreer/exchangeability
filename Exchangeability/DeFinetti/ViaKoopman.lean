@@ -68,22 +68,8 @@ theorem integrable_of_bounded {Ω : Type*} [MeasurableSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {f : Ω → ℝ} (hmeas : Measurable f) (hbd : ∃ C, ∀ ω, |f ω| ≤ C) :
     Integrable f μ := by
-  rcases hbd with ⟨C, hC⟩
-  have hC_nn : 0 ≤ C := by
-    by_cases h : ∃ ω, True
-    · obtain ⟨ω⟩ := h
-      exact (abs_nonneg (f ω)).trans (hC ω)
-    · exact le_refl 0
-  refine ⟨hmeas.aestronglyMeasurable, ?_⟩
-  calc ∫⁻ ω, ‖f ω‖₊ ∂μ
-      ≤ ∫⁻ ω, C.toNNReal ∂μ := by
-        apply lintegral_mono
-        intro ω
-        simp [ENNReal.coe_le_coe, Real.toNNReal_of_nonpos, Real.toNNReal_le_iff_le_coe]
-        exact (Real.norm_eq_abs (f ω)).le.trans (hC ω)
-    _ = C.toNNReal * μ Set.univ := by simp [lintegral_const]
-    _ = C.toNNReal := by simp [measure_univ]
-    _ < ⊤ := ENNReal.coe_lt_top
+  obtain ⟨C, hC⟩ := hbd
+  exact ⟨hmeas.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hC)⟩
 
 end MeasureTheory
 
@@ -335,7 +321,7 @@ TODO: The exact construction requires careful handling of the measurable space i
 For now we axiomatize it as a placeholder. -/
 noncomputable def rcdKernel {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] : Kernel (Ω[α]) α :=
-  (condExpKernel μ (shiftInvariantSigma (α := α))).map
+  Kernel.map (condExpKernel μ (shiftInvariantSigma (α := α)))
     (π0 (α := α)) (measurable_pi0 (α := α))
 
 /-- The regular conditional distribution as a function assigning to each point
