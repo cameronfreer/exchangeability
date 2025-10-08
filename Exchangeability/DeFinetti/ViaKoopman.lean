@@ -516,38 +516,20 @@ lemma ν_ae_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
   refine (ae_all_iff).2 ?_
   intro k
 
-  -- For each Borel set s ⊆ α, we'll show ν(shift^[k] ω)(s) = ν(ω)(s) a.e.
-  -- Then use ae_all_iff over a countable π-system + measure extension
+  -- We prove the measures are equal using the fact that they are both probability
+  -- measures that agree on a countable basis
 
-  -- Define the indicator function F_s(y) = 𝟙_s(y 0) for a measurable set s ⊆ α
-  -- By definition of ν via Kernel.map and Kernel.comap:
-  -- ν(ω)(s) = (condExpKernel μ tail ω)(π₀⁻¹(s))
-  --         = ∫ 𝟙_s(y 0) ∂(condExpKernel μ tail ω)
-  --         = μ[𝟙_s ∘ π₀ | tail](ω)  (by condExp_ae_eq_integral_condExpKernel)
+  -- Strategy: For each measurable set s ⊆ α, show ν(shift^[k] ω)(s) = ν(ω)(s) a.e.
+  -- using condExpKernel's characterization via conditional expectation
 
-  -- Similarly: ν(shift^[k] ω)(s) = μ[𝟙_s ∘ π₀ | tail](shift^[k] ω)
+  -- The key observation: by condExp_ae_eq_integral_condExpKernel,
+  -- ν(ω)(s) = (condExpKernel ω)(π₀⁻¹ s) = μ[𝟙_{π₀⁻¹ s} | tail](ω) a.e.
 
-  -- Key observation: The function F_s := 𝟙_s ∘ π₀ : Ω → ℝ satisfies:
-  -- F_s(shift^[k] y) = 𝟙_s((shift^[k] y) 0) = 𝟙_s(y k)
-  --                  = ((𝟙_s ∘ πₖ) ∘ shift^[-k])(y)  (conceptually)
+  -- For now, we need to assume or prove that condExpKernel respects shift
+  -- This requires showing: ∫ f d(condExpKernel (shift^[k] ω)) = ∫ f d(condExpKernel ω)
+  -- for all measurable f, which follows from condexp_precomp_iterate_eq
 
-  -- But π₀ is NOT shift-invariant. Instead, we use:
-  -- By condexp_precomp_iterate_eq applied to the indicator of {y : y k ∈ s}:
-  --   μ[𝟙_s(y k) | tail] = μ[𝟙_s((shift^[k] y) 0) | tail]
-  --                       = μ[(𝟙_s ∘ π₀) ∘ shift^[k] | tail]
-  --                       =ᵐ μ[𝟙_s ∘ π₀ | tail]  (by condexp_precomp_iterate_eq)
-  -- where the last equality uses that 𝟙_s ∘ π₀ is measurable w.r.t. cylinders,
-  -- which are "shift-invariant up to coordinate permutation"
-
-  -- TODO: This requires careful setup with the right measurability conditions
-  -- The challenge is that π₀ itself is NOT shift-invariant, but the *distribution*
-  -- of π₀ under the conditional measure IS shift-invariant
-
-  -- Alternative approach: Work directly with the kernel equality
-  -- Show that for a.e. ω, the map k ↦ ν((shift^[k]) ω) is constant
-  -- by showing it's shift-invariant pointwise a.e.
-
-  sorry  -- TODO: Implement using condExp_ae_eq_integral_condExpKernel + condexp_precomp_iterate_eq
+  sorry  -- TODO: Full proof requires Kernel.ext_iff and condExp characterization
 
 /-- Helper: shift^[k] y n = y (n + k) -/
 lemma shift_iterate_apply (k n : ℕ) (y : Ω[α]) :
