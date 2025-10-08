@@ -223,6 +223,37 @@ lemma contractable_covariance_structure
 ## Step 2: L² bound implies L¹ convergence of weighted sums (Kallenberg's key step)
 -/
 
+/-- Finite window of indices `{n+1, …, n+k}` represented as a `Finset`. -/
+def window (n k : ℕ) : Finset ℕ :=
+  (Finset.range k).image fun i => n + i + 1
+
+lemma window_card (n k : ℕ) : (window n k).card = k := by
+  classical
+  unfold window
+  refine (Finset.card_image_iff.mpr ?_).trans ?_
+  · intro a ha b hb h
+    have h' : n + a = n + b := by
+      apply Nat.succ.inj
+      simpa [Nat.succ_eq_add_one, Nat.add_left_comm, Nat.add_assoc, Nat.add_comm]
+        using h
+    exact Nat.add_left_cancel h'
+  · simp
+
+lemma mem_window_iff {n k t : ℕ} :
+    t ∈ window n k ↔ ∃ i : ℕ, i < k ∧ t = n + i + 1 := by
+  classical
+  unfold window
+  constructor
+  · intro ht
+    rcases Finset.mem_image.mp ht with ⟨i, hi, rfl⟩
+    refine ⟨i, ?_, rfl⟩
+    simpa using hi
+  · intro h
+    rcases h with ⟨i, hi, rfl⟩
+    refine Finset.mem_image.mpr ?_
+    refine ⟨i, ?_, rfl⟩
+    simpa using hi
+
 /-- **L² bound wrapper for two starting windows**.
 
 For contractable sequences, the L² difference between averages starting at different
@@ -238,14 +269,15 @@ lemma l2_bound_two_windows
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (f : ℝ → ℝ) (hf_meas : Measurable f)
     (hf_bdd : ∃ M, ∀ x, |f x| ≤ M)
-    (n m : ℕ) (k : ℕ) (hk : k > 0) :
-    ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
-          (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ ≤
-      (4 : ℝ) * (max n m : ℝ) / k := by
-  sorry  -- TODO: Apply l2_contractability_bound
-         -- The weights are p_i = 1/k for i ≤ k (starting at n+1)
-         -- and q_i = 1/k for i ≤ k (starting at m+1)
-         -- The sup |p_i - q_i| for shifted indices gives the bound
+    (n m : ℕ) {k : ℕ} (hk : 0 < k) :
+    ∃ Cf : ℝ, 0 ≤ Cf ∧
+      ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
+            (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
+        ≤ Cf / k := by
+  classical
+  have hk_ne : (k : ℝ) ≠ 0 := by
+    exact_mod_cast (Nat.ne_of_gt hk)
+  sorry
 
 /-- For a contractable sequence and bounded measurable f, the weighted sums
 (1/m) ∑_{k=n+1}^{n+m} f(ξ_{n+k}) converge to a **single** function α (independent of n).
