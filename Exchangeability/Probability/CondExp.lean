@@ -226,25 +226,36 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
 
       -- TODO: Complete using these verified mathlib lemmas:
       --
-      -- Key lemmas found in mathlib:
+      -- Key lemmas:
       -- 1. setIntegral_condExp (hm : m ≤ m₀) (hf : Integrable f μ) (hs : MeasurableSet[m] s) :
       --      ∫ x in s, (μ[f|m]) x ∂μ = ∫ x in s, f x ∂μ
       --    (from ConditionalExpectation.Basic line 214)
       --
-      -- 2. condExp_mul_of_stronglyMeasurable_left {f g : α → ℝ} (hf : StronglyMeasurable[m] f)
-      --      (hfg : Integrable (f * g) μ) (hg : Integrable g μ) : μ[f * g|m] =ᵐ[μ] f * μ[g|m]
-      --    (from ConditionalExpectation.Real line 295)
+      -- 2. inter_indicator_one : (s ∩ t).indicator 1 = s.indicator 1 * t.indicator 1
+      --    (from Algebra.GroupWithZero.Indicator line 64)
       --
       -- Strategy:
-      -- Since g = μ[H.indicator | mG], we have by setIntegral_condExp on G (which is mG-measurable):
-      --   ∫ in G, g = ∫ in G, H.indicator
+      -- We have g = μ[H.indicator 1 | mG], so need to show:
+      --   ∫ in F ∩ G, g = ∫ in F ∩ G, H.indicator 1
       --
-      -- For F ∩ G: rewrite as ∫ in G, F.indicator * g using indicator properties
-      -- Then use that F.indicator is mF-measurable (hence can condition on mG):
-      --   μ[F.indicator * H.indicator | mG] = F.indicator * μ[H.indicator | mG] = F.indicator * g
-      -- Integrate over G to get the result.
+      -- Rewrite LHS using setIntegral with restriction:
+      --   ∫ in F ∩ G, g = ∫ ω, (F ∩ G).indicator 1 ω * g ω ∂μ
+      --                = ∫ ω, F.indicator 1 ω * G.indicator 1 ω * g ω ∂μ (by inter_indicator_one)
       --
-      -- The challenge: F.indicator is not mG-measurable, so we need the product formula from h_prod
+      -- Since g =ᵐ[μ] μ[H.indicator 1 | mG] and G is mG-measurable:
+      --   ∫ in G, g = ∫ in G, H.indicator 1 (by setIntegral_condExp)
+      --
+      -- Now: ∫ in F ∩ G, g
+      --    = ∫ ω, F.indicator 1 ω * (G.indicator 1 ω * g ω) ∂μ
+      --    = ∫ ω in F, G.indicator 1 ω * g ω ∂μ
+      --    = ∫ ω in F ∩ G, g ω ∂μ
+      --    = ∫ ω in F, (∫ ω in G, g) using Fubini-like reasoning
+      --
+      -- Alternative direct approach:
+      --   ∫ in F ∩ G, g = ∫ ω, (F ∩ G).indicator g ω ∂μ
+      --   By definition of g and setIntegral on G:
+      --     ∫ in G, g = ∫ in G, H.indicator 1
+      --   Multiply both sides by F.indicator and integrate to get result.
       sorry
     have h_dynkin :
         ∀ {S} (hS : MeasurableSet[mF ⊔ mG] S),
