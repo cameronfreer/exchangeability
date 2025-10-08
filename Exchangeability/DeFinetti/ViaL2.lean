@@ -250,6 +250,117 @@ private lemma abs_mul_le_half_sq_add_sq (a b : ℝ) :
 
 end CovarianceHelpers
 
+/-!
+## Lp utility lemmas
+
+Standard lemmas for working with Lp spaces and ENNReal conversions.
+-/
+
+section LpUtilities
+
+/-- Distance between `toLp` elements equals the `eLpNorm` of their difference. -/
+lemma dist_toLp_eq_eLpNorm_sub
+  {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} {p : ℝ≥0∞}
+  (hp0 : p ≠ 0) (hp∞ : p ≠ ∞)
+  {f g : Ω → ℝ} (hf : MemLp f p μ) (hg : MemLp g p μ) :
+  dist (hf.toLp f) (hg.toLp g)
+    = ENNReal.toReal (eLpNorm (fun ω => f ω - g ω) p μ) := by
+  rw [Lp.dist_def]
+  have : (hf.toLp f) - (hg.toLp g)
+        = (hf.sub hg).toLp (fun ω => f ω - g ω) := by
+    ext1
+    filter_upwards [Lp.coeFn_sub (hf.toLp f) (hg.toLp g),
+                    hf.coeFn_toLp, hg.coeFn_toLp,
+                    (hf.sub hg).coeFn_toLp] with ω h_sub hf_ae hg_ae hsub_ae
+    simp [h_sub, hf_ae, hg_ae, hsub_ae]
+  rw [this, Lp.norm_toLp]
+
+/-- Converting strict inequality through `ENNReal.toReal`. -/
+lemma toReal_lt_of_lt_ofReal {x : ℝ≥0∞} {ε : ℝ}
+    (hx : x ≠ ∞) (hε : 0 ≤ ε) :
+    x < ENNReal.ofReal ε → ENNReal.toReal x < ε := by
+  intro h
+  rw [ENNReal.toReal_lt_toReal hx (by simp)]
+  simpa [ENNReal.toReal_ofReal hε] using h
+
+/-- Arithmetic bound: √(Cf/m) < ε/2 when m is large enough. -/
+lemma sqrt_div_lt_half_eps_of_nat
+  {Cf ε : ℝ} (hCf : 0 ≤ Cf) (hε : 0 < ε) :
+  ∀ ⦃m : ℕ⦄, m ≥ Nat.ceil (4 * Cf / (ε^2)) + 1 →
+    Real.sqrt (Cf / m) < ε / 2 := by
+  intro m hm
+  have hm_real : ((Nat.ceil (4*Cf/ε^2) : ℝ) + 1) ≤ m := by exact_mod_cast hm
+  have hA_lt_m : 4*Cf/ε^2 < (m : ℝ) := by
+    calc 4*Cf/ε^2
+        ≤ Nat.ceil (4*Cf/ε^2) := Nat.le_ceil _
+      _ < (Nat.ceil (4*Cf/ε^2) : ℝ) + 1 := by linarith
+      _ ≤ m := hm_real
+  by_cases hCf0 : Cf = 0
+  · simp [hCf0, div_pos hε (by norm_num : (0:ℝ) < 2)]
+  have hCfpos : 0 < Cf := lt_of_le_of_ne hCf (Ne.symm hCf0)
+  have hmpos : 0 < (m : ℝ) := by
+    calc (0 : ℝ) < 4*Cf/ε^2 := by positivity
+      _ < m := hA_lt_m
+  have hdenom_pos : 0 < 4*Cf/ε^2 := by positivity
+  have hdiv : Cf / (m : ℝ) < Cf / (4*Cf/ε^2) := by
+    exact div_lt_div_of_pos_left hCfpos hdenom_pos hA_lt_m
+  have heq : Cf / (4*Cf/ε^2) = ε^2 / 4 := by
+    field_simp [ne_of_gt hCfpos]
+    ring
+  have hlt : Cf / (m : ℝ) < ε^2 / 4 := by
+    calc Cf / (m : ℝ)
+        < Cf / (4*Cf/ε^2) := hdiv
+      _ = ε^2 / 4 := heq
+  have hnonneg : 0 ≤ Cf / (m : ℝ) := div_nonneg hCf (Nat.cast_nonneg m)
+  have hsqrt : Real.sqrt (Cf / m) < Real.sqrt (ε^2 / 4) := by
+    exact Real.sqrt_lt_sqrt hnonneg hlt
+  calc Real.sqrt (Cf / m)
+      < Real.sqrt (ε^2 / 4) := hsqrt
+    _ = Real.sqrt ((ε/2)^2) := by
+        congr 1
+        rw [sq]
+        ring
+    _ = |ε / 2| := Real.sqrt_sq_eq_abs _
+    _ = ε / 2 := abs_of_pos (div_pos hε (by norm_num))
+
+/-- Convert an L² integral bound to an eLpNorm bound. -/
+lemma eLpNorm_two_from_integral_sq_le
+  {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
+  {g : Ω → ℝ} (hg : MemLp g 2 μ)
+  {C : ℝ} (hC : 0 ≤ C)
+  (h : ∫ ω, (g ω)^2 ∂μ ≤ C) :
+  eLpNorm g 2 μ ≤ ENNReal.ofReal (Real.sqrt C) := by
+  have hp_ne_zero : (2 : ℝ≥0∞) ≠ 0 := by norm_num
+  have hp_ne_top : (2 : ℝ≥0∞) ≠ ∞ := by norm_num
+  rw [eLpNorm_eq_lintegral_rpow_nnnorm hp_ne_zero hp_ne_top]
+  have : (∫⁻ ω, (‖g ω‖₊ : ℝ≥0∞) ^ (2 : ℝ) ∂μ)^(1/2)
+       ≤ (ENNReal.ofReal C)^(1/2) := by
+    apply ENNReal.rpow_le_rpow _ (by norm_num : (0:ℝ) ≤ 1/2)
+    have hgnn : ∫⁻ ω, (‖g ω‖₊ : ℝ≥0∞) ^ (2 : ℝ) ∂μ
+              = ENNReal.ofReal (∫ ω, (g ω)^2 ∂μ) := by
+      rw [← integral_eq_lintegral_of_nonneg_ae]
+      · congr 1
+        ext ω
+        simp [Real.nnnorm_of_nonneg (sq_nonneg _), Real.coe_nnabs]
+      · apply Filter.eventually_of_forall
+        intro ω
+        exact sq_nonneg _
+      · have : Integrable (fun ω => (g ω)^2) μ := by
+          have := hg.integrable_norm_pow (p:=2) (by decide)
+          simpa [Real.norm_eq_abs, sq_abs] using this
+        exact this.aestronglyMeasurable
+    rw [hgnn]
+    exact ENNReal.ofReal_le_ofReal h
+  calc (∫⁻ ω, (‖g ω‖₊ : ℝ≥0∞) ^ (2 : ℝ) ∂μ) ^ (1 / 2)
+      ≤ (ENNReal.ofReal C) ^ (1 / 2) := this
+    _ = ENNReal.ofReal (C ^ (1 / 2)) := by
+        rw [ENNReal.ofReal_rpow_of_nonneg hC (by norm_num)]
+    _ = ENNReal.ofReal (Real.sqrt C) := by
+        congr 1
+        exact (Real.rpow_natCast C 2).symm ▸ Real.sq_sqrt hC ▸ rfl
+
+end LpUtilities
+
 /-- For a contractable sequence of real-valued random variables in L², all pairs
 have the same covariance. This follows from contractability implying that all
 increasing subsequences of length 2 have the same joint distribution.
@@ -876,6 +987,37 @@ where the middle term is bounded by O(1/k) uniformly in n,m by `l2_bound_two_win
 
 This eliminates the 3ε uniformity problem!
 -/
+/-- Uniform version of l2_bound_two_windows: The constant Cf is the same for all
+window positions. This follows because Cf = 2σ²(1-ρ) depends only on the covariance
+structure of f∘X, which is uniform by contractability. -/
+lemma l2_bound_two_windows_uniform
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (f : ℝ → ℝ) (hf_meas : Measurable f)
+    (hf_bdd : ∃ M, ∀ x, |f x| ≤ M) :
+    ∃ Cf : ℝ, 0 ≤ Cf ∧
+      ∀ (n m k : ℕ), 0 < k →
+        ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
+              (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
+          ≤ Cf / k := by
+  -- Use l2_bound_two_windows once to get Cf for arbitrary windows
+  have h_k1 : 0 < (1 : ℕ) := by norm_num
+  obtain ⟨Cf, hCf_nn, _⟩ := l2_bound_two_windows X hX_contract hX_meas hX_L2 f hf_meas hf_bdd 0 0 h_k1
+  -- Now show this Cf works for all n, m, k
+  refine ⟨Cf, hCf_nn, fun n m k hk => ?_⟩
+  -- For each specific n, m, k, get the bound
+  obtain ⟨Cf_nmk, _, hbound⟩ := l2_bound_two_windows X hX_contract hX_meas hX_L2 f hf_meas hf_bdd n m hk
+  -- The key: Cf_nmk = Cf for all n, m, k because both equal 2σ²(1-ρ)
+  -- where σ², ρ come from contractable_covariance_structure applied to f∘X
+  -- Since contractable_covariance_structure gives a unique answer, Cf_nmk = Cf
+  have hCf_eq : Cf_nmk = Cf := by
+    -- Both are 2σ²(1-ρ) from the same covariance structure
+    sorry  -- This requires showing contractable_covariance_structure is deterministic
+  rw [← hCf_eq]
+  exact hbound
+
 theorem weighted_sums_converge_L1
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
@@ -982,9 +1124,8 @@ theorem weighted_sums_converge_L1
     -- Each term is bounded by √(Cf/N) via l2_bound_two_windows
     -- So we need 2√(Cf/N) < ε, i.e., N > 4Cf/ε²
 
-    -- Get Cf for window size 1 (to establish it exists)
-    have h_k1 : 0 < (1 : ℕ) := by norm_num
-    obtain ⟨Cf, hCf_nonneg, _⟩ := l2_bound_two_windows X hX_contract hX_meas hX_L2 f hf_meas hf_bdd 0 0 h_k1
+    -- Get uniform Cf that works for all window positions
+    obtain ⟨Cf, hCf_nonneg, hCf_unif⟩ := l2_bound_two_windows_uniform X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
 
     -- Choose N large enough
     have hε_sq_pos : 0 < ε ^ 2 := pow_pos hε 2
@@ -1022,13 +1163,52 @@ theorem weighted_sums_converge_L1
       · exact (hA_meas 0 k).sub (hA_meas 0 ℓ) |>.aestronglyMeasurable
       · norm_num
 
-    -- Each term bounded by √(Cf/k) via l2_bound_two_windows
-    obtain ⟨Cf_m, _, hbound_m⟩ := l2_bound_two_windows X hX_contract hX_meas hX_L2 f hf_meas hf_bdd 0 0 hk_pos
-    obtain ⟨Cf_ℓ, _, hbound_ℓ⟩ := l2_bound_two_windows X hX_contract hX_meas hX_L2 f hf_meas hf_bdd 0 0 hk_pos
+    -- Each term bounded by √(Cf/k) via uniform bound
+    have hCf_k_nn : 0 ≤ Cf / k := div_nonneg hCf_nonneg (Nat.cast_nonneg k)
 
-    -- Convert integral bounds to eLpNorm bounds
-    -- (This step needs the integral-to-norm conversion; for now we'll use that Cf_m, Cf_ℓ ≤ Cf)
-    sorry  -- Technical: convert ∫(·)² ≤ Cf/k to eLpNorm ≤ √(Cf/k) and combine
+    have hbound_m : ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (0 + i.val + 1) ω) -
+                           (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
+                    ≤ Cf / k := hCf_unif 0 m k hk_pos
+
+    have hbound_ℓ : ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (0 + i.val + 1) ω) -
+                           (1/(k:ℝ)) * ∑ i : Fin k, f (X (ℓ + i.val + 1) ω))^2 ∂μ
+                    ≤ Cf / k := hCf_unif 0 ℓ k hk_pos
+
+    have hL2_m : eLpNorm (fun ω => A 0 m ω - A 0 k ω) 2 μ
+                ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
+      apply eLpNorm_two_from_integral_sq_le
+      · exact (hA_memLp 0 m).sub (hA_memLp 0 k)
+      · exact hCf_k_nn
+      · convert hbound_m using 2
+        ext ω
+        simp [A]
+        ring
+
+    have hL2_ℓ : eLpNorm (fun ω => A 0 ℓ ω - A 0 k ω) 2 μ
+                ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
+      apply eLpNorm_two_from_integral_sq_le
+      · exact (hA_memLp 0 ℓ).sub (hA_memLp 0 k)
+      · exact hCf_k_nn
+      · convert hbound_ℓ using 2
+        ext ω
+        simp [A]
+        ring
+
+    calc eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
+        ≤ eLpNorm (fun ω => A 0 m ω - A 0 k ω) 2 μ
+          + eLpNorm (fun ω => A 0 ℓ ω - A 0 k ω) 2 μ := tri
+      _ ≤ ENNReal.ofReal (Real.sqrt (Cf / k))
+          + ENNReal.ofReal (Real.sqrt (Cf / k)) := by
+            exact add_le_add hL2_m hL2_ℓ
+      _ = ENNReal.ofReal (2 * Real.sqrt (Cf / k)) := by
+            rw [← ENNReal.ofReal_add (Real.sqrt_nonneg _) (Real.sqrt_nonneg _)]
+            ring_nf
+      _ < ENNReal.ofReal ε := by
+            apply ENNReal.ofReal_lt_ofReal_iff hε |>.mpr
+            have : Real.sqrt (Cf / k) < ε / 2 := by
+              apply sqrt_div_lt_half_eps_of_nat hCf_nonneg hε
+              exact Nat.le_refl N
+            linarith
 
   have hA_cauchy_L1_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
       eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ < ENNReal.ofReal ε := by
@@ -1057,15 +1237,16 @@ theorem weighted_sums_converge_L1
       refine ⟨N, fun m hm ℓ hℓ => ?_⟩
       -- dist in Lp equals eLpNorm of difference
       have : dist (F m) (F ℓ) = ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ) := by
-        simp [F, Lp.dist_def]
-        -- toLp preserves the Lp norm
-        sorry  -- Technical: eLpNorm_toLp_sub lemma
+        simpa [F] using
+          dist_toLp_eq_eLpNorm_sub (hp0 := one_ne_zero) (hp∞ := ENNReal.coe_ne_top)
+            (hA_memLp 0 m) (hA_memLp 0 ℓ)
       rw [this]
       have hbound := hN m ℓ hm hℓ
       have : ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ) < ε := by
-        have : eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ < ENNReal.ofReal ε := hbound
-        -- Convert ENNReal inequality to Real
-        sorry  -- Technical: ENNReal.toReal preserves <
+        have hfin : eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ ≠ ∞ := by
+          exact (MemLp.sub (hA_memLp 0 m) (hA_memLp 0 ℓ)).eLpNorm_ne_top
+        apply toReal_lt_of_lt_ofReal hfin (by exact le_of_lt hε)
+        exact hbound
       exact this
 
     -- Completeness of L¹ gives a limit
@@ -1080,12 +1261,18 @@ theorem weighted_sums_converge_L1
     obtain ⟨M, hM⟩ := this
     refine ⟨M, fun m hm => ?_⟩
     -- Convert dist back to eLpNorm
-    have : dist (F m) G = ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - G ω) 1 μ) := by
-      simp [F, Lp.dist_def]
-      sorry  -- Technical: toLp distance formula
-    rw [← this] at hM
-    have : ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - G ω) 1 μ) < ε := hM m hm
-    sorry  -- Technical: convert Real < to ENNReal <
+    have hdist : dist (F m) G = ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - G ω) 1 μ) := by
+      simpa [F] using
+        dist_toLp_eq_eLpNorm_sub (hp0 := one_ne_zero) (hp∞ := ENNReal.coe_ne_top)
+          (hA_memLp 0 m) G.memℒp
+    rw [← hdist] at hM
+    have hreal : ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - G ω) 1 μ) < ε := hM m hm
+    have hfin : eLpNorm (fun ω => A 0 m ω - G ω) 1 μ ≠ ∞ := by
+      exact (MemLp.sub (hA_memLp 0 m) G.memℒp).eLpNorm_ne_top
+    calc eLpNorm (fun ω => A 0 m ω - G ω) 1 μ
+        < ENNReal.ofReal (ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - G ω) 1 μ)) := by
+          rw [ENNReal.ofReal_toReal hfin]
+        _ < ENNReal.ofReal ε := by exact ENNReal.ofReal_lt_ofReal_iff hε |>.mpr hreal
 
   obtain ⟨alpha_0, halpha_0_meas, halpha_0_mem, halpha_0_conv⟩ := h_exist_alpha_0
 
@@ -1103,16 +1290,13 @@ theorem weighted_sums_converge_L1
     -- Get M₁ such that ‖A 0 m - alpha_0‖₁ < ε/2 for m ≥ M₁
     rcases halpha_0_conv (ε / 2) hε2_pos with ⟨M₁, hM₁⟩
 
-    -- Get bound constant from l2_bound_two_windows
-    have h_k1 : 0 < (1 : ℕ) := by norm_num
-    obtain ⟨Cf, hCf_nonneg, h_bound⟩ := l2_bound_two_windows X hX_contract hX_meas hX_L2 f hf_meas hf_bdd n 0 h_k1
+    -- Get uniform bound constant
+    obtain ⟨Cf, hCf_nonneg, hCf_unif⟩ := l2_bound_two_windows_uniform X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
 
     -- Choose M₂ large enough that √(Cf/M₂) < ε/2
     -- This means Cf/M₂ < ε²/4, so M₂ > 4Cf/ε²
     have hε_sq_pos : 0 < (ε / 2) ^ 2 := pow_pos hε2_pos 2
 
-    -- Get Cf for any sample window to establish a uniform bound
-    -- (All windows give same Cf since it depends only on the covariance structure)
     let M₂ := Nat.ceil (4 * Cf / (ε ^ 2)) + 1
 
     -- Define M as max of M₁ and M₂
@@ -1147,113 +1331,33 @@ theorem weighted_sums_converge_L1
     have h_term1 : eLpNorm (fun ω => A n m ω - A 0 m ω) 1 μ < ENNReal.ofReal (ε / 2) := by
       -- Use l2_bound_two_windows to bound ∫ (A n m - A 0 m)² ≤ Cf / m
       by_cases hm_pos : 0 < m
-      · -- Apply the bound
-        obtain ⟨Cf_m, hCf_m_nonneg, h_bound_sq⟩ :=
-          l2_bound_two_windows X hX_contract hX_meas hX_L2 f hf_meas hf_bdd n 0 hm_pos
-        -- h_bound_sq gives ∫ (A n m - A 0 m)² ≤ Cf_m / m
-        have h_bound_sq' : ∫ ω, (A n m ω - A 0 m ω)^2 ∂μ ≤ Cf_m / m := by
+      · -- Apply the uniform bound
+        have h_bound_sq : ∫ ω, ((1/(m:ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
+                                 (1/(m:ℝ)) * ∑ i : Fin m, f (X (0 + i.val + 1) ω))^2 ∂μ
+                         ≤ Cf / m := hCf_unif n 0 m hm_pos
+        -- Convert to A notation
+        have h_bound_sq' : ∫ ω, (A n m ω - A 0 m ω)^2 ∂μ ≤ Cf / m := by
           convert h_bound_sq using 2
+          ext ω
           simp [A]; ring
-        -- Convert integral to eLpNorm
+        -- Convert integral to eLpNorm using utility lemma
         have h_L2 : eLpNorm (fun ω => A n m ω - A 0 m ω) 2 μ ≤
-            ENNReal.ofReal (Real.sqrt (Cf_m / m)) := by
-          -- Use MemLp.eLpNorm_eq_integral_rpow_norm to convert ∫ f² to eLpNorm f 2
-          -- For p = 2: eLpNorm f 2 μ = ENNReal.ofReal ((∫ ‖f‖²)^(1/2))
-          have hf_memLp : MemLp (fun ω => A n m ω - A 0 m ω) 2 μ := by
-            -- A n m and A 0 m are bounded by M, hence in L²
-            obtain ⟨M, hM⟩ := hf_bdd
-            apply MemLp.of_bound
-              ((hA_meas n m).sub (hA_meas 0 m) |>.aestronglyMeasurable)
-              (2 * M)
-            filter_upwards with ω
-            calc ‖A n m ω - A 0 m ω‖
-                ≤ ‖A n m ω‖ + ‖A 0 m ω‖ := norm_sub_le _ _
-              _ ≤ M + M := by
-                  have h1 : ‖A n m ω‖ ≤ M := by
-                    simp [A, Real.norm_eq_abs]
-                    by_cases hm' : m = 0
-                    · simp [hm']; exact le_trans (abs_nonneg _) (hM 0)
-                    · have hm_pos : 0 < (m : ℝ) := by exact_mod_cast Nat.pos_of_ne_zero hm'
-                      calc |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω)|
-                          ≤ (1 / (m : ℝ)) * ∑ k : Fin m, |f (X (n + k.val + 1) ω)| := by
-                            -- |average| ≤ average of |·|
-                            have h_inv_pos : 0 ≤ 1 / (m : ℝ) := by
-                              apply div_nonneg; norm_num; exact_mod_cast Nat.zero_le m
-                            calc |(1 / (m : ℝ)) * ∑ k, f (X (n + k.val + 1) ω)|
-                                = (1 / (m : ℝ)) * |∑ k, f (X (n + k.val + 1) ω)| := by
-                                  rw [abs_mul, abs_of_nonneg h_inv_pos]
-                              _ ≤ (1 / (m : ℝ)) * ∑ k, |f (X (n + k.val + 1) ω)| := by
-                                  apply mul_le_mul_of_nonneg_left _ h_inv_pos
-                                  exact Finset.abs_sum_le_sum_abs _ _
-                        _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, M := by
-                            apply mul_le_mul_of_nonneg_left _ (by linarith : 0 ≤ 1 / (m : ℝ))
-                            apply Finset.sum_le_sum
-                            intro k _
-                            exact hM _
-                        _ = M := by
-                            have : ∑ k : Fin m, M = (m : ℝ) * M := by
-                              simp [Finset.sum_const, Finset.card_fin]
-                            simp [this]
-                            field_simp
-                            ring
-                  have h2 : ‖A 0 m ω‖ ≤ M := by
-                    simp [A, Real.norm_eq_abs]
-                    by_cases hm' : m = 0
-                    · simp [hm']; exact le_trans (abs_nonneg _) (hM 0)
-                    · have hm_pos : 0 < (m : ℝ) := by exact_mod_cast Nat.pos_of_ne_zero hm'
-                      calc |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (0 + k.val + 1) ω)|
-                          ≤ (1 / (m : ℝ)) * ∑ k : Fin m, |f (X (0 + k.val + 1) ω)| := by
-                            have h_inv_pos : 0 ≤ 1 / (m : ℝ) := by
-                              apply div_nonneg; norm_num; exact_mod_cast Nat.zero_le m
-                            calc |(1 / (m : ℝ)) * ∑ k, f (X (0 + k.val + 1) ω)|
-                                = (1 / (m : ℝ)) * |∑ k, f (X (0 + k.val + 1) ω)| := by
-                                  rw [abs_mul, abs_of_nonneg h_inv_pos]
-                              _ ≤ (1 / (m : ℝ)) * ∑ k, |f (X (0 + k.val + 1) ω)| := by
-                                  apply mul_le_mul_of_nonneg_left _ h_inv_pos
-                                  exact Finset.abs_sum_le_sum_abs _ _
-                        _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, M := by
-                            apply mul_le_mul_of_nonneg_left _ (by linarith : 0 ≤ 1 / (m : ℝ))
-                            apply Finset.sum_le_sum
-                            intro k _
-                            exact hM _
-                        _ = M := by
-                            have : ∑ k : Fin m, M = (m : ℝ) * M := by
-                              simp [Finset.sum_const, Finset.card_fin]
-                            simp [this]
-                            field_simp
-                            ring
-                  exact add_le_add h1 h2
-              _ = 2 * M := by ring
-          have h_eq := hf_memLp.eLpNorm_eq_integral_rpow_norm
-            (by norm_num : (2 : ℝ≥0∞) ≠ 0)
-            (by norm_num : (2 : ℝ≥0∞) ≠ ∞)
-          rw [h_eq]
-          -- Now we have eLpNorm = ENNReal.ofReal ((∫ ‖f‖²)^(1/2))
-          -- And ∫ ‖f‖² = ∫ (A n m - A 0 m)²
-          have h_norm_sq : ∀ω, ‖A n m ω - A 0 m ω‖ ^ (2 : ℝ) = (A n m ω - A 0 m ω) ^ 2 := by
-            intro ω; simp [sq_abs, Real.norm_eq_abs]
-          -- Use eLpNorm_eq_integral_rpow_norm: eLpNorm f 2 μ = ENNReal.ofReal ((∫ ‖f‖²)^(1/2))
-          rw [h_eq]
-          apply ENNReal.ofReal_le_ofReal
-          apply Real.rpow_le_rpow
-          · exact integral_nonneg (fun ω => sq_nonneg _)
-          · convert h_bound_sq' using 1
-            congr 1
-            ext ω
-            rw [← h_norm_sq]
-            simp [Real.norm_rpow, abs_norm]
-          · norm_num
+            ENNReal.ofReal (Real.sqrt (Cf / m)) := by
+          apply eLpNorm_two_from_integral_sq_le
+          · exact (hA_memLp n m).sub (hA_memLp 0 m)
+          · exact div_nonneg hCf_nonneg (Nat.cast_nonneg m)
+          · exact h_bound_sq'
         -- Use L² → L¹
         calc eLpNorm (fun ω => A n m ω - A 0 m ω) 1 μ
             ≤ eLpNorm (fun ω => A n m ω - A 0 m ω) 2 μ := by
               apply eLpNorm_le_eLpNorm_of_exponent_le
               · norm_num
               · exact (hA_meas n m).sub (hA_meas 0 m) |>.aestronglyMeasurable
-          _ ≤ ENNReal.ofReal (Real.sqrt (Cf_m / m)) := h_L2
+          _ ≤ ENNReal.ofReal (Real.sqrt (Cf / m)) := h_L2
           _ < ENNReal.ofReal (ε / 2) := by
-              -- Choose M large enough that √(Cf_m/M) < ε/2
-              -- This requires M > 4*Cf_m/ε²
-              sorry  -- Arithmetic: m ≥ M and M chosen appropriately implies √(Cf_m/m) < ε/2
+              apply ENNReal.ofReal_lt_ofReal_iff hε2_pos |>.mpr
+              apply sqrt_div_lt_half_eps_of_nat hCf_nonneg hε
+              exact hm₂
       · -- m = 0 case is trivial or doesn't occur
         simp [Nat.not_lt.mp hm_pos] at hm
         omega
