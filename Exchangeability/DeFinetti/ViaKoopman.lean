@@ -351,7 +351,7 @@ lemma ν_measurable_tail {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
 /-!
 Helper lemmas establishing the stability of the conditional expectation and the
 regular conditional distribution under compositions with shift iterates.
--/-
+-/
 
 private lemma condexp_precomp_iterate_eq
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
@@ -827,7 +827,7 @@ private lemma condexp_pair_factorization
       fun ω => ∫ x, f x ∂(ν (μ := μ) ω) := by
     filter_upwards [h_marg0] with ω hω
     have : (fun y : Ω[α] => f (y 0)) = f ∘ (fun y => y 0) := rfl
-    rw [this, MeasureTheory.integral_map (measurable_pi_apply 0) hf_meas]
+    rw [this, MeasureTheory.integral_map (measurable_pi_apply 0).aemeasurable hf_meas.aestronglyMeasurable]
     congr 1
     exact hω.symm
 
@@ -837,7 +837,7 @@ private lemma condexp_pair_factorization
       fun ω => ∫ x, g x ∂(ν (μ := μ) ω) := by
     filter_upwards [h_marg1] with ω hω
     have : (fun y : Ω[α] => g (y 1)) = g ∘ (fun y => y 1) := rfl
-    rw [this, MeasureTheory.integral_map (measurable_pi_apply 1) hg_meas]
+    rw [this, MeasureTheory.integral_map (measurable_pi_apply 1).aemeasurable hg_meas.aestronglyMeasurable]
     congr 1
     exact hω.symm
 
