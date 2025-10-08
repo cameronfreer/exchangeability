@@ -635,8 +635,15 @@ lemma aemeasurable_measure_pi {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSp
           exact measure_iUnion hpair hf
         rw [this]
         exact Measurable.ennreal_tsum hfP
-    -- Use the measurability criterion: if ω ↦ κ ω s is measurable for all s, then κ is AEMeasurable
-    sorry  -- This requires a general measurability criterion from mathlib
+    -- For measure-valued functions, measurability of all evaluation maps
+    -- should imply AEMeasurable. This is a standard result but the exact
+    -- mathlib API is unclear. We leave this as a technical gap.
+    -- The mathematical content (measurability on rectangles extending to all sets)
+    -- is complete via the π-λ induction above.
+    sorry
+
+  -- κ is definitionally equal to the goal, so hκ_meas gives the result
+  exact hκ_meas
 
 /-- The bind of a probability measure with the product measure kernel equals the integral
 of the product measure. This is the other side of the ConditionallyIID equation.
