@@ -1085,7 +1085,22 @@ theorem weighted_sums_converge_L1
         -- Convert integral to eLpNorm
         have h_L2 : eLpNorm (fun ω => A n m ω - A 0 m ω) 2 μ ≤
             ENNReal.ofReal (Real.sqrt (Cf / m)) := by
-          sorry  -- Convert between ∫ f² and eLpNorm f 2
+          -- Use MemLp.eLpNorm_eq_integral_rpow_norm to convert ∫ f² to eLpNorm f 2
+          -- For p = 2: eLpNorm f 2 μ = ENNReal.ofReal ((∫ ‖f‖²)^(1/2))
+          have hf_memLp : MemLp (fun ω => A n m ω - A 0 m ω) 2 μ := by
+            -- A n m and A 0 m are bounded, hence in L² on probability space
+            -- Since L¹ ⊆ L² on probability spaces and A n m are bounded
+            sorry  -- Standard: bounded functions on probability spaces are in all Lp
+          have h_eq := hf_memLp.eLpNorm_eq_integral_rpow_norm
+            (by norm_num : (2 : ℝ≥0∞) ≠ 0)
+            (by norm_num : (2 : ℝ≥0∞) ≠ ∞)
+          rw [h_eq]
+          -- Now we have eLpNorm = ENNReal.ofReal ((∫ ‖f‖²)^(1/2))
+          -- And ∫ ‖f‖² = ∫ (A n m - A 0 m)²
+          have h_norm_sq : ∀ω, ‖A n m ω - A 0 m ω‖ ^ (2 : ℝ) = (A n m ω - A 0 m ω) ^ 2 := by
+            intro ω; simp [sq_abs, Real.norm_eq_abs]
+          simp only [ENNReal.toReal_ofNat] at h_eq ⊢
+          sorry  -- Connect ∫ (A n m - A 0 m)² ≤ Cf/m to the eLpNorm form
         -- Use L² → L¹
         calc eLpNorm (fun ω => A n m ω - A 0 m ω) 1 μ
             ≤ eLpNorm (fun ω => A n m ω - A 0 m ω) 2 μ := by
