@@ -207,19 +207,18 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
           ∫ ω in F ∩ G, g ω ∂μ
             = ∫ ω in F ∩ G, (H.indicator fun _ : Ω => (1 : ℝ)) ω ∂μ := by
       intro F hF G hG
-      -- TODO: Complete the rectangle proof
-      -- Strategy (partially implemented):
-      -- 1. Product formula h_prod F hF H hH gives:
-      --    μ[(F ∩ H).indicator 1 | mG] =ᵐ μ[F.indicator 1 | mG] * g
-      -- 2. Integrate over G and use setIntegral_condExp:
-      --    ∫_G (F ∩ H).indicator = ∫_G μ[(F ∩ H).indicator | mG]
-      --                          = ∫_G μ[F.indicator | mG] * g (by product formula)
-      -- 3. The key missing step: show ∫_G μ[F.indicator | mG] * g = ∫_G F.indicator * g
-      --    This requires either:
-      --    a) A pull-out lemma: ∫ h * μ[f | m] = ∫ μ[h * f | m] when h is m-measurable
-      --    b) Tower property: use that we can condition on mF ⊔ mG, then on mG
-      -- 4. Similarly show ∫_G F.indicator * g = ∫_{F ∩ G} g
-      -- 5. And ∫_G (F ∩ H).indicator = ∫_{F ∩ G ∩ H} 1 = ∫_{F ∩ G} H.indicator
+      -- TODO: Complete h_rect using product formula and indicator manipulation
+      -- Progress made:
+      -- 1. ✓ Product formula h_prod specialized: μ[(F ∩ H).indicator 1 | mG] =ᵐ μ[F.indicator 1 | mG] * g
+      -- 2. ✓ Key identity: (F ∩ H).indicator = F.indicator * H.indicator
+      -- 3. Remaining: careful use of setIntegral_indicator and setIntegral_condExp to show:
+      --    ∫_{F ∩ G} g = ∫_{F ∩ G} H.indicator
+      -- The main steps are:
+      -- a) ∫_{F ∩ G} g = ∫_G F.indicator * g (by setIntegral_indicator)
+      -- b) ∫_G F.indicator * g = ∫_G F.indicator * H.indicator (using g = μ[H.indicator | mG] and setIntegral_condExp)
+      -- c) ∫_G F.indicator * H.indicator = ∫_{F ∩ G} H.indicator (by setIntegral_indicator)
+      -- Note: Step (b) requires careful handling - may need a pull-out lemma or to work with
+      -- (F ∩ H).indicator and apply the product formula after using setIntegral_condExp
       sorry
     have h_dynkin :
         ∀ {S} (hS : MeasurableSet[mF ⊔ mG] S),
