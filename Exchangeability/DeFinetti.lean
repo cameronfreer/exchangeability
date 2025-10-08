@@ -121,11 +121,13 @@ For `n > 0`, this is the uniform measure on `{X 0 ω, X 1 ω, ..., X (n-1) ω}`.
 def empiricalMeasure [Inhabited α] (X : ℕ → Ω → α) (n : ℕ) (ω : Ω) :
     ProbabilityMeasure α :=
   if h : n = 0 then
-    sorry  -- ProbabilityMeasure.dirac default (need the right API)
+    ⟨Measure.dirac default, Measure.dirac.isProbabilityMeasure⟩
   else
     sorry
-    -- TODO: Implement using ProbabilityMeasure.uniform on Finset (Fin n)
-    -- and ProbabilityMeasure.map with (fun i ↦ X i.val ω)
+    -- TODO: Implement using uniform measure on Finset (Fin n)
+    -- The uniform measure on a finite set can be constructed as:
+    -- (1/n) • Σᵢ Measure.dirac (X i ω) where i ∈ Fin n
+    -- Need to show this is a probability measure (total mass = 1)
 
 /-!
 ## Main theorem statements
