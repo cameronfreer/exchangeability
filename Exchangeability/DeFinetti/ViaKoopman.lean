@@ -374,11 +374,11 @@ private lemma condexp_precomp_iterate_eq
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) {k : ℕ}
     {f : Ω[α] → ℝ} (hf : Integrable f μ) :
-    μ[(fun ω => f (shift^[k] ω)) | shiftInvariantSigma (α := α)]
+    μ[(fun ω => f ((shift (α := α))^[k] ω)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] μ[f | shiftInvariantSigma (α := α)] := by
   classical
   set m := shiftInvariantSigma (α := α)
-  let shiftk := shift^[k]
+  let shiftk := (shift (α := α))^[k]
   have h_shiftk_pres : MeasurePreserving shiftk μ μ := hσ.iterate k
   have h_shiftk_meas : AEMeasurable shiftk μ :=
     (measurable_shift (α := α)).iterate k |>.aemeasurable
@@ -395,9 +395,7 @@ private lemma condexp_precomp_iterate_eq
         (hf := h_int_shift)
         (hg_int_finite := ?_)
         (hg_eq := ?_)
-        (hgm :=
-          (MeasureTheory.condExp_aestronglyMeasurable
-            (μ := μ) (m := m) (f := f))).aesStronglyMeasurable)).symm
+        (hgm := (MeasureTheory.stronglyMeasurable_condExp (μ := μ)).aestronglyMeasurable)).symm
   · intro s hs _
     have h_meas : MeasurableSet s :=
       (mem_shiftInvariantSigma_iff (α := α) (s := s)).1 hs |>.1
