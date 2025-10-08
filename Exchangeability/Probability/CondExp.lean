@@ -415,22 +415,26 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
   -- By Pythagoras: ∫ X₂² = ∫ X₁² + ∫ (X₂ - X₁)²
   -- Since ∫ X₂² = ∫ X₁² by hypothesis, we get ∫ (X₂ - X₁)² = 0
 
-  sorry  -- TODO: Complete using L² orthogonality:
-  -- Mathlib lemmas identified:
-  -- 1. norm_sub_sq_real (x y : F) : ‖x - y‖² = ‖x‖² - 2⟪x,y⟫ + ‖y‖²
-  --    (from Mathlib.Analysis.InnerProductSpace.Basic)
-  -- 2. inner_condExpL2_left_eq_right : ⟪condExpL2 f, g⟫ = ⟪f, condExpL2 g⟫
+  sorry  -- TODO: Complete using L² orthogonality - all key lemmas now identified:
+  --
+  -- Core mathlib lemmas (verified in search):
+  -- 1. Lp.eq_zero_iff_ae_eq_zero : (f : Lp E p μ) = 0 ↔ f =ᵐ[μ] 0
+  --    (from MeasureTheory.Function.LpSpace.Basic)
+  -- 2. norm_sub_sq_real (x y : F) : ‖x - y‖² = ‖x‖² - 2⟪x,y⟫ + ‖y‖²
+  --    (from Analysis.InnerProductSpace.Basic)
+  -- 3. inner_condExpL2_left_eq_right : ⟪condExpL2 f, g⟫ = ⟪f, condExpL2 g⟫
   --    (orthogonality of conditional expectation projection)
-  -- 3. eLpNorm_condExp_le : eLpNorm (μ[f|m]) 2 μ ≤ eLpNorm f 2 μ
-  --    (from ConditionalExpectation.Basic line 360)
-  -- 4. MemLp.condExpL2_ae_eq_condExp : converts between μ[·|m] and condExpL2
+  -- 4. integral_inner_eq_sq_eLpNorm (f : α →₂[μ] E) : ∫ ⟪f,f⟫ = ENNReal.toReal (∫⁻ ‖f‖₊²)
+  --    (from MeasureTheory.Function.L2Space)
+  -- 5. MemLp.condExpL2_ae_eq_condExp : converts between μ[·|m] and condExpL2
+  --    (from ConditionalExpectation.Basic)
   --
   -- Strategy:
-  -- - Work in L²[μ]: use that X₁ = condExpL2(X₂) (orthogonal projection)
-  -- - Apply norm_sub_sq: ‖X₂ - X₁‖² = ‖X₂‖² - 2⟪X₂,X₁⟫ + ‖X₁‖²
-  -- - Use orthogonality: ⟪X₂ - X₁, X₁⟫ = 0 gives ⟪X₂,X₁⟫ = ⟪X₁,X₁⟫ = ‖X₁‖²
-  -- - Substitute: ‖X₂ - X₁‖² = ‖X₂‖² - ‖X₁‖² = 0 (by hSecond)
-  -- - Conclude X₁ =ᵐ X₂ from ‖X₂ - X₁‖² = 0 in L²
+  -- - Convert X₁, X₂ to L²[μ] using MemLp (we have hX₁_int, hInt)
+  -- - Apply norm_sub_sq_real: ‖X₂ - X₁‖² = ‖X₂‖² - 2⟪X₂,X₁⟫ + ‖X₁‖²
+  -- - Use inner_condExpL2: since X₁ = condExpL2(X₂), we have ⟪X₂,X₁⟫ = ⟪X₂,condExpL2 X₂⟫ = ⟪condExpL2 X₂,condExpL2 X₂⟫ = ‖X₁‖²
+  -- - Substitute: ‖X₂ - X₁‖² = ‖X₂‖² - 2‖X₁‖² + ‖X₁‖² = ‖X₂‖² - ‖X₁‖² = 0 (by hSecond)
+  -- - Apply Lp.eq_zero_iff_ae_eq_zero: X₂ - X₁ = 0 ae, so X₁ =ᵐ X₂
 
 /-! ### Reverse Martingale Convergence -/
 
