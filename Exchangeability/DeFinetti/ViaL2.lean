@@ -701,11 +701,11 @@ theorem weighted_sums_converge_L1
     -- Convert dist back to eLpNorm
     have hdist : dist (F m) G = ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - G ω) 1 μ) := by
       simpa [F] using
-        dist_toLp_eq_eLpNorm_sub (hp0 := one_ne_zero) (hp∞ := ENNReal.coe_ne_top)
+        dist_toLp_eq_eLpNorm_sub (hp0 := one_ne_zero) (hptop := ENNReal.coe_ne_top)
           (hA_memLp 0 m) G.memℒp
     rw [← hdist] at hM
     have hreal : ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - G ω) 1 μ) < ε := hM m hm
-    have hfin : eLpNorm (fun ω => A 0 m ω - G ω) 1 μ ≠ ∞ := by
+    have hfin : eLpNorm (fun ω => A 0 m ω - G ω) 1 μ ≠ ⊤ := by
       exact (MemLp.sub (hA_memLp 0 m) G.memℒp).eLpNorm_ne_top
     calc eLpNorm (fun ω => A 0 m ω - G ω) 1 μ
         < ENNReal.ofReal (ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - G ω) 1 μ)) := by
@@ -742,8 +742,8 @@ theorem weighted_sums_converge_L1
 
     use M
     intro m hm
-    have hm₁ : M₁ ≤ m := le_of_max_le_left (le_trans (le_max_left _ _) hm)
-    have hm₂ : M₂ ≤ m := le_of_max_le_right (le_trans (le_max_right _ _) hm)
+    have hm₁ : M₁ ≤ m := le_trans (le_max_left M₁ M₂) hm
+    have hm₂ : M₂ ≤ m := le_trans (le_max_right M₁ M₂) hm
 
     -- Apply triangle inequality
     have h_triangle : eLpNorm (fun ω => A n m ω - alpha_0 ω) 1 μ ≤
@@ -777,12 +777,13 @@ theorem weighted_sums_converge_L1
         have h_bound_sq' : ∫ ω, (A n m ω - A 0 m ω)^2 ∂μ ≤ Cf / m := by
           convert h_bound_sq using 2
           ext ω
-          simp [A]; ring
+          simp [A]
         -- Convert integral to eLpNorm using utility lemma
         have h_L2 : eLpNorm (fun ω => A n m ω - A 0 m ω) 2 μ ≤
             ENNReal.ofReal (Real.sqrt (Cf / m)) := by
           apply eLpNorm_two_from_integral_sq_le
-          · exact (hA_memLp n m).sub (hA_memLp 0 m)
+          · -- Need L² membership, but hA_memLp gives L¹
+            sorry
           · exact div_nonneg hCf_nonneg (Nat.cast_nonneg m)
           · exact h_bound_sq'
         -- Use L² → L¹
