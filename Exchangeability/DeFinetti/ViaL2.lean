@@ -996,12 +996,40 @@ theorem weighted_sums_converge_L1
         linarith
       exact this
 
-    -- TODO: This requires a different approach than l2_bound_two_windows
-    -- Option 1: Decompose A 0 ℓ = (m/ℓ) A 0 m + ((ℓ-m)/ℓ) (tail average)
-    -- Option 2: Use convergence of Cesàro averages directly
-    -- Option 3: Apply ergodic theorem or law of large numbers
-    -- For now, assume existence of Cauchy sequence (standard for L² martingales)
-    sorry  -- Standard but technical - Cauchy property of empirical averages
+    -- Choose N so that √(Cf/N) < ε/2
+    -- We need N > 4Cf/ε²
+    let N : ℕ := Nat.ceil (4 * Cf / (ε ^ 2)) + 1
+    have hN_pos : 0 < N := Nat.succ_pos _
+
+    refine ⟨N, fun m ℓ hm hℓ => ?_⟩
+
+    -- Use common length k = min m ℓ
+    let k := min m ℓ
+    have hk_pos : 0 < k := by
+      have : 0 < N := hN_pos
+      have : N ≤ min m ℓ := min_le_iff.mpr (Or.inl hm)
+      exact Nat.lt_of_lt_of_le hN_pos this
+
+    -- Triangle inequality via common length
+    have tri : eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
+              ≤ eLpNorm (fun ω => A 0 m ω - A 0 k ω) 2 μ
+                + eLpNorm (fun ω => A 0 ℓ ω - A 0 k ω) 2 μ := by
+      have hdecomp : (fun ω => A 0 m ω - A 0 ℓ ω)
+                   = (fun ω => (A 0 m ω - A 0 k ω) + (A 0 k ω - A 0 ℓ ω)) := by
+        ext ω; ring
+      rw [hdecomp]
+      apply eLpNorm_add_le
+      · exact (hA_meas 0 m).sub (hA_meas 0 k) |>.aestronglyMeasurable
+      · exact (hA_meas 0 k).sub (hA_meas 0 ℓ) |>.aestronglyMeasurable
+      · norm_num
+
+    -- Each term bounded by √(Cf/k) via l2_bound_two_windows
+    obtain ⟨Cf_m, _, hbound_m⟩ := l2_bound_two_windows X hX_contract hX_meas hX_L2 f hf_meas hf_bdd 0 0 hk_pos
+    obtain ⟨Cf_ℓ, _, hbound_ℓ⟩ := l2_bound_two_windows X hX_contract hX_meas hX_L2 f hf_meas hf_bdd 0 0 hk_pos
+
+    -- Convert integral bounds to eLpNorm bounds
+    -- (This step needs the integral-to-norm conversion; for now we'll use that Cf_m, Cf_ℓ ≤ Cf)
+    sorry  -- Technical: convert ∫(·)² ≤ Cf/k to eLpNorm ≤ √(Cf/k) and combine
 
   have hA_cauchy_L1_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
       eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ < ENNReal.ofReal ε := by
@@ -1019,18 +1047,46 @@ theorem weighted_sums_converge_L1
   have h_exist_alpha_0 : ∃ alpha_0 : Ω → ℝ, Measurable alpha_0 ∧ MemLp alpha_0 1 μ ∧
       (∀ ε > 0, ∃ M, ∀ m ≥ M,
         eLpNorm (fun ω => A 0 m ω - alpha_0 ω) 1 μ < ENNReal.ofReal ε) := by
-    -- Use Cauchy completeness of L¹
-    -- The sequence (A 0 m)_m is Cauchy in L¹, so it converges
-    -- We construct the limit by extracting it from the Lp space
+    -- Build sequence in L¹ using toLp
+    let F : ℕ → Lp ℝ 1 μ := fun m => (hA_memLp 0 m).toLp (A 0 m)
 
-    -- Strategy: Use the fact that Lp 1 is complete
-    -- 1. Show (A 0 m) is Cauchy in Lp norm
-    -- 2. Get a limit in the Lp space
-    -- 3. Extract a measurable representative
+    -- F is Cauchy in Lp
+    have hCauchy : CauchySeq F := by
+      rw [Metric.cauchySeq_iff]
+      intro ε hε
+      obtain ⟨N, hN⟩ := hA_cauchy_L1_0 ε hε
+      refine ⟨N, fun m hm ℓ hℓ => ?_⟩
+      -- dist in Lp equals eLpNorm of difference
+      have : dist (F m) (F ℓ) = ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ) := by
+        simp [F, Lp.dist_def]
+        -- toLp preserves the Lp norm
+        sorry  -- Technical: eLpNorm_toLp_sub lemma
+      rw [this]
+      have hbound := hN m ℓ hm hℓ
+      have : ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ) < ε := by
+        have : eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ < ENNReal.ofReal ε := hbound
+        -- Convert ENNReal inequality to Real
+        sorry  -- Technical: ENNReal.toReal preserves <
+      exact this
 
-    sorry  -- TODO: This requires using Mathlib's Lp space completion
-           -- Look for theorems about Cauchy sequences in Lp spaces
-           -- The key is that L¹(μ) is complete when μ is a probability measure
+    -- Completeness of L¹ gives a limit
+    obtain ⟨G, hG⟩ := CauchySeq.tendsto_of_complete hCauchy
+
+    -- Extract measurable representative
+    refine ⟨G, G.aestronglyMeasurable.measurable_mk, G.memℒp, ?_⟩
+    intro ε hε
+    -- Use convergence of F to G
+    have : ∃ M, ∀ m ≥ M, dist (F m) G < ε := by
+      exact Metric.tendsto_atTop.mp hG ε hε
+    obtain ⟨M, hM⟩ := this
+    refine ⟨M, fun m hm => ?_⟩
+    -- Convert dist back to eLpNorm
+    have : dist (F m) G = ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - G ω) 1 μ) := by
+      simp [F, Lp.dist_def]
+      sorry  -- Technical: toLp distance formula
+    rw [← this] at hM
+    have : ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - G ω) 1 μ) < ε := hM m hm
+    sorry  -- Technical: convert Real < to ENNReal <
 
   obtain ⟨alpha_0, halpha_0_meas, halpha_0_mem, halpha_0_conv⟩ := h_exist_alpha_0
 
