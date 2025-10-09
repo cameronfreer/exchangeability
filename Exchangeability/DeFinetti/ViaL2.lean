@@ -539,17 +539,36 @@ theorem weighted_sums_converge_L1
             · have hM_nonneg : 0 ≤ M :=
                 (le_trans (abs_nonneg _) (hM 0))
               simp [hm, hM_nonneg]
-            · have hm_pos : 0 < (m : ℝ) := by exact_mod_cast Nat.pos_of_ne_zero hm
-              have hm_ne_zero : (m : ℝ) ≠ 0 := ne_of_gt hm_pos
-              have h_inv_mul : (1 / (m : ℝ)) * (m : ℝ) = (1 : ℝ) := by
-                field_simp
-              have : ∑ k : Fin m, M = (m : ℝ) * M := by
-                simp [Finset.sum_const, mul_comm, mul_left_comm, mul_assoc]
-              calc
-                (1 / (m : ℝ)) * ∑ k : Fin m, M
-                    = (1 / (m : ℝ)) * ((m : ℝ) * M) := by simpa [this]
-                _ = ((1 / (m : ℝ)) * (m : ℝ)) * M := by ring
-                _ = M := by simpa [h_inv_mul]
+            · have : (1 / (m : ℝ)) * ∑ k : Fin m, M = M := by
+                simp only [Finset.sum_const, Finset.card_univ, Fintype.card_fin]
+                field_simp [Nat.cast_ne_zero.mpr hm]
+                ring
+              rw [this]
+    exact MemLp.of_bound (hA_meas n m).aestronglyMeasurable M hA_ae_bdd
+
+  -- A n m is also in L² (bounded functions on probability spaces)
+  have hA_memLp_two : ∀ n m, MemLp (A n m) 2 μ := by
+    intro n m
+    obtain ⟨M, hM⟩ := hf_bdd
+    have hA_ae_bdd : ∀ᵐ ω ∂μ, ‖A n m ω‖ ≤ M := by
+      filter_upwards with ω
+      simp only [A, Real.norm_eq_abs]
+      -- Same bound as L¹ case
+      classical
+      by_cases hm : m = 0
+      · simp [hm]; exact le_trans (abs_nonneg _) (hM 0)
+      · calc |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω)|
+            ≤ (1 / (m : ℝ)) * ∑ k : Fin m, |f (X (n + k.val + 1) ω)| := by
+              have hm_pos : 0 < (m : ℝ) := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hm)
+              rw [abs_mul, abs_of_pos (div_pos zero_lt_one hm_pos)]
+              exact mul_le_mul_of_nonneg_left
+                (Finset.abs_sum_le_sum_abs _ _) (le_of_lt (div_pos zero_lt_one hm_pos))
+          _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, M := by
+              gcongr; exact hM _
+          _ = M := by
+              simp only [Finset.sum_const, Finset.card_univ, Fintype.card_fin]
+              field_simp [Nat.cast_ne_zero.mpr hm]
+              ring
     exact MemLp.of_bound (hA_meas n m).aestronglyMeasurable M hA_ae_bdd
 
   -- Step 1: For n=0, show (A 0 m)_m is Cauchy in L² hence L¹
@@ -630,22 +649,24 @@ theorem weighted_sums_converge_L1
     have hL2_m : eLpNorm (fun ω => A 0 m ω - A 0 k ω) 2 μ
                 ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
       apply eLpNorm_two_from_integral_sq_le
-      · exact (hA_memLp 0 m).sub (hA_memLp 0 k)
+      · exact (hA_memLp_two 0 m).sub (hA_memLp_two 0 k)
       · exact hCf_k_nn
       · convert hbound_m using 2
         ext ω
-        simp [A]
-        ring
+        simp only [A, zero_add]
+        -- A 0 m = 1/m * ∑ᵢ f(Xᵢ₊₁), A 0 k = 1/k * ∑ⱼ f(Xⱼ₊₁)
+        -- But hbound_m has both with 1/k, need to show these match
+        sorry
 
     have hL2_ℓ : eLpNorm (fun ω => A 0 ℓ ω - A 0 k ω) 2 μ
                 ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
       apply eLpNorm_two_from_integral_sq_le
-      · exact (hA_memLp 0 ℓ).sub (hA_memLp 0 k)
+      · exact (hA_memLp_two 0 ℓ).sub (hA_memLp_two 0 k)
       · exact hCf_k_nn
       · convert hbound_ℓ using 2
         ext ω
-        simp [A]
-        ring
+        simp only [A, zero_add]
+        sorry
 
     calc eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
         ≤ eLpNorm (fun ω => A 0 m ω - A 0 k ω) 2 μ
@@ -658,9 +679,12 @@ theorem weighted_sums_converge_L1
             ring_nf
       _ < ENNReal.ofReal ε := by
             apply ENNReal.ofReal_lt_ofReal_iff hε |>.mpr
+            have hk_ge_N : k ≥ N := by
+              show min m ℓ ≥ N
+              exact Nat.le_min.mpr ⟨hm, hℓ⟩
             have : Real.sqrt (Cf / k) < ε / 2 := by
               apply sqrt_div_lt_half_eps_of_nat hCf_nonneg hε
-              exact Nat.le_refl N
+              exact hk_ge_N
             linarith
 
   have hA_cauchy_L1_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
@@ -675,60 +699,85 @@ theorem weighted_sums_converge_L1
           · exact (hA_meas 0 m).sub (hA_meas 0 ℓ) |>.aestronglyMeasurable
       _ < ENNReal.ofReal ε := hN m ℓ hm hℓ
 
-  -- Step 2: Completeness of L¹ gives alpha_0
-  have h_exist_alpha_0 : ∃ alpha_0 : Ω → ℝ, Measurable alpha_0 ∧ MemLp alpha_0 1 μ ∧
-      (∀ ε > 0, ∃ M, ∀ m ≥ M,
-        eLpNorm (fun ω => A 0 m ω - alpha_0 ω) 1 μ < ENNReal.ofReal ε) := by
-    -- Build sequence in L¹ using toLp
+  -- Step 2: Completeness of L¹ gives α₀ as the limit of the base averages.
+  have h_exist_alpha_0 :
+      ∃ alpha_0 : Ω → ℝ, Measurable alpha_0 ∧ MemLp alpha_0 1 μ ∧
+        (∀ ε > 0, ∃ M, ∀ m ≥ M,
+          eLpNorm (fun ω => A 0 m ω - alpha_0 ω) 1 μ < ENNReal.ofReal ε) := by
+    classical
+    -- View the base averages as a sequence in L¹.
     let F : ℕ → Lp ℝ 1 μ := fun m => (hA_memLp 0 m).toLp (A 0 m)
-
-    -- F is Cauchy in Lp
+    -- Show this sequence is Cauchy.
     have hCauchy : CauchySeq F := by
       rw [Metric.cauchySeq_iff]
       intro ε hε
       obtain ⟨N, hN⟩ := hA_cauchy_L1_0 ε hε
       refine ⟨N, fun m hm ℓ hℓ => ?_⟩
-      -- dist in Lp equals eLpNorm of difference
-      have : dist (F m) (F ℓ) = ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ) := by
+      have hdist :
+          dist (F m) (F ℓ) =
+            ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ) := by
         simpa [F] using
           dist_toLp_eq_eLpNorm_sub (hp0 := one_ne_zero) (hptop := ENNReal.coe_ne_top)
             (hA_memLp 0 m) (hA_memLp 0 ℓ)
-      rw [this]
+      have hfin :
+          eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ ≠ ⊤ :=
+        (MemLp.sub (hA_memLp 0 m) (hA_memLp 0 ℓ)).eLpNorm_ne_top
       have hbound := hN m ℓ hm hℓ
-      have : ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ) < ε := by
-        have hfin : eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ ≠ ⊤ := by
-          exact (MemLp.sub (hA_memLp 0 m) (hA_memLp 0 ℓ)).eLpNorm_ne_top
-        apply toReal_lt_of_lt_ofReal hfin (by exact le_of_lt hε)
-        exact hbound
-      exact this
-
-    -- Completeness of L¹ gives a limit
-    -- New API: CompleteSpace.complete instead of CauchySeq.tendsto_of_complete
-    rcases CompleteSpace.complete (show Cauchy (atTop.map F) from hCauchy) with ⟨G, hG⟩
-    -- hG : atTop.map F ≤ 𝓝 G (defeq: Tendsto F atTop (𝓝 G))
+      have hlt :
+          ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ) < ε :=
+        toReal_lt_of_lt_ofReal hfin (le_of_lt hε) hbound
+      simpa [hdist]
+    -- Since L¹ is complete, the sequence converges to some `G`.
+    obtain ⟨G, hG⟩ := cauchySeq_tendsto_of_complete hCauchy
     have hG' : Tendsto F atTop (𝓝 G) := hG
-
-    -- Extract measurable representative
-    refine ⟨G, G.aestronglyMeasurable.measurable_mk, G.memℒp, ?_⟩
+    -- Choose a measurable representative of `G`.
+    let alpha : Ω → ℝ := (Lp.aestronglyMeasurable G).mk G
+    have h_alpha_ae : G =ᵐ[μ] alpha :=
+      (Lp.aestronglyMeasurable G).ae_eq_mk
+    have halpha_meas : Measurable alpha :=
+      (Lp.aestronglyMeasurable G).measurable_mk
+    have halpha_mem : MemLp alpha 1 μ :=
+      MemLp.ae_eq h_alpha_ae (Lp.memLp G)
+    refine ⟨alpha, halpha_meas, halpha_mem, ?_⟩
+    -- Convert convergence in L¹ to convergence of raw functions.
     intro ε hε
-    -- Use convergence of F to G
-    have : ∃ M, ∀ m ≥ M, dist (F m) G < ε := by
-      exact Metric.tendsto_atTop.mp hG' ε hε
-    obtain ⟨M, hM⟩ := this
+    obtain ⟨M, hM⟩ := Metric.tendsto_atTop.mp hG' ε hε
     refine ⟨M, fun m hm => ?_⟩
-    -- Convert dist back to eLpNorm
-    have hdist : dist (F m) G = ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - G ω) 1 μ) := by
+    have hdist_lt : dist (F m) G < ε := hM m hm
+    have hdist :
+        dist (F m) G =
+          ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - G ω) 1 μ) := by
       simpa [F] using
         dist_toLp_eq_eLpNorm_sub (hp0 := one_ne_zero) (hptop := ENNReal.coe_ne_top)
-          (hA_memLp 0 m) G.memℒp
-    rw [← hdist] at hM
-    have hreal : ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - G ω) 1 μ) < ε := hM m hm
-    have hfin : eLpNorm (fun ω => A 0 m ω - G ω) 1 μ ≠ ⊤ := by
-      exact (MemLp.sub (hA_memLp 0 m) G.memℒp).eLpNorm_ne_top
-    calc eLpNorm (fun ω => A 0 m ω - G ω) 1 μ
-        < ENNReal.ofReal (ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - G ω) 1 μ)) := by
-          rw [ENNReal.ofReal_toReal hfin]
-        _ < ENNReal.ofReal ε := by exact ENNReal.ofReal_lt_ofReal_iff hε |>.mpr hreal
+          (hA_memLp 0 m) (Lp.memLp G)
+    have hfin :
+        eLpNorm (fun ω => A 0 m ω - G ω) 1 μ ≠ ⊤ :=
+      (MemLp.sub (hA_memLp 0 m) (Lp.memLp G)).eLpNorm_ne_top
+    have htoReal :
+        ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - G ω) 1 μ) < ε := by
+      simpa [hdist] using hdist_lt
+    -- Relate the difference with `alpha` via the a.e. equality.
+    have h_sub :
+        (fun ω => A 0 m ω - alpha ω) =ᵐ[μ]
+          fun ω => A 0 m ω - G ω := by
+      filter_upwards [h_alpha_ae] with ω hω
+      simp [A, hω]
+    have h_eq :
+        eLpNorm (fun ω => A 0 m ω - alpha ω) 1 μ =
+          eLpNorm (fun ω => A 0 m ω - G ω) 1 μ :=
+      (eLpNorm_congr_ae h_sub).trans rfl
+    -- Convert the real inequality to one in `ℝ≥0∞`.
+    have h_lt :
+        eLpNorm (fun ω => A 0 m ω - G ω) 1 μ
+          < ENNReal.ofReal ε := by
+      have h_ofReal :
+          ENNReal.ofReal (ENNReal.toReal
+            (eLpNorm (fun ω => A 0 m ω - G ω) 1 μ)) < ENNReal.ofReal ε :=
+        ENNReal.ofReal_lt_ofReal_iff hε |>.mpr htoReal
+      rw [ENNReal.ofReal_toReal hfin] at h_ofReal
+      exact h_ofReal
+    rw [h_eq]
+    exact h_lt
 
   obtain ⟨alpha_0, halpha_0_meas, halpha_0_mem, halpha_0_conv⟩ := h_exist_alpha_0
 
@@ -794,14 +843,10 @@ theorem weighted_sums_converge_L1
         -- Convert to A notation
         have h_bound_sq' : ∫ ω, (A n m ω - A 0 m ω)^2 ∂μ ≤ Cf / m := by
           convert h_bound_sq using 2
-          ext ω
-          simp [A]
-        -- Convert integral to eLpNorm using utility lemma
         have h_L2 : eLpNorm (fun ω => A n m ω - A 0 m ω) 2 μ ≤
             ENNReal.ofReal (Real.sqrt (Cf / m)) := by
           apply eLpNorm_two_from_integral_sq_le
-          · -- Need L² membership, but hA_memLp gives L¹
-            sorry
+          · exact (hA_memLp_two n m).sub (hA_memLp_two 0 m)
           · exact div_nonneg hCf_nonneg (Nat.cast_nonneg m)
           · exact h_bound_sq'
         -- Use L² → L¹
