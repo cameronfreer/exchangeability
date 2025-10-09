@@ -871,6 +871,39 @@ lemma identicalConditionalMarginals_integral
     _ =ᵐ[μ] fun ω => ∫ y, f (π0 y) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω) := h_rhs
     _ =ᵐ[μ] fun ω => ∫ x, f x ∂(ν (μ := μ) ω) := h_to_nu
 
+/-- **Wrapper**: For bounded measurable `f : α → ℝ`, the k-th coordinate integral through
+the kernel agrees a.e. with integrating against `ν`. -/
+lemma coord_integral_via_ν
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ) (k : ℕ)
+    {f : α → ℝ} (hf : Measurable f) (hbd : ∃ C, ∀ x, |f x| ≤ C) :
+    ∀ᵐ ω ∂μ,
+      ∫ y, f (y k) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)
+        = ∫ x, f x ∂(ν (μ := μ) ω) :=
+  identicalConditionalMarginals_integral (μ := μ) (α := α) hσ k hf hbd
+
+/-- **Wrapper**: Special case for indicators - coordinate k measures agree with ν. -/
+lemma coord_indicator_via_ν
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ) (k : ℕ)
+    {s : Set α} (hs : MeasurableSet s) :
+    ∀ᵐ ω ∂μ,
+      (condExpKernel μ (shiftInvariantSigma (α := α)) ω)
+        ((fun y : Ω[α] => y k) ⁻¹' s)
+      = ν (μ := μ) ω s := by
+  -- Use the integral version with f := indicator of s
+  have hf : Measurable (s.indicator fun _ : α => (1 : ℝ)) :=
+    measurable_const.indicator hs
+  have hbd : ∃ C, ∀ x, |(s.indicator fun _ : α => (1 : ℝ)) x| ≤ C :=
+    ⟨1, by intro x; by_cases hx : x ∈ s <;> simp [Set.indicator, hx]⟩
+  have := coord_integral_via_ν (μ := μ) (α := α) hσ k hf hbd
+  filter_upwards [this] with ω hω
+  -- The integral equality from hω relates indicators; convert to measure equality
+  -- By integral_indicator_one: ∫ 1_s = (μ s).toReal
+  -- So hω says: (condExpKernel preimage measure).toReal = (ν measure).toReal
+  -- Since both are probability measures (finite), toReal is injective
+  sorry  -- TODO: apply integral_indicator_one on both sides + toReal_injective
+
 /-- **Bridge between kernel-level and measure-level independence for integrals.**
 
 `Kernel.IndepFun X Y κ μ` states that X and Y are independent under the kernel κ with respect to μ.
