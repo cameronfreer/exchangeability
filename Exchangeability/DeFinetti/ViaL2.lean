@@ -325,10 +325,12 @@ lemma eLpNorm_two_from_integral_sq_le
   {C : ℝ} (hC : 0 ≤ C)
   (h : ∫ ω, (g ω)^2 ∂μ ≤ C) :
   eLpNorm g 2 μ ≤ ENNReal.ofReal (Real.sqrt C) := by
-  -- eLpNorm g 2 μ = (∫⁻ ω, ‖g ω‖ₑ^2 ∂μ)^(1/2)
-  -- We have ∫ ω, (g ω)^2 ∂μ ≤ C
-  -- For real g, ‖g‖^2 = g^2, so need to connect integral with lintegral
-  sorry -- TODO: use integral_eq_lintegral and rpow properties
+  -- Strategy: eLpNorm g 2 = (∫⁻ ‖g‖^2)^(1/2) ≤ C^(1/2)
+  have hg_sq_nn : 0 ≤ᵐ[μ] fun ω => (g ω)^2 := by
+    filter_upwards with ω; exact sq_nonneg _
+  have hg_sq_meas : AEStronglyMeasurable (fun ω => (g ω)^2) μ :=
+    hg.aestronglyMeasurable.pow 2
+  sorry -- TODO: Use integral_eq_lintegral_of_nonneg_ae and eLpNorm_eq_lintegral_rpow_enorm
 
 end LpUtilities
 
