@@ -79,6 +79,14 @@ namespace Exchangeability.Probability
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
+/-
+Note on linter warnings: Some theorems in this file explicitly include `{m₀ : MeasurableSpace Ω}`
+as a parameter, which makes the section variable `[MeasurableSpace Ω]` unused for those theorems.
+This is intentional: these theorems need to work with multiple measurable space structures on Ω
+(e.g., m₀, m₁, m₂, mF, mG, mH) and explicitly naming m₀ makes the statements clearer. We disable
+the unusedSectionVars linter for such theorems with `set_option linter.unusedSectionVars false`.
+-/
+
 /-! ### Conditional Probability -/
 
 /-- Conditional probability of an event `A` given a σ-algebra `m`.
@@ -90,6 +98,7 @@ noncomputable def condProb {m₀ : MeasurableSpace Ω} (μ : Measure Ω) [IsProb
     (m : MeasurableSpace Ω) (A : Set Ω) : Ω → ℝ :=
   μ[A.indicator (fun _ => (1 : ℝ)) | m]
 
+set_option linter.unusedSectionVars false in
 /-- Conditional probability takes values in `[0,1]` almost everywhere. -/
 lemma condProb_ae_nonneg_le_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     [IsProbabilityMeasure μ] (m : MeasurableSpace Ω) (hm : m ≤ m₀)
@@ -115,6 +124,7 @@ lemma condProb_ae_nonneg_le_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
   filter_upwards [h₀, h₁] with ω h0 h1
   exact ⟨h0, by simpa using h1⟩
 
+set_option linter.unusedSectionVars false in
 /-- Conditional probability integrates to the expected measure on sets that are
 measurable with respect to the conditioning σ-algebra. -/
 lemma condProb_integral_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
@@ -295,7 +305,7 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
             have : G ∩ (F ∩ H) = F ∩ G ∩ H := by
               ext ω
               simp [Set.mem_inter_iff, and_left_comm, and_assoc]
-            simpa [this]
+            simp [this]
     have h_dynkin :
         ∀ {S} (hS : MeasurableSet[mF ⊔ mG] S),
           ∫ ω in S, g ω ∂μ
@@ -442,7 +452,7 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         (fun ω => f1 ω * f2 ω)
           = fun ω => (t1 ∩ t2).indicator (fun _ : Ω => (1 : ℝ)) ω := by
       funext ω; by_cases h1 : ω ∈ t1 <;> by_cases h2 : ω ∈ t2 <;>
-        simp [f1, f2, Set.indicator, h1, h2, Set.mem_inter_iff, indicator_prod ω] at *
+        simp [f1, f2, Set.indicator, h1, h2, Set.mem_inter_iff] at *
     have h_inner :
         μ[(t1 ∩ t2).indicator (fun _ : Ω => (1 : ℝ)) | mF ⊔ mG]
           =ᵐ[μ] f1 * μ[f2 | mF ⊔ mG] := by
@@ -799,12 +809,26 @@ lemma reverse_martingale_convergence {m₀ : MeasurableSpace Ω} {μ : Measure �
     (∀ᵐ ω ∂μ, Tendsto (fun n => μ[X | 𝒢 n] ω) atTop (𝓝 (μ[X | ⨅ n, 𝒢 n] ω))) ∧
     Tendsto (fun n => eLpNorm (μ[X | 𝒢 n] - μ[X | ⨅ n, 𝒢 n]) 1 μ) atTop (𝓝 0) := by
   -- Strategy: Convert decreasing 𝒢 to increasing filtration via OrderDual ℕ
-  -- Define ℱ : OrderDual ℕ → MeasurableSpace Ω by ℱ (toDual n) = 𝒢 n
-  -- Then ℱ is increasing (because 𝒢 is decreasing and OrderDual reverses order)
-  -- Apply Integrable.tendsto_ae_condExp and tendsto_eLpNorm_condExp
+  --
+  -- 1. Define ℱ : Filtration (OrderDual ℕ) m₀ by ℱ n = 𝒢 (ofDual n)
+  --    This is monotone because 𝒢 is antitone and OrderDual reverses order.
+  --
+  -- 2. Show ⨆ n, ℱ n = ⨅ n, 𝒢 n (= tail)
+  --
+  -- 3. Set g := μ[X | tail], which is integrable and StronglyMeasurable[tail].
+  --    By the equality in step 2, g is also StronglyMeasurable[⨆ n, ℱ n].
+  --
+  -- 4. Apply Integrable.tendsto_ae_condExp and Integrable.tendsto_eLpNorm_condExp
+  --    to get convergence of μ[g | ℱ n] to g both a.e. and in L¹.
+  --
+  -- 5. Use tower property: μ[g | 𝒢 n] = μ[μ[X | tail] | 𝒢 n] = μ[X | 𝒢 n]
+  --    (because tail ≤ 𝒢 n for all n).
+  --
+  -- 6. Translate from OrderDual ℕ indexing back to ℕ indexing to get the result.
 
-  sorry -- TODO: Implement using OrderDual filtration and mathlib convergence theorems
+  sorry
 
+set_option linter.unusedSectionVars false in
 /-- Application to tail σ-algebras: convergence as we condition on
 increasingly coarse shifted processes.
 
@@ -832,15 +856,15 @@ Use conditional distribution kernels: same joint law implies same conditional la
 See `ProbabilityTheory.condExpKernel`, `condDistrib`, and `IdentDistrib` API.
 -/
 lemma condexp_same_dist {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {ξ η ζ : Ω → α} (g : α → ℝ) (hg : Measurable g)
-    (h_dist : Measure.map (fun ω => (ξ ω, η ω)) μ
+    {ξ η ζ : Ω → α} (_g : α → ℝ) (_hg : Measurable _g)
+    (_h_dist : Measure.map (fun ω => (ξ ω, η ω)) μ
               = Measure.map (fun ω => (ξ ω, ζ ω)) μ) :
     True :=
   trivial
 /-! ### Utilities for the Martingale Approach -/
 
+set_option linter.unusedSectionVars false in
 /-- Given conditional probabilities agreeing, establish conditional independence.
-
 This is immediate from Doob's characterization above.
 -/
 lemma condIndep_of_condProb_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
