@@ -789,23 +789,62 @@ lemma identicalConditionalMarginals_integral
     ∀ᵐ ω ∂μ,
       ∫ y, f (y k) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)
         = ∫ x, f x ∂(ν (μ := μ) ω) := by
-  -- The proof uses these key pieces:
-  -- 1. Integrability of f ∘ (coordinate k) and f ∘ π0
-  -- 2. condExp_ae_eq_integral_condExpKernel: CE = integral against condExpKernel
-  -- 3. condexp_precomp_iterate_eq: CE commutes with shift
-  -- 4. coord_k_eq_coord_0_shift_k: coordinate k = π0 ∘ shift^[k]
-  -- 5. integral_ν_eq_integral_condExpKernel: connects to ν
+  -- Setup integrability
+  obtain ⟨C, hC⟩ := hbd
+  have hf_comp_coord_int : Integrable (fun ω : Ω[α] => f (ω k)) μ := by
+    refine MeasureTheory.integrable_of_bounded ?_ ?_
+    · exact hf.comp (measurable_pi_apply k)
+    · exact ⟨C, fun ω => hC (ω k)⟩
+  have hf_comp_pi0_int : Integrable (fun ω : Ω[α] => f (π0 ω)) μ := by
+    refine MeasureTheory.integrable_of_bounded ?_ ?_
+    · exact hf.comp (measurable_pi0 (α := α))
+    · exact ⟨C, fun ω => hC (π0 ω)⟩
 
-  -- TODO: The proof requires careful chaining of ae equalities. The strategy is:
-  -- ∫ f(y k) d(condExpKernel ω)
-  --   = ∫ f(π0(shift^[k] y)) d(condExpKernel ω)     [by coord relation]
-  --   = ∫ f(π0(y)) d(condExpKernel ω)              [by shift commutation in CE]
-  --   = ∫ f dν(ω)                                   [by integral_ν lemma]
-  --
-  -- The challenge is that condexp_precomp_iterate_eq works at the CE level, not integral level.
-  -- Need to convert: CE[f ∘ πk] ≈ CE[f ∘ π0 ∘ shift^k] ≈ CE[f ∘ π0] then to integrals.
+  -- Key: coordinate k = π0 ∘ shift^[k]
+  have h_coord : (fun y : Ω[α] => f (y k)) = fun y => f (π0 (shift^[k] y)) := by
+    funext y
+    simp only [π0]
+    rw [shift_iterate_apply]
+    simp
 
-  sorry  -- Proof strategy correct but needs careful ae equality manipulation
+  -- LHS = CE[f ∘ coord_k]
+  have h_lhs : (fun ω => ∫ y, f (y k) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω))
+      =ᵐ[μ] μ[fun ω => f (ω k) | shiftInvariantSigma (α := α)] := by
+    exact (condExp_ae_eq_integral_condExpKernel (shiftInvariantSigma_le (α := α)) hf_comp_coord_int).symm
+
+  -- CE[f ∘ coord_k] = CE[f ∘ π0 ∘ shift^k] by function equality
+  have h_coord_ce : μ[fun ω => f (ω k) | shiftInvariantSigma (α := α)]
+      =ᵐ[μ] μ[fun ω => f (π0 (shift^[k] ω)) | shiftInvariantSigma (α := α)] := by
+    apply MeasureTheory.condExp_congr_ae
+    filter_upwards with ω
+    simp only [π0]
+    rw [shift_iterate_apply]
+    simp
+
+  -- CE[f ∘ π0 ∘ shift^k] = CE[f ∘ π0] by shift commutation
+  -- This uses condexp_precomp_iterate_eq with the function (f ∘ π0)
+  have h_shift_ce : μ[fun ω => f (π0 (shift^[k] ω)) | shiftInvariantSigma (α := α)]
+      =ᵐ[μ] μ[fun ω => f (π0 ω) | shiftInvariantSigma (α := α)] := by
+    exact condexp_precomp_iterate_eq hσ hf_comp_pi0_int
+
+  -- CE[f ∘ π0] = integral against condExpKernel
+  have h_rhs : μ[fun ω => f (π0 ω) | shiftInvariantSigma (α := α)]
+      =ᵐ[μ] fun ω => ∫ y, f (π0 y) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω) := by
+    exact condExp_ae_eq_integral_condExpKernel (shiftInvariantSigma_le (α := α)) hf_comp_pi0_int
+
+  -- Convert integral of f ∘ π0 to integral against ν
+  have h_to_nu : (fun ω => ∫ y, f (π0 y) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω))
+      =ᵐ[μ] fun ω => ∫ x, f x ∂(ν (μ := μ) ω) := by
+    filter_upwards with ω
+    exact (integral_ν_eq_integral_condExpKernel ω hf).symm
+
+  -- Chain all equalities
+  calc (fun ω => ∫ y, f (y k) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω))
+      =ᵐ[μ] μ[fun ω => f (ω k) | shiftInvariantSigma (α := α)] := h_lhs
+    _ =ᵐ[μ] μ[fun ω => f (π0 (shift^[k] ω)) | shiftInvariantSigma (α := α)] := h_coord_ce
+    _ =ᵐ[μ] μ[fun ω => f (π0 ω) | shiftInvariantSigma (α := α)] := h_shift_ce
+    _ =ᵐ[μ] fun ω => ∫ y, f (π0 y) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω) := h_rhs
+    _ =ᵐ[μ] fun ω => ∫ x, f x ∂(ν (μ := μ) ω) := h_to_nu
 
 /-- **TODO/WRAPPER**: Extract measure-level independence from kernel-level independence.
 
