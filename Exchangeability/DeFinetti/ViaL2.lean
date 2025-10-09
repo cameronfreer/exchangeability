@@ -375,8 +375,11 @@ lemma eLpNorm_two_from_integral_sq_le
   -- Integral is nonnegative
   have h_int_nonneg : 0 ≤ ∫ ω, ‖g ω‖^2 ∂μ := by
     apply integral_nonneg; intro ω; exact sq_nonneg _
-  -- For p=2, we can use the relationship between L²-norm and integral
-  -- eLpNorm g 2 μ ≤ ofReal √C is equivalent to (eLpNorm g 2 μ)² ≤ ofReal C
+  -- TODO: Complete this proof properly
+  -- The idea is: for p=2, eLpNorm g 2 μ = (∫ ‖g‖²)^(1/2)
+  -- Given ∫ g² ≤ C, we have ∫ ‖g‖² ≤ C (since ‖g‖² = g² for real g)
+  -- Therefore (∫ ‖g‖²)^(1/2) ≤ C^(1/2) = √C
+  -- This requires using eLpNorm_eq_lintegral_rpow_enorm and converting to integral
   sorry
 
 end LpUtilities
@@ -653,13 +656,13 @@ theorem weighted_sums_converge_L1
       simpa [A] using hCf_unif (ℓ - k) 0 k hk_pos
 
     -- Convert each integral bound to an L² eLpNorm bound
+    -- For now, use the uniform bound - we need bounds that match the triangle inequality terms
+    -- Term 1: eLpNorm (A 0 m - A (m-k) k)
+    -- This compares a long average with its tail - needs different approach
     have h1_L2 :
-      eLpNorm (fun ω => A 0 k ω - A (m - k) k ω) 2 μ
+      eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
         ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
-      apply eLpNorm_two_from_integral_sq_le
-      · exact (hA_memLp_two 0 k).sub (hA_memLp_two (m - k) k)
-      · exact div_nonneg hCf_nonneg (Nat.cast_nonneg k)
-      · exact h1sq
+      sorry -- TODO: Need to show long average vs tail bound
     have h2_L2 :
       eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
         ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
@@ -668,12 +671,9 @@ theorem weighted_sums_converge_L1
       · exact div_nonneg hCf_nonneg (Nat.cast_nonneg k)
       · exact h2sq
     have h3_L2 :
-      eLpNorm (fun ω => A (ℓ - k) k ω - A 0 k ω) 2 μ
+      eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ
         ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
-      apply eLpNorm_two_from_integral_sq_le
-      · exact (hA_memLp_two (ℓ - k) k).sub (hA_memLp_two 0 k)
-      · exact div_nonneg hCf_nonneg (Nat.cast_nonneg k)
-      · exact h3sq
+      sorry -- TODO: Symmetric to h1_L2
 
     -- Triangle inequality on three segments:
     -- (A 0 m - A 0 ℓ) = (A 0 m - A (m - k) k) + (A (m - k) k - A (ℓ - k) k) + (A (ℓ - k) k - A 0 ℓ)
@@ -737,12 +737,17 @@ theorem weighted_sums_converge_L1
         _ ≤ (ENNReal.ofReal (Real.sqrt (Cf / k))
               + ENNReal.ofReal (Real.sqrt (Cf / k)))
               + ENNReal.ofReal (Real.sqrt (Cf / k)) := by
-              sorry -- TODO: Fix type mismatch - bounds are for A 0 k not A 0 m/ℓ
+              apply add_le_add
+              · apply add_le_add h1_L2 h2_L2
+              · exact h3_L2
         _ = ENNReal.ofReal (2 * Real.sqrt (Cf / k))
               + ENNReal.ofReal (Real.sqrt (Cf / k)) := by
-              sorry -- TODO: Fix ENNReal arithmetic
+              rw [← ENNReal.ofReal_add h0 h0]
+              simp [two_mul]
         _ = ENNReal.ofReal (3 * Real.sqrt (Cf / k)) := by
-              sorry -- TODO: Fix ENNReal arithmetic
+              have h2_nonneg : 0 ≤ 2 * Real.sqrt (Cf / k) := by nlinarith
+              rw [← ENNReal.ofReal_add h2_nonneg h0]
+              ring_nf
 
     -- Choose k large ⇒ 3 √(Cf/k) < ε
     have hlt_real : 3 * Real.sqrt (Cf / k) < ε := by
