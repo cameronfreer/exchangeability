@@ -555,135 +555,20 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
     ∀ H, MeasurableSet[MeasurableSpace.generateFrom π] H →
       μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
         =ᵐ[μ] μ[H.indicator (fun _ => (1 : ℝ)) | mG] := by
-      sorry
-  -- TODO: Apply Dynkin π-λ theorem to extend from π to generateFrom π
-  --
-  -- Strategy: Use induction_on_inter with property C(H) := "μ[H.indicator | mF ⊔ mG] =ᵐ μ[H.indicator | mG]"
-  --
-  -- Key mathlib lemmas:
-  -- 1. induction_on_inter : The Dynkin π-λ theorem
-  --    (MeasureTheory.PiSystem:674)
-  --    Given m = generateFrom s and IsPiSystem s, extend property from s to all measurable sets
-  --
-  -- 2. ae_eq_trans : Transitivity of almost everywhere equality
-  --    Chain ae equalities together
-  --
-  -- Steps:
-  -- 1. Apply induction_on_inter with s = π, h_eq : generateFrom π = generateFrom π (rfl)
-  --
-  -- 2. Verify C on empty set: Both condExp of zero indicator are zero a.e.
-  --
-  -- 3. Verify C on basic sets (H ∈ π): This is the hypothesis h
-  --
-  -- 4. Verify C closed under complements:
-  --    If μ[H.indicator | mF ⊔ mG] =ᵐ μ[H.indicator | mG], show same for Hᶜ
-  --    Use: Hᶜ.indicator 1 = 1 - H.indicator 1
-  --    Apply linearity of condExp: μ[1 - H.indicator | m] =ᵐ 1 - μ[H.indicator | m]
-  --    Use hypothesis on H to get result for Hᶜ
-  --
-  -- 5. Verify C closed under countable disjoint unions:
-  --    If μ[fᵢ.indicator | mF ⊔ mG] =ᵐ μ[fᵢ.indicator | mG] for disjoint fᵢ
-  --    Show: μ[(⋃ᵢ fᵢ).indicator | mF ⊔ mG] =ᵐ μ[(⋃ᵢ fᵢ).indicator | mG]
-  --    Use: (⋃ᵢ fᵢ).indicator = ∑ᵢ fᵢ.indicator (for disjoint union)
-  --    Apply: condExp of series equals series of condExp (monotone convergence)
-  --    Use inductive hypothesis on each fᵢ
-  --
-  /-
-      -- TODO: This code block should be moved inside the h_dynkin proof above (line 341)
-      -- This extends the projection property from π to all sets in generateFrom π.
-      have h_sup_le :
-          mF ⊔ mG ≤ MeasurableSpace.generateFrom rects := by
-        refine sup_le ?_ ?_
-        · intro s hs
-          have : s ∈ rects := by
-            refine ⟨s, Set.univ, hs, MeasurableSet.univ, ?_⟩
-            simp
-          exact measurableSet_generateFrom this
-        · intro s hs
-          have : s ∈ rects := by
-            refine ⟨Set.univ, s, MeasurableSet.univ, hs, ?_⟩
-            simp
-          exact measurableSet_generateFrom this
-      have h_generate_le :
-          MeasurableSpace.generateFrom rects ≤ mF ⊔ mG := by
-        refine generateFrom_le ?_
-        intro s hs
-        obtain ⟨F, G, hF, hG, rfl⟩ := hs
-        exact (MeasurableSet.inter
-          (hF.mono (le_sup_left : mF ≤ mF ⊔ mG))
-          (hG.mono (le_sup_right : mG ≤ mF ⊔ mG)))
-      have h_sigma_eq : mF ⊔ mG = MeasurableSpace.generateFrom rects :=
-        le_antisymm h_sup_le h_generate_le
+  classical
+  intro H hH
+  -- Property we want to extend: C(H) := "μ[1_H | mF ⊔ mG] =ᵐ μ[1_H | mG]"
+  -- Strategy: Show this holds for π, extends to complements and disjoint unions
+  -- Then by Dynkin π-λ theorem, it holds for all of generateFrom π
 
-      have h_univ_mem : (Set.univ : Set Ω) ∈ rects := by
-        refine ⟨Set.univ, Set.univ, MeasurableSet.univ, MeasurableSet.univ, ?_⟩
-        simp
-      have h_total :
-          ∫ ω, g ω ∂μ
-            = ∫ ω, (H.indicator fun _ : Ω => (1 : ℝ)) ω ∂μ := by
-        simpa [Measure.restrict_univ] using h_rects _ h_univ_mem
-
-      classical
-      let hfun : Ω → ℝ := fun ω =>
-        (H.indicator fun _ : Ω => (1 : ℝ)) ω
-      have h_property :
-          ∀ {t} (ht : MeasurableSet[mF ⊔ mG] t),
-            ∫ ω in t, g ω ∂μ = ∫ ω in t, hfun ω ∂μ := by
-        refine
-          MeasureTheory.induction_on_inter
-            (m := mF ⊔ mG)
-            (C := fun t _ => ∫ ω in t, g ω ∂μ = ∫ ω in t, hfun ω ∂μ)
-            (h_eq := h_sigma_eq) h_pi ?empty ?basic ?compl ?iUnion
-        · -- empty set
-          simpa using integral_empty (μ := μ) (f := fun ω => g ω)
-        · -- rectangles
-          intro t ht
-          exact h_rects t ht
-        · -- complements
-          intro t htm hCt
-          have htm₀ : MeasurableSet t := hmFG _ htm
-          have h_g_compl :
-              ∫ ω in tᶜ, g ω ∂μ
-                = ∫ ω, g ω ∂μ - ∫ ω in t, g ω ∂μ := by
-            refine (sub_eq_iff_eq_add).2 ?_
-            have h_add :=
-              integral_add_compl (μ := μ) (s := t) (f := fun ω => g ω) htm₀ hg_int
-            simpa [add_comm, add_left_comm, add_assoc] using h_add.symm
-          have h_h_compl :
-              ∫ ω in tᶜ, hfun ω ∂μ
-                = ∫ ω, hfun ω ∂μ - ∫ ω in t, hfun ω ∂μ := by
-            refine (sub_eq_iff_eq_add).2 ?_
-            have h_add :=
-              integral_add_compl (μ := μ) (s := t) (f := hfun) htm₀ hH_int
-            simpa [add_comm, add_left_comm, add_assoc] using h_add.symm
-          calc
-            ∫ ω in tᶜ, g ω ∂μ
-                = ∫ ω, g ω ∂μ - ∫ ω in t, g ω ∂μ := h_g_compl
-            _ = ∫ ω, hfun ω ∂μ - ∫ ω in t, hfun ω ∂μ := by
-                simpa [h_total, hCt]
-            _ = ∫ ω in tᶜ, hfun ω ∂μ := h_h_compl.symm
-        · -- countable disjoint unions
-          intro f hd hfm hCf
-          have hfm₀ : ∀ n, MeasurableSet (f n) := fun n => hmFG _ (hfm n)
-          have h_int_g : IntegrableOn g (⋃ n, f n) μ := hg_int.integrableOn
-          have h_int_h : IntegrableOn hfun (⋃ n, f n) μ := hH_int.integrableOn
-          have h_g_iUnion :=
-            integral_iUnion (μ := μ) (f := fun ω => g ω) hfm₀ hd h_int_g
-          have h_h_iUnion :=
-            integral_iUnion (μ := μ) (f := fun ω => hfun ω) hfm₀ hd h_int_h
-          have h_tsum :
-              (∑' n, ∫ ω in f n, g ω ∂μ)
-                = ∑' n, ∫ ω in f n, hfun ω ∂μ := by
-            refine tsum_congr ?_
-            intro n
-            exact hCf n
-          calc
-            ∫ ω in ⋃ n, f n, g ω ∂μ
-                = ∑' n, ∫ ω in f n, g ω ∂μ := h_g_iUnion
-            _ = ∑' n, ∫ ω in f n, hfun ω ∂μ := h_tsum
-            _ = ∫ ω in ⋃ n, f n, hfun ω ∂μ := h_h_iUnion.symm
-      exact h_property hS
-  -/
+  -- For now, use ae_eq_condExp_of_forall_setIntegral_eq
+  -- We show that the two conditional expectations have the same integrals
+  -- on all mF ⊔ mG-measurable sets
+  sorry
+  -- TODO: Complete using either:
+  -- 1. Dynkin system API (generateFrom_le_toMeasurableSpace_of_subset_of_isPiSystem)
+  -- 2. Or direct proof via ae_eq_condExp_of_forall_setIntegral_eq showing
+  --    integrals agree on all mF ⊔ mG-measurable sets by π-λ induction
 
 /-! ### Bounded Martingales and L² Inequalities -/
 
