@@ -90,6 +90,7 @@ noncomputable def condProb {m₀ : MeasurableSpace Ω} (μ : Measure Ω) [IsProb
     (m : MeasurableSpace Ω) (A : Set Ω) : Ω → ℝ :=
   μ[A.indicator (fun _ => (1 : ℝ)) | m]
 
+set_option linter.unusedSectionVars false in
 /-- Conditional probability takes values in `[0,1]` almost everywhere. -/
 lemma condProb_ae_nonneg_le_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     [IsProbabilityMeasure μ] (m : MeasurableSpace Ω) (hm : m ≤ m₀)
@@ -115,6 +116,7 @@ lemma condProb_ae_nonneg_le_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
   filter_upwards [h₀, h₁] with ω h0 h1
   exact ⟨h0, by simpa using h1⟩
 
+set_option linter.unusedSectionVars false in
 /-- Conditional probability integrates to the expected measure on sets that are
 measurable with respect to the conditioning σ-algebra. -/
 lemma condProb_integral_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
@@ -295,7 +297,7 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
             have : G ∩ (F ∩ H) = F ∩ G ∩ H := by
               ext ω
               simp [Set.mem_inter_iff, and_left_comm, and_assoc]
-            simpa [this]
+            simp [this]
     have h_dynkin :
         ∀ {S} (hS : MeasurableSet[mF ⊔ mG] S),
           ∫ ω in S, g ω ∂μ
@@ -442,7 +444,7 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         (fun ω => f1 ω * f2 ω)
           = fun ω => (t1 ∩ t2).indicator (fun _ : Ω => (1 : ℝ)) ω := by
       funext ω; by_cases h1 : ω ∈ t1 <;> by_cases h2 : ω ∈ t2 <;>
-        simp [f1, f2, Set.indicator, h1, h2, Set.mem_inter_iff, indicator_prod ω] at *
+        simp [f1, f2, Set.indicator, h1, h2, Set.mem_inter_iff] at *
     have h_inner :
         μ[(t1 ∩ t2).indicator (fun _ : Ω => (1 : ℝ)) | mF ⊔ mG]
           =ᵐ[μ] f1 * μ[f2 | mF ⊔ mG] := by
@@ -805,6 +807,7 @@ lemma reverse_martingale_convergence {m₀ : MeasurableSpace Ω} {μ : Measure �
 
   sorry -- TODO: Implement using OrderDual filtration and mathlib convergence theorems
 
+set_option linter.unusedSectionVars false in
 /-- Application to tail σ-algebras: convergence as we condition on
 increasingly coarse shifted processes.
 
@@ -832,15 +835,15 @@ Use conditional distribution kernels: same joint law implies same conditional la
 See `ProbabilityTheory.condExpKernel`, `condDistrib`, and `IdentDistrib` API.
 -/
 lemma condexp_same_dist {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {ξ η ζ : Ω → α} (g : α → ℝ) (hg : Measurable g)
-    (h_dist : Measure.map (fun ω => (ξ ω, η ω)) μ
+    {ξ η ζ : Ω → α} (_g : α → ℝ) (_hg : Measurable _g)
+    (_h_dist : Measure.map (fun ω => (ξ ω, η ω)) μ
               = Measure.map (fun ω => (ξ ω, ζ ω)) μ) :
     True :=
   trivial
 /-! ### Utilities for the Martingale Approach -/
 
+set_option linter.unusedSectionVars false in
 /-- Given conditional probabilities agreeing, establish conditional independence.
-
 This is immediate from Doob's characterization above.
 -/
 lemma condIndep_of_condProb_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
