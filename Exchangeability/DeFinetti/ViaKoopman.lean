@@ -764,6 +764,27 @@ lemma identicalConditionalMarginals {μ : Measure (Ω[α])} [IsProbabilityMeasur
 
   sorry  -- AXIOM: Depends on shift-invariance of condExpKernel (same as ν_ae_shiftInvariant)
 
+/-- Integral under the `k`-th conditional marginal equals the integral under `ν(ω)`.
+
+This avoids any "kernel uniqueness": we work at the level of integrals, which is
+all later lemmas need. This is the **working version** that downstream proofs should use.
+
+**Proof strategy**:
+1. Use `condExp_ae_eq_integral_condExpKernel` to represent conditional expectations as integrals
+2. Apply `condexp_precomp_iterate_eq` to show CE commutes with shift
+3. Connect via coordinate relation and `integral_ν_eq_integral_condExpKernel`
+-/
+lemma identicalConditionalMarginals_integral
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ) (k : ℕ)
+    {f : α → ℝ} (hf : Measurable f) (hbd : ∃ C, ∀ x, |f x| ≤ C) :
+    ∀ᵐ ω ∂μ,
+      ∫ y, f (y k) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)
+        = ∫ x, f x ∂(ν (μ := μ) ω) := by
+  sorry  -- TODO: Complete proof combining condexp_precomp_iterate_eq, coord_k_eq_coord_0_shift_k,
+         -- condExp_ae_eq_integral_condExpKernel, and integral_ν_eq_integral_condExpKernel
+         -- Key steps outlined in documentation above are correct, just need exact Lean proof
+
 /-- **TODO/WRAPPER**: Extract measure-level independence from kernel-level independence.
 
 **Goal**: Prove that `Kernel.IndepFun X Y κ μ` implies `∀ᵐ a ∂μ, IndepFun X Y (κ a)`.
