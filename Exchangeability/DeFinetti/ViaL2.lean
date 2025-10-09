@@ -95,6 +95,7 @@ private lemma measurable_eval_fin2 {i : Fin 2} :
     Measurable fun g : (Fin 2 → ℝ) => g i :=
   measurable_pi_apply _
 
+set_option linter.unusedSectionVars false in
 /-- For a contractable sequence, the law of each coordinate agrees with the law
 of `X 0`. -/
 lemma contractable_map_single (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i)) {i : ℕ} :
@@ -142,23 +143,23 @@ private lemma strictMono_two {i j : ℕ} (hij : i < j) :
   -- Reduce the strict inequality on `Fin 2` to natural numbers.
   have hval : a.val < b.val := Fin.lt_iff_val_lt_val.mp hlt
   -- `b` must be the second coordinate.
-  have hb_val_le : b.val ≤ 1 := Nat.lt_succ_iff.mp (show b.val < 2 by simpa using b.is_lt)
+  have hb_val_le : b.val ≤ 1 := Nat.lt_succ_iff.mp (show b.val < 2 by simp [b.is_lt])
   have hb_ne_zero : b.val ≠ 0 := by
     intro hb
-    have : a.val < 0 := by simpa [hb] using hval
-    exact Nat.not_lt_zero _ this
+    simp [hb] at hval
   have hb_pos : 0 < b.val := Nat.pos_of_ne_zero hb_ne_zero
   have hb_ge_one : 1 ≤ b.val := Nat.succ_le_of_lt hb_pos
   have hb_val : b.val = 1 := le_antisymm hb_val_le hb_ge_one
   -- Consequently `a` is the first coordinate.
-  have ha_lt_one : a.val < 1 := by simpa [hb_val] using hval
+  have ha_lt_one : a.val < 1 := by simp only [hb_val] at hval; exact hval
   have ha_val : a.val = 0 := Nat.lt_one_iff.mp ha_lt_one
   -- Rewrite the conclusion using these identifications.
-  have ha : a = fin2Zero := by ext; simpa [fin2Zero, ha_val]
-  have hb : b = fin2One := by ext; simpa [fin2One, hb_val]
+  have ha : a = fin2Zero := by ext; simp [fin2Zero, ha_val]
+  have hb : b = fin2One := by ext; simp [fin2One, hb_val]
   subst ha; subst hb
   simp [fin2Zero, fin2One, hij]
 
+set_option linter.unusedSectionVars false in
 /-- For a contractable sequence, every increasing pair `(i,j)` with `i < j`
 has the same joint law as `(X 0, X 1)`. -/
 lemma contractable_map_pair (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i)) {i j : ℕ} (hij : i < j) :
@@ -172,16 +173,16 @@ lemma contractable_map_pair (hX_contract : Contractable μ X) (hX_meas : ∀ i, 
   let eval : (Fin 2 → ℝ) → ℝ × ℝ :=
     fun g => (g fin2Zero, g fin2One)
   have h_eval_meas : Measurable eval := by
-    refine (measurable_eval_fin2 (i := fin2Zero)).prod_mk ?_
+    refine (measurable_eval_fin2 (i := fin2Zero)).prodMk ?_
     exact measurable_eval_fin2 (i := fin2One)
   have h_meas_k : Measurable fun ω => fun t : Fin 2 => X (k t) ω := by
     refine measurable_pi_lambda _ ?_
     intro t
     by_cases ht : t = fin2Zero
-    · have : k t = i := by simpa [k, ht]
-      simpa [this] using hX_meas i
-    · have : k t = j := by simpa [k, ht] using if_neg ht
-      simpa [this] using hX_meas j
+    · have : k t = i := by simp [k, ht]
+      simp [this]; exact hX_meas i
+    · have : k t = j := by simp [k, if_neg ht]
+      simp [this]; exact hX_meas j
   have h_meas_std : Measurable fun ω => fun t : Fin 2 => X t.val ω := by
     refine measurable_pi_lambda _ ?_
     intro t
@@ -200,6 +201,7 @@ lemma contractable_map_pair (hX_contract : Contractable μ X) (hX_meas : ∀ i, 
     simp [eval, fin2Zero, fin2One]
   simpa [Function.comp, h_comp_simp, h_comp_simp'] using h_comp
 
+set_option linter.unusedSectionVars false in
 /-- Postcompose a contractable sequence with a measurable function. -/
 lemma contractable_comp (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i))
     (f : ℝ → ℝ) (hf_meas : Measurable f) :
@@ -271,7 +273,7 @@ lemma dist_toLp_eq_eLpNorm_sub
 
 /-- Converting strict inequality through `ENNReal.toReal`. -/
 lemma toReal_lt_of_lt_ofReal {x : ENNReal} {ε : ℝ}
-    (hx : x ≠ ⊤) (hε : 0 ≤ ε) :
+    (_hx : x ≠ ⊤) (hε : 0 ≤ ε) :
     x < ENNReal.ofReal ε → ENNReal.toReal x < ε := by
   intro h
   have : ENNReal.toReal x < ENNReal.toReal (ENNReal.ofReal ε) := by
@@ -318,6 +320,44 @@ lemma sqrt_div_lt_half_eps_of_nat
     _ = |ε / 2| := Real.sqrt_sq_eq_abs _
     _ = ε / 2 := abs_of_pos (div_pos hε (by norm_num))
 
+/-- Arithmetic bound: 3·√(Cf/m) < ε when m is large enough. -/
+lemma sqrt_div_lt_third_eps_of_nat
+  {Cf ε : ℝ} (hCf : 0 ≤ Cf) (hε : 0 < ε) :
+  ∀ ⦃m : ℕ⦄, m ≥ Nat.ceil (9 * Cf / (ε^2)) + 1 →
+    3 * Real.sqrt (Cf / m) < ε := by
+  intro m hm
+  have hm_real : ((Nat.ceil (9*Cf/ε^2) : ℝ) + 1) ≤ m := by exact_mod_cast hm
+  have hA_lt_m : 9*Cf/ε^2 < (m : ℝ) := by
+    calc 9*Cf/ε^2
+        ≤ Nat.ceil (9*Cf/ε^2) := Nat.le_ceil _
+      _ < (Nat.ceil (9*Cf/ε^2) : ℝ) + 1 := by linarith
+      _ ≤ m := hm_real
+  by_cases hCf0 : Cf = 0
+  · simp [hCf0, hε]
+  have hCfpos : 0 < Cf := lt_of_le_of_ne hCf (Ne.symm hCf0)
+  have hmpos : 0 < (m : ℝ) := by
+    calc (0 : ℝ) < 9*Cf/ε^2 := by positivity
+      _ < m := hA_lt_m
+  have hdenom_pos : 0 < 9*Cf/ε^2 := by positivity
+  have hdiv : Cf / (m : ℝ) < Cf / (9*Cf/ε^2) := by
+    exact div_lt_div_of_pos_left hCfpos hdenom_pos hA_lt_m
+  have heq : Cf / (9*Cf/ε^2) = ε^2 / 9 := by
+    field_simp [ne_of_gt hCfpos]
+  have hlt : Cf / (m : ℝ) < ε^2 / 9 := by
+    calc Cf / (m : ℝ)
+        < Cf / (9*Cf/ε^2) := hdiv
+      _ = ε^2 / 9 := heq
+  have hnonneg : 0 ≤ Cf / (m : ℝ) := div_nonneg hCf (Nat.cast_nonneg m)
+  have hsqrt : Real.sqrt (Cf / m) < Real.sqrt (ε^2 / 9) := by
+    exact Real.sqrt_lt_sqrt hnonneg hlt
+  have h_sqrt_simpl : Real.sqrt (ε^2 / 9) = ε / 3 := by
+    rw [Real.sqrt_div (sq_nonneg ε), Real.sqrt_sq (le_of_lt hε)]
+    rw [show (9 : ℝ) = 3^2 by norm_num, Real.sqrt_sq (by norm_num : (0 : ℝ) ≤ 3)]
+  calc 3 * Real.sqrt (Cf / m)
+      < 3 * Real.sqrt (ε^2 / 9) := by linarith [hsqrt]
+    _ = 3 * (ε / 3) := by rw [h_sqrt_simpl]
+    _ = ε := by ring
+
 /-- Convert an L² integral bound to an eLpNorm bound. -/
 lemma eLpNorm_two_from_integral_sq_le
   {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
@@ -325,12 +365,19 @@ lemma eLpNorm_two_from_integral_sq_le
   {C : ℝ} (hC : 0 ≤ C)
   (h : ∫ ω, (g ω)^2 ∂μ ≤ C) :
   eLpNorm g 2 μ ≤ ENNReal.ofReal (Real.sqrt C) := by
-  -- Strategy: eLpNorm g 2 = (∫⁻ ‖g‖^2)^(1/2) ≤ C^(1/2)
-  have hg_sq_nn : 0 ≤ᵐ[μ] fun ω => (g ω)^2 := by
-    filter_upwards with ω; exact sq_nonneg _
-  have hg_sq_meas : AEStronglyMeasurable (fun ω => (g ω)^2) μ :=
-    hg.aestronglyMeasurable.pow 2
-  sorry -- TODO: Use integral_eq_lintegral_of_nonneg_ae and eLpNorm_eq_lintegral_rpow_enorm
+  -- For real-valued g, use ‖g‖ = |g| and sq_abs
+  have h_sq_eq : ∀ ω, ‖g ω‖^2 = (g ω)^2 := by
+    intro ω; rw [Real.norm_eq_abs, sq_abs]
+  -- Get integral bound in terms of ‖g‖^2
+  have h_int_le : ∫ ω, ‖g ω‖^2 ∂μ ≤ C := by
+    have : (fun ω => ‖g ω‖^2) = fun ω => (g ω)^2 := funext h_sq_eq
+    rw [this]; exact h
+  -- Integral is nonnegative
+  have h_int_nonneg : 0 ≤ ∫ ω, ‖g ω‖^2 ∂μ := by
+    apply integral_nonneg; intro ω; exact sq_nonneg _
+  -- For p=2, we can use the relationship between L²-norm and integral
+  -- eLpNorm g 2 μ ≤ ofReal √C is equivalent to (eLpNorm g 2 μ)² ≤ ofReal C
+  sorry
 
 end LpUtilities
 
@@ -516,7 +563,7 @@ theorem weighted_sums_converge_L1
                 |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω)|
                     = (1 / (m : ℝ)) *
                         |∑ k : Fin m, f (X (n + k.val + 1) ω)| := by
-                      simpa [abs_mul, h_inv_abs]
+                      simp [abs_mul]
                 _ ≤ (1 / (m : ℝ)) *
                         ∑ k : Fin m, |f (X (n + k.val + 1) ω)| := by
                       exact
@@ -578,112 +625,132 @@ theorem weighted_sums_converge_L1
   have hA_cauchy_L2_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
       eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ < ENNReal.ofReal ε := by
     intro ε hε
-    -- Strategy: use triangle inequality to compare via a common window
-    -- For m, ℓ ≥ N, compare both to A 0 N and use the two-window bound
-    -- ‖A 0 m - A 0 ℓ‖₂ ≤ ‖A 0 m - A 0 N‖₂ + ‖A 0 N - A 0 ℓ‖₂
-    -- Each term is bounded by √(Cf/N) via l2_bound_two_windows
-    -- So we need 2√(Cf/N) < ε, i.e., N > 4Cf/ε²
-
-    -- Get uniform Cf that works for all window positions
-    obtain ⟨Cf, hCf_nonneg, hCf_unif⟩ := l2_bound_two_windows_uniform X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
-
-    -- Choose N large enough
-    have hε_sq_pos : 0 < ε ^ 2 := pow_pos hε 2
-    have hε_sq : 0 < ε ^ 2 / (4 * Cf + 1) := by
-      apply div_pos hε_sq_pos
-      have : 0 < (4 : ℝ) * Cf + 1 := by
-        have : 0 ≤ (4 : ℝ) * Cf := mul_nonneg (by norm_num) hCf_nonneg
-        linarith
-      exact this
-
-    -- Choose N so that √(Cf/N) < ε/2
-    -- We need N > 4Cf/ε²
-    let N : ℕ := Nat.ceil (4 * Cf / (ε ^ 2)) + 1
+    -- Uniform two-window bound: ∫ (...)^2 ≤ Cf / k
+    obtain ⟨Cf, hCf_nonneg, hCf_unif⟩ :=
+      l2_bound_two_windows_uniform X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
+    -- Choose N so that 3 * √(Cf/N) < ε
+    let N : ℕ := Nat.ceil (9 * Cf / (ε ^ 2)) + 1
     have hN_pos : 0 < N := Nat.succ_pos _
-
-    refine ⟨N, fun m ℓ hm hℓ => ?_⟩
-
-    -- Use common length k = min m ℓ
+    refine ⟨N, ?_⟩
+    intro m ℓ hm hℓ
+    -- Common tail length k = min m ℓ
     let k := min m ℓ
-    have hk_pos : 0 < k := by
-      have : N ≤ min m ℓ := by
-        apply le_min
-        · exact hm
-        · exact hℓ
-      exact Nat.lt_of_lt_of_le hN_pos this
+    have hk_ge_N : N ≤ k := by
+      have : N ≤ min m ℓ := Nat.le_min.mpr ⟨hm, hℓ⟩
+      simpa [k] using this
+    have hk_pos : 0 < k := lt_of_lt_of_le hN_pos hk_ge_N
 
-    -- Triangle inequality via common length
-    have tri : eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
-              ≤ eLpNorm (fun ω => A 0 m ω - A 0 k ω) 2 μ
-                + eLpNorm (fun ω => A 0 ℓ ω - A 0 k ω) 2 μ := by
-      have hdecomp : (fun ω => A 0 m ω - A 0 ℓ ω)
-                   = (fun ω => (A 0 m ω - A 0 k ω) + (A 0 k ω - A 0 ℓ ω)) := by
+    -- Three same-length comparisons (tail-averages):
+    -- T1: (0 vs m-k), T2: ((m-k) vs (ℓ-k)), T3: ((ℓ-k) vs 0), all of length k.
+    have h1sq :
+      ∫ ω, (A 0 k ω - A (m - k) k ω)^2 ∂μ ≤ Cf / k := by
+      simpa [A] using hCf_unif 0 (m - k) k hk_pos
+    have h2sq :
+      ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ ≤ Cf / k := by
+      simpa [A] using hCf_unif (m - k) (ℓ - k) k hk_pos
+    have h3sq :
+      ∫ ω, (A (ℓ - k) k ω - A 0 k ω)^2 ∂μ ≤ Cf / k := by
+      simpa [A] using hCf_unif (ℓ - k) 0 k hk_pos
+
+    -- Convert each integral bound to an L² eLpNorm bound
+    have h1_L2 :
+      eLpNorm (fun ω => A 0 k ω - A (m - k) k ω) 2 μ
+        ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
+      apply eLpNorm_two_from_integral_sq_le
+      · exact (hA_memLp_two 0 k).sub (hA_memLp_two (m - k) k)
+      · exact div_nonneg hCf_nonneg (Nat.cast_nonneg k)
+      · exact h1sq
+    have h2_L2 :
+      eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
+        ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
+      apply eLpNorm_two_from_integral_sq_le
+      · exact (hA_memLp_two (m - k) k).sub (hA_memLp_two (ℓ - k) k)
+      · exact div_nonneg hCf_nonneg (Nat.cast_nonneg k)
+      · exact h2sq
+    have h3_L2 :
+      eLpNorm (fun ω => A (ℓ - k) k ω - A 0 k ω) 2 μ
+        ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
+      apply eLpNorm_two_from_integral_sq_le
+      · exact (hA_memLp_two (ℓ - k) k).sub (hA_memLp_two 0 k)
+      · exact div_nonneg hCf_nonneg (Nat.cast_nonneg k)
+      · exact h3sq
+
+    -- Triangle inequality on three segments:
+    -- (A 0 m - A 0 ℓ) = (A 0 m - A (m - k) k) + (A (m - k) k - A (ℓ - k) k) + (A (ℓ - k) k - A 0 ℓ)
+    have tri :
+      eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
+        ≤ eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
+          + eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
+          + eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ := by
+      -- split into T1 + (T2 + T3), then split T2 + T3
+      have hsplit :
+        (fun ω => A 0 m ω - A 0 ℓ ω)
+          = (fun ω =>
+                (A 0 m ω - A (m - k) k ω)
+                + ((A (m - k) k ω - A (ℓ - k) k ω)
+                  + (A (ℓ - k) k ω - A 0 ℓ ω))) := by
         ext ω; ring
-      rw [hdecomp]
-      calc eLpNorm (fun ω => A 0 m ω - A 0 k ω + (A 0 k ω - A 0 ℓ ω)) 2 μ
-          ≤ eLpNorm (fun ω => A 0 m ω - A 0 k ω) 2 μ +
-              eLpNorm (fun ω => A 0 k ω - A 0 ℓ ω) 2 μ := by
-            apply eLpNorm_add_le
-            · exact (hA_meas 0 m).sub (hA_meas 0 k) |>.aestronglyMeasurable
-            · exact (hA_meas 0 k).sub (hA_meas 0 ℓ) |>.aestronglyMeasurable
-            · norm_num
-        _ = eLpNorm (fun ω => A 0 m ω - A 0 k ω) 2 μ +
-              eLpNorm (fun ω => A 0 ℓ ω - A 0 k ω) 2 μ := by
-            congr 1
-            -- eLpNorm (A 0 k - A 0 ℓ) = eLpNorm (A 0 ℓ - A 0 k)
-            have h : eLpNorm (fun ω => A 0 k ω - A 0 ℓ ω) 2 μ =
-                     eLpNorm (fun ω => -(A 0 k ω - A 0 ℓ ω)) 2 μ :=
-              (eLpNorm_neg _ _ _).symm
-            convert h using 2
-            ext ω
-            ring
+      have step1 :
+        eLpNorm
+          (fun ω =>
+            (A 0 m ω - A (m - k) k ω)
+            + ((A (m - k) k ω - A (ℓ - k) k ω)
+              + (A (ℓ - k) k ω - A 0 ℓ ω))) 2 μ
+        ≤ eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
+            + eLpNorm (fun ω =>
+                (A (m - k) k ω - A (ℓ - k) k ω)
+                + (A (ℓ - k) k ω - A 0 ℓ ω)) 2 μ := by
+        apply eLpNorm_add_le
+        · exact ((hA_meas 0 m).sub (hA_meas (m - k) k)).aestronglyMeasurable
+        · exact (Measurable.add ((hA_meas (m - k) k).sub (hA_meas (ℓ - k) k))
+                ((hA_meas (ℓ - k) k).sub (hA_meas 0 ℓ))).aestronglyMeasurable
+        · norm_num
+      have step2 :
+        eLpNorm (fun ω =>
+            (A (m - k) k ω - A (ℓ - k) k ω)
+          + (A (ℓ - k) k ω - A 0 ℓ ω)) 2 μ
+        ≤ eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
+            + eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ := by
+        apply eLpNorm_add_le
+        · exact ((hA_meas (m - k) k).sub (hA_meas (ℓ - k) k)).aestronglyMeasurable
+        · exact ((hA_meas (ℓ - k) k).sub (hA_meas 0 ℓ)).aestronglyMeasurable
+        · norm_num
+      -- reassociate the sums of bounds
+      have : eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
+            ≤ eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
+              + (eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
+                + eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ) := by
+        simpa [hsplit] using
+          (le_trans step1 <| add_le_add_left step2 _)
+      simpa [add_assoc] using this
 
-    -- Each term bounded by √(Cf/k) via uniform bound
-    have hCf_k_nn : 0 ≤ Cf / k := div_nonneg hCf_nonneg (Nat.cast_nonneg k)
+    -- Bound each term by √(Cf/k), then sum to 3√(Cf/k)
+    have bound3 :
+      eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
+        ≤ ENNReal.ofReal (3 * Real.sqrt (Cf / k)) := by
+      have h0 : 0 ≤ Real.sqrt (Cf / k) := Real.sqrt_nonneg _
+      calc
+        eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
+            ≤ eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
+              + eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
+              + eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ := tri
+        _ ≤ (ENNReal.ofReal (Real.sqrt (Cf / k))
+              + ENNReal.ofReal (Real.sqrt (Cf / k)))
+              + ENNReal.ofReal (Real.sqrt (Cf / k)) := by
+              sorry -- TODO: Fix type mismatch - bounds are for A 0 k not A 0 m/ℓ
+        _ = ENNReal.ofReal (2 * Real.sqrt (Cf / k))
+              + ENNReal.ofReal (Real.sqrt (Cf / k)) := by
+              sorry -- TODO: Fix ENNReal arithmetic
+        _ = ENNReal.ofReal (3 * Real.sqrt (Cf / k)) := by
+              sorry -- TODO: Fix ENNReal arithmetic
 
-    have hbound_m : ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (0 + i.val + 1) ω) -
-                           (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
-                    ≤ Cf / k := hCf_unif 0 m k hk_pos
-
-    have hbound_ℓ : ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (0 + i.val + 1) ω) -
-                           (1/(k:ℝ)) * ∑ i : Fin k, f (X (ℓ + i.val + 1) ω))^2 ∂μ
-                    ≤ Cf / k := hCf_unif 0 ℓ k hk_pos
-
-    have hL2_m : eLpNorm (fun ω => A 0 m ω - A 0 k ω) 2 μ
-                ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
-      apply eLpNorm_two_from_integral_sq_le
-      · exact (hA_memLp_two 0 m).sub (hA_memLp_two 0 k)
-      · exact hCf_k_nn
-      · -- Need: ∫ (A 0 m - A 0 k)^2 ≤ Cf/k
-        -- Have: ∫ (1/k*∑ᵢ₌₁ᵏ f(Xᵢ) - 1/k*∑ᵢ₌₁ᵏ f(X_{m+i}))^2 ≤ Cf/k
-        -- Key: when k ≤ m, the first k terms match, so this is a reindexing
-        sorry -- TODO: prove sum reindexing lemma
-
-    have hL2_ℓ : eLpNorm (fun ω => A 0 ℓ ω - A 0 k ω) 2 μ
-                ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
-      apply eLpNorm_two_from_integral_sq_le
-      · exact (hA_memLp_two 0 ℓ).sub (hA_memLp_two 0 k)
-      · exact hCf_k_nn
-      · sorry -- TODO: same reindexing as above
-
-    calc eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
-        ≤ eLpNorm (fun ω => A 0 m ω - A 0 k ω) 2 μ
-          + eLpNorm (fun ω => A 0 ℓ ω - A 0 k ω) 2 μ := tri
-      _ ≤ ENNReal.ofReal (Real.sqrt (Cf / k))
-          + ENNReal.ofReal (Real.sqrt (Cf / k)) := by
-            exact add_le_add hL2_m hL2_ℓ
-      _ = ENNReal.ofReal (2 * Real.sqrt (Cf / k)) := by
-            rw [← ENNReal.ofReal_add (Real.sqrt_nonneg _) (Real.sqrt_nonneg _)]
-            ring_nf
-      _ < ENNReal.ofReal ε := by
-            apply ENNReal.ofReal_lt_ofReal_iff hε |>.mpr
-            have hk_ge_N : k ≥ N := by
-              show min m ℓ ≥ N
-              exact Nat.le_min.mpr ⟨hm, hℓ⟩
-            have : Real.sqrt (Cf / k) < ε / 2 := by
-              apply sqrt_div_lt_half_eps_of_nat hCf_nonneg hε
-              exact hk_ge_N
-            linarith
+    -- Choose k large ⇒ 3 √(Cf/k) < ε
+    have hlt_real : 3 * Real.sqrt (Cf / k) < ε := by
+      apply sqrt_div_lt_third_eps_of_nat hCf_nonneg hε
+      exact hk_ge_N
+    have hlt : ENNReal.ofReal (3 * Real.sqrt (Cf / k)) < ENNReal.ofReal ε :=
+      (ENNReal.ofReal_lt_ofReal_iff hε).mpr hlt_real
+    exact lt_of_le_of_lt bound3 hlt
 
   have hA_cauchy_L1_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
       eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ < ENNReal.ofReal ε := by
@@ -725,7 +792,7 @@ theorem weighted_sums_converge_L1
         toReal_lt_of_lt_ofReal hfin (le_of_lt hε) hbound
       simpa [hdist]
     -- Since L¹ is complete, the sequence converges to some `G`.
-    obtain ⟨G, hG⟩ := cauchySeq_tendsto_of_complete hCauchy
+    rcases CompleteSpace.complete (show Cauchy (atTop.map F) from hCauchy) with ⟨G, hG⟩
     have hG' : Tendsto F atTop (𝓝 G) := hG
     -- Choose a measurable representative of `G`.
     let alpha : Ω → ℝ := (Lp.aestronglyMeasurable G).mk G
@@ -857,7 +924,7 @@ theorem weighted_sums_converge_L1
               apply sqrt_div_lt_half_eps_of_nat hCf_nonneg hε
               exact hm₂
       · -- m = 0 case is trivial or doesn't occur
-        simp [Nat.not_lt.mp hm_pos] at hm
+        simp at hm
         omega
 
     -- Combine
@@ -956,10 +1023,10 @@ For now, we state this as `True` and complete the identification in Step 5.
 -/
 theorem alpha_is_reverse_martingale
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
-    (hX_meas : ∀ i, Measurable (X i))
-    (α : ℕ → Ω → ℝ)
-    (f : ℝ → ℝ) (hf_meas : Measurable f) :
+    (_X : ℕ → Ω → ℝ) (_hX_contract : Contractable μ _X)
+    (_hX_meas : ∀ i, Measurable (_X i))
+    (_α : ℕ → Ω → ℝ)
+    (_f : ℝ → ℝ) (_hf_meas : Measurable _f) :
     True := by
   -- Defer to Step 5 where we identify α_n with conditional expectation
   trivial
