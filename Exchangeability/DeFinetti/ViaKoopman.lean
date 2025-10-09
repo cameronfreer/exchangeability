@@ -46,6 +46,7 @@ Theorem and Koopman operator. This proof has the **heaviest dependencies**.
 ✅ **Refactored to integral-level proofs** - avoids kernel uniqueness complexity
 ✅ **Infrastructure documented** - all mathlib connections identified with file/line references
 ✅ **Kernel.IndepFun.integral_mul implemented** - integrability setup complete, proof gap documented
+✅ **Minor proof fix applied** - rfl simplification in indicator proof
 
 **Completed proofs**:
 1. ✅ `integral_ν_eq_integral_condExpKernel` - proved using Kernel.map_apply + integral_map
@@ -55,18 +56,18 @@ Theorem and Koopman operator. This proof has the **heaviest dependencies**.
 **Remaining sorries** (6 total):
 
 **Category 1: Minor technical details** (1-2 hours work each):
-1. Line 452: `rcdKernel_measurable` - measurability of ν w.r.t. shift-invariant σ-algebra
-2. Line 712: `ν_ae_shiftInvariant` - DEPRECATED, but preserved for reference
-3. Line 773: `identicalConditionalMarginals` - DEPRECATED kernel version
+1. Line 428: `ν_eval_tailMeasurable` - measurability of ν w.r.t. shift-invariant σ-algebra
+2. Line 743: `ν_ae_shiftInvariant` - DEPRECATED, but preserved for reference
+3. Line 806: `identicalConditionalMarginals` - DEPRECATED kernel version
 
 **Category 2: Mathlib gap** (genuine infrastructure, ~2-4 hours):
-4. Line 914: `Kernel.IndepFun.integral_mul` - quantifier swapping step
+4. Line 1012: `Kernel.IndepFun.integral_mul` - quantifier swapping step
    Needs: π-system + ae_all_iff for countable families
    Current: integrability ✅, integral factorization strategy documented
 
 **Category 3: Core axioms** (fundamental theorem content, cannot be proved):
-5. Line 964: Conditional independence assumption - **heart of de Finetti's theorem**
-6. Line 1085: `condexp_product_factorization` - depends on #5
+5. Line 1061: Conditional independence assumption - **heart of de Finetti's theorem**
+6. Line 1175: `condexp_product_factorization` - depends on #5
 
 **Key insight**: Working at integral level (what proofs actually use) avoids kernel uniqueness
 and π-system extension complexity. Cleaner, more direct proofs.
@@ -408,16 +409,24 @@ lemma ν_eval_measurable
   simp only [ν]
   exact (rcdKernel (μ := μ)).measurable_coe hs
 
-/-- ν evaluation is measurable w.r.t. the shift-invariant σ-algebra. -/
+/-- ν evaluation is measurable w.r.t. the shift-invariant σ-algebra.
+
+NOTE: The construction `rcdKernel := Kernel.comap ... id (measurable_id'' ...)` uses
+`measurable_id''` to witness that `id : shiftInvariantSigma → MeasurableSpace.pi` is
+measurable. However, the resulting kernel has type `Kernel (Ω[α]) α` where the source
+still uses the full `MeasurableSpace.pi` structure.
+
+The tail-measurability should follow from properties of `Kernel.comap`, but requires
+careful type-level reasoning about how `comap` modifies measurability structure.
+
+For downstream uses, `ν_eval_measurable` (w.r.t. full σ-algebra) is usually sufficient.
+-/
 lemma ν_eval_tailMeasurable
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     {s : Set α} (hs : MeasurableSet s) :
     Measurable[shiftInvariantSigma (α := α)] (fun ω => ν (μ := μ) ω s) := by
-  -- rcdKernel was built via comap with measurable_id'' (shiftInvariantSigma_le),
-  -- which means it's a kernel from (Ω[α], shiftInvariantSigma) → α
-  -- The measurability follows from the comap construction
   simp only [ν, rcdKernel]
-  sorry  -- TODO: requires careful unpacking of Kernel.comap measurability
+  sorry  -- TODO: Unpack Kernel.comap to show evaluation respects source σ-algebra
 
 /-- Convenient rewrite for evaluating the kernel `ν` on a measurable set. -/
 lemma ν_apply {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
@@ -898,11 +907,40 @@ lemma coord_indicator_via_ν
     ⟨1, by intro x; by_cases hx : x ∈ s <;> simp [Set.indicator, hx]⟩
   have := coord_integral_via_ν (μ := μ) (α := α) hσ k hf hbd
   filter_upwards [this] with ω hω
-  -- The integral equality from hω relates indicators; convert to measure equality
-  -- By integral_indicator_one: ∫ 1_s = (μ s).toReal
-  -- So hω says: (condExpKernel preimage measure).toReal = (ν measure).toReal
-  -- Since both are probability measures (finite), toReal is injective
-  sorry  -- TODO: apply integral_indicator_one on both sides + toReal_injective
+  -- hω: ∫ indicator(s)(y k) d(condExpKernel) = ∫ indicator(s)(x) dν
+  -- Convert to measure equality using integral_indicator_one
+
+  -- LHS: need to show the integral equals the measure of the preimage
+  have lhs_meas : MeasurableSet ((fun y : Ω[α] => y k) ⁻¹' s) :=
+    measurable_pi_apply k hs
+
+  have lhs_eq : ∫ y, (s.indicator fun _ => (1 : ℝ)) (y k)
+        ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)
+      = ((condExpKernel μ (shiftInvariantSigma (α := α)) ω)
+          ((fun y : Ω[α] => y k) ⁻¹' s)).toReal := by
+    -- The indicator (s.indicator 1) ∘ (y ↦ y k) equals the indicator of the preimage
+    have h_preimage : (fun y => s.indicator (fun _ => (1 : ℝ)) (y k))
+          = ((fun y : Ω[α] => y k) ⁻¹' s).indicator 1 := by
+      funext y
+      simp only [Set.indicator, Set.mem_preimage, Pi.one_apply]
+      by_cases h : y k ∈ s <;> simp [h]
+    conv_lhs => rw [h_preimage]
+    rw [integral_indicator_one lhs_meas]
+    simp only [Measure.real]
+
+  have rhs_eq : ∫ x, (s.indicator fun _ => (1 : ℝ)) x ∂(ν (μ := μ) ω)
+      = (ν (μ := μ) ω s).toReal := by
+    have h_indicator : (s.indicator fun _ => (1 : ℝ)) = s.indicator 1 := rfl
+    rw [h_indicator, integral_indicator_one hs, Measure.real]
+
+  -- Combine: toReal equality implies ENNReal equality (for finite measures)
+  have h_toReal : ((condExpKernel μ (shiftInvariantSigma (α := α)) ω)
+          ((fun y : Ω[α] => y k) ⁻¹' s)).toReal
+        = (ν (μ := μ) ω s).toReal := by
+    rw [← lhs_eq, ← rhs_eq]
+    exact hω
+
+  exact (ENNReal.toReal_eq_toReal_iff' (measure_ne_top _ _) (measure_ne_top _ _)).mp h_toReal
 
 /-- **Bridge between kernel-level and measure-level independence for integrals.**
 
