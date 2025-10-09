@@ -79,6 +79,14 @@ namespace Exchangeability.Probability
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
+/-
+Note on linter warnings: Some theorems in this file explicitly include `{m₀ : MeasurableSpace Ω}`
+as a parameter, which makes the section variable `[MeasurableSpace Ω]` unused for those theorems.
+This is intentional: these theorems need to work with multiple measurable space structures on Ω
+(e.g., m₀, m₁, m₂, mF, mG, mH) and explicitly naming m₀ makes the statements clearer. We disable
+the unusedSectionVars linter for such theorems with `set_option linter.unusedSectionVars false`.
+-/
+
 /-! ### Conditional Probability -/
 
 /-- Conditional probability of an event `A` given a σ-algebra `m`.
