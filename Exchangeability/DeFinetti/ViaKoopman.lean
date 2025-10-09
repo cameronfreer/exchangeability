@@ -403,6 +403,80 @@ Helper lemmas establishing the stability of the conditional expectation and the
 regular conditional distribution under compositions with shift iterates.
 -/
 
+/-
+TODO pipeline for the remaining sorries
+=====================================
+
+The outstanding goals in this file reduce to three pieces of Mathlib-style
+infrastructure.  We list them here with proof sketches so they can be developed
+in isolation (ideally upstreamed) before we circle back to the main arguments.
+
+1.  `Kernel.IndepFun.ae_measure_indepFun`
+    -------------------------------------
+
+    **Statement (informal)**: from kernel-level independence of two functions
+    `X`, `Y` we get measure-level independence of `X`, `Y` for `μ`-almost every
+    parameter `a`, provided the target σ-algebras are countably generated.
+
+    **Sketch**:
+    * Work in the Standard Borel setting so every σ-algebra is countably
+      generated (`MeasurableSpace.CountablyGenerated` is available).
+    * Fix `a` and assume independence fails.  By definition we get measurable
+      sets `B`, `C` with a non-zero defect.  Using the countable generating
+      π-system (e.g. `natGeneratingSequence`) we can choose `B`, `C` from a
+      countable family where independence already holds almost everywhere.
+    * Conclude that the failure set has measure zero, hence independence
+      holds for almost every `a`.
+
+2.  `Kernel.IndepFun.integral_mul`
+    -------------------------------
+
+    **Statement (informal)**: under the same hypotheses and assuming bounded
+    test functions, the kernel-level mixed integral factors as the product of
+    integrals for `μ`-a.e. parameter.  This is the kernel analogue of
+    `IndepFun.integral_mul_eq_mul_integral`.
+
+    **Sketch**:
+    * Apply `Kernel.IndepFun.ae_measure_indepFun` to obtain (for a.e. `a`)
+      `MeasureTheory.IndepFun X Y (κ a)`.
+    * Use boundedness to deduce integrability of `X`, `Y`, `X*Y` w.r.t. `κ a`.
+    * Invoke the measure-level lemma pointwise in `a`, obtaining the desired
+      equality outside a null set.  Boundedness gives a uniform dominating
+      constant so no finiteness issues arise.
+
+3.  `condExpKernel` shift invariance
+    --------------------------------
+
+    **Statement (informal)**: if `shift : Ω[α] → Ω[α]` is measure preserving and
+    `ℱ = shiftInvariantSigma`, then the regular conditional kernel is invariant
+    under precomposition by the shift, and hence its push-forward along any
+    coordinate evaluation is also invariant.
+
+    **Sketch**:
+    * Show `condExpKernel μ ℱ` is a Markov kernel measurable w.r.t. `ℱ` on the
+      source (`condExpKernel` already stores the measurability data).
+    * Because shift preserves `ℱ` and `μ`, both kernels
+      `ω ↦ condExpKernel μ ℱ ω` and `ω ↦ condExpKernel μ ℱ (shift^[k] ω)` solve
+      the same conditional expectation problem.  Use uniqueness of regular
+      conditional probabilities (available for Standard Borel spaces) to deduce
+      equality `μ`-a.e.
+    * Mapping through coordinate projections (`π₀`, `πₖ`) yields the desired
+      almost-everywhere equality for `ν`, which is defined as the push-forward
+      of `condExpKernel`.
+
+Once these three lemmas are established, the pending sorries collapse as
+follows:
+
+* `ν_ae_shiftInvariant` uses the shift-invariance lemma directly.
+* `identicalConditionalMarginals` becomes a two-line argument invoking the
+  shift invariance plus the coordinate/shift identity.
+* `Kernel.IndepFun.integral_mul` feeds into the factorisation lemma
+  `condexp_pair_factorization`.
+* The π–system induction in `condexp_product_factorization` reduces to repeated
+  applications of the two-point factorisation combined with conditional
+  independence already available at the kernel level.
+-/
+
 private lemma condexp_precomp_iterate_eq
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) {k : ℕ}
