@@ -789,9 +789,23 @@ lemma identicalConditionalMarginals_integral
     ∀ᵐ ω ∂μ,
       ∫ y, f (y k) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)
         = ∫ x, f x ∂(ν (μ := μ) ω) := by
-  sorry  -- TODO: Complete proof combining condexp_precomp_iterate_eq, coord_k_eq_coord_0_shift_k,
-         -- condExp_ae_eq_integral_condExpKernel, and integral_ν_eq_integral_condExpKernel
-         -- Key steps outlined in documentation above are correct, just need exact Lean proof
+  -- The proof uses these key pieces:
+  -- 1. Integrability of f ∘ (coordinate k) and f ∘ π0
+  -- 2. condExp_ae_eq_integral_condExpKernel: CE = integral against condExpKernel
+  -- 3. condexp_precomp_iterate_eq: CE commutes with shift
+  -- 4. coord_k_eq_coord_0_shift_k: coordinate k = π0 ∘ shift^[k]
+  -- 5. integral_ν_eq_integral_condExpKernel: connects to ν
+
+  -- TODO: The proof requires careful chaining of ae equalities. The strategy is:
+  -- ∫ f(y k) d(condExpKernel ω)
+  --   = ∫ f(π0(shift^[k] y)) d(condExpKernel ω)     [by coord relation]
+  --   = ∫ f(π0(y)) d(condExpKernel ω)              [by shift commutation in CE]
+  --   = ∫ f dν(ω)                                   [by integral_ν lemma]
+  --
+  -- The challenge is that condexp_precomp_iterate_eq works at the CE level, not integral level.
+  -- Need to convert: CE[f ∘ πk] ≈ CE[f ∘ π0 ∘ shift^k] ≈ CE[f ∘ π0] then to integrals.
+
+  sorry  -- Proof strategy correct but needs careful ae equality manipulation
 
 /-- **TODO/WRAPPER**: Extract measure-level independence from kernel-level independence.
 
