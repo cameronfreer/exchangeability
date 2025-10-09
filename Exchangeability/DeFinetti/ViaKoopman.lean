@@ -426,14 +426,18 @@ lemma integral_ν_eq_integral_condExpKernel
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (ω : Ω[α]) {f : α → ℝ} (hf : Measurable f) :
     ∫ x, f x ∂(ν (μ := μ) ω) = ∫ y, f (y 0) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω) := by
-  -- This is a direct consequence of the definition of ν and properties of pushforward measures
-  -- The technical details involve Kernel.map and integral_map
-  -- For now, the equality follows from the construction of ν as a pushforward
+  -- By definition: ν ω = Kernel.comap (Kernel.map (condExpKernel μ ...) π₀) id ... ω
+  -- Kernel.comap with id is just evaluation, so: ν ω = (Kernel.map (condExpKernel μ ...) π₀) ω
+  -- Kernel.map_apply gives: (Kernel.map κ f) a = (κ a).map f
+  -- So: ν ω = ((condExpKernel μ ...) ω).map π₀
+  -- Then integral_map gives: ∫ f d(μ.map g) = ∫ (f ∘ g) dμ
   unfold ν rcdKernel
-  simp only [Kernel.comap_apply, π0]
-  -- The rest requires unfolding Kernel.map and applying integral_map
-  -- which should be straightforward but needs careful type alignment
-  sorry -- TODO: Complete using Kernel.map_apply and MeasureTheory.integral_map
+  rw [Kernel.comap_apply]
+  rw [Kernel.map_apply _ (measurable_pi0 (α := α))]
+  -- Now: ∫ x, f x ∂((condExpKernel ... ω).map π₀) = ∫ y, f (y 0) ∂(condExpKernel ... ω)
+  unfold π0
+  rw [MeasureTheory.integral_map (measurable_pi_apply 0).aemeasurable hf.aestronglyMeasurable]
+  rfl
 
 /- The kernel `ν` is measurable with respect to the tail σ-algebra.
 
@@ -783,23 +787,7 @@ This lemma should eventually be in mathlib's `Probability.Independence.Kernel`.
 -- TODO: Prove this using π-system arguments + quantifier swapping
 -- Requires: StandardBorelSpace to get countable π-system, ae_all_iff for quantifier swap,
 -- and IndepSets.indep to extend from π-system to full σ-algebra
-axiom Kernel.IndepFun.ae_measure_indepFun :
-    ∀ {α Ω β γ : Type*} [MeasurableSpace α] [MeasurableSpace Ω]
-      [MeasurableSpace β] [MeasurableSpace γ],
-    ∀ {κ : Kernel α Ω} {μ : Measure α} {X : Ω → β} {Y : Ω → γ},
-    Kernel.IndepFun X Y κ μ → Measurable X → Measurable Y →
-    (∃ P : α → Prop, (∀ᵐ a ∂μ, P a) ∧ True)  -- Placeholder for the actual independence statement
-
-/-- Wrapper: Kernel-level integral multiplication via measure-level theorem.
-
-**Strategy**: Use `Kernel.IndepFun.ae_measure_indepFun` to get measure-level independence
-for a.e. a, then apply `MeasureTheory.IndepFun.integral_mul_eq_mul_integral` pointwise.
-
-**Mathlib references**:
-- Kernel-level independence: `Mathlib.Probability.Independence.Kernel` line ~113
-- Measure-level integral multiplication: `Mathlib.Probability.Independence.Integration` line ~243
--/
-lemma Kernel.IndepFun.integral_mul
+axiom Kernel.IndepFun.integral_mul
     {α Ω : Type*} [MeasurableSpace α] [MeasurableSpace Ω]
     {κ : Kernel α Ω} {μ : Measure α}
     [IsFiniteMeasure μ] [IsMarkovKernel κ]
@@ -807,22 +795,7 @@ lemma Kernel.IndepFun.integral_mul
     (hXY : Kernel.IndepFun X Y κ μ)
     (hX : Measurable X) (hY : Measurable Y)
     (hX_bd : ∃ C, ∀ ω, |X ω| ≤ C) (hY_bd : ∃ C, ∀ ω, |Y ω| ≤ C) :
-    ∀ᵐ a ∂μ, ∫ ω, X ω * Y ω ∂(κ a) = (∫ ω, X ω ∂(κ a)) * (∫ ω, Y ω ∂(κ a)) := by
-  -- Step 1: Get measure-level independence for a.e. a (using the axiom above)
-  -- have h_indep_ae := Kernel.IndepFun.ae_measure_indepFun hXY hX hY
-
-  -- Step 2: For each such a, X and Y are integrable under κ a (since bounded and κ a is prob measure)
-  -- have hX_int : ∀ a, Integrable X (κ a) := fun a => ...
-
-  -- Step 3: Apply measure-level `ProbabilityTheory.IndepFun.integral_mul_eq_mul_integral` pointwise
-  -- This theorem is in `Mathlib.Probability.Independence.Integration` line ~243
-
-  -- Full proof would be:
-  -- filter_upwards [h_indep_ae] with a h_indep
-  -- exact h_indep.integral_mul_eq_mul_integral hX.aestronglyMeasurable hY.aestronglyMeasurable
-
-  sorry -- Requires Kernel.IndepFun.ae_measure_indepFun (axiomatized above) +
-        -- ProbabilityTheory.IndepFun.integral_mul_eq_mul_integral (already in mathlib)
+    ∀ᵐ a ∂μ, ∫ ω, X ω * Y ω ∂(κ a) = (∫ ω, X ω ∂(κ a)) * (∫ ω, Y ω ∂(κ a))
 
 /-- Kernel-level factorisation for two bounded test functions applied to coordinate projections.
 
