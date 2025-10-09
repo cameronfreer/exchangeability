@@ -378,7 +378,9 @@ lemma eLpNorm_two_from_integral_sq_le
   -- For p=2, eLpNorm g 2 μ = (∫ ‖g‖²)^(1/2)
   -- Given ∫ g² ≤ C, we have ∫ ‖g‖² ≤ C (since ‖g‖² = g² for real g)
   -- Therefore (∫ ‖g‖²)^(1/2) ≤ C^(1/2) = √C
-  sorry
+
+  -- Use MemLp.eLpNorm_eq_integral_rpow_norm to relate eLpNorm to the integral
+  sorry -- TODO: Implement using MemLp.eLpNorm_eq_integral_rpow_norm with p=2
 
 end LpUtilities
 
@@ -534,8 +536,18 @@ private lemma l2_bound_long_vs_tail
     ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
           (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
       ≤ Cf / k := by
-  -- The difference can be bounded using the contractability bound
-  -- Key insight: express as weighted average difference with sup weight |p - q| ≤ 1/k
+  -- Strategy: Apply l2_contractability_bound with weights
+  -- p_i = 1/m for all i ∈ Fin m
+  -- q_i = 0 if i < m-k, else 1/k for i ∈ {m-k, ..., m-1}
+  -- This gives sup |p - q| ≤ 1/k, hence bound is 2σ²(1-ρ) · (1/k) = Cf/k
+
+  -- For now, we need contractable_covariance_structure to get σ, ρ
+  -- Since that's not yet proven, we leave this as sorry
+  -- The full proof would:
+  -- 1. Get (m_mean, σ, ρ) from contractable_covariance_structure applied to f ∘ X
+  -- 2. Define weights p, q on Fin m as described above
+  -- 3. Apply l2_contractability_bound to get the bound 2σ²(1-ρ) · (1/k)
+  -- 4. Note that Cf = 2σ²(1-ρ) by definition
   sorry
 
 theorem weighted_sums_converge_L1
