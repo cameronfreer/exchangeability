@@ -375,12 +375,10 @@ lemma eLpNorm_two_from_integral_sq_le
   -- Integral is nonnegative
   have h_int_nonneg : 0 ≤ ∫ ω, ‖g ω‖^2 ∂μ := by
     apply integral_nonneg; intro ω; exact sq_nonneg _
-  -- TODO: Complete this proof properly
-  -- The idea is: for p=2, eLpNorm g 2 μ = (∫ ‖g‖²)^(1/2)
+  -- For p=2, eLpNorm g 2 μ = (∫ ‖g‖²)^(1/2)
   -- Given ∫ g² ≤ C, we have ∫ ‖g‖² ≤ C (since ‖g‖² = g² for real g)
   -- Therefore (∫ ‖g‖²)^(1/2) ≤ C^(1/2) = √C
-  -- This requires using eLpNorm_eq_lintegral_rpow_enorm and converting to integral
-  sorry
+  sorry -- TODO: Need correct API for eLpNorm^2 = ∫ ‖·‖²
 
 end LpUtilities
 
@@ -442,8 +440,7 @@ lemma mem_window_iff {n k t : ℕ} :
 /-- Cardinality of Fin values less than k in Fin (2*k) -/
 private lemma card_fin_lt_k {k : ℕ} :
     (Finset.univ.filter (fun i : Fin (2 * k) => i.val < k)).card = k := by
-  -- Use cardinality formula and bijection with range k
-  sorry -- TODO: Show bijection between filter {i | i.val < k} and Finset.range k
+  sorry
 
 /-- The supremum of |p i - q i| for two-window weights -/
 private lemma sup_two_window_weights {k : ℕ} (hk : 0 < k)
@@ -451,8 +448,16 @@ private lemma sup_two_window_weights {k : ℕ} (hk : 0 < k)
     (hp : p = fun i => if i.val < k then 1 / (k : ℝ) else 0)
     (hq : q = fun i => if i.val < k then 0 else 1 / (k : ℝ)) :
     ⨆ i, |p i - q i| = 1 / (k : ℝ) := by
-  -- TODO: Fix supremum proof - simp completing goals too early
-  sorry
+  -- For all i, |p i - q i| = 1/k (one of them is always 1/k, the other 0)
+  have h_eq : ∀ i : Fin (2 * k), |p i - q i| = 1 / (k : ℝ) := by
+    intro i
+    rw [hp, hq]
+    simp only
+    split_ifs <;> simp [abs_neg]
+  -- The supremum of a constant function is that constant
+  haveI : Nonempty (Fin (2 * k)) := ⟨⟨0, by omega⟩⟩
+  simp_rw [h_eq]
+  exact ciSup_const
 
 /-- **L² bound wrapper for two starting windows**.
 
