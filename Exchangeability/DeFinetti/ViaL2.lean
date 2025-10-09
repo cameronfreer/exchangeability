@@ -320,6 +320,45 @@ lemma sqrt_div_lt_half_eps_of_nat
     _ = |ε / 2| := Real.sqrt_sq_eq_abs _
     _ = ε / 2 := abs_of_pos (div_pos hε (by norm_num))
 
+/-- Arithmetic bound: 3·√(Cf/m) < ε when m is large enough. -/
+lemma sqrt_div_lt_third_eps_of_nat
+  {Cf ε : ℝ} (hCf : 0 ≤ Cf) (hε : 0 < ε) :
+  ∀ ⦃m : ℕ⦄, m ≥ Nat.ceil (9 * Cf / (ε^2)) + 1 →
+    3 * Real.sqrt (Cf / m) < ε := by
+  intro m hm
+  have hm_real : ((Nat.ceil (9*Cf/ε^2) : ℝ) + 1) ≤ m := by exact_mod_cast hm
+  have hA_lt_m : 9*Cf/ε^2 < (m : ℝ) := by
+    calc 9*Cf/ε^2
+        ≤ Nat.ceil (9*Cf/ε^2) := Nat.le_ceil _
+      _ < (Nat.ceil (9*Cf/ε^2) : ℝ) + 1 := by linarith
+      _ ≤ m := hm_real
+  by_cases hCf0 : Cf = 0
+  · simp [hCf0, hε]
+  have hCfpos : 0 < Cf := lt_of_le_of_ne hCf (Ne.symm hCf0)
+  have hmpos : 0 < (m : ℝ) := by
+    calc (0 : ℝ) < 9*Cf/ε^2 := by positivity
+      _ < m := hA_lt_m
+  have hdenom_pos : 0 < 9*Cf/ε^2 := by positivity
+  have hdiv : Cf / (m : ℝ) < Cf / (9*Cf/ε^2) := by
+    exact div_lt_div_of_pos_left hCfpos hdenom_pos hA_lt_m
+  have heq : Cf / (9*Cf/ε^2) = ε^2 / 9 := by
+    field_simp [ne_of_gt hCfpos]
+  have hlt : Cf / (m : ℝ) < ε^2 / 9 := by
+    calc Cf / (m : ℝ)
+        < Cf / (9*Cf/ε^2) := hdiv
+      _ = ε^2 / 9 := heq
+  have hnonneg : 0 ≤ Cf / (m : ℝ) := div_nonneg hCf (Nat.cast_nonneg m)
+  have hsqrt : Real.sqrt (Cf / m) < Real.sqrt (ε^2 / 9) := by
+    exact Real.sqrt_lt_sqrt hnonneg hlt
+  have h_sqrt_simpl : Real.sqrt (ε^2 / 9) = ε / 3 := by
+    rw [Real.sqrt_div (sq_nonneg ε)]
+    simp only [Real.sqrt_sq (le_of_lt hε)]
+    norm_num
+  calc 3 * Real.sqrt (Cf / m)
+      < 3 * Real.sqrt (ε^2 / 9) := by linarith [hsqrt]
+    _ = 3 * (ε / 3) := by rw [h_sqrt_simpl]
+    _ = ε := by ring
+
 /-- Convert an L² integral bound to an eLpNorm bound. -/
 lemma eLpNorm_two_from_integral_sq_le
   {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
@@ -327,12 +366,19 @@ lemma eLpNorm_two_from_integral_sq_le
   {C : ℝ} (hC : 0 ≤ C)
   (h : ∫ ω, (g ω)^2 ∂μ ≤ C) :
   eLpNorm g 2 μ ≤ ENNReal.ofReal (Real.sqrt C) := by
-  -- Strategy: eLpNorm g 2 = (∫⁻ ‖g‖^2)^(1/2) ≤ C^(1/2)
-  have hg_sq_nn : 0 ≤ᵐ[μ] fun ω => (g ω)^2 := by
-    filter_upwards with ω; exact sq_nonneg _
-  have hg_sq_meas : AEStronglyMeasurable (fun ω => (g ω)^2) μ :=
-    hg.aestronglyMeasurable.pow 2
-  sorry -- TODO: Use integral_eq_lintegral_of_nonneg_ae and eLpNorm_eq_lintegral_rpow_enorm
+  -- For real-valued g, use ‖g‖ = |g| and sq_abs
+  have h_sq_eq : ∀ ω, ‖g ω‖^2 = (g ω)^2 := by
+    intro ω; rw [Real.norm_eq_abs, sq_abs]
+  -- Get integral bound in terms of ‖g‖^2
+  have h_int_le : ∫ ω, ‖g ω‖^2 ∂μ ≤ C := by
+    have : (fun ω => ‖g ω‖^2) = fun ω => (g ω)^2 := funext h_sq_eq
+    rw [this]; exact h
+  -- Integral is nonnegative
+  have h_int_nonneg : 0 ≤ ∫ ω, ‖g ω‖^2 ∂μ := by
+    apply integral_nonneg; intro ω; exact sq_nonneg _
+  -- For p=2, we can use the relationship between L²-norm and integral
+  -- eLpNorm g 2 μ ≤ ofReal √C is equivalent to (eLpNorm g 2 μ)² ≤ ofReal C
+  sorry
 
 end LpUtilities
 
@@ -727,7 +773,7 @@ theorem weighted_sums_converge_L1
         toReal_lt_of_lt_ofReal hfin (le_of_lt hε) hbound
       simpa [hdist]
     -- Since L¹ is complete, the sequence converges to some `G`.
-    obtain ⟨G, hG⟩ := cauchySeq_tendsto_of_complete hCauchy
+    rcases CompleteSpace.complete (show Cauchy (atTop.map F) from hCauchy) with ⟨G, hG⟩
     have hG' : Tendsto F atTop (𝓝 G) := hG
     -- Choose a measurable representative of `G`.
     let alpha : Ω → ℝ := (Lp.aestronglyMeasurable G).mk G
