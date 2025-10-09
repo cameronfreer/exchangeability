@@ -94,9 +94,14 @@ This is the conditional expectation of the indicator function of `A`.
 
 We define it using mathlib's `condexp` applied to the indicator function.
 -/
-noncomputable def condProb {m₀ : MeasurableSpace Ω} (μ : Measure Ω) [IsProbabilityMeasure μ] 
+noncomputable def condProb {m₀ : MeasurableSpace Ω} (μ : Measure Ω) [IsProbabilityMeasure μ]
     (m : MeasurableSpace Ω) (A : Set Ω) : Ω → ℝ :=
   μ[A.indicator (fun _ => (1 : ℝ)) | m]
+
+set_option linter.unusedSectionVars false in
+lemma condProb_def {m₀ : MeasurableSpace Ω} (μ : Measure Ω) [IsProbabilityMeasure μ]
+    (m : MeasurableSpace Ω) (A : Set Ω) :
+    condProb μ m A = μ[A.indicator (fun _ => (1 : ℝ)) | m] := rfl
 
 set_option linter.unusedSectionVars false in
 /-- Conditional probability takes values in `[0,1]` almost everywhere. -/
@@ -173,6 +178,16 @@ lemma condProb_empty {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
   have : (∅ : Set Ω).indicator (fun _ : Ω => (1 : ℝ)) = fun _ => (0 : ℝ) := by
     funext ω; simp [Set.indicator]
   simp [condProb, this, condExp_const (μ := μ) (m := m) hm (0 : ℝ)]
+
+set_option linter.unusedSectionVars false in
+@[simp]
+lemma condProb_compl {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+    [IsProbabilityMeasure μ] (m : MeasurableSpace Ω) (hm : m ≤ m₀)
+    [SigmaFinite (μ.trim hm)] {A : Set Ω} (hA : MeasurableSet[m₀] A) :
+    condProb μ m Aᶜ =ᵐ[μ] (fun ω => 1 - condProb μ m A ω) := by
+  classical
+  -- 1_{Aᶜ} = 1 - 1_A, use linearity of condExp
+  sorry
 
 /-! ### Conditional Independence (Doob's Characterization)
 
