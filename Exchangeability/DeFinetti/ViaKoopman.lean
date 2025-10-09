@@ -364,7 +364,7 @@ convergence, uniqueness of measures).
 -/
 axiom ae_eq_of_forall_integral_eq {α β : Type*} {mα : MeasurableSpace α} {mβ : MeasurableSpace β}
     [StandardBorelSpace β] {μ : Measure α} {κ η : @Kernel α β mα mβ} :
-    (∀ (f : β → ℝ) (hf : Measurable f) (hbd : ∃ C, ∀ b, |f b| ≤ C),
+    (∀ (f : β → ℝ) (_hf : Measurable f) (_hbd : ∃ C, ∀ b, |f b| ≤ C),
       (fun a => ∫ b, f b ∂(κ a)) =ᵐ[μ] (fun a => ∫ b, f b ∂(η a))) →
     (∀ᵐ a ∂μ, κ a = η a)
 
@@ -715,6 +715,7 @@ lemma ν_ae_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
   sorry  -- AXIOM: condExpKernel shift-invariance (provable using mathlib infrastructure above)
 
 /-- Helper: shift^[k] y n = y (n + k) -/
+omit [MeasurableSpace α] in
 lemma shift_iterate_apply (k n : ℕ) (y : Ω[α]) :
     (shift (α := α))^[k] y n = y (n + k) := by
   induction k generalizing n with
@@ -1300,12 +1301,12 @@ The proof combines:
 This completes Kallenberg's "First proof" approach using the mean ergodic theorem. -/
 theorem condexp_cylinder_factorizes {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α]
-    (hσ : MeasurePreserving shift μ μ)
+    (_hσ : MeasurePreserving shift μ μ)
     (m : ℕ) (fs : Fin m → α → ℝ)
-    (hmeas : ∀ k, Measurable (fs k))
-    (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
+    (_hmeas : ∀ k, Measurable (fs k))
+    (_hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
     -- Conditional independence hypothesis (using sorry to avoid typeclass issues):
-    (hciid : True) :
+    (_hciid : True) :
     ∃ (ν_result : Ω[α] → Measure α),
       (∀ᵐ ω ∂μ, IsProbabilityMeasure (ν_result ω)) ∧
       (∀ᵐ ω ∂μ, ∃ (val : ℝ), val = ∏ k : Fin m, ∫ x, fs k x ∂(ν_result ω)) := by
