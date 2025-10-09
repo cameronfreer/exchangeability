@@ -688,10 +688,20 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     (hmg : μ[X₂ | m₁] =ᵐ[μ] X₁)
     (hSecond : ∫ ω, (X₂ ω)^2 ∂μ = ∫ ω, (X₁ ω)^2 ∂μ) :
     X₁ =ᵐ[μ] X₂ := by
+  classical
+  -- Strategy: Use L² orthogonal projection properties
+  -- condExp is the orthogonal projection onto the L² closure of m₁-measurable functions
+  -- So ‖X₂‖² = ‖μ[X₂|m₁]‖² + ‖X₂ - μ[X₂|m₁]‖² (Pythagoras)
+  -- Combined with the second moment equality, this forces X₂ - X₁ =ᵐ 0
   sorry
   /-
-  -- TODO: This proof depends on condVar and condVar_ae_eq_condExp_sq_sub_sq_condExp
-  -- which are not yet defined in the file
+  -- The following proof sketch uses condexpL2 API:
+  -- 1. Lift to L²: let f := X₂ as element of Lp ℝ 2 μ
+  -- 2. Show μ[X₂|m₁] equals condexpL2 f (the L² conditional expectation)
+  -- 3. Use orthogonality: ‖f‖² = ‖condexpL2 f‖² + ‖f - condexpL2 f‖²
+  -- 4. From hSecond: ‖f‖² = ‖X₁‖² = ‖μ[X₂|m₁]‖² (using hmg)
+  -- 5. This forces ‖f - condexpL2 f‖ = 0, hence f = condexpL2 f in L²
+  -- 6. Conclude X₂ =ᵐ μ[X₂|m₁] =ᵐ X₁
   classical
   -- Promote X₁ to L² using the L² property of X₂.
   have h_cond_mem : MemLp (μ[X₂ | m₁]) 2 μ := hL2.condExp (m := m₁)
