@@ -793,10 +793,25 @@ increasingly coarse shifted processes.
 
 Specialization of reverse_martingale_convergence where 𝒢 n = σ(θₙ X).
 -/
-lemma condexp_tendsto_tail {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → α) (f : Ω → ℝ) (hf : Integrable f μ) :
-    True :=
-  trivial
+lemma condexp_tendsto_tail {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → α) (hX_meas : ∀ n, Measurable (X n))
+    (f : Ω → ℝ) (hf : Integrable f μ)
+    (hf_meas : StronglyMeasurable[DeFinetti.ViaMartingale.tailSigma X] f)
+    (h_le : ∀ n, DeFinetti.ViaMartingale.revFiltration X n ≤ m₀)
+    [∀ n, SigmaFinite (μ.trim (h_le n))] :
+    (∀ᵐ ω ∂μ, Tendsto (fun n => μ[f | DeFinetti.ViaMartingale.revFiltration X n] ω) atTop
+      (𝓝 (μ[f | DeFinetti.ViaMartingale.tailSigma X] ω))) ∧
+    Tendsto (fun n => eLpNorm (μ[f | DeFinetti.ViaMartingale.revFiltration X n] -
+      μ[f | DeFinetti.ViaMartingale.tailSigma X]) 1 μ) atTop (𝓝 0) := by
+  -- Apply reverse_martingale_convergence with 𝒢 n = revFiltration X n
+  have h_decr : ∀ n, DeFinetti.ViaMartingale.revFiltration X (n + 1) ≤
+      DeFinetti.ViaMartingale.revFiltration X n :=
+    fun n => DeFinetti.ViaMartingale.revFiltration_antitone X (Nat.le_succ n)
+  have h_tail_eq : DeFinetti.ViaMartingale.tailSigma X = ⨅ n, DeFinetti.ViaMartingale.revFiltration X n :=
+    DeFinetti.ViaMartingale.tailSigma_eq_iInf_rev X
+  rw [h_tail_eq] at hf_meas ⊢
+  exact reverse_martingale_convergence
+    (DeFinetti.ViaMartingale.revFiltration X) h_le h_decr f hf hf_meas
 
 /-! ### Distributional Equality and Conditional Expectations -/
 
