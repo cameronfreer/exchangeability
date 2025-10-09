@@ -263,12 +263,11 @@ section LpUtilities
 /-- Distance between `toLp` elements equals the `eLpNorm` of their difference. -/
 lemma dist_toLp_eq_eLpNorm_sub
   {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} {p : ENNReal}
-  (hp0 : p ≠ 0) (hptop : p ≠ ⊤)
   {f g : Ω → ℝ} (hf : MemLp f p μ) (hg : MemLp g p μ) :
   dist (hf.toLp f) (hg.toLp g)
     = ENNReal.toReal (eLpNorm (fun ω => f ω - g ω) p μ) := by
-  -- TODO: Fix Lp API changes
-  sorry
+  rw [Lp.dist_edist, Lp.edist_toLp_toLp]
+  rfl
 
 /-- Converting strict inequality through `ENNReal.toReal`. -/
 lemma toReal_lt_of_lt_ofReal {x : ENNReal} {ε : ℝ}
@@ -326,8 +325,10 @@ lemma eLpNorm_two_from_integral_sq_le
   {C : ℝ} (hC : 0 ≤ C)
   (h : ∫ ω, (g ω)^2 ∂μ ≤ C) :
   eLpNorm g 2 μ ≤ ENNReal.ofReal (Real.sqrt C) := by
-  -- TODO: Fix after finding correct eLpNorm lemma name in current mathlib
-  sorry
+  -- eLpNorm g 2 μ = (∫⁻ ω, ‖g ω‖ₑ^2 ∂μ)^(1/2)
+  -- We have ∫ ω, (g ω)^2 ∂μ ≤ C
+  -- For real g, ‖g‖^2 = g^2, so need to connect integral with lintegral
+  sorry -- TODO: use integral_eq_lintegral and rpow properties
 
 end LpUtilities
 
@@ -651,22 +652,17 @@ theorem weighted_sums_converge_L1
       apply eLpNorm_two_from_integral_sq_le
       · exact (hA_memLp_two 0 m).sub (hA_memLp_two 0 k)
       · exact hCf_k_nn
-      · convert hbound_m using 2
-        ext ω
-        simp only [A, zero_add]
-        -- A 0 m = 1/m * ∑ᵢ f(Xᵢ₊₁), A 0 k = 1/k * ∑ⱼ f(Xⱼ₊₁)
-        -- But hbound_m has both with 1/k, need to show these match
-        sorry
+      · -- Need: ∫ (A 0 m - A 0 k)^2 ≤ Cf/k
+        -- Have: ∫ (1/k*∑ᵢ₌₁ᵏ f(Xᵢ) - 1/k*∑ᵢ₌₁ᵏ f(X_{m+i}))^2 ≤ Cf/k
+        -- Key: when k ≤ m, the first k terms match, so this is a reindexing
+        sorry -- TODO: prove sum reindexing lemma
 
     have hL2_ℓ : eLpNorm (fun ω => A 0 ℓ ω - A 0 k ω) 2 μ
                 ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
       apply eLpNorm_two_from_integral_sq_le
       · exact (hA_memLp_two 0 ℓ).sub (hA_memLp_two 0 k)
       · exact hCf_k_nn
-      · convert hbound_ℓ using 2
-        ext ω
-        simp only [A, zero_add]
-        sorry
+      · sorry -- TODO: same reindexing as above
 
     calc eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
         ≤ eLpNorm (fun ω => A 0 m ω - A 0 k ω) 2 μ
@@ -717,8 +713,7 @@ theorem weighted_sums_converge_L1
           dist (F m) (F ℓ) =
             ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ) := by
         simpa [F] using
-          dist_toLp_eq_eLpNorm_sub (hp0 := one_ne_zero) (hptop := ENNReal.coe_ne_top)
-            (hA_memLp 0 m) (hA_memLp 0 ℓ)
+          dist_toLp_eq_eLpNorm_sub (hA_memLp 0 m) (hA_memLp 0 ℓ)
       have hfin :
           eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ ≠ ⊤ :=
         (MemLp.sub (hA_memLp 0 m) (hA_memLp 0 ℓ)).eLpNorm_ne_top
@@ -748,8 +743,7 @@ theorem weighted_sums_converge_L1
         dist (F m) G =
           ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - G ω) 1 μ) := by
       simpa [F] using
-        dist_toLp_eq_eLpNorm_sub (hp0 := one_ne_zero) (hptop := ENNReal.coe_ne_top)
-          (hA_memLp 0 m) (Lp.memLp G)
+        dist_toLp_eq_eLpNorm_sub (hA_memLp 0 m) (Lp.memLp G)
     have hfin :
         eLpNorm (fun ω => A 0 m ω - G ω) 1 μ ≠ ⊤ :=
       (MemLp.sub (hA_memLp 0 m) (Lp.memLp G)).eLpNorm_ne_top

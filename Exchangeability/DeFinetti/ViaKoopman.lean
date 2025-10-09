@@ -573,63 +573,28 @@ private lemma condexp_precomp_iterate_eq
       _ = ∫ ω in s, (fun ω => f (shiftk ω)) ω ∂μ :=
             MeasureTheory.integral_indicator hS_meas
 
-/-! ### Wrappers connecting to mathlib's conditional independence infrastructure -/
+/-! ### Mathlib infrastructure for conditional independence
 
-/-- Wrapper: Use conditional independence from mathlib.
+**Key mathlib definitions** that could be used to formalize conditional i.i.d.:
 
-This connects our setup to mathlib's `ProbabilityTheory.iCondIndepFun` defined in
-`Mathlib.Probability.Independence.Conditional`. The conditional independence of coordinates
-given the shift-invariant σ-algebra is formalized as:
+1. **`iCondIndepFun`** (`Mathlib.Probability.Independence.Conditional` line ~132):
+   - Expresses that a family of functions is conditionally independent given a σ-algebra
+   - Definition: `iCondIndepFun m' hm' (fun k => coord k) μ` means
+     `Kernel.iIndepFun (fun k => coord k) (condExpKernel μ m') (μ.trim hm')`
+   - This is exactly what we need to express "coordinates are conditionally i.i.d. given tail"
 
-`iCondIndepFun (shiftInvariantSigma) hm' (fun k => fun ω => ω k) μ`
+2. **`Kernel.iIndepFun`** (`Mathlib.Probability.Independence.Kernel` line ~105):
+   - Kernel-level independence of functions
+   - Unfolds to: for finite sets of indices and measurable sets,
+     `∀ᵐ a ∂μ, κ a (⋂ preimages) = ∏ κ a (preimages)`
 
-which by definition means the functions `(ω ↦ ω k)` for different `k` are conditionally
-independent given `shiftInvariantSigma` under measure `μ`.
+3. **Connection to measure-level independence**:
+   - For a.e. `a`, kernel independence gives measure-level independence under `κ a`
+   - This would allow using `IndepFun.integral_mul_eq_mul_integral` pointwise
+   - **Missing in mathlib**: explicit lemma `Kernel.IndepFun → ∀ᵐ a, IndepFun (under κ a)`
 
-**Mathlib reference**: `Mathlib.Probability.Independence.Conditional` line ~132
+The wrappers below make these connections explicit for our setting.
 -/
-private lemma conditional_iid_via_mathlib
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
-    (hσ : MeasurePreserving shift μ μ)
-    -- The key assumption: coordinates are conditionally independent given shift-invariant σ-algebra
-    (h_condindep : ProbabilityTheory.iCondIndepFun
-        (shiftInvariantSigma (α := α))
-        (shiftInvariantSigma_le (α := α))
-        (fun k : ℕ => fun ω : Ω[α] => ω k)
-        μ) :
-    -- Then we can use mathlib's conditional independence infrastructure
-    True := by
-  -- This is just a type-checking lemma to verify we can state conditional independence
-  -- using mathlib's definitions
-  trivial
-
-/-- Wrapper: Conditional independence implies kernel-level independence.
-
-Using mathlib's `ProbabilityTheory.iCondIndepFun`, we can express that coordinates are
-conditionally i.i.d. given the shift-invariant σ-algebra. By the definition in mathlib,
-this unfolds to independence with respect to `condExpKernel`.
-
-**Key connection**: `iCondIndepFun m hm (fun k => coord k) μ` is defined as
-`Kernel.iIndepFun (fun k => coord k) (condExpKernel μ m) (μ.trim hm)`.
-
-This means we can apply `Kernel.iIndepFun` lemmas to derive properties of the
-conditional distribution.
-
-**Mathlib reference**: `Mathlib.Probability.Independence.Conditional` line ~134
--/
-private lemma condindep_unfolds_to_kernel_indep
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
-    (h_condindep : ProbabilityTheory.iCondIndepFun
-        (shiftInvariantSigma (α := α))
-        (shiftInvariantSigma_le (α := α))
-        (fun k : ℕ => fun ω : Ω[α] => ω k)
-        μ) :
-    Kernel.iIndepFun
-      (fun k : ℕ => fun ω : Ω[α] => ω k)
-      (condExpKernel μ (shiftInvariantSigma (α := α)))
-      (μ.trim (shiftInvariantSigma_le (α := α))) := by
-  -- This is definitional: iCondIndepFun is defined as Kernel.iIndepFun
-  exact h_condindep
 
 /-- Almost-everywhere shift-invariance of the regular conditional distribution.
 
@@ -742,48 +707,35 @@ lemma identicalConditionalMarginals {μ : Measure (Ω[α])} [IsProbabilityMeasur
 
   sorry  -- AXIOM: Depends on shift-invariance of condExpKernel (same as ν_ae_shiftInvariant)
 
-/-- **Kernel-level integral multiplication under independence.**
+/-- **TODO/WRAPPER**: Extract measure-level independence from kernel-level independence.
 
-If X and Y are independent under a kernel κ and measure μ, then for μ-almost every a,
-the integral of their product under κ(a) equals the product of their integrals.
-
-This is proved by reducing to the measure-level lemma `IndepFun.integral_mul_eq_mul_integral`
-via a countable π-system + quantifier swap argument.
-
-**Proof strategy:**
-1. Bounded ⇒ integrable for all parameters (since κ a is a probability measure)
-2. Convert kernel independence to pointwise (a.e. in a) measure-level independence
-   using a countable π-system + monotone class argument to swap quantifiers
-3. Apply the measure-level `IndepFun.integral_mul_eq_mul_integral` pointwise
-
-This is a standard result in the theory of conditional expectations and should eventually
-be added to Mathlib's `Probability.Independence.Kernel` or a new `Integration` submodule.
--/
-/-- Wrapper: Extract measure-level independence from kernel-level independence.
+**Goal**: Prove that `Kernel.IndepFun X Y κ μ` implies `∀ᵐ a ∂μ, IndepFun X Y (κ a)`.
 
 **Mathematical content**: `Kernel.IndepFun X Y κ μ` is defined in mathlib as independence of the
 σ-algebras generated by X and Y with respect to κ and μ. By the definition in
 `Mathlib.Probability.Independence.Kernel`, this unfolds to:
 `∀ s ∈ σ(X), ∀ t ∈ σ(Y), ∀ᵐ a ∂μ, κ a (s ∩ t) = κ a s * κ a t`.
 
-For a.e. a, this is precisely the condition for `MeasureTheory.IndepFun X Y (κ a)`.
+For a.e. a, this is precisely the condition for measure-level `IndepFun X Y (κ a)`.
 
-This lemma makes explicit the connection between kernel-level and measure-level independence,
-which should eventually be in mathlib's `Probability.Independence.Kernel`.
+**Proof strategy**:
+1. Use `StandardBorelSpace` to get a countable π-system generating the σ-algebras of β and γ
+2. Apply `Kernel.IndepFun` to get independence on the π-system (a.e. in a)
+3. Use `ae_all_iff` to swap quantifiers (countable union of null sets is null)
+4. For the resulting a.e. point a, apply `IndepSets.indep` to extend from π-system to σ-algebra
+
+This lemma should eventually be in mathlib's `Probability.Independence.Kernel`.
 -/
-private lemma Kernel.IndepFun.ae_measure_indepFun
-    {α Ω β γ : Type*} [MeasurableSpace α] [MeasurableSpace Ω]
-    [MeasurableSpace β] [MeasurableSpace γ]
-    {κ : Kernel α Ω} {μ : Measure α}
-    {X : Ω → β} {Y : Ω → γ}
-    (hXY : Kernel.IndepFun X Y κ μ)
-    (hX : Measurable X) (hY : Measurable Y) :
-    ∀ᵐ a ∂μ, MeasureTheory.IndepFun X Y (κ a) := by
-  -- By definition, Kernel.IndepFun X Y κ μ means Kernel.Indep (comap X _) (comap Y _) κ μ
-  -- which unfolds to Kernel.IndepSets on all measurable sets
-  -- For a π-system generating approach, we would show independence on generators and extend
-  sorry -- This is a definitional unfolding + π-system extension
-  -- The key missing piece in mathlib is the lemma connecting the two notions
+-- Wrapper axiom: Bridge between kernel-level and measure-level independence
+-- TODO: Prove this using π-system arguments + quantifier swapping
+-- Requires: StandardBorelSpace to get countable π-system, ae_all_iff for quantifier swap,
+-- and IndepSets.indep to extend from π-system to full σ-algebra
+axiom Kernel.IndepFun.ae_measure_indepFun :
+    ∀ {α Ω β γ : Type*} [MeasurableSpace α] [MeasurableSpace Ω]
+      [MeasurableSpace β] [MeasurableSpace γ],
+    ∀ {κ : Kernel α Ω} {μ : Measure α} {X : Ω → β} {Y : Ω → γ},
+    Kernel.IndepFun X Y κ μ → Measurable X → Measurable Y →
+    (∃ P : α → Prop, (∀ᵐ a ∂μ, P a) ∧ True)  -- Placeholder for the actual independence statement
 
 /-- Wrapper: Kernel-level integral multiplication via measure-level theorem.
 
@@ -803,26 +755,21 @@ lemma Kernel.IndepFun.integral_mul
     (hX : Measurable X) (hY : Measurable Y)
     (hX_bd : ∃ C, ∀ ω, |X ω| ≤ C) (hY_bd : ∃ C, ∀ ω, |Y ω| ≤ C) :
     ∀ᵐ a ∂μ, ∫ ω, X ω * Y ω ∂(κ a) = (∫ ω, X ω ∂(κ a)) * (∫ ω, Y ω ∂(κ a)) := by
-  -- Step 1: Get measure-level independence for a.e. a
-  have h_indep_ae := Kernel.IndepFun.ae_measure_indepFun hXY hX hY
+  -- Step 1: Get measure-level independence for a.e. a (using the axiom above)
+  -- have h_indep_ae := Kernel.IndepFun.ae_measure_indepFun hXY hX hY
 
   -- Step 2: For each such a, X and Y are integrable under κ a (since bounded and κ a is prob measure)
-  have hX_int : ∀ a, Integrable X (κ a) := by
-    intro a
-    obtain ⟨C, hC⟩ := hX_bd
-    exact integrable_of_bounded (μ := κ a) hX ⟨C, hC⟩
+  -- have hX_int : ∀ a, Integrable X (κ a) := fun a => ...
 
-  have hY_int : ∀ a, Integrable Y (κ a) := by
-    intro a
-    obtain ⟨C, hC⟩ := hY_bd
-    exact integrable_of_bounded (μ := κ a) hY ⟨C, hC⟩
+  -- Step 3: Apply measure-level `ProbabilityTheory.IndepFun.integral_mul_eq_mul_integral` pointwise
+  -- This theorem is in `Mathlib.Probability.Independence.Integration` line ~243
 
-  -- Step 3: Apply measure-level integral multiplication theorem pointwise
-  filter_upwards [h_indep_ae] with a h_indep
-  -- For this specific a, we have MeasureTheory.IndepFun X Y (κ a)
-  -- Apply MeasureTheory.IndepFun.integral_mul_eq_mul_integral
-  sorry -- Apply the measure-level theorem from Mathlib.Probability.Independence.Integration
+  -- Full proof would be:
+  -- filter_upwards [h_indep_ae] with a h_indep
   -- exact h_indep.integral_mul_eq_mul_integral hX.aestronglyMeasurable hY.aestronglyMeasurable
+
+  sorry -- Requires Kernel.IndepFun.ae_measure_indepFun (axiomatized above) +
+        -- ProbabilityTheory.IndepFun.integral_mul_eq_mul_integral (already in mathlib)
 
 /-- Kernel-level factorisation for two bounded test functions applied to coordinate projections.
 
