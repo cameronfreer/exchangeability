@@ -186,8 +186,24 @@ lemma condProb_compl {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     [SigmaFinite (μ.trim hm)] {A : Set Ω} (hA : MeasurableSet[m₀] A) :
     condProb μ m Aᶜ =ᵐ[μ] (fun ω => 1 - condProb μ m A ω) := by
   classical
-  -- 1_{Aᶜ} = 1 - 1_A, use linearity of condExp
-  sorry
+  have hId :
+      Aᶜ.indicator (fun _ : Ω => (1 : ℝ))
+        = (fun _ : Ω => (1 : ℝ)) - A.indicator (fun _ : Ω => (1 : ℝ)) := by
+    funext ω
+    by_cases h : ω ∈ A <;> simp [Set.indicator, h]
+  have hlin :
+      μ[Aᶜ.indicator (fun _ => (1 : ℝ)) | m]
+        =ᵐ[μ] μ[(fun _ => (1 : ℝ)) | m] - μ[A.indicator (fun _ => (1 : ℝ)) | m] := by
+    simpa [hId] using
+      (condExp_sub (μ := μ) (m := m)
+        (f := fun _ : Ω => (1 : ℝ))
+        (g := A.indicator fun _ : Ω => (1 : ℝ)))
+  have hconst : μ[(fun _ : Ω => (1 : ℝ)) | m] =ᵐ[μ] (fun _ => (1 : ℝ)) :=
+    (condExp_const (μ := μ) (m := m) hm (1 : ℝ)).eventuallyEq
+  have : μ[Aᶜ.indicator (fun _ : Ω => (1 : ℝ)) | m]
+            =ᵐ[μ] (fun ω => 1 - μ[A.indicator (fun _ : Ω => (1 : ℝ)) | m] ω) :=
+    hlin.trans <| (EventuallyEq.sub hconst EventuallyEq.rfl)
+  simpa [condProb] using this
 
 /-! ### Conditional Independence (Doob's Characterization)
 
@@ -557,18 +573,7 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
         =ᵐ[μ] μ[H.indicator (fun _ => (1 : ℝ)) | mG] := by
   classical
   intro H hH
-  -- Property we want to extend: C(H) := "μ[1_H | mF ⊔ mG] =ᵐ μ[1_H | mG]"
-  -- Strategy: Show this holds for π, extends to complements and disjoint unions
-  -- Then by Dynkin π-λ theorem, it holds for all of generateFrom π
-
-  -- For now, use ae_eq_condExp_of_forall_setIntegral_eq
-  -- We show that the two conditional expectations have the same integrals
-  -- on all mF ⊔ mG-measurable sets
   sorry
-  -- TODO: Complete using either:
-  -- 1. Dynkin system API (generateFrom_le_toMeasurableSpace_of_subset_of_isPiSystem)
-  -- 2. Or direct proof via ae_eq_condExp_of_forall_setIntegral_eq showing
-  --    integrals agree on all mF ⊔ mG-measurable sets by π-λ induction
 
 /-! ### Bounded Martingales and L² Inequalities -/
 
@@ -593,9 +598,7 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
   -- condExp is the orthogonal projection onto the L² closure of m₁-measurable functions
   -- So ‖X₂‖² = ‖μ[X₂|m₁]‖² + ‖X₂ - μ[X₂|m₁]‖² (Pythagoras)
   -- Combined with the second moment equality, this forces X₂ - X₁ =ᵐ 0
-  sorry
-  /-
-  -- The following proof sketch uses condexpL2 API:
+  -- The following proof uses condexpL2 API:
   -- 1. Lift to L²: let f := X₂ as element of Lp ℝ 2 μ
   -- 2. Show μ[X₂|m₁] equals condexpL2 f (the L² conditional expectation)
   -- 3. Use orthogonality: ‖f‖² = ‖condexpL2 f‖² + ‖f - condexpL2 f‖²
@@ -718,7 +721,6 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
   have h_eq : X₂ =ᵐ[μ] X₁ :=
     h_diff_zero.mono fun ω hω => sub_eq_zero.mp hω
   exact h_eq.symm
-  -/
 
 /-! ### Reverse Martingale Convergence -/
 
@@ -740,22 +742,8 @@ lemma reverse_martingale_convergence {m₀ : MeasurableSpace Ω} {μ : Measure �
     (∀ᵐ ω ∂μ, Tendsto (fun n => μ[X | 𝒢 n] ω) atTop (𝓝 (μ[X | ⨅ n, 𝒢 n] ω))) ∧
     Tendsto (fun n => eLpNorm (μ[X | 𝒢 n] - μ[X | ⨅ n, 𝒢 n]) 1 μ) atTop (𝓝 0) := by
   -- Strategy: Convert decreasing 𝒢 to increasing filtration via OrderDual ℕ
-  --
-  -- 1. Define ℱ : Filtration (OrderDual ℕ) m₀ by ℱ n = 𝒢 (ofDual n)
-  --    This is monotone because 𝒢 is antitone and OrderDual reverses order.
-  --
-  -- 2. Show ⨆ n, ℱ n = ⨅ n, 𝒢 n (= tail)
-  --
-  -- 3. Set g := μ[X | tail], which is integrable and StronglyMeasurable[tail].
-  --    By the equality in step 2, g is also StronglyMeasurable[⨆ n, ℱ n].
-  --
-  -- 4. Apply Integrable.tendsto_ae_condExp and Integrable.tendsto_eLpNorm_condExp
-  --    to get convergence of μ[g | ℱ n] to g both a.e. and in L¹.
-  --
-  -- 5. Use tower property: μ[g | 𝒢 n] = μ[μ[X | tail] | 𝒢 n] = μ[X | 𝒢 n]
-  --    (because tail ≤ 𝒢 n for all n).
-  --
-  -- 6. Translate from OrderDual ℕ indexing back to ℕ indexing to get the result.
+  -- Define ℱ : OrderDual ℕ → MeasurableSpace Ω by ℱ n = 𝒢 (OrderDual.ofDual n)
+  -- This is monotone because 𝒢 is antitone and OrderDual reverses order
 
   sorry
 
