@@ -95,6 +95,7 @@ private lemma measurable_eval_fin2 {i : Fin 2} :
     Measurable fun g : (Fin 2 → ℝ) => g i :=
   measurable_pi_apply _
 
+set_option linter.unusedSectionVars false in
 /-- For a contractable sequence, the law of each coordinate agrees with the law
 of `X 0`. -/
 lemma contractable_map_single (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i)) {i : ℕ} :
@@ -142,23 +143,23 @@ private lemma strictMono_two {i j : ℕ} (hij : i < j) :
   -- Reduce the strict inequality on `Fin 2` to natural numbers.
   have hval : a.val < b.val := Fin.lt_iff_val_lt_val.mp hlt
   -- `b` must be the second coordinate.
-  have hb_val_le : b.val ≤ 1 := Nat.lt_succ_iff.mp (show b.val < 2 by simpa using b.is_lt)
+  have hb_val_le : b.val ≤ 1 := Nat.lt_succ_iff.mp (show b.val < 2 by simp [b.is_lt])
   have hb_ne_zero : b.val ≠ 0 := by
     intro hb
-    have : a.val < 0 := by simpa [hb] using hval
-    exact Nat.not_lt_zero _ this
+    simp [hb] at hval
   have hb_pos : 0 < b.val := Nat.pos_of_ne_zero hb_ne_zero
   have hb_ge_one : 1 ≤ b.val := Nat.succ_le_of_lt hb_pos
   have hb_val : b.val = 1 := le_antisymm hb_val_le hb_ge_one
   -- Consequently `a` is the first coordinate.
-  have ha_lt_one : a.val < 1 := by simpa [hb_val] using hval
+  have ha_lt_one : a.val < 1 := by simp only [hb_val] at hval; exact hval
   have ha_val : a.val = 0 := Nat.lt_one_iff.mp ha_lt_one
   -- Rewrite the conclusion using these identifications.
-  have ha : a = fin2Zero := by ext; simpa [fin2Zero, ha_val]
-  have hb : b = fin2One := by ext; simpa [fin2One, hb_val]
+  have ha : a = fin2Zero := by ext; simp [fin2Zero, ha_val]
+  have hb : b = fin2One := by ext; simp [fin2One, hb_val]
   subst ha; subst hb
   simp [fin2Zero, fin2One, hij]
 
+set_option linter.unusedSectionVars false in
 /-- For a contractable sequence, every increasing pair `(i,j)` with `i < j`
 has the same joint law as `(X 0, X 1)`. -/
 lemma contractable_map_pair (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i)) {i j : ℕ} (hij : i < j) :
@@ -172,16 +173,16 @@ lemma contractable_map_pair (hX_contract : Contractable μ X) (hX_meas : ∀ i, 
   let eval : (Fin 2 → ℝ) → ℝ × ℝ :=
     fun g => (g fin2Zero, g fin2One)
   have h_eval_meas : Measurable eval := by
-    refine (measurable_eval_fin2 (i := fin2Zero)).prod_mk ?_
+    refine (measurable_eval_fin2 (i := fin2Zero)).prodMk ?_
     exact measurable_eval_fin2 (i := fin2One)
   have h_meas_k : Measurable fun ω => fun t : Fin 2 => X (k t) ω := by
     refine measurable_pi_lambda _ ?_
     intro t
     by_cases ht : t = fin2Zero
-    · have : k t = i := by simpa [k, ht]
-      simpa [this] using hX_meas i
-    · have : k t = j := by simpa [k, ht] using if_neg ht
-      simpa [this] using hX_meas j
+    · have : k t = i := by simp [k, ht]
+      simp [this]; exact hX_meas i
+    · have : k t = j := by simp [k, if_neg ht]
+      simp [this]; exact hX_meas j
   have h_meas_std : Measurable fun ω => fun t : Fin 2 => X t.val ω := by
     refine measurable_pi_lambda _ ?_
     intro t
@@ -200,6 +201,7 @@ lemma contractable_map_pair (hX_contract : Contractable μ X) (hX_meas : ∀ i, 
     simp [eval, fin2Zero, fin2One]
   simpa [Function.comp, h_comp_simp, h_comp_simp'] using h_comp
 
+set_option linter.unusedSectionVars false in
 /-- Postcompose a contractable sequence with a measurable function. -/
 lemma contractable_comp (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i))
     (f : ℝ → ℝ) (hf_meas : Measurable f) :
@@ -271,7 +273,7 @@ lemma dist_toLp_eq_eLpNorm_sub
 
 /-- Converting strict inequality through `ENNReal.toReal`. -/
 lemma toReal_lt_of_lt_ofReal {x : ENNReal} {ε : ℝ}
-    (hx : x ≠ ⊤) (hε : 0 ≤ ε) :
+    (_hx : x ≠ ⊤) (hε : 0 ≤ ε) :
     x < ENNReal.ofReal ε → ENNReal.toReal x < ε := by
   intro h
   have : ENNReal.toReal x < ENNReal.toReal (ENNReal.ofReal ε) := by
@@ -516,7 +518,7 @@ theorem weighted_sums_converge_L1
                 |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω)|
                     = (1 / (m : ℝ)) *
                         |∑ k : Fin m, f (X (n + k.val + 1) ω)| := by
-                      simpa [abs_mul, h_inv_abs]
+                      simp [abs_mul]
                 _ ≤ (1 / (m : ℝ)) *
                         ∑ k : Fin m, |f (X (n + k.val + 1) ω)| := by
                       exact
@@ -857,7 +859,7 @@ theorem weighted_sums_converge_L1
               apply sqrt_div_lt_half_eps_of_nat hCf_nonneg hε
               exact hm₂
       · -- m = 0 case is trivial or doesn't occur
-        simp [Nat.not_lt.mp hm_pos] at hm
+        simp at hm
         omega
 
     -- Combine
@@ -956,10 +958,10 @@ For now, we state this as `True` and complete the identification in Step 5.
 -/
 theorem alpha_is_reverse_martingale
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
-    (hX_meas : ∀ i, Measurable (X i))
-    (α : ℕ → Ω → ℝ)
-    (f : ℝ → ℝ) (hf_meas : Measurable f) :
+    (_X : ℕ → Ω → ℝ) (_hX_contract : Contractable μ _X)
+    (_hX_meas : ∀ i, Measurable (_X i))
+    (_α : ℕ → Ω → ℝ)
+    (_f : ℝ → ℝ) (_hf_meas : Measurable _f) :
     True := by
   -- Defer to Step 5 where we identify α_n with conditional expectation
   trivial
