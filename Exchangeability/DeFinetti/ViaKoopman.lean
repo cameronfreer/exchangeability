@@ -898,11 +898,43 @@ lemma coord_indicator_via_ν
     ⟨1, by intro x; by_cases hx : x ∈ s <;> simp [Set.indicator, hx]⟩
   have := coord_integral_via_ν (μ := μ) (α := α) hσ k hf hbd
   filter_upwards [this] with ω hω
-  -- The integral equality from hω relates indicators; convert to measure equality
-  -- By integral_indicator_one: ∫ 1_s = (μ s).toReal
-  -- So hω says: (condExpKernel preimage measure).toReal = (ν measure).toReal
-  -- Since both are probability measures (finite), toReal is injective
-  sorry  -- TODO: apply integral_indicator_one on both sides + toReal_injective
+  -- hω: ∫ indicator(s)(y k) d(condExpKernel) = ∫ indicator(s)(x) dν
+  -- Convert to measure equality using integral_indicator_one
+
+  -- LHS: need to show the integral equals the measure of the preimage
+  have lhs_meas : MeasurableSet ((fun y : Ω[α] => y k) ⁻¹' s) :=
+    measurable_pi_apply k hs
+
+  have lhs_eq : ∫ y, (s.indicator fun _ => (1 : ℝ)) (y k)
+        ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)
+      = ((condExpKernel μ (shiftInvariantSigma (α := α)) ω)
+          ((fun y : Ω[α] => y k) ⁻¹' s)).toReal := by
+    -- The indicator (s.indicator 1) ∘ (y ↦ y k) equals the indicator of the preimage
+    have h_preimage : (fun y => s.indicator (fun _ => (1 : ℝ)) (y k))
+          = ((fun y : Ω[α] => y k) ⁻¹' s).indicator 1 := by
+      funext y
+      simp only [Set.indicator, Set.mem_preimage, Pi.one_apply]
+      by_cases h : y k ∈ s <;> simp [h]
+    conv_lhs => rw [h_preimage]
+    rw [integral_indicator_one lhs_meas]
+    simp only [Measure.real]
+
+  have rhs_eq : ∫ x, (s.indicator fun _ => (1 : ℝ)) x ∂(ν (μ := μ) ω)
+      = (ν (μ := μ) ω s).toReal := by
+    have h_indicator : (s.indicator fun _ => (1 : ℝ)) = s.indicator 1 := by
+      ext x
+      simp only [Set.indicator, Pi.one_apply]
+      split_ifs <;> rfl
+    rw [h_indicator, integral_indicator_one hs, Measure.real]
+
+  -- Combine: toReal equality implies ENNReal equality (for finite measures)
+  have h_toReal : ((condExpKernel μ (shiftInvariantSigma (α := α)) ω)
+          ((fun y : Ω[α] => y k) ⁻¹' s)).toReal
+        = (ν (μ := μ) ω s).toReal := by
+    rw [← lhs_eq, ← rhs_eq]
+    exact hω
+
+  exact (ENNReal.toReal_eq_toReal_iff' (measure_ne_top _ _) (measure_ne_top _ _)).mp h_toReal
 
 /-- **Bridge between kernel-level and measure-level independence for integrals.**
 
