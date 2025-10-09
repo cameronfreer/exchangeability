@@ -351,9 +351,8 @@ lemma sqrt_div_lt_third_eps_of_nat
   have hsqrt : Real.sqrt (Cf / m) < Real.sqrt (ε^2 / 9) := by
     exact Real.sqrt_lt_sqrt hnonneg hlt
   have h_sqrt_simpl : Real.sqrt (ε^2 / 9) = ε / 3 := by
-    rw [Real.sqrt_div (sq_nonneg ε)]
-    simp only [Real.sqrt_sq (le_of_lt hε)]
-    norm_num
+    rw [Real.sqrt_div (sq_nonneg ε), Real.sqrt_sq (le_of_lt hε)]
+    rw [show (9 : ℝ) = 3^2 by norm_num, Real.sqrt_sq (by norm_num : (0 : ℝ) ≤ 3)]
   calc 3 * Real.sqrt (Cf / m)
       < 3 * Real.sqrt (ε^2 / 9) := by linarith [hsqrt]
     _ = 3 * (ε / 3) := by rw [h_sqrt_simpl]
@@ -626,112 +625,132 @@ theorem weighted_sums_converge_L1
   have hA_cauchy_L2_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
       eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ < ENNReal.ofReal ε := by
     intro ε hε
-    -- Strategy: use triangle inequality to compare via a common window
-    -- For m, ℓ ≥ N, compare both to A 0 N and use the two-window bound
-    -- ‖A 0 m - A 0 ℓ‖₂ ≤ ‖A 0 m - A 0 N‖₂ + ‖A 0 N - A 0 ℓ‖₂
-    -- Each term is bounded by √(Cf/N) via l2_bound_two_windows
-    -- So we need 2√(Cf/N) < ε, i.e., N > 4Cf/ε²
-
-    -- Get uniform Cf that works for all window positions
-    obtain ⟨Cf, hCf_nonneg, hCf_unif⟩ := l2_bound_two_windows_uniform X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
-
-    -- Choose N large enough
-    have hε_sq_pos : 0 < ε ^ 2 := pow_pos hε 2
-    have hε_sq : 0 < ε ^ 2 / (4 * Cf + 1) := by
-      apply div_pos hε_sq_pos
-      have : 0 < (4 : ℝ) * Cf + 1 := by
-        have : 0 ≤ (4 : ℝ) * Cf := mul_nonneg (by norm_num) hCf_nonneg
-        linarith
-      exact this
-
-    -- Choose N so that √(Cf/N) < ε/2
-    -- We need N > 4Cf/ε²
-    let N : ℕ := Nat.ceil (4 * Cf / (ε ^ 2)) + 1
+    -- Uniform two-window bound: ∫ (...)^2 ≤ Cf / k
+    obtain ⟨Cf, hCf_nonneg, hCf_unif⟩ :=
+      l2_bound_two_windows_uniform X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
+    -- Choose N so that 3 * √(Cf/N) < ε
+    let N : ℕ := Nat.ceil (9 * Cf / (ε ^ 2)) + 1
     have hN_pos : 0 < N := Nat.succ_pos _
-
-    refine ⟨N, fun m ℓ hm hℓ => ?_⟩
-
-    -- Use common length k = min m ℓ
+    refine ⟨N, ?_⟩
+    intro m ℓ hm hℓ
+    -- Common tail length k = min m ℓ
     let k := min m ℓ
-    have hk_pos : 0 < k := by
-      have : N ≤ min m ℓ := by
-        apply le_min
-        · exact hm
-        · exact hℓ
-      exact Nat.lt_of_lt_of_le hN_pos this
+    have hk_ge_N : N ≤ k := by
+      have : N ≤ min m ℓ := Nat.le_min.mpr ⟨hm, hℓ⟩
+      simpa [k] using this
+    have hk_pos : 0 < k := lt_of_lt_of_le hN_pos hk_ge_N
 
-    -- Triangle inequality via common length
-    have tri : eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
-              ≤ eLpNorm (fun ω => A 0 m ω - A 0 k ω) 2 μ
-                + eLpNorm (fun ω => A 0 ℓ ω - A 0 k ω) 2 μ := by
-      have hdecomp : (fun ω => A 0 m ω - A 0 ℓ ω)
-                   = (fun ω => (A 0 m ω - A 0 k ω) + (A 0 k ω - A 0 ℓ ω)) := by
+    -- Three same-length comparisons (tail-averages):
+    -- T1: (0 vs m-k), T2: ((m-k) vs (ℓ-k)), T3: ((ℓ-k) vs 0), all of length k.
+    have h1sq :
+      ∫ ω, (A 0 k ω - A (m - k) k ω)^2 ∂μ ≤ Cf / k := by
+      simpa [A] using hCf_unif 0 (m - k) k hk_pos
+    have h2sq :
+      ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ ≤ Cf / k := by
+      simpa [A] using hCf_unif (m - k) (ℓ - k) k hk_pos
+    have h3sq :
+      ∫ ω, (A (ℓ - k) k ω - A 0 k ω)^2 ∂μ ≤ Cf / k := by
+      simpa [A] using hCf_unif (ℓ - k) 0 k hk_pos
+
+    -- Convert each integral bound to an L² eLpNorm bound
+    have h1_L2 :
+      eLpNorm (fun ω => A 0 k ω - A (m - k) k ω) 2 μ
+        ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
+      apply eLpNorm_two_from_integral_sq_le
+      · exact (hA_memLp_two 0 k).sub (hA_memLp_two (m - k) k)
+      · exact div_nonneg hCf_nonneg (Nat.cast_nonneg k)
+      · exact h1sq
+    have h2_L2 :
+      eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
+        ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
+      apply eLpNorm_two_from_integral_sq_le
+      · exact (hA_memLp_two (m - k) k).sub (hA_memLp_two (ℓ - k) k)
+      · exact div_nonneg hCf_nonneg (Nat.cast_nonneg k)
+      · exact h2sq
+    have h3_L2 :
+      eLpNorm (fun ω => A (ℓ - k) k ω - A 0 k ω) 2 μ
+        ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
+      apply eLpNorm_two_from_integral_sq_le
+      · exact (hA_memLp_two (ℓ - k) k).sub (hA_memLp_two 0 k)
+      · exact div_nonneg hCf_nonneg (Nat.cast_nonneg k)
+      · exact h3sq
+
+    -- Triangle inequality on three segments:
+    -- (A 0 m - A 0 ℓ) = (A 0 m - A (m - k) k) + (A (m - k) k - A (ℓ - k) k) + (A (ℓ - k) k - A 0 ℓ)
+    have tri :
+      eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
+        ≤ eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
+          + eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
+          + eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ := by
+      -- split into T1 + (T2 + T3), then split T2 + T3
+      have hsplit :
+        (fun ω => A 0 m ω - A 0 ℓ ω)
+          = (fun ω =>
+                (A 0 m ω - A (m - k) k ω)
+                + ((A (m - k) k ω - A (ℓ - k) k ω)
+                  + (A (ℓ - k) k ω - A 0 ℓ ω))) := by
         ext ω; ring
-      rw [hdecomp]
-      calc eLpNorm (fun ω => A 0 m ω - A 0 k ω + (A 0 k ω - A 0 ℓ ω)) 2 μ
-          ≤ eLpNorm (fun ω => A 0 m ω - A 0 k ω) 2 μ +
-              eLpNorm (fun ω => A 0 k ω - A 0 ℓ ω) 2 μ := by
-            apply eLpNorm_add_le
-            · exact (hA_meas 0 m).sub (hA_meas 0 k) |>.aestronglyMeasurable
-            · exact (hA_meas 0 k).sub (hA_meas 0 ℓ) |>.aestronglyMeasurable
-            · norm_num
-        _ = eLpNorm (fun ω => A 0 m ω - A 0 k ω) 2 μ +
-              eLpNorm (fun ω => A 0 ℓ ω - A 0 k ω) 2 μ := by
-            congr 1
-            -- eLpNorm (A 0 k - A 0 ℓ) = eLpNorm (A 0 ℓ - A 0 k)
-            have h : eLpNorm (fun ω => A 0 k ω - A 0 ℓ ω) 2 μ =
-                     eLpNorm (fun ω => -(A 0 k ω - A 0 ℓ ω)) 2 μ :=
-              (eLpNorm_neg _ _ _).symm
-            convert h using 2
-            ext ω
-            ring
+      have step1 :
+        eLpNorm
+          (fun ω =>
+            (A 0 m ω - A (m - k) k ω)
+            + ((A (m - k) k ω - A (ℓ - k) k ω)
+              + (A (ℓ - k) k ω - A 0 ℓ ω))) 2 μ
+        ≤ eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
+            + eLpNorm (fun ω =>
+                (A (m - k) k ω - A (ℓ - k) k ω)
+                + (A (ℓ - k) k ω - A 0 ℓ ω)) 2 μ := by
+        apply eLpNorm_add_le
+        · exact ((hA_meas 0 m).sub (hA_meas (m - k) k)).aestronglyMeasurable
+        · exact (Measurable.add ((hA_meas (m - k) k).sub (hA_meas (ℓ - k) k))
+                ((hA_meas (ℓ - k) k).sub (hA_meas 0 ℓ))).aestronglyMeasurable
+        · norm_num
+      have step2 :
+        eLpNorm (fun ω =>
+            (A (m - k) k ω - A (ℓ - k) k ω)
+          + (A (ℓ - k) k ω - A 0 ℓ ω)) 2 μ
+        ≤ eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
+            + eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ := by
+        apply eLpNorm_add_le
+        · exact ((hA_meas (m - k) k).sub (hA_meas (ℓ - k) k)).aestronglyMeasurable
+        · exact ((hA_meas (ℓ - k) k).sub (hA_meas 0 ℓ)).aestronglyMeasurable
+        · norm_num
+      -- reassociate the sums of bounds
+      have : eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
+            ≤ eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
+              + (eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
+                + eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ) := by
+        simpa [hsplit] using
+          (le_trans step1 <| add_le_add_left step2 _)
+      simpa [add_assoc] using this
 
-    -- Each term bounded by √(Cf/k) via uniform bound
-    have hCf_k_nn : 0 ≤ Cf / k := div_nonneg hCf_nonneg (Nat.cast_nonneg k)
+    -- Bound each term by √(Cf/k), then sum to 3√(Cf/k)
+    have bound3 :
+      eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
+        ≤ ENNReal.ofReal (3 * Real.sqrt (Cf / k)) := by
+      have h0 : 0 ≤ Real.sqrt (Cf / k) := Real.sqrt_nonneg _
+      calc
+        eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
+            ≤ eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
+              + eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
+              + eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ := tri
+        _ ≤ (ENNReal.ofReal (Real.sqrt (Cf / k))
+              + ENNReal.ofReal (Real.sqrt (Cf / k)))
+              + ENNReal.ofReal (Real.sqrt (Cf / k)) := by
+              sorry -- TODO: Fix type mismatch - bounds are for A 0 k not A 0 m/ℓ
+        _ = ENNReal.ofReal (2 * Real.sqrt (Cf / k))
+              + ENNReal.ofReal (Real.sqrt (Cf / k)) := by
+              sorry -- TODO: Fix ENNReal arithmetic
+        _ = ENNReal.ofReal (3 * Real.sqrt (Cf / k)) := by
+              sorry -- TODO: Fix ENNReal arithmetic
 
-    have hbound_m : ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (0 + i.val + 1) ω) -
-                           (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
-                    ≤ Cf / k := hCf_unif 0 m k hk_pos
-
-    have hbound_ℓ : ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (0 + i.val + 1) ω) -
-                           (1/(k:ℝ)) * ∑ i : Fin k, f (X (ℓ + i.val + 1) ω))^2 ∂μ
-                    ≤ Cf / k := hCf_unif 0 ℓ k hk_pos
-
-    have hL2_m : eLpNorm (fun ω => A 0 m ω - A 0 k ω) 2 μ
-                ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
-      apply eLpNorm_two_from_integral_sq_le
-      · exact (hA_memLp_two 0 m).sub (hA_memLp_two 0 k)
-      · exact hCf_k_nn
-      · -- Need: ∫ (A 0 m - A 0 k)^2 ≤ Cf/k
-        -- Have: ∫ (1/k*∑ᵢ₌₁ᵏ f(Xᵢ) - 1/k*∑ᵢ₌₁ᵏ f(X_{m+i}))^2 ≤ Cf/k
-        -- Key: when k ≤ m, the first k terms match, so this is a reindexing
-        sorry -- TODO: prove sum reindexing lemma
-
-    have hL2_ℓ : eLpNorm (fun ω => A 0 ℓ ω - A 0 k ω) 2 μ
-                ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
-      apply eLpNorm_two_from_integral_sq_le
-      · exact (hA_memLp_two 0 ℓ).sub (hA_memLp_two 0 k)
-      · exact hCf_k_nn
-      · sorry -- TODO: same reindexing as above
-
-    calc eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
-        ≤ eLpNorm (fun ω => A 0 m ω - A 0 k ω) 2 μ
-          + eLpNorm (fun ω => A 0 ℓ ω - A 0 k ω) 2 μ := tri
-      _ ≤ ENNReal.ofReal (Real.sqrt (Cf / k))
-          + ENNReal.ofReal (Real.sqrt (Cf / k)) := by
-            exact add_le_add hL2_m hL2_ℓ
-      _ = ENNReal.ofReal (2 * Real.sqrt (Cf / k)) := by
-            rw [← ENNReal.ofReal_add (Real.sqrt_nonneg _) (Real.sqrt_nonneg _)]
-            ring_nf
-      _ < ENNReal.ofReal ε := by
-            apply ENNReal.ofReal_lt_ofReal_iff hε |>.mpr
-            have hk_ge_N : k ≥ N := by
-              show min m ℓ ≥ N
-              exact Nat.le_min.mpr ⟨hm, hℓ⟩
-            have : Real.sqrt (Cf / k) < ε / 2 := by
-              apply sqrt_div_lt_half_eps_of_nat hCf_nonneg hε
-              exact hk_ge_N
-            linarith
+    -- Choose k large ⇒ 3 √(Cf/k) < ε
+    have hlt_real : 3 * Real.sqrt (Cf / k) < ε := by
+      apply sqrt_div_lt_third_eps_of_nat hCf_nonneg hε
+      exact hk_ge_N
+    have hlt : ENNReal.ofReal (3 * Real.sqrt (Cf / k)) < ENNReal.ofReal ε :=
+      (ENNReal.ofReal_lt_ofReal_iff hε).mpr hlt_real
+    exact lt_of_le_of_lt bound3 hlt
 
   have hA_cauchy_L1_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
       eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ < ENNReal.ofReal ε := by
