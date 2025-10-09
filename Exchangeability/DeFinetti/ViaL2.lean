@@ -390,8 +390,8 @@ lemma mem_window_iff {n k t : ℕ} :
 /-- Cardinality of Fin values less than k in Fin (2*k) -/
 private lemma card_fin_lt_k {k : ℕ} :
     (Finset.univ.filter (fun i : Fin (2 * k) => i.val < k)).card = k := by
-  -- TODO: Fix proof - complex Finset reasoning needs API update
-  sorry
+  -- Use cardinality formula and bijection with range k
+  sorry -- TODO: Show bijection between filter {i | i.val < k} and Finset.range k
 
 /-- The supremum of |p i - q i| for two-window weights -/
 private lemma sup_two_window_weights {k : ℕ} (hk : 0 < k)
