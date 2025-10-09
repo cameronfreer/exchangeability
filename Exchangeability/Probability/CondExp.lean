@@ -774,10 +774,19 @@ Use `Integrable.tendsto_ae_condexp` and `ae_eq_condExp_of_forall_setIntegral_eq`
 -/
 lemma reverse_martingale_convergence {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     [IsProbabilityMeasure μ] (𝒢 : ℕ → MeasurableSpace Ω)
+    (h_le : ∀ n, 𝒢 n ≤ m₀)
     (h_decr : ∀ n, 𝒢 (n + 1) ≤ 𝒢 n)
-    (X : Ω → ℝ) (hX_int : Integrable X μ) :
-    True :=
-  trivial
+    [∀ n, SigmaFinite (μ.trim (h_le n))]
+    (X : Ω → ℝ) (hX_int : Integrable X μ)
+    (hX_meas : StronglyMeasurable[⨅ n, 𝒢 n] X) :
+    (∀ᵐ ω ∂μ, Tendsto (fun n => μ[X | 𝒢 n] ω) atTop (𝓝 (μ[X | ⨅ n, 𝒢 n] ω))) ∧
+    Tendsto (fun n => eLpNorm (μ[X | 𝒢 n] - μ[X | ⨅ n, 𝒢 n]) 1 μ) atTop (𝓝 0) := by
+  -- Strategy: Convert decreasing 𝒢 to increasing filtration via OrderDual ℕ
+  -- Define ℱ : OrderDual ℕ → MeasurableSpace Ω by ℱ (toDual n) = 𝒢 n
+  -- Then ℱ is increasing (because 𝒢 is decreasing and OrderDual reverses order)
+  -- Apply Integrable.tendsto_ae_condExp and tendsto_eLpNorm_condExp
+
+  sorry -- TODO: Implement using OrderDual filtration and mathlib convergence theorems
 
 /-- Application to tail σ-algebras: convergence as we condition on
 increasingly coarse shifted processes.
