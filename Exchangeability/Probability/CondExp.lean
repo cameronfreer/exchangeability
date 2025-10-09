@@ -809,11 +809,24 @@ lemma reverse_martingale_convergence {m₀ : MeasurableSpace Ω} {μ : Measure �
     (∀ᵐ ω ∂μ, Tendsto (fun n => μ[X | 𝒢 n] ω) atTop (𝓝 (μ[X | ⨅ n, 𝒢 n] ω))) ∧
     Tendsto (fun n => eLpNorm (μ[X | 𝒢 n] - μ[X | ⨅ n, 𝒢 n]) 1 μ) atTop (𝓝 0) := by
   -- Strategy: Convert decreasing 𝒢 to increasing filtration via OrderDual ℕ
-  -- Define ℱ : OrderDual ℕ → MeasurableSpace Ω by ℱ (toDual n) = 𝒢 n
-  -- Then ℱ is increasing (because 𝒢 is decreasing and OrderDual reverses order)
-  -- Apply Integrable.tendsto_ae_condExp and tendsto_eLpNorm_condExp
+  --
+  -- 1. Define ℱ : Filtration (OrderDual ℕ) m₀ by ℱ n = 𝒢 (ofDual n)
+  --    This is monotone because 𝒢 is antitone and OrderDual reverses order.
+  --
+  -- 2. Show ⨆ n, ℱ n = ⨅ n, 𝒢 n (= tail)
+  --
+  -- 3. Set g := μ[X | tail], which is integrable and StronglyMeasurable[tail].
+  --    By the equality in step 2, g is also StronglyMeasurable[⨆ n, ℱ n].
+  --
+  -- 4. Apply Integrable.tendsto_ae_condExp and Integrable.tendsto_eLpNorm_condExp
+  --    to get convergence of μ[g | ℱ n] to g both a.e. and in L¹.
+  --
+  -- 5. Use tower property: μ[g | 𝒢 n] = μ[μ[X | tail] | 𝒢 n] = μ[X | 𝒢 n]
+  --    (because tail ≤ 𝒢 n for all n).
+  --
+  -- 6. Translate from OrderDual ℕ indexing back to ℕ indexing to get the result.
 
-  sorry -- TODO: Implement using OrderDual filtration and mathlib convergence theorems
+  sorry
 
 set_option linter.unusedSectionVars false in
 /-- Application to tail σ-algebras: convergence as we condition on
