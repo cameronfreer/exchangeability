@@ -94,9 +94,14 @@ This is the conditional expectation of the indicator function of `A`.
 
 We define it using mathlib's `condexp` applied to the indicator function.
 -/
-noncomputable def condProb {m₀ : MeasurableSpace Ω} (μ : Measure Ω) [IsProbabilityMeasure μ] 
+noncomputable def condProb {m₀ : MeasurableSpace Ω} (μ : Measure Ω) [IsProbabilityMeasure μ]
     (m : MeasurableSpace Ω) (A : Set Ω) : Ω → ℝ :=
   μ[A.indicator (fun _ => (1 : ℝ)) | m]
+
+set_option linter.unusedSectionVars false in
+lemma condProb_def {m₀ : MeasurableSpace Ω} (μ : Measure Ω) [IsProbabilityMeasure μ]
+    (m : MeasurableSpace Ω) (A : Set Ω) :
+    condProb μ m A = μ[A.indicator (fun _ => (1 : ℝ)) | m] := rfl
 
 set_option linter.unusedSectionVars false in
 /-- Conditional probability takes values in `[0,1]` almost everywhere. -/
@@ -152,6 +157,37 @@ lemma condProb_integral_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
   -- Put everything together and clean up intersections.
   simpa [condProb, h_indicator, h_const, Set.inter_comm, Set.inter_left_comm, Set.inter_assoc]
     using h_condexp
+
+set_option linter.unusedSectionVars false in
+@[simp]
+lemma condProb_univ {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+    [IsProbabilityMeasure μ] (m : MeasurableSpace Ω) (hm : m ≤ m₀)
+    [SigmaFinite (μ.trim hm)] :
+    condProb μ m (Set.univ : Set Ω) =ᵐ[μ] (fun _ => (1 : ℝ)) := by
+  classical
+  have : (Set.univ : Set Ω).indicator (fun _ : Ω => (1 : ℝ)) = fun _ => (1 : ℝ) := by
+    funext ω; simp [Set.indicator]
+  simp [condProb, this, condExp_const (μ := μ) (m := m) hm (1 : ℝ)]
+
+set_option linter.unusedSectionVars false in
+@[simp]
+lemma condProb_empty {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+    [IsProbabilityMeasure μ] (m : MeasurableSpace Ω) (hm : m ≤ m₀) :
+    condProb μ m (∅ : Set Ω) =ᵐ[μ] (fun _ => (0 : ℝ)) := by
+  classical
+  have : (∅ : Set Ω).indicator (fun _ : Ω => (1 : ℝ)) = fun _ => (0 : ℝ) := by
+    funext ω; simp [Set.indicator]
+  simp [condProb, this, condExp_const (μ := μ) (m := m) hm (0 : ℝ)]
+
+set_option linter.unusedSectionVars false in
+@[simp]
+lemma condProb_compl {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+    [IsProbabilityMeasure μ] (m : MeasurableSpace Ω) (hm : m ≤ m₀)
+    [SigmaFinite (μ.trim hm)] {A : Set Ω} (hA : MeasurableSet[m₀] A) :
+    condProb μ m Aᶜ =ᵐ[μ] (fun ω => 1 - condProb μ m A ω) := by
+  classical
+  -- 1_{Aᶜ} = 1 - 1_A, use linearity of condExp
+  sorry
 
 /-! ### Conditional Independence (Doob's Characterization)
 
@@ -667,10 +703,20 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     (hmg : μ[X₂ | m₁] =ᵐ[μ] X₁)
     (hSecond : ∫ ω, (X₂ ω)^2 ∂μ = ∫ ω, (X₁ ω)^2 ∂μ) :
     X₁ =ᵐ[μ] X₂ := by
+  classical
+  -- Strategy: Use L² orthogonal projection properties
+  -- condExp is the orthogonal projection onto the L² closure of m₁-measurable functions
+  -- So ‖X₂‖² = ‖μ[X₂|m₁]‖² + ‖X₂ - μ[X₂|m₁]‖² (Pythagoras)
+  -- Combined with the second moment equality, this forces X₂ - X₁ =ᵐ 0
   sorry
   /-
-  -- TODO: This proof depends on condVar and condVar_ae_eq_condExp_sq_sub_sq_condExp
-  -- which are not yet defined in the file
+  -- The following proof sketch uses condexpL2 API:
+  -- 1. Lift to L²: let f := X₂ as element of Lp ℝ 2 μ
+  -- 2. Show μ[X₂|m₁] equals condexpL2 f (the L² conditional expectation)
+  -- 3. Use orthogonality: ‖f‖² = ‖condexpL2 f‖² + ‖f - condexpL2 f‖²
+  -- 4. From hSecond: ‖f‖² = ‖X₁‖² = ‖μ[X₂|m₁]‖² (using hmg)
+  -- 5. This forces ‖f - condexpL2 f‖ = 0, hence f = condexpL2 f in L²
+  -- 6. Conclude X₂ =ᵐ μ[X₂|m₁] =ᵐ X₁
   classical
   -- Promote X₁ to L² using the L² property of X₂.
   have h_cond_mem : MemLp (μ[X₂ | m₁]) 2 μ := hL2.condExp (m := m₁)
