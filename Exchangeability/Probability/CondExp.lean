@@ -628,8 +628,9 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
 
 /-! ### Bounded Martingales and L² Inequalities -/
 
-/-- L² identification lemma: if X₂ is a martingale with respect to m₁ ≤ m₂
-and E[X₂²] = E[X₁²], then X₁ = X₂ a.s.
+/-- L² identification lemma: if `X₂` is square-integrable and
+`μ[X₂ | m₁] = X₁`, while the second moments of `X₁` and `X₂` coincide,
+then `X₁ = X₂` almost everywhere.
 
 This uses Pythagoras identity in L²: conditional expectation is orthogonal projection,
 so E[(X₂ - E[X₂|m₁])²] = E[X₂²] - E[(E[X₂|m₁])²].
@@ -639,51 +640,127 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     [IsProbabilityMeasure μ] {m₁ m₂ : MeasurableSpace Ω}
     (hm₁ : m₁ ≤ m₀) (hm₂ : m₂ ≤ m₀)
     [SigmaFinite (μ.trim hm₁)] [SigmaFinite (μ.trim hm₂)]
-    {X₁ X₂ : Ω → ℝ} (hInt : Integrable X₂ μ)
+    {X₁ X₂ : Ω → ℝ} (hL2 : MemLp X₂ 2 μ)
     (hmg : μ[X₂ | m₁] =ᵐ[μ] X₁)
     (hSecond : ∫ ω, (X₂ ω)^2 ∂μ = ∫ ω, (X₁ ω)^2 ∂μ) :
     X₁ =ᵐ[μ] X₂ := by
-  -- Strategy: Use Pythagoras identity in L²
-  -- Since X₁ = μ[X₂ | m₁], we have ‖X₂‖² = ‖X₁‖² + ‖X₂ - X₁‖²
-  -- Combined with ∫ X₂² = ∫ X₁² gives ‖X₂ - X₁‖² = 0
+  classical
+  -- Promote X₁ to L² using the L² property of X₂.
+  have h_cond_mem : MemLp (μ[X₂ | m₁]) 2 μ := hL2.condExp (m := m₁)
+  have hX₁_mem : MemLp X₁ 2 μ := h_cond_mem.ae_eq (hmg.symm)
+  have h_diff_L2 : MemLp (X₂ - X₁) 2 μ := hL2.sub hX₁_mem
+  -- The squared difference is L¹-integrable.
+  have h_diff_mem : MemLp (X₂ - μ[X₂ | m₁]) 2 μ := hL2.sub h_cond_mem
+  have h_diff_sq_int :
+      Integrable (fun ω => (X₂ ω - μ[X₂ | m₁] ω) ^ 2) μ :=
+    h_diff_mem.integrable_sq
 
-  -- First, establish that X₁ is integrable (follows from being a conditional expectation)
-  have hX₁_int : Integrable X₁ μ := by
-    -- X₁ =ᵐ μ[X₂ | m₁] and conditional expectations are integrable
-    have : Integrable (μ[X₂ | m₁]) μ := integrable_condExp
-    exact Integrable.congr this hmg
+  -- Identify the integral of the conditional variance.
+  have h_integral_var :
+      ∫ ω, Var[X₂; μ | m₁] ω ∂μ
+        = ∫ ω, (X₂ ω)^2 ∂μ - ∫ ω, (X₁ ω)^2 ∂μ := by
+    have h_var_int :
+        Integrable (Var[X₂; μ | m₁]) μ := by
+      simpa [condVar] using
+        integrable_condExp (μ := μ) (m := m₁) (hm := hm₁)
+          (f := fun ω => (X₂ ω - μ[X₂ | m₁] ω) ^ 2) h_diff_sq_int
+    have h_mu_sq_int :
+        Integrable (μ[X₂ ^ 2 | m₁]) μ :=
+      integrable_condExp (μ := μ) (m := m₁) (hm := hm₁)
+        (f := fun ω => (X₂ ω) ^ 2) (hL2.integrable_sq)
+    have h_cond_sq_int :
+        Integrable (fun ω => (μ[X₂ | m₁] ω) ^ 2) μ :=
+      h_cond_mem.integrable_sq
+    have h_eq :=
+      condVar_ae_eq_condExp_sq_sub_sq_condExp (μ := μ) (m := m₁) (hm := hm₁)
+        (X := X₂) hL2
+    have h_congr :
+        ∫ ω, Var[X₂; μ | m₁] ω ∂μ
+          = ∫ ω, (μ[X₂ ^ 2 | m₁] ω - μ[X₂ | m₁] ω ^ 2) ∂μ :=
+      integral_congr_ae h_var_int (h_mu_sq_int.sub h_cond_sq_int) h_eq
+    have h_sub :=
+      integral_sub h_mu_sq_int h_cond_sq_int
+    have h_condExp_sq :
+        ∫ ω, μ[X₂ ^ 2 | m₁] ω ∂μ = ∫ ω, (X₂ ω) ^ 2 ∂μ :=
+      integral_condExp (μ := μ) (m := m₁) (hm := hm₁)
+        (f := fun ω => (X₂ ω) ^ 2)
+        (hL2.integrable_sq)
+    have h_sq_replace :
+        ∫ ω, (μ[X₂ | m₁] ω) ^ 2 ∂μ = ∫ ω, (X₁ ω) ^ 2 ∂μ :=
+      integral_congr_ae
+        (h_cond_sq_int)
+        (hX₁_mem.integrable_sq)
+        (hmg.mono fun ω hω => by simpa [hω])
+    calc
+      ∫ ω, Var[X₂; μ | m₁] ω ∂μ
+          = ∫ ω, (μ[X₂ ^ 2 | m₁] ω - μ[X₂ | m₁] ω ^ 2) ∂μ := h_congr
+      _ = (∫ ω, μ[X₂ ^ 2 | m₁] ω ∂μ)
+            - ∫ ω, (μ[X₂ | m₁] ω) ^ 2 ∂μ := h_sub
+      _ = ∫ ω, (X₂ ω) ^ 2 ∂μ - ∫ ω, (X₁ ω) ^ 2 ∂μ := by
+        simpa [h_sq_replace] using congrArg₂ Sub.sub h_condExp_sq rfl
 
-  -- Key: Show ∫ (X₂ - X₁)² = 0
-  -- By Pythagoras: ∫ X₂² = ∫ X₁² + ∫ (X₂ - X₁)²
-  -- Since ∫ X₂² = ∫ X₁² by hypothesis, we get ∫ (X₂ - X₁)² = 0
+  -- Replace the integral of the conditional variance with the integral of the squared deviation.
+  have h_integral_diff :
+      ∫ ω, (X₂ ω - X₁ ω) ^ 2 ∂μ = ∫ ω, Var[X₂; μ | m₁] ω ∂μ := by
+    have h_int :=
+      integral_condExp (μ := μ) (m := m₁) (hm := hm₁)
+        (f := fun ω => (X₂ ω - μ[X₂ | m₁] ω) ^ 2) h_diff_sq_int
+    have h_sq_eq :
+        (fun ω => (X₂ ω - μ[X₂ | m₁] ω) ^ 2)
+          =ᵐ[μ] fun ω => (X₂ ω - X₁ ω) ^ 2 :=
+      hmg.mono fun ω hω => by simpa [hω]
+    have h_sq_int : Integrable (fun ω => (X₂ ω - X₁ ω) ^ 2) μ :=
+      h_diff_L2.integrable_sq
+    calc
+      ∫ ω, (X₂ ω - X₁ ω) ^ 2 ∂μ
+          = ∫ ω, (X₂ ω - μ[X₂ | m₁] ω) ^ 2 ∂μ := integral_congr_ae h_sq_int h_diff_sq_int h_sq_eq.symm
+      _ = ∫ ω, Var[X₂; μ | m₁] ω ∂μ := by
+        simpa [condVar] using h_int.symm
 
-  sorry  -- TODO: Complete using L² orthogonality - all key lemmas verified:
-  --
-  -- Core mathlib lemmas:
-  -- 1. Lp.eq_zero_iff_ae_eq_zero : (f : Lp E p μ) = 0 ↔ f =ᵐ[μ] 0
-  --    (MeasureTheory.Function.LpSpace.Basic:298)
-  --
-  -- 2. norm_sub_sq : ‖x - y‖² = ‖x‖² - 2 * re ⟪x,y⟫ + ‖y‖²
-  --    (Analysis.InnerProductSpace.Basic:409)
-  --    For real inner products: ‖x - y‖² = ‖x‖² - 2⟪x,y⟫ + ‖y‖²
-  --
-  -- 3. inner_condExpL2_left_eq_right (hm : m ≤ m0) {f g : α →₂[μ] E} :
-  --      ⟪condExpL2 𝕜 E hm f, g⟫ = ⟪f, condExpL2 𝕜 E hm g⟫
-  --    (ConditionalExpectation.CondexpL2:103)
-  --    Key orthogonality: projection property of conditional expectation
-  --
-  -- 4. eLpNorm_eq_zero_iff {f : α → ε} (hf : AEStronglyMeasurable f μ) (h0 : p ≠ 0) :
-  --      eLpNorm f p μ = 0 ↔ f =ᵐ[μ] 0
-  --    (Function.LpSeminorm.Basic:993)
-  --
-  -- Strategy:
-  -- - Convert X₁, X₂ to L²[μ] using MemLp (we have hX₁_int, hInt and μ is probability)
-  -- - Let X₁' := condExpL2(X₂) so X₁ =ᵐ X₁' by hmg and MemLp.condExpL2_ae_eq_condExp
-  -- - Apply norm_sub_sq: ‖X₂ - X₁'‖² = ‖X₂‖² - 2⟪X₂,X₁'⟫ + ‖X₁'‖²
-  -- - Use inner_condExpL2_left_eq_right with g = X₁':
-  --     ⟪X₂, X₁'⟫ = ⟪X₂, condExpL2 X₂⟫ = ⟪condExpL2 X₂, condExpL2 X₂⟫ = ‖X₁'‖²
-  -- - Substitute: ‖X₂ - X₁'‖² = ‖X₂‖² - 2‖X₁'‖² + ‖X₁'‖² = ‖X₂‖² - ‖X₁'‖² = 0 (by hSecond)
-  -- - Apply Lp.eq_zero_iff_ae_eq_zero: X₂ - X₁' =ᵐ 0, thus X₁ =ᵐ X₂
+  -- Combine the previous identities to deduce that the squared deviation integrates to zero.
+  have h_diff_integral_zero :
+      ∫ ω, (X₂ ω - X₁ ω) ^ 2 ∂μ = 0 := by
+    simpa [hSecond, h_integral_var] using h_integral_diff
+
+  -- Use the L² inner product to deduce that X₂ - X₁ vanishes almost everywhere.
+  let diffLp := h_diff_L2.toLp (X₂ - X₁)
+  have h_diff_coe : diffLp =ᵐ[μ] fun ω => X₂ ω - X₁ ω :=
+    h_diff_L2.coeFn_toLp (X₂ - X₁)
+  have h_integrand_eq :
+      (fun ω => diffLp ω * diffLp ω)
+        =ᵐ[μ] fun ω => (X₂ ω - X₁ ω) ^ 2 := by
+    refine h_diff_coe.mono ?_
+    intro ω hω
+    simp [pow_two, hω] 
+  have h_integrable_prod :
+      Integrable (fun ω => diffLp ω * diffLp ω) μ :=
+    (h_diff_L2.integrable_sq.congr h_integrand_eq.symm)
+  have h_inner_zero :
+      (⟪diffLp, diffLp⟫ : ℝ) = 0 := by
+    calc
+      (⟪diffLp, diffLp⟫ : ℝ)
+          = ∫ ω, diffLp ω * diffLp ω ∂μ := inner_def _ _
+      _ = ∫ ω, (X₂ ω - X₁ ω) ^ 2 ∂μ :=
+        integral_congr_ae h_integrable_prod h_diff_L2.integrable_sq h_integrand_eq
+      _ = 0 := h_diff_integral_zero
+  have h_diffLp_zero : diffLp = 0 :=
+    inner_self_eq_zero.mp (by simpa using h_inner_zero)
+  have h_zero_mem : MemLp (fun _ : Ω => (0 : ℝ)) 2 μ := MemLp.zero
+  have h_zero_toLp :
+      h_zero_mem.toLp (fun _ : Ω => (0 : ℝ)) = (0 : Lp ℝ 2 μ) :=
+    MemLp.toLp_zero h_zero_mem
+  have h_diff_zero :
+      X₂ - X₁ =ᵐ[μ] fun _ : Ω => (0 : ℝ) := by
+    have h_Lp_eq :
+        diffLp = h_zero_mem.toLp (fun _ : Ω => (0 : ℝ)) := by
+      simpa [diffLp, h_zero_toLp] using h_diffLp_zero
+    exact
+      (MemLp.toLp_eq_toLp_iff (μ := μ) (p := (2 : ℝ≥0∞))
+        (f := X₂ - X₁) (g := fun _ : Ω => (0 : ℝ))
+        h_diff_L2 h_zero_mem).1 h_Lp_eq
+  have h_eq : X₂ =ᵐ[μ] X₁ :=
+    h_diff_zero.mono fun ω hω => sub_eq_zero.mp hω
+  exact h_eq.symm
 
 /-! ### Reverse Martingale Convergence -/
 
