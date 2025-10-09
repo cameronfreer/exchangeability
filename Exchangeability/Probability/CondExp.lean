@@ -153,6 +153,27 @@ lemma condProb_integral_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
   simpa [condProb, h_indicator, h_const, Set.inter_comm, Set.inter_left_comm, Set.inter_assoc]
     using h_condexp
 
+set_option linter.unusedSectionVars false in
+@[simp]
+lemma condProb_univ {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+    [IsProbabilityMeasure μ] (m : MeasurableSpace Ω) (hm : m ≤ m₀)
+    [SigmaFinite (μ.trim hm)] :
+    condProb μ m (Set.univ : Set Ω) =ᵐ[μ] (fun _ => (1 : ℝ)) := by
+  classical
+  have : (Set.univ : Set Ω).indicator (fun _ : Ω => (1 : ℝ)) = fun _ => (1 : ℝ) := by
+    funext ω; simp [Set.indicator]
+  simp [condProb, this, condExp_const (μ := μ) (m := m) hm (1 : ℝ)]
+
+set_option linter.unusedSectionVars false in
+@[simp]
+lemma condProb_empty {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+    [IsProbabilityMeasure μ] (m : MeasurableSpace Ω) (hm : m ≤ m₀) :
+    condProb μ m (∅ : Set Ω) =ᵐ[μ] (fun _ => (0 : ℝ)) := by
+  classical
+  have : (∅ : Set Ω).indicator (fun _ : Ω => (1 : ℝ)) = fun _ => (0 : ℝ) := by
+    funext ω; simp [Set.indicator]
+  simp [condProb, this, condExp_const (μ := μ) (m := m) hm (0 : ℝ)]
+
 /-! ### Conditional Independence (Doob's Characterization)
 
 ## Mathlib Integration
