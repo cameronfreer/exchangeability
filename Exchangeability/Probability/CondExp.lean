@@ -225,41 +225,76 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
       rw [rhs_eq]
 
       -- The key insight: F ∩ G ∩ H = (F ∩ H) ∩ G
-      -- Apply setIntegral_condExp on the mG-measurable set G
-      calc ∫ ω in F ∩ G, g ω ∂μ
-          = ∫ ω in G ∩ F, g ω ∂μ := by rw [Set.inter_comm]
-        _ = ∫ ω in G, (F.indicator (fun _ => (1 : ℝ)) ω) * g ω ∂μ := by
-            rw [← setIntegral_indicator hF']
-            congr 1 with ω
-            by_cases h : ω ∈ F <;> simp [Set.indicator, h]
-        _ = ∫ ω in G, (F.indicator (fun _ => (1 : ℝ)) ω) * (H.indicator (fun _ => (1 : ℝ)) ω) ∂μ := by
-            -- TODO: This requires showing ∫ in G, F.indicator * g = ∫ in G, F.indicator * H.indicator
-            --
-            -- Approach: Use Fubini-like reasoning or the product formula from h_prod
-            -- The product formula states: μ⟦F ∩ H | mG⟧ =ᵐ[μ] μ⟦F | mG⟧ * μ⟦H | mG⟧
-            --
-            -- Strategy:
-            -- 1. Both integrals equal ∫ in F ∩ G, (respective function)
-            -- 2. Use that g = μ[H.indicator | mG]
-            -- 3. The equality ∫ in F ∩ G, g = ∫ in F ∩ G, H.indicator follows from
-            --    properties of conditional expectation and the product formula
-            --
-            -- This is subtle and may require appeal to the full power of the product formula
-            -- or a more sophisticated argument using conditional expectation properties.
-            sorry
-        _ = ∫ ω in G, (F ∩ H).indicator (fun _ => (1 : ℝ)) ω ∂μ := by
-            congr 1 with ω
-            simp only [Set.indicator]
-            by_cases hF : ω ∈ F <;> by_cases hH : ω ∈ H <;> simp [hF, hH, Set.mem_inter_iff]
-        _ = ∫ ω in G ∩ (F ∩ H), (1 : ℝ) ∂μ := by
-            rw [setIntegral_indicator (MeasurableSet.inter hF' hH')]
-        _ = (μ (G ∩ (F ∩ H))).toReal := by simp [Measure.real_def]
+      -- Apply conditional expectation identities on the mG-measurable set G
+      have hF_int : Integrable (F.indicator fun _ : Ω => (1 : ℝ)) μ :=
+        (integrable_const (1 : ℝ)).indicator hF'
+      have hFG_int : Integrable (F.indicator fun ω : Ω => g ω) μ := by
+        have h_eq :
+            (fun ω => (F.indicator fun _ : Ω => (1 : ℝ)) ω * g ω)
+              = F.indicator fun ω : Ω => g ω := by
+          funext ω; by_cases hω : ω ∈ F <;> simp [Set.indicator, hω]
+        simpa [h_eq] using hg_int.indicator hF'
+      have hFH_int : Integrable ((F ∩ H).indicator fun _ : Ω => (1 : ℝ)) μ :=
+        (integrable_const (1 : ℝ)).indicator (MeasurableSet.inter hF' hH')
+      have h_mul :
+          μ[F.indicator (fun ω : Ω => g ω) | mG]
+            =ᵐ[μ] μ[F.indicator fun _ : Ω => (1 : ℝ) | mG] * g := by
+        have hfg_int :
+            Integrable (fun ω => (F.indicator fun _ : Ω => (1 : ℝ)) ω * g ω) μ := by
+          have h_eq :
+              (fun ω => (F.indicator fun _ : Ω => (1 : ℝ)) ω * g ω)
+                = F.indicator fun ω : Ω => g ω := by
+            funext ω; by_cases hω : ω ∈ F <;> simp [Set.indicator, hω]
+          simpa [h_eq] using hg_int.indicator hF'
+        have h_expr :
+            (fun ω => (F.indicator fun _ : Ω => (1 : ℝ)) ω * g ω)
+              = F.indicator fun ω : Ω => g ω := by
+          funext ω; by_cases hω : ω ∈ F <;> simp [Set.indicator, hω]
+        simpa [h_expr] using
+          (condExp_mul_of_aestronglyMeasurable_right (μ := μ) (m := mG)
+              hg_meas hfg_int hF_int)
+      have h_prod_FH := h_prod F hF H hH
+      have hG_set : MeasurableSet G := hmG _ hG
+      calc
+        ∫ ω in F ∩ G, g ω ∂μ
+            = ∫ ω in G ∩ F, g ω ∂μ := by simp [Set.inter_comm]
+        _ = ∫ ω in G, F.indicator (fun ω : Ω => g ω) ω ∂μ := by
+            simpa [Set.inter_comm] using
+              (setIntegral_indicator (μ := μ) (s := G) (t := F)
+                (f := fun ω : Ω => g ω) hF').symm
+        _ = ∫ ω in G, μ[F.indicator (fun ω : Ω => g ω) | mG] ω ∂μ := by
+            have h_cond :=
+              setIntegral_condExp (μ := μ) (m := mG) (hm := hmG)
+                (f := F.indicator fun ω : Ω => g ω) hFG_int hG
+            simpa using h_cond.symm
+        _ = ∫ ω in G,
+              μ[F.indicator fun _ : Ω => (1 : ℝ) | mG] ω * g ω ∂μ := by
+            refine setIntegral_congr_ae hG_set ?_
+            filter_upwards [h_mul] with ω hω _ using hω
+        _ = ∫ ω in G,
+              μ[(F ∩ H).indicator fun _ : Ω => (1 : ℝ) | mG] ω ∂μ := by
+            refine setIntegral_congr_ae hG_set ?_
+            filter_upwards [h_prod_FH] with ω hω _ using hω.symm
+        _ = ∫ ω in G, (F ∩ H).indicator (fun _ : Ω => (1 : ℝ)) ω ∂μ := by
+            exact
+              setIntegral_condExp (μ := μ) (m := mG) (hm := hmG)
+                (f := (F ∩ H).indicator fun _ : Ω => (1 : ℝ)) hFH_int hG
+        _ = (μ (G ∩ (F ∩ H))).toReal := by
+            have h_indicator :
+                ∫ ω in G, (F ∩ H).indicator (fun _ : Ω => (1 : ℝ)) ω ∂μ
+                  = ∫ ω in G ∩ (F ∩ H), (1 : ℝ) ∂μ :=
+              setIntegral_indicator (μ := μ) (s := G) (t := F ∩ H)
+                (f := fun _ : Ω => (1 : ℝ)) (MeasurableSet.inter hF' hH')
+            have h_const :
+                ∫ ω in G ∩ (F ∩ H), (1 : ℝ) ∂μ
+                  = (μ (G ∩ (F ∩ H))).toReal := by
+              simp [Measure.real_def]
+            simpa [h_const] using h_indicator
         _ = (μ (F ∩ G ∩ H)).toReal := by
             have : G ∩ (F ∩ H) = F ∩ G ∩ H := by
               ext ω
-              simp only [Set.mem_inter_iff]
-              tauto
-            rw [this]
+              simp [Set.mem_inter_iff, and_left_comm, and_assoc]
+            simpa [this]
     have h_dynkin :
         ∀ {S} (hS : MeasurableSet[mF ⊔ mG] S),
           ∫ ω in S, g ω ∂μ
@@ -302,31 +337,6 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
       -- 2. generateFrom_sup_generateFrom : generateFrom s ⊔ generateFrom t = generateFrom (s ∪ t)
       --    (from MeasureTheory.MeasurableSpace.Defs line 382)
       --    Connects supremum of σ-algebras to union of generating sets
-      --
-      -- Required steps:
-      -- 1. Prove: mF ⊔ mG = generateFrom rects
-      --    Plan: Show rects generates mF ⊔ mG by proving:
-      --    - For F ∈ mF: F = F ∩ univ where F ∈ mF and univ ∈ mG, so F ∈ generateFrom rects
-      --    - For G ∈ mG: G = univ ∩ G where univ ∈ mF and G ∈ mG, so G ∈ generateFrom rects
-      --    - Thus rects generates both mF and mG, hence mF ⊔ mG ⊆ generateFrom rects
-      --    - Reverse: each rect F ∩ G is in mF ⊔ mG since F ∈ mF and G ∈ mG
-      --
-      -- 2. Verify C holds on ∅: ∫ in ∅, g = ∫ in ∅, H.indicator = 0 (both zero by setIntegral_empty)
-      --
-      -- 3. Verify C holds on rects: this is h_rects above ✓
-      --
-      -- 4. Prove C closed under complements:
-      --    If ∫ in S, g = ∫ in S, H.indicator, then ∫ in Sᶜ, g = ∫ in Sᶜ, H.indicator
-      --    Use: ∫ in univ = ∫ in S + ∫ in Sᶜ (integral_add_compl)
-      --    Both g and H.indicator have same total integral from h_rects on univ
-      --    Subtraction gives the result
-      --
-      -- 5. Prove C closed under countable disjoint unions:
-      --    If ∫ in fᵢ, g = ∫ in fᵢ, H.indicator for all i, and fᵢ pairwise disjoint,
-      --    then ∫ in ⋃ᵢ fᵢ, g = ∫ in ⋃ᵢ fᵢ, H.indicator
-      --    Use: setIntegral_iUnion for pairwise disjoint unions
-      --    Apply to both sides and use the inductive hypothesis
-      sorry
     have h_proj :
         μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
           =ᵐ[μ] g := by
@@ -412,7 +422,66 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     --      = μ[t1.indicator | mG] * μ[t2.indicator | mG]
     --
     -- This completes the product formula for conditional independence.
-    sorry
+    set f1 : Ω → ℝ := t1.indicator fun _ : Ω => (1 : ℝ)
+    set f2 : Ω → ℝ := t2.indicator fun _ : Ω => (1 : ℝ)
+    have hf1_int : Integrable f1 μ :=
+      (integrable_const (1 : ℝ)).indicator (hmF _ ht1)
+    have hf2_int : Integrable f2 μ :=
+      (integrable_const (1 : ℝ)).indicator (hmH _ ht2)
+    have hf_prod_int :
+        Integrable ((t1 ∩ t2).indicator fun _ : Ω => (1 : ℝ)) μ :=
+      (integrable_const (1 : ℝ)).indicator
+        (MeasurableSet.inter (hmF _ ht1) (hmH _ ht2))
+    have hf1_aesm :
+        AEStronglyMeasurable[mF ⊔ mG] f1 μ :=
+      ((stronglyMeasurable_const.indicator ht1).aestronglyMeasurable).mono
+        (le_sup_left : mF ≤ mF ⊔ mG)
+    have hf_prod_eq :
+        (fun ω => f1 ω * f2 ω)
+          = fun ω => (t1 ∩ t2).indicator (fun _ : Ω => (1 : ℝ)) ω := by
+      funext ω; by_cases h1 : ω ∈ t1 <;> by_cases h2 : ω ∈ t2 <;>
+        simp [f1, f2, Set.indicator, h1, h2, Set.mem_inter_iff, indicator_prod ω] at *
+    have h_inner :
+        μ[(t1 ∩ t2).indicator (fun _ : Ω => (1 : ℝ)) | mF ⊔ mG]
+          =ᵐ[μ] f1 * μ[f2 | mF ⊔ mG] := by
+      have h_mul :
+          μ[(fun ω => f1 ω * f2 ω) | mF ⊔ mG]
+            =ᵐ[μ] f1 * μ[f2 | mF ⊔ mG] :=
+        condExp_mul_of_aestronglyMeasurable_left (μ := μ) (m := mF ⊔ mG)
+          hf1_aesm (by simpa [hf_prod_eq] using hf_prod_int) hf2_int
+      simpa [hf_prod_eq] using h_mul
+    have h_inner' :
+        μ[(t1 ∩ t2).indicator (fun _ : Ω => (1 : ℝ)) | mF ⊔ mG]
+          =ᵐ[μ] f1 * μ[f2 | mG] :=
+      h_inner.trans <| EventuallyEq.mul EventuallyEq.rfl hProjt2
+    have h_tower :=
+      (condExp_condExp_of_le (μ := μ)
+          (hm₁₂ := le_sup_right : mG ≤ mF ⊔ mG)
+          (hm₂ := sup_le hmF hmG)
+          (f := (t1 ∩ t2).indicator fun _ : Ω => (1 : ℝ))).symm
+    have h_lhs :
+        μ[(t1 ∩ t2).indicator (fun _ : Ω => (1 : ℝ)) | mG]
+          =ᵐ[μ] μ[f1 * μ[f2 | mG] | mG] :=
+      h_tower.trans <| condExp_congr_ae (μ := μ) (m := mG) h_inner'
+    have h_condExp_f2_meas :
+        AEStronglyMeasurable[mG] (μ[f2 | mG]) μ :=
+      stronglyMeasurable_condExp.aestronglyMeasurable
+    have h_prod_cond_int :
+        Integrable (fun ω => f1 ω * μ[f2 | mG] ω) μ := by
+      have h_eq :
+          (fun ω => f1 ω * μ[f2 | mG] ω)
+            = t1.indicator (fun ω => μ[f2 | mG] ω) ω := by
+        funext ω; by_cases hω : ω ∈ t1 <;> simp [f1, Set.indicator, hω]
+      simpa [h_eq] using
+        (integrable_condExp (μ := μ) (m := mG) (f := f2)).indicator (hmF _ ht1)
+    have h_pull :
+        μ[f1 * μ[f2 | mG] | mG]
+          =ᵐ[μ] μ[f1 | mG] * μ[f2 | mG] :=
+      condExp_mul_of_aestronglyMeasurable_right (μ := μ) (m := mG)
+        h_condExp_f2_meas h_prod_cond_int hf1_int
+    have h_goal :=
+      h_lhs.trans h_pull
+    simpa [f1, f2] using h_goal
 
 /-- If conditional probabilities agree a.e. for a π-system generating ℋ,
 then they agree for all H ∈ ℋ.
@@ -463,13 +532,105 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
   --    Apply: condExp of series equals series of condExp (monotone convergence)
   --    Use inductive hypothesis on each fᵢ
   --
-  -- This extends the projection property from π to all sets in generateFrom π.
-  sorry
+      -- This extends the projection property from π to all sets in generateFrom π.
+      have h_sup_le :
+          mF ⊔ mG ≤ MeasurableSpace.generateFrom rects := by
+        refine sup_le ?_ ?_
+        · intro s hs
+          have : s ∈ rects := by
+            refine ⟨s, Set.univ, hs, MeasurableSet.univ, ?_⟩
+            simp
+          exact measurableSet_generateFrom this
+        · intro s hs
+          have : s ∈ rects := by
+            refine ⟨Set.univ, s, MeasurableSet.univ, hs, ?_⟩
+            simp
+          exact measurableSet_generateFrom this
+      have h_generate_le :
+          MeasurableSpace.generateFrom rects ≤ mF ⊔ mG := by
+        refine generateFrom_le ?_
+        intro s hs
+        obtain ⟨F, G, hF, hG, rfl⟩ := hs
+        exact (MeasurableSet.inter
+          (hF.mono (le_sup_left : mF ≤ mF ⊔ mG))
+          (hG.mono (le_sup_right : mG ≤ mF ⊔ mG)))
+      have h_sigma_eq : mF ⊔ mG = MeasurableSpace.generateFrom rects :=
+        le_antisymm h_sup_le h_generate_le
+
+      have h_univ_mem : (Set.univ : Set Ω) ∈ rects := by
+        refine ⟨Set.univ, Set.univ, MeasurableSet.univ, MeasurableSet.univ, ?_⟩
+        simp
+      have h_total :
+          ∫ ω, g ω ∂μ
+            = ∫ ω, (H.indicator fun _ : Ω => (1 : ℝ)) ω ∂μ := by
+        simpa [Measure.restrict_univ] using h_rects _ h_univ_mem
+
+      classical
+      let hfun : Ω → ℝ := fun ω =>
+        (H.indicator fun _ : Ω => (1 : ℝ)) ω
+      have h_property :
+          ∀ {t} (ht : MeasurableSet[mF ⊔ mG] t),
+            ∫ ω in t, g ω ∂μ = ∫ ω in t, hfun ω ∂μ := by
+        refine
+          MeasureTheory.induction_on_inter
+            (m := mF ⊔ mG)
+            (C := fun t _ => ∫ ω in t, g ω ∂μ = ∫ ω in t, hfun ω ∂μ)
+            (h_eq := h_sigma_eq) h_pi ?empty ?basic ?compl ?iUnion
+        · -- empty set
+          simpa using integral_empty (μ := μ) (f := fun ω => g ω)
+        · -- rectangles
+          intro t ht
+          exact h_rects t ht
+        · -- complements
+          intro t htm hCt
+          have htm₀ : MeasurableSet t := hmFG _ htm
+          have h_g_compl :
+              ∫ ω in tᶜ, g ω ∂μ
+                = ∫ ω, g ω ∂μ - ∫ ω in t, g ω ∂μ := by
+            refine (sub_eq_iff_eq_add).2 ?_
+            have h_add :=
+              integral_add_compl (μ := μ) (s := t) (f := fun ω => g ω) htm₀ hg_int
+            simpa [add_comm, add_left_comm, add_assoc] using h_add.symm
+          have h_h_compl :
+              ∫ ω in tᶜ, hfun ω ∂μ
+                = ∫ ω, hfun ω ∂μ - ∫ ω in t, hfun ω ∂μ := by
+            refine (sub_eq_iff_eq_add).2 ?_
+            have h_add :=
+              integral_add_compl (μ := μ) (s := t) (f := hfun) htm₀ hH_int
+            simpa [add_comm, add_left_comm, add_assoc] using h_add.symm
+          calc
+            ∫ ω in tᶜ, g ω ∂μ
+                = ∫ ω, g ω ∂μ - ∫ ω in t, g ω ∂μ := h_g_compl
+            _ = ∫ ω, hfun ω ∂μ - ∫ ω in t, hfun ω ∂μ := by
+                simpa [h_total, hCt]
+            _ = ∫ ω in tᶜ, hfun ω ∂μ := h_h_compl.symm
+        · -- countable disjoint unions
+          intro f hd hfm hCf
+          have hfm₀ : ∀ n, MeasurableSet (f n) := fun n => hmFG _ (hfm n)
+          have h_int_g : IntegrableOn g (⋃ n, f n) μ := hg_int.integrableOn
+          have h_int_h : IntegrableOn hfun (⋃ n, f n) μ := hH_int.integrableOn
+          have h_g_iUnion :=
+            integral_iUnion (μ := μ) (f := fun ω => g ω) hfm₀ hd h_int_g
+          have h_h_iUnion :=
+            integral_iUnion (μ := μ) (f := fun ω => hfun ω) hfm₀ hd h_int_h
+          have h_tsum :
+              (∑' n, ∫ ω in f n, g ω ∂μ)
+                = ∑' n, ∫ ω in f n, hfun ω ∂μ := by
+            refine tsum_congr ?_
+            intro n
+            exact hCf n
+          calc
+            ∫ ω in ⋃ n, f n, g ω ∂μ
+                = ∑' n, ∫ ω in f n, g ω ∂μ := h_g_iUnion
+            _ = ∑' n, ∫ ω in f n, hfun ω ∂μ := h_tsum
+            _ = ∫ ω in ⋃ n, f n, hfun ω ∂μ := h_h_iUnion.symm
+      exact h_property hS
 
 /-! ### Bounded Martingales and L² Inequalities -/
 
-/-- L² identification lemma: if X₂ is a martingale with respect to m₁ ≤ m₂
-and E[X₂²] = E[X₁²], then X₁ = X₂ a.s.
+/-- L² identification lemma: if `X₂` is square-integrable and
+`μ[X₂ | m₁] = X₁`, while the second moments of `X₁` and `X₂` coincide,
+then `X₁ = X₂` almost everywhere.
 
 This uses Pythagoras identity in L²: conditional expectation is orthogonal projection,
 so E[(X₂ - E[X₂|m₁])²] = E[X₂²] - E[(E[X₂|m₁])²].
@@ -479,51 +640,127 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     [IsProbabilityMeasure μ] {m₁ m₂ : MeasurableSpace Ω}
     (hm₁ : m₁ ≤ m₀) (hm₂ : m₂ ≤ m₀)
     [SigmaFinite (μ.trim hm₁)] [SigmaFinite (μ.trim hm₂)]
-    {X₁ X₂ : Ω → ℝ} (hInt : Integrable X₂ μ)
+    {X₁ X₂ : Ω → ℝ} (hL2 : MemLp X₂ 2 μ)
     (hmg : μ[X₂ | m₁] =ᵐ[μ] X₁)
     (hSecond : ∫ ω, (X₂ ω)^2 ∂μ = ∫ ω, (X₁ ω)^2 ∂μ) :
     X₁ =ᵐ[μ] X₂ := by
-  -- Strategy: Use Pythagoras identity in L²
-  -- Since X₁ = μ[X₂ | m₁], we have ‖X₂‖² = ‖X₁‖² + ‖X₂ - X₁‖²
-  -- Combined with ∫ X₂² = ∫ X₁² gives ‖X₂ - X₁‖² = 0
+  classical
+  -- Promote X₁ to L² using the L² property of X₂.
+  have h_cond_mem : MemLp (μ[X₂ | m₁]) 2 μ := hL2.condExp (m := m₁)
+  have hX₁_mem : MemLp X₁ 2 μ := h_cond_mem.ae_eq (hmg.symm)
+  have h_diff_L2 : MemLp (X₂ - X₁) 2 μ := hL2.sub hX₁_mem
+  -- The squared difference is L¹-integrable.
+  have h_diff_mem : MemLp (X₂ - μ[X₂ | m₁]) 2 μ := hL2.sub h_cond_mem
+  have h_diff_sq_int :
+      Integrable (fun ω => (X₂ ω - μ[X₂ | m₁] ω) ^ 2) μ :=
+    h_diff_mem.integrable_sq
 
-  -- First, establish that X₁ is integrable (follows from being a conditional expectation)
-  have hX₁_int : Integrable X₁ μ := by
-    -- X₁ =ᵐ μ[X₂ | m₁] and conditional expectations are integrable
-    have : Integrable (μ[X₂ | m₁]) μ := integrable_condExp
-    exact Integrable.congr this hmg
+  -- Identify the integral of the conditional variance.
+  have h_integral_var :
+      ∫ ω, Var[X₂; μ | m₁] ω ∂μ
+        = ∫ ω, (X₂ ω)^2 ∂μ - ∫ ω, (X₁ ω)^2 ∂μ := by
+    have h_var_int :
+        Integrable (Var[X₂; μ | m₁]) μ := by
+      simpa [condVar] using
+        integrable_condExp (μ := μ) (m := m₁) (hm := hm₁)
+          (f := fun ω => (X₂ ω - μ[X₂ | m₁] ω) ^ 2) h_diff_sq_int
+    have h_mu_sq_int :
+        Integrable (μ[X₂ ^ 2 | m₁]) μ :=
+      integrable_condExp (μ := μ) (m := m₁) (hm := hm₁)
+        (f := fun ω => (X₂ ω) ^ 2) (hL2.integrable_sq)
+    have h_cond_sq_int :
+        Integrable (fun ω => (μ[X₂ | m₁] ω) ^ 2) μ :=
+      h_cond_mem.integrable_sq
+    have h_eq :=
+      condVar_ae_eq_condExp_sq_sub_sq_condExp (μ := μ) (m := m₁) (hm := hm₁)
+        (X := X₂) hL2
+    have h_congr :
+        ∫ ω, Var[X₂; μ | m₁] ω ∂μ
+          = ∫ ω, (μ[X₂ ^ 2 | m₁] ω - μ[X₂ | m₁] ω ^ 2) ∂μ :=
+      integral_congr_ae h_var_int (h_mu_sq_int.sub h_cond_sq_int) h_eq
+    have h_sub :=
+      integral_sub h_mu_sq_int h_cond_sq_int
+    have h_condExp_sq :
+        ∫ ω, μ[X₂ ^ 2 | m₁] ω ∂μ = ∫ ω, (X₂ ω) ^ 2 ∂μ :=
+      integral_condExp (μ := μ) (m := m₁) (hm := hm₁)
+        (f := fun ω => (X₂ ω) ^ 2)
+        (hL2.integrable_sq)
+    have h_sq_replace :
+        ∫ ω, (μ[X₂ | m₁] ω) ^ 2 ∂μ = ∫ ω, (X₁ ω) ^ 2 ∂μ :=
+      integral_congr_ae
+        (h_cond_sq_int)
+        (hX₁_mem.integrable_sq)
+        (hmg.mono fun ω hω => by simpa [hω])
+    calc
+      ∫ ω, Var[X₂; μ | m₁] ω ∂μ
+          = ∫ ω, (μ[X₂ ^ 2 | m₁] ω - μ[X₂ | m₁] ω ^ 2) ∂μ := h_congr
+      _ = (∫ ω, μ[X₂ ^ 2 | m₁] ω ∂μ)
+            - ∫ ω, (μ[X₂ | m₁] ω) ^ 2 ∂μ := h_sub
+      _ = ∫ ω, (X₂ ω) ^ 2 ∂μ - ∫ ω, (X₁ ω) ^ 2 ∂μ := by
+        simpa [h_sq_replace] using congrArg₂ Sub.sub h_condExp_sq rfl
 
-  -- Key: Show ∫ (X₂ - X₁)² = 0
-  -- By Pythagoras: ∫ X₂² = ∫ X₁² + ∫ (X₂ - X₁)²
-  -- Since ∫ X₂² = ∫ X₁² by hypothesis, we get ∫ (X₂ - X₁)² = 0
+  -- Replace the integral of the conditional variance with the integral of the squared deviation.
+  have h_integral_diff :
+      ∫ ω, (X₂ ω - X₁ ω) ^ 2 ∂μ = ∫ ω, Var[X₂; μ | m₁] ω ∂μ := by
+    have h_int :=
+      integral_condExp (μ := μ) (m := m₁) (hm := hm₁)
+        (f := fun ω => (X₂ ω - μ[X₂ | m₁] ω) ^ 2) h_diff_sq_int
+    have h_sq_eq :
+        (fun ω => (X₂ ω - μ[X₂ | m₁] ω) ^ 2)
+          =ᵐ[μ] fun ω => (X₂ ω - X₁ ω) ^ 2 :=
+      hmg.mono fun ω hω => by simpa [hω]
+    have h_sq_int : Integrable (fun ω => (X₂ ω - X₁ ω) ^ 2) μ :=
+      h_diff_L2.integrable_sq
+    calc
+      ∫ ω, (X₂ ω - X₁ ω) ^ 2 ∂μ
+          = ∫ ω, (X₂ ω - μ[X₂ | m₁] ω) ^ 2 ∂μ := integral_congr_ae h_sq_int h_diff_sq_int h_sq_eq.symm
+      _ = ∫ ω, Var[X₂; μ | m₁] ω ∂μ := by
+        simpa [condVar] using h_int.symm
 
-  sorry  -- TODO: Complete using L² orthogonality - all key lemmas verified:
-  --
-  -- Core mathlib lemmas:
-  -- 1. Lp.eq_zero_iff_ae_eq_zero : (f : Lp E p μ) = 0 ↔ f =ᵐ[μ] 0
-  --    (MeasureTheory.Function.LpSpace.Basic:298)
-  --
-  -- 2. norm_sub_sq : ‖x - y‖² = ‖x‖² - 2 * re ⟪x,y⟫ + ‖y‖²
-  --    (Analysis.InnerProductSpace.Basic:409)
-  --    For real inner products: ‖x - y‖² = ‖x‖² - 2⟪x,y⟫ + ‖y‖²
-  --
-  -- 3. inner_condExpL2_left_eq_right (hm : m ≤ m0) {f g : α →₂[μ] E} :
-  --      ⟪condExpL2 𝕜 E hm f, g⟫ = ⟪f, condExpL2 𝕜 E hm g⟫
-  --    (ConditionalExpectation.CondexpL2:103)
-  --    Key orthogonality: projection property of conditional expectation
-  --
-  -- 4. eLpNorm_eq_zero_iff {f : α → ε} (hf : AEStronglyMeasurable f μ) (h0 : p ≠ 0) :
-  --      eLpNorm f p μ = 0 ↔ f =ᵐ[μ] 0
-  --    (Function.LpSeminorm.Basic:993)
-  --
-  -- Strategy:
-  -- - Convert X₁, X₂ to L²[μ] using MemLp (we have hX₁_int, hInt and μ is probability)
-  -- - Let X₁' := condExpL2(X₂) so X₁ =ᵐ X₁' by hmg and MemLp.condExpL2_ae_eq_condExp
-  -- - Apply norm_sub_sq: ‖X₂ - X₁'‖² = ‖X₂‖² - 2⟪X₂,X₁'⟫ + ‖X₁'‖²
-  -- - Use inner_condExpL2_left_eq_right with g = X₁':
-  --     ⟪X₂, X₁'⟫ = ⟪X₂, condExpL2 X₂⟫ = ⟪condExpL2 X₂, condExpL2 X₂⟫ = ‖X₁'‖²
-  -- - Substitute: ‖X₂ - X₁'‖² = ‖X₂‖² - 2‖X₁'‖² + ‖X₁'‖² = ‖X₂‖² - ‖X₁'‖² = 0 (by hSecond)
-  -- - Apply Lp.eq_zero_iff_ae_eq_zero: X₂ - X₁' =ᵐ 0, thus X₁ =ᵐ X₂
+  -- Combine the previous identities to deduce that the squared deviation integrates to zero.
+  have h_diff_integral_zero :
+      ∫ ω, (X₂ ω - X₁ ω) ^ 2 ∂μ = 0 := by
+    simpa [hSecond, h_integral_var] using h_integral_diff
+
+  -- Use the L² inner product to deduce that X₂ - X₁ vanishes almost everywhere.
+  let diffLp := h_diff_L2.toLp (X₂ - X₁)
+  have h_diff_coe : diffLp =ᵐ[μ] fun ω => X₂ ω - X₁ ω :=
+    h_diff_L2.coeFn_toLp (X₂ - X₁)
+  have h_integrand_eq :
+      (fun ω => diffLp ω * diffLp ω)
+        =ᵐ[μ] fun ω => (X₂ ω - X₁ ω) ^ 2 := by
+    refine h_diff_coe.mono ?_
+    intro ω hω
+    simp [pow_two, hω] 
+  have h_integrable_prod :
+      Integrable (fun ω => diffLp ω * diffLp ω) μ :=
+    (h_diff_L2.integrable_sq.congr h_integrand_eq.symm)
+  have h_inner_zero :
+      (⟪diffLp, diffLp⟫ : ℝ) = 0 := by
+    calc
+      (⟪diffLp, diffLp⟫ : ℝ)
+          = ∫ ω, diffLp ω * diffLp ω ∂μ := inner_def _ _
+      _ = ∫ ω, (X₂ ω - X₁ ω) ^ 2 ∂μ :=
+        integral_congr_ae h_integrable_prod h_diff_L2.integrable_sq h_integrand_eq
+      _ = 0 := h_diff_integral_zero
+  have h_diffLp_zero : diffLp = 0 :=
+    inner_self_eq_zero.mp (by simpa using h_inner_zero)
+  have h_zero_mem : MemLp (fun _ : Ω => (0 : ℝ)) 2 μ := MemLp.zero
+  have h_zero_toLp :
+      h_zero_mem.toLp (fun _ : Ω => (0 : ℝ)) = (0 : Lp ℝ 2 μ) :=
+    MemLp.toLp_zero h_zero_mem
+  have h_diff_zero :
+      X₂ - X₁ =ᵐ[μ] fun _ : Ω => (0 : ℝ) := by
+    have h_Lp_eq :
+        diffLp = h_zero_mem.toLp (fun _ : Ω => (0 : ℝ)) := by
+      simpa [diffLp, h_zero_toLp] using h_diffLp_zero
+    exact
+      (MemLp.toLp_eq_toLp_iff (μ := μ) (p := (2 : ℝ≥0∞))
+        (f := X₂ - X₁) (g := fun _ : Ω => (0 : ℝ))
+        h_diff_L2 h_zero_mem).1 h_Lp_eq
+  have h_eq : X₂ =ᵐ[μ] X₁ :=
+    h_diff_zero.mono fun ω hω => sub_eq_zero.mp hω
+  exact h_eq.symm
 
 /-! ### Reverse Martingale Convergence -/
 
@@ -537,10 +774,19 @@ Use `Integrable.tendsto_ae_condexp` and `ae_eq_condExp_of_forall_setIntegral_eq`
 -/
 lemma reverse_martingale_convergence {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     [IsProbabilityMeasure μ] (𝒢 : ℕ → MeasurableSpace Ω)
+    (h_le : ∀ n, 𝒢 n ≤ m₀)
     (h_decr : ∀ n, 𝒢 (n + 1) ≤ 𝒢 n)
-    (X : Ω → ℝ) (hX_int : Integrable X μ) :
-    True :=
-  trivial
+    [∀ n, SigmaFinite (μ.trim (h_le n))]
+    (X : Ω → ℝ) (hX_int : Integrable X μ)
+    (hX_meas : StronglyMeasurable[⨅ n, 𝒢 n] X) :
+    (∀ᵐ ω ∂μ, Tendsto (fun n => μ[X | 𝒢 n] ω) atTop (𝓝 (μ[X | ⨅ n, 𝒢 n] ω))) ∧
+    Tendsto (fun n => eLpNorm (μ[X | 𝒢 n] - μ[X | ⨅ n, 𝒢 n]) 1 μ) atTop (𝓝 0) := by
+  -- Strategy: Convert decreasing 𝒢 to increasing filtration via OrderDual ℕ
+  -- Define ℱ : OrderDual ℕ → MeasurableSpace Ω by ℱ (toDual n) = 𝒢 n
+  -- Then ℱ is increasing (because 𝒢 is decreasing and OrderDual reverses order)
+  -- Apply Integrable.tendsto_ae_condExp and tendsto_eLpNorm_condExp
+
+  sorry -- TODO: Implement using OrderDual filtration and mathlib convergence theorems
 
 /-- Application to tail σ-algebras: convergence as we condition on
 increasingly coarse shifted processes.
