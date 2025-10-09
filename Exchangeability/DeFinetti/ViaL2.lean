@@ -263,12 +263,11 @@ section LpUtilities
 /-- Distance between `toLp` elements equals the `eLpNorm` of their difference. -/
 lemma dist_toLp_eq_eLpNorm_sub
   {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} {p : ENNReal}
-  (hp0 : p ≠ 0) (hptop : p ≠ ⊤)
   {f g : Ω → ℝ} (hf : MemLp f p μ) (hg : MemLp g p μ) :
   dist (hf.toLp f) (hg.toLp g)
     = ENNReal.toReal (eLpNorm (fun ω => f ω - g ω) p μ) := by
-  -- TODO: Fix Lp API changes
-  sorry
+  rw [Lp.dist_edist, Lp.edist_toLp_toLp]
+  rfl
 
 /-- Converting strict inequality through `ENNReal.toReal`. -/
 lemma toReal_lt_of_lt_ofReal {x : ENNReal} {ε : ℝ}
@@ -714,8 +713,7 @@ theorem weighted_sums_converge_L1
           dist (F m) (F ℓ) =
             ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ) := by
         simpa [F] using
-          dist_toLp_eq_eLpNorm_sub (hp0 := one_ne_zero) (hptop := ENNReal.coe_ne_top)
-            (hA_memLp 0 m) (hA_memLp 0 ℓ)
+          dist_toLp_eq_eLpNorm_sub (hA_memLp 0 m) (hA_memLp 0 ℓ)
       have hfin :
           eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ ≠ ⊤ :=
         (MemLp.sub (hA_memLp 0 m) (hA_memLp 0 ℓ)).eLpNorm_ne_top
@@ -745,8 +743,7 @@ theorem weighted_sums_converge_L1
         dist (F m) G =
           ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - G ω) 1 μ) := by
       simpa [F] using
-        dist_toLp_eq_eLpNorm_sub (hp0 := one_ne_zero) (hptop := ENNReal.coe_ne_top)
-          (hA_memLp 0 m) (Lp.memLp G)
+        dist_toLp_eq_eLpNorm_sub (hA_memLp 0 m) (Lp.memLp G)
     have hfin :
         eLpNorm (fun ω => A 0 m ω - G ω) 1 μ ≠ ⊤ :=
       (MemLp.sub (hA_memLp 0 m) (Lp.memLp G)).eLpNorm_ne_top
