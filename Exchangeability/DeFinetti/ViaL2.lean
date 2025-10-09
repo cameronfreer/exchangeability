@@ -400,9 +400,70 @@ lemma contractable_covariance_structure
       (∀ k, ∫ ω, (X k ω - m)^2 ∂μ = σSq) ∧
       (∀ i j, i ≠ j → ∫ ω, (X i ω - m) * (X j ω - m) ∂μ = σSq * ρ) ∧
       0 ≤ σSq ∧ -1 ≤ ρ ∧ ρ ≤ 1 := by
-  -- TODO: Fix integral_map API changes
-  -- Not needed for main proof (noted in comment above)
-  sorry
+  -- Strategy: Use contractability to show all marginals of same size have same distribution
+  -- This implies all X_i have the same mean and variance, and all pairs have same covariance
+
+  -- Define m as the mean of X_0 (all X_i have the same distribution by contractability)
+  let m := ∫ ω, X 0 ω ∂μ
+
+  -- All X_i have the same mean by contractability (single-variable marginal)
+  have hmean : ∀ k, ∫ ω, X k ω ∂μ = m := by
+    intro k
+    -- X_k has the same distribution as X_0 by contractability
+    -- This requires showing that the measure.map of a single variable is the same
+    sorry -- TODO: Apply contractability to size-1 subsequences
+
+  -- Define σSq as the variance of X_0
+  let σSq := ∫ ω, (X 0 ω - m)^2 ∂μ
+
+  -- All X_i have the same variance
+  have hvar : ∀ k, ∫ ω, (X k ω - m)^2 ∂μ = σSq := by
+    intro k
+    rw [← hmean k]
+    sorry -- TODO: Apply contractability to show same second moment
+
+  -- Define ρ from the covariance of (X_0, X_1)
+  have hσSq_nonneg : 0 ≤ σSq := by
+    apply integral_nonneg
+    intro ω
+    exact sq_nonneg _
+
+  by_cases hσSq_pos : 0 < σSq
+  · -- Case: positive variance
+    let ρ := (∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ) / σSq
+
+    -- All pairs have the same covariance
+    have hcov : ∀ i j, i ≠ j → ∫ ω, (X i ω - m) * (X j ω - m) ∂μ = σSq * ρ := by
+      intro i j hij
+      sorry -- TODO: Apply contractability to size-2 subsequences
+
+    -- Bound on ρ from Cauchy-Schwarz
+    have hρ_bd : -1 ≤ ρ ∧ ρ ≤ 1 := by
+      sorry -- TODO: Use Cauchy-Schwarz on the covariance
+
+    exact ⟨m, σSq, ρ, hmean, hvar, hcov, hσSq_nonneg, hρ_bd⟩
+
+  · -- Case: zero variance (all X_i are constant a.s.)
+    push_neg at hσSq_pos
+    have hσSq_zero : σSq = 0 := le_antisymm hσSq_pos hσSq_nonneg
+
+    -- When variance is 0, all X_i = m almost surely
+    have hX_const : ∀ i, ∀ᵐ ω ∂μ, X i ω = m := by
+      intro i
+      sorry -- TODO: variance 0 implies constant a.s.
+
+    -- Covariance is 0
+    have hcov : ∀ i j, i ≠ j → ∫ ω, (X i ω - m) * (X j ω - m) ∂μ = 0 := by
+      intro i j _
+      sorry -- TODO: constant implies 0 covariance
+
+    -- ρ = 0 works
+    use m, σSq, 0
+    refine ⟨hmean, hvar, ?_, hσSq_nonneg, ?_⟩
+    · intro i j hij
+      rw [hcov i j hij, hσSq_zero]
+      ring
+    · norm_num
 
 /-!
 ## Step 2: L² bound implies L¹ convergence of weighted sums (Kallenberg's key step)
