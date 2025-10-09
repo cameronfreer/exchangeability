@@ -72,7 +72,7 @@ The goal is to incrementally replace stubs with proofs as needed by the de Finet
 -/
 
 noncomputable section
-open scoped MeasureTheory ProbabilityTheory
+open scoped MeasureTheory ProbabilityTheory Topology
 open MeasureTheory Filter Set
 
 namespace Exchangeability.Probability
@@ -456,7 +456,7 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
       h_inner.trans <| EventuallyEq.mul EventuallyEq.rfl hProjt2
     have h_tower :=
       (condExp_condExp_of_le (μ := μ)
-          (hm₁₂ := le_sup_right : mG ≤ mF ⊔ mG)
+          (hm₁₂ := le_sup_right)
           (hm₂ := sup_le hmF hmG)
           (f := (t1 ∩ t2).indicator fun _ : Ω => (1 : ℝ))).symm
     have h_lhs :
@@ -791,27 +791,20 @@ lemma reverse_martingale_convergence {m₀ : MeasurableSpace Ω} {μ : Measure �
 /-- Application to tail σ-algebras: convergence as we condition on
 increasingly coarse shifted processes.
 
-Specialization of reverse_martingale_convergence where 𝒢 n = σ(θₙ X).
+Specialization of reverse_martingale_convergence where 𝒢 n is a decreasing
+family of σ-algebras (e.g., σ(θₙ X) for shifted processes).
+The tail σ-algebra is ⨅ n, 𝒢 n.
 -/
 lemma condexp_tendsto_tail {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → α) (hX_meas : ∀ n, Measurable (X n))
+    (𝒢 : ℕ → MeasurableSpace Ω)
+    (h_le : ∀ n, 𝒢 n ≤ m₀)
+    (h_decr : ∀ n, 𝒢 (n + 1) ≤ 𝒢 n)
+    [∀ n, SigmaFinite (μ.trim (h_le n))]
     (f : Ω → ℝ) (hf : Integrable f μ)
-    (hf_meas : StronglyMeasurable[DeFinetti.ViaMartingale.tailSigma X] f)
-    (h_le : ∀ n, DeFinetti.ViaMartingale.revFiltration X n ≤ m₀)
-    [∀ n, SigmaFinite (μ.trim (h_le n))] :
-    (∀ᵐ ω ∂μ, Tendsto (fun n => μ[f | DeFinetti.ViaMartingale.revFiltration X n] ω) atTop
-      (𝓝 (μ[f | DeFinetti.ViaMartingale.tailSigma X] ω))) ∧
-    Tendsto (fun n => eLpNorm (μ[f | DeFinetti.ViaMartingale.revFiltration X n] -
-      μ[f | DeFinetti.ViaMartingale.tailSigma X]) 1 μ) atTop (𝓝 0) := by
-  -- Apply reverse_martingale_convergence with 𝒢 n = revFiltration X n
-  have h_decr : ∀ n, DeFinetti.ViaMartingale.revFiltration X (n + 1) ≤
-      DeFinetti.ViaMartingale.revFiltration X n :=
-    fun n => DeFinetti.ViaMartingale.revFiltration_antitone X (Nat.le_succ n)
-  have h_tail_eq : DeFinetti.ViaMartingale.tailSigma X = ⨅ n, DeFinetti.ViaMartingale.revFiltration X n :=
-    DeFinetti.ViaMartingale.tailSigma_eq_iInf_rev X
-  rw [h_tail_eq] at hf_meas ⊢
-  exact reverse_martingale_convergence
-    (DeFinetti.ViaMartingale.revFiltration X) h_le h_decr f hf hf_meas
+    (hf_meas : StronglyMeasurable[⨅ n, 𝒢 n] f) :
+    (∀ᵐ ω ∂μ, Tendsto (fun n => μ[f | 𝒢 n] ω) atTop (𝓝 (μ[f | ⨅ n, 𝒢 n] ω))) ∧
+    Tendsto (fun n => eLpNorm (μ[f | 𝒢 n] - μ[f | ⨅ n, 𝒢 n]) 1 μ) atTop (𝓝 0) :=
+  reverse_martingale_convergence 𝒢 h_le h_decr f hf hf_meas
 
 /-! ### Distributional Equality and Conditional Expectations -/
 
