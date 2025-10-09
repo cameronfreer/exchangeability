@@ -439,7 +439,10 @@ lemma contractable_covariance_structure
 
     -- Bound on ρ from Cauchy-Schwarz
     have hρ_bd : -1 ≤ ρ ∧ ρ ≤ 1 := by
-      sorry -- TODO: Use Cauchy-Schwarz on the covariance
+      -- By Cauchy-Schwarz: |E[(X-m)(Y-m)]|² ≤ E[(X-m)²] · E[(Y-m)²]
+      -- For X_0, X_1: |Cov|² ≤ σ² · σ² = σ⁴
+      -- So |Cov| ≤ σ², and thus |ρ| = |Cov/σ²| ≤ 1
+      sorry -- TODO: Apply Cauchy-Schwarz for L² functions, use integral_mul_sq_le_sqrt_mul_sqrt or similar
 
     exact ⟨m, σSq, ρ, hmean, hvar, hcov, hσSq_nonneg, hρ_bd⟩
 
