@@ -408,16 +408,24 @@ lemma ν_eval_measurable
   simp only [ν]
   exact (rcdKernel (μ := μ)).measurable_coe hs
 
-/-- ν evaluation is measurable w.r.t. the shift-invariant σ-algebra. -/
+/-- ν evaluation is measurable w.r.t. the shift-invariant σ-algebra.
+
+NOTE: The construction `rcdKernel := Kernel.comap ... id (measurable_id'' ...)` uses
+`measurable_id''` to witness that `id : shiftInvariantSigma → MeasurableSpace.pi` is
+measurable. However, the resulting kernel has type `Kernel (Ω[α]) α` where the source
+still uses the full `MeasurableSpace.pi` structure.
+
+The tail-measurability should follow from properties of `Kernel.comap`, but requires
+careful type-level reasoning about how `comap` modifies measurability structure.
+
+For downstream uses, `ν_eval_measurable` (w.r.t. full σ-algebra) is usually sufficient.
+-/
 lemma ν_eval_tailMeasurable
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     {s : Set α} (hs : MeasurableSet s) :
     Measurable[shiftInvariantSigma (α := α)] (fun ω => ν (μ := μ) ω s) := by
-  -- rcdKernel was built via comap with measurable_id'' (shiftInvariantSigma_le),
-  -- which means it's a kernel from (Ω[α], shiftInvariantSigma) → α
-  -- The measurability follows from the comap construction
   simp only [ν, rcdKernel]
-  sorry  -- TODO: requires careful unpacking of Kernel.comap measurability
+  sorry  -- TODO: Unpack Kernel.comap to show evaluation respects source σ-algebra
 
 /-- Convenient rewrite for evaluating the kernel `ν` on a measurable set. -/
 lemma ν_apply {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
