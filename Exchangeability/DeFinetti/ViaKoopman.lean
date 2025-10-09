@@ -399,6 +399,26 @@ noncomputable def ν {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] : Ω[α] → Measure α :=
   fun ω => (rcdKernel (μ := μ)) ω
 
+/-- ν evaluation on measurable sets is measurable in the parameter. -/
+lemma ν_eval_measurable
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    {s : Set α} (hs : MeasurableSet s) :
+    Measurable (fun ω => ν (μ := μ) ω s) := by
+  -- Kernel evaluation is measurable in the parameter for measurable sets
+  simp only [ν]
+  exact (rcdKernel (μ := μ)).measurable_coe hs
+
+/-- ν evaluation is measurable w.r.t. the shift-invariant σ-algebra. -/
+lemma ν_eval_tailMeasurable
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    {s : Set α} (hs : MeasurableSet s) :
+    Measurable[shiftInvariantSigma (α := α)] (fun ω => ν (μ := μ) ω s) := by
+  -- rcdKernel was built via comap with measurable_id'' (shiftInvariantSigma_le),
+  -- which means it's a kernel from (Ω[α], shiftInvariantSigma) → α
+  -- The measurability follows from the comap construction
+  simp only [ν, rcdKernel]
+  sorry  -- TODO: requires careful unpacking of Kernel.comap measurability
+
 /-- Convenient rewrite for evaluating the kernel `ν` on a measurable set. -/
 lemma ν_apply {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (ω : Ω[α]) (s : Set α) (hs : MeasurableSet s) :
@@ -714,8 +734,8 @@ lemma ν_ae_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
   -- This is provable but requires careful setup with StandardBorelSpace infrastructure
   sorry  -- AXIOM: condExpKernel shift-invariance (provable using mathlib infrastructure above)
 
+set_option linter.unusedSectionVars false in
 /-- Helper: shift^[k] y n = y (n + k) -/
-omit [MeasurableSpace α] in
 lemma shift_iterate_apply (k n : ℕ) (y : Ω[α]) :
     (shift (α := α))^[k] y n = y (n + k) := by
   induction k generalizing n with
@@ -726,6 +746,7 @@ lemma shift_iterate_apply (k n : ℕ) (y : Ω[α]) :
     rw [ih]
     ring_nf
 
+set_option linter.unusedSectionVars false in
 /-- The k-th coordinate equals the 0-th coordinate after k shifts. -/
 lemma coord_k_eq_coord_0_shift_k (k : ℕ) :
     (fun y : Ω[α] => y k) = (fun y => y 0) ∘ (shift (α := α))^[k] := by
