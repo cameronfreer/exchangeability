@@ -399,6 +399,34 @@ noncomputable def ν {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] : Ω[α] → Measure α :=
   fun ω => (rcdKernel (μ := μ)) ω
 
+/-- ν evaluation on measurable sets is measurable in the parameter. -/
+lemma ν_eval_measurable
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    {s : Set α} (hs : MeasurableSet s) :
+    Measurable (fun ω => ν (μ := μ) ω s) := by
+  -- Kernel evaluation is measurable in the parameter for measurable sets
+  simp only [ν]
+  exact (rcdKernel (μ := μ)).measurable_coe hs
+
+/-- ν evaluation is measurable w.r.t. the shift-invariant σ-algebra.
+
+NOTE: The construction `rcdKernel := Kernel.comap ... id (measurable_id'' ...)` uses
+`measurable_id''` to witness that `id : shiftInvariantSigma → MeasurableSpace.pi` is
+measurable. However, the resulting kernel has type `Kernel (Ω[α]) α` where the source
+still uses the full `MeasurableSpace.pi` structure.
+
+The tail-measurability should follow from properties of `Kernel.comap`, but requires
+careful type-level reasoning about how `comap` modifies measurability structure.
+
+For downstream uses, `ν_eval_measurable` (w.r.t. full σ-algebra) is usually sufficient.
+-/
+lemma ν_eval_tailMeasurable
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    {s : Set α} (hs : MeasurableSet s) :
+    Measurable[shiftInvariantSigma (α := α)] (fun ω => ν (μ := μ) ω s) := by
+  simp only [ν, rcdKernel]
+  sorry  -- TODO: Unpack Kernel.comap to show evaluation respects source σ-algebra
+
 /-- Convenient rewrite for evaluating the kernel `ν` on a measurable set. -/
 lemma ν_apply {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (ω : Ω[α]) (s : Set α) (hs : MeasurableSet s) :
@@ -714,8 +742,8 @@ lemma ν_ae_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
   -- This is provable but requires careful setup with StandardBorelSpace infrastructure
   sorry  -- AXIOM: condExpKernel shift-invariance (provable using mathlib infrastructure above)
 
+set_option linter.unusedSectionVars false in
 /-- Helper: shift^[k] y n = y (n + k) -/
-omit [MeasurableSpace α] in
 lemma shift_iterate_apply (k n : ℕ) (y : Ω[α]) :
     (shift (α := α))^[k] y n = y (n + k) := by
   induction k generalizing n with
@@ -726,6 +754,7 @@ lemma shift_iterate_apply (k n : ℕ) (y : Ω[α]) :
     rw [ih]
     ring_nf
 
+set_option linter.unusedSectionVars false in
 /-- The k-th coordinate equals the 0-th coordinate after k shifts. -/
 lemma coord_k_eq_coord_0_shift_k (k : ℕ) :
     (fun y : Ω[α] => y k) = (fun y => y 0) ∘ (shift (α := α))^[k] := by
@@ -849,6 +878,71 @@ lemma identicalConditionalMarginals_integral
     _ =ᵐ[μ] μ[fun ω => f (π0 ω) | shiftInvariantSigma (α := α)] := h_shift_ce
     _ =ᵐ[μ] fun ω => ∫ y, f (π0 y) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω) := h_rhs
     _ =ᵐ[μ] fun ω => ∫ x, f x ∂(ν (μ := μ) ω) := h_to_nu
+
+/-- **Wrapper**: For bounded measurable `f : α → ℝ`, the k-th coordinate integral through
+the kernel agrees a.e. with integrating against `ν`. -/
+lemma coord_integral_via_ν
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ) (k : ℕ)
+    {f : α → ℝ} (hf : Measurable f) (hbd : ∃ C, ∀ x, |f x| ≤ C) :
+    ∀ᵐ ω ∂μ,
+      ∫ y, f (y k) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)
+        = ∫ x, f x ∂(ν (μ := μ) ω) :=
+  identicalConditionalMarginals_integral (μ := μ) (α := α) hσ k hf hbd
+
+/-- **Wrapper**: Special case for indicators - coordinate k measures agree with ν. -/
+lemma coord_indicator_via_ν
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ) (k : ℕ)
+    {s : Set α} (hs : MeasurableSet s) :
+    ∀ᵐ ω ∂μ,
+      (condExpKernel μ (shiftInvariantSigma (α := α)) ω)
+        ((fun y : Ω[α] => y k) ⁻¹' s)
+      = ν (μ := μ) ω s := by
+  -- Use the integral version with f := indicator of s
+  have hf : Measurable (s.indicator fun _ : α => (1 : ℝ)) :=
+    measurable_const.indicator hs
+  have hbd : ∃ C, ∀ x, |(s.indicator fun _ : α => (1 : ℝ)) x| ≤ C :=
+    ⟨1, by intro x; by_cases hx : x ∈ s <;> simp [Set.indicator, hx]⟩
+  have := coord_integral_via_ν (μ := μ) (α := α) hσ k hf hbd
+  filter_upwards [this] with ω hω
+  -- hω: ∫ indicator(s)(y k) d(condExpKernel) = ∫ indicator(s)(x) dν
+  -- Convert to measure equality using integral_indicator_one
+
+  -- LHS: need to show the integral equals the measure of the preimage
+  have lhs_meas : MeasurableSet ((fun y : Ω[α] => y k) ⁻¹' s) :=
+    measurable_pi_apply k hs
+
+  have lhs_eq : ∫ y, (s.indicator fun _ => (1 : ℝ)) (y k)
+        ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)
+      = ((condExpKernel μ (shiftInvariantSigma (α := α)) ω)
+          ((fun y : Ω[α] => y k) ⁻¹' s)).toReal := by
+    -- The indicator (s.indicator 1) ∘ (y ↦ y k) equals the indicator of the preimage
+    have h_preimage : (fun y => s.indicator (fun _ => (1 : ℝ)) (y k))
+          = ((fun y : Ω[α] => y k) ⁻¹' s).indicator 1 := by
+      funext y
+      simp only [Set.indicator, Set.mem_preimage, Pi.one_apply]
+      by_cases h : y k ∈ s <;> simp [h]
+    conv_lhs => rw [h_preimage]
+    rw [integral_indicator_one lhs_meas]
+    simp only [Measure.real]
+
+  have rhs_eq : ∫ x, (s.indicator fun _ => (1 : ℝ)) x ∂(ν (μ := μ) ω)
+      = (ν (μ := μ) ω s).toReal := by
+    have h_indicator : (s.indicator fun _ => (1 : ℝ)) = s.indicator 1 := by
+      ext x
+      simp only [Set.indicator, Pi.one_apply]
+      split_ifs <;> rfl
+    rw [h_indicator, integral_indicator_one hs, Measure.real]
+
+  -- Combine: toReal equality implies ENNReal equality (for finite measures)
+  have h_toReal : ((condExpKernel μ (shiftInvariantSigma (α := α)) ω)
+          ((fun y : Ω[α] => y k) ⁻¹' s)).toReal
+        = (ν (μ := μ) ω s).toReal := by
+    rw [← lhs_eq, ← rhs_eq]
+    exact hω
+
+  exact (ENNReal.toReal_eq_toReal_iff' (measure_ne_top _ _) (measure_ne_top _ _)).mp h_toReal
 
 /-- **Bridge between kernel-level and measure-level independence for integrals.**
 

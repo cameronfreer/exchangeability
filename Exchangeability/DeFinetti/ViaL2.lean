@@ -378,7 +378,7 @@ lemma eLpNorm_two_from_integral_sq_le
   -- For p=2, eLpNorm g 2 μ = (∫ ‖g‖²)^(1/2)
   -- Given ∫ g² ≤ C, we have ∫ ‖g‖² ≤ C (since ‖g‖² = g² for real g)
   -- Therefore (∫ ‖g‖²)^(1/2) ≤ C^(1/2) = √C
-  sorry -- TODO: Need correct API for eLpNorm^2 = ∫ ‖·‖²
+  sorry
 
 end LpUtilities
 
@@ -440,7 +440,7 @@ lemma mem_window_iff {n k t : ℕ} :
 /-- Cardinality of Fin values less than k in Fin (2*k) -/
 private lemma card_fin_lt_k {k : ℕ} :
     (Finset.univ.filter (fun i : Fin (2 * k) => i.val < k)).card = k := by
-  sorry
+  sorry -- TODO: Prove that the filter has exactly k elements
 
 /-- The supremum of |p i - q i| for two-window weights -/
 private lemma sup_two_window_weights {k : ℕ} (hk : 0 < k)
@@ -513,6 +513,30 @@ lemma l2_bound_two_windows_uniform
     sorry  -- This requires showing contractable_covariance_structure is deterministic
   rw [← hCf_eq]
   exact hbound
+
+/-- Long average vs tail average bound: Comparing the average of the first m terms
+with the average of the last k terms (where k ≤ m) has the same L² contractability bound.
+
+This is the key lemma needed to complete the Cauchy argument in weighted_sums_converge_L1.
+-/
+private lemma l2_bound_long_vs_tail
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (f : ℝ → ℝ) (hf_meas : Measurable f)
+    (hf_bdd : ∃ M, ∀ x, |f x| ≤ M)
+    (Cf : ℝ) (hCf_nonneg : 0 ≤ Cf)
+    (hCf_unif : ∀ (n m k : ℕ), 0 < k →
+      ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
+            (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ ≤ Cf / k)
+    (n m k : ℕ) (hk : 0 < k) (hkm : k ≤ m) :
+    ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
+          (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
+      ≤ Cf / k := by
+  -- The difference can be bounded using the contractability bound
+  -- Key insight: express as weighted average difference with sup weight |p - q| ≤ 1/k
+  sorry
 
 theorem weighted_sums_converge_L1
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -660,14 +684,35 @@ theorem weighted_sums_converge_L1
       ∫ ω, (A (ℓ - k) k ω - A 0 k ω)^2 ∂μ ≤ Cf / k := by
       simpa [A] using hCf_unif (ℓ - k) 0 k hk_pos
 
+    -- Long vs tail comparisons for h1_L2 and h3_L2
+    have hkm : k ≤ m := Nat.min_le_left m ℓ
+    have hkℓ : k ≤ ℓ := Nat.min_le_right m ℓ
+
+    have h1sq_long :
+      ∫ ω, (A 0 m ω - A (m - k) k ω)^2 ∂μ ≤ Cf / k := by
+      simpa [A] using l2_bound_long_vs_tail X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
+        Cf hCf_nonneg hCf_unif 0 m k hk_pos hkm
+
+    have h3sq_long :
+      ∫ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 ∂μ ≤ Cf / k := by
+      have : ∫ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 ∂μ
+           = ∫ ω, (A 0 ℓ ω - A (ℓ - k) k ω)^2 ∂μ := by
+        congr 1; ext ω; ring_nf
+      rw [this]
+      simpa [A] using l2_bound_long_vs_tail X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
+        Cf hCf_nonneg hCf_unif 0 ℓ k hk_pos hkℓ
+
     -- Convert each integral bound to an L² eLpNorm bound
     -- For now, use the uniform bound - we need bounds that match the triangle inequality terms
     -- Term 1: eLpNorm (A 0 m - A (m-k) k)
-    -- This compares a long average with its tail - needs different approach
+    -- This compares a long average with its tail - uses l2_bound_long_vs_tail
     have h1_L2 :
       eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
         ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
-      sorry -- TODO: Need to show long average vs tail bound
+      apply eLpNorm_two_from_integral_sq_le
+      · exact (hA_memLp_two 0 m).sub (hA_memLp_two (m - k) k)
+      · exact div_nonneg hCf_nonneg (Nat.cast_nonneg k)
+      · exact h1sq_long
     have h2_L2 :
       eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
         ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
@@ -678,7 +723,10 @@ theorem weighted_sums_converge_L1
     have h3_L2 :
       eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ
         ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
-      sorry -- TODO: Symmetric to h1_L2
+      apply eLpNorm_two_from_integral_sq_le
+      · exact (hA_memLp_two (ℓ - k) k).sub (hA_memLp_two 0 ℓ)
+      · exact div_nonneg hCf_nonneg (Nat.cast_nonneg k)
+      · exact h3sq_long
 
     -- Triangle inequality on three segments:
     -- (A 0 m - A 0 ℓ) = (A 0 m - A (m - k) k) + (A (m - k) k - A (ℓ - k) k) + (A (ℓ - k) k - A 0 ℓ)
