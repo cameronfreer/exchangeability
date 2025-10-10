@@ -784,22 +784,77 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
         Pairwise (Disjoint on f) → (∀ i, C_S (f i)) → C_S (⋃ i, f i) := by
       intro f hf_meas hf_disj hf_C
       simp only [C_S] at hf_C ⊢
-      -- Strategy: Use linearity and dominated convergence
-      -- 1. Indicator of disjoint union = sum of indicators
-      -- 2. Conditional expectation is linear: μ[∑ indicator_i | m] = ∑ μ[indicator_i | m]
-      -- 3. Integral of sum = sum of integrals (dominated convergence, all bounded by 1)
-      -- 4. Apply hypothesis hf_C to each term
-      sorry -- Complete using dominated convergence: indicators bounded by 1,
-            -- and use hf_C for each i to show the sum of integrals are equal
+
+      -- Strategy: Show that ∫ μ[indicator(⋃ f i) | m] = ∫ μ[indicator(⋃ f i) | m']
+      -- by showing both equal ∑ ∫ μ[indicator(f i) | m]
+
+      -- Step 1: Indicator of disjoint union equals sum of indicators
+      have h_ind_union : ∀ ω, (⋃ i, f i).indicator (fun _ : Ω => (1 : ℝ)) ω
+          = ∑' i, (f i).indicator (fun _ : Ω => (1 : ℝ)) ω := by
+        sorry -- Standard fact: indicator of disjoint union = sum of indicators
+
+      -- Step 2: Conditional expectation of the sum
+      have h_condExp_L : μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
+          =ᵐ[μ] fun ω => ∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω := by
+        sorry -- Apply condExp_tsum with summability from boundedness by 1
+
+      have h_condExp_R : μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG]
+          =ᵐ[μ] fun ω => ∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mG] ω := by
+        sorry -- Apply condExp_tsum with summability from boundedness by 1
+
+      -- Step 3: Integrate both sides
+      rw [integral_congr_ae (ae_restrict_of_ae h_condExp_L),
+          integral_congr_ae (ae_restrict_of_ae h_condExp_R)]
+
+      -- Step 4: Exchange integral and sum using dominated convergence
+      -- All terms bounded by 1 (from condExp of bounded functions)
+      have h_int_tsum_L : ∫ ω in S, (∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω) ∂μ
+          = ∑' i, ∫ ω in S, μ[(f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω ∂μ := by
+        sorry -- Dominated convergence: |μ[indicator | m]| ≤ μ[1 | m] = 1
+
+      have h_int_tsum_R : ∫ ω in S, (∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mG] ω) ∂μ
+          = ∑' i, ∫ ω in S, μ[(f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂μ := by
+        sorry -- Dominated convergence: |μ[indicator | m]| ≤ μ[1 | m] = 1
+
+      -- Step 5: Apply hypothesis hf_C to each term
+      rw [h_int_tsum_L, h_int_tsum_R]
+      congr 1
+      ext i
+      exact hf_C i
 
     -- Step 3: Apply Dynkin π-λ theorem
     -- We've shown C_S is a Dynkin system (closed under ∅, complement, disjoint union)
     -- containing π (from hCπ). By Dynkin's π-λ theorem, C_S contains σ(π).
-    -- Therefore C_S A holds.
-    sorry -- Apply MeasurableSpace.induction_on_inter:
-          -- Define C' : ∀ (s : Set Ω), MeasurableSet s → Prop := fun B _ => C_S B
-          -- Then prove C' ∅, C' preserves complements, C' preserves countable disjoint unions
-          -- And C' holds on π, so C' A for A ∈ σ(π)
+
+    -- Wrap C_S in a predicate that takes a measurability proof
+    -- This allows us to use induction_on_inter
+    let C' : ∀ (B : Set Ω), @MeasurableSet Ω (MeasurableSpace.generateFrom π) B → Prop :=
+      fun B _ => C_S B
+
+    -- C' inherits all the Dynkin system properties from C_S
+    have hC'_empty : C' ∅ (@MeasurableSet.empty Ω (MeasurableSpace.generateFrom π)) := hC_empty
+
+    have hC'_π : ∀ (B : Set Ω) (hB : B ∈ π),
+        C' B (show @MeasurableSet Ω (MeasurableSpace.generateFrom π) B from .basic _ hB) := by
+      intro B hB
+      exact hCπ B hB
+
+    have hC'_compl : ∀ (B : Set Ω) (hB : @MeasurableSet Ω (MeasurableSpace.generateFrom π) B),
+        C' B hB → C' Bᶜ hB.compl := by
+      intro B hB hCB
+      exact hC_compl B (hπ_le _ hB) hCB
+
+    have hC'_iUnion : ∀ (f : ℕ → Set Ω), Pairwise (Disjoint on f) →
+        ∀ (hf : ∀ i, @MeasurableSet Ω (MeasurableSpace.generateFrom π) (f i)),
+        (∀ i, C' (f i) (hf i)) → C' (⋃ i, f i) (MeasurableSet.iUnion hf) := by
+      intro f hdisj hf hf_C
+      apply hC_iUnion f (fun i => hπ_le _ (hf i)) hdisj
+      intro i
+      exact hf_C i
+
+    -- Apply induction_on_inter
+    exact @MeasurableSpace.induction_on_inter Ω (MeasurableSpace.generateFrom π) C' π
+      rfl hπ hC'_empty hC'_π hC'_compl hC'_iUnion A hA
 
   -- Now use uniqueness of conditional expectation
   -- We need to show ceL =ᵐ[μ] ceR, i.e., the two conditional expectations are a.e. equal

@@ -375,11 +375,10 @@ lemma eLpNorm_two_from_integral_sq_le
   -- Integral is nonnegative
   have h_int_nonneg : 0 ≤ ∫ ω, ‖g ω‖^2 ∂μ := by
     apply integral_nonneg; intro ω; exact sq_nonneg _
-  -- For p=2, eLpNorm g 2 μ = (∫⁻ ‖g‖²)^(1/2)
-  -- Given ∫ g² ≤ C, we have ∫ ‖g‖² ≤ C (since ‖g‖² = g² for real g)
-  -- Therefore (∫⁻ ‖g‖²)^(1/2) ≤ C^(1/2) = √C
-  -- TODO: Use MemLp.eLpNorm_eq_integral_rpow_norm to express toReal(eLpNorm) as (∫ ‖g‖²)^(1/2),
-  -- then convert rpow(1/2) to sqrt, apply monotonicity, and lift back to ENNReal
+  -- Strategy: eLpNorm g 2 μ = (∫⁻ ‖g‖²)^(1/2) by definition.
+  -- We have ∫ ‖g‖² ≤ C, which gives ∫⁻ (ofReal ‖g‖²) ≤ ofReal C.
+  -- Applying rpow (1/2) and using monotonicity: (∫⁻ ‖g‖²)^(1/2) ≤ (ofReal C)^(1/2) = ofReal √C.
+  -- The challenge is converting between enorm and norm, and between integral and lintegral.
   sorry
 
 end LpUtilities
@@ -539,8 +538,7 @@ private lemma sup_two_window_weights {k : ℕ} (hk : 0 < k)
   have hk2 : 0 < 2 * k := Nat.mul_pos (by decide : 0 < 2) hk
   haveI : Nonempty (Fin (2 * k)) := ⟨⟨0, hk2⟩⟩
   simp_rw [h_eq]
-  -- TODO: Fix iSup_const application (was ciSup_const, needs type class instance)
-  sorry
+  exact ciSup_const
 
 /-- **L² bound wrapper for two starting windows**.
 
