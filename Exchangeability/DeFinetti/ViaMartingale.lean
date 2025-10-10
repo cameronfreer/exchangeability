@@ -488,239 +488,24 @@ lemma contractable_dist_eq_on_first_r_tail
   -- unfold and conclude
   simpa [hE₁, hE₂, Measure.map_apply, hA] using this
 
-/-- Equality of pushforward measures on basic rectangles using the first-tail cylinders. -/
-lemma contractable_dist_eq_on_rectangles
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {X : ℕ → Ω → α} (hX : Contractable μ X)
-    (k m : ℕ) (hk : k ≤ m) :
-    ∀ (r : ℕ) (B : Set α) (hB : MeasurableSet B)
-      (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i)),
-      (Measure.map (fun ω => (X m ω, shiftRV X m ω)) μ)
-          (B ×ˢ tailCylinder (α:=α) r C)
-        =
-      (Measure.map (fun ω => (X k ω, shiftRV X m ω)) μ)
-          (B ×ˢ tailCylinder (α:=α) r C) := by
-  classical
-  intro r B hB C hC
-  let ψ₁ : Ω → α × (ℕ → α) := fun ω => (X m ω, shiftRV X m ω)
-  let ψ₂ : Ω → α × (ℕ → α) := fun ω => (X k ω, shiftRV X m ω)
-  have hmeas :
-      MeasurableSet (B ×ˢ tailCylinder (α:=α) r C) :=
-    hB.prod (tailCylinder_measurable (α:=α) hC)
-  have hpre₁ :
-      ψ₁ ⁻¹' (B ×ˢ tailCylinder (α:=α) r C)
-        = {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
-    ext ω; simp [ψ₁, tailCylinder, shiftRV, Set.mem_prod, Set.preimage,
-      Set.mem_setOf_eq]
-  have hpre₂ :
-      ψ₂ ⁻¹' (B ×ˢ tailCylinder (α:=α) r C)
-        = {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
-    ext ω; simp [ψ₂, tailCylinder, shiftRV, Set.mem_prod, Set.preimage,
-      Set.mem_setOf_eq]
-  have h :=
-    contractable_dist_eq_on_first_r_tail (μ:=μ) (X:=X) hX k m r hk B hB C hC
-  simpa [ψ₁, ψ₂, Measure.map_apply, hmeas, hpre₁, hpre₂] using h
-
-/-- If two measures on `α × (ℕ → α)` agree on rectangles coming from the first-tail
-coordinates, then they are equal. -/
-lemma prod_path_measure_ext
-    {μ ν : Measure (α × (ℕ → α))}
-    (h : ∀ (r : ℕ) (B : Set α) (hB : MeasurableSet B)
-          (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i)),
-          μ (B ×ˢ tailCylinder (α:=α) r C)
-            = ν (B ×ˢ tailCylinder (α:=α) r C)) :
-    μ = ν := by
-  -- Strategy: Use Measure.ext_of_generateFrom_of_cover with the π-system of rectangles
-  --
-  -- The π-system S consists of all rectangles B ×ˢ tailCylinder r C
-  -- where B is measurable in α and C i are measurable for each i < r.
-  --
-  -- Key facts:
-  -- 1. S is a π-system (closed under intersections)
-  -- 2. S generates the product σ-algebra on α × (ℕ → α)
-  -- 3. μ and ν agree on S by hypothesis
-  -- 4. Both measures are σ-finite (as products of σ-finite measures)
-
-  -- Define the π-system of rectangles
-  let S : Set (Set (α × (ℕ → α))) :=
-    {s | ∃ (r : ℕ) (B : Set α) (hB : MeasurableSet B)
-           (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i)),
-           s = B ×ˢ tailCylinder r C}
-
-  -- Show S is a π-system
-  have h_pi : IsPiSystem S := by
-    intro s₁ hs₁ s₂ hs₂ _
-    obtain ⟨r₁, B₁, hB₁, C₁, hC₁, rfl⟩ := hs₁
-    obtain ⟨r₂, B₂, hB₂, C₂, hC₂, rfl⟩ := hs₂
-    -- (B₁ ×ˢ tailCylinder r₁ C₁) ∩ (B₂ ×ˢ tailCylinder r₂ C₂)
-    -- = (B₁ ∩ B₂) ×ˢ (tailCylinder r₁ C₁ ∩ tailCylinder r₂ C₂)
-    -- The intersection of two tail cylinders is a tail cylinder with r = max r₁ r₂
-
-    -- Take r = max r₁ r₂
-    let r := max r₁ r₂
-
-    -- Define C for the intersection: combines C₁ and C₂
-    let C : Fin r → Set α := fun i =>
-      if h : i.1 < r₁ then
-        if h' : i.1 < r₂ then C₁ ⟨i.1, h⟩ ∩ C₂ ⟨i.1, h'⟩ else C₁ ⟨i.1, h⟩
-      else if h' : i.1 < r₂ then C₂ ⟨i.1, h'⟩ else Set.univ
-
-    have hC : ∀ i, MeasurableSet (C i) := by
-      intro i
-      simp only [C]
-      split_ifs with h1 h2 h3
-      · exact (hC₁ ⟨i.1, h1⟩).inter (hC₂ ⟨i.1, h2⟩)
-      · exact hC₁ ⟨i.1, h1⟩
-      · exact hC₂ ⟨i.1, h3⟩
-      · exact MeasurableSet.univ
-
-    -- Show the intersection equals this rectangle
-    use r, B₁ ∩ B₂, hB₁.inter hB₂, C, hC
-
-    ext ⟨a, f⟩
-    simp only [Set.mem_inter_iff, Set.mem_prod, tailCylinder]
-    constructor
-    · intro ⟨⟨ha₁, hf₁⟩, ⟨ha₂, hf₂⟩⟩
-      refine ⟨⟨ha₁, ha₂⟩, ?_⟩
-      intro i
-      simp only [C]
-      by_cases h1 : i.1 < r₁
-      · by_cases h2 : i.1 < r₂
-        · simp [h1, h2]
-          exact ⟨hf₁ ⟨i.1, h1⟩, hf₂ ⟨i.1, h2⟩⟩
-        · simp [h1, h2]
-          exact hf₁ ⟨i.1, h1⟩
-      · by_cases h2 : i.1 < r₂
-        · simp [h1, h2]
-          exact hf₂ ⟨i.1, h2⟩
-        · simp [h1, h2]
-    · intro ⟨⟨ha₁, ha₂⟩, hf⟩
-      refine ⟨⟨ha₁, ?_⟩, ⟨ha₂, ?_⟩⟩
-      · intro i
-        have : i.1 < r := Nat.lt_of_lt_of_le i.2 (Nat.le_max_left r₁ r₂)
-        have hi := hf ⟨i.1, this⟩
-        simp only [C] at hi
-        simp [i.2] at hi
-        exact hi.1
-      · intro i
-        have : i.1 < r := Nat.lt_of_lt_of_le i.2 (Nat.le_max_right r₁ r₂)
-        have hi := hf ⟨i.1, this⟩
-        simp only [C] at hi
-        by_cases h1 : i.1 < r₁
-        · simp [h1, i.2] at hi
-          exact hi.2
-        · simp [h1, i.2] at hi
-          exact hi
-
-  -- Show S generates the product σ-algebra
-  have h_gen : (inferInstance : MeasurableSpace (α × (ℕ → α))) = MeasurableSpace.generateFrom S := by
-    -- Strategy: Show both directions of inclusion
-    -- 1. MeasurableSpace.generateFrom S ≤ product σ-algebra (every rectangle is measurable)
-    -- 2. Product σ-algebra ≤ MeasurableSpace.generateFrom S (generators of product are in generateFrom S)
-
-    apply le_antisymm
-
-    -- Direction 1: generateFrom S ≤ product σ-algebra
-    · apply MeasurableSpace.generateFrom_le
-      intro s ⟨r, B, hB, C, hC, rfl⟩
-      -- B ×ˢ tailCylinder r C is measurable in the product
-      apply MeasurableSet.prod hB
-      exact tailCylinder_measurable hC
-
-    -- Direction 2: product σ-algebra ≤ generateFrom S
-    · -- Strategy: show that the generators of the product σ-algebra are in generateFrom S
-      -- The product σ-algebra is sup of two comaps: comap Prod.fst and comap Prod.snd
-
-      -- Prod.instMeasurableSpace = comap Prod.fst ⊔ comap Prod.snd
-      rw [MeasurableSpace.prod_eq]
-      apply sup_le
-
-      -- Show comap Prod.fst ≤ generateFrom S
-      · rw [MeasurableSpace.comap_le_iff_le_map]
-        apply MeasurableSpace.generateFrom_le
-        intro A hA
-        -- Need to show Prod.fst ⁻¹' A ∈ generateFrom S
-        -- This is A × univ which equals A ×ˢ tailCylinder 0 (fun _ => univ)
-        have : Prod.fst ⁻¹' A = A ×ˢ Set.univ := by
-          ext ⟨a, f⟩
-          simp
-        rw [this]
-        have : A ×ˢ Set.univ = A ×ˢ tailCylinder 0 (fun _ => Set.univ) := by
-          ext ⟨a, f⟩
-          simp [tailCylinder]
-        rw [this]
-        apply MeasurableSpace.measurableSet_generateFrom
-        exact ⟨0, A, hA, (fun _ => Set.univ), (fun _ => MeasurableSet.univ), rfl⟩
-
-      -- Show comap Prod.snd ≤ generateFrom S
-      · -- Strategy: Show that generating sets for Pi.measurableSpace pull back to generateFrom S
-        rw [MeasurableSpace.comap_le_iff_le_map]
-        apply MeasurableSpace.generateFrom_le
-        intro B hB
-        -- B has form {f | f i ∈ C} for some i : ℕ and measurable C
-        -- The measurable space on (ℕ → α) is Pi.measurableSpace,
-        -- generated by sets of the form {f | f i ∈ C}
-
-        -- We need: Prod.snd ⁻¹' B ∈ generateFrom S, i.e., Set.univ ×ˢ B ∈ generateFrom S
-
-        -- The challenge is that Pi.measurableSpace is generated by a complex family of sets.
-        -- For a rigorous proof, we would need to:
-        -- 1. Characterize the generators of Pi.measurableSpace explicitly
-        -- 2. Show each generator {f | f n ∈ C} for n : ℕ can be expressed via S
-        --    - Case n = 0: Not directly in S (would need first coordinate to vary)
-        --    - Case n > 0: Use tailCylinder with r = n and only C(n-1) non-trivial
-        -- 3. Use closure properties of generateFrom
-
-        -- This is technically intricate. The mathematical content is clear:
-        -- tailCylinder accesses all f(i) for i ≥ 1, and combined with varying the
-        -- first coordinate in products, we can access all coordinates of f.
-
-        -- For now, accepting as axiom:
-        sorry -- TODO: Formalize using generators of Pi.measurableSpace
-
-  -- Show μ and ν agree on S
-  have h_agree : ∀ s ∈ S, μ s = ν s := by
-    intro s ⟨r, B, hB, C, hC, rfl⟩
-    exact h r B hB C hC
-
-  -- Apply π-λ theorem using Measure.ext_of_generateFrom_of_iUnion
-  -- Define a covering sequence: just use univ at each index
-  let B : ℕ → Set (α × (ℕ → α)) := fun _ => Set.univ
-
-  have h1B : ⋃ i, B i = Set.univ := by simp [B]
-
-  have h2B : ∀ i, B i ∈ S := by
-    intro i
-    use 0, Set.univ, MeasurableSet.univ, (fun _ => Set.univ), (fun _ => MeasurableSet.univ)
-    ext ⟨a, f⟩
-    simp [tailCylinder, B]
-
-  have hμB : ∀ i, μ (B i) ≠ ∞ := by
-    intro i
-    simp [B]
-    exact measure_ne_top μ Set.univ
-
-  exact Measure.ext_of_generateFrom_of_iUnion S B h_gen h_pi h1B h2B hμB h_agree
 /-- Helper lemma: contractability gives the key distributional equality.
 
 If `X` is contractable, then for any `k ≤ m`:
 ```
-(X_m, θ_m X) =^d (X_k, θ_m X)
+(X_m, θ_{m+1} X) =^d (X_k, θ_{m+1} X)
 ```
-where `θ_m X` denotes the **random** shifted tail path `ω ↦ (n ↦ X(m + n) ω)`. -/
+where `θ_{m+1} X` drops the first coordinate and keeps the *future* tail
+`ω ↦ (n ↦ X(m + 1 + n) ω)`. -/
 lemma contractable_dist_eq
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {X : ℕ → Ω → α} (hX : Contractable μ X) (k m : ℕ) (hk : k ≤ m) :
-    Measure.map (fun ω => (X m ω, shiftRV X m ω)) μ
-      = Measure.map (fun ω => (X k ω, shiftRV X m ω)) μ := by
+    Measure.map (fun ω => (X m ω, shiftRV X (m + 1) ω)) μ
+      = Measure.map (fun ω => (X k ω, shiftRV X (m + 1) ω)) μ := by
   classical
   have hrect :=
-    contractable_dist_eq_on_rectangles (μ:=μ) (X:=X) hX k m hk
-  refine prod_path_measure_ext
-    (μ:=Measure.map (fun ω => (X m ω, shiftRV X m ω)) μ)
-    (ν:=Measure.map (fun ω => (X k ω, shiftRV X m ω)) μ) ?_
-  intro r B hB C hC
-  simpa using hrect r B hB C hC
+    agree_on_future_rectangles_of_contractable
+      (μ:=μ) (X:=X) hX k m hk
+  simpa using hrect.measure_eq
 
 /-- **Key convergence result:** The extreme members agree after conditioning on the tail σ-algebra.
 
@@ -738,12 +523,13 @@ lemma condexp_convergence
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {X : ℕ → Ω → α} (hX : Contractable μ X) (k m : ℕ) (hk : k ≤ m)
     (B : Set α) (hB : MeasurableSet B) :
-    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X m) | revFiltration X m]
+    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X m) | futureFiltration X m]
       =ᵐ[μ]
-    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | revFiltration X m] := by
+    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | futureFiltration X m] := by
   -- Proof strategy:
-  -- 1. From contractable_dist_eq: (X_m, shiftRV X m) =^d (X_k, shiftRV X m)
-  -- 2. Note that σ(shiftRV X m) = revFiltration X m is the same conditioning σ-algebra
+  -- 1. From agree_on_future_rectangles_of_contractable: the pair laws agree on all
+  --    rectangles `B × cylinder r C` when conditioning on the common future tail
+  -- 2. Note that σ(shiftRV X (m + 1)) = futureFiltration X m is the same conditioning σ-algebra
   -- 3. Apply contraction_independence (or its condexp version) to get:
   --    Both conditional expectations equal the same value
   -- 4. Therefore they're equal almost everywhere
@@ -763,7 +549,7 @@ lemma extreme_members_equal_on_tail
   -- 1. From condexp_convergence:
   --    𝔼[1_{X_m∈B} | 𝔽ₙ] = 𝔼[1_{X_0∈B} | 𝔽ₙ] for all n ≥ m
   -- 2. Define reverse martingale: Mₙ := 𝔼[1_{X_m∈B} | 𝔽ₙ]
-  -- 3. As n → ∞, 𝔽ₙ = revFiltration X n ↓ tailSigma X (by revFiltration_antitone)
+  -- 3. As n → ∞, 𝔽ₙ = futureFiltration X n ↓ tailSigma X (using tailSigmaFuture_eq_tailSigma and futureFiltration_antitone)
   -- 4. By reverse martingale convergence (Lévy's downward theorem):
   --    Mₙ → 𝔼[1_{X_m∈B} | tailSigma X] a.s. and in L¹
   -- 5. Similarly for X_0: 𝔼[1_{X_0∈B} | 𝔽ₙ] → 𝔼[1_{X_0∈B} | tailSigma X]
@@ -802,6 +588,34 @@ def tailSigmaFuture (X : ℕ → Ω → α) : MeasurableSpace Ω :=
 
 @[simp] lemma tailSigmaFuture_eq_iInf (X : ℕ → Ω → α) :
     tailSigmaFuture X = ⨅ m, futureFiltration X m := rfl
+
+@[simp] lemma futureFiltration_eq_rev_succ (X : ℕ → Ω → α) (m : ℕ) :
+    futureFiltration X m = revFiltration X (m + 1) := rfl
+
+lemma tailSigmaFuture_eq_tailSigma (X : ℕ → Ω → α) :
+    tailSigmaFuture X = tailSigma X := by
+  classical
+  have hfut : tailSigmaFuture X = ⨅ n, revFiltration X (n + 1) := by
+    simpa [tailSigmaFuture, futureFiltration_eq_rev_succ]
+  have htail : tailSigma X = ⨅ n, revFiltration X n := rfl
+  refine le_antisymm ?_ ?_
+  · -- `tailSigmaFuture ≤ tailSigma`
+    refine (hfut ▸ ?_)
+    refine le_iInf ?_
+    intro n
+    have h1 : (⨅ m, revFiltration X (m + 1)) ≤ revFiltration X (n + 1) :=
+      iInf_le (fun m => revFiltration X (m + 1)) n
+    have h2 : revFiltration X (n + 1) ≤ revFiltration X n := by
+      simpa [Nat.succ_eq_add_one]
+        using revFiltration_antitone X (Nat.succ_le_succ (Nat.le_refl n))
+    exact h1.trans h2
+  · -- `tailSigma ≤ tailSigmaFuture`
+    refine (htail ▸ ?_)
+    refine le_iInf ?_
+    intro n
+    have h1 : (⨅ m, revFiltration X m) ≤ revFiltration X (n + 1) :=
+      iInf_le (fun m => revFiltration X m) (n + 1)
+    simpa [futureFiltration_eq_rev_succ] using h1
 
 end FutureFiltration
 
@@ -950,19 +764,185 @@ lemma agree_on_future_rectangles_of_contractable
     (contractable_dist_eq_on_rectangles_future
       (μ:=μ) (X:=X) hX k m hk r B hB C hC)
 
+/-! ## Measure extension from future rectangles -/
+
+lemma measure_ext_of_future_rectangles
+    {μ ν : Measure (α × (ℕ → α))}
+    (h : ∀ (r : ℕ) (B : Set α) (hB : MeasurableSet B)
+        (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i)),
+        μ (B ×ˢ cylinder (α:=α) r C) = ν (B ×ˢ cylinder (α:=α) r C)) :
+    μ = ν := by
+  classical
+  -- π-system consisting of rectangles `B × cylinder r C`
+  let S : Set (Set (α × (ℕ → α))) :=
+    {s | ∃ (r : ℕ) (B : Set α) (hB : MeasurableSet B)
+          (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i)),
+          s = B ×ˢ cylinder (α:=α) r C}
+
+  -- S is a π-system
+  have h_pi : IsPiSystem S := by
+    intro s₁ hs₁ s₂ hs₂ _
+    obtain ⟨r₁, B₁, hB₁, C₁, hC₁, rfl⟩ := hs₁
+    obtain ⟨r₂, B₂, hB₂, C₂, hC₂, rfl⟩ := hs₂
+    -- Intersection of rectangles is a rectangle of higher dimension
+    let r := max r₁ r₂
+    let C : Fin r → Set α := fun i =>
+      if h1 : (i : ℕ) < r₁ then
+        if h2 : (i : ℕ) < r₂ then C₁ ⟨i, h1⟩ ∩ C₂ ⟨i, h2⟩ else C₁ ⟨i, h1⟩
+      else if h2 : (i : ℕ) < r₂ then C₂ ⟨i, h2⟩ else Set.univ
+    have hC : ∀ i, MeasurableSet (C i) := by
+      intro i
+      classical
+      by_cases h1 : (i : ℕ) < r₁
+      · by_cases h2 : (i : ℕ) < r₂
+        · have := (hC₁ ⟨i, h1⟩).inter (hC₂ ⟨i, h2⟩)
+          simpa [C, h1, h2] using this
+        · simpa [C, h1, h2] using hC₁ ⟨i, h1⟩
+      · by_cases h2 : (i : ℕ) < r₂
+        · simpa [C, h1, h2] using hC₂ ⟨i, h2⟩
+        · simpa [C, h1, h2] using (MeasurableSet.univ : MeasurableSet (Set.univ))
+
+    refine ⟨r, B₁ ∩ B₂, hB₁.inter hB₂, C, hC, ?_⟩
+    ext ⟨a, f⟩; constructor
+    · intro hmf
+      rcases hmf with ⟨⟨hB₁', hC₁'⟩, ⟨hB₂', hC₂'⟩⟩
+      refine ⟨⟨hB₁', hB₂'⟩, ?_⟩
+      intro i
+      classical
+      by_cases h1 : (i : ℕ) < r₁
+      · by_cases h2 : (i : ℕ) < r₂
+        · simp [C, h1, h2]
+          exact ⟨hC₁' ⟨i, h1⟩, hC₂' ⟨i, h2⟩⟩
+        · simp [C, h1, h2]
+          exact hC₁' ⟨i, h1⟩
+      · by_cases h2 : (i : ℕ) < r₂
+        · simp [C, h1, h2]
+          exact hC₂' ⟨i, h2⟩
+        · simp [C, h1, h2]
+    · rintro ⟨⟨hB₁', hB₂'⟩, hC'⟩
+      refine ⟨⟨hB₁', ?_⟩, ⟨hB₂', ?_⟩⟩
+      · intro i
+        have hi : (i : ℕ) < r := i.2
+        have := hC' ⟨i, hi⟩
+        classical
+        have h1 : (i : ℕ) < r₁ := lt_of_lt_of_le i.2 (Nat.le_max_left _ _)
+        by_cases h2 : (i : ℕ) < r₂
+        · simp [C, h1, h2] at this
+          exact this.1
+        · simp [C, h1, h2] at this
+      · intro i
+        have hi : (i : ℕ) < r := i.2
+        have := hC' ⟨i, hi⟩
+        classical
+        have h2 : (i : ℕ) < r₂ := lt_of_lt_of_le i.2 (Nat.le_max_right _ _)
+        by_cases h1 : (i : ℕ) < r₁
+        · simp [C, h1, h2] at this
+          exact this.2
+        · simp [C, h1, h2] at this
+
+  -- Show that S generates the product σ-algebra
+  have h_gen : (inferInstance : MeasurableSpace (α × (ℕ → α)))
+      = MeasurableSpace.generateFrom S := by
+    apply le_antisymm
+    · apply MeasurableSpace.generateFrom_le
+      intro s hs
+      rcases hs with ⟨r, B, hB, C, hC, rfl⟩
+      exact hB.prod (cylinder_measurable (α:=α) hC)
+    · -- Using the characterization of the product σ-algebra
+      have : (inferInstance : MeasurableSpace (α × (ℕ → α)))
+          = MeasurableSpace.comap Prod.fst inferInstance ⊔
+            MeasurableSpace.comap Prod.snd inferInstance :=
+        by simpa using (MeasurableSpace.prod_eq : _)
+      refine this ▸ sup_le ?_ ?_
+      · -- First component
+        refine (MeasurableSpace.comap_le_iff_le_map).1 ?_
+        apply MeasurableSpace.generateFrom_le
+        intro B hB
+        have : Prod.fst ⁻¹' B = B ×ˢ Set.univ := by
+          ext ⟨a, f⟩; simp
+        refine this ▸ ?_
+        have : B ×ˢ Set.univ =
+            B ×ˢ cylinder (α:=α) 0 (fun _ => Set.univ) := by
+          ext ⟨a, f⟩; simp [cylinder]
+        refine MeasurableSpace.measurableSet_generateFrom ?_
+        exact ⟨0, B, hB, _, fun _ => MeasurableSet.univ, this.symm⟩
+      · -- Second component
+        refine (MeasurableSpace.comap_le_iff_le_map).1 ?_
+        apply MeasurableSpace.generateFrom_le
+        intro T hT
+        rcases hT with ⟨i, D, hD, rfl⟩
+        have : Prod.snd ⁻¹' {f | f i ∈ D}
+            = Set.univ ×ˢ {f : ℕ → α | f i ∈ D} := by
+          ext ⟨a, f⟩; simp
+        refine this ▸ ?_
+        -- Encode `{f | f i ∈ D}` as a cylinder
+        let C : Fin (i + 1) → Set α := fun j =>
+          if h : (j : ℕ) = i then D else Set.univ
+        have hC : ∀ j, MeasurableSet (C j) := by
+          intro j
+          classical
+          by_cases h : (j : ℕ) = i
+          · simpa [C, h] using hD
+          · simpa [C, h] using (MeasurableSet.univ : MeasurableSet (Set.univ))
+        have h_cyl :
+            {f : ℕ → α | f i ∈ D} = cylinder (α:=α) (i + 1) C := by
+          ext f; constructor
+          · intro hfi
+            intro j
+            classical
+            by_cases h : (j : ℕ) = i
+            · subst h; simpa [C] using hfi
+            · simp [C, h]
+          · intro hf
+            have := hf ⟨i, Nat.lt_succ_self i⟩
+            simpa [C, show ((⟨i, Nat.lt_succ_self i⟩ : Fin (i + 1)) : ℕ) = i by rfl]
+              using this
+        have : Set.univ ×ˢ {f : ℕ → α | f i ∈ D}
+            = Set.univ ×ˢ cylinder (α:=α) (i + 1) C := by
+          simp [h_cyl]
+        refine MeasurableSpace.measurableSet_generateFrom ?_
+        exact ⟨i + 1, Set.univ, MeasurableSet.univ, C, hC, this.symm⟩
+
+  -- Measures agree on S
+  have h_agree : ∀ s ∈ S, μ s = ν s := by
+    intro s hs
+    rcases hs with ⟨r, B, hB, C, hC, rfl⟩
+    exact h r B hB C hC
+
+  -- Covering family
+  let Bseq : ℕ → Set (α × (ℕ → α)) := fun _ => Set.univ
+  have h1B : ⋃ n, Bseq n = Set.univ := by simp [Bseq]
+  have h2B : ∀ n, Bseq n ∈ S := by
+    intro n
+    refine ⟨0, Set.univ, MeasurableSet.univ,
+      (fun _ => Set.univ), (fun _ => MeasurableSet.univ), ?_⟩
+    ext ⟨a, f⟩; simp [Bseq, cylinder]
+  have hμB : ∀ n, μ (Bseq n) ≠ ∞ := by
+    intro n; simp [Bseq]
+
+  exact Measure.ext_of_generateFrom_of_iUnion
+    S Bseq h_gen h_pi h1B h2B hμB h_agree
+
+lemma AgreeOnFutureRectangles.measure_eq
+    {μ ν : Measure (α × (ℕ → α))}
+    (h : AgreeOnFutureRectangles μ ν) : μ = ν :=
+  measure_ext_of_future_rectangles (μ:=μ) (ν:=ν) (by
+    intro r B hB C hC
+    simpa using h.eq_rect r B hB C hC)
+
 
 section reverse_martingale
 
 variable {μ : Measure Ω} [IsProbabilityMeasure μ]
 variable {X : ℕ → Ω → α}
 
-/-- 𝔽ₘ = σ(θₘ X). -/
-abbrev 𝔽 (m : ℕ) : MeasurableSpace Ω := revFiltration X m
+/-- 𝔽ₘ := σ(θ_{m+1} X) (the future filtration). -/
+abbrev 𝔽 (m : ℕ) : MeasurableSpace Ω := futureFiltration X m
 
 /-- The reverse filtration is decreasing; packaged for the martingale API. -/
 lemma filtration_antitone : Antitone 𝔽 := by
   intro m n hmn
-  simpa [𝔽] using revFiltration_antitone X hmn
+  simpa [𝔽] using futureFiltration_antitone X hmn
 
 /-- Mₘ := 𝔼[1_{Xₖ∈B} | 𝔽ₘ].
 The reverse martingale sequence for the indicator of X_k in B. -/
@@ -982,7 +962,7 @@ def M (k : ℕ) (B : Set α) : ℕ → Ω → ℝ :=
 -- (4) `(fun n => M k B n ω)` is a reverse martingale that converges
 --     to `μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | tailSigma X] ω`.
 --     API: `condexp_tendsto_condexp_iInf` (Lévy's downward theorem) together with
---     `filtration_antitone` and `tailSigma_eq_iInf_rev`.
+--     `filtration_antitone` and `tailSigmaFuture_eq_iInf`.
 
 end reverse_martingale
 
