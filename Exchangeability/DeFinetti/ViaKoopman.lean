@@ -1370,7 +1370,25 @@ lemma Kernel.IndepFun.integral_mul
     -- Apply DCT with bound CX * CY
     apply MeasureTheory.tendsto_integral_of_dominated_convergence (fun _ => CX * CY)
     · -- AEStronglyMeasurable for each product
-      sorry  -- Need to show approx_X n * approx_Y n is measurable
+      intro n
+      -- Extract structures for both
+      obtain ⟨ι, hι, a, A, hA_meas, hA_eq⟩ := h_simple_X n
+      obtain ⟨κι, hκι, b, B, hB_meas, hB_eq⟩ := h_simple_Y n
+      rw [hA_eq, hB_eq]
+      -- Product of sums of indicators is measurable
+      apply AEStronglyMeasurable.mul
+      · apply Measurable.aestronglyMeasurable
+        apply Finset.measurable_sum
+        intro i _
+        apply Measurable.indicator
+        · exact measurable_const
+        · exact (hA_meas i).1
+      · apply Measurable.aestronglyMeasurable
+        apply Finset.measurable_sum
+        intro j _
+        apply Measurable.indicator
+        · exact measurable_const
+        · exact (hB_meas j).1
     · -- Integrable bound
       exact integrable_const (CX * CY)
     · -- Uniform bound: |approx_X n ω * approx_Y n ω| ≤ CX * CY
@@ -1395,7 +1413,17 @@ lemma Kernel.IndepFun.integral_mul
     · -- Show ∫ approx_X(n) → ∫ X using DCT
       apply MeasureTheory.tendsto_integral_of_dominated_convergence (fun _ => CX)
       · -- AEStronglyMeasurable for each approx_X n
-        sorry  -- Need to show approx_X n is measurable
+        intro n
+        -- Extract the simple function structure
+        obtain ⟨ι, hι, a, A, hA_meas, hA_eq⟩ := h_simple_X n
+        rw [hA_eq]
+        -- Sum of measurable functions (indicator of measurable set with constant) is measurable
+        apply Measurable.aestronglyMeasurable
+        apply Finset.measurable_sum
+        intro i _
+        apply Measurable.indicator
+        · exact measurable_const
+        · exact (hA_meas i).1
       · -- Integrable bound
         exact integrable_const CX
       · -- Uniform bound: |approx_X n ω| ≤ CX
@@ -1408,7 +1436,17 @@ lemma Kernel.IndepFun.integral_mul
     · -- Show ∫ approx_Y(n) → ∫ Y using DCT
       apply MeasureTheory.tendsto_integral_of_dominated_convergence (fun _ => CY)
       · -- AEStronglyMeasurable for each approx_Y n
-        sorry  -- Need to show approx_Y n is measurable
+        intro n
+        -- Extract the simple function structure
+        obtain ⟨κι, hκι, b, B, hB_meas, hB_eq⟩ := h_simple_Y n
+        rw [hB_eq]
+        -- Sum of measurable functions is measurable
+        apply Measurable.aestronglyMeasurable
+        apply Finset.measurable_sum
+        intro j _
+        apply Measurable.indicator
+        · exact measurable_const
+        · exact (hB_meas j).1
       · -- Integrable bound
         exact integrable_const CY
       · -- Uniform bound: |approx_Y n ω| ≤ CY
