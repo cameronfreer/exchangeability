@@ -87,6 +87,24 @@ This is intentional: these theorems need to work with multiple measurable space 
 the unusedSectionVars linter for such theorems with `set_option linter.unusedSectionVars false`.
 -/
 
+/-! ### Helper lemmas for set integration -/
+
+/-- If two functions are a.e. equal on `μ.restrict s`, their set integrals on `s` coincide. -/
+lemma setIntegral_congr_ae'
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    {μ : Measure Ω} {s : Set Ω} {f g : Ω → E}
+    (hfg : f =ᵐ[μ.restrict s] g) :
+    ∫ x in s, f x ∂μ = ∫ x in s, g x ∂μ :=
+  integral_congr_ae hfg
+
+/-- If two functions are a.e. equal under `μ`, their set integrals on any `s` coincide. -/
+lemma setIntegral_congr_ae_of_ae
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    {μ : Measure Ω} {s : Set Ω} {f g : Ω → E}
+    (hfgμ : f =ᵐ[μ] g) :
+    ∫ x in s, f x ∂μ = ∫ x in s, g x ∂μ :=
+  setIntegral_congr_ae' (ae_restrict_of_ae hfgμ)
+
 /-! ### Conditional Probability -/
 
 /-- Conditional probability of an event `A` given a σ-algebra `m`.
@@ -648,15 +666,14 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         Integrable (fun ω => (μ[X₂ | m₁] ω) ^ 2) μ :=
       h_cond_mem.integrable_sq
     -- The conditional variance equals μ[X₂² | m₁] - (μ[X₂ | m₁])²
+    -- This is a standard variance decomposition formula
     have h_var_formula :
         μ[(X₂ - μ[X₂ | m₁])^2 | m₁] =ᵐ[μ] μ[X₂ ^ 2 | m₁] - (μ[X₂ | m₁]) ^ 2 := by
-      -- Expand (X₂ - μ[X₂|m₁])² = X₂² - 2·X₂·μ[X₂|m₁] + (μ[X₂|m₁])²
-      have h_expand : (fun ω => (X₂ ω - μ[X₂ | m₁] ω) ^ 2)
-          = fun ω => X₂ ω ^ 2 - 2 * X₂ ω * μ[X₂ | m₁] ω + μ[X₂ | m₁] ω ^ 2 := by
-        ext ω
-        ring
-      -- Apply linearity of conditional expectation
-      -- The detailed expansion requires condExp linearity lemmas
+      -- The full proof requires:
+      -- 1. Expanding (X₂ - μ[X₂|m₁])² = X₂² - 2·X₂·μ[X₂|m₁] + (μ[X₂|m₁])²
+      -- 2. Linearity: μ[a + b + c | m] = μ[a|m] + μ[b|m] + μ[c|m]
+      -- 3. Pull-out property: μ[g·f | m] = g·μ[f|m] when g is m-measurable
+      -- 4. Idempotence: μ[μ[X|m] | m] = μ[X|m]
       sorry
     have h_congr :
         ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ
