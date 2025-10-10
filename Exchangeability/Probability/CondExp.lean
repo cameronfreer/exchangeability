@@ -113,6 +113,7 @@ lemma condexp_indicator_eq_of_agree_on_future_rectangles
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α]
     {X₁ X₂ : Ω → α} {Y : Ω → ℕ → α}
+    (hX₁ : Measurable X₁) (hX₂ : Measurable X₂) (hY : Measurable Y)
     (hagree : Exchangeability.DeFinetti.ViaMartingale.AgreeOnFutureRectangles
       (Measure.map (fun ω => (X₁ ω, Y ω)) μ)
       (Measure.map (fun ω => (X₂ ω, Y ω)) μ))
@@ -122,15 +123,86 @@ lemma condexp_indicator_eq_of_agree_on_future_rectangles
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂
         | MeasurableSpace.comap Y inferInstance] := by
-  -- TODO: Leverage `AgreeOnFutureRectangles.measure_eq` together with the
-  -- uniqueness characterization of conditional expectation (`ae_eq_condExp_of_forall_setIntegral_eq`).
-  -- Outline:
-  -- 1. Translate agreement on future rectangles into equality of integrals of
-  --    indicator functions of sets measurable w.r.t.
-  --    `MeasurableSpace.comap Y inferInstance`.
-  -- 2. Apply π-λ theorem to extend from cylinders to all such sets.
-  -- 3. Conclude the conditional expectations are a.e. equal.
-  sorry
+  classical
+  set mY := MeasurableSpace.comap Y inferInstance
+  set f₁ : Ω → ℝ := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₁ ω)
+  set f₂ : Ω → ℝ := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₂ ω)
+  have hX₁B : MeasurableSet (X₁ ⁻¹' B) := hX₁ hB
+  have hX₂B : MeasurableSet (X₂ ⁻¹' B) := hX₂ hB
+  have hf₁_indicator : f₁ = Set.indicator (X₁ ⁻¹' B) (fun _ : Ω => (1 : ℝ)) := by
+    funext ω; by_cases hω : X₁ ω ∈ B <;> simp [f₁, Set.indicator, hω]
+  have hf₂_indicator : f₂ = Set.indicator (X₂ ⁻¹' B) (fun _ : Ω => (1 : ℝ)) := by
+    funext ω; by_cases hω : X₂ ω ∈ B <;> simp [f₂, Set.indicator, hω]
+  have h_int_const : Integrable (fun _ : Ω => (1 : ℝ)) μ := integrable_const _
+  have hf₁_int : Integrable f₁ μ := by
+    simpa [f₁, hf₁_indicator] using h_int_const.indicator hX₁B
+  have hf₂_int : Integrable f₂ μ := by
+    simpa [f₂, hf₂_indicator] using h_int_const.indicator hX₂B
+  have hmY : mY ≤ inferInstance := by
+    intro s hs
+    rcases hs with ⟨E, hE, rfl⟩
+    exact hY hE
+  haveI : SigmaFinite (μ.trim hmY) :=
+    (inferInstance : IsFiniteMeasure (μ.trim hmY)).toSigmaFinite
+  have hmeasure_eq := hagree.measure_eq
+  have h_integral_eq :
+      ∀ {E : Set (ℕ → α)} (hE : MeasurableSet E),
+        ∫ ω in Y ⁻¹' E, f₁ ω ∂μ = ∫ ω in Y ⁻¹' E, f₂ ω ∂μ := by
+    intro E hE
+    have hrect : MeasurableSet (B ×ˢ E) := hB.prod hE
+    have hpair₁ : Measurable fun ω => (X₁ ω, Y ω) := hX₁.prod_mk hY
+    have hpair₂ : Measurable fun ω => (X₂ ω, Y ω) := hX₂.prod_mk hY
+    have hμ_eq : μ ((fun ω => (X₁ ω, Y ω)) ⁻¹' (B ×ˢ E))
+        = μ ((fun ω => (X₂ ω, Y ω)) ⁻¹' (B ×ˢ E)) := by
+      simpa [Measure.map_apply, hpair₁, hpair₂, hrect]
+        using congrArg (fun ν => ν (B ×ˢ E)) hmeasure_eq
+    have hpre₁ : (fun ω => (X₁ ω, Y ω)) ⁻¹' (B ×ˢ E)
+        = (X₁ ⁻¹' B) ∩ (Y ⁻¹' E) := by
+      ext ω; constructor <;> intro hω <;> simp [Set.mem_preimage] at hω ⊢
+    have hpre₂ : (fun ω => (X₂ ω, Y ω)) ⁻¹' (B ×ˢ E)
+        = (X₂ ⁻¹' B) ∩ (Y ⁻¹' E) := by
+      ext ω; constructor <;> intro hω <;> simp [Set.mem_preimage] at hω ⊢
+    have hμ_inter : μ ((X₁ ⁻¹' B) ∩ (Y ⁻¹' E))
+        = μ ((X₂ ⁻¹' B) ∩ (Y ⁻¹' E)) := by
+      simpa [hpre₁, hpre₂] using hμ_eq
+    calc
+      ∫ ω in Y ⁻¹' E, f₁ ω ∂μ
+          = ∫ ω in (Y ⁻¹' E) ∩ (X₁ ⁻¹' B), (1 : ℝ) ∂μ := by
+            simpa [f₁, hf₁_indicator, Set.inter_left_comm, Set.inter_assoc]
+              using
+                setIntegral_indicator (μ := μ) (s := Y ⁻¹' E) (t := X₁ ⁻¹' B)
+                  (f := fun _ : Ω => (1 : ℝ)) hX₁B
+      _ = (μ ((X₁ ⁻¹' B) ∩ (Y ⁻¹' E))).toReal := by
+        simp [Measure.real_def, Set.inter_left_comm, Set.inter_assoc]
+      _ = (μ ((X₂ ⁻¹' B) ∩ (Y ⁻¹' E))).toReal := by simpa [hμ_inter]
+      _ = ∫ ω in (Y ⁻¹' E) ∩ (X₂ ⁻¹' B), (1 : ℝ) ∂μ := by
+        simp [Measure.real_def, Set.inter_left_comm, Set.inter_assoc]
+      _ = ∫ ω in Y ⁻¹' E, f₂ ω ∂μ := by
+        simpa [f₂, hf₂_indicator, Set.inter_left_comm, Set.inter_assoc]
+          using
+            setIntegral_indicator (μ := μ) (s := Y ⁻¹' E) (t := X₂ ⁻¹' B)
+              (f := fun _ : Ω => (1 : ℝ)) hX₂B
+  have h_integral_eq' :
+      ∀ {s : Set Ω}, MeasurableSet[mY] s →
+        ∫ ω in s, f₁ ω ∂μ = ∫ ω in s, f₂ ω ∂μ := by
+    intro s hs
+    rcases hs with ⟨E, hE, rfl⟩
+    simpa using h_integral_eq hE
+  have h_cond₂ := setIntegral_condExp (μ := μ) (m := mY) (hm := hmY)
+      (f := f₂) hf₂_int
+  have h_g_meas : StronglyMeasurable[mY] (μ[f₂ | mY]) :=
+    stronglyMeasurable_condexp
+  have h_g_int : Integrable (μ[f₂ | mY]) μ := integrable_condexp
+  have h_set_integral_eq :
+      ∀ {s : Set Ω}, MeasurableSet[mY] s →
+        ∫ ω in s, f₁ ω ∂μ = ∫ ω in s, μ[f₂ | mY] ω ∂μ := by
+    intro s hs
+    have h1 := h_integral_eq' hs
+    have h2 := h_cond₂ hs
+    simpa [f₂] using h1.trans h2.symm
+  exact
+    ae_eq_condExp_of_forall_setIntegral_eq (hm := hmY)
+      hf₁_int h_g_int h_set_integral_eq h_g_meas
 
 /-! ### Conditional Probability -/
 
@@ -712,22 +784,77 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
         Pairwise (Disjoint on f) → (∀ i, C_S (f i)) → C_S (⋃ i, f i) := by
       intro f hf_meas hf_disj hf_C
       simp only [C_S] at hf_C ⊢
-      -- Strategy: Use linearity and dominated convergence
-      -- 1. Indicator of disjoint union = sum of indicators
-      -- 2. Conditional expectation is linear: μ[∑ indicator_i | m] = ∑ μ[indicator_i | m]
-      -- 3. Integral of sum = sum of integrals (dominated convergence, all bounded by 1)
-      -- 4. Apply hypothesis hf_C to each term
-      sorry -- Complete using dominated convergence: indicators bounded by 1,
-            -- and use hf_C for each i to show the sum of integrals are equal
+
+      -- Strategy: Show that ∫ μ[indicator(⋃ f i) | m] = ∫ μ[indicator(⋃ f i) | m']
+      -- by showing both equal ∑ ∫ μ[indicator(f i) | m]
+
+      -- Step 1: Indicator of disjoint union equals sum of indicators
+      have h_ind_union : ∀ ω, (⋃ i, f i).indicator (fun _ : Ω => (1 : ℝ)) ω
+          = ∑' i, (f i).indicator (fun _ : Ω => (1 : ℝ)) ω := by
+        sorry -- Standard fact: indicator of disjoint union = sum of indicators
+
+      -- Step 2: Conditional expectation of the sum
+      have h_condExp_L : μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
+          =ᵐ[μ] fun ω => ∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω := by
+        sorry -- Apply condExp_tsum with summability from boundedness by 1
+
+      have h_condExp_R : μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG]
+          =ᵐ[μ] fun ω => ∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mG] ω := by
+        sorry -- Apply condExp_tsum with summability from boundedness by 1
+
+      -- Step 3: Integrate both sides
+      rw [integral_congr_ae (ae_restrict_of_ae h_condExp_L),
+          integral_congr_ae (ae_restrict_of_ae h_condExp_R)]
+
+      -- Step 4: Exchange integral and sum using dominated convergence
+      -- All terms bounded by 1 (from condExp of bounded functions)
+      have h_int_tsum_L : ∫ ω in S, (∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω) ∂μ
+          = ∑' i, ∫ ω in S, μ[(f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω ∂μ := by
+        sorry -- Dominated convergence: |μ[indicator | m]| ≤ μ[1 | m] = 1
+
+      have h_int_tsum_R : ∫ ω in S, (∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mG] ω) ∂μ
+          = ∑' i, ∫ ω in S, μ[(f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂μ := by
+        sorry -- Dominated convergence: |μ[indicator | m]| ≤ μ[1 | m] = 1
+
+      -- Step 5: Apply hypothesis hf_C to each term
+      rw [h_int_tsum_L, h_int_tsum_R]
+      congr 1
+      ext i
+      exact hf_C i
 
     -- Step 3: Apply Dynkin π-λ theorem
     -- We've shown C_S is a Dynkin system (closed under ∅, complement, disjoint union)
     -- containing π (from hCπ). By Dynkin's π-λ theorem, C_S contains σ(π).
-    -- Therefore C_S A holds.
-    sorry -- Apply MeasurableSpace.induction_on_inter:
-          -- Define C' : ∀ (s : Set Ω), MeasurableSet s → Prop := fun B _ => C_S B
-          -- Then prove C' ∅, C' preserves complements, C' preserves countable disjoint unions
-          -- And C' holds on π, so C' A for A ∈ σ(π)
+
+    -- Wrap C_S in a predicate that takes a measurability proof
+    -- This allows us to use induction_on_inter
+    let C' : ∀ (B : Set Ω), @MeasurableSet Ω (MeasurableSpace.generateFrom π) B → Prop :=
+      fun B _ => C_S B
+
+    -- C' inherits all the Dynkin system properties from C_S
+    have hC'_empty : C' ∅ (@MeasurableSet.empty Ω (MeasurableSpace.generateFrom π)) := hC_empty
+
+    have hC'_π : ∀ (B : Set Ω) (hB : B ∈ π),
+        C' B (show @MeasurableSet Ω (MeasurableSpace.generateFrom π) B from .basic _ hB) := by
+      intro B hB
+      exact hCπ B hB
+
+    have hC'_compl : ∀ (B : Set Ω) (hB : @MeasurableSet Ω (MeasurableSpace.generateFrom π) B),
+        C' B hB → C' Bᶜ hB.compl := by
+      intro B hB hCB
+      exact hC_compl B (hπ_le _ hB) hCB
+
+    have hC'_iUnion : ∀ (f : ℕ → Set Ω), Pairwise (Disjoint on f) →
+        ∀ (hf : ∀ i, @MeasurableSet Ω (MeasurableSpace.generateFrom π) (f i)),
+        (∀ i, C' (f i) (hf i)) → C' (⋃ i, f i) (MeasurableSet.iUnion hf) := by
+      intro f hdisj hf hf_C
+      apply hC_iUnion f (fun i => hπ_le _ (hf i)) hdisj
+      intro i
+      exact hf_C i
+
+    -- Apply induction_on_inter
+    exact @MeasurableSpace.induction_on_inter Ω (MeasurableSpace.generateFrom π) C' π
+      rfl hπ hC'_empty hC'_π hC'_compl hC'_iUnion A hA
 
   -- Now use uniqueness of conditional expectation
   -- We need to show ceL =ᵐ[μ] ceR, i.e., the two conditional expectations are a.e. equal
