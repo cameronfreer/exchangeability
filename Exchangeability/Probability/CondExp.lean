@@ -265,9 +265,10 @@ lemma condProb_ae_nonneg_le_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
 
 /-- Uniform bound: conditional probability is in `[0,1]` a.e. uniformly over `A`. -/
 lemma condProb_ae_bound_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (m : MeasurableSpace Ω) (hm : m ≤ m₀) [SigmaFinite (μ.trim hm)]
+    (m : MeasurableSpace Ω) (hm : m ≤ m₀) [inst : SigmaFinite (μ.trim hm)]
     (A : Set Ω) (hA : MeasurableSet[m₀] A) :
     ∀ᵐ ω ∂μ, ‖μ[A.indicator (fun _ => (1 : ℝ)) | m] ω‖ ≤ 1 := by
+  haveI : SigmaFinite (μ.trim hm) := inst
   have h := condProb_ae_nonneg_le_one m hm hA
   filter_upwards [h] with ω hω
   rcases hω with ⟨h0, h1⟩
