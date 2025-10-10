@@ -375,14 +375,34 @@ lemma eLpNorm_two_from_integral_sq_le
   -- Integral is nonnegative
   have h_int_nonneg : 0 ≤ ∫ ω, ‖g ω‖^2 ∂μ := by
     apply integral_nonneg; intro ω; exact sq_nonneg _
-  -- For p=2, eLpNorm g 2 μ = (∫ ‖g‖²)^(1/2)
+  -- For p=2, eLpNorm g 2 μ = (∫⁻ ‖g‖²)^(1/2)
   -- Given ∫ g² ≤ C, we have ∫ ‖g‖² ≤ C (since ‖g‖² = g² for real g)
-  -- Therefore (∫ ‖g‖²)^(1/2) ≤ C^(1/2) = √C
-
-  -- Use MemLp.eLpNorm_eq_integral_rpow_norm to relate eLpNorm to the integral
-  sorry -- TODO: Implement using MemLp.eLpNorm_eq_integral_rpow_norm with p=2
+  -- Therefore (∫⁻ ‖g‖²)^(1/2) ≤ C^(1/2) = √C
+  -- TODO: Complete this proof using:
+  -- 1. eLpNorm_eq_lintegral_rpow_enorm to express eLpNorm as (∫⁻ ‖g‖²ₑ)^(1/2)
+  -- 2. Convert Bochner integral bound to Lebesgue integral bound
+  -- 3. Apply monotonicity of x ↦ x^(1/2)
+  sorry
 
 end LpUtilities
+
+/-- Any function from Fin 1 is vacuously StrictMono -/
+private lemma fin1_strictMono_vacuous (k : Fin 1 → ℕ) : StrictMono k := by
+  intro i j hij
+  -- Fin 1 has only one element, so i < j is impossible
+  exfalso
+  have : i = 0 := Fin.eq_zero i
+  have : j = 0 := Fin.eq_zero j
+  omega
+
+/-- For contractable sequences, all single variables have the same distribution -/
+private lemma contractable_single_marginal_eq
+    {μ : Measure Ω} {X : ℕ → Ω → α}
+    (hX_contract : Contractable μ X) (k : ℕ) :
+    Measure.map (X k) μ = Measure.map (X 0) μ := by
+  -- Strategy: The general case requires extracting single marginals from Fin 1 → α maps
+  -- For now, leave as sorry and implement hmean directly below
+  sorry
 
 /-- For a contractable sequence of real-valued random variables in L², all pairs
 have the same covariance. This follows from contractability implying that all
@@ -409,9 +429,11 @@ lemma contractable_covariance_structure
   -- All X_i have the same mean by contractability (single-variable marginal)
   have hmean : ∀ k, ∫ ω, X k ω ∂μ = m := by
     intro k
-    -- X_k has the same distribution as X_0 by contractability
-    -- This requires showing that the measure.map of a single variable is the same
-    sorry -- TODO: Apply contractability to size-1 subsequences
+    -- Use contractable_single_marginal_eq to show X_k has same distribution as X_0
+    have h_eq_dist := contractable_single_marginal_eq hX_contract k
+    -- TODO: Transfer integral via equal distributions
+    -- Need: integral equality lemma for functions under equal pushforward measures
+    sorry
 
   -- Define σSq as the variance of X_0
   let σSq := ∫ ω, (X 0 ω - m)^2 ∂μ
@@ -506,7 +528,10 @@ lemma mem_window_iff {n k t : ℕ} :
 /-- Cardinality of Fin values less than k in Fin (2*k) -/
 private lemma card_fin_lt_k {k : ℕ} :
     (Finset.univ.filter (fun i : Fin (2 * k) => i.val < k)).card = k := by
-  sorry -- TODO: Prove that the filter has exactly k elements
+  -- The filter selects exactly the elements 0, 1, ..., k-1 from Fin (2*k)
+  -- This has cardinality k
+  -- TODO: Complete using Finset.card_bij or Finset.card_range
+  sorry
 
 /-- The supremum of |p i - q i| for two-window weights -/
 private lemma sup_two_window_weights {k : ℕ} (hk : 0 < k)
