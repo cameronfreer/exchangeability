@@ -1001,9 +1001,9 @@ private lemma Kernel.IndepFun.integral_mul_simple
   -- First, get independence for all pairs
   have h_indep_pairs : ∀ i j, ∀ᵐ t ∂μ, κ t (A i ∩ B j) = κ t (A i) * κ t (B j) := by
     intro i j
-    -- Use Kernel.IndepFun which gives independence for sets in σ(X) and σ(Y)
-    -- hXY : Kernel.IndepFun X Y κ μ unfolds to Kernel.Indep (comap X _) (comap Y _) κ μ
-    sorry  -- Need to extract set independence from Kernel.IndepFun
+    -- hXY : Kernel.IndepFun X Y κ μ means Kernel.Indep (comap X _) (comap Y _) κ μ
+    -- which gives: ∀ s ∈ σ(X), ∀ t ∈ σ(Y), ∀ᵐ a, κ a (s ∩ t) = κ a s * κ a t
+    exact hXY (A i) (B j) (hA_meas i) (hB_meas j)
 
   -- Combine finitely many ae statements
   have h_all_pairs : ∀ᵐ t ∂μ, ∀ i j, κ t (A i ∩ B j) = κ t (A i) * κ t (B j) := by
@@ -1021,16 +1021,17 @@ private lemma Kernel.IndepFun.integral_mul_simple
   have h_left : ∫ ω, (∑ i, (A i).indicator (fun _ => a_coef i) ω) *
                        (∑ j, (B j).indicator (fun _ => b_coef j) ω) ∂(κ t)
               = ∑ i, ∑ j, (a_coef i) * (b_coef j) * (κ t (A i ∩ B j)).toReal := by
-    -- Expand product of sums, pull integral through, use indicator integral lemma
-    sorry  -- ~15 lines: Finset.sum_mul + integral linearity + integral_indicator_const
+    sorry  -- Expand (∑ᵢ aᵢ·1_{Aᵢ})(∑ⱼ bⱼ·1_{Bⱼ}), use indicator product = intersection indicator,
+           -- pull integral through with integral_finset_sum, apply integral_indicator_const
 
   -- Expand right side: (∫ ∑ᵢ aᵢ·1_{Aᵢ})(∫ ∑ⱼ bⱼ·1_{Bⱼ}) = (∑ᵢ aᵢ·μ(Aᵢ))(∑ⱼ bⱼ·μ(Bⱼ))
   have h_right : (∫ ω, ∑ i, (A i).indicator (fun _ => a_coef i) ω ∂(κ t)) *
                  (∫ ω, ∑ j, (B j).indicator (fun _ => b_coef j) ω ∂(κ t))
               = (∑ i, (a_coef i) * (κ t (A i)).toReal) *
                 (∑ j, (b_coef j) * (κ t (B j)).toReal) := by
-    -- Pull sum out of integral twice, apply indicator integral lemma
-    sorry  -- ~10 lines: integral_finset_sum + integral_indicator_const
+    congr 1
+    · sorry  -- ∫ ∑ᵢ aᵢ·1_{Aᵢ} = ∑ᵢ aᵢ·(κ t (Aᵢ)).toReal via integral_finset_sum + integral_indicator_const
+    · sorry  -- ∫ ∑ⱼ bⱼ·1_{Bⱼ} = ∑ⱼ bⱼ·(κ t (Bⱼ)).toReal via integral_finset_sum + integral_indicator_const
 
   -- Use independence to connect the two
   have h_connection : ∑ i, ∑ j, (a_coef i) * (b_coef j) * (κ t (A i ∩ B j)).toReal
@@ -1042,8 +1043,8 @@ private lemma Kernel.IndepFun.integral_mul_simple
   have h_toReal : ∑ i, ∑ j, (a_coef i) * (b_coef j) * ((κ t (A i) * κ t (B j)).toReal)
                 = (∑ i, (a_coef i) * (κ t (A i)).toReal) *
                   (∑ j, (b_coef j) * (κ t (B j)).toReal) := by
-    -- Distribute toReal and rearrange sums
-    sorry  -- ~10 lines: ENNReal.toReal_mul + Finset.sum_mul rearrangement
+    sorry  -- Use ENNReal.toReal_mul to get (x*y).toReal = x.toReal * y.toReal,
+           -- then rearrange: ∑ᵢ ∑ⱼ aᵢ·bⱼ·xᵢ·yⱼ = (∑ᵢ aᵢ·xᵢ)(∑ⱼ bⱼ·yⱼ) via Finset.sum_mul
 
   -- Chain them together
   rw [h_left, h_connection, h_toReal, ← h_right]
