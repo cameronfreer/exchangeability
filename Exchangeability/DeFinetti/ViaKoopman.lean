@@ -1296,37 +1296,83 @@ lemma Kernel.IndepFun.integral_mul
     sorry  -- Approximation construction (~30-40 lines using dyadic intervals)
            -- Would use: h_preimage_meas to ensure dual measurability
 
-  -- Step B.7: Show how to use the approximations (if we had them)
+  -- Step B.7: Apply the approximation framework
 
-  -- If we obtain the approximations:
-  -- obtain ⟨approx_X, approx_Y, h_simple_X, h_simple_Y, h_bd_X, h_bd_Y, h_conv_X, h_conv_Y⟩ :=
-  --   approximation_exists
+  -- Obtain the approximating sequences
+  obtain ⟨approx_X, approx_Y, h_simple_X, h_simple_Y, h_bd_X, h_bd_Y, h_conv_X, h_conv_Y⟩ :=
+    approximation_exists
 
-  -- Then for each (n, m) pair, we could apply Step A:
-  -- For each n, m: ∃ ae set Sₙₘ where ∀ a ∈ Sₙₘ, ∫ approx_X(n) approx_Y(m) = (∫ approx_X(n))(∫ approx_Y(m))
+  -- Step B.7.1: Apply Step A to each approximation pair
+  -- For each n, m, we can apply integral_mul_simple since approx_X(n), approx_Y(m) are simple
+  have h_approx_factorization : ∀ n m, ∀ᵐ a ∂μ,
+      ∫ ω, approx_X n ω * approx_Y m ω ∂(κ a) =
+      (∫ ω, approx_X n ω ∂(κ a)) * (∫ ω, approx_Y m ω ∂(κ a)) := by
+    intro n m
+    -- We need to unpack the simple function structure and apply Step A
+    -- This requires extracting the coefficients and sets from h_simple_X n and h_simple_Y m
+    sorry  -- Application of Step A to approximations (~20-30 lines)
+           -- Need to destruct the existential quantifiers and apply integral_mul_simple
 
-  -- Using ae_all_iff on ℕ × ℕ:
-  -- ∃ ae set S where ∀ a ∈ S, ∀ n m, the equation holds
+  -- Step B.7.2: Combine countably many ae statements
+  have h_combined : ∀ᵐ a ∂μ, ∀ n m,
+      ∫ ω, approx_X n ω * approx_Y m ω ∂(κ a) =
+      (∫ ω, approx_X n ω ∂(κ a)) * (∫ ω, approx_Y m ω ∂(κ a)) := by
+    -- Use ae_all_iff twice to combine over ℕ × ℕ
+    rw [ae_all_iff]
+    intro n
+    rw [ae_all_iff]
+    intro m
+    exact h_approx_factorization n m
 
-  -- On this ae-good set S, for each fixed a:
-  -- - approx_X(n) ω → X ω for all ω (pointwise convergence)
-  -- - approx_Y(m) ω → Y ω for all ω (pointwise convergence)
-  -- - |approx_X(n) ω approx_Y(m) ω| ≤ CX · CY (uniform domination)
+  -- Step B.7.3: On the ae-good set, pass to the limit
+  filter_upwards [h_combined] with a ha
 
-  -- By DCT applied to the probability measure κ(a):
-  -- - ∫ approx_X(n) approx_Y(m) d(κ a) → ∫ X Y d(κ a) as n, m → ∞
-  -- - (∫ approx_X(n) d(κ a))(∫ approx_Y(m) d(κ a)) → (∫ X d(κ a))(∫ Y d(κ a))
+  -- Now we work with a fixed a in the ae-good set
+  -- We have: ∀ n m, factorization holds for approximations at a
+  -- We need: factorization holds for X, Y at a
 
-  -- Since the approximations satisfy equality, the limit does too:
-  -- ∫ X Y d(κ a) = (∫ X d(κ a))(∫ Y d(κ a)) for a ∈ S
+  -- The proof strategy: both sides converge to the desired values
+  -- Left side: ∫ approx_X(n) approx_Y(m) → ∫ XY
+  -- Right side: (∫ approx_X(n))(∫ approx_Y(m)) → (∫ X)(∫ Y)
+  -- Since LHS = RHS for all n,m, the limits are equal
 
-  -- Since μ(S) = 1, this is the desired ae equality.
+  -- Step B.7.3a: Show the LHS converges
+  -- We need a double limit: n, m → ∞
+  -- For simplicity, take a diagonal sequence (e.g., n = m)
+  have h_lhs_converges : Filter.Tendsto
+      (fun n => ∫ ω, approx_X n ω * approx_Y n ω ∂(κ a))
+      Filter.atTop
+      (𝓝 (∫ ω, X ω * Y ω ∂(κ a))) := by
+    -- Apply dominated convergence theorem
+    -- Need: pointwise convergence + uniform domination
+    sorry  -- DCT for LHS (~10-15 lines)
+           -- Use: integral_tendsto_of_tendsto_of_dominated
+           -- Domination: |approx_X(n) * approx_Y(n)| ≤ CX * CY
 
-  sorry  -- Step B: Would implement the above using:
-         -- - ae_all_iff for combining countable ae statements
-         -- - integral_tendsto_of_tendsto_of_dominated for DCT
-         -- - Filter.Tendsto.mul for product convergence
-         -- Implementation: ~40-50 lines following this blueprint
+  -- Step B.7.3b: Show the RHS converges
+  have h_rhs_converges : Filter.Tendsto
+      (fun n => (∫ ω, approx_X n ω ∂(κ a)) * (∫ ω, approx_Y n ω ∂(κ a)))
+      Filter.atTop
+      (𝓝 ((∫ ω, X ω ∂(κ a)) * (∫ ω, Y ω ∂(κ a)))) := by
+    -- This is a product of two convergent sequences
+    apply Filter.Tendsto.mul
+    · sorry  -- ∫ approx_X(n) → ∫ X (~5-8 lines, DCT)
+    · sorry  -- ∫ approx_Y(n) → ∫ Y (~5-8 lines, DCT)
+
+  -- Step B.7.3c: Since LHS = RHS for all n, the limits are equal
+  have h_eq_on_diagonal : ∀ n, ∫ ω, approx_X n ω * approx_Y n ω ∂(κ a) =
+                                 (∫ ω, approx_X n ω ∂(κ a)) * (∫ ω, approx_Y n ω ∂(κ a)) := by
+    intro n
+    exact ha n n
+
+  -- The limits of equal sequences are equal
+  -- If f(n) = g(n) for all n, and f(n) → L₁, g(n) → L₂, then L₁ = L₂
+  have : (fun n => ∫ ω, approx_X n ω * approx_Y n ω ∂(κ a)) =
+         (fun n => (∫ ω, approx_X n ω ∂(κ a)) * (∫ ω, approx_Y n ω ∂(κ a))) := by
+    ext n
+    exact h_eq_on_diagonal n
+  rw [this] at h_lhs_converges
+  exact tendsto_nhds_unique h_lhs_converges h_rhs_converges
 
 /-- Kernel-level factorisation for two bounded test functions applied to coordinate projections.
 
