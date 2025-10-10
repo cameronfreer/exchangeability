@@ -1293,13 +1293,92 @@ lemma Kernel.IndepFun.integral_mul
       -- Pointwise convergence
       (∀ ω, Filter.Tendsto (fun n => approx_X n ω) Filter.atTop (𝓝 (X ω))) ∧
       (∀ ω, Filter.Tendsto (fun n => approx_Y n ω) Filter.atTop (𝓝 (Y ω))) := by
-    sorry  -- Approximation construction (~30-40 lines)
-           -- Strategy: Use dyadic approximation at scale 2^(-n)
-           -- For each n, partition [-CX, CX] into intervals of length 2^(-n)
-           -- Define approx_X n ω = k * 2^(-n) where k is chosen so X ω ∈ [k*2^(-n), (k+1)*2^(-n))
-           -- Each partition interval is X⁻¹(I) which is measurable in both senses by h_preimage_meas
-           -- Uniform bounds: |approx_X n ω| ≤ CX + 2^(-n) ≤ 2*CX for large n
-           -- Pointwise convergence: |X ω - approx_X n ω| ≤ 2^(-n) → 0
+    -- Strategy: Construct dyadic rational approximations
+    -- For each n, use a grid with spacing 2^(-n) on [-CX, CX]
+
+    -- Define the dyadic approximation function
+    let dyadic_approx (C : ℝ) (f : Ω → ℝ) (n : ℕ) : Ω → ℝ := fun ω =>
+      -- Round f(ω) down to nearest multiple of 2^(-n), clamped to [-C, C]
+      let grid_size := (2 : ℝ) ^ (-(n : ℤ))
+      let val := max (-C) (min C (f ω))
+      ⌊val / grid_size⌋ * grid_size
+
+    refine ⟨dyadic_approx CX X, dyadic_approx CY Y, ?_, ?_, ?_, ?_, ?_, ?_⟩
+
+    -- Prove each dyadic_approx is a simple function
+    · intro n
+      -- Define the finite index set: integers k with k*2^(-n) in [-CX, CX]
+      let grid_size := (2 : ℝ) ^ (-(n : ℤ))
+      -- Range of k: approximately -⌈CX/grid_size⌉ to ⌈CX/grid_size⌉
+      let k_min := ⌈-CX / grid_size⌉ - 1
+      let k_max := ⌈CX / grid_size⌉ + 1
+      -- Define index type as integers in finite range
+      let ι := {k : ℤ // k_min ≤ k ∧ k ≤ k_max}
+
+      -- For each k, define the set where X falls in the k-th grid cell
+      let A : ι → Set Ω := fun ⟨k, _⟩ => X ⁻¹' (Set.Ico (k * grid_size) ((k + 1) * grid_size))
+      let a : ι → ℝ := fun ⟨k, _⟩ => k * grid_size
+
+      -- 1. ι is Fintype (bounded integers)
+      have hι : Fintype ι := by
+        -- ι is a subtype of integers in [k_min, k_max]
+        sorry -- Should use Int.fintypeIcc or Set.fintypeIcc
+              -- The subtype {k : ℤ // k_min ≤ k ≤ k_max} is Fintype
+
+      -- 2. Each A k is measurable in both senses
+      have hA_meas : ∀ i : ι, MeasurableSet (A i) ∧
+                               MeasurableSet[MeasurableSpace.comap X inferInstance] (A i) := by
+        intro ⟨k, _⟩
+        simp only [A]
+        constructor
+        · -- Ambient measurability: X⁻¹(Ico(...)) is measurable
+          exact (h_preimage_meas (Set.Ico (k * grid_size) ((k + 1) * grid_size)) measurableSet_Ico).1
+        · -- Comap measurability: X⁻¹(S) is in comap X by definition
+          exact ⟨Set.Ico (k * grid_size) ((k + 1) * grid_size), measurableSet_Ico, rfl⟩
+
+      -- 3. Show the equality
+      refine ⟨ι, hι, a, A, hA_meas, ?_⟩
+      ext ω
+      simp only [dyadic_approx, A, a]
+      -- LHS: ⌊clamp(X ω) / grid_size⌋ * grid_size
+      -- RHS: ∑ ⟨k, _⟩, indicator(X ω ∈ Ico(k*g, (k+1)*g)) * (k * g)
+
+      -- The sum has exactly one nonzero term: the k where X(ω) falls in [k*g, (k+1)*g)
+      -- That k is precisely ⌊clamp(X ω) / grid_size⌋
+
+      sorry -- Show sum collapses to single term matching floor value
+            -- Key steps:
+            -- 1. Let k₀ = ⌊clamp(X ω) / grid_size⌋
+            -- 2. Show clamp(X ω) ∈ Ico(k₀ * g, (k₀ + 1) * g)
+            -- 3. Show for k ≠ k₀, clamp(X ω) ∉ Ico(k * g, (k + 1) * g)
+            -- 4. Therefore sum = indicator(k₀) * (k₀ * g) = k₀ * g
+
+    · intro n
+      sorry -- Symmetric for Y
+
+    -- Uniform bounds
+    · intro n ω
+      simp only [dyadic_approx]
+      sorry -- Show |⌊clamp(X(ω))/2^(-n)⌋ * 2^(-n)| ≤ CX
+            -- Outline:
+            -- 1. val = clamp(X ω) ∈ [-CX, CX]
+            -- 2. Floor: ⌊val/g⌋ * g ≤ val < (⌊val/g⌋ + 1) * g where g = 2^(-n)
+            -- 3. Therefore |⌊val/g⌋ * g| ≤ max(|val|, |val + g|) ≤ CX + g
+            -- 4. For strict bound ≤ CX, need more careful analysis or adjust specification
+
+    · intro n ω
+      sorry -- Symmetric for Y
+
+    -- Pointwise convergence
+    · intro ω
+      -- Key property: floor quantization has error at most one grid unit
+      -- |X(ω) - ⌊X(ω)/ε⌋*ε| ≤ ε, and ε = 2^(-n) → 0
+      sorry -- Apply Metric.tendsto_atTop with error bound 2^(-n)
+            -- For any ε > 0, choose N with 2^(-N) < ε
+            -- Then for n ≥ N: dist(X ω, dyadic_approx CX X n ω) ≤ 2^(-n) ≤ 2^(-N) < ε
+
+    · intro ω
+      sorry -- Symmetric for Y
 
   -- Step B.7: Apply the approximation framework
 
@@ -1370,7 +1449,25 @@ lemma Kernel.IndepFun.integral_mul
     -- Apply DCT with bound CX * CY
     apply MeasureTheory.tendsto_integral_of_dominated_convergence (fun _ => CX * CY)
     · -- AEStronglyMeasurable for each product
-      sorry  -- Need to show approx_X n * approx_Y n is measurable
+      intro n
+      -- Extract structures for both
+      obtain ⟨ι, hι, a, A, hA_meas, hA_eq⟩ := h_simple_X n
+      obtain ⟨κι, hκι, b, B, hB_meas, hB_eq⟩ := h_simple_Y n
+      rw [hA_eq, hB_eq]
+      -- Product of sums of indicators is measurable
+      apply AEStronglyMeasurable.mul
+      · apply Measurable.aestronglyMeasurable
+        apply Finset.measurable_sum
+        intro i _
+        apply Measurable.indicator
+        · exact measurable_const
+        · exact (hA_meas i).1
+      · apply Measurable.aestronglyMeasurable
+        apply Finset.measurable_sum
+        intro j _
+        apply Measurable.indicator
+        · exact measurable_const
+        · exact (hB_meas j).1
     · -- Integrable bound
       exact integrable_const (CX * CY)
     · -- Uniform bound: |approx_X n ω * approx_Y n ω| ≤ CX * CY
@@ -1395,7 +1492,17 @@ lemma Kernel.IndepFun.integral_mul
     · -- Show ∫ approx_X(n) → ∫ X using DCT
       apply MeasureTheory.tendsto_integral_of_dominated_convergence (fun _ => CX)
       · -- AEStronglyMeasurable for each approx_X n
-        sorry  -- Need to show approx_X n is measurable
+        intro n
+        -- Extract the simple function structure
+        obtain ⟨ι, hι, a, A, hA_meas, hA_eq⟩ := h_simple_X n
+        rw [hA_eq]
+        -- Sum of measurable functions (indicator of measurable set with constant) is measurable
+        apply Measurable.aestronglyMeasurable
+        apply Finset.measurable_sum
+        intro i _
+        apply Measurable.indicator
+        · exact measurable_const
+        · exact (hA_meas i).1
       · -- Integrable bound
         exact integrable_const CX
       · -- Uniform bound: |approx_X n ω| ≤ CX
@@ -1408,7 +1515,17 @@ lemma Kernel.IndepFun.integral_mul
     · -- Show ∫ approx_Y(n) → ∫ Y using DCT
       apply MeasureTheory.tendsto_integral_of_dominated_convergence (fun _ => CY)
       · -- AEStronglyMeasurable for each approx_Y n
-        sorry  -- Need to show approx_Y n is measurable
+        intro n
+        -- Extract the simple function structure
+        obtain ⟨κι, hκι, b, B, hB_meas, hB_eq⟩ := h_simple_Y n
+        rw [hB_eq]
+        -- Sum of measurable functions is measurable
+        apply Measurable.aestronglyMeasurable
+        apply Finset.measurable_sum
+        intro j _
+        apply Measurable.indicator
+        · exact measurable_const
+        · exact (hB_meas j).1
       · -- Integrable bound
         exact integrable_const CY
       · -- Uniform bound: |approx_Y n ω| ≤ CY

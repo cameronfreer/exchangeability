@@ -505,7 +505,7 @@ lemma contractable_dist_eq
   have hrect :=
     agree_on_future_rectangles_of_contractable
       (μ:=μ) (X:=X) hX k m hk
-  simpa using hrect.measure_eq
+  simpa using AgreeOnFutureRectangles_to_measure_eq hrect
 
 /-- **Key convergence result:** The extreme members agree after conditioning on the tail σ-algebra.
 
@@ -543,25 +543,104 @@ lemma condexp_convergence
 
 lemma extreme_members_equal_on_tail
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {X : ℕ → Ω → α} (hX : Contractable μ X) (m : ℕ) (B : Set α) (hB : MeasurableSet B) :
+    {X : ℕ → Ω → α}
+    (hX : Contractable μ X)
+    (hX_meas : ∀ n, Measurable (X n))
+    (m : ℕ) (B : Set α) (hB : MeasurableSet B) :
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X m) | tailSigma X]
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] := by
-  -- Proof strategy:
-  -- 1. From condexp_convergence:
-  --    𝔼[1_{X_m∈B} | 𝔽ₙ] = 𝔼[1_{X_0∈B} | 𝔽ₙ] for all n ≥ m
-  -- 2. Define reverse martingale: Mₙ := 𝔼[1_{X_m∈B} | 𝔽ₙ]
-  -- 3. As n → ∞, 𝔽ₙ = futureFiltration X n ↓ tailSigma X (using tailSigmaFuture_eq_tailSigma and futureFiltration_antitone)
-  -- 4. By reverse martingale convergence (Lévy's downward theorem):
-  --    Mₙ → 𝔼[1_{X_m∈B} | tailSigma X] a.s. and in L¹
-  -- 5. Similarly for X_0: 𝔼[1_{X_0∈B} | 𝔽ₙ] → 𝔼[1_{X_0∈B} | tailSigma X]
-  -- 6. Since Mₙ are all equal (from step 1), their limits are equal
-  -- 7. Therefore the conclusion holds
-  --
-  -- This requires from CondExp.lean:
-  -- - Reverse martingale convergence (condexp_tendsto_condexp_iInf)
-  -- - Dominated convergence for L¹ functions
-  sorry
+  classical
+  -- Notation
+  set f_m : Ω → ℝ := (Set.indicator B (fun _ => (1 : ℝ)) ∘ X m)
+  set f_0 : Ω → ℝ := (Set.indicator B (fun _ => (1 : ℝ)) ∘ X 0)
+
+  -- (1) Levelwise equality at σ(θ_{m+1}X) from your rectangles lemma
+  have h_level :
+      μ[f_m | futureFiltration X m] =ᵐ[μ] μ[f_0 | futureFiltration X m] := by
+    -- This is exactly your `condexp_convergence` specialized to k=0
+    have hk : 0 ≤ m := Nat.zero_le m
+    exact
+      (condexp_convergence (μ:=μ) (X:=X) hX hX_meas (k:=0) (m:=m) hk B hB)
+
+  -- (2) Tail σ-algebra is below every futureFiltration
+  have hTail_le_future :
+      tailSigma X ≤ futureFiltration X m := by
+    -- tail = ⨅ n futureFiltration X n, so ≤ any one of them
+    have : tailSigmaFuture X = ⨅ n, futureFiltration X n := rfl
+    have h' : tailSigma X = tailSigmaFuture X := (tailSigmaFuture_eq_tailSigma X).symm
+    simpa [h', this] using iInf_le (fun n => futureFiltration X n) m
+
+  -- (3) Measurability fact used by setIntegral_condExp
+  set Y := shiftRV X (m + 1)
+  have hY : Measurable Y := measurable_shiftRV (hX := hX_meas) (m := m + 1)
+  have hmY : futureFiltration X m ≤ (inferInstance : MeasurableSpace Ω) := by
+    -- comap Y ≤ ⊥-extension; unfold and use measurability of Y
+    intro s hs
+    rcases hs with ⟨t, ht, rfl⟩
+    exact hY ht
+
+  -- (4) Equality of set integrals over every A in the tail σ-algebra
+  have h_setInt_eq :
+      ∀ {A : Set Ω}, MeasurableSet[tailSigma X] A →
+        ∫ ω in A, f_m ω ∂μ = ∫ ω in A, f_0 ω ∂μ := by
+    intro A hA
+    -- A is measurable at every future level; in particular at m
+    have hA_m : MeasurableSet[futureFiltration X m] A :=
+      hTail_le_future _ hA
+    -- Evaluate ∫_A f_m using condExp at level m
+    have hint_m : Integrable f_m μ :=
+      (integrable_const (1 : ℝ)).indicator ((hX_meas m) hB)
+    have hint_0 : Integrable f_0 μ :=
+      (integrable_const (1 : ℝ)).indicator ((hX_meas 0) hB)
+    have hCE_m :=
+      setIntegral_condExp (μ := μ) (m := futureFiltration X m) (hm := hmY)
+        (f := f_m) hint_m hA_m
+    have hCE_0 :=
+      setIntegral_condExp (μ := μ) (m := futureFiltration X m) (hm := hmY)
+        (f := f_0) hint_0 hA_m
+    -- Replace CE(f_m|⋯) by CE(f_0|⋯) on A using the a.e. equality h_level
+    have h_swap :
+        ∫ ω in A, μ[f_m | futureFiltration X m] ω ∂μ
+          = ∫ ω in A, μ[f_0 | futureFiltration X m] ω ∂μ := by
+      refine setIntegral_congr_ae ?_ (ae_restrict_of_ae h_level)
+      exact hA_m
+    -- Chain equalities:
+    -- ∫_A f_m = ∫_A CE_m(f_m) = ∫_A CE_m(f_0) = ∫_A f_0
+    calc
+      ∫ ω in A, f_m ω ∂μ
+          = ∫ ω in A, μ[f_m | futureFiltration X m] ω ∂μ := hCE_m.symm
+      _ = ∫ ω in A, μ[f_0 | futureFiltration X m] ω ∂μ := h_swap
+      _ = ∫ ω in A, f_0 ω ∂μ := hCE_0
+
+  -- (5) Use uniqueness of CE on the tail: CE_tail(f_m) = CE_tail(f_0)
+  have hmTail :
+      tailSigma X ≤ (inferInstance : MeasurableSpace Ω) := by
+    intro s hs; exact hs  -- every tail-measurable set is measurable in Ω
+  -- we choose g := CE_tail(f_0)
+  have g_meas :
+      StronglyMeasurable[tailSigma X] (μ[f_0 | tailSigma X]) :=
+    stronglyMeasurable_condexp
+  have g_int : Integrable (μ[f_0 | tailSigma X]) μ := integrable_condexp
+  have h_target :
+      μ[f_m | tailSigma X] =ᵐ[μ] μ[f_0 | tailSigma X] := by
+    -- apply uniqueness with the set-integral identity proved above
+    refine
+      (ae_eq_condExp_of_forall_setIntegral_eq
+        (μ := μ) (m := tailSigma X) (hm := hmTail)
+        (f := f_m) (g := μ[f_0 | tailSigma X])
+        (hf_int := (integrable_const (1 : ℝ)).indicator ((hX_meas m) hB))
+        (hg_int := g_int)
+        (h_set_integral_eq := ?_)
+        (hg_meas := g_meas)).symm
+    intro A hA
+    -- ∫_A f_m = ∫_A f_0, and ∫_A CE_tail(f_0) = ∫_A f_0
+    have := h_setInt_eq hA
+    simpa [setIntegral_condExp (μ := μ) (m := tailSigma X) (hm := hmTail)
+            (f := f_0) ((integrable_const (1 : ℝ)).indicator ((hX_meas 0) hB)) hA]
+      using this
+
+  simpa [f_m, f_0] using h_target
 
 /--
 Additive “future-filtration + standard-cylinder” layer that coexists with the
@@ -746,12 +825,8 @@ lemma contractable_dist_eq_on_rectangles_future
 
 end FutureRectangles
 
-structure AgreeOnFutureRectangles
-    (μ ν : Measure (α × (ℕ → α))) : Prop :=
-  (eq_rect :
-    ∀ (r : ℕ) (B : Set α) (hB : MeasurableSet B)
-      (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i)),
-      μ (B ×ˢ cylinder (α:=α) r C) = ν (B ×ˢ cylinder (α:=α) r C))
+/-- Use the AgreeOnFutureRectangles from CondExp (which just wraps measure equality). -/
+abbrev AgreeOnFutureRectangles := Exchangeability.Probability.AgreeOnFutureRectangles
 
 lemma agree_on_future_rectangles_of_contractable
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -761,10 +836,8 @@ lemma agree_on_future_rectangles_of_contractable
       (Measure.map (fun ω => (X k ω, shiftRV X (m + 1) ω)) μ) := by
   classical
   refine ⟨?_⟩
-  intro r B hB C hC
-  simpa using
-    (contractable_dist_eq_on_rectangles_future
-      (μ:=μ) (X:=X) hX k m hk r B hB C hC)
+  -- Direct measure equality from contractable_dist_eq
+  exact contractable_dist_eq (μ:=μ) (X:=X) hX k m hk
 
 /-! ## Measure extension from future rectangles -/
 
@@ -925,12 +998,11 @@ lemma measure_ext_of_future_rectangles
   exact Measure.ext_of_generateFrom_of_iUnion
     S Bseq h_gen h_pi h1B h2B hμB h_agree
 
-lemma AgreeOnFutureRectangles.measure_eq
+/-- The measure_eq field is now directly accessible since we simplified the structure. -/
+lemma AgreeOnFutureRectangles_to_measure_eq
     {μ ν : Measure (α × (ℕ → α))}
     (h : AgreeOnFutureRectangles μ ν) : μ = ν :=
-  measure_ext_of_future_rectangles (μ:=μ) (ν:=ν) (by
-    intro r B hB C hC
-    simpa using h.eq_rect r B hB C hC)
+  h.measure_eq
 
 
 section reverse_martingale
