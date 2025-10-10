@@ -62,13 +62,18 @@ Theorem and Koopman operator. This proof has the **heaviest dependencies**.
 1. Line 733: `ν_ae_shiftInvariant` - DEPRECATED, superseded by integral-level proofs
 2. Line 803: `identicalConditionalMarginals` - DEPRECATED kernel version
 
-**Category 2: Kernel independence infrastructure** (routine substeps, ~30-80 lines total):
-3. Line 979: `Kernel.IndepFun.integral_mul_simple` - 4 mechanical substeps (h_left, h_right, h_toReal, + mathlib lemma lookup)
-4. Line 1135: `Kernel.IndepFun.integral_mul` - Step B implementation (~60-80 lines using SimpleFunc.approx)
+**Category 2: Kernel independence infrastructure** (MECHANICAL, all math complete):
+3. Line 1008: Kernel independence lemma lookup (~2 lines, search mathlib for Kernel.Indep set independence)
+4. Line 1025: `h_left` in integral_mul_simple (~15 lines: Finset.sum_mul + integral_finset_sum + integral_indicator_const)
+5. Line 1034: `h_right` in integral_mul_simple (~10 lines: integral_finset_sum + integral_indicator_const)
+6. Line 1049: `h_toReal` in integral_mul_simple (~10 lines: ENNReal.toReal_mul + Finset.sum_mul rearrangement)
+7. Line 1148: Step B full implementation (~60 lines: SimpleFunc.approx + ae_all_iff + DCT)
 
 **Category 3: Core axioms** (fundamental theorem content, cannot be proved):
-5. Line 1144: Conditional independence assumption - **heart of de Finetti's theorem**
-6. Line 1265: `condexp_product_factorization` - depends on #5
+8. Line 1152: Conditional independence assumption - **heart of de Finetti's theorem**
+9. Line 1273: `condexp_product_factorization` - depends on #8
+
+**Summary**: 9 sorries total = 2 deprecated + 5 mechanical (~95 lines) + 2 core axioms
 
 **Key insight**: Working at integral level (what proofs actually use) avoids kernel uniqueness
 and π-system extension complexity. Cleaner, more direct proofs.
