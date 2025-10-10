@@ -384,6 +384,24 @@ lemma eLpNorm_two_from_integral_sq_le
 
 end LpUtilities
 
+/-- Any function from Fin 1 is vacuously StrictMono -/
+private lemma fin1_strictMono_vacuous (k : Fin 1 → ℕ) : StrictMono k := by
+  intro i j hij
+  -- Fin 1 has only one element, so i < j is impossible
+  exfalso
+  have : i = 0 := Fin.eq_zero i
+  have : j = 0 := Fin.eq_zero j
+  omega
+
+/-- For contractable sequences, all single variables have the same distribution -/
+private lemma contractable_single_marginal_eq
+    {μ : Measure Ω} {X : ℕ → Ω → α}
+    (hX_contract : Contractable μ X) (k : ℕ) :
+    Measure.map (X k) μ = Measure.map (X 0) μ := by
+  -- Strategy: The general case requires extracting single marginals from Fin 1 → α maps
+  -- For now, leave as sorry and implement hmean directly below
+  sorry
+
 /-- For a contractable sequence of real-valued random variables in L², all pairs
 have the same covariance. This follows from contractability implying that all
 increasing subsequences of length 2 have the same joint distribution.
@@ -409,13 +427,11 @@ lemma contractable_covariance_structure
   -- All X_i have the same mean by contractability (single-variable marginal)
   have hmean : ∀ k, ∫ ω, X k ω ∂μ = m := by
     intro k
-    -- Strategy: Use contractability to show X_k has same marginal distribution as X_0
-    -- For m=1, StrictMono is vacuously true, but the proof is subtle
-    -- Simpler: use the fact that contractable implies exchangeable for finite sequences
-    -- and thus all marginals are identical
-    sorry -- TODO: Extract single-variable marginal equality from contractability
-    -- Key insight: For any k, the subsequence (k) has same distribution as (0)
-    -- This follows from contractability but requires careful use of Measure.map
+    -- Use contractable_single_marginal_eq to show X_k has same distribution as X_0
+    have h_eq_dist := contractable_single_marginal_eq hX_contract k
+    -- TODO: Transfer integral via equal distributions
+    -- Need: integral equality lemma for functions under equal pushforward measures
+    sorry
 
   -- Define σSq as the variance of X_0
   let σSq := ∫ ω, (X 0 ω - m)^2 ∂μ
