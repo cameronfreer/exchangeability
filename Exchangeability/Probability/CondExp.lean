@@ -131,7 +131,21 @@ lemma indicator_iUnion_tsum_of_pairwise_disjoint
       by_contra hne
       have : Disjoint (f i) (f j) := hdisj (Ne.symm hne)
       exact this.le_bot ⟨hi, hj⟩
-    sorry
+    have houter : ((⋃ j, f j).indicator (fun _ : Ω => (1 : ℝ)) ω) = 1 := by
+      have : ω ∈ ⋃ j, f j := h
+      simp [Set.indicator_of_mem, this]
+    have hzero : ∀ j ≠ i, (f j).indicator (fun _ : Ω => (1 : ℝ)) ω = (0 : ℝ) := by
+      intro j hji
+      have : ω ∉ f j := by
+        intro hj
+        exact hji (huniq j hj)
+      simp [Set.indicator_of_notMem, this]
+    have hi_val : (f i).indicator (fun _ : Ω => (1 : ℝ)) ω = (1 : ℝ) := by
+      simp [Set.indicator_of_mem, hi]
+    have htsum : (∑' j, (f j).indicator (fun _ : Ω => (1 : ℝ)) ω) = 1 := by
+      classical
+      simpa [hi_val] using tsum_eq_single i hzero
+    simpa [houter, htsum]
   · -- ω ∉ ⋃ i, f i: all f i miss ω
     have : ∀ i, ω ∉ f i := fun i hi => h (Set.mem_iUnion.mpr ⟨i, hi⟩)
     simp [Set.indicator_of_notMem h, Set.indicator_of_notMem (this _)]
