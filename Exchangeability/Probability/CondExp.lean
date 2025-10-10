@@ -62,6 +62,8 @@ This file integrates mathlib's probability theory infrastructure and provides a 
 - `bounded_martingale_l2_eq`: L² identification (TODO: use `MemLp.condExpL2_ae_eq_condExp`)
 - `reverse_martingale_convergence`: Requires martingale convergence theory
 - `condexp_same_dist`: Distributional invariance (TODO: use `condExpKernel`, `condDistrib`)
+- `condexp_indicator_eq_of_agree_on_future_rectangles`: Pair-law equality with
+  a common future tail implies equality of conditional indicators
 
 The goal is to incrementally replace stubs with proofs as needed by the de Finetti development.
 
@@ -104,6 +106,31 @@ lemma setIntegral_congr_ae_of_ae
     (hfgμ : f =ᵐ[μ] g) :
     ∫ x in s, f x ∂μ = ∫ x in s, g x ∂μ :=
   setIntegral_congr_ae' (ae_restrict_of_ae hfgμ)
+
+/-! ### Pair-law ⇒ conditional indicator equality (stub) -/
+
+lemma condexp_indicator_eq_of_agree_on_future_rectangles
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {α : Type*} [MeasurableSpace α]
+    {X₁ X₂ : Ω → α} {Y : Ω → ℕ → α}
+    (hagree : Exchangeability.DeFinetti.ViaMartingale.AgreeOnFutureRectangles
+      (Measure.map (fun ω => (X₁ ω, Y ω)) μ)
+      (Measure.map (fun ω => (X₂ ω, Y ω)) μ))
+    (B : Set α) (hB : MeasurableSet B) :
+    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₁
+        | MeasurableSpace.comap Y inferInstance]
+      =ᵐ[μ]
+    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂
+        | MeasurableSpace.comap Y inferInstance] := by
+  -- TODO: Leverage `AgreeOnFutureRectangles.measure_eq` together with the
+  -- uniqueness characterization of conditional expectation (`ae_eq_condExp_of_forall_setIntegral_eq`).
+  -- Outline:
+  -- 1. Translate agreement on future rectangles into equality of integrals of
+  --    indicator functions of sets measurable w.r.t.
+  --    `MeasurableSpace.comap Y inferInstance`.
+  -- 2. Apply π-λ theorem to extend from cylinders to all such sets.
+  -- 3. Conclude the conditional expectations are a.e. equal.
+  sorry
 
 /-! ### Conditional Probability -/
 

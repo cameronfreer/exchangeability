@@ -28,13 +28,13 @@ convergence:
    `E(μ₂ - μ₁)² = Eμ₂² - Eμ₁² = 0`, implying `μ₁ = μ₂` a.s.
 
 2. **Main theorem**: If `ξ` is contractable, then `ξₙ` are conditionally i.i.d.
-   given the tail σ-algebra `𝒯_ξ = ⋂_n σ(θ_n ξ)`.
+  given the tail σ-algebra `𝒯_ξ = ⋂_n σ(θ_n ξ)`.
 
-   From contractability: `(ξ_m, θ_m ξ) =^d (ξ_k, θ_k ξ)` for `k ≤ m`.
-   Using Lemma 1.3 and reverse martingale convergence:
-   ```
-   P[ξ_m ∈ B | θ_m ξ] = P[ξ_k ∈ B | θ_m ξ] → P[ξ_k ∈ B | 𝒯_ξ]
-   ```
+  From contractability: `(ξ_m, θ_{m+1} ξ) =^d (ξ_k, θ_{m+1} ξ)` for `k ≤ m`.
+  Using Lemma 1.3 and reverse martingale convergence:
+  ```
+  P[ξ_m ∈ B | θ_{m+1} ξ] = P[ξ_k ∈ B | θ_{m+1} ξ] → P[ξ_k ∈ B | 𝒯_ξ]
+  ```
    This shows conditional independence and identical conditional laws.
 
 ## Main results
@@ -511,7 +511,7 @@ lemma contractable_dist_eq
 
 For any `k ≤ m` and measurable set `B`:
 ```
-P[X_m ∈ B | θ_m X] = P[X_k ∈ B | θ_m X] → P[X_k ∈ B | 𝒯_X]  (as n → ∞)
+P[X_m ∈ B | θ_{m+1} X] = P[X_k ∈ B | θ_{m+1} X] → P[X_k ∈ B | 𝒯_X]  (as n → ∞)
 ```
 
 This is proved using Lemma 1.3 (contraction-independence) followed by reverse
@@ -972,14 +972,14 @@ If `X` is contractable, then `X₁, X₂, ...` are conditionally i.i.d. given th
 tail σ-algebra `𝒯_X = ⋂_n σ(θ_n X)`.
 
 **Proof structure:**
-1. From contractability: `(X_m, θ_m X) =^d (X_k, θ_k X)` for `k ≤ m ≤ n`
+1. From contractability: `(X_m, θ_{m+1} X) =^d (X_k, θ_{m+1} X)` for `k ≤ m ≤ n`
 2. Define `𝒯_X = ⋂_n σ(θ_n X)` (tail σ-algebra)
 3. Apply Lemma 1.3 + reverse martingale convergence:
    ```
-   P[X_m ∈ B | θ_m X] = P[X_k ∈ B | θ_m X] → P[X_k ∈ B | 𝒯_X]
+   P[X_m ∈ B | θ_{m+1} X] = P[X_k ∈ B | θ_{m+1} X] → P[X_k ∈ B | 𝒯_X]
    ```
-4. Conclude: `P[X_m ∈ B | θ_m X] = P[X_m ∈ B | 𝒯_X] = P[X_1 ∈ B | 𝒯_X]`
-5. First equality: `X_m ⊥⊥_{𝒯_X} θ_m X` for all `m`
+4. Conclude: `P[X_m ∈ B | θ_{m+1} X] = P[X_m ∈ B | 𝒯_X] = P[X_1 ∈ B | 𝒯_X]`
+5. First equality: `X_m ⊥⊥_{𝒯_X} θ_{m+1} X` for all `m`
 6. By iteration: `X₁, X₂, ...` conditionally independent given `𝒯_X`
 7. Second equality: conditional laws agree, giving conditional i.i.d.
 
