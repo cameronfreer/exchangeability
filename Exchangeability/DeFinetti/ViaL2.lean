@@ -638,18 +638,30 @@ private lemma l2_bound_long_vs_tail
     ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
           (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
       ≤ Cf / k := by
-  -- Strategy: Apply l2_contractability_bound with weights
-  -- p_i = 1/m for all i ∈ Fin m
-  -- q_i = 0 if i < m-k, else 1/k for i ∈ {m-k, ..., m-1}
-  -- This gives sup |p - q| ≤ 1/k, hence bound is 2σ²(1-ρ) · (1/k) = Cf/k
+  -- Strategy: The key observation is that comparing a long average (1/m) with
+  -- a tail average (1/k over last k terms) is the same as comparing two different
+  -- weight vectors over the same m terms.
 
-  -- For now, we need contractable_covariance_structure to get σ, ρ
-  -- Since that's not yet proven, we leave this as sorry
-  -- The full proof would:
-  -- 1. Get (m_mean, σ, ρ) from contractable_covariance_structure applied to f ∘ X
-  -- 2. Define weights p, q on Fin m as described above
-  -- 3. Apply l2_contractability_bound to get the bound 2σ²(1-ρ) · (1/k)
-  -- 4. Note that Cf = 2σ²(1-ρ) by definition
+  -- Since Cf is already the uniform bound for equal-weight windows (from hCf_unif),
+  -- and this comparison uses weights that differ by at most 1/k at each position,
+  -- the bound follows from the general weight lemma.
+
+  -- Specifically:
+  -- - Long avg: sum_{i<m} (1/m) f(X_{n+i+1})
+  -- - Tail avg: sum_{i<k} (1/k) f(X_{n+(m-k)+i+1}) = sum_{i in [m-k,m)} (1/k) f(X_{n+i+1})
+  -- These can be written as:
+  --   p_i = 1/m for all i
+  --   q_i = 0 for i < m-k, and 1/k for i >= m-k
+  -- So sup|p-q| = max(1/m, 1/k) = 1/k (since k ≤ m)
+
+  -- The bound from l2_contractability_bound would be: 2σ²(1-ρ) · (1/k) = Cf/k
+  -- which is exactly what we need to prove.
+
+  -- However, we can also use the existing hCf_unif more directly:
+  -- Note that the tail average is just an equal-weight window starting at n+(m-k),
+  -- so we can bound the difference using a triangle inequality approach.
+
+  -- For now, leave as sorry until contractable_covariance_structure is complete
   sorry
 
 theorem weighted_sums_converge_L1
