@@ -1002,11 +1002,8 @@ private lemma Kernel.IndepFun.integral_mul_simple
   have h_indep_pairs : ∀ i j, ∀ᵐ t ∂μ, κ t (A i ∩ B j) = κ t (A i) * κ t (B j) := by
     intro i j
     -- Use Kernel.IndepFun which gives independence for sets in σ(X) and σ(Y)
-    -- This follows from the definition of Kernel.Indep
-    have : Kernel.Indep (MeasurableSpace.comap X inferInstance)
-                        (MeasurableSpace.comap Y inferInstance) κ μ := hXY
-    -- The exact mathlib lemma for extracting set-level independence from Kernel.Indep
-    sorry  -- TODO: Find the right mathlib lemma (likely in Mathlib.Probability.Independence.Kernel)
+    -- hXY : Kernel.IndepFun X Y κ μ unfolds to Kernel.Indep (comap X _) (comap Y _) κ μ
+    sorry  -- Need to extract set independence from Kernel.IndepFun
 
   -- Combine finitely many ae statements
   have h_all_pairs : ∀ᵐ t ∂μ, ∀ i j, κ t (A i ∩ B j) = κ t (A i) * κ t (B j) := by
@@ -1024,19 +1021,16 @@ private lemma Kernel.IndepFun.integral_mul_simple
   have h_left : ∫ ω, (∑ i, (A i).indicator (fun _ => a_coef i) ω) *
                        (∑ j, (B j).indicator (fun _ => b_coef j) ω) ∂(κ t)
               = ∑ i, ∑ j, (a_coef i) * (b_coef j) * (κ t (A i ∩ B j)).toReal := by
-    -- Expand (∑ᵢ aᵢ·1_{Aᵢ})(∑ⱼ bⱼ·1_{Bⱼ}) = ∑ᵢ ∑ⱼ aᵢbⱼ·(1_{Aᵢ}·1_{Bⱼ}) = ∑ᵢ ∑ⱼ aᵢbⱼ·1_{Aᵢ∩Bⱼ}
-    -- Then use linearity: ∫ ∑∑ = ∑∑ ∫
-    -- Finally apply integral_indicator_const to each term
-    sorry  -- ~15 lines: product of sums, pull integral through double sum, indicator algebra
+    -- Expand product of sums, pull integral through, use indicator integral lemma
+    sorry  -- ~15 lines: Finset.sum_mul + integral linearity + integral_indicator_const
 
   -- Expand right side: (∫ ∑ᵢ aᵢ·1_{Aᵢ})(∫ ∑ⱼ bⱼ·1_{Bⱼ}) = (∑ᵢ aᵢ·μ(Aᵢ))(∑ⱼ bⱼ·μ(Bⱼ))
   have h_right : (∫ ω, ∑ i, (A i).indicator (fun _ => a_coef i) ω ∂(κ t)) *
                  (∫ ω, ∑ j, (B j).indicator (fun _ => b_coef j) ω ∂(κ t))
               = (∑ i, (a_coef i) * (κ t (A i)).toReal) *
                 (∑ j, (b_coef j) * (κ t (B j)).toReal) := by
-    -- For each factor: ∫ ∑ᵢ aᵢ·1_{Aᵢ} = ∑ᵢ aᵢ·∫ 1_{Aᵢ} = ∑ᵢ aᵢ·μ(Aᵢ)
-    -- Use integral_finset_sum (linearity) + integral_indicator_const
-    sorry  -- ~10 lines: pull sum out of integral twice, apply indicator integral lemma
+    -- Pull sum out of integral twice, apply indicator integral lemma
+    sorry  -- ~10 lines: integral_finset_sum + integral_indicator_const
 
   -- Use independence to connect the two
   have h_connection : ∑ i, ∑ j, (a_coef i) * (b_coef j) * (κ t (A i ∩ B j)).toReal
@@ -1048,10 +1042,8 @@ private lemma Kernel.IndepFun.integral_mul_simple
   have h_toReal : ∑ i, ∑ j, (a_coef i) * (b_coef j) * ((κ t (A i) * κ t (B j)).toReal)
                 = (∑ i, (a_coef i) * (κ t (A i)).toReal) *
                   (∑ j, (b_coef j) * (κ t (B j)).toReal) := by
-    -- First distribute toReal: (x*y).toReal = x.toReal * y.toReal (for finite measures)
-    -- Then rearrange: ∑ᵢ ∑ⱼ aᵢ·bⱼ·xᵢ·yⱼ = (∑ᵢ aᵢ·xᵢ)(∑ⱼ bⱼ·yⱼ)
-    -- This is pure algebra once toReal is distributed
-    sorry  -- ~10 lines: toReal distributivity + sum rearrangement
+    -- Distribute toReal and rearrange sums
+    sorry  -- ~10 lines: ENNReal.toReal_mul + Finset.sum_mul rearrangement
 
   -- Chain them together
   rw [h_left, h_connection, h_toReal, ← h_right]
@@ -1141,7 +1133,7 @@ lemma Kernel.IndepFun.integral_mul
   --
   -- **Implementation**: ~60-80 lines using SimpleFunc infrastructure from mathlib
 
-  sorry  -- Step B: Complete bounded approximation (detailed substeps documented above)
+  sorry  -- Step B: Approximate X, Y by simple functions, apply Step A, pass to limit via DCT
 
 /-- Kernel-level factorisation for two bounded test functions applied to coordinate projections.
 
