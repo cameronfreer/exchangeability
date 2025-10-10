@@ -1032,10 +1032,12 @@ private lemma Kernel.IndepFun.integral_mul_simple
     -- Simplify each integral separately
     have h1 : ∫ ω, ∑ i, (A i).indicator (fun _ => a_coef i) ω ∂(κ t)
             = ∑ i, (a_coef i) * (κ t (A i)).toReal := by
-      sorry -- Pull sum out with integral_finset_sum, apply integral_indicator_const
+      sorry -- Use integral_finset_sum, then integral_indicator_const for each term
+            -- Note: A i is measurable in σ(X), need to show this implies measurability in ambient space
     have h2 : ∫ ω, ∑ j, (B j).indicator (fun _ => b_coef j) ω ∂(κ t)
             = ∑ j, (b_coef j) * (κ t (B j)).toReal := by
-      sorry -- Pull sum out with integral_finset_sum, apply integral_indicator_const
+      sorry -- Use integral_finset_sum, then integral_indicator_const for each term
+            -- Note: B j is measurable in σ(Y), need to show this implies measurability in ambient space
     rw [h1, h2]
 
   -- Use independence to connect the two
