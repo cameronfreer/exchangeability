@@ -107,6 +107,48 @@ lemma setIntegral_congr_ae_of_ae
     ∫ x in s, f x ∂μ = ∫ x in s, g x ∂μ :=
   setIntegral_congr_ae' (ae_restrict_of_ae hfgμ)
 
+/-! ### Helper lemmas for σ-finiteness and indicators -/
+
+/-- If `μ` is finite, then any trim of `μ` is σ-finite. -/
+lemma sigmaFinite_trim_of_le {m m₀ : MeasurableSpace Ω}
+    (μ : Measure Ω) [IsFiniteMeasure μ] (hm : m ≤ m₀) :
+    SigmaFinite (μ.trim hm) :=
+  (inferInstance : IsFiniteMeasure (μ.trim hm)).toSigmaFinite
+
+/-- For pairwise disjoint sets, the indicator of the union equals
+the pointwise `tsum` of indicators (for ℝ-valued constants). -/
+lemma indicator_iUnion_tsum_of_pairwise_disjoint
+    (f : ℕ → Set Ω) (hdisj : Pairwise (Disjoint on f)) :
+    (fun ω => ((⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω))
+      = fun ω => ∑' i, (f i).indicator (fun _ => (1 : ℝ)) ω := by
+  classical
+  funext ω
+  by_cases h : ω ∈ ⋃ i, f i
+  · -- ω ∈ ⋃ i, f i: exactly one index i has ω ∈ f i
+    obtain ⟨i, hi⟩ := Set.mem_iUnion.mp h
+    have huniq : ∀ j, ω ∈ f j → j = i := by
+      intro j hj
+      by_contra hne
+      have : Disjoint (f i) (f j) := hdisj (Ne.symm hne)
+      exact this.le_bot ⟨hi, hj⟩
+    sorry
+  · -- ω ∉ ⋃ i, f i: all f i miss ω
+    have : ∀ i, ω ∉ f i := fun i hi => h (Set.mem_iUnion.mpr ⟨i, hi⟩)
+    simp [Set.indicator_of_notMem h, Set.indicator_of_notMem (this _)]
+
+/-- Uniform bound: conditional probability is in `[0,1]` a.e. uniformly over `A`. -/
+lemma condProb_ae_bound_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (m : MeasurableSpace Ω) (hm : m ≤ m₀) [SigmaFinite (μ.trim hm)]
+    (A : Set Ω) (hA : MeasurableSet[m₀] A) :
+    ∀ᵐ ω ∂μ, ‖μ[A.indicator (fun _ => (1 : ℝ)) | m] ω‖ ≤ 1 := by
+  have := condProb_ae_nonneg_le_one m hm hA
+  filter_upwards [this] with ω hω
+  rcases hω with ⟨h0, h1⟩
+  have : |condProb μ m A ω| ≤ 1 := by
+    have : |condProb μ m A ω| = condProb μ m A ω := abs_of_nonneg h0
+    simpa [this]
+  simpa [Real.norm_eq_abs, condProb] using this
+
 /-! ### Pair-law ⇒ conditional indicator equality (stub) -/
 
 lemma condexp_indicator_eq_of_agree_on_future_rectangles
@@ -1055,82 +1097,36 @@ lemma reverse_martingale_convergence {m₀ : MeasurableSpace Ω} {μ : Measure �
     (∀ᵐ ω ∂μ, Tendsto (fun n => μ[X | 𝒢 n] ω) atTop (𝓝 (μ[X | ⨅ n, 𝒢 n] ω))) ∧
     Tendsto (fun n => eLpNorm (μ[X | 𝒢 n] - μ[X | ⨅ n, 𝒢 n]) 1 μ) atTop (𝓝 0) := by
   classical
-  -- Tail σ-algebra and target function
+  -- Tail σ-algebra
   set tail : MeasurableSpace Ω := ⨅ n, 𝒢 n
-  set g : Ω → ℝ := μ[X | tail]
 
-  -- Step 1: Build an increasing filtration from the decreasing one
-  -- ℱ n = ⨅ k, 𝒢 (n + k) = "tail from time n"
-  let ℱ : ℕ → MeasurableSpace Ω := fun n => ⨅ k, 𝒢 (n + k)
+  -- 𝒢 is antitone
+  have h_antitone : Antitone 𝒢 := by
+    intro i j hij
+    obtain ⟨t, rfl⟩ := Nat.exists_eq_add_of_le hij
+    -- chain one-step decreases
+    have : ∀ t, 𝒢 (i + t + 1) ≤ 𝒢 (i + t) := fun t => by
+      simpa [Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using h_decr (i + t)
+    -- by simple induction
+    simpa [Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using
+      Nat.rec (motive := fun t => 𝒢 (i + t) ≤ 𝒢 i)
+        (by simp)
+        (fun t ih => (this t).trans ih) t
 
-  -- ℱ is monotone (increasing)
-  have h_mono : Monotone ℱ := by
-    intro n m hnm
-    refine le_iInf ?_
-    intro k
-    have : ℱ n ≤ 𝒢 (n + (k + (m - n))) := iInf_le (fun t => 𝒢 (n + t)) (k + (m - n))
-    have heq : n + (k + (m - n)) = m + k := by omega
-    simpa [heq] using this
+  -- (1) a.e. convergence for antitone families
+  -- Need: Integrable.tendsto_ae_condExp_of_antitone or similar
+  have h_ae :
+      ∀ᵐ ω ∂μ, Tendsto (fun n => μ[X | 𝒢 n] ω) atTop (𝓝 (μ[X | tail] ω)) := by
+    sorry -- mathlib may not have this yet; could prove via Doob or backward martingale
 
-  -- ⨆ n, ℱ n = tail
-  have h_sup_eq_tail : (⨆ n, ℱ n) = tail := by
-    apply le_antisymm
-    · -- ⨆ ℱ ≤ tail
-      refine iSup_le ?_
-      intro m
-      refine le_iInf ?_
-      intro n
-      have hmn : ℱ m ≤ 𝒢 (m + n) := iInf_le (fun k => 𝒢 (m + k)) n
-      have h_antitone : Antitone 𝒢 := by
-        intro i j hij
-        obtain ⟨t, rfl⟩ := Nat.exists_eq_add_of_le hij
-        simpa using
-          Nat.rec (motive := fun t => 𝒢 (i + t) ≤ 𝒢 i) (by simp)
-            (fun t ih => (by simpa [Nat.add_assoc] using (h_decr (i + t)).trans ih)) t
-      exact hmn.trans (h_antitone (Nat.le_add_left _ _))
-    · -- tail ≤ ⨆ ℱ
-      have : tail ≤ ℱ 0 := by
-        refine le_iInf ?_
-        intro k
-        simpa [Nat.zero_add] using (iInf_le 𝒢 k)
-      exact le_iSup_of_le 0 this
+  -- (2) L¹ convergence for antitone families
+  -- Need: Integrable.tendsto_eLpNorm_condExp_of_antitone or similar
+  have h_L1 :
+      Tendsto (fun n => eLpNorm (μ[X | 𝒢 n] - μ[X | tail]) 1 μ) atTop (𝓝 0) := by
+    sorry -- follows from a.e. convergence + uniform integrability
 
-  -- Step 2: Set up for applying increasing filtration convergence
-  have hg_int : Integrable g μ := integrable_condExp
-
-  -- We need g to be strongly measurable w.r.t. ⨆ ℱ = tail
-  have hg_meas_tail : StronglyMeasurable[tail] g := stronglyMeasurable_condExp
-  have hg_meas_sup : StronglyMeasurable[⨆ n, ℱ n] g := by
-    simpa [h_sup_eq_tail] using hg_meas_tail
-
-  -- Step 3: Create a Filtration structure for mathlib's convergence theorems
-  have h_le_ℱ : ∀ n, ℱ n ≤ m₀ := fun n =>
-    iInf_le_of_le 0 (h_le n)
-
-  -- Build the Filtration
-  let ℱ_filt : Filtration ℕ m₀ := {
-    seq := ℱ
-    mono' := h_mono
-    le' := h_le_ℱ
-  }
-
-  -- We need SigmaFinite instances for ℱ
-  have h_sigmaFinite_ℱ : ∀ n, SigmaFinite (μ.trim (h_le_ℱ n)) := by
-    intro n
-    sorry -- Need to derive from SigmaFinite on 𝒢
-
-  -- Step 4: Apply increasing filtration convergence to g
-  -- Since g is measurable w.r.t. tail = ⨆ ℱ, we have μ[g | ℱ n] → g
-  have h_ae_inc : ∀ᵐ ω ∂μ, Tendsto (fun n => μ[g | ℱ_filt n] ω) atTop (𝓝 (g ω)) := by
-    sorry -- Need to apply mathlib convergence, requires proper variable setup
-
-  have h_L1_inc : Tendsto (fun n => eLpNorm (μ[g | ℱ_filt n] - g) 1 μ) atTop (𝓝 0) := by
-    sorry -- Need to apply mathlib convergence, requires proper variable setup
-
-  -- Step 5: The convergence follows from mathlib's reverse martingale convergence theorem
-  -- The key insight: for a *decreasing* filtration 𝒢, the sequence μ[X | 𝒢 n] converges
-  -- to μ[X | ⨅ n, 𝒢 n] both a.e. and in L¹
-  sorry
+  -- Done
+  exact ⟨h_ae, h_L1⟩
 
 set_option linter.unusedSectionVars false in
 /-- Application to tail σ-algebras: convergence as we condition on
