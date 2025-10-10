@@ -61,10 +61,10 @@ Theorem and Koopman operator. This proof has the **heaviest dependencies**.
 1. Line 749: `ν_ae_shiftInvariant` - DEPRECATED, superseded by integral-level proofs
 2. Line 812: `identicalConditionalMarginals` - DEPRECATED kernel version
 
-**Category 2: Mathlib gap** (genuine infrastructure, ~2-4 hours):
-3. Line 1015: `Kernel.IndepFun.integral_mul` - quantifier swapping step
-   Needs: π-system + ae_all_iff for countable families
-   Current: integrability ✅, integral factorization strategy documented
+**Category 2: Mathlib gap** (solvable locally, ~100-150 lines):
+3. Line 1046: `Kernel.IndepFun.integral_mul` - integral factorization under kernel independence
+   Strategy: Simple function case → bounded approximation (no quantifier swap needed)
+   Current: integrability ✅, complete proof strategy documented with implementation notes
 
 **Category 3: Core axioms** (fundamental theorem content, cannot be proved):
 4. Line 1064: Conditional independence assumption - **heart of de Finetti's theorem**
@@ -107,6 +107,13 @@ theorem integrable_of_bounded {Ω : Type*} [MeasurableSpace Ω]
     Integrable f μ := by
   obtain ⟨C, hC⟩ := hbd
   exact ⟨hmeas.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hC)⟩
+
+/-- Integral of indicator of a set with constant value 1. -/
+@[simp] lemma integral_indicator_one {Ω : Type*} [MeasurableSpace Ω]
+    {μ : Measure Ω} {s : Set Ω} (hs : MeasurableSet s) :
+    ∫ ω, s.indicator (fun _ => (1 : ℝ)) ω ∂μ = (μ s).toReal := by
+  rw [integral_indicator hs]
+  simp [Measure.real]
 
 end MeasureTheory
 
@@ -1008,15 +1015,35 @@ lemma Kernel.IndepFun.integral_mul
   -- Kernel.IndepFun gives: ∀ s t, ... → ∀ᵐ a, equation holds
   -- We need: ∀ᵐ a, IndepFun X Y (κ a) → then use IndepFun.integral_mul_eq_mul_integral
 
-  -- This requires either:
-  -- (a) A countable π-system argument with ae_all_iff, OR
-  -- (b) Direct use of the integral characterization of independence
+  -- **COMPLETION STRATEGY** (avoids full quantifier swap):
+  --
+  -- Instead of deriving pointwise measure-level independence, prove factorization directly:
+  --
+  -- A. **Simple function case**:
+  --    For φ := ∑ᵢ aᵢ·1_{Aᵢ} (Aᵢ ∈ σ(X)) and ψ := ∑ⱼ bⱼ·1_{Bⱼ} (Bⱼ ∈ σ(Y)):
+  --    - Expand ∫ φψ d(κ a) = ∑ᵢ ∑ⱼ aᵢbⱼ·(κ a (Aᵢ ∩ Bⱼ)).toReal
+  --    - Use Kernel.IndepFun on each (Aᵢ, Bⱼ) pair: ∀ᵐ a, κ a (Aᵢ∩Bⱼ) = κ a Aᵢ * κ a Bⱼ
+  --    - Take finite union of null sets (finitely many pairs)
+  --    - Show ∫ φψ = (∫ φ)(∫ ψ) holds a.e. via toReal algebra
+  --
+  -- B. **Bounded measurable case**:
+  --    - Approximate X, Y by simple functions Xₙ, Yₘ (via SimpleFunc.approx or quantization)
+  --    - Apply (A) to each (Xₙ, Yₘ) pair
+  --    - Use `ae_all_iff` on ℕ×ℕ to get single null set for all approximations
+  --    - Pass to limit via dominated convergence (boundedness ensures uniform integrability)
+  --
+  -- This yields the full result without requiring `∀ᵐ a, IndepFun X Y (κ a)`.
+  --
+  -- **Implementation notes**:
+  -- - Helper needed: integral of finite sum of weighted indicators
+  -- - toReal distributivity: `(x*y).toReal = x.toReal * y.toReal` when x,y < ∞
+  --   (holds here since κ is a probability kernel)
+  -- - SimpleFunc approximation: use `MeasureTheory.SimpleFunc.approx` from mathlib
+  --   or hand-roll uniform grid quantization
+  --
+  -- Estimated effort: ~100-150 lines for careful implementation of both steps.
 
-  -- For now, we note that this is a standard measure theory fact that should be in mathlib
-  sorry  -- MATHLIB GAP: This should follow from kernel independence + integral characterization
-    -- The complete proof would show:
-    -- 1. Kernel.IndepFun X Y κ μ implies ∀ᵐ a, IndepFun X Y (κ a) (via π-system + ae_all_iff)
-    -- 2. Then apply IndepFun.integral_mul_eq_mul_integral from mathlib
+  sorry  -- MATHLIB GAP: Solvable via simple→bounded approximation (see strategy above)
 
 /-- Kernel-level factorisation for two bounded test functions applied to coordinate projections.
 
