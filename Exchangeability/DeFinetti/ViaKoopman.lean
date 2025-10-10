@@ -115,6 +115,18 @@ theorem integrable_of_bounded {Ω : Type*} [MeasurableSpace Ω]
   rw [integral_indicator hs]
   simp [Measure.real]
 
+/-- Integral of a weighted indicator function. -/
+lemma integral_indicator_const {Ω : Type*} [MeasurableSpace Ω]
+    {μ : Measure Ω} {s : Set Ω} (hs : MeasurableSet s) (c : ℝ) :
+    ∫ ω, s.indicator (fun _ => c) ω ∂μ = c * (μ s).toReal := by
+  have h_eq : s.indicator (fun _ => c) = fun ω => c * s.indicator (fun _ => (1 : ℝ)) ω := by
+    ext ω
+    by_cases h : ω ∈ s <;> simp [Set.indicator, h]
+  calc ∫ ω, s.indicator (fun _ => c) ω ∂μ
+      = ∫ ω, c * s.indicator (fun _ => (1 : ℝ)) ω ∂μ := by rw [h_eq]
+    _ = c * ∫ ω, s.indicator (fun _ => (1 : ℝ)) ω ∂μ := integral_const_mul c _
+    _ = c * (μ s).toReal := by rw [integral_indicator_one hs]
+
 end MeasureTheory
 
 section CylinderFunctions
@@ -954,6 +966,86 @@ lemma coord_indicator_via_ν
     exact hω
 
   exact (ENNReal.toReal_eq_toReal_iff' (measure_ne_top _ _) (measure_ne_top _ _)).mp h_toReal
+
+/-! ### Kernel independence and integral factorization -/
+
+/-- **Step A: Simple function factorization under kernel independence.**
+
+For finite simple functions built from sets in σ(X) and σ(Y), kernel independence
+implies integral factorization almost everywhere.
+
+This is the key building block for the general bounded function case.
+-/
+private lemma Kernel.IndepFun.integral_mul_simple
+    {α Ω ι κι : Type*} [MeasurableSpace α] [MeasurableSpace Ω]
+    [Fintype ι] [Fintype κι]
+    {κ : Kernel α Ω} {μ : Measure α}
+    [IsFiniteMeasure μ] [IsMarkovKernel κ]
+    {X Y : Ω → ℝ}
+    (hXY : Kernel.IndepFun X Y κ μ)
+    (a_coef : ι → ℝ) (A : ι → Set Ω)
+    (b_coef : κι → ℝ) (B : κι → Set Ω)
+    (hA_meas : ∀ i, MeasurableSet[MeasurableSpace.comap X inferInstance] (A i))
+    (hB_meas : ∀ j, MeasurableSet[MeasurableSpace.comap Y inferInstance] (B j)) :
+    ∀ᵐ t ∂μ,
+      ∫ ω, (∑ i : ι, (A i).indicator (fun _ => a_coef i) ω) *
+            (∑ j : κι, (B j).indicator (fun _ => b_coef j) ω) ∂(κ t)
+      =
+      (∫ ω, ∑ i : ι, (A i).indicator (fun _ => a_coef i) ω ∂(κ t)) *
+      (∫ ω, ∑ j : κι, (B j).indicator (fun _ => b_coef j) ω ∂(κ t)) := by
+  classical
+  -- For each pair (i,j), we have: ∀ᵐ t, κ t (A i ∩ B j) = κ t (A i) * κ t (B j)
+  -- Since there are finitely many pairs, we can take a finite union of null sets
+
+  -- First, get independence for all pairs
+  have h_indep_pairs : ∀ i j, ∀ᵐ t ∂μ, κ t (A i ∩ B j) = κ t (A i) * κ t (B j) := by
+    intro i j
+    -- Use Kernel.IndepFun which gives independence for sets in σ(X) and σ(Y)
+    -- This follows from the definition of Kernel.Indep
+    have : Kernel.Indep (MeasurableSpace.comap X inferInstance)
+                        (MeasurableSpace.comap Y inferInstance) κ μ := hXY
+    -- The exact mathlib lemma for extracting set-level independence from Kernel.Indep
+    sorry  -- TODO: Find the right mathlib lemma (likely in Mathlib.Probability.Independence.Kernel)
+
+  -- Combine finitely many ae statements
+  have h_all_pairs : ∀ᵐ t ∂μ, ∀ i j, κ t (A i ∩ B j) = κ t (A i) * κ t (B j) := by
+    -- Use ae_all_iff for finite types
+    rw [ae_all_iff]
+    intro i
+    rw [ae_all_iff]
+    intro j
+    exact h_indep_pairs i j
+
+  -- Now work on the a.e. set where all pairs satisfy independence
+  filter_upwards [h_all_pairs] with t ht
+
+  -- Expand left side: ∫ (∑ᵢ aᵢ·1_{Aᵢ})(∑ⱼ bⱼ·1_{Bⱼ}) = ∫ ∑ᵢ ∑ⱼ aᵢbⱼ·1_{Aᵢ∩Bⱼ}
+  have h_left : ∫ ω, (∑ i, (A i).indicator (fun _ => a_coef i) ω) *
+                       (∑ j, (B j).indicator (fun _ => b_coef j) ω) ∂(κ t)
+              = ∑ i, ∑ j, (a_coef i) * (b_coef j) * (κ t (A i ∩ B j)).toReal := by
+    sorry  -- Expand product of sums and integrals
+
+  -- Expand right side: (∫ ∑ᵢ aᵢ·1_{Aᵢ})(∫ ∑ⱼ bⱼ·1_{Bⱼ}) = (∑ᵢ aᵢ·μ(Aᵢ))(∑ⱼ bⱼ·μ(Bⱼ))
+  have h_right : (∫ ω, ∑ i, (A i).indicator (fun _ => a_coef i) ω ∂(κ t)) *
+                 (∫ ω, ∑ j, (B j).indicator (fun _ => b_coef j) ω ∂(κ t))
+              = (∑ i, (a_coef i) * (κ t (A i)).toReal) *
+                (∑ j, (b_coef j) * (κ t (B j)).toReal) := by
+    sorry  -- Linearity of integral
+
+  -- Use independence to connect the two
+  have h_connection : ∑ i, ∑ j, (a_coef i) * (b_coef j) * (κ t (A i ∩ B j)).toReal
+                    = ∑ i, ∑ j, (a_coef i) * (b_coef j) * ((κ t (A i) * κ t (B j)).toReal) := by
+    congr 1; ext i; congr 1; ext j
+    rw [ht i j]
+
+  -- Simplify using toReal distributivity
+  have h_toReal : ∑ i, ∑ j, (a_coef i) * (b_coef j) * ((κ t (A i) * κ t (B j)).toReal)
+                = (∑ i, (a_coef i) * (κ t (A i)).toReal) *
+                  (∑ j, (b_coef j) * (κ t (B j)).toReal) := by
+    sorry  -- Algebraic rearrangement + toReal distributivity
+
+  -- Chain them together
+  rw [h_left, h_connection, h_toReal, ← h_right]
 
 /-- **Bridge between kernel-level and measure-level independence for integrals.**
 
