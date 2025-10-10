@@ -1054,10 +1054,82 @@ lemma reverse_martingale_convergence {m₀ : MeasurableSpace Ω} {μ : Measure �
     (hX_meas : StronglyMeasurable[⨅ n, 𝒢 n] X) :
     (∀ᵐ ω ∂μ, Tendsto (fun n => μ[X | 𝒢 n] ω) atTop (𝓝 (μ[X | ⨅ n, 𝒢 n] ω))) ∧
     Tendsto (fun n => eLpNorm (μ[X | 𝒢 n] - μ[X | ⨅ n, 𝒢 n]) 1 μ) atTop (𝓝 0) := by
-  -- Strategy: Convert decreasing 𝒢 to increasing filtration via OrderDual ℕ
-  -- Define ℱ : OrderDual ℕ → MeasurableSpace Ω by ℱ n = 𝒢 (OrderDual.ofDual n)
-  -- This is monotone because 𝒢 is antitone and OrderDual reverses order
+  classical
+  -- Tail σ-algebra and target function
+  set tail : MeasurableSpace Ω := ⨅ n, 𝒢 n
+  set g : Ω → ℝ := μ[X | tail]
 
+  -- Step 1: Build an increasing filtration from the decreasing one
+  -- ℱ n = ⨅ k, 𝒢 (n + k) = "tail from time n"
+  let ℱ : ℕ → MeasurableSpace Ω := fun n => ⨅ k, 𝒢 (n + k)
+
+  -- ℱ is monotone (increasing)
+  have h_mono : Monotone ℱ := by
+    intro n m hnm
+    refine le_iInf ?_
+    intro k
+    have : ℱ n ≤ 𝒢 (n + (k + (m - n))) := iInf_le (fun t => 𝒢 (n + t)) (k + (m - n))
+    have heq : n + (k + (m - n)) = m + k := by omega
+    simpa [heq] using this
+
+  -- ⨆ n, ℱ n = tail
+  have h_sup_eq_tail : (⨆ n, ℱ n) = tail := by
+    apply le_antisymm
+    · -- ⨆ ℱ ≤ tail
+      refine iSup_le ?_
+      intro m
+      refine le_iInf ?_
+      intro n
+      have hmn : ℱ m ≤ 𝒢 (m + n) := iInf_le (fun k => 𝒢 (m + k)) n
+      have h_antitone : Antitone 𝒢 := by
+        intro i j hij
+        obtain ⟨t, rfl⟩ := Nat.exists_eq_add_of_le hij
+        simpa using
+          Nat.rec (motive := fun t => 𝒢 (i + t) ≤ 𝒢 i) (by simp)
+            (fun t ih => (by simpa [Nat.add_assoc] using (h_decr (i + t)).trans ih)) t
+      exact hmn.trans (h_antitone (Nat.le_add_left _ _))
+    · -- tail ≤ ⨆ ℱ
+      have : tail ≤ ℱ 0 := by
+        refine le_iInf ?_
+        intro k
+        simpa [Nat.zero_add] using (iInf_le 𝒢 k)
+      exact le_iSup_of_le 0 this
+
+  -- Step 2: Set up for applying increasing filtration convergence
+  have hg_int : Integrable g μ := integrable_condExp
+
+  -- We need g to be strongly measurable w.r.t. ⨆ ℱ = tail
+  have hg_meas_tail : StronglyMeasurable[tail] g := stronglyMeasurable_condExp
+  have hg_meas_sup : StronglyMeasurable[⨆ n, ℱ n] g := by
+    simpa [h_sup_eq_tail] using hg_meas_tail
+
+  -- Step 3: Create a Filtration structure for mathlib's convergence theorems
+  have h_le_ℱ : ∀ n, ℱ n ≤ m₀ := fun n =>
+    iInf_le_of_le 0 (h_le n)
+
+  -- Build the Filtration
+  let ℱ_filt : Filtration ℕ m₀ := {
+    seq := ℱ
+    mono' := h_mono
+    le' := h_le_ℱ
+  }
+
+  -- We need SigmaFinite instances for ℱ
+  have h_sigmaFinite_ℱ : ∀ n, SigmaFinite (μ.trim (h_le_ℱ n)) := by
+    intro n
+    sorry -- Need to derive from SigmaFinite on 𝒢
+
+  -- Step 4: Apply increasing filtration convergence to g
+  -- Since g is measurable w.r.t. tail = ⨆ ℱ, we have μ[g | ℱ n] → g
+  have h_ae_inc : ∀ᵐ ω ∂μ, Tendsto (fun n => μ[g | ℱ_filt n] ω) atTop (𝓝 (g ω)) := by
+    sorry -- Need to apply mathlib convergence, requires proper variable setup
+
+  have h_L1_inc : Tendsto (fun n => eLpNorm (μ[g | ℱ_filt n] - g) 1 μ) atTop (𝓝 0) := by
+    sorry -- Need to apply mathlib convergence, requires proper variable setup
+
+  -- Step 5: The convergence follows from mathlib's reverse martingale convergence theorem
+  -- The key insight: for a *decreasing* filtration 𝒢, the sequence μ[X | 𝒢 n] converges
+  -- to μ[X | ⨅ n, 𝒢 n] both a.e. and in L¹
   sorry
 
 set_option linter.unusedSectionVars false in
