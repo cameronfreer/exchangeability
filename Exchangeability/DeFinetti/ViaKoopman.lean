@@ -1273,21 +1273,60 @@ lemma Kernel.IndepFun.integral_mul
   -- 2. Or invoking a density/approximation theorem from mathlib
   -- 3. Verifying all the convergence and measurability details
 
-  -- Alternative pragmatic approach: Since this is a standard result in probability theory,
-  -- and we've established the key case (simple functions) rigorously, we mark the
-  -- extension to bounded measurable functions as accepted pending full elaboration.
+  -- Step B.6: Set up approximation structure more explicitly
 
-  -- The proof is conceptually clear:
-  -- 1. ✅ Step A proves it for simple functions
-  -- 2. ✅ h_preimage_meas establishes measurability compatibility
-  -- 3. ⬜ Standard approximation + DCT extends to bounded measurable
-  --
-  -- The mathematical content is complete; remaining work is ~40-60 lines of
-  -- technical measure theory that follows the standard template.
+  -- We assert the existence of approximating sequences with the right properties
+  have approximation_exists :
+    ∃ (approx_X : ℕ → Ω → ℝ) (approx_Y : ℕ → Ω → ℝ),
+      -- Each approximation is a simple function satisfying Step A's requirements
+      (∀ n, ∃ (ι : Type) (_ : Fintype ι) (a : ι → ℝ) (A : ι → Set Ω),
+        (∀ i, MeasurableSet (A i) ∧
+              MeasurableSet[MeasurableSpace.comap X inferInstance] (A i)) ∧
+        approx_X n = fun ω => ∑ i, (A i).indicator (fun _ => a i) ω) ∧
+      (∀ n, ∃ (κι : Type) (_ : Fintype κι) (b : κι → ℝ) (B : κι → Set Ω),
+        (∀ j, MeasurableSet (B j) ∧
+              MeasurableSet[MeasurableSpace.comap Y inferInstance] (B j)) ∧
+        approx_Y n = fun ω => ∑ j, (B j).indicator (fun _ => b j) ω) ∧
+      -- Uniform bounds
+      (∀ n ω, |approx_X n ω| ≤ CX) ∧
+      (∀ n ω, |approx_Y n ω| ≤ CY) ∧
+      -- Pointwise convergence
+      (∀ ω, Filter.Tendsto (fun n => approx_X n ω) Filter.atTop (𝓝 (X ω))) ∧
+      (∀ ω, Filter.Tendsto (fun n => approx_Y n ω) Filter.atTop (𝓝 (Y ω))) := by
+    sorry  -- Approximation construction (~30-40 lines using dyadic intervals)
+           -- Would use: h_preimage_meas to ensure dual measurability
 
-  sorry  -- Step B completion deferred
-         -- Framework: Step A (complete) + measurability bridge (complete) + DCT (standard)
-         -- This is a well-known extension requiring routine but lengthy elaboration
+  -- Step B.7: Show how to use the approximations (if we had them)
+
+  -- If we obtain the approximations:
+  -- obtain ⟨approx_X, approx_Y, h_simple_X, h_simple_Y, h_bd_X, h_bd_Y, h_conv_X, h_conv_Y⟩ :=
+  --   approximation_exists
+
+  -- Then for each (n, m) pair, we could apply Step A:
+  -- For each n, m: ∃ ae set Sₙₘ where ∀ a ∈ Sₙₘ, ∫ approx_X(n) approx_Y(m) = (∫ approx_X(n))(∫ approx_Y(m))
+
+  -- Using ae_all_iff on ℕ × ℕ:
+  -- ∃ ae set S where ∀ a ∈ S, ∀ n m, the equation holds
+
+  -- On this ae-good set S, for each fixed a:
+  -- - approx_X(n) ω → X ω for all ω (pointwise convergence)
+  -- - approx_Y(m) ω → Y ω for all ω (pointwise convergence)
+  -- - |approx_X(n) ω approx_Y(m) ω| ≤ CX · CY (uniform domination)
+
+  -- By DCT applied to the probability measure κ(a):
+  -- - ∫ approx_X(n) approx_Y(m) d(κ a) → ∫ X Y d(κ a) as n, m → ∞
+  -- - (∫ approx_X(n) d(κ a))(∫ approx_Y(m) d(κ a)) → (∫ X d(κ a))(∫ Y d(κ a))
+
+  -- Since the approximations satisfy equality, the limit does too:
+  -- ∫ X Y d(κ a) = (∫ X d(κ a))(∫ Y d(κ a)) for a ∈ S
+
+  -- Since μ(S) = 1, this is the desired ae equality.
+
+  sorry  -- Step B: Would implement the above using:
+         -- - ae_all_iff for combining countable ae statements
+         -- - integral_tendsto_of_tendsto_of_dominated for DCT
+         -- - Filter.Tendsto.mul for product convergence
+         -- Implementation: ~40-50 lines following this blueprint
 
 /-- Kernel-level factorisation for two bounded test functions applied to coordinate projections.
 
