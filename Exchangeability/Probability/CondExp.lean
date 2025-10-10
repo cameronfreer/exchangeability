@@ -1002,19 +1002,29 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
             condExp_congr_ae h_expand
         _ =ᵐ[μ] μ[X₂ ^ 2 | m₁] - μ[2 • X₂ * μ[X₂ | m₁] | m₁] + μ[(μ[X₂ | m₁]) ^ 2 | m₁] := by
             -- Linearity of condExp
-            have h1 := hX₂_sq.integrable
+            have h1 : Integrable (X₂ ^ 2) μ := hL2.integrable_sq
             have h2 : Integrable (2 • X₂ * μ[X₂ | m₁]) μ := by
               -- Both X₂ and μ[X₂|m₁] are in L², so their product is in L¹ by Hölder
               have : Integrable (X₂ * μ[X₂ | m₁]) μ := by
                 have hX₂_int : Integrable X₂ μ := hL2.integrable one_le_two
                 have hcond_int : Integrable (μ[X₂ | m₁]) μ := h_cond_mem.integrable one_le_two
-                exact Integrable.mul hX₂_int hcond_int
+                exact hX₂_int.mul hcond_int
               exact this.const_mul 2
             have h3 : Integrable ((μ[X₂ | m₁]) ^ 2) μ := h_cond_mem.integrable_sq
-            sorry -- apply condExp linearity
+            -- Apply linearity: μ[a - b + c | m] = μ[a|m] - μ[b|m] + μ[c|m]
+            calc μ[X₂ ^ 2 - 2 • X₂ * μ[X₂ | m₁] + (μ[X₂ | m₁]) ^ 2 | m₁]
+                =ᵐ[μ] μ[X₂ ^ 2 - 2 • X₂ * μ[X₂ | m₁] | m₁] + μ[(μ[X₂ | m₁]) ^ 2 | m₁] :=
+                  condExp_add (h1.sub h2) h3
+              _ =ᵐ[μ] (μ[X₂ ^ 2 | m₁] - μ[2 • X₂ * μ[X₂ | m₁] | m₁]) + μ[(μ[X₂ | m₁]) ^ 2 | m₁] :=
+                  by filter_upwards [condExp_sub h1 h2] with ω h; simp [h]
+              _ =ᵐ[μ] μ[X₂ ^ 2 | m₁] - μ[2 • X₂ * μ[X₂ | m₁] | m₁] + μ[(μ[X₂ | m₁]) ^ 2 | m₁] :=
+                  by filter_upwards with ω; ring
         _ =ᵐ[μ] μ[X₂ ^ 2 | m₁] - 2 • μ[X₂ | m₁] * μ[X₂ | m₁] + (μ[X₂ | m₁]) ^ 2 := by
-            -- Pull-out and idempotence
-            sorry
+            -- Pull-out property: μ[g * f | m] = g * μ[f | m] when g is m-measurable
+            -- And idempotence: μ[g | m] = g when g is m-measurable
+            -- Pull out property: μ[g * f | m] = g * μ[f | m] for m-measurable g
+            -- Idempotence: μ[g | m] = g for m-measurable g
+            sorry -- Need pull-out lemma for m-measurable functions
         _ =ᵐ[μ] μ[X₂ ^ 2 | m₁] - (μ[X₂ | m₁]) ^ 2 := by
             filter_upwards with ω
             ring
