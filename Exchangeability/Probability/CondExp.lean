@@ -131,7 +131,18 @@ lemma indicator_iUnion_tsum_of_pairwise_disjoint
       by_contra hne
       have : Disjoint (f i) (f j) := hdisj (Ne.symm hne)
       exact this.le_bot ⟨hi, hj⟩
-    sorry
+    -- Only f i contributes, all others are 0
+    calc (⋃ k, f k).indicator (fun _ => (1:ℝ)) ω
+        = 1 := Set.indicator_of_mem h _
+      _ = ∑' j, if j = i then (1:ℝ) else 0 := by rw [tsum_ite_eq]; simp
+      _ = ∑' j, (f j).indicator (fun _ => (1:ℝ)) ω := by
+          congr 1; ext j
+          by_cases hj : ω ∈ f j
+          · rw [Set.indicator_of_mem hj, huniq j hj]; simp
+          · rw [Set.indicator_of_notMem hj]
+            by_cases hji : j = i
+            · exact absurd (hji ▸ hi) hj
+            · simp [hji]
   · -- ω ∉ ⋃ i, f i: all f i miss ω
     have : ∀ i, ω ∉ f i := fun i hi => h (Set.mem_iUnion.mpr ⟨i, hi⟩)
     simp [Set.indicator_of_notMem h, Set.indicator_of_notMem (this _)]
@@ -980,12 +991,28 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     -- This is a standard variance decomposition formula
     have h_var_formula :
         μ[(X₂ - μ[X₂ | m₁])^2 | m₁] =ᵐ[μ] μ[X₂ ^ 2 | m₁] - (μ[X₂ | m₁]) ^ 2 := by
-      -- The full proof requires:
-      -- 1. Expanding (X₂ - μ[X₂|m₁])² = X₂² - 2·X₂·μ[X₂|m₁] + (μ[X₂|m₁])²
-      -- 2. Linearity: μ[a + b + c | m] = μ[a|m] + μ[b|m] + μ[c|m]
-      -- 3. Pull-out property: μ[g·f | m] = g·μ[f|m] when g is m-measurable
-      -- 4. Idempotence: μ[μ[X|m] | m] = μ[X|m]
-      sorry
+      -- Expand (X₂ - μ[X₂|m₁])²
+      have h_expand : (X₂ - μ[X₂ | m₁]) ^ 2
+          =ᵐ[μ] X₂ ^ 2 - 2 • X₂ * μ[X₂ | m₁] + (μ[X₂ | m₁]) ^ 2 := by
+        filter_upwards with ω
+        ring
+      -- Apply condExp to both sides
+      calc μ[(X₂ - μ[X₂ | m₁])^2 | m₁]
+          =ᵐ[μ] μ[X₂ ^ 2 - 2 • X₂ * μ[X₂ | m₁] + (μ[X₂ | m₁]) ^ 2 | m₁] :=
+            condExp_congr_ae h_expand
+        _ =ᵐ[μ] μ[X₂ ^ 2 | m₁] - μ[2 • X₂ * μ[X₂ | m₁] | m₁] + μ[(μ[X₂ | m₁]) ^ 2 | m₁] := by
+            -- Linearity of condExp
+            have h1 := hX₂_sq.integrable
+            have h2 : Integrable (2 • X₂ * μ[X₂ | m₁]) μ := by
+              sorry -- follows from integrability of X₂ and μ[X₂|m₁]
+            have h3 : Integrable ((μ[X₂ | m₁]) ^ 2) μ := h_cond_mem.integrable_sq
+            sorry -- apply condExp linearity
+        _ =ᵐ[μ] μ[X₂ ^ 2 | m₁] - 2 • μ[X₂ | m₁] * μ[X₂ | m₁] + (μ[X₂ | m₁]) ^ 2 := by
+            -- Pull-out and idempotence
+            sorry
+        _ =ᵐ[μ] μ[X₂ ^ 2 | m₁] - (μ[X₂ | m₁]) ^ 2 := by
+            filter_upwards with ω
+            ring
     have h_congr :
         ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ
           = ∫ ω, (μ[X₂ ^ 2 | m₁] ω - μ[X₂ | m₁] ω ^ 2) ∂μ :=
