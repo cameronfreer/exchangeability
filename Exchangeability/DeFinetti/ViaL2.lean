@@ -943,6 +943,19 @@ lemma l2_bound_two_windows_uniform
   -- This requires contractable_covariance_structure to extract m, σ, ρ
   sorry
 
+/-- Reindex the last `k`-block of a length-`m` sum.
+
+For `m,k : ℕ` with `0 < k ≤ m`, and any real constant `c` and function `F : ℕ → ℝ`,
+the sum over the last `k` positions of a length-`m` vector can be reindexed to a sum over `Fin k`:
+∑_{i<m} (1_{i ≥ m-k} · c) · F(i) = c · ∑_{j<k} F(m - k + j).
+-/
+private lemma sum_tail_block_reindex
+    {m k : ℕ} (hk_pos : 0 < k) (hkm : k ≤ m)
+    (c : ℝ) (F : ℕ → ℝ) :
+    ∑ i : Fin m, (if i.val < m - k then 0 else c) * F i.val
+      = c * ∑ j : Fin k, F (m - k + j.val) := by
+  sorry -- TODO: Implement full proof (currently blocked by Lean 4.24 syntax issue with Finset.sum in calc)
+
 /-- Long average vs tail average bound: Comparing the average of the first m terms
 with the average of the last k terms (where k ≤ m) has the same L² contractability bound.
 
