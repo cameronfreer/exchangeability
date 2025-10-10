@@ -39,7 +39,7 @@ Theorem and Koopman operator. This proof has the **heaviest dependencies**.
 
 ## Current Status
 
-✅ **Compiles successfully** with 6 remaining sorries
+✅ **Compiles successfully** with 5 remaining sorries
 ✅ **Helper lemmas proved** using mathlib (shift properties, condexp_precomp_iterate_eq)
 ✅ **Key technical lemma complete**: `integral_ν_eq_integral_condExpKernel` ✅
 ✅ **identicalConditionalMarginals_integral proved** - ae integral equality established ✅
@@ -47,27 +47,28 @@ Theorem and Koopman operator. This proof has the **heaviest dependencies**.
 ✅ **Infrastructure documented** - all mathlib connections identified with file/line references
 ✅ **Kernel.IndepFun.integral_mul implemented** - integrability setup complete, proof gap documented
 ✅ **Minor proof fix applied** - rfl simplification in indicator proof
+✅ **ν_eval_tailMeasurable proved** - kernel measurability property established
 
 **Completed proofs**:
 1. ✅ `integral_ν_eq_integral_condExpKernel` - proved using Kernel.map_apply + integral_map
 2. ✅ `identicalConditionalMarginals_integral` - full proof via ae equality chaining through CE
 3. ✅ `Kernel.IndepFun.integral_mul` - integrability established, final quantifier swap remains
+4. ✅ `ν_eval_tailMeasurable` - proved using condExpKernel tail-measurability + Kernel.map
 
-**Remaining sorries** (6 total):
+**Remaining sorries** (5 total):
 
-**Category 1: Minor technical details** (1-2 hours work each):
-1. Line 428: `ν_eval_tailMeasurable` - measurability of ν w.r.t. shift-invariant σ-algebra
-2. Line 743: `ν_ae_shiftInvariant` - DEPRECATED, but preserved for reference
-3. Line 806: `identicalConditionalMarginals` - DEPRECATED kernel version
+**Category 1: DEPRECATED (preserved for reference, not needed for main proof):
+1. Line 749: `ν_ae_shiftInvariant` - DEPRECATED, superseded by integral-level proofs
+2. Line 812: `identicalConditionalMarginals` - DEPRECATED kernel version
 
 **Category 2: Mathlib gap** (genuine infrastructure, ~2-4 hours):
-4. Line 1012: `Kernel.IndepFun.integral_mul` - quantifier swapping step
+3. Line 1015: `Kernel.IndepFun.integral_mul` - quantifier swapping step
    Needs: π-system + ae_all_iff for countable families
    Current: integrability ✅, integral factorization strategy documented
 
 **Category 3: Core axioms** (fundamental theorem content, cannot be proved):
-5. Line 1061: Conditional independence assumption - **heart of de Finetti's theorem**
-6. Line 1175: `condexp_product_factorization` - depends on #5
+4. Line 1064: Conditional independence assumption - **heart of de Finetti's theorem**
+5. Line 1178: `condexp_product_factorization` - depends on #4
 
 **Key insight**: Working at integral level (what proofs actually use) avoids kernel uniqueness
 and π-system extension complexity. Cleaner, more direct proofs.
@@ -425,8 +426,13 @@ lemma ν_eval_tailMeasurable
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     {s : Set α} (hs : MeasurableSet s) :
     Measurable[shiftInvariantSigma (α := α)] (fun ω => ν (μ := μ) ω s) := by
-  simp only [ν, rcdKernel]
-  sorry  -- TODO: Unpack Kernel.comap to show evaluation respects source σ-algebra
+  simp only [ν, rcdKernel, Kernel.comap_apply]
+  -- After unfolding comap, we have: (Kernel.map (condExpKernel ...) π0) (id ω) s
+  -- which simplifies to: (Kernel.map (condExpKernel ...) π0) ω s
+  -- The condExpKernel is constructed with type @Kernel Ω Ω shiftInvariantSigma _,
+  -- meaning it's measurable w.r.t. the shift-invariant σ-algebra in its first argument
+  -- Kernel.map preserves this measurability structure
+  exact (Kernel.map (condExpKernel μ (shiftInvariantSigma (α := α))) (π0 (α := α))).measurable_coe hs
 
 /-- Convenient rewrite for evaluating the kernel `ν` on a measurable set. -/
 lemma ν_apply {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
