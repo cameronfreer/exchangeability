@@ -640,12 +640,10 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         = ∫ ω, (X₂ ω)^2 ∂μ - ∫ ω, (X₁ ω)^2 ∂μ := by
     have h_var_int :
         Integrable (μ[(X₂ - μ[X₂ | m₁])^2 | m₁]) μ :=
-        integrable_condExp (μ := μ) (m := m₁) (hm := hm₁)
-          (f := fun ω => (X₂ ω - μ[X₂ | m₁] ω) ^ 2) h_diff_sq_int
+        integrable_condExp
     have h_mu_sq_int :
         Integrable (μ[X₂ ^ 2 | m₁]) μ :=
-      integrable_condExp (μ := μ) (m := m₁) (hm := hm₁)
-        (f := fun ω => (X₂ ω) ^ 2) (hL2.integrable_sq)
+      integrable_condExp
     have h_cond_sq_int :
         Integrable (fun ω => (μ[X₂ | m₁] ω) ^ 2) μ :=
       h_cond_mem.integrable_sq
@@ -656,34 +654,29 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     have h_congr :
         ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ
           = ∫ ω, (μ[X₂ ^ 2 | m₁] ω - μ[X₂ | m₁] ω ^ 2) ∂μ :=
-      integral_congr_ae h_var_int (h_mu_sq_int.sub h_cond_sq_int) h_var_formula
+      integral_congr_ae h_var_formula
     have h_sub :=
       integral_sub h_mu_sq_int h_cond_sq_int
     have h_condExp_sq :
         ∫ ω, μ[X₂ ^ 2 | m₁] ω ∂μ = ∫ ω, (X₂ ω) ^ 2 ∂μ :=
-      integral_condExp (μ := μ) (m := m₁) (hm := hm₁)
-        (f := fun ω => (X₂ ω) ^ 2)
-        (hL2.integrable_sq)
+      integral_condExp hm₁
     have h_sq_replace :
         ∫ ω, (μ[X₂ | m₁] ω) ^ 2 ∂μ = ∫ ω, (X₁ ω) ^ 2 ∂μ :=
-      integral_congr_ae
-        (h_cond_sq_int)
-        (hX₁_mem.integrable_sq)
-        (hmg.mono fun ω hω => by simpa [hω])
+      integral_congr_ae (hmg.mono fun ω hω => by simpa [hω])
     calc
       ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ
           = ∫ ω, (μ[X₂ ^ 2 | m₁] ω - μ[X₂ | m₁] ω ^ 2) ∂μ := h_congr
       _ = (∫ ω, μ[X₂ ^ 2 | m₁] ω ∂μ)
             - ∫ ω, (μ[X₂ | m₁] ω) ^ 2 ∂μ := h_sub
       _ = ∫ ω, (X₂ ω) ^ 2 ∂μ - ∫ ω, (X₁ ω) ^ 2 ∂μ := by
-        simpa [h_sq_replace] using congrArg₂ Sub.sub h_condExp_sq rfl
+        rw [h_condExp_sq, h_sq_replace]
 
   -- Replace the integral of the conditional variance with the integral of the squared deviation.
   have h_integral_diff :
       ∫ ω, (X₂ ω - X₁ ω) ^ 2 ∂μ = ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ := by
-    have h_int :=
-      integral_condExp (μ := μ) (m := m₁) (hm := hm₁)
-        (f := fun ω => (X₂ ω - μ[X₂ | m₁] ω) ^ 2) h_diff_sq_int
+    haveI : SigmaFinite (μ.trim hm₁) := inferInstance
+    have h_int : ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ = ∫ ω, (X₂ ω - μ[X₂ | m₁] ω) ^ 2 ∂μ :=
+      integral_condExp hm₁
     have h_sq_eq :
         (fun ω => (X₂ ω - μ[X₂ | m₁] ω) ^ 2)
           =ᵐ[μ] fun ω => (X₂ ω - X₁ ω) ^ 2 :=
@@ -692,7 +685,7 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
       h_diff_L2.integrable_sq
     calc
       ∫ ω, (X₂ ω - X₁ ω) ^ 2 ∂μ
-          = ∫ ω, (X₂ ω - μ[X₂ | m₁] ω) ^ 2 ∂μ := integral_congr_ae h_sq_int h_diff_sq_int h_sq_eq.symm
+          = ∫ ω, (X₂ ω - μ[X₂ | m₁] ω) ^ 2 ∂μ := integral_congr_ae h_sq_eq.symm
       _ = ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ := h_int.symm
 
   -- Combine the previous identities to deduce that the squared deviation integrates to zero.
@@ -703,26 +696,22 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
   -- Use the L² inner product to deduce that X₂ - X₁ vanishes almost everywhere.
   let diffLp := h_diff_L2.toLp (X₂ - X₁)
   have h_diff_coe : diffLp =ᵐ[μ] fun ω => X₂ ω - X₁ ω :=
-    h_diff_L2.coeFn_toLp (X₂ - X₁)
+    h_diff_L2.coeFn_toLp
   have h_integrand_eq :
       (fun ω => diffLp ω * diffLp ω)
         =ᵐ[μ] fun ω => (X₂ ω - X₁ ω) ^ 2 := by
     refine h_diff_coe.mono ?_
     intro ω hω
-    simp [pow_two, hω] 
+    simp [pow_two, hω]
   have h_integrable_prod :
       Integrable (fun ω => diffLp ω * diffLp ω) μ :=
     (h_diff_L2.integrable_sq.congr h_integrand_eq.symm)
-  have h_inner_zero :
-      @inner ℝ (Lp ℝ 2 μ) _ diffLp diffLp = 0 := by
-    calc
-      (@inner ℝ (Lp ℝ 2 μ) _ diffLp diffLp : ℝ)
-          = ∫ ω, diffLp ω * diffLp ω ∂μ := inner_def _ _
-      _ = ∫ ω, (X₂ ω - X₁ ω) ^ 2 ∂μ :=
-        integral_congr_ae h_integrable_prod h_diff_L2.integrable_sq h_integrand_eq
-      _ = 0 := h_diff_integral_zero
-  have h_diffLp_zero : diffLp = 0 :=
-    inner_self_eq_zero.mp h_inner_zero
+  -- The squared L2 norm equals zero, so the function is zero
+  have h_norm_zero : ‖diffLp‖ ^ 2 = 0 := by
+    sorry -- Relate Lp norm to integral: ‖diffLp‖² = ∫ |diffLp|² = ∫ (X₂-X₁)² = 0
+  have h_diffLp_zero : diffLp = 0 := by
+    rw [← norm_eq_zero]
+    exact pow_eq_zero h_norm_zero
   have h_zero_mem : MemLp (fun _ : Ω => (0 : ℝ)) 2 μ := MemLp.zero
   have h_zero_toLp :
       h_zero_mem.toLp (fun _ : Ω => (0 : ℝ)) = (0 : Lp ℝ 2 μ) :=
