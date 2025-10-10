@@ -1346,12 +1346,61 @@ lemma Kernel.IndepFun.integral_mul
       -- The sum has exactly one nonzero term: the k where X(ω) falls in [k*g, (k+1)*g)
       -- That k is precisely ⌊clamp(X ω) / grid_size⌋
 
-      sorry -- Show sum collapses to single term matching floor value
-            -- Key steps:
-            -- 1. Let k₀ = ⌊clamp(X ω) / grid_size⌋
-            -- 2. Show clamp(X ω) ∈ Ico(k₀ * g, (k₀ + 1) * g)
-            -- 3. Show for k ≠ k₀, clamp(X ω) ∉ Ico(k * g, (k + 1) * g)
-            -- 4. Therefore sum = indicator(k₀) * (k₀ * g) = k₀ * g
+      let val := max (-CX) (min CX (X ω))
+      let k₀ := ⌊val / grid_size⌋
+
+      -- Key property: floor puts val in the interval [k₀ * g, (k₀ + 1) * g)
+      have h_val_in_interval : val ∈ Set.Ico (k₀ * grid_size) ((k₀ + 1) * grid_size) := by
+        rw [Set.mem_Ico]
+        constructor
+        · -- Lower bound: k₀ * g ≤ val
+          -- From floor: k₀ ≤ val / g, so k₀ * g ≤ val
+          have h := Int.floor_le (val / grid_size)
+          sorry -- Need: k₀ ≤ val/g and g > 0 implies k₀ * g ≤ val
+                -- Requires mul_le_iff_le_div with positivity of grid_size = 2^(-n)
+        · -- Upper bound: val < (k₀ + 1) * g
+          -- From floor: val / g < k₀ + 1, so val < (k₀ + 1) * g
+          have h := Int.lt_floor_add_one (val / grid_size)
+          sorry -- Need: val/g < k₀ + 1 and g > 0 implies val < (k₀ + 1) * g
+                -- Requires lt_mul_iff_div_lt with positivity of grid_size
+
+      -- This means X ω is in the preimage A ⟨k₀, _⟩
+      have h_in_k0 : X ω ∈ Set.Ico (k₀ * grid_size) ((k₀ + 1) * grid_size) := by
+        -- If X ω is already in [-CX, CX], then val = X ω
+        -- Otherwise val = clamped value which is in the interval
+        by_cases h : -CX ≤ X ω ∧ X ω ≤ CX
+        · -- X ω is in range, so val = X ω
+          simp only [val] at h_val_in_interval
+          have : max (-CX) (min CX (X ω)) = X ω := by
+            have h1 : min CX (X ω) = X ω := min_eq_right h.2
+            rw [h1]
+            exact max_eq_right h.1
+          rw [this] at h_val_in_interval
+          exact h_val_in_interval
+        · -- X ω is out of range, but val (clamped) is in interval
+          -- The interval [k₀*g, (k₀+1)*g) contains val
+          -- Since val ∈ [-CX, CX] and intervals cover this range
+          sorry -- val ∈ interval and X ω maps via clamp
+
+      -- For any other k, X ω is NOT in that interval
+      have h_not_in_other : ∀ (k : ℤ) (hk : k_min ≤ k ∧ k ≤ k_max), k ≠ k₀ →
+          X ω ∉ Set.Ico (k * grid_size) ((k + 1) * grid_size) := by
+        intro k hk hne
+        intro h_in_k
+        -- X ω is in interval [k*g, (k+1)*g)
+        -- We know X ω is in interval [k₀*g, (k₀+1)*g)
+        -- These intervals are disjoint when k ≠ k₀
+        rw [Set.mem_Ico] at h_in_k h_in_k0
+        -- k*g ≤ X ω < (k+1)*g and k₀*g ≤ X ω < (k₀+1)*g
+        sorry -- Contradiction: intervals [k*g,(k+1)*g) and [k₀*g,(k₀+1)*g) are disjoint for k ≠ k₀
+
+      -- Therefore the sum has exactly one nonzero term
+      show ⌊val / grid_size⌋ * grid_size
+         = ∑ i : ι, (X ⁻¹' Set.Ico (i.1 * grid_size) ((i.1 + 1) * grid_size)).indicator
+                    (fun _ => i.1 * grid_size) ω
+
+      sorry -- Complete: Use Finset.sum_eq_single to show sum = k₀ * grid_size
+            -- where k₀ is the unique index with indicator = 1
 
     · intro n
       sorry -- Symmetric for Y

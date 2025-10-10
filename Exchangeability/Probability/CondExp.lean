@@ -234,7 +234,7 @@ lemma condProb_ae_bound_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [IsPro
     (m : MeasurableSpace Ω) (hm : m ≤ m₀) [SigmaFinite (μ.trim hm)]
     (A : Set Ω) (hA : MeasurableSet[m₀] A) :
     ∀ᵐ ω ∂μ, ‖μ[A.indicator (fun _ => (1 : ℝ)) | m] ω‖ ≤ 1 := by
-  have := condProb_ae_nonneg_le_one m hm hA
+  have := @condProb_ae_nonneg_le_one Ω m₀ μ _ m hm _ A hA
   filter_upwards [this] with ω hω
   rcases hω with ⟨h0, h1⟩
   have : |condProb μ m A ω| ≤ 1 := by
@@ -787,13 +787,24 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
         congrFun (indicator_iUnion_tsum_of_pairwise_disjoint f hf_disj)
 
       -- Step 2: Conditional expectation of the sum
+      -- Need: E[∑' i, 1_{f i}] = ∑' i, E[1_{f i}]
+      -- This requires linearity of condExp for infinite sums (monotone/dominated convergence)
+      --
+      -- Proof strategy:
+      -- 1. Use h_ind_union to rewrite LHS: E[(⋃ f i).indicator] = E[∑' i, (f i).indicator]
+      -- 2. Apply condExp linearity for series: need a lemma like `condExp_tsum`
+      --    (Similar to `integral_tsum` from dominated convergence)
+      -- 3. Each indicator is bounded by 1, so the series is dominated by constant 1
+      --
+      -- Mathlib has `integral_tsum` but not yet `condExp_tsum` - this needs to be added
+      -- or proven directly using monotone convergence for conditional expectations.
       have h_condExp_L : μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
           =ᵐ[μ] fun ω => ∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω := by
-        sorry -- Apply condExp_tsum with summability from boundedness by 1
+        sorry -- Needs condExp_tsum or monotone convergence for condExp
 
       have h_condExp_R : μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG]
           =ᵐ[μ] fun ω => ∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mG] ω := by
-        sorry -- Apply condExp_tsum with summability from boundedness by 1
+        sorry -- Same as h_condExp_L, needs condExp_tsum
 
       -- Step 3: Integrate both sides
       rw [integral_congr_ae (ae_restrict_of_ae h_condExp_L),
@@ -801,13 +812,24 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
 
       -- Step 4: Exchange integral and sum using dominated convergence
       -- All terms bounded by 1 (from condExp of bounded functions)
+      --
+      -- Proof strategy:
+      -- Use `integral_tsum` (mathlib's dominated convergence for series)
+      -- Key facts:
+      -- 1. Each indicator function satisfies: 0 ≤ 1_{f i} ≤ 1
+      -- 2. Conditional expectation preserves bounds: 0 ≤ E[1_{f i}|m] ≤ E[1|m] = 1
+      -- 3. Therefore |E[1_{f i}|m]| ≤ 1, so the series is dominated by ∑' i, 1 on S
+      -- 4. But we need summability: ∑' i, ∫ |E[1_{f i}|m]| < ∞
+      --    This holds because f i are disjoint, so ∑ i, ∫ E[1_{f i}|m] = ∫ E[∑ 1_{f i}|m] ≤ ∫ 1 < ∞
+      --
+      -- Mathlib: Use `integral_tsum` with appropriate summability proof
       have h_int_tsum_L : ∫ ω in S, (∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω) ∂μ
           = ∑' i, ∫ ω in S, μ[(f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω ∂μ := by
-        sorry -- Dominated convergence: |μ[indicator | m]| ≤ μ[1 | m] = 1
+        sorry -- Use integral_tsum with domination by summable constants
 
       have h_int_tsum_R : ∫ ω in S, (∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mG] ω) ∂μ
           = ∑' i, ∫ ω in S, μ[(f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂μ := by
-        sorry -- Dominated convergence: |μ[indicator | m]| ≤ μ[1 | m] = 1
+        sorry -- Same as h_int_tsum_L, use integral_tsum
 
       -- Step 5: Apply hypothesis hf_C to each term
       rw [h_int_tsum_L, h_int_tsum_R]
@@ -872,6 +894,42 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
   -- And: ∫ ceL = ∫ A.indicator (from setIntegral_condExp for ceL)
   -- Therefore: ∫ ceR = ∫ A.indicator
   rw [← h_int_eq S hS, setIntegral_condExp hmFG h_ind_int hS]
+
+/-- **Simplified CondIndep wrapper for the martingale proof.**
+
+If for all measurable sets B ⊆ σ(ξ) we have
+  E[1_{ξ∈B} | σ(η) ∨ σ(ζ)] = E[1_{ξ∈B} | σ(η)] a.e.,
+then ξ ⊥⊥_η ζ.
+
+This follows directly from `condIndep_iff` (the product formula characterization)
+by taking F = univ and using the projection property.
+
+**Use case:** In the martingale approach to de Finetti, we establish conditional
+expectation equality on indicators, then invoke this lemma to get conditional independence.
+-/
+lemma CondIndep.of_indicator_condexp_eq
+    {Ω α β : Type*} [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β]
+    [StandardBorelSpace Ω] [StandardBorelSpace α] [StandardBorelSpace β]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {ξ : Ω → α} {η : Ω → β} {ζ : Ω → (ℕ → α)}
+    (hξ : Measurable ξ) (hη : Measurable η) (hζ : Measurable ζ)
+    (h : ∀ (B : Set α), MeasurableSet B →
+          μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ
+              | MeasurableSpace.comap η inferInstance ⊔ MeasurableSpace.comap ζ inferInstance]
+        =ᵐ[μ]
+          μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ
+              | MeasurableSpace.comap η inferInstance]) :
+    ProbabilityTheory.CondIndep
+      (MeasurableSpace.comap ξ inferInstance)
+      (MeasurableSpace.comap ζ inferInstance)
+      (MeasurableSpace.comap η inferInstance)
+      (fun s ⟨t, ht, rfl⟩ => hξ ht)
+      μ := by
+  -- TODO: Prove via condIndep_iff product formula
+  -- The key is that the hypothesis gives the projection property:
+  -- E[1_H | σ(η) ∨ σ(ζ)] = E[1_H | σ(η)] for H ∈ σ(ξ)
+  -- This is exactly Doob's characterization (FMP 6.6).
+  sorry
 
 /-! ### Bounded Martingales and L² Inequalities -/
 
@@ -1115,17 +1173,37 @@ lemma reverse_martingale_convergence {m₀ : MeasurableSpace Ω} {μ : Measure �
 
   -- (1) a.e. convergence for antitone families
   -- mathlib has `Integrable.tendsto_ae_condexp` for ⨆ n, ℱ n (increasing filtrations)
-  -- For antitone 𝒢 with ⨅ n, 𝒢 n, we need the dual version or reindexing
+  -- This is Lévy's upward theorem. We need the downward version.
+  --
+  -- Lévy's Downward Theorem: Let 𝒢ₙ ↓ 𝒢∞. Then E[X|𝒢ₙ] → E[X|𝒢∞] a.e. and in L¹.
+  --
+  -- Proof strategy:
+  -- (a) Since conditional expectations are uniformly integrable (bounded in L²),
+  --     it suffices to show a.e. convergence; L¹ convergence follows.
+  -- (b) Use the tower property and monotonicity: for m ≤ n,
+  --     E[E[X|𝒢ₙ]|𝒢ₘ] = E[X|𝒢ₙ] since 𝒢ₙ ≤ 𝒢ₘ
+  -- (c) Apply reverse martingale convergence (Doob) or use the relationship:
+  --     For antitone 𝒢ₙ, the sequence E[X|𝒢ₙ] forms a "backward martingale"
+  --
+  -- This is NOT currently in mathlib4, but should be provable from existing tools.
   have h_ae :
       ∀ᵐ ω ∂μ, Tendsto (fun n => μ[X | 𝒢 n] ω) atTop (𝓝 (μ[X | tail] ω)) := by
-    sorry -- Prove by reindexing to convert to increasing filtration case
+    sorry -- Lévy's downward theorem - needs to be added to mathlib or proven here
 
   -- (2) L¹ convergence for antitone families
   -- Similar to (1), use reindexing or derive from uniform integrability
   -- mathlib has L¹ convergence for increasing filtrations
+  --
+  -- Proof strategy:
+  -- L¹ convergence follows from a.e. convergence + uniform integrability.
+  -- Conditional expectations of an integrable function are uniformly integrable
+  -- (this is a general fact about martingales).
+  -- Therefore: a.e. convergence (from h_ae) + uniform integrability ⟹ L¹ convergence
+  --
+  -- Alternatively, use dominated convergence: |E[X|𝒢ₙ] - E[X|𝒢∞]| ≤ 2·E[|X| | 𝒢₀]
   have h_L1 :
       Tendsto (fun n => eLpNorm (μ[X | 𝒢 n] - μ[X | tail]) 1 μ) atTop (𝓝 0) := by
-    sorry -- Follows from (1) via uniform integrability of conditional expectations
+    sorry -- Follows from h_ae via uniform integrability of conditional expectations
 
   -- Done
   exact ⟨h_ae, h_L1⟩

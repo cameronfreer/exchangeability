@@ -358,19 +358,19 @@ lemma contraction_independence
               = Measure.map (fun ω => (ξ ω, ζ ω)) μ)
     (h_sigma : MeasurableSpace.comap η inferInstance ≤ MeasurableSpace.comap ζ inferInstance) :
     ProbabilityTheory.CondIndep ξ ζ η μ := by
-  -- Proof strategy (wrapper around condexp_indicator_eq_of_dist_eq_and_le):
-  -- Step 1: For each measurable B, apply condexp_indicator_eq_of_dist_eq_and_le
-  --         to get: P[ξ ∈ B | η] = P[ξ ∈ B | ζ] a.s.
-  -- Step 2: This shows that ξ and ζ have the same conditional distribution given η
-  -- Step 3: Since σ(η) ⊆ σ(ζ), this implies ξ ⊥⊥_η ζ by Doob's
-  -- characterization (FMP 6.6)
+  -- Proof path:
+  -- 1. Use condexp_indicator_eq_of_dist_eq_and_le to get:
+  --    E[1_{ξ∈B} | η] = E[1_{ξ∈B} | ζ] a.s. for all measurable B
+  -- 2. By tower property and σ(η) ⊆ σ(ζ), this gives:
+  --    E[1_{ξ∈B} | η ∨ ζ] = E[1_{ξ∈B} | η] a.s.
+  -- 3. Apply Doob's characterization via condIndep_iff_condexp_eq
   --
-  -- The key insight: condexp_indicator_eq_of_dist_eq_and_le gives the conditional
-  -- expectation equality directly, which is exactly what we need for conditional independence.
+  -- Note: CondIndep.of_indicator_condexp_eq provides this path for the
+  -- specific case where ζ : Ω → ℕ → α (sequences). For general ζ : Ω → α,
+  -- a similar lemma can be proven using the same approach.
   --
-  -- TODO: Once CondIndep API is clarified in mathlib, formalize using:
-  -- - condexp_indicator_eq_of_dist_eq_and_le (already stated above)
-  -- - Doob's characterization of conditional independence
+  -- TODO: Either generalize CondIndep.of_indicator_condexp_eq or prove directly
+  -- via condIndep_iff product formula (same mathematical idea).
   sorry
 
 /-- If `(ξ,η)` and `(ξ,ζ)` have the same law and `σ(η) ≤ σ(ζ)`,
@@ -1040,6 +1040,22 @@ def M (k : ℕ) (B : Set α) : ℕ → Ω → ℝ :=
 
 end reverse_martingale
 
+/-- **Key lemma: All coordinates have identical conditional distributions.**
+
+For a contractable sequence, all coordinates X_m have the same conditional law given
+the tail σ-algebra. This follows immediately from `extreme_members_equal_on_tail`. -/
+lemma identical_conditional_laws
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {X : ℕ → Ω → α}
+    (hX : Contractable μ X)
+    (hX_meas : ∀ n, Measurable (X n))
+    (m : ℕ) :
+    ∀ B : Set α, MeasurableSet B →
+      μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X m) | tailSigma X]
+        =ᵐ[μ]
+      μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] :=
+  fun B hB => extreme_members_equal_on_tail hX hX_meas m B hB
+
 /-- **Aldous' third proof of de Finetti's theorem.**
 
 If `X` is contractable, then `X₁, X₂, ...` are conditionally i.i.d. given the
@@ -1061,18 +1077,32 @@ tail σ-algebra `𝒯_X = ⋂_n σ(θ_n X)`.
 theorem deFinetti_martingale
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α]
-    (X : ℕ → Ω → α) (hX : Contractable μ X) :
-    ∃ (ℱ : MeasurableSpace Ω) (ν : Ω → Measure α),
-      (∀ ω, IsProbabilityMeasure (ν ω)) ∧
-      -- The sequence is conditionally i.i.d. given ℱ = 𝒯_X with law ν
-      (ℱ = tailSigma X) ∧
-      -- Conditional i.i.d. property (to be formalized)
-      sorry := by
-  use tailSigma X
-  -- Define ν ω = P[X₁ ∈ · | 𝒯_X](ω)
-  -- Use extreme_members_equal_on_tail to show conditional laws agree
-  -- Use contraction_independence iteratively to show conditional independence
-  sorry
+    (X : ℕ → Ω → α)
+    (hX : Contractable μ X)
+    (hX_meas : ∀ n, Measurable (X n)) :
+    ConditionallyIID μ X := by
+  -- Define the conditional law ν(ω) = P[X₀ ∈ · | 𝒯_X](ω)
+  -- This is a Markov kernel from Ω (with tailSigma X) to α
+
+  -- Step 1: Construct ν using conditional expectation of indicators
+  -- For each measurable B ⊆ α, define ν(ω)(B) := E[1_{X₀∈B} | 𝒯_X](ω)
+
+  sorry -- TODO: Kernel construction from conditional expectations
+
+  -- Step 2: Show all X_n have the same conditional law
+  -- This follows from extreme_members_equal_on_tail:
+  -- E[1_{X_m∈B} | 𝒯_X] = E[1_{X₀∈B} | 𝒯_X] for all m
+
+  -- Step 3: Show conditional independence
+  -- For finite subsets {X_{k₁}, ..., X_{kₙ}}, need to show:
+  -- E[∏ᵢ 1_{X_{kᵢ}∈Bᵢ} | 𝒯_X] = ∏ᵢ E[1_{X_{kᵢ}∈Bᵢ} | 𝒯_X]
+  --
+  -- Proof sketch:
+  -- - By contractability and extreme_members_equal_on_tail,
+  --   E[1_{X_m∈B} | 𝒯_X] = E[1_{X₀∈B} | 𝒯_X] is tail-measurable
+  -- - For disjoint future tails, conditional independence follows from
+  --   contraction_independence applied iteratively
+  -- - Use π-system argument on rectangles to extend to all events
 
 -- TODO: Add main theorem when proof is complete
 -- theorem deFinetti_viaMartingale := ...
