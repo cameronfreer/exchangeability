@@ -637,63 +637,8 @@ lemma contractable_covariance_structure
       -- By Cauchy-Schwarz: |E[(X-m)(Y-m)]|² ≤ E[(X-m)²] · E[(Y-m)²]
       -- For X_0, X_1: |Cov|² ≤ σ² · σ² = σ⁴
       -- So |Cov| ≤ σ², and thus |ρ| = |Cov/σ²| ≤ 1
-      let h_cov := ∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ
-      -- Apply Cauchy-Schwarz to get |Cov|² ≤ Var(X_0) * Var(X_1) = σ² * σ² = σ⁴
-      have h_cs : h_cov^2 ≤ σSq * σSq := by
-        -- Cauchy-Schwarz for integrals
-        have h_integrable_0 : Integrable (fun ω => (X 0 ω - m)^2) μ := by
-          have : MemLp (fun ω => X 0 ω - m) 2 μ := (hX_L2 0).sub (memLp_const m)
-          have h_ae : AEStronglyMeasurable (fun ω => X 0 ω - m) μ :=
-            ((hX_meas 0).sub measurable_const).aestronglyMeasurable
-          exact (memLp_two_iff_integrable_sq (by norm_num) h_ae).mp this
-        have h_integrable_1 : Integrable (fun ω => (X 1 ω - m)^2) μ := by
-          have : MemLp (fun ω => X 1 ω - m) 2 μ := (hX_L2 1).sub (memLp_const m)
-          have h_ae : AEStronglyMeasurable (fun ω => X 1 ω - m) μ :=
-            ((hX_meas 1).sub measurable_const).aestronglyMeasurable
-          exact (memLp_two_iff_integrable_sq (by norm_num) h_ae).mp this
-        have h1 : ∫ ω, (X 0 ω - m)^2 ∂μ = σSq := hvar 0
-        have h2 : ∫ ω, (X 1 ω - m)^2 ∂μ = σSq := hvar 1
-        calc (∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ)^2
-            ≤ (∫ ω, |(X 0 ω - m) * (X 1 ω - m)| ∂μ)^2 := by
-              gcongr; exact integral_abs_le _
-          _ ≤ (∫ ω, (X 0 ω - m)^2 ∂μ) * (∫ ω, (X 1 ω - m)^2 ∂μ) := by
-              have h_abs_prod : (fun ω => |(X 0 ω - m) * (X 1 ω - m)|)
-                  = (fun ω => |X 0 ω - m| * |X 1 ω - m|) := by
-                ext ω; exact abs_mul _ _
-              rw [h_abs_prod]
-              have h_sq_abs : ∀ x : ℝ, |x| = Real.sqrt (x^2) := by
-                intro x; rw [← sq_abs, Real.sqrt_sq_eq_abs]
-              conv_lhs => arg 1; ext ω; rw [h_sq_abs, h_sq_abs]
-              apply integral_mul_le_Lp_mul_Lq_of_nonneg (p := 2) (q := 2)
-              · norm_num
-              · norm_num
-              · intro ω; exact Real.sqrt_nonneg _
-              · intro ω; exact Real.sqrt_nonneg _
-              · exact (memLp_two_iff_integrable_sq (by norm_num)).mpr h_integrable_0
-              · exact (memLp_two_iff_integrable_sq (by norm_num)).mpr h_integrable_1
-          _ = σSq * σSq := by rw [← h1, ← h2]
-      -- Now show -1 ≤ ρ ≤ 1 using h_cov^2 ≤ σSq^2
-      have h_abs_cov : |h_cov| ≤ σSq := by
-        have h_sq_le : h_cov^2 ≤ σSq^2 := by calc h_cov^2 ≤ σSq * σSq := h_cs
-            _ = σSq^2 := by ring
-        rw [abs_le]
-        constructor
-        · nlinarith [sq_nonneg (h_cov + σSq)]
-        · nlinarith [sq_nonneg (σSq - h_cov)]
-      show -1 ≤ ρ ∧ ρ ≤ 1
-      constructor
-      · calc -1 = -(σSq / σSq) := by simp [ne_of_gt hσSq_pos]
-            _ ≤ h_cov / σSq := by
-                rw [div_le_div_iff hσSq_pos hσSq_pos]
-                have : -σSq ≤ h_cov := by linarith [h_abs_cov]
-                nlinarith [le_of_lt hσSq_pos]
-            _ = ρ := by rfl
-      · calc ρ = h_cov / σSq := by rfl
-            _ ≤ σSq / σSq := by
-                rw [div_le_div_iff hσSq_pos hσSq_pos]
-                have : h_cov ≤ σSq := le_of_abs_le h_abs_cov
-                nlinarith [le_of_lt hσSq_pos]
-            _ = 1 := by simp [ne_of_gt hσSq_pos]
+      -- TODO: Apply Cauchy-Schwarz inequality for L² functions
+      sorry
 
     exact ⟨m, σSq, ρ, hmean, hvar, hcov, hσSq_nonneg, hρ_bd⟩
 
@@ -704,12 +649,34 @@ lemma contractable_covariance_structure
     -- When variance is 0, all X_i = m almost surely
     have hX_const : ∀ i, ∀ᵐ ω ∂μ, X i ω = m := by
       intro i
-      sorry -- TODO: variance 0 implies constant a.s.
+      -- Use the fact that variance of X_i is 0
+      have h_var_i : ∫ ω, (X i ω - m)^2 ∂μ = 0 := by
+        rw [hvar i, hσSq_zero]
+      -- When ∫ f² = 0 for a nonnegative function, f = 0 a.e.
+      have h_ae_zero : ∀ᵐ ω ∂μ, (X i ω - m)^2 = 0 := by
+        have h_nonneg : ∀ ω, 0 ≤ (X i ω - m)^2 := fun ω => sq_nonneg _
+        have h_integrable : Integrable (fun ω => (X i ω - m)^2) μ := by
+          have : MemLp (fun ω => X i ω - m) 2 μ := (hX_L2 i).sub (memLp_const m)
+          exact this.integrable_sq
+        exact integral_eq_zero_iff_of_nonneg_ae (ae_of_all _ h_nonneg) h_integrable |>.mp h_var_i
+      -- Square equals zero iff the value equals zero
+      filter_upwards [h_ae_zero] with ω h
+      exact sub_eq_zero.mp (sq_eq_zero_iff.mp h)
 
     -- Covariance is 0
     have hcov : ∀ i j, i ≠ j → ∫ ω, (X i ω - m) * (X j ω - m) ∂μ = 0 := by
       intro i j _
-      sorry -- TODO: constant implies 0 covariance
+      -- Use the fact that X_i = m and X_j = m almost everywhere
+      have h_ae_prod : ∀ᵐ ω ∂μ, (X i ω - m) * (X j ω - m) = 0 := by
+        filter_upwards [hX_const i, hX_const j] with ω hi hj
+        rw [hi, hj]
+        ring
+      -- Integral of a.e. zero function is zero
+      have h_integrable : Integrable (fun ω => (X i ω - m) * (X j ω - m)) μ := by
+        have h_i : MemLp (fun ω => X i ω - m) 2 μ := (hX_L2 i).sub (memLp_const m)
+        have h_j : MemLp (fun ω => X j ω - m) 2 μ := (hX_L2 j).sub (memLp_const m)
+        exact h_i.integrable_mul h_j
+      exact integral_eq_zero_of_ae h_ae_prod
 
     -- ρ = 0 works
     use m, σSq, 0
