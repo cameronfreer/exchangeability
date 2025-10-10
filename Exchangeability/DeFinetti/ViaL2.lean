@@ -378,10 +378,8 @@ lemma eLpNorm_two_from_integral_sq_le
   -- For p=2, eLpNorm g 2 μ = (∫⁻ ‖g‖²)^(1/2)
   -- Given ∫ g² ≤ C, we have ∫ ‖g‖² ≤ C (since ‖g‖² = g² for real g)
   -- Therefore (∫⁻ ‖g‖²)^(1/2) ≤ C^(1/2) = √C
-  -- TODO: Complete this proof using:
-  -- 1. eLpNorm_eq_lintegral_rpow_enorm to express eLpNorm as (∫⁻ ‖g‖²ₑ)^(1/2)
-  -- 2. Convert Bochner integral bound to Lebesgue integral bound
-  -- 3. Apply monotonicity of x ↦ x^(1/2)
+  -- TODO: Use MemLp.eLpNorm_eq_integral_rpow_norm to express toReal(eLpNorm) as (∫ ‖g‖²)^(1/2),
+  -- then convert rpow(1/2) to sqrt, apply monotonicity, and lift back to ENNReal
   sorry
 
 end LpUtilities
@@ -525,14 +523,6 @@ lemma mem_window_iff {n k t : ℕ} :
     refine ⟨i, ?_, rfl⟩
     simpa using hi
 
-/-- Cardinality of Fin values less than k in Fin (2*k) -/
-private lemma card_fin_lt_k {k : ℕ} :
-    (Finset.univ.filter (fun i : Fin (2 * k) => i.val < k)).card = k := by
-  -- The filter selects exactly the elements 0, 1, ..., k-1 from Fin (2*k)
-  -- This has cardinality k
-  -- TODO: Complete using Finset.card_bij or Finset.card_range
-  sorry
-
 /-- The supremum of |p i - q i| for two-window weights -/
 private lemma sup_two_window_weights {k : ℕ} (hk : 0 < k)
     (p q : Fin (2 * k) → ℝ)
@@ -546,9 +536,11 @@ private lemma sup_two_window_weights {k : ℕ} (hk : 0 < k)
     simp only
     split_ifs <;> simp [abs_neg]
   -- The supremum of a constant function is that constant
-  haveI : Nonempty (Fin (2 * k)) := ⟨⟨0, by omega⟩⟩
+  have hk2 : 0 < 2 * k := Nat.mul_pos (by decide : 0 < 2) hk
+  haveI : Nonempty (Fin (2 * k)) := ⟨⟨0, hk2⟩⟩
   simp_rw [h_eq]
-  exact ciSup_const
+  -- TODO: Fix iSup_const application (was ciSup_const, needs type class instance)
+  sorry
 
 /-- **L² bound wrapper for two starting windows**.
 
