@@ -419,10 +419,21 @@ lemma eLpNorm_two_from_integral_sq_le
   -- Now we have: ofReal((∫ ‖g‖² ∂μ)^(1/2)) ≤ ofReal(√C)
   -- Use ofReal monotonicity
   apply ENNReal.ofReal_le_ofReal
-  -- Show (∫ ‖g‖² ∂μ)^(1/2) ≤ √C
-  -- This follows from monotonicity of x ↦ x^(1/2) on [0,∞)
-  -- TODO: The goal might be in rpow form after simp; need to convert properly
-  sorry
+  -- Show (∫ ‖g‖² ∂μ)^(2⁻¹) ≤ √C
+  -- The goal has 2⁻¹ which is the same as (1/2)
+  have h_C_nonneg : 0 ≤ C := by linarith [h_int_nonneg, h_int_le]
+  -- Convert 2⁻¹ to (1/2) and use rpow monotonicity
+  show (∫ ω, ‖g ω‖ ^ 2 ∂μ) ^ (2⁻¹ : ℝ) ≤ Real.sqrt C
+  rw [show (2⁻¹ : ℝ) = (1 / 2 : ℝ) by norm_num]
+  -- Goal is now (∫ ‖g‖²)^(1/2) ≤ √C
+  rw [Real.sqrt_eq_rpow]
+  -- Goal is (∫ ‖g‖²)^(1/2) ≤ C^(1/2)
+  -- Note: the ‖g‖^2 in the integral is with ^(2:ℕ), need to be careful with types
+  have h_int_le' : (∫ ω, ‖g ω‖ ^ (2:ℝ) ∂μ) ≤ C := by
+    convert h_int_le using 2
+    ext ω
+    simp [sq]
+  gcongr
 
 end LpUtilities
 
@@ -448,10 +459,32 @@ private lemma contractable_single_marginal_eq
     {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i)) (k : ℕ) :
     Measure.map (X k) μ = Measure.map (X 0) μ := by
-  -- TODO: This should follow from contractable_map_single but there are technical
-  -- issues with the eta-expansion and section variables. The proof is straightforward:
-  -- apply contractability to the singleton subsequence {k}.
-  sorry
+  -- Apply contractability to the singleton subsequence {k}
+  classical
+  let κ : Fin 1 → ℕ := fun _ => k
+  have hκ : StrictMono κ := fin1_strictMono_vacuous κ
+  have h_map := hX_contract 1 κ hκ
+  -- h_map says: map of (ω ↦ (i ↦ X (κ i) ω)) equals map of (ω ↦ (i ↦ X i.val ω))
+  -- We need to extract the single coordinate from Fin 1 → α
+  let eval : (Fin 1 → α) → α := fun g => g ⟨0, by decide⟩
+  have h_eval_meas : Measurable eval := measurable_pi_apply _
+  have h_meas_κ : Measurable fun ω => fun j : Fin 1 => X (κ j) ω := by
+    refine measurable_pi_lambda _ ?_
+    intro j; simpa [κ] using hX_meas (κ j)
+  have h_meas_std : Measurable fun ω => fun j : Fin 1 => X j.val ω := by
+    refine measurable_pi_lambda _ ?_
+    intro j; simpa using hX_meas j.val
+  -- Apply eval to both sides
+  have h_left := (Measure.map_map h_eval_meas h_meas_κ (μ := μ)).symm
+  have h_right := Measure.map_map h_eval_meas h_meas_std (μ := μ)
+  have h_eval := congrArg (Measure.map eval) h_map
+  have h_comp := h_left.trans (h_eval.trans h_right)
+  -- Simplify the compositions
+  have h_comp_left : (fun ω => eval (fun j : Fin 1 => X (κ j) ω)) = fun ω => X k ω := by
+    funext ω; simp [eval, κ]
+  have h_comp_right : (fun ω => eval (fun j : Fin 1 => X j.val ω)) = fun ω => X 0 ω := by
+    funext ω; simp [eval]
+  simpa [Function.comp, h_comp_left, h_comp_right] using h_comp
 
 /-- **Contractable sequences have uniform covariance structure.**
 
