@@ -663,6 +663,13 @@ private lemma l2_bound_long_vs_tail
   -- For now, leave as sorry until contractable_covariance_structure is complete
   sorry
 
+/-- **Weighted sums converge in L¹ for contractable sequences.**
+
+For a contractable sequence X and bounded measurable f, the Cesàro averages
+`(1/m) * ∑_{i<m} f(X_{n+i+1})` converge in L¹ to a limit α : Ω → ℝ that does not depend on n.
+
+This is the key convergence result needed for de Finetti's theorem via the L² approach.
+The proof uses L² contractability bounds to show the averages form a Cauchy sequence in L¹. -/
 theorem weighted_sums_converge_L1
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
