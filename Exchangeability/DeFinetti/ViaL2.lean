@@ -409,9 +409,13 @@ lemma contractable_covariance_structure
   -- All X_i have the same mean by contractability (single-variable marginal)
   have hmean : ∀ k, ∫ ω, X k ω ∂μ = m := by
     intro k
-    -- X_k has the same distribution as X_0 by contractability
-    -- This requires showing that the measure.map of a single variable is the same
-    sorry -- TODO: Apply contractability to size-1 subsequences
+    -- Strategy: Use contractability to show X_k has same marginal distribution as X_0
+    -- For m=1, StrictMono is vacuously true, but the proof is subtle
+    -- Simpler: use the fact that contractable implies exchangeable for finite sequences
+    -- and thus all marginals are identical
+    sorry -- TODO: Extract single-variable marginal equality from contractability
+    -- Key insight: For any k, the subsequence (k) has same distribution as (0)
+    -- This follows from contractability but requires careful use of Measure.map
 
   -- Define σSq as the variance of X_0
   let σSq := ∫ ω, (X 0 ω - m)^2 ∂μ
