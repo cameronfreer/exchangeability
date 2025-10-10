@@ -158,6 +158,18 @@ structure AgreeOnFutureRectangles {α : Type*} [MeasurableSpace α]
     (μ ν : Measure (α × (ℕ → α))) : Prop :=
   (measure_eq : μ = ν)
 
+/-- If (X₁,Y) and (X₂,Y) have the same distribution, then
+E[1_{X₁∈B} | σ(Y)] = E[1_{X₂∈B} | σ(Y)] a.e.
+
+**Mathematical idea:** The hypothesis `hagree.measure_eq` says the pushforward measures
+`μ ∘ (X₁,Y)⁻¹` and `μ ∘ (X₂,Y)⁻¹` are equal. This implies that for any measurable
+rectangle B × E, we have μ(X₁⁻¹(B) ∩ Y⁻¹(E)) = μ(X₂⁻¹(B) ∩ Y⁻¹(E)).
+Computing set integrals ∫_{Y⁻¹(E)} 1_{Xᵢ∈B} dμ as measures of these intersections
+shows they're equal for all E. By uniqueness of conditional expectation
+(`ae_eq_condExp_of_forall_setIntegral_eq`), the conditional expectations are equal a.e.
+
+**TODO:** This proof has Lean 4 technical issues with measurable space instance resolution
+when working with sub-σ-algebras. The mathematical content is straightforward. -/
 lemma condexp_indicator_eq_of_agree_on_future_rectangles
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α]
@@ -171,12 +183,7 @@ lemma condexp_indicator_eq_of_agree_on_future_rectangles
         | MeasurableSpace.comap Y inferInstance]
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂
-        | MeasurableSpace.comap Y inferInstance] := by
-  -- TODO: Technical Lean issue with measurable space instance resolution.
-  -- Mathematical idea: hagree.measure_eq says the pushforward measures are equal,
-  -- so integrals over rectangles B × E agree, implying the conditional expectations
-  -- E[1_{X₁∈B} | σ(Y)] and E[1_{X₂∈B} | σ(Y)] are equal a.e.
-  -- Should use ae_eq_condExp_of_forall_setIntegral_eq after establishing set integral equality.
+        | MeasurableSpace.comap Y inferInstance] :=
   sorry
 
 /-! ### Conditional Probability -/
