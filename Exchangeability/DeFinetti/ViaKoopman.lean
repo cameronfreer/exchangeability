@@ -1346,12 +1346,29 @@ lemma Kernel.IndepFun.integral_mul
       -- The sum has exactly one nonzero term: the k where X(ω) falls in [k*g, (k+1)*g)
       -- That k is precisely ⌊clamp(X ω) / grid_size⌋
 
-      sorry -- Show sum collapses to single term matching floor value
-            -- Key steps:
-            -- 1. Let k₀ = ⌊clamp(X ω) / grid_size⌋
-            -- 2. Show clamp(X ω) ∈ Ico(k₀ * g, (k₀ + 1) * g)
-            -- 3. Show for k ≠ k₀, clamp(X ω) ∉ Ico(k * g, (k + 1) * g)
-            -- 4. Therefore sum = indicator(k₀) * (k₀ * g) = k₀ * g
+      let val := max (-CX) (min CX (X ω))
+      let k₀ := ⌊val / grid_size⌋
+
+      -- Key property: floor puts val in the interval [k₀ * g, (k₀ + 1) * g)
+      have h_val_in_interval : val ∈ Set.Ico (k₀ * grid_size) ((k₀ + 1) * grid_size) := by
+        sorry -- Int.floor_mul_le and Int.lt_floor_add_one
+
+      -- This means X ω is in the preimage A ⟨k₀, _⟩
+      have h_in_k0 : X ω ∈ Set.Ico (k₀ * grid_size) ((k₀ + 1) * grid_size) := by
+        sorry -- val = clamp(X ω) and val ∈ interval
+
+      -- For any other k, X ω is NOT in that interval
+      have h_not_in_other : ∀ (k : ℤ) (hk : k_min ≤ k ∧ k ≤ k_max), k ≠ k₀ →
+          X ω ∉ Set.Ico (k * grid_size) ((k + 1) * grid_size) := by
+        sorry -- Intervals are disjoint
+
+      -- Therefore the sum has exactly one nonzero term
+      show ⌊val / grid_size⌋ * grid_size
+         = ∑ i : ι, (X ⁻¹' Set.Ico (i.1 * grid_size) ((i.1 + 1) * grid_size)).indicator
+                    (fun _ => i.1 * grid_size) ω
+
+      sorry -- Complete: Use Finset.sum_eq_single to show sum = k₀ * grid_size
+            -- where k₀ is the unique index with indicator = 1
 
     · intro n
       sorry -- Symmetric for Y
