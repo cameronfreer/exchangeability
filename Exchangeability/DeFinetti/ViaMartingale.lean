@@ -358,19 +358,19 @@ lemma contraction_independence
               = Measure.map (fun ω => (ξ ω, ζ ω)) μ)
     (h_sigma : MeasurableSpace.comap η inferInstance ≤ MeasurableSpace.comap ζ inferInstance) :
     ProbabilityTheory.CondIndep ξ ζ η μ := by
-  -- Proof strategy (wrapper around condexp_indicator_eq_of_dist_eq_and_le):
-  -- Step 1: For each measurable B, apply condexp_indicator_eq_of_dist_eq_and_le
-  --         to get: P[ξ ∈ B | η] = P[ξ ∈ B | ζ] a.s.
-  -- Step 2: This shows that ξ and ζ have the same conditional distribution given η
-  -- Step 3: Since σ(η) ⊆ σ(ζ), this implies ξ ⊥⊥_η ζ by Doob's
-  -- characterization (FMP 6.6)
+  -- Proof path:
+  -- 1. Use condexp_indicator_eq_of_dist_eq_and_le to get:
+  --    E[1_{ξ∈B} | η] = E[1_{ξ∈B} | ζ] a.s. for all measurable B
+  -- 2. By tower property and σ(η) ⊆ σ(ζ), this gives:
+  --    E[1_{ξ∈B} | η ∨ ζ] = E[1_{ξ∈B} | η] a.s.
+  -- 3. Apply Doob's characterization via condIndep_iff_condexp_eq
   --
-  -- The key insight: condexp_indicator_eq_of_dist_eq_and_le gives the conditional
-  -- expectation equality directly, which is exactly what we need for conditional independence.
+  -- Note: CondIndep.of_indicator_condexp_eq provides this path for the
+  -- specific case where ζ : Ω → ℕ → α (sequences). For general ζ : Ω → α,
+  -- a similar lemma can be proven using the same approach.
   --
-  -- TODO: Once CondIndep API is clarified in mathlib, formalize using:
-  -- - condexp_indicator_eq_of_dist_eq_and_le (already stated above)
-  -- - Doob's characterization of conditional independence
+  -- TODO: Either generalize CondIndep.of_indicator_condexp_eq or prove directly
+  -- via condIndep_iff product formula (same mathematical idea).
   sorry
 
 /-- If `(ξ,η)` and `(ξ,ζ)` have the same law and `σ(η) ≤ σ(ζ)`,
