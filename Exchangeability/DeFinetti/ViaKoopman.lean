@@ -1321,7 +1321,9 @@ lemma Kernel.IndepFun.integral_mul
 
       -- 1. ι is Fintype (bounded integers)
       have hι : Fintype ι := by
-        sorry -- Use Int.fintype_Icc or similar for bounded integer subtype
+        -- ι is a subtype of integers in [k_min, k_max]
+        sorry -- Should use Int.fintypeIcc or Set.fintypeIcc
+              -- The subtype {k : ℤ // k_min ≤ k ≤ k_max} is Fintype
 
       -- 2. Each A k is measurable in both senses
       have hA_meas : ∀ i : ι, MeasurableSet (A i) ∧
@@ -1336,9 +1338,20 @@ lemma Kernel.IndepFun.integral_mul
 
       -- 3. Show the equality
       refine ⟨ι, hι, a, A, hA_meas, ?_⟩
-      sorry -- Prove: dyadic_approx CX X n = fun ω => ∑ i, (A i).indicator (fun _ => a i) ω
-            -- Strategy: case analysis on which interval clamped X(ω) falls in
-            -- The floor function determines unique k, and result is k * grid_size = a(k)
+      ext ω
+      simp only [dyadic_approx, A, a]
+      -- LHS: ⌊clamp(X ω) / grid_size⌋ * grid_size
+      -- RHS: ∑ ⟨k, _⟩, indicator(X ω ∈ Ico(k*g, (k+1)*g)) * (k * g)
+
+      -- The sum has exactly one nonzero term: the k where X(ω) falls in [k*g, (k+1)*g)
+      -- That k is precisely ⌊clamp(X ω) / grid_size⌋
+
+      sorry -- Show sum collapses to single term matching floor value
+            -- Key steps:
+            -- 1. Let k₀ = ⌊clamp(X ω) / grid_size⌋
+            -- 2. Show clamp(X ω) ∈ Ico(k₀ * g, (k₀ + 1) * g)
+            -- 3. Show for k ≠ k₀, clamp(X ω) ∉ Ico(k * g, (k + 1) * g)
+            -- 4. Therefore sum = indicator(k₀) * (k₀ * g) = k₀ * g
 
     · intro n
       sorry -- Symmetric for Y
