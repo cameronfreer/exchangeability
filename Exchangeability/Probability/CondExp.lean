@@ -218,8 +218,46 @@ lemma condexp_indicator_eq_of_agree_on_future_rectangles
         | MeasurableSpace.comap Y inferInstance]
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂
-        | MeasurableSpace.comap Y inferInstance] :=
-  sorry
+        | MeasurableSpace.comap Y inferInstance] := by
+  let mY := MeasurableSpace.comap Y inferInstance
+  -- **Strategy:** For any σ(Y)-measurable set E, show:
+  --   ∫_{E} 1_{X₁∈B} dμ = ∫_{E} 1_{X₂∈B} dμ
+  -- Then uniqueness of conditional expectation gives equality a.e.
+  apply ae_eq_condExp_of_forall_setIntegral_eq (mY := mY) (μ := μ)
+  · exact Measurable.aestronglyMeasurable <| Measurable.indicator hX₁ hB
+  · exact Measurable.aestronglyMeasurable <| Measurable.indicator hX₂ hB
+  · intro E _hEmeas _hEfin
+    -- **Goal:** ∫_{E} 1_{X₁∈B} dμ = ∫_{E} 1_{X₂∈B} dμ
+    -- **Key:** E is σ(Y)-measurable, so E = Y⁻¹(E') for some E' measurable w.r.t. (ℕ → α).
+    -- The set integral ∫_{Y⁻¹(E')} 1_{Xᵢ∈B} dμ equals μ(Xᵢ∈B ∧ Y∈E')
+    --   = (pushforward μ via (Xᵢ, Y))(B × E')
+    -- Since hagree.measure_eq says these pushforwards are equal, the integrals match.
+    calc
+      ∫ x in E, (Set.indicator B (fun _ => (1 : ℝ)) ∘ X₁) x ∂μ
+        = ∫ x in E, (B.indicator (fun _ => (1 : ℝ)) (X₁ x)) ∂μ := rfl
+      _ = ∫ x in X₁ ⁻¹' B ∩ E, (1 : ℝ) ∂μ := by
+          rw [setIntegral_indicator hB]
+      _ = (μ (X₁ ⁻¹' B ∩ E)).toReal := by
+          simp [integral_const, MeasurableSet.inter (hX₁ hB) _hEmeas, smul_eq_mul, mul_one]
+      _ = (μ (X₂ ⁻¹' B ∩ E)).toReal := by
+          -- This is where hagree.measure_eq is used. The equality
+          --   μ(X₁∈B ∧ E) = μ(X₂∈B ∧ E)
+          -- follows from the pushforward measures being equal on B×E'.
+          -- For now we complete the proof modulo that step.
+          congr 1
+          -- **Detailed argument:**
+          -- We have: (μ.map (λω ↦ (X₁ ω, Y ω))) = (μ.map (λω ↦ (X₂ ω, Y ω)))
+          -- E is σ(Y)-measurable, so ∃ E' mble in (ℕ→α), E = Y⁻¹(E').
+          -- Then μ(Xᵢ∈B ∧ E) = μ(Xᵢ∈B ∧ Y∈E')
+          --                   = (μ.map (Xᵢ,Y))({(b,y) | b∈B, y∈E'})
+          --                   = (μ.map (Xᵢ,Y))(B × E')
+          -- By hagree.measure_eq, these are equal.
+          sorry
+      _ = ∫ x in X₂ ⁻¹' B ∩ E, (1 : ℝ) ∂μ := by
+          simp [integral_const, MeasurableSet.inter (hX₂ hB) _hEmeas, smul_eq_mul, mul_one]
+      _ = ∫ x in E, (B.indicator (fun _ => (1 : ℝ)) (X₂ x)) ∂μ := by
+          rw [← setIntegral_indicator hB]
+      _ = ∫ x in E, (Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂) x ∂μ := rfl
 
 /-! ### Conditional Probability -/
 
@@ -562,8 +600,20 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         intro f hf_meas hf_disj hf_C
         simp only [C] at hf_C ⊢
         have hf_meas' : ∀ i, MeasurableSet[m₀] (f i) := fun i => hmFG _ (hf_meas i)
-        -- Use tsum for countable disjoint union
-        sorry
+        -- **Strategy:** Use `integral_iUnion` to handle the countable union
+        -- We have: ∀ i, ∫_{f i} g dμ = μ[f i].
+        -- Goal: ∫_{⋃ i, f i} g dμ = μ[⋃ i, f i].
+        calc
+          ∫ ω in ⋃ i, f i, g ω ∂μ
+            = ∑' i, ∫ ω in f i, g ω ∂μ := by
+                apply MeasureTheory.integral_iUnion hf_disj
+                · intro i; exact (hg_int.integrableOn)
+            _ = ∑' i, (μ (f i)).toReal := by
+                congr 1; ext i; exact hf_C i
+            _ = (∑' i, μ (f i)).toReal := ENNReal.toReal_tsum (fun _ => measure_ne_top μ _)
+            _ = (μ (⋃ i, f i)).toReal := by
+                congr 1
+                exact (measure_iUnion hf_disj (fun i => hmFG _ (hf_meas i))).symm
 
       -- Apply induction_on_inter
       sorry -- Need suitable form of induction_on_inter for this setting
@@ -836,12 +886,13 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
       have h_condExp_L : μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
           =ᵐ[μ] fun ω => ∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω := by
         haveI : IsFiniteMeasure μ := inferInstance
-        exact condExp_indicator_iUnion_tsum (le_sup_left.trans hmFG) f hf_meas hf_disj
+        exact @condExp_indicator_iUnion_tsum Ω m₀ (mF ⊔ mG) μ _ (le_sup_left.trans hmFG) f hf_meas hf_disj
 
       have h_condExp_R : μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG]
           =ᵐ[μ] fun ω => ∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mG] ω := by
         haveI : IsFiniteMeasure μ := inferInstance
-        exact condExp_indicator_iUnion_tsum (hmG.trans hmFG) f hf_meas hf_disj
+        have hmG' : mG ≤ m₀ := hmG.trans hmFG
+        exact @condExp_indicator_iUnion_tsum Ω m₀ mG μ _ hmG' f hf_meas hf_disj
 
       -- Step 3: Integrate both sides
       rw [integral_congr_ae (ae_restrict_of_ae h_condExp_L),
@@ -862,11 +913,79 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
       -- Mathlib: Use `integral_tsum` with appropriate summability proof
       have h_int_tsum_L : ∫ ω in S, (∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω) ∂μ
           = ∑' i, ∫ ω in S, μ[(f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω ∂μ := by
-        sorry -- Use integral_tsum with domination by summable constants
+        -- **Strategy:** Use `integral_tsum` from mathlib
+        -- We can avoid the tsum for conditional expectations by using `integral_iUnion`
+        -- directly on the LHS.
+        calc
+          ∫ ω in S, (∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω) ∂μ
+            = ∫ ω in S, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω ∂μ := by
+                apply integral_congr_ae
+                exact ae_restrict_of_ae h_condExp_L.symm
+            _ = ∫ ω in S, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂μ := by
+                rw [setIntegral_condExp (mF ⊔ mG) (Measurable.indicator
+                  (fun ⦃s⦄ a ↦ hmFG s (MeasurableSet.iUnion hf_meas))
+                  (@MeasurableSet.univ ℝ _)).aestronglyMeasurable]
+            _ = ∫ ω in S ∩ (⋃ i, f i), (1 : ℝ) ∂μ := by
+                rw [setIntegral_indicator (hmFG _ (MeasurableSet.iUnion hf_meas))]
+            _ = (μ (S ∩ (⋃ i, f i))).toReal := by
+                simp [integral_const, smul_eq_mul, mul_one]
+            _ = (μ (⋃ i, S ∩ f i)).toReal := by
+                congr 1; rw [Set.inter_iUnion]
+            _ = (∑' i, μ (S ∩ f i)).toReal := by
+                congr 1
+                apply measure_iUnion (hf_disj.mono (fun i j h ↦ h.inter_left' S))
+                intro i
+                exact MeasurableSet.inter hS_meas (hmFG _ (hf_meas i))
+            _ = ∑' i, (μ (S ∩ f i)).toReal := ENNReal.toReal_tsum (fun _ => measure_ne_top μ _)
+            _ = ∑' i, ∫ ω in S ∩ f i, (1 : ℝ) ∂μ := by
+                congr 1; ext i
+                simp [integral_const, smul_eq_mul, mul_one]
+            _ = ∑' i, ∫ ω in S, (f i).indicator (fun _ => (1 : ℝ)) ω ∂μ := by
+                congr 1; ext i
+                rw [← setIntegral_indicator (hmFG _ (hf_meas i)), Set.indicator_comp_right]
+                rfl
+            _ = ∑' i, ∫ ω in S, μ[(f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω ∂μ := by
+                congr 1; ext i
+                rw [← setIntegral_condExp (mF ⊔ mG)
+                  (Measurable.indicator (fun ⦃s⦄ a ↦ hmFG s (hf_meas i))
+                    (@MeasurableSet.univ ℝ _)).aestronglyMeasurable]
 
       have h_int_tsum_R : ∫ ω in S, (∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mG] ω) ∂μ
           = ∑' i, ∫ ω in S, μ[(f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂μ := by
-        sorry -- Same as h_int_tsum_L, use integral_tsum
+        -- Same strategy using `integral_iUnion`
+        calc
+          ∫ ω in S, (∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mG] ω) ∂μ
+            = ∫ ω in S, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂μ := by
+                apply integral_congr_ae
+                exact ae_restrict_of_ae h_condExp_R.symm
+            _ = ∫ ω in S, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂μ := by
+                rw [setIntegral_condExp mG (Measurable.indicator
+                  (fun ⦃s⦄ a ↦ hmFG s (MeasurableSet.iUnion hf_meas))
+                  (@MeasurableSet.univ ℝ _)).aestronglyMeasurable]
+            _ = ∫ ω in S ∩ (⋃ i, f i), (1 : ℝ) ∂μ := by
+                rw [setIntegral_indicator (hmFG _ (MeasurableSet.iUnion hf_meas))]
+            _ = (μ (S ∩ (⋃ i, f i))).toReal := by
+                simp [integral_const, smul_eq_mul, mul_one]
+            _ = (μ (⋃ i, S ∩ f i)).toReal := by
+                congr 1; rw [Set.inter_iUnion]
+            _ = (∑' i, μ (S ∩ f i)).toReal := by
+                congr 1
+                apply measure_iUnion (hf_disj.mono (fun i j h ↦ h.inter_left' S))
+                intro i
+                exact MeasurableSet.inter hS_meas (hmFG _ (hf_meas i))
+            _ = ∑' i, (μ (S ∩ f i)).toReal := ENNReal.toReal_tsum (fun _ => measure_ne_top μ _)
+            _ = ∑' i, ∫ ω in S ∩ f i, (1 : ℝ) ∂μ := by
+                congr 1; ext i
+                simp [integral_const, smul_eq_mul, mul_one]
+            _ = ∑' i, ∫ ω in S, (f i).indicator (fun _ => (1 : ℝ)) ω ∂μ := by
+                congr 1; ext i
+                rw [← setIntegral_indicator (hmFG _ (hf_meas i)), Set.indicator_comp_right]
+                rfl
+            _ = ∑' i, ∫ ω in S, μ[(f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂μ := by
+                congr 1; ext i
+                rw [← setIntegral_condExp mG
+                  (Measurable.indicator (fun ⦃s⦄ a ↦ hmFG s (hf_meas i))
+                    (@MeasurableSet.univ ℝ _)).aestronglyMeasurable]
 
       -- Step 5: Apply hypothesis hf_C to each term
       rw [h_int_tsum_L, h_int_tsum_R]
