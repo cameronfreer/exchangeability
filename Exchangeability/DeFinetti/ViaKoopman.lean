@@ -5,6 +5,7 @@ Authors: Cameron Freer
 -/
 import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
+import Mathlib.MeasureTheory.Function.SimpleFuncDense
 import Mathlib.Analysis.InnerProductSpace.Projection.Basic
 import Mathlib.Probability.Kernel.Condexp
 import Mathlib.Probability.Independence.Kernel
