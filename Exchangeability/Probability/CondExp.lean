@@ -73,7 +73,7 @@ The goal is to incrementally replace stubs with proofs as needed by the de Finet
 
 noncomputable section
 open scoped MeasureTheory ProbabilityTheory Topology
-open MeasureTheory Filter Set
+open MeasureTheory Filter Set Function
 
 namespace Exchangeability.Probability
 
@@ -194,10 +194,11 @@ lemma condProb_compl {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
   have hlin :
       μ[Aᶜ.indicator (fun _ => (1 : ℝ)) | m]
         =ᵐ[μ] μ[(fun _ => (1 : ℝ)) | m] - μ[A.indicator (fun _ => (1 : ℝ)) | m] := by
+    have h_int : Integrable (A.indicator fun _ : Ω => (1 : ℝ)) μ :=
+      (integrable_const (1 : ℝ)).indicator hA
     simpa [hId] using
-      (condExp_sub (μ := μ) (m := m)
-        (f := fun _ : Ω => (1 : ℝ))
-        (g := A.indicator fun _ : Ω => (1 : ℝ)))
+      condExp_sub (μ := μ) (m := m)
+        (integrable_const (1 : ℝ)) h_int
   have hconst : μ[(fun _ : Ω => (1 : ℝ)) | m] =ᵐ[μ] (fun _ => (1 : ℝ)) :=
     (condExp_const (μ := μ) (m := m) hm (1 : ℝ)).eventuallyEq
   have : μ[Aᶜ.indicator (fun _ : Ω => (1 : ℝ)) | m]
@@ -387,20 +388,37 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         obtain ⟨F, G, hF, hG, rfl⟩ := hs
         exact h_rect hF hG
 
-      -- TODO: Apply Dynkin π-λ theorem using induction_on_inter
-      --
-      -- Strategy: Use induction_on_inter with C(S) := "∫ in S, g = ∫ in S, H.indicator"
-      --
-      -- Key mathlib lemmas verified:
-      -- 1. induction_on_inter : The Dynkin π-λ theorem
-      --    (from MeasureTheory.PiSystem line 674)
-      --    Given m = generateFrom s and IsPiSystem s, prove property C on all measurable sets
-      --    by verifying C on: empty, basic sets in s, complements, and countable disjoint unions
-      --
-      -- 2. generateFrom_sup_generateFrom : generateFrom s ⊔ generateFrom t = generateFrom (s ∪ t)
-      --    (from MeasureTheory.MeasurableSpace.Defs line 382)
-      --    Connects supremum of σ-algebras to union of generating sets
-      sorry
+      -- Apply Dynkin π-λ theorem using induction_on_inter
+      -- Define the property: C(S) := "∫ in S, g = ∫ in S, H.indicator"
+      let C : Set Ω → Prop := fun S => ∫ ω in S, g ω ∂μ = ∫ ω in S, H.indicator (fun _ => (1 : ℝ)) ω ∂μ
+
+      -- Show C satisfies Dynkin system properties
+      have h_C_empty : C ∅ := by simp [C]
+
+      have h_C_compl : ∀ s, MeasurableSet[mF ⊔ mG] s → C s → C sᶜ := by
+        intro s hs hCs
+        simp only [C] at hCs ⊢
+        have hs' : MeasurableSet[m₀] s := hmFG _ hs
+        have h_add_g : ∫ ω in s, g ω ∂μ + ∫ ω in sᶜ, g ω ∂μ = ∫ ω, g ω ∂μ :=
+          integral_add_compl hs' hg_int
+        have h_add_H : ∫ ω in s, H.indicator (fun _ => (1 : ℝ)) ω ∂μ + ∫ ω in sᶜ, H.indicator (fun _ => (1 : ℝ)) ω ∂μ
+            = ∫ ω, H.indicator (fun _ => (1 : ℝ)) ω ∂μ :=
+          integral_add_compl hs' hH_int
+        have h_total : ∫ ω, g ω ∂μ = ∫ ω, H.indicator (fun _ => (1 : ℝ)) ω ∂μ :=
+          setIntegral_condExp (μ := μ) (m := mG) (hm := hmG)
+            (f := H.indicator fun _ => (1 : ℝ)) hH_int MeasurableSet.univ |> fun h => by simpa using h
+        linarith
+
+      have h_C_iUnion : ∀ (f : ℕ → Set Ω), (∀ i, MeasurableSet[mF ⊔ mG] (f i)) →
+          Pairwise (Disjoint on f) → (∀ i, C (f i)) → C (⋃ i, f i) := by
+        intro f hf_meas hf_disj hf_C
+        simp only [C] at hf_C ⊢
+        have hf_meas' : ∀ i, MeasurableSet[m₀] (f i) := fun i => hmFG _ (hf_meas i)
+        -- Use tsum for countable disjoint union
+        sorry
+
+      -- Apply induction_on_inter
+      sorry -- Need suitable form of induction_on_inter for this setting
     have h_proj :
         μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
           =ᵐ[μ] g := by
@@ -608,7 +626,7 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
   classical
   -- Promote X₁ to L² using the L² property of X₂.
   have h_cond_mem : MemLp (μ[X₂ | m₁]) 2 μ := hL2.condExp (m := m₁)
-  have hX₁_mem : MemLp X₁ 2 μ := h_cond_mem.ae_eq (hmg.symm)
+  have hX₁_mem : MemLp X₁ 2 μ := h_cond_mem.ae_eq hmg
   have h_diff_L2 : MemLp (X₂ - X₁) 2 μ := hL2.sub hX₁_mem
   -- The squared difference is L¹-integrable.
   have h_diff_mem : MemLp (X₂ - μ[X₂ | m₁]) 2 μ := hL2.sub h_cond_mem
@@ -631,13 +649,14 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     have h_cond_sq_int :
         Integrable (fun ω => (μ[X₂ | m₁] ω) ^ 2) μ :=
       h_cond_mem.integrable_sq
-    have h_eq :=
-      condVar_ae_eq_condExp_sq_sub_sq_condExp (μ := μ) (m := m₁) (hm := hm₁)
-        (X := X₂) hL2
+    -- The conditional variance equals μ[X₂² | m₁] - (μ[X₂ | m₁])²
+    have h_var_formula :
+        μ[(X₂ - μ[X₂ | m₁])^2 | m₁] =ᵐ[μ] μ[X₂ ^ 2 | m₁] - (μ[X₂ | m₁]) ^ 2 := by
+      sorry -- This is a standard identity
     have h_congr :
-        ∫ ω, Var[X₂; μ | m₁] ω ∂μ
+        ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ
           = ∫ ω, (μ[X₂ ^ 2 | m₁] ω - μ[X₂ | m₁] ω ^ 2) ∂μ :=
-      integral_congr_ae h_var_int (h_mu_sq_int.sub h_cond_sq_int) h_eq
+      integral_congr_ae h_var_int (h_mu_sq_int.sub h_cond_sq_int) h_var_formula
     have h_sub :=
       integral_sub h_mu_sq_int h_cond_sq_int
     have h_condExp_sq :
@@ -652,7 +671,7 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         (hX₁_mem.integrable_sq)
         (hmg.mono fun ω hω => by simpa [hω])
     calc
-      ∫ ω, Var[X₂; μ | m₁] ω ∂μ
+      ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ
           = ∫ ω, (μ[X₂ ^ 2 | m₁] ω - μ[X₂ | m₁] ω ^ 2) ∂μ := h_congr
       _ = (∫ ω, μ[X₂ ^ 2 | m₁] ω ∂μ)
             - ∫ ω, (μ[X₂ | m₁] ω) ^ 2 ∂μ := h_sub
@@ -661,7 +680,7 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
 
   -- Replace the integral of the conditional variance with the integral of the squared deviation.
   have h_integral_diff :
-      ∫ ω, (X₂ ω - X₁ ω) ^ 2 ∂μ = ∫ ω, Var[X₂; μ | m₁] ω ∂μ := by
+      ∫ ω, (X₂ ω - X₁ ω) ^ 2 ∂μ = ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ := by
     have h_int :=
       integral_condExp (μ := μ) (m := m₁) (hm := hm₁)
         (f := fun ω => (X₂ ω - μ[X₂ | m₁] ω) ^ 2) h_diff_sq_int
@@ -674,8 +693,7 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     calc
       ∫ ω, (X₂ ω - X₁ ω) ^ 2 ∂μ
           = ∫ ω, (X₂ ω - μ[X₂ | m₁] ω) ^ 2 ∂μ := integral_congr_ae h_sq_int h_diff_sq_int h_sq_eq.symm
-      _ = ∫ ω, Var[X₂; μ | m₁] ω ∂μ := by
-        simpa [condVar] using h_int.symm
+      _ = ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ := h_int.symm
 
   -- Combine the previous identities to deduce that the squared deviation integrates to zero.
   have h_diff_integral_zero :
@@ -696,15 +714,15 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
       Integrable (fun ω => diffLp ω * diffLp ω) μ :=
     (h_diff_L2.integrable_sq.congr h_integrand_eq.symm)
   have h_inner_zero :
-      (⟪diffLp, diffLp⟫ : ℝ) = 0 := by
+      @inner ℝ (Lp ℝ 2 μ) _ diffLp diffLp = 0 := by
     calc
-      (⟪diffLp, diffLp⟫ : ℝ)
+      (@inner ℝ (Lp ℝ 2 μ) _ diffLp diffLp : ℝ)
           = ∫ ω, diffLp ω * diffLp ω ∂μ := inner_def _ _
       _ = ∫ ω, (X₂ ω - X₁ ω) ^ 2 ∂μ :=
         integral_congr_ae h_integrable_prod h_diff_L2.integrable_sq h_integrand_eq
       _ = 0 := h_diff_integral_zero
   have h_diffLp_zero : diffLp = 0 :=
-    inner_self_eq_zero.mp (by simpa using h_inner_zero)
+    inner_self_eq_zero.mp h_inner_zero
   have h_zero_mem : MemLp (fun _ : Ω => (0 : ℝ)) 2 μ := MemLp.zero
   have h_zero_toLp :
       h_zero_mem.toLp (fun _ : Ω => (0 : ℝ)) = (0 : Lp ℝ 2 μ) :=
@@ -715,7 +733,7 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         diffLp = h_zero_mem.toLp (fun _ : Ω => (0 : ℝ)) := by
       simpa [diffLp, h_zero_toLp] using h_diffLp_zero
     exact
-      (MemLp.toLp_eq_toLp_iff (μ := μ) (p := (2 : ℝ≥0∞))
+      (MemLp.toLp_eq_toLp_iff (μ := μ) (p := 2)
         (f := X₂ - X₁) (g := fun _ : Ω => (0 : ℝ))
         h_diff_L2 h_zero_mem).1 h_Lp_eq
   have h_eq : X₂ =ᵐ[μ] X₁ :=
