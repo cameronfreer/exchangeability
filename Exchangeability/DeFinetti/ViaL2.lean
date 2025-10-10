@@ -539,8 +539,21 @@ lemma contractable_covariance_structure
   -- All X_i have the same variance
   have hvar : ∀ k, ∫ ω, (X k ω - m)^2 ∂μ = σSq := by
     intro k
-    rw [← hmean k]
-    sorry -- TODO: Apply contractability to show same second moment
+    -- Use equal distribution to transfer the variance integral
+    have h_eq_dist := contractable_single_marginal_eq hX_contract hX_meas k
+    have hmean_k := hmean k
+    -- The variance with k's mean equals variance with m (since they're equal)
+    show ∫ ω, (X k ω - m)^2 ∂μ = σSq
+    -- Transform X_k integral to X_0 integral via measure map
+    have h_int_k : ∫ ω, (X k ω - m)^2 ∂μ = ∫ x, (x - m)^2 ∂(Measure.map (X k) μ) := by
+      have h_ae : AEStronglyMeasurable (fun x : ℝ => (x - m)^2) (Measure.map (X k) μ) := by
+        exact (continuous_id.sub continuous_const).pow 2 |>.aestronglyMeasurable
+      exact (integral_map (hX_meas k).aemeasurable h_ae).symm
+    have h_int_0 : ∫ ω, (X 0 ω - m)^2 ∂μ = ∫ x, (x - m)^2 ∂(Measure.map (X 0) μ) := by
+      have h_ae : AEStronglyMeasurable (fun x : ℝ => (x - m)^2) (Measure.map (X 0) μ) := by
+        exact (continuous_id.sub continuous_const).pow 2 |>.aestronglyMeasurable
+      exact (integral_map (hX_meas 0).aemeasurable h_ae).symm
+    rw [h_int_k, h_eq_dist, ← h_int_0]
 
   -- Define ρ from the covariance of (X_0, X_1)
   have hσSq_nonneg : 0 ≤ σSq := by
@@ -555,14 +568,132 @@ lemma contractable_covariance_structure
     -- All pairs have the same covariance
     have hcov : ∀ i j, i ≠ j → ∫ ω, (X i ω - m) * (X j ω - m) ∂μ = σSq * ρ := by
       intro i j hij
-      sorry -- TODO: Apply contractability to size-2 subsequences
+      -- Apply contractability to get equal distributions for pairs
+      by_cases h_ord : i < j
+      · -- Case i < j: use contractable_map_pair directly
+        have h_eq_dist := contractable_map_pair X hX_contract hX_meas h_ord
+        -- Transfer the covariance integral via measure map
+        have h_int_ij : ∫ ω, (X i ω - m) * (X j ω - m) ∂μ
+            = ∫ p : ℝ × ℝ, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (X i ω, X j ω)) μ) := by
+          have h_ae : AEStronglyMeasurable (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
+              (Measure.map (fun ω => (X i ω, X j ω)) μ) := by
+            exact ((continuous_fst.sub continuous_const).mul
+              (continuous_snd.sub continuous_const)).aestronglyMeasurable
+          have h_comp : (fun ω => (X i ω - m) * (X j ω - m))
+              = (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m)) ∘ (fun ω => (X i ω, X j ω)) := rfl
+          rw [h_comp]
+          exact (integral_map ((hX_meas i).prodMk (hX_meas j)).aemeasurable h_ae).symm
+        have h_int_01 : ∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ
+            = ∫ p : ℝ × ℝ, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (X 0 ω, X 1 ω)) μ) := by
+          have h_ae : AEStronglyMeasurable (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
+              (Measure.map (fun ω => (X 0 ω, X 1 ω)) μ) := by
+            exact ((continuous_fst.sub continuous_const).mul
+              (continuous_snd.sub continuous_const)).aestronglyMeasurable
+          have h_comp : (fun ω => (X 0 ω - m) * (X 1 ω - m))
+              = (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m)) ∘ (fun ω => (X 0 ω, X 1 ω)) := rfl
+          rw [h_comp]
+          exact (integral_map ((hX_meas 0).prodMk (hX_meas 1)).aemeasurable h_ae).symm
+        rw [h_int_ij, h_eq_dist, ← h_int_01]
+        -- Now need to show: ∫ (X 0 ω - m) * (X 1 ω - m) ∂μ = σSq * ρ
+        -- This follows from the definition of ρ
+        have hρ_def : ρ = (∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ) / σSq := rfl
+        rw [hρ_def]
+        field_simp [ne_of_gt hσSq_pos]
+      · -- Case j < i: use symmetry
+        push_neg at h_ord
+        have h_ji : j < i := Nat.lt_of_le_of_ne h_ord (Ne.symm hij)
+        have h_eq_dist := contractable_map_pair X hX_contract hX_meas h_ji
+        have h_int_ji : ∫ ω, (X j ω - m) * (X i ω - m) ∂μ
+            = ∫ p : ℝ × ℝ, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (X j ω, X i ω)) μ) := by
+          have h_ae : AEStronglyMeasurable (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
+              (Measure.map (fun ω => (X j ω, X i ω)) μ) := by
+            exact ((continuous_fst.sub continuous_const).mul
+              (continuous_snd.sub continuous_const)).aestronglyMeasurable
+          have h_comp : (fun ω => (X j ω - m) * (X i ω - m))
+              = (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m)) ∘ (fun ω => (X j ω, X i ω)) := rfl
+          rw [h_comp]
+          exact (integral_map ((hX_meas j).prodMk (hX_meas i)).aemeasurable h_ae).symm
+        have h_int_01 : ∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ
+            = ∫ p : ℝ × ℝ, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (X 0 ω, X 1 ω)) μ) := by
+          have h_ae : AEStronglyMeasurable (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
+              (Measure.map (fun ω => (X 0 ω, X 1 ω)) μ) := by
+            exact ((continuous_fst.sub continuous_const).mul
+              (continuous_snd.sub continuous_const)).aestronglyMeasurable
+          have h_comp : (fun ω => (X 0 ω - m) * (X 1 ω - m))
+              = (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m)) ∘ (fun ω => (X 0 ω, X 1 ω)) := rfl
+          rw [h_comp]
+          exact (integral_map ((hX_meas 0).prodMk (hX_meas 1)).aemeasurable h_ae).symm
+        have h_symm : ∫ ω, (X i ω - m) * (X j ω - m) ∂μ = ∫ ω, (X j ω - m) * (X i ω - m) ∂μ := by
+          congr 1; ext ω; ring
+        rw [h_symm, h_int_ji, h_eq_dist, ← h_int_01]
+        -- Now need to show: ∫ (X 0 ω - m) * (X 1 ω - m) ∂μ = σSq * ρ
+        -- This follows from the definition of ρ
+        have hρ_def : ρ = (∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ) / σSq := rfl
+        rw [hρ_def]
+        field_simp [ne_of_gt hσSq_pos]
 
     -- Bound on ρ from Cauchy-Schwarz
     have hρ_bd : -1 ≤ ρ ∧ ρ ≤ 1 := by
       -- By Cauchy-Schwarz: |E[(X-m)(Y-m)]|² ≤ E[(X-m)²] · E[(Y-m)²]
       -- For X_0, X_1: |Cov|² ≤ σ² · σ² = σ⁴
       -- So |Cov| ≤ σ², and thus |ρ| = |Cov/σ²| ≤ 1
-      sorry -- TODO: Apply Cauchy-Schwarz for L² functions, use integral_mul_sq_le_sqrt_mul_sqrt or similar
+      let h_cov := ∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ
+      -- Apply Cauchy-Schwarz to get |Cov|² ≤ Var(X_0) * Var(X_1) = σ² * σ² = σ⁴
+      have h_cs : h_cov^2 ≤ σSq * σSq := by
+        -- Cauchy-Schwarz for integrals
+        have h_integrable_0 : Integrable (fun ω => (X 0 ω - m)^2) μ := by
+          have : MemLp (fun ω => X 0 ω - m) 2 μ := (hX_L2 0).sub (memLp_const m)
+          have h_ae : AEStronglyMeasurable (fun ω => X 0 ω - m) μ :=
+            ((hX_meas 0).sub measurable_const).aestronglyMeasurable
+          exact (memLp_two_iff_integrable_sq (by norm_num) h_ae).mp this
+        have h_integrable_1 : Integrable (fun ω => (X 1 ω - m)^2) μ := by
+          have : MemLp (fun ω => X 1 ω - m) 2 μ := (hX_L2 1).sub (memLp_const m)
+          have h_ae : AEStronglyMeasurable (fun ω => X 1 ω - m) μ :=
+            ((hX_meas 1).sub measurable_const).aestronglyMeasurable
+          exact (memLp_two_iff_integrable_sq (by norm_num) h_ae).mp this
+        have h1 : ∫ ω, (X 0 ω - m)^2 ∂μ = σSq := hvar 0
+        have h2 : ∫ ω, (X 1 ω - m)^2 ∂μ = σSq := hvar 1
+        calc (∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ)^2
+            ≤ (∫ ω, |(X 0 ω - m) * (X 1 ω - m)| ∂μ)^2 := by
+              gcongr; exact integral_abs_le _
+          _ ≤ (∫ ω, (X 0 ω - m)^2 ∂μ) * (∫ ω, (X 1 ω - m)^2 ∂μ) := by
+              have h_abs_prod : (fun ω => |(X 0 ω - m) * (X 1 ω - m)|)
+                  = (fun ω => |X 0 ω - m| * |X 1 ω - m|) := by
+                ext ω; exact abs_mul _ _
+              rw [h_abs_prod]
+              have h_sq_abs : ∀ x : ℝ, |x| = Real.sqrt (x^2) := by
+                intro x; rw [← sq_abs, Real.sqrt_sq_eq_abs]
+              conv_lhs => arg 1; ext ω; rw [h_sq_abs, h_sq_abs]
+              apply integral_mul_le_Lp_mul_Lq_of_nonneg (p := 2) (q := 2)
+              · norm_num
+              · norm_num
+              · intro ω; exact Real.sqrt_nonneg _
+              · intro ω; exact Real.sqrt_nonneg _
+              · exact (memLp_two_iff_integrable_sq (by norm_num)).mpr h_integrable_0
+              · exact (memLp_two_iff_integrable_sq (by norm_num)).mpr h_integrable_1
+          _ = σSq * σSq := by rw [← h1, ← h2]
+      -- Now show -1 ≤ ρ ≤ 1 using h_cov^2 ≤ σSq^2
+      have h_abs_cov : |h_cov| ≤ σSq := by
+        have h_sq_le : h_cov^2 ≤ σSq^2 := by calc h_cov^2 ≤ σSq * σSq := h_cs
+            _ = σSq^2 := by ring
+        rw [abs_le]
+        constructor
+        · nlinarith [sq_nonneg (h_cov + σSq)]
+        · nlinarith [sq_nonneg (σSq - h_cov)]
+      show -1 ≤ ρ ∧ ρ ≤ 1
+      constructor
+      · calc -1 = -(σSq / σSq) := by simp [ne_of_gt hσSq_pos]
+            _ ≤ h_cov / σSq := by
+                rw [div_le_div_iff hσSq_pos hσSq_pos]
+                have : -σSq ≤ h_cov := by linarith [h_abs_cov]
+                nlinarith [le_of_lt hσSq_pos]
+            _ = ρ := by rfl
+      · calc ρ = h_cov / σSq := by rfl
+            _ ≤ σSq / σSq := by
+                rw [div_le_div_iff hσSq_pos hσSq_pos]
+                have : h_cov ≤ σSq := le_of_abs_le h_abs_cov
+                nlinarith [le_of_lt hσSq_pos]
+            _ = 1 := by simp [ne_of_gt hσSq_pos]
 
     exact ⟨m, σSq, ρ, hmean, hvar, hcov, hσSq_nonneg, hρ_bd⟩
 
