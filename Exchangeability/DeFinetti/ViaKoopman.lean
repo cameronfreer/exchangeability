@@ -1065,9 +1065,9 @@ private lemma Kernel.IndepFun.integral_mul_simple
               · exact (hA_meas_ambient i).inter (hB_meas_ambient j)
       _ = ∑ i, ∑ j, (a_coef i) * (b_coef j) * (κ t (A i ∩ B j)).toReal := by
             congr 1; ext i; congr 1; ext j
-            show ∫ ω, (A i ∩ B j).indicator (fun _ => a_coef i * b_coef j) ω ∂(κ t)
-                = (a_coef i * b_coef j) * ((κ t) (A i ∩ B j)).toReal
-            simp only [integral_indicator_const ((hA_meas_ambient i).inter (hB_meas_ambient j))]
+            rw [integral_indicator_const]
+            · simp [Measure.real, mul_comm]
+            · exact (hA_meas_ambient i).inter (hB_meas_ambient j)
 
   -- Expand right side: (∫ ∑ᵢ aᵢ·1_{Aᵢ})(∫ ∑ⱼ bⱼ·1_{Bⱼ}) = (∑ᵢ aᵢ·μ(Aᵢ))(∑ⱼ bⱼ·μ(Bⱼ))
   have h_right : (∫ ω, ∑ i, (A i).indicator (fun _ => a_coef i) ω ∂(κ t)) *
