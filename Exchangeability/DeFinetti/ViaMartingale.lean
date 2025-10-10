@@ -521,23 +521,25 @@ martingale convergence. -/
 
 lemma condexp_convergence
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {X : ℕ → Ω → α} (hX : Contractable μ X) (k m : ℕ) (hk : k ≤ m)
+    {X : ℕ → Ω → α} (hX : Contractable μ X)
+    (hX_meas : ∀ n, Measurable (X n))
+    (k m : ℕ) (hk : k ≤ m)
     (B : Set α) (hB : MeasurableSet B) :
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X m) | futureFiltration X m]
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | futureFiltration X m] := by
-  -- Proof strategy:
-  -- 1. From agree_on_future_rectangles_of_contractable: the pair laws agree on all
-  --    rectangles `B × cylinder r C` when conditioning on the common future tail
-  -- 2. Note that σ(shiftRV X (m + 1)) = futureFiltration X m is the same conditioning σ-algebra
-  -- 3. Apply contraction_independence (or its condexp version) to get:
-  --    Both conditional expectations equal the same value
-  -- 4. Therefore they're equal almost everywhere
-  --
-  -- This requires from CondExp.lean:
-  -- - condexp_indicator_eq_of_dist_eq_and_le: distributional equality → condexp equality
-  -- - Tower property if needed
-  sorry
+  classical
+  have hshift := measurable_shiftRV (hX := hX_meas) (m := m + 1)
+  have hagree := agree_on_future_rectangles_of_contractable
+    (μ := μ) (X := X) hX k m hk
+  have hlemma :=
+    Exchangeability.Probability.condexp_indicator_eq_of_agree_on_future_rectangles
+      (μ := μ) (X₁ := fun ω => X m ω) (X₂ := fun ω => X k ω)
+      (Y := shiftRV X (m + 1))
+      (hX₁ := hX_meas m) (hX₂ := hX_meas k) (hY := hshift)
+      (hagree := hagree) B hB
+  simpa [futureFiltration]
+    using hlemma
 
 lemma extreme_members_equal_on_tail
     {μ : Measure Ω} [IsProbabilityMeasure μ]
