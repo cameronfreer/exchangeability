@@ -234,8 +234,8 @@ lemma condProb_ae_bound_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [IsPro
     (m : MeasurableSpace Ω) (hm : m ≤ m₀) [SigmaFinite (μ.trim hm)]
     (A : Set Ω) (hA : MeasurableSet[m₀] A) :
     ∀ᵐ ω ∂μ, ‖μ[A.indicator (fun _ => (1 : ℝ)) | m] ω‖ ≤ 1 := by
-  have := @condProb_ae_nonneg_le_one Ω m₀ μ _ m hm _ A hA
-  filter_upwards [this] with ω hω
+  have h := condProb_ae_nonneg_le_one m hm hA
+  filter_upwards [h] with ω hω
   rcases hω with ⟨h0, h1⟩
   have : |condProb μ m A ω| ≤ 1 := by
     have : |condProb μ m A ω| = condProb μ m A ω := abs_of_nonneg h0
@@ -908,9 +908,9 @@ by taking F = univ and using the projection property.
 expectation equality on indicators, then invoke this lemma to get conditional independence.
 -/
 lemma CondIndep.of_indicator_condexp_eq
-    {Ω α β : Type*} [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β]
+    {Ω α β : Type*} {mΩ : MeasurableSpace Ω} [MeasurableSpace α] [MeasurableSpace β]
     [StandardBorelSpace Ω] [StandardBorelSpace α] [StandardBorelSpace β]
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {μ : Measure Ω} [IsFiniteMeasure μ]
     {ξ : Ω → α} {η : Ω → β} {ζ : Ω → (ℕ → α)}
     (hξ : Measurable ξ) (hη : Measurable η) (hζ : Measurable ζ)
     (h : ∀ (B : Set α), MeasurableSet B →
@@ -920,10 +920,10 @@ lemma CondIndep.of_indicator_condexp_eq
           μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ
               | MeasurableSpace.comap η inferInstance]) :
     ProbabilityTheory.CondIndep
+      (MeasurableSpace.comap η inferInstance)
       (MeasurableSpace.comap ξ inferInstance)
       (MeasurableSpace.comap ζ inferInstance)
-      (MeasurableSpace.comap η inferInstance)
-      (fun s ⟨t, ht, rfl⟩ => hξ ht)
+      (hη.comap_le)
       μ := by
   -- TODO: Prove via condIndep_iff product formula
   -- The key is that the hypothesis gives the projection property:

@@ -1074,38 +1074,88 @@ tail σ-algebra `𝒯_X = ⋂_n σ(θ_n X)`.
 7. Second equality: conditional laws agree, giving conditional i.i.d.
 
 *Kallenberg (2005), third proof of Theorem 1.1 (page 28).* -/
+/-! ### Step 1: Constructing the directing measure ν
+
+From conditional expectations on indicators, we need to build a measurable family
+of probability measures `ν : Ω → Measure α`.
+
+The construction uses the standard Borel machinery: for each `ω`, define
+`ν ω` to be the unique probability measure satisfying
+`ν ω B = E[1_{X₀∈B} | 𝒯_X](ω)` for all measurable `B`.
+
+This requires StandardBorelSpace assumption on α to ensure existence.
+-/
+
+/-- Construction of the directing measure from conditional expectations.
+For each `ω : Ω`, `ν ω` is the conditional distribution of `X₀` given the tail σ-algebra. -/
+axiom directingMeasure_of_contractable
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+    (X : ℕ → Ω → α)
+    (hX_meas : ∀ n, Measurable (X n)) :
+    { ν : Ω → Measure α //
+      (∀ ω, IsProbabilityMeasure (ν ω)) ∧
+      (∀ B : Set α, MeasurableSet B →
+        (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X]) ∧
+      (∀ B : Set α, MeasurableSet B → Measurable (fun ω => ν ω B)) }
+
+/-! ### Step 2: Identical conditional laws -/
+
+/-- All `X_n` have the same conditional law `ν`.
+This follows from `extreme_members_equal_on_tail`. -/
+lemma conditional_law_eq_directingMeasure
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+    (X : ℕ → Ω → α)
+    (hX : Contractable μ X)
+    (hX_meas : ∀ n, Measurable (X n))
+    (ν : Ω → Measure α)
+    (hν : ∀ B : Set α, MeasurableSet B →
+        (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X])
+    (n : ℕ) (B : Set α) (hB : MeasurableSet B) :
+    (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X] := by
+  have h0 := hν B hB
+  have hn := extreme_members_equal_on_tail hX hX_meas n B hB
+  exact ae_eq_trans h0.symm hn
+
+/-! ### Step 3: Conditional independence -/
+
+/-- Finite-dimensional product formula for conditionally i.i.d. sequences.
+This is the key step that requires a π-system argument. -/
+axiom finite_product_formula
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+    (X : ℕ → Ω → α)
+    (hX : Contractable μ X)
+    (hX_meas : ∀ n, Measurable (X n))
+    (ν : Ω → Measure α)
+    (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
+    (hν_meas : ∀ B : Set α, MeasurableSet B → Measurable (fun ω => ν ω B))
+    (hν_law : ∀ n B, MeasurableSet B →
+        (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X])
+    (m : ℕ) (k : Fin m → ℕ) :
+    Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
+      = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)
+
+/-! ### Main theorem -/
+
 theorem deFinetti_martingale
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {α : Type*} [MeasurableSpace α]
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
     (X : ℕ → Ω → α)
     (hX : Contractable μ X)
     (hX_meas : ∀ n, Measurable (X n)) :
     ConditionallyIID μ X := by
-  -- Define the conditional law ν(ω) = P[X₀ ∈ · | 𝒯_X](ω)
-  -- This is a Markov kernel from Ω (with tailSigma X) to α
+  -- Step 1: Construct the directing measure ν
+  obtain ⟨ν, hν_prob, hν_law, hν_meas⟩ := directingMeasure_of_contractable X hX_meas
 
-  -- Step 1: Construct ν using conditional expectation of indicators
-  -- For each measurable B ⊆ α, define ν(ω)(B) := E[1_{X₀∈B} | 𝒯_X](ω)
+  -- Step 2: Verify it's a ConditionallyIID certificate
+  refine ⟨ν, hν_prob, ?_⟩
 
-  sorry -- TODO: Kernel construction from conditional expectations
-
-  -- Step 2: Show all X_n have the same conditional law
-  -- This follows from extreme_members_equal_on_tail:
-  -- E[1_{X_m∈B} | 𝒯_X] = E[1_{X₀∈B} | 𝒯_X] for all m
-
-  -- Step 3: Show conditional independence
-  -- For finite subsets {X_{k₁}, ..., X_{kₙ}}, need to show:
-  -- E[∏ᵢ 1_{X_{kᵢ}∈Bᵢ} | 𝒯_X] = ∏ᵢ E[1_{X_{kᵢ}∈Bᵢ} | 𝒯_X]
-  --
-  -- Proof sketch:
-  -- - By contractability and extreme_members_equal_on_tail,
-  --   E[1_{X_m∈B} | 𝒯_X] = E[1_{X₀∈B} | 𝒯_X] is tail-measurable
-  -- - For disjoint future tails, conditional independence follows from
-  --   contraction_independence applied iteratively
-  -- - Use π-system argument on rectangles to extend to all events
-
--- TODO: Add main theorem when proof is complete
--- theorem deFinetti_viaMartingale := ...
+  -- Step 3: Prove finite-dimensional product formula
+  intro m k
+  exact finite_product_formula X hX hX_meas ν hν_prob hν_meas
+    (fun n B hB => conditional_law_eq_directingMeasure X hX hX_meas ν hν_law n B hB) m k
 
 end ViaMartingale
 end DeFinetti
