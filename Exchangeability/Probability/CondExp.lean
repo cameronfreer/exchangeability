@@ -148,6 +148,40 @@ lemma indicator_iUnion_tsum_of_pairwise_disjoint
     have : ∀ i, ω ∉ f i := fun i hi => h (Set.mem_iUnion.mpr ⟨i, hi⟩)
     simp [Set.indicator_of_notMem h, Set.indicator_of_notMem (this _)]
 
+/-- **Conditional expectation commutes with tsum for disjoint indicator functions.**
+
+For pairwise disjoint measurable sets, the conditional expectation of the union's
+indicator equals the tsum of conditional expectations of individual indicators.
+
+This is a special case of monotone convergence for conditional expectations.
+The proof uses the fact that partial sums of disjoint indicators are increasing
+and bounded, allowing us to pass to the limit.
+
+**TODO**: This currently uses `sorry`. The proof requires:
+1. Monotone convergence for conditional expectation (not yet in mathlib)
+2. Or dominated convergence applied to the specific case of bounded indicators
+3. Key property: E[lim fₙ | m] = lim E[fₙ | m] for monotone bounded sequences
+-/
+lemma condExp_indicator_iUnion_tsum {m₀ m : MeasurableSpace Ω} {μ : Measure Ω}
+    [IsFiniteMeasure μ] (hm : m ≤ m₀)
+    (f : ℕ → Set Ω) (hf_meas : ∀ i, MeasurableSet[m₀] (f i))
+    (hdisj : Pairwise (Disjoint on f)) :
+    μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | m]
+      =ᵐ[μ] fun ω => ∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | m] ω := by
+  -- Step 1: Use pointwise equality from indicator_iUnion_tsum_of_pairwise_disjoint
+  have h_ind : (⋃ i, f i).indicator (fun _ : Ω => (1 : ℝ))
+      = fun ω => ∑' i, (f i).indicator (fun _ : Ω => (1 : ℝ)) ω :=
+    indicator_iUnion_tsum_of_pairwise_disjoint f hdisj
+
+  -- Step 2: Apply condExp_congr_ae to get E[⋃ indicator] = E[∑ indicator]
+  have h_lhs : μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | m]
+      =ᵐ[μ] μ[fun ω => ∑' i, (f i).indicator (fun _ : Ω => (1 : ℝ)) ω | m] :=
+    condExp_congr_ae (EventuallyEq.of_forall h_ind)
+
+  -- Step 3: The core step - show E[∑ indicator] = ∑ E[indicator]
+  -- This requires monotone convergence for conditional expectation
+  sorry
+
 /-! ### Pair-law ⇒ conditional indicator equality (stub) -/
 
 /-- Standard cylinder on the first `r` coordinates starting at index 0. -/
@@ -801,11 +835,11 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
       -- or proven directly using monotone convergence for conditional expectations.
       have h_condExp_L : μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
           =ᵐ[μ] fun ω => ∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω := by
-        sorry -- Needs condExp_tsum or monotone convergence for condExp
+        exact Exchangeability.Probability.condExp_indicator_iUnion_tsum (le_sup_left.trans hmFG) f hf_meas hf_disj
 
       have h_condExp_R : μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG]
           =ᵐ[μ] fun ω => ∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mG] ω := by
-        sorry -- Same as h_condExp_L, needs condExp_tsum
+        exact Exchangeability.Probability.condExp_indicator_iUnion_tsum (hmG.trans hmFG) f hf_meas hf_disj
 
       -- Step 3: Integrate both sides
       rw [integral_congr_ae (ae_restrict_of_ae h_condExp_L),
