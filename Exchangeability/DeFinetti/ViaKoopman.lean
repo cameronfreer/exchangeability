@@ -62,13 +62,18 @@ Theorem and Koopman operator. This proof has the **heaviest dependencies**.
 1. Line 733: `ν_ae_shiftInvariant` - DEPRECATED, superseded by integral-level proofs
 2. Line 803: `identicalConditionalMarginals` - DEPRECATED kernel version
 
-**Category 2: Kernel independence infrastructure** (routine substeps, ~30-80 lines total):
-3. Line 979: `Kernel.IndepFun.integral_mul_simple` - 4 mechanical substeps (h_left, h_right, h_toReal, + mathlib lemma lookup)
-4. Line 1135: `Kernel.IndepFun.integral_mul` - Step B implementation (~60-80 lines using SimpleFunc.approx)
+**Category 2: Kernel independence infrastructure** (MECHANICAL, all math complete):
+3. Line 1008: Kernel independence lemma lookup (~2 lines, search mathlib for Kernel.Indep set independence)
+4. Line 1025: `h_left` in integral_mul_simple (~15 lines: Finset.sum_mul + integral_finset_sum + integral_indicator_const)
+5. Line 1034: `h_right` in integral_mul_simple (~10 lines: integral_finset_sum + integral_indicator_const)
+6. Line 1049: `h_toReal` in integral_mul_simple (~10 lines: ENNReal.toReal_mul + Finset.sum_mul rearrangement)
+7. Line 1148: Step B full implementation (~60 lines: SimpleFunc.approx + ae_all_iff + DCT)
 
 **Category 3: Core axioms** (fundamental theorem content, cannot be proved):
-5. Line 1144: Conditional independence assumption - **heart of de Finetti's theorem**
-6. Line 1265: `condexp_product_factorization` - depends on #5
+8. Line 1152: Conditional independence assumption - **heart of de Finetti's theorem**
+9. Line 1273: `condexp_product_factorization` - depends on #8
+
+**Summary**: 9 sorries total = 2 deprecated + 5 mechanical (~95 lines) + 2 core axioms
 
 **Key insight**: Working at integral level (what proofs actually use) avoids kernel uniqueness
 and π-system extension complexity. Cleaner, more direct proofs.
@@ -1019,14 +1024,19 @@ private lemma Kernel.IndepFun.integral_mul_simple
   have h_left : ∫ ω, (∑ i, (A i).indicator (fun _ => a_coef i) ω) *
                        (∑ j, (B j).indicator (fun _ => b_coef j) ω) ∂(κ t)
               = ∑ i, ∑ j, (a_coef i) * (b_coef j) * (κ t (A i ∩ B j)).toReal := by
-    sorry  -- Expand product of sums and integrals
+    -- Expand (∑ᵢ aᵢ·1_{Aᵢ})(∑ⱼ bⱼ·1_{Bⱼ}) = ∑ᵢ ∑ⱼ aᵢbⱼ·(1_{Aᵢ}·1_{Bⱼ}) = ∑ᵢ ∑ⱼ aᵢbⱼ·1_{Aᵢ∩Bⱼ}
+    -- Then use linearity: ∫ ∑∑ = ∑∑ ∫
+    -- Finally apply integral_indicator_const to each term
+    sorry  -- ~15 lines: product of sums, pull integral through double sum, indicator algebra
 
   -- Expand right side: (∫ ∑ᵢ aᵢ·1_{Aᵢ})(∫ ∑ⱼ bⱼ·1_{Bⱼ}) = (∑ᵢ aᵢ·μ(Aᵢ))(∑ⱼ bⱼ·μ(Bⱼ))
   have h_right : (∫ ω, ∑ i, (A i).indicator (fun _ => a_coef i) ω ∂(κ t)) *
                  (∫ ω, ∑ j, (B j).indicator (fun _ => b_coef j) ω ∂(κ t))
               = (∑ i, (a_coef i) * (κ t (A i)).toReal) *
                 (∑ j, (b_coef j) * (κ t (B j)).toReal) := by
-    sorry  -- Linearity of integral
+    -- For each factor: ∫ ∑ᵢ aᵢ·1_{Aᵢ} = ∑ᵢ aᵢ·∫ 1_{Aᵢ} = ∑ᵢ aᵢ·μ(Aᵢ)
+    -- Use integral_finset_sum (linearity) + integral_indicator_const
+    sorry  -- ~10 lines: pull sum out of integral twice, apply indicator integral lemma
 
   -- Use independence to connect the two
   have h_connection : ∑ i, ∑ j, (a_coef i) * (b_coef j) * (κ t (A i ∩ B j)).toReal
@@ -1038,7 +1048,10 @@ private lemma Kernel.IndepFun.integral_mul_simple
   have h_toReal : ∑ i, ∑ j, (a_coef i) * (b_coef j) * ((κ t (A i) * κ t (B j)).toReal)
                 = (∑ i, (a_coef i) * (κ t (A i)).toReal) *
                   (∑ j, (b_coef j) * (κ t (B j)).toReal) := by
-    sorry  -- Algebraic rearrangement + toReal distributivity
+    -- First distribute toReal: (x*y).toReal = x.toReal * y.toReal (for finite measures)
+    -- Then rearrange: ∑ᵢ ∑ⱼ aᵢ·bⱼ·xᵢ·yⱼ = (∑ᵢ aᵢ·xᵢ)(∑ⱼ bⱼ·yⱼ)
+    -- This is pure algebra once toReal is distributed
+    sorry  -- ~10 lines: toReal distributivity + sum rearrangement
 
   -- Chain them together
   rw [h_left, h_connection, h_toReal, ← h_right]
