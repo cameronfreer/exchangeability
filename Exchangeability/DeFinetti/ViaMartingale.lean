@@ -722,6 +722,48 @@ lemma cylinder_measurable {r : ℕ} {C : Fin r → Set α}
 
 end FutureCylinders
 
+/-! ## Product of indicators for finite cylinders -/
+
+/-- Product of indicator functions for a finite cylinder on the first `r` coordinates. -/
+def indProd {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α) : Ω → ℝ :=
+  fun ω => ∏ i : Fin r, Set.indicator (C i) (fun _ => (1 : ℝ)) (X i ω)
+
+lemma indProd_as_indicator
+    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α) :
+    indProd X r C
+      = Set.indicator {ω | ∀ i : Fin r, X i ω ∈ C i} (fun _ => (1 : ℝ)) := by
+  classical
+  funext ω
+  -- Each factor is 0/1; the product is 1 iff all factors are 1.
+  induction r with
+  | zero => simp [indProd]  -- r = 0 : empty product = 1; the set is `univ`.
+  | succ r ih =>
+    -- Move from r to r+1
+    have : indProd X (r + 1) C ω
+        = indProd X r (fun j => C (Fin.castSucc j)) ω
+          * Set.indicator (C ⟨r, Nat.lt_succ_self r⟩) (fun _ => (1 : ℝ)) (X r ω) := by
+      simp [indProd, Fin.prod_univ_succ]
+    simp [this, ih, Set.indicator, Fin.forall_fin_succ]
+
+/-- Basic integrability: `indProd` is an indicator of a measurable set, hence integrable. -/
+lemma indProd_integrable
+    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    {μ : Measure Ω} (X : ℕ → Ω → α)
+    (r : ℕ) (C : Fin r → Set α)
+    (hX : ∀ n, Measurable (X n)) (hC : ∀ i, MeasurableSet (C i)) :
+    Integrable (indProd X r C) μ := by
+  classical
+  have hSet :
+      MeasurableSet {ω | ∀ i : Fin r, X i ω ∈ C i} := by
+    refine MeasurableSet.iInter ?_
+    intro i
+    have : Measurable fun ω => X i ω := hX i
+    simpa using this (hC i)
+  simpa [indProd_as_indicator X r C]
+    using (integrable_const (1 : ℝ)).indicator hSet
+
 /-- Drop the first coordinate of a path. -/
 def drop {α : Type*} (f : ℕ → α) : ℕ → α := shiftSeq (β:=α) 1 f
 
@@ -1039,6 +1081,51 @@ def M (k : ℕ) (B : Set α) : ℕ → Ω → ℝ :=
 --     `filtration_antitone` and `tailSigmaFuture_eq_iInf`.
 
 end reverse_martingale
+
+/-! ## Tail factorization on finite cylinders -/
+
+/-- **Tail factorization on finite cylinders.**
+
+Assume you have, for all large enough `m`, the finite‑level factorization
+at the future filtration:
+```
+μ[indProd X r C | σ(θ_{m+1}X)]
+  = ∏ i<r μ[1_{X₀∈C i} | σ(θ_{m+1}X)]   a.s.
+```
+Then the same factorization holds **at the tail σ‑algebra**:
+```
+μ[indProd X r C | 𝒯_X]
+  = ∏ i<r μ[1_{X₀∈C i} | 𝒯_X]           a.s.
+```
+
+This passes the finite‑level equality to the tail using bounded
+dominated convergence together with reverse martingale convergence. -/
+axiom tail_factorization_from_future
+    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → α)
+    (hX : ∀ n, Measurable (X n))
+    (r : ℕ) (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i))
+    -- finite-level factorization hypothesis (available after applying the wrapper repeatedly)
+    (h_fact :
+      ∀ m ≥ r,  -- any `m` with at least r future steps works
+        μ[indProd X r C | futureFiltration X m]
+          =ᵐ[μ]
+        (fun ω => ∏ i : Fin r,
+          μ[Set.indicator (C i) (fun _ => (1 : ℝ)) ∘ (X 0) | futureFiltration X m] ω))
+    -- reverse-martingale convergence for each singleton factor
+    (h_rev :
+      ∀ i : Fin r,
+        (∀ᵐ ω ∂μ,
+          Tendsto (fun m => μ[Set.indicator (C i) (fun _ => (1 : ℝ)) ∘ (X 0)
+                                 | futureFiltration X m] ω)
+                  atTop
+                  (𝓝 (μ[Set.indicator (C i) (fun _ => (1 : ℝ)) ∘ (X 0)
+                          | tailSigma X] ω)))) :
+    μ[indProd X r C | tailSigma X]
+      =ᵐ[μ]
+    (fun ω => ∏ i : Fin r,
+        μ[Set.indicator (C i) (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] ω)
 
 /-- **Key lemma: All coordinates have identical conditional distributions.**
 
