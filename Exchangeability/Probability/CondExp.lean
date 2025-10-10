@@ -234,7 +234,7 @@ lemma condProb_ae_bound_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [IsPro
     (m : MeasurableSpace Ω) (hm : m ≤ m₀) [SigmaFinite (μ.trim hm)]
     (A : Set Ω) (hA : MeasurableSet[m₀] A) :
     ∀ᵐ ω ∂μ, ‖μ[A.indicator (fun _ => (1 : ℝ)) | m] ω‖ ≤ 1 := by
-  have := condProb_ae_nonneg_le_one m hm hA
+  have := @condProb_ae_nonneg_le_one Ω m₀ μ _ m hm _ A hA
   filter_upwards [this] with ω hω
   rcases hω with ⟨h0, h1⟩
   have : |condProb μ m A ω| ≤ 1 := by
@@ -894,6 +894,42 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
   -- And: ∫ ceL = ∫ A.indicator (from setIntegral_condExp for ceL)
   -- Therefore: ∫ ceR = ∫ A.indicator
   rw [← h_int_eq S hS, setIntegral_condExp hmFG h_ind_int hS]
+
+/-- **Simplified CondIndep wrapper for the martingale proof.**
+
+If for all measurable sets B ⊆ σ(ξ) we have
+  E[1_{ξ∈B} | σ(η) ∨ σ(ζ)] = E[1_{ξ∈B} | σ(η)] a.e.,
+then ξ ⊥⊥_η ζ.
+
+This follows directly from `condIndep_iff` (the product formula characterization)
+by taking F = univ and using the projection property.
+
+**Use case:** In the martingale approach to de Finetti, we establish conditional
+expectation equality on indicators, then invoke this lemma to get conditional independence.
+-/
+lemma CondIndep.of_indicator_condexp_eq
+    {Ω α β : Type*} [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β]
+    [StandardBorelSpace Ω] [StandardBorelSpace α] [StandardBorelSpace β]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {ξ : Ω → α} {η : Ω → β} {ζ : Ω → (ℕ → α)}
+    (hξ : Measurable ξ) (hη : Measurable η) (hζ : Measurable ζ)
+    (h : ∀ (B : Set α), MeasurableSet B →
+          μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ
+              | MeasurableSpace.comap η inferInstance ⊔ MeasurableSpace.comap ζ inferInstance]
+        =ᵐ[μ]
+          μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ
+              | MeasurableSpace.comap η inferInstance]) :
+    ProbabilityTheory.CondIndep
+      (MeasurableSpace.comap ξ inferInstance)
+      (MeasurableSpace.comap ζ inferInstance)
+      (MeasurableSpace.comap η inferInstance)
+      (fun s ⟨t, ht, rfl⟩ => hξ ht)
+      μ := by
+  -- TODO: Prove via condIndep_iff product formula
+  -- The key is that the hypothesis gives the projection property:
+  -- E[1_H | σ(η) ∨ σ(ζ)] = E[1_H | σ(η)] for H ∈ σ(ξ)
+  -- This is exactly Doob's characterization (FMP 6.6).
+  sorry
 
 /-! ### Bounded Martingales and L² Inequalities -/
 
