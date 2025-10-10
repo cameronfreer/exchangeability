@@ -139,25 +139,22 @@ lemma contractable_map_single (hX_contract : Contractable μ X) (hX_meas : ∀ i
     simp [eval, fin1Zero]
   simpa [Function.comp, h_comp_simp, h_comp_simp'] using h_comp
 
-/-- Helper lemma: the strict monotonicity condition for two-point selections. -/
+/-- **Strict monotonicity for two-point subsequence selection.**
+
+For `i < j`, the function mapping `0 ↦ i, 1 ↦ j` is strictly monotone on Fin 2. -/
 private lemma strictMono_two {i j : ℕ} (hij : i < j) :
     StrictMono fun t : Fin 2 => if t = fin2Zero then i else j := by
   classical
   intro a b hlt
-  -- Reduce the strict inequality on `Fin 2` to natural numbers.
+  -- Reduce to: a.val = 0, b.val = 1 (only possibility in Fin 2 with a < b)
   have hval : a.val < b.val := Fin.lt_iff_val_lt_val.mp hlt
-  -- `b` must be the second coordinate.
   have hb_val_le : b.val ≤ 1 := Nat.lt_succ_iff.mp (show b.val < 2 by simp [b.is_lt])
-  have hb_ne_zero : b.val ≠ 0 := by
-    intro hb
-    simp [hb] at hval
-  have hb_pos : 0 < b.val := Nat.pos_of_ne_zero hb_ne_zero
-  have hb_ge_one : 1 ≤ b.val := Nat.succ_le_of_lt hb_pos
-  have hb_val : b.val = 1 := le_antisymm hb_val_le hb_ge_one
-  -- Consequently `a` is the first coordinate.
-  have ha_lt_one : a.val < 1 := by simp only [hb_val] at hval; exact hval
-  have ha_val : a.val = 0 := Nat.lt_one_iff.mp ha_lt_one
-  -- Rewrite the conclusion using these identifications.
+  have hb_ne_zero : b.val ≠ 0 := by intro hb; simp [hb] at hval
+  have hb_val : b.val = 1 := by
+    exact le_antisymm hb_val_le (Nat.succ_le_of_lt (Nat.pos_of_ne_zero hb_ne_zero))
+  have ha_val : a.val = 0 := by
+    exact Nat.lt_one_iff.mp (by simp only [hb_val] at hval; exact hval)
+  -- Apply to conclusion
   have ha : a = fin2Zero := by ext; simp [fin2Zero, ha_val]
   have hb : b = fin2One := by ext; simp [fin2One, hb_val]
   subst ha; subst hb
@@ -255,7 +252,10 @@ lemma contractable_comp (hX_contract : Contractable μ X) (hX_meas : ∀ i, Meas
   simpa [Function.comp, Φ, h_left_eval, h_right_eval] using
     h_left.trans (h_apply.trans h_right)
 
-/-- Elementary inequality used to dominate products by squares. -/
+/-- **Young's inequality for products: |ab| ≤ (a² + b²)/2.**
+
+Elementary inequality used to dominate products by squares, derived from
+the identity `0 ≤ (|a| - |b|)²`. Used in covariance bounds. -/
 private lemma abs_mul_le_half_sq_add_sq (a b : ℝ) :
     |a * b| ≤ ((a ^ 2) + (b ^ 2)) / 2 := by
   have h := two_mul_le_add_sq (|a|) (|b|)
@@ -292,7 +292,10 @@ lemma dist_toLp_eq_eLpNorm_sub
   rw [Lp.dist_edist, Lp.edist_toLp_toLp]
   rfl
 
-/-- Converting strict inequality through `ENNReal.toReal`. -/
+/-- **Converting ENNReal inequalities to real inequalities.**
+
+If `x < ofReal ε` in ENNReal (with x finite), then `toReal x < ε` in ℝ.
+Bridges extended and real arithmetic in L^p norm bounds. -/
 lemma toReal_lt_of_lt_ofReal {x : ENNReal} {ε : ℝ}
     (_hx : x ≠ ⊤) (hε : 0 ≤ ε) :
     x < ENNReal.ofReal ε → ENNReal.toReal x < ε := by
@@ -302,7 +305,10 @@ lemma toReal_lt_of_lt_ofReal {x : ENNReal} {ε : ℝ}
   simp [ENNReal.toReal_ofReal hε] at this
   exact this
 
-/-- Arithmetic bound: √(Cf/m) < ε/2 when m is large enough. -/
+/-- **Arithmetic bound for convergence rates: √(Cf/m) < ε/2 when m is large.**
+
+Given a constant Cf and target precision ε, provides an explicit threshold for m
+such that √(Cf/m) < ε/2. Used to establish L² Cauchy sequences converge in L¹. -/
 lemma sqrt_div_lt_half_eps_of_nat
   {Cf ε : ℝ} (hCf : 0 ≤ Cf) (hε : 0 < ε) :
   ∀ ⦃m : ℕ⦄, m ≥ Nat.ceil (4 * Cf / (ε^2)) + 1 →
@@ -341,7 +347,10 @@ lemma sqrt_div_lt_half_eps_of_nat
     _ = |ε / 2| := Real.sqrt_sq_eq_abs _
     _ = ε / 2 := abs_of_pos (div_pos hε (by norm_num))
 
-/-- Arithmetic bound: 3·√(Cf/m) < ε when m is large enough. -/
+/-- **Arithmetic bound for convergence rates: 3·√(Cf/m) < ε when m is large.**
+
+Similar to `sqrt_div_lt_half_eps_of_nat` but with factor 3 instead of 1/2.
+Used in the Cauchy argument where we sum three L² bounds via triangle inequality. -/
 lemma sqrt_div_lt_third_eps_of_nat
   {Cf ε : ℝ} (hCf : 0 ≤ Cf) (hε : 0 < ε) :
   ∀ ⦃m : ℕ⦄, m ≥ Nat.ceil (9 * Cf / (ε^2)) + 1 →
@@ -404,10 +413,11 @@ lemma eLpNorm_two_from_integral_sq_le
 
 end LpUtilities
 
-/-- Any function from Fin 1 is vacuously StrictMono -/
+/-- **Any function from Fin 1 is vacuously strictly monotone.**
+
+Since Fin 1 has only one element, the premise `i < j` is impossible. -/
 private lemma fin1_strictMono_vacuous (k : Fin 1 → ℕ) : StrictMono k := by
   intro i j hij
-  -- Fin 1 has only one element, so i < j is impossible
   exfalso
   have hi : i = 0 := Fin.eq_zero i
   have hj : j = 0 := Fin.eq_zero j
@@ -513,10 +523,14 @@ lemma contractable_covariance_structure
 ## Step 2: L² bound implies L¹ convergence of weighted sums (Kallenberg's key step)
 -/
 
-/-- Finite window of indices `{n+1, …, n+k}` represented as a `Finset`. -/
+/-- **Finite window of consecutive indices.**
+
+The window `{n+1, n+2, ..., n+k}` represented as a `Finset ℕ`.
+Used to express Cesàro averages: `(1/k) * ∑_{i ∈ window n k} f(X_i)`. -/
 def window (n k : ℕ) : Finset ℕ :=
   (Finset.range k).image fun i => n + i + 1
 
+/-- The window contains exactly k elements. -/
 lemma window_card (n k : ℕ) : (window n k).card = k := by
   classical
   unfold window
@@ -529,6 +543,7 @@ lemma window_card (n k : ℕ) : (window n k).card = k := by
     exact Nat.add_left_cancel h'
   · simp
 
+/-- Characterization of window membership. -/
 lemma mem_window_iff {n k t : ℕ} :
     t ∈ window n k ↔ ∃ i : ℕ, i < k ∧ t = n + i + 1 := by
   classical

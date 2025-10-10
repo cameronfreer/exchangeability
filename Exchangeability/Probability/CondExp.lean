@@ -595,10 +595,7 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
       -- Apply ae_eq_condExp_of_forall_setIntegral_eq
       have hmFG : mF ⊔ mG ≤ m₀ := sup_le hmF hmG
       -- σ-finiteness follows from μ being a finite measure
-      haveI : SigmaFinite (μ.trim hmFG) := by
-        -- Trimmed finite measures are σ-finite
-        have : IsFiniteMeasure (μ.trim hmFG) := inferInstance
-        exact IsFiniteMeasure.toSigmaFinite _
+      haveI : SigmaFinite (μ.trim hmFG) := sigmaFinite_trim_of_le μ hmFG
       refine (ae_eq_condExp_of_forall_setIntegral_eq hmFG ?_ ?_ ?_ ?_).symm
       -- 1. H.indicator is integrable
       · exact hH_int
