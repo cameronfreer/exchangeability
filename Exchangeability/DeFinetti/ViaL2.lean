@@ -648,14 +648,91 @@ lemma contractable_covariance_structure
       -- Apply Cauchy-Schwarz: |∫ f·g| ≤ √(∫ f²) · √(∫ g²)
       have h_cs : |∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ|
           ≤ Real.sqrt (∫ ω, (X 0 ω - m)^2 ∂μ) * Real.sqrt (∫ ω, (X 1 ω - m)^2 ∂μ) := by
-        -- This is Hölder's inequality with p = q = 2 (Cauchy-Schwarz)
-        -- For real-valued L² functions f,g: |∫ f·g| ≤ (∫ |f|²)^(1/2) · (∫ |g|²)^(1/2)
-        sorry  -- TODO: Apply mathlib's Hölder/Cauchy-Schwarz for L² functions
+        -- Apply Hölder's inequality directly to the integrand
+        -- Step 1: |∫ f·g| ≤ ∫ |f·g|
+        have h_tri : |∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ| ≤ ∫ ω, |(X 0 ω - m) * (X 1 ω - m)| ∂μ :=
+          MeasureTheory.norm_integral_le_integral_norm (fun ω => (X 0 ω - m) * (X 1 ω - m))
+        -- Step 2: ∫ |f·g| = ∫ |f|·|g|
+        have h_abs_mul : ∫ ω, |(X 0 ω - m) * (X 1 ω - m)| ∂μ = ∫ ω, |X 0 ω - m| * |X 1 ω - m| ∂μ := by
+          congr 1
+          funext ω
+          exact abs_mul (X 0 ω - m) (X 1 ω - m)
+        -- Step 3: Hölder inequality
+        have h_holder : ∫ ω, |X 0 ω - m| * |X 1 ω - m| ∂μ
+            ≤ (∫ ω, |X 0 ω - m| ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, |X 1 ω - m| ^ 2 ∂μ) ^ (1/2 : ℝ) := by
+          -- Apply Hölder's inequality (Cauchy-Schwarz)
+          -- We have f, g in L²
+          -- Convert the goal to use snorm
+          have h_nonneg₀ : ∀ᵐ ω ∂μ, 0 ≤ |X 0 ω - m| := ae_of_all μ (fun ω => abs_nonneg _)
+          have h_nonneg₁ : ∀ᵐ ω ∂μ, 0 ≤ |X 1 ω - m| := ae_of_all μ (fun ω => abs_nonneg _)
+          -- Apply Hölder: ∫ |f||g| ≤ (∫ |f|^p)^(1/p) * (∫ |g|^q)^(1/q) with p=q=2
+          have h_key : ∫ ω, |X 0 ω - m| * |X 1 ω - m| ∂μ
+              ≤ (∫ ω, |X 0 ω - m| ^ (2:ℝ) ∂μ) ^ ((2:ℝ)⁻¹) * (∫ ω, |X 1 ω - m| ^ (2:ℝ) ∂μ) ^ ((2:ℝ)⁻¹) := by
+            -- HölderConjugate for p = q = 2
+            have hpq : (2:ℝ).HolderConjugate 2 := by
+              constructor
+              · norm_num
+              · norm_num
+              · norm_num
+            -- MemLp for |f| and |g| with ENNReal exponents
+            -- Use that for ℝ, MemLp f p μ is defined via snorm which uses ‖f ω‖
+            -- So MemLp (X 0 · - m) means ‖X 0 ω - m‖ which equals |X 0 ω - m|
+            have hf₀' : MemLp (fun ω => |X 0 ω - m|) (ENNReal.ofReal 2) μ := by
+              have h2 : (ENNReal.ofReal 2 : ENNReal) = (2 : ENNReal) := by norm_num
+              rw [h2]
+              -- hf₀ says MemLp (fun ω => X 0 ω - m), which by definition uses snorm of ‖·‖
+              -- So this is the same as MemLp (fun ω => ‖X 0 ω - m‖)
+              have : MemLp (fun ω => ‖X 0 ω - m‖) 2 μ := hf₀.norm
+              -- Now ‖X 0 ω - m‖ = |X 0 ω - m| for reals
+              have h_eq : (fun ω => ‖X 0 ω - m‖) =ᵐ[μ] (fun ω => |X 0 ω - m|) := by
+                filter_upwards with ω
+                exact Real.norm_eq_abs _
+              exact MemLp.ae_eq h_eq this
+            have hf₁' : MemLp (fun ω => |X 1 ω - m|) (ENNReal.ofReal 2) μ := by
+              have h2 : (ENNReal.ofReal 2 : ENNReal) = (2 : ENNReal) := by norm_num
+              rw [h2]
+              -- hf₁ says MemLp (fun ω => X 1 ω - m), which by definition uses snorm of ‖·‖
+              -- So this is the same as MemLp (fun ω => ‖X 1 ω - m‖)
+              have : MemLp (fun ω => ‖X 1 ω - m‖) 2 μ := hf₁.norm
+              -- Now ‖X 1 ω - m‖ = |X 1 ω - m| for reals
+              have h_eq : (fun ω => ‖X 1 ω - m‖) =ᵐ[μ] (fun ω => |X 1 ω - m|) := by
+                filter_upwards with ω
+                exact Real.norm_eq_abs _
+              exact MemLp.ae_eq h_eq this
+            -- Apply integral_mul_le_Lp_mul_Lq_of_nonneg
+            have := MeasureTheory.integral_mul_le_Lp_mul_Lq_of_nonneg hpq h_nonneg₀ h_nonneg₁ hf₀' hf₁'
+            convert this using 2 <;> norm_num
+          convert h_key using 2
+          · norm_num
+          · norm_num
+        -- Step 4: Convert rpow to sqrt and |x|^2 to x^2
+        have h_sqrt_conv : (∫ ω, |X 0 ω - m| ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, |X 1 ω - m| ^ 2 ∂μ) ^ (1/2 : ℝ)
+            = Real.sqrt (∫ ω, (X 0 ω - m)^2 ∂μ) * Real.sqrt (∫ ω, (X 1 ω - m)^2 ∂μ) := by
+          have h4 : (∫ ω, |X 0 ω - m| ^ 2 ∂μ) ^ (1/2 : ℝ) = Real.sqrt (∫ ω, (X 0 ω - m)^2 ∂μ) := by
+            rw [Real.sqrt_eq_rpow]
+            congr 1
+            congr 1
+            funext ω
+            rw [sq_abs]
+          have h5 : (∫ ω, |X 1 ω - m| ^ 2 ∂μ) ^ (1/2 : ℝ) = Real.sqrt (∫ ω, (X 1 ω - m)^2 ∂μ) := by
+            rw [Real.sqrt_eq_rpow]
+            congr 1
+            congr 1
+            funext ω
+            rw [sq_abs]
+          rw [h4, h5]
+        -- Combine all steps
+        calc |∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ|
+            ≤ ∫ ω, |(X 0 ω - m) * (X 1 ω - m)| ∂μ := h_tri
+          _ = ∫ ω, |X 0 ω - m| * |X 1 ω - m| ∂μ := h_abs_mul
+          _ ≤ (∫ ω, |X 0 ω - m| ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, |X 1 ω - m| ^ 2 ∂μ) ^ (1/2 : ℝ) := h_holder
+          _ = Real.sqrt (∫ ω, (X 0 ω - m)^2 ∂μ) * Real.sqrt (∫ ω, (X 1 ω - m)^2 ∂μ) := h_sqrt_conv
 
       -- Substitute the variances
       rw [hvar 0, hvar 1] at h_cs
       have h_sqrt_sq : Real.sqrt σSq * Real.sqrt σSq = σSq := by
-        rw [← Real.sqrt_mul hσSq_nonneg, Real.sqrt_sq hσSq_nonneg]
+        have : σSq * σSq = σSq ^ 2 := (sq σSq).symm
+        rw [← Real.sqrt_mul hσSq_nonneg, this, Real.sqrt_sq hσSq_nonneg]
       rw [h_sqrt_sq] at h_cs
 
       -- The covariance equals σSq * ρ by definition
@@ -665,8 +742,8 @@ lemma contractable_covariance_structure
       rw [h_cov_eq] at h_cs
 
       -- Now |σSq * ρ| ≤ σSq
-      rw [abs_mul, abs_of_pos hσSq_pos] at h_cs
-      have h_ρ_bd : σSq * |ρ| ≤ σSq := h_cs
+      rw [abs_mul, abs_of_pos hσSq_pos, mul_comm] at h_cs
+      have h_ρ_bd : |ρ| * σSq ≤ σSq := h_cs
       have : |ρ| ≤ 1 := (mul_le_iff_le_one_left hσSq_pos).mp h_ρ_bd
       exact abs_le.mp this
 
