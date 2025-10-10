@@ -604,12 +604,63 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
     (h : ∀ H ∈ π,
       μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
         =ᵐ[μ] μ[H.indicator (fun _ => (1 : ℝ)) | mG]) :
-    ∀ H, MeasurableSet[MeasurableSpace.generateFrom π] H →
-      μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
-        =ᵐ[μ] μ[H.indicator (fun _ => (1 : ℝ)) | mG] := by
+    ∀ E, MeasurableSpace.generateFrom π ≤ m₀ →
+      MeasurableSet[MeasurableSpace.generateFrom π] E →
+      μ[E.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
+        =ᵐ[μ] μ[E.indicator (fun _ => (1 : ℝ)) | mG] := by
   classical
-  intro H hH
-  sorry
+  have hmFG : mF ⊔ mG ≤ m₀ := sup_le hmF hmG
+  intro hπ_le E hE
+
+  -- Strategy: Fix S ∈ mF ⊔ mG and extend in E using Dynkin π-λ
+  -- Define C(E) := "∫_S LHS dμ = ∫_S RHS dμ for all S ∈ mF ⊔ mG"
+  -- Then use uniqueness of conditional expectation
+
+  -- We'll show the two conditional expectations have the same integral on every measurable set
+  have h_int_eq : ∀ (S : Set Ω), MeasurableSet[mF ⊔ mG] S →
+      ∫ ω in S, (μ[E.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω) ∂μ
+        = ∫ ω in S, (μ[E.indicator (fun _ => (1 : ℝ)) | mG] ω) ∂μ := by
+    intro S hS
+
+    -- Define the property C_S(E') for the Dynkin system
+    let C_S : Set Ω → Prop := fun E' =>
+      ∫ ω in S, (μ[E'.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω) ∂μ
+        = ∫ ω in S, (μ[E'.indicator (fun _ => (1 : ℝ)) | mG] ω) ∂μ
+
+    -- Step 1: C_S holds on π
+    have hCπ : ∀ E' ∈ π, C_S E' := by
+      intro E' hE'π
+      have hAE := h E' hE'π
+      exact setIntegral_congr_ae_of_ae hAE
+
+    -- Step 2: C_S is closed under ∅, complement, and countable disjoint unions
+    have hC_empty : C_S ∅ := by simp [C_S]
+
+    have hC_compl : ∀ E', MeasurableSet[m₀] E' → C_S E' → C_S E'ᶜ := by
+      intro E' hE'meas hCE'
+      simp only [C_S] at hCE' ⊢
+      -- Use linearity: indicator of complement = 1 - indicator
+      have hId : E'ᶜ.indicator (fun _ : Ω => (1 : ℝ))
+          = (fun _ : Ω => (1 : ℝ)) - E'.indicator (fun _ : Ω => (1 : ℝ)) := by
+        funext ω
+        by_cases hω : ω ∈ E' <;> simp [Set.indicator, hω]
+      sorry -- Apply linearity of conditional expectation and set integrals
+
+    have hC_iUnion : ∀ (f : ℕ → Set Ω), (∀ i, MeasurableSet[m₀] (f i)) →
+        Pairwise (Disjoint on f) → (∀ i, C_S (f i)) → C_S (⋃ i, f i) := by
+      intro f hf_meas hf_disj hf_C
+      simp only [C_S] at hf_C ⊢
+      sorry -- Use dominated convergence to commute ∫ and ∑
+
+    -- Step 3: Apply Dynkin π-λ theorem
+    sorry -- Apply induction_on_inter with the properties above
+
+  -- Now use uniqueness of conditional expectation
+  have h_ind_int : Integrable (E.indicator fun _ : Ω => (1 : ℝ)) μ :=
+    (integrable_const (1 : ℝ)).indicator (hπ_le _ hE)
+  refine (ae_eq_condExp_of_forall_setIntegral_eq (hm := hmFG) h_ind_int
+    integrable_condExp.aestronglyMeasurable (fun S hS _ => ?_)).symm
+  exact h_int_eq S hS
 
 /-! ### Bounded Martingales and L² Inequalities -/
 
