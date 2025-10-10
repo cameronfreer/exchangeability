@@ -523,8 +523,15 @@ lemma contractable_covariance_structure
     -- Transfer integral via equal distributions
     -- The key fact: if X_k and X_0 have the same distribution, their expectations are equal
     -- This follows from ∫ X_k dμ = ∫ id d(X_k#μ) = ∫ id d(X_0#μ) = ∫ X_0 dμ
-    -- TODO: Use integral_map to transfer expectations across measure equality
-    sorry
+    have h_int_k : ∫ ω, X k ω ∂μ = ∫ x, x ∂(Measure.map (X k) μ) := by
+      have h_ae : AEStronglyMeasurable (id : ℝ → ℝ) (Measure.map (X k) μ) :=
+        aestronglyMeasurable_id
+      exact (integral_map (hX_meas k).aemeasurable h_ae).symm
+    have h_int_0 : ∫ ω, X 0 ω ∂μ = ∫ x, x ∂(Measure.map (X 0) μ) := by
+      have h_ae : AEStronglyMeasurable (id : ℝ → ℝ) (Measure.map (X 0) μ) :=
+        aestronglyMeasurable_id
+      exact (integral_map (hX_meas 0).aemeasurable h_ae).symm
+    rw [h_int_k, h_eq_dist, ← h_int_0]
 
   -- Define σSq as the variance of X_0
   let σSq := ∫ ω, (X 0 ω - m)^2 ∂μ
