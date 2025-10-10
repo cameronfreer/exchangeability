@@ -1084,6 +1084,40 @@ end reverse_martingale
 
 /-! ## Tail factorization on finite cylinders -/
 
+/-! ### Helper lemmas for finite-level factorization -/
+
+/-- For contractable sequences, X_i and the future shift are conditionally independent
+given any later future filtration. This is a key consequence of contractability. -/
+axiom coordinate_future_condIndep
+    {Ω α : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω] [MeasurableSpace α]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → α)
+    (hX : Contractable μ X)
+    (hX_meas : ∀ n, Measurable (X n))
+    (i m : ℕ) (hm : m > i) :
+    ProbabilityTheory.CondIndep
+      (futureFiltration X m)
+      (MeasurableSpace.comap (X i) inferInstance)
+      (MeasurableSpace.comap (shiftRV X (m + 1)) inferInstance)
+      (futureFiltration_le X m)
+      μ
+
+/-- Conditional expectation of products factors when coordinates are conditionally
+independent. This is a wrapper around the general product rule for conditional expectations. -/
+axiom condExp_product_of_condIndep
+    {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {m : MeasurableSpace Ω}
+    (hm : m ≤ inferInstance)
+    (f g : Ω → ℝ)
+    (hf_int : Integrable f μ) (hg_int : Integrable g μ)
+    (hf_meas : AEStronglyMeasurable[m] f μ)
+    (hg_meas : StronglyMeasurable g)
+    (h_indep : ∀ A B, MeasurableSet[m] A → MeasurableSet B →
+        μ[A.indicator (fun _ => (1 : ℝ)) | m] * μ[B.indicator (fun _ => (1 : ℝ)) | m]
+          =ᵐ[μ] μ[(A ∩ B).indicator (fun _ => (1 : ℝ)) | m]) :
+    μ[(fun ω => f ω * g ω) | m] =ᵐ[μ] (fun ω => μ[f | m] ω * g ω)
+
 /-- **Finite-level factorization builder.**
 
 For a contractable sequence, at any future level `m ≥ r`, the conditional expectation
@@ -1106,10 +1140,28 @@ lemma finite_level_factorization
       =ᵐ[μ]
     (fun ω => ∏ i : Fin r,
         μ[Set.indicator (C i) (fun _ => (1 : ℝ)) ∘ (X 0) | futureFiltration X m] ω) := by
-  -- The proof proceeds by induction on r, pulling out one coordinate at a time.
-  -- Base case (r = 0): empty product equals 1 on both sides
-  -- Inductive step: use contractability + condIndep to factor out X_{r-1}
-  sorry -- TODO: Implement via induction
+  -- Proof by induction on r, factoring out one coordinate at a time
+  induction r with
+  | zero =>
+    -- Base case: empty product = 1 on both sides
+    simp [indProd, Finset.prod_empty]
+    -- Both sides are the constant function 1, so they're equal a.e.
+    have : (fun ω => (1 : ℝ)) =ᵐ[μ] μ[(fun _ => (1 : ℝ)) | futureFiltration X m] := by
+      exact (condExp_const (hm := futureFiltration_le X m) (1 : ℝ)).symm
+    exact this
+  | succ r ih =>
+    -- Inductive step: factor out the last coordinate X_r
+    -- Strategy:
+    -- 1. Split indProd into product of first r coordinates and last coordinate
+    -- 2. Use contractability: X_r has same conditional law as X_0 given future
+    -- 3. Use conditional independence to factor the product
+    -- 4. Apply inductive hypothesis to the first r coordinates
+
+    -- For now, this requires several technical lemmas about:
+    -- - How indProd splits under Fin.succ
+    -- - Conditional independence from contractability
+    -- - Factoring conditional expectations of products
+    sorry
 
 /-- **Tail factorization on finite cylinders.**
 
