@@ -83,14 +83,19 @@ variable (X : ℕ → Ω → ℝ)
 variable (hX_contract : Contractable μ X)
 variable (hX_meas : ∀ i, Measurable (X i))
 
+/-- The unique element of Fin 1. -/
 private def fin1Zero : Fin 1 := ⟨0, by decide⟩
+/-- First element of Fin 2. -/
 private def fin2Zero : Fin 2 := ⟨0, by decide⟩
+/-- Second element of Fin 2. -/
 private def fin2One : Fin 2 := ⟨1, by decide⟩
 
+/-- Evaluation at fin1Zero is measurable. -/
 private lemma measurable_eval_fin1 :
     Measurable fun g : (Fin 1 → ℝ) => g (fin1Zero) :=
   measurable_pi_apply _
 
+/-- Evaluation at any element of Fin 2 is measurable. -/
 private lemma measurable_eval_fin2 {i : Fin 2} :
     Measurable fun g : (Fin 2 → ℝ) => g i :=
   measurable_pi_apply _
@@ -424,21 +429,32 @@ private lemma fin1_strictMono_vacuous (k : Fin 1 → ℕ) : StrictMono k := by
   rw [hi, hj] at hij
   exact LT.lt.false hij
 
-/-- For contractable sequences, all single variables have the same distribution -/
+/-- **Single marginals have identical distribution in contractable sequences.**
+
+For contractable sequences, all variables `X_k` have the same distribution as `X_0`.
+This is a special case of `contractable_map_single` for the general type α.
+
+**Strategy**: Extract single marginals from Fin 1 → α maps using contractability.
+Currently left as sorry; the mean equality is handled directly in the covariance lemma below. -/
 private lemma contractable_single_marginal_eq
     {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX_contract : Contractable μ X) (k : ℕ) :
     Measure.map (X k) μ = Measure.map (X 0) μ := by
-  -- Strategy: The general case requires extracting single marginals from Fin 1 → α maps
-  -- For now, leave as sorry and implement hmean directly below
   sorry
 
-/-- For a contractable sequence of real-valued random variables in L², all pairs
-have the same covariance. This follows from contractability implying that all
-increasing subsequences of length 2 have the same joint distribution.
+/-- **Contractable sequences have uniform covariance structure.**
 
-NOTE: This lemma is not needed for the main proof and is left for future work.
--/
+For contractable L² sequences, there exist constants m (mean), σ² (variance), and ρ
+(correlation) such that:
+- All variables have mean m and variance σ²
+- All distinct pairs have covariance σ²·ρ with |ρ| ≤ 1
+
+This follows from contractability: all variables have the same marginal distribution
+(hence same mean/variance), and all pairs have the same joint distribution (hence
+same covariance).
+
+**Note**: This lemma is not needed for the main proof and is left for future work.
+The L² bound can be applied directly without explicitly computing these constants. -/
 lemma contractable_covariance_structure
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
@@ -559,19 +575,23 @@ lemma mem_window_iff {n k t : ℕ} :
     refine ⟨i, ?_, rfl⟩
     simpa using hi
 
-/-- The supremum of |p i - q i| for two-window weights -/
+/-- **Supremum of weight differences for two non-overlapping windows.**
+
+For two weight vectors representing uniform averages over disjoint windows of size k,
+the supremum of their pointwise differences is exactly 1/k. This is the key parameter
+in the L² contractability bound.
+
+Uses `ciSup_const` since ℝ is only a `ConditionallyCompleteLattice`. -/
 private lemma sup_two_window_weights {k : ℕ} (hk : 0 < k)
     (p q : Fin (2 * k) → ℝ)
     (hp : p = fun i => if i.val < k then 1 / (k : ℝ) else 0)
     (hq : q = fun i => if i.val < k then 0 else 1 / (k : ℝ)) :
     ⨆ i, |p i - q i| = 1 / (k : ℝ) := by
-  -- For all i, |p i - q i| = 1/k (one of them is always 1/k, the other 0)
   have h_eq : ∀ i : Fin (2 * k), |p i - q i| = 1 / (k : ℝ) := by
     intro i
     rw [hp, hq]
     simp only
     split_ifs <;> simp [abs_neg]
-  -- The supremum of a constant function is that constant
   haveI : Nonempty (Fin (2 * k)) := ⟨⟨0, Nat.mul_pos (by decide : 0 < 2) hk⟩⟩
   simp_rw [h_eq]
   exact ciSup_const
