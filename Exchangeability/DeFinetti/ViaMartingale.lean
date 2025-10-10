@@ -504,7 +504,7 @@ lemma contractable_dist_eq_on_rectangles
   intro r B hB C hC
   let ψ₁ : Ω → α × (ℕ → α) := fun ω => (X m ω, shiftRV X m ω)
   let ψ₂ : Ω → α × (ℕ → α) := fun ω => (X k ω, shiftRV X m ω)
-  have hmeas :
+  have hmeas_tail :
       MeasurableSet (B ×ˢ tailCylinder (α:=α) r C) :=
     hB.prod (tailCylinder_measurable (α:=α) hC)
   have hpre₁ :
@@ -517,9 +517,38 @@ lemma contractable_dist_eq_on_rectangles
         = {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
     ext ω; simp [ψ₂, tailCylinder, shiftRV, Set.mem_prod, Set.preimage,
       Set.mem_setOf_eq]
-  have h :=
-    contractable_dist_eq_on_first_r_tail (μ:=μ) (X:=X) hX k m r hk B hB C hC
-  simpa [ψ₁, ψ₂, Measure.map_apply, hmeas, hpre₁, hpre₂] using h
+
+  -- Rewrite the equality using the future-cylinder formulation.
+  have hmeas_cyl :
+      MeasurableSet (B ×ˢ cylinder (α:=α) r C) :=
+    hB.prod (cylinder_measurable (α:=α) hC)
+  have hpre_future₁ :
+      (fun ω => (X m ω, shiftRV X (m + 1) ω))
+          ⁻¹' (B ×ˢ cylinder (α:=α) r C)
+        = {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
+    simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
+      using
+        (preimage_rect_future (μ:=μ) (X:=X) (k:=m) (m:=m) r B C)
+  have hpre_future₂ :
+      (fun ω => (X k ω, shiftRV X (m + 1) ω))
+          ⁻¹' (B ×ˢ cylinder (α:=α) r C)
+        = {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
+    simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
+      using
+        (preimage_rect_future (μ:=μ) (X:=X) (k:=k) (m:=m) r B C)
+
+  have hfuture :=
+    contractable_dist_eq_on_rectangles_future
+      (μ:=μ) (X:=X) hX k m hk r B hB C hC
+
+  have hsets_eq :
+      μ {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
+        =
+      μ {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
+    simpa [Measure.map_apply, hmeas_cyl, hpre_future₁, hpre_future₂]
+      using hfuture
+
+  simpa [Measure.map_apply, hmeas_tail, hpre₁, hpre₂] using hsets_eq
 
 /-- If two measures on `α × (ℕ → α)` agree on rectangles coming from the first-tail
 coordinates, then they are equal. -/
@@ -738,12 +767,13 @@ lemma condexp_convergence
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {X : ℕ → Ω → α} (hX : Contractable μ X) (k m : ℕ) (hk : k ≤ m)
     (B : Set α) (hB : MeasurableSet B) :
-    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X m) | revFiltration X m]
+    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X m) | futureFiltration X m]
       =ᵐ[μ]
-    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | revFiltration X m] := by
+    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | futureFiltration X m] := by
   -- Proof strategy:
-  -- 1. From contractable_dist_eq: (X_m, shiftRV X m) =^d (X_k, shiftRV X m)
-  -- 2. Note that σ(shiftRV X m) = revFiltration X m is the same conditioning σ-algebra
+  -- 1. From agree_on_future_rectangles_of_contractable: the pair laws agree on all
+  --    rectangles `B × cylinder r C` when conditioning on the common future tail
+  -- 2. Note that σ(shiftRV X (m + 1)) = futureFiltration X m is the same conditioning σ-algebra
   -- 3. Apply contraction_independence (or its condexp version) to get:
   --    Both conditional expectations equal the same value
   -- 4. Therefore they're equal almost everywhere
@@ -763,7 +793,7 @@ lemma extreme_members_equal_on_tail
   -- 1. From condexp_convergence:
   --    𝔼[1_{X_m∈B} | 𝔽ₙ] = 𝔼[1_{X_0∈B} | 𝔽ₙ] for all n ≥ m
   -- 2. Define reverse martingale: Mₙ := 𝔼[1_{X_m∈B} | 𝔽ₙ]
-  -- 3. As n → ∞, 𝔽ₙ = revFiltration X n ↓ tailSigma X (by revFiltration_antitone)
+  -- 3. As n → ∞, 𝔽ₙ = futureFiltration X n ↓ tailSigmaFuture X (once we identify tail σ-algebras via futureFiltration_antitone)
   -- 4. By reverse martingale convergence (Lévy's downward theorem):
   --    Mₙ → 𝔼[1_{X_m∈B} | tailSigma X] a.s. and in L¹
   -- 5. Similarly for X_0: 𝔼[1_{X_0∈B} | 𝔽ₙ] → 𝔼[1_{X_0∈B} | tailSigma X]
@@ -956,13 +986,13 @@ section reverse_martingale
 variable {μ : Measure Ω} [IsProbabilityMeasure μ]
 variable {X : ℕ → Ω → α}
 
-/-- 𝔽ₘ = σ(θₘ X). -/
-abbrev 𝔽 (m : ℕ) : MeasurableSpace Ω := revFiltration X m
+/-- 𝔽ₘ := σ(θ_{m+1} X) (the future filtration). -/
+abbrev 𝔽 (m : ℕ) : MeasurableSpace Ω := futureFiltration X m
 
 /-- The reverse filtration is decreasing; packaged for the martingale API. -/
 lemma filtration_antitone : Antitone 𝔽 := by
   intro m n hmn
-  simpa [𝔽] using revFiltration_antitone X hmn
+  simpa [𝔽] using futureFiltration_antitone X hmn
 
 /-- Mₘ := 𝔼[1_{Xₖ∈B} | 𝔽ₘ].
 The reverse martingale sequence for the indicator of X_k in B. -/
@@ -982,7 +1012,7 @@ def M (k : ℕ) (B : Set α) : ℕ → Ω → ℝ :=
 -- (4) `(fun n => M k B n ω)` is a reverse martingale that converges
 --     to `μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | tailSigma X] ω`.
 --     API: `condexp_tendsto_condexp_iInf` (Lévy's downward theorem) together with
---     `filtration_antitone` and `tailSigma_eq_iInf_rev`.
+--     `filtration_antitone` and `tailSigmaFuture_eq_iInf`.
 
 end reverse_martingale
 
