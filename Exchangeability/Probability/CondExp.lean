@@ -631,63 +631,127 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
     (h : ∀ H ∈ π,
       μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
         =ᵐ[μ] μ[H.indicator (fun _ => (1 : ℝ)) | mG]) :
-    ∀ E, MeasurableSpace.generateFrom π ≤ m₀ →
-      MeasurableSet[MeasurableSpace.generateFrom π] E →
-      μ[E.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
-        =ᵐ[μ] μ[E.indicator (fun _ => (1 : ℝ)) | mG] := by
+    ∀ A, MeasurableSpace.generateFrom π ≤ m₀ →
+      MeasurableSet[MeasurableSpace.generateFrom π] A →
+      μ[A.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
+        =ᵐ[μ] μ[A.indicator (fun _ => (1 : ℝ)) | mG] := by
   classical
   have hmFG : mF ⊔ mG ≤ m₀ := sup_le hmF hmG
-  intro hπ_le E hE
+  intro A hπ_le hA
 
-  -- Strategy: Fix S ∈ mF ⊔ mG and extend in E using Dynkin π-λ
-  -- Define C(E) := "∫_S LHS dμ = ∫_S RHS dμ for all S ∈ mF ⊔ mG"
+  -- Strategy: Fix S ∈ mF ⊔ mG and extend in A using Dynkin π-λ
+  -- Define C(A) := "∫_S LHS dμ = ∫_S RHS dμ for all S ∈ mF ⊔ mG"
   -- Then use uniqueness of conditional expectation
 
   -- We'll show the two conditional expectations have the same integral on every measurable set
+  let ceL := μ[A.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
+  let ceR := μ[A.indicator (fun _ => (1 : ℝ)) | mG]
   have h_int_eq : ∀ (S : Set Ω), MeasurableSet[mF ⊔ mG] S →
-      ∫ ω in S, (μ[E.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω) ∂μ
-        = ∫ ω in S, (μ[E.indicator (fun _ => (1 : ℝ)) | mG] ω) ∂μ := by
+      ∫ ω in S, ceL ω ∂μ = ∫ ω in S, ceR ω ∂μ := by
     intro S hS
 
-    -- Define the property C_S(E') for the Dynkin system
-    let C_S : Set Ω → Prop := fun E' =>
-      ∫ ω in S, (μ[E'.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω) ∂μ
-        = ∫ ω in S, (μ[E'.indicator (fun _ => (1 : ℝ)) | mG] ω) ∂μ
+    -- Define the property C_S(B) for the Dynkin system
+    let C_S : Set Ω → Prop := fun B =>
+      let ceBL := μ[B.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
+      let ceBR := μ[B.indicator (fun _ => (1 : ℝ)) | mG]
+      ∫ ω in S, ceBL ω ∂μ = ∫ ω in S, ceBR ω ∂μ
 
     -- Step 1: C_S holds on π
-    have hCπ : ∀ E' ∈ π, C_S E' := by
-      intro E' hE'π
-      have hAE := h E' hE'π
-      exact setIntegral_congr_ae_of_ae hAE
+    have hCπ : ∀ B ∈ π, C_S B := by
+      intro B hBπ
+      simp only [C_S]
+      -- Use the a.e. equality from hypothesis h
+      have hAE : μ[B.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
+          =ᵐ[μ] μ[B.indicator (fun _ => (1 : ℝ)) | mG] := h B hBπ
+      -- Convert to a.e. equality on μ.restrict S and apply integral_congr_ae
+      refine integral_congr_ae ?_
+      exact ae_restrict_of_ae hAE
 
     -- Step 2: C_S is closed under ∅, complement, and countable disjoint unions
-    have hC_empty : C_S ∅ := by simp [C_S]
+    have hC_empty : C_S ∅ := by
+      simp only [C_S, Set.indicator_empty]
+      rw [condExp_const hmFG (0 : ℝ), condExp_const hmG (0 : ℝ)]
 
-    have hC_compl : ∀ E', MeasurableSet[m₀] E' → C_S E' → C_S E'ᶜ := by
-      intro E' hE'meas hCE'
-      simp only [C_S] at hCE' ⊢
+    have hC_compl : ∀ B, MeasurableSet[m₀] B → C_S B → C_S Bᶜ := by
+      intro B hBmeas hCB
+      simp only [C_S] at hCB ⊢
       -- Use linearity: indicator of complement = 1 - indicator
-      have hId : E'ᶜ.indicator (fun _ : Ω => (1 : ℝ))
-          = (fun _ : Ω => (1 : ℝ)) - E'.indicator (fun _ : Ω => (1 : ℝ)) := by
+      have hId : Bᶜ.indicator (fun _ : Ω => (1 : ℝ))
+          = (fun _ : Ω => (1 : ℝ)) - B.indicator (fun _ : Ω => (1 : ℝ)) := by
         funext ω
-        by_cases hω : ω ∈ E' <;> simp [Set.indicator, hω]
-      sorry -- Apply linearity of conditional expectation and set integrals
+        by_cases hω : ω ∈ B <;> simp [Set.indicator, hω]
+      -- Rewrite using the identity
+      conv_lhs => arg 2; intro ω; rw [hId]
+      conv_rhs => arg 2; intro ω; rw [hId]
+      -- Apply linearity of conditional expectation
+      have hint_B : Integrable (B.indicator fun _ : Ω => (1 : ℝ)) μ :=
+        (integrable_const (1 : ℝ)).indicator hBmeas
+      have hint_1 : Integrable (fun _ : Ω => (1 : ℝ)) μ := integrable_const _
+      have h_sub_L : μ[(fun _ : Ω => (1 : ℝ)) - B.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
+          =ᵐ[μ] μ[fun _ => (1 : ℝ) | mF ⊔ mG] - μ[B.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] :=
+        condExp_sub hint_1 hint_B (mF ⊔ mG)
+      have h_sub_R : μ[(fun _ : Ω => (1 : ℝ)) - B.indicator (fun _ => (1 : ℝ)) | mG]
+          =ᵐ[μ] μ[fun _ => (1 : ℝ) | mG] - μ[B.indicator (fun _ => (1 : ℝ)) | mG] :=
+        condExp_sub hint_1 hint_B mG
+      rw [integral_congr_ae (ae_restrict_of_ae h_sub_L),
+          integral_congr_ae (ae_restrict_of_ae h_sub_R)]
+      rw [condExp_const hmFG (1 : ℝ), condExp_const hmG (1 : ℝ)]
+      -- Now use linearity of set integrals and the hypothesis hCB
+      simp only [Pi.sub_apply, Pi.one_apply]
+      -- The goal is now ∫ ω in S, (1 - indicator B) ω ∂μ = ∫ ω in S, (1 - indicator B) ω ∂μ on both sides
+      -- After applying linearity, we get: (∫ 1) - (∫ indicator B) = (∫ 1) - (∫ indicator B)
+      -- And hCB tells us the indicator parts are equal
+      calc ∫ ω in S, (1 - μ[B.indicator (fun x => 1) | mF ⊔ mG] ω) ∂μ
+          = ∫ ω in S, (1 : ℝ) ∂μ - ∫ ω in S, μ[B.indicator (fun x => 1) | mF ⊔ mG] ω ∂μ := by
+            exact integral_sub hint_1.integrableOn integrable_condExp.integrableOn
+        _ = ∫ ω in S, (1 : ℝ) ∂μ - ∫ ω in S, μ[B.indicator (fun x => 1) | mG] ω ∂μ := by rw [hCB]
+        _ = ∫ ω in S, (1 - μ[B.indicator (fun x => 1) | mG] ω) ∂μ := by
+            rw [integral_sub hint_1.integrableOn integrable_condExp.integrableOn]
 
     have hC_iUnion : ∀ (f : ℕ → Set Ω), (∀ i, MeasurableSet[m₀] (f i)) →
         Pairwise (Disjoint on f) → (∀ i, C_S (f i)) → C_S (⋃ i, f i) := by
       intro f hf_meas hf_disj hf_C
       simp only [C_S] at hf_C ⊢
-      sorry -- Use dominated convergence to commute ∫ and ∑
+      -- Strategy: Use linearity and dominated convergence
+      -- 1. Indicator of disjoint union = sum of indicators
+      -- 2. Conditional expectation is linear: μ[∑ indicator_i | m] = ∑ μ[indicator_i | m]
+      -- 3. Integral of sum = sum of integrals (dominated convergence, all bounded by 1)
+      -- 4. Apply hypothesis hf_C to each term
+      sorry -- Complete using dominated convergence: indicators bounded by 1,
+            -- and use hf_C for each i to show the sum of integrals are equal
 
     -- Step 3: Apply Dynkin π-λ theorem
-    sorry -- Apply induction_on_inter with the properties above
+    -- We've shown C_S is a Dynkin system (closed under ∅, complement, disjoint union)
+    -- containing π (from hCπ). By Dynkin's π-λ theorem, C_S contains σ(π).
+    -- Therefore C_S A holds.
+    sorry -- Apply MeasurableSpace.induction_on_inter:
+          -- Define C' : ∀ (s : Set Ω), MeasurableSet s → Prop := fun B _ => C_S B
+          -- Then prove C' ∅, C' preserves complements, C' preserves countable disjoint unions
+          -- And C' holds on π, so C' A for A ∈ σ(π)
 
   -- Now use uniqueness of conditional expectation
-  have h_ind_int : Integrable (E.indicator fun _ : Ω => (1 : ℝ)) μ :=
-    (integrable_const (1 : ℝ)).indicator (hπ_le _ hE)
+  -- We need to show ceL =ᵐ[μ] ceR, i.e., the two conditional expectations are a.e. equal
+  -- Strategy: Show ceR has the same integrals as the indicator function on mF ⊔ mG-measurable sets
+  have h_ind_int : Integrable (A.indicator fun _ : Ω => (1 : ℝ)) μ :=
+    (integrable_const (1 : ℝ)).indicator (hπ_le _ hA)
+
+  -- First, we need to show ceR is mF ⊔ mG-measurable
+  -- But ceR is only mG-measurable, and mG ≤ mF ⊔ mG, so it's also mF ⊔ mG-measurable
+  have ceR_meas : AEStronglyMeasurable[mF ⊔ mG] ceR μ := by
+    have : AEStronglyMeasurable[mG] ceR μ :=
+      StronglyMeasurable.aestronglyMeasurable stronglyMeasurable_condExp
+    exact this.mono (le_sup_right : mG ≤ mF ⊔ mG)
+
+  -- Now apply uniqueness: ceR =ᵐ[μ] ceL because they have same integrals
   refine (ae_eq_condExp_of_forall_setIntegral_eq (hm := hmFG) h_ind_int
-    integrable_condExp.aestronglyMeasurable (fun S hS _ => ?_)).symm
-  exact h_int_eq S hS
+    (fun s _ _ => integrable_condExp.integrableOn)
+    (fun S hS _ => ?_)
+    ceR_meas).symm
+  -- Need to show: ∫ ω in S, ceR ω ∂μ = ∫ ω in S, A.indicator (fun _ => 1) ω ∂μ
+  -- We know: ∫ ceL = ∫ ceR (from h_int_eq)
+  -- And: ∫ ceL = ∫ A.indicator (from setIntegral_condExp for ceL)
+  -- Therefore: ∫ ceR = ∫ A.indicator
+  rw [← h_int_eq S hS, setIntegral_condExp hmFG h_ind_int hS]
 
 /-! ### Bounded Martingales and L² Inequalities -/
 
