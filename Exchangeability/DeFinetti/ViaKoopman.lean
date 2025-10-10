@@ -1019,14 +1019,19 @@ private lemma Kernel.IndepFun.integral_mul_simple
   have h_left : ∫ ω, (∑ i, (A i).indicator (fun _ => a_coef i) ω) *
                        (∑ j, (B j).indicator (fun _ => b_coef j) ω) ∂(κ t)
               = ∑ i, ∑ j, (a_coef i) * (b_coef j) * (κ t (A i ∩ B j)).toReal := by
-    sorry  -- Expand product of sums and integrals
+    -- Expand (∑ᵢ aᵢ·1_{Aᵢ})(∑ⱼ bⱼ·1_{Bⱼ}) = ∑ᵢ ∑ⱼ aᵢbⱼ·(1_{Aᵢ}·1_{Bⱼ}) = ∑ᵢ ∑ⱼ aᵢbⱼ·1_{Aᵢ∩Bⱼ}
+    -- Then use linearity: ∫ ∑∑ = ∑∑ ∫
+    -- Finally apply integral_indicator_const to each term
+    sorry  -- ~15 lines: product of sums, pull integral through double sum, indicator algebra
 
   -- Expand right side: (∫ ∑ᵢ aᵢ·1_{Aᵢ})(∫ ∑ⱼ bⱼ·1_{Bⱼ}) = (∑ᵢ aᵢ·μ(Aᵢ))(∑ⱼ bⱼ·μ(Bⱼ))
   have h_right : (∫ ω, ∑ i, (A i).indicator (fun _ => a_coef i) ω ∂(κ t)) *
                  (∫ ω, ∑ j, (B j).indicator (fun _ => b_coef j) ω ∂(κ t))
               = (∑ i, (a_coef i) * (κ t (A i)).toReal) *
                 (∑ j, (b_coef j) * (κ t (B j)).toReal) := by
-    sorry  -- Linearity of integral
+    -- For each factor: ∫ ∑ᵢ aᵢ·1_{Aᵢ} = ∑ᵢ aᵢ·∫ 1_{Aᵢ} = ∑ᵢ aᵢ·μ(Aᵢ)
+    -- Use integral_finset_sum (linearity) + integral_indicator_const
+    sorry  -- ~10 lines: pull sum out of integral twice, apply indicator integral lemma
 
   -- Use independence to connect the two
   have h_connection : ∑ i, ∑ j, (a_coef i) * (b_coef j) * (κ t (A i ∩ B j)).toReal
@@ -1038,7 +1043,10 @@ private lemma Kernel.IndepFun.integral_mul_simple
   have h_toReal : ∑ i, ∑ j, (a_coef i) * (b_coef j) * ((κ t (A i) * κ t (B j)).toReal)
                 = (∑ i, (a_coef i) * (κ t (A i)).toReal) *
                   (∑ j, (b_coef j) * (κ t (B j)).toReal) := by
-    sorry  -- Algebraic rearrangement + toReal distributivity
+    -- First distribute toReal: (x*y).toReal = x.toReal * y.toReal (for finite measures)
+    -- Then rearrange: ∑ᵢ ∑ⱼ aᵢ·bⱼ·xᵢ·yⱼ = (∑ᵢ aᵢ·xᵢ)(∑ⱼ bⱼ·yⱼ)
+    -- This is pure algebra once toReal is distributed
+    sorry  -- ~10 lines: toReal distributivity + sum rearrangement
 
   -- Chain them together
   rw [h_left, h_connection, h_toReal, ← h_right]
