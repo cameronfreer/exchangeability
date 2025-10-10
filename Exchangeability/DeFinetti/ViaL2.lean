@@ -162,7 +162,8 @@ private lemma strictMono_two {i j : ℕ} (hij : i < j) :
 set_option linter.unusedSectionVars false in
 /-- For a contractable sequence, every increasing pair `(i,j)` with `i < j`
 has the same joint law as `(X 0, X 1)`. -/
-lemma contractable_map_pair (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i)) {i j : ℕ} (hij : i < j) :
+lemma contractable_map_pair (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i))
+    {i j : ℕ} (hij : i < j) :
     Measure.map (fun ω => (X i ω, X j ω)) μ =
       Measure.map (fun ω => (X 0 ω, X 1 ω)) μ := by
   classical
@@ -388,9 +389,10 @@ private lemma fin1_strictMono_vacuous (k : Fin 1 → ℕ) : StrictMono k := by
   intro i j hij
   -- Fin 1 has only one element, so i < j is impossible
   exfalso
-  have : i = 0 := Fin.eq_zero i
-  have : j = 0 := Fin.eq_zero j
-  omega
+  have hi : i = 0 := Fin.eq_zero i
+  have hj : j = 0 := Fin.eq_zero j
+  rw [hi, hj] at hij
+  exact LT.lt.false hij
 
 /-- For contractable sequences, all single variables have the same distribution -/
 private lemma contractable_single_marginal_eq
@@ -535,8 +537,7 @@ private lemma sup_two_window_weights {k : ℕ} (hk : 0 < k)
     simp only
     split_ifs <;> simp [abs_neg]
   -- The supremum of a constant function is that constant
-  have hk2 : 0 < 2 * k := Nat.mul_pos (by decide : 0 < 2) hk
-  haveI : Nonempty (Fin (2 * k)) := ⟨⟨0, hk2⟩⟩
+  haveI : Nonempty (Fin (2 * k)) := ⟨⟨0, Nat.mul_pos (by decide : 0 < 2) hk⟩⟩
   simp_rw [h_eq]
   exact ciSup_const
 
