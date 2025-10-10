@@ -1029,9 +1029,7 @@ private lemma Kernel.IndepFun.integral_mul_simple
                  (∫ ω, ∑ j, (B j).indicator (fun _ => b_coef j) ω ∂(κ t))
               = (∑ i, (a_coef i) * (κ t (A i)).toReal) *
                 (∑ j, (b_coef j) * (κ t (B j)).toReal) := by
-    congr 1
-    · sorry  -- ∫ ∑ᵢ aᵢ·1_{Aᵢ} = ∑ᵢ aᵢ·(κ t (Aᵢ)).toReal via integral_finset_sum + integral_indicator_const
-    · sorry  -- ∫ ∑ⱼ bⱼ·1_{Bⱼ} = ∑ⱼ bⱼ·(κ t (Bⱼ)).toReal via integral_finset_sum + integral_indicator_const
+    sorry  -- Apply integral_finset_sum to pull sums out, then integral_indicator_const to each term
 
   -- Use independence to connect the two
   have h_connection : ∑ i, ∑ j, (a_coef i) * (b_coef j) * (κ t (A i ∩ B j)).toReal
@@ -1043,8 +1041,18 @@ private lemma Kernel.IndepFun.integral_mul_simple
   have h_toReal : ∑ i, ∑ j, (a_coef i) * (b_coef j) * ((κ t (A i) * κ t (B j)).toReal)
                 = (∑ i, (a_coef i) * (κ t (A i)).toReal) *
                   (∑ j, (b_coef j) * (κ t (B j)).toReal) := by
-    sorry  -- Use ENNReal.toReal_mul to get (x*y).toReal = x.toReal * y.toReal,
-           -- then rearrange: ∑ᵢ ∑ⱼ aᵢ·bⱼ·xᵢ·yⱼ = (∑ᵢ aᵢ·xᵢ)(∑ⱼ bⱼ·yⱼ) via Finset.sum_mul
+    calc ∑ i, ∑ j, (a_coef i) * (b_coef j) * ((κ t (A i) * κ t (B j)).toReal)
+        = ∑ i, ∑ j, (a_coef i) * (b_coef j) * ((κ t (A i)).toReal * (κ t (B j)).toReal) := by
+            congr 1; ext i; congr 1; ext j
+            rw [ENNReal.toReal_mul]
+      _ = ∑ i, (∑ j, (a_coef i) * (κ t (A i)).toReal * ((b_coef j) * (κ t (B j)).toReal)) := by
+            congr 1; ext i; congr 1; ext j
+            ring
+      _ = ∑ i, ((a_coef i) * (κ t (A i)).toReal * ∑ j, (b_coef j) * (κ t (B j)).toReal) := by
+            congr 1; ext i
+            rw [← Finset.mul_sum]
+      _ = (∑ i, (a_coef i) * (κ t (A i)).toReal) * (∑ j, (b_coef j) * (κ t (B j)).toReal) := by
+            rw [Finset.sum_mul]
 
   -- Chain them together
   rw [h_left, h_connection, h_toReal, ← h_right]
