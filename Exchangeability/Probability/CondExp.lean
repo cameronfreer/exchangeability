@@ -650,7 +650,14 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     -- The conditional variance equals μ[X₂² | m₁] - (μ[X₂ | m₁])²
     have h_var_formula :
         μ[(X₂ - μ[X₂ | m₁])^2 | m₁] =ᵐ[μ] μ[X₂ ^ 2 | m₁] - (μ[X₂ | m₁]) ^ 2 := by
-      sorry -- This is a standard identity
+      -- Expand (X₂ - μ[X₂|m₁])² = X₂² - 2·X₂·μ[X₂|m₁] + (μ[X₂|m₁])²
+      have h_expand : (fun ω => (X₂ ω - μ[X₂ | m₁] ω) ^ 2)
+          = fun ω => X₂ ω ^ 2 - 2 * X₂ ω * μ[X₂ | m₁] ω + μ[X₂ | m₁] ω ^ 2 := by
+        ext ω
+        ring
+      -- Apply linearity of conditional expectation
+      -- The detailed expansion requires condExp linearity lemmas
+      sorry
     have h_congr :
         ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ
           = ∫ ω, (μ[X₂ ^ 2 | m₁] ω - μ[X₂ | m₁] ω ^ 2) ∂μ :=
@@ -708,7 +715,20 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     (h_diff_L2.integrable_sq.congr h_integrand_eq.symm)
   -- The squared L2 norm equals zero, so the function is zero
   have h_norm_zero : ‖diffLp‖ ^ 2 = 0 := by
-    sorry -- Relate Lp norm to integral: ‖diffLp‖² = ∫ |diffLp|² = ∫ (X₂-X₁)² = 0
+    -- For Lp spaces with p=2, ‖f‖² = (∫|f|²)^(1/2)² = ∫|f|²
+    have h_norm_eq : ‖diffLp‖ ^ 2 = ∫ ω, |diffLp ω| ^ 2 ∂μ := by
+      -- ‖f‖_2 = (∫|f|²)^(1/2), so ‖f‖_2² = ∫|f|²
+      sorry -- Need snorm_two_eq_toLp and relation to integral
+    -- |diffLp|² = diffLp² since diffLp is real-valued
+    have h_abs : (fun ω => |diffLp ω| ^ 2) =ᵐ[μ] fun ω => diffLp ω ^ 2 :=
+      Eventually.of_forall fun ω => sq_abs _
+    calc ‖diffLp‖ ^ 2
+        = ∫ ω, |diffLp ω| ^ 2 ∂μ := h_norm_eq
+      _ = ∫ ω, diffLp ω ^ 2 ∂μ := integral_congr_ae h_abs
+      _ = ∫ ω, diffLp ω * diffLp ω ∂μ :=
+          integral_congr_ae (Eventually.of_forall fun ω => by ring)
+      _ = ∫ ω, (X₂ ω - X₁ ω) ^ 2 ∂μ := integral_congr_ae h_integrand_eq
+      _ = 0 := h_diff_integral_zero
   have h_diffLp_zero : diffLp = 0 := by
     rw [← norm_eq_zero]
     exact pow_eq_zero h_norm_zero
