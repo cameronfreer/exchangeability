@@ -375,12 +375,14 @@ lemma eLpNorm_two_from_integral_sq_le
   -- Integral is nonnegative
   have h_int_nonneg : 0 ≤ ∫ ω, ‖g ω‖^2 ∂μ := by
     apply integral_nonneg; intro ω; exact sq_nonneg _
-  -- For p=2, eLpNorm g 2 μ = (∫ ‖g‖²)^(1/2)
+  -- For p=2, eLpNorm g 2 μ = (∫⁻ ‖g‖²)^(1/2)
   -- Given ∫ g² ≤ C, we have ∫ ‖g‖² ≤ C (since ‖g‖² = g² for real g)
-  -- Therefore (∫ ‖g‖²)^(1/2) ≤ C^(1/2) = √C
-
-  -- Use MemLp.eLpNorm_eq_integral_rpow_norm to relate eLpNorm to the integral
-  sorry -- TODO: Implement using MemLp.eLpNorm_eq_integral_rpow_norm with p=2
+  -- Therefore (∫⁻ ‖g‖²)^(1/2) ≤ C^(1/2) = √C
+  -- TODO: Complete this proof using:
+  -- 1. eLpNorm_eq_lintegral_rpow_enorm to express eLpNorm as (∫⁻ ‖g‖²ₑ)^(1/2)
+  -- 2. Convert Bochner integral bound to Lebesgue integral bound
+  -- 3. Apply monotonicity of x ↦ x^(1/2)
+  sorry
 
 end LpUtilities
 
@@ -526,7 +528,10 @@ lemma mem_window_iff {n k t : ℕ} :
 /-- Cardinality of Fin values less than k in Fin (2*k) -/
 private lemma card_fin_lt_k {k : ℕ} :
     (Finset.univ.filter (fun i : Fin (2 * k) => i.val < k)).card = k := by
-  sorry -- TODO: Prove that the filter has exactly k elements
+  -- The filter selects exactly the elements 0, 1, ..., k-1 from Fin (2*k)
+  -- This has cardinality k
+  -- TODO: Complete using Finset.card_bij or Finset.card_range
+  sorry
 
 /-- The supremum of |p i - q i| for two-window weights -/
 private lemma sup_two_window_weights {k : ℕ} (hk : 0 < k)
