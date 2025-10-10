@@ -8,6 +8,7 @@ import Mathlib.Probability.Independence.Basic
 import Mathlib.Probability.Independence.Conditional
 import Mathlib.Probability.Martingale.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
+import Mathlib.MeasureTheory.Function.ConditionalExpectation.Real
 import Mathlib.MeasureTheory.PiSystem
 
 /-!
@@ -1002,11 +1003,7 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
             have h1 : Integrable (X₂ ^ 2) μ := hL2.integrable_sq
             have h2 : Integrable (2 • X₂ * μ[X₂ | m₁]) μ := by
               -- Both X₂ and μ[X₂|m₁] are in L², so their product is in L¹ by Hölder
-              have : Integrable (X₂ * μ[X₂ | m₁]) μ := by
-                have hX₂_int : Integrable X₂ μ := hL2.integrable one_le_two
-                have hcond_int : Integrable (μ[X₂ | m₁]) μ := h_cond_mem.integrable one_le_two
-                exact hX₂_int.mul hcond_int
-              exact this.const_mul 2
+              sorry
             have h3 : Integrable ((μ[X₂ | m₁]) ^ 2) μ := h_cond_mem.integrable_sq
             -- Apply linearity: μ[a - b + c | m] = μ[a|m] - μ[b|m] + μ[c|m]
             calc μ[X₂ ^ 2 - 2 • X₂ * μ[X₂ | m₁] + (μ[X₂ | m₁]) ^ 2 | m₁]
@@ -1019,9 +1016,27 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         _ =ᵐ[μ] μ[X₂ ^ 2 | m₁] - 2 • μ[X₂ | m₁] * μ[X₂ | m₁] + (μ[X₂ | m₁]) ^ 2 := by
             -- Pull-out property: μ[g * f | m] = g * μ[f | m] when g is m-measurable
             -- And idempotence: μ[g | m] = g when g is m-measurable
-            -- Pull out property: μ[g * f | m] = g * μ[f | m] for m-measurable g
-            -- Idempotence: μ[g | m] = g for m-measurable g
-            sorry -- Need pull-out lemma for m-measurable functions
+            have h_meas : AEStronglyMeasurable[m₁] (μ[X₂ | m₁]) μ :=
+              stronglyMeasurable_condExp.aestronglyMeasurable
+            have hX₂_int : Integrable X₂ μ := hL2.integrable one_le_two
+            -- Pull out 2 • μ[X₂ | m₁] from μ[2 • X₂ * μ[X₂ | m₁] | m₁]
+            have h_pullout : μ[2 • X₂ * μ[X₂ | m₁] | m₁]
+                =ᵐ[μ] 2 • μ[X₂ | m₁] * μ[X₂ | m₁] := by
+              calc μ[2 • X₂ * μ[X₂ | m₁] | m₁]
+                  =ᵐ[μ] μ[(2 • μ[X₂ | m₁]) * X₂ | m₁] := by
+                    filter_upwards with ω; ring
+                _ =ᵐ[μ] (2 • μ[X₂ | m₁]) * μ[X₂ | m₁] := by
+                    have h_int : Integrable ((2 • μ[X₂ | m₁]) * X₂) μ := by sorry
+                    have h_smul_meas : AEStronglyMeasurable[m₁] (2 • μ[X₂ | m₁]) μ :=
+                      h_meas.const_smul 2
+                    exact condExp_mul_of_aestronglyMeasurable_left h_smul_meas h_int hX₂_int
+                _ =ᵐ[μ] 2 • μ[X₂ | m₁] * μ[X₂ | m₁] := by
+                    filter_upwards with ω; ring
+            -- Idempotence: μ[(μ[X₂ | m₁])² | m₁] = (μ[X₂ | m₁])²
+            have h_idem : μ[(μ[X₂ | m₁]) ^ 2 | m₁] =ᵐ[μ] (μ[X₂ | m₁]) ^ 2 :=
+              condExp_of_aestronglyMeasurable' hm₁ (h_meas.pow 2) h_cond_mem.integrable_sq
+            filter_upwards [h_pullout, h_idem] with ω hp hi
+            simp [hp, hi]
         _ =ᵐ[μ] μ[X₂ ^ 2 | m₁] - (μ[X₂ | m₁]) ^ 2 := by
             filter_upwards with ω
             ring
