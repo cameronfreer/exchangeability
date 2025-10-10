@@ -1322,8 +1322,8 @@ lemma Kernel.IndepFun.integral_mul
       -- 1. ι is Fintype (bounded integers)
       have hι : Fintype ι := by
         -- ι is a subtype of integers in [k_min, k_max]
-        sorry -- Should use Int.fintypeIcc or Set.fintypeIcc
-              -- The subtype {k : ℤ // k_min ≤ k ≤ k_max} is Fintype
+        classical
+        exact Set.fintypeSubset (Finset.Icc k_min k_max : Set ℤ) (fun ki h => by simp only [Finset.mem_coe, Finset.mem_Icc]; exact h)
 
       -- 2. Each A k is measurable in both senses
       have hA_meas : ∀ i : ι, MeasurableSet (A i) ∧
@@ -1356,13 +1356,21 @@ lemma Kernel.IndepFun.integral_mul
         · -- Lower bound: k₀ * g ≤ val
           -- From floor: k₀ ≤ val / g, so k₀ * g ≤ val
           have h := Int.floor_le (val / grid_size)
-          sorry -- Need: k₀ ≤ val/g and g > 0 implies k₀ * g ≤ val
-                -- Requires mul_le_iff_le_div with positivity of grid_size = 2^(-n)
+          have hg : 0 < grid_size := by
+            simp only [grid_size]
+            positivity
+          calc (k₀ : ℝ) * grid_size
+              ≤ (val / grid_size) * grid_size := by exact_mod_cast mul_le_mul_of_nonneg_right h (le_of_lt hg)
+            _ = val := div_mul_cancel₀ val (ne_of_gt hg)
         · -- Upper bound: val < (k₀ + 1) * g
           -- From floor: val / g < k₀ + 1, so val < (k₀ + 1) * g
           have h := Int.lt_floor_add_one (val / grid_size)
-          sorry -- Need: val/g < k₀ + 1 and g > 0 implies val < (k₀ + 1) * g
-                -- Requires lt_mul_iff_div_lt with positivity of grid_size
+          have hg : 0 < grid_size := by
+            simp only [grid_size]
+            positivity
+          calc val
+              = (val / grid_size) * grid_size := (div_mul_cancel₀ val (ne_of_gt hg)).symm
+            _ < ((k₀ : ℝ) + 1) * grid_size := by exact_mod_cast mul_lt_mul_of_pos_right h hg
 
       -- This means X ω is in the preimage A ⟨k₀, _⟩
       have h_in_k0 : X ω ∈ Set.Ico (k₀ * grid_size) ((k₀ + 1) * grid_size) := by
@@ -1382,6 +1390,48 @@ lemma Kernel.IndepFun.integral_mul
           -- Since val ∈ [-CX, CX] and intervals cover this range
           sorry -- val ∈ interval and X ω maps via clamp
 
+      -- k₀ is in the valid range
+      have h_k0_in_range : k_min ≤ k₀ ∧ k₀ ≤ k_max := by
+        constructor
+        · -- k_min ≤ k₀
+          -- val ∈ [-CX, CX], so val/g ∈ [-CX/g, CX/g]
+          -- k₀ = ⌊val/g⌋ ≥ ⌊-CX/g⌋ ≥ ⌈-CX/g⌉ - 1 = k_min
+          have h_val_lower : -CX ≤ val := by
+            simp only [val]
+            exact le_max_left _ _
+          have hg : 0 < grid_size := by
+            simp only [grid_size]
+            positivity
+          have : -CX / grid_size ≤ val / grid_size := by
+            exact div_le_div_of_nonneg_right h_val_lower (le_of_lt hg)
+          have : ⌈-CX / grid_size⌉ ≤ k₀ + 1 := by
+            calc ⌈-CX / grid_size⌉
+                ≤ ⌈val / grid_size⌉ := Int.ceil_mono this
+              _ ≤ ⌊val / grid_size⌋ + 1 := Int.ceil_le_floor_add_one _
+              _ = k₀ + 1 := rfl
+          omega
+        · -- k₀ ≤ k_max
+          -- k₀ = ⌊val/g⌋ ≤ ⌈CX/g⌉ < ⌈CX/g⌉ + 1 = k_max
+          have h_val_upper : val ≤ CX := by
+            simp only [val]
+            refine max_le ?_ ?_
+            · -- -CX ≤ CX
+              have : |X ω| ≤ CX := hCX ω
+              linarith [abs_nonneg (X ω)]
+            · -- min CX (X ω) ≤ CX
+              exact min_le_left _ _
+          have hg : 0 < grid_size := by
+            simp only [grid_size]
+            positivity
+          have : val / grid_size ≤ CX / grid_size := by
+            exact div_le_div_of_nonneg_right h_val_upper (le_of_lt hg)
+          calc k₀
+              = ⌊val / grid_size⌋ := rfl
+            _ ≤ ⌊CX / grid_size⌋ := Int.floor_mono this
+            _ ≤ ⌈CX / grid_size⌉ := Int.floor_le_ceil _
+            _ ≤ ⌈CX / grid_size⌉ + 1 := by omega
+            _ = k_max := rfl
+
       -- For any other k, X ω is NOT in that interval
       have h_not_in_other : ∀ (k : ℤ) (hk : k_min ≤ k ∧ k ≤ k_max), k ≠ k₀ →
           X ω ∉ Set.Ico (k * grid_size) ((k + 1) * grid_size) := by
@@ -1392,15 +1442,47 @@ lemma Kernel.IndepFun.integral_mul
         -- These intervals are disjoint when k ≠ k₀
         rw [Set.mem_Ico] at h_in_k h_in_k0
         -- k*g ≤ X ω < (k+1)*g and k₀*g ≤ X ω < (k₀+1)*g
-        sorry -- Contradiction: intervals [k*g,(k+1)*g) and [k₀*g,(k₀+1)*g) are disjoint for k ≠ k₀
+        -- Case split on whether k < k₀ or k₀ < k
+        obtain h_lt | h_gt := hne.lt_or_gt
+        · -- Case: k < k₀
+          -- Then (k+1)*g ≤ k₀*g, so X ω < (k+1)*g ≤ k₀*g ≤ X ω, contradiction
+          have : (k + 1) * grid_size ≤ k₀ * grid_size := by
+            apply mul_le_mul_of_nonneg_right
+            · exact_mod_cast Int.add_one_le_iff.mpr h_lt
+            · linarith
+          linarith [h_in_k.2, h_in_k0.1, this]
+        · -- Case: k₀ < k
+          -- Then (k₀+1)*g ≤ k*g, so X ω < (k₀+1)*g ≤ k*g ≤ X ω, contradiction
+          have : (k₀ + 1) * grid_size ≤ k * grid_size := by
+            apply mul_le_mul_of_nonneg_right
+            · exact_mod_cast Int.add_one_le_iff.mpr h_gt
+            · linarith
+          linarith [h_in_k0.2, h_in_k.1, this]
 
       -- Therefore the sum has exactly one nonzero term
       show ⌊val / grid_size⌋ * grid_size
          = ∑ i : ι, (X ⁻¹' Set.Ico (i.1 * grid_size) ((i.1 + 1) * grid_size)).indicator
                     (fun _ => i.1 * grid_size) ω
 
-      sorry -- Complete: Use Finset.sum_eq_single to show sum = k₀ * grid_size
-            -- where k₀ is the unique index with indicator = 1
+      -- Use Finset.sum_eq_single to collapse to single nonzero term
+      rw [Finset.sum_eq_single ⟨k₀, h_k0_in_range⟩]
+      · -- The term for k₀ evaluates to k₀ * grid_size
+        simp only [Set.indicator]
+        split_ifs with h
+        · rfl
+        · exfalso
+          exact h h_in_k0
+      · -- All other terms are zero
+        intro ⟨k, hk⟩ _ hne
+        simp only [Set.indicator]
+        split_ifs with h
+        · exfalso
+          exact h_not_in_other k hk (Subtype.mk_eq_mk.not.mp hne) h
+        · rfl
+      · -- If k₀ is not in finset (impossible since it's Fintype)
+        intro h
+        exfalso
+        exact h (Finset.mem_univ _)
 
     · intro n
       sorry -- Symmetric for Y
@@ -1408,12 +1490,44 @@ lemma Kernel.IndepFun.integral_mul
     -- Uniform bounds
     · intro n ω
       simp only [dyadic_approx]
-      sorry -- Show |⌊clamp(X(ω))/2^(-n)⌋ * 2^(-n)| ≤ CX
-            -- Outline:
-            -- 1. val = clamp(X ω) ∈ [-CX, CX]
-            -- 2. Floor: ⌊val/g⌋ * g ≤ val < (⌊val/g⌋ + 1) * g where g = 2^(-n)
-            -- 3. Therefore |⌊val/g⌋ * g| ≤ max(|val|, |val + g|) ≤ CX + g
-            -- 4. For strict bound ≤ CX, need more careful analysis or adjust specification
+      let grid_size := (2 : ℝ) ^ (-(n : ℤ))
+      let val := max (-CX) (min CX (X ω))
+      -- val ∈ [-CX, CX]
+      have h_val_lower : -CX ≤ val := le_max_left _ _
+      have h_val_upper : val ≤ CX := by
+        refine max_le ?_ ?_
+        · have : |X ω| ≤ CX := hCX ω
+          linarith [abs_nonneg (X ω)]
+        · exact min_le_left _ _
+      -- Floor property: ⌊val/g⌋ * g ≤ val
+      have hg : 0 < grid_size := by simp only [grid_size]; positivity
+      have h_floor_le : (⌊val / grid_size⌋ : ℝ) * grid_size ≤ val := by
+        calc (⌊val / grid_size⌋ : ℝ) * grid_size
+            ≤ (val / grid_size) * grid_size := by
+              exact_mod_cast mul_le_mul_of_nonneg_right (Int.floor_le _) (le_of_lt hg)
+          _ = val := div_mul_cancel₀ val (ne_of_gt hg)
+      -- Since ⌊val/g⌋ * g ≤ val ≤ CX, we have upper bound
+      have h_floor_upper : (⌊val / grid_size⌋ : ℝ) * grid_size ≤ CX := by
+        linarith [h_val_upper, h_floor_le]
+      -- For lower bound: val ≥ -CX implies val/g ≥ -CX/g, so ⌊val/g⌋ ≥ ⌊-CX/g⌋
+      have h_floor_lower : -CX ≤ (⌊val / grid_size⌋ : ℝ) * grid_size := by
+        have : -CX / grid_size ≤ val / grid_size := by
+          exact div_le_div_of_nonneg_right h_val_lower (le_of_lt hg)
+        have : (⌊-CX / grid_size⌋ : ℝ) ≤ ⌊val / grid_size⌋ := by
+          exact_mod_cast Int.floor_mono this
+        have : (⌊-CX / grid_size⌋ : ℝ) * grid_size ≤ (⌊val / grid_size⌋ : ℝ) * grid_size := by
+          exact mul_le_mul_of_nonneg_right this (le_of_lt hg)
+        have h1 : -CX < (⌊-CX / grid_size⌋ : ℝ) * grid_size + grid_size := by
+          calc -CX
+              = (-CX / grid_size) * grid_size := (div_mul_cancel₀ _ (ne_of_gt hg)).symm
+            _ < ((⌊-CX / grid_size⌋ : ℝ) + 1) * grid_size := by
+                exact_mod_cast mul_lt_mul_of_pos_right (Int.lt_floor_add_one _) hg
+            _ = (⌊-CX / grid_size⌋ : ℝ) * grid_size + grid_size := by ring
+        have h2 : (⌊-CX / grid_size⌋ : ℝ) * grid_size ≤ (⌊val / grid_size⌋ : ℝ) * grid_size :=
+          mul_le_mul_of_nonneg_right (by exact_mod_cast Int.floor_mono (div_le_div_of_nonneg_right h_val_lower (le_of_lt hg))) (le_of_lt hg)
+        -- Combine: -CX < ⌊-CX/g⌋*g + g and ⌊-CX/g⌋*g ≤ ⌊val/g⌋*g gives -CX < ⌊val/g⌋*g + g
+        have : -CX < (⌊val / grid_size⌋ : ℝ) * grid_size + grid_size := by linarith
+        linarith
 
     · intro n ω
       sorry -- Symmetric for Y
