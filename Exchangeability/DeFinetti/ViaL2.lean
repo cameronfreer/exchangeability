@@ -162,7 +162,8 @@ private lemma strictMono_two {i j : ℕ} (hij : i < j) :
 set_option linter.unusedSectionVars false in
 /-- For a contractable sequence, every increasing pair `(i,j)` with `i < j`
 has the same joint law as `(X 0, X 1)`. -/
-lemma contractable_map_pair (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i)) {i j : ℕ} (hij : i < j) :
+lemma contractable_map_pair (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i))
+    {i j : ℕ} (hij : i < j) :
     Measure.map (fun ω => (X i ω, X j ω)) μ =
       Measure.map (fun ω => (X 0 ω, X 1 ω)) μ := by
   classical
