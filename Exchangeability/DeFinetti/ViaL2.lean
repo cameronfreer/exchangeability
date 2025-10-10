@@ -139,25 +139,22 @@ lemma contractable_map_single (hX_contract : Contractable μ X) (hX_meas : ∀ i
     simp [eval, fin1Zero]
   simpa [Function.comp, h_comp_simp, h_comp_simp'] using h_comp
 
-/-- Helper lemma: the strict monotonicity condition for two-point selections. -/
+/-- **Strict monotonicity for two-point subsequence selection.**
+
+For `i < j`, the function mapping `0 ↦ i, 1 ↦ j` is strictly monotone on Fin 2. -/
 private lemma strictMono_two {i j : ℕ} (hij : i < j) :
     StrictMono fun t : Fin 2 => if t = fin2Zero then i else j := by
   classical
   intro a b hlt
-  -- Reduce the strict inequality on `Fin 2` to natural numbers.
+  -- Reduce to: a.val = 0, b.val = 1 (only possibility in Fin 2 with a < b)
   have hval : a.val < b.val := Fin.lt_iff_val_lt_val.mp hlt
-  -- `b` must be the second coordinate.
   have hb_val_le : b.val ≤ 1 := Nat.lt_succ_iff.mp (show b.val < 2 by simp [b.is_lt])
-  have hb_ne_zero : b.val ≠ 0 := by
-    intro hb
-    simp [hb] at hval
-  have hb_pos : 0 < b.val := Nat.pos_of_ne_zero hb_ne_zero
-  have hb_ge_one : 1 ≤ b.val := Nat.succ_le_of_lt hb_pos
-  have hb_val : b.val = 1 := le_antisymm hb_val_le hb_ge_one
-  -- Consequently `a` is the first coordinate.
-  have ha_lt_one : a.val < 1 := by simp only [hb_val] at hval; exact hval
-  have ha_val : a.val = 0 := Nat.lt_one_iff.mp ha_lt_one
-  -- Rewrite the conclusion using these identifications.
+  have hb_ne_zero : b.val ≠ 0 := by intro hb; simp [hb] at hval
+  have hb_val : b.val = 1 := by
+    exact le_antisymm hb_val_le (Nat.succ_le_of_lt (Nat.pos_of_ne_zero hb_ne_zero))
+  have ha_val : a.val = 0 := by
+    exact Nat.lt_one_iff.mp (by simp only [hb_val] at hval; exact hval)
+  -- Apply to conclusion
   have ha : a = fin2Zero := by ext; simp [fin2Zero, ha_val]
   have hb : b = fin2One := by ext; simp [fin2One, hb_val]
   subst ha; subst hb
@@ -416,10 +413,11 @@ lemma eLpNorm_two_from_integral_sq_le
 
 end LpUtilities
 
-/-- Any function from Fin 1 is vacuously StrictMono -/
+/-- **Any function from Fin 1 is vacuously strictly monotone.**
+
+Since Fin 1 has only one element, the premise `i < j` is impossible. -/
 private lemma fin1_strictMono_vacuous (k : Fin 1 → ℕ) : StrictMono k := by
   intro i j hij
-  -- Fin 1 has only one element, so i < j is impossible
   exfalso
   have hi : i = 0 := Fin.eq_zero i
   have hj : j = 0 := Fin.eq_zero j
