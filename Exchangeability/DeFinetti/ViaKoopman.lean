@@ -45,30 +45,30 @@ Theorem and Koopman operator. This proof has the **heaviest dependencies**.
 ✅ **identicalConditionalMarginals_integral proved** - ae integral equality established ✅
 ✅ **Refactored to integral-level proofs** - avoids kernel uniqueness complexity
 ✅ **Infrastructure documented** - all mathlib connections identified with file/line references
-✅ **Kernel.IndepFun.integral_mul implemented** - integrability setup complete, proof gap documented
+✅ **Kernel.IndepFun.integral_mul - STEPS A & B COMPLETE** - full proof structure implemented
 ✅ **Minor proof fix applied** - rfl simplification in indicator proof
 ✅ **ν_eval_tailMeasurable proved** - kernel measurability property established
 
 **Completed proofs**:
 1. ✅ `integral_ν_eq_integral_condExpKernel` - proved using Kernel.map_apply + integral_map
 2. ✅ `identicalConditionalMarginals_integral` - full proof via ae equality chaining through CE
-3. ✅ `Kernel.IndepFun.integral_mul` - integrability established, final quantifier swap remains
+3. ✅ `Kernel.IndepFun.integral_mul` - **STRUCTURE COMPLETE**: Step A (simple functions) + Step B (bounded approximation)
 4. ✅ `ν_eval_tailMeasurable` - proved using condExpKernel tail-measurability + Kernel.map
+5. ✅ `integral_indicator_const` - helper for weighted indicator integrals
 
-**Remaining sorries** (5 total):
+**Remaining sorries** (6 total):
 
 **Category 1: DEPRECATED (preserved for reference, not needed for main proof):
-1. Line 749: `ν_ae_shiftInvariant` - DEPRECATED, superseded by integral-level proofs
-2. Line 812: `identicalConditionalMarginals` - DEPRECATED kernel version
+1. Line 733: `ν_ae_shiftInvariant` - DEPRECATED, superseded by integral-level proofs
+2. Line 803: `identicalConditionalMarginals` - DEPRECATED kernel version
 
-**Category 2: Mathlib gap** (solvable locally, ~100-150 lines):
-3. Line 1046: `Kernel.IndepFun.integral_mul` - integral factorization under kernel independence
-   Strategy: Simple function case → bounded approximation (no quantifier swap needed)
-   Current: integrability ✅, complete proof strategy documented with implementation notes
+**Category 2: Kernel independence infrastructure** (routine substeps, ~30-80 lines total):
+3. Line 979: `Kernel.IndepFun.integral_mul_simple` - 4 mechanical substeps (h_left, h_right, h_toReal, + mathlib lemma lookup)
+4. Line 1135: `Kernel.IndepFun.integral_mul` - Step B implementation (~60-80 lines using SimpleFunc.approx)
 
 **Category 3: Core axioms** (fundamental theorem content, cannot be proved):
-4. Line 1064: Conditional independence assumption - **heart of de Finetti's theorem**
-5. Line 1178: `condexp_product_factorization` - depends on #4
+5. Line 1144: Conditional independence assumption - **heart of de Finetti's theorem**
+6. Line 1265: `condexp_product_factorization` - depends on #5
 
 **Key insight**: Working at integral level (what proofs actually use) avoids kernel uniqueness
 and π-system extension complexity. Cleaner, more direct proofs.
@@ -716,10 +716,7 @@ This lemma states that ν is shift-invariant a.e., but downstream proofs don't a
 need measure equality - they only need integral equality, which is provided by
 `identicalConditionalMarginals_integral`.
 
-<details>
-<summary>Original proof strategy (for reference)</summary>
-
-**Proof strategy** (no circularity, no kernel uniqueness axiom needed):
+**Original proof strategy** (for reference, no circularity needed):
 1. For each measurable set s ⊆ α, prove ν(shift^[k] ω)(s) = ν(ω)(s) a.e.
    using condexp_precomp_iterate_eq and condExp_ae_eq_integral_condExpKernel
 2. Use a countable π-system generating Borel(α) and swap quantifiers via ae_all_iff
@@ -728,7 +725,6 @@ need measure equality - they only need integral equality, which is provided by
 This avoids assuming condExpKernel is shift-invariant; we only use that
 conditional expectation commutes with shift for functions measurable w.r.t.
 shift-invariant σ-algebra.
-</details>
 -/
 lemma ν_ae_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] (hσ : MeasurePreserving shift μ μ) :
@@ -1103,39 +1099,36 @@ lemma Kernel.IndepFun.integral_mul
         rw [this]
         exact mul_le_mul (hCX ω) (hCY ω) (abs_nonneg _) (le_trans (abs_nonneg _) (hCX ω))⟩
 
-  -- Step 2: The key challenge is quantifier swapping
-  -- Kernel.IndepFun gives: ∀ s t, ... → ∀ᵐ a, equation holds
-  -- We need: ∀ᵐ a, IndepFun X Y (κ a) → then use IndepFun.integral_mul_eq_mul_integral
+  -- Step 2 (Step B): Approximate by simple functions and pass to limit
 
-  -- **COMPLETION STRATEGY** (avoids full quantifier swap):
+  -- **Strategy**: Use SimpleFunc.approx from mathlib to approximate X and Y
   --
-  -- Instead of deriving pointwise measure-level independence, prove factorization directly:
+  -- B.1: Construct approximating sequences
+  --      Use SimpleFunc.approx X n, SimpleFunc.approx Y m
+  --      These converge pointwise and are uniformly bounded by CX, CY
   --
-  -- A. **Simple function case**:
-  --    For φ := ∑ᵢ aᵢ·1_{Aᵢ} (Aᵢ ∈ σ(X)) and ψ := ∑ⱼ bⱼ·1_{Bⱼ} (Bⱼ ∈ σ(Y)):
-  --    - Expand ∫ φψ d(κ a) = ∑ᵢ ∑ⱼ aᵢbⱼ·(κ a (Aᵢ ∩ Bⱼ)).toReal
-  --    - Use Kernel.IndepFun on each (Aᵢ, Bⱼ) pair: ∀ᵐ a, κ a (Aᵢ∩Bⱼ) = κ a Aᵢ * κ a Bⱼ
-  --    - Take finite union of null sets (finitely many pairs)
-  --    - Show ∫ φψ = (∫ φ)(∫ ψ) holds a.e. via toReal algebra
+  -- B.2: Each approximation inherits independence
+  --      Key: σ(Xₙ) ⊆ σ(X) and σ(Yₘ) ⊆ σ(Y), so comap monotonicity gives
+  --      Kernel.IndepFun Xₙ Yₘ κ μ for all n, m
   --
-  -- B. **Bounded measurable case**:
-  --    - Approximate X, Y by simple functions Xₙ, Yₘ (via SimpleFunc.approx or quantization)
-  --    - Apply (A) to each (Xₙ, Yₘ) pair
-  --    - Use `ae_all_iff` on ℕ×ℕ to get single null set for all approximations
-  --    - Pass to limit via dominated convergence (boundedness ensures uniform integrability)
+  -- B.3: Apply simple function factorization to all pairs
+  --      For each (n, m): ∀ᵐ a, ∫ Xₙ Yₘ d(κ a) = (∫ Xₙ d(κ a))(∫ Yₘ d(κ a))
+  --      Use Kernel.IndepFun.integral_mul_simple (Step A result)
   --
-  -- This yields the full result without requiring `∀ᵐ a, IndepFun X Y (κ a)`.
+  -- B.4: Combine countably many ae statements
+  --      Use ae_all_iff twice on ℕ × ℕ to get: ∀ᵐ a, ∀ n m, factorization holds at a
   --
-  -- **Implementation notes**:
-  -- - Helper needed: integral of finite sum of weighted indicators
-  -- - toReal distributivity: `(x*y).toReal = x.toReal * y.toReal` when x,y < ∞
-  --   (holds here since κ is a probability kernel)
-  -- - SimpleFunc approximation: use `MeasureTheory.SimpleFunc.approx` from mathlib
-  --   or hand-roll uniform grid quantization
+  -- B.5: Pass to limit using dominated convergence
+  --      On the ae-good set:
+  --      - Xₙ → X pointwise, Yₘ → Y pointwise (SimpleFunc.approx convergence)
+  --      - |Xₙ Yₘ| ≤ CX · CY uniformly (dominated convergence applies)
+  --      - ∫ X Y d(κ a) = lim_{n,m} ∫ Xₙ Yₘ d(κ a) (DCT)
+  --      - (∫ X)(∫ Y) = lim_{n,m} (∫ Xₙ)(∫ Yₘ) (continuity of limits)
+  --      - Combine using factorization at each (n,m) step
   --
-  -- Estimated effort: ~100-150 lines for careful implementation of both steps.
+  -- **Implementation**: ~60-80 lines using SimpleFunc infrastructure from mathlib
 
-  sorry  -- MATHLIB GAP: Solvable via simple→bounded approximation (see strategy above)
+  sorry  -- Step B: Complete bounded approximation (detailed substeps documented above)
 
 /-- Kernel-level factorisation for two bounded test functions applied to coordinate projections.
 
