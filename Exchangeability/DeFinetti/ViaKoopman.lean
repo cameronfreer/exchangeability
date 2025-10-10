@@ -46,6 +46,7 @@ Theorem and Koopman operator. This proof has the **heaviest dependencies**.
 ✅ **Refactored to integral-level proofs** - avoids kernel uniqueness complexity
 ✅ **Infrastructure documented** - all mathlib connections identified with file/line references
 ✅ **Kernel.IndepFun.integral_mul implemented** - integrability setup complete, proof gap documented
+✅ **Minor proof fix applied** - rfl simplification in indicator proof
 
 **Completed proofs**:
 1. ✅ `integral_ν_eq_integral_condExpKernel` - proved using Kernel.map_apply + integral_map
@@ -55,18 +56,18 @@ Theorem and Koopman operator. This proof has the **heaviest dependencies**.
 **Remaining sorries** (6 total):
 
 **Category 1: Minor technical details** (1-2 hours work each):
-1. Line 452: `rcdKernel_measurable` - measurability of ν w.r.t. shift-invariant σ-algebra
-2. Line 712: `ν_ae_shiftInvariant` - DEPRECATED, but preserved for reference
-3. Line 773: `identicalConditionalMarginals` - DEPRECATED kernel version
+1. Line 428: `ν_eval_tailMeasurable` - measurability of ν w.r.t. shift-invariant σ-algebra
+2. Line 743: `ν_ae_shiftInvariant` - DEPRECATED, but preserved for reference
+3. Line 806: `identicalConditionalMarginals` - DEPRECATED kernel version
 
 **Category 2: Mathlib gap** (genuine infrastructure, ~2-4 hours):
-4. Line 914: `Kernel.IndepFun.integral_mul` - quantifier swapping step
+4. Line 1012: `Kernel.IndepFun.integral_mul` - quantifier swapping step
    Needs: π-system + ae_all_iff for countable families
    Current: integrability ✅, integral factorization strategy documented
 
 **Category 3: Core axioms** (fundamental theorem content, cannot be proved):
-5. Line 964: Conditional independence assumption - **heart of de Finetti's theorem**
-6. Line 1085: `condexp_product_factorization` - depends on #5
+5. Line 1061: Conditional independence assumption - **heart of de Finetti's theorem**
+6. Line 1175: `condexp_product_factorization` - depends on #5
 
 **Key insight**: Working at integral level (what proofs actually use) avoids kernel uniqueness
 and π-system extension complexity. Cleaner, more direct proofs.
@@ -929,10 +930,7 @@ lemma coord_indicator_via_ν
 
   have rhs_eq : ∫ x, (s.indicator fun _ => (1 : ℝ)) x ∂(ν (μ := μ) ω)
       = (ν (μ := μ) ω s).toReal := by
-    have h_indicator : (s.indicator fun _ => (1 : ℝ)) = s.indicator 1 := by
-      ext x
-      simp only [Set.indicator, Pi.one_apply]
-      split_ifs <;> rfl
+    have h_indicator : (s.indicator fun _ => (1 : ℝ)) = s.indicator 1 := rfl
     rw [h_indicator, integral_indicator_one hs, Measure.real]
 
   -- Combine: toReal equality implies ENNReal equality (for finite measures)
