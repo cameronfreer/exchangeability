@@ -255,7 +255,10 @@ lemma contractable_comp (hX_contract : Contractable μ X) (hX_meas : ∀ i, Meas
   simpa [Function.comp, Φ, h_left_eval, h_right_eval] using
     h_left.trans (h_apply.trans h_right)
 
-/-- Elementary inequality used to dominate products by squares. -/
+/-- **Young's inequality for products: |ab| ≤ (a² + b²)/2.**
+
+Elementary inequality used to dominate products by squares, derived from
+the identity `0 ≤ (|a| - |b|)²`. Used in covariance bounds. -/
 private lemma abs_mul_le_half_sq_add_sq (a b : ℝ) :
     |a * b| ≤ ((a ^ 2) + (b ^ 2)) / 2 := by
   have h := two_mul_le_add_sq (|a|) (|b|)
@@ -292,7 +295,10 @@ lemma dist_toLp_eq_eLpNorm_sub
   rw [Lp.dist_edist, Lp.edist_toLp_toLp]
   rfl
 
-/-- Converting strict inequality through `ENNReal.toReal`. -/
+/-- **Converting ENNReal inequalities to real inequalities.**
+
+If `x < ofReal ε` in ENNReal (with x finite), then `toReal x < ε` in ℝ.
+Bridges extended and real arithmetic in L^p norm bounds. -/
 lemma toReal_lt_of_lt_ofReal {x : ENNReal} {ε : ℝ}
     (_hx : x ≠ ⊤) (hε : 0 ≤ ε) :
     x < ENNReal.ofReal ε → ENNReal.toReal x < ε := by
@@ -302,7 +308,10 @@ lemma toReal_lt_of_lt_ofReal {x : ENNReal} {ε : ℝ}
   simp [ENNReal.toReal_ofReal hε] at this
   exact this
 
-/-- Arithmetic bound: √(Cf/m) < ε/2 when m is large enough. -/
+/-- **Arithmetic bound for convergence rates: √(Cf/m) < ε/2 when m is large.**
+
+Given a constant Cf and target precision ε, provides an explicit threshold for m
+such that √(Cf/m) < ε/2. Used to establish L² Cauchy sequences converge in L¹. -/
 lemma sqrt_div_lt_half_eps_of_nat
   {Cf ε : ℝ} (hCf : 0 ≤ Cf) (hε : 0 < ε) :
   ∀ ⦃m : ℕ⦄, m ≥ Nat.ceil (4 * Cf / (ε^2)) + 1 →
@@ -341,7 +350,10 @@ lemma sqrt_div_lt_half_eps_of_nat
     _ = |ε / 2| := Real.sqrt_sq_eq_abs _
     _ = ε / 2 := abs_of_pos (div_pos hε (by norm_num))
 
-/-- Arithmetic bound: 3·√(Cf/m) < ε when m is large enough. -/
+/-- **Arithmetic bound for convergence rates: 3·√(Cf/m) < ε when m is large.**
+
+Similar to `sqrt_div_lt_half_eps_of_nat` but with factor 3 instead of 1/2.
+Used in the Cauchy argument where we sum three L² bounds via triangle inequality. -/
 lemma sqrt_div_lt_third_eps_of_nat
   {Cf ε : ℝ} (hCf : 0 ≤ Cf) (hε : 0 < ε) :
   ∀ ⦃m : ℕ⦄, m ≥ Nat.ceil (9 * Cf / (ε^2)) + 1 →
@@ -513,10 +525,14 @@ lemma contractable_covariance_structure
 ## Step 2: L² bound implies L¹ convergence of weighted sums (Kallenberg's key step)
 -/
 
-/-- Finite window of indices `{n+1, …, n+k}` represented as a `Finset`. -/
+/-- **Finite window of consecutive indices.**
+
+The window `{n+1, n+2, ..., n+k}` represented as a `Finset ℕ`.
+Used to express Cesàro averages: `(1/k) * ∑_{i ∈ window n k} f(X_i)`. -/
 def window (n k : ℕ) : Finset ℕ :=
   (Finset.range k).image fun i => n + i + 1
 
+/-- The window contains exactly k elements. -/
 lemma window_card (n k : ℕ) : (window n k).card = k := by
   classical
   unfold window
@@ -529,6 +545,7 @@ lemma window_card (n k : ℕ) : (window n k).card = k := by
     exact Nat.add_left_cancel h'
   · simp
 
+/-- Characterization of window membership. -/
 lemma mem_window_iff {n k t : ℕ} :
     t ∈ window n k ↔ ∃ i : ℕ, i < k ∧ t = n + i + 1 := by
   classical
