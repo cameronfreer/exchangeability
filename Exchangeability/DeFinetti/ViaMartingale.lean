@@ -85,8 +85,12 @@ lemma comap_comp_le
     MeasurableSpace.comap (g ∘ f) (inferInstance : MeasurableSpace Z)
       ≤ MeasurableSpace.comap f (inferInstance : MeasurableSpace Y) := by
   intro s hs
-  refine ⟨g ⁻¹' s, ?_, by ext x; rfl⟩
-  exact hg hs
+  -- s is a set in the comap (g ∘ f) algebra, so s = (g ∘ f) ⁻¹' t for some t
+  obtain ⟨t, ht, rfl⟩ := hs
+  -- Show (g ∘ f) ⁻¹' t is in comap f
+  refine ⟨g ⁻¹' t, hg ht, ?_⟩
+  ext x
+  simp [Set.mem_preimage, Function.comp_apply]
 
 end ComapTools
 
@@ -129,8 +133,6 @@ end SequenceShift
 
 section TailCylinders
 
-variable {α}
-
 /-- Cylinder on the first `r` tail coordinates (shifted by one). -/
 def tailCylinder (r : ℕ) (C : Fin r → Set α) : Set (ℕ → α) :=
   {f | ∀ i : Fin r, f (i.1 + 1) ∈ C i}
@@ -142,6 +144,7 @@ lemma tailCylinder_measurable {r : ℕ} {C : Fin r → Set α}
     (hC : ∀ i, MeasurableSet (C i)) :
     MeasurableSet (tailCylinder (α:=α) r C) := by
   classical
+  haveI : Countable (Fin r) := inferInstance
   refine MeasurableSet.iInter ?_
   intro i
   have hi : Measurable fun f : ℕ → α => f (i.1 + 1) :=
@@ -171,14 +174,16 @@ lemma orderEmbOfFin_surj {s : Finset ℕ} {x : ℕ} (hx : x ∈ s) :
   -- Use the fact that it's an injective function from a finite type to itself
   have h_inj : Function.Injective (s.orderEmbOfFin rfl : Fin s.card → ℕ) :=
     (s.orderEmbOfFin rfl).injective
-  have h_range_sub : ∀ i, s.orderEmbOfFin rfl i ∈ s := orderEmbOfFin_mem (s:=s)
+  have h_range_sub : ∀ i, s.orderEmbOfFin rfl i ∈ s := fun i => s.orderEmbOfFin_mem rfl i
   -- Define a function to s viewed as a subtype
   let f : Fin s.card → s := fun i => ⟨s.orderEmbOfFin rfl i, h_range_sub i⟩
   have hf_inj : Function.Injective f := by
     intro i j hij
     exact h_inj (Subtype.ext_iff.mp hij)
   -- Injective function between finite types of equal cardinality is surjective
-  have hf_surj : Function.Surjective f := Fintype.surjective_of_injective hf_inj
+  have hf_surj : Function.Surjective f := by
+    have : Fintype.card (Fin s.card) = Fintype.card s := rfl
+    exact Fintype.bijective_iff_injective_and_card.mpr ⟨hf_inj, this⟩ |>.2
   obtain ⟨i, hi⟩ := hf_surj ⟨x, hx⟩
   use i
   exact Subtype.ext_iff.mp hi
@@ -191,18 +196,21 @@ lemma strictMono_fin_cases
     StrictMono (Fin.cases a (fun i => f i)) := by
   intro i j hij
   classical
-  cases' i using Fin.cases with _ i
-  · cases' j using Fin.cases with _ j
-    · exact False.elim ((lt_irrefl (0 : Fin (n + 1))) hij)
-    · simpa using ha j
-  · cases' j using Fin.cases with _ j
-    ·
-      have : ((Fin.succ i : Fin (n + 1)).1) < 0 := by
-        simpa [Fin.lt_iff_val_lt_val] using hij
-      exact False.elim ((Nat.not_lt.mpr (Nat.zero_le _)) this)
-    ·
-      have hij' : i < j := (Fin.succ_lt_succ_iff).1 hij
-      simpa using hf hij'
+  fin_cases i <;> fin_cases j
+  · -- 0 < 0 impossible
+    exact False.elim ((lt_irrefl (0 : Fin (n + 1))) hij)
+  · -- 0 < succ j
+    rename_i j
+    simpa using ha j
+  · -- succ i < 0 impossible
+    rename_i i
+    have : ((Fin.succ i : Fin (n + 1)).1) < 0 := by
+      simpa [Fin.lt_iff_val_lt_val] using hij
+    exact False.elim ((Nat.not_lt.mpr (Nat.zero_le _)) this)
+  · -- succ i < succ j
+    rename_i i j
+    have hij' : i < j := (Fin.succ_lt_succ_iff).1 hij
+    simpa using hf hij'
 
 end FinsetOrder
 
