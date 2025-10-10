@@ -1029,7 +1029,14 @@ private lemma Kernel.IndepFun.integral_mul_simple
                  (∫ ω, ∑ j, (B j).indicator (fun _ => b_coef j) ω ∂(κ t))
               = (∑ i, (a_coef i) * (κ t (A i)).toReal) *
                 (∑ j, (b_coef j) * (κ t (B j)).toReal) := by
-    sorry  -- Apply integral_finset_sum to pull sums out, then integral_indicator_const to each term
+    -- Simplify each integral separately
+    have h1 : ∫ ω, ∑ i, (A i).indicator (fun _ => a_coef i) ω ∂(κ t)
+            = ∑ i, (a_coef i) * (κ t (A i)).toReal := by
+      sorry -- Pull sum out with integral_finset_sum, apply integral_indicator_const
+    have h2 : ∫ ω, ∑ j, (B j).indicator (fun _ => b_coef j) ω ∂(κ t)
+            = ∑ j, (b_coef j) * (κ t (B j)).toReal := by
+      sorry -- Pull sum out with integral_finset_sum, apply integral_indicator_const
+    rw [h1, h2]
 
   -- Use independence to connect the two
   have h_connection : ∑ i, ∑ j, (a_coef i) * (b_coef j) * (κ t (A i ∩ B j)).toReal
