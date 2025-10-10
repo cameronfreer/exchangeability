@@ -1385,6 +1385,70 @@ lemma condIndep_of_condProb_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     ProbabilityTheory.CondIndep mG mF mH hmG μ :=
   (condIndep_iff_condexp_eq hmF hmG hmH).mpr h
 
+/-- **Product formula for conditional expectations of indicators** under conditional independence.
+
+If `mF` and `mH` are conditionally independent given `m`, then for
+`A ∈ mF` and `B ∈ mH` we have
+```
+μ[(1_{A∩B}) | m] = (μ[1_A | m]) · (μ[1_B | m])   a.e.
+```
+This is a direct rewrap of `ProbabilityTheory.condIndep_iff` (set version).
+-/
+lemma condExp_indicator_mul_indicator_of_condIndep
+    {Ω : Type*} {m₀ : MeasurableSpace Ω} [StandardBorelSpace Ω]
+    {m mF mH : MeasurableSpace Ω} {μ : @Measure Ω m₀}
+    [IsFiniteMeasure μ]
+    (hm  : m  ≤ m₀) (hmF : mF ≤ m₀) (hmH : mH ≤ m₀)
+    (hCI : ProbabilityTheory.CondIndep m mF mH hm μ)
+    {A B : Set Ω} (hA : MeasurableSet[mF] A) (hB : MeasurableSet[mH] B) :
+  μ[(A ∩ B).indicator (fun _ => (1 : ℝ)) | m]
+    =ᵐ[μ]
+  (μ[A.indicator (fun _ => (1 : ℝ)) | m]
+   * μ[B.indicator (fun _ => (1 : ℝ)) | m]) := by
+  -- This is exactly the set-level product identity from `condIndep_iff`.
+  have hProd :=
+    (ProbabilityTheory.condIndep_iff m mF mH hm hmF hmH μ).1 hCI
+  simpa using hProd A B hA hB
+
+/-- **Pull‑out corollary**: if, in addition, `B` is `m`‑measurable then
+`μ[1_B | m] = 1_B` a.e., so we can pull the right factor out (as an indicator).
+
+Formally:
+```
+μ[1_{A∩B} | m] = μ[1_A | m] · 1_B     a.e.   (when B ∈ m)
+```
+-/
+lemma condExp_indicator_mul_indicator_of_condIndep_pullout
+    {Ω : Type*} {m₀ : MeasurableSpace Ω} [StandardBorelSpace Ω]
+    {m mF mH : MeasurableSpace Ω} {μ : @Measure Ω m₀}
+    [IsFiniteMeasure μ]
+    (hm  : m  ≤ m₀) (hmF : mF ≤ m₀) (hmH : mH ≤ m₀)
+    (hCI : ProbabilityTheory.CondIndep m mF mH hm μ)
+    {A B : Set Ω} (hA : MeasurableSet[mF] A) (hB : MeasurableSet[mH] B)
+    (hB_m : MeasurableSet[m] B) :
+  μ[(A ∩ B).indicator (fun _ => (1 : ℝ)) | m]
+    =ᵐ[μ]
+  (μ[A.indicator (fun _ => (1 : ℝ)) | m]
+   * B.indicator (fun _ => (1 : ℝ))) := by
+  have hMain :=
+    condExp_indicator_mul_indicator_of_condIndep
+      (μ := μ) (m₀ := m₀) (m := m) (mF := mF) (mH := mH)
+      hm hmF hmH hCI hA hB
+  -- When `B ∈ m`, `μ[1_B | m] = 1_B` a.e.
+  have hRight :
+      μ[B.indicator (fun _ => (1 : ℝ)) | m] =ᵐ[μ] (B.indicator fun _ => (1 : ℝ)) := by
+    -- The constant function 1 is integrable
+    have h_int : Integrable (fun _ : Ω => (1 : ℝ)) μ := integrable_const (1 : ℝ)
+    -- Use the fact that for an m-measurable set, μ[1_B | m] = 1_B
+    -- This follows from condExp_indicator and condExp_const
+    calc μ[B.indicator (fun _ : Ω => (1 : ℝ)) | m]
+        =ᵐ[μ] B.indicator (μ[(fun _ : Ω => (1 : ℝ)) | m]) := condExp_indicator h_int hB_m
+      _ = B.indicator (fun _ => (1 : ℝ)) := by
+          congr 1
+          exact condExp_const (m := m) (hm := hm) (1 : ℝ)
+  -- Substitute on the right.
+  exact hMain.trans (EventuallyEq.mul EventuallyEq.rfl hRight)
+
 end Exchangeability.Probability
 
 /-! ### Re-exports and Aliases from Mathlib
