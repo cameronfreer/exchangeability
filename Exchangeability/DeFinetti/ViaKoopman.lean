@@ -1331,13 +1331,12 @@ lemma Kernel.IndepFun.integral_mul
     -- Uniform bounds
     · intro n ω
       simp only [dyadic_approx]
-      -- The clamped value is in [-CX, CX]
-      -- The floor quantization keeps us in that range (approximately)
-      -- Since we need a strict bound and the quantization might exceed slightly,
-      -- we use a weaker bound that's easier to prove
       sorry -- Show |⌊clamp(X(ω))/2^(-n)⌋ * 2^(-n)| ≤ CX
-            -- Key: clamp(X(ω)) ∈ [-CX, CX] implies floor quantization ≈ CX
-            -- For now, may need to adjust bound to CX + 2^(-n) or use n ≥ 1
+            -- Outline:
+            -- 1. val = clamp(X ω) ∈ [-CX, CX]
+            -- 2. Floor: ⌊val/g⌋ * g ≤ val < (⌊val/g⌋ + 1) * g where g = 2^(-n)
+            -- 3. Therefore |⌊val/g⌋ * g| ≤ max(|val|, |val + g|) ≤ CX + g
+            -- 4. For strict bound ≤ CX, need more careful analysis or adjust specification
 
     · intro n ω
       sorry -- Symmetric for Y
