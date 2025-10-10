@@ -8,6 +8,7 @@ import Mathlib.Probability.Independence.Basic
 import Mathlib.Probability.Independence.Conditional
 import Mathlib.Probability.Martingale.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
+import Mathlib.MeasureTheory.Function.ConditionalExpectation.Real
 import Mathlib.MeasureTheory.PiSystem
 
 /-!
@@ -944,11 +945,8 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
             have h1 : Integrable (X₂ ^ 2) μ := hL2.integrable_sq
             have h2 : Integrable (2 • X₂ * μ[X₂ | m₁]) μ := by
               -- Both X₂ and μ[X₂|m₁] are in L², so their product is in L¹ by Hölder
-              have : Integrable (X₂ * μ[X₂ | m₁]) μ := by
-                have hX₂_int : Integrable X₂ μ := hL2.integrable one_le_two
-                have hcond_int : Integrable (μ[X₂ | m₁]) μ := h_cond_mem.integrable one_le_two
-                exact hX₂_int.mul hcond_int
-              exact this.const_mul 2
+              have h_prod : Integrable (X₂ * μ[X₂ | m₁]) μ := hL2.integrable_mul h_cond_mem
+              exact h_prod.const_smul 2
             have h3 : Integrable ((μ[X₂ | m₁]) ^ 2) μ := h_cond_mem.integrable_sq
             -- Apply linearity: μ[a - b + c | m] = μ[a|m] - μ[b|m] + μ[c|m]
             calc μ[X₂ ^ 2 - 2 • X₂ * μ[X₂ | m₁] + (μ[X₂ | m₁]) ^ 2 | m₁]
@@ -961,9 +959,29 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         _ =ᵐ[μ] μ[X₂ ^ 2 | m₁] - 2 • μ[X₂ | m₁] * μ[X₂ | m₁] + (μ[X₂ | m₁]) ^ 2 := by
             -- Pull-out property: μ[g * f | m] = g * μ[f | m] when g is m-measurable
             -- And idempotence: μ[g | m] = g when g is m-measurable
-            -- Pull out property: μ[g * f | m] = g * μ[f | m] for m-measurable g
-            -- Idempotence: μ[g | m] = g for m-measurable g
-            sorry -- Need pull-out lemma for m-measurable functions
+            have h_meas : AEStronglyMeasurable[m₁] (μ[X₂ | m₁]) μ :=
+              stronglyMeasurable_condExp.aestronglyMeasurable
+            have hX₂_int : Integrable X₂ μ := hL2.integrable one_le_two
+            -- Pull out 2 • μ[X₂ | m₁] from μ[2 • X₂ * μ[X₂ | m₁] | m₁]
+            have h_pullout : μ[2 • X₂ * μ[X₂ | m₁] | m₁]
+                =ᵐ[μ] 2 • μ[X₂ | m₁] * μ[X₂ | m₁] := by
+              calc μ[2 • X₂ * μ[X₂ | m₁] | m₁]
+                  =ᵐ[μ] μ[(2 • μ[X₂ | m₁]) * X₂ | m₁] := by
+                    filter_upwards with ω; ring
+                _ =ᵐ[μ] (2 • μ[X₂ | m₁]) * μ[X₂ | m₁] := by
+                    have h_int : Integrable ((2 • μ[X₂ | m₁]) * X₂) μ := by
+                      have h_prod : Integrable (μ[X₂ | m₁] * X₂) μ := h_cond_mem.integrable_mul hL2
+                      exact h_prod.const_smul 2
+                    have h_smul_meas : AEStronglyMeasurable[m₁] (2 • μ[X₂ | m₁]) μ :=
+                      h_meas.const_smul 2
+                    exact condExp_mul_of_aestronglyMeasurable_left h_smul_meas h_int hX₂_int
+                _ =ᵐ[μ] 2 • μ[X₂ | m₁] * μ[X₂ | m₁] := by
+                    filter_upwards with ω; ring
+            -- Idempotence: μ[(μ[X₂ | m₁])² | m₁] = (μ[X₂ | m₁])²
+            have h_idem : μ[(μ[X₂ | m₁]) ^ 2 | m₁] =ᵐ[μ] (μ[X₂ | m₁]) ^ 2 :=
+              condExp_of_aestronglyMeasurable' hm₁ (h_meas.pow 2) h_cond_mem.integrable_sq
+            filter_upwards [h_pullout, h_idem] with ω hp hi
+            simp [hp, hi]
         _ =ᵐ[μ] μ[X₂ ^ 2 | m₁] - (μ[X₂ | m₁]) ^ 2 := by
             filter_upwards with ω
             ring
@@ -1027,7 +1045,8 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     -- For Lp spaces with p=2, ‖f‖² = (∫|f|²)^(1/2)² = ∫|f|²
     have h_norm_eq : ‖diffLp‖ ^ 2 = ∫ ω, |diffLp ω| ^ 2 ∂μ := by
       -- ‖f‖_2 = (∫|f|²)^(1/2), so ‖f‖_2² = ∫|f|²
-      sorry -- Need snorm_two_eq_toLp and relation to integral
+      rw [sq, ← inner_self_eq_norm_sq, inner_def, integral_inner_eq_sq_eLpNorm]
+      simp only [inner_self_eq_norm_sq_to_K, RCLike.ofReal_real_eq_id, id_eq]
     -- |diffLp|² = diffLp² since diffLp is real-valued
     have h_abs : (fun ω => |diffLp ω| ^ 2) =ᵐ[μ] fun ω => diffLp ω ^ 2 :=
       Eventually.of_forall fun ω => sq_abs _
@@ -1095,16 +1114,18 @@ lemma reverse_martingale_convergence {m₀ : MeasurableSpace Ω} {μ : Measure �
         (fun t ih => (this t).trans ih) t
 
   -- (1) a.e. convergence for antitone families
-  -- Need: Integrable.tendsto_ae_condExp_of_antitone or similar
+  -- mathlib has `Integrable.tendsto_ae_condexp` for ⨆ n, ℱ n (increasing filtrations)
+  -- For antitone 𝒢 with ⨅ n, 𝒢 n, we need the dual version or reindexing
   have h_ae :
       ∀ᵐ ω ∂μ, Tendsto (fun n => μ[X | 𝒢 n] ω) atTop (𝓝 (μ[X | tail] ω)) := by
-    sorry -- mathlib may not have this yet; could prove via Doob or backward martingale
+    sorry -- Prove by reindexing to convert to increasing filtration case
 
   -- (2) L¹ convergence for antitone families
-  -- Need: Integrable.tendsto_eLpNorm_condExp_of_antitone or similar
+  -- Similar to (1), use reindexing or derive from uniform integrability
+  -- mathlib has L¹ convergence for increasing filtrations
   have h_L1 :
       Tendsto (fun n => eLpNorm (μ[X | 𝒢 n] - μ[X | tail]) 1 μ) atTop (𝓝 0) := by
-    sorry -- follows from a.e. convergence + uniform integrability
+    sorry -- Follows from (1) via uniform integrability of conditional expectations
 
   -- Done
   exact ⟨h_ae, h_L1⟩
