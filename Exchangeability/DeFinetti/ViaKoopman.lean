@@ -374,25 +374,10 @@ lemma measurable_pi0 : Measurable (π0 (α := α)) := by
 
 namespace ProbabilityTheory.Kernel
 
-/-- **TODO**: Add to Mathlib.
-
-Two kernels from α to β are equal μ-almost everywhere if they give the same integrals
-for all bounded measurable test functions.
-
-This is the kernel analogue of `Measure.ext_of_forall_integral_eq` and should be proved
-using standard measure theory techniques (approximation by simple functions, monotone
-convergence, uniqueness of measures).
-
-**Proof sketch**:
-1. For each a, the measures κ(a) and η(a) agree on integrals of bounded measurable functions
-2. By density of bounded functions and monotone class theorem, κ(a) = η(a) as measures
-3. The set where κ(a) ≠ η(a) has μ-measure zero by hypothesis
--/
-axiom ae_eq_of_forall_integral_eq {α β : Type*} {mα : MeasurableSpace α} {mβ : MeasurableSpace β}
-    [StandardBorelSpace β] {μ : Measure α} {κ η : @Kernel α β mα mβ} :
-    (∀ (f : β → ℝ) (_hf : Measurable f) (_hbd : ∃ C, ∀ b, |f b| ≤ C),
-      (fun a => ∫ b, f b ∂(κ a)) =ᵐ[μ] (fun a => ∫ b, f b ∂(η a))) →
-    (∀ᵐ a ∂μ, κ a = η a)
+/- NOTE: The axiom `ae_eq_of_forall_integral_eq` was removed as it's unused.
+The file uses integral-level statements instead (see identicalConditionalMarginals_integral).
+If kernel a.e. equality is needed later, it can be proved using indicators on a countable
+π-system generator for Borel, ae_all_iff to swap quantifiers, and measure extension. -/
 
 end ProbabilityTheory.Kernel
 
