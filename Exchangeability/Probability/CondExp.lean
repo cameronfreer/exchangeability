@@ -148,39 +148,6 @@ lemma indicator_iUnion_tsum_of_pairwise_disjoint
     have : ∀ i, ω ∉ f i := fun i hi => h (Set.mem_iUnion.mpr ⟨i, hi⟩)
     simp [Set.indicator_of_notMem h, Set.indicator_of_notMem (this _)]
 
-/-- **Conditional expectation commutes with tsum for disjoint indicator functions.**
-
-For pairwise disjoint measurable sets, the conditional expectation of the union's
-indicator equals the tsum of conditional expectations of individual indicators.
-
-This is a special case of monotone convergence for conditional expectations.
-The proof uses the fact that partial sums of disjoint indicators are increasing
-and bounded, allowing us to pass to the limit.
-
-**TODO**: This currently uses `sorry`. The proof requires:
-1. Monotone convergence for conditional expectation (not yet in mathlib)
-2. Or dominated convergence applied to the specific case of bounded indicators
-3. Key property: E[lim fₙ | m] = lim E[fₙ | m] for monotone bounded sequences
--/
-lemma condExp_indicator_iUnion_tsum {m₀ m : MeasurableSpace Ω} {μ : Measure Ω}
-    [IsFiniteMeasure μ] (hm : m ≤ m₀)
-    (f : ℕ → Set Ω) (hf_meas : ∀ i, MeasurableSet[m₀] (f i))
-    (hdisj : Pairwise (Disjoint on f)) :
-    μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | m]
-      =ᵐ[μ] fun ω => ∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | m] ω := by
-  -- Step 1: Use pointwise equality from indicator_iUnion_tsum_of_pairwise_disjoint
-  have h_ind : (⋃ i, f i).indicator (fun _ : Ω => (1 : ℝ))
-      = fun ω => ∑' i, (f i).indicator (fun _ : Ω => (1 : ℝ)) ω :=
-    indicator_iUnion_tsum_of_pairwise_disjoint f hdisj
-
-  -- Step 2: Apply condExp_congr_ae to get E[⋃ indicator] = E[∑ indicator]
-  have h_lhs : μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | m]
-      =ᵐ[μ] μ[fun ω => ∑' i, (f i).indicator (fun _ : Ω => (1 : ℝ)) ω | m] :=
-    condExp_congr_ae (Eventually.of_forall h_ind)
-
-  -- Step 3: The core step - show E[∑ indicator] = ∑ E[indicator]
-  -- This requires monotone convergence for conditional expectation
-  sorry
 
 /-! ### Pair-law ⇒ conditional indicator equality (stub) -/
 
@@ -218,8 +185,91 @@ lemma condexp_indicator_eq_of_agree_on_future_rectangles
         | MeasurableSpace.comap Y inferInstance]
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂
-        | MeasurableSpace.comap Y inferInstance] :=
-  sorry
+        | MeasurableSpace.comap Y inferInstance] := by
+  classical
+  set mY := MeasurableSpace.comap Y inferInstance
+  set f₁ : Ω → ℝ := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₁ ω)
+  set f₂ : Ω → ℝ := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₂ ω)
+  have hX₁B : MeasurableSet (X₁ ⁻¹' B) := hX₁ hB
+  have hX₂B : MeasurableSet (X₂ ⁻¹' B) := hX₂ hB
+  have hf₁_indicator : f₁ = Set.indicator (X₁ ⁻¹' B) (fun _ : Ω => (1 : ℝ)) := by
+    funext ω; by_cases hω : X₁ ω ∈ B <;> simp [f₁, Set.indicator, hω]
+  have hf₂_indicator : f₂ = Set.indicator (X₂ ⁻¹' B) (fun _ : Ω => (1 : ℝ)) := by
+    funext ω; by_cases hω : X₂ ω ∈ B <;> simp [f₂, Set.indicator, hω]
+  have h_int_const : Integrable (fun _ : Ω => (1 : ℝ)) μ := integrable_const _
+  have hf₁_int : Integrable f₁ μ := by
+    simpa [f₁, hf₁_indicator] using h_int_const.indicator hX₁B
+  have hf₂_int : Integrable f₂ μ := by
+    simpa [f₂, hf₂_indicator] using h_int_const.indicator hX₂B
+  have hmY : mY ≤ inferInstance := by
+    intro s hs
+    rcases hs with ⟨E, hE, rfl⟩
+    exact hY hE
+  haveI : SigmaFinite (μ.trim hmY) :=
+    (inferInstance : IsFiniteMeasure (μ.trim hmY)).toSigmaFinite
+  have hmeasure_eq := hagree.measure_eq
+
+  -- equality of set integrals on all mY-measurable sets
+  have h_integral_eq :
+      ∀ {E : Set (ℕ → α)} (hE : MeasurableSet E),
+        ∫ ω in Y ⁻¹' E, f₁ ω ∂μ = ∫ ω in Y ⁻¹' E, f₂ ω ∂μ := by
+    intro E hE
+    have hrect : MeasurableSet (B ×ˢ E) := hB.prod hE
+    have hpair₁ : Measurable fun ω => (X₁ ω, Y ω) := hX₁.prod_mk hY
+    have hpair₂ : Measurable fun ω => (X₂ ω, Y ω) := hX₂.prod_mk hY
+    have hμ_eq :
+        μ ((fun ω => (X₁ ω, Y ω)) ⁻¹' (B ×ˢ E))
+        = μ ((fun ω => (X₂ ω, Y ω)) ⁻¹' (B ×ˢ E)) := by
+      simpa [Measure.map_apply, hpair₁, hpair₂, hrect]
+        using congrArg (fun ν => ν (B ×ˢ E)) hmeasure_eq
+    have hpre₁ :
+        (fun ω => (X₁ ω, Y ω)) ⁻¹' (B ×ˢ E)
+          = (X₁ ⁻¹' B) ∩ (Y ⁻¹' E) := by
+      ext ω; constructor <;> intro hω <;> simp [Set.mem_preimage] at hω ⊢
+    have hpre₂ :
+        (fun ω => (X₂ ω, Y ω)) ⁻¹' (B ×ˢ E)
+          = (X₂ ⁻¹' B) ∩ (Y ⁻¹' E) := by
+      ext ω; constructor <;> intro hω <;> simp [Set.mem_preimage] at hω ⊢
+    have hμ_inter :
+        μ ((X₁ ⁻¹' B) ∩ (Y ⁻¹' E))
+        = μ ((X₂ ⁻¹' B) ∩ (Y ⁻¹' E)) := by
+      simpa [hpre₁, hpre₂] using hμ_eq
+    calc
+      ∫ ω in Y ⁻¹' E, f₁ ω ∂μ
+          = ∫ ω in (Y ⁻¹' E) ∩ (X₁ ⁻¹' B), (1 : ℝ) ∂μ := by
+            simpa [f₁, hf₁_indicator, Set.inter_left_comm, Set.inter_assoc]
+              using
+                setIntegral_indicator (μ := μ) (s := Y ⁻¹' E) (t := X₁ ⁻¹' B)
+                  (f := fun _ : Ω => (1 : ℝ)) hX₁B
+      _ = (μ ((X₁ ⁻¹' B) ∩ (Y ⁻¹' E))).toReal := by
+        simp [Measure.real_def, Set.inter_left_comm, Set.inter_assoc]
+      _ = (μ ((X₂ ⁻¹' B) ∩ (Y ⁻¹' E))).toReal := by simpa [hμ_inter]
+      _ = ∫ ω in (Y ⁻¹' E) ∩ (X₂ ⁻¹' B), (1 : ℝ) ∂μ := by
+        simp [Measure.real_def, Set.inter_left_comm, Set.inter_assoc]
+      _ = ∫ ω in Y ⁻¹' E, f₂ ω ∂μ := by
+        simpa [f₂, hf₂_indicator, Set.inter_left_comm, Set.inter_assoc]
+          using
+            setIntegral_indicator (μ := μ) (s := Y ⁻¹' E) (t := X₂ ⁻¹' B)
+              (f := fun _ : Ω => (1 : ℝ)) hX₂B
+
+  have h_cond₂ := setIntegral_condExp (μ := μ) (m := mY) (hm := hmY)
+      (f := f₂) hf₂_int
+  have h_g_meas : StronglyMeasurable[mY] (μ[f₂ | mY]) :=
+    stronglyMeasurable_condExp
+  have h_g_int : Integrable (μ[f₂ | mY]) μ := integrable_condexp
+
+  -- uniqueness of CE from equality of all set integrals over mY
+  have h_set :
+      ∀ {s : Set Ω}, MeasurableSet[mY] s →
+        ∫ ω in s, f₁ ω ∂μ = ∫ ω in s, μ[f₂ | mY] ω ∂μ := by
+    intro s hs
+    have h1 := h_integral_eq (by rcases hs with ⟨E, hE, rfl⟩; exact hE)
+    have h2 := h_cond₂ hs
+    simpa [f₂] using h1.trans h2.symm
+
+  exact
+    ae_eq_condExp_of_forall_setIntegral_eq (hm := hmY)
+      hf₁_int h_g_int h_set h_g_meas
 
 /-! ### Conditional Probability -/
 
@@ -557,13 +607,32 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
             (f := H.indicator fun _ => (1 : ℝ)) hH_int MeasurableSet.univ |> fun h => by simpa using h
         linarith
 
-      have h_C_iUnion : ∀ (f : ℕ → Set Ω), (∀ i, MeasurableSet[mF ⊔ mG] (f i)) →
-          Pairwise (Disjoint on f) → (∀ i, C (f i)) → C (⋃ i, f i) := by
+      have h_C_iUnion :
+          ∀ (f : ℕ → Set Ω), (∀ i, MeasurableSet[mF ⊔ mG] (f i)) →
+            Pairwise (Disjoint on f) → (∀ i, C (f i)) → C (⋃ i, f i) := by
         intro f hf_meas hf_disj hf_C
-        simp only [C] at hf_C ⊢
-        have hf_meas' : ∀ i, MeasurableSet[m₀] (f i) := fun i => hmFG _ (hf_meas i)
-        -- Use tsum for countable disjoint union
-        sorry
+        -- Expand C(⋃ i, f i)
+        -- Use additivity of set integrals on pairwise disjoint unions for both sides.
+        have h_left :
+            ∫ ω in ⋃ i, f i, g ω ∂μ
+              = ∑' i, ∫ ω in f i, g ω ∂μ :=
+          integral_iUnion
+            (hf_meas := fun i => (hmFG _ (hf_meas i)))
+            (hfdisj := hf_disj)
+            (hfi := fun _ => hg_int.integrableOn)
+        have h_right :
+            ∫ ω in ⋃ i, f i, (H.indicator fun _ => (1 : ℝ)) ω ∂μ
+              = ∑' i, ∫ ω in f i, (H.indicator fun _ => (1 : ℝ)) ω ∂μ :=
+          integral_iUnion
+            (hf_meas := fun i => (hmFG _ (hf_meas i)))
+            (hfdisj := hf_disj)
+            (hfi := fun _ => hH_int.integrableOn)
+        -- termwise equality from hypothesis
+        have h_terms : ∀ i, ∫ ω in f i, g ω ∂μ
+                            = ∫ ω in f i, (H.indicator fun _ => (1 : ℝ)) ω ∂μ :=
+          hf_C
+        simpa [C, h_left, h_right] using
+          (tsum_congr (by intro i; simpa using h_terms i))
 
       -- Apply induction_on_inter
       sorry -- Need suitable form of induction_on_inter for this setting
@@ -808,71 +877,46 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
         _ = ∫ ω in S, (1 - μ[B.indicator (fun x => 1) | mG] ω) ∂μ := by
             rw [integral_sub hint_1.integrableOn integrable_condExp.integrableOn]
 
-    have hC_iUnion : ∀ (f : ℕ → Set Ω), (∀ i, MeasurableSet[m₀] (f i)) →
-        Pairwise (Disjoint on f) → (∀ i, C_S (f i)) → C_S (⋃ i, f i) := by
-      intro f hf_meas hf_disj hf_C
-      simp only [C_S] at hf_C ⊢
-
-      -- Strategy: Show that ∫ μ[indicator(⋃ f i) | m] = ∫ μ[indicator(⋃ f i) | m']
-      -- by showing both equal ∑ ∫ μ[indicator(f i) | m]
-
-      -- Step 1: Indicator of disjoint union equals sum of indicators
-      have h_ind_union : ∀ ω, (⋃ i, f i).indicator (fun _ : Ω => (1 : ℝ)) ω
-          = ∑' i, (f i).indicator (fun _ : Ω => (1 : ℝ)) ω :=
-        congrFun (indicator_iUnion_tsum_of_pairwise_disjoint f hf_disj)
-
-      -- Step 2: Conditional expectation of the sum
-      -- Need: E[∑' i, 1_{f i}] = ∑' i, E[1_{f i}]
-      -- This requires linearity of condExp for infinite sums (monotone/dominated convergence)
-      --
-      -- Proof strategy:
-      -- 1. Use h_ind_union to rewrite LHS: E[(⋃ f i).indicator] = E[∑' i, (f i).indicator]
-      -- 2. Apply condExp linearity for series: need a lemma like `condExp_tsum`
-      --    (Similar to `integral_tsum` from dominated convergence)
-      -- 3. Each indicator is bounded by 1, so the series is dominated by constant 1
-      --
-      -- Mathlib has `integral_tsum` but not yet `condExp_tsum` - this needs to be added
-      -- or proven directly using monotone convergence for conditional expectations.
-      have h_condExp_L : μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
-          =ᵐ[μ] fun ω => ∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω := by
-        haveI : IsFiniteMeasure μ := inferInstance
-        exact condExp_indicator_iUnion_tsum (le_sup_left.trans hmFG) f hf_meas hf_disj
-
-      have h_condExp_R : μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG]
-          =ᵐ[μ] fun ω => ∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mG] ω := by
-        haveI : IsFiniteMeasure μ := inferInstance
-        exact condExp_indicator_iUnion_tsum (hmG.trans hmFG) f hf_meas hf_disj
-
-      -- Step 3: Integrate both sides
-      rw [integral_congr_ae (ae_restrict_of_ae h_condExp_L),
-          integral_congr_ae (ae_restrict_of_ae h_condExp_R)]
-
-      -- Step 4: Exchange integral and sum using dominated convergence
-      -- All terms bounded by 1 (from condExp of bounded functions)
-      --
-      -- Proof strategy:
-      -- Use `integral_tsum` (mathlib's dominated convergence for series)
-      -- Key facts:
-      -- 1. Each indicator function satisfies: 0 ≤ 1_{f i} ≤ 1
-      -- 2. Conditional expectation preserves bounds: 0 ≤ E[1_{f i}|m] ≤ E[1|m] = 1
-      -- 3. Therefore |E[1_{f i}|m]| ≤ 1, so the series is dominated by ∑' i, 1 on S
-      -- 4. But we need summability: ∑' i, ∫ |E[1_{f i}|m]| < ∞
-      --    This holds because f i are disjoint, so ∑ i, ∫ E[1_{f i}|m] = ∫ E[∑ 1_{f i}|m] ≤ ∫ 1 < ∞
-      --
-      -- Mathlib: Use `integral_tsum` with appropriate summability proof
-      have h_int_tsum_L : ∫ ω in S, (∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω) ∂μ
-          = ∑' i, ∫ ω in S, μ[(f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω ∂μ := by
-        sorry -- Use integral_tsum with domination by summable constants
-
-      have h_int_tsum_R : ∫ ω in S, (∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mG] ω) ∂μ
-          = ∑' i, ∫ ω in S, μ[(f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂μ := by
-        sorry -- Same as h_int_tsum_L, use integral_tsum
-
-      -- Step 5: Apply hypothesis hf_C to each term
-      rw [h_int_tsum_L, h_int_tsum_R]
-      congr 1
-      ext i
-      exact hf_C i
+    have hC_iUnion :
+        ∀ (f : ℕ → Set Ω), (∀ i, MeasurableSet[m₀] (f i)) →
+          Pairwise (Disjoint on f) → (∀ i, C_S (f i)) → C_S (⋃ i, f i) := by
+      intro f hf_meas hf_disj _hfC  -- we won't need hfC in this argument
+      -- Rewrite set integrals over S as integrals w.r.t. the restricted measure μ.restrict S.
+      have hL₁ :
+          ∫ ω in S, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω ∂μ
+            = ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω ∂(μ.restrict S) := by
+        simp [set_integral_eq_integral_restrict]
+      have hR₁ :
+          ∫ ω in S, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂μ
+            = ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂(μ.restrict S) := by
+        simp [set_integral_eq_integral_restrict]
+      -- Finite ⇒ σ‑finite for trims, so we can use `integral_condExp` on the restricted measure.
+      haveI : IsFiniteMeasure (μ.restrict S) := inferInstance
+      haveI : SigmaFinite ((μ.restrict S).trim hmFG) :=
+        (inferInstance : IsFiniteMeasure ((μ.restrict S).trim hmFG)).toSigmaFinite
+      haveI : SigmaFinite ((μ.restrict S).trim hmG)  :=
+        (inferInstance : IsFiniteMeasure ((μ.restrict S).trim hmG)).toSigmaFinite
+      -- Apply `integral_condExp` with the restricted measure on `Ω` (set = univ).
+      have hL₂ :
+          ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω ∂(μ.restrict S)
+            = ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S) := by
+        simpa using
+          (integral_condExp (μ := μ.restrict S) (m := mF ⊔ mG) (hm := hmFG)
+            (f := (⋃ i, f i).indicator (fun _ => (1 : ℝ))))
+      have hR₂ :
+          ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂(μ.restrict S)
+            = ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S) := by
+        simpa using
+          (integral_condExp (μ := μ.restrict S) (m := mG) (hm := hmG)
+            (f := (⋃ i, f i).indicator (fun _ => (1 : ℝ))))
+      -- Evaluate both sides as the (restricted) measure of the union.
+      have h_meas_union : MeasurableSet (⋃ i, f i) := MeasurableSet.iUnion hf_meas
+      have h_eval :
+          ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S)
+            = ((μ.restrict S) (⋃ i, f i)).toReal := by
+        simp [Measure.real_def, h_meas_union]
+      -- Both sides compute to the same number; conclude.
+      simpa [C_S, hL₁, hR₁, hL₂, hR₂, h_eval]
 
     -- Step 3: Apply Dynkin π-λ theorem
     -- We've shown C_S is a Dynkin system (closed under ∅, complement, disjoint union)
