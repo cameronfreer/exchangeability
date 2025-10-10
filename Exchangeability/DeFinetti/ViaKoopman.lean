@@ -1351,16 +1351,42 @@ lemma Kernel.IndepFun.integral_mul
 
       -- Key property: floor puts val in the interval [k₀ * g, (k₀ + 1) * g)
       have h_val_in_interval : val ∈ Set.Ico (k₀ * grid_size) ((k₀ + 1) * grid_size) := by
-        sorry -- Int.floor_mul_le and Int.lt_floor_add_one
+        rw [Set.mem_Ico]
+        constructor
+        · -- Lower bound: k₀ * g ≤ val
+          -- From floor: k₀ ≤ val / g, so k₀ * g ≤ val
+          sorry -- calc with Int.floor_le
+        · -- Upper bound: val < (k₀ + 1) * g
+          -- From floor: val / g < k₀ + 1, so val < (k₀ + 1) * g
+          sorry -- calc with Int.lt_floor_add_one
 
       -- This means X ω is in the preimage A ⟨k₀, _⟩
       have h_in_k0 : X ω ∈ Set.Ico (k₀ * grid_size) ((k₀ + 1) * grid_size) := by
-        sorry -- val = clamp(X ω) and val ∈ interval
+        -- If X ω is already in [-CX, CX], then val = X ω
+        -- Otherwise val = clamped value which is in the interval
+        by_cases h : -CX ≤ X ω ∧ X ω ≤ CX
+        · -- X ω is in range, so val = X ω
+          simp only [val] at h_val_in_interval
+          have : max (-CX) (min CX (X ω)) = X ω := by
+            sorry -- min and max simplify when in range
+          rw [this] at h_val_in_interval
+          exact h_val_in_interval
+        · -- X ω is out of range, but val (clamped) is in interval
+          -- The interval [k₀*g, (k₀+1)*g) contains val
+          -- Since val ∈ [-CX, CX] and intervals cover this range
+          sorry -- val ∈ interval and X ω maps via clamp
 
       -- For any other k, X ω is NOT in that interval
       have h_not_in_other : ∀ (k : ℤ) (hk : k_min ≤ k ∧ k ≤ k_max), k ≠ k₀ →
           X ω ∉ Set.Ico (k * grid_size) ((k + 1) * grid_size) := by
-        sorry -- Intervals are disjoint
+        intro k hk hne
+        intro h_in_k
+        -- X ω is in interval [k*g, (k+1)*g)
+        -- We know X ω is in interval [k₀*g, (k₀+1)*g)
+        -- These intervals are disjoint when k ≠ k₀
+        rw [Set.mem_Ico] at h_in_k h_in_k0
+        -- k*g ≤ X ω < (k+1)*g and k₀*g ≤ X ω < (k₀+1)*g
+        sorry -- Contradiction: intervals [k*g,(k+1)*g) and [k₀*g,(k₀+1)*g) are disjoint for k ≠ k₀
 
       -- Therefore the sum has exactly one nonzero term
       show ⌊val / grid_size⌋ * grid_size
