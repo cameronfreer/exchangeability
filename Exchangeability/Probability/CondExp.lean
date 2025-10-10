@@ -149,12 +149,21 @@ lemma indicator_iUnion_tsum_of_pairwise_disjoint
 
 /-! ### Pair-law ⇒ conditional indicator equality (stub) -/
 
+/-- Standard cylinder on the first `r` coordinates starting at index 0. -/
+def cylinder (α : Type*) (r : ℕ) (C : Fin r → Set α) : Set (ℕ → α) :=
+  {f | ∀ i : Fin r, f i ∈ C i}
+
+/-- Agreement on future rectangles property (inlined to avoid circular dependency). -/
+structure AgreeOnFutureRectangles {α : Type*} [MeasurableSpace α]
+    (μ ν : Measure (α × (ℕ → α))) : Prop :=
+  (measure_eq : μ = ν)
+
 lemma condexp_indicator_eq_of_agree_on_future_rectangles
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α]
     {X₁ X₂ : Ω → α} {Y : Ω → ℕ → α}
     (hX₁ : Measurable X₁) (hX₂ : Measurable X₂) (hY : Measurable Y)
-    (hagree : Exchangeability.DeFinetti.ViaMartingale.AgreeOnFutureRectangles
+    (hagree : AgreeOnFutureRectangles
       (Measure.map (fun ω => (X₁ ω, Y ω)) μ)
       (Measure.map (fun ω => (X₂ ω, Y ω)) μ))
     (B : Set α) (hB : MeasurableSet B) :
@@ -164,9 +173,14 @@ lemma condexp_indicator_eq_of_agree_on_future_rectangles
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂
         | MeasurableSpace.comap Y inferInstance] := by
   classical
-  set mY := MeasurableSpace.comap Y inferInstance
+  set mY := @MeasurableSpace.comap (ℕ → α) Ω _ Y
   set f₁ : Ω → ℝ := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₁ ω)
   set f₂ : Ω → ℝ := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₂ ω)
+  have hmY : mY ≤ ‹MeasurableSpace Ω› := by
+    intro s hs
+    rcases hs with ⟨E, hE, rfl⟩
+    exact hY hE
+  -- Measurability in the ambient space (needed for integrability)
   have hX₁B : MeasurableSet (X₁ ⁻¹' B) := hX₁ hB
   have hX₂B : MeasurableSet (X₂ ⁻¹' B) := hX₂ hB
   have hf₁_indicator : f₁ = Set.indicator (X₁ ⁻¹' B) (fun _ : Ω => (1 : ℝ)) := by
@@ -178,10 +192,6 @@ lemma condexp_indicator_eq_of_agree_on_future_rectangles
     simpa [f₁, hf₁_indicator] using h_int_const.indicator hX₁B
   have hf₂_int : Integrable f₂ μ := by
     simpa [f₂, hf₂_indicator] using h_int_const.indicator hX₂B
-  have hmY : mY ≤ inferInstance := by
-    intro s hs
-    rcases hs with ⟨E, hE, rfl⟩
-    exact hY hE
   haveI : SigmaFinite (μ.trim hmY) :=
     (inferInstance : IsFiniteMeasure (μ.trim hmY)).toSigmaFinite
   have hmeasure_eq := hagree.measure_eq
