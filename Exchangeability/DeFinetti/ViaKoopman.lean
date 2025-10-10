@@ -1359,21 +1359,20 @@ lemma Kernel.IndepFun.integral_mul
 
       -- This means X ω is in the preimage A ⟨k₀, _⟩
       have h_in_k0 : X ω ∈ Set.Ico (k₀ * grid_size) ((k₀ + 1) * grid_size) := by
-        -- If X ω is already in [-CX, CX], then val = X ω
-        -- Otherwise val = clamped value which is in the interval
-        by_cases h : -CX ≤ X ω ∧ X ω ≤ CX
-        · -- X ω is in range, so val = X ω
-          simp only [val] at h_val_in_interval
-          have : max (-CX) (min CX (X ω)) = X ω := by
-            have h1 : min CX (X ω) = X ω := min_eq_right h.2
-            rw [h1]
-            exact max_eq_right h.1
-          rw [this] at h_val_in_interval
-          exact h_val_in_interval
-        · -- X ω is out of range, but val (clamped) is in interval
-          -- The interval [k₀*g, (k₀+1)*g) contains val
-          -- Since val ∈ [-CX, CX] and intervals cover this range
-          sorry -- val ∈ interval and X ω maps via clamp
+        -- By hypothesis hCX, we have |X ω| ≤ CX, so -CX ≤ X ω ≤ CX
+        have h_range : -CX ≤ X ω ∧ X ω ≤ CX := by
+          have : |X ω| ≤ CX := hCX ω
+          constructor
+          · linarith [abs_nonneg (X ω), neg_le_abs (X ω)]
+          · exact le_trans (le_abs_self (X ω)) this
+        -- Therefore val = X ω
+        simp only [val] at h_val_in_interval
+        have : max (-CX) (min CX (X ω)) = X ω := by
+          have h1 : min CX (X ω) = X ω := min_eq_right h_range.2
+          rw [h1]
+          exact max_eq_right h_range.1
+        rw [this] at h_val_in_interval
+        exact h_val_in_interval
 
       -- k₀ is in the valid range
       have h_k0_in_range : k_min ≤ k₀ ∧ k₀ ≤ k_max := by
@@ -1521,15 +1520,20 @@ lemma Kernel.IndepFun.integral_mul
             _ < ((k₀ : ℝ) + 1) * grid_size := by exact_mod_cast mul_lt_mul_of_pos_right h hg
 
       have h_in_k0 : Y ω ∈ Set.Ico (k₀ * grid_size) ((k₀ + 1) * grid_size) := by
-        by_cases h : -CY ≤ Y ω ∧ Y ω ≤ CY
-        · simp only [val] at h_val_in_interval
-          have : max (-CY) (min CY (Y ω)) = Y ω := by
-            have h1 : min CY (Y ω) = Y ω := min_eq_right h.2
-            rw [h1]
-            exact max_eq_right h.1
-          rw [this] at h_val_in_interval
-          exact h_val_in_interval
-        · sorry -- val ∈ interval and Y ω maps via clamp
+        -- By hypothesis hCY, we have |Y ω| ≤ CY, so -CY ≤ Y ω ≤ CY
+        have h_range : -CY ≤ Y ω ∧ Y ω ≤ CY := by
+          have : |Y ω| ≤ CY := hCY ω
+          constructor
+          · linarith [abs_nonneg (Y ω), neg_le_abs (Y ω)]
+          · exact le_trans (le_abs_self (Y ω)) this
+        -- Therefore val = Y ω
+        simp only [val] at h_val_in_interval
+        have : max (-CY) (min CY (Y ω)) = Y ω := by
+          have h1 : min CY (Y ω) = Y ω := min_eq_right h_range.2
+          rw [h1]
+          exact max_eq_right h_range.1
+        rw [this] at h_val_in_interval
+        exact h_val_in_interval
 
       have h_k0_in_range : k_min ≤ k₀ ∧ k₀ ≤ k_max := by
         constructor
