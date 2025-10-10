@@ -176,7 +176,7 @@ lemma condExp_indicator_iUnion_tsum {m₀ m : MeasurableSpace Ω} {μ : Measure 
   -- Step 2: Apply condExp_congr_ae to get E[⋃ indicator] = E[∑ indicator]
   have h_lhs : μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | m]
       =ᵐ[μ] μ[fun ω => ∑' i, (f i).indicator (fun _ : Ω => (1 : ℝ)) ω | m] :=
-    condExp_congr_ae (EventuallyEq.of_forall h_ind)
+    condExp_congr_ae (Eventually.of_forall h_ind)
 
   -- Step 3: The core step - show E[∑ indicator] = ∑ E[indicator]
   -- This requires monotone convergence for conditional expectation
@@ -269,7 +269,7 @@ lemma condProb_ae_bound_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [IsPro
     (A : Set Ω) (hA : MeasurableSet[m₀] A) :
     ∀ᵐ ω ∂μ, ‖μ[A.indicator (fun _ => (1 : ℝ)) | m] ω‖ ≤ 1 := by
   haveI : SigmaFinite (μ.trim hm) := inst
-  have h := condProb_ae_nonneg_le_one m hm hA
+  have h := @condProb_ae_nonneg_le_one Ω m₀ μ _ m hm inst A hA
   filter_upwards [h] with ω hω
   rcases hω with ⟨h0, h1⟩
   have : |condProb μ m A ω| ≤ 1 := by
@@ -835,11 +835,13 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
       -- or proven directly using monotone convergence for conditional expectations.
       have h_condExp_L : μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
           =ᵐ[μ] fun ω => ∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω := by
-        exact Exchangeability.Probability.condExp_indicator_iUnion_tsum (le_sup_left.trans hmFG) f hf_meas hf_disj
+        haveI : IsFiniteMeasure μ := inferInstance
+        exact condExp_indicator_iUnion_tsum (le_sup_left.trans hmFG) f hf_meas hf_disj
 
       have h_condExp_R : μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG]
           =ᵐ[μ] fun ω => ∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mG] ω := by
-        exact Exchangeability.Probability.condExp_indicator_iUnion_tsum (hmG.trans hmFG) f hf_meas hf_disj
+        haveI : IsFiniteMeasure μ := inferInstance
+        exact condExp_indicator_iUnion_tsum (hmG.trans hmFG) f hf_meas hf_disj
 
       -- Step 3: Integrate both sides
       rw [integral_congr_ae (ae_restrict_of_ae h_condExp_L),
