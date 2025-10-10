@@ -1307,24 +1307,118 @@ lemma Kernel.IndepFun.integral_mul
 
     -- Prove each dyadic_approx is a simple function
     · intro n
-      sorry -- Need to show dyadic_approx CX X n is a finite sum of indicators
-            -- For each k in finite range, define A_k = X⁻¹([k*2^(-n), (k+1)*2^(-n)))
-            -- These are measurable by h_preimage_meas
-            -- dyadic_approx = ∑_k (k * 2^(-n)) * indicator(A_k)
+      -- Define the finite index set: integers k with k*2^(-n) in [-CX, CX]
+      let grid_size := (2 : ℝ) ^ (-(n : ℤ))
+      -- Range of k: approximately -⌈CX/grid_size⌉ to ⌈CX/grid_size⌉
+      let k_min := ⌈-CX / grid_size⌉ - 1
+      let k_max := ⌈CX / grid_size⌉ + 1
+      -- Define index type as integers in finite range
+      let ι := {k : ℤ // k_min ≤ k ∧ k ≤ k_max}
+
+      -- For each k, define the set where X falls in the k-th grid cell
+      let A : ι → Set Ω := fun ⟨k, _⟩ => X ⁻¹' (Set.Ico (k * grid_size) ((k + 1) * grid_size))
+      let a : ι → ℝ := fun ⟨k, _⟩ => k * grid_size
+
+      -- 1. ι is Fintype (bounded integers)
+      have hι : Fintype ι := by
+        -- ι is a subtype of integers in [k_min, k_max]
+        sorry -- Should use Int.fintypeIcc or Set.fintypeIcc
+              -- The subtype {k : ℤ // k_min ≤ k ≤ k_max} is Fintype
+
+      -- 2. Each A k is measurable in both senses
+      have hA_meas : ∀ i : ι, MeasurableSet (A i) ∧
+                               MeasurableSet[MeasurableSpace.comap X inferInstance] (A i) := by
+        intro ⟨k, _⟩
+        simp only [A]
+        constructor
+        · -- Ambient measurability: X⁻¹(Ico(...)) is measurable
+          exact (h_preimage_meas (Set.Ico (k * grid_size) ((k + 1) * grid_size)) measurableSet_Ico).1
+        · -- Comap measurability: X⁻¹(S) is in comap X by definition
+          exact ⟨Set.Ico (k * grid_size) ((k + 1) * grid_size), measurableSet_Ico, rfl⟩
+
+      -- 3. Show the equality
+      refine ⟨ι, hι, a, A, hA_meas, ?_⟩
+      ext ω
+      simp only [dyadic_approx, A, a]
+      -- LHS: ⌊clamp(X ω) / grid_size⌋ * grid_size
+      -- RHS: ∑ ⟨k, _⟩, indicator(X ω ∈ Ico(k*g, (k+1)*g)) * (k * g)
+
+      -- The sum has exactly one nonzero term: the k where X(ω) falls in [k*g, (k+1)*g)
+      -- That k is precisely ⌊clamp(X ω) / grid_size⌋
+
+      let val := max (-CX) (min CX (X ω))
+      let k₀ := ⌊val / grid_size⌋
+
+      -- Key property: floor puts val in the interval [k₀ * g, (k₀ + 1) * g)
+      have h_val_in_interval : val ∈ Set.Ico (k₀ * grid_size) ((k₀ + 1) * grid_size) := by
+        rw [Set.mem_Ico]
+        constructor
+        · -- Lower bound: k₀ * g ≤ val
+          -- From floor: k₀ ≤ val / g, so k₀ * g ≤ val
+          sorry -- calc with Int.floor_le
+        · -- Upper bound: val < (k₀ + 1) * g
+          -- From floor: val / g < k₀ + 1, so val < (k₀ + 1) * g
+          sorry -- calc with Int.lt_floor_add_one
+
+      -- This means X ω is in the preimage A ⟨k₀, _⟩
+      have h_in_k0 : X ω ∈ Set.Ico (k₀ * grid_size) ((k₀ + 1) * grid_size) := by
+        -- If X ω is already in [-CX, CX], then val = X ω
+        -- Otherwise val = clamped value which is in the interval
+        by_cases h : -CX ≤ X ω ∧ X ω ≤ CX
+        · -- X ω is in range, so val = X ω
+          simp only [val] at h_val_in_interval
+          have : max (-CX) (min CX (X ω)) = X ω := by
+            sorry -- min and max simplify when in range
+          rw [this] at h_val_in_interval
+          exact h_val_in_interval
+        · -- X ω is out of range, but val (clamped) is in interval
+          -- The interval [k₀*g, (k₀+1)*g) contains val
+          -- Since val ∈ [-CX, CX] and intervals cover this range
+          sorry -- val ∈ interval and X ω maps via clamp
+
+      -- For any other k, X ω is NOT in that interval
+      have h_not_in_other : ∀ (k : ℤ) (hk : k_min ≤ k ∧ k ≤ k_max), k ≠ k₀ →
+          X ω ∉ Set.Ico (k * grid_size) ((k + 1) * grid_size) := by
+        intro k hk hne
+        intro h_in_k
+        -- X ω is in interval [k*g, (k+1)*g)
+        -- We know X ω is in interval [k₀*g, (k₀+1)*g)
+        -- These intervals are disjoint when k ≠ k₀
+        rw [Set.mem_Ico] at h_in_k h_in_k0
+        -- k*g ≤ X ω < (k+1)*g and k₀*g ≤ X ω < (k₀+1)*g
+        sorry -- Contradiction: intervals [k*g,(k+1)*g) and [k₀*g,(k₀+1)*g) are disjoint for k ≠ k₀
+
+      -- Therefore the sum has exactly one nonzero term
+      show ⌊val / grid_size⌋ * grid_size
+         = ∑ i : ι, (X ⁻¹' Set.Ico (i.1 * grid_size) ((i.1 + 1) * grid_size)).indicator
+                    (fun _ => i.1 * grid_size) ω
+
+      sorry -- Complete: Use Finset.sum_eq_single to show sum = k₀ * grid_size
+            -- where k₀ is the unique index with indicator = 1
 
     · intro n
       sorry -- Symmetric for Y
 
     -- Uniform bounds
     · intro n ω
-      sorry -- |⌊X(ω)/2^(-n)⌋ * 2^(-n)| ≤ |X(ω)| + 2^(-n) ≤ CX + 2^(-n) ≤ CX for all n ≥ 1
+      simp only [dyadic_approx]
+      sorry -- Show |⌊clamp(X(ω))/2^(-n)⌋ * 2^(-n)| ≤ CX
+            -- Outline:
+            -- 1. val = clamp(X ω) ∈ [-CX, CX]
+            -- 2. Floor: ⌊val/g⌋ * g ≤ val < (⌊val/g⌋ + 1) * g where g = 2^(-n)
+            -- 3. Therefore |⌊val/g⌋ * g| ≤ max(|val|, |val + g|) ≤ CX + g
+            -- 4. For strict bound ≤ CX, need more careful analysis or adjust specification
 
     · intro n ω
       sorry -- Symmetric for Y
 
     -- Pointwise convergence
     · intro ω
-      sorry -- |X(ω) - dyadic_approx X n ω| ≤ 2^(-n) → 0 as n → ∞
+      -- Key property: floor quantization has error at most one grid unit
+      -- |X(ω) - ⌊X(ω)/ε⌋*ε| ≤ ε, and ε = 2^(-n) → 0
+      sorry -- Apply Metric.tendsto_atTop with error bound 2^(-n)
+            -- For any ε > 0, choose N with 2^(-N) < ε
+            -- Then for n ≥ N: dist(X ω, dyadic_approx CX X n ω) ≤ 2^(-n) ≤ 2^(-N) < ε
 
     · intro ω
       sorry -- Symmetric for Y
