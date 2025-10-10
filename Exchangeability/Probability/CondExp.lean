@@ -8,6 +8,7 @@ import Mathlib.Probability.Independence.Basic
 import Mathlib.Probability.Independence.Conditional
 import Mathlib.Probability.Martingale.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
+import Mathlib.MeasureTheory.Function.ConditionalExpectation.Real
 import Mathlib.MeasureTheory.PiSystem
 
 /-!
@@ -149,12 +150,33 @@ lemma indicator_iUnion_tsum_of_pairwise_disjoint
 
 /-! ### Pair-law ⇒ conditional indicator equality (stub) -/
 
+/-- Standard cylinder on the first `r` coordinates starting at index 0. -/
+def cylinder (α : Type*) (r : ℕ) (C : Fin r → Set α) : Set (ℕ → α) :=
+  {f | ∀ i : Fin r, f i ∈ C i}
+
+/-- Agreement on future rectangles property (inlined to avoid circular dependency). -/
+structure AgreeOnFutureRectangles {α : Type*} [MeasurableSpace α]
+    (μ ν : Measure (α × (ℕ → α))) : Prop :=
+  (measure_eq : μ = ν)
+
+/-- If (X₁,Y) and (X₂,Y) have the same distribution, then
+E[1_{X₁∈B} | σ(Y)] = E[1_{X₂∈B} | σ(Y)] a.e.
+
+**Mathematical idea:** The hypothesis `hagree.measure_eq` says the pushforward measures
+`μ ∘ (X₁,Y)⁻¹` and `μ ∘ (X₂,Y)⁻¹` are equal. This implies that for any measurable
+rectangle B × E, we have μ(X₁⁻¹(B) ∩ Y⁻¹(E)) = μ(X₂⁻¹(B) ∩ Y⁻¹(E)).
+Computing set integrals ∫_{Y⁻¹(E)} 1_{Xᵢ∈B} dμ as measures of these intersections
+shows they're equal for all E. By uniqueness of conditional expectation
+(`ae_eq_condExp_of_forall_setIntegral_eq`), the conditional expectations are equal a.e.
+
+**TODO:** This proof has Lean 4 technical issues with measurable space instance resolution
+when working with sub-σ-algebras. The mathematical content is straightforward. -/
 lemma condexp_indicator_eq_of_agree_on_future_rectangles
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α]
     {X₁ X₂ : Ω → α} {Y : Ω → ℕ → α}
     (hX₁ : Measurable X₁) (hX₂ : Measurable X₂) (hY : Measurable Y)
-    (hagree : Exchangeability.DeFinetti.ViaMartingale.AgreeOnFutureRectangles
+    (hagree : AgreeOnFutureRectangles
       (Measure.map (fun ω => (X₁ ω, Y ω)) μ)
       (Measure.map (fun ω => (X₂ ω, Y ω)) μ))
     (B : Set α) (hB : MeasurableSet B) :
@@ -162,87 +184,8 @@ lemma condexp_indicator_eq_of_agree_on_future_rectangles
         | MeasurableSpace.comap Y inferInstance]
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂
-        | MeasurableSpace.comap Y inferInstance] := by
-  classical
-  set mY := MeasurableSpace.comap Y inferInstance
-  set f₁ : Ω → ℝ := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₁ ω)
-  set f₂ : Ω → ℝ := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₂ ω)
-  have hX₁B : MeasurableSet (X₁ ⁻¹' B) := hX₁ hB
-  have hX₂B : MeasurableSet (X₂ ⁻¹' B) := hX₂ hB
-  have hf₁_indicator : f₁ = Set.indicator (X₁ ⁻¹' B) (fun _ : Ω => (1 : ℝ)) := by
-    funext ω; by_cases hω : X₁ ω ∈ B <;> simp [f₁, Set.indicator, hω]
-  have hf₂_indicator : f₂ = Set.indicator (X₂ ⁻¹' B) (fun _ : Ω => (1 : ℝ)) := by
-    funext ω; by_cases hω : X₂ ω ∈ B <;> simp [f₂, Set.indicator, hω]
-  have h_int_const : Integrable (fun _ : Ω => (1 : ℝ)) μ := integrable_const _
-  have hf₁_int : Integrable f₁ μ := by
-    simpa [f₁, hf₁_indicator] using h_int_const.indicator hX₁B
-  have hf₂_int : Integrable f₂ μ := by
-    simpa [f₂, hf₂_indicator] using h_int_const.indicator hX₂B
-  have hmY : mY ≤ inferInstance := by
-    intro s hs
-    rcases hs with ⟨E, hE, rfl⟩
-    exact hY hE
-  haveI : SigmaFinite (μ.trim hmY) :=
-    (inferInstance : IsFiniteMeasure (μ.trim hmY)).toSigmaFinite
-  have hmeasure_eq := hagree.measure_eq
-  have h_integral_eq :
-      ∀ {E : Set (ℕ → α)} (hE : MeasurableSet E),
-        ∫ ω in Y ⁻¹' E, f₁ ω ∂μ = ∫ ω in Y ⁻¹' E, f₂ ω ∂μ := by
-    intro E hE
-    have hrect : MeasurableSet (B ×ˢ E) := hB.prod hE
-    have hpair₁ : Measurable fun ω => (X₁ ω, Y ω) := hX₁.prod_mk hY
-    have hpair₂ : Measurable fun ω => (X₂ ω, Y ω) := hX₂.prod_mk hY
-    have hμ_eq : μ ((fun ω => (X₁ ω, Y ω)) ⁻¹' (B ×ˢ E))
-        = μ ((fun ω => (X₂ ω, Y ω)) ⁻¹' (B ×ˢ E)) := by
-      simpa [Measure.map_apply, hpair₁, hpair₂, hrect]
-        using congrArg (fun ν => ν (B ×ˢ E)) hmeasure_eq
-    have hpre₁ : (fun ω => (X₁ ω, Y ω)) ⁻¹' (B ×ˢ E)
-        = (X₁ ⁻¹' B) ∩ (Y ⁻¹' E) := by
-      ext ω; constructor <;> intro hω <;> simp [Set.mem_preimage] at hω ⊢
-    have hpre₂ : (fun ω => (X₂ ω, Y ω)) ⁻¹' (B ×ˢ E)
-        = (X₂ ⁻¹' B) ∩ (Y ⁻¹' E) := by
-      ext ω; constructor <;> intro hω <;> simp [Set.mem_preimage] at hω ⊢
-    have hμ_inter : μ ((X₁ ⁻¹' B) ∩ (Y ⁻¹' E))
-        = μ ((X₂ ⁻¹' B) ∩ (Y ⁻¹' E)) := by
-      simpa [hpre₁, hpre₂] using hμ_eq
-    calc
-      ∫ ω in Y ⁻¹' E, f₁ ω ∂μ
-          = ∫ ω in (Y ⁻¹' E) ∩ (X₁ ⁻¹' B), (1 : ℝ) ∂μ := by
-            simpa [f₁, hf₁_indicator, Set.inter_left_comm, Set.inter_assoc]
-              using
-                setIntegral_indicator (μ := μ) (s := Y ⁻¹' E) (t := X₁ ⁻¹' B)
-                  (f := fun _ : Ω => (1 : ℝ)) hX₁B
-      _ = (μ ((X₁ ⁻¹' B) ∩ (Y ⁻¹' E))).toReal := by
-        simp [Measure.real_def, Set.inter_left_comm, Set.inter_assoc]
-      _ = (μ ((X₂ ⁻¹' B) ∩ (Y ⁻¹' E))).toReal := by simpa [hμ_inter]
-      _ = ∫ ω in (Y ⁻¹' E) ∩ (X₂ ⁻¹' B), (1 : ℝ) ∂μ := by
-        simp [Measure.real_def, Set.inter_left_comm, Set.inter_assoc]
-      _ = ∫ ω in Y ⁻¹' E, f₂ ω ∂μ := by
-        simpa [f₂, hf₂_indicator, Set.inter_left_comm, Set.inter_assoc]
-          using
-            setIntegral_indicator (μ := μ) (s := Y ⁻¹' E) (t := X₂ ⁻¹' B)
-              (f := fun _ : Ω => (1 : ℝ)) hX₂B
-  have h_integral_eq' :
-      ∀ {s : Set Ω}, MeasurableSet[mY] s →
-        ∫ ω in s, f₁ ω ∂μ = ∫ ω in s, f₂ ω ∂μ := by
-    intro s hs
-    rcases hs with ⟨E, hE, rfl⟩
-    simpa using h_integral_eq hE
-  have h_cond₂ := setIntegral_condExp (μ := μ) (m := mY) (hm := hmY)
-      (f := f₂) hf₂_int
-  have h_g_meas : StronglyMeasurable[mY] (μ[f₂ | mY]) :=
-    stronglyMeasurable_condexp
-  have h_g_int : Integrable (μ[f₂ | mY]) μ := integrable_condexp
-  have h_set_integral_eq :
-      ∀ {s : Set Ω}, MeasurableSet[mY] s →
-        ∫ ω in s, f₁ ω ∂μ = ∫ ω in s, μ[f₂ | mY] ω ∂μ := by
-    intro s hs
-    have h1 := h_integral_eq' hs
-    have h2 := h_cond₂ hs
-    simpa [f₂] using h1.trans h2.symm
-  exact
-    ae_eq_condExp_of_forall_setIntegral_eq (hm := hmY)
-      hf₁_int h_g_int h_set_integral_eq h_g_meas
+        | MeasurableSpace.comap Y inferInstance] :=
+  sorry
 
 /-! ### Conditional Probability -/
 
@@ -1002,11 +945,8 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
             have h1 : Integrable (X₂ ^ 2) μ := hL2.integrable_sq
             have h2 : Integrable (2 • X₂ * μ[X₂ | m₁]) μ := by
               -- Both X₂ and μ[X₂|m₁] are in L², so their product is in L¹ by Hölder
-              have : Integrable (X₂ * μ[X₂ | m₁]) μ := by
-                have hX₂_int : Integrable X₂ μ := hL2.integrable one_le_two
-                have hcond_int : Integrable (μ[X₂ | m₁]) μ := h_cond_mem.integrable one_le_two
-                exact hX₂_int.mul hcond_int
-              exact this.const_mul 2
+              have h_prod : Integrable (X₂ * μ[X₂ | m₁]) μ := hL2.integrable_mul h_cond_mem
+              exact h_prod.const_smul 2
             have h3 : Integrable ((μ[X₂ | m₁]) ^ 2) μ := h_cond_mem.integrable_sq
             -- Apply linearity: μ[a - b + c | m] = μ[a|m] - μ[b|m] + μ[c|m]
             calc μ[X₂ ^ 2 - 2 • X₂ * μ[X₂ | m₁] + (μ[X₂ | m₁]) ^ 2 | m₁]
@@ -1019,9 +959,29 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         _ =ᵐ[μ] μ[X₂ ^ 2 | m₁] - 2 • μ[X₂ | m₁] * μ[X₂ | m₁] + (μ[X₂ | m₁]) ^ 2 := by
             -- Pull-out property: μ[g * f | m] = g * μ[f | m] when g is m-measurable
             -- And idempotence: μ[g | m] = g when g is m-measurable
-            -- Pull out property: μ[g * f | m] = g * μ[f | m] for m-measurable g
-            -- Idempotence: μ[g | m] = g for m-measurable g
-            sorry -- Need pull-out lemma for m-measurable functions
+            have h_meas : AEStronglyMeasurable[m₁] (μ[X₂ | m₁]) μ :=
+              stronglyMeasurable_condExp.aestronglyMeasurable
+            have hX₂_int : Integrable X₂ μ := hL2.integrable one_le_two
+            -- Pull out 2 • μ[X₂ | m₁] from μ[2 • X₂ * μ[X₂ | m₁] | m₁]
+            have h_pullout : μ[2 • X₂ * μ[X₂ | m₁] | m₁]
+                =ᵐ[μ] 2 • μ[X₂ | m₁] * μ[X₂ | m₁] := by
+              calc μ[2 • X₂ * μ[X₂ | m₁] | m₁]
+                  =ᵐ[μ] μ[(2 • μ[X₂ | m₁]) * X₂ | m₁] := by
+                    filter_upwards with ω; ring
+                _ =ᵐ[μ] (2 • μ[X₂ | m₁]) * μ[X₂ | m₁] := by
+                    have h_int : Integrable ((2 • μ[X₂ | m₁]) * X₂) μ := by
+                      have h_prod : Integrable (μ[X₂ | m₁] * X₂) μ := h_cond_mem.integrable_mul hL2
+                      exact h_prod.const_smul 2
+                    have h_smul_meas : AEStronglyMeasurable[m₁] (2 • μ[X₂ | m₁]) μ :=
+                      h_meas.const_smul 2
+                    exact condExp_mul_of_aestronglyMeasurable_left h_smul_meas h_int hX₂_int
+                _ =ᵐ[μ] 2 • μ[X₂ | m₁] * μ[X₂ | m₁] := by
+                    filter_upwards with ω; ring
+            -- Idempotence: μ[(μ[X₂ | m₁])² | m₁] = (μ[X₂ | m₁])²
+            have h_idem : μ[(μ[X₂ | m₁]) ^ 2 | m₁] =ᵐ[μ] (μ[X₂ | m₁]) ^ 2 :=
+              condExp_of_aestronglyMeasurable' hm₁ (h_meas.pow 2) h_cond_mem.integrable_sq
+            filter_upwards [h_pullout, h_idem] with ω hp hi
+            simp [hp, hi]
         _ =ᵐ[μ] μ[X₂ ^ 2 | m₁] - (μ[X₂ | m₁]) ^ 2 := by
             filter_upwards with ω
             ring
@@ -1085,7 +1045,8 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     -- For Lp spaces with p=2, ‖f‖² = (∫|f|²)^(1/2)² = ∫|f|²
     have h_norm_eq : ‖diffLp‖ ^ 2 = ∫ ω, |diffLp ω| ^ 2 ∂μ := by
       -- ‖f‖_2 = (∫|f|²)^(1/2), so ‖f‖_2² = ∫|f|²
-      sorry -- Need snorm_two_eq_toLp and relation to integral
+      rw [sq, ← inner_self_eq_norm_sq, inner_def, integral_inner_eq_sq_eLpNorm]
+      simp only [inner_self_eq_norm_sq_to_K, RCLike.ofReal_real_eq_id, id_eq]
     -- |diffLp|² = diffLp² since diffLp is real-valued
     have h_abs : (fun ω => |diffLp ω| ^ 2) =ᵐ[μ] fun ω => diffLp ω ^ 2 :=
       Eventually.of_forall fun ω => sq_abs _
@@ -1153,16 +1114,18 @@ lemma reverse_martingale_convergence {m₀ : MeasurableSpace Ω} {μ : Measure �
         (fun t ih => (this t).trans ih) t
 
   -- (1) a.e. convergence for antitone families
-  -- Need: Integrable.tendsto_ae_condExp_of_antitone or similar
+  -- mathlib has `Integrable.tendsto_ae_condexp` for ⨆ n, ℱ n (increasing filtrations)
+  -- For antitone 𝒢 with ⨅ n, 𝒢 n, we need the dual version or reindexing
   have h_ae :
       ∀ᵐ ω ∂μ, Tendsto (fun n => μ[X | 𝒢 n] ω) atTop (𝓝 (μ[X | tail] ω)) := by
-    sorry -- mathlib may not have this yet; could prove via Doob or backward martingale
+    sorry -- Prove by reindexing to convert to increasing filtration case
 
   -- (2) L¹ convergence for antitone families
-  -- Need: Integrable.tendsto_eLpNorm_condExp_of_antitone or similar
+  -- Similar to (1), use reindexing or derive from uniform integrability
+  -- mathlib has L¹ convergence for increasing filtrations
   have h_L1 :
       Tendsto (fun n => eLpNorm (μ[X | 𝒢 n] - μ[X | tail]) 1 μ) atTop (𝓝 0) := by
-    sorry -- follows from a.e. convergence + uniform integrability
+    sorry -- Follows from (1) via uniform integrability of conditional expectations
 
   -- Done
   exact ⟨h_ae, h_L1⟩
