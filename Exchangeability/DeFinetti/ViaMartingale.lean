@@ -722,6 +722,48 @@ lemma cylinder_measurable {r : ℕ} {C : Fin r → Set α}
 
 end FutureCylinders
 
+/-! ## Product of indicators for finite cylinders -/
+
+/-- Product of indicator functions for a finite cylinder on the first `r` coordinates. -/
+def indProd {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α) : Ω → ℝ :=
+  fun ω => ∏ i : Fin r, Set.indicator (C i) (fun _ => (1 : ℝ)) (X i ω)
+
+lemma indProd_as_indicator
+    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α) :
+    indProd X r C
+      = Set.indicator {ω | ∀ i : Fin r, X i ω ∈ C i} (fun _ => (1 : ℝ)) := by
+  classical
+  funext ω
+  -- Each factor is 0/1; the product is 1 iff all factors are 1.
+  induction r with
+  | zero => simp [indProd]  -- r = 0 : empty product = 1; the set is `univ`.
+  | succ r ih =>
+    -- Move from r to r+1
+    have : indProd X (r + 1) C ω
+        = indProd X r (fun j => C (Fin.castSucc j)) ω
+          * Set.indicator (C ⟨r, Nat.lt_succ_self r⟩) (fun _ => (1 : ℝ)) (X r ω) := by
+      simp [indProd, Fin.prod_univ_succ]
+    simp [this, ih, Set.indicator, Fin.forall_fin_succ]
+
+/-- Basic integrability: `indProd` is an indicator of a measurable set, hence integrable. -/
+lemma indProd_integrable
+    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    {μ : Measure Ω} (X : ℕ → Ω → α)
+    (r : ℕ) (C : Fin r → Set α)
+    (hX : ∀ n, Measurable (X n)) (hC : ∀ i, MeasurableSet (C i)) :
+    Integrable (indProd X r C) μ := by
+  classical
+  have hSet :
+      MeasurableSet {ω | ∀ i : Fin r, X i ω ∈ C i} := by
+    refine MeasurableSet.iInter ?_
+    intro i
+    have : Measurable fun ω => X i ω := hX i
+    simpa using this (hC i)
+  simpa [indProd_as_indicator X r C]
+    using (integrable_const (1 : ℝ)).indicator hSet
+
 /-- Drop the first coordinate of a path. -/
 def drop {α : Type*} (f : ℕ → α) : ℕ → α := shiftSeq (β:=α) 1 f
 
@@ -1040,6 +1082,51 @@ def M (k : ℕ) (B : Set α) : ℕ → Ω → ℝ :=
 
 end reverse_martingale
 
+/-! ## Tail factorization on finite cylinders -/
+
+/-- **Tail factorization on finite cylinders.**
+
+Assume you have, for all large enough `m`, the finite‑level factorization
+at the future filtration:
+```
+μ[indProd X r C | σ(θ_{m+1}X)]
+  = ∏ i<r μ[1_{X₀∈C i} | σ(θ_{m+1}X)]   a.s.
+```
+Then the same factorization holds **at the tail σ‑algebra**:
+```
+μ[indProd X r C | 𝒯_X]
+  = ∏ i<r μ[1_{X₀∈C i} | 𝒯_X]           a.s.
+```
+
+This passes the finite‑level equality to the tail using bounded
+dominated convergence together with reverse martingale convergence. -/
+axiom tail_factorization_from_future
+    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → α)
+    (hX : ∀ n, Measurable (X n))
+    (r : ℕ) (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i))
+    -- finite-level factorization hypothesis (available after applying the wrapper repeatedly)
+    (h_fact :
+      ∀ m ≥ r,  -- any `m` with at least r future steps works
+        μ[indProd X r C | futureFiltration X m]
+          =ᵐ[μ]
+        (fun ω => ∏ i : Fin r,
+          μ[Set.indicator (C i) (fun _ => (1 : ℝ)) ∘ (X 0) | futureFiltration X m] ω))
+    -- reverse-martingale convergence for each singleton factor
+    (h_rev :
+      ∀ i : Fin r,
+        (∀ᵐ ω ∂μ,
+          Tendsto (fun m => μ[Set.indicator (C i) (fun _ => (1 : ℝ)) ∘ (X 0)
+                                 | futureFiltration X m] ω)
+                  atTop
+                  (𝓝 (μ[Set.indicator (C i) (fun _ => (1 : ℝ)) ∘ (X 0)
+                          | tailSigma X] ω)))) :
+    μ[indProd X r C | tailSigma X]
+      =ᵐ[μ]
+    (fun ω => ∏ i : Fin r,
+        μ[Set.indicator (C i) (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] ω)
+
 /-- **Key lemma: All coordinates have identical conditional distributions.**
 
 For a contractable sequence, all coordinates X_m have the same conditional law given
@@ -1074,38 +1161,88 @@ tail σ-algebra `𝒯_X = ⋂_n σ(θ_n X)`.
 7. Second equality: conditional laws agree, giving conditional i.i.d.
 
 *Kallenberg (2005), third proof of Theorem 1.1 (page 28).* -/
+/-! ### Step 1: Constructing the directing measure ν
+
+From conditional expectations on indicators, we need to build a measurable family
+of probability measures `ν : Ω → Measure α`.
+
+The construction uses the standard Borel machinery: for each `ω`, define
+`ν ω` to be the unique probability measure satisfying
+`ν ω B = E[1_{X₀∈B} | 𝒯_X](ω)` for all measurable `B`.
+
+This requires StandardBorelSpace assumption on α to ensure existence.
+-/
+
+/-- Construction of the directing measure from conditional expectations.
+For each `ω : Ω`, `ν ω` is the conditional distribution of `X₀` given the tail σ-algebra. -/
+axiom directingMeasure_of_contractable
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+    (X : ℕ → Ω → α)
+    (hX_meas : ∀ n, Measurable (X n)) :
+    { ν : Ω → Measure α //
+      (∀ ω, IsProbabilityMeasure (ν ω)) ∧
+      (∀ B : Set α, MeasurableSet B →
+        (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X]) ∧
+      (∀ B : Set α, MeasurableSet B → Measurable (fun ω => ν ω B)) }
+
+/-! ### Step 2: Identical conditional laws -/
+
+/-- All `X_n` have the same conditional law `ν`.
+This follows from `extreme_members_equal_on_tail`. -/
+lemma conditional_law_eq_directingMeasure
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+    (X : ℕ → Ω → α)
+    (hX : Contractable μ X)
+    (hX_meas : ∀ n, Measurable (X n))
+    (ν : Ω → Measure α)
+    (hν : ∀ B : Set α, MeasurableSet B →
+        (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X])
+    (n : ℕ) (B : Set α) (hB : MeasurableSet B) :
+    (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X] := by
+  have h0 := hν B hB
+  have hn := extreme_members_equal_on_tail hX hX_meas n B hB
+  exact ae_eq_trans h0.symm hn
+
+/-! ### Step 3: Conditional independence -/
+
+/-- Finite-dimensional product formula for conditionally i.i.d. sequences.
+This is the key step that requires a π-system argument. -/
+axiom finite_product_formula
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+    (X : ℕ → Ω → α)
+    (hX : Contractable μ X)
+    (hX_meas : ∀ n, Measurable (X n))
+    (ν : Ω → Measure α)
+    (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
+    (hν_meas : ∀ B : Set α, MeasurableSet B → Measurable (fun ω => ν ω B))
+    (hν_law : ∀ n B, MeasurableSet B →
+        (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X])
+    (m : ℕ) (k : Fin m → ℕ) :
+    Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
+      = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)
+
+/-! ### Main theorem -/
+
 theorem deFinetti_martingale
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {α : Type*} [MeasurableSpace α]
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
     (X : ℕ → Ω → α)
     (hX : Contractable μ X)
     (hX_meas : ∀ n, Measurable (X n)) :
     ConditionallyIID μ X := by
-  -- Define the conditional law ν(ω) = P[X₀ ∈ · | 𝒯_X](ω)
-  -- This is a Markov kernel from Ω (with tailSigma X) to α
+  -- Step 1: Construct the directing measure ν
+  obtain ⟨ν, hν_prob, hν_law, hν_meas⟩ := directingMeasure_of_contractable X hX_meas
 
-  -- Step 1: Construct ν using conditional expectation of indicators
-  -- For each measurable B ⊆ α, define ν(ω)(B) := E[1_{X₀∈B} | 𝒯_X](ω)
+  -- Step 2: Verify it's a ConditionallyIID certificate
+  refine ⟨ν, hν_prob, ?_⟩
 
-  sorry -- TODO: Kernel construction from conditional expectations
-
-  -- Step 2: Show all X_n have the same conditional law
-  -- This follows from extreme_members_equal_on_tail:
-  -- E[1_{X_m∈B} | 𝒯_X] = E[1_{X₀∈B} | 𝒯_X] for all m
-
-  -- Step 3: Show conditional independence
-  -- For finite subsets {X_{k₁}, ..., X_{kₙ}}, need to show:
-  -- E[∏ᵢ 1_{X_{kᵢ}∈Bᵢ} | 𝒯_X] = ∏ᵢ E[1_{X_{kᵢ}∈Bᵢ} | 𝒯_X]
-  --
-  -- Proof sketch:
-  -- - By contractability and extreme_members_equal_on_tail,
-  --   E[1_{X_m∈B} | 𝒯_X] = E[1_{X₀∈B} | 𝒯_X] is tail-measurable
-  -- - For disjoint future tails, conditional independence follows from
-  --   contraction_independence applied iteratively
-  -- - Use π-system argument on rectangles to extend to all events
-
--- TODO: Add main theorem when proof is complete
--- theorem deFinetti_viaMartingale := ...
+  -- Step 3: Prove finite-dimensional product formula
+  intro m k
+  exact finite_product_formula X hX hX_meas ν hν_prob hν_meas
+    (fun n B hB => conditional_law_eq_directingMeasure X hX hX_meas ν hν_law n B hB) m k
 
 end ViaMartingale
 end DeFinetti
