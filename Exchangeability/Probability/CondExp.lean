@@ -134,7 +134,7 @@ lemma indicator_iUnion_tsum_of_pairwise_disjoint
     -- Only f i contributes, all others are 0
     calc (⋃ k, f k).indicator (fun _ => (1:ℝ)) ω
         = 1 := Set.indicator_of_mem h _
-      _ = ∑' j, if j = i then (1:ℝ) else 0 := by rw [tsum_ite_eq]; simp
+      _ = ∑' j, if j = i then (1:ℝ) else 0 := by rw [tsum_ite_eq]
       _ = ∑' j, (f j).indicator (fun _ => (1:ℝ)) ω := by
           congr 1; ext j
           by_cases hj : ω ∈ f j
@@ -146,19 +146,6 @@ lemma indicator_iUnion_tsum_of_pairwise_disjoint
   · -- ω ∉ ⋃ i, f i: all f i miss ω
     have : ∀ i, ω ∉ f i := fun i hi => h (Set.mem_iUnion.mpr ⟨i, hi⟩)
     simp [Set.indicator_of_notMem h, Set.indicator_of_notMem (this _)]
-
-/-- Uniform bound: conditional probability is in `[0,1]` a.e. uniformly over `A`. -/
-lemma condProb_ae_bound_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (m : MeasurableSpace Ω) (hm : m ≤ m₀) [SigmaFinite (μ.trim hm)]
-    (A : Set Ω) (hA : MeasurableSet[m₀] A) :
-    ∀ᵐ ω ∂μ, ‖μ[A.indicator (fun _ => (1 : ℝ)) | m] ω‖ ≤ 1 := by
-  have := condProb_ae_nonneg_le_one m hm hA
-  filter_upwards [this] with ω hω
-  rcases hω with ⟨h0, h1⟩
-  have : |condProb μ m A ω| ≤ 1 := by
-    have : |condProb μ m A ω| = condProb μ m A ω := abs_of_nonneg h0
-    simpa [this]
-  simpa [Real.norm_eq_abs, condProb] using this
 
 /-! ### Pair-law ⇒ conditional indicator equality (stub) -/
 
@@ -298,6 +285,19 @@ lemma condProb_ae_nonneg_le_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     simpa [condProb, condExp_const (μ := μ) (m := m) hm (1 : ℝ)] using h_mono
   filter_upwards [h₀, h₁] with ω h0 h1
   exact ⟨h0, by simpa using h1⟩
+
+/-- Uniform bound: conditional probability is in `[0,1]` a.e. uniformly over `A`. -/
+lemma condProb_ae_bound_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (m : MeasurableSpace Ω) (hm : m ≤ m₀) [SigmaFinite (μ.trim hm)]
+    (A : Set Ω) (hA : MeasurableSet[m₀] A) :
+    ∀ᵐ ω ∂μ, ‖μ[A.indicator (fun _ => (1 : ℝ)) | m] ω‖ ≤ 1 := by
+  have := condProb_ae_nonneg_le_one m hm hA
+  filter_upwards [this] with ω hω
+  rcases hω with ⟨h0, h1⟩
+  have : |condProb μ m A ω| ≤ 1 := by
+    have : |condProb μ m A ω| = condProb μ m A ω := abs_of_nonneg h0
+    simpa [this]
+  simpa [Real.norm_eq_abs, condProb] using this
 
 set_option linter.unusedSectionVars false in
 /-- Conditional probability integrates to the expected measure on sets that are
@@ -843,8 +843,8 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
 
       -- Step 1: Indicator of disjoint union equals sum of indicators
       have h_ind_union : ∀ ω, (⋃ i, f i).indicator (fun _ : Ω => (1 : ℝ)) ω
-          = ∑' i, (f i).indicator (fun _ : Ω => (1 : ℝ)) ω := by
-        sorry -- Standard fact: indicator of disjoint union = sum of indicators
+          = ∑' i, (f i).indicator (fun _ : Ω => (1 : ℝ)) ω :=
+        congrFun (indicator_iUnion_tsum_of_pairwise_disjoint f hf_disj)
 
       -- Step 2: Conditional expectation of the sum
       have h_condExp_L : μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
@@ -1004,7 +1004,12 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
             -- Linearity of condExp
             have h1 := hX₂_sq.integrable
             have h2 : Integrable (2 • X₂ * μ[X₂ | m₁]) μ := by
-              sorry -- follows from integrability of X₂ and μ[X₂|m₁]
+              -- Both X₂ and μ[X₂|m₁] are in L², so their product is in L¹ by Hölder
+              have : Integrable (X₂ * μ[X₂ | m₁]) μ := by
+                have hX₂_int : Integrable X₂ μ := hL2.integrable one_le_two
+                have hcond_int : Integrable (μ[X₂ | m₁]) μ := h_cond_mem.integrable one_le_two
+                exact Integrable.mul hX₂_int hcond_int
+              exact this.const_mul 2
             have h3 : Integrable ((μ[X₂ | m₁]) ^ 2) μ := h_cond_mem.integrable_sq
             sorry -- apply condExp linearity
         _ =ᵐ[μ] μ[X₂ ^ 2 | m₁] - 2 • μ[X₂ | m₁] * μ[X₂ | m₁] + (μ[X₂ | m₁]) ^ 2 := by
