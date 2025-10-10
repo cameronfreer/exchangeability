@@ -1307,24 +1307,48 @@ lemma Kernel.IndepFun.integral_mul
 
     -- Prove each dyadic_approx is a simple function
     · intro n
-      sorry -- Need to show dyadic_approx CX X n is a finite sum of indicators
-            -- For each k in finite range, define A_k = X⁻¹([k*2^(-n), (k+1)*2^(-n)))
-            -- These are measurable by h_preimage_meas
-            -- dyadic_approx = ∑_k (k * 2^(-n)) * indicator(A_k)
+      -- Define the finite index set: integers k with k*2^(-n) in [-CX, CX]
+      let grid_size := (2 : ℝ) ^ (-(n : ℤ))
+      -- Range of k: approximately -⌈CX/grid_size⌉ to ⌈CX/grid_size⌉
+      let k_min := ⌈-CX / grid_size⌉ - 1
+      let k_max := ⌈CX / grid_size⌉ + 1
+      -- Define index type as integers in finite range
+      let ι := {k : ℤ // k_min ≤ k ∧ k ≤ k_max}
+
+      -- For each k, define the set where X falls in the k-th grid cell
+      let A : ι → Set Ω := fun ⟨k, _⟩ => X ⁻¹' (Set.Ico (k * grid_size) ((k + 1) * grid_size))
+      let a : ι → ℝ := fun ⟨k, _⟩ => k * grid_size
+
+      sorry -- Complete the simple function proof:
+            -- 1. Show ι is Fintype (finite subtype of ℤ)
+            -- 2. Show A k is measurable (both ambient and comap) via h_preimage_meas
+            -- 3. Show dyadic_approx CX X n = ∑ i, indicator (A i) (a i)
+            --    by case analysis on which grid cell X(ω) falls into
 
     · intro n
       sorry -- Symmetric for Y
 
     -- Uniform bounds
     · intro n ω
-      sorry -- |⌊X(ω)/2^(-n)⌋ * 2^(-n)| ≤ |X(ω)| + 2^(-n) ≤ CX + 2^(-n) ≤ CX for all n ≥ 1
+      simp only [dyadic_approx]
+      -- The clamped value is in [-CX, CX]
+      -- The floor quantization keeps us in that range (approximately)
+      -- Since we need a strict bound and the quantization might exceed slightly,
+      -- we use a weaker bound that's easier to prove
+      sorry -- Show |⌊clamp(X(ω))/2^(-n)⌋ * 2^(-n)| ≤ CX
+            -- Key: clamp(X(ω)) ∈ [-CX, CX] implies floor quantization ≈ CX
+            -- For now, may need to adjust bound to CX + 2^(-n) or use n ≥ 1
 
     · intro n ω
       sorry -- Symmetric for Y
 
     -- Pointwise convergence
     · intro ω
-      sorry -- |X(ω) - dyadic_approx X n ω| ≤ 2^(-n) → 0 as n → ∞
+      -- Key property: floor quantization has error at most one grid unit
+      -- |X(ω) - ⌊X(ω)/ε⌋*ε| ≤ ε, and ε = 2^(-n) → 0
+      sorry -- Apply Metric.tendsto_atTop with error bound 2^(-n)
+            -- For any ε > 0, choose N with 2^(-N) < ε
+            -- Then for n ≥ N: dist(X ω, dyadic_approx CX X n ω) ≤ 2^(-n) ≤ 2^(-N) < ε
 
     · intro ω
       sorry -- Symmetric for Y
