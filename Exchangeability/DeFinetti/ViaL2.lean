@@ -375,12 +375,34 @@ lemma eLpNorm_two_from_integral_sq_le
   -- Integral is nonnegative
   have h_int_nonneg : 0 ≤ ∫ ω, ‖g ω‖^2 ∂μ := by
     apply integral_nonneg; intro ω; exact sq_nonneg _
-  -- For p=2, eLpNorm g 2 μ = (∫ ‖g‖²)^(1/2)
+  -- For p=2, eLpNorm g 2 μ = (∫⁻ ‖g‖²)^(1/2)
   -- Given ∫ g² ≤ C, we have ∫ ‖g‖² ≤ C (since ‖g‖² = g² for real g)
-  -- Therefore (∫ ‖g‖²)^(1/2) ≤ C^(1/2) = √C
+  -- Therefore (∫⁻ ‖g‖²)^(1/2) ≤ C^(1/2) = √C
+  -- TODO: Complete this proof using:
+  -- 1. eLpNorm_eq_lintegral_rpow_enorm to express eLpNorm as (∫⁻ ‖g‖²ₑ)^(1/2)
+  -- 2. Convert Bochner integral bound to Lebesgue integral bound
+  -- 3. Apply monotonicity of x ↦ x^(1/2)
   sorry
 
 end LpUtilities
+
+/-- Any function from Fin 1 is vacuously StrictMono -/
+private lemma fin1_strictMono_vacuous (k : Fin 1 → ℕ) : StrictMono k := by
+  intro i j hij
+  -- Fin 1 has only one element, so i < j is impossible
+  exfalso
+  have : i = 0 := Fin.eq_zero i
+  have : j = 0 := Fin.eq_zero j
+  omega
+
+/-- For contractable sequences, all single variables have the same distribution -/
+private lemma contractable_single_marginal_eq
+    {μ : Measure Ω} {X : ℕ → Ω → α}
+    (hX_contract : Contractable μ X) (k : ℕ) :
+    Measure.map (X k) μ = Measure.map (X 0) μ := by
+  -- Strategy: The general case requires extracting single marginals from Fin 1 → α maps
+  -- For now, leave as sorry and implement hmean directly below
+  sorry
 
 /-- For a contractable sequence of real-valued random variables in L², all pairs
 have the same covariance. This follows from contractability implying that all
@@ -398,9 +420,75 @@ lemma contractable_covariance_structure
       (∀ k, ∫ ω, (X k ω - m)^2 ∂μ = σSq) ∧
       (∀ i j, i ≠ j → ∫ ω, (X i ω - m) * (X j ω - m) ∂μ = σSq * ρ) ∧
       0 ≤ σSq ∧ -1 ≤ ρ ∧ ρ ≤ 1 := by
-  -- TODO: Fix integral_map API changes
-  -- Not needed for main proof (noted in comment above)
-  sorry
+  -- Strategy: Use contractability to show all marginals of same size have same distribution
+  -- This implies all X_i have the same mean and variance, and all pairs have same covariance
+
+  -- Define m as the mean of X_0 (all X_i have the same distribution by contractability)
+  let m := ∫ ω, X 0 ω ∂μ
+
+  -- All X_i have the same mean by contractability (single-variable marginal)
+  have hmean : ∀ k, ∫ ω, X k ω ∂μ = m := by
+    intro k
+    -- Use contractable_single_marginal_eq to show X_k has same distribution as X_0
+    have h_eq_dist := contractable_single_marginal_eq hX_contract k
+    -- TODO: Transfer integral via equal distributions
+    -- Need: integral equality lemma for functions under equal pushforward measures
+    sorry
+
+  -- Define σSq as the variance of X_0
+  let σSq := ∫ ω, (X 0 ω - m)^2 ∂μ
+
+  -- All X_i have the same variance
+  have hvar : ∀ k, ∫ ω, (X k ω - m)^2 ∂μ = σSq := by
+    intro k
+    rw [← hmean k]
+    sorry -- TODO: Apply contractability to show same second moment
+
+  -- Define ρ from the covariance of (X_0, X_1)
+  have hσSq_nonneg : 0 ≤ σSq := by
+    apply integral_nonneg
+    intro ω
+    exact sq_nonneg _
+
+  by_cases hσSq_pos : 0 < σSq
+  · -- Case: positive variance
+    let ρ := (∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ) / σSq
+
+    -- All pairs have the same covariance
+    have hcov : ∀ i j, i ≠ j → ∫ ω, (X i ω - m) * (X j ω - m) ∂μ = σSq * ρ := by
+      intro i j hij
+      sorry -- TODO: Apply contractability to size-2 subsequences
+
+    -- Bound on ρ from Cauchy-Schwarz
+    have hρ_bd : -1 ≤ ρ ∧ ρ ≤ 1 := by
+      -- By Cauchy-Schwarz: |E[(X-m)(Y-m)]|² ≤ E[(X-m)²] · E[(Y-m)²]
+      -- For X_0, X_1: |Cov|² ≤ σ² · σ² = σ⁴
+      -- So |Cov| ≤ σ², and thus |ρ| = |Cov/σ²| ≤ 1
+      sorry -- TODO: Apply Cauchy-Schwarz for L² functions, use integral_mul_sq_le_sqrt_mul_sqrt or similar
+
+    exact ⟨m, σSq, ρ, hmean, hvar, hcov, hσSq_nonneg, hρ_bd⟩
+
+  · -- Case: zero variance (all X_i are constant a.s.)
+    push_neg at hσSq_pos
+    have hσSq_zero : σSq = 0 := le_antisymm hσSq_pos hσSq_nonneg
+
+    -- When variance is 0, all X_i = m almost surely
+    have hX_const : ∀ i, ∀ᵐ ω ∂μ, X i ω = m := by
+      intro i
+      sorry -- TODO: variance 0 implies constant a.s.
+
+    -- Covariance is 0
+    have hcov : ∀ i j, i ≠ j → ∫ ω, (X i ω - m) * (X j ω - m) ∂μ = 0 := by
+      intro i j _
+      sorry -- TODO: constant implies 0 covariance
+
+    -- ρ = 0 works
+    use m, σSq, 0
+    refine ⟨hmean, hvar, ?_, hσSq_nonneg, ?_⟩
+    · intro i j hij
+      rw [hcov i j hij, hσSq_zero]
+      ring
+    · norm_num
 
 /-!
 ## Step 2: L² bound implies L¹ convergence of weighted sums (Kallenberg's key step)
@@ -440,7 +528,10 @@ lemma mem_window_iff {n k t : ℕ} :
 /-- Cardinality of Fin values less than k in Fin (2*k) -/
 private lemma card_fin_lt_k {k : ℕ} :
     (Finset.univ.filter (fun i : Fin (2 * k) => i.val < k)).card = k := by
-  sorry -- TODO: Prove that the filter has exactly k elements
+  -- The filter selects exactly the elements 0, 1, ..., k-1 from Fin (2*k)
+  -- This has cardinality k
+  -- TODO: Complete using Finset.card_bij or Finset.card_range
+  sorry
 
 /-- The supremum of |p i - q i| for two-window weights -/
 private lemma sup_two_window_weights {k : ℕ} (hk : 0 < k)
@@ -534,8 +625,18 @@ private lemma l2_bound_long_vs_tail
     ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
           (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
       ≤ Cf / k := by
-  -- The difference can be bounded using the contractability bound
-  -- Key insight: express as weighted average difference with sup weight |p - q| ≤ 1/k
+  -- Strategy: Apply l2_contractability_bound with weights
+  -- p_i = 1/m for all i ∈ Fin m
+  -- q_i = 0 if i < m-k, else 1/k for i ∈ {m-k, ..., m-1}
+  -- This gives sup |p - q| ≤ 1/k, hence bound is 2σ²(1-ρ) · (1/k) = Cf/k
+
+  -- For now, we need contractable_covariance_structure to get σ, ρ
+  -- Since that's not yet proven, we leave this as sorry
+  -- The full proof would:
+  -- 1. Get (m_mean, σ, ρ) from contractable_covariance_structure applied to f ∘ X
+  -- 2. Define weights p, q on Fin m as described above
+  -- 3. Apply l2_contractability_bound to get the bound 2σ²(1-ρ) · (1/k)
+  -- 4. Note that Cf = 2σ²(1-ρ) by definition
   sorry
 
 theorem weighted_sums_converge_L1
