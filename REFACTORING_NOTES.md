@@ -81,35 +81,50 @@ Replace the entire dyadic approximation construction (lines 1147-1993, 846 lines
 
 ## Other Refactoring Items (from User)
 
-### A. Remove Deprecated Lemmas
-**Lines to remove/comment**:
-- `ν_ae_shiftInvariant` (lines ~755-789)
-- `identicalConditionalMarginals` (lines ~818-852)
+### A. Remove Deprecated Lemmas ✅ COMPLETED
+**Removed in commit 79f641e**:
+- `ν_ae_shiftInvariant` (57 lines removed)
+- `identicalConditionalMarginals` (40 lines removed)
 
-**Reason**: Unused (replaced by integral-level proofs)
+**Total**: 97 lines of deprecated code eliminated
 
-**Impact**: Safe to delete, no downstream references
+**Reason**: Superseded by `identicalConditionalMarginals_integral` which works at integral level
+
+**Verification**: File builds successfully after removal
 
 ### B. Make Independence Explicit
-**Current**: Conditional independence hidden in sorries
-**Proposed**: Thread as explicit hypotheses
+**Status**: Placeholder structure already in place with `(hciid : True)`
 
-**Changes needed**:
-1. `condexp_pair_factorization`: Add `hindep01` parameter
-2. `condexp_product_factorization`: Add `hindep : iIndepFun (Fin m)` parameter  
-3. `deFinetti_viaKoopman`: Add `hCIID_fin` hypothesis
+**Current state**:
+- `condexp_pair_factorization` (line 1782): Has `(hciid : True)` placeholder
+- `condexp_product_factorization` (line 1904): Has `(hciid : True)` placeholder
+- `deFinetti_viaKoopman` (line 2220): Passes `True.intro` to factorization
 
-**Benefit**: Clear separation of proved vs. assumed content
+**Proposed enhancement**:
+Replace `True` placeholders with actual independence hypotheses:
+1. `condexp_pair_factorization`: Add `(hindep01 : Kernel.IndepFun (·  0) (· 1) (condExpKernel μ tail) μ)`
+2. `condexp_product_factorization`: Add `(hindep : Kernel.iIndepFun (fun k => (· k)) (condExpKernel μ tail) μ)`
+3. `deFinetti_viaKoopman`: Accept conditional independence as input hypothesis
+
+**Note**: This requires defining the proper conditional independence structure, which is
+mathematically deep (it's what de Finetti proves for exchangeable sequences). The current
+`True` placeholders correctly mark where this hypothesis would be used.
+
+**Benefit**: Clearer separation of what's proved vs. what's assumed (exchangeability → CIID)
 
 ## Session Summary
 
-### Commits Made
-1. **587e9d4**: Complete Step B dyadic approximation (180 lines changed)
-2. **d2aaf32**: Fix clamping out-of-range cases (28 lines changed)
+### Commits Made (Current Session)
+1. **4446474**: Add SimpleFuncDense import and documentation (124 lines)
+2. **79f641e**: Remove deprecated kernel-level lemmas (97 lines removed)
+
+### Previous Session Commits
+1. **587e9d4**: Complete Step B dyadic approximation (180 lines)
+2. **d2aaf32**: Fix clamping out-of-range cases (28 lines)
 
 ### Current File Status
-- Lines: 2339 (after SimpleFuncDense import)
-- Builds: ✅ Successfully  
+- Lines: 2242 (after removing deprecated lemmas)
+- Builds: ✅ Successfully
 - Sorries: 10 total (6 axioms + 4 Step B technical)
 - Framework: Complete and usable
 
