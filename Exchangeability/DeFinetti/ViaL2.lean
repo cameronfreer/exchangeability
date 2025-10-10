@@ -637,8 +637,38 @@ lemma contractable_covariance_structure
       -- By Cauchy-Schwarz: |E[(X-m)(Y-m)]|² ≤ E[(X-m)²] · E[(Y-m)²]
       -- For X_0, X_1: |Cov|² ≤ σ² · σ² = σ⁴
       -- So |Cov| ≤ σ², and thus |ρ| = |Cov/σ²| ≤ 1
-      -- TODO: Apply Cauchy-Schwarz inequality for L² functions
-      sorry
+
+      -- The centered variables are in L²
+      have hf₀ : MemLp (fun ω => X 0 ω - m) 2 μ := (hX_L2 0).sub (memLp_const m)
+      have hf₁ : MemLp (fun ω => X 1 ω - m) 2 μ := (hX_L2 1).sub (memLp_const m)
+
+      -- Their product is integrable
+      have h_int : Integrable (fun ω => (X 0 ω - m) * (X 1 ω - m)) μ := hf₀.integrable_mul hf₁
+
+      -- Apply Cauchy-Schwarz: |∫ f·g| ≤ √(∫ f²) · √(∫ g²)
+      have h_cs : |∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ|
+          ≤ Real.sqrt (∫ ω, (X 0 ω - m)^2 ∂μ) * Real.sqrt (∫ ω, (X 1 ω - m)^2 ∂μ) := by
+        -- This is Hölder's inequality with p = q = 2 (Cauchy-Schwarz)
+        -- For real-valued L² functions f,g: |∫ f·g| ≤ (∫ |f|²)^(1/2) · (∫ |g|²)^(1/2)
+        sorry  -- TODO: Apply mathlib's Hölder/Cauchy-Schwarz for L² functions
+
+      -- Substitute the variances
+      rw [hvar 0, hvar 1] at h_cs
+      have h_sqrt_sq : Real.sqrt σSq * Real.sqrt σSq = σSq := by
+        rw [← Real.sqrt_mul hσSq_nonneg, Real.sqrt_sq hσSq_nonneg]
+      rw [h_sqrt_sq] at h_cs
+
+      -- The covariance equals σSq * ρ by definition
+      have h_cov_eq : ∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ = σSq * ρ := by
+        have : ρ = (∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ) / σSq := rfl
+        rw [this]; field_simp [ne_of_gt hσSq_pos]
+      rw [h_cov_eq] at h_cs
+
+      -- Now |σSq * ρ| ≤ σSq
+      rw [abs_mul, abs_of_pos hσSq_pos] at h_cs
+      have h_ρ_bd : σSq * |ρ| ≤ σSq := h_cs
+      have : |ρ| ≤ 1 := (mul_le_iff_le_one_left hσSq_pos).mp h_ρ_bd
+      exact abs_le.mp this
 
     exact ⟨m, σSq, ρ, hmean, hvar, hcov, hσSq_nonneg, hρ_bd⟩
 
