@@ -96,8 +96,12 @@ private lemma measurable_eval_fin2 {i : Fin 2} :
   measurable_pi_apply _
 
 set_option linter.unusedSectionVars false in
-/-- For a contractable sequence, the law of each coordinate agrees with the law
-of `X 0`. -/
+/-- **All marginals have the same distribution in a contractable sequence.**
+
+For a contractable sequence, the law of each coordinate agrees with the law of `X 0`.
+This follows from contractability by taking the singleton subsequence `{i}`.
+
+This is used to establish uniform covariance structure across all pairs of coordinates. -/
 lemma contractable_map_single (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i)) {i : ℕ} :
     Measure.map (fun ω => X i ω) μ = Measure.map (fun ω => X 0 ω) μ := by
   classical
@@ -160,8 +164,15 @@ private lemma strictMono_two {i j : ℕ} (hij : i < j) :
   simp [fin2Zero, fin2One, hij]
 
 set_option linter.unusedSectionVars false in
-/-- For a contractable sequence, every increasing pair `(i,j)` with `i < j`
-has the same joint law as `(X 0, X 1)`. -/
+/-- **All bivariate marginals have the same distribution in a contractable sequence.**
+
+For a contractable sequence, every increasing pair `(i,j)` with `i < j` has the same
+joint law as `(X 0, X 1)`. This follows from contractability by taking the two-point
+subsequence `{i, j}`.
+
+Combined with `contractable_map_single`, this establishes that covariances are uniform:
+Cov(X_i, X_j) depends only on whether i = j, giving the covariance structure needed
+for the L² contractability bound. -/
 lemma contractable_map_pair (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i))
     {i j : ℕ} (hij : i < j) :
     Measure.map (fun ω => (X i ω, X j ω)) μ =
@@ -203,7 +214,11 @@ lemma contractable_map_pair (hX_contract : Contractable μ X) (hX_meas : ∀ i, 
   simpa [Function.comp, h_comp_simp, h_comp_simp'] using h_comp
 
 set_option linter.unusedSectionVars false in
-/-- Postcompose a contractable sequence with a measurable function. -/
+/-- **Contractability is preserved under measurable postcomposition.**
+
+If X is a contractable sequence and f is measurable, then `f ∘ X` is also contractable.
+This allows transferring contractability from one sequence to another via measurable
+transformations, which is useful for studying bounded functions of contractable sequences. -/
 lemma contractable_comp (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i))
     (f : ℝ → ℝ) (hf_meas : Measurable f) :
     Contractable μ (fun n ω => f (X n ω)) := by
@@ -263,7 +278,12 @@ Standard lemmas for working with Lp spaces and ENNReal conversions.
 
 section LpUtilities
 
-/-- Distance between `toLp` elements equals the `eLpNorm` of their difference. -/
+/-- **Distance in L^p space equals the L^p norm of the difference.**
+
+For functions in L^p, the metric distance between their `toLp` representatives equals
+the `eLpNorm` of their pointwise difference (after converting from ENNReal).
+
+This bridges the abstract metric structure of L^p spaces with concrete norm calculations. -/
 lemma dist_toLp_eq_eLpNorm_sub
   {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} {p : ENNReal}
   {f g : Ω → ℝ} (hf : MemLp f p μ) (hg : MemLp g p μ) :
