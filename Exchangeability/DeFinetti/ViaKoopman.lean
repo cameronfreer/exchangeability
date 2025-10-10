@@ -1319,11 +1319,26 @@ lemma Kernel.IndepFun.integral_mul
       let A : ι → Set Ω := fun ⟨k, _⟩ => X ⁻¹' (Set.Ico (k * grid_size) ((k + 1) * grid_size))
       let a : ι → ℝ := fun ⟨k, _⟩ => k * grid_size
 
-      sorry -- Complete the simple function proof:
-            -- 1. Show ι is Fintype (finite subtype of ℤ)
-            -- 2. Show A k is measurable (both ambient and comap) via h_preimage_meas
-            -- 3. Show dyadic_approx CX X n = ∑ i, indicator (A i) (a i)
-            --    by case analysis on which grid cell X(ω) falls into
+      -- 1. ι is Fintype (bounded integers)
+      have hι : Fintype ι := by
+        sorry -- Use Int.fintype_Icc or similar for bounded integer subtype
+
+      -- 2. Each A k is measurable in both senses
+      have hA_meas : ∀ i : ι, MeasurableSet (A i) ∧
+                               MeasurableSet[MeasurableSpace.comap X inferInstance] (A i) := by
+        intro ⟨k, _⟩
+        simp only [A]
+        constructor
+        · -- Ambient measurability: X⁻¹(Ico(...)) is measurable
+          exact (h_preimage_meas (Set.Ico (k * grid_size) ((k + 1) * grid_size)) measurableSet_Ico).1
+        · -- Comap measurability: X⁻¹(S) is in comap X by definition
+          exact ⟨Set.Ico (k * grid_size) ((k + 1) * grid_size), measurableSet_Ico, rfl⟩
+
+      -- 3. Show the equality
+      refine ⟨ι, hι, a, A, hA_meas, ?_⟩
+      sorry -- Prove: dyadic_approx CX X n = fun ω => ∑ i, (A i).indicator (fun _ => a i) ω
+            -- Strategy: case analysis on which interval clamped X(ω) falls in
+            -- The floor function determines unique k, and result is k * grid_size = a(k)
 
     · intro n
       sorry -- Symmetric for Y
