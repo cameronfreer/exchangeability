@@ -536,8 +536,7 @@ private lemma sup_two_window_weights {k : ℕ} (hk : 0 < k)
     simp only
     split_ifs <;> simp [abs_neg]
   -- The supremum of a constant function is that constant
-  have hk2 : 0 < 2 * k := Nat.mul_pos (by decide : 0 < 2) hk
-  haveI : Nonempty (Fin (2 * k)) := ⟨⟨0, hk2⟩⟩
+  haveI : Nonempty (Fin (2 * k)) := ⟨⟨0, Nat.mul_pos (by decide : 0 < 2) hk⟩⟩
   simp_rw [h_eq]
   exact ciSup_const
 
