@@ -775,6 +775,182 @@ lemma extreme_members_equal_on_tail
   -- - Dominated convergence for L¹ functions
   sorry
 
+/--
+Additive “future-filtration + standard-cylinder” layer that coexists with the
+current `revFiltration` / `tailCylinder` infrastructure. Existing names remain intact.
+-/
+
+/-! ## Future filtration (additive) -/
+section FutureFiltration
+
+variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+
+/-- Future reverse filtration: 𝔽ᶠᵘᵗₘ = σ(θ_{m+1} X). -/
+abbrev futureFiltration (X : ℕ → Ω → α) (m : ℕ) : MeasurableSpace Ω :=
+  MeasurableSpace.comap (shiftRV X (m + 1)) inferInstance
+
+/-- The future filtration is decreasing (antitone). -/
+lemma futureFiltration_antitone (X : ℕ → Ω → α) :
+    Antitone (futureFiltration X) := by
+  intro m n hmn
+  simpa [futureFiltration, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using
+    (revFiltration_antitone X (Nat.succ_le_succ hmn))
+
+/-- Tail σ-algebra via the future filtration. (Additive alias.) -/
+def tailSigmaFuture (X : ℕ → Ω → α) : MeasurableSpace Ω :=
+  ⨅ m, futureFiltration X m
+
+@[simp] lemma tailSigmaFuture_eq_iInf (X : ℕ → Ω → α) :
+    tailSigmaFuture X = ⨅ m, futureFiltration X m := rfl
+
+end FutureFiltration
+
+/-! ## Standard cylinders on paths (starting at index 0) -/
+section FutureCylinders
+
+variable {α : Type*}
+
+/-- Standard cylinder on the first `r` coordinates starting at index 0. -/
+def cylinder (r : ℕ) (C : Fin r → Set α) : Set (ℕ → α) :=
+  {f | ∀ i : Fin r, f i ∈ C i}
+
+variable [MeasurableSpace α]
+
+lemma cylinder_measurable {r : ℕ} {C : Fin r → Set α}
+    (hC : ∀ i, MeasurableSet (C i)) :
+    MeasurableSet (cylinder (α:=α) r C) := by
+  classical
+  refine MeasurableSet.iInter ?_
+  intro i
+  have hi : Measurable fun f : (ℕ → α) => f i := measurable_pi_apply i
+  simpa [cylinder] using hi (hC i)
+
+end FutureCylinders
+
+/-- Drop the first coordinate of a path. -/
+def drop {α : Type*} (f : ℕ → α) : ℕ → α := shiftSeq (β:=α) 1 f
+
+@[simp] lemma drop_apply {α : Type*} (f : ℕ → α) (n : ℕ) :
+    drop f n = f (n + 1) := rfl
+
+section CylinderBridge
+
+variable {α : Type*} [MeasurableSpace α]
+
+lemma measurable_drop : Measurable (drop : (ℕ → α) → (ℕ → α)) := by
+  simpa [drop] using (measurable_shiftSeq (β:=α) (d:=1))
+
+/-- `tailCylinder` is the preimage of a standard cylinder under `drop`. -/
+lemma tailCylinder_eq_preimage_cylinder
+    {r : ℕ} {C : Fin r → Set α} :
+    tailCylinder (α:=α) r C
+      = (drop : (ℕ → α) → (ℕ → α)) ⁻¹' (cylinder (α:=α) r C) := by
+  ext f
+  constructor <;> intro hf
+  · simpa [tailCylinder, drop, shiftSeq, cylinder]
+  · simpa [tailCylinder, drop, shiftSeq, cylinder]
+
+@[simp] lemma mem_cylinder_iff {r : ℕ} {C : Fin r → Set α} {f : ℕ → α} :
+    f ∈ cylinder (α:=α) r C ↔ ∀ i : Fin r, f i ∈ C i := Iff.rfl
+
+@[simp] lemma mem_tailCylinder_iff {r : ℕ} {C : Fin r → Set α} {f : ℕ → α} :
+    f ∈ tailCylinder (α:=α) r C ↔ ∀ i : Fin r, f (i.1 + 1) ∈ C i := Iff.rfl
+
+end CylinderBridge
+
+/-! ## Rectangles using future tails and standard cylinders -/
+section FutureRectangles
+
+variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+variable {μ : Measure Ω} [IsProbabilityMeasure μ]
+variable {X : ℕ → Ω → α}
+
+/-- Preimage calculation for rectangles with `(X k, θ_{m+1}X)` and a standard cylinder. -/
+lemma preimage_rect_future
+    (k m r : ℕ) (B : Set α) (C : Fin r → Set α) :
+    let ψ := fun ω => (X k ω, shiftRV X (m + 1) ω)
+    ψ ⁻¹' (B ×ˢ cylinder (α:=α) r C)
+      = {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + 1 + i.1) ω ∈ C i} := by
+  classical
+  intro ψ
+  ext ω; constructor <;> intro h
+  · rcases h with ⟨hB, hC⟩
+    refine ⟨?_, ?_⟩
+    · simpa [ψ]
+    · intro i
+      have : (shiftRV X (m + 1) ω) ∈ cylinder (α:=α) r C := hC
+      simpa [ψ, cylinder, shiftRV, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
+        using this i
+  · rcases h with ⟨hB, hC⟩
+    refine ⟨?_, ?_⟩
+    · simpa [ψ]
+    · intro i
+      have : X (m + 1 + i.1) ω ∈ C i := hC i
+      simpa [ψ, cylinder, shiftRV, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
+        using this
+
+/-- **Finite-dimensional equality on future rectangles with standard cylinders.**
+For `k ≤ m` and measurable `B`, the measures of
+`B × cylinder r C` under the pushforwards by
+`ω ↦ (X m ω, θ_{m+1}X(ω))` and `ω ↦ (X k ω, θ_{m+1}X(ω))` coincide. -/
+lemma contractable_dist_eq_on_rectangles_future
+    {X : ℕ → Ω → α} (hX : Contractable μ X)
+    (k m : ℕ) (hk : k ≤ m)
+    (r : ℕ) (B : Set α) (hB : MeasurableSet B)
+    (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i)) :
+    (Measure.map (fun ω => (X m ω, shiftRV X (m + 1) ω)) μ)
+        (B ×ˢ cylinder (α:=α) r C)
+  =
+    (Measure.map (fun ω => (X k ω, shiftRV X (m + 1) ω)) μ)
+        (B ×ˢ cylinder (α:=α) r C) := by
+  classical
+  set ψ₁ : Ω → α × (ℕ → α) := fun ω => (X m ω, shiftRV X (m + 1) ω)
+  set ψ₂ : Ω → α × (ℕ → α) := fun ω => (X k ω, shiftRV X (m + 1) ω)
+  have hrect : MeasurableSet (B ×ˢ cylinder (α:=α) r C) :=
+    hB.prod (cylinder_measurable (α:=α) hC)
+  have hpre₁ :
+      ψ₁ ⁻¹' (B ×ˢ cylinder (α:=α) r C)
+        = {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + 1 + i.1) ω ∈ C i} := by
+    simpa [ψ₁, preimage_rect_future (μ:=μ) (X:=X) m m r B C]
+  have hpre₂ :
+      ψ₂ ⁻¹' (B ×ˢ cylinder (α:=α) r C)
+        = {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + 1 + i.1) ω ∈ C i} := by
+    simpa [ψ₂, preimage_rect_future (μ:=μ) (X:=X) k m r B C]
+  have hfd :
+    μ {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
+      =
+    μ {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
+    simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using
+      (contractable_dist_eq_on_first_r_tail
+        (μ:=μ) (X:=X) hX k m r hk B hB C hC)
+  have : μ (ψ₁ ⁻¹' (B ×ˢ cylinder (α:=α) r C))
+        = μ (ψ₂ ⁻¹' (B ×ˢ cylinder (α:=α) r C)) := by
+    simpa [hpre₁, hpre₂]
+  simpa [Measure.map_apply, hrect, ψ₁, ψ₂] using this
+
+end FutureRectangles
+
+structure AgreeOnFutureRectangles
+    (μ ν : Measure (α × (ℕ → α))) : Prop :=
+  (eq_rect :
+    ∀ (r : ℕ) (B : Set α) (hB : MeasurableSet B)
+      (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i)),
+      μ (B ×ˢ cylinder (α:=α) r C) = ν (B ×ˢ cylinder (α:=α) r C))
+
+lemma agree_on_future_rectangles_of_contractable
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {X : ℕ → Ω → α} (hX : Contractable μ X) (k m : ℕ) (hk : k ≤ m) :
+    AgreeOnFutureRectangles
+      (Measure.map (fun ω => (X m ω, shiftRV X (m + 1) ω)) μ)
+      (Measure.map (fun ω => (X k ω, shiftRV X (m + 1) ω)) μ) := by
+  classical
+  refine ⟨?_⟩
+  intro r B hB C hC
+  simpa using
+    (contractable_dist_eq_on_rectangles_future
+      (μ:=μ) (X:=X) hX k m hk r B hB C hC)
+
+
 section reverse_martingale
 
 variable {μ : Measure Ω} [IsProbabilityMeasure μ]
