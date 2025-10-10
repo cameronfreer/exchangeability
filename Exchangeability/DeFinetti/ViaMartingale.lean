@@ -1084,6 +1084,33 @@ end reverse_martingale
 
 /-! ## Tail factorization on finite cylinders -/
 
+/-- **Finite-level factorization builder.**
+
+For a contractable sequence, at any future level `m ≥ r`, the conditional expectation
+of the product indicator factors:
+```
+μ[∏ᵢ<r 1_{Xᵢ∈Cᵢ} | σ(θₘ₊₁X)] = ∏ᵢ<r μ[1_{X₀∈Cᵢ} | σ(θₘ₊₁X)]
+```
+
+This iteratively applies `condIndep_of_indicator_condexp_eq` to pull out one coordinate
+at a time, using contractability to replace each `Xᵢ` with `X₀`. -/
+lemma finite_level_factorization
+    {Ω α : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω] [MeasurableSpace α]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → α)
+    (hX : Contractable μ X)
+    (hX_meas : ∀ n, Measurable (X n))
+    (r : ℕ) (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i))
+    (m : ℕ) (hm : m ≥ r) :
+    μ[indProd X r C | futureFiltration X m]
+      =ᵐ[μ]
+    (fun ω => ∏ i : Fin r,
+        μ[Set.indicator (C i) (fun _ => (1 : ℝ)) ∘ (X 0) | futureFiltration X m] ω) := by
+  -- The proof proceeds by induction on r, pulling out one coordinate at a time.
+  -- Base case (r = 0): empty product equals 1 on both sides
+  -- Inductive step: use contractability + condIndep to factor out X_{r-1}
+  sorry -- TODO: Implement via induction
+
 /-- **Tail factorization on finite cylinders.**
 
 Assume you have, for all large enough `m`, the finite‑level factorization
@@ -1208,7 +1235,17 @@ lemma conditional_law_eq_directingMeasure
 /-! ### Step 3: Conditional independence -/
 
 /-- Finite-dimensional product formula for conditionally i.i.d. sequences.
-This is the key step that requires a π-system argument. -/
+
+**Proof strategy:**
+1. Use `finite_level_factorization` to get factorization at future levels
+2. Apply `tail_factorization_from_future` with reverse martingale convergence
+   (`condexp_tendsto_tail`) to lift to the tail σ-algebra
+3. Use identical conditional laws (from `conditional_law_eq_directingMeasure`)
+   to replace each `Xᵢ` with `X₀` in the product
+4. Extend from rectangles to all measurable sets via π-system/monotone class
+   (rectangles generate the product σ-algebra)
+
+This is the key step that assembles all the machinery. -/
 axiom finite_product_formula
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
