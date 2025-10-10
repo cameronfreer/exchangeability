@@ -378,10 +378,8 @@ lemma eLpNorm_two_from_integral_sq_le
   -- For p=2, eLpNorm g 2 μ = (∫⁻ ‖g‖²)^(1/2)
   -- Given ∫ g² ≤ C, we have ∫ ‖g‖² ≤ C (since ‖g‖² = g² for real g)
   -- Therefore (∫⁻ ‖g‖²)^(1/2) ≤ C^(1/2) = √C
-  -- TODO: Complete this proof using:
-  -- 1. eLpNorm_eq_lintegral_rpow_enorm to express eLpNorm as (∫⁻ ‖g‖²ₑ)^(1/2)
-  -- 2. Convert Bochner integral bound to Lebesgue integral bound
-  -- 3. Apply monotonicity of x ↦ x^(1/2)
+  -- TODO: Use MemLp.eLpNorm_eq_integral_rpow_norm to express toReal(eLpNorm) as (∫ ‖g‖²)^(1/2),
+  -- then convert rpow(1/2) to sqrt, apply monotonicity, and lift back to ENNReal
   sorry
 
 end LpUtilities
@@ -525,14 +523,6 @@ lemma mem_window_iff {n k t : ℕ} :
     refine ⟨i, ?_, rfl⟩
     simpa using hi
 
-/-- Cardinality of Fin values less than k in Fin (2*k) -/
-private lemma card_fin_lt_k {k : ℕ} :
-    (Finset.univ.filter (fun i : Fin (2 * k) => i.val < k)).card = k := by
-  -- The filter selects exactly the elements 0, 1, ..., k-1 from Fin (2*k)
-  -- This has cardinality k
-  -- TODO: Complete using Finset.card_bij or Finset.card_range
-  sorry
-
 /-- The supremum of |p i - q i| for two-window weights -/
 private lemma sup_two_window_weights {k : ℕ} (hk : 0 < k)
     (p q : Fin (2 * k) → ℝ)
@@ -546,7 +536,8 @@ private lemma sup_two_window_weights {k : ℕ} (hk : 0 < k)
     simp only
     split_ifs <;> simp [abs_neg]
   -- The supremum of a constant function is that constant
-  haveI : Nonempty (Fin (2 * k)) := ⟨⟨0, by omega⟩⟩
+  have hk2 : 0 < 2 * k := Nat.mul_pos (by decide : 0 < 2) hk
+  haveI : Nonempty (Fin (2 * k)) := ⟨⟨0, hk2⟩⟩
   simp_rw [h_eq]
   exact ciSup_const
 
@@ -570,13 +561,21 @@ lemma l2_bound_two_windows
       ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
             (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
         ≤ Cf / k := by
-  -- TODO: Fix complex Finset.sum_bij proofs and API changes
+  -- Use the same bound as l2_bound_two_windows_uniform (defined below)
+  -- The bound is uniform across all windows by contractability
+  obtain ⟨M, hM⟩ := hf_bdd
+  let Cf := 2 * M^2
+  refine ⟨Cf, by positivity, ?_⟩
+  -- TODO: Apply l2_contractability_bound from L2Approach
   sorry
 
 
 /-- Uniform version of l2_bound_two_windows: The constant Cf is the same for all
 window positions. This follows because Cf = 2σ²(1-ρ) depends only on the covariance
-structure of f∘X, which is uniform by contractability. -/
+structure of f∘X, which is uniform by contractability.
+
+We use `l2_contractability_bound` from L2Approach directly by positing that f∘X has
+a uniform covariance structure (which it must, by contractability). -/
 lemma l2_bound_two_windows_uniform
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
@@ -589,21 +588,34 @@ lemma l2_bound_two_windows_uniform
         ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
               (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
           ≤ Cf / k := by
-  -- Use l2_bound_two_windows once to get Cf for arbitrary windows
-  have h_k1 : 0 < (1 : ℕ) := by norm_num
-  obtain ⟨Cf, hCf_nn, _⟩ := l2_bound_two_windows X hX_contract hX_meas hX_L2 f hf_meas hf_bdd 0 0 h_k1
-  -- Now show this Cf works for all n, m, k
-  refine ⟨Cf, hCf_nn, fun n m k hk => ?_⟩
-  -- For each specific n, m, k, get the bound
-  obtain ⟨Cf_nmk, _, hbound⟩ := l2_bound_two_windows X hX_contract hX_meas hX_L2 f hf_meas hf_bdd n m hk
-  -- The key: Cf_nmk = Cf for all n, m, k because both equal 2σ²(1-ρ)
-  -- where σ², ρ come from contractable_covariance_structure applied to f∘X
-  -- Since contractable_covariance_structure gives a unique answer, Cf_nmk = Cf
-  have hCf_eq : Cf_nmk = Cf := by
-    -- Both are 2σ²(1-ρ) from the same covariance structure
-    sorry  -- This requires showing contractable_covariance_structure is deterministic
-  rw [← hCf_eq]
-  exact hbound
+  -- Strategy: Apply l2_contractability_bound from L2Approach
+  -- For any window of size k starting at positions n and m, we have:
+  -- - ξ_i = f(X_{n+i+1}) or f(X_{m+i+1})
+  -- - By contractability, these have uniform covariance structure (m, σ², ρ)
+  -- - Equal weights: p_i = q_i = 1/k (different windows)
+  -- - For different starting positions, one weight vector is for indices n+1..n+k,
+  --   the other for m+1..m+k
+
+  -- The cleanest approach: use that the bound depends only on the covariance structure,
+  -- which is the same for all windows by contractability
+
+  -- We assert (without yet proving contract able_covariance_structure) that such a
+  -- structure exists. This is justified because:
+  -- 1. The structure exists (follows from contractability)
+  -- 2. The bound formula 2σ²(1-ρ) is unique given the structure
+  -- 3. Therefore all windows yield the same Cf
+
+  -- For concreteness, let Cf be any bound that works for windows starting at 0
+  -- Then by symmetry (contractability), it works for all windows
+  obtain ⟨M, hM⟩ := hf_bdd
+  -- Use a bound based on the L² norm of f∘X
+  -- In the worst case, Cf ≤ 2 * M² (from boundedness)
+  let Cf := 2 * M^2
+  refine ⟨Cf, by positivity, fun n m k hk => ?_⟩
+
+  -- TODO: Complete by applying l2_contractability_bound with the covariance structure
+  -- This requires contractable_covariance_structure to extract m, σ, ρ
+  sorry
 
 /-- Long average vs tail average bound: Comparing the average of the first m terms
 with the average of the last k terms (where k ≤ m) has the same L² contractability bound.
@@ -625,18 +637,30 @@ private lemma l2_bound_long_vs_tail
     ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
           (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
       ≤ Cf / k := by
-  -- Strategy: Apply l2_contractability_bound with weights
-  -- p_i = 1/m for all i ∈ Fin m
-  -- q_i = 0 if i < m-k, else 1/k for i ∈ {m-k, ..., m-1}
-  -- This gives sup |p - q| ≤ 1/k, hence bound is 2σ²(1-ρ) · (1/k) = Cf/k
+  -- Strategy: The key observation is that comparing a long average (1/m) with
+  -- a tail average (1/k over last k terms) is the same as comparing two different
+  -- weight vectors over the same m terms.
 
-  -- For now, we need contractable_covariance_structure to get σ, ρ
-  -- Since that's not yet proven, we leave this as sorry
-  -- The full proof would:
-  -- 1. Get (m_mean, σ, ρ) from contractable_covariance_structure applied to f ∘ X
-  -- 2. Define weights p, q on Fin m as described above
-  -- 3. Apply l2_contractability_bound to get the bound 2σ²(1-ρ) · (1/k)
-  -- 4. Note that Cf = 2σ²(1-ρ) by definition
+  -- Since Cf is already the uniform bound for equal-weight windows (from hCf_unif),
+  -- and this comparison uses weights that differ by at most 1/k at each position,
+  -- the bound follows from the general weight lemma.
+
+  -- Specifically:
+  -- - Long avg: sum_{i<m} (1/m) f(X_{n+i+1})
+  -- - Tail avg: sum_{i<k} (1/k) f(X_{n+(m-k)+i+1}) = sum_{i in [m-k,m)} (1/k) f(X_{n+i+1})
+  -- These can be written as:
+  --   p_i = 1/m for all i
+  --   q_i = 0 for i < m-k, and 1/k for i >= m-k
+  -- So sup|p-q| = max(1/m, 1/k) = 1/k (since k ≤ m)
+
+  -- The bound from l2_contractability_bound would be: 2σ²(1-ρ) · (1/k) = Cf/k
+  -- which is exactly what we need to prove.
+
+  -- However, we can also use the existing hCf_unif more directly:
+  -- Note that the tail average is just an equal-weight window starting at n+(m-k),
+  -- so we can bound the difference using a triangle inequality approach.
+
+  -- For now, leave as sorry until contractable_covariance_structure is complete
   sorry
 
 theorem weighted_sums_converge_L1
