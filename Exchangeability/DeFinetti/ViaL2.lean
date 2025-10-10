@@ -410,11 +410,30 @@ lemma eLpNorm_two_from_integral_sq_le
   -- Integral is nonnegative
   have h_int_nonneg : 0 ≤ ∫ ω, ‖g ω‖^2 ∂μ := by
     apply integral_nonneg; intro ω; exact sq_nonneg _
-  -- Strategy: eLpNorm g 2 μ = (∫⁻ ‖g‖²)^(1/2) by definition.
-  -- We have ∫ ‖g‖² ≤ C, which gives ∫⁻ (ofReal ‖g‖²) ≤ ofReal C.
-  -- Applying rpow (1/2) and using monotonicity: (∫⁻ ‖g‖²)^(1/2) ≤ (ofReal C)^(1/2) = ofReal √C.
-  -- The challenge is converting between enorm and norm, and between integral and lintegral.
-  sorry
+  -- Strategy: eLpNorm g 2 μ = (∫ ‖g‖²)^(1/2) by definition (via MemLp characterization).
+  -- We have ∫ ‖g‖² ≤ C, so (∫ ‖g‖²)^(1/2) ≤ C^(1/2) = √C.
+
+  -- Use the MemLp characterization to convert eLpNorm to an integral
+  rw [MemLp.eLpNorm_eq_integral_rpow_norm (by norm_num) (by norm_num) hg]
+  simp only [ENNReal.toReal_ofNat]
+  -- Now we have: ofReal((∫ ‖g‖² ∂μ)^(1/2)) ≤ ofReal(√C)
+  -- Use ofReal monotonicity
+  apply ENNReal.ofReal_le_ofReal
+  -- Show (∫ ‖g‖² ∂μ)^(2⁻¹) ≤ √C
+  -- The goal has 2⁻¹ which is the same as (1/2)
+  have h_C_nonneg : 0 ≤ C := by linarith [h_int_nonneg, h_int_le]
+  -- Convert 2⁻¹ to (1/2) and use rpow monotonicity
+  show (∫ ω, ‖g ω‖ ^ 2 ∂μ) ^ (2⁻¹ : ℝ) ≤ Real.sqrt C
+  rw [show (2⁻¹ : ℝ) = (1 / 2 : ℝ) by norm_num]
+  -- Goal is now (∫ ‖g‖²)^(1/2) ≤ √C
+  rw [Real.sqrt_eq_rpow]
+  -- Goal is (∫ ‖g‖²)^(1/2) ≤ C^(1/2)
+  -- Note: the ‖g‖^2 in the integral is with ^(2:ℕ), need to be careful with types
+  have h_int_le' : (∫ ω, ‖g ω‖ ^ (2:ℝ) ∂μ) ≤ C := by
+    convert h_int_le using 2
+    ext ω
+    simp [sq]
+  gcongr
 
 end LpUtilities
 
@@ -432,15 +451,40 @@ private lemma fin1_strictMono_vacuous (k : Fin 1 → ℕ) : StrictMono k := by
 /-- **Single marginals have identical distribution in contractable sequences.**
 
 For contractable sequences, all variables `X_k` have the same distribution as `X_0`.
-This is a special case of `contractable_map_single` for the general type α.
+This is a direct application of `contractable_map_single`.
 
-**Strategy**: Extract single marginals from Fin 1 → α maps using contractability.
-Currently left as sorry; the mean equality is handled directly in the covariance lemma below. -/
+**Note**: This wrapper is kept for compatibility, but `contractable_map_single` can be
+used directly when measurability hypotheses are available. -/
 private lemma contractable_single_marginal_eq
     {μ : Measure Ω} {X : ℕ → Ω → α}
-    (hX_contract : Contractable μ X) (k : ℕ) :
+    (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i)) (k : ℕ) :
     Measure.map (X k) μ = Measure.map (X 0) μ := by
-  sorry
+  -- Apply contractability to the singleton subsequence {k}
+  classical
+  let κ : Fin 1 → ℕ := fun _ => k
+  have hκ : StrictMono κ := fin1_strictMono_vacuous κ
+  have h_map := hX_contract 1 κ hκ
+  -- h_map says: map of (ω ↦ (i ↦ X (κ i) ω)) equals map of (ω ↦ (i ↦ X i.val ω))
+  -- We need to extract the single coordinate from Fin 1 → α
+  let eval : (Fin 1 → α) → α := fun g => g ⟨0, by decide⟩
+  have h_eval_meas : Measurable eval := measurable_pi_apply _
+  have h_meas_κ : Measurable fun ω => fun j : Fin 1 => X (κ j) ω := by
+    refine measurable_pi_lambda _ ?_
+    intro j; simpa [κ] using hX_meas (κ j)
+  have h_meas_std : Measurable fun ω => fun j : Fin 1 => X j.val ω := by
+    refine measurable_pi_lambda _ ?_
+    intro j; simpa using hX_meas j.val
+  -- Apply eval to both sides
+  have h_left := (Measure.map_map h_eval_meas h_meas_κ (μ := μ)).symm
+  have h_right := Measure.map_map h_eval_meas h_meas_std (μ := μ)
+  have h_eval := congrArg (Measure.map eval) h_map
+  have h_comp := h_left.trans (h_eval.trans h_right)
+  -- Simplify the compositions
+  have h_comp_left : (fun ω => eval (fun j : Fin 1 => X (κ j) ω)) = fun ω => X k ω := by
+    funext ω; simp [eval, κ]
+  have h_comp_right : (fun ω => eval (fun j : Fin 1 => X j.val ω)) = fun ω => X 0 ω := by
+    funext ω; simp [eval]
+  simpa [Function.comp, h_comp_left, h_comp_right] using h_comp
 
 /-- **Contractable sequences have uniform covariance structure.**
 
@@ -475,10 +519,19 @@ lemma contractable_covariance_structure
   have hmean : ∀ k, ∫ ω, X k ω ∂μ = m := by
     intro k
     -- Use contractable_single_marginal_eq to show X_k has same distribution as X_0
-    have h_eq_dist := contractable_single_marginal_eq hX_contract k
-    -- TODO: Transfer integral via equal distributions
-    -- Need: integral equality lemma for functions under equal pushforward measures
-    sorry
+    have h_eq_dist := contractable_single_marginal_eq hX_contract hX_meas k
+    -- Transfer integral via equal distributions
+    -- The key fact: if X_k and X_0 have the same distribution, their expectations are equal
+    -- This follows from ∫ X_k dμ = ∫ id d(X_k#μ) = ∫ id d(X_0#μ) = ∫ X_0 dμ
+    have h_int_k : ∫ ω, X k ω ∂μ = ∫ x, x ∂(Measure.map (X k) μ) := by
+      have h_ae : AEStronglyMeasurable (id : ℝ → ℝ) (Measure.map (X k) μ) :=
+        aestronglyMeasurable_id
+      exact (integral_map (hX_meas k).aemeasurable h_ae).symm
+    have h_int_0 : ∫ ω, X 0 ω ∂μ = ∫ x, x ∂(Measure.map (X 0) μ) := by
+      have h_ae : AEStronglyMeasurable (id : ℝ → ℝ) (Measure.map (X 0) μ) :=
+        aestronglyMeasurable_id
+      exact (integral_map (hX_meas 0).aemeasurable h_ae).symm
+    rw [h_int_k, h_eq_dist, ← h_int_0]
 
   -- Define σSq as the variance of X_0
   let σSq := ∫ ω, (X 0 ω - m)^2 ∂μ
@@ -616,13 +669,26 @@ lemma l2_bound_two_windows
       ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
             (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
         ≤ Cf / k := by
-  -- Use the same bound as l2_bound_two_windows_uniform (defined below)
-  -- The bound is uniform across all windows by contractability
+  -- Strategy: Apply l2_contractability_bound from L2Approach
+  -- The key steps are:
+  -- 1. For f∘X contractable, by contractability all f(X_i) have the same mean and variance
+  -- 2. All pairs f(X_i), f(X_j) have the same covariance
+  -- 3. Apply the L² bound with weights representing the two windows
+  -- 4. The bound is 2σ²(1-ρ) · sup|p_i - q_i| = 2σ²(1-ρ) / k
+
+  -- TODO: Complete this proof by:
+  -- - Establishing the covariance structure for f∘X (using contractable_covariance_structure)
+  -- - Defining appropriate weight vectors p, q for the two windows
+  -- - Applying l2_contractability_bound
+  -- - Showing that sup|p_i - q_i| = 1/k for equal-weight windows
+
+  -- For now, we assert the existence of such a bound Cf
   obtain ⟨M, hM⟩ := hf_bdd
-  let Cf := 2 * M^2
-  refine ⟨Cf, by positivity, ?_⟩
-  -- TODO: Apply l2_contractability_bound from L2Approach
-  sorry
+  use 4 * M^2
+  constructor
+  · positivity
+  · -- The bound Cf / k with Cf = 4M² (or 2σ²(1-ρ) from the proper analysis)
+    sorry
 
 
 /-- Uniform version of l2_bound_two_windows: The constant Cf is the same for all
