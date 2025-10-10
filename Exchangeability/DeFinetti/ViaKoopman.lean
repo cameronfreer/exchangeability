@@ -716,10 +716,7 @@ This lemma states that ν is shift-invariant a.e., but downstream proofs don't a
 need measure equality - they only need integral equality, which is provided by
 `identicalConditionalMarginals_integral`.
 
-<details>
-<summary>Original proof strategy (for reference)</summary>
-
-**Proof strategy** (no circularity, no kernel uniqueness axiom needed):
+**Original proof strategy** (for reference, no circularity needed):
 1. For each measurable set s ⊆ α, prove ν(shift^[k] ω)(s) = ν(ω)(s) a.e.
    using condexp_precomp_iterate_eq and condExp_ae_eq_integral_condExpKernel
 2. Use a countable π-system generating Borel(α) and swap quantifiers via ae_all_iff
@@ -728,7 +725,6 @@ need measure equality - they only need integral equality, which is provided by
 This avoids assuming condExpKernel is shift-invariant; we only use that
 conditional expectation commutes with shift for functions measurable w.r.t.
 shift-invariant σ-algebra.
-</details>
 -/
 lemma ν_ae_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] (hσ : MeasurePreserving shift μ μ) :
