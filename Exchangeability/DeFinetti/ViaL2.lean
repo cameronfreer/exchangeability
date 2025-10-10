@@ -388,9 +388,10 @@ private lemma fin1_strictMono_vacuous (k : Fin 1 → ℕ) : StrictMono k := by
   intro i j hij
   -- Fin 1 has only one element, so i < j is impossible
   exfalso
-  have : i = 0 := Fin.eq_zero i
-  have : j = 0 := Fin.eq_zero j
-  omega
+  have hi : i = 0 := Fin.eq_zero i
+  have hj : j = 0 := Fin.eq_zero j
+  rw [hi, hj] at hij
+  exact LT.lt.false hij
 
 /-- For contractable sequences, all single variables have the same distribution -/
 private lemma contractable_single_marginal_eq
