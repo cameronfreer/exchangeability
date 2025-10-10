@@ -1293,8 +1293,13 @@ lemma Kernel.IndepFun.integral_mul
       -- Pointwise convergence
       (∀ ω, Filter.Tendsto (fun n => approx_X n ω) Filter.atTop (𝓝 (X ω))) ∧
       (∀ ω, Filter.Tendsto (fun n => approx_Y n ω) Filter.atTop (𝓝 (Y ω))) := by
-    sorry  -- Approximation construction (~30-40 lines using dyadic intervals)
-           -- Would use: h_preimage_meas to ensure dual measurability
+    sorry  -- Approximation construction (~30-40 lines)
+           -- Strategy: Use dyadic approximation at scale 2^(-n)
+           -- For each n, partition [-CX, CX] into intervals of length 2^(-n)
+           -- Define approx_X n ω = k * 2^(-n) where k is chosen so X ω ∈ [k*2^(-n), (k+1)*2^(-n))
+           -- Each partition interval is X⁻¹(I) which is measurable in both senses by h_preimage_meas
+           -- Uniform bounds: |approx_X n ω| ≤ CX + 2^(-n) ≤ 2*CX for large n
+           -- Pointwise convergence: |X ω - approx_X n ω| ≤ 2^(-n) → 0
 
   -- Step B.7: Apply the approximation framework
 
@@ -1308,10 +1313,29 @@ lemma Kernel.IndepFun.integral_mul
       ∫ ω, approx_X n ω * approx_Y m ω ∂(κ a) =
       (∫ ω, approx_X n ω ∂(κ a)) * (∫ ω, approx_Y m ω ∂(κ a)) := by
     intro n m
-    -- We need to unpack the simple function structure and apply Step A
-    -- This requires extracting the coefficients and sets from h_simple_X n and h_simple_Y m
-    sorry  -- Application of Step A to approximations (~20-30 lines)
-           -- Need to destruct the existential quantifiers and apply integral_mul_simple
+    -- Extract the simple function structure for approx_X(n)
+    obtain ⟨ι, hι, a_coef, A, hA_meas_both, hA_eq⟩ := h_simple_X n
+
+    -- Extract the simple function structure for approx_Y(m)
+    obtain ⟨κι, hκι, b_coef, B, hB_meas_both, hB_eq⟩ := h_simple_Y m
+
+    -- Rewrite using the simple function representations
+    rw [hA_eq, hB_eq]
+
+    -- Extract both measurability conditions for each set
+    have hA_meas_comap : ∀ i, MeasurableSet[MeasurableSpace.comap X inferInstance] (A i) :=
+      fun i => (hA_meas_both i).2
+    have hA_meas_ambient : ∀ i, MeasurableSet (A i) :=
+      fun i => (hA_meas_both i).1
+
+    have hB_meas_comap : ∀ j, MeasurableSet[MeasurableSpace.comap Y inferInstance] (B j) :=
+      fun j => (hB_meas_both j).2
+    have hB_meas_ambient : ∀ j, MeasurableSet (B j) :=
+      fun j => (hB_meas_both j).1
+
+    -- Now apply Step A (integral_mul_simple)
+    exact Kernel.IndepFun.integral_mul_simple hXY a_coef A b_coef B
+      hA_meas_comap hB_meas_comap hA_meas_ambient hB_meas_ambient
 
   -- Step B.7.2: Combine countably many ae statements
   have h_combined : ∀ᵐ a ∂μ, ∀ n m,
@@ -1343,11 +1367,23 @@ lemma Kernel.IndepFun.integral_mul
       (fun n => ∫ ω, approx_X n ω * approx_Y n ω ∂(κ a))
       Filter.atTop
       (𝓝 (∫ ω, X ω * Y ω ∂(κ a))) := by
-    -- Apply dominated convergence theorem
-    -- Need: pointwise convergence + uniform domination
-    sorry  -- DCT for LHS (~10-15 lines)
-           -- Use: integral_tendsto_of_tendsto_of_dominated
-           -- Domination: |approx_X(n) * approx_Y(n)| ≤ CX * CY
+    -- Apply DCT with bound CX * CY
+    apply MeasureTheory.tendsto_integral_of_dominated_convergence (fun _ => CX * CY)
+    · -- AEStronglyMeasurable for each product
+      sorry  -- Need to show approx_X n * approx_Y n is measurable
+    · -- Integrable bound
+      exact integrable_const (CX * CY)
+    · -- Uniform bound: |approx_X n ω * approx_Y n ω| ≤ CX * CY
+      intro n
+      filter_upwards with ω
+      have hX := h_bd_X n ω
+      have hY := h_bd_Y n ω
+      calc |approx_X n ω * approx_Y n ω|
+          = |approx_X n ω| * |approx_Y n ω| := abs_mul _ _
+        _ ≤ CX * CY := mul_le_mul hX hY (abs_nonneg _) (by linarith [abs_nonneg (X ω), hCX ω])
+    · -- Pointwise convergence
+      filter_upwards with ω
+      exact Filter.Tendsto.mul (h_conv_X ω) (h_conv_Y ω)
 
   -- Step B.7.3b: Show the RHS converges
   have h_rhs_converges : Filter.Tendsto
@@ -1356,8 +1392,32 @@ lemma Kernel.IndepFun.integral_mul
       (𝓝 ((∫ ω, X ω ∂(κ a)) * (∫ ω, Y ω ∂(κ a)))) := by
     -- This is a product of two convergent sequences
     apply Filter.Tendsto.mul
-    · sorry  -- ∫ approx_X(n) → ∫ X (~5-8 lines, DCT)
-    · sorry  -- ∫ approx_Y(n) → ∫ Y (~5-8 lines, DCT)
+    · -- Show ∫ approx_X(n) → ∫ X using DCT
+      apply MeasureTheory.tendsto_integral_of_dominated_convergence (fun _ => CX)
+      · -- AEStronglyMeasurable for each approx_X n
+        sorry  -- Need to show approx_X n is measurable
+      · -- Integrable bound
+        exact integrable_const CX
+      · -- Uniform bound: |approx_X n ω| ≤ CX
+        intro n
+        filter_upwards with ω
+        exact h_bd_X n ω
+      · -- Pointwise convergence
+        filter_upwards with ω
+        exact h_conv_X ω
+    · -- Show ∫ approx_Y(n) → ∫ Y using DCT
+      apply MeasureTheory.tendsto_integral_of_dominated_convergence (fun _ => CY)
+      · -- AEStronglyMeasurable for each approx_Y n
+        sorry  -- Need to show approx_Y n is measurable
+      · -- Integrable bound
+        exact integrable_const CY
+      · -- Uniform bound: |approx_Y n ω| ≤ CY
+        intro n
+        filter_upwards with ω
+        exact h_bd_Y n ω
+      · -- Pointwise convergence
+        filter_upwards with ω
+        exact h_conv_Y ω
 
   -- Step B.7.3c: Since LHS = RHS for all n, the limits are equal
   have h_eq_on_diagonal : ∀ n, ∫ ω, approx_X n ω * approx_Y n ω ∂(κ a) =
