@@ -539,8 +539,7 @@ private lemma sup_two_window_weights {k : ℕ} (hk : 0 < k)
   have hk2 : 0 < 2 * k := Nat.mul_pos (by decide : 0 < 2) hk
   haveI : Nonempty (Fin (2 * k)) := ⟨⟨0, hk2⟩⟩
   simp_rw [h_eq]
-  -- TODO: Fix iSup_const application (was ciSup_const, needs type class instance)
-  sorry
+  exact ciSup_const
 
 /-- **L² bound wrapper for two starting windows**.
 
