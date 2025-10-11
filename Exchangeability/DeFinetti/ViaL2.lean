@@ -4,7 +4,6 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
 import Exchangeability.DeFinetti.L2Approach
-import Exchangeability.DeFinetti.CovarianceStructure
 import Exchangeability.Contractability
 import Exchangeability.ConditionallyIID
 import Mathlib.MeasureTheory.Function.L2Space
