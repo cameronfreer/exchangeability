@@ -1512,13 +1512,26 @@ lemma Integrable.tendsto_L1_condexp_antitone
     [∀ n, SigmaFinite (μ.trim (hle n))]
     {X : Ω → ℝ} (hX : Integrable X μ) :
     Tendsto (fun n => eLpNorm (μ[X | 𝒢 n] - μ[X | ⨅ n, 𝒢 n]) 1 μ) atTop (𝓝 0) := by
-  -- This follows from:
-  -- 1. L¹-contraction: ‖μ[f|m]‖₁ ≤ ‖f‖₁ for conditional expectations
-  -- 2. Truncation: for ε>0, ∃M with ‖X - X^M‖₁ < ε where X^M is bounded
-  -- 3. Bounded case: a.e. convergence + Cauchy-Schwarz ⇒ L¹ convergence on prob space
-  -- 4. Triangle inequality to combine the pieces
-  -- The proof is standard but tedious in Lean; we admit for now.
-  sorry
+  set tail := ⨅ n, 𝒢 n with htail_def
+  -- Key fact: a.e. convergence (from the a.e. lemma)
+  have h_ae : ∀ᵐ ω ∂μ, Tendsto (fun n => μ[X | 𝒢 n] ω) atTop (𝓝 (μ[X | tail] ω)) :=
+    Integrable.tendsto_ae_condexp_antitone 𝒢 hle hdecr hX
+
+  -- Uniform integrability: all conditional expectations μ[X | 𝒢 n] are uniformly integrable
+  -- because they are dominated by μ[|X| | 𝒢 n], and these form a reverse martingale bounded by |X|
+  -- On a finite measure space, uniform L¹ bound implies uniform integrability.
+
+  -- Standard fact: On a probability space,
+  --   a.e. convergence + uniform integrability ⇒ L¹ convergence
+  -- The sequence {μ[X | 𝒢 n]} is uniformly integrable because:
+  --   1. ‖μ[X | 𝒢 n]‖₁ ≤ ‖X‖₁ for all n (L¹ contraction)
+  --   2. On a probability space, this uniform bound gives uniform integrability
+  --
+  -- This is Vitali's convergence theorem. The detailed proof would construct
+  -- the uniform integrability condition using the tower property and Markov's inequality.
+  -- For now we appeal to the standard result.
+
+  sorry -- Vitali convergence theorem: UI + a.e. convergence ⇒ L¹ convergence
 
 /-- **Reverse martingale convergence theorem.**
 
