@@ -664,8 +664,22 @@ lemma l2_bound_two_windows_uniform
                             ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
       ≤ ∫ ω, (2*M)^2 / k ∂μ := by
           apply integral_mono
-          · -- LHS is integrable: bounded
-            sorry
+          · -- LHS is integrable: bounded by constant (2M)²/k
+            have h_meas : Measurable (fun ω => (1/(k:ℝ))^2 * (∑ i : Fin k, f (X (n + i.val + 1) ω) -
+                                                 ∑ i : Fin k, f (X (m + i.val + 1) ω))^2) := by
+              apply Measurable.mul measurable_const
+              apply Measurable.pow
+              apply Measurable.sub <;> apply measurable_finset_sum <;>
+                intro i _ <;> exact hf_meas.comp (hX_meas _)
+            have h_bdd : ∀ᵐ ω ∂μ, ‖(1/(k:ℝ))^2 * (∑ i : Fin k, f (X (n + i.val + 1) ω) -
+                                                 ∑ i : Fin k, f (X (m + i.val + 1) ω))^2‖
+                          ≤ (2*M)^2 / k := by
+              apply eventually_of_forall
+              intro ω
+              rw [Real.norm_eq_abs, abs_of_nonneg]
+              · exact h_integrand_bound ω
+              · apply mul_nonneg (sq_nonneg _) (sq_nonneg _)
+            exact Integrable.of_bounded h_meas.aestronglyMeasurable h_bdd
           · exact integrable_const _
           · exact h_integrand_bound
     _ = (2*M)^2 / k := by
