@@ -668,19 +668,13 @@ lemma measurable_firstRMap
 lemma firstRSigma_mono
     (X : ℕ → Ω → α) {r s : ℕ} (hrs : r ≤ s) :
     firstRSigma X r ≤ firstRSigma X s := by
-  rw [firstRSigma, firstRSigma]
-  apply MeasurableSpace.comap_mono
-  intro f
-  exact fun i => f (Fin.castLE hrs i)
+  sorry  -- TODO: Need comap relationship for different firstRMap functions
 
 /-- The first-r σ-algebra is contained in the future filtration at level m when r ≤ m. -/
 lemma firstRSigma_le_futureFiltration
     (X : ℕ → Ω → α) {r m : ℕ} (hrm : r ≤ m) :
     firstRSigma X r ≤ futureFiltration X m := by
-  rw [firstRSigma, futureFiltration]
-  apply MeasurableSpace.comap_mono
-  intro f
-  exact fun i => f (Fin.castLE hrm i)
+  sorry  -- TODO: Need comap relationship between firstRMap and shifted coordinates
 
 /-- The empty cylinder (r = 0) is the whole space. -/
 @[simp]
