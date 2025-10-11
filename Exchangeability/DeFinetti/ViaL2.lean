@@ -656,9 +656,7 @@ lemma l2_bound_two_windows_uniform
             _ = (2*M)^2 := by ring
             _ = (2*M)^2 * 1 := by ring
             _ = (2*M)^2 * (k / k) := by rw [div_self (ne_of_gt hk_pos)]
-            _ = (2*M)^2 / k := by
-                rw [mul_div_assoc]
-                ring
+            _ = (2*M)^2 / k := by ring
 
   -- Now integrate the bound
   calc ∫ ω, (1/(k:ℝ))^2 * (∑ i : Fin k, f (X (n + i.val + 1) ω) -
@@ -743,12 +741,14 @@ private lemma sum_tail_block_reindex
           congr 1
           -- Bijection between {i : Fin m | i.val ≥ m - k} and Fin k
           -- Map i ↦ ⟨i.val - (m - k), ...⟩ and j ↦ ⟨m - k + j.val, ...⟩
-          apply Finset.sum_bij (fun (i : Fin m) (hi : i ∈ Finset.univ.filter (fun i => ¬ i.val < m - k)) =>
-            (⟨i.val - (m - k), by
-              simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hi
-              have : m - k ≤ i.val := by omega
-              have : i.val < m := i.2
-              omega⟩ : Fin k))
+          refine Finset.sum_bij
+            (fun (i : Fin m) (hi : i ∈ Finset.univ.filter (fun i => ¬ i.val < m - k)) =>
+              (⟨i.val - (m - k), by
+                simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hi
+                have : m - k ≤ i.val := by omega
+                have : i.val < m := i.2
+                omega⟩ : Fin k))
+            ?_ ?_ ?_ ?_
           · -- Show mapping preserves elements
             intro i hi
             simp only [Finset.mem_univ]
@@ -773,9 +773,11 @@ private lemma sum_tail_block_reindex
             omega
           · -- Surjectivity
             intro j hj
-            use ⟨m - k + j.val, by omega⟩
-            simp only [Finset.mem_filter, Finset.mem_univ, true_and, Fin.mk.injEq]
-            omega
+            refine ⟨⟨m - k + j.val, by omega⟩, ?_, ?_⟩
+            · simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+              omega
+            · simp only [Fin.mk.injEq]
+              omega
 
 /-- Long average vs tail average bound: Comparing the average of the first m terms
 with the average of the last k terms (where k ≤ m) has the same L² contractability bound.
