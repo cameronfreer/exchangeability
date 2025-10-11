@@ -1105,7 +1105,9 @@ lemma measure_ext_of_future_rectangles
       (fun _ => Set.univ), (fun _ => MeasurableSet.univ), ?_⟩
     ext ⟨a, f⟩; simp [Bseq, cylinder]
   have hμB : ∀ n, μ (Bseq n) ≠ ∞ := by
-    intro n; simp [Bseq]
+    intro n
+    simp [Bseq]
+    sorry  -- TODO: Prove μ Set.univ ≠ ∞ (needs IsFiniteMeasure assumption)
 
   exact Measure.ext_of_generateFrom_of_iUnion
     S Bseq h_gen h_pi h1B h2B hμB h_agree
