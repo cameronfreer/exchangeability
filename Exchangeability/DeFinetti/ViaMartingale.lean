@@ -905,6 +905,33 @@ lemma indProd_eq_firstRCylinder_indicator
   rw [indProd_as_indicator]
   rfl
 
+/-- indProd is strongly measurable when coordinates and sets are measurable. -/
+lemma indProd_stronglyMeasurable
+    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α)
+    (hX : ∀ n, Measurable (X n)) (hC : ∀ i, MeasurableSet (C i)) :
+    StronglyMeasurable (indProd X r C) := by
+  rw [indProd_eq_firstRCylinder_indicator]
+  refine StronglyMeasurable.indicator ?_ ?_
+  · exact stronglyMeasurable_const
+  · exact firstRCylinder_measurable_ambient X r C hX hC
+
+/-- indProd takes values in [0,1]. -/
+lemma indProd_nonneg_le_one {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α) (ω : Ω) :
+    0 ≤ indProd X r C ω ∧ indProd X r C ω ≤ 1 := by
+  rw [indProd_as_indicator]
+  by_cases h : ∀ i : Fin r, X i ω ∈ C i
+  · simp [Set.indicator, h]
+  · simp [Set.indicator, h]
+
+/-- indProd of zero coordinates is identically 1. -/
+@[simp] lemma indProd_zero {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) (C : Fin 0 → Set α) :
+    indProd X 0 C = fun _ => 1 := by
+  funext ω
+  simp [indProd]
+
 /-- Drop the first coordinate of a path. -/
 def drop {α : Type*} (f : ℕ → α) : ℕ → α := shiftSeq (β:=α) 1 f
 
@@ -933,6 +960,27 @@ lemma tailCylinder_eq_preimage_cylinder
 
 @[simp] lemma mem_tailCylinder_iff {r : ℕ} {C : Fin r → Set α} {f : ℕ → α} :
     f ∈ tailCylinder (α:=α) r C ↔ ∀ i : Fin r, f (i.1 + 1) ∈ C i := Iff.rfl
+
+/-- The cylinder set is measurable when each component set is measurable. -/
+lemma cylinder_measurable_set {r : ℕ} {C : Fin r → Set α}
+    (hC : ∀ i, MeasurableSet (C i)) :
+    MeasurableSet (cylinder (α:=α) r C) :=
+  cylinder_measurable hC
+
+/-- The tail cylinder is measurable when each component is measurable. -/
+lemma tailCylinder_measurable {r : ℕ} {C : Fin r → Set α}
+    (hC : ∀ i, MeasurableSet (C i)) :
+    MeasurableSet (tailCylinder (α:=α) r C) := by
+  rw [tailCylinder_eq_preimage_cylinder]
+  exact measurable_drop (cylinder_measurable hC)
+
+/-- Empty cylinder is the whole space. -/
+@[simp] lemma cylinder_zero : cylinder (α:=α) 0 (fun _ => Set.univ) = Set.univ := by
+  ext f; simp [cylinder]
+
+/-- Empty tail cylinder is the whole space. -/
+@[simp] lemma tailCylinder_zero : tailCylinder (α:=α) 0 (fun _ => Set.univ) = Set.univ := by
+  ext f; simp [tailCylinder]
 
 end CylinderBridge
 
