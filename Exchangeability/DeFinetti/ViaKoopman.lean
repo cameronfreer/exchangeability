@@ -349,24 +349,51 @@ lemma condindep_pair_given_tail
   -- Part B: Shift equivariance for products
   -- Goal: Show CE[f(ω₀)·g(ωₖ) | ℐ] doesn't depend on k
 
-  -- Key required lemma (not yet formalized):
-  -- For shift-invariant μ and shift-invariant σ-algebra ℐ:
-  --   condExpL2 (φ ∘ shift) = condExpL2 φ  (a.e.)
+  -- Key lemma: condExpL2 commutes with the Koopman operator
+  -- Since condExpL2 = metProjection (by bridge lemma), and metProjection
+  -- is projection onto fixedSpace, we have:
+  --   koopman shift hσ (condexpL2 f) = condexpL2 f
+  -- i.e., (condexpL2 f) ∘ shift = condexpL2 f
 
-  -- This would show: CE[f(ω₁)·g(ωₖ₊₁) | ℐ] = CE[f(ω₀)·g(ωₖ) | ℐ] ∘ shift
-  --                                        = CE[f(ω₀)·g(ωₖ) | ℐ]  (by invariance)
+  -- We also need: condexpL2 (koopman shift hσ f) = condexpL2 f
+  -- i.e., condexpL2 (f ∘ shift) = condexpL2 f
 
-  -- By shift-invariance of the marginals of an exchangeable measure:
-  -- (f(ω₀), g(ωₖ)) and (f(ω₁), g(ωₖ₊₁)) have the same distribution
-  -- So their conditional expectations given ℐ have the same distribution
+  -- This follows from: condexpL2 is projection onto fixedSpace, and for any f,
+  -- projecting f onto fixedSpace gives the same result as projecting f∘shift,
+  -- because shift preserves the measure
 
-  -- But actually need stronger: they're equal a.e., not just same distribution
-  -- This requires deep ergodic decomposition theory
+  -- Key lemma for Part B: conditional expectation commutes with Koopman operator
+  -- This says: condexpL2 (f ∘ shift) = condexpL2 f
+  have h_condexp_koopman_commute : ∀ (f : Lp ℝ 2 μ),
+      condexpL2 (koopman shift hσ f) = condexpL2 f := by
+    intro f
+    -- Equivalently: P(Uf) = Pf where P = condexpL2, U = koopman
+    -- Since condexpL2 is projection onto fixedSpace(U), this reduces to:
+    -- Projection onto U-invariant subspace commutes with U
 
-  -- TODO: Requires formalizing:
-  -- 1. condExpL2 commutes with shift under shift-invariant measure/σ-algebra
-  -- 2. Extremal decomposition of exchangeable measures
-  -- 3. Ergodic convergence for conditional expectations
+    -- Proof outline:
+    -- 1. Decompose: f = Pf + (f - Pf) with Pf ∈ fixedSpace, (f - Pf) ⊥ fixedSpace
+    -- 2. U(Pf) = Pf (definition of fixedSpace)
+    -- 3. U(f - Pf) ⊥ fixedSpace (U isometry preserves orthogonality)
+    -- 4. P(Uf) = P(Pf + U(f - Pf)) = Pf + 0 = Pf
+
+    -- Required infrastructure (not yet formalized):
+    -- - Orthogonal decomposition with respect to projection
+    -- - Isometries preserve orthogonal complements
+    -- - Projections onto invariant subspaces commute with preserving isometries
+
+    sorry
+
+  -- With h_condexp_koopman_commute, we can show products have constant CE
+  -- For φₖ(ω) = f(ω 0) · g(ω k), we want: CE[φₖ|ℐ] doesn't depend on k
+
+  -- The argument would be:
+  -- CE[f(ω₁)·g(ωₖ₊₁)|ℐ] = CE[(f(ω₀)·g(ωₖ)) ∘ shift|ℐ]
+  --                        = CE[f(ω₀)·g(ωₖ)|ℐ]  (by h_condexp_koopman_commute)
+
+  -- But this requires additional work to formalize product functions properly
+
+  -- TODO: Formalize product function construction and apply commutation lemma
 
   -- Part C: Taking k → ∞ (tail argument)
   -- As k → ∞, g(ωₖ) becomes "independent" of ω₀ in the sense that
