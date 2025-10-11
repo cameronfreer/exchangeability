@@ -3,12 +3,11 @@ Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
-import Mathlib.Probability.ConditionalExpectation
+import Exchangeability.Probability.CondExpBasic
+import Exchangeability.Probability.CondProb
 import Mathlib.Probability.Independence.Basic
 import Mathlib.Probability.Independence.Conditional
 import Mathlib.Probability.Martingale.Basic
-import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
-import Mathlib.MeasureTheory.Function.ConditionalExpectation.Real
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.CondexpL2
 import Mathlib.MeasureTheory.PiSystem
 import Mathlib.MeasureTheory.OuterMeasure.BorelCantelli
@@ -92,66 +91,10 @@ This is intentional: these theorems need to work with multiple measurable space 
 the unusedSectionVars linter for such theorems with `set_option linter.unusedSectionVars false`.
 -/
 
-/-! ### Helper lemmas for set integration -/
-
-/-- If two functions are a.e. equal on `μ.restrict s`, their set integrals on `s` coincide. -/
-lemma setIntegral_congr_ae'
-    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-    {μ : Measure Ω} {s : Set Ω} {f g : Ω → E}
-    (hfg : f =ᵐ[μ.restrict s] g) :
-    ∫ x in s, f x ∂μ = ∫ x in s, g x ∂μ :=
-  integral_congr_ae hfg
-
-/-- If two functions are a.e. equal under `μ`, their set integrals on any `s` coincide. -/
-lemma setIntegral_congr_ae_of_ae
-    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-    {μ : Measure Ω} {s : Set Ω} {f g : Ω → E}
-    (hfgμ : f =ᵐ[μ] g) :
-    ∫ x in s, f x ∂μ = ∫ x in s, g x ∂μ :=
-  setIntegral_congr_ae' (ae_restrict_of_ae hfgμ)
-
-/-! ### Helper lemmas for σ-finiteness and indicators -/
-
-/-- If `μ` is finite, then any trim of `μ` is σ-finite. -/
-lemma sigmaFinite_trim_of_le {m m₀ : MeasurableSpace Ω}
-    (μ : Measure Ω) [IsFiniteMeasure μ] (hm : m ≤ m₀) :
-    SigmaFinite (μ.trim hm) :=
-  (inferInstance : IsFiniteMeasure (μ.trim hm)).toSigmaFinite
-
-/-- For pairwise disjoint sets, the indicator of the union equals
-the pointwise `tsum` of indicators (for ℝ-valued constants). -/
-lemma indicator_iUnion_tsum_of_pairwise_disjoint
-    (f : ℕ → Set Ω) (hdisj : Pairwise (Disjoint on f)) :
-    (fun ω => ((⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω))
-      = fun ω => ∑' i, (f i).indicator (fun _ => (1 : ℝ)) ω := by
-  classical
-  funext ω
-  by_cases h : ω ∈ ⋃ i, f i
-  · -- ω ∈ ⋃ i, f i: exactly one index i has ω ∈ f i
-    obtain ⟨i, hi⟩ := Set.mem_iUnion.mp h
-    have huniq : ∀ j, ω ∈ f j → j = i := by
-      intro j hj
-      by_contra hne
-      have : Disjoint (f i) (f j) := hdisj (Ne.symm hne)
-      exact this.le_bot ⟨hi, hj⟩
-    -- Only f i contributes, all others are 0
-    calc (⋃ k, f k).indicator (fun _ => (1:ℝ)) ω
-        = 1 := Set.indicator_of_mem h _
-      _ = ∑' j, if j = i then (1:ℝ) else 0 := by rw [tsum_ite_eq]
-      _ = ∑' j, (f j).indicator (fun _ => (1:ℝ)) ω := by
-          congr 1; ext j
-          by_cases hj : ω ∈ f j
-          · rw [Set.indicator_of_mem hj, huniq j hj]; simp
-          · rw [Set.indicator_of_notMem hj]
-            by_cases hji : j = i
-            · exact absurd (hji ▸ hi) hj
-            · simp [hji]
-  · -- ω ∉ ⋃ i, f i: all f i miss ω
-    have : ∀ i, ω ∉ f i := fun i hi => h (Set.mem_iUnion.mpr ⟨i, hi⟩)
-    simp [Set.indicator_of_notMem h, Set.indicator_of_notMem (this _)]
-
-
 /-! ### Pair-law ⇒ conditional indicator equality (stub) -/
+
+-- Note: Helper lemmas for set integration, σ-finiteness, and indicators
+-- have been moved to Exchangeability.Probability.CondExpBasic
 
 /-- Standard cylinder on the first `r` coordinates starting at index 0. -/
 def cylinder (α : Type*) (r : ℕ) (C : Fin r → Set α) : Set (ℕ → α) :=
@@ -285,138 +228,8 @@ lemma condexp_indicator_eq_of_agree_on_future_rectangles
       hf₁_int h_g_int h_set h_g_meas
   -/
 
-/-! ### Conditional Probability -/
-
-/-- Conditional probability of an event `A` given a σ-algebra `m`.
-This is the conditional expectation of the indicator function of `A`.
-
-We define it using mathlib's `condexp` applied to the indicator function.
--/
-noncomputable def condProb {m₀ : MeasurableSpace Ω} (μ : Measure Ω) [IsProbabilityMeasure μ]
-    (m : MeasurableSpace Ω) (A : Set Ω) : Ω → ℝ :=
-  μ[A.indicator (fun _ => (1 : ℝ)) | m]
-
-set_option linter.unusedSectionVars false in
-lemma condProb_def {m₀ : MeasurableSpace Ω} (μ : Measure Ω) [IsProbabilityMeasure μ]
-    (m : MeasurableSpace Ω) (A : Set Ω) :
-    condProb μ m A = μ[A.indicator (fun _ => (1 : ℝ)) | m] := rfl
-
-set_option linter.unusedSectionVars false in
-/-- Conditional probability takes values in `[0,1]` almost everywhere. -/
-lemma condProb_ae_nonneg_le_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
-    [IsProbabilityMeasure μ] (m : MeasurableSpace Ω) (hm : m ≤ m₀)
-    [SigmaFinite (μ.trim hm)] {A : Set Ω} (hA : MeasurableSet[m₀] A) :
-    ∀ᵐ ω ∂μ, 0 ≤ condProb μ m A ω ∧ condProb μ m A ω ≤ 1 := by
-  classical
-  -- Nonnegativity via condExp_nonneg
-  have h₀ : 0 ≤ᵐ[μ] condProb μ m A := by
-    have : 0 ≤ᵐ[μ] A.indicator (fun _ : Ω => (1 : ℝ)) :=
-      ae_of_all _ fun ω => by
-        by_cases hω : ω ∈ A <;> simp [Set.indicator, hω]
-    simpa [condProb] using condExp_nonneg (μ := μ) (m := m) this
-  -- Upper bound via monotonicity and condExp_const
-  have h₁ : condProb μ m A ≤ᵐ[μ] fun _ : Ω => (1 : ℝ) := by
-    have h_le : A.indicator (fun _ => (1 : ℝ)) ≤ᵐ[μ] fun _ => (1 : ℝ) :=
-      ae_of_all _ fun ω => by
-        by_cases hω : ω ∈ A <;> simp [Set.indicator, hω]
-    -- Indicator of measurable set with integrable constant is integrable
-    have h_int : Integrable (A.indicator fun _ : Ω => (1 : ℝ)) μ :=
-      (integrable_const (1 : ℝ)).indicator hA
-    have h_mono := condExp_mono (μ := μ) (m := m) h_int (integrable_const (1 : ℝ)) h_le
-    simpa [condProb, condExp_const (μ := μ) (m := m) hm (1 : ℝ)] using h_mono
-  filter_upwards [h₀, h₁] with ω h0 h1
-  exact ⟨h0, by simpa using h1⟩
-
-/-- Uniform bound: conditional probability is in `[0,1]` a.e. uniformly over `A`. -/
-lemma condProb_ae_bound_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (m : MeasurableSpace Ω) (hm : m ≤ m₀) [inst : SigmaFinite (μ.trim hm)]
-    (A : Set Ω) (hA : MeasurableSet[m₀] A) :
-    ∀ᵐ ω ∂μ, ‖μ[A.indicator (fun _ => (1 : ℝ)) | m] ω‖ ≤ 1 := by
-  haveI : SigmaFinite (μ.trim hm) := inst
-  have h := condProb_ae_nonneg_le_one m hm hA
-  filter_upwards [h] with ω hω
-  rcases hω with ⟨h0, h1⟩
-  have : |condProb μ m A ω| ≤ 1 := by
-    have : |condProb μ m A ω| = condProb μ m A ω := abs_of_nonneg h0
-    simpa [this]
-  simpa [Real.norm_eq_abs, condProb] using this
-
-set_option linter.unusedSectionVars false in
-/-- Conditional probability integrates to the expected measure on sets that are
-measurable with respect to the conditioning σ-algebra. -/
-lemma condProb_integral_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
-    [IsProbabilityMeasure μ] (m : MeasurableSpace Ω) (hm : m ≤ m₀)
-    [SigmaFinite (μ.trim hm)] {A B : Set Ω} (hA : MeasurableSet[m₀] A)
-    (hB : MeasurableSet[m] B) :
-    ∫ ω in B, condProb μ m A ω ∂μ = (μ (A ∩ B)).toReal := by
-  classical
-  have h_int : Integrable (A.indicator fun _ : Ω => (1 : ℝ)) μ :=
-    (integrable_const (1 : ℝ)).indicator hA
-  -- Use the defining property of the conditional expectation on the set `B`.
-  have h_condexp :=
-    setIntegral_condExp (μ := μ) (m := m) (hm := hm)
-      (f := A.indicator fun _ : Ω => (1 : ℝ)) h_int hB
-  -- Rewrite as an integral over `B ∩ A` of the constant 1.
-  have h_indicator :
-      ∫ ω in B, A.indicator (fun _ : Ω => (1 : ℝ)) ω ∂μ
-        = ∫ ω in B ∩ A, (1 : ℝ) ∂μ := by
-    simpa [Set.inter_comm, Set.inter_left_comm, Set.inter_assoc]
-      using setIntegral_indicator (μ := μ) (s := B) (t := A)
-        (f := fun _ : Ω => (1 : ℝ)) hA
-  -- Evaluate the integral of 1 over the set.
-  have h_const : ∫ ω in B ∩ A, (1 : ℝ) ∂μ = (μ (B ∩ A)).toReal := by
-    simp [Measure.real_def, Set.inter_comm]
-  -- Put everything together and clean up intersections.
-  simpa [condProb, h_indicator, h_const, Set.inter_comm, Set.inter_left_comm, Set.inter_assoc]
-    using h_condexp
-
-set_option linter.unusedSectionVars false in
-@[simp]
-lemma condProb_univ {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
-    [IsProbabilityMeasure μ] (m : MeasurableSpace Ω) (hm : m ≤ m₀)
-    [SigmaFinite (μ.trim hm)] :
-    condProb μ m (Set.univ : Set Ω) =ᵐ[μ] (fun _ => (1 : ℝ)) := by
-  classical
-  have : (Set.univ : Set Ω).indicator (fun _ : Ω => (1 : ℝ)) = fun _ => (1 : ℝ) := by
-    funext ω; simp [Set.indicator]
-  simp [condProb, this, condExp_const (μ := μ) (m := m) hm (1 : ℝ)]
-
-set_option linter.unusedSectionVars false in
-@[simp]
-lemma condProb_empty {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
-    [IsProbabilityMeasure μ] (m : MeasurableSpace Ω) (hm : m ≤ m₀) :
-    condProb μ m (∅ : Set Ω) =ᵐ[μ] (fun _ => (0 : ℝ)) := by
-  classical
-  have : (∅ : Set Ω).indicator (fun _ : Ω => (1 : ℝ)) = fun _ => (0 : ℝ) := by
-    funext ω; simp [Set.indicator]
-  simp [condProb, this, condExp_const (μ := μ) (m := m) hm (0 : ℝ)]
-
-set_option linter.unusedSectionVars false in
-@[simp]
-lemma condProb_compl {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
-    [IsProbabilityMeasure μ] (m : MeasurableSpace Ω) (hm : m ≤ m₀)
-    [SigmaFinite (μ.trim hm)] {A : Set Ω} (hA : MeasurableSet[m₀] A) :
-    condProb μ m Aᶜ =ᵐ[μ] (fun ω => 1 - condProb μ m A ω) := by
-  classical
-  have hId :
-      Aᶜ.indicator (fun _ : Ω => (1 : ℝ))
-        = (fun _ : Ω => (1 : ℝ)) - A.indicator (fun _ : Ω => (1 : ℝ)) := by
-    funext ω
-    by_cases h : ω ∈ A <;> simp [Set.indicator, h]
-  have hlin :
-      μ[Aᶜ.indicator (fun _ => (1 : ℝ)) | m]
-        =ᵐ[μ] μ[(fun _ => (1 : ℝ)) | m] - μ[A.indicator (fun _ => (1 : ℝ)) | m] := by
-    have h_int : Integrable (A.indicator fun _ : Ω => (1 : ℝ)) μ :=
-      (integrable_const (1 : ℝ)).indicator hA
-    simpa [hId] using
-      condExp_sub (μ := μ) (m := m)
-        (integrable_const (1 : ℝ)) h_int
-  have hconst : μ[(fun _ : Ω => (1 : ℝ)) | m] =ᵐ[μ] (fun _ => (1 : ℝ)) :=
-    (condExp_const (μ := μ) (m := m) hm (1 : ℝ)).eventuallyEq
-  have : μ[Aᶜ.indicator (fun _ : Ω => (1 : ℝ)) | m]
-            =ᵐ[μ] (fun ω => 1 - μ[A.indicator (fun _ : Ω => (1 : ℝ)) | m] ω) :=
-    hlin.trans <| (EventuallyEq.sub hconst EventuallyEq.rfl)
-  simpa [condProb] using this
+-- Note: Conditional probability definitions and lemmas (condProb and related results)
+-- have been moved to Exchangeability.Probability.CondProb
 
 /-! ### Conditional Independence (Doob's Characterization)
 
@@ -1490,48 +1303,8 @@ lemma Integrable.tendsto_L1_condexp_antitone
 
   sorry
 
-/-- **Lévy's downward theorem: L¹ convergence for antitone σ-algebras.**
-
-For a decreasing family of σ-algebras 𝒢 n ↓ 𝒢∞ := ⨅ n, 𝒢 n,
-conditional expectations converge in L¹:
-  ‖μ[X | 𝒢 n] - μ[X | 𝒢∞]‖₁ → 0
-
-Proof strategy: truncation + L¹-contraction of conditional expectation.
-For any ε > 0:
-1. Choose M so that ‖X - X^M‖₁ < ε/3 (truncation X^M := max(min(X,M),-M))
-2. Use a.e. convergence for bounded X^M (L² case) + Cauchy-Schwarz to get L¹
-3. Triangle inequality: ‖μ[X|𝒢 n] - μ[X|tail]‖₁
-     ≤ ‖μ[X-X^M|𝒢 n]‖₁ + ‖μ[X^M|𝒢 n] - μ[X^M|tail]‖₁ + ‖μ[X^M-X|tail]‖₁
-     ≤ 2‖X-X^M‖₁ + middle term  (by L¹-contraction)
-4. Send n → ∞ (middle → 0 by L² bounded case) then M → ∞
--/
-lemma Integrable.tendsto_L1_condexp_antitone
-    {Ω} {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (𝒢 : ℕ → MeasurableSpace Ω)
-    (hle : ∀ n, 𝒢 n ≤ m₀) (hdecr : ∀ n, 𝒢 (n+1) ≤ 𝒢 n)
-    [∀ n, SigmaFinite (μ.trim (hle n))]
-    {X : Ω → ℝ} (hX : Integrable X μ) :
-    Tendsto (fun n => eLpNorm (μ[X | 𝒢 n] - μ[X | ⨅ n, 𝒢 n]) 1 μ) atTop (𝓝 0) := by
-  set tail := ⨅ n, 𝒢 n with htail_def
-  -- Key fact: a.e. convergence (from the a.e. lemma)
-  have h_ae : ∀ᵐ ω ∂μ, Tendsto (fun n => μ[X | 𝒢 n] ω) atTop (𝓝 (μ[X | tail] ω)) :=
-    Integrable.tendsto_ae_condexp_antitone 𝒢 hle hdecr hX
-
-  -- Uniform integrability: all conditional expectations μ[X | 𝒢 n] are uniformly integrable
-  -- because they are dominated by μ[|X| | 𝒢 n], and these form a reverse martingale bounded by |X|
-  -- On a finite measure space, uniform L¹ bound implies uniform integrability.
-
-  -- Standard fact: On a probability space,
-  --   a.e. convergence + uniform integrability ⇒ L¹ convergence
-  -- The sequence {μ[X | 𝒢 n]} is uniformly integrable because:
-  --   1. ‖μ[X | 𝒢 n]‖₁ ≤ ‖X‖₁ for all n (L¹ contraction)
-  --   2. On a probability space, this uniform bound gives uniform integrability
-  --
-  -- This is Vitali's convergence theorem. The detailed proof would construct
-  -- the uniform integrability condition using the tower property and Markov's inequality.
-  -- For now we appeal to the standard result.
-
-  sorry -- Vitali convergence theorem: UI + a.e. convergence ⇒ L¹ convergence
+-- Note: Duplicate declaration removed - see earlier declaration of
+-- Integrable.tendsto_L1_condexp_antitone above
 
 /-- **Reverse martingale convergence theorem.**
 
