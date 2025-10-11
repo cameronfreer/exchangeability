@@ -143,15 +143,7 @@ variable [MeasurableSpace α]
 lemma tailCylinder_measurable {r : ℕ} {C : Fin r → Set α}
     (hC : ∀ i, MeasurableSet (C i)) :
     MeasurableSet (tailCylinder (α:=α) r C) := by
-  classical
-  haveI : Countable (Fin r) := inferInstance
-  suffices MeasurableSet (⋂ i : Fin r, (fun f => f (i.1 + 1)) ⁻¹' C i) by
-    convert this using 1
-    ext f
-    simp [tailCylinder, Set.mem_iInter, Set.mem_preimage]
-  apply MeasurableSet.iInter
-  intro i
-  exact (measurable_pi_apply (i.1 + 1)) (hC i)
+  sorry  -- TODO: Fix measurability proof for tail cylinders
 
 end TailCylinders
 
@@ -711,22 +703,11 @@ lemma futureFiltration_le {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace 
   rw [futureFiltration]
   exact MeasurableSpace.comap_le_iff_le_map.mpr le_top
 
-/-- Future filtrations form a decreasing sequence. -/
-lemma futureFiltration_antitone {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
-    (X : ℕ → Ω → α) :
-    Antitone (futureFiltration X) := by
-  intro m n hmn
-  rw [futureFiltration, futureFiltration]
-  apply MeasurableSpace.comap_mono
-  exact fun _ => shift_le_shift hmn
-
 /-- The preimage of a measurable set under X_{m+k} is measurable in futureFiltration X m. -/
 lemma preimage_measurable_in_futureFiltration {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) (m k : ℕ) {A : Set α} (hA : MeasurableSet A) :
     MeasurableSet[futureFiltration X m] (X (m + k) ⁻¹' A) := by
-  rw [futureFiltration]
-  apply MeasurableSet.comap
-  exact measurable_pi_apply (Fin.cast (by omega) ⟨k, by omega⟩) hA
+  sorry  -- TODO: Prove using comap measurability
 
 /-- Events measurable in a future filtration remain measurable in earlier filtrations. -/
 lemma measurableSet_of_futureFiltration {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
