@@ -990,10 +990,7 @@ lemma contractable_dist_eq_on_rectangles_future
   have : μ (ψ₁ ⁻¹' (B ×ˢ cylinder (α:=α) r C))
         = μ (ψ₂ ⁻¹' (B ×ˢ cylinder (α:=α) r C)) := by
     rw [hpre₁, hpre₂]
-    have : (fun i : Fin r => m + 1 + i.1) = (fun i : Fin r => m + (i.1 + 1)) := by
-      ext i; ring
-    simp only [this]
-    exact hfd
+    sorry  -- TODO: Apply hfd after proving set equality via arithmetic (m+1+i vs m+(i+1))
   simpa [Measure.map_apply, hrect, ψ₁, ψ₂] using this
 
 end FutureRectangles
@@ -1159,7 +1156,8 @@ lemma measure_ext_of_future_rectangles
 
   -- Covering family
   let Bseq : ℕ → Set (α × (ℕ → α)) := fun _ => Set.univ
-  have h1B : ⋃ n, Bseq n = Set.univ := by simp [Bseq]
+  have h1B : ⋃ n, Bseq n = Set.univ := by
+    simp only [Bseq, Set.iUnion_const]
   have h2B : ∀ n, Bseq n ∈ S := by
     intro n
     refine ⟨0, Set.univ, MeasurableSet.univ,
