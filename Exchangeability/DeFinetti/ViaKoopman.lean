@@ -151,33 +151,49 @@ lemma Kernel.IndepFun.ae_measure_indepFun
     {X Y : Ω → ℝ}
     (hXY : Kernel.IndepFun X Y κ μ) :
     ∀ᵐ a ∂μ, ∫ ω, X ω * Y ω ∂(κ a) = (∫ ω, X ω ∂(κ a)) * (∫ ω, Y ω ∂(κ a)) := by
-  -- The key idea: kernel independence gives us independence for a.e. parameter
-  -- We'll show that for a.e. a, X and Y are measure-independent under κ a
+  -- Strategy: Show that for a.e. a, X and Y are measure-independent under κ a,
+  -- then apply measure-level integral factorization.
 
-  -- Step 1: For ℝ with Borel σ-algebra, use a countable π-system that generates it
-  -- The sets {X⁻¹(Iic q) | q : ℚ} form a π-system that generates σ(X)
-  -- Similarly for Y
+  -- Key observation from line 1632-1643: For measurable X : Ω → ℝ and Borel S ⊆ ℝ,
+  -- the preimage X⁻¹(S) is measurable both in the ambient σ-algebra AND in comap X.
+  -- This is exactly what Kernel.IndepFun provides: independence on comap σ-algebras.
 
-  -- Step 2: Get independence for all pairs from the countable generator
-  -- hXY gives us: ∀ s ∈ σ(X), ∀ t ∈ σ(Y), ∀ᵐ a, κ a (s ∩ t) = κ a s * κ a t
+  -- Step 1: For X, Y : Ω → ℝ measurable, use that X, Y generate their comap σ-algebras
+  -- Kernel.IndepFun X Y κ μ means: Kernel.Indep (comap X) (comap Y) κ μ
+  -- Which gives: ∀ s ∈ {s | MeasurableSet[comap X] s}, ∀ t ∈ {t | MeasurableSet[comap Y] t},
+  --              ∀ᵐ a, κ a (s ∩ t) = κ a s * κ a t
 
-  -- For a countable collection of sets, we can combine the null sets
-  -- Using ae_all_iff: (∀ i : ℕ, ∀ᵐ a, P i a) ↔ (∀ᵐ a, ∀ i, P i a)
+  -- Step 2: Key fact: For measurable X : Ω → ℝ, any Borel set B ⊆ ℝ gives X⁻¹(B) ∈ comap X
+  have h_X_preimage : ∀ (B : Set ℝ), MeasurableSet B →
+      MeasurableSet[MeasurableSpace.comap X inferInstance] (X ⁻¹' B) := by
+    intro B hB
+    exact ⟨B, hB, rfl⟩
 
-  -- Step 3: On the a.e. set where independence holds for all generator pairs,
-  -- apply Dynkin's π-λ theorem to extend to the full σ-algebras
+  have h_Y_preimage : ∀ (B : Set ℝ), MeasurableSet B →
+      MeasurableSet[MeasurableSpace.comap Y inferInstance] (Y ⁻¹' B) := by
+    intro B hB
+    exact ⟨B, hB, rfl⟩
 
-  -- Step 4: Measure-level independence under κ a gives integral factorization
-  -- This is IndepFun.integral_mul_eq_mul_integral from mathlib
+  -- Step 3: Unfold Kernel.IndepFun to get the independence statement
+  -- For ANY s, t in the comap σ-algebras, we have ∀ᵐ a, κ a (s ∩ t) = κ a s * κ a t
 
-  -- The proof requires several technical lemmas from mathlib:
-  -- 1. Countable generator for Borel ℝ (GeneratesFrom / generateFrom)
-  -- 2. ae_all_iff for swapping quantifiers
-  -- 3. Dynkin π-λ theorem (MeasureTheory.generateFrom_induction or similar)
-  -- 4. IndepFun.integral_mul_eq_mul_integral for measure-level independence
+  -- Step 4: Use a countable generator for Borel ℝ (e.g., {(-∞, q] | q ∈ ℚ})
+  -- For each pair of rationals q₁, q₂, apply hXY to X⁻¹((-∞, q₁]) and Y⁻¹((-∞, q₂])
+  -- This gives countably many a.e. statements
 
-  -- For now, we note that this is standard measure-theoretic infrastructure
-  -- that should exist in mathlib or be provable from existing lemmas
+  -- Step 5: Use ae_all_iff to combine: (∀ i, ∀ᵐ a, P i a) ↔ (∀ᵐ a, ∀ i, P i a)
+  -- This gives an a.e. set where independence holds for all generator pairs
+
+  -- Step 6: On this a.e. set, apply π-λ theorem to extend from generators to full σ-algebras
+  -- This shows: for a.e. a, all measurable sets are independent under κ a
+
+  -- Step 7: Measure-level independence + integrability implies integral factorization
+  -- Apply IndepFun.integral_mul or similar from mathlib
+
+  -- This proof structure is sound but requires formalizing:
+  -- - Countable Borel generators
+  -- - π-λ theorem for measures
+  -- - Connection from set independence to integral factorization
 
   sorry
 
