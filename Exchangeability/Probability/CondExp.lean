@@ -1180,9 +1180,9 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
             -- Apply linearity: μ[a - b + c | m] = μ[a|m] - μ[b|m] + μ[c|m]
             calc μ[X₂ ^ 2 - 2 • X₂ * μ[X₂ | m₁] + (μ[X₂ | m₁]) ^ 2 | m₁]
                 =ᵐ[μ] μ[X₂ ^ 2 - 2 • X₂ * μ[X₂ | m₁] | m₁] + μ[(μ[X₂ | m₁]) ^ 2 | m₁] :=
-                  condExp_add (h1.sub h2) h3
+                  condExp_add (h1.sub h2) h3 m₁
               _ =ᵐ[μ] (μ[X₂ ^ 2 | m₁] - μ[2 • X₂ * μ[X₂ | m₁] | m₁]) + μ[(μ[X₂ | m₁]) ^ 2 | m₁] :=
-                  by filter_upwards [condExp_sub h1 h2] with ω h; simp [h]
+                  by filter_upwards [condExp_sub h1 h2 m₁] with ω h; simp [h]
               _ =ᵐ[μ] μ[X₂ ^ 2 | m₁] - μ[2 • X₂ * μ[X₂ | m₁] | m₁] + μ[(μ[X₂ | m₁]) ^ 2 | m₁] :=
                   by filter_upwards with ω; ring
         _ =ᵐ[μ] μ[X₂ ^ 2 | m₁] - 2 • μ[X₂ | m₁] * μ[X₂ | m₁] + (μ[X₂ | m₁]) ^ 2 := by
