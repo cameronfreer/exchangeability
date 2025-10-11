@@ -5,6 +5,7 @@ Authors: Cameron Freer
 -/
 import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
+import Mathlib.MeasureTheory.Function.SimpleFuncDense
 import Mathlib.Analysis.InnerProductSpace.Projection.Basic
 import Mathlib.Probability.Kernel.Condexp
 import Mathlib.Probability.Independence.Kernel
@@ -697,62 +698,6 @@ private lemma condexp_precomp_iterate_eq
 The wrappers below make these connections explicit for our setting.
 -/
 
-/-- **DEPRECATED**: Almost-everywhere shift-invariance of the regular conditional distribution.
-
-**This kernel-level approach is no longer needed.** Use `identicalConditionalMarginals_integral`
-instead, which works at the integral level and avoids kernel uniqueness issues.
-
-This lemma states that ν is shift-invariant a.e., but downstream proofs don't actually
-need measure equality - they only need integral equality, which is provided by
-`identicalConditionalMarginals_integral`.
-
-**Original proof strategy** (for reference, no circularity needed):
-1. For each measurable set s ⊆ α, prove ν(shift^[k] ω)(s) = ν(ω)(s) a.e.
-   using condexp_precomp_iterate_eq and condExp_ae_eq_integral_condExpKernel
-2. Use a countable π-system generating Borel(α) and swap quantifiers via ae_all_iff
-3. Extend from the π-system to all Borel sets via measure extension
-
-This avoids assuming condExpKernel is shift-invariant; we only use that
-conditional expectation commutes with shift for functions measurable w.r.t.
-shift-invariant σ-algebra.
--/
-lemma ν_ae_shiftInvariant {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    [StandardBorelSpace α] (hσ : MeasurePreserving shift μ μ) :
-    ∀ᵐ ω ∂μ, ∀ k : ℕ, ν (μ := μ) ((shift (α := α))^[k] ω) = ν (μ := μ) ω := by
-  classical
-  refine (ae_all_iff).2 ?_
-  intro k
-
-  -- Strategy: Use that condExpKernel is measurable w.r.t. shift-invariant σ-algebra
-  -- Key fact: If ω and ω' agree on the shift-invariant σ-algebra, then
-  -- condExpKernel ω = condExpKernel ω'. Since shift^[k] preserves this σ-algebra,
-  -- we should have condExpKernel (shift^[k] ω) = condExpKernel ω.
-
-  -- However, condExpKernel is a Kernel (Ω[α]) (Ω[α]), not (Ω[α]) α
-  -- We need to show that after mapping via π₀, the resulting kernels are equal
-
-  -- **Mathlib infrastructure needed**:
-  -- 1. `condExpKernel_apply_eq_condDistrib` (Mathlib.Probability.Kernel.Condexp:84)
-  --    - Already in mathlib, relates condExpKernel to condDistrib
-  -- 2. Uniqueness of regular conditional probabilities for StandardBorelSpace
-  --    - Should be in mathlib's conditional distribution theory
-  -- 3. `ae_all_iff` (already used above) - swaps ∀ and ∀ᵐ for countable families
-  -- 4. `Measure.ext_of_generateFrom_of_iUnion` - π-system measure extension
-  --    - In Mathlib.MeasureTheory.Measure.Restrict:463
-
-  -- **Proof outline**:
-  -- For each k, we want to show ν(shift^[k] ω) = ν(ω) for a.e. ω
-  -- Step 1: Use `condexp_precomp_iterate_eq` (already proved above) to show
-  --         that for any measurable f : Ω[α] → ℝ,
-  --         μ[f ∘ shift^[k] | tail] = μ[f | tail]
-  -- Step 2: Apply `condExp_ae_eq_integral_condExpKernel` (mathlib) to get
-  --         ∫ f ∘ shift^[k] d(condExpKernel ω) = ∫ f d(condExpKernel ω) a.e.
-  -- Step 3: This holds for all f in a countable dense family (π-system)
-  -- Step 4: Use uniqueness of measures to conclude condExpKernel(shift^[k] ω) = condExpKernel(ω)
-  -- Step 5: Push forward through π₀ to get ν(shift^[k] ω) = ν(ω)
-
-  -- This is provable but requires careful setup with StandardBorelSpace infrastructure
-  sorry  -- AXIOM: condExpKernel shift-invariance (provable using mathlib infrastructure above)
 
 set_option linter.unusedSectionVars false in
 /-- Helper: shift^[k] y n = y (n + k) -/
@@ -775,47 +720,6 @@ lemma coord_k_eq_coord_0_shift_k (k : ℕ) :
   rw [shift_iterate_apply]
   simp
 
-/-- **DEPRECATED**: Kernel-level identical marginals - no longer needed.
-
-Use `identicalConditionalMarginals_integral` instead, which:
-- Works at the integral level (what downstream proofs actually use)
-- Avoids kernel uniqueness / measure extension complexity
-- Has a clearer proof path using existing mathlib infrastructure
-
-This lemma proves kernel equality, but downstream proofs only ever use it
-to derive integral equalities. The integral version provides exactly what's
-needed without the extra machinery.
--/
-lemma identicalConditionalMarginals {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    [StandardBorelSpace α] (hσ : MeasurePreserving shift μ μ) (k : ℕ) :
-    ∀ᵐ ω ∂μ,
-      (Kernel.comap ((condExpKernel μ (shiftInvariantSigma (α := α))).map
-        (fun y : Ω[α] => y k)) id (measurable_id'' (shiftInvariantSigma_le (α := α)))
-        : Kernel (Ω[α]) α) ω
-      = ν (μ := μ) ω := by
-  -- The k-th marginal kernel is the pushforward via πₖ
-  -- By definition of ν, the 0-th marginal kernel is the pushforward via π₀
-  -- Using coord_k_eq_coord_0_shift_k: πₖ = π₀ ∘ shift^[k]
-
-  -- Using ν_ae_shiftInvariant, we know that for a.e. ω:
-  -- ν(shift^[k] ω) = ν(ω)
-
-  -- We need to show: LHS ω = ν ω
-  -- where LHS ω = Kernel.comap ((condExpKernel...).map (y ↦ y k)) id ... ω
-
-  -- Key insight: By the coordinate relation y k = (shift^[k] y) 0, we have:
-  -- LHS ω should equal the kernel at ω that maps via (y ↦ (shift^[k] y) 0)
-
-  -- This requires kernel composition properties that may not be in current mathlib.
-  -- Specifically, we need:
-  -- (condExpKernel μ tail).map πₖ evaluated at ω
-  -- = (condExpKernel μ tail).map (π₀ ∘ shift^[k]) evaluated at ω
-  -- = (condExpKernel μ tail ∘ shift^[-k]).map π₀ evaluated at shift^[k] ω  (if shift commutes with kernel)
-  -- = (condExpKernel μ tail).map π₀ evaluated at shift^[k] ω  (by shift-invariance of condExpKernel)
-  -- = ν(shift^[k] ω)
-  -- = ν(ω)  (by ν_ae_shiftInvariant)
-
-  sorry  -- AXIOM: Depends on shift-invariance of condExpKernel (same as ν_ae_shiftInvariant)
 
 /-- Integral under the `k`-th conditional marginal equals the integral under `ν(ω)`.
 
