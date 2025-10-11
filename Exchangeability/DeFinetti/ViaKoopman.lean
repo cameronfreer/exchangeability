@@ -347,25 +347,26 @@ lemma condindep_pair_given_tail
     exact h_met f
 
   -- Part B: Shift equivariance for products
-  -- For any bounded measurable f, g : α → ℝ and k ≥ 1, we want to show:
-  -- CE[f(ω₀)·g(ωₖ) | ℐ] doesn't depend on k
+  -- Goal: Show CE[f(ω₀)·g(ωₖ) | ℐ] doesn't depend on k
 
-  -- The key observation: f(ω₀)·g(ωₖ) ∘ shift^j has the same conditional distribution
-  -- because shift^j preserves μ and ℐ is shift-invariant
+  -- Key required lemma (not yet formalized):
+  -- For shift-invariant μ and shift-invariant σ-algebra ℐ:
+  --   condExpL2 (φ ∘ shift) = condExpL2 φ  (a.e.)
 
-  -- Step 1: For bounded measurable f, g and k ≥ 1, form the product function
-  -- φₖ(ω) = f(ω 0) · g(ω k)
+  -- This would show: CE[f(ω₁)·g(ωₖ₊₁) | ℐ] = CE[f(ω₀)·g(ωₖ) | ℐ] ∘ shift
+  --                                        = CE[f(ω₀)·g(ωₖ) | ℐ]  (by invariance)
 
-  -- Step 2: Observe shift equivariance: φₖ ∘ shift = φₖ₊₁
-  -- This means: f(ω₁)·g(ωₖ₊₁) = f((shift ω) 0)·g((shift ω) k)
+  -- By shift-invariance of the marginals of an exchangeable measure:
+  -- (f(ω₀), g(ωₖ)) and (f(ω₁), g(ωₖ₊₁)) have the same distribution
+  -- So their conditional expectations given ℐ have the same distribution
 
-  -- Step 3: Since μ is shift-invariant (by hσ : MeasurePreserving shift)
-  -- and ℐ is shift-invariant, CE[φₖ | ℐ] and CE[φₖ₊₁ | ℐ] have the same distribution
+  -- But actually need stronger: they're equal a.e., not just same distribution
+  -- This requires deep ergodic decomposition theory
 
-  -- Step 4: Actually, by the shift-invariance of functions in L²(μ, ℐ),
-  -- we have CE[φₖ | ℐ] = CE[φₖ₊₁ | ℐ] almost everywhere
-
-  -- TODO: Formalize this shift equivariance argument
+  -- TODO: Requires formalizing:
+  -- 1. condExpL2 commutes with shift under shift-invariant measure/σ-algebra
+  -- 2. Extremal decomposition of exchangeable measures
+  -- 3. Ergodic convergence for conditional expectations
 
   -- Part C: Taking k → ∞ (tail argument)
   -- As k → ∞, g(ωₖ) becomes "independent" of ω₀ in the sense that
