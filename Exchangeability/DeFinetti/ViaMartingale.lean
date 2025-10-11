@@ -900,6 +900,22 @@ lemma mem_firstRCylinder_iff (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Se
     ω ∈ firstRCylinder X r C ↔ ∀ i : Fin r, X i ω ∈ C i :=
   Iff.rfl
 
+/-- firstRCylinder on universal sets is the whole space. -/
+lemma firstRCylinder_univ (X : ℕ → Ω → α) (r : ℕ) :
+    firstRCylinder X r (fun _ => Set.univ) = Set.univ := by
+  ext ω; simp [firstRCylinder]
+
+/-- Intersection of firstRCylinders equals coordinate-wise intersection. -/
+lemma firstRCylinder_inter (X : ℕ → Ω → α) {r : ℕ} {C D : Fin r → Set α} :
+    firstRCylinder X r C ∩ firstRCylinder X r D = firstRCylinder X r (fun i => C i ∩ D i) := by
+  ext ω
+  simp [firstRCylinder, Set.mem_inter_iff]
+  constructor
+  · intro ⟨hC, hD⟩ i
+    exact ⟨hC i, hD i⟩
+  · intro h
+    exact ⟨fun i => (h i).1, fun i => (h i).2⟩
+
 end FirstBlockCylinder
 
 /-! ## Product of indicators for finite cylinders -/
@@ -1090,6 +1106,25 @@ lemma tailCylinder_measurable {r : ℕ} {C : Fin r → Set α}
 /-- Empty tail cylinder is the whole space. -/
 @[simp] lemma tailCylinder_zero : tailCylinder (α:=α) 0 (fun _ => Set.univ) = Set.univ := by
   ext f; simp [tailCylinder]
+
+/-- Cylinder on universal sets is the whole space. -/
+lemma cylinder_univ {r : ℕ} : cylinder (α:=α) r (fun _ => Set.univ) = Set.univ := by
+  ext f; simp [cylinder]
+
+/-- Tail cylinder on universal sets is the whole space. -/
+lemma tailCylinder_univ {r : ℕ} : tailCylinder (α:=α) r (fun _ => Set.univ) = Set.univ := by
+  ext f; simp [tailCylinder]
+
+/-- Cylinders form intersections coordinate-wise. -/
+lemma cylinder_inter {r : ℕ} {C D : Fin r → Set α} :
+    cylinder (α:=α) r C ∩ cylinder (α:=α) r D = cylinder (α:=α) r (fun i => C i ∩ D i) := by
+  ext f
+  simp [cylinder, Set.mem_inter_iff]
+  constructor
+  · intro ⟨hC, hD⟩ i
+    exact ⟨hC i, hD i⟩
+  · intro h
+    exact ⟨fun i => (h i).1, fun i => (h i).2⟩
 
 end CylinderBridge
 
