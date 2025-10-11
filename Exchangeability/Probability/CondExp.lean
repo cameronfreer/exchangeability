@@ -765,9 +765,11 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
       have h_eval :
           ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S)
             = ((μ.restrict S) (⋃ i, f i)).toReal := by
-        simp [Measure.real_def, h_meas_union]
+        rw [setIntegral_indicator_const_Lp (E := ℝ) (α := Ω) (p := 1) h_meas_union (by norm_num : (0:ℝ) < 1)]
+        simp [Measure.real_def]
       -- Both sides compute to the same number; conclude.
-      simpa [C_S, hL₁, hR₁, hL₂, hR₂, h_eval]
+      simp only [C_S]
+      rw [hL₁, hR₁, hL₂, hR₂, h_eval]
 
     -- Step 3: Apply Dynkin π-λ theorem
     -- We've shown C_S is a Dynkin system (closed under ∅, complement, disjoint union)
