@@ -814,10 +814,20 @@ private lemma l2_bound_long_vs_tail
   -- 3. Can compare it with a window of size k starting at n using hCf_unif
   -- 4. The bound Cf/k applies since both are equal-weight windows of size k
   --
-  -- OR alternatively:
-  -- Use that bounded differences of averages satisfy the L² contractability bound
-  -- directly from the weighted sum lemma in L2Approach.
+  -- Rewrite long average (1/m) * ∑_{i<m} f(X_{n+i+1}) in terms of weights on each position
+  -- We can split it as: sum over first (m-k) terms + sum over last k terms
+  -- Then compare with the tail average which is just the last k terms weighted by 1/k
 
+  -- Key insight: Write the difference as a weighted combination where we can apply sum_tail_block_reindex
+  -- Long avg = (1/m) * [first (m-k) terms + last k terms]
+  -- Tail avg = (1/k) * [last k terms]
+  -- Difference involves the last k terms with weight (1/m - 1/k) and first terms with weight 1/m
+
+  -- Since |1/m - 1/k| ≤ 1/k and we have at most m terms each bounded,
+  -- this reduces to applying the uniform bound hCf_unif
+
+  -- For now, use that the tail average starting at n+(m-k) is a window of size k,
+  -- so we can bound it against another window of size k using hCf_unif
   sorry
 
 /-- **Weighted sums converge in L¹ for contractable sequences.**
