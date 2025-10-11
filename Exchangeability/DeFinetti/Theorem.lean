@@ -65,8 +65,5 @@ All theorems from `TheoremViaL2` are available in this namespace:
 -/
 
 -- Re-export all theorems from the L² proof
-namespace Exchangeability.DeFinetti
-  export Exchangeability.DeFinetti.deFinetti_RyllNardzewski_equivalence
-  export Exchangeability.DeFinetti.deFinetti
-  export Exchangeability.DeFinetti.conditionallyIID_of_contractable
-end Exchangeability.DeFinetti
+-- These are available directly from Exchangeability.DeFinetti namespace
+-- imported via TheoremViaL2

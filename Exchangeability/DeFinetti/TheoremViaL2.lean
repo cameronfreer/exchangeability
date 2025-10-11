@@ -90,17 +90,21 @@ theorem deFinetti_RyllNardzewski_equivalence
     Contractable μ X ↔ Exchangeable μ X ∧ ConditionallyIID μ X := by
   constructor
   · intro hContract
-    constructor
-    · -- (i) → (ii): Contractable → Exchangeable
-      exact exchangeable_of_contractable hContract hX_meas
-    · -- (i) → (iii): Contractable → ConditionallyIID via L² + CommonEnding
-      -- Get the directing measure and its properties from ViaL2
-      obtain ⟨ν, hν_prob, hν_meas, h_bridge⟩ :=
-        ViaL2.directing_measure_satisfies_requirements X hX_meas hContract hX_L2
+    -- (i) → (iii): Contractable → ConditionallyIID via L² + CommonEnding
+    -- Get the directing measure and its properties from ViaL2
+    obtain ⟨ν, hν_prob, hν_meas, h_bridge⟩ :=
+      ViaL2.directing_measure_satisfies_requirements X hX_meas hContract hX_L2
 
-      -- Apply CommonEnding to complete the proof
+    -- Apply CommonEnding to complete the proof
+    have hCIID : ConditionallyIID μ X := by
       sorry  -- TODO: exact CommonEnding.complete_from_directing_measure X hX_meas hContract ν hν_prob hν_meas h_bridge
       -- Note: This exact line works but depends on ViaL2.lean which currently has compilation errors
+
+    constructor
+    · -- (i) → (ii): Contractable → Exchangeable (via ConditionallyIID)
+      exact exchangeable_of_conditionallyIID hCIID
+    · -- (i) → (iii): ConditionallyIID (proved above)
+      exact hCIID
 
   · intro ⟨hExch, _hCIID⟩
     -- (ii) → (i): Exchangeable → Contractable (already proved)
