@@ -961,6 +961,33 @@ lemma indicator_comp_preimage
   ext ω
   simp [Set.indicator, Set.mem_preimage]
 
+/-- Binary indicator takes values in {0, 1}. -/
+lemma indicator_binary
+    {Ω : Type*} [MeasurableSpace Ω]
+    (A : Set Ω) (ω : Ω) :
+    A.indicator (fun _ => (1 : ℝ)) ω = 0 ∨ A.indicator (fun _ => (1 : ℝ)) ω = 1 := by
+  by_cases h : ω ∈ A
+  · simp [Set.indicator, h]
+  · simp [Set.indicator, h]
+
+/-- Indicator is bounded by its constant. -/
+lemma indicator_le_const
+    {Ω : Type*} [MeasurableSpace Ω]
+    (A : Set Ω) (c : ℝ) (hc : 0 ≤ c) (ω : Ω) :
+    A.indicator (fun _ => c) ω ≤ c := by
+  by_cases h : ω ∈ A
+  · simp [Set.indicator, h]
+  · simp [Set.indicator, h, hc]
+
+/-- Indicator is nonnegative when constant is nonnegative. -/
+lemma indicator_nonneg
+    {Ω : Type*} [MeasurableSpace Ω]
+    (A : Set Ω) (c : ℝ) (hc : 0 ≤ c) (ω : Ω) :
+    0 ≤ A.indicator (fun _ => c) ω := by
+  by_cases h : ω ∈ A
+  · simp [Set.indicator, h, hc]
+  · simp [Set.indicator, h]
+
 /-- indProd is strongly measurable when coordinates and sets are measurable. -/
 lemma indProd_stronglyMeasurable
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
