@@ -661,14 +661,15 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
           refine MeasurableSpace.generateFrom_le ?_
           intro s hs
           obtain ⟨F, G, hF, hG, rfl⟩ := hs
-          exact MeasurableSet.inter (le_sup_left _ _ _ hF) (le_sup_right _ _ _ hG)
+          exact @MeasurableSet.inter _ (mF ⊔ mG) _ _ (le_sup_left hF) (le_sup_right hG)
 
       -- Apply MeasurableSpace.induction_on_inter
       refine MeasurableSpace.induction_on_inter h_gen h_pi ?_ ?_ ?_ ?_ S hS
       · exact h_C_empty
       · exact h_rects
       · exact h_C_compl
-      · exact h_C_iUnion
+      · intro f hf_disj hf_meas hf_C
+        exact h_C_iUnion f hf_meas hf_disj hf_C
     have h_proj :
         μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
           =ᵐ[μ] g := by
