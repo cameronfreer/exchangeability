@@ -306,21 +306,20 @@ lemma condIndep_of_indicator_condexp_eq
         (hm₂ := sup_le hmF hmG)
         (f := fun ω => f1 ω * f2 ω)).symm
   -- Pull out the `mF ⊔ mG`-measurable factor `f1` at the middle level.
+  have hf1f2_int : Integrable (fun ω => f1 ω * f2 ω) μ := by
+    have : (fun ω => f1 ω * f2 ω) = (tF ∩ tH).indicator (fun _ : Ω => (1 : ℝ)) := by
+      funext ω; by_cases h1 : ω ∈ tF <;> by_cases h2 : ω ∈ tH <;>
+        simp [f1, f2, Set.indicator, h1, h2, Set.mem_inter_iff] at *
+    rw [this]
+    exact (integrable_const (1 : ℝ) (μ := μ)).indicator
+        (MeasurableSet.inter (hmF _ htF) (hmH _ htH))
   have h_pull_middle :
       μ[(fun ω => f1 ω * f2 ω) | mF ⊔ mG]
         =ᵐ[μ] f1 * μ[f2 | mF ⊔ mG] :=
     condExp_mul_of_aestronglyMeasurable_left
       (μ := μ) (m := mF ⊔ mG)
       hf1_aesm
-      (by
-        -- integrable of the product `f1 * f2`
-        have : (fun ω => f1 ω * f2 ω)
-              = (tF ∩ tH).indicator (fun _ : Ω => (1 : ℝ)) := by
-          funext ω; by_cases h1 : ω ∈ tF <;> by_cases h2 : ω ∈ tH <;>
-            simp [f1, f2, Set.indicator, h1, h2, Set.mem_inter_iff] at *
-        simpa [this] using
-          (integrable_const (1 : ℝ)).indicator
-            (MeasurableSet.inter (hmF _ htF) (hmH _ htH)))
+      hf1f2_int
       hf2_int
   -- Substitute the projection property to drop `mF` at the middle.
   have h_middle_to_G :
@@ -328,27 +327,29 @@ lemma condIndep_of_indicator_condexp_eq
         =ᵐ[μ] f1 * μ[f2 | mG] :=
     h_pull_middle.trans <| EventuallyEq.mul EventuallyEq.rfl hProj
   -- Pull out the `mG`-measurable factor at the outer level.
+  have hf1_condexp_int : Integrable (f1 * μ[f2 | mG]) μ := by
+    have h_eq : f1 * μ[f2 | mG] = tF.indicator (fun ω => μ[f2 | mG] ω) := by
+      funext ω; by_cases hω : ω ∈ tF <;> simp [f1, Set.indicator, hω]
+    rw [h_eq]
+    exact (integrable_condExp (μ := μ) (m := mG) (f := f2)).indicator (hmF _ htF)
   have h_pull_outer :
       μ[f1 * μ[f2 | mG] | mG]
         =ᵐ[μ] μ[f1 | mG] * μ[f2 | mG] :=
     condExp_mul_of_aestronglyMeasurable_right
       (μ := μ) (m := mG)
       (stronglyMeasurable_condExp (μ := μ) (m := mG) (f := f2)).aestronglyMeasurable
-      (by
-        -- integrable of `f1 * μ[f2 | mG]`
-        have : (fun ω => f1 ω * μ[f2 | mG] ω)
-              = tF.indicator (fun ω => μ[f2 | mG] ω) := by
-          funext ω; by_cases hω : ω ∈ tF <;> simp [f1, Set.indicator, hω]
-        simpa [this] using
-          (integrable_condExp (μ := μ) (m := mG) (f := f2)).indicator (hmF _ htF))
+      hf1_condexp_int
       hf1_int
   -- Chain the equalities into the product formula.
-  have :
+  have h_prod :
       μ[(fun ω => f1 ω * f2 ω) | mG]
         =ᵐ[μ] μ[f1 | mG] * μ[f2 | mG] :=
-    h_tower.trans (condExp_congr_ae (h_middle_to_G.trans h_pull_outer))
+    h_tower.trans (condExp_congr_ae h_middle_to_G |>.trans h_pull_outer)
   -- Rephrase the product formula for indicators.
-  simpa [f1, f2, Set.indicator_inter_mul_indicator] using this
+  have h_f1f2 : (fun ω => f1 ω * f2 ω) = (tF ∩ tH).indicator (fun _ => (1 : ℝ)) := by
+    funext ω; by_cases h1 : ω ∈ tF <;> by_cases h2 : ω ∈ tH <;>
+      simp [f1, f2, Set.indicator, h1, h2, Set.mem_inter_iff] at *
+  simpa [h_f1f2, f1, f2] using h_prod
 
 /-! ### Bounded Martingales and L² Inequalities -/
 
