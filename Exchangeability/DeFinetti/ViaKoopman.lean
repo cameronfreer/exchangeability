@@ -346,8 +346,45 @@ lemma condindep_pair_given_tail
     rw [← h_bridge]
     exact h_met f
 
-  -- Parts B-D: Now we need to use this convergence to show conditional independence
-  -- This requires the shift equivariance and tail arguments
+  -- Part B: Shift equivariance for products
+  -- For any bounded measurable f, g : α → ℝ and k ≥ 1, we want to show:
+  -- CE[f(ω₀)·g(ωₖ) | ℐ] doesn't depend on k
+
+  -- The key observation: f(ω₀)·g(ωₖ) ∘ shift^j has the same conditional distribution
+  -- because shift^j preserves μ and ℐ is shift-invariant
+
+  -- Step 1: For bounded measurable f, g and k ≥ 1, form the product function
+  -- φₖ(ω) = f(ω 0) · g(ω k)
+
+  -- Step 2: Observe shift equivariance: φₖ ∘ shift = φₖ₊₁
+  -- This means: f(ω₁)·g(ωₖ₊₁) = f((shift ω) 0)·g((shift ω) k)
+
+  -- Step 3: Since μ is shift-invariant (by hσ : MeasurePreserving shift)
+  -- and ℐ is shift-invariant, CE[φₖ | ℐ] and CE[φₖ₊₁ | ℐ] have the same distribution
+
+  -- Step 4: Actually, by the shift-invariance of functions in L²(μ, ℐ),
+  -- we have CE[φₖ | ℐ] = CE[φₖ₊₁ | ℐ] almost everywhere
+
+  -- TODO: Formalize this shift equivariance argument
+
+  -- Part C: Taking k → ∞ (tail argument)
+  -- As k → ∞, g(ωₖ) becomes "independent" of ω₀ in the sense that
+  -- it depends only on coordinates far from 0
+
+  -- By ergodic/extremal decomposition theory, for μ-almost all ω:
+  -- CE[f(ω₀)·g(ωₖ) | ℐ](ω) → CE[f(ω₀) | ℐ](ω) · CE[g(ωₖ) | ℐ](ω) as k → ∞
+
+  -- But by Part B, the LHS doesn't depend on k, so equality holds for k=1
+
+  -- TODO: This requires mixing/extremal measure theory
+
+  -- Part D: Extension to kernel independence
+  -- The above shows CE[f(ω₀)·g(ω₁) | ℐ] = CE[f(ω₀) | ℐ]·CE[g(ω₁) | ℐ] for simple functions
+
+  -- Apply Dynkin π-λ theorem to extend from generators to all measurable sets
+  -- This gives the desired Kernel.IndepFun at the kernel level
+
+  -- TODO: Need π-λ extension machinery
 
   sorry
 
