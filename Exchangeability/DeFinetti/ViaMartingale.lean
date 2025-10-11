@@ -545,6 +545,10 @@ variable {α : Type*}
 def cylinder (r : ℕ) (C : Fin r → Set α) : Set (ℕ → α) :=
   {f | ∀ i : Fin r, f i ∈ C i}
 
+/-- Cylinder for functions with domain Fin r. -/
+def finCylinder (r : ℕ) (C : Fin r → Set α) : Set (Fin r → α) :=
+  {f | ∀ i : Fin r, f i ∈ C i}
+
 variable [MeasurableSpace α]
 
 lemma cylinder_measurable {r : ℕ} {C : Fin r → Set α}
@@ -615,12 +619,12 @@ abbrev firstRSigma (X : ℕ → Ω → α) (r : ℕ) : MeasurableSpace Ω :=
 def firstRCylinder (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α) : Set Ω :=
   {ω | ∀ i : Fin r, X i ω ∈ C i}
 
-/-- As expected, the block cylinder is the preimage of a standard cylinder
+/-- As expected, the block cylinder is the preimage of a finite cylinder
    under the `firstRMap`. -/
-lemma firstRCylinder_eq_preimage_cylinder
+lemma firstRCylinder_eq_preimage_finCylinder
     (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α) :
     firstRCylinder X r C
-      = (firstRMap X r) ⁻¹' (cylinder (α:=α) r C) := rfl
+      = (firstRMap X r) ⁻¹' (finCylinder (α:=α) r C) := rfl
 
 /-- **Measurable in the first-`r` σ‑algebra.**
 If each `C i` is measurable in `α`, then the block cylinder is measurable in
@@ -630,10 +634,7 @@ lemma firstRCylinder_measurable_in_firstRSigma
     (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α)
     (hC : ∀ i, MeasurableSet (C i)) :
     MeasurableSet[firstRSigma X r] (firstRCylinder X r C) := by
-  classical
-  -- Sets measurable for a comap are precisely preimages of measurable sets.
-  rw [firstRCylinder_eq_preimage_cylinder]
-  exact ⟨cylinder (α:=α) r C, cylinder_measurable (α:=α) hC, rfl⟩
+  sorry  -- TODO: Need measurability lemma for finCylinder
 
 /-- **Measurable in the ambient σ‑algebra.**
 If each coordinate `X i` is measurable, then the block cylinder is measurable
