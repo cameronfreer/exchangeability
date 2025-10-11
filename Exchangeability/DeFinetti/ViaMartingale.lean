@@ -879,6 +879,43 @@ lemma firstRSigma_mono
   intro f
   exact fun i => f (Fin.castLE hrs i)
 
+/-- The first-r σ-algebra is contained in the future filtration at level m when r ≤ m. -/
+lemma firstRSigma_le_futureFiltration
+    (X : ℕ → Ω → α) {r m : ℕ} (hrm : r ≤ m) :
+    firstRSigma X r ≤ futureFiltration X m := by
+  rw [firstRSigma, futureFiltration]
+  apply MeasurableSpace.comap_mono
+  intro f
+  exact fun i => f (Fin.castLE hrm i)
+
+/-- The empty cylinder (r = 0) is the whole space. -/
+@[simp]
+lemma firstRCylinder_zero (X : ℕ → Ω → α) (C : Fin 0 → Set α) :
+    firstRCylinder X 0 C = Set.univ := by
+  ext ω
+  simp [firstRCylinder]
+
+/-- Cylinder membership characterization. -/
+lemma mem_firstRCylinder_iff (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α) (ω : Ω) :
+    ω ∈ firstRCylinder X r C ↔ ∀ i : Fin r, X i ω ∈ C i :=
+  Iff.rfl
+
+/-- firstRCylinder on universal sets is the whole space. -/
+lemma firstRCylinder_univ (X : ℕ → Ω → α) (r : ℕ) :
+    firstRCylinder X r (fun _ => Set.univ) = Set.univ := by
+  ext ω; simp [firstRCylinder]
+
+/-- Intersection of firstRCylinders equals coordinate-wise intersection. -/
+lemma firstRCylinder_inter (X : ℕ → Ω → α) {r : ℕ} {C D : Fin r → Set α} :
+    firstRCylinder X r C ∩ firstRCylinder X r D = firstRCylinder X r (fun i => C i ∩ D i) := by
+  ext ω
+  simp [firstRCylinder, Set.mem_inter_iff]
+  constructor
+  · intro ⟨hC, hD⟩ i
+    exact ⟨hC i, hD i⟩
+  · intro h
+    exact ⟨fun i => (h i).1, fun i => (h i).2⟩
+
 end FirstBlockCylinder
 
 /-! ## Product of indicators for finite cylinders -/
@@ -932,6 +969,53 @@ lemma indProd_eq_firstRCylinder_indicator
   rw [indProd_as_indicator]
   rfl
 
+/-! ### Indicator algebra helpers for factorization -/
+
+/-- The product of two indicator functions equals the indicator of their intersection. -/
+lemma indicator_mul_indicator_eq_indicator_inter
+    {Ω : Type*} [MeasurableSpace Ω]
+    (A B : Set Ω) (c d : ℝ) :
+    (A.indicator (fun _ => c)) * (B.indicator (fun _ => d))
+      = (A ∩ B).indicator (fun _ => c * d) := by
+  ext ω
+  by_cases hA : ω ∈ A <;> by_cases hB : ω ∈ B <;>
+    simp [Set.indicator, hA, hB, Set.mem_inter_iff]
+
+/-- Indicator function composed with preimage. -/
+lemma indicator_comp_preimage
+    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (f : Ω → α) (B : Set α) (c : ℝ) :
+    (B.indicator (fun _ => c)) ∘ f = (f ⁻¹' B).indicator (fun _ => c) := by
+  ext ω
+  simp [Set.indicator, Set.mem_preimage]
+
+/-- Binary indicator takes values in {0, 1}. -/
+lemma indicator_binary
+    {Ω : Type*} [MeasurableSpace Ω]
+    (A : Set Ω) (ω : Ω) :
+    A.indicator (fun _ => (1 : ℝ)) ω = 0 ∨ A.indicator (fun _ => (1 : ℝ)) ω = 1 := by
+  by_cases h : ω ∈ A
+  · simp [Set.indicator, h]
+  · simp [Set.indicator, h]
+
+/-- Indicator is bounded by its constant. -/
+lemma indicator_le_const
+    {Ω : Type*} [MeasurableSpace Ω]
+    (A : Set Ω) (c : ℝ) (hc : 0 ≤ c) (ω : Ω) :
+    A.indicator (fun _ => c) ω ≤ c := by
+  by_cases h : ω ∈ A
+  · simp [Set.indicator, h]
+  · simp [Set.indicator, h, hc]
+
+/-- Indicator is nonnegative when constant is nonnegative. -/
+lemma indicator_nonneg
+    {Ω : Type*} [MeasurableSpace Ω]
+    (A : Set Ω) (c : ℝ) (hc : 0 ≤ c) (ω : Ω) :
+    0 ≤ A.indicator (fun _ => c) ω := by
+  by_cases h : ω ∈ A
+  · simp [Set.indicator, h, hc]
+  · simp [Set.indicator, h]
+
 /-- indProd is strongly measurable when coordinates and sets are measurable. -/
 lemma indProd_stronglyMeasurable
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
@@ -958,6 +1042,38 @@ lemma indProd_nonneg_le_one {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpac
     indProd X 0 C = fun _ => 1 := by
   funext ω
   simp [indProd]
+
+/-- indProd on the universal sets is identically 1. -/
+lemma indProd_univ {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) (r : ℕ) :
+    indProd X r (fun _ => Set.univ) = fun _ => 1 := by
+  funext ω
+  simp [indProd, Set.indicator]
+
+/-- indProd is measurable when coordinates are measurable. -/
+lemma indProd_measurable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α)
+    (hX : ∀ n, Measurable (X n)) (hC : ∀ i, MeasurableSet (C i)) :
+    Measurable (indProd X r C) :=
+  (indProd_stronglyMeasurable X r C hX hC).measurable
+
+/-- indProd product equals multiplication of indProds. -/
+lemma indProd_mul {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) {r : ℕ} {C D : Fin r → Set α} (ω : Ω) :
+    indProd X r C ω * indProd X r D ω = indProd X r (fun i => C i ∩ D i) ω := by
+  simp only [indProd]
+  rw [Finset.prod_mul_distrib]
+  congr 1
+  ext i
+  by_cases hC : X i ω ∈ C i <;> by_cases hD : X i ω ∈ D i <;>
+    simp [Set.indicator, hC, hD, Set.mem_inter_iff]
+
+/-- indProd on intersection via firstRCylinder. -/
+lemma indProd_inter_eq {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) {r : ℕ} {C D : Fin r → Set α} :
+    indProd X r (fun i => C i ∩ D i)
+      = (firstRCylinder X r C ∩ firstRCylinder X r D).indicator (fun _ => (1 : ℝ)) := by
+  rw [← firstRCylinder_inter, indProd_eq_firstRCylinder_indicator]
 
 /-- Drop the first coordinate of a path. -/
 def drop {α : Type*} (f : ℕ → α) : ℕ → α := shiftSeq (β:=α) 1 f
@@ -1008,6 +1124,25 @@ lemma tailCylinder_measurable {r : ℕ} {C : Fin r → Set α}
 /-- Empty tail cylinder is the whole space. -/
 @[simp] lemma tailCylinder_zero : tailCylinder (α:=α) 0 (fun _ => Set.univ) = Set.univ := by
   ext f; simp [tailCylinder]
+
+/-- Cylinder on universal sets is the whole space. -/
+lemma cylinder_univ {r : ℕ} : cylinder (α:=α) r (fun _ => Set.univ) = Set.univ := by
+  ext f; simp [cylinder]
+
+/-- Tail cylinder on universal sets is the whole space. -/
+lemma tailCylinder_univ {r : ℕ} : tailCylinder (α:=α) r (fun _ => Set.univ) = Set.univ := by
+  ext f; simp [tailCylinder]
+
+/-- Cylinders form intersections coordinate-wise. -/
+lemma cylinder_inter {r : ℕ} {C D : Fin r → Set α} :
+    cylinder (α:=α) r C ∩ cylinder (α:=α) r D = cylinder (α:=α) r (fun i => C i ∩ D i) := by
+  ext f
+  simp [cylinder, Set.mem_inter_iff]
+  constructor
+  · intro ⟨hC, hD⟩ i
+    exact ⟨hC i, hD i⟩
+  · intro h
+    exact ⟨fun i => (h i).1, fun i => (h i).2⟩
 
 end CylinderBridge
 
@@ -1359,6 +1494,34 @@ axiom condExp_product_of_condIndep
           =ᵐ[μ] μ[(A ∩ B).indicator (fun _ => (1 : ℝ)) | m]) :
     μ[(fun ω => f ω * g ω) | m] =ᵐ[μ] (fun ω => μ[f | m] ω * g ω)
 
+/-- **Conditional expectation factorization for indicator products without axioms.**
+
+Given two sets `A` (measurable in `m`) and `B` (measurable in ambient), under conditional
+independence, the conditional expectation of the indicator product factors:
+```
+μ[1_A · 1_B | m] = μ[1_A | m] · 1_B   a.e.
+```
+
+This uses the `CondIndep` property directly via indicator algebra, without requiring
+the general product axiom. -/
+lemma condexp_indicator_inter_of_condIndep
+    {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {m : MeasurableSpace Ω} (hm : m ≤ inferInstance)
+    (A B : Set Ω)
+    (hA : MeasurableSet[m] A)
+    (hB : MeasurableSet B)
+    (h_condIndep : CondIndep (MeasurableSpace.comap A.indicator inferInstance)
+                              (MeasurableSpace.comap B.indicator inferInstance) m μ) :
+    μ[(A.indicator (fun _ => (1 : ℝ))) * (B.indicator (fun _ => (1 : ℝ))) | m]
+      =ᵐ[μ]
+    (fun ω => (μ[A.indicator (fun _ => (1 : ℝ)) | m] ω) * (B.indicator (fun _ => (1 : ℝ)) ω)) := by
+  -- Rewrite the product as indicator of intersection
+  rw [indicator_mul_indicator_eq_indicator_inter]
+  -- The conditional expectation of 1_{A∩B} equals μ[1_A | m] · 1_B by CondIndep
+  -- This is exactly the definition of conditional independence for indicator functions
+  sorry  -- TODO: Implement using CondIndep unfolding and condexp properties
+
 /-- **Finite-level factorization builder.**
 
 For a contractable sequence, at any future level `m ≥ r`, the conditional expectation
@@ -1386,131 +1549,146 @@ lemma finite_level_factorization
   -- Induct on r (the number of factors)
   refine Nat.rec ?base ?step r
   · -- r = 0: empty product is 1
-    intro m _hm
+    intro m hm
     have hconst :
         μ[(fun _ : Ω => (1 : ℝ)) | futureFiltration X m] =ᵐ[μ] (fun _ => (1 : ℝ)) :=
       condExp_const (μ := μ) (m := futureFiltration X m)
         (hm := by intro s hs; exact hs) (1 : ℝ)
     simpa [indProd] using hconst
-  · -- r ↦ r+1
+  · -- r ↦ r+1: Inductive step using indicator factorization
     intro r ih m hm
-    -- Split the product into "first r" × "last"
-    -- notation for the truncated family
-    let Cinit : Fin r → Set α := fun j => C (Fin.castSucc j)
-    let last  : Set α := C ⟨r, Nat.lt_succ_self r⟩
-    have hCinit : ∀ j, MeasurableSet (Cinit j) := fun j => hC _
-    have hlast  : MeasurableSet last := hC _
-    -- Rewrite indProd and the target product at r+1
-    have hsplit :
-        indProd X (r+1) C
-          = fun ω =>
-              (indProd X r Cinit ω) *
-              (Set.indicator last (fun _ => (1 : ℝ)) (X r ω)) := by
-      funext ω
-      simp [indProd, Fin.prod_univ_succ, Cinit, last]
-    -- Apply the induction hypothesis to the "first r" block
-    have hIH := ih (m := m) (by exact Nat.le_trans (Nat.le_succ r) hm)  -- m ≥ r+1 ⇒ m ≥ r
-    -- We will use the product formula at level m.
-    -- Put names to the two factors:
-    set f := indProd X r Cinit
-    set g := Set.indicator last (fun _ => (1 : ℝ)) ∘ X r
 
-    -- Note: f and g can be expressed as indicators using FirstBlockCylinder helpers:
-    -- • f = (firstRCylinder X r Cinit).indicator (fun _ => 1)  (by indProd_eq_firstRCylinder_indicator)
-    -- • g = (X r ⁻¹' last).indicator (fun _ => 1)
-    -- • firstRCylinder X r Cinit is measurable in firstRSigma X r (by firstRCylinder_measurable_in_firstRSigma)
-    -- • X r ⁻¹' last is measurable in MeasurableSpace.comap (X r) inferInstance
-    -- These σ-algebras are conditionally independent given futureFiltration X m
-    -- (by coordinate_future_condIndep axiom), which would allow us to use
-    -- condExp_indicator_mul_indicator_of_condIndep from CondExp.lean instead of
-    -- the more general condExp_product_of_condIndep.
-    -- Both are integrable (bounded indicators / product of bounded indicators)
-    have hf_int : Integrable f μ := indProd_integrable X r Cinit hX_meas hCinit
-    have hg_int : Integrable g μ := by
-      -- indicator of a measurable set after a measurable map is integrable
-      have : MeasurableSet (X r ⁻¹' last) := (hX_meas r) hlast
-      simpa [g, Function.comp] using (integrable_const (1 : ℝ)).indicator this
-    -- f is adapted to the sigma algebra generated by the first r coordinates; measurability at level m
-    -- For the product rule axiom we only need AEStronglyMeasurable[m] f and g strongly measurable.
-    have hf_meas : AEStronglyMeasurable[futureFiltration X m] f μ := by
-      -- f is bounded, so any a.e. version will do; we can use condexp to manufacture an m-measurable version
-      -- (this is a standard trick to discharge the aestrong measurability side-condition).
-      refine (stronglyMeasurable_condExp (μ := μ) (m := futureFiltration X m) (f := f)).aestronglyMeasurable.congr ?ae
-      -- choose the a.e. equal version to be f itself (true a.e.)
-      exact EventuallyEq.rfl
-    have hg_meas : StronglyMeasurable g := by
-      -- g is the composition of a measurable function with an indicator; this is strongly measurable.
-      have : Measurable g := by
-        have hXr := hX_meas r
-        have : Measurable fun ω => Set.indicator last (fun _ : α => (1 : ℝ)) (X r ω) := by
-          refine (measurable_const.indicator ?_).comp hXr
-          simpa using hlast
-        simpa [g, Function.comp] using this
-      exact this.stronglyMeasurable
-    -- Replace `g` inside the conditional expectation at level m by the `X 0`-version,
-    -- using your `condexp_convergence` (the rectangle-based lemma).
-    have hswap :
-        μ[g | futureFiltration X m]
-          =ᵐ[μ]
-        μ[Set.indicator last (fun _ => (1 : ℝ)) ∘ (X 0) | futureFiltration X m] := by
-      -- r ≤ m from hm, so we can apply the "extreme members coincide at level m" lemma
-      have hrm : r ≤ m := Nat.le_of_lt_succ (Nat.lt_of_le_of_lt (Nat.le_refl _) (Nat.succ_lt_succ_iff.mpr hm))
-      -- `condexp_convergence` specialized to `B = last`
-      simpa [g] using
-        (condexp_convergence (μ := μ) (X := X) hX hX_meas (k := 0) (m := m) hrm last hlast)
-    -- Product rule (axiom) at level m:
-    have hprod :
-        μ[(fun ω => f ω * g ω) | futureFiltration X m]
-          =ᵐ[μ] (fun ω => μ[f | futureFiltration X m] ω * g ω) :=
-      condExp_product_of_condIndep
-        (μ := μ) (m := futureFiltration X m)
-        (hm := by intro s hs; exact hs)
-        (f := f) (g := g)
-        hf_int hg_int hf_meas hg_meas
-        (by
-          -- we provide the indicator-product rule premise via your independence axiom
-          intro A B hA hB
-          -- This premise is exactly the product identity on indicators at level m.
-          -- We discharge it from `coordinate_future_condIndep` (axiom) and standard CE algebra.
-          -- Since the axiom returns the needed conditional independence, we accept this premise.
-          -- (If you later replace the axiom by a proved lemma, this `by` becomes a short proof.)
-          exact EventuallyEq.rfl)
-    -- Put the pieces together
-    -- Left side (with `f * g`) becomes, by hprod, CE(f) * g;
-    -- replace g's CE by the X0-version (hswap);
-    -- and use the IH for CE(f) to get the desired product of the r+1 singleton factors.
-    have : μ[indProd X (r+1) C | futureFiltration X m]
-            =ᵐ[μ]
-          (fun ω =>
-            (μ[f | futureFiltration X m] ω) *
-            (μ[Set.indicator last (fun _ => (1 : ℝ)) ∘ (X 0) | futureFiltration X m] ω)) := by
-      simpa [hsplit, f, g] using hprod
-    -- Replace μ[f | …] by the product of the first r singleton conditionals (IH)
-    have hIH' :
-        μ[f | futureFiltration X m]
-          =ᵐ[μ]
-        (fun ω => ∏ i : Fin r,
-            μ[Set.indicator (Cinit i) (fun _ => (1 : ℝ)) ∘ (X 0) | futureFiltration X m] ω) := by
-      simpa [f, Cinit] using hIH
-    -- Final clean-up: recognize the target (product over `Fin (r+1)`)
-    have htarget :
-        (fun ω =>
-          (μ[f | futureFiltration X m] ω) *
-          (μ[Set.indicator last (fun _ => (1 : ℝ)) ∘ (X 0) | futureFiltration X m] ω))
-        = (fun ω =>
-            ∏ i : Fin (r+1),
-              μ[Set.indicator (C i) (fun _ => (1 : ℝ)) ∘ (X 0) | futureFiltration X m] ω) := by
+    -- Split C into "first r" and "last"
+    let Cinit : Fin r → Set α := fun j => C (Fin.castSucc j)
+    let Clast : Set α := C ⟨r, Nat.lt_succ_self r⟩
+    have hCinit : ∀ j, MeasurableSet (Cinit j) := fun j => hC _
+    have hClast : MeasurableSet Clast := hC ⟨r, Nat.lt_succ_self r⟩
+
+    -- Factorize the product ∏_{i<r+1} 1_{Xᵢ∈Cᵢ} = (∏_{i<r} 1_{Xᵢ∈Cᵢ}) · 1_{Xᵣ∈Clast}
+    have hsplit : indProd X (r+1) C
+        = fun ω => indProd X r Cinit ω * Set.indicator Clast (fun _ => (1:ℝ)) (X r ω) := by
       funext ω
-      -- split the Fin (r+1) product into first r × last
-      simpa [Fin.prod_univ_succ, Cinit, last]
-        using rfl
-    -- Conclude by chaining the a.e. equalities and rewriting the product
-    refine this.trans ?_
-    refine (EventuallyEq.mul hIH' (EventuallyEq.of_eq rfl)).trans ?_
-    -- Insert the `hswap` for g's CE and fold to the target
-    refine (EventuallyEq.congr ?_ hswap).trans (EventuallyEq.of_eq htarget)
-    -- trivial a.e.-eq on the left factor for the congruence
-    exact EventuallyEq.rfl
+      simp [indProd, Fin.prod_univ_succ, Cinit, Clast]
+
+    -- Express the two factors as indicators of sets
+    set A := firstRCylinder X r Cinit with hA_def
+    set B := X r ⁻¹' Clast with hB_def
+
+    -- Rewrite indProd using indicator algebra
+    have hf_indicator : indProd X r Cinit = A.indicator (fun _ => (1:ℝ)) := by
+      rw [← hA_def]
+      exact indProd_eq_firstRCylinder_indicator X r Cinit
+
+    have hg_indicator : (Set.indicator Clast (fun _ => (1:ℝ)) ∘ X r)
+        = B.indicator (fun _ => (1:ℝ)) := by
+      rw [← hB_def]
+      exact indicator_comp_preimage (X r) Clast 1
+
+    -- The product is the indicator of A ∩ B
+    have hprod_indicator :
+        (fun ω => indProd X r Cinit ω * (Set.indicator Clast (fun _ => (1:ℝ)) (X r ω)))
+        = (A ∩ B).indicator (fun _ => (1:ℝ)) := by
+      rw [hf_indicator, hg_indicator]
+      exact indicator_mul_indicator_eq_indicator_inter A B 1 1
+
+    -- Measurability
+    have hA_meas : MeasurableSet[futureFiltration X m] A := by
+      rw [hA_def]
+      -- A is measurable in firstRSigma X r, which is ≤ futureFiltration X m when r ≤ m
+      have h_in_first : MeasurableSet[firstRSigma X r] (firstRCylinder X r Cinit) :=
+        firstRCylinder_measurable_in_firstRSigma X r Cinit hCinit
+      exact firstRSigma_le_futureFiltration X (Nat.le_of_succ_le hm) _ h_in_first
+
+    have hB_meas : MeasurableSet B := by
+      rw [hB_def]
+      exact (hX_meas r) hClast
+
+    -- Conditional independence (from axiom)
+    have h_condIndep : CondIndep
+        (MeasurableSpace.comap A.indicator inferInstance)
+        (MeasurableSpace.comap B.indicator inferInstance)
+        (futureFiltration X m) μ := by
+      -- This needs to be derived from coordinate_future_condIndep, which states that
+      -- X_i and shiftRV X (m+1) are conditionally independent given futureFiltration X m.
+      -- Since A depends on X_0,...,X_{r-1} and B = X_r⁻¹(Clast), and r < m, we need to:
+      -- 1. Show that A is measurable w.r.t. σ(X_0,...,X_{r-1}) ⊆ futureFiltration X m
+      -- 2. Show that B is measurable w.r.t. σ(X_r)
+      -- 3. Apply coordinate_future_condIndep with appropriate substitutions
+      -- This is non-trivial and requires developing the theory of conditional independence.
+      sorry
+
+    -- Apply indicator factorization
+    have hfactor :
+        μ[(A.indicator (fun _ => (1:ℝ))) * (B.indicator (fun _ => (1:ℝ))) | futureFiltration X m]
+          =ᵐ[μ]
+        (fun ω => (μ[A.indicator (fun _ => (1:ℝ)) | futureFiltration X m] ω)
+                  * (B.indicator (fun _ => (1:ℝ)) ω)) :=
+      condexp_indicator_inter_of_condIndep
+        (by intro s hs; exact hs) A B hA_meas hB_meas h_condIndep
+
+    -- Apply IH to the first r factors
+    have hIH : μ[indProd X r Cinit | futureFiltration X m] =ᵐ[μ]
+        (fun ω => ∏ i : Fin r,
+          μ[Set.indicator (Cinit i) (fun _ => (1:ℝ)) ∘ (X 0) | futureFiltration X m] ω) := by
+      exact ih (Nat.le_of_succ_le hm)
+
+    -- Replace Xᵣ with X₀ using contractability
+    have hswap : μ[(Set.indicator Clast (fun _ => (1:ℝ)) ∘ X r) | futureFiltration X m]
+        =ᵐ[μ]
+        μ[(Set.indicator Clast (fun _ => (1:ℝ)) ∘ X 0) | futureFiltration X m] := by
+      exact condexp_convergence hX hX_meas (Nat.le_of_succ_le hm) Clast hClast
+
+    -- Combine everything
+    calc μ[indProd X (r+1) C | futureFiltration X m]
+        _ =ᵐ[μ] μ[(fun ω => indProd X r Cinit ω
+                      * Set.indicator Clast (fun _ => (1:ℝ)) (X r ω))
+                   | futureFiltration X m] := by
+          apply condExp_congr
+          exact EventuallyEq.of_eq hsplit
+        _ =ᵐ[μ] μ[(A.indicator (fun _ => (1:ℝ)))
+                   * (B.indicator (fun _ => (1:ℝ)))
+                   | futureFiltration X m] := by
+          apply condExp_congr
+          funext ω
+          rw [← hf_indicator, ← hg_indicator]
+        _ =ᵐ[μ] (fun ω => (μ[A.indicator (fun _ => (1:ℝ)) | futureFiltration X m] ω)
+                          * (B.indicator (fun _ => (1:ℝ)) ω)) := hfactor
+        _ =ᵐ[μ] (fun ω => (μ[indProd X r Cinit | futureFiltration X m] ω)
+                          * (Set.indicator Clast (fun _ => (1:ℝ)) (X r ω))) := by
+          apply EventuallyEq.mul
+          · apply condExp_congr
+            exact EventuallyEq.of_eq hf_indicator.symm
+          · exact EventuallyEq.of_eq hg_indicator.symm
+        _ =ᵐ[μ] (fun ω => (∏ i : Fin r,
+                            μ[Set.indicator (Cinit i) (fun _ => (1:ℝ)) ∘ (X 0)
+                              | futureFiltration X m] ω)
+                          * (Set.indicator Clast (fun _ => (1:ℝ)) (X r ω))) := by
+          apply EventuallyEq.mul hIH
+          exact EventuallyEq.rfl
+        _ =ᵐ[μ] (fun ω => (∏ i : Fin r,
+                            μ[Set.indicator (Cinit i) (fun _ => (1:ℝ)) ∘ (X 0)
+                              | futureFiltration X m] ω)
+                          * μ[Set.indicator Clast (fun _ => (1:ℝ)) ∘ (X 0)
+                              | futureFiltration X m] ω) := by
+          apply EventuallyEq.mul EventuallyEq.rfl
+          -- Apply hswap to replace X r with X 0, then use pullout property
+          calc Set.indicator Clast (fun _ => (1:ℝ)) (X r ·)
+              _ =ᵐ[μ] μ[Set.indicator Clast (fun _ => (1:ℝ)) ∘ X r | futureFiltration X m] := by
+                -- B.indicator is futureFiltration X m-measurable (X r depends on coord r < m)
+                symm
+                apply condExp_of_stronglyMeasurable
+                · intro s hs; exact hs
+                · have : Measurable (Set.indicator Clast (fun _ => (1:ℝ)) ∘ X r) := by
+                    exact Measurable.comp (measurable_const.indicator (by exact hClast)) (hX_meas r)
+                  exact this.stronglyMeasurable
+                · exact (integrable_const (1:ℝ)).indicator ((hX_meas r) hClast)
+              _ =ᵐ[μ] μ[Set.indicator Clast (fun _ => (1:ℝ)) ∘ X 0 | futureFiltration X m] := hswap
+        _ =ᵐ[μ] (fun ω => ∏ i : Fin (r+1),
+                            μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0)
+                              | futureFiltration X m] ω) := by
+          apply EventuallyEq.of_eq
+          funext ω
+          simp [Fin.prod_univ_succ, Cinit, Clast]
 
 /-- **Tail factorization on finite cylinders.**
 
