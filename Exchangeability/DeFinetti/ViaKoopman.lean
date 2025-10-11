@@ -598,8 +598,22 @@ lemma indicator_product_bridge_ax
 
   -- Now prove: ∫ F dμ = ∫ G dμ using the factorization axiom
   have h_eq_integrals : ∫ ω, F ω ∂μ = ∫ ω, G ω ∂μ := by
-    -- Use tower property and factorization
-    sorry -- This requires condexp_product_factorization_ax + tower property
+    -- The key is that F and G are ae equal
+    -- F ω = ∏ i, indicator (B i) (ω (k i))
+    -- G ω = ∏ i, (ν ω (B i)).toReal = ∏ i, (∫ indicator (B i) dν_ω)
+
+    -- By identicalConditionalMarginals_integral, each coordinate satisfies:
+    -- ∫ indicator (B i) (y (k i)) d(condExpKernel) =ᵐ ∫ indicator (B i) dν
+
+    -- Therefore the products are also ae equal (though proving this formally
+    -- requires careful product manipulation which is deferred)
+
+    -- For the bridge to complete, this equality follows from:
+    -- 1. Each marginal: indicator (B i) (ω (k i)) has CE = ∫ indicator dν (via identicalConditionalMarginals)
+    -- 2. Products of conditionally independent terms have product CEs
+    -- 3. Tower property: ∫ CE[·] = ∫ (·)
+
+    sorry -- Full proof requires product version of identicalConditionalMarginals + tower property
 
   -- Convert both sides to ENNReal and conclude
   calc ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
