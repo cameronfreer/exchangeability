@@ -506,25 +506,115 @@ lemma indicator_product_bridge_ax
     (hB_meas : ∀ i, MeasurableSet (B i)) :
     ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
       = ∫⁻ ω, ∏ i : Fin m, (ν μ ω) (B i) ∂μ := by
-  -- Step 1: Define indicator functions as measurable bounded functions
-  let fs : Fin m → α → ℝ := fun i => (B i).indicator (fun _ => 1)
+  classical
 
-  -- Step 2: Apply condexp_product_factorization_ax to these indicators
-  have h_factor := condexp_product_factorization_ax μ hσ m fs
-    (fun i => Measurable.indicator measurable_const (hB_meas i))
-    (fun i => ⟨1, fun x => by simp [fs, Set.indicator]; split_ifs <;> norm_num⟩)
-    trivial
+  -- Define real-valued product function
+  let F : Ω[α] → ℝ := fun ω => ∏ i : Fin m, (B i).indicator (fun _ => (1 : ℝ)) (ω (k i))
 
-  -- h_factor gives: CE[∏ indicators | ℐ] =ᵐ ∏(∫ indicator dν)
+  -- F is measurable and bounded
+  have hF_meas : Measurable F := by
+    apply Finset.measurable_prod
+    intro i _
+    exact Measurable.indicator measurable_const (hB_meas i) |>.comp (measurable_pi_apply (k i))
 
-  -- Step 3: Integrate both sides
-  -- LHS: ∫ CE[∏ indicators | ℐ] dμ = ∫ ∏ indicators dμ (tower property)
-  -- RHS: ∫ ∏(∫ indicator dν) dμ
+  have hF_bd : ∀ ω, |F ω| ≤ 1 := by
+    intro ω
+    have h01 : ∀ i, 0 ≤ (B i).indicator (fun _ => (1 : ℝ)) (ω (k i))
+             ∧     (B i).indicator (fun _ => (1 : ℝ)) (ω (k i)) ≤ 1 := by
+      intro i
+      by_cases h : ω (k i) ∈ B i <;> simp [Set.indicator, h]
+    have h_nonneg : 0 ≤ F ω := Finset.prod_nonneg fun i _ => (h01 i).1
+    have h_le_one : F ω ≤ 1 := by
+      show (∏ i : Fin m, (B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ≤ 1
+      calc ∏ i : Fin m, (B i).indicator (fun _ => (1 : ℝ)) (ω (k i))
+          ≤ ∏ i : Fin m, (1 : ℝ) := by
+              apply Finset.prod_le_prod
+              · intro i _; exact (h01 i).1
+              · intro i _; exact (h01 i).2
+        _ = 1 := by simp
+    rw [abs_of_nonneg h_nonneg]
+    exact h_le_one
 
-  -- Step 4: Simplify using: ∫ indicator dν = ν(B)
-  -- and convert from ℝ to ENNReal
+  have hF_nonneg : 0 ≤ᵐ[μ] F := ae_of_all _ (fun ω => by
+    have := hF_bd ω
+    rw [abs_le] at this
+    exact this.1)
 
-  sorry
+  have hF_int : Integrable F μ := by
+    apply MeasureTheory.integrable_of_bounded hF_meas
+    exact ⟨1, hF_bd⟩
+
+  -- LHS: Convert ENNReal integral to real integral
+  have hL : ∫⁻ ω, ENNReal.ofReal (F ω) ∂μ = ENNReal.ofReal (∫ ω, F ω ∂μ) := by
+    exact lintegral_ofReal_eq_integral hF_meas.aemeasurable hF_nonneg hF_int
+
+  -- RHS: Product of kernel measures
+  let G : Ω[α] → ℝ := fun ω => ∏ i, ((ν μ ω) (B i)).toReal
+
+  have hG_meas : Measurable G := by
+    apply Finset.measurable_prod
+    intro i _
+    exact Measurable.ennreal_toReal (ν_eval_measurable (hB_meas i))
+
+  have hG_nonneg : 0 ≤ᵐ[μ] G := ae_of_all _ (fun ω =>
+    Finset.prod_nonneg fun i _ => ENNReal.toReal_nonneg)
+
+  have hG_bd : ∀ ω, |G ω| ≤ 1 := by
+    intro ω
+    have h01 : ∀ i, 0 ≤ ((ν μ ω) (B i)).toReal ∧ ((ν μ ω) (B i)).toReal ≤ 1 := by
+      intro i
+      constructor
+      · exact ENNReal.toReal_nonneg
+      · have : (ν μ ω) (B i) ≤ 1 := by
+          have := measure_mono (show B i ⊆ Set.univ from Set.subset_univ _)
+          simp at this
+          exact this
+        have : ((ν μ ω) (B i)).toReal ≤ (1 : ENNReal).toReal := by
+          apply ENNReal.toReal_mono
+          · simp
+          · exact this
+        simpa using this
+    have h_nonneg : 0 ≤ G ω := Finset.prod_nonneg fun i _ => (h01 i).1
+    have h_le_one : G ω ≤ 1 := by
+      show (∏ i : Fin m, ((ν μ ω) (B i)).toReal) ≤ 1
+      calc ∏ i : Fin m, ((ν μ ω) (B i)).toReal
+          ≤ ∏ i : Fin m, (1 : ℝ) := by
+              apply Finset.prod_le_prod
+              · intro i _; exact (h01 i).1
+              · intro i _; exact (h01 i).2
+        _ = 1 := by simp
+    rw [abs_of_nonneg h_nonneg]
+    exact h_le_one
+
+  have hG_int : Integrable G μ := by
+    apply MeasureTheory.integrable_of_bounded hG_meas
+    exact ⟨1, hG_bd⟩
+
+  -- Key fact: ∫ indicator dν = ν(B).toReal for each coordinate
+  have h_indicator_integral : ∀ i ω, ∫ x, (B i).indicator (fun _ => (1 : ℝ)) x ∂(ν μ ω)
+                                     = ((ν μ ω) (B i)).toReal := by
+    intro i ω
+    exact integral_indicator_one (hB_meas i)
+
+  -- Now prove: ∫ F dμ = ∫ G dμ using the factorization axiom
+  have h_eq_integrals : ∫ ω, F ω ∂μ = ∫ ω, G ω ∂μ := by
+    -- Use tower property and factorization
+    sorry -- This requires condexp_product_factorization_ax + tower property
+
+  -- Convert both sides to ENNReal and conclude
+  calc ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
+      = ∫⁻ ω, ENNReal.ofReal (F ω) ∂μ := by
+          congr; funext ω; simp [F]
+    _ = ENNReal.ofReal (∫ ω, F ω ∂μ) := hL
+    _ = ENNReal.ofReal (∫ ω, G ω ∂μ) := by rw [h_eq_integrals]
+    _ = ∫⁻ ω, ENNReal.ofReal (G ω) ∂μ := by
+          rw [lintegral_ofReal_eq_integral hG_meas.aemeasurable hG_nonneg hG_int]
+    _ = ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal (((ν μ ω) (B i)).toReal) ∂μ := by
+          congr; funext ω; simp [G]
+    _ = ∫⁻ ω, ∏ i : Fin m, (ν μ ω) (B i) ∂μ := by
+          congr; funext ω
+          congr; funext i
+          exact ENNReal.ofReal_toReal (measure_ne_top _ _)
 
 /-- **Final bridge axiom** to the `ConditionallyIID` structure.
 
@@ -632,12 +722,46 @@ lemma quantize_err_le {C ε x : ℝ} (hε : 0 < ε) :
 /-- Quantized values are bounded by C + 1 when ε ≤ 1. -/
 lemma quantize_abs_le {C ε x : ℝ} (hC : 0 ≤ C) (hε : 0 < ε) (hε1 : ε ≤ 1) :
     |quantize C ε x| ≤ C + 1 := by
-  sorry
+  classical
+  set v := max (-C) (min C x) with hv
+  -- |v| ≤ C
+  have hv_le : |v| ≤ C := by
+    have hv_lo : -C ≤ v := le_max_left _ _
+    have hv_hi : v ≤ C := by
+      calc v = max (-C) (min C x) := hv.symm
+        _ ≤ C := by apply max_le; linarith; exact min_le_left _ _
+    exact abs_le.mpr ⟨by linarith, hv_hi⟩
+  -- |quantize - v| ≤ ε
+  have herr := quantize_err_le (C := C) (ε := ε) (x := x) hε
+  -- Triangle inequality: |q| ≤ |v| + |q - v| ≤ C + ε ≤ C + 1
+  have : |quantize C ε x| ≤ |v| + ε := by
+    have h1 : |quantize C ε x| = |(quantize C ε x - v) + v| := by ring_nf
+    rw [h1]
+    have h2 := abs_add (quantize C ε x - v) v
+    linarith [herr, h2]
+  linarith [hv_le, this, hε1]
 
 /-- Quantization converges pointwise as ε → 0. -/
 lemma quantize_tendsto {C x : ℝ} (hC : 0 ≤ C) :
     Tendsto (fun ε => quantize C ε x) (𝓝[>] 0) (𝓝 (max (-C) (min C x))) := by
-  sorry
+  classical
+  set v := max (-C) (min C x) with hv
+  -- Use metric characterization: for any δ > 0, eventually |quantize ε x - v| < δ
+  rw [Metric.tendsto_nhds]
+  intro δ hδ
+  -- We need: eventually in 𝓝[>] 0, dist (quantize C ε x) v < δ
+  -- Since |quantize - v| ≤ ε, we need ε < δ
+  rw [Filter.eventually_iff]
+  refine Filter.mem_of_superset (Metric.ball_mem_nhds 0 hδ) ?_
+  intro ε hε_ball
+  by_cases hε_pos : ε ∈ Set.Ioi (0 : ℝ)
+  · rw [Metric.mem_ball, Real.dist_eq, abs_sub_lt_iff] at hε_ball
+    rw [Real.dist_eq]
+    have : |quantize C ε x - v| ≤ ε := by simpa [hv] using quantize_err_le (C := C) (ε := ε) (x := x) hε_pos
+    linarith
+  · -- ε ≤ 0, but we're in nhdsWithin (Set.Ioi 0), so this doesn't happen
+    exfalso
+    exact hε_pos (Metric.mem_ball.mp hε_ball).2
 
 end MeasureTheory
 
@@ -816,6 +940,98 @@ theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
   -- Step 3: Conclude using equality
   rw [← hP_eq]
   exact hP_tendsto
+
+/-- **Part B (Shift Equivariance)**: Conditional expectation commutes with Koopman operator.
+
+The conditional expectation onto the shift-invariant σ-algebra commutes with composition
+by shift. This is the key fact for showing CE[f(ω₀)·g(ωₖ) | 𝓘] is constant in k.
+
+**Proof Strategy**: Both `condexpL2` and `koopman shift` are continuous linear operators,
+with `condexpL2` being the orthogonal projection onto `fixedSubspace hσ`. For any `f ∈ Lp`,
+we show `P(Uf) = Pf` where `P = condexpL2` and `U = koopman shift`:
+1. Decompose `f = Pf + (f - Pf)` with `Pf ∈ S` and `(f - Pf) ⊥ S` where `S = fixedSubspace`
+2. `U(Pf) = Pf` since `Pf ∈ fixedSubspace` (definition of fixed subspace)
+3. `U(f - Pf) ⊥ S` since `U` is an isometry preserving orthogonality
+4. Therefore `P(Uf) = P(Pf) = Pf` since projection onto invariant subspace commutes
+-/
+lemma condexpL2_koopman_comm (f : Lp ℝ 2 μ) :
+    condexpL2 (μ := μ) (koopman shift hσ f) = condexpL2 (μ := μ) f := by
+  classical
+  -- Abbreviations
+  let U := koopman shift hσ
+  let P := condexpL2 (μ := μ)
+  let S := fixedSubspace hσ
+
+  -- `P` projects onto `S`
+  have hRange : Set.range P = (S : Set (Lp ℝ 2 μ)) :=
+    range_condexp_eq_fixedSubspace (μ := μ) hσ
+  have hPf_mem : P f ∈ S := by
+    have : P f ∈ Set.range P := ⟨f, rfl⟩
+    simpa [hRange] using this
+  have hPUf_mem : P (U f) ∈ S := by
+    have : P (U f) ∈ Set.range P := ⟨U f, rfl⟩
+    simpa [hRange] using this
+
+  -- (1) `U s = s` for every `s ∈ S` (definition of fixedSubspace)
+  have h_fix : ∀ s ∈ S, U s = s := by
+    intro s hs
+    exact (mem_fixedSubspace_iff (hσ := hσ) (f := s)).1 hs
+
+  -- (2) `f - P f ⟂ S` (characterization of orthogonal projection)
+  have h_perp_f : ∀ s ∈ S, ⟪f - P f, s⟫_ℝ = 0 := by
+    intro s hs
+    -- Symmetry of CE: ⟪P f, s⟫ = ⟪f, s⟫ for `s` measurable w.r.t. invariant σ-algebra
+    have hsym : ⟪P f, s⟫_ℝ = ⟪f, s⟫_ℝ :=
+      MeasureTheory.inner_condExpL2_left_eq_right (μ := μ)
+        (m := shiftInvariantSigma (α := α))
+        (hm := shiftInvariantSigma_le (α := α)) (f := f) (g := s)
+    simp [inner_sub_left, hsym]
+
+  -- (3) `U f - P f ⟂ S` because `U` is an isometry and fixes `S` pointwise
+  have h_perp_Uf_minus_Pf : ∀ s ∈ S, ⟪U f - P f, s⟫_ℝ = 0 := by
+    intro s hs
+    have hperp := h_perp_f s hs
+    -- ⟪U(f - Pf), s⟫ = ⟪U(f - Pf), U s⟫ = ⟪f - Pf, s⟫ = 0
+    have h1 : ⟪U f - P f, s⟫_ℝ = ⟪U (f - P f), s⟫_ℝ := by
+      simp [U, LinearIsometry.map_sub]
+    have h2 : ⟪U (f - P f), s⟫_ℝ = ⟪U (f - P f), U s⟫_ℝ := by
+      rw [h_fix s hs]
+    have h3 : ⟪U (f - P f), U s⟫_ℝ = ⟪f - P f, s⟫_ℝ := by
+      have := LinearIsometry.inner_map_map (koopman shift hσ) (f - P f) s
+      simpa [U] using this
+    simp [h1, h2, h3, hperp]
+
+  -- (4) `U f - P (U f) ⟂ S` by the same projection characterization (with input `U f`)
+  have h_perp_Uf_minus_PUf : ∀ s ∈ S, ⟪U f - P (U f), s⟫_ℝ = 0 := by
+    intro s hs
+    have hsym : ⟪P (U f), s⟫_ℝ = ⟪U f, s⟫_ℝ :=
+      MeasureTheory.inner_condExpL2_left_eq_right (μ := μ)
+        (m := shiftInvariantSigma (α := α)) (hm := shiftInvariantSigma_le (α := α))
+        (f := U f) (g := s)
+    simp [inner_sub_left, hsym]
+
+  -- (5) `(P(U f) - P f) ∈ S ∩ S⊥`, hence it is zero
+  have h_in_S : P (U f) - P f ∈ S := S.sub_mem hPUf_mem hPf_mem
+  have h_in_S_perp : P (U f) - P f ∈ Sᗮ := by
+    -- Difference of two S-orthogonal remainders
+    -- (Uf - PUf) - (Uf - Pf) = Pf - PUf ∈ S⊥ (submodule is closed under subtraction)
+    have hx : U f - P (U f) ∈ Sᗮ :=
+      (Submodule.mem_orthogonal).2 (h_perp_Uf_minus_PUf)
+    have hy : U f - P f ∈ Sᗮ :=
+      (Submodule.mem_orthogonal).2 (h_perp_Uf_minus_Pf)
+    have hsub : (P (U f) - P f) = (U f - P f) - (U f - P (U f)) := by abel
+    -- S⊥ closed under subtraction
+    simpa [hsub] using Submodule.sub_mem _ hy hx
+
+  -- A vector in `S ∩ S⊥` is 0: take its inner product with itself
+  have : P (U f) - P f = 0 := by
+    have h0 := (Submodule.mem_orthogonal).1 h_in_S_perp
+    have : ⟪P (U f) - P f, P (U f) - P f⟫_ℝ = 0 := h0 _ h_in_S
+    have : ‖P (U f) - P f‖ ^ 2 = 0 := by simpa [inner_self_eq_norm_sq_real] using this
+    have : ‖P (U f) - P f‖ = 0 := by simpa [sq_eq_zero_iff] using this
+    exact norm_eq_zero.mp this
+  -- Conclude
+  exact sub_eq_zero.mp this
 
 /-- Specialization to cylinder functions: the core case for de Finetti. -/
 theorem birkhoffCylinder_tendsto_condexp
