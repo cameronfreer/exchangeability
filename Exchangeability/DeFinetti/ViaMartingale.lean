@@ -301,11 +301,6 @@ section Measurability
 
 variable {X : ℕ → Ω → α}
 
-lemma measurable_path (hX : ∀ n, Measurable (X n)) :
-    Measurable (path X) := by
-  classical
-  simpa [path] using measurable_pi_iff.mpr hX
-
 lemma measurable_shiftRV (hX : ∀ n, Measurable (X n)) {m : ℕ} :
     Measurable (shiftRV X m) := by
   classical
