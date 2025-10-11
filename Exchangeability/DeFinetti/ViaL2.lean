@@ -647,7 +647,17 @@ lemma l2_bound_two_windows_uniform
     -- Combine with 1/k² factor
     calc (1/(k:ℝ))^2 * (∑ i : Fin k, (f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω)))^2
         ≤ (1/(k:ℝ))^2 * (k * (2*M))^2 := mul_le_mul_of_nonneg_left h_sq_bound (sq_nonneg _)
-      _ = (2*M)^2 / k := by sorry  -- TODO: Algebraic simplification (1/k)² * (k * (2M))² = (2M)²/k
+      _ = (2*M)^2 / k := by
+          have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
+          calc (1/(k:ℝ))^2 * (k * (2*M))^2
+              = (1/(k:ℝ))^2 * k^2 * (2*M)^2 := by ring
+            _ = ((1/k:ℝ) * k)^2 * (2*M)^2 := by rw [mul_pow]; ring
+            _ = 1^2 * (2*M)^2 := by rw [div_mul_cancel₀ (1:ℝ) (ne_of_gt hk_pos)]
+            _ = (2*M)^2 := by ring
+            _ = (2*M)^2 / k := by
+                symm
+                apply div_eq_iff (ne_of_gt hk_pos) |>.mpr
+                ring
 
   -- Now integrate the bound
   calc ∫ ω, (1/(k:ℝ))^2 * (∑ i : Fin k, f (X (n + i.val + 1) ω) -
