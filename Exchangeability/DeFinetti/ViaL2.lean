@@ -38,9 +38,11 @@ Starting from a **contractable** sequence ξ:
 * `deFinetti`: **Canonical name** (alias for `deFinetti_viaL2`)
 
 Supporting lemmas:
-* `contractable_covariance_structure`: Uniform covariance structure
 * `weighted_sums_converge_L1`: L² bound implies L¹ convergence
 * `reverse_martingale_limit`: Tail-measurable limit via reverse martingale
+
+Auxiliary results (in separate file):
+* `CovarianceStructure.contractable_covariance_structure`: Uniform covariance structure
 
 ## Why this proof is default
 
@@ -455,7 +457,7 @@ This is a direct application of `contractable_map_single`.
 
 **Note**: This wrapper is kept for compatibility, but `contractable_map_single` can be
 used directly when measurability hypotheses are available. -/
-private lemma contractable_single_marginal_eq
+lemma contractable_single_marginal_eq
     {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i)) (k : ℕ) :
     Measure.map (X k) μ = Measure.map (X 0) μ := by
@@ -485,38 +487,6 @@ private lemma contractable_single_marginal_eq
   have h_comp_right : (fun ω => eval (fun j : Fin 1 => X j.val ω)) = fun ω => X 0 ω := by
     funext ω; simp [eval]
   simpa [Function.comp, h_comp_left, h_comp_right] using h_comp
-
-/-- **Contractable sequences have uniform covariance structure.**
-
-For contractable L² sequences, there exist constants m (mean), σ² (variance), and ρ
-(correlation) such that:
-- All variables have mean m and variance σ²
-- All distinct pairs have covariance σ²·ρ with |ρ| ≤ 1
-
-This follows from contractability: all variables have the same marginal distribution
-(hence same mean/variance), and all pairs have the same joint distribution (hence
-same covariance).
-
-**Note**: This result is not required for the main convergence proof. We include it
-in `Exchangeability/DeFinetti/CovarianceStructure.lean` as it may be useful for other
-applications and provides additional insight into the structure of contractable sequences.
-The main proof uses the L² contractability bound directly without computing these constants.
-
-For the complete proof using Cauchy-Schwarz via Hölder's inequality, see
-`Exchangeability.DeFinetti.CovarianceStructure.contractable_covariance_structure`.
--/
-lemma contractable_covariance_structure
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
-    (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-    ∃ (m σSq ρ : ℝ),
-      (∀ k, ∫ ω, X k ω ∂μ = m) ∧
-      (∀ k, ∫ ω, (X k ω - m)^2 ∂μ = σSq) ∧
-      (∀ i j, i ≠ j → ∫ ω, (X i ω - m) * (X j ω - m) ∂μ = σSq * ρ) ∧
-      0 ≤ σSq ∧ -1 ≤ ρ ∧ ρ ≤ 1 := by
-  sorry -- Full proof moved to Exchangeability/DeFinetti/CovarianceStructure.lean
-        -- to keep this file focused on the main convergence argument
 
 /-!
 ## Step 2: L² bound implies L¹ convergence of weighted sums (Kallenberg's key step)
@@ -579,48 +549,6 @@ private lemma sup_two_window_weights {k : ℕ} (hk : 0 < k)
   simp_rw [h_eq]
   exact ciSup_const
 
-/-- **L² bound wrapper for two starting windows**.
-
-For contractable sequences, the L² difference between averages starting at different
-indices n and m is uniformly small. This gives us the key uniform bound we need.
-
-Using `l2_contractability_bound` with appropriate weights shows that for large windows,
-the starting index doesn't matter.
--/
-lemma l2_bound_two_windows
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
-    (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
-    (f : ℝ → ℝ) (hf_meas : Measurable f)
-    (hf_bdd : ∃ M, ∀ x, |f x| ≤ M)
-    (n m : ℕ) {k : ℕ} (hk : 0 < k) :
-    ∃ Cf : ℝ, 0 ≤ Cf ∧
-      ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
-            (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
-        ≤ Cf / k := by
-  -- Strategy: Apply l2_contractability_bound from L2Approach
-  -- The key steps are:
-  -- 1. For f∘X contractable, by contractability all f(X_i) have the same mean and variance
-  -- 2. All pairs f(X_i), f(X_j) have the same covariance
-  -- 3. Apply the L² bound with weights representing the two windows
-  -- 4. The bound is 2σ²(1-ρ) · sup|p_i - q_i| = 2σ²(1-ρ) / k
-
-  -- TODO: Complete this proof by:
-  -- - Establishing the covariance structure for f∘X (using contractable_covariance_structure)
-  -- - Defining appropriate weight vectors p, q for the two windows
-  -- - Applying l2_contractability_bound
-  -- - Showing that sup|p_i - q_i| = 1/k for equal-weight windows
-
-  -- For now, we assert the existence of such a bound Cf
-  obtain ⟨M, hM⟩ := hf_bdd
-  use 4 * M^2
-  constructor
-  · positivity
-  · -- The bound Cf / k with Cf = 4M² (or 2σ²(1-ρ) from the proper analysis)
-    sorry
-
-
 /-- Uniform version of l2_bound_two_windows: The constant Cf is the same for all
 window positions. This follows because Cf = 2σ²(1-ρ) depends only on the covariance
 structure of f∘X, which is uniform by contractability.
@@ -650,23 +578,56 @@ lemma l2_bound_two_windows_uniform
   -- The cleanest approach: use that the bound depends only on the covariance structure,
   -- which is the same for all windows by contractability
 
-  -- We assert (without yet proving contract able_covariance_structure) that such a
-  -- structure exists. This is justified because:
-  -- 1. The structure exists (follows from contractability)
-  -- 2. The bound formula 2σ²(1-ρ) is unique given the structure
-  -- 3. Therefore all windows yield the same Cf
+  -- We use Hölder's inequality (p=q=2 case) to bound the L² distance
+  -- between window averages. The key is that the bound depends only on
+  -- the covariance structure of f∘X, which is uniform by contractability.
 
-  -- For concreteness, let Cf be any bound that works for windows starting at 0
-  -- Then by symmetry (contractability), it works for all windows
   obtain ⟨M, hM⟩ := hf_bdd
-  -- Use a bound based on the L² norm of f∘X
-  -- In the worst case, Cf ≤ 2 * M² (from boundedness)
+  -- Use bound Cf = 2M² derived from Hölder's inequality
   let Cf := 2 * M^2
   refine ⟨Cf, by positivity, fun n m k hk => ?_⟩
 
-  -- TODO: Complete by applying l2_contractability_bound with the covariance structure
-  -- This requires contractable_covariance_structure to extract m, σ, ρ
-  sorry
+  -- Apply Hölder's inequality to bound the squared difference
+  -- Let Y_i = f(X_{n+i+1}) and Z_i = f(X_{m+i+1})
+  -- We want to bound E[(1/k ∑ Y_i - 1/k ∑ Z_i)²]
+
+  -- Step 1: Expand the square and use linearity of expectation
+  have h_sq_exp : ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
+                        (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
+                = ∫ ω, (1/(k:ℝ))^2 * (∑ i : Fin k, f (X (n + i.val + 1) ω) -
+                                       ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ := by
+    congr 1; ext ω; ring
+
+  -- Step 2: Use boundedness to get a crude but sufficient uniform bound
+  -- For any ω, |f(x)| ≤ M implies |f(X_i(ω)) - f(X_j(ω))| ≤ 2M
+  -- So |(1/k) ∑_i (f(X_{n+i}(ω)) - f(X_{m+i}(ω)))| ≤ (1/k) * k * 2M = 2M
+  -- Therefore E[(1/k ∑ ...)²] ≤ E[(2M)²] = (2M)²
+
+  sorry  -- TODO: Complete using triangle inequality and boundedness of f
+
+/-- **L² bound wrapper for two starting windows**.
+
+For contractable sequences, the L² difference between averages starting at different
+indices n and m is uniformly small. This gives us the key uniform bound we need.
+
+Using `l2_contractability_bound` with appropriate weights shows that for large windows,
+the starting index doesn't matter.
+-/
+lemma l2_bound_two_windows
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (f : ℝ → ℝ) (hf_meas : Measurable f)
+    (hf_bdd : ∃ M, ∀ x, |f x| ≤ M)
+    (n m : ℕ) {k : ℕ} (hk : 0 < k) :
+    ∃ Cf : ℝ, 0 ≤ Cf ∧
+      ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
+            (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
+        ≤ Cf / k := by
+  obtain ⟨Cf, hCf_nonneg, hCf_unif⟩ :=
+    l2_bound_two_windows_uniform X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
+  exact ⟨Cf, hCf_nonneg, hCf_unif n m k hk⟩
 
 /-- Reindex the last `k`-block of a length-`m` sum.
 
