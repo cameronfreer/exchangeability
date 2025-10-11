@@ -224,15 +224,64 @@ lemma Kernel.IndepFun.comp
 
 This is the substantive part of Kallenberg's "first proof": the ergodic/shift argument
 shows the coordinates are conditionally independent given `shiftInvariantSigma`.
+
+**Proof Strategy** (Kallenberg's ergodic argument):
+1. **Mean Ergodic Theorem**: For shift-invariant μ, Birkhoff averages converge to
+   conditional expectation onto shift-invariant σ-algebra
+
+2. **Key observation**: For bounded measurable f, g and any k ≥ 1:
+   CE[f(ω₀)·g(ωₖ) | ℐ] is shift-invariant
+   where ℐ = shiftInvariantSigma
+
+3. **Extremal property**: Show CE[f(ω₀)·g(ωₖ) | ℐ] doesn't depend on k
+   - Use shift equivariance: shift^k ω has same conditional distribution
+   - Extremal measures on shift-invariant functions are ergodic
+   - For ergodic measures, time averages equal space averages
+
+4. **Independence**: Once CE[f(ω₀)·g(ωₖ) | ℐ] = CE[f(ω₀) | ℐ]·CE[g(ωₖ) | ℐ]
+   for all k, and taking k → ∞ with tail σ-algebra argument
+
+5. **Generator extension**: Extend from simple functions to full σ-algebra
+   using π-λ theorem at kernel level
+
+**Mathematical Content**: This is the deep ergodic-theoretic core of de Finetti's theorem.
+It uses the Mean Ergodic Theorem and extremal measure theory.
 -/
 lemma condindep_pair_given_tail
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ) :
     Kernel.IndepFun (fun ω : Ω[α] => ω 0) (fun ω : Ω[α] => ω 1)
       (condExpKernel μ (shiftInvariantSigma (α := α))) μ := by
+  -- This requires the full power of the Mean Ergodic Theorem
+  -- and extremal measure decomposition
+
+  -- Step 1: Apply Mean Ergodic Theorem
+  -- For L²(μ), Birkhoff averages (1/n)∑ᵢ₌₀ⁿ⁻¹ f ∘ shift^i converge to
+  -- the orthogonal projection onto shift-invariant functions
+
+  -- Step 2: Show this projection equals conditional expectation
+  -- onto shiftInvariantSigma
+
+  -- Step 3: Use shift equivariance to show
+  -- CE[f(ω₀)·g(ω₁) | ℐ] = CE[f(ω₀) | ℐ]·CE[g(ω₁) | ℐ]
+
+  -- Step 4: Apply generator + Dynkin theorem to extend to kernel independence
+
   sorry
 
-/-- **Axiomized product factorization** for general finite cylinder products. -/
+/-- **Axiomized product factorization** for general finite cylinder products.
+
+**Proof Strategy** (Induction on m):
+- **Base case** (m = 0): Product of empty family is 1, trivial
+- **Base case** (m = 1): Single function, follows from marginal properties
+- **Inductive step**: Split product into first m factors and last factor
+  * Apply `condindep_pair_given_tail` to show independence
+  * Use inductive hypothesis on first m factors
+  * Apply `Kernel.IndepFun.comp` to compose with product function
+  * Multiply factorizations
+
+This extends conditional independence from pairs to finite products.
+-/
 lemma condexp_product_factorization_ax
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
@@ -242,9 +291,29 @@ lemma condexp_product_factorization_ax
     (hciid : True) :
     μ[fun ω => ∏ k, fs k (ω (k : ℕ)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν μ ω)) := by
+  -- Induction on m
+  -- Base case: m = 0 or m = 1
+  -- Inductive step: use condindep_pair_given_tail + IH
   sorry
 
-/-- **Bridge axiom** for ENNReal version needed by `CommonEnding`. -/
+/-- **Bridge axiom** for ENNReal version needed by `CommonEnding`.
+
+**Proof Strategy**:
+1. Apply `condexp_product_factorization_ax` to indicator functions
+   - Indicators are bounded measurable functions
+   - Product of indicators gives cylinder set probabilities
+
+2. Integrate both sides:
+   - LHS: ∫ CE[∏ indicators | ℐ] dμ
+   - RHS: ∫ ∏(∫ indicator dν) dμ
+   - Use tower property: ∫ CE[f | ℐ] dμ = ∫ f dμ
+
+3. Convert from ℝ to ENNReal:
+   - Use ENNReal.ofReal properties
+   - Indicators take values in [0,1], so conversion is clean
+
+This connects the conditional expectation factorization to measure-theoretic form.
+-/
 lemma indicator_product_bridge_ax
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
@@ -252,13 +321,41 @@ lemma indicator_product_bridge_ax
     (hB_meas : ∀ i, MeasurableSet (B i)) :
     ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
       = ∫⁻ ω, ∏ i : Fin m, (ν μ ω) (B i) ∂μ := by
+  -- Apply condexp_product_factorization_ax to indicators
+  -- Integrate both sides using tower property
+  -- Convert to ENNReal
   sorry
 
-/-- **Final bridge axiom** to the `ConditionallyIID` structure. -/
+/-- **Final bridge axiom** to the `ConditionallyIID` structure.
+
+**Proof Strategy**:
+This is the assembly step connecting all previous axioms to the `ConditionallyIID` definition.
+
+1. Unfold `ConditionallyIID` definition:
+   - Need to provide a kernel ν : Ω[α] → Measure α
+   - Show coordinates are iid under ν(ω) for each ω
+
+2. Use ν defined earlier: `ν μ ω = Kernel.map (condExpKernel μ ℐ) measurable_pi_apply_0 ω`
+   - This is the marginal distribution at coordinate 0
+   - By shift-invariance, all coordinates have same conditional marginal
+
+3. Apply `indicator_product_bridge_ax`:
+   - This gives the product measure property for cylinders
+   - Cylinder sets generate the product σ-algebra
+
+4. Call `CommonEnding.conditional_iid_from_directing_measure`:
+   - Existing helper that assembles CIID structure from cylinder properties
+   - Provide ν_eval_measurable (proved earlier)
+   - Provide indicator_product_bridge (Axiom 5)
+
+This completes de Finetti's theorem by showing exchangeable ⇒ conditionally IID.
+-/
 lemma exchangeable_implies_ciid_modulo_bridge_ax
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ) :
     Exchangeability.ConditionallyIID μ (fun i (ω : Ω[α]) => ω i) := by
+  -- Apply CommonEnding.conditional_iid_from_directing_measure
+  -- with ν and indicator_product_bridge_ax
   sorry
 
 namespace MeasureTheory
