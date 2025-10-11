@@ -583,8 +583,8 @@ lemma l2_bound_two_windows_uniform
   -- the covariance structure of f∘X, which is uniform by contractability.
 
   obtain ⟨M, hM⟩ := hf_bdd
-  -- Use bound Cf = 2M² derived from Hölder's inequality
-  let Cf := 2 * M^2
+  -- Use bound Cf = (2M)² = 4M² derived from triangle inequality
+  let Cf := (2*M)^2
   refine ⟨Cf, by positivity, fun n m k hk => ?_⟩
 
   -- Apply Hölder's inequality to bound the squared difference
@@ -602,7 +602,59 @@ lemma l2_bound_two_windows_uniform
   -- For any ω: |∑_i (f(X_{n+i}(ω)) - f(X_{m+i}(ω)))| ≤ k · 2M (triangle ineq + |f| ≤ M)
   -- So |(1/k) ∑_i ...|² ≤ (2M)², and E[...] ≤ (2M)²/k since the bound is deterministic.
 
-  sorry  -- TODO: Complete using Finset.abs_sum_le_sum_abs, abs_sub bounds, and integral_mono
+  rw [h_sq_exp]
+
+  -- Show the integrand is bounded by (2M)²/k
+  have h_integrand_bound : ∀ ω, (1/(k:ℝ))^2 * (∑ i : Fin k, f (X (n + i.val + 1) ω) -
+                                                 ∑ i : Fin k, f (X (m + i.val + 1) ω))^2
+                               ≤ (2*M)^2 / k := by
+    intro ω
+    -- Rewrite the sum difference
+    have h_sum_diff : (∑ i : Fin k, f (X (n + i.val + 1) ω) - ∑ i : Fin k, f (X (m + i.val + 1) ω))
+                    = ∑ i : Fin k, (f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω)) := by
+      rw [Finset.sum_sub_distrib]
+    rw [h_sum_diff]
+
+    -- Bound the absolute value of the sum
+    have h_abs_sum : |∑ i : Fin k, (f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω))| ≤ k * (2*M) := by
+      calc |∑ i : Fin k, (f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω))|
+          ≤ ∑ i : Fin k, |f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω)| :=
+            Finset.abs_sum_le_sum_abs _ _
+        _ ≤ ∑ i : Fin k, 2*M := by
+            apply Finset.sum_le_sum
+            intro i _
+            have h1 := hM (X (n + i.val + 1) ω)
+            have h2 := hM (X (m + i.val + 1) ω)
+            calc |f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω)|
+                ≤ |f (X (n + i.val + 1) ω)| + |f (X (m + i.val + 1) ω)| := abs_sub _ _
+              _ ≤ M + M := add_le_add h1 h2
+              _ = 2*M := by ring
+        _ = k * (2*M) := by
+            rw [Finset.sum_const, Finset.card_fin]; ring
+
+    -- Square the bound
+    have h_sq_bound : (∑ i : Fin k, (f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω)))^2
+                    ≤ (k * (2*M))^2 := by
+      sorry  -- TODO: sq_le_sq' or abs squared bound
+
+    -- Combine with 1/k² factor
+    calc (1/(k:ℝ))^2 * (∑ i : Fin k, (f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω)))^2
+        ≤ (1/(k:ℝ))^2 * (k * (2*M))^2 := mul_le_mul_of_nonneg_left h_sq_bound (sq_nonneg _)
+      _ = (1/(k:ℝ))^2 * (k:ℝ)^2 * (2*M)^2 := by ring
+      _ = (2*M)^2 / k := by
+          sorry  -- TODO: field_simp with hk_pos proof
+
+  -- Now integrate the bound
+  calc ∫ ω, (1/(k:ℝ))^2 * (∑ i : Fin k, f (X (n + i.val + 1) ω) -
+                            ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
+      ≤ ∫ ω, (2*M)^2 / k ∂μ := by
+          apply integral_mono
+          · sorry -- integrability of LHS
+          · exact integrable_const _
+          · exact h_integrand_bound
+    _ = (2*M)^2 / k := by
+        rw [integral_const]; simp
+    _ = Cf / k := rfl
 
 /-- **L² bound wrapper for two starting windows**.
 
