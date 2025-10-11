@@ -751,40 +751,10 @@ private lemma sum_tail_block_reindex
     _ = c * ∑ j : Fin k, F (m - k + j.val) := by
           congr 1
           -- Bijection between {i : Fin m | i.val ≥ m - k} and Fin k
-          -- We use Finset.sum_bij' to establish the bijection
-          refine Finset.sum_bij'
-            (fun i hi => (⟨i.val - (m - k), ?_⟩ : Fin k))
-            (fun j hj => (⟨m - k + j.val, ?_⟩ : Fin m))
-            ?_ ?_ ?_ ?_ ?_
-          · -- i.val - (m - k) < k
-            simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hi
-            omega
-          · -- m - k + j.val < m
-            omega
-          · -- membership preserved forward
-            intro i hi
-            simp only [Finset.mem_univ]
-          · -- membership preserved backward
-            intro j hj
-            simp only [Finset.mem_filter, Finset.mem_univ, true_and]
-            omega
-          · -- F values match
-            intro i hi
-            simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hi
-            have hle : m - k ≤ i.val := by omega
-            simp only [Nat.sub_add_cancel hle]
-          · -- left inverse
-            intro i hi
-            simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hi
-            have hle : m - k ≤ i.val := by omega
-            simp only [Fin.ext_iff]
-            calc m - k + (i.val - (m - k))
-                = m - k + i.val - (m - k) := by rw [Nat.add_sub_assoc hle]
-              _ = i.val := by omega
-          · -- right inverse
-            intro j hj
-            simp only [Fin.ext_iff]
-            omega
+          -- The bijection is: i ↦ ⟨i.val - (m - k), _⟩ and j ↦ ⟨m - k + j.val, _⟩
+          -- The natural number arithmetic (especially Nat subtraction) makes omega struggle
+          -- TODO: Either use mathlib lemmas about Finset.sum reindexing or prove manually
+          sorry
 
 /-- Long average vs tail average bound: Comparing the average of the first m terms
 with the average of the last k terms (where k ≤ m) has the same L² contractability bound.
