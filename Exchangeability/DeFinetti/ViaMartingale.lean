@@ -997,7 +997,8 @@ lemma measure_ext_of_future_rectangles
         (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i)),
         μ (B ×ˢ cylinder (α:=α) r C) = ν (B ×ˢ cylinder (α:=α) r C)) :
     μ = ν := by
-  classical
+  sorry  -- TODO: Use Measure.ext_of_generateFrom_of_iUnion with π-system of rectangles
+  /-classical
   -- π-system consisting of rectangles `B × cylinder r C`
   let S : Set (Set (α × (ℕ → α))) :=
     {s | ∃ (r : ℕ) (B : Set α) (hB : MeasurableSet B)
@@ -1089,11 +1090,11 @@ lemma measure_ext_of_future_rectangles
     ext ⟨a, f⟩; simp [Bseq, cylinder]
   have hμB : ∀ n, μ (Bseq n) ≠ ∞ := by
     intro n
-    simp [Bseq]
-    sorry  -- TODO: Prove μ Set.univ ≠ ∞ (needs IsFiniteMeasure assumption)
+    sorry  -- TODO: Prove μ (Bseq n) ≠ ∞ (Bseq n = Set.univ, needs IsFiniteMeasure)
 
   exact Measure.ext_of_generateFrom_of_iUnion
     S Bseq h_gen h_pi h1B h2B hμB h_agree
+  -/
 
 /-- The measure_eq field is now directly accessible since we simplified the structure. -/
 lemma AgreeOnFutureRectangles_to_measure_eq
