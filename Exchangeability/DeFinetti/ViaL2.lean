@@ -663,10 +663,15 @@ lemma l2_bound_two_windows_uniform
         ≤ (1/(k:ℝ))^2 * (k * (2*M))^2 := mul_le_mul_of_nonneg_left h_sq_bound (sq_nonneg _)
       _ = (2*M)^2 := h_alg
       _ ≤ (2*M)^2 / k := by
-          -- Since k ≥ 1 (nat), we have (2M)² * k ≥ (2M)², so (2M)²/k * k ≥ (2M)²/k
+          -- Since k ≥ 1 (nat), we have (2M)² * k ≥ (2M)², so (2M)²/k ≤ (2M)²
           -- But we want (2M)² ≤ (2M)²/k, which requires k ≤ 1
-          -- Actually for k ≥ 1, we have (2M)²/k ≤ (2M)², NOT the reverse!
-          -- This bound goes the WRONG WAY. We need to use a different approach.
+          -- This bound goes the WRONG WAY!
+          --
+          -- TODO: Use l2_contractability_bound from L2Approach.lean
+          -- That theorem provides:
+          --   ∫ (∑ pᵢξᵢ - ∑ qᵢξᵢ)² ≤ 2σ²(1-ρ)·sup|pᵢ-qᵢ|
+          -- For uniform weights p = q = 1/k at different positions,
+          -- this gives the sharp Cf/k bound we need.
           sorry
 
   -- Now integrate the bound
@@ -933,6 +938,11 @@ private lemma l2_bound_long_vs_tail
 
   -- The sharp bound Cf/k would follow from a more detailed analysis using
   -- the weighted average lemma from L2Approach, which we defer
+  --
+  -- TODO: Apply l2_contractability_bound comparing weights:
+  --   p = (1/m, 1/m, ..., 1/m)  [m terms]
+  --   q = (0, ..., 0, 1/k, ..., 1/k)  [m-k zeros, then k terms of 1/k]
+  -- The weight differences are small enough to give Cf/k bound.
   sorry
 
 /-- **Weighted sums converge in L¹ for contractable sequences.**
