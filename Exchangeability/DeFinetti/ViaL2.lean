@@ -906,7 +906,11 @@ private lemma l2_bound_long_vs_tail
       _ = (2 * M)^2 := by ring
       _ ≤ (4 * M)^2 := by
           apply sq_le_sq'
-          · have : 0 ≤ 4 * M := by sorry
+          · have hM_nonneg : 0 ≤ M := by
+              -- |f 0| ≤ M implies 0 ≤ M
+              have : |f 0| ≤ M := hM 0
+              exact le_trans (abs_nonneg _) this
+            have : 0 ≤ 4 * M := by linarith
             linarith [this]
           · linarith
 
