@@ -1175,14 +1175,14 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
             have h2 : Integrable (2 • X₂ * μ[X₂ | m₁]) μ := by
               -- Both X₂ and μ[X₂|m₁] are in L², so their product is in L¹ by Hölder
               have h_prod : Integrable (X₂ * μ[X₂ | m₁]) μ := hL2.integrable_mul h_cond_mem
-              exact h_prod.const_smul 2
+              exact h_prod.smul 2
             have h3 : Integrable ((μ[X₂ | m₁]) ^ 2) μ := h_cond_mem.integrable_sq
             -- Apply linearity: μ[a - b + c | m] = μ[a|m] - μ[b|m] + μ[c|m]
             calc μ[X₂ ^ 2 - 2 • X₂ * μ[X₂ | m₁] + (μ[X₂ | m₁]) ^ 2 | m₁]
                 =ᵐ[μ] μ[X₂ ^ 2 - 2 • X₂ * μ[X₂ | m₁] | m₁] + μ[(μ[X₂ | m₁]) ^ 2 | m₁] :=
-                  condExp_add (h1.sub h2) h3
+                  condExp_add (h1.sub h2) h3 m₁
               _ =ᵐ[μ] (μ[X₂ ^ 2 | m₁] - μ[2 • X₂ * μ[X₂ | m₁] | m₁]) + μ[(μ[X₂ | m₁]) ^ 2 | m₁] :=
-                  by filter_upwards [condExp_sub h1 h2] with ω h; simp [h]
+                  by filter_upwards [condExp_sub h1 h2 m₁] with ω h; simp [h]
               _ =ᵐ[μ] μ[X₂ ^ 2 | m₁] - μ[2 • X₂ * μ[X₂ | m₁] | m₁] + μ[(μ[X₂ | m₁]) ^ 2 | m₁] :=
                   by filter_upwards with ω; ring
         _ =ᵐ[μ] μ[X₂ ^ 2 | m₁] - 2 • μ[X₂ | m₁] * μ[X₂ | m₁] + (μ[X₂ | m₁]) ^ 2 := by
@@ -1200,7 +1200,7 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
                 _ =ᵐ[μ] (2 • μ[X₂ | m₁]) * μ[X₂ | m₁] := by
                     have h_int : Integrable ((2 • μ[X₂ | m₁]) * X₂) μ := by
                       have h_prod : Integrable (μ[X₂ | m₁] * X₂) μ := h_cond_mem.integrable_mul hL2
-                      exact h_prod.const_smul 2
+                      exact h_prod.smul 2
                     have h_smul_meas : AEStronglyMeasurable[m₁] (2 • μ[X₂ | m₁]) μ :=
                       h_meas.const_smul 2
                     exact condExp_mul_of_aestronglyMeasurable_left h_smul_meas h_int hX₂_int
@@ -1512,13 +1512,26 @@ lemma Integrable.tendsto_L1_condexp_antitone
     [∀ n, SigmaFinite (μ.trim (hle n))]
     {X : Ω → ℝ} (hX : Integrable X μ) :
     Tendsto (fun n => eLpNorm (μ[X | 𝒢 n] - μ[X | ⨅ n, 𝒢 n]) 1 μ) atTop (𝓝 0) := by
-  -- This follows from:
-  -- 1. L¹-contraction: ‖μ[f|m]‖₁ ≤ ‖f‖₁ for conditional expectations
-  -- 2. Truncation: for ε>0, ∃M with ‖X - X^M‖₁ < ε where X^M is bounded
-  -- 3. Bounded case: a.e. convergence + Cauchy-Schwarz ⇒ L¹ convergence on prob space
-  -- 4. Triangle inequality to combine the pieces
-  -- The proof is standard but tedious in Lean; we admit for now.
-  sorry
+  set tail := ⨅ n, 𝒢 n with htail_def
+  -- Key fact: a.e. convergence (from the a.e. lemma)
+  have h_ae : ∀ᵐ ω ∂μ, Tendsto (fun n => μ[X | 𝒢 n] ω) atTop (𝓝 (μ[X | tail] ω)) :=
+    Integrable.tendsto_ae_condexp_antitone 𝒢 hle hdecr hX
+
+  -- Uniform integrability: all conditional expectations μ[X | 𝒢 n] are uniformly integrable
+  -- because they are dominated by μ[|X| | 𝒢 n], and these form a reverse martingale bounded by |X|
+  -- On a finite measure space, uniform L¹ bound implies uniform integrability.
+
+  -- Standard fact: On a probability space,
+  --   a.e. convergence + uniform integrability ⇒ L¹ convergence
+  -- The sequence {μ[X | 𝒢 n]} is uniformly integrable because:
+  --   1. ‖μ[X | 𝒢 n]‖₁ ≤ ‖X‖₁ for all n (L¹ contraction)
+  --   2. On a probability space, this uniform bound gives uniform integrability
+  --
+  -- This is Vitali's convergence theorem. The detailed proof would construct
+  -- the uniform integrability condition using the tower property and Markov's inequality.
+  -- For now we appeal to the standard result.
+
+  sorry -- Vitali convergence theorem: UI + a.e. convergence ⇒ L¹ convergence
 
 /-- **Reverse martingale convergence theorem.**
 
