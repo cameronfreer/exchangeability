@@ -506,25 +506,115 @@ lemma indicator_product_bridge_ax
     (hB_meas : ∀ i, MeasurableSet (B i)) :
     ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
       = ∫⁻ ω, ∏ i : Fin m, (ν μ ω) (B i) ∂μ := by
-  -- Step 1: Define indicator functions as measurable bounded functions
-  let fs : Fin m → α → ℝ := fun i => (B i).indicator (fun _ => 1)
+  classical
 
-  -- Step 2: Apply condexp_product_factorization_ax to these indicators
-  have h_factor := condexp_product_factorization_ax μ hσ m fs
-    (fun i => Measurable.indicator measurable_const (hB_meas i))
-    (fun i => ⟨1, fun x => by simp [fs, Set.indicator]; split_ifs <;> norm_num⟩)
-    trivial
+  -- Define real-valued product function
+  let F : Ω[α] → ℝ := fun ω => ∏ i : Fin m, (B i).indicator (fun _ => (1 : ℝ)) (ω (k i))
 
-  -- h_factor gives: CE[∏ indicators | ℐ] =ᵐ ∏(∫ indicator dν)
+  -- F is measurable and bounded
+  have hF_meas : Measurable F := by
+    apply Finset.measurable_prod
+    intro i _
+    exact Measurable.indicator measurable_const (hB_meas i) |>.comp (measurable_pi_apply (k i))
 
-  -- Step 3: Integrate both sides
-  -- LHS: ∫ CE[∏ indicators | ℐ] dμ = ∫ ∏ indicators dμ (tower property)
-  -- RHS: ∫ ∏(∫ indicator dν) dμ
+  have hF_bd : ∀ ω, |F ω| ≤ 1 := by
+    intro ω
+    have h01 : ∀ i, 0 ≤ (B i).indicator (fun _ => (1 : ℝ)) (ω (k i))
+             ∧     (B i).indicator (fun _ => (1 : ℝ)) (ω (k i)) ≤ 1 := by
+      intro i
+      by_cases h : ω (k i) ∈ B i <;> simp [Set.indicator, h]
+    have h_nonneg : 0 ≤ F ω := Finset.prod_nonneg fun i _ => (h01 i).1
+    have h_le_one : F ω ≤ 1 := by
+      show (∏ i : Fin m, (B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ≤ 1
+      calc ∏ i : Fin m, (B i).indicator (fun _ => (1 : ℝ)) (ω (k i))
+          ≤ ∏ i : Fin m, (1 : ℝ) := by
+              apply Finset.prod_le_prod
+              · intro i _; exact (h01 i).1
+              · intro i _; exact (h01 i).2
+        _ = 1 := by simp
+    rw [abs_of_nonneg h_nonneg]
+    exact h_le_one
 
-  -- Step 4: Simplify using: ∫ indicator dν = ν(B)
-  -- and convert from ℝ to ENNReal
+  have hF_nonneg : 0 ≤ᵐ[μ] F := ae_of_all _ (fun ω => by
+    have := hF_bd ω
+    rw [abs_le] at this
+    exact this.1)
 
-  sorry
+  have hF_int : Integrable F μ := by
+    apply MeasureTheory.integrable_of_bounded hF_meas
+    exact ⟨1, hF_bd⟩
+
+  -- LHS: Convert ENNReal integral to real integral
+  have hL : ∫⁻ ω, ENNReal.ofReal (F ω) ∂μ = ENNReal.ofReal (∫ ω, F ω ∂μ) := by
+    exact lintegral_ofReal_eq_integral hF_meas.aemeasurable hF_nonneg hF_int
+
+  -- RHS: Product of kernel measures
+  let G : Ω[α] → ℝ := fun ω => ∏ i, ((ν μ ω) (B i)).toReal
+
+  have hG_meas : Measurable G := by
+    apply Finset.measurable_prod
+    intro i _
+    exact Measurable.ennreal_toReal (ν_eval_measurable (hB_meas i))
+
+  have hG_nonneg : 0 ≤ᵐ[μ] G := ae_of_all _ (fun ω =>
+    Finset.prod_nonneg fun i _ => ENNReal.toReal_nonneg)
+
+  have hG_bd : ∀ ω, |G ω| ≤ 1 := by
+    intro ω
+    have h01 : ∀ i, 0 ≤ ((ν μ ω) (B i)).toReal ∧ ((ν μ ω) (B i)).toReal ≤ 1 := by
+      intro i
+      constructor
+      · exact ENNReal.toReal_nonneg
+      · have : (ν μ ω) (B i) ≤ 1 := by
+          have := measure_mono (show B i ⊆ Set.univ from Set.subset_univ _)
+          simp at this
+          exact this
+        have : ((ν μ ω) (B i)).toReal ≤ (1 : ENNReal).toReal := by
+          apply ENNReal.toReal_mono
+          · simp
+          · exact this
+        simpa using this
+    have h_nonneg : 0 ≤ G ω := Finset.prod_nonneg fun i _ => (h01 i).1
+    have h_le_one : G ω ≤ 1 := by
+      show (∏ i : Fin m, ((ν μ ω) (B i)).toReal) ≤ 1
+      calc ∏ i : Fin m, ((ν μ ω) (B i)).toReal
+          ≤ ∏ i : Fin m, (1 : ℝ) := by
+              apply Finset.prod_le_prod
+              · intro i _; exact (h01 i).1
+              · intro i _; exact (h01 i).2
+        _ = 1 := by simp
+    rw [abs_of_nonneg h_nonneg]
+    exact h_le_one
+
+  have hG_int : Integrable G μ := by
+    apply MeasureTheory.integrable_of_bounded hG_meas
+    exact ⟨1, hG_bd⟩
+
+  -- Key fact: ∫ indicator dν = ν(B).toReal for each coordinate
+  have h_indicator_integral : ∀ i ω, ∫ x, (B i).indicator (fun _ => (1 : ℝ)) x ∂(ν μ ω)
+                                     = ((ν μ ω) (B i)).toReal := by
+    intro i ω
+    exact integral_indicator_one (hB_meas i)
+
+  -- Now prove: ∫ F dμ = ∫ G dμ using the factorization axiom
+  have h_eq_integrals : ∫ ω, F ω ∂μ = ∫ ω, G ω ∂μ := by
+    -- Use tower property and factorization
+    sorry -- This requires condexp_product_factorization_ax + tower property
+
+  -- Convert both sides to ENNReal and conclude
+  calc ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
+      = ∫⁻ ω, ENNReal.ofReal (F ω) ∂μ := by
+          congr; funext ω; simp [F]
+    _ = ENNReal.ofReal (∫ ω, F ω ∂μ) := hL
+    _ = ENNReal.ofReal (∫ ω, G ω ∂μ) := by rw [h_eq_integrals]
+    _ = ∫⁻ ω, ENNReal.ofReal (G ω) ∂μ := by
+          rw [lintegral_ofReal_eq_integral hG_meas.aemeasurable hG_nonneg hG_int]
+    _ = ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal (((ν μ ω) (B i)).toReal) ∂μ := by
+          congr; funext ω; simp [G]
+    _ = ∫⁻ ω, ∏ i : Fin m, (ν μ ω) (B i) ∂μ := by
+          congr; funext ω
+          congr; funext i
+          exact ENNReal.ofReal_toReal (measure_ne_top _ _)
 
 /-- **Final bridge axiom** to the `ConditionallyIID` structure.
 
