@@ -38,9 +38,11 @@ Starting from a **contractable** sequence ξ:
 * `deFinetti`: **Canonical name** (alias for `deFinetti_viaL2`)
 
 Supporting lemmas:
-* `contractable_covariance_structure`: Uniform covariance structure
 * `weighted_sums_converge_L1`: L² bound implies L¹ convergence
 * `reverse_martingale_limit`: Tail-measurable limit via reverse martingale
+
+Auxiliary results (in separate file):
+* `CovarianceStructure.contractable_covariance_structure`: Uniform covariance structure
 
 ## Why this proof is default
 
@@ -485,38 +487,6 @@ lemma contractable_single_marginal_eq
   have h_comp_right : (fun ω => eval (fun j : Fin 1 => X j.val ω)) = fun ω => X 0 ω := by
     funext ω; simp [eval]
   simpa [Function.comp, h_comp_left, h_comp_right] using h_comp
-
-/-- **Contractable sequences have uniform covariance structure.**
-
-For contractable L² sequences, there exist constants m (mean), σ² (variance), and ρ
-(correlation) such that:
-- All variables have mean m and variance σ²
-- All distinct pairs have covariance σ²·ρ with |ρ| ≤ 1
-
-This follows from contractability: all variables have the same marginal distribution
-(hence same mean/variance), and all pairs have the same joint distribution (hence
-same covariance).
-
-**Note**: This result is not required for the main convergence proof. We include it
-in `Exchangeability/DeFinetti/CovarianceStructure.lean` as it may be useful for other
-applications and provides additional insight into the structure of contractable sequences.
-The main proof uses the L² contractability bound directly without computing these constants.
-
-For the complete proof using Cauchy-Schwarz via Hölder's inequality, see
-`Exchangeability.DeFinetti.CovarianceStructure.contractable_covariance_structure`.
--/
-lemma contractable_covariance_structure
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
-    (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-    ∃ (m σSq ρ : ℝ),
-      (∀ k, ∫ ω, X k ω ∂μ = m) ∧
-      (∀ k, ∫ ω, (X k ω - m)^2 ∂μ = σSq) ∧
-      (∀ i j, i ≠ j → ∫ ω, (X i ω - m) * (X j ω - m) ∂μ = σSq * ρ) ∧
-      0 ≤ σSq ∧ -1 ≤ ρ ∧ ρ ≤ 1 := by
-  sorry -- Full proof moved to Exchangeability/DeFinetti/CovarianceStructure.lean
-        -- to keep this file focused on the main convergence argument
 
 /-!
 ## Step 2: L² bound implies L¹ convergence of weighted sums (Kallenberg's key step)
