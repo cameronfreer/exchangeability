@@ -1319,7 +1319,24 @@ lemma Integrable.tendsto_ae_condexp_antitone
     [∀ n, SigmaFinite (μ.trim (hle n))]
     {X : Ω → ℝ} (hX : Integrable X μ) :
   ∀ᵐ ω ∂μ, Tendsto (fun n => μ[X | 𝒢 n] ω) atTop (𝓝 (μ[X | ⨅ n, 𝒢 n] ω)) := by
-  sorry -- TODO: Implement following the blueprint
+  -- Set up the tail σ-algebra
+  set tail := ⨅ n, 𝒢 n
+  have htail_le : tail ≤ m₀ := iInf_le_of_le 0 (hle 0)
+
+  -- Build antitone chain property
+  have h_antitone : Antitone 𝒢 := by
+    intro i j hij
+    obtain ⟨t, rfl⟩ := Nat.exists_eq_add_of_le hij
+    induction t with
+    | zero => simp
+    | succ t ih => exact (hdecr _).trans ih
+
+  -- Main proof via truncation (Layer 2 approach)
+  -- For each M, truncate X to X^M := max(min(X, M), -M)
+  -- Use that bounded functions give a.e. convergence (Layer 1)
+  -- Then pass to limit M → ∞
+
+  sorry -- TODO: Implement Layer 1 (L² + Borel-Cantelli) then Layer 2 (truncation)
 
 /-- **Lévy's downward theorem: L¹ convergence for antitone σ-algebras.**
 
@@ -1336,7 +1353,23 @@ lemma Integrable.tendsto_L1_condexp_antitone
     [∀ n, SigmaFinite (μ.trim (hle n))]
     {X : Ω → ℝ} (hX : Integrable X μ) :
   Tendsto (fun n => eLpNorm (μ[X | 𝒢 n] - μ[X | ⨅ n, 𝒢 n]) 1 μ) atTop (𝓝 0) := by
-  sorry -- TODO: Implement following the blueprint
+  -- Set up the tail σ-algebra
+  set tail := ⨅ n, 𝒢 n
+  have htail_le : tail ≤ m₀ := iInf_le_of_le 0 (hle 0)
+  haveI : SigmaFinite (μ.trim htail_le) := by
+    apply (inferInstance : IsFiniteMeasure (μ.trim htail_le)).toSigmaFinite
+
+  -- Proof by truncation:
+  -- For any ε > 0, pick M large so that ‖X - X^M‖₁ < ε/3
+  -- Then use L¹ contraction:
+  --   ‖μ[X|𝒢 n] - μ[X|tail]‖₁
+  --     ≤ ‖μ[X - X^M | 𝒢 n]‖₁ + ‖μ[X^M|𝒢 n] - μ[X^M|tail]‖₁ + ‖μ[X^M - X | tail]‖₁
+  --     ≤ 2‖X - X^M‖₁ + ‖μ[X^M|𝒢 n] - μ[X^M|tail]‖₁
+  --
+  -- For large n, the middle term → 0 (by a.e. convergence for bounded X^M)
+  -- So limsup ≤ 2ε/3, and since ε arbitrary, get convergence to 0.
+
+  sorry -- TODO: Implement using truncation + L¹ contraction + a.e. convergence
 
 /-- **Reverse martingale convergence theorem.**
 
