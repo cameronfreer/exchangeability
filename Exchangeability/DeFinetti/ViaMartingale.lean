@@ -1057,6 +1057,24 @@ lemma indProd_measurable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace �
     Measurable (indProd X r C) :=
   (indProd_stronglyMeasurable X r C hX hC).measurable
 
+/-- indProd product equals multiplication of indProds. -/
+lemma indProd_mul {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) {r : ℕ} {C D : Fin r → Set α} (ω : Ω) :
+    indProd X r C ω * indProd X r D ω = indProd X r (fun i => C i ∩ D i) ω := by
+  simp only [indProd]
+  rw [Finset.prod_mul_distrib]
+  congr 1
+  ext i
+  by_cases hC : X i ω ∈ C i <;> by_cases hD : X i ω ∈ D i <;>
+    simp [Set.indicator, hC, hD, Set.mem_inter_iff]
+
+/-- indProd on intersection via firstRCylinder. -/
+lemma indProd_inter_eq {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) {r : ℕ} {C D : Fin r → Set α} :
+    indProd X r (fun i => C i ∩ D i)
+      = (firstRCylinder X r C ∩ firstRCylinder X r D).indicator (fun _ => (1 : ℝ)) := by
+  rw [← firstRCylinder_inter, indProd_eq_firstRCylinder_indicator]
+
 /-- Drop the first coordinate of a path. -/
 def drop {α : Type*} (f : ℕ → α) : ℕ → α := shiftSeq (β:=α) 1 f
 
