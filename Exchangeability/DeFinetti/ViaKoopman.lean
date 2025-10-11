@@ -347,25 +347,53 @@ lemma condindep_pair_given_tail
     exact h_met f
 
   -- Part B: Shift equivariance for products
-  -- For any bounded measurable f, g : α → ℝ and k ≥ 1, we want to show:
-  -- CE[f(ω₀)·g(ωₖ) | ℐ] doesn't depend on k
+  -- Goal: Show CE[f(ω₀)·g(ωₖ) | ℐ] doesn't depend on k
 
-  -- The key observation: f(ω₀)·g(ωₖ) ∘ shift^j has the same conditional distribution
-  -- because shift^j preserves μ and ℐ is shift-invariant
+  -- Key lemma: condExpL2 commutes with the Koopman operator
+  -- Since condExpL2 = metProjection (by bridge lemma), and metProjection
+  -- is projection onto fixedSpace, we have:
+  --   koopman shift hσ (condexpL2 f) = condexpL2 f
+  -- i.e., (condexpL2 f) ∘ shift = condexpL2 f
 
-  -- Step 1: For bounded measurable f, g and k ≥ 1, form the product function
-  -- φₖ(ω) = f(ω 0) · g(ω k)
+  -- We also need: condexpL2 (koopman shift hσ f) = condexpL2 f
+  -- i.e., condexpL2 (f ∘ shift) = condexpL2 f
 
-  -- Step 2: Observe shift equivariance: φₖ ∘ shift = φₖ₊₁
-  -- This means: f(ω₁)·g(ωₖ₊₁) = f((shift ω) 0)·g((shift ω) k)
+  -- This follows from: condexpL2 is projection onto fixedSpace, and for any f,
+  -- projecting f onto fixedSpace gives the same result as projecting f∘shift,
+  -- because shift preserves the measure
 
-  -- Step 3: Since μ is shift-invariant (by hσ : MeasurePreserving shift)
-  -- and ℐ is shift-invariant, CE[φₖ | ℐ] and CE[φₖ₊₁ | ℐ] have the same distribution
+  -- Key lemma for Part B: conditional expectation commutes with Koopman operator
+  -- This says: condexpL2 (f ∘ shift) = condexpL2 f
+  have h_condexp_koopman_commute : ∀ (f : Lp ℝ 2 μ),
+      condexpL2 (koopman shift hσ f) = condexpL2 f := by
+    intro f
+    -- Equivalently: P(Uf) = Pf where P = condexpL2, U = koopman
+    -- Since condexpL2 is projection onto fixedSpace(U), this reduces to:
+    -- Projection onto U-invariant subspace commutes with U
 
-  -- Step 4: Actually, by the shift-invariance of functions in L²(μ, ℐ),
-  -- we have CE[φₖ | ℐ] = CE[φₖ₊₁ | ℐ] almost everywhere
+    -- Proof outline:
+    -- 1. Decompose: f = Pf + (f - Pf) with Pf ∈ fixedSpace, (f - Pf) ⊥ fixedSpace
+    -- 2. U(Pf) = Pf (definition of fixedSpace)
+    -- 3. U(f - Pf) ⊥ fixedSpace (U isometry preserves orthogonality)
+    -- 4. P(Uf) = P(Pf + U(f - Pf)) = Pf + 0 = Pf
 
-  -- TODO: Formalize this shift equivariance argument
+    -- Required infrastructure (not yet formalized):
+    -- - Orthogonal decomposition with respect to projection
+    -- - Isometries preserve orthogonal complements
+    -- - Projections onto invariant subspaces commute with preserving isometries
+
+    sorry
+
+  -- With h_condexp_koopman_commute, we can show products have constant CE
+  -- For φₖ(ω) = f(ω 0) · g(ω k), we want: CE[φₖ|ℐ] doesn't depend on k
+
+  -- The argument would be:
+  -- CE[f(ω₁)·g(ωₖ₊₁)|ℐ] = CE[(f(ω₀)·g(ωₖ)) ∘ shift|ℐ]
+  --                        = CE[f(ω₀)·g(ωₖ)|ℐ]  (by h_condexp_koopman_commute)
+
+  -- But this requires additional work to formalize product functions properly
+
+  -- TODO: Formalize product function construction and apply commutation lemma
 
   -- Part C: Taking k → ∞ (tail argument)
   -- As k → ∞, g(ωₖ) becomes "independent" of ω₀ in the sense that
