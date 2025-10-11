@@ -906,10 +906,55 @@ lemma l2_bound_two_windows_uniform
   refine ⟨Cf, hCf_nonneg, fun n m k hk => ?_⟩
 
   -- Steps 4-5: Apply l2_contractability_bound with uniform weights and simplify to Cf/k
-  -- We need to show the L² bound for windows at positions n and m
 
-  sorry -- TODO: Complete the application of l2_contractability_bound
-  -- This requires constructing appropriate weight vectors and applying the bound
+  -- Construct a sequence of length 2k combining both windows
+  -- ξᵢ = f(X_{n+i+1}) for i < k, ξᵢ = f(X_{m+(i-k)+1}) for i ≥ k
+  let ξ : Fin (2 * k) → Ω → ℝ := fun i ω =>
+    if i.val < k then f (X (n + i.val + 1) ω) else f (X (m + (i.val - k) + 1) ω)
+
+  -- Weight vectors: p puts weight 1/k on first k positions, q on last k positions
+  let p : Fin (2 * k) → ℝ := fun i => if i.val < k then 1 / (k : ℝ) else 0
+  let q : Fin (2 * k) → ℝ := fun i => if i.val < k then 0 else 1 / (k : ℝ)
+
+  -- The goal simplifies to showing that the weighted average difference equals our target
+  have h_goal_eq : ∀ ω, (1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
+                         (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω)
+                       = ∑ i : Fin (2*k), p i * ξ i ω - ∑ i : Fin (2*k), q i * ξ i ω := by
+    sorry -- TODO: Prove this equality by splitting sums
+
+  -- Prove p and q are probability distributions
+  have hp_prob : (∑ i : Fin (2*k), p i) = 1 ∧ ∀ i, 0 ≤ p i := by
+    sorry -- TODO: Prove p sums to 1 and is nonnegative
+
+  have hq_prob : (∑ i : Fin (2*k), q i) = 1 ∧ ∀ i, 0 ≤ q i := by
+    sorry -- TODO: Prove q sums to 1 and is nonnegative
+
+  -- Apply l2_contractability_bound
+  have h_bound := @L2Approach.l2_contractability_bound Ω _ μ _ (2*k) ξ mf
+    (Real.sqrt σSqf) ρf hρ_bd
+    sorry -- hmean for ξ
+    sorry -- hL2 for ξ
+    sorry -- hvar for ξ
+    sorry -- hcov for ξ
+    p q hp_prob hq_prob
+
+  -- The supremum |pᵢ - qᵢ| = 1/k
+  have h_sup : (⨆ i : Fin (2*k), |p i - q i|) = 1 / (k : ℝ) := by
+    sorry -- This follows from sup_two_window_weights
+
+  -- Simplify: 2·(√σSqf)²·(1-ρf)·(1/k) = 2σSqf(1-ρf)/k = Cf/k
+  have h_simplify : 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) * (1 / (k : ℝ)) = Cf / k := by
+    have h_sqrt_sq : (Real.sqrt σSqf) ^ 2 = σSqf := Real.sq_sqrt hσSq_nonneg
+    simp [Cf, h_sqrt_sq]
+    ring
+
+  calc ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
+             (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
+    = ∫ ω, (∑ i : Fin (2*k), p i * ξ i ω - ∑ i : Fin (2*k), q i * ξ i ω)^2 ∂μ := by
+        congr 1; ext ω; rw [h_goal_eq ω]
+  _ ≤ 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) * (⨆ i : Fin (2*k), |p i - q i|) := h_bound
+  _ = 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) * (1 / (k : ℝ)) := by rw [h_sup]
+  _ = Cf / k := h_simplify
 
 /-- **L² bound wrapper for two starting windows**.
 
