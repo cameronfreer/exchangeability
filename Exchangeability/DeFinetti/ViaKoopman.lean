@@ -251,19 +251,28 @@ lemma metProjection_eq_condExpL2_shiftInvariant
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) :
     metProjection (shift (α := α)) hσ = condexpL2 (μ := μ) := by
-  -- Both are orthogonal projections onto the same closed subspace
+  classical
+  -- Strategy: Show metProjection = METProjection, then use proj_eq_condexp
 
-  -- Step 1: Show fixedSpace(koopman shift) = L²(μ, shiftInvariantSigma)
-  -- Need: f ∈ fixedSpace ↔ f measurable w.r.t. shiftInvariantSigma
-  -- This follows from: koopman shift f = f ∘ shift = f
-  --   ⟺ f is shift-invariant
-  --   ⟺ f measurable w.r.t. shiftInvariantSigma
+  -- Step 1: Both metProjection and METProjection are defined identically
+  -- as S.subtypeL.comp S.orthogonalProjection where S = fixedSpace (koopman shift hσ)
 
-  -- Step 2: Apply uniqueness of orthogonal projections
-  -- Both metProjection and condExpL2 are the unique orthogonal projection
-  -- onto the same closed subspace, hence they're equal
+  -- metProjection (from KoopmanMeanErgodic.lean:216-230):
+  -- let S := fixedSpace (koopman T hT)
+  -- S.subtypeL.comp S.orthogonalProjection
 
-  sorry
+  -- METProjection (from InvariantSigma.lean:707-715):
+  -- let S := fixedSubspace hσ := fixedSpace (koopman shift hσ)
+  -- S.subtypeL.comp S.orthogonalProjection
+
+  -- Show they're definitionally equal
+  have h_eq_MET : metProjection (shift (α := α)) hσ = METProjection hσ := by
+    unfold metProjection METProjection fixedSubspace
+    rfl
+
+  -- Step 2: Use the existing theorem proj_eq_condexp
+  rw [h_eq_MET]
+  exact proj_eq_condexp hσ
 
 /-- **Core axiom**: Conditional independence of the first two coordinates given the tail σ-algebra.
 
