@@ -14,6 +14,7 @@ import Exchangeability.DeFinetti.InvariantSigma
 import Exchangeability.DeFinetti.ProjectionLemmas
 import Exchangeability.DeFinetti.CommonEnding
 import Exchangeability.ConditionallyIID
+import Exchangeability.DeFinetti.AxiomsForDeFinetti
 
 /-!
 # de Finetti's Theorem via Koopman Operator
