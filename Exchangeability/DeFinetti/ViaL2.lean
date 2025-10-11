@@ -645,15 +645,14 @@ lemma l2_bound_two_windows_uniform
       linarith
 
     -- Combine with 1/k² factor
+    have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
+    have h_alg : (1/(k:ℝ))^2 * (k * (2*M))^2 = (2*M)^2 / k := by
+      have hk_ne : (k:ℝ) ≠ 0 := ne_of_gt hk_pos
+      field_simp [hk_ne]
+      ring
     calc (1/(k:ℝ))^2 * (∑ i : Fin k, (f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω)))^2
         ≤ (1/(k:ℝ))^2 * (k * (2*M))^2 := mul_le_mul_of_nonneg_left h_sq_bound (sq_nonneg _)
-      _ = (2*M)^2 / k := by
-          have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
-          have hk_ne : (k:ℝ) ≠ 0 := ne_of_gt hk_pos
-          rw [div_pow, mul_pow]
-          simp only [sq, mul_comm (k*k), mul_assoc, mul_left_comm]
-          rw [div_mul_cancel₀ _ (mul_ne_zero hk_ne hk_ne)]
-          rw [mul_div_assoc]
+      _ = (2*M)^2 / k := h_alg
 
   -- Now integrate the bound
   calc ∫ ω, (1/(k:ℝ))^2 * (∑ i : Fin k, f (X (n + i.val + 1) ω) -
