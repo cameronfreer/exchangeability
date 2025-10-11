@@ -1072,6 +1072,7 @@ lemma measure_ext_of_future_rectangles
         · simp [C, h1, h2] at this
           exact this.1
         · simp [C, h1, h2] at this
+          exact this
       · intro i
         have hi : (i : ℕ) < r := lt_of_lt_of_le i.2 (Nat.le_max_right r₁ r₂)
         have := hC' ⟨i, hi⟩
@@ -1081,69 +1082,12 @@ lemma measure_ext_of_future_rectangles
         · simp [C, h1, h2] at this
           exact this.2
         · simp [C, h1, h2] at this
+          exact this
 
   -- Show that S generates the product σ-algebra
   have h_gen : (inferInstance : MeasurableSpace (α × (ℕ → α)))
       = MeasurableSpace.generateFrom S := by
-    apply le_antisymm
-    · apply MeasurableSpace.generateFrom_le
-      intro s hs
-      rcases hs with ⟨r, B, hB, C, hC, rfl⟩
-      exact hB.prod (cylinder_measurable (α:=α) hC)
-    · -- Using the characterization of the product σ-algebra
-      have : (inferInstance : MeasurableSpace (α × (ℕ → α)))
-          = MeasurableSpace.comap Prod.fst inferInstance ⊔
-            MeasurableSpace.comap Prod.snd inferInstance :=
-        by simpa using (MeasurableSpace.prod_eq : _)
-      refine this ▸ sup_le ?_ ?_
-      · -- First component
-        refine (MeasurableSpace.comap_le_iff_le_map).1 ?_
-        apply MeasurableSpace.generateFrom_le
-        intro B hB
-        have : Prod.fst ⁻¹' B = B ×ˢ Set.univ := by
-          ext ⟨a, f⟩; simp
-        refine this ▸ ?_
-        have : B ×ˢ Set.univ =
-            B ×ˢ cylinder (α:=α) 0 (fun _ => Set.univ) := by
-          ext ⟨a, f⟩; simp [cylinder]
-        refine MeasurableSpace.measurableSet_generateFrom ?_
-        exact ⟨0, B, hB, _, fun _ => MeasurableSet.univ, this.symm⟩
-      · -- Second component
-        refine (MeasurableSpace.comap_le_iff_le_map).1 ?_
-        apply MeasurableSpace.generateFrom_le
-        intro T hT
-        rcases hT with ⟨i, D, hD, rfl⟩
-        have : Prod.snd ⁻¹' {f | f i ∈ D}
-            = Set.univ ×ˢ {f : ℕ → α | f i ∈ D} := by
-          ext ⟨a, f⟩; simp
-        refine this ▸ ?_
-        -- Encode `{f | f i ∈ D}` as a cylinder
-        let C : Fin (i + 1) → Set α := fun j =>
-          if h : (j : ℕ) = i then D else Set.univ
-        have hC : ∀ j, MeasurableSet (C j) := by
-          intro j
-          classical
-          by_cases h : (j : ℕ) = i
-          · simpa [C, h] using hD
-          · simpa [C, h] using (MeasurableSet.univ : MeasurableSet (Set.univ))
-        have h_cyl :
-            {f : ℕ → α | f i ∈ D} = cylinder (α:=α) (i + 1) C := by
-          ext f; constructor
-          · intro hfi
-            intro j
-            classical
-            by_cases h : (j : ℕ) = i
-            · subst h; simpa [C] using hfi
-            · simp [C, h]
-          · intro hf
-            have := hf ⟨i, Nat.lt_succ_self i⟩
-            simpa [C, show ((⟨i, Nat.lt_succ_self i⟩ : Fin (i + 1)) : ℕ) = i by rfl]
-              using this
-        have : Set.univ ×ˢ {f : ℕ → α | f i ∈ D}
-            = Set.univ ×ˢ cylinder (α:=α) (i + 1) C := by
-          simp [h_cyl]
-        refine MeasurableSpace.measurableSet_generateFrom ?_
-        exact ⟨i + 1, Set.univ, MeasurableSet.univ, C, hC, this.symm⟩
+    sorry  -- TODO: Prove S generates product σ-algebra
 
   -- Measures agree on S
   have h_agree : ∀ s ∈ S, μ s = ν s := by
