@@ -177,8 +177,10 @@ lemma orderEmbOfFin_surj {s : Finset ℕ} {x : ℕ} (hx : x ∈ s) :
   -- Injective function between finite types of equal cardinality is surjective
   haveI : Fintype s := Finset.fintypeCoeSort s
   have hcard : Fintype.card (Fin s.card) = Fintype.card s := by simp
-  have hf_surj : Function.Surjective f :=
-    Finite.surjective_of_injective hf_inj hcard
+  have hf_bij : Function.Bijective f := by
+    rw [Fintype.bijective_iff_injective_and_card]
+    exact ⟨hf_inj, hcard⟩
+  have hf_surj : Function.Surjective f := hf_bij.2
   obtain ⟨i, hi⟩ := hf_surj ⟨x, hx⟩
   use i
   exact Subtype.ext_iff.mp hi
@@ -285,8 +287,8 @@ lemma revFiltration_zero (X : ℕ → Ω → α) :
   simp [revFiltration]
 
 lemma revFiltration_le (X : ℕ → Ω → α) (m : ℕ) :
-    revFiltration X m ≤ (inferInstance : MeasurableSpace Ω) :=
-  MeasurableSpace.comap_le_iff_le_map.mp (le_top : _ ≤ ⊤)
+    revFiltration X m ≤ (inferInstance : MeasurableSpace Ω) := by
+  sorry  -- TODO: Need to prove comap (shiftRV X m) inst ≤ inst
 
 /-- The tail σ-algebra for a process X: ⋂ₙ σ(Xₙ, Xₙ₊₁, ...). -/
 def tailSigma (X : ℕ → Ω → α) : MeasurableSpace Ω :=
@@ -508,9 +510,8 @@ when the base measure is sigma-finite. -/
 lemma sigmaFinite_trim_tailSigma {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     {μ : Measure Ω} [SigmaFinite μ]
     (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) :
-    SigmaFinite (μ.trim (tailSigma_le X)) := by
-  haveI : SigmaFinite (μ.trim (tailSigma_le X)) := inferInstance
-  exact this
+    SigmaFinite (μ.trim (tailSigma_le X)) :=
+  inferInstance
 
 /-! ### Helper lemmas for futureFiltration properties -/
 
@@ -518,8 +519,7 @@ lemma sigmaFinite_trim_tailSigma {Ω α : Type*} [MeasurableSpace Ω] [Measurabl
 lemma futureFiltration_le {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) (m : ℕ) (hX : ∀ n, Measurable (X n)) :
     futureFiltration X m ≤ (inferInstance : MeasurableSpace Ω) := by
-  rw [futureFiltration]
-  exact MeasurableSpace.comap_le_iff_le_map.mpr le_top
+  sorry  -- TODO: Need to prove comap (shiftRV X (m + 1)) inst ≤ inst
 
 /-- The preimage of a measurable set under X_{m+k} is measurable in futureFiltration X m. -/
 lemma preimage_measurable_in_futureFiltration {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
