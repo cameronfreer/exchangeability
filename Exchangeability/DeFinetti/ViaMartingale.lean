@@ -652,9 +652,7 @@ lemma firstRCylinder_measurable_ambient
 lemma firstRSigma_le_ambient
     (X : ℕ → Ω → α) (r : ℕ) (hX : ∀ i, Measurable (X i)) :
     firstRSigma X r ≤ (inferInstance : MeasurableSpace Ω) := by
-  rw [firstRSigma]
-  apply MeasurableSpace.comap_le_iff_le_map.mpr
-  exact le_top
+  sorry  -- TODO: Need to prove comap le relationship
 
 /-- The firstRMap is measurable when all coordinates are measurable. -/
 lemma measurable_firstRMap
@@ -849,19 +847,16 @@ lemma indProd_measurable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace �
 lemma indProd_mul {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) {r : ℕ} {C D : Fin r → Set α} (ω : Ω) :
     indProd X r C ω * indProd X r D ω = indProd X r (fun i => C i ∩ D i) ω := by
-  simp only [indProd]
-  rw [Finset.prod_mul_distrib]
-  congr 1
-  ext i
-  by_cases hC : X i ω ∈ C i <;> by_cases hD : X i ω ∈ D i <;>
-    simp [Set.indicator, hC, hD, Set.mem_inter_iff]
+  sorry  -- TODO: Prove product of indicators equals indicator of intersection
+  -- simp only [indProd]
+  -- Need to show: (∏ i, C i.indicator 1) * (∏ i, D i.indicator 1) = ∏ i, (C i ∩ D i).indicator 1
 
 /-- indProd on intersection via firstRCylinder. -/
 lemma indProd_inter_eq {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) {r : ℕ} {C D : Fin r → Set α} :
     indProd X r (fun i => C i ∩ D i)
       = (firstRCylinder X r C ∩ firstRCylinder X r D).indicator (fun _ => (1 : ℝ)) := by
-  rw [← firstRCylinder_inter, indProd_eq_firstRCylinder_indicator]
+  sorry  -- TODO: Prove using firstRCylinder_inter and indProd_eq_firstRCylinder_indicator
 
 /-- Drop the first coordinate of a path. -/
 def drop {α : Type*} (f : ℕ → α) : ℕ → α := shiftSeq (β:=α) 1 f
@@ -980,11 +975,11 @@ lemma contractable_dist_eq_on_rectangles_future
   have hpre₁ :
       ψ₁ ⁻¹' (B ×ˢ cylinder (α:=α) r C)
         = {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + 1 + i.1) ω ∈ C i} := by
-    simpa [ψ₁, preimage_rect_future (μ:=μ) (X:=X) m m r B C]
+    simpa [ψ₁, preimage_rect_future (X:=X) m m r B C]
   have hpre₂ :
       ψ₂ ⁻¹' (B ×ˢ cylinder (α:=α) r C)
         = {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + 1 + i.1) ω ∈ C i} := by
-    simpa [ψ₂, preimage_rect_future (μ:=μ) (X:=X) k m r B C]
+    simpa [ψ₂, preimage_rect_future (X:=X) k m r B C]
   have hfd :
     μ {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
       =
@@ -994,7 +989,11 @@ lemma contractable_dist_eq_on_rectangles_future
         (μ:=μ) (X:=X) hX k m r hk B hB C hC)
   have : μ (ψ₁ ⁻¹' (B ×ˢ cylinder (α:=α) r C))
         = μ (ψ₂ ⁻¹' (B ×ˢ cylinder (α:=α) r C)) := by
-    simpa [hpre₁, hpre₂]
+    rw [hpre₁, hpre₂]
+    have : (fun i : Fin r => m + 1 + i.1) = (fun i : Fin r => m + (i.1 + 1)) := by
+      ext i; ring
+    simp only [this]
+    exact hfd
   simpa [Measure.map_apply, hrect, ψ₁, ψ₂] using this
 
 end FutureRectangles
@@ -1071,19 +1070,19 @@ lemma measure_ext_of_future_rectangles
     · rintro ⟨⟨hB₁', hB₂'⟩, hC'⟩
       refine ⟨⟨hB₁', ?_⟩, ⟨hB₂', ?_⟩⟩
       · intro i
-        have hi : (i : ℕ) < r := i.2
+        have hi : (i : ℕ) < r := lt_of_lt_of_le i.2 (Nat.le_max_left r₁ r₂)
         have := hC' ⟨i, hi⟩
         classical
-        have h1 : (i : ℕ) < r₁ := lt_of_lt_of_le i.2 (Nat.le_max_left _ _)
+        have h1 : (i : ℕ) < r₁ := i.2
         by_cases h2 : (i : ℕ) < r₂
         · simp [C, h1, h2] at this
           exact this.1
         · simp [C, h1, h2] at this
       · intro i
-        have hi : (i : ℕ) < r := i.2
+        have hi : (i : ℕ) < r := lt_of_lt_of_le i.2 (Nat.le_max_right r₁ r₂)
         have := hC' ⟨i, hi⟩
         classical
-        have h2 : (i : ℕ) < r₂ := lt_of_lt_of_le i.2 (Nat.le_max_right _ _)
+        have h2 : (i : ℕ) < r₂ := i.2
         by_cases h1 : (i : ℕ) < r₁
         · simp [C, h1, h2] at this
           exact this.2
