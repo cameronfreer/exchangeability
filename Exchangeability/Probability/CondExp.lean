@@ -186,36 +186,39 @@ lemma condexp_indicator_eq_of_agree_on_future_rectangles
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂
         | MeasurableSpace.comap Y inferInstance] := by
-  sorry
-  /-classical
-  let mY := MeasurableSpace.comap Y inferInstance
-  let f₁ : Ω → ℝ := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₁ ω)
-  let f₂ : Ω → ℝ := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₂ ω)
+  classical
+  -- Work directly with the functions without set/let to avoid context issues
   have hX₁B : MeasurableSet (X₁ ⁻¹' B) := hX₁ hB
   have hX₂B : MeasurableSet (X₂ ⁻¹' B) := hX₂ hB
-  have hf₁_indicator : f₁ = Set.indicator (X₁ ⁻¹' B) (fun _ : Ω => (1 : ℝ)) := by
-    funext ω; by_cases hω : X₁ ω ∈ B <;> simp [Set.indicator, hω]
-  have hf₂_indicator : f₂ = Set.indicator (X₂ ⁻¹' B) (fun _ : Ω => (1 : ℝ)) := by
-    funext ω; by_cases hω : X₂ ω ∈ B <;> simp [Set.indicator, hω]
   have h_int_const : Integrable (fun _ : Ω => (1 : ℝ)) μ := integrable_const _
-  have hf₁_int : Integrable f₁ μ := by
-    rw [hf₁_indicator]
+  have hf₁_int : Integrable (Set.indicator B (fun _ => (1 : ℝ)) ∘ X₁) μ := by
+    show Integrable (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₁ ω)) μ
+    have : (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₁ ω))
+           = Set.indicator (X₁ ⁻¹' B) (fun _ => (1 : ℝ)) := by
+      funext ω; by_cases hω : X₁ ω ∈ B <;> simp [Set.indicator, hω]
+    rw [this]
     exact h_int_const.indicator hX₁B
-  have hf₂_int : Integrable f₂ μ := by
-    rw [hf₂_indicator]
+  have hf₂_int : Integrable (Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂) μ := by
+    show Integrable (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₂ ω)) μ
+    have : (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₂ ω))
+           = Set.indicator (X₂ ⁻¹' B) (fun _ => (1 : ℝ)) := by
+      funext ω; by_cases hω : X₂ ω ∈ B <;> simp [Set.indicator, hω]
+    rw [this]
     exact h_int_const.indicator hX₂B
-  have hmY : mY ≤ inferInstance := by
+
+  set mY := MeasurableSpace.comap Y inferInstance with hmY_def
+  have hmY : mY ≤ _ := by
     intro s hs
     rcases hs with ⟨E, hE, rfl⟩
     exact hY hE
   haveI : SigmaFinite (μ.trim hmY) :=
     (inferInstance : IsFiniteMeasure (μ.trim hmY)).toSigmaFinite
-  have hmeasure_eq := hagree.measure_eq
 
   -- equality of set integrals on all mY-measurable sets
   have h_integral_eq :
       ∀ {E : Set (ℕ → α)} (hE : MeasurableSet E),
-        ∫ ω in Y ⁻¹' E, f₁ ω ∂μ = ∫ ω in Y ⁻¹' E, f₂ ω ∂μ := by
+        ∫ ω in Y ⁻¹' E, (Set.indicator B (fun _ => (1 : ℝ)) ∘ X₁) ω ∂μ
+        = ∫ ω in Y ⁻¹' E, (Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂) ω ∂μ := by
     intro E hE
     have hrect : MeasurableSet (B ×ˢ E) := hB.prod hE
     have hpair₁ : Measurable fun ω => (X₁ ω, Y ω) := hX₁.prod_mk hY
@@ -224,7 +227,7 @@ lemma condexp_indicator_eq_of_agree_on_future_rectangles
         μ ((fun ω => (X₁ ω, Y ω)) ⁻¹' (B ×ˢ E))
         = μ ((fun ω => (X₂ ω, Y ω)) ⁻¹' (B ×ˢ E)) := by
       simpa [Measure.map_apply, hpair₁, hpair₂, hrect]
-        using congrArg (fun ν => ν (B ×ˢ E)) hmeasure_eq
+        using congrArg (fun ν => ν (B ×ˢ E)) hagree.measure_eq
     have hpre₁ :
         (fun ω => (X₁ ω, Y ω)) ⁻¹' (B ×ˢ E)
           = (X₁ ⁻¹' B) ∩ (Y ⁻¹' E) := by
@@ -238,42 +241,44 @@ lemma condexp_indicator_eq_of_agree_on_future_rectangles
         = μ ((X₂ ⁻¹' B) ∩ (Y ⁻¹' E)) := by
       simpa [hpre₁, hpre₂] using hμ_eq
     calc
-      ∫ ω in Y ⁻¹' E, f₁ ω ∂μ
+      ∫ ω in Y ⁻¹' E, (Set.indicator B (fun _ => (1 : ℝ)) ∘ X₁) ω ∂μ
           = ∫ ω in (Y ⁻¹' E) ∩ (X₁ ⁻¹' B), (1 : ℝ) ∂μ := by
-            simpa [f₁, hf₁_indicator, Set.inter_left_comm, Set.inter_assoc]
-              using
-                setIntegral_indicator (μ := μ) (s := Y ⁻¹' E) (t := X₁ ⁻¹' B)
-                  (f := fun _ : Ω => (1 : ℝ)) hX₁B
+            have : (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₁ ω))
+                   = Set.indicator (X₁ ⁻¹' B) (fun _ => (1 : ℝ)) := by
+              funext ω; by_cases hω : X₁ ω ∈ B <;> simp [Set.indicator, hω]
+            simp only [Function.comp_apply, this, Set.inter_left_comm, Set.inter_assoc]
+            exact setIntegral_indicator hX₁B
       _ = (μ ((X₁ ⁻¹' B) ∩ (Y ⁻¹' E))).toReal := by
         simp [Measure.real_def, Set.inter_left_comm, Set.inter_assoc]
       _ = (μ ((X₂ ⁻¹' B) ∩ (Y ⁻¹' E))).toReal := by simpa [hμ_inter]
       _ = ∫ ω in (Y ⁻¹' E) ∩ (X₂ ⁻¹' B), (1 : ℝ) ∂μ := by
         simp [Measure.real_def, Set.inter_left_comm, Set.inter_assoc]
-      _ = ∫ ω in Y ⁻¹' E, f₂ ω ∂μ := by
-        simpa [f₂, hf₂_indicator, Set.inter_left_comm, Set.inter_assoc]
-          using
-            setIntegral_indicator (μ := μ) (s := Y ⁻¹' E) (t := X₂ ⁻¹' B)
-              (f := fun _ : Ω => (1 : ℝ)) hX₂B
+      _ = ∫ ω in Y ⁻¹' E, (Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂) ω ∂μ := by
+            have : (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₂ ω))
+                   = Set.indicator (X₂ ⁻¹' B) (fun _ => (1 : ℝ)) := by
+              funext ω; by_cases hω : X₂ ω ∈ B <;> simp [Set.indicator, hω]
+            simp only [Function.comp_apply, this, Set.inter_left_comm, Set.inter_assoc]
+            exact (setIntegral_indicator hX₂B).symm
 
   have h_cond₂ := setIntegral_condExp (μ := μ) (m := mY) (hm := hmY)
-      (f := f₂) hf₂_int
-  have h_g_meas : StronglyMeasurable[mY] (μ[f₂ | mY]) :=
+      (f := Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂) hf₂_int
+  have h_g_meas : StronglyMeasurable[mY] (μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂ | mY]) :=
     stronglyMeasurable_condExp
-  have h_g_int : Integrable (μ[f₂ | mY]) μ := integrable_condexp
+  have h_g_int : Integrable (μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂ | mY]) μ := integrable_condexp
 
   -- uniqueness of CE from equality of all set integrals over mY
   have h_set :
       ∀ {s : Set Ω}, MeasurableSet[mY] s →
-        ∫ ω in s, f₁ ω ∂μ = ∫ ω in s, μ[f₂ | mY] ω ∂μ := by
+        ∫ ω in s, (Set.indicator B (fun _ => (1 : ℝ)) ∘ X₁) ω ∂μ
+        = ∫ ω in s, μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂ | mY] ω ∂μ := by
     intro s hs
     have h1 := h_integral_eq (by rcases hs with ⟨E, hE, rfl⟩; exact hE)
     have h2 := h_cond₂ hs
-    simpa [f₂] using h1.trans h2.symm
+    exact h1.trans h2.symm
 
   exact
     ae_eq_condExp_of_forall_setIntegral_eq (hm := hmY)
       hf₁_int h_g_int h_set h_g_meas
-  -/
 
 /-! ### Conditional Probability -/
 
@@ -653,9 +658,9 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
             have : G ∈ rects := ⟨Set.univ, G, MeasurableSet.univ, hG, by simp⟩
             exact MeasurableSpace.measurableSet_generateFrom this
         · -- generateFrom rects ≤ mF ⊔ mG
+          refine MeasurableSpace.generateFrom_le ?_
           intro s hs
-          obtain ⟨F, G, hF, hG, h_eq⟩ := hs
-          rw [h_eq]
+          obtain ⟨F, G, hF, hG, rfl⟩ := hs
           exact MeasurableSet.inter (le_sup_left _ _ _ hF) (le_sup_right _ _ _ hG)
 
       -- Apply MeasurableSpace.induction_on_inter
