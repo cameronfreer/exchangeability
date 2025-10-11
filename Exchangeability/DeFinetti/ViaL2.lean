@@ -645,16 +645,29 @@ lemma l2_bound_two_windows_uniform
       linarith
 
     -- Combine with 1/k² factor
+    -- Note: The algebraic simplification gives (2M)², not (2M)²/k
+    -- This is a weaker bound than the sharp Cf/k bound (see line 927-928)
     have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
-    have h_alg : (1/(k:ℝ))^2 * (k * (2*M))^2 = (2*M)^2 / k := by
+    have h_alg : (1/(k:ℝ))^2 * (k * (2*M))^2 = (2*M)^2 := by
       have hk_ne : (k:ℝ) ≠ 0 := ne_of_gt hk_pos
-      -- Algebraic identity: (1/k²) * (k * 2M)² = (1/k²) * k² * (2M)² = (2M)²
-      -- But we want (2M)²/k, not (2M)². The original bound should give us (2M)²/k directly.
-      -- TODO: Fix the bound derivation
-      sorry
+      calc (1/(k:ℝ))^2 * (k * (2*M))^2
+          = (1/(k:ℝ))^2 * (k^2 * (2*M)^2) := by ring
+        _ = (1/k^2) * (k^2 * (2*M)^2) := by rw [div_pow, one_pow]
+        _ = ((1/k^2) * k^2) * (2*M)^2 := by ring
+        _ = (k^2 / k^2) * (2*M)^2 := by rw [one_div, inv_mul_eq_div]
+        _ = 1 * (2*M)^2 := by rw [div_self (pow_ne_zero 2 hk_ne)]
+        _ = (2*M)^2 := by ring
+    -- We get a bound of (2M)² which is weaker than the target (2M)²/k
+    -- The sharp bound requires the weighted average lemma (deferred)
     calc (1/(k:ℝ))^2 * (∑ i : Fin k, (f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω)))^2
         ≤ (1/(k:ℝ))^2 * (k * (2*M))^2 := mul_le_mul_of_nonneg_left h_sq_bound (sq_nonneg _)
-      _ = (2*M)^2 / k := h_alg
+      _ = (2*M)^2 := h_alg
+      _ ≤ (2*M)^2 / k := by
+          -- Since k ≥ 1 (nat), we have (2M)² * k ≥ (2M)², so (2M)²/k * k ≥ (2M)²/k
+          -- But we want (2M)² ≤ (2M)²/k, which requires k ≤ 1
+          -- Actually for k ≥ 1, we have (2M)²/k ≤ (2M)², NOT the reverse!
+          -- This bound goes the WRONG WAY. We need to use a different approach.
+          sorry
 
   -- Now integrate the bound
   calc ∫ ω, (1/(k:ℝ))^2 * (∑ i : Fin k, f (X (n + i.val + 1) ω) -
@@ -738,9 +751,40 @@ private lemma sum_tail_block_reindex
     _ = c * ∑ j : Fin k, F (m - k + j.val) := by
           congr 1
           -- Bijection between {i : Fin m | i.val ≥ m - k} and Fin k
-          -- Map i ↦ ⟨i.val - (m - k), ...⟩ and j ↦ ⟨m - k + j.val, ...⟩
-          -- TODO: Complete bijection proof - omega struggles with the arithmetic
-          sorry
+          -- We use Finset.sum_bij' to establish the bijection
+          refine Finset.sum_bij'
+            (fun i hi => (⟨i.val - (m - k), ?_⟩ : Fin k))
+            (fun j hj => (⟨m - k + j.val, ?_⟩ : Fin m))
+            ?_ ?_ ?_ ?_ ?_
+          · -- i.val - (m - k) < k
+            simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hi
+            omega
+          · -- m - k + j.val < m
+            omega
+          · -- membership preserved forward
+            intro i hi
+            simp only [Finset.mem_univ]
+          · -- membership preserved backward
+            intro j hj
+            simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+            omega
+          · -- F values match
+            intro i hi
+            simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hi
+            have hle : m - k ≤ i.val := by omega
+            simp only [Nat.sub_add_cancel hle]
+          · -- left inverse
+            intro i hi
+            simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hi
+            have hle : m - k ≤ i.val := by omega
+            simp only [Fin.ext_iff]
+            calc m - k + (i.val - (m - k))
+                = m - k + i.val - (m - k) := by rw [Nat.add_sub_assoc hle]
+              _ = i.val := by omega
+          · -- right inverse
+            intro j hj
+            simp only [Fin.ext_iff]
+            omega
 
 /-- Long average vs tail average bound: Comparing the average of the first m terms
 with the average of the last k terms (where k ≤ m) has the same L² contractability bound.
