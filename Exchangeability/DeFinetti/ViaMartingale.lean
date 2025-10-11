@@ -1027,6 +1027,20 @@ lemma indProd_nonneg_le_one {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpac
   funext ω
   simp [indProd]
 
+/-- indProd on the universal sets is identically 1. -/
+lemma indProd_univ {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) (r : ℕ) :
+    indProd X r (fun _ => Set.univ) = fun _ => 1 := by
+  funext ω
+  simp [indProd, Set.indicator]
+
+/-- indProd is measurable when coordinates are measurable. -/
+lemma indProd_measurable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α)
+    (hX : ∀ n, Measurable (X n)) (hC : ∀ i, MeasurableSet (C i)) :
+    Measurable (indProd X r C) :=
+  (indProd_stronglyMeasurable X r C hX hC).measurable
+
 /-- Drop the first coordinate of a path. -/
 def drop {α : Type*} (f : ℕ → α) : ℕ → α := shiftSeq (β:=α) 1 f
 
