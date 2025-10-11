@@ -650,6 +650,71 @@ lemma tailSigmaFuture_eq_tailSigma (X : ℕ → Ω → α) :
       iInf_le (fun m => revFiltration X m) (n + 1)
     simpa [futureFiltration_eq_rev_succ] using h1
 
+/-! ### Helper lemmas for tail σ-algebra -/
+
+/-- The tail σ-algebra is a sub-σ-algebra of the ambient σ-algebra. -/
+lemma tailSigma_le {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) :
+    tailSigma X ≤ (inferInstance : MeasurableSpace Ω) := by
+  refine iInf_le_of_le 0 ?_
+  exact revFiltration_le X 0
+
+/-- Future filtration is always at least as fine as the tail σ-algebra. -/
+lemma tailSigma_le_futureFiltration {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) (m : ℕ) :
+    tailSigma X ≤ futureFiltration X m := by
+  rw [← tailSigmaFuture_eq_tailSigma]
+  exact iInf_le (fun m => futureFiltration X m) m
+
+/-- Indicators of tail-measurable sets are tail-measurable functions. -/
+lemma indicator_tailMeasurable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) (A : Set Ω) (hA : MeasurableSet[tailSigma X] A) :
+    StronglyMeasurable[tailSigma X] (A.indicator (fun _ => (1 : ℝ))) := by
+  refine StronglyMeasurable.indicator ?_ hA
+  exact stronglyMeasurable_const
+
+/-- If each coordinate is measurable, then the tail σ-algebra is sigma-finite
+when the base measure is sigma-finite. -/
+lemma sigmaFinite_trim_tailSigma {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    {μ : Measure Ω} [SigmaFinite μ]
+    (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) :
+    SigmaFinite (μ.trim (tailSigma_le X)) := by
+  haveI : SigmaFinite (μ.trim (tailSigma_le X)) := inferInstance
+  exact this
+
+/-! ### Helper lemmas for futureFiltration properties -/
+
+/-- The future filtration at level m is a sub-σ-algebra of the ambient σ-algebra. -/
+lemma futureFiltration_le {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) (m : ℕ) (hX : ∀ n, Measurable (X n)) :
+    futureFiltration X m ≤ (inferInstance : MeasurableSpace Ω) := by
+  rw [futureFiltration]
+  exact MeasurableSpace.comap_le_iff_le_map.mpr le_top
+
+/-- Future filtrations form a decreasing sequence. -/
+lemma futureFiltration_antitone {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) :
+    Antitone (futureFiltration X) := by
+  intro m n hmn
+  rw [futureFiltration, futureFiltration]
+  apply MeasurableSpace.comap_mono
+  exact fun _ => shift_le_shift hmn
+
+/-- The preimage of a measurable set under X_{m+k} is measurable in futureFiltration X m. -/
+lemma preimage_measurable_in_futureFiltration {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) (m k : ℕ) {A : Set α} (hA : MeasurableSet A) :
+    MeasurableSet[futureFiltration X m] (X (m + k) ⁻¹' A) := by
+  rw [futureFiltration]
+  apply MeasurableSet.comap
+  exact measurable_pi_apply (Fin.cast (by omega) ⟨k, by omega⟩) hA
+
+/-- Events measurable in a future filtration remain measurable in earlier filtrations. -/
+lemma measurableSet_of_futureFiltration {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) {m n : ℕ} (hmn : m ≤ n) {A : Set Ω}
+    (hA : MeasurableSet[futureFiltration X n] A) :
+    MeasurableSet[futureFiltration X m] A := by
+  exact futureFiltration_antitone X hmn A hA
+
 end FutureFiltration
 
 /-! ## Standard cylinders on paths (starting at index 0) -/
@@ -675,7 +740,45 @@ lemma cylinder_measurable {r : ℕ} {C : Fin r → Set α}
 
 end FutureCylinders
 
-/-! ### A tiny helper: measurability of the finite block cylinder for the first `r` coordinates -/
+/-! ### A tiny helper: measurability of the finite block cylinder for the first `r` coordinates
+
+This section provides infrastructure for working with finite block cylinders on the first `r`
+coordinates of a sequence. The key insight is that `indProd X r C` (the product of indicators)
+equals the indicator of the cylinder set `firstRCylinder X r C`.
+
+## Connection to `finite_level_factorization`
+
+In the proof of `finite_level_factorization`, we inductively factor the product indicator
+`indProd X (r+1) C` into:
+- `f = indProd X r Cinit` (first r coordinates)
+- `g = indicator of X_r⁻¹(last)` (r-th coordinate)
+
+Using the helpers in this section:
+- `f = (firstRCylinder X r Cinit).indicator (fun _ => 1)` (by `indProd_eq_firstRCylinder_indicator`)
+- `firstRCylinder X r Cinit` is measurable in `firstRSigma X r`
+  (by `firstRCylinder_measurable_in_firstRSigma`)
+- `firstRSigma X r ≤ ambient σ-algebra` when coordinates are measurable
+  (by `firstRSigma_le_ambient`)
+
+These properties package exactly what's needed to apply conditional independence results
+and the product formula for conditional expectations of indicators.
+
+## Usage pattern
+
+```lean
+let mF := firstRSigma X r                    -- σ-algebra from first r coordinates
+let A  := firstRCylinder X r C               -- cylinder event
+
+have hA_mF : MeasurableSet[mF] A :=
+  firstRCylinder_measurable_in_firstRSigma X r C hC
+
+have hA_ambient : MeasurableSet A :=
+  firstRCylinder_measurable_ambient X r C hX hC
+
+have hmF_le : mF ≤ inferInstance :=
+  firstRSigma_le_ambient X r hX
+```
+-/
 section FirstBlockCylinder
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
@@ -724,19 +827,30 @@ lemma firstRCylinder_measurable_ambient
   simp only [firstRCylinder, Set.setOf_forall]
   exact MeasurableSet.iInter fun i => (hX i) (hC i)
 
-/-- If each of the first `r` coordinates is measurable, then
-the σ‑algebra generated by them is a sub‑σ‑algebra of the ambient one. -/
+/-- The first-r σ-algebra is a sub-σ-algebra of the ambient σ-algebra when coordinates are measurable. -/
 lemma firstRSigma_le_ambient
     (X : ℕ → Ω → α) (r : ℕ) (hX : ∀ i, Measurable (X i)) :
     firstRSigma X r ≤ (inferInstance : MeasurableSpace Ω) := by
-  classical
-  -- Coordinates measurable ⇒ product map measurable.
-  have hφ : Measurable (firstRMap X r) := by
-    refine (measurable_pi_iff).2 ?_
-    intro i; simpa using hX i
-  intro s hs
-  rcases hs with ⟨T, hT, rfl⟩
-  exact hφ hT
+  rw [firstRSigma]
+  apply MeasurableSpace.comap_le_iff_le_map.mpr
+  exact le_top
+
+/-- The firstRMap is measurable when all coordinates are measurable. -/
+lemma measurable_firstRMap
+    (X : ℕ → Ω → α) (r : ℕ) (hX : ∀ i, Measurable (X i)) :
+    Measurable (firstRMap X r) := by
+  apply measurable_pi_lambda
+  intro i
+  exact hX i
+
+/-- Stronger version: firstRSigma increases with r. -/
+lemma firstRSigma_mono
+    (X : ℕ → Ω → α) {r s : ℕ} (hrs : r ≤ s) :
+    firstRSigma X r ≤ firstRSigma X s := by
+  rw [firstRSigma, firstRSigma]
+  apply MeasurableSpace.comap_mono
+  intro f
+  exact fun i => f (Fin.castLE hrs i)
 
 end FirstBlockCylinder
 
@@ -781,6 +895,15 @@ lemma indProd_integrable
     simpa using this (hC i)
   simpa [indProd_as_indicator X r C]
     using (integrable_const (1 : ℝ)).indicator hSet
+
+/-- Connection between `indProd` and `firstRCylinder`: the product indicator
+equals the indicator of the first-`r` cylinder. -/
+lemma indProd_eq_firstRCylinder_indicator
+    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α) :
+    indProd X r C = (firstRCylinder X r C).indicator (fun _ => (1 : ℝ)) := by
+  rw [indProd_as_indicator]
+  rfl
 
 /-- Drop the first coordinate of a path. -/
 def drop {α : Type*} (f : ℕ → α) : ℕ → α := shiftSeq (β:=α) 1 f
@@ -1121,7 +1244,32 @@ axiom coordinate_future_condIndep
       μ
 
 /-- Conditional expectation of products factors when coordinates are conditionally
-independent. This is a wrapper around the general product rule for conditional expectations. -/
+independent. This is a wrapper around the general product rule for conditional expectations.
+
+**Proof strategy** (to be implemented):
+This can be derived from `condExp_indicator_mul_indicator_of_condIndep` in CondExp.lean
+using the following steps:
+
+1. **Simple functions**: For `f = ∑ᵢ aᵢ·1_{Aᵢ}` and `g = ∑ⱼ bⱼ·1_{Bⱼ}`, use linearity:
+   ```
+   μ[f * g | m] = ∑ᵢⱼ aᵢbⱼ · μ[1_{Aᵢ∩Bⱼ} | m]
+                = ∑ᵢⱼ aᵢbⱼ · μ[1_{Aᵢ} | m] · 1_{Bⱼ}   (by h_indep + pullout)
+                = (∑ᵢ aᵢ · μ[1_{Aᵢ} | m]) · (∑ⱼ bⱼ·1_{Bⱼ})
+                = μ[f | m] · g
+   ```
+
+2. **Approximation**: For general integrable `f`, `g`:
+   - Approximate `f` by m-measurable simple functions `fₙ → f` in L¹
+   - Approximate `g` by simple functions `gₙ → g` in L¹
+   - Use `μ[fₙ * gₙ | m] = μ[fₙ | m] * gₙ` from step 1
+   - Pass to limit using dominated/monotone convergence for conditional expectations
+
+3. **Measurability**: The ae strong measurability of `f` w.r.t. `m` ensures the approximation
+   by m-measurable simple functions exists.
+
+This proof requires developing the approximation theory for conditional expectations,
+which is substantial. For now, we axiomatize it.
+-/
 axiom condExp_product_of_condIndep
     {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -1191,6 +1339,16 @@ lemma finite_level_factorization
     -- Put names to the two factors:
     set f := indProd X r Cinit
     set g := Set.indicator last (fun _ => (1 : ℝ)) ∘ X r
+
+    -- Note: f and g can be expressed as indicators using FirstBlockCylinder helpers:
+    -- • f = (firstRCylinder X r Cinit).indicator (fun _ => 1)  (by indProd_eq_firstRCylinder_indicator)
+    -- • g = (X r ⁻¹' last).indicator (fun _ => 1)
+    -- • firstRCylinder X r Cinit is measurable in firstRSigma X r (by firstRCylinder_measurable_in_firstRSigma)
+    -- • X r ⁻¹' last is measurable in MeasurableSpace.comap (X r) inferInstance
+    -- These σ-algebras are conditionally independent given futureFiltration X m
+    -- (by coordinate_future_condIndep axiom), which would allow us to use
+    -- condExp_indicator_mul_indicator_of_condIndep from CondExp.lean instead of
+    -- the more general condExp_product_of_condIndep.
     -- Both are integrable (bounded indicators / product of bounded indicators)
     have hf_int : Integrable f μ := indProd_integrable X r Cinit hX_meas hCinit
     have hg_int : Integrable g μ := by
