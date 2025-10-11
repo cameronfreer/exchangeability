@@ -667,19 +667,25 @@ lemma l2_bound_two_windows_uniform
           · -- LHS is integrable: bounded by constant (2M)²/k
             have h_meas : Measurable (fun ω => (1/(k:ℝ))^2 * (∑ i : Fin k, f (X (n + i.val + 1) ω) -
                                                  ∑ i : Fin k, f (X (m + i.val + 1) ω))^2) := by
-              apply Measurable.mul measurable_const
+              apply Measurable.const_mul
               apply Measurable.pow
-              apply Measurable.sub <;> apply measurable_finset_sum <;>
-                intro i _ <;> exact hf_meas.comp (hX_meas _)
+              have h1 : Measurable (fun ω => ∑ i : Fin k, f (X (n + i.val + 1) ω)) := by
+                apply Finset.measurable_sum
+                intro i _
+                exact hf_meas.comp (hX_meas _)
+              have h2 : Measurable (fun ω => ∑ i : Fin k, f (X (m + i.val + 1) ω)) := by
+                apply Finset.measurable_sum
+                intro i _
+                exact hf_meas.comp (hX_meas _)
+              exact Measurable.sub h1 h2
             have h_bdd : ∀ᵐ ω ∂μ, ‖(1/(k:ℝ))^2 * (∑ i : Fin k, f (X (n + i.val + 1) ω) -
                                                  ∑ i : Fin k, f (X (m + i.val + 1) ω))^2‖
                           ≤ (2*M)^2 / k := by
-              apply eventually_of_forall
-              intro ω
+              filter_upwards with ω
               rw [Real.norm_eq_abs, abs_of_nonneg]
               · exact h_integrand_bound ω
               · apply mul_nonneg (sq_nonneg _) (sq_nonneg _)
-            exact Integrable.of_bounded h_meas.aestronglyMeasurable h_bdd
+            exact Integrable.of_bound h_meas.aestronglyMeasurable h_bdd
           · exact integrable_const _
           · exact h_integrand_bound
     _ = (2*M)^2 / k := by
@@ -721,12 +727,43 @@ private lemma sum_tail_block_reindex
     (c : ℝ) (F : ℕ → ℝ) :
     ∑ i : Fin m, (if i.val < m - k then 0 else c) * F i.val
       = c * ∑ j : Fin k, F (m - k + j.val) := by
-  -- Strategy:
-  -- 1. Split sum: indices < m-k contribute 0
-  -- 2. For indices i with m-k ≤ i < m, use bijection i ↔ j where j = i - (m-k)
-  -- 3. This gives i.val = m - k + j.val for j : Fin k
-  -- 4. Apply Finset.sum_bij with this bijection
-  sorry
+  -- Split the sum into indices < m-k (which contribute 0) and indices ≥ m-k
+  calc ∑ i : Fin m, (if i.val < m - k then 0 else c) * F i.val
+      = ∑ i : Fin m, if i.val < m - k then 0 else c * F i.val := by
+          congr 1; ext i; split_ifs <;> ring
+    _ = ∑ i ∈ Finset.univ.filter (fun i : Fin m => ¬ i.val < m - k), c * F i.val := by
+          rw [Finset.sum_filter]; simp
+    _ = c * ∑ i ∈ Finset.univ.filter (fun i : Fin m => ¬ i.val < m - k), F i.val := by
+          rw [Finset.sum_mul]
+    _ = c * ∑ j : Fin k, F (m - k + j.val) := by
+          congr 1
+          -- Bijection between {i : Fin m | i.val ≥ m - k} and Fin k
+          -- Map i ↦ ⟨i.val - (m - k), ...⟩ and j ↦ ⟨m - k + j.val, ...⟩
+          apply Finset.sum_bij (fun i hi => ⟨i.val - (m - k), ?_⟩)
+          · -- Show i.val - (m - k) < k
+            intro i hi
+            simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hi
+            omega
+          · -- Show mapping preserves elements
+            intro i hi
+            simp only [Finset.mem_univ]
+          · -- Show F values match
+            intro i hi
+            simp only [Fin.val_mk]
+            have : ¬ i.val < m - k := by simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hi; exact hi
+            omega
+          · -- Injectivity
+            intro i₁ i₂ hi₁ hi₂ heq
+            simp only [Fin.mk.injEq] at heq
+            ext; omega
+          · -- Surjectivity
+            intro j hj
+            use ⟨m - k + j.val, by omega⟩
+            constructor
+            · simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+              omega
+            · simp only [Fin.mk.injEq]
+              omega
 
 /-- Long average vs tail average bound: Comparing the average of the first m terms
 with the average of the last k terms (where k ≤ m) has the same L² contractability bound.
