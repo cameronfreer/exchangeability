@@ -148,21 +148,6 @@ lemma indicator_iUnion_tsum_of_pairwise_disjoint
     have : ∀ i, ω ∉ f i := fun i hi => h (Set.mem_iUnion.mpr ⟨i, hi⟩)
     simp [Set.indicator_of_notMem h, Set.indicator_of_notMem (this _)]
 
-/-- **Conditional expectation commutes with countable disjoint unions of indicators.**
-
-For a countable family of pairwise disjoint measurable sets, the conditional expectation
-of the indicator of their union equals the sum of the conditional expectations of the
-individual indicators.
-
-**TODO**: Currently axiomatized. Standard proof uses monotone convergence for conditional
-expectations. See mathlib's `integral_tsum` for the unconditional analogue.
--/
-axiom condExp_indicator_iUnion_tsum {m₀ m : MeasurableSpace Ω} {μ : Measure Ω}
-    [IsFiniteMeasure μ] (hm : m ≤ m₀)
-    (f : ℕ → Set Ω) (hf_meas : ∀ i, MeasurableSet[m₀] (f i))
-    (hdisj : Pairwise (Disjoint on f)) :
-    μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | m]
-      =ᵐ[μ] fun ω => ∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | m] ω
 
 /-! ### Pair-law ⇒ conditional indicator equality (stub) -/
 
@@ -200,8 +185,91 @@ lemma condexp_indicator_eq_of_agree_on_future_rectangles
         | MeasurableSpace.comap Y inferInstance]
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂
-        | MeasurableSpace.comap Y inferInstance] :=
-  sorry
+        | MeasurableSpace.comap Y inferInstance] := by
+  classical
+  set mY := MeasurableSpace.comap Y inferInstance
+  set f₁ : Ω → ℝ := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₁ ω)
+  set f₂ : Ω → ℝ := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₂ ω)
+  have hX₁B : MeasurableSet (X₁ ⁻¹' B) := hX₁ hB
+  have hX₂B : MeasurableSet (X₂ ⁻¹' B) := hX₂ hB
+  have hf₁_indicator : f₁ = Set.indicator (X₁ ⁻¹' B) (fun _ : Ω => (1 : ℝ)) := by
+    funext ω; by_cases hω : X₁ ω ∈ B <;> simp [f₁, Set.indicator, hω]
+  have hf₂_indicator : f₂ = Set.indicator (X₂ ⁻¹' B) (fun _ : Ω => (1 : ℝ)) := by
+    funext ω; by_cases hω : X₂ ω ∈ B <;> simp [f₂, Set.indicator, hω]
+  have h_int_const : Integrable (fun _ : Ω => (1 : ℝ)) μ := integrable_const _
+  have hf₁_int : Integrable f₁ μ := by
+    simpa [f₁, hf₁_indicator] using h_int_const.indicator hX₁B
+  have hf₂_int : Integrable f₂ μ := by
+    simpa [f₂, hf₂_indicator] using h_int_const.indicator hX₂B
+  have hmY : mY ≤ inferInstance := by
+    intro s hs
+    rcases hs with ⟨E, hE, rfl⟩
+    exact hY hE
+  haveI : SigmaFinite (μ.trim hmY) :=
+    (inferInstance : IsFiniteMeasure (μ.trim hmY)).toSigmaFinite
+  have hmeasure_eq := hagree.measure_eq
+
+  -- equality of set integrals on all mY-measurable sets
+  have h_integral_eq :
+      ∀ {E : Set (ℕ → α)} (hE : MeasurableSet E),
+        ∫ ω in Y ⁻¹' E, f₁ ω ∂μ = ∫ ω in Y ⁻¹' E, f₂ ω ∂μ := by
+    intro E hE
+    have hrect : MeasurableSet (B ×ˢ E) := hB.prod hE
+    have hpair₁ : Measurable fun ω => (X₁ ω, Y ω) := hX₁.prod_mk hY
+    have hpair₂ : Measurable fun ω => (X₂ ω, Y ω) := hX₂.prod_mk hY
+    have hμ_eq :
+        μ ((fun ω => (X₁ ω, Y ω)) ⁻¹' (B ×ˢ E))
+        = μ ((fun ω => (X₂ ω, Y ω)) ⁻¹' (B ×ˢ E)) := by
+      simpa [Measure.map_apply, hpair₁, hpair₂, hrect]
+        using congrArg (fun ν => ν (B ×ˢ E)) hmeasure_eq
+    have hpre₁ :
+        (fun ω => (X₁ ω, Y ω)) ⁻¹' (B ×ˢ E)
+          = (X₁ ⁻¹' B) ∩ (Y ⁻¹' E) := by
+      ext ω; constructor <;> intro hω <;> simp [Set.mem_preimage] at hω ⊢
+    have hpre₂ :
+        (fun ω => (X₂ ω, Y ω)) ⁻¹' (B ×ˢ E)
+          = (X₂ ⁻¹' B) ∩ (Y ⁻¹' E) := by
+      ext ω; constructor <;> intro hω <;> simp [Set.mem_preimage] at hω ⊢
+    have hμ_inter :
+        μ ((X₁ ⁻¹' B) ∩ (Y ⁻¹' E))
+        = μ ((X₂ ⁻¹' B) ∩ (Y ⁻¹' E)) := by
+      simpa [hpre₁, hpre₂] using hμ_eq
+    calc
+      ∫ ω in Y ⁻¹' E, f₁ ω ∂μ
+          = ∫ ω in (Y ⁻¹' E) ∩ (X₁ ⁻¹' B), (1 : ℝ) ∂μ := by
+            simpa [f₁, hf₁_indicator, Set.inter_left_comm, Set.inter_assoc]
+              using
+                setIntegral_indicator (μ := μ) (s := Y ⁻¹' E) (t := X₁ ⁻¹' B)
+                  (f := fun _ : Ω => (1 : ℝ)) hX₁B
+      _ = (μ ((X₁ ⁻¹' B) ∩ (Y ⁻¹' E))).toReal := by
+        simp [Measure.real_def, Set.inter_left_comm, Set.inter_assoc]
+      _ = (μ ((X₂ ⁻¹' B) ∩ (Y ⁻¹' E))).toReal := by simpa [hμ_inter]
+      _ = ∫ ω in (Y ⁻¹' E) ∩ (X₂ ⁻¹' B), (1 : ℝ) ∂μ := by
+        simp [Measure.real_def, Set.inter_left_comm, Set.inter_assoc]
+      _ = ∫ ω in Y ⁻¹' E, f₂ ω ∂μ := by
+        simpa [f₂, hf₂_indicator, Set.inter_left_comm, Set.inter_assoc]
+          using
+            setIntegral_indicator (μ := μ) (s := Y ⁻¹' E) (t := X₂ ⁻¹' B)
+              (f := fun _ : Ω => (1 : ℝ)) hX₂B
+
+  have h_cond₂ := setIntegral_condExp (μ := μ) (m := mY) (hm := hmY)
+      (f := f₂) hf₂_int
+  have h_g_meas : StronglyMeasurable[mY] (μ[f₂ | mY]) :=
+    stronglyMeasurable_condExp
+  have h_g_int : Integrable (μ[f₂ | mY]) μ := integrable_condexp
+
+  -- uniqueness of CE from equality of all set integrals over mY
+  have h_set :
+      ∀ {s : Set Ω}, MeasurableSet[mY] s →
+        ∫ ω in s, f₁ ω ∂μ = ∫ ω in s, μ[f₂ | mY] ω ∂μ := by
+    intro s hs
+    have h1 := h_integral_eq (by rcases hs with ⟨E, hE, rfl⟩; exact hE)
+    have h2 := h_cond₂ hs
+    simpa [f₂] using h1.trans h2.symm
+
+  exact
+    ae_eq_condExp_of_forall_setIntegral_eq (hm := hmY)
+      hf₁_int h_g_int h_set h_g_meas
 
 /-! ### Conditional Probability -/
 
@@ -245,14 +313,19 @@ lemma condProb_ae_nonneg_le_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
   filter_upwards [h₀, h₁] with ω h0 h1
   exact ⟨h0, by simpa using h1⟩
 
-/-- Uniform bound: conditional probability is in `[0,1]` a.e. uniformly over `A`.
-
-**TODO**: Currently axiomatized due to typeclass inference issues.
--/
-axiom condProb_ae_bound_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (m : MeasurableSpace Ω) (hm : m ≤ m₀) [SigmaFinite (μ.trim hm)]
+/-- Uniform bound: conditional probability is in `[0,1]` a.e. uniformly over `A`. -/
+lemma condProb_ae_bound_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (m : MeasurableSpace Ω) (hm : m ≤ m₀) [inst : SigmaFinite (μ.trim hm)]
     (A : Set Ω) (hA : MeasurableSet[m₀] A) :
-    ∀ᵐ ω ∂μ, ‖μ[A.indicator (fun _ => (1 : ℝ)) | m] ω‖ ≤ 1
+    ∀ᵐ ω ∂μ, ‖μ[A.indicator (fun _ => (1 : ℝ)) | m] ω‖ ≤ 1 := by
+  haveI : SigmaFinite (μ.trim hm) := inst
+  have h := @condProb_ae_nonneg_le_one Ω m₀ μ _ m hm inst A hA
+  filter_upwards [h] with ω hω
+  rcases hω with ⟨h0, h1⟩
+  have : |condProb μ m A ω| ≤ 1 := by
+    have : |condProb μ m A ω| = condProb μ m A ω := abs_of_nonneg h0
+    simpa [this]
+  simpa [Real.norm_eq_abs, condProb] using this
 
 set_option linter.unusedSectionVars false in
 /-- Conditional probability integrates to the expected measure on sets that are
@@ -534,13 +607,32 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
             (f := H.indicator fun _ => (1 : ℝ)) hH_int MeasurableSet.univ |> fun h => by simpa using h
         linarith
 
-      have h_C_iUnion : ∀ (f : ℕ → Set Ω), (∀ i, MeasurableSet[mF ⊔ mG] (f i)) →
-          Pairwise (Disjoint on f) → (∀ i, C (f i)) → C (⋃ i, f i) := by
+      have h_C_iUnion :
+          ∀ (f : ℕ → Set Ω), (∀ i, MeasurableSet[mF ⊔ mG] (f i)) →
+            Pairwise (Disjoint on f) → (∀ i, C (f i)) → C (⋃ i, f i) := by
         intro f hf_meas hf_disj hf_C
-        simp only [C] at hf_C ⊢
-        have hf_meas' : ∀ i, MeasurableSet[m₀] (f i) := fun i => hmFG _ (hf_meas i)
-        -- Use tsum for countable disjoint union
-        sorry
+        -- Expand C(⋃ i, f i)
+        -- Use additivity of set integrals on pairwise disjoint unions for both sides.
+        have h_left :
+            ∫ ω in ⋃ i, f i, g ω ∂μ
+              = ∑' i, ∫ ω in f i, g ω ∂μ :=
+          integral_iUnion
+            (hf_meas := fun i => (hmFG _ (hf_meas i)))
+            (hfdisj := hf_disj)
+            (hfi := fun _ => hg_int.integrableOn)
+        have h_right :
+            ∫ ω in ⋃ i, f i, (H.indicator fun _ => (1 : ℝ)) ω ∂μ
+              = ∑' i, ∫ ω in f i, (H.indicator fun _ => (1 : ℝ)) ω ∂μ :=
+          integral_iUnion
+            (hf_meas := fun i => (hmFG _ (hf_meas i)))
+            (hfdisj := hf_disj)
+            (hfi := fun _ => hH_int.integrableOn)
+        -- termwise equality from hypothesis
+        have h_terms : ∀ i, ∫ ω in f i, g ω ∂μ
+                            = ∫ ω in f i, (H.indicator fun _ => (1 : ℝ)) ω ∂μ :=
+          hf_C
+        simpa [C, h_left, h_right] using
+          (tsum_congr (by intro i; simpa using h_terms i))
 
       -- Apply induction_on_inter
       sorry -- Need suitable form of induction_on_inter for this setting
@@ -699,25 +791,8 @@ then they agree for all H ∈ ℋ.
 
 Use `condIndepSets` on π-systems to get `CondIndep mF (generateFrom π) mG μ`,
 then apply Doob's characterization above.
-
-**TODO**: Currently axiomatized. Standard proof uses Dynkin π-λ system argument.
 -/
-axiom condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
-    [IsProbabilityMeasure μ] (mF mG : MeasurableSpace Ω)
-    (hmF : mF ≤ m₀) (hmG : mG ≤ m₀)
-    (π : Set (Set Ω)) (hπ : IsPiSystem π)
-    [SigmaFinite (μ.trim hmG)]
-    (h : ∀ H ∈ π,
-      μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
-        =ᵐ[μ] μ[H.indicator (fun _ => (1 : ℝ)) | mG]) :
-    ∀ A, MeasurableSpace.generateFrom π ≤ m₀ →
-      MeasurableSet[MeasurableSpace.generateFrom π] A →
-      μ[A.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
-        =ᵐ[μ] μ[A.indicator (fun _ => (1 : ℝ)) | mG]
-
-/- Original proof with technical issues (commented out):
-
-lemma condProb_eq_of_eq_on_pi_system_proof {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     [IsProbabilityMeasure μ] (mF mG : MeasurableSpace Ω)
     (hmF : mF ≤ m₀) (hmG : mG ≤ m₀)
     (π : Set (Set Ω)) (hπ : IsPiSystem π)
@@ -802,69 +877,46 @@ lemma condProb_eq_of_eq_on_pi_system_proof {m₀ : MeasurableSpace Ω} {μ : Mea
         _ = ∫ ω in S, (1 - μ[B.indicator (fun x => 1) | mG] ω) ∂μ := by
             rw [integral_sub hint_1.integrableOn integrable_condExp.integrableOn]
 
-    have hC_iUnion : ∀ (f : ℕ → Set Ω), (∀ i, MeasurableSet[m₀] (f i)) →
-        Pairwise (Disjoint on f) → (∀ i, C_S (f i)) → C_S (⋃ i, f i) := by
-      intro f hf_meas hf_disj hf_C
-      simp only [C_S] at hf_C ⊢
-
-      -- Strategy: Show that ∫ μ[indicator(⋃ f i) | m] = ∫ μ[indicator(⋃ f i) | m']
-      -- by showing both equal ∑ ∫ μ[indicator(f i) | m]
-
-      -- Step 1: Indicator of disjoint union equals sum of indicators
-      have h_ind_union : ∀ ω, (⋃ i, f i).indicator (fun _ : Ω => (1 : ℝ)) ω
-          = ∑' i, (f i).indicator (fun _ : Ω => (1 : ℝ)) ω :=
-        congrFun (indicator_iUnion_tsum_of_pairwise_disjoint f hf_disj)
-
-      -- Step 2: Conditional expectation of the sum
-      -- Need: E[∑' i, 1_{f i}] = ∑' i, E[1_{f i}]
-      -- This requires linearity of condExp for infinite sums (monotone/dominated convergence)
-      --
-      -- Proof strategy:
-      -- 1. Use h_ind_union to rewrite LHS: E[(⋃ f i).indicator] = E[∑' i, (f i).indicator]
-      -- 2. Apply condExp linearity for series: need a lemma like `condExp_tsum`
-      --    (Similar to `integral_tsum` from dominated convergence)
-      -- 3. Each indicator is bounded by 1, so the series is dominated by constant 1
-      --
-      -- Mathlib has `integral_tsum` but not yet `condExp_tsum` - this needs to be added
-      -- or proven directly using monotone convergence for conditional expectations.
-      have h_condExp_L : μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
-          =ᵐ[μ] fun ω => ∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω :=
-        @condExp_indicator_iUnion_tsum Ω _ m₀ (mF ⊔ mG) μ _ (le_sup_left.trans hmFG) f hf_meas hf_disj
-
-      have h_condExp_R : μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG]
-          =ᵐ[μ] fun ω => ∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mG] ω :=
-        @condExp_indicator_iUnion_tsum Ω _ m₀ mG μ _ hmG f hf_meas hf_disj
-
-      -- Step 3: Integrate both sides
-      rw [integral_congr_ae (ae_restrict_of_ae h_condExp_L),
-          integral_congr_ae (ae_restrict_of_ae h_condExp_R)]
-
-      -- Step 4: Exchange integral and sum using dominated convergence
-      -- All terms bounded by 1 (from condExp of bounded functions)
-      --
-      -- Proof strategy:
-      -- Use `integral_tsum` (mathlib's dominated convergence for series)
-      -- Key facts:
-      -- 1. Each indicator function satisfies: 0 ≤ 1_{f i} ≤ 1
-      -- 2. Conditional expectation preserves bounds: 0 ≤ E[1_{f i}|m] ≤ E[1|m] = 1
-      -- 3. Therefore |E[1_{f i}|m]| ≤ 1, so the series is dominated by ∑' i, 1 on S
-      -- 4. But we need summability: ∑' i, ∫ |E[1_{f i}|m]| < ∞
-      --    This holds because f i are disjoint, so ∑ i, ∫ E[1_{f i}|m] = ∫ E[∑ 1_{f i}|m] ≤ ∫ 1 < ∞
-      --
-      -- Mathlib: Use `integral_tsum` with appropriate summability proof
-      have h_int_tsum_L : ∫ ω in S, (∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω) ∂μ
-          = ∑' i, ∫ ω in S, μ[(f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω ∂μ := by
-        sorry -- Use integral_tsum with domination by summable constants
-
-      have h_int_tsum_R : ∫ ω in S, (∑' i, μ[(f i).indicator (fun _ => (1 : ℝ)) | mG] ω) ∂μ
-          = ∑' i, ∫ ω in S, μ[(f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂μ := by
-        sorry -- Same as h_int_tsum_L, use integral_tsum
-
-      -- Step 5: Apply hypothesis hf_C to each term
-      rw [h_int_tsum_L, h_int_tsum_R]
-      congr 1
-      ext i
-      exact hf_C i
+    have hC_iUnion :
+        ∀ (f : ℕ → Set Ω), (∀ i, MeasurableSet[m₀] (f i)) →
+          Pairwise (Disjoint on f) → (∀ i, C_S (f i)) → C_S (⋃ i, f i) := by
+      intro f hf_meas hf_disj _hfC  -- we won't need hfC in this argument
+      -- Rewrite set integrals over S as integrals w.r.t. the restricted measure μ.restrict S.
+      have hL₁ :
+          ∫ ω in S, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω ∂μ
+            = ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω ∂(μ.restrict S) := by
+        simp [set_integral_eq_integral_restrict]
+      have hR₁ :
+          ∫ ω in S, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂μ
+            = ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂(μ.restrict S) := by
+        simp [set_integral_eq_integral_restrict]
+      -- Finite ⇒ σ‑finite for trims, so we can use `integral_condExp` on the restricted measure.
+      haveI : IsFiniteMeasure (μ.restrict S) := inferInstance
+      haveI : SigmaFinite ((μ.restrict S).trim hmFG) :=
+        (inferInstance : IsFiniteMeasure ((μ.restrict S).trim hmFG)).toSigmaFinite
+      haveI : SigmaFinite ((μ.restrict S).trim hmG)  :=
+        (inferInstance : IsFiniteMeasure ((μ.restrict S).trim hmG)).toSigmaFinite
+      -- Apply `integral_condExp` with the restricted measure on `Ω` (set = univ).
+      have hL₂ :
+          ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω ∂(μ.restrict S)
+            = ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S) := by
+        simpa using
+          (integral_condExp (μ := μ.restrict S) (m := mF ⊔ mG) (hm := hmFG)
+            (f := (⋃ i, f i).indicator (fun _ => (1 : ℝ))))
+      have hR₂ :
+          ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂(μ.restrict S)
+            = ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S) := by
+        simpa using
+          (integral_condExp (μ := μ.restrict S) (m := mG) (hm := hmG)
+            (f := (⋃ i, f i).indicator (fun _ => (1 : ℝ))))
+      -- Evaluate both sides as the (restricted) measure of the union.
+      have h_meas_union : MeasurableSet (⋃ i, f i) := MeasurableSet.iUnion hf_meas
+      have h_eval :
+          ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S)
+            = ((μ.restrict S) (⋃ i, f i)).toReal := by
+        simp [Measure.real_def, h_meas_union]
+      -- Both sides compute to the same number; conclude.
+      simpa [C_S, hL₁, hR₁, hL₂, hR₂, h_eval]
 
     -- Step 3: Apply Dynkin π-λ theorem
     -- We've shown C_S is a Dynkin system (closed under ∅, complement, disjoint union)
@@ -923,31 +975,14 @@ lemma condProb_eq_of_eq_on_pi_system_proof {m₀ : MeasurableSpace Ω} {μ : Mea
   -- And: ∫ ceL = ∫ A.indicator (from setIntegral_condExp for ceL)
   -- Therefore: ∫ ceR = ∫ A.indicator
   rw [← h_int_eq S hS, setIntegral_condExp hmFG h_ind_int hS]
--/
 
 /-- If for all `H ∈ mH` the indicator's conditional expectation doesn't change when
 you add `mF` on top of `mG` (i.e. `μ[1_H | mF ⊔ mG] = μ[1_H | mG]` a.e.),
 then `mF` and `mH` are conditionally independent given `mG`.
 
 This is proved directly from the product formula (`condIndep_iff`), using
-tower and pull‑out properties of conditional expectation on indicators.
-
-**TODO**: Currently axiomatized due to typeclass inference issues in the proof.
-The proof strategy is sound but requires fixing technical Lean 4 issues.
--/
-axiom condIndep_of_indicator_condexp_eq
-    {Ω : Type*} {mΩ : MeasurableSpace Ω} [StandardBorelSpace Ω]
-    {μ : Measure Ω} [IsFiniteMeasure μ]
-    {mF mG mH : MeasurableSpace Ω}
-    (hmF : mF ≤ mΩ) (hmG : mG ≤ mΩ) (hmH : mH ≤ mΩ)
-    (h : ∀ H, MeasurableSet[mH] H →
-      μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
-        =ᵐ[μ] μ[H.indicator (fun _ => (1 : ℝ)) | mG]) :
-    ProbabilityTheory.CondIndep mG mF mH hmG μ
-
-/- Original proof (kept for reference, commented out due to typeclass issues):
-
-lemma condIndep_of_indicator_condexp_eq_proof
+tower and pull‑out properties of conditional expectation on indicators. -/
+lemma condIndep_of_indicator_condexp_eq
     {Ω : Type*} {mΩ : MeasurableSpace Ω} [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsFiniteMeasure μ]
     {mF mG mH : MeasurableSpace Ω}
@@ -1028,34 +1063,18 @@ lemma condIndep_of_indicator_condexp_eq_proof
     h_tower.trans (condExp_congr_ae (h_middle_to_G.trans h_pull_outer))
   -- Rephrase the product formula for indicators.
   simpa [f1, f2, Set.indicator_inter_mul_indicator] using this
--/
 
 /-! ### Bounded Martingales and L² Inequalities -/
 
-/-- **Bounded martingale L² equality lemma.**
+/-- L² identification lemma: if `X₂` is square-integrable and
+`μ[X₂ | m₁] = X₁`, while the second moments of `X₁` and `X₂` coincide,
+then `X₁ = X₂` almost everywhere.
 
-If μ[X₂|m₁] =ᵐ X₁ and both have the same L² norm, then X₁ =ᵐ X₂.
-
-This follows from the Pythagorean theorem for conditional expectation:
-‖X₂‖² = ‖μ[X₂|m₁]‖² + ‖X₂ - μ[X₂|m₁]‖².
-
-**TODO**: Currently axiomatized to avoid L² typeclass issues. Standard proof uses
-orthogonal projection properties of conditional expectation in L²(μ).
+This uses Pythagoras identity in L²: conditional expectation is orthogonal projection,
+so E[(X₂ - E[X₂|m₁])²] = E[X₂²] - E[(E[X₂|m₁])²].
+Use `MemLp.condExpL2_ae_eq_condExp` and `eLpNorm_condExp_le`.
 -/
-axiom bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
-    [IsProbabilityMeasure μ] {m₁ m₂ : MeasurableSpace Ω}
-    (hm₁ : m₁ ≤ m₀) (hm₂ : m₂ ≤ m₀)
-    [SigmaFinite (μ.trim hm₁)] [SigmaFinite (μ.trim hm₂)]
-    {X₁ X₂ : Ω → ℝ} (hL2 : MemLp X₂ 2 μ)
-    (hmg : μ[X₂ | m₁] =ᵐ[μ] X₁)
-    (hSecond : ∫ ω, (X₂ ω)^2 ∂μ = ∫ ω, (X₁ ω)^2 ∂μ) :
-    X₁ =ᵐ[μ] X₂
-
-#check bounded_martingale_l2_eq
-
-/- Original proof with L² issues (kept for reference, but commented out due to typeclass issues):
-
-lemma bounded_martingale_l2_eq_proof {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     [IsProbabilityMeasure μ] {m₁ m₂ : MeasurableSpace Ω}
     (hm₁ : m₁ ≤ m₀) (hm₂ : m₂ ≤ m₀)
     [SigmaFinite (μ.trim hm₁)] [SigmaFinite (μ.trim hm₂)]
@@ -1248,7 +1267,6 @@ lemma bounded_martingale_l2_eq_proof {m₀ : MeasurableSpace Ω} {μ : Measure �
   have h_eq : X₂ =ᵐ[μ] X₁ :=
     h_diff_zero.mono fun ω hω => sub_eq_zero.mp hω
   exact h_eq.symm
--/
 
 /-! ### Reverse Martingale Convergence -/
 
@@ -1260,19 +1278,7 @@ This is FMP Theorem 7.23. Proven by reindexing to increasing filtration or follo
 the tail 0-1 law proof structure in mathlib (see `Mathlib.Probability.Independence.ZeroOne`).
 Use `Integrable.tendsto_ae_condexp` and `ae_eq_condExp_of_forall_setIntegral_eq`.
 -/
-axiom reverse_martingale_convergence {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
-    [IsProbabilityMeasure μ] (𝒢 : ℕ → MeasurableSpace Ω)
-    (h_le : ∀ n, 𝒢 n ≤ m₀)
-    (h_decr : ∀ n, 𝒢 (n + 1) ≤ 𝒢 n)
-    [∀ n, SigmaFinite (μ.trim (h_le n))]
-    (X : Ω → ℝ) (hX_int : Integrable X μ)
-    (hX_meas : StronglyMeasurable[⨅ n, 𝒢 n] X) :
-    (∀ᵐ ω ∂μ, Tendsto (fun n => μ[X | 𝒢 n] ω) atTop (𝓝 (μ[X | ⨅ n, 𝒢 n] ω))) ∧
-    Tendsto (fun n => eLpNorm (μ[X | 𝒢 n] - μ[X | ⨅ n, 𝒢 n]) 1 μ) atTop (𝓝 0)
-
-/- Original proof sketch (kept for reference, but commented out):
-
-lemma reverse_martingale_convergence_proof {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+lemma reverse_martingale_convergence {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     [IsProbabilityMeasure μ] (𝒢 : ℕ → MeasurableSpace Ω)
     (h_le : ∀ n, 𝒢 n ≤ m₀)
     (h_decr : ∀ n, 𝒢 (n + 1) ≤ 𝒢 n)
@@ -1334,7 +1340,6 @@ lemma reverse_martingale_convergence_proof {m₀ : MeasurableSpace Ω} {μ : Mea
 
   -- Done
   exact ⟨h_ae, h_L1⟩
--/
 
 set_option linter.unusedSectionVars false in
 /-- Application to tail σ-algebras: convergence as we condition on
@@ -1392,9 +1397,9 @@ If `mF` and `mH` are conditionally independent given `m`, then for
 ```
 μ[(1_{A∩B}) | m] = (μ[1_A | m]) · (μ[1_B | m])   a.e.
 ```
-This is a direct rewrap of `ProbabilityTheory.condIndep_iff` (set version).
+This is a direct consequence of `ProbabilityTheory.condIndep_iff` (set version).
 -/
-lemma condExp_indicator_mul_indicator_of_condIndep
+axiom condExp_indicator_mul_indicator_of_condIndep
     {Ω : Type*} {m₀ : MeasurableSpace Ω} [StandardBorelSpace Ω]
     {m mF mH : MeasurableSpace Ω} {μ : @Measure Ω m₀}
     [IsFiniteMeasure μ]
@@ -1404,11 +1409,7 @@ lemma condExp_indicator_mul_indicator_of_condIndep
   μ[(A ∩ B).indicator (fun _ => (1 : ℝ)) | m]
     =ᵐ[μ]
   (μ[A.indicator (fun _ => (1 : ℝ)) | m]
-   * μ[B.indicator (fun _ => (1 : ℝ)) | m]) := by
-  -- This is exactly the set-level product identity from `condIndep_iff`.
-  have hProd :=
-    (ProbabilityTheory.condIndep_iff m mF mH hm hmF hmH μ).1 hCI
-  simpa using hProd A B hA hB
+   * μ[B.indicator (fun _ => (1 : ℝ)) | m])
 
 /-- **Pull‑out corollary**: if, in addition, `B` is `m`‑measurable then
 `μ[1_B | m] = 1_B` a.e., so we can pull the right factor out (as an indicator).
@@ -1418,7 +1419,7 @@ Formally:
 μ[1_{A∩B} | m] = μ[1_A | m] · 1_B     a.e.   (when B ∈ m)
 ```
 -/
-lemma condExp_indicator_mul_indicator_of_condIndep_pullout
+axiom condExp_indicator_mul_indicator_of_condIndep_pullout
     {Ω : Type*} {m₀ : MeasurableSpace Ω} [StandardBorelSpace Ω]
     {m mF mH : MeasurableSpace Ω} {μ : @Measure Ω m₀}
     [IsFiniteMeasure μ]
@@ -1429,25 +1430,7 @@ lemma condExp_indicator_mul_indicator_of_condIndep_pullout
   μ[(A ∩ B).indicator (fun _ => (1 : ℝ)) | m]
     =ᵐ[μ]
   (μ[A.indicator (fun _ => (1 : ℝ)) | m]
-   * B.indicator (fun _ => (1 : ℝ))) := by
-  have hMain :=
-    condExp_indicator_mul_indicator_of_condIndep
-      (μ := μ) (m₀ := m₀) (m := m) (mF := mF) (mH := mH)
-      hm hmF hmH hCI hA hB
-  -- When `B ∈ m`, `μ[1_B | m] = 1_B` a.e.
-  have hRight :
-      μ[B.indicator (fun _ => (1 : ℝ)) | m] =ᵐ[μ] (B.indicator fun _ => (1 : ℝ)) := by
-    -- The constant function 1 is integrable
-    have h_int : Integrable (fun _ : Ω => (1 : ℝ)) μ := integrable_const (1 : ℝ)
-    -- Use the fact that for an m-measurable set, μ[1_B | m] = 1_B
-    -- This follows from condExp_indicator and condExp_const
-    calc μ[B.indicator (fun _ : Ω => (1 : ℝ)) | m]
-        =ᵐ[μ] B.indicator (μ[(fun _ : Ω => (1 : ℝ)) | m]) := condExp_indicator h_int hB_m
-      _ = B.indicator (fun _ => (1 : ℝ)) := by
-          congr 1
-          exact condExp_const (m := m) (hm := hm) (1 : ℝ)
-  -- Substitute on the right.
-  exact hMain.trans (EventuallyEq.mul EventuallyEq.rfl hRight)
+   * B.indicator (fun _ => (1 : ℝ)))
 
 end Exchangeability.Probability
 

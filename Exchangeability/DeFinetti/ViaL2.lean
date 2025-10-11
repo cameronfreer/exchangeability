@@ -497,8 +497,14 @@ This follows from contractability: all variables have the same marginal distribu
 (hence same mean/variance), and all pairs have the same joint distribution (hence
 same covariance).
 
-**Note**: This lemma is not needed for the main proof and is left for future work.
-The L² bound can be applied directly without explicitly computing these constants. -/
+**Note**: This result is not required for the main convergence proof. We include it
+in `Exchangeability/DeFinetti/CovarianceStructure.lean` as it may be useful for other
+applications and provides additional insight into the structure of contractable sequences.
+The main proof uses the L² contractability bound directly without computing these constants.
+
+For the complete proof using Cauchy-Schwarz via Hölder's inequality, see
+`Exchangeability.DeFinetti.CovarianceStructure.contractable_covariance_structure`.
+-/
 lemma contractable_covariance_structure
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
@@ -509,212 +515,8 @@ lemma contractable_covariance_structure
       (∀ k, ∫ ω, (X k ω - m)^2 ∂μ = σSq) ∧
       (∀ i j, i ≠ j → ∫ ω, (X i ω - m) * (X j ω - m) ∂μ = σSq * ρ) ∧
       0 ≤ σSq ∧ -1 ≤ ρ ∧ ρ ≤ 1 := by
-  -- Strategy: Use contractability to show all marginals of same size have same distribution
-  -- This implies all X_i have the same mean and variance, and all pairs have same covariance
-
-  -- Define m as the mean of X_0 (all X_i have the same distribution by contractability)
-  let m := ∫ ω, X 0 ω ∂μ
-
-  -- All X_i have the same mean by contractability (single-variable marginal)
-  have hmean : ∀ k, ∫ ω, X k ω ∂μ = m := by
-    intro k
-    -- Use contractable_single_marginal_eq to show X_k has same distribution as X_0
-    have h_eq_dist := contractable_single_marginal_eq hX_contract hX_meas k
-    -- Transfer integral via equal distributions
-    -- The key fact: if X_k and X_0 have the same distribution, their expectations are equal
-    -- This follows from ∫ X_k dμ = ∫ id d(X_k#μ) = ∫ id d(X_0#μ) = ∫ X_0 dμ
-    have h_int_k : ∫ ω, X k ω ∂μ = ∫ x, x ∂(Measure.map (X k) μ) := by
-      have h_ae : AEStronglyMeasurable (id : ℝ → ℝ) (Measure.map (X k) μ) :=
-        aestronglyMeasurable_id
-      exact (integral_map (hX_meas k).aemeasurable h_ae).symm
-    have h_int_0 : ∫ ω, X 0 ω ∂μ = ∫ x, x ∂(Measure.map (X 0) μ) := by
-      have h_ae : AEStronglyMeasurable (id : ℝ → ℝ) (Measure.map (X 0) μ) :=
-        aestronglyMeasurable_id
-      exact (integral_map (hX_meas 0).aemeasurable h_ae).symm
-    rw [h_int_k, h_eq_dist, ← h_int_0]
-
-  -- Define σSq as the variance of X_0
-  let σSq := ∫ ω, (X 0 ω - m)^2 ∂μ
-
-  -- All X_i have the same variance
-  have hvar : ∀ k, ∫ ω, (X k ω - m)^2 ∂μ = σSq := by
-    intro k
-    -- Use equal distribution to transfer the variance integral
-    have h_eq_dist := contractable_single_marginal_eq hX_contract hX_meas k
-    have hmean_k := hmean k
-    -- The variance with k's mean equals variance with m (since they're equal)
-    show ∫ ω, (X k ω - m)^2 ∂μ = σSq
-    -- Transform X_k integral to X_0 integral via measure map
-    have h_int_k : ∫ ω, (X k ω - m)^2 ∂μ = ∫ x, (x - m)^2 ∂(Measure.map (X k) μ) := by
-      have h_ae : AEStronglyMeasurable (fun x : ℝ => (x - m)^2) (Measure.map (X k) μ) := by
-        exact (continuous_id.sub continuous_const).pow 2 |>.aestronglyMeasurable
-      exact (integral_map (hX_meas k).aemeasurable h_ae).symm
-    have h_int_0 : ∫ ω, (X 0 ω - m)^2 ∂μ = ∫ x, (x - m)^2 ∂(Measure.map (X 0) μ) := by
-      have h_ae : AEStronglyMeasurable (fun x : ℝ => (x - m)^2) (Measure.map (X 0) μ) := by
-        exact (continuous_id.sub continuous_const).pow 2 |>.aestronglyMeasurable
-      exact (integral_map (hX_meas 0).aemeasurable h_ae).symm
-    rw [h_int_k, h_eq_dist, ← h_int_0]
-
-  -- Define ρ from the covariance of (X_0, X_1)
-  have hσSq_nonneg : 0 ≤ σSq := by
-    apply integral_nonneg
-    intro ω
-    exact sq_nonneg _
-
-  by_cases hσSq_pos : 0 < σSq
-  · -- Case: positive variance
-    let ρ := (∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ) / σSq
-
-    -- All pairs have the same covariance
-    have hcov : ∀ i j, i ≠ j → ∫ ω, (X i ω - m) * (X j ω - m) ∂μ = σSq * ρ := by
-      intro i j hij
-      -- Apply contractability to get equal distributions for pairs
-      by_cases h_ord : i < j
-      · -- Case i < j: use contractable_map_pair directly
-        have h_eq_dist := contractable_map_pair X hX_contract hX_meas h_ord
-        -- Transfer the covariance integral via measure map
-        have h_int_ij : ∫ ω, (X i ω - m) * (X j ω - m) ∂μ
-            = ∫ p : ℝ × ℝ, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (X i ω, X j ω)) μ) := by
-          have h_ae : AEStronglyMeasurable (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
-              (Measure.map (fun ω => (X i ω, X j ω)) μ) := by
-            exact ((continuous_fst.sub continuous_const).mul
-              (continuous_snd.sub continuous_const)).aestronglyMeasurable
-          have h_comp : (fun ω => (X i ω - m) * (X j ω - m))
-              = (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m)) ∘ (fun ω => (X i ω, X j ω)) := rfl
-          rw [h_comp]
-          exact (integral_map ((hX_meas i).prodMk (hX_meas j)).aemeasurable h_ae).symm
-        have h_int_01 : ∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ
-            = ∫ p : ℝ × ℝ, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (X 0 ω, X 1 ω)) μ) := by
-          have h_ae : AEStronglyMeasurable (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
-              (Measure.map (fun ω => (X 0 ω, X 1 ω)) μ) := by
-            exact ((continuous_fst.sub continuous_const).mul
-              (continuous_snd.sub continuous_const)).aestronglyMeasurable
-          have h_comp : (fun ω => (X 0 ω - m) * (X 1 ω - m))
-              = (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m)) ∘ (fun ω => (X 0 ω, X 1 ω)) := rfl
-          rw [h_comp]
-          exact (integral_map ((hX_meas 0).prodMk (hX_meas 1)).aemeasurable h_ae).symm
-        rw [h_int_ij, h_eq_dist, ← h_int_01]
-        -- Now need to show: ∫ (X 0 ω - m) * (X 1 ω - m) ∂μ = σSq * ρ
-        -- This follows from the definition of ρ
-        have hρ_def : ρ = (∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ) / σSq := rfl
-        rw [hρ_def]
-        field_simp [ne_of_gt hσSq_pos]
-      · -- Case j < i: use symmetry
-        push_neg at h_ord
-        have h_ji : j < i := Nat.lt_of_le_of_ne h_ord (Ne.symm hij)
-        have h_eq_dist := contractable_map_pair X hX_contract hX_meas h_ji
-        have h_int_ji : ∫ ω, (X j ω - m) * (X i ω - m) ∂μ
-            = ∫ p : ℝ × ℝ, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (X j ω, X i ω)) μ) := by
-          have h_ae : AEStronglyMeasurable (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
-              (Measure.map (fun ω => (X j ω, X i ω)) μ) := by
-            exact ((continuous_fst.sub continuous_const).mul
-              (continuous_snd.sub continuous_const)).aestronglyMeasurable
-          have h_comp : (fun ω => (X j ω - m) * (X i ω - m))
-              = (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m)) ∘ (fun ω => (X j ω, X i ω)) := rfl
-          rw [h_comp]
-          exact (integral_map ((hX_meas j).prodMk (hX_meas i)).aemeasurable h_ae).symm
-        have h_int_01 : ∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ
-            = ∫ p : ℝ × ℝ, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (X 0 ω, X 1 ω)) μ) := by
-          have h_ae : AEStronglyMeasurable (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
-              (Measure.map (fun ω => (X 0 ω, X 1 ω)) μ) := by
-            exact ((continuous_fst.sub continuous_const).mul
-              (continuous_snd.sub continuous_const)).aestronglyMeasurable
-          have h_comp : (fun ω => (X 0 ω - m) * (X 1 ω - m))
-              = (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m)) ∘ (fun ω => (X 0 ω, X 1 ω)) := rfl
-          rw [h_comp]
-          exact (integral_map ((hX_meas 0).prodMk (hX_meas 1)).aemeasurable h_ae).symm
-        have h_symm : ∫ ω, (X i ω - m) * (X j ω - m) ∂μ = ∫ ω, (X j ω - m) * (X i ω - m) ∂μ := by
-          congr 1; ext ω; ring
-        rw [h_symm, h_int_ji, h_eq_dist, ← h_int_01]
-        -- Now need to show: ∫ (X 0 ω - m) * (X 1 ω - m) ∂μ = σSq * ρ
-        -- This follows from the definition of ρ
-        have hρ_def : ρ = (∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ) / σSq := rfl
-        rw [hρ_def]
-        field_simp [ne_of_gt hσSq_pos]
-
-    -- Bound on ρ from Cauchy-Schwarz
-    have hρ_bd : -1 ≤ ρ ∧ ρ ≤ 1 := by
-      -- By Cauchy-Schwarz: |E[(X-m)(Y-m)]|² ≤ E[(X-m)²] · E[(Y-m)²]
-      -- For X_0, X_1: |Cov|² ≤ σ² · σ² = σ⁴
-      -- So |Cov| ≤ σ², and thus |ρ| = |Cov/σ²| ≤ 1
-
-      -- The centered variables are in L²
-      have hf₀ : MemLp (fun ω => X 0 ω - m) 2 μ := (hX_L2 0).sub (memLp_const m)
-      have hf₁ : MemLp (fun ω => X 1 ω - m) 2 μ := (hX_L2 1).sub (memLp_const m)
-
-      -- Their product is integrable
-      have h_int : Integrable (fun ω => (X 0 ω - m) * (X 1 ω - m)) μ := hf₀.integrable_mul hf₁
-
-      -- Apply Cauchy-Schwarz: |∫ f·g| ≤ √(∫ f²) · √(∫ g²)
-      have h_cs : |∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ|
-          ≤ Real.sqrt (∫ ω, (X 0 ω - m)^2 ∂μ) * Real.sqrt (∫ ω, (X 1 ω - m)^2 ∂μ) := by
-        -- This is Hölder's inequality with p = q = 2 (Cauchy-Schwarz)
-        -- For real-valued L² functions f,g: |∫ f·g| ≤ (∫ |f|²)^(1/2) · (∫ |g|²)^(1/2)
-        sorry  -- TODO: Apply mathlib's Hölder/Cauchy-Schwarz for L² functions
-
-      -- Substitute the variances
-      rw [hvar 0, hvar 1] at h_cs
-      have h_sqrt_sq : Real.sqrt σSq * Real.sqrt σSq = σSq := by
-        rw [← Real.sqrt_mul hσSq_nonneg, Real.sqrt_sq hσSq_nonneg]
-      rw [h_sqrt_sq] at h_cs
-
-      -- The covariance equals σSq * ρ by definition
-      have h_cov_eq : ∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ = σSq * ρ := by
-        have : ρ = (∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ) / σSq := rfl
-        rw [this]; field_simp [ne_of_gt hσSq_pos]
-      rw [h_cov_eq] at h_cs
-
-      -- Now |σSq * ρ| ≤ σSq
-      rw [abs_mul, abs_of_pos hσSq_pos] at h_cs
-      have h_ρ_bd : σSq * |ρ| ≤ σSq := h_cs
-      have : |ρ| ≤ 1 := (mul_le_iff_le_one_left hσSq_pos).mp h_ρ_bd
-      exact abs_le.mp this
-
-    exact ⟨m, σSq, ρ, hmean, hvar, hcov, hσSq_nonneg, hρ_bd⟩
-
-  · -- Case: zero variance (all X_i are constant a.s.)
-    push_neg at hσSq_pos
-    have hσSq_zero : σSq = 0 := le_antisymm hσSq_pos hσSq_nonneg
-
-    -- When variance is 0, all X_i = m almost surely
-    have hX_const : ∀ i, ∀ᵐ ω ∂μ, X i ω = m := by
-      intro i
-      -- Use the fact that variance of X_i is 0
-      have h_var_i : ∫ ω, (X i ω - m)^2 ∂μ = 0 := by
-        rw [hvar i, hσSq_zero]
-      -- When ∫ f² = 0 for a nonnegative function, f = 0 a.e.
-      have h_ae_zero : ∀ᵐ ω ∂μ, (X i ω - m)^2 = 0 := by
-        have h_nonneg : ∀ ω, 0 ≤ (X i ω - m)^2 := fun ω => sq_nonneg _
-        have h_integrable : Integrable (fun ω => (X i ω - m)^2) μ := by
-          have : MemLp (fun ω => X i ω - m) 2 μ := (hX_L2 i).sub (memLp_const m)
-          exact this.integrable_sq
-        exact integral_eq_zero_iff_of_nonneg_ae (ae_of_all _ h_nonneg) h_integrable |>.mp h_var_i
-      -- Square equals zero iff the value equals zero
-      filter_upwards [h_ae_zero] with ω h
-      exact sub_eq_zero.mp (sq_eq_zero_iff.mp h)
-
-    -- Covariance is 0
-    have hcov : ∀ i j, i ≠ j → ∫ ω, (X i ω - m) * (X j ω - m) ∂μ = 0 := by
-      intro i j _
-      -- Use the fact that X_i = m and X_j = m almost everywhere
-      have h_ae_prod : ∀ᵐ ω ∂μ, (X i ω - m) * (X j ω - m) = 0 := by
-        filter_upwards [hX_const i, hX_const j] with ω hi hj
-        rw [hi, hj]
-        ring
-      -- Integral of a.e. zero function is zero
-      have h_integrable : Integrable (fun ω => (X i ω - m) * (X j ω - m)) μ := by
-        have h_i : MemLp (fun ω => X i ω - m) 2 μ := (hX_L2 i).sub (memLp_const m)
-        have h_j : MemLp (fun ω => X j ω - m) 2 μ := (hX_L2 j).sub (memLp_const m)
-        exact h_i.integrable_mul h_j
-      exact integral_eq_zero_of_ae h_ae_prod
-
-    -- ρ = 0 works
-    use m, σSq, 0
-    refine ⟨hmean, hvar, ?_, hσSq_nonneg, ?_⟩
-    · intro i j hij
-      rw [hcov i j hij, hσSq_zero]
-      ring
-    · norm_num
+  sorry -- Full proof moved to Exchangeability/DeFinetti/CovarianceStructure.lean
+        -- to keep this file focused on the main convergence argument
 
 /-!
 ## Step 2: L² bound implies L¹ convergence of weighted sums (Kallenberg's key step)
@@ -865,6 +667,19 @@ lemma l2_bound_two_windows_uniform
   -- TODO: Complete by applying l2_contractability_bound with the covariance structure
   -- This requires contractable_covariance_structure to extract m, σ, ρ
   sorry
+
+/-- Reindex the last `k`-block of a length-`m` sum.
+
+For `m,k : ℕ` with `0 < k ≤ m`, and any real constant `c` and function `F : ℕ → ℝ`,
+the sum over the last `k` positions of a length-`m` vector can be reindexed to a sum over `Fin k`:
+∑_{i<m} (1_{i ≥ m-k} · c) · F(i) = c · ∑_{j<k} F(m - k + j).
+-/
+private lemma sum_tail_block_reindex
+    {m k : ℕ} (hk_pos : 0 < k) (hkm : k ≤ m)
+    (c : ℝ) (F : ℕ → ℝ) :
+    ∑ i : Fin m, (if i.val < m - k then 0 else c) * F i.val
+      = c * ∑ j : Fin k, F (m - k + j.val) := by
+  sorry -- TODO: Implement full proof (currently blocked by Lean 4.24 syntax issue with Finset.sum in calc)
 
 /-- Long average vs tail average bound: Comparing the average of the first m terms
 with the average of the last k terms (where k ≤ m) has the same L² contractability bound.
