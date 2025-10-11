@@ -649,12 +649,10 @@ lemma l2_bound_two_windows_uniform
         ≤ (1/(k:ℝ))^2 * (k * (2*M))^2 := mul_le_mul_of_nonneg_left h_sq_bound (sq_nonneg _)
       _ = (2*M)^2 / k := by
           have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
+          have hk_ne : (k:ℝ) ≠ 0 := ne_of_gt hk_pos
           rw [div_pow, mul_pow]
-          simp only [sq]
-          rw [mul_comm (1/(k:ℝ) * (1/(k:ℝ)))]
-          rw [mul_assoc, mul_assoc, mul_comm (k*k)]
-          simp only [one_div]
-          rw [inv_mul_cancel (ne_of_gt hk_pos), inv_mul_cancel (ne_of_gt hk_pos), one_mul, one_mul]
+          simp only [sq, mul_comm (k*k), mul_assoc, mul_left_comm]
+          rw [div_mul_cancel₀ _ (mul_ne_zero hk_ne hk_ne)]
           rw [mul_div_assoc]
 
   -- Now integrate the bound
