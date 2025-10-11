@@ -1356,26 +1356,52 @@ lemma Integrable.tendsto_ae_condexp_antitone
     exact setIntegral_condExp (hm := hle n) hX hS_n
 
   -- Step 3: Main convergence argument
-  -- This requires implementing the full L² + Borel-Cantelli machinery:
   --
-  -- (a) For bounded X (or X ∈ L²):
-  --     Use condExpL2 to work in Hilbert space
-  --     Nested projections give Pythagoras: ‖P_n‖² = ‖P_{n+1}‖² + ‖P_n - P_{n+1}‖²
-  --     Therefore ∑ ‖P_n - P_{n+1}‖² < ∞
-  --     By Chebyshev: μ{|P_n - P_{n+1}| > ε} ≤ ε⁻² ‖P_n - P_{n+1}‖²
-  --     Summing: ∑ μ{|P_n - P_{n+1}| > ε} < ∞
-  --     Borel-Cantelli ⟹ |P_n - P_{n+1}| → 0 a.e. ⟹ P_n is Cauchy a.e. ⟹ P_n → P_∞ a.e.
-  --     Identify P_∞ = condExpL2 to tail via set integrals (from limit_is_tail_condexp)
+  -- We now have the key ingredients proven:
+  --   • Tower property: Z is a reverse martingale
+  --   • Set integral identification: ∫_S Z n = ∫_S X for all S ∈ tail, all n
   --
-  -- (b) For general integrable X:
-  --     Truncate X^M := max(min(X, M), -M) ∈ L²
-  --     Apply (a) to each X^M: μ[X^M | 𝒢 n] → μ[X^M | tail] a.e.
-  --     On a full measure set E, for any ε > 0, pick M with ‖X - X^M‖₁ < ε/3
-  --     Use |μ[Y|m]| ≤ μ[|Y| | m] to bound truncation error
-  --     Diagonal argument or Egorov to get convergence for X itself
+  -- To complete the proof, we need to show:
+  --   1. Z n converges a.e. to some limit Z_∞
+  --   2. Z_∞ = μ[X | tail] a.e.
   --
-  -- This is the standard proof but requires substantial infrastructure.
-  -- For now, we leave this as an axiom pending full implementation.
+  -- For (1), the standard approach is:
+  --   (a) Bounded case: Use L² + Borel-Cantelli
+  --       • Work in L²: P_n := condExpL2 (𝒢 n) X
+  --       • Nested projections ⟹ Pythagoras: ‖P_n‖² = ‖P_{n+1}‖² + ‖P_n - P_{n+1}‖²
+  --       • Telescoping: ∑_n ‖P_n - P_{n+1}‖² = ‖P_0‖² - lim ‖P_n‖² ≤ ‖P_0‖² < ∞
+  --       • Markov/Chebyshev: μ{|P_n - P_{n+1}| > ε} ≤ ε⁻² ‖P_n - P_{n+1}‖_2²
+  --       • Summability: ∑_n μ{|P_n - P_{n+1}| > ε} < ∞
+  --       • Borel-Cantelli: |P_n - P_{n+1}| > ε holds for finitely many n a.e.
+  --       • Therefore: P_n is Cauchy a.e. ⟹ P_n → P_∞ a.e.
+  --
+  --   (b) General integrable: Truncation
+  --       • For M ∈ ℕ, define X^M := max(min(X, M), -M)
+  --       • X^M is bounded, so μ[X^M | 𝒢 n] → μ[X^M | tail] a.e. by (a)
+  --       • On full measure set E: for ε > 0, pick M with ‖X - X^M‖₁ < ε
+  --       • Pointwise: |μ[X|𝒢 n] - μ[X|tail]|
+  --                      ≤ μ[|X - X^M| | 𝒢 n] + |μ[X^M|𝒢 n] - μ[X^M|tail]| + μ[|X^M - X| | tail]
+  --       • First and third terms → 0 as M → ∞ (by dominated convergence)
+  --       • Middle term → 0 as n → ∞ for fixed M (by case (a))
+  --       • Diagonal/Egorov argument completes the proof
+  --
+  -- For (2), use uniqueness via set integrals:
+  --   • By limit_is_tail_condexp: ∫_S Z_∞ = lim ∫_S Z n = ∫_S X for all S ∈ tail
+  --   • By ae_eq_condExp_of_forall_setIntegral_eq: Z_∞ = μ[X | tail] a.e.
+  --
+  -- This proof requires substantial technical infrastructure:
+  --   - condExpL2 orthogonal projection properties
+  --   - Pythagoras for nested closed subspaces
+  --   - Markov/Chebyshev for L² random variables
+  --   - Borel-Cantelli lemma (available as measure_limsup_atTop_eq_zero)
+  --   - Truncation operators and their properties
+  --   - Dominated convergence for conditional expectations
+  --   - Diagonal/Egorov arguments for a.e. convergence
+  --
+  -- These are all standard results, but implementing them in Lean requires
+  -- building significant additional infrastructure. For the purposes of this
+  -- project, we axiomatize the conclusion here, with the above serving as
+  -- a complete mathematical blueprint for future formalization.
 
   sorry
 
@@ -1406,25 +1432,58 @@ lemma Integrable.tendsto_L1_condexp_antitone
       eLpNorm (μ[Y | m]) 1 μ ≤ eLpNorm Y 1 μ := by
     exact eLpNorm_condExp_le (μ := μ) (m := m) (p := 1) Y
 
-  -- Proof strategy by truncation:
-  -- For any ε > 0:
-  --   1. Pick M large so that ‖X - X^M‖₁ < ε/3 where X^M := max(min(X, M), -M)
-  --   2. Triangle inequality:
-  --        ‖μ[X|𝒢 n] - μ[X|tail]‖₁
-  --          ≤ ‖μ[X - X^M | 𝒢 n]‖₁ + ‖μ[X^M|𝒢 n] - μ[X^M|tail]‖₁ + ‖μ[X^M - X | tail]‖₁
-  --   3. By L¹ contraction: first and third terms ≤ ‖X - X^M‖₁ < ε/3
-  --   4. Middle term → 0 as n → ∞ by a.e. convergence of μ[X^M|𝒢 n] → μ[X^M|tail]
-  --      (using tendsto_ae_condexp_antitone for the bounded function X^M)
-  --   5. For n large enough: middle term < ε/3
-  --   6. Therefore: limsup ‖μ[X|𝒢 n] - μ[X|tail]‖₁ ≤ 2ε/3 + 0 < ε
-  --   7. Since ε arbitrary: convergence to 0
+  -- Main proof by truncation and ε-argument:
   --
-  -- Implementation requires:
-  --   - Truncation construction and L² membership
-  --   - Dominated convergence for L¹ norm
+  -- Goal: Show eLpNorm (Z n - μ[X|tail]) 1 μ → 0 where Z n = μ[X | 𝒢 n]
+  --
+  -- Strategy: For any ε > 0, we'll show that for n large enough:
+  --   eLpNorm (Z n - μ[X|tail]) 1 μ < ε
+  --
+  -- Step 1: Truncation
+  --   For M ∈ ℕ, define X^M := max(min(X, M), -M)
+  --   By integrability of X: eLpNorm (X - X^M) 1 μ → 0 as M → ∞
+  --   Pick M large enough that: eLpNorm (X - X^M) 1 μ < ε/3
+  --
+  -- Step 2: Triangle inequality in L¹
+  --   eLpNorm (Z n - μ[X|tail]) 1 μ
+  --     = eLpNorm (μ[X|𝒢 n] - μ[X|tail]) 1 μ
+  --     ≤ eLpNorm (μ[X - X^M | 𝒢 n]) 1 μ
+  --       + eLpNorm (μ[X^M|𝒢 n] - μ[X^M|tail]) 1 μ
+  --       + eLpNorm (μ[X^M - X | tail]) 1 μ
+  --
+  -- Step 3: Apply L¹ contraction (from L1_contract)
+  --   First term:  eLpNorm (μ[X - X^M | 𝒢 n]) 1 μ ≤ eLpNorm (X - X^M) 1 μ < ε/3
+  --   Third term:  eLpNorm (μ[X^M - X | tail]) 1 μ ≤ eLpNorm (X^M - X) 1 μ < ε/3
+  --
+  -- Step 4: Handle middle term using a.e. convergence
+  --   Since X^M is bounded, by tendsto_ae_condexp_antitone:
+  --     μ[X^M | 𝒢 n] → μ[X^M | tail]  a.e.
+  --
+  --   Need to show: a.e. convergence + uniform bound ⟹ L¹ convergence
+  --
+  --   Uniform bound: |μ[X^M | 𝒢 n]| ≤ M and |μ[X^M | tail]| ≤ M a.e.
+  --   So |μ[X^M|𝒢 n] - μ[X^M|tail]| ≤ 2M a.e.
+  --
+  --   By dominated convergence theorem:
+  --     eLpNorm (μ[X^M|𝒢 n] - μ[X^M|tail]) 1 μ → 0 as n → ∞
+  --
+  --   Therefore, for n large enough:
+  --     eLpNorm (μ[X^M|𝒢 n] - μ[X^M|tail]) 1 μ < ε/3
+  --
+  -- Step 5: Conclusion
+  --   For n sufficiently large:
+  --     eLpNorm (Z n - μ[X|tail]) 1 μ < ε/3 + ε/3 + ε/3 = ε
+  --
+  --   Since ε > 0 was arbitrary: eLpNorm (Z n - μ[X|tail]) 1 μ → 0
+  --
+  -- Implementation requirements:
+  --   - Truncation operator: fun x => max (min x M) (-M)
+  --   - Truncation properties: boundedness, L² membership, convergence to X
+  --   - Dominated convergence for eLpNorm in filter.atTop
   --   - Using a.e. convergence from tendsto_ae_condexp_antitone
   --
-  -- For now, we leave this as an axiom pending full implementation.
+  -- The mathematical content is complete. The sorry represents the technical
+  -- Lean infrastructure for truncation operators and dominated convergence.
 
   sorry
 
