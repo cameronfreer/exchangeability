@@ -133,14 +133,16 @@ axiom Kernel.IndepFun.ae_measure_indepFun
 This is the substantive part of Kallenberg's "first proof": the ergodic/shift argument
 shows the coordinates are conditionally independent given `shiftInvariantSigma`.
 -/
-axiom condindep_pair_given_tail
+lemma condindep_pair_given_tail
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ) :
-    Kernel.IndepFun (fun ω : Ω[α] => ω 0) (fun ω : Ω[α] => ω 1)
-      (condExpKernel μ (shiftInvariantSigma (α := α))) μ
+    @Kernel.IndepFun (Ω[α]) (Ω[α]) _ _
+      (fun ω : Ω[α] => ω 0) (fun ω : Ω[α] => ω 1)
+      (condExpKernel μ (shiftInvariantSigma (α := α))) μ := by
+  sorry
 
 /-- **Axiomized product factorization** for general finite cylinder products. -/
-axiom condexp_product_factorization_ax
+lemma condexp_product_factorization_ax
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
     (m : ℕ) (fs : Fin m → α → ℝ)
@@ -148,22 +150,25 @@ axiom condexp_product_factorization_ax
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
     (hciid : True) :
     μ[fun ω => ∏ k, fs k (ω (k : ℕ)) | shiftInvariantSigma (α := α)]
-      =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω))
+      =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν μ ω)) := by
+  sorry
 
 /-- **Bridge axiom** for ENNReal version needed by `CommonEnding`. -/
-axiom indicator_product_bridge_ax
+lemma indicator_product_bridge_ax
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
     (m : ℕ) (k : Fin m → ℕ) (B : Fin m → Set α)
     (hB_meas : ∀ i, MeasurableSet (B i)) :
     ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
-      = ∫⁻ ω, ∏ i : Fin m, (ν (μ := μ) ω) (B i) ∂μ
+      = ∫⁻ ω, ∏ i : Fin m, (ν μ ω) (B i) ∂μ := by
+  sorry
 
 /-- **Final bridge axiom** to the `ConditionallyIID` structure. -/
-axiom exchangeable_implies_ciid_modulo_bridge_ax
+lemma exchangeable_implies_ciid_modulo_bridge_ax
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ) :
-    Exchangeability.ConditionallyIID μ (fun i (ω : Ω[α]) => ω i)
+    Exchangeability.ConditionallyIID μ (fun i (ω : Ω[α]) => ω i) := by
+  sorry
 
 namespace MeasureTheory
 
