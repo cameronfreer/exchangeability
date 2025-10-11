@@ -974,11 +974,7 @@ lemma contractable_dist_eq_on_rectangles_future
     simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using
       (contractable_dist_eq_on_first_r_tail
         (μ:=μ) (X:=X) hX k m r hk B hB C hC)
-  have : μ (ψ₁ ⁻¹' (B ×ˢ cylinder (α:=α) r C))
-        = μ (ψ₂ ⁻¹' (B ×ˢ cylinder (α:=α) r C)) := by
-    rw [hpre₁, hpre₂]
-    sorry  -- TODO: Apply hfd after proving set equality via arithmetic (m+1+i vs m+(i+1))
-  simpa [Measure.map_apply, hrect, ψ₁, ψ₂] using this
+  sorry  -- TODO: Prove Measure.map equality using contractable_dist_eq_on_first_r_tail
 
 end FutureRectangles
 
