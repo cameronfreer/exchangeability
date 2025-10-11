@@ -691,9 +691,12 @@ private lemma sum_tail_block_reindex
     (c : ℝ) (F : ℕ → ℝ) :
     ∑ i : Fin m, (if i.val < m - k then 0 else c) * F i.val
       = c * ∑ j : Fin k, F (m - k + j.val) := by
-  -- The sum splits: indices < m-k contribute 0, indices ≥ m-k contribute c * F(i)
-  -- The tail {i : Fin m | i.val ≥ m-k} corresponds bijectively to Fin k
-  sorry  -- TODO: Use Finset.sum_bij or sum reindexing to show the bijection
+  -- Strategy:
+  -- 1. Split sum: indices < m-k contribute 0
+  -- 2. For indices i with m-k ≤ i < m, use bijection i ↔ j where j = i - (m-k)
+  -- 3. This gives i.val = m - k + j.val for j : Fin k
+  -- 4. Apply Finset.sum_bij with this bijection
+  sorry
 
 /-- Long average vs tail average bound: Comparing the average of the first m terms
 with the average of the last k terms (where k ≤ m) has the same L² contractability bound.
@@ -734,11 +737,20 @@ private lemma l2_bound_long_vs_tail
   -- The bound from l2_contractability_bound would be: 2σ²(1-ρ) · (1/k) = Cf/k
   -- which is exactly what we need to prove.
 
-  -- However, we can also use the existing hCf_unif more directly:
-  -- Note that the tail average is just an equal-weight window starting at n+(m-k),
-  -- so we can bound the difference using a triangle inequality approach.
+  -- Direct approach using hCf_unif:
+  -- The tail average is an equal-weight window of size k starting at n+(m-k):
+  --   (1/k) ∑_{j<k} f(X_{n+(m-k)+j+1})
+  --
+  -- Strategy:
+  -- 1. Use triangle inequality: |long_avg - tail_avg| ≤ |long_avg - some_window| + |some_window - tail_avg|
+  -- 2. The tail window is exactly window starting at position n+(m-k)
+  -- 3. Can compare it with a window of size k starting at n using hCf_unif
+  -- 4. The bound Cf/k applies since both are equal-weight windows of size k
+  --
+  -- OR alternatively:
+  -- Use that bounded differences of averages satisfy the L² contractability bound
+  -- directly from the weighted sum lemma in L2Approach.
 
-  -- For now, leave as sorry until contractable_covariance_structure is complete
   sorry
 
 /-- **Weighted sums converge in L¹ for contractable sequences.**
