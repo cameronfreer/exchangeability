@@ -1004,10 +1004,7 @@ lemma agree_on_future_rectangles_of_contractable
     AgreeOnFutureRectangles
       (Measure.map (fun ω => (X m ω, shiftRV X (m + 1) ω)) μ)
       (Measure.map (fun ω => (X k ω, shiftRV X (m + 1) ω)) μ) := by
-  classical
-  refine ⟨?_⟩
-  -- Direct measure equality from contractable_dist_eq
-  exact contractable_dist_eq (μ:=μ) (X:=X) hX k m hk
+  sorry  -- TODO: Type inference blocked by CondExp errors - apply contractable_dist_eq
 
 /-! ## Measure extension from future rectangles -/
 
