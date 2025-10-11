@@ -1473,6 +1473,14 @@ tail σ-algebra `𝒯_X = ⋂_n σ(θ_n X)`.
 7. Second equality: conditional laws agree, giving conditional i.i.d.
 
 *Kallenberg (2005), third proof of Theorem 1.1 (page 28).* -/
+theorem deFinetti_viaMartingale
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {X : ℕ → Ω → α}
+    (hX : Contractable μ X)
+    (hX_meas : ∀ n, Measurable (X n)) :
+    ConditionallyIID μ X := by
+  sorry  -- TODO: Complete martingale proof of de Finetti
+
 /-! ### Step 1: Constructing the directing measure ν
 
 From conditional expectations on indicators, we need to build a measurable family
