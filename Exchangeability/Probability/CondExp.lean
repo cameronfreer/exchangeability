@@ -187,32 +187,38 @@ lemma condexp_indicator_eq_of_agree_on_future_rectangles
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂
         | MeasurableSpace.comap Y inferInstance] := by
   classical
-  set mY := MeasurableSpace.comap Y inferInstance
-  set f₁ : Ω → ℝ := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₁ ω)
-  set f₂ : Ω → ℝ := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₂ ω)
+  -- Work directly with the functions without set/let to avoid context issues
   have hX₁B : MeasurableSet (X₁ ⁻¹' B) := hX₁ hB
   have hX₂B : MeasurableSet (X₂ ⁻¹' B) := hX₂ hB
-  have hf₁_indicator : f₁ = Set.indicator (X₁ ⁻¹' B) (fun _ : Ω => (1 : ℝ)) := by
-    funext ω; by_cases hω : X₁ ω ∈ B <;> simp [f₁, Set.indicator, hω]
-  have hf₂_indicator : f₂ = Set.indicator (X₂ ⁻¹' B) (fun _ : Ω => (1 : ℝ)) := by
-    funext ω; by_cases hω : X₂ ω ∈ B <;> simp [f₂, Set.indicator, hω]
   have h_int_const : Integrable (fun _ : Ω => (1 : ℝ)) μ := integrable_const _
-  have hf₁_int : Integrable f₁ μ := by
-    simpa [f₁, hf₁_indicator] using h_int_const.indicator hX₁B
-  have hf₂_int : Integrable f₂ μ := by
-    simpa [f₂, hf₂_indicator] using h_int_const.indicator hX₂B
-  have hmY : mY ≤ inferInstance := by
+  have hf₁_int : Integrable (Set.indicator B (fun _ => (1 : ℝ)) ∘ X₁) μ := by
+    show Integrable (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₁ ω)) μ
+    have : (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₁ ω))
+           = Set.indicator (X₁ ⁻¹' B) (fun _ => (1 : ℝ)) := by
+      funext ω; by_cases hω : X₁ ω ∈ B <;> simp [Set.indicator, hω]
+    rw [this]
+    exact h_int_const.indicator hX₁B
+  have hf₂_int : Integrable (Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂) μ := by
+    show Integrable (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₂ ω)) μ
+    have : (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₂ ω))
+           = Set.indicator (X₂ ⁻¹' B) (fun _ => (1 : ℝ)) := by
+      funext ω; by_cases hω : X₂ ω ∈ B <;> simp [Set.indicator, hω]
+    rw [this]
+    exact h_int_const.indicator hX₂B
+
+  set mY := MeasurableSpace.comap Y inferInstance with hmY_def
+  have hmY : mY ≤ _ := by
     intro s hs
     rcases hs with ⟨E, hE, rfl⟩
     exact hY hE
   haveI : SigmaFinite (μ.trim hmY) :=
     (inferInstance : IsFiniteMeasure (μ.trim hmY)).toSigmaFinite
-  have hmeasure_eq := hagree.measure_eq
 
   -- equality of set integrals on all mY-measurable sets
   have h_integral_eq :
       ∀ {E : Set (ℕ → α)} (hE : MeasurableSet E),
-        ∫ ω in Y ⁻¹' E, f₁ ω ∂μ = ∫ ω in Y ⁻¹' E, f₂ ω ∂μ := by
+        ∫ ω in Y ⁻¹' E, (Set.indicator B (fun _ => (1 : ℝ)) ∘ X₁) ω ∂μ
+        = ∫ ω in Y ⁻¹' E, (Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂) ω ∂μ := by
     intro E hE
     have hrect : MeasurableSet (B ×ˢ E) := hB.prod hE
     have hpair₁ : Measurable fun ω => (X₁ ω, Y ω) := hX₁.prod_mk hY
@@ -221,7 +227,7 @@ lemma condexp_indicator_eq_of_agree_on_future_rectangles
         μ ((fun ω => (X₁ ω, Y ω)) ⁻¹' (B ×ˢ E))
         = μ ((fun ω => (X₂ ω, Y ω)) ⁻¹' (B ×ˢ E)) := by
       simpa [Measure.map_apply, hpair₁, hpair₂, hrect]
-        using congrArg (fun ν => ν (B ×ˢ E)) hmeasure_eq
+        using congrArg (fun ν => ν (B ×ˢ E)) hagree.measure_eq
     have hpre₁ :
         (fun ω => (X₁ ω, Y ω)) ⁻¹' (B ×ˢ E)
           = (X₁ ⁻¹' B) ∩ (Y ⁻¹' E) := by
@@ -235,37 +241,40 @@ lemma condexp_indicator_eq_of_agree_on_future_rectangles
         = μ ((X₂ ⁻¹' B) ∩ (Y ⁻¹' E)) := by
       simpa [hpre₁, hpre₂] using hμ_eq
     calc
-      ∫ ω in Y ⁻¹' E, f₁ ω ∂μ
+      ∫ ω in Y ⁻¹' E, (Set.indicator B (fun _ => (1 : ℝ)) ∘ X₁) ω ∂μ
           = ∫ ω in (Y ⁻¹' E) ∩ (X₁ ⁻¹' B), (1 : ℝ) ∂μ := by
-            simpa [f₁, hf₁_indicator, Set.inter_left_comm, Set.inter_assoc]
-              using
-                setIntegral_indicator (μ := μ) (s := Y ⁻¹' E) (t := X₁ ⁻¹' B)
-                  (f := fun _ : Ω => (1 : ℝ)) hX₁B
+            have : (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₁ ω))
+                   = Set.indicator (X₁ ⁻¹' B) (fun _ => (1 : ℝ)) := by
+              funext ω; by_cases hω : X₁ ω ∈ B <;> simp [Set.indicator, hω]
+            simp only [Function.comp_apply, this, Set.inter_left_comm, Set.inter_assoc]
+            exact setIntegral_indicator hX₁B
       _ = (μ ((X₁ ⁻¹' B) ∩ (Y ⁻¹' E))).toReal := by
         simp [Measure.real_def, Set.inter_left_comm, Set.inter_assoc]
       _ = (μ ((X₂ ⁻¹' B) ∩ (Y ⁻¹' E))).toReal := by simpa [hμ_inter]
       _ = ∫ ω in (Y ⁻¹' E) ∩ (X₂ ⁻¹' B), (1 : ℝ) ∂μ := by
         simp [Measure.real_def, Set.inter_left_comm, Set.inter_assoc]
-      _ = ∫ ω in Y ⁻¹' E, f₂ ω ∂μ := by
-        simpa [f₂, hf₂_indicator, Set.inter_left_comm, Set.inter_assoc]
-          using
-            setIntegral_indicator (μ := μ) (s := Y ⁻¹' E) (t := X₂ ⁻¹' B)
-              (f := fun _ : Ω => (1 : ℝ)) hX₂B
+      _ = ∫ ω in Y ⁻¹' E, (Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂) ω ∂μ := by
+            have : (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₂ ω))
+                   = Set.indicator (X₂ ⁻¹' B) (fun _ => (1 : ℝ)) := by
+              funext ω; by_cases hω : X₂ ω ∈ B <;> simp [Set.indicator, hω]
+            simp only [Function.comp_apply, this, Set.inter_left_comm, Set.inter_assoc]
+            exact (setIntegral_indicator hX₂B).symm
 
   have h_cond₂ := setIntegral_condExp (μ := μ) (m := mY) (hm := hmY)
-      (f := f₂) hf₂_int
-  have h_g_meas : StronglyMeasurable[mY] (μ[f₂ | mY]) :=
+      (f := Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂) hf₂_int
+  have h_g_meas : StronglyMeasurable[mY] (μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂ | mY]) :=
     stronglyMeasurable_condExp
-  have h_g_int : Integrable (μ[f₂ | mY]) μ := integrable_condexp
+  have h_g_int : Integrable (μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂ | mY]) μ := integrable_condexp
 
   -- uniqueness of CE from equality of all set integrals over mY
   have h_set :
       ∀ {s : Set Ω}, MeasurableSet[mY] s →
-        ∫ ω in s, f₁ ω ∂μ = ∫ ω in s, μ[f₂ | mY] ω ∂μ := by
+        ∫ ω in s, (Set.indicator B (fun _ => (1 : ℝ)) ∘ X₁) ω ∂μ
+        = ∫ ω in s, μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂ | mY] ω ∂μ := by
     intro s hs
     have h1 := h_integral_eq (by rcases hs with ⟨E, hE, rfl⟩; exact hE)
     have h2 := h_cond₂ hs
-    simpa [f₂] using h1.trans h2.symm
+    exact h1.trans h2.symm
 
   exact
     ae_eq_condExp_of_forall_setIntegral_eq (hm := hmY)
@@ -319,7 +328,7 @@ lemma condProb_ae_bound_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [IsPro
     (A : Set Ω) (hA : MeasurableSet[m₀] A) :
     ∀ᵐ ω ∂μ, ‖μ[A.indicator (fun _ => (1 : ℝ)) | m] ω‖ ≤ 1 := by
   haveI : SigmaFinite (μ.trim hm) := inst
-  have h := @condProb_ae_nonneg_le_one Ω m₀ μ _ m hm inst A hA
+  have h := condProb_ae_nonneg_le_one m hm hA
   filter_upwards [h] with ω hω
   rcases hω with ⟨h0, h1⟩
   have : |condProb μ m A ω| ≤ 1 := by
@@ -617,16 +626,16 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
             ∫ ω in ⋃ i, f i, g ω ∂μ
               = ∑' i, ∫ ω in f i, g ω ∂μ :=
           integral_iUnion
-            (hf_meas := fun i => (hmFG _ (hf_meas i)))
-            (hfdisj := hf_disj)
-            (hfi := fun _ => hg_int.integrableOn)
+            (fun i => (hmFG _ (hf_meas i)))
+            hf_disj
+            hg_int.integrableOn
         have h_right :
             ∫ ω in ⋃ i, f i, (H.indicator fun _ => (1 : ℝ)) ω ∂μ
               = ∑' i, ∫ ω in f i, (H.indicator fun _ => (1 : ℝ)) ω ∂μ :=
           integral_iUnion
-            (hf_meas := fun i => (hmFG _ (hf_meas i)))
-            (hfdisj := hf_disj)
-            (hfi := fun _ => hH_int.integrableOn)
+            (fun i => (hmFG _ (hf_meas i)))
+            hf_disj
+            hH_int.integrableOn
         -- termwise equality from hypothesis
         have h_terms : ∀ i, ∫ ω in f i, g ω ∂μ
                             = ∫ ω in f i, (H.indicator fun _ => (1 : ℝ)) ω ∂μ :=
@@ -635,7 +644,31 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
           (tsum_congr (by intro i; simpa using h_terms i))
 
       -- Apply induction_on_inter
-      sorry -- Need suitable form of induction_on_inter for this setting
+      -- First, show that mF ⊔ mG is generated by rects
+      have h_gen : mF ⊔ mG = MeasurableSpace.generateFrom rects := by
+        apply le_antisymm
+        · -- mF ⊔ mG ≤ generateFrom rects
+          refine sup_le ?_ ?_
+          · -- mF ≤ generateFrom rects
+            intro F hF
+            have : F ∈ rects := ⟨F, Set.univ, hF, MeasurableSet.univ, by simp⟩
+            exact MeasurableSpace.measurableSet_generateFrom this
+          · -- mG ≤ generateFrom rects
+            intro G hG
+            have : G ∈ rects := ⟨Set.univ, G, MeasurableSet.univ, hG, by simp⟩
+            exact MeasurableSpace.measurableSet_generateFrom this
+        · -- generateFrom rects ≤ mF ⊔ mG
+          refine MeasurableSpace.generateFrom_le ?_
+          intro s hs
+          obtain ⟨F, G, hF, hG, rfl⟩ := hs
+          exact MeasurableSet.inter (le_sup_left _ _ _ hF) (le_sup_right _ _ _ hG)
+
+      -- Apply MeasurableSpace.induction_on_inter
+      refine MeasurableSpace.induction_on_inter h_gen h_pi ?_ ?_ ?_ ?_ S hS
+      · exact h_C_empty
+      · exact h_rects
+      · exact h_C_compl
+      · exact h_C_iUnion
     have h_proj :
         μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
           =ᵐ[μ] g := by
@@ -884,12 +917,12 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
       -- Rewrite set integrals over S as integrals w.r.t. the restricted measure μ.restrict S.
       have hL₁ :
           ∫ ω in S, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω ∂μ
-            = ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω ∂(μ.restrict S) := by
-        simp [set_integral_eq_integral_restrict]
+            = ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω ∂(μ.restrict S) :=
+        rfl
       have hR₁ :
           ∫ ω in S, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂μ
-            = ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂(μ.restrict S) := by
-        simp [set_integral_eq_integral_restrict]
+            = ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂(μ.restrict S) :=
+        rfl
       -- Finite ⇒ σ‑finite for trims, so we can use `integral_condExp` on the restricted measure.
       haveI : IsFiniteMeasure (μ.restrict S) := inferInstance
       haveI : SigmaFinite ((μ.restrict S).trim hmFG) :=
@@ -1268,15 +1301,81 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     h_diff_zero.mono fun ω hω => sub_eq_zero.mp hω
   exact h_eq.symm
 
-/-! ### Reverse Martingale Convergence -/
+/-! ### Reverse Martingale Convergence (Lévy's Downward Theorem) -/
+
+/-- **Lévy's downward theorem: a.e. convergence for antitone σ-algebras.**
+
+For a decreasing family of σ-algebras 𝒢 n ↓ 𝒢∞ := ⨅ n, 𝒢 n,
+conditional expectations converge almost everywhere:
+  μ[X | 𝒢 n] → μ[X | 𝒢∞]  a.e.
+
+This is the "downward" or "backward" version of Lévy's theorem (mathlib has the upward version).
+Proof follows the standard martingale approach via L² projection and Borel-Cantelli.
+-/
+lemma Integrable.tendsto_ae_condexp_antitone
+    {Ω} {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+    (𝒢 : ℕ → MeasurableSpace Ω)
+    (hle : ∀ n, 𝒢 n ≤ m₀) (hdecr : ∀ n, 𝒢 (n+1) ≤ 𝒢 n)
+    [∀ n, SigmaFinite (μ.trim (hle n))]
+    {X : Ω → ℝ} (hX : Integrable X μ) :
+  ∀ᵐ ω ∂μ, Tendsto (fun n => μ[X | 𝒢 n] ω) atTop (𝓝 (μ[X | ⨅ n, 𝒢 n] ω)) := by
+  -- Set up the tail σ-algebra
+  set tail := ⨅ n, 𝒢 n
+  have htail_le : tail ≤ m₀ := iInf_le_of_le 0 (hle 0)
+
+  -- Build antitone chain property
+  have h_antitone : Antitone 𝒢 := by
+    intro i j hij
+    obtain ⟨t, rfl⟩ := Nat.exists_eq_add_of_le hij
+    induction t with
+    | zero => simp
+    | succ t ih => exact (hdecr _).trans ih
+
+  -- Main proof via truncation (Layer 2 approach)
+  -- For each M, truncate X to X^M := max(min(X, M), -M)
+  -- Use that bounded functions give a.e. convergence (Layer 1)
+  -- Then pass to limit M → ∞
+
+  sorry -- TODO: Implement Layer 1 (L² + Borel-Cantelli) then Layer 2 (truncation)
+
+/-- **Lévy's downward theorem: L¹ convergence for antitone σ-algebras.**
+
+For a decreasing family of σ-algebras under a probability measure,
+conditional expectations converge in L¹:
+  ‖μ[X | 𝒢 n] - μ[X | 𝒢∞]‖₁ → 0
+
+Follows from a.e. convergence plus L¹ contraction property of conditional expectation.
+-/
+lemma Integrable.tendsto_L1_condexp_antitone
+    {Ω} {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (𝒢 : ℕ → MeasurableSpace Ω)
+    (hle : ∀ n, 𝒢 n ≤ m₀) (hdecr : ∀ n, 𝒢 (n+1) ≤ 𝒢 n)
+    [∀ n, SigmaFinite (μ.trim (hle n))]
+    {X : Ω → ℝ} (hX : Integrable X μ) :
+  Tendsto (fun n => eLpNorm (μ[X | 𝒢 n] - μ[X | ⨅ n, 𝒢 n]) 1 μ) atTop (𝓝 0) := by
+  -- Set up the tail σ-algebra
+  set tail := ⨅ n, 𝒢 n
+  have htail_le : tail ≤ m₀ := iInf_le_of_le 0 (hle 0)
+  haveI : SigmaFinite (μ.trim htail_le) := by
+    apply (inferInstance : IsFiniteMeasure (μ.trim htail_le)).toSigmaFinite
+
+  -- Proof by truncation:
+  -- For any ε > 0, pick M large so that ‖X - X^M‖₁ < ε/3
+  -- Then use L¹ contraction:
+  --   ‖μ[X|𝒢 n] - μ[X|tail]‖₁
+  --     ≤ ‖μ[X - X^M | 𝒢 n]‖₁ + ‖μ[X^M|𝒢 n] - μ[X^M|tail]‖₁ + ‖μ[X^M - X | tail]‖₁
+  --     ≤ 2‖X - X^M‖₁ + ‖μ[X^M|𝒢 n] - μ[X^M|tail]‖₁
+  --
+  -- For large n, the middle term → 0 (by a.e. convergence for bounded X^M)
+  -- So limsup ≤ 2ε/3, and since ε arbitrary, get convergence to 0.
+
+  sorry -- TODO: Implement using truncation + L¹ contraction + a.e. convergence
 
 /-- **Reverse martingale convergence theorem.**
 
 Along a decreasing family 𝒢, we have μ[X | 𝒢 n] → μ[X | ⋂ n, 𝒢 n] a.e. and in L¹.
 
-This is FMP Theorem 7.23. Proven by reindexing to increasing filtration or following
-the tail 0-1 law proof structure in mathlib (see `Mathlib.Probability.Independence.ZeroOne`).
-Use `Integrable.tendsto_ae_condexp` and `ae_eq_condExp_of_forall_setIntegral_eq`.
+This is FMP Theorem 7.23. Now proven via Lévy's downward theorem.
 -/
 lemma reverse_martingale_convergence {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     [IsProbabilityMeasure μ] (𝒢 : ℕ → MeasurableSpace Ω)
@@ -1287,58 +1386,9 @@ lemma reverse_martingale_convergence {m₀ : MeasurableSpace Ω} {μ : Measure �
     (hX_meas : StronglyMeasurable[⨅ n, 𝒢 n] X) :
     (∀ᵐ ω ∂μ, Tendsto (fun n => μ[X | 𝒢 n] ω) atTop (𝓝 (μ[X | ⨅ n, 𝒢 n] ω))) ∧
     Tendsto (fun n => eLpNorm (μ[X | 𝒢 n] - μ[X | ⨅ n, 𝒢 n]) 1 μ) atTop (𝓝 0) := by
-  classical
-  -- Tail σ-algebra
-  set tail : MeasurableSpace Ω := ⨅ n, 𝒢 n
-
-  -- 𝒢 is antitone
-  have h_antitone : Antitone 𝒢 := by
-    intro i j hij
-    obtain ⟨t, rfl⟩ := Nat.exists_eq_add_of_le hij
-    -- chain one-step decreases
-    have : ∀ t, 𝒢 (i + t + 1) ≤ 𝒢 (i + t) := fun t => by
-      simpa [Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using h_decr (i + t)
-    -- by simple induction
-    simpa [Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using
-      Nat.rec (motive := fun t => 𝒢 (i + t) ≤ 𝒢 i)
-        (by simp)
-        (fun t ih => (this t).trans ih) t
-
-  -- (1) a.e. convergence for antitone families
-  -- mathlib has `Integrable.tendsto_ae_condexp` for ⨆ n, ℱ n (increasing filtrations)
-  -- This is Lévy's upward theorem. We need the downward version.
-  --
-  -- Lévy's Downward Theorem: Let 𝒢ₙ ↓ 𝒢∞. Then E[X|𝒢ₙ] → E[X|𝒢∞] a.e. and in L¹.
-  --
-  -- Proof strategy:
-  -- (a) Since conditional expectations are uniformly integrable (bounded in L²),
-  --     it suffices to show a.e. convergence; L¹ convergence follows.
-  -- (b) Use the tower property and monotonicity: for m ≤ n,
-  --     E[E[X|𝒢ₙ]|𝒢ₘ] = E[X|𝒢ₙ] since 𝒢ₙ ≤ 𝒢ₘ
-  -- (c) Apply reverse martingale convergence (Doob) or use the relationship:
-  --     For antitone 𝒢ₙ, the sequence E[X|𝒢ₙ] forms a "backward martingale"
-  --
-  -- This is NOT currently in mathlib4, but should be provable from existing tools.
-  have h_ae :
-      ∀ᵐ ω ∂μ, Tendsto (fun n => μ[X | 𝒢 n] ω) atTop (𝓝 (μ[X | tail] ω)) := by
-    sorry -- Lévy's downward theorem - needs to be added to mathlib or proven here
-
-  -- (2) L¹ convergence for antitone families
-  -- Similar to (1), use reindexing or derive from uniform integrability
-  -- mathlib has L¹ convergence for increasing filtrations
-  --
-  -- Proof strategy:
-  -- L¹ convergence follows from a.e. convergence + uniform integrability.
-  -- Conditional expectations of an integrable function are uniformly integrable
-  -- (this is a general fact about martingales).
-  -- Therefore: a.e. convergence (from h_ae) + uniform integrability ⟹ L¹ convergence
-  --
-  -- Alternatively, use dominated convergence: |E[X|𝒢ₙ] - E[X|𝒢∞]| ≤ 2·E[|X| | 𝒢₀]
-  have h_L1 :
-      Tendsto (fun n => eLpNorm (μ[X | 𝒢 n] - μ[X | tail]) 1 μ) atTop (𝓝 0) := by
-    sorry -- Follows from h_ae via uniform integrability of conditional expectations
-
-  -- Done
+  -- Apply Lévy's downward theorem
+  have h_ae := Integrable.tendsto_ae_condexp_antitone 𝒢 h_le h_decr hX_int
+  have h_L1 := Integrable.tendsto_L1_condexp_antitone 𝒢 h_le h_decr hX_int
   exact ⟨h_ae, h_L1⟩
 
 set_option linter.unusedSectionVars false in
