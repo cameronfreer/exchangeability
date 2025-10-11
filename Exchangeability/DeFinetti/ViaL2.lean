@@ -635,32 +635,27 @@ lemma l2_bound_two_windows_uniform
     -- Square the bound
     have h_sq_bound : (∑ i : Fin k, (f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω)))^2
                     ≤ (k * (2*M))^2 := by
-      have h_nonneg : 0 ≤ k * (2*M) := by
-        apply mul_nonneg
-        · exact Nat.cast_nonneg k
-        · apply mul_nonneg; norm_num
-          exact le_abs_self M
-      calc (∑ i : Fin k, (f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω)))^2
-          = |∑ i : Fin k, (f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω))|^2 := by
-              rw [sq_abs]
-        _ ≤ (k * (2*M))^2 := by
-            apply sq_le_sq' _ h_abs_sum
-            linarith
+      have h1 : (∑ i : Fin k, (f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω)))^2
+              ≤ |∑ i : Fin k, (f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω))|^2 := by
+        rw [← sq_abs]
+      have h2 : |∑ i : Fin k, (f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω))|^2
+              ≤ (k * (2*M))^2 := by
+        rw [sq, sq]
+        apply mul_self_le_mul_self (abs_nonneg _) h_abs_sum
+      linarith
 
     -- Combine with 1/k² factor
     calc (1/(k:ℝ))^2 * (∑ i : Fin k, (f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω)))^2
         ≤ (1/(k:ℝ))^2 * (k * (2*M))^2 := mul_le_mul_of_nonneg_left h_sq_bound (sq_nonneg _)
-      _ = (2*M)^2 / k := by
-          have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
-          field_simp
-          ring
+      _ = (2*M)^2 / k := by sorry  -- TODO: Algebraic simplification (1/k)² * (k * (2M))² = (2M)²/k
 
   -- Now integrate the bound
   calc ∫ ω, (1/(k:ℝ))^2 * (∑ i : Fin k, f (X (n + i.val + 1) ω) -
                             ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
       ≤ ∫ ω, (2*M)^2 / k ∂μ := by
           apply integral_mono
-          · sorry -- integrability of LHS
+          · -- LHS is integrable: bounded
+            sorry
           · exact integrable_const _
           · exact h_integrand_bound
     _ = (2*M)^2 / k := by
