@@ -1049,6 +1049,16 @@ From measure-level independence, we get integral factorization.
 However, for bounded measurable functions, we can use a more direct approach via the
 integral characterization of independence.
 -/
+
+-- Helper: Powers of 2 with negative exponent are ≤ 1.
+private lemma zpow_two_neg_le_one (n : ℕ) : (2 : ℝ) ^ (-(n : ℤ)) ≤ 1 := by
+  sorry
+
+-- Helper: The dyadic grid size (2^{-n}) tends to 0.
+private lemma tendsto_grid_to_zero :
+    Filter.Tendsto (fun n : ℕ => (2 : ℝ) ^ (-(n : ℤ))) Filter.atTop (nhds 0) := by
+  sorry
+
 lemma Kernel.IndepFun.integral_mul
     {α Ω : Type*} [MeasurableSpace α] [MeasurableSpace Ω]
     {κ : Kernel α Ω} {μ : Measure α}
@@ -1179,8 +1189,8 @@ lemma Kernel.IndepFun.integral_mul
               MeasurableSet[MeasurableSpace.comap Y inferInstance] (B j)) ∧
         approx_Y n = fun ω => ∑ j, (B j).indicator (fun _ => b j) ω) ∧
       -- Uniform bounds
-      (∀ n ω, |approx_X n ω| ≤ CX) ∧
-      (∀ n ω, |approx_Y n ω| ≤ CY) ∧
+      (∀ n ω, |approx_X n ω| ≤ CX + 1) ∧
+      (∀ n ω, |approx_Y n ω| ≤ CY + 1) ∧
       -- Pointwise convergence
       (∀ ω, Filter.Tendsto (fun n => approx_X n ω) Filter.atTop (𝓝 (X ω))) ∧
       (∀ ω, Filter.Tendsto (fun n => approx_Y n ω) Filter.atTop (𝓝 (Y ω))) := by
@@ -1529,7 +1539,7 @@ lemma Kernel.IndepFun.integral_mul
       have h_floor_upper : (⌊val / grid_size⌋ : ℝ) * grid_size ≤ CX := by
         linarith [h_val_upper, h_floor_le]
       -- For lower bound: val ≥ -CX implies val/g ≥ -CX/g, so ⌊val/g⌋ ≥ ⌊-CX/g⌋
-      have h_floor_lower : -CX ≤ (⌊val / grid_size⌋ : ℝ) * grid_size := by
+      have h_floor_lower : -(CX + 1) ≤ (⌊val / grid_size⌋ : ℝ) * grid_size := by
         -- Use transitivity: -CX ≤ ⌊-CX/g⌋*g + g and ⌊-CX/g⌋*g ≤ ⌊val/g⌋*g
         have h1 : -CX ≤ (⌊-CX / grid_size⌋ : ℝ) * grid_size + grid_size := by
           have : -CX < (⌊-CX / grid_size⌋ : ℝ) * grid_size + grid_size := by
@@ -1543,11 +1553,14 @@ lemma Kernel.IndepFun.integral_mul
           apply mul_le_mul_of_nonneg_right
           · exact_mod_cast Int.floor_mono (div_le_div_of_nonneg_right h_val_lower (le_of_lt hg))
           · exact le_of_lt hg
-        sorry -- Technical issue: linarith can't combine strict + non-strict inequalities
-              -- Mathematical argument: -CX < ⌊-CX/g⌋*g + g ≤ ⌊val/g⌋*g + g gives result
+        -- Combine: -CX ≤ ⌊-CX/g⌋*g + g and ⌊-CX/g⌋*g ≤ ⌊val/g⌋*g, so -CX ≤ ⌊val/g⌋*g + g
+        -- Since g ≤ 1, we have -(CX+1) ≤ -CX ≤ ⌊val/g⌋*g + g ≤ ⌊val/g⌋*g + 1
+        have h_grid_le_one : grid_size ≤ 1 := zpow_two_neg_le_one n
+        linarith [h1, h2, h_grid_le_one]
+      have h_upper : (⌊val / grid_size⌋ : ℝ) * grid_size ≤ CX + 1 := by linarith [h_floor_upper]
       -- Combine to get absolute value bound
       rw [abs_le]
-      exact ⟨h_floor_lower, h_floor_upper⟩
+      exact ⟨h_floor_lower, h_upper⟩
 
     · intro n ω
       -- Symmetric for Y (same as X above)
@@ -1568,7 +1581,7 @@ lemma Kernel.IndepFun.integral_mul
           _ = val := div_mul_cancel₀ val (ne_of_gt hg)
       have h_floor_upper : (⌊val / grid_size⌋ : ℝ) * grid_size ≤ CY := by
         linarith [h_val_upper, h_floor_le]
-      have h_floor_lower : -CY ≤ (⌊val / grid_size⌋ : ℝ) * grid_size := by
+      have h_floor_lower : -(CY + 1) ≤ (⌊val / grid_size⌋ : ℝ) * grid_size := by
         have h1 : -CY ≤ (⌊-CY / grid_size⌋ : ℝ) * grid_size + grid_size := by
           have : -CY < (⌊-CY / grid_size⌋ : ℝ) * grid_size + grid_size := by
             calc -CY
@@ -1581,21 +1594,23 @@ lemma Kernel.IndepFun.integral_mul
           apply mul_le_mul_of_nonneg_right
           · exact_mod_cast Int.floor_mono (div_le_div_of_nonneg_right h_val_lower (le_of_lt hg))
           · exact le_of_lt hg
-        sorry -- Technical issue: linarith can't combine strict + non-strict inequalities
-              -- Mathematical argument: -CY < ⌊-CY/g⌋*g + g ≤ ⌊val/g⌋*g + g gives result
+        -- Combine: -CY ≤ ⌊-CY/g⌋*g + g and ⌊-CY/g⌋*g ≤ ⌊val/g⌋*g, so -CY ≤ ⌊val/g⌋*g + g
+        -- Since g ≤ 1, we have -(CY+1) ≤ -CY ≤ ⌊val/g⌋*g + g ≤ ⌊val/g⌋*g + 1
+        have h_grid_le_one : grid_size ≤ 1 := zpow_two_neg_le_one n
+        linarith [h1, h2, h_grid_le_one]
+      have h_upper : (⌊val / grid_size⌋ : ℝ) * grid_size ≤ CY + 1 := by linarith [h_floor_upper]
       rw [abs_le]
-      exact ⟨h_floor_lower, h_floor_upper⟩
+      exact ⟨h_floor_lower, h_upper⟩
 
-    -- Pointwise convergence
+    -- Pointwise convergence for X
     · intro ω
-      -- Key property: floor quantization has error at most one grid unit
-      -- |X(ω) - ⌊X(ω)/ε⌋*ε| ≤ ε, and ε = 2^(-n) → 0
-      sorry -- For any ε > 0, choose N with 2^(-N) < ε (using Archimedean property)
-            -- Then for n ≥ N: dist(X ω, dyadic_approx CX X n ω) ≤ 2^(-n) ≤ 2^(-N) < ε
-            -- The error bound comes from floor properties: |val - ⌊val/g⌋*g| < g
+      simp only [dyadic_approx]
+      sorry
 
+    -- Pointwise convergence for Y
     · intro ω
-      sorry -- Symmetric for Y
+      simp only [dyadic_approx]
+      sorry
 
   -- Step B.7: Apply the approximation framework
 
@@ -1663,8 +1678,8 @@ lemma Kernel.IndepFun.integral_mul
       (fun n => ∫ ω, approx_X n ω * approx_Y n ω ∂(κ a))
       Filter.atTop
       (𝓝 (∫ ω, X ω * Y ω ∂(κ a))) := by
-    -- Apply DCT with bound CX * CY
-    apply MeasureTheory.tendsto_integral_of_dominated_convergence (fun _ => CX * CY)
+    -- Apply DCT with bound (CX+1) * (CY+1)
+    apply MeasureTheory.tendsto_integral_of_dominated_convergence (fun _ => (CX + 1) * (CY + 1))
     · -- AEStronglyMeasurable for each product
       intro n
       -- Extract structures for both
@@ -1686,15 +1701,16 @@ lemma Kernel.IndepFun.integral_mul
         · exact measurable_const
         · exact (hB_meas j).1
     · -- Integrable bound
-      exact integrable_const (CX * CY)
-    · -- Uniform bound: |approx_X n ω * approx_Y n ω| ≤ CX * CY
+      exact integrable_const ((CX + 1) * (CY + 1))
+    · -- Uniform bound: |approx_X n ω * approx_Y n ω| ≤ (CX+1) * (CY+1)
       intro n
       filter_upwards with ω
       have hX := h_bd_X n ω
       have hY := h_bd_Y n ω
+      have h_CX_nonneg : 0 ≤ CX + 1 := by linarith [abs_nonneg (X ω), hCX ω]
       calc |approx_X n ω * approx_Y n ω|
           = |approx_X n ω| * |approx_Y n ω| := abs_mul _ _
-        _ ≤ CX * CY := mul_le_mul hX hY (abs_nonneg _) (by linarith [abs_nonneg (X ω), hCX ω])
+        _ ≤ (CX + 1) * (CY + 1) := mul_le_mul hX hY (abs_nonneg _) h_CX_nonneg
     · -- Pointwise convergence
       filter_upwards with ω
       exact Filter.Tendsto.mul (h_conv_X ω) (h_conv_Y ω)
@@ -1707,7 +1723,7 @@ lemma Kernel.IndepFun.integral_mul
     -- This is a product of two convergent sequences
     apply Filter.Tendsto.mul
     · -- Show ∫ approx_X(n) → ∫ X using DCT
-      apply MeasureTheory.tendsto_integral_of_dominated_convergence (fun _ => CX)
+      apply MeasureTheory.tendsto_integral_of_dominated_convergence (fun _ => CX + 1)
       · -- AEStronglyMeasurable for each approx_X n
         intro n
         -- Extract the simple function structure
@@ -1721,8 +1737,8 @@ lemma Kernel.IndepFun.integral_mul
         · exact measurable_const
         · exact (hA_meas i).1
       · -- Integrable bound
-        exact integrable_const CX
-      · -- Uniform bound: |approx_X n ω| ≤ CX
+        exact integrable_const (CX + 1)
+      · -- Uniform bound: |approx_X n ω| ≤ CX+1
         intro n
         filter_upwards with ω
         exact h_bd_X n ω
@@ -1730,7 +1746,7 @@ lemma Kernel.IndepFun.integral_mul
         filter_upwards with ω
         exact h_conv_X ω
     · -- Show ∫ approx_Y(n) → ∫ Y using DCT
-      apply MeasureTheory.tendsto_integral_of_dominated_convergence (fun _ => CY)
+      apply MeasureTheory.tendsto_integral_of_dominated_convergence (fun _ => CY + 1)
       · -- AEStronglyMeasurable for each approx_Y n
         intro n
         -- Extract the simple function structure
@@ -1744,8 +1760,8 @@ lemma Kernel.IndepFun.integral_mul
         · exact measurable_const
         · exact (hB_meas j).1
       · -- Integrable bound
-        exact integrable_const CY
-      · -- Uniform bound: |approx_Y n ω| ≤ CY
+        exact integrable_const (CY + 1)
+      · -- Uniform bound: |approx_Y n ω| ≤ CY+1
         intro n
         filter_upwards with ω
         exact h_bd_Y n ω
