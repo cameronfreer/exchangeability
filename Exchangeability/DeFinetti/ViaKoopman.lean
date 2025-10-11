@@ -262,20 +262,35 @@ lemma condindep_pair_given_tail
     (hσ : MeasurePreserving shift μ μ) :
     Kernel.IndepFun (fun ω : Ω[α] => ω 0) (fun ω : Ω[α] => ω 1)
       (condExpKernel μ (shiftInvariantSigma (α := α))) μ := by
-  -- This requires the full power of the Mean Ergodic Theorem
-  -- and extremal measure decomposition
+  -- This is the deepest theorem - requires full Mean Ergodic Theorem
 
-  -- Step 1: Apply Mean Ergodic Theorem
-  -- For L²(μ), Birkhoff averages (1/n)∑ᵢ₌₀ⁿ⁻¹ f ∘ shift^i converge to
-  -- the orthogonal projection onto shift-invariant functions
+  -- PROOF OUTLINE (Kallenberg's ergodic argument):
 
-  -- Step 2: Show this projection equals conditional expectation
-  -- onto shiftInvariantSigma
+  -- Part A: MET gives projection onto tail
+  -- 1. Apply birkhoffAverage_tendsto_metProjection from KoopmanMeanErgodic
+  -- 2. Identify metProjection with condExpL2 onto shiftInvariantSigma
+  -- 3. This shows Birkhoff averages → CE[·|ℐ] in L²
 
-  -- Step 3: Use shift equivariance to show
-  -- CE[f(ω₀)·g(ω₁) | ℐ] = CE[f(ω₀) | ℐ]·CE[g(ω₁) | ℐ]
+  -- Part B: Shift equivariance for products
+  -- 4. Consider f(ω₀)·g(ωₖ) for any k ≥ 1
+  -- 5. Observe: f(ω₀)·g(ωₖ) ∘ shift = f(ω₁)·g(ωₖ₊₁) has same distribution
+  -- 6. By shift-invariance of CE[·|ℐ], this conditional expectation is constant in k
 
-  -- Step 4: Apply generator + Dynkin theorem to extend to kernel independence
+  -- Part C: Taking k → ∞ (tail argument)
+  -- 7. As k → ∞, g(ωₖ) becomes "independent" of ω₀ through the tail
+  -- 8. By extremal/ergodic property: CE[f(ω₀)·g(ωₖ)|ℐ] → CE[f(ω₀)|ℐ]·CE[g(ωₖ)|ℐ]
+  -- 9. But by step 6, LHS doesn't depend on k, so equality holds for k=1
+
+  -- Part D: Extension to kernel independence
+  -- 10. The above gives independence for simple functions
+  -- 11. Apply generator + Dynkin π-λ theorem to extend to all measurable sets
+  -- 12. This gives Kernel.IndepFun at the kernel level
+
+  -- This proof requires substantial ergodic theory machinery not yet
+  -- fully developed in this file. Key missing pieces:
+  -- - Identification of metProjection with condExpL2
+  -- - Extremal decomposition / ergodic limit theory
+  -- - Kernel-level π-λ extension
 
   sorry
 
