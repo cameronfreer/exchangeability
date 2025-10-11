@@ -246,9 +246,36 @@ lemma shiftProcess_add (X : ℕ → Ω → α) (m k : ℕ) :
     shiftProcess (shiftProcess X m) k = shiftProcess X (m + k) := by
   funext n ω; simp [shiftProcess, Nat.add_assoc]
 
+/-- If all coordinates of X are measurable, so are all coordinates of shifted process. -/
+lemma measurable_shiftProcess (X : ℕ → Ω → α) (m : ℕ)
+    (hX : ∀ n, Measurable (X n)) (n : ℕ) :
+    Measurable (shiftProcess X m n) := by
+  simp only [shiftProcess]
+  exact hX (m + n)
+
+/-- The path map is measurable when all coordinates are measurable. -/
+lemma measurable_path (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) :
+    Measurable (path X) := by
+  apply measurable_pi_lambda
+  intro n
+  simpa [path] using hX n
+
 omit [MeasurableSpace Ω] [MeasurableSpace α] in
 lemma path_eq_shiftRV_zero (X : ℕ → Ω → α) : path X = shiftRV X 0 :=
   (shiftRV_zero X).symm
+
+/-- Composing X_n with shiftProcess extracts the (m+n)-th coordinate. -/
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
+@[simp]
+lemma coord_comp_shiftProcess (X : ℕ → Ω → α) (m n : ℕ) :
+    (fun ω => shiftProcess X m n ω) = X (m + n) := by
+  funext ω; simp [shiftProcess]
+
+/-- Relationship between shiftRV and path composition. -/
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
+lemma shiftRV_eq_path_comp_shift (X : ℕ → Ω → α) (m : ℕ) :
+    shiftRV X m = path (shiftProcess X m) := by
+  funext ω n; simp [shiftRV, path, shiftProcess]
 
 omit [MeasurableSpace Ω] [MeasurableSpace α] in
 lemma shiftProcess_apply (X : ℕ → Ω → α) (m n ω) :
@@ -905,6 +932,33 @@ lemma indProd_eq_firstRCylinder_indicator
   rw [indProd_as_indicator]
   rfl
 
+/-- indProd is strongly measurable when coordinates and sets are measurable. -/
+lemma indProd_stronglyMeasurable
+    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α)
+    (hX : ∀ n, Measurable (X n)) (hC : ∀ i, MeasurableSet (C i)) :
+    StronglyMeasurable (indProd X r C) := by
+  rw [indProd_eq_firstRCylinder_indicator]
+  refine StronglyMeasurable.indicator ?_ ?_
+  · exact stronglyMeasurable_const
+  · exact firstRCylinder_measurable_ambient X r C hX hC
+
+/-- indProd takes values in [0,1]. -/
+lemma indProd_nonneg_le_one {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α) (ω : Ω) :
+    0 ≤ indProd X r C ω ∧ indProd X r C ω ≤ 1 := by
+  rw [indProd_as_indicator]
+  by_cases h : ∀ i : Fin r, X i ω ∈ C i
+  · simp [Set.indicator, h]
+  · simp [Set.indicator, h]
+
+/-- indProd of zero coordinates is identically 1. -/
+@[simp] lemma indProd_zero {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) (C : Fin 0 → Set α) :
+    indProd X 0 C = fun _ => 1 := by
+  funext ω
+  simp [indProd]
+
 /-- Drop the first coordinate of a path. -/
 def drop {α : Type*} (f : ℕ → α) : ℕ → α := shiftSeq (β:=α) 1 f
 
@@ -933,6 +987,27 @@ lemma tailCylinder_eq_preimage_cylinder
 
 @[simp] lemma mem_tailCylinder_iff {r : ℕ} {C : Fin r → Set α} {f : ℕ → α} :
     f ∈ tailCylinder (α:=α) r C ↔ ∀ i : Fin r, f (i.1 + 1) ∈ C i := Iff.rfl
+
+/-- The cylinder set is measurable when each component set is measurable. -/
+lemma cylinder_measurable_set {r : ℕ} {C : Fin r → Set α}
+    (hC : ∀ i, MeasurableSet (C i)) :
+    MeasurableSet (cylinder (α:=α) r C) :=
+  cylinder_measurable hC
+
+/-- The tail cylinder is measurable when each component is measurable. -/
+lemma tailCylinder_measurable {r : ℕ} {C : Fin r → Set α}
+    (hC : ∀ i, MeasurableSet (C i)) :
+    MeasurableSet (tailCylinder (α:=α) r C) := by
+  rw [tailCylinder_eq_preimage_cylinder]
+  exact measurable_drop (cylinder_measurable hC)
+
+/-- Empty cylinder is the whole space. -/
+@[simp] lemma cylinder_zero : cylinder (α:=α) 0 (fun _ => Set.univ) = Set.univ := by
+  ext f; simp [cylinder]
+
+/-- Empty tail cylinder is the whole space. -/
+@[simp] lemma tailCylinder_zero : tailCylinder (α:=α) 0 (fun _ => Set.univ) = Set.univ := by
+  ext f; simp [tailCylinder]
 
 end CylinderBridge
 
