@@ -12,6 +12,8 @@ import Mathlib.Probability.Independence.Kernel
 import Exchangeability.Ergodic.KoopmanMeanErgodic
 import Exchangeability.DeFinetti.InvariantSigma
 import Exchangeability.DeFinetti.ProjectionLemmas
+import Exchangeability.DeFinetti.CommonEnding
+import Exchangeability.ConditionallyIID
 
 /-!
 # de Finetti's Theorem via Koopman Operator
@@ -2218,5 +2220,101 @@ theorem deFinetti_viaKoopman
     -- Apply condexp_product_factorization
     -- (which currently has sorry, pending conditional independence setup)
     exact condexp_product_factorization hσ m fs hmeas hbd True.intro
+
+/-- **Bridge Lemma**: Connect conditional expectation factorization to measure products.
+
+This is the key technical lemma connecting ViaKoopman's factorization results to
+CommonEnding's `conditional_iid_from_directing_measure` infrastructure.
+
+Given measurable sets B_i, the integral of the product of indicators equals the
+integral of the product of measures ν(ω)(B_i). This is exactly the "bridge condition"
+needed by CommonEnding.
+-/
+theorem indicator_product_bridge
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ)
+    (m : ℕ) (k : Fin m → ℕ) (B : Fin m → Set α)
+    (hB_meas : ∀ i, MeasurableSet (B i)) :
+    ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
+      = ∫⁻ ω, ∏ i : Fin m, (ν (μ := μ) ω) (B i) ∂μ := by
+  -- Key insight: indicator (B i) (ω (k i)) is 0 or 1
+  -- When 1: means ω (k i) ∈ B i
+  -- ofReal maps: 1 ↦ 1, 0 ↦ 0 in ENNReal
+
+  classical
+  -- Simplify indicators: (B i).indicator 1 (ω (k i)) equals 1 iff ω (k i) ∈ B i
+  have h_indicator : ∀ i (ω : Ω[α]), (B i).indicator (fun _ => (1 : ℝ)) (ω (k i)) =
+      if ω (k i) ∈ B i then 1 else 0 := by
+    intro i ω
+    simp [Set.indicator]
+
+  -- Convert indicator to ENNReal: ofReal maps 0 ↦ 0, 1 ↦ 1
+  have h_ofReal_indicator : ∀ i (ω : Ω[α]),
+      ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) =
+      if ω (k i) ∈ B i then 1 else 0 := by
+    intro i ω
+    rw [h_indicator]
+    split_ifs <;> simp [ENNReal.ofReal_zero, ENNReal.ofReal_one]
+
+  -- The product equals the indicator of the product set
+  have h_product_set : ∀ (ω : Ω[α]),
+      ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) =
+      if ∀ i, ω (k i) ∈ B i then 1 else 0 := by
+    intro ω
+    simp only [h_ofReal_indicator]
+    by_cases hω : ∀ i, ω (k i) ∈ B i
+    · -- All coordinates in their sets: all terms = 1, product = 1
+      have hall : ∀ i : Fin m, (if ω (k i) ∈ B i then (1 : ENNReal) else 0) = 1 := by
+        intro i
+        simp [hω i]
+      simp [hω, hall, Finset.prod_const_one]
+    · -- At least one coordinate not in its set: product = 0
+      push_neg at hω
+      obtain ⟨j, hj⟩ := hω
+      have hprod : ∏ i : Fin m, (if ω (k i) ∈ B i then (1 : ENNReal) else 0) = 0 := by
+        apply Finset.prod_eq_zero (Finset.mem_univ j)
+        simp [hj]
+      have hneg : ¬(∀ i, ω (k i) ∈ B i) := by
+        intro hall
+        exact hj (hall j)
+      simp [hneg, hprod]
+
+  -- Rewrite the bridge condition in terms we can prove
+  -- The key insight is that this bridge relies on conditional independence
+  -- which is the core content of de Finetti's theorem
+  -- We'll state this as an axiom for now since proving it requires the full machinery
+
+  sorry  -- AXIOM: This bridge requires conditional independence (the heart of de Finetti)
+
+/-- **Exchangeable implies ConditionallyIID** (modulo the bridge axiom).
+
+This theorem shows the complete logical chain from exchangeability to ConditionallyIID,
+assuming the `indicator_product_bridge` lemma. The bridge lemma itself requires
+conditional independence, which must come from ergodic theory or martingale theory.
+
+**Proof strategy:**
+1. Start with exchangeability → contractability (proven in Contractability.lean)
+2. Use contractability to get measure-preserving shift
+3. Construct ν via regular conditional distribution (rcdKernel)
+4. Apply indicator_product_bridge to get the bridge condition
+5. Use CommonEnding.conditional_iid_from_directing_measure to conclude
+-/
+theorem exchangeable_implies_ciid_modulo_bridge
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ) :
+    Exchangeability.ConditionallyIID μ (fun i (ω : Ω[α]) => ω i) := by
+  -- Need measurability of ν ω s for any measurable s (not dependent on s being fixed)
+  have hν_meas_any : ∀ s : Set α, MeasurableSet s → Measurable (fun ω => ν (μ := μ) ω s) := by
+    intros s hs
+    exact ν_eval_measurable hs
+
+  -- Apply CommonEnding.conditional_iid_from_directing_measure
+  -- Note: CommonEnding expects ∀ s, Measurable (fun ω => ν ω s)
+  -- but our ν_eval_measurable has type MeasurableSet s → Measurable ...
+  -- This is actually stronger, but we need to provide a lambda
+  sorry  -- TODO: Need to reconcile type mismatch between conditional_iid_from_directing_measure
+         -- which expects ∀ s to include non-measurable sets, vs ν_eval_measurable which
+         -- only works for measurable sets. This should be fine since CommonEnding only
+         -- uses measurable sets in practice.
 
 end Exchangeability.DeFinetti.ViaKoopman

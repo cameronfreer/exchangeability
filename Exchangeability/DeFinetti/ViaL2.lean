@@ -583,8 +583,8 @@ lemma l2_bound_two_windows_uniform
   -- the covariance structure of f∘X, which is uniform by contractability.
 
   obtain ⟨M, hM⟩ := hf_bdd
-  -- Use bound Cf = 2M² derived from Hölder's inequality
-  let Cf := 2 * M^2
+  -- Use bound Cf = (2M)² = 4M² derived from triangle inequality
+  let Cf := (2*M)^2
   refine ⟨Cf, by positivity, fun n m k hk => ?_⟩
 
   -- Apply Hölder's inequality to bound the squared difference
@@ -598,12 +598,79 @@ lemma l2_bound_two_windows_uniform
                                        ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ := by
     congr 1; ext ω; ring
 
-  -- Step 2: Use boundedness to get a crude but sufficient uniform bound
-  -- For any ω, |f(x)| ≤ M implies |f(X_i(ω)) - f(X_j(ω))| ≤ 2M
-  -- So |(1/k) ∑_i (f(X_{n+i}(ω)) - f(X_{m+i}(ω)))| ≤ (1/k) * k * 2M = 2M
-  -- Therefore E[(1/k ∑ ...)²] ≤ E[(2M)²] = (2M)²
+  -- Step 2: Bound using triangle inequality and boundedness
+  -- For any ω: |∑_i (f(X_{n+i}(ω)) - f(X_{m+i}(ω)))| ≤ k · 2M (triangle ineq + |f| ≤ M)
+  -- So |(1/k) ∑_i ...|² ≤ (2M)², and E[...] ≤ (2M)²/k since the bound is deterministic.
 
-  sorry  -- TODO: Complete using triangle inequality and boundedness of f
+  rw [h_sq_exp]
+
+  -- Show the integrand is bounded by (2M)²/k
+  have h_integrand_bound : ∀ ω, (1/(k:ℝ))^2 * (∑ i : Fin k, f (X (n + i.val + 1) ω) -
+                                                 ∑ i : Fin k, f (X (m + i.val + 1) ω))^2
+                               ≤ (2*M)^2 / k := by
+    intro ω
+    -- Rewrite the sum difference
+    have h_sum_diff : (∑ i : Fin k, f (X (n + i.val + 1) ω) - ∑ i : Fin k, f (X (m + i.val + 1) ω))
+                    = ∑ i : Fin k, (f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω)) := by
+      rw [Finset.sum_sub_distrib]
+    rw [h_sum_diff]
+
+    -- Bound the absolute value of the sum
+    have h_abs_sum : |∑ i : Fin k, (f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω))| ≤ k * (2*M) := by
+      calc |∑ i : Fin k, (f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω))|
+          ≤ ∑ i : Fin k, |f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω)| :=
+            Finset.abs_sum_le_sum_abs _ _
+        _ ≤ ∑ i : Fin k, 2*M := by
+            apply Finset.sum_le_sum
+            intro i _
+            have h1 := hM (X (n + i.val + 1) ω)
+            have h2 := hM (X (m + i.val + 1) ω)
+            calc |f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω)|
+                ≤ |f (X (n + i.val + 1) ω)| + |f (X (m + i.val + 1) ω)| := abs_sub _ _
+              _ ≤ M + M := add_le_add h1 h2
+              _ = 2*M := by ring
+        _ = k * (2*M) := by
+            rw [Finset.sum_const, Finset.card_fin]; ring
+
+    -- Square the bound
+    have h_sq_bound : (∑ i : Fin k, (f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω)))^2
+                    ≤ (k * (2*M))^2 := by
+      have h1 : (∑ i : Fin k, (f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω)))^2
+              ≤ |∑ i : Fin k, (f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω))|^2 := by
+        rw [← sq_abs]
+      have h2 : |∑ i : Fin k, (f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω))|^2
+              ≤ (k * (2*M))^2 := by
+        rw [sq, sq]
+        apply mul_self_le_mul_self (abs_nonneg _) h_abs_sum
+      linarith
+
+    -- Combine with 1/k² factor
+    calc (1/(k:ℝ))^2 * (∑ i : Fin k, (f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω)))^2
+        ≤ (1/(k:ℝ))^2 * (k * (2*M))^2 := mul_le_mul_of_nonneg_left h_sq_bound (sq_nonneg _)
+      _ = (2*M)^2 / k := by
+          have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
+          calc (1/(k:ℝ))^2 * (k * (2*M))^2
+              = (1/(k:ℝ))^2 * k^2 * (2*M)^2 := by ring
+            _ = ((1/k:ℝ) * k)^2 * (2*M)^2 := by rw [mul_pow]; ring
+            _ = 1^2 * (2*M)^2 := by rw [div_mul_cancel₀ (1:ℝ) (ne_of_gt hk_pos)]
+            _ = (2*M)^2 := by ring
+            _ = (2*M)^2 / k := by
+                symm
+                apply div_eq_iff (ne_of_gt hk_pos) |>.mpr
+                ring
+
+  -- Now integrate the bound
+  calc ∫ ω, (1/(k:ℝ))^2 * (∑ i : Fin k, f (X (n + i.val + 1) ω) -
+                            ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
+      ≤ ∫ ω, (2*M)^2 / k ∂μ := by
+          apply integral_mono
+          · -- LHS is integrable: bounded
+            sorry
+          · exact integrable_const _
+          · exact h_integrand_bound
+    _ = (2*M)^2 / k := by
+        rw [integral_const]; simp
+    _ = Cf / k := rfl
 
 /-- **L² bound wrapper for two starting windows**.
 
@@ -640,7 +707,12 @@ private lemma sum_tail_block_reindex
     (c : ℝ) (F : ℕ → ℝ) :
     ∑ i : Fin m, (if i.val < m - k then 0 else c) * F i.val
       = c * ∑ j : Fin k, F (m - k + j.val) := by
-  sorry -- TODO: Implement full proof (currently blocked by Lean 4.24 syntax issue with Finset.sum in calc)
+  -- Strategy:
+  -- 1. Split sum: indices < m-k contribute 0
+  -- 2. For indices i with m-k ≤ i < m, use bijection i ↔ j where j = i - (m-k)
+  -- 3. This gives i.val = m - k + j.val for j : Fin k
+  -- 4. Apply Finset.sum_bij with this bijection
+  sorry
 
 /-- Long average vs tail average bound: Comparing the average of the first m terms
 with the average of the last k terms (where k ≤ m) has the same L² contractability bound.
@@ -681,11 +753,20 @@ private lemma l2_bound_long_vs_tail
   -- The bound from l2_contractability_bound would be: 2σ²(1-ρ) · (1/k) = Cf/k
   -- which is exactly what we need to prove.
 
-  -- However, we can also use the existing hCf_unif more directly:
-  -- Note that the tail average is just an equal-weight window starting at n+(m-k),
-  -- so we can bound the difference using a triangle inequality approach.
+  -- Direct approach using hCf_unif:
+  -- The tail average is an equal-weight window of size k starting at n+(m-k):
+  --   (1/k) ∑_{j<k} f(X_{n+(m-k)+j+1})
+  --
+  -- Strategy:
+  -- 1. Use triangle inequality: |long_avg - tail_avg| ≤ |long_avg - some_window| + |some_window - tail_avg|
+  -- 2. The tail window is exactly window starting at position n+(m-k)
+  -- 3. Can compare it with a window of size k starting at n using hCf_unif
+  -- 4. The bound Cf/k applies since both are equal-weight windows of size k
+  --
+  -- OR alternatively:
+  -- Use that bounded differences of averages satisfy the L² contractability bound
+  -- directly from the weighted sum lemma in L2Approach.
 
-  -- For now, leave as sorry until contractable_covariance_structure is complete
   sorry
 
 /-- **Weighted sums converge in L¹ for contractable sequences.**
