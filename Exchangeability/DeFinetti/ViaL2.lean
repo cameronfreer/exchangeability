@@ -598,12 +598,11 @@ lemma l2_bound_two_windows_uniform
                                        ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ := by
     congr 1; ext ω; ring
 
-  -- Step 2: Use boundedness to get a crude but sufficient uniform bound
-  -- For any ω, |f(x)| ≤ M implies |f(X_i(ω)) - f(X_j(ω))| ≤ 2M
-  -- So |(1/k) ∑_i (f(X_{n+i}(ω)) - f(X_{m+i}(ω)))| ≤ (1/k) * k * 2M = 2M
-  -- Therefore E[(1/k ∑ ...)²] ≤ E[(2M)²] = (2M)²
+  -- Step 2: Bound using triangle inequality and boundedness
+  -- For any ω: |∑_i (f(X_{n+i}(ω)) - f(X_{m+i}(ω)))| ≤ k · 2M (triangle ineq + |f| ≤ M)
+  -- So |(1/k) ∑_i ...|² ≤ (2M)², and E[...] ≤ (2M)²/k since the bound is deterministic.
 
-  sorry  -- TODO: Complete using triangle inequality and boundedness of f
+  sorry  -- TODO: Complete using Finset.abs_sum_le_sum_abs, abs_sub bounds, and integral_mono
 
 /-- **L² bound wrapper for two starting windows**.
 
