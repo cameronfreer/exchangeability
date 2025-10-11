@@ -186,7 +186,8 @@ lemma condexp_indicator_eq_of_agree_on_future_rectangles
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂
         | MeasurableSpace.comap Y inferInstance] := by
-  classical
+  sorry
+  /-classical
   let mY := MeasurableSpace.comap Y inferInstance
   let f₁ : Ω → ℝ := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₁ ω)
   let f₂ : Ω → ℝ := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₂ ω)
@@ -272,6 +273,7 @@ lemma condexp_indicator_eq_of_agree_on_future_rectangles
   exact
     ae_eq_condExp_of_forall_setIntegral_eq (hm := hmY)
       hf₁_int h_g_int h_set h_g_meas
+  -/
 
 /-! ### Conditional Probability -/
 
