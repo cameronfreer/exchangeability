@@ -1175,7 +1175,7 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
             have h2 : Integrable (2 • X₂ * μ[X₂ | m₁]) μ := by
               -- Both X₂ and μ[X₂|m₁] are in L², so their product is in L¹ by Hölder
               have h_prod : Integrable (X₂ * μ[X₂ | m₁]) μ := hL2.integrable_mul h_cond_mem
-              exact h_prod.const_smul 2
+              exact h_prod.smul 2
             have h3 : Integrable ((μ[X₂ | m₁]) ^ 2) μ := h_cond_mem.integrable_sq
             -- Apply linearity: μ[a - b + c | m] = μ[a|m] - μ[b|m] + μ[c|m]
             calc μ[X₂ ^ 2 - 2 • X₂ * μ[X₂ | m₁] + (μ[X₂ | m₁]) ^ 2 | m₁]
@@ -1200,7 +1200,7 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
                 _ =ᵐ[μ] (2 • μ[X₂ | m₁]) * μ[X₂ | m₁] := by
                     have h_int : Integrable ((2 • μ[X₂ | m₁]) * X₂) μ := by
                       have h_prod : Integrable (μ[X₂ | m₁] * X₂) μ := h_cond_mem.integrable_mul hL2
-                      exact h_prod.const_smul 2
+                      exact h_prod.smul 2
                     have h_smul_meas : AEStronglyMeasurable[m₁] (2 • μ[X₂ | m₁]) μ :=
                       h_meas.const_smul 2
                     exact condExp_mul_of_aestronglyMeasurable_left h_smul_meas h_int hX₂_int
