@@ -649,14 +649,13 @@ lemma l2_bound_two_windows_uniform
         ≤ (1/(k:ℝ))^2 * (k * (2*M))^2 := mul_le_mul_of_nonneg_left h_sq_bound (sq_nonneg _)
       _ = (2*M)^2 / k := by
           have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
-          calc (1/(k:ℝ))^2 * (k * (2*M))^2
-              = (1/(k:ℝ))^2 * k^2 * (2*M)^2 := by ring
-            _ = ((1/k:ℝ) * k)^2 * (2*M)^2 := by rw [mul_pow]; ring
-            _ = 1^2 * (2*M)^2 := by rw [div_mul_cancel₀ (1:ℝ) (ne_of_gt hk_pos)]
-            _ = (2*M)^2 := by ring
-            _ = (2*M)^2 * 1 := by ring
-            _ = (2*M)^2 * (k / k) := by rw [div_self (ne_of_gt hk_pos)]
-            _ = (2*M)^2 / k := by ring
+          rw [div_pow, mul_pow]
+          simp only [sq]
+          rw [mul_comm (1/(k:ℝ) * (1/(k:ℝ)))]
+          rw [mul_assoc, mul_assoc, mul_comm (k*k)]
+          simp only [one_div]
+          rw [inv_mul_cancel (ne_of_gt hk_pos), inv_mul_cancel (ne_of_gt hk_pos), one_mul, one_mul]
+          rw [mul_div_assoc]
 
   -- Now integrate the bound
   calc ∫ ω, (1/(k:ℝ))^2 * (∑ i : Fin k, f (X (n + i.val + 1) ω) -
