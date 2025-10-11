@@ -920,7 +920,27 @@ lemma l2_bound_two_windows_uniform
   have h_goal_eq : ∀ ω, (1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
                          (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω)
                        = ∑ i : Fin (2*k), p i * ξ i ω - ∑ i : Fin (2*k), q i * ξ i ω := by
-    sorry -- TODO: Prove this equality by splitting sums
+    intro ω
+    -- Split the RHS sums by the condition i.val < k
+    have h_p_split : ∑ i : Fin (2*k), p i * ξ i ω
+        = ∑ i ∈ Finset.filter (fun (i : Fin (2*k)) => i.val < k) Finset.univ,
+            (1/(k:ℝ)) * f (X (n + i.val + 1) ω) := by
+      sorry -- Sum over first k indices with weight 1/k
+    have h_q_split : ∑ i : Fin (2*k), q i * ξ i ω
+        = ∑ i ∈ Finset.filter (fun (i : Fin (2*k)) => ¬(i.val < k)) Finset.univ,
+            (1/(k:ℝ)) * f (X (m + (i.val - k) + 1) ω) := by
+      sorry -- Sum over last k indices with weight 1/k
+    rw [h_p_split, h_q_split]
+    -- Now need to show these filtered sums equal the original Fin k sums
+    have h_bij_n : ∑ i ∈ Finset.filter (fun i : Fin (2*k) => i.val < k) Finset.univ,
+                     (1/(k:ℝ)) * f (X (n + i.val + 1) ω)
+                 = (1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) := by
+      sorry -- Bijection between filtered indices and Fin k
+    have h_bij_m : ∑ i ∈ Finset.filter (fun i : Fin (2*k) => ¬(i.val < k)) Finset.univ,
+                     (1/(k:ℝ)) * f (X (m + (i.val - k) + 1) ω)
+                 = (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω) := by
+      sorry -- Bijection between filtered indices and Fin k
+    rw [h_bij_n, h_bij_m]
 
   -- Prove p and q are probability distributions
   have hp_prob : (∑ i : Fin (2*k), p i) = 1 ∧ ∀ i, 0 ≤ p i := by
