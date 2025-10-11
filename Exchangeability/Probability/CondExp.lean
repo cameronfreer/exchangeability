@@ -1490,6 +1490,36 @@ lemma Integrable.tendsto_L1_condexp_antitone
 
   sorry
 
+/-- **Lévy's downward theorem: L¹ convergence for antitone σ-algebras.**
+
+For a decreasing family of σ-algebras 𝒢 n ↓ 𝒢∞ := ⨅ n, 𝒢 n,
+conditional expectations converge in L¹:
+  ‖μ[X | 𝒢 n] - μ[X | 𝒢∞]‖₁ → 0
+
+Proof strategy: truncation + L¹-contraction of conditional expectation.
+For any ε > 0:
+1. Choose M so that ‖X - X^M‖₁ < ε/3 (truncation X^M := max(min(X,M),-M))
+2. Use a.e. convergence for bounded X^M (L² case) + Cauchy-Schwarz to get L¹
+3. Triangle inequality: ‖μ[X|𝒢 n] - μ[X|tail]‖₁
+     ≤ ‖μ[X-X^M|𝒢 n]‖₁ + ‖μ[X^M|𝒢 n] - μ[X^M|tail]‖₁ + ‖μ[X^M-X|tail]‖₁
+     ≤ 2‖X-X^M‖₁ + middle term  (by L¹-contraction)
+4. Send n → ∞ (middle → 0 by L² bounded case) then M → ∞
+-/
+lemma Integrable.tendsto_L1_condexp_antitone
+    {Ω} {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (𝒢 : ℕ → MeasurableSpace Ω)
+    (hle : ∀ n, 𝒢 n ≤ m₀) (hdecr : ∀ n, 𝒢 (n+1) ≤ 𝒢 n)
+    [∀ n, SigmaFinite (μ.trim (hle n))]
+    {X : Ω → ℝ} (hX : Integrable X μ) :
+    Tendsto (fun n => eLpNorm (μ[X | 𝒢 n] - μ[X | ⨅ n, 𝒢 n]) 1 μ) atTop (𝓝 0) := by
+  -- This follows from:
+  -- 1. L¹-contraction: ‖μ[f|m]‖₁ ≤ ‖f‖₁ for conditional expectations
+  -- 2. Truncation: for ε>0, ∃M with ‖X - X^M‖₁ < ε where X^M is bounded
+  -- 3. Bounded case: a.e. convergence + Cauchy-Schwarz ⇒ L¹ convergence on prob space
+  -- 4. Triangle inequality to combine the pieces
+  -- The proof is standard but tedious in Lean; we admit for now.
+  sorry
+
 /-- **Reverse martingale convergence theorem.**
 
 Along a decreasing family 𝒢, we have μ[X | 𝒢 n] → μ[X | ⋂ n, 𝒢 n] a.e. and in L¹.
