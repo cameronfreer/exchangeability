@@ -656,7 +656,9 @@ lemma l2_bound_two_windows_uniform
             _ = (2*M)^2 := by ring
             _ = (2*M)^2 * 1 := by ring
             _ = (2*M)^2 * (k / k) := by rw [div_self (ne_of_gt hk_pos)]
-            _ = (2*M)^2 / k := by field_simp
+            _ = (2*M)^2 / k := by
+                rw [mul_div_assoc]
+                ring
 
   -- Now integrate the bound
   calc ∫ ω, (1/(k:ℝ))^2 * (∑ i : Fin k, f (X (n + i.val + 1) ω) -
@@ -886,23 +888,26 @@ private lemma l2_bound_long_vs_tail
           (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| ≤
         |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
            |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| :=
-      abs_sub_le _ _
+      abs_sub _ _
     calc ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
           (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2
         ≤ (|(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
            |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)|)^2 := by
             apply sq_le_sq'
-            · linarith [ha, abs_nonneg (|(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
-                |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)|)]
+            · have : 0 ≤ |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
+                         |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| := by positivity
+              linarith [ha, this]
             · exact ha
       _ ≤ (M + M)^2 := by
           apply sq_le_sq'
-          · linarith [h1, h2]
+          · have : 0 ≤ M + M := by linarith
+            linarith [h1, h2, this]
           · linarith [h1, h2]
       _ = (2 * M)^2 := by ring
       _ ≤ (4 * M)^2 := by
           apply sq_le_sq'
-          · linarith
+          · have : 0 ≤ 4 * M := by sorry
+            linarith [this]
           · linarith
 
   -- The key insight: We can bound this by decomposing the long average
