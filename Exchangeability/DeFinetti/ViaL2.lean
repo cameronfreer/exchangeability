@@ -648,8 +648,9 @@ lemma l2_bound_two_windows_uniform
     have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
     have h_alg : (1/(k:ℝ))^2 * (k * (2*M))^2 = (2*M)^2 / k := by
       have hk_ne : (k:ℝ) ≠ 0 := ne_of_gt hk_pos
-      -- TODO: Complete algebraic simplification. The identity is obvious but Lean tactics struggle.
-      -- Should follow from: (1/k²) * (k²*(2M)²) = (2M)²/k after cancellation
+      -- Algebraic identity: (1/k²) * (k * 2M)² = (1/k²) * k² * (2M)² = (2M)²
+      -- But we want (2M)²/k, not (2M)². The original bound should give us (2M)²/k directly.
+      -- TODO: Fix the bound derivation
       sorry
     calc (1/(k:ℝ))^2 * (∑ i : Fin k, (f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω)))^2
         ≤ (1/(k:ℝ))^2 * (k * (2*M))^2 := mul_le_mul_of_nonneg_left h_sq_bound (sq_nonneg _)
@@ -848,8 +849,8 @@ private lemma l2_bound_long_vs_tail
                   intro i _; exact hM _
               _ = k * M := by rw [Finset.sum_const, Finset.card_fin]; ring
         _ = M := by
-          field_simp
-          ring
+          have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
+          field_simp [ne_of_gt hk_pos]
     have ha : |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
           (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| ≤
         |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
@@ -875,11 +876,15 @@ private lemma l2_bound_long_vs_tail
               have : |f 0| ≤ M := hM 0
               exact le_trans (abs_nonneg _) this
             have : 0 ≤ M + M := by linarith
+            have h_sum_bound : |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
+                               |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| ≤ M + M := by
+              linarith [h1, h2]
             have : -(M + M) ≤ |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
                                |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| := by
-              linarith [abs_nonneg (|(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
-                                    |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)|)]
-            linarith
+              have h_nonneg : 0 ≤ |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
+                                   |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| := by positivity
+              linarith [h_nonneg, hM_nonneg]
+            linarith [h_sum_bound]
           · linarith [h1, h2]
       _ = (2 * M)^2 := by ring
       _ ≤ (4 * M)^2 := by
@@ -889,8 +894,11 @@ private lemma l2_bound_long_vs_tail
               have : |f 0| ≤ M := hM 0
               exact le_trans (abs_nonneg _) this
             have : 0 ≤ 4 * M := by linarith
-            linarith [this]
-          · linarith
+            linarith [this, hM_nonneg]
+          · have hM_nonneg : 0 ≤ M := by
+              have : |f 0| ≤ M := hM 0
+              exact le_trans (abs_nonneg _) this
+            linarith [hM_nonneg]
 
   -- The key insight: We can bound this by decomposing the long average
   -- and using triangle inequality with a common window of size k
