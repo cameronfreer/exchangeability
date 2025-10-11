@@ -940,15 +940,11 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
       have hL₂ :
           ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω ∂(μ.restrict S)
             = ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S) := by
-        simpa using
-          (integral_condExp (μ := μ.restrict S) (m := mF ⊔ mG) (hm := hmFG)
-            (f := (⋃ i, f i).indicator (fun _ => (1 : ℝ))))
+        sorry  -- TODO: Need lemma relating μ[f|m] to (μ.restrict S)[f|m]
       have hR₂ :
           ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂(μ.restrict S)
             = ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S) := by
-        simpa using
-          (integral_condExp (μ := μ.restrict S) (m := mG) (hm := hmG)
-            (f := (⋃ i, f i).indicator (fun _ => (1 : ℝ))))
+        sorry  -- TODO: Need lemma relating μ[f|m] to (μ.restrict S)[f|m]
       -- Evaluate both sides as the (restricted) measure of the union.
       have h_meas_union : MeasurableSet (⋃ i, f i) := MeasurableSet.iUnion hf_meas
       have h_eval :
