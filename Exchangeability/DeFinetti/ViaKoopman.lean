@@ -117,16 +117,49 @@ or upstream mathlib lemmas as they become available.
 This is standard given countably-generated targets (here `ℝ` with Borel), by passing to a
 countable generator and swapping `∀`/`a.e.` quantifiers via `ae_all_iff`, then applying a π-λ argument pointwise.
 
-TODO: Fix syntax - IndepFun is not being resolved correctly. The concept is:
-Kernel.IndepFun X Y κ μ  implies  (for a.e. a)  X and Y are independent under the measure (κ a).
+**Proof strategy**:
+1. Kernel.IndepFun X Y κ μ means: ∀ s ∈ σ(X), ∀ t ∈ σ(Y), ∀ᵐ a, κ a (s ∩ t) = κ a s * κ a t
+2. Use countable generators for σ(X) and σ(Y) (ℝ has countable generator {Iic q | q : ℚ})
+3. Apply ae_all_iff to swap quantifiers: (∀ s t from countable family, ∀ᵐ a, ...) ↔ (∀ᵐ a, ∀ s t, ...)
+4. For each a in the a.e. set, X and Y are measure-independent under κ a
+5. Apply measure-level integral factorization IndepFun.integral_mul_eq_mul_integral
 -/
-axiom Kernel.IndepFun.ae_measure_indepFun
+lemma Kernel.IndepFun.ae_measure_indepFun
     {α₁ Ω : Type*} [MeasurableSpace α₁] [MeasurableSpace Ω]
     (κ : Kernel α₁ Ω) (μ : Measure α₁)
     [IsFiniteMeasure μ] [IsMarkovKernel κ]
     {X Y : Ω → ℝ}
     (hXY : Kernel.IndepFun X Y κ μ) :
-    ∀ᵐ a ∂μ, ∫ ω, X ω * Y ω ∂(κ a) = (∫ ω, X ω ∂(κ a)) * (∫ ω, Y ω ∂(κ a))
+    ∀ᵐ a ∂μ, ∫ ω, X ω * Y ω ∂(κ a) = (∫ ω, X ω ∂(κ a)) * (∫ ω, Y ω ∂(κ a)) := by
+  -- The key idea: kernel independence gives us independence for a.e. parameter
+  -- We'll show that for a.e. a, X and Y are measure-independent under κ a
+
+  -- Step 1: For ℝ with Borel σ-algebra, use a countable π-system that generates it
+  -- The sets {X⁻¹(Iic q) | q : ℚ} form a π-system that generates σ(X)
+  -- Similarly for Y
+
+  -- Step 2: Get independence for all pairs from the countable generator
+  -- hXY gives us: ∀ s ∈ σ(X), ∀ t ∈ σ(Y), ∀ᵐ a, κ a (s ∩ t) = κ a s * κ a t
+
+  -- For a countable collection of sets, we can combine the null sets
+  -- Using ae_all_iff: (∀ i : ℕ, ∀ᵐ a, P i a) ↔ (∀ᵐ a, ∀ i, P i a)
+
+  -- Step 3: On the a.e. set where independence holds for all generator pairs,
+  -- apply Dynkin's π-λ theorem to extend to the full σ-algebras
+
+  -- Step 4: Measure-level independence under κ a gives integral factorization
+  -- This is IndepFun.integral_mul_eq_mul_integral from mathlib
+
+  -- The proof requires several technical lemmas from mathlib:
+  -- 1. Countable generator for Borel ℝ (GeneratesFrom / generateFrom)
+  -- 2. ae_all_iff for swapping quantifiers
+  -- 3. Dynkin π-λ theorem (MeasureTheory.generateFrom_induction or similar)
+  -- 4. IndepFun.integral_mul_eq_mul_integral for measure-level independence
+
+  -- For now, we note that this is standard measure-theoretic infrastructure
+  -- that should exist in mathlib or be provable from existing lemmas
+
+  sorry
 
 /-- **Composition axiom**: Independence is preserved under composition with measurable functions.
 
