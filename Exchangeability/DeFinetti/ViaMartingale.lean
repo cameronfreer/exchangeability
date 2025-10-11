@@ -879,6 +879,15 @@ lemma firstRSigma_mono
   intro f
   exact fun i => f (Fin.castLE hrs i)
 
+/-- The first-r σ-algebra is contained in the future filtration at level m when r ≤ m. -/
+lemma firstRSigma_le_futureFiltration
+    (X : ℕ → Ω → α) {r m : ℕ} (hrm : r ≤ m) :
+    firstRSigma X r ≤ futureFiltration X m := by
+  rw [firstRSigma, futureFiltration]
+  apply MeasurableSpace.comap_mono
+  intro f
+  exact fun i => f (Fin.castLE hrm i)
+
 end FirstBlockCylinder
 
 /-! ## Product of indicators for finite cylinders -/
@@ -1480,7 +1489,9 @@ lemma finite_level_factorization
     have hA_meas : MeasurableSet[futureFiltration X m] A := by
       rw [hA_def]
       -- A is measurable in firstRSigma X r, which is ≤ futureFiltration X m when r ≤ m
-      sorry  -- TODO: Use firstRCylinder_measurable_in_firstRSigma and σ-algebra ordering
+      have h_in_first : MeasurableSet[firstRSigma X r] (firstRCylinder X r Cinit) :=
+        firstRCylinder_measurable_in_firstRSigma X r Cinit hCinit
+      exact firstRSigma_le_futureFiltration X (Nat.le_of_succ_le hm) _ h_in_first
 
     have hB_meas : MeasurableSet B := by
       rw [hB_def]
@@ -1491,7 +1502,14 @@ lemma finite_level_factorization
         (MeasurableSpace.comap A.indicator inferInstance)
         (MeasurableSpace.comap B.indicator inferInstance)
         (futureFiltration X m) μ := by
-      sorry  -- TODO: Derive from coordinate_future_condIndep axiom
+      -- This needs to be derived from coordinate_future_condIndep, which states that
+      -- X_i and shiftRV X (m+1) are conditionally independent given futureFiltration X m.
+      -- Since A depends on X_0,...,X_{r-1} and B = X_r⁻¹(Clast), and r < m, we need to:
+      -- 1. Show that A is measurable w.r.t. σ(X_0,...,X_{r-1}) ⊆ futureFiltration X m
+      -- 2. Show that B is measurable w.r.t. σ(X_r)
+      -- 3. Apply coordinate_future_condIndep with appropriate substitutions
+      -- This is non-trivial and requires developing the theory of conditional independence.
+      sorry
 
     -- Apply indicator factorization
     have hfactor :
@@ -1547,7 +1565,18 @@ lemma finite_level_factorization
                           * μ[Set.indicator Clast (fun _ => (1:ℝ)) ∘ (X 0)
                               | futureFiltration X m] ω) := by
           apply EventuallyEq.mul EventuallyEq.rfl
-          sorry  -- TODO: Apply hswap and pullout
+          -- Apply hswap to replace X r with X 0, then use pullout property
+          calc Set.indicator Clast (fun _ => (1:ℝ)) (X r ·)
+              _ =ᵐ[μ] μ[Set.indicator Clast (fun _ => (1:ℝ)) ∘ X r | futureFiltration X m] := by
+                -- B.indicator is futureFiltration X m-measurable (X r depends on coord r < m)
+                symm
+                apply condExp_of_stronglyMeasurable
+                · intro s hs; exact hs
+                · have : Measurable (Set.indicator Clast (fun _ => (1:ℝ)) ∘ X r) := by
+                    exact Measurable.comp (measurable_const.indicator (by exact hClast)) (hX_meas r)
+                  exact this.stronglyMeasurable
+                · exact (integrable_const (1:ℝ)).indicator ((hX_meas r) hClast)
+              _ =ᵐ[μ] μ[Set.indicator Clast (fun _ => (1:ℝ)) ∘ X 0 | futureFiltration X m] := hswap
         _ =ᵐ[μ] (fun ω => ∏ i : Fin (r+1),
                             μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0)
                               | futureFiltration X m] ω) := by
