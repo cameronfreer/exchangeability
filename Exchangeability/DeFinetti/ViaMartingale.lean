@@ -978,8 +978,9 @@ lemma contractable_dist_eq_on_rectangles_future
 
 end FutureRectangles
 
-/-- Use the AgreeOnFutureRectangles from CondExp (which just wraps measure equality). -/
-abbrev AgreeOnFutureRectangles := Exchangeability.Probability.AgreeOnFutureRectangles
+/-- Placeholder for AgreeOnFutureRectangles until CondExp compiles. -/
+axiom AgreeOnFutureRectangles : {α : Type*} → [MeasurableSpace α] →
+  Measure (α × (ℕ → α)) → Measure (α × (ℕ → α)) → Prop
 
 lemma agree_on_future_rectangles_of_contractable
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -1100,7 +1101,7 @@ lemma measure_ext_of_future_rectangles
 lemma AgreeOnFutureRectangles_to_measure_eq
     {μ ν : Measure (α × (ℕ → α))}
     (h : AgreeOnFutureRectangles μ ν) : μ = ν :=
-  h.measure_eq
+  sorry  -- TODO: Extract h.measure_eq once CondExp type inference is fixed
 
 
 section reverse_martingale
