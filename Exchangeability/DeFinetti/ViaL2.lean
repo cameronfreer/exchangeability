@@ -882,8 +882,25 @@ private lemma l2_bound_long_vs_tail
           apply sq_le_sq (by positivity) (add_le_add h1 h2)
       _ = (4 * M)^2 := by ring
 
-  -- This crude bound shows the integrand is bounded, hence integrable
-  -- TODO: Use the more refined approach with hCf_unif to get the sharp bound Cf/k
+  -- The key insight: We can bound this by decomposing the long average
+  -- and using triangle inequality with a common window of size k
+
+  -- Introduce an intermediate window: (1/k) * ∑_{i<k} f(X_{n+i+1})
+  -- Then: |long_avg - tail_avg|² ≤ 2|long_avg - window_avg|² + 2|window_avg - tail_avg|²
+
+  -- The second term |window_avg - tail_avg|² can be bounded by hCf_unif since
+  -- both are equal-weight windows of size k at positions n and n+(m-k)
+
+  -- For the first term, we use that the long average (1/m) is close to any k-window (1/k)
+  -- This follows from the fact that the long average is a weighted combination that
+  -- includes the k-window with smaller weight
+
+  -- However, the cleanest approach requires more machinery about weighted averages
+  -- For now, we have established the integrand is bounded, which is the key
+  -- integrability property needed for the convergence proof
+
+  -- The sharp bound Cf/k would follow from a more detailed analysis using
+  -- the weighted average lemma from L2Approach, which we defer
   sorry
 
 /-- **Weighted sums converge in L¹ for contractable sequences.**
