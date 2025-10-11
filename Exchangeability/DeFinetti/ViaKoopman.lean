@@ -323,9 +323,31 @@ lemma condindep_pair_given_tail
 
   -- This proof requires substantial ergodic theory machinery not yet
   -- fully developed in this file. Key missing pieces:
-  -- - Identification of metProjection with condExpL2
   -- - Extremal decomposition / ergodic limit theory
   -- - Kernel-level π-λ extension
+
+  -- Part A: Apply Mean Ergodic Theorem
+  -- Step 1: Get MET convergence for any f ∈ L²(μ)
+  have h_met : ∀ (f : Lp ℝ 2 μ),
+      Tendsto (fun n => birkhoffAverage ℝ (koopman shift hσ) _root_.id n f)
+        atTop (𝓝 (metProjection shift hσ f)) := by
+    intro f
+    exact birkhoffAverage_tendsto_metProjection shift hσ f
+
+  -- Step 2: Use bridge lemma to connect metProjection to condExpL2
+  have h_bridge : metProjection shift hσ = condexpL2 (μ := μ) := by
+    exact metProjection_eq_condExpL2_shiftInvariant hσ
+
+  -- Step 3: Combine to get: Birkhoff averages → CE[·|ℐ] in L²
+  have h_birkhoff_to_ce : ∀ (f : Lp ℝ 2 μ),
+      Tendsto (fun n => birkhoffAverage ℝ (koopman shift hσ) _root_.id n f)
+        atTop (𝓝 (condexpL2 f)) := by
+    intro f
+    rw [← h_bridge]
+    exact h_met f
+
+  -- Parts B-D: Now we need to use this convergence to show conditional independence
+  -- This requires the shift equivariance and tail arguments
 
   sorry
 
