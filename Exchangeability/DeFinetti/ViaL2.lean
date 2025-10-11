@@ -924,10 +924,10 @@ lemma l2_bound_two_windows_uniform
 
   -- Prove p and q are probability distributions
   have hp_prob : (∑ i : Fin (2*k), p i) = 1 ∧ ∀ i, 0 ≤ p i := by
-    sorry -- TODO: Prove p sums to 1 and is nonnegative
+    sorry -- TODO: k values of 1/k sum to 1, all weights nonnegative
 
   have hq_prob : (∑ i : Fin (2*k), q i) = 1 ∧ ∀ i, 0 ≤ q i := by
-    sorry -- TODO: Prove q sums to 1 and is nonnegative
+    sorry -- TODO: k values of 1/k sum to 1, all weights nonnegative
 
   -- Apply l2_contractability_bound
   have h_bound := @L2Approach.l2_contractability_bound Ω _ μ _ (2*k) ξ mf
@@ -940,7 +940,9 @@ lemma l2_bound_two_windows_uniform
 
   -- The supremum |pᵢ - qᵢ| = 1/k
   have h_sup : (⨆ i : Fin (2*k), |p i - q i|) = 1 / (k : ℝ) := by
-    sorry -- This follows from sup_two_window_weights
+    apply sup_two_window_weights hk
+    · rfl
+    · rfl
 
   -- Simplify: 2·(√σSqf)²·(1-ρf)·(1/k) = 2σSqf(1-ρf)/k = Cf/k
   have h_simplify : 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) * (1 / (k : ℝ)) = Cf / k := by
