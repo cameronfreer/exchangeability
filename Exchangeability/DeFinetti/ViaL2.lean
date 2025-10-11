@@ -648,8 +648,10 @@ lemma l2_bound_two_windows_uniform
     have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
     have h_alg : (1/(k:ℝ))^2 * (k * (2*M))^2 = (2*M)^2 / k := by
       have hk_ne : (k:ℝ) ≠ 0 := ne_of_gt hk_pos
-      field_simp [hk_ne]
-      ring
+      rw [div_pow, mul_pow, sq, sq, one_pow]
+      rw [div_mul_eq_mul_div, mul_comm (k*k), mul_assoc]
+      rw [mul_div_mul_left _ _ (mul_ne_zero hk_ne hk_ne)]
+      rw [mul_div_assoc]
     calc (1/(k:ℝ))^2 * (∑ i : Fin k, (f (X (n + i.val + 1) ω) - f (X (m + i.val + 1) ω)))^2
         ≤ (1/(k:ℝ))^2 * (k * (2*M))^2 := mul_le_mul_of_nonneg_left h_sq_bound (sq_nonneg _)
       _ = (2*M)^2 / k := h_alg
