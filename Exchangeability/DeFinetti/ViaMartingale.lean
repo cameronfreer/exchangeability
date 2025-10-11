@@ -145,11 +145,13 @@ lemma tailCylinder_measurable {r : ℕ} {C : Fin r → Set α}
     MeasurableSet (tailCylinder (α:=α) r C) := by
   classical
   haveI : Countable (Fin r) := inferInstance
-  apply MeasurableSet.iInter (ι := Fin r)
+  suffices MeasurableSet (⋂ i : Fin r, (fun f => f (i.1 + 1)) ⁻¹' C i) by
+    convert this using 1
+    ext f
+    simp [tailCylinder, Set.mem_iInter, Set.mem_preimage]
+  apply MeasurableSet.iInter
   intro i
-  have hi : Measurable fun f : ℕ → α => f (i.1 + 1) :=
-    measurable_pi_apply (i.1 + 1)
-  simpa [tailCylinder] using hi (hC i)
+  exact (measurable_pi_apply (i.1 + 1)) (hC i)
 
 end TailCylinders
 
@@ -287,6 +289,10 @@ abbrev revFiltration (X : ℕ → Ω → α) (m : ℕ) : MeasurableSpace Ω :=
 lemma revFiltration_zero (X : ℕ → Ω → α) :
     revFiltration X 0 = MeasurableSpace.comap (path X) inferInstance := by
   simp [revFiltration]
+
+lemma revFiltration_le (X : ℕ → Ω → α) (m : ℕ) :
+    revFiltration X m ≤ (inferInstance : MeasurableSpace Ω) :=
+  MeasurableSpace.comap_le_iff_le_map.mpr le_top
 
 /-- The tail σ-algebra for a process X: ⋂ₙ σ(Xₙ, Xₙ₊₁, ...). -/
 def tailSigma (X : ℕ → Ω → α) : MeasurableSpace Ω :=
@@ -446,7 +452,7 @@ lemma contractable_dist_eq_on_first_r_tail
     have h0 : Measurable (fun y : (Fin (r + 1) → α) => y 0) := measurable_pi_apply 0
     have hS : ∀ i, Measurable (fun y : (Fin (r + 1) → α) => y (Fin.succ i)) :=
       fun i => measurable_pi_apply (Fin.succ i)
-    refine (h0 hB).and ?_
+    refine MeasurableSet.inter (h0 hB) ?_
     refine MeasurableSet.iInter ?_
     intro i
     simpa using (hS i (hC i))
@@ -472,11 +478,7 @@ lemma contractable_dist_eq
     {X : ℕ → Ω → α} (hX : Contractable μ X) (k m : ℕ) (hk : k ≤ m) :
     Measure.map (fun ω => (X m ω, shiftRV X (m + 1) ω)) μ
       = Measure.map (fun ω => (X k ω, shiftRV X (m + 1) ω)) μ := by
-  classical
-  have hrect :=
-    agree_on_future_rectangles_of_contractable
-      (μ:=μ) (X:=X) hX k m hk
-  simpa using AgreeOnFutureRectangles_to_measure_eq hrect
+  sorry  -- TODO: Prove using contractability directly (without circular dependency)
 
 /-- **Key convergence result:** The extreme members agree after conditioning on the tail σ-algebra.
 
@@ -613,12 +615,11 @@ lemma extreme_members_equal_on_tail
 
   simpa [f_m, f_0] using h_target
 
-/--
-Additive “future-filtration + standard-cylinder” layer that coexists with the
+/-! ## Future filtration (additive)
+
+Additive "future-filtration + standard-cylinder" layer that coexists with the
 current `revFiltration` / `tailCylinder` infrastructure. Existing names remain intact.
 -/
-
-/-! ## Future filtration (additive) -/
 section FutureFiltration
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
