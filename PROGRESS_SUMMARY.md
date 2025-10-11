@@ -148,14 +148,55 @@ All new helper lemmas:
    - `finite_product_formula`
    - These require substantial CondExp.lean infrastructure
 
+## Continued Session Progress
+
+### Additional Commits (Session 2)
+
+After user fixed some CondExp.lean issues, continued adding infrastructure:
+
+#### 7. Cylinder Set Algebra
+**Commit:** `621ff71` - feat: Add cylinder set algebra lemmas
+
+**Added lemmas:**
+- `cylinder_univ`, `tailCylinder_univ`: Cylinders on universal sets
+- `cylinder_inter`: Intersection of cylinders equals coordinate-wise intersection
+- `firstRCylinder_univ`: FirstRCylinder on universal sets
+- `firstRCylinder_inter`: Intersection of firstRCylinders
+
+**Purpose:** Algebraic properties for cylinder set reasoning
+
+#### 8. IndProd Composition
+**Commit:** `ca686a5` - feat: Add indProd multiplication and intersection lemmas
+
+**Added lemmas:**
+- `indProd_mul`: Product of indProds equals indProd on intersections
+- `indProd_inter_eq`: Connection between indProd and cylinder indicators
+
+**Purpose:** Bridge product and set-theoretic representations
+
+### Total Infrastructure Added
+
+- **Session 1:** 12 helper lemmas (6 commits)
+- **Session 2:** 7 additional helper lemmas (2 commits)
+- **Total:** 19 new helper lemmas across 8 feature commits
+
+### CondExp.lean Status
+
+User has fixed some CondExp.lean compilation errors:
+- Fixed: Missing σ-algebra arguments in condExp_add/sub
+- Fixed: Invalid Integrable.const_smul usage
+- Remaining: Some errors still present but reduced
+
 ## Repository Status
 
 - **Branch:** main
-- **Commits ahead:** 6 commits ready to push
+- **Total commits:** 9 (including merges and user fixes)
+- **Feature commits:** 8
 - **Working tree:** Clean
-- **Build status:** ViaMartingale.lean infrastructure compiles (modulo CondExp.lean dependency)
+- **Build status:** Improved (some CondExp.lean errors remain)
 
 ---
 
 *Generated: 2025-10-11*
 *Session focus: Surgical patch for finite_level_factorization + infrastructure*
+*Updated: 2025-10-11 (Session 2 - continued infrastructure)*

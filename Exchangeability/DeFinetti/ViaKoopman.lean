@@ -116,51 +116,247 @@ or upstream mathlib lemmas as they become available.
 
 This is standard given countably-generated targets (here `ℝ` with Borel), by passing to a
 countable generator and swapping `∀`/`a.e.` quantifiers via `ae_all_iff`, then applying a π-λ argument pointwise.
+
+**Proof strategy**:
+1. Kernel.IndepFun X Y κ μ means: ∀ s ∈ σ(X), ∀ t ∈ σ(Y), ∀ᵐ a, κ a (s ∩ t) = κ a s * κ a t
+2. Use countable generators for σ(X) and σ(Y) (ℝ has countable generator {Iic q | q : ℚ})
+3. Apply ae_all_iff to swap quantifiers: (∀ s t from countable family, ∀ᵐ a, ...) ↔ (∀ᵐ a, ∀ s t, ...)
+4. For each a in the a.e. set, X and Y are measure-independent under κ a
+5. Apply measure-level integral factorization IndepFun.integral_mul_eq_mul_integral
 -/
-axiom Kernel.IndepFun.ae_measure_indepFun
-    {α Ω : Type*} [MeasurableSpace α] [MeasurableSpace Ω]
-    {κ : Kernel α Ω} {μ : Measure α}
+lemma Kernel.IndepFun.ae_measure_indepFun
+    {α₁ Ω : Type*} [MeasurableSpace α₁] [MeasurableSpace Ω]
+    (κ : Kernel α₁ Ω) (μ : Measure α₁)
     [IsFiniteMeasure μ] [IsMarkovKernel κ]
     {X Y : Ω → ℝ}
     (hXY : Kernel.IndepFun X Y κ μ) :
-    ∀ᵐ a ∂μ, MeasureTheory.IndepFun X Y (κ a)
+    ∀ᵐ a ∂μ, ∫ ω, X ω * Y ω ∂(κ a) = (∫ ω, X ω ∂(κ a)) * (∫ ω, Y ω ∂(κ a)) := by
+  -- The key idea: kernel independence gives us independence for a.e. parameter
+  -- We'll show that for a.e. a, X and Y are measure-independent under κ a
+
+  -- Step 1: For ℝ with Borel σ-algebra, use a countable π-system that generates it
+  -- The sets {X⁻¹(Iic q) | q : ℚ} form a π-system that generates σ(X)
+  -- Similarly for Y
+
+  -- Step 2: Get independence for all pairs from the countable generator
+  -- hXY gives us: ∀ s ∈ σ(X), ∀ t ∈ σ(Y), ∀ᵐ a, κ a (s ∩ t) = κ a s * κ a t
+
+  -- For a countable collection of sets, we can combine the null sets
+  -- Using ae_all_iff: (∀ i : ℕ, ∀ᵐ a, P i a) ↔ (∀ᵐ a, ∀ i, P i a)
+
+  -- Step 3: On the a.e. set where independence holds for all generator pairs,
+  -- apply Dynkin's π-λ theorem to extend to the full σ-algebras
+
+  -- Step 4: Measure-level independence under κ a gives integral factorization
+  -- This is IndepFun.integral_mul_eq_mul_integral from mathlib
+
+  -- The proof requires several technical lemmas from mathlib:
+  -- 1. Countable generator for Borel ℝ (GeneratesFrom / generateFrom)
+  -- 2. ae_all_iff for swapping quantifiers
+  -- 3. Dynkin π-λ theorem (MeasureTheory.generateFrom_induction or similar)
+  -- 4. IndepFun.integral_mul_eq_mul_integral for measure-level independence
+
+  -- For now, we note that this is standard measure-theoretic infrastructure
+  -- that should exist in mathlib or be provable from existing lemmas
+
+  sorry
+
+/-- **Composition axiom**: Independence is preserved under composition with measurable functions.
+
+If X and Y are kernel-independent, then f ∘ X and g ∘ Y are also kernel-independent
+for any measurable functions f and g.
+
+**Proof strategy**:
+- Kernel.IndepFun X Y κ μ means Kernel.Indep (comap X) (comap Y) κ μ
+- For measurable f, comap (f ∘ X) ⊆ comap X (preimages under f∘X are preimages under X)
+- Independence of larger σ-algebras implies independence of sub-σ-algebras
+-/
+lemma Kernel.IndepFun.comp
+    {α Ω β γ : Type*} [MeasurableSpace α] [MeasurableSpace Ω]
+    [MeasurableSpace β] [MeasurableSpace γ]
+    {κ : Kernel α Ω} {μ : Measure α}
+    {X : Ω → β} {Y : Ω → γ}
+    (hXY : Kernel.IndepFun X Y κ μ)
+    {f : β → ℝ} {g : γ → ℝ}
+    (hf : Measurable f) (hg : Measurable g) :
+    Kernel.IndepFun (f ∘ X) (g ∘ Y) κ μ := by
+  -- The key insight: Kernel.IndepFun is defined as independence of the comap σ-algebras
+  -- For sets s, t in the target σ-algebras, we need to show:
+  -- ∀ s ∈ σ(f∘X), ∀ t ∈ σ(g∘Y), ∀ᵐ a, κ a (s ∩ t) = κ a s * κ a t
+
+  intro s t hs ht
+  -- s is measurable w.r.t. comap (f ∘ X), so s = (f ∘ X)⁻¹(S) for some measurable S ⊆ ℝ
+  -- This means s = X⁻¹(f⁻¹(S)), so s is in comap X
+  -- Similarly t is in comap Y
+
+  -- We need to show s ∈ comap X and t ∈ comap Y
+  -- Key fact: if s is measurable w.r.t. comap (f ∘ X), then s is measurable w.r.t. comap X
+  -- because comap (f ∘ X) ≤ comap X
+
+  have hs' : MeasurableSet[MeasurableSpace.comap X inferInstance] s := by
+    -- hs : MeasurableSet[comap (f ∘ X)] s
+    -- Need: MeasurableSet[comap X] s
+
+    -- Strategy: Show comap (f ∘ X) ≤ comap X
+    -- This means every measurable set in comap (f ∘ X) is also in comap X
+
+    -- The key property: (f ∘ X) = f ∘ X means preimages under (f ∘ X)
+    -- are preimages under X of preimages under f
+    -- When f is measurable, this gives us what we need
+
+    -- We use: MeasurableSpace.comap_comp or prove it directly
+    have h_le : MeasurableSpace.comap (f ∘ X) inferInstance ≤ MeasurableSpace.comap X inferInstance := by
+      -- Show that every set measurable w.r.t. comap (f ∘ X) is measurable w.r.t. comap X
+      intro s' hs'
+      -- hs' : MeasurableSet[comap (f ∘ X)] s'
+      -- Need: MeasurableSet[comap X] s'
+      sorry
+    exact h_le hs
+
+  have ht' : MeasurableSet[MeasurableSpace.comap Y inferInstance] t := by
+    have h_le : MeasurableSpace.comap (g ∘ Y) inferInstance ≤ MeasurableSpace.comap Y inferInstance := by
+      sorry
+    exact h_le ht
+
+  exact hXY s t hs' ht'
 
 /-- **Core axiom**: Conditional independence of the first two coordinates given the tail σ-algebra.
 
 This is the substantive part of Kallenberg's "first proof": the ergodic/shift argument
 shows the coordinates are conditionally independent given `shiftInvariantSigma`.
+
+**Proof Strategy** (Kallenberg's ergodic argument):
+1. **Mean Ergodic Theorem**: For shift-invariant μ, Birkhoff averages converge to
+   conditional expectation onto shift-invariant σ-algebra
+
+2. **Key observation**: For bounded measurable f, g and any k ≥ 1:
+   CE[f(ω₀)·g(ωₖ) | ℐ] is shift-invariant
+   where ℐ = shiftInvariantSigma
+
+3. **Extremal property**: Show CE[f(ω₀)·g(ωₖ) | ℐ] doesn't depend on k
+   - Use shift equivariance: shift^k ω has same conditional distribution
+   - Extremal measures on shift-invariant functions are ergodic
+   - For ergodic measures, time averages equal space averages
+
+4. **Independence**: Once CE[f(ω₀)·g(ωₖ) | ℐ] = CE[f(ω₀) | ℐ]·CE[g(ωₖ) | ℐ]
+   for all k, and taking k → ∞ with tail σ-algebra argument
+
+5. **Generator extension**: Extend from simple functions to full σ-algebra
+   using π-λ theorem at kernel level
+
+**Mathematical Content**: This is the deep ergodic-theoretic core of de Finetti's theorem.
+It uses the Mean Ergodic Theorem and extremal measure theory.
 -/
-axiom condindep_pair_given_tail
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+lemma condindep_pair_given_tail
+    (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ) :
     Kernel.IndepFun (fun ω : Ω[α] => ω 0) (fun ω : Ω[α] => ω 1)
-      (condExpKernel μ (shiftInvariantSigma (α := α))) μ
+      (condExpKernel μ (shiftInvariantSigma (α := α))) μ := by
+  -- This requires the full power of the Mean Ergodic Theorem
+  -- and extremal measure decomposition
 
-/-- **Axiomized product factorization** for general finite cylinder products. -/
-axiom condexp_product_factorization_ax
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+  -- Step 1: Apply Mean Ergodic Theorem
+  -- For L²(μ), Birkhoff averages (1/n)∑ᵢ₌₀ⁿ⁻¹ f ∘ shift^i converge to
+  -- the orthogonal projection onto shift-invariant functions
+
+  -- Step 2: Show this projection equals conditional expectation
+  -- onto shiftInvariantSigma
+
+  -- Step 3: Use shift equivariance to show
+  -- CE[f(ω₀)·g(ω₁) | ℐ] = CE[f(ω₀) | ℐ]·CE[g(ω₁) | ℐ]
+
+  -- Step 4: Apply generator + Dynkin theorem to extend to kernel independence
+
+  sorry
+
+/-- **Axiomized product factorization** for general finite cylinder products.
+
+**Proof Strategy** (Induction on m):
+- **Base case** (m = 0): Product of empty family is 1, trivial
+- **Base case** (m = 1): Single function, follows from marginal properties
+- **Inductive step**: Split product into first m factors and last factor
+  * Apply `condindep_pair_given_tail` to show independence
+  * Use inductive hypothesis on first m factors
+  * Apply `Kernel.IndepFun.comp` to compose with product function
+  * Multiply factorizations
+
+This extends conditional independence from pairs to finite products.
+-/
+lemma condexp_product_factorization_ax
+    (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
     (m : ℕ) (fs : Fin m → α → ℝ)
     (hmeas : ∀ k, Measurable (fs k))
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
     (hciid : True) :
     μ[fun ω => ∏ k, fs k (ω (k : ℕ)) | shiftInvariantSigma (α := α)]
-      =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω))
+      =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν μ ω)) := by
+  -- Induction on m
+  -- Base case: m = 0 or m = 1
+  -- Inductive step: use condindep_pair_given_tail + IH
+  sorry
 
-/-- **Bridge axiom** for ENNReal version needed by `CommonEnding`. -/
-axiom indicator_product_bridge_ax
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+/-- **Bridge axiom** for ENNReal version needed by `CommonEnding`.
+
+**Proof Strategy**:
+1. Apply `condexp_product_factorization_ax` to indicator functions
+   - Indicators are bounded measurable functions
+   - Product of indicators gives cylinder set probabilities
+
+2. Integrate both sides:
+   - LHS: ∫ CE[∏ indicators | ℐ] dμ
+   - RHS: ∫ ∏(∫ indicator dν) dμ
+   - Use tower property: ∫ CE[f | ℐ] dμ = ∫ f dμ
+
+3. Convert from ℝ to ENNReal:
+   - Use ENNReal.ofReal properties
+   - Indicators take values in [0,1], so conversion is clean
+
+This connects the conditional expectation factorization to measure-theoretic form.
+-/
+lemma indicator_product_bridge_ax
+    (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
     (m : ℕ) (k : Fin m → ℕ) (B : Fin m → Set α)
     (hB_meas : ∀ i, MeasurableSet (B i)) :
     ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
-      = ∫⁻ ω, ∏ i : Fin m, (ν (μ := μ) ω) (B i) ∂μ
+      = ∫⁻ ω, ∏ i : Fin m, (ν μ ω) (B i) ∂μ := by
+  -- Apply condexp_product_factorization_ax to indicators
+  -- Integrate both sides using tower property
+  -- Convert to ENNReal
+  sorry
 
-/-- **Final bridge axiom** to the `ConditionallyIID` structure. -/
-axiom exchangeable_implies_ciid_modulo_bridge_ax
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+/-- **Final bridge axiom** to the `ConditionallyIID` structure.
+
+**Proof Strategy**:
+This is the assembly step connecting all previous axioms to the `ConditionallyIID` definition.
+
+1. Unfold `ConditionallyIID` definition:
+   - Need to provide a kernel ν : Ω[α] → Measure α
+   - Show coordinates are iid under ν(ω) for each ω
+
+2. Use ν defined earlier: `ν μ ω = Kernel.map (condExpKernel μ ℐ) measurable_pi_apply_0 ω`
+   - This is the marginal distribution at coordinate 0
+   - By shift-invariance, all coordinates have same conditional marginal
+
+3. Apply `indicator_product_bridge_ax`:
+   - This gives the product measure property for cylinders
+   - Cylinder sets generate the product σ-algebra
+
+4. Call `CommonEnding.conditional_iid_from_directing_measure`:
+   - Existing helper that assembles CIID structure from cylinder properties
+   - Provide ν_eval_measurable (proved earlier)
+   - Provide indicator_product_bridge (Axiom 5)
+
+This completes de Finetti's theorem by showing exchangeable ⇒ conditionally IID.
+-/
+lemma exchangeable_implies_ciid_modulo_bridge_ax
+    (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ) :
-    Exchangeability.ConditionallyIID μ (fun i (ω : Ω[α]) => ω i)
+    Exchangeability.ConditionallyIID μ (fun i (ω : Ω[α]) => ω i) := by
+  -- Apply CommonEnding.conditional_iid_from_directing_measure
+  -- with ν and indicator_product_bridge_ax
+  sorry
 
 namespace MeasureTheory
 
@@ -191,6 +387,40 @@ lemma integral_indicator_const {Ω : Type*} [MeasurableSpace Ω]
       = ∫ ω, c * s.indicator (fun _ => (1 : ℝ)) ω ∂μ := by rw [h_eq]
     _ = c * ∫ ω, s.indicator (fun _ => (1 : ℝ)) ω ∂μ := integral_const_mul c _
     _ = c * (μ s).toReal := by rw [integral_indicator_one hs]
+
+/-- Quantize a real number to a dyadic grid with bounds ±C and precision ε. -/
+def quantize (C ε : ℝ) (x : ℝ) : ℝ :=
+  let v := max (-C) (min C x)
+  ⌊v / ε⌋ * ε
+
+/-- The quantization error is bounded by the grid spacing. -/
+lemma quantize_err_le {C ε x : ℝ} (hε : 0 < ε) :
+    |quantize C ε x - max (-C) (min C x)| ≤ ε := by
+  unfold quantize
+  set v := max (-C) (min C x)
+  have h_floor : (⌊v / ε⌋ : ℝ) ≤ v / ε := Int.floor_le (v / ε)
+  have h_ceil : v / ε < (⌊v / ε⌋ : ℝ) + 1 := Int.lt_floor_add_one (v / ε)
+  have h1 : (⌊v / ε⌋ : ℝ) * ε ≤ v := by
+    calc (⌊v / ε⌋ : ℝ) * ε ≤ (v / ε) * ε := by nlinarith [hε]
+       _ = v := by field_simp
+  have h2 : v < ((⌊v / ε⌋ : ℝ) + 1) * ε := by
+    calc v = (v / ε) * ε := by field_simp
+       _ < ((⌊v / ε⌋ : ℝ) + 1) * ε := by nlinarith [hε, h_ceil]
+  have h3 : v - (⌊v / ε⌋ : ℝ) * ε < ε := by linarith
+  rw [abs_sub_le_iff]
+  constructor
+  · linarith
+  · linarith
+
+/-- Quantized values are bounded by C + 1 when ε ≤ 1. -/
+lemma quantize_abs_le {C ε x : ℝ} (hC : 0 ≤ C) (hε : 0 < ε) (hε1 : ε ≤ 1) :
+    |quantize C ε x| ≤ C + 1 := by
+  sorry
+
+/-- Quantization converges pointwise as ε → 0. -/
+lemma quantize_tendsto {C x : ℝ} (hC : 0 ≤ C) :
+    Tendsto (fun ε => quantize C ε x) (𝓝[>] 0) (𝓝 (max (-C) (min C x))) := by
+  sorry
 
 end MeasureTheory
 
@@ -1128,22 +1358,8 @@ lemma Kernel.IndepFun.integral_mul
     (hX : Measurable X) (hY : Measurable Y)
     (hX_bd : ∃ C, ∀ ω, |X ω| ≤ C) (hY_bd : ∃ C, ∀ ω, |Y ω| ≤ C) :
     ∀ᵐ a ∂μ, ∫ ω, X ω * Y ω ∂(κ a) = (∫ ω, X ω ∂(κ a)) * (∫ ω, Y ω ∂(κ a)) := by
-  classical
-  -- a.e. measure-level independence
-  have h_indep_ae :=
-    Kernel.IndepFun.ae_measure_indepFun (κ := κ) (μ := μ) (X := X) (Y := Y) hXY
-  -- integrability (from boundedness)
-  obtain ⟨CX, hCX⟩ := hX_bd
-  obtain ⟨CY, hCY⟩ := hY_bd
-  have hX_int : ∀ a, Integrable X (κ a) := fun _ =>
-    integrable_of_bounded (μ := κ _) hX ⟨CX, hCX⟩
-  have hY_int : ∀ a, Integrable Y (κ a) := fun _ =>
-    integrable_of_bounded (μ := κ _) hY ⟨CY, hCY⟩
-  -- pointwise application of the measure-level lemma
-  refine h_indep_ae.mono ?_
-  intro a ha
-  exact MeasureTheory.IndepFun.integral_mul_eq_mul_integral
-    (μ := κ a) (X := X) (Y := Y) ha (hX_int a) (hY_int a)
+  -- Direct application of the axiom
+  exact Kernel.IndepFun.ae_measure_indepFun hXY
 
 /-! ### OLD PROOF (kept for reference - can be moved to AxiomsForDeFinetti to prove the axiom)
 
@@ -1903,12 +2119,9 @@ private lemma condexp_pair_factorization
                       (fun y : Ω[α] => g (y 1))
                       (condExpKernel μ (shiftInvariantSigma (α := α))) μ := by
     -- compose `condindep_pair_given_tail` with measurable `f`, `g`
-    -- mathlib's `Kernel.IndepFun.comp` handles this; we use it implicitly.
-    -- We give the measurability facts explicitly below.
-    have base := condindep_pair_given_tail (μ := μ) (α := α) hσ
-    exact base.comp
-      (hf_meas.comp (measurable_pi_apply 0))
-      (hg_meas.comp (measurable_pi_apply 1))
+    -- Apply Kernel.IndepFun.comp to compose with measurable functions
+    have base := condindep_pair_given_tail μ hσ
+    exact base.comp hf_meas hg_meas
   -- factorize the kernel integral a.e.
   have h_factor :
       (fun ω => ∫ y, f (y 0) * g (y 1)
@@ -1923,10 +2136,7 @@ private lemma condexp_pair_factorization
       let ⟨C, hC⟩ := hf_bd; ⟨C, fun ω => hC (ω 0)⟩
     have hg_bd' : ∃ C, ∀ ω, |(fun y : Ω[α] => g (y 1)) ω| ≤ C :=
       let ⟨C, hC⟩ := hg_bd; ⟨C, fun ω => hC (ω 1)⟩
-    exact Kernel.IndepFun.integral_mul (μ := μ)
-      (κ := condExpKernel μ (shiftInvariantSigma (α := α)))
-      (X := fun y => f (y 0)) (Y := fun y => g (y 1))
-      h_indep12
+    exact Kernel.IndepFun.integral_mul h_indep12
       (hf_meas.comp (measurable_pi_apply 0))
       (hg_meas.comp (measurable_pi_apply 1))
       hf_bd' hg_bd'

@@ -145,7 +145,7 @@ lemma tailCylinder_measurable {r : ℕ} {C : Fin r → Set α}
     MeasurableSet (tailCylinder (α:=α) r C) := by
   classical
   haveI : Countable (Fin r) := inferInstance
-  refine MeasurableSet.iInter ?_
+  apply MeasurableSet.iInter (ι := Fin r)
   intro i
   have hi : Measurable fun f : ℕ → α => f (i.1 + 1) :=
     measurable_pi_apply (i.1 + 1)
@@ -181,9 +181,8 @@ lemma orderEmbOfFin_surj {s : Finset ℕ} {x : ℕ} (hx : x ∈ s) :
     intro i j hij
     exact h_inj (Subtype.ext_iff.mp hij)
   -- Injective function between finite types of equal cardinality is surjective
-  have hf_surj : Function.Surjective f := by
-    have : Fintype.card (Fin s.card) = Fintype.card s := rfl
-    exact Fintype.bijective_iff_injective_and_card.mpr ⟨hf_inj, this⟩ |>.2
+  have hf_surj : Function.Surjective f :=
+    Finite.surjective_of_injective hf_inj
   obtain ⟨i, hi⟩ := hf_surj ⟨x, hx⟩
   use i
   exact Subtype.ext_iff.mp hi
@@ -195,22 +194,20 @@ lemma strictMono_fin_cases
     (ha : ∀ i, a < f i) :
     StrictMono (Fin.cases a (fun i => f i)) := by
   intro i j hij
-  classical
-  fin_cases i <;> fin_cases j
-  · -- 0 < 0 impossible
-    exact False.elim ((lt_irrefl (0 : Fin (n + 1))) hij)
-  · -- 0 < succ j
-    rename_i j
-    simpa using ha j
-  · -- succ i < 0 impossible
-    rename_i i
-    have : ((Fin.succ i : Fin (n + 1)).1) < 0 := by
-      simpa [Fin.lt_iff_val_lt_val] using hij
-    exact False.elim ((Nat.not_lt.mpr (Nat.zero_le _)) this)
-  · -- succ i < succ j
-    rename_i i j
-    have hij' : i < j := (Fin.succ_lt_succ_iff).1 hij
-    simpa using hf hij'
+  cases i using Fin.cases with
+  | zero =>
+    cases j using Fin.cases with
+    | zero => exact absurd hij (lt_irrefl _)
+    | succ j => simpa using ha j
+  | succ i =>
+    cases j using Fin.cases with
+    | zero =>
+      have : (Fin.succ i : Fin (n + 1)).1 < 0 := by
+        simpa [Fin.lt_iff_val_lt_val] using hij
+      exact absurd this (Nat.not_lt.mpr (Nat.zero_le _))
+    | succ j =>
+      have hij' : i < j := (Fin.succ_lt_succ_iff).1 hij
+      simpa using hf hij'
 
 end FinsetOrder
 
@@ -249,30 +246,30 @@ lemma shiftProcess_add (X : ℕ → Ω → α) (m k : ℕ) :
 /-- If all coordinates of X are measurable, so are all coordinates of shifted process. -/
 lemma measurable_shiftProcess (X : ℕ → Ω → α) (m : ℕ)
     (hX : ∀ n, Measurable (X n)) (n : ℕ) :
-    Measurable (shiftProcess X m n) := by
-  simp only [shiftProcess]
-  exact hX (m + n)
+    Measurable (shiftProcess X m n) :=
+  hX (m + n)
 
 /-- The path map is measurable when all coordinates are measurable. -/
 lemma measurable_path (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) :
     Measurable (path X) := by
   apply measurable_pi_lambda
   intro n
-  simpa [path] using hX n
+  simp only [path]
+  exact hX n
 
 omit [MeasurableSpace Ω] [MeasurableSpace α] in
 lemma path_eq_shiftRV_zero (X : ℕ → Ω → α) : path X = shiftRV X 0 :=
   (shiftRV_zero X).symm
 
-/-- Composing X_n with shiftProcess extracts the (m+n)-th coordinate. -/
 omit [MeasurableSpace Ω] [MeasurableSpace α] in
+/-- Composing X_n with shiftProcess extracts the (m+n)-th coordinate. -/
 @[simp]
 lemma coord_comp_shiftProcess (X : ℕ → Ω → α) (m n : ℕ) :
     (fun ω => shiftProcess X m n ω) = X (m + n) := by
   funext ω; simp [shiftProcess]
 
-/-- Relationship between shiftRV and path composition. -/
 omit [MeasurableSpace Ω] [MeasurableSpace α] in
+/-- Relationship between shiftRV and path composition. -/
 lemma shiftRV_eq_path_comp_shift (X : ℕ → Ω → α) (m : ℕ) :
     shiftRV X m = path (shiftProcess X m) := by
   funext ω n; simp [shiftRV, path, shiftProcess]
@@ -303,11 +300,6 @@ lemma tailSigma_eq_iInf_rev (X : ℕ → Ω → α) :
 section Measurability
 
 variable {X : ℕ → Ω → α}
-
-lemma measurable_path (hX : ∀ n, Measurable (X n)) :
-    Measurable (path X) := by
-  classical
-  simpa [path] using measurable_pi_iff.mpr hX
 
 lemma measurable_shiftRV (hX : ∀ n, Measurable (X n)) {m : ℕ} :
     Measurable (shiftRV X m) := by
@@ -900,6 +892,22 @@ lemma mem_firstRCylinder_iff (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Se
     ω ∈ firstRCylinder X r C ↔ ∀ i : Fin r, X i ω ∈ C i :=
   Iff.rfl
 
+/-- firstRCylinder on universal sets is the whole space. -/
+lemma firstRCylinder_univ (X : ℕ → Ω → α) (r : ℕ) :
+    firstRCylinder X r (fun _ => Set.univ) = Set.univ := by
+  ext ω; simp [firstRCylinder]
+
+/-- Intersection of firstRCylinders equals coordinate-wise intersection. -/
+lemma firstRCylinder_inter (X : ℕ → Ω → α) {r : ℕ} {C D : Fin r → Set α} :
+    firstRCylinder X r C ∩ firstRCylinder X r D = firstRCylinder X r (fun i => C i ∩ D i) := by
+  ext ω
+  simp [firstRCylinder, Set.mem_inter_iff]
+  constructor
+  · intro ⟨hC, hD⟩ i
+    exact ⟨hC i, hD i⟩
+  · intro h
+    exact ⟨fun i => (h i).1, fun i => (h i).2⟩
+
 end FirstBlockCylinder
 
 /-! ## Product of indicators for finite cylinders -/
@@ -1041,6 +1049,24 @@ lemma indProd_measurable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace �
     Measurable (indProd X r C) :=
   (indProd_stronglyMeasurable X r C hX hC).measurable
 
+/-- indProd product equals multiplication of indProds. -/
+lemma indProd_mul {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) {r : ℕ} {C D : Fin r → Set α} (ω : Ω) :
+    indProd X r C ω * indProd X r D ω = indProd X r (fun i => C i ∩ D i) ω := by
+  simp only [indProd]
+  rw [Finset.prod_mul_distrib]
+  congr 1
+  ext i
+  by_cases hC : X i ω ∈ C i <;> by_cases hD : X i ω ∈ D i <;>
+    simp [Set.indicator, hC, hD, Set.mem_inter_iff]
+
+/-- indProd on intersection via firstRCylinder. -/
+lemma indProd_inter_eq {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) {r : ℕ} {C D : Fin r → Set α} :
+    indProd X r (fun i => C i ∩ D i)
+      = (firstRCylinder X r C ∩ firstRCylinder X r D).indicator (fun _ => (1 : ℝ)) := by
+  rw [← firstRCylinder_inter, indProd_eq_firstRCylinder_indicator]
+
 /-- Drop the first coordinate of a path. -/
 def drop {α : Type*} (f : ℕ → α) : ℕ → α := shiftSeq (β:=α) 1 f
 
@@ -1090,6 +1116,25 @@ lemma tailCylinder_measurable {r : ℕ} {C : Fin r → Set α}
 /-- Empty tail cylinder is the whole space. -/
 @[simp] lemma tailCylinder_zero : tailCylinder (α:=α) 0 (fun _ => Set.univ) = Set.univ := by
   ext f; simp [tailCylinder]
+
+/-- Cylinder on universal sets is the whole space. -/
+lemma cylinder_univ {r : ℕ} : cylinder (α:=α) r (fun _ => Set.univ) = Set.univ := by
+  ext f; simp [cylinder]
+
+/-- Tail cylinder on universal sets is the whole space. -/
+lemma tailCylinder_univ {r : ℕ} : tailCylinder (α:=α) r (fun _ => Set.univ) = Set.univ := by
+  ext f; simp [tailCylinder]
+
+/-- Cylinders form intersections coordinate-wise. -/
+lemma cylinder_inter {r : ℕ} {C D : Fin r → Set α} :
+    cylinder (α:=α) r C ∩ cylinder (α:=α) r D = cylinder (α:=α) r (fun i => C i ∩ D i) := by
+  ext f
+  simp [cylinder, Set.mem_inter_iff]
+  constructor
+  · intro ⟨hC, hD⟩ i
+    exact ⟨hC i, hD i⟩
+  · intro h
+    exact ⟨fun i => (h i).1, fun i => (h i).2⟩
 
 end CylinderBridge
 
