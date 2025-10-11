@@ -187,20 +187,22 @@ lemma condexp_indicator_eq_of_agree_on_future_rectangles
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂
         | MeasurableSpace.comap Y inferInstance] := by
   classical
-  set mY := MeasurableSpace.comap Y inferInstance
-  set f₁ : Ω → ℝ := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₁ ω)
-  set f₂ : Ω → ℝ := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₂ ω)
+  let mY := MeasurableSpace.comap Y inferInstance
+  let f₁ : Ω → ℝ := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₁ ω)
+  let f₂ : Ω → ℝ := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X₂ ω)
   have hX₁B : MeasurableSet (X₁ ⁻¹' B) := hX₁ hB
   have hX₂B : MeasurableSet (X₂ ⁻¹' B) := hX₂ hB
   have hf₁_indicator : f₁ = Set.indicator (X₁ ⁻¹' B) (fun _ : Ω => (1 : ℝ)) := by
-    funext ω; by_cases hω : X₁ ω ∈ B <;> simp [f₁, Set.indicator, hω]
+    funext ω; by_cases hω : X₁ ω ∈ B <;> simp [Set.indicator, hω]
   have hf₂_indicator : f₂ = Set.indicator (X₂ ⁻¹' B) (fun _ : Ω => (1 : ℝ)) := by
-    funext ω; by_cases hω : X₂ ω ∈ B <;> simp [f₂, Set.indicator, hω]
+    funext ω; by_cases hω : X₂ ω ∈ B <;> simp [Set.indicator, hω]
   have h_int_const : Integrable (fun _ : Ω => (1 : ℝ)) μ := integrable_const _
   have hf₁_int : Integrable f₁ μ := by
-    simpa [f₁, hf₁_indicator] using h_int_const.indicator hX₁B
+    rw [hf₁_indicator]
+    exact h_int_const.indicator hX₁B
   have hf₂_int : Integrable f₂ μ := by
-    simpa [f₂, hf₂_indicator] using h_int_const.indicator hX₂B
+    rw [hf₂_indicator]
+    exact h_int_const.indicator hX₂B
   have hmY : mY ≤ inferInstance := by
     intro s hs
     rcases hs with ⟨E, hE, rfl⟩
@@ -319,7 +321,7 @@ lemma condProb_ae_bound_one {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [IsPro
     (A : Set Ω) (hA : MeasurableSet[m₀] A) :
     ∀ᵐ ω ∂μ, ‖μ[A.indicator (fun _ => (1 : ℝ)) | m] ω‖ ≤ 1 := by
   haveI : SigmaFinite (μ.trim hm) := inst
-  have h := @condProb_ae_nonneg_le_one Ω m₀ μ _ m hm inst A hA
+  have h := condProb_ae_nonneg_le_one m hm hA
   filter_upwards [h] with ω hω
   rcases hω with ⟨h0, h1⟩
   have : |condProb μ m A ω| ≤ 1 := by
@@ -617,16 +619,16 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
             ∫ ω in ⋃ i, f i, g ω ∂μ
               = ∑' i, ∫ ω in f i, g ω ∂μ :=
           integral_iUnion
-            (hf_meas := fun i => (hmFG _ (hf_meas i)))
-            (hfdisj := hf_disj)
-            (hfi := fun _ => hg_int.integrableOn)
+            (fun i => (hmFG _ (hf_meas i)))
+            hf_disj
+            hg_int.integrableOn
         have h_right :
             ∫ ω in ⋃ i, f i, (H.indicator fun _ => (1 : ℝ)) ω ∂μ
               = ∑' i, ∫ ω in f i, (H.indicator fun _ => (1 : ℝ)) ω ∂μ :=
           integral_iUnion
-            (hf_meas := fun i => (hmFG _ (hf_meas i)))
-            (hfdisj := hf_disj)
-            (hfi := fun _ => hH_int.integrableOn)
+            (fun i => (hmFG _ (hf_meas i)))
+            hf_disj
+            hH_int.integrableOn
         -- termwise equality from hypothesis
         have h_terms : ∀ i, ∫ ω in f i, g ω ∂μ
                             = ∫ ω in f i, (H.indicator fun _ => (1 : ℝ)) ω ∂μ :=
@@ -650,7 +652,8 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
             exact MeasurableSpace.measurableSet_generateFrom this
         · -- generateFrom rects ≤ mF ⊔ mG
           intro s hs
-          obtain ⟨F, G, hF, hG, rfl⟩ := hs
+          obtain ⟨F, G, hF, hG, h_eq⟩ := hs
+          rw [h_eq]
           exact MeasurableSet.inter (le_sup_left _ _ _ hF) (le_sup_right _ _ _ hG)
 
       -- Apply MeasurableSpace.induction_on_inter
@@ -907,12 +910,12 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
       -- Rewrite set integrals over S as integrals w.r.t. the restricted measure μ.restrict S.
       have hL₁ :
           ∫ ω in S, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω ∂μ
-            = ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω ∂(μ.restrict S) := by
-        simp [set_integral_eq_integral_restrict]
+            = ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω ∂(μ.restrict S) :=
+        rfl
       have hR₁ :
           ∫ ω in S, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂μ
-            = ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂(μ.restrict S) := by
-        simp [set_integral_eq_integral_restrict]
+            = ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂(μ.restrict S) :=
+        rfl
       -- Finite ⇒ σ‑finite for trims, so we can use `integral_condExp` on the restricted measure.
       haveI : IsFiniteMeasure (μ.restrict S) := inferInstance
       haveI : SigmaFinite ((μ.restrict S).trim hmFG) :=
