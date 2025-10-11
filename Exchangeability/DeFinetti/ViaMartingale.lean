@@ -888,6 +888,18 @@ lemma firstRSigma_le_futureFiltration
   intro f
   exact fun i => f (Fin.castLE hrm i)
 
+/-- The empty cylinder (r = 0) is the whole space. -/
+@[simp]
+lemma firstRCylinder_zero (X : ℕ → Ω → α) (C : Fin 0 → Set α) :
+    firstRCylinder X 0 C = Set.univ := by
+  ext ω
+  simp [firstRCylinder]
+
+/-- Cylinder membership characterization. -/
+lemma mem_firstRCylinder_iff (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α) (ω : Ω) :
+    ω ∈ firstRCylinder X r C ↔ ∀ i : Fin r, X i ω ∈ C i :=
+  Iff.rfl
+
 end FirstBlockCylinder
 
 /-! ## Product of indicators for finite cylinders -/
