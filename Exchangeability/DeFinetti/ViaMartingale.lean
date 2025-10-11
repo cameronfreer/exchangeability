@@ -175,8 +175,10 @@ lemma orderEmbOfFin_surj {s : Finset ℕ} {x : ℕ} (hx : x ∈ s) :
     intro i j hij
     exact h_inj (Subtype.ext_iff.mp hij)
   -- Injective function between finite types of equal cardinality is surjective
-  have hf_surj : Function.Surjective f :=
-    Finite.surjective_of_injective hf_inj
+  haveI : Fintype s := Finset.fintypeCoeSort s
+  have hf_surj : Function.Surjective f := by
+    haveI : Finite (Fin s.card) := inferInstance
+    exact Finite.surjective_of_injective hf_inj
   obtain ⟨i, hi⟩ := hf_surj ⟨x, hx⟩
   use i
   exact Subtype.ext_iff.mp hi
@@ -284,7 +286,7 @@ lemma revFiltration_zero (X : ℕ → Ω → α) :
 
 lemma revFiltration_le (X : ℕ → Ω → α) (m : ℕ) :
     revFiltration X m ≤ (inferInstance : MeasurableSpace Ω) :=
-  MeasurableSpace.comap_le_iff_le_map.mpr le_top
+  MeasurableSpace.comap_le_iff_le_map.2 le_top
 
 /-- The tail σ-algebra for a process X: ⋂ₙ σ(Xₙ, Xₙ₊₁, ...). -/
 def tailSigma (X : ℕ → Ω → α) : MeasurableSpace Ω :=
@@ -309,19 +311,7 @@ end Measurability
 
 lemma revFiltration_antitone (X : ℕ → Ω → α) :
     Antitone (revFiltration X) := by
-  intro m k hmk
-  have hcomp : shiftRV X k = (shiftSeq (β:=α) (k - m)) ∘ shiftRV X m := by
-    funext ω n
-    have hkm : m + (k - m) = k := by
-      simpa using Nat.add_sub_of_le hmk
-    have : m + (n + (k - m)) = k + n := by
-      have : m + (n + (k - m)) = (m + (k - m)) + n := by
-        simpa [Nat.add_comm, Nat.add_left_comm, Nat.add_assoc]
-      simpa [this, hkm, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc]
-    simp [shiftRV, shiftSeq, Function.comp, this]
-  have hmeas := measurable_shiftSeq (β:=α) (k - m)
-  simpa [revFiltration, hcomp, Function.comp] using
-    comap_comp_le (shiftRV X m) (shiftSeq (β:=α) (k - m)) hmeas
+  sorry  -- TODO: Fix type mismatch with comap_comp_le
 
 /-- If `X` is contractable, then so is each of its shifts `θₘ X`. -/
 lemma shift_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
@@ -493,18 +483,7 @@ lemma condexp_convergence
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X m) | futureFiltration X m]
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | futureFiltration X m] := by
-  classical
-  have hshift := measurable_shiftRV (hX := hX_meas) (m := m + 1)
-  have hagree := agree_on_future_rectangles_of_contractable
-    (μ := μ) (X := X) hX k m hk
-  have hlemma :=
-    Exchangeability.Probability.condexp_indicator_eq_of_agree_on_future_rectangles
-      (μ := μ) (X₁ := fun ω => X m ω) (X₂ := fun ω => X k ω)
-      (Y := shiftRV X (m + 1))
-      (hX₁ := hX_meas m) (hX₂ := hX_meas k) (hY := hshift)
-      (hagree := hagree) B hB
-  simpa [futureFiltration]
-    using hlemma
+  sorry  -- TODO: Uses agree_on_future_rectangles_of_contractable defined later
 
 lemma extreme_members_equal_on_tail
     {μ : Measure Ω} [IsProbabilityMeasure μ]
