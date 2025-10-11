@@ -9,7 +9,9 @@ import Mathlib.Probability.Independence.Conditional
 import Mathlib.Probability.Martingale.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Real
+import Mathlib.MeasureTheory.Function.ConditionalExpectation.CondexpL2
 import Mathlib.MeasureTheory.PiSystem
+import Mathlib.MeasureTheory.OuterMeasure.BorelCantelli
 
 /-!
 # Conditional Expectation API for Exchangeability Proofs
@@ -1320,8 +1322,11 @@ lemma Integrable.tendsto_ae_condexp_antitone
     {X : Ω → ℝ} (hX : Integrable X μ) :
   ∀ᵐ ω ∂μ, Tendsto (fun n => μ[X | 𝒢 n] ω) atTop (𝓝 (μ[X | ⨅ n, 𝒢 n] ω)) := by
   -- Set up the tail σ-algebra
-  set tail := ⨅ n, 𝒢 n
+  set tail := ⨅ n, 𝒢 n with htail_def
   have htail_le : tail ≤ m₀ := iInf_le_of_le 0 (hle 0)
+  haveI : SigmaFinite (μ.trim htail_le) := by
+    have : IsFiniteMeasure (μ.trim htail_le) := inferInstance
+    exact this.toSigmaFinite
 
   -- Build antitone chain property
   have h_antitone : Antitone 𝒢 := by
@@ -1331,12 +1336,48 @@ lemma Integrable.tendsto_ae_condexp_antitone
     | zero => simp
     | succ t ih => exact (hdecr _).trans ih
 
-  -- Main proof via truncation (Layer 2 approach)
-  -- For each M, truncate X to X^M := max(min(X, M), -M)
-  -- Use that bounded functions give a.e. convergence (Layer 1)
-  -- Then pass to limit M → ∞
+  -- Key properties of conditional expectations
+  set Z := fun n => μ[X | 𝒢 n]
 
-  sorry -- TODO: Implement Layer 1 (L² + Borel-Cantelli) then Layer 2 (truncation)
+  -- Step 1: Show Z n is a reverse martingale
+  -- For i ≤ j: μ[Z i | 𝒢 j] = μ[μ[X|𝒢 i] | 𝒢 j] = μ[X | 𝒢 j] = Z j
+  have tower_property (i j : ℕ) (hij : i ≤ j) :
+      μ[Z i | 𝒢 j] =ᵐ[μ] Z j := by
+    have : 𝒢 j ≤ 𝒢 i := h_antitone hij
+    exact condExp_condExp_of_le (hm₁₂ := this) (hm₂ := hle i) (f := X)
+
+  -- Step 2: Identify the limit
+  -- For any S ∈ tail, S is in every 𝒢 n, so ∫_S Z n = ∫_S X for all n
+  have limit_is_tail_condexp {S : Set Ω} (hS : MeasurableSet[tail] S) (n : ℕ) :
+      ∫ ω in S, Z n ω ∂μ = ∫ ω in S, X ω ∂μ := by
+    have hS_n : MeasurableSet[𝒢 n] S := by
+      have : tail ≤ 𝒢 n := iInf_le 𝒢 n
+      exact this _ hS
+    exact setIntegral_condExp (hm := hle n) hX hS_n
+
+  -- Step 3: Main convergence argument
+  -- This requires implementing the full L² + Borel-Cantelli machinery:
+  --
+  -- (a) For bounded X (or X ∈ L²):
+  --     Use condExpL2 to work in Hilbert space
+  --     Nested projections give Pythagoras: ‖P_n‖² = ‖P_{n+1}‖² + ‖P_n - P_{n+1}‖²
+  --     Therefore ∑ ‖P_n - P_{n+1}‖² < ∞
+  --     By Chebyshev: μ{|P_n - P_{n+1}| > ε} ≤ ε⁻² ‖P_n - P_{n+1}‖²
+  --     Summing: ∑ μ{|P_n - P_{n+1}| > ε} < ∞
+  --     Borel-Cantelli ⟹ |P_n - P_{n+1}| → 0 a.e. ⟹ P_n is Cauchy a.e. ⟹ P_n → P_∞ a.e.
+  --     Identify P_∞ = condExpL2 to tail via set integrals (from limit_is_tail_condexp)
+  --
+  -- (b) For general integrable X:
+  --     Truncate X^M := max(min(X, M), -M) ∈ L²
+  --     Apply (a) to each X^M: μ[X^M | 𝒢 n] → μ[X^M | tail] a.e.
+  --     On a full measure set E, for any ε > 0, pick M with ‖X - X^M‖₁ < ε/3
+  --     Use |μ[Y|m]| ≤ μ[|Y| | m] to bound truncation error
+  --     Diagonal argument or Egorov to get convergence for X itself
+  --
+  -- This is the standard proof but requires substantial infrastructure.
+  -- For now, we leave this as an axiom pending full implementation.
+
+  sorry
 
 /-- **Lévy's downward theorem: L¹ convergence for antitone σ-algebras.**
 
@@ -1359,17 +1400,33 @@ lemma Integrable.tendsto_L1_condexp_antitone
   haveI : SigmaFinite (μ.trim htail_le) := by
     apply (inferInstance : IsFiniteMeasure (μ.trim htail_le)).toSigmaFinite
 
-  -- Proof by truncation:
-  -- For any ε > 0, pick M large so that ‖X - X^M‖₁ < ε/3
-  -- Then use L¹ contraction:
-  --   ‖μ[X|𝒢 n] - μ[X|tail]‖₁
-  --     ≤ ‖μ[X - X^M | 𝒢 n]‖₁ + ‖μ[X^M|𝒢 n] - μ[X^M|tail]‖₁ + ‖μ[X^M - X | tail]‖₁
-  --     ≤ 2‖X - X^M‖₁ + ‖μ[X^M|𝒢 n] - μ[X^M|tail]‖₁
-  --
-  -- For large n, the middle term → 0 (by a.e. convergence for bounded X^M)
-  -- So limsup ≤ 2ε/3, and since ε arbitrary, get convergence to 0.
+  -- Key tool: L¹ contraction for conditional expectation
+  have L1_contract {Y : Ω → ℝ} (hY : Integrable Y μ) (m : MeasurableSpace Ω) (hm : m ≤ m₀)
+      [SigmaFinite (μ.trim hm)] :
+      eLpNorm (μ[Y | m]) 1 μ ≤ eLpNorm Y 1 μ := by
+    exact eLpNorm_condExp_le (μ := μ) (m := m) (p := 1) Y
 
-  sorry -- TODO: Implement using truncation + L¹ contraction + a.e. convergence
+  -- Proof strategy by truncation:
+  -- For any ε > 0:
+  --   1. Pick M large so that ‖X - X^M‖₁ < ε/3 where X^M := max(min(X, M), -M)
+  --   2. Triangle inequality:
+  --        ‖μ[X|𝒢 n] - μ[X|tail]‖₁
+  --          ≤ ‖μ[X - X^M | 𝒢 n]‖₁ + ‖μ[X^M|𝒢 n] - μ[X^M|tail]‖₁ + ‖μ[X^M - X | tail]‖₁
+  --   3. By L¹ contraction: first and third terms ≤ ‖X - X^M‖₁ < ε/3
+  --   4. Middle term → 0 as n → ∞ by a.e. convergence of μ[X^M|𝒢 n] → μ[X^M|tail]
+  --      (using tendsto_ae_condexp_antitone for the bounded function X^M)
+  --   5. For n large enough: middle term < ε/3
+  --   6. Therefore: limsup ‖μ[X|𝒢 n] - μ[X|tail]‖₁ ≤ 2ε/3 + 0 < ε
+  --   7. Since ε arbitrary: convergence to 0
+  --
+  -- Implementation requires:
+  --   - Truncation construction and L² membership
+  --   - Dominated convergence for L¹ norm
+  --   - Using a.e. convergence from tendsto_ae_condexp_antitone
+  --
+  -- For now, we leave this as an axiom pending full implementation.
+
+  sorry
 
 /-- **Reverse martingale convergence theorem.**
 
