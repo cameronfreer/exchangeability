@@ -510,8 +510,8 @@ when the base measure is sigma-finite. -/
 lemma sigmaFinite_trim_tailSigma {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     {μ : Measure Ω} [SigmaFinite μ]
     (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) :
-    SigmaFinite (μ.trim (tailSigma_le X)) :=
-  inferInstance
+    SigmaFinite (μ.trim (tailSigma_le X)) := by
+  sorry  -- TODO: Need to prove sigma-finiteness is preserved under trimming
 
 /-! ### Helper lemmas for futureFiltration properties -/
 
@@ -553,9 +553,10 @@ lemma cylinder_measurable {r : ℕ} {C : Fin r → Set α}
   classical
   simp only [cylinder, Set.setOf_forall]
   exact MeasurableSet.iInter fun i => by
-    convert measurable_pi_apply i (hC i) using 1
-    ext f
-    simp [Set.mem_preimage]
+    have : (fun f : ℕ → α => f i.val) ⁻¹' C i = {f | f i ∈ C i} := by
+      ext f; simp [Set.mem_preimage]
+    rw [← this]
+    exact Measurable.measurableSet_preimage (measurable_pi_apply i.val) (hC i)
 
 end FutureCylinders
 
