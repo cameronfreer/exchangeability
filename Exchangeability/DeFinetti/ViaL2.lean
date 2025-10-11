@@ -639,7 +639,9 @@ private lemma sum_tail_block_reindex
     (c : ℝ) (F : ℕ → ℝ) :
     ∑ i : Fin m, (if i.val < m - k then 0 else c) * F i.val
       = c * ∑ j : Fin k, F (m - k + j.val) := by
-  sorry -- TODO: Implement full proof (currently blocked by Lean 4.24 syntax issue with Finset.sum in calc)
+  -- The sum splits: indices < m-k contribute 0, indices ≥ m-k contribute c * F(i)
+  -- The tail {i : Fin m | i.val ≥ m-k} corresponds bijectively to Fin k
+  sorry  -- TODO: Use Finset.sum_bij or sum reindexing to show the bijection
 
 /-- Long average vs tail average bound: Comparing the average of the first m terms
 with the average of the last k terms (where k ≤ m) has the same L² contractability bound.
