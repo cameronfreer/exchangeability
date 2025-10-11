@@ -128,6 +128,21 @@ axiom Kernel.IndepFun.ae_measure_indepFun
     (hXY : Kernel.IndepFun X Y κ μ) :
     ∀ᵐ a ∂μ, ∫ ω, X ω * Y ω ∂(κ a) = (∫ ω, X ω ∂(κ a)) * (∫ ω, Y ω ∂(κ a))
 
+/-- **Composition axiom**: Independence is preserved under composition with measurable functions.
+
+If X and Y are kernel-independent, then f ∘ X and g ∘ Y are also kernel-independent
+for any measurable functions f and g.
+-/
+axiom Kernel.IndepFun.comp
+    {α Ω β γ : Type*} [MeasurableSpace α] [MeasurableSpace Ω]
+    [MeasurableSpace β] [MeasurableSpace γ]
+    {κ : Kernel α Ω} {μ : Measure α}
+    {X : Ω → β} {Y : Ω → γ}
+    (hXY : Kernel.IndepFun X Y κ μ)
+    {f : β → ℝ} {g : γ → ℝ}
+    (hf : Measurable f) (hg : Measurable g) :
+    Kernel.IndepFun (f ∘ X) (g ∘ Y) κ μ
+
 /-- **Core axiom**: Conditional independence of the first two coordinates given the tail σ-algebra.
 
 This is the substantive part of Kallenberg's "first proof": the ergodic/shift argument
@@ -136,8 +151,7 @@ shows the coordinates are conditionally independent given `shiftInvariantSigma`.
 lemma condindep_pair_given_tail
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ) :
-    @Kernel.IndepFun (Ω[α]) (Ω[α]) _ _
-      (fun ω : Ω[α] => ω 0) (fun ω : Ω[α] => ω 1)
+    Kernel.IndepFun (fun ω : Ω[α] => ω 0) (fun ω : Ω[α] => ω 1)
       (condExpKernel μ (shiftInvariantSigma (α := α))) μ := by
   sorry
 
@@ -1931,8 +1945,7 @@ private lemma condexp_pair_factorization
                       (fun y : Ω[α] => g (y 1))
                       (condExpKernel μ (shiftInvariantSigma (α := α))) μ := by
     -- compose `condindep_pair_given_tail` with measurable `f`, `g`
-    -- mathlib's `Kernel.IndepFun.comp` handles this; we use it implicitly.
-    -- We give the measurability facts explicitly below.
+    -- Apply Kernel.IndepFun.comp to compose with measurable functions
     have base := condindep_pair_given_tail μ hσ
     exact base.comp hf_meas hg_meas
   -- factorize the kernel integral a.e.
@@ -1949,10 +1962,7 @@ private lemma condexp_pair_factorization
       let ⟨C, hC⟩ := hf_bd; ⟨C, fun ω => hC (ω 0)⟩
     have hg_bd' : ∃ C, ∀ ω, |(fun y : Ω[α] => g (y 1)) ω| ≤ C :=
       let ⟨C, hC⟩ := hg_bd; ⟨C, fun ω => hC (ω 1)⟩
-    exact Kernel.IndepFun.integral_mul
-      (condExpKernel μ (shiftInvariantSigma (α := α))) μ
-      (fun y => f (y 0)) (fun y => g (y 1))
-      h_indep12
+    exact Kernel.IndepFun.integral_mul h_indep12
       (hf_meas.comp (measurable_pi_apply 0))
       (hg_meas.comp (measurable_pi_apply 1))
       hf_bd' hg_bd'
