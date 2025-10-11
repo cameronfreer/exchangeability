@@ -655,9 +655,9 @@ lemma l2_bound_two_windows_uniform
             _ = 1^2 * (2*M)^2 := by rw [div_mul_cancel₀ (1:ℝ) (ne_of_gt hk_pos)]
             _ = (2*M)^2 := by ring
             _ = (2*M)^2 / k := by
-                symm
-                apply div_eq_iff (ne_of_gt hk_pos) |>.mpr
-                ring
+                have : (2*M)^2 = (2*M)^2 / k * k := by
+                  rw [div_mul_cancel₀]; exact ne_of_gt hk_pos
+                rw [this, mul_comm]; ring
 
   -- Now integrate the bound
   calc ∫ ω, (1/(k:ℝ))^2 * (∑ i : Fin k, f (X (n + i.val + 1) ω) -
@@ -826,8 +826,81 @@ private lemma l2_bound_long_vs_tail
   -- Since |1/m - 1/k| ≤ 1/k and we have at most m terms each bounded,
   -- this reduces to applying the uniform bound hCf_unif
 
-  -- For now, use that the tail average starting at n+(m-k) is a window of size k,
-  -- so we can bound it against another window of size k using hCf_unif
+  -- Use that we can rewrite the long average to isolate the tail portion
+  -- and apply the uniform bound
+
+  obtain ⟨M, hM⟩ := hf_bdd
+
+  -- The key is to use boundedness to show the difference is controlled
+  -- For a more direct proof, we use that:
+  -- |long_avg - tail_avg|² ≤ |long_avg - window_avg|² + |window_avg - tail_avg|²
+  -- where both terms can be bounded using hCf_unif
+
+  -- However, for simplicity, we can use the fact that both averages involve
+  -- bounded functions and the weight difference is small
+
+  -- Direct bound using triangle inequality and boundedness
+  have h_bdd_integrand : ∀ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
+        (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2
+      ≤ (4 * M)^2 := by
+    intro ω
+    have h1 : |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| ≤ M := by
+      rw [abs_mul, abs_of_nonneg (by positivity : 0 ≤ 1 / (m : ℝ))]
+      calc |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)|
+          = (1 / (m : ℝ)) * |∑ i : Fin m, f (X (n + i.val + 1) ω)| := by rw [abs_mul]; simp [abs_of_nonneg]
+        _ ≤ (1 / (m : ℝ)) * (m * M) := by
+            apply mul_le_mul_of_nonneg_left _ (by positivity)
+            calc |∑ i : Fin m, f (X (n + i.val + 1) ω)|
+                ≤ ∑ i : Fin m, |f (X (n + i.val + 1) ω)| := Finset.abs_sum_le_sum_abs _ _
+              _ ≤ ∑ i : Fin m, M := by
+                  apply Finset.sum_le_sum
+                  intro i _; exact hM _
+              _ = m * M := by rw [Finset.sum_const, Finset.card_fin]; ring
+        _ = M := by field_simp; ring
+    have h2 : |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| ≤ M := by
+      rw [abs_mul, abs_of_nonneg (by positivity : 0 ≤ 1 / (k : ℝ))]
+      calc |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)|
+          = (1 / (k : ℝ)) * |∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| := by rw [abs_mul]; simp [abs_of_nonneg]
+        _ ≤ (1 / (k : ℝ)) * (k * M) := by
+            apply mul_le_mul_of_nonneg_left _ (by positivity)
+            calc |∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)|
+                ≤ ∑ i : Fin k, |f (X (n + (m - k) + i.val + 1) ω)| := Finset.abs_sum_le_sum_abs _ _
+              _ ≤ ∑ i : Fin k, M := by
+                  apply Finset.sum_le_sum
+                  intro i _; exact hM _
+              _ = k * M := by rw [Finset.sum_const, Finset.card_fin]; ring
+        _ = M := by field_simp; ring
+    calc ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
+          (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2
+        ≤ (|(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
+           |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)|)^2 := by
+            apply sq_le_sq'
+            · linarith [abs_nonneg ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
+                (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))]
+            · exact abs_sub_abs_le_abs_sub _ _
+      _ ≤ (M + M)^2 := by
+          apply sq_le_sq (by positivity) (add_le_add h1 h2)
+      _ = (4 * M)^2 := by ring
+
+  -- The key insight: We can bound this by decomposing the long average
+  -- and using triangle inequality with a common window of size k
+
+  -- Introduce an intermediate window: (1/k) * ∑_{i<k} f(X_{n+i+1})
+  -- Then: |long_avg - tail_avg|² ≤ 2|long_avg - window_avg|² + 2|window_avg - tail_avg|²
+
+  -- The second term |window_avg - tail_avg|² can be bounded by hCf_unif since
+  -- both are equal-weight windows of size k at positions n and n+(m-k)
+
+  -- For the first term, we use that the long average (1/m) is close to any k-window (1/k)
+  -- This follows from the fact that the long average is a weighted combination that
+  -- includes the k-window with smaller weight
+
+  -- However, the cleanest approach requires more machinery about weighted averages
+  -- For now, we have established the integrand is bounded, which is the key
+  -- integrability property needed for the convergence proof
+
+  -- The sharp bound Cf/k would follow from a more detailed analysis using
+  -- the weighted average lemma from L2Approach, which we defer
   sorry
 
 /-- **Weighted sums converge in L¹ for contractable sequences.**
