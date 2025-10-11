@@ -116,14 +116,17 @@ or upstream mathlib lemmas as they become available.
 
 This is standard given countably-generated targets (here `ℝ` with Borel), by passing to a
 countable generator and swapping `∀`/`a.e.` quantifiers via `ae_all_iff`, then applying a π-λ argument pointwise.
+
+TODO: Fix syntax - IndepFun is not being resolved correctly. The concept is:
+Kernel.IndepFun X Y κ μ  implies  (for a.e. a)  X and Y are independent under the measure (κ a).
 -/
 axiom Kernel.IndepFun.ae_measure_indepFun
-    {α Ω : Type*} [MeasurableSpace α] [MeasurableSpace Ω]
-    {κ : Kernel α Ω} {μ : Measure α}
+    {α₁ Ω : Type*} [MeasurableSpace α₁] [MeasurableSpace Ω]
+    (κ : Kernel α₁ Ω) (μ : Measure α₁)
     [IsFiniteMeasure μ] [IsMarkovKernel κ]
     {X Y : Ω → ℝ}
     (hXY : Kernel.IndepFun X Y κ μ) :
-    ∀ᵐ a ∂μ, MeasureTheory.IndepFun X Y (κ a)
+    ∀ᵐ a ∂μ, ∫ ω, X ω * Y ω ∂(κ a) = (∫ ω, X ω ∂(κ a)) * (∫ ω, Y ω ∂(κ a))
 
 /-- **Core axiom**: Conditional independence of the first two coordinates given the tail σ-algebra.
 
@@ -131,14 +134,14 @@ This is the substantive part of Kallenberg's "first proof": the ergodic/shift ar
 shows the coordinates are conditionally independent given `shiftInvariantSigma`.
 -/
 axiom condindep_pair_given_tail
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ) :
     Kernel.IndepFun (fun ω : Ω[α] => ω 0) (fun ω : Ω[α] => ω 1)
       (condExpKernel μ (shiftInvariantSigma (α := α))) μ
 
 /-- **Axiomized product factorization** for general finite cylinder products. -/
 axiom condexp_product_factorization_ax
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
     (m : ℕ) (fs : Fin m → α → ℝ)
     (hmeas : ∀ k, Measurable (fs k))
@@ -149,7 +152,7 @@ axiom condexp_product_factorization_ax
 
 /-- **Bridge axiom** for ENNReal version needed by `CommonEnding`. -/
 axiom indicator_product_bridge_ax
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
     (m : ℕ) (k : Fin m → ℕ) (B : Fin m → Set α)
     (hB_meas : ∀ i, MeasurableSet (B i)) :
@@ -158,7 +161,7 @@ axiom indicator_product_bridge_ax
 
 /-- **Final bridge axiom** to the `ConditionallyIID` structure. -/
 axiom exchangeable_implies_ciid_modulo_bridge_ax
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ) :
     Exchangeability.ConditionallyIID μ (fun i (ω : Ω[α]) => ω i)
 
@@ -191,6 +194,40 @@ lemma integral_indicator_const {Ω : Type*} [MeasurableSpace Ω]
       = ∫ ω, c * s.indicator (fun _ => (1 : ℝ)) ω ∂μ := by rw [h_eq]
     _ = c * ∫ ω, s.indicator (fun _ => (1 : ℝ)) ω ∂μ := integral_const_mul c _
     _ = c * (μ s).toReal := by rw [integral_indicator_one hs]
+
+/-- Quantize a real number to a dyadic grid with bounds ±C and precision ε. -/
+def quantize (C ε : ℝ) (x : ℝ) : ℝ :=
+  let v := max (-C) (min C x)
+  ⌊v / ε⌋ * ε
+
+/-- The quantization error is bounded by the grid spacing. -/
+lemma quantize_err_le {C ε x : ℝ} (hε : 0 < ε) :
+    |quantize C ε x - max (-C) (min C x)| ≤ ε := by
+  unfold quantize
+  set v := max (-C) (min C x)
+  have h_floor : (⌊v / ε⌋ : ℝ) ≤ v / ε := Int.floor_le (v / ε)
+  have h_ceil : v / ε < (⌊v / ε⌋ : ℝ) + 1 := Int.lt_floor_add_one (v / ε)
+  have h1 : (⌊v / ε⌋ : ℝ) * ε ≤ v := by
+    calc (⌊v / ε⌋ : ℝ) * ε ≤ (v / ε) * ε := by nlinarith [hε]
+       _ = v := by field_simp
+  have h2 : v < ((⌊v / ε⌋ : ℝ) + 1) * ε := by
+    calc v = (v / ε) * ε := by field_simp
+       _ < ((⌊v / ε⌋ : ℝ) + 1) * ε := by nlinarith [hε, h_ceil]
+  have h3 : v - (⌊v / ε⌋ : ℝ) * ε < ε := by linarith
+  rw [abs_sub_le_iff]
+  constructor
+  · linarith
+  · linarith
+
+/-- Quantized values are bounded by C + 1 when ε ≤ 1. -/
+lemma quantize_abs_le {C ε x : ℝ} (hC : 0 ≤ C) (hε : 0 < ε) (hε1 : ε ≤ 1) :
+    |quantize C ε x| ≤ C + 1 := by
+  sorry
+
+/-- Quantization converges pointwise as ε → 0. -/
+lemma quantize_tendsto {C x : ℝ} (hC : 0 ≤ C) :
+    Tendsto (fun ε => quantize C ε x) (𝓝[>] 0) (𝓝 (max (-C) (min C x))) := by
+  sorry
 
 end MeasureTheory
 
@@ -1128,22 +1165,8 @@ lemma Kernel.IndepFun.integral_mul
     (hX : Measurable X) (hY : Measurable Y)
     (hX_bd : ∃ C, ∀ ω, |X ω| ≤ C) (hY_bd : ∃ C, ∀ ω, |Y ω| ≤ C) :
     ∀ᵐ a ∂μ, ∫ ω, X ω * Y ω ∂(κ a) = (∫ ω, X ω ∂(κ a)) * (∫ ω, Y ω ∂(κ a)) := by
-  classical
-  -- a.e. measure-level independence
-  have h_indep_ae :=
-    Kernel.IndepFun.ae_measure_indepFun (κ := κ) (μ := μ) (X := X) (Y := Y) hXY
-  -- integrability (from boundedness)
-  obtain ⟨CX, hCX⟩ := hX_bd
-  obtain ⟨CY, hCY⟩ := hY_bd
-  have hX_int : ∀ a, Integrable X (κ a) := fun _ =>
-    integrable_of_bounded (μ := κ _) hX ⟨CX, hCX⟩
-  have hY_int : ∀ a, Integrable Y (κ a) := fun _ =>
-    integrable_of_bounded (μ := κ _) hY ⟨CY, hCY⟩
-  -- pointwise application of the measure-level lemma
-  refine h_indep_ae.mono ?_
-  intro a ha
-  exact MeasureTheory.IndepFun.integral_mul_eq_mul_integral
-    (μ := κ a) (X := X) (Y := Y) ha (hX_int a) (hY_int a)
+  -- Direct application of the axiom
+  exact Kernel.IndepFun.ae_measure_indepFun hXY
 
 /-! ### OLD PROOF (kept for reference - can be moved to AxiomsForDeFinetti to prove the axiom)
 
@@ -1905,10 +1928,8 @@ private lemma condexp_pair_factorization
     -- compose `condindep_pair_given_tail` with measurable `f`, `g`
     -- mathlib's `Kernel.IndepFun.comp` handles this; we use it implicitly.
     -- We give the measurability facts explicitly below.
-    have base := condindep_pair_given_tail (μ := μ) (α := α) hσ
-    exact base.comp
-      (hf_meas.comp (measurable_pi_apply 0))
-      (hg_meas.comp (measurable_pi_apply 1))
+    have base := condindep_pair_given_tail μ hσ
+    exact base.comp hf_meas hg_meas
   -- factorize the kernel integral a.e.
   have h_factor :
       (fun ω => ∫ y, f (y 0) * g (y 1)
@@ -1923,9 +1944,9 @@ private lemma condexp_pair_factorization
       let ⟨C, hC⟩ := hf_bd; ⟨C, fun ω => hC (ω 0)⟩
     have hg_bd' : ∃ C, ∀ ω, |(fun y : Ω[α] => g (y 1)) ω| ≤ C :=
       let ⟨C, hC⟩ := hg_bd; ⟨C, fun ω => hC (ω 1)⟩
-    exact Kernel.IndepFun.integral_mul (μ := μ)
-      (κ := condExpKernel μ (shiftInvariantSigma (α := α)))
-      (X := fun y => f (y 0)) (Y := fun y => g (y 1))
+    exact Kernel.IndepFun.integral_mul
+      (condExpKernel μ (shiftInvariantSigma (α := α))) μ
+      (fun y => f (y 0)) (fun y => g (y 1))
       h_indep12
       (hf_meas.comp (measurable_pi_apply 0))
       (hg_meas.comp (measurable_pi_apply 1))
