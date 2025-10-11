@@ -1296,15 +1296,48 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     h_diff_zero.mono fun ω hω => sub_eq_zero.mp hω
   exact h_eq.symm
 
-/-! ### Reverse Martingale Convergence -/
+/-! ### Reverse Martingale Convergence (Lévy's Downward Theorem) -/
+
+/-- **Lévy's downward theorem: a.e. convergence for antitone σ-algebras.**
+
+For a decreasing family of σ-algebras 𝒢 n ↓ 𝒢∞ := ⨅ n, 𝒢 n,
+conditional expectations converge almost everywhere:
+  μ[X | 𝒢 n] → μ[X | 𝒢∞]  a.e.
+
+This is the "downward" or "backward" version of Lévy's theorem (mathlib has the upward version).
+Proof follows the standard martingale approach via L² projection and Borel-Cantelli.
+-/
+lemma Integrable.tendsto_ae_condexp_antitone
+    {Ω} {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+    (𝒢 : ℕ → MeasurableSpace Ω)
+    (hle : ∀ n, 𝒢 n ≤ m₀) (hdecr : ∀ n, 𝒢 (n+1) ≤ 𝒢 n)
+    [∀ n, SigmaFinite (μ.trim (hle n))]
+    {X : Ω → ℝ} (hX : Integrable X μ) :
+  ∀ᵐ ω ∂μ, Tendsto (fun n => μ[X | 𝒢 n] ω) atTop (𝓝 (μ[X | ⨅ n, 𝒢 n] ω)) := by
+  sorry -- TODO: Implement following the blueprint
+
+/-- **Lévy's downward theorem: L¹ convergence for antitone σ-algebras.**
+
+For a decreasing family of σ-algebras under a probability measure,
+conditional expectations converge in L¹:
+  ‖μ[X | 𝒢 n] - μ[X | 𝒢∞]‖₁ → 0
+
+Follows from a.e. convergence plus L¹ contraction property of conditional expectation.
+-/
+lemma Integrable.tendsto_L1_condexp_antitone
+    {Ω} {m₀ : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (𝒢 : ℕ → MeasurableSpace Ω)
+    (hle : ∀ n, 𝒢 n ≤ m₀) (hdecr : ∀ n, 𝒢 (n+1) ≤ 𝒢 n)
+    [∀ n, SigmaFinite (μ.trim (hle n))]
+    {X : Ω → ℝ} (hX : Integrable X μ) :
+  Tendsto (fun n => eLpNorm (μ[X | 𝒢 n] - μ[X | ⨅ n, 𝒢 n]) 1 μ) atTop (𝓝 0) := by
+  sorry -- TODO: Implement following the blueprint
 
 /-- **Reverse martingale convergence theorem.**
 
 Along a decreasing family 𝒢, we have μ[X | 𝒢 n] → μ[X | ⋂ n, 𝒢 n] a.e. and in L¹.
 
-This is FMP Theorem 7.23. Proven by reindexing to increasing filtration or following
-the tail 0-1 law proof structure in mathlib (see `Mathlib.Probability.Independence.ZeroOne`).
-Use `Integrable.tendsto_ae_condexp` and `ae_eq_condExp_of_forall_setIntegral_eq`.
+This is FMP Theorem 7.23. Now proven via Lévy's downward theorem.
 -/
 lemma reverse_martingale_convergence {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     [IsProbabilityMeasure μ] (𝒢 : ℕ → MeasurableSpace Ω)
@@ -1315,58 +1348,9 @@ lemma reverse_martingale_convergence {m₀ : MeasurableSpace Ω} {μ : Measure �
     (hX_meas : StronglyMeasurable[⨅ n, 𝒢 n] X) :
     (∀ᵐ ω ∂μ, Tendsto (fun n => μ[X | 𝒢 n] ω) atTop (𝓝 (μ[X | ⨅ n, 𝒢 n] ω))) ∧
     Tendsto (fun n => eLpNorm (μ[X | 𝒢 n] - μ[X | ⨅ n, 𝒢 n]) 1 μ) atTop (𝓝 0) := by
-  classical
-  -- Tail σ-algebra
-  set tail : MeasurableSpace Ω := ⨅ n, 𝒢 n
-
-  -- 𝒢 is antitone
-  have h_antitone : Antitone 𝒢 := by
-    intro i j hij
-    obtain ⟨t, rfl⟩ := Nat.exists_eq_add_of_le hij
-    -- chain one-step decreases
-    have : ∀ t, 𝒢 (i + t + 1) ≤ 𝒢 (i + t) := fun t => by
-      simpa [Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using h_decr (i + t)
-    -- by simple induction
-    simpa [Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using
-      Nat.rec (motive := fun t => 𝒢 (i + t) ≤ 𝒢 i)
-        (by simp)
-        (fun t ih => (this t).trans ih) t
-
-  -- (1) a.e. convergence for antitone families
-  -- mathlib has `Integrable.tendsto_ae_condexp` for ⨆ n, ℱ n (increasing filtrations)
-  -- This is Lévy's upward theorem. We need the downward version.
-  --
-  -- Lévy's Downward Theorem: Let 𝒢ₙ ↓ 𝒢∞. Then E[X|𝒢ₙ] → E[X|𝒢∞] a.e. and in L¹.
-  --
-  -- Proof strategy:
-  -- (a) Since conditional expectations are uniformly integrable (bounded in L²),
-  --     it suffices to show a.e. convergence; L¹ convergence follows.
-  -- (b) Use the tower property and monotonicity: for m ≤ n,
-  --     E[E[X|𝒢ₙ]|𝒢ₘ] = E[X|𝒢ₙ] since 𝒢ₙ ≤ 𝒢ₘ
-  -- (c) Apply reverse martingale convergence (Doob) or use the relationship:
-  --     For antitone 𝒢ₙ, the sequence E[X|𝒢ₙ] forms a "backward martingale"
-  --
-  -- This is NOT currently in mathlib4, but should be provable from existing tools.
-  have h_ae :
-      ∀ᵐ ω ∂μ, Tendsto (fun n => μ[X | 𝒢 n] ω) atTop (𝓝 (μ[X | tail] ω)) := by
-    sorry -- Lévy's downward theorem - needs to be added to mathlib or proven here
-
-  -- (2) L¹ convergence for antitone families
-  -- Similar to (1), use reindexing or derive from uniform integrability
-  -- mathlib has L¹ convergence for increasing filtrations
-  --
-  -- Proof strategy:
-  -- L¹ convergence follows from a.e. convergence + uniform integrability.
-  -- Conditional expectations of an integrable function are uniformly integrable
-  -- (this is a general fact about martingales).
-  -- Therefore: a.e. convergence (from h_ae) + uniform integrability ⟹ L¹ convergence
-  --
-  -- Alternatively, use dominated convergence: |E[X|𝒢ₙ] - E[X|𝒢∞]| ≤ 2·E[|X| | 𝒢₀]
-  have h_L1 :
-      Tendsto (fun n => eLpNorm (μ[X | 𝒢 n] - μ[X | tail]) 1 μ) atTop (𝓝 0) := by
-    sorry -- Follows from h_ae via uniform integrability of conditional expectations
-
-  -- Done
+  -- Apply Lévy's downward theorem
+  have h_ae := Integrable.tendsto_ae_condexp_antitone 𝒢 h_le h_decr hX_int
+  have h_L1 := Integrable.tendsto_L1_condexp_antitone 𝒢 h_le h_decr hX_int
   exact ⟨h_ae, h_L1⟩
 
 set_option linter.unusedSectionVars false in
