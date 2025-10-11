@@ -755,10 +755,22 @@ private lemma sum_tail_block_reindex
           rw [← Finset.mul_sum]
     _ = c * ∑ j : Fin k, F (m - k + j.val) := by
           congr 1
-          -- Bijection between {i : Fin m | i.val ≥ m - k} and Fin k
-          -- The bijection is: i ↦ ⟨i.val - (m - k), _⟩ and j ↦ ⟨m - k + j.val, _⟩
-          -- The natural number arithmetic (especially Nat subtraction) makes omega struggle
-          -- TODO: Either use mathlib lemmas about Finset.sum reindexing or prove manually
+          -- TODO: Bijection between {i : Fin m | i.val ≥ m - k} and Fin k
+          -- The bijection should be:
+          --   forward:  i ↦ ⟨i.val - (m - k), proof that i.val - (m-k) < k⟩
+          --   backward: j ↦ ⟨m - k + j.val, proof that m - k + j.val < m⟩
+          --
+          -- The difficulty is that omega struggles with the natural number arithmetic:
+          -- 1. Showing m - k + (i.val - (m - k)) = i.val when m - k ≤ i.val
+          -- 2. Showing (m - k + j.val) - (m - k) = j.val
+          --
+          -- These are true by Nat.add_sub_cancel and Nat.sub_add_cancel but
+          -- the proof context with Fin types makes omega unable to see through.
+          --
+          -- Options to complete:
+          -- - Use Fin.castOrderIso or similar mathlib bijections
+          -- - Manually construct with explicit Nat lemmas instead of omega
+          -- - Use a different sum reindexing lemma from mathlib
           sorry
 
 /-- Long average vs tail average bound: Comparing the average of the first m terms
