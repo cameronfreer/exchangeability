@@ -230,6 +230,41 @@ lemma Kernel.IndepFun.comp
 
   exact hXY s t hs' ht'
 
+/-- **Bridge lemma**: The Mean Ergodic Theorem projection equals conditional expectation
+onto the shift-invariant σ-algebra.
+
+**Statement**: For a measure-preserving shift on path space,
+  `metProjection shift hσ = condexpL2`
+
+**Proof strategy**:
+1. Both are orthogonal projections onto the same subspace in L²(μ)
+2. The fixed-point subspace `{f : f ∘ shift = f}` equals the subspace of
+   shiftInvariantSigma-measurable functions
+3. By uniqueness of orthogonal projections, they must be equal
+
+**Key insight**: Functions invariant under the Koopman operator (f ∘ shift = f) are
+precisely those measurable with respect to the shift-invariant σ-algebra. This
+connects the ergodic-theoretic perspective (fixed points of dynamics) with the
+probabilistic perspective (conditional expectation onto a sub-σ-algebra).
+-/
+lemma metProjection_eq_condExpL2_shiftInvariant
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ) :
+    metProjection (shift (α := α)) hσ = condexpL2 (μ := μ) := by
+  -- Both are orthogonal projections onto the same closed subspace
+
+  -- Step 1: Show fixedSpace(koopman shift) = L²(μ, shiftInvariantSigma)
+  -- Need: f ∈ fixedSpace ↔ f measurable w.r.t. shiftInvariantSigma
+  -- This follows from: koopman shift f = f ∘ shift = f
+  --   ⟺ f is shift-invariant
+  --   ⟺ f measurable w.r.t. shiftInvariantSigma
+
+  -- Step 2: Apply uniqueness of orthogonal projections
+  -- Both metProjection and condExpL2 are the unique orthogonal projection
+  -- onto the same closed subspace, hence they're equal
+
+  sorry
+
 /-- **Core axiom**: Conditional independence of the first two coordinates given the tail σ-algebra.
 
 This is the substantive part of Kallenberg's "first proof": the ergodic/shift argument
