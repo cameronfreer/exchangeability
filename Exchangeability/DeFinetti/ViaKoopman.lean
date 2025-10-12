@@ -458,28 +458,27 @@ lemma condexp_product_factorization_ax
   induction m with
   | zero =>
     -- Base case: m = 0, empty product is 1
+    -- Need to show: CE[1 | ℐ] =ᵐ 1
     simp only [Finset.prod_empty]
-    -- CE[1 | ℐ] = 1 a.e.
-    sorry
-  | succ m IH =>
-    -- Inductive step: m + 1 coordinates
-    -- Split: ∏ᵢ₌₀ᵐ f(ωᵢ) = (∏ᵢ₌₀ᵐ⁻¹ f(ωᵢ)) · f(ωₘ)
+    -- CE of a constant is the constant a.e.
+    have : (fun ω => (1 : ℝ)) = (1 : Ω[α] → ℝ) := rfl
+    rw [this]
+    exact condExp_const shiftInvariantSigma_le
+  | succ n IH =>
+    -- Inductive step: n + 1 coordinates
+    -- Split: ∏ᵢ₌₀ⁿ f(ωᵢ) = (∏ᵢ₌₀ⁿ⁻¹ f(ωᵢ)) · f(ωₙ)
 
-    -- Step 1: Apply conditional independence to split the product
-    -- We need to show the first m coordinates are independent of coordinate m
-    -- conditioned on the shift-invariant σ-algebra
+    -- Strategy:
+    -- 1. Apply IH to get: CE[∏ᵢ₌₀ⁿ⁻¹ fs i (ωᵢ) | ℐ] =ᵐ ∏ᵢ₌₀ⁿ⁻¹ (∫ fs i dν)
+    -- 2. Apply identicalConditionalMarginals to get: CE[fs n (ωₙ) | ℐ] =ᵐ ∫ fs n dν
+    -- 3. Use condindep_pair_given_tail to split CE of product:
+    --    CE[(∏ᵢ₌₀ⁿ⁻¹ fs i (ωᵢ)) · fs n (ωₙ) | ℐ] =ᵐ CE[∏ᵢ₌₀ⁿ⁻¹ fs i (ωᵢ) | ℐ] · CE[fs n (ωₙ) | ℐ]
+    -- 4. Combine: =ᵐ (∏ᵢ₌₀ⁿ⁻¹ ∫ fs i dν) · (∫ fs n dν) = ∏ᵢ₌₀ⁿ ∫ fs i dν
 
-    -- Step 2: Apply IH to the first m factors
-    -- This gives: CE[∏ᵢ₌₀ᵐ⁻¹ f(ωᵢ) | ℐ] =ᵐ ∏ᵢ₌₀ᵐ⁻¹ (∫ f dν)
+    -- The key step is (3): translating Kernel.IndepFun to CE factorization
+    -- This requires: CE[X · Y | ℐ] = CE[X | ℐ] · CE[Y | ℐ] when X, Y are conditionally independent
 
-    -- Step 3: Apply conditional independence for the last factor
-    -- CE[f(ωₘ) | ℐ] =ᵐ ∫ f dν
-
-    -- Step 4: Multiply the factorizations
-    -- CE[(∏ᵢ₌₀ᵐ⁻¹ f(ωᵢ)) · f(ωₘ) | ℐ] = CE[∏ᵢ₌₀ᵐ⁻¹ f(ωᵢ) | ℐ] · CE[f(ωₘ) | ℐ]
-    --   =ᵐ (∏ᵢ₌₀ᵐ⁻¹ ∫ f dν) · (∫ f dν) = ∏ᵢ₌₀ᵐ ∫ f dν
-
-    sorry
+    sorry -- Requires: CE factorization lemma from Kernel.IndepFun (condindep_pair_given_tail)
 
 /-- **Generalized product factorization** for arbitrary coordinate indices.
 
@@ -507,7 +506,8 @@ lemma condexp_product_factorization_general
   | zero =>
     simp [Finset.prod_empty]
     -- CE[1 | ℐ] = 1 a.e. and ∏ (empty) = 1
-    sorry -- Same as base case in condexp_product_factorization_ax
+    -- Same as base case in condexp_product_factorization_ax
+    exact condExp_const shiftInvariantSigma_le
 
   | succ n IH =>
     -- Inductive step: split product into first n factors and last factor
