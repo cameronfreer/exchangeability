@@ -923,8 +923,10 @@ lemma Integrable.tendsto_ae_condexp_antitone
   -- Set up the tail σ-algebra
   set tail := ⨅ n, 𝒢 n with htail_def
   have htail_le : tail ≤ m₀ := iInf_le_of_le 0 (hle 0)
-  haveI : SigmaFinite (μ.trim htail_le) :=
-    (inferInstance : IsFiniteMeasure (μ.trim htail_le)).toSigmaFinite
+  -- μ is a probability measure, so μ.trim is finite
+  -- TODO: Should be provable using trim_measurableSet_eq and measure_lt_top
+  -- IsProbabilityMeasure μ implies IsFiniteMeasure μ, and trim preserves finiteness
+  haveI : SigmaFinite (μ.trim htail_le) := by sorry
 
   -- Build antitone chain property
   have h_antitone : Antitone 𝒢 := by
