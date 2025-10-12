@@ -2908,8 +2908,13 @@ lemma directing_measure_eval_Iic_measurable
       intro q
       exact alphaIic_measurable X hX_contract hX_meas hX_L2 (q : ℝ)
     -- Measurable iInf over countable index
-    -- TODO: Find the right measurable_iInf lemma for this setup
-    sorry
+    -- Use Measurable.iInf for countable types
+    -- The function ω ↦ iInf_q f(ω, q) is measurable if each ω ↦ f(ω, q) is measurable
+    unfold cdf_from_alpha
+    simp only [iInf]
+    -- After unfolding, we have sInf of a range
+    -- For ℝ-valued functions, sInf of a countable family of measurable functions is measurable
+    exact Measurable.iInf hterm
   -- Identify with the CDF evaluation
   -- This will follow from Measure.ofCDF_apply_Iic once directing_measure is defined
   -- For now, we assume this identification holds
