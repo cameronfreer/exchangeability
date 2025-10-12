@@ -871,15 +871,20 @@ private lemma card_filter_partition (k : ℕ) :
 /-- Cardinality of `{i : Fin(2k) | i.val < k}` is k. -/
 lemma card_filter_fin_val_lt_two_mul (k : ℕ) :
   ((univ : Finset (Fin (2*k))).filter (fun i => i.val < k)).card = k := by
+  -- Use symmetry: both halves of Fin (2k) have equal size
   have h_part := card_filter_partition k
-  -- We'll show both sets have equal cardinality
+  -- Prove both sets have size k by showing they partition 2k equally
+  suffices h : ((univ : Finset (Fin (2*k))).filter (fun i => i.val < k)).card =
+               ((univ : Finset (Fin (2*k))).filter (fun i => ¬(i.val < k))).card by omega
+  -- Show bijection by shifting: i ↦ i + k
   sorry
 
 /-- Cardinality of `{i : Fin(2k) | i.val ≥ k}` is k. -/
 lemma card_filter_fin_val_ge_two_mul (k : ℕ) :
   ((univ : Finset (Fin (2*k))).filter (fun i => ¬(i.val < k))).card = k := by
+  have h_lt := card_filter_fin_val_lt_two_mul k
   have h_part := card_filter_partition k
-  sorry
+  omega
 
 /-- Sum over `{i : Fin n | i.val < k}` equals sum over Fin k when k ≤ n. -/
 lemma sum_filter_fin_val_lt_eq_sum_fin {β : Type*} [AddCommMonoid β] (n k : ℕ) (hk : k ≤ n) (g : ℕ → β) :
