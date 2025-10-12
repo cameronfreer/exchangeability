@@ -585,6 +585,7 @@ lemma sigmaFinite_trim_tailSigma {Ω α : Type*} [MeasurableSpace Ω] [Measurabl
     (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) :
     SigmaFinite (μ.trim (tailSigma_le X hX)) := by
   sorry  -- TODO: Need to prove sigma-finiteness is preserved under trimming
+  -- inferInstance fails; may need manual construction or mathlib extension
 
 /-! ### Helper lemmas for futureFiltration properties -/
 
@@ -1187,9 +1188,9 @@ lemma contractable_dist_eq_on_rectangles_future
         rw [this]; exact hC i
   -- Measurability of ψ₁ and ψ₂
   have hψ₁_meas : Measurable ψ₁ :=
-    (hX_meas m).prod_mk (measurable_shiftRV hX_meas)
+    (hX_meas m).prodMk (measurable_shiftRV hX_meas)
   have hψ₂_meas : Measurable ψ₂ :=
-    (hX_meas k).prod_mk (measurable_shiftRV hX_meas)
+    (hX_meas k).prodMk (measurable_shiftRV hX_meas)
   -- Apply Measure.map_apply and connect the pieces
   rw [Measure.map_apply hψ₁_meas hrect, Measure.map_apply hψ₂_meas hrect]
   rw [hpre₁, hpre₂, hset_eq₁, hset_eq₂]
@@ -1522,15 +1523,15 @@ variable {X : ℕ → Ω → α}
 abbrev 𝔽 (m : ℕ) : MeasurableSpace Ω := futureFiltration X m
 
 /-- The reverse filtration is decreasing; packaged for the martingale API. -/
-axiom filtration_antitone (X : ℕ → Ω → α) : Antitone (fun m => futureFiltration X m)
-  -- TODO: lemma filtration_antitone : Antitone 𝔽 := by
-  --   intro m n hmn; simpa [𝔽] using futureFiltration_antitone X hmn
+lemma filtration_antitone (X : ℕ → Ω → α) : Antitone (fun m => futureFiltration X m) :=
+  futureFiltration_antitone X
 
 /-- Mₘ := 𝔼[1_{Xₖ∈B} | 𝔽ₘ].
 The reverse martingale sequence for the indicator of X_k in B. -/
 axiom M (k : ℕ) (B : Set α) : ℕ → Ω → ℝ
   -- TODO: def M (k : ℕ) (B : Set α) : ℕ → Ω → ℝ :=
   --   fun m ω => μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | 𝔽 m] ω
+  -- Blocked by typeclass instance metavariable issues in conditional expectation
 
 -- TODO (CondExp.lean milestones):
 -- (1) `0 ≤ M k B m ω ≤ 1` a.s.
