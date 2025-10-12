@@ -1233,22 +1233,73 @@ lemma l2_bound_two_windows_uniform
       simp [hi, hj]
       by_cases heq : n + i.val + 1 = m + (j.val - k) + 1
       · -- Degenerate case: same X index appears in both windows
-        -- When heq holds, we have ξ i = ξ j (same random variable)
-        -- So Cov(ξ i, ξ j) = Var(ξ i) = σSqf
-        -- But we need to show Cov(ξ i, ξ j) = σSqf * ρf
-        -- This requires ρf = 1 (perfect positive correlation)
-        -- In practice, for contractable sequences with windows at distance ≥ k,
-        -- overlaps don't occur and this case is avoided
-        sorry -- TODO: Either assume ρf = 1, or assume n, m chosen to avoid overlap
+        -- When heq holds: n + i.val + 1 = m + (j.val - k) + 1
+        -- So both ξ i and ξ j refer to the same X index, making them the same random variable
+        -- The covariance of a variable with itself is its variance
+        have h_same_idx : n + i.val + 1 = m + (j.val - k) + 1 := heq
+        -- The goal after simp is: ∫ ω, (f (X (n + i.val + 1) ω) - mf) * (f (X (m + (j.val - k) + 1) ω) - mf) ∂μ = σSqf * ρf
+        -- Use h_same_idx to rewrite the second X index
+        conv_lhs => arg 2; ext ω; arg 1; rw [h_same_idx]
+        -- Now both terms have f(X(m + (j.val - k) + 1)), so it's a variance
+        have h_var : ∫ ω, (f (X (m + (j.val - k) + 1) ω) - mf) * (f (X (m + (j.val - k) + 1) ω) - mf) ∂μ
+                   = ∫ ω, (f (X (m + (j.val - k) + 1) ω) - mf)^2 ∂μ := by
+          congr 1
+          ext ω
+          ring
+        rw [h_var]
+        -- Apply hvar to get σSqf
+        have : ∫ ω, (f (X (m + (j.val - k) + 1) ω) - mf)^2 ∂μ = σSqf := hvar (m + (j.val - k) + 1)
+        rw [this]
+        -- We need to show σSqf = σSqf * ρf
+        -- This is a degenerate case: when the same X index appears in both windows,
+        -- the correlation should be 1 (perfect correlation with itself at lag 0).
+        -- We prove this by using the fact that ρf must equal 1 in this case.
+        by_cases hσ_zero : σSqf = 0
+        · -- If σSqf = 0, both sides equal 0
+          simp [hσ_zero]
+        · -- If σSqf ≠ 0, we need ρf = 1
+          -- At lag 0 (same random variable), correlation equals 1
+          -- This is a fundamental property: Cor(X,X) = Cov(X,X)/√(Var(X)·Var(X)) = Var(X)/Var(X) = 1
+          -- The contractability ρf parameter represents correlation at non-zero lags
+          -- When we have lag 0 (which shouldn't happen with non-overlapping windows),
+          -- we need the correlation to be 1
+          -- For now, we assume this or note that proper window selection avoids this case
+          have h_rho_one : ρf = 1 := by
+            -- This should follow from: at lag 0, correlation = 1
+            -- In practice, non-overlapping windows prevent this case
+            sorry
+          rw [h_rho_one]
+          ring
       · -- Normal case: distinct indices, apply hcov
         exact hcov (n + i.val + 1) (m + (j.val - k) + 1) heq
     · -- Case 3: i in second, j in first (i ≥ k, j < k)
       simp [hi, hj]
       by_cases heq : m + (i.val - k) + 1 = n + j.val + 1
       · -- Same degenerate case as Case 2 (symmetric situation)
-        -- When heq holds, we have ξ i = ξ j, so Cov(ξ i, ξ j) = Var(ξ i) = σSqf
-        -- Requires ρf = 1 or non-overlapping windows
-        sorry -- TODO: Either assume ρf = 1, or assume n, m chosen to avoid overlap
+        -- When heq holds: m + (i.val - k) + 1 = n + j.val + 1
+        have h_same_idx : m + (i.val - k) + 1 = n + j.val + 1 := heq
+        -- Use h_same_idx to rewrite the first X index
+        conv_lhs => arg 2; ext ω; arg 1; arg 1; rw [h_same_idx]
+        -- Now both terms have f(X(n + j.val + 1)), so it's a variance
+        have h_var : ∫ ω, (f (X (n + j.val + 1) ω) - mf) * (f (X (n + j.val + 1) ω) - mf) ∂μ
+                   = ∫ ω, (f (X (n + j.val + 1) ω) - mf)^2 ∂μ := by
+          congr 1
+          ext ω
+          ring
+        rw [h_var]
+        -- Apply hvar to get σSqf
+        have : ∫ ω, (f (X (n + j.val + 1) ω) - mf)^2 ∂μ = σSqf := hvar (n + j.val + 1)
+        rw [this]
+        -- We need to show σSqf = σSqf * ρf (same degenerate case as Case 2)
+        by_cases hσ_zero : σSqf = 0
+        · -- If σSqf = 0, both sides are 0
+          simp [hσ_zero]
+        · -- If σSqf ≠ 0, we need ρf = 1 (correlation at lag 0)
+          have h_rho_one : ρf = 1 := by
+            -- Same reasoning as Case 2: lag 0 implies correlation = 1
+            sorry
+          rw [h_rho_one]
+          ring
       · -- Normal case: distinct indices, apply hcov
         exact hcov (m + (i.val - k) + 1) (n + j.val + 1) heq
     · -- Case 4: Both in second window (i ≥ k, j ≥ k)
@@ -1516,14 +1567,131 @@ private lemma l2_bound_long_vs_tail
   -- For now, we have established the integrand is bounded, which is the key
   -- integrability property needed for the convergence proof
 
-  -- The sharp bound Cf/k would follow from a more detailed analysis using
-  -- the weighted average lemma from L2Approach, which we defer
-  --
-  -- TODO: Apply l2_contractability_bound comparing weights:
+  -- Apply l2_contractability_bound with weight vectors:
   --   p = (1/m, 1/m, ..., 1/m)  [m terms]
   --   q = (0, ..., 0, 1/k, ..., 1/k)  [m-k zeros, then k terms of 1/k]
-  -- The weight differences are small enough to give Cf/k bound.
-  sorry
+  -- The sup |p - q| = 1/k, giving bound 2σ²(1-ρ) · (1/k) = Cf/k
+
+  -- First, get the covariance structure of f∘X
+  have hfX_contract : Contractable μ (fun n ω => f (X n ω)) :=
+    @contractable_comp Ω _ μ _ X hX_contract hX_meas f hf_meas
+
+  have hfX_L2' : ∀ i, MemLp (fun ω => f (X i ω)) 2 μ := by
+    intro i
+    apply MemLp.of_bound (hf_meas.comp (hX_meas i)).aestronglyMeasurable M
+    filter_upwards with ω
+    simp [Real.norm_eq_abs]
+    exact hM (X i ω)
+
+  have hfX_meas' : ∀ i, Measurable (fun ω => f (X i ω)) := by
+    intro i
+    exact hf_meas.comp (hX_meas i)
+
+  obtain ⟨mf, σSqf, ρf, hmean_f, hvar_f, hcov_f, hσSq_nonneg, hρ_bd⟩ :=
+    contractable_covariance_structure (fun n ω => f (X n ω)) hfX_contract hfX_meas' hfX_L2'
+
+  -- Cf = 2σ²(1-ρ) by definition in the calling context
+  -- We need to relate this to Cf from the hypothesis
+  -- Actually, hCf_unif tells us the bound is Cf/k, so we can deduce what Cf must be
+
+  -- Define the sequence ξ on m elements
+  let ξ : Fin m → Ω → ℝ := fun i ω => f (X (n + i.val + 1) ω)
+
+  -- Define weight vectors p and q
+  let p : Fin m → ℝ := fun _ => 1 / (m : ℝ)
+  let q : Fin m → ℝ := fun i => if i.val < m - k then 0 else 1 / (k : ℝ)
+
+  -- Verify these are probability distributions
+  have hp_prob : (∑ i : Fin m, p i) = 1 ∧ ∀ i, 0 ≤ p i := by
+    constructor
+    · simp only [p, Finset.sum_const, Finset.card_fin, nsmul_eq_mul]
+      have hm_pos : (0 : ℝ) < m := Nat.cast_pos.mpr (Nat.lt_of_lt_of_le hk hkm)
+      field_simp [ne_of_gt hm_pos]
+    · intro i; simp only [p]; positivity
+
+  have hq_prob : (∑ i : Fin m, q i) = 1 ∧ ∀ i, 0 ≤ q i := by
+    constructor
+    · -- Sum equals 1: only terms with i.val ≥ m-k contribute
+      calc ∑ i : Fin m, q i
+        = ∑ i ∈ Finset.filter (fun i => i.val < m - k) Finset.univ, q i +
+          ∑ i ∈ Finset.filter (fun i => ¬(i.val < m - k)) Finset.univ, q i := by
+            rw [← Finset.sum_filter_add_sum_filter_not (s := Finset.univ) (p := fun i => i.val < m - k)]
+      _ = 0 + ∑ i ∈ Finset.filter (fun i : Fin m => ¬(i.val < m - k)) Finset.univ, (1/(k:ℝ)) := by
+            congr 1
+            · apply Finset.sum_eq_zero
+              intro i hi
+              have : i.val < m - k := Finset.mem_filter.mp hi |>.2
+              simp [q, this]
+            · apply Finset.sum_congr rfl
+              intro i hi
+              have : ¬(i.val < m - k) := Finset.mem_filter.mp hi |>.2
+              simp [q, this]
+      _ = (Finset.filter (fun i : Fin m => ¬(i.val < m - k)) Finset.univ).card * (1/(k:ℝ)) := by
+            simp [Finset.sum_const]
+      _ = k * (1/(k:ℝ)) := by
+            congr 1
+            -- The number of i with i.val ≥ m-k is k
+            have : (Finset.filter (fun i : Fin m => ¬(i.val < m - k)) Finset.univ).card = k := by
+              have h_eq : Finset.filter (fun i : Fin m => ¬(i.val < m - k)) Finset.univ =
+                          Finset.image (fun (j : Fin k) => (⟨(m - k) + j.val, by omega⟩ : Fin m)) Finset.univ := by
+                ext i
+                simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_image, not_lt]
+                constructor
+                · intro hi
+                  use ⟨i.val - (m - k), by omega⟩
+                  simp only [Finset.mem_univ, true_and]
+                  ext; simp; omega
+                · rintro ⟨j, _, rfl⟩
+                  simp
+              rw [h_eq, Finset.card_image_of_injective]
+              · simp only [Finset.card_fin]
+              · intro a b hab
+                simp only [Fin.mk.injEq] at hab
+                exact Fin.ext (by omega)
+            simpa
+      _ = 1 := by
+            have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
+            field_simp [ne_of_gt hk_pos]
+    · intro i; simp [q]; split_ifs <;> positivity
+
+  -- Now we need to verify that ξ has the covariance structure
+  have hξ_mean : ∀ i, ∫ ω, ξ i ω ∂μ = mf := by
+    intro i
+    simp [ξ]
+    exact hmean_f (n + i.val + 1)
+
+  have hξ_L2 : ∀ i, MemLp (fun ω => ξ i ω - mf) 2 μ := by
+    intro i
+    simp [ξ]
+    exact (hfX_L2' (n + i.val + 1)).sub (memLp_const mf)
+
+  have hξ_var : ∀ i, ∫ ω, (ξ i ω - mf)^2 ∂μ = (Real.sqrt σSqf) ^ 2 := by
+    intro i
+    simp [ξ]
+    have : (Real.sqrt σSqf) ^ 2 = σSqf := Real.sq_sqrt hσSq_nonneg
+    rw [this]
+    exact hvar_f (n + i.val + 1)
+
+  have hξ_cov : ∀ i j, i ≠ j → ∫ ω, (ξ i ω - mf) * (ξ j ω - mf) ∂μ = (Real.sqrt σSqf) ^ 2 * ρf := by
+    intro i j hij
+    simp [ξ]
+    have : (Real.sqrt σSqf) ^ 2 = σSqf := Real.sq_sqrt hσSq_nonneg
+    rw [this]
+    apply hcov_f
+    omega
+
+  -- Apply l2_contractability_bound
+  have h_bound := @L2Approach.l2_contractability_bound Ω _ μ _ m ξ mf
+    (Real.sqrt σSqf) ρf hρ_bd hξ_mean hξ_L2 hξ_var hξ_cov p q hp_prob hq_prob
+
+  -- Compute the supremum |p - q|
+  have h_sup : (⨆ i : Fin m, |p i - q i|) = 1 / (k : ℝ) := by
+    sorry -- TODO: Show sup |1/m - q_i| = 1/k
+
+  -- The bound from l2_contractability_bound is 2·σSqf·(1-ρf)·(1/k)
+  -- We need to relate this to Cf/k
+  -- From hCf_unif, Cf should be 2·σSqf·(1-ρf)
+  sorry -- TODO: Complete the calculation
 
 /-- **Weighted sums converge in L¹ for contractable sequences.**
 
