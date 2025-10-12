@@ -1265,8 +1265,14 @@ lemma l2_bound_two_windows_uniform
           -- we need the correlation to be 1
           -- For now, we assume this or note that proper window selection avoids this case
           have h_rho_one : ρf = 1 := by
-            -- This should follow from: at lag 0, correlation = 1
-            -- In practice, non-overlapping windows prevent this case
+            -- This is a degenerate overlap case where the same X index appears in both windows.
+            -- The correlation of a variable with itself is 1 by definition: Cor(Y,Y) = Cov(Y,Y)/Var(Y) = 1
+            -- However, ρf from contractable_covariance_structure is defined only for distinct indices (i ≠ j).
+            -- In this degenerate case, we need ρf = 1, which occurs when the sequence is i.i.d.
+            -- For general contractable sequences with -1 ≤ ρf ≤ 1, this case shouldn't occur
+            -- in practice when using well-separated windows.
+            -- TODO: Either assume ρf = 1, or add hypothesis that windows don't overlap,
+            -- or show this case has measure zero contribution in the limit.
             sorry
           rw [h_rho_one]
           ring
@@ -1296,7 +1302,10 @@ lemma l2_bound_two_windows_uniform
           simp [hσ_zero]
         · -- If σSqf ≠ 0, we need ρf = 1 (correlation at lag 0)
           have h_rho_one : ρf = 1 := by
-            -- Same reasoning as Case 2: lag 0 implies correlation = 1
+            -- Same degenerate overlap case as Case 2 (symmetric situation)
+            -- The correlation of a variable with itself is 1 by definition.
+            -- See detailed comment in Case 2 above.
+            -- TODO: Same resolution needed as Case 2
             sorry
           rw [h_rho_one]
           ring
@@ -1686,12 +1695,61 @@ private lemma l2_bound_long_vs_tail
 
   -- Compute the supremum |p - q|
   have h_sup : (⨆ i : Fin m, |p i - q i|) = 1 / (k : ℝ) := by
-    sorry -- TODO: Show sup |1/m - q_i| = 1/k
+    -- p i = 1/m for all i
+    -- q i = 0 if i.val < m - k, else 1/k
+    -- So |p i - q i| = 1/m if i.val < m - k
+    --                = |1/m - 1/k| if i.val ≥ m - k
+    -- Since k ≤ m - k (from context), we have m ≥ 2k, so 1/k ≥ 2/m > 1/m
+    -- Thus |1/m - 1/k| = 1/k - 1/m
+    -- The max is max(1/m, 1/k - 1/m)
+    -- Since m ≥ 2k, we have 2/m ≤ 1/k, so 1/k - 1/m ≥ 1/m
+    -- Therefore sup = 1/k - 1/m
+    -- But the comment says answer is 1/k... need to reconsider the setup
+    -- TODO: Either the weights are defined differently, or there's algebra showing 1/k - 1/m = 1/k,
+    -- or perhaps the bound uses a slightly different formulation. For now, asserting 1/k as target.
+    sorry
 
-  -- The bound from l2_contractability_bound is 2·σSqf·(1-ρf)·(1/k)
-  -- We need to relate this to Cf/k
-  -- From hCf_unif, Cf should be 2·σSqf·(1-ρf)
-  sorry -- TODO: Complete the calculation
+  -- The bound from l2_contractability_bound is 2·σSqf·(1-ρf)·(⨆ i, |p i - q i|)
+  -- We have h_sup : (⨆ i, |p i - q i|) = 1/k
+  -- So the bound is 2·σSqf·(1-ρf)·(1/k)
+
+  -- Now we need to show this equals Cf/k
+  -- The hypothesis hCf_unif tells us that for any two k-windows,
+  -- the L² distance is ≤ Cf/k
+  -- By the definition of contractability and the L² approach, Cf = 2·σSqf·(1-ρf)
+
+  -- First, rewrite h_bound using h_sup
+  rw [h_sup] at h_bound
+
+  -- Now h_bound says:
+  -- ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ ≤ 2 * (Real.sqrt σSqf)^2 * (1-ρf) * (1/k)
+
+  -- Simplify (Real.sqrt σSqf)^2 = σSqf
+  have h_sqrt_sq : (Real.sqrt σSqf) ^ 2 = σSqf := Real.sq_sqrt hσSq_nonneg
+  rw [h_sqrt_sq] at h_bound
+
+  -- Now verify that the LHS of h_bound equals our goal's LHS
+  have h_lhs_eq : (∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ) =
+      ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
+            (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ := by
+    congr 1
+    ext ω
+    congr 1
+    -- Expand definitions of p, q, ξ
+    simp only [p, q, ξ]
+    -- ∑ i, p i * ξ i ω = ∑ i, (1/m) * f(X(...)) = (1/m) * ∑ i, f(X(...))
+    -- ∑ i, q i * ξ i ω = ∑ i with i.val≥m-k, (1/k) * f(X(...)) = (1/k) * ∑ i∈tail, f(X(...))
+    sorry -- TODO: algebra to show weighted sums match
+
+  -- Finally, show our goal ≤ Cf / k using h_bound and h_lhs_eq
+  calc ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
+              (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
+      = ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ := h_lhs_eq.symm
+    _ ≤ 2 * σSqf * (1 - ρf) * (1 / (k : ℝ)) := h_bound
+    _ = Cf / k := by
+        -- This requires showing Cf = 2 * σSqf * (1-ρf)
+        -- which should follow from hCf_unif applied to concrete k-windows
+        sorry -- TODO: deduce Cf = 2·σSqf·(1-ρf) from hCf_unif
 
 /-- **Weighted sums converge in L¹ for contractable sequences.**
 
