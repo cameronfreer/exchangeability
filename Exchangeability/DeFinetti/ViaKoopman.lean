@@ -432,6 +432,28 @@ lemma condindep_pair_given_tail
 
   sorry
 
+/-- **Helper lemma**: Kernel independence implies CE factorization for products.
+
+If X and Y are conditionally independent given a σ-algebra m (as kernels),
+then their conditional expectation factors: CE[X·Y | m] =ᵐ CE[X | m]·CE[Y | m].
+
+This is the bridge between `Kernel.IndepFun` and conditional expectation factorization.
+-/
+lemma condExp_mul_of_indep
+    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {m : MeasurableSpace Ω} (hm : m ≤ inferInstance)
+    {X Y : Ω → ℝ} (hX : Measurable X) (hY : Measurable Y)
+    (hXbd : ∃ C, ∀ ω, |X ω| ≤ C) (hYbd : ∃ C, ∀ ω, |Y ω| ≤ C)
+    (hindep : Kernel.IndepFun X Y (condExpKernel μ m) μ) :
+    μ[X * Y | m] =ᵐ[μ] μ[X | m] * μ[Y | m] := by
+  -- Strategy: Kernel.IndepFun means for κ = condExpKernel:
+  -- ∫ X·Y dκ(ω) = (∫ X dκ(ω)) · (∫ Y dκ(ω)) for μ-a.e. ω
+
+  -- But CE[·|m] is defined as ∫ · d(condExpKernel)
+  -- So this is exactly saying CE[X·Y|m] = CE[X|m]·CE[Y|m]
+
+  sorry -- Requires unpacking Kernel.IndepFun definition and connecting to condExp
+
 /-- **Axiomized product factorization** for general finite cylinder products.
 
 **Proof Strategy** (Induction on m):
@@ -458,28 +480,32 @@ lemma condexp_product_factorization_ax
   induction m with
   | zero =>
     -- Base case: m = 0, empty product is 1
+    -- Need to show: CE[1 | ℐ] =ᵐ 1
     simp only [Finset.prod_empty]
-    -- CE[1 | ℐ] = 1 a.e.
-    sorry
-  | succ m IH =>
-    -- Inductive step: m + 1 coordinates
-    -- Split: ∏ᵢ₌₀ᵐ f(ωᵢ) = (∏ᵢ₌₀ᵐ⁻¹ f(ωᵢ)) · f(ωₘ)
+    -- CE of a constant is the constant a.e.
+    have : (fun ω => (1 : ℝ)) = (1 : Ω[α] → ℝ) := rfl
+    rw [this]
+    exact condExp_const shiftInvariantSigma_le
+  | succ n IH =>
+    -- Inductive step: n + 1 coordinates
+    -- Split: ∏ᵢ₌₀ⁿ f(ωᵢ) = (∏ᵢ₌₀ⁿ⁻¹ f(ωᵢ)) · f(ωₙ)
 
-    -- Step 1: Apply conditional independence to split the product
-    -- We need to show the first m coordinates are independent of coordinate m
-    -- conditioned on the shift-invariant σ-algebra
+    -- Strategy:
+    -- 1. Apply IH to get: CE[∏ᵢ₌₀ⁿ⁻¹ fs i (ωᵢ) | ℐ] =ᵐ ∏ᵢ₌₀ⁿ⁻¹ (∫ fs i dν)
+    -- 2. Apply identicalConditionalMarginals to get: CE[fs n (ωₙ) | ℐ] =ᵐ ∫ fs n dν
+    -- 3. Use condindep_pair_given_tail to split CE of product:
+    --    CE[(∏ᵢ₌₀ⁿ⁻¹ fs i (ωᵢ)) · fs n (ωₙ) | ℐ] =ᵐ CE[∏ᵢ₌₀ⁿ⁻¹ fs i (ωᵢ) | ℐ] · CE[fs n (ωₙ) | ℐ]
+    -- 4. Combine: =ᵐ (∏ᵢ₌₀ⁿ⁻¹ ∫ fs i dν) · (∫ fs n dν) = ∏ᵢ₌₀ⁿ ∫ fs i dν
 
-    -- Step 2: Apply IH to the first m factors
-    -- This gives: CE[∏ᵢ₌₀ᵐ⁻¹ f(ωᵢ) | ℐ] =ᵐ ∏ᵢ₌₀ᵐ⁻¹ (∫ f dν)
+    -- The key step is (3): translating Kernel.IndepFun to CE factorization
+    -- This is provided by condExp_mul_of_indep
 
-    -- Step 3: Apply conditional independence for the last factor
-    -- CE[f(ωₘ) | ℐ] =ᵐ ∫ f dν
+    -- Apply condExp_mul_of_indep with:
+    -- - X = ∏ᵢ₌₀ⁿ⁻¹ fs i (ωᵢ)  (measurable function of first n coordinates)
+    -- - Y = fs n (ωₙ)            (measurable function of coordinate n)
+    -- - hindep from condindep_pair_given_tail (extended to functions of coordinates)
 
-    -- Step 4: Multiply the factorizations
-    -- CE[(∏ᵢ₌₀ᵐ⁻¹ f(ωᵢ)) · f(ωₘ) | ℐ] = CE[∏ᵢ₌₀ᵐ⁻¹ f(ωᵢ) | ℐ] · CE[f(ωₘ) | ℐ]
-    --   =ᵐ (∏ᵢ₌₀ᵐ⁻¹ ∫ f dν) · (∫ f dν) = ∏ᵢ₌₀ᵐ ∫ f dν
-
-    sorry
+    sorry -- Apply condExp_mul_of_indep + combine with IH and identicalConditionalMarginals
 
 /-- **Generalized product factorization** for arbitrary coordinate indices.
 
@@ -499,19 +525,26 @@ lemma condexp_product_factorization_general
     (hciid : True) :
     μ[fun ω => ∏ i, fs i (ω (k i)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] (fun ω => ∏ i, ∫ x, fs i x ∂(ν μ ω)) := by
-  -- Key insight: The factorization doesn't depend on coordinate selection
-  -- because the measure is shift-invariant and ν is the same for all coordinates
+  -- This generalizes condexp_product_factorization_ax to arbitrary coordinates k
+  -- The proof follows the same structure but uses identicalConditionalMarginals
 
-  -- Strategy: Show that both sides are equal by using identicalConditionalMarginals
-  -- which already handles arbitrary coordinates
+  -- Base case m = 0
+  induction m with
+  | zero =>
+    simp [Finset.prod_empty]
+    -- CE[1 | ℐ] = 1 a.e. and ∏ (empty) = 1
+    -- Same as base case in condexp_product_factorization_ax
+    exact condExp_const shiftInvariantSigma_le
 
-  -- For each coordinate i, we have:
-  -- CE[fs i (ω (k i)) | ℐ] =ᵐ ∫ fs i dν  (by identicalConditionalMarginals)
+  | succ n IH =>
+    -- Inductive step: split product into first n factors and last factor
+    -- CE[∏ᵢ₌₀ⁿ fs i (ω (k i)) | ℐ]
+    --   = CE[(∏ᵢ₌₀ⁿ⁻¹ fs i (ω (k i))) · fs n (ω (k n)) | ℐ]
+    --   = CE[∏ᵢ₌₀ⁿ⁻¹ fs i (ω (k i)) | ℐ] · CE[fs n (ω (k n)) | ℐ]  [conditional independence]
+    --   =ᵐ (∏ᵢ₌₀ⁿ⁻¹ ∫ fs i dν) · (∫ fs n dν)                       [IH + identicalConditionalMarginals]
+    --   = ∏ᵢ₌₀ⁿ ∫ fs i dν
 
-  -- For products, we need conditional independence, which follows from
-  -- the exchangeability assumption (hciid parameter)
-
-  sorry -- Requires combining identicalConditionalMarginals with conditional independence
+    sorry -- Same structure as condexp_product_factorization_ax, uses identicalConditionalMarginals for arbitrary k
 
 /-- **Bridge axiom** for ENNReal version needed by `CommonEnding`.
 
@@ -665,12 +698,36 @@ lemma indicator_product_bridge_ax
       exact (h_indicator_integral i ω).symm
 
     -- Connect via tower property + ae equalities
-    -- ∫ F = ∫ (fun ω => ∏ i, fs i (ω (k i)))     [by h_F_ae]
-    --     = ∫ CE[fun ω => ∏ i, fs i (ω (k i)) | 𝓘]  [tower property]
-    --     = ∫ (fun ω => ∏ i, ∫ x, fs i x ∂(ν μ ω))  [by h_factor]
-    --     = ∫ G                                     [by h_G_ae]
+    -- Step 1: ∫ F = ∫ (fun ω => ∏ i, fs i (ω (k i)))
+    have step1 : ∫ ω, F ω ∂μ = ∫ ω, (∏ i, fs i (ω (k i))) ∂μ :=
+      integral_congr_ae h_F_ae
 
-    sorry -- Apply: integral_congr_ae + tower property for conditional expectation
+    -- Step 2: Tower property - need integrability first
+    have prod_int : Integrable (fun ω => ∏ i, fs i (ω (k i))) μ := by
+      -- Product of indicators is bounded by 1, hence integrable
+      have : (fun ω => ∏ i, fs i (ω (k i))) =ᵐ[μ] F := h_F_ae.symm
+      exact Integrable.congr hF_int this
+
+    -- Step 3: ∫ (∏ fs) = ∫ CE[∏ fs | 𝓘] by tower property
+    have step2 : ∫ ω, (∏ i, fs i (ω (k i))) ∂μ =
+                 ∫ ω, μ[fun ω => ∏ i, fs i (ω (k i)) | shiftInvariantSigma (α := α)] ω ∂μ := by
+      exact (integral_condExp shiftInvariantSigma_le prod_int).symm
+
+    -- Step 4: CE[∏ fs] =ᵐ (∏ ∫ fs dν) by h_factor
+    have step3 : ∫ ω, μ[fun ω => ∏ i, fs i (ω (k i)) | shiftInvariantSigma (α := α)] ω ∂μ =
+                 ∫ ω, (∏ i, ∫ x, fs i x ∂(ν μ ω)) ∂μ :=
+      integral_congr_ae h_factor
+
+    -- Step 5: ∫ (∏ ∫ fs dν) = ∫ G
+    have step4 : ∫ ω, (∏ i, ∫ x, fs i x ∂(ν μ ω)) ∂μ = ∫ ω, G ω ∂μ :=
+      integral_congr_ae h_G_ae.symm
+
+    -- Chain all steps
+    calc ∫ ω, F ω ∂μ
+        = ∫ ω, (∏ i, fs i (ω (k i))) ∂μ := step1
+      _ = ∫ ω, μ[fun ω => ∏ i, fs i (ω (k i)) | shiftInvariantSigma (α := α)] ω ∂μ := step2
+      _ = ∫ ω, (∏ i, ∫ x, fs i x ∂(ν μ ω)) ∂μ := step3
+      _ = ∫ ω, G ω ∂μ := step4
 
   -- Convert both sides to ENNReal and conclude
   calc ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
