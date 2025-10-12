@@ -1537,7 +1537,7 @@ The reverse martingale sequence for the indicator of X_k in B.
 
 Uses `condExpWith` from CondExp.lean to manage typeclass instances properly. -/
 noncomputable
-def M (hX_meas : ∀ n, Measurable (X n)) (k : ℕ) (B : Set α) (hB : MeasurableSet B) :
+def M (hX_meas : ∀ n, Measurable (X n)) (k : ℕ) (B : Set α) (_hB : MeasurableSet B) :
     ℕ → Ω → ℝ :=
   fun m => Exchangeability.Probability.condExpWith μ (futureFiltration X m)
     (futureFiltration_le X m hX_meas)
@@ -1573,39 +1573,6 @@ axiom coordinate_future_condIndep
     (hX_meas : ∀ n, Measurable (X n))
     (i m : ℕ) (hm : m > i) : True
   -- TODO: Full type with CondIndep blocked by typeclass resolution
-
-/-- Conditional expectation of products factors when coordinates are conditionally
-independent. This is a wrapper around the general product rule for conditional expectations.
-
-**Proof strategy** (to be implemented):
-This can be derived from `condExp_indicator_mul_indicator_of_condIndep` in CondExp.lean
-using the following steps:
-
-1. **Simple functions**: For `f = ∑ᵢ aᵢ·1_{Aᵢ}` and `g = ∑ⱼ bⱼ·1_{Bⱼ}`, use linearity:
-   ```
-   μ[f * g | m] = ∑ᵢⱼ aᵢbⱼ · μ[1_{Aᵢ∩Bⱼ} | m]
-                = ∑ᵢⱼ aᵢbⱼ · μ[1_{Aᵢ} | m] · 1_{Bⱼ}   (by h_indep + pullout)
-                = (∑ᵢ aᵢ · μ[1_{Aᵢ} | m]) · (∑ⱼ bⱼ·1_{Bⱼ})
-                = μ[f | m] · g
-   ```
-
-2. **Approximation**: For general integrable `f`, `g`:
-   - Approximate `f` by m-measurable simple functions `fₙ → f` in L¹
-   - Approximate `g` by simple functions `gₙ → g` in L¹
-   - Use `μ[fₙ * gₙ | m] = μ[fₙ | m] * gₙ` from step 1
-   - Pass to limit using dominated/monotone convergence for conditional expectations
-
-3. **Measurability**: The ae strong measurability of `f` w.r.t. `m` ensures the approximation
-   by m-measurable simple functions exists.
-
-This proof requires developing the approximation theory for conditional expectations,
-which is substantial. For now, we axiomatize it.
--/
-axiom condExp_product_of_condIndep
-    {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
-    {μ : Measure Ω} [IsProbabilityMeasure μ] : True
-  -- TODO: Full axiom with conditional independence → product factorization
-  -- Blocked by typeclass resolution in conditional expectation API
 
 /-- **Product formula for conditional expectations under conditional independence.**
 
