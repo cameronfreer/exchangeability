@@ -1529,9 +1529,9 @@ lemma filtration_antitone (X : ℕ → Ω → α) : Antitone (fun m => futureFil
 /-- Mₘ := 𝔼[1_{Xₖ∈B} | 𝔽ₘ].
 The reverse martingale sequence for the indicator of X_k in B. -/
 axiom M (k : ℕ) (B : Set α) : ℕ → Ω → ℝ
-  -- TODO: def M (k : ℕ) (B : Set α) : ℕ → Ω → ℝ :=
-  --   fun m ω => μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | 𝔽 m] ω
-  -- Blocked by typeclass instance metavariable issues in conditional expectation
+  -- TODO: Requires proper instance management for conditional expectation
+  -- The mathematical definition is clear: M k B m ω = μ[1_{X_k ∈ B} | σ(θ_{m+1} X)] ω
+  -- Technical blocker: Lean 4 typeclass inference with futureFiltration
 
 -- TODO (CondExp.lean milestones):
 -- (1) `0 ≤ M k B m ω ≤ 1` a.s.
