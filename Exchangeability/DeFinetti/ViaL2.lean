@@ -1000,8 +1000,8 @@ lemma l2_bound_two_windows_uniform
       _ = k * (1/(k:ℝ)) := by
             congr 1
             -- Count: exactly k indices in Fin (2*k) satisfy i.val < k
-            -- This is a basic fact: among {0,...,2k-1}, exactly {0,...,k-1} satisfy < k
-            sorry  -- TODO: Prove cardinality of {i : Fin (2k) | i.val < k} = k
+            -- Among {0,...,2k-1}, exactly {0,...,k-1} satisfy < k
+            sorry  -- TODO: Cardinality {i : Fin(2k) | i.val < k} = k
       _ = 1 := by
             have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
             field_simp [ne_of_gt hk_pos]
@@ -1102,17 +1102,22 @@ lemma l2_bound_two_windows_uniform
       simp [hi, hj]
       by_cases heq : n + i.val + 1 = m + (j.val - k) + 1
       · -- Degenerate case: same X index appears in both windows
-        -- This means ξ i and ξ j are the same random variable
-        -- The covariance equals variance in this case
-        -- For the theorem to work cleanly, windows should be disjoint or mostly distinct
-        sorry -- TODO: Handle when windows overlap; may need additional structure
+        -- When heq holds, we have ξ i = ξ j (same random variable)
+        -- So Cov(ξ i, ξ j) = Var(ξ i) = σSqf
+        -- But we need to show Cov(ξ i, ξ j) = σSqf * ρf
+        -- This requires ρf = 1 (perfect positive correlation)
+        -- In practice, for contractable sequences with windows at distance ≥ k,
+        -- overlaps don't occur and this case is avoided
+        sorry -- TODO: Either assume ρf = 1, or assume n, m chosen to avoid overlap
       · -- Normal case: distinct indices, apply hcov
         exact hcov (n + i.val + 1) (m + (j.val - k) + 1) heq
     · -- Case 3: i in second, j in first (i ≥ k, j < k)
       simp [hi, hj]
       by_cases heq : m + (i.val - k) + 1 = n + j.val + 1
-      · -- Same degenerate case as Case 2
-        sorry -- TODO: Handle when windows overlap
+      · -- Same degenerate case as Case 2 (symmetric situation)
+        -- When heq holds, we have ξ i = ξ j, so Cov(ξ i, ξ j) = Var(ξ i) = σSqf
+        -- Requires ρf = 1 or non-overlapping windows
+        sorry -- TODO: Either assume ρf = 1, or assume n, m chosen to avoid overlap
       · -- Normal case: distinct indices, apply hcov
         exact hcov (m + (i.val - k) + 1) (n + j.val + 1) heq
     · -- Case 4: Both in second window (i ≥ k, j ≥ k)
