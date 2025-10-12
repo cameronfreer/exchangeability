@@ -685,7 +685,7 @@ lemma condIndep_of_indicator_condexp_eq
     condExp_mul_of_aestronglyMeasurable_left
       (μ := μ) (m := mF ⊔ mG)
       hf1_aesm
-      (by sorry : Integrable (fun ω => f1 ω * f2 ω) μ)
+      (by sorry : Integrable (fun ω => f1 ω * f2 ω) μ)  -- Product of integrable indicators
       hf2_int
   -- Substitute the projection property to drop `mF` at the middle.
   have h_middle_to_G :
@@ -699,7 +699,7 @@ lemma condIndep_of_indicator_condexp_eq
     condExp_mul_of_aestronglyMeasurable_right
       (μ := μ) (m := mG)
       (stronglyMeasurable_condExp (μ := μ) (m := mG) (f := f2)).aestronglyMeasurable
-      (by sorry : Integrable (fun ω => f1 ω * μ[f2 | mG] ω) μ)
+      (by sorry : Integrable (fun ω => f1 ω * μ[f2 | mG] ω) μ)  -- Product of indicator and condExp
       hf1_int
   -- Chain the equalities into the product formula.
   sorry  -- TODO: Fix chaining of conditional expectation equalities
@@ -874,9 +874,8 @@ lemma Integrable.tendsto_ae_condexp_antitone
   -- Set up the tail σ-algebra
   set tail := ⨅ n, 𝒢 n with htail_def
   have htail_le : tail ≤ m₀ := iInf_le_of_le 0 (hle 0)
-  haveI : SigmaFinite (μ.trim htail_le) := by
-    have : IsProbabilityMeasure μ := inferInstance
-    sorry  -- TODO: Derive SigmaFinite from IsProbabilityMeasure
+  haveI : SigmaFinite (μ.trim htail_le) :=
+    (inferInstance : IsFiniteMeasure (μ.trim htail_le)).toSigmaFinite
 
   -- Build antitone chain property
   have h_antitone : Antitone 𝒢 := by
