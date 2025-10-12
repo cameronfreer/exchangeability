@@ -293,9 +293,16 @@ lemma revFiltration_zero (X : ℕ → Ω → α) :
     revFiltration X 0 = MeasurableSpace.comap (path X) inferInstance := by
   simp [revFiltration]
 
-lemma revFiltration_le (X : ℕ → Ω → α) (m : ℕ) :
+lemma revFiltration_le (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) (m : ℕ) :
     revFiltration X m ≤ (inferInstance : MeasurableSpace Ω) := by
-  sorry  -- TODO: Need to prove comap (shiftRV X m) inst ≤ inst
+  -- The comap is ≤ ambient iff the function is measurable
+  -- shiftRV X m = path (shiftProcess X m) is measurable
+  simp only [revFiltration]
+  intro s hs
+  obtain ⟨t, ht, rfl⟩ := hs
+  rw [shiftRV_eq_path_comp_shift]
+  have h_meas := measurable_path (shiftProcess X m) (measurable_shiftProcess X m hX)
+  exact h_meas ht
 
 /-- The tail σ-algebra for a process X: ⋂ₙ σ(Xₙ, Xₙ₊₁, ...). -/
 def tailSigma (X : ℕ → Ω → α) : MeasurableSpace Ω :=
@@ -320,7 +327,19 @@ end Measurability
 
 lemma revFiltration_antitone (X : ℕ → Ω → α) :
     Antitone (revFiltration X) := by
-  sorry  -- TODO: Fix type mismatch with comap_comp_le
+  intro m n hmn
+  -- Need to show: revFiltration X n ≤ revFiltration X m when m ≤ n
+  -- Strategy: shiftRV X n = shiftSeq (n - m) ∘ shiftRV X m
+  simp only [revFiltration]
+  let k := n - m
+  -- Show shiftRV X n = shiftSeq k ∘ shiftRV X m
+  have h_comp : shiftRV X n = shiftSeq k ∘ shiftRV X m := by
+    funext ω i
+    simp only [shiftRV, shiftSeq, Function.comp_apply]
+    congr 1
+    omega
+  rw [h_comp]
+  exact comap_comp_le (shiftRV X m) (shiftSeq k) measurable_shiftSeq
 
 /-- If `X` is contractable, then so is each of its shifts `θₘ X`. -/
 lemma shift_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
@@ -378,13 +397,100 @@ the probabilities agree when comparing `(X m, θₘ X)` vs `(X k, θₘ X)`.
 This is the exact finite-dimensional marginal needed for the martingale step. -/
 lemma contractable_dist_eq_on_first_r_tail
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {X : ℕ → Ω → α} (hX : Contractable μ X)
+    {X : ℕ → Ω → α} (hX : Contractable μ X) (hX_meas : ∀ n, Measurable (X n))
     (k m r : ℕ) (hk : k ≤ m)
     (B : Set α) (hB : MeasurableSet B)
     (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i)) :
     μ {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
       = μ {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
-  sorry  -- TODO: Fix type mismatches in contractability proof
+  classical
+  -- Reindex (r+1)-vector: head = m (resp. k), tail = m+1,...,m+r
+  let κ_tail : Fin r → ℕ := fun i => m + (i.1 + 1)
+  have h_tail : StrictMono κ_tail := by
+    intro i j hij
+    show κ_tail i < κ_tail j
+    simp only [κ_tail]
+    omega
+  let κ₁ : Fin (r + 1) → ℕ := Fin.cases m (fun i : Fin r => κ_tail i)
+  let κ₂ : Fin (r + 1) → ℕ := Fin.cases k (fun i : Fin r => κ_tail i)
+  have hκ₁ : StrictMono κ₁ := strictMono_fin_cases h_tail (fun i => by
+    show m < κ_tail i
+    simp only [κ_tail]
+    omega)
+  have hκ₂ : StrictMono κ₂ := strictMono_fin_cases h_tail (fun i => by
+    show k < κ_tail i
+    simp only [κ_tail]
+    omega)
+  -- contractability: both maps give the same law
+  have hlaw₁ : Measure.map (fun ω i => X (κ₁ i) ω) μ
+              = Measure.map (fun ω i => X i.1 ω) μ :=
+    hX (r + 1) κ₁ hκ₁
+  have hlaw₂ : Measure.map (fun ω i => X (κ₂ i) ω) μ
+              = Measure.map (fun ω i => X i.1 ω) μ :=
+    hX (r + 1) κ₂ hκ₂
+  -- Therefore the laws are equal
+  have : Measure.map (fun ω i => X (κ₁ i) ω) μ
+       = Measure.map (fun ω i => X (κ₂ i) ω) μ := by
+    rw [hlaw₁, hlaw₂]
+  -- The sets we want are exactly the preimages of the same event
+  let A : Set (Fin (r + 1) → α) := {y | y 0 ∈ B ∧ ∀ i : Fin r, y (Fin.succ i) ∈ C i}
+  have hA : MeasurableSet A := by
+    have h0 : Measurable (fun y : Fin (r + 1) → α => y 0) := measurable_pi_apply 0
+    have hS : ∀ i : Fin r, Measurable (fun y : Fin (r + 1) → α => y (Fin.succ i)) :=
+      fun i => measurable_pi_apply (Fin.succ i)
+    have : A = (fun y => y 0) ⁻¹' B ∩ (⋂ i : Fin r, (fun y => y (Fin.succ i)) ⁻¹' C i) := by
+      ext y; simp [A, Set.mem_iInter]
+    rw [this]
+    exact (h0 hB).inter (MeasurableSet.iInter fun i => hS i (hC i))
+  -- Measurability of the index maps
+  have hφ₁ : Measurable (fun ω i => X (κ₁ i) ω) := by
+    apply measurable_pi_lambda
+    intro i
+    cases i using Fin.cases with
+    | zero => exact hX_meas m
+    | succ j => simp only [κ₁, κ_tail]; exact hX_meas (m + (j.1 + 1))
+  have hφ₂ : Measurable (fun ω i => X (κ₂ i) ω) := by
+    apply measurable_pi_lambda
+    intro i
+    cases i using Fin.cases with
+    | zero => exact hX_meas k
+    | succ j => simp only [κ₂, κ_tail]; exact hX_meas (m + (j.1 + 1))
+  have hE₁ : {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
+           = (fun ω i => X (κ₁ i) ω) ⁻¹' A := by
+    ext ω
+    simp only [Set.mem_setOf, Set.mem_preimage, A, κ₁, κ_tail]
+    constructor
+    · intro ⟨hB', hC'⟩
+      constructor
+      · simpa using hB'
+      · intro i
+        simpa using hC' i
+    · intro ⟨hB', hC'⟩
+      constructor
+      · simpa using hB'
+      · intro i
+        simpa using hC' i
+  have hE₂ : {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
+           = (fun ω i => X (κ₂ i) ω) ⁻¹' A := by
+    ext ω
+    simp only [Set.mem_setOf, Set.mem_preimage, A, κ₂, κ_tail]
+    constructor
+    · intro ⟨hB', hC'⟩
+      constructor
+      · simpa using hB'
+      · intro i
+        simpa using hC' i
+    · intro ⟨hB', hC'⟩
+      constructor
+      · simpa using hB'
+      · intro i
+        simpa using hC' i
+  calc μ {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
+      = μ ((fun ω i => X (κ₁ i) ω) ⁻¹' A) := by rw [hE₁]
+    _ = (Measure.map (fun ω i => X (κ₁ i) ω) μ) A := (Measure.map_apply hφ₁ hA).symm
+    _ = (Measure.map (fun ω i => X (κ₂ i) ω) μ) A := by rw [this]
+    _ = μ ((fun ω i => X (κ₂ i) ω) ⁻¹' A) := Measure.map_apply hφ₂ hA
+    _ = μ {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by rw [← hE₂]
 
 /-- Helper lemma: contractability gives the key distributional equality.
 
@@ -396,10 +502,13 @@ where `θ_{m+1} X` drops the first coordinate and keeps the *future* tail
 `ω ↦ (n ↦ X(m + 1 + n) ω)`. -/
 lemma contractable_dist_eq
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {X : ℕ → Ω → α} (hX : Contractable μ X) (k m : ℕ) (hk : k ≤ m) :
+    {X : ℕ → Ω → α} (hX : Contractable μ X) (hX_meas : ∀ n, Measurable (X n))
+    (k m : ℕ) (hk : k ≤ m) :
     Measure.map (fun ω => (X m ω, shiftRV X (m + 1) ω)) μ
       = Measure.map (fun ω => (X k ω, shiftRV X (m + 1) ω)) μ := by
-  sorry  -- TODO: Prove using contractability directly (without circular dependency)
+  sorry
+  -- TODO: Apply measure_ext_of_future_rectangles (defined later) to contractable_dist_eq_on_rectangles_future
+  -- Will need file reorganization to avoid forward reference
 
 /-- Future reverse filtration: 𝔽ᶠᵘᵗₘ = σ(θ_{m+1} X). -/
 abbrev futureFiltration (X : ℕ → Ω → α) (m : ℕ) : MeasurableSpace Ω :=
@@ -478,8 +587,8 @@ lemma tailSigmaFuture_eq_tailSigma (X : ℕ → Ω → α) :
     intro n
     have h1 : (⨅ m, revFiltration X (m + 1)) ≤ revFiltration X (n + 1) :=
       iInf_le (fun m => revFiltration X (m + 1)) n
-    have h2 : revFiltration X (n + 1) ≤ revFiltration X n := by
-      sorry  -- TODO: Requires revFiltration_antitone which is currently stubbed
+    have h2 : revFiltration X (n + 1) ≤ revFiltration X n :=
+      revFiltration_antitone X (Nat.le_succ n)
     exact h1.trans h2
   · -- `tailSigma ≤ tailSigmaFuture`
     refine (htail ▸ ?_)
@@ -493,10 +602,10 @@ lemma tailSigmaFuture_eq_tailSigma (X : ℕ → Ω → α) :
 
 /-- The tail σ-algebra is a sub-σ-algebra of the ambient σ-algebra. -/
 lemma tailSigma_le {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
-    (X : ℕ → Ω → α) :
+    (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) :
     tailSigma X ≤ (inferInstance : MeasurableSpace Ω) := by
   refine iInf_le_of_le 0 ?_
-  exact revFiltration_le X 0
+  exact revFiltration_le X hX 0
 
 /-- Future filtration is always at least as fine as the tail σ-algebra. -/
 lemma tailSigma_le_futureFiltration {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
@@ -517,7 +626,7 @@ when the base measure is sigma-finite. -/
 lemma sigmaFinite_trim_tailSigma {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     {μ : Measure Ω} [SigmaFinite μ]
     (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) :
-    SigmaFinite (μ.trim (tailSigma_le X)) := by
+    SigmaFinite (μ.trim (tailSigma_le X hX)) := by
   sorry  -- TODO: Need to prove sigma-finiteness is preserved under trimming
 
 /-! ### Helper lemmas for futureFiltration properties -/
@@ -526,13 +635,26 @@ lemma sigmaFinite_trim_tailSigma {Ω α : Type*} [MeasurableSpace Ω] [Measurabl
 lemma futureFiltration_le {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) (m : ℕ) (hX : ∀ n, Measurable (X n)) :
     futureFiltration X m ≤ (inferInstance : MeasurableSpace Ω) := by
-  sorry  -- TODO: Need to prove comap (shiftRV X (m + 1)) inst ≤ inst
+  -- futureFiltration X m = revFiltration X (m + 1)
+  simp only [futureFiltration]
+  exact revFiltration_le X hX (m + 1)
 
-/-- The preimage of a measurable set under X_{m+k} is measurable in futureFiltration X m. -/
+/-- The preimage of a measurable set under X_{m+k} is measurable in futureFiltration X m.
+Note: This requires k ≥ 1 since futureFiltration X m = σ(X_{m+1}, X_{m+2}, ...). -/
 lemma preimage_measurable_in_futureFiltration {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
-    (X : ℕ → Ω → α) (m k : ℕ) {A : Set α} (hA : MeasurableSet A) :
+    (X : ℕ → Ω → α) (m k : ℕ) (hk : 1 ≤ k) {A : Set α} (hA : MeasurableSet A) :
     MeasurableSet[futureFiltration X m] (X (m + k) ⁻¹' A) := by
-  sorry  -- TODO: Prove using comap measurability
+  -- futureFiltration X m = comap (shiftRV X (m+1))
+  -- X (m + k) = X (m + 1 + (k-1)) = π_{k-1} ∘ shiftRV X (m+1)
+  -- where π_n projects to the n-th coordinate
+  simp only [futureFiltration]
+  have : X (m + k) = (fun f : ℕ → α => f (k - 1)) ∘ shiftRV X (m + 1) := by
+    funext ω
+    simp [shiftRV]
+    congr 1
+    omega
+  rw [this, Set.preimage_comp]
+  exact ⟨(fun f : ℕ → α => f (k - 1)) ⁻¹' A, (measurable_pi_apply (k - 1)) hA, rfl⟩
 
 /-- Events measurable in a future filtration remain measurable in earlier filtrations. -/
 lemma measurableSet_of_futureFiltration {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
@@ -669,12 +791,6 @@ lemma firstRCylinder_measurable_ambient
   simp only [firstRCylinder, Set.setOf_forall]
   exact MeasurableSet.iInter fun i => (hX i) (hC i)
 
-/-- The first-r σ-algebra is a sub-σ-algebra of the ambient σ-algebra when coordinates are measurable. -/
-lemma firstRSigma_le_ambient
-    (X : ℕ → Ω → α) (r : ℕ) (hX : ∀ i, Measurable (X i)) :
-    firstRSigma X r ≤ (inferInstance : MeasurableSpace Ω) := by
-  sorry  -- TODO: Need to prove comap le relationship
-
 /-- The firstRMap is measurable when all coordinates are measurable. -/
 lemma measurable_firstRMap
     (X : ℕ → Ω → α) (r : ℕ) (hX : ∀ i, Measurable (X i)) :
@@ -683,17 +799,77 @@ lemma measurable_firstRMap
   intro i
   exact hX i
 
+/-- The first-r σ-algebra is a sub-σ-algebra of the ambient σ-algebra when coordinates are measurable. -/
+lemma firstRSigma_le_ambient
+    (X : ℕ → Ω → α) (r : ℕ) (hX : ∀ i, Measurable (X i)) :
+    firstRSigma X r ≤ (inferInstance : MeasurableSpace Ω) := by
+  simp only [firstRSigma]
+  intro s hs
+  obtain ⟨t, ht, rfl⟩ := hs
+  exact (measurable_firstRMap X r hX) ht
+
 /-- Stronger version: firstRSigma increases with r. -/
 lemma firstRSigma_mono
     (X : ℕ → Ω → α) {r s : ℕ} (hrs : r ≤ s) :
     firstRSigma X r ≤ firstRSigma X s := by
-  sorry  -- TODO: Need comap relationship for different firstRMap functions
+  -- Strategy: firstRMap X r factors through firstRMap X s via projection
+  simp only [firstRSigma]
+  intro t ht
+  obtain ⟨u, hu, rfl⟩ := ht
+  -- Define projection π : (Fin s → α) → (Fin r → α) taking first r coords
+  let π : (Fin s → α) → (Fin r → α) := fun f i => f ⟨i.val, Nat.lt_of_lt_of_le i.isLt hrs⟩
+  -- Show firstRMap X r = π ∘ firstRMap X s
+  have h_comp : firstRMap X r = π ∘ firstRMap X s := by
+    funext ω i
+    simp [firstRMap, π]
+  -- π is measurable (composition of coordinate projections)
+  have hπ : Measurable π := by
+    rw [measurable_pi_iff]
+    intro i
+    simp only [π]
+    exact measurable_pi_apply _
+  -- Preimage factors through composition
+  rw [h_comp, Set.preimage_comp]
+  exact ⟨π ⁻¹' u, hπ hu, rfl⟩
 
-/-- The first-r σ-algebra is contained in the future filtration at level m when r ≤ m. -/
+/-- The first r coordinates are measurable in the full reverse filtration. -/
+lemma firstRSigma_le_revFiltration_zero
+    (X : ℕ → Ω → α) (r : ℕ) :
+    firstRSigma X r ≤ revFiltration X 0 := by
+  -- revFiltration X 0 generates σ(X₀, X₁, X₂, ...) which contains σ(X₀, ..., X_{r-1})
+  -- Strategy: firstRMap X r factors through path X via projection
+  simp only [firstRSigma, revFiltration]
+  intro s hs
+  obtain ⟨t, ht, rfl⟩ := hs
+  -- Define projection π : (ℕ → α) → (Fin r → α) that takes first r coords
+  let π : (ℕ → α) → (Fin r → α) := fun f i => f i
+  -- firstRMap X r = π ∘ shiftRV X 0 = π ∘ path X
+  have h_comp : firstRMap X r = π ∘ shiftRV X 0 := by
+    funext ω i
+    simp [firstRMap, shiftRV, π]
+  -- π is measurable
+  have hπ : Measurable π := by
+    apply measurable_pi_lambda
+    intro i
+    simp only [π]
+    exact measurable_pi_apply (i : ℕ)
+  rw [h_comp, Set.preimage_comp]
+  exact ⟨π ⁻¹' t, hπ ht, rfl⟩
+
+/-- **NOTE:** This lemma statement appears incorrect as written.
+- `firstRSigma X r` is generated by X₀, ..., X_{r-1}
+- `futureFiltration X m` is generated by X_{m+1}, X_{m+2}, ...
+- When r ≤ m, these are non-overlapping index sets, so the inclusion cannot hold.
+
+The correct statement might be `firstRSigma_le_revFiltration_zero` (proved above),
+or perhaps the indices/filtrations need to be adjusted.
+
+This is currently only used in the commented-out proof of `finite_level_factorization`
+(line 1380), which is an axiom placeholder returning `True`. -/
 lemma firstRSigma_le_futureFiltration
     (X : ℕ → Ω → α) {r m : ℕ} (hrm : r ≤ m) :
     firstRSigma X r ≤ futureFiltration X m := by
-  sorry  -- TODO: Need comap relationship between firstRMap and shifted coordinates
+  sorry  -- TODO: Statement needs correction - see note above
 
 /-- The empty cylinder (r = 0) is the whole space. -/
 @[simp]
@@ -767,14 +943,20 @@ lemma indProd_eq_firstRCylinder_indicator
   rw [indProd_as_indicator]
   rfl
 
-/-- Basic integrability: `indProd` is an indicator of a measurable set, hence integrable. -/
+/-- Basic integrability: `indProd` is an indicator of a measurable set, hence integrable
+under a finite measure. -/
 lemma indProd_integrable
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
-    {μ : Measure Ω} (X : ℕ → Ω → α)
+    {μ : Measure Ω} [IsFiniteMeasure μ] (X : ℕ → Ω → α)
     (r : ℕ) (C : Fin r → Set α)
     (hX : ∀ n, Measurable (X n)) (hC : ∀ i, MeasurableSet (C i)) :
     Integrable (indProd X r C) μ := by
-  sorry  -- TODO: Needs [IsFiniteMeasure μ] or different approach
+  -- indProd X r C is the indicator of firstRCylinder X r C
+  rw [indProd_eq_firstRCylinder_indicator]
+  -- Indicator functions of measurable sets are integrable under finite measures
+  apply Integrable.indicator
+  · exact integrable_const 1
+  · exact firstRCylinder_measurable_ambient X r C hX hC
 
 /-! ### Indicator algebra helpers for factorization -/
 
@@ -984,7 +1166,7 @@ For `k ≤ m` and measurable `B`, the measures of
 `B × cylinder r C` under the pushforwards by
 `ω ↦ (X m ω, θ_{m+1}X(ω))` and `ω ↦ (X k ω, θ_{m+1}X(ω))` coincide. -/
 lemma contractable_dist_eq_on_rectangles_future
-    {X : ℕ → Ω → α} (hX : Contractable μ X)
+    {X : ℕ → Ω → α} (hX : Contractable μ X) (hX_meas : ∀ n, Measurable (X n))
     (k m : ℕ) (hk : k ≤ m)
     (r : ℕ) (B : Set α) (hB : MeasurableSet B)
     (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i)) :
@@ -1012,8 +1194,49 @@ lemma contractable_dist_eq_on_rectangles_future
     μ {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
     simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using
       (contractable_dist_eq_on_first_r_tail
-        (μ:=μ) (X:=X) hX k m r hk B hB C hC)
-  sorry  -- TODO: Prove Measure.map equality using contractable_dist_eq_on_first_r_tail
+        (μ:=μ) (X:=X) hX hX_meas k m r hk B hB C hC)
+  -- Show the sets are equal modulo arithmetic
+  have hset_eq₁ : {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + 1 + i.1) ω ∈ C i}
+                = {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
+    ext ω; simp only [Set.mem_setOf]
+    constructor
+    · intro ⟨hB, hC⟩
+      constructor
+      · exact hB
+      · intro i
+        have : m + 1 + i.1 = m + (i.1 + 1) := by omega
+        rw [← this]; exact hC i
+    · intro ⟨hB, hC⟩
+      constructor
+      · exact hB
+      · intro i
+        have : m + 1 + i.1 = m + (i.1 + 1) := by omega
+        rw [this]; exact hC i
+  have hset_eq₂ : {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + 1 + i.1) ω ∈ C i}
+                = {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
+    ext ω; simp only [Set.mem_setOf]
+    constructor
+    · intro ⟨hB, hC⟩
+      constructor
+      · exact hB
+      · intro i
+        have : m + 1 + i.1 = m + (i.1 + 1) := by omega
+        rw [← this]; exact hC i
+    · intro ⟨hB, hC⟩
+      constructor
+      · exact hB
+      · intro i
+        have : m + 1 + i.1 = m + (i.1 + 1) := by omega
+        rw [this]; exact hC i
+  -- Measurability of ψ₁ and ψ₂
+  have hψ₁_meas : Measurable ψ₁ :=
+    (hX_meas m).prod_mk (measurable_shiftRV hX_meas)
+  have hψ₂_meas : Measurable ψ₂ :=
+    (hX_meas k).prod_mk (measurable_shiftRV hX_meas)
+  -- Apply Measure.map_apply and connect the pieces
+  rw [Measure.map_apply hψ₁_meas hrect, Measure.map_apply hψ₂_meas hrect]
+  rw [hpre₁, hpre₂, hset_eq₁, hset_eq₂]
+  exact hfd
 
 end FutureRectangles
 
@@ -1023,22 +1246,22 @@ axiom AgreeOnFutureRectangles : {α : Type*} → [MeasurableSpace α] →
 
 lemma agree_on_future_rectangles_of_contractable
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {X : ℕ → Ω → α} (hX : Contractable μ X) (k m : ℕ) (hk : k ≤ m) :
+    {X : ℕ → Ω → α} (hX : Contractable μ X) (hX_meas : ∀ n, Measurable (X n))
+    (k m : ℕ) (hk : k ≤ m) :
     AgreeOnFutureRectangles
       (Measure.map (fun ω => (X m ω, shiftRV X (m + 1) ω)) μ)
       (Measure.map (fun ω => (X k ω, shiftRV X (m + 1) ω)) μ) := by
-  sorry  -- TODO: Type inference blocked by CondExp errors - apply contractable_dist_eq
+  sorry  -- TODO: Will use contractable_dist_eq once file organization is fixed
 
 /-! ## Measure extension from future rectangles -/
 
 lemma measure_ext_of_future_rectangles
-    {μ ν : Measure (α × (ℕ → α))}
+    {μ ν : Measure (α × (ℕ → α))} [IsFiniteMeasure μ] [IsFiniteMeasure ν]
     (h : ∀ (r : ℕ) (B : Set α) (hB : MeasurableSet B)
         (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i)),
         μ (B ×ˢ cylinder (α:=α) r C) = ν (B ×ˢ cylinder (α:=α) r C)) :
     μ = ν := by
-  sorry  -- TODO: Use Measure.ext_of_generateFrom_of_iUnion with π-system of rectangles
-  /-classical
+  classical
   -- π-system consisting of rectangles `B × cylinder r C`
   let S : Set (Set (α × (ℕ → α))) :=
     {s | ∃ (r : ℕ) (B : Set α) (hB : MeasurableSet B)
@@ -1111,7 +1334,9 @@ lemma measure_ext_of_future_rectangles
   -- Show that S generates the product σ-algebra
   have h_gen : (inferInstance : MeasurableSpace (α × (ℕ → α)))
       = MeasurableSpace.generateFrom S := by
-    sorry  -- TODO: Prove S generates product σ-algebra
+    -- The product σ-algebra is generated by measurable rectangles
+    -- Our S contains all measurable rectangles (taking various r)
+    sorry  -- TODO: Show product measurable space = generateFrom of rectangles
 
   -- Measures agree on S
   have h_agree : ∀ s ∈ S, μ s = ν s := by
@@ -1130,11 +1355,11 @@ lemma measure_ext_of_future_rectangles
     ext ⟨a, f⟩; simp [Bseq, cylinder]
   have hμB : ∀ n, μ (Bseq n) ≠ ∞ := by
     intro n
-    sorry  -- TODO: Prove μ (Bseq n) ≠ ∞ (Bseq n = Set.univ, needs IsFiniteMeasure)
+    simp only [Bseq]
+    exact measure_ne_top μ Set.univ
 
   exact Measure.ext_of_generateFrom_of_iUnion
     S Bseq h_gen h_pi h1B h2B hμB h_agree
-  -/
 
 /-- The measure_eq field is now directly accessible since we simplified the structure. -/
 lemma AgreeOnFutureRectangles_to_measure_eq

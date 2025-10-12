@@ -367,7 +367,7 @@ If `mF` and `mH` are conditionally independent given `m`, then for
 ```
 This is a direct consequence of `ProbabilityTheory.condIndep_iff` (set version).
 -/
-axiom condExp_indicator_mul_indicator_of_condIndep
+lemma condExp_indicator_mul_indicator_of_condIndep
     {Ω : Type*} {m₀ : MeasurableSpace Ω} [StandardBorelSpace Ω]
     {m mF mH : MeasurableSpace Ω} {μ : @Measure Ω m₀}
     [IsFiniteMeasure μ]
@@ -377,7 +377,9 @@ axiom condExp_indicator_mul_indicator_of_condIndep
   μ[(A ∩ B).indicator (fun _ => (1 : ℝ)) | m]
     =ᵐ[μ]
   (μ[A.indicator (fun _ => (1 : ℝ)) | m]
-   * μ[B.indicator (fun _ => (1 : ℝ)) | m])
+   * μ[B.indicator (fun _ => (1 : ℝ)) | m]) := by
+  -- This is exactly the product formula from condIndep_iff
+  exact (ProbabilityTheory.condIndep_iff m mF mH hm hmF hmH μ).mp hCI A B hA hB
 
 
 end Exchangeability.Probability

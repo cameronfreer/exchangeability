@@ -838,6 +838,74 @@ private lemma sup_two_window_weights {k : ℕ} (hk : 0 < k)
   simp_rw [h_eq]
   exact ciSup_const
 
+-- Helper lemmas for Fin index gymnastics in two-window bounds.
+-- These lemmas isolate the technical reindexing and cardinality proofs needed for
+-- the weighted average machinery.
+namespace FinIndexHelpers
+
+open scoped BigOperators
+open Finset
+
+/-- Auxiliary lemma: the two filtered sets partition Fin(2k). -/
+private lemma card_filter_partition (k : ℕ) :
+  let s_lt := (univ : Finset (Fin (2*k))).filter (fun i => i.val < k)
+  let s_ge := (univ : Finset (Fin (2*k))).filter (fun i => ¬(i.val < k))
+  s_lt.card + s_ge.card = 2*k := by
+  have h_partition : (univ : Finset (Fin (2*k)))
+                   = (univ : Finset (Fin (2*k))).filter (fun i => i.val < k)
+                   ∪ (univ : Finset (Fin (2*k))).filter (fun i => ¬(i.val < k)) := by
+    ext i; simp only [mem_union, mem_filter, mem_univ, true_and]; tauto
+  have h_disj : Disjoint ((univ : Finset (Fin (2*k))).filter (fun i => i.val < k))
+                         ((univ : Finset (Fin (2*k))).filter (fun i => ¬(i.val < k))) := by
+    rw [disjoint_iff_ne]
+    intro a ha b hb
+    simp only [mem_filter, mem_univ, true_and] at ha hb
+    intro heq
+    rw [heq] at ha
+    exact hb ha
+  have h_card_sum := card_union_of_disjoint h_disj
+  rw [← h_partition] at h_card_sum
+  simp only [card_fin] at h_card_sum
+  convert h_card_sum.symm using 2 <;> simp only [Finset.filter_congr_decidable]
+
+/-- Cardinality of `{i : Fin(2k) | i.val < k}` is k. -/
+lemma card_filter_fin_val_lt_two_mul (k : ℕ) :
+  ((univ : Finset (Fin (2*k))).filter (fun i => i.val < k)).card = k := by
+  -- Use symmetry: both halves of Fin (2k) have equal size
+  have h_part := card_filter_partition k
+  -- Prove both sets have size k by showing they partition 2k equally
+  suffices h : ((univ : Finset (Fin (2*k))).filter (fun i => i.val < k)).card =
+               ((univ : Finset (Fin (2*k))).filter (fun i => ¬(i.val < k))).card by omega
+  -- Show bijection by shifting: i ↦ i + k
+  sorry
+
+/-- Cardinality of `{i : Fin(2k) | i.val ≥ k}` is k. -/
+lemma card_filter_fin_val_ge_two_mul (k : ℕ) :
+  ((univ : Finset (Fin (2*k))).filter (fun i => ¬(i.val < k))).card = k := by
+  have h_lt := card_filter_fin_val_lt_two_mul k
+  have h_part := card_filter_partition k
+  omega
+
+/-- Sum over `{i : Fin n | i.val < k}` equals sum over Fin k when k ≤ n. -/
+lemma sum_filter_fin_val_lt_eq_sum_fin {β : Type*} [AddCommMonoid β] (n k : ℕ) (hk : k ≤ n) (g : ℕ → β) :
+  ∑ i ∈ ((univ : Finset (Fin n)).filter (fun i => i.val < k)), g i.val
+    = ∑ j : Fin k, g j.val := by
+  sorry
+
+/-- Sum over `{i : Fin n | i.val ≥ k}` equals sum over Fin (n-k) with offset, when k ≤ n. -/
+lemma sum_filter_fin_val_ge_eq_sum_fin {β : Type*} [AddCommMonoid β] (n k : ℕ) (hk : k ≤ n) (g : ℕ → β) :
+  ∑ i ∈ ((univ : Finset (Fin n)).filter (fun i => ¬(i.val < k))), g i.val
+    = ∑ j : Fin (n - k), g (k + j.val) := by
+  sorry
+
+/-- Sum over last k elements of Fin(n+k) equals sum over Fin k with offset. -/
+lemma sum_last_block_eq_sum_fin {β : Type*} [AddCommMonoid β] (n k : ℕ) (g : ℕ → β) :
+  ∑ i ∈ ((univ : Finset (Fin (n + k))).filter (fun i => n ≤ i.val)), g i.val
+    = ∑ j : Fin k, g (n + j.val) := by
+  sorry
+
+end FinIndexHelpers
+
 /-- Uniform version of l2_bound_two_windows: The constant Cf is the same for all
 window positions. This follows because Cf = 2σ²(1-ρ) depends only on the covariance
 structure of f∘X, which is uniform by contractability.
@@ -963,25 +1031,88 @@ lemma l2_bound_two_windows_uniform
     have h_bij_n : ∑ i ∈ Finset.filter (fun i : Fin (2*k) => i.val < k) Finset.univ,
                      (1/(k:ℝ)) * f (X (n + i.val + 1) ω)
                  = (1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) := by
-      rw [Finset.mul_sum]
-      -- Establish bijection between {i : Fin (2k) | i < k} and Fin k
-      -- The bijection is i ↦ ⟨i.val, proof⟩
-      sorry -- TODO: Use Finset.sum_bij or similar to establish the bijection
+      -- Both sums compute (1/k)*f(X_{n+j+1}) summed over j ∈ {0,...,k-1}
+      -- LHS: filtered sum over {i : Fin(2k) | i.val < k}
+      -- RHS: (1/k) * sum over Fin k
+      -- These are equal because the filtered set has elements with .val in {0,...,k-1}
+      sorry  -- TODO: Bijection via Finset.sum_bij with i ↦ ⟨i.val, proof⟩
     have h_bij_m : ∑ i ∈ Finset.filter (fun i : Fin (2*k) => ¬(i.val < k)) Finset.univ,
                      (1/(k:ℝ)) * f (X (m + (i.val - k) + 1) ω)
                  = (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω) := by
-      rw [Finset.mul_sum]
-      -- Establish bijection between {i : Fin (2k) | i ≥ k} and Fin k
-      -- The bijection is i ↦ ⟨i.val - k, proof⟩
-      sorry -- TODO: Use Finset.sum_bij to reindex from i.val-k to j.val
+      -- For i : Fin (2k) with i.val ≥ k, we have m + (i.val - k) + 1 ranges over
+      -- same values as m + j.val + 1 for j : Fin k, so the sums are equal
+      sorry  -- TODO: Bijection {i : Fin (2k) | i.val ≥ k} ↔ Fin k via i ↦ i - k
     rw [h_bij_n, h_bij_m]
 
   -- Prove p and q are probability distributions
   have hp_prob : (∑ i : Fin (2*k), p i) = 1 ∧ ∀ i, 0 ≤ p i := by
-    sorry -- TODO: k values of 1/k sum to 1, all weights nonnegative
+    constructor
+    · -- Sum equals 1
+      -- Split sum based on i.val < k
+      calc ∑ i : Fin (2*k), p i
+        = ∑ i ∈ Finset.filter (fun i => i.val < k) Finset.univ, p i +
+          ∑ i ∈ Finset.filter (fun i => ¬(i.val < k)) Finset.univ, p i := by
+            rw [← Finset.sum_filter_add_sum_filter_not (s := Finset.univ) (p := fun i => i.val < k)]
+      _ = ∑ i ∈ Finset.filter (fun i : Fin (2*k) => i.val < k) Finset.univ, (1/(k:ℝ)) + 0 := by
+            congr 1
+            · apply Finset.sum_congr rfl
+              intro i hi
+              have : i.val < k := Finset.mem_filter.mp hi |>.2
+              simp [p, this]
+            · apply Finset.sum_eq_zero
+              intro i hi
+              have : ¬(i.val < k) := Finset.mem_filter.mp hi |>.2
+              simp [p, this]
+      _ = (Finset.filter (fun i : Fin (2*k) => i.val < k) Finset.univ).card * (1/(k:ℝ)) := by
+            simp [Finset.sum_const]
+      _ = k * (1/(k:ℝ)) := by
+            congr 1
+            simpa using FinIndexHelpers.card_filter_fin_val_lt_two_mul k
+      _ = 1 := by
+            have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
+            field_simp [ne_of_gt hk_pos]
+    · -- All weights nonnegative
+      intro i
+      simp only [p]
+      split_ifs with h
+      · apply div_nonneg
+        · linarith
+        · exact Nat.cast_nonneg k
+      · linarith
 
   have hq_prob : (∑ i : Fin (2*k), q i) = 1 ∧ ∀ i, 0 ≤ q i := by
-    sorry -- TODO: k values of 1/k sum to 1, all weights nonnegative
+    constructor
+    · -- Sum equals 1
+      calc ∑ i : Fin (2*k), q i
+        = ∑ i ∈ Finset.filter (fun i => i.val < k) Finset.univ, q i +
+          ∑ i ∈ Finset.filter (fun i => ¬(i.val < k)) Finset.univ, q i := by
+            rw [← Finset.sum_filter_add_sum_filter_not (s := Finset.univ) (p := fun i => i.val < k)]
+      _ = 0 + ∑ i ∈ Finset.filter (fun i : Fin (2*k) => ¬(i.val < k)) Finset.univ, (1/(k:ℝ)) := by
+            congr 1
+            · apply Finset.sum_eq_zero
+              intro i hi
+              have : i.val < k := Finset.mem_filter.mp hi |>.2
+              simp [q, this]
+            · apply Finset.sum_congr rfl
+              intro i hi
+              have : ¬(i.val < k) := Finset.mem_filter.mp hi |>.2
+              simp [q, this]
+      _ = (Finset.filter (fun i : Fin (2*k) => ¬(i.val < k)) Finset.univ).card * (1/(k:ℝ)) := by
+            simp [Finset.sum_const]
+      _ = k * (1/(k:ℝ)) := by
+            congr 1
+            simpa [not_lt] using FinIndexHelpers.card_filter_fin_val_ge_two_mul k
+      _ = 1 := by
+            have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
+            field_simp [ne_of_gt hk_pos]
+    · -- All weights nonnegative
+      intro i
+      simp only [q]
+      split_ifs with h
+      · linarith
+      · apply div_nonneg
+        · linarith
+        · exact Nat.cast_nonneg k
 
   -- Prove covariance properties for ξ
   -- Each ξ_i is f(X_j) for some j, so inherits the covariance structure from f∘X
@@ -1035,17 +1166,22 @@ lemma l2_bound_two_windows_uniform
       simp [hi, hj]
       by_cases heq : n + i.val + 1 = m + (j.val - k) + 1
       · -- Degenerate case: same X index appears in both windows
-        -- This means ξ i and ξ j are the same random variable
-        -- The covariance equals variance in this case
-        -- For the theorem to work cleanly, windows should be disjoint or mostly distinct
-        sorry -- TODO: Handle when windows overlap; may need additional structure
+        -- When heq holds, we have ξ i = ξ j (same random variable)
+        -- So Cov(ξ i, ξ j) = Var(ξ i) = σSqf
+        -- But we need to show Cov(ξ i, ξ j) = σSqf * ρf
+        -- This requires ρf = 1 (perfect positive correlation)
+        -- In practice, for contractable sequences with windows at distance ≥ k,
+        -- overlaps don't occur and this case is avoided
+        sorry -- TODO: Either assume ρf = 1, or assume n, m chosen to avoid overlap
       · -- Normal case: distinct indices, apply hcov
         exact hcov (n + i.val + 1) (m + (j.val - k) + 1) heq
     · -- Case 3: i in second, j in first (i ≥ k, j < k)
       simp [hi, hj]
       by_cases heq : m + (i.val - k) + 1 = n + j.val + 1
-      · -- Same degenerate case as Case 2
-        sorry -- TODO: Handle when windows overlap
+      · -- Same degenerate case as Case 2 (symmetric situation)
+        -- When heq holds, we have ξ i = ξ j, so Cov(ξ i, ξ j) = Var(ξ i) = σSqf
+        -- Requires ρf = 1 or non-overlapping windows
+        sorry -- TODO: Either assume ρf = 1, or assume n, m chosen to avoid overlap
       · -- Normal case: distinct indices, apply hcov
         exact hcov (m + (i.val - k) + 1) (n + j.val + 1) heq
     · -- Case 4: Both in second window (i ≥ k, j ≥ k)
@@ -1133,22 +1269,7 @@ private lemma sum_tail_block_reindex
           rw [← Finset.mul_sum]
     _ = c * ∑ j : Fin k, F (m - k + j.val) := by
           congr 1
-          -- TODO: Bijection between {i : Fin m | i.val ≥ m - k} and Fin k
-          -- The bijection should be:
-          --   forward:  i ↦ ⟨i.val - (m - k), proof that i.val - (m-k) < k⟩
-          --   backward: j ↦ ⟨m - k + j.val, proof that m - k + j.val < m⟩
-          --
-          -- The difficulty is that omega struggles with the natural number arithmetic:
-          -- 1. Showing m - k + (i.val - (m - k)) = i.val when m - k ≤ i.val
-          -- 2. Showing (m - k + j.val) - (m - k) = j.val
-          --
-          -- These are true by Nat.add_sub_cancel and Nat.sub_add_cancel but
-          -- the proof context with Fin types makes omega unable to see through.
-          --
-          -- Options to complete:
-          -- - Use Fin.castOrderIso or similar mathlib bijections
-          -- - Manually construct with explicit Nat lemmas instead of omega
-          -- - Use a different sum reindexing lemma from mathlib
+          -- Bijection between {i : Fin m | i.val ≥ m - k} and Fin k via i ↦ i - (m-k)
           sorry
 
 /-- Long average vs tail average bound: Comparing the average of the first m terms
