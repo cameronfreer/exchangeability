@@ -432,6 +432,28 @@ lemma condindep_pair_given_tail
 
   sorry
 
+/-- **Helper lemma**: Kernel independence implies CE factorization for products.
+
+If X and Y are conditionally independent given a σ-algebra m (as kernels),
+then their conditional expectation factors: CE[X·Y | m] =ᵐ CE[X | m]·CE[Y | m].
+
+This is the bridge between `Kernel.IndepFun` and conditional expectation factorization.
+-/
+lemma condExp_mul_of_indep
+    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {m : MeasurableSpace Ω} (hm : m ≤ inferInstance)
+    {X Y : Ω → ℝ} (hX : Measurable X) (hY : Measurable Y)
+    (hXbd : ∃ C, ∀ ω, |X ω| ≤ C) (hYbd : ∃ C, ∀ ω, |Y ω| ≤ C)
+    (hindep : Kernel.IndepFun X Y (condExpKernel μ m) μ) :
+    μ[X * Y | m] =ᵐ[μ] μ[X | m] * μ[Y | m] := by
+  -- Strategy: Kernel.IndepFun means for κ = condExpKernel:
+  -- ∫ X·Y dκ(ω) = (∫ X dκ(ω)) · (∫ Y dκ(ω)) for μ-a.e. ω
+
+  -- But CE[·|m] is defined as ∫ · d(condExpKernel)
+  -- So this is exactly saying CE[X·Y|m] = CE[X|m]·CE[Y|m]
+
+  sorry -- Requires unpacking Kernel.IndepFun definition and connecting to condExp
+
 /-- **Axiomized product factorization** for general finite cylinder products.
 
 **Proof Strategy** (Induction on m):
@@ -476,9 +498,14 @@ lemma condexp_product_factorization_ax
     -- 4. Combine: =ᵐ (∏ᵢ₌₀ⁿ⁻¹ ∫ fs i dν) · (∫ fs n dν) = ∏ᵢ₌₀ⁿ ∫ fs i dν
 
     -- The key step is (3): translating Kernel.IndepFun to CE factorization
-    -- This requires: CE[X · Y | ℐ] = CE[X | ℐ] · CE[Y | ℐ] when X, Y are conditionally independent
+    -- This is provided by condExp_mul_of_indep
 
-    sorry -- Requires: CE factorization lemma from Kernel.IndepFun (condindep_pair_given_tail)
+    -- Apply condExp_mul_of_indep with:
+    -- - X = ∏ᵢ₌₀ⁿ⁻¹ fs i (ωᵢ)  (measurable function of first n coordinates)
+    -- - Y = fs n (ωₙ)            (measurable function of coordinate n)
+    -- - hindep from condindep_pair_given_tail (extended to functions of coordinates)
+
+    sorry -- Apply condExp_mul_of_indep + combine with IH and identicalConditionalMarginals
 
 /-- **Generalized product factorization** for arbitrary coordinate indices.
 
