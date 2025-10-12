@@ -67,9 +67,9 @@ and all other files). They are kept here for potential future mathlib contributi
 - ✅ **One restricted measure sorry**: Line 563 uses `setIntegral_condExp` successfully
 
 **Remaining sorries** (4 total):
-- Line 570: Restricted measure conditional expectation (S measurable in mF⊔mG but not in mG)
-- Line 769: `bounded_martingale_l2_eq` (requires variance decomposition and Lp norm API)
-- Lines 872, 954: Convergence theorem sorries (mathematical content complete, technical proofs deferred)
+- Line 566: Restricted measure conditional expectation (S measurable in mF⊔mG but not in mG)
+- Line 765: `bounded_martingale_l2_eq` (requires variance decomposition and Lp norm API)
+- Lines 868, 950: Convergence theorem sorries (mathematical content complete, technical proofs deferred)
 
 ## Future Work
 
