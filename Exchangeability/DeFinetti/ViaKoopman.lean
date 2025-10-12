@@ -1301,62 +1301,6 @@ theorem extremeMembers_agree
       (f := condexpL2 (μ := μ) fL2)).1 hMem
   simpa using hFixed
 
-/-- The projection onto the first coordinate. -/
-def π0 : Ω[α] → α := fun ω => ω 0
-
-
-lemma measurable_pi0 : Measurable (π0 (α := α)) := by
-  classical
-  simpa using (measurable_pi_apply (0 : ℕ) :
-    Measurable fun ω : Ω[α] => ω 0)
-
-namespace ProbabilityTheory.Kernel
-
-/- NOTE: The axiom `ae_eq_of_forall_integral_eq` was removed as it's unused.
-The file uses integral-level statements instead (see identicalConditionalMarginals_integral).
-If kernel a.e. equality is needed later, it can be proved using indicators on a countable
-π-system generator for Borel, ae_all_iff to swap quantifiers, and measure extension. -/
-
-end ProbabilityTheory.Kernel
-
-/-- Regular conditional distribution kernel constructed via condExpKernel.
-
-This is the kernel giving the conditional distribution of the first coordinate
-given the tail σ-algebra.
-
-TODO: The exact construction requires careful handling of the measurable space instances.
-For now we axiomatize it as a placeholder. -/
-noncomputable def rcdKernel {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    [StandardBorelSpace α] : Kernel (Ω[α]) α :=
-  Kernel.comap ((condExpKernel μ (shiftInvariantSigma (α := α))).map (π0 (α := α)))
-    id (measurable_id'' (shiftInvariantSigma_le (α := α)))
-
-instance rcdKernel_isMarkovKernel {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    [StandardBorelSpace α] : IsMarkovKernel (rcdKernel (μ := μ)) := by
-  unfold rcdKernel
-  -- First, condExpKernel is a Markov kernel
-  have h1 : IsMarkovKernel (condExpKernel μ (shiftInvariantSigma (α := α))) := inferInstance
-  -- Second, map preserves IsMarkovKernel
-  have h2 : IsMarkovKernel ((condExpKernel μ (shiftInvariantSigma (α := α))).map (π0 (α := α))) :=
-    Kernel.IsMarkovKernel.map _ (measurable_pi0 (α := α))
-  -- Third, comap preserves IsMarkovKernel (this is an instance)
-  exact Kernel.IsMarkovKernel.comap _ (measurable_id'' (shiftInvariantSigma_le (α := α)))
-
-/-- The regular conditional distribution as a function assigning to each point
- a probability measure on α. -/
-noncomputable def ν {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    [StandardBorelSpace α] : Ω[α] → Measure α :=
-  fun ω => (rcdKernel (μ := μ)) ω
-
-/-- ν evaluation on measurable sets is measurable in the parameter. -/
-lemma ν_eval_measurable
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
-    {s : Set α} (hs : MeasurableSet s) :
-    Measurable (fun ω => ν (μ := μ) ω s) := by
-  -- Kernel evaluation is measurable in the parameter for measurable sets
-  simp only [ν]
-  exact (rcdKernel (μ := μ)).measurable_coe hs
-
 /-- ν evaluation is measurable w.r.t. the shift-invariant σ-algebra.
 
 NOTE: The construction `rcdKernel := Kernel.comap ... id (measurable_id'' ...)` uses
