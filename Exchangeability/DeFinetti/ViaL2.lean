@@ -2334,8 +2334,8 @@ theorem subsequence_criterion_convergence_in_probability
     have h_diff_meas : Measurable (fun ω => ξ (φ k) ω - ξ_limit ω) :=
       (hξ_meas (φ k)).sub hξ_limit_meas
     have h_abs_meas : Measurable (fun ω => |ξ (φ k) ω - ξ_limit ω|) := by
-      -- abs is continuous on ℝ, so measurable; composition preserves measurability
-      sorry
+      -- For ℝ, abs = norm, and Measurable.norm works
+      exact h_diff_meas.norm
     exact h_abs_meas measurableSet_Ici
   have hA_tsum : (∑' k, μ (A k)) ≠ ⊤ := by
     -- μ(A k) ≤ 2^{-(k+1)} and ∑ 2^{-(k+1)} < ∞
