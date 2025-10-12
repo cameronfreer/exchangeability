@@ -344,22 +344,76 @@ end Proofs
 /-!
 ## Roadmap for Future Work
 
+### Critical Blocker Analysis: `condindep_pair_given_tail`
+
+This axiom is the **CRITICAL BOTTLENECK** for the entire de Finetti formalization.
+It requires proving that coordinates ω 0 and ω 1 are conditionally independent
+given the shift-invariant σ-algebra.
+
+#### What's Missing from Mathlib
+
+The proof requires **ergodic decomposition theory** that is not yet in mathlib:
+
+1. **Extremal measures and ergodic decomposition**
+   - Every probability measure on a compact space can be uniquely decomposed
+     as an integral over extremal measures
+   - For shift-invariant measures, extremal = ergodic
+   - **Status**: Not in mathlib. Requires:
+     - Choquet's theorem (integral representation on compact convex sets)
+     - de Finetti-Hewitt-Savage theorem (extremal characterization)
+
+2. **Conditional independence from ergodicity**
+   - For ergodic measures: time averages = space averages
+   - This implies: CE[f(ω₀)·g(ωₖ) | ℐ] → CE[f(ω₀) | ℐ]·CE[g(ωₖ) | ℐ] as k → ∞
+   - For shift-invariant measures, this holds for k=1 by extremal decomposition
+   - **Status**: Partially in mathlib (Mean Ergodic Theorem), but missing:
+     - Conditional version of ergodic theorem
+     - Asymptotic independence from mixing
+
+3. **Kernel-level independence**
+   - Need to state: `Kernel.IndepFun (proj 0) (proj 1) (condExpKernel μ ℐ) μ`
+   - **Status**: Blocked by autoparam issues with `condExpKernel`
+   - **Workaround needed**: Either fix autoparam or bypass with direct factorization
+
+#### Proof Strategy (Kallenberg's Argument)
+
+The proof would proceed as follows (if we had the machinery):
+
+```lean
+-- Step 1: Ergodic decomposition
+-- μ = ∫ μ_e dλ(e) where μ_e are ergodic measures
+
+-- Step 2: For each ergodic component μ_e:
+-- Birkhoff ergodic theorem gives:
+-- lim_{k→∞} (1/k) ∑_{i=0}^{k-1} f(ω_i) = E_μ_e[f] a.e.
+
+-- Step 3: Apply to product f(ω_0)·g(ω_k):
+-- For ergodic μ_e, shift-invariance implies
+-- E_μ_e[f(ω_0)·g(ω_k)] = E_μ_e[f(ω_0)]·E_μ_e[g(ω_k)]
+
+-- Step 4: Integrate over ergodic decomposition:
+-- E_μ[f(ω_0)·g(ω_1) | ℐ] = E_μ[f(ω_0) | ℐ]·E_μ[g(ω_1) | ℐ]
+```
+
+#### What Can Be Done Now
+
+Without the ergodic decomposition machinery, we can:
+1. Document the precise mathlib gaps (this section)
+2. Prove helper lemmas that don't require ergodic decomposition
+3. Verify that IF we had conditional independence, the rest would follow
+4. Contribute to mathlib: Add Choquet theory, ergodic decomposition
+
 ### Immediate Next Steps
 
 1. **Resolve `condExpKernel` autoparam issues**
-   - The main blocker for `condindep_pair_given_tail` is that we cannot state the proper
-     `Kernel.IndepFun` type with `condExpKernel` due to typeclass resolution issues
-   - This requires either:
-     a) Finding the right explicit parameters to avoid autoparam
-     b) Refactoring the conditional independence API
-     c) Using a workaround with explicit kernel construction
+   - The blocker for stating `condindep_pair_given_tail` properly
+   - Try explicit type annotations to avoid autoparam
+   - Consider proving `kernel_integral_product_factorization` directly
 
-2. **Prove `condindep_pair_given_tail` from Mean Ergodic Theorem**
-   - This is the **CRITICAL BOTTLENECK** for the entire proof
-   - Strategy: Use asymptotic independence from ergodic mixing
-   - Key insight: For large n, coordinates ω 0 and ω n are "approximately independent"
-     given the tail σ-algebra, and the limit gives exact independence
-   - Requires: Deep ergodic theory machinery not yet in mathlib
+2. **Contribute to mathlib: Ergodic decomposition**
+   - This is graduate-level ergodic theory
+   - Major undertaking but would enable the full de Finetti proof
+   - Reference: Walters "Introduction to Ergodic Theory" (1982), Chapter 6
 
 3. **Complete `Kernel.IndepFun.ae_measure_indepFun` using OLD PROOF**
    - Lines 1837-2672 of ViaKoopman.lean contain a complete strategy
