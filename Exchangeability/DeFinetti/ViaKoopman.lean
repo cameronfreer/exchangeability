@@ -2380,12 +2380,123 @@ via dyadic approximation. This can be used to eventually prove the axiom
     -- Pointwise convergence for X
     · intro ω
       simp only [dyadic_approx]
-      sorry
+      -- Show: ⌊val/2^(-n)⌋ * 2^(-n) → val as n → ∞
+      -- Key: |⌊val/g⌋*g - val| ≤ g, and g = 2^(-n) → 0
+      rw [Metric.tendsto_atTop]
+      intro δ hδ
+      -- Choose N large enough that 2^(-N) < δ
+      obtain ⟨N, hN⟩ : ∃ N : ℕ, (2 : ℝ) ^ (-(N : ℤ)) < δ := by
+        obtain ⟨N, hN⟩ := exists_nat_gt (1 / δ)
+        use N
+        have h2pos : (0 : ℝ) < 2 := by norm_num
+        have : (2 : ℝ) ^ (N : ℤ) > 1 / δ := by
+          calc (2 : ℝ) ^ (N : ℤ)
+              = (2 : ℝ) ^ (N : ℕ) := by simp
+            _ ≥ (N : ℝ) * 1 := by
+                apply one_add_le_pow_of_nonneg_of_le
+                · norm_num
+                · norm_num
+            _ > 1 / δ := by linarith
+        calc (2 : ℝ) ^ (-(N : ℤ))
+            = 1 / (2 : ℝ) ^ (N : ℤ) := by rw [zpow_neg, one_div]
+          _ < 1 / (1 / δ) := by apply div_lt_div_of_pos_left; linarith; positivity; exact this
+          _ = δ := by field_simp
+      use N
+      intro n hn
+      let grid_size := (2 : ℝ) ^ (-(n : ℤ))
+      let val := max (-CX) (min CX (X ω))
+      have hg : 0 < grid_size := by simp only [grid_size]; positivity
+      -- Floor property: |⌊val/g⌋*g - val| ≤ g
+      have h_floor_err : |⌊val / grid_size⌋ * grid_size - val| ≤ grid_size := by
+        have h_floor_le : (⌊val / grid_size⌋ : ℝ) * grid_size ≤ val := by
+          calc (⌊val / grid_size⌋ : ℝ) * grid_size
+              ≤ (val / grid_size) * grid_size := by
+                exact_mod_cast mul_le_mul_of_nonneg_right (Int.floor_le _) (le_of_lt hg)
+            _ = val := div_mul_cancel₀ val (ne_of_gt hg)
+        have h_floor_gt : val - grid_size < (⌊val / grid_size⌋ : ℝ) * grid_size := by
+          calc val - grid_size
+              = (val / grid_size - 1) * grid_size := by field_simp; ring
+            _ < ((⌊val / grid_size⌋ : ℝ)) * grid_size := by
+              apply mul_lt_mul_of_pos_right
+              · calc val / grid_size - 1
+                    < (⌊val / grid_size⌋ : ℝ) + 1 - 1 := by linarith [Int.lt_floor_add_one (val / grid_size)]
+                  _ = (⌊val / grid_size⌋ : ℝ) := by ring
+              · exact hg
+        rw [abs_sub_le_iff]
+        constructor
+        · linarith
+        · linarith
+      -- grid_size monotone decreasing and < δ for n ≥ N
+      have h_grid_small : grid_size < δ := by
+        calc grid_size
+            = (2 : ℝ) ^ (-(n : ℤ)) := rfl
+          _ ≤ (2 : ℝ) ^ (-(N : ℤ)) := by
+              apply zpow_le_of_le
+              · norm_num
+              · exact_mod_cast Int.neg_le_neg (Int.ofNat_le.mpr hn)
+          _ < δ := hN
+      calc dist ((⌊val / grid_size⌋ : ℝ) * grid_size) val
+          = |⌊val / grid_size⌋ * grid_size - val| := by rw [Real.dist_eq]
+        _ ≤ grid_size := h_floor_err
+        _ < δ := h_grid_small
 
     -- Pointwise convergence for Y
     · intro ω
       simp only [dyadic_approx]
-      sorry
+      -- Same proof as for X
+      rw [Metric.tendsto_atTop]
+      intro δ hδ
+      obtain ⟨N, hN⟩ : ∃ N : ℕ, (2 : ℝ) ^ (-(N : ℤ)) < δ := by
+        obtain ⟨N, hN⟩ := exists_nat_gt (1 / δ)
+        use N
+        have : (2 : ℝ) ^ (N : ℤ) > 1 / δ := by
+          calc (2 : ℝ) ^ (N : ℤ)
+              = (2 : ℝ) ^ (N : ℕ) := by simp
+            _ ≥ (N : ℝ) * 1 := by
+                apply one_add_le_pow_of_nonneg_of_le
+                · norm_num
+                · norm_num
+            _ > 1 / δ := by linarith
+        calc (2 : ℝ) ^ (-(N : ℤ))
+            = 1 / (2 : ℝ) ^ (N : ℤ) := by rw [zpow_neg, one_div]
+          _ < 1 / (1 / δ) := by apply div_lt_div_of_pos_left; linarith; positivity; exact this
+          _ = δ := by field_simp
+      use N
+      intro n hn
+      let grid_size := (2 : ℝ) ^ (-(n : ℤ))
+      let val := max (-CY) (min CY (Y ω))
+      have hg : 0 < grid_size := by simp only [grid_size]; positivity
+      have h_floor_err : |⌊val / grid_size⌋ * grid_size - val| ≤ grid_size := by
+        have h_floor_le : (⌊val / grid_size⌋ : ℝ) * grid_size ≤ val := by
+          calc (⌊val / grid_size⌋ : ℝ) * grid_size
+              ≤ (val / grid_size) * grid_size := by
+                exact_mod_cast mul_le_mul_of_nonneg_right (Int.floor_le _) (le_of_lt hg)
+            _ = val := div_mul_cancel₀ val (ne_of_gt hg)
+        have h_floor_gt : val - grid_size < (⌊val / grid_size⌋ : ℝ) * grid_size := by
+          calc val - grid_size
+              = (val / grid_size - 1) * grid_size := by field_simp; ring
+            _ < ((⌊val / grid_size⌋ : ℝ)) * grid_size := by
+              apply mul_lt_mul_of_pos_right
+              · calc val / grid_size - 1
+                    < (⌊val / grid_size⌋ : ℝ) + 1 - 1 := by linarith [Int.lt_floor_add_one (val / grid_size)]
+                  _ = (⌊val / grid_size⌋ : ℝ) := by ring
+              · exact hg
+        rw [abs_sub_le_iff]
+        constructor
+        · linarith
+        · linarith
+      have h_grid_small : grid_size < δ := by
+        calc grid_size
+            = (2 : ℝ) ^ (-(n : ℤ)) := rfl
+          _ ≤ (2 : ℝ) ^ (-(N : ℤ)) := by
+              apply zpow_le_of_le
+              · norm_num
+              · exact_mod_cast Int.neg_le_neg (Int.ofNat_le.mpr hn)
+          _ < δ := hN
+      calc dist ((⌊val / grid_size⌋ : ℝ) * grid_size) val
+          = |⌊val / grid_size⌋ * grid_size - val| := by rw [Real.dist_eq]
+        _ ≤ grid_size := h_floor_err
+        _ < δ := h_grid_small
 
   -- Step B.7: Apply the approximation framework
 
