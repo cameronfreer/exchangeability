@@ -2444,9 +2444,10 @@ theorem reverse_martingale_subsequence_convergence
         · -- AEStronglyMeasurable: follows from measurability
           exact (h_alpha_meas n).sub h_alpha_inf_meas |>.norm.aestronglyMeasurable
         · -- HasFiniteIntegral: ∫⁻ ‖f‖ < ∞
-          -- The integral ∫ |alpha n - alpha_inf| can be made < 1 by h_L1_conv
-          -- For ℝ-valued functions, ∫⁻ ‖f‖ and ∫ |f| are related
-          -- If ∫ |f| is finite (which h_L1_conv implies), then ∫⁻ ‖f‖ₑ < ∞
+          -- Since h_L1_conv gives us that ∫ |alpha n - alpha_inf| is eventually < any ε > 0,
+          -- the integral must be finite (it can be bounded by any positive real).
+          -- In particular, for ε = 1, we get a finite bound for large enough n.
+          -- For small n, we use a specific  finite value as bound.
           sorry
       have hmarkov_real := mul_meas_ge_le_integral_of_nonneg hf_nonneg hf_int ε
       -- This gives: ε * μ.real {ω | ε ≤ |alpha n ω - alpha_inf ω|} ≤ ∫ ω, |alpha n ω - alpha_inf ω| ∂μ
@@ -2474,10 +2475,56 @@ theorem reverse_martingale_subsequence_convergence
         _ ≤ ENNReal.ofReal ((1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ) := by
             apply ENNReal.ofReal_le_ofReal
             exact this
-    -- Now use the L¹ convergence hypothesis to push RHS → 0.
-    -- Convert the real integral bound to `ℝ≥0∞` via `ofReal`.
-    -- Finish with a squeeze/tendsto_of_tendsto_of_le_of_le.
-    sorry
+    -- Now use the L¹ convergence hypothesis to push RHS → 0
+    -- By h_L1_conv: for any δ > 0, ∃ N, ∀ n ≥ N, ∫ |alpha n - alpha_inf| < δ
+    -- So ∫ |alpha n - alpha_inf| → 0, thus (1/ε) * ∫ |alpha n - alpha_inf| → 0
+    -- Therefore ENNReal.ofReal ((1/ε) * ∫ |alpha n - alpha_inf|) → 0
+    have h_rhs_tendsto : Tendsto (fun n => ENNReal.ofReal ((1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ)) atTop (𝓝 0) := by
+      -- Use h_L1_conv to show ∫ |alpha n - alpha_inf| → 0
+      -- Then (1/ε) * integral → 0, and ofReal preserves this
+      rw [ENNReal.tendsto_nhds_zero]
+      intro δ hδ
+      -- Want: eventually, ENNReal.ofReal ((1/ε) * ∫ ...) < δ
+      -- Get δ' = ε * δ.toReal from h_L1_conv
+      -- If δ.toReal = 0, then δ = 0 or δ = ∞, but δ > 0 so δ = ∞ and trivial
+      by_cases hδ_top : δ = ⊤
+      · -- If δ = ∞, then ENNReal.ofReal (...) < ∞ always since ofReal gives finite values
+        simp [hδ_top]
+      · -- δ is finite and positive, so δ.toReal > 0
+        have hδ_ne_top : δ ≠ ⊤ := hδ_top
+        have hδ_lt_top : δ < ⊤ := hδ_ne_top.lt_top
+        have hδ_toReal_pos : 0 < δ.toReal := by
+          rw [ENNReal.toReal_pos_iff]
+          exact ⟨hδ, hδ_lt_top⟩
+        -- Choose δ' = ε * δ.toReal > 0
+        obtain ⟨N, hN⟩ := h_L1_conv (ε * δ.toReal) (mul_pos hε hδ_toReal_pos)
+        -- For n ≥ N: ∫ |alpha n - alpha_inf| < ε * δ.toReal
+        -- So (1/ε) * ∫ < δ.toReal
+        -- Therefore ofReal ((1/ε) * ∫) < δ
+        filter_upwards [eventually_ge_atTop N] with n hn
+        have h_integral_bound : ∫ ω, |alpha n ω - alpha_inf ω| ∂μ < ε * δ.toReal := hN n hn
+        have h_scaled : (1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ < δ.toReal := by
+          calc (1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ
+              < (1/ε) * (ε * δ.toReal) := by gcongr
+            _ = δ.toReal := by field_simp
+        have h_nonneg : 0 ≤ (1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ :=
+          mul_nonneg (div_nonneg (by norm_num) (le_of_lt hε))
+            (integral_nonneg (fun _ => abs_nonneg _))
+        have h_lt : ENNReal.ofReal ((1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ) < δ := by
+          calc ENNReal.ofReal ((1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ)
+              < ENNReal.ofReal δ.toReal := by
+                rw [ENNReal.ofReal_lt_ofReal_iff_of_nonneg h_nonneg]
+                exact h_scaled
+            _ = δ := ENNReal.ofReal_toReal hδ_top
+        exact le_of_lt h_lt
+    -- Apply squeeze: 0 ≤ μ {...} ≤ RHS, and RHS → 0
+    apply tendsto_of_tendsto_of_tendsto_of_le_of_le
+    · exact tendsto_const_nhds
+    · exact h_rhs_tendsto
+    · intro n
+      exact zero_le _
+    · intro n
+      exact hmarkov n
 
   -- Apply the subsequence criterion we just proved
   exact subsequence_criterion_convergence_in_probability alpha alpha_inf
