@@ -707,17 +707,20 @@ lemma indicator_product_bridge_ax
   -- Convert both sides to ENNReal and conclude
   calc ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
       = ∫⁻ ω, ENNReal.ofReal (F ω) ∂μ := by
-          sorry -- TODO: congr; funext ω; simp [F]
+          congr; funext ω; rfl
     _ = ENNReal.ofReal (∫ ω, F ω ∂μ) := hL
     _ = ENNReal.ofReal (∫ ω, G ω ∂μ) := by rw [h_eq_integrals]
     _ = ∫⁻ ω, ENNReal.ofReal (G ω) ∂μ := by
           rw [ofReal_integral_eq_lintegral_ofReal hG_int hG_nonneg]
     _ = ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal (((ν (μ := μ) ω) (B i)).toReal) ∂μ := by
-          sorry -- TODO: congr; funext ω; simp [G]
+          congr; funext ω; rfl
     _ = ∫⁻ ω, ∏ i : Fin m, (ν (μ := μ) ω) (B i) ∂μ := by
           congr; funext ω
           congr; funext i
-          sorry -- TODO: exact ENNReal.ofReal_toReal (measure_ne_top _ _) -- needs IsFiniteMeasure instance
+          haveI : IsProbabilityMeasure (ν (μ := μ) ω) := by
+            unfold ν
+            exact IsMarkovKernel.isProbabilityMeasure ω
+          exact ENNReal.ofReal_toReal (measure_ne_top _ _)
 
 /-- **Final bridge axiom** to the `ConditionallyIID` structure.
 
