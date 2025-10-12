@@ -144,7 +144,13 @@ variable [MeasurableSpace α]
 lemma tailCylinder_measurable {r : ℕ} {C : Fin r → Set α}
     (hC : ∀ i, MeasurableSet (C i)) :
     MeasurableSet (tailCylinder (α:=α) r C) := by
-  sorry  -- TODO: Fix measurability proof for tail cylinders
+  classical
+  simp only [tailCylinder, Set.setOf_forall]
+  exact MeasurableSet.iInter fun i => by
+    have : (fun f : ℕ → α => f (i.val + 1)) ⁻¹' C i = {f | f (i.1 + 1) ∈ C i} := by
+      ext f; simp [Set.mem_preimage]
+    rw [← this]
+    exact (hC i).preimage (measurable_pi_apply (i.val + 1))
 
 end TailCylinders
 
