@@ -552,6 +552,17 @@ def finCylinder (r : ℕ) (C : Fin r → Set α) : Set (Fin r → α) :=
 
 variable [MeasurableSpace α]
 
+lemma finCylinder_measurable {r : ℕ} {C : Fin r → Set α}
+    (hC : ∀ i, MeasurableSet (C i)) :
+    MeasurableSet (finCylinder r C) := by
+  classical
+  simp only [finCylinder, Set.setOf_forall]
+  exact MeasurableSet.iInter fun i => by
+    have : (fun f : Fin r → α => f i) ⁻¹' C i = {f | f i ∈ C i} := by
+      ext f; simp [Set.mem_preimage]
+    rw [← this]
+    exact (hC i).preimage (measurable_pi_apply i)
+
 lemma cylinder_measurable {r : ℕ} {C : Fin r → Set α}
     (hC : ∀ i, MeasurableSet (C i)) :
     MeasurableSet (cylinder (α:=α) r C) := by
@@ -635,7 +646,10 @@ lemma firstRCylinder_measurable_in_firstRSigma
     (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α)
     (hC : ∀ i, MeasurableSet (C i)) :
     MeasurableSet[firstRSigma X r] (firstRCylinder X r C) := by
-  sorry  -- TODO: Need measurability lemma for finCylinder
+  -- firstRSigma X r = comap (firstRMap X r)
+  -- A set is measurable in the comap iff it's a preimage of a measurable set
+  rw [firstRCylinder_eq_preimage_finCylinder]
+  exact ⟨_, finCylinder_measurable hC, rfl⟩
 
 /-- **Measurable in the ambient σ‑algebra.**
 If each coordinate `X i` is measurable, then the block cylinder is measurable
