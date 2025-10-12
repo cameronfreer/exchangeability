@@ -949,13 +949,51 @@ lemma l2_bound_two_windows_uniform
   have hq_prob : (∑ i : Fin (2*k), q i) = 1 ∧ ∀ i, 0 ≤ q i := by
     sorry -- TODO: k values of 1/k sum to 1, all weights nonnegative
 
+  -- Prove covariance properties for ξ
+  -- Each ξ_i is f(X_j) for some j, so inherits the covariance structure from f∘X
+  have hξ_mean : ∀ i : Fin (2*k), ∫ ω, ξ i ω ∂μ = mf := by
+    intro i
+    simp [ξ]
+    split_ifs with h
+    · -- Case i.val < k: ξ i = f(X_{n+i.val+1})
+      exact hmean (n + i.val + 1)
+    · -- Case i.val ≥ k: ξ i = f(X_{m+(i.val-k)+1})
+      exact hmean (m + (i.val - k) + 1)
+
+  have hξ_L2 : ∀ i : Fin (2*k), MemLp (fun ω => ξ i ω - mf) 2 μ := by
+    intro i
+    simp [ξ]
+    split_ifs with h
+    · -- Case i.val < k
+      convert hvar (n + i.val + 1) using 1
+      sorry -- Need to show MemLp follows from finite variance
+    · -- Case i.val ≥ k
+      convert hvar (m + (i.val - k) + 1) using 1
+      sorry -- Need to show MemLp follows from finite variance
+
+  have hξ_var : ∀ i : Fin (2*k), ∫ ω, (ξ i ω - mf)^2 ∂μ = (Real.sqrt σSqf) ^ 2 := by
+    intro i
+    have h_sqrt_sq : (Real.sqrt σSqf) ^ 2 = σSqf := Real.sq_sqrt hσSq_nonneg
+    rw [h_sqrt_sq]
+    simp [ξ]
+    split_ifs with h
+    · -- Case i.val < k
+      exact hvar (n + i.val + 1)
+    · -- Case i.val ≥ k
+      exact hvar (m + (i.val - k) + 1)
+
+  have hξ_cov : ∀ i j : Fin (2*k), i ≠ j →
+      ∫ ω, (ξ i ω - mf) * (ξ j ω - mf) ∂μ = (Real.sqrt σSqf) ^ 2 * ρf := by
+    intro i j hij
+    have h_sqrt_sq : (Real.sqrt σSqf) ^ 2 = σSqf := Real.sq_sqrt hσSq_nonneg
+    rw [h_sqrt_sq]
+    simp [ξ]
+    sorry -- Need to handle 4 cases based on i.val < k and j.val < k
+    -- Each case applies hcov to appropriate indices from f∘X
+
   -- Apply l2_contractability_bound
   have h_bound := @L2Approach.l2_contractability_bound Ω _ μ _ (2*k) ξ mf
-    (Real.sqrt σSqf) ρf hρ_bd
-    sorry -- hmean for ξ
-    sorry -- hL2 for ξ
-    sorry -- hvar for ξ
-    sorry -- hcov for ξ
+    (Real.sqrt σSqf) ρf hρ_bd hξ_mean hξ_L2 hξ_var hξ_cov
     p q hp_prob hq_prob
 
   -- The supremum |pᵢ - qᵢ| = 1/k
