@@ -341,4 +341,56 @@ lemma quantize_tendsto_proof {C x : ℝ} (_hC : 0 ≤ C) :
 
 end Proofs
 
+/-!
+## Roadmap for Future Work
+
+### Immediate Next Steps
+
+1. **Resolve `condExpKernel` autoparam issues**
+   - The main blocker for `condindep_pair_given_tail` is that we cannot state the proper
+     `Kernel.IndepFun` type with `condExpKernel` due to typeclass resolution issues
+   - This requires either:
+     a) Finding the right explicit parameters to avoid autoparam
+     b) Refactoring the conditional independence API
+     c) Using a workaround with explicit kernel construction
+
+2. **Prove `condindep_pair_given_tail` from Mean Ergodic Theorem**
+   - This is the **CRITICAL BOTTLENECK** for the entire proof
+   - Strategy: Use asymptotic independence from ergodic mixing
+   - Key insight: For large n, coordinates ω 0 and ω n are "approximately independent"
+     given the tail σ-algebra, and the limit gives exact independence
+   - Requires: Deep ergodic theory machinery not yet in mathlib
+
+3. **Complete `Kernel.IndepFun.ae_measure_indepFun` using OLD PROOF**
+   - Lines 1837-2672 of ViaKoopman.lean contain a complete strategy
+   - Extract and formalize the dyadic approximation approach
+   - This would unblock `kernel_integral_product_factorization`
+
+### Medium-term Goals
+
+4. **Fix `condexpL2_koopman_comm` API issues**
+   - Resolve the `koopman` vs `LinearIsometry` type mismatch
+   - Use `koopman_isometry` lemma to access isometry properties
+   - Complete the orthogonal projection argument
+
+5. **Prove factorization axioms by induction**
+   - Once `kernel_integral_product_factorization` is proved, the factorization
+     axioms can be proved by straightforward induction
+   - Base cases (m = 0) are already sketched in commented-out code
+
+### Long-term Vision
+
+The ultimate goal is to remove all axioms and have a **fully formalized proof** of
+de Finetti's theorem in Lean 4. This would be a significant achievement in the
+formalization of probability theory and would demonstrate that:
+
+1. **Ergodic theory** can be effectively combined with probability theory in type theory
+2. **Exchangeability** theory is amenable to full formalization
+3. The **Koopman operator approach** provides a clean conceptual framework
+
+**Estimated difficulty**: The remaining work is **graduate-level probability theory**
+requiring expertise in ergodic theory, measure theory, and kernel integration.
+
+-/
+
 end Exchangeability.DeFinetti
