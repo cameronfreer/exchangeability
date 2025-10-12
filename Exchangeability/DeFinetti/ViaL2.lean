@@ -890,19 +890,64 @@ lemma card_filter_fin_val_ge_two_mul (k : ℕ) :
 lemma sum_filter_fin_val_lt_eq_sum_fin {β : Type*} [AddCommMonoid β] (n k : ℕ) (hk : k ≤ n) (g : ℕ → β) :
   ∑ i ∈ ((univ : Finset (Fin n)).filter (fun i => i.val < k)), g i.val
     = ∑ j : Fin k, g j.val := by
-  sorry
+  -- The filtered set equals the image of Fin k under the embedding
+  have h_eq : ((univ : Finset (Fin n)).filter (fun i => i.val < k))
+            = Finset.image (fun (j : Fin k) => (⟨j.val, Nat.lt_of_lt_of_le j.isLt hk⟩ : Fin n)) univ := by
+    ext i
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_image]
+    constructor
+    · intro hi
+      use ⟨i.val, hi⟩
+    · rintro ⟨j, _, rfl⟩
+      exact j.isLt
+  rw [h_eq, Finset.sum_image]
+  · intro a b _ _ hab
+    simp only [Fin.mk.injEq] at hab
+    exact Fin.ext hab
 
 /-- Sum over `{i : Fin n | i.val ≥ k}` equals sum over Fin (n-k) with offset, when k ≤ n. -/
 lemma sum_filter_fin_val_ge_eq_sum_fin {β : Type*} [AddCommMonoid β] (n k : ℕ) (hk : k ≤ n) (g : ℕ → β) :
   ∑ i ∈ ((univ : Finset (Fin n)).filter (fun i => ¬(i.val < k))), g i.val
     = ∑ j : Fin (n - k), g (k + j.val) := by
-  sorry
+  -- The filtered set equals the image of Fin (n-k) under the shift map
+  have h_eq : ((univ : Finset (Fin n)).filter (fun i => ¬(i.val < k)))
+            = Finset.image (fun (j : Fin (n - k)) => (⟨k + j.val, by omega⟩ : Fin n)) univ := by
+    ext i
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_image, not_lt]
+    constructor
+    · intro hi
+      use ⟨i.val - k, by omega⟩
+      ext
+      simp
+      omega
+    · rintro ⟨j, _, rfl⟩
+      simp
+  rw [h_eq, Finset.sum_image]
+  · intro a b _ _ hab
+    simp only [Fin.mk.injEq] at hab
+    exact Fin.ext (by omega)
 
 /-- Sum over last k elements of Fin(n+k) equals sum over Fin k with offset. -/
 lemma sum_last_block_eq_sum_fin {β : Type*} [AddCommMonoid β] (n k : ℕ) (g : ℕ → β) :
   ∑ i ∈ ((univ : Finset (Fin (n + k))).filter (fun i => n ≤ i.val)), g i.val
     = ∑ j : Fin k, g (n + j.val) := by
-  sorry
+  -- The filtered set equals the image of Fin k under the shift map
+  have h_eq : ((univ : Finset (Fin (n + k))).filter (fun i => n ≤ i.val))
+            = Finset.image (fun (j : Fin k) => (⟨n + j.val, by omega⟩ : Fin (n + k))) univ := by
+    ext i
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_image]
+    constructor
+    · intro hi
+      use ⟨i.val - n, by omega⟩
+      ext
+      simp
+      omega
+    · rintro ⟨j, _, rfl⟩
+      simp
+  rw [h_eq, Finset.sum_image]
+  · intro a b _ _ hab
+    simp only [Fin.mk.injEq] at hab
+    exact Fin.ext (by omega)
 
 end FinIndexHelpers
 
