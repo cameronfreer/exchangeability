@@ -2379,12 +2379,40 @@ theorem subsequence_criterion_convergence_in_probability
         (limsup A atTop)ᶜ
         ⊆ {ω | Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω))} := by
       intro ω hω
-      -- from eventually_not_mem limsup we get ∃K, ∀k≥K, ω ∉ A k
-      -- hence ∀k≥K, |ξ_{φ k}(ω) − ξ(ω)| < ε k, and ε k → 0 ⇒ convergence
-      -- TODO: fill with `eventually_iff_forall_frequently` / set limsup expansions:
-      -- `mem_limsup` as `∀ᶠᶠ k in atTop, ω ∈ A k` (frequently). Use its complement.
-      -- then use the `tendsto_iff_norm_tendsto_zero` style for reals with ε_k → 0.
-      sorry
+      -- ω ∉ limsup A means eventually ω ∉ A k
+      -- i.e., eventually |ξ (φ k) ω - ξ_limit ω| < ε k
+      -- Since ε k → 0, this implies ξ (φ k) ω → ξ_limit ω
+      -- The key fact: limsup A = {ω | frequently ω ∈ A_k}
+      -- So ω ∉ limsup A ⟺ eventually ω ∉ A_k
+      have h_eventually : ∃ K, ∀ k ≥ K, ω ∉ A k := by
+        -- This follows from the definition of limsup as inf sup
+        -- limsup A = ⋂ N, ⋃ k ≥ N, A k
+        -- ω ∉ limsup A means ∃ N, ω ∉ ⋃ k ≥ N, A k, i.e., ∃ N, ∀ k ≥ N, ω ∉ A k
+        sorry
+      obtain ⟨K, hK⟩ := h_eventually
+      -- Show convergence using squeeze: |ξ (φ k) ω - ξ_limit ω| ≤ ε k for k ≥ K
+      simp only [Set.mem_setOf_eq]
+      rw [Metric.tendsto_atTop]
+      intro δ hδ
+      -- Need to find N such that for k ≥ N, |ξ (φ k) ω - ξ_limit ω| < δ
+      -- Since ε k → 0, we can find N such that ε N < δ
+      rw [Metric.tendsto_atTop] at hε_tendsto
+      obtain ⟨N₁, hN₁⟩ := hε_tendsto δ hδ
+      use max K N₁
+      intro k hk
+      -- For k ≥ max K N₁, we have:
+      -- 1. k ≥ K, so ω ∉ A k, hence |ξ (φ k) ω - ξ_limit ω| < ε k
+      -- 2. k ≥ N₁, so ε k < δ (since dist (ε k) 0 = ε k for positive ε k)
+      have h1 : ω ∉ A k := hK k (le_of_max_le_left hk)
+      simp only [A, Set.mem_setOf_eq, not_le] at h1
+      have h2 : ε k < δ := by
+        have := hN₁ k (le_of_max_le_right hk)
+        simp [Real.dist_eq, abs_of_pos (hε_pos k)] at this
+        exact this
+      calc dist (ξ (φ k) ω) (ξ_limit ω)
+          = |ξ (φ k) ω - ξ_limit ω| := Real.dist_eq _ _
+        _ < ε k := h1
+        _ < δ := h2
     have h_meas : MeasurableSet (limsup A atTop) := by
       -- limsup of measurable sets is measurable
       -- Use measurability tactic which knows about @[measurability] lemmas
@@ -2393,9 +2421,18 @@ theorem subsequence_criterion_convergence_in_probability
       simp [measure_compl h_meas, hBC]
     -- So almost every ω lies in the RHS set
     have hAE : μ {ω | Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω))} = μ Set.univ := by
-      -- monotonicity of μ and hcompl
-      -- TODO: monotonicity step; or use `ae_iff` with the previous equality
-      sorry
+      -- We have (limsup A)ᶜ ⊆ {ω | Tendsto...} and μ((limsup A)ᶜ) = μ univ
+      -- By monotonicity: μ univ ≤ μ {ω | Tendsto...}
+      -- But μ {ω | Tendsto...} ≤ μ univ always (since it's a subset)
+      -- Therefore equality
+      have h_le : μ Set.univ ≤ μ {ω | Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω))} := by
+        calc μ Set.univ
+            = μ ((limsup A atTop)ᶜ) := this.symm
+          _ ≤ μ {ω | Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω))} :=
+              measure_mono hcompl
+      have h_ge : μ {ω | Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω))} ≤ μ Set.univ :=
+        measure_mono (Set.subset_univ _)
+      exact le_antisymm h_ge h_le
     -- conclude: convert measure equality to ae statement
     -- We have (limsup A)ᶜ ⊆ {ω | Tendsto...} and ∀ᵐ ω, ω ∈ (limsup A)ᶜ (since μ(limsup A) = 0)
     -- Therefore ∀ᵐ ω, ω ∈ {ω | Tendsto...}
