@@ -1854,8 +1854,8 @@ lemma Kernel.IndepFun.integral_mul
     (hX : Measurable X) (hY : Measurable Y)
     (hX_bd : ∃ C, ∀ ω, |X ω| ≤ C) (hY_bd : ∃ C, ∀ ω, |Y ω| ≤ C) :
     ∀ᵐ a ∂μ, ∫ ω, X ω * Y ω ∂(κ a) = (∫ ω, X ω ∂(κ a)) * (∫ ω, Y ω ∂(κ a)) := by
-  -- Direct application of the axiom
-  sorry -- TODO: exact Kernel.IndepFun.ae_measure_indepFun hXY -- type mismatch
+  -- Direct application of the axiom (boundedness assumptions not needed for the axiom)
+  exact Kernel.IndepFun.ae_measure_indepFun κ μ hXY
 
 /-! ### OLD PROOF (kept for reference - can be moved to AxiomsForDeFinetti to prove the axiom)
 
