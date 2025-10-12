@@ -322,6 +322,14 @@ noncomputable def ν {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] : Ω[α] → Measure α :=
   fun ω => (rcdKernel (μ := μ)) ω
 
+/-- ν evaluation on measurable sets is measurable in the parameter. -/
+lemma ν_eval_measurable
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    {s : Set α} (hs : MeasurableSet s) :
+    Measurable (fun ω => ν (μ := μ) ω s) := by
+  simp only [ν]
+  exact (rcdKernel (μ := μ)).measurable_coe hs
+
 /-! ## Axioms for de Finetti theorem -/
 
 /-- **Core axiom**: Conditional independence of the first two coordinates given the tail σ-algebra.
@@ -685,13 +693,12 @@ lemma indicator_product_bridge_ax
     rw [abs_le] at this
     exact this.1)
 
-  have hF_int : Integrable F μ := by
-    apply MeasureTheory.integrable_of_bounded hF_meas
-    exact ⟨1, hF_bd⟩
+  have hF_int : Integrable F μ :=
+    ⟨hF_meas.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hF_bd)⟩
 
   -- LHS: Convert ENNReal integral to real integral
-  have hL : ∫⁻ ω, ENNReal.ofReal (F ω) ∂μ = ENNReal.ofReal (∫ ω, F ω ∂μ) := by
-    exact lintegral_ofReal_eq_integral hF_meas.aemeasurable hF_nonneg hF_int
+  have hL : ∫⁻ ω, ENNReal.ofReal (F ω) ∂μ = ENNReal.ofReal (∫ ω, F ω ∂μ) :=
+    (ofReal_integral_eq_lintegral_ofReal hF_int hF_nonneg).symm
 
   -- RHS: Product of kernel measures
   let G : Ω[α] → ℝ := fun ω => ∏ i, ((ν (μ := μ) ω) (B i)).toReal
@@ -731,9 +738,8 @@ lemma indicator_product_bridge_ax
     rw [abs_of_nonneg h_nonneg]
     exact h_le_one
 
-  have hG_int : Integrable G μ := by
-    apply MeasureTheory.integrable_of_bounded hG_meas
-    exact ⟨1, hG_bd⟩
+  have hG_int : Integrable G μ :=
+    ⟨hG_meas.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hG_bd)⟩
 
   -- Key fact: ∫ indicator dν = ν(B).toReal for each coordinate
   have h_indicator_integral : ∀ i ω, ∫ x, (B i).indicator (fun _ => (1 : ℝ)) x ∂(ν (μ := μ) ω)
@@ -816,7 +822,7 @@ lemma indicator_product_bridge_ax
     _ = ENNReal.ofReal (∫ ω, F ω ∂μ) := hL
     _ = ENNReal.ofReal (∫ ω, G ω ∂μ) := by rw [h_eq_integrals]
     _ = ∫⁻ ω, ENNReal.ofReal (G ω) ∂μ := by
-          rw [lintegral_ofReal_eq_integral hG_meas.aemeasurable hG_nonneg hG_int]
+          rw [ofReal_integral_eq_lintegral_ofReal hG_int hG_nonneg]
     _ = ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal (((ν (μ := μ) ω) (B i)).toReal) ∂μ := by
           congr; funext ω; simp [G]
     _ = ∫⁻ ω, ∏ i : Fin m, (ν (μ := μ) ω) (B i) ∂μ := by
@@ -943,10 +949,11 @@ lemma quantize_abs_le {C ε x : ℝ} (hC : 0 ≤ C) (hε : 0 < ε) (hε1 : ε �
   have herr := quantize_err_le (C := C) (ε := ε) (x := x) hε
   -- Triangle inequality: |q| ≤ |v| + |q - v| ≤ C + ε ≤ C + 1
   have : |quantize C ε x| ≤ |v| + ε := by
-    have h1 : |quantize C ε x| = |(quantize C ε x - v) + v| := by ring_nf
-    rw [h1]
-    have h2 := abs_add (quantize C ε x - v) v
-    linarith [herr, h2]
+    calc |quantize C ε x|
+        = |(quantize C ε x - v) + v| := by ring_nf
+      _ ≤ |quantize C ε x - v| + |v| := abs_add_le _ _
+      _ ≤ ε + |v| := by linarith [herr]
+      _ = |v| + ε := by ring
   linarith [hv_le, this, hε1]
 
 /-- Quantization converges pointwise as ε → 0. -/
