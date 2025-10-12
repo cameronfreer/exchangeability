@@ -2507,19 +2507,114 @@ private lemma indIic_measurable (t : ℝ) : Measurable (indIic t) := by
 private lemma indIic_bdd (t : ℝ) : ∀ x, |indIic t x| ≤ 1 := by
   intro x; by_cases hx : x ≤ t <;> simp [indIic, hx, abs_of_nonneg]
 
-/-- For each ω, the map t ↦ α_{𝟙_{(-∞,t]}}(ω) defines a CDF.
-
-This will be used to construct ν(ω) via the Stieltjes measure construction.
--/
-noncomputable def cdf_from_alpha
+/-- Raw "CDF" at level t: the L¹-limit α_{1_{(-∞,t]}} produced by Step 2.
+This is the raw α before right-continuous correction. -/
+noncomputable def alphaIic
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (t : ℝ) : Ω → ℝ :=
-  -- Apply the L¹ convergence theorem to the indicator f = 1_{(-∞,t]}
   (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
       (indIic t) (indIic_measurable t) ⟨1, indIic_bdd t⟩).choose
+
+/-- Measurability of the raw α_{Iic t}. -/
+lemma alphaIic_measurable
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (t : ℝ) :
+    Measurable (alphaIic X hX_contract hX_meas hX_L2 t) := by
+  -- Straight from weighted_sums_converge_L1 witness
+  have := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
+            (indIic t) (indIic_measurable t) ⟨1, indIic_bdd t⟩).choose_spec
+  exact this.1
+
+/-- 0 ≤ α_{Iic t} ≤ 1. The α is an L¹-limit of averages of indicators in [0,1]. -/
+lemma alphaIic_bound
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (t : ℝ) (ω : Ω) :
+    0 ≤ alphaIic X hX_contract hX_meas hX_L2 t ω
+    ∧ alphaIic X hX_contract hX_meas hX_L2 t ω ≤ 1 := by
+  -- α is the L¹-limit of Cesàro averages of indIic values (which are 0 or 1)
+  -- Hence α ∈ [0,1] a.e., and by choosing a representative we can assume pointwise
+  -- TODO: formalize via L¹ limit of bounded functions
+  sorry
+
+/-- Right-continuous CDF from α via countable rational envelope:
+F(ω,t) := inf_{q∈ℚ, t<q} α_{Iic q}(ω).
+This is monotone increasing and right-continuous in t. -/
+noncomputable def cdf_from_alpha
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (ω : Ω) (t : ℝ) : ℝ :=
+  ⨅ (q : {q : ℚ // t < (q : ℝ)}), alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω
+
+/-- F(ω,·) is monotone nondecreasing. -/
+lemma cdf_from_alpha_mono
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (ω : Ω) :
+    Monotone (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) := by
+  intro s t hst
+  -- The index set {q | t<q} ⊆ {q | s<q} when s ≤ t
+  -- Hence inf over smaller set ≥ inf over larger set
+  -- TODO: formalize iInf subset ordering
+  sorry
+
+/-- Right-continuity in t: F(ω,t) = lim_{u↘t} F(ω,u). -/
+lemma cdf_from_alpha_rightContinuous
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (ω : Ω) :
+    ∀ t, Filter.Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω)
+      (𝓝[>] t) (𝓝 (cdf_from_alpha X hX_contract hX_meas hX_L2 ω t)) := by
+  intro t
+  -- Standard right-limit envelope argument:
+  -- F(t) = inf_{q>t, q∈ℚ} α(q), and by density of rationals,
+  -- for any ε>0, ∃q>t with α(q) < F(t) + ε
+  -- For u close enough to t (specifically u < q), F(u) ≤ α(q) < F(t) + ε
+  -- Also F(t) ≤ F(u) by monotonicity, giving |F(u) - F(t)| < ε
+  -- TODO: formalize using Filter.tendsto_iInf or explicit ε-δ
+  sorry
+
+/-- Bounds 0 ≤ F ≤ 1 (pointwise in ω,t). -/
+lemma cdf_from_alpha_bounds
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (ω : Ω) (t : ℝ) :
+    0 ≤ cdf_from_alpha X hX_contract hX_meas hX_L2 ω t
+    ∧ cdf_from_alpha X hX_contract hX_meas hX_L2 ω t ≤ 1 := by
+  -- iInf of values in [0,1] stays in [0,1]
+  -- TODO: formalize iInf bounds preservation
+  sorry
+
+/-- F(ω,t) → 0 as t → -∞, and F(ω,t) → 1 as t → +∞. -/
+lemma cdf_from_alpha_limits
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (ω : Ω) :
+    Filter.Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) Filter.atBot (𝓝 0) ∧
+    Filter.Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) Filter.atTop (𝓝 1) := by
+  -- Sketch: For t→-∞, the indicators 1_{x≤t} → 0 pointwise, so their averages → 0,
+  -- and by L¹ convergence, α_{Iic t} → 0. Transfer this to F via the iInf envelope.
+  -- Similarly for t→+∞, indicators → 1, so α → 1, and F → 1.
+  -- TODO: formalize using dominated convergence and monotonicity
+  sorry
 
 /-- Build the directing measure ν from the CDF.
 
