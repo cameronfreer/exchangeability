@@ -8,6 +8,7 @@ import Exchangeability.Probability.CondProb
 import Mathlib.Probability.Independence.Basic
 import Mathlib.Probability.Independence.Conditional
 import Mathlib.Probability.Martingale.Basic
+import Mathlib.Probability.CondVar
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.CondexpL2
 import Mathlib.MeasureTheory.PiSystem
 import Mathlib.MeasureTheory.OuterMeasure.BorelCantelli
@@ -581,11 +582,15 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
       have hL₂ :
           ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω ∂(μ.restrict S)
             = ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S) := by
-        sorry  -- TODO: Need lemma relating μ[f|m] to (μ.restrict S)[f|m]
+        -- Need: integral of condExp w.r.t. μ over S equals integral of f w.r.t. μ over S
+        -- This follows from setIntegral_condExp
+        sorry  -- TODO: Use setIntegral_condExp to relate integrals
       have hR₂ :
           ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂(μ.restrict S)
             = ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S) := by
-        sorry  -- TODO: Need lemma relating μ[f|m] to (μ.restrict S)[f|m]
+        -- Need: integral of condExp w.r.t. μ over S equals integral of f w.r.t. μ over S
+        -- This follows from setIntegral_condExp
+        sorry  -- TODO: Use setIntegral_condExp to relate integrals
       -- Evaluate both sides as the (restricted) measure of the union.
       have h_meas_union : MeasurableSet[m₀] (⋃ i, f i) := MeasurableSet.iUnion hf_meas
       have h_eval :
@@ -815,7 +820,8 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     -- This is a standard variance decomposition formula
     have h_var_formula :
         μ[(X₂ - μ[X₂ | m₁])^2 | m₁] =ᵐ[μ] μ[X₂ ^ 2 | m₁] - (μ[X₂ | m₁]) ^ 2 := by
-      sorry  -- TODO: Fix variance decomposition formula (condExp linearity issues)
+      -- Use the variance decomposition lemma from mathlib
+      exact condVar_ae_eq_condExp_sq_sub_sq_condExp hm₁ hL2
     have h_congr :
         ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ
           = ∫ ω, (μ[X₂ ^ 2 | m₁] ω - μ[X₂ | m₁] ω ^ 2) ∂μ :=

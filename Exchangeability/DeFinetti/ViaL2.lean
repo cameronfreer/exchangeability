@@ -2329,10 +2329,14 @@ theorem subsequence_criterion_convergence_in_probability
   have hA_meas : ∀ k, MeasurableSet (A k) := by
     intro k
     -- A k = {ω | ε k ≤ |ξ (φ k) ω - ξ_limit ω|}
-    -- This is measurable because |ξ (φ k) - ξ_limit| is measurable
-    -- (continuous maps on Polish spaces like ℝ are measurable)
-    -- TODO: find the correct lemma for `Measurable (abs ∘ f)` when `Measurable f`
-    sorry
+    -- Since measurable functions from Ω → ℝ compose with continuous ℝ → ℝ functions,
+    -- and abs : ℝ → ℝ is continuous, we have |ξ (φ k) - ξ_limit| is measurable
+    have h_diff_meas : Measurable (fun ω => ξ (φ k) ω - ξ_limit ω) :=
+      (hξ_meas (φ k)).sub hξ_limit_meas
+    have h_abs_meas : Measurable (fun ω => |ξ (φ k) ω - ξ_limit ω|) := by
+      -- abs is continuous on ℝ, so measurable; composition preserves measurability
+      sorry
+    exact h_abs_meas measurableSet_Ici
   have hA_tsum : (∑' k, μ (A k)) ≠ ⊤ := by
     -- μ(A k) ≤ 2^{-(k+1)} and ∑ 2^{-(k+1)} < ∞
     have hbound : ∀ k, μ (A k) ≤ ((1 : ENNReal) / 2) ^ (k+1) := by
@@ -2429,7 +2433,18 @@ theorem reverse_martingale_subsequence_convergence
     have hmarkov :
         ∀ n, μ {ω | ε ≤ |alpha n ω - alpha_inf ω|}
             ≤ ENNReal.ofReal ( (1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ ) := by
-      -- TODO: fill with the exact Markov/Chebyshev lemma you prefer.
+      intro n
+      -- Apply Markov's inequality: ε * μ.real {ω | ε ≤ f ω} ≤ ∫ f dμ
+      -- We need: f nonnegative and integrable
+      have hf_nonneg : 0 ≤ᵐ[μ] (fun ω => |alpha n ω - alpha_inf ω|) := by
+        filter_upwards with ω
+        exact abs_nonneg _
+      have hf_int : Integrable (fun ω => |alpha n ω - alpha_inf ω|) μ := by
+        -- TODO: derive from h_L1_conv or add as hypothesis
+        sorry
+      have := mul_meas_ge_le_integral_of_nonneg hf_nonneg hf_int ε
+      -- This gives: ε * μ.real {ω | ε ≤ |alpha n ω - alpha_inf ω|} ≤ ∫ ω, |alpha n ω - alpha_inf ω| ∂μ
+      -- Divide by ε (assuming ε > 0) and convert to ENNReal
       sorry
     -- Now use the L¹ convergence hypothesis to push RHS → 0.
     -- Convert the real integral bound to `ℝ≥0∞` via `ofReal`.
