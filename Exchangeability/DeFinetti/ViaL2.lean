@@ -2565,10 +2565,25 @@ lemma cdf_from_alpha_mono
     (ω : Ω) :
     Monotone (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) := by
   intro s t hst
-  -- The index set {q | t<q} ⊆ {q | s<q} when s ≤ t
-  -- Hence inf over smaller set ≥ inf over larger set
-  -- TODO: formalize iInf subset ordering
-  sorry
+  -- When s ≤ t, the set {q : ℚ | t < q} ⊆ {q : ℚ | s < q}
+  -- For any element q in the smaller set, we show it's in the larger set
+  -- Then iInf over smaller set ≥ iInf over larger set
+  have hne_t : Nonempty {q : ℚ // t < (q : ℝ)} := by
+    obtain ⟨q, hq1, _⟩ := exists_rat_btwn (lt_add_one t)
+    exact ⟨⟨q, hq1⟩⟩
+  refine le_ciInf fun ⟨qt, hqt⟩ => ?_
+  -- qt > t ≥ s, so qt > s, hence ⟨qt, _⟩ is in the index set for s
+  have hqs : s < (qt : ℝ) := lt_of_le_of_lt hst hqt
+  calc alphaIic X hX_contract hX_meas hX_L2 (qt : ℝ) ω
+      = alphaIic X hX_contract hX_meas hX_L2 ((⟨qt, hqs⟩ : {q : ℚ // s < (q : ℝ)}) : ℝ) ω := rfl
+    _ ≥ ⨅ (q : {q : ℚ // s < (q : ℝ)}), alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω := by
+        have hbdd : BddBelow (Set.range fun (q : {q : ℚ // s < (q : ℝ)}) =>
+            alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω) := by
+          use 0
+          intro y ⟨q, hq⟩
+          rw [← hq]
+          exact (alphaIic_bound X hX_contract hX_meas hX_L2 (q : ℝ) ω).1
+        exact ciInf_le hbdd ⟨qt, hqs⟩
 
 /-- Right-continuity in t: F(ω,t) = lim_{u↘t} F(ω,u). -/
 lemma cdf_from_alpha_rightContinuous
