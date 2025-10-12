@@ -866,7 +866,7 @@ private lemma card_filter_partition (k : ℕ) :
   have h_card_sum := card_union_of_disjoint h_disj
   rw [← h_partition] at h_card_sum
   simp only [card_fin] at h_card_sum
-  convert h_card_sum.symm using 2 <;> simp only [Finset.filter_congr_decidable]
+  convert h_card_sum.symm using 2
 
 /-- Cardinality of `{i : Fin(2k) | i.val < k}` is k. -/
 lemma card_filter_fin_val_lt_two_mul (k : ℕ) :
@@ -1648,7 +1648,7 @@ private lemma l2_bound_long_vs_tail
                 constructor
                 · intro hi
                   use ⟨i.val - (m - k), by omega⟩
-                  simp only [Finset.mem_univ, true_and]
+                  simp only []
                   ext; simp; omega
                 · rintro ⟨j, _, rfl⟩
                   simp
@@ -2291,7 +2291,7 @@ theorem subsequence_criterion_convergence_in_probability
     have hk := h_prob_conv (ε k) (hε_pos k)
     -- eventually < 2^{-(k+1)} in ENNReal
     have : (0 : ENNReal) < ((1/2 : ENNReal) ^ (k+1)) := by
-      apply ENNReal.pow_pos <;> norm_num
+      apply ENNReal.pow_pos; norm_num
     -- TODO: from `Tendsto ... (𝓝 0)` deduce ∃n, value ≤ (1/2)^{k+1}
     -- Use `((tendsto_order.1 hk).2 this)` or `eventually_lt_iff_lt_lim` flavor
     -- and then extract an index.
@@ -2349,7 +2349,7 @@ theorem subsequence_criterion_convergence_in_probability
       -- TODO: `measurableSet_iInter` + `measurableSet_iUnion` composition.
       sorry
     have : μ ((limsup A atTop)ᶜ) = μ Set.univ := by
-      simpa [measure_compl h_meas, hBC] using congrArg (fun t => μ t) rfl
+      simp [measure_compl h_meas, hBC]
     -- So almost every ω lies in the RHS set
     have hAE : μ {ω | Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω))} = μ Set.univ := by
       -- monotonicity of μ and hcompl
@@ -2431,6 +2431,9 @@ for any i ∈ I:
 
 TODO: Use contractability to relate different time points.
 -/
+-- Unused variable linter disabled: This is a placeholder theorem with trivial conclusion.
+-- The parameters document the intended signature for the full implementation.
+set_option linter.unusedVariables false in
 theorem contractability_conditional_expectation
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
@@ -2565,10 +2568,25 @@ lemma cdf_from_alpha_mono
     (ω : Ω) :
     Monotone (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) := by
   intro s t hst
-  -- The index set {q | t<q} ⊆ {q | s<q} when s ≤ t
-  -- Hence inf over smaller set ≥ inf over larger set
-  -- TODO: formalize iInf subset ordering
-  sorry
+  -- When s ≤ t, the set {q : ℚ | t < q} ⊆ {q : ℚ | s < q}
+  -- For any element q in the smaller set, we show it's in the larger set
+  -- Then iInf over smaller set ≥ iInf over larger set
+  have hne_t : Nonempty {q : ℚ // t < (q : ℝ)} := by
+    obtain ⟨q, hq1, _⟩ := exists_rat_btwn (lt_add_one t)
+    exact ⟨⟨q, hq1⟩⟩
+  refine le_ciInf fun ⟨qt, hqt⟩ => ?_
+  -- qt > t ≥ s, so qt > s, hence ⟨qt, _⟩ is in the index set for s
+  have hqs : s < (qt : ℝ) := lt_of_le_of_lt hst hqt
+  calc alphaIic X hX_contract hX_meas hX_L2 (qt : ℝ) ω
+      = alphaIic X hX_contract hX_meas hX_L2 ((⟨qt, hqs⟩ : {q : ℚ // s < (q : ℝ)}) : ℝ) ω := rfl
+    _ ≥ ⨅ (q : {q : ℚ // s < (q : ℝ)}), alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω := by
+        have hbdd : BddBelow (Set.range fun (q : {q : ℚ // s < (q : ℝ)}) =>
+            alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω) := by
+          use 0
+          intro y ⟨q, hq⟩
+          rw [← hq]
+          exact (alphaIic_bound X hX_contract hX_meas hX_L2 (q : ℝ) ω).1
+        exact ciInf_le hbdd ⟨qt, hqs⟩
 
 /-- Right-continuity in t: F(ω,t) = lim_{u↘t} F(ω,u). -/
 lemma cdf_from_alpha_rightContinuous
@@ -2597,9 +2615,27 @@ lemma cdf_from_alpha_bounds
     (ω : Ω) (t : ℝ) :
     0 ≤ cdf_from_alpha X hX_contract hX_meas hX_L2 ω t
     ∧ cdf_from_alpha X hX_contract hX_meas hX_L2 ω t ≤ 1 := by
-  -- iInf of values in [0,1] stays in [0,1]
-  -- TODO: formalize iInf bounds preservation
-  sorry
+  -- First establish that the index set is nonempty
+  have hne : Nonempty {q : ℚ // t < (q : ℝ)} := by
+    obtain ⟨q, hq1, _⟩ := exists_rat_btwn (lt_add_one t)
+    exact ⟨⟨q, hq1⟩⟩
+  constructor
+  · -- Lower bound: iInf ≥ 0
+    -- Each alphaIic value is ≥ 0, so their infimum is ≥ 0
+    refine le_ciInf fun q => ?_
+    exact (alphaIic_bound X hX_contract hX_meas hX_L2 (q : ℝ) ω).1
+  · -- Upper bound: iInf ≤ 1
+    -- Pick any q with t < q, then iInf ≤ alphaIic q ≤ 1
+    have hbdd : BddBelow (Set.range fun (q : {q : ℚ // t < (q : ℝ)}) =>
+        alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω) := by
+      use 0
+      intro y ⟨q, hq⟩
+      rw [← hq]
+      exact (alphaIic_bound X hX_contract hX_meas hX_L2 (q : ℝ) ω).1
+    calc cdf_from_alpha X hX_contract hX_meas hX_L2 ω t
+        = ⨅ (q : {q : ℚ // t < (q : ℝ)}), alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω := rfl
+      _ ≤ alphaIic X hX_contract hX_meas hX_L2 (hne.some : ℝ) ω := ciInf_le hbdd hne.some
+      _ ≤ 1 := (alphaIic_bound X hX_contract hX_meas hX_L2 (hne.some : ℝ) ω).2
 
 /-- F(ω,t) → 0 as t → -∞, and F(ω,t) → 1 as t → +∞. -/
 lemma cdf_from_alpha_limits
