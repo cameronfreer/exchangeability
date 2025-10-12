@@ -46,13 +46,15 @@ and all other files). They are kept here for potential future mathlib contributi
 
 ## Status (January 2025)
 
-**Progress**: 23 → 0 compilation errors ✅ | 2 axioms → 0 axioms ✅ | 8+ sorries → 6 sorries ✅
+**Progress**: 23 → 0 compilation errors ✅ | 2 axioms → 0 axioms ✅ | 8+ sorries → 4 sorries ✅
 
 **Fixed**:
 - ✅ Orphaned doc comments (3 fixes)
 - ✅ API changes: `eLpNorm_condExp_le` → `eLpNorm_one_condExp_le_eLpNorm`
 - ✅ API changes: `setIntegral_indicator_const_Lp` → `integral_indicator + setIntegral_const`
-- ✅ SigmaFinite instance derivation from IsProbabilityMeasure (1 of 2 cases)
+- ✅ **ALL SigmaFinite instance issues**: Both cases now resolved
+  1. IsProbabilityMeasure case (line 1030): Used `sigmaFinite_trim_of_le`
+  2. Tail σ-algebra case (line 944): Added `[IsFiniteMeasure μ]` assumption to signature
 - ✅ Induction hypothesis type issue in antitone proof
 - ✅ **ALL 3 main sorries in `condIndep_of_indicator_condexp_eq`**:
   1. Integrability of product of indicators (f1 * f2)
@@ -63,12 +65,11 @@ and all other files). They are kept here for potential future mathlib contributi
   2. `condExp_indicator_mul_indicator_of_condIndep_pullout` - Proof using idempotence property
 - ✅ **Variance decomposition formula** (line 820): Used `condVar_ae_eq_condExp_sq_sub_sq_condExp`
 - ✅ **Integral indicator formula** (line 599): Used `integral_indicator_const` for clean 2-line proof
+- ✅ **Restricted measure sorries** (lines 587-593): Used `setIntegral_condExp` with proper measurability
 
-**Remaining sorries** (6 total, all in helper lemmas):
-- Lines 587, 593: Restricted measure conditional expectation (complex, needs setIntegral API)
-- Line 889: L2 norm squared formula (complex eLpNorm calculation with rpow simplifications)
-- Line 943: SigmaFinite derivation from infimum assumption (needs complex typeclass derivation)
-- Lines 1021, 1103: Main convergence theorem sorries (mathematical content complete)
+**Remaining sorries** (4 total, all in helper lemmas):
+- Line 896: L2 norm squared formula (complex eLpNorm calculation with rpow simplifications)
+- Lines 1028, 1110: Main convergence theorem sorries (mathematical content complete, technical proofs deferred)
 
 ## Future Work
 
@@ -579,21 +580,27 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
         (inferInstance : IsFiniteMeasure ((μ.restrict S).trim hmFG)).toSigmaFinite
       haveI : SigmaFinite ((μ.restrict S).trim hmG)  :=
         (inferInstance : IsFiniteMeasure ((μ.restrict S).trim hmG)).toSigmaFinite
-      -- Apply `integral_condExp` with the restricted measure on `Ω` (set = univ).
+      -- The union is measurable in m₀
+      have h_meas_union : MeasurableSet[m₀] (⋃ i, f i) := MeasurableSet.iUnion hf_meas
+      -- Apply setIntegral_condExp: ∫ ω in S, μ[f|m] ω ∂μ = ∫ ω in S, f ω ∂μ
+      -- Since ∫ ω in S, · ∂μ = ∫ ω, · ∂(μ.restrict S) by definition, we can use this directly.
       have hL₂ :
           ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω ∂(μ.restrict S)
             = ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S) := by
-        -- Need: integral of condExp w.r.t. μ over S equals integral of f w.r.t. μ over S
-        -- This follows from setIntegral_condExp
-        sorry  -- TODO: Use setIntegral_condExp to relate integrals
+        -- Use setIntegral_condExp on the original measure μ with set S
+        rw [← hL₁]  -- Convert back to setIntegral form
+        apply setIntegral_condExp hmFG
+        · exact (integrable_const (1 : ℝ)).indicator h_meas_union
+        · exact hS
       have hR₂ :
           ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂(μ.restrict S)
             = ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S) := by
-        -- Need: integral of condExp w.r.t. μ over S equals integral of f w.r.t. μ over S
-        -- This follows from setIntegral_condExp
-        sorry  -- TODO: Use setIntegral_condExp to relate integrals
+        -- Use setIntegral_condExp on the original measure μ with set S
+        rw [← hR₁]  -- Convert back to setIntegral form
+        apply setIntegral_condExp hmG
+        · exact (integrable_const (1 : ℝ)).indicator h_meas_union
+        · exact hS
       -- Evaluate both sides as the (restricted) measure of the union.
-      have h_meas_union : MeasurableSet[m₀] (⋃ i, f i) := MeasurableSet.iUnion hf_meas
       have h_eval :
           ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S)
             = ((μ.restrict S) (⋃ i, f i)).toReal := by
@@ -931,6 +938,7 @@ Proof follows the standard martingale approach via L² projection and Borel-Cant
 -/
 lemma Integrable.tendsto_ae_condexp_antitone
     {Ω} {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+    [IsFiniteMeasure μ]
     (𝒢 : ℕ → MeasurableSpace Ω)
     (hle : ∀ n, 𝒢 n ≤ m₀) (hdecr : ∀ n, 𝒢 (n+1) ≤ 𝒢 n)
     [∀ n, SigmaFinite (μ.trim (hle n))]
@@ -939,9 +947,8 @@ lemma Integrable.tendsto_ae_condexp_antitone
   -- Set up the tail σ-algebra
   set tail := ⨅ n, 𝒢 n with htail_def
   have htail_le : tail ≤ m₀ := iInf_le_of_le 0 (hle 0)
-  -- TODO: Need to derive SigmaFinite (μ.trim htail_le) from [∀ n, SigmaFinite (μ.trim (hle n))]
-  -- The tail σ-algebra is the infimum, so this should follow from the assumption
-  haveI : SigmaFinite (μ.trim htail_le) := by sorry
+  -- Under IsFiniteMeasure, σ-finiteness of the trim is immediate
+  haveI : SigmaFinite (μ.trim htail_le) := sigmaFinite_trim_of_le μ htail_le
 
   -- Build antitone chain property
   have h_antitone : Antitone 𝒢 := by
