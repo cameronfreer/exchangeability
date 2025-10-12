@@ -2433,7 +2433,18 @@ theorem reverse_martingale_subsequence_convergence
     have hmarkov :
         ∀ n, μ {ω | ε ≤ |alpha n ω - alpha_inf ω|}
             ≤ ENNReal.ofReal ( (1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ ) := by
-      -- TODO: fill with the exact Markov/Chebyshev lemma you prefer.
+      intro n
+      -- Apply Markov's inequality: ε * μ.real {ω | ε ≤ f ω} ≤ ∫ f dμ
+      -- We need: f nonnegative and integrable
+      have hf_nonneg : 0 ≤ᵐ[μ] (fun ω => |alpha n ω - alpha_inf ω|) := by
+        filter_upwards with ω
+        exact abs_nonneg _
+      have hf_int : Integrable (fun ω => |alpha n ω - alpha_inf ω|) μ := by
+        -- TODO: derive from h_L1_conv or add as hypothesis
+        sorry
+      have := mul_meas_ge_le_integral_of_nonneg hf_nonneg hf_int ε
+      -- This gives: ε * μ.real {ω | ε ≤ |alpha n ω - alpha_inf ω|} ≤ ∫ ω, |alpha n ω - alpha_inf ω| ∂μ
+      -- Divide by ε (assuming ε > 0) and convert to ENNReal
       sorry
     -- Now use the L¹ convergence hypothesis to push RHS → 0.
     -- Convert the real integral bound to `ℝ≥0∞` via `ofReal`.
