@@ -2335,8 +2335,9 @@ theorem subsequence_criterion_convergence_in_probability
       sorry
     -- geometric series in ENNReal
     have : (∑' k, ((1 : ENNReal) / 2) ^ (k+1)) ≠ ⊤ := by
-      -- TODO: `tsum_geometric_of_lt_1` in ENNReal, or bound by a real geom. series via coercions
-      sorry
+      -- ∑ (1/2)^(k+1) = (1/2) * (1 - 1/2)⁻¹ = (1/2) * 2 = 1 < ⊤
+      rw [ENNReal.tsum_geometric_add_one]
+      norm_num
     -- TODO: use tsum_le_tsum with hbound
     sorry
 
