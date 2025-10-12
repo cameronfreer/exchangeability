@@ -601,7 +601,15 @@ lemma indicator_product_bridge_ax
       constructor
       · exact ENNReal.toReal_nonneg
       · have : (ν (μ := μ) ω) (B i) ≤ 1 := by
-          sorry -- TODO: have := measure_mono (show B i ⊆ Set.univ from Set.subset_univ _)
+          have h_le : (ν (μ := μ) ω) (B i) ≤ (ν (μ := μ) ω) Set.univ := by
+            apply measure_mono
+            exact Set.subset_univ _
+          haveI : IsProbabilityMeasure (ν (μ := μ) ω) := by
+            unfold ν
+            exact IsMarkovKernel.isProbabilityMeasure ω
+          have h_univ : (ν (μ := μ) ω) Set.univ = 1 := measure_univ
+          rw [h_univ] at h_le
+          exact h_le
         have : ((ν (μ := μ) ω) (B i)).toReal ≤ (1 : ENNReal).toReal := by
           apply ENNReal.toReal_mono
           · simp
@@ -1821,8 +1829,7 @@ private lemma integrable_of_bounded {Ω : Type*} [MeasurableSpace Ω] {μ : Meas
     [IsFiniteMeasure μ] {f : Ω → ℝ} (hf : Measurable f) (hbd : ∃ C, ∀ ω, |f ω| ≤ C) :
     Integrable f μ := by
   obtain ⟨C, hC⟩ := hbd
-  sorry -- TODO: use HasFiniteIntegral.of_bounded pattern
-  -- exact MeasureTheory.integrable_of_bounded hf ⟨C, hC⟩
+  exact ⟨hf.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hC)⟩
 
 /-- **Kernel integral factorization for bounded measurable functions**.
 
