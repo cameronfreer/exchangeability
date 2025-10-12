@@ -2287,13 +2287,15 @@ theorem subsequence_criterion_convergence_in_probability
   have h_exists : ∀ k, ∃ n, μ {ω | ε k ≤ |ξ n ω - ξ_limit ω|} ≤ ((1 : ENNReal) / 2) ^ (k+1) := by
     intro k
     have hk := h_prob_conv (ε k) (hε_pos k)
-    -- eventually < 2^{-(k+1)} in ENNReal
-    have : (0 : ENNReal) < ((1/2 : ENNReal) ^ (k+1)) := by
+    -- eventually ≤ 2^{-(k+1)} in ENNReal
+    have hpos : (0 : ENNReal) < ((1/2 : ENNReal) ^ (k+1)) := by
       apply ENNReal.pow_pos; norm_num
-    -- TODO: from `Tendsto ... (𝓝 0)` deduce ∃n, value ≤ (1/2)^{k+1}
-    -- Use `((tendsto_order.1 hk).2 this)` or `eventually_lt_iff_lt_lim` flavor
-    -- and then extract an index.
-    sorry
+    -- from Tendsto to 0, we get eventually ≤ (1/2)^(k+1)
+    rw [ENNReal.tendsto_nhds_zero] at hk
+    have hev : ∀ᶠ n in atTop, μ {ω | ε k ≤ |ξ n ω - ξ_limit ω|} ≤ ((1/2 : ENNReal) ^ (k+1)) :=
+      hk _ hpos
+    -- extract a witness
+    exact hev.exists
 
   -- Make the indices strictly increasing
   choose n hn using h_exists
