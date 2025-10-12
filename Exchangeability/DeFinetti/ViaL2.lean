@@ -2313,13 +2313,13 @@ theorem subsequence_criterion_convergence_in_probability
           calc φ a < φ b := IH h
             _ < φ b + 1 := Nat.lt_succ_self _
             _ ≤ max (φ b + 1) (n (b + 1)) := le_max_left _ _
-            _ = φ (b + 1) := by simp [φ, Nat.rec]
+            _ = φ (b + 1) := by simp [φ]
         · -- Case: a = b, so need φ b < φ (b+1)
           rw [h]
           show φ b < φ (b + 1)
           calc φ b < φ b + 1 := Nat.lt_succ_self _
             _ ≤ max (φ b + 1) (n (b + 1)) := le_max_left _ _
-            _ = φ (b + 1) := by simp [φ, Nat.rec]
+            _ = φ (b + 1) := by simp [φ]
 
   -- Bad sets A_k
   let A : ℕ → Set Ω := fun k => {ω | ε k ≤ |ξ (φ k) ω - ξ_limit ω|}
@@ -2415,49 +2415,51 @@ theorem reverse_martingale_subsequence_convergence
   -- Apply the subsequence criterion we just proved
   exact subsequence_criterion_convergence_in_probability alpha alpha_inf h_prob_conv
 
-/-- The α_n sequence is a reverse martingale with respect to the tail filtration.
+/-- Placeholder: The α_n sequence is a reverse martingale with respect to the tail filtration.
 
-**Note**: This lemma's content is deferred to Step 5 (`alpha_is_conditional_expectation`).
+**TODO**: This lemma's content is deferred to Step 5 (`alpha_is_conditional_expectation`).
 Once we identify α_n = E[f(X_{n+1}) | σ(X_{n+1}, X_{n+2}, ...)] in Step 5,
 the reverse martingale property follows immediately from the standard tower property
 of conditional expectation.
 
-For now, we state this as `True` and complete the identification in Step 5.
+This private placeholder exists only so the file compiles while we develop other parts.
 -/
-theorem alpha_is_reverse_martingale
+@[nolint unusedArguments]
+private theorem alpha_is_reverse_martingale
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (_X : ℕ → Ω → ℝ) (_hX_contract : Contractable μ _X)
     (_hX_meas : ∀ i, Measurable (_X i))
     (_α : ℕ → Ω → ℝ)
     (_f : ℝ → ℝ) (_hf_meas : Measurable _f) :
-    True := by
-  -- Defer to Step 5 where we identify α_n with conditional expectation
+    True :=
   trivial
 
 /-!
 ## Step 4: Contractability + dominated convergence gives conditional expectation formula
 -/
 
-/-- Using contractability and dominated convergence, we get:
+/-- Placeholder: Using contractability and dominated convergence, we get:
 E[f(X_i) ; ∩I_k] = E[α_{k-1} ; ∩I_k] → E[α_∞ ; ∩I_k]
 
 **Kallenberg**: "By the contractability of ξ and dominated convergence we get, a.s. along ℕ
 for any i ∈ I:
   E[f(ξ_i); ∩I_k] = E[α_{k-1}; ∩I_k] → E[α_∞; ∩I_k]"
 
-TODO: Use contractability to relate different time points.
+**TODO**: Use contractability to relate different time points.
+
+This private placeholder exists only so the file compiles while we develop other parts.
+The parameters document the intended signature for the full implementation.
 -/
--- Unused variable linter disabled: This is a placeholder theorem with trivial conclusion.
--- The parameters document the intended signature for the full implementation.
-theorem contractability_conditional_expectation
+@[nolint unusedArguments]
+private theorem contractability_conditional_expectation
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (_hX_contract : Contractable μ X)
-    (_hX_meas : ∀ i, Measurable (X i))
-    (f : ℝ → ℝ) (_hf_meas : Measurable f)
-    (alpha : ℕ → Ω → ℝ) (alpha_inf : Ω → ℝ)
-    (I_k : Set Ω)  -- Event ∩I_k in tail σ-algebra
-    (_h_conv : ∀ᵐ ω ∂μ, Tendsto (fun n => alpha n ω) atTop (𝓝 (alpha_inf ω))) :
-    True := by
+    (_X : ℕ → Ω → ℝ) (_hX_contract : Contractable μ _X)
+    (_hX_meas : ∀ i, Measurable (_X i))
+    (_f : ℝ → ℝ) (_hf_meas : Measurable _f)
+    (_alpha : ℕ → Ω → ℝ) (_alpha_inf : Ω → ℝ)
+    (_I_k : Set Ω)  -- Event ∩I_k in tail σ-algebra
+    (_h_conv : ∀ᵐ ω ∂μ, Tendsto (fun n => _alpha n ω) atTop (𝓝 (_alpha_inf ω))) :
+    True :=
   trivial
 
 /-!
