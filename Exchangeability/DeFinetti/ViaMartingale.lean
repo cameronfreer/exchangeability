@@ -585,6 +585,7 @@ lemma sigmaFinite_trim_tailSigma {Ω α : Type*} [MeasurableSpace Ω] [Measurabl
     (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) :
     SigmaFinite (μ.trim (tailSigma_le X hX)) := by
   sorry  -- TODO: Need to prove sigma-finiteness is preserved under trimming
+  -- inferInstance fails; may need manual construction or mathlib extension
 
 /-! ### Helper lemmas for futureFiltration properties -/
 

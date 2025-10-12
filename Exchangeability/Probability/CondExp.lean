@@ -102,8 +102,8 @@ def cylinder (α : Type*) (r : ℕ) (C : Fin r → Set α) : Set (ℕ → α) :=
 
 /-- Agreement on future rectangles property (inlined to avoid circular dependency). -/
 structure AgreeOnFutureRectangles {α : Type*} [MeasurableSpace α]
-    (μ ν : Measure (α × (ℕ → α))) : Prop :=
-  (measure_eq : μ = ν)
+    (μ ν : Measure (α × (ℕ → α))) : Prop where
+  measure_eq : μ = ν
 
 /-- If (X₁,Y) and (X₂,Y) have the same distribution, then
 E[1_{X₁∈B} | σ(Y)] = E[1_{X₂∈B} | σ(Y)] a.e.
