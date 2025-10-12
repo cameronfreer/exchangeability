@@ -978,10 +978,77 @@ lemma l2_bound_two_windows_uniform
 
   -- Prove p and q are probability distributions
   have hp_prob : (∑ i : Fin (2*k), p i) = 1 ∧ ∀ i, 0 ≤ p i := by
-    sorry -- TODO: k values of 1/k sum to 1, all weights nonnegative
+    constructor
+    · -- Sum equals 1
+      -- Split sum based on i.val < k
+      calc ∑ i : Fin (2*k), p i
+        = ∑ i ∈ Finset.filter (fun i => i.val < k) Finset.univ, p i +
+          ∑ i ∈ Finset.filter (fun i => ¬(i.val < k)) Finset.univ, p i := by
+            rw [← Finset.sum_filter_add_sum_filter_not (s := Finset.univ) (p := fun i => i.val < k)]
+      _ = ∑ i ∈ Finset.filter (fun i : Fin (2*k) => i.val < k) Finset.univ, (1/(k:ℝ)) + 0 := by
+            congr 1
+            · apply Finset.sum_congr rfl
+              intro i hi
+              have : i.val < k := Finset.mem_filter.mp hi |>.2
+              simp [p, this]
+            · apply Finset.sum_eq_zero
+              intro i hi
+              have : ¬(i.val < k) := Finset.mem_filter.mp hi |>.2
+              simp [p, this]
+      _ = (Finset.filter (fun i : Fin (2*k) => i.val < k) Finset.univ).card * (1/(k:ℝ)) := by
+            simp [Finset.sum_const]
+      _ = k * (1/(k:ℝ)) := by
+            congr 1
+            -- Count: exactly k indices satisfy i.val < k in Fin (2*k)
+            -- These are precisely {0, 1, ..., k-1}
+            sorry
+      _ = 1 := by
+            have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
+            field_simp [ne_of_gt hk_pos]
+    · -- All weights nonnegative
+      intro i
+      simp only [p]
+      split_ifs with h
+      · apply div_nonneg
+        · linarith
+        · exact Nat.cast_nonneg k
+      · linarith
 
   have hq_prob : (∑ i : Fin (2*k), q i) = 1 ∧ ∀ i, 0 ≤ q i := by
-    sorry -- TODO: k values of 1/k sum to 1, all weights nonnegative
+    constructor
+    · -- Sum equals 1
+      calc ∑ i : Fin (2*k), q i
+        = ∑ i ∈ Finset.filter (fun i => i.val < k) Finset.univ, q i +
+          ∑ i ∈ Finset.filter (fun i => ¬(i.val < k)) Finset.univ, q i := by
+            rw [← Finset.sum_filter_add_sum_filter_not (s := Finset.univ) (p := fun i => i.val < k)]
+      _ = 0 + ∑ i ∈ Finset.filter (fun i : Fin (2*k) => ¬(i.val < k)) Finset.univ, (1/(k:ℝ)) := by
+            congr 1
+            · apply Finset.sum_eq_zero
+              intro i hi
+              have : i.val < k := Finset.mem_filter.mp hi |>.2
+              simp [q, this]
+            · apply Finset.sum_congr rfl
+              intro i hi
+              have : ¬(i.val < k) := Finset.mem_filter.mp hi |>.2
+              simp [q, this]
+      _ = (Finset.filter (fun i : Fin (2*k) => ¬(i.val < k)) Finset.univ).card * (1/(k:ℝ)) := by
+            simp [Finset.sum_const]
+      _ = k * (1/(k:ℝ)) := by
+            congr 1
+            -- Count: exactly k indices satisfy i.val ≥ k in Fin (2*k)
+            -- These are precisely {k, k+1, ..., 2k-1}
+            sorry
+      _ = 1 := by
+            have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
+            field_simp [ne_of_gt hk_pos]
+    · -- All weights nonnegative
+      intro i
+      simp only [q]
+      split_ifs with h
+      · linarith
+      · apply div_nonneg
+        · linarith
+        · exact Nat.cast_nonneg k
 
   -- Prove covariance properties for ξ
   -- Each ξ_i is f(X_j) for some j, so inherits the covariance structure from f∘X
@@ -1133,22 +1200,7 @@ private lemma sum_tail_block_reindex
           rw [← Finset.mul_sum]
     _ = c * ∑ j : Fin k, F (m - k + j.val) := by
           congr 1
-          -- TODO: Bijection between {i : Fin m | i.val ≥ m - k} and Fin k
-          -- The bijection should be:
-          --   forward:  i ↦ ⟨i.val - (m - k), proof that i.val - (m-k) < k⟩
-          --   backward: j ↦ ⟨m - k + j.val, proof that m - k + j.val < m⟩
-          --
-          -- The difficulty is that omega struggles with the natural number arithmetic:
-          -- 1. Showing m - k + (i.val - (m - k)) = i.val when m - k ≤ i.val
-          -- 2. Showing (m - k + j.val) - (m - k) = j.val
-          --
-          -- These are true by Nat.add_sub_cancel and Nat.sub_add_cancel but
-          -- the proof context with Fin types makes omega unable to see through.
-          --
-          -- Options to complete:
-          -- - Use Fin.castOrderIso or similar mathlib bijections
-          -- - Manually construct with explicit Nat lemmas instead of omega
-          -- - Use a different sum reindexing lemma from mathlib
+          -- Bijection between {i : Fin m | i.val ≥ m - k} and Fin k via i ↦ i - (m-k)
           sorry
 
 /-- Long average vs tail average bound: Comparing the average of the first m terms
