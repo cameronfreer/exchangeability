@@ -2387,9 +2387,8 @@ theorem subsequence_criterion_convergence_in_probability
       sorry
     have h_meas : MeasurableSet (limsup A atTop) := by
       -- limsup of measurable sets is measurable
-      -- TODO: use `measurableSet_limsup` from Mathlib.MeasureTheory.MeasurableSpace.MeasurablyGenerated
-      -- The lemma exists but seems not to be imported correctly
-      sorry
+      -- Use measurability tactic which knows about @[measurability] lemmas
+      measurability
     have : μ ((limsup A atTop)ᶜ) = μ Set.univ := by
       simp [measure_compl h_meas, hBC]
     -- So almost every ω lies in the RHS set
