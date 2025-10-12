@@ -2733,7 +2733,7 @@ theorem condexp_product_factorization
     (hciid : True) :
     μ[fun ω => ∏ k, fs k (ω (k : ℕ)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω)) :=
-  condexp_product_factorization_ax hσ m fs hmeas hbd hciid
+  condexp_product_factorization_ax μ hσ m fs hmeas hbd hciid
   /-
   · -- Inductive step: split product into (product of first m factors) * (last factor)
     -- Reindex: product over Fin (m + 1) splits into product over Fin m and the m-th term
@@ -3046,7 +3046,7 @@ theorem indicator_product_bridge
     (hB_meas : ∀ i, MeasurableSet (B i)) :
     ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
       = ∫⁻ ω, ∏ i : Fin m, (ν (μ := μ) ω) (B i) ∂μ :=
-  indicator_product_bridge_ax hσ m k B hB_meas
+  indicator_product_bridge_ax μ hσ m k B hB_meas
 
 /-! ### Exchangeable implies ConditionallyIID (modulo the bridge axiom)
 
