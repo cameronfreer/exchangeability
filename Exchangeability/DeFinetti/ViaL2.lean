@@ -2278,24 +2278,24 @@ theorem subsequence_criterion_convergence_in_probability
     apply one_div_pos.mpr
     positivity
   have hε_tendsto : Tendsto ε atTop (𝓝 0) := by
-    -- TODO: replace with the standard lemma:
-    -- `tendsto_one_div_add_atTop_0_nat` or `tendsto_one_div_atTop_0_nat`
-    -- exact (tendsto_one_div_add_atTop_0_nat 1)  -- typical variant
-    -- Minimal fallback if you prefer not to import: use monotone+lim characterization
-    sorry
+    -- ε k = 1 / (k+1), so use tendsto_one_div_add_atTop_nhds_zero_nat
+    simp only [ε]
+    exact tendsto_one_div_add_atTop_nhds_zero_nat
 
   -- For each k, since μ{ε k ≤ |ξ_n−ξ|} → 0, build a strictly increasing subsequence φ
   -- with μ{ε k ≤ |ξ_{φ k}−ξ|} ≤ 2^{-(k+1)}.
   have h_exists : ∀ k, ∃ n, μ {ω | ε k ≤ |ξ n ω - ξ_limit ω|} ≤ ((1 : ENNReal) / 2) ^ (k+1) := by
     intro k
     have hk := h_prob_conv (ε k) (hε_pos k)
-    -- eventually < 2^{-(k+1)} in ENNReal
-    have : (0 : ENNReal) < ((1/2 : ENNReal) ^ (k+1)) := by
+    -- eventually ≤ 2^{-(k+1)} in ENNReal
+    have hpos : (0 : ENNReal) < ((1/2 : ENNReal) ^ (k+1)) := by
       apply ENNReal.pow_pos; norm_num
-    -- TODO: from `Tendsto ... (𝓝 0)` deduce ∃n, value ≤ (1/2)^{k+1}
-    -- Use `((tendsto_order.1 hk).2 this)` or `eventually_lt_iff_lt_lim` flavor
-    -- and then extract an index.
-    sorry
+    -- from Tendsto to 0, we get eventually ≤ (1/2)^(k+1)
+    rw [ENNReal.tendsto_nhds_zero] at hk
+    have hev : ∀ᶠ n in atTop, μ {ω | ε k ≤ |ξ n ω - ξ_limit ω|} ≤ ((1/2 : ENNReal) ^ (k+1)) :=
+      hk _ hpos
+    -- extract a witness
+    exact hev.exists
 
   -- Make the indices strictly increasing
   choose n hn using h_exists
@@ -2327,24 +2327,35 @@ theorem subsequence_criterion_convergence_in_probability
     -- μ(A k) ≤ 2^{-(k+1)} and ∑ 2^{-(k+1)} < ∞
     have hbound : ∀ k, μ (A k) ≤ ((1 : ENNReal) / 2) ^ (k+1) := by
       intro k
-      have hk := hn (k+1)
-      -- when we built φ we ensured φ (k+1) ≥ n (k+1); use monotonicity in n if needed.
-      -- Here, we defined φ by recursion to be ≥ each chosen `n (k+1)` eventually.
-      -- A simpler (and perfectly fine) choice is to **define** A (k+1) using n (k+1)
-      -- directly. Keeping this style: accept the ≤ inequality; you can tighten indices if desired.
+      -- We have hn k : μ {ω | ε k ≤ |ξ (n k) ω - ξ_limit ω|} ≤ (1/2)^(k+1)
+      -- First prove φ k ≥ n k by induction on k
+      have hφ_ge_n : ∀ k, n k ≤ φ k := by
+        intro k
+        induction k with
+        | zero => simp [φ]
+        | succ k IH =>
+          simp only [φ]
+          -- φ (k+1) = max (φ k + 1) (n (k+1)) ≥ n (k+1)
+          exact Nat.le_max_right (φ k + 1) (n (k+1))
+      -- Since ξ n converges in probability to ξ_limit, and φ k ≥ n k,
+      -- we use the fact that n k was chosen to satisfy the bound
+      -- TODO: either use monotonicity of the probability convergence,
+      -- or adjust the construction so φ k = n k.
+      -- For now, using the fact that the bound holds for n k:
       sorry
     -- geometric series in ENNReal
-    have : (∑' k, ((1 : ENNReal) / 2) ^ (k+1)) ≠ ⊤ := by
-      -- TODO: `tsum_geometric_of_lt_1` in ENNReal, or bound by a real geom. series via coercions
-      sorry
-    -- TODO: use tsum_le_tsum with hbound
-    sorry
+    have hgeom : (∑' k, ((1 : ENNReal) / 2) ^ (k+1)) ≠ ⊤ := by
+      -- ∑ (1/2)^(k+1) = (1/2) * (1 - 1/2)⁻¹ = (1/2) * 2 = 1 < ⊤
+      rw [ENNReal.tsum_geometric_add_one]
+      norm_num
+    -- Use tsum_le_tsum with hbound
+    have hle : (∑' k, μ (A k)) ≤ ∑' k, ((1 : ENNReal) / 2) ^ (k+1) :=
+      ENNReal.tsum_le_tsum hbound
+    exact ne_top_of_le_ne_top hgeom hle
 
   -- Borel–Cantelli: μ(limsup A) = 0 when ∑ μ(A_k) < ∞.
   have hBC : μ (limsup A atTop) = 0 := by
-    -- TODO: `measure_limsup_eq_zero_of_tsum_ne_top` or `borel_cantelli_of_tsum_lt_top`.
-    -- Both appear in mathlib under `MeasureTheory`/`Probability`.
-    sorry
+    exact MeasureTheory.measure_limsup_atTop_eq_zero hA_tsum
 
   -- Outside limsup A, there is K(ω) with ∀k≥K, |ξ_{φ k}(ω)−ξ(ω)| < ε k  →  convergence
   have h_as :
