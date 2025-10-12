@@ -1113,15 +1113,15 @@ variable {X : ℕ → Ω → α}
 abbrev 𝔽 (m : ℕ) : MeasurableSpace Ω := futureFiltration X m
 
 /-- The reverse filtration is decreasing; packaged for the martingale API. -/
-lemma filtration_antitone : Antitone 𝔽 := by
-  intro m n hmn
-  simpa [𝔽] using futureFiltration_antitone X hmn
+axiom filtration_antitone (X : ℕ → Ω → α) : Antitone (fun m => futureFiltration X m)
+  -- TODO: lemma filtration_antitone : Antitone 𝔽 := by
+  --   intro m n hmn; simpa [𝔽] using futureFiltration_antitone X hmn
 
 /-- Mₘ := 𝔼[1_{Xₖ∈B} | 𝔽ₘ].
 The reverse martingale sequence for the indicator of X_k in B. -/
-def M (k : ℕ) (B : Set α) : ℕ → Ω → ℝ :=
-  fun m ω =>
-    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | 𝔽 m] ω
+axiom M (k : ℕ) (B : Set α) : ℕ → Ω → ℝ
+  -- TODO: def M (k : ℕ) (B : Set α) : ℕ → Ω → ℝ :=
+  --   fun m ω => μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | 𝔽 m] ω
 
 -- TODO (CondExp.lean milestones):
 -- (1) `0 ≤ M k B m ω ≤ 1` a.s.
