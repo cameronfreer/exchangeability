@@ -925,21 +925,55 @@ lemma l2_bound_two_windows_uniform
     have h_p_split : ∑ i : Fin (2*k), p i * ξ i ω
         = ∑ i ∈ Finset.filter (fun (i : Fin (2*k)) => i.val < k) Finset.univ,
             (1/(k:ℝ)) * f (X (n + i.val + 1) ω) := by
-      sorry -- Sum over first k indices with weight 1/k
+      -- Split sum into two parts based on i.val < k
+      rw [← Finset.sum_filter_add_sum_filter_not (s := Finset.univ) (p := fun i => i.val < k)]
+      -- The second part (i.val ≥ k) sums to 0 since p i = 0 there
+      have h_zero : ∑ i ∈ Finset.filter (fun i => ¬(i.val < k)) Finset.univ, p i * ξ i ω = 0 := by
+        apply Finset.sum_eq_zero
+        intro i hi
+        simp [p]
+        have : ¬(i.val < k) := Finset.mem_filter.mp hi |>.2
+        simp [this]
+      rw [h_zero, add_zero]
+      -- On the first part (i.val < k), we have p i = 1/k and ξ i = f(X_{n+i+1})
+      apply Finset.sum_congr rfl
+      intro i hi
+      have hi_lt : i.val < k := Finset.mem_filter.mp hi |>.2
+      simp [p, ξ, hi_lt]
     have h_q_split : ∑ i : Fin (2*k), q i * ξ i ω
         = ∑ i ∈ Finset.filter (fun (i : Fin (2*k)) => ¬(i.val < k)) Finset.univ,
             (1/(k:ℝ)) * f (X (m + (i.val - k) + 1) ω) := by
-      sorry -- Sum over last k indices with weight 1/k
+      -- Split sum into two parts based on i.val < k
+      rw [← Finset.sum_filter_add_sum_filter_not (s := Finset.univ) (p := fun i => i.val < k)]
+      -- The first part (i.val < k) sums to 0 since q i = 0 there
+      have h_zero : ∑ i ∈ Finset.filter (fun i => i.val < k) Finset.univ, q i * ξ i ω = 0 := by
+        apply Finset.sum_eq_zero
+        intro i hi
+        simp [q]
+        have : i.val < k := Finset.mem_filter.mp hi |>.2
+        simp [this]
+      rw [h_zero, zero_add]
+      -- On the second part (i.val ≥ k), we have q i = 1/k and ξ i = f(X_{m+(i-k)+1})
+      apply Finset.sum_congr rfl
+      intro i hi
+      have hi_ge : ¬(i.val < k) := Finset.mem_filter.mp hi |>.2
+      simp [q, ξ, hi_ge]
     rw [h_p_split, h_q_split]
     -- Now need to show these filtered sums equal the original Fin k sums
     have h_bij_n : ∑ i ∈ Finset.filter (fun i : Fin (2*k) => i.val < k) Finset.univ,
                      (1/(k:ℝ)) * f (X (n + i.val + 1) ω)
                  = (1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) := by
-      sorry -- Bijection between filtered indices and Fin k
+      rw [Finset.mul_sum]
+      -- Establish bijection between {i : Fin (2k) | i < k} and Fin k
+      -- The bijection is i ↦ ⟨i.val, proof⟩
+      sorry -- TODO: Use Finset.sum_bij or similar to establish the bijection
     have h_bij_m : ∑ i ∈ Finset.filter (fun i : Fin (2*k) => ¬(i.val < k)) Finset.univ,
                      (1/(k:ℝ)) * f (X (m + (i.val - k) + 1) ω)
                  = (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω) := by
-      sorry -- Bijection between filtered indices and Fin k
+      rw [Finset.mul_sum]
+      -- Establish bijection between {i : Fin (2k) | i ≥ k} and Fin k
+      -- The bijection is i ↦ ⟨i.val - k, proof⟩
+      sorry -- TODO: Use Finset.sum_bij to reindex from i.val-k to j.val
     rw [h_bij_n, h_bij_m]
 
   -- Prove p and q are probability distributions
@@ -964,12 +998,10 @@ lemma l2_bound_two_windows_uniform
     intro i
     simp [ξ]
     split_ifs with h
-    · -- Case i.val < k
-      convert hvar (n + i.val + 1) using 1
-      sorry -- Need to show MemLp follows from finite variance
-    · -- Case i.val ≥ k
-      convert hvar (m + (i.val - k) + 1) using 1
-      sorry -- Need to show MemLp follows from finite variance
+    · -- Case i.val < k: ξ i = f(X_{n+i.val+1})
+      exact (hfX_L2 (n + i.val + 1)).sub (memLp_const mf)
+    · -- Case i.val ≥ k: ξ i = f(X_{m+(i.val-k)+1})
+      exact (hfX_L2 (m + (i.val - k) + 1)).sub (memLp_const mf)
 
   have hξ_var : ∀ i : Fin (2*k), ∫ ω, (ξ i ω - mf)^2 ∂μ = (Real.sqrt σSqf) ^ 2 := by
     intro i
@@ -988,8 +1020,44 @@ lemma l2_bound_two_windows_uniform
     have h_sqrt_sq : (Real.sqrt σSqf) ^ 2 = σSqf := Real.sq_sqrt hσSq_nonneg
     rw [h_sqrt_sq]
     simp [ξ]
-    sorry -- Need to handle 4 cases based on i.val < k and j.val < k
-    -- Each case applies hcov to appropriate indices from f∘X
+    -- Split into 4 cases based on which window each index belongs to
+    by_cases hi : i.val < k <;> by_cases hj : j.val < k
+    · -- Case 1: Both in first window (i < k, j < k)
+      simp [hi, hj]
+      -- Need to show n + i.val + 1 ≠ n + j.val + 1
+      have hneq : n + i.val + 1 ≠ n + j.val + 1 := by
+        intro heq
+        have : i.val = j.val := by omega
+        have : i = j := Fin.ext this
+        exact hij this
+      exact hcov (n + i.val + 1) (n + j.val + 1) hneq
+    · -- Case 2: i in first, j in second (i < k, j ≥ k)
+      simp [hi, hj]
+      by_cases heq : n + i.val + 1 = m + (j.val - k) + 1
+      · -- Degenerate case: same X index appears in both windows
+        -- This means ξ i and ξ j are the same random variable
+        -- The covariance equals variance in this case
+        -- For the theorem to work cleanly, windows should be disjoint or mostly distinct
+        sorry -- TODO: Handle when windows overlap; may need additional structure
+      · -- Normal case: distinct indices, apply hcov
+        exact hcov (n + i.val + 1) (m + (j.val - k) + 1) heq
+    · -- Case 3: i in second, j in first (i ≥ k, j < k)
+      simp [hi, hj]
+      by_cases heq : m + (i.val - k) + 1 = n + j.val + 1
+      · -- Same degenerate case as Case 2
+        sorry -- TODO: Handle when windows overlap
+      · -- Normal case: distinct indices, apply hcov
+        exact hcov (m + (i.val - k) + 1) (n + j.val + 1) heq
+    · -- Case 4: Both in second window (i ≥ k, j ≥ k)
+      simp [hi, hj]
+      -- Need to show m + (i.val - k) + 1 ≠ m + (j.val - k) + 1
+      have hneq : m + (i.val - k) + 1 ≠ m + (j.val - k) + 1 := by
+        intro heq
+        have : i.val - k = j.val - k := by omega
+        have : i.val = j.val := by omega
+        have : i = j := Fin.ext this
+        exact hij this
+      exact hcov (m + (i.val - k) + 1) (m + (j.val - k) + 1) hneq
 
   -- Apply l2_contractability_bound
   have h_bound := @L2Approach.l2_contractability_bound Ω _ μ _ (2*k) ξ mf
