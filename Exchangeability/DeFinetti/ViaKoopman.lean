@@ -447,15 +447,51 @@ lemma condExp_mul_of_indep
     (hXbd : ∃ C, ∀ ω, |X ω| ≤ C) (hYbd : ∃ C, ∀ ω, |Y ω| ≤ C)
     (hindep : Kernel.IndepFun X Y (condExpKernel m) μ) :
     μ[X * Y | m] =ᵐ[μ] μ[X | m] * μ[Y | m] := by
-  -- Complete proof structure (needs condExpKernel explicit parameter handling):
-  -- 1. Establish integrability using HasFiniteIntegral.of_bounded
-  -- 2. Apply Kernel.IndepFun.ae_measure_indepFun for kernel factorization
-  -- 3. Use ProbabilityTheory.condExp_ae_eq_integral_condExpKernel to convert
-  -- 4. Combine with filter_upwards
-  --
-  -- Technical issue: condExpKernel autoparam resolution with sub-σ-algebra
-  -- The proof is structurally complete but needs careful handling of implicit parameters
-  sorry
+  -- Step 1: Establish integrability
+  have hXY_int : Integrable (X * Y) μ := by
+    obtain ⟨CX, hCX⟩ := hXbd
+    obtain ⟨CY, hCY⟩ := hYbd
+    have hbd : ∀ ω, |(X * Y) ω| ≤ CX * CY := fun ω => by
+      have hCX_nonneg : 0 ≤ CX := by
+        have : 0 ≤ |X ω| := abs_nonneg _
+        linarith [hCX ω]
+      calc |(X * Y) ω| = |X ω * Y ω| := rfl
+        _ = |X ω| * |Y ω| := abs_mul _ _
+        _ ≤ CX * CY := mul_le_mul (hCX ω) (hCY ω) (abs_nonneg _) hCX_nonneg
+    exact ⟨(hX.mul hY).aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hbd)⟩
+
+  have hX_int : Integrable X μ := by
+    obtain ⟨CX, hCX⟩ := hXbd
+    exact ⟨hX.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hCX)⟩
+
+  have hY_int : Integrable Y μ := by
+    obtain ⟨CY, hCY⟩ := hYbd
+    exact ⟨hY.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hCY)⟩
+
+  -- Step 2: Get kernel-level factorization from Kernel.IndepFun
+  have h_kernel : ∀ᵐ ω ∂μ,
+      ∫ a, X a * Y a ∂(condExpKernel m ω) =
+      (∫ a, X a ∂(condExpKernel m ω)) * (∫ a, Y a ∂(condExpKernel m ω)) :=
+    Kernel.IndepFun.ae_measure_indepFun (condExpKernel m) μ hindep
+
+  -- Step 3: Convert CE to kernel integrals using condExp_ae_eq_integral_condExpKernel
+  have h_LHS : μ[X * Y | m] =ᵐ[μ] fun ω => ∫ a, (X * Y) a ∂(condExpKernel m ω) :=
+    ProbabilityTheory.condExp_ae_eq_integral_condExpKernel (μ := μ) (m := m) (f := X * Y) hm hXY_int
+
+  have h_X : μ[X | m] =ᵐ[μ] fun ω => ∫ a, X a ∂(condExpKernel m ω) :=
+    ProbabilityTheory.condExp_ae_eq_integral_condExpKernel (μ := μ) (m := m) (f := X) hm hX_int
+
+  have h_Y : μ[Y | m] =ᵐ[μ] fun ω => ∫ a, Y a ∂(condExpKernel m ω) :=
+    ProbabilityTheory.condExp_ae_eq_integral_condExpKernel (μ := μ) (m := m) (f := Y) hm hY_int
+
+  -- Step 4: Combine using filter_upwards
+  filter_upwards [h_LHS, h_X, h_Y, h_kernel] with ω hLHS hX_eq hY_eq hker
+  calc μ[X * Y | m] ω
+      = ∫ a, (X * Y) a ∂(condExpKernel m ω) := hLHS
+    _ = ∫ a, X a * Y a ∂(condExpKernel m ω) := rfl
+    _ = (∫ a, X a ∂(condExpKernel m ω)) * (∫ a, Y a ∂(condExpKernel m ω)) := hker
+    _ = μ[X | m] ω * μ[Y | m] ω := by rw [hX_eq, hY_eq]
+    _ = (μ[X | m] * μ[Y | m]) ω := rfl
 
 /-- **Axiomized product factorization** for general finite cylinder products.
 
