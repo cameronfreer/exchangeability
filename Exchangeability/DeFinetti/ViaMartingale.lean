@@ -397,13 +397,100 @@ the probabilities agree when comparing `(X m, θₘ X)` vs `(X k, θₘ X)`.
 This is the exact finite-dimensional marginal needed for the martingale step. -/
 lemma contractable_dist_eq_on_first_r_tail
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {X : ℕ → Ω → α} (hX : Contractable μ X)
+    {X : ℕ → Ω → α} (hX : Contractable μ X) (hX_meas : ∀ n, Measurable (X n))
     (k m r : ℕ) (hk : k ≤ m)
     (B : Set α) (hB : MeasurableSet B)
     (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i)) :
     μ {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
       = μ {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
-  sorry  -- TODO: Fix type mismatches in contractability proof
+  classical
+  -- Reindex (r+1)-vector: head = m (resp. k), tail = m+1,...,m+r
+  let κ_tail : Fin r → ℕ := fun i => m + (i.1 + 1)
+  have h_tail : StrictMono κ_tail := by
+    intro i j hij
+    show κ_tail i < κ_tail j
+    simp only [κ_tail]
+    omega
+  let κ₁ : Fin (r + 1) → ℕ := Fin.cases m (fun i : Fin r => κ_tail i)
+  let κ₂ : Fin (r + 1) → ℕ := Fin.cases k (fun i : Fin r => κ_tail i)
+  have hκ₁ : StrictMono κ₁ := strictMono_fin_cases h_tail (fun i => by
+    show m < κ_tail i
+    simp only [κ_tail]
+    omega)
+  have hκ₂ : StrictMono κ₂ := strictMono_fin_cases h_tail (fun i => by
+    show k < κ_tail i
+    simp only [κ_tail]
+    omega)
+  -- contractability: both maps give the same law
+  have hlaw₁ : Measure.map (fun ω i => X (κ₁ i) ω) μ
+              = Measure.map (fun ω i => X i.1 ω) μ :=
+    hX (r + 1) κ₁ hκ₁
+  have hlaw₂ : Measure.map (fun ω i => X (κ₂ i) ω) μ
+              = Measure.map (fun ω i => X i.1 ω) μ :=
+    hX (r + 1) κ₂ hκ₂
+  -- Therefore the laws are equal
+  have : Measure.map (fun ω i => X (κ₁ i) ω) μ
+       = Measure.map (fun ω i => X (κ₂ i) ω) μ := by
+    rw [hlaw₁, hlaw₂]
+  -- The sets we want are exactly the preimages of the same event
+  let A : Set (Fin (r + 1) → α) := {y | y 0 ∈ B ∧ ∀ i : Fin r, y (Fin.succ i) ∈ C i}
+  have hA : MeasurableSet A := by
+    have h0 : Measurable (fun y : Fin (r + 1) → α => y 0) := measurable_pi_apply 0
+    have hS : ∀ i : Fin r, Measurable (fun y : Fin (r + 1) → α => y (Fin.succ i)) :=
+      fun i => measurable_pi_apply (Fin.succ i)
+    have : A = (fun y => y 0) ⁻¹' B ∩ (⋂ i : Fin r, (fun y => y (Fin.succ i)) ⁻¹' C i) := by
+      ext y; simp [A, Set.mem_iInter]
+    rw [this]
+    exact (h0 hB).inter (MeasurableSet.iInter fun i => hS i (hC i))
+  -- Measurability of the index maps
+  have hφ₁ : Measurable (fun ω i => X (κ₁ i) ω) := by
+    apply measurable_pi_lambda
+    intro i
+    cases i using Fin.cases with
+    | zero => exact hX_meas m
+    | succ j => simp only [κ₁, κ_tail]; exact hX_meas (m + (j.1 + 1))
+  have hφ₂ : Measurable (fun ω i => X (κ₂ i) ω) := by
+    apply measurable_pi_lambda
+    intro i
+    cases i using Fin.cases with
+    | zero => exact hX_meas k
+    | succ j => simp only [κ₂, κ_tail]; exact hX_meas (m + (j.1 + 1))
+  have hE₁ : {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
+           = (fun ω i => X (κ₁ i) ω) ⁻¹' A := by
+    ext ω
+    simp only [Set.mem_setOf, Set.mem_preimage, A, κ₁, κ_tail]
+    constructor
+    · intro ⟨hB', hC'⟩
+      constructor
+      · simpa using hB'
+      · intro i
+        simpa using hC' i
+    · intro ⟨hB', hC'⟩
+      constructor
+      · simpa using hB'
+      · intro i
+        simpa using hC' i
+  have hE₂ : {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
+           = (fun ω i => X (κ₂ i) ω) ⁻¹' A := by
+    ext ω
+    simp only [Set.mem_setOf, Set.mem_preimage, A, κ₂, κ_tail]
+    constructor
+    · intro ⟨hB', hC'⟩
+      constructor
+      · simpa using hB'
+      · intro i
+        simpa using hC' i
+    · intro ⟨hB', hC'⟩
+      constructor
+      · simpa using hB'
+      · intro i
+        simpa using hC' i
+  calc μ {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
+      = μ ((fun ω i => X (κ₁ i) ω) ⁻¹' A) := by rw [hE₁]
+    _ = (Measure.map (fun ω i => X (κ₁ i) ω) μ) A := (Measure.map_apply hφ₁ hA).symm
+    _ = (Measure.map (fun ω i => X (κ₂ i) ω) μ) A := by rw [this]
+    _ = μ ((fun ω i => X (κ₂ i) ω) ⁻¹' A) := Measure.map_apply hφ₂ hA
+    _ = μ {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by rw [← hE₂]
 
 /-- Helper lemma: contractability gives the key distributional equality.
 
@@ -415,10 +502,13 @@ where `θ_{m+1} X` drops the first coordinate and keeps the *future* tail
 `ω ↦ (n ↦ X(m + 1 + n) ω)`. -/
 lemma contractable_dist_eq
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {X : ℕ → Ω → α} (hX : Contractable μ X) (k m : ℕ) (hk : k ≤ m) :
+    {X : ℕ → Ω → α} (hX : Contractable μ X) (hX_meas : ∀ n, Measurable (X n))
+    (k m : ℕ) (hk : k ≤ m) :
     Measure.map (fun ω => (X m ω, shiftRV X (m + 1) ω)) μ
       = Measure.map (fun ω => (X k ω, shiftRV X (m + 1) ω)) μ := by
-  sorry  -- TODO: Prove using contractability directly (without circular dependency)
+  sorry
+  -- TODO: Apply measure_ext_of_future_rectangles (defined later) to contractable_dist_eq_on_rectangles_future
+  -- Will need file reorganization to avoid forward reference
 
 /-- Future reverse filtration: 𝔽ᶠᵘᵗₘ = σ(θ_{m+1} X). -/
 abbrev futureFiltration (X : ℕ → Ω → α) (m : ℕ) : MeasurableSpace Ω :=
@@ -1104,7 +1194,7 @@ lemma contractable_dist_eq_on_rectangles_future
     μ {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
     simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using
       (contractable_dist_eq_on_first_r_tail
-        (μ:=μ) (X:=X) hX k m r hk B hB C hC)
+        (μ:=μ) (X:=X) hX hX_meas k m r hk B hB C hC)
   -- Show the sets are equal modulo arithmetic
   have hset_eq₁ : {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + 1 + i.1) ω ∈ C i}
                 = {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
@@ -1156,22 +1246,22 @@ axiom AgreeOnFutureRectangles : {α : Type*} → [MeasurableSpace α] →
 
 lemma agree_on_future_rectangles_of_contractable
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {X : ℕ → Ω → α} (hX : Contractable μ X) (k m : ℕ) (hk : k ≤ m) :
+    {X : ℕ → Ω → α} (hX : Contractable μ X) (hX_meas : ∀ n, Measurable (X n))
+    (k m : ℕ) (hk : k ≤ m) :
     AgreeOnFutureRectangles
       (Measure.map (fun ω => (X m ω, shiftRV X (m + 1) ω)) μ)
       (Measure.map (fun ω => (X k ω, shiftRV X (m + 1) ω)) μ) := by
-  sorry  -- TODO: Type inference blocked by CondExp errors - apply contractable_dist_eq
+  sorry  -- TODO: Will use contractable_dist_eq once file organization is fixed
 
 /-! ## Measure extension from future rectangles -/
 
 lemma measure_ext_of_future_rectangles
-    {μ ν : Measure (α × (ℕ → α))}
+    {μ ν : Measure (α × (ℕ → α))} [IsFiniteMeasure μ] [IsFiniteMeasure ν]
     (h : ∀ (r : ℕ) (B : Set α) (hB : MeasurableSet B)
         (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i)),
         μ (B ×ˢ cylinder (α:=α) r C) = ν (B ×ˢ cylinder (α:=α) r C)) :
     μ = ν := by
-  sorry  -- TODO: Use Measure.ext_of_generateFrom_of_iUnion with π-system of rectangles
-  /-classical
+  classical
   -- π-system consisting of rectangles `B × cylinder r C`
   let S : Set (Set (α × (ℕ → α))) :=
     {s | ∃ (r : ℕ) (B : Set α) (hB : MeasurableSet B)
@@ -1244,7 +1334,9 @@ lemma measure_ext_of_future_rectangles
   -- Show that S generates the product σ-algebra
   have h_gen : (inferInstance : MeasurableSpace (α × (ℕ → α)))
       = MeasurableSpace.generateFrom S := by
-    sorry  -- TODO: Prove S generates product σ-algebra
+    -- The product σ-algebra is generated by measurable rectangles
+    -- Our S contains all measurable rectangles (taking various r)
+    sorry  -- TODO: Show product measurable space = generateFrom of rectangles
 
   -- Measures agree on S
   have h_agree : ∀ s ∈ S, μ s = ν s := by
@@ -1263,11 +1355,11 @@ lemma measure_ext_of_future_rectangles
     ext ⟨a, f⟩; simp [Bseq, cylinder]
   have hμB : ∀ n, μ (Bseq n) ≠ ∞ := by
     intro n
-    sorry  -- TODO: Prove μ (Bseq n) ≠ ∞ (Bseq n = Set.univ, needs IsFiniteMeasure)
+    simp only [Bseq]
+    exact measure_ne_top μ Set.univ
 
   exact Measure.ext_of_generateFrom_of_iUnion
     S Bseq h_gen h_pi h1B h2B hμB h_agree
-  -/
 
 /-- The measure_eq field is now directly accessible since we simplified the structure. -/
 lemma AgreeOnFutureRectangles_to_measure_eq

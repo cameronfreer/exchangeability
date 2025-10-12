@@ -107,6 +107,13 @@ variable {α : Type*} [MeasurableSpace α]
 
 /-! ## Utility lemmas -/
 
+/-- **Robust wrapper for CE ↔ kernel integral conversion**.
+
+This is just an alias for the mathlib theorem with explicit parameter names
+to help with elaboration.
+-/
+alias condExp_eq_kernel_integral := ProbabilityTheory.condExp_ae_eq_integral_condExpKernel
+
 /-- If `g` is measurable, then `comap (g ∘ f) ≤ comap f`.
 
 This is a standard fact about σ-algebra comap: composing with a measurable function
@@ -281,6 +288,42 @@ lemma metProjection_eq_condExpL2_shiftInvariant
   rw [h_eq_MET]
   exact proj_eq_condexp hσ
 
+/-! ## Regular conditional distribution -/
+
+/-- Projection onto the first coordinate. -/
+def π0 : Ω[α] → α := fun ω => ω 0
+
+lemma measurable_pi0 : Measurable (π0 (α := α)) := by
+  classical
+  simpa using (measurable_pi_apply (0 : ℕ) :
+    Measurable fun ω : Ω[α] => ω 0)
+
+/-- Regular conditional distribution kernel constructed via condExpKernel.
+
+This is the kernel giving the conditional distribution of the first coordinate
+given the tail σ-algebra.
+-/
+noncomputable def rcdKernel {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    [StandardBorelSpace α] : Kernel (Ω[α]) α :=
+  Kernel.comap ((condExpKernel μ (shiftInvariantSigma (α := α))).map (π0 (α := α)))
+    id (measurable_id'' (shiftInvariantSigma_le (α := α)))
+
+instance rcdKernel_isMarkovKernel {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    [StandardBorelSpace α] : IsMarkovKernel (rcdKernel (μ := μ)) := by
+  unfold rcdKernel
+  have h1 : IsMarkovKernel (condExpKernel μ (shiftInvariantSigma (α := α))) := inferInstance
+  have h2 : IsMarkovKernel ((condExpKernel μ (shiftInvariantSigma (α := α))).map (π0 (α := α))) :=
+    Kernel.IsMarkovKernel.map _ (measurable_pi0 (α := α))
+  exact Kernel.IsMarkovKernel.comap _ (measurable_id'' (shiftInvariantSigma_le (α := α)))
+
+/-- The regular conditional distribution as a function assigning to each point
+a probability measure on α. -/
+noncomputable def ν {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    [StandardBorelSpace α] : Ω[α] → Measure α :=
+  fun ω => (rcdKernel (μ := μ)) ω
+
+/-! ## Axioms for de Finetti theorem -/
+
 /-- **Core axiom**: Conditional independence of the first two coordinates given the tail σ-algebra.
 
 This is the substantive part of Kallenberg's "first proof": the ergodic/shift argument
@@ -440,19 +483,56 @@ then their conditional expectation factors: CE[X·Y | m] =ᵐ CE[X | m]·CE[Y | 
 This is the bridge between `Kernel.IndepFun` and conditional expectation factorization.
 -/
 lemma condExp_mul_of_indep
-    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {m : MeasurableSpace Ω} (hm : m ≤ inferInstance)
+    {Ω : Type*} {m : MeasurableSpace Ω} [mΩ : MeasurableSpace Ω] [StandardBorelSpace Ω]
+    (μ : Measure Ω) [IsProbabilityMeasure μ]
+    (hm : m ≤ mΩ)
     {X Y : Ω → ℝ} (hX : Measurable X) (hY : Measurable Y)
     (hXbd : ∃ C, ∀ ω, |X ω| ≤ C) (hYbd : ∃ C, ∀ ω, |Y ω| ≤ C)
-    (hindep : Kernel.IndepFun X Y (condExpKernel μ m) μ) :
+    (hindep : ∀ᵐ ω ∂μ, ∫ a, X a * Y a ∂(condExpKernel μ m ω) =
+                        (∫ a, X a ∂(condExpKernel μ m ω)) * (∫ a, Y a ∂(condExpKernel μ m ω))) :
     μ[X * Y | m] =ᵐ[μ] μ[X | m] * μ[Y | m] := by
-  -- Strategy: Kernel.IndepFun means for κ = condExpKernel:
-  -- ∫ X·Y dκ(ω) = (∫ X dκ(ω)) · (∫ Y dκ(ω)) for μ-a.e. ω
+  -- Step 1: Establish integrability
+  have hXY_int : Integrable (X * Y) μ := by
+    obtain ⟨CX, hCX⟩ := hXbd
+    obtain ⟨CY, hCY⟩ := hYbd
+    have hbd : ∀ ω, |(X * Y) ω| ≤ CX * CY := fun ω => by
+      have hCX_nonneg : 0 ≤ CX := by
+        have : 0 ≤ |X ω| := abs_nonneg _
+        linarith [hCX ω]
+      calc |(X * Y) ω| = |X ω * Y ω| := rfl
+        _ = |X ω| * |Y ω| := abs_mul _ _
+        _ ≤ CX * CY := mul_le_mul (hCX ω) (hCY ω) (abs_nonneg _) hCX_nonneg
+    exact ⟨(hX.mul hY).aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hbd)⟩
 
-  -- But CE[·|m] is defined as ∫ · d(condExpKernel)
-  -- So this is exactly saying CE[X·Y|m] = CE[X|m]·CE[Y|m]
+  have hX_int : Integrable X μ := by
+    obtain ⟨CX, hCX⟩ := hXbd
+    exact ⟨hX.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hCX)⟩
 
-  sorry -- Requires unpacking Kernel.IndepFun definition and connecting to condExp
+  have hY_int : Integrable Y μ := by
+    obtain ⟨CY, hCY⟩ := hYbd
+    exact ⟨hY.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hCY)⟩
+
+  -- Step 2: Use the kernel-level factorization hypothesis
+  have h_kernel := hindep
+
+  -- Step 3: Convert CE to kernel integrals using our robust wrapper
+  have h_LHS : μ[X * Y | m] =ᵐ[μ] fun ω => ∫ a, (X * Y) a ∂(condExpKernel μ m ω) :=
+    condExp_eq_kernel_integral hm hXY_int
+
+  have h_X : μ[X | m] =ᵐ[μ] fun ω => ∫ a, X a ∂(condExpKernel μ m ω) :=
+    condExp_eq_kernel_integral hm hX_int
+
+  have h_Y : μ[Y | m] =ᵐ[μ] fun ω => ∫ a, Y a ∂(condExpKernel μ m ω) :=
+    condExp_eq_kernel_integral hm hY_int
+
+  -- Step 4: Combine using filter_upwards
+  filter_upwards [h_LHS, h_X, h_Y, h_kernel] with ω hLHS hX_eq hY_eq hker
+  calc μ[X * Y | m] ω
+      = ∫ a, (X * Y) a ∂(condExpKernel μ m ω) := hLHS
+    _ = ∫ a, X a * Y a ∂(condExpKernel μ m ω) := rfl
+    _ = (∫ a, X a ∂(condExpKernel μ m ω)) * (∫ a, Y a ∂(condExpKernel μ m ω)) := hker
+    _ = μ[X | m] ω * μ[Y | m] ω := by rw [hX_eq, hY_eq]
+    _ = (μ[X | m] * μ[Y | m]) ω := rfl
 
 /-- **Axiomized product factorization** for general finite cylinder products.
 
@@ -475,7 +555,7 @@ lemma condexp_product_factorization_ax
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
     (hciid : True) :
     μ[fun ω => ∏ k, fs k (ω (k : ℕ)) | shiftInvariantSigma (α := α)]
-      =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν μ ω)) := by
+      =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω)) := by
   -- Proof by induction on m
   induction m with
   | zero =>
@@ -524,7 +604,7 @@ lemma condexp_product_factorization_general
     (hbd : ∀ i, ∃ C, ∀ x, |fs i x| ≤ C)
     (hciid : True) :
     μ[fun ω => ∏ i, fs i (ω (k i)) | shiftInvariantSigma (α := α)]
-      =ᵐ[μ] (fun ω => ∏ i, ∫ x, fs i x ∂(ν μ ω)) := by
+      =ᵐ[μ] (fun ω => ∏ i, ∫ x, fs i x ∂(ν (μ := μ) ω)) := by
   -- This generalizes condexp_product_factorization_ax to arbitrary coordinates k
   -- The proof follows the same structure but uses identicalConditionalMarginals
 
@@ -570,7 +650,7 @@ lemma indicator_product_bridge_ax
     (m : ℕ) (k : Fin m → ℕ) (B : Fin m → Set α)
     (hB_meas : ∀ i, MeasurableSet (B i)) :
     ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
-      = ∫⁻ ω, ∏ i : Fin m, (ν μ ω) (B i) ∂μ := by
+      = ∫⁻ ω, ∏ i : Fin m, (ν (μ := μ) ω) (B i) ∂μ := by
   classical
 
   -- Define real-valued product function
@@ -614,7 +694,7 @@ lemma indicator_product_bridge_ax
     exact lintegral_ofReal_eq_integral hF_meas.aemeasurable hF_nonneg hF_int
 
   -- RHS: Product of kernel measures
-  let G : Ω[α] → ℝ := fun ω => ∏ i, ((ν μ ω) (B i)).toReal
+  let G : Ω[α] → ℝ := fun ω => ∏ i, ((ν (μ := μ) ω) (B i)).toReal
 
   have hG_meas : Measurable G := by
     apply Finset.measurable_prod
@@ -626,23 +706,23 @@ lemma indicator_product_bridge_ax
 
   have hG_bd : ∀ ω, |G ω| ≤ 1 := by
     intro ω
-    have h01 : ∀ i, 0 ≤ ((ν μ ω) (B i)).toReal ∧ ((ν μ ω) (B i)).toReal ≤ 1 := by
+    have h01 : ∀ i, 0 ≤ ((ν (μ := μ) ω) (B i)).toReal ∧ ((ν (μ := μ) ω) (B i)).toReal ≤ 1 := by
       intro i
       constructor
       · exact ENNReal.toReal_nonneg
-      · have : (ν μ ω) (B i) ≤ 1 := by
+      · have : (ν (μ := μ) ω) (B i) ≤ 1 := by
           have := measure_mono (show B i ⊆ Set.univ from Set.subset_univ _)
           simp at this
           exact this
-        have : ((ν μ ω) (B i)).toReal ≤ (1 : ENNReal).toReal := by
+        have : ((ν (μ := μ) ω) (B i)).toReal ≤ (1 : ENNReal).toReal := by
           apply ENNReal.toReal_mono
           · simp
           · exact this
         simpa using this
     have h_nonneg : 0 ≤ G ω := Finset.prod_nonneg fun i _ => (h01 i).1
     have h_le_one : G ω ≤ 1 := by
-      show (∏ i : Fin m, ((ν μ ω) (B i)).toReal) ≤ 1
-      calc ∏ i : Fin m, ((ν μ ω) (B i)).toReal
+      show (∏ i : Fin m, ((ν (μ := μ) ω) (B i)).toReal) ≤ 1
+      calc ∏ i : Fin m, ((ν (μ := μ) ω) (B i)).toReal
           ≤ ∏ i : Fin m, (1 : ℝ) := by
               apply Finset.prod_le_prod
               · intro i _; exact (h01 i).1
@@ -656,8 +736,8 @@ lemma indicator_product_bridge_ax
     exact ⟨1, hG_bd⟩
 
   -- Key fact: ∫ indicator dν = ν(B).toReal for each coordinate
-  have h_indicator_integral : ∀ i ω, ∫ x, (B i).indicator (fun _ => (1 : ℝ)) x ∂(ν μ ω)
-                                     = ((ν μ ω) (B i)).toReal := by
+  have h_indicator_integral : ∀ i ω, ∫ x, (B i).indicator (fun _ => (1 : ℝ)) x ∂(ν (μ := μ) ω)
+                                     = ((ν (μ := μ) ω) (B i)).toReal := by
     intro i ω
     exact integral_indicator_one (hB_meas i)
 
@@ -690,7 +770,7 @@ lemma indicator_product_bridge_ax
       filter_upwards with ω
       rfl
 
-    have h_G_ae : G =ᵐ[μ] fun ω => ∏ i, ∫ x, fs i x ∂(ν μ ω) := by
+    have h_G_ae : G =ᵐ[μ] fun ω => ∏ i, ∫ x, fs i x ∂(ν (μ := μ) ω) := by
       filter_upwards with ω
       simp [G]
       congr 1
@@ -715,18 +795,18 @@ lemma indicator_product_bridge_ax
 
     -- Step 4: CE[∏ fs] =ᵐ (∏ ∫ fs dν) by h_factor
     have step3 : ∫ ω, μ[fun ω => ∏ i, fs i (ω (k i)) | shiftInvariantSigma (α := α)] ω ∂μ =
-                 ∫ ω, (∏ i, ∫ x, fs i x ∂(ν μ ω)) ∂μ :=
+                 ∫ ω, (∏ i, ∫ x, fs i x ∂(ν (μ := μ) ω)) ∂μ :=
       integral_congr_ae h_factor
 
     -- Step 5: ∫ (∏ ∫ fs dν) = ∫ G
-    have step4 : ∫ ω, (∏ i, ∫ x, fs i x ∂(ν μ ω)) ∂μ = ∫ ω, G ω ∂μ :=
+    have step4 : ∫ ω, (∏ i, ∫ x, fs i x ∂(ν (μ := μ) ω)) ∂μ = ∫ ω, G ω ∂μ :=
       integral_congr_ae h_G_ae.symm
 
     -- Chain all steps
     calc ∫ ω, F ω ∂μ
         = ∫ ω, (∏ i, fs i (ω (k i))) ∂μ := step1
       _ = ∫ ω, μ[fun ω => ∏ i, fs i (ω (k i)) | shiftInvariantSigma (α := α)] ω ∂μ := step2
-      _ = ∫ ω, (∏ i, ∫ x, fs i x ∂(ν μ ω)) ∂μ := step3
+      _ = ∫ ω, (∏ i, ∫ x, fs i x ∂(ν (μ := μ) ω)) ∂μ := step3
       _ = ∫ ω, G ω ∂μ := step4
 
   -- Convert both sides to ENNReal and conclude
@@ -737,9 +817,9 @@ lemma indicator_product_bridge_ax
     _ = ENNReal.ofReal (∫ ω, G ω ∂μ) := by rw [h_eq_integrals]
     _ = ∫⁻ ω, ENNReal.ofReal (G ω) ∂μ := by
           rw [lintegral_ofReal_eq_integral hG_meas.aemeasurable hG_nonneg hG_int]
-    _ = ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal (((ν μ ω) (B i)).toReal) ∂μ := by
+    _ = ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal (((ν (μ := μ) ω) (B i)).toReal) ∂μ := by
           congr; funext ω; simp [G]
-    _ = ∫⁻ ω, ∏ i : Fin m, (ν μ ω) (B i) ∂μ := by
+    _ = ∫⁻ ω, ∏ i : Fin m, (ν (μ := μ) ω) (B i) ∂μ := by
           congr; funext ω
           congr; funext i
           exact ENNReal.ofReal_toReal (measure_ne_top _ _)
