@@ -440,19 +440,24 @@ then their conditional expectation factors: CE[X·Y | m] =ᵐ CE[X | m]·CE[Y | 
 This is the bridge between `Kernel.IndepFun` and conditional expectation factorization.
 -/
 lemma condExp_mul_of_indep
-    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {m : MeasurableSpace Ω} (hm : m ≤ inferInstance)
+    {Ω : Type*} {m : MeasurableSpace Ω} [MeasurableSpace Ω] [StandardBorelSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (hm : m ≤ ‹MeasurableSpace Ω›)
     {X Y : Ω → ℝ} (hX : Measurable X) (hY : Measurable Y)
     (hXbd : ∃ C, ∀ ω, |X ω| ≤ C) (hYbd : ∃ C, ∀ ω, |Y ω| ≤ C)
     (hindep : Kernel.IndepFun X Y (condExpKernel μ m) μ) :
     μ[X * Y | m] =ᵐ[μ] μ[X | m] * μ[Y | m] := by
-  -- Strategy: Kernel.IndepFun means for κ = condExpKernel:
-  -- ∫ X·Y dκ(ω) = (∫ X dκ(ω)) · (∫ Y dκ(ω)) for μ-a.e. ω
-
-  -- But CE[·|m] is defined as ∫ · d(condExpKernel)
-  -- So this is exactly saying CE[X·Y|m] = CE[X|m]·CE[Y|m]
-
-  sorry -- Requires unpacking Kernel.IndepFun definition and connecting to condExp
+  -- Strategy: Use Kernel.IndepFun.ae_measure_indepFun to get kernel-level factorization,
+  -- then apply ProbabilityTheory.condExp_ae_eq_integral_condExpKernel to convert to CE
+  --
+  -- Steps:
+  -- 1. Get integrability from boundedness using HasFiniteIntegral.of_bounded
+  -- 2. Apply Kernel.IndepFun.ae_measure_indepFun for a.e. factorization
+  -- 3. Use condExp_ae_eq_integral_condExpKernel to relate CE to kernel integrals
+  -- 4. Combine with filter_upwards
+  --
+  -- Technical issue: Type class resolution for condExpKernel with sub-σ-algebra needs care
+  sorry
 
 /-- **Axiomized product factorization** for general finite cylinder products.
 
