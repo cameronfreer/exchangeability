@@ -2334,8 +2334,8 @@ theorem subsequence_criterion_convergence_in_probability
     have h_diff_meas : Measurable (fun ω => ξ (φ k) ω - ξ_limit ω) :=
       (hξ_meas (φ k)).sub hξ_limit_meas
     have h_abs_meas : Measurable (fun ω => |ξ (φ k) ω - ξ_limit ω|) := by
-      -- abs is continuous on ℝ, so measurable; composition preserves measurability
-      sorry
+      -- For ℝ, abs = norm, and Measurable.norm works
+      exact h_diff_meas.norm
     exact h_abs_meas measurableSet_Ici
   have hA_tsum : (∑' k, μ (A k)) ≠ ⊤ := by
     -- μ(A k) ≤ 2^{-(k+1)} and ∑ 2^{-(k+1)} < ∞
@@ -2387,9 +2387,8 @@ theorem subsequence_criterion_convergence_in_probability
       sorry
     have h_meas : MeasurableSet (limsup A atTop) := by
       -- limsup of measurable sets is measurable
-      -- TODO: use `measurableSet_limsup` from Mathlib.MeasureTheory.MeasurableSpace.MeasurablyGenerated
-      -- The lemma exists but seems not to be imported correctly
-      sorry
+      -- Use measurability tactic which knows about @[measurability] lemmas
+      measurability
     have : μ ((limsup A atTop)ᶜ) = μ Set.univ := by
       simp [measure_compl h_meas, hBC]
     -- So almost every ω lies in the RHS set
@@ -2440,12 +2439,41 @@ theorem reverse_martingale_subsequence_convergence
         filter_upwards with ω
         exact abs_nonneg _
       have hf_int : Integrable (fun ω => |alpha n ω - alpha_inf ω|) μ := by
-        -- TODO: derive from h_L1_conv or add as hypothesis
-        sorry
-      have := mul_meas_ge_le_integral_of_nonneg hf_nonneg hf_int ε
+        -- Need to show: AEStronglyMeasurable and HasFiniteIntegral
+        constructor
+        · -- AEStronglyMeasurable: follows from measurability
+          exact (h_alpha_meas n).sub h_alpha_inf_meas |>.norm.aestronglyMeasurable
+        · -- HasFiniteIntegral: ∫⁻ ‖f‖ < ∞
+          -- The integral ∫ |alpha n - alpha_inf| can be made < 1 by h_L1_conv
+          -- For ℝ-valued functions, ∫⁻ ‖f‖ and ∫ |f| are related
+          -- If ∫ |f| is finite (which h_L1_conv implies), then ∫⁻ ‖f‖ₑ < ∞
+          sorry
+      have hmarkov_real := mul_meas_ge_le_integral_of_nonneg hf_nonneg hf_int ε
       -- This gives: ε * μ.real {ω | ε ≤ |alpha n ω - alpha_inf ω|} ≤ ∫ ω, |alpha n ω - alpha_inf ω| ∂μ
-      -- Divide by ε (assuming ε > 0) and convert to ENNReal
-      sorry
+      -- Divide by ε (assuming ε > 0): μ.real S ≤ (1/ε) * ∫ f
+      have : μ.real {ω | ε ≤ |alpha n ω - alpha_inf ω|} ≤ (1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ := by
+        have hε_ne : ε ≠ 0 := ne_of_gt hε
+        calc μ.real {ω | ε ≤ |alpha n ω - alpha_inf ω|}
+            = ε⁻¹ * (ε * μ.real {ω | ε ≤ |alpha n ω - alpha_inf ω|}) := by field_simp
+          _ ≤ ε⁻¹ * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ := by gcongr
+          _ = (1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ := by ring
+      -- Convert μ.real to μ: μ.real S = (μ S).toReal
+      -- Use ENNReal.ofReal_le_iff_le_toReal
+      have h_integral_nonneg : 0 ≤ (1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ := by
+        apply mul_nonneg
+        · exact div_nonneg (by norm_num) (le_of_lt hε)
+        · exact integral_nonneg (fun _ => abs_nonneg _)
+      rw [Measure.real] at this
+      -- μ S = ofReal (μ S).toReal when μ S < ∞ (which holds for probability measures)
+      -- We have: (μ S).toReal ≤ (1/ε) * ∫ f
+      -- Apply ofReal to both sides
+      have h_finite : μ {ω | ε ≤ |alpha n ω - alpha_inf ω|} ≠ ⊤ := measure_ne_top μ _
+      calc μ {ω | ε ≤ |alpha n ω - alpha_inf ω|}
+          = ENNReal.ofReal ((μ {ω | ε ≤ |alpha n ω - alpha_inf ω|}).toReal) := by
+            exact (ENNReal.ofReal_toReal_eq_iff.mpr h_finite).symm
+        _ ≤ ENNReal.ofReal ((1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ) := by
+            apply ENNReal.ofReal_le_ofReal
+            exact this
     -- Now use the L¹ convergence hypothesis to push RHS → 0.
     -- Convert the real integral bound to `ℝ≥0∞` via `ofReal`.
     -- Finish with a squeeze/tendsto_of_tendsto_of_le_of_le.
