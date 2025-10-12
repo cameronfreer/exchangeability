@@ -964,12 +964,10 @@ lemma l2_bound_two_windows_uniform
     intro i
     simp [ξ]
     split_ifs with h
-    · -- Case i.val < k
-      convert hvar (n + i.val + 1) using 1
-      sorry -- Need to show MemLp follows from finite variance
-    · -- Case i.val ≥ k
-      convert hvar (m + (i.val - k) + 1) using 1
-      sorry -- Need to show MemLp follows from finite variance
+    · -- Case i.val < k: ξ i = f(X_{n+i.val+1})
+      exact (hfX_L2 (n + i.val + 1)).sub (memLp_const mf)
+    · -- Case i.val ≥ k: ξ i = f(X_{m+(i.val-k)+1})
+      exact (hfX_L2 (m + (i.val - k) + 1)).sub (memLp_const mf)
 
   have hξ_var : ∀ i : Fin (2*k), ∫ ω, (ξ i ω - mf)^2 ∂μ = (Real.sqrt σSqf) ^ 2 := by
     intro i
@@ -988,8 +986,39 @@ lemma l2_bound_two_windows_uniform
     have h_sqrt_sq : (Real.sqrt σSqf) ^ 2 = σSqf := Real.sq_sqrt hσSq_nonneg
     rw [h_sqrt_sq]
     simp [ξ]
-    sorry -- Need to handle 4 cases based on i.val < k and j.val < k
-    -- Each case applies hcov to appropriate indices from f∘X
+    -- Split into 4 cases based on which window each index belongs to
+    by_cases hi : i.val < k <;> by_cases hj : j.val < k
+    · -- Case 1: Both in first window (i < k, j < k)
+      simp [hi, hj]
+      -- Need to show n + i.val + 1 ≠ n + j.val + 1
+      have hneq : n + i.val + 1 ≠ n + j.val + 1 := by
+        intro heq
+        have : i.val = j.val := by omega
+        have : i = j := Fin.ext this
+        exact hij this
+      exact hcov (n + i.val + 1) (n + j.val + 1) hneq
+    · -- Case 2: i in first, j in second (i < k, j ≥ k)
+      simp [hi, hj]
+      -- Need to show n + i.val + 1 ≠ m + (j.val - k) + 1
+      have hneq : n + i.val + 1 ≠ m + (j.val - k) + 1 := by
+        sorry -- These are potentially different indices
+      exact hcov (n + i.val + 1) (m + (j.val - k) + 1) hneq
+    · -- Case 3: i in second, j in first (i ≥ k, j < k)
+      simp [hi, hj]
+      -- Need to show m + (i.val - k) + 1 ≠ n + j.val + 1
+      have hneq : m + (i.val - k) + 1 ≠ n + j.val + 1 := by
+        sorry -- These are potentially different indices
+      exact hcov (m + (i.val - k) + 1) (n + j.val + 1) hneq
+    · -- Case 4: Both in second window (i ≥ k, j ≥ k)
+      simp [hi, hj]
+      -- Need to show m + (i.val - k) + 1 ≠ m + (j.val - k) + 1
+      have hneq : m + (i.val - k) + 1 ≠ m + (j.val - k) + 1 := by
+        intro heq
+        have : i.val - k = j.val - k := by omega
+        have : i.val = j.val := by omega
+        have : i = j := Fin.ext this
+        exact hij this
+      exact hcov (m + (i.val - k) + 1) (m + (j.val - k) + 1) hneq
 
   -- Apply l2_contractability_bound
   have h_bound := @L2Approach.l2_contractability_bound Ω _ μ _ (2*k) ξ mf
