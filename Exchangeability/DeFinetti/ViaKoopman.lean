@@ -455,10 +455,22 @@ lemma condexp_product_factorization_ax
   -- Proof by induction on m
   induction m with
   | zero =>
-    -- Base case: m = 0, empty product is 1
-    -- Need to show: CE[1 | ℐ] =ᵐ 1
-    -- CE of a constant is the constant a.e.
-    sorry -- TODO: needs CompleteSpace instance for condExp_const
+    -- Base case: the empty product is 1, and E[1 | 𝓘] = 1 a.e.
+    have h_int : Integrable (fun _ : Ω[α] => (1 : ℝ)) μ := integrable_const _
+    have h_ce :
+        μ[(fun _ => (1 : ℝ)) | shiftInvariantSigma (α := α)]
+          =ᵐ[μ]
+        (fun ω =>
+          ∫ x, (1 : ℝ) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) :=
+      condExp_eq_kernel_integral (shiftInvariantSigma_le (α := α)) h_int
+    refine h_ce.trans ?_
+    filter_upwards with ω
+    -- Each condExpKernel ω is a probability measure
+    haveI : IsProbabilityMeasure
+        (condExpKernel μ (shiftInvariantSigma (α := α)) ω) :=
+      IsMarkovKernel.isProbabilityMeasure ω
+    -- ∫ 1 dν = 1 for a probability measure ν
+    simp [integral_const, measure_univ]
   | succ n IH =>
     -- Inductive step: n + 1 coordinates
     -- Split: ∏ᵢ₌₀ⁿ f(ωᵢ) = (∏ᵢ₌₀ⁿ⁻¹ f(ωᵢ)) · f(ωₙ)
@@ -504,10 +516,23 @@ lemma condexp_product_factorization_general
   -- Base case m = 0
   induction m with
   | zero =>
+    -- Base case: the empty product is 1, and E[1 | 𝓘] = 1 a.e.
     simp [Finset.prod_empty]
-    -- CE[1 | ℐ] = 1 a.e. and ∏ (empty) = 1
-    -- Same as base case in condexp_product_factorization_ax
-    sorry -- TODO: needs CompleteSpace instance for condExp_const
+    have h_int : Integrable (fun _ : Ω[α] => (1 : ℝ)) μ := integrable_const _
+    have h_ce :
+        μ[(fun _ => (1 : ℝ)) | shiftInvariantSigma (α := α)]
+          =ᵐ[μ]
+        (fun ω =>
+          ∫ x, (1 : ℝ) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) :=
+      condExp_eq_kernel_integral (shiftInvariantSigma_le (α := α)) h_int
+    refine h_ce.trans ?_
+    filter_upwards with ω
+    -- Each condExpKernel ω is a probability measure
+    haveI : IsProbabilityMeasure
+        (condExpKernel μ (shiftInvariantSigma (α := α)) ω) :=
+      IsMarkovKernel.isProbabilityMeasure ω
+    -- ∫ 1 dν = 1 for a probability measure ν
+    simp [integral_const, measure_univ]
 
   | succ n IH =>
     -- Inductive step: split product into first n factors and last factor
@@ -537,6 +562,22 @@ lemma condexp_product_factorization_general
 
 This connects the conditional expectation factorization to measure-theoretic form.
 -/
+-- Helper lemma: product of indicators equals the product function
+private lemma ofReal_prod_indicator_univ {m : ℕ} (k : Fin m → ℕ) (B : Fin m → Set α) (ω : Ω[α]) :
+    ENNReal.ofReal (∏ i : Fin m, (B i).indicator (fun _ => (1 : ℝ)) (ω (k i)))
+      = ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) := by
+  rw [ENNReal.ofReal_prod_of_nonneg]
+  intro i _
+  exact Set.indicator_nonneg (fun _ _ => zero_le_one) _
+
+-- Helper lemma: product of ofReal∘toReal for measures
+private lemma prod_ofReal_toReal_meas {m : ℕ} (ν : Ω[α] → Measure α) (B : Fin m → Set α) (ω : Ω[α])
+    (hν : ∀ i, (ν ω) (B i) ≠ ⊤) :
+    ∏ i : Fin m, ENNReal.ofReal (((ν ω) (B i)).toReal)
+      = ∏ i : Fin m, (ν ω) (B i) := by
+  congr; funext i
+  exact ENNReal.ofReal_toReal (hν i)
+
 lemma indicator_product_bridge_ax
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
@@ -707,13 +748,19 @@ lemma indicator_product_bridge_ax
   -- Convert both sides to ENNReal and conclude
   calc ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
       = ∫⁻ ω, ENNReal.ofReal (F ω) ∂μ := by
-          sorry -- TODO: congr; funext ω doesn't complete - needs unfolding
+          congr; funext ω
+          exact (ofReal_prod_indicator_univ k B ω).symm
     _ = ENNReal.ofReal (∫ ω, F ω ∂μ) := hL
     _ = ENNReal.ofReal (∫ ω, G ω ∂μ) := by rw [h_eq_integrals]
     _ = ∫⁻ ω, ENNReal.ofReal (G ω) ∂μ := by
           rw [ofReal_integral_eq_lintegral_ofReal hG_int hG_nonneg]
     _ = ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal (((ν (μ := μ) ω) (B i)).toReal) ∂μ := by
-          sorry -- TODO: congr; funext ω doesn't complete - needs unfolding
+          congr 1; funext ω
+          show ENNReal.ofReal (G ω) = ∏ i : Fin m, ENNReal.ofReal (((ν (μ := μ) ω) (B i)).toReal)
+          simp only [G]
+          rw [ENNReal.ofReal_prod_of_nonneg]
+          intro i _
+          exact ENNReal.toReal_nonneg
     _ = ∫⁻ ω, ∏ i : Fin m, (ν (μ := μ) ω) (B i) ∂μ := by
           congr; funext ω
           congr; funext i
