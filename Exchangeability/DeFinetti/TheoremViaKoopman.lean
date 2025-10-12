@@ -67,7 +67,11 @@ variable {Ω : Type*} [MeasurableSpace Ω]
 /-!
 ## Main theorems (Koopman proof)
 
-TODO: These theorems will be implemented once ViaKoopman.lean is created.
+These theorems connect the general theory to the classical de Finetti result.
+
+**Status**: The equivalence axiom remains unproved because it depends on ViaKoopman.lean's axioms
+(particularly `condindep_pair_given_tail`). However, two of the three theorems can be proved
+from the equivalence using infrastructure from Contractability.lean and ConditionallyIID.lean.
 -/
 
 /-- **Kallenberg Theorem 1.1 (via Koopman)**: Contractable ⇔ (Exchangeable ∧ ConditionallyIID).
@@ -75,11 +79,14 @@ TODO: These theorems will be implemented once ViaKoopman.lean is created.
 This is the three-way equivalence proved using the Mean Ergodic Theorem.
 
 **Proof structure**:
-- (i) → (iii): ViaKoopman (Mean Ergodic Theorem) + CommonEnding
-- (iii) → (ii): `exchangeable_of_conditionallyIID` (in ConditionallyIID.lean)
-- (ii) → (i): `contractable_of_exchangeable` (in Contractability.lean)
+- (i) → (ii): `contractable_of_exchangeable` (in Contractability.lean) ✓
+- (ii) → (iii): ViaKoopman (Mean Ergodic Theorem) + CommonEnding [AXIOM]
+- (iii) → (ii): `exchangeable_of_conditionallyIID` (in ConditionallyIID.lean) ✓
 
 **Reference**: Kallenberg (2005), Theorem 1.1 (page 26), "First proof".
+
+**Note**: This remains an axiom because the direction (Exchangeable → ConditionallyIID) requires
+the full ViaKoopman machinery, which depends on unproved axioms like `condindep_pair_given_tail`.
 -/
 axiom deFinetti_RyllNardzewski_equivalence_viaKoopman
     (μ : Measure Ω) [IsProbabilityMeasure μ]
@@ -90,23 +97,31 @@ axiom deFinetti_RyllNardzewski_equivalence_viaKoopman
 /-- **De Finetti's Theorem (Koopman proof)**: Exchangeable ⇒ ConditionallyIID.
 
 **Reference**: Kallenberg (2005), Theorem 1.1 (page 26), "First proof".
+
+**Proof**: Apply `contractable_of_exchangeable` to get contractability, then use the equivalence
+to extract ConditionallyIID.
 -/
-axiom deFinetti_viaKoopman
+theorem deFinetti_viaKoopman
     (μ : Measure Ω) [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
     (hX_exch : Exchangeable μ X)
     (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-    ConditionallyIID μ X
+    ConditionallyIID μ X := by
+  have hContract := contractable_of_exchangeable hX_exch hX_meas
+  exact ((deFinetti_RyllNardzewski_equivalence_viaKoopman μ X hX_meas hX_L2).mp hContract).2
 
 /-- **Contractable implies conditionally i.i.d.** (via Koopman).
 
 **Reference**: Kallenberg (2005), page 26, "First proof".
+
+**Proof**: Follows directly from the equivalence theorem.
 -/
-axiom conditionallyIID_of_contractable_viaKoopman
+theorem conditionallyIID_of_contractable_viaKoopman
     (μ : Measure Ω) [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
     (hContract : Contractable μ X)
     (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-    ConditionallyIID μ X
+    ConditionallyIID μ X := by
+  exact ((deFinetti_RyllNardzewski_equivalence_viaKoopman μ X hX_meas hX_L2).mp hContract).2
 
 end Exchangeability.DeFinetti
