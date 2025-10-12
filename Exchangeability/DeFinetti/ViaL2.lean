@@ -2458,8 +2458,22 @@ theorem reverse_martingale_subsequence_convergence
           _ ≤ ε⁻¹ * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ := by gcongr
           _ = (1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ := by ring
       -- Convert μ.real to μ: μ.real S = (μ S).toReal
-      -- Then apply ENNReal.ofReal_le_ofReal to get μ S ≤ ENNReal.ofReal ((1/ε) * ∫ f)
-      sorry
+      -- Use ENNReal.ofReal_le_iff_le_toReal
+      have h_integral_nonneg : 0 ≤ (1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ := by
+        apply mul_nonneg
+        · exact div_nonneg (by norm_num) (le_of_lt hε)
+        · exact integral_nonneg (fun _ => abs_nonneg _)
+      rw [Measure.real] at this
+      -- μ S = ofReal (μ S).toReal when μ S < ∞ (which holds for probability measures)
+      -- We have: (μ S).toReal ≤ (1/ε) * ∫ f
+      -- Apply ofReal to both sides
+      have h_finite : μ {ω | ε ≤ |alpha n ω - alpha_inf ω|} ≠ ⊤ := measure_ne_top μ _
+      calc μ {ω | ε ≤ |alpha n ω - alpha_inf ω|}
+          = ENNReal.ofReal ((μ {ω | ε ≤ |alpha n ω - alpha_inf ω|}).toReal) := by
+            exact (ENNReal.ofReal_toReal_eq_iff.mpr h_finite).symm
+        _ ≤ ENNReal.ofReal ((1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ) := by
+            apply ENNReal.ofReal_le_ofReal
+            exact this
     -- Now use the L¹ convergence hypothesis to push RHS → 0.
     -- Convert the real integral bound to `ℝ≥0∞` via `ofReal`.
     -- Finish with a squeeze/tendsto_of_tendsto_of_le_of_le.
