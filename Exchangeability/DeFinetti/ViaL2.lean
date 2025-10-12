@@ -2396,9 +2396,14 @@ theorem subsequence_criterion_convergence_in_probability
       -- monotonicity of μ and hcompl
       -- TODO: monotonicity step; or use `ae_iff` with the previous equality
       sorry
-    -- conclude
-    -- TODO: `ae_iff` to switch from measure of set = μ univ to `∀ᵐ` statement
-    sorry
+    -- conclude: convert measure equality to ae statement
+    -- We have (limsup A)ᶜ ⊆ {ω | Tendsto...} and ∀ᵐ ω, ω ∈ (limsup A)ᶜ (since μ(limsup A) = 0)
+    -- Therefore ∀ᵐ ω, ω ∈ {ω | Tendsto...}
+    have h_ae_compl : ∀ᵐ ω ∂μ, ω ∈ (limsup A atTop)ᶜ := by
+      rw [ae_iff]
+      simp [hBC]
+    -- Use Eventually.mono to transfer from subset
+    exact h_ae_compl.mono hcompl
 
   exact ⟨φ, hφ_smono, h_as⟩
 
