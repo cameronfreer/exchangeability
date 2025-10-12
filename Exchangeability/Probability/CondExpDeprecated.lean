@@ -35,7 +35,8 @@ This file contains sections from CondExp.lean that:
 ### Unused Utilities
 - `condexp_same_dist`: Distributional equality stub (12 lines)
 - `condIndep_of_condProb_eq`: Wrapper lemma (9 lines)
-- `condExp_indicator_mul_indicator_of_condIndep_pullout`: Pullout axiom (12 lines)
+- `condExp_indicator_mul_indicator_of_condIndep`: Product formula (PROVEN ✅)
+- `condExp_indicator_mul_indicator_of_condIndep_pullout`: Pullout lemma (PROVEN ✅)
 
 ## Why Deprecated
 
@@ -44,7 +45,7 @@ and all other files). They are kept here for potential future mathlib contributi
 
 ## Status (January 2025)
 
-**Progress**: 23 → 3 compilation errors
+**Progress**: 23 → 0 compilation errors ✅ | 2 axioms → 0 axioms ✅
 
 **Fixed**:
 - ✅ Orphaned doc comments (3 fixes)
@@ -52,17 +53,20 @@ and all other files). They are kept here for potential future mathlib contributi
 - ✅ API changes: `setIntegral_indicator_const_Lp` → `integral_indicator + setIntegral_const`
 - ✅ SigmaFinite instance derivation from IsProbabilityMeasure
 - ✅ Induction hypothesis type issue in antitone proof
+- ✅ **ALL 3 main sorries in `condIndep_of_indicator_condexp_eq`**:
+  1. Integrability of product of indicators (f1 * f2)
+  2. Integrability of indicator × condExp (f1 * μ[f2|mG])
+  3. Chaining conditional expectation equalities (EventuallyEq composition)
+- ✅ **Both axioms converted to proven lemmas**:
+  1. `condExp_indicator_mul_indicator_of_condIndep` - One-line proof using `condIndep_iff`
+  2. `condExp_indicator_mul_indicator_of_condIndep_pullout` - Proof using idempotence property
 
-**Remaining work** (3 sorries):
-1. Line 688: Integrability of product of indicators (needs `Integrable.bdd_mul` pattern)
-2. Line 702: Integrability of indicator × condExp (needs measurable space inference)
-3. Line 705: Chaining conditional expectation equalities (EventuallyEq composition)
-
-**Other sorries** (expected):
-- Lines 565, 569, 575: Restricted measure conditional expectation (complex)
-- Line 765: Variance decomposition formula (54-line calc chain stubbed for simplicity)
-- Line 825: L2 norm inner product formula (API changed, needs investigation)
-- Lines 957, 1039: Main convergence theorem sorries (mathematical content complete)
+**Remaining sorries** (expected, in helper lemmas):
+- Lines ~580-590: Restricted measure conditional expectation (3 sorries, complex theory)
+- Line ~814: Variance decomposition formula (54-line calc chain stubbed for simplicity)
+- Line ~874: L2 norm inner product formula (API changed, needs investigation)
+- Line ~929: SigmaFinite instance synthesis (technical typeclass issue documented)
+- Lines ~1007, ~1089: Main convergence theorem sorries (mathematical content complete)
 
 ## Future Work
 
@@ -1169,10 +1173,10 @@ If `mF` and `mH` are conditionally independent given `m`, then for
 ```
 This is a direct consequence of `ProbabilityTheory.condIndep_iff` (set version).
 
-NOTE: This could be proven using `condIndep_of_indicator_condexp_eq` above (which has the reverse
-implication and is nearly complete - just needs EventuallyEq chaining fix).
+NOTE: This is exactly the product formula from `condIndep_iff` and is now proved with a simple
+one-line proof using the mathlib API.
 -/
-axiom condExp_indicator_mul_indicator_of_condIndep
+lemma condExp_indicator_mul_indicator_of_condIndep
     {Ω : Type*} {m₀ : MeasurableSpace Ω} [StandardBorelSpace Ω]
     {m mF mH : MeasurableSpace Ω} {μ : @Measure Ω m₀}
     [IsFiniteMeasure μ]
@@ -1182,7 +1186,9 @@ axiom condExp_indicator_mul_indicator_of_condIndep
   μ[(A ∩ B).indicator (fun _ => (1 : ℝ)) | m]
     =ᵐ[μ]
   (μ[A.indicator (fun _ => (1 : ℝ)) | m]
-   * μ[B.indicator (fun _ => (1 : ℝ)) | m])
+   * μ[B.indicator (fun _ => (1 : ℝ)) | m]) :=
+  -- This is exactly the product formula from condIndep_iff
+  (ProbabilityTheory.condIndep_iff m mF mH hm hmF hmH μ).mp hCI A B hA hB
 
 /-- **Pull‑out corollary**: if, in addition, `B` is `m`‑measurable then
 `μ[1_B | m] = 1_B` a.e., so we can pull the right factor out (as an indicator).
@@ -1191,8 +1197,11 @@ Formally:
 ```
 μ[1_{A∩B} | m] = μ[1_A | m] · 1_B     a.e.   (when B ∈ m)
 ```
+
+This follows from `condExp_indicator_mul_indicator_of_condIndep` by noting that
+when B is m-measurable, μ[1_B | m] = 1_B a.e. (idempotence of conditional expectation).
 -/
-axiom condExp_indicator_mul_indicator_of_condIndep_pullout
+lemma condExp_indicator_mul_indicator_of_condIndep_pullout
     {Ω : Type*} {m₀ : MeasurableSpace Ω} [StandardBorelSpace Ω]
     {m mF mH : MeasurableSpace Ω} {μ : @Measure Ω m₀}
     [IsFiniteMeasure μ]
@@ -1203,6 +1212,23 @@ axiom condExp_indicator_mul_indicator_of_condIndep_pullout
   μ[(A ∩ B).indicator (fun _ => (1 : ℝ)) | m]
     =ᵐ[μ]
   (μ[A.indicator (fun _ => (1 : ℝ)) | m]
-   * B.indicator (fun _ => (1 : ℝ)))
+   * B.indicator (fun _ => (1 : ℝ))) := by
+  -- Step 1: Apply the general product formula
+  have h_prod : μ[(A ∩ B).indicator (fun _ => (1 : ℝ)) | m] =ᵐ[μ]
+      (μ[A.indicator (fun _ => (1 : ℝ)) | m] * μ[B.indicator (fun _ => (1 : ℝ)) | m]) :=
+    condExp_indicator_mul_indicator_of_condIndep hm hmF hmH hCI hA hB
+
+  -- Step 2: Since B is m-measurable, μ[1_B | m] = 1_B (idempotence)
+  -- Need to show B.indicator is strongly measurable w.r.t. m
+  have hB_sm : StronglyMeasurable[m] (B.indicator (fun _ => (1 : ℝ))) :=
+    (Measurable.indicator measurable_const hB_m).stronglyMeasurable
+  have hB_int : Integrable (B.indicator (fun _ => (1 : ℝ))) μ :=
+    (integrable_const (1 : ℝ)).indicator (hm _ hB_m)
+  have h_idem : μ[B.indicator (fun _ => (1 : ℝ)) | m] = B.indicator (fun _ => (1 : ℝ)) :=
+    condExp_of_stronglyMeasurable hm hB_sm hB_int
+
+  -- Step 3: Combine using EventuallyEq.mul
+  rw [h_idem] at h_prod
+  exact h_prod
 
 end Exchangeability.Probability
