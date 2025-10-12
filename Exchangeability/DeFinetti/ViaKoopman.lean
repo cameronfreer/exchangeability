@@ -321,15 +321,22 @@ private lemma condExp_mul_pullout
     μ[Z * Y | shiftInvariantSigma (α := α)] =ᵐ[μ] Z * μ[Y | shiftInvariantSigma (α := α)] := by
   sorry
   /-
-  Proof strategy (requires correct mathlib API):
-  1. Show Z is AEStronglyMeasurable w.r.t. m
-  2. Show Z*Y is integrable (using boundedness of Z)
-  3. Apply condExp_mul_of_aestronglyMeasurable_left or similar mathlib lemma
+  Proof strategy:
+  1. Show Z*Y is integrable: |Z*Y| ≤ C*|Y| where C bounds Z, and Y is integrable
+     Use: Integrable.bdd_mul or similar lemma
 
-  The issue is finding the exact signature of the pull-out lemma.
-  Mathlib should have: condExp[Z*Y | m] = Z * condExp[Y | m] when Z is m-measurable
+  2. Show the ae-equality by uniqueness of CE:
+     For any m-measurable set A:
+       ∫_A CE[Z*Y|m] = ∫_A Z*Y           (tower property)
+       ∫_A Z*CE[Y|m] = ∫_A Z*Y           (since Z is m-measurable, pull out)
+     Therefore CE[Z*Y|m] = Z*CE[Y|m] by uniqueness
 
-  TODO: Find exact mathlib lemma name and complete proof (~20 LOC)
+  3. Mathlib lemmas needed:
+     - Integrable multiplication by bounded measurable function
+     - Pull-out property: MeasureTheory.condExp_measurable_mul or build from scratch
+
+  This is standard but requires finding the right mathlib API.
+  Estimated: ~20-25 LOC once correct lemmas identified.
   -/
 
 /-! ## Axioms for de Finetti theorem -/
