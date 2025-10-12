@@ -763,13 +763,14 @@ lemma exchangeable_implies_ciid_modulo_bridge_ax
 
   -- Step 4: Use CommonEnding.conditional_iid_from_directing_measure
   -- or directly construct the ConditionallyIID structure
+  use ν (μ := μ)
   constructor
-  · -- Provide the directing measure ν
-    sorry -- TODO: exact ν μ
+  · -- Show ν gives probability measures
+    intro ω
+    unfold ν
+    exact IsMarkovKernel.isProbabilityMeasure ω
   · -- Show it satisfies the product property via indicator_product_bridge_ax
-    -- TODO: intro m k B hB_meas
-    -- TODO: exact indicator_product_bridge_ax μ hσ m k B hB_meas
-    sorry
+    sorry -- TODO: Need to prove the Measure.map = μ.bind property
 
 namespace MeasureTheory
 
