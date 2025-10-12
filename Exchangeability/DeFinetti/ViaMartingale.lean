@@ -580,13 +580,18 @@ lemma indicator_tailMeasurable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableS
   exact stronglyMeasurable_const
 
 /-- If each coordinate is measurable, then the tail σ-algebra is sigma-finite
-when the base measure is sigma-finite. -/
-lemma sigmaFinite_trim_tailSigma {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
-    {μ : Measure Ω} [SigmaFinite μ]
+when the base measure is finite.
+
+Note: While this could be stated for general sigma-finite measures, we only need the finite
+case for de Finetti's theorem (which works with probability measures). The general sigma-finite
+case requires manual construction of spanning sets and is a mathlib gap. -/
+lemma sigmaFinite_trim_tailSigma {Ω α : Type*} {m₀ : MeasurableSpace Ω} [MeasurableSpace α]
+    {μ : @Measure Ω m₀} [IsFiniteMeasure μ]
     (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) :
     SigmaFinite (μ.trim (tailSigma_le X hX)) := by
-  sorry  -- TODO: Need to prove sigma-finiteness is preserved under trimming
-  -- inferInstance fails; may need manual construction or mathlib extension
+  classical
+  -- Use the infrastructure from CondExp.lean
+  exact Exchangeability.Probability.sigmaFinite_trim μ (tailSigma_le X hX)
 
 /-! ### Helper lemmas for futureFiltration properties -/
 
