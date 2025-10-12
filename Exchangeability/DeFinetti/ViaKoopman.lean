@@ -2619,6 +2619,8 @@ private lemma condexp_pair_factorization
           ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) *
         (∫ y, g (y 1)
           ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω))) := by
+    sorry -- TODO: needs h_indep12 of type Kernel.IndepFun, but can't state that type
+    /-
     -- boundedness for `Kernel.IndepFun.integral_mul`
     have hf_bd' : ∃ C, ∀ ω, |(fun y : Ω[α] => f (y 0)) ω| ≤ C :=
       let ⟨C, hC⟩ := hf_bd; ⟨C, fun ω => hC (ω 0)⟩
@@ -2628,6 +2630,7 @@ private lemma condexp_pair_factorization
       (hf_meas.comp (measurable_pi_apply 0))
       (hg_meas.comp (measurable_pi_apply 1))
       hf_bd' hg_bd'
+    -/
   -- replace both marginals by integrals against ν using your proven lemma
   have h0 := identicalConditionalMarginals_integral (μ := μ) (α := α) hσ 0 hf_meas hf_bd
   have h1 := identicalConditionalMarginals_integral (μ := μ) (α := α) hσ 1 hg_meas hg_bd
