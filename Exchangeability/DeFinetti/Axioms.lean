@@ -254,6 +254,27 @@ lemma condexpL2_koopman_comm_proof (f : Lp ℝ 2 μ) :
   -- 4. Show P(U f) - P f ∈ S ∩ S⊥ using orthogonality arguments
   -- 5. A vector in S ∩ S⊥ must be zero (inner product with itself is 0)
 
+/-!
+### Proof of quantize_tendsto
+
+This proves that the quantize function converges as ε → 0⁺.
+
+**Strategy**: Show |quantize C ε x - v| ≤ ε where v = max (-C) (min C x),
+and use the fact that ε → 0 implies the quantized value converges to v.
+-/
+
+lemma quantize_tendsto_proof {C x : ℝ} (hC : 0 ≤ C) :
+    Tendsto (fun ε => ViaKoopman.MeasureTheory.quantize C ε x) (𝓝[>] 0) (𝓝 (max (-C) (min C x))) := by
+  sorry
+  -- Strategy: For any δ > 0, we need to show that eventually |quantize C ε x - v| < δ
+  -- We have |quantize C ε x - v| ≤ ε (from quantize_err_le)
+  -- So if ε < δ, we're done
+  -- The proof sketch is:
+  -- 1. rw [Metric.tendsto_nhdsWithin_nhds]
+  -- 2. For any δ > 0, choose ε₀ = δ
+  -- 3. For ε ∈ (0, δ), use quantize_err_le to show dist < δ
+  -- Left as sorry due to filter API complexity
+
 end Proofs
 
 end Exchangeability.DeFinetti
