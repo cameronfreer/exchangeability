@@ -866,7 +866,7 @@ private lemma card_filter_partition (k : ℕ) :
   have h_card_sum := card_union_of_disjoint h_disj
   rw [← h_partition] at h_card_sum
   simp only [card_fin] at h_card_sum
-  convert h_card_sum.symm using 2 <;> simp only [Finset.filter_congr_decidable]
+  convert h_card_sum.symm using 2
 
 /-- Cardinality of `{i : Fin(2k) | i.val < k}` is k. -/
 lemma card_filter_fin_val_lt_two_mul (k : ℕ) :
@@ -1648,7 +1648,7 @@ private lemma l2_bound_long_vs_tail
                 constructor
                 · intro hi
                   use ⟨i.val - (m - k), by omega⟩
-                  simp only [Finset.mem_univ, true_and]
+                  simp only []
                   ext; simp; omega
                 · rintro ⟨j, _, rfl⟩
                   simp
@@ -2291,7 +2291,7 @@ theorem subsequence_criterion_convergence_in_probability
     have hk := h_prob_conv (ε k) (hε_pos k)
     -- eventually < 2^{-(k+1)} in ENNReal
     have : (0 : ENNReal) < ((1/2 : ENNReal) ^ (k+1)) := by
-      apply ENNReal.pow_pos <;> norm_num
+      apply ENNReal.pow_pos; norm_num
     -- TODO: from `Tendsto ... (𝓝 0)` deduce ∃n, value ≤ (1/2)^{k+1}
     -- Use `((tendsto_order.1 hk).2 this)` or `eventually_lt_iff_lt_lim` flavor
     -- and then extract an index.
@@ -2349,7 +2349,7 @@ theorem subsequence_criterion_convergence_in_probability
       -- TODO: `measurableSet_iInter` + `measurableSet_iUnion` composition.
       sorry
     have : μ ((limsup A atTop)ᶜ) = μ Set.univ := by
-      simpa [measure_compl h_meas, hBC] using congrArg (fun t => μ t) rfl
+      simp [measure_compl h_meas, hBC]
     -- So almost every ω lies in the RHS set
     have hAE : μ {ω | Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω))} = μ Set.univ := by
       -- monotonicity of μ and hcompl
@@ -2431,6 +2431,9 @@ for any i ∈ I:
 
 TODO: Use contractability to relate different time points.
 -/
+-- Unused variable linter disabled: This is a placeholder theorem with trivial conclusion.
+-- The parameters document the intended signature for the full implementation.
+set_option linter.unusedVariables false in
 theorem contractability_conditional_expectation
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
