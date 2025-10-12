@@ -2379,12 +2379,40 @@ theorem subsequence_criterion_convergence_in_probability
         (limsup A atTop)ᶜ
         ⊆ {ω | Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω))} := by
       intro ω hω
-      -- from eventually_not_mem limsup we get ∃K, ∀k≥K, ω ∉ A k
-      -- hence ∀k≥K, |ξ_{φ k}(ω) − ξ(ω)| < ε k, and ε k → 0 ⇒ convergence
-      -- TODO: fill with `eventually_iff_forall_frequently` / set limsup expansions:
-      -- `mem_limsup` as `∀ᶠᶠ k in atTop, ω ∈ A k` (frequently). Use its complement.
-      -- then use the `tendsto_iff_norm_tendsto_zero` style for reals with ε_k → 0.
-      sorry
+      -- ω ∉ limsup A means eventually ω ∉ A k
+      -- i.e., eventually |ξ (φ k) ω - ξ_limit ω| < ε k
+      -- Since ε k → 0, this implies ξ (φ k) ω → ξ_limit ω
+      -- The key fact: limsup A = {ω | frequently ω ∈ A_k}
+      -- So ω ∉ limsup A ⟺ eventually ω ∉ A_k
+      have h_eventually : ∃ K, ∀ k ≥ K, ω ∉ A k := by
+        -- This follows from the definition of limsup as inf sup
+        -- limsup A = ⋂ N, ⋃ k ≥ N, A k
+        -- ω ∉ limsup A means ∃ N, ω ∉ ⋃ k ≥ N, A k, i.e., ∃ N, ∀ k ≥ N, ω ∉ A k
+        sorry
+      obtain ⟨K, hK⟩ := h_eventually
+      -- Show convergence using squeeze: |ξ (φ k) ω - ξ_limit ω| ≤ ε k for k ≥ K
+      simp only [Set.mem_setOf_eq]
+      rw [Metric.tendsto_atTop]
+      intro δ hδ
+      -- Need to find N such that for k ≥ N, |ξ (φ k) ω - ξ_limit ω| < δ
+      -- Since ε k → 0, we can find N such that ε N < δ
+      rw [Metric.tendsto_atTop] at hε_tendsto
+      obtain ⟨N₁, hN₁⟩ := hε_tendsto δ hδ
+      use max K N₁
+      intro k hk
+      -- For k ≥ max K N₁, we have:
+      -- 1. k ≥ K, so ω ∉ A k, hence |ξ (φ k) ω - ξ_limit ω| < ε k
+      -- 2. k ≥ N₁, so ε k < δ (since dist (ε k) 0 = ε k for positive ε k)
+      have h1 : ω ∉ A k := hK k (le_of_max_le_left hk)
+      simp only [A, Set.mem_setOf_eq, not_le] at h1
+      have h2 : ε k < δ := by
+        have := hN₁ k (le_of_max_le_right hk)
+        simp [Real.dist_eq, abs_of_pos (hε_pos k)] at this
+        exact this
+      calc dist (ξ (φ k) ω) (ξ_limit ω)
+          = |ξ (φ k) ω - ξ_limit ω| := Real.dist_eq _ _
+        _ < ε k := h1
+        _ < δ := h2
     have h_meas : MeasurableSet (limsup A atTop) := by
       -- limsup of measurable sets is measurable
       -- Use measurability tactic which knows about @[measurability] lemmas
@@ -2393,12 +2421,26 @@ theorem subsequence_criterion_convergence_in_probability
       simp [measure_compl h_meas, hBC]
     -- So almost every ω lies in the RHS set
     have hAE : μ {ω | Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω))} = μ Set.univ := by
-      -- monotonicity of μ and hcompl
-      -- TODO: monotonicity step; or use `ae_iff` with the previous equality
-      sorry
-    -- conclude
-    -- TODO: `ae_iff` to switch from measure of set = μ univ to `∀ᵐ` statement
-    sorry
+      -- We have (limsup A)ᶜ ⊆ {ω | Tendsto...} and μ((limsup A)ᶜ) = μ univ
+      -- By monotonicity: μ univ ≤ μ {ω | Tendsto...}
+      -- But μ {ω | Tendsto...} ≤ μ univ always (since it's a subset)
+      -- Therefore equality
+      have h_le : μ Set.univ ≤ μ {ω | Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω))} := by
+        calc μ Set.univ
+            = μ ((limsup A atTop)ᶜ) := this.symm
+          _ ≤ μ {ω | Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω))} :=
+              measure_mono hcompl
+      have h_ge : μ {ω | Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω))} ≤ μ Set.univ :=
+        measure_mono (Set.subset_univ _)
+      exact le_antisymm h_ge h_le
+    -- conclude: convert measure equality to ae statement
+    -- We have (limsup A)ᶜ ⊆ {ω | Tendsto...} and ∀ᵐ ω, ω ∈ (limsup A)ᶜ (since μ(limsup A) = 0)
+    -- Therefore ∀ᵐ ω, ω ∈ {ω | Tendsto...}
+    have h_ae_compl : ∀ᵐ ω ∂μ, ω ∈ (limsup A atTop)ᶜ := by
+      rw [ae_iff]
+      simp [hBC]
+    -- Use Eventually.mono to transfer from subset
+    exact h_ae_compl.mono hcompl
 
   exact ⟨φ, hφ_smono, h_as⟩
 
@@ -2444,9 +2486,20 @@ theorem reverse_martingale_subsequence_convergence
         · -- AEStronglyMeasurable: follows from measurability
           exact (h_alpha_meas n).sub h_alpha_inf_meas |>.norm.aestronglyMeasurable
         · -- HasFiniteIntegral: ∫⁻ ‖f‖ < ∞
-          -- The integral ∫ |alpha n - alpha_inf| can be made < 1 by h_L1_conv
-          -- For ℝ-valued functions, ∫⁻ ‖f‖ and ∫ |f| are related
-          -- If ∫ |f| is finite (which h_L1_conv implies), then ∫⁻ ‖f‖ₑ < ∞
+          -- The hypothesis h_L1_conv uses ∫, which only makes sense for integrable functions.
+          -- So h_L1_conv implicitly guarantees that |alpha n - alpha_inf| is integrable for
+          -- large enough n. Since HasFiniteIntegral is exactly one half of being integrable
+          -- (the other half is AEStronglyMeasurable, which we've already shown),
+          -- and since the function is nonnegative and measurable, the existence of the
+          -- Bochner integral ∫ |alpha n - alpha_inf| (as used in h_L1_conv) implies
+          -- HasFiniteIntegral.
+          --
+          -- Technically, we'd need a lemma like: "if ∫ |f| exists as a real number
+          -- (i.e., Integrable f), then HasFiniteIntegral f". This is essentially
+          -- the definition/characterization of Integrable.
+          --
+          -- For now, we leave this as sorry, noting that the theorem statement h_L1_conv
+          -- already assumes integrability by using the Bochner integral.
           sorry
       have hmarkov_real := mul_meas_ge_le_integral_of_nonneg hf_nonneg hf_int ε
       -- This gives: ε * μ.real {ω | ε ≤ |alpha n ω - alpha_inf ω|} ≤ ∫ ω, |alpha n ω - alpha_inf ω| ∂μ
@@ -2474,10 +2527,56 @@ theorem reverse_martingale_subsequence_convergence
         _ ≤ ENNReal.ofReal ((1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ) := by
             apply ENNReal.ofReal_le_ofReal
             exact this
-    -- Now use the L¹ convergence hypothesis to push RHS → 0.
-    -- Convert the real integral bound to `ℝ≥0∞` via `ofReal`.
-    -- Finish with a squeeze/tendsto_of_tendsto_of_le_of_le.
-    sorry
+    -- Now use the L¹ convergence hypothesis to push RHS → 0
+    -- By h_L1_conv: for any δ > 0, ∃ N, ∀ n ≥ N, ∫ |alpha n - alpha_inf| < δ
+    -- So ∫ |alpha n - alpha_inf| → 0, thus (1/ε) * ∫ |alpha n - alpha_inf| → 0
+    -- Therefore ENNReal.ofReal ((1/ε) * ∫ |alpha n - alpha_inf|) → 0
+    have h_rhs_tendsto : Tendsto (fun n => ENNReal.ofReal ((1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ)) atTop (𝓝 0) := by
+      -- Use h_L1_conv to show ∫ |alpha n - alpha_inf| → 0
+      -- Then (1/ε) * integral → 0, and ofReal preserves this
+      rw [ENNReal.tendsto_nhds_zero]
+      intro δ hδ
+      -- Want: eventually, ENNReal.ofReal ((1/ε) * ∫ ...) < δ
+      -- Get δ' = ε * δ.toReal from h_L1_conv
+      -- If δ.toReal = 0, then δ = 0 or δ = ∞, but δ > 0 so δ = ∞ and trivial
+      by_cases hδ_top : δ = ⊤
+      · -- If δ = ∞, then ENNReal.ofReal (...) < ∞ always since ofReal gives finite values
+        simp [hδ_top]
+      · -- δ is finite and positive, so δ.toReal > 0
+        have hδ_ne_top : δ ≠ ⊤ := hδ_top
+        have hδ_lt_top : δ < ⊤ := hδ_ne_top.lt_top
+        have hδ_toReal_pos : 0 < δ.toReal := by
+          rw [ENNReal.toReal_pos_iff]
+          exact ⟨hδ, hδ_lt_top⟩
+        -- Choose δ' = ε * δ.toReal > 0
+        obtain ⟨N, hN⟩ := h_L1_conv (ε * δ.toReal) (mul_pos hε hδ_toReal_pos)
+        -- For n ≥ N: ∫ |alpha n - alpha_inf| < ε * δ.toReal
+        -- So (1/ε) * ∫ < δ.toReal
+        -- Therefore ofReal ((1/ε) * ∫) < δ
+        filter_upwards [eventually_ge_atTop N] with n hn
+        have h_integral_bound : ∫ ω, |alpha n ω - alpha_inf ω| ∂μ < ε * δ.toReal := hN n hn
+        have h_scaled : (1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ < δ.toReal := by
+          calc (1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ
+              < (1/ε) * (ε * δ.toReal) := by gcongr
+            _ = δ.toReal := by field_simp
+        have h_nonneg : 0 ≤ (1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ :=
+          mul_nonneg (div_nonneg (by norm_num) (le_of_lt hε))
+            (integral_nonneg (fun _ => abs_nonneg _))
+        have h_lt : ENNReal.ofReal ((1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ) < δ := by
+          calc ENNReal.ofReal ((1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ)
+              < ENNReal.ofReal δ.toReal := by
+                rw [ENNReal.ofReal_lt_ofReal_iff_of_nonneg h_nonneg]
+                exact h_scaled
+            _ = δ := ENNReal.ofReal_toReal hδ_top
+        exact le_of_lt h_lt
+    -- Apply squeeze: 0 ≤ μ {...} ≤ RHS, and RHS → 0
+    apply tendsto_of_tendsto_of_tendsto_of_le_of_le
+    · exact tendsto_const_nhds
+    · exact h_rhs_tendsto
+    · intro n
+      exact zero_le _
+    · intro n
+      exact hmarkov n
 
   -- Apply the subsequence criterion we just proved
   exact subsequence_criterion_convergence_in_probability alpha alpha_inf
