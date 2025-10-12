@@ -319,30 +319,22 @@ private lemma condExp_mul_pullout
     (hZ_bd : ∃ C, ∀ ω, |Z ω| ≤ C)
     (hY : Integrable Y μ) :
     μ[Z * Y | shiftInvariantSigma (α := α)] =ᵐ[μ] Z * μ[Y | shiftInvariantSigma (α := α)] := by
-  set m := shiftInvariantSigma (α := α)
+  sorry
+  /-
+  Proof strategy (found correct APIs!):
+  1. Z is AEStronglyMeasurable[m] via: hZ_meas.aestronglyMeasurable
+  2. Z*Y is integrable because:
+     - |Z*Y| ≤ C*|Y| pointwise
+     - Need: Integrable.of_norm_le or similar domination lemma
+     - Alternative: Use Integrable.smul_measure or L∞ × L¹ → L¹ lemma
+  3. Apply: MeasureTheory.condExp_mul_of_aestronglyMeasurable_left
 
-  -- Show Z is AEStronglyMeasurable w.r.t. m
-  have hZ_aesm : AEStronglyMeasurable[m] Z μ :=
-    hZ_meas.aestronglyMeasurable
+  Missing piece: Need mathlib lemma for "bounded × integrable → integrable"
+  - Might be named: Integrable.of_bounded_smul, Integrable.mul_of_essSup_lt_top
+  - Or might need to use memℒp with p=1 and q=∞, then Hölder
 
-  -- Show Z*Y is integrable: bounded * integrable = integrable
-  obtain ⟨C, hC⟩ := hZ_bd
-  have hZY_int : Integrable (Z * Y) μ := by
-    -- Use that |Z*Y| ≤ C*|Y|, and C*|Y| is integrable
-    have h_bound : ∀ ω, |Z ω * Y ω| ≤ C * |Y ω| := fun ω => by
-      calc |Z ω * Y ω|
-        = |Z ω| * |Y ω| := abs_mul (Z ω) (Y ω)
-      _ ≤ C * |Y ω| := mul_le_mul_of_nonneg_right (hC ω) (abs_nonneg _)
-    have hCY_int : Integrable (fun ω => C * |Y ω|) μ := by
-      by_cases hC_pos : 0 < C
-      · exact hY.norm.const_mul C
-      · simp [not_lt] at hC_pos
-        sorry  -- Handle C ≤ 0 case
-    sorry  -- Apply integrability from domination
-
-  -- Apply the pull-out lemma from mathlib
-  exact MeasureTheory.condExp_mul_of_aestronglyMeasurable_left
-    (μ := μ) (m := m) hZ_aesm hZY_int hY
+  Once found, implementation is ~15 lines.
+  -/
 
 /-! ## Axioms for de Finetti theorem -/
 
@@ -456,18 +448,28 @@ private lemma condexp_pair_factorization_MET
 
     sorry
     /-
-    The challenge is that f(ω₀)·g(ω₁) is NOT simply (f·g) ∘ shift, but rather a mixed expression.
+    CHALLENGE ANALYSIS (Session 2):
 
-    Strategy:
-    1. Define F(ω) := f(ω₀)·g(ω₀)
-    2. Note that F(shift ω) = f((shift ω)₀)·g((shift ω)₀) = f(ω₁)·g(ω₁)
-    3. But we have f(ω₀)·g(ω₁) which is NOT the same as F(shift ω)
+    Goal: Show CE[f(ω₀)·g(ω₁)|m] = CE[f(ω₀)·g(ω₀)|m]
 
-    Alternative: Use a symmetry argument or different formulation.
-    Actually, we might need to use that the measure is exchangeable, not just shift-invariant.
+    Observation: f(ω₀)·g(ω₁) = f(ω₀)·g((shift ω)₀), but this is NOT F∘shift for any F.
 
-    TODO: This needs more thought about the exact lemma to apply.
-    ~10-15 lines once the right approach is identified
+    Attempted approach via measure-preserving shift:
+    - For A ∈ m (shift-invariant), want: ∫_A f(ω₀)·g(ω₁) dμ = ∫_A f(ω₀)·g(ω₀) dμ
+    - Using measure-preserving: ∫_A f(ω₀)·g((shift ω)₀) dμ = ∫_{shift⁻¹' A} f(ω₁)·g(ω₀) dμ
+    - Since shift⁻¹' A = A: = ∫_A f(ω₁)·g(ω₀) dμ
+    - But this gives f(ω₁)·g(ω₀), not f(ω₀)·g(ω₀)!
+
+    Possible resolution:
+    1. Need EXCHANGEABILITY (not just shift-invariance): (ω₀,ω₁) ~ (ω₁,ω₀)
+    2. Or use TAIL σ-algebra property: indices "far away" are asymptotically independent
+    3. Or there's a more clever use of condexp_precomp_iterate_eq we're missing
+
+    This is a KEY conceptual challenge. The proof might require a different setup or
+    additional assumptions beyond just measure-preserving shift.
+
+    TODO: Consult Kallenberg's proof or de Finetti literature for the right approach.
+    Estimate: ~10-20 lines once the right property is identified.
     -/
 
   -- Step 2 & 3: (Can skip - not needed for the direct proof)
