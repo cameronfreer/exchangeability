@@ -2301,9 +2301,25 @@ theorem subsequence_criterion_convergence_in_probability
   choose n hn using h_exists
   let φ : ℕ → ℕ := fun k => Nat.rec (n 0) (fun k acc => max (acc + 1) (n (k+1))) k
   have hφ_smono : StrictMono φ := by
-    -- TODO: Easy recursion: φ (k+1) = max (φ k + 1) (n (k+1)) ≥ φ k + 1
-    -- Use induction on b, cases on whether a+1 = b or a+1 < b
-    sorry
+    -- φ is defined recursively as φ k = Nat.rec (n 0) (fun k acc => max (acc + 1) (n (k+1))) k
+    -- So φ 0 = n 0 and φ (k+1) = max (φ k + 1) (n (k+1))
+    -- This means φ (k+1) ≥ φ k + 1, hence strictly monotone
+    intro a b hab
+    induction b with
+    | zero => omega  -- Can't have a < 0
+    | succ b IH =>
+        rcases Nat.lt_succ_iff_lt_or_eq.mp hab with h | h
+        · -- Case: a < b, so by IH we have φ a < φ b
+          calc φ a < φ b := IH h
+            _ < φ b + 1 := Nat.lt_succ_self _
+            _ ≤ max (φ b + 1) (n (b + 1)) := le_max_left _ _
+            _ = φ (b + 1) := by simp [φ, Nat.rec]
+        · -- Case: a = b, so need φ b < φ (b+1)
+          rw [h]
+          show φ b < φ (b + 1)
+          calc φ b < φ b + 1 := Nat.lt_succ_self _
+            _ ≤ max (φ b + 1) (n (b + 1)) := le_max_left _ _
+            _ = φ (b + 1) := by simp [φ, Nat.rec]
 
   -- Bad sets A_k
   let A : ℕ → Set Ω := fun k => {ω | ε k ≤ |ξ (φ k) ω - ξ_limit ω|}
