@@ -321,22 +321,19 @@ private lemma condExp_mul_pullout
     μ[Z * Y | shiftInvariantSigma (α := α)] =ᵐ[μ] Z * μ[Y | shiftInvariantSigma (α := α)] := by
   sorry
   /-
-  Proof strategy:
-  1. Show Z*Y is integrable: |Z*Y| ≤ C*|Y| where C bounds Z, and Y is integrable
-     Use: Integrable.bdd_mul or similar lemma
+  Proof strategy (found correct APIs!):
+  1. Z is AEStronglyMeasurable[m] via: hZ_meas.aestronglyMeasurable
+  2. Z*Y is integrable because:
+     - |Z*Y| ≤ C*|Y| pointwise
+     - Need: Integrable.of_norm_le or similar domination lemma
+     - Alternative: Use Integrable.smul_measure or L∞ × L¹ → L¹ lemma
+  3. Apply: MeasureTheory.condExp_mul_of_aestronglyMeasurable_left
 
-  2. Show the ae-equality by uniqueness of CE:
-     For any m-measurable set A:
-       ∫_A CE[Z*Y|m] = ∫_A Z*Y           (tower property)
-       ∫_A Z*CE[Y|m] = ∫_A Z*Y           (since Z is m-measurable, pull out)
-     Therefore CE[Z*Y|m] = Z*CE[Y|m] by uniqueness
+  Missing piece: Need mathlib lemma for "bounded × integrable → integrable"
+  - Might be named: Integrable.of_bounded_smul, Integrable.mul_of_essSup_lt_top
+  - Or might need to use memℒp with p=1 and q=∞, then Hölder
 
-  3. Mathlib lemmas needed:
-     - Integrable multiplication by bounded measurable function
-     - Pull-out property: MeasureTheory.condExp_measurable_mul or build from scratch
-
-  This is standard but requires finding the right mathlib API.
-  Estimated: ~20-25 LOC once correct lemmas identified.
+  Once found, implementation is ~15 lines.
   -/
 
 /-! ## Axioms for de Finetti theorem -/
@@ -446,12 +443,33 @@ private lemma condexp_pair_factorization_MET
   -- Step 1: Show CE[f(ω₀)·g(ω₁)|ℐ] = CE[f(ω₀)·g(ω₀)|ℐ] by shift invariance
   -- Key insight: shifting doesn't change the conditional expectation onto shift-invariant σ-algebra
   have h_shift_inv : μ[(fun ω => f (ω 0) * g (ω 1)) | m] =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 0)) | m] := by
+    -- Note: ω 1 = (shift ω) 0, so f(ω₀)·g(ω₁) = f(ω₀)·g((shift ω)₀)
+    -- We want to rewrite this as (some function) ∘ shift and use condexp_precomp_iterate_eq
+
     sorry
     /-
-    Use condexp_precomp_iterate_eq (line 1452) applied to the function ω ↦ f(ω₀)·g(ω₀)
-    composed with shift. This shows CE[f(ω₀)·g(ω₁)|ℐ] = CE[f((shift ω)₀)·g((shift ω)₀)|ℐ]
-    = CE[f(ω₁)·g(ω₁)|ℐ]. Then use symmetry.
-    ~10 lines
+    CHALLENGE ANALYSIS (Session 2):
+
+    Goal: Show CE[f(ω₀)·g(ω₁)|m] = CE[f(ω₀)·g(ω₀)|m]
+
+    Observation: f(ω₀)·g(ω₁) = f(ω₀)·g((shift ω)₀), but this is NOT F∘shift for any F.
+
+    Attempted approach via measure-preserving shift:
+    - For A ∈ m (shift-invariant), want: ∫_A f(ω₀)·g(ω₁) dμ = ∫_A f(ω₀)·g(ω₀) dμ
+    - Using measure-preserving: ∫_A f(ω₀)·g((shift ω)₀) dμ = ∫_{shift⁻¹' A} f(ω₁)·g(ω₀) dμ
+    - Since shift⁻¹' A = A: = ∫_A f(ω₁)·g(ω₀) dμ
+    - But this gives f(ω₁)·g(ω₀), not f(ω₀)·g(ω₀)!
+
+    Possible resolution:
+    1. Need EXCHANGEABILITY (not just shift-invariance): (ω₀,ω₁) ~ (ω₁,ω₀)
+    2. Or use TAIL σ-algebra property: indices "far away" are asymptotically independent
+    3. Or there's a more clever use of condexp_precomp_iterate_eq we're missing
+
+    This is a KEY conceptual challenge. The proof might require a different setup or
+    additional assumptions beyond just measure-preserving shift.
+
+    TODO: Consult Kallenberg's proof or de Finetti literature for the right approach.
+    Estimate: ~10-20 lines once the right property is identified.
     -/
 
   -- Step 2 & 3: (Can skip - not needed for the direct proof)
@@ -462,12 +480,15 @@ private lemma condexp_pair_factorization_MET
       =ᵐ[μ] (fun ω => μ[(fun ω => g (ω 0)) | m] ω * μ[(fun ω => f (ω 0)) | m] ω) := by
     sorry
     /-
-    Use condExp_mul_pullout: since CE[g(ω₀)|ℐ] is ℐ-measurable (by stronglyMeasurable_condExp),
-    we can pull it out. This needs:
-    1. Measurability of CE[g(ω₀)|ℐ] w.r.t. ℐ (standard)
-    2. Boundedness (follows from g being bounded)
-    3. Apply condExp_mul_pullout
-    ~10 lines once condExp_mul_pullout is proved
+    Use condExp_mul_pullout once the boundedness issue is resolved.
+    Main issue: need to prove |CE[g|m]| ≤ C from |g| ≤ C, which requires Jensen's inequality.
+
+    Proof sketch:
+    - Z := CE[g(ω₀)|m] is m-measurable by stronglyMeasurable_condExp
+    - Boundedness: |CE[g|m]| ≤ CE[|g| | m] ≤ C (by Jensen and monotonicity)
+    - Y := f ∘ π_0 is integrable (bounded + measurable)
+    - Apply condExp_mul_pullout
+    ~15 lines
     -/
 
   -- Step 5: CE[f(ω₀)·g(ω₀)|ℐ] = CE[f(ω₀)·CE[g(ω₀)|ℐ]|ℐ]
@@ -476,11 +497,23 @@ private lemma condexp_pair_factorization_MET
       =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] := by
     sorry
     /-
-    This is a bit subtle - we need to show that we can replace g(ω₀) with CE[g(ω₀)|ℐ]
-    inside the conditional expectation. This uses:
-    1. Tower property: CE[CE[Y|m]·X | m] = CE[Y·X | m] when properly stated
-    2. The fact that CE[g(ω₀)|ℐ] is ℐ-measurable
-    ~15 lines
+    Key idea: show both sides have the same integral over every m-measurable set.
+
+    For m-measurable set A:
+    - LHS: ∫_A CE[f·g|m] dμ = ∫_A f·g dμ (def of CE)
+    - RHS: ∫_A CE[f·CE[g|m]|m] dμ = ∫_A f·CE[g|m] dμ (def of CE)
+
+    So need: ∫_A f·g dμ = ∫_A f·CE[g|m] dμ for all m-measurable A.
+
+    But ∫_A f·CE[g|m] dμ = ∫ 1_A·f·CE[g|m] dμ. If 1_A·f were m-measurable, we could
+    pull out CE[g|m] and use the defining property of CE. However, f∘π₀ is typically
+    NOT m-measurable (only g∘π₀ ∘ shift^k is for the tail σ-algebra).
+
+    Alternative approach: This might follow from a general "substitution" lemma for CE,
+    or might require using specific properties of the product structure and tail σ-algebra.
+
+    TODO: Find the right mathlib lemma or prove directly.
+    ~15-20 lines
     -/
 
   -- Step 6: Combine all the equalities

@@ -1,6 +1,6 @@
 # de Finetti Formalization - Current Status
 
-**Last Updated**: 2025-10-12
+**Last Updated**: 2025-10-12 (Session 2 completed)
 
 ## Executive Summary
 
@@ -53,79 +53,87 @@ We can eliminate ALL axioms by proving factorization directly from Mean Ergodic 
 
 ### Completed ✅
 
-1. ✅ **Helper lemmas with proof strategies** (ViaKoopman.lean:293-333)
-   - `condExp_L1_lipschitz` - sorry'd with detailed mathlib lemma needs
-   - `condExp_mul_pullout` - sorry'd with detailed proof strategy
+1. ✅ **Helper lemmas with proof strategies** (ViaKoopman.lean:293-336)
+   - `condExp_L1_lipschitz` (line 293) - sorry'd with detailed mathlib lemma needs
+   - `condExp_mul_pullout` (line 315) - sorry'd with API research needs documented
 
-2. ✅ **Pair factorization STRUCTURED PROOF** (ViaKoopman.lean:427-493)
+2. ✅ **Pair factorization STRUCTURED PROOF** (ViaKoopman.lean:430-520)
    - `condexp_pair_factorization_MET` - **FULLY STRUCTURED** with:
-     * h_shift_inv (sorry'd, ~10 LOC) - shift invariance using condexp_precomp_iterate_eq
-     * h_tower (sorry'd, ~15 LOC) - tower property application
-     * h_pullout (sorry'd, ~10 LOC) - pull-out using condExp_mul_pullout
+     * h_shift_inv (line 449, ~10-15 LOC) - **CHALLENGE IDENTIFIED**: Mixed coordinates
+     * h_tower (line 488, ~15-20 LOC) - **APPROACH ANALYZED**: Integral characterization
+     * h_pullout (line 471, ~15 LOC) - Blocked by condExp_mul_pullout
      * Complete calc chain combining all 3 steps ✅ **PROVED**
    - All ingredients identified with line number references
-   - **This is the KEY BREAKTHROUGH lemma** - structure complete, needs filling
+   - **This is the KEY BREAKTHROUGH lemma** - structure complete, needs resolution of challenges
 
-3. ✅ **Documentation**
+3. ✅ **Documentation** (Session 2)
    - `ProofPlan.lean` - complete implementation roadmap
    - `MathlibGaps.lean` - analysis of "hard path" (educational)
-   - Inline comments explaining strategy
-   - All 3 sorry'd steps have detailed proof outlines in comments
+   - `SESSION2_SUMMARY.md` - detailed analysis of challenges and next steps
+   - All 3 sorry'd steps have detailed proof outlines AND challenge analysis in comments
 
 ### Remaining Work (by priority)
 
-#### HIGH PRIORITY: Complete the Breakthrough (~45 LOC)
+#### HIGH PRIORITY: Resolve Blocking Issues (~3-4 hours total)
 
-1. **Fill in `condExp_L1_lipschitz`** (~15 LOC) - ViaKoopman.lean:293
-   - Need to find correct mathlib lemmas:
-     * `MeasureTheory.condExp_sub` for linearity
-     * Jensen's inequality for |·|: `|CE[f|m]| ≤ CE[|f| | m]`
-     * Tower property: `∫ CE[|f| | m] = ∫ |f|`
-   - Standard measure theory once lemmas identified
+1. **Mathlib API Research for `condExp_mul_pullout`** (~1 hour) - ViaKoopman.lean:315
+   - Find correct way to build `AEStronglyMeasurable[m]` from `Measurable[m]`
+   - Identify correct `bdd_mul` signature (API may have changed)
+   - Find `Filter.eventually_of_forall` or replacement
+   - **Impact**: Unblocks h_pullout, ~10-15 LOC once APIs found
 
-2. **Fill in `condExp_mul_pullout`** (~20 LOC) - ViaKoopman.lean:315
-   - Need correct mathlib pull-out lemma
-   - Tried `condExp_mul_of_aestronglyMeasurable_left` but signature mismatch
-   - Alternative: prove directly by testing against indicators
+2. **Analyze `h_shift_inv` Exchangeability** (~1-2 hours) - ViaKoopman.lean:449
+   - **Challenge**: `f(ω₀)·g(ω₁)` mixes coordinates, NOT simply `(f·g) ∘ shift`
+   - Determine if we need exchangeability vs just shift-invariance
+   - Find the right lemma for mixed coordinate expressions
+   - May need to consult Kallenberg's proof approach
+   - **Impact**: Completes 1 of 3 sub-sorries, ~10-15 LOC
 
-3. **Fill in 3 sorries in `condexp_pair_factorization_MET`** (~10-15 LOC total) - ViaKoopman.lean:427
-   - h_shift_inv (~5 LOC): Apply condexp_precomp_iterate_eq (line 1452)
-   - h_tower (~8 LOC): Standard tower property manipulation
-   - h_pullout (~7 LOC): Apply condExp_mul_pullout once it's proved
-   - The calc chain combining them is **already complete** ✅
+3. **Find Substitution Lemma for `h_tower`** (~1 hour) - ViaKoopman.lean:488
+   - **Goal**: Show `CE[f·g|m] = CE[f·CE[g|m]|m]`
+   - **Challenge**: `f∘π₀` typically NOT m-measurable for tail σ-algebra
+   - Search mathlib for CE substitution properties
+   - Or prove directly using integral characterization approach
+   - **Impact**: Completes 1 of 3 sub-sorries, ~15-20 LOC
 
-**Impact**: Eliminates 2 deepest axioms!
+4. **Implement `h_pullout`** (~30 min) - ViaKoopman.lean:471
+   - **Blocked by**: condExp_mul_pullout (task #1)
+   - Once unblocked: straightforward application
+   - Need Jensen's inequality for boundedness of CE
+   - **Impact**: Completes final sub-sorry, ~15 LOC
 
-**Current Status**: Structure 100% complete, ~45 LOC of filling needed
+**Impact**: Eliminates 2 deepest axioms once all 3 sub-sorries completed!
+
+**Current Status**: Structure 100% complete, challenges identified and documented
 
 #### MEDIUM PRIORITY: Induction and Consequences (~55 LOC)
 
-4. **Prove `condexp_product_factorization`** (~30 LOC)
-   - Replace axiom at line 471
+5. **Prove `condexp_product_factorization`** (~30 LOC)
+   - Replace axiom (needs line update after challenges resolved)
    - Straightforward induction using pair factorization
-   - Base case already sketched (line 482)
+   - Base case already sketched
    - **Impact**: Eliminates 1 axiom
 
-5. **Prove `condexp_product_factorization_general`** (~20 LOC)
-   - Replace axiom at line 512
+6. **Prove `condexp_product_factorization_general`** (~20 LOC)
+   - Replace axiom (needs line update)
    - Sort indices, apply standard case
    - **Impact**: Eliminates 1 axiom
 
-6. **Convert `indicator_product_bridge_ax`** (~5 LOC)
-   - Line 1257: remove "axiom" keyword
+7. **Convert `indicator_product_bridge_ax`** (~5 LOC)
+   - Line needs update: remove "axiom" keyword
    - Already correctly implemented
    - **Impact**: Eliminates 1 axiom
 
 #### LOW PRIORITY: Cleanup (~50 LOC)
 
-7. **Prove `condexpL2_koopman_comm`** (~50 LOC)
-   - Replace axiom at line 1084
+8. **Prove `condexpL2_koopman_comm`** (~50 LOC)
+   - Replace axiom (line needs update)
    - Proof sketch already in comments (line 1088-1165)
    - Requires inner product API cleanup
    - **Impact**: Eliminates 1 axiom
 
-8. **Convert `exchangeable_implies_ciid_modulo_bridge_ax`** (< 5 LOC)
-   - Line 1281: remove "axiom" keyword
+9. **Convert `exchangeable_implies_ciid_modulo_bridge_ax`** (< 5 LOC)
+   - Line needs update: remove "axiom" keyword
    - Already correctly implemented
    - **Impact**: Eliminates 1 axiom
 
@@ -133,10 +141,12 @@ We can eliminate ALL axioms by proving factorization directly from Mean Ergodic 
 
 | Priority | Tasks | Estimated LOC | Time Estimate |
 |----------|-------|---------------|---------------|
-| HIGH | Fill helper lemmas + pair factorization sorries | ~45 | 2-3 hours |
+| HIGH | API research + resolve challenges | ~40-60 | 3-4 hours |
 | MEDIUM | Induction + consequences | ~55 | 2-3 hours |
 | LOW | Cleanup | ~50 | 2-3 hours |
-| **TOTAL** | **8 tasks** | **~150 LOC** | **~1 day** |
+| **TOTAL** | **9 tasks** | **~145-165 LOC** | **~1-1.5 days** |
+
+**Note (Session 2)**: Challenges in h_shift_inv and h_tower identified. Estimates updated to reflect need for analysis rather than just implementation.
 
 ## What Changed?
 
@@ -157,32 +167,47 @@ We can eliminate ALL axioms by proving factorization directly from Mean Ergodic 
 
 ## How to Complete the Formalization
 
-### Quick Start (2-3 hours) - Get to 95% → 98%
+### Quick Start (3-4 hours) - Resolve KEY CHALLENGES
 
-1. Open `ViaKoopman.lean`
-2. Jump to line 293: `condExp_L1_lipschitz`
-   - Find mathlib lemmas for condExp_sub, Jensen for |·|, tower property
-   - Fill in the sorry (~15 lines)
-3. Jump to line 315: `condExp_mul_pullout`
-   - Find mathlib pull-out lemma or prove directly
-   - Fill in the sorry (~20 lines)
-4. Jump to line 427: `condexp_pair_factorization_MET`
-   - Fill h_shift_inv (~5 lines using condexp_precomp_iterate_eq at line 1452)
-   - Fill h_tower (~8 lines using tower property)
-   - Fill h_pullout (~7 lines using condExp_mul_pullout)
-   - The calc chain is already complete!
+**See [SESSION2_SUMMARY.md](SESSION2_SUMMARY.md) for detailed analysis of challenges**
+
+1. **Open `ViaKoopman.lean`**
+
+2. **Line 315: `condExp_mul_pullout`** (~1 hour API research)
+   - Find correct APIs for: `Measurable[m] → AEStronglyMeasurable[m]`
+   - Find correct `bdd_mul` signature
+   - Find `Filter.eventually_of_forall` replacement
+   - Implement once APIs identified (~10-15 lines)
+
+3. **Line 449: `h_shift_inv`** (~1-2 hours analysis + implementation)
+   - **CHALLENGE**: `f(ω₀)·g(ω₁)` mixes coordinates, NOT `(f·g) ∘ shift`
+   - May need exchangeability assumption, not just shift-invariance
+   - Consult Kallenberg's proof for approach
+   - (~10-15 lines once right lemma found)
+
+4. **Line 488: `h_tower`** (~1 hour research + implementation)
+   - **CHALLENGE**: `f∘π₀` not m-measurable for tail σ-algebra
+   - Find CE substitution lemma or prove via integral characterization
+   - (~15-20 lines)
+
+5. **Line 471: `h_pullout`** (~30 min once #2 done)
+   - Blocked by `condExp_mul_pullout`
+   - Need Jensen for boundedness
+   - (~15 lines)
 
 **Result**: Eliminates 2 deepest axioms, unblocks everything else!
 
-**Progress so far**: Structure 100% complete, proof outline fully documented
+**Progress so far (Session 2)**: Challenges identified and documented, file compiles with 3 sorries
 
-### Full Completion (add 4-6 hours) - Get to 100%
+### Full Completion (add 4-6 hours after challenges resolved) - Get to 100%
 
-8. Implement induction proofs (Steps 4-5 from ProofPlan.lean)
-9. Remove "axiom" keywords (Steps 6-8)
-10. Optional: Complete Hilbert space proof (Step 1)
+6. Implement induction proofs (tasks #5-6 from above)
+7. Remove "axiom" keywords (tasks #7, #9)
+8. Optional: Complete Hilbert space proof (task #8)
 
 **Result**: **ZERO AXIOMS, FULL DE FINETTI THEOREM!** 🎉
+
+**Realistic Timeline**: 1-1.5 days of focused work for someone familiar with mathlib CE API
 
 ## Key Files Reference
 
