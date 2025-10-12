@@ -601,7 +601,15 @@ lemma indicator_product_bridge_ax
       constructor
       · exact ENNReal.toReal_nonneg
       · have : (ν (μ := μ) ω) (B i) ≤ 1 := by
-          sorry -- TODO: have := measure_mono (show B i ⊆ Set.univ from Set.subset_univ _)
+          have h_le : (ν (μ := μ) ω) (B i) ≤ (ν (μ := μ) ω) Set.univ := by
+            apply measure_mono
+            exact Set.subset_univ _
+          haveI : IsProbabilityMeasure (ν (μ := μ) ω) := by
+            unfold ν
+            exact IsMarkovKernel.isProbabilityMeasure ω
+          have h_univ : (ν (μ := μ) ω) Set.univ = 1 := measure_univ
+          rw [h_univ] at h_le
+          exact h_le
         have : ((ν (μ := μ) ω) (B i)).toReal ≤ (1 : ENNReal).toReal := by
           apply ENNReal.toReal_mono
           · simp
@@ -699,17 +707,20 @@ lemma indicator_product_bridge_ax
   -- Convert both sides to ENNReal and conclude
   calc ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
       = ∫⁻ ω, ENNReal.ofReal (F ω) ∂μ := by
-          sorry -- TODO: congr; funext ω; simp [F]
+          sorry -- TODO: congr; funext ω doesn't complete - needs unfolding
     _ = ENNReal.ofReal (∫ ω, F ω ∂μ) := hL
     _ = ENNReal.ofReal (∫ ω, G ω ∂μ) := by rw [h_eq_integrals]
     _ = ∫⁻ ω, ENNReal.ofReal (G ω) ∂μ := by
           rw [ofReal_integral_eq_lintegral_ofReal hG_int hG_nonneg]
     _ = ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal (((ν (μ := μ) ω) (B i)).toReal) ∂μ := by
-          sorry -- TODO: congr; funext ω; simp [G]
+          sorry -- TODO: congr; funext ω doesn't complete - needs unfolding
     _ = ∫⁻ ω, ∏ i : Fin m, (ν (μ := μ) ω) (B i) ∂μ := by
           congr; funext ω
           congr; funext i
-          sorry -- TODO: exact ENNReal.ofReal_toReal (measure_ne_top _ _) -- needs IsFiniteMeasure instance
+          haveI : IsProbabilityMeasure (ν (μ := μ) ω) := by
+            unfold ν
+            exact IsMarkovKernel.isProbabilityMeasure ω
+          exact ENNReal.ofReal_toReal (measure_ne_top _ _)
 
 /-- **Final bridge axiom** to the `ConditionallyIID` structure.
 
@@ -752,13 +763,14 @@ lemma exchangeable_implies_ciid_modulo_bridge_ax
 
   -- Step 4: Use CommonEnding.conditional_iid_from_directing_measure
   -- or directly construct the ConditionallyIID structure
+  use ν (μ := μ)
   constructor
-  · -- Provide the directing measure ν
-    sorry -- TODO: exact ν μ
+  · -- Show ν gives probability measures
+    intro ω
+    unfold ν
+    exact IsMarkovKernel.isProbabilityMeasure ω
   · -- Show it satisfies the product property via indicator_product_bridge_ax
-    -- TODO: intro m k B hB_meas
-    -- TODO: exact indicator_product_bridge_ax μ hσ m k B hB_meas
-    sorry
+    sorry -- TODO: Need to prove the Measure.map = μ.bind property
 
 namespace MeasureTheory
 
@@ -1821,8 +1833,7 @@ private lemma integrable_of_bounded {Ω : Type*} [MeasurableSpace Ω] {μ : Meas
     [IsFiniteMeasure μ] {f : Ω → ℝ} (hf : Measurable f) (hbd : ∃ C, ∀ ω, |f ω| ≤ C) :
     Integrable f μ := by
   obtain ⟨C, hC⟩ := hbd
-  sorry -- TODO: use HasFiniteIntegral.of_bounded pattern
-  -- exact MeasureTheory.integrable_of_bounded hf ⟨C, hC⟩
+  exact ⟨hf.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hC)⟩
 
 /-- **Kernel integral factorization for bounded measurable functions**.
 
