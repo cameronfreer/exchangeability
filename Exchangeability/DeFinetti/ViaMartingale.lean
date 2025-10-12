@@ -9,6 +9,7 @@ import Mathlib.Probability.Martingale.Basic
 import Exchangeability.Contractability
 import Exchangeability.ConditionallyIID
 import Exchangeability.Probability.CondExp
+import Exchangeability.Probability.Martingale
 
 /-!
 # de Finetti's Theorem via Reverse Martingales

@@ -4,7 +4,6 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
 import Mathlib.Probability.Martingale.Basic
-import Mathlib.Order.Filter.AtTopBot
 
 /-!
 # Martingale Convergence for De Finetti
@@ -76,7 +75,7 @@ the sequence converges a.e. to the conditional expectation with respect to
 the tail σ-algebra 𝔽_∞ := ⋂ₙ 𝔽ₙ.
 
 **Axiomatized** pending mathlib development of martingale convergence theory. -/
-axiom reverse_martingale_convergence_ae
+theorem reverse_martingale_convergence_ae
     {ι : Type*} [Preorder ι] [IsDirected ι (· ≥ ·)]
     [IsProbabilityMeasure μ]
     {𝔽 : ι → MeasurableSpace Ω}
@@ -88,13 +87,10 @@ axiom reverse_martingale_convergence_ae
     (h_martingale : ∀ i j, i ≤ j →
       μ[M j | 𝔽 i] =ᵐ[μ] M i)
     (f₀ : Ω → ℝ) (h_f₀_meas : Measurable f₀) (h_f₀_int : Integrable f₀ μ) :
-    ∃ M_∞ : Ω → ℝ,
-      -- 1. M_∞ is tail-measurable
-      StronglyMeasurable[⨅ i, 𝔽 i] M_∞ ∧
-      -- 2. M_∞ equals the conditional expectation on tail
+    ∃ M_∞ : Ω → ℝ, StronglyMeasurable[⨅ i, 𝔽 i] M_∞ ∧
       (μ[f₀ | ⨅ i, 𝔽 i] =ᵐ[μ] M_∞) ∧
-      -- 3. Mₙ → M_∞ a.s.
-      (∀ᵐ ω ∂μ, Tendsto (fun i => M i ω) atTop (𝓝 (M_∞ ω)))
+      (∀ᵐ ω ∂μ, Tendsto (fun i => M i ω) atTop (𝓝 (M_∞ ω))) := by
+  sorry
 
 /-- **Simplified version for ℕ-indexed reverse martingales.**
 
@@ -110,8 +106,7 @@ axiom reverse_martingale_convergence_nat
     (h_martingale : ∀ m n, m ≤ n →
       μ[M n | 𝔽 m] =ᵐ[μ] M m)
     (f₀ : Ω → ℝ) (h_f₀_int : Integrable f₀ μ) :
-    ∃ M_∞ : Ω → ℝ,
-      (μ[f₀ | ⨅ n, 𝔽 n] =ᵐ[μ] M_∞) ∧
+    ∃ M_∞ : Ω → ℝ, (μ[f₀ | ⨅ n, 𝔽 n] =ᵐ[μ] M_∞) ∧
       (∀ᵐ ω ∂μ, Tendsto (fun n => M n ω) atTop (𝓝 (M_∞ ω)))
 
 /-! ## Application to De Finetti
