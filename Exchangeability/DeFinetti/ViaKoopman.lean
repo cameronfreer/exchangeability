@@ -2583,14 +2583,17 @@ private lemma condexp_pair_factorization
         =ᵐ[μ]
       (fun ω => ∫ y, f (y 0) * g (y 1)
           ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) := by
-    sorry -- TODO: needs Integrable proof, not just Measurable
-    /-
-    refine ProbabilityTheory.condExp_ae_eq_integral_condExpKernel
-      (μ := μ) (m := shiftInvariantSigma (α := α))
-      (f := fun ω => f (ω 0) * g (ω 1)) ?hmeas
-    exact (hf_meas.comp (measurable_pi_apply 0)).mul
-          (hg_meas.comp (measurable_pi_apply 1))
-    -/
+    -- Prove integrability from boundedness
+    have h_meas : Measurable (fun (ω : Ω[α]) => f (ω 0) * g (ω 1)) :=
+      (hf_meas.comp (measurable_pi_apply 0)).mul (hg_meas.comp (measurable_pi_apply 1))
+    have h_int : Integrable (fun (ω : Ω[α]) => f (ω 0) * g (ω 1)) μ := by
+      obtain ⟨C_f, hC_f⟩ := hf_bd
+      obtain ⟨C_g, hC_g⟩ := hg_bd
+      refine MeasureTheory.integrable_of_bounded h_meas ⟨C_f * C_g, fun ω => ?_⟩
+      calc |f (ω 0) * g (ω 1)|
+          = |f (ω 0)| * |g (ω 1)| := abs_mul _ _
+        _ ≤ C_f * C_g := mul_le_mul (hC_f _) (hC_g _) (abs_nonneg _) (by linarith [abs_nonneg (f (ω 0)), hC_f (ω 0)])
+    exact condExp_eq_kernel_integral (shiftInvariantSigma_le (α := α)) h_int
   -- kernel-level independence of coord 0 and 1 (axiom)
   -- NOTE: Can't state Kernel.IndepFun type due to autoparam issues with condExpKernel
   have h_indep12 : True := by trivial
