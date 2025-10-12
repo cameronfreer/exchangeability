@@ -925,21 +925,55 @@ lemma l2_bound_two_windows_uniform
     have h_p_split : ∑ i : Fin (2*k), p i * ξ i ω
         = ∑ i ∈ Finset.filter (fun (i : Fin (2*k)) => i.val < k) Finset.univ,
             (1/(k:ℝ)) * f (X (n + i.val + 1) ω) := by
-      sorry -- Sum over first k indices with weight 1/k
+      -- Split sum into two parts based on i.val < k
+      rw [← Finset.sum_filter_add_sum_filter_not (s := Finset.univ) (p := fun i => i.val < k)]
+      -- The second part (i.val ≥ k) sums to 0 since p i = 0 there
+      have h_zero : ∑ i ∈ Finset.filter (fun i => ¬(i.val < k)) Finset.univ, p i * ξ i ω = 0 := by
+        apply Finset.sum_eq_zero
+        intro i hi
+        simp [p]
+        have : ¬(i.val < k) := Finset.mem_filter.mp hi |>.2
+        simp [this]
+      rw [h_zero, add_zero]
+      -- On the first part (i.val < k), we have p i = 1/k and ξ i = f(X_{n+i+1})
+      apply Finset.sum_congr rfl
+      intro i hi
+      have hi_lt : i.val < k := Finset.mem_filter.mp hi |>.2
+      simp [p, ξ, hi_lt]
     have h_q_split : ∑ i : Fin (2*k), q i * ξ i ω
         = ∑ i ∈ Finset.filter (fun (i : Fin (2*k)) => ¬(i.val < k)) Finset.univ,
             (1/(k:ℝ)) * f (X (m + (i.val - k) + 1) ω) := by
-      sorry -- Sum over last k indices with weight 1/k
+      -- Split sum into two parts based on i.val < k
+      rw [← Finset.sum_filter_add_sum_filter_not (s := Finset.univ) (p := fun i => i.val < k)]
+      -- The first part (i.val < k) sums to 0 since q i = 0 there
+      have h_zero : ∑ i ∈ Finset.filter (fun i => i.val < k) Finset.univ, q i * ξ i ω = 0 := by
+        apply Finset.sum_eq_zero
+        intro i hi
+        simp [q]
+        have : i.val < k := Finset.mem_filter.mp hi |>.2
+        simp [this]
+      rw [h_zero, zero_add]
+      -- On the second part (i.val ≥ k), we have q i = 1/k and ξ i = f(X_{m+(i-k)+1})
+      apply Finset.sum_congr rfl
+      intro i hi
+      have hi_ge : ¬(i.val < k) := Finset.mem_filter.mp hi |>.2
+      simp [q, ξ, hi_ge]
     rw [h_p_split, h_q_split]
     -- Now need to show these filtered sums equal the original Fin k sums
     have h_bij_n : ∑ i ∈ Finset.filter (fun i : Fin (2*k) => i.val < k) Finset.univ,
                      (1/(k:ℝ)) * f (X (n + i.val + 1) ω)
                  = (1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) := by
-      sorry -- Bijection between filtered indices and Fin k
+      rw [Finset.mul_sum]
+      -- Establish bijection between {i : Fin (2k) | i < k} and Fin k
+      -- The bijection is i ↦ ⟨i.val, proof⟩
+      sorry -- TODO: Use Finset.sum_bij or similar to establish the bijection
     have h_bij_m : ∑ i ∈ Finset.filter (fun i : Fin (2*k) => ¬(i.val < k)) Finset.univ,
                      (1/(k:ℝ)) * f (X (m + (i.val - k) + 1) ω)
                  = (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω) := by
-      sorry -- Bijection between filtered indices and Fin k
+      rw [Finset.mul_sum]
+      -- Establish bijection between {i : Fin (2k) | i ≥ k} and Fin k
+      -- The bijection is i ↦ ⟨i.val - k, proof⟩
+      sorry -- TODO: Use Finset.sum_bij to reindex from i.val-k to j.val
     rw [h_bij_n, h_bij_m]
 
   -- Prove p and q are probability distributions
