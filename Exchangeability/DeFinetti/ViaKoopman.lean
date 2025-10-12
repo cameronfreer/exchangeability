@@ -601,9 +601,15 @@ lemma indicator_product_bridge_ax
       constructor
       · exact ENNReal.toReal_nonneg
       · have : (ν (μ := μ) ω) (B i) ≤ 1 := by
-          have := measure_mono (show B i ⊆ Set.univ from Set.subset_univ _)
-          simp at this
-          exact this
+          have h_le : (ν (μ := μ) ω) (B i) ≤ (ν (μ := μ) ω) Set.univ := by
+            apply measure_mono
+            exact Set.subset_univ _
+          haveI : IsProbabilityMeasure (ν (μ := μ) ω) := by
+            unfold ν
+            exact IsMarkovKernel.isProbabilityMeasure ω
+          have h_univ : (ν (μ := μ) ω) Set.univ = 1 := measure_univ
+          rw [h_univ] at h_le
+          exact h_le
         have : ((ν (μ := μ) ω) (B i)).toReal ≤ (1 : ENNReal).toReal := by
           apply ENNReal.toReal_mono
           · simp
@@ -701,16 +707,19 @@ lemma indicator_product_bridge_ax
   -- Convert both sides to ENNReal and conclude
   calc ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
       = ∫⁻ ω, ENNReal.ofReal (F ω) ∂μ := by
-          congr; funext ω; simp [F]
+          sorry -- TODO: congr; funext ω doesn't complete - needs unfolding
     _ = ENNReal.ofReal (∫ ω, F ω ∂μ) := hL
     _ = ENNReal.ofReal (∫ ω, G ω ∂μ) := by rw [h_eq_integrals]
     _ = ∫⁻ ω, ENNReal.ofReal (G ω) ∂μ := by
           rw [ofReal_integral_eq_lintegral_ofReal hG_int hG_nonneg]
     _ = ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal (((ν (μ := μ) ω) (B i)).toReal) ∂μ := by
-          congr; funext ω; simp [G]
+          sorry -- TODO: congr; funext ω doesn't complete - needs unfolding
     _ = ∫⁻ ω, ∏ i : Fin m, (ν (μ := μ) ω) (B i) ∂μ := by
           congr; funext ω
           congr; funext i
+          haveI : IsProbabilityMeasure (ν (μ := μ) ω) := by
+            unfold ν
+            exact IsMarkovKernel.isProbabilityMeasure ω
           exact ENNReal.ofReal_toReal (measure_ne_top _ _)
 
 /-- **Final bridge axiom** to the `ConditionallyIID` structure.
@@ -754,13 +763,14 @@ lemma exchangeable_implies_ciid_modulo_bridge_ax
 
   -- Step 4: Use CommonEnding.conditional_iid_from_directing_measure
   -- or directly construct the ConditionallyIID structure
+  use ν (μ := μ)
   constructor
-  · -- Provide the directing measure ν
-    sorry -- TODO: exact ν μ
+  · -- Show ν gives probability measures
+    intro ω
+    unfold ν
+    exact IsMarkovKernel.isProbabilityMeasure ω
   · -- Show it satisfies the product property via indicator_product_bridge_ax
-    -- TODO: intro m k B hB_meas
-    -- TODO: exact indicator_product_bridge_ax μ hσ m k B hB_meas
-    sorry
+    sorry -- TODO: Need to prove the Measure.map = μ.bind property
 
 namespace MeasureTheory
 
@@ -849,6 +859,8 @@ lemma quantize_tendsto {C x : ℝ} (hC : 0 ≤ C) :
   intro δ hδ
   -- We need: eventually in 𝓝[>] 0, dist (quantize C ε x) v < δ
   -- Since |quantize - v| ≤ ε, we need ε < δ
+  sorry -- TODO: needs nhdsWithin (Set.Ioi 0) membership, not just 𝓝 0
+  /-
   rw [Filter.eventually_iff]
   refine Filter.mem_of_superset (Metric.ball_mem_nhds 0 hδ) ?_
   intro ε hε_ball
@@ -860,6 +872,7 @@ lemma quantize_tendsto {C x : ℝ} (hC : 0 ≤ C) :
   · -- ε ≤ 0, but we're in nhdsWithin (Set.Ioi 0), so this doesn't happen
     exfalso
     exact hε_pos (Metric.mem_ball.mp hε_ball).2
+  -/
 
 end MeasureTheory
 
@@ -1054,6 +1067,8 @@ we show `P(Uf) = Pf` where `P = condexpL2` and `U = koopman shift`:
 -/
 lemma condexpL2_koopman_comm (f : Lp ℝ 2 μ) :
     condexpL2 (μ := μ) (koopman shift hσ f) = condexpL2 (μ := μ) f := by
+  sorry
+  /-
   classical
   -- Abbreviations
   let U := koopman shift hσ
@@ -1130,6 +1145,7 @@ lemma condexpL2_koopman_comm (f : Lp ℝ 2 μ) :
     exact norm_eq_zero.mp this
   -- Conclude
   exact sub_eq_zero.mp this
+  -/
 
 /-- Specialization to cylinder functions: the core case for de Finetti. -/
 theorem birkhoffCylinder_tendsto_condexp
@@ -1817,7 +1833,7 @@ private lemma integrable_of_bounded {Ω : Type*} [MeasurableSpace Ω] {μ : Meas
     [IsFiniteMeasure μ] {f : Ω → ℝ} (hf : Measurable f) (hbd : ∃ C, ∀ ω, |f ω| ≤ C) :
     Integrable f μ := by
   obtain ⟨C, hC⟩ := hbd
-  exact MeasureTheory.integrable_of_bounded hf ⟨C, hC⟩
+  exact ⟨hf.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hC)⟩
 
 /-- **Kernel integral factorization for bounded measurable functions**.
 
@@ -1834,7 +1850,7 @@ lemma Kernel.IndepFun.integral_mul
     (hX_bd : ∃ C, ∀ ω, |X ω| ≤ C) (hY_bd : ∃ C, ∀ ω, |Y ω| ≤ C) :
     ∀ᵐ a ∂μ, ∫ ω, X ω * Y ω ∂(κ a) = (∫ ω, X ω ∂(κ a)) * (∫ ω, Y ω ∂(κ a)) := by
   -- Direct application of the axiom
-  exact Kernel.IndepFun.ae_measure_indepFun hXY
+  sorry -- TODO: exact Kernel.IndepFun.ae_measure_indepFun hXY -- type mismatch
 
 /-! ### OLD PROOF (kept for reference - can be moved to AxiomsForDeFinetti to prove the axiom)
 
@@ -2583,20 +2599,28 @@ private lemma condexp_pair_factorization
         =ᵐ[μ]
       (fun ω => ∫ y, f (y 0) * g (y 1)
           ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) := by
+    sorry -- TODO: needs Integrable proof, not just Measurable
+    /-
     refine ProbabilityTheory.condExp_ae_eq_integral_condExpKernel
       (μ := μ) (m := shiftInvariantSigma (α := α))
       (f := fun ω => f (ω 0) * g (ω 1)) ?hmeas
     exact (hf_meas.comp (measurable_pi_apply 0)).mul
           (hg_meas.comp (measurable_pi_apply 1))
+    -/
   -- kernel-level independence of coord 0 and 1 (axiom)
+  -- NOTE: Can't state Kernel.IndepFun type due to autoparam issues with condExpKernel
+  have h_indep12 : True := by trivial
+  /-
   have h_indep12 :
       Kernel.IndepFun (fun y : Ω[α] => f (y 0))
                       (fun y : Ω[α] => g (y 1))
                       (condExpKernel μ (shiftInvariantSigma (α := α))) μ := by
+    sorry -- TODO: Kernel.IndepFun has autoparam issues with condExpKernel
     -- compose `condindep_pair_given_tail` with measurable `f`, `g`
     -- Apply Kernel.IndepFun.comp to compose with measurable functions
     have base := condindep_pair_given_tail μ hσ
     exact base.comp hf_meas hg_meas
+    -/
   -- factorize the kernel integral a.e.
   have h_factor :
       (fun ω => ∫ y, f (y 0) * g (y 1)
@@ -2606,6 +2630,8 @@ private lemma condexp_pair_factorization
           ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) *
         (∫ y, g (y 1)
           ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω))) := by
+    sorry -- TODO: needs h_indep12 of type Kernel.IndepFun, but can't state that type
+    /-
     -- boundedness for `Kernel.IndepFun.integral_mul`
     have hf_bd' : ∃ C, ∀ ω, |(fun y : Ω[α] => f (y 0)) ω| ≤ C :=
       let ⟨C, hC⟩ := hf_bd; ⟨C, fun ω => hC (ω 0)⟩
@@ -2615,6 +2641,7 @@ private lemma condexp_pair_factorization
       (hf_meas.comp (measurable_pi_apply 0))
       (hg_meas.comp (measurable_pi_apply 1))
       hf_bd' hg_bd'
+    -/
   -- replace both marginals by integrals against ν using your proven lemma
   have h0 := identicalConditionalMarginals_integral (μ := μ) (α := α) hσ 0 hf_meas hf_bd
   have h1 := identicalConditionalMarginals_integral (μ := μ) (α := α) hσ 1 hg_meas hg_bd
@@ -2717,7 +2744,7 @@ theorem condexp_product_factorization
     (hciid : True) :
     μ[fun ω => ∏ k, fs k (ω (k : ℕ)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω)) :=
-  condexp_product_factorization_ax hσ m fs hmeas hbd hciid
+  condexp_product_factorization_ax μ hσ m fs hmeas hbd hciid
   /-
   · -- Inductive step: split product into (product of first m factors) * (last factor)
     -- Reindex: product over Fin (m + 1) splits into product over Fin m and the m-th term
@@ -3030,7 +3057,7 @@ theorem indicator_product_bridge
     (hB_meas : ∀ i, MeasurableSet (B i)) :
     ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
       = ∫⁻ ω, ∏ i : Fin m, (ν (μ := μ) ω) (B i) ∂μ :=
-  indicator_product_bridge_ax hσ m k B hB_meas
+  indicator_product_bridge_ax μ hσ m k B hB_meas
 
 /-! ### Exchangeable implies ConditionallyIID (modulo the bridge axiom)
 
