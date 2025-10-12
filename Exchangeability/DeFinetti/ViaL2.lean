@@ -2597,9 +2597,27 @@ lemma cdf_from_alpha_bounds
     (ω : Ω) (t : ℝ) :
     0 ≤ cdf_from_alpha X hX_contract hX_meas hX_L2 ω t
     ∧ cdf_from_alpha X hX_contract hX_meas hX_L2 ω t ≤ 1 := by
-  -- iInf of values in [0,1] stays in [0,1]
-  -- TODO: formalize iInf bounds preservation
-  sorry
+  -- First establish that the index set is nonempty
+  have hne : Nonempty {q : ℚ // t < (q : ℝ)} := by
+    obtain ⟨q, hq1, _⟩ := exists_rat_btwn (lt_add_one t)
+    exact ⟨⟨q, hq1⟩⟩
+  constructor
+  · -- Lower bound: iInf ≥ 0
+    -- Each alphaIic value is ≥ 0, so their infimum is ≥ 0
+    refine le_ciInf fun q => ?_
+    exact (alphaIic_bound X hX_contract hX_meas hX_L2 (q : ℝ) ω).1
+  · -- Upper bound: iInf ≤ 1
+    -- Pick any q with t < q, then iInf ≤ alphaIic q ≤ 1
+    have hbdd : BddBelow (Set.range fun (q : {q : ℚ // t < (q : ℝ)}) =>
+        alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω) := by
+      use 0
+      intro y ⟨q, hq⟩
+      rw [← hq]
+      exact (alphaIic_bound X hX_contract hX_meas hX_L2 (q : ℝ) ω).1
+    calc cdf_from_alpha X hX_contract hX_meas hX_L2 ω t
+        = ⨅ (q : {q : ℚ // t < (q : ℝ)}), alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω := rfl
+      _ ≤ alphaIic X hX_contract hX_meas hX_L2 (hne.some : ℝ) ω := ciInf_le hbdd hne.some
+      _ ≤ 1 := (alphaIic_bound X hX_contract hX_meas hX_L2 (hne.some : ℝ) ω).2
 
 /-- F(ω,t) → 0 as t → -∞, and F(ω,t) → 1 as t → +∞. -/
 lemma cdf_from_alpha_limits
