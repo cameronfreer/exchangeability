@@ -718,14 +718,10 @@ lemma condIndep_of_indicator_condexp_eq
       hf1_int
   -- Chain the equalities into the product formula.
   -- Goal: μ[(f1 * f2) | mG] =ᵐ[μ] μ[f1 | mG] * μ[f2 | mG]
-  -- Have:
-  --   h_tower:        μ[(f1 * f2) | mG] =ᵐ[μ] μ[μ[(f1 * f2) | mF ⊔ mG] | mG]
-  --   h_pull_middle:  μ[(f1 * f2) | mF ⊔ mG] =ᵐ[μ] f1 * μ[f2 | mF ⊔ mG]
-  --   h_middle_to_G:  μ[(f1 * f2) | mF ⊔ mG] =ᵐ[μ] f1 * μ[f2 | mG]
-  --   h_pull_outer:   μ[f1 * μ[f2 | mG] | mG] =ᵐ[μ] μ[f1 | mG] * μ[f2 | mG]
-  -- Need to combine: h_tower.trans (condExp_congr_ae (h_middle_to_G.trans h_pull_outer))
-  -- Issue: Type mismatch in EventuallyEq.trans composition
-  sorry  -- TODO: Fix EventuallyEq chaining (the logic is correct, just type inference issues)
+  -- Strategy: h_tower → condExp_congr_ae h_middle_to_G → h_pull_outer
+  -- The logic: Use tower property, substitute middle expression, then apply pull-out
+  -- Issue: Type inference fails on EventuallyEq.trans composition with condExp_congr_ae
+  sorry
 
 /-! ### Bounded Martingales and L² (NOT USED) -/
 
@@ -1140,11 +1136,8 @@ If `mF` and `mH` are conditionally independent given `m`, then for
 μ[(1_{A∩B}) | m] = (μ[1_A | m]) · (μ[1_B | m])   a.e.
 ```
 This is a direct consequence of `ProbabilityTheory.condIndep_iff` (set version).
--/
-/-- **Product formula for conditional independence**: Conditional expectation of product
-equals product of conditional expectations.
 
-This could be proven using `condIndep_of_indicator_condexp_eq` above (which has the reverse
+NOTE: This could be proven using `condIndep_of_indicator_condexp_eq` above (which has the reverse
 implication and is nearly complete - just needs EventuallyEq chaining fix).
 -/
 axiom condExp_indicator_mul_indicator_of_condIndep
