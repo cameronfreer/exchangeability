@@ -963,17 +963,15 @@ lemma l2_bound_two_windows_uniform
     have h_bij_n : ∑ i ∈ Finset.filter (fun i : Fin (2*k) => i.val < k) Finset.univ,
                      (1/(k:ℝ)) * f (X (n + i.val + 1) ω)
                  = (1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) := by
-      rw [Finset.mul_sum]
-      -- Establish bijection between {i : Fin (2k) | i < k} and Fin k
-      -- The bijection is i ↦ ⟨i.val, proof⟩
-      sorry -- TODO: Use Finset.sum_bij or similar to establish the bijection
+      -- For i : Fin (2k) with i.val < k, we have n + i.val + 1 ranges over same values
+      -- as n + j.val + 1 for j : Fin k, so the sums are equal
+      sorry  -- TODO: Bijection {i : Fin (2k) | i.val < k} ↔ Fin k
     have h_bij_m : ∑ i ∈ Finset.filter (fun i : Fin (2*k) => ¬(i.val < k)) Finset.univ,
                      (1/(k:ℝ)) * f (X (m + (i.val - k) + 1) ω)
                  = (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω) := by
-      rw [Finset.mul_sum]
-      -- Establish bijection between {i : Fin (2k) | i ≥ k} and Fin k
-      -- The bijection is i ↦ ⟨i.val - k, proof⟩
-      sorry -- TODO: Use Finset.sum_bij to reindex from i.val-k to j.val
+      -- For i : Fin (2k) with i.val ≥ k, we have m + (i.val - k) + 1 ranges over
+      -- same values as m + j.val + 1 for j : Fin k, so the sums are equal
+      sorry  -- TODO: Bijection {i : Fin (2k) | i.val ≥ k} ↔ Fin k via i ↦ i - k
     rw [h_bij_n, h_bij_m]
 
   -- Prove p and q are probability distributions
@@ -999,9 +997,9 @@ lemma l2_bound_two_windows_uniform
             simp [Finset.sum_const]
       _ = k * (1/(k:ℝ)) := by
             congr 1
-            -- Count: exactly k indices satisfy i.val < k in Fin (2*k)
-            -- These are precisely {0, 1, ..., k-1}
-            sorry
+            -- Count: exactly k indices in Fin (2*k) satisfy i.val < k
+            -- This is a basic fact: among {0,...,2k-1}, exactly {0,...,k-1} satisfy < k
+            sorry  -- TODO: Prove cardinality of {i : Fin (2k) | i.val < k} = k
       _ = 1 := by
             have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
             field_simp [ne_of_gt hk_pos]
@@ -1035,9 +1033,9 @@ lemma l2_bound_two_windows_uniform
             simp [Finset.sum_const]
       _ = k * (1/(k:ℝ)) := by
             congr 1
-            -- Count: exactly k indices satisfy i.val ≥ k in Fin (2*k)
-            -- These are precisely {k, k+1, ..., 2k-1}
-            sorry
+            -- Count: exactly k indices in Fin (2*k) satisfy i.val ≥ k
+            -- This is a basic fact: among {0,...,2k-1}, exactly {k,...,2k-1} satisfy ≥ k
+            sorry  -- TODO: Prove cardinality of {i : Fin (2k) | i.val ≥ k} = k
       _ = 1 := by
             have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
             field_simp [ne_of_gt hk_pos]
