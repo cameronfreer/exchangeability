@@ -700,7 +700,15 @@ lemma condIndep_of_indicator_condexp_eq
     condExp_mul_of_aestronglyMeasurable_left
       (μ := μ) (m := mF ⊔ mG)
       hf1_aesm
-      (by sorry : Integrable (fun ω => f1 ω * f2 ω) μ)  -- Product of integrable indicators
+      (by
+        -- f1 * f2 = indicator of tF ∩ tH
+        show Integrable (fun ω => f1 ω * f2 ω) μ
+        have : (fun ω => f1 ω * f2 ω) = (tF ∩ tH).indicator (fun _ => (1 : ℝ)) := by
+          ext ω
+          simp [f1, f2, Set.indicator_apply]
+          by_cases h1 : ω ∈ tF <;> by_cases h2 : ω ∈ tH <;> simp [h1, h2]
+        rw [this]
+        exact (integrable_const (1 : ℝ)).indicator (MeasurableSet.inter (hmF _ htF) (hmH _ htH)))
       hf2_int
   -- Substitute the projection property to drop `mF` at the middle.
   have h_middle_to_G :
@@ -714,7 +722,15 @@ lemma condIndep_of_indicator_condexp_eq
     condExp_mul_of_aestronglyMeasurable_right
       (μ := μ) (m := mG)
       (stronglyMeasurable_condExp (μ := μ) (m := mG) (f := f2)).aestronglyMeasurable
-      (by sorry : Integrable (fun ω => f1 ω * μ[f2 | mG] ω) μ)  -- Product of indicator and condExp
+      (by
+        -- f1 is indicator of tF, so f1 * μ[f2 | mG] = indicator of tF applied to μ[f2 | mG]
+        show Integrable (fun ω => f1 ω * μ[f2 | mG] ω) μ
+        have : (fun ω => f1 ω * μ[f2 | mG] ω) = fun ω => tF.indicator (μ[f2 | mG]) ω := by
+          ext ω
+          simp only [f1, Set.indicator_apply]
+          by_cases h : ω ∈ tF <;> simp [h]
+        rw [this]
+        exact (integrable_condExp (μ := μ) (m := mG) (f := f2)).indicator (hmF _ htF))
       hf1_int
   -- Chain the equalities into the product formula.
   -- Goal: μ[(f1 * f2) | mG] =ᵐ[μ] μ[f1 | mG] * μ[f2 | mG]
