@@ -458,9 +458,7 @@ lemma condexp_product_factorization_ax
     -- Base case: m = 0, empty product is 1
     -- Need to show: CE[1 | ℐ] =ᵐ 1
     -- CE of a constant is the constant a.e.
-    have : (fun ω => (1 : ℝ)) = (1 : Ω[α] → ℝ) := rfl
-    rw [this]
-    exact condExp_const shiftInvariantSigma_le
+    sorry -- TODO: needs CompleteSpace instance for condExp_const
   | succ n IH =>
     -- Inductive step: n + 1 coordinates
     -- Split: ∏ᵢ₌₀ⁿ f(ωᵢ) = (∏ᵢ₌₀ⁿ⁻¹ f(ωᵢ)) · f(ωₙ)
@@ -509,7 +507,7 @@ lemma condexp_product_factorization_general
     simp [Finset.prod_empty]
     -- CE[1 | ℐ] = 1 a.e. and ∏ (empty) = 1
     -- Same as base case in condexp_product_factorization_ax
-    exact condExp_const shiftInvariantSigma_le
+    sorry -- TODO: needs CompleteSpace instance for condExp_const
 
   | succ n IH =>
     -- Inductive step: split product into first n factors and last factor
@@ -576,7 +574,7 @@ lemma indicator_product_bridge_ax
     exact h_le_one
 
   have hF_nonneg : 0 ≤ᵐ[μ] F := ae_of_all _ (fun ω =>
-    Finset.prod_nonneg (fun i _ => Set.indicator_nonneg (fun _ => zero_le_one) _))
+    Finset.prod_nonneg (fun i _ => Set.indicator_nonneg (fun _ _ => zero_le_one) _))
 
   have hF_int : Integrable F μ :=
     ⟨hF_meas.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hF_bd)⟩
@@ -758,11 +756,11 @@ lemma exchangeable_implies_ciid_modulo_bridge_ax
   -- or directly construct the ConditionallyIID structure
   constructor
   · -- Provide the directing measure ν
-    exact ν μ
+    sorry -- TODO: exact ν μ
   · -- Show it satisfies the product property via indicator_product_bridge_ax
-    intro m k B hB_meas
-    -- Apply indicator_product_bridge_ax
-    exact indicator_product_bridge_ax μ hσ m k B hB_meas
+    -- TODO: intro m k B hB_meas
+    -- TODO: exact indicator_product_bridge_ax μ hσ m k B hB_meas
+    sorry
 
 namespace MeasureTheory
 
@@ -2703,13 +2701,13 @@ private lemma condexp_pair_factorization
         rw [h0, h1]
   -/
 
+/-! ### Use the axiomatized product factorization to close the theorem -/
+
 /-- Conditional expectation factorizes through the regular conditional distribution.
 
 Assuming conditional independence of coordinates given the tail σ-algebra,
 the conditional expectation of a product equals the product of integrals
 against the conditional distribution ν. -/
-/-! ### Use the axiomatized product factorization to close the theorem -/
-
 theorem condexp_product_factorization
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
@@ -3014,7 +3012,7 @@ theorem deFinetti_viaKoopman
     -- (which currently has sorry, pending conditional independence setup)
     exact condexp_product_factorization hσ m fs hmeas hbd True.intro
 
-/-- **Bridge Lemma**: Connect conditional expectation factorization to measure products.
+/-! ### Bridge Lemma: Connect conditional expectation factorization to measure products
 
 This is the key technical lemma connecting ViaKoopman's factorization results to
 CommonEnding's `conditional_iid_from_directing_measure` infrastructure.
@@ -3023,6 +3021,7 @@ Given measurable sets B_i, the integral of the product of indicators equals the
 integral of the product of measures ν(ω)(B_i). This is exactly the "bridge condition"
 needed by CommonEnding.
 -/
+
 /-- Bridge in ENNReal form needed by `CommonEnding`. -/
 theorem indicator_product_bridge
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
@@ -3033,7 +3032,7 @@ theorem indicator_product_bridge
       = ∫⁻ ω, ∏ i : Fin m, (ν (μ := μ) ω) (B i) ∂μ :=
   indicator_product_bridge_ax hσ m k B hB_meas
 
-/-- **Exchangeable implies ConditionallyIID** (modulo the bridge axiom).
+/-! ### Exchangeable implies ConditionallyIID (modulo the bridge axiom)
 
 This theorem shows the complete logical chain from exchangeability to ConditionallyIID,
 assuming the `indicator_product_bridge` lemma. The bridge lemma itself requires
@@ -3046,6 +3045,7 @@ conditional independence, which must come from ergodic theory or martingale theo
 4. Apply indicator_product_bridge to get the bridge condition
 5. Use CommonEnding.conditional_iid_from_directing_measure to conclude
 -/
+
 /-- Final wrapper to `ConditionallyIID` (kept modular behind an axiom). -/
 theorem exchangeable_implies_ciid_modulo_bridge
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
