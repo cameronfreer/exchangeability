@@ -446,15 +446,14 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
       h_lhs.trans h_pull
     simpa [f1, f2] using h_goal
 
+/-! ### π-System Extension (NOT USED) -/
+
 /-- If conditional probabilities agree a.e. for a π-system generating ℋ,
 then they agree for all H ∈ ℋ.
 
 Use `condIndepSets` on π-systems to get `CondIndep mF (generateFrom π) mG μ`,
 then apply Doob's characterization above.
 -/
-
-/-! ### π-System Extension (NOT USED) -/
-
 lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     [IsProbabilityMeasure μ] (mF mG : MeasurableSpace Ω)
     (hmF : mF ≤ m₀) (hmG : mG ≤ m₀)
@@ -573,8 +572,7 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
       have h_eval :
           ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S)
             = ((μ.restrict S) (⋃ i, f i)).toReal := by
-        rw [setIntegral_indicator_const_Lp (E := ℝ) (α := Ω) (p := 1) h_meas_union (by norm_num : (0:ℝ) < 1)]
-        simp [Measure.real_def]
+        rw [integral_indicator h_meas_union, setIntegral_const, smul_eq_mul, mul_one]
       -- Both sides compute to the same number; conclude.
       simp only [C_S]
       rw [hL₁, hR₁, hL₂, hR₂, h_eval]
@@ -725,7 +723,7 @@ lemma condIndep_of_indicator_condexp_eq
   -- Rephrase the product formula for indicators.
   simpa [f1, f2, Set.indicator_inter_mul_indicator] using this
 
-/-! ### Bounded Martingales and L² Inequalities -/
+/-! ### Bounded Martingales and L² (NOT USED) -/
 
 /-- L² identification lemma: if `X₂` is square-integrable and
 `μ[X₂ | m₁] = X₁`, while the second moments of `X₁` and `X₂` coincide,
@@ -735,9 +733,6 @@ This uses Pythagoras identity in L²: conditional expectation is orthogonal proj
 so E[(X₂ - E[X₂|m₁])²] = E[X₂²] - E[(E[X₂|m₁])²].
 Use `MemLp.condExpL2_ae_eq_condExp` and `eLpNorm_condExp_le`.
 -/
-
-/-! ### Bounded Martingales and L² (NOT USED) -/
-
 lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     [IsProbabilityMeasure μ] {m₁ m₂ : MeasurableSpace Ω}
     (hm₁ : m₁ ≤ m₀) (hm₂ : m₂ ≤ m₀)
@@ -932,7 +927,7 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     h_diff_zero.mono fun ω hω => sub_eq_zero.mp hω
   exact h_eq.symm
 
-/-! ### Reverse Martingale Convergence (Lévy's Downward Theorem) -/
+/-! ### Reverse Martingale Convergence (NOT USED) -/
 
 /-- **Lévy's downward theorem: a.e. convergence for antitone σ-algebras.**
 
@@ -943,9 +938,6 @@ conditional expectations converge almost everywhere:
 This is the "downward" or "backward" version of Lévy's theorem (mathlib has the upward version).
 Proof follows the standard martingale approach via L² projection and Borel-Cantelli.
 -/
-
-/-! ### Reverse Martingale Convergence (NOT USED) -/
-
 lemma Integrable.tendsto_ae_condexp_antitone
     {Ω} {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     (𝒢 : ℕ → MeasurableSpace Ω)
@@ -1062,7 +1054,7 @@ lemma Integrable.tendsto_L1_condexp_antitone
   have L1_contract {Y : Ω → ℝ} (hY : Integrable Y μ) (m : MeasurableSpace Ω) (hm : m ≤ m₀)
       [SigmaFinite (μ.trim hm)] :
       eLpNorm (μ[Y | m]) 1 μ ≤ eLpNorm Y 1 μ := by
-    exact eLpNorm_condExp_le (μ := μ) (m := m) (p := 1) Y
+    exact eLpNorm_one_condExp_le_eLpNorm (μ := μ) (m := m) Y
 
   -- Main proof by truncation and ε-argument:
   --
