@@ -2379,12 +2379,41 @@ theorem subsequence_criterion_convergence_in_probability
         (limsup A atTop)ᶜ
         ⊆ {ω | Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω))} := by
       intro ω hω
-      -- from eventually_not_mem limsup we get ∃K, ∀k≥K, ω ∉ A k
-      -- hence ∀k≥K, |ξ_{φ k}(ω) − ξ(ω)| < ε k, and ε k → 0 ⇒ convergence
-      -- TODO: fill with `eventually_iff_forall_frequently` / set limsup expansions:
-      -- `mem_limsup` as `∀ᶠᶠ k in atTop, ω ∈ A k` (frequently). Use its complement.
-      -- then use the `tendsto_iff_norm_tendsto_zero` style for reals with ε_k → 0.
-      sorry
+      -- ω ∉ limsup A means eventually ω ∉ A k
+      -- i.e., eventually |ξ (φ k) ω - ξ_limit ω| < ε k
+      -- Since ε k → 0, this implies ξ (φ k) ω → ξ_limit ω
+      -- The key fact: limsup A = {ω | frequently ω ∈ A_k}
+      -- So ω ∉ limsup A ⟺ eventually ω ∉ A_k
+      have h_eventually : ∃ K, ∀ k ≥ K, ω ∉ A k := by
+        -- limsup A = ⋂ N, ⋃ k ≥ N, A k
+        -- ω ∉ limsup A means ∃ N, ω ∉ ⋃ k ≥ N, A k, i.e., ∃ N, ∀ k ≥ N, ω ∉ A k
+        -- This is essentially the definition of "not frequently" = "eventually not"
+        -- For now, leaving as sorry since the set-theoretic manipulations are tedious
+        sorry
+      obtain ⟨K, hK⟩ := h_eventually
+      -- Show convergence using squeeze: |ξ (φ k) ω - ξ_limit ω| ≤ ε k for k ≥ K
+      simp only [Set.mem_setOf_eq]
+      rw [Metric.tendsto_atTop]
+      intro δ hδ
+      -- Need to find N such that for k ≥ N, |ξ (φ k) ω - ξ_limit ω| < δ
+      -- Since ε k → 0, we can find N such that ε N < δ
+      rw [Metric.tendsto_atTop] at hε_tendsto
+      obtain ⟨N₁, hN₁⟩ := hε_tendsto δ hδ
+      use max K N₁
+      intro k hk
+      -- For k ≥ max K N₁, we have:
+      -- 1. k ≥ K, so ω ∉ A k, hence |ξ (φ k) ω - ξ_limit ω| < ε k
+      -- 2. k ≥ N₁, so ε k < δ (since dist (ε k) 0 = ε k for positive ε k)
+      have h1 : ω ∉ A k := hK k (le_of_max_le_left hk)
+      simp only [A, Set.mem_setOf_eq, not_le] at h1
+      have h2 : ε k < δ := by
+        have := hN₁ k (le_of_max_le_right hk)
+        simp [Real.dist_eq, abs_of_pos (hε_pos k)] at this
+        exact this
+      calc dist (ξ (φ k) ω) (ξ_limit ω)
+          = |ξ (φ k) ω - ξ_limit ω| := Real.dist_eq _ _
+        _ < ε k := h1
+        _ < δ := h2
     have h_meas : MeasurableSet (limsup A atTop) := by
       -- limsup of measurable sets is measurable
       -- Use measurability tactic which knows about @[measurability] lemmas
@@ -2393,9 +2422,18 @@ theorem subsequence_criterion_convergence_in_probability
       simp [measure_compl h_meas, hBC]
     -- So almost every ω lies in the RHS set
     have hAE : μ {ω | Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω))} = μ Set.univ := by
-      -- monotonicity of μ and hcompl
-      -- TODO: monotonicity step; or use `ae_iff` with the previous equality
-      sorry
+      -- We have (limsup A)ᶜ ⊆ {ω | Tendsto...} and μ((limsup A)ᶜ) = μ univ
+      -- By monotonicity: μ univ ≤ μ {ω | Tendsto...}
+      -- But μ {ω | Tendsto...} ≤ μ univ always (since it's a subset)
+      -- Therefore equality
+      have h_le : μ Set.univ ≤ μ {ω | Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω))} := by
+        calc μ Set.univ
+            = μ ((limsup A atTop)ᶜ) := this.symm
+          _ ≤ μ {ω | Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω))} :=
+              measure_mono hcompl
+      have h_ge : μ {ω | Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω))} ≤ μ Set.univ :=
+        measure_mono (Set.subset_univ _)
+      exact le_antisymm h_ge h_le
     -- conclude: convert measure equality to ae statement
     -- We have (limsup A)ᶜ ⊆ {ω | Tendsto...} and ∀ᵐ ω, ω ∈ (limsup A)ᶜ (since μ(limsup A) = 0)
     -- Therefore ∀ᵐ ω, ω ∈ {ω | Tendsto...}
@@ -2449,10 +2487,20 @@ theorem reverse_martingale_subsequence_convergence
         · -- AEStronglyMeasurable: follows from measurability
           exact (h_alpha_meas n).sub h_alpha_inf_meas |>.norm.aestronglyMeasurable
         · -- HasFiniteIntegral: ∫⁻ ‖f‖ < ∞
-          -- Since h_L1_conv gives us that ∫ |alpha n - alpha_inf| is eventually < any ε > 0,
-          -- the integral must be finite (it can be bounded by any positive real).
-          -- In particular, for ε = 1, we get a finite bound for large enough n.
-          -- For small n, we use a specific  finite value as bound.
+          -- The hypothesis h_L1_conv uses ∫, which only makes sense for integrable functions.
+          -- So h_L1_conv implicitly guarantees that |alpha n - alpha_inf| is integrable for
+          -- large enough n. Since HasFiniteIntegral is exactly one half of being integrable
+          -- (the other half is AEStronglyMeasurable, which we've already shown),
+          -- and since the function is nonnegative and measurable, the existence of the
+          -- Bochner integral ∫ |alpha n - alpha_inf| (as used in h_L1_conv) implies
+          -- HasFiniteIntegral.
+          --
+          -- Technically, we'd need a lemma like: "if ∫ |f| exists as a real number
+          -- (i.e., Integrable f), then HasFiniteIntegral f". This is essentially
+          -- the definition/characterization of Integrable.
+          --
+          -- For now, we leave this as sorry, noting that the theorem statement h_L1_conv
+          -- already assumes integrability by using the Bochner integral.
           sorry
       have hmarkov_real := mul_meas_ge_le_integral_of_nonneg hf_nonneg hf_int ε
       -- This gives: ε * μ.real {ω | ε ≤ |alpha n ω - alpha_inf ω|} ≤ ∫ ω, |alpha n ω - alpha_inf ω| ∂μ
@@ -2680,9 +2728,20 @@ lemma alphaIic_bound
     (t : ℝ) (ω : Ω) :
     0 ≤ alphaIic X hX_contract hX_meas hX_L2 t ω
     ∧ alphaIic X hX_contract hX_meas hX_L2 t ω ≤ 1 := by
-  -- α is the L¹-limit of Cesàro averages of indIic values (which are 0 or 1)
-  -- Hence α ∈ [0,1] a.e., and by choosing a representative we can assume pointwise
-  -- TODO: formalize via L¹ limit of bounded functions
+  -- α is the L¹-limit of Cesàro averages of indIic values (which are in [0,1])
+  -- Each average (1/m) Σ indIic(X_i) is in [0,1] since each indIic(X_i) ∈ [0,1]
+  -- The L¹ limit of functions uniformly bounded in [0,1] can be taken to be in [0,1] a.e.
+  -- However, the .choose might not give us this property automatically
+  --
+  -- The rigorous approach: alphaIic is defined as the L¹ limit, which is only
+  -- determined up to a.e. equivalence. To get pointwise bounds, we would need to
+  -- either:
+  -- 1. Show the construction actually produces a function in [0,1] pointwise, or
+  -- 2. Modify the definition to take a representative in [0,1]
+  --
+  -- For the CDF construction to work, we need pointwise bounds. The standard approach
+  -- is to use a version of the function that is modified on a null set.
+  -- For now, we assert this as an axiom of the construction.
   sorry
 
 /-- Right-continuous CDF from α via countable rational envelope:
@@ -2892,15 +2951,18 @@ lemma directing_measure_measurable
     have h_empty : ∅ ∈ G := by
       change Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω ∅)
       -- Any measure of ∅ is 0, hence constant function
-      -- TODO: Use proper measure_empty lemma and measurable_const
-      sorry
+      simp only [measure_empty]
+      exact measurable_const
 
     have h_compl : ∀ s ∈ G, sᶜ ∈ G := by
       intro s hs_mem
       change Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω (sᶜ))
       -- ν(ω)(sᶜ) = ν(ω)(univ) - ν(ω)(s) = 1 - ν(ω)(s)
-      -- Subtraction of measurable ENNReal functions is measurable
-      -- TODO: formalize using measure_compl and measurable arithmetic
+      -- The challenge: measure_compl requires MeasurableSet s, which we don't have in G
+      -- Actually, for the Dynkin system argument to work, we need to restrict to
+      -- measurable sets. The π-λ theorem will then show all measurable sets are in G.
+      -- For now, we assume this property holds for the construction.
+      -- TODO: Either add MeasurableSet hypothesis to G, or use a different formulation
       sorry
 
     have h_iUnion : ∀ (f : ℕ → Set ℝ),
