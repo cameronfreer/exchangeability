@@ -53,41 +53,50 @@ We can eliminate ALL axioms by proving factorization directly from Mean Ergodic 
 
 ### Completed ✅
 
-1. ✅ **Helper lemmas skeleton** (ViaKoopman.lean:291-324)
-   - `condExp_L1_lipschitz` - with proof sketch
-   - `condExp_mul_pullout` - with proof sketch
+1. ✅ **Helper lemmas with proof strategies** (ViaKoopman.lean:293-333)
+   - `condExp_L1_lipschitz` - sorry'd with detailed mathlib lemma needs
+   - `condExp_mul_pullout` - sorry'd with detailed proof strategy
 
-2. ✅ **Pair factorization skeleton** (ViaKoopman.lean:398-461)
-   - `condexp_pair_factorization_MET` - complete 6-step proof outline
-   - All ingredients identified and referenced
-   - **This is the KEY BREAKTHROUGH lemma**
+2. ✅ **Pair factorization STRUCTURED PROOF** (ViaKoopman.lean:427-493)
+   - `condexp_pair_factorization_MET` - **FULLY STRUCTURED** with:
+     * h_shift_inv (sorry'd, ~10 LOC) - shift invariance using condexp_precomp_iterate_eq
+     * h_tower (sorry'd, ~15 LOC) - tower property application
+     * h_pullout (sorry'd, ~10 LOC) - pull-out using condExp_mul_pullout
+     * Complete calc chain combining all 3 steps ✅ **PROVED**
+   - All ingredients identified with line number references
+   - **This is the KEY BREAKTHROUGH lemma** - structure complete, needs filling
 
 3. ✅ **Documentation**
    - `ProofPlan.lean` - complete implementation roadmap
    - `MathlibGaps.lean` - analysis of "hard path" (educational)
    - Inline comments explaining strategy
+   - All 3 sorry'd steps have detailed proof outlines in comments
 
 ### Remaining Work (by priority)
 
-#### HIGH PRIORITY: Complete the Breakthrough (~60 LOC)
+#### HIGH PRIORITY: Complete the Breakthrough (~45 LOC)
 
-1. **Fill in `condExp_L1_lipschitz`** (~15 LOC)
-   - Tower property + Jensen's inequality
-   - Standard measure theory
+1. **Fill in `condExp_L1_lipschitz`** (~15 LOC) - ViaKoopman.lean:293
+   - Need to find correct mathlib lemmas:
+     * `MeasureTheory.condExp_sub` for linearity
+     * Jensen's inequality for |·|: `|CE[f|m]| ≤ CE[|f| | m]`
+     * Tower property: `∫ CE[|f| | m] = ∫ |f|`
+   - Standard measure theory once lemmas identified
 
-2. **Fill in `condExp_mul_pullout`** (~20 LOC)
-   - Test against ℐ-measurable indicators
-   - Or find direct mathlib lemma
+2. **Fill in `condExp_mul_pullout`** (~20 LOC) - ViaKoopman.lean:315
+   - Need correct mathlib pull-out lemma
+   - Tried `condExp_mul_of_aestronglyMeasurable_left` but signature mismatch
+   - Alternative: prove directly by testing against indicators
 
-3. **Implement `condexp_pair_factorization_MET`** (~25 LOC)
-   - Follow the 6-step outline already written
-   - Wire together existing lemmas:
-     - `condexp_precomp_iterate_eq` (line 1467)
-     - `birkhoffAverage_tendsto_condexp` (line 1030)
-     - `range_condexp_eq_fixedSubspace` (line 717)
-   - All ingredients already in file!
+3. **Fill in 3 sorries in `condexp_pair_factorization_MET`** (~10-15 LOC total) - ViaKoopman.lean:427
+   - h_shift_inv (~5 LOC): Apply condexp_precomp_iterate_eq (line 1452)
+   - h_tower (~8 LOC): Standard tower property manipulation
+   - h_pullout (~7 LOC): Apply condExp_mul_pullout once it's proved
+   - The calc chain combining them is **already complete** ✅
 
 **Impact**: Eliminates 2 deepest axioms!
+
+**Current Status**: Structure 100% complete, ~45 LOC of filling needed
 
 #### MEDIUM PRIORITY: Induction and Consequences (~55 LOC)
 
@@ -124,10 +133,10 @@ We can eliminate ALL axioms by proving factorization directly from Mean Ergodic 
 
 | Priority | Tasks | Estimated LOC | Time Estimate |
 |----------|-------|---------------|---------------|
-| HIGH | Fill helper lemmas + pair factorization | ~60 | 2-4 hours |
+| HIGH | Fill helper lemmas + pair factorization sorries | ~45 | 2-3 hours |
 | MEDIUM | Induction + consequences | ~55 | 2-3 hours |
 | LOW | Cleanup | ~50 | 2-3 hours |
-| **TOTAL** | **8 tasks** | **~165 LOC** | **~1 day** |
+| **TOTAL** | **8 tasks** | **~150 LOC** | **~1 day** |
 
 ## What Changed?
 
@@ -148,17 +157,24 @@ We can eliminate ALL axioms by proving factorization directly from Mean Ergodic 
 
 ## How to Complete the Formalization
 
-### Quick Start (2-4 hours) - Get to 90% → 98%
+### Quick Start (2-3 hours) - Get to 95% → 98%
 
 1. Open `ViaKoopman.lean`
 2. Jump to line 293: `condExp_L1_lipschitz`
-3. Fill in the sorry (~15 lines using tower property + Jensen)
-4. Jump to line 309: `condExp_mul_pullout`
-5. Fill in the sorry (~20 lines testing against indicators)
-6. Jump to line 418: `condexp_pair_factorization_MET`
-7. Follow the 6-step outline, wire together existing lemmas (~25 lines)
+   - Find mathlib lemmas for condExp_sub, Jensen for |·|, tower property
+   - Fill in the sorry (~15 lines)
+3. Jump to line 315: `condExp_mul_pullout`
+   - Find mathlib pull-out lemma or prove directly
+   - Fill in the sorry (~20 lines)
+4. Jump to line 427: `condexp_pair_factorization_MET`
+   - Fill h_shift_inv (~5 lines using condexp_precomp_iterate_eq at line 1452)
+   - Fill h_tower (~8 lines using tower property)
+   - Fill h_pullout (~7 lines using condExp_mul_pullout)
+   - The calc chain is already complete!
 
 **Result**: Eliminates 2 deepest axioms, unblocks everything else!
+
+**Progress so far**: Structure 100% complete, proof outline fully documented
 
 ### Full Completion (add 4-6 hours) - Get to 100%
 
