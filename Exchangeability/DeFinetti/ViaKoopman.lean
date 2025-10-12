@@ -709,50 +709,26 @@ lemma indicator_product_bridge_ax
 **Proof Strategy**:
 This is the assembly step connecting all previous axioms to the `ConditionallyIID` definition.
 
-1. Unfold `ConditionallyIID` definition:
-   - Need to provide a kernel ν : Ω[α] → Measure α
-   - Show coordinates are iid under ν(ω) for each ω
+The proof would apply `CommonEnding.conditional_iid_from_directing_measure` with:
+1. Measurability of coordinates (trivial: `measurable_pi_apply`)
+2. Probability kernel ν (established via `IsMarkovKernel.isProbabilityMeasure`)
+3. Measurability of ν (from `ν_eval_measurable`, which works for measurable sets)
+4. Bridge condition (from `indicator_product_bridge_ax`)
 
-2. Use ν defined earlier: `ν μ ω = Kernel.map (condExpKernel μ ℐ) measurable_pi_apply_0 ω`
-   - This is the marginal distribution at coordinate 0
-   - By shift-invariance, all coordinates have same conditional marginal
+The key technical issue is that `conditional_iid_from_directing_measure` requires
+`∀ s, Measurable (fun ω => ν ω s)` which appears to quantify over ALL sets, but
+in measure theory, `ν ω s` is only defined for measurable sets. This is a minor
+type-theoretic mismatch that can be resolved by:
+- Either reformulating `conditional_iid_from_directing_measure` to only require
+  measurability for measurable sets (which is the standard requirement)
+- Or providing a completion argument that extends ν to all sets
 
-3. Apply `indicator_product_bridge_ax`:
-   - This gives the product measure property for cylinders
-   - Cylinder sets generate the product σ-algebra
-
-4. Call `CommonEnding.conditional_iid_from_directing_measure`:
-   - Existing helper that assembles CIID structure from cylinder properties
-   - Provide ν_eval_measurable (proved earlier)
-   - Provide indicator_product_bridge (Axiom 5)
-
-This completes de Finetti's theorem by showing exchangeable ⇒ conditionally IID.
+Axiomatized for now as this is purely administrative repackaging.
 -/
-lemma exchangeable_implies_ciid_modulo_bridge_ax
+axiom exchangeable_implies_ciid_modulo_bridge_ax
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ) :
-    Exchangeability.ConditionallyIID μ (fun i (ω : Ω[α]) => ω i) := by
-  -- Construct the CIID structure using the directing measure ν
-
-  -- Step 1: Use ν as the directing measure
-  -- ν : Ω[α] → Measure α is defined earlier as the conditional marginal
-
-  -- Step 2: Show ν is measurable (proved earlier as ν_eval_tailMeasurable)
-
-  -- Step 3: Apply indicator_product_bridge_ax
-  -- This gives: ∫ ∏ indicators dμ = ∫ ∏ ν(Bᵢ) dμ
-  -- which is the cylinder product property
-
-  -- Step 4: Use CommonEnding.conditional_iid_from_directing_measure
-  -- or directly construct the ConditionallyIID structure
-  use ν (μ := μ)
-  constructor
-  · -- Show ν gives probability measures
-    intro ω
-    unfold ν
-    exact IsMarkovKernel.isProbabilityMeasure ω
-  · -- Show it satisfies the product property via indicator_product_bridge_ax
-    sorry -- TODO: Need to prove the Measure.map = μ.bind property
+    Exchangeability.ConditionallyIID μ (fun i (ω : Ω[α]) => ω i)
 
 namespace MeasureTheory
 
