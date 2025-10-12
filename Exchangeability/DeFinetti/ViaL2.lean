@@ -2951,15 +2951,18 @@ lemma directing_measure_measurable
     have h_empty : ∅ ∈ G := by
       change Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω ∅)
       -- Any measure of ∅ is 0, hence constant function
-      -- TODO: Use proper measure_empty lemma and measurable_const
-      sorry
+      simp only [measure_empty]
+      exact measurable_const
 
     have h_compl : ∀ s ∈ G, sᶜ ∈ G := by
       intro s hs_mem
       change Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω (sᶜ))
       -- ν(ω)(sᶜ) = ν(ω)(univ) - ν(ω)(s) = 1 - ν(ω)(s)
-      -- Subtraction of measurable ENNReal functions is measurable
-      -- TODO: formalize using measure_compl and measurable arithmetic
+      -- The challenge: measure_compl requires MeasurableSet s, which we don't have in G
+      -- Actually, for the Dynkin system argument to work, we need to restrict to
+      -- measurable sets. The π-λ theorem will then show all measurable sets are in G.
+      -- For now, we assume this property holds for the construction.
+      -- TODO: Either add MeasurableSet hypothesis to G, or use a different formulation
       sorry
 
     have h_iUnion : ∀ (f : ℕ → Set ℝ),
