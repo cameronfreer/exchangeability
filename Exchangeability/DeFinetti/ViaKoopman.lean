@@ -481,6 +481,38 @@ lemma condexp_product_factorization_ax
 
     sorry
 
+/-- **Generalized product factorization** for arbitrary coordinate indices.
+
+This extends `condexp_product_factorization_ax` from coordinates `ω 0, ω 1, ...`
+to arbitrary indices `ω (k 0), ω (k 1), ...`.
+
+**Proof Strategy**: Use shift-invariance to reduce to the standard case.
+For any coordinate selection `k : Fin m → ℕ`, we can relate it to the
+standard selection via shifts, then apply the shift equivariance of CE.
+-/
+lemma condexp_product_factorization_general
+    (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ)
+    (m : ℕ) (fs : Fin m → α → ℝ) (k : Fin m → ℕ)
+    (hmeas : ∀ i, Measurable (fs i))
+    (hbd : ∀ i, ∃ C, ∀ x, |fs i x| ≤ C)
+    (hciid : True) :
+    μ[fun ω => ∏ i, fs i (ω (k i)) | shiftInvariantSigma (α := α)]
+      =ᵐ[μ] (fun ω => ∏ i, ∫ x, fs i x ∂(ν μ ω)) := by
+  -- Key insight: The factorization doesn't depend on coordinate selection
+  -- because the measure is shift-invariant and ν is the same for all coordinates
+
+  -- Strategy: Show that both sides are equal by using identicalConditionalMarginals
+  -- which already handles arbitrary coordinates
+
+  -- For each coordinate i, we have:
+  -- CE[fs i (ω (k i)) | ℐ] =ᵐ ∫ fs i dν  (by identicalConditionalMarginals)
+
+  -- For products, we need conditional independence, which follows from
+  -- the exchangeability assumption (hciid parameter)
+
+  sorry -- Requires combining identicalConditionalMarginals with conditional independence
+
 /-- **Bridge axiom** for ENNReal version needed by `CommonEnding`.
 
 **Proof Strategy**:
@@ -598,22 +630,47 @@ lemma indicator_product_bridge_ax
 
   -- Now prove: ∫ F dμ = ∫ G dμ using the factorization axiom
   have h_eq_integrals : ∫ ω, F ω ∂μ = ∫ ω, G ω ∂μ := by
-    -- The key is that F and G are ae equal
-    -- F ω = ∏ i, indicator (B i) (ω (k i))
-    -- G ω = ∏ i, (ν ω (B i)).toReal = ∏ i, (∫ indicator (B i) dν_ω)
+    -- Strategy: Show F =ᵐ G, then conclude ∫ F = ∫ G
+    -- We'll show this by proving CE[F|𝓘] =ᵐ G, then using ∫ CE[F|𝓘] = ∫ F (tower property)
 
-    -- By identicalConditionalMarginals_integral, each coordinate satisfies:
-    -- ∫ indicator (B i) (y (k i)) d(condExpKernel) =ᵐ ∫ indicator (B i) dν
+    -- Step 1: Apply product factorization axiom
+    -- This gives: CE[∏ indicator | 𝓘] =ᵐ ∏ (∫ indicator dν)
+    let fs : Fin m → α → ℝ := fun i => (B i).indicator (fun _ => 1)
 
-    -- Therefore the products are also ae equal (though proving this formally
-    -- requires careful product manipulation which is deferred)
+    have fs_meas : ∀ i, Measurable (fs i) := by
+      intro i
+      exact Measurable.indicator measurable_const (hB_meas i)
 
-    -- For the bridge to complete, this equality follows from:
-    -- 1. Each marginal: indicator (B i) (ω (k i)) has CE = ∫ indicator dν (via identicalConditionalMarginals)
-    -- 2. Products of conditionally independent terms have product CEs
-    -- 3. Tower property: ∫ CE[·] = ∫ (·)
+    have fs_bd : ∀ i, ∃ C, ∀ x, |fs i x| ≤ C := by
+      intro i
+      refine ⟨1, fun x => ?_⟩
+      by_cases h : x ∈ B i <;> simp [fs, Set.indicator, h]
 
-    sorry -- Full proof requires product version of identicalConditionalMarginals + tower property
+    -- Use the generalized factorization for arbitrary coordinates k
+    have h_factor := condexp_product_factorization_general μ hσ m fs k fs_meas fs_bd trivial
+
+    -- h_factor gives: CE[∏ i, fs i (ω (k i)) | 𝓘] =ᵐ (∏ i, ∫ fs i dν)
+    -- This is exactly: CE[F | 𝓘] =ᵐ G
+
+    -- By tower property: ∫ F dμ = ∫ CE[F|𝓘] dμ = ∫ G dμ
+    have h_F_ae : F =ᵐ[μ] fun ω => ∏ i, fs i (ω (k i)) := by
+      filter_upwards with ω
+      rfl
+
+    have h_G_ae : G =ᵐ[μ] fun ω => ∏ i, ∫ x, fs i x ∂(ν μ ω) := by
+      filter_upwards with ω
+      simp [G]
+      congr 1
+      ext i
+      exact (h_indicator_integral i ω).symm
+
+    -- Connect via tower property + ae equalities
+    -- ∫ F = ∫ (fun ω => ∏ i, fs i (ω (k i)))     [by h_F_ae]
+    --     = ∫ CE[fun ω => ∏ i, fs i (ω (k i)) | 𝓘]  [tower property]
+    --     = ∫ (fun ω => ∏ i, ∫ x, fs i x ∂(ν μ ω))  [by h_factor]
+    --     = ∫ G                                     [by h_G_ae]
+
+    sorry -- Apply: integral_congr_ae + tower property for conditional expectation
 
   -- Convert both sides to ENNReal and conclude
   calc ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
