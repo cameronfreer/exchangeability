@@ -847,6 +847,8 @@ lemma quantize_tendsto {C x : ℝ} (hC : 0 ≤ C) :
   intro δ hδ
   -- We need: eventually in 𝓝[>] 0, dist (quantize C ε x) v < δ
   -- Since |quantize - v| ≤ ε, we need ε < δ
+  sorry -- TODO: needs nhdsWithin (Set.Ioi 0) membership, not just 𝓝 0
+  /-
   rw [Filter.eventually_iff]
   refine Filter.mem_of_superset (Metric.ball_mem_nhds 0 hδ) ?_
   intro ε hε_ball
@@ -858,6 +860,7 @@ lemma quantize_tendsto {C x : ℝ} (hC : 0 ≤ C) :
   · -- ε ≤ 0, but we're in nhdsWithin (Set.Ioi 0), so this doesn't happen
     exfalso
     exact hε_pos (Metric.mem_ball.mp hε_ball).2
+  -/
 
 end MeasureTheory
 
@@ -1818,7 +1821,8 @@ private lemma integrable_of_bounded {Ω : Type*} [MeasurableSpace Ω] {μ : Meas
     [IsFiniteMeasure μ] {f : Ω → ℝ} (hf : Measurable f) (hbd : ∃ C, ∀ ω, |f ω| ≤ C) :
     Integrable f μ := by
   obtain ⟨C, hC⟩ := hbd
-  exact MeasureTheory.integrable_of_bounded hf ⟨C, hC⟩
+  sorry -- TODO: use HasFiniteIntegral.of_bounded pattern
+  -- exact MeasureTheory.integrable_of_bounded hf ⟨C, hC⟩
 
 /-- **Kernel integral factorization for bounded measurable functions**.
 
