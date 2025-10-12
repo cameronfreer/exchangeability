@@ -738,15 +738,6 @@ lemma indProd_as_indicator
     · simp only [not_exists, not_not] at hr
       exact absurd hr h
 
-/-- Basic integrability: `indProd` is an indicator of a measurable set, hence integrable. -/
-lemma indProd_integrable
-    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
-    {μ : Measure Ω} (X : ℕ → Ω → α)
-    (r : ℕ) (C : Fin r → Set α)
-    (hX : ∀ n, Measurable (X n)) (hC : ∀ i, MeasurableSet (C i)) :
-    Integrable (indProd X r C) μ := by
-  sorry  -- TODO: Prove integrability using indProd_eq_firstRCylinder_indicator
-
 /-- Connection between `indProd` and `firstRCylinder`: the product indicator
 equals the indicator of the first-`r` cylinder. -/
 lemma indProd_eq_firstRCylinder_indicator
@@ -755,6 +746,15 @@ lemma indProd_eq_firstRCylinder_indicator
     indProd X r C = (firstRCylinder X r C).indicator (fun _ => (1 : ℝ)) := by
   rw [indProd_as_indicator]
   rfl
+
+/-- Basic integrability: `indProd` is an indicator of a measurable set, hence integrable. -/
+lemma indProd_integrable
+    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    {μ : Measure Ω} (X : ℕ → Ω → α)
+    (r : ℕ) (C : Fin r → Set α)
+    (hX : ∀ n, Measurable (X n)) (hC : ∀ i, MeasurableSet (C i)) :
+    Integrable (indProd X r C) μ := by
+  sorry  -- TODO: Needs [IsFiniteMeasure μ] or different approach
 
 /-! ### Indicator algebra helpers for factorization -/
 
@@ -862,7 +862,7 @@ lemma indProd_inter_eq {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) {r : ℕ} {C D : Fin r → Set α} :
     indProd X r (fun i => C i ∩ D i)
       = (firstRCylinder X r C ∩ firstRCylinder X r D).indicator (fun _ => (1 : ℝ)) := by
-  sorry  -- TODO: Prove using firstRCylinder_inter and indProd_eq_firstRCylinder_indicator
+  rw [indProd_eq_firstRCylinder_indicator, firstRCylinder_inter]
 
 /-- Drop the first coordinate of a path. -/
 def drop {α : Type*} (f : ℕ → α) : ℕ → α := shiftSeq (β:=α) 1 f
