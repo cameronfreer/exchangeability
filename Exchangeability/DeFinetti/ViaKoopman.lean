@@ -601,9 +601,7 @@ lemma indicator_product_bridge_ax
       constructor
       · exact ENNReal.toReal_nonneg
       · have : (ν (μ := μ) ω) (B i) ≤ 1 := by
-          have := measure_mono (show B i ⊆ Set.univ from Set.subset_univ _)
-          simp at this
-          exact this
+          sorry -- TODO: have := measure_mono (show B i ⊆ Set.univ from Set.subset_univ _)
         have : ((ν (μ := μ) ω) (B i)).toReal ≤ (1 : ENNReal).toReal := by
           apply ENNReal.toReal_mono
           · simp
@@ -711,7 +709,7 @@ lemma indicator_product_bridge_ax
     _ = ∫⁻ ω, ∏ i : Fin m, (ν (μ := μ) ω) (B i) ∂μ := by
           congr; funext ω
           congr; funext i
-          exact ENNReal.ofReal_toReal (measure_ne_top _ _)
+          sorry -- TODO: exact ENNReal.ofReal_toReal (measure_ne_top _ _) -- needs IsFiniteMeasure instance
 
 /-- **Final bridge axiom** to the `ConditionallyIID` structure.
 
