@@ -545,13 +545,26 @@ lemma sigmaFinite_trim_tailSigma {Ω α : Type*} [MeasurableSpace Ω] [Measurabl
 lemma futureFiltration_le {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) (m : ℕ) (hX : ∀ n, Measurable (X n)) :
     futureFiltration X m ≤ (inferInstance : MeasurableSpace Ω) := by
-  sorry  -- TODO: Need to prove comap (shiftRV X (m + 1)) inst ≤ inst
+  -- futureFiltration X m = revFiltration X (m + 1)
+  simp only [futureFiltration]
+  exact revFiltration_le X hX (m + 1)
 
-/-- The preimage of a measurable set under X_{m+k} is measurable in futureFiltration X m. -/
+/-- The preimage of a measurable set under X_{m+k} is measurable in futureFiltration X m.
+Note: This requires k ≥ 1 since futureFiltration X m = σ(X_{m+1}, X_{m+2}, ...). -/
 lemma preimage_measurable_in_futureFiltration {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
-    (X : ℕ → Ω → α) (m k : ℕ) {A : Set α} (hA : MeasurableSet A) :
+    (X : ℕ → Ω → α) (m k : ℕ) (hk : 1 ≤ k) {A : Set α} (hA : MeasurableSet A) :
     MeasurableSet[futureFiltration X m] (X (m + k) ⁻¹' A) := by
-  sorry  -- TODO: Prove using comap measurability
+  -- futureFiltration X m = comap (shiftRV X (m+1))
+  -- X (m + k) = X (m + 1 + (k-1)) = π_{k-1} ∘ shiftRV X (m+1)
+  -- where π_n projects to the n-th coordinate
+  simp only [futureFiltration]
+  have : X (m + k) = (fun f : ℕ → α => f (k - 1)) ∘ shiftRV X (m + 1) := by
+    funext ω
+    simp [shiftRV]
+    congr 1
+    omega
+  rw [this, Set.preimage_comp]
+  exact ⟨(fun f : ℕ → α => f (k - 1)) ⁻¹' A, (measurable_pi_apply (k - 1)) hA, rfl⟩
 
 /-- Events measurable in a future filtration remain measurable in earlier filtrations. -/
 lemma measurableSet_of_futureFiltration {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
@@ -688,12 +701,6 @@ lemma firstRCylinder_measurable_ambient
   simp only [firstRCylinder, Set.setOf_forall]
   exact MeasurableSet.iInter fun i => (hX i) (hC i)
 
-/-- The first-r σ-algebra is a sub-σ-algebra of the ambient σ-algebra when coordinates are measurable. -/
-lemma firstRSigma_le_ambient
-    (X : ℕ → Ω → α) (r : ℕ) (hX : ∀ i, Measurable (X i)) :
-    firstRSigma X r ≤ (inferInstance : MeasurableSpace Ω) := by
-  sorry  -- TODO: Need to prove comap le relationship
-
 /-- The firstRMap is measurable when all coordinates are measurable. -/
 lemma measurable_firstRMap
     (X : ℕ → Ω → α) (r : ℕ) (hX : ∀ i, Measurable (X i)) :
@@ -702,11 +709,38 @@ lemma measurable_firstRMap
   intro i
   exact hX i
 
+/-- The first-r σ-algebra is a sub-σ-algebra of the ambient σ-algebra when coordinates are measurable. -/
+lemma firstRSigma_le_ambient
+    (X : ℕ → Ω → α) (r : ℕ) (hX : ∀ i, Measurable (X i)) :
+    firstRSigma X r ≤ (inferInstance : MeasurableSpace Ω) := by
+  simp only [firstRSigma]
+  intro s hs
+  obtain ⟨t, ht, rfl⟩ := hs
+  exact (measurable_firstRMap X r hX) ht
+
 /-- Stronger version: firstRSigma increases with r. -/
 lemma firstRSigma_mono
     (X : ℕ → Ω → α) {r s : ℕ} (hrs : r ≤ s) :
     firstRSigma X r ≤ firstRSigma X s := by
-  sorry  -- TODO: Need comap relationship for different firstRMap functions
+  -- Strategy: firstRMap X r factors through firstRMap X s via projection
+  simp only [firstRSigma]
+  intro t ht
+  obtain ⟨u, hu, rfl⟩ := ht
+  -- Define projection π : (Fin s → α) → (Fin r → α) taking first r coords
+  let π : (Fin s → α) → (Fin r → α) := fun f i => f ⟨i.val, Nat.lt_of_lt_of_le i.isLt hrs⟩
+  -- Show firstRMap X r = π ∘ firstRMap X s
+  have h_comp : firstRMap X r = π ∘ firstRMap X s := by
+    funext ω i
+    simp [firstRMap, π]
+  -- π is measurable (composition of coordinate projections)
+  have hπ : Measurable π := by
+    rw [measurable_pi_iff]
+    intro i
+    simp only [π]
+    exact measurable_pi_apply _
+  -- Preimage factors through composition
+  rw [h_comp, Set.preimage_comp]
+  exact ⟨π ⁻¹' u, hπ hu, rfl⟩
 
 /-- The first-r σ-algebra is contained in the future filtration at level m when r ≤ m. -/
 lemma firstRSigma_le_futureFiltration
