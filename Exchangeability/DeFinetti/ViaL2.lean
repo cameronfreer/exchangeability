@@ -1076,17 +1076,21 @@ lemma l2_bound_two_windows_uniform
     have h_bij_n : ∑ i ∈ Finset.filter (fun i : Fin (2*k) => i.val < k) Finset.univ,
                      (1/(k:ℝ)) * f (X (n + i.val + 1) ω)
                  = (1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) := by
-      -- Both sums compute (1/k)*f(X_{n+j+1}) summed over j ∈ {0,...,k-1}
-      -- LHS: filtered sum over {i : Fin(2k) | i.val < k}
-      -- RHS: (1/k) * sum over Fin k
-      -- These are equal because the filtered set has elements with .val in {0,...,k-1}
-      sorry  -- TODO: Bijection via Finset.sum_bij with i ↦ ⟨i.val, proof⟩
+      trans ((1/(k:ℝ)) * ∑ i ∈ Finset.filter (fun i : Fin (2*k) => i.val < k) Finset.univ, f (X (n + i.val + 1) ω))
+      · simp_rw [Finset.mul_sum]
+      · congr 1
+        exact FinIndexHelpers.sum_filter_fin_val_lt_eq_sum_fin (2*k) k (by omega) (fun j => f (X (n + j + 1) ω))
     have h_bij_m : ∑ i ∈ Finset.filter (fun i : Fin (2*k) => ¬(i.val < k)) Finset.univ,
                      (1/(k:ℝ)) * f (X (m + (i.val - k) + 1) ω)
                  = (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω) := by
-      -- For i : Fin (2k) with i.val ≥ k, we have m + (i.val - k) + 1 ranges over
-      -- same values as m + j.val + 1 for j : Fin k, so the sums are equal
-      sorry  -- TODO: Bijection {i : Fin (2k) | i.val ≥ k} ↔ Fin k via i ↦ i - k
+      trans ((1/(k:ℝ)) * ∑ i ∈ Finset.filter (fun i : Fin (2*k) => ¬(i.val < k)) Finset.univ, f (X (m + (i.val - k) + 1) ω))
+      · simp_rw [Finset.mul_sum]
+      · congr 1
+        have h_sub : 2*k - k = k := by omega
+        trans (∑ j : Fin (2*k - k), f (X (m + (k + j.val - k) + 1) ω))
+        · exact FinIndexHelpers.sum_filter_fin_val_ge_eq_sum_fin (2*k) k (by omega) (fun j => f (X (m + (j - k) + 1) ω))
+        · rw [h_sub]
+          congr 1; funext j; congr 2; omega
     rw [h_bij_n, h_bij_m]
 
   -- Prove p and q are probability distributions
