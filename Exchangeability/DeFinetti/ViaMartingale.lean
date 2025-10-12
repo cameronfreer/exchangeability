@@ -853,14 +853,20 @@ lemma indProd_eq_firstRCylinder_indicator
   rw [indProd_as_indicator]
   rfl
 
-/-- Basic integrability: `indProd` is an indicator of a measurable set, hence integrable. -/
+/-- Basic integrability: `indProd` is an indicator of a measurable set, hence integrable
+under a finite measure. -/
 lemma indProd_integrable
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
-    {μ : Measure Ω} (X : ℕ → Ω → α)
+    {μ : Measure Ω} [IsFiniteMeasure μ] (X : ℕ → Ω → α)
     (r : ℕ) (C : Fin r → Set α)
     (hX : ∀ n, Measurable (X n)) (hC : ∀ i, MeasurableSet (C i)) :
     Integrable (indProd X r C) μ := by
-  sorry  -- TODO: Needs [IsFiniteMeasure μ] or different approach
+  -- indProd X r C is the indicator of firstRCylinder X r C
+  rw [indProd_eq_firstRCylinder_indicator]
+  -- Indicator functions of measurable sets are integrable under finite measures
+  apply Integrable.indicator
+  · exact integrable_const 1
+  · exact firstRCylinder_measurable_ambient X r C hX hC
 
 /-! ### Indicator algebra helpers for factorization -/
 
