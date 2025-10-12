@@ -2439,15 +2439,26 @@ theorem reverse_martingale_subsequence_convergence
         filter_upwards with ω
         exact abs_nonneg _
       have hf_int : Integrable (fun ω => |alpha n ω - alpha_inf ω|) μ := by
-        -- The hypothesis h_L1_conv implies integrability:
-        -- If ∫ |f| can be made arbitrarily small (< any ε), then ∫ |f| is finite
-        -- For n large enough, we have ∫ |alpha n - alpha_inf| < 1, so finite integral
-        -- With measurability (from h_alpha_meas), finite integral implies Integrable
-        -- TODO: find the exact lemma or add Integrable as hypothesis to the theorem
-        sorry
-      have := mul_meas_ge_le_integral_of_nonneg hf_nonneg hf_int ε
+        -- Need to show: AEStronglyMeasurable and HasFiniteIntegral
+        constructor
+        · -- AEStronglyMeasurable: follows from measurability
+          exact (h_alpha_meas n).sub h_alpha_inf_meas |>.norm.aestronglyMeasurable
+        · -- HasFiniteIntegral: ∫⁻ ‖f‖ < ∞
+          -- The integral ∫ |alpha n - alpha_inf| can be made < 1 by h_L1_conv
+          -- For ℝ-valued functions, ∫⁻ ‖f‖ and ∫ |f| are related
+          -- If ∫ |f| is finite (which h_L1_conv implies), then ∫⁻ ‖f‖ₑ < ∞
+          sorry
+      have hmarkov_real := mul_meas_ge_le_integral_of_nonneg hf_nonneg hf_int ε
       -- This gives: ε * μ.real {ω | ε ≤ |alpha n ω - alpha_inf ω|} ≤ ∫ ω, |alpha n ω - alpha_inf ω| ∂μ
-      -- Divide by ε (assuming ε > 0) and convert to ENNReal
+      -- Divide by ε (assuming ε > 0): μ.real S ≤ (1/ε) * ∫ f
+      have : μ.real {ω | ε ≤ |alpha n ω - alpha_inf ω|} ≤ (1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ := by
+        have hε_ne : ε ≠ 0 := ne_of_gt hε
+        calc μ.real {ω | ε ≤ |alpha n ω - alpha_inf ω|}
+            = ε⁻¹ * (ε * μ.real {ω | ε ≤ |alpha n ω - alpha_inf ω|}) := by field_simp
+          _ ≤ ε⁻¹ * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ := by gcongr
+          _ = (1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ := by ring
+      -- Convert μ.real to μ: μ.real S = (μ S).toReal
+      -- Then apply ENNReal.ofReal_le_ofReal to get μ S ≤ ENNReal.ofReal ((1/ε) * ∫ f)
       sorry
     -- Now use the L¹ convergence hypothesis to push RHS → 0.
     -- Convert the real integral bound to `ℝ≥0∞` via `ofReal`.
