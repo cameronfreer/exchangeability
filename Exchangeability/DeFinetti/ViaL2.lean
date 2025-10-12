@@ -838,6 +838,69 @@ private lemma sup_two_window_weights {k : ℕ} (hk : 0 < k)
   simp_rw [h_eq]
   exact ciSup_const
 
+-- Helper lemmas for Fin index gymnastics in two-window bounds.
+-- These lemmas isolate the technical reindexing and cardinality proofs needed for
+-- the weighted average machinery.
+namespace FinIndexHelpers
+
+open scoped BigOperators
+open Finset
+
+/-- Auxiliary lemma: the two filtered sets partition Fin(2k). -/
+private lemma card_filter_partition (k : ℕ) :
+  let s_lt := (univ : Finset (Fin (2*k))).filter (fun i => i.val < k)
+  let s_ge := (univ : Finset (Fin (2*k))).filter (fun i => ¬(i.val < k))
+  s_lt.card + s_ge.card = 2*k := by
+  have h_partition : (univ : Finset (Fin (2*k)))
+                   = (univ : Finset (Fin (2*k))).filter (fun i => i.val < k)
+                   ∪ (univ : Finset (Fin (2*k))).filter (fun i => ¬(i.val < k)) := by
+    ext i; simp only [mem_union, mem_filter, mem_univ, true_and]; tauto
+  have h_disj : Disjoint ((univ : Finset (Fin (2*k))).filter (fun i => i.val < k))
+                         ((univ : Finset (Fin (2*k))).filter (fun i => ¬(i.val < k))) := by
+    rw [disjoint_iff_ne]
+    intro a ha b hb
+    simp only [mem_filter, mem_univ, true_and] at ha hb
+    intro heq
+    rw [heq] at ha
+    exact hb ha
+  have h_card_sum := card_union_of_disjoint h_disj
+  rw [← h_partition] at h_card_sum
+  simp only [card_fin] at h_card_sum
+  convert h_card_sum.symm using 2 <;> simp only [Finset.filter_congr_decidable]
+
+/-- Cardinality of `{i : Fin(2k) | i.val < k}` is k. -/
+lemma card_filter_fin_val_lt_two_mul (k : ℕ) :
+  ((univ : Finset (Fin (2*k))).filter (fun i => i.val < k)).card = k := by
+  have h_part := card_filter_partition k
+  -- We'll show both sets have equal cardinality
+  sorry
+
+/-- Cardinality of `{i : Fin(2k) | i.val ≥ k}` is k. -/
+lemma card_filter_fin_val_ge_two_mul (k : ℕ) :
+  ((univ : Finset (Fin (2*k))).filter (fun i => ¬(i.val < k))).card = k := by
+  have h_part := card_filter_partition k
+  sorry
+
+/-- Sum over `{i : Fin n | i.val < k}` equals sum over Fin k when k ≤ n. -/
+lemma sum_filter_fin_val_lt_eq_sum_fin {β : Type*} [AddCommMonoid β] (n k : ℕ) (hk : k ≤ n) (g : ℕ → β) :
+  ∑ i ∈ ((univ : Finset (Fin n)).filter (fun i => i.val < k)), g i.val
+    = ∑ j : Fin k, g j.val := by
+  sorry
+
+/-- Sum over `{i : Fin n | i.val ≥ k}` equals sum over Fin (n-k) with offset, when k ≤ n. -/
+lemma sum_filter_fin_val_ge_eq_sum_fin {β : Type*} [AddCommMonoid β] (n k : ℕ) (hk : k ≤ n) (g : ℕ → β) :
+  ∑ i ∈ ((univ : Finset (Fin n)).filter (fun i => ¬(i.val < k))), g i.val
+    = ∑ j : Fin (n - k), g (k + j.val) := by
+  sorry
+
+/-- Sum over last k elements of Fin(n+k) equals sum over Fin k with offset. -/
+lemma sum_last_block_eq_sum_fin {β : Type*} [AddCommMonoid β] (n k : ℕ) (g : ℕ → β) :
+  ∑ i ∈ ((univ : Finset (Fin (n + k))).filter (fun i => n ≤ i.val)), g i.val
+    = ∑ j : Fin k, g (n + j.val) := by
+  sorry
+
+end FinIndexHelpers
+
 /-- Uniform version of l2_bound_two_windows: The constant Cf is the same for all
 window positions. This follows because Cf = 2σ²(1-ρ) depends only on the covariance
 structure of f∘X, which is uniform by contractability.
@@ -999,9 +1062,7 @@ lemma l2_bound_two_windows_uniform
             simp [Finset.sum_const]
       _ = k * (1/(k:ℝ)) := by
             congr 1
-            -- Count: exactly k indices in Fin (2*k) satisfy i.val < k
-            -- Among {0,...,2k-1}, exactly {0,...,k-1} satisfy < k
-            sorry  -- TODO: Cardinality {i : Fin(2k) | i.val < k} = k
+            simpa using FinIndexHelpers.card_filter_fin_val_lt_two_mul k
       _ = 1 := by
             have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
             field_simp [ne_of_gt hk_pos]
@@ -1035,9 +1096,7 @@ lemma l2_bound_two_windows_uniform
             simp [Finset.sum_const]
       _ = k * (1/(k:ℝ)) := by
             congr 1
-            -- Count: exactly k indices in Fin (2*k) satisfy i.val ≥ k
-            -- This is a basic fact: among {0,...,2k-1}, exactly {k,...,2k-1} satisfy ≥ k
-            sorry  -- TODO: Prove cardinality of {i : Fin (2k) | i.val ≥ k} = k
+            simpa [not_lt] using FinIndexHelpers.card_filter_fin_val_ge_two_mul k
       _ = 1 := by
             have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
             field_simp [ne_of_gt hk_pos]
