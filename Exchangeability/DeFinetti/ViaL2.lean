@@ -2630,12 +2630,16 @@ noncomputable def directing_measure
     (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
     Ω → Measure ℝ :=
   fun ω =>
-    -- TODO: switch to whichever you prefer:
-    --   * `Measure.ofCDF (fun t => cdf_from_alpha X hX_contract hX_meas hX_L2 t ω)`
-    --   * or via `StieltjesFunction.ofMonoRightCont` + `.measure`
-    -- Provide monotonicity / right continuity / boundary values (0/1) once you've proven them.
-    by
-      sorry
+    -- Build via Stieltjes/Carathéodory from the right-continuous CDF
+    -- TODO: The exact API might be Measure.ofCDF or StieltjesFunction.measure
+    -- Once CDF properties are proven, this becomes:
+    -- Measure.ofCDF
+    --   (cdf_from_alpha X hX_contract hX_meas hX_L2 ω)
+    --   (cdf_from_alpha_mono X hX_contract hX_meas hX_L2 ω)
+    --   (cdf_from_alpha_rightContinuous X hX_contract hX_meas hX_L2 ω)
+    --   (cdf_from_alpha_limits X hX_contract hX_meas hX_L2 ω).1
+    --   (cdf_from_alpha_limits X hX_contract hX_meas hX_L2 ω).2
+    sorry
 
 /-- The directing measure is a probability measure. -/
 lemma directing_measure_isProbabilityMeasure
@@ -2646,8 +2650,39 @@ lemma directing_measure_isProbabilityMeasure
     (ω : Ω) :
     IsProbabilityMeasure (directing_measure X hX_contract hX_meas hX_L2 ω) := by
   classical
-  -- TODO: direct from the `Measure.ofCDF` fact: `IsProbabilityMeasure.of_ofCDF`.
-  -- or for StieltjesFunction, use `.isProbabilityMeasure`.
+  -- Direct from Measure.ofCDF: the limits at ±∞ guarantee total mass 1
+  -- TODO: Once directing_measure uses Measure.ofCDF, this becomes:
+  -- exact Measure.isProbabilityMeasure_ofCDF _ _ _ _ _
+  sorry
+
+/-- For each fixed t, ω ↦ ν(ω)((-∞,t]) is measurable.
+This is the base case for the π-λ theorem. -/
+lemma directing_measure_eval_Iic_measurable
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (t : ℝ) :
+    Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω (Set.Iic t)) := by
+  -- ν(ω)(Iic t) = F_ω(t) by definition of Measure.ofCDF
+  -- Measurability follows from measurability of cdf_from_alpha in ω
+  have hmeas : Measurable (fun ω => cdf_from_alpha X hX_contract hX_meas hX_L2 ω t) := by
+    classical
+    -- cdf_from_alpha ω t = iInf over countable set of measurable functions
+    -- Each term alphaIic X ... (q : ℝ) is measurable in ω
+    have hq : Countable {q : ℚ // t < (q : ℝ)} := inferInstance
+    have hterm : ∀ q : {q : ℚ // t < (q : ℝ)},
+        Measurable (fun ω => alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω) := by
+      intro q
+      exact alphaIic_measurable X hX_contract hX_meas hX_L2 (q : ℝ)
+    -- Measurable iInf over countable index
+    -- TODO: Find the right measurable_iInf lemma for this setup
+    sorry
+  -- Identify with the CDF evaluation
+  -- This will follow from Measure.ofCDF_apply_Iic once directing_measure is defined
+  -- For now, we assume this identification holds
+  -- TODO: Once directing_measure uses Measure.ofCDF, prove:
+  -- ∀ ω, directing_measure ... ω (Set.Iic t) = cdf_from_alpha ... ω t
   sorry
 
 /-- For each set s, the map ω ↦ ν(ω)(s) is measurable.
@@ -2670,13 +2705,48 @@ lemma directing_measure_measurable
   classical
   by_cases hs : MeasurableSet s
   ·
-    -- π–λ skeleton:
-    -- 1. Prove it for half‑lines (-∞, t] using the very definition of the CDF.
-    -- 2. Close under the Dynkin system to all Borel sets (use `MeasurableSpace.induction_on_inter`
-    --    or `IsDynkinSystem` API).
-    -- 3. Conclude measurability for all Borel sets; for non‑measurable set, the clause below.
-    -- TODO: fill; typical line: build the generating π-system ℐ = {(-∞,t]} and
-    -- show the map ω ↦ ν(ω)(·) is measurable on ℐ, then extend by the π–λ theorem.
+    -- π–λ theorem approach:
+    -- Define the class of "good" sets G = {s | ω ↦ ν(ω)(s) is measurable}
+    let G : Set (Set ℝ) :=
+      {s | Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω s)}
+
+    -- Step 1: Show G contains the π-system of half-lines
+    have h_pi : ∀ t : ℝ, Set.Iic t ∈ G := by
+      intro t
+      exact directing_measure_eval_Iic_measurable X hX_contract hX_meas hX_L2 t
+
+    -- Step 2: Show G is a Dynkin system (λ-system)
+    have h_empty : ∅ ∈ G := by
+      change Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω ∅)
+      -- Any measure of ∅ is 0, hence constant function
+      -- TODO: Use proper measure_empty lemma and measurable_const
+      sorry
+
+    have h_compl : ∀ s ∈ G, sᶜ ∈ G := by
+      intro s hs_mem
+      change Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω (sᶜ))
+      -- ν(ω)(sᶜ) = ν(ω)(univ) - ν(ω)(s) = 1 - ν(ω)(s)
+      -- Subtraction of measurable ENNReal functions is measurable
+      -- TODO: formalize using measure_compl and measurable arithmetic
+      sorry
+
+    have h_iUnion : ∀ (f : ℕ → Set ℝ),
+        (∀ i j, i ≠ j → Disjoint (f i) (f j)) →
+        (∀ n, f n ∈ G) →
+        (⋃ n, f n) ∈ G := by
+      intro f hdisj hf
+      change Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω (⋃ n, f n))
+      -- ν(ω)(⋃ f n) = ∑ ν(ω)(f n) by σ-additivity
+      -- Countable sums of measurable ENNReal functions are measurable
+      -- TODO: formalize using measure_iUnion and measurable_tsum
+      sorry
+
+    -- Step 3: Apply π-λ theorem
+    -- The Borel σ-algebra is generated by half-lines {Iic t | t ∈ ℝ}
+    -- G contains this π-system and is a Dynkin system,
+    -- hence G contains all Borel sets
+    -- TODO: Apply the formal π-λ theorem from mathlib
+    -- (likely MeasurableSpace.induction_on or similar)
     sorry
   ·
     -- If `s` is not measurable, `ν(ω)(s)` = 0 for Carathéodory outer measure on Borel σ‑algebra,
@@ -2707,11 +2777,33 @@ lemma directing_measure_integral
   obtain ⟨alpha, hα_meas, hα_L1, hα_conv⟩ :=
     weighted_sums_converge_L1 X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
   refine ⟨alpha, hα_meas, hα_L1, hα_conv, ?_⟩
-  -- Identification α_f = ∫ f dν(·) a.e.:
-  -- Sketch: 1) verify for indicators of half–lines by construction of ν (cdf),
-  --         2) extend to simple functions,
-  --         3) pass to bounded measurable f by dominated convergence / monotone class.
-  -- TODO: fill the standard monotone class argument.
+
+  -- Identification α_f = ∫ f dν(·) a.e. via monotone class theorem
+
+  -- Step 1: Base case for indicators of half-lines
+  have base : ∀ t : ℝ,
+      ∀ᵐ ω ∂μ, alphaIic X hX_contract hX_meas hX_L2 t ω
+        = ∫ x, (Set.Iic t).indicator (fun _ => (1 : ℝ)) x
+            ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
+    intro t
+    -- The integral of an indicator equals the measure of the set
+    -- ν(ω)(Iic t) = cdf_from_alpha ω t by Measure.ofCDF construction
+    -- alphaIic approximates cdf_from_alpha via the rational envelope
+    -- TODO: formalize a.e. equality:
+    -- 1) ∫ 1_{Iic t} dν(ω) = ν(ω)(Iic t) (integral of indicator)
+    -- 2) ν(ω)(Iic t) = cdf_from_alpha ω t (Measure.ofCDF property)
+    -- 3) alphaIic t ω ≈ cdf_from_alpha ω t (L¹ limit + density of rationals)
+    sorry
+
+  -- Step 2: Define the good class of functions
+  -- C = {f bounded Borel | ∀ᵐ ω, α_f(ω) = ∫ f dν(ω)}
+  -- Show C contains indicators of half-lines (Step 1),
+  -- closed under linear combinations, and closed under monotone limits
+
+  -- Step 3: Apply monotone class theorem
+  -- TODO: Use mathlib's monotone class API or implement manually
+  -- Since C contains a π-system (indicators of half-lines) and is a monotone class,
+  -- C contains all bounded Borel functions
   sorry
 
 /-- The bridge property: E[∏ᵢ 𝟙_{Bᵢ}(X_{k(i)})] = E[∏ᵢ ν(·)(Bᵢ)].
@@ -2731,11 +2823,36 @@ lemma directing_measure_bridge
       = ∫⁻ ω, ∏ i : Fin m,
         directing_measure X hX_contract hX_meas hX_L2 ω (B i) ∂μ := by
   classical
-  -- Reduce to simple/indicator functions and use the identification from
-  -- `directing_measure_integral` applied to `f = 1_{B_i}` for each i, plus contractability.
-  -- Then multiply and integrate, applying Tonelli/Fubini as needed.
-  -- TODO: Fill the algebra (it's the standard π–system → multiplicative class proof).
-  sorry
+  -- Proof by induction on m (number of factors)
+  induction m with
+  | zero =>
+      -- Base case: empty product = 1
+      simp [Finset.prod_empty]
+  | succ m IH =>
+      -- Inductive step: separate the last factor
+      -- Strategy: Use tail-measurability and conditioning
+
+      -- Step 1: Reorder indices if needed so last k(m) is maximal
+      -- (Use exchangeability/contractability to reindex)
+      -- TODO: Construct permutation putting max at end
+      -- For now, assume WLOG that k is already ordered
+
+      -- Step 2: Separate last factor from product of first m factors
+      -- TODO: Define H = ∏_{i<m} 1_{B_i}(X_{k(i)}) as the "tail factor"
+
+      -- Step 3: Use directing_measure_integral for indicators
+      -- This gives: α_{1_B} = ν(·)(B) a.e. for each indicator
+      -- TODO: Apply to each B_i
+
+      -- Step 4: Use tail-measurability and tower property
+      -- The first m factors are measurable w.r.t. σ(X_j | j ≤ N) for N = max_{i<m} k(i)
+      -- The last factor X_{k(m)} is independent of this σ-field (by contractability)
+      -- Hence E[H · 1_B(X_{k(m)})] = E[H · ν(·)(B)] by conditional expectation
+      -- TODO: formalize tower property / conditional expectation argument
+
+      -- Step 5: Apply induction hypothesis to H
+      -- TODO: Use IH on the product of m factors
+      sorry
 
 /-!
 ## Infrastructure for directing measure construction (used by TheoremViaL2)
