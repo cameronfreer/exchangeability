@@ -46,7 +46,7 @@ and all other files). They are kept here for potential future mathlib contributi
 
 ## Status (January 2025)
 
-**Progress**: 23 → 0 compilation errors ✅ | 2 axioms → 0 axioms ✅ | 8+ sorries → 4 sorries ✅
+**Progress**: 23 → 0 compilation errors ✅ | 2 axioms → 0 axioms ✅ | 8+ sorries → 3 sorries ✅
 
 **Fixed**:
 - ✅ Orphaned doc comments (3 fixes)
@@ -66,10 +66,14 @@ and all other files). They are kept here for potential future mathlib contributi
 - ✅ **Variance decomposition formula** (line 820): Used `condVar_ae_eq_condExp_sq_sub_sq_condExp`
 - ✅ **Integral indicator formula** (line 599): Used `integral_indicator_const` for clean 2-line proof
 - ✅ **Restricted measure sorries** (lines 587-593): Used `setIntegral_condExp` with proper measurability
+- ✅ **`bounded_martingale_l2_eq` completely rewritten**: Eliminated L² norm complexity
+  - Replaced 134-line proof with 105-line cleaner proof
+  - Avoids L² norm identity entirely using measure-theoretic approach
+  - Direct route: `∫ (X₂ - X₁)² = 0` → lintegral → `X₂ - X₁ = 0` a.e.
+  - Uses `lintegral_eq_zero_iff` and `ENNReal.ofReal` conversions
 
-**Remaining sorries** (4 total, all in helper lemmas):
-- Line 896: L2 norm squared formula (complex eLpNorm calculation with rpow simplifications)
-- Lines 1028, 1110: Main convergence theorem sorries (mathematical content complete, technical proofs deferred)
+**Remaining sorries** (3 total, only in convergence theorem helper lemmas):
+- Lines 1000, 1082: Main convergence theorem sorries (mathematical content complete, technical proofs deferred)
 
 ## Future Work
 
@@ -792,138 +796,109 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     (hSecond : ∫ ω, (X₂ ω)^2 ∂μ = ∫ ω, (X₁ ω)^2 ∂μ) :
     X₁ =ᵐ[μ] X₂ := by
   classical
-  -- Strategy: Use L² orthogonal projection properties
-  -- condExp is the orthogonal projection onto the L² closure of m₁-measurable functions
-  -- So ‖X₂‖² = ‖μ[X₂|m₁]‖² + ‖X₂ - μ[X₂|m₁]‖² (Pythagoras)
-  -- Combined with the second moment equality, this forces X₂ - X₁ =ᵐ 0
-  -- The following proof uses condexpL2 API:
-  -- 1. Lift to L²: let f := X₂ as element of Lp ℝ 2 μ
-  -- 2. Show μ[X₂|m₁] equals condexpL2 f (the L² conditional expectation)
-  -- 3. Use orthogonality: ‖f‖² = ‖condexpL2 f‖² + ‖f - condexpL2 f‖²
-  -- 4. From hSecond: ‖f‖² = ‖X₁‖² = ‖μ[X₂|m₁]‖² (using hmg)
-  -- 5. This forces ‖f - condexpL2 f‖ = 0, hence f = condexpL2 f in L²
-  -- 6. Conclude X₂ =ᵐ μ[X₂|m₁] =ᵐ X₁
-  classical
-  -- Promote X₁ to L² using the L² property of X₂.
+  -- 1) L² facts and the "conditional variance = condExp of square minus square of condExp" identity
   have h_cond_mem : MemLp (μ[X₂ | m₁]) 2 μ := hL2.condExp (m := m₁)
   have hX₁_mem : MemLp X₁ 2 μ := h_cond_mem.ae_eq hmg
   have h_diff_L2 : MemLp (X₂ - X₁) 2 μ := hL2.sub hX₁_mem
-  -- The squared difference is L¹-integrable.
-  have h_diff_mem : MemLp (X₂ - μ[X₂ | m₁]) 2 μ := hL2.sub h_cond_mem
   have h_diff_sq_int :
       Integrable (fun ω => (X₂ ω - μ[X₂ | m₁] ω) ^ 2) μ :=
-    h_diff_mem.integrable_sq
+    (hL2.sub h_cond_mem).integrable_sq
 
-  -- Identify the integral of the conditional variance.
+  -- Identify ∫ μ[(X₂ - E[X₂|m₁])² | m₁] = ∫ X₂² − ∫ (E[X₂|m₁])²
   have h_integral_var :
       ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ
         = ∫ ω, (X₂ ω)^2 ∂μ - ∫ ω, (X₁ ω)^2 ∂μ := by
-    have h_var_int :
-        Integrable (μ[(X₂ - μ[X₂ | m₁])^2 | m₁]) μ :=
-        integrable_condExp
-    have h_mu_sq_int :
-        Integrable (μ[X₂ ^ 2 | m₁]) μ :=
-      integrable_condExp
-    have h_cond_sq_int :
-        Integrable (fun ω => (μ[X₂ | m₁] ω) ^ 2) μ :=
-      h_cond_mem.integrable_sq
-    -- The conditional variance equals μ[X₂² | m₁] - (μ[X₂ | m₁])²
-    -- This is a standard variance decomposition formula
+    -- conditional variance formula a.e.
     have h_var_formula :
-        μ[(X₂ - μ[X₂ | m₁])^2 | m₁] =ᵐ[μ] μ[X₂ ^ 2 | m₁] - (μ[X₂ | m₁]) ^ 2 := by
-      -- Use the variance decomposition lemma from mathlib
-      exact condVar_ae_eq_condExp_sq_sub_sq_condExp hm₁ hL2
+        μ[(X₂ - μ[X₂ | m₁])^2 | m₁]
+          =ᵐ[μ] μ[X₂ ^ 2 | m₁] - (μ[X₂ | m₁]) ^ 2 :=
+      condVar_ae_eq_condExp_sq_sub_sq_condExp hm₁ hL2
+    -- integrate both sides
     have h_congr :
         ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ
           = ∫ ω, (μ[X₂ ^ 2 | m₁] ω - μ[X₂ | m₁] ω ^ 2) ∂μ :=
       integral_congr_ae h_var_formula
-    have h_sub :=
-      integral_sub h_mu_sq_int h_cond_sq_int
+    have h_mu_sq_int : Integrable (μ[X₂ ^ 2 | m₁]) μ := integrable_condExp
+    have h_cond_sq_int : Integrable (fun ω => (μ[X₂ | m₁] ω) ^ 2) μ :=
+      h_cond_mem.integrable_sq
+    have h_sub := integral_sub h_mu_sq_int h_cond_sq_int
     have h_condExp_sq :
         ∫ ω, μ[X₂ ^ 2 | m₁] ω ∂μ = ∫ ω, (X₂ ω) ^ 2 ∂μ :=
       integral_condExp hm₁
     have h_sq_replace :
         ∫ ω, (μ[X₂ | m₁] ω) ^ 2 ∂μ = ∫ ω, (X₁ ω) ^ 2 ∂μ :=
-      integral_congr_ae (hmg.mono fun ω hω => by simpa [hω])
-    calc
-      ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ
-          = ∫ ω, (μ[X₂ ^ 2 | m₁] ω - μ[X₂ | m₁] ω ^ 2) ∂μ := h_congr
-      _ = (∫ ω, μ[X₂ ^ 2 | m₁] ω ∂μ)
-            - ∫ ω, (μ[X₂ | m₁] ω) ^ 2 ∂μ := h_sub
-      _ = ∫ ω, (X₂ ω) ^ 2 ∂μ - ∫ ω, (X₁ ω) ^ 2 ∂μ := by
-        rw [h_condExp_sq, h_sq_replace]
+      integral_congr_ae (hmg.mono (by intro ω hω; simpa [hω]))
+    simpa [h_congr, h_sub, h_condExp_sq, h_sq_replace]
 
-  -- Replace the integral of the conditional variance with the integral of the squared deviation.
+  -- 2) Replace the conditional variance integral by the squared deviation integral
+  --    to obtain: ∫ (X₂ - X₁)² = 0.
   have h_integral_diff :
-      ∫ ω, (X₂ ω - X₁ ω) ^ 2 ∂μ = ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ := by
-    haveI : SigmaFinite (μ.trim hm₁) := inferInstance
-    have h_int : ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ = ∫ ω, (X₂ ω - μ[X₂ | m₁] ω) ^ 2 ∂μ :=
-      integral_condExp hm₁
+      ∫ ω, (X₂ ω - X₁ ω) ^ 2 ∂μ
+        = ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ := by
+    have h_int : ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ
+                  = ∫ ω, (X₂ ω - μ[X₂ | m₁] ω) ^ 2 ∂μ :=
+      (integral_condExp hm₁).symm
     have h_sq_eq :
         (fun ω => (X₂ ω - μ[X₂ | m₁] ω) ^ 2)
           =ᵐ[μ] fun ω => (X₂ ω - X₁ ω) ^ 2 :=
-      hmg.mono fun ω hω => by simpa [hω]
+      hmg.mono (by intro ω hω; simpa [hω])
     have h_sq_int : Integrable (fun ω => (X₂ ω - X₁ ω) ^ 2) μ :=
       h_diff_L2.integrable_sq
     calc
       ∫ ω, (X₂ ω - X₁ ω) ^ 2 ∂μ
           = ∫ ω, (X₂ ω - μ[X₂ | m₁] ω) ^ 2 ∂μ := integral_congr_ae h_sq_eq.symm
-      _ = ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ := h_int.symm
+      _ = ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ := h_int
 
-  -- Combine the previous identities to deduce that the squared deviation integrates to zero.
   have h_diff_integral_zero :
       ∫ ω, (X₂ ω - X₁ ω) ^ 2 ∂μ = 0 := by
+    -- using hSecond
     simpa [hSecond, h_integral_var] using h_integral_diff
 
-  -- Use the L² inner product to deduce that X₂ - X₁ vanishes almost everywhere.
-  let diffLp := h_diff_L2.toLp (X₂ - X₁)
-  have h_diff_coe : diffLp =ᵐ[μ] fun ω => X₂ ω - X₁ ω :=
-    h_diff_L2.coeFn_toLp
-  have h_integrand_eq :
-      (fun ω => diffLp ω * diffLp ω)
-        =ᵐ[μ] fun ω => (X₂ ω - X₁ ω) ^ 2 := by
-    refine h_diff_coe.mono ?_
-    intro ω hω
-    simp [pow_two, hω]
-  have h_integrable_prod :
-      Integrable (fun ω => diffLp ω * diffLp ω) μ :=
-    (h_diff_L2.integrable_sq.congr h_integrand_eq.symm)
-  -- The squared L2 norm equals zero, so the function is zero
-  have h_norm_zero : ‖diffLp‖ ^ 2 = 0 := by
-    -- For Lp spaces with p=2, ‖f‖² equals ∫|f|² by the L² norm formula
-    have h_norm_eq : ‖diffLp‖ ^ 2 = ∫ ω, |diffLp ω| ^ 2 ∂μ := by
-      -- This follows from norm_toLp and eLpNorm properties for p=2
-      -- The squared L² norm equals the integral of the squared function
-      sorry  -- TODO: Complex calculation involving eLpNorm_eq_lintegral_rpow_nnnorm and rpow simplifications
-    -- |diffLp|² = diffLp² since diffLp is real-valued
-    have h_abs : (fun ω => |diffLp ω| ^ 2) =ᵐ[μ] fun ω => diffLp ω ^ 2 :=
-      Eventually.of_forall fun ω => sq_abs _
-    calc ‖diffLp‖ ^ 2
-        = ∫ ω, |diffLp ω| ^ 2 ∂μ := h_norm_eq
-      _ = ∫ ω, diffLp ω ^ 2 ∂μ := integral_congr_ae h_abs
-      _ = ∫ ω, diffLp ω * diffLp ω ∂μ :=
-          integral_congr_ae (Eventually.of_forall fun ω => by ring)
-      _ = ∫ ω, (X₂ ω - X₁ ω) ^ 2 ∂μ := integral_congr_ae h_integrand_eq
-      _ = 0 := h_diff_integral_zero
-  have h_diffLp_zero : diffLp = 0 := by
-    rw [← norm_eq_zero]
-    exact pow_eq_zero h_norm_zero
-  have h_zero_mem : MemLp (fun _ : Ω => (0 : ℝ)) 2 μ := MemLp.zero
-  have h_zero_toLp :
-      h_zero_mem.toLp (fun _ : Ω => (0 : ℝ)) = (0 : Lp ℝ 2 μ) :=
-    MemLp.toLp_zero h_zero_mem
-  have h_diff_zero :
-      X₂ - X₁ =ᵐ[μ] fun _ : Ω => (0 : ℝ) := by
-    have h_Lp_eq :
-        diffLp = h_zero_mem.toLp (fun _ : Ω => (0 : ℝ)) := by
-      simpa [diffLp, h_zero_toLp] using h_diffLp_zero
-    exact
-      (MemLp.toLp_eq_toLp_iff (μ := μ) (p := 2)
-        (f := X₂ - X₁) (g := fun _ : Ω => (0 : ℝ))
-        h_diff_L2 h_zero_mem).1 h_Lp_eq
-  have h_eq : X₂ =ᵐ[μ] X₁ :=
-    h_diff_zero.mono fun ω hω => sub_eq_zero.mp hω
-  exact h_eq.symm
+  -- 3) Avoid any L²-norm identity: go directly from
+  --       ∫ (X₂ - X₁)² = 0
+  --    to
+  --       X₂ - X₁ = 0 a.e.
+  set g : Ω → ℝ := fun ω => (X₂ ω - X₁ ω) ^ 2
+  have hg_int : Integrable g μ := h_diff_L2.integrable_sq
+  have hg_nonneg : 0 ≤ᵐ[μ] g :=
+    Filter.eventually_of_forall (by intro ω; exact sq_nonneg _)
+
+  -- Turn the real integral 0 into a lintegral 0, then to a.e. zero via `lintegral_eq_zero_iff`.
+  have h_toReal0 :
+      (∫⁻ ω, ENNReal.ofReal (g ω) ∂μ).toReal = 0 := by
+    -- `integral_eq_lintegral_of_nonneg_ae` : ∫ g = (∫⁻ ofReal g).toReal
+    have := (integral_eq_lintegral_of_nonneg_ae hg_nonneg hg_int.aestronglyMeasurable).symm
+    simpa [g, h_diff_integral_zero] using this
+  have h_lt_top :
+      ∫⁻ ω, ENNReal.ofReal (g ω) ∂μ < ∞ :=
+    lintegral_ofReal_lt_top_of_integrable hg_nonneg hg_int
+  have h_lint_zero :
+      ∫⁻ ω, ENNReal.ofReal (g ω) ∂μ = 0 := by
+    -- If y < ∞ and y.toReal = 0 then y = 0 (via `ENNReal.toReal_eq_iff`).
+    have := (ENNReal.toReal_eq_iff (ne_of_lt h_lt_top)).1 h_toReal0
+    simpa using this
+
+  have h_g_zero_ofReal :
+      (fun ω => ENNReal.ofReal (g ω)) =ᵐ[μ] 0 :=
+    lintegral_eq_zero_iff.mp h_lint_zero
+
+  -- Drop `ofReal` using nonnegativity to conclude `g = 0` a.e.
+  have h_g_zero : g =ᵐ[μ] 0 := by
+    refine (h_g_zero_ofReal.and hg_nonneg).mono ?_
+    intro ω h
+    rcases h with ⟨h0, hge⟩
+    have hle : g ω ≤ 0 := (ENNReal.ofReal_eq_zero).1 h0
+    have : g ω = 0 := le_antisymm hle hge
+    simpa [g] using this
+
+  -- From (X₂ - X₁)² = 0 a.e. to X₂ - X₁ = 0 a.e., hence X₁ = X₂ a.e.
+  have h_diff_zero : (fun ω => X₂ ω - X₁ ω) =ᵐ[μ] 0 := by
+    refine h_g_zero.mono ?_
+    intro ω hsq
+    have : (X₂ ω - X₁ ω) * (X₂ ω - X₁ ω) = 0 := by simpa [pow_two, g] using hsq
+    exact mul_self_eq_zero.mp this
+  have : X₂ =ᵐ[μ] X₁ := h_diff_zero.mono (by intro ω h; exact sub_eq_zero.mp h)
+  exact this.symm
 
 /-! ### Reverse Martingale Convergence (NOT USED) -/
 

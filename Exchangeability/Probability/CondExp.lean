@@ -334,12 +334,12 @@ sigma-finite instances before calling `μ[f | m]`, avoiding typeclass metavariab
 noncomputable
 def condExpWith {Ω : Type*} {m₀ : MeasurableSpace Ω}
     (μ : Measure Ω) [IsProbabilityMeasure μ]
-    (m : MeasurableSpace Ω) (hm : m ≤ m₀)
+    (m : MeasurableSpace Ω) (_hm : m ≤ m₀)
     (f : Ω → ℝ) : Ω → ℝ := by
   classical
   haveI : IsFiniteMeasure μ := inferInstance
-  haveI : IsFiniteMeasure (μ.trim hm) := isFiniteMeasure_trim μ hm
-  haveI : SigmaFinite (μ.trim hm) := sigmaFinite_trim μ hm
+  haveI : IsFiniteMeasure (μ.trim _hm) := isFiniteMeasure_trim μ _hm
+  haveI : SigmaFinite (μ.trim _hm) := sigmaFinite_trim μ _hm
   exact μ[f | m]
 
 /-! ### Bridge lemma for indicator factorization
