@@ -1318,8 +1318,10 @@ private lemma sum_tail_block_reindex
           rw [← Finset.mul_sum]
     _ = c * ∑ j : Fin k, F (m - k + j.val) := by
           congr 1
-          -- Bijection between {i : Fin m | i.val ≥ m - k} and Fin k via i ↦ i - (m-k)
-          sorry
+          have h_sub : m - (m - k) = k := by omega
+          trans (∑ j : Fin (m - (m - k)), F ((m - k) + j.val))
+          · exact FinIndexHelpers.sum_filter_fin_val_ge_eq_sum_fin m (m - k) (by omega) F
+          · rw [h_sub]
 
 /-- Long average vs tail average bound: Comparing the average of the first m terms
 with the average of the last k terms (where k ≤ m) has the same L² contractability bound.
