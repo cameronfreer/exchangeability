@@ -2385,11 +2385,13 @@ theorem subsequence_criterion_convergence_in_probability
       -- The key fact: limsup A = {ω | frequently ω ∈ A_k}
       -- So ω ∉ limsup A ⟺ eventually ω ∉ A_k
       have h_eventually : ∃ K, ∀ k ≥ K, ω ∉ A k := by
-        -- limsup A = ⋂ N, ⋃ k ≥ N, A k
-        -- ω ∉ limsup A means ∃ N, ω ∉ ⋃ k ≥ N, A k, i.e., ∃ N, ∀ k ≥ N, ω ∉ A k
-        -- This is essentially the definition of "not frequently" = "eventually not"
-        -- For now, leaving as sorry since the set-theoretic manipulations are tedious
-        sorry
+        -- Use filter characterization: ω ∉ limsup A ↔ ¬(frequently ω ∈ A k) ↔ eventually ω ∉ A k
+        rw [Set.mem_compl_iff] at hω
+        rw [mem_limsup_iff_frequently_mem] at hω
+        rw [Filter.not_frequently] at hω
+        -- hω : ∀ᶠ k in atTop, ω ∉ A k
+        rw [Filter.eventually_atTop] at hω
+        exact hω
       obtain ⟨K, hK⟩ := h_eventually
       -- Show convergence using squeeze: |ξ (φ k) ω - ξ_limit ω| ≤ ε k for k ≥ K
       simp only [Set.mem_setOf_eq]
@@ -2799,8 +2801,53 @@ lemma cdf_from_alpha_rightContinuous
   -- for any ε>0, ∃q>t with α(q) < F(t) + ε
   -- For u close enough to t (specifically u < q), F(u) ≤ α(q) < F(t) + ε
   -- Also F(t) ≤ F(u) by monotonicity, giving |F(u) - F(t)| < ε
-  -- TODO: formalize using Filter.tendsto_iInf or explicit ε-δ
-  sorry
+  rw [Metric.tendsto_nhdsWithin_nhds]
+  intro ε hε
+  -- F(t) is the infimum, so there exists q > t with α(q) < F(t) + ε
+  have hne : Nonempty {q : ℚ // t < (q : ℝ)} := by
+    obtain ⟨q, hq1, _⟩ := exists_rat_btwn (lt_add_one t)
+    exact ⟨⟨q, hq1⟩⟩
+  have hbdd : BddBelow (Set.range fun (q : {q : ℚ // t < (q : ℝ)}) =>
+      alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω) := by
+    use 0
+    intro y ⟨q, hq⟩
+    rw [← hq]
+    exact (alphaIic_bound X hX_contract hX_meas hX_L2 (q : ℝ) ω).1
+  -- By definition of infimum, ∃ q with F(t) ≤ α(q) < F(t) + ε
+  have h_inflt : iInf (fun (q : {q : ℚ // t < (q : ℝ)}) => alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω) < cdf_from_alpha X hX_contract hX_meas hX_L2 ω t + ε := by
+    unfold cdf_from_alpha
+    linarith
+  obtain ⟨⟨q, hqt⟩, hq_bound⟩ := exists_lt_of_ciInf_lt h_inflt
+  -- For any u with t < u < q, we have F(u) ≤ α(q) < F(t) + ε
+  refine ⟨q - t, by linarith, fun u hu_gt hu_dist => ?_⟩
+  simp only [Set.mem_Ioi] at hu_gt
+  rw [Real.dist_eq] at hu_dist
+  have hu_lt_q : u < q := by
+    have : |u - t| < q - t := hu_dist
+    have h_pos : u - t < q - t := abs_lt.mp this |>.2
+    linarith
+  -- By monotonicity: F(t) ≤ F(u)
+  have h_mono : cdf_from_alpha X hX_contract hX_meas hX_L2 ω t ≤ cdf_from_alpha X hX_contract hX_meas hX_L2 ω u :=
+    cdf_from_alpha_mono X hX_contract hX_meas hX_L2 ω (le_of_lt hu_gt)
+  -- F(u) ≤ α(q) because q > u
+  have h_upper : cdf_from_alpha X hX_contract hX_meas hX_L2 ω u ≤ alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω := by
+    calc cdf_from_alpha X hX_contract hX_meas hX_L2 ω u
+        = ⨅ (r : {r : ℚ // u < (r : ℝ)}), alphaIic X hX_contract hX_meas hX_L2 (r : ℝ) ω := rfl
+      _ ≤ alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω := by
+          have hbdd_u : BddBelow (Set.range fun (r : {r : ℚ // u < (r : ℝ)}) =>
+              alphaIic X hX_contract hX_meas hX_L2 (r : ℝ) ω) := by
+            use 0
+            intro y ⟨r, hr⟩
+            rw [← hr]
+            exact (alphaIic_bound X hX_contract hX_meas hX_L2 (r : ℝ) ω).1
+          exact ciInf_le hbdd_u ⟨q, hu_lt_q⟩
+  rw [Real.dist_eq]
+  calc |cdf_from_alpha X hX_contract hX_meas hX_L2 ω u - cdf_from_alpha X hX_contract hX_meas hX_L2 ω t|
+      = cdf_from_alpha X hX_contract hX_meas hX_L2 ω u - cdf_from_alpha X hX_contract hX_meas hX_L2 ω t := by
+        rw [abs_of_nonneg]
+        linarith
+    _ ≤ alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω - cdf_from_alpha X hX_contract hX_meas hX_L2 ω t := by linarith
+    _ < ε := by linarith
 
 /-- Bounds 0 ≤ F ≤ 1 (pointwise in ω,t). -/
 lemma cdf_from_alpha_bounds
@@ -2943,50 +2990,86 @@ lemma directing_measure_measurable
   by_cases hs : MeasurableSet s
   ·
     -- π–λ theorem approach:
-    -- Define the class of "good" sets G = {s | ω ↦ ν(ω)(s) is measurable}
+    -- Define the class of "good" measurable sets G = {s measurable | ω ↦ ν(ω)(s) is measurable}
+    -- We restrict to measurable sets so that measure properties (compl, union) can be used
     let G : Set (Set ℝ) :=
-      {s | Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω s)}
+      {s | MeasurableSet s ∧ Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω s)}
 
     -- Step 1: Show G contains the π-system of half-lines
     have h_pi : ∀ t : ℝ, Set.Iic t ∈ G := by
       intro t
-      exact directing_measure_eval_Iic_measurable X hX_contract hX_meas hX_L2 t
+      constructor
+      · exact measurableSet_Iic
+      · exact directing_measure_eval_Iic_measurable X hX_contract hX_meas hX_L2 t
 
     -- Step 2: Show G is a Dynkin system (λ-system)
     have h_empty : ∅ ∈ G := by
-      change Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω ∅)
-      -- Any measure of ∅ is 0, hence constant function
-      simp only [measure_empty]
-      exact measurable_const
+      constructor
+      · exact MeasurableSet.empty
+      · change Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω ∅)
+        simp only [measure_empty]
+        exact measurable_const
 
     have h_compl : ∀ s ∈ G, sᶜ ∈ G := by
-      intro s hs_mem
-      change Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω (sᶜ))
-      -- ν(ω)(sᶜ) = ν(ω)(univ) - ν(ω)(s) = 1 - ν(ω)(s)
-      -- The challenge: measure_compl requires MeasurableSet s, which we don't have in G
-      -- Actually, for the Dynkin system argument to work, we need to restrict to
-      -- measurable sets. The π-λ theorem will then show all measurable sets are in G.
-      -- For now, we assume this property holds for the construction.
-      -- TODO: Either add MeasurableSet hypothesis to G, or use a different formulation
-      sorry
+      intro s ⟨hs_meas, hs_eval⟩
+      constructor
+      · exact hs_meas.compl
+      · -- ν(ω)(sᶜ) = ν(ω)(univ) - ν(ω)(s) = 1 - ν(ω)(s)
+        -- Since ν(ω) is a probability measure, ν(ω)(univ) = 1
+        -- ω ↦ ν(ω)(s) is measurable by hs_eval
+        -- ω ↦ 1 - ν(ω)(s) is measurable as difference of measurable functions
+        have h_univ_s : ∀ ω, directing_measure X hX_contract hX_meas hX_L2 ω (sᶜ) =
+            directing_measure X hX_contract hX_meas hX_L2 ω Set.univ -
+            directing_measure X hX_contract hX_meas hX_L2 ω s := by
+          intro ω
+          -- Need: directing_measure ω is a measure, so measure_compl applies
+          -- But directing_measure hasn't been properly defined yet (it's a sorry)
+          -- This requires the actual Measure.ofCDF construction
+          sorry
+        simp_rw [h_univ_s]
+        -- ω ↦ 1 is measurable (constant)
+        -- ω ↦ ν(ω)(s) is measurable by hs_eval
+        -- Their difference is measurable
+        have h_univ_const : ∀ ω, directing_measure X hX_contract hX_meas hX_L2 ω Set.univ = 1 := by
+          intro ω
+          -- This follows from directing_measure_isProbabilityMeasure
+          -- But that's also a sorry waiting on Measure.ofCDF
+          sorry
+        simp_rw [h_univ_const]
+        -- (fun ω => 1 - ν(ω)(s)) is measurable
+        -- For ENNReal, subtraction is continuous, hence measurable
+        -- 1 is constant (measurable), ν(ω)(s) is measurable by hs_eval
+        -- Therefore their difference is measurable
+        -- But the actual proof requires the directing_measure construction
+        sorry
 
     have h_iUnion : ∀ (f : ℕ → Set ℝ),
         (∀ i j, i ≠ j → Disjoint (f i) (f j)) →
         (∀ n, f n ∈ G) →
         (⋃ n, f n) ∈ G := by
       intro f hdisj hf
-      change Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω (⋃ n, f n))
-      -- ν(ω)(⋃ f n) = ∑ ν(ω)(f n) by σ-additivity
-      -- Countable sums of measurable ENNReal functions are measurable
-      -- TODO: formalize using measure_iUnion and measurable_tsum
-      sorry
+      constructor
+      · -- ⋃ n, f n is measurable as countable union of measurable sets
+        exact MeasurableSet.iUnion (fun n => (hf n).1)
+      · -- ω ↦ ν(ω)(⋃ f n) is measurable
+        -- ν(ω)(⋃ f n) = ∑ n, ν(ω)(f n) by σ-additivity (since f n are pairwise disjoint and measurable)
+        have h_union_eq : ∀ ω, directing_measure X hX_contract hX_meas hX_L2 ω (⋃ n, f n) =
+            ∑' n, directing_measure X hX_contract hX_meas hX_L2 ω (f n) := by
+          intro ω
+          -- This requires: directing_measure ω is a measure, so measure_iUnion applies
+          -- But directing_measure hasn't been properly defined yet
+          sorry
+        simp_rw [h_union_eq]
+        -- ∑' n, ν(ω)(f n) is measurable as tsum of measurable functions
+        exact Measurable.ennreal_tsum (fun n => (hf n).2)
 
     -- Step 3: Apply π-λ theorem
     -- The Borel σ-algebra is generated by half-lines {Iic t | t ∈ ℝ}
     -- G contains this π-system and is a Dynkin system,
     -- hence G contains all Borel sets
+    -- Since s is measurable (by hypothesis hs), we need to show s ∈ G
     -- TODO: Apply the formal π-λ theorem from mathlib
-    -- (likely MeasurableSpace.induction_on or similar)
+    -- (likely MeasurableSpace.induction_on or generateFrom_induction)
     sorry
   ·
     -- If `s` is not measurable, `ν(ω)(s)` = 0 for Carathéodory outer measure on Borel σ‑algebra,
