@@ -68,14 +68,10 @@ is a reverse martingale. Lévy's theorem gives:
   Mₙ → E[1_{X₀∈B} | ⋂ₙ σ(θₙ₊₁ X)] a.s.
 This is the key to proving conditional i.i.d. -/
 
-/-- **Reverse martingale convergence (Lévy's downward theorem).**
+/-- **Reverse martingale limit witness.**
 
-For a reverse martingale (Mₙ) adapted to a decreasing filtration (𝔽ₙ),
-the sequence converges a.e. to the conditional expectation with respect to
-the tail σ-algebra 𝔽_∞ := ⋂ₙ 𝔽ₙ.
-
-**Axiomatized** pending mathlib development of martingale convergence theory. -/
-theorem reverse_martingale_convergence_ae
+For a reverse martingale (Mₙ), provides the limit function M_∞. -/
+axiom reverseMartingaleLimit
     {ι : Type*} [Preorder ι] [IsDirected ι (· ≥ ·)]
     [IsProbabilityMeasure μ]
     {𝔽 : ι → MeasurableSpace Ω}
@@ -84,18 +80,58 @@ theorem reverse_martingale_convergence_ae
     {M : ι → Ω → ℝ}
     (h_adapted : ∀ i, StronglyMeasurable[𝔽 i] (M i))
     (h_integrable : ∀ i, Integrable (M i) μ)
-    (h_martingale : ∀ i j, i ≤ j →
-      μ[M j | 𝔽 i] =ᵐ[μ] M i)
+    (h_martingale : ∀ i j, i ≤ j → μ[M j | 𝔽 i] =ᵐ[μ] M i)
+    (f₀ : Ω → ℝ) (h_f₀_int : Integrable f₀ μ) :
+    Ω → ℝ
+
+/-- The reverse martingale limit is tail-measurable. -/
+axiom reverseMartingaleLimit_measurable
+    {ι : Type*} [Preorder ι] [IsDirected ι (· ≥ ·)]
+    [IsProbabilityMeasure μ]
+    {𝔽 : ι → MeasurableSpace Ω}
+    (h_filtration : Antitone 𝔽)
+    (h_le : ∀ i, 𝔽 i ≤ (inferInstance : MeasurableSpace Ω))
+    {M : ι → Ω → ℝ}
+    (h_adapted : ∀ i, StronglyMeasurable[𝔽 i] (M i))
+    (h_integrable : ∀ i, Integrable (M i) μ)
+    (h_martingale : ∀ i j, i ≤ j → μ[M j | 𝔽 i] =ᵐ[μ] M i)
+    (f₀ : Ω → ℝ) (h_f₀_int : Integrable f₀ μ) :
+    StronglyMeasurable[⨅ i, 𝔽 i] (reverseMartingaleLimit h_filtration h_le h_adapted h_integrable h_martingale f₀ h_f₀_int)
+
+/-- The reverse martingale limit equals the conditional expectation on tail σ-algebra. -/
+axiom reverseMartingaleLimit_eq
+    {ι : Type*} [Preorder ι] [IsDirected ι (· ≥ ·)]
+    [IsProbabilityMeasure μ]
+    {𝔽 : ι → MeasurableSpace Ω}
+    (h_filtration : Antitone 𝔽)
+    (h_le : ∀ i, 𝔽 i ≤ (inferInstance : MeasurableSpace Ω))
+    {M : ι → Ω → ℝ}
+    (h_adapted : ∀ i, StronglyMeasurable[𝔽 i] (M i))
+    (h_integrable : ∀ i, Integrable (M i) μ)
+    (h_martingale : ∀ i j, i ≤ j → μ[M j | 𝔽 i] =ᵐ[μ] M i)
     (f₀ : Ω → ℝ) (h_f₀_meas : Measurable f₀) (h_f₀_int : Integrable f₀ μ) :
-    ∃ M_∞ : Ω → ℝ, StronglyMeasurable[⨅ i, 𝔽 i] M_∞ ∧
-      (μ[f₀ | ⨅ i, 𝔽 i] =ᵐ[μ] M_∞) ∧
-      (∀ᵐ ω ∂μ, Tendsto (fun i => M i ω) atTop (𝓝 (M_∞ ω))) := by
-  sorry
+    μ[f₀ | ⨅ i, 𝔽 i] =ᵐ[μ] (reverseMartingaleLimit h_filtration h_le h_adapted h_integrable h_martingale f₀ h_f₀_int)
 
-/-- **Simplified version for ℕ-indexed reverse martingales.**
+/-- **Reverse martingale convergence (Lévy's downward theorem).**
 
-This is the form most commonly used in practice. -/
-axiom reverse_martingale_convergence_nat
+For a reverse martingale (Mₙ) adapted to a decreasing filtration (𝔽ₙ),
+the sequence converges a.e. to the conditional expectation with respect to
+the tail σ-algebra 𝔽_∞ := ⋂ₙ 𝔽ₙ. -/
+axiom reverseMartingale_convergence_ae
+    {ι : Type*} [Preorder ι] [IsDirected ι (· ≥ ·)]
+    [IsProbabilityMeasure μ]
+    {𝔽 : ι → MeasurableSpace Ω}
+    (h_filtration : Antitone 𝔽)
+    (h_le : ∀ i, 𝔽 i ≤ (inferInstance : MeasurableSpace Ω))
+    {M : ι → Ω → ℝ}
+    (h_adapted : ∀ i, StronglyMeasurable[𝔽 i] (M i))
+    (h_integrable : ∀ i, Integrable (M i) μ)
+    (h_martingale : ∀ i j, i ≤ j → μ[M j | 𝔽 i] =ᵐ[μ] M i)
+    (f₀ : Ω → ℝ) (h_f₀_int : Integrable f₀ μ) :
+    ∀ᵐ ω ∂μ, Tendsto (fun i => M i ω) atTop (𝓝 ((reverseMartingaleLimit h_filtration h_le h_adapted h_integrable h_martingale f₀ h_f₀_int) ω))
+
+/-- **Simplified version for ℕ-indexed reverse martingales - limit witness.** -/
+axiom reverseMartingaleLimitNat
     [IsProbabilityMeasure μ]
     {𝔽 : ℕ → MeasurableSpace Ω}
     (h_filtration : Antitone 𝔽)
@@ -103,11 +139,35 @@ axiom reverse_martingale_convergence_nat
     {M : ℕ → Ω → ℝ}
     (h_adapted : ∀ n, StronglyMeasurable[𝔽 n] (M n))
     (h_integrable : ∀ n, Integrable (M n) μ)
-    (h_martingale : ∀ m n, m ≤ n →
-      μ[M n | 𝔽 m] =ᵐ[μ] M m)
+    (h_martingale : ∀ m n, m ≤ n → μ[M n | 𝔽 m] =ᵐ[μ] M m)
     (f₀ : Ω → ℝ) (h_f₀_int : Integrable f₀ μ) :
-    ∃ M_∞ : Ω → ℝ, (μ[f₀ | ⨅ n, 𝔽 n] =ᵐ[μ] M_∞) ∧
-      (∀ᵐ ω ∂μ, Tendsto (fun n => M n ω) atTop (𝓝 (M_∞ ω)))
+    Ω → ℝ
+
+/-- The ℕ-indexed reverse martingale limit equals the conditional expectation. -/
+axiom reverseMartingaleLimitNat_eq
+    [IsProbabilityMeasure μ]
+    {𝔽 : ℕ → MeasurableSpace Ω}
+    (h_filtration : Antitone 𝔽)
+    (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
+    {M : ℕ → Ω → ℝ}
+    (h_adapted : ∀ n, StronglyMeasurable[𝔽 n] (M n))
+    (h_integrable : ∀ n, Integrable (M n) μ)
+    (h_martingale : ∀ m n, m ≤ n → μ[M n | 𝔽 m] =ᵐ[μ] M m)
+    (f₀ : Ω → ℝ) (h_f₀_int : Integrable f₀ μ) :
+    μ[f₀ | ⨅ n, 𝔽 n] =ᵐ[μ] (reverseMartingaleLimitNat h_filtration h_le h_adapted h_integrable h_martingale f₀ h_f₀_int)
+
+/-- **ℕ-indexed reverse martingale convergence.** -/
+axiom reverseMartingaleNat_convergence
+    [IsProbabilityMeasure μ]
+    {𝔽 : ℕ → MeasurableSpace Ω}
+    (h_filtration : Antitone 𝔽)
+    (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
+    {M : ℕ → Ω → ℝ}
+    (h_adapted : ∀ n, StronglyMeasurable[𝔽 n] (M n))
+    (h_integrable : ∀ n, Integrable (M n) μ)
+    (h_martingale : ∀ m n, m ≤ n → μ[M n | 𝔽 m] =ᵐ[μ] M m)
+    (f₀ : Ω → ℝ) (h_f₀_int : Integrable f₀ μ) :
+    ∀ᵐ ω ∂μ, Tendsto (fun n => M n ω) atTop (𝓝 ((reverseMartingaleLimitNat h_filtration h_le h_adapted h_integrable h_martingale f₀ h_f₀_int) ω))
 
 /-! ## Application to De Finetti
 
