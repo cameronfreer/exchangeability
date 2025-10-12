@@ -290,5 +290,17 @@ lemma condExp_indicator_mul_indicator_of_condIndep
   -- This is exactly the product formula from condIndep_iff
   exact (ProbabilityTheory.condIndep_iff m mF mH hm hmF hmH μ).mp hCI A B hA hB
 
+/-! ### Helper API for Sub-σ-algebras
+
+These wrappers provide explicit instance management for conditional expectations
+with sub-σ-algebras, working around Lean 4 typeclass inference issues.
+
+**NOTE:** The @ notation for condExp is extremely finicky. After multiple attempts,
+this remains a technical blocker. The mathematical content is clear but Lean 4's
+typeclass resolution for conditional expectations with sub-σ-algebras needs
+deeper expertise or mathlib improvements. -/
+
+-- Disabled due to @ notation complexity
+-- def condExpWith ... := @condExp Ω ℝ ...
 
 end Exchangeability.Probability
