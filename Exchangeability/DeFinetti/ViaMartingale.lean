@@ -404,93 +404,68 @@ lemma contractable_dist_eq_on_first_r_tail
     μ {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
       = μ {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
   classical
-  -- Reindex (r+1)-vector: head = m (resp. k), tail = m+1,...,m+r
-  let κ_tail : Fin r → ℕ := fun i => m + (i.1 + 1)
-  have h_tail : StrictMono κ_tail := by
+  let f : Fin r → ℕ := fun i => m + (i.1 + 1)
+  have hf_mono : StrictMono f := by
     intro i j hij
-    show κ_tail i < κ_tail j
-    simp only [κ_tail]
-    omega
-  let κ₁ : Fin (r + 1) → ℕ := Fin.cases m (fun i : Fin r => κ_tail i)
-  let κ₂ : Fin (r + 1) → ℕ := Fin.cases k (fun i : Fin r => κ_tail i)
-  have hκ₁ : StrictMono κ₁ := strictMono_fin_cases h_tail (fun i => by
-    show m < κ_tail i
-    simp only [κ_tail]
-    omega)
-  have hκ₂ : StrictMono κ₂ := strictMono_fin_cases h_tail (fun i => by
-    show k < κ_tail i
-    simp only [κ_tail]
-    omega)
-  -- contractability: both maps give the same law
-  have hlaw₁ : Measure.map (fun ω i => X (κ₁ i) ω) μ
-              = Measure.map (fun ω i => X i.1 ω) μ :=
-    hX (r + 1) κ₁ hκ₁
-  have hlaw₂ : Measure.map (fun ω i => X (κ₂ i) ω) μ
-              = Measure.map (fun ω i => X i.1 ω) μ :=
-    hX (r + 1) κ₂ hκ₂
-  -- Therefore the laws are equal
-  have : Measure.map (fun ω i => X (κ₁ i) ω) μ
-       = Measure.map (fun ω i => X (κ₂ i) ω) μ := by
-    rw [hlaw₁, hlaw₂]
-  -- The sets we want are exactly the preimages of the same event
-  let A : Set (Fin (r + 1) → α) := {y | y 0 ∈ B ∧ ∀ i : Fin r, y (Fin.succ i) ∈ C i}
+    have hij' : i.1 < j.1 := (Fin.lt_iff_val_lt_val).1 hij
+    have : i.1 + 1 < j.1 + 1 := Nat.succ_lt_succ hij'
+    simpa [f, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using
+      Nat.add_lt_add_left this m
+  have hm_lt : ∀ i, m < f i := by
+    intro i
+    have : 0 < i.1 + 1 := Nat.succ_pos _
+    simpa [f] using Nat.lt_add_of_pos_right this
+  have hk_lt : ∀ i, k < f i := fun i => lt_of_le_of_lt hk (hm_lt i)
+  let s₁ : Fin (r+1) → ℕ := Fin.cases m f
+  let s₂ : Fin (r+1) → ℕ := Fin.cases k f
+  have hs₁ : StrictMono s₁ := strictMono_fin_cases (n:=r) (f:=f) hf_mono hm_lt
+  have hs₂ : StrictMono s₂ := strictMono_fin_cases (n:=r) (f:=f) hf_mono hk_lt
+  have hmap_eq :
+      Measure.map (fun ω i => X (s₁ i) ω) μ
+        = Measure.map (fun ω i => X (s₂ i) ω) μ := by
+    calc
+      Measure.map (fun ω i => X (s₁ i) ω) μ
+          = Measure.map (fun ω (i : Fin (r+1)) => X i.1 ω) μ := by
+            simpa [s₁] using hX (r+1) s₁ hs₁
+      _   = Measure.map (fun ω i => X (s₂ i) ω) μ := by
+            simpa [s₂] using (hX (r+1) s₂ hs₂).symm
+  let A : Set (Fin (r+1) → α) :=
+    {v | v 0 ∈ B ∧ ∀ i : Fin r, v (Fin.succ i) ∈ C i}
+  have hpre₁ :
+      {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
+        = (fun ω i => X (s₁ i) ω) ⁻¹' A := by
+    ext ω; simp [A, s₁, f]
+  have hpre₂ :
+      {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
+        = (fun ω i => X (s₂ i) ω) ⁻¹' A := by
+    ext ω; simp [A, s₂, f]
   have hA : MeasurableSet A := by
-    have h0 : Measurable (fun y : Fin (r + 1) → α => y 0) := measurable_pi_apply 0
-    have hS : ∀ i : Fin r, Measurable (fun y : Fin (r + 1) → α => y (Fin.succ i)) :=
+    have h0 : Measurable (fun (v : Fin (r+1) → α) => v 0) := measurable_pi_apply 0
+    have hS : ∀ i : Fin r, Measurable (fun (v : Fin (r+1) → α) => v (Fin.succ i)) :=
       fun i => measurable_pi_apply (Fin.succ i)
-    have : A = (fun y => y 0) ⁻¹' B ∩ (⋂ i : Fin r, (fun y => y (Fin.succ i)) ⁻¹' C i) := by
-      ext y; simp [A, Set.mem_iInter]
+    have : A = (fun v => v 0) ⁻¹' B ∩ ⋂ i : Fin r, (fun v => v (Fin.succ i)) ⁻¹' C i := by
+      ext v; simp [A, Set.mem_iInter]
     rw [this]
     exact (h0 hB).inter (MeasurableSet.iInter fun i => hS i (hC i))
-  -- Measurability of the index maps
-  have hφ₁ : Measurable (fun ω i => X (κ₁ i) ω) := by
+  -- Both functions are measurable (from hX_meas)
+  have hφ₁ : Measurable (fun ω i => X (s₁ i) ω) := by
     apply measurable_pi_lambda
     intro i
     cases i using Fin.cases with
     | zero => exact hX_meas m
-    | succ j => simp only [κ₁, κ_tail]; exact hX_meas (m + (j.1 + 1))
-  have hφ₂ : Measurable (fun ω i => X (κ₂ i) ω) := by
+    | succ j => simp only [s₁, f]; exact hX_meas (m + (j.1 + 1))
+  have hφ₂ : Measurable (fun ω i => X (s₂ i) ω) := by
     apply measurable_pi_lambda
     intro i
     cases i using Fin.cases with
     | zero => exact hX_meas k
-    | succ j => simp only [κ₂, κ_tail]; exact hX_meas (m + (j.1 + 1))
-  have hE₁ : {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
-           = (fun ω i => X (κ₁ i) ω) ⁻¹' A := by
-    ext ω
-    simp only [Set.mem_setOf, Set.mem_preimage, A, κ₁, κ_tail]
-    constructor
-    · intro ⟨hB', hC'⟩
-      constructor
-      · simpa using hB'
-      · intro i
-        simpa using hC' i
-    · intro ⟨hB', hC'⟩
-      constructor
-      · simpa using hB'
-      · intro i
-        simpa using hC' i
-  have hE₂ : {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
-           = (fun ω i => X (κ₂ i) ω) ⁻¹' A := by
-    ext ω
-    simp only [Set.mem_setOf, Set.mem_preimage, A, κ₂, κ_tail]
-    constructor
-    · intro ⟨hB', hC'⟩
-      constructor
-      · simpa using hB'
-      · intro i
-        simpa using hC' i
-    · intro ⟨hB', hC'⟩
-      constructor
-      · simpa using hB'
-      · intro i
-        simpa using hC' i
+    | succ j => simp only [s₂, f]; exact hX_meas (m + (j.1 + 1))
   calc μ {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
-      = μ ((fun ω i => X (κ₁ i) ω) ⁻¹' A) := by rw [hE₁]
-    _ = (Measure.map (fun ω i => X (κ₁ i) ω) μ) A := (Measure.map_apply hφ₁ hA).symm
-    _ = (Measure.map (fun ω i => X (κ₂ i) ω) μ) A := by rw [this]
-    _ = μ ((fun ω i => X (κ₂ i) ω) ⁻¹' A) := Measure.map_apply hφ₂ hA
-    _ = μ {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by rw [← hE₂]
+      = μ ((fun ω i => X (s₁ i) ω) ⁻¹' A) := by rw [hpre₁]
+    _ = (Measure.map (fun ω i => X (s₁ i) ω) μ) A := (Measure.map_apply hφ₁ hA).symm
+    _ = (Measure.map (fun ω i => X (s₂ i) ω) μ) A := by rw [hmap_eq]
+    _ = μ ((fun ω i => X (s₂ i) ω) ⁻¹' A) := Measure.map_apply hφ₂ hA
+    _ = μ {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by rw [← hpre₂]
 
 /-- Helper lemma: contractability gives the key distributional equality.
 
@@ -1261,10 +1236,27 @@ lemma measure_ext_of_future_rectangles
         (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i)),
         μ (B ×ˢ cylinder (α:=α) r C) = ν (B ×ˢ cylinder (α:=α) r C)) :
     μ = ν := by
-  sorry
-  -- TODO: Complete proof using π-λ theorem (Measure.ext_of_generateFrom_of_iUnion)
-  -- Proof strategy is documented below but commented out due to generation sorry
-  /-classical
+  classical
+  -- Proof Plan (π-λ Theorem Application):
+  --
+  -- Step 1: Define π-system S
+  --   S = {B ×ˢ cylinder r C | B measurable, C_i measurable}
+  --   This is a π-system (closed under finite intersections)
+  --
+  -- Step 2: Show S generates product σ-algebra
+  --   Prove: generateFrom S = inferInstance
+  --   - (⊆): Show Prod.fst, Prod.snd measurable w.r.t. generateFrom S
+  --     * Product σ-algebra = comap Prod.fst ⊔ comap Prod.snd
+  --     * Both comaps ≤ generateFrom S
+  --   - (⊇): Every rectangle in S is measurable in product σ-algebra
+  --
+  -- Step 3: Apply π-λ theorem
+  --   Use Measure.ext_of_generateFrom_of_iUnion:
+  --   - Measures agree on S (hypothesis h)
+  --   - S generates the σ-algebra
+  --   - Have covering family with finite measure
+  --   - Therefore μ = ν
+
   -- π-system consisting of rectangles `B × cylinder r C`
   let S : Set (Set (α × (ℕ → α))) :=
     {s | ∃ (r : ℕ) (B : Set α) (hB : MeasurableSet B)
@@ -1363,7 +1355,7 @@ lemma measure_ext_of_future_rectangles
           MeasurableSet[MeasurableSpace.generateFrom S] (Prod.snd ⁻¹' cylinder r C) := by
         intro r C hC
         -- Prod.snd ⁻¹' (cylinder r C) = univ ×ˢ (cylinder r C)
-        have : Prod.snd ⁻¹' cylinder r C = Set.univ ×ˢ cylinder r C := by
+        have : (Prod.snd : α × (ℕ → α) → ℕ → α) ⁻¹' cylinder r C = Set.univ ×ˢ cylinder r C := by
           ext ⟨a, f⟩
           simp [cylinder]
         rw [this]
@@ -1403,14 +1395,28 @@ lemma measure_ext_of_future_rectangles
         -- T contains all cylinders (by h_snd), and Pi is generated by cylinders
         -- Therefore Pi ⊆ T, so for any E measurable in Pi, Prod.snd⁻¹(E) ∈ generateFrom S
 
-        -- This completes the proof that Prod.snd is measurable w.r.t. generateFrom S
+        -- Apply measurable_generateFrom using cylinder generators
+        -- The Pi σ-algebra on (ℕ → α) is generated by cylinders
+        -- We've shown Prod.snd⁻¹(cylinder) ∈ generateFrom S for all cylinders
 
-        -- The formalization of this argument requires either:
-        -- (a) An induction principle on measurable sets, or
-        -- (b) A lemma stating that preimage sets form a σ-algebra, or
-        -- (c) Direct use of Pi generation characterization
+        -- Define the generating set for Pi: all cylinders
+        let T : Set (Set (ℕ → α)) := {s | ∃ (r : ℕ) (C : Fin r → Set α),
+          (∀ i, MeasurableSet (C i)) ∧ s = cylinder r C}
 
-        sorry  -- TODO: Formalize σ-algebra argument or apply mathlib generation lemma
+        -- Show Pi is generated by cylinders
+        have hT_gen : (inferInstance : MeasurableSpace (ℕ → α)) = MeasurableSpace.generateFrom T := by
+          -- Cylinders generate the Pi σ-algebra
+          sorry  -- TODO: This requires showing Pi = generateFrom cylinders
+
+        -- Apply measurable_generateFrom
+        have : @Measurable (α × (ℕ → α)) (ℕ → α)
+            (MeasurableSpace.generateFrom S) (MeasurableSpace.generateFrom T) Prod.snd := by
+          apply @measurable_generateFrom _ _ (MeasurableSpace.generateFrom S) _ _
+          intro s hs
+          obtain ⟨r, C, hC, rfl⟩ := hs
+          exact h_snd r C hC
+        rw [← hT_gen] at this
+        exact this
 
       -- Combine using sup
       calc (inferInstance : MeasurableSpace (α × (ℕ → α)))
@@ -1442,14 +1448,13 @@ lemma measure_ext_of_future_rectangles
     refine ⟨0, Set.univ, MeasurableSet.univ,
       (fun _ => Set.univ), (fun _ => MeasurableSet.univ), ?_⟩
     ext ⟨a, f⟩; simp [Bseq, cylinder]
-  have hμB : ∀ n, μ (Bseq n) ≠ ∞ := by
+  have hμB : ∀ n, μ (Bseq n) ≠ ⊤ := by
     intro n
     simp only [Bseq]
     exact measure_ne_top μ Set.univ
 
   exact Measure.ext_of_generateFrom_of_iUnion
     S Bseq h_gen h_pi h1B h2B hμB h_agree
-  -/
 
 /-- The measure_eq field is now directly accessible since we simplified the structure. -/
 lemma AgreeOnFutureRectangles_to_measure_eq
