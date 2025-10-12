@@ -598,22 +598,37 @@ lemma indicator_product_bridge_ax
 
   -- Now prove: ∫ F dμ = ∫ G dμ using the factorization axiom
   have h_eq_integrals : ∫ ω, F ω ∂μ = ∫ ω, G ω ∂μ := by
-    -- The key is that F and G are ae equal
-    -- F ω = ∏ i, indicator (B i) (ω (k i))
-    -- G ω = ∏ i, (ν ω (B i)).toReal = ∏ i, (∫ indicator (B i) dν_ω)
+    -- Strategy: Show F =ᵐ G, then conclude ∫ F = ∫ G
+    -- We'll show this by proving CE[F|𝓘] =ᵐ G, then using ∫ CE[F|𝓘] = ∫ F (tower property)
 
-    -- By identicalConditionalMarginals_integral, each coordinate satisfies:
-    -- ∫ indicator (B i) (y (k i)) d(condExpKernel) =ᵐ ∫ indicator (B i) dν
+    -- Step 1: Apply product factorization axiom
+    -- This gives: CE[∏ indicator | 𝓘] =ᵐ ∏ (∫ indicator dν)
+    let fs : Fin m → α → ℝ := fun i => (B i).indicator (fun _ => 1)
 
-    -- Therefore the products are also ae equal (though proving this formally
-    -- requires careful product manipulation which is deferred)
+    have fs_meas : ∀ i, Measurable (fs i) := by
+      intro i
+      exact Measurable.indicator measurable_const (hB_meas i)
 
-    -- For the bridge to complete, this equality follows from:
-    -- 1. Each marginal: indicator (B i) (ω (k i)) has CE = ∫ indicator dν (via identicalConditionalMarginals)
-    -- 2. Products of conditionally independent terms have product CEs
-    -- 3. Tower property: ∫ CE[·] = ∫ (·)
+    have fs_bd : ∀ i, ∃ C, ∀ x, |fs i x| ≤ C := by
+      intro i
+      refine ⟨1, fun x => ?_⟩
+      by_cases h : x ∈ B i <;> simp [fs, Set.indicator, h]
 
-    sorry -- Full proof requires product version of identicalConditionalMarginals + tower property
+    have h_factor := condexp_product_factorization_ax μ hσ m fs fs_meas fs_bd trivial
+
+    -- h_factor gives: CE[∏ i, fs i (ω i) | 𝓘] =ᵐ (∏ i, ∫ fs i dν)
+    -- We need: CE[∏ i, fs i (ω (k i)) | 𝓘] =ᵐ (∏ i, ∫ fs i dν)
+
+    -- Key insight: For exchangeable/shift-invariant measures, coordinate selection doesn't matter
+    -- The factorization holds for ANY choice of indices k : Fin m → ℕ
+
+    -- To complete this:
+    -- 1. Generalize condexp_product_factorization_ax to arbitrary index maps k
+    --    (follows from exchangeability + the k = identity case)
+    -- 2. Apply tower property: ∫ F dμ = ∫ CE[F|𝓘] dμ = ∫ G dμ
+    --    where the middle equality uses the generalized factorization
+
+    sorry -- Requires: condexp_product_factorization_ax for arbitrary coordinate indices k
 
   -- Convert both sides to ENNReal and conclude
   calc ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
