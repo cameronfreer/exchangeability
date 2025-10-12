@@ -2329,10 +2329,14 @@ theorem subsequence_criterion_convergence_in_probability
   have hA_meas : ∀ k, MeasurableSet (A k) := by
     intro k
     -- A k = {ω | ε k ≤ |ξ (φ k) ω - ξ_limit ω|}
-    -- This is measurable because |ξ (φ k) - ξ_limit| is measurable
-    -- (continuous maps on Polish spaces like ℝ are measurable)
-    -- TODO: find the correct lemma for `Measurable (abs ∘ f)` when `Measurable f`
-    sorry
+    -- Since measurable functions from Ω → ℝ compose with continuous ℝ → ℝ functions,
+    -- and abs : ℝ → ℝ is continuous, we have |ξ (φ k) - ξ_limit| is measurable
+    have h_diff_meas : Measurable (fun ω => ξ (φ k) ω - ξ_limit ω) :=
+      (hξ_meas (φ k)).sub hξ_limit_meas
+    have h_abs_meas : Measurable (fun ω => |ξ (φ k) ω - ξ_limit ω|) := by
+      -- abs is continuous on ℝ, so measurable; composition preserves measurability
+      sorry
+    exact h_abs_meas measurableSet_Ici
   have hA_tsum : (∑' k, μ (A k)) ≠ ⊤ := by
     -- μ(A k) ≤ 2^{-(k+1)} and ∑ 2^{-(k+1)} < ∞
     have hbound : ∀ k, μ (A k) ≤ ((1 : ENNReal) / 2) ^ (k+1) := by
