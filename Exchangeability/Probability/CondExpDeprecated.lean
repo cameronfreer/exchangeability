@@ -927,9 +927,8 @@ lemma Integrable.tendsto_ae_condexp_antitone
   -- Set up the tail σ-algebra
   set tail := ⨅ n, 𝒢 n with htail_def
   have htail_le : tail ≤ m₀ := iInf_le_of_le 0 (hle 0)
-  -- μ is a probability measure, so μ.trim is finite
-  -- TODO: Should be provable using trim_measurableSet_eq and measure_lt_top
-  -- IsProbabilityMeasure μ implies IsFiniteMeasure μ, and trim preserves finiteness
+  -- TODO: Need to derive SigmaFinite (μ.trim htail_le) from [∀ n, SigmaFinite (μ.trim (hle n))]
+  -- The tail σ-algebra is the infimum, so this should follow from the assumption
   haveI : SigmaFinite (μ.trim htail_le) := by sorry
 
   -- Build antitone chain property
@@ -1028,8 +1027,8 @@ lemma Integrable.tendsto_L1_condexp_antitone
   -- Set up the tail σ-algebra
   set tail := ⨅ n, 𝒢 n
   have htail_le : tail ≤ m₀ := iInf_le_of_le 0 (hle 0)
-  haveI : SigmaFinite (μ.trim htail_le) := by
-    apply (inferInstance : IsFiniteMeasure (μ.trim htail_le)).toSigmaFinite
+  -- σ-finiteness follows from μ being a finite measure
+  haveI : SigmaFinite (μ.trim htail_le) := sigmaFinite_trim_of_le μ htail_le
 
   -- Key tool: L¹ contraction for conditional expectation
   have L1_contract {Y : Ω → ℝ} (hY : Integrable Y μ) (m : MeasurableSpace Ω) (hm : m ≤ m₀)
