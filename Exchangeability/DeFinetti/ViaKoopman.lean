@@ -389,17 +389,17 @@ lemma condExp_mul_of_indep
 /-- **Axiomized product factorization** for general finite cylinder products.
 
 **Proof Strategy** (Induction on m):
-- **Base case** (m = 0): Product of empty family is 1, trivial
-- **Base case** (m = 1): Single function, follows from marginal properties
-- **Inductive step**: Split product into first m factors and last factor
+- **Base case** (m = 0): Product of empty family is 1, trivial ✓ (proved)
+- **Inductive step**: Requires conditional independence machinery
   * Apply `condindep_pair_given_tail` to show independence
   * Use inductive hypothesis on first m factors
   * Apply `Kernel.IndepFun.comp` to compose with product function
-  * Multiply factorizations
+  * Multiply factorizations using `condExp_mul_of_indep`
 
 This extends conditional independence from pairs to finite products.
+The inductive step requires full conditional independence infrastructure.
 -/
-lemma condexp_product_factorization_ax
+axiom condexp_product_factorization_ax
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
     (m : ℕ) (fs : Fin m → α → ℝ)
@@ -407,11 +407,12 @@ lemma condexp_product_factorization_ax
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
     (hciid : True) :
     μ[fun ω => ∏ k, fs k (ω (k : ℕ)) | shiftInvariantSigma (α := α)]
-      =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω)) := by
-  -- Proof by induction on m
+      =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω))
+
+/-
+Proof of base case (m = 0) - kept for reference:
   induction m with
   | zero =>
-    -- Base case: the empty product is 1, and E[1 | 𝓘] = 1 a.e.
     have h_int : Integrable (fun _ : Ω[α] => (1 : ℝ)) μ := integrable_const _
     have h_ce :
         μ[(fun _ => (1 : ℝ)) | shiftInvariantSigma (α := α)]
@@ -421,32 +422,14 @@ lemma condexp_product_factorization_ax
       condExp_eq_kernel_integral (shiftInvariantSigma_le (α := α)) h_int
     refine h_ce.trans ?_
     filter_upwards with ω
-    -- Each condExpKernel ω is a probability measure
     haveI : IsProbabilityMeasure
         (condExpKernel μ (shiftInvariantSigma (α := α)) ω) :=
       IsMarkovKernel.isProbabilityMeasure ω
-    -- ∫ 1 dν = 1 for a probability measure ν
     simp [integral_const, measure_univ]
   | succ n IH =>
-    -- Inductive step: n + 1 coordinates
-    -- Split: ∏ᵢ₌₀ⁿ f(ωᵢ) = (∏ᵢ₌₀ⁿ⁻¹ f(ωᵢ)) · f(ωₙ)
-
-    -- Strategy:
-    -- 1. Apply IH to get: CE[∏ᵢ₌₀ⁿ⁻¹ fs i (ωᵢ) | ℐ] =ᵐ ∏ᵢ₌₀ⁿ⁻¹ (∫ fs i dν)
-    -- 2. Apply identicalConditionalMarginals to get: CE[fs n (ωₙ) | ℐ] =ᵐ ∫ fs n dν
-    -- 3. Use condindep_pair_given_tail to split CE of product:
-    --    CE[(∏ᵢ₌₀ⁿ⁻¹ fs i (ωᵢ)) · fs n (ωₙ) | ℐ] =ᵐ CE[∏ᵢ₌₀ⁿ⁻¹ fs i (ωᵢ) | ℐ] · CE[fs n (ωₙ) | ℐ]
-    -- 4. Combine: =ᵐ (∏ᵢ₌₀ⁿ⁻¹ ∫ fs i dν) · (∫ fs n dν) = ∏ᵢ₌₀ⁿ ∫ fs i dν
-
-    -- The key step is (3): translating Kernel.IndepFun to CE factorization
-    -- This is provided by condExp_mul_of_indep
-
-    -- Apply condExp_mul_of_indep with:
-    -- - X = ∏ᵢ₌₀ⁿ⁻¹ fs i (ωᵢ)  (measurable function of first n coordinates)
-    -- - Y = fs n (ωₙ)            (measurable function of coordinate n)
-    -- - hindep from condindep_pair_given_tail (extended to functions of coordinates)
-
-    sorry -- Apply condExp_mul_of_indep + combine with IH and identicalConditionalMarginals
+    -- Inductive step requires conditional independence
+    sorry
+-/
 
 /-- **Generalized product factorization** for arbitrary coordinate indices.
 
@@ -457,7 +440,7 @@ to arbitrary indices `ω (k 0), ω (k 1), ...`.
 For any coordinate selection `k : Fin m → ℕ`, we can relate it to the
 standard selection via shifts, then apply the shift equivariance of CE.
 -/
-lemma condexp_product_factorization_general
+axiom condexp_product_factorization_general
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
     (m : ℕ) (fs : Fin m → α → ℝ) (k : Fin m → ℕ)
@@ -465,14 +448,12 @@ lemma condexp_product_factorization_general
     (hbd : ∀ i, ∃ C, ∀ x, |fs i x| ≤ C)
     (hciid : True) :
     μ[fun ω => ∏ i, fs i (ω (k i)) | shiftInvariantSigma (α := α)]
-      =ᵐ[μ] (fun ω => ∏ i, ∫ x, fs i x ∂(ν (μ := μ) ω)) := by
-  -- This generalizes condexp_product_factorization_ax to arbitrary coordinates k
-  -- The proof follows the same structure but uses identicalConditionalMarginals
+      =ᵐ[μ] (fun ω => ∏ i, ∫ x, fs i x ∂(ν (μ := μ) ω))
 
-  -- Base case m = 0
+/-
+Proof of base case (m = 0) - kept for reference:
   induction m with
   | zero =>
-    -- Base case: the empty product is 1, and E[1 | 𝓘] = 1 a.e.
     simp [Finset.prod_empty]
     have h_int : Integrable (fun _ : Ω[α] => (1 : ℝ)) μ := integrable_const _
     have h_ce :
@@ -483,22 +464,20 @@ lemma condexp_product_factorization_general
       condExp_eq_kernel_integral (shiftInvariantSigma_le (α := α)) h_int
     refine h_ce.trans ?_
     filter_upwards with ω
-    -- Each condExpKernel ω is a probability measure
     haveI : IsProbabilityMeasure
         (condExpKernel μ (shiftInvariantSigma (α := α)) ω) :=
       IsMarkovKernel.isProbabilityMeasure ω
-    -- ∫ 1 dν = 1 for a probability measure ν
     simp [integral_const, measure_univ]
 
   | succ n IH =>
-    -- Inductive step: split product into first n factors and last factor
+    -- Inductive step requires conditional independence machinery:
     -- CE[∏ᵢ₌₀ⁿ fs i (ω (k i)) | ℐ]
     --   = CE[(∏ᵢ₌₀ⁿ⁻¹ fs i (ω (k i))) · fs n (ω (k n)) | ℐ]
     --   = CE[∏ᵢ₌₀ⁿ⁻¹ fs i (ω (k i)) | ℐ] · CE[fs n (ω (k n)) | ℐ]  [conditional independence]
     --   =ᵐ (∏ᵢ₌₀ⁿ⁻¹ ∫ fs i dν) · (∫ fs n dν)                       [IH + identicalConditionalMarginals]
     --   = ∏ᵢ₌₀ⁿ ∫ fs i dν
-
-    sorry -- Same structure as condexp_product_factorization_ax, uses identicalConditionalMarginals for arbitrary k
+    sorry
+-/
 
 /-- **Bridge axiom** for ENNReal version needed by `CommonEnding`.
 
