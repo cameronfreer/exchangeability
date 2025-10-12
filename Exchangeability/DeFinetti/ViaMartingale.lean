@@ -580,13 +580,18 @@ lemma indicator_tailMeasurable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableS
   exact stronglyMeasurable_const
 
 /-- If each coordinate is measurable, then the tail σ-algebra is sigma-finite
-when the base measure is sigma-finite. -/
-lemma sigmaFinite_trim_tailSigma {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
-    {μ : Measure Ω} [SigmaFinite μ]
+when the base measure is finite.
+
+Note: While this could be stated for general sigma-finite measures, we only need the finite
+case for de Finetti's theorem (which works with probability measures). The general sigma-finite
+case requires manual construction of spanning sets and is a mathlib gap. -/
+lemma sigmaFinite_trim_tailSigma {Ω α : Type*} {m₀ : MeasurableSpace Ω} [MeasurableSpace α]
+    {μ : @Measure Ω m₀} [IsFiniteMeasure μ]
     (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) :
     SigmaFinite (μ.trim (tailSigma_le X hX)) := by
-  sorry  -- TODO: Need to prove sigma-finiteness is preserved under trimming
-  -- inferInstance fails; may need manual construction or mathlib extension
+  classical
+  -- Use the infrastructure from CondExp.lean
+  exact Exchangeability.Probability.sigmaFinite_trim μ (tailSigma_le X hX)
 
 /-! ### Helper lemmas for futureFiltration properties -/
 
@@ -1528,11 +1533,15 @@ lemma filtration_antitone (X : ℕ → Ω → α) : Antitone (fun m => futureFil
   futureFiltration_antitone X
 
 /-- Mₘ := 𝔼[1_{Xₖ∈B} | 𝔽ₘ].
-The reverse martingale sequence for the indicator of X_k in B. -/
-axiom M (k : ℕ) (B : Set α) : ℕ → Ω → ℝ
-  -- TODO: Requires proper instance management for conditional expectation
-  -- The mathematical definition is clear: M k B m ω = μ[1_{X_k ∈ B} | σ(θ_{m+1} X)] ω
-  -- Technical blocker: Lean 4 typeclass inference with futureFiltration
+The reverse martingale sequence for the indicator of X_k in B.
+
+Uses `condExpWith` from CondExp.lean to manage typeclass instances properly. -/
+noncomputable
+def M (hX_meas : ∀ n, Measurable (X n)) (k : ℕ) (B : Set α) (_hB : MeasurableSet B) :
+    ℕ → Ω → ℝ :=
+  fun m => Exchangeability.Probability.condExpWith μ (futureFiltration X m)
+    (futureFiltration_le X m hX_meas)
+    (B.indicator (fun _ => (1 : ℝ)) ∘ X k)
 
 -- TODO (CondExp.lean milestones):
 -- (1) `0 ≤ M k B m ω ≤ 1` a.s.
@@ -1565,62 +1574,28 @@ axiom coordinate_future_condIndep
     (i m : ℕ) (hm : m > i) : True
   -- TODO: Full type with CondIndep blocked by typeclass resolution
 
-/-- Conditional expectation of products factors when coordinates are conditionally
-independent. This is a wrapper around the general product rule for conditional expectations.
+/-- **Product formula for conditional expectations under conditional independence.**
 
-**Proof strategy** (to be implemented):
-This can be derived from `condExp_indicator_mul_indicator_of_condIndep` in CondExp.lean
-using the following steps:
-
-1. **Simple functions**: For `f = ∑ᵢ aᵢ·1_{Aᵢ}` and `g = ∑ⱼ bⱼ·1_{Bⱼ}`, use linearity:
-   ```
-   μ[f * g | m] = ∑ᵢⱼ aᵢbⱼ · μ[1_{Aᵢ∩Bⱼ} | m]
-                = ∑ᵢⱼ aᵢbⱼ · μ[1_{Aᵢ} | m] · 1_{Bⱼ}   (by h_indep + pullout)
-                = (∑ᵢ aᵢ · μ[1_{Aᵢ} | m]) · (∑ⱼ bⱼ·1_{Bⱼ})
-                = μ[f | m] · g
-   ```
-
-2. **Approximation**: For general integrable `f`, `g`:
-   - Approximate `f` by m-measurable simple functions `fₙ → f` in L¹
-   - Approximate `g` by simple functions `gₙ → g` in L¹
-   - Use `μ[fₙ * gₙ | m] = μ[fₙ | m] * gₙ` from step 1
-   - Pass to limit using dominated/monotone convergence for conditional expectations
-
-3. **Measurability**: The ae strong measurability of `f` w.r.t. `m` ensures the approximation
-   by m-measurable simple functions exists.
-
-This proof requires developing the approximation theory for conditional expectations,
-which is substantial. For now, we axiomatize it.
--/
-axiom condExp_product_of_condIndep
-    {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
-    {μ : Measure Ω} [IsProbabilityMeasure μ] : True
-  -- TODO: Full axiom with conditional independence → product factorization
-  -- Blocked by typeclass resolution in conditional expectation API
-
-/-- **Conditional expectation factorization for indicator products without axioms.**
-
-Given two sets `A` (measurable in `m`) and `B` (measurable in ambient), under conditional
-independence, the conditional expectation of the indicator product factors:
+Given two sets `A` (measurable in `mF`) and `B` (measurable in `mH`), under conditional
+independence given `m`, the conditional expectation of the intersection indicator factors:
 ```
-μ[1_A · 1_B | m] = μ[1_A | m] · 1_B   a.e.
+μ[1_{A∩B} | m] = μ[1_A | m] · μ[1_B | m]   a.e.
 ```
 
-This uses the `CondIndep` property directly via indicator algebra, without requiring
-the general product axiom. -/
-axiom condexp_indicator_inter_of_condIndep
-    {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
-    {μ : Measure Ω} [IsProbabilityMeasure μ] : True
-  -- TODO: Full lemma with CondIndep → indicator factorization
-  -- Blocked by typeclass resolution issues
-  /-
-    {m : MeasurableSpace Ω} (hm : m ≤ inferInstance)
-    (A B : Set Ω)
-    (hA : MeasurableSet[m] A)
-    (hB : MeasurableSet B)
-    (h_condIndep : CondIndep ...) :
-    μ[(A.indicator * B.indicator) | m] =ᵐ[μ] ...
-  -/
+Now proven using `condexp_indicator_inter_bridge` from CondExp.lean, eliminating the
+previous `: True` axiom stub. -/
+lemma condexp_indicator_inter_of_condIndep
+    {Ω : Type*} {m₀ : MeasurableSpace Ω} [StandardBorelSpace Ω]
+    {μ : @Measure Ω m₀} [IsProbabilityMeasure μ]
+    {m mF mH : MeasurableSpace Ω}
+    (hm : m ≤ m₀) (hmF : mF ≤ m₀) (hmH : mH ≤ m₀)
+    (hCI : ProbabilityTheory.CondIndep m mF mH hm μ)
+    {A B : Set Ω} (hA : MeasurableSet[mF] A) (hB : MeasurableSet[mH] B) :
+    μ[(A ∩ B).indicator (fun _ => (1 : ℝ)) | m]
+      =ᵐ[μ]
+    (μ[A.indicator (fun _ => (1 : ℝ)) | m] *
+     μ[B.indicator (fun _ => (1 : ℝ)) | m]) :=
+  Exchangeability.Probability.condexp_indicator_inter_bridge hm hmF hmH hCI hA hB
 
 /-- **Finite-level factorization builder.**
 

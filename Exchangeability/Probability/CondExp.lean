@@ -293,14 +293,82 @@ lemma condExp_indicator_mul_indicator_of_condIndep
 /-! ### Helper API for Sub-σ-algebras
 
 These wrappers provide explicit instance management for conditional expectations
-with sub-σ-algebras, working around Lean 4 typeclass inference issues.
+with sub-σ-algebras, working around Lean 4 typeclass inference issues. -/
 
-**NOTE:** The @ notation for condExp is extremely finicky. After multiple attempts,
-this remains a technical blocker. The mathematical content is clear but Lean 4's
-typeclass resolution for conditional expectations with sub-σ-algebras needs
-deeper expertise or mathlib improvements. -/
+/-! ### SigmaFinite instances for trimmed measures
 
--- Disabled due to @ notation complexity
--- def condExpWith ... := @condExp Ω ℝ ...
+When working with conditional expectations on sub-σ-algebras, we need `SigmaFinite (μ.trim hm)`.
+For probability measures (or finite measures), this follows from showing the trimmed measure
+is still finite. -/
+
+/-- Helper lemma: Trimmed measure is finite when the original measure is finite. -/
+lemma isFiniteMeasure_trim {Ω : Type*} {m₀ : MeasurableSpace Ω}
+    (μ : Measure Ω) [IsFiniteMeasure μ]
+    {m : MeasurableSpace Ω} (hm : m ≤ m₀) :
+    IsFiniteMeasure (μ.trim hm) := by
+  classical
+  -- univ is m-measurable, so trim agrees with μ on univ
+  have hU : (μ.trim hm) Set.univ = μ Set.univ := by
+    rw [trim_measurableSet_eq hm MeasurableSet.univ]
+  -- Now measure_univ_lt_top comes from [IsFiniteMeasure μ]
+  refine ⟨?_⟩
+  simpa [hU] using (measure_lt_top μ Set.univ)
+
+/-- Helper lemma: Trimmed measure is sigma-finite when the original measure is finite. -/
+lemma sigmaFinite_trim {Ω : Type*} {m₀ : MeasurableSpace Ω}
+    (μ : Measure Ω) [IsFiniteMeasure μ]
+    {m : MeasurableSpace Ω} (hm : m ≤ m₀) :
+    SigmaFinite (μ.trim hm) := by
+  haveI := isFiniteMeasure_trim μ hm
+  infer_instance
+
+/-! ### Stable conditional expectation wrapper
+
+This wrapper manages typeclass instances to avoid metavariable issues
+when calling `condexp` with sub-σ-algebras. -/
+
+/-- Conditional expectation with explicit sub-σ-algebra and automatic instance management.
+
+This wrapper "freezes" the conditioning σ-algebra and installs the necessary
+sigma-finite instances before calling `μ[f | m]`, avoiding typeclass metavariable issues. -/
+noncomputable
+def condExpWith {Ω : Type*} {m₀ : MeasurableSpace Ω}
+    (μ : Measure Ω) [IsProbabilityMeasure μ]
+    (m : MeasurableSpace Ω) (_hm : m ≤ m₀)
+    (f : Ω → ℝ) : Ω → ℝ := by
+  classical
+  haveI : IsFiniteMeasure μ := inferInstance
+  haveI : IsFiniteMeasure (μ.trim _hm) := isFiniteMeasure_trim μ _hm
+  haveI : SigmaFinite (μ.trim _hm) := sigmaFinite_trim μ _hm
+  exact μ[f | m]
+
+/-! ### Bridge lemma for indicator factorization
+
+This adapter allows ViaMartingale.lean to use the proven factorization lemma
+while managing typeclass instances correctly. -/
+
+/-- Bridge lemma: Product formula for conditional expectations of indicators under conditional independence.
+
+This is an adapter that manages typeclass instances and forwards to
+`condExp_indicator_mul_indicator_of_condIndep`. Use this in ViaMartingale.lean
+to avoid typeclass resolution issues. -/
+lemma condexp_indicator_inter_bridge
+    {Ω : Type*} {m₀ : MeasurableSpace Ω} [StandardBorelSpace Ω]
+    {μ : @Measure Ω m₀} [IsProbabilityMeasure μ]
+    {m mF mH : MeasurableSpace Ω}
+    (hm : m ≤ m₀) (hmF : mF ≤ m₀) (hmH : mH ≤ m₀)
+    (hCI : ProbabilityTheory.CondIndep m mF mH hm μ)
+    {A B : Set Ω} (hA : MeasurableSet[mF] A) (hB : MeasurableSet[mH] B) :
+    μ[(A ∩ B).indicator (fun _ => (1 : ℝ)) | m]
+      =ᵐ[μ]
+    (μ[A.indicator (fun _ => (1 : ℝ)) | m] *
+     μ[B.indicator (fun _ => (1 : ℝ)) | m]) := by
+  classical
+  -- Install trimmed instances
+  haveI : IsFiniteMeasure μ := inferInstance
+  haveI : IsFiniteMeasure (μ.trim hm) := isFiniteMeasure_trim μ hm
+  haveI : SigmaFinite (μ.trim hm) := sigmaFinite_trim μ hm
+  -- Forward to the proven lemma
+  exact condExp_indicator_mul_indicator_of_condIndep hm hmF hmH hCI hA hB
 
 end Exchangeability.Probability
