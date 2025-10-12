@@ -2385,11 +2385,13 @@ theorem subsequence_criterion_convergence_in_probability
       -- The key fact: limsup A = {ω | frequently ω ∈ A_k}
       -- So ω ∉ limsup A ⟺ eventually ω ∉ A_k
       have h_eventually : ∃ K, ∀ k ≥ K, ω ∉ A k := by
-        -- limsup A = ⋂ N, ⋃ k ≥ N, A k
-        -- ω ∉ limsup A means ∃ N, ω ∉ ⋃ k ≥ N, A k, i.e., ∃ N, ∀ k ≥ N, ω ∉ A k
-        -- This is essentially the definition of "not frequently" = "eventually not"
-        -- For now, leaving as sorry since the set-theoretic manipulations are tedious
-        sorry
+        -- Use filter characterization: ω ∉ limsup A ↔ ¬(frequently ω ∈ A k) ↔ eventually ω ∉ A k
+        rw [Set.mem_compl_iff] at hω
+        rw [mem_limsup_iff_frequently_mem] at hω
+        rw [Filter.not_frequently] at hω
+        -- hω : ∀ᶠ k in atTop, ω ∉ A k
+        rw [Filter.eventually_atTop] at hω
+        exact hω
       obtain ⟨K, hK⟩ := h_eventually
       -- Show convergence using squeeze: |ξ (φ k) ω - ξ_limit ω| ≤ ε k for k ≥ K
       simp only [Set.mem_setOf_eq]
@@ -2799,8 +2801,53 @@ lemma cdf_from_alpha_rightContinuous
   -- for any ε>0, ∃q>t with α(q) < F(t) + ε
   -- For u close enough to t (specifically u < q), F(u) ≤ α(q) < F(t) + ε
   -- Also F(t) ≤ F(u) by monotonicity, giving |F(u) - F(t)| < ε
-  -- TODO: formalize using Filter.tendsto_iInf or explicit ε-δ
-  sorry
+  rw [Metric.tendsto_nhdsWithin_nhds]
+  intro ε hε
+  -- F(t) is the infimum, so there exists q > t with α(q) < F(t) + ε
+  have hne : Nonempty {q : ℚ // t < (q : ℝ)} := by
+    obtain ⟨q, hq1, _⟩ := exists_rat_btwn (lt_add_one t)
+    exact ⟨⟨q, hq1⟩⟩
+  have hbdd : BddBelow (Set.range fun (q : {q : ℚ // t < (q : ℝ)}) =>
+      alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω) := by
+    use 0
+    intro y ⟨q, hq⟩
+    rw [← hq]
+    exact (alphaIic_bound X hX_contract hX_meas hX_L2 (q : ℝ) ω).1
+  -- By definition of infimum, ∃ q with F(t) ≤ α(q) < F(t) + ε
+  have h_inflt : iInf (fun (q : {q : ℚ // t < (q : ℝ)}) => alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω) < cdf_from_alpha X hX_contract hX_meas hX_L2 ω t + ε := by
+    unfold cdf_from_alpha
+    linarith
+  obtain ⟨⟨q, hqt⟩, hq_bound⟩ := exists_lt_of_ciInf_lt h_inflt
+  -- For any u with t < u < q, we have F(u) ≤ α(q) < F(t) + ε
+  refine ⟨q - t, by linarith, fun u hu_gt hu_dist => ?_⟩
+  simp only [Set.mem_Ioi] at hu_gt
+  rw [Real.dist_eq] at hu_dist
+  have hu_lt_q : u < q := by
+    have : |u - t| < q - t := hu_dist
+    have h_pos : u - t < q - t := abs_lt.mp this |>.2
+    linarith
+  -- By monotonicity: F(t) ≤ F(u)
+  have h_mono : cdf_from_alpha X hX_contract hX_meas hX_L2 ω t ≤ cdf_from_alpha X hX_contract hX_meas hX_L2 ω u :=
+    cdf_from_alpha_mono X hX_contract hX_meas hX_L2 ω (le_of_lt hu_gt)
+  -- F(u) ≤ α(q) because q > u
+  have h_upper : cdf_from_alpha X hX_contract hX_meas hX_L2 ω u ≤ alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω := by
+    calc cdf_from_alpha X hX_contract hX_meas hX_L2 ω u
+        = ⨅ (r : {r : ℚ // u < (r : ℝ)}), alphaIic X hX_contract hX_meas hX_L2 (r : ℝ) ω := rfl
+      _ ≤ alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω := by
+          have hbdd_u : BddBelow (Set.range fun (r : {r : ℚ // u < (r : ℝ)}) =>
+              alphaIic X hX_contract hX_meas hX_L2 (r : ℝ) ω) := by
+            use 0
+            intro y ⟨r, hr⟩
+            rw [← hr]
+            exact (alphaIic_bound X hX_contract hX_meas hX_L2 (r : ℝ) ω).1
+          exact ciInf_le hbdd_u ⟨q, hu_lt_q⟩
+  rw [Real.dist_eq]
+  calc |cdf_from_alpha X hX_contract hX_meas hX_L2 ω u - cdf_from_alpha X hX_contract hX_meas hX_L2 ω t|
+      = cdf_from_alpha X hX_contract hX_meas hX_L2 ω u - cdf_from_alpha X hX_contract hX_meas hX_L2 ω t := by
+        rw [abs_of_nonneg]
+        linarith
+    _ ≤ alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω - cdf_from_alpha X hX_contract hX_meas hX_L2 ω t := by linarith
+    _ < ε := by linarith
 
 /-- Bounds 0 ≤ F ≤ 1 (pointwise in ω,t). -/
 lemma cdf_from_alpha_bounds
