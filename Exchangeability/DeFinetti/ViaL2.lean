@@ -866,7 +866,7 @@ private lemma card_filter_partition (k : ℕ) :
   have h_card_sum := card_union_of_disjoint h_disj
   rw [← h_partition] at h_card_sum
   simp only [card_fin] at h_card_sum
-  convert h_card_sum.symm using 2 <;> simp only [Finset.filter_congr_decidable]
+  convert h_card_sum.symm using 2
 
 /-- Cardinality of `{i : Fin(2k) | i.val < k}` is k. -/
 lemma card_filter_fin_val_lt_two_mul (k : ℕ) :
@@ -1648,7 +1648,7 @@ private lemma l2_bound_long_vs_tail
                 constructor
                 · intro hi
                   use ⟨i.val - (m - k), by omega⟩
-                  simp only [Finset.mem_univ, true_and]
+                  simp only []
                   ext; simp; omega
                 · rintro ⟨j, _, rfl⟩
                   simp
@@ -2291,7 +2291,7 @@ theorem subsequence_criterion_convergence_in_probability
     have hk := h_prob_conv (ε k) (hε_pos k)
     -- eventually < 2^{-(k+1)} in ENNReal
     have : (0 : ENNReal) < ((1/2 : ENNReal) ^ (k+1)) := by
-      apply ENNReal.pow_pos <;> norm_num
+      apply ENNReal.pow_pos; norm_num
     -- TODO: from `Tendsto ... (𝓝 0)` deduce ∃n, value ≤ (1/2)^{k+1}
     -- Use `((tendsto_order.1 hk).2 this)` or `eventually_lt_iff_lt_lim` flavor
     -- and then extract an index.
@@ -2301,9 +2301,25 @@ theorem subsequence_criterion_convergence_in_probability
   choose n hn using h_exists
   let φ : ℕ → ℕ := fun k => Nat.rec (n 0) (fun k acc => max (acc + 1) (n (k+1))) k
   have hφ_smono : StrictMono φ := by
-    -- TODO: Easy recursion: φ (k+1) = max (φ k + 1) (n (k+1)) ≥ φ k + 1
-    -- Use induction on b, cases on whether a+1 = b or a+1 < b
-    sorry
+    -- φ is defined recursively as φ k = Nat.rec (n 0) (fun k acc => max (acc + 1) (n (k+1))) k
+    -- So φ 0 = n 0 and φ (k+1) = max (φ k + 1) (n (k+1))
+    -- This means φ (k+1) ≥ φ k + 1, hence strictly monotone
+    intro a b hab
+    induction b with
+    | zero => omega  -- Can't have a < 0
+    | succ b IH =>
+        rcases Nat.lt_succ_iff_lt_or_eq.mp hab with h | h
+        · -- Case: a < b, so by IH we have φ a < φ b
+          calc φ a < φ b := IH h
+            _ < φ b + 1 := Nat.lt_succ_self _
+            _ ≤ max (φ b + 1) (n (b + 1)) := le_max_left _ _
+            _ = φ (b + 1) := by simp [φ]
+        · -- Case: a = b, so need φ b < φ (b+1)
+          rw [h]
+          show φ b < φ (b + 1)
+          calc φ b < φ b + 1 := Nat.lt_succ_self _
+            _ ≤ max (φ b + 1) (n (b + 1)) := le_max_left _ _
+            _ = φ (b + 1) := by simp [φ]
 
   -- Bad sets A_k
   let A : ℕ → Set Ω := fun k => {ω | ε k ≤ |ξ (φ k) ω - ξ_limit ω|}
@@ -2349,7 +2365,7 @@ theorem subsequence_criterion_convergence_in_probability
       -- TODO: `measurableSet_iInter` + `measurableSet_iUnion` composition.
       sorry
     have : μ ((limsup A atTop)ᶜ) = μ Set.univ := by
-      simpa [measure_compl h_meas, hBC] using congrArg (fun t => μ t) rfl
+      simp [measure_compl h_meas, hBC]
     -- So almost every ω lies in the RHS set
     have hAE : μ {ω | Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω))} = μ Set.univ := by
       -- monotonicity of μ and hcompl
@@ -2399,47 +2415,51 @@ theorem reverse_martingale_subsequence_convergence
   -- Apply the subsequence criterion we just proved
   exact subsequence_criterion_convergence_in_probability alpha alpha_inf h_prob_conv
 
-/-- The α_n sequence is a reverse martingale with respect to the tail filtration.
+/-- Placeholder: The α_n sequence is a reverse martingale with respect to the tail filtration.
 
-**Note**: This lemma's content is deferred to Step 5 (`alpha_is_conditional_expectation`).
+**TODO**: This lemma's content is deferred to Step 5 (`alpha_is_conditional_expectation`).
 Once we identify α_n = E[f(X_{n+1}) | σ(X_{n+1}, X_{n+2}, ...)] in Step 5,
 the reverse martingale property follows immediately from the standard tower property
 of conditional expectation.
 
-For now, we state this as `True` and complete the identification in Step 5.
+This private placeholder exists only so the file compiles while we develop other parts.
 -/
-theorem alpha_is_reverse_martingale
+@[nolint unusedArguments]
+private theorem alpha_is_reverse_martingale
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (_X : ℕ → Ω → ℝ) (_hX_contract : Contractable μ _X)
     (_hX_meas : ∀ i, Measurable (_X i))
     (_α : ℕ → Ω → ℝ)
     (_f : ℝ → ℝ) (_hf_meas : Measurable _f) :
-    True := by
-  -- Defer to Step 5 where we identify α_n with conditional expectation
+    True :=
   trivial
 
 /-!
 ## Step 4: Contractability + dominated convergence gives conditional expectation formula
 -/
 
-/-- Using contractability and dominated convergence, we get:
+/-- Placeholder: Using contractability and dominated convergence, we get:
 E[f(X_i) ; ∩I_k] = E[α_{k-1} ; ∩I_k] → E[α_∞ ; ∩I_k]
 
 **Kallenberg**: "By the contractability of ξ and dominated convergence we get, a.s. along ℕ
 for any i ∈ I:
   E[f(ξ_i); ∩I_k] = E[α_{k-1}; ∩I_k] → E[α_∞; ∩I_k]"
 
-TODO: Use contractability to relate different time points.
+**TODO**: Use contractability to relate different time points.
+
+This private placeholder exists only so the file compiles while we develop other parts.
+The parameters document the intended signature for the full implementation.
 -/
-theorem contractability_conditional_expectation
+@[nolint unusedArguments]
+private theorem contractability_conditional_expectation
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
-    (hX_meas : ∀ i, Measurable (X i))
-    (f : ℝ → ℝ) (hf_meas : Measurable f)
-    (alpha : ℕ → Ω → ℝ) (alpha_inf : Ω → ℝ)
-    (I_k : Set Ω)  -- Event ∩I_k in tail σ-algebra
-    (h_conv : ∀ᵐ ω ∂μ, Tendsto (fun n => alpha n ω) atTop (𝓝 (alpha_inf ω))) :
-    True := by
+    (_X : ℕ → Ω → ℝ) (_hX_contract : Contractable μ _X)
+    (_hX_meas : ∀ i, Measurable (_X i))
+    (_f : ℝ → ℝ) (_hf_meas : Measurable _f)
+    (_alpha : ℕ → Ω → ℝ) (_alpha_inf : Ω → ℝ)
+    (_I_k : Set Ω)  -- Event ∩I_k in tail σ-algebra
+    (_h_conv : ∀ᵐ ω ∂μ, Tendsto (fun n => _alpha n ω) atTop (𝓝 (_alpha_inf ω))) :
+    True :=
   trivial
 
 /-!
@@ -2565,10 +2585,25 @@ lemma cdf_from_alpha_mono
     (ω : Ω) :
     Monotone (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) := by
   intro s t hst
-  -- The index set {q | t<q} ⊆ {q | s<q} when s ≤ t
-  -- Hence inf over smaller set ≥ inf over larger set
-  -- TODO: formalize iInf subset ordering
-  sorry
+  -- When s ≤ t, the set {q : ℚ | t < q} ⊆ {q : ℚ | s < q}
+  -- For any element q in the smaller set, we show it's in the larger set
+  -- Then iInf over smaller set ≥ iInf over larger set
+  have hne_t : Nonempty {q : ℚ // t < (q : ℝ)} := by
+    obtain ⟨q, hq1, _⟩ := exists_rat_btwn (lt_add_one t)
+    exact ⟨⟨q, hq1⟩⟩
+  refine le_ciInf fun ⟨qt, hqt⟩ => ?_
+  -- qt > t ≥ s, so qt > s, hence ⟨qt, _⟩ is in the index set for s
+  have hqs : s < (qt : ℝ) := lt_of_le_of_lt hst hqt
+  calc alphaIic X hX_contract hX_meas hX_L2 (qt : ℝ) ω
+      = alphaIic X hX_contract hX_meas hX_L2 ((⟨qt, hqs⟩ : {q : ℚ // s < (q : ℝ)}) : ℝ) ω := rfl
+    _ ≥ ⨅ (q : {q : ℚ // s < (q : ℝ)}), alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω := by
+        have hbdd : BddBelow (Set.range fun (q : {q : ℚ // s < (q : ℝ)}) =>
+            alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω) := by
+          use 0
+          intro y ⟨q, hq⟩
+          rw [← hq]
+          exact (alphaIic_bound X hX_contract hX_meas hX_L2 (q : ℝ) ω).1
+        exact ciInf_le hbdd ⟨qt, hqs⟩
 
 /-- Right-continuity in t: F(ω,t) = lim_{u↘t} F(ω,u). -/
 lemma cdf_from_alpha_rightContinuous
@@ -2597,9 +2632,27 @@ lemma cdf_from_alpha_bounds
     (ω : Ω) (t : ℝ) :
     0 ≤ cdf_from_alpha X hX_contract hX_meas hX_L2 ω t
     ∧ cdf_from_alpha X hX_contract hX_meas hX_L2 ω t ≤ 1 := by
-  -- iInf of values in [0,1] stays in [0,1]
-  -- TODO: formalize iInf bounds preservation
-  sorry
+  -- First establish that the index set is nonempty
+  have hne : Nonempty {q : ℚ // t < (q : ℝ)} := by
+    obtain ⟨q, hq1, _⟩ := exists_rat_btwn (lt_add_one t)
+    exact ⟨⟨q, hq1⟩⟩
+  constructor
+  · -- Lower bound: iInf ≥ 0
+    -- Each alphaIic value is ≥ 0, so their infimum is ≥ 0
+    refine le_ciInf fun q => ?_
+    exact (alphaIic_bound X hX_contract hX_meas hX_L2 (q : ℝ) ω).1
+  · -- Upper bound: iInf ≤ 1
+    -- Pick any q with t < q, then iInf ≤ alphaIic q ≤ 1
+    have hbdd : BddBelow (Set.range fun (q : {q : ℚ // t < (q : ℝ)}) =>
+        alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω) := by
+      use 0
+      intro y ⟨q, hq⟩
+      rw [← hq]
+      exact (alphaIic_bound X hX_contract hX_meas hX_L2 (q : ℝ) ω).1
+    calc cdf_from_alpha X hX_contract hX_meas hX_L2 ω t
+        = ⨅ (q : {q : ℚ // t < (q : ℝ)}), alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω := rfl
+      _ ≤ alphaIic X hX_contract hX_meas hX_L2 (hne.some : ℝ) ω := ciInf_le hbdd hne.some
+      _ ≤ 1 := (alphaIic_bound X hX_contract hX_meas hX_L2 (hne.some : ℝ) ω).2
 
 /-- F(ω,t) → 0 as t → -∞, and F(ω,t) → 1 as t → +∞. -/
 lemma cdf_from_alpha_limits
