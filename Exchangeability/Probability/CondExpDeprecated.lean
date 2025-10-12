@@ -46,13 +46,13 @@ and all other files). They are kept here for potential future mathlib contributi
 
 ## Status (January 2025)
 
-**Progress**: 23 → 0 compilation errors ✅ | 2 axioms → 0 axioms ✅
+**Progress**: 23 → 0 compilation errors ✅ | 2 axioms → 0 axioms ✅ | 8+ sorries → 6 sorries ✅
 
 **Fixed**:
 - ✅ Orphaned doc comments (3 fixes)
 - ✅ API changes: `eLpNorm_condExp_le` → `eLpNorm_one_condExp_le_eLpNorm`
 - ✅ API changes: `setIntegral_indicator_const_Lp` → `integral_indicator + setIntegral_const`
-- ✅ SigmaFinite instance derivation from IsProbabilityMeasure
+- ✅ SigmaFinite instance derivation from IsProbabilityMeasure (1 of 2 cases)
 - ✅ Induction hypothesis type issue in antitone proof
 - ✅ **ALL 3 main sorries in `condIndep_of_indicator_condexp_eq`**:
   1. Integrability of product of indicators (f1 * f2)
@@ -61,13 +61,14 @@ and all other files). They are kept here for potential future mathlib contributi
 - ✅ **Both axioms converted to proven lemmas**:
   1. `condExp_indicator_mul_indicator_of_condIndep` - One-line proof using `condIndep_iff`
   2. `condExp_indicator_mul_indicator_of_condIndep_pullout` - Proof using idempotence property
+- ✅ **Variance decomposition formula** (line 820): Used `condVar_ae_eq_condExp_sq_sub_sq_condExp`
+- ✅ **Integral indicator formula** (line 599): Used `integral_indicator_const` for clean 2-line proof
 
-**Remaining sorries** (expected, in helper lemmas):
-- Lines ~580-590: Restricted measure conditional expectation (3 sorries, complex theory)
-- Line ~814: Variance decomposition formula (54-line calc chain stubbed for simplicity)
-- Line ~874: L2 norm inner product formula (API changed, needs investigation)
-- Line ~929: SigmaFinite instance synthesis (technical typeclass issue documented)
-- Lines ~1007, ~1089: Main convergence theorem sorries (mathematical content complete)
+**Remaining sorries** (6 total, all in helper lemmas):
+- Lines 587, 593: Restricted measure conditional expectation (complex, needs setIntegral API)
+- Line 889: L2 norm squared formula (complex eLpNorm calculation with rpow simplifications)
+- Line 943: SigmaFinite derivation from infimum assumption (needs complex typeclass derivation)
+- Lines 1021, 1103: Main convergence theorem sorries (mathematical content complete)
 
 ## Future Work
 
