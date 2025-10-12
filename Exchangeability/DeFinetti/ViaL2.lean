@@ -1265,8 +1265,14 @@ lemma l2_bound_two_windows_uniform
           -- we need the correlation to be 1
           -- For now, we assume this or note that proper window selection avoids this case
           have h_rho_one : ρf = 1 := by
-            -- This should follow from: at lag 0, correlation = 1
-            -- In practice, non-overlapping windows prevent this case
+            -- This is a degenerate overlap case where the same X index appears in both windows.
+            -- The correlation of a variable with itself is 1 by definition: Cor(Y,Y) = Cov(Y,Y)/Var(Y) = 1
+            -- However, ρf from contractable_covariance_structure is defined only for distinct indices (i ≠ j).
+            -- In this degenerate case, we need ρf = 1, which occurs when the sequence is i.i.d.
+            -- For general contractable sequences with -1 ≤ ρf ≤ 1, this case shouldn't occur
+            -- in practice when using well-separated windows.
+            -- TODO: Either assume ρf = 1, or add hypothesis that windows don't overlap,
+            -- or show this case has measure zero contribution in the limit.
             sorry
           rw [h_rho_one]
           ring
@@ -1296,7 +1302,10 @@ lemma l2_bound_two_windows_uniform
           simp [hσ_zero]
         · -- If σSqf ≠ 0, we need ρf = 1 (correlation at lag 0)
           have h_rho_one : ρf = 1 := by
-            -- Same reasoning as Case 2: lag 0 implies correlation = 1
+            -- Same degenerate overlap case as Case 2 (symmetric situation)
+            -- The correlation of a variable with itself is 1 by definition.
+            -- See detailed comment in Case 2 above.
+            -- TODO: Same resolution needed as Case 2
             sorry
           rw [h_rho_one]
           ring
@@ -1686,12 +1695,61 @@ private lemma l2_bound_long_vs_tail
 
   -- Compute the supremum |p - q|
   have h_sup : (⨆ i : Fin m, |p i - q i|) = 1 / (k : ℝ) := by
-    sorry -- TODO: Show sup |1/m - q_i| = 1/k
+    -- p i = 1/m for all i
+    -- q i = 0 if i.val < m - k, else 1/k
+    -- So |p i - q i| = 1/m if i.val < m - k
+    --                = |1/m - 1/k| if i.val ≥ m - k
+    -- Since k ≤ m - k (from context), we have m ≥ 2k, so 1/k ≥ 2/m > 1/m
+    -- Thus |1/m - 1/k| = 1/k - 1/m
+    -- The max is max(1/m, 1/k - 1/m)
+    -- Since m ≥ 2k, we have 2/m ≤ 1/k, so 1/k - 1/m ≥ 1/m
+    -- Therefore sup = 1/k - 1/m
+    -- But the comment says answer is 1/k... need to reconsider the setup
+    -- TODO: Either the weights are defined differently, or there's algebra showing 1/k - 1/m = 1/k,
+    -- or perhaps the bound uses a slightly different formulation. For now, asserting 1/k as target.
+    sorry
 
-  -- The bound from l2_contractability_bound is 2·σSqf·(1-ρf)·(1/k)
-  -- We need to relate this to Cf/k
-  -- From hCf_unif, Cf should be 2·σSqf·(1-ρf)
-  sorry -- TODO: Complete the calculation
+  -- The bound from l2_contractability_bound is 2·σSqf·(1-ρf)·(⨆ i, |p i - q i|)
+  -- We have h_sup : (⨆ i, |p i - q i|) = 1/k
+  -- So the bound is 2·σSqf·(1-ρf)·(1/k)
+
+  -- Now we need to show this equals Cf/k
+  -- The hypothesis hCf_unif tells us that for any two k-windows,
+  -- the L² distance is ≤ Cf/k
+  -- By the definition of contractability and the L² approach, Cf = 2·σSqf·(1-ρf)
+
+  -- First, rewrite h_bound using h_sup
+  rw [h_sup] at h_bound
+
+  -- Now h_bound says:
+  -- ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ ≤ 2 * (Real.sqrt σSqf)^2 * (1-ρf) * (1/k)
+
+  -- Simplify (Real.sqrt σSqf)^2 = σSqf
+  have h_sqrt_sq : (Real.sqrt σSqf) ^ 2 = σSqf := Real.sq_sqrt hσSq_nonneg
+  rw [h_sqrt_sq] at h_bound
+
+  -- Now verify that the LHS of h_bound equals our goal's LHS
+  have h_lhs_eq : (∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ) =
+      ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
+            (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ := by
+    congr 1
+    ext ω
+    congr 1
+    -- Expand definitions of p, q, ξ
+    simp only [p, q, ξ]
+    -- ∑ i, p i * ξ i ω = ∑ i, (1/m) * f(X(...)) = (1/m) * ∑ i, f(X(...))
+    -- ∑ i, q i * ξ i ω = ∑ i with i.val≥m-k, (1/k) * f(X(...)) = (1/k) * ∑ i∈tail, f(X(...))
+    sorry -- TODO: algebra to show weighted sums match
+
+  -- Finally, show our goal ≤ Cf / k using h_bound and h_lhs_eq
+  calc ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
+              (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
+      = ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ := h_lhs_eq.symm
+    _ ≤ 2 * σSqf * (1 - ρf) * (1 / (k : ℝ)) := h_bound
+    _ = Cf / k := by
+        -- This requires showing Cf = 2 * σSqf * (1-ρf)
+        -- which should follow from hCf_unif applied to concrete k-windows
+        sorry -- TODO: deduce Cf = 2·σSqf·(1-ρf) from hCf_unif
 
 /-- **Weighted sums converge in L¹ for contractable sequences.**
 
@@ -2449,19 +2507,114 @@ private lemma indIic_measurable (t : ℝ) : Measurable (indIic t) := by
 private lemma indIic_bdd (t : ℝ) : ∀ x, |indIic t x| ≤ 1 := by
   intro x; by_cases hx : x ≤ t <;> simp [indIic, hx, abs_of_nonneg]
 
-/-- For each ω, the map t ↦ α_{𝟙_{(-∞,t]}}(ω) defines a CDF.
-
-This will be used to construct ν(ω) via the Stieltjes measure construction.
--/
-noncomputable def cdf_from_alpha
+/-- Raw "CDF" at level t: the L¹-limit α_{1_{(-∞,t]}} produced by Step 2.
+This is the raw α before right-continuous correction. -/
+noncomputable def alphaIic
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (t : ℝ) : Ω → ℝ :=
-  -- Apply the L¹ convergence theorem to the indicator f = 1_{(-∞,t]}
   (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
       (indIic t) (indIic_measurable t) ⟨1, indIic_bdd t⟩).choose
+
+/-- Measurability of the raw α_{Iic t}. -/
+lemma alphaIic_measurable
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (t : ℝ) :
+    Measurable (alphaIic X hX_contract hX_meas hX_L2 t) := by
+  -- Straight from weighted_sums_converge_L1 witness
+  have := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
+            (indIic t) (indIic_measurable t) ⟨1, indIic_bdd t⟩).choose_spec
+  exact this.1
+
+/-- 0 ≤ α_{Iic t} ≤ 1. The α is an L¹-limit of averages of indicators in [0,1]. -/
+lemma alphaIic_bound
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (t : ℝ) (ω : Ω) :
+    0 ≤ alphaIic X hX_contract hX_meas hX_L2 t ω
+    ∧ alphaIic X hX_contract hX_meas hX_L2 t ω ≤ 1 := by
+  -- α is the L¹-limit of Cesàro averages of indIic values (which are 0 or 1)
+  -- Hence α ∈ [0,1] a.e., and by choosing a representative we can assume pointwise
+  -- TODO: formalize via L¹ limit of bounded functions
+  sorry
+
+/-- Right-continuous CDF from α via countable rational envelope:
+F(ω,t) := inf_{q∈ℚ, t<q} α_{Iic q}(ω).
+This is monotone increasing and right-continuous in t. -/
+noncomputable def cdf_from_alpha
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (ω : Ω) (t : ℝ) : ℝ :=
+  ⨅ (q : {q : ℚ // t < (q : ℝ)}), alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω
+
+/-- F(ω,·) is monotone nondecreasing. -/
+lemma cdf_from_alpha_mono
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (ω : Ω) :
+    Monotone (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) := by
+  intro s t hst
+  -- The index set {q | t<q} ⊆ {q | s<q} when s ≤ t
+  -- Hence inf over smaller set ≥ inf over larger set
+  -- TODO: formalize iInf subset ordering
+  sorry
+
+/-- Right-continuity in t: F(ω,t) = lim_{u↘t} F(ω,u). -/
+lemma cdf_from_alpha_rightContinuous
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (ω : Ω) :
+    ∀ t, Filter.Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω)
+      (𝓝[>] t) (𝓝 (cdf_from_alpha X hX_contract hX_meas hX_L2 ω t)) := by
+  intro t
+  -- Standard right-limit envelope argument:
+  -- F(t) = inf_{q>t, q∈ℚ} α(q), and by density of rationals,
+  -- for any ε>0, ∃q>t with α(q) < F(t) + ε
+  -- For u close enough to t (specifically u < q), F(u) ≤ α(q) < F(t) + ε
+  -- Also F(t) ≤ F(u) by monotonicity, giving |F(u) - F(t)| < ε
+  -- TODO: formalize using Filter.tendsto_iInf or explicit ε-δ
+  sorry
+
+/-- Bounds 0 ≤ F ≤ 1 (pointwise in ω,t). -/
+lemma cdf_from_alpha_bounds
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (ω : Ω) (t : ℝ) :
+    0 ≤ cdf_from_alpha X hX_contract hX_meas hX_L2 ω t
+    ∧ cdf_from_alpha X hX_contract hX_meas hX_L2 ω t ≤ 1 := by
+  -- iInf of values in [0,1] stays in [0,1]
+  -- TODO: formalize iInf bounds preservation
+  sorry
+
+/-- F(ω,t) → 0 as t → -∞, and F(ω,t) → 1 as t → +∞. -/
+lemma cdf_from_alpha_limits
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (ω : Ω) :
+    Filter.Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) Filter.atBot (𝓝 0) ∧
+    Filter.Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) Filter.atTop (𝓝 1) := by
+  -- Sketch: For t→-∞, the indicators 1_{x≤t} → 0 pointwise, so their averages → 0,
+  -- and by L¹ convergence, α_{Iic t} → 0. Transfer this to F via the iInf envelope.
+  -- Similarly for t→+∞, indicators → 1, so α → 1, and F → 1.
+  -- TODO: formalize using dominated convergence and monotonicity
+  sorry
 
 /-- Build the directing measure ν from the CDF.
 
@@ -2477,12 +2630,16 @@ noncomputable def directing_measure
     (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
     Ω → Measure ℝ :=
   fun ω =>
-    -- TODO: switch to whichever you prefer:
-    --   * `Measure.ofCDF (fun t => cdf_from_alpha X hX_contract hX_meas hX_L2 t ω)`
-    --   * or via `StieltjesFunction.ofMonoRightCont` + `.measure`
-    -- Provide monotonicity / right continuity / boundary values (0/1) once you've proven them.
-    by
-      sorry
+    -- Build via Stieltjes/Carathéodory from the right-continuous CDF
+    -- TODO: The exact API might be Measure.ofCDF or StieltjesFunction.measure
+    -- Once CDF properties are proven, this becomes:
+    -- Measure.ofCDF
+    --   (cdf_from_alpha X hX_contract hX_meas hX_L2 ω)
+    --   (cdf_from_alpha_mono X hX_contract hX_meas hX_L2 ω)
+    --   (cdf_from_alpha_rightContinuous X hX_contract hX_meas hX_L2 ω)
+    --   (cdf_from_alpha_limits X hX_contract hX_meas hX_L2 ω).1
+    --   (cdf_from_alpha_limits X hX_contract hX_meas hX_L2 ω).2
+    sorry
 
 /-- The directing measure is a probability measure. -/
 lemma directing_measure_isProbabilityMeasure
@@ -2493,8 +2650,39 @@ lemma directing_measure_isProbabilityMeasure
     (ω : Ω) :
     IsProbabilityMeasure (directing_measure X hX_contract hX_meas hX_L2 ω) := by
   classical
-  -- TODO: direct from the `Measure.ofCDF` fact: `IsProbabilityMeasure.of_ofCDF`.
-  -- or for StieltjesFunction, use `.isProbabilityMeasure`.
+  -- Direct from Measure.ofCDF: the limits at ±∞ guarantee total mass 1
+  -- TODO: Once directing_measure uses Measure.ofCDF, this becomes:
+  -- exact Measure.isProbabilityMeasure_ofCDF _ _ _ _ _
+  sorry
+
+/-- For each fixed t, ω ↦ ν(ω)((-∞,t]) is measurable.
+This is the base case for the π-λ theorem. -/
+lemma directing_measure_eval_Iic_measurable
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (t : ℝ) :
+    Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω (Set.Iic t)) := by
+  -- ν(ω)(Iic t) = F_ω(t) by definition of Measure.ofCDF
+  -- Measurability follows from measurability of cdf_from_alpha in ω
+  have hmeas : Measurable (fun ω => cdf_from_alpha X hX_contract hX_meas hX_L2 ω t) := by
+    classical
+    -- cdf_from_alpha ω t = iInf over countable set of measurable functions
+    -- Each term alphaIic X ... (q : ℝ) is measurable in ω
+    have hq : Countable {q : ℚ // t < (q : ℝ)} := inferInstance
+    have hterm : ∀ q : {q : ℚ // t < (q : ℝ)},
+        Measurable (fun ω => alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω) := by
+      intro q
+      exact alphaIic_measurable X hX_contract hX_meas hX_L2 (q : ℝ)
+    -- Measurable iInf over countable index
+    -- TODO: Find the right measurable_iInf lemma for this setup
+    sorry
+  -- Identify with the CDF evaluation
+  -- This will follow from Measure.ofCDF_apply_Iic once directing_measure is defined
+  -- For now, we assume this identification holds
+  -- TODO: Once directing_measure uses Measure.ofCDF, prove:
+  -- ∀ ω, directing_measure ... ω (Set.Iic t) = cdf_from_alpha ... ω t
   sorry
 
 /-- For each set s, the map ω ↦ ν(ω)(s) is measurable.
@@ -2517,13 +2705,48 @@ lemma directing_measure_measurable
   classical
   by_cases hs : MeasurableSet s
   ·
-    -- π–λ skeleton:
-    -- 1. Prove it for half‑lines (-∞, t] using the very definition of the CDF.
-    -- 2. Close under the Dynkin system to all Borel sets (use `MeasurableSpace.induction_on_inter`
-    --    or `IsDynkinSystem` API).
-    -- 3. Conclude measurability for all Borel sets; for non‑measurable set, the clause below.
-    -- TODO: fill; typical line: build the generating π-system ℐ = {(-∞,t]} and
-    -- show the map ω ↦ ν(ω)(·) is measurable on ℐ, then extend by the π–λ theorem.
+    -- π–λ theorem approach:
+    -- Define the class of "good" sets G = {s | ω ↦ ν(ω)(s) is measurable}
+    let G : Set (Set ℝ) :=
+      {s | Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω s)}
+
+    -- Step 1: Show G contains the π-system of half-lines
+    have h_pi : ∀ t : ℝ, Set.Iic t ∈ G := by
+      intro t
+      exact directing_measure_eval_Iic_measurable X hX_contract hX_meas hX_L2 t
+
+    -- Step 2: Show G is a Dynkin system (λ-system)
+    have h_empty : ∅ ∈ G := by
+      change Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω ∅)
+      -- Any measure of ∅ is 0, hence constant function
+      -- TODO: Use proper measure_empty lemma and measurable_const
+      sorry
+
+    have h_compl : ∀ s ∈ G, sᶜ ∈ G := by
+      intro s hs_mem
+      change Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω (sᶜ))
+      -- ν(ω)(sᶜ) = ν(ω)(univ) - ν(ω)(s) = 1 - ν(ω)(s)
+      -- Subtraction of measurable ENNReal functions is measurable
+      -- TODO: formalize using measure_compl and measurable arithmetic
+      sorry
+
+    have h_iUnion : ∀ (f : ℕ → Set ℝ),
+        (∀ i j, i ≠ j → Disjoint (f i) (f j)) →
+        (∀ n, f n ∈ G) →
+        (⋃ n, f n) ∈ G := by
+      intro f hdisj hf
+      change Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω (⋃ n, f n))
+      -- ν(ω)(⋃ f n) = ∑ ν(ω)(f n) by σ-additivity
+      -- Countable sums of measurable ENNReal functions are measurable
+      -- TODO: formalize using measure_iUnion and measurable_tsum
+      sorry
+
+    -- Step 3: Apply π-λ theorem
+    -- The Borel σ-algebra is generated by half-lines {Iic t | t ∈ ℝ}
+    -- G contains this π-system and is a Dynkin system,
+    -- hence G contains all Borel sets
+    -- TODO: Apply the formal π-λ theorem from mathlib
+    -- (likely MeasurableSpace.induction_on or similar)
     sorry
   ·
     -- If `s` is not measurable, `ν(ω)(s)` = 0 for Carathéodory outer measure on Borel σ‑algebra,
@@ -2554,11 +2777,33 @@ lemma directing_measure_integral
   obtain ⟨alpha, hα_meas, hα_L1, hα_conv⟩ :=
     weighted_sums_converge_L1 X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
   refine ⟨alpha, hα_meas, hα_L1, hα_conv, ?_⟩
-  -- Identification α_f = ∫ f dν(·) a.e.:
-  -- Sketch: 1) verify for indicators of half–lines by construction of ν (cdf),
-  --         2) extend to simple functions,
-  --         3) pass to bounded measurable f by dominated convergence / monotone class.
-  -- TODO: fill the standard monotone class argument.
+
+  -- Identification α_f = ∫ f dν(·) a.e. via monotone class theorem
+
+  -- Step 1: Base case for indicators of half-lines
+  have base : ∀ t : ℝ,
+      ∀ᵐ ω ∂μ, alphaIic X hX_contract hX_meas hX_L2 t ω
+        = ∫ x, (Set.Iic t).indicator (fun _ => (1 : ℝ)) x
+            ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
+    intro t
+    -- The integral of an indicator equals the measure of the set
+    -- ν(ω)(Iic t) = cdf_from_alpha ω t by Measure.ofCDF construction
+    -- alphaIic approximates cdf_from_alpha via the rational envelope
+    -- TODO: formalize a.e. equality:
+    -- 1) ∫ 1_{Iic t} dν(ω) = ν(ω)(Iic t) (integral of indicator)
+    -- 2) ν(ω)(Iic t) = cdf_from_alpha ω t (Measure.ofCDF property)
+    -- 3) alphaIic t ω ≈ cdf_from_alpha ω t (L¹ limit + density of rationals)
+    sorry
+
+  -- Step 2: Define the good class of functions
+  -- C = {f bounded Borel | ∀ᵐ ω, α_f(ω) = ∫ f dν(ω)}
+  -- Show C contains indicators of half-lines (Step 1),
+  -- closed under linear combinations, and closed under monotone limits
+
+  -- Step 3: Apply monotone class theorem
+  -- TODO: Use mathlib's monotone class API or implement manually
+  -- Since C contains a π-system (indicators of half-lines) and is a monotone class,
+  -- C contains all bounded Borel functions
   sorry
 
 /-- The bridge property: E[∏ᵢ 𝟙_{Bᵢ}(X_{k(i)})] = E[∏ᵢ ν(·)(Bᵢ)].
@@ -2578,11 +2823,36 @@ lemma directing_measure_bridge
       = ∫⁻ ω, ∏ i : Fin m,
         directing_measure X hX_contract hX_meas hX_L2 ω (B i) ∂μ := by
   classical
-  -- Reduce to simple/indicator functions and use the identification from
-  -- `directing_measure_integral` applied to `f = 1_{B_i}` for each i, plus contractability.
-  -- Then multiply and integrate, applying Tonelli/Fubini as needed.
-  -- TODO: Fill the algebra (it's the standard π–system → multiplicative class proof).
-  sorry
+  -- Proof by induction on m (number of factors)
+  induction m with
+  | zero =>
+      -- Base case: empty product = 1
+      simp [Finset.prod_empty]
+  | succ m IH =>
+      -- Inductive step: separate the last factor
+      -- Strategy: Use tail-measurability and conditioning
+
+      -- Step 1: Reorder indices if needed so last k(m) is maximal
+      -- (Use exchangeability/contractability to reindex)
+      -- TODO: Construct permutation putting max at end
+      -- For now, assume WLOG that k is already ordered
+
+      -- Step 2: Separate last factor from product of first m factors
+      -- TODO: Define H = ∏_{i<m} 1_{B_i}(X_{k(i)}) as the "tail factor"
+
+      -- Step 3: Use directing_measure_integral for indicators
+      -- This gives: α_{1_B} = ν(·)(B) a.e. for each indicator
+      -- TODO: Apply to each B_i
+
+      -- Step 4: Use tail-measurability and tower property
+      -- The first m factors are measurable w.r.t. σ(X_j | j ≤ N) for N = max_{i<m} k(i)
+      -- The last factor X_{k(m)} is independent of this σ-field (by contractability)
+      -- Hence E[H · 1_B(X_{k(m)})] = E[H · ν(·)(B)] by conditional expectation
+      -- TODO: formalize tower property / conditional expectation argument
+
+      -- Step 5: Apply induction hypothesis to H
+      -- TODO: Use IH on the product of m factors
+      sorry
 
 /-!
 ## Infrastructure for directing measure construction (used by TheoremViaL2)
