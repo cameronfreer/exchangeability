@@ -397,7 +397,7 @@ the probabilities agree when comparing `(X m, θₘ X)` vs `(X k, θₘ X)`.
 This is the exact finite-dimensional marginal needed for the martingale step. -/
 lemma contractable_dist_eq_on_first_r_tail
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {X : ℕ → Ω → α} (hX : Contractable μ X)
+    {X : ℕ → Ω → α} (hX : Contractable μ X) (hX_meas : ∀ n, Measurable (X n))
     (k m r : ℕ) (hk : k ≤ m)
     (B : Set α) (hB : MeasurableSet B)
     (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i)) :
@@ -435,18 +435,61 @@ lemma contractable_dist_eq_on_first_r_tail
   -- The sets we want are exactly the preimages of the same event
   let A : Set (Fin (r + 1) → α) := {y | y 0 ∈ B ∧ ∀ i : Fin r, y (Fin.succ i) ∈ C i}
   have hA : MeasurableSet A := by
-    sorry  -- TODO: Prove A is measurable (standard)
+    have h0 : Measurable (fun y : Fin (r + 1) → α => y 0) := measurable_pi_apply 0
+    have hS : ∀ i : Fin r, Measurable (fun y : Fin (r + 1) → α => y (Fin.succ i)) :=
+      fun i => measurable_pi_apply (Fin.succ i)
+    have : A = (fun y => y 0) ⁻¹' B ∩ (⋂ i : Fin r, (fun y => y (Fin.succ i)) ⁻¹' C i) := by
+      ext y; simp [A, Set.mem_iInter]
+    rw [this]
+    exact (h0 hB).inter (MeasurableSet.iInter fun i => hS i (hC i))
+  -- Measurability of the index maps
+  have hφ₁ : Measurable (fun ω i => X (κ₁ i) ω) := by
+    apply measurable_pi_lambda
+    intro i
+    cases i using Fin.cases with
+    | zero => exact hX_meas m
+    | succ j => simp only [κ₁, κ_tail]; exact hX_meas (m + (j.1 + 1))
+  have hφ₂ : Measurable (fun ω i => X (κ₂ i) ω) := by
+    apply measurable_pi_lambda
+    intro i
+    cases i using Fin.cases with
+    | zero => exact hX_meas k
+    | succ j => simp only [κ₂, κ_tail]; exact hX_meas (m + (j.1 + 1))
   have hE₁ : {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
            = (fun ω i => X (κ₁ i) ω) ⁻¹' A := by
-    sorry  -- TODO: Unfold definitions
+    ext ω
+    simp only [Set.mem_setOf, Set.mem_preimage, A, κ₁, κ_tail]
+    constructor
+    · intro ⟨hB', hC'⟩
+      constructor
+      · simpa using hB'
+      · intro i
+        simpa using hC' i
+    · intro ⟨hB', hC'⟩
+      constructor
+      · simpa using hB'
+      · intro i
+        simpa using hC' i
   have hE₂ : {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
            = (fun ω i => X (κ₂ i) ω) ⁻¹' A := by
-    sorry  -- TODO: Unfold definitions
+    ext ω
+    simp only [Set.mem_setOf, Set.mem_preimage, A, κ₂, κ_tail]
+    constructor
+    · intro ⟨hB', hC'⟩
+      constructor
+      · simpa using hB'
+      · intro i
+        simpa using hC' i
+    · intro ⟨hB', hC'⟩
+      constructor
+      · simpa using hB'
+      · intro i
+        simpa using hC' i
   calc μ {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
       = μ ((fun ω i => X (κ₁ i) ω) ⁻¹' A) := by rw [hE₁]
-    _ = (Measure.map (fun ω i => X (κ₁ i) ω) μ) A := sorry  -- Measure.map_apply
+    _ = (Measure.map (fun ω i => X (κ₁ i) ω) μ) A := (Measure.map_apply hφ₁ hA).symm
     _ = (Measure.map (fun ω i => X (κ₂ i) ω) μ) A := by rw [this]
-    _ = μ ((fun ω i => X (κ₂ i) ω) ⁻¹' A) := sorry  -- Measure.map_apply
+    _ = μ ((fun ω i => X (κ₂ i) ω) ⁻¹' A) := Measure.map_apply hφ₂ hA
     _ = μ {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by rw [← hE₂]
 
 /-- Helper lemma: contractability gives the key distributional equality.
@@ -1148,7 +1191,7 @@ lemma contractable_dist_eq_on_rectangles_future
     μ {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
     simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using
       (contractable_dist_eq_on_first_r_tail
-        (μ:=μ) (X:=X) hX k m r hk B hB C hC)
+        (μ:=μ) (X:=X) hX hX_meas k m r hk B hB C hC)
   -- Show the sets are equal modulo arithmetic
   have hset_eq₁ : {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + 1 + i.1) ω ∈ C i}
                 = {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
