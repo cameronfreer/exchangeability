@@ -963,9 +963,11 @@ lemma l2_bound_two_windows_uniform
     have h_bij_n : ∑ i ∈ Finset.filter (fun i : Fin (2*k) => i.val < k) Finset.univ,
                      (1/(k:ℝ)) * f (X (n + i.val + 1) ω)
                  = (1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) := by
-      -- Bijection: {i : Fin(2k) | i.val < k} ↔ Fin k via i ↦ ⟨i.val, proof⟩
-      -- The sums are equal because i.val ranges over {0, ..., k-1} in both cases
-      sorry  -- TODO: Apply Finset.sum_bij or use reindexing lemma
+      -- Both sums compute (1/k)*f(X_{n+j+1}) summed over j ∈ {0,...,k-1}
+      -- LHS: filtered sum over {i : Fin(2k) | i.val < k}
+      -- RHS: (1/k) * sum over Fin k
+      -- These are equal because the filtered set has elements with .val in {0,...,k-1}
+      sorry  -- TODO: Bijection via Finset.sum_bij with i ↦ ⟨i.val, proof⟩
     have h_bij_m : ∑ i ∈ Finset.filter (fun i : Fin (2*k) => ¬(i.val < k)) Finset.univ,
                      (1/(k:ℝ)) * f (X (m + (i.val - k) + 1) ω)
                  = (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω) := by
