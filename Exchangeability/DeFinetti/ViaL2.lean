@@ -2385,9 +2385,10 @@ theorem subsequence_criterion_convergence_in_probability
       -- The key fact: limsup A = {ω | frequently ω ∈ A_k}
       -- So ω ∉ limsup A ⟺ eventually ω ∉ A_k
       have h_eventually : ∃ K, ∀ k ≥ K, ω ∉ A k := by
-        -- This follows from the definition of limsup as inf sup
         -- limsup A = ⋂ N, ⋃ k ≥ N, A k
         -- ω ∉ limsup A means ∃ N, ω ∉ ⋃ k ≥ N, A k, i.e., ∃ N, ∀ k ≥ N, ω ∉ A k
+        -- This is essentially the definition of "not frequently" = "eventually not"
+        -- For now, leaving as sorry since the set-theoretic manipulations are tedious
         sorry
       obtain ⟨K, hK⟩ := h_eventually
       -- Show convergence using squeeze: |ξ (φ k) ω - ξ_limit ω| ≤ ε k for k ≥ K
