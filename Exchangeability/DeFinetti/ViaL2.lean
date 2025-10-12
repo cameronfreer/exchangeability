@@ -2439,7 +2439,11 @@ theorem reverse_martingale_subsequence_convergence
         filter_upwards with ω
         exact abs_nonneg _
       have hf_int : Integrable (fun ω => |alpha n ω - alpha_inf ω|) μ := by
-        -- TODO: derive from h_L1_conv or add as hypothesis
+        -- The hypothesis h_L1_conv implies integrability:
+        -- If ∫ |f| can be made arbitrarily small (< any ε), then ∫ |f| is finite
+        -- For n large enough, we have ∫ |alpha n - alpha_inf| < 1, so finite integral
+        -- With measurability (from h_alpha_meas), finite integral implies Integrable
+        -- TODO: find the exact lemma or add Integrable as hypothesis to the theorem
         sorry
       have := mul_meas_ge_le_integral_of_nonneg hf_nonneg hf_int ε
       -- This gives: ε * μ.real {ω | ε ≤ |alpha n ω - alpha_inf ω|} ≤ ∫ ω, |alpha n ω - alpha_inf ω| ∂μ
