@@ -596,7 +596,10 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
       have h_eval :
           ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S)
             = ((μ.restrict S) (⋃ i, f i)).toReal := by
-        sorry  -- TODO: Need to show integral_indicator applies with proper measurable space
+        -- Use integral_indicator_const: ∫ s.indicator (fun _ => e) ∂μ = μ.real s • e
+        -- For e = 1, this gives: ∫ s.indicator (fun _ => 1) ∂μ = μ.real s = (μ s).toReal
+        rw [integral_indicator_const (1 : ℝ) h_meas_union]
+        simp [Measure.real]
       -- Both sides compute to the same number; conclude.
       simp only [C_S]
       rw [hL₁, hR₁, hL₂, hR₂, h_eval]
@@ -879,9 +882,11 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     (h_diff_L2.integrable_sq.congr h_integrand_eq.symm)
   -- The squared L2 norm equals zero, so the function is zero
   have h_norm_zero : ‖diffLp‖ ^ 2 = 0 := by
-    -- For Lp spaces with p=2, ‖f‖² = (∫|f|²)^(1/2)² = ∫|f|²
+    -- For Lp spaces with p=2, ‖f‖² equals ∫|f|² by the L² norm formula
     have h_norm_eq : ‖diffLp‖ ^ 2 = ∫ ω, |diffLp ω| ^ 2 ∂μ := by
-      sorry  -- TODO: Fix L2 norm squared formula (inner_self_eq_norm_sq API changed)
+      -- This follows from norm_toLp and eLpNorm properties for p=2
+      -- The squared L² norm equals the integral of the squared function
+      sorry  -- TODO: Complex calculation involving eLpNorm_eq_lintegral_rpow_nnnorm and rpow simplifications
     -- |diffLp|² = diffLp² since diffLp is real-valued
     have h_abs : (fun ω => |diffLp ω| ^ 2) =ᵐ[μ] fun ω => diffLp ω ^ 2 :=
       Eventually.of_forall fun ω => sq_abs _
