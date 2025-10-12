@@ -999,16 +999,21 @@ lemma l2_bound_two_windows_uniform
       exact hcov (n + i.val + 1) (n + j.val + 1) hneq
     · -- Case 2: i in first, j in second (i < k, j ≥ k)
       simp [hi, hj]
-      -- Need to show n + i.val + 1 ≠ m + (j.val - k) + 1
-      have hneq : n + i.val + 1 ≠ m + (j.val - k) + 1 := by
-        sorry -- These are potentially different indices
-      exact hcov (n + i.val + 1) (m + (j.val - k) + 1) hneq
+      by_cases heq : n + i.val + 1 = m + (j.val - k) + 1
+      · -- Degenerate case: same X index appears in both windows
+        -- This means ξ i and ξ j are the same random variable
+        -- The covariance equals variance in this case
+        -- For the theorem to work cleanly, windows should be disjoint or mostly distinct
+        sorry -- TODO: Handle when windows overlap; may need additional structure
+      · -- Normal case: distinct indices, apply hcov
+        exact hcov (n + i.val + 1) (m + (j.val - k) + 1) heq
     · -- Case 3: i in second, j in first (i ≥ k, j < k)
       simp [hi, hj]
-      -- Need to show m + (i.val - k) + 1 ≠ n + j.val + 1
-      have hneq : m + (i.val - k) + 1 ≠ n + j.val + 1 := by
-        sorry -- These are potentially different indices
-      exact hcov (m + (i.val - k) + 1) (n + j.val + 1) hneq
+      by_cases heq : m + (i.val - k) + 1 = n + j.val + 1
+      · -- Same degenerate case as Case 2
+        sorry -- TODO: Handle when windows overlap
+      · -- Normal case: distinct indices, apply hcov
+        exact hcov (m + (i.val - k) + 1) (n + j.val + 1) heq
     · -- Case 4: Both in second window (i ≥ k, j ≥ k)
       simp [hi, hj]
       -- Need to show m + (i.val - k) + 1 ≠ m + (j.val - k) + 1
