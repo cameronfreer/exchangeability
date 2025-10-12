@@ -2990,50 +2990,86 @@ lemma directing_measure_measurable
   by_cases hs : MeasurableSet s
   ·
     -- π–λ theorem approach:
-    -- Define the class of "good" sets G = {s | ω ↦ ν(ω)(s) is measurable}
+    -- Define the class of "good" measurable sets G = {s measurable | ω ↦ ν(ω)(s) is measurable}
+    -- We restrict to measurable sets so that measure properties (compl, union) can be used
     let G : Set (Set ℝ) :=
-      {s | Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω s)}
+      {s | MeasurableSet s ∧ Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω s)}
 
     -- Step 1: Show G contains the π-system of half-lines
     have h_pi : ∀ t : ℝ, Set.Iic t ∈ G := by
       intro t
-      exact directing_measure_eval_Iic_measurable X hX_contract hX_meas hX_L2 t
+      constructor
+      · exact measurableSet_Iic
+      · exact directing_measure_eval_Iic_measurable X hX_contract hX_meas hX_L2 t
 
     -- Step 2: Show G is a Dynkin system (λ-system)
     have h_empty : ∅ ∈ G := by
-      change Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω ∅)
-      -- Any measure of ∅ is 0, hence constant function
-      simp only [measure_empty]
-      exact measurable_const
+      constructor
+      · exact MeasurableSet.empty
+      · change Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω ∅)
+        simp only [measure_empty]
+        exact measurable_const
 
     have h_compl : ∀ s ∈ G, sᶜ ∈ G := by
-      intro s hs_mem
-      change Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω (sᶜ))
-      -- ν(ω)(sᶜ) = ν(ω)(univ) - ν(ω)(s) = 1 - ν(ω)(s)
-      -- The challenge: measure_compl requires MeasurableSet s, which we don't have in G
-      -- Actually, for the Dynkin system argument to work, we need to restrict to
-      -- measurable sets. The π-λ theorem will then show all measurable sets are in G.
-      -- For now, we assume this property holds for the construction.
-      -- TODO: Either add MeasurableSet hypothesis to G, or use a different formulation
-      sorry
+      intro s ⟨hs_meas, hs_eval⟩
+      constructor
+      · exact hs_meas.compl
+      · -- ν(ω)(sᶜ) = ν(ω)(univ) - ν(ω)(s) = 1 - ν(ω)(s)
+        -- Since ν(ω) is a probability measure, ν(ω)(univ) = 1
+        -- ω ↦ ν(ω)(s) is measurable by hs_eval
+        -- ω ↦ 1 - ν(ω)(s) is measurable as difference of measurable functions
+        have h_univ_s : ∀ ω, directing_measure X hX_contract hX_meas hX_L2 ω (sᶜ) =
+            directing_measure X hX_contract hX_meas hX_L2 ω Set.univ -
+            directing_measure X hX_contract hX_meas hX_L2 ω s := by
+          intro ω
+          -- Need: directing_measure ω is a measure, so measure_compl applies
+          -- But directing_measure hasn't been properly defined yet (it's a sorry)
+          -- This requires the actual Measure.ofCDF construction
+          sorry
+        simp_rw [h_univ_s]
+        -- ω ↦ 1 is measurable (constant)
+        -- ω ↦ ν(ω)(s) is measurable by hs_eval
+        -- Their difference is measurable
+        have h_univ_const : ∀ ω, directing_measure X hX_contract hX_meas hX_L2 ω Set.univ = 1 := by
+          intro ω
+          -- This follows from directing_measure_isProbabilityMeasure
+          -- But that's also a sorry waiting on Measure.ofCDF
+          sorry
+        simp_rw [h_univ_const]
+        -- (fun ω => 1 - ν(ω)(s)) is measurable
+        -- For ENNReal, subtraction is continuous, hence measurable
+        -- 1 is constant (measurable), ν(ω)(s) is measurable by hs_eval
+        -- Therefore their difference is measurable
+        -- But the actual proof requires the directing_measure construction
+        sorry
 
     have h_iUnion : ∀ (f : ℕ → Set ℝ),
         (∀ i j, i ≠ j → Disjoint (f i) (f j)) →
         (∀ n, f n ∈ G) →
         (⋃ n, f n) ∈ G := by
       intro f hdisj hf
-      change Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω (⋃ n, f n))
-      -- ν(ω)(⋃ f n) = ∑ ν(ω)(f n) by σ-additivity
-      -- Countable sums of measurable ENNReal functions are measurable
-      -- TODO: formalize using measure_iUnion and measurable_tsum
-      sorry
+      constructor
+      · -- ⋃ n, f n is measurable as countable union of measurable sets
+        exact MeasurableSet.iUnion (fun n => (hf n).1)
+      · -- ω ↦ ν(ω)(⋃ f n) is measurable
+        -- ν(ω)(⋃ f n) = ∑ n, ν(ω)(f n) by σ-additivity (since f n are pairwise disjoint and measurable)
+        have h_union_eq : ∀ ω, directing_measure X hX_contract hX_meas hX_L2 ω (⋃ n, f n) =
+            ∑' n, directing_measure X hX_contract hX_meas hX_L2 ω (f n) := by
+          intro ω
+          -- This requires: directing_measure ω is a measure, so measure_iUnion applies
+          -- But directing_measure hasn't been properly defined yet
+          sorry
+        simp_rw [h_union_eq]
+        -- ∑' n, ν(ω)(f n) is measurable as tsum of measurable functions
+        exact Measurable.ennreal_tsum (fun n => (hf n).2)
 
     -- Step 3: Apply π-λ theorem
     -- The Borel σ-algebra is generated by half-lines {Iic t | t ∈ ℝ}
     -- G contains this π-system and is a Dynkin system,
     -- hence G contains all Borel sets
+    -- Since s is measurable (by hypothesis hs), we need to show s ∈ G
     -- TODO: Apply the formal π-λ theorem from mathlib
-    -- (likely MeasurableSpace.induction_on or similar)
+    -- (likely MeasurableSpace.induction_on or generateFrom_induction)
     sorry
   ·
     -- If `s` is not measurable, `ν(ω)(s)` = 0 for Carathéodory outer measure on Borel σ‑algebra,
