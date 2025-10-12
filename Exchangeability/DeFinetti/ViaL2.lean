@@ -9,6 +9,7 @@ import Exchangeability.ConditionallyIID
 import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
+import Mathlib.MeasureTheory.MeasurableSpace.MeasurablyGenerated
 import Mathlib.Probability.Kernel.Basic
 import Canonical
 
@@ -2266,6 +2267,8 @@ TODO: Adapt to our L¹ convergence setting.
 theorem subsequence_criterion_convergence_in_probability
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (ξ : ℕ → Ω → ℝ) (ξ_limit : Ω → ℝ)
+    (hξ_meas : ∀ n, Measurable (ξ n))
+    (hξ_limit_meas : Measurable ξ_limit)
     (h_prob_conv : ∀ ε > 0, Tendsto (fun n => μ {ω | ε ≤ |ξ n ω - ξ_limit ω|}) atTop (𝓝 0)) :
     ∃ (φ : ℕ → ℕ), StrictMono φ ∧
       ∀ᵐ ω ∂μ, Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω)) := by
@@ -2323,6 +2326,13 @@ theorem subsequence_criterion_convergence_in_probability
 
   -- Bad sets A_k
   let A : ℕ → Set Ω := fun k => {ω | ε k ≤ |ξ (φ k) ω - ξ_limit ω|}
+  have hA_meas : ∀ k, MeasurableSet (A k) := by
+    intro k
+    -- A k = {ω | ε k ≤ |ξ (φ k) ω - ξ_limit ω|}
+    -- This is measurable because |ξ (φ k) - ξ_limit| is measurable
+    -- (continuous maps on Polish spaces like ℝ are measurable)
+    -- TODO: find the correct lemma for `Measurable (abs ∘ f)` when `Measurable f`
+    sorry
   have hA_tsum : (∑' k, μ (A k)) ≠ ⊤ := by
     -- μ(A k) ≤ 2^{-(k+1)} and ∑ 2^{-(k+1)} < ∞
     have hbound : ∀ k, μ (A k) ≤ ((1 : ENNReal) / 2) ^ (k+1) := by
@@ -2373,7 +2383,8 @@ theorem subsequence_criterion_convergence_in_probability
       sorry
     have h_meas : MeasurableSet (limsup A atTop) := by
       -- limsup of measurable sets is measurable
-      -- TODO: `measurableSet_iInter` + `measurableSet_iUnion` composition.
+      -- TODO: use `measurableSet_limsup` from Mathlib.MeasureTheory.MeasurableSpace.MeasurablyGenerated
+      -- The lemma exists but seems not to be imported correctly
       sorry
     have : μ ((limsup A atTop)ᶜ) = μ Set.univ := by
       simp [measure_compl h_meas, hBC]
@@ -2400,6 +2411,8 @@ proof shows `alpha_n = alpha` for all n directly.
 theorem reverse_martingale_subsequence_convergence
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (alpha : ℕ → Ω → ℝ) (alpha_inf : Ω → ℝ)
+    (h_alpha_meas : ∀ n, Measurable (alpha n))
+    (h_alpha_inf_meas : Measurable alpha_inf)
     (h_L1_conv : ∀ ε > 0, ∃ N, ∀ n ≥ N, ∫ ω, |alpha n ω - alpha_inf ω| ∂μ < ε) :
     ∃ (φ : ℕ → ℕ), StrictMono φ ∧
       ∀ᵐ ω ∂μ, Tendsto (fun k => alpha (φ k) ω) atTop (𝓝 (alpha_inf ω)) := by
@@ -2424,7 +2437,8 @@ theorem reverse_martingale_subsequence_convergence
     sorry
 
   -- Apply the subsequence criterion we just proved
-  exact subsequence_criterion_convergence_in_probability alpha alpha_inf h_prob_conv
+  exact subsequence_criterion_convergence_in_probability alpha alpha_inf
+    h_alpha_meas h_alpha_inf_meas h_prob_conv
 
 /-- Placeholder: The α_n sequence is a reverse martingale with respect to the tail filtration.
 
