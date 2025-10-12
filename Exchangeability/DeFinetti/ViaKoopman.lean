@@ -458,7 +458,7 @@ lemma condexp_product_factorization_ax
     -- Base case: m = 0, empty product is 1
     -- Need to show: CE[1 | ℐ] =ᵐ 1
     -- CE of a constant is the constant a.e.
-    exact condExp_const shiftInvariantSigma_le
+    sorry -- TODO: needs CompleteSpace instance for condExp_const
   | succ n IH =>
     -- Inductive step: n + 1 coordinates
     -- Split: ∏ᵢ₌₀ⁿ f(ωᵢ) = (∏ᵢ₌₀ⁿ⁻¹ f(ωᵢ)) · f(ωₙ)
@@ -507,7 +507,7 @@ lemma condexp_product_factorization_general
     simp [Finset.prod_empty]
     -- CE[1 | ℐ] = 1 a.e. and ∏ (empty) = 1
     -- Same as base case in condexp_product_factorization_ax
-    exact condExp_const shiftInvariantSigma_le
+    sorry -- TODO: needs CompleteSpace instance for condExp_const
 
   | succ n IH =>
     -- Inductive step: split product into first n factors and last factor
@@ -574,7 +574,7 @@ lemma indicator_product_bridge_ax
     exact h_le_one
 
   have hF_nonneg : 0 ≤ᵐ[μ] F := ae_of_all _ (fun ω =>
-    Finset.prod_nonneg (fun i _ => Set.indicator_nonneg (fun _ => zero_le_one) _))
+    Finset.prod_nonneg (fun i _ => Set.indicator_nonneg (fun _ _ => zero_le_one) _))
 
   have hF_int : Integrable F μ :=
     ⟨hF_meas.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hF_bd)⟩
@@ -756,11 +756,11 @@ lemma exchangeable_implies_ciid_modulo_bridge_ax
   -- or directly construct the ConditionallyIID structure
   constructor
   · -- Provide the directing measure ν
-    exact ν μ
+    sorry -- TODO: exact ν μ
   · -- Show it satisfies the product property via indicator_product_bridge_ax
-    intro m k B hB_meas
-    -- Apply indicator_product_bridge_ax
-    exact indicator_product_bridge_ax μ hσ m k B hB_meas
+    -- TODO: intro m k B hB_meas
+    -- TODO: exact indicator_product_bridge_ax μ hσ m k B hB_meas
+    sorry
 
 namespace MeasureTheory
 
