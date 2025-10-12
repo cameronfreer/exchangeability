@@ -717,12 +717,26 @@ lemma indProd_as_indicator
     (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α) :
     indProd X r C
       = Set.indicator {ω | ∀ i : Fin r, X i ω ∈ C i} (fun _ => (1 : ℝ)) := by
-  classical
-  sorry  -- TODO: Prove indProd equals indicator of firstRCylinder via induction
-  -- funext ω
-  -- induction r with
-  -- | zero => simp [indProd]
-  -- | succ r ih => Need to relate Fin.prod_univ_succ with indicator multiplication
+  funext ω
+  simp only [indProd, Set.indicator]
+  split_ifs with h
+  · -- ω satisfies all conditions: product equals 1
+    calc ∏ i : Fin r, Set.indicator (C i) (fun _ => (1 : ℝ)) (X i ω)
+        = ∏ i : Fin r, (1 : ℝ) := by
+          congr 1
+          ext i
+          simp only [Set.indicator]
+          rw [if_pos (h i)]
+      _ = 1 := Finset.prod_const_one
+  · -- ω doesn't satisfy all conditions
+    by_cases hr : ∃ i : Fin r, X i ω ∉ C i
+    · obtain ⟨i, hi⟩ := hr
+      have : Set.indicator (C i) (fun _ => (1 : ℝ)) (X i ω) = 0 := by
+        simp only [Set.indicator]
+        rw [if_neg hi]
+      rw [Finset.prod_eq_zero (Finset.mem_univ i) this]
+    · simp only [not_exists, not_not] at hr
+      exact absurd hr h
 
 /-- Basic integrability: `indProd` is an indicator of a measurable set, hence integrable. -/
 lemma indProd_integrable
@@ -835,9 +849,13 @@ lemma indProd_measurable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace �
 lemma indProd_mul {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) {r : ℕ} {C D : Fin r → Set α} (ω : Ω) :
     indProd X r C ω * indProd X r D ω = indProd X r (fun i => C i ∩ D i) ω := by
-  sorry  -- TODO: Prove product of indicators equals indicator of intersection
-  -- simp only [indProd]
-  -- Need to show: (∏ i, C i.indicator 1) * (∏ i, D i.indicator 1) = ∏ i, (C i ∩ D i).indicator 1
+  simp only [indProd]
+  rw [← Finset.prod_mul_distrib]
+  congr 1
+  funext i
+  simp only [Set.indicator]
+  by_cases hC : X i ω ∈ C i <;> by_cases hD : X i ω ∈ D i <;>
+    simp [hC, hD, Set.mem_inter_iff]
 
 /-- indProd on intersection via firstRCylinder. -/
 lemma indProd_inter_eq {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
