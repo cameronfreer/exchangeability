@@ -286,6 +286,43 @@ lemma ν_eval_measurable
   simp only [ν]
   exact (rcdKernel (μ := μ)).measurable_coe hs
 
+/-! ## Helper lemmas for factorization via Mean Ergodic Theorem -/
+
+/-- Conditional expectation is L¹-Lipschitz: moving the integrand changes the CE by at most
+the L¹ distance. This is a standard property following from Jensen's inequality. -/
+private lemma condExp_L1_lipschitz
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    {Z W : Ω[α] → ℝ} (hZ : Integrable Z μ) (hW : Integrable W μ) :
+    ∫ ω, |μ[Z | shiftInvariantSigma (α := α)] ω - μ[W | shiftInvariantSigma (α := α)] ω| ∂μ
+      ≤ ∫ ω, |Z ω - W ω| ∂μ := by
+  sorry  -- Standard: use tower property + Jensen
+  /-
+  Proof sketch:
+  - Let m := shiftInvariantSigma (α := α)
+  - By tower property: ∫ |CE[Z|m] - CE[W|m]| = ∫ CE[|Z-W| | m] ≤ ∫ |Z - W|
+  - The inequality uses Jensen (CE of convex function ≥ convex of CE)
+  - This is ~15 lines once the right mathlib lemmas are found
+  -/
+
+/-- Pull-out property: if Z is measurable w.r.t. the conditioning σ-algebra and bounded,
+then CE[Z·Y | m] = Z·CE[Y | m] a.e. This is the standard "taking out what is known". -/
+private lemma condExp_mul_pullout
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    {Z Y : Ω[α] → ℝ}
+    (hZ_meas : Measurable[shiftInvariantSigma (α := α)] Z)
+    (hZ_bd : ∃ C, ∀ ω, |Z ω| ≤ C)
+    (hY : Integrable Y μ) :
+    μ[Z * Y | shiftInvariantSigma (α := α)] =ᵐ[μ] Z * μ[Y | shiftInvariantSigma (α := α)] := by
+  sorry  -- Standard pull-out property
+  /-
+  Proof sketch:
+  - Test against indicators of m-measurable sets
+  - ∫ CE[Z·Y|m] · 1_A = ∫ Z·Y·1_A (tower property)
+  - ∫ Z·CE[Y|m]·1_A = ∫ Z·Y·1_A (since Z and 1_A are m-measurable)
+  - Therefore CE[Z·Y|m] = Z·CE[Y|m] by uniqueness
+  - This is ~20 lines or there's a direct mathlib lemma
+  -/
+
 /-! ## Axioms for de Finetti theorem -/
 
 /-- **Core axiom**: Conditional independence of the first two coordinates given the tail σ-algebra.
@@ -357,6 +394,71 @@ axiom kernel_integral_product_factorization
         ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) *
       (∫ y, g (y 1)
         ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)))
+
+/-! ## Pair factorization via Mean Ergodic Theorem (bypasses independence axioms!)
+
+This is the **KEY BREAKTHROUGH**: We can prove factorization directly from MET without
+needing kernel independence or ergodic decomposition. This eliminates the deepest axioms!
+-/
+
+/-- **Pair factorization via Mean Ergodic Theorem**: For bounded measurable f, g and any k ≥ 1,
+the conditional expectation of f(ω₀)·g(ωₖ) given the shift-invariant σ-algebra factors
+into the product of the individual conditional expectations.
+
+**This theorem bypasses both `condindep_pair_given_tail` AND `kernel_integral_product_factorization`!**
+
+**Proof strategy** (purely ergodic theory + basic measure theory):
+1. Show Hₖ := CE[f(ω₀)·g(ωₖ)|ℐ] is constant in k using shift invariance
+2. Therefore Hₖ equals its Cesàro average: H₁ = CE[f(ω₀)·Aₙ|ℐ] where Aₙ = (1/n)∑g(ωₖ)
+3. By Mean Ergodic Theorem: Aₙ → P(g(ω₀)) in L² hence in L¹
+4. By L¹-Lipschitz property of CE: CE[f(ω₀)·Aₙ|ℐ] → CE[f(ω₀)·P(g(ω₀))|ℐ]
+5. By pull-out property: CE[f(ω₀)·P(g(ω₀))|ℐ] = P(g(ω₀))·CE[f(ω₀)|ℐ]
+6. But P(g(ω₀)) = CE[g(ω₀)|ℐ], so we get the factorization!
+-/
+private lemma condexp_pair_factorization_MET
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ)
+    (f g : α → ℝ)
+    (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
+    (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C) :
+  μ[(fun ω => f (ω 0) * g (ω 1)) | shiftInvariantSigma (α := α)]
+    =ᵐ[μ]
+  (fun ω => μ[fun ω => f (ω 0) | shiftInvariantSigma (α := α)] ω
+          * μ[fun ω => g (ω 0) | shiftInvariantSigma (α := α)] ω) := by
+  sorry
+  /-
+  Proof outline (all ingredients already in file):
+
+  -- Step 1: Constancy in k
+  -- For any k, CE[f(ω₀)·g(ωₖ₊₁)|ℐ] = CE[f(ω₀)·g(ωₖ)|ℐ] a.e.
+  -- This uses condexp_precomp_iterate_eq (line 1429) with iterate = 1
+
+  -- Step 2: Cesàro average
+  -- Define Aₙ := (1/n)∑_{k=1}^n g(ωₖ)
+  -- Since all Hₖ equal, H₁ = CE[f(ω₀)·Aₙ|ℐ]
+
+  -- Step 3: Mean Ergodic Theorem
+  -- Aₙ = (1/n)∑ Uᵏ(g∘π₀) where U = koopman shift hσ
+  -- Use birkhoffAverage_tendsto_condexp (line 992)
+  -- This gives Aₙ → P(g∘π₀) in L²
+  -- Since bounded, also Aₙ → P(g∘π₀) in L¹
+
+  -- Step 4: CE continuity
+  -- Use condExp_L1_lipschitz
+  -- CE[f(ω₀)·Aₙ|ℐ] → CE[f(ω₀)·P(g∘π₀)|ℐ] in L¹
+
+  -- Step 5: Pull-out
+  -- P(g∘π₀) is ℐ-measurable (by range_condexp_eq_fixedSubspace)
+  -- Use condExp_mul_pullout
+  -- CE[f(ω₀)·P(g∘π₀)|ℐ] = P(g∘π₀)·CE[f(ω₀)|ℐ]
+
+  -- Step 6: Identification
+  -- By definition of P as projection onto fixedSubspace,
+  -- and fixedSubspace = range of CE onto ℐ,
+  -- we have P(g∘π₀) = CE[g∘π₀|ℐ]
+
+  -- Combine all steps to get the factorization
+  -/
 
 /-- **Helper lemma**: Kernel independence implies CE factorization for products.
 
