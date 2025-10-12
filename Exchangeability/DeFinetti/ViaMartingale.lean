@@ -1076,7 +1076,7 @@ For `k ≤ m` and measurable `B`, the measures of
 `B × cylinder r C` under the pushforwards by
 `ω ↦ (X m ω, θ_{m+1}X(ω))` and `ω ↦ (X k ω, θ_{m+1}X(ω))` coincide. -/
 lemma contractable_dist_eq_on_rectangles_future
-    {X : ℕ → Ω → α} (hX : Contractable μ X)
+    {X : ℕ → Ω → α} (hX : Contractable μ X) (hX_meas : ∀ n, Measurable (X n))
     (k m : ℕ) (hk : k ≤ m)
     (r : ℕ) (B : Set α) (hB : MeasurableSet B)
     (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i)) :
@@ -1105,7 +1105,48 @@ lemma contractable_dist_eq_on_rectangles_future
     simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using
       (contractable_dist_eq_on_first_r_tail
         (μ:=μ) (X:=X) hX k m r hk B hB C hC)
-  sorry  -- TODO: Prove Measure.map equality using contractable_dist_eq_on_first_r_tail
+  -- Show the sets are equal modulo arithmetic
+  have hset_eq₁ : {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + 1 + i.1) ω ∈ C i}
+                = {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
+    ext ω; simp only [Set.mem_setOf]
+    constructor
+    · intro ⟨hB, hC⟩
+      constructor
+      · exact hB
+      · intro i
+        have : m + 1 + i.1 = m + (i.1 + 1) := by omega
+        rw [← this]; exact hC i
+    · intro ⟨hB, hC⟩
+      constructor
+      · exact hB
+      · intro i
+        have : m + 1 + i.1 = m + (i.1 + 1) := by omega
+        rw [this]; exact hC i
+  have hset_eq₂ : {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + 1 + i.1) ω ∈ C i}
+                = {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
+    ext ω; simp only [Set.mem_setOf]
+    constructor
+    · intro ⟨hB, hC⟩
+      constructor
+      · exact hB
+      · intro i
+        have : m + 1 + i.1 = m + (i.1 + 1) := by omega
+        rw [← this]; exact hC i
+    · intro ⟨hB, hC⟩
+      constructor
+      · exact hB
+      · intro i
+        have : m + 1 + i.1 = m + (i.1 + 1) := by omega
+        rw [this]; exact hC i
+  -- Measurability of ψ₁ and ψ₂
+  have hψ₁_meas : Measurable ψ₁ :=
+    (hX_meas m).prod_mk (measurable_shiftRV hX_meas)
+  have hψ₂_meas : Measurable ψ₂ :=
+    (hX_meas k).prod_mk (measurable_shiftRV hX_meas)
+  -- Apply Measure.map_apply and connect the pieces
+  rw [Measure.map_apply hψ₁_meas hrect, Measure.map_apply hψ₂_meas hrect]
+  rw [hpre₁, hpre₂, hset_eq₁, hset_eq₂]
+  exact hfd
 
 end FutureRectangles
 
