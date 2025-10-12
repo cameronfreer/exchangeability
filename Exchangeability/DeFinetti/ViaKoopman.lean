@@ -481,6 +481,38 @@ lemma condexp_product_factorization_ax
 
     sorry
 
+/-- **Generalized product factorization** for arbitrary coordinate indices.
+
+This extends `condexp_product_factorization_ax` from coordinates `ω 0, ω 1, ...`
+to arbitrary indices `ω (k 0), ω (k 1), ...`.
+
+**Proof Strategy**: Use shift-invariance to reduce to the standard case.
+For any coordinate selection `k : Fin m → ℕ`, we can relate it to the
+standard selection via shifts, then apply the shift equivariance of CE.
+-/
+lemma condexp_product_factorization_general
+    (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ)
+    (m : ℕ) (fs : Fin m → α → ℝ) (k : Fin m → ℕ)
+    (hmeas : ∀ i, Measurable (fs i))
+    (hbd : ∀ i, ∃ C, ∀ x, |fs i x| ≤ C)
+    (hciid : True) :
+    μ[fun ω => ∏ i, fs i (ω (k i)) | shiftInvariantSigma (α := α)]
+      =ᵐ[μ] (fun ω => ∏ i, ∫ x, fs i x ∂(ν μ ω)) := by
+  -- Key insight: The factorization doesn't depend on coordinate selection
+  -- because the measure is shift-invariant and ν is the same for all coordinates
+
+  -- Strategy: Show that both sides are equal by using identicalConditionalMarginals
+  -- which already handles arbitrary coordinates
+
+  -- For each coordinate i, we have:
+  -- CE[fs i (ω (k i)) | ℐ] =ᵐ ∫ fs i dν  (by identicalConditionalMarginals)
+
+  -- For products, we need conditional independence, which follows from
+  -- the exchangeability assumption (hciid parameter)
+
+  sorry -- Requires combining identicalConditionalMarginals with conditional independence
+
 /-- **Bridge axiom** for ENNReal version needed by `CommonEnding`.
 
 **Proof Strategy**:
@@ -614,21 +646,31 @@ lemma indicator_product_bridge_ax
       refine ⟨1, fun x => ?_⟩
       by_cases h : x ∈ B i <;> simp [fs, Set.indicator, h]
 
-    have h_factor := condexp_product_factorization_ax μ hσ m fs fs_meas fs_bd trivial
+    -- Use the generalized factorization for arbitrary coordinates k
+    have h_factor := condexp_product_factorization_general μ hσ m fs k fs_meas fs_bd trivial
 
-    -- h_factor gives: CE[∏ i, fs i (ω i) | 𝓘] =ᵐ (∏ i, ∫ fs i dν)
-    -- We need: CE[∏ i, fs i (ω (k i)) | 𝓘] =ᵐ (∏ i, ∫ fs i dν)
+    -- h_factor gives: CE[∏ i, fs i (ω (k i)) | 𝓘] =ᵐ (∏ i, ∫ fs i dν)
+    -- This is exactly: CE[F | 𝓘] =ᵐ G
 
-    -- Key insight: For exchangeable/shift-invariant measures, coordinate selection doesn't matter
-    -- The factorization holds for ANY choice of indices k : Fin m → ℕ
+    -- By tower property: ∫ F dμ = ∫ CE[F|𝓘] dμ = ∫ G dμ
+    have h_F_ae : F =ᵐ[μ] fun ω => ∏ i, fs i (ω (k i)) := by
+      filter_upwards with ω
+      rfl
 
-    -- To complete this:
-    -- 1. Generalize condexp_product_factorization_ax to arbitrary index maps k
-    --    (follows from exchangeability + the k = identity case)
-    -- 2. Apply tower property: ∫ F dμ = ∫ CE[F|𝓘] dμ = ∫ G dμ
-    --    where the middle equality uses the generalized factorization
+    have h_G_ae : G =ᵐ[μ] fun ω => ∏ i, ∫ x, fs i x ∂(ν μ ω) := by
+      filter_upwards with ω
+      simp [G]
+      congr 1
+      ext i
+      exact (h_indicator_integral i ω).symm
 
-    sorry -- Requires: condexp_product_factorization_ax for arbitrary coordinate indices k
+    -- Connect via tower property + ae equalities
+    -- ∫ F = ∫ (fun ω => ∏ i, fs i (ω (k i)))     [by h_F_ae]
+    --     = ∫ CE[fun ω => ∏ i, fs i (ω (k i)) | 𝓘]  [tower property]
+    --     = ∫ (fun ω => ∏ i, ∫ x, fs i x ∂(ν μ ω))  [by h_factor]
+    --     = ∫ G                                     [by h_G_ae]
+
+    sorry -- Apply: integral_congr_ae + tower property for conditional expectation
 
   -- Convert both sides to ENNReal and conclude
   calc ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
