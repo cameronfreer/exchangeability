@@ -1188,9 +1188,9 @@ lemma contractable_dist_eq_on_rectangles_future
         rw [this]; exact hC i
   -- Measurability of ψ₁ and ψ₂
   have hψ₁_meas : Measurable ψ₁ :=
-    (hX_meas m).prod_mk (measurable_shiftRV hX_meas)
+    (hX_meas m).prodMk (measurable_shiftRV hX_meas)
   have hψ₂_meas : Measurable ψ₂ :=
-    (hX_meas k).prod_mk (measurable_shiftRV hX_meas)
+    (hX_meas k).prodMk (measurable_shiftRV hX_meas)
   -- Apply Measure.map_apply and connect the pieces
   rw [Measure.map_apply hψ₁_meas hrect, Measure.map_apply hψ₂_meas hrect]
   rw [hpre₁, hpre₂, hset_eq₁, hset_eq₂]
