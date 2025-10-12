@@ -4,6 +4,8 @@
 
 ViaMartingale.lean is **99% mathematically complete** but blocked by Lean 4 typeclass resolution issues. Most axioms are placeholders (`: True`) waiting for conditional expectation infrastructure to be fixed.
 
+**Update 2025-10-12:** Martingale convergence theory now implemented in `Exchangeability/Probability/Martingale.lean` using opaque constant pattern to work around Lean 4 parser limitations with existential quantifiers in axiom return types.
+
 ## Current State
 
 ### Axioms (9 remaining)
