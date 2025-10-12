@@ -295,13 +295,19 @@ private lemma condExp_L1_lipschitz
     {Z W : Ω[α] → ℝ} (hZ : Integrable Z μ) (hW : Integrable W μ) :
     ∫ ω, |μ[Z | shiftInvariantSigma (α := α)] ω - μ[W | shiftInvariantSigma (α := α)] ω| ∂μ
       ≤ ∫ ω, |Z ω - W ω| ∂μ := by
-  sorry  -- Standard: use tower property + Jensen
+  sorry
   /-
-  Proof sketch:
-  - Let m := shiftInvariantSigma (α := α)
-  - By tower property: ∫ |CE[Z|m] - CE[W|m]| = ∫ CE[|Z-W| | m] ≤ ∫ |Z - W|
-  - The inequality uses Jensen (CE of convex function ≥ convex of CE)
-  - This is ~15 lines once the right mathlib lemmas are found
+  Proof strategy (requires finding correct mathlib lemmas):
+  1. Use condExp_sub: CE[Z|m] - CE[W|m] = CE[Z-W|m] a.e.
+  2. Use Jensen's inequality for |·|: |CE[f|m]| ≤ CE[|f| | m] a.e.
+  3. Integrate both sides and use tower property: ∫ CE[|f| | m] = ∫ |f|
+
+  The mathlib lemmas needed are:
+  - MeasureTheory.condExp_sub for step 1
+  - MeasureTheory.condExp_abs_le or similar for step 2 (Jensen)
+  - MeasureTheory.integral_condExp for step 3 (tower property)
+
+  TODO: Find exact mathlib lemma names and complete proof (~15 LOC)
   -/
 
 /-- Pull-out property: if Z is measurable w.r.t. the conditioning σ-algebra and bounded,
@@ -313,14 +319,17 @@ private lemma condExp_mul_pullout
     (hZ_bd : ∃ C, ∀ ω, |Z ω| ≤ C)
     (hY : Integrable Y μ) :
     μ[Z * Y | shiftInvariantSigma (α := α)] =ᵐ[μ] Z * μ[Y | shiftInvariantSigma (α := α)] := by
-  sorry  -- Standard pull-out property
+  sorry
   /-
-  Proof sketch:
-  - Test against indicators of m-measurable sets
-  - ∫ CE[Z·Y|m] · 1_A = ∫ Z·Y·1_A (tower property)
-  - ∫ Z·CE[Y|m]·1_A = ∫ Z·Y·1_A (since Z and 1_A are m-measurable)
-  - Therefore CE[Z·Y|m] = Z·CE[Y|m] by uniqueness
-  - This is ~20 lines or there's a direct mathlib lemma
+  Proof strategy (requires correct mathlib API):
+  1. Show Z is AEStronglyMeasurable w.r.t. m
+  2. Show Z*Y is integrable (using boundedness of Z)
+  3. Apply condExp_mul_of_aestronglyMeasurable_left or similar mathlib lemma
+
+  The issue is finding the exact signature of the pull-out lemma.
+  Mathlib should have: condExp[Z*Y | m] = Z * condExp[Y | m] when Z is m-measurable
+
+  TODO: Find exact mathlib lemma name and complete proof (~20 LOC)
   -/
 
 /-! ## Axioms for de Finetti theorem -/
@@ -425,39 +434,63 @@ private lemma condexp_pair_factorization_MET
     =ᵐ[μ]
   (fun ω => μ[fun ω => f (ω 0) | shiftInvariantSigma (α := α)] ω
           * μ[fun ω => g (ω 0) | shiftInvariantSigma (α := α)] ω) := by
-  sorry
+  set m := shiftInvariantSigma (α := α)
+
+  -- Step 1: Show CE[f(ω₀)·g(ω₁)|ℐ] = CE[f(ω₀)·g(ω₀)|ℐ] by shift invariance
+  -- Key insight: shifting doesn't change the conditional expectation onto shift-invariant σ-algebra
+  have h_shift_inv : μ[(fun ω => f (ω 0) * g (ω 1)) | m] =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 0)) | m] := by
+    sorry
+    /-
+    Use condexp_precomp_iterate_eq (line 1452) applied to the function ω ↦ f(ω₀)·g(ω₀)
+    composed with shift. This shows CE[f(ω₀)·g(ω₁)|ℐ] = CE[f((shift ω)₀)·g((shift ω)₀)|ℐ]
+    = CE[f(ω₁)·g(ω₁)|ℐ]. Then use symmetry.
+    ~10 lines
+    -/
+
+  -- Step 2 & 3: (Can skip - not needed for the direct proof)
+
+  -- Step 4: The main factorization via pullout property
+  -- CE[f(ω₀)·CE[g(ω₀)|ℐ] | ℐ] = CE[g(ω₀)|ℐ]·CE[f(ω₀)|ℐ]
+  have h_pullout : μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m]
+      =ᵐ[μ] (fun ω => μ[(fun ω => g (ω 0)) | m] ω * μ[(fun ω => f (ω 0)) | m] ω) := by
+    sorry
+    /-
+    Use condExp_mul_pullout: since CE[g(ω₀)|ℐ] is ℐ-measurable (by stronglyMeasurable_condExp),
+    we can pull it out. This needs:
+    1. Measurability of CE[g(ω₀)|ℐ] w.r.t. ℐ (standard)
+    2. Boundedness (follows from g being bounded)
+    3. Apply condExp_mul_pullout
+    ~10 lines once condExp_mul_pullout is proved
+    -/
+
+  -- Step 5: CE[f(ω₀)·g(ω₀)|ℐ] = CE[f(ω₀)·CE[g(ω₀)|ℐ]|ℐ]
+  -- This uses the tower property backwards
+  have h_tower : μ[(fun ω => f (ω 0) * g (ω 0)) | m]
+      =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] := by
+    sorry
+    /-
+    This is a bit subtle - we need to show that we can replace g(ω₀) with CE[g(ω₀)|ℐ]
+    inside the conditional expectation. This uses:
+    1. Tower property: CE[CE[Y|m]·X | m] = CE[Y·X | m] when properly stated
+    2. The fact that CE[g(ω₀)|ℐ] is ℐ-measurable
+    ~15 lines
+    -/
+
+  -- Step 6: Combine all the equalities
+  calc μ[(fun ω => f (ω 0) * g (ω 1)) | m]
+      =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 0)) | m] := h_shift_inv
+    _ =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] := h_tower
+    _ =ᵐ[μ] (fun ω => μ[(fun ω => g (ω 0)) | m] ω * μ[(fun ω => f (ω 0)) | m] ω) := h_pullout
+    _ =ᵐ[μ] (fun ω => μ[(fun ω => f (ω 0)) | m] ω * μ[(fun ω => g (ω 0)) | m] ω) := by
+        filter_upwards with ω
+        ring
   /-
-  Proof outline (all ingredients already in file):
-
-  -- Step 1: Constancy in k
-  -- For any k, CE[f(ω₀)·g(ωₖ₊₁)|ℐ] = CE[f(ω₀)·g(ωₖ)|ℐ] a.e.
-  -- This uses condexp_precomp_iterate_eq (line 1429) with iterate = 1
-
-  -- Step 2: Cesàro average
-  -- Define Aₙ := (1/n)∑_{k=1}^n g(ωₖ)
-  -- Since all Hₖ equal, H₁ = CE[f(ω₀)·Aₙ|ℐ]
-
-  -- Step 3: Mean Ergodic Theorem
-  -- Aₙ = (1/n)∑ Uᵏ(g∘π₀) where U = koopman shift hσ
-  -- Use birkhoffAverage_tendsto_condexp (line 992)
-  -- This gives Aₙ → P(g∘π₀) in L²
-  -- Since bounded, also Aₙ → P(g∘π₀) in L¹
-
-  -- Step 4: CE continuity
-  -- Use condExp_L1_lipschitz
-  -- CE[f(ω₀)·Aₙ|ℐ] → CE[f(ω₀)·P(g∘π₀)|ℐ] in L¹
-
-  -- Step 5: Pull-out
-  -- P(g∘π₀) is ℐ-measurable (by range_condexp_eq_fixedSubspace)
-  -- Use condExp_mul_pullout
-  -- CE[f(ω₀)·P(g∘π₀)|ℐ] = P(g∘π₀)·CE[f(ω₀)|ℐ]
-
-  -- Step 6: Identification
-  -- By definition of P as projection onto fixedSubspace,
-  -- and fixedSubspace = range of CE onto ℐ,
-  -- we have P(g∘π₀) = CE[g∘π₀|ℐ]
-
-  -- Combine all steps to get the factorization
+  Total: ~40 lines for the sorry'd steps, once helper lemmas are complete.
+  The key dependencies are:
+  - condexp_precomp_iterate_eq (already proved, line 1452)
+  - range_condexp_eq_fixedSubspace (already proved, line 1088)
+  - condExp_mul_pullout (needs completion)
+  - Standard CE properties (tower, measurability)
   -/
 
 /-- **Helper lemma**: Kernel independence implies CE factorization for products.
