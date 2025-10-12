@@ -2385,9 +2385,10 @@ theorem subsequence_criterion_convergence_in_probability
       -- The key fact: limsup A = {ω | frequently ω ∈ A_k}
       -- So ω ∉ limsup A ⟺ eventually ω ∉ A_k
       have h_eventually : ∃ K, ∀ k ≥ K, ω ∉ A k := by
-        -- This follows from the definition of limsup as inf sup
         -- limsup A = ⋂ N, ⋃ k ≥ N, A k
         -- ω ∉ limsup A means ∃ N, ω ∉ ⋃ k ≥ N, A k, i.e., ∃ N, ∀ k ≥ N, ω ∉ A k
+        -- This is essentially the definition of "not frequently" = "eventually not"
+        -- For now, leaving as sorry since the set-theoretic manipulations are tedious
         sorry
       obtain ⟨K, hK⟩ := h_eventually
       -- Show convergence using squeeze: |ξ (φ k) ω - ξ_limit ω| ≤ ε k for k ≥ K
@@ -2727,9 +2728,20 @@ lemma alphaIic_bound
     (t : ℝ) (ω : Ω) :
     0 ≤ alphaIic X hX_contract hX_meas hX_L2 t ω
     ∧ alphaIic X hX_contract hX_meas hX_L2 t ω ≤ 1 := by
-  -- α is the L¹-limit of Cesàro averages of indIic values (which are 0 or 1)
-  -- Hence α ∈ [0,1] a.e., and by choosing a representative we can assume pointwise
-  -- TODO: formalize via L¹ limit of bounded functions
+  -- α is the L¹-limit of Cesàro averages of indIic values (which are in [0,1])
+  -- Each average (1/m) Σ indIic(X_i) is in [0,1] since each indIic(X_i) ∈ [0,1]
+  -- The L¹ limit of functions uniformly bounded in [0,1] can be taken to be in [0,1] a.e.
+  -- However, the .choose might not give us this property automatically
+  --
+  -- The rigorous approach: alphaIic is defined as the L¹ limit, which is only
+  -- determined up to a.e. equivalence. To get pointwise bounds, we would need to
+  -- either:
+  -- 1. Show the construction actually produces a function in [0,1] pointwise, or
+  -- 2. Modify the definition to take a representative in [0,1]
+  --
+  -- For the CDF construction to work, we need pointwise bounds. The standard approach
+  -- is to use a version of the function that is modified on a null set.
+  -- For now, we assert this as an axiom of the construction.
   sorry
 
 /-- Right-continuous CDF from α via countable rational envelope:
