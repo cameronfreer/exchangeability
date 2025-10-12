@@ -2486,10 +2486,20 @@ theorem reverse_martingale_subsequence_convergence
         · -- AEStronglyMeasurable: follows from measurability
           exact (h_alpha_meas n).sub h_alpha_inf_meas |>.norm.aestronglyMeasurable
         · -- HasFiniteIntegral: ∫⁻ ‖f‖ < ∞
-          -- Since h_L1_conv gives us that ∫ |alpha n - alpha_inf| is eventually < any ε > 0,
-          -- the integral must be finite (it can be bounded by any positive real).
-          -- In particular, for ε = 1, we get a finite bound for large enough n.
-          -- For small n, we use a specific  finite value as bound.
+          -- The hypothesis h_L1_conv uses ∫, which only makes sense for integrable functions.
+          -- So h_L1_conv implicitly guarantees that |alpha n - alpha_inf| is integrable for
+          -- large enough n. Since HasFiniteIntegral is exactly one half of being integrable
+          -- (the other half is AEStronglyMeasurable, which we've already shown),
+          -- and since the function is nonnegative and measurable, the existence of the
+          -- Bochner integral ∫ |alpha n - alpha_inf| (as used in h_L1_conv) implies
+          -- HasFiniteIntegral.
+          --
+          -- Technically, we'd need a lemma like: "if ∫ |f| exists as a real number
+          -- (i.e., Integrable f), then HasFiniteIntegral f". This is essentially
+          -- the definition/characterization of Integrable.
+          --
+          -- For now, we leave this as sorry, noting that the theorem statement h_L1_conv
+          -- already assumes integrability by using the Bochner integral.
           sorry
       have hmarkov_real := mul_meas_ge_le_integral_of_nonneg hf_nonneg hf_int ε
       -- This gives: ε * μ.real {ω | ε ≤ |alpha n ω - alpha_inf ω|} ≤ ∫ ω, |alpha n ω - alpha_inf ω| ∂μ
