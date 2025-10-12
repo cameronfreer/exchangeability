@@ -2433,15 +2433,14 @@ TODO: Use contractability to relate different time points.
 -/
 -- Unused variable linter disabled: This is a placeholder theorem with trivial conclusion.
 -- The parameters document the intended signature for the full implementation.
-set_option linter.unusedVariables false in
 theorem contractability_conditional_expectation
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
-    (hX_meas : ∀ i, Measurable (X i))
-    (f : ℝ → ℝ) (hf_meas : Measurable f)
+    (X : ℕ → Ω → ℝ) (_hX_contract : Contractable μ X)
+    (_hX_meas : ∀ i, Measurable (X i))
+    (f : ℝ → ℝ) (_hf_meas : Measurable f)
     (alpha : ℕ → Ω → ℝ) (alpha_inf : Ω → ℝ)
     (I_k : Set Ω)  -- Event ∩I_k in tail σ-algebra
-    (h_conv : ∀ᵐ ω ∂μ, Tendsto (fun n => alpha n ω) atTop (𝓝 (alpha_inf ω))) :
+    (_h_conv : ∀ᵐ ω ∂μ, Tendsto (fun n => alpha n ω) atTop (𝓝 (alpha_inf ω))) :
     True := by
   trivial
 
