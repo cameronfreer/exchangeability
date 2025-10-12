@@ -403,7 +403,51 @@ lemma contractable_dist_eq_on_first_r_tail
     (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i)) :
     μ {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
       = μ {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
-  sorry  -- TODO: Fix type mismatches in contractability proof
+  classical
+  -- Reindex (r+1)-vector: head = m (resp. k), tail = m+1,...,m+r
+  let κ_tail : Fin r → ℕ := fun i => m + (i.1 + 1)
+  have h_tail : StrictMono κ_tail := by
+    intro i j hij
+    show κ_tail i < κ_tail j
+    simp only [κ_tail]
+    omega
+  let κ₁ : Fin (r + 1) → ℕ := Fin.cases m (fun i : Fin r => κ_tail i)
+  let κ₂ : Fin (r + 1) → ℕ := Fin.cases k (fun i : Fin r => κ_tail i)
+  have hκ₁ : StrictMono κ₁ := strictMono_fin_cases h_tail (fun i => by
+    show m < κ_tail i
+    simp only [κ_tail]
+    omega)
+  have hκ₂ : StrictMono κ₂ := strictMono_fin_cases h_tail (fun i => by
+    show k < κ_tail i
+    simp only [κ_tail]
+    omega)
+  -- contractability: both maps give the same law
+  have hlaw₁ : Measure.map (fun ω i => X (κ₁ i) ω) μ
+              = Measure.map (fun ω i => X i.1 ω) μ :=
+    hX (r + 1) κ₁ hκ₁
+  have hlaw₂ : Measure.map (fun ω i => X (κ₂ i) ω) μ
+              = Measure.map (fun ω i => X i.1 ω) μ :=
+    hX (r + 1) κ₂ hκ₂
+  -- Therefore the laws are equal
+  have : Measure.map (fun ω i => X (κ₁ i) ω) μ
+       = Measure.map (fun ω i => X (κ₂ i) ω) μ := by
+    rw [hlaw₁, hlaw₂]
+  -- The sets we want are exactly the preimages of the same event
+  let A : Set (Fin (r + 1) → α) := {y | y 0 ∈ B ∧ ∀ i : Fin r, y (Fin.succ i) ∈ C i}
+  have hA : MeasurableSet A := by
+    sorry  -- TODO: Prove A is measurable (standard)
+  have hE₁ : {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
+           = (fun ω i => X (κ₁ i) ω) ⁻¹' A := by
+    sorry  -- TODO: Unfold definitions
+  have hE₂ : {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
+           = (fun ω i => X (κ₂ i) ω) ⁻¹' A := by
+    sorry  -- TODO: Unfold definitions
+  calc μ {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
+      = μ ((fun ω i => X (κ₁ i) ω) ⁻¹' A) := by rw [hE₁]
+    _ = (Measure.map (fun ω i => X (κ₁ i) ω) μ) A := sorry  -- Measure.map_apply
+    _ = (Measure.map (fun ω i => X (κ₂ i) ω) μ) A := by rw [this]
+    _ = μ ((fun ω i => X (κ₂ i) ω) ⁻¹' A) := sorry  -- Measure.map_apply
+    _ = μ {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by rw [← hE₂]
 
 /-- Helper lemma: contractability gives the key distributional equality.
 
