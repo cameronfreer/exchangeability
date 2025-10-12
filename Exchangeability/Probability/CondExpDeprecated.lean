@@ -733,11 +733,25 @@ lemma condIndep_of_indicator_condexp_eq
         exact (integrable_condExp (μ := μ) (m := mG) (f := f2)).indicator (hmF _ htF))
       hf1_int
   -- Chain the equalities into the product formula.
-  -- Goal: μ[(f1 * f2) | mG] =ᵐ[μ] μ[f1 | mG] * μ[f2 | mG]
-  -- Strategy: h_tower → condExp_congr_ae h_middle_to_G → h_pull_outer
-  -- The logic: Use tower property, substitute middle expression, then apply pull-out
-  -- Issue: Type inference fails on EventuallyEq.trans composition with condExp_congr_ae
-  sorry
+  -- Note: f1 * f2 = (tF ∩ tH).indicator (fun _ => 1)
+  have f_eq : (fun ω => f1 ω * f2 ω) = (tF ∩ tH).indicator (fun _ => (1 : ℝ)) := by
+    ext ω
+    simp [f1, f2, Set.indicator_apply]
+    by_cases h1 : ω ∈ tF <;> by_cases h2 : ω ∈ tH <;> simp [h1, h2]
+  -- Step 1: Apply tower property
+  have step1 := h_tower
+  -- Step 2: Use condExp_congr_ae with h_middle_to_G to substitute in the inner condExp
+  have step2 : μ[μ[(fun ω => f1 ω * f2 ω) | mF ⊔ mG] | mG] =ᵐ[μ] μ[f1 * μ[f2 | mG] | mG] :=
+    condExp_congr_ae h_middle_to_G
+  -- Step 3: Combine step1 and step2
+  have step3 : μ[(fun ω => f1 ω * f2 ω) | mG] =ᵐ[μ] μ[f1 * μ[f2 | mG] | mG] :=
+    step1.trans step2
+  -- Step 4: Apply h_pull_outer
+  have step4 : μ[(fun ω => f1 ω * f2 ω) | mG] =ᵐ[μ] μ[f1 | mG] * μ[f2 | mG] :=
+    step3.trans h_pull_outer
+  -- Step 5: Rewrite using f_eq
+  rw [f_eq] at step4
+  exact step4
 
 /-! ### Bounded Martingales and L² (NOT USED) -/
 
