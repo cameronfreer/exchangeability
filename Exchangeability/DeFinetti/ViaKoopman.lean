@@ -455,10 +455,22 @@ lemma condexp_product_factorization_ax
   -- Proof by induction on m
   induction m with
   | zero =>
-    -- Base case: m = 0, empty product is 1
-    -- Need to show: CE[1 | ℐ] =ᵐ 1
-    -- CE of a constant is the constant a.e.
-    sorry -- TODO: needs CompleteSpace instance for condExp_const
+    -- Base case: the empty product is 1, and E[1 | 𝓘] = 1 a.e.
+    have h_int : Integrable (fun _ : Ω[α] => (1 : ℝ)) μ := integrable_const _
+    have h_ce :
+        μ[(fun _ => (1 : ℝ)) | shiftInvariantSigma (α := α)]
+          =ᵐ[μ]
+        (fun ω =>
+          ∫ x, (1 : ℝ) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) :=
+      condExp_eq_kernel_integral (shiftInvariantSigma_le (α := α)) h_int
+    refine h_ce.trans ?_
+    filter_upwards with ω
+    -- Each condExpKernel ω is a probability measure
+    haveI : IsProbabilityMeasure
+        (condExpKernel μ (shiftInvariantSigma (α := α)) ω) :=
+      IsMarkovKernel.isProbabilityMeasure ω
+    -- ∫ 1 dν = 1 for a probability measure ν
+    simp [integral_const, measure_univ]
   | succ n IH =>
     -- Inductive step: n + 1 coordinates
     -- Split: ∏ᵢ₌₀ⁿ f(ωᵢ) = (∏ᵢ₌₀ⁿ⁻¹ f(ωᵢ)) · f(ωₙ)
@@ -504,10 +516,23 @@ lemma condexp_product_factorization_general
   -- Base case m = 0
   induction m with
   | zero =>
+    -- Base case: the empty product is 1, and E[1 | 𝓘] = 1 a.e.
     simp [Finset.prod_empty]
-    -- CE[1 | ℐ] = 1 a.e. and ∏ (empty) = 1
-    -- Same as base case in condexp_product_factorization_ax
-    sorry -- TODO: needs CompleteSpace instance for condExp_const
+    have h_int : Integrable (fun _ : Ω[α] => (1 : ℝ)) μ := integrable_const _
+    have h_ce :
+        μ[(fun _ => (1 : ℝ)) | shiftInvariantSigma (α := α)]
+          =ᵐ[μ]
+        (fun ω =>
+          ∫ x, (1 : ℝ) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) :=
+      condExp_eq_kernel_integral (shiftInvariantSigma_le (α := α)) h_int
+    refine h_ce.trans ?_
+    filter_upwards with ω
+    -- Each condExpKernel ω is a probability measure
+    haveI : IsProbabilityMeasure
+        (condExpKernel μ (shiftInvariantSigma (α := α)) ω) :=
+      IsMarkovKernel.isProbabilityMeasure ω
+    -- ∫ 1 dν = 1 for a probability measure ν
+    simp [integral_const, measure_univ]
 
   | succ n IH =>
     -- Inductive step: split product into first n factors and last factor
