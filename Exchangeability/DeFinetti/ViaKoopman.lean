@@ -2584,11 +2584,14 @@ private lemma condexp_pair_factorization
         =ᵐ[μ]
       (fun ω => ∫ y, f (y 0) * g (y 1)
           ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) := by
+    sorry -- TODO: needs Integrable proof, not just Measurable
+    /-
     refine ProbabilityTheory.condExp_ae_eq_integral_condExpKernel
       (μ := μ) (m := shiftInvariantSigma (α := α))
       (f := fun ω => f (ω 0) * g (ω 1)) ?hmeas
     exact (hf_meas.comp (measurable_pi_apply 0)).mul
           (hg_meas.comp (measurable_pi_apply 1))
+    -/
   -- kernel-level independence of coord 0 and 1 (axiom)
   have h_indep12 :
       Kernel.IndepFun (fun y : Ω[α] => f (y 0))
