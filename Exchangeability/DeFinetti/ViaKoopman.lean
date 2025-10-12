@@ -322,10 +322,12 @@ It uses the Mean Ergodic Theorem and extremal measure theory.
 --     (condExpKernel μ (shiftInvariantSigma (α := α))) μ
 -- but this triggers autoparam errors with condExpKernel.
 -- For now, we axiomatize a placeholder that downstream lemmas can use.
+-- Note: f and g are currently unused because this is a placeholder axiom returning True.
+-- The actual statement should use Kernel.IndepFun but that triggers autoparam errors.
 axiom condindep_pair_given_tail
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ) :
-    ∀ (f g : α → ℝ), True
+    ∀ (_f _g : α → ℝ), True
 
 /-- **Kernel integral factorization axiom**: For bounded measurable functions f and g,
 the integral of f(ω 0) · g(ω 1) against the conditional expectation kernel factors
@@ -527,6 +529,8 @@ Proof of base case (m = 0) - kept for reference:
 This connects the conditional expectation factorization to measure-theoretic form.
 -/
 -- Helper lemma: product of indicators equals the product function
+-- Note: MeasurableSpace α is not needed here, but it's a section variable so we can't omit it
+-- without restructuring. The warning can be safely ignored - it's just about automatic inclusion.
 private lemma ofReal_prod_indicator_univ {m : ℕ} (k : Fin m → ℕ) (B : Fin m → Set α) (ω : Ω[α]) :
     ENNReal.ofReal (∏ i : Fin m, (B i).indicator (fun _ => (1 : ℝ)) (ω (k i)))
       = ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) := by
@@ -657,7 +661,7 @@ lemma indicator_product_bridge_ax
     have fs_bd : ∀ i, ∃ C, ∀ x, |fs i x| ≤ C := by
       intro i
       refine ⟨1, fun x => ?_⟩
-      by_cases h : x ∈ B i <;> simp [fs, Set.indicator, h]
+      by_cases h : x ∈ B i <;> simp [fs, h]
 
     -- Use the generalized factorization for arbitrary coordinates k
     have h_factor := condexp_product_factorization_general μ hσ m fs k fs_meas fs_bd trivial
@@ -1815,14 +1819,17 @@ private lemma integrable_of_bounded {Ω : Type*} [MeasurableSpace Ω] {μ : Meas
 Short proof: use the axiom `Kernel.IndepFun.ae_measure_indepFun` to get measure-level
 independence a.e., then apply the standard measure-level factorization lemma.
 -/
+-- Note: The measurability and boundedness assumptions are included in the signature for
+-- completeness and future proofs, but are not needed for the current axiom-based proof.
+-- The full proof would use these to establish integrability.
 lemma Kernel.IndepFun.integral_mul
     {α Ω : Type*} [MeasurableSpace α] [MeasurableSpace Ω]
     {κ : Kernel α Ω} {μ : Measure α}
     [IsFiniteMeasure μ] [IsMarkovKernel κ]
     {X Y : Ω → ℝ}
     (hXY : Kernel.IndepFun X Y κ μ)
-    (hX : Measurable X) (hY : Measurable Y)
-    (hX_bd : ∃ C, ∀ ω, |X ω| ≤ C) (hY_bd : ∃ C, ∀ ω, |Y ω| ≤ C) :
+    (_hX : Measurable X) (_hY : Measurable Y)
+    (_hX_bd : ∃ C, ∀ ω, |X ω| ≤ C) (_hY_bd : ∃ C, ∀ ω, |Y ω| ≤ C) :
     ∀ᵐ a ∂μ, ∫ ω, X ω * Y ω ∂(κ a) = (∫ ω, X ω ∂(κ a)) * (∫ ω, Y ω ∂(κ a)) := by
   -- Direct application of the axiom (boundedness assumptions not needed for the axiom)
   exact Kernel.IndepFun.ae_measure_indepFun κ μ hXY
@@ -2667,13 +2674,15 @@ to eventually prove `Kernel.IndepFun.ae_measure_indepFun`
 
 /-! ### Pair factorization for the conditional expectation -/
 
+-- Note: hciid is a placeholder for conditional independence hypothesis.
+-- It's unused because we invoke the axiom kernel_integral_product_factorization instead.
 private lemma condexp_pair_factorization
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] (hσ : MeasurePreserving shift μ μ)
     (f g : α → ℝ)
     (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
     (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C)
-    (hciid : True) :
+    (_hciid : True) :
     μ[(fun ω => f (ω 0) * g (ω 1)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ]
     fun ω =>
@@ -2742,7 +2751,7 @@ private lemma condexp_pair_factorization
   refine h_kernel.trans ?_
   refine h_factor.trans ?_
   filter_upwards [h0, h1] with ω hω0 hω1
-  simpa [hω0, hω1]
+  simp [hω0, hω1]
   /-
   classical
   -- Step 1: Both coordinates have the same conditional law (from identicalConditionalMarginals_integral)
