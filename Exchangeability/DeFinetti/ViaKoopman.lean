@@ -362,7 +362,8 @@ It uses the Mean Ergodic Theorem and extremal measure theory.
 lemma condindep_pair_given_tail
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ) :
-    Kernel.IndepFun (fun ω : Ω[α] => ω 0) (fun ω : Ω[α] => ω 1)
+    @Kernel.IndepFun (Ω[α]) (Ω[α]) α α _ _ _
+      (fun ω : Ω[α] => ω 0) (fun ω : Ω[α] => ω 1)
       (condExpKernel μ (shiftInvariantSigma (α := α))) μ := by
   -- This is the deepest theorem - requires full Mean Ergodic Theorem
 
@@ -569,7 +570,6 @@ lemma condexp_product_factorization_ax
   | zero =>
     -- Base case: m = 0, empty product is 1
     -- Need to show: CE[1 | ℐ] =ᵐ 1
-    simp only [Finset.prod_empty]
     -- CE of a constant is the constant a.e.
     have : (fun ω => (1 : ℝ)) = (1 : Ω[α] → ℝ) := rfl
     rw [this]
@@ -688,10 +688,8 @@ lemma indicator_product_bridge_ax
     rw [abs_of_nonneg h_nonneg]
     exact h_le_one
 
-  have hF_nonneg : 0 ≤ᵐ[μ] F := ae_of_all _ (fun ω => by
-    have := hF_bd ω
-    rw [abs_le] at this
-    exact this.1)
+  have hF_nonneg : 0 ≤ᵐ[μ] F := ae_of_all _ (fun ω =>
+    Finset.prod_nonneg (fun i _ => Set.indicator_nonneg (fun _ => zero_le_one) _))
 
   have hF_int : Integrable F μ :=
     ⟨hF_meas.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hF_bd)⟩
@@ -797,7 +795,7 @@ lemma indicator_product_bridge_ax
     -- Step 3: ∫ (∏ fs) = ∫ CE[∏ fs | 𝓘] by tower property
     have step2 : ∫ ω, (∏ i, fs i (ω (k i))) ∂μ =
                  ∫ ω, μ[fun ω => ∏ i, fs i (ω (k i)) | shiftInvariantSigma (α := α)] ω ∂μ := by
-      exact (integral_condExp shiftInvariantSigma_le prod_int).symm
+      exact (integral_condExp shiftInvariantSigma_le).symm
 
     -- Step 4: CE[∏ fs] =ᵐ (∏ ∫ fs dν) by h_factor
     have step3 : ∫ ω, μ[fun ω => ∏ i, fs i (ω (k i)) | shiftInvariantSigma (α := α)] ω ∂μ =
