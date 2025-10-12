@@ -213,6 +213,42 @@ filter API complexity.
 -/
 
 /-!
+## Status Summary
+
+| Axiom | Status | Priority | Notes |
+|-------|--------|----------|-------|
+| `condindep_pair_given_tail` | TODO | **CRITICAL** | Deep ergodic theory - Mean Ergodic Theorem core. Main bottleneck! |
+| `kernel_integral_product_factorization` | TODO | HIGH | Depends on condindep_pair_given_tail |
+| `condexp_product_factorization_ax` | TODO | HIGH | Depends on kernel_integral_product_factorization |
+| `Kernel.IndepFun.ae_measure_indepFun` | TODO | MEDIUM | OLD PROOF in ViaKoopman.lean:1837-2672. Used for kernel theory. |
+| `condexp_product_factorization_general` | TODO | LOW | Follows from ax case via shift reduction |
+| `condexpL2_koopman_comm` | TODO | LOW | API issues with koopman/isometry interface. Ergodic theory support. |
+| `exchangeable_implies_ciid_modulo_bridge_ax` | TODO | LOW | Wrapper around CommonEnding theorem |
+| `Kernel.IndepFun.comp` | **PROVED** ✅ | N/A | Already proved in ViaKoopman.lean lines 173-201 (not an axiom!) |
+| `quantize_tendsto` | **PROVED** ✅ | N/A | Complete proof below. Never used in main theorem! |
+
+### Dependency Chain for Main Theorem
+
+The critical path to the de Finetti theorem is:
+
+```
+condindep_pair_given_tail (CRITICAL BOTTLENECK)
+  ↓
+kernel_integral_product_factorization
+  ↓
+condexp_product_factorization_ax
+  ↓
+Main de Finetti theorem
+```
+
+The **most impactful** axiom to prove is `condindep_pair_given_tail`, which requires deep
+ergodic-theoretic machinery (Mean Ergodic Theorem, mixing properties, asymptotic independence).
+
+**Note**: `quantize_tendsto` is never actually used in ViaKoopman.lean, so proving it doesn't
+reduce the axiom count for the main theorem. It's included for completeness.
+-/
+
+/-!
 ## Actual proofs
 
 This section contains actual Lean proofs (not just documentation).
@@ -253,6 +289,12 @@ lemma condexpL2_koopman_comm_proof (f : Lp ℝ 2 μ) :
   -- 3. U is an isometry that fixes S pointwise
   -- 4. Show P(U f) - P f ∈ S ∩ S⊥ using orthogonality arguments
   -- 5. A vector in S ∩ S⊥ must be zero (inner product with itself is 0)
+  --
+  -- API issues preventing direct proof:
+  -- - koopman returns ContinuousLinearMap, not LinearIsometry
+  -- - Need to use koopman_isometry to access isometry properties
+  -- - inner_condExpL2_left_eq_right has different type signature than expected
+  -- - Submodule.mem_orthogonal needs to be applied with proper iff elimination
 
 /-!
 ### Proof of quantize_tendsto
@@ -263,18 +305,92 @@ This proves that the quantize function converges as ε → 0⁺.
 and use the fact that ε → 0 implies the quantized value converges to v.
 -/
 
-lemma quantize_tendsto_proof {C x : ℝ} (hC : 0 ≤ C) :
+lemma quantize_tendsto_proof {C x : ℝ} (_hC : 0 ≤ C) :
     Tendsto (fun ε => ViaKoopman.MeasureTheory.quantize C ε x) (𝓝[>] 0) (𝓝 (max (-C) (min C x))) := by
-  sorry
   -- Strategy: For any δ > 0, we need to show that eventually |quantize C ε x - v| < δ
   -- We have |quantize C ε x - v| ≤ ε (from quantize_err_le)
   -- So if ε < δ, we're done
-  -- The proof sketch is:
-  -- 1. rw [Metric.tendsto_nhdsWithin_nhds]
-  -- 2. For any δ > 0, choose ε₀ = δ
-  -- 3. For ε ∈ (0, δ), use quantize_err_le to show dist < δ
-  -- Left as sorry due to filter API complexity
+
+  rw [Metric.tendsto_nhdsWithin_nhds]
+  intro δ hδ
+
+  -- Choose ε₀ = δ
+  use δ, hδ
+
+  intro ε' hε'_pos hε'_lt
+
+  -- First, convert hε'_pos from Set.Ioi membership to 0 < ε'
+  rw [Set.mem_Ioi] at hε'_pos
+
+  -- Convert dist ε' 0 < δ to ε' < δ
+  -- Since ε' > 0, we have dist ε' 0 = |ε'| = ε'
+  have hε'_lt' : ε' < δ := by
+    have : dist ε' 0 = ε' := by
+      rw [Real.dist_eq]
+      simp [abs_of_pos hε'_pos]
+    linarith [hε'_lt, this]
+
+  -- We need to show: dist (quantize C ε' x) (max (-C) (min C x)) < δ
+  -- We have: |quantize C ε' x - max (-C) (min C x)| ≤ ε' (from quantize_err_le)
+  have h_err := ViaKoopman.MeasureTheory.quantize_err_le (C := C) (ε := ε') (x := x) hε'_pos
+
+  calc dist (ViaKoopman.MeasureTheory.quantize C ε' x) (max (-C) (min C x))
+      = |ViaKoopman.MeasureTheory.quantize C ε' x - max (-C) (min C x)| := Real.dist_eq _ _
+    _ ≤ ε' := h_err
+    _ < δ := hε'_lt'
 
 end Proofs
+
+/-!
+## Roadmap for Future Work
+
+### Immediate Next Steps
+
+1. **Resolve `condExpKernel` autoparam issues**
+   - The main blocker for `condindep_pair_given_tail` is that we cannot state the proper
+     `Kernel.IndepFun` type with `condExpKernel` due to typeclass resolution issues
+   - This requires either:
+     a) Finding the right explicit parameters to avoid autoparam
+     b) Refactoring the conditional independence API
+     c) Using a workaround with explicit kernel construction
+
+2. **Prove `condindep_pair_given_tail` from Mean Ergodic Theorem**
+   - This is the **CRITICAL BOTTLENECK** for the entire proof
+   - Strategy: Use asymptotic independence from ergodic mixing
+   - Key insight: For large n, coordinates ω 0 and ω n are "approximately independent"
+     given the tail σ-algebra, and the limit gives exact independence
+   - Requires: Deep ergodic theory machinery not yet in mathlib
+
+3. **Complete `Kernel.IndepFun.ae_measure_indepFun` using OLD PROOF**
+   - Lines 1837-2672 of ViaKoopman.lean contain a complete strategy
+   - Extract and formalize the dyadic approximation approach
+   - This would unblock `kernel_integral_product_factorization`
+
+### Medium-term Goals
+
+4. **Fix `condexpL2_koopman_comm` API issues**
+   - Resolve the `koopman` vs `LinearIsometry` type mismatch
+   - Use `koopman_isometry` lemma to access isometry properties
+   - Complete the orthogonal projection argument
+
+5. **Prove factorization axioms by induction**
+   - Once `kernel_integral_product_factorization` is proved, the factorization
+     axioms can be proved by straightforward induction
+   - Base cases (m = 0) are already sketched in commented-out code
+
+### Long-term Vision
+
+The ultimate goal is to remove all axioms and have a **fully formalized proof** of
+de Finetti's theorem in Lean 4. This would be a significant achievement in the
+formalization of probability theory and would demonstrate that:
+
+1. **Ergodic theory** can be effectively combined with probability theory in type theory
+2. **Exchangeability** theory is amenable to full formalization
+3. The **Koopman operator approach** provides a clean conceptual framework
+
+**Estimated difficulty**: The remaining work is **graduate-level probability theory**
+requiring expertise in ergodic theory, measure theory, and kernel integration.
+
+-/
 
 end Exchangeability.DeFinetti
