@@ -2627,23 +2627,28 @@ theorem reverse_martingale_subsequence_convergence
         · -- AEStronglyMeasurable: follows from measurability
           exact (h_alpha_meas n).sub h_alpha_inf_meas |>.norm.aestronglyMeasurable
         · -- HasFiniteIntegral: ∫⁻ ‖f‖ < ∞
-          -- The hypothesis h_L1_conv uses ∫, which only makes sense for integrable functions.
-          -- So h_L1_conv implicitly guarantees that |alpha n - alpha_inf| is integrable for
-          -- large enough n. Since HasFiniteIntegral is exactly one half of being integrable
-          -- (the other half is AEStronglyMeasurable, which we've already shown),
-          -- and since the function is nonnegative and measurable, the existence of the
-          -- Bochner integral ∫ |alpha n - alpha_inf| (as used in h_L1_conv) implies
-          -- HasFiniteIntegral.
+          -- **Gap in hypothesis**: h_L1_conv states that ∫ |alpha n - alpha_inf| ∂μ < ε
+          -- for sufficiently large n. To even write this integral in Lean (using Bochner integral),
+          -- the function must be integrable. However, h_L1_conv doesn't explicitly provide
+          -- `Integrable (fun ω => |alpha n ω - alpha_inf ω|) μ` as a hypothesis.
           --
-          -- In Lean, the Bochner integral `∫ f ∂μ` is only well-defined when f is integrable.
-          -- The hypothesis h_L1_conv uses such integrals, implicitly assuming integrability.
+          -- **Mathematical fact**: L¹ convergence (αₙ → α_inf in L¹ norm) means:
+          -- - Each αₙ ∈ L¹(μ) (i.e., integrable)
+          -- - α_inf ∈ L¹(μ)
+          -- - ‖αₙ - α_inf‖_{L¹} → 0
           --
-          -- The proper fix would be to either:
-          -- 1. Add `∀ n, Integrable (fun ω => |alpha n ω - alpha_inf ω|) μ` as a hypothesis, or
-          -- 2. Use a different convergence statement (like lintegral with ENNReal)
+          -- In Lean's measure theory, if `∫ |f| ∂μ` is finite and f is measurable, then
+          -- f is integrable. The Bochner integral `∫ f ∂μ` is only well-defined for integrable f
+          -- (it's defined to be 0 for non-integrable functions, but then bounds like `< ε` would
+          -- be vacuous).
           --
-          -- For now, accept that h_L1_conv's use of Bochner integrals implies the functions
-          -- are integrable, hence have finite integral:
+          -- **Proper fix**: Add `∀ n, Integrable (fun ω => |alpha n ω - alpha_inf ω|) μ` as an
+          -- explicit hypothesis to this theorem. This would make the L¹ convergence statement
+          -- mathematically precise.
+          --
+          -- **Workaround**: Accept that the Bochner integral appearing in h_L1_conv with finite
+          -- bounds implicitly guarantees integrability. This is semantically correct but not
+          -- formally derivable from the current hypothesis type.
           sorry
       have hmarkov_real := mul_meas_ge_le_integral_of_nonneg hf_nonneg hf_int ε
       -- This gives: ε * μ.real {ω | ε ≤ |alpha n ω - alpha_inf ω|} ≤ ∫ ω, |alpha n ω - alpha_inf ω| ∂μ
