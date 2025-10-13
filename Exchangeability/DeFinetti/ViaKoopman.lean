@@ -746,13 +746,32 @@ private lemma condexp_pair_factorization_MET
     -- we have CE[f·g|m] = CE[f·CE[g|m]|m]
     have h_const_limit : μ[(fun ω => f (ω 0) * g (ω 0)) | m]
         =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] := by
+      /-
+      **THE KEY INSIGHT**: We have a function that is both:
+      1. CONSTANT in n (by lag-constancy): CE[f·A_n|m] = CE[f·g|m] for all n
+      2. CONVERGENT (by MET + L¹-Lipschitz): CE[f·A_n|m] → CE[f·CE[g|m]|m]
+
+      Therefore the constant must equal the limit!
+
+      Proof outline:
+      - Let Z_n := CE[f·A_n|m] (a sequence of functions)
+      - By h_product_const: Z_n = CE[f·g|m] for all n (constant sequence)
+      - By h_ce_limit: Z_n → CE[f·CE[g|m]|m] ae
+      - For constant sequences: if c = c = c = ... → L, then c = L
+      - Therefore: CE[f·g|m] = CE[f·CE[g|m]|m]
+      -/
+
       sorry
       /-
-      From h_product_const: CE[f·A_n|m] = CE[f·g|m] for all n
-      From h_ce_limit: CE[f·A_n|m] → CE[f·CE[g|m]|m]
-      Therefore: CE[f·g|m] = CE[f·CE[g|m]|m]
+      Implementation strategy:
+      1. Take any particular n (say n=0)
+      2. CE[f·A_0|m] = CE[f·g|m] by h_product_const 0
+      3. CE[f·A_n|m] → CE[f·CE[g|m]|m] by h_ce_limit
+      4. But CE[f·A_n|m] = CE[f·A_0|m] for all n by h_product_const
+      5. So CE[f·A_0|m] → CE[f·CE[g|m]|m] (constant sequence converges to itself)
+      6. Therefore: CE[f·g|m] = CE[f·CE[g|m]|m]
 
-      Technically: need to show that a constant sequence equals its limit.
+      Need lemma: constant ae sequences have their constant value equal to any limit
       -/
 
     exact h_const_limit
