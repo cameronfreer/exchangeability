@@ -775,17 +775,46 @@ private lemma condexp_pair_factorization_MET
         rw [mul_comm (f (ω 0)), mul_assoc, ← Finset.mul_sum]
         ring_nf
 
-      sorry
-      /-
-      Strategy to complete:
-      1. Apply h_product_expand to rewrite as sum
-      2. Use condExp_smul to pull out (1/(n+1))
-      3. Use condExp_finset_sum for the sum
-      4. Apply h_lag_const_all: each CE[f·g(ω k)|m] = CE[f·g(ω₀)|m]
-      5. Simplify: (1/(n+1))·(n+1)·CE[f·g(ω₀)|m] = CE[f·g(ω₀)|m]
+      -- Step 2a: Apply condExp_finset_sum to the product sum
+      have h_prod_sum : μ[∑ i ∈ Finset.range (n + 1), fun ω => f (ω 0) * g (ω i) | m] =ᵐ[μ]
+          ∑ i ∈ Finset.range (n + 1), μ[fun ω => f (ω 0) * g (ω i) | m] :=
+        condExp_finset_sum hfgk_int m
 
-      Similar structure to step 1, but with products.
-      -/
+      -- Step 2b: Apply lag-constancy - all terms become CE[f·g(ω₀)|m]
+      have h_prod_shift : ∑ i ∈ Finset.range (n + 1), μ[fun ω => f (ω 0) * g (ω i) | m] =ᵐ[μ]
+          ∑ i ∈ Finset.range (n + 1), μ[fun ω => f (ω 0) * g (ω 0) | m] := by
+        apply eventuallyEq_sum
+        intro k _
+        exact h_lag_const_all k
+
+      -- Step 2c: The sum becomes (n+1) copies of CE[f·g(ω₀)|m]
+      have h_prod_const : ∑ i ∈ Finset.range (n + 1), μ[fun ω => f (ω 0) * g (ω 0) | m] =ᵐ[μ]
+          fun ω => (n + 1 : ℝ) * μ[fun ω => f (ω 0) * g (ω 0) | m] ω := by
+        apply ae_of_all
+        intro ω
+        simp [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+
+      -- Step 2d: Rewrite using the expansion and combine all steps
+      have h_first : μ[(fun ω => f (ω 0) * A n ω) | m] =ᵐ[μ]
+          μ[(1 / (n + 1 : ℝ)) • (∑ i ∈ Finset.range (n + 1), fun ω' => f (ω' 0) * g (ω' i)) | m] := by
+        rw [h_product_expand]
+        apply condExp_congr_ae
+        apply ae_of_all
+        intro ω
+        simp only [Pi.smul_apply, smul_eq_mul, Finset.sum_apply]
+
+      calc μ[(fun ω => f (ω 0) * A n ω) | m]
+        =ᵐ[μ] μ[(1 / (n + 1 : ℝ)) • (∑ i ∈ Finset.range (n + 1), fun ω' => f (ω' 0) * g (ω' i)) | m] :=
+          h_first
+      _ =ᵐ[μ] (1 / (n + 1 : ℝ)) • μ[∑ i ∈ Finset.range (n + 1), fun ω => f (ω 0) * g (ω i) | m] :=
+          condExp_smul _ _ m
+      _ =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 0)) | m] := by
+          -- Apply h_prod_sum, h_prod_shift, and h_prod_const
+          have h_chain := h_prod_sum.trans (h_prod_shift.trans h_prod_const)
+          filter_upwards [h_chain] with ω hω
+          simp only [Pi.smul_apply, smul_eq_mul]
+          rw [hω]
+          field_simp
 
     -- Step 3: A_n → CE[g(ω₀)|m] in L¹ (by MET + boundedness)
     have h_met_convergence : ∀ᵐ ω ∂μ,
