@@ -71,8 +71,8 @@ variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
 /-- **Helper:** If `f =ᵐ[μ] g`, then `μ[f|m] =ᵐ[μ] μ[g|m]`. -/
 lemma condExp_congr_ae {m₀ m : MeasurableSpace Ω}
-    {μ : Measure Ω} {f g : Ω → ℝ} {hm : m ≤ m₀} [SigmaFinite (μ.trim hm)]
-    (h : f =ᵐ[μ] g) :
+    {μ : Measure Ω} {f g : Ω → ℝ} (h : f =ᵐ[μ] g)
+    (hm : m ≤ m₀) [SigmaFinite (μ.trim hm)] :
     μ[f | m] =ᵐ[μ] μ[g | m] := by
   sorry  -- TODO: Find correct mathlib lemma or prove
 
@@ -1775,32 +1775,36 @@ lemma finite_level_factorization
     have hIH : μ[indProd X r Cinit | futureFiltration X m] =ᵐ[μ]
         (fun ω => ∏ i : Fin r,
           μ[Set.indicator (Cinit i) (fun _ => (1:ℝ)) ∘ (X 0) | futureFiltration X m] ω) := by
-      exact ih (Nat.le_of_succ_le hm)
+      exact ih Cinit hCinit (Nat.le_of_succ_le hm)
 
     -- Replace Xᵣ with X₀ using contractability
     have hswap : μ[(Set.indicator Clast (fun _ => (1:ℝ)) ∘ X r) | futureFiltration X m]
         =ᵐ[μ]
         μ[(Set.indicator Clast (fun _ => (1:ℝ)) ∘ X 0) | futureFiltration X m] := by
-      exact condexp_convergence hX hX_meas (Nat.le_of_succ_le hm) Clast hClast
+      -- condexp_convergence swaps X_m with X_k, so swap X_m with X_r, then with X_0
+      have h1 := condexp_convergence hX hX_meas r m (Nat.le_of_lt hrm) Clast hClast
+      have h2 := condexp_convergence hX hX_meas 0 m (Nat.zero_le m) Clast hClast
+      exact h1.symm.trans h2
 
     -- Combine everything
     calc μ[indProd X (r+1) C | futureFiltration X m]
         _ =ᵐ[μ] μ[(fun ω => indProd X r Cinit ω
                       * Set.indicator Clast (fun _ => (1:ℝ)) (X r ω))
                    | futureFiltration X m] := by
-          refine condExp_congr_ae (EventuallyEq.of_eq hsplit)
+          refine condExp_congr_ae (EventuallyEq.of_eq hsplit) (futureFiltration_le X m hX_meas)
         _ =ᵐ[μ] μ[(A.indicator (fun _ => (1:ℝ)))
                    * (B.indicator (fun _ => (1:ℝ)))
                    | futureFiltration X m] := by
-          refine condExp_congr_ae (EventuallyEq.of_eq ?_)
+          refine condExp_congr_ae (EventuallyEq.of_eq ?_) (futureFiltration_le X m hX_meas)
           funext ω
           rw [← hf_indicator, ← hg_indicator]
+          rfl
         _ =ᵐ[μ] (fun ω => (μ[A.indicator (fun _ => (1:ℝ)) | futureFiltration X m] ω)
                           * (B.indicator (fun _ => (1:ℝ)) ω)) := hfactor
         _ =ᵐ[μ] (fun ω => (μ[indProd X r Cinit | futureFiltration X m] ω)
                           * (Set.indicator Clast (fun _ => (1:ℝ)) (X r ω))) := by
           apply EventuallyEq.mul
-          · refine condExp_congr_ae (EventuallyEq.of_eq hf_indicator.symm)
+          · refine condExp_congr_ae (EventuallyEq.of_eq hf_indicator.symm) (futureFiltration_le X m hX_meas)
           · exact EventuallyEq.of_eq hg_indicator.symm
         _ =ᵐ[μ] (fun ω => (∏ i : Fin r,
                             μ[Set.indicator (Cinit i) (fun _ => (1:ℝ)) ∘ (X 0)
