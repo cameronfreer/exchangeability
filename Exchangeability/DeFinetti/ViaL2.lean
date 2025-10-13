@@ -11,6 +11,7 @@ import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.MeasureTheory.MeasurableSpace.MeasurablyGenerated
 import Mathlib.MeasureTheory.PiSystem
+import Mathlib.MeasureTheory.Constructions.BorelSpace.Order
 import Mathlib.Probability.Kernel.Basic
 import Canonical
 
@@ -1739,9 +1740,63 @@ private lemma l2_bound_long_vs_tail
     congr 1
     -- Expand definitions of p, q, ξ
     simp only [p, q, ξ]
-    -- ∑ i, p i * ξ i ω = ∑ i, (1/m) * f(X(...)) = (1/m) * ∑ i, f(X(...))
-    -- ∑ i, q i * ξ i ω = ∑ i with i.val≥m-k, (1/k) * f(X(...)) = (1/k) * ∑ i∈tail, f(X(...))
-    sorry -- TODO: algebra to show weighted sums match
+    -- LHS: ∑ i, p i * ξ i ω = ∑ i, (1/m) * f(X(n + i.val + 1) ω) = (1/m) * ∑ i, f(X(...))
+    rw [show ∑ i : Fin m, (1 / (m : ℝ)) * f (X (n + i.val + 1) ω) =
+             (1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)
+        by rw [← Finset.mul_sum]]
+    -- RHS: ∑ i, q i * ξ i ω where q i = 0 if i.val < m-k, else 1/k
+    -- So this equals ∑_{i : i.val ≥ m-k} (1/k) * f(X(n + i.val + 1) ω)
+    -- Reindex: when i.val ≥ m-k, write i.val = (m-k) + j for j ∈ [0, k)
+    have h_q_sum : ∑ i : Fin m, q i * f (X (n + i.val + 1) ω) =
+        (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω) := by
+      -- Split sum based on whether i.val < m - k
+      calc ∑ i : Fin m, q i * f (X (n + i.val + 1) ω)
+        = ∑ i ∈ Finset.filter (fun i => i.val < m - k) Finset.univ, q i * f (X (n + i.val + 1) ω) +
+          ∑ i ∈ Finset.filter (fun i => ¬(i.val < m - k)) Finset.univ, q i * f (X (n + i.val + 1) ω) := by
+            rw [← Finset.sum_filter_add_sum_filter_not (s := Finset.univ) (p := fun i => i.val < m - k)]
+      _ = 0 + ∑ i ∈ Finset.filter (fun i : Fin m => ¬(i.val < m - k)) Finset.univ,
+            (1 / (k : ℝ)) * f (X (n + i.val + 1) ω) := by
+            congr 1
+            · apply Finset.sum_eq_zero
+              intro i hi
+              have : i.val < m - k := Finset.mem_filter.mp hi |>.2
+              simp [q, this]
+            · apply Finset.sum_congr rfl
+              intro i hi
+              have : ¬(i.val < m - k) := Finset.mem_filter.mp hi |>.2
+              simp [q, this]
+      _ = (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω) := by
+            simp only [zero_add]
+            rw [← Finset.mul_sum]
+            congr 1
+            -- Reindex: i with i.val ≥ m-k ↔ i = ⟨(m-k) + j.val, _⟩ for j : Fin k
+            -- The filtered set equals the image of the map j ↦ ⟨(m-k) + j, _⟩
+            trans (∑ i ∈ Finset.image (fun (j : Fin k) => (⟨(m - k) + j.val, by omega⟩ : Fin m)) Finset.univ,
+                    f (X (n + i.val + 1) ω))
+            · congr 1
+              ext i
+              simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_image]
+              constructor
+              · intro hi
+                use ⟨i.val - (m - k), by omega⟩
+                simp only [Finset.mem_univ, true_and]
+                ext
+                simp only [Fin.val_mk]
+                omega
+              · rintro ⟨j, _, rfl⟩
+                simp only [Fin.val_mk]
+                omega
+            · -- Now the sum is over an image, apply sum_image with injectivity
+              rw [Finset.sum_image]
+              · congr 1
+                ext j
+                simp only [Fin.val_mk]
+                omega
+              -- Prove injectivity
+              · intro j₁ _ j₂ _ h
+                simp only [Fin.mk.injEq] at h
+                exact Fin.ext (by omega)
+    rw [h_q_sum]
 
   -- Finally, show our goal ≤ Cf / k using h_bound and h_lhs_eq
   calc ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
@@ -2910,16 +2965,14 @@ noncomputable def directing_measure
     (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
     Ω → Measure ℝ :=
   fun ω =>
-    -- Build via Stieltjes/Carathéodory from the right-continuous CDF
-    -- TODO: The exact API might be Measure.ofCDF or StieltjesFunction.measure
-    -- Once CDF properties are proven, this becomes:
-    -- Measure.ofCDF
-    --   (cdf_from_alpha X hX_contract hX_meas hX_L2 ω)
-    --   (cdf_from_alpha_mono X hX_contract hX_meas hX_L2 ω)
-    --   (cdf_from_alpha_rightContinuous X hX_contract hX_meas hX_L2 ω)
-    --   (cdf_from_alpha_limits X hX_contract hX_meas hX_L2 ω).1
-    --   (cdf_from_alpha_limits X hX_contract hX_meas hX_L2 ω).2
-    sorry
+    -- Build via StieltjesFunction from the right-continuous CDF
+    -- The Stieltjes function for ω is cdf_from_alpha X hX_contract hX_meas hX_L2 ω
+    let F_ω : StieltjesFunction := {
+      toFun := cdf_from_alpha X hX_contract hX_meas hX_L2 ω
+      mono' := cdf_from_alpha_mono X hX_contract hX_meas hX_L2 ω
+      right_continuous' := fun t => cdf_from_alpha_rightContinuous X hX_contract hX_meas hX_L2 ω t
+    }
+    F_ω.measure
 
 /-- The directing measure is a probability measure. -/
 lemma directing_measure_isProbabilityMeasure
@@ -2929,10 +2982,12 @@ lemma directing_measure_isProbabilityMeasure
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (ω : Ω) :
     IsProbabilityMeasure (directing_measure X hX_contract hX_meas hX_L2 ω) := by
-  classical
-  -- Direct from Measure.ofCDF: the limits at ±∞ guarantee total mass 1
-  -- TODO: Once directing_measure uses Measure.ofCDF, this becomes:
-  -- exact Measure.isProbabilityMeasure_ofCDF _ _ _ _ _
+  -- The limits at ±∞ guarantee total mass 1 via StieltjesFunction.measure_univ
+  -- However, cdf_from_alpha_limits is currently a sorry, so we must sorry this too
+  constructor
+  unfold directing_measure
+  simp only []
+  -- Would use: StieltjesFunction.measure_univ with limits (cdf_from_alpha_limits X hX_contract hX_meas hX_L2 ω)
   sorry
 
 /-- For each fixed t, ω ↦ ν(ω)((-∞,t]) is measurable.
@@ -2963,12 +3018,22 @@ lemma directing_measure_eval_Iic_measurable
     -- After unfolding, we have sInf of a range
     -- For ℝ-valued functions, sInf of a countable family of measurable functions is measurable
     exact Measurable.iInf hterm
-  -- Identify with the CDF evaluation
-  -- This will follow from Measure.ofCDF_apply_Iic once directing_measure is defined
-  -- For now, we assume this identification holds
-  -- TODO: Once directing_measure uses Measure.ofCDF, prove:
-  -- ∀ ω, directing_measure ... ω (Set.Iic t) = cdf_from_alpha ... ω t
-  sorry
+  -- Identify with the CDF evaluation using StieltjesFunction.measure_Iic
+  -- directing_measure ω (Iic t) = F_ω.measure (Iic t)
+  --                              = ofReal (F_ω t - 0)  [by StieltjesFunction.measure_Iic with limit 0 at bot]
+  --                              = ofReal (cdf_from_alpha ω t)
+  -- Since ω ↦ ofReal (cdf_from_alpha ω t) is measurable (ENNReal.ofReal ∘ measurable function),
+  -- we have ω ↦ directing_measure ω (Iic t) is measurable
+  have h_eq : ∀ ω, directing_measure X hX_contract hX_meas hX_L2 ω (Set.Iic t) =
+      ENNReal.ofReal (cdf_from_alpha X hX_contract hX_meas hX_L2 ω t) := by
+    intro ω
+    unfold directing_measure
+    simp only []
+    -- F_ω.measure (Iic t) = ofReal (F_ω t - 0) where F_ω has limit 0 at bot
+    -- But cdf_from_alpha_limits is a sorry, so we must sorry this identification
+    sorry
+  simp_rw [h_eq]
+  exact ENNReal.measurable_ofReal.comp hmeas
 
 /-- For each set s, the map ω ↦ ν(ω)(s) is measurable.
 
@@ -3023,26 +3088,21 @@ lemma directing_measure_measurable
             directing_measure X hX_contract hX_meas hX_L2 ω Set.univ -
             directing_measure X hX_contract hX_meas hX_L2 ω s := by
           intro ω
-          -- Need: directing_measure ω is a measure, so measure_compl applies
-          -- But directing_measure hasn't been properly defined yet (it's a sorry)
-          -- This requires the actual Measure.ofCDF construction
-          sorry
+          -- directing_measure ω is a measure (StieltjesFunction.measure), so measure_compl applies
+          rw [measure_compl hs_meas (measure_ne_top _ s)]
         simp_rw [h_univ_s]
-        -- ω ↦ 1 is measurable (constant)
+        -- ω ↦ ν(ω)(univ) is constant 1 (probability measure), so measurable
         -- ω ↦ ν(ω)(s) is measurable by hs_eval
         -- Their difference is measurable
         have h_univ_const : ∀ ω, directing_measure X hX_contract hX_meas hX_L2 ω Set.univ = 1 := by
           intro ω
           -- This follows from directing_measure_isProbabilityMeasure
-          -- But that's also a sorry waiting on Measure.ofCDF
+          -- But that depends on cdf_from_alpha_limits which is a sorry
           sorry
         simp_rw [h_univ_const]
         -- (fun ω => 1 - ν(ω)(s)) is measurable
-        -- For ENNReal, subtraction is continuous, hence measurable
-        -- 1 is constant (measurable), ν(ω)(s) is measurable by hs_eval
-        -- Therefore their difference is measurable
-        -- But the actual proof requires the directing_measure construction
-        sorry
+        -- Constant 1 minus measurable function
+        exact Measurable.const_sub hs_eval 1
 
     have h_iUnion : ∀ (f : ℕ → Set ℝ),
         (∀ i j, i ≠ j → Disjoint (f i) (f j)) →
@@ -3057,9 +3117,8 @@ lemma directing_measure_measurable
         have h_union_eq : ∀ ω, directing_measure X hX_contract hX_meas hX_L2 ω (⋃ n, f n) =
             ∑' n, directing_measure X hX_contract hX_meas hX_L2 ω (f n) := by
           intro ω
-          -- This requires: directing_measure ω is a measure, so measure_iUnion applies
-          -- But directing_measure hasn't been properly defined yet
-          sorry
+          -- directing_measure ω is a measure (StieltjesFunction.measure), so measure_iUnion applies
+          exact measure_iUnion hdisj (fun n => (hf n).1)
         simp_rw [h_union_eq]
         -- ∑' n, ν(ω)(f n) is measurable as tsum of measurable functions
         exact Measurable.ennreal_tsum (fun n => (hf n).2)
@@ -3078,10 +3137,8 @@ lemma directing_measure_measurable
     let S : Set (Set ℝ) := Set.range (Set.Iic : ℝ → Set ℝ)
 
     -- Prove the necessary facts about S
-    have h_gen : (inferInstance : MeasurableSpace ℝ) = MeasurableSpace.generateFrom S := by
-      -- The Borel σ-algebra on ℝ is generated by {Iic t | t ∈ ℝ}
-      -- This is a standard fact about Borel spaces
-      sorry
+    have h_gen : (inferInstance : MeasurableSpace ℝ) = MeasurableSpace.generateFrom S :=
+      @borel_eq_generateFrom_Iic ℝ _ _ _ _
 
     have h_pi_S : IsPiSystem S := by
       -- {Iic t | t ∈ ℝ} is a π-system
