@@ -1916,7 +1916,17 @@ lemma block_coord_condIndep
     -- By Dynkin: GoodSets contains the generated σ-algebra
     -- Therefore E ∈ GoodSets for all measurable E
 
-    sorry -- TODO (2-3 hours total): Implement Parts A, B, C
+    -- Given: E measurable in firstRSigma X r ⊔ finFutureSigma X m k
+    -- Goal: ∫_E indicator B (X r) dμ = ∫_E μ[indicator B ∘ X r | finFuture_k] dμ
+
+    -- This is a complex application of Dynkin's π-λ theorem
+    -- The key insight: contractable_finite_cylinder_measure gives us the factorization
+    -- for cylinder generators, and monotone class theory extends it
+
+    sorry -- TODO (2-3 hours): Full Dynkin π-λ implementation
+          -- Part A: Prove for cylinder generators using contractable_finite_cylinder_measure
+          -- Part B: Show closure under monotone limits
+          -- Part C: Apply Dynkin's theorem to conclude
 
   -- **Step 2: Pass to limit as k → ∞ using martingale convergence**
   --
