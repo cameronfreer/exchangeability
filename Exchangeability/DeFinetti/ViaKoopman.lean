@@ -462,33 +462,36 @@ private lemma integrable_of_bounded {Ω : Type*} [MeasurableSpace Ω] {μ : Meas
   obtain ⟨C, hC⟩ := hbd
   exact ⟨hf.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hC)⟩
 
-/-- **Tower property for products**: CE[X · CE[Y|m] | m] = CE[X · Y | m].
+/-- **Pull-out property with conditional expectation factor on the left**.
 
-For any integrable Y and bounded measurable X, taking CE of Y first then multiplying by X
-and taking CE again gives the same result as multiplying first then taking CE.
+For bounded measurable X and integrable Y:
+  CE[X · CE[Y|m] | m] = CE[Y|m] · CE[X|m]
 
-**Mathematical statement**: If Y is integrable and Z = CE[Y|m], then:
-  CE[X·Z | m] = CE[X·Y | m]
+This is the correct "take out what is known" rule with the m-measurable factor CE[Y|m]
+on the left. The factor CE[Y|m] is m-ae-strongly-measurable, so we can apply the
+standard pull-out lemma from mathlib.
 
-**Why this holds**: By the defining property of CE, for any m-measurable set A:
-  ∫_A Z dμ = ∫_A Y dμ
+**Why the naive "tower for products" CE[X·CE[Y|m]|m] = CE[X·Y|m] is FALSE:**
+Taking m = {∅,Ω} (trivial σ-algebra), the naive identity reduces to:
+  E[X·E[Y]] = E[X·Y]
+which only holds when Cov(X,Y) = 0. This is not true in general.
 
-Extending this to products requires the monotone class theorem or Fubini-type arguments
-to show: ∫_A X·Z dμ = ∫_A X·Y dμ for m-measurable A.
+**Proof strategy:** Use `condExp_mul_of_aestronglyMeasurable_left` from mathlib with:
+- Left factor: CE[Y|m] (m-ae-strongly-measurable by stronglyMeasurable_condExp)
+- Right factor: X (bounded, hence integrable on finite measure space)
+- Product: CE[Y|m]·X is integrable by Integrable.bdd_mul'
 
-**Note**: This holds even when X is NOT m-measurable (as in our case where X = f(ω₀)
-and m = shiftInvariantSigma).
-
-**Status**: Standard result in conditional expectation theory, axiomatized pending
-a formal proof using monotone class theorem or mathlib search.
+**Status:** Axiomatized due to Lean 4 type class instance issues with multiple
+measurable space structures. The mathematical content is straightforward.
 -/
-axiom condexp_tower_mul
+axiom condexp_mul_condexp
     {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
     {m : MeasurableSpace Ω} (hm : m ≤ mΩ)
     {X Y : Ω → ℝ}
     (hX_meas : Measurable X) (hX_bd : ∃ C, ∀ ω, |X ω| ≤ C)
     (hY_int : Integrable Y μ) :
-    μ[(fun ω => X ω * μ[Y | m] ω) | m] =ᵐ[μ] μ[(fun ω => X ω * Y ω) | m]
+    μ[(fun ω => X ω * μ[Y | m] ω) | m]
+      =ᵐ[μ] (fun ω => μ[Y | m] ω * μ[X | m] ω)
 
 /-- **Lag-constancy axiom**: Conditional expectation of products is constant in the lag.
 
@@ -620,31 +623,29 @@ private lemma condexp_pair_factorization_MET
       _ =ᵐ[μ] (fun ω => Z ω * μ[(fun ω => f (ω 0)) | m] ω) := h
 
   -- Step 5: CE[f(ω₀)·g(ω₀)|ℐ] = CE[f(ω₀)·CE[g(ω₀)|ℐ]|ℐ]
-  -- This is the tower property: CE[f·CE[g|m]|m] = CE[f·g|m]
+  -- Strategy: Use MET + Cesàro averaging to avoid the false "tower for products"
+  -- NOTE: The naive CE[X·CE[Y|m]|m] = CE[X·Y|m] is FALSE in general!
+  -- Instead, we use: CE[f·A_n|m] → CE[f·CE[g|m]|m] = CE[g|m]·CE[f|m]
   have h_tower : μ[(fun ω => f (ω 0) * g (ω 0)) | m]
       =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] := by
-    -- Let Y := g∘π₀, and note that CE[Y|m] appears in the RHS
-    let Y : Ω[α] → ℝ := (fun ω => g (ω 0))
-    -- Y is integrable
-    have hY_int : Integrable Y μ := by
-      obtain ⟨Cg, hCg⟩ := hg_bd
-      constructor
-      · exact hg_meas.comp_aemeasurable (measurable_pi_apply 0).aemeasurable |>.aestronglyMeasurable
-      · have h_bd : ∀ (ω : Ω[α]), |Y ω| ≤ Cg := by
-          intro ω
-          simp [Y]
-          exact hCg (ω 0)
-        exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
+    sorry
+    /-
+    TODO: Implement MET/Cesàro averaging proof:
 
-    -- Apply the tower property axiom: CE[X·CE[Y|m]|m] = CE[X·Y|m]
-    -- Here X = f∘π₀ and the equation gives CE[X·Y|m] = CE[X·CE[Y|m]|m]
-    have hX_meas : Measurable (fun ω : Ω[α] => f (ω 0)) :=
-      hf_meas.comp (measurable_pi_apply 0)
-    have hX_bd : ∃ C, ∀ ω, |(fun ω : Ω[α] => f (ω 0)) ω| ≤ C := by
-      exact ⟨_, fun ω => hf_bd.choose_spec (ω 0)⟩
-    have h_tower_mul : μ[(fun ω => f (ω 0) * μ[Y | m] ω) | m] =ᵐ[μ] μ[(fun ω => f (ω 0) * Y ω) | m] :=
-      condexp_tower_mul shiftInvariantSigma_le hX_meas hX_bd hY_int
-    exact h_tower_mul.symm
+    1. Define A_n = (1/n)∑_{k=0}^{n-1} g(ω k)
+    2. Show CE[A_n|ℐ] = CE[g(ω₀)|ℐ] (by linearity + condexp_precomp_iterate_eq)
+    3. Show CE[f(ω₀)·A_n|ℐ] = (1/n)∑_{k=0}^{n-1} CE[f(ω₀)·g(ωₖ)|ℐ]
+    4. Use lag-constancy: each term equals CE[f(ω₀)·g(ω₁)|ℐ], independent of k
+    5. By MET: A_n → P(g(ω₀)) = CE[g(ω₀)|ℐ] in L² (hence L¹ by boundedness)
+    6. Apply condExp_L1_lipschitz: CE[f(ω₀)·A_n|ℐ] → CE[f(ω₀)·CE[g(ω₀)|ℐ]|ℐ]
+    7. Apply condexp_mul_condexp with left factor CE[g(ω₀)|ℐ]:
+       CE[f(ω₀)·CE[g(ω₀)|ℐ]|ℐ] = CE[g(ω₀)|ℐ]·CE[f(ω₀)|ℐ]
+    8. From step 4: CE[f(ω₀)·A_n|ℐ] = CE[f(ω₀)·g(ω₁)|ℐ] for all n
+    9. By step 1: CE[f(ω₀)·g(ω₁)|ℐ] = CE[f(ω₀)·g(ω₀)|ℐ] (shift invariance)
+    10. Combine: CE[f(ω₀)·g(ω₀)|ℐ] = CE[g(ω₀)|ℐ]·CE[f(ω₀)|ℐ]
+
+    This avoids the false "tower for products" entirely.
+    -/
 
   -- Step 6: Combine all the equalities
   calc μ[(fun ω => f (ω 0) * g (ω 1)) | m]
