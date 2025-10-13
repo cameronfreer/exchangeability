@@ -297,14 +297,12 @@ private lemma condExp_abs_le_of_abs_le
     {X : Ω → ℝ} (hX : Integrable X μ) {C : ℝ} (hC : ∀ ω, |X ω| ≤ C) :
     ∀ᵐ ω ∂μ, |μ[X | m] ω| ≤ C := by
   sorry
-  /- TODO: Proof sketch:
-  1. By Jensen: |CE[X|m]| ≤ CE[|X||m] a.e.
-  2. Since |X| ≤ C pointwise: CE[|X||m] ≤ CE[C|m] = C a.e.
-  3. Combine to get: |CE[X|m]| ≤ C a.e.
-  Key lemmas needed:
-  - MeasureTheory.ae_le_of_condExp_le or similar
-  - condExp_const
-  Estimated: 8-12 lines
+  /- TODO: Need to find correct lemma names in mathlib:
+  - Jensen's inequality for conditional expectation: |CE[X|m]| ≤ CE[|X||m]
+  - Monotonicity: CE[|X||m] ≤ CE[C|m] when |X| ≤ C
+  - Constant: CE[C|m] = C
+  The logic is correct, just need to find the right API.
+  Estimated: 10-15 lines once APIs found
   -/
 
 /-- If `Z` is a.e.-bounded and measurable and `Y` is integrable,
