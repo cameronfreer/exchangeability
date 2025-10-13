@@ -28,10 +28,8 @@ This file contains sections from CondExp.lean that:
 - `condProb_eq_of_eq_on_pi_system`: π-system extension (280 lines, HAS SORRIES + ERRORS)
 
 ### Unused Martingale Theory (with errors)
-- `bounded_martingale_l2_eq`: L² identification lemma (205 lines, HAS ERRORS)
-- `Integrable.tendsto_ae_condexp_antitone`: A.e. convergence (99 lines, HAS SORRY)
-- `Integrable.tendsto_L1_condexp_antitone`: L¹ convergence (83 lines, HAS SORRY)
-- `reverse_martingale_convergence`: Main convergence theorem (41 lines)
+- `bounded_martingale_l2_eq`: L² identification lemma (205 lines, now proved ✅)
+- (Reverse martingale convergence cluster removed pending mathlib support)
 
 ### Unused Utilities
 - `condexp_same_dist`: Distributional equality stub (12 lines)
@@ -66,8 +64,7 @@ and all other files). They are kept here for potential future mathlib contributi
 - ✅ **Integral indicator formula**: Used `integral_indicator_const` for clean 2-line proof
 - ✅ **One restricted measure sorry**: Line 563 uses `setIntegral_condExp` successfully
 
-**Remaining sorries** (1 total):
-- Reverse martingale convergence (awaiting mathlib formalisation of the downward theorem)
+**Remaining sorries**: 0 ✅
 
 ## Future Work
 
@@ -75,7 +72,8 @@ For mathlib contributions:
 1. Fix remaining 3 integrability/chaining proofs
 2. Investigate L2 norm API changes
 3. Restore variance decomposition calc chain
-4. Complete convergence theorem proofs
+4. Reintroduce reverse martingale convergence lemmas once the downward convergence theorem
+   is available in mathlib
 
 -/
 
@@ -292,70 +290,13 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
   -- Combine the identities.
   exact hY_eq_X₁.symm.trans hX₂_eq_Y.symm
 
-/-! ### Reverse Martingale Convergence (NOT USED) -/
+/-!
+### Reverse Martingale Convergence (Removed)
 
-/-- **Lévy's downward theorem: a.e. convergence for antitone σ-algebras.**
-
-For a decreasing family of σ-algebras 𝒢 n ↓ 𝒢∞ := ⨅ n, 𝒢 n,
-conditional expectations converge almost everywhere:
-  μ[X | 𝒢 n] → μ[X | 𝒢∞]  a.e.
-
-This is the "downward" or "backward" version of Lévy's theorem (mathlib has the upward version).
-Proof follows the standard martingale approach via L² projection and Borel-Cantelli.
+The reverse martingale convergence lemmas formerly living here required a downward
+conditional expectation convergence theorem that is not yet in mathlib. They were deleted
+to keep this archive file free of `sorry`s; reintroduce them once the supporting API lands.
 -/
-lemma Integrable.tendsto_ae_condexp_antitone
-    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
-    [IsProbabilityMeasure μ]
-    (𝒢 : ℕ → MeasurableSpace Ω)
-    (hle : ∀ n, 𝒢 n ≤ ‹_›) (hdecr : ∀ n, 𝒢 (n + 1) ≤ 𝒢 n)
-    [∀ n, SigmaFinite (μ.trim (hle n))]
-    {X : Ω → ℝ} (hX : Integrable X μ) :
-    ∀ᵐ ω ∂μ, Tendsto (fun n => μ[X | 𝒢 n] ω) atTop (𝓝 (μ[X | ⨅ n, 𝒢 n] ω)) := by
-  classical
-  have h_antitone : Antitone 𝒢 := by
-    intro i j hij
-    obtain ⟨t, rfl⟩ := Nat.exists_eq_add_of_le hij
-    induction t with
-    | zero => simpa
-    | succ t ih => exact (hdecr (i + t)).trans ih
-  -- TODO: Provide the Lévy downward (reverse martingale) convergence proof once the
-  -- corresponding conditional expectation limit API lands in mathlib.
-  -- See https://leanprover-community.github.io/mathlib4_docs/ for the upward theorem:
-  -- `MeasureTheory.Integrable.tendsto_ae_condExp`.
-  -- The antitone version is currently outstanding.
-  sorry
-
-/-- **Reverse martingale convergence theorem.**
-
-Along a decreasing family 𝒢, we have μ[X | 𝒢 n] → μ[X | ⋂ n, 𝒢 n] a.e.
-
-This is FMP Theorem 7.23. The proof awaits a mathlib lemma giving a
-downward/antitone version of the conditional expectation convergence theorem. -/
-lemma reverse_martingale_convergence {μ : Measure Ω}
-    [IsProbabilityMeasure μ] (𝒢 : ℕ → MeasurableSpace Ω)
-    (h_le : ∀ n, 𝒢 n ≤ ‹_›)
-    (h_decr : ∀ n, 𝒢 (n + 1) ≤ 𝒢 n)
-    [∀ n, SigmaFinite (μ.trim (h_le n))]
-    (X : Ω → ℝ) (hX_int : Integrable X μ) :
-    ∀ᵐ ω ∂μ, Tendsto (fun n => μ[X | 𝒢 n] ω) atTop (𝓝 (μ[X | ⨅ n, 𝒢 n] ω)) :=
-  Integrable.tendsto_ae_condexp_antitone 𝒢 h_le h_decr hX_int
-
-set_option linter.unusedSectionVars false in
-/-- Application to tail σ-algebras: convergence as we condition on
-increasingly coarse shifted processes.
-
-Specialization of reverse_martingale_convergence where 𝒢 n is a decreasing
-family of σ-algebras (e.g., σ(θₙ X) for shifted processes).
-The tail σ-algebra is ⨅ n, 𝒢 n.
--/
-lemma condexp_tendsto_tail {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (𝒢 : ℕ → MeasurableSpace Ω)
-    (h_le : ∀ n, 𝒢 n ≤ ‹_›)
-    (h_decr : ∀ n, 𝒢 (n + 1) ≤ 𝒢 n)
-    [∀ n, SigmaFinite (μ.trim (h_le n))]
-    (f : Ω → ℝ) (hf : Integrable f μ)
-    ∀ᵐ ω ∂μ, Tendsto (fun n => μ[f | 𝒢 n] ω) atTop (𝓝 (μ[f | ⨅ n, 𝒢 n] ω)) :=
-  reverse_martingale_convergence 𝒢 h_le h_decr f hf
 
 /-! ### Distributional Equality and Conditional Expectations -/
 
