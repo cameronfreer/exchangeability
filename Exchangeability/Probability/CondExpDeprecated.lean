@@ -214,13 +214,13 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
 
   -- Integrate the variance decomposition to obtain ∫ Var = 0.
   have hVar_decomp :
-      ProbabilityTheory.Var[X₂; μ | m₁]
+      Var[X₂; μ | m₁]
         =ᵐ[μ] μ[(fun ω => (X₂ ω) ^ 2) | m₁] - μ[X₂ | m₁] ^ 2 := by
     simpa [hY] using
       ProbabilityTheory.condVar_ae_eq_condExp_sq_sub_sq_condExp
         (μ := μ) (m := m₁) (m₀ := m₀) (X := X₂) (hm := hm₁) (hX := hL2)
   have h_var_integral_zero :
-      ∫ ω, ProbabilityTheory.Var[X₂; μ | m₁] ω ∂μ = 0 := by
+      ∫ ω, Var[X₂; μ | m₁] ω ∂μ = 0 := by
     have hInt_cond_sq :
         Integrable (fun ω => μ[(fun ω => (X₂ ω) ^ 2) | m₁] ω) μ :=
       integrable_condExp (μ := μ) (m := m₁) (f := fun ω => (X₂ ω) ^ 2)
@@ -229,15 +229,16 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
       (MemLp.condExp (m := m₁) (μ := μ) (m₀ := m₀) hL2).integrable_sq
     have hInt_cond_sq_eq :
         ∫ ω, μ[(fun ω => (X₂ ω) ^ 2) | m₁] ω ∂μ
-          = ∫ ω, (X₂ ω) ^ 2 ∂μ :=
-      integral_condExp (μ := μ) (m := m₁) (m₀ := m₀)
-        (f := fun ω => (X₂ ω) ^ 2)
+          = ∫ ω, (X₂ ω) ^ 2 ∂μ := by
+      simpa using
+        (integral_condExp (μ := μ) (m := m₁) (m₀ := m₀)
+          (hm := hm₁) (f := fun ω => (X₂ ω) ^ 2))
     have hInt_Y_sq_eq :
         ∫ ω, (μ[X₂ | m₁] ω) ^ 2 ∂μ = ∫ ω, (X₁ ω) ^ 2 ∂μ := by
       have := integral_congr_ae (EventuallyEq.fun_comp hmg fun x => x ^ 2)
       simpa [hY] using this
     calc
-      ∫ ω, ProbabilityTheory.Var[X₂; μ | m₁] ω ∂μ
+      ∫ ω, Var[X₂; μ | m₁] ω ∂μ
           = ∫ ω, (μ[(fun ω => (X₂ ω) ^ 2) | m₁] ω
                 - (μ[X₂ | m₁] ω) ^ 2) ∂μ := by
               exact integral_congr_ae hVar_decomp
@@ -249,30 +250,30 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
       _ = 0 := by simpa [sub_eq_zero, hSecond]
 
   -- Non-negativity and integrability of the conditional variance.
-  have hVar_nonneg : 0 ≤ᵐ[μ] ProbabilityTheory.Var[X₂; μ | m₁] := by
+  have hVar_nonneg : 0 ≤ᵐ[μ] Var[X₂; μ | m₁] := by
     have h_sq_nonneg :
         0 ≤ᵐ[μ] fun ω => (X₂ ω - Y ω) ^ 2 :=
       Eventually.of_forall fun ω => sq_nonneg _
     simpa [ProbabilityTheory.condVar, hY] using
       condExp_nonneg (μ := μ) (m := m₁) h_sq_nonneg
   have hVar_integrable :
-      Integrable (ProbabilityTheory.Var[X₂; μ | m₁]) μ :=
+      Integrable (Var[X₂; μ | m₁]) μ :=
     ProbabilityTheory.integrable_condVar (m := m₁) (μ := μ) (X := X₂)
   have hVar_zero :
-      ProbabilityTheory.Var[X₂; μ | m₁] =ᵐ[μ] 0 :=
+      Var[X₂; μ | m₁] =ᵐ[μ] 0 :=
     (integral_eq_zero_iff_of_nonneg_ae hVar_nonneg hVar_integrable).1 h_var_integral_zero
 
   -- Relate the integral of the conditional variance to the square error.
   have h_diff_sq_int_zero :
       ∫ ω, (X₂ ω - Y ω) ^ 2 ∂μ = 0 := by
     have hset :
-        ∫ ω, ProbabilityTheory.Var[X₂; μ | m₁] ω ∂μ
+        ∫ ω, Var[X₂; μ | m₁] ω ∂μ
             = ∫ ω, (X₂ ω - μ[X₂ | m₁] ω) ^ 2 ∂μ := by
       simpa [setIntegral_univ] using
         ProbabilityTheory.setIntegral_condVar
           (μ := μ) (m := m₁) (X := X₂) (hm := hm₁)
           (s := Set.univ) h_diff_sq_int MeasurableSet.univ
-    have hIntVar : ∫ ω, ProbabilityTheory.Var[X₂; μ | m₁] ω ∂μ = 0 := by
+    have hIntVar : ∫ ω, Var[X₂; μ | m₁] ω ∂μ = 0 := by
       simpa using integral_congr_ae hVar_zero
     simpa [hY] using hset.symm.trans hIntVar
 
