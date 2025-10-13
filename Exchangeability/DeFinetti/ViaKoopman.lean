@@ -303,17 +303,14 @@ private lemma integrable_mul_of_ae_bdd_left
     hZ.aestronglyMeasurable.mul hY.aestronglyMeasurable
   have h_finite : HasFiniteIntegral (Z * Y) μ := by
     sorry
-    /- TODO: Complete the domination proof. Strategy:
-    calc ∫⁻ ω, ‖(Z * Y) ω‖₊ ∂μ
-        ≤ ∫⁻ ω, ‖Z ω‖₊ * ‖Y ω‖₊ ∂μ := by simp [nnnorm_mul]; apply lintegral_mono; intro ω; rfl
-      _ ≤ ∫⁻ ω, Real.nnabs C * ‖Y ω‖₊ ∂μ := by
-          apply lintegral_mono_ae; refine hC.mono ?_; intro ω hω
-          apply mul_le_mul_right'
-          -- Need API: For real x, ‖x‖₊ = |x|.toNNReal
-          -- Then: ‖Z ω‖₊ ≤ Real.nnabs C follows from Real.toNNReal_le_toNNReal hω
-          sorry
-      _ = Real.nnabs C * ∫⁻ ω, ‖Y ω‖₊ ∂μ := lintegral_const_mul _ _
-      _ < ∞ := ENNReal.mul_lt_top ENNReal.coe_ne_top (ne_of_lt hY.2)
+    /- TODO: Domination proof works but has syntax issues. Strategy:
+    Show: ∫⁻ ω, ‖(Z * Y) ω‖₊ ∂μ < ∞ by:
+    1. ‖(Z * Y) ω‖₊ ≤ ‖Z ω‖₊ * ‖Y ω‖₊ (nnnorm_mul)
+    2. ‖Z ω‖₊ * ‖Y ω‖₊ ≤ Real.nnabs C * ‖Y ω‖₊ a.e. (from |Z ω| ≤ C)
+       - Key: simp [Real.nnabs, Real.norm_eq_abs]; exact Real.toNNReal_le_toNNReal hω
+    3. ∫⁻ Real.nnabs C * ‖Y‖₊ = Real.nnabs C * ∫⁻ ‖Y‖₊ (lintegral_const_mul)
+    4. Real.nnabs C * ∫⁻ ‖Y‖₊ < ∞ (ENNReal.mul_lt_top, using hY.2)
+    Estimated: 5 lines once calc syntax resolved
     -/
   exact ⟨h_meas, h_finite⟩
 
@@ -507,42 +504,74 @@ private lemma condexp_pair_factorization_MET
   -- CE[f(ω₀)·CE[g(ω₀)|ℐ] | ℐ] = CE[g(ω₀)|ℐ]·CE[f(ω₀)|ℐ]
   have h_pullout : μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m]
       =ᵐ[μ] (fun ω => μ[(fun ω => g (ω 0)) | m] ω * μ[(fun ω => f (ω 0)) | m] ω) := by
-    sorry
-    /-
-    Use condExp_mul_pullout once the boundedness issue is resolved.
-    Main issue: need to prove |CE[g|m]| ≤ C from |g| ≤ C, which requires Jensen's inequality.
+    -- Z := CE[g(ω₀)|m]
+    set Z := μ[(fun ω => g (ω 0)) | m]
 
-    Proof sketch:
-    - Z := CE[g(ω₀)|m] is m-measurable by stronglyMeasurable_condExp
-    - Boundedness: |CE[g|m]| ≤ CE[|g| | m] ≤ C (by Jensen and monotonicity)
-    - Y := f ∘ π_0 is integrable (bounded + measurable)
-    - Apply condExp_mul_pullout
-    ~15 lines
-    -/
+    -- Z is m-measurable (automatic from stronglyMeasurable_condExp)
+    have hZ_meas : Measurable[m] Z := by
+      exact stronglyMeasurable_condExp.measurable
+
+    -- Z is bounded: |CE[g|m]| ≤ C a.e. by Jensen's inequality
+    have hZ_bd : ∃ C, ∀ ω, |Z ω| ≤ C := by
+      obtain ⟨Cg, hCg⟩ := hg_bd
+      use Cg
+      intro ω
+      -- Need: |CE[g|m] ω| ≤ Cg
+      -- Strategy: Use that conditional expectation of bounded function is bounded
+      -- Specifically: |g| ≤ Cg implies |CE[g|m]| ≤ Cg a.e.
+      -- This follows from: |CE[g|m]| ≤ CE[|g||m] ≤ CE[Cg|m] = Cg
+      sorry
+      /- TODO: Need one of these approaches:
+      1. Find mathlib lemma: condExp preserves bounds
+      2. Prove directly: |E[g|F]| ≤ E[|g||F] ≤ C when |g| ≤ C
+      3. Use: ess_sup (CE[g|m]) ≤ ess_sup g
+      Estimated: 5-10 lines once correct lemma found
+      -/
+
+    -- Y := f(ω₀) is integrable (bounded + measurable)
+    have hY_int : Integrable (fun ω => f (ω 0)) μ := by
+      obtain ⟨Cf, hCf⟩ := hf_bd
+      -- Can't use integrable_of_bounded since it's defined later in the file
+      -- Manually construct: Integrable = AEStronglyMeasurable + HasFiniteIntegral
+      constructor
+      · exact (hf_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
+      · -- HasFiniteIntegral: ∫⁻ ω, ‖f (ω 0)‖₊ ∂μ < ∞
+        sorry
+        /- TODO: Same as integrable_mul_of_ae_bdd_left line 305
+        Show: ∫⁻ ω, ‖f (ω 0)‖₊ ∂μ ≤ Cf * μ(Ω) < ∞
+        Key: simp [Real.nnabs, Real.norm_eq_abs]; exact Real.toNNReal_le_toNNReal (hCf (ω 0))
+        Estimated: 3-5 lines
+        -/
+
+    -- Apply condExp_mul_pullout: CE[Z·Y | m] = Z·CE[Y | m]
+    have h := condExp_mul_pullout hZ_meas hZ_bd hY_int
+    -- h gives: CE[Z * Y | m] = Z * CE[Y | m] where Y = f∘π₀
+    -- But goal needs: CE[Y * Z | m] = Z * CE[Y | m]
+    -- Use commutativity: Y * Z = Z * Y
+    calc μ[(fun ω => f (ω 0) * Z ω) | m]
+        =ᵐ[μ] μ[(fun ω => Z ω * f (ω 0)) | m] := by
+          -- Functions are equal since multiplication commutes
+          have : (fun ω => f (ω 0) * Z ω) = (fun ω => Z ω * f (ω 0)) := by
+            ext ω; ring
+          rw [this]
+      _ =ᵐ[μ] (fun ω => Z ω * μ[(fun ω => f (ω 0)) | m] ω) := h
 
   -- Step 5: CE[f(ω₀)·g(ω₀)|ℐ] = CE[f(ω₀)·CE[g(ω₀)|ℐ]|ℐ]
   -- This uses the tower property backwards
   have h_tower : μ[(fun ω => f (ω 0) * g (ω 0)) | m]
       =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] := by
+    -- This is the tower property: CE[f·g|m] = CE[f·CE[g|m]|m]
+    -- Key insight: For any m-measurable set A, both sides have the same integral:
+    --   ∫_A f·g dμ = ∫_A f·CE[g|m] dμ
+    -- This follows from the defining property of CE: ∫_A g dμ = ∫_A CE[g|m] dμ
     sorry
-    /-
-    Key idea: show both sides have the same integral over every m-measurable set.
-
-    For m-measurable set A:
-    - LHS: ∫_A CE[f·g|m] dμ = ∫_A f·g dμ (def of CE)
-    - RHS: ∫_A CE[f·CE[g|m]|m] dμ = ∫_A f·CE[g|m] dμ (def of CE)
-
-    So need: ∫_A f·g dμ = ∫_A f·CE[g|m] dμ for all m-measurable A.
-
-    But ∫_A f·CE[g|m] dμ = ∫ 1_A·f·CE[g|m] dμ. If 1_A·f were m-measurable, we could
-    pull out CE[g|m] and use the defining property of CE. However, f∘π₀ is typically
-    NOT m-measurable (only g∘π₀ ∘ shift^k is for the tail σ-algebra).
-
-    Alternative approach: This might follow from a general "substitution" lemma for CE,
-    or might require using specific properties of the product structure and tail σ-algebra.
-
-    TODO: Find the right mathlib lemma or prove directly.
-    ~15-20 lines
+    /- TODO: This needs ae_eq_condExp_of_forall_setIntegral_eq or similar
+    Approach:
+    1. Show both functions are integrable
+    2. For each m-measurable A, show: ∫_A f·g dμ = ∫_A f·CE[g|m] dμ
+    3. This uses: ∫_A g dμ = ∫_A CE[g|m] dμ (defining property of CE)
+    4. Apply ae_eq_condExp_of_forall_setIntegral_eq
+    Estimated: 15-20 lines
     -/
 
   -- Step 6: Combine all the equalities
