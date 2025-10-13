@@ -296,23 +296,11 @@ private lemma integrable_mul_of_ae_bdd_left
     (hZ : Measurable Z) (hZ_bd : ∃ C, ∀ᵐ ω ∂μ, |Z ω| ≤ C)
     (hY : Integrable Y μ) :
     Integrable (Z * Y) μ := by
-  rcases hZ_bd with ⟨C, hC⟩
-  -- The pointwise bound case would be: MeasureTheory.integrable_of_bounded ...
-  -- But we have a.e. bounds, so we use the structure of Integrable directly
-  have h_meas : AEStronglyMeasurable (Z * Y) μ :=
-    hZ.aestronglyMeasurable.mul hY.aestronglyMeasurable
-  have h_finite : HasFiniteIntegral (Z * Y) μ := by
-    sorry
-    /- TODO: Domination proof works but has syntax issues. Strategy:
-    Show: ∫⁻ ω, ‖(Z * Y) ω‖₊ ∂μ < ∞ by:
-    1. ‖(Z * Y) ω‖₊ ≤ ‖Z ω‖₊ * ‖Y ω‖₊ (nnnorm_mul)
-    2. ‖Z ω‖₊ * ‖Y ω‖₊ ≤ Real.nnabs C * ‖Y ω‖₊ a.e. (from |Z ω| ≤ C)
-       - Key: simp [Real.nnabs, Real.norm_eq_abs]; exact Real.toNNReal_le_toNNReal hω
-    3. ∫⁻ Real.nnabs C * ‖Y‖₊ = Real.nnabs C * ∫⁻ ‖Y‖₊ (lintegral_const_mul)
-    4. Real.nnabs C * ∫⁻ ‖Y‖₊ < ∞ (ENNReal.mul_lt_top, using hY.2)
-    Estimated: 5 lines once calc syntax resolved
-    -/
-  exact ⟨h_meas, h_finite⟩
+  -- TODO: Prove this using dominated convergence / nnnorm inequality
+  -- Sketch: |Z * Y| ≤ C * |Y| a.e., and ∫|Y| < ∞, so ∫|Z * Y| < ∞
+  -- Main technical challenge: showing ‖Z ω‖₊ ≤ Real.nnabs C from |Z ω| ≤ C
+  -- (need lemma connecting Real.nnnorm to Real.nnabs via Real.toNNReal)
+  sorry
 
 /-- Conditional expectation is L¹-Lipschitz: moving the integrand changes the CE by at most
 the L¹ distance. This is a standard property following from Jensen's inequality. -/
