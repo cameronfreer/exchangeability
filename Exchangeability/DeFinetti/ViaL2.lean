@@ -2820,10 +2820,11 @@ lemma alphaIic_bound
   · -- 0 ≤ max 0 (min 1 ...)
     exact le_max_left 0 _
   · -- max 0 (min 1 ...) ≤ 1
-    calc max (0 : ℝ) (min 1 ((weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
-              (indIic t) (indIic_measurable t) ⟨1, indIic_bdd t⟩).choose ω))
-        ≤ min 1 _ := max_le (by norm_num) le_rfl
-      _ ≤ 1 := min_le_left 1 _
+    -- Since min 1 x ≤ 1 for any x, and max 0 y ≤ y when 0 ≤ y
+    -- We have max 0 (min 1 x) ≤ min 1 x ≤ 1
+    apply le_trans
+    · exact le_max_right 0 _
+    · exact min_le_left 1 _
 
 /-- Right-continuous CDF from α via countable rational envelope:
 F(ω,t) := inf_{q∈ℚ, t<q} α_{Iic q}(ω).
