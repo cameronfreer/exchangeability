@@ -2945,11 +2945,97 @@ lemma cdf_from_alpha_limits
     (ω : Ω) :
     Filter.Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) Filter.atBot (𝓝 0) ∧
     Filter.Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) Filter.atTop (𝓝 1) := by
-  -- Sketch: For t→-∞, the indicators 1_{x≤t} → 0 pointwise, so their averages → 0,
-  -- and by L¹ convergence, α_{Iic t} → 0. Transfer this to F via the iInf envelope.
-  -- Similarly for t→+∞, indicators → 1, so α → 1, and F → 1.
-  -- TODO: formalize using dominated convergence and monotonicity
-  sorry
+  constructor
+  · -- Limit at -∞: F(ω,t) → 0 as t → -∞
+    -- Strategy: F(ω,t) = inf_{q>t} α_{Iic q}(ω)
+    -- Show: ∀ ε > 0, ∃ T, ∀ t < T, F(ω,t) < ε
+    -- Since F(ω,t) ≤ α_{Iic q}(ω) for any q > t,
+    -- it suffices to show α_{Iic q}(ω) → 0 as q → -∞
+
+    -- Key lemma needed: For indicators 1_{(-∞,t]}, as t → -∞:
+    -- 1) The indicators converge to 0 pointwise for any x
+    -- 2) By dominated convergence, the Cesàro averages converge to 0 in L¹
+    -- 3) L¹ convergence + subsequence gives pointwise convergence a.e.
+    -- 4) alphaIic is one such limit, so alphaIic t ω → 0 as t → -∞ (for a.e. ω)
+
+    -- For now, assume we have a lemma:
+    have h_alpha_limit : ∀ ε > 0, ∃ T : ℝ, ∀ t < T,
+        alphaIic X hX_contract hX_meas hX_L2 t ω < ε := by
+      -- This requires showing L¹ limit → 0 implies pointwise limit → 0
+      -- via dominated convergence on indicators
+      sorry
+
+    -- Use the lemma to show F(ω,·) → 0
+    -- Tendsto at atBot: ∀ neighborhood s of 0, ∃ T, ∀ t < T, F(t) ∈ s
+    rw [Filter.tendsto, Filter.le_def]
+    intro s hs
+    -- Get an ε-ball around 0
+    obtain ⟨ε, hε_pos, hε_ball⟩ := Metric.mem_nhds_iff.mp hs
+    obtain ⟨T, hT⟩ := h_alpha_limit ε hε_pos
+    use T - 1
+    intro t ht
+    -- Show F(ω,t) ∈ ball 0 ε
+    apply hε_ball
+    rw [Metric.mem_ball]
+    -- dist F(ω,t) 0 < ε
+    -- Actually, we need dist (cdf_from_alpha ω t) 0 < ε
+    -- Since cdf_from_alpha ω t ≥ 0, this means cdf_from_alpha ω t < ε
+    have hF_nonneg : 0 ≤ cdf_from_alpha X hX_contract hX_meas hX_L2 ω t := by
+      unfold cdf_from_alpha
+      exact le_ciInf fun ⟨q, _⟩ => (alphaIic_bound X hX_contract hX_meas hX_L2 (q : ℝ) ω).1
+    rw [dist_comm, Real.dist_eq, abs_of_nonneg hF_nonneg]
+    -- Now show cdf_from_alpha ω t < ε
+    unfold cdf_from_alpha
+    have hbdd : BddBelow (Set.range fun (q : {q : ℚ // t < (q : ℝ)}) =>
+        alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω) := by
+      use 0
+      intro y ⟨q, hq⟩
+      rw [← hq]
+      exact (alphaIic_bound X hX_contract hX_meas hX_L2 (q : ℝ) ω).1
+    -- Pick a rational q with t < q < T
+    have : t < T - 1 + 1 := by linarith
+    obtain ⟨qrat, hq_gt, hq_lt⟩ := exists_rat_btwn this
+    calc ⨅ (q : {q : ℚ // t < (q : ℝ)}), alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω
+        ≤ alphaIic X hX_contract hX_meas hX_L2 (qrat : ℝ) ω := ciInf_le hbdd ⟨qrat, hq_gt⟩
+      _ < ε := hT (qrat : ℝ) (by linarith [hq_lt])
+
+  · -- Limit at +∞: F(ω,t) → 1 as t → +∞
+    -- Similar strategy: Show α_{Iic q}(ω) → 1 as q → +∞
+    -- This uses dominated convergence on indicators 1_{(-∞,t]} → 1 as t → +∞
+
+    have h_alpha_limit : ∀ ε > 0, ∃ T : ℝ, ∀ t > T,
+        1 - ε < alphaIic X hX_contract hX_meas hX_L2 t ω := by
+      -- Requires dominated convergence showing indicators → 1
+      sorry
+
+    rw [Filter.tendsto, Filter.le_def]
+    intro s hs
+    -- Get an ε-ball around 1
+    obtain ⟨ε, hε_pos, hε_ball⟩ := Metric.mem_nhds_iff.mp hs
+    obtain ⟨T, hT⟩ := h_alpha_limit ε hε_pos
+    use T + 1
+    intro t ht
+    -- Show F(ω,t) ∈ ball 1 ε
+    apply hε_ball
+    rw [Metric.mem_ball]
+    -- dist F(ω,t) 1 < ε, i.e., |F(ω,t) - 1| < ε
+    -- Since F(ω,t) ≤ 1, we have 1 - F(ω,t) < ε, i.e., F(ω,t) > 1 - ε
+    have hF_le_one : cdf_from_alpha X hX_contract hX_meas hX_L2 ω t ≤ 1 := by
+      unfold cdf_from_alpha
+      refine le_ciInf fun ⟨q, _⟩ => ?_
+      exact (alphaIic_bound X hX_contract hX_meas hX_L2 (q : ℝ) ω).2
+    have hF_nonneg : 0 ≤ 1 - cdf_from_alpha X hX_contract hX_meas hX_L2 ω t := by
+      linarith [le_ciInf fun ⟨q, _⟩ =>
+        (alphaIic_bound X hX_contract hX_meas hX_L2 (q : ℝ) ω).1, hF_le_one]
+    rw [Real.dist_eq, abs_sub_comm, abs_of_nonneg hF_nonneg]
+    -- Show 1 - F(ω,t) < ε
+    -- This follows from F(ω,t) = inf_{q>t} α(q) and all α(q) > 1 - ε for q > t > T
+    unfold cdf_from_alpha
+    -- Need: 1 - iInf α < ε, i.e., iInf α > 1 - ε
+    -- If all α(q) > 1 - ε for q > t, then iInf α ≥ 1 - ε
+    -- Actually, taking inf we get exactly iInf α ≥ 1 - ε (not strict)
+    -- But we need strict for the open ball. This requires more care with the limit.
+    sorry
 
 /-- Build the directing measure ν from the CDF.
 
@@ -2965,16 +3051,14 @@ noncomputable def directing_measure
     (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
     Ω → Measure ℝ :=
   fun ω =>
-    -- Build via Stieltjes/Carathéodory from the right-continuous CDF
-    -- TODO: The exact API might be Measure.ofCDF or StieltjesFunction.measure
-    -- Once CDF properties are proven, this becomes:
-    -- Measure.ofCDF
-    --   (cdf_from_alpha X hX_contract hX_meas hX_L2 ω)
-    --   (cdf_from_alpha_mono X hX_contract hX_meas hX_L2 ω)
-    --   (cdf_from_alpha_rightContinuous X hX_contract hX_meas hX_L2 ω)
-    --   (cdf_from_alpha_limits X hX_contract hX_meas hX_L2 ω).1
-    --   (cdf_from_alpha_limits X hX_contract hX_meas hX_L2 ω).2
-    sorry
+    -- Build via StieltjesFunction from the right-continuous CDF
+    -- The Stieltjes function for ω is cdf_from_alpha X hX_contract hX_meas hX_L2 ω
+    let F_ω : StieltjesFunction := {
+      toFun := cdf_from_alpha X hX_contract hX_meas hX_L2 ω
+      mono' := cdf_from_alpha_mono X hX_contract hX_meas hX_L2 ω
+      right_continuous' := fun t => cdf_from_alpha_rightContinuous X hX_contract hX_meas hX_L2 ω t
+    }
+    F_ω.measure
 
 /-- The directing measure is a probability measure. -/
 lemma directing_measure_isProbabilityMeasure
@@ -2984,10 +3068,12 @@ lemma directing_measure_isProbabilityMeasure
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (ω : Ω) :
     IsProbabilityMeasure (directing_measure X hX_contract hX_meas hX_L2 ω) := by
-  classical
-  -- Direct from Measure.ofCDF: the limits at ±∞ guarantee total mass 1
-  -- TODO: Once directing_measure uses Measure.ofCDF, this becomes:
-  -- exact Measure.isProbabilityMeasure_ofCDF _ _ _ _ _
+  -- The limits at ±∞ guarantee total mass 1 via StieltjesFunction.measure_univ
+  -- However, cdf_from_alpha_limits is currently a sorry, so we must sorry this too
+  constructor
+  unfold directing_measure
+  simp only []
+  -- Would use: StieltjesFunction.measure_univ with limits (cdf_from_alpha_limits X hX_contract hX_meas hX_L2 ω)
   sorry
 
 /-- For each fixed t, ω ↦ ν(ω)((-∞,t]) is measurable.
@@ -3018,12 +3104,22 @@ lemma directing_measure_eval_Iic_measurable
     -- After unfolding, we have sInf of a range
     -- For ℝ-valued functions, sInf of a countable family of measurable functions is measurable
     exact Measurable.iInf hterm
-  -- Identify with the CDF evaluation
-  -- This will follow from Measure.ofCDF_apply_Iic once directing_measure is defined
-  -- For now, we assume this identification holds
-  -- TODO: Once directing_measure uses Measure.ofCDF, prove:
-  -- ∀ ω, directing_measure ... ω (Set.Iic t) = cdf_from_alpha ... ω t
-  sorry
+  -- Identify with the CDF evaluation using StieltjesFunction.measure_Iic
+  -- directing_measure ω (Iic t) = F_ω.measure (Iic t)
+  --                              = ofReal (F_ω t - 0)  [by StieltjesFunction.measure_Iic with limit 0 at bot]
+  --                              = ofReal (cdf_from_alpha ω t)
+  -- Since ω ↦ ofReal (cdf_from_alpha ω t) is measurable (ENNReal.ofReal ∘ measurable function),
+  -- we have ω ↦ directing_measure ω (Iic t) is measurable
+  have h_eq : ∀ ω, directing_measure X hX_contract hX_meas hX_L2 ω (Set.Iic t) =
+      ENNReal.ofReal (cdf_from_alpha X hX_contract hX_meas hX_L2 ω t) := by
+    intro ω
+    unfold directing_measure
+    simp only []
+    -- F_ω.measure (Iic t) = ofReal (F_ω t - 0) where F_ω has limit 0 at bot
+    -- But cdf_from_alpha_limits is a sorry, so we must sorry this identification
+    sorry
+  simp_rw [h_eq]
+  exact ENNReal.measurable_ofReal.comp hmeas
 
 /-- For each set s, the map ω ↦ ν(ω)(s) is measurable.
 
@@ -3078,26 +3174,21 @@ lemma directing_measure_measurable
             directing_measure X hX_contract hX_meas hX_L2 ω Set.univ -
             directing_measure X hX_contract hX_meas hX_L2 ω s := by
           intro ω
-          -- Need: directing_measure ω is a measure, so measure_compl applies
-          -- But directing_measure hasn't been properly defined yet (it's a sorry)
-          -- This requires the actual Measure.ofCDF construction
-          sorry
+          -- directing_measure ω is a measure (StieltjesFunction.measure), so measure_compl applies
+          rw [measure_compl hs_meas (measure_ne_top _ s)]
         simp_rw [h_univ_s]
-        -- ω ↦ 1 is measurable (constant)
+        -- ω ↦ ν(ω)(univ) is constant 1 (probability measure), so measurable
         -- ω ↦ ν(ω)(s) is measurable by hs_eval
         -- Their difference is measurable
         have h_univ_const : ∀ ω, directing_measure X hX_contract hX_meas hX_L2 ω Set.univ = 1 := by
           intro ω
           -- This follows from directing_measure_isProbabilityMeasure
-          -- But that's also a sorry waiting on Measure.ofCDF
+          -- But that depends on cdf_from_alpha_limits which is a sorry
           sorry
         simp_rw [h_univ_const]
         -- (fun ω => 1 - ν(ω)(s)) is measurable
-        -- For ENNReal, subtraction is continuous, hence measurable
-        -- 1 is constant (measurable), ν(ω)(s) is measurable by hs_eval
-        -- Therefore their difference is measurable
-        -- But the actual proof requires the directing_measure construction
-        sorry
+        -- Constant 1 minus measurable function
+        exact Measurable.const_sub hs_eval 1
 
     have h_iUnion : ∀ (f : ℕ → Set ℝ),
         (∀ i j, i ≠ j → Disjoint (f i) (f j)) →
@@ -3112,9 +3203,8 @@ lemma directing_measure_measurable
         have h_union_eq : ∀ ω, directing_measure X hX_contract hX_meas hX_L2 ω (⋃ n, f n) =
             ∑' n, directing_measure X hX_contract hX_meas hX_L2 ω (f n) := by
           intro ω
-          -- This requires: directing_measure ω is a measure, so measure_iUnion applies
-          -- But directing_measure hasn't been properly defined yet
-          sorry
+          -- directing_measure ω is a measure (StieltjesFunction.measure), so measure_iUnion applies
+          exact measure_iUnion hdisj (fun n => (hf n).1)
         simp_rw [h_union_eq]
         -- ∑' n, ν(ω)(f n) is measurable as tsum of measurable functions
         exact Measurable.ennreal_tsum (fun n => (hf n).2)
