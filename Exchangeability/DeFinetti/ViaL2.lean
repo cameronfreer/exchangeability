@@ -1740,9 +1740,63 @@ private lemma l2_bound_long_vs_tail
     congr 1
     -- Expand definitions of p, q, ξ
     simp only [p, q, ξ]
-    -- ∑ i, p i * ξ i ω = ∑ i, (1/m) * f(X(...)) = (1/m) * ∑ i, f(X(...))
-    -- ∑ i, q i * ξ i ω = ∑ i with i.val≥m-k, (1/k) * f(X(...)) = (1/k) * ∑ i∈tail, f(X(...))
-    sorry -- TODO: algebra to show weighted sums match
+    -- LHS: ∑ i, p i * ξ i ω = ∑ i, (1/m) * f(X(n + i.val + 1) ω) = (1/m) * ∑ i, f(X(...))
+    rw [show ∑ i : Fin m, (1 / (m : ℝ)) * f (X (n + i.val + 1) ω) =
+             (1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)
+        by rw [← Finset.mul_sum]]
+    -- RHS: ∑ i, q i * ξ i ω where q i = 0 if i.val < m-k, else 1/k
+    -- So this equals ∑_{i : i.val ≥ m-k} (1/k) * f(X(n + i.val + 1) ω)
+    -- Reindex: when i.val ≥ m-k, write i.val = (m-k) + j for j ∈ [0, k)
+    have h_q_sum : ∑ i : Fin m, q i * f (X (n + i.val + 1) ω) =
+        (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω) := by
+      -- Split sum based on whether i.val < m - k
+      calc ∑ i : Fin m, q i * f (X (n + i.val + 1) ω)
+        = ∑ i ∈ Finset.filter (fun i => i.val < m - k) Finset.univ, q i * f (X (n + i.val + 1) ω) +
+          ∑ i ∈ Finset.filter (fun i => ¬(i.val < m - k)) Finset.univ, q i * f (X (n + i.val + 1) ω) := by
+            rw [← Finset.sum_filter_add_sum_filter_not (s := Finset.univ) (p := fun i => i.val < m - k)]
+      _ = 0 + ∑ i ∈ Finset.filter (fun i : Fin m => ¬(i.val < m - k)) Finset.univ,
+            (1 / (k : ℝ)) * f (X (n + i.val + 1) ω) := by
+            congr 1
+            · apply Finset.sum_eq_zero
+              intro i hi
+              have : i.val < m - k := Finset.mem_filter.mp hi |>.2
+              simp [q, this]
+            · apply Finset.sum_congr rfl
+              intro i hi
+              have : ¬(i.val < m - k) := Finset.mem_filter.mp hi |>.2
+              simp [q, this]
+      _ = (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω) := by
+            simp only [zero_add]
+            rw [← Finset.mul_sum]
+            congr 1
+            -- Reindex: i with i.val ≥ m-k ↔ i = ⟨(m-k) + j.val, _⟩ for j : Fin k
+            -- The filtered set equals the image of the map j ↦ ⟨(m-k) + j, _⟩
+            trans (∑ i ∈ Finset.image (fun (j : Fin k) => (⟨(m - k) + j.val, by omega⟩ : Fin m)) Finset.univ,
+                    f (X (n + i.val + 1) ω))
+            · congr 1
+              ext i
+              simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_image]
+              constructor
+              · intro hi
+                use ⟨i.val - (m - k), by omega⟩
+                simp only [Finset.mem_univ, true_and]
+                ext
+                simp only [Fin.val_mk]
+                omega
+              · rintro ⟨j, _, rfl⟩
+                simp only [Fin.val_mk]
+                omega
+            · -- Now the sum is over an image, apply sum_image with injectivity
+              rw [Finset.sum_image]
+              · congr 1
+                ext j
+                simp only [Fin.val_mk]
+                omega
+              -- Prove injectivity
+              · intro j₁ _ j₂ _ h
+                simp only [Fin.mk.injEq] at h
+                exact Fin.ext (by omega)
+    rw [h_q_sum]
 
   -- Finally, show our goal ≤ Cf / k using h_bound and h_lhs_eq
   calc ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
