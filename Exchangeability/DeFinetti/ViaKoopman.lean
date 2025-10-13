@@ -318,11 +318,14 @@ private lemma integrable_mul_of_ae_bdd_left
     (hZ : Measurable Z) (hZ_bd : ∃ C, ∀ᵐ ω ∂μ, |Z ω| ≤ C)
     (hY : Integrable Y μ) :
     Integrable (Z * Y) μ := by
-  -- TODO: Prove this using dominated convergence / nnnorm inequality
-  -- Sketch: |Z * Y| ≤ C * |Y| a.e., and ∫|Y| < ∞, so ∫|Z * Y| < ∞
-  -- Main technical challenge: showing ‖Z ω‖₊ ≤ Real.nnabs C from |Z ω| ≤ C
-  -- (need lemma connecting Real.nnnorm to Real.nnabs via Real.toNNReal)
-  sorry
+  -- Use mathlib's Integrable.bdd_mul' which handles a.e. bounded functions
+  obtain ⟨C, hC⟩ := hZ_bd
+  -- For reals, |Z ω| = ‖Z ω‖
+  have hZ_norm : ∀ᵐ ω ∂μ, ‖Z ω‖ ≤ C := by
+    filter_upwards [hC] with ω hω
+    rwa [Real.norm_eq_abs]
+  -- Apply Integrable.bdd_mul': if Y integrable and ‖Z‖ ≤ C a.e., then Z*Y integrable
+  exact Integrable.bdd_mul' hY hZ.aestronglyMeasurable hZ_norm
 
 /-- Conditional expectation is L¹-Lipschitz: moving the integrand changes the CE by at most
 the L¹ distance. This is a standard property following from Jensen's inequality. -/
