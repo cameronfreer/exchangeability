@@ -476,21 +476,12 @@ lemma contractable_dist_eq_on_first_r_tail
 abbrev futureFiltration (X : ℕ → Ω → α) (m : ℕ) : MeasurableSpace Ω :=
   MeasurableSpace.comap (shiftRV X (m + 1)) inferInstance
 
-/-- **Axiom placeholder:** Conditional expectation convergence from contractability.
+/-- **Axiom ELIMINATED:** Conditional expectation convergence from contractability.
 
-**STATUS: This axiom has been ELIMINATED. See `condexp_convergence_proof` at line 1530 for the full proof.**
+This axiom has been eliminated! See `condexp_convergence` at line ~1530 for the full proof
+using the CE bridge lemma from CondExp.lean.
 
-This forward declaration exists only because some lemmas before line 1530 reference it.
-The axiom is proven from contractability using the CE bridge lemma from CondExp.lean. -/
-axiom condexp_convergence
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {X : ℕ → Ω → α} (hX : Contractable μ X)
-    (hX_meas : ∀ n, Measurable (X n))
-    (k m : ℕ) (hk : k ≤ m)
-    (B : Set α) (hB : MeasurableSet B) :
-    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X m) | futureFiltration X m]
-      =ᵐ[μ]
-    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | futureFiltration X m]
+The forward declaration is no longer needed as nothing references it before the proof. -/
 
 lemma extreme_members_equal_on_tail
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -1535,7 +1526,7 @@ P[X_m ∈ B | θ_{m+1} X] = P[X_k ∈ B | θ_{m+1} X]
 **Proof:** Uses the CE bridge lemma from CondExp.lean with the measure equality from
 contractability. The key insight is that deleting coordinates doesn't change the joint distribution
 with the future, which implies conditional expectation equality by the bridge lemma. -/
-lemma condexp_convergence_proof
+lemma condexp_convergence
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {X : ℕ → Ω → α} (hX : Contractable μ X)
     (hX_meas : ∀ n, Measurable (X n))
