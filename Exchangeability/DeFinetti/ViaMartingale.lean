@@ -1621,7 +1621,7 @@ Taking U = (X₀,...,X_{r-1}), η = θ_{m+1} X, ζ = (X_r, θ_{m+1} X) gives the
 
 **This replaces the old broken `coordinate_future_condIndep` which incorrectly claimed
 Y ⊥⊥_{σ(Y)} Y.** -/
-axiom block_coord_condIndep
+lemma block_coord_condIndep
     {Ω α : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω] [MeasurableSpace α]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α)
@@ -1633,7 +1633,51 @@ axiom block_coord_condIndep
     (firstRSigma X r)                             -- past block: σ(X₀,...,X_{r-1})
     (MeasurableSpace.comap (X r) inferInstance)   -- single coord: σ(X_r)
     (futureFiltration_le X m hX_meas)             -- witness: σ(θ_{m+1} X) ≤ ambient
-    μ
+    μ := by
+  -- Strategy: Use condIndep_of_indicator_condexp_eq to show projection property
+  -- For any H ∈ σ(X_r), we need to show:
+  --   μ[H.indicator | firstRSigma X r ⊔ futureFiltration X m] =ᵐ μ[H.indicator | futureFiltration X m]
+  -- This follows from contractability: when r < m, coordinate X_r is conditionally
+  -- independent of (X₀,...,X_{r-1}) given the future θ_{m+1} X.
+
+  apply Exchangeability.Probability.condIndep_of_indicator_condexp_eq
+  · -- hmF: firstRSigma X r ≤ ambient
+    exact firstRSigma_le_ambient X r hX_meas
+  · -- hmH: σ(X_r) ≤ ambient (hmG already provided in goal)
+    intro s hs
+    obtain ⟨t, ht, rfl⟩ := hs
+    exact (hX_meas r) ht
+  -- Show projection property: for all H ∈ σ(X_r),
+  -- μ[H.indicator | firstRSigma X r ⊔ futureFiltration X m] =ᵐ μ[H.indicator | futureFiltration X m]
+  intro H hH
+  -- H is measurable in σ(X_r), so H = (X r)⁻¹(B) for some measurable B
+  obtain ⟨B, hB, rfl⟩ := hH
+  -- The indicator function is (indicator B ∘ X r)
+
+  -- TODO: Prove projection property from contractability
+  -- **Mathematical strategy:**
+  -- From contractability with r < m, we have distributional symmetry:
+  --   (X₀, X₁, ..., X_{r-1}, X_r, X_{m+1}, X_{m+2}, ...)
+  --   has same distribution as
+  --   (X₀, X₁, ..., X_{r-1}, X_{r+1}, X_{m+1}, X_{m+2}, ...)
+  -- when we "skip" coordinate r (which is < m).
+  --
+  -- This implies that given (X₀,...,X_{r-1}) and the future θ_{m+1} X,
+  -- the conditional distribution of X_r doesn't depend on (X₀,...,X_{r-1}).
+  --
+  -- **Proof approach:**
+  -- 1. Use contractability to show distributional equality:
+  --    Measure.map (fun ω => (firstRMap X r ω, X r ω, shiftRV X (m+1) ω)) μ
+  --      "equals in distribution"
+  --    Measure.map (fun ω => (firstRMap X r ω, shiftRV X (m+1) ω)) μ  [with X_r "recovered"]
+  --
+  -- 2. Apply a CE bridge lemma (generalization of condexp_indicator_eq_of_pair_law_eq)
+  --    to conclude that the conditional expectations match.
+  --
+  -- **Implementation note:** This requires proving a helper lemma about how contractability
+  -- implies the specific distributional equality needed here. This is non-trivial and may
+  -- require extending the current infrastructure in CondExp.lean.
+  sorry
 
 /-- **Product formula for conditional expectations under conditional independence.**
 
