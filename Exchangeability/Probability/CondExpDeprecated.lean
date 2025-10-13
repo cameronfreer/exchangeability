@@ -106,26 +106,12 @@ lemma setIntegral_condExp_of_measurableSet
     {f : Ω → ℝ} (hf : Integrable f μ)
     {S : Set Ω} (hS : MeasurableSet[m₀] S) :
     ∫ ω in S, μ[f|m] ω ∂μ = ∫ ω in S, f ω ∂μ := by
-  -- This is a fundamental generalization of setIntegral_condExp
-  -- The standard lemma requires S ∈ m, but this holds for any S ∈ m₀
-
-  -- Mathematical proof outline:
-  -- Method 1: Convert to indicator functions
-  --   ∫ in S, g = ∫ S.indicator * g
-  --   We have: ∫ μ[(S.indicator * f)|m] = ∫ (S.indicator * f) by integral_condExp
-  --   Need: μ[(S.indicator * f)|m] = S.indicator * μ[f|m]
-  --   But this requires S ∈ m (this is condExp_indicator)
-
-  -- Method 2: Use dominated convergence
-  --   Approximate S from below by m-measurable sets
-  --   But S might not be approximable by m-measurable sets
-
-  -- Method 3: Direct from definition
-  --   μ[f|m] is characterized by: ∫ in T, μ[f|m] = ∫ in T, f for all T ∈ m
-  --   Need to extend this to T ∈ m₀
-  --   This requires a careful measure-theoretic argument
-
-  sorry  -- TODO: Mathlib contribution - requires careful proof using measure theory
+  -- This generalization of setIntegral_condExp is a genuine mathlib gap
+  -- Standard proof would use one of:
+  -- 1. condExp_indicator for non-m-measurable sets (doesn't exist)
+  -- 2. Approximation by m-measurable sets (not always possible)
+  -- 3. Direct measure-theoretic argument from first principles
+  sorry  -- TODO: Requires new mathlib infrastructure
 
 lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     [StandardBorelSpace Ω] [IsFiniteMeasure μ]
