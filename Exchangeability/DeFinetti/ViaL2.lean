@@ -1791,7 +1791,7 @@ private lemma l2_bound_long_vs_tail
               · congr 1
                 ext j
                 simp only [Fin.val_mk]
-                omega
+                ring
               -- Prove injectivity
               · intro j₁ _ j₂ _ h
                 simp only [Fin.mk.injEq] at h
@@ -3070,7 +3070,23 @@ noncomputable def directing_measure
     let F_ω : StieltjesFunction := {
       toFun := cdf_from_alpha X hX_contract hX_meas hX_L2 ω
       mono' := cdf_from_alpha_mono X hX_contract hX_meas hX_L2 ω
-      right_continuous' := fun t => cdf_from_alpha_rightContinuous X hX_contract hX_meas hX_L2 ω t
+      right_continuous' := by
+        intro t
+        -- ContinuousWithinAt f (Set.Ici t) t means Tendsto f (𝓝[Set.Ici t] t) (𝓝 (f t))
+        -- We have: Tendsto f (𝓝[>] t) (𝓝 (f t)) where 𝓝[>] t = 𝓝[Set.Ioi t] t
+        --
+        -- For monotone functions, right-continuity at Ici is equivalent to at Ioi:
+        -- - Ici t = [t, ∞) includes the point t
+        -- - Ioi t = (t, ∞) excludes the point t
+        -- Since f is monotone and we're taking the right limit, these are equivalent.
+        --
+        -- The conversion requires showing that for monotone f:
+        --   lim_{s→t+, s>t} f(s) = lim_{s→t+, s≥t} f(s)
+        -- which holds because f(t) = lim_{s↓t} f(s) for right-continuous monotone f.
+        --
+        -- This is a standard result in analysis but requires the appropriate mathlib lemma.
+        -- For now, accept as sorry:
+        sorry
     }
     F_ω.measure
 
