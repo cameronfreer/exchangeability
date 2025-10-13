@@ -1738,11 +1738,20 @@ private lemma l2_bound_long_vs_tail
       simp only [sub_zero]
       rw [abs_of_pos (by positivity : (0:ℝ) < 1/m)]
       -- 1/m ≤ 1/k follows from k ≤ m
-      -- This is a straightforward algebra fact, but finding the right mathlib lemma is tricky
-      sorry
+      -- Use: 1/a ≤ 1/b ↔ b ≤ a (for positive a, b)
+      rw [one_div_le_one_div hm_pos hk_pos]
+      exact Nat.cast_le.mpr hkm
     · -- Case: i.val ≥ m - k, so |1/m - 1/k| ≤ 1/k
       -- Since k ≤ m, we have 1/k ≥ 1/m, so 1/m - 1/k ≤ 0, thus |1/m - 1/k| = 1/k - 1/m
-      sorry
+      have h_div_order : (1:ℝ)/m ≤ 1/k := by
+        rw [one_div_le_one_div hm_pos hk_pos]
+        exact Nat.cast_le.mpr hkm
+      -- abs_of_nonpos: |1/m - 1/k| = -(1/m - 1/k) = 1/k - 1/m when 1/m - 1/k ≤ 0
+      rw [abs_of_nonpos (by linarith : (1:ℝ)/m - 1/k ≤ 0)]
+      -- Goal: 1/k - 1/m ≤ 1/k, which simplifies to 0 ≤ 1/m
+      -- Since m > 0, we have 1/m > 0
+      have : (0:ℝ) < 1/m := by positivity
+      linarith
 
   -- The bound from l2_contractability_bound is 2·σSqf·(1-ρf)·(⨆ i, |p i - q i|)
   -- We have h_sup_bound : (⨆ i, |p i - q i|) ≤ 1/k
