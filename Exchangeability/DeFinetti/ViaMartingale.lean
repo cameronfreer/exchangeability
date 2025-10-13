@@ -1767,13 +1767,28 @@ lemma contractable_finite_cylinder_measure
   -- Goal is: μ ((fun ω i => X (idx i) ω) ⁻¹' S_std) = μ ((fun ω i => X i.val ω) ⁻¹' S_std)
   --
   -- Since the measures are equal, they assign equal measure to preimages
-  calc μ ((fun ω i => X (idx i) ω) ⁻¹' S_std)
+
+  -- First prove S_std is measurable
+  have hS_meas : MeasurableSet S_std := by
+    -- S_std is a cylinder set - finite intersection of coordinate preimages
+    sorry -- TODO (20-30 min): Prove cylinder set measurability
+          -- Strategy: Express as intersection of coordinate preimages via iInter
+          -- Use MeasurableSet.iInter and measurable_pi_apply
+          -- Technical issue: set-builder notation type resolution
+
+  -- Prove the functions are measurable
+  have h_meas_idx : Measurable (fun ω (i : Fin (r + 1 + k)) => X (idx i) ω) :=
+    measurable_pi_lambda _ (fun i => hX_meas (idx i))
+  have h_meas_std : Measurable (fun ω (i : Fin (r + 1 + k)) => X (↑i) ω) :=
+    measurable_pi_lambda _ (fun i => hX_meas (↑i))
+
+  calc μ ((fun ω (i : Fin (r + 1 + k)) => X (idx i) ω) ⁻¹' S_std)
       = Measure.map (fun ω i => X (idx i) ω) μ S_std := by
-        sorry -- TODO: Apply Measure.map_apply (requires S_std measurable)
-    _ = Measure.map (fun ω i => X i.val ω) μ S_std := by
+        rw [Measure.map_apply h_meas_idx hS_meas]
+    _ = Measure.map (fun ω (i : Fin (r + 1 + k)) => X (↑i) ω) μ S_std := by
         rw [contract]
-    _ = μ ((fun ω i => X i.val ω) ⁻¹' S_std) := by
-        sorry -- TODO: Apply Measure.map_apply (requires S_std measurable)
+    _ = μ ((fun ω (i : Fin (r + 1 + k)) => X (↑i) ω) ⁻¹' S_std) := by
+        rw [Measure.map_apply h_meas_std hS_meas]
 
 /-- **Correct conditional independence from contractability (Kallenberg Lemma 1.3).**
 
@@ -1901,7 +1916,35 @@ lemma block_coord_condIndep
     -- By Dynkin: GoodSets contains the generated σ-algebra
     -- Therefore E ∈ GoodSets for all measurable E
 
-    sorry -- TODO (2-3 hours total): Implement Parts A, B, C
+    -- Given: E measurable in firstRSigma X r ⊔ finFutureSigma X m k
+    -- Goal: ∫_E indicator B (X r) dμ = ∫_E μ[indicator B ∘ X r | finFuture_k] dμ
+
+    -- Use Dynkin's π-λ theorem: prove for all measurable E via monotone class argument
+
+    -- Define GoodSets = collection of sets E for which the integral equality holds
+    let GoodSets : Set (Set Ω) := {E |
+      MeasurableSet[firstRSigma X r ⊔ finFutureSigma X m k] E ∧
+      ∫ ω in E, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ =
+      ∫ ω in E, (Exchangeability.Probability.condExpWith μ
+          (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
+          (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ}
+
+    -- We need to show E ∈ GoodSets
+
+    -- Strategy: Show GoodSets is a monotone class containing the cylinder π-system
+    -- Then by Dynkin's π-λ theorem, GoodSets contains all measurable sets
+
+    -- Part A (60-90 min): Cylinder π-system ⊆ GoodSets
+    -- For any cylinder set E_cyl = {∀i X_i ∈ A_i} ∩ {∀j X_{m+1+j} ∈ C_j}, show E_cyl ∈ GoodSets
+    -- Key: Apply contractable_finite_cylinder_measure to prove integral equality for cylinders
+
+    -- Part B (30 min): GoodSets is a monotone class
+    -- Use MCT and DCT to show closure under monotone limits
+
+    -- Part C (30 min): Apply Dynkin's π-λ theorem
+    -- Conclude E ∈ GoodSets using mathlib's Dynkin theorem
+
+    sorry -- TODO (2-3 hours total): Implement Parts A, B, C following the strategy above
 
   -- **Step 2: Pass to limit as k → ∞ using martingale convergence**
   --
