@@ -186,6 +186,13 @@ lemma condIndep_of_indicator_condexp_eq
 
 /-! ### Bounded Martingales and L² (NOT USED) -/
 
+section MartingaleL2
+
+-- Lean needs the ambient `[MeasurableSpace Ω]` to form `Measure Ω`.
+-- The lemma below only uses it through those measures, so we silence
+-- `linter.unusedSectionVars` to avoid a spurious warning.
+set_option linter.unusedSectionVars false
+
 /-- L² identification lemma: if `X₂` is square-integrable and
 `μ[X₂ | m₁] = X₁`, while the second moments of `X₁` and `X₂` coincide,
 then `X₁ = X₂` almost everywhere.
@@ -247,7 +254,8 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
               exact integral_sub hInt_cond_sq hInt_Y_sq
       _ = ∫ ω, (X₂ ω) ^ 2 ∂μ - ∫ ω, (X₁ ω) ^ 2 ∂μ := by
         simp [hInt_cond_sq_eq, hInt_Y_sq_eq]
-      _ = 0 := by simpa [sub_eq_zero, hSecond]
+      _ = 0 := by
+        simp [hSecond]
 
   -- Non-negativity and integrability of the conditional variance.
   have hVar_nonneg : 0 ≤ᵐ[μ] Var[X₂; μ | m₁] := by
@@ -290,6 +298,8 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
 
   -- Combine the identities.
   exact hY_eq_X₁.symm.trans hX₂_eq_Y.symm
+
+end MartingaleL2
 
 /-!
 ### Reverse Martingale Convergence (Removed)
