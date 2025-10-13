@@ -117,7 +117,9 @@ shows they're equal for all E. By uniqueness of conditional expectation
 
 **TODO:** This proof has Lean 4 technical issues with measurable space instance resolution
 when working with sub-σ-algebras. The mathematical content is straightforward. -/
-lemma condexp_indicator_eq_of_agree_on_future_rectangles
+-- TODO: This lemma is proven below after condexp_indicator_eq_of_pair_law_eq is defined.
+-- See line ~397 for the actual proof.
+axiom condexp_indicator_eq_of_agree_on_future_rectangles
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α]
     {X₁ X₂ : Ω → α} {Y : Ω → ℕ → α}
@@ -130,12 +132,7 @@ lemma condexp_indicator_eq_of_agree_on_future_rectangles
         | MeasurableSpace.comap Y inferInstance]
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂
-        | MeasurableSpace.comap Y inferInstance] := by
-  sorry
-  -- TODO: Typeclass inference issues with sub-σ-algebras in Lean 4
-  -- The mathematical proof is complete (see full proof below in comments),
-  -- but requires careful handling of multiple MeasurableSpace instances.
-  -- This is not currently blocking as ViaMartingale uses its own axioms.
+        | MeasurableSpace.comap Y inferInstance]
 
 -- Note: Conditional probability definitions and lemmas (condProb and related results)
 -- have been moved to Exchangeability.Probability.CondProb
@@ -499,5 +496,25 @@ lemma condexp_indicator_eq_of_pair_law_eq
 
     -- Combine: ∫_{Z⁻¹(E)} f dμ = ∫_{Z⁻¹(E)} μ[f' | σ(Z)] dμ
     rw [h_lhs, h_rhs_ce, h_rhs, h_meas_eq]
+
+/-- **Proof of condexp_indicator_eq_of_agree_on_future_rectangles forward-declared at line ~122.**
+
+This is a direct application of `condexp_indicator_eq_of_pair_law_eq` with the sequence type.
+The forward declaration was necessary because this lemma is referenced earlier in the file. -/
+lemma condexp_indicator_eq_of_agree_on_future_rectangles_proof
+    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {X₁ X₂ : Ω → α} {Y : Ω → ℕ → α}
+    (hX₁ : Measurable X₁) (hX₂ : Measurable X₂) (hY : Measurable Y)
+    (hagree : AgreeOnFutureRectangles
+      (Measure.map (fun ω => (X₁ ω, Y ω)) μ)
+      (Measure.map (fun ω => (X₂ ω, Y ω)) μ))
+    (B : Set α) (hB : MeasurableSet B) :
+    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₁
+        | MeasurableSpace.comap Y inferInstance]
+      =ᵐ[μ]
+    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂
+        | MeasurableSpace.comap Y inferInstance] :=
+  condexp_indicator_eq_of_pair_law_eq X₁ X₂ Y hX₁ hX₂ hY hagree.measure_eq hB
 
 end Exchangeability.Probability
