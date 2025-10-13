@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
 import Mathlib.Probability.ConditionalExpectation
+import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
 import Mathlib.Probability.Martingale.Basic
 import Exchangeability.Contractability
@@ -67,6 +68,13 @@ namespace ViaMartingale
 open MeasureTheory Filter
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+
+/-- **Helper:** If `f =ᵐ[μ] g`, then `μ[f|m] =ᵐ[μ] μ[g|m]`. -/
+lemma condExp_congr_ae {m₀ m : MeasurableSpace Ω}
+    {μ : Measure Ω} {f g : Ω → ℝ} {hm : m ≤ m₀} [SigmaFinite (μ.trim hm)]
+    (h : f =ᵐ[μ] g) :
+    μ[f | m] =ᵐ[μ] μ[g | m] := by
+  sorry  -- TODO: Find correct mathlib lemma or prove
 
 /-- `shiftProcess X m` is the process `n ↦ X (m + n)` (Kallenberg's θₘ ξ). -/
 def shiftProcess (X : ℕ → Ω → α) (m : ℕ) : ℕ → Ω → α := fun n ω => X (m + n) ω
@@ -1780,12 +1788,11 @@ lemma finite_level_factorization
         _ =ᵐ[μ] μ[(fun ω => indProd X r Cinit ω
                       * Set.indicator Clast (fun _ => (1:ℝ)) (X r ω))
                    | futureFiltration X m] := by
-          apply condExp_congr
-          exact EventuallyEq.of_eq hsplit
+          refine condExp_congr_ae (EventuallyEq.of_eq hsplit)
         _ =ᵐ[μ] μ[(A.indicator (fun _ => (1:ℝ)))
                    * (B.indicator (fun _ => (1:ℝ)))
                    | futureFiltration X m] := by
-          apply condExp_congr
+          refine condExp_congr_ae (EventuallyEq.of_eq ?_)
           funext ω
           rw [← hf_indicator, ← hg_indicator]
         _ =ᵐ[μ] (fun ω => (μ[A.indicator (fun _ => (1:ℝ)) | futureFiltration X m] ω)
@@ -1793,8 +1800,7 @@ lemma finite_level_factorization
         _ =ᵐ[μ] (fun ω => (μ[indProd X r Cinit | futureFiltration X m] ω)
                           * (Set.indicator Clast (fun _ => (1:ℝ)) (X r ω))) := by
           apply EventuallyEq.mul
-          · apply condExp_congr
-            exact EventuallyEq.of_eq hf_indicator.symm
+          · refine condExp_congr_ae (EventuallyEq.of_eq hf_indicator.symm)
           · exact EventuallyEq.of_eq hg_indicator.symm
         _ =ᵐ[μ] (fun ω => (∏ i : Fin r,
                             μ[Set.indicator (Cinit i) (fun _ => (1:ℝ)) ∘ (X 0)
