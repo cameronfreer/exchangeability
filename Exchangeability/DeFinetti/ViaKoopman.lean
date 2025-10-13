@@ -292,18 +292,23 @@ lemma ν_eval_measurable
 then |CE[X|m]| ≤ C almost everywhere. This follows from the tower property and
 Jensen's inequality for conditional expectation. -/
 private lemma condExp_abs_le_of_abs_le
-    {Ω : Type*} {_ : MeasurableSpace Ω} {μ : Measure Ω} [IsFiniteMeasure μ]
+    {Ω : Type*} {_ : MeasurableSpace Ω} {μ : Measure Ω} [IsFiniteMeasure μ] [Nonempty Ω]
     {m : MeasurableSpace Ω} (hm : m ≤ ‹_›)
     {X : Ω → ℝ} (hX : Integrable X μ) {C : ℝ} (hC : ∀ ω, |X ω| ≤ C) :
     ∀ᵐ ω ∂μ, |μ[X | m] ω| ≤ C := by
-  sorry
-  /- TODO: Need to find correct lemma names in mathlib:
-  - Jensen's inequality for conditional expectation: |CE[X|m]| ≤ CE[|X||m]
-  - Monotonicity: CE[|X||m] ≤ CE[C|m] when |X| ≤ C
-  - Constant: CE[C|m] = C
-  The logic is correct, just need to find the right API.
-  Estimated: 10-15 lines once APIs found
-  -/
+  -- C must be nonnegative since |X ω| ≤ C and |X ω| ≥ 0
+  have hC_nn : 0 ≤ C := le_trans (abs_nonneg _) (hC (Classical.choice ‹Nonempty Ω›))
+  -- Convert pointwise bound to a.e. bound
+  have hC_ae : ∀ᵐ ω ∂μ, |X ω| ≤ C := ae_of_all μ hC
+  -- Convert to NNReal bound for ae_bdd_condExp_of_ae_bdd
+  have hC_ae' : ∀ᵐ ω ∂μ, |X ω| ≤ C.toNNReal := by
+    filter_upwards [hC_ae] with ω hω
+    rwa [Real.coe_toNNReal _ hC_nn]
+  -- Apply mathlib lemma
+  have := ae_bdd_condExp_of_ae_bdd (m := m) hC_ae'
+  -- Convert back from NNReal
+  filter_upwards [this] with ω hω
+  rwa [Real.coe_toNNReal _ hC_nn] at hω
 
 /-- If `Z` is a.e.-bounded and measurable and `Y` is integrable,
     then `Z*Y` is integrable (finite measure suffices). -/
