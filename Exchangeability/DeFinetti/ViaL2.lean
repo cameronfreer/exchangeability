@@ -2553,12 +2553,15 @@ theorem reverse_martingale_subsequence_convergence
           -- Bochner integral ∫ |alpha n - alpha_inf| (as used in h_L1_conv) implies
           -- HasFiniteIntegral.
           --
-          -- Technically, we'd need a lemma like: "if ∫ |f| exists as a real number
-          -- (i.e., Integrable f), then HasFiniteIntegral f". This is essentially
-          -- the definition/characterization of Integrable.
+          -- In Lean, the Bochner integral `∫ f ∂μ` is only well-defined when f is integrable.
+          -- The hypothesis h_L1_conv uses such integrals, implicitly assuming integrability.
           --
-          -- For now, we leave this as sorry, noting that the theorem statement h_L1_conv
-          -- already assumes integrability by using the Bochner integral.
+          -- The proper fix would be to either:
+          -- 1. Add `∀ n, Integrable (fun ω => |alpha n ω - alpha_inf ω|) μ` as a hypothesis, or
+          -- 2. Use a different convergence statement (like lintegral with ENNReal)
+          --
+          -- For now, accept that h_L1_conv's use of Bochner integrals implies the functions
+          -- are integrable, hence have finite integral:
           sorry
       have hmarkov_real := mul_meas_ge_le_integral_of_nonneg hf_nonneg hf_int ε
       -- This gives: ε * μ.real {ω | ε ≤ |alpha n ω - alpha_inf ω|} ≤ ∫ ω, |alpha n ω - alpha_inf ω| ∂μ
