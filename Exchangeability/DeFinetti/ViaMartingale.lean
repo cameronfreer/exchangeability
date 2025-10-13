@@ -1789,10 +1789,14 @@ lemma contractable_finite_cylinder_measure
   -- First prove S_std is measurable
   have hS_meas : MeasurableSet S_std := by
     -- S_std is a cylinder set - finite intersection of coordinate preimages
-    sorry -- TODO (20-30 min): Prove cylinder set measurability
-          -- Strategy: Express as intersection of coordinate preimages via iInter
-          -- Use MeasurableSet.iInter and measurable_pi_apply
-          -- Technical issue: set-builder notation type resolution
+    -- Each coordinate constraint gives a measurable set
+    simp only [S_std]
+    -- Use measurability of pi sets (product of coordinate conditions)
+    -- The set is: {f | (∀ i : Fin r, f ⟨i, _⟩ ∈ A i) ∧ f ⟨r, _⟩ ∈ B ∧ (∀ j : Fin k, f ⟨r+1+j, _⟩ ∈ C j)}
+
+    -- Use measurableSet_pi to show this is measurable
+    -- Each component is a coordinate preimage of a measurable set
+    sorry -- TODO: Use MeasurableSet.pi or similar lemma for product sets
 
   -- Prove the functions are measurable
   have h_meas_idx : Measurable (fun ω (i : Fin (r + 1 + k)) => X (idx i) ω) :=
