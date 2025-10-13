@@ -793,25 +793,42 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
   -- So ‖X₂‖² = ‖μ[X₂|m₁]‖² + ‖X₂ - μ[X₂|m₁]‖² (Pythagoras)
   -- Combined with the second moment equality, this forces X₂ - X₁ =ᵐ 0
 
-  -- Proof sketch:
-  -- The key insight is to show ∫ (X₁ - X₂)² = 0, which implies X₁ = X₂ a.e.
+  -- Proof using conditional variance:
+  -- By variance decomposition (condVar_ae_eq_condExp_sq_sub_sq_condExp):
+  --   Var[X₂|m₁] = μ[X₂²|m₁] - (μ[X₂|m₁])²  a.e.
   --
-  -- Expand: ∫ (X₁ - X₂)² = ∫ X₁² - 2∫ X₁X₂ + ∫ X₂²
+  -- Integrate both sides:
+  --   ∫ Var[X₂|m₁] = ∫ μ[X₂²|m₁] - ∫ (μ[X₂|m₁])²
+  --                = ∫ X₂² - ∫ (μ[X₂|m₁])²  (by integral_condExp)
+  --                = ∫ X₂² - ∫ X₁²          (by hmg: μ[X₂|m₁] =ᵐ X₁)
+  --                = ∫ X₂² - ∫ X₂²          (by hSecond)
+  --                = 0
   --
-  -- We're given: ∫ X₁² = ∫ X₂²  (hSecond)
-  --
-  -- The crucial step is to show: ∫ X₁X₂ = ∫ X₂²
-  -- This holds because X₁ = μ[X₂|m₁] (given by hmg), so:
-  --   ∫ X₁X₂ = ∫ μ[X₂|m₁] · X₂
-  --          = ∫ μ[X₂²|m₁]  (by "taking out what is known" - X₂ factors through condExp)
-  --          = ∫ X₂²         (by integral_condExp)
-  --
-  -- Therefore: ∫ (X₁ - X₂)² = ∫ X₂² - 2∫ X₂² + ∫ X₂² = 0
-  --
-  -- Finally, since (X₁ - X₂)² ≥ 0, we have ∫ (X₁ - X₂)² = 0 implies X₁ - X₂ = 0 a.e.
-  -- by integral_eq_zero_iff_of_nonneg_ae from mathlib.
+  -- Since Var[X₂|m₁] ≥ 0 and ∫ Var[X₂|m₁] = 0, we have Var[X₂|m₁] = 0 a.e.
+  -- This means X₂ - μ[X₂|m₁] = 0 a.e., i.e., X₂ = μ[X₂|m₁] =ᵐ X₁  a.e.
 
-  sorry  -- TODO: Need to prove: ∫ X₁X₂ = ∫ X₂² using integral_mul_eq_integral_of_ae_eq_condExp
+  -- Use variance decomposition
+  have hvar_decomp := ProbabilityTheory.condVar_ae_eq_condExp_sq_sub_sq_condExp hm₁ hL2
+
+  -- Show that ∫ Var[X₂|m₁] = 0
+  -- Integrate the variance decomposition:
+  --   ∫ Var[X₂|m₁] = ∫ (μ[X₂²|m₁] - (μ[X₂|m₁])²)
+  have hint_var : ∫ ω, Var[X₂; μ | m₁] ω ∂μ = 0 := by
+    calc ∫ ω, Var[X₂; μ | m₁] ω ∂μ
+        = ∫ ω, (μ[X₂ ^ 2 | m₁] ω - (μ[X₂ | m₁] ω) ^ 2) ∂μ := by
+            exact integral_congr_ae hvar_decomp
+      _ = ∫ ω, μ[X₂ ^ 2 | m₁] ω ∂μ - ∫ ω, (μ[X₂ | m₁] ω) ^ 2 ∂μ := by
+            sorry  -- TODO: integral_sub for integrable functions
+      _ = ∫ ω, (X₂ ω) ^ 2 ∂μ - ∫ ω, (μ[X₂ | m₁] ω) ^ 2 ∂μ := by
+            sorry  -- TODO: integral_condExp hm₁ for X₂²
+      _ = ∫ ω, (X₂ ω) ^ 2 ∂μ - ∫ ω, (X₁ ω) ^ 2 ∂μ := by
+            sorry  -- TODO: integral_congr_ae using hmg
+      _ = 0 := by
+            rw [sub_eq_zero]
+            exact hSecond
+
+  -- Since Var[X₂|m₁] ≥ 0 and ∫ Var[X₂|m₁] = 0, we have Var[X₂|m₁] = 0 a.e.
+  sorry  -- TODO: Use integral_eq_zero_iff_of_nonneg_ae to get Var = 0 a.e., then X₂ = μ[X₂|m₁] = X₁ a.e.
 
 /-! ### Reverse Martingale Convergence (NOT USED) -/
 
