@@ -2037,7 +2037,12 @@ lemma block_coord_condIndep
       -- This is exactly what contractable_finite_cylinder_measure provides
       exact contractable_finite_cylinder_measure X hX hX_meas hrm A hA B hB C hC
 
-    -- Step 3: RHS computation - THE CRITICAL INFRASTRUCTURE GAP
+    -- Step 3: RHS computation - CRITICAL INFRASTRUCTURE GAP
+    -- Integrating CE over cylinder E_past ∩ E_future (where E_future ∈ finFutureSigma)
+    -- should equal reindexed cylinder measure via Fubini/disintegration
+    --
+    -- Similar to kernel_integral_product_factorization in ViaKoopman.lean,
+    -- this requires infrastructure not currently available in mathlib
     have rhs_computation : ∀ (A : Fin r → Set α) (hA : ∀ i, MeasurableSet (A i))
         (C : Fin k → Set α) (hC : ∀ i, MeasurableSet (C i)),
       let E_cyl := {ω | (∀ i, X i.val ω ∈ A i) ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)}
@@ -2046,19 +2051,7 @@ lemma block_coord_condIndep
           (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ
         = (μ ({ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (r + 1 + j.val) ω ∈ C j)})).toReal := by
       intro A hA C hC
-      -- THIS IS THE KEY MISSING PIECE
-      -- Need to show: CE integral over cylinder = reindexed cylinder measure
-      --
-      -- Possible approaches:
-      -- 1. Product measure decomposition: E_cyl = E_first × E_future
-      --    Then use Fubini to factor the integral
-      -- 2. Use CE characterization on a cleverly chosen family of test sets
-      -- 3. Build explicit disintegration kernel and compute
-      --
-      -- None of these are straightforward in current mathlib/codebase
-      sorry -- TODO (1-2 hours): Critical infrastructure gap
-            -- Requires: product measure theory OR disintegration kernels
-            -- OR clever application of CE uniqueness theorem
+      sorry -- TODO: Requires product measure / Fubini / disintegration infrastructure
 
     -- Combine steps 1-3 to show cylinders are in GoodSets
     have cylinders_in_goodsets : ∀ (A : Fin r → Set α) (hA : ∀ i, MeasurableSet (A i))
