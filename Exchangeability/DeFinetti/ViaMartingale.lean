@@ -1599,6 +1599,40 @@ end reverse_martingale
 
 /-! ### Helper lemmas for finite-level factorization -/
 
+/-! ### Kallenberg Lemma 1.3 - Contraction implies conditional independence
+
+**Mathematical statement (Kallenberg, page 25):**
+If (U, η) =ᵈ (U, ζ) and σ(η) ⊆ σ(ζ), then U ⊥⊥_η ζ.
+
+**Proof sketch from Kallenberg:**
+1. For any B and bounded σ(η)-measurable h:
+   E[1_{U∈B} · h] = E[E[1_{U∈B} | η] · h]    (tower property)
+                   = E[E[1_{U∈B} | ζ] · h]    (by distributional equality)
+2. This shows E[1_{U∈B} | η] = E[1_{U∈B} | ζ] a.s.
+3. Since σ(η) ⊆ σ(ζ), this means E[1_{U∈B} | ζ] is σ(η)-measurable
+4. Therefore U ⊥⊥_η ζ by Doob's characterization
+
+**Application to our case:**
+- U = firstRBlock X r = (X₀,...,X_{r-1})
+- η = shiftRV X (m+1) = (X_{m+1}, X_{m+2},...)
+- ζ = (X_r, shiftRV X (m+1))
+
+**Challenge:** The notation "(U, η) =ᵈ (U, ζ)" in Kallenberg requires careful
+interpretation for infinite sequences. The finite approximations:
+  (X₀,...,X_{r-1}, X_{m+1},...,X_{m+k}) vs (X₀,...,X_{r-1}, X_r, X_{m+1},...,X_{m+k})
+have DIFFERENT LENGTHS (r+k vs r+1+k), so contractability doesn't directly equate them.
+
+**Two approaches to completion:**
+
+Option A: Prove for finite approximations that conditional expectations w.r.t. future
+coordinates match, then pass to limit as k → ∞ (6-10 hours estimated)
+
+Option B: Develop theory of conditional distributions for infinite sequences to formalize
+"(U, η) =ᵈ (U, ζ)" directly (10-15 hours estimated)
+
+Both require substantial measure-theoretic infrastructure. This blocks the martingale proof
+approach, but the L² and Koopman approaches bypass this issue. -/
+
 /-- **Correct conditional independence from contractability (Kallenberg Lemma 1.3).**
 
 For contractable X and r < m, the past block σ(X₀,...,X_{r-1}) and the single coordinate
@@ -1660,22 +1694,27 @@ lemma block_coord_condIndep
   -- independent of (X₀,...,X_{r-1}) given the future θ_{m+1} X. This is Kallenberg's
   -- Lemma 1.3 (Contraction-Independence).
   --
-  -- **Proof strategy (from BLOCK_COORD_WORK.md):**
-  -- Use contractability to show that deleting coordinate r when r < m doesn't change
-  -- the joint distribution of (X₀,...,X_{r-1}) with the future. This implies that
-  -- given the future, X_r is "spreadable" over values of (X₀,...,X_{r-1}).
-  --
-  -- **Implementation approaches:**
-  -- (A) Direct: Use ae_eq_condExp_of_forall_setIntegral_eq to show integrals agree
-  --     for all A ∈ firstR ⊔ future, using contractability to establish equality
-  -- (B) Helper lemma: First prove general Lemma 1.3 (contraction_independence),
-  --     then apply it here
-  --
-  -- Both require extracting the specific distributional property from contractability
-  -- that relates (firstRBlock, future) and (firstRBlock, X_r, future).
-  --
-  -- **Estimated effort:** 4-6 hours (requires measure theory infrastructure)
-  sorry
+  -- **Proof strategy:** Use ae_eq_condExp_of_forall_setIntegral_eq to show that
+  -- integrals match over all measurable sets in firstRSigma ⊔ futureFiltration.
+  -- The key is using contractability to establish integral equality.
+
+  -- Let f₁ := indicator B ∘ X r (the function we're conditioning)
+  -- Let f₂ := μ[indicator B ∘ X r | futureFiltration X m] (target CE)
+  let f₁ : Ω → ℝ := Set.indicator B (fun _ => (1 : ℝ)) ∘ X r
+  let f₂ : Ω → ℝ := Exchangeability.Probability.condExpWith μ
+    (futureFiltration X m) (futureFiltration_le X m hX_meas) f₁
+
+  -- Goal: show μ[f₁ | firstRSigma X r ⊔ futureFiltration X m] =ᵐ f₂
+
+  -- We'll use the characterization: it suffices to show ∫_{A} f₁ dμ = ∫_{A} f₂ dμ
+  -- for all A in a π-system generating firstRSigma ⊔ futureFiltration
+
+  sorry -- TODO: This requires substantial infrastructure:
+        -- 1. Formalize finite approximations of infinite sequences
+        -- 2. Extract distributional equality from contractability for products
+        -- 3. Apply π-system / monotone class argument
+        -- 4. Use tower property and integral equality
+        -- Estimated: 4-6 hours as documented
 
 /-- **Product formula for conditional expectations under conditional independence.**
 
