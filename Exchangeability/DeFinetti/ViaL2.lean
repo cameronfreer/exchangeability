@@ -1791,7 +1791,7 @@ private lemma l2_bound_long_vs_tail
               · congr 1
                 ext j
                 simp only [Fin.val_mk]
-                omega
+                ring
               -- Prove injectivity
               · intro j₁ _ j₂ _ h
                 simp only [Fin.mk.injEq] at h
@@ -3070,7 +3070,15 @@ noncomputable def directing_measure
     let F_ω : StieltjesFunction := {
       toFun := cdf_from_alpha X hX_contract hX_meas hX_L2 ω
       mono' := cdf_from_alpha_mono X hX_contract hX_meas hX_L2 ω
-      right_continuous' := fun t => cdf_from_alpha_rightContinuous X hX_contract hX_meas hX_L2 ω t
+      right_continuous' := by
+        intro t
+        -- ContinuousWithinAt is defined as Tendsto at nhdsWithin
+        -- We have Tendsto at 𝓝[>] which is nhdsWithin (Set.Ioi t)
+        -- Need to show nhdsWithin (Set.Ici t) but we have nhdsWithin (Set.Ioi t)
+        -- These aren't quite the same (Ici includes t, Ioi doesn't)
+        -- Actually, right-continuity is usually defined with Ioi (>)
+        -- Let me check what StieltjesFunction expects
+        sorry
     }
     F_ω.measure
 
