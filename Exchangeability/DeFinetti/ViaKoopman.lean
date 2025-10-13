@@ -297,24 +297,24 @@ private lemma integrable_mul_of_ae_bdd_left
     (hY : Integrable Y μ) :
     Integrable (Z * Y) μ := by
   rcases hZ_bd with ⟨C, hC⟩
-  -- Work with |C| to ensure non-negativity
-  have : (Z * Y).Integrable μ := by
-    have h_meas : AEStronglyMeasurable (Z * Y) μ :=
-      hZ.aestronglyMeasurable.mul hY.aestronglyMeasurable
-    have h_le : ∀ᵐ ω ∂μ, |(Z * Y) ω| ≤ |C| * |Y ω| := by
-      refine hC.mono ?_
-      intro ω hω
-      calc |(Z * Y) ω|
-          = |Z ω * Y ω| := rfl
-        _ = |Z ω| * |Y ω| := abs_mul _ _
-        _ ≤ C * |Y ω| := mul_le_mul_of_nonneg_right hω (abs_nonneg _)
-        _ ≤ |C| * |Y ω| := mul_le_mul_of_nonneg_right (le_abs_self C) (abs_nonneg _)
-    have h_int_dom : Integrable (fun ω => |C| * |Y ω|) μ := by
-      convert hY.norm.const_mul |C|
-      ext ω; simp
-    -- Use that h_meas and h_le with h_int_dom gives integrability
+  -- The pointwise bound case would be: MeasureTheory.integrable_of_bounded ...
+  -- But we have a.e. bounds, so we use the structure of Integrable directly
+  have h_meas : AEStronglyMeasurable (Z * Y) μ :=
+    hZ.aestronglyMeasurable.mul hY.aestronglyMeasurable
+  have h_finite : HasFiniteIntegral (Z * Y) μ := by
     sorry
-  exact this
+    /- Proof strategy: Use domination
+    calc ∫⁻ ω, ‖(Z * Y) ω‖₊ ∂μ
+        ≤ ∫⁻ ω, ‖Z ω‖₊ * ‖Y ω‖₊ ∂μ := by apply lintegral_mono; intro ω; simp [nnnorm_mul]
+      _ ≤ ∫⁻ ω, Real.nnabs C * ‖Y ω‖₊ ∂μ := by
+          apply lintegral_mono_ae; refine hC.mono ?_; intro ω hω
+          -- Need:  ‖Z ω‖₊ * ‖Y ω‖₊ ≤ Real.nnabs C * ‖Y ω‖₊ from |Z ω| ≤ C
+          -- Should use: Real.nnnorm (x : ℝ) = |x|.toNNReal and Real.nnabs C = |C|.toNNReal
+          sorry
+      _ = Real.nnabs C * ∫⁻ ω, ‖Y ω‖₊ ∂μ := lintegral_const_mul _ _
+      _ < ∞ := ENNReal.mul_lt_top ENNReal.coe_ne_top hY.hasFiniteIntegral.ne
+    -/
+  exact ⟨h_meas, h_finite⟩
 
 /-- Conditional expectation is L¹-Lipschitz: moving the integrand changes the CE by at most
 the L¹ distance. This is a standard property following from Jensen's inequality. -/
@@ -355,10 +355,9 @@ private lemma condExp_mul_pullout
 
   -- Z*Y is integrable using our helper lemma
   have hZY_int : Integrable (Z * Y) μ := by
-    -- Since Z is measurable w.r.t. m ≤ ‹MeasurableSpace _›, it's AEMeasurable
-    have hZ_aemeas : AEMeasurable Z μ := hZ_meas.aemeasurable
-    refine integrable_mul_of_ae_bdd_left (μ := μ) (Z := Z) (Y := Y) hZ_aemeas.measurable ?_ hY
-    exact ⟨hZ_bd.choose, ae_of_all _ hZ_bd.choose_spec⟩
+    -- Since Z is measurable w.r.t. m, and m is a sub-σ-algebra, Z is measurable w.r.t. ambient
+    -- We need to convert Measurable[m] Z to Measurable Z
+    sorry -- TODO: Find correct way to lift measurability from sub-σ-algebra to ambient
 
   -- Apply mathlib's pull-out lemma
   exact MeasureTheory.condExp_mul_of_aestronglyMeasurable_left
