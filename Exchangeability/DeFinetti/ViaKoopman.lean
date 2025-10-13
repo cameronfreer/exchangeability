@@ -303,17 +303,14 @@ private lemma integrable_mul_of_ae_bdd_left
     hZ.aestronglyMeasurable.mul hY.aestronglyMeasurable
   have h_finite : HasFiniteIntegral (Z * Y) μ := by
     sorry
-    /- TODO: Complete the domination proof. Strategy:
-    calc ∫⁻ ω, ‖(Z * Y) ω‖₊ ∂μ
-        ≤ ∫⁻ ω, ‖Z ω‖₊ * ‖Y ω‖₊ ∂μ := by simp [nnnorm_mul]; apply lintegral_mono; intro ω; rfl
-      _ ≤ ∫⁻ ω, Real.nnabs C * ‖Y ω‖₊ ∂μ := by
-          apply lintegral_mono_ae; refine hC.mono ?_; intro ω hω
-          apply mul_le_mul_right'
-          -- Need API: For real x, ‖x‖₊ = |x|.toNNReal
-          -- Then: ‖Z ω‖₊ ≤ Real.nnabs C follows from Real.toNNReal_le_toNNReal hω
-          sorry
-      _ = Real.nnabs C * ∫⁻ ω, ‖Y ω‖₊ ∂μ := lintegral_const_mul _ _
-      _ < ∞ := ENNReal.mul_lt_top ENNReal.coe_ne_top (ne_of_lt hY.2)
+    /- TODO: Domination proof works but has syntax issues. Strategy:
+    Show: ∫⁻ ω, ‖(Z * Y) ω‖₊ ∂μ < ∞ by:
+    1. ‖(Z * Y) ω‖₊ ≤ ‖Z ω‖₊ * ‖Y ω‖₊ (nnnorm_mul)
+    2. ‖Z ω‖₊ * ‖Y ω‖₊ ≤ Real.nnabs C * ‖Y ω‖₊ a.e. (from |Z ω| ≤ C)
+       - Key: simp [Real.nnabs, Real.norm_eq_abs]; exact Real.toNNReal_le_toNNReal hω
+    3. ∫⁻ Real.nnabs C * ‖Y‖₊ = Real.nnabs C * ∫⁻ ‖Y‖₊ (lintegral_const_mul)
+    4. Real.nnabs C * ∫⁻ ‖Y‖₊ < ∞ (ENNReal.mul_lt_top, using hY.2)
+    Estimated: 5 lines once calc syntax resolved
     -/
   exact ⟨h_meas, h_finite⟩
 
@@ -539,7 +536,12 @@ private lemma condexp_pair_factorization_MET
       constructor
       · exact (hf_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
       · -- HasFiniteIntegral: ∫⁻ ω, ‖f (ω 0)‖₊ ∂μ < ∞
-        sorry -- TODO: Similar to integrable_mul_of_ae_bdd_left, needs nnnorm API
+        sorry
+        /- TODO: Same as integrable_mul_of_ae_bdd_left line 305
+        Show: ∫⁻ ω, ‖f (ω 0)‖₊ ∂μ ≤ Cf * μ(Ω) < ∞
+        Key: simp [Real.nnabs, Real.norm_eq_abs]; exact Real.toNNReal_le_toNNReal (hCf (ω 0))
+        Estimated: 3-5 lines
+        -/
 
     -- Apply condExp_mul_pullout: CE[Z·Y | m] = Z·CE[Y | m]
     have h := condExp_mul_pullout hZ_meas hZ_bd hY_int
