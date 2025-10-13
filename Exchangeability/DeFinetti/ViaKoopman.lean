@@ -550,13 +550,18 @@ private lemma condexp_pair_factorization_MET
     have hZ_bd : ∃ C, ∀ᵐ ω ∂μ, |Z ω| ≤ C := by
       obtain ⟨Cg, hCg⟩ := hg_bd
       use Cg
+      -- Show g∘π₀ is integrable (same proof as hY_int)
+      have hg_int : Integrable (fun ω => g (ω 0)) μ := by
+        constructor
+        · exact (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
+        · have h_bd : ∀ (ω : Ω[α]), |g (ω 0)| ≤ Cg := fun ω => hCg (ω 0)
+          exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
+      -- Apply condExp_abs_le_of_abs_le (once it's proved)
+      have h_bd' : ∀ (ω : Ω[α]), |g (ω 0)| ≤ Cg := fun ω => hCg (ω 0)
+      -- TODO: Fix type inference issue with condExp_abs_le_of_abs_le
+      -- Expected: condExp_abs_le_of_abs_le shiftInvariantSigma_le hg_int h_bd'
+      -- But Lean has trouble inferring the measurable space parameters
       sorry
-      /- TODO: Show |CE[g(ω₀)|m]| ≤ Cg a.e. using condExp_abs_le_of_abs_le
-      Approach:
-      1. Show g∘π₀ is integrable (needs same HasFiniteIntegral proof as hY_int)
-      2. Apply condExp_abs_le_of_abs_le with shiftInvariantSigma_le and hCg∘π₀
-      Estimated: 3 lines once HasFiniteIntegral is resolved
-      -/
 
     -- Y := f(ω₀) is integrable (bounded + measurable)
     have hY_int : Integrable (fun ω => f (ω 0)) μ := by
