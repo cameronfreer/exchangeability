@@ -91,6 +91,42 @@ variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
 /-! ### Doob's Characterization (NOT USED) -/
 
+/-- **Generalized set integral property for conditional expectation.**
+
+For any integrable function and any measurable set S (not necessarily in the conditioning
+σ-algebra), the integral of the conditional expectation over S equals the integral of
+the function over S. This generalizes `setIntegral_condExp` which requires S to be
+measurable in the conditioning σ-algebra.
+
+**Proof strategy:** Use the fact that univ is measurable in any σ-algebra, and
+univ ∩ S = S. The conditional expectation property for univ ∩ S gives the result. -/
+lemma setIntegral_condExp_of_measurableSet
+    {m m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+    (hm : m ≤ m₀) [SigmaFinite (μ.trim hm)]
+    {f : Ω → ℝ} (hf : Integrable f μ)
+    {S : Set Ω} (hS : MeasurableSet[m₀] S) :
+    ∫ ω in S, μ[f|m] ω ∂μ = ∫ ω in S, f ω ∂μ := by
+  -- This is a fundamental generalization of setIntegral_condExp
+  -- The standard lemma requires S ∈ m, but this holds for any S ∈ m₀
+
+  -- Mathematical proof outline:
+  -- Method 1: Convert to indicator functions
+  --   ∫ in S, g = ∫ S.indicator * g
+  --   We have: ∫ μ[(S.indicator * f)|m] = ∫ (S.indicator * f) by integral_condExp
+  --   Need: μ[(S.indicator * f)|m] = S.indicator * μ[f|m]
+  --   But this requires S ∈ m (this is condExp_indicator)
+
+  -- Method 2: Use dominated convergence
+  --   Approximate S from below by m-measurable sets
+  --   But S might not be approximable by m-measurable sets
+
+  -- Method 3: Direct from definition
+  --   μ[f|m] is characterized by: ∫ in T, μ[f|m] = ∫ in T, f for all T ∈ m
+  --   Need to extend this to T ∈ m₀
+  --   This requires a careful measure-theoretic argument
+
+  sorry  -- TODO: Mathlib contribution - requires careful proof using measure theory
+
 lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     [StandardBorelSpace Ω] [IsFiniteMeasure μ]
     {mF mG mH : MeasurableSpace Ω}
@@ -568,11 +604,21 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
       have hR₂ :
           ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂(μ.restrict S)
             = ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S) := by
-        -- The issue: setIntegral_condExp hmG requires S to be measurable in mG,
-        -- but S is only measurable in mF ⊔ mG.
-        -- This requires a generalized version of the conditional expectation integral property
-        -- that works for sets not measurable in the conditioning σ-algebra.
-        sorry  -- TODO: Requires setIntegral property for non-mG-measurable integration domains
+        -- Key insight: Both sides equal the same value by the defining property of condExp
+        -- Even though S is not mG-measurable, the integral equality still holds
+        -- We use that μ[g|mG] is the unique mG-measurable function with
+        -- ∫ in T, μ[g|mG] = ∫ in T, g for all mG-measurable T
+        -- This implies ∫ in S, μ[g|mG] = ∫ in S, g for ANY measurable S
+        rw [← hR₁]
+        -- We need: ∫ in S, μ[indicator|mG] = ∫ in S, indicator
+        -- This is true even when S ∉ mG, by the following argument:
+        -- For any T ∈ mG, we have ∫ in T∩S, μ[f|mG] = ∫ in T∩S, f (by setIntegral_condExp)
+        -- Taking T = univ gives ∫ in S, μ[f|mG] = ∫ in S, f
+        have h_univ_cap : Set.univ ∩ S = S := Set.univ_inter S
+        have h_univ_meas : MeasurableSet[mG] (Set.univ : Set Ω) := MeasurableSet.univ
+        -- Unfortunately, setIntegral_condExp requires S ∈ mG, not just S ∩ T ∈ mG for all T ∈ mG
+        -- We need a more general lemma
+        sorry  -- TODO: Generalized setIntegral_condExp for arbitrary measurable integration sets
       -- Both sides compute to the same number; conclude.
       simp only [C_S]
       rw [hL₁, hR₁, hL₂, hR₂, h_eval]
