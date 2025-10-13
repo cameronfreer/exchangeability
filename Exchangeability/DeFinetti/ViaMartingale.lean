@@ -1810,7 +1810,21 @@ lemma finite_level_factorization
           =ᵐ[μ]
         (fun ω => (μ[A.indicator (fun _ => (1:ℝ)) | futureFiltration X m] ω)
                   * (B.indicator (fun _ => (1:ℝ)) ω)) := by
-      sorry  -- TODO: Fix type mismatch in condexp_indicator_inter_of_condIndep call
+      -- TODO: This requires a non-standard factorization formula
+      -- Standard CI gives: μ[(A ∩ B).indicator | F] = μ[A.indicator | F] * μ[B.indicator | F]
+      -- But here we need: μ[(A * B).indicator | F] = μ[A.indicator | F] * B.indicator
+      --
+      -- The RHS has B.indicator WITHOUT conditional expectation, which is unusual since
+      -- B ∈ σ(X_r) is NOT measurable w.r.t. futureFiltration X m (r < m means X_r is "past").
+      --
+      -- Possible approaches:
+      -- 1. This formula might be incorrect and needs adjustment throughout the calc chain
+      -- 2. There might be a subtle measurability property that allows B to be pulled out
+      -- 3. A different CI factorization lemma is needed
+      --
+      -- The continuation uses hswap to eventually replace X_r terms, so perhaps the unusual
+      -- formula here is intentionally "wrong" and gets corrected later in the calc chain.
+      sorry
 
     -- Apply IH to the first r factors
     have hIH : μ[indProd X r Cinit | futureFiltration X m] =ᵐ[μ]
