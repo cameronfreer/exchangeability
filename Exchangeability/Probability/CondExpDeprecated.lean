@@ -46,15 +46,15 @@ and all other files). They are kept here for potential future mathlib contributi
 
 ## Status (January 2025)
 
-**Progress**: 23 → 0 compilation errors ✅ | 2 axioms → 0 axioms ✅ | 8+ sorries → 3 sorries ✅
+**Progress**: 23 → 0 compilation errors ✅ | 2 axioms → 0 axioms ✅ | 8+ sorries → 4 sorries
 
 **Fixed**:
 - ✅ Orphaned doc comments (3 fixes)
 - ✅ API changes: `eLpNorm_condExp_le` → `eLpNorm_one_condExp_le_eLpNorm`
 - ✅ API changes: `setIntegral_indicator_const_Lp` → `integral_indicator + setIntegral_const`
 - ✅ **ALL SigmaFinite instance issues**: Both cases now resolved
-  1. IsProbabilityMeasure case (line 1030): Used `sigmaFinite_trim_of_le`
-  2. Tail σ-algebra case (line 944): Added `[IsFiniteMeasure μ]` assumption to signature
+  1. IsProbabilityMeasure case: Used `sigmaFinite_trim_of_le`
+  2. Tail σ-algebra case: Added `[IsFiniteMeasure μ]` assumption to signature
 - ✅ Induction hypothesis type issue in antitone proof
 - ✅ **ALL 3 main sorries in `condIndep_of_indicator_condexp_eq`**:
   1. Integrability of product of indicators (f1 * f2)
@@ -63,17 +63,13 @@ and all other files). They are kept here for potential future mathlib contributi
 - ✅ **Both axioms converted to proven lemmas**:
   1. `condExp_indicator_mul_indicator_of_condIndep` - One-line proof using `condIndep_iff`
   2. `condExp_indicator_mul_indicator_of_condIndep_pullout` - Proof using idempotence property
-- ✅ **Variance decomposition formula** (line 820): Used `condVar_ae_eq_condExp_sq_sub_sq_condExp`
-- ✅ **Integral indicator formula** (line 599): Used `integral_indicator_const` for clean 2-line proof
-- ✅ **Restricted measure sorries** (lines 587-593): Used `setIntegral_condExp` with proper measurability
-- ✅ **`bounded_martingale_l2_eq` completely rewritten**: Eliminated L² norm complexity
-  - Replaced 134-line proof with 105-line cleaner proof
-  - Avoids L² norm identity entirely using measure-theoretic approach
-  - Direct route: `∫ (X₂ - X₁)² = 0` → lintegral → `X₂ - X₁ = 0` a.e.
-  - Uses `lintegral_eq_zero_iff` and `ENNReal.ofReal` conversions
+- ✅ **Integral indicator formula**: Used `integral_indicator_const` for clean 2-line proof
+- ✅ **One restricted measure sorry**: Line 563 uses `setIntegral_condExp` successfully
 
-**Remaining sorries** (3 total, only in convergence theorem helper lemmas):
-- Lines 1000, 1082: Main convergence theorem sorries (mathematical content complete, technical proofs deferred)
+**Remaining sorries** (4 total):
+- Line 566: Restricted measure conditional expectation (S measurable in mF⊔mG but not in mG)
+- Line 765: `bounded_martingale_l2_eq` (requires variance decomposition and Lp norm API)
+- Lines 868, 950: Convergence theorem sorries (mathematical content complete, technical proofs deferred)
 
 ## Future Work
 
@@ -368,42 +364,9 @@ lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         · simp [Set.indicator, h1, h2]
       · simp [Set.indicator, h1]
 
-    -- TODO: Complete reverse direction using tower property
-    --
-    -- Goal: Show μ⟦t1 ∩ t2 | mG⟧ =ᵐ[μ] μ⟦t1 | mG⟧ * μ⟦t2 | mG⟧
-    -- Given: hProjt2: μ[t2.indicator | mF ⊔ mG] =ᵐ[μ] μ[t2.indicator | mG]
-    --        indicator_prod: (t1 ∩ t2).indicator = t1.indicator * t2.indicator ✓
-    --
-    -- Key mathlib lemmas:
-    -- 1. condExp_condExp_of_le {m₁ m₂ m₀ : MeasurableSpace α} (hm₁₂ : m₁ ≤ m₂) (hm₂ : m₂ ≤ m₀) :
-    --      μ[μ[f|m₂]|m₁] =ᵐ[μ] μ[f|m₁]
-    --    (ConditionalExpectation.Basic:324) - Tower property
-    --
-    -- 2. condExp_stronglyMeasurable_mul_of_bound (hm : m ≤ m0) {f g : α → ℝ}
-    --      (hf : StronglyMeasurable[m] f) (hg : Integrable g μ) :
-    --      μ[f * g | m] =ᵐ[μ] f * μ[g | m]
-    --    (ConditionalExpectation.Real:243) - Pull-out property
-    --
-    -- Strategy:
-    -- 1. Apply tower property from mG to mF ⊔ mG:
-    --      μ[(t1 ∩ t2).indicator | mG] = μ[μ[(t1 ∩ t2).indicator | mF ⊔ mG] | mG]
-    --
-    -- 2. Use indicator_prod and apply condExp to product:
-    --      μ[t1.indicator * t2.indicator | mF ⊔ mG]
-    --
-    -- 3. Since t1.indicator is mF-measurable (hence mF ⊔ mG-measurable), pull it out:
-    --      = t1.indicator * μ[t2.indicator | mF ⊔ mG]
-    --
-    -- 4. Apply hProjt2 to substitute:
-    --      =ᵐ[μ] t1.indicator * μ[t2.indicator | mG]
-    --
-    -- 5. Apply tower property again from outer mG conditioning:
-    --      μ[t1.indicator * μ[t2.indicator | mG] | mG]
-    --
-    -- 6. Pull out μ[t2.indicator | mG] (which is mG-measurable):
-    --      = μ[t1.indicator | mG] * μ[t2.indicator | mG]
-    --
-    -- This completes the product formula for conditional independence.
+    -- Step 3: Apply tower property and pull-out properties to derive the product formula
+    -- Strategy: Use tower property to go from mG to mF ⊔ mG, pull out t1.indicator,
+    -- apply hProjt2, then apply tower property again and pull out to get the product
     set f1 : Ω → ℝ := t1.indicator fun _ : Ω => (1 : ℝ)
     set f2 : Ω → ℝ := t2.indicator fun _ : Ω => (1 : ℝ)
     have hf1_int : Integrable f1 μ :=
@@ -586,24 +549,21 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
         (inferInstance : IsFiniteMeasure ((μ.restrict S).trim hmG)).toSigmaFinite
       -- The union is measurable in m₀
       have h_meas_union : MeasurableSet[m₀] (⋃ i, f i) := MeasurableSet.iUnion hf_meas
-      -- Apply setIntegral_condExp: ∫ ω in S, μ[f|m] ω ∂μ = ∫ ω in S, f ω ∂μ
-      -- Since ∫ ω in S, · ∂μ = ∫ ω, · ∂(μ.restrict S) by definition, we can use this directly.
+      -- Use the defining property: ∫ ω in S, μ[f|m] ω ∂μ = ∫ ω in S, f ω ∂μ
       have hL₂ :
           ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mF ⊔ mG] ω ∂(μ.restrict S)
             = ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S) := by
-        -- Use setIntegral_condExp on the original measure μ with set S
-        rw [← hL₁]  -- Convert back to setIntegral form
+        rw [← hL₁]
         apply setIntegral_condExp hmFG
         · exact (integrable_const (1 : ℝ)).indicator h_meas_union
         · exact hS
       have hR₂ :
           ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂(μ.restrict S)
             = ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S) := by
-        -- Use setIntegral_condExp on the original measure μ with set S
-        rw [← hR₁]  -- Convert back to setIntegral form
-        apply setIntegral_condExp hmG
-        · exact (integrable_const (1 : ℝ)).indicator h_meas_union
-        · exact hS
+        -- Problem: setIntegral_condExp hmG requires S to be measurable in mG,
+        -- but we only have S measurable in mF ⊔ mG
+        rw [← hR₁]
+        sorry  -- TODO: Need generalized setIntegral property for conditional expectation
       -- Evaluate both sides as the (restricted) measure of the union.
       have h_eval :
           ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S)
@@ -795,110 +755,14 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     (hmg : μ[X₂ | m₁] =ᵐ[μ] X₁)
     (hSecond : ∫ ω, (X₂ ω)^2 ∂μ = ∫ ω, (X₁ ω)^2 ∂μ) :
     X₁ =ᵐ[μ] X₂ := by
-  classical
-  -- 1) L² facts and the "conditional variance = condExp of square minus square of condExp" identity
-  have h_cond_mem : MemLp (μ[X₂ | m₁]) 2 μ := hL2.condExp (m := m₁)
-  have hX₁_mem : MemLp X₁ 2 μ := h_cond_mem.ae_eq hmg
-  have h_diff_L2 : MemLp (X₂ - X₁) 2 μ := hL2.sub hX₁_mem
-  have h_diff_sq_int :
-      Integrable (fun ω => (X₂ ω - μ[X₂ | m₁] ω) ^ 2) μ :=
-    (hL2.sub h_cond_mem).integrable_sq
-
-  -- Identify ∫ μ[(X₂ - E[X₂|m₁])² | m₁] = ∫ X₂² − ∫ (E[X₂|m₁])²
-  have h_integral_var :
-      ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ
-        = ∫ ω, (X₂ ω)^2 ∂μ - ∫ ω, (X₁ ω)^2 ∂μ := by
-    -- conditional variance formula a.e.
-    have h_var_formula :
-        μ[(X₂ - μ[X₂ | m₁])^2 | m₁]
-          =ᵐ[μ] μ[X₂ ^ 2 | m₁] - (μ[X₂ | m₁]) ^ 2 :=
-      condVar_ae_eq_condExp_sq_sub_sq_condExp hm₁ hL2
-    -- integrate both sides
-    have h_congr :
-        ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ
-          = ∫ ω, (μ[X₂ ^ 2 | m₁] ω - μ[X₂ | m₁] ω ^ 2) ∂μ :=
-      integral_congr_ae h_var_formula
-    have h_mu_sq_int : Integrable (μ[X₂ ^ 2 | m₁]) μ := integrable_condExp
-    have h_cond_sq_int : Integrable (fun ω => (μ[X₂ | m₁] ω) ^ 2) μ :=
-      h_cond_mem.integrable_sq
-    have h_sub := integral_sub h_mu_sq_int h_cond_sq_int
-    have h_condExp_sq :
-        ∫ ω, μ[X₂ ^ 2 | m₁] ω ∂μ = ∫ ω, (X₂ ω) ^ 2 ∂μ :=
-      integral_condExp hm₁
-    have h_sq_replace :
-        ∫ ω, (μ[X₂ | m₁] ω) ^ 2 ∂μ = ∫ ω, (X₁ ω) ^ 2 ∂μ :=
-      integral_congr_ae (hmg.mono (by intro ω hω; simpa [hω]))
-    simpa [h_congr, h_sub, h_condExp_sq, h_sq_replace]
-
-  -- 2) Replace the conditional variance integral by the squared deviation integral
-  --    to obtain: ∫ (X₂ - X₁)² = 0.
-  have h_integral_diff :
-      ∫ ω, (X₂ ω - X₁ ω) ^ 2 ∂μ
-        = ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ := by
-    have h_int : ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ
-                  = ∫ ω, (X₂ ω - μ[X₂ | m₁] ω) ^ 2 ∂μ :=
-      (integral_condExp hm₁).symm
-    have h_sq_eq :
-        (fun ω => (X₂ ω - μ[X₂ | m₁] ω) ^ 2)
-          =ᵐ[μ] fun ω => (X₂ ω - X₁ ω) ^ 2 :=
-      hmg.mono (by intro ω hω; simpa [hω])
-    have h_sq_int : Integrable (fun ω => (X₂ ω - X₁ ω) ^ 2) μ :=
-      h_diff_L2.integrable_sq
-    calc
-      ∫ ω, (X₂ ω - X₁ ω) ^ 2 ∂μ
-          = ∫ ω, (X₂ ω - μ[X₂ | m₁] ω) ^ 2 ∂μ := integral_congr_ae h_sq_eq.symm
-      _ = ∫ ω, μ[(X₂ - μ[X₂ | m₁])^2 | m₁] ω ∂μ := h_int
-
-  have h_diff_integral_zero :
-      ∫ ω, (X₂ ω - X₁ ω) ^ 2 ∂μ = 0 := by
-    -- using hSecond
-    simpa [hSecond, h_integral_var] using h_integral_diff
-
-  -- 3) Avoid any L²-norm identity: go directly from
-  --       ∫ (X₂ - X₁)² = 0
-  --    to
-  --       X₂ - X₁ = 0 a.e.
-  set g : Ω → ℝ := fun ω => (X₂ ω - X₁ ω) ^ 2
-  have hg_int : Integrable g μ := h_diff_L2.integrable_sq
-  have hg_nonneg : 0 ≤ᵐ[μ] g :=
-    Filter.eventually_of_forall (by intro ω; exact sq_nonneg _)
-
-  -- Turn the real integral 0 into a lintegral 0, then to a.e. zero via `lintegral_eq_zero_iff`.
-  have h_toReal0 :
-      (∫⁻ ω, ENNReal.ofReal (g ω) ∂μ).toReal = 0 := by
-    -- `integral_eq_lintegral_of_nonneg_ae` : ∫ g = (∫⁻ ofReal g).toReal
-    have := (integral_eq_lintegral_of_nonneg_ae hg_nonneg hg_int.aestronglyMeasurable).symm
-    simpa [g, h_diff_integral_zero] using this
-  have h_lt_top :
-      ∫⁻ ω, ENNReal.ofReal (g ω) ∂μ < ∞ :=
-    lintegral_ofReal_lt_top_of_integrable hg_nonneg hg_int
-  have h_lint_zero :
-      ∫⁻ ω, ENNReal.ofReal (g ω) ∂μ = 0 := by
-    -- If y < ∞ and y.toReal = 0 then y = 0 (via `ENNReal.toReal_eq_iff`).
-    have := (ENNReal.toReal_eq_iff (ne_of_lt h_lt_top)).1 h_toReal0
-    simpa using this
-
-  have h_g_zero_ofReal :
-      (fun ω => ENNReal.ofReal (g ω)) =ᵐ[μ] 0 :=
-    lintegral_eq_zero_iff.mp h_lint_zero
-
-  -- Drop `ofReal` using nonnegativity to conclude `g = 0` a.e.
-  have h_g_zero : g =ᵐ[μ] 0 := by
-    refine (h_g_zero_ofReal.and hg_nonneg).mono ?_
-    intro ω h
-    rcases h with ⟨h0, hge⟩
-    have hle : g ω ≤ 0 := (ENNReal.ofReal_eq_zero).1 h0
-    have : g ω = 0 := le_antisymm hle hge
-    simpa [g] using this
-
-  -- From (X₂ - X₁)² = 0 a.e. to X₂ - X₁ = 0 a.e., hence X₁ = X₂ a.e.
-  have h_diff_zero : (fun ω => X₂ ω - X₁ ω) =ᵐ[μ] 0 := by
-    refine h_g_zero.mono ?_
-    intro ω hsq
-    have : (X₂ ω - X₁ ω) * (X₂ ω - X₁ ω) = 0 := by simpa [pow_two, g] using hsq
-    exact mul_self_eq_zero.mp this
-  have : X₂ =ᵐ[μ] X₁ := h_diff_zero.mono (by intro ω h; exact sub_eq_zero.mp h)
-  exact this.symm
+  -- Strategy: Use L² orthogonal projection properties
+  -- condExp is the orthogonal projection onto the L² closure of m₁-measurable functions
+  -- So ‖X₂‖² = ‖μ[X₂|m₁]‖² + ‖X₂ - μ[X₂|m₁]‖² (Pythagoras)
+  -- Combined with the second moment equality, this forces X₂ - X₁ =ᵐ 0
+  --
+  -- This requires conditional variance decomposition and Lp norm calculations
+  -- which are complex in the current mathlib API
+  sorry  -- TODO: Requires variance decomposition formula and Lp norm identities
 
 /-! ### Reverse Martingale Convergence (NOT USED) -/
 
