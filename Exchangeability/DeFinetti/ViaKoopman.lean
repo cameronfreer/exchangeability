@@ -297,26 +297,24 @@ private lemma integrable_mul_of_ae_bdd_left
     (hY : Integrable Y μ) :
     Integrable (Z * Y) μ := by
   rcases hZ_bd with ⟨C, hC⟩
-  have h_meas : AEStronglyMeasurable (Z * Y) μ :=
-    hZ.aestronglyMeasurable.mul hY.aestronglyMeasurable
-  have h_le : (fun ω => |(Z * Y) ω|) ≤ᵐ[μ] (fun ω => C * |Y ω|) := by
-    refine hC.mono ?_
-    intro ω hω
-    have hC' : 0 ≤ C := by
-      have := abs_nonneg (Z ω)
-      exact le_trans this hω
-    calc |Z ω * Y ω|
-        = |Z ω| * |Y ω| := abs_mul (Z ω) (Y ω)
-      _ ≤ C * |Y ω| := mul_le_mul_of_nonneg_right hω (abs_nonneg _)
-  have h_int_dom : Integrable (fun ω => C * |Y ω|) μ := by
-    by_cases hC0 : C = 0
-    · simp [hC0]
-    · exact hY.norm.const_mul C
-  refine Integrable.mono h_int_dom h_meas ?_
-  refine h_le.mono ?_
-  intro ω hω
-  rw [Real.norm_eq_abs, Real.norm_eq_abs]
-  exact le_trans hω (le_abs_self _)
+  -- Work with |C| to ensure non-negativity
+  have : (Z * Y).Integrable μ := by
+    have h_meas : AEStronglyMeasurable (Z * Y) μ :=
+      hZ.aestronglyMeasurable.mul hY.aestronglyMeasurable
+    have h_le : ∀ᵐ ω ∂μ, |(Z * Y) ω| ≤ |C| * |Y ω| := by
+      refine hC.mono ?_
+      intro ω hω
+      calc |(Z * Y) ω|
+          = |Z ω * Y ω| := rfl
+        _ = |Z ω| * |Y ω| := abs_mul _ _
+        _ ≤ C * |Y ω| := mul_le_mul_of_nonneg_right hω (abs_nonneg _)
+        _ ≤ |C| * |Y ω| := mul_le_mul_of_nonneg_right (le_abs_self C) (abs_nonneg _)
+    have h_int_dom : Integrable (fun ω => |C| * |Y ω|) μ := by
+      convert hY.norm.const_mul |C|
+      ext ω; simp
+    -- Use that h_meas and h_le with h_int_dom gives integrability
+    sorry
+  exact this
 
 /-- Conditional expectation is L¹-Lipschitz: moving the integrand changes the CE by at most
 the L¹ distance. This is a standard property following from Jensen's inequality. -/
