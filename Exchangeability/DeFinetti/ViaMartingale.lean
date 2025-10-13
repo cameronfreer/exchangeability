@@ -2023,8 +2023,10 @@ lemma block_coord_condIndep
         = (μ ({ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)})).toReal := by
       intro A hA C hC
       -- Integral of indicator over E_cyl equals measure of E_cyl ∩ {X_r ∈ B}
-      sorry -- TODO (30 min): Standard integral-to-measure conversion for indicators
-            -- Should use: integral_indicator, Measure.restrict properties
+      sorry -- TODO (30 min): Standard integral-to-measure conversion
+            -- Strategy: indicator B (X r ω) = indicator (X r ⁻¹' B) ω
+            --           Use integral_indicator, Measure.restrict properties
+            --           Show E_cyl ∩ {X_r ∈ B} = {∀i X_i ∈ A_i, X_r ∈ B, ∀j X_{m+1+j} ∈ C_j}
 
     -- Step 2: Apply contractability
     have contractability_step : ∀ (A : Fin r → Set α) (hA : ∀ i, MeasurableSet (A i))
