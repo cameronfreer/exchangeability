@@ -2820,10 +2820,10 @@ lemma alphaIic_bound
   · -- 0 ≤ max 0 (min 1 ...)
     exact le_max_left 0 _
   · -- max 0 (min 1 ...) ≤ 1
-    -- Since min 1 x ≤ 1 for any x, and max 0 y ≤ y when 0 ≤ y
-    -- We have max 0 (min 1 x) ≤ min 1 x ≤ 1
-    apply le_trans
-    · exact le_max_right 0 _
+    -- Since min 1 x ≤ 1 for any x, and max a b ≤ c when both a ≤ c and b ≤ c
+    -- We have max 0 (min 1 x) ≤ 1 since 0 ≤ 1 and min 1 x ≤ 1
+    apply max_le
+    · linarith
     · exact min_le_left 1 _
 
 /-- Right-continuous CDF from α via countable rational envelope:
