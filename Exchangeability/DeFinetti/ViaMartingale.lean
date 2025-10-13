@@ -1751,7 +1751,11 @@ lemma finite_level_factorization
     -- Factorize the product ∏_{i<r+1} 1_{Xᵢ∈Cᵢ} = (∏_{i<r} 1_{Xᵢ∈Cᵢ}) · 1_{Xᵣ∈Clast}
     have hsplit : indProd X (r+1) C
         = fun ω => indProd X r Cinit ω * Set.indicator Clast (fun _ => (1:ℝ)) (X r ω) := by
-      sorry  -- TODO: Fix product split proof
+      funext ω
+      simp only [indProd, Cinit, Clast]
+      -- Split the product using Fin.prod_univ_castSucc
+      rw [Fin.prod_univ_castSucc]
+      rfl
 
     -- Express the two factors as indicators of sets
     set A := firstRCylinder X r Cinit with hA_def
@@ -1806,7 +1810,21 @@ lemma finite_level_factorization
           =ᵐ[μ]
         (fun ω => (μ[A.indicator (fun _ => (1:ℝ)) | futureFiltration X m] ω)
                   * (B.indicator (fun _ => (1:ℝ)) ω)) := by
-      sorry  -- TODO: Fix type mismatch in condexp_indicator_inter_of_condIndep call
+      -- TODO: This requires a non-standard factorization formula
+      -- Standard CI gives: μ[(A ∩ B).indicator | F] = μ[A.indicator | F] * μ[B.indicator | F]
+      -- But here we need: μ[(A * B).indicator | F] = μ[A.indicator | F] * B.indicator
+      --
+      -- The RHS has B.indicator WITHOUT conditional expectation, which is unusual since
+      -- B ∈ σ(X_r) is NOT measurable w.r.t. futureFiltration X m (r < m means X_r is "past").
+      --
+      -- Possible approaches:
+      -- 1. This formula might be incorrect and needs adjustment throughout the calc chain
+      -- 2. There might be a subtle measurability property that allows B to be pulled out
+      -- 3. A different CI factorization lemma is needed
+      --
+      -- The continuation uses hswap to eventually replace X_r terms, so perhaps the unusual
+      -- formula here is intentionally "wrong" and gets corrected later in the calc chain.
+      sorry
 
     -- Apply IH to the first r factors
     have hIH : μ[indProd X r Cinit | futureFiltration X m] =ᵐ[μ]
@@ -1864,7 +1882,12 @@ lemma finite_level_factorization
         _ =ᵐ[μ] (fun ω => ∏ i : Fin (r+1),
                             μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0)
                               | futureFiltration X m] ω) := by
-          sorry  -- TODO: Fix final product reindexing
+          apply EventuallyEq.of_eq
+          funext ω
+          -- Reverse of hsplit: combine products using Fin.prod_univ_castSucc
+          symm
+          rw [Fin.prod_univ_castSucc]
+          simp only [Cinit, Clast, Fin.last]
 
 /-- **Tail factorization on finite cylinders.**
 
