@@ -2820,10 +2820,11 @@ lemma alphaIic_bound
   · -- 0 ≤ max 0 (min 1 ...)
     exact le_max_left 0 _
   · -- max 0 (min 1 ...) ≤ 1
-    calc max (0 : ℝ) (min 1 ((weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
-              (indIic t) (indIic_measurable t) ⟨1, indIic_bdd t⟩).choose ω))
-        ≤ min 1 _ := max_le (by norm_num) le_rfl
-      _ ≤ 1 := min_le_left 1 _
+    -- Since min 1 x ≤ 1 for any x, and max a b ≤ c when both a ≤ c and b ≤ c
+    -- We have max 0 (min 1 x) ≤ 1 since 0 ≤ 1 and min 1 x ≤ 1
+    apply max_le
+    · linarith
+    · exact min_le_left 1 _
 
 /-- Right-continuous CDF from α via countable rational envelope:
 F(ω,t) := inf_{q∈ℚ, t<q} α_{Iic q}(ω).
@@ -2985,33 +2986,28 @@ lemma cdf_from_alpha_limits
     have h_alpha_limit : ∀ ε > 0, ∃ T : ℝ, ∀ t < T,
         alphaIic X hX_contract hX_meas hX_L2 t ω < ε := by
       intro ε hε_pos
-      -- Strategy: Use the fact that alphaIic is clipped to [0,1] and depends on
-      -- the L¹ limit of Cesàro averages of indIic t.
+      -- Since ε > 0 and alphaIic is bounded in [0,1], we can always find such a T.
+      -- The challenge is that alphaIic is defined as an L¹ limit (via .choose),
+      -- which only gives us a function determined up to a.e. equivalence.
       --
-      -- Key observation: For any fixed realization of the sequence X_i(ω),
-      -- as t → -∞, fewer and fewer X_i(ω) values lie in (-∞, t], so
-      -- the Cesàro averages (1/m) Σ 1_{(-∞,t]}(X_i(ω)) → 0.
+      -- However, we've already clipped alphaIic to [0,1] pointwise, so we have
+      -- pointwise control. The question is: does alphaIic t ω → 0 as t → -∞?
       --
-      -- Since alphaIic is the L¹ limit of these averages (clipped to [0,1]),
-      -- and the averages are bounded by 1, we expect alphaIic t ω → 0.
+      -- Key observation: For any fixed ω, the sequence X_i(ω) is a sequence of reals.
+      -- For indicators 1_{(-∞,t]}(X_i(ω)):
+      -- - When t < min_i X_i(ω), all indicators are 0
+      -- - So for sufficiently small t, the Cesàro averages are 0
       --
-      -- However, the full proof requires:
-      -- 1. Showing that for μ-a.e. ω, as t → -∞, the Cesàro averages → 0
-      -- 2. Interchanging the L¹ limit with the limit as t → -∞
-      -- 3. Using uniform integrability or dominated convergence
+      -- However, we're dealing with limits in L¹, not pointwise convergence.
+      -- The alphaIic is the L¹ limit of Cesàro averages, but that limit is only
+      -- determined a.e., and we've taken a particular representative (via clipping).
       --
-      -- For now, we observe that:
-      -- - alphaIic t ω ∈ [0, 1] by construction (alphaIic_bound)
-      -- - As t → -∞, indIic t (x) → 0 for all x
-      -- - By dominated convergence on the underlying probability space,
-      --   the integrals ∫ indIic t (X_1 ω') dμ(ω') → 0
+      -- The proper proof would show that:
+      -- 1. For each t, alphaIic t is close to the Cesàro average for large m (in L¹)
+      -- 2. As t → -∞, these Cesàro averages → 0 pointwise for each ω
+      -- 3. By a diagonal argument or uniform convergence, alphaIic t ω → 0
       --
-      -- The missing piece is connecting this to the pointwise limit of alphaIic.
-      -- This requires showing that alphaIic t ω is close to the empirical average
-      -- for large enough m, uniformly in t below some threshold.
-      --
-      -- Accept as axiom for now - this is a technical point about
-      -- interchanging limits that would require substantial measure theory:
+      -- This requires substantial infrastructure. Accept as axiom:
       sorry
 
     -- Use h_alpha_limit to show F(ω,·) → 0
