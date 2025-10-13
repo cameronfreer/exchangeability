@@ -2049,13 +2049,41 @@ theorem weighted_sums_converge_L1
       simpa [A] using hCf_unif 0 (m - k) k hk_pos hdisj
     have h2sq :
       ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ ≤ Cf / k := by
-      have hdisj : Disjoint (window (m - k) k) (window (ℓ - k) k) := by
-        apply window_disjoint
-        -- Need: (m - k) + k < (ℓ - k) + 1, i.e., m < ℓ - k + 1, i.e., m + k ≤ ℓ
-        -- We have m ≥ 2k and ℓ ≥ 2k, but we don't have m + k ≤ ℓ in general
-        -- Actually, we need to use that m ≤ ℓ (or handle the symmetric case)
-        sorry  -- TODO: This needs m ≤ ℓ or a different construction
-      simpa [A] using hCf_unif (m - k) (ℓ - k) k hk_pos hdisj
+      by_cases h_order : m + k ≤ ℓ
+      case pos =>
+        -- When m + k ≤ ℓ, windows are disjoint
+        have hdisj : Disjoint (window (m - k) k) (window (ℓ - k) k) := by
+          apply window_disjoint
+          -- Need: (m - k) + k < (ℓ - k) + 1, i.e., m + k ≤ ℓ
+          omega
+        simpa [A] using hCf_unif (m - k) (ℓ - k) k hk_pos hdisj
+      case neg =>
+        -- When m + k > ℓ, windows may overlap
+        -- Use symmetry: the bound is symmetric in m and ℓ
+        have : ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ
+             = ∫ ω, (A (ℓ - k) k ω - A (m - k) k ω)^2 ∂μ := by
+          congr 1; ext ω; ring_nf
+        rw [this]
+        -- Now we need ℓ + k ≤ m for disjointness
+        by_cases h_sym : ℓ + k ≤ m
+        case pos =>
+          have hdisj : Disjoint (window (ℓ - k) k) (window (m - k) k) := by
+            apply window_disjoint
+            omega
+          simpa [A] using hCf_unif (ℓ - k) (m - k) k hk_pos hdisj
+        case neg =>
+          -- Neither m + k ≤ ℓ nor ℓ + k ≤ m: windows overlap
+          -- This means |m - ℓ| < k, so m and ℓ are close
+          -- Use a crude bound: |A (m-k) k - A (ℓ-k) k| ≤ 2M where M bounds f
+          -- Then ∫ (...)² ≤ (2M)² = 4M²
+          -- Since we need ≤ Cf/k, we use: 4M² ≤ Cf/k if k ≤ Cf/(4M²)
+          -- For large k (k ≥ 2N), we may not have this, so use a different bound
+          --
+          -- Better approach: Use that |A (m-k) k - A (ℓ-k) k| is small when |m - ℓ| is small
+          -- by contractability, but WITHOUT requiring disjoint windows
+          -- The L² contractability bound applies even for overlapping windows,
+          -- just with a potentially worse constant
+          sorry  -- TODO: Use general L² bound without disjointness assumption
     have h3sq :
       ∫ ω, (A (ℓ - k) k ω - A 0 k ω)^2 ∂μ ≤ Cf / k := by
       have hdisj : Disjoint (window (ℓ - k) k) (window 0 k) := by
@@ -2336,13 +2364,26 @@ theorem weighted_sums_converge_L1
 
     let M₂ := Nat.ceil (4 * Cf / (ε ^ 2)) + 1
 
-    -- Define M as max of M₁ and M₂
-    let M := max M₁ M₂
+    -- Define M as max of M₁, M₂, and 2*n+1 to ensure m is large
+    -- For A n m vs A 0 m: we use indices {n+1,...,n+m} vs {1,...,m}
+    -- These overlap when n < m, so we can't directly use disjoint windows
+    -- Instead, wait for m large enough that we can use a different approach
+    let M := max (max M₁ M₂) (2 * n + 1)
 
     use M
     intro m hm
-    have hm₁ : M₁ ≤ m := le_trans (le_max_left M₁ M₂) hm
-    have hm₂ : M₂ ≤ m := le_trans (le_max_right M₁ M₂) hm
+    have hm₁ : M₁ ≤ m := by
+      calc M₁ ≤ max M₁ M₂ := le_max_left M₁ M₂
+           _ ≤ M := le_max_left _ _
+           _ ≤ m := hm
+    have hm₂ : M₂ ≤ m := by
+      calc M₂ ≤ max M₁ M₂ := le_max_right M₁ M₂
+           _ ≤ M := le_max_left _ _
+           _ ≤ m := hm
+    have hmn : n < m := by
+      calc n < 2 * n + 1 := by omega
+           _ ≤ M := le_max_right _ _
+           _ ≤ m := hm
 
     -- Apply triangle inequality
     have h_triangle : eLpNorm (fun ω => A n m ω - alpha_0 ω) 1 μ ≤
@@ -2371,11 +2412,21 @@ theorem weighted_sums_converge_L1
       · -- Apply the uniform bound (requires disjoint windows)
         -- Windows {n+1,...,n+m} and {1,...,m} are disjoint iff n ≥ m
         have hdisj : Disjoint (window n m) (window 0 m) := by
-          -- Prove disjointness: window n m = {n+1, ..., n+m}, window 0 m = {1, ..., m}
-          -- These are disjoint when n + 1 > m, i.e., n ≥ m
-          -- For now, we need n ≥ m to hold. This is ensured by choosing m large enough
-          -- in practice. For the formal proof, we use that m ≥ M₂ and can make M₂ depend on n.
-          sorry  -- TODO: Add constraint that M₂ ≥ n or restructure to ensure n < m case is handled
+          -- window n m = {n+1, ..., n+m}, window 0 m = {1, ..., m}
+          -- For disjointness, need n+1 > m (i.e., n ≥ m) OR n+m < 1 (impossible)
+          -- But we have n < m from hmn, so these windows OVERLAP
+          --
+          -- The fundamental issue: we're trying to show A n m → alpha_0 for any n,
+          -- using |A n m - alpha_0| ≤ |A n m - A 0 m| + |A 0 m - alpha_0|
+          -- But A n m and A 0 m use overlapping index sets when n < m
+          --
+          -- Possible solutions:
+          -- 1. Use a bound that works for overlapping windows (without disjointness)
+          -- 2. Compare with A 0 n instead of A 0 m (shorter window that doesn't overlap)
+          -- 3. Wait for m ≥ 2n so we can use a tail-vs-tail comparison
+          --
+          -- For now, this is an architectural limitation similar to h2sq overlap case
+          sorry  -- TODO: Use bound that works without disjointness, or restructure argument
         have h_bound_sq : ∫ ω, ((1/(m:ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
                                  (1/(m:ℝ)) * ∑ i : Fin m, f (X (0 + i.val + 1) ω))^2 ∂μ
                          ≤ Cf / m := hCf_unif n 0 m hm_pos hdisj
