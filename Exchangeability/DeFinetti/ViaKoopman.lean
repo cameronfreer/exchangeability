@@ -334,20 +334,19 @@ private lemma condExp_L1_lipschitz
     {Z W : Ω[α] → ℝ} (hZ : Integrable Z μ) (hW : Integrable W μ) :
     ∫ ω, |μ[Z | shiftInvariantSigma (α := α)] ω - μ[W | shiftInvariantSigma (α := α)] ω| ∂μ
       ≤ ∫ ω, |Z ω - W ω| ∂μ := by
-  sorry
-  /-
-  Proof strategy (requires finding correct mathlib lemmas):
-  1. Use condExp_sub: CE[Z|m] - CE[W|m] = CE[Z-W|m] a.e.
-  2. Use Jensen's inequality for |·|: |CE[f|m]| ≤ CE[|f| | m] a.e.
-  3. Integrate both sides and use tower property: ∫ CE[|f| | m] = ∫ |f|
-
-  The mathlib lemmas needed are:
-  - MeasureTheory.condExp_sub for step 1
-  - MeasureTheory.condExp_abs_le or similar for step 2 (Jensen)
-  - MeasureTheory.integral_condExp for step 3 (tower property)
-
-  TODO: Find exact mathlib lemma names and complete proof (~15 LOC)
-  -/
+  -- Step 1: CE[Z-W|m] = CE[Z|m] - CE[W|m] a.e. (by condExp_sub)
+  have h_sub : μ[(Z - W) | shiftInvariantSigma]
+              =ᵐ[μ] μ[Z | shiftInvariantSigma] - μ[W | shiftInvariantSigma] :=
+    condExp_sub hZ hW shiftInvariantSigma
+  -- Step 2: Rewrite integral using a.e. equality and apply Jensen
+  calc ∫ ω, |μ[Z | shiftInvariantSigma] ω - μ[W | shiftInvariantSigma] ω| ∂μ
+      = ∫ ω, |μ[(Z - W) | shiftInvariantSigma] ω| ∂μ := by
+          refine integral_congr_ae ?_
+          filter_upwards [h_sub] with ω hω
+          simp [hω]
+    _ ≤ ∫ ω, |Z ω - W ω| ∂μ := by
+          -- Apply mathlib's integral_abs_condExp_le
+          exact integral_abs_condExp_le (Z - W)
 
 /-- Pull-out property: if Z is measurable w.r.t. the conditioning σ-algebra and a.e.-bounded,
 then CE[Z·Y | m] = Z·CE[Y | m] a.e. This is the standard "taking out what is known". -/
