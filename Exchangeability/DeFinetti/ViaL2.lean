@@ -3072,12 +3072,20 @@ noncomputable def directing_measure
       mono' := cdf_from_alpha_mono X hX_contract hX_meas hX_L2 ω
       right_continuous' := by
         intro t
-        -- ContinuousWithinAt is defined as Tendsto at nhdsWithin
-        -- We have Tendsto at 𝓝[>] which is nhdsWithin (Set.Ioi t)
-        -- Need to show nhdsWithin (Set.Ici t) but we have nhdsWithin (Set.Ioi t)
-        -- These aren't quite the same (Ici includes t, Ioi doesn't)
-        -- Actually, right-continuity is usually defined with Ioi (>)
-        -- Let me check what StieltjesFunction expects
+        -- ContinuousWithinAt f (Set.Ici t) t means Tendsto f (𝓝[Set.Ici t] t) (𝓝 (f t))
+        -- We have: Tendsto f (𝓝[>] t) (𝓝 (f t)) where 𝓝[>] t = 𝓝[Set.Ioi t] t
+        --
+        -- For monotone functions, right-continuity at Ici is equivalent to at Ioi:
+        -- - Ici t = [t, ∞) includes the point t
+        -- - Ioi t = (t, ∞) excludes the point t
+        -- Since f is monotone and we're taking the right limit, these are equivalent.
+        --
+        -- The conversion requires showing that for monotone f:
+        --   lim_{s→t+, s>t} f(s) = lim_{s→t+, s≥t} f(s)
+        -- which holds because f(t) = lim_{s↓t} f(s) for right-continuous monotone f.
+        --
+        -- This is a standard result in analysis but requires the appropriate mathlib lemma.
+        -- For now, accept as sorry:
         sorry
     }
     F_ω.measure
