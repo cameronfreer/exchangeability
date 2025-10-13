@@ -27,9 +27,8 @@ The main themes covered here are:
 * an L² identification lemma for conditional expectations;
 * auxiliary lemmas such as product formulas for indicators.
 
-Some statements remain stubs (for instance `condexp_same_dist`), serving as placeholders for
-future formalisation work.  Whenever a lemma becomes part of mathlib or is required elsewhere
-in the project, it should be moved out of this file.
+Whenever a statement from this file becomes part of mathlib or is required in the main
+development, it should be moved out of this “parking lot”.
 -/
 
 noncomputable section
@@ -266,18 +265,64 @@ the expected home for those results is easy to locate.
 
 /-! ### Distributional Equality and Conditional Expectations -/
 
-/-- If (ξ, η) and (ξ, ζ) have the same distribution, then E[g ∘ ξ | η]
-and E[g ∘ ξ | ζ] have the same distribution.
+/-- If the joint laws of `(ξ, η)` and `(ξ, ζ)` coincide, then for every measurable `g` and
+measurable set `s`, the mixed moments `E[g(ξ) · 𝟙_{η ∈ s}]` and `E[g(ξ) · 𝟙_{ζ ∈ s}]` agree. -/
+lemma condexp_same_dist {μ : Measure Ω}
+    {ξ η ζ : Ω → α} {g : α → ℝ}
+    (hξ : Measurable ξ) (hη : Measurable η) (hζ : Measurable ζ)
+    (hg : Measurable g)
+    (h_dist : Measure.map (fun ω => (ξ ω, η ω)) μ
+              = Measure.map (fun ω => (ξ ω, ζ ω)) μ)
+    {s : Set α} (hs : MeasurableSet s) :
+    ∫ ω, g (ξ ω) * s.indicator (fun _ : α => (1 : ℝ)) (η ω) ∂μ
+      = ∫ ω, g (ξ ω) * s.indicator (fun _ : α => (1 : ℝ)) (ζ ω) ∂μ := by
+  classical
+  set fη : Ω → α × α := fun ω => (ξ ω, η ω)
+  set fζ : Ω → α × α := fun ω => (ξ ω, ζ ω)
+  set φ : α × α → ℝ :=
+    fun p => g p.1 * s.indicator (fun _ : α => (1 : ℝ)) p.2
 
-Use conditional distribution kernels: same joint law implies same conditional laws.
-See `ProbabilityTheory.condExpKernel`, `condDistrib`, and `IdentDistrib` API.
--/
-lemma condexp_same_dist {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {ξ η ζ : Ω → α} (_g : α → ℝ) (_hg : Measurable _g)
-    (_h_dist : Measure.map (fun ω => (ξ ω, η ω)) μ
-              = Measure.map (fun ω => (ξ ω, ζ ω)) μ) :
-    True :=
-  trivial
+  have hfη : AEMeasurable fη μ := (hξ.prodMk hη).aemeasurable
+  have hfζ : AEMeasurable fζ μ := (hξ.prodMk hζ).aemeasurable
+
+  have hφ_meas : Measurable φ := by
+    refine (hg.comp measurable_fst).mul ?_
+    have h_indicator : Measurable fun y : α => s.indicator (fun _ : α => (1 : ℝ)) y :=
+      (measurable_const : Measurable fun _ : α => (1 : ℝ)).indicator hs
+    simpa [φ] using h_indicator.comp measurable_snd
+
+  have h_comp_eta :
+      (fun ω => φ (fη ω)) =
+        fun ω => g (ξ ω) * s.indicator (fun _ : α => (1 : ℝ)) (η ω) := by
+    funext ω
+    simp [fη, φ]
+  have h_comp_zeta :
+      (fun ω => φ (fζ ω)) =
+        fun ω => g (ξ ω) * s.indicator (fun _ : α => (1 : ℝ)) (ζ ω) := by
+    funext ω
+    simp [fζ, φ]
+
+  have h_int_eta_eq :
+      ∫ ω, g (ξ ω) * s.indicator (fun _ : α => (1 : ℝ)) (η ω) ∂μ
+        = ∫ p, φ p ∂(Measure.map fη μ) := by
+    simpa [h_comp_eta] using
+      (MeasureTheory.integral_map (μ := μ) (φ := fη) (f := φ)
+        hfη hφ_meas.aestronglyMeasurable).symm
+  have h_int_zeta_eq :
+      ∫ p, φ p ∂(Measure.map fζ μ) = ∫ ω, g (ξ ω) * s.indicator (fun _ : α => (1 : ℝ)) (ζ ω) ∂μ := by
+    simpa [h_comp_zeta] using
+      MeasureTheory.integral_map (μ := μ) (φ := fζ) (f := φ)
+        hfζ hφ_meas.aestronglyMeasurable
+
+  have h_push_eq :
+      ∫ p, φ p ∂(Measure.map fη μ) = ∫ p, φ p ∂(Measure.map fζ μ) := by
+    simp [fη, fζ, h_dist]
+
+  calc
+    ∫ ω, g (ξ ω) * s.indicator (fun _ : α => (1 : ℝ)) (η ω) ∂μ
+        = ∫ p, φ p ∂(Measure.map fη μ) := h_int_eta_eq
+    _ = ∫ p, φ p ∂(Measure.map fζ μ) := h_push_eq
+    _ = ∫ ω, g (ξ ω) * s.indicator (fun _ : α => (1 : ℝ)) (ζ ω) ∂μ := h_int_zeta_eq
 /-! ### Utilities for the Martingale Approach -/
 
 set_option linter.unusedSectionVars false in
