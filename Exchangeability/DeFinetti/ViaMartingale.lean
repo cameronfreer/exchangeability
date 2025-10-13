@@ -476,21 +476,12 @@ lemma contractable_dist_eq_on_first_r_tail
 abbrev futureFiltration (X : ℕ → Ω → α) (m : ℕ) : MeasurableSpace Ω :=
   MeasurableSpace.comap (shiftRV X (m + 1)) inferInstance
 
-/-- **Axiom placeholder:** Conditional expectation convergence from contractability.
+/-- **Axiom ELIMINATED:** Conditional expectation convergence from contractability.
 
-**STATUS: This axiom has been ELIMINATED. See `condexp_convergence_proof` at line 1530 for the full proof.**
+This axiom has been eliminated! See `condexp_convergence` at line ~1530 for the full proof
+using the CE bridge lemma from CondExp.lean.
 
-This forward declaration exists only because some lemmas before line 1530 reference it.
-The axiom is proven from contractability using the CE bridge lemma from CondExp.lean. -/
-axiom condexp_convergence
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {X : ℕ → Ω → α} (hX : Contractable μ X)
-    (hX_meas : ∀ n, Measurable (X n))
-    (k m : ℕ) (hk : k ≤ m)
-    (B : Set α) (hB : MeasurableSet B) :
-    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X m) | futureFiltration X m]
-      =ᵐ[μ]
-    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | futureFiltration X m]
+The forward declaration is no longer needed as nothing references it before the proof. -/
 
 lemma extreme_members_equal_on_tail
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -1535,7 +1526,7 @@ P[X_m ∈ B | θ_{m+1} X] = P[X_k ∈ B | θ_{m+1} X]
 **Proof:** Uses the CE bridge lemma from CondExp.lean with the measure equality from
 contractability. The key insight is that deleting coordinates doesn't change the joint distribution
 with the future, which implies conditional expectation equality by the bridge lemma. -/
-lemma condexp_convergence_proof
+lemma condexp_convergence
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {X : ℕ → Ω → α} (hX : Contractable μ X)
     (hX_meas : ∀ n, Measurable (X n))
@@ -1630,7 +1621,7 @@ Taking U = (X₀,...,X_{r-1}), η = θ_{m+1} X, ζ = (X_r, θ_{m+1} X) gives the
 
 **This replaces the old broken `coordinate_future_condIndep` which incorrectly claimed
 Y ⊥⊥_{σ(Y)} Y.** -/
-axiom block_coord_condIndep
+lemma block_coord_condIndep
     {Ω α : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω] [MeasurableSpace α]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α)
@@ -1642,7 +1633,51 @@ axiom block_coord_condIndep
     (firstRSigma X r)                             -- past block: σ(X₀,...,X_{r-1})
     (MeasurableSpace.comap (X r) inferInstance)   -- single coord: σ(X_r)
     (futureFiltration_le X m hX_meas)             -- witness: σ(θ_{m+1} X) ≤ ambient
-    μ
+    μ := by
+  -- Strategy: Use condIndep_of_indicator_condexp_eq to show projection property
+  -- For any H ∈ σ(X_r), we need to show:
+  --   μ[H.indicator | firstRSigma X r ⊔ futureFiltration X m] =ᵐ μ[H.indicator | futureFiltration X m]
+  -- This follows from contractability: when r < m, coordinate X_r is conditionally
+  -- independent of (X₀,...,X_{r-1}) given the future θ_{m+1} X.
+
+  apply Exchangeability.Probability.condIndep_of_indicator_condexp_eq
+  · -- hmF: firstRSigma X r ≤ ambient
+    exact firstRSigma_le_ambient X r hX_meas
+  · -- hmH: σ(X_r) ≤ ambient (hmG already provided in goal)
+    intro s hs
+    obtain ⟨t, ht, rfl⟩ := hs
+    exact (hX_meas r) ht
+  -- Show projection property: for all H ∈ σ(X_r),
+  -- μ[H.indicator | firstRSigma X r ⊔ futureFiltration X m] =ᵐ μ[H.indicator | futureFiltration X m]
+  intro H hH
+  -- H is measurable in σ(X_r), so H = (X r)⁻¹(B) for some measurable B
+  obtain ⟨B, hB, rfl⟩ := hH
+  -- The indicator function is (indicator B ∘ X r)
+
+  -- TODO: Prove projection property from contractability
+  -- **Mathematical strategy:**
+  -- From contractability with r < m, we have distributional symmetry:
+  --   (X₀, X₁, ..., X_{r-1}, X_r, X_{m+1}, X_{m+2}, ...)
+  --   has same distribution as
+  --   (X₀, X₁, ..., X_{r-1}, X_{r+1}, X_{m+1}, X_{m+2}, ...)
+  -- when we "skip" coordinate r (which is < m).
+  --
+  -- This implies that given (X₀,...,X_{r-1}) and the future θ_{m+1} X,
+  -- the conditional distribution of X_r doesn't depend on (X₀,...,X_{r-1}).
+  --
+  -- **Proof approach:**
+  -- 1. Use contractability to show distributional equality:
+  --    Measure.map (fun ω => (firstRMap X r ω, X r ω, shiftRV X (m+1) ω)) μ
+  --      "equals in distribution"
+  --    Measure.map (fun ω => (firstRMap X r ω, shiftRV X (m+1) ω)) μ  [with X_r "recovered"]
+  --
+  -- 2. Apply a CE bridge lemma (generalization of condexp_indicator_eq_of_pair_law_eq)
+  --    to conclude that the conditional expectations match.
+  --
+  -- **Implementation note:** This requires proving a helper lemma about how contractability
+  -- implies the specific distributional equality needed here. This is non-trivial and may
+  -- require extending the current infrastructure in CondExp.lean.
+  sorry
 
 /-- **Product formula for conditional expectations under conditional independence.**
 
@@ -1716,7 +1751,11 @@ lemma finite_level_factorization
     -- Factorize the product ∏_{i<r+1} 1_{Xᵢ∈Cᵢ} = (∏_{i<r} 1_{Xᵢ∈Cᵢ}) · 1_{Xᵣ∈Clast}
     have hsplit : indProd X (r+1) C
         = fun ω => indProd X r Cinit ω * Set.indicator Clast (fun _ => (1:ℝ)) (X r ω) := by
-      sorry  -- TODO: Fix product split proof
+      funext ω
+      simp only [indProd, Cinit, Clast]
+      -- Split the product using Fin.prod_univ_castSucc
+      rw [Fin.prod_univ_castSucc]
+      rfl
 
     -- Express the two factors as indicators of sets
     set A := firstRCylinder X r Cinit with hA_def
@@ -1771,7 +1810,21 @@ lemma finite_level_factorization
           =ᵐ[μ]
         (fun ω => (μ[A.indicator (fun _ => (1:ℝ)) | futureFiltration X m] ω)
                   * (B.indicator (fun _ => (1:ℝ)) ω)) := by
-      sorry  -- TODO: Fix type mismatch in condexp_indicator_inter_of_condIndep call
+      -- TODO: This requires a non-standard factorization formula
+      -- Standard CI gives: μ[(A ∩ B).indicator | F] = μ[A.indicator | F] * μ[B.indicator | F]
+      -- But here we need: μ[(A * B).indicator | F] = μ[A.indicator | F] * B.indicator
+      --
+      -- The RHS has B.indicator WITHOUT conditional expectation, which is unusual since
+      -- B ∈ σ(X_r) is NOT measurable w.r.t. futureFiltration X m (r < m means X_r is "past").
+      --
+      -- Possible approaches:
+      -- 1. This formula might be incorrect and needs adjustment throughout the calc chain
+      -- 2. There might be a subtle measurability property that allows B to be pulled out
+      -- 3. A different CI factorization lemma is needed
+      --
+      -- The continuation uses hswap to eventually replace X_r terms, so perhaps the unusual
+      -- formula here is intentionally "wrong" and gets corrected later in the calc chain.
+      sorry
 
     -- Apply IH to the first r factors
     have hIH : μ[indProd X r Cinit | futureFiltration X m] =ᵐ[μ]
@@ -1829,7 +1882,12 @@ lemma finite_level_factorization
         _ =ᵐ[μ] (fun ω => ∏ i : Fin (r+1),
                             μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0)
                               | futureFiltration X m] ω) := by
-          sorry  -- TODO: Fix final product reindexing
+          apply EventuallyEq.of_eq
+          funext ω
+          -- Reverse of hsplit: combine products using Fin.prod_univ_castSucc
+          symm
+          rw [Fin.prod_univ_castSucc]
+          simp only [Cinit, Clast, Fin.last]
 
 /-- **Tail factorization on finite cylinders.**
 

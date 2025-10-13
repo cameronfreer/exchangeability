@@ -292,20 +292,23 @@ lemma ν_eval_measurable
 then |CE[X|m]| ≤ C almost everywhere. This follows from the tower property and
 Jensen's inequality for conditional expectation. -/
 private lemma condExp_abs_le_of_abs_le
-    {Ω : Type*} {_ : MeasurableSpace Ω} {μ : Measure Ω} [IsFiniteMeasure μ]
+    {Ω : Type*} {_ : MeasurableSpace Ω} {μ : Measure Ω} [IsFiniteMeasure μ] [Nonempty Ω]
     {m : MeasurableSpace Ω} (hm : m ≤ ‹_›)
     {X : Ω → ℝ} (hX : Integrable X μ) {C : ℝ} (hC : ∀ ω, |X ω| ≤ C) :
     ∀ᵐ ω ∂μ, |μ[X | m] ω| ≤ C := by
-  sorry
-  /- TODO: Proof sketch:
-  1. By Jensen: |CE[X|m]| ≤ CE[|X||m] a.e.
-  2. Since |X| ≤ C pointwise: CE[|X||m] ≤ CE[C|m] = C a.e.
-  3. Combine to get: |CE[X|m]| ≤ C a.e.
-  Key lemmas needed:
-  - MeasureTheory.ae_le_of_condExp_le or similar
-  - condExp_const
-  Estimated: 8-12 lines
-  -/
+  -- C must be nonnegative since |X ω| ≤ C and |X ω| ≥ 0
+  have hC_nn : 0 ≤ C := le_trans (abs_nonneg _) (hC (Classical.choice ‹Nonempty Ω›))
+  -- Convert pointwise bound to a.e. bound
+  have hC_ae : ∀ᵐ ω ∂μ, |X ω| ≤ C := ae_of_all μ hC
+  -- Convert to NNReal bound for ae_bdd_condExp_of_ae_bdd
+  have hC_ae' : ∀ᵐ ω ∂μ, |X ω| ≤ C.toNNReal := by
+    filter_upwards [hC_ae] with ω hω
+    rwa [Real.coe_toNNReal _ hC_nn]
+  -- Apply mathlib lemma
+  have := ae_bdd_condExp_of_ae_bdd (m := m) hC_ae'
+  -- Convert back from NNReal
+  filter_upwards [this] with ω hω
+  rwa [Real.coe_toNNReal _ hC_nn] at hω
 
 /-- If `Z` is a.e.-bounded and measurable and `Y` is integrable,
     then `Z*Y` is integrable (finite measure suffices). -/
@@ -315,11 +318,14 @@ private lemma integrable_mul_of_ae_bdd_left
     (hZ : Measurable Z) (hZ_bd : ∃ C, ∀ᵐ ω ∂μ, |Z ω| ≤ C)
     (hY : Integrable Y μ) :
     Integrable (Z * Y) μ := by
-  -- TODO: Prove this using dominated convergence / nnnorm inequality
-  -- Sketch: |Z * Y| ≤ C * |Y| a.e., and ∫|Y| < ∞, so ∫|Z * Y| < ∞
-  -- Main technical challenge: showing ‖Z ω‖₊ ≤ Real.nnabs C from |Z ω| ≤ C
-  -- (need lemma connecting Real.nnnorm to Real.nnabs via Real.toNNReal)
-  sorry
+  -- Use mathlib's Integrable.bdd_mul' which handles a.e. bounded functions
+  obtain ⟨C, hC⟩ := hZ_bd
+  -- For reals, |Z ω| = ‖Z ω‖
+  have hZ_norm : ∀ᵐ ω ∂μ, ‖Z ω‖ ≤ C := by
+    filter_upwards [hC] with ω hω
+    rwa [Real.norm_eq_abs]
+  -- Apply Integrable.bdd_mul': if Y integrable and ‖Z‖ ≤ C a.e., then Z*Y integrable
+  exact Integrable.bdd_mul' hY hZ.aestronglyMeasurable hZ_norm
 
 /-- Conditional expectation is L¹-Lipschitz: moving the integrand changes the CE by at most
 the L¹ distance. This is a standard property following from Jensen's inequality. -/
@@ -328,20 +334,19 @@ private lemma condExp_L1_lipschitz
     {Z W : Ω[α] → ℝ} (hZ : Integrable Z μ) (hW : Integrable W μ) :
     ∫ ω, |μ[Z | shiftInvariantSigma (α := α)] ω - μ[W | shiftInvariantSigma (α := α)] ω| ∂μ
       ≤ ∫ ω, |Z ω - W ω| ∂μ := by
-  sorry
-  /-
-  Proof strategy (requires finding correct mathlib lemmas):
-  1. Use condExp_sub: CE[Z|m] - CE[W|m] = CE[Z-W|m] a.e.
-  2. Use Jensen's inequality for |·|: |CE[f|m]| ≤ CE[|f| | m] a.e.
-  3. Integrate both sides and use tower property: ∫ CE[|f| | m] = ∫ |f|
-
-  The mathlib lemmas needed are:
-  - MeasureTheory.condExp_sub for step 1
-  - MeasureTheory.condExp_abs_le or similar for step 2 (Jensen)
-  - MeasureTheory.integral_condExp for step 3 (tower property)
-
-  TODO: Find exact mathlib lemma names and complete proof (~15 LOC)
-  -/
+  -- Step 1: CE[Z-W|m] = CE[Z|m] - CE[W|m] a.e. (by condExp_sub)
+  have h_sub : μ[(Z - W) | shiftInvariantSigma]
+              =ᵐ[μ] μ[Z | shiftInvariantSigma] - μ[W | shiftInvariantSigma] :=
+    condExp_sub hZ hW shiftInvariantSigma
+  -- Step 2: Rewrite integral using a.e. equality and apply Jensen
+  calc ∫ ω, |μ[Z | shiftInvariantSigma] ω - μ[W | shiftInvariantSigma] ω| ∂μ
+      = ∫ ω, |μ[(Z - W) | shiftInvariantSigma] ω| ∂μ := by
+          refine integral_congr_ae ?_
+          filter_upwards [h_sub] with ω hω
+          simp [hω]
+    _ ≤ ∫ ω, |Z ω - W ω| ∂μ := by
+          -- Apply mathlib's integral_abs_condExp_le
+          exact integral_abs_condExp_le (Z - W)
 
 /-- Pull-out property: if Z is measurable w.r.t. the conditioning σ-algebra and a.e.-bounded,
 then CE[Z·Y | m] = Z·CE[Y | m] a.e. This is the standard "taking out what is known". -/
@@ -448,6 +453,53 @@ This is the **KEY BREAKTHROUGH**: We can prove factorization directly from MET w
 needing kernel independence or ergodic decomposition. This eliminates the deepest axioms!
 -/
 
+/-- Integrability from pointwise bounds: if f is measurable and |f| ≤ C everywhere,
+then f is integrable under any finite measure. -/
+private lemma integrable_of_bounded {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
+    [IsFiniteMeasure μ] {f : Ω → ℝ} (hf : Measurable f) (hbd : ∃ C, ∀ ω, |f ω| ≤ C) :
+    Integrable f μ := by
+  obtain ⟨C, hC⟩ := hbd
+  exact ⟨hf.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hC)⟩
+
+/-- **Lag-constancy**: The conditional expectation of f(ω₀)·g(ωₖ) given the shift-invariant
+σ-algebra is constant in k. This is the key property that makes the Kallenberg approach work
+WITHOUT needing exchangeability! -/
+private lemma condexp_pair_lag_constant
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ)
+    (f g : α → ℝ)
+    (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
+    (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C)
+    (k : ℕ) :
+    μ[(fun ω => f (ω 0) * g (ω (k+1))) | shiftInvariantSigma (α := α)]
+      =ᵐ[μ]
+    μ[(fun ω => f (ω 0) * g (ω k)) | shiftInvariantSigma (α := α)] := by
+  -- The function ω ↦ f(ω₀)·g(ω_k) is integrable (bounded × bounded)
+  have h_int : Integrable (fun ω => f (ω 0) * g (ω k)) μ := by
+    obtain ⟨Cf, hCf⟩ := hf_bd
+    obtain ⟨Cg, hCg⟩ := hg_bd
+    refine integrable_of_bounded ?_ ?_
+    · exact (hf_meas.comp (measurable_pi_apply 0)).mul (hg_meas.comp (measurable_pi_apply k))
+    · use Cf * Cg
+      intro ω
+      have hCf_nn : 0 ≤ Cf := le_trans (abs_nonneg _) (hCf (ω 0))
+      calc |f (ω 0) * g (ω k)|
+          = |f (ω 0)| * |g (ω k)| := abs_mul _ _
+        _ ≤ Cf * Cg := mul_le_mul (hCf _) (hCg _) (abs_nonneg _) hCf_nn
+
+  -- Key: show f(ω 0) * g(ω (k+1)) = F(shift ω) where F ω = f(ω 0) * g(ω k)
+  -- Since shift^[1] ω n = ω (1 + n), we have: shift^[1] ω k = ω (k+1) and shift^[1] ω 0 = ω 1
+  -- But we need f(ω 0), not f(ω 1), so can't directly use shift
+
+  sorry  -- TODO: The type mismatch issue remains - need different approach
+  /- The challenge: condexp_precomp_iterate_eq gives CE[F∘shift|I] = CE[F|I]
+  But F∘shift has F(shift ω) = f(shift ω 0) * g(shift ω k) = f(ω 1) * g(ω (k+1))
+  We need f(ω 0) * g(ω (k+1)), so we need F where F(shift ω) gives f(ω 0).
+
+  Possible resolution: Use shift^[k+1] instead of shift to align coordinates properly,
+  or prove a variant of condexp_precomp_iterate_eq that works coordinate-wise.
+  -/
+
 /-- **Pair factorization via Mean Ergodic Theorem**: For bounded measurable f, g and any k ≥ 1,
 the conditional expectation of f(ω₀)·g(ωₖ) given the shift-invariant σ-algebra factors
 into the product of the individual conditional expectations.
@@ -463,7 +515,7 @@ into the product of the individual conditional expectations.
 6. But P(g(ω₀)) = CE[g(ω₀)|ℐ], so we get the factorization!
 -/
 private lemma condexp_pair_factorization_MET
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
     (hσ : MeasurePreserving shift μ μ)
     (f g : α → ℝ)
     (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
@@ -477,18 +529,16 @@ private lemma condexp_pair_factorization_MET
   -- Step 1: Show CE[f(ω₀)·g(ω₁)|ℐ] = CE[f(ω₀)·g(ω₀)|ℐ] by shift invariance
   -- Key insight: shifting doesn't change the conditional expectation onto shift-invariant σ-algebra
   have h_shift_inv : μ[(fun ω => f (ω 0) * g (ω 1)) | m] =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 0)) | m] := by
-    sorry
-    /- TODO: Use lag-constancy lemma `condexp_pair_lag_constant` (defined at line 1761)
-    Resolution:
-    - This follows from condexp_pair_lag_constant with k=0
-    - That lemma shows: CE[f(ω₀)·g(ω_(k+1))|I] = CE[f(ω₀)·g(ω_k)|I]
-    - For k=0: CE[f(ω₀)·g(ω₁)|I] = CE[f(ω₀)·g(ω₀)|I]
-    - However, condexp_pair_lag_constant is defined later in the file (line 1761)
-    - Either: (1) move condexp_pair_lag_constant earlier, or
-              (2) restructure to prove lag-constancy first, or
-              (3) inline the proof here
-    Estimate: 1 line once ordering is resolved: `symm; exact condexp_pair_lag_constant hσ f g hf_meas hf_bd hg_meas hg_bd 0`
-    -/
+    -- Use lag-constancy with k=0: CE[f(ω₀)·g(ω₁)|I] = CE[f(ω₀)·g(ω₀)|I]
+    -- Note: m = shiftInvariantSigma by definition
+    have : m = shiftInvariantSigma (α := α) := rfl
+    rw [this]
+    -- condexp_pair_lag_constant gives: CE[f·g(k+1)|I] = CE[f·g(k)|I]
+    -- For k=0: CE[f·g(1)|I] = CE[f·g(0)|I]
+    have h := condexp_pair_lag_constant hσ f g hf_meas hf_bd hg_meas hg_bd 0
+    -- Need to simplify 0+1 = 1
+    simp only [zero_add] at h
+    exact h
 
   -- Step 2 & 3: (Can skip - not needed for the direct proof)
 
@@ -507,13 +557,18 @@ private lemma condexp_pair_factorization_MET
     have hZ_bd : ∃ C, ∀ᵐ ω ∂μ, |Z ω| ≤ C := by
       obtain ⟨Cg, hCg⟩ := hg_bd
       use Cg
+      -- Show g∘π₀ is integrable (same proof as hY_int)
+      have hg_int : Integrable (fun ω => g (ω 0)) μ := by
+        constructor
+        · exact (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
+        · have h_bd : ∀ (ω : Ω[α]), |g (ω 0)| ≤ Cg := fun ω => hCg (ω 0)
+          exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
+      -- Apply condExp_abs_le_of_abs_le: |CE[g∘π₀|m]| ≤ Cg a.e.
+      have h_bd' : ∀ (ω : Ω[α]), |g (ω 0)| ≤ Cg := fun ω => hCg (ω 0)
+      -- TODO: Type inference issue with condExp_abs_le_of_abs_le
+      -- The lemma is now proved, but Lean has trouble with implicit MeasurableSpace arguments
+      -- when m is defined as `set m := shiftInvariantSigma`
       sorry
-      /- TODO: Show |CE[g(ω₀)|m]| ≤ Cg a.e. using condExp_abs_le_of_abs_le
-      Approach:
-      1. Show g∘π₀ is integrable (needs same HasFiniteIntegral proof as hY_int)
-      2. Apply condExp_abs_le_of_abs_le with shiftInvariantSigma_le and hCg∘π₀
-      Estimated: 3 lines once HasFiniteIntegral is resolved
-      -/
 
     -- Y := f(ω₀) is integrable (bounded + measurable)
     have hY_int : Integrable (fun ω => f (ω 0)) μ := by
@@ -523,13 +578,10 @@ private lemma condexp_pair_factorization_MET
       constructor
       · exact (hf_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
       · -- HasFiniteIntegral: ∫⁻ ω, ‖f (ω 0)‖₊ ∂μ < ∞
-        -- Bound: ‖f (ω 0)‖₊ ≤ Cf for all ω, so ∫⁻ ‖f∘π₀‖₊ ≤ Cf·μ(Ω) = Cf < ∞
-        sorry
-        /- TODO: Show ∫⁻ ω, ‖f (ω 0)‖₊ ∂μ ≤ Cf * μ(Set.univ) < ∞
-        Uses lintegral_mono with constant Cf, then lintegral_const
-        Main blocker: same nnnorm issue as integrable_mul_of_ae_bdd_left
-        Estimated: 5 lines once nnnorm conversion resolved
-        -/
+        -- Bound: |f (ω 0)| ≤ Cf for all ω
+        -- Use HasFiniteIntegral.of_bounded
+        have h_bd : ∀ (ω : Ω[α]), |f (ω 0)| ≤ Cf := fun ω => hCf (ω 0)
+        exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
 
     -- Apply condExp_mul_pullout: CE[Z·Y | m] = Z·CE[Y | m]
     have h := condExp_mul_pullout hZ_meas hZ_bd hY_int
@@ -1741,36 +1793,6 @@ private lemma condexp_product_shift_invariant
   · rw [shift_iterate_apply]; rw [zero_add]
   · rw [shift_iterate_apply]; rw [add_comm]
 
-/-- **Lag-constancy**: The conditional expectation of f(ω₀)·g(ωₖ) given the shift-invariant
-σ-algebra is constant in k. This is the key property that makes the Kallenberg approach work
-WITHOUT needing exchangeability! -/
-private lemma condexp_pair_lag_constant
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
-    (hσ : MeasurePreserving shift μ μ)
-    (f g : α → ℝ)
-    (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
-    (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C)
-    (k : ℕ) :
-    μ[(fun ω => f (ω 0) * g (ω (k+1))) | shiftInvariantSigma (α := α)]
-      =ᵐ[μ]
-    μ[(fun ω => f (ω 0) * g (ω k)) | shiftInvariantSigma (α := α)] := by
-  -- The function ω ↦ f(ω₀)·g(ω_k) is integrable (bounded × bounded)
-  have h_int : Integrable (fun ω => f (ω 0) * g (ω k)) μ := by
-    obtain ⟨Cf, hCf⟩ := hf_bd
-    obtain ⟨Cg, hCg⟩ := hg_bd
-    refine MeasureTheory.integrable_of_bounded ?_ ?_
-    · exact (hf_meas.comp (measurable_pi_apply 0)).mul (hg_meas.comp (measurable_pi_apply k))
-    · use Cf * Cg
-      intro ω
-      have hCf_nn : 0 ≤ Cf := le_trans (abs_nonneg _) (hCf (ω 0))
-      calc |f (ω 0) * g (ω k)|
-          = |f (ω 0)| * |g (ω k)| := abs_mul _ _
-        _ ≤ Cf * Cg := mul_le_mul (hCf _) (hCg _) (abs_nonneg _) hCf_nn
-  -- Apply condexp_precomp_iterate_eq with shift count 1
-  -- TODO: Type mismatch - condexp_precomp_iterate_eq gives f(shift ω 0) = f(ω 1)
-  -- but we need f(ω 0). May need different function construction or application.
-  sorry
-
 /-- Integral under the `k`-th conditional marginal equals the integral under `ν(ω)`.
 
 **Proof strategy**:
@@ -2077,7 +2099,7 @@ private lemma Kernel.IndepFun.integral_mul_simple
   -- Chain them together
   rw [h_left, h_connection, h_toReal, ← h_right]
 
-/-- **Bridge between kernel-level and measure-level independence for integrals.**
+/- **Bridge between kernel-level and measure-level independence for integrals.**
 
 `Kernel.IndepFun X Y κ μ` states that X and Y are independent under the kernel κ with respect to μ.
 This means that for a.e. `a ∂μ`, the functions X and Y are independent under the measure `κ a`.
@@ -2094,13 +2116,6 @@ From measure-level independence, we get integral factorization.
 However, for bounded measurable functions, we can use a more direct approach via the
 integral characterization of independence.
 -/
-
--- Helper: Bounded measurable functions are integrable
-private lemma integrable_of_bounded {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
-    [IsFiniteMeasure μ] {f : Ω → ℝ} (hf : Measurable f) (hbd : ∃ C, ∀ ω, |f ω| ≤ C) :
-    Integrable f μ := by
-  obtain ⟨C, hC⟩ := hbd
-  exact ⟨hf.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hC)⟩
 
 /-- **Kernel integral factorization for bounded measurable functions**.
 
