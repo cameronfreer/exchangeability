@@ -1735,9 +1735,15 @@ lemma finite_level_factorization
         (fun ω => indProd X r Cinit ω * (Set.indicator Clast (fun _ => (1:ℝ)) (X r ω)))
         = (A ∩ B).indicator (fun _ => (1:ℝ)) := by
       ext ω
-      simp only [Function.comp_apply] at hg_indicator
-      rw [congr_fun hf_indicator ω, congr_fun hg_indicator ω]
-      exact congr_fun (indicator_mul_indicator_eq_indicator_inter A B 1 1) ω
+      have hg' : Set.indicator Clast (fun _ => (1:ℝ)) (X r ω) = B.indicator (fun _ => (1:ℝ)) ω := by
+        have := congr_fun hg_indicator ω
+        simp only [Function.comp_apply] at this
+        exact this
+      rw [congr_fun hf_indicator ω, hg']
+      have := congr_fun (indicator_mul_indicator_eq_indicator_inter A B 1 1) ω
+      simp only [Pi.mul_apply] at this
+      convert this using 1
+      ring
 
     -- Measurability of A in firstRSigma X r
     have hA_meas_firstR : MeasurableSet[firstRSigma X r] A := by
@@ -1814,18 +1820,12 @@ lemma finite_level_factorization
                           * μ[Set.indicator Clast (fun _ => (1:ℝ)) ∘ (X 0)
                               | futureFiltration X m] ω) := by
           apply EventuallyEq.mul EventuallyEq.rfl
-          -- Apply hswap to replace X r with X 0, then use pullout property
-          calc (Set.indicator Clast (fun _ => (1:ℝ)) ∘ X r)
-              _ =ᵐ[μ] μ[Set.indicator Clast (fun _ => (1:ℝ)) ∘ X r | futureFiltration X m] := by
-                -- B.indicator is futureFiltration X m-measurable (X r depends on coord r < m)
-                symm
-                apply condExp_of_aestronglyMeasurable'
-                · intro s hs; exact hs
-                · have : Measurable (Set.indicator Clast (fun _ => (1:ℝ)) ∘ X r) := by
-                    exact Measurable.comp (measurable_const.indicator (by exact hClast)) (hX_meas r)
-                  exact this.aestronglyMeasurable
-                · exact (integrable_const (1:ℝ)).indicator ((hX_meas r) hClast)
-              _ =ᵐ[μ] μ[Set.indicator Clast (fun _ => (1:ℝ)) ∘ X 0 | futureFiltration X m] := hswap
+          -- Apply hswap to replace X r with X 0
+          -- TODO: This step needs investigation - the function (Clast.indicator ∘ X r) is NOT
+          -- futureFiltration-measurable since r < m, so we can't use condExp_of_aestronglyMeasurable.
+          -- The correct approach may involve pulling the function out of the conditional expectation
+          -- differently, or restructuring this part of the calc chain.
+          sorry
         _ =ᵐ[μ] (fun ω => ∏ i : Fin (r+1),
                             μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0)
                               | futureFiltration X m] ω) := by
