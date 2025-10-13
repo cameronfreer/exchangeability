@@ -3088,26 +3088,21 @@ lemma directing_measure_measurable
             directing_measure X hX_contract hX_meas hX_L2 ω Set.univ -
             directing_measure X hX_contract hX_meas hX_L2 ω s := by
           intro ω
-          -- Need: directing_measure ω is a measure, so measure_compl applies
-          -- But directing_measure hasn't been properly defined yet (it's a sorry)
-          -- This requires the actual Measure.ofCDF construction
-          sorry
+          -- directing_measure ω is a measure (StieltjesFunction.measure), so measure_compl applies
+          rw [measure_compl hs_meas (measure_ne_top _ s)]
         simp_rw [h_univ_s]
-        -- ω ↦ 1 is measurable (constant)
+        -- ω ↦ ν(ω)(univ) is constant 1 (probability measure), so measurable
         -- ω ↦ ν(ω)(s) is measurable by hs_eval
         -- Their difference is measurable
         have h_univ_const : ∀ ω, directing_measure X hX_contract hX_meas hX_L2 ω Set.univ = 1 := by
           intro ω
           -- This follows from directing_measure_isProbabilityMeasure
-          -- But that's also a sorry waiting on Measure.ofCDF
+          -- But that depends on cdf_from_alpha_limits which is a sorry
           sorry
         simp_rw [h_univ_const]
         -- (fun ω => 1 - ν(ω)(s)) is measurable
-        -- For ENNReal, subtraction is continuous, hence measurable
-        -- 1 is constant (measurable), ν(ω)(s) is measurable by hs_eval
-        -- Therefore their difference is measurable
-        -- But the actual proof requires the directing_measure construction
-        sorry
+        -- Constant 1 minus measurable function
+        exact Measurable.const_sub hs_eval 1
 
     have h_iUnion : ∀ (f : ℕ → Set ℝ),
         (∀ i j, i ≠ j → Disjoint (f i) (f j)) →
@@ -3122,9 +3117,8 @@ lemma directing_measure_measurable
         have h_union_eq : ∀ ω, directing_measure X hX_contract hX_meas hX_L2 ω (⋃ n, f n) =
             ∑' n, directing_measure X hX_contract hX_meas hX_L2 ω (f n) := by
           intro ω
-          -- This requires: directing_measure ω is a measure, so measure_iUnion applies
-          -- But directing_measure hasn't been properly defined yet
-          sorry
+          -- directing_measure ω is a measure (StieltjesFunction.measure), so measure_iUnion applies
+          exact measure_iUnion hdisj (fun n => (hf n).1)
         simp_rw [h_union_eq]
         -- ∑' n, ν(ω)(f n) is measurable as tsum of measurable functions
         exact Measurable.ennreal_tsum (fun n => (hf n).2)
