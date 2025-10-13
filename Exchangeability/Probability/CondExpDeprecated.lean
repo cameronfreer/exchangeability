@@ -557,13 +557,6 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
         apply setIntegral_condExp hmFG
         · exact (integrable_const (1 : ℝ)).indicator h_meas_union
         · exact hS
-      have hR₂ :
-          ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂(μ.restrict S)
-            = ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S) := by
-        -- Problem: setIntegral_condExp hmG requires S to be measurable in mG,
-        -- but we only have S measurable in mF ⊔ mG
-        rw [← hR₁]
-        sorry  -- TODO: Need generalized setIntegral property for conditional expectation
       -- Evaluate both sides as the (restricted) measure of the union.
       have h_eval :
           ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S)
@@ -572,6 +565,14 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
         -- For e = 1, this gives: ∫ s.indicator (fun _ => 1) ∂μ = μ.real s = (μ s).toReal
         rw [integral_indicator_const (1 : ℝ) h_meas_union]
         simp [Measure.real]
+      have hR₂ :
+          ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂(μ.restrict S)
+            = ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S) := by
+        -- The issue: setIntegral_condExp hmG requires S to be measurable in mG,
+        -- but S is only measurable in mF ⊔ mG.
+        -- This requires a generalized version of the conditional expectation integral property
+        -- that works for sets not measurable in the conditioning σ-algebra.
+        sorry  -- TODO: Requires setIntegral property for non-mG-measurable integration domains
       -- Both sides compute to the same number; conclude.
       simp only [C_S]
       rw [hL₁, hR₁, hL₂, hR₂, h_eval]
