@@ -562,18 +562,16 @@ private lemma condexp_pair_factorization_MET
   -- This uses the tower property backwards
   have h_tower : μ[(fun ω => f (ω 0) * g (ω 0)) | m]
       =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] := by
-    -- This is the tower property: CE[f·g|m] = CE[f·CE[g|m]|m]
-    -- Key insight: For any m-measurable set A, both sides have the same integral:
-    --   ∫_A f·g dμ = ∫_A f·CE[g|m] dμ
-    -- This follows from the defining property of CE: ∫_A g dμ = ∫_A CE[g|m] dμ
     sorry
-    /- TODO: This needs ae_eq_condExp_of_forall_setIntegral_eq or similar
-    Approach:
-    1. Show both functions are integrable
-    2. For each m-measurable A, show: ∫_A f·g dμ = ∫_A f·CE[g|m] dμ
-    3. This uses: ∫_A g dμ = ∫_A CE[g|m] dμ (defining property of CE)
-    4. Apply ae_eq_condExp_of_forall_setIntegral_eq
-    Estimated: 15-20 lines
+    /- TODO: Proof via integral equality over m-measurable sets
+    Strategy:
+    1. Show f·g and f·CE[g|m] are both integrable
+    2. For every m-measurable set A, show: ∫_A f·g = ∫_A f·CE[g|m]
+       This follows from ∫_A g = ∫_A CE[g|m] (defining property of CE)
+       by factoring out f (which may need m-measurability of indicator functions)
+    3. Apply MeasureTheory.ae_eq_condExp_of_forall_setIntegral_eq
+    Estimated: 20-25 lines
+    Main challenge: Step 2 requires careful manipulation of integrals
     -/
 
   -- Step 6: Combine all the equalities
