@@ -2753,16 +2753,20 @@ private lemma indIic_measurable (t : ℝ) : Measurable (indIic t) := by
 private lemma indIic_bdd (t : ℝ) : ∀ x, |indIic t x| ≤ 1 := by
   intro x; by_cases hx : x ≤ t <;> simp [indIic, hx, abs_of_nonneg]
 
-/-- Raw "CDF" at level t: the L¹-limit α_{1_{(-∞,t]}} produced by Step 2.
-This is the raw α before right-continuous correction. -/
+/-- Raw "CDF" at level t: the L¹-limit α_{1_{(-∞,t]}} produced by Step 2,
+clipped to [0,1] to ensure pointwise bounds.
+
+The clipping preserves measurability and a.e. equality (hence L¹ properties) since
+the underlying limit is a.e. in [0,1] anyway (being the limit of averages in [0,1]).
+-/
 noncomputable def alphaIic
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (t : ℝ) : Ω → ℝ :=
-  (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
-      (indIic t) (indIic_measurable t) ⟨1, indIic_bdd t⟩).choose
+  fun ω => max 0 (min 1 ((weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
+      (indIic t) (indIic_measurable t) ⟨1, indIic_bdd t⟩).choose ω))
 
 /-- Measurability of the raw α_{Iic t}. -/
 lemma alphaIic_measurable
@@ -2772,12 +2776,34 @@ lemma alphaIic_measurable
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (t : ℝ) :
     Measurable (alphaIic X hX_contract hX_meas hX_L2 t) := by
-  -- Straight from weighted_sums_converge_L1 witness
-  have := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
-            (indIic t) (indIic_measurable t) ⟨1, indIic_bdd t⟩).choose_spec
-  exact this.1
+  -- alphaIic is max 0 (min 1 limit) where limit is measurable
+  unfold alphaIic
+  have h_limit_meas : Measurable (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
+            (indIic t) (indIic_measurable t) ⟨1, indIic_bdd t⟩).choose := by
+    exact (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
+            (indIic t) (indIic_measurable t) ⟨1, indIic_bdd t⟩).choose_spec.1
+  -- max and min preserve measurability
+  exact (measurable_const.min h_limit_meas).max measurable_const
 
-/-- 0 ≤ α_{Iic t} ≤ 1. The α is an L¹-limit of averages of indicators in [0,1]. -/
+/-- 0 ≤ α_{Iic t} ≤ 1. The α is an L¹-limit of averages of indicators in [0,1].
+
+DESIGN NOTE: This lemma requires pointwise bounds on alphaIic, but alphaIic is defined
+as an L¹ limit witness via .choose, which only determines the function up to a.e. equivalence.
+
+The mathematically standard resolution is one of:
+1. Modify alphaIic's definition to explicitly take a representative in [0,1]:
+   `alphaIic t ω := max 0 (min 1 (original_limit t ω))`
+   This preserves measurability and a.e. equality, hence L¹ properties.
+
+2. Strengthen weighted_sums_converge_L1 to provide a witness with pointwise bounds
+   when the input function is bounded (requires modifying the existential).
+
+3. Accept as a property of the construction: Since each Cesàro average
+   (1/m) Σ_{i<m} indIic(X_i ω) ∈ [0,1] pointwise, and these converge in L¹ to alphaIic,
+   we can choose a representative of the equivalence class that is in [0,1] pointwise.
+
+For the proof to proceed, we adopt approach (3) as an axiom of the construction.
+-/
 lemma alphaIic_bound
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
@@ -2786,21 +2812,15 @@ lemma alphaIic_bound
     (t : ℝ) (ω : Ω) :
     0 ≤ alphaIic X hX_contract hX_meas hX_L2 t ω
     ∧ alphaIic X hX_contract hX_meas hX_L2 t ω ≤ 1 := by
-  -- α is the L¹-limit of Cesàro averages of indIic values (which are in [0,1])
-  -- Each average (1/m) Σ indIic(X_i) is in [0,1] since each indIic(X_i) ∈ [0,1]
-  -- The L¹ limit of functions uniformly bounded in [0,1] can be taken to be in [0,1] a.e.
-  -- However, the .choose might not give us this property automatically
-  --
-  -- The rigorous approach: alphaIic is defined as the L¹ limit, which is only
-  -- determined up to a.e. equivalence. To get pointwise bounds, we would need to
-  -- either:
-  -- 1. Show the construction actually produces a function in [0,1] pointwise, or
-  -- 2. Modify the definition to take a representative in [0,1]
-  --
-  -- For the CDF construction to work, we need pointwise bounds. The standard approach
-  -- is to use a version of the function that is modified on a null set.
-  -- For now, we assert this as an axiom of the construction.
-  sorry
+  -- alphaIic is defined as max 0 (min 1 limit), so bounds are immediate
+  unfold alphaIic
+  constructor
+  · -- 0 ≤ max 0 (min 1 ...)
+    exact le_max_left 0 _
+  · -- max 0 (min 1 ...) ≤ 1
+    calc max 0 (min 1 _)
+        ≤ min 1 _ := max_le (by norm_num) le_rfl
+      _ ≤ 1 := min_le_left 1 _
 
 /-- Right-continuous CDF from α via countable rational envelope:
 F(ω,t) := inf_{q∈ℚ, t<q} α_{Iic q}(ω).
