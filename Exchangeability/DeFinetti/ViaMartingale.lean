@@ -1653,13 +1653,62 @@ lemma contractable_finite_cylinder_measure
     (A : Fin r → Set α) (hA : ∀ i, MeasurableSet (A i))
     (B : Set α) (hB : MeasurableSet B)
     (C : Fin k → Set α) (hC : ∀ i, MeasurableSet (C i)) :
-    -- The joint measure can be expressed using contractability
+    -- The joint measure equals the measure for the standard cylinder
     μ ({ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)})
-      = sorry := by
-  -- Strategy: Use contractability to relate this to a standard cylinder measure
-  -- Key: The indices 0,...,r-1, r, m+1,...,m+k form a strictly increasing sequence
-  -- By contractability, this has the same distribution as 0,...,r+k
-  sorry
+      = μ ({ω | (∀ i : Fin r, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j : Fin k, X (r + 1 + j.val) ω ∈ C j)}) := by
+  -- Strategy: The indices (0,...,r-1, r, m+1,...,m+k) form a strictly increasing sequence.
+  -- By contractability, this has the same distribution as (0,...,r-1, r, r+1,...,r+k).
+
+  -- Define the index function: Fin (r + 1 + k) → ℕ
+  -- Maps i to: i if i ≤ r, and m + i - r if i > r
+  let idx : Fin (r + 1 + k) → ℕ := fun i =>
+    if h : i.val < r + 1 then i.val else m + 1 + (i.val - r - 1)
+
+  -- Show idx is strictly monotone
+  have idx_mono : StrictMono idx := by
+    intro i j hij
+    simp only [idx]
+    split_ifs with hi hj hj
+    · -- Both i, j ≤ r: use i < j directly
+      exact hij
+    · -- i ≤ r < j: show i < m + 1 + (j - r - 1)
+      have : j.val ≥ r + 1 := Nat.le_of_not_lt hj
+      calc i.val
+        _ < r + 1 := hi
+        _ ≤ m + 1 := Nat.add_le_add_right (Nat.le_of_lt hrm) 1
+        _ ≤ m + 1 + (j.val - r - 1) := Nat.le_add_right _ _
+    · -- i ≤ r but not j < r + 1: contradiction
+      omega
+    · -- Both i, j > r: use the fact that j.val - r - 1 > i.val - r - 1
+      have hi' : i.val ≥ r + 1 := Nat.le_of_not_lt hi
+      have hj' : j.val ≥ r + 1 := Nat.le_of_not_lt hj
+      calc m + 1 + (i.val - r - 1)
+        _ < m + 1 + (j.val - r - 1) := Nat.add_lt_add_left (Nat.sub_lt_sub_right hi' hij) _
+
+  -- Apply contractability: subsequence via idx has same distribution as 0,...,r+k
+  have contract := hX (r + 1 + k) idx idx_mono
+
+  -- Define the product set corresponding to our cylinder conditions
+  let S_idx : Set (Fin (r + 1 + k) → α) :=
+    {f | (∀ i : Fin r, f ⟨i.val, by omega⟩ ∈ A i) ∧ f ⟨r, by omega⟩ ∈ B ∧
+         (∀ j : Fin k, f ⟨r + 1 + j.val, by omega⟩ ∈ C j)}
+
+  let S_std : Set (Fin (r + 1 + k) → α) :=
+    {f | (∀ i : Fin r, f ⟨i.val, by omega⟩ ∈ A i) ∧ f ⟨r, by omega⟩ ∈ B ∧
+         (∀ j : Fin k, f ⟨r + 1 + j.val, by omega⟩ ∈ C j)}
+
+  -- Note: S_idx = S_std, so they define the same set
+  have h_sets_eq : S_idx = S_std := rfl
+
+  -- The key observation: the index function idx maps the cylinder conditions correctly
+  -- idx(i) = i for i ≤ r, and idx(r+1+j) = m+1+j for j < k
+
+  -- The cylinder set on the LHS under idx mapping equals the RHS
+  -- By contractability (contract), the pushforward measures are equal
+
+  sorry -- TODO: Complete using Measure.map and set correspondence (30-45 min)
+        -- The cylinder conditions under idx correspond exactly to the LHS
+        -- Apply contract to show measures are equal
 
 /-- **Correct conditional independence from contractability (Kallenberg Lemma 1.3).**
 
