@@ -792,10 +792,26 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
   -- condExp is the orthogonal projection onto the L² closure of m₁-measurable functions
   -- So ‖X₂‖² = ‖μ[X₂|m₁]‖² + ‖X₂ - μ[X₂|m₁]‖² (Pythagoras)
   -- Combined with the second moment equality, this forces X₂ - X₁ =ᵐ 0
+
+  -- Proof sketch:
+  -- The key insight is to show ∫ (X₁ - X₂)² = 0, which implies X₁ = X₂ a.e.
   --
-  -- This requires conditional variance decomposition and Lp norm calculations
-  -- which are complex in the current mathlib API
-  sorry  -- TODO: Requires variance decomposition formula and Lp norm identities
+  -- Expand: ∫ (X₁ - X₂)² = ∫ X₁² - 2∫ X₁X₂ + ∫ X₂²
+  --
+  -- We're given: ∫ X₁² = ∫ X₂²  (hSecond)
+  --
+  -- The crucial step is to show: ∫ X₁X₂ = ∫ X₂²
+  -- This holds because X₁ = μ[X₂|m₁] (given by hmg), so:
+  --   ∫ X₁X₂ = ∫ μ[X₂|m₁] · X₂
+  --          = ∫ μ[X₂²|m₁]  (by "taking out what is known" - X₂ factors through condExp)
+  --          = ∫ X₂²         (by integral_condExp)
+  --
+  -- Therefore: ∫ (X₁ - X₂)² = ∫ X₂² - 2∫ X₂² + ∫ X₂² = 0
+  --
+  -- Finally, since (X₁ - X₂)² ≥ 0, we have ∫ (X₁ - X₂)² = 0 implies X₁ - X₂ = 0 a.e.
+  -- by integral_eq_zero_iff_of_nonneg_ae from mathlib.
+
+  sorry  -- TODO: Need to prove: ∫ X₁X₂ = ∫ X₂² using integral_mul_eq_integral_of_ae_eq_condExp
 
 /-! ### Reverse Martingale Convergence (NOT USED) -/
 
