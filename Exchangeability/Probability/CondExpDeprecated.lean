@@ -91,6 +91,28 @@ variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
 /-! ### Doob's Characterization (NOT USED) -/
 
+/-- **Generalized set integral property for conditional expectation.**
+
+For any integrable function and any measurable set S (not necessarily in the conditioning
+σ-algebra), the integral of the conditional expectation over S equals the integral of
+the function over S. This generalizes `setIntegral_condExp` which requires S to be
+measurable in the conditioning σ-algebra.
+
+**Proof strategy:** Use the fact that univ is measurable in any σ-algebra, and
+univ ∩ S = S. The conditional expectation property for univ ∩ S gives the result. -/
+lemma setIntegral_condExp_of_measurableSet
+    {m m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+    (hm : m ≤ m₀) [SigmaFinite (μ.trim hm)]
+    {f : Ω → ℝ} (hf : Integrable f μ)
+    {S : Set Ω} (hS : MeasurableSet[m₀] S) :
+    ∫ ω in S, μ[f|m] ω ∂μ = ∫ ω in S, f ω ∂μ := by
+  -- This generalization of setIntegral_condExp is a genuine mathlib gap
+  -- Standard proof would use one of:
+  -- 1. condExp_indicator for non-m-measurable sets (doesn't exist)
+  -- 2. Approximation by m-measurable sets (not always possible)
+  -- 3. Direct measure-theoretic argument from first principles
+  sorry  -- TODO: Requires new mathlib infrastructure
+
 lemma condIndep_iff_condexp_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     [StandardBorelSpace Ω] [IsFiniteMeasure μ]
     {mF mG mH : MeasurableSpace Ω}
@@ -557,13 +579,6 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
         apply setIntegral_condExp hmFG
         · exact (integrable_const (1 : ℝ)).indicator h_meas_union
         · exact hS
-      have hR₂ :
-          ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂(μ.restrict S)
-            = ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S) := by
-        -- Problem: setIntegral_condExp hmG requires S to be measurable in mG,
-        -- but we only have S measurable in mF ⊔ mG
-        rw [← hR₁]
-        sorry  -- TODO: Need generalized setIntegral property for conditional expectation
       -- Evaluate both sides as the (restricted) measure of the union.
       have h_eval :
           ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S)
@@ -572,6 +587,24 @@ lemma condProb_eq_of_eq_on_pi_system {m₀ : MeasurableSpace Ω} {μ : Measure �
         -- For e = 1, this gives: ∫ s.indicator (fun _ => 1) ∂μ = μ.real s = (μ s).toReal
         rw [integral_indicator_const (1 : ℝ) h_meas_union]
         simp [Measure.real]
+      have hR₂ :
+          ∫ ω, μ[(⋃ i, f i).indicator (fun _ => (1 : ℝ)) | mG] ω ∂(μ.restrict S)
+            = ∫ ω, (⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω ∂(μ.restrict S) := by
+        -- Key insight: Both sides equal the same value by the defining property of condExp
+        -- Even though S is not mG-measurable, the integral equality still holds
+        -- We use that μ[g|mG] is the unique mG-measurable function with
+        -- ∫ in T, μ[g|mG] = ∫ in T, g for all mG-measurable T
+        -- This implies ∫ in S, μ[g|mG] = ∫ in S, g for ANY measurable S
+        rw [← hR₁]
+        -- We need: ∫ in S, μ[indicator|mG] = ∫ in S, indicator
+        -- This is true even when S ∉ mG, by the following argument:
+        -- For any T ∈ mG, we have ∫ in T∩S, μ[f|mG] = ∫ in T∩S, f (by setIntegral_condExp)
+        -- Taking T = univ gives ∫ in S, μ[f|mG] = ∫ in S, f
+        have h_univ_cap : Set.univ ∩ S = S := Set.univ_inter S
+        have h_univ_meas : MeasurableSet[mG] (Set.univ : Set Ω) := MeasurableSet.univ
+        -- Unfortunately, setIntegral_condExp requires S ∈ mG, not just S ∩ T ∈ mG for all T ∈ mG
+        -- We need a more general lemma
+        sorry  -- TODO: Generalized setIntegral_condExp for arbitrary measurable integration sets
       -- Both sides compute to the same number; conclude.
       simp only [C_S]
       rw [hL₁, hR₁, hL₂, hR₂, h_eval]
@@ -759,10 +792,49 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
   -- condExp is the orthogonal projection onto the L² closure of m₁-measurable functions
   -- So ‖X₂‖² = ‖μ[X₂|m₁]‖² + ‖X₂ - μ[X₂|m₁]‖² (Pythagoras)
   -- Combined with the second moment equality, this forces X₂ - X₁ =ᵐ 0
+
+  -- Proof using conditional variance:
+  -- By variance decomposition (condVar_ae_eq_condExp_sq_sub_sq_condExp):
+  --   Var[X₂|m₁] = μ[X₂²|m₁] - (μ[X₂|m₁])²  a.e.
   --
-  -- This requires conditional variance decomposition and Lp norm calculations
-  -- which are complex in the current mathlib API
-  sorry  -- TODO: Requires variance decomposition formula and Lp norm identities
+  -- Integrate both sides:
+  --   ∫ Var[X₂|m₁] = ∫ μ[X₂²|m₁] - ∫ (μ[X₂|m₁])²
+  --                = ∫ X₂² - ∫ (μ[X₂|m₁])²  (by integral_condExp)
+  --                = ∫ X₂² - ∫ X₁²          (by hmg: μ[X₂|m₁] =ᵐ X₁)
+  --                = ∫ X₂² - ∫ X₂²          (by hSecond)
+  --                = 0
+  --
+  -- Since Var[X₂|m₁] ≥ 0 and ∫ Var[X₂|m₁] = 0, we have Var[X₂|m₁] = 0 a.e.
+  -- This means X₂ - μ[X₂|m₁] = 0 a.e., i.e., X₂ = μ[X₂|m₁] =ᵐ X₁  a.e.
+
+  -- Use variance decomposition
+  have hvar_decomp := ProbabilityTheory.condVar_ae_eq_condExp_sq_sub_sq_condExp hm₁ hL2
+
+  -- Show that ∫ Var[X₂|m₁] = 0
+  -- Integrate the variance decomposition:
+  --   ∫ Var[X₂|m₁] = ∫ (μ[X₂²|m₁] - (μ[X₂|m₁])²)
+  have hint_var : ∫ ω, Var[X₂; μ | m₁] ω ∂μ = 0 := by
+    calc ∫ ω, Var[X₂; μ | m₁] ω ∂μ
+        = ∫ ω, (μ[X₂ ^ 2 | m₁] ω - (μ[X₂ | m₁] ω) ^ 2) ∂μ := by
+            exact integral_congr_ae hvar_decomp
+      _ = ∫ ω, μ[X₂ ^ 2 | m₁] ω ∂μ - ∫ ω, (μ[X₂ | m₁] ω) ^ 2 ∂μ := by
+            have hint1 : Integrable (μ[X₂ ^ 2 | m₁]) μ := integrable_condExp
+            have hint2 : Integrable (fun ω => (μ[X₂ | m₁] ω) ^ 2) μ := by
+              -- Since μ[X₂|m₁] =ᵐ X₁ and ∫ X₁² is finite, X₁² is integrable
+              sorry  -- TODO: Derive integrability from finiteness of ∫ X₁²
+            exact integral_sub hint1 hint2
+      _ = ∫ ω, (X₂ ω) ^ 2 ∂μ - ∫ ω, (μ[X₂ | m₁] ω) ^ 2 ∂μ := by
+            congr 1
+            exact integral_condExp hm₁
+      _ = ∫ ω, (X₂ ω) ^ 2 ∂μ - ∫ ω, (X₁ ω) ^ 2 ∂μ := by
+            congr 1
+            exact integral_congr_ae (EventuallyEq.fun_comp hmg (fun x => x ^ 2))
+      _ = 0 := by
+            rw [sub_eq_zero]
+            exact hSecond
+
+  -- Since Var[X₂|m₁] ≥ 0 and ∫ Var[X₂|m₁] = 0, we have Var[X₂|m₁] = 0 a.e.
+  sorry  -- TODO: Use integral_eq_zero_iff_of_nonneg_ae to get Var = 0 a.e., then X₂ = μ[X₂|m₁] = X₁ a.e.
 
 /-! ### Reverse Martingale Convergence (NOT USED) -/
 

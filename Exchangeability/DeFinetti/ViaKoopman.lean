@@ -303,17 +303,17 @@ private lemma integrable_mul_of_ae_bdd_left
     hZ.aestronglyMeasurable.mul hY.aestronglyMeasurable
   have h_finite : HasFiniteIntegral (Z * Y) μ := by
     sorry
-    /- Proof strategy: Use domination
+    /- TODO: Complete the domination proof. Strategy:
     calc ∫⁻ ω, ‖(Z * Y) ω‖₊ ∂μ
-        ≤ ∫⁻ ω, ‖Z ω‖₊ * ‖Y ω‖₊ ∂μ := by apply lintegral_mono; intro ω; simp [nnnorm_mul]
+        ≤ ∫⁻ ω, ‖Z ω‖₊ * ‖Y ω‖₊ ∂μ := by simp [nnnorm_mul]; apply lintegral_mono; intro ω; rfl
       _ ≤ ∫⁻ ω, Real.nnabs C * ‖Y ω‖₊ ∂μ := by
           apply lintegral_mono_ae; refine hC.mono ?_; intro ω hω
-          -- Need:  ‖Z ω‖₊ * ‖Y ω‖₊ ≤ Real.nnabs C * ‖Y ω‖₊ from |Z ω| ≤ C
-          -- This reduces to: ‖Z ω‖₊ ≤ Real.nnabs C, which is |Z ω|.toNNReal ≤ |C|.toNNReal
-          -- Try: apply mul_le_mul_right'; simp only [Real.nnabs, Real.norm_eq_abs]; exact Real.toNNReal_le_toNNReal hω
+          apply mul_le_mul_right'
+          -- Need API: For real x, ‖x‖₊ = |x|.toNNReal
+          -- Then: ‖Z ω‖₊ ≤ Real.nnabs C follows from Real.toNNReal_le_toNNReal hω
           sorry
       _ = Real.nnabs C * ∫⁻ ω, ‖Y ω‖₊ ∂μ := lintegral_const_mul _ _
-      _ < ∞ := ENNReal.mul_lt_top ENNReal.coe_ne_top hY.hasFiniteIntegral.ne
+      _ < ∞ := ENNReal.mul_lt_top ENNReal.coe_ne_top (ne_of_lt hY.2)
     -/
   exact ⟨h_meas, h_finite⟩
 
@@ -348,21 +348,24 @@ private lemma condExp_mul_pullout
     (hZ_bd : ∃ C, ∀ ω, |Z ω| ≤ C)
     (hY : Integrable Y μ) :
     μ[Z * Y | shiftInvariantSigma (α := α)] =ᵐ[μ] Z * μ[Y | shiftInvariantSigma (α := α)] := by
-  set m := shiftInvariantSigma (α := α)
-
-  -- Z is AEStronglyMeasurable w.r.t. m
-  have hZ_aesm : AEStronglyMeasurable[m] Z μ :=
+  -- Z is AEStronglyMeasurable w.r.t. shiftInvariantSigma
+  have hZ_aesm : AEStronglyMeasurable[shiftInvariantSigma (α := α)] Z μ :=
     hZ_meas.aestronglyMeasurable
 
   -- Z*Y is integrable using our helper lemma
   have hZY_int : Integrable (Z * Y) μ := by
-    -- Since Z is measurable w.r.t. m, and m is a sub-σ-algebra, Z is measurable w.r.t. ambient
-    -- We need to convert Measurable[m] Z to Measurable Z
-    sorry -- TODO: Find correct way to lift measurability from sub-σ-algebra to ambient
+    -- Since Z is measurable w.r.t. shiftInvariantSigma, and it's a sub-σ-algebra,
+    -- Z is measurable w.r.t. the ambient σ-algebra
+    have hZ_meas_ambient : Measurable Z := by
+      apply Measurable.mono hZ_meas
+      · exact shiftInvariantSigma_le (α := α)
+      · exact le_rfl
+    exact integrable_mul_of_ae_bdd_left hZ_meas_ambient
+      (hZ_bd.imp fun C hC => ae_of_all μ hC) hY
 
   -- Apply mathlib's pull-out lemma
   exact MeasureTheory.condExp_mul_of_aestronglyMeasurable_left
-    (μ := μ) (m := m) hZ_aesm hZY_int hY
+    (μ := μ) (m := shiftInvariantSigma (α := α)) hZ_aesm hZY_int hY
 
 /-! ## Axioms for de Finetti theorem -/
 
@@ -471,34 +474,32 @@ private lemma condexp_pair_factorization_MET
   -- Step 1: Show CE[f(ω₀)·g(ω₁)|ℐ] = CE[f(ω₀)·g(ω₀)|ℐ] by shift invariance
   -- Key insight: shifting doesn't change the conditional expectation onto shift-invariant σ-algebra
   have h_shift_inv : μ[(fun ω => f (ω 0) * g (ω 1)) | m] =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 0)) | m] := by
-    -- Note: ω 1 = (shift ω) 0, so f(ω₀)·g(ω₁) = f(ω₀)·g((shift ω)₀)
-    -- We want to rewrite this as (some function) ∘ shift and use condexp_precomp_iterate_eq
-
+    -- TODO: This requires EXCHANGEABILITY or stronger properties!
+    --
+    -- Analysis: We have `condexp_product_shift_invariant` which shows:
+    --   CE[f(ωⱼ)·g(ωⱼ₊ₖ)|I] = CE[f(ω₀)·g(ωₖ)|I]
+    -- This tells us that shifting BOTH coordinates together preserves CE.
+    --
+    -- But to prove CE[f(ω₀)·g(ω₁)|I] = CE[f(ω₀)·g(ω₀)|I], we need to show
+    -- that DIFFERENT LAGS (k=0 vs k=1) give the same CE. This is NOT implied
+    -- by shift-invariance alone!
+    --
+    -- Kallenberg's proof (FMP page 26) uses CONTRACTABILITY: μ is exchangeable,
+    -- which gives finite permutation invariance. In particular:
+    --   (ω₀, ω₁) ~ (ω₁, ω₀) under μ (swapping first two coordinates)
+    -- This implies: E[f(ω₀)·g(ω₁) | I] = E[g(ω₀)·f(ω₁) | I]
+    -- And more generally, by Finetti, all marginals are i.i.d. conditional on I.
+    --
+    -- RESOLUTION NEEDED:
+    -- Either:
+    -- 1. Add exchangeability as an assumption to this lemma
+    -- 2. Use the fact that this lemma is ultimately only called in contexts
+    --    where μ IS exchangeable (see exchangeable_implies_ciid_modulo_bridge)
+    -- 3. Prove lag-constancy more directly using ergodic theory
+    --
+    -- For now, leaving as sorry since this is a FUNDAMENTAL gap.
+    -- Estimate: ~20-30 lines once we add the right assumption or property.
     sorry
-    /-
-    CHALLENGE ANALYSIS (Session 2):
-
-    Goal: Show CE[f(ω₀)·g(ω₁)|m] = CE[f(ω₀)·g(ω₀)|m]
-
-    Observation: f(ω₀)·g(ω₁) = f(ω₀)·g((shift ω)₀), but this is NOT F∘shift for any F.
-
-    Attempted approach via measure-preserving shift:
-    - For A ∈ m (shift-invariant), want: ∫_A f(ω₀)·g(ω₁) dμ = ∫_A f(ω₀)·g(ω₀) dμ
-    - Using measure-preserving: ∫_A f(ω₀)·g((shift ω)₀) dμ = ∫_{shift⁻¹' A} f(ω₁)·g(ω₀) dμ
-    - Since shift⁻¹' A = A: = ∫_A f(ω₁)·g(ω₀) dμ
-    - But this gives f(ω₁)·g(ω₀), not f(ω₀)·g(ω₀)!
-
-    Possible resolution:
-    1. Need EXCHANGEABILITY (not just shift-invariance): (ω₀,ω₁) ~ (ω₁,ω₀)
-    2. Or use TAIL σ-algebra property: indices "far away" are asymptotically independent
-    3. Or there's a more clever use of condexp_precomp_iterate_eq we're missing
-
-    This is a KEY conceptual challenge. The proof might require a different setup or
-    additional assumptions beyond just measure-preserving shift.
-
-    TODO: Consult Kallenberg's proof or de Finetti literature for the right approach.
-    Estimate: ~10-20 lines once the right property is identified.
-    -/
 
   -- Step 2 & 3: (Can skip - not needed for the direct proof)
 
@@ -1682,6 +1683,48 @@ lemma coord_k_eq_coord_0_shift_k (k : ℕ) :
   rw [shift_iterate_apply]
   simp
 
+
+/-- **Shift-invariance of products**: The conditional expectation of f(ωⱼ)·g(ωⱼ₊ₖ) equals
+that of f(ω₀)·g(ωₖ). This follows directly from `condexp_precomp_iterate_eq`! -/
+private lemma condexp_product_shift_invariant
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ)
+    (f g : α → ℝ)
+    (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
+    (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C)
+    (j k : ℕ) :
+    μ[(fun ω => f (ω j) * g (ω (j + k))) | shiftInvariantSigma (α := α)]
+      =ᵐ[μ]
+    μ[(fun ω => f (ω 0) * g (ω k)) | shiftInvariantSigma (α := α)] := by
+  -- F(ω) := f(ω₀)·g(ωₖ), then F(shift^j ω) = f(ωⱼ)·g(ωⱼ₊ₖ)
+  set F : Ω[α] → ℝ := fun ω => f (ω 0) * g (ω k)
+  have hF_int : Integrable F μ := by
+    obtain ⟨Cf, hCf⟩ := hf_bd
+    obtain ⟨Cg, hCg⟩ := hg_bd
+    refine MeasureTheory.integrable_of_bounded ?_ ?_
+    · exact (hf_meas.comp (measurable_pi_apply 0)).mul (hg_meas.comp (measurable_pi_apply k))
+    · use Cf * Cg
+      intro ω
+      have hCf_nn : 0 ≤ Cf := le_trans (abs_nonneg _) (hCf (ω 0))
+      calc |F ω|
+          = |f (ω 0) * g (ω k)| := rfl
+        _ = |f (ω 0)| * |g (ω k)| := abs_mul _ _
+        _ ≤ Cf * Cg := mul_le_mul (hCf _) (hCg _) (abs_nonneg _) hCf_nn
+  -- Apply condexp_precomp_iterate_eq with shift count j
+  have h_key := condexp_precomp_iterate_eq (μ := μ) hσ (k := j) hF_int
+  -- h_key : μ[F ∘ shift^[j] | I] = μ[F | I]
+  -- We need: μ[(ω ↦ f(ωⱼ)·g(ωⱼ₊ₖ)) | I] = μ[F | I]
+  -- So we show: (ω ↦ f(ωⱼ)·g(ωⱼ₊ₖ)) = F ∘ shift^[j]
+  suffices h_eq : (fun ω => f (ω j) * g (ω (j + k))) = (fun ω => F (shift^[j] ω)) by
+    rw [h_eq]
+    exact h_key
+  ext ω
+  simp only [F]
+  -- Goal: f (ω j) * g (ω (j + k)) = f ((shift^[j] ω) 0) * g ((shift^[j] ω) k)
+  -- By definition: shift^[j] ω = fun n => ω (j + n)
+  congr 1
+  · rw [shift_iterate_apply]; rw [zero_add]
+  · rw [shift_iterate_apply]; rw [add_comm]
 
 /-- **Lag-constancy**: The conditional expectation of f(ω₀)·g(ωₖ) given the shift-invariant
 σ-algebra is constant in k. This is the key property that makes the Kallenberg approach work
