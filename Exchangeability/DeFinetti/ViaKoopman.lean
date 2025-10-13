@@ -775,72 +775,94 @@ private lemma condexp_pair_factorization_MET
         rw [mul_comm (f (ω 0)), mul_assoc, ← Finset.mul_sum]
         ring_nf
 
-      sorry
-      /-
-      Strategy to complete:
-      1. Apply h_product_expand to rewrite as sum
-      2. Use condExp_smul to pull out (1/(n+1))
-      3. Use condExp_finset_sum for the sum
-      4. Apply h_lag_const_all: each CE[f·g(ω k)|m] = CE[f·g(ω₀)|m]
-      5. Simplify: (1/(n+1))·(n+1)·CE[f·g(ω₀)|m] = CE[f·g(ω₀)|m]
+      -- Step 2a: Apply condExp_finset_sum to the product sum
+      have h_prod_sum : μ[∑ i ∈ Finset.range (n + 1), fun ω => f (ω 0) * g (ω i) | m] =ᵐ[μ]
+          ∑ i ∈ Finset.range (n + 1), μ[fun ω => f (ω 0) * g (ω i) | m] :=
+        condExp_finset_sum hfgk_int m
 
-      Similar structure to step 1, but with products.
-      -/
+      -- Step 2b: Apply lag-constancy - all terms become CE[f·g(ω₀)|m]
+      have h_prod_shift : ∑ i ∈ Finset.range (n + 1), μ[fun ω => f (ω 0) * g (ω i) | m] =ᵐ[μ]
+          ∑ i ∈ Finset.range (n + 1), μ[fun ω => f (ω 0) * g (ω 0) | m] := by
+        apply eventuallyEq_sum
+        intro k _
+        exact h_lag_const_all k
 
-    -- Step 3: A_n → CE[g(ω₀)|m] in L¹ (by MET + boundedness)
+      -- Step 2c: The sum becomes (n+1) copies of CE[f·g(ω₀)|m]
+      have h_prod_const : ∑ i ∈ Finset.range (n + 1), μ[fun ω => f (ω 0) * g (ω 0) | m] =ᵐ[μ]
+          fun ω => (n + 1 : ℝ) * μ[fun ω => f (ω 0) * g (ω 0) | m] ω := by
+        apply ae_of_all
+        intro ω
+        simp [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+
+      -- Step 2d: Rewrite using the expansion and combine all steps
+      have h_first : μ[(fun ω => f (ω 0) * A n ω) | m] =ᵐ[μ]
+          μ[(1 / (n + 1 : ℝ)) • (∑ i ∈ Finset.range (n + 1), fun ω' => f (ω' 0) * g (ω' i)) | m] := by
+        rw [h_product_expand]
+        apply condExp_congr_ae
+        apply ae_of_all
+        intro ω
+        simp only [Pi.smul_apply, smul_eq_mul, Finset.sum_apply]
+
+      calc μ[(fun ω => f (ω 0) * A n ω) | m]
+        =ᵐ[μ] μ[(1 / (n + 1 : ℝ)) • (∑ i ∈ Finset.range (n + 1), fun ω' => f (ω' 0) * g (ω' i)) | m] :=
+          h_first
+      _ =ᵐ[μ] (1 / (n + 1 : ℝ)) • μ[∑ i ∈ Finset.range (n + 1), fun ω => f (ω 0) * g (ω i) | m] :=
+          condExp_smul _ _ m
+      _ =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 0)) | m] := by
+          -- Apply h_prod_sum, h_prod_shift, and h_prod_const
+          have h_chain := h_prod_sum.trans (h_prod_shift.trans h_prod_const)
+          filter_upwards [h_chain] with ω hω
+          simp only [Pi.smul_apply, smul_eq_mul]
+          rw [hω]
+          field_simp
+
+    -- Step 3: A_n → CE[g(ω₀)|m] ae (by MET + Lp→ae convergence)
     have h_met_convergence : ∀ᵐ ω ∂μ,
         Tendsto (fun n => A n ω) atTop (𝓝 (μ[(fun ω => g (ω 0)) | m] ω)) := by
       sorry
       /-
-      Strategy (simpler approach):
-      1. A_n is defined pointwise as Cesàro average
-      2. By MET (birkhoffAverage_tendsto_condexp): Birkhoff averages converge in L²
-      3. Our A_n equals the Birkhoff average  pointwise
-      4. L² convergence implies ae convergence (for a subsequence)
-      5. By monotonicity/boundedness: full sequence converges ae
+      **TODO**: This step requires connecting Lp convergence to pointwise convergence,
+      which involves substantial technical machinery:
+      1. Construct Lp representative of g using Memℒp.toLp
+      2. Apply birkhoffAverage_tendsto_condexp to get L² convergence
+      3. Show pointwise A_n equals coeFn of Birkhoff average using measurableEquiv
+      4. Use L² convergence → ae convergence (subsequence)
+      5. Use boundedness to show full sequence converges ae
 
-      Challenge: Need to construct the Lp representative and connect pointwise A_n
-      to the Birkhoff average in Lp. This requires careful work with toLp and coeFn.
+      The infrastructure exists in mathlib (Lp.coeFn, Memℒp.toLp, tendsto_of_tendsto_of_tendsto),
+      but requires careful API navigation. Postponing for now to complete proof structure.
       -/
 
-    -- Step 4: f·A_n → f·CE[g(ω₀)|m] in L¹ (by boundedness of f)
+    -- Step 4: f·A_n → f·CE[g(ω₀)|m] in L¹ (by dominated convergence)
+    obtain ⟨Cf, hCf⟩ := hf_bd
     have h_product_convergence :
         Tendsto (fun n => ∫ ω, |f (ω 0) * A n ω - f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω| ∂μ)
                 atTop (𝓝 0) := by
-      -- Get the bound on f
-      obtain ⟨Cf, hCf⟩ := hf_bd
-
       sorry
       /-
-      Strategy:
-      1. Factor out f: |f·A_n - f·CE[g|m]| = |f|·|A_n - CE[g|m]|
-      2. Bound: |f| ≤ Cf, so |f·A_n - f·CE[g|m]| ≤ Cf·|A_n - CE[g|m]|
-      3. Integrate: ∫|f·A_n - f·CE[g|m]| ≤ Cf·∫|A_n - CE[g|m]|
-      4. By h_met_convergence: A_n → CE[g|m] ae
-      5. By dominated convergence (|f·(A_n - CE[g|m])| ≤ 2·Cf·Cg): integral → 0
+      **TODO**: This step uses dominated convergence theorem:
+      1. By h_met_convergence: f(ω₀)·A_n(ω) → f(ω₀)·CE[g(ω₀)|m](ω) ae
+      2. Dominating function: |f(ω₀)·(A_n(ω) - CE[g(ω₀)|m](ω))| ≤ 2·Cf·Cg
+      3. Apply MeasureTheory.tendsto_integral_of_dominated_convergence
+      4. Conclude: ∫|f·A_n - f·CE[g|m]| → 0
 
-      Need:
-      - h_met_convergence to give L¹ convergence (not just ae)
-      - Or use dominated convergence theorem directly
+      Requires: integrability lemmas, dominated convergence API. Straightforward but lengthy.
       -/
 
-    -- Step 5: CE[f·A_n|m] → CE[f·CE[g(ω₀)|m]|m] (by L¹-Lipschitz)
+    -- Step 5: CE[f·A_n|m] → CE[f·CE[g(ω₀)|m]|m] ae (by L¹-Lipschitz of CE)
     have h_ce_limit : ∀ᵐ ω ∂μ,
         Tendsto (fun n => μ[(fun ω' => f (ω' 0) * A n ω') | m] ω)
                 atTop (𝓝 (μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | m] ω') | m] ω)) := by
       sorry
       /-
-      Strategy:
-      1. By h_product_convergence: ∫|f·A_n - f·CE[g|m]| → 0
-      2. Apply condExp_L1_lipschitz:
-         ∫|CE[f·A_n|m] - CE[f·CE[g|m]|m]| ≤ ∫|f·A_n - f·CE[g|m]| → 0
-      3. L¹ convergence implies ae convergence (for a subsequence)
-      4. By monotonicity: full sequence converges ae
+      **TODO**: This step uses the L¹-Lipschitz property of conditional expectation:
+      1. By h_product_convergence: ∫|f·A_n - f·CE[g|m]| → 0 (L¹ convergence)
+      2. Apply Lipschitz property: ∫|CE[f·A_n|m] - CE[f·CE[g|m]|m]| ≤ ∫|f·A_n - f·CE[g|m]|
+      3. Therefore: CE[f·A_n|m] → CE[f·CE[g|m]|m] in L¹
+      4. L¹ convergence → ae convergence (subsequence) → use to extract ae convergence
 
-      Need:
-      - Integrability of f·A_n and f·CE[g|m] (from boundedness)
-      - L¹ → ae convergence lemma
-      - Or: use Cauchy sequence in L¹ + completeness
+      Requires: MeasureTheory.Lp.tendsto_of_forall_integral_tendsto or similar.
+      Could also use: completeness of L¹ + Cauchy criterion.
       -/
 
     -- Step 6: Combine - CE[f·A_n|m] is constant but also convergent
@@ -887,20 +909,52 @@ private lemma condexp_pair_factorization_MET
       -- and h_ce_limit says this constant sequence converges to CE[f·CE[g|m]|m]
       -- Therefore the constant equals the limit
 
-      sorry
       /-
-      Proof sketch:
-      1. From h_product_const 0: CE[f·A_0|m] = CE[f·g|m] ae
-      2. From h_ce_limit: CE[f·A_n|m] → CE[f·CE[g|m]|m] ae (as n → ∞)
-      3. From h_product_const: ∀ n, CE[f·A_n|m] = CE[f·g|m] ae
-      4. Combining: CE[f·g|m] → CE[f·CE[g|m]|m] ae (constant sequence)
-      5. Limit of constant = constant: CE[f·g|m] = CE[f·CE[g|m]|m] ae
+      Strategy: Combine ae-equalities from h_product_const and h_ce_limit
+      to show the constant equals the limit.
 
-      Implementation:
-      - Use Filter.EventuallyEq.trans and Tendsto.congr
-      - Key lemma needed: If f_n = c ae for all n and f_n → L ae, then c = L ae
-      - This is essentially: constant ae-sequences have unique limits
+      Key insight: On the intersection of all the ae sets (which is still ae since
+      we take countable intersection), we have:
+      - CE[f·A_n|m] ω = CE[f·g|m] ω for all n
+      - CE[f·A_n|m] ω → CE[f·CE[g|m]|m] ω
+      Therefore: CE[f·g|m] ω = CE[f·CE[g|m]|m] ω
       -/
+
+      -- Combine all the ae sets using countable intersection
+      have h_all_eq := ae_all_iff.2 h_product_const
+      filter_upwards [h_all_eq, h_ce_limit] with ω hω_const hω_lim
+
+      -- At this ω, we have:
+      -- 1. CE[f·A_n|m] ω = CE[f·g|m] ω for all n (from hω_const)
+      -- 2. CE[f·A_n|m] ω → CE[f·CE[g|m]|m] ω (from hω_lim)
+
+      -- Key insight: hω_const says CE[f·A_n|m] ω = CE[f·g|m] ω for all n
+      -- So the sequence (CE[f·A_n|m] ω)_{n∈ℕ} is constantly equal to CE[f·g|m] ω
+      -- But hω_lim says this sequence converges to CE[f·CE[g|m]|m] ω
+      -- Therefore: CE[f·g|m] ω = CE[f·CE[g|m]|m] ω
+
+      -- The sequence is eventually equal to the constant
+      have h_eq_ev : ∀ᶠ n in atTop, μ[(fun ω' => f (ω' 0) * A n ω') | m] ω
+          = μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω := by
+        rw [eventually_atTop]
+        use 0
+        intro n _
+        -- Need to show the functions are equal
+        -- hω_const n : μ[fun ω => f (ω 0) * A n ω|m] ω = μ[fun ω => f (ω 0) * g (ω 0)|m] ω
+        -- But we need: μ[fun ω' => f (ω' 0) * A n ω'|m] ω = μ[fun ω => f (ω 0) * g (ω 0)|m] ω
+        -- These are the same by α-equivalence (just renaming bound variable)
+        convert hω_const n
+
+      -- The constant sequence converges to the limit
+      have h_const_lim : Tendsto (fun (_ : ℕ) => μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω)
+          atTop (𝓝 (μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | m] ω') | m] ω)) := by
+        apply Tendsto.congr' h_eq_ev hω_lim
+
+      -- A constant sequence's limit equals the constant
+      have h_const_eq := tendsto_nhds_unique h_const_lim tendsto_const_nhds
+      -- h_const_eq : μ[fun ω' => f (ω' 0) * μ[fun ω => g (ω 0)|m] ω'|m] ω = μ[fun ω => f (ω 0) * g (ω 0)|m] ω
+      -- We need: μ[fun ω => f (ω 0) * g (ω 0)|m] ω = μ[fun ω' => f (ω' 0) * μ[fun ω => g (ω 0)|m] ω'|m] ω
+      exact h_const_eq.symm
 
     exact h_const_limit
 
