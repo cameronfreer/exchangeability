@@ -309,7 +309,8 @@ private lemma integrable_mul_of_ae_bdd_left
       _ ≤ ∫⁻ ω, Real.nnabs C * ‖Y ω‖₊ ∂μ := by
           apply lintegral_mono_ae; refine hC.mono ?_; intro ω hω
           -- Need:  ‖Z ω‖₊ * ‖Y ω‖₊ ≤ Real.nnabs C * ‖Y ω‖₊ from |Z ω| ≤ C
-          -- Should use: Real.nnnorm (x : ℝ) = |x|.toNNReal and Real.nnabs C = |C|.toNNReal
+          -- This reduces to: ‖Z ω‖₊ ≤ Real.nnabs C, which is |Z ω|.toNNReal ≤ |C|.toNNReal
+          -- Try: apply mul_le_mul_right'; simp only [Real.nnabs, Real.norm_eq_abs]; exact Real.toNNReal_le_toNNReal hω
           sorry
       _ = Real.nnabs C * ∫⁻ ω, ‖Y ω‖₊ ∂μ := lintegral_const_mul _ _
       _ < ∞ := ENNReal.mul_lt_top ENNReal.coe_ne_top hY.hasFiniteIntegral.ne
@@ -1686,6 +1687,37 @@ lemma coord_k_eq_coord_0_shift_k (k : ℕ) :
 
 This avoids any "kernel uniqueness": we work at the level of integrals, which is
 all later lemmas need. This is the **working version** that downstream proofs should use.
+-/
+
+/-- **Lag-constancy**: The conditional expectation of f(ω₀)·g(ωₖ) given the shift-invariant
+σ-algebra is constant in k. This is the key property that makes the Kallenberg approach work
+WITHOUT needing exchangeability! -/
+private lemma condexp_pair_lag_constant
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ)
+    (f g : α → ℝ)
+    (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
+    (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C)
+    (k : ℕ) :
+    μ[(fun ω => f (ω 0) * g (ω (k+1))) | shiftInvariantSigma (α := α)]
+      =ᵐ[μ]
+    μ[(fun ω => f (ω 0) * g (ω k)) | shiftInvariantSigma (α := α)] := by
+  set m := shiftInvariantSigma (α := α)
+  -- The function ω ↦ f(ω₀)·g(ω_k) is integrable (bounded × bounded)
+  have h_int : Integrable (fun ω => f (ω 0) * g (ω k)) μ := by
+    obtain ⟨Cf, hCf⟩ := hf_bd
+    obtain ⟨Cg, hCg⟩ := hg_bd
+    refine MeasureTheory.integrable_of_bounded ?_ ?_
+    · exact (hf_meas.comp (measurable_pi_apply 0)).mul (hg_meas.comp (measurable_pi_apply k))
+    · use Cf * Cg
+      intro ω
+      calc |f (ω 0) * g (ω k)|
+          = |f (ω 0)| * |g (ω k)| := abs_mul _ _
+        _ ≤ Cf * Cg := mul_le_mul (hCf _) (hCg _) (abs_nonneg _) (by linarith)
+  -- Apply condexp_precomp_iterate_eq with shift count 1
+  simpa using condexp_precomp_iterate_eq (μ := μ) hσ (k := 1) h_int
+
+/-- Integral under the `k`-th conditional marginal equals the integral under `ν(ω)`.
 
 **Proof strategy**:
 1. Use `condExp_ae_eq_integral_condExpKernel` to represent conditional expectations as integrals
