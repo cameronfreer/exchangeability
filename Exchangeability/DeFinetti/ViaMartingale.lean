@@ -1767,13 +1767,28 @@ lemma contractable_finite_cylinder_measure
   -- Goal is: μ ((fun ω i => X (idx i) ω) ⁻¹' S_std) = μ ((fun ω i => X i.val ω) ⁻¹' S_std)
   --
   -- Since the measures are equal, they assign equal measure to preimages
-  calc μ ((fun ω i => X (idx i) ω) ⁻¹' S_std)
+
+  -- First prove S_std is measurable
+  have hS_meas : MeasurableSet S_std := by
+    -- S_std is a cylinder set - finite intersection of coordinate preimages
+    sorry -- TODO (20-30 min): Prove cylinder set measurability
+          -- Strategy: Express as intersection of coordinate preimages via iInter
+          -- Use MeasurableSet.iInter and measurable_pi_apply
+          -- Technical issue: set-builder notation type resolution
+
+  -- Prove the functions are measurable
+  have h_meas_idx : Measurable (fun ω (i : Fin (r + 1 + k)) => X (idx i) ω) :=
+    measurable_pi_lambda _ (fun i => hX_meas (idx i))
+  have h_meas_std : Measurable (fun ω (i : Fin (r + 1 + k)) => X (↑i) ω) :=
+    measurable_pi_lambda _ (fun i => hX_meas (↑i))
+
+  calc μ ((fun ω (i : Fin (r + 1 + k)) => X (idx i) ω) ⁻¹' S_std)
       = Measure.map (fun ω i => X (idx i) ω) μ S_std := by
-        sorry -- TODO: Apply Measure.map_apply (requires S_std measurable)
-    _ = Measure.map (fun ω i => X i.val ω) μ S_std := by
+        rw [Measure.map_apply h_meas_idx hS_meas]
+    _ = Measure.map (fun ω (i : Fin (r + 1 + k)) => X (↑i) ω) μ S_std := by
         rw [contract]
-    _ = μ ((fun ω i => X i.val ω) ⁻¹' S_std) := by
-        sorry -- TODO: Apply Measure.map_apply (requires S_std measurable)
+    _ = μ ((fun ω (i : Fin (r + 1 + k)) => X (↑i) ω) ⁻¹' S_std) := by
+        rw [Measure.map_apply h_meas_std hS_meas]
 
 /-- **Correct conditional independence from contractability (Kallenberg Lemma 1.3).**
 
