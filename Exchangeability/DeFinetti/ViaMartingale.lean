@@ -1751,7 +1751,11 @@ lemma finite_level_factorization
     -- Factorize the product ∏_{i<r+1} 1_{Xᵢ∈Cᵢ} = (∏_{i<r} 1_{Xᵢ∈Cᵢ}) · 1_{Xᵣ∈Clast}
     have hsplit : indProd X (r+1) C
         = fun ω => indProd X r Cinit ω * Set.indicator Clast (fun _ => (1:ℝ)) (X r ω) := by
-      sorry  -- TODO: Fix product split proof
+      funext ω
+      simp only [indProd, Cinit, Clast]
+      -- Split the product using Fin.prod_univ_castSucc
+      rw [Fin.prod_univ_castSucc]
+      rfl
 
     -- Express the two factors as indicators of sets
     set A := firstRCylinder X r Cinit with hA_def
@@ -1864,7 +1868,12 @@ lemma finite_level_factorization
         _ =ᵐ[μ] (fun ω => ∏ i : Fin (r+1),
                             μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0)
                               | futureFiltration X m] ω) := by
-          sorry  -- TODO: Fix final product reindexing
+          apply EventuallyEq.of_eq
+          funext ω
+          -- Reverse of hsplit: combine products using Fin.prod_univ_castSucc
+          symm
+          rw [Fin.prod_univ_castSucc]
+          simp only [Cinit, Clast, Fin.last]
 
 /-- **Tail factorization on finite cylinders.**
 
