@@ -525,6 +525,8 @@ axiom condexp_pair_lag_constant
       =ᵐ[μ]
     μ[(fun ω => f (ω 0) * g (ω k)) | shiftInvariantSigma (α := α)]
 
+set_option maxHeartbeats 1000000
+
 /-- **Pair factorization via Mean Ergodic Theorem**: For bounded measurable f, g and any k ≥ 1,
 the conditional expectation of f(ω₀)·g(ωₖ) given the shift-invariant σ-algebra factors
 into the product of the individual conditional expectations.
@@ -687,58 +689,49 @@ private lemma condexp_pair_factorization_MET
         | succ k IH => exact (h_g_shift k).trans IH
 
       -- Now prove the main result
-      -- Step 1a: Unfold A_n and apply condExp_smul
-      have hsum_int : Integrable (fun ω => (Finset.range (n + 1)).sum (fun k => g (ω k))) μ :=
-        integrable_finset_sum _ hgk_int
-      have h_smul : μ[A n | m] =ᵐ[μ]
-          (1 / (n + 1 : ℝ)) • μ[fun ω => (Finset.range (n + 1)).sum (fun k => g (ω k)) | m] :=
-        condExp_smul (1 / (n + 1 : ℝ)) _ m
-
-      -- Step 1b: Apply condExp_finset_sum
+      -- Step 1a: Apply condExp_finset_sum
       have h_sum_pre : μ[∑ i ∈ Finset.range (n + 1), fun ω => g (ω i) | m] =ᵐ[μ]
           ∑ i ∈ Finset.range (n + 1), μ[fun ω => g (ω i) | m] :=
         condExp_finset_sum hgk_int m
 
-      -- Step 1c: Apply shift invariance  to sum - all terms become g(ω 0)
+      -- Step 1b: Apply shift invariance to sum - all terms become g(ω 0)
       have h_sum_shift : ∑ i ∈ Finset.range (n + 1), μ[fun ω => g (ω i) | m] =ᵐ[μ]
           ∑ i ∈ Finset.range (n + 1), μ[fun ω => g (ω 0) | m] := by
         apply eventuallyEq_sum
         intro k _
         exact h_g_shift_all k
 
-      -- Step 1d: The sum becomes (n+1) copies of CE[g(ω₀)|m]
+      -- Step 1c: The sum becomes (n+1) copies of CE[g(ω₀)|m]
       have h_const : ∑ i ∈ Finset.range (n + 1), μ[fun ω => g (ω 0) | m] =ᵐ[μ]
           fun ω => (n + 1 : ℝ) * μ[fun ω => g (ω 0) | m] ω := by
         apply ae_of_all
         intro ω
-        simp [Finset.sum_const, Finset.card_range, nsmul_eq_mul, Pi.smul_apply]
+        simp [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
 
-      -- Step 1e: Rewrite A_n in terms of sum
-      have h_An_rewrite : μ[A n | m] =ᵐ[μ] (1 / (n + 1 : ℝ)) • μ[∑ i ∈ Finset.range (n + 1), fun ω => g (ω i) | m] := by
-        have : A n = fun ω => (1 / (n + 1 : ℝ)) * ∑ i ∈ Finset.range (n + 1), g (ω i) := rfl
-        rw [this]
-        have h_eq : (fun ω => (1 / (n + 1)) * ∑ i ∈ Finset.range (n + 1), g (ω i))
-            = (1 / (n + 1)) • (∑ i ∈ Finset.range (n + 1), fun ω => g (ω i)) := by
-          funext ω
-          simp [Pi.smul_apply, smul_eq_mul, Finset.sum_apply]
-        rw [h_eq]
-        exact condExp_smul (1 / (n + 1)) _ m
+      -- Step 1d: Use definition of A directly and chain results
+      have h_A_unfold : A n = fun ω => (1 / (n + 1 : ℝ)) * ∑ i ∈ Finset.range (n + 1), g (ω i) := rfl
 
-      -- Step 1f: Chain everything together
+      -- First, rewrite using the definitional equality, then apply ae-equal reasoning
+      have h_first : μ[A n | m] =ᵐ[μ]
+          μ[(1 / (n + 1 : ℝ)) • (∑ i ∈ Finset.range (n + 1), fun ω' => g (ω' i)) | m] := by
+        conv_lhs => rw [h_A_unfold]
+        apply condExp_congr_ae
+        apply ae_of_all
+        intro ω
+        simp only [Pi.smul_apply, smul_eq_mul, Finset.sum_apply]
+
       calc μ[A n | m]
-        =ᵐ[μ] (1 / (n + 1 : ℝ)) • μ[∑ i ∈ Finset.range (n + 1), fun ω => g (ω i) | m] := h_An_rewrite
-      _ =ᵐ[μ] (1 / (n + 1 : ℝ)) • (∑ i ∈ Finset.range (n + 1), μ[fun ω => g (ω i) | m]) :=
-          EventuallyEq.smul EventuallyEq.rfl h_sum_pre
-      _ =ᵐ[μ] (1 / (n + 1 : ℝ)) • (∑ i ∈ Finset.range (n + 1), μ[fun ω => g (ω 0) | m]) :=
-          EventuallyEq.smul EventuallyEq.rfl h_sum_shift
-      _ =ᵐ[μ] (1 / (n + 1 : ℝ)) • (fun ω => (n + 1 : ℝ) * μ[fun ω => g (ω 0) | m] ω) :=
-          EventuallyEq.smul EventuallyEq.rfl h_const
+        =ᵐ[μ] μ[(1 / (n + 1 : ℝ)) • (∑ i ∈ Finset.range (n + 1), fun ω' => g (ω' i)) | m] :=
+          h_first
+      _ =ᵐ[μ] (1 / (n + 1 : ℝ)) • μ[∑ i ∈ Finset.range (n + 1), fun ω => g (ω i) | m] :=
+          condExp_smul _ _ m
       _ =ᵐ[μ] μ[fun ω => g (ω 0) | m] := by
-          apply ae_of_all
-          intro ω
-          simp [Pi.smul_apply, smul_eq_mul]
+          -- Apply h_sum_pre, h_sum_shift, and h_const
+          have h_chain := h_sum_pre.trans (h_sum_shift.trans h_const)
+          filter_upwards [h_chain] with ω hω
+          simp only [Pi.smul_apply, smul_eq_mul]
+          rw [hω]
           field_simp
-          ring
 
     -- Step 2: CE[f·A_n|m] = CE[f·g(ω₀)|m] for all n (by lag-constancy)
     have h_product_const : ∀ n, μ[(fun ω => f (ω 0) * A n ω) | m]
