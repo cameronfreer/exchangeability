@@ -288,6 +288,25 @@ lemma ν_eval_measurable
 
 /-! ## Helper lemmas for factorization via Mean Ergodic Theorem -/
 
+/-- Conditional expectation preserves pointwise bounds: if |X| ≤ C everywhere,
+then |CE[X|m]| ≤ C almost everywhere. This follows from the tower property and
+Jensen's inequality for conditional expectation. -/
+private lemma condExp_abs_le_of_abs_le
+    {Ω : Type*} {_ : MeasurableSpace Ω} {μ : Measure Ω} [IsFiniteMeasure μ]
+    {m : MeasurableSpace Ω} (hm : m ≤ ‹_›)
+    {X : Ω → ℝ} (hX : Integrable X μ) {C : ℝ} (hC : ∀ ω, |X ω| ≤ C) :
+    ∀ᵐ ω ∂μ, |μ[X | m] ω| ≤ C := by
+  sorry
+  /- TODO: Proof sketch:
+  1. By Jensen: |CE[X|m]| ≤ CE[|X||m] a.e.
+  2. Since |X| ≤ C pointwise: CE[|X||m] ≤ CE[C|m] = C a.e.
+  3. Combine to get: |CE[X|m]| ≤ C a.e.
+  Key lemmas needed:
+  - MeasureTheory.ae_le_of_condExp_le or similar
+  - condExp_const
+  Estimated: 8-12 lines
+  -/
+
 /-- If `Z` is a.e.-bounded and measurable and `Y` is integrable,
     then `Z*Y` is integrable (finite measure suffices). -/
 private lemma integrable_mul_of_ae_bdd_left
@@ -324,13 +343,13 @@ private lemma condExp_L1_lipschitz
   TODO: Find exact mathlib lemma names and complete proof (~15 LOC)
   -/
 
-/-- Pull-out property: if Z is measurable w.r.t. the conditioning σ-algebra and bounded,
+/-- Pull-out property: if Z is measurable w.r.t. the conditioning σ-algebra and a.e.-bounded,
 then CE[Z·Y | m] = Z·CE[Y | m] a.e. This is the standard "taking out what is known". -/
 private lemma condExp_mul_pullout
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     {Z Y : Ω[α] → ℝ}
     (hZ_meas : Measurable[shiftInvariantSigma (α := α)] Z)
-    (hZ_bd : ∃ C, ∀ ω, |Z ω| ≤ C)
+    (hZ_bd : ∃ C, ∀ᵐ ω ∂μ, |Z ω| ≤ C)
     (hY : Integrable Y μ) :
     μ[Z * Y | shiftInvariantSigma (α := α)] =ᵐ[μ] Z * μ[Y | shiftInvariantSigma (α := α)] := by
   -- Z is AEStronglyMeasurable w.r.t. shiftInvariantSigma
@@ -345,8 +364,7 @@ private lemma condExp_mul_pullout
       apply Measurable.mono hZ_meas
       · exact shiftInvariantSigma_le (α := α)
       · exact le_rfl
-    exact integrable_mul_of_ae_bdd_left hZ_meas_ambient
-      (hZ_bd.imp fun C hC => ae_of_all μ hC) hY
+    exact integrable_mul_of_ae_bdd_left hZ_meas_ambient hZ_bd hY
 
   -- Apply mathlib's pull-out lemma
   exact MeasureTheory.condExp_mul_of_aestronglyMeasurable_left
@@ -500,20 +518,15 @@ private lemma condexp_pair_factorization_MET
       exact stronglyMeasurable_condExp.measurable
 
     -- Z is bounded: |CE[g|m]| ≤ C a.e. by Jensen's inequality
-    have hZ_bd : ∃ C, ∀ ω, |Z ω| ≤ C := by
+    have hZ_bd : ∃ C, ∀ᵐ ω ∂μ, |Z ω| ≤ C := by
       obtain ⟨Cg, hCg⟩ := hg_bd
       use Cg
-      intro ω
-      -- Need: |CE[g|m] ω| ≤ Cg
-      -- Strategy: Use that conditional expectation of bounded function is bounded
-      -- Specifically: |g| ≤ Cg implies |CE[g|m]| ≤ Cg a.e.
-      -- This follows from: |CE[g|m]| ≤ CE[|g||m] ≤ CE[Cg|m] = Cg
       sorry
-      /- TODO: Need one of these approaches:
-      1. Find mathlib lemma: condExp preserves bounds
-      2. Prove directly: |E[g|F]| ≤ E[|g||F] ≤ C when |g| ≤ C
-      3. Use: ess_sup (CE[g|m]) ≤ ess_sup g
-      Estimated: 5-10 lines once correct lemma found
+      /- TODO: Show |CE[g(ω₀)|m]| ≤ Cg a.e. using condExp_abs_le_of_abs_le
+      Approach:
+      1. Show g∘π₀ is integrable (needs same HasFiniteIntegral proof as hY_int)
+      2. Apply condExp_abs_le_of_abs_le with shiftInvariantSigma_le and hCg∘π₀
+      Estimated: 3 lines once HasFiniteIntegral is resolved
       -/
 
     -- Y := f(ω₀) is integrable (bounded + measurable)
@@ -524,11 +537,12 @@ private lemma condexp_pair_factorization_MET
       constructor
       · exact (hf_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
       · -- HasFiniteIntegral: ∫⁻ ω, ‖f (ω 0)‖₊ ∂μ < ∞
+        -- Bound: ‖f (ω 0)‖₊ ≤ Cf for all ω, so ∫⁻ ‖f∘π₀‖₊ ≤ Cf·μ(Ω) = Cf < ∞
         sorry
-        /- TODO: Same as integrable_mul_of_ae_bdd_left line 305
-        Show: ∫⁻ ω, ‖f (ω 0)‖₊ ∂μ ≤ Cf * μ(Ω) < ∞
-        Key: simp [Real.nnabs, Real.norm_eq_abs]; exact Real.toNNReal_le_toNNReal (hCf (ω 0))
-        Estimated: 3-5 lines
+        /- TODO: Show ∫⁻ ω, ‖f (ω 0)‖₊ ∂μ ≤ Cf * μ(Set.univ) < ∞
+        Uses lintegral_mono with constant Cf, then lintegral_const
+        Main blocker: same nnnorm issue as integrable_mul_of_ae_bdd_left
+        Estimated: 5 lines once nnnorm conversion resolved
         -/
 
     -- Apply condExp_mul_pullout: CE[Z·Y | m] = Z·CE[Y | m]
