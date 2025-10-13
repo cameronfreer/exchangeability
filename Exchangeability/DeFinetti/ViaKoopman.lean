@@ -292,18 +292,23 @@ lemma ν_eval_measurable
 then |CE[X|m]| ≤ C almost everywhere. This follows from the tower property and
 Jensen's inequality for conditional expectation. -/
 private lemma condExp_abs_le_of_abs_le
-    {Ω : Type*} {_ : MeasurableSpace Ω} {μ : Measure Ω} [IsFiniteMeasure μ]
+    {Ω : Type*} {_ : MeasurableSpace Ω} {μ : Measure Ω} [IsFiniteMeasure μ] [Nonempty Ω]
     {m : MeasurableSpace Ω} (hm : m ≤ ‹_›)
     {X : Ω → ℝ} (hX : Integrable X μ) {C : ℝ} (hC : ∀ ω, |X ω| ≤ C) :
     ∀ᵐ ω ∂μ, |μ[X | m] ω| ≤ C := by
-  sorry
-  /- TODO: Need to find correct lemma names in mathlib:
-  - Jensen's inequality for conditional expectation: |CE[X|m]| ≤ CE[|X||m]
-  - Monotonicity: CE[|X||m] ≤ CE[C|m] when |X| ≤ C
-  - Constant: CE[C|m] = C
-  The logic is correct, just need to find the right API.
-  Estimated: 10-15 lines once APIs found
-  -/
+  -- C must be nonnegative since |X ω| ≤ C and |X ω| ≥ 0
+  have hC_nn : 0 ≤ C := le_trans (abs_nonneg _) (hC (Classical.choice ‹Nonempty Ω›))
+  -- Convert pointwise bound to a.e. bound
+  have hC_ae : ∀ᵐ ω ∂μ, |X ω| ≤ C := ae_of_all μ hC
+  -- Convert to NNReal bound for ae_bdd_condExp_of_ae_bdd
+  have hC_ae' : ∀ᵐ ω ∂μ, |X ω| ≤ C.toNNReal := by
+    filter_upwards [hC_ae] with ω hω
+    rwa [Real.coe_toNNReal _ hC_nn]
+  -- Apply mathlib lemma
+  have := ae_bdd_condExp_of_ae_bdd (m := m) hC_ae'
+  -- Convert back from NNReal
+  filter_upwards [this] with ω hω
+  rwa [Real.coe_toNNReal _ hC_nn] at hω
 
 /-- If `Z` is a.e.-bounded and measurable and `Y` is integrable,
     then `Z*Y` is integrable (finite measure suffices). -/
@@ -313,11 +318,14 @@ private lemma integrable_mul_of_ae_bdd_left
     (hZ : Measurable Z) (hZ_bd : ∃ C, ∀ᵐ ω ∂μ, |Z ω| ≤ C)
     (hY : Integrable Y μ) :
     Integrable (Z * Y) μ := by
-  -- TODO: Prove this using dominated convergence / nnnorm inequality
-  -- Sketch: |Z * Y| ≤ C * |Y| a.e., and ∫|Y| < ∞, so ∫|Z * Y| < ∞
-  -- Main technical challenge: showing ‖Z ω‖₊ ≤ Real.nnabs C from |Z ω| ≤ C
-  -- (need lemma connecting Real.nnnorm to Real.nnabs via Real.toNNReal)
-  sorry
+  -- Use mathlib's Integrable.bdd_mul' which handles a.e. bounded functions
+  obtain ⟨C, hC⟩ := hZ_bd
+  -- For reals, |Z ω| = ‖Z ω‖
+  have hZ_norm : ∀ᵐ ω ∂μ, ‖Z ω‖ ≤ C := by
+    filter_upwards [hC] with ω hω
+    rwa [Real.norm_eq_abs]
+  -- Apply Integrable.bdd_mul': if Y integrable and ‖Z‖ ≤ C a.e., then Z*Y integrable
+  exact Integrable.bdd_mul' hY hZ.aestronglyMeasurable hZ_norm
 
 /-- Conditional expectation is L¹-Lipschitz: moving the integrand changes the CE by at most
 the L¹ distance. This is a standard property following from Jensen's inequality. -/
@@ -326,20 +334,19 @@ private lemma condExp_L1_lipschitz
     {Z W : Ω[α] → ℝ} (hZ : Integrable Z μ) (hW : Integrable W μ) :
     ∫ ω, |μ[Z | shiftInvariantSigma (α := α)] ω - μ[W | shiftInvariantSigma (α := α)] ω| ∂μ
       ≤ ∫ ω, |Z ω - W ω| ∂μ := by
-  sorry
-  /-
-  Proof strategy (requires finding correct mathlib lemmas):
-  1. Use condExp_sub: CE[Z|m] - CE[W|m] = CE[Z-W|m] a.e.
-  2. Use Jensen's inequality for |·|: |CE[f|m]| ≤ CE[|f| | m] a.e.
-  3. Integrate both sides and use tower property: ∫ CE[|f| | m] = ∫ |f|
-
-  The mathlib lemmas needed are:
-  - MeasureTheory.condExp_sub for step 1
-  - MeasureTheory.condExp_abs_le or similar for step 2 (Jensen)
-  - MeasureTheory.integral_condExp for step 3 (tower property)
-
-  TODO: Find exact mathlib lemma names and complete proof (~15 LOC)
-  -/
+  -- Step 1: CE[Z-W|m] = CE[Z|m] - CE[W|m] a.e. (by condExp_sub)
+  have h_sub : μ[(Z - W) | shiftInvariantSigma]
+              =ᵐ[μ] μ[Z | shiftInvariantSigma] - μ[W | shiftInvariantSigma] :=
+    condExp_sub hZ hW shiftInvariantSigma
+  -- Step 2: Rewrite integral using a.e. equality and apply Jensen
+  calc ∫ ω, |μ[Z | shiftInvariantSigma] ω - μ[W | shiftInvariantSigma] ω| ∂μ
+      = ∫ ω, |μ[(Z - W) | shiftInvariantSigma] ω| ∂μ := by
+          refine integral_congr_ae ?_
+          filter_upwards [h_sub] with ω hω
+          simp [hω]
+    _ ≤ ∫ ω, |Z ω - W ω| ∂μ := by
+          -- Apply mathlib's integral_abs_condExp_le
+          exact integral_abs_condExp_le (Z - W)
 
 /-- Pull-out property: if Z is measurable w.r.t. the conditioning σ-algebra and a.e.-bounded,
 then CE[Z·Y | m] = Z·CE[Y | m] a.e. This is the standard "taking out what is known". -/
@@ -508,7 +515,7 @@ into the product of the individual conditional expectations.
 6. But P(g(ω₀)) = CE[g(ω₀)|ℐ], so we get the factorization!
 -/
 private lemma condexp_pair_factorization_MET
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
     (hσ : MeasurePreserving shift μ μ)
     (f g : α → ℝ)
     (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
@@ -556,11 +563,11 @@ private lemma condexp_pair_factorization_MET
         · exact (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
         · have h_bd : ∀ (ω : Ω[α]), |g (ω 0)| ≤ Cg := fun ω => hCg (ω 0)
           exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
-      -- Apply condExp_abs_le_of_abs_le (once it's proved)
+      -- Apply condExp_abs_le_of_abs_le: |CE[g∘π₀|m]| ≤ Cg a.e.
       have h_bd' : ∀ (ω : Ω[α]), |g (ω 0)| ≤ Cg := fun ω => hCg (ω 0)
-      -- TODO: Fix type inference issue with condExp_abs_le_of_abs_le
-      -- Expected: condExp_abs_le_of_abs_le shiftInvariantSigma_le hg_int h_bd'
-      -- But Lean has trouble inferring the measurable space parameters
+      -- TODO: Type inference issue with condExp_abs_le_of_abs_le
+      -- The lemma is now proved, but Lean has trouble with implicit MeasurableSpace arguments
+      -- when m is defined as `set m := shiftInvariantSigma`
       sorry
 
     -- Y := f(ω₀) is integrable (bounded + measurable)

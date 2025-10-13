@@ -3376,19 +3376,27 @@ lemma directing_measure_measurable
     -- Apply to s to conclude
     exact (h_induction s hs).2
   ·
-    -- If `s` is not measurable, then by the definition of a measure on a σ-algebra,
-    -- the value ν(ω)(s) is technically undefined (or could be anything).
-    -- However, for our purposes, we can show the function is still measurable.
+    -- NON-MEASURABLE CASE: s is not a measurable set
     --
-    -- Option 1: Show F_ω.measure is only defined on measurableSet, so ν(ω)(s) is constant 0
-    -- Option 2: Use that any function to ℝ≥0∞ is measurable when restricted appropriately
+    -- Context: directing_measure ω is defined as F_ω.measure where F_ω is a StieltjesFunction.
+    -- In Lean, StieltjesFunction.measure extends to a complete measure via Carathéodory's
+    -- extension theorem, so it's defined on ALL sets (not just measurable ones).
     --
-    -- For now, the key insight is that measures in Lean are only meaningfully defined on
-    -- measurable sets. For non-measurable s, the behavior is not specified, but we can
-    -- still prove measurability by observing that the function is constructed uniformly.
+    -- Mathematical fact: For non-measurable sets, the measure equals the outer measure:
+    --   μ(s) = inf{μ(A) : A ⊇ s, A measurable}
     --
-    -- Accept as sorry - this is more of a foundations issue about how measures handle
-    -- non-measurable sets in Lean's type theory:
+    -- The function ω ↦ directing_measure ω s should be measurable because:
+    -- 1. The construction is uniform in ω (same Stieltjes CDF process for all ω)
+    -- 2. The outer measure is σ-additive from below, inheriting measurability
+    -- 3. For each ω, F_ω is constructed from cdf_from_alpha ω, which is measurable in ω
+    --
+    -- To prove this rigorously would require:
+    -- - Showing outer measures preserve measurability in parameters
+    -- - Using that the Carathéodory extension is functorial in the base measure
+    -- - Possibly: showing the function equals a measurable function a.e.
+    --
+    -- This is a deep result in measure theory about parameter-dependent measures.
+    -- For now, accept as sorry:
     sorry
 
 /-- The directing measure integrates to give α_f.
