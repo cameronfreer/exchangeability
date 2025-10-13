@@ -597,20 +597,24 @@ private lemma condexp_pair_factorization_MET
       _ =ᵐ[μ] (fun ω => Z ω * μ[(fun ω => f (ω 0)) | m] ω) := h
 
   -- Step 5: CE[f(ω₀)·g(ω₀)|ℐ] = CE[f(ω₀)·CE[g(ω₀)|ℐ]|ℐ]
-  -- This uses the tower property backwards
+  -- This is the tower property: CE[f·CE[g|m]|m] = CE[f·g|m]
   have h_tower : μ[(fun ω => f (ω 0) * g (ω 0)) | m]
       =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] := by
+    -- Let Y := g∘π₀ and Z := CE[Y|m]
+    set Y := (fun ω => g (ω 0))
+    set Z := μ[Y | m]
+    -- Y is integrable (shown earlier in hY_int pattern)
+    have hY_int : Integrable Y μ := by
+      obtain ⟨Cg, hCg⟩ := hg_bd
+      constructor
+      · exact (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
+      · have h_bd : ∀ (ω : Ω[α]), |Y ω| ≤ Cg := fun ω => hCg (ω 0)
+        exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
+    -- Z = CE[Y|m] is m-measurable
+    have hZ_meas : AEStronglyMeasurable[m] Z μ := aestronglyMeasurable'_condExp
+    -- For any m-measurable set A: ∫_A f·g = ∫_A f·Z
+    -- This uses the tower property: ∫_A f·g = ∫_A f·CE[g|m]
     sorry
-    /- TODO: Proof via integral equality over m-measurable sets
-    Strategy:
-    1. Show f·g and f·CE[g|m] are both integrable
-    2. For every m-measurable set A, show: ∫_A f·g = ∫_A f·CE[g|m]
-       This follows from ∫_A g = ∫_A CE[g|m] (defining property of CE)
-       by factoring out f (which may need m-measurability of indicator functions)
-    3. Apply MeasureTheory.ae_eq_condExp_of_forall_setIntegral_eq
-    Estimated: 20-25 lines
-    Main challenge: Step 2 requires careful manipulation of integrals
-    -/
 
   -- Step 6: Combine all the equalities
   calc μ[(fun ω => f (ω 0) * g (ω 1)) | m]
