@@ -1654,29 +1654,27 @@ lemma block_coord_condIndep
   obtain ⟨B, hB, rfl⟩ := hH
   -- The indicator function is (indicator B ∘ X r)
 
-  -- TODO: Prove projection property from contractability
-  -- **Mathematical strategy:**
-  -- From contractability with r < m, we have distributional symmetry:
-  --   (X₀, X₁, ..., X_{r-1}, X_r, X_{m+1}, X_{m+2}, ...)
-  --   has same distribution as
-  --   (X₀, X₁, ..., X_{r-1}, X_{r+1}, X_{m+1}, X_{m+2}, ...)
-  -- when we "skip" coordinate r (which is < m).
+  -- Prove projection property: μ[1_B ∘ X_r | firstR ⊔ future] =ᵐ μ[1_B ∘ X_r | future]
   --
-  -- This implies that given (X₀,...,X_{r-1}) and the future θ_{m+1} X,
-  -- the conditional distribution of X_r doesn't depend on (X₀,...,X_{r-1}).
+  -- **Mathematical content:** From contractability with r < m, X_r is conditionally
+  -- independent of (X₀,...,X_{r-1}) given the future θ_{m+1} X. This is Kallenberg's
+  -- Lemma 1.3 (Contraction-Independence).
   --
-  -- **Proof approach:**
-  -- 1. Use contractability to show distributional equality:
-  --    Measure.map (fun ω => (firstRMap X r ω, X r ω, shiftRV X (m+1) ω)) μ
-  --      "equals in distribution"
-  --    Measure.map (fun ω => (firstRMap X r ω, shiftRV X (m+1) ω)) μ  [with X_r "recovered"]
+  -- **Proof strategy (from BLOCK_COORD_WORK.md):**
+  -- Use contractability to show that deleting coordinate r when r < m doesn't change
+  -- the joint distribution of (X₀,...,X_{r-1}) with the future. This implies that
+  -- given the future, X_r is "spreadable" over values of (X₀,...,X_{r-1}).
   --
-  -- 2. Apply a CE bridge lemma (generalization of condexp_indicator_eq_of_pair_law_eq)
-  --    to conclude that the conditional expectations match.
+  -- **Implementation approaches:**
+  -- (A) Direct: Use ae_eq_condExp_of_forall_setIntegral_eq to show integrals agree
+  --     for all A ∈ firstR ⊔ future, using contractability to establish equality
+  -- (B) Helper lemma: First prove general Lemma 1.3 (contraction_independence),
+  --     then apply it here
   --
-  -- **Implementation note:** This requires proving a helper lemma about how contractability
-  -- implies the specific distributional equality needed here. This is non-trivial and may
-  -- require extending the current infrastructure in CondExp.lean.
+  -- Both require extracting the specific distributional property from contractability
+  -- that relates (firstRBlock, future) and (firstRBlock, X_r, future).
+  --
+  -- **Estimated effort:** 4-6 hours (requires measure theory infrastructure)
   sorry
 
 /-- **Product formula for conditional expectations under conditional independence.**
