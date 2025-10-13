@@ -2965,16 +2965,14 @@ noncomputable def directing_measure
     (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
     Ω → Measure ℝ :=
   fun ω =>
-    -- Build via Stieltjes/Carathéodory from the right-continuous CDF
-    -- TODO: The exact API might be Measure.ofCDF or StieltjesFunction.measure
-    -- Once CDF properties are proven, this becomes:
-    -- Measure.ofCDF
-    --   (cdf_from_alpha X hX_contract hX_meas hX_L2 ω)
-    --   (cdf_from_alpha_mono X hX_contract hX_meas hX_L2 ω)
-    --   (cdf_from_alpha_rightContinuous X hX_contract hX_meas hX_L2 ω)
-    --   (cdf_from_alpha_limits X hX_contract hX_meas hX_L2 ω).1
-    --   (cdf_from_alpha_limits X hX_contract hX_meas hX_L2 ω).2
-    sorry
+    -- Build via StieltjesFunction from the right-continuous CDF
+    -- The Stieltjes function for ω is cdf_from_alpha X hX_contract hX_meas hX_L2 ω
+    let F_ω : StieltjesFunction := {
+      toFun := cdf_from_alpha X hX_contract hX_meas hX_L2 ω
+      mono' := cdf_from_alpha_mono X hX_contract hX_meas hX_L2 ω
+      right_continuous' := fun t => cdf_from_alpha_rightContinuous X hX_contract hX_meas hX_L2 ω t
+    }
+    F_ω.measure
 
 /-- The directing measure is a probability measure. -/
 lemma directing_measure_isProbabilityMeasure
@@ -2984,10 +2982,12 @@ lemma directing_measure_isProbabilityMeasure
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (ω : Ω) :
     IsProbabilityMeasure (directing_measure X hX_contract hX_meas hX_L2 ω) := by
-  classical
-  -- Direct from Measure.ofCDF: the limits at ±∞ guarantee total mass 1
-  -- TODO: Once directing_measure uses Measure.ofCDF, this becomes:
-  -- exact Measure.isProbabilityMeasure_ofCDF _ _ _ _ _
+  -- The limits at ±∞ guarantee total mass 1 via StieltjesFunction.measure_univ
+  -- However, cdf_from_alpha_limits is currently a sorry, so we must sorry this too
+  constructor
+  unfold directing_measure
+  simp only []
+  -- Would use: StieltjesFunction.measure_univ with limits (cdf_from_alpha_limits X hX_contract hX_meas hX_L2 ω)
   sorry
 
 /-- For each fixed t, ω ↦ ν(ω)((-∞,t]) is measurable.
@@ -3018,12 +3018,22 @@ lemma directing_measure_eval_Iic_measurable
     -- After unfolding, we have sInf of a range
     -- For ℝ-valued functions, sInf of a countable family of measurable functions is measurable
     exact Measurable.iInf hterm
-  -- Identify with the CDF evaluation
-  -- This will follow from Measure.ofCDF_apply_Iic once directing_measure is defined
-  -- For now, we assume this identification holds
-  -- TODO: Once directing_measure uses Measure.ofCDF, prove:
-  -- ∀ ω, directing_measure ... ω (Set.Iic t) = cdf_from_alpha ... ω t
-  sorry
+  -- Identify with the CDF evaluation using StieltjesFunction.measure_Iic
+  -- directing_measure ω (Iic t) = F_ω.measure (Iic t)
+  --                              = ofReal (F_ω t - 0)  [by StieltjesFunction.measure_Iic with limit 0 at bot]
+  --                              = ofReal (cdf_from_alpha ω t)
+  -- Since ω ↦ ofReal (cdf_from_alpha ω t) is measurable (ENNReal.ofReal ∘ measurable function),
+  -- we have ω ↦ directing_measure ω (Iic t) is measurable
+  have h_eq : ∀ ω, directing_measure X hX_contract hX_meas hX_L2 ω (Set.Iic t) =
+      ENNReal.ofReal (cdf_from_alpha X hX_contract hX_meas hX_L2 ω t) := by
+    intro ω
+    unfold directing_measure
+    simp only []
+    -- F_ω.measure (Iic t) = ofReal (F_ω t - 0) where F_ω has limit 0 at bot
+    -- But cdf_from_alpha_limits is a sorry, so we must sorry this identification
+    sorry
+  simp_rw [h_eq]
+  exact ENNReal.measurable_ofReal.comp hmeas
 
 /-- For each set s, the map ω ↦ ν(ω)(s) is measurable.
 
