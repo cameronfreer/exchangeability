@@ -1228,8 +1228,8 @@ lemma agree_on_future_rectangles_of_contractable
 
 lemma measure_ext_of_future_rectangles
     {μ ν : Measure (α × (ℕ → α))} [IsFiniteMeasure μ] [IsFiniteMeasure ν]
-    (h : ∀ (r : ℕ) (B : Set α) (hB : MeasurableSet B)
-        (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i)),
+    (h : ∀ (r : ℕ) (B : Set α) (_hB : MeasurableSet B)
+        (C : Fin r → Set α) (_hC : ∀ i, MeasurableSet (C i)),
         μ (B ×ˢ cylinder (α:=α) r C) = ν (B ×ˢ cylinder (α:=α) r C)) :
     μ = ν := by
   classical
