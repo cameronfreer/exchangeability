@@ -448,6 +448,28 @@ This is the **KEY BREAKTHROUGH**: We can prove factorization directly from MET w
 needing kernel independence or ergodic decomposition. This eliminates the deepest axioms!
 -/
 
+/-- **Lag-constancy**: The conditional expectation of f(ω₀)·g(ωₖ) given the shift-invariant
+σ-algebra is constant in k. This is the key property that makes the Kallenberg approach work
+WITHOUT needing exchangeability! -/
+private lemma condexp_pair_lag_constant
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ)
+    (f g : α → ℝ)
+    (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
+    (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C)
+    (k : ℕ) :
+    μ[(fun ω => f (ω 0) * g (ω (k+1))) | shiftInvariantSigma (α := α)]
+      =ᵐ[μ]
+    μ[(fun ω => f (ω 0) * g (ω k)) | shiftInvariantSigma (α := α)] := by
+  sorry
+  /- TODO: Complete lag-constancy proof
+  Strategy:
+  1. Show f(ω₀)·g(ω_k) is integrable (bounded × bounded, uses integrable_of_bounded)
+  2. Apply condexp_precomp_iterate_eq with shift count 1
+  3. Handle type mismatch: need to construct function so f(shift ω 0) = f(ω 0)
+  Estimated: 15-20 lines once integrable_of_bounded is in scope
+  -/
+
 /-- **Pair factorization via Mean Ergodic Theorem**: For bounded measurable f, g and any k ≥ 1,
 the conditional expectation of f(ω₀)·g(ωₖ) given the shift-invariant σ-algebra factors
 into the product of the individual conditional expectations.
@@ -477,18 +499,16 @@ private lemma condexp_pair_factorization_MET
   -- Step 1: Show CE[f(ω₀)·g(ω₁)|ℐ] = CE[f(ω₀)·g(ω₀)|ℐ] by shift invariance
   -- Key insight: shifting doesn't change the conditional expectation onto shift-invariant σ-algebra
   have h_shift_inv : μ[(fun ω => f (ω 0) * g (ω 1)) | m] =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 0)) | m] := by
-    sorry
-    /- TODO: Use lag-constancy lemma `condexp_pair_lag_constant` (defined at line 1761)
-    Resolution:
-    - This follows from condexp_pair_lag_constant with k=0
-    - That lemma shows: CE[f(ω₀)·g(ω_(k+1))|I] = CE[f(ω₀)·g(ω_k)|I]
-    - For k=0: CE[f(ω₀)·g(ω₁)|I] = CE[f(ω₀)·g(ω₀)|I]
-    - However, condexp_pair_lag_constant is defined later in the file (line 1761)
-    - Either: (1) move condexp_pair_lag_constant earlier, or
-              (2) restructure to prove lag-constancy first, or
-              (3) inline the proof here
-    Estimate: 1 line once ordering is resolved: `symm; exact condexp_pair_lag_constant hσ f g hf_meas hf_bd hg_meas hg_bd 0`
-    -/
+    -- Use lag-constancy with k=0: CE[f(ω₀)·g(ω₁)|I] = CE[f(ω₀)·g(ω₀)|I]
+    -- Note: m = shiftInvariantSigma by definition
+    have : m = shiftInvariantSigma (α := α) := rfl
+    rw [this]
+    -- condexp_pair_lag_constant gives: CE[f·g(k+1)|I] = CE[f·g(k)|I]
+    -- For k=0: CE[f·g(1)|I] = CE[f·g(0)|I]
+    have h := condexp_pair_lag_constant hσ f g hf_meas hf_bd hg_meas hg_bd 0
+    -- Need to simplify 0+1 = 1
+    simp only [zero_add] at h
+    exact h
 
   -- Step 2 & 3: (Can skip - not needed for the direct proof)
 
@@ -1740,36 +1760,6 @@ private lemma condexp_product_shift_invariant
   congr 1
   · rw [shift_iterate_apply]; rw [zero_add]
   · rw [shift_iterate_apply]; rw [add_comm]
-
-/-- **Lag-constancy**: The conditional expectation of f(ω₀)·g(ωₖ) given the shift-invariant
-σ-algebra is constant in k. This is the key property that makes the Kallenberg approach work
-WITHOUT needing exchangeability! -/
-private lemma condexp_pair_lag_constant
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
-    (hσ : MeasurePreserving shift μ μ)
-    (f g : α → ℝ)
-    (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
-    (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C)
-    (k : ℕ) :
-    μ[(fun ω => f (ω 0) * g (ω (k+1))) | shiftInvariantSigma (α := α)]
-      =ᵐ[μ]
-    μ[(fun ω => f (ω 0) * g (ω k)) | shiftInvariantSigma (α := α)] := by
-  -- The function ω ↦ f(ω₀)·g(ω_k) is integrable (bounded × bounded)
-  have h_int : Integrable (fun ω => f (ω 0) * g (ω k)) μ := by
-    obtain ⟨Cf, hCf⟩ := hf_bd
-    obtain ⟨Cg, hCg⟩ := hg_bd
-    refine MeasureTheory.integrable_of_bounded ?_ ?_
-    · exact (hf_meas.comp (measurable_pi_apply 0)).mul (hg_meas.comp (measurable_pi_apply k))
-    · use Cf * Cg
-      intro ω
-      have hCf_nn : 0 ≤ Cf := le_trans (abs_nonneg _) (hCf (ω 0))
-      calc |f (ω 0) * g (ω k)|
-          = |f (ω 0)| * |g (ω k)| := abs_mul _ _
-        _ ≤ Cf * Cg := mul_le_mul (hCf _) (hCg _) (abs_nonneg _) hCf_nn
-  -- Apply condexp_precomp_iterate_eq with shift count 1
-  -- TODO: Type mismatch - condexp_precomp_iterate_eq gives f(shift ω 0) = f(ω 1)
-  -- but we need f(ω 0). May need different function construction or application.
-  sorry
 
 /-- Integral under the `k`-th conditional marginal equals the integral under `ν(ω)`.
 
