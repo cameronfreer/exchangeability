@@ -671,31 +671,21 @@ private lemma condexp_pair_factorization_MET
       have h_An_eq : A n = fun ω => (1 / (n + 1 : ℝ)) * (Finset.range (n + 1)).sum (fun k => g (ω k)) :=
         rfl
 
-      -- Apply CE linearity step-by-step
-      -- First, pull out the constant factor
-      have h_step1 : μ[A n | m] =ᵐ[μ]
-          μ[fun ω => (1 / (n + 1 : ℝ)) * (Finset.range (n + 1)).sum (fun k => g (ω k)) | m] := by
-        rw [h_An_eq]
-
-      -- Use the fact that CE commutes with finite sums
-      have h_step2 : μ[fun ω => (Finset.range (n + 1)).sum (fun k => g (ω k)) | m] =ᵐ[μ]
-          (Finset.range (n + 1)).sum (fun k => μ[fun ω => g (ω k) | m]) := by
-        exact condExp_finset_sum hgk_int m
-
-      -- Each CE[g(ω k)|m] = CE[g(ω 0)|m] by shift invariance
-      have h_step3 : (Finset.range (n + 1)).sum (fun k => μ[fun ω => g (ω k) | m]) =ᵐ[μ]
-          (Finset.range (n + 1)).sum (fun k => μ[fun ω => g (ω 0) | m]) := by
-        refine Finset.sum_congr rfl fun k hk => ?_
-        exact condexp_precomp_iterate_eq hσ hg0_int
+      -- Work pointwise to combine all the algebraic steps
+      -- We'll show the result pointwise ae, then lift back to ae equality
 
       sorry
       /-
-      Remaining steps:
-      1. Simplify sum of constants: ∑_{k=0}^n CE[g(ω 0)|m] = (n+1)·CE[g(ω 0)|m]
-      2. Pull through the (1/(n+1)) factor
-      3. Cancel: (1/(n+1))·(n+1)·CE[g(ω 0)|m] = CE[g(ω 0)|m]
+      Strategy to complete:
+      1. For the sum: CE[∑_k g(ω k)|m] = ∑_k CE[g(ω k)|m] by condExp_finset_sum
+      2. Shift invariance: each CE[g(ω k)|m] = CE[g(ω 0)|m] by condexp_precomp_iterate_eq
+      3. Sum of constants: ∑_{k=0}^n CE[g(ω 0)|m] = (n+1)·CE[g(ω 0)|m]
+      4. Pull CE through scalar: CE[(1/(n+1))·X|m] = (1/(n+1))·CE[X|m] by condExp_smul
+      5. Cancel: (1/(n+1))·(n+1)·CE[g(ω 0)|m] = CE[g(ω 0)|m]
 
-      The challenge is combining the steps properly with EventuallyEq reasoning.
+      The mechanical part is properly combining these with EventuallyEq.trans.
+      Main challenge: condExp_smul and condExp_finset_sum may have type class issues
+      that need careful handling.
       -/
 
     -- Step 2: CE[f·A_n|m] = CE[f·g(ω₀)|m] for all n (by lag-constancy)
@@ -718,20 +708,38 @@ private lemma condexp_pair_factorization_MET
           -- Transitivity with IH
           exact h_step.trans IH
 
+      -- Establish integrability of each f·g(ω k) term
+      obtain ⟨Cf, hCf⟩ := hf_bd
+      obtain ⟨Cg, hCg⟩ := hg_bd
+      have hfgk_int : ∀ k ∈ Finset.range (n + 1), Integrable (fun ω => f (ω 0) * g (ω k)) μ := by
+        intro k _
+        constructor
+        · exact ((hf_meas.comp (measurable_pi_apply 0)).mul (hg_meas.comp (measurable_pi_apply k))).aestronglyMeasurable
+        · have h_bd : ∀ (ω : Ω[α]), |f (ω 0) * g (ω k)| ≤ Cf * Cg := by
+            intro ω
+            calc |f (ω 0) * g (ω k)|
+                = |f (ω 0)| * |g (ω k)| := abs_mul _ _
+              _ ≤ Cf * Cg := mul_le_mul (hCf (ω 0)) (hCg (ω k)) (abs_nonneg _) (by linarith [abs_nonneg (f (ω 0)), hCf (ω 0)])
+          exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
+
+      -- Rewrite f·A_n as a sum
+      have h_product_expand : (fun ω => f (ω 0) * A n ω) =
+          (fun ω => (1 / (n + 1 : ℝ)) * (Finset.range (n + 1)).sum (fun k => f (ω 0) * g (ω k))) := by
+        ext ω
+        simp only [A]
+        rw [mul_comm (f (ω 0)), mul_assoc, ← Finset.mul_sum]
+        ring_nf
+
       sorry
       /-
-      Now we have: for all k, CE[f(ω₀)·g(ω k)|m] = CE[f(ω₀)·g(ω₀)|m]
+      Strategy to complete:
+      1. Apply h_product_expand to rewrite as sum
+      2. Use condExp_smul to pull out (1/(n+1))
+      3. Use condExp_finset_sum for the sum
+      4. Apply h_lag_const_all: each CE[f·g(ω k)|m] = CE[f·g(ω₀)|m]
+      5. Simplify: (1/(n+1))·(n+1)·CE[f·g(ω₀)|m] = CE[f·g(ω₀)|m]
 
-      Strategy to finish:
-      1. Expand A n: f·A_n = (1/(n+1))·f·∑_k g(ω k) = (1/(n+1))·∑_k f·g(ω k)
-      2. By linearity: CE[f·A_n|m] = (1/(n+1))·∑_k CE[f·g(ω k)|m]
-      3. By h_lag_const_all: each term equals CE[f·g(ω₀)|m]
-      4. Therefore: CE[f·A_n|m] = (1/(n+1))·(n+1)·CE[f·g(ω₀)|m] = CE[f·g(ω₀)|m]
-
-      Challenges:
-      - Need to work with Finset.sum and conditional expectation
-      - Need integrability of each f·g(ω k) term
-      - Need CE linearity for finite sums
+      Similar structure to step 1, but with products.
       -/
 
     -- Step 3: A_n → CE[g(ω₀)|m] in L¹ (by MET + boundedness)
