@@ -2352,15 +2352,31 @@ theorem weighted_sums_converge_L1
       push_neg at h_separated
       -- h_separated : (m : ℤ) - ℓ < k ∧ (ℓ : ℤ) - m < k
 
-      -- For the close case, observe that when |m-ℓ| < k = N and m,ℓ ≥ 2N,
-      -- we can bound the difference differently using the fact that
-      -- most of the averaging windows overlap.
+      -- CLOSE CASE BOUND via Telescoping
       --
-      -- Key insight: A 0 m = average over [1..m], A 0 ℓ = average over [1..ℓ]
-      -- The difference is dominated by the small number of differing indices.
+      -- Key insight: For |m - ℓ| < k, use telescoping:
+      --   A 0 m - A 0 ℓ = ∑_{j=ℓ+1}^m (A 0 j - A 0 (j-1))
       --
-      -- TODO: Implement refined bound or adjust threshold choice
-      sorry
+      -- Each consecutive difference satisfies:
+      --   |A 0 j - A 0 (j-1)| ≤ 2M/j
+      --
+      -- Therefore: |A 0 m - A 0 ℓ| ≤ 2M ∑_{j=ℓ+1}^m 1/j ≤ 2M * |m-ℓ|/ℓ < 2Mk/ℓ
+      --
+      -- For this to be < ε, we need ℓ > 2Mk/ε.
+      -- Since ℓ ≥ 2N, we need: 2N > 2Mk/ε, i.e., N > Mk/ε.
+      -- With k = N, this gives: N > MN/ε, which is impossible unless ε > M.
+      --
+      -- RESOLUTION: Use LARGER threshold
+      -- Instead of N ≈ C/ε² (from separated case), use N ≈ C/ε³ to handle both cases.
+      -- Specifically, we need N > max(9C_star/ε², 2Mk/ε) where k = N.
+      -- The second constraint gives N² > 2MN/ε, so N > 2M/ε.
+      -- Combined: N > max(9C_star/ε², 2M/ε).
+      --
+      -- For small ε, the first term dominates, but the implementation would need
+      -- to account for both constraints. This makes the threshold calculation
+      -- more complex than currently implemented (line 2023).
+      --
+      sorry  -- TODO: Implement refined threshold accounting for close case
 
   have hA_cauchy_L1_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
       eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ < ENNReal.ofReal ε := by
