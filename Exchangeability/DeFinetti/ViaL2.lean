@@ -2049,13 +2049,41 @@ theorem weighted_sums_converge_L1
       simpa [A] using hCf_unif 0 (m - k) k hk_pos hdisj
     have h2sq :
       ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ ≤ Cf / k := by
-      have hdisj : Disjoint (window (m - k) k) (window (ℓ - k) k) := by
-        apply window_disjoint
-        -- Need: (m - k) + k < (ℓ - k) + 1, i.e., m < ℓ - k + 1, i.e., m + k ≤ ℓ
-        -- We have m ≥ 2k and ℓ ≥ 2k, but we don't have m + k ≤ ℓ in general
-        -- Actually, we need to use that m ≤ ℓ (or handle the symmetric case)
-        sorry  -- TODO: This needs m ≤ ℓ or a different construction
-      simpa [A] using hCf_unif (m - k) (ℓ - k) k hk_pos hdisj
+      by_cases h_order : m + k ≤ ℓ
+      case pos =>
+        -- When m + k ≤ ℓ, windows are disjoint
+        have hdisj : Disjoint (window (m - k) k) (window (ℓ - k) k) := by
+          apply window_disjoint
+          -- Need: (m - k) + k < (ℓ - k) + 1, i.e., m + k ≤ ℓ
+          omega
+        simpa [A] using hCf_unif (m - k) (ℓ - k) k hk_pos hdisj
+      case neg =>
+        -- When m + k > ℓ, windows may overlap
+        -- Use symmetry: the bound is symmetric in m and ℓ
+        have : ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ
+             = ∫ ω, (A (ℓ - k) k ω - A (m - k) k ω)^2 ∂μ := by
+          congr 1; ext ω; ring_nf
+        rw [this]
+        -- Now we need ℓ + k ≤ m for disjointness
+        by_cases h_sym : ℓ + k ≤ m
+        case pos =>
+          have hdisj : Disjoint (window (ℓ - k) k) (window (m - k) k) := by
+            apply window_disjoint
+            omega
+          simpa [A] using hCf_unif (ℓ - k) (m - k) k hk_pos hdisj
+        case neg =>
+          -- Neither m + k ≤ ℓ nor ℓ + k ≤ m: windows overlap
+          -- This means |m - ℓ| < k, so m and ℓ are close
+          -- Use a crude bound: |A (m-k) k - A (ℓ-k) k| ≤ 2M where M bounds f
+          -- Then ∫ (...)² ≤ (2M)² = 4M²
+          -- Since we need ≤ Cf/k, we use: 4M² ≤ Cf/k if k ≤ Cf/(4M²)
+          -- For large k (k ≥ 2N), we may not have this, so use a different bound
+          --
+          -- Better approach: Use that |A (m-k) k - A (ℓ-k) k| is small when |m - ℓ| is small
+          -- by contractability, but WITHOUT requiring disjoint windows
+          -- The L² contractability bound applies even for overlapping windows,
+          -- just with a potentially worse constant
+          sorry  -- TODO: Use general L² bound without disjointness assumption
     have h3sq :
       ∫ ω, (A (ℓ - k) k ω - A 0 k ω)^2 ∂μ ≤ Cf / k := by
       have hdisj : Disjoint (window (ℓ - k) k) (window 0 k) := by
