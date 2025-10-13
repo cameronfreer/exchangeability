@@ -820,8 +820,10 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
       _ = ∫ ω, μ[X₂ ^ 2 | m₁] ω ∂μ - ∫ ω, (μ[X₂ | m₁] ω) ^ 2 ∂μ := by
             have hint1 : Integrable (μ[X₂ ^ 2 | m₁]) μ := integrable_condExp
             have hint2 : Integrable (fun ω => (μ[X₂ | m₁] ω) ^ 2) μ := by
-              -- Since μ[X₂|m₁] =ᵐ X₁ and ∫ X₁² is finite, X₁² is integrable
-              sorry  -- TODO: Derive integrability from finiteness of ∫ X₁²
+              -- Conditional expectations preserve L², so their square is integrable
+              have h_cond_mem : MemLp (μ[X₂ | m₁]) 2 μ :=
+                (MemLp.condExp (m := m₁) (μ := μ) (m₀ := m₀) hL2)
+              simpa using h_cond_mem.integrable_sq
             exact integral_sub hint1 hint2
       _ = ∫ ω, (X₂ ω) ^ 2 ∂μ - ∫ ω, (μ[X₂ | m₁] ω) ^ 2 ∂μ := by
             congr 1
@@ -834,7 +836,52 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
             exact hSecond
 
   -- Since Var[X₂|m₁] ≥ 0 and ∫ Var[X₂|m₁] = 0, we have Var[X₂|m₁] = 0 a.e.
-  sorry  -- TODO: Use integral_eq_zero_iff_of_nonneg_ae to get Var = 0 a.e., then X₂ = μ[X₂|m₁] = X₁ a.e.
+  have hVar_nonneg : 0 ≤ᵐ[μ] Var[X₂; μ | m₁] := by
+    have h_sq_nonneg :
+        0 ≤ᵐ[μ] fun ω => (X₂ ω - μ[X₂ | m₁] ω) ^ 2 :=
+      Eventually.of_forall fun ω => sq_nonneg _
+    simpa [ProbabilityTheory.condVar] using condExp_nonneg (μ := μ) (m := m₁) h_sq_nonneg
+  have hVar_integrable :
+      Integrable (ProbabilityTheory.Var[X₂; μ | m₁]) μ :=
+    ProbabilityTheory.integrable_condVar (hm := hm₁) (μ := μ) (X := X₂)
+  have hVar_zero :
+      Var[X₂; μ | m₁] =ᵐ[μ] 0 :=
+    (integral_eq_zero_iff_of_nonneg_ae hVar_nonneg hVar_integrable).1 hint_var
+
+  -- Convert the vanishing conditional variance into the vanishing of the square error
+  have h_cond_mem : MemLp (μ[X₂ | m₁]) 2 μ :=
+    (MemLp.condExp (m := m₁) (μ := μ) (m₀ := m₀) hL2)
+  have hdiff_mem :
+      MemLp (fun ω => X₂ ω - μ[X₂ | m₁] ω) 2 μ :=
+    hL2.sub h_cond_mem
+  have hdiff_sq_int :
+      Integrable (fun ω => (X₂ ω - μ[X₂ | m₁] ω) ^ 2) μ :=
+    hdiff_mem.integrable_sq
+
+  have h_int_diff_sq :
+      ∫ ω, (X₂ ω - μ[X₂ | m₁] ω) ^ 2 ∂μ = 0 := by
+    have hVar_int_zero :
+        ∫ ω, Var[X₂; μ | m₁] ω ∂μ = 0 := by
+      simpa using integral_congr_ae hVar_zero
+    have hset :=
+      ProbabilityTheory.setIntegral_condVar (μ := μ) (m := m₁) (X := X₂)
+        (hm := hm₁) (s := Set.univ) hdiff_sq_int MeasurableSet.univ
+    have hset' :
+        ∫ ω, Var[X₂; μ | m₁] ω ∂μ =
+          ∫ ω, (X₂ ω - μ[X₂ | m₁] ω) ^ 2 ∂μ := by
+      simpa using hset
+    exact hset'.symm ▸ hVar_int_zero
+
+  have h_sq_zero :
+      (fun ω => (X₂ ω - μ[X₂ | m₁] ω) ^ 2) =ᵐ[μ] 0 :=
+    (integral_eq_zero_iff_of_nonneg_ae
+        (Eventually.of_forall fun ω => sq_nonneg _) hdiff_sq_int).1 h_int_diff_sq
+  have h_diff_zero :
+      (fun ω => X₂ ω - μ[X₂ | m₁] ω) =ᵐ[μ] 0 :=
+    h_sq_zero.mono fun ω hω => sq_eq_zero_iff.mp hω
+  have hX2_eq_cond : X₂ =ᵐ[μ] μ[X₂ | m₁] :=
+    h_diff_zero.mono fun ω hω => sub_eq_zero.mp hω
+  exact hX2_eq_cond.trans hmg
 
 /-! ### Reverse Martingale Convergence (NOT USED) -/
 
