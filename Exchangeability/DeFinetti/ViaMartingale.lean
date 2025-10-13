@@ -1766,10 +1766,29 @@ lemma contractable_finite_cylinder_measure
   --
   -- Goal is: μ ((fun ω i => X (idx i) ω) ⁻¹' S_std) = μ ((fun ω i => X i.val ω) ⁻¹' S_std)
   --
-  -- Need to use: (Measure.map f μ) s = μ (f⁻¹' s) when f measurable, s measurable
-  -- Then: μ (f⁻¹' S_std) = (Measure.map f μ) S_std for both f's
-  --       and contract gives (Measure.map f₁ μ) S_std = (Measure.map f₂ μ) S_std
-  sorry -- TODO (10 min): Apply Measure.map_apply after proving S_std measurable as cylinder set
+  -- Since the measures are equal, they assign equal measure to preimages
+
+  -- First prove S_std is measurable
+  have hS_meas : MeasurableSet S_std := by
+    -- S_std is a cylinder set - finite intersection of coordinate preimages
+    sorry -- TODO (20-30 min): Prove cylinder set measurability
+          -- Strategy: Express as intersection of coordinate preimages via iInter
+          -- Use MeasurableSet.iInter and measurable_pi_apply
+          -- Technical issue: set-builder notation type resolution
+
+  -- Prove the functions are measurable
+  have h_meas_idx : Measurable (fun ω (i : Fin (r + 1 + k)) => X (idx i) ω) :=
+    measurable_pi_lambda _ (fun i => hX_meas (idx i))
+  have h_meas_std : Measurable (fun ω (i : Fin (r + 1 + k)) => X (↑i) ω) :=
+    measurable_pi_lambda _ (fun i => hX_meas (↑i))
+
+  calc μ ((fun ω (i : Fin (r + 1 + k)) => X (idx i) ω) ⁻¹' S_std)
+      = Measure.map (fun ω i => X (idx i) ω) μ S_std := by
+        rw [Measure.map_apply h_meas_idx hS_meas]
+    _ = Measure.map (fun ω (i : Fin (r + 1 + k)) => X (↑i) ω) μ S_std := by
+        rw [contract]
+    _ = μ ((fun ω (i : Fin (r + 1 + k)) => X (↑i) ω) ⁻¹' S_std) := by
+        rw [Measure.map_apply h_meas_std hS_meas]
 
 /-- **Correct conditional independence from contractability (Kallenberg Lemma 1.3).**
 
@@ -1868,12 +1887,55 @@ lemma block_coord_condIndep
     -- since it contains the π-system of cylinders and is a monotone class,
     -- it contains the generated σ-algebra.
 
-    sorry -- TODO (2-3 hours): Implement this strategy
-          -- Technical details:
-          -- 1. Formalize cylinder π-system using Finset-indexed products
-          -- 2. Apply contractable_finite_cylinder_measure to get measure equality for cylinders
-          -- 3. Show this implies integral equality using conditional expectation properties
-          -- 4. Package the monotone class argument
+    -- **Proof strategy (Dynkin's π-λ theorem):**
+    --
+    -- Define GoodSets = {E measurable | ∫_E indicator B (X r) dμ = ∫_E μ[indicator B ∘ X r | finFuture_k] dμ}
+    --
+    -- **Part A (60-90 min): Show cylinder π-system ⊆ GoodSets**
+    -- For E_cyl = {ω | ∀i X_i ∈ A_i} ∩ {ω | ∀j X_{m+1+j} ∈ C_j}:
+    --   LHS = ∫_{E_cyl} indicator B (X r) dμ
+    --       = μ(E_cyl ∩ {X_r ∈ B})
+    --       = μ({∀i X_i ∈ A_i, X_r ∈ B, ∀j X_{m+1+j} ∈ C_j})
+    --
+    -- Apply contractable_finite_cylinder_measure (hrm : r < m):
+    --       = μ({∀i X_i ∈ A_i, X_r ∈ B, ∀j X_{r+1+j} ∈ C_j})  [reindexing]
+    --
+    --   RHS = ∫_{E_cyl} μ[indicator B ∘ X r | finFuture_k] dμ
+    --
+    -- Show LHS = RHS using conditional expectation characterization
+    --
+    -- **Part B (30 min): Show GoodSets is a monotone class**
+    -- Monotone limits: If E_n ∈ GoodSets and E_n ↗, then ⋃ E_n ∈ GoodSets
+    --   Use monotone convergence theorem for integrals
+    -- Decreasing limits: If E_n ∈ GoodSets and E_n ↘, then ⋂ E_n ∈ GoodSets
+    --   Use dominated convergence theorem for integrals
+    --
+    -- **Part C (30 min): Apply Dynkin's π-λ theorem**
+    -- The cylinder π-system generates σ(firstRSigma ⊔ finFutureSigma)
+    -- GoodSets contains π-system and is a monotone class
+    -- By Dynkin: GoodSets contains the generated σ-algebra
+    -- Therefore E ∈ GoodSets for all measurable E
+
+    -- Given: E measurable in firstRSigma X r ⊔ finFutureSigma X m k
+    -- Goal: ∫_E indicator B (X r) dμ = ∫_E μ[indicator B ∘ X r | finFuture_k] dμ
+
+    -- Use Dynkin's π-λ theorem: define GoodSets and show it's a monotone class containing cylinders
+    --
+    -- Implementation outline:
+    -- 1. Define GoodSets = {E | integral equality holds}
+    -- 2. Part A (60-90 min): Show cylinder π-system ⊆ GoodSets
+    --    - For E_cyl = {∀i X_i ∈ A_i} ∩ {∀j X_{m+1+j} ∈ C_j}:
+    --      LHS = μ(E_cyl ∩ {X_r ∈ B})
+    --      Apply contractable_finite_cylinder_measure
+    --      Use CE characterization for RHS
+    -- 3. Part B (30 min): Show monotone class closure
+    --    - Monotone limits: MCT for integrals
+    --    - Decreasing limits: DCT for integrals
+    -- 4. Part C (30 min): Apply Dynkin's π-λ theorem from mathlib
+    --    - GoodSets contains π-system and is monotone class
+    --    - Therefore GoodSets contains all measurable sets
+
+    sorry -- TODO (2-3 hours): Full Dynkin π-λ implementation
 
   -- **Step 2: Pass to limit as k → ∞ using martingale convergence**
   --
