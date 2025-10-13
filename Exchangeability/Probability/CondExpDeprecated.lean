@@ -14,67 +14,22 @@ import Mathlib.MeasureTheory.PiSystem
 import Mathlib.MeasureTheory.OuterMeasure.BorelCantelli
 
 /-!
-# Deprecated Conditional Expectation Code
+# Conditional Expectation Lemmas Parked for Future Use
 
-This file contains sections from CondExp.lean that:
-1. Have compilation errors (type mismatches, API changes)
-2. Are NOT used by downstream code (ViaMartingale.lean, etc.)
-3. Were moved here to keep the main CondExp.lean file clean and buildable
+This file gathers results about conditional expectations, conditional independence, and
+martingale-style arguments that are currently not needed by the main de Finetti development.
+Keeping them in a separate module lets `CondExp.lean` stay lightweight while we iterate on
+potential mathlib contributions.
 
-## Contents
+The main themes covered here are:
 
-### Unused Conditional Independence Proofs (with errors)
-- `condIndep_iff_condexp_eq`: Doob's characterization (383 lines)
-- `condProb_eq_of_eq_on_pi_system`: π-system extension (280 lines, HAS SORRIES + ERRORS)
+* characterisations of conditional independence phrased using indicator functions;
+* an L² identification lemma for conditional expectations;
+* auxiliary lemmas such as product formulas for indicators.
 
-### Unused Martingale Theory (with errors)
-- `bounded_martingale_l2_eq`: L² identification lemma (205 lines, now proved ✅)
-- (Reverse martingale convergence cluster removed pending mathlib support)
-
-### Unused Utilities
-- `condexp_same_dist`: Distributional equality stub (12 lines)
-- `condIndep_of_condProb_eq`: Wrapper lemma (9 lines)
-- `condExp_indicator_mul_indicator_of_condIndep`: Product formula (PROVEN ✅)
-- `condExp_indicator_mul_indicator_of_condIndep_pullout`: Pullout lemma (PROVEN ✅)
-
-## Why Deprecated
-
-These sections are NOT used by any downstream code in the project (checked ViaMartingale.lean
-and all other files). They are kept here for potential future mathlib contributions.
-
-## Status (January 2025)
-
-**Progress**: 23 → 0 compilation errors ✅ | 2 axioms → 0 axioms ✅ | 8+ sorries → 4 sorries
-
-**Fixed**:
-- ✅ Orphaned doc comments (3 fixes)
-- ✅ API changes: `eLpNorm_condExp_le` → `eLpNorm_one_condExp_le_eLpNorm`
-- ✅ API changes: `setIntegral_indicator_const_Lp` → `integral_indicator + setIntegral_const`
-- ✅ **ALL SigmaFinite instance issues**: Both cases now resolved
-  1. IsProbabilityMeasure case: Used `sigmaFinite_trim_of_le`
-  2. Tail σ-algebra case: Added `[IsFiniteMeasure μ]` assumption to signature
-- ✅ Induction hypothesis type issue in antitone proof
-- ✅ **ALL 3 main sorries in `condIndep_of_indicator_condexp_eq`**:
-  1. Integrability of product of indicators (f1 * f2)
-  2. Integrability of indicator × condExp (f1 * μ[f2|mG])
-  3. Chaining conditional expectation equalities (EventuallyEq composition)
-- ✅ **Both axioms converted to proven lemmas**:
-  1. `condExp_indicator_mul_indicator_of_condIndep` - One-line proof using `condIndep_iff`
-  2. `condExp_indicator_mul_indicator_of_condIndep_pullout` - Proof using idempotence property
-- ✅ **Integral indicator formula**: Used `integral_indicator_const` for clean 2-line proof
-- ✅ **One restricted measure sorry**: Line 563 uses `setIntegral_condExp` successfully
-
-**Remaining sorries**: 0 ✅
-
-## Future Work
-
-For mathlib contributions:
-1. Fix remaining 3 integrability/chaining proofs
-2. Investigate L2 norm API changes
-3. Restore variance decomposition calc chain
-4. Reintroduce reverse martingale convergence lemmas once the downward convergence theorem
-   is available in mathlib
-
+Some statements remain stubs (for instance `condexp_same_dist`), serving as placeholders for
+future formalisation work.  Whenever a lemma becomes part of mathlib or is required elsewhere
+in the project, it should be moved out of this file.
 -/
 
 noncomputable section
@@ -85,7 +40,7 @@ namespace Exchangeability.Probability
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
-/-! ### Doob's Characterization (NOT USED) -/
+/-! ### Conditional independence lemmas -/
 
 lemma condIndep_of_indicator_condexp_eq
     {Ω : Type*} {mΩ : MeasurableSpace Ω} [StandardBorelSpace Ω]
@@ -184,7 +139,7 @@ lemma condIndep_of_indicator_condexp_eq
   rw [f_eq] at step4
   exact step4
 
-/-! ### Bounded Martingales and L² (NOT USED) -/
+/-! ### L² martingale lemma -/
 
 section MartingaleL2
 
@@ -302,11 +257,11 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
 end MartingaleL2
 
 /-!
-### Reverse Martingale Convergence (Removed)
+### Reverse martingale convergence (future work)
 
-The reverse martingale convergence lemmas formerly living here required a downward
-conditional expectation convergence theorem that is not yet in mathlib. They were deleted
-to keep this archive file free of `sorry`s; reintroduce them once the supporting API lands.
+Statements about reverse martingale convergence are intended to live here once the necessary
+downward conditional expectation limit lemmas appear in mathlib. The placeholder remains so
+the expected home for those results is easy to locate.
 -/
 
 /-! ### Distributional Equality and Conditional Expectations -/
