@@ -650,30 +650,62 @@ private lemma condexp_pair_factorization_MET
     -- Step 1: CE[A_n|m] = CE[g(ω₀)|m] for all n (by linearity + shift invariance)
     have h_cesaro_ce : ∀ n, μ[A n | m] =ᵐ[μ] μ[(fun ω => g (ω 0)) | m] := by
       intro n
+      -- First, establish integrability of g(ω 0)
+      have hg0_int : Integrable (fun ω => g (ω 0)) μ := by
+        obtain ⟨Cg, hCg⟩ := hg_bd
+        constructor
+        · exact (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
+        · have h_bd : ∀ (ω : Ω[α]), |g (ω 0)| ≤ Cg := fun ω => hCg (ω 0)
+          exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
+
       sorry
       /-
-      Strategy:
-      1. Show A n is integrable (bounded, measurable)
-      2. Use linearity: CE[(1/n)∑_k g(ω k)|m] = (1/n)∑_k CE[g(ω k)|m]
-      3. For each k: show ω ↦ g(ω k) equals g ∘ (shift^[k])
-      4. Apply condexp_precomp_iterate_eq: CE[g ∘ shift^k|m] = CE[g ∘ id|m]
-      5. Sum: (1/n) * n * CE[g(ω 0)|m] = CE[g(ω 0)|m]
+      Strategy (with integrability in hand):
+      1. For each k, show (fun ω => g (ω k)) = g ∘ shift^[k]
+      2. Each such function is integrable by MeasurePreserving.integrable_comp
+      3. Therefore the sum is integrable
+      4. Apply CE linearity (need to find/prove lemma for Finset.sum)
+      5. For each k: CE[g ∘ shift^k | m] = CE[g ∘ id | m] by condexp_precomp_iterate_eq
+      6. Sum: (1/(n+1)) * (n+1) * CE[g(ω 0)|m] = CE[g(ω 0)|m]
 
-      Challenges:
-      - Need integrability of each g(ω k) term
-      - Need to work with Finset.sum and conditional expectation linearity
-      - May need helper lemma for CE of finite sums
+      Main challenge: Need a lemma like condExp_finset_sum for pulling CE through finite sums.
+      This should follow from repeated application of condExp_add, but may need to be proved.
       -/
 
     -- Step 2: CE[f·A_n|m] = CE[f·g(ω₀)|m] for all n (by lag-constancy)
     have h_product_const : ∀ n, μ[(fun ω => f (ω 0) * A n ω) | m]
         =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 0)) | m] := by
+      intro n
+
+      -- Key lemma: For all k, CE[f(ω₀)·g(ω k)|m] = CE[f(ω₀)·g(ω₀)|m]
+      have h_lag_const_all : ∀ k, μ[(fun ω => f (ω 0) * g (ω k)) | m]
+          =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 0)) | m] := by
+        intro k
+        -- Prove by induction on k
+        induction k with
+        | zero => rfl
+        | succ k IH =>
+          -- By condexp_pair_lag_constant: CE[f(ω₀)·g(ω(k+1))|m] = CE[f(ω₀)·g(ωk)|m]
+          have h_step : μ[(fun ω => f (ω 0) * g (ω (k+1))) | m]
+              =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω k)) | m] := by
+            exact condexp_pair_lag_constant hσ f g hf_meas hf_bd hg_meas hg_bd k
+          -- Transitivity with IH
+          exact h_step.trans IH
+
       sorry
       /-
-      By linearity: CE[f·A_n|m] = (1/n)∑_{k=0}^{n-1} CE[f(ω₀)·g(ω_k)|m]
-      By condexp_pair_lag_constant: CE[f(ω₀)·g(ω_k)|m] = CE[f(ω₀)·g(ω₀)|m] for all k
-      (Apply lag-constancy repeatedly: k+1 → k → ... → 0)
-      Therefore: CE[f·A_n|m] = CE[f(ω₀)·g(ω₀)|m]
+      Now we have: for all k, CE[f(ω₀)·g(ω k)|m] = CE[f(ω₀)·g(ω₀)|m]
+
+      Strategy to finish:
+      1. Expand A n: f·A_n = (1/(n+1))·f·∑_k g(ω k) = (1/(n+1))·∑_k f·g(ω k)
+      2. By linearity: CE[f·A_n|m] = (1/(n+1))·∑_k CE[f·g(ω k)|m]
+      3. By h_lag_const_all: each term equals CE[f·g(ω₀)|m]
+      4. Therefore: CE[f·A_n|m] = (1/(n+1))·(n+1)·CE[f·g(ω₀)|m] = CE[f·g(ω₀)|m]
+
+      Challenges:
+      - Need to work with Finset.sum and conditional expectation
+      - Need integrability of each f·g(ω k) term
+      - Need CE linearity for finite sums
       -/
 
     -- Step 3: A_n → CE[g(ω₀)|m] in L¹ (by MET + boundedness)
@@ -714,13 +746,32 @@ private lemma condexp_pair_factorization_MET
     -- we have CE[f·g|m] = CE[f·CE[g|m]|m]
     have h_const_limit : μ[(fun ω => f (ω 0) * g (ω 0)) | m]
         =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] := by
+      /-
+      **THE KEY INSIGHT**: We have a function that is both:
+      1. CONSTANT in n (by lag-constancy): CE[f·A_n|m] = CE[f·g|m] for all n
+      2. CONVERGENT (by MET + L¹-Lipschitz): CE[f·A_n|m] → CE[f·CE[g|m]|m]
+
+      Therefore the constant must equal the limit!
+
+      Proof outline:
+      - Let Z_n := CE[f·A_n|m] (a sequence of functions)
+      - By h_product_const: Z_n = CE[f·g|m] for all n (constant sequence)
+      - By h_ce_limit: Z_n → CE[f·CE[g|m]|m] ae
+      - For constant sequences: if c = c = c = ... → L, then c = L
+      - Therefore: CE[f·g|m] = CE[f·CE[g|m]|m]
+      -/
+
       sorry
       /-
-      From h_product_const: CE[f·A_n|m] = CE[f·g|m] for all n
-      From h_ce_limit: CE[f·A_n|m] → CE[f·CE[g|m]|m]
-      Therefore: CE[f·g|m] = CE[f·CE[g|m]|m]
+      Implementation strategy:
+      1. Take any particular n (say n=0)
+      2. CE[f·A_0|m] = CE[f·g|m] by h_product_const 0
+      3. CE[f·A_n|m] → CE[f·CE[g|m]|m] by h_ce_limit
+      4. But CE[f·A_n|m] = CE[f·A_0|m] for all n by h_product_const
+      5. So CE[f·A_0|m] → CE[f·CE[g|m]|m] (constant sequence converges to itself)
+      6. Therefore: CE[f·g|m] = CE[f·CE[g|m]|m]
 
-      Technically: need to show that a constant sequence equals its limit.
+      Need lemma: constant ae sequences have their constant value equal to any limit
       -/
 
     exact h_const_limit
