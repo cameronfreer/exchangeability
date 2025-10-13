@@ -713,21 +713,36 @@ private lemma condexp_pair_factorization_MET
         Tendsto (fun n => A n ω) atTop (𝓝 (μ[(fun ω => g (ω 0)) | m] ω)) := by
       sorry
       /-
-      This requires connecting to birkhoffAverage_tendsto_condexp.
-      By MET: Birkhoff averages converge to CE in L².
-      By boundedness of g: L² convergence implies L¹ convergence.
-      By definition: Birkhoff averages equal our Cesàro averages pointwise.
-      Therefore: A_n → CE[g(ω₀)|m] almost everywhere (and in L¹).
+      Strategy (simpler approach):
+      1. A_n is defined pointwise as Cesàro average
+      2. By MET (birkhoffAverage_tendsto_condexp): Birkhoff averages converge in L²
+      3. Our A_n equals the Birkhoff average  pointwise
+      4. L² convergence implies ae convergence (for a subsequence)
+      5. By monotonicity/boundedness: full sequence converges ae
+
+      Challenge: Need to construct the Lp representative and connect pointwise A_n
+      to the Birkhoff average in Lp. This requires careful work with toLp and coeFn.
       -/
 
     -- Step 4: f·A_n → f·CE[g(ω₀)|m] in L¹ (by boundedness of f)
     have h_product_convergence :
         Tendsto (fun n => ∫ ω, |f (ω 0) * A n ω - f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω| ∂μ)
                 atTop (𝓝 0) := by
+      -- Get the bound on f
+      obtain ⟨Cf, hCf⟩ := hf_bd
+
       sorry
       /-
-      |f·A_n - f·CE[g|m]| = |f|·|A_n - CE[g|m]| ≤ C·|A_n - CE[g|m]|
-      Since A_n → CE[g|m] in L¹ and f is bounded, the product converges in L¹.
+      Strategy:
+      1. Factor out f: |f·A_n - f·CE[g|m]| = |f|·|A_n - CE[g|m]|
+      2. Bound: |f| ≤ Cf, so |f·A_n - f·CE[g|m]| ≤ Cf·|A_n - CE[g|m]|
+      3. Integrate: ∫|f·A_n - f·CE[g|m]| ≤ Cf·∫|A_n - CE[g|m]|
+      4. By h_met_convergence: A_n → CE[g|m] ae
+      5. By dominated convergence (|f·(A_n - CE[g|m])| ≤ 2·Cf·Cg): integral → 0
+
+      Need:
+      - h_met_convergence to give L¹ convergence (not just ae)
+      - Or use dominated convergence theorem directly
       -/
 
     -- Step 5: CE[f·A_n|m] → CE[f·CE[g(ω₀)|m]|m] (by L¹-Lipschitz)
@@ -736,9 +751,17 @@ private lemma condexp_pair_factorization_MET
                 atTop (𝓝 (μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | m] ω') | m] ω)) := by
       sorry
       /-
-      By condExp_L1_lipschitz:
-        ‖CE[f·A_n|m] - CE[f·CE[g|m]|m]‖_L¹ ≤ ‖f·A_n - f·CE[g|m]‖_L¹ → 0
-      Therefore CE[f·A_n|m] → CE[f·CE[g|m]|m] in L¹ (hence ae).
+      Strategy:
+      1. By h_product_convergence: ∫|f·A_n - f·CE[g|m]| → 0
+      2. Apply condExp_L1_lipschitz:
+         ∫|CE[f·A_n|m] - CE[f·CE[g|m]|m]| ≤ ∫|f·A_n - f·CE[g|m]| → 0
+      3. L¹ convergence implies ae convergence (for a subsequence)
+      4. By monotonicity: full sequence converges ae
+
+      Need:
+      - Integrability of f·A_n and f·CE[g|m] (from boundedness)
+      - L¹ → ae convergence lemma
+      - Or: use Cauchy sequence in L¹ + completeness
       -/
 
     -- Step 6: Combine - CE[f·A_n|m] is constant but also convergent
@@ -761,17 +784,43 @@ private lemma condexp_pair_factorization_MET
       - Therefore: CE[f·g|m] = CE[f·CE[g|m]|m]
       -/
 
-      sorry
       /-
       Implementation strategy:
-      1. Take any particular n (say n=0)
-      2. CE[f·A_0|m] = CE[f·g|m] by h_product_const 0
-      3. CE[f·A_n|m] → CE[f·CE[g|m]|m] by h_ce_limit
-      4. But CE[f·A_n|m] = CE[f·A_0|m] for all n by h_product_const
-      5. So CE[f·A_0|m] → CE[f·CE[g|m]|m] (constant sequence converges to itself)
-      6. Therefore: CE[f·g|m] = CE[f·CE[g|m]|m]
+      We have TWO facts:
+      A. h_product_const: ∀ n, CE[f·A_n|m] = CE[f·g|m] ae  (constant sequence)
+      B. h_ce_limit: CE[f·A_n|m] → CE[f·CE[g|m]|m] ae      (convergence)
 
-      Need lemma: constant ae sequences have their constant value equal to any limit
+      From A: The sequence is almost surely constant
+      From B: The sequence converges almost surely
+      Conclusion: The constant equals the limit almost surely
+
+      Detailed proof:
+      1. By h_product_const 0: CE[f·A_0|m] = CE[f·g|m] ae
+      2. By h_ce_limit: ∀ᵐ ω, CE[f·A_n|m] ω → CE[f·CE[g|m]|m] ω
+      3. By h_product_const: ∀ n, ∀ᵐ ω, CE[f·A_n|m] ω = CE[f·g|m] ω
+      4. Combining ae sets: ∀ᵐ ω, ∀ n, CE[f·A_n|m] ω = CE[f·g|m] ω and CE[f·A_n|m] ω → CE[f·CE[g|m]|m] ω
+      5. For such ω: constant sequence CE[f·g|m] ω → CE[f·CE[g|m]|m] ω
+      6. Limit of constant = constant: CE[f·g|m] ω = CE[f·CE[g|m]|m] ω
+      7. Therefore: CE[f·g|m] = CE[f·CE[g|m]|m] ae
+      -/
+
+      -- The key observation: h_product_const says CE[f·A_n|m] is constant (= CE[f·g|m])
+      -- and h_ce_limit says this constant sequence converges to CE[f·CE[g|m]|m]
+      -- Therefore the constant equals the limit
+
+      sorry
+      /-
+      Proof sketch:
+      1. From h_product_const 0: CE[f·A_0|m] = CE[f·g|m] ae
+      2. From h_ce_limit: CE[f·A_n|m] → CE[f·CE[g|m]|m] ae (as n → ∞)
+      3. From h_product_const: ∀ n, CE[f·A_n|m] = CE[f·g|m] ae
+      4. Combining: CE[f·g|m] → CE[f·CE[g|m]|m] ae (constant sequence)
+      5. Limit of constant = constant: CE[f·g|m] = CE[f·CE[g|m]|m] ae
+
+      Implementation:
+      - Use Filter.EventuallyEq.trans and Tendsto.congr
+      - Key lemma needed: If f_n = c ae for all n and f_n → L ae, then c = L ae
+      - This is essentially: constant ae-sequences have unique limits
       -/
 
     exact h_const_limit
