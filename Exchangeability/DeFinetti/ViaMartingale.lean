@@ -1934,31 +1934,81 @@ lemma block_coord_condIndep
     -- Strategy: Show GoodSets is a monotone class containing the cylinder π-system
     -- Then by Dynkin's π-λ theorem, GoodSets contains all measurable sets
 
-    -- Part A (60-90 min): Cylinder π-system ⊆ GoodSets
-    -- For any cylinder E_cyl = {∀i X_i ∈ A_i} ∩ {∀j X_{m+1+j} ∈ C_j}, show E_cyl ∈ GoodSets
+    -- **Part A (60-90 min): Cylinder π-system ⊆ GoodSets**
     --
-    -- Strategy: Show cylinder sets satisfy the integral equality by using
-    -- contractable_finite_cylinder_measure to relate measure factorization
-    -- to conditional expectation characterization
+    -- Goal: For any cylinder E_cyl = {∀i X_i ∈ A_i} ∩ {∀j X_{m+1+j} ∈ C_j},
+    --       show E_cyl ∈ GoodSets
     --
-    -- Key insight: By contractable_finite_cylinder_measure,
-    -- μ({X_i ∈ A_i, X_r ∈ B, X_{m+1+j} ∈ C_j}) = μ({X_i ∈ A_i, X_r ∈ B, X_{r+1+j} ∈ C_j})
-    -- This distributional equality implies the integral equality via CE characterization.
+    -- Proof outline:
     --
-    -- Part B (30 min): GoodSets is a monotone class
-    -- Show closure under monotone increasing sequences (MCT)
-    -- Show closure under monotone decreasing sequences (DCT)
+    -- 1. Define representative cylinder:
+    --    E_cyl = {ω | ∀i<r, X_i ω ∈ A_i} ∩ {ω | ∀j<k, X_{m+1+j} ω ∈ C_j}
     --
-    -- Part C (30 min): Apply Dynkin's π-λ theorem
-    -- Use Parts A + B to conclude E ∈ GoodSets via Dynkin's theorem from mathlib
+    -- 2. Show E_cyl is measurable in firstRSigma ⊔ finFutureSigma ✓
+    --    (product of measurable sets)
     --
-    -- Implementation challenge: Need CE theory infrastructure to connect
-    -- measure equality to integral equality. May require extending CondExp.lean.
+    -- 3. LHS computation:
+    --    ∫_{E_cyl} indicator B (X r) dμ
+    --      = μ(E_cyl ∩ {X_r ∈ B})
+    --      = μ({∀i X_i ∈ A_i, X_r ∈ B, ∀j X_{m+1+j} ∈ C_j})
+    --
+    -- 4. Apply contractable_finite_cylinder_measure (key step):
+    --    μ({∀i X_i ∈ A_i, X_r ∈ B, ∀j X_{m+1+j} ∈ C_j})
+    --      = μ({∀i X_i ∈ A_i, X_r ∈ B, ∀j X_{r+1+j} ∈ C_j})  ... (*)
+    --
+    -- 5. RHS computation - need to show:
+    --    ∫_{E_cyl} μ[indicator B ∘ X r | finFuture_k] dμ = (*) above
+    --
+    --    Challenge: Relate the CE integral to the reindexed measure.
+    --
+    --    Possible approaches:
+    --    a) Use setIntegral_condExp to convert RHS to ∫_{E_cyl} indicator B (X r) dμ
+    --       on a different cylinder (requires showing E_cyl is in finFutureSigma - FALSE)
+    --
+    --    b) Use Fubini/product measure structure to factor the integ ral
+    --       ∫_{E_first} (∫_{E_future} ...)
+    --
+    --    c) Use ae_eq_condExp_of_forall_setIntegral_eq (uniqueness of CE)
+    --       to show indicator B (X r) has the right integral property
+    --
+    --    d) Use condexp_indicator_eq_of_pair_law_eq (CE bridge lemma from CondExp.lean)
+    --       with the distributional equality from contractability
+    --
+    -- Missing infrastructure: Need lemma connecting cylinder measure equality
+    -- to conditional expectation integral equality. This is non-trivial and may
+    -- require developing product measure / Fubini machinery for this setting.
+    --
+    -- **Part B (30 min): GoodSets is a monotone class**
+    --
+    -- For increasing sequence: E_n ↗ E with E_n ∈ GoodSets
+    --   Need: E ∈ GoodSets
+    --   Strategy: Use monotone convergence theorem (MCT) for both integrals:
+    --     ∫_E indicator = lim ∫_{E_n} indicator  (MCT)
+    --     ∫_E μ[...] = lim ∫_{E_n} μ[...]        (MCT)
+    --   Since ∫_{E_n} indicator = ∫_{E_n} μ[...] for all n, limits are equal.
+    --
+    -- For decreasing sequence: E_n ↘ E with E_n ∈ GoodSets
+    --   Strategy: Use dominated convergence theorem (DCT) with dominating function = 1
+    --   (similar argument)
+    --
+    -- **Part C (30 min): Apply Dynkin's π-λ theorem**
+    --
+    -- 1. Show cylinder sets form a π-system (closed under finite intersections)
+    -- 2. Show GoodSets is a λ-system (Dynkin system):
+    --    - Contains Ω ✓
+    --    - Closed under complements (use integral property)
+    --    - Closed under disjoint increasing unions (Part B)
+    -- 3. Apply mathlib's Dynkin π-λ theorem from MeasureTheory.PiSystem
+    --    Since cylinders form a π-system generating firstRSigma ⊔ finFutureSigma,
+    --    and GoodSets is a λ-system containing the cylinders,
+    --    GoodSets contains all measurable sets.
+    --
+    -- Key issue: Part A requires infrastructure that may not exist yet.
+    -- The mathematical idea is clear but the formalization is non-trivial.
 
-    sorry -- TODO (2-3 hours total): Implement Parts A, B, C
-          -- Part A: Cylinder π-system proof using contractable_finite_cylinder_measure
-          -- Part B: Monotone class properties (MCT/DCT)
-          -- Part C: Apply Dynkin's π-λ theorem from MeasureTheory.PiSystem
+    sorry -- TODO (2-3 hours): Implement Parts A, B, C above
+          -- Bottleneck: Part A requires CE/measure theory infrastructure
+          -- Parts B and C are more straightforward once Part A is done
 
   -- **Step 2: Pass to limit as k → ∞ using martingale convergence**
   --
