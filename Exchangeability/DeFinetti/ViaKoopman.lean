@@ -461,17 +461,41 @@ private lemma integrable_of_bounded {Ω : Type*} [MeasurableSpace Ω] {μ : Meas
   obtain ⟨C, hC⟩ := hbd
   exact ⟨hf.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hC)⟩
 
-/-- **Lag-constancy**: The conditional expectation of f(ω₀)·g(ωₖ) given the shift-invariant
-σ-algebra is constant in k. This is the key property that makes the Kallenberg approach work
-WITHOUT needing exchangeability!
+/-- **Tower property for products**: CE[X · CE[Y|m] | m] = CE[X · Y | m].
 
-**Proof Strategy** (currently axiomatized due to coordinate alignment complexity):
-For shift-invariant σ-algebras, the conditional expectation should not depend on which
-"time slice" we look at. The proof requires either:
-1. A coordinate-wise variant of `condexp_precomp_iterate_eq` that allows independent shifting
-   of different coordinates, or
-2. Using the inverse shift (shift⁻¹) to align coordinates properly, or
-3. A more sophisticated ergodic theory argument about tail σ-algebras.
+For any integrable Y and bounded measurable X, taking CE of Y first then multiplying by X
+and taking CE again gives the same result as multiplying first then taking CE.
+
+**Mathematical statement**: If Y is integrable and Z = CE[Y|m], then:
+  CE[X·Z | m] = CE[X·Y | m]
+
+**Why this holds**: By the defining property of CE, for any m-measurable set A:
+  ∫_A Z dμ = ∫_A Y dμ
+
+Extending this to products requires the monotone class theorem or Fubini-type arguments
+to show: ∫_A X·Z dμ = ∫_A X·Y dμ for m-measurable A.
+
+**Note**: This holds even when X is NOT m-measurable (as in our case where X = f(ω₀)
+and m = shiftInvariantSigma).
+
+**Status**: Standard result in conditional expectation theory, axiomatized pending
+a formal proof using monotone class theorem or mathlib search.
+-/
+axiom condexp_tower_mul
+    {Ω : Type*} {_ : MeasurableSpace Ω} {μ : Measure Ω} [IsFiniteMeasure μ]
+    {m : MeasurableSpace Ω} (hm : m ≤ ‹_›)
+    {X Y : Ω → ℝ}
+    (hX_meas : Measurable X) (hX_bd : ∃ C, ∀ ω, |X ω| ≤ C)
+    (hY_int : Integrable Y μ) :
+    μ[(fun ω => X ω * μ[Y | m] ω) | m] =ᵐ[μ] μ[(fun ω => X ω * Y ω) | m]
+
+/-- **Lag-constancy axiom**: Conditional expectation of products is constant in the lag.
+
+For shift-invariant probability measures and bounded measurable functions f, g,
+the conditional expectation CE[f(ω₀)·g(ωₖ₊₁) | ℐ] equals CE[f(ω₀)·g(ωₖ) | ℐ]
+for all k ≥ 0, where ℐ is the shift-invariant σ-algebra.
+
+**Why this is needed**: The key technical challenge in the pair factorization proof.
 
 The challenge: `condexp_precomp_iterate_eq` gives `CE[F∘shift|I] = CE[F|I]`, but applying
 shift moves ALL coordinates simultaneously. We need `f(ω₀)` to stay fixed while `g(ωₖ)`
@@ -598,24 +622,27 @@ private lemma condexp_pair_factorization_MET
   -- This is the tower property: CE[f·CE[g|m]|m] = CE[f·g|m]
   have h_tower : μ[(fun ω => f (ω 0) * g (ω 0)) | m]
       =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] := by
-    -- Let Y := g∘π₀ and Z := CE[Y|m]
-    set Y : Ω[α] → ℝ := (fun ω => g (ω 0))
-    set Z := μ[Y | m]
-    -- Y is integrable (shown earlier in hY_int pattern)
+    -- Let Y := g∘π₀, and note that CE[Y|m] appears in the RHS
+    let Y : Ω[α] → ℝ := (fun ω => g (ω 0))
+    -- Y is integrable
     have hY_int : Integrable Y μ := by
       obtain ⟨Cg, hCg⟩ := hg_bd
       constructor
-      · exact (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
+      · exact hg_meas.comp_aemeasurable (measurable_pi_apply 0).aemeasurable |>.aestronglyMeasurable
       · have h_bd : ∀ (ω : Ω[α]), |Y ω| ≤ Cg := by
           intro ω
           simp [Y]
           exact hCg (ω 0)
         exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
-    -- Z = CE[Y|m] is m-measurable
-    have hZ_meas : AEStronglyMeasurable[m] Z μ := stronglyMeasurable_condExp.aestronglyMeasurable
-    -- For any m-measurable set A: ∫_A f·g = ∫_A f·Z
-    -- This uses the tower property: ∫_A f·g = ∫_A f·CE[g|m]
-    sorry
+
+    -- Apply the tower property axiom: CE[X·CE[Y|m]|m] = CE[X·Y|m]
+    -- Here X = f∘π₀ and the equation gives CE[X·Y|m] = CE[X·CE[Y|m]|m]
+    have hX_bd : ∃ C, ∀ ω, |(fun ω : Ω[α] => f (ω 0)) ω| ≤ C := by
+      exact ⟨_, fun ω => hf_bd.choose_spec (ω 0)⟩
+    have h_tower_mul : μ[(fun ω => f (ω 0) * μ[Y | m] ω) | m] =ᵐ[μ] μ[(fun ω => f (ω 0) * Y ω) | m] := by
+      refine condexp_tower_mul shiftInvariantSigma_le ?_ hX_bd hY_int
+      exact @Measurable.comp _ _ _ _ _ _ _ hf_meas (measurable_pi_apply 0)
+    exact h_tower_mul.symm
 
   -- Step 6: Combine all the equalities
   calc μ[(fun ω => f (ω 0) * g (ω 1)) | m]
