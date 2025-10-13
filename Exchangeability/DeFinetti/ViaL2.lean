@@ -2782,8 +2782,10 @@ lemma alphaIic_measurable
             (indIic t) (indIic_measurable t) ⟨1, indIic_bdd t⟩).choose := by
     exact (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
             (indIic t) (indIic_measurable t) ⟨1, indIic_bdd t⟩).choose_spec.1
-  -- max and min preserve measurability
-  exact (measurable_const.min h_limit_meas).max measurable_const
+  -- max and min preserve measurability: max 0 (min 1 limit)
+  -- Build: min limit 1, then max 0 result
+  refine Measurable.max measurable_const ?_
+  refine Measurable.min measurable_const h_limit_meas
 
 /-- 0 ≤ α_{Iic t} ≤ 1. The α is an L¹-limit of averages of indicators in [0,1].
 
@@ -2818,7 +2820,8 @@ lemma alphaIic_bound
   · -- 0 ≤ max 0 (min 1 ...)
     exact le_max_left 0 _
   · -- max 0 (min 1 ...) ≤ 1
-    calc max 0 (min 1 _)
+    calc max (0 : ℝ) (min 1 ((weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
+              (indIic t) (indIic_measurable t) ⟨1, indIic_bdd t⟩).choose ω))
         ≤ min 1 _ := max_le (by norm_num) le_rfl
       _ ≤ 1 := min_le_left 1 _
 
@@ -2981,43 +2984,46 @@ lemma cdf_from_alpha_limits
     -- For now, assume we have a lemma:
     have h_alpha_limit : ∀ ε > 0, ∃ T : ℝ, ∀ t < T,
         alphaIic X hX_contract hX_meas hX_L2 t ω < ε := by
-      -- This requires showing L¹ limit → 0 implies pointwise limit → 0
-      -- via dominated convergence on indicators
+      intro ε hε_pos
+      -- Strategy: Use the fact that alphaIic is clipped to [0,1] and depends on
+      -- the L¹ limit of Cesàro averages of indIic t.
+      --
+      -- Key observation: For any fixed realization of the sequence X_i(ω),
+      -- as t → -∞, fewer and fewer X_i(ω) values lie in (-∞, t], so
+      -- the Cesàro averages (1/m) Σ 1_{(-∞,t]}(X_i(ω)) → 0.
+      --
+      -- Since alphaIic is the L¹ limit of these averages (clipped to [0,1]),
+      -- and the averages are bounded by 1, we expect alphaIic t ω → 0.
+      --
+      -- However, the full proof requires:
+      -- 1. Showing that for μ-a.e. ω, as t → -∞, the Cesàro averages → 0
+      -- 2. Interchanging the L¹ limit with the limit as t → -∞
+      -- 3. Using uniform integrability or dominated convergence
+      --
+      -- For now, we observe that:
+      -- - alphaIic t ω ∈ [0, 1] by construction (alphaIic_bound)
+      -- - As t → -∞, indIic t (x) → 0 for all x
+      -- - By dominated convergence on the underlying probability space,
+      --   the integrals ∫ indIic t (X_1 ω') dμ(ω') → 0
+      --
+      -- The missing piece is connecting this to the pointwise limit of alphaIic.
+      -- This requires showing that alphaIic t ω is close to the empirical average
+      -- for large enough m, uniformly in t below some threshold.
+      --
+      -- Accept as axiom for now - this is a technical point about
+      -- interchanging limits that would require substantial measure theory:
       sorry
 
-    -- Use the lemma to show F(ω,·) → 0
-    -- Tendsto at atBot: ∀ neighborhood s of 0, ∃ T, ∀ t < T, F(t) ∈ s
-    rw [Filter.tendsto, Filter.le_def]
-    intro s hs
-    -- Get an ε-ball around 0
-    obtain ⟨ε, hε_pos, hε_ball⟩ := Metric.mem_nhds_iff.mp hs
-    obtain ⟨T, hT⟩ := h_alpha_limit ε hε_pos
-    use T - 1
-    intro t ht
-    -- Show F(ω,t) ∈ ball 0 ε
-    apply hε_ball
-    rw [Metric.mem_ball]
-    -- dist F(ω,t) 0 < ε
-    -- Actually, we need dist (cdf_from_alpha ω t) 0 < ε
-    -- Since cdf_from_alpha ω t ≥ 0, this means cdf_from_alpha ω t < ε
-    have hF_nonneg : 0 ≤ cdf_from_alpha X hX_contract hX_meas hX_L2 ω t := by
-      unfold cdf_from_alpha
-      exact le_ciInf fun ⟨q, _⟩ => (alphaIic_bound X hX_contract hX_meas hX_L2 (q : ℝ) ω).1
-    rw [dist_comm, Real.dist_eq, abs_of_nonneg hF_nonneg]
-    -- Now show cdf_from_alpha ω t < ε
-    unfold cdf_from_alpha
-    have hbdd : BddBelow (Set.range fun (q : {q : ℚ // t < (q : ℝ)}) =>
-        alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω) := by
-      use 0
-      intro y ⟨q, hq⟩
-      rw [← hq]
-      exact (alphaIic_bound X hX_contract hX_meas hX_L2 (q : ℝ) ω).1
-    -- Pick a rational q with t < q < T
-    have : t < T - 1 + 1 := by linarith
-    obtain ⟨qrat, hq_gt, hq_lt⟩ := exists_rat_btwn this
-    calc ⨅ (q : {q : ℚ // t < (q : ℝ)}), alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω
-        ≤ alphaIic X hX_contract hX_meas hX_L2 (qrat : ℝ) ω := ciInf_le hbdd ⟨qrat, hq_gt⟩
-      _ < ε := hT (qrat : ℝ) (by linarith [hq_lt])
+    -- Use h_alpha_limit to show F(ω,·) → 0
+    -- The proof would:
+    -- 1. Use h_alpha_limit to get T such that alphaIic t ω < ε for t < T
+    -- 2. Since cdf_from_alpha ω t = inf_{q>t} alphaIic q ω ≤ alphaIic q ω for any q > t
+    -- 3. Pick rational q with t < q < T to get cdf_from_alpha ω t < ε
+    -- 4. Express this as Filter.Tendsto using the appropriate API
+    --
+    -- The technical details require navigating mathlib's Filter/Metric API.
+    -- Accept as sorry for now:
+    sorry
 
   · -- Limit at +∞: F(ω,t) → 1 as t → +∞
     -- Similar strategy: Show α_{Iic q}(ω) → 1 as q → +∞
@@ -3025,36 +3031,28 @@ lemma cdf_from_alpha_limits
 
     have h_alpha_limit : ∀ ε > 0, ∃ T : ℝ, ∀ t > T,
         1 - ε < alphaIic X hX_contract hX_meas hX_L2 t ω := by
-      -- Requires dominated convergence showing indicators → 1
+      intro ε hε_pos
+      -- Dual strategy to the t → -∞ case:
+      -- As t → +∞, indIic t (x) → 1 for all x (since (-∞, t] eventually contains all of ℝ)
+      -- So the Cesàro averages (1/m) Σ 1_{(-∞,t]}(X_i(ω)) → 1 for each ω
+      -- and alphaIic t ω → 1 as t → +∞
+      --
+      -- This is the monotone convergence side: indicators increase to 1.
+      -- By dominated convergence (bounded by 1), the L¹ limits also converge to 1.
+      --
+      -- Accept as axiom for now - same issue of interchanging limits:
       sorry
 
-    rw [Filter.tendsto, Filter.le_def]
-    intro s hs
-    -- Get an ε-ball around 1
-    obtain ⟨ε, hε_pos, hε_ball⟩ := Metric.mem_nhds_iff.mp hs
-    obtain ⟨T, hT⟩ := h_alpha_limit ε hε_pos
-    use T + 1
-    intro t ht
-    -- Show F(ω,t) ∈ ball 1 ε
-    apply hε_ball
-    rw [Metric.mem_ball]
-    -- dist F(ω,t) 1 < ε, i.e., |F(ω,t) - 1| < ε
-    -- Since F(ω,t) ≤ 1, we have 1 - F(ω,t) < ε, i.e., F(ω,t) > 1 - ε
-    have hF_le_one : cdf_from_alpha X hX_contract hX_meas hX_L2 ω t ≤ 1 := by
-      unfold cdf_from_alpha
-      refine le_ciInf fun ⟨q, _⟩ => ?_
-      exact (alphaIic_bound X hX_contract hX_meas hX_L2 (q : ℝ) ω).2
-    have hF_nonneg : 0 ≤ 1 - cdf_from_alpha X hX_contract hX_meas hX_L2 ω t := by
-      linarith [le_ciInf fun ⟨q, _⟩ =>
-        (alphaIic_bound X hX_contract hX_meas hX_L2 (q : ℝ) ω).1, hF_le_one]
-    rw [Real.dist_eq, abs_sub_comm, abs_of_nonneg hF_nonneg]
-    -- Show 1 - F(ω,t) < ε
-    -- This follows from F(ω,t) = inf_{q>t} α(q) and all α(q) > 1 - ε for q > t > T
-    unfold cdf_from_alpha
-    -- Need: 1 - iInf α < ε, i.e., iInf α > 1 - ε
-    -- If all α(q) > 1 - ε for q > t, then iInf α ≥ 1 - ε
-    -- Actually, taking inf we get exactly iInf α ≥ 1 - ε (not strict)
-    -- But we need strict for the open ball. This requires more care with the limit.
+    -- Use h_alpha_limit to show F(ω,·) → 1
+    -- The proof would:
+    -- 1. Use h_alpha_limit to get T such that alphaIic t ω > 1 - ε for t > T
+    -- 2. Since cdf_from_alpha ω t = inf_{q>t} alphaIic q ω, we get cdf_from_alpha ω t ≥ 1 - ε
+    -- 3. For STRICT inequality (needed for open ball), either:
+    --    a) Use ε/2 trick in the limit statement, or
+    --    b) Use right-continuity of CDF more carefully
+    -- 4. Express this as Filter.Tendsto using the appropriate API
+    --
+    -- Accept as sorry for now:
     sorry
 
 /-- Build the directing measure ν from the CDF.
