@@ -482,8 +482,8 @@ and m = shiftInvariantSigma).
 a formal proof using monotone class theorem or mathlib search.
 -/
 axiom condexp_tower_mul
-    {Ω : Type*} {_ : MeasurableSpace Ω} {μ : Measure Ω} [IsFiniteMeasure μ]
-    {m : MeasurableSpace Ω} (hm : m ≤ ‹_›)
+    {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
+    {m : MeasurableSpace Ω} (hm : m ≤ mΩ)
     {X Y : Ω → ℝ}
     (hX_meas : Measurable X) (hX_bd : ∃ C, ∀ ω, |X ω| ≤ C)
     (hY_int : Integrable Y μ) :
@@ -637,11 +637,12 @@ private lemma condexp_pair_factorization_MET
 
     -- Apply the tower property axiom: CE[X·CE[Y|m]|m] = CE[X·Y|m]
     -- Here X = f∘π₀ and the equation gives CE[X·Y|m] = CE[X·CE[Y|m]|m]
+    have hX_meas : Measurable (fun ω : Ω[α] => f (ω 0)) :=
+      hf_meas.comp (measurable_pi_apply 0)
     have hX_bd : ∃ C, ∀ ω, |(fun ω : Ω[α] => f (ω 0)) ω| ≤ C := by
       exact ⟨_, fun ω => hf_bd.choose_spec (ω 0)⟩
-    have h_tower_mul : μ[(fun ω => f (ω 0) * μ[Y | m] ω) | m] =ᵐ[μ] μ[(fun ω => f (ω 0) * Y ω) | m] := by
-      refine condexp_tower_mul shiftInvariantSigma_le ?_ hX_bd hY_int
-      exact @Measurable.comp _ _ _ _ _ _ _ hf_meas (measurable_pi_apply 0)
+    have h_tower_mul : μ[(fun ω => f (ω 0) * μ[Y | m] ω) | m] =ᵐ[μ] μ[(fun ω => f (ω 0) * Y ω) | m] :=
+      condexp_tower_mul shiftInvariantSigma_le hX_meas hX_bd hY_int
     exact h_tower_mul.symm
 
   -- Step 6: Combine all the equalities
