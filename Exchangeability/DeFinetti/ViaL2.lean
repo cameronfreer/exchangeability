@@ -2364,13 +2364,26 @@ theorem weighted_sums_converge_L1
 
     let M₂ := Nat.ceil (4 * Cf / (ε ^ 2)) + 1
 
-    -- Define M as max of M₁ and M₂
-    let M := max M₁ M₂
+    -- Define M as max of M₁, M₂, and 2*n+1 to ensure m is large
+    -- For A n m vs A 0 m: we use indices {n+1,...,n+m} vs {1,...,m}
+    -- These overlap when n < m, so we can't directly use disjoint windows
+    -- Instead, wait for m large enough that we can use a different approach
+    let M := max (max M₁ M₂) (2 * n + 1)
 
     use M
     intro m hm
-    have hm₁ : M₁ ≤ m := le_trans (le_max_left M₁ M₂) hm
-    have hm₂ : M₂ ≤ m := le_trans (le_max_right M₁ M₂) hm
+    have hm₁ : M₁ ≤ m := by
+      calc M₁ ≤ max M₁ M₂ := le_max_left M₁ M₂
+           _ ≤ M := le_max_left _ _
+           _ ≤ m := hm
+    have hm₂ : M₂ ≤ m := by
+      calc M₂ ≤ max M₁ M₂ := le_max_right M₁ M₂
+           _ ≤ M := le_max_left _ _
+           _ ≤ m := hm
+    have hmn : n < m := by
+      calc n < 2 * n + 1 := by omega
+           _ ≤ M := le_max_right _ _
+           _ ≤ m := hm
 
     -- Apply triangle inequality
     have h_triangle : eLpNorm (fun ω => A n m ω - alpha_0 ω) 1 μ ≤
@@ -2399,11 +2412,21 @@ theorem weighted_sums_converge_L1
       · -- Apply the uniform bound (requires disjoint windows)
         -- Windows {n+1,...,n+m} and {1,...,m} are disjoint iff n ≥ m
         have hdisj : Disjoint (window n m) (window 0 m) := by
-          -- Prove disjointness: window n m = {n+1, ..., n+m}, window 0 m = {1, ..., m}
-          -- These are disjoint when n + 1 > m, i.e., n ≥ m
-          -- For now, we need n ≥ m to hold. This is ensured by choosing m large enough
-          -- in practice. For the formal proof, we use that m ≥ M₂ and can make M₂ depend on n.
-          sorry  -- TODO: Add constraint that M₂ ≥ n or restructure to ensure n < m case is handled
+          -- window n m = {n+1, ..., n+m}, window 0 m = {1, ..., m}
+          -- For disjointness, need n+1 > m (i.e., n ≥ m) OR n+m < 1 (impossible)
+          -- But we have n < m from hmn, so these windows OVERLAP
+          --
+          -- The fundamental issue: we're trying to show A n m → alpha_0 for any n,
+          -- using |A n m - alpha_0| ≤ |A n m - A 0 m| + |A 0 m - alpha_0|
+          -- But A n m and A 0 m use overlapping index sets when n < m
+          --
+          -- Possible solutions:
+          -- 1. Use a bound that works for overlapping windows (without disjointness)
+          -- 2. Compare with A 0 n instead of A 0 m (shorter window that doesn't overlap)
+          -- 3. Wait for m ≥ 2n so we can use a tail-vs-tail comparison
+          --
+          -- For now, this is an architectural limitation similar to h2sq overlap case
+          sorry  -- TODO: Use bound that works without disjointness, or restructure argument
         have h_bound_sq : ∫ ω, ((1/(m:ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
                                  (1/(m:ℝ)) * ∑ i : Fin m, f (X (0 + i.val + 1) ω))^2 ∂μ
                          ≤ Cf / m := hCf_unif n 0 m hm_pos hdisj
