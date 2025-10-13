@@ -667,26 +667,78 @@ private lemma condexp_pair_factorization_MET
         · have h_bd : ∀ (ω : Ω[α]), |g (ω k)| ≤ Cg := fun ω => hCg (ω k)
           exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
 
-      -- Unfold A_n definition
-      have h_An_eq : A n = fun ω => (1 / (n + 1 : ℝ)) * (Finset.range (n + 1)).sum (fun k => g (ω k)) :=
-        rfl
+      -- Derive shift invariance for g from condexp_pair_lag_constant with f = 1
+      have hg_bd' : ∃ C, ∀ x, |g x| ≤ C := ⟨Cg, hCg⟩
+      have h_g_shift : ∀ k, μ[fun ω => g (ω (k+1)) | m] =ᵐ[μ] μ[fun ω => g (ω k) | m] := by
+        intro k
+        -- Use condexp_pair_lag_constant with f = constant 1 function
+        have h_const_meas : Measurable (fun (_ : α) => (1 : ℝ)) := measurable_const
+        have h_const_bd : ∃ C, ∀ x : α, |(1 : ℝ)| ≤ C := ⟨1, fun _ => by simp [abs_one]⟩
+        have h_pair := condexp_pair_lag_constant hσ (fun _ => 1) g h_const_meas h_const_bd hg_meas hg_bd' k
+        -- Simplify 1 * g = g
+        simp only [one_mul] at h_pair
+        exact h_pair
 
-      -- Work pointwise to combine all the algebraic steps
-      -- We'll show the result pointwise ae, then lift back to ae equality
+      -- Extend to all k by induction
+      have h_g_shift_all : ∀ k, μ[fun ω => g (ω k) | m] =ᵐ[μ] μ[fun ω => g (ω 0) | m] := by
+        intro k
+        induction k with
+        | zero => rfl
+        | succ k IH => exact (h_g_shift k).trans IH
 
-      sorry
-      /-
-      Strategy to complete:
-      1. For the sum: CE[∑_k g(ω k)|m] = ∑_k CE[g(ω k)|m] by condExp_finset_sum
-      2. Shift invariance: each CE[g(ω k)|m] = CE[g(ω 0)|m] by condexp_precomp_iterate_eq
-      3. Sum of constants: ∑_{k=0}^n CE[g(ω 0)|m] = (n+1)·CE[g(ω 0)|m]
-      4. Pull CE through scalar: CE[(1/(n+1))·X|m] = (1/(n+1))·CE[X|m] by condExp_smul
-      5. Cancel: (1/(n+1))·(n+1)·CE[g(ω 0)|m] = CE[g(ω 0)|m]
+      -- Now prove the main result
+      -- Step 1a: Unfold A_n and apply condExp_smul
+      have hsum_int : Integrable (fun ω => (Finset.range (n + 1)).sum (fun k => g (ω k))) μ :=
+        integrable_finset_sum _ hgk_int
+      have h_smul : μ[A n | m] =ᵐ[μ]
+          (1 / (n + 1 : ℝ)) • μ[fun ω => (Finset.range (n + 1)).sum (fun k => g (ω k)) | m] :=
+        condExp_smul (1 / (n + 1 : ℝ)) _ m
 
-      The mechanical part is properly combining these with EventuallyEq.trans.
-      Main challenge: condExp_smul and condExp_finset_sum may have type class issues
-      that need careful handling.
-      -/
+      -- Step 1b: Apply condExp_finset_sum
+      have h_sum_pre : μ[∑ i ∈ Finset.range (n + 1), fun ω => g (ω i) | m] =ᵐ[μ]
+          ∑ i ∈ Finset.range (n + 1), μ[fun ω => g (ω i) | m] :=
+        condExp_finset_sum hgk_int m
+
+      -- Step 1c: Apply shift invariance  to sum - all terms become g(ω 0)
+      have h_sum_shift : ∑ i ∈ Finset.range (n + 1), μ[fun ω => g (ω i) | m] =ᵐ[μ]
+          ∑ i ∈ Finset.range (n + 1), μ[fun ω => g (ω 0) | m] := by
+        apply eventuallyEq_sum
+        intro k _
+        exact h_g_shift_all k
+
+      -- Step 1d: The sum becomes (n+1) copies of CE[g(ω₀)|m]
+      have h_const : ∑ i ∈ Finset.range (n + 1), μ[fun ω => g (ω 0) | m] =ᵐ[μ]
+          fun ω => (n + 1 : ℝ) * μ[fun ω => g (ω 0) | m] ω := by
+        apply ae_of_all
+        intro ω
+        simp [Finset.sum_const, Finset.card_range, nsmul_eq_mul, Pi.smul_apply]
+
+      -- Step 1e: Rewrite A_n in terms of sum
+      have h_An_rewrite : μ[A n | m] =ᵐ[μ] (1 / (n + 1 : ℝ)) • μ[∑ i ∈ Finset.range (n + 1), fun ω => g (ω i) | m] := by
+        have : A n = fun ω => (1 / (n + 1 : ℝ)) * ∑ i ∈ Finset.range (n + 1), g (ω i) := rfl
+        rw [this]
+        have h_eq : (fun ω => (1 / (n + 1)) * ∑ i ∈ Finset.range (n + 1), g (ω i))
+            = (1 / (n + 1)) • (∑ i ∈ Finset.range (n + 1), fun ω => g (ω i)) := by
+          funext ω
+          simp [Pi.smul_apply, smul_eq_mul, Finset.sum_apply]
+        rw [h_eq]
+        exact condExp_smul (1 / (n + 1)) _ m
+
+      -- Step 1f: Chain everything together
+      calc μ[A n | m]
+        =ᵐ[μ] (1 / (n + 1 : ℝ)) • μ[∑ i ∈ Finset.range (n + 1), fun ω => g (ω i) | m] := h_An_rewrite
+      _ =ᵐ[μ] (1 / (n + 1 : ℝ)) • (∑ i ∈ Finset.range (n + 1), μ[fun ω => g (ω i) | m]) :=
+          EventuallyEq.smul EventuallyEq.rfl h_sum_pre
+      _ =ᵐ[μ] (1 / (n + 1 : ℝ)) • (∑ i ∈ Finset.range (n + 1), μ[fun ω => g (ω 0) | m]) :=
+          EventuallyEq.smul EventuallyEq.rfl h_sum_shift
+      _ =ᵐ[μ] (1 / (n + 1 : ℝ)) • (fun ω => (n + 1 : ℝ) * μ[fun ω => g (ω 0) | m] ω) :=
+          EventuallyEq.smul EventuallyEq.rfl h_const
+      _ =ᵐ[μ] μ[fun ω => g (ω 0) | m] := by
+          apply ae_of_all
+          intro ω
+          simp [Pi.smul_apply, smul_eq_mul]
+          field_simp
+          ring
 
     -- Step 2: CE[f·A_n|m] = CE[f·g(ω₀)|m] for all n (by lag-constancy)
     have h_product_const : ∀ n, μ[(fun ω => f (ω 0) * A n ω) | m]
