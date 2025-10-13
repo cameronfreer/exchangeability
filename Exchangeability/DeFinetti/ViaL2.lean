@@ -2014,33 +2014,66 @@ theorem weighted_sums_converge_L1
     -- For simplicity, multiply Cf by 3 as upper bound (since C_star ≤ 3*max component)
     let N : ℕ := Nat.ceil (27 * Cf / (ε ^ 2)) + 1
     have hN_pos : 0 < N := Nat.succ_pos _
-    refine ⟨N, ?_⟩
+    -- Require m, ℓ ≥ 2N to ensure windows are disjoint
+    refine ⟨2 * N, ?_⟩
     intro m ℓ hm hℓ
-    -- Common tail length k = min m ℓ
-    let k := min m ℓ
-    have hk_ge_N : N ≤ k := by
-      have : N ≤ min m ℓ := Nat.le_min.mpr ⟨hm, hℓ⟩
-      simpa [k] using this
-    have hk_pos : 0 < k := lt_of_lt_of_le hN_pos hk_ge_N
+    -- Use fixed k = N (not min m ℓ) to ensure 2k ≤ m and 2k ≤ ℓ
+    let k := N
+    have hk_pos : 0 < k := hN_pos
+    -- With m, ℓ ≥ 2N and k = N, we have 2k ≤ m and 2k ≤ ℓ
+    have h2k_le_m : 2 * k ≤ m := by simpa [k] using hm
+    have h2k_le_ℓ : 2 * k ≤ ℓ := by simpa [k] using hℓ
+
+    -- Helper: windows are disjoint when n1 + k < n2 + 1
+    have window_disjoint (n1 n2 : ℕ) (h : n1 + k < n2 + 1) : Disjoint (window n1 k) (window n2 k) := by
+      rw [Finset.disjoint_left]
+      intros x hx1 hx2
+      rw [window] at hx1 hx2
+      obtain ⟨i, hi, rfl⟩ := Finset.mem_image.mp hx1
+      obtain ⟨j, hj, heq⟩ := Finset.mem_image.mp hx2
+      -- n1 + i + 1 = n2 + j + 1
+      have : n1 + i = n2 + j := by omega
+      have hi_bd : i < k := Finset.mem_range.mp hi
+      -- From h: n1 + k < n2 + 1, so n1 + k ≤ n2
+      -- From this and i < k: n1 + i < n1 + k ≤ n2 ≤ n2 + j
+      omega
 
     -- Three same-length comparisons (tail-averages):
     -- T1: (0 vs m-k), T2: ((m-k) vs (ℓ-k)), T3: ((ℓ-k) vs 0), all of length k.
     have h1sq :
       ∫ ω, (A 0 k ω - A (m - k) k ω)^2 ∂μ ≤ Cf / k := by
-      have hdisj : Disjoint (window 0 k) (window (m - k) k) := by sorry  -- TODO: prove windows are disjoint
+      have hdisj : Disjoint (window 0 k) (window (m - k) k) := by
+        apply window_disjoint
+        -- Need: 0 + k < (m - k) + 1, i.e., k < m - k + 1, i.e., 2k ≤ m
+        omega
       simpa [A] using hCf_unif 0 (m - k) k hk_pos hdisj
     have h2sq :
       ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ ≤ Cf / k := by
-      have hdisj : Disjoint (window (m - k) k) (window (ℓ - k) k) := by sorry  -- TODO: prove windows are disjoint
+      have hdisj : Disjoint (window (m - k) k) (window (ℓ - k) k) := by
+        apply window_disjoint
+        -- Need: (m - k) + k < (ℓ - k) + 1, i.e., m < ℓ - k + 1, i.e., m + k ≤ ℓ
+        -- We have m ≥ 2k and ℓ ≥ 2k, but we don't have m + k ≤ ℓ in general
+        -- Actually, we need to use that m ≤ ℓ (or handle the symmetric case)
+        sorry  -- TODO: This needs m ≤ ℓ or a different construction
       simpa [A] using hCf_unif (m - k) (ℓ - k) k hk_pos hdisj
     have h3sq :
       ∫ ω, (A (ℓ - k) k ω - A 0 k ω)^2 ∂μ ≤ Cf / k := by
-      have hdisj : Disjoint (window (ℓ - k) k) (window 0 k) := by sorry  -- TODO: prove windows are disjoint
+      have hdisj : Disjoint (window (ℓ - k) k) (window 0 k) := by
+        apply Disjoint.symm
+        apply window_disjoint
+        -- Need: 0 + k < (ℓ - k) + 1, i.e., 2k ≤ ℓ
+        omega
       simpa [A] using hCf_unif (ℓ - k) 0 k hk_pos hdisj
 
     -- Long vs tail comparisons for h1_L2 and h3_L2
-    have hkm : k ≤ m := Nat.min_le_left m ℓ
-    have hkℓ : k ≤ ℓ := Nat.min_le_right m ℓ
+    have hkm : k ≤ m := by
+      calc k = N := rfl
+           _ ≤ 2 * N := Nat.le_mul_of_pos_left _ (by decide : 0 < 2)
+           _ ≤ m := hm
+    have hkℓ : k ≤ ℓ := by
+      calc k = N := rfl
+           _ ≤ 2 * N := Nat.le_mul_of_pos_left _ (by decide : 0 < 2)
+           _ ≤ ℓ := hℓ
 
     -- Get Ctail constants from long-vs-tail bounds
     obtain ⟨Ctail1, hC1_nonneg, h1sq_long⟩ :=
