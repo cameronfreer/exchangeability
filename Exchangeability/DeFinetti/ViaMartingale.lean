@@ -2028,9 +2028,76 @@ lemma block_coord_condIndep
     -- Key issue: Part A requires infrastructure that may not exist yet.
     -- The mathematical idea is clear but the formalization is non-trivial.
 
-    sorry -- TODO (2-3 hours): Implement Parts A, B, C above
-          -- Bottleneck: Part A requires CE/measure theory infrastructure
-          -- Parts B and C are more straightforward once Part A is done
+    -- Attempt to implement Part A with explicit infrastructure gaps marked
+
+    -- For any given k, we need to show E ∈ GoodSets
+    -- Start with cylinder sets and extend via Dynkin
+
+    -- **Cylinder case: mostfundamental case**
+    -- For E_cyl = {∀i<r, X_i ∈ A_i} ∩ {∀j<k, X_{m+1+j} ∈ C_j}, show:
+    -- ∫_{E_cyl} indicator B (X r) dμ = ∫_{E_cyl} μ[indicator B ∘ X r | finFuture_k] dμ
+
+    -- Step 1: LHS computation
+    have lhs_computation : ∀ (A : Fin r → Set α) (hA : ∀ i, MeasurableSet (A i))
+        (C : Fin k → Set α) (hC : ∀ i, MeasurableSet (C i)),
+      let E_cyl := {ω | (∀ i, X i.val ω ∈ A i) ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)}
+      ∫ ω in E_cyl, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ
+        = (μ ({ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)})).toReal := by
+      intro A hA C hC
+      -- Integral of indicator over E_cyl equals measure of E_cyl ∩ {X_r ∈ B}
+      sorry -- TODO (30 min): Standard integral-to-measure conversion
+            -- Strategy: indicator B (X r ω) = indicator (X r ⁻¹' B) ω
+            --           Use integral_indicator, Measure.restrict properties
+            --           Show E_cyl ∩ {X_r ∈ B} = {∀i X_i ∈ A_i, X_r ∈ B, ∀j X_{m+1+j} ∈ C_j}
+
+    -- Step 2: Apply contractability
+    have contractability_step : ∀ (A : Fin r → Set α) (hA : ∀ i, MeasurableSet (A i))
+        (C : Fin k → Set α) (hC : ∀ i, MeasurableSet (C i)),
+      μ ({ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)})
+        = μ ({ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (r + 1 + j.val) ω ∈ C j)}) := by
+      intro A hA C hC
+      -- This is exactly what contractable_finite_cylinder_measure provides
+      exact contractable_finite_cylinder_measure X hX hX_meas hrm A hA B hB C hC
+
+    -- Step 3: RHS computation - CRITICAL INFRASTRUCTURE GAP
+    -- Integrating CE over cylinder E_past ∩ E_future (where E_future ∈ finFutureSigma)
+    -- should equal reindexed cylinder measure via Fubini/disintegration
+    --
+    -- Similar to kernel_integral_product_factorization in ViaKoopman.lean,
+    -- this requires infrastructure not currently available in mathlib
+    have rhs_computation : ∀ (A : Fin r → Set α) (hA : ∀ i, MeasurableSet (A i))
+        (C : Fin k → Set α) (hC : ∀ i, MeasurableSet (C i)),
+      let E_cyl := {ω | (∀ i, X i.val ω ∈ A i) ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)}
+      ∫ ω in E_cyl, (Exchangeability.Probability.condExpWith μ
+          (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
+          (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ
+        = (μ ({ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (r + 1 + j.val) ω ∈ C j)})).toReal := by
+      intro A hA C hC
+      sorry -- TODO: Requires product measure / Fubini / disintegration infrastructure
+
+    -- Combine steps 1-3 to show cylinders are in GoodSets
+    have cylinders_in_goodsets : ∀ (A : Fin r → Set α) (hA : ∀ i, MeasurableSet (A i))
+        (C : Fin k → Set α) (hC : ∀ i, MeasurableSet (C i)),
+      let E_cyl := {ω | (∀ i, X i.val ω ∈ A i) ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)}
+      E_cyl ∈ GoodSets := by
+      intro A hA C hC
+      constructor
+      · -- Measurability of E_cyl
+        sorry -- TODO (15 min): Show cylinder is measurable in firstRSigma ⊔ finFutureSigma
+      · -- Integral equality
+        rw [lhs_computation A hA C hC, rhs_computation A hA C hC]
+        rw [contractability_step A hA C hC]
+
+    -- Part B: Monotone class properties
+    have goodsets_closed_under_unions : ∀ (E_seq : ℕ → Set Ω),
+        (∀ n, E_seq n ∈ GoodSets) →
+        Monotone E_seq →
+        (⋃ n, E_seq n) ∈ GoodSets := by
+      sorry -- TODO (30 min): Use MCT on both sides of integral equality
+
+    -- Part C: Apply Dynkin's π-λ theorem
+    sorry -- TODO (30 min): Use Parts A + B to conclude E ∈ GoodSets
+          -- Apply mathlib's Dynkin theorem from MeasureTheory.PiSystem
 
   -- **Step 2: Pass to limit as k → ∞ using martingale convergence**
   --
