@@ -507,18 +507,39 @@ private lemma condexp_pair_factorization_MET
   -- CE[f(ω₀)·CE[g(ω₀)|ℐ] | ℐ] = CE[g(ω₀)|ℐ]·CE[f(ω₀)|ℐ]
   have h_pullout : μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m]
       =ᵐ[μ] (fun ω => μ[(fun ω => g (ω 0)) | m] ω * μ[(fun ω => f (ω 0)) | m] ω) := by
-    sorry
-    /-
-    Use condExp_mul_pullout once the boundedness issue is resolved.
-    Main issue: need to prove |CE[g|m]| ≤ C from |g| ≤ C, which requires Jensen's inequality.
+    -- Z := CE[g(ω₀)|m]
+    set Z := μ[(fun ω => g (ω 0)) | m]
 
-    Proof sketch:
-    - Z := CE[g(ω₀)|m] is m-measurable by stronglyMeasurable_condExp
-    - Boundedness: |CE[g|m]| ≤ CE[|g| | m] ≤ C (by Jensen and monotonicity)
-    - Y := f ∘ π_0 is integrable (bounded + measurable)
-    - Apply condExp_mul_pullout
-    ~15 lines
-    -/
+    -- Z is m-measurable (automatic from stronglyMeasurable_condExp)
+    have hZ_meas : Measurable[m] Z := by
+      exact stronglyMeasurable_condExp.measurable
+
+    -- Z is bounded: |CE[g|m]| ≤ C a.e. by Jensen's inequality
+    have hZ_bd : ∃ C, ∀ ω, |Z ω| ≤ C := by
+      obtain ⟨Cg, hCg⟩ := hg_bd
+      use Cg
+      intro ω
+      -- Need: |CE[g|m] ω| ≤ Cg
+      -- By Jensen: |CE[g|m]| ≤ CE[|g| | m] a.e.
+      -- By monotonicity: CE[|g| | m] ≤ Cg a.e. (since |g| ≤ Cg)
+      sorry -- TODO: Apply Jensen's inequality for conditional expectation
+
+    -- Y := f(ω₀) is integrable (bounded + measurable)
+    have hY_int : Integrable (fun ω => f (ω 0)) μ := by
+      obtain ⟨Cf, hCf⟩ := hf_bd
+      -- Can't use integrable_of_bounded since it's defined later in the file
+      -- Manually construct: Integrable = AEStronglyMeasurable + HasFiniteIntegral
+      constructor
+      · exact (hf_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
+      · -- HasFiniteIntegral: ∫⁻ ω, ‖f (ω 0)‖₊ ∂μ < ∞
+        sorry -- TODO: Similar to integrable_mul_of_ae_bdd_left, needs nnnorm API
+
+    -- Apply condExp_mul_pullout: CE[Z·Y | m] = Z·CE[Y | m]
+    have h := condExp_mul_pullout hZ_meas hZ_bd hY_int
+    -- h gives: CE[Z * (f∘π₀) | m] = Z * CE[f∘π₀ | m]
+    -- But we need CE[(f∘π₀) * Z | m] = Z * CE[f∘π₀ | m]
+    -- So we need to commute the multiplication and adjust
+    sorry -- TODO: Fix type mismatch with function order
 
   -- Step 5: CE[f(ω₀)·g(ω₀)|ℐ] = CE[f(ω₀)·CE[g(ω₀)|ℐ]|ℐ]
   -- This uses the tower property backwards
