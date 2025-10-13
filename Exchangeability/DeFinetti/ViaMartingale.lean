@@ -1919,14 +1919,23 @@ lemma block_coord_condIndep
     -- Given: E measurable in firstRSigma X r ⊔ finFutureSigma X m k
     -- Goal: ∫_E indicator B (X r) dμ = ∫_E μ[indicator B ∘ X r | finFuture_k] dμ
 
-    -- This is a complex application of Dynkin's π-λ theorem
-    -- The key insight: contractable_finite_cylinder_measure gives us the factorization
-    -- for cylinder generators, and monotone class theory extends it
+    -- Use Dynkin's π-λ theorem: define GoodSets and show it's a monotone class containing cylinders
+    --
+    -- Implementation outline:
+    -- 1. Define GoodSets = {E | integral equality holds}
+    -- 2. Part A (60-90 min): Show cylinder π-system ⊆ GoodSets
+    --    - For E_cyl = {∀i X_i ∈ A_i} ∩ {∀j X_{m+1+j} ∈ C_j}:
+    --      LHS = μ(E_cyl ∩ {X_r ∈ B})
+    --      Apply contractable_finite_cylinder_measure
+    --      Use CE characterization for RHS
+    -- 3. Part B (30 min): Show monotone class closure
+    --    - Monotone limits: MCT for integrals
+    --    - Decreasing limits: DCT for integrals
+    -- 4. Part C (30 min): Apply Dynkin's π-λ theorem from mathlib
+    --    - GoodSets contains π-system and is monotone class
+    --    - Therefore GoodSets contains all measurable sets
 
     sorry -- TODO (2-3 hours): Full Dynkin π-λ implementation
-          -- Part A: Prove for cylinder generators using contractable_finite_cylinder_measure
-          -- Part B: Show closure under monotone limits
-          -- Part C: Apply Dynkin's theorem to conclude
 
   -- **Step 2: Pass to limit as k → ∞ using martingale convergence**
   --
