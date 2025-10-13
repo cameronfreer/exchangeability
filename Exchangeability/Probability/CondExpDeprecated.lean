@@ -66,9 +66,8 @@ and all other files). They are kept here for potential future mathlib contributi
 - ✅ **Integral indicator formula**: Used `integral_indicator_const` for clean 2-line proof
 - ✅ **One restricted measure sorry**: Line 563 uses `setIntegral_condExp` successfully
 
-**Remaining sorries** (2 total):
-- Line 765: `bounded_martingale_l2_eq` (requires variance decomposition and Lp norm API)
-- Line 404: Reverse martingale convergence (awaiting mathlib formalisation)
+**Remaining sorries** (1 total):
+- Reverse martingale convergence (awaiting mathlib formalisation of the downward theorem)
 
 ## Future Work
 
@@ -198,107 +197,100 @@ so E[(X₂ - E[X₂|m₁])²] = E[X₂²] - E[(E[X₂|m₁])²].
 Use `MemLp.condExpL2_ae_eq_condExp` and `eLpNorm_condExp_le`.
 -/
 lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
-    [IsProbabilityMeasure μ] {m₁ m₂ : MeasurableSpace Ω}
-    (hm₁ : m₁ ≤ m₀) (hm₂ : m₂ ≤ m₀)
-    [SigmaFinite (μ.trim hm₁)] [SigmaFinite (μ.trim hm₂)]
+    [IsProbabilityMeasure μ] {m₁ : MeasurableSpace Ω}
+    (hm₁ : m₁ ≤ m₀) [SigmaFinite (μ.trim hm₁)]
     {X₁ X₂ : Ω → ℝ} (hL2 : MemLp X₂ 2 μ)
     (hmg : μ[X₂ | m₁] =ᵐ[μ] X₁)
     (hSecond : ∫ ω, (X₂ ω)^2 ∂μ = ∫ ω, (X₁ ω)^2 ∂μ) :
     X₁ =ᵐ[μ] X₂ := by
-  -- Strategy: Use L² orthogonal projection properties
-  -- condExp is the orthogonal projection onto the L² closure of m₁-measurable functions
-  -- So ‖X₂‖² = ‖μ[X₂|m₁]‖² + ‖X₂ - μ[X₂|m₁]‖² (Pythagoras)
-  -- Combined with the second moment equality, this forces X₂ - X₁ =ᵐ 0
+  classical
+  -- Abbreviate the conditional expectation.
+  set Y : Ω → ℝ := μ[X₂ | m₁] with hY
+  have hY_eq_X₁ : Y =ᵐ[μ] X₁ := by simpa [hY] using hmg
+  -- Square-integrability is inherited by the conditional expectation.
+  have hY_mem : MemLp Y 2 μ := by
+    simpa [hY] using (MemLp.condExp (m := m₁) (μ := μ) (m₀ := m₀) hL2)
+  have h_diff_mem : MemLp (fun ω => X₂ ω - Y ω) 2 μ := hL2.sub hY_mem
+  have h_diff_sq_int :
+      Integrable (fun ω => (X₂ ω - Y ω) ^ 2) μ := h_diff_mem.integrable_sq
 
-  -- Proof using conditional variance:
-  -- By variance decomposition (condVar_ae_eq_condExp_sq_sub_sq_condExp):
-  --   Var[X₂|m₁] = μ[X₂²|m₁] - (μ[X₂|m₁])²  a.e.
-  --
-  -- Integrate both sides:
-  --   ∫ Var[X₂|m₁] = ∫ μ[X₂²|m₁] - ∫ (μ[X₂|m₁])²
-  --                = ∫ X₂² - ∫ (μ[X₂|m₁])²  (by integral_condExp)
-  --                = ∫ X₂² - ∫ X₁²          (by hmg: μ[X₂|m₁] =ᵐ X₁)
-  --                = ∫ X₂² - ∫ X₂²          (by hSecond)
-  --                = 0
-  --
-  -- Since Var[X₂|m₁] ≥ 0 and ∫ Var[X₂|m₁] = 0, we have Var[X₂|m₁] = 0 a.e.
-  -- This means X₂ - μ[X₂|m₁] = 0 a.e., i.e., X₂ = μ[X₂|m₁] =ᵐ X₁  a.e.
-
-  -- Use variance decomposition
-  have hvar_decomp := ProbabilityTheory.condVar_ae_eq_condExp_sq_sub_sq_condExp hm₁ hL2
-
-  -- Show that ∫ Var[X₂|m₁] = 0
-  -- Integrate the variance decomposition:
-  --   ∫ Var[X₂|m₁] = ∫ (μ[X₂²|m₁] - (μ[X₂|m₁])²)
-  have hint_var : ∫ ω, Var[X₂; μ | m₁] ω ∂μ = 0 := by
-    calc ∫ ω, Var[X₂; μ | m₁] ω ∂μ
-        = ∫ ω, (μ[X₂ ^ 2 | m₁] ω - (μ[X₂ | m₁] ω) ^ 2) ∂μ := by
-            exact integral_congr_ae hvar_decomp
-      _ = ∫ ω, μ[X₂ ^ 2 | m₁] ω ∂μ - ∫ ω, (μ[X₂ | m₁] ω) ^ 2 ∂μ := by
-            have hint1 : Integrable (μ[X₂ ^ 2 | m₁]) μ := integrable_condExp
-            have hint2 : Integrable (fun ω => (μ[X₂ | m₁] ω) ^ 2) μ := by
-              -- Conditional expectations preserve L², so their square is integrable
-              have h_cond_mem : MemLp (μ[X₂ | m₁]) 2 μ :=
-                (MemLp.condExp (m := m₁) (μ := μ) (m₀ := m₀) hL2)
-              simpa using h_cond_mem.integrable_sq
-            exact integral_sub hint1 hint2
-      _ = ∫ ω, (X₂ ω) ^ 2 ∂μ - ∫ ω, (μ[X₂ | m₁] ω) ^ 2 ∂μ := by
-            congr 1
-            exact integral_condExp hm₁
+  -- Integrate the variance decomposition to obtain ∫ Var = 0.
+  have hVar_decomp :
+      ProbabilityTheory.Var[X₂; μ | m₁]
+        =ᵐ[μ] μ[(fun ω => (X₂ ω) ^ 2) | m₁] - μ[X₂ | m₁] ^ 2 := by
+    simpa [hY] using
+      ProbabilityTheory.condVar_ae_eq_condExp_sq_sub_sq_condExp
+        (μ := μ) (m := m₁) (m₀ := m₀) (X := X₂) (hm := hm₁) (hX := hL2)
+  have h_var_integral_zero :
+      ∫ ω, ProbabilityTheory.Var[X₂; μ | m₁] ω ∂μ = 0 := by
+    have hInt_cond_sq :
+        Integrable (fun ω => μ[(fun ω => (X₂ ω) ^ 2) | m₁] ω) μ :=
+      integrable_condExp (μ := μ) (m := m₁) (f := fun ω => (X₂ ω) ^ 2)
+    have hInt_Y_sq :
+        Integrable (fun ω => (μ[X₂ | m₁] ω) ^ 2) μ :=
+      (MemLp.condExp (m := m₁) (μ := μ) (m₀ := m₀) hL2).integrable_sq
+    have hInt_cond_sq_eq :
+        ∫ ω, μ[(fun ω => (X₂ ω) ^ 2) | m₁] ω ∂μ
+          = ∫ ω, (X₂ ω) ^ 2 ∂μ :=
+      integral_condExp (μ := μ) (m := m₁) (m₀ := m₀)
+        (f := fun ω => (X₂ ω) ^ 2)
+    have hInt_Y_sq_eq :
+        ∫ ω, (μ[X₂ | m₁] ω) ^ 2 ∂μ = ∫ ω, (X₁ ω) ^ 2 ∂μ := by
+      have := integral_congr_ae (EventuallyEq.fun_comp hmg fun x => x ^ 2)
+      simpa [hY] using this
+    calc
+      ∫ ω, ProbabilityTheory.Var[X₂; μ | m₁] ω ∂μ
+          = ∫ ω, (μ[(fun ω => (X₂ ω) ^ 2) | m₁] ω
+                - (μ[X₂ | m₁] ω) ^ 2) ∂μ := by
+              exact integral_congr_ae hVar_decomp
+      _ = ∫ ω, μ[(fun ω => (X₂ ω) ^ 2) | m₁] ω ∂μ
+              - ∫ ω, (μ[X₂ | m₁] ω) ^ 2 ∂μ := by
+              exact integral_sub hInt_cond_sq hInt_Y_sq
       _ = ∫ ω, (X₂ ω) ^ 2 ∂μ - ∫ ω, (X₁ ω) ^ 2 ∂μ := by
-            congr 1
-            exact integral_congr_ae (EventuallyEq.fun_comp hmg (fun x => x ^ 2))
-      _ = 0 := by
-            rw [sub_eq_zero]
-            exact hSecond
+        simp [hInt_cond_sq_eq, hInt_Y_sq_eq]
+      _ = 0 := by simpa [sub_eq_zero, hSecond]
 
-  -- Since Var[X₂|m₁] ≥ 0 and ∫ Var[X₂|m₁] = 0, we have Var[X₂|m₁] = 0 a.e.
-  have hVar_nonneg : 0 ≤ᵐ[μ] Var[X₂; μ | m₁] := by
+  -- Non-negativity and integrability of the conditional variance.
+  have hVar_nonneg : 0 ≤ᵐ[μ] ProbabilityTheory.Var[X₂; μ | m₁] := by
     have h_sq_nonneg :
-        0 ≤ᵐ[μ] fun ω => (X₂ ω - μ[X₂ | m₁] ω) ^ 2 :=
+        0 ≤ᵐ[μ] fun ω => (X₂ ω - Y ω) ^ 2 :=
       Eventually.of_forall fun ω => sq_nonneg _
-    simpa [ProbabilityTheory.condVar] using condExp_nonneg (μ := μ) (m := m₁) h_sq_nonneg
+    simpa [ProbabilityTheory.condVar, hY] using
+      condExp_nonneg (μ := μ) (m := m₁) h_sq_nonneg
   have hVar_integrable :
       Integrable (ProbabilityTheory.Var[X₂; μ | m₁]) μ :=
-    ProbabilityTheory.integrable_condVar (hm := hm₁) (μ := μ) (X := X₂)
+    ProbabilityTheory.integrable_condVar (m := m₁) (μ := μ) (X := X₂)
   have hVar_zero :
-      Var[X₂; μ | m₁] =ᵐ[μ] 0 :=
-    (integral_eq_zero_iff_of_nonneg_ae hVar_nonneg hVar_integrable).1 hint_var
+      ProbabilityTheory.Var[X₂; μ | m₁] =ᵐ[μ] 0 :=
+    (integral_eq_zero_iff_of_nonneg_ae hVar_nonneg hVar_integrable).1 h_var_integral_zero
 
-  -- Convert the vanishing conditional variance into the vanishing of the square error
-  have h_cond_mem : MemLp (μ[X₂ | m₁]) 2 μ :=
-    (MemLp.condExp (m := m₁) (μ := μ) (m₀ := m₀) hL2)
-  have hdiff_mem :
-      MemLp (fun ω => X₂ ω - μ[X₂ | m₁] ω) 2 μ :=
-    hL2.sub h_cond_mem
-  have hdiff_sq_int :
-      Integrable (fun ω => (X₂ ω - μ[X₂ | m₁] ω) ^ 2) μ :=
-    hdiff_mem.integrable_sq
-
-  have h_int_diff_sq :
-      ∫ ω, (X₂ ω - μ[X₂ | m₁] ω) ^ 2 ∂μ = 0 := by
-    have hVar_int_zero :
-        ∫ ω, Var[X₂; μ | m₁] ω ∂μ = 0 := by
+  -- Relate the integral of the conditional variance to the square error.
+  have h_diff_sq_int_zero :
+      ∫ ω, (X₂ ω - Y ω) ^ 2 ∂μ = 0 := by
+    have hset :
+        ∫ ω, ProbabilityTheory.Var[X₂; μ | m₁] ω ∂μ
+            = ∫ ω, (X₂ ω - μ[X₂ | m₁] ω) ^ 2 ∂μ := by
+      simpa [setIntegral_univ] using
+        ProbabilityTheory.setIntegral_condVar
+          (μ := μ) (m := m₁) (X := X₂) (hm := hm₁)
+          (s := Set.univ) h_diff_sq_int MeasurableSet.univ
+    have hIntVar : ∫ ω, ProbabilityTheory.Var[X₂; μ | m₁] ω ∂μ = 0 := by
       simpa using integral_congr_ae hVar_zero
-    have hset :=
-      ProbabilityTheory.setIntegral_condVar (μ := μ) (m := m₁) (X := X₂)
-        (hm := hm₁) (s := Set.univ) hdiff_sq_int MeasurableSet.univ
-    have hset' :
-        ∫ ω, Var[X₂; μ | m₁] ω ∂μ =
-          ∫ ω, (X₂ ω - μ[X₂ | m₁] ω) ^ 2 ∂μ := by
-      simpa using hset
-    exact hset'.symm ▸ hVar_int_zero
+    simpa [hY] using hset.symm.trans hIntVar
 
+  -- Deduce that the square error vanishes almost everywhere.
   have h_sq_zero :
-      (fun ω => (X₂ ω - μ[X₂ | m₁] ω) ^ 2) =ᵐ[μ] 0 :=
+      (fun ω => (X₂ ω - Y ω) ^ 2) =ᵐ[μ] 0 :=
     (integral_eq_zero_iff_of_nonneg_ae
-        (Eventually.of_forall fun ω => sq_nonneg _) hdiff_sq_int).1 h_int_diff_sq
+        (Eventually.of_forall fun ω => sq_nonneg _) h_diff_sq_int).1 h_diff_sq_int_zero
   have h_diff_zero :
-      (fun ω => X₂ ω - μ[X₂ | m₁] ω) =ᵐ[μ] 0 :=
+      (fun ω => X₂ ω - Y ω) =ᵐ[μ] 0 :=
     h_sq_zero.mono fun ω hω => sq_eq_zero_iff.mp hω
-  have hX2_eq_cond : X₂ =ᵐ[μ] μ[X₂ | m₁] :=
+  have hX₂_eq_Y : X₂ =ᵐ[μ] Y :=
     h_diff_zero.mono fun ω hω => sub_eq_zero.mp hω
-  exact hX2_eq_cond.trans hmg
+
+  -- Combine the identities.
+  exact hY_eq_X₁.symm.trans hX₂_eq_Y.symm
 
 /-! ### Reverse Martingale Convergence (NOT USED) -/
 
@@ -326,14 +318,19 @@ lemma Integrable.tendsto_ae_condexp_antitone
     induction t with
     | zero => simpa
     | succ t ih => exact (hdecr (i + t)).trans ih
-  exact condExp_tendsto_iInf (μ := μ) (𝔽 := 𝒢) h_antitone hle X hX
+  -- TODO: Provide the Lévy downward (reverse martingale) convergence proof once the
+  -- corresponding conditional expectation limit API lands in mathlib.
+  -- See https://leanprover-community.github.io/mathlib4_docs/ for the upward theorem:
+  -- `MeasureTheory.Integrable.tendsto_ae_condExp`.
+  -- The antitone version is currently outstanding.
+  sorry
 
 /-- **Reverse martingale convergence theorem.**
 
 Along a decreasing family 𝒢, we have μ[X | 𝒢 n] → μ[X | ⋂ n, 𝒢 n] a.e.
 
-This is FMP Theorem 7.23. Now obtained from the axiomatised
-`condExp_tendsto_iInf`. -/
+This is FMP Theorem 7.23. The proof awaits a mathlib lemma giving a
+downward/antitone version of the conditional expectation convergence theorem. -/
 lemma reverse_martingale_convergence {μ : Measure Ω}
     [IsProbabilityMeasure μ] (𝒢 : ℕ → MeasurableSpace Ω)
     (h_le : ∀ n, 𝒢 n ≤ ‹_›)
