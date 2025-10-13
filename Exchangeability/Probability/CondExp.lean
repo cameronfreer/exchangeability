@@ -171,7 +171,7 @@ This characterization follows from the product formula in `condIndep_iff`:
 Note: Requires StandardBorelSpace assumption from mathlib's CondIndep definition.
 -/
 
--- Note: Large sections with compilation errors have been moved to CondExpDeprecated.lean
+-- Note: Large sections with compilation errors have been moved to CondExpExtras.lean
 -- This file now contains only what's used by downstream code (ViaMartingale.lean)
 
 lemma condIndep_of_indicator_condexp_eq
@@ -261,7 +261,7 @@ lemma condIndep_of_indicator_condexp_eq
 
 /-! ### Axioms for Conditional Independence Factorization -/
 
--- Note: bounded_martingale_l2_eq and related L² proofs have been moved to CondExpDeprecated.lean
+-- Note: bounded_martingale_l2_eq and related L² proofs have been moved to CondExpExtras.lean
 
 
 /-- **Product formula for conditional expectations of indicators** under conditional independence.

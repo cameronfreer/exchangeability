@@ -2258,18 +2258,29 @@ theorem weighted_sums_converge_L1
         -- First establish C_star ≤ 3 * Cf
         have hC_star_bound : C_star ≤ 3 * Cf := by
           -- C_star = max(Cf, Ctail1, Ctail3)
-          -- All three constants come from the same covariance structure: 2 * σSqf * (1 - ρf)
-          -- - Cf from l2_bound_two_windows_uniform (ViaL2.lean:1032)
-          -- - Ctail1, Ctail3 from l2_bound_long_vs_tail (ViaL2.lean:1862)
           --
-          -- Mathematically, they should all be equal, so C_star = Cf ≤ 3 * Cf.
-          -- However, proving this equality rigorously requires showing that the
-          -- covariance bounds in both lemmas produce the same constant.
+          -- MATHEMATICAL FACT: All three constants equal 2 * σSqf * (1 - ρf)
+          -- - Cf from l2_bound_two_windows_uniform (line 1032)
+          -- - Ctail1, Ctail3 from l2_bound_long_vs_tail (line 1869)
+          -- Both lemmas call contractable_covariance_structure on the same f∘X
           --
-          -- For now, we use a conservative bound: since C_star ≥ Cf and all constants
-          -- come from similar structures, C_star shouldn't be much larger than Cf.
-          -- The bound C_star ≤ 3 * Cf is conservative and sufficient for the proof.
-          sorry  -- TODO: Prove Ctail1 ≤ Cf and Ctail3 ≤ Cf from covariance structure
+          -- LEAN CHALLENGE: Cf, Ctail1, Ctail3 are existentially quantified separately
+          -- - Cf comes from: obtain ⟨Cf, _, _⟩ := l2_bound_two_windows_uniform ...
+          -- - Ctail1 from: obtain ⟨Ctail1, _, _⟩ := l2_bound_long_vs_tail ... m ...
+          -- - Ctail3 from: obtain ⟨Ctail3, _, _⟩ := l2_bound_long_vs_tail ... ℓ ...
+          --
+          -- Even though they extract from the same covariance structure, Lean sees them
+          -- as different terms. To prove Ctail1 = Cf, we'd need to refactor the lemmas to:
+          -- 1. Extract covariance structure once: obtain ⟨m, σ², ρ, ...⟩ := ...
+          -- 2. Define Cf := 2 * σ² * (1 - ρ) as a concrete value
+          -- 3. Pass this Cf to the lemmas instead of existentially quantifying
+          --
+          -- PRAGMATIC SOLUTION: Use conservative bound C_star ≤ 3 * Cf
+          -- Since C_star = max(Cf, Ctail1, Ctail3) and all equal Cf mathematically:
+          -- C_star = Cf ≤ 3 * Cf (trivially true)
+          --
+          -- The factor of 3 is loose but sufficient for the threshold calculation
+          sorry  -- TODO: Refactor lemmas to share covariance structure extraction
   
         -- Lower bound on N
         have hN_lower : (27 * Cf / ε ^ 2 : ℝ) < N := by
@@ -2352,15 +2363,31 @@ theorem weighted_sums_converge_L1
       push_neg at h_separated
       -- h_separated : (m : ℤ) - ℓ < k ∧ (ℓ : ℤ) - m < k
 
-      -- For the close case, observe that when |m-ℓ| < k = N and m,ℓ ≥ 2N,
-      -- we can bound the difference differently using the fact that
-      -- most of the averaging windows overlap.
+      -- CLOSE CASE BOUND via Telescoping
       --
-      -- Key insight: A 0 m = average over [1..m], A 0 ℓ = average over [1..ℓ]
-      -- The difference is dominated by the small number of differing indices.
+      -- Key insight: For |m - ℓ| < k, use telescoping:
+      --   A 0 m - A 0 ℓ = ∑_{j=ℓ+1}^m (A 0 j - A 0 (j-1))
       --
-      -- TODO: Implement refined bound or adjust threshold choice
-      sorry
+      -- Each consecutive difference satisfies:
+      --   |A 0 j - A 0 (j-1)| ≤ 2M/j
+      --
+      -- Therefore: |A 0 m - A 0 ℓ| ≤ 2M ∑_{j=ℓ+1}^m 1/j ≤ 2M * |m-ℓ|/ℓ < 2Mk/ℓ
+      --
+      -- For this to be < ε, we need ℓ > 2Mk/ε.
+      -- Since ℓ ≥ 2N, we need: 2N > 2Mk/ε, i.e., N > Mk/ε.
+      -- With k = N, this gives: N > MN/ε, which is impossible unless ε > M.
+      --
+      -- RESOLUTION: Use LARGER threshold
+      -- Instead of N ≈ C/ε² (from separated case), use N ≈ C/ε³ to handle both cases.
+      -- Specifically, we need N > max(9C_star/ε², 2Mk/ε) where k = N.
+      -- The second constraint gives N² > 2MN/ε, so N > 2M/ε.
+      -- Combined: N > max(9C_star/ε², 2M/ε).
+      --
+      -- For small ε, the first term dominates, but the implementation would need
+      -- to account for both constraints. This makes the threshold calculation
+      -- more complex than currently implemented (line 2023).
+      --
+      sorry  -- TODO: Implement refined threshold accounting for close case
 
   have hA_cauchy_L1_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
       eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ < ENNReal.ofReal ε := by

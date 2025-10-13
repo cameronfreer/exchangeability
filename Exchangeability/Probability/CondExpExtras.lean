@@ -14,67 +14,21 @@ import Mathlib.MeasureTheory.PiSystem
 import Mathlib.MeasureTheory.OuterMeasure.BorelCantelli
 
 /-!
-# Deprecated Conditional Expectation Code
+# Conditional Expectation Lemmas Parked for Future Use
 
-This file contains sections from CondExp.lean that:
-1. Have compilation errors (type mismatches, API changes)
-2. Are NOT used by downstream code (ViaMartingale.lean, etc.)
-3. Were moved here to keep the main CondExp.lean file clean and buildable
+This file gathers results about conditional expectations, conditional independence, and
+martingale-style arguments that are currently not needed by the main de Finetti development.
+Keeping them in a separate module lets `CondExp.lean` stay lightweight while we iterate on
+potential mathlib contributions.
 
-## Contents
+The main themes covered here are:
 
-### Unused Conditional Independence Proofs (with errors)
-- `condIndep_iff_condexp_eq`: Doob's characterization (383 lines)
-- `condProb_eq_of_eq_on_pi_system`: π-system extension (280 lines, HAS SORRIES + ERRORS)
+* characterisations of conditional independence phrased using indicator functions;
+* an L² identification lemma for conditional expectations;
+* auxiliary lemmas such as product formulas for indicators.
 
-### Unused Martingale Theory (with errors)
-- `bounded_martingale_l2_eq`: L² identification lemma (205 lines, now proved ✅)
-- (Reverse martingale convergence cluster removed pending mathlib support)
-
-### Unused Utilities
-- `condexp_same_dist`: Distributional equality stub (12 lines)
-- `condIndep_of_condProb_eq`: Wrapper lemma (9 lines)
-- `condExp_indicator_mul_indicator_of_condIndep`: Product formula (PROVEN ✅)
-- `condExp_indicator_mul_indicator_of_condIndep_pullout`: Pullout lemma (PROVEN ✅)
-
-## Why Deprecated
-
-These sections are NOT used by any downstream code in the project (checked ViaMartingale.lean
-and all other files). They are kept here for potential future mathlib contributions.
-
-## Status (January 2025)
-
-**Progress**: 23 → 0 compilation errors ✅ | 2 axioms → 0 axioms ✅ | 8+ sorries → 4 sorries
-
-**Fixed**:
-- ✅ Orphaned doc comments (3 fixes)
-- ✅ API changes: `eLpNorm_condExp_le` → `eLpNorm_one_condExp_le_eLpNorm`
-- ✅ API changes: `setIntegral_indicator_const_Lp` → `integral_indicator + setIntegral_const`
-- ✅ **ALL SigmaFinite instance issues**: Both cases now resolved
-  1. IsProbabilityMeasure case: Used `sigmaFinite_trim_of_le`
-  2. Tail σ-algebra case: Added `[IsFiniteMeasure μ]` assumption to signature
-- ✅ Induction hypothesis type issue in antitone proof
-- ✅ **ALL 3 main sorries in `condIndep_of_indicator_condexp_eq`**:
-  1. Integrability of product of indicators (f1 * f2)
-  2. Integrability of indicator × condExp (f1 * μ[f2|mG])
-  3. Chaining conditional expectation equalities (EventuallyEq composition)
-- ✅ **Both axioms converted to proven lemmas**:
-  1. `condExp_indicator_mul_indicator_of_condIndep` - One-line proof using `condIndep_iff`
-  2. `condExp_indicator_mul_indicator_of_condIndep_pullout` - Proof using idempotence property
-- ✅ **Integral indicator formula**: Used `integral_indicator_const` for clean 2-line proof
-- ✅ **One restricted measure sorry**: Line 563 uses `setIntegral_condExp` successfully
-
-**Remaining sorries**: 0 ✅
-
-## Future Work
-
-For mathlib contributions:
-1. Fix remaining 3 integrability/chaining proofs
-2. Investigate L2 norm API changes
-3. Restore variance decomposition calc chain
-4. Reintroduce reverse martingale convergence lemmas once the downward convergence theorem
-   is available in mathlib
-
+Whenever a statement from this file becomes part of mathlib or is required in the main
+development, it should be moved out of this “parking lot”.
 -/
 
 noncomputable section
@@ -85,7 +39,7 @@ namespace Exchangeability.Probability
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
-/-! ### Doob's Characterization (NOT USED) -/
+/-! ### Conditional independence lemmas -/
 
 lemma condIndep_of_indicator_condexp_eq
     {Ω : Type*} {mΩ : MeasurableSpace Ω} [StandardBorelSpace Ω]
@@ -184,7 +138,14 @@ lemma condIndep_of_indicator_condexp_eq
   rw [f_eq] at step4
   exact step4
 
-/-! ### Bounded Martingales and L² (NOT USED) -/
+/-! ### L² martingale lemma -/
+
+section MartingaleL2
+
+-- Lean needs the ambient `[MeasurableSpace Ω]` to form `Measure Ω`.
+-- The lemma below only uses it through those measures, so we silence
+-- `linter.unusedSectionVars` to avoid a spurious warning.
+set_option linter.unusedSectionVars false
 
 /-- L² identification lemma: if `X₂` is square-integrable and
 `μ[X₂ | m₁] = X₁`, while the second moments of `X₁` and `X₂` coincide,
@@ -247,7 +208,8 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
               exact integral_sub hInt_cond_sq hInt_Y_sq
       _ = ∫ ω, (X₂ ω) ^ 2 ∂μ - ∫ ω, (X₁ ω) ^ 2 ∂μ := by
         simp [hInt_cond_sq_eq, hInt_Y_sq_eq]
-      _ = 0 := by simpa [sub_eq_zero, hSecond]
+      _ = 0 := by
+        simp [hSecond]
 
   -- Non-negativity and integrability of the conditional variance.
   have hVar_nonneg : 0 ≤ᵐ[μ] Var[X₂; μ | m₁] := by
@@ -291,28 +253,112 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
   -- Combine the identities.
   exact hY_eq_X₁.symm.trans hX₂_eq_Y.symm
 
-/-!
-### Reverse Martingale Convergence (Removed)
+end MartingaleL2
 
-The reverse martingale convergence lemmas formerly living here required a downward
-conditional expectation convergence theorem that is not yet in mathlib. They were deleted
-to keep this archive file free of `sorry`s; reintroduce them once the supporting API lands.
+/-!
+### Reverse martingale convergence (future work)
+
+Statements about reverse martingale convergence are intended to live here once the necessary
+downward conditional expectation limit lemmas appear in mathlib. The placeholder remains so
+the expected home for those results is easy to locate.
 -/
 
 /-! ### Distributional Equality and Conditional Expectations -/
 
-/-- If (ξ, η) and (ξ, ζ) have the same distribution, then E[g ∘ ξ | η]
-and E[g ∘ ξ | ζ] have the same distribution.
+/-- If the joint laws of `(ξ, η)` and `(ξ, ζ)` coincide, then any integrable observable of the
+pair has the same expectation. -/
+lemma integral_pair_eq_of_joint_eq {μ : Measure Ω}
+    {ξ η ζ : Ω → α} {φ : α × α → ℝ}
+    (hξ : Measurable ξ) (hη : Measurable η) (hζ : Measurable ζ)
+    (hφ :
+      AEStronglyMeasurable φ (Measure.map (fun ω => (ξ ω, η ω)) μ))
+    (hφ_int :
+      Integrable φ (Measure.map (fun ω => (ξ ω, η ω)) μ))
+    (h_dist :
+      Measure.map (fun ω => (ξ ω, η ω)) μ
+        = Measure.map (fun ω => (ξ ω, ζ ω)) μ) :
+    ∫ ω, φ (ξ ω, η ω) ∂μ = ∫ ω, φ (ξ ω, ζ ω) ∂μ := by
+  classical
+  set fη : Ω → α × α := fun ω => (ξ ω, η ω)
+  set fζ : Ω → α × α := fun ω => (ξ ω, ζ ω)
+  have hfη : AEMeasurable fη μ := (hξ.prodMk hη).aemeasurable
+  have hfζ : AEMeasurable fζ μ := (hξ.prodMk hζ).aemeasurable
+  have hφ_meas_zeta :
+      AEStronglyMeasurable φ (Measure.map fζ μ) := by
+    simpa [fη, fζ, h_dist] using hφ
+  have hφ_int_zeta :
+      Integrable φ (Measure.map fζ μ) := by
+    simpa [fη, fζ, h_dist] using hφ_int
+  have h_eta :
+      ∫ ω, φ (ξ ω, η ω) ∂μ = ∫ p, φ p ∂(Measure.map fη μ) := by
+    simpa [fη] using
+      (MeasureTheory.integral_map (μ := μ) (φ := fη) (f := φ)
+        hfη hφ).symm
+  have h_zeta :
+      ∫ ω, φ (ξ ω, ζ ω) ∂μ = ∫ p, φ p ∂(Measure.map fζ μ) := by
+    simpa [fζ] using
+      (MeasureTheory.integral_map (μ := μ) (φ := fζ) (f := φ)
+        hfζ hφ_meas_zeta).symm
+  calc
+    ∫ ω, φ (ξ ω, η ω) ∂μ
+        = ∫ p, φ p ∂(Measure.map fη μ) := h_eta
+    _ = ∫ p, φ p ∂(Measure.map fζ μ) := by simp [fη, fζ, h_dist]
+    _ = ∫ ω, φ (ξ ω, ζ ω) ∂μ := h_zeta.symm
 
-Use conditional distribution kernels: same joint law implies same conditional laws.
-See `ProbabilityTheory.condExpKernel`, `condDistrib`, and `IdentDistrib` API.
--/
-lemma condexp_same_dist {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {ξ η ζ : Ω → α} (_g : α → ℝ) (_hg : Measurable _g)
-    (_h_dist : Measure.map (fun ω => (ξ ω, η ω)) μ
-              = Measure.map (fun ω => (ξ ω, ζ ω)) μ) :
-    True :=
-  trivial
+/-- If `(ξ, η)` and `(ξ, ζ)` share the same joint law, then for every measurable `g` and
+measurable set `s`, the mixed moments `E[g(ξ) · 𝟙_{η ∈ s}]` and `E[g(ξ) · 𝟙_{ζ ∈ s}]` agree. -/
+lemma condexp_same_dist {μ : Measure Ω}
+    {ξ η ζ : Ω → α} {g : α → ℝ}
+    (hξ : Measurable ξ) (hη : Measurable η) (hζ : Measurable ζ)
+    (hg : Measurable g) (h_int : Integrable (fun ω => g (ξ ω)) μ)
+    (h_dist : Measure.map (fun ω => (ξ ω, η ω)) μ
+              = Measure.map (fun ω => (ξ ω, ζ ω)) μ)
+    {s : Set α} (hs : MeasurableSet s) :
+    ∫ ω, g (ξ ω) * s.indicator (fun _ : α => (1 : ℝ)) (η ω) ∂μ
+      = ∫ ω, g (ξ ω) * s.indicator (fun _ : α => (1 : ℝ)) (ζ ω) ∂μ := by
+  classical
+  set φ : α × α → ℝ :=
+    fun p => g p.1 * s.indicator (fun _ : α => (1 : ℝ)) p.2
+  set fη : Ω → α × α := fun ω => (ξ ω, η ω)
+  set fζ : Ω → α × α := fun ω => (ξ ω, ζ ω)
+  have h_comp_eta :
+      (fun ω => φ (fη ω)) =
+        fun ω => g (ξ ω) * s.indicator (fun _ : α => (1 : ℝ)) (η ω) := by
+    funext ω
+    simp [fη, φ]
+  have h_comp_zeta :
+      (fun ω => φ (fζ ω)) =
+        fun ω => g (ξ ω) * s.indicator (fun _ : α => (1 : ℝ)) (ζ ω) := by
+    funext ω
+    simp [fζ, φ]
+  have h_eq_eta :
+      (fun ω => g (ξ ω) * s.indicator (fun _ : α => (1 : ℝ)) (η ω)) =
+        Set.indicator (η ⁻¹' s) (fun ω => g (ξ ω)) := by
+    funext ω
+    by_cases hmem : η ω ∈ s
+    · simp [Set.indicator, hmem]
+    · simp [Set.indicator, hmem]
+  have h_indicator_eta :
+      Integrable (fun ω => g (ξ ω) * s.indicator (fun _ : α => (1 : ℝ)) (η ω)) μ := by
+    simpa [h_eq_eta] using h_int.indicator (hη hs)
+  have hφ_meas :
+      AEStronglyMeasurable φ (Measure.map fη μ) := by
+    refine (hg.comp measurable_fst).aestronglyMeasurable.mul ?_
+    have h_indicator :
+        AEStronglyMeasurable (fun p : α × α => s.indicator (fun _ : α => (1 : ℝ)) p.2)
+          (Measure.map fη μ) :=
+      (Measurable.indicator measurable_const hs).aestronglyMeasurable.comp_measurable measurable_snd
+    simpa [φ] using h_indicator
+  have hfη : AEMeasurable fη μ := (hξ.prodMk hη).aemeasurable
+  have hφ_int :
+      Integrable φ (Measure.map fη μ) :=
+    (integrable_map_measure (μ := μ) (f := fη) (g := φ)
+        (hg := hφ_meas) (hf := hfη)).mpr
+      (by simpa [Function.comp, h_comp_eta] using h_indicator_eta)
+  have h_result :=
+    integral_pair_eq_of_joint_eq (μ := μ) (ξ := ξ) (η := η) (ζ := ζ)
+      hξ hη hζ hφ_meas hφ_int h_dist
+  simpa [h_comp_eta, h_comp_zeta] using h_result
 /-! ### Utilities for the Martingale Approach -/
 
 set_option linter.unusedSectionVars false in
