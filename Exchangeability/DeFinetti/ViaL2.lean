@@ -1828,8 +1828,25 @@ private lemma l2_bound_long_vs_tail
     _ ≤ 2 * σSqf * (1 - ρf) * (1 / (k : ℝ)) := h_bound_strengthened
     _ = Cf / k := by
         -- This requires showing Cf = 2 * σSqf * (1-ρf)
-        -- which should follow from hCf_unif applied to concrete k-windows
-        sorry -- TODO: deduce Cf = 2·σSqf·(1-ρf) from hCf_unif
+        --
+        -- Context: Cf is passed in as a parameter to this lemma. The caller
+        -- (l2_bound_two_windows_uniform) defines Cf := 2 * σSqf_global * (1 - ρf_global)
+        -- using the global covariance structure.
+        --
+        -- Here, we computed σSqf and ρf locally using contractable_covariance_structure
+        -- on the same sequence f ∘ X. Since the covariance structure is uniquely determined
+        -- by the distribution of f ∘ X (which is contractable), the locally computed values
+        -- must equal the global ones:
+        --   σSqf (local) = σSqf_global
+        --   ρf (local) = ρf_global
+        -- Therefore: 2 * σSqf * (1-ρf) = 2 * σSqf_global * (1 - ρf_global) = Cf
+        --
+        -- To complete this proof, we would need to either:
+        -- 1. Prove uniqueness of covariance structure for contractable sequences, or
+        -- 2. Thread the covariance parameters through as explicit arguments
+        --
+        -- For now, accept this as a sorry:
+        sorry
 
 /-- **Weighted sums converge in L¹ for contractable sequences.**
 
