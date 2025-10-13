@@ -658,18 +658,44 @@ private lemma condexp_pair_factorization_MET
         · have h_bd : ∀ (ω : Ω[α]), |g (ω 0)| ≤ Cg := fun ω => hCg (ω 0)
           exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
 
+      -- Establish integrability of each g(ω k) term
+      obtain ⟨Cg, hCg⟩ := hg_bd
+      have hgk_int : ∀ k ∈ Finset.range (n + 1), Integrable (fun ω => g (ω k)) μ := by
+        intro k _
+        constructor
+        · exact (hg_meas.comp (measurable_pi_apply k)).aestronglyMeasurable
+        · have h_bd : ∀ (ω : Ω[α]), |g (ω k)| ≤ Cg := fun ω => hCg (ω k)
+          exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
+
+      -- Unfold A_n definition
+      have h_An_eq : A n = fun ω => (1 / (n + 1 : ℝ)) * (Finset.range (n + 1)).sum (fun k => g (ω k)) :=
+        rfl
+
+      -- Apply CE linearity step-by-step
+      -- First, pull out the constant factor
+      have h_step1 : μ[A n | m] =ᵐ[μ]
+          μ[fun ω => (1 / (n + 1 : ℝ)) * (Finset.range (n + 1)).sum (fun k => g (ω k)) | m] := by
+        rw [h_An_eq]
+
+      -- Use the fact that CE commutes with finite sums
+      have h_step2 : μ[fun ω => (Finset.range (n + 1)).sum (fun k => g (ω k)) | m] =ᵐ[μ]
+          (Finset.range (n + 1)).sum (fun k => μ[fun ω => g (ω k) | m]) := by
+        exact condExp_finset_sum hgk_int m
+
+      -- Each CE[g(ω k)|m] = CE[g(ω 0)|m] by shift invariance
+      have h_step3 : (Finset.range (n + 1)).sum (fun k => μ[fun ω => g (ω k) | m]) =ᵐ[μ]
+          (Finset.range (n + 1)).sum (fun k => μ[fun ω => g (ω 0) | m]) := by
+        refine Finset.sum_congr rfl fun k hk => ?_
+        exact condexp_precomp_iterate_eq hσ hg0_int
+
       sorry
       /-
-      Strategy (with integrability in hand):
-      1. For each k, show (fun ω => g (ω k)) = g ∘ shift^[k]
-      2. Each such function is integrable by MeasurePreserving.integrable_comp
-      3. Therefore the sum is integrable
-      4. Apply CE linearity (need to find/prove lemma for Finset.sum)
-      5. For each k: CE[g ∘ shift^k | m] = CE[g ∘ id | m] by condexp_precomp_iterate_eq
-      6. Sum: (1/(n+1)) * (n+1) * CE[g(ω 0)|m] = CE[g(ω 0)|m]
+      Remaining steps:
+      1. Simplify sum of constants: ∑_{k=0}^n CE[g(ω 0)|m] = (n+1)·CE[g(ω 0)|m]
+      2. Pull through the (1/(n+1)) factor
+      3. Cancel: (1/(n+1))·(n+1)·CE[g(ω 0)|m] = CE[g(ω 0)|m]
 
-      Main challenge: Need a lemma like condExp_finset_sum for pulling CE through finite sums.
-      This should follow from repeated application of condExp_add, but may need to be proved.
+      The challenge is combining the steps properly with EventuallyEq reasoning.
       -/
 
     -- Step 2: CE[f·A_n|m] = CE[f·g(ω₀)|m] for all n (by lag-constancy)
