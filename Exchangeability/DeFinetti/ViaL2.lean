@@ -1402,7 +1402,15 @@ lemma l2_bound_two_windows
       ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
             (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
         ≤ Cf / k := by
-  sorry
+  -- This is the same as l2_bound_two_windows_uniform but without the disjointness requirement
+  -- The bound depends only on the covariance structure, which is uniform for contractable sequences
+  -- Whether the windows overlap or not doesn't matter for the bound
+  obtain ⟨Cf, hCf_nonneg, hCf_unif⟩ := l2_bound_two_windows_uniform X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
+  refine ⟨Cf, hCf_nonneg, ?_⟩
+  -- The key insight: we can bound the overlapping case by using the disjoint case
+  -- by choosing large enough separated windows
+  -- For now, use the crude bound that works for any n, m:
+  sorry  -- TODO: Prove bound holds even without disjointness
 
 /-- Reindex the last `k`-block of a length-`m` sum.
 
@@ -2024,303 +2032,335 @@ theorem weighted_sums_converge_L1
     have h2k_le_m : 2 * k ≤ m := by simpa [k] using hm
     have h2k_le_ℓ : 2 * k ≤ ℓ := by simpa [k] using hℓ
 
-    -- Helper: windows are disjoint when n1 + k < n2 + 1
-    have window_disjoint (n1 n2 : ℕ) (h : n1 + k < n2 + 1) : Disjoint (window n1 k) (window n2 k) := by
-      rw [Finset.disjoint_left]
-      intros x hx1 hx2
-      rw [window] at hx1 hx2
-      obtain ⟨i, hi, rfl⟩ := Finset.mem_image.mp hx1
-      obtain ⟨j, hj, heq⟩ := Finset.mem_image.mp hx2
-      -- n1 + i + 1 = n2 + j + 1
-      have : n1 + i = n2 + j := by omega
-      have hi_bd : i < k := Finset.mem_range.mp hi
-      -- From h: n1 + k < n2 + 1, so n1 + k ≤ n2
-      -- From this and i < k: n1 + i < n1 + k ≤ n2 ≤ n2 + j
-      omega
+    -- CASE SPLIT: Separated vs Close
+    -- When |m - ℓ| ≥ k, use triangle decomposition (all windows disjoint)
+    -- When |m - ℓ| < k, m and ℓ are already close, so bound directly
+    by_cases h_separated : k ≤ (m : ℤ) - ℓ ∨ k ≤ (ℓ : ℤ) - m
+    case pos =>
+      -- SEPARATED CASE: |m - ℓ| ≥ k
+      -- Use triangle inequality decomposition with disjoint windows
 
-    -- Three same-length comparisons (tail-averages):
-    -- T1: (0 vs m-k), T2: ((m-k) vs (ℓ-k)), T3: ((ℓ-k) vs 0), all of length k.
-    have h1sq :
-      ∫ ω, (A 0 k ω - A (m - k) k ω)^2 ∂μ ≤ Cf / k := by
-      have hdisj : Disjoint (window 0 k) (window (m - k) k) := by
-        apply window_disjoint
-        -- Need: 0 + k < (m - k) + 1, i.e., k < m - k + 1, i.e., 2k ≤ m
+      -- Helper: windows are disjoint when n1 + k < n2 + 1
+      have window_disjoint (n1 n2 : ℕ) (h : n1 + k < n2 + 1) : Disjoint (window n1 k) (window n2 k) := by
+        rw [Finset.disjoint_left]
+        intros x hx1 hx2
+        rw [window] at hx1 hx2
+        obtain ⟨i, hi, rfl⟩ := Finset.mem_image.mp hx1
+        obtain ⟨j, hj, heq⟩ := Finset.mem_image.mp hx2
+        -- n1 + i + 1 = n2 + j + 1
+        have : n1 + i = n2 + j := by omega
+        have hi_bd : i < k := Finset.mem_range.mp hi
+        -- From h: n1 + k < n2 + 1, so n1 + k ≤ n2
+        -- From this and i < k: n1 + i < n1 + k ≤ n2 ≤ n2 + j
         omega
-      simpa [A] using hCf_unif 0 (m - k) k hk_pos hdisj
-    have h2sq :
-      ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ ≤ Cf / k := by
-      by_cases h_order : m + k ≤ ℓ
-      case pos =>
-        -- When m + k ≤ ℓ, windows are disjoint
-        have hdisj : Disjoint (window (m - k) k) (window (ℓ - k) k) := by
+  
+      -- Three same-length comparisons (tail-averages):
+      -- T1: (0 vs m-k), T2: ((m-k) vs (ℓ-k)), T3: ((ℓ-k) vs 0), all of length k.
+      have h1sq :
+        ∫ ω, (A 0 k ω - A (m - k) k ω)^2 ∂μ ≤ Cf / k := by
+        have hdisj : Disjoint (window 0 k) (window (m - k) k) := by
           apply window_disjoint
-          -- Need: (m - k) + k < (ℓ - k) + 1, i.e., m + k ≤ ℓ
+          -- Need: 0 + k < (m - k) + 1, i.e., k < m - k + 1, i.e., 2k ≤ m
           omega
-        simpa [A] using hCf_unif (m - k) (ℓ - k) k hk_pos hdisj
-      case neg =>
-        -- When m + k > ℓ, windows may overlap
-        -- Use symmetry: the bound is symmetric in m and ℓ
-        have : ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ
-             = ∫ ω, (A (ℓ - k) k ω - A (m - k) k ω)^2 ∂μ := by
+        simpa [A] using hCf_unif 0 (m - k) k hk_pos hdisj
+      have h2sq :
+        ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ ≤ Cf / k := by
+        by_cases h_order : m + k ≤ ℓ
+        case pos =>
+          -- When m + k ≤ ℓ, windows are disjoint
+          have hdisj : Disjoint (window (m - k) k) (window (ℓ - k) k) := by
+            apply window_disjoint
+            -- Need: (m - k) + k < (ℓ - k) + 1, i.e., m + k ≤ ℓ
+            omega
+          simpa [A] using hCf_unif (m - k) (ℓ - k) k hk_pos hdisj
+        case neg =>
+          -- When m + k > ℓ, windows may overlap
+          -- Use symmetry: the bound is symmetric in m and ℓ
+          have : ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ
+               = ∫ ω, (A (ℓ - k) k ω - A (m - k) k ω)^2 ∂μ := by
+            congr 1; ext ω; ring_nf
+          rw [this]
+          -- Now we need ℓ + k ≤ m for disjointness
+          by_cases h_sym : ℓ + k ≤ m
+          case pos =>
+            have hdisj : Disjoint (window (ℓ - k) k) (window (m - k) k) := by
+              apply window_disjoint
+              omega
+            simpa [A] using hCf_unif (ℓ - k) (m - k) k hk_pos hdisj
+          case neg =>
+            -- Neither m + k ≤ ℓ nor ℓ + k ≤ m
+            -- But h_separated says k ≤ m - ℓ ∨ k ≤ ℓ - m
+            -- This is a contradiction! omega will derive False.
+            omega
+      have h3sq :
+        ∫ ω, (A (ℓ - k) k ω - A 0 k ω)^2 ∂μ ≤ Cf / k := by
+        have hdisj : Disjoint (window (ℓ - k) k) (window 0 k) := by
+          apply Disjoint.symm
+          apply window_disjoint
+          -- Need: 0 + k < (ℓ - k) + 1, i.e., 2k ≤ ℓ
+          omega
+        simpa [A] using hCf_unif (ℓ - k) 0 k hk_pos hdisj
+  
+      -- Long vs tail comparisons for h1_L2 and h3_L2
+      have hkm : k ≤ m := by
+        calc k = N := rfl
+             _ ≤ 2 * N := Nat.le_mul_of_pos_left _ (by decide : 0 < 2)
+             _ ≤ m := hm
+      have hkℓ : k ≤ ℓ := by
+        calc k = N := rfl
+             _ ≤ 2 * N := Nat.le_mul_of_pos_left _ (by decide : 0 < 2)
+             _ ≤ ℓ := hℓ
+  
+      -- Get Ctail constants from long-vs-tail bounds
+      obtain ⟨Ctail1, hC1_nonneg, h1sq_long⟩ :=
+        l2_bound_long_vs_tail X hX_contract hX_meas hX_L2 f hf_meas hf_bdd 0 m k hk_pos hkm
+  
+      obtain ⟨Ctail3, hC3_nonneg, h3sq_long_prelim⟩ :=
+        l2_bound_long_vs_tail X hX_contract hX_meas hX_L2 f hf_meas hf_bdd 0 ℓ k hk_pos hkℓ
+  
+      have h1sq_long : ∫ ω, (A 0 m ω - A (m - k) k ω)^2 ∂μ ≤ Ctail1 / k := by
+        simpa [A] using h1sq_long
+  
+      have h3sq_long : ∫ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 ∂μ ≤ Ctail3 / k := by
+        have : ∫ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 ∂μ
+             = ∫ ω, (A 0 ℓ ω - A (ℓ - k) k ω)^2 ∂μ := by
           congr 1; ext ω; ring_nf
         rw [this]
-        -- Now we need ℓ + k ≤ m for disjointness
-        by_cases h_sym : ℓ + k ≤ m
-        case pos =>
-          have hdisj : Disjoint (window (ℓ - k) k) (window (m - k) k) := by
-            apply window_disjoint
-            omega
-          simpa [A] using hCf_unif (ℓ - k) (m - k) k hk_pos hdisj
-        case neg =>
-          -- Neither m + k ≤ ℓ nor ℓ + k ≤ m: windows overlap
-          -- This means |m - ℓ| < k, so m and ℓ are close
-          -- Use a crude bound: |A (m-k) k - A (ℓ-k) k| ≤ 2M where M bounds f
-          -- Then ∫ (...)² ≤ (2M)² = 4M²
-          -- Since we need ≤ Cf/k, we use: 4M² ≤ Cf/k if k ≤ Cf/(4M²)
-          -- For large k (k ≥ 2N), we may not have this, so use a different bound
-          --
-          -- Better approach: Use that |A (m-k) k - A (ℓ-k) k| is small when |m - ℓ| is small
-          -- by contractability, but WITHOUT requiring disjoint windows
-          -- The L² contractability bound applies even for overlapping windows,
-          -- just with a potentially worse constant
-          sorry  -- TODO: Use general L² bound without disjointness assumption
-    have h3sq :
-      ∫ ω, (A (ℓ - k) k ω - A 0 k ω)^2 ∂μ ≤ Cf / k := by
-      have hdisj : Disjoint (window (ℓ - k) k) (window 0 k) := by
-        apply Disjoint.symm
-        apply window_disjoint
-        -- Need: 0 + k < (ℓ - k) + 1, i.e., 2k ≤ ℓ
-        omega
-      simpa [A] using hCf_unif (ℓ - k) 0 k hk_pos hdisj
-
-    -- Long vs tail comparisons for h1_L2 and h3_L2
-    have hkm : k ≤ m := by
-      calc k = N := rfl
-           _ ≤ 2 * N := Nat.le_mul_of_pos_left _ (by decide : 0 < 2)
-           _ ≤ m := hm
-    have hkℓ : k ≤ ℓ := by
-      calc k = N := rfl
-           _ ≤ 2 * N := Nat.le_mul_of_pos_left _ (by decide : 0 < 2)
-           _ ≤ ℓ := hℓ
-
-    -- Get Ctail constants from long-vs-tail bounds
-    obtain ⟨Ctail1, hC1_nonneg, h1sq_long⟩ :=
-      l2_bound_long_vs_tail X hX_contract hX_meas hX_L2 f hf_meas hf_bdd 0 m k hk_pos hkm
-
-    obtain ⟨Ctail3, hC3_nonneg, h3sq_long_prelim⟩ :=
-      l2_bound_long_vs_tail X hX_contract hX_meas hX_L2 f hf_meas hf_bdd 0 ℓ k hk_pos hkℓ
-
-    have h1sq_long : ∫ ω, (A 0 m ω - A (m - k) k ω)^2 ∂μ ≤ Ctail1 / k := by
-      simpa [A] using h1sq_long
-
-    have h3sq_long : ∫ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 ∂μ ≤ Ctail3 / k := by
-      have : ∫ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 ∂μ
-           = ∫ ω, (A 0 ℓ ω - A (ℓ - k) k ω)^2 ∂μ := by
-        congr 1; ext ω; ring_nf
-      rw [this]
-      simpa [A] using h3sq_long_prelim
-
-    -- Define C_star := max of all three constants
-    let C_star : ℝ := max Cf (max Ctail1 Ctail3)
-    have hC_star_nonneg : 0 ≤ C_star := by
-      apply le_max_iff.mpr
-      left; exact hCf_nonneg
-    have hCf_le_C_star : Cf ≤ C_star := le_max_left _ _
-    have hC1_le_C_star : Ctail1 ≤ C_star := le_trans (le_max_left _ _) (le_max_right _ _)
-    have hC3_le_C_star : Ctail3 ≤ C_star := le_trans (le_max_right _ _) (le_max_right _ _)
-
-    -- Strengthen the integral bounds to use C_star
-    have h1sq_C_star : ∫ ω, (A 0 m ω - A (m - k) k ω)^2 ∂μ ≤ C_star / k := by
-      calc ∫ ω, (A 0 m ω - A (m - k) k ω)^2 ∂μ
-          ≤ Ctail1 / k := h1sq_long
-        _ ≤ C_star / k := by exact div_le_div_of_nonneg_right hC1_le_C_star (Nat.cast_nonneg k)
-    have h2sq_C_star : ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ ≤ C_star / k := by
-      calc ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ
-          ≤ Cf / k := h2sq
-        _ ≤ C_star / k := by exact div_le_div_of_nonneg_right hCf_le_C_star (Nat.cast_nonneg k)
-    have h3sq_C_star : ∫ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 ∂μ ≤ C_star / k := by
-      calc ∫ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 ∂μ
-          ≤ Ctail3 / k := h3sq_long
-        _ ≤ C_star / k := by exact div_le_div_of_nonneg_right hC3_le_C_star (Nat.cast_nonneg k)
-
-    -- Convert each integral bound to an L² eLpNorm bound using C_star
-    have h1_L2 :
-      eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
-        ≤ ENNReal.ofReal (Real.sqrt (C_star / k)) := by
-      apply eLpNorm_two_from_integral_sq_le
-      · exact (hA_memLp_two 0 m).sub (hA_memLp_two (m - k) k)
-      · exact div_nonneg hC_star_nonneg (Nat.cast_nonneg k)
-      · exact h1sq_C_star
-    have h2_L2 :
-      eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
-        ≤ ENNReal.ofReal (Real.sqrt (C_star / k)) := by
-      apply eLpNorm_two_from_integral_sq_le
-      · exact (hA_memLp_two (m - k) k).sub (hA_memLp_two (ℓ - k) k)
-      · exact div_nonneg hC_star_nonneg (Nat.cast_nonneg k)
-      · exact h2sq_C_star
-    have h3_L2 :
-      eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ
-        ≤ ENNReal.ofReal (Real.sqrt (C_star / k)) := by
-      apply eLpNorm_two_from_integral_sq_le
-      · exact (hA_memLp_two (ℓ - k) k).sub (hA_memLp_two 0 ℓ)
-      · exact div_nonneg hC_star_nonneg (Nat.cast_nonneg k)
-      · exact h3sq_C_star
-
-    -- Triangle inequality on three segments:
-    -- (A 0 m - A 0 ℓ) = (A 0 m - A (m - k) k) + (A (m - k) k - A (ℓ - k) k) + (A (ℓ - k) k - A 0 ℓ)
-    have tri :
-      eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
-        ≤ eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
-          + eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
-          + eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ := by
-      -- split into T1 + (T2 + T3), then split T2 + T3
-      have hsplit :
-        (fun ω => A 0 m ω - A 0 ℓ ω)
-          = (fun ω =>
-                (A 0 m ω - A (m - k) k ω)
-                + ((A (m - k) k ω - A (ℓ - k) k ω)
-                  + (A (ℓ - k) k ω - A 0 ℓ ω))) := by
-        ext ω; ring
-      have step1 :
-        eLpNorm
-          (fun ω =>
-            (A 0 m ω - A (m - k) k ω)
-            + ((A (m - k) k ω - A (ℓ - k) k ω)
-              + (A (ℓ - k) k ω - A 0 ℓ ω))) 2 μ
-        ≤ eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
-            + eLpNorm (fun ω =>
-                (A (m - k) k ω - A (ℓ - k) k ω)
-                + (A (ℓ - k) k ω - A 0 ℓ ω)) 2 μ := by
-        apply eLpNorm_add_le
-        · exact ((hA_meas 0 m).sub (hA_meas (m - k) k)).aestronglyMeasurable
-        · exact (Measurable.add ((hA_meas (m - k) k).sub (hA_meas (ℓ - k) k))
-                ((hA_meas (ℓ - k) k).sub (hA_meas 0 ℓ))).aestronglyMeasurable
-        · norm_num
-      have step2 :
-        eLpNorm (fun ω =>
-            (A (m - k) k ω - A (ℓ - k) k ω)
-          + (A (ℓ - k) k ω - A 0 ℓ ω)) 2 μ
-        ≤ eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
-            + eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ := by
-        apply eLpNorm_add_le
-        · exact ((hA_meas (m - k) k).sub (hA_meas (ℓ - k) k)).aestronglyMeasurable
-        · exact ((hA_meas (ℓ - k) k).sub (hA_meas 0 ℓ)).aestronglyMeasurable
-        · norm_num
-      -- reassociate the sums of bounds
-      have : eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
-            ≤ eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
-              + (eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
-                + eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ) := by
-        simpa [hsplit] using
-          (le_trans step1 <| add_le_add_left step2 _)
-      simpa [add_assoc] using this
-
-    -- Bound each term by √(C_star/k), then sum to 3√(C_star/k)
-    have bound3 :
-      eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
-        ≤ ENNReal.ofReal (3 * Real.sqrt (C_star / k)) := by
-      have h0 : 0 ≤ Real.sqrt (C_star / k) := Real.sqrt_nonneg _
-      calc
+        simpa [A] using h3sq_long_prelim
+  
+      -- Define C_star := max of all three constants
+      let C_star : ℝ := max Cf (max Ctail1 Ctail3)
+      have hC_star_nonneg : 0 ≤ C_star := by
+        apply le_max_iff.mpr
+        left; exact hCf_nonneg
+      have hCf_le_C_star : Cf ≤ C_star := le_max_left _ _
+      have hC1_le_C_star : Ctail1 ≤ C_star := le_trans (le_max_left _ _) (le_max_right _ _)
+      have hC3_le_C_star : Ctail3 ≤ C_star := le_trans (le_max_right _ _) (le_max_right _ _)
+  
+      -- Strengthen the integral bounds to use C_star
+      have h1sq_C_star : ∫ ω, (A 0 m ω - A (m - k) k ω)^2 ∂μ ≤ C_star / k := by
+        calc ∫ ω, (A 0 m ω - A (m - k) k ω)^2 ∂μ
+            ≤ Ctail1 / k := h1sq_long
+          _ ≤ C_star / k := by exact div_le_div_of_nonneg_right hC1_le_C_star (Nat.cast_nonneg k)
+      have h2sq_C_star : ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ ≤ C_star / k := by
+        calc ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ
+            ≤ Cf / k := h2sq
+          _ ≤ C_star / k := by exact div_le_div_of_nonneg_right hCf_le_C_star (Nat.cast_nonneg k)
+      have h3sq_C_star : ∫ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 ∂μ ≤ C_star / k := by
+        calc ∫ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 ∂μ
+            ≤ Ctail3 / k := h3sq_long
+          _ ≤ C_star / k := by exact div_le_div_of_nonneg_right hC3_le_C_star (Nat.cast_nonneg k)
+  
+      -- Convert each integral bound to an L² eLpNorm bound using C_star
+      have h1_L2 :
+        eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
+          ≤ ENNReal.ofReal (Real.sqrt (C_star / k)) := by
+        apply eLpNorm_two_from_integral_sq_le
+        · exact (hA_memLp_two 0 m).sub (hA_memLp_two (m - k) k)
+        · exact div_nonneg hC_star_nonneg (Nat.cast_nonneg k)
+        · exact h1sq_C_star
+      have h2_L2 :
+        eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
+          ≤ ENNReal.ofReal (Real.sqrt (C_star / k)) := by
+        apply eLpNorm_two_from_integral_sq_le
+        · exact (hA_memLp_two (m - k) k).sub (hA_memLp_two (ℓ - k) k)
+        · exact div_nonneg hC_star_nonneg (Nat.cast_nonneg k)
+        · exact h2sq_C_star
+      have h3_L2 :
+        eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ
+          ≤ ENNReal.ofReal (Real.sqrt (C_star / k)) := by
+        apply eLpNorm_two_from_integral_sq_le
+        · exact (hA_memLp_two (ℓ - k) k).sub (hA_memLp_two 0 ℓ)
+        · exact div_nonneg hC_star_nonneg (Nat.cast_nonneg k)
+        · exact h3sq_C_star
+  
+      -- Triangle inequality on three segments:
+      -- (A 0 m - A 0 ℓ) = (A 0 m - A (m - k) k) + (A (m - k) k - A (ℓ - k) k) + (A (ℓ - k) k - A 0 ℓ)
+      have tri :
         eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
-            ≤ eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
-              + eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
-              + eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ := tri
-        _ ≤ (ENNReal.ofReal (Real.sqrt (C_star / k))
-              + ENNReal.ofReal (Real.sqrt (C_star / k)))
-              + ENNReal.ofReal (Real.sqrt (C_star / k)) := by
-              apply add_le_add
-              · apply add_le_add h1_L2 h2_L2
-              · exact h3_L2
-        _ = ENNReal.ofReal (2 * Real.sqrt (C_star / k))
-              + ENNReal.ofReal (Real.sqrt (C_star / k)) := by
-              rw [← ENNReal.ofReal_add h0 h0]
-              simp [two_mul]
-        _ = ENNReal.ofReal (3 * Real.sqrt (C_star / k)) := by
-              have h2_nonneg : 0 ≤ 2 * Real.sqrt (C_star / k) := by nlinarith [h0]
-              rw [← ENNReal.ofReal_add h2_nonneg h0]
-              ring_nf
+          ≤ eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
+            + eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
+            + eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ := by
+        -- split into T1 + (T2 + T3), then split T2 + T3
+        have hsplit :
+          (fun ω => A 0 m ω - A 0 ℓ ω)
+            = (fun ω =>
+                  (A 0 m ω - A (m - k) k ω)
+                  + ((A (m - k) k ω - A (ℓ - k) k ω)
+                    + (A (ℓ - k) k ω - A 0 ℓ ω))) := by
+          ext ω; ring
+        have step1 :
+          eLpNorm
+            (fun ω =>
+              (A 0 m ω - A (m - k) k ω)
+              + ((A (m - k) k ω - A (ℓ - k) k ω)
+                + (A (ℓ - k) k ω - A 0 ℓ ω))) 2 μ
+          ≤ eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
+              + eLpNorm (fun ω =>
+                  (A (m - k) k ω - A (ℓ - k) k ω)
+                  + (A (ℓ - k) k ω - A 0 ℓ ω)) 2 μ := by
+          apply eLpNorm_add_le
+          · exact ((hA_meas 0 m).sub (hA_meas (m - k) k)).aestronglyMeasurable
+          · exact (Measurable.add ((hA_meas (m - k) k).sub (hA_meas (ℓ - k) k))
+                  ((hA_meas (ℓ - k) k).sub (hA_meas 0 ℓ))).aestronglyMeasurable
+          · norm_num
+        have step2 :
+          eLpNorm (fun ω =>
+              (A (m - k) k ω - A (ℓ - k) k ω)
+            + (A (ℓ - k) k ω - A 0 ℓ ω)) 2 μ
+          ≤ eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
+              + eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ := by
+          apply eLpNorm_add_le
+          · exact ((hA_meas (m - k) k).sub (hA_meas (ℓ - k) k)).aestronglyMeasurable
+          · exact ((hA_meas (ℓ - k) k).sub (hA_meas 0 ℓ)).aestronglyMeasurable
+          · norm_num
+        -- reassociate the sums of bounds
+        have : eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
+              ≤ eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
+                + (eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
+                  + eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ) := by
+          simpa [hsplit] using
+            (le_trans step1 <| add_le_add_left step2 _)
+        simpa [add_assoc] using this
+  
+      -- Bound each term by √(C_star/k), then sum to 3√(C_star/k)
+      have bound3 :
+        eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
+          ≤ ENNReal.ofReal (3 * Real.sqrt (C_star / k)) := by
+        have h0 : 0 ≤ Real.sqrt (C_star / k) := Real.sqrt_nonneg _
+        calc
+          eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
+              ≤ eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
+                + eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
+                + eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ := tri
+          _ ≤ (ENNReal.ofReal (Real.sqrt (C_star / k))
+                + ENNReal.ofReal (Real.sqrt (C_star / k)))
+                + ENNReal.ofReal (Real.sqrt (C_star / k)) := by
+                apply add_le_add
+                · apply add_le_add h1_L2 h2_L2
+                · exact h3_L2
+          _ = ENNReal.ofReal (2 * Real.sqrt (C_star / k))
+                + ENNReal.ofReal (Real.sqrt (C_star / k)) := by
+                rw [← ENNReal.ofReal_add h0 h0]
+                simp [two_mul]
+          _ = ENNReal.ofReal (3 * Real.sqrt (C_star / k)) := by
+                have h2_nonneg : 0 ≤ 2 * Real.sqrt (C_star / k) := by nlinarith [h0]
+                rw [← ENNReal.ofReal_add h2_nonneg h0]
+                ring_nf
+  
+      -- Choose k large ⇒ 3 √(C_star/k) < ε
+      have hlt_real : 3 * Real.sqrt (C_star / k) < ε := by
+        -- k = N and N = ceil(27 * Cf / ε²) + 1, so N - 1 ≥ 27 * Cf / ε²
+        -- We have C_star = max(Cf, Ctail1, Ctail3) ≤ 3 * Cf (conservative bound)
+        -- Then: 9 * C_star / N < 9 * 3 * Cf / (27 * Cf / ε²) = ε²
+        -- So: 3 * sqrt(C_star / N) < ε
+  
+        -- First establish C_star ≤ 3 * Cf
+        have hC_star_bound : C_star ≤ 3 * Cf := by
+          -- C_star = max(Cf, Ctail1, Ctail3)
+          -- All three constants come from the same covariance structure: 2 * σSqf * (1 - ρf)
+          -- - Cf from l2_bound_two_windows_uniform (ViaL2.lean:1032)
+          -- - Ctail1, Ctail3 from l2_bound_long_vs_tail (ViaL2.lean:1862)
+          --
+          -- Mathematically, they should all be equal, so C_star = Cf ≤ 3 * Cf.
+          -- However, proving this equality rigorously requires showing that the
+          -- covariance bounds in both lemmas produce the same constant.
+          --
+          -- For now, we use a conservative bound: since C_star ≥ Cf and all constants
+          -- come from similar structures, C_star shouldn't be much larger than Cf.
+          -- The bound C_star ≤ 3 * Cf is conservative and sufficient for the proof.
+          sorry  -- TODO: Prove Ctail1 ≤ Cf and Ctail3 ≤ Cf from covariance structure
+  
+        -- Lower bound on N
+        have hN_lower : (27 * Cf / ε ^ 2 : ℝ) < N := by
+          have h1 : (27 * Cf / ε ^ 2 : ℝ) ≤ Nat.ceil (27 * Cf / ε ^ 2) := Nat.le_ceil _
+          have h2 : (Nat.ceil (27 * Cf / ε ^ 2) : ℝ) < N := by
+            show (Nat.ceil (27 * Cf / ε ^ 2) : ℝ) < (Nat.ceil (27 * Cf / ε ^ 2) + 1 : ℕ)
+            norm_cast
+            omega
+          linarith
+  
+        -- Calculate the bound
+        have h_sq : 9 * C_star / (k : ℝ) < ε ^ 2 := by
+          -- k = N by definition
+          have hk_eq : (k : ℝ) = N := rfl
+          rw [hk_eq]
+          have hε_sq_pos : 0 < ε ^ 2 := by positivity
+          -- Either Cf > 0 or Cf = 0
+          by_cases hCf_zero : Cf = 0
+          case pos =>
+            -- If Cf = 0, then all bounds are 0, so C_star ≤ C_star_bound ≤ 0, hence C_star = 0
+            have hC_star_le_zero : C_star ≤ 0 := by
+              calc C_star ≤ 3 * Cf := hC_star_bound
+                   _ = 0 := by simp [hCf_zero]
+            have hC_star_zero : C_star = 0 := le_antisymm hC_star_le_zero hC_star_nonneg
+            simp [hC_star_zero]; exact hε_sq_pos
+          case neg =>
+            -- If Cf > 0, use the bound calculation
+            have hCf_pos : 0 < Cf := by
+              push_neg at hCf_zero
+              exact hCf_nonneg.lt_of_ne (Ne.symm hCf_zero)
+            calc 9 * C_star / (N : ℝ)
+                ≤ 9 * (3 * Cf) / (N : ℝ) := by
+                    apply div_le_div_of_nonneg_right
+                    · apply mul_le_mul_of_nonneg_left hC_star_bound
+                      norm_num
+                    · exact Nat.cast_nonneg N
+              _ = 27 * Cf / (N : ℝ) := by ring
+              _ < 27 * Cf / (27 * Cf / ε ^ 2) := by
+                    apply div_lt_div_of_pos_left
+                    · apply mul_pos; norm_num; exact hCf_pos
+                    · apply div_pos; apply mul_pos; norm_num; exact hCf_pos; exact hε_sq_pos
+                    · exact hN_lower
+              _ = ε ^ 2 := by field_simp [ne_of_gt hCf_pos, ne_of_gt hε_sq_pos]
+  
+        -- Take square roots
+        have h0 : 0 ≤ C_star / (k : ℝ) := by positivity
+        have h1 : 0 ≤ 9 * C_star / (k : ℝ) := by positivity
+        have h2 : 0 < ε := hε
+        have h9_nonneg : (0 : ℝ) ≤ 9 := by norm_num
+        have h3 : (3 : ℝ) = Real.sqrt 9 := by
+          rw [show (9 : ℝ) = 3 ^ 2 by norm_num]
+          rw [Real.sqrt_sq (by norm_num : (0 : ℝ) ≤ 3)]
+        calc 3 * Real.sqrt (C_star / (k : ℝ))
+            = Real.sqrt 9 * Real.sqrt (C_star / (k : ℝ)) := by rw [h3]
+          _ = Real.sqrt (9 * (C_star / (k : ℝ))) := by
+                rw [← Real.sqrt_mul h9_nonneg (C_star / (k : ℝ))]
+          _ = Real.sqrt (9 * C_star / (k : ℝ)) := by
+                congr 1; ring
+          _ < Real.sqrt (ε ^ 2) := by
+                apply Real.sqrt_lt_sqrt h1
+                exact h_sq
+          _ = ε := by
+                rw [Real.sqrt_sq (le_of_lt h2)]
+      have hlt : ENNReal.ofReal (3 * Real.sqrt (C_star / k)) < ENNReal.ofReal ε :=
+        (ENNReal.ofReal_lt_ofReal_iff hε).mpr hlt_real
+      exact lt_of_le_of_lt bound3 hlt
 
-    -- Choose k large ⇒ 3 √(C_star/k) < ε
-    have hlt_real : 3 * Real.sqrt (C_star / k) < ε := by
-      -- k = N and N = ceil(27 * Cf / ε²) + 1, so N - 1 ≥ 27 * Cf / ε²
-      -- We have C_star = max(Cf, Ctail1, Ctail3) ≤ 3 * Cf (conservative bound)
-      -- Then: 9 * C_star / N < 9 * 3 * Cf / (27 * Cf / ε²) = ε²
-      -- So: 3 * sqrt(C_star / N) < ε
+    case neg =>
+      -- CLOSE CASE: |m - ℓ| < k
+      -- In this case, m and ℓ are close, so we use a more direct argument
+      -- The bound will be: L² norm ≤ 2M√k/√m  where k = N and m ≥ 2N
+      -- This gives: 2M√N/√(2N) = M√2, which is independent of ℓ and still constant
+      --
+      -- To make this work, we need to either:
+      -- (a) Choose N large enough that this constant is < ε, OR
+      -- (b) Use a refined analysis showing the bound improves with m, ℓ
+      --
+      -- For now, we'll use approach (b): refine the bound to depend on min(m,ℓ)
+      -- and use that when min(m,ℓ) → ∞, the bound → 0
+      push_neg at h_separated
+      -- h_separated : (m : ℤ) - ℓ < k ∧ (ℓ : ℤ) - m < k
 
-      -- First establish C_star ≤ 3 * Cf
-      have hC_star_bound : C_star ≤ 3 * Cf := by
-        -- C_star = max(Cf, Ctail1, Ctail3)
-        -- In the worst case, all three constants are equal to Cf, but we take a conservative
-        -- bound assuming they could add up. For the max, we just need that each ≤ some bound.
-        -- Since all come from similar covariance structures, use Cf as base bound.
-        -- This is a placeholder - the actual relationship should be proven from the lemma structure
-        sorry  -- TODO: Prove C_star ≤ 3 * Cf from covariance structure bounds
-
-      -- Lower bound on N
-      have hN_lower : (27 * Cf / ε ^ 2 : ℝ) < N := by
-        have h1 : (27 * Cf / ε ^ 2 : ℝ) ≤ Nat.ceil (27 * Cf / ε ^ 2) := Nat.le_ceil _
-        have h2 : (Nat.ceil (27 * Cf / ε ^ 2) : ℝ) < N := by
-          show (Nat.ceil (27 * Cf / ε ^ 2) : ℝ) < (Nat.ceil (27 * Cf / ε ^ 2) + 1 : ℕ)
-          norm_cast
-          omega
-        linarith
-
-      -- Calculate the bound
-      have h_sq : 9 * C_star / (k : ℝ) < ε ^ 2 := by
-        -- k = N by definition
-        have hk_eq : (k : ℝ) = N := rfl
-        rw [hk_eq]
-        have hε_sq_pos : 0 < ε ^ 2 := by positivity
-        -- Either Cf > 0 or Cf = 0
-        by_cases hCf_zero : Cf = 0
-        case pos =>
-          -- If Cf = 0, then all bounds are 0, so C_star ≤ C_star_bound ≤ 0, hence C_star = 0
-          have hC_star_le_zero : C_star ≤ 0 := by
-            calc C_star ≤ 3 * Cf := hC_star_bound
-                 _ = 0 := by simp [hCf_zero]
-          have hC_star_zero : C_star = 0 := le_antisymm hC_star_le_zero hC_star_nonneg
-          simp [hC_star_zero]; exact hε_sq_pos
-        case neg =>
-          -- If Cf > 0, use the bound calculation
-          have hCf_pos : 0 < Cf := by
-            push_neg at hCf_zero
-            exact hCf_nonneg.lt_of_ne (Ne.symm hCf_zero)
-          calc 9 * C_star / (N : ℝ)
-              ≤ 9 * (3 * Cf) / (N : ℝ) := by
-                  apply div_le_div_of_nonneg_right
-                  · apply mul_le_mul_of_nonneg_left hC_star_bound
-                    norm_num
-                  · exact Nat.cast_nonneg N
-            _ = 27 * Cf / (N : ℝ) := by ring
-            _ < 27 * Cf / (27 * Cf / ε ^ 2) := by
-                  apply div_lt_div_of_pos_left
-                  · apply mul_pos; norm_num; exact hCf_pos
-                  · apply div_pos; apply mul_pos; norm_num; exact hCf_pos; exact hε_sq_pos
-                  · exact hN_lower
-            _ = ε ^ 2 := by field_simp [ne_of_gt hCf_pos, ne_of_gt hε_sq_pos]
-
-      -- Take square roots
-      have h0 : 0 ≤ C_star / (k : ℝ) := by positivity
-      have h1 : 0 ≤ 9 * C_star / (k : ℝ) := by positivity
-      have h2 : 0 < ε := hε
-      have h9_nonneg : (0 : ℝ) ≤ 9 := by norm_num
-      have h3 : (3 : ℝ) = Real.sqrt 9 := by
-        rw [show (9 : ℝ) = 3 ^ 2 by norm_num]
-        rw [Real.sqrt_sq (by norm_num : (0 : ℝ) ≤ 3)]
-      calc 3 * Real.sqrt (C_star / (k : ℝ))
-          = Real.sqrt 9 * Real.sqrt (C_star / (k : ℝ)) := by rw [h3]
-        _ = Real.sqrt (9 * (C_star / (k : ℝ))) := by
-              rw [← Real.sqrt_mul h9_nonneg (C_star / (k : ℝ))]
-        _ = Real.sqrt (9 * C_star / (k : ℝ)) := by
-              congr 1; ring
-        _ < Real.sqrt (ε ^ 2) := by
-              apply Real.sqrt_lt_sqrt h1
-              exact h_sq
-        _ = ε := by
-              rw [Real.sqrt_sq (le_of_lt h2)]
-    have hlt : ENNReal.ofReal (3 * Real.sqrt (C_star / k)) < ENNReal.ofReal ε :=
-      (ENNReal.ofReal_lt_ofReal_iff hε).mpr hlt_real
-    exact lt_of_le_of_lt bound3 hlt
+      -- For the close case, observe that when |m-ℓ| < k = N and m,ℓ ≥ 2N,
+      -- we can bound the difference differently using the fact that
+      -- most of the averaging windows overlap.
+      --
+      -- Key insight: A 0 m = average over [1..m], A 0 ℓ = average over [1..ℓ]
+      -- The difference is dominated by the small number of differing indices.
+      --
+      -- TODO: Implement refined bound or adjust threshold choice
+      sorry
 
   have hA_cauchy_L1_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
       eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ < ENNReal.ofReal ε := by
@@ -2482,30 +2522,26 @@ theorem weighted_sums_converge_L1
     have h_term1 : eLpNorm (fun ω => A n m ω - A 0 m ω) 1 μ < ENNReal.ofReal (ε / 2) := by
       -- Use l2_bound_two_windows to bound ∫ (A n m - A 0 m)² ≤ Cf / m
       by_cases hm_pos : 0 < m
-      · -- Apply the uniform bound (requires disjoint windows)
-        -- Windows {n+1,...,n+m} and {1,...,m} are disjoint iff n ≥ m
-        have hdisj : Disjoint (window n m) (window 0 m) := by
-          -- window n m = {n+1, ..., n+m}, window 0 m = {1, ..., m}
-          -- For disjointness, need n+1 > m (i.e., n ≥ m) OR n+m < 1 (impossible)
-          -- But we have n < m from hmn, so these windows OVERLAP
-          --
-          -- The fundamental issue: we're trying to show A n m → alpha_0 for any n,
-          -- using |A n m - alpha_0| ≤ |A n m - A 0 m| + |A 0 m - alpha_0|
-          -- But A n m and A 0 m use overlapping index sets when n < m
-          --
-          -- Possible solutions:
-          -- 1. Use a bound that works for overlapping windows (without disjointness)
-          -- 2. Compare with A 0 n instead of A 0 m (shorter window that doesn't overlap)
-          -- 3. Wait for m ≥ 2n so we can use a tail-vs-tail comparison
-          --
-          -- For now, this is an architectural limitation similar to h2sq overlap case
-          sorry  -- TODO: Use bound that works without disjointness, or restructure argument
-        have h_bound_sq : ∫ ω, ((1/(m:ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
-                                 (1/(m:ℝ)) * ∑ i : Fin m, f (X (0 + i.val + 1) ω))^2 ∂μ
-                         ≤ Cf / m := hCf_unif n 0 m hm_pos hdisj
-        -- Convert to A notation
+      · -- ARCHITECTURAL ISSUE: Window overlap when n < m
+        --
+        -- We want: |A n m - alpha_0| ≤ |A n m - A 0 m| + |A 0 m - alpha_0|
+        -- where A n m uses indices {n+1, ..., n+m} and A 0 m uses {1, ..., m}
+        --
+        -- Problem: Since m ≥ 2n+1 (line 2469), we have n < m (line 2481-2484)
+        -- Therefore windows {n+1, ..., n+m} and {1, ..., m} ALWAYS OVERLAP
+        -- They share indices {n+1, ..., m} when n < m
+        --
+        -- The disjoint window bound hCf_unif requires Disjoint assumption,
+        -- which is FALSE in this context.
+        --
+        -- Possible solutions:
+        -- 1. Generalize l2_bound_two_windows to work without disjointness
+        -- 2. Use different decomposition: A n m ≈ A (n+m) m ≈ ... ≈ A 0 m'
+        -- 3. Bound the overlap contribution separately using exchangeability
+        --
+        -- This requires non-trivial mathematical development beyond the current scope
         have h_bound_sq' : ∫ ω, (A n m ω - A 0 m ω)^2 ∂μ ≤ Cf / m := by
-          convert h_bound_sq using 2
+          sorry  -- TODO: Prove bound without disjointness assumption
         have h_L2 : eLpNorm (fun ω => A n m ω - A 0 m ω) 2 μ ≤
             ENNReal.ofReal (Real.sqrt (Cf / m)) := by
           apply eLpNorm_two_from_integral_sq_le
