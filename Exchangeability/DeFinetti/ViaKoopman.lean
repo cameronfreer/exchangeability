@@ -348,21 +348,24 @@ private lemma condExp_mul_pullout
     (hZ_bd : ∃ C, ∀ ω, |Z ω| ≤ C)
     (hY : Integrable Y μ) :
     μ[Z * Y | shiftInvariantSigma (α := α)] =ᵐ[μ] Z * μ[Y | shiftInvariantSigma (α := α)] := by
-  set m := shiftInvariantSigma (α := α)
-
-  -- Z is AEStronglyMeasurable w.r.t. m
-  have hZ_aesm : AEStronglyMeasurable[m] Z μ :=
+  -- Z is AEStronglyMeasurable w.r.t. shiftInvariantSigma
+  have hZ_aesm : AEStronglyMeasurable[shiftInvariantSigma (α := α)] Z μ :=
     hZ_meas.aestronglyMeasurable
 
   -- Z*Y is integrable using our helper lemma
   have hZY_int : Integrable (Z * Y) μ := by
-    -- Since Z is measurable w.r.t. m, and m is a sub-σ-algebra, Z is measurable w.r.t. ambient
-    -- We need to convert Measurable[m] Z to Measurable Z
-    sorry -- TODO: Find correct way to lift measurability from sub-σ-algebra to ambient
+    -- Since Z is measurable w.r.t. shiftInvariantSigma, and it's a sub-σ-algebra,
+    -- Z is measurable w.r.t. the ambient σ-algebra
+    have hZ_meas_ambient : Measurable Z := by
+      apply Measurable.mono hZ_meas
+      · exact shiftInvariantSigma_le (α := α)
+      · exact le_rfl
+    exact integrable_mul_of_ae_bdd_left hZ_meas_ambient
+      (hZ_bd.imp fun C hC => ae_of_all μ hC) hY
 
   -- Apply mathlib's pull-out lemma
   exact MeasureTheory.condExp_mul_of_aestronglyMeasurable_left
-    (μ := μ) (m := m) hZ_aesm hZY_int hY
+    (μ := μ) (m := shiftInvariantSigma (α := α)) hZ_aesm hZY_int hY
 
 /-! ## Axioms for de Finetti theorem -/
 
