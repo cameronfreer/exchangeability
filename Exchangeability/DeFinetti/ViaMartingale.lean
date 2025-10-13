@@ -1700,15 +1700,76 @@ lemma contractable_finite_cylinder_measure
   -- Note: S_idx = S_std, so they define the same set
   have h_sets_eq : S_idx = S_std := rfl
 
-  -- The key observation: the index function idx maps the cylinder conditions correctly
-  -- idx(i) = i for i ≤ r, and idx(r+1+j) = m+1+j for j < k
+  -- Key: Show that the LHS and RHS sets are preimages under the respective mappings
 
-  -- The cylinder set on the LHS under idx mapping equals the RHS
-  -- By contractability (contract), the pushforward measures are equal
+  -- The LHS: {ω | X_0,...,X_{r-1} ∈ A, X_r ∈ B, X_{m+1},...,X_{m+k} ∈ C}
+  -- is exactly the preimage of S_idx under (fun ω i => X (idx i) ω)
+  have lhs_eq : {ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)}
+      = (fun ω => fun i => X (idx i) ω) ⁻¹' S_idx := by
+    ext ω
+    simp only [Set.mem_setOf_eq, Set.mem_preimage, S_idx]
+    constructor
+    · intro ⟨hA, hB, hC⟩
+      refine ⟨?_, ?_, ?_⟩
+      · intro i
+        -- For i < r: idx(i) = i, so X(idx i) ω = X i ω ∈ A i
+        have hi : idx ⟨i.val, by omega⟩ = i.val := by
+          simp only [idx]; split_ifs <;> omega
+        rw [hi]
+        exact hA i
+      · -- For i = r: idx(r) = r, so X(idx r) ω = X r ω ∈ B
+        have : idx ⟨r, by omega⟩ = r := by
+          simp only [idx]; split_ifs <;> omega
+        rw [this]
+        exact hB
+      · intro j
+        -- For i = r+1+j: idx(r+1+j) = m+1+j
+        have : idx ⟨r + 1 + j.val, by omega⟩ = m + 1 + j.val := by
+          simp only [idx]
+          split_ifs with h
+          · omega
+          · have : r + 1 + j.val - r - 1 = j.val := by omega
+            rw [this]
+        rw [this]
+        exact hC j
+    · intro ⟨hA, hB, hC⟩
+      refine ⟨?_, ?_, ?_⟩
+      · intro i
+        have : idx ⟨i.val, by omega⟩ = i.val := by
+          simp only [idx]; split_ifs <;> omega
+        rw [← this]
+        exact hA ⟨i.val, by omega⟩
+      · have : idx ⟨r, by omega⟩ = r := by
+          simp only [idx]; split_ifs <;> omega
+        rw [← this]
+        exact hB
+      · intro j
+        have idx_val : idx ⟨r + 1 + j.val, by omega⟩ = m + 1 + j.val := by
+          simp only [idx]
+          split_ifs with h
+          · omega
+          · have : r + 1 + j.val - r - 1 = j.val := by omega
+            rw [this]
+        rw [← idx_val]
+        exact hC j
 
-  sorry -- TODO: Complete using Measure.map and set correspondence (30-45 min)
-        -- The cylinder conditions under idx correspond exactly to the LHS
-        -- Apply contract to show measures are equal
+  -- The RHS is the preimage of S_std under (fun ω i => X i.val ω)
+  have rhs_eq : {ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (r + 1 + j.val) ω ∈ C j)}
+      = (fun ω => fun i => X i.val ω) ⁻¹' S_std := by
+    ext ω; simp [S_std]
+
+  -- Apply contractability: the pushforward measures are equal
+  rw [lhs_eq, rhs_eq, h_sets_eq]
+
+  -- contract says the two pushforward measures are equal:
+  -- Measure.map (fun ω i => X (idx i) ω) μ = Measure.map (fun ω i => X i.val ω) μ
+  --
+  -- Goal is: μ ((fun ω i => X (idx i) ω) ⁻¹' S_std) = μ ((fun ω i => X i.val ω) ⁻¹' S_std)
+  --
+  -- Need to use: (Measure.map f μ) s = μ (f⁻¹' s) when f measurable, s measurable
+  -- Then: μ (f⁻¹' S_std) = (Measure.map f μ) S_std for both f's
+  --       and contract gives (Measure.map f₁ μ) S_std = (Measure.map f₂ μ) S_std
+  sorry -- TODO (10 min): Apply Measure.map_apply after proving S_std measurable as cylinder set
 
 /-- **Correct conditional independence from contractability (Kallenberg Lemma 1.3).**
 
