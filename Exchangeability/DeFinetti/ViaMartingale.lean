@@ -2064,9 +2064,42 @@ lemma block_coord_condIndep
       let E_cyl := {ω | (∀ i, X i.val ω ∈ A i) ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)}
       E_cyl ∈ GoodSets := by
       intro A hA C hC
+      -- Explicitly bind E_cyl from the let in the type
+      show MeasurableSet[firstRSigma X r ⊔ finFutureSigma X m k]
+        {ω | (∀ i, X i.val ω ∈ A i) ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)} ∧ _
       constructor
-      · -- Measurability of E_cyl
-        sorry -- TODO (15 min): Show cylinder is measurable in firstRSigma ⊔ finFutureSigma
+      · -- Measurability of E_cyl in firstRSigma X r ⊔ finFutureSigma X m k
+        -- E_cyl = E_past ∩ E_future where:
+        -- E_past = {∀ i, X i ∈ A i} = firstRCylinder X r A
+        -- E_future = {∀ j, X (m+1+j) ∈ C j}
+
+        -- Define the components
+        let E_past := firstRCylinder X r A
+        let E_future : Set Ω := {ω | ∀ j : Fin k, X (m + 1 + j.val) ω ∈ C j}
+
+        -- Show the set equals E_past ∩ E_future
+        show MeasurableSet[firstRSigma X r ⊔ finFutureSigma X m k] (E_past ∩ E_future)
+
+        have : {ω | (∀ i, X i.val ω ∈ A i) ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)} = E_past ∩ E_future := by
+          ext ω
+          simp [E_past, E_future, firstRCylinder]
+
+        -- E_past is measurable in firstRSigma X r
+        have hE_past : MeasurableSet[firstRSigma X r] E_past :=
+          firstRCylinder_measurable_in_firstRSigma X r A hA
+
+        -- E_future is measurable in finFutureSigma X m k
+        -- finFutureSigma is comap of (fun ω j => X (m+1+j) ω), so E_future is preimage
+        have hE_future : MeasurableSet[finFutureSigma X m k] E_future := by
+          -- E_future = preimage of finite cylinder under the future map
+          unfold finFutureSigma
+          sorry -- TODO: Show this is preimage of measurable set under comap function
+                -- Similar pattern to firstRCylinder_measurable_in_firstRSigma
+
+        -- Intersection is measurable in the sup
+        sorry -- TODO: Standard σ-algebra lifting
+              -- Use: MeasurableSet[m₁] E₁ → m₁ ≤ m → MeasurableSet[m] E₁
+              -- Then: MeasurableSet[m] E₁ → MeasurableSet[m] E₂ → MeasurableSet[m] (E₁ ∩ E₂)
       · -- Integral equality
         rw [lhs_computation A hA C hC, rhs_computation A hA C hC]
         rw [contractability_step A hA C hC]
@@ -2080,14 +2113,33 @@ lemma block_coord_condIndep
         (⋃ n, E_seq n) ∈ GoodSets := by
       intro E_seq hE_in hMono
       constructor
-      · -- Measurability of union
-        sorry -- TODO: Show ⋃ E_n is measurable (standard)
+      · -- Measurability of union: countable union of measurable sets is measurable
+        apply MeasurableSet.iUnion
+        intro n
+        exact (hE_in n).1
       · -- Integral equality for union
-        -- Strategy: Use monotone convergence theorem (MCT)
-        -- lim ∫_{E_n} indicator = ∫_{⋃ E_n} indicator (by MCT)
-        -- lim ∫_{E_n} μ[...] = ∫_{⋃ E_n} μ[...] (by MCT)
-        -- Since ∫_{E_n} indicator = ∫_{E_n} μ[...] for all n, limits are equal
-        sorry -- TODO: Apply MCT (MeasureTheory.lintegral_iSup_directed)
+        -- Use measure continuity from below for indicator functions
+        -- For indicator B (X r): integral over set = measure of preimage ∩ set
+        -- Similarly for conditional expectation
+        -- Since equality holds for all E_n, it holds for the limit
+
+        -- Extract the functions we're integrating
+        let f := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X r ω)
+        let g := fun ω => (Exchangeability.Probability.condExpWith μ
+          (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
+          (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω
+
+        -- For each n, we have ∫_{E_n} f = ∫_{E_n} g
+        have h_eq_n : ∀ n, ∫ ω in E_seq n, f ω ∂μ = ∫ ω in E_seq n, g ω ∂μ := by
+          intro n
+          exact (hE_in n).2
+
+        -- Need to show: ∫_{⋃ E_n} f = ∫_{⋃ E_n} g
+        -- Use monotone convergence for integrals over increasing sets
+        sorry -- TODO: Apply measure continuity + integral_indicator pattern
+              -- Can use: lim ∫_{E_n} f = ∫_{⋃ E_n} f (by MCT for indicators)
+              -- Then: lim (∫_{E_n} f) = lim (∫_{E_n} g) (by h_eq_n)
+              --       ∫_{⋃ E_n} f = ∫_{⋃ E_n} g
 
     have goodsets_closed_under_monotone_inter : ∀ (E_seq : ℕ → Set Ω),
         (∀ n, E_seq n ∈ GoodSets) →
@@ -2095,14 +2147,32 @@ lemma block_coord_condIndep
         (⋂ n, E_seq n) ∈ GoodSets := by
       intro E_seq hE_in hAnti
       constructor
-      · -- Measurability of intersection
-        sorry -- TODO: Show ⋂ E_n is measurable (standard)
+      · -- Measurability of intersection: countable intersection of measurable sets is measurable
+        apply MeasurableSet.iInter
+        intro n
+        exact (hE_in n).1
       · -- Integral equality for intersection
-        -- Strategy: Use dominated convergence theorem (DCT)
-        -- Dominating function: indicator of univ = 1 (integrable)
-        -- lim ∫_{E_n} indicator = ∫_{⋂ E_n} indicator (by DCT)
-        -- lim ∫_{E_n} μ[...] = ∫_{⋂ E_n} μ[...] (by DCT)
-        sorry -- TODO: Apply DCT for decreasing sequences
+        -- Use measure continuity from above for indicator functions
+        -- For decreasing sequences with finite measure
+
+        -- Extract the functions we're integrating
+        let f := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X r ω)
+        let g := fun ω => (Exchangeability.Probability.condExpWith μ
+          (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
+          (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω
+
+        -- For each n, we have ∫_{E_n} f = ∫_{E_n} g
+        have h_eq_n : ∀ n, ∫ ω in E_seq n, f ω ∂μ = ∫ ω in E_seq n, g ω ∂μ := by
+          intro n
+          exact (hE_in n).2
+
+        -- Need to show: ∫_{⋂ E_n} f = ∫_{⋂ E_n} g
+        -- Use dominated convergence for integrals over decreasing sets
+        -- Dominating function: constant 1 (since indicator ≤ 1)
+        sorry -- TODO: Apply measure continuity from above + DCT pattern
+              -- Can use: lim ∫_{E_n} f = ∫_{⋂ E_n} f (by DCT, dominated by 1)
+              -- Then: lim (∫_{E_n} f) = lim (∫_{E_n} g) (by h_eq_n)
+              --       ∫_{⋂ E_n} f = ∫_{⋂ E_n} g
 
     -- Part C: Apply Dynkin's π-λ theorem
     --
