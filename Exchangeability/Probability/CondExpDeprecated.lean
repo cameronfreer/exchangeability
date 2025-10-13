@@ -818,11 +818,17 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
         = ∫ ω, (μ[X₂ ^ 2 | m₁] ω - (μ[X₂ | m₁] ω) ^ 2) ∂μ := by
             exact integral_congr_ae hvar_decomp
       _ = ∫ ω, μ[X₂ ^ 2 | m₁] ω ∂μ - ∫ ω, (μ[X₂ | m₁] ω) ^ 2 ∂μ := by
-            sorry  -- TODO: integral_sub for integrable functions
+            have hint1 : Integrable (μ[X₂ ^ 2 | m₁]) μ := integrable_condExp
+            have hint2 : Integrable (fun ω => (μ[X₂ | m₁] ω) ^ 2) μ := by
+              -- Since μ[X₂|m₁] =ᵐ X₁ and ∫ X₁² is finite, X₁² is integrable
+              sorry  -- TODO: Derive integrability from finiteness of ∫ X₁²
+            exact integral_sub hint1 hint2
       _ = ∫ ω, (X₂ ω) ^ 2 ∂μ - ∫ ω, (μ[X₂ | m₁] ω) ^ 2 ∂μ := by
-            sorry  -- TODO: integral_condExp hm₁ for X₂²
+            congr 1
+            exact integral_condExp hm₁
       _ = ∫ ω, (X₂ ω) ^ 2 ∂μ - ∫ ω, (X₁ ω) ^ 2 ∂μ := by
-            sorry  -- TODO: integral_congr_ae using hmg
+            congr 1
+            exact integral_congr_ae (EventuallyEq.fun_comp hmg (fun x => x ^ 2))
       _ = 0 := by
             rw [sub_eq_zero]
             exact hSecond
