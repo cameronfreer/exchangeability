@@ -513,7 +513,7 @@ into the product of the individual conditional expectations.
 6. But P(g(ω₀)) = CE[g(ω₀)|ℐ], so we get the factorization!
 -/
 private lemma condexp_pair_factorization_MET
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
     (hσ : MeasurePreserving shift μ μ)
     (f g : α → ℝ)
     (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
@@ -561,11 +561,11 @@ private lemma condexp_pair_factorization_MET
         · exact (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
         · have h_bd : ∀ (ω : Ω[α]), |g (ω 0)| ≤ Cg := fun ω => hCg (ω 0)
           exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
-      -- Apply condExp_abs_le_of_abs_le (once it's proved)
+      -- Apply condExp_abs_le_of_abs_le: |CE[g∘π₀|m]| ≤ Cg a.e.
       have h_bd' : ∀ (ω : Ω[α]), |g (ω 0)| ≤ Cg := fun ω => hCg (ω 0)
-      -- TODO: Fix type inference issue with condExp_abs_le_of_abs_le
-      -- Expected: condExp_abs_le_of_abs_le shiftInvariantSigma_le hg_int h_bd'
-      -- But Lean has trouble inferring the measurable space parameters
+      -- TODO: Type inference issue with condExp_abs_le_of_abs_le
+      -- The lemma is now proved, but Lean has trouble with implicit MeasurableSpace arguments
+      -- when m is defined as `set m := shiftInvariantSigma`
       sorry
 
     -- Y := f(ω₀) is integrable (bounded + measurable)
