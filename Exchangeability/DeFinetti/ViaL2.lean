@@ -3085,8 +3085,16 @@ lemma directing_measure_measurable
 
     have h_pi_S : IsPiSystem S := by
       -- {Iic t | t ∈ ℝ} is a π-system
-      -- For any s, t: Iic s ∩ Iic t = Iic (min s t), which is in S
-      sorry
+      -- For any Iic s, Iic t: if (Iic s) ∩ (Iic t) is nonempty, then it's in S
+      -- (Iic s) ∩ (Iic t) = Iic (min s t)
+      intro u hu v hv _
+      -- u ∈ S means u = Iic s for some s
+      -- v ∈ S means v = Iic t for some t
+      obtain ⟨s, rfl⟩ := hu
+      obtain ⟨t, rfl⟩ := hv
+      -- Need to show: Iic s ∩ Iic t ∈ S
+      use min s t
+      exact Set.Iic_inter_Iic.symm
 
     -- Apply the π-λ theorem
     have h_induction : ∀ t (htm : MeasurableSet t), C t htm := fun t htm =>
