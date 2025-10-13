@@ -410,9 +410,24 @@ lemma condexp_indicator_eq_of_pair_law_eq
     =ᵐ[μ]
   μ[(Set.indicator B (fun _ => (1:ℝ))) ∘ Y'| MeasurableSpace.comap Z inferInstance] := by
   sorry
-  -- TODO: Implement using ae_eq_condExp_of_forall_setIntegral_eq
-  -- Test against bounded h that are σ(Z)-measurable
-  -- Use hpair to show ∫ 1_{Y∈B} * h ∘ Z dμ = ∫ 1_{Y'∈B} * h ∘ Z dμ
-  -- This equality for all test functions implies CE equality
+  -- TODO: Use ae_eq_condExp_of_forall_setIntegral_eq
+  --
+  -- Proof strategy (mathematically complete, typeclass issues remain):
+  -- 1. For any A ∈ σ(Z), we have A = Z⁻¹(E) for some measurable E
+  -- 2. Show ∫_A (indicator B ∘ Y) dμ = μ(Y⁻¹(B) ∩ Z⁻¹(E)).toReal
+  -- 3. Show ∫_A (indicator B ∘ Y') dμ = μ(Y'⁻¹(B) ∩ Z⁻¹(E)).toReal
+  -- 4. Use hpair: since pushforward measures agree on rectangles B × E,
+  --    we have μ(Y⁻¹(B) ∩ Z⁻¹(E)) = μ(Y'⁻¹(B) ∩ Z⁻¹(E))
+  -- 5. By CE defining property: ∫_A μ[f' | σ(Z)] = ∫_A f' for all A ∈ σ(Z)
+  -- 6. Thus ∫_A f = ∫_A μ[f' | σ(Z)] for all A ∈ σ(Z)
+  -- 7. By uniqueness (ae_eq_condExp_of_forall_setIntegral_eq): μ[f | σ(Z)] =ᵐ μ[f' | σ(Z)]
+  --
+  -- **Typeclass issue:** Working with MeasurableSpace.comap Z inferInstance requires
+  -- careful management of multiple measurable space instances on Ω. The comap creates
+  -- a sub-σ-algebra, but proving the ≤ relationship and managing the typeclass resolution
+  -- for conditional expectation with respect to comaps needs additional infrastructure.
+  --
+  -- This is tractable (2-4 hours) but requires deep Lean 4 typeclass engineering.
+  -- Not currently blocking as ViaMartingale.lean has its own CE bridge axioms.
 
 end Exchangeability.Probability
