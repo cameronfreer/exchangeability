@@ -566,13 +566,10 @@ private lemma condexp_pair_factorization_MET
       constructor
       · exact (hf_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
       · -- HasFiniteIntegral: ∫⁻ ω, ‖f (ω 0)‖₊ ∂μ < ∞
-        -- Bound: ‖f (ω 0)‖₊ ≤ Cf for all ω, so ∫⁻ ‖f∘π₀‖₊ ≤ Cf·μ(Ω) = Cf < ∞
-        sorry
-        /- TODO: Show ∫⁻ ω, ‖f (ω 0)‖₊ ∂μ ≤ Cf * μ(Set.univ) < ∞
-        Uses lintegral_mono with constant Cf, then lintegral_const
-        Main blocker: same nnnorm issue as integrable_mul_of_ae_bdd_left
-        Estimated: 5 lines once nnnorm conversion resolved
-        -/
+        -- Bound: |f (ω 0)| ≤ Cf for all ω
+        -- Use HasFiniteIntegral.of_bounded
+        have h_bd : ∀ (ω : Ω[α]), |f (ω 0)| ≤ Cf := fun ω => hCf (ω 0)
+        exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
 
     -- Apply condExp_mul_pullout: CE[Z·Y | m] = Z·CE[Y | m]
     have h := condExp_mul_pullout hZ_meas hZ_bd hY_int
