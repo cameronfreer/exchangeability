@@ -399,20 +399,105 @@ E[1_{Y ∈ B} | σ(Z)] = E[1_{Y' ∈ B} | σ(Z)]  a.e.
 Use with Y = X_m, Y' = X_k, Z = shiftRV X (m+1), and the equality comes from contractability
 via `contractable_dist_eq`. -/
 lemma condexp_indicator_eq_of_pair_law_eq
-    {Ω α β : Type*} [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β]
+    {Ω α β : Type*} [mΩ : MeasurableSpace Ω] [MeasurableSpace α] [mβ : MeasurableSpace β]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (Y Y' : Ω → α) (Z : Ω → β)
     (hY : Measurable Y) (hY' : Measurable Y') (hZ : Measurable Z)
     (hpair : Measure.map (fun ω => (Y ω, Z ω)) μ
            = Measure.map (fun ω => (Y' ω, Z ω)) μ)
     {B : Set α} (hB : MeasurableSet B) :
-  μ[(Set.indicator B (fun _ => (1:ℝ))) ∘ Y | MeasurableSpace.comap Z inferInstance]
+  μ[(Set.indicator B (fun _ => (1:ℝ))) ∘ Y | MeasurableSpace.comap Z mβ]
     =ᵐ[μ]
-  μ[(Set.indicator B (fun _ => (1:ℝ))) ∘ Y'| MeasurableSpace.comap Z inferInstance] := by
-  sorry
-  -- TODO: Implement using ae_eq_condExp_of_forall_setIntegral_eq
-  -- Test against bounded h that are σ(Z)-measurable
-  -- Use hpair to show ∫ 1_{Y∈B} * h ∘ Z dμ = ∫ 1_{Y'∈B} * h ∘ Z dμ
-  -- This equality for all test functions implies CE equality
+  μ[(Set.indicator B (fun _ => (1:ℝ))) ∘ Y' | MeasurableSpace.comap Z mβ] := by
+  classical
+  -- Set up notation
+  set f := (Set.indicator B (fun _ => (1:ℝ))) ∘ Y
+  set f' := (Set.indicator B (fun _ => (1:ℝ))) ∘ Y'
+  set mZ := MeasurableSpace.comap Z mβ
+
+  -- Prove that comap Z is a sub-σ-algebra of the ambient space
+  have hmZ_le : mZ ≤ mΩ := by
+    intro s hs
+    -- s ∈ comap Z means s = Z⁻¹(E) for some measurable E
+    rcases hs with ⟨E, hE, rfl⟩
+    -- Z⁻¹(E) is measurable in ambient space since Z is measurable
+    exact hZ hE
+
+  -- Integrability
+  have hf_int : Integrable f μ := (integrable_const (1:ℝ)).indicator (hY hB)
+  have hf'_int : Integrable f' μ := (integrable_const (1:ℝ)).indicator (hY' hB)
+
+  -- Apply ae_eq_condExp_of_forall_setIntegral_eq
+  refine (MeasureTheory.ae_eq_condExp_of_forall_setIntegral_eq
+    (hm := hmZ_le)
+    (f := f)
+    (g := μ[f' | mZ])
+    (hf := hf_int)
+    (hg_int_finite := ?hg_int_finite)
+    (hg_eq := ?hg_eq)
+    (hgm := MeasureTheory.stronglyMeasurable_condExp.aestronglyMeasurable)).symm
+
+  case hg_int_finite =>
+    intro s _ _
+    exact integrable_condExp.integrableOn
+
+  case hg_eq =>
+    intro A hA _
+    -- A is in σ(Z), so A = Z⁻¹(E) for some measurable E
+    obtain ⟨E, hE, rfl⟩ := hA
+
+    -- Key equality from distributional assumption
+    have h_meas_eq : μ (Y ⁻¹' B ∩ Z ⁻¹' E) = μ (Y' ⁻¹' B ∩ Z ⁻¹' E) := by
+      -- The pushforward measures agree on rectangles
+      have := congr_arg (fun ν => ν (B ×ˢ E)) hpair
+      simp only [Measure.map_apply (hY.prod_mk hZ) (hB.prod hE),
+                 Measure.map_apply (hY'.prod_mk hZ) (hB.prod hE)] at this
+      -- Convert product preimage to intersection
+      have h1 : (fun ω => (Y ω, Z ω)) ⁻¹' (B ×ˢ E) = Y ⁻¹' B ∩ Z ⁻¹' E := by
+        ext ω; simp [Set.mem_prod]
+      have h2 : (fun ω => (Y' ω, Z ω)) ⁻¹' (B ×ˢ E) = Y' ⁻¹' B ∩ Z ⁻¹' E := by
+        ext ω; simp [Set.mem_prod]
+      rw [h1, h2] at this
+      exact this
+
+    -- LHS: ∫_{Z⁻¹(E)} f dμ = μ(Y⁻¹(B) ∩ Z⁻¹(E))
+    -- f ω = indicator B (const 1) (Y ω) = indicator (Y⁻¹' B) (const 1) ω
+    have h_lhs : ∫ ω in Z ⁻¹' E, f ω ∂μ = (μ (Y ⁻¹' B ∩ Z ⁻¹' E)).toReal := by
+      -- Rewrite f in terms of preimage indicator
+      have hf_eq : f = (Y ⁻¹' B).indicator (fun _ => (1:ℝ)) := by
+        ext ω
+        simp only [f, Function.comp_apply, Set.indicator, Set.mem_preimage]
+      rw [hf_eq]
+      -- Set integral of indicator: ∫_{Z⁻¹E} 1_{Y⁻¹B} = μ(Y⁻¹B ∩ Z⁻¹E)
+      rw [integral_indicator (hY hB)]
+      simp only [integral_const]
+      -- Double restriction: μ.restrict(Z⁻¹E).restrict(Y⁻¹B) univ = μ(Y⁻¹B ∩ Z⁻¹E)
+      rw [Measure.restrict_restrict (hY hB)]
+      simp only [smul_eq_mul, mul_one]
+      -- (μ.restrict S).real univ = (μ S).toReal
+      simp [Measure.real, Measure.restrict_apply MeasurableSet.univ, Set.univ_inter]
+
+    -- RHS: ∫_{Z⁻¹(E)} μ[f' | σ(Z)] dμ = ∫_{Z⁻¹(E)} f' dμ (by CE property)
+    have h_rhs_ce : ∫ ω in Z ⁻¹' E, μ[f' | mZ] ω ∂μ = ∫ ω in Z ⁻¹' E, f' ω ∂μ :=
+      setIntegral_condExp hmZ_le hf'_int ⟨E, hE, rfl⟩
+
+    -- RHS: ∫_{Z⁻¹(E)} f' dμ = μ(Y'⁻¹(B) ∩ Z⁻¹(E))
+    have h_rhs : ∫ ω in Z ⁻¹' E, f' ω ∂μ = (μ (Y' ⁻¹' B ∩ Z ⁻¹' E)).toReal := by
+      -- Rewrite f' in terms of preimage indicator
+      have hf'_eq : f' = (Y' ⁻¹' B).indicator (fun _ => (1:ℝ)) := by
+        ext ω
+        simp only [f', Function.comp_apply, Set.indicator, Set.mem_preimage]
+      rw [hf'_eq]
+      -- Set integral of indicator: ∫_{Z⁻¹E} 1_{Y'⁻¹B} = μ(Y'⁻¹B ∩ Z⁻¹E)
+      rw [integral_indicator (hY' hB)]
+      simp only [integral_const]
+      -- Double restriction: μ.restrict(Z⁻¹E).restrict(Y'⁻¹B) univ = μ(Y'⁻¹B ∩ Z⁻¹E)
+      rw [Measure.restrict_restrict (hY' hB)]
+      simp only [smul_eq_mul, mul_one]
+      -- (μ.restrict S).real univ = (μ S).toReal
+      simp [Measure.real, Measure.restrict_apply MeasurableSet.univ, Set.univ_inter]
+
+    -- Combine: ∫_{Z⁻¹(E)} f dμ = ∫_{Z⁻¹(E)} μ[f' | σ(Z)] dμ
+    rw [h_lhs, h_rhs_ce, h_rhs, h_meas_eq]
 
 end Exchangeability.Probability

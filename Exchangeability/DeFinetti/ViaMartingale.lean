@@ -1809,22 +1809,27 @@ lemma finite_level_factorization
         μ[(A.indicator (fun _ => (1:ℝ))) * (B.indicator (fun _ => (1:ℝ))) | futureFiltration X m]
           =ᵐ[μ]
         (fun ω => (μ[A.indicator (fun _ => (1:ℝ)) | futureFiltration X m] ω)
-                  * (B.indicator (fun _ => (1:ℝ)) ω)) := by
-      -- TODO: This requires a non-standard factorization formula
-      -- Standard CI gives: μ[(A ∩ B).indicator | F] = μ[A.indicator | F] * μ[B.indicator | F]
-      -- But here we need: μ[(A * B).indicator | F] = μ[A.indicator | F] * B.indicator
-      --
-      -- The RHS has B.indicator WITHOUT conditional expectation, which is unusual since
-      -- B ∈ σ(X_r) is NOT measurable w.r.t. futureFiltration X m (r < m means X_r is "past").
-      --
-      -- Possible approaches:
-      -- 1. This formula might be incorrect and needs adjustment throughout the calc chain
-      -- 2. There might be a subtle measurability property that allows B to be pulled out
-      -- 3. A different CI factorization lemma is needed
-      --
-      -- The continuation uses hswap to eventually replace X_r terms, so perhaps the unusual
-      -- formula here is intentionally "wrong" and gets corrected later in the calc chain.
-      sorry
+                  * (μ[B.indicator (fun _ => (1:ℝ)) | futureFiltration X m] ω)) := by
+      -- Convert product of indicators to indicator of intersection
+      have h_inter : (A.indicator (fun _ => (1:ℝ))) * (B.indicator (fun _ => (1:ℝ)))
+                   = (A ∩ B).indicator (fun _ => (1:ℝ)) := by
+        ext ω
+        simp only [Pi.mul_apply]
+        have := congr_fun (indicator_mul_indicator_eq_indicator_inter A B 1 1) ω
+        simpa using this
+      -- Apply standard CI product formula
+      calc μ[(A.indicator (fun _ => (1:ℝ))) * (B.indicator (fun _ => (1:ℝ))) | futureFiltration X m]
+          _ =ᵐ[μ] μ[(A ∩ B).indicator (fun _ => (1:ℝ)) | futureFiltration X m] := by
+            exact condExp_congr_ae (EventuallyEq.of_eq h_inter)
+          _ =ᵐ[μ] (μ[A.indicator (fun _ => (1:ℝ)) | futureFiltration X m] *
+                   μ[B.indicator (fun _ => (1:ℝ)) | futureFiltration X m]) := by
+            exact condexp_indicator_inter_of_condIndep
+              (futureFiltration_le X m hX_meas)
+              (firstRSigma_le_ambient X r hX_meas)
+              (fun s hs => by obtain ⟨t, ht, rfl⟩ := hs; exact (hX_meas r) ht)
+              h_condIndep
+              hA_meas_firstR
+              hB_meas_Xr
 
     -- Apply IH to the first r factors
     have hIH : μ[indProd X r Cinit | futureFiltration X m] =ᵐ[μ]
@@ -1855,16 +1860,16 @@ lemma finite_level_factorization
           rw [← hf_indicator, ← hg_indicator]
           rfl
         _ =ᵐ[μ] (fun ω => (μ[A.indicator (fun _ => (1:ℝ)) | futureFiltration X m] ω)
-                          * (B.indicator (fun _ => (1:ℝ)) ω)) := hfactor
+                          * (μ[B.indicator (fun _ => (1:ℝ)) | futureFiltration X m] ω)) := hfactor
         _ =ᵐ[μ] (fun ω => (μ[indProd X r Cinit | futureFiltration X m] ω)
-                          * (Set.indicator Clast (fun _ => (1:ℝ)) (X r ω))) := by
+                          * (μ[Set.indicator Clast (fun _ => (1:ℝ)) ∘ X r | futureFiltration X m] ω)) := by
           apply EventuallyEq.mul
           · refine condExp_congr_ae (EventuallyEq.of_eq hf_indicator.symm)
-          · exact EventuallyEq.of_eq hg_indicator.symm
+          · refine condExp_congr_ae (EventuallyEq.of_eq hg_indicator.symm)
         _ =ᵐ[μ] (fun ω => (∏ i : Fin r,
                             μ[Set.indicator (Cinit i) (fun _ => (1:ℝ)) ∘ (X 0)
                               | futureFiltration X m] ω)
-                          * (Set.indicator Clast (fun _ => (1:ℝ)) (X r ω))) := by
+                          * (μ[Set.indicator Clast (fun _ => (1:ℝ)) ∘ X r | futureFiltration X m] ω)) := by
           apply EventuallyEq.mul hIH
           exact EventuallyEq.rfl
         _ =ᵐ[μ] (fun ω => (∏ i : Fin r,
@@ -1873,12 +1878,7 @@ lemma finite_level_factorization
                           * μ[Set.indicator Clast (fun _ => (1:ℝ)) ∘ (X 0)
                               | futureFiltration X m] ω) := by
           apply EventuallyEq.mul EventuallyEq.rfl
-          -- Apply hswap to replace X r with X 0
-          -- TODO: This step needs investigation - the function (Clast.indicator ∘ X r) is NOT
-          -- futureFiltration-measurable since r < m, so we can't use condExp_of_aestronglyMeasurable.
-          -- The correct approach may involve pulling the function out of the conditional expectation
-          -- differently, or restructuring this part of the calc chain.
-          sorry
+          exact hswap
         _ =ᵐ[μ] (fun ω => ∏ i : Fin (r+1),
                             μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0)
                               | futureFiltration X m] ω) := by
