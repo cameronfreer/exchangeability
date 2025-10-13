@@ -69,12 +69,8 @@ open MeasureTheory Filter
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
-/-- **Helper:** If `f =ᵐ[μ] g`, then `μ[f|m] =ᵐ[μ] μ[g|m]`. -/
-lemma condExp_congr_ae {m₀ m : MeasurableSpace Ω}
-    {μ : Measure Ω} {f g : Ω → ℝ} (h : f =ᵐ[μ] g)
-    (hm : m ≤ m₀) [SigmaFinite (μ.trim hm)] :
-    μ[f | m] =ᵐ[μ] μ[g | m] := by
-  sorry  -- TODO: Find correct mathlib lemma or prove
+-- Note: condExp_congr_ae is available from mathlib
+-- (Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic)
 
 /-- `shiftProcess X m` is the process `n ↦ X (m + n)` (Kallenberg's θₘ ξ). -/
 def shiftProcess (X : ℕ → Ω → α) (m : ℕ) : ℕ → Ω → α := fun n ω => X (m + n) ω
@@ -1738,10 +1734,16 @@ lemma finite_level_factorization
     have hprod_indicator :
         (fun ω => indProd X r Cinit ω * (Set.indicator Clast (fun _ => (1:ℝ)) (X r ω)))
         = (A ∩ B).indicator (fun _ => (1:ℝ)) := by
-      rw [hf_indicator]
       ext ω
-      convert (congr_fun (indicator_mul_indicator_eq_indicator_inter A B 1 1) ω).symm using 2
-      exact (congr_fun hg_indicator ω).symm
+      have hg' : Set.indicator Clast (fun _ => (1:ℝ)) (X r ω) = B.indicator (fun _ => (1:ℝ)) ω := by
+        have := congr_fun hg_indicator ω
+        simp only [Function.comp_apply] at this
+        exact this
+      rw [congr_fun hf_indicator ω, hg']
+      have := congr_fun (indicator_mul_indicator_eq_indicator_inter A B 1 1) ω
+      simp only [Pi.mul_apply] at this
+      convert this using 1
+      ring
 
     -- Measurability of A in firstRSigma X r
     have hA_meas_firstR : MeasurableSet[firstRSigma X r] A := by
@@ -1791,11 +1793,11 @@ lemma finite_level_factorization
         _ =ᵐ[μ] μ[(fun ω => indProd X r Cinit ω
                       * Set.indicator Clast (fun _ => (1:ℝ)) (X r ω))
                    | futureFiltration X m] := by
-          refine condExp_congr_ae (EventuallyEq.of_eq hsplit) (futureFiltration_le X m hX_meas)
+          refine condExp_congr_ae (EventuallyEq.of_eq hsplit)
         _ =ᵐ[μ] μ[(A.indicator (fun _ => (1:ℝ)))
                    * (B.indicator (fun _ => (1:ℝ)))
                    | futureFiltration X m] := by
-          refine condExp_congr_ae (EventuallyEq.of_eq ?_) (futureFiltration_le X m hX_meas)
+          refine condExp_congr_ae (EventuallyEq.of_eq ?_)
           funext ω
           rw [← hf_indicator, ← hg_indicator]
           rfl
@@ -1804,7 +1806,7 @@ lemma finite_level_factorization
         _ =ᵐ[μ] (fun ω => (μ[indProd X r Cinit | futureFiltration X m] ω)
                           * (Set.indicator Clast (fun _ => (1:ℝ)) (X r ω))) := by
           apply EventuallyEq.mul
-          · refine condExp_congr_ae (EventuallyEq.of_eq hf_indicator.symm) (futureFiltration_le X m hX_meas)
+          · refine condExp_congr_ae (EventuallyEq.of_eq hf_indicator.symm)
           · exact EventuallyEq.of_eq hg_indicator.symm
         _ =ᵐ[μ] (fun ω => (∏ i : Fin r,
                             μ[Set.indicator (Cinit i) (fun _ => (1:ℝ)) ∘ (X 0)
@@ -1818,18 +1820,12 @@ lemma finite_level_factorization
                           * μ[Set.indicator Clast (fun _ => (1:ℝ)) ∘ (X 0)
                               | futureFiltration X m] ω) := by
           apply EventuallyEq.mul EventuallyEq.rfl
-          -- Apply hswap to replace X r with X 0, then use pullout property
-          calc Set.indicator Clast (fun _ => (1:ℝ)) (X r ·)
-              _ =ᵐ[μ] μ[Set.indicator Clast (fun _ => (1:ℝ)) ∘ X r | futureFiltration X m] := by
-                -- B.indicator is futureFiltration X m-measurable (X r depends on coord r < m)
-                symm
-                apply condExp_of_stronglyMeasurable
-                · intro s hs; exact hs
-                · have : Measurable (Set.indicator Clast (fun _ => (1:ℝ)) ∘ X r) := by
-                    exact Measurable.comp (measurable_const.indicator (by exact hClast)) (hX_meas r)
-                  exact this.stronglyMeasurable
-                · exact (integrable_const (1:ℝ)).indicator ((hX_meas r) hClast)
-              _ =ᵐ[μ] μ[Set.indicator Clast (fun _ => (1:ℝ)) ∘ X 0 | futureFiltration X m] := hswap
+          -- Apply hswap to replace X r with X 0
+          -- TODO: This step needs investigation - the function (Clast.indicator ∘ X r) is NOT
+          -- futureFiltration-measurable since r < m, so we can't use condExp_of_aestronglyMeasurable.
+          -- The correct approach may involve pulling the function out of the conditional expectation
+          -- differently, or restructuring this part of the calc chain.
+          sorry
         _ =ᵐ[μ] (fun ω => ∏ i : Fin (r+1),
                             μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0)
                               | futureFiltration X m] ω) := by
