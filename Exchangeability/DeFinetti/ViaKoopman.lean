@@ -560,25 +560,18 @@ private lemma condexp_pair_factorization_MET
   -- This uses the tower property backwards
   have h_tower : μ[(fun ω => f (ω 0) * g (ω 0)) | m]
       =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] := by
+    -- This is the tower property: CE[f·g|m] = CE[f·CE[g|m]|m]
+    -- Key insight: For any m-measurable set A, both sides have the same integral:
+    --   ∫_A f·g dμ = ∫_A f·CE[g|m] dμ
+    -- This follows from the defining property of CE: ∫_A g dμ = ∫_A CE[g|m] dμ
     sorry
-    /-
-    Key idea: show both sides have the same integral over every m-measurable set.
-
-    For m-measurable set A:
-    - LHS: ∫_A CE[f·g|m] dμ = ∫_A f·g dμ (def of CE)
-    - RHS: ∫_A CE[f·CE[g|m]|m] dμ = ∫_A f·CE[g|m] dμ (def of CE)
-
-    So need: ∫_A f·g dμ = ∫_A f·CE[g|m] dμ for all m-measurable A.
-
-    But ∫_A f·CE[g|m] dμ = ∫ 1_A·f·CE[g|m] dμ. If 1_A·f were m-measurable, we could
-    pull out CE[g|m] and use the defining property of CE. However, f∘π₀ is typically
-    NOT m-measurable (only g∘π₀ ∘ shift^k is for the tail σ-algebra).
-
-    Alternative approach: This might follow from a general "substitution" lemma for CE,
-    or might require using specific properties of the product structure and tail σ-algebra.
-
-    TODO: Find the right mathlib lemma or prove directly.
-    ~15-20 lines
+    /- TODO: This needs ae_eq_condExp_of_forall_setIntegral_eq or similar
+    Approach:
+    1. Show both functions are integrable
+    2. For each m-measurable A, show: ∫_A f·g dμ = ∫_A f·CE[g|m] dμ
+    3. This uses: ∫_A g dμ = ∫_A CE[g|m] dμ (defining property of CE)
+    4. Apply ae_eq_condExp_of_forall_setIntegral_eq
+    Estimated: 15-20 lines
     -/
 
   -- Step 6: Combine all the equalities
