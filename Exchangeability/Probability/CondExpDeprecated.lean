@@ -265,32 +265,62 @@ the expected home for those results is easy to locate.
 
 /-! ### Distributional Equality and Conditional Expectations -/
 
-/-- If the joint laws of `(ξ, η)` and `(ξ, ζ)` coincide, then for every measurable `g` and
+/-- If the joint laws of `(ξ, η)` and `(ξ, ζ)` coincide, then any integrable observable of the
+pair has the same expectation. -/
+lemma integral_pair_eq_of_joint_eq {μ : Measure Ω}
+    {ξ η ζ : Ω → α} {φ : α × α → ℝ}
+    (hξ : Measurable ξ) (hη : Measurable η) (hζ : Measurable ζ)
+    (hφ :
+      AEStronglyMeasurable φ (Measure.map (fun ω => (ξ ω, η ω)) μ))
+    (hφ_int :
+      Integrable φ (Measure.map (fun ω => (ξ ω, η ω)) μ))
+    (h_dist :
+      Measure.map (fun ω => (ξ ω, η ω)) μ
+        = Measure.map (fun ω => (ξ ω, ζ ω)) μ) :
+    ∫ ω, φ (ξ ω, η ω) ∂μ = ∫ ω, φ (ξ ω, ζ ω) ∂μ := by
+  classical
+  set fη : Ω → α × α := fun ω => (ξ ω, η ω)
+  set fζ : Ω → α × α := fun ω => (ξ ω, ζ ω)
+  have hfη : AEMeasurable fη μ := (hξ.prodMk hη).aemeasurable
+  have hfζ : AEMeasurable fζ μ := (hξ.prodMk hζ).aemeasurable
+  have hφ_meas_zeta :
+      AEStronglyMeasurable φ (Measure.map fζ μ) := by
+    simpa [fη, fζ, h_dist] using hφ
+  have hφ_int_zeta :
+      Integrable φ (Measure.map fζ μ) := by
+    simpa [fη, fζ, h_dist] using hφ_int
+  have h_eta :
+      ∫ ω, φ (ξ ω, η ω) ∂μ = ∫ p, φ p ∂(Measure.map fη μ) := by
+    simpa [fη] using
+      (MeasureTheory.integral_map (μ := μ) (φ := fη) (f := φ)
+        hfη hφ).symm
+  have h_zeta :
+      ∫ ω, φ (ξ ω, ζ ω) ∂μ = ∫ p, φ p ∂(Measure.map fζ μ) := by
+    simpa [fζ] using
+      (MeasureTheory.integral_map (μ := μ) (φ := fζ) (f := φ)
+        hfζ hφ_meas_zeta).symm
+  calc
+    ∫ ω, φ (ξ ω, η ω) ∂μ
+        = ∫ p, φ p ∂(Measure.map fη μ) := h_eta
+    _ = ∫ p, φ p ∂(Measure.map fζ μ) := by simp [fη, fζ, h_dist]
+    _ = ∫ ω, φ (ξ ω, ζ ω) ∂μ := h_zeta.symm
+
+/-- If `(ξ, η)` and `(ξ, ζ)` share the same joint law, then for every measurable `g` and
 measurable set `s`, the mixed moments `E[g(ξ) · 𝟙_{η ∈ s}]` and `E[g(ξ) · 𝟙_{ζ ∈ s}]` agree. -/
 lemma condexp_same_dist {μ : Measure Ω}
     {ξ η ζ : Ω → α} {g : α → ℝ}
     (hξ : Measurable ξ) (hη : Measurable η) (hζ : Measurable ζ)
-    (hg : Measurable g)
+    (hg : Measurable g) (h_int : Integrable (fun ω => g (ξ ω)) μ)
     (h_dist : Measure.map (fun ω => (ξ ω, η ω)) μ
               = Measure.map (fun ω => (ξ ω, ζ ω)) μ)
     {s : Set α} (hs : MeasurableSet s) :
     ∫ ω, g (ξ ω) * s.indicator (fun _ : α => (1 : ℝ)) (η ω) ∂μ
       = ∫ ω, g (ξ ω) * s.indicator (fun _ : α => (1 : ℝ)) (ζ ω) ∂μ := by
   classical
-  set fη : Ω → α × α := fun ω => (ξ ω, η ω)
-  set fζ : Ω → α × α := fun ω => (ξ ω, ζ ω)
   set φ : α × α → ℝ :=
     fun p => g p.1 * s.indicator (fun _ : α => (1 : ℝ)) p.2
-
-  have hfη : AEMeasurable fη μ := (hξ.prodMk hη).aemeasurable
-  have hfζ : AEMeasurable fζ μ := (hξ.prodMk hζ).aemeasurable
-
-  have hφ_meas : Measurable φ := by
-    refine (hg.comp measurable_fst).mul ?_
-    have h_indicator : Measurable fun y : α => s.indicator (fun _ : α => (1 : ℝ)) y :=
-      (measurable_const : Measurable fun _ : α => (1 : ℝ)).indicator hs
-    simpa [φ] using h_indicator.comp measurable_snd
-
+  set fη : Ω → α × α := fun ω => (ξ ω, η ω)
+  set fζ : Ω → α × α := fun ω => (ξ ω, ζ ω)
   have h_comp_eta :
       (fun ω => φ (fη ω)) =
         fun ω => g (ξ ω) * s.indicator (fun _ : α => (1 : ℝ)) (η ω) := by
@@ -301,28 +331,34 @@ lemma condexp_same_dist {μ : Measure Ω}
         fun ω => g (ξ ω) * s.indicator (fun _ : α => (1 : ℝ)) (ζ ω) := by
     funext ω
     simp [fζ, φ]
-
-  have h_int_eta_eq :
-      ∫ ω, g (ξ ω) * s.indicator (fun _ : α => (1 : ℝ)) (η ω) ∂μ
-        = ∫ p, φ p ∂(Measure.map fη μ) := by
-    simpa [h_comp_eta] using
-      (MeasureTheory.integral_map (μ := μ) (φ := fη) (f := φ)
-        hfη hφ_meas.aestronglyMeasurable).symm
-  have h_int_zeta_eq :
-      ∫ p, φ p ∂(Measure.map fζ μ) = ∫ ω, g (ξ ω) * s.indicator (fun _ : α => (1 : ℝ)) (ζ ω) ∂μ := by
-    simpa [h_comp_zeta] using
-      MeasureTheory.integral_map (μ := μ) (φ := fζ) (f := φ)
-        hfζ hφ_meas.aestronglyMeasurable
-
-  have h_push_eq :
-      ∫ p, φ p ∂(Measure.map fη μ) = ∫ p, φ p ∂(Measure.map fζ μ) := by
-    simp [fη, fζ, h_dist]
-
-  calc
-    ∫ ω, g (ξ ω) * s.indicator (fun _ : α => (1 : ℝ)) (η ω) ∂μ
-        = ∫ p, φ p ∂(Measure.map fη μ) := h_int_eta_eq
-    _ = ∫ p, φ p ∂(Measure.map fζ μ) := h_push_eq
-    _ = ∫ ω, g (ξ ω) * s.indicator (fun _ : α => (1 : ℝ)) (ζ ω) ∂μ := h_int_zeta_eq
+  have h_eq_eta :
+      (fun ω => g (ξ ω) * s.indicator (fun _ : α => (1 : ℝ)) (η ω)) =
+        Set.indicator (η ⁻¹' s) (fun ω => g (ξ ω)) := by
+    funext ω
+    by_cases hmem : η ω ∈ s
+    · simp [Set.indicator, hmem]
+    · simp [Set.indicator, hmem]
+  have h_indicator_eta :
+      Integrable (fun ω => g (ξ ω) * s.indicator (fun _ : α => (1 : ℝ)) (η ω)) μ := by
+    simpa [h_eq_eta] using h_int.indicator (hη hs)
+  have hφ_meas :
+      AEStronglyMeasurable φ (Measure.map fη μ) := by
+    refine (hg.comp measurable_fst).aestronglyMeasurable.mul ?_
+    have h_indicator :
+        AEStronglyMeasurable (fun p : α × α => s.indicator (fun _ : α => (1 : ℝ)) p.2)
+          (Measure.map fη μ) :=
+      (Measurable.indicator measurable_const hs).aestronglyMeasurable.comp_measurable measurable_snd
+    simpa [φ] using h_indicator
+  have hfη : AEMeasurable fη μ := (hξ.prodMk hη).aemeasurable
+  have hφ_int :
+      Integrable φ (Measure.map fη μ) :=
+    (integrable_map_measure (μ := μ) (f := fη) (g := φ)
+        (hg := hφ_meas) (hf := hfη)).mpr
+      (by simpa [Function.comp, h_comp_eta] using h_indicator_eta)
+  have h_result :=
+    integral_pair_eq_of_joint_eq (μ := μ) (ξ := ξ) (η := η) (ζ := ζ)
+      hξ hη hζ hφ_meas hφ_int h_dist
+  simpa [h_comp_eta, h_comp_zeta] using h_result
 /-! ### Utilities for the Martingale Approach -/
 
 set_option linter.unusedSectionVars false in
