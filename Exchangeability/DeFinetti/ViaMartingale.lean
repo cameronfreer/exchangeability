@@ -1919,23 +1919,32 @@ lemma block_coord_condIndep
     -- Given: E measurable in firstRSigma X r ⊔ finFutureSigma X m k
     -- Goal: ∫_E indicator B (X r) dμ = ∫_E μ[indicator B ∘ X r | finFuture_k] dμ
 
-    -- Use Dynkin's π-λ theorem: define GoodSets and show it's a monotone class containing cylinders
-    --
-    -- Implementation outline:
-    -- 1. Define GoodSets = {E | integral equality holds}
-    -- 2. Part A (60-90 min): Show cylinder π-system ⊆ GoodSets
-    --    - For E_cyl = {∀i X_i ∈ A_i} ∩ {∀j X_{m+1+j} ∈ C_j}:
-    --      LHS = μ(E_cyl ∩ {X_r ∈ B})
-    --      Apply contractable_finite_cylinder_measure
-    --      Use CE characterization for RHS
-    -- 3. Part B (30 min): Show monotone class closure
-    --    - Monotone limits: MCT for integrals
-    --    - Decreasing limits: DCT for integrals
-    -- 4. Part C (30 min): Apply Dynkin's π-λ theorem from mathlib
-    --    - GoodSets contains π-system and is monotone class
-    --    - Therefore GoodSets contains all measurable sets
+    -- Use Dynkin's π-λ theorem: prove for all measurable E via monotone class argument
 
-    sorry -- TODO (2-3 hours): Full Dynkin π-λ implementation
+    -- Define GoodSets = collection of sets E for which the integral equality holds
+    let GoodSets : Set (Set Ω) := {E |
+      MeasurableSet[firstRSigma X r ⊔ finFutureSigma X m k] E ∧
+      ∫ ω in E, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ =
+      ∫ ω in E, (Exchangeability.Probability.condExpWith μ
+          (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
+          (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ}
+
+    -- We need to show E ∈ GoodSets
+
+    -- Strategy: Show GoodSets is a monotone class containing the cylinder π-system
+    -- Then by Dynkin's π-λ theorem, GoodSets contains all measurable sets
+
+    -- Part A (60-90 min): Cylinder π-system ⊆ GoodSets
+    -- For any cylinder set E_cyl = {∀i X_i ∈ A_i} ∩ {∀j X_{m+1+j} ∈ C_j}, show E_cyl ∈ GoodSets
+    -- Key: Apply contractable_finite_cylinder_measure to prove integral equality for cylinders
+
+    -- Part B (30 min): GoodSets is a monotone class
+    -- Use MCT and DCT to show closure under monotone limits
+
+    -- Part C (30 min): Apply Dynkin's π-λ theorem
+    -- Conclude E ∈ GoodSets using mathlib's Dynkin theorem
+
+    sorry -- TODO (2-3 hours total): Implement Parts A, B, C following the strategy above
 
   -- **Step 2: Pass to limit as k → ∞ using martingale convergence**
   --
