@@ -1697,39 +1697,62 @@ private lemma l2_bound_long_vs_tail
     (Real.sqrt σSqf) ρf hρ_bd hξ_mean hξ_L2 hξ_var hξ_cov p q hp_prob hq_prob
 
   -- Compute the supremum |p - q|
-  have h_sup : (⨆ i : Fin m, |p i - q i|) = 1 / (k : ℝ) := by
-    -- p i = 1/m for all i
-    -- q i = 0 if i.val < m - k, else 1/k
-    -- So |p i - q i| = 1/m if i.val < m - k
-    --                = |1/m - 1/k| if i.val ≥ m - k
-    -- Since k ≤ m - k (from context), we have m ≥ 2k, so 1/k ≥ 2/m > 1/m
-    -- Thus |1/m - 1/k| = 1/k - 1/m
-    -- The max is max(1/m, 1/k - 1/m)
-    -- Since m ≥ 2k, we have 2/m ≤ 1/k, so 1/k - 1/m ≥ 1/m
-    -- Therefore sup = 1/k - 1/m
-    -- But the comment says answer is 1/k... need to reconsider the setup
-    -- TODO: Either the weights are defined differently, or there's algebra showing 1/k - 1/m = 1/k,
-    -- or perhaps the bound uses a slightly different formulation. For now, asserting 1/k as target.
-    sorry
+  -- p i = 1/m for all i
+  -- q i = 0 if i.val < m - k, else 1/k
+  -- So |p i - q i| = 1/m if i.val < m - k
+  --                = |1/m - 1/k| if i.val ≥ m - k
+  -- Since k ≤ m - k (from hkm), we have m ≥ 2k, so 1/k > 1/m
+  -- Thus |1/m - 1/k| = 1/k - 1/m
+  -- Therefore: sup |p i - q i| = max(1/m, 1/k - 1/m) = 1/k - 1/m
+  --
+  -- For the proof, we bound: 1/k - 1/m ≤ 1/k
+  -- This gives a slightly looser but still valid bound
+  have h_sup_bound : (⨆ i : Fin m, |p i - q i|) ≤ 1 / (k : ℝ) := by
+    -- Show that for all i, |p i - q i| ≤ 1/k
+    haveI : Nonempty (Fin m) := by
+      apply Fin.pos_iff_nonempty.mp
+      exact Nat.lt_of_lt_of_le hk hkm
+    apply ciSup_le
+    intro i
+    simp only [p, q]
+    have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
+    have hm_pos : (0:ℝ) < m := Nat.cast_pos.mpr (Nat.lt_of_lt_of_le hk hkm)
+    split_ifs with hi
+    · -- Case: i.val < m - k, so |1/m - 0| = 1/m ≤ 1/k
+      simp only [sub_zero]
+      rw [abs_of_pos (by positivity : (0:ℝ) < 1/m)]
+      -- 1/m ≤ 1/k follows from k ≤ m
+      -- This is a straightforward algebra fact, but finding the right mathlib lemma is tricky
+      sorry
+    · -- Case: i.val ≥ m - k, so |1/m - 1/k| ≤ 1/k
+      -- Since k ≤ m, we have 1/k ≥ 1/m, so 1/m - 1/k ≤ 0, thus |1/m - 1/k| = 1/k - 1/m
+      sorry
 
   -- The bound from l2_contractability_bound is 2·σSqf·(1-ρf)·(⨆ i, |p i - q i|)
-  -- We have h_sup : (⨆ i, |p i - q i|) = 1/k
-  -- So the bound is 2·σSqf·(1-ρf)·(1/k)
+  -- We have h_sup_bound : (⨆ i, |p i - q i|) ≤ 1/k
+  -- So we can bound by 2·σSqf·(1-ρf)·(1/k)
 
-  -- Now we need to show this equals Cf/k
+  -- Now we need to show this is bounded by Cf/k
   -- The hypothesis hCf_unif tells us that for any two k-windows,
   -- the L² distance is ≤ Cf/k
   -- By the definition of contractability and the L² approach, Cf = 2·σSqf·(1-ρf)
 
-  -- First, rewrite h_bound using h_sup
-  rw [h_sup] at h_bound
-
-  -- Now h_bound says:
-  -- ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ ≤ 2 * (Real.sqrt σSqf)^2 * (1-ρf) * (1/k)
-
   -- Simplify (Real.sqrt σSqf)^2 = σSqf
   have h_sqrt_sq : (Real.sqrt σSqf) ^ 2 = σSqf := Real.sq_sqrt hσSq_nonneg
-  rw [h_sqrt_sq] at h_bound
+
+  -- Strengthen h_bound using h_sup_bound
+  have h_bound_strengthened : ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ ≤
+      2 * σSqf * (1 - ρf) * (1 / (k : ℝ)) := by
+    calc ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ
+      ≤ 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) * (⨆ i, |p i - q i|) := h_bound
+    _ ≤ 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) * (1 / (k : ℝ)) := by
+        apply mul_le_mul_of_nonneg_left h_sup_bound
+        apply mul_nonneg
+        · apply mul_nonneg
+          · linarith
+          · exact sq_nonneg _
+        · linarith [hρ_bd.2]
+    _ = 2 * σSqf * (1 - ρf) * (1 / (k : ℝ)) := by rw [h_sqrt_sq]
 
   -- Now verify that the LHS of h_bound equals our goal's LHS
   have h_lhs_eq : (∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ) =
@@ -1798,15 +1821,32 @@ private lemma l2_bound_long_vs_tail
                 exact Fin.ext (by omega)
     rw [h_q_sum]
 
-  -- Finally, show our goal ≤ Cf / k using h_bound and h_lhs_eq
+  -- Finally, show our goal ≤ Cf / k using h_bound_strengthened and h_lhs_eq
   calc ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
               (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
       = ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ := h_lhs_eq.symm
-    _ ≤ 2 * σSqf * (1 - ρf) * (1 / (k : ℝ)) := h_bound
+    _ ≤ 2 * σSqf * (1 - ρf) * (1 / (k : ℝ)) := h_bound_strengthened
     _ = Cf / k := by
         -- This requires showing Cf = 2 * σSqf * (1-ρf)
-        -- which should follow from hCf_unif applied to concrete k-windows
-        sorry -- TODO: deduce Cf = 2·σSqf·(1-ρf) from hCf_unif
+        --
+        -- Context: Cf is passed in as a parameter to this lemma. The caller
+        -- (l2_bound_two_windows_uniform) defines Cf := 2 * σSqf_global * (1 - ρf_global)
+        -- using the global covariance structure.
+        --
+        -- Here, we computed σSqf and ρf locally using contractable_covariance_structure
+        -- on the same sequence f ∘ X. Since the covariance structure is uniquely determined
+        -- by the distribution of f ∘ X (which is contractable), the locally computed values
+        -- must equal the global ones:
+        --   σSqf (local) = σSqf_global
+        --   ρf (local) = ρf_global
+        -- Therefore: 2 * σSqf * (1-ρf) = 2 * σSqf_global * (1 - ρf_global) = Cf
+        --
+        -- To complete this proof, we would need to either:
+        -- 1. Prove uniqueness of covariance structure for contractable sequences, or
+        -- 2. Thread the covariance parameters through as explicit arguments
+        --
+        -- For now, accept this as a sorry:
+        sorry
 
 /-- **Weighted sums converge in L¹ for contractable sequences.**
 
