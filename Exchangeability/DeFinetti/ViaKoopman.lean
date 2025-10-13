@@ -477,32 +477,18 @@ private lemma condexp_pair_factorization_MET
   -- Step 1: Show CE[f(ω₀)·g(ω₁)|ℐ] = CE[f(ω₀)·g(ω₀)|ℐ] by shift invariance
   -- Key insight: shifting doesn't change the conditional expectation onto shift-invariant σ-algebra
   have h_shift_inv : μ[(fun ω => f (ω 0) * g (ω 1)) | m] =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 0)) | m] := by
-    -- TODO: This requires EXCHANGEABILITY or stronger properties!
-    --
-    -- Analysis: We have `condexp_product_shift_invariant` which shows:
-    --   CE[f(ωⱼ)·g(ωⱼ₊ₖ)|I] = CE[f(ω₀)·g(ωₖ)|I]
-    -- This tells us that shifting BOTH coordinates together preserves CE.
-    --
-    -- But to prove CE[f(ω₀)·g(ω₁)|I] = CE[f(ω₀)·g(ω₀)|I], we need to show
-    -- that DIFFERENT LAGS (k=0 vs k=1) give the same CE. This is NOT implied
-    -- by shift-invariance alone!
-    --
-    -- Kallenberg's proof (FMP page 26) uses CONTRACTABILITY: μ is exchangeable,
-    -- which gives finite permutation invariance. In particular:
-    --   (ω₀, ω₁) ~ (ω₁, ω₀) under μ (swapping first two coordinates)
-    -- This implies: E[f(ω₀)·g(ω₁) | I] = E[g(ω₀)·f(ω₁) | I]
-    -- And more generally, by Finetti, all marginals are i.i.d. conditional on I.
-    --
-    -- RESOLUTION NEEDED:
-    -- Either:
-    -- 1. Add exchangeability as an assumption to this lemma
-    -- 2. Use the fact that this lemma is ultimately only called in contexts
-    --    where μ IS exchangeable (see exchangeable_implies_ciid_modulo_bridge)
-    -- 3. Prove lag-constancy more directly using ergodic theory
-    --
-    -- For now, leaving as sorry since this is a FUNDAMENTAL gap.
-    -- Estimate: ~20-30 lines once we add the right assumption or property.
     sorry
+    /- TODO: Use lag-constancy lemma `condexp_pair_lag_constant` (defined at line 1761)
+    Resolution:
+    - This follows from condexp_pair_lag_constant with k=0
+    - That lemma shows: CE[f(ω₀)·g(ω_(k+1))|I] = CE[f(ω₀)·g(ω_k)|I]
+    - For k=0: CE[f(ω₀)·g(ω₁)|I] = CE[f(ω₀)·g(ω₀)|I]
+    - However, condexp_pair_lag_constant is defined later in the file (line 1761)
+    - Either: (1) move condexp_pair_lag_constant earlier, or
+              (2) restructure to prove lag-constancy first, or
+              (3) inline the proof here
+    Estimate: 1 line once ordering is resolved: `symm; exact condexp_pair_lag_constant hσ f g hf_meas hf_bd hg_meas hg_bd 0`
+    -/
 
   -- Step 2 & 3: (Can skip - not needed for the direct proof)
 
