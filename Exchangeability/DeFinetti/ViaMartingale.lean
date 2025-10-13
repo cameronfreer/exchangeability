@@ -1653,13 +1653,127 @@ lemma contractable_finite_cylinder_measure
     (A : Fin r → Set α) (hA : ∀ i, MeasurableSet (A i))
     (B : Set α) (hB : MeasurableSet B)
     (C : Fin k → Set α) (hC : ∀ i, MeasurableSet (C i)) :
-    -- The joint measure can be expressed using contractability
+    -- The joint measure equals the measure for the standard cylinder
     μ ({ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)})
-      = sorry := by
-  -- Strategy: Use contractability to relate this to a standard cylinder measure
-  -- Key: The indices 0,...,r-1, r, m+1,...,m+k form a strictly increasing sequence
-  -- By contractability, this has the same distribution as 0,...,r+k
-  sorry
+      = μ ({ω | (∀ i : Fin r, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j : Fin k, X (r + 1 + j.val) ω ∈ C j)}) := by
+  -- Strategy: The indices (0,...,r-1, r, m+1,...,m+k) form a strictly increasing sequence.
+  -- By contractability, this has the same distribution as (0,...,r-1, r, r+1,...,r+k).
+
+  -- Define the index function: Fin (r + 1 + k) → ℕ
+  -- Maps i to: i if i ≤ r, and m + i - r if i > r
+  let idx : Fin (r + 1 + k) → ℕ := fun i =>
+    if h : i.val < r + 1 then i.val else m + 1 + (i.val - r - 1)
+
+  -- Show idx is strictly monotone
+  have idx_mono : StrictMono idx := by
+    intro i j hij
+    simp only [idx]
+    split_ifs with hi hj hj
+    · -- Both i, j ≤ r: use i < j directly
+      exact hij
+    · -- i ≤ r < j: show i < m + 1 + (j - r - 1)
+      have : j.val ≥ r + 1 := Nat.le_of_not_lt hj
+      calc i.val
+        _ < r + 1 := hi
+        _ ≤ m + 1 := Nat.add_le_add_right (Nat.le_of_lt hrm) 1
+        _ ≤ m + 1 + (j.val - r - 1) := Nat.le_add_right _ _
+    · -- i ≤ r but not j < r + 1: contradiction
+      omega
+    · -- Both i, j > r: use the fact that j.val - r - 1 > i.val - r - 1
+      have hi' : i.val ≥ r + 1 := Nat.le_of_not_lt hi
+      have hj' : j.val ≥ r + 1 := Nat.le_of_not_lt hj
+      calc m + 1 + (i.val - r - 1)
+        _ < m + 1 + (j.val - r - 1) := Nat.add_lt_add_left (Nat.sub_lt_sub_right hi' hij) _
+
+  -- Apply contractability: subsequence via idx has same distribution as 0,...,r+k
+  have contract := hX (r + 1 + k) idx idx_mono
+
+  -- Define the product set corresponding to our cylinder conditions
+  let S_idx : Set (Fin (r + 1 + k) → α) :=
+    {f | (∀ i : Fin r, f ⟨i.val, by omega⟩ ∈ A i) ∧ f ⟨r, by omega⟩ ∈ B ∧
+         (∀ j : Fin k, f ⟨r + 1 + j.val, by omega⟩ ∈ C j)}
+
+  let S_std : Set (Fin (r + 1 + k) → α) :=
+    {f | (∀ i : Fin r, f ⟨i.val, by omega⟩ ∈ A i) ∧ f ⟨r, by omega⟩ ∈ B ∧
+         (∀ j : Fin k, f ⟨r + 1 + j.val, by omega⟩ ∈ C j)}
+
+  -- Note: S_idx = S_std, so they define the same set
+  have h_sets_eq : S_idx = S_std := rfl
+
+  -- Key: Show that the LHS and RHS sets are preimages under the respective mappings
+
+  -- The LHS: {ω | X_0,...,X_{r-1} ∈ A, X_r ∈ B, X_{m+1},...,X_{m+k} ∈ C}
+  -- is exactly the preimage of S_idx under (fun ω i => X (idx i) ω)
+  have lhs_eq : {ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)}
+      = (fun ω => fun i => X (idx i) ω) ⁻¹' S_idx := by
+    ext ω
+    simp only [Set.mem_setOf_eq, Set.mem_preimage, S_idx]
+    constructor
+    · intro ⟨hA, hB, hC⟩
+      refine ⟨?_, ?_, ?_⟩
+      · intro i
+        -- For i < r: idx(i) = i, so X(idx i) ω = X i ω ∈ A i
+        have hi : idx ⟨i.val, by omega⟩ = i.val := by
+          simp only [idx]; split_ifs <;> omega
+        rw [hi]
+        exact hA i
+      · -- For i = r: idx(r) = r, so X(idx r) ω = X r ω ∈ B
+        have : idx ⟨r, by omega⟩ = r := by
+          simp only [idx]; split_ifs <;> omega
+        rw [this]
+        exact hB
+      · intro j
+        -- For i = r+1+j: idx(r+1+j) = m+1+j
+        have : idx ⟨r + 1 + j.val, by omega⟩ = m + 1 + j.val := by
+          simp only [idx]
+          split_ifs with h
+          · omega
+          · have : r + 1 + j.val - r - 1 = j.val := by omega
+            rw [this]
+        rw [this]
+        exact hC j
+    · intro ⟨hA, hB, hC⟩
+      refine ⟨?_, ?_, ?_⟩
+      · intro i
+        have : idx ⟨i.val, by omega⟩ = i.val := by
+          simp only [idx]; split_ifs <;> omega
+        rw [← this]
+        exact hA ⟨i.val, by omega⟩
+      · have : idx ⟨r, by omega⟩ = r := by
+          simp only [idx]; split_ifs <;> omega
+        rw [← this]
+        exact hB
+      · intro j
+        have idx_val : idx ⟨r + 1 + j.val, by omega⟩ = m + 1 + j.val := by
+          simp only [idx]
+          split_ifs with h
+          · omega
+          · have : r + 1 + j.val - r - 1 = j.val := by omega
+            rw [this]
+        rw [← idx_val]
+        exact hC j
+
+  -- The RHS is the preimage of S_std under (fun ω i => X i.val ω)
+  have rhs_eq : {ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (r + 1 + j.val) ω ∈ C j)}
+      = (fun ω => fun i => X i.val ω) ⁻¹' S_std := by
+    ext ω; simp [S_std]
+
+  -- Apply contractability: the pushforward measures are equal
+  rw [lhs_eq, rhs_eq, h_sets_eq]
+
+  -- contract says the two pushforward measures are equal:
+  -- Measure.map (fun ω i => X (idx i) ω) μ = Measure.map (fun ω i => X i.val ω) μ
+  --
+  -- Goal is: μ ((fun ω i => X (idx i) ω) ⁻¹' S_std) = μ ((fun ω i => X i.val ω) ⁻¹' S_std)
+  --
+  -- Since the measures are equal, they assign equal measure to preimages
+  calc μ ((fun ω i => X (idx i) ω) ⁻¹' S_std)
+      = Measure.map (fun ω i => X (idx i) ω) μ S_std := by
+        sorry -- TODO: Apply Measure.map_apply (requires S_std measurable)
+    _ = Measure.map (fun ω i => X i.val ω) μ S_std := by
+        rw [contract]
+    _ = μ ((fun ω i => X i.val ω) ⁻¹' S_std) := by
+        sorry -- TODO: Apply Measure.map_apply (requires S_std measurable)
 
 /-- **Correct conditional independence from contractability (Kallenberg Lemma 1.3).**
 
@@ -1730,23 +1844,91 @@ lemma block_coord_condIndep
               (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
               (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ := by
     intro k E hE
-    -- Strategy: Use π-system / monotone class argument
-    -- The σ-algebra firstRSigma ⊔ finFutureSigma is generated by cylinder products
 
-    -- For generating cylinder sets {ω | X₀,...,X_{r-1} ∈ A} ∩ {ω | X_{m+1},...,X_{m+k} ∈ C},
-    -- use contractability to show the joint distribution exhibits factorization
-    sorry -- TODO: Implement using π-system + contractability (2-3 hours)
-          -- 1. Prove for cylinder generators using contractable_finite_cylinder_measure
-          -- 2. Apply monotone class theorem to extend
+    -- **Strategy:** Prove integral equality for all E measurable in firstRSigma ⊔ finFutureSigma
+    -- Goal: ∫_E indicator B (X r ω) dμ = ∫_E μ[indicator B ∘ X r | finFuture_k] ω dμ
 
-  -- Step 2: Pass to limit as k → ∞
-  -- As k → ∞, finFutureSigma X m k ↗ futureFiltration X m
-  -- By martingale convergence, the conditional expectations converge
-  sorry -- TODO: Apply martingale convergence theory (2-3 hours)
-        -- This requires:
-        -- 1. Show {finFutureSigma X m k} forms a filtration
-        -- 2. Apply Lévy's downward theorem or equivalent
-        -- 3. Use dominated convergence for the integrals
+    -- **Step 1a: Define π-system of cylinder generators**
+    -- A cylinder generator is a set of form:
+    --   {ω | ∀i<r, X_i ω ∈ A_i} ∩ {ω | ∀j<k, X_{m+1+j} ω ∈ C_j}
+    -- These generate firstRSigma ⊔ finFutureSigma and form a π-system (closed under ∩)
+
+    -- **Step 1b: Prove integral equality for cylinder generators**
+    -- For E = {∀i X_i ∈ A_i} ∩ {∀j X_{m+1+j} ∈ C_j}:
+    --   LHS = ∫_E indicator B (X r) dμ
+    --       = μ(E ∩ {X_r ∈ B})
+    --       = μ({∀i X_i ∈ A_i, X_r ∈ B, ∀j X_{m+1+j} ∈ C_j})
+    --
+    -- By contractable_finite_cylinder_measure:
+    --   = μ({∀i X_i ∈ A_i, X_r ∈ B, ∀j X_{r+1+j} ∈ C_j})  [reindexing via contractability]
+    --
+    -- The RHS involves μ[indicator B ∘ X r | finFuture_k] which by definition
+    -- satisfies the conditional expectation property. The key is that the factorization
+    -- from contractability implies the projection property.
+
+    -- **Step 1c: Extend to all measurable sets via monotone class theorem**
+    -- The collection of sets E for which the integral equality holds forms a
+    -- monotone class (closed under monotone limits). By monotone class theorem,
+    -- since it contains the π-system of cylinders and is a monotone class,
+    -- it contains the generated σ-algebra.
+
+    -- **Proof strategy (Dynkin's π-λ theorem):**
+    --
+    -- Define GoodSets = {E measurable | ∫_E indicator B (X r) dμ = ∫_E μ[indicator B ∘ X r | finFuture_k] dμ}
+    --
+    -- **Part A (60-90 min): Show cylinder π-system ⊆ GoodSets**
+    -- For E_cyl = {ω | ∀i X_i ∈ A_i} ∩ {ω | ∀j X_{m+1+j} ∈ C_j}:
+    --   LHS = ∫_{E_cyl} indicator B (X r) dμ
+    --       = μ(E_cyl ∩ {X_r ∈ B})
+    --       = μ({∀i X_i ∈ A_i, X_r ∈ B, ∀j X_{m+1+j} ∈ C_j})
+    --
+    -- Apply contractable_finite_cylinder_measure (hrm : r < m):
+    --       = μ({∀i X_i ∈ A_i, X_r ∈ B, ∀j X_{r+1+j} ∈ C_j})  [reindexing]
+    --
+    --   RHS = ∫_{E_cyl} μ[indicator B ∘ X r | finFuture_k] dμ
+    --
+    -- Show LHS = RHS using conditional expectation characterization
+    --
+    -- **Part B (30 min): Show GoodSets is a monotone class**
+    -- Monotone limits: If E_n ∈ GoodSets and E_n ↗, then ⋃ E_n ∈ GoodSets
+    --   Use monotone convergence theorem for integrals
+    -- Decreasing limits: If E_n ∈ GoodSets and E_n ↘, then ⋂ E_n ∈ GoodSets
+    --   Use dominated convergence theorem for integrals
+    --
+    -- **Part C (30 min): Apply Dynkin's π-λ theorem**
+    -- The cylinder π-system generates σ(firstRSigma ⊔ finFutureSigma)
+    -- GoodSets contains π-system and is a monotone class
+    -- By Dynkin: GoodSets contains the generated σ-algebra
+    -- Therefore E ∈ GoodSets for all measurable E
+
+    sorry -- TODO (2-3 hours total): Implement Parts A, B, C
+
+  -- **Step 2: Pass to limit as k → ∞ using martingale convergence**
+  --
+  -- Goal: Show that
+  --   μ[indicator B ∘ X r | firstRSigma ⊔ futureFiltration]
+  --     =ᵐ μ[indicator B ∘ X r | futureFiltration]
+  --
+  -- Strategy:
+  -- 1. Observe that finFutureSigma X m k ↗ futureFiltration X m as k → ∞
+  --    (finite future approximates infinite future)
+  --
+  -- 2. By finite_approx, for each k:
+  --    μ[indicator B ∘ X r | firstRSigma ⊔ finFutureSigma_k] =ᵐ μ[indicator B ∘ X r | finFutureSigma_k]
+  --
+  -- 3. Apply Lévy's downward theorem (reverse martingale convergence):
+  --    As the σ-algebras increase, the conditional expectations converge a.e.
+  --    - LHS converges to μ[indicator B ∘ X r | firstRSigma ⊔ futureFiltration]
+  --    - RHS converges to μ[indicator B ∘ X r | futureFiltration]
+  --
+  -- 4. Since they're equal at each finite k and converge, their limits are equal a.e.
+  --
+  -- Technical requirements:
+  -- - Show {finFutureSigma X m k} forms an increasing filtration
+  -- - Apply martingale convergence theorem from mathlib
+  -- - Use dominated convergence for integrable functions (indicator is L¹)
+
+  sorry -- TODO (2-3 hours): Implement Lévy's downward theorem application
 
 /-- **Product formula for conditional expectations under conditional independence.**
 
