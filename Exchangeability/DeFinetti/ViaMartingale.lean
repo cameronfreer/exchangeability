@@ -1935,16 +1935,30 @@ lemma block_coord_condIndep
     -- Then by Dynkin's π-λ theorem, GoodSets contains all measurable sets
 
     -- Part A (60-90 min): Cylinder π-system ⊆ GoodSets
-    -- For any cylinder set E_cyl = {∀i X_i ∈ A_i} ∩ {∀j X_{m+1+j} ∈ C_j}, show E_cyl ∈ GoodSets
-    -- Key: Apply contractable_finite_cylinder_measure to prove integral equality for cylinders
-
+    -- For any cylinder E_cyl = {∀i X_i ∈ A_i} ∩ {∀j X_{m+1+j} ∈ C_j}, show E_cyl ∈ GoodSets
+    --
+    -- Strategy: Show cylinder sets satisfy the integral equality by using
+    -- contractable_finite_cylinder_measure to relate measure factorization
+    -- to conditional expectation characterization
+    --
+    -- Key insight: By contractable_finite_cylinder_measure,
+    -- μ({X_i ∈ A_i, X_r ∈ B, X_{m+1+j} ∈ C_j}) = μ({X_i ∈ A_i, X_r ∈ B, X_{r+1+j} ∈ C_j})
+    -- This distributional equality implies the integral equality via CE characterization.
+    --
     -- Part B (30 min): GoodSets is a monotone class
-    -- Use MCT and DCT to show closure under monotone limits
-
+    -- Show closure under monotone increasing sequences (MCT)
+    -- Show closure under monotone decreasing sequences (DCT)
+    --
     -- Part C (30 min): Apply Dynkin's π-λ theorem
-    -- Conclude E ∈ GoodSets using mathlib's Dynkin theorem
+    -- Use Parts A + B to conclude E ∈ GoodSets via Dynkin's theorem from mathlib
+    --
+    -- Implementation challenge: Need CE theory infrastructure to connect
+    -- measure equality to integral equality. May require extending CondExp.lean.
 
-    sorry -- TODO (2-3 hours total): Implement Parts A, B, C following the strategy above
+    sorry -- TODO (2-3 hours total): Implement Parts A, B, C
+          -- Part A: Cylinder π-system proof using contractable_finite_cylinder_measure
+          -- Part B: Monotone class properties (MCT/DCT)
+          -- Part C: Apply Dynkin's π-λ theorem from MeasureTheory.PiSystem
 
   -- **Step 2: Pass to limit as k → ∞ using martingale convergence**
   --
