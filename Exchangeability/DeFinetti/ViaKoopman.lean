@@ -288,6 +288,36 @@ lemma ν_eval_measurable
 
 /-! ## Helper lemmas for factorization via Mean Ergodic Theorem -/
 
+/-- If `Z` is a.e.-bounded and measurable and `Y` is integrable,
+    then `Z*Y` is integrable (finite measure suffices). -/
+private lemma integrable_mul_of_ae_bdd_left
+    {μ : Measure (Ω[α])} [IsFiniteMeasure μ]
+    {Z Y : Ω[α] → ℝ}
+    (hZ : Measurable Z) (hZ_bd : ∃ C, ∀ᵐ ω ∂μ, |Z ω| ≤ C)
+    (hY : Integrable Y μ) :
+    Integrable (Z * Y) μ := by
+  rcases hZ_bd with ⟨C, hC⟩
+  have h_meas : AEStronglyMeasurable (Z * Y) μ :=
+    hZ.aestronglyMeasurable.mul hY.aestronglyMeasurable
+  have h_le : (fun ω => |(Z * Y) ω|) ≤ᵐ[μ] (fun ω => C * |Y ω|) := by
+    refine hC.mono ?_
+    intro ω hω
+    have hC' : 0 ≤ C := by
+      have := abs_nonneg (Z ω)
+      exact le_trans this hω
+    calc |Z ω * Y ω|
+        = |Z ω| * |Y ω| := abs_mul (Z ω) (Y ω)
+      _ ≤ C * |Y ω| := mul_le_mul_of_nonneg_right hω (abs_nonneg _)
+  have h_int_dom : Integrable (fun ω => C * |Y ω|) μ := by
+    by_cases hC0 : C = 0
+    · simp [hC0]
+    · exact hY.norm.const_mul C
+  refine Integrable.mono h_int_dom h_meas ?_
+  refine h_le.mono ?_
+  intro ω hω
+  rw [Real.norm_eq_abs, Real.norm_eq_abs]
+  exact le_trans hω (le_abs_self _)
+
 /-- Conditional expectation is L¹-Lipschitz: moving the integrand changes the CE by at most
 the L¹ distance. This is a standard property following from Jensen's inequality. -/
 private lemma condExp_L1_lipschitz
@@ -319,22 +349,22 @@ private lemma condExp_mul_pullout
     (hZ_bd : ∃ C, ∀ ω, |Z ω| ≤ C)
     (hY : Integrable Y μ) :
     μ[Z * Y | shiftInvariantSigma (α := α)] =ᵐ[μ] Z * μ[Y | shiftInvariantSigma (α := α)] := by
-  sorry
-  /-
-  Proof strategy (found correct APIs!):
-  1. Z is AEStronglyMeasurable[m] via: hZ_meas.aestronglyMeasurable
-  2. Z*Y is integrable because:
-     - |Z*Y| ≤ C*|Y| pointwise
-     - Need: Integrable.of_norm_le or similar domination lemma
-     - Alternative: Use Integrable.smul_measure or L∞ × L¹ → L¹ lemma
-  3. Apply: MeasureTheory.condExp_mul_of_aestronglyMeasurable_left
+  set m := shiftInvariantSigma (α := α)
 
-  Missing piece: Need mathlib lemma for "bounded × integrable → integrable"
-  - Might be named: Integrable.of_bounded_smul, Integrable.mul_of_essSup_lt_top
-  - Or might need to use memℒp with p=1 and q=∞, then Hölder
+  -- Z is AEStronglyMeasurable w.r.t. m
+  have hZ_aesm : AEStronglyMeasurable[m] Z μ :=
+    hZ_meas.aestronglyMeasurable
 
-  Once found, implementation is ~15 lines.
-  -/
+  -- Z*Y is integrable using our helper lemma
+  have hZY_int : Integrable (Z * Y) μ := by
+    -- Since Z is measurable w.r.t. m ≤ ‹MeasurableSpace _›, it's AEMeasurable
+    have hZ_aemeas : AEMeasurable Z μ := hZ_meas.aemeasurable
+    refine integrable_mul_of_ae_bdd_left (μ := μ) (Z := Z) (Y := Y) hZ_aemeas.measurable ?_ hY
+    exact ⟨hZ_bd.choose, ae_of_all _ hZ_bd.choose_spec⟩
+
+  -- Apply mathlib's pull-out lemma
+  exact MeasureTheory.condExp_mul_of_aestronglyMeasurable_left
+    (μ := μ) (m := m) hZ_aesm hZY_int hY
 
 /-! ## Axioms for de Finetti theorem -/
 
