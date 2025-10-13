@@ -1738,11 +1738,20 @@ private lemma l2_bound_long_vs_tail
       simp only [sub_zero]
       rw [abs_of_pos (by positivity : (0:ℝ) < 1/m)]
       -- 1/m ≤ 1/k follows from k ≤ m
-      -- This is a straightforward algebra fact, but finding the right mathlib lemma is tricky
-      sorry
+      -- Use: 1/a ≤ 1/b ↔ b ≤ a (for positive a, b)
+      rw [one_div_le_one_div hm_pos hk_pos]
+      exact Nat.cast_le.mpr hkm
     · -- Case: i.val ≥ m - k, so |1/m - 1/k| ≤ 1/k
       -- Since k ≤ m, we have 1/k ≥ 1/m, so 1/m - 1/k ≤ 0, thus |1/m - 1/k| = 1/k - 1/m
-      sorry
+      have h_div_order : (1:ℝ)/m ≤ 1/k := by
+        rw [one_div_le_one_div hm_pos hk_pos]
+        exact Nat.cast_le.mpr hkm
+      -- abs_of_nonpos: |1/m - 1/k| = -(1/m - 1/k) = 1/k - 1/m when 1/m - 1/k ≤ 0
+      rw [abs_of_nonpos (by linarith : (1:ℝ)/m - 1/k ≤ 0)]
+      -- Goal: 1/k - 1/m ≤ 1/k, which simplifies to 0 ≤ 1/m
+      -- Since m > 0, we have 1/m > 0
+      have : (0:ℝ) < 1/m := by positivity
+      linarith
 
   -- The bound from l2_contractability_bound is 2·σSqf·(1-ρf)·(⨆ i, |p i - q i|)
   -- We have h_sup_bound : (⨆ i, |p i - q i|) ≤ 1/k
@@ -3151,17 +3160,22 @@ noncomputable def directing_measure
         -- ContinuousWithinAt f (Set.Ici t) t means Tendsto f (𝓝[Set.Ici t] t) (𝓝 (f t))
         -- We have: Tendsto f (𝓝[>] t) (𝓝 (f t)) where 𝓝[>] t = 𝓝[Set.Ioi t] t
         --
-        -- For monotone functions, right-continuity at Ici is equivalent to at Ioi:
-        -- - Ici t = [t, ∞) includes the point t
-        -- - Ioi t = (t, ∞) excludes the point t
-        -- Since f is monotone and we're taking the right limit, these are equivalent.
+        -- Strategy: Convert Tendsto at 𝓝[Ioi t] t to Tendsto at 𝓝[Ici t] t
         --
-        -- The conversion requires showing that for monotone f:
-        --   lim_{s→t+, s>t} f(s) = lim_{s→t+, s≥t} f(s)
-        -- which holds because f(t) = lim_{s↓t} f(s) for right-continuous monotone f.
+        -- Mathematical fact: For any function (monotone or not),
+        --   Tendsto f (𝓝[Ioi t] t) l ↔ Tendsto f (𝓝[Ici t] t) l
+        -- because Ici t = insert t (Ioi t), and inserting the single point {t}
+        -- doesn't affect the neighborhood filter at t itself.
         --
-        -- This is a standard result in analysis but requires the appropriate mathlib lemma.
-        -- For now, accept as sorry:
+        -- The mathlib lemma for this is nhdsWithin_insert:
+        --   𝓝[insert a s] a = 𝓝[s] a (when a ∉ s)
+        --
+        -- Applied here: 𝓝[Ici t] t = 𝓝[insert t (Ioi t)] t = 𝓝[Ioi t] t = 𝓝[>] t
+        --
+        -- However, the actual application requires navigating Set.Ici/Ioi definitions
+        -- and the nhdsWithin_insert rewrite, which is tricky in practice.
+        --
+        -- For now, accept as sorry - this is a standard topology lemma:
         sorry
     }
     F_ω.measure
