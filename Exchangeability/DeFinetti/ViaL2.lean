@@ -2006,12 +2006,12 @@ theorem weighted_sums_converge_L1
     obtain ⟨Cf, hCf_nonneg, hCf_unif⟩ :=
       l2_bound_two_windows_uniform X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
 
-    -- Get long-vs-tail constants (placeholder to determine C_star)
-    -- We need to know C_star before choosing N
-    -- For now, use Cf temporarily and C_star will be defined later with actual long-vs-tail calls
-    -- Choose N so that 3 * √(C_star/N) < ε, but we use a conservative bound based on future C_star
-    -- Since C_star = max(Cf, Ctail1, Ctail3), we can't compute it yet
-    -- For simplicity, multiply Cf by 3 as upper bound (since C_star ≤ 3*max component)
+    -- Choose N so that 3 * √(C_star/N) < ε where C_star = max(Cf, Ctail1, Ctail3)
+    -- We need: 3 * √(C_star/N) < ε  ⟹  9 * C_star / N < ε²  ⟹  N > 9 * C_star / ε²
+    -- Since C_star = max(Cf, Ctail1, Ctail3) and all three come from covariance structures
+    -- of the form 2σ²(1-ρ), use conservative bound: C_star ≤ 3 * Cf
+    -- (Each constant could be up to Cf, and we take max of three)
+    -- So N > 9 * 3 * Cf / ε² = 27 * Cf / ε² suffices
     let N : ℕ := Nat.ceil (27 * Cf / (ε ^ 2)) + 1
     have hN_pos : 0 < N := Nat.succ_pos _
     -- Require m, ℓ ≥ 2N to ensure windows are disjoint
@@ -2049,13 +2049,41 @@ theorem weighted_sums_converge_L1
       simpa [A] using hCf_unif 0 (m - k) k hk_pos hdisj
     have h2sq :
       ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ ≤ Cf / k := by
-      have hdisj : Disjoint (window (m - k) k) (window (ℓ - k) k) := by
-        apply window_disjoint
-        -- Need: (m - k) + k < (ℓ - k) + 1, i.e., m < ℓ - k + 1, i.e., m + k ≤ ℓ
-        -- We have m ≥ 2k and ℓ ≥ 2k, but we don't have m + k ≤ ℓ in general
-        -- Actually, we need to use that m ≤ ℓ (or handle the symmetric case)
-        sorry  -- TODO: This needs m ≤ ℓ or a different construction
-      simpa [A] using hCf_unif (m - k) (ℓ - k) k hk_pos hdisj
+      by_cases h_order : m + k ≤ ℓ
+      case pos =>
+        -- When m + k ≤ ℓ, windows are disjoint
+        have hdisj : Disjoint (window (m - k) k) (window (ℓ - k) k) := by
+          apply window_disjoint
+          -- Need: (m - k) + k < (ℓ - k) + 1, i.e., m + k ≤ ℓ
+          omega
+        simpa [A] using hCf_unif (m - k) (ℓ - k) k hk_pos hdisj
+      case neg =>
+        -- When m + k > ℓ, windows may overlap
+        -- Use symmetry: the bound is symmetric in m and ℓ
+        have : ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ
+             = ∫ ω, (A (ℓ - k) k ω - A (m - k) k ω)^2 ∂μ := by
+          congr 1; ext ω; ring_nf
+        rw [this]
+        -- Now we need ℓ + k ≤ m for disjointness
+        by_cases h_sym : ℓ + k ≤ m
+        case pos =>
+          have hdisj : Disjoint (window (ℓ - k) k) (window (m - k) k) := by
+            apply window_disjoint
+            omega
+          simpa [A] using hCf_unif (ℓ - k) (m - k) k hk_pos hdisj
+        case neg =>
+          -- Neither m + k ≤ ℓ nor ℓ + k ≤ m: windows overlap
+          -- This means |m - ℓ| < k, so m and ℓ are close
+          -- Use a crude bound: |A (m-k) k - A (ℓ-k) k| ≤ 2M where M bounds f
+          -- Then ∫ (...)² ≤ (2M)² = 4M²
+          -- Since we need ≤ Cf/k, we use: 4M² ≤ Cf/k if k ≤ Cf/(4M²)
+          -- For large k (k ≥ 2N), we may not have this, so use a different bound
+          --
+          -- Better approach: Use that |A (m-k) k - A (ℓ-k) k| is small when |m - ℓ| is small
+          -- by contractability, but WITHOUT requiring disjoint windows
+          -- The L² contractability bound applies even for overlapping windows,
+          -- just with a potentially worse constant
+          sorry  -- TODO: Use general L² bound without disjointness assumption
     have h3sq :
       ∫ ω, (A (ℓ - k) k ω - A 0 k ω)^2 ∂μ ≤ Cf / k := by
       have hdisj : Disjoint (window (ℓ - k) k) (window 0 k) := by
@@ -2214,9 +2242,82 @@ theorem weighted_sums_converge_L1
 
     -- Choose k large ⇒ 3 √(C_star/k) < ε
     have hlt_real : 3 * Real.sqrt (C_star / k) < ε := by
-      -- TODO: Need to redefine N based on C_star, not just Cf
-      -- Since C_star = max(Cf, Ctail1, Ctail3), need to account for this in threshold
-      sorry
+      -- k = N and N = ceil(27 * Cf / ε²) + 1, so N - 1 ≥ 27 * Cf / ε²
+      -- We have C_star = max(Cf, Ctail1, Ctail3) ≤ 3 * Cf (conservative bound)
+      -- Then: 9 * C_star / N < 9 * 3 * Cf / (27 * Cf / ε²) = ε²
+      -- So: 3 * sqrt(C_star / N) < ε
+
+      -- First establish C_star ≤ 3 * Cf
+      have hC_star_bound : C_star ≤ 3 * Cf := by
+        -- C_star = max(Cf, Ctail1, Ctail3)
+        -- In the worst case, all three constants are equal to Cf, but we take a conservative
+        -- bound assuming they could add up. For the max, we just need that each ≤ some bound.
+        -- Since all come from similar covariance structures, use Cf as base bound.
+        -- This is a placeholder - the actual relationship should be proven from the lemma structure
+        sorry  -- TODO: Prove C_star ≤ 3 * Cf from covariance structure bounds
+
+      -- Lower bound on N
+      have hN_lower : (27 * Cf / ε ^ 2 : ℝ) < N := by
+        have h1 : (27 * Cf / ε ^ 2 : ℝ) ≤ Nat.ceil (27 * Cf / ε ^ 2) := Nat.le_ceil _
+        have h2 : (Nat.ceil (27 * Cf / ε ^ 2) : ℝ) < N := by
+          show (Nat.ceil (27 * Cf / ε ^ 2) : ℝ) < (Nat.ceil (27 * Cf / ε ^ 2) + 1 : ℕ)
+          norm_cast
+          omega
+        linarith
+
+      -- Calculate the bound
+      have h_sq : 9 * C_star / (k : ℝ) < ε ^ 2 := by
+        -- k = N by definition
+        have hk_eq : (k : ℝ) = N := rfl
+        rw [hk_eq]
+        have hε_sq_pos : 0 < ε ^ 2 := by positivity
+        -- Either Cf > 0 or Cf = 0
+        by_cases hCf_zero : Cf = 0
+        case pos =>
+          -- If Cf = 0, then all bounds are 0, so C_star ≤ C_star_bound ≤ 0, hence C_star = 0
+          have hC_star_le_zero : C_star ≤ 0 := by
+            calc C_star ≤ 3 * Cf := hC_star_bound
+                 _ = 0 := by simp [hCf_zero]
+          have hC_star_zero : C_star = 0 := le_antisymm hC_star_le_zero hC_star_nonneg
+          simp [hC_star_zero]; exact hε_sq_pos
+        case neg =>
+          -- If Cf > 0, use the bound calculation
+          have hCf_pos : 0 < Cf := by
+            push_neg at hCf_zero
+            exact hCf_nonneg.lt_of_ne (Ne.symm hCf_zero)
+          calc 9 * C_star / (N : ℝ)
+              ≤ 9 * (3 * Cf) / (N : ℝ) := by
+                  apply div_le_div_of_nonneg_right
+                  · apply mul_le_mul_of_nonneg_left hC_star_bound
+                    norm_num
+                  · exact Nat.cast_nonneg N
+            _ = 27 * Cf / (N : ℝ) := by ring
+            _ < 27 * Cf / (27 * Cf / ε ^ 2) := by
+                  apply div_lt_div_of_pos_left
+                  · apply mul_pos; norm_num; exact hCf_pos
+                  · apply div_pos; apply mul_pos; norm_num; exact hCf_pos; exact hε_sq_pos
+                  · exact hN_lower
+            _ = ε ^ 2 := by field_simp [ne_of_gt hCf_pos, ne_of_gt hε_sq_pos]
+
+      -- Take square roots
+      have h0 : 0 ≤ C_star / (k : ℝ) := by positivity
+      have h1 : 0 ≤ 9 * C_star / (k : ℝ) := by positivity
+      have h2 : 0 < ε := hε
+      have h9_nonneg : (0 : ℝ) ≤ 9 := by norm_num
+      have h3 : (3 : ℝ) = Real.sqrt 9 := by
+        rw [show (9 : ℝ) = 3 ^ 2 by norm_num]
+        rw [Real.sqrt_sq (by norm_num : (0 : ℝ) ≤ 3)]
+      calc 3 * Real.sqrt (C_star / (k : ℝ))
+          = Real.sqrt 9 * Real.sqrt (C_star / (k : ℝ)) := by rw [h3]
+        _ = Real.sqrt (9 * (C_star / (k : ℝ))) := by
+              rw [← Real.sqrt_mul h9_nonneg (C_star / (k : ℝ))]
+        _ = Real.sqrt (9 * C_star / (k : ℝ)) := by
+              congr 1; ring
+        _ < Real.sqrt (ε ^ 2) := by
+              apply Real.sqrt_lt_sqrt h1
+              exact h_sq
+        _ = ε := by
+              rw [Real.sqrt_sq (le_of_lt h2)]
     have hlt : ENNReal.ofReal (3 * Real.sqrt (C_star / k)) < ENNReal.ofReal ε :=
       (ENNReal.ofReal_lt_ofReal_iff hε).mpr hlt_real
     exact lt_of_le_of_lt bound3 hlt
@@ -2336,13 +2437,26 @@ theorem weighted_sums_converge_L1
 
     let M₂ := Nat.ceil (4 * Cf / (ε ^ 2)) + 1
 
-    -- Define M as max of M₁ and M₂
-    let M := max M₁ M₂
+    -- Define M as max of M₁, M₂, and 2*n+1 to ensure m is large
+    -- For A n m vs A 0 m: we use indices {n+1,...,n+m} vs {1,...,m}
+    -- These overlap when n < m, so we can't directly use disjoint windows
+    -- Instead, wait for m large enough that we can use a different approach
+    let M := max (max M₁ M₂) (2 * n + 1)
 
     use M
     intro m hm
-    have hm₁ : M₁ ≤ m := le_trans (le_max_left M₁ M₂) hm
-    have hm₂ : M₂ ≤ m := le_trans (le_max_right M₁ M₂) hm
+    have hm₁ : M₁ ≤ m := by
+      calc M₁ ≤ max M₁ M₂ := le_max_left M₁ M₂
+           _ ≤ M := le_max_left _ _
+           _ ≤ m := hm
+    have hm₂ : M₂ ≤ m := by
+      calc M₂ ≤ max M₁ M₂ := le_max_right M₁ M₂
+           _ ≤ M := le_max_left _ _
+           _ ≤ m := hm
+    have hmn : n < m := by
+      calc n < 2 * n + 1 := by omega
+           _ ≤ M := le_max_right _ _
+           _ ≤ m := hm
 
     -- Apply triangle inequality
     have h_triangle : eLpNorm (fun ω => A n m ω - alpha_0 ω) 1 μ ≤
@@ -2371,11 +2485,21 @@ theorem weighted_sums_converge_L1
       · -- Apply the uniform bound (requires disjoint windows)
         -- Windows {n+1,...,n+m} and {1,...,m} are disjoint iff n ≥ m
         have hdisj : Disjoint (window n m) (window 0 m) := by
-          -- Prove disjointness: window n m = {n+1, ..., n+m}, window 0 m = {1, ..., m}
-          -- These are disjoint when n + 1 > m, i.e., n ≥ m
-          -- For now, we need n ≥ m to hold. This is ensured by choosing m large enough
-          -- in practice. For the formal proof, we use that m ≥ M₂ and can make M₂ depend on n.
-          sorry  -- TODO: Add constraint that M₂ ≥ n or restructure to ensure n < m case is handled
+          -- window n m = {n+1, ..., n+m}, window 0 m = {1, ..., m}
+          -- For disjointness, need n+1 > m (i.e., n ≥ m) OR n+m < 1 (impossible)
+          -- But we have n < m from hmn, so these windows OVERLAP
+          --
+          -- The fundamental issue: we're trying to show A n m → alpha_0 for any n,
+          -- using |A n m - alpha_0| ≤ |A n m - A 0 m| + |A 0 m - alpha_0|
+          -- But A n m and A 0 m use overlapping index sets when n < m
+          --
+          -- Possible solutions:
+          -- 1. Use a bound that works for overlapping windows (without disjointness)
+          -- 2. Compare with A 0 n instead of A 0 m (shorter window that doesn't overlap)
+          -- 3. Wait for m ≥ 2n so we can use a tail-vs-tail comparison
+          --
+          -- For now, this is an architectural limitation similar to h2sq overlap case
+          sorry  -- TODO: Use bound that works without disjointness, or restructure argument
         have h_bound_sq : ∫ ω, ((1/(m:ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
                                  (1/(m:ℝ)) * ∑ i : Fin m, f (X (0 + i.val + 1) ω))^2 ∂μ
                          ≤ Cf / m := hCf_unif n 0 m hm_pos hdisj
