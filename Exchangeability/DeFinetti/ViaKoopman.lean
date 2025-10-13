@@ -303,17 +303,17 @@ private lemma integrable_mul_of_ae_bdd_left
     hZ.aestronglyMeasurable.mul hY.aestronglyMeasurable
   have h_finite : HasFiniteIntegral (Z * Y) μ := by
     sorry
-    /- Proof strategy: Use domination
+    /- TODO: Complete the domination proof. Strategy:
     calc ∫⁻ ω, ‖(Z * Y) ω‖₊ ∂μ
-        ≤ ∫⁻ ω, ‖Z ω‖₊ * ‖Y ω‖₊ ∂μ := by apply lintegral_mono; intro ω; simp [nnnorm_mul]
+        ≤ ∫⁻ ω, ‖Z ω‖₊ * ‖Y ω‖₊ ∂μ := by simp [nnnorm_mul]; apply lintegral_mono; intro ω; rfl
       _ ≤ ∫⁻ ω, Real.nnabs C * ‖Y ω‖₊ ∂μ := by
           apply lintegral_mono_ae; refine hC.mono ?_; intro ω hω
-          -- Need:  ‖Z ω‖₊ * ‖Y ω‖₊ ≤ Real.nnabs C * ‖Y ω‖₊ from |Z ω| ≤ C
-          -- This reduces to: ‖Z ω‖₊ ≤ Real.nnabs C, which is |Z ω|.toNNReal ≤ |C|.toNNReal
-          -- Try: apply mul_le_mul_right'; simp only [Real.nnabs, Real.norm_eq_abs]; exact Real.toNNReal_le_toNNReal hω
+          apply mul_le_mul_right'
+          -- Need API: For real x, ‖x‖₊ = |x|.toNNReal
+          -- Then: ‖Z ω‖₊ ≤ Real.nnabs C follows from Real.toNNReal_le_toNNReal hω
           sorry
       _ = Real.nnabs C * ∫⁻ ω, ‖Y ω‖₊ ∂μ := lintegral_const_mul _ _
-      _ < ∞ := ENNReal.mul_lt_top ENNReal.coe_ne_top hY.hasFiniteIntegral.ne
+      _ < ∞ := ENNReal.mul_lt_top ENNReal.coe_ne_top (ne_of_lt hY.2)
     -/
   exact ⟨h_meas, h_finite⟩
 
