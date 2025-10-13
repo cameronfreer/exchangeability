@@ -1663,7 +1663,7 @@ lemma condexp_indicator_inter_of_condIndep
      μ[B.indicator (fun _ => (1 : ℝ)) | m]) :=
   Exchangeability.Probability.condexp_indicator_inter_bridge hm hmF hmH hCI hA hB
 
-/-- **Finite-level factorization builder.**
+/-- **Finite-level factorization builder (formerly Axiom 3).**
 
 For a contractable sequence, at any future level `m ≥ r`, the conditional expectation
 of the product indicator factors:
@@ -1671,32 +1671,32 @@ of the product indicator factors:
 μ[∏ᵢ<r 1_{Xᵢ∈Cᵢ} | σ(θₘ₊₁X)] = ∏ᵢ<r μ[1_{X₀∈Cᵢ} | σ(θₘ₊₁X)]
 ```
 
-This iteratively applies `condIndep_of_indicator_condexp_eq` to pull out one coordinate
-at a time, using contractability to replace each `Xᵢ` with `X₀`. -/
-axiom finite_level_factorization
+This iteratively applies conditional independence to pull out one coordinate at a time,
+using contractability to replace each `Xᵢ` with `X₀`. -/
+lemma finite_level_factorization
     {Ω α : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω] [MeasurableSpace α]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α)
     (hX : Contractable μ X)
     (hX_meas : ∀ n, Measurable (X n))
     (r : ℕ) (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i))
-    (m : ℕ) (hm : m ≥ r) : True
-  -- TODO: Prove factorization via induction on r
-  -- μ[indProd X r C | futureFiltration X m] =ᵐ[μ] ∏ᵢ μ[indicator(C i) ∘ X 0 | ...]
-  /-
-  by
+    (m : ℕ) (hm : m ≥ r) :
+    μ[indProd X r C | futureFiltration X m]
+      =ᵐ[μ]
+    (fun ω => ∏ i : Fin r,
+      μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | futureFiltration X m] ω) := by
   classical
-  revert m hm
-  refine Nat.rec ?base ?step r
-  · -- r = 0: empty product is 1
-    intro m hm
-    have hconst :
-        μ[(fun _ : Ω => (1 : ℝ)) | futureFiltration X m] =ᵐ[μ] (fun _ => (1 : ℝ)) :=
-      condExp_const (μ := μ) (m := futureFiltration X m)
-        (hm := by intro s hs; exact hs) (1 : ℝ)
-    simpa [indProd] using hconst
-  · -- r ↦ r+1: Inductive step using indicator factorization
-    intro r ih m hm
+  induction r with
+  | zero =>
+    -- r = 0: empty product is 1
+    -- Both indProd X 0 C and the RHS are constant 1
+    -- TODO: Need to prove μ[1 | futureFiltration X m] =ᵐ[μ] 1
+    -- This is a simple consequence of condExp_const
+    sorry
+  | succ r ih =>
+    -- r ↦ r+1: Inductive step using indicator factorization
+    -- Must have r+1 ≤ m, which gives r < m for conditional independence
+    have hrm : r < m := Nat.lt_of_succ_le hm
 
     -- Split C into "first r" and "last"
     let Cinit : Fin r → Set α := fun j => C (Fin.castSucc j)
@@ -1731,40 +1731,39 @@ axiom finite_level_factorization
       rw [hf_indicator, hg_indicator]
       exact indicator_mul_indicator_eq_indicator_inter A B 1 1
 
-    -- Measurability
-    have hA_meas : MeasurableSet[futureFiltration X m] A := by
+    -- Measurability of A in firstRSigma X r
+    have hA_meas_firstR : MeasurableSet[firstRSigma X r] A := by
       rw [hA_def]
-      -- A is measurable in firstRSigma X r, which is ≤ futureFiltration X m when r ≤ m
-      have h_in_first : MeasurableSet[firstRSigma X r] (firstRCylinder X r Cinit) :=
-        firstRCylinder_measurable_in_firstRSigma X r Cinit hCinit
-      exact firstRSigma_le_futureFiltration X (Nat.le_of_succ_le hm) _ h_in_first
+      exact firstRCylinder_measurable_in_firstRSigma X r Cinit hCinit
 
-    have hB_meas : MeasurableSet B := by
+    -- Measurability of B in σ(X r)
+    have hB_meas_Xr : MeasurableSet[MeasurableSpace.comap (X r) inferInstance] B := by
       rw [hB_def]
-      exact (hX_meas r) hClast
+      -- B = X r ⁻¹' Clast, which is measurable in σ(X r) by definition of comap
+      exact ⟨Clast, hClast, rfl⟩
 
-    -- Conditional independence (from axiom)
-    have h_condIndep : CondIndep
-        (MeasurableSpace.comap A.indicator inferInstance)
-        (MeasurableSpace.comap B.indicator inferInstance)
-        (futureFiltration X m) μ := by
-      -- This needs to be derived from coordinate_future_condIndep, which states that
-      -- X_i and shiftRV X (m+1) are conditionally independent given futureFiltration X m.
-      -- Since A depends on X_0,...,X_{r-1} and B = X_r⁻¹(Clast), and r < m, we need to:
-      -- 1. Show that A is measurable w.r.t. σ(X_0,...,X_{r-1}) ⊆ futureFiltration X m
-      -- 2. Show that B is measurable w.r.t. σ(X_r)
-      -- 3. Apply coordinate_future_condIndep with appropriate substitutions
-      -- This is non-trivial and requires developing the theory of conditional independence.
-      sorry
+    -- Conditional independence from block_coord_condIndep
+    have h_condIndep : ProbabilityTheory.CondIndep
+        (futureFiltration X m)
+        (firstRSigma X r)
+        (MeasurableSpace.comap (X r) inferInstance)
+        (futureFiltration_le X m hX_meas)
+        μ := by
+      exact block_coord_condIndep X hX hX_meas hrm
 
-    -- Apply indicator factorization
+    -- Apply indicator factorization using the CI
     have hfactor :
         μ[(A.indicator (fun _ => (1:ℝ))) * (B.indicator (fun _ => (1:ℝ))) | futureFiltration X m]
           =ᵐ[μ]
         (fun ω => (μ[A.indicator (fun _ => (1:ℝ)) | futureFiltration X m] ω)
                   * (B.indicator (fun _ => (1:ℝ)) ω)) :=
       condexp_indicator_inter_of_condIndep
-        (by intro s hs; exact hs) A B hA_meas hB_meas h_condIndep
+        (futureFiltration_le X m hX_meas)
+        (firstRSigma_le_ambient X r hX_meas)
+        (MeasurableSpace.comap_le_iff_le_map.mpr (hX_meas r).comap_le)
+        h_condIndep
+        hA_meas_firstR
+        hB_meas_Xr
 
     -- Apply IH to the first r factors
     have hIH : μ[indProd X r Cinit | futureFiltration X m] =ᵐ[μ]
@@ -1829,7 +1828,6 @@ axiom finite_level_factorization
           apply EventuallyEq.of_eq
           funext ω
           simp [Fin.prod_univ_succ, Cinit, Clast]
-  -/
 
 /-- **Tail factorization on finite cylinders.**
 
