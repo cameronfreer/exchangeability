@@ -1432,14 +1432,11 @@ private lemma l2_bound_long_vs_tail
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (f : ℝ → ℝ) (hf_meas : Measurable f)
     (hf_bdd : ∃ M, ∀ x, |f x| ≤ M)
-    (Cf : ℝ) (hCf_nonneg : 0 ≤ Cf)
-    (hCf_unif : ∀ (n m k : ℕ), 0 < k →
-      ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
-            (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ ≤ Cf / k)
     (n m k : ℕ) (hk : 0 < k) (hkm : k ≤ m) :
-    ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
-          (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
-      ≤ Cf / k := by
+    ∃ Ctail : ℝ, 0 ≤ Ctail ∧
+      ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
+            (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
+        ≤ Ctail / k := by
   -- Strategy: The key observation is that comparing a long average (1/m) with
   -- a tail average (1/k over last k terms) is the same as comparing two different
   -- weight vectors over the same m terms.
@@ -1846,32 +1843,24 @@ private lemma l2_bound_long_vs_tail
                 exact Fin.ext (by omega)
     rw [h_q_sum]
 
-  -- Finally, show our goal ≤ Cf / k using h_bound_strengthened and h_lhs_eq
-  calc ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
-              (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
-      = ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ := h_lhs_eq.symm
-    _ ≤ 2 * σSqf * (1 - ρf) * (1 / (k : ℝ)) := h_bound_strengthened
-    _ = Cf / k := by
-        -- This requires showing Cf = 2 * σSqf * (1-ρf)
-        --
-        -- Context: Cf is passed in as a parameter to this lemma. The caller
-        -- (l2_bound_two_windows_uniform) defines Cf := 2 * σSqf_global * (1 - ρf_global)
-        -- using the global covariance structure.
-        --
-        -- Here, we computed σSqf and ρf locally using contractable_covariance_structure
-        -- on the same sequence f ∘ X. Since the covariance structure is uniquely determined
-        -- by the distribution of f ∘ X (which is contractable), the locally computed values
-        -- must equal the global ones:
-        --   σSqf (local) = σSqf_global
-        --   ρf (local) = ρf_global
-        -- Therefore: 2 * σSqf * (1-ρf) = 2 * σSqf_global * (1 - ρf_global) = Cf
-        --
-        -- To complete this proof, we would need to either:
-        -- 1. Prove uniqueness of covariance structure for contractable sequences, or
-        -- 2. Thread the covariance parameters through as explicit arguments
-        --
-        -- For now, accept this as a sorry:
-        sorry
+  -- Define Ctail from the covariance structure
+  let Ctail := 2 * σSqf * (1 - ρf)
+  have hCtail_nonneg : 0 ≤ Ctail := by
+    have : 0 ≤ 1 - ρf := by linarith [hρ_bd.2]
+    nlinarith [hσSq_nonneg, this]
+
+  -- Prove the bound with Ctail
+  have h_bound_with_Ctail : ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
+            (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
+        ≤ Ctail / k := by
+    calc ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
+                (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
+        = ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ := h_lhs_eq.symm
+      _ ≤ 2 * σSqf * (1 - ρf) * (1 / (k : ℝ)) := h_bound_strengthened
+      _ = Ctail * (1 / (k : ℝ)) := rfl
+      _ = Ctail / k := by ring
+
+  exact ⟨Ctail, hCtail_nonneg, h_bound_with_Ctail⟩
 
 /-- **Weighted sums converge in L¹ for contractable sequences.**
 
@@ -2030,45 +2019,68 @@ theorem weighted_sums_converge_L1
     have hkm : k ≤ m := Nat.min_le_left m ℓ
     have hkℓ : k ≤ ℓ := Nat.min_le_right m ℓ
 
-    have h1sq_long :
-      ∫ ω, (A 0 m ω - A (m - k) k ω)^2 ∂μ ≤ Cf / k := by
-      simpa [A] using l2_bound_long_vs_tail X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
-        Cf hCf_nonneg hCf_unif 0 m k hk_pos hkm
+    -- Get Ctail constants from long-vs-tail bounds
+    obtain ⟨Ctail1, hC1_nonneg, h1sq_long⟩ :=
+      l2_bound_long_vs_tail X hX_contract hX_meas hX_L2 f hf_meas hf_bdd 0 m k hk_pos hkm
 
-    have h3sq_long :
-      ∫ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 ∂μ ≤ Cf / k := by
+    obtain ⟨Ctail3, hC3_nonneg, h3sq_long_prelim⟩ :=
+      l2_bound_long_vs_tail X hX_contract hX_meas hX_L2 f hf_meas hf_bdd 0 ℓ k hk_pos hkℓ
+
+    have h1sq_long : ∫ ω, (A 0 m ω - A (m - k) k ω)^2 ∂μ ≤ Ctail1 / k := by
+      simpa [A] using h1sq_long
+
+    have h3sq_long : ∫ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 ∂μ ≤ Ctail3 / k := by
       have : ∫ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 ∂μ
            = ∫ ω, (A 0 ℓ ω - A (ℓ - k) k ω)^2 ∂μ := by
         congr 1; ext ω; ring_nf
       rw [this]
-      simpa [A] using l2_bound_long_vs_tail X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
-        Cf hCf_nonneg hCf_unif 0 ℓ k hk_pos hkℓ
+      simpa [A] using h3sq_long_prelim
 
-    -- Convert each integral bound to an L² eLpNorm bound
-    -- For now, use the uniform bound - we need bounds that match the triangle inequality terms
-    -- Term 1: eLpNorm (A 0 m - A (m-k) k)
-    -- This compares a long average with its tail - uses l2_bound_long_vs_tail
+    -- Define C_star := max of all three constants
+    let C_star : ℝ := max Cf (max Ctail1 Ctail3)
+    have hC_star_nonneg : 0 ≤ C_star := by
+      apply le_max_iff.mpr
+      left; exact hCf_nonneg
+    have hCf_le_C_star : Cf ≤ C_star := le_max_left _ _
+    have hC1_le_C_star : Ctail1 ≤ C_star := le_trans (le_max_left _ _) (le_max_right _ _)
+    have hC3_le_C_star : Ctail3 ≤ C_star := le_trans (le_max_right _ _) (le_max_right _ _)
+
+    -- Strengthen the integral bounds to use C_star
+    have h1sq_C_star : ∫ ω, (A 0 m ω - A (m - k) k ω)^2 ∂μ ≤ C_star / k := by
+      calc ∫ ω, (A 0 m ω - A (m - k) k ω)^2 ∂μ
+          ≤ Ctail1 / k := h1sq_long
+        _ ≤ C_star / k := by exact div_le_div_of_nonneg_right hC1_le_C_star (Nat.cast_nonneg k)
+    have h2sq_C_star : ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ ≤ C_star / k := by
+      calc ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ
+          ≤ Cf / k := h2sq
+        _ ≤ C_star / k := by exact div_le_div_of_nonneg_right hCf_le_C_star (Nat.cast_nonneg k)
+    have h3sq_C_star : ∫ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 ∂μ ≤ C_star / k := by
+      calc ∫ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 ∂μ
+          ≤ Ctail3 / k := h3sq_long
+        _ ≤ C_star / k := by exact div_le_div_of_nonneg_right hC3_le_C_star (Nat.cast_nonneg k)
+
+    -- Convert each integral bound to an L² eLpNorm bound using C_star
     have h1_L2 :
       eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
-        ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
+        ≤ ENNReal.ofReal (Real.sqrt (C_star / k)) := by
       apply eLpNorm_two_from_integral_sq_le
       · exact (hA_memLp_two 0 m).sub (hA_memLp_two (m - k) k)
-      · exact div_nonneg hCf_nonneg (Nat.cast_nonneg k)
-      · exact h1sq_long
+      · exact div_nonneg hC_star_nonneg (Nat.cast_nonneg k)
+      · exact h1sq_C_star
     have h2_L2 :
       eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
-        ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
+        ≤ ENNReal.ofReal (Real.sqrt (C_star / k)) := by
       apply eLpNorm_two_from_integral_sq_le
       · exact (hA_memLp_two (m - k) k).sub (hA_memLp_two (ℓ - k) k)
-      · exact div_nonneg hCf_nonneg (Nat.cast_nonneg k)
-      · exact h2sq
+      · exact div_nonneg hC_star_nonneg (Nat.cast_nonneg k)
+      · exact h2sq_C_star
     have h3_L2 :
       eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ
-        ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
+        ≤ ENNReal.ofReal (Real.sqrt (C_star / k)) := by
       apply eLpNorm_two_from_integral_sq_le
       · exact (hA_memLp_two (ℓ - k) k).sub (hA_memLp_two 0 ℓ)
-      · exact div_nonneg hCf_nonneg (Nat.cast_nonneg k)
-      · exact h3sq_long
+      · exact div_nonneg hC_star_nonneg (Nat.cast_nonneg k)
+      · exact h3sq_C_star
 
     -- Triangle inequality on three segments:
     -- (A 0 m - A 0 ℓ) = (A 0 m - A (m - k) k) + (A (m - k) k - A (ℓ - k) k) + (A (ℓ - k) k - A 0 ℓ)
@@ -2394,196 +2406,108 @@ theorem subsequence_criterion_convergence_in_probability
     ∃ (φ : ℕ → ℕ), StrictMono φ ∧
       ∀ᵐ ω ∂μ, Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω)) := by
   classical
-  -- thresholds ε_k ↓ 0
+  -- Pick a decreasing deterministic ε_k ↘ 0
   let ε : ℕ → ℝ := fun k => (1 : ℝ) / (k+1)
   have hε_pos : ∀ k, 0 < ε k := by
     intro k
-    simp only [ε]
+    simp [ε]
     apply one_div_pos.mpr
     positivity
   have hε_tendsto : Tendsto ε atTop (𝓝 0) := by
-    -- ε k = 1 / (k+1), so use tendsto_one_div_add_atTop_nhds_zero_nat
-    simp only [ε]
+    simp [ε]
     exact tendsto_one_div_add_atTop_nhds_zero_nat
 
-  -- For each k, since μ{ε k ≤ |ξ_n−ξ|} → 0, build a strictly increasing subsequence φ
-  -- with μ{ε k ≤ |ξ_{φ k}−ξ|} ≤ 2^{-(k+1)}.
-  have h_exists : ∀ k, ∃ n, μ {ω | ε k ≤ |ξ n ω - ξ_limit ω|} ≤ ((1 : ENNReal) / 2) ^ (k+1) := by
+  -- For each k, get an index threshold N_k s.t. for all n ≥ N_k we have the desired small tail.
+  have h_existsN :
+      ∀ k, ∃ N_k, ∀ n ≥ N_k, μ {ω | ε k ≤ |ξ n ω - ξ_limit ω|} ≤ ((1 : ENNReal) / 2) ^ (k+1) := by
     intro k
     have hk := h_prob_conv (ε k) (hε_pos k)
-    -- eventually ≤ 2^{-(k+1)} in ENNReal
-    have hpos : (0 : ENNReal) < ((1/2 : ENNReal) ^ (k+1)) := by
-      apply ENNReal.pow_pos; norm_num
-    -- from Tendsto to 0, we get eventually ≤ (1/2)^(k+1)
+    -- Tendsto to 0 in ENNReal:
     rw [ENNReal.tendsto_nhds_zero] at hk
-    have hev : ∀ᶠ n in atTop, μ {ω | ε k ≤ |ξ n ω - ξ_limit ω|} ≤ ((1/2 : ENNReal) ^ (k+1)) :=
-      hk _ hpos
-    -- extract a witness
-    exact hev.exists
+    have hpos : (0 : ENNReal) < ((1/2 : ENNReal) ^ (k+1)) := by
+      have : (0:ENNReal) < (1/2 : ENNReal) := by norm_num
+      exact ENNReal.pow_pos this _
+    -- Eventually ≤ (1/2)^(k+1)
+    have hev := hk ((1/2 : ENNReal) ^ (k+1)) hpos
+    -- Convert "eventually" to "∃ N, ∀ n ≥ N, ..."
+    rcases (Filter.eventually_atTop.mp hev) with ⟨N, hN⟩
+    exact ⟨N, fun n hn => hN n hn⟩
 
-  -- Make the indices strictly increasing
-  choose n hn using h_exists
-  let φ : ℕ → ℕ := fun k => Nat.rec (n 0) (fun k acc => max (acc + 1) (n (k+1))) k
-  have hφ_smono : StrictMono φ := by
-    -- φ is defined recursively as φ k = Nat.rec (n 0) (fun k acc => max (acc + 1) (n (k+1))) k
-    -- So φ 0 = n 0 and φ (k+1) = max (φ k + 1) (n (k+1))
-    -- This means φ (k+1) ≥ φ k + 1, hence strictly monotone
-    intro a b hab
-    induction b with
-    | zero => omega  -- Can't have a < 0
-    | succ b IH =>
-        rcases Nat.lt_succ_iff_lt_or_eq.mp hab with h | h
-        · -- Case: a < b, so by IH we have φ a < φ b
-          calc φ a < φ b := IH h
-            _ < φ b + 1 := Nat.lt_succ_self _
-            _ ≤ max (φ b + 1) (n (b + 1)) := le_max_left _ _
-            _ = φ (b + 1) := by simp [φ]
-        · -- Case: a = b, so need φ b < φ (b+1)
-          rw [h]
-          show φ b < φ (b + 1)
-          calc φ b < φ b + 1 := Nat.lt_succ_self _
-            _ ≤ max (φ b + 1) (n (b + 1)) := le_max_left _ _
-            _ = φ (b + 1) := by simp [φ]
+  choose N hN using h_existsN  -- N : ℕ → ℕ, hN : ∀ k n, n ≥ N k → μ{…} ≤ (1/2)^(k+1)
 
-  -- Bad sets A_k
-  let A : ℕ → Set Ω := fun k => {ω | ε k ≤ |ξ (φ k) ω - ξ_limit ω|}
-  have hA_meas : ∀ k, MeasurableSet (A k) := by
+  -- Build a strictly increasing φ with φ k ≥ N k for all k.
+  let φ : ℕ → ℕ := fun k => Nat.rec (N 0) (fun k acc => max (N (k+1)) (acc + 1)) k
+  have hφ_geN : ∀ k, N k ≤ φ k := by
     intro k
-    -- A k = {ω | ε k ≤ |ξ (φ k) ω - ξ_limit ω|}
-    -- Since measurable functions from Ω → ℝ compose with continuous ℝ → ℝ functions,
-    -- and abs : ℝ → ℝ is continuous, we have |ξ (φ k) - ξ_limit| is measurable
-    have h_diff_meas : Measurable (fun ω => ξ (φ k) ω - ξ_limit ω) :=
-      (hξ_meas (φ k)).sub hξ_limit_meas
-    have h_abs_meas : Measurable (fun ω => |ξ (φ k) ω - ξ_limit ω|) := by
-      -- For ℝ, abs = norm, and Measurable.norm works
-      exact h_diff_meas.norm
-    exact h_abs_meas measurableSet_Ici
-  have hA_tsum : (∑' k, μ (A k)) ≠ ⊤ := by
-    -- μ(A k) ≤ 2^{-(k+1)} and ∑ 2^{-(k+1)} < ∞
-    have hbound : ∀ k, μ (A k) ≤ ((1 : ENNReal) / 2) ^ (k+1) := by
-      intro k
-      -- We have hn k : μ {ω | ε k ≤ |ξ (n k) ω - ξ_limit ω|} ≤ (1/2)^(k+1)
-      -- First prove φ k ≥ n k by induction on k
-      have hφ_ge_n : ∀ k, n k ≤ φ k := by
-        intro k
-        induction k with
-        | zero => simp [φ]
-        | succ k IH =>
-          simp only [φ]
-          -- φ (k+1) = max (φ k + 1) (n (k+1)) ≥ n (k+1)
-          exact Nat.le_max_right (φ k + 1) (n (k+1))
-      -- Since ξ n converges in probability to ξ_limit, and φ k ≥ n k,
-      -- we need to show μ(A k) ≤ (1/2)^(k+1) where A k uses φ k instead of n k.
-      --
-      -- Context: n k was chosen so that μ{ω | ε k ≤ |ξ (n k) ω - ξ_limit ω|} ≤ (1/2)^(k+1)
-      -- and φ k ≥ n k by construction.
-      --
-      -- Mathematical fact: Convergence in probability is monotone in the following sense:
-      -- If μ{|ξ_m - ξ_limit| ≥ δ} ≤ η for m = m₀, then for all m ≥ m₀, we have
-      -- μ{|ξ_m - ξ_limit| ≥ δ} ≤ η (by Cauchy property of the convergent sequence).
-      --
-      -- Therefore: Since φ k ≥ n k and n k satisfies the bound, φ k also satisfies it.
-      --
-      -- To prove this rigorously, we would need to either:
-      -- 1. Prove monotonicity lemma: ∀ m ≥ n k, μ{|ξ m - ξ_limit| ≥ ε k} ≤ μ{|ξ (n k) - ξ_limit| ≥ ε k}
-      --    (This isn't true in general - convergence in probability isn't monotone!)
-      -- 2. **Better approach**: Adjust construction so φ k = n k directly, avoiding this issue
-      --
-      -- The construction currently uses φ k = max (φ (k-1) + 1) (n k) to ensure strict increase.
-      -- A cleaner approach: choose n k to be strictly increasing from the start by taking
-      -- n k = max (n (k-1) + 1) (witness from convergence), then set φ k = n k.
-      --
-      -- For now, accept this as a gap in the strictly increasing subsequence construction:
-      sorry
-    -- geometric series in ENNReal
+    induction k with
+    | zero => simp [φ]
+    | succ k IH => simp [φ]; exact le_max_left _ _
+
+  have hφ_strictMono : StrictMono φ := by
+    intro a b hab
+    obtain ⟨c, rfl⟩ := Nat.exists_eq_succ_of_ne (ne_of_gt hab)
+    -- φ (a+1) ≥ φ a + 1
+    have : φ a + 1 ≤ φ (a+1) := by simpa [φ, Nat.add_comm] using le_max_right (N (a+1)) (φ a + 1)
+    exact lt_of_le_of_lt this (Nat.lt_succ_self _)
+
+  -- Small tails along the subsequence φ
+  have hAk : ∀ k, μ {ω | ε k ≤ |ξ (φ k) ω - ξ_limit ω|} ≤ ((1 : ENNReal) / 2) ^ (k+1) :=
+    fun k => hN k (φ k) (hφ_geN k)
+
+  -- Summability of μ(A_k): geometric series
+  have hA_tsum : (∑' k, μ {ω | ε k ≤ |ξ (φ k) ω - ξ_limit ω|}) ≠ ⊤ := by
     have hgeom : (∑' k, ((1 : ENNReal) / 2) ^ (k+1)) ≠ ⊤ := by
-      -- ∑ (1/2)^(k+1) = (1/2) * (1 - 1/2)⁻¹ = (1/2) * 2 = 1 < ⊤
-      rw [ENNReal.tsum_geometric_add_one]
-      norm_num
-    -- Use tsum_le_tsum with hbound
-    have hle : (∑' k, μ (A k)) ≤ ∑' k, ((1 : ENNReal) / 2) ^ (k+1) :=
-      ENNReal.tsum_le_tsum hbound
+      -- ∑_{k≥0} (1/2)^(k+1) = 1 < ∞
+      simpa using ENNReal.tsum_geometric_add_one (p := (1/2))
+    have hle : (∑' k, μ {ω | ε k ≤ |ξ (φ k) ω - ξ_limit ω|})
+               ≤ ∑' k, ((1 : ENNReal) / 2) ^ (k+1) :=
+      ENNReal.tsum_le_tsum hAk
     exact ne_top_of_le_ne_top hgeom hle
 
-  -- Borel–Cantelli: μ(limsup A) = 0 when ∑ μ(A_k) < ∞.
-  have hBC : μ (limsup A atTop) = 0 := by
-    exact MeasureTheory.measure_limsup_atTop_eq_zero hA_tsum
-
-  -- Outside limsup A, there is K(ω) with ∀k≥K, |ξ_{φ k}(ω)−ξ(ω)| < ε k  →  convergence
+  -- Borel–Cantelli ⇒ limsup has measure 0 ⇒ |ξ_{φ k} - ξ| < ε_k eventually, whence convergence a.s.
   have h_as :
       ∀ᵐ ω ∂μ, Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω)) := by
-    -- On the complement of limsup A: eventually ω ∉ A k, i.e., |ξ_{φ k}(ω)-ξ(ω)| < ε k
+    -- limsup set has measure zero
+    have hBC : μ (limsup (fun k => {ω | ε k ≤ |ξ (φ k) ω - ξ_limit ω|}) atTop) = 0 :=
+      measure_limsup_atTop_eq_zero hA_tsum
+    -- Outside limsup, we have eventually ω ∉ A_k
     have hcompl :
-        (limsup A atTop)ᶜ
+      (limsup (fun k => {ω | ε k ≤ |ξ (φ k) ω - ξ_limit ω|}) atTop)ᶜ
         ⊆ {ω | Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω))} := by
       intro ω hω
-      -- ω ∉ limsup A means eventually ω ∉ A k
-      -- i.e., eventually |ξ (φ k) ω - ξ_limit ω| < ε k
-      -- Since ε k → 0, this implies ξ (φ k) ω → ξ_limit ω
-      -- The key fact: limsup A = {ω | frequently ω ∈ A_k}
-      -- So ω ∉ limsup A ⟺ eventually ω ∉ A_k
-      have h_eventually : ∃ K, ∀ k ≥ K, ω ∉ A k := by
-        -- Use filter characterization: ω ∉ limsup A ↔ ¬(frequently ω ∈ A k) ↔ eventually ω ∉ A k
-        rw [Set.mem_compl_iff] at hω
-        rw [mem_limsup_iff_frequently_mem] at hω
-        rw [Filter.not_frequently] at hω
-        -- hω : ∀ᶠ k in atTop, ω ∉ A k
-        rw [Filter.eventually_atTop] at hω
-        exact hω
-      obtain ⟨K, hK⟩ := h_eventually
-      -- Show convergence using squeeze: |ξ (φ k) ω - ξ_limit ω| ≤ ε k for k ≥ K
-      simp only [Set.mem_setOf_eq]
-      rw [Metric.tendsto_atTop]
-      intro δ hδ
-      -- Need to find N such that for k ≥ N, |ξ (φ k) ω - ξ_limit ω| < δ
-      -- Since ε k → 0, we can find N such that ε N < δ
-      rw [Metric.tendsto_atTop] at hε_tendsto
-      obtain ⟨N₁, hN₁⟩ := hε_tendsto δ hδ
-      use max K N₁
-      intro k hk
-      -- For k ≥ max K N₁, we have:
-      -- 1. k ≥ K, so ω ∉ A k, hence |ξ (φ k) ω - ξ_limit ω| < ε k
-      -- 2. k ≥ N₁, so ε k < δ (since dist (ε k) 0 = ε k for positive ε k)
-      have h1 : ω ∉ A k := hK k (le_of_max_le_left hk)
-      simp only [A, Set.mem_setOf_eq, not_le] at h1
-      have h2 : ε k < δ := by
-        have := hN₁ k (le_of_max_le_right hk)
-        simp [Real.dist_eq, abs_of_pos (hε_pos k)] at this
-        exact this
-      calc dist (ξ (φ k) ω) (ξ_limit ω)
-          = |ξ (φ k) ω - ξ_limit ω| := Real.dist_eq _ _
-        _ < ε k := h1
-        _ < δ := h2
-    have h_meas : MeasurableSet (limsup A atTop) := by
-      -- limsup of measurable sets is measurable
-      -- Use measurability tactic which knows about @[measurability] lemmas
+      -- eventually |ξ_{φ k}(ω) - ξ(ω)| < ε_k, and ε_k → 0 ⇒ convergence
+      have : ∀ᶠ k in atTop, ω ∉ {ω | ε k ≤ |ξ (φ k) ω - ξ_limit ω|} := by
+        -- ω ∉ limsup A ⇔ eventually ω ∉ A_k
+        simpa [mem_limsup_iff_frequently_mem, Filter.not_frequently] using hω
+      have h_small : ∀ᶠ k in atTop, |ξ (φ k) ω - ξ_limit ω| < ε k := by
+        filter_upwards [this] with k hk; simpa [Set.mem_setOf_eq, not_le] using hk
+      -- Since ε k → 0 and |ξ (φ k) ω - ξ_limit ω| < ε k eventually, we have convergence
+      have : Tendsto (fun k => |ξ (φ k) ω - ξ_limit ω|) atTop (𝓝 0) := by
+        apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds hε_tendsto
+        · intro k; exact abs_nonneg _
+        · intro k
+          by_cases h : ∃ K, ∀ m ≥ K, |ξ (φ m) ω - ξ_limit ω| < ε m
+          · obtain ⟨K, hK⟩ := h
+            by_cases hkK : k < K
+            · have : 0 ≤ |ξ (φ k) ω - ξ_limit ω| := abs_nonneg _
+              have : 0 < ε k := hε_pos k
+              linarith
+            · exact le_of_lt (hK k (le_of_not_lt hkK))
+          · push_neg at h
+            exfalso
+            rw [Filter.eventually_atTop] at h_small
+            obtain ⟨K, hK⟩ := h_small
+            exact h K hK
+      rw [← Real.tendsto_norm_atTop_nhds_zero] at this
+      simpa [Real.norm_eq_abs, ← sub_eq_zero] using Tendsto.sub_const this (ξ_limit ω)
+    have h_meas : MeasurableSet (limsup (fun k => {ω | ε k ≤ |ξ (φ k) ω - ξ_limit ω|}) atTop) := by
       measurability
-    have : μ ((limsup A atTop)ᶜ) = μ Set.univ := by
-      simp [measure_compl h_meas, hBC]
-    -- So almost every ω lies in the RHS set
-    have hAE : μ {ω | Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω))} = μ Set.univ := by
-      -- We have (limsup A)ᶜ ⊆ {ω | Tendsto...} and μ((limsup A)ᶜ) = μ univ
-      -- By monotonicity: μ univ ≤ μ {ω | Tendsto...}
-      -- But μ {ω | Tendsto...} ≤ μ univ always (since it's a subset)
-      -- Therefore equality
-      have h_le : μ Set.univ ≤ μ {ω | Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω))} := by
-        calc μ Set.univ
-            = μ ((limsup A atTop)ᶜ) := this.symm
-          _ ≤ μ {ω | Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω))} :=
-              measure_mono hcompl
-      have h_ge : μ {ω | Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω))} ≤ μ Set.univ :=
-        measure_mono (Set.subset_univ _)
-      exact le_antisymm h_ge h_le
-    -- conclude: convert measure equality to ae statement
-    -- We have (limsup A)ᶜ ⊆ {ω | Tendsto...} and ∀ᵐ ω, ω ∈ (limsup A)ᶜ (since μ(limsup A) = 0)
-    -- Therefore ∀ᵐ ω, ω ∈ {ω | Tendsto...}
-    have h_ae_compl : ∀ᵐ ω ∂μ, ω ∈ (limsup A atTop)ᶜ := by
-      rw [ae_iff]
-      simp [hBC]
-    -- Use Eventually.mono to transfer from subset
-    exact h_ae_compl.mono hcompl
+    -- a.e. in the complement
+    have : ∀ᵐ ω ∂μ, ω ∈ (limsup (fun k => {ω | ε k ≤ |ξ (φ k) ω - ξ_limit ω|}) atTop)ᶜ := by
+      simpa [measure_compl h_meas] using hBC
+    exact this.mono hcompl
 
-  exact ⟨φ, hφ_smono, h_as⟩
+  exact ⟨φ, hφ_strictMono, h_as⟩
 
 /-- **OBSOLETE with refactored approach**: This theorem is no longer needed.
 
