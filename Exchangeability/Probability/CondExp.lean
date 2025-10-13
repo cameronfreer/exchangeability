@@ -371,4 +371,48 @@ lemma condexp_indicator_inter_bridge
   -- Forward to the proven lemma
   exact condExp_indicator_mul_indicator_of_condIndep hm hmF hmH hCI hA hB
 
+/-! ### Conditional expectation equality from distributional equality
+
+This is the key bridge lemma for Axiom 1 (condexp_convergence): if (Y, Z) and (Y', Z)
+have the same joint distribution, then their conditional expectations given σ(Z) are equal. -/
+
+/-- **CE bridge lemma:** If `(Y, Z)` and `(Y', Z)` have the same law, then for every measurable `B`,
+```
+E[1_{Y ∈ B} | σ(Z)] = E[1_{Y' ∈ B} | σ(Z)]  a.e.
+```
+
+**Proof strategy:**
+1. For any bounded h measurable w.r.t. σ(Z), we have
+   ```
+   ∫ 1_{Y ∈ B} · h ∘ Z dμ = ∫ 1_{Y' ∈ B} · h ∘ Z dμ
+   ```
+   by the equality of joint push-forward measures on rectangles B × E.
+
+2. This equality holds for all σ(Z)-measurable test functions h.
+
+3. By uniqueness of conditional expectation (`ae_eq_condExp_of_forall_setIntegral_eq`),
+   ```
+   E[1_{Y ∈ B} | σ(Z)] = E[1_{Y' ∈ B} | σ(Z)]  a.e.
+   ```
+
+**This is the key step for `condexp_convergence` in ViaMartingale.lean!**
+Use with Y = X_m, Y' = X_k, Z = shiftRV X (m+1), and the equality comes from contractability
+via `contractable_dist_eq`. -/
+lemma condexp_indicator_eq_of_pair_law_eq
+    {Ω α β : Type*} [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (Y Y' : Ω → α) (Z : Ω → β)
+    (hY : Measurable Y) (hY' : Measurable Y') (hZ : Measurable Z)
+    (hpair : Measure.map (fun ω => (Y ω, Z ω)) μ
+           = Measure.map (fun ω => (Y' ω, Z ω)) μ)
+    {B : Set α} (hB : MeasurableSet B) :
+  μ[(Set.indicator B (fun _ => (1:ℝ))) ∘ Y | MeasurableSpace.comap Z inferInstance]
+    =ᵐ[μ]
+  μ[(Set.indicator B (fun _ => (1:ℝ))) ∘ Y'| MeasurableSpace.comap Z inferInstance] := by
+  sorry
+  -- TODO: Implement using ae_eq_condExp_of_forall_setIntegral_eq
+  -- Test against bounded h that are σ(Z)-measurable
+  -- Use hpair to show ∫ 1_{Y∈B} * h ∘ Z dμ = ∫ 1_{Y'∈B} * h ∘ Z dμ
+  -- This equality for all test functions implies CE equality
+
 end Exchangeability.Probability
