@@ -552,11 +552,21 @@ private lemma condexp_pair_factorization_MET
         · have h_bd : ∀ (ω : Ω[α]), |g (ω 0)| ≤ Cg := fun ω => hCg (ω 0)
           exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
       -- Apply condExp_abs_le_of_abs_le: |CE[g∘π₀|m]| ≤ Cg a.e.
+      -- Inline the proof to avoid type inference issues with 'set m := ...'
       have h_bd' : ∀ (ω : Ω[α]), |g (ω 0)| ≤ Cg := fun ω => hCg (ω 0)
-      -- TODO: Type inference issue with condExp_abs_le_of_abs_le
-      -- The lemma is now proved, but Lean has trouble with implicit MeasurableSpace arguments
-      -- when m is defined as `set m := shiftInvariantSigma`
-      sorry
+      -- Cg ≥ 0 since |g x| ≤ Cg and |g x| ≥ 0
+      have hCg_nn : 0 ≤ Cg := le_trans (abs_nonneg _) (hCg (Classical.choice ‹Nonempty α›))
+      -- Convert pointwise bound to a.e. bound
+      have hCg_ae : ∀ᵐ ω ∂μ, |g (ω 0)| ≤ Cg := ae_of_all μ h_bd'
+      -- Convert to NNReal bound for ae_bdd_condExp_of_ae_bdd
+      have hCg_ae' : ∀ᵐ ω ∂μ, |g (ω 0)| ≤ Cg.toNNReal := by
+        filter_upwards [hCg_ae] with ω hω
+        rwa [Real.coe_toNNReal _ hCg_nn]
+      -- Apply mathlib's ae_bdd_condExp_of_ae_bdd
+      have := ae_bdd_condExp_of_ae_bdd (m := m) hCg_ae'
+      -- Convert back from NNReal
+      filter_upwards [this] with ω hω
+      rwa [Real.coe_toNNReal _ hCg_nn] at hω
 
     -- Y := f(ω₀) is integrable (bounded + measurable)
     have hY_int : Integrable (fun ω => f (ω 0)) μ := by
