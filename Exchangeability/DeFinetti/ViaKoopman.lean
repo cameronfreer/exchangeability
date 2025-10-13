@@ -507,18 +507,52 @@ private lemma condexp_pair_factorization_MET
   -- CE[f(ω₀)·CE[g(ω₀)|ℐ] | ℐ] = CE[g(ω₀)|ℐ]·CE[f(ω₀)|ℐ]
   have h_pullout : μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m]
       =ᵐ[μ] (fun ω => μ[(fun ω => g (ω 0)) | m] ω * μ[(fun ω => f (ω 0)) | m] ω) := by
-    sorry
-    /-
-    Use condExp_mul_pullout once the boundedness issue is resolved.
-    Main issue: need to prove |CE[g|m]| ≤ C from |g| ≤ C, which requires Jensen's inequality.
+    -- Z := CE[g(ω₀)|m]
+    set Z := μ[(fun ω => g (ω 0)) | m]
 
-    Proof sketch:
-    - Z := CE[g(ω₀)|m] is m-measurable by stronglyMeasurable_condExp
-    - Boundedness: |CE[g|m]| ≤ CE[|g| | m] ≤ C (by Jensen and monotonicity)
-    - Y := f ∘ π_0 is integrable (bounded + measurable)
-    - Apply condExp_mul_pullout
-    ~15 lines
-    -/
+    -- Z is m-measurable (automatic from stronglyMeasurable_condExp)
+    have hZ_meas : Measurable[m] Z := by
+      exact stronglyMeasurable_condExp.measurable
+
+    -- Z is bounded: |CE[g|m]| ≤ C a.e. by Jensen's inequality
+    have hZ_bd : ∃ C, ∀ ω, |Z ω| ≤ C := by
+      obtain ⟨Cg, hCg⟩ := hg_bd
+      use Cg
+      intro ω
+      -- Need: |CE[g|m] ω| ≤ Cg
+      -- Strategy: Use that conditional expectation of bounded function is bounded
+      -- Specifically: |g| ≤ Cg implies |CE[g|m]| ≤ Cg a.e.
+      -- This follows from: |CE[g|m]| ≤ CE[|g||m] ≤ CE[Cg|m] = Cg
+      sorry
+      /- TODO: Need one of these approaches:
+      1. Find mathlib lemma: condExp preserves bounds
+      2. Prove directly: |E[g|F]| ≤ E[|g||F] ≤ C when |g| ≤ C
+      3. Use: ess_sup (CE[g|m]) ≤ ess_sup g
+      Estimated: 5-10 lines once correct lemma found
+      -/
+
+    -- Y := f(ω₀) is integrable (bounded + measurable)
+    have hY_int : Integrable (fun ω => f (ω 0)) μ := by
+      obtain ⟨Cf, hCf⟩ := hf_bd
+      -- Can't use integrable_of_bounded since it's defined later in the file
+      -- Manually construct: Integrable = AEStronglyMeasurable + HasFiniteIntegral
+      constructor
+      · exact (hf_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
+      · -- HasFiniteIntegral: ∫⁻ ω, ‖f (ω 0)‖₊ ∂μ < ∞
+        sorry -- TODO: Similar to integrable_mul_of_ae_bdd_left, needs nnnorm API
+
+    -- Apply condExp_mul_pullout: CE[Z·Y | m] = Z·CE[Y | m]
+    have h := condExp_mul_pullout hZ_meas hZ_bd hY_int
+    -- h gives: CE[Z * Y | m] = Z * CE[Y | m] where Y = f∘π₀
+    -- But goal needs: CE[Y * Z | m] = Z * CE[Y | m]
+    -- Use commutativity: Y * Z = Z * Y
+    calc μ[(fun ω => f (ω 0) * Z ω) | m]
+        =ᵐ[μ] μ[(fun ω => Z ω * f (ω 0)) | m] := by
+          -- Functions are equal since multiplication commutes
+          have : (fun ω => f (ω 0) * Z ω) = (fun ω => Z ω * f (ω 0)) := by
+            ext ω; ring
+          rw [this]
+      _ =ᵐ[μ] (fun ω => Z ω * μ[(fun ω => f (ω 0)) | m] ω) := h
 
   -- Step 5: CE[f(ω₀)·g(ω₀)|ℐ] = CE[f(ω₀)·CE[g(ω₀)|ℐ]|ℐ]
   -- This uses the tower property backwards
