@@ -2447,7 +2447,21 @@ theorem weighted_sums_converge_L1
 
       -- Convert to L² norm bound
       have h_L2_bound : eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ ≤ ENNReal.ofReal (2 * M) := by
-        sorry  -- TODO: Use boundedness + probability measure to bound L² norm
+        -- TODO (15-20 min): Prove using pointwise bound on probability measure
+        -- Strategy:
+        --   1. From h_pointwise: |f ω| ≤ 2M for all ω
+        --   2. So |f ω|² ≤ (2M)² for all ω
+        --   3. Thus ∫ |f|² dμ ≤ (2M)² ∫ 1 dμ = (2M)² (probability measure)
+        --   4. Taking square root: eLpNorm f 2 μ ≤ 2M
+        --
+        -- Key lemmas needed:
+        --   - eLpNorm_eq_lintegral_rpow_enorm (not eLpNorm_eq_lintegral_rpow_nnnorm!)
+        --   - lintegral_mono with pointwise bound |f|² ≤ C²
+        --   - ENNReal.rpow_le_rpow for taking (1/2) power
+        --   - sq_sqrt for simplifying ((2M)²)^(1/2) = 2M
+        --
+        -- Measurability available: (hA_meas 0 m).sub (hA_meas 0 ℓ)
+        sorry
 
       -- Show this is < ε (for appropriate ε relative to M)
       calc eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
