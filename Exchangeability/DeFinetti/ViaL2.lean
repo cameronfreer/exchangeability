@@ -1153,11 +1153,13 @@ lemma l2_bound_two_windows_uniform
         ∑ t ∈ S, qS t * Y t ω =
           (1 / (k : ℝ)) * ∑ t ∈ window m k, Y t ω := by
       simpa [qS] using h_weight_restrict (window m k) h_subset_m ω
-    have h_split :
-        ∑ t ∈ S, δ t * Y t ω
+    calc
+      ∑ t ∈ S, δ t * Y t ω
           = ∑ t ∈ S, pS t * Y t ω - ∑ t ∈ S, qS t * Y t ω := by
-      simp [δ, Finset.sum_sub_distrib, mul_sub, sub_eq_add_neg, add_comm, add_left_comm, add_assoc]
-    simpa [h_sum_p, h_sum_q] using h_split
+              simp [δ, Finset.sum_sub_distrib, mul_sub]
+      _ = (1 / (k : ℝ)) * ∑ t ∈ window n k, Y t ω -
+          (1 / (k : ℝ)) * ∑ t ∈ window m k, Y t ω := by
+              simpa [h_sum_p, h_sum_q]
 
   have h_goal :
       ∀ ω,
@@ -1186,12 +1188,16 @@ lemma l2_bound_two_windows_uniform
             (f := fun _ : ℕ => (1 / (k : ℝ)))).symm
       simpa [pS, h_filter]
         using h_indicator
+    have h_card : (window n k).card = k := window_card n k
+    have h_one : (window n k).card * (1 / (k : ℝ)) = 1 := by
+      have hk_ne' : (k : ℝ) ≠ 0 := hk_ne
+      have hdiv : (1 / (k : ℝ)) = (k : ℝ)⁻¹ := by simp [one_div]
+      have hmul : (k : ℝ) * (k : ℝ)⁻¹ = 1 := mul_inv_cancel hk_ne'
+      simpa [h_card, hdiv] using hmul
     have h_const :
         ∑ t ∈ window n k, (1 / (k : ℝ))
-          = (k : ℝ) * (1 / (k : ℝ)) := by
-      simp [Finset.sum_const, window_card]
-    have h_one : (k : ℝ) * (1 / (k : ℝ)) = 1 := by
-      field_simp [hk_ne]
+          = (window n k).card * (1 / (k : ℝ)) := by
+      simp [Finset.sum_const]
     simpa [h_sum, h_const, h_one]
 
   have h_sum_qS :
@@ -1211,26 +1217,30 @@ lemma l2_bound_two_windows_uniform
             (f := fun _ : ℕ => (1 / (k : ℝ)))).symm
       simpa [qS, h_filter]
         using h_indicator
+    have h_card : (window m k).card = k := window_card m k
+    have h_one : (window m k).card * (1 / (k : ℝ)) = 1 := by
+      have hk_ne' : (k : ℝ) ≠ 0 := hk_ne
+      have hdiv : (1 / (k : ℝ)) = (k : ℝ)⁻¹ := by simp [one_div]
+      have hmul : (k : ℝ) * (k : ℝ)⁻¹ = 1 := mul_inv_cancel hk_ne'
+      simpa [h_card, hdiv] using hmul
     have h_const :
         ∑ t ∈ window m k, (1 / (k : ℝ))
-          = (k : ℝ) * (1 / (k : ℝ)) := by
-      simp [Finset.sum_const, window_card]
-    have h_one : (k : ℝ) * (1 / (k : ℝ)) = 1 := by
-      field_simp [hk_ne]
+          = (window m k).card * (1 / (k : ℝ)) := by
+      simp [Finset.sum_const]
     simpa [h_sum, h_const, h_one]
 
   -- Positivity of the weights
   have hpS_nonneg : ∀ t, 0 ≤ pS t := by
     intro t
     by_cases ht : t ∈ window n k
-    · have hk_nonneg : 0 ≤ (1 / (k : ℝ)) := inv_nonneg.mpr (le_of_lt hk_pos)
+    · have hk_nonneg : 0 ≤ (1 / (k : ℝ)) := div_nonneg zero_le_one (le_of_lt hk_pos)
       simpa [pS, ht] using hk_nonneg
     · simp [pS, ht]
 
   have hqS_nonneg : ∀ t, 0 ≤ qS t := by
     intro t
     by_cases ht : t ∈ window m k
-    · have hk_nonneg : 0 ≤ (1 / (k : ℝ)) := inv_nonneg.mpr (le_of_lt hk_pos)
+    · have hk_nonneg : 0 ≤ (1 / (k : ℝ)) := div_nonneg zero_le_one (le_of_lt hk_pos)
       simpa [qS, ht] using hk_nonneg
     · simp [qS, ht]
 
@@ -1271,28 +1281,14 @@ lemma l2_bound_two_windows_uniform
     · have h_equiv :
         ∑ i : Fin nS, p i = ∑ t ∈ S, pS t := by
         classical
-        have h_bij :
-            ∑ i ∈ (Finset.univ : Finset (Fin nS)), p i =
-              ∑ t ∈ S, pS t := by
-          refine
-            (Finset.sum_bij (fun (i : Fin nS) _ => idx i)
-              ?_ ?_ ?_ ?_ : _ = _)
-          · intro i hi
-            simpa [idx] using h_idx_mem i
-          · intro i hi
-            simp [p, idx]
-          · intro t ht
-            refine ⟨eβ.symm ⟨t, ht⟩, by simp, ?_⟩
-            have hidx :
-                idx (eβ.symm ⟨t, ht⟩) = t := by
-              have := Equiv.apply_symm_apply eβ ⟨t, ht⟩
-              exact congrArg Subtype.val this
-            simp [p, idx, hidx]
-          · intro i j hi hj h
-            have h' : (eβ i).1 = (eβ j).1 := by simpa [idx] using h
-            have : eβ i = eβ j := Subtype.ext h'
-            exact eβ.injective this
-        simpa using h_bij
+        have h_sum_equiv :
+            ∑ i : Fin nS, pS (idx i) =
+              ∑ b : β, pS b.1 :=
+          (Fintype.sum_equiv eβ (fun b : β => pS b.1)).symm
+        have h_sum_attach :
+            ∑ b : β, pS b.1 = ∑ t ∈ S, pS t := by
+          simpa [β] using Finset.sum_attach (s := S) (f := fun t => pS t)
+        simpa [p, idx] using h_sum_equiv.trans h_sum_attach
       simpa [h_equiv, h_sum_pS]
     · intro i
       simpa [p, idx] using hpS_nonneg (idx i)
@@ -1302,28 +1298,14 @@ lemma l2_bound_two_windows_uniform
     · have h_equiv :
         ∑ i : Fin nS, q i = ∑ t ∈ S, qS t := by
         classical
-        have h_bij :
-            ∑ i ∈ (Finset.univ : Finset (Fin nS)), q i =
-              ∑ t ∈ S, qS t := by
-          refine
-            (Finset.sum_bij (fun (i : Fin nS) _ => idx i)
-              ?_ ?_ ?_ ?_ : _ = _)
-          · intro i hi
-            simpa [idx] using h_idx_mem i
-          · intro i hi
-            simp [q, idx]
-          · intro t ht
-            refine ⟨eβ.symm ⟨t, ht⟩, by simp, ?_⟩
-            have hidx :
-                idx (eβ.symm ⟨t, ht⟩) = t := by
-              have := Equiv.apply_symm_apply eβ ⟨t, ht⟩
-              exact congrArg Subtype.val this
-            simp [q, idx, hidx]
-          · intro i j hi hj h
-            have h' : (eβ i).1 = (eβ j).1 := by simpa [idx] using h
-            have : eβ i = eβ j := Subtype.ext h'
-            exact eβ.injective this
-        simpa using h_bij
+        have h_sum_equiv :
+            ∑ i : Fin nS, qS (idx i) =
+              ∑ b : β, qS b.1 :=
+          (Fintype.sum_equiv eβ (fun b : β => qS b.1)).symm
+        have h_sum_attach :
+            ∑ b : β, qS b.1 = ∑ t ∈ S, qS t := by
+          simpa [β] using Finset.sum_attach (s := S) (f := fun t => qS t)
+        simpa [q, idx] using h_sum_equiv.trans h_sum_attach
       simpa [h_equiv, h_sum_qS]
     · intro i
       simpa [q, idx] using hqS_nonneg (idx i)
@@ -1374,28 +1356,16 @@ lemma l2_bound_two_windows_uniform
           ∑ t ∈ S, pS t * Y t ω := by
     intro ω
     classical
-    have h_bij :
-        ∑ i ∈ (Finset.univ : Finset (Fin nS)), p i * ξ i ω =
+    have h_sum_equiv :
+        ∑ i : Fin nS, p i * ξ i ω =
+          ∑ b : β, pS b.1 * Y b.1 ω :=
+      (Fintype.sum_equiv eβ (fun b : β => pS b.1 * Y b.1 ω)).symm
+    have h_sum_attach :
+        ∑ b : β, pS b.1 * Y b.1 ω =
           ∑ t ∈ S, pS t * Y t ω := by
-      refine
-        (Finset.sum_bij (fun (i : Fin nS) _ => idx i)
-          ?_ ?_ ?_ ?_ : _ = _)
-      · intro i hi
-        simpa [idx] using h_idx_mem i
-      · intro i hi
-        simp [p, ξ, idx, Y]
-      · intro t ht
-        refine ⟨eβ.symm ⟨t, ht⟩, by simp, ?_⟩
-        have hidx :
-            idx (eβ.symm ⟨t, ht⟩) = t := by
-          have := Equiv.apply_symm_apply eβ ⟨t, ht⟩
-          exact congrArg Subtype.val this
-        simp [p, ξ, idx, Y, hidx]
-      · intro i j hi hj h
-        have h' : (eβ i).1 = (eβ j).1 := by simpa [idx] using h
-        have : eβ i = eβ j := Subtype.ext h'
-        exact eβ.injective this
-    simpa [p, ξ, idx, Y] using h_bij
+      simpa [β] using
+        Finset.sum_attach (s := S) (f := fun t => pS t * Y t ω)
+    simpa [p, ξ, idx, Y] using h_sum_equiv.trans h_sum_attach
 
   have h_sum_q_fin :
       ∀ ω,
@@ -1403,28 +1373,16 @@ lemma l2_bound_two_windows_uniform
           ∑ t ∈ S, qS t * Y t ω := by
     intro ω
     classical
-    have h_bij :
-        ∑ i ∈ (Finset.univ : Finset (Fin nS)), q i * ξ i ω =
+    have h_sum_equiv :
+        ∑ i : Fin nS, q i * ξ i ω =
+          ∑ b : β, qS b.1 * Y b.1 ω :=
+      (Fintype.sum_equiv eβ (fun b : β => qS b.1 * Y b.1 ω)).symm
+    have h_sum_attach :
+        ∑ b : β, qS b.1 * Y b.1 ω =
           ∑ t ∈ S, qS t * Y t ω := by
-      refine
-        (Finset.sum_bij (fun (i : Fin nS) _ => idx i)
-          ?_ ?_ ?_ ?_ : _ = _)
-      · intro i hi
-        simpa [idx] using h_idx_mem i
-      · intro i hi
-        simp [q, ξ, idx, Y]
-      · intro t ht
-        refine ⟨eβ.symm ⟨t, ht⟩, by simp, ?_⟩
-        have hidx :
-            idx (eβ.symm ⟨t, ht⟩) = t := by
-          have := Equiv.apply_symm_apply eβ ⟨t, ht⟩
-          exact congrArg Subtype.val this
-        simp [q, ξ, idx, Y, hidx]
-      · intro i j hi hj h
-        have h' : (eβ i).1 = (eβ j).1 := by simpa [idx] using h
-        have : eβ i = eβ j := Subtype.ext h'
-        exact eβ.injective this
-    simpa [q, ξ, idx, Y] using h_bij
+      simpa [β] using
+        Finset.sum_attach (s := S) (f := fun t => qS t * Y t ω)
+    simpa [q, ξ, idx, Y] using h_sum_equiv.trans h_sum_attach
 
   have h_delta_fin :
       ∀ ω,
