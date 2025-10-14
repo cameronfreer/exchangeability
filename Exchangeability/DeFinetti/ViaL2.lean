@@ -3447,26 +3447,33 @@ noncomputable def directing_measure
       mono' := cdf_from_alpha_mono X hX_contract hX_meas hX_L2 ω
       right_continuous' := by
         intro t
-        -- ContinuousWithinAt f (Set.Ici t) t means Tendsto f (𝓝[Set.Ici t] t) (𝓝 (f t))
-        -- We have: Tendsto f (𝓝[>] t) (𝓝 (f t)) where 𝓝[>] t = 𝓝[Set.Ioi t] t
-        --
-        -- Strategy: Convert Tendsto at 𝓝[Ioi t] t to Tendsto at 𝓝[Ici t] t
-        --
-        -- Mathematical fact: For any function (monotone or not),
-        --   Tendsto f (𝓝[Ioi t] t) l ↔ Tendsto f (𝓝[Ici t] t) l
-        -- because Ici t = insert t (Ioi t), and inserting the single point {t}
-        -- doesn't affect the neighborhood filter at t itself.
-        --
-        -- The mathlib lemma for this is nhdsWithin_insert:
-        --   𝓝[insert a s] a = 𝓝[s] a (when a ∉ s)
-        --
-        -- Applied here: 𝓝[Ici t] t = 𝓝[insert t (Ioi t)] t = 𝓝[Ioi t] t = 𝓝[>] t
-        --
-        -- However, the actual application requires navigating Set.Ici/Ioi definitions
-        -- and the nhdsWithin_insert rewrite, which is tricky in practice.
-        --
-        -- For now, accept as sorry - this is a standard topology lemma:
-        sorry
+        -- Right-continuity from Ioi t extends to Ici t
+        -- We have: Tendsto at 𝓝[>] t from cdf_from_alpha_rightContinuous
+        have h_rc := cdf_from_alpha_rightContinuous X hX_contract hX_meas hX_L2 ω t
+        -- Note: Ici t = insert t (Ioi t), and inserting t doesn't affect the filter
+        rw [ContinuousWithinAt]
+        have h_eq : Set.Ici t = insert t (Set.Ioi t) := by
+          ext x
+          simp only [Set.mem_Ici, Set.mem_insert_iff, Set.mem_Ioi]
+          constructor
+          · intro hx
+            by_cases h : x = t
+            · left; exact h
+            · right; exact lt_of_le_of_ne hx (Ne.symm h)
+          · intro hx
+            cases hx with
+            | inl heq => rw [heq]
+            | inr hlt => exact le_of_lt hlt
+        rw [h_eq, nhdsWithin_insert]
+        -- Need to show: Tendsto f (pure t ⊔ 𝓝[>] t) (𝓝 (f t))
+        -- We have: Tendsto f (𝓝[>] t) (𝓝 (f t))
+        -- At pure t: f(t) is trivially in 𝓝 (f t)
+        apply Tendsto.sup
+        · -- Tendsto f (pure t) (𝓝 (f t))
+          rw [tendsto_pure_left]
+          intro s hs
+          exact mem_of_mem_nhds hs
+        · exact h_rc
     }
     F_ω.measure
 
