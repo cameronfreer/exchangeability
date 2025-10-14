@@ -1592,10 +1592,10 @@ private lemma l2_bound_long_vs_tail
     (f : ℝ → ℝ) (hf_meas : Measurable f)
     (hf_bdd : ∃ M, ∀ x, |f x| ≤ M)
     (n m k : ℕ) (hk : 0 < k) (hkm : k ≤ m) :
-    ∃ Ctail : ℝ, 0 ≤ Ctail ∧
+    ∃ Cf : ℝ, 0 ≤ Cf ∧
       ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
             (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
-        ≤ Ctail / k := by
+        ≤ Cf / k := by
   -- Strategy: The key observation is that comparing a long average (1/m) with
   -- a tail average (1/k over last k terms) is the same as comparing two different
   -- weight vectors over the same m terms.
@@ -2002,24 +2002,24 @@ private lemma l2_bound_long_vs_tail
                 exact Fin.ext (by omega)
     rw [h_q_sum]
 
-  -- Define Ctail from the covariance structure
-  let Ctail := 2 * σSqf * (1 - ρf)
-  have hCtail_nonneg : 0 ≤ Ctail := by
+  -- Define Cf from the covariance structure
+  let Cf := 2 * σSqf * (1 - ρf)
+  have hCf_nonneg : 0 ≤ Cf := by
     have : 0 ≤ 1 - ρf := by linarith [hρ_bd.2]
     nlinarith [hσSq_nonneg, this]
 
-  -- Prove the bound with Ctail
-  have h_bound_with_Ctail : ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
+  -- Prove the bound with Cf
+  have h_bound_with_Cf : ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
             (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
-        ≤ Ctail / k := by
+        ≤ Cf / k := by
     calc ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
                 (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
         = ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ := h_lhs_eq.symm
       _ ≤ 2 * σSqf * (1 - ρf) * (1 / (k : ℝ)) := h_bound_strengthened
-      _ = Ctail * (1 / (k : ℝ)) := rfl
-      _ = Ctail / k := by ring
+      _ = Cf * (1 / (k : ℝ)) := rfl
+      _ = Cf / k := by ring
 
-  exact ⟨Ctail, hCtail_nonneg, h_bound_with_Ctail⟩
+  exact ⟨Cf, hCf_nonneg, h_bound_with_Cf⟩
 
 /-- **Weighted sums converge in L¹ for contractable sequences.**
 
@@ -2600,9 +2600,9 @@ theorem weighted_sums_converge_L1
     intro ε hε
     -- Choose N to handle BOTH separated and close cases
     --
-    -- SEPARATED CASE: Need 3 * √(C_star/N) < ε
-    --   ⟹ 9 * C_star / N < ε²
-    --   ⟹ N > 9 * C_star / ε²
+    -- SEPARATED CASE: Need 3 * √(Cf/N) < ε
+    --   ⟹ 9 * Cf / N < ε²
+    --   ⟹ N > 9 * Cf / ε²
     --
     -- CLOSE CASE: Need 2Mk/ℓ < ε where k = N and ℓ ≥ 2N
     --   With ℓ = 2N: 2Mk/(2N) = Mk/N < ε
@@ -2663,7 +2663,7 @@ theorem weighted_sums_converge_L1
            _ ≤ 2 * N := Nat.le_mul_of_pos_left _ (by decide : 0 < 2)
            _ ≤ ℓ := hℓ
   
-    -- Get Ctail constants from long-vs-tail bounds
+    -- Long-vs-tail comparisons share the same Cf constant
     have h1sq_long :
         ∫ ω, (A 0 m ω - A (m - k) k ω)^2 ∂μ ≤ Cf / k := by
       simpa [A] using
@@ -2678,44 +2678,28 @@ theorem weighted_sums_converge_L1
       simpa [A] using
         (h_long_tail_bound (n := 0) (m := ℓ) (k := k) hk_pos hkℓ)
 
-    -- Strengthen the integral bounds to use Cf
-    let C_star : ℝ := Cf
-    have hC_star_nonneg : 0 ≤ C_star := hCf_nonneg
-    have h1sq_C_star : ∫ ω, (A 0 m ω - A (m - k) k ω)^2 ∂μ ≤ C_star / k := by
-      calc
-        ∫ ω, (A 0 m ω - A (m - k) k ω)^2 ∂μ ≤ Cf / k := h1sq_long
-        _ = C_star / k := by simp [C_star]
-    have h2sq_C_star : ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ ≤ C_star / k := by
-      calc
-        ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ ≤ Cf / k := h2sq
-        _ = C_star / k := by simp [C_star]
-    have h3sq_C_star : ∫ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 ∂μ ≤ C_star / k := by
-      calc
-        ∫ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 ∂μ ≤ Cf / k := h3sq_long
-        _ = C_star / k := by simp [C_star]
-
-    -- Convert each integral bound to an L² eLpNorm bound using C_star
+    -- Convert each integral bound to an L² eLpNorm bound using Cf
     have h1_L2 :
       eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
-        ≤ ENNReal.ofReal (Real.sqrt (C_star / k)) := by
+        ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
       apply eLpNorm_two_from_integral_sq_le
       · exact (hA_memLp_two 0 m).sub (hA_memLp_two (m - k) k)
-      · exact div_nonneg hC_star_nonneg (Nat.cast_nonneg k)
-      · exact h1sq_C_star
+      · exact div_nonneg hCf_nonneg (Nat.cast_nonneg k)
+      · exact h1sq_long
     have h2_L2 :
       eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
-        ≤ ENNReal.ofReal (Real.sqrt (C_star / k)) := by
+        ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
       apply eLpNorm_two_from_integral_sq_le
       · exact (hA_memLp_two (m - k) k).sub (hA_memLp_two (ℓ - k) k)
-      · exact div_nonneg hC_star_nonneg (Nat.cast_nonneg k)
-      · exact h2sq_C_star
+      · exact div_nonneg hCf_nonneg (Nat.cast_nonneg k)
+      · exact h2sq
     have h3_L2 :
       eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ
-        ≤ ENNReal.ofReal (Real.sqrt (C_star / k)) := by
+        ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
       apply eLpNorm_two_from_integral_sq_le
       · exact (hA_memLp_two (ℓ - k) k).sub (hA_memLp_two 0 ℓ)
-      · exact div_nonneg hC_star_nonneg (Nat.cast_nonneg k)
-      · exact h3sq_C_star
+      · exact div_nonneg hCf_nonneg (Nat.cast_nonneg k)
+      · exact h3sq_long
   
     -- Triangle inequality on three segments:
     -- (A 0 m - A 0 ℓ) = (A 0 m - A (m - k) k) + (A (m - k) k - A (ℓ - k) k) + (A (ℓ - k) k - A 0 ℓ)
@@ -2766,32 +2750,32 @@ theorem weighted_sums_converge_L1
           (le_trans step1 <| add_le_add_left step2 _)
       simpa [add_assoc] using this
   
-    -- Bound each term by √(C_star/k), then sum to 3√(C_star/k)
+    -- Bound each term by √(Cf/k), then sum to 3√(Cf/k)
     have bound3 :
       eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
-        ≤ ENNReal.ofReal (3 * Real.sqrt (C_star / k)) := by
-      have h0 : 0 ≤ Real.sqrt (C_star / k) := Real.sqrt_nonneg _
+        ≤ ENNReal.ofReal (3 * Real.sqrt (Cf / k)) := by
+      have h0 : 0 ≤ Real.sqrt (Cf / k) := Real.sqrt_nonneg _
       calc
         eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
             ≤ eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
               + eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
               + eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ := tri
-        _ ≤ (ENNReal.ofReal (Real.sqrt (C_star / k))
-              + ENNReal.ofReal (Real.sqrt (C_star / k)))
-              + ENNReal.ofReal (Real.sqrt (C_star / k)) := by
+        _ ≤ (ENNReal.ofReal (Real.sqrt (Cf / k))
+              + ENNReal.ofReal (Real.sqrt (Cf / k)))
+              + ENNReal.ofReal (Real.sqrt (Cf / k)) := by
               apply add_le_add
               · apply add_le_add h1_L2 h2_L2
               · exact h3_L2
-        _ = ENNReal.ofReal (2 * Real.sqrt (C_star / k))
-              + ENNReal.ofReal (Real.sqrt (C_star / k)) := by
+        _ = ENNReal.ofReal (2 * Real.sqrt (Cf / k))
+              + ENNReal.ofReal (Real.sqrt (Cf / k)) := by
               rw [← ENNReal.ofReal_add h0 h0]
               simp [two_mul]
-        _ = ENNReal.ofReal (3 * Real.sqrt (C_star / k)) := by
-              have h2_nonneg : 0 ≤ 2 * Real.sqrt (C_star / k) := by nlinarith [h0]
+        _ = ENNReal.ofReal (3 * Real.sqrt (Cf / k)) := by
+              have h2_nonneg : 0 ≤ 2 * Real.sqrt (Cf / k) := by nlinarith [h0]
               rw [← ENNReal.ofReal_add h2_nonneg h0]
               ring_nf
   
-    -- Choose k large ⇒ 3 √(C_star/k) < ε (here C_star = Cf)
+    -- Choose k large ⇒ 3 √(Cf/k) < ε
     have hN_lower : (9 * Cf / ε ^ 2 : ℝ) < N := by
       have h1 : (9 * Cf / ε ^ 2 : ℝ) ≤ Nat.ceil (9 * Cf / ε ^ 2) := Nat.le_ceil _
       have h2 :
@@ -2803,10 +2787,10 @@ theorem weighted_sums_converge_L1
         exact_mod_cast h2
       linarith
     have hε_sq_pos : 0 < ε ^ 2 := by positivity
-    have hlt_real : 3 * Real.sqrt (C_star / k) < ε := by
+    have hlt_real : 3 * Real.sqrt (Cf / k) < ε := by
       have hk_eq : (k : ℝ) = N := rfl
       by_cases hCf_zero : Cf = 0
-      · have : C_star = 0 := by simpa [C_star, hCf_zero]
+      · have : Cf = 0 := by simpa [Cf, hCf_zero]
         have hε_pos : 0 < ε := hε
         simp [this, hk_eq, hε_pos]
       · have hCf_pos : 0 < Cf := lt_of_le_of_ne hCf_nonneg hCf_zero
@@ -2820,50 +2804,50 @@ theorem weighted_sums_converge_L1
         have h_sq : 9 * Cf / (k : ℝ) < ε ^ 2 := by
           have := (div_lt_iff hN_pos_real).mpr (by simpa [mul_comm] using h_mul)
           simpa [hk_eq] using this
-        have htemp_nonneg : 0 ≤ 9 * (C_star / (k : ℝ)) := by
+        have htemp_nonneg : 0 ≤ 9 * (Cf / (k : ℝ)) := by
           have hk_pos' : 0 < (k : ℝ) := by simpa [hk_eq]
           positivity
         have h_sq_root :
-            Real.sqrt (9 * (C_star / (k : ℝ))) < ε := by
+            Real.sqrt (9 * (Cf / (k : ℝ))) < ε := by
           have htemp :=
             Real.sqrt_lt.mpr
               ⟨htemp_nonneg, by positivity,
-                by simpa [C_star, hk_eq] using h_sq⟩
+                by simpa [Cf, hk_eq] using h_sq⟩
           simpa [Real.sqrt_sq (le_of_lt hε)] using htemp
         have hsqrt_mul :
-            Real.sqrt (9 * (C_star / (k : ℝ))) =
-              Real.sqrt 9 * Real.sqrt (C_star / (k : ℝ)) :=
+            Real.sqrt (9 * (Cf / (k : ℝ))) =
+              Real.sqrt 9 * Real.sqrt (Cf / (k : ℝ)) :=
           Real.sqrt_mul (show (0 : ℝ) ≤ 9 by norm_num)
-            (by positivity : 0 ≤ C_star / (k : ℝ))
+            (by positivity : 0 ≤ Cf / (k : ℝ))
         have h3 : (3 : ℝ) = Real.sqrt 9 := by
           rw [show (9 : ℝ) = 3 ^ 2 by norm_num]
           exact Real.sqrt_sq (by norm_num : (0 : ℝ) ≤ 3)
         have h_sqrt :
-            3 * Real.sqrt (C_star / (k : ℝ)) =
-              Real.sqrt (9 * (C_star / (k : ℝ))) := by
+            3 * Real.sqrt (Cf / (k : ℝ)) =
+              Real.sqrt (9 * (Cf / (k : ℝ))) := by
           simpa [hsqrt_mul, h3, mul_comm] using hsqrt_mul.symm
-        simpa [h_sqrt, C_star, hk_eq] using h_sq_root
+        simpa [h_sqrt, Cf, hk_eq] using h_sq_root
 
       -- Take square roots
-      have h0 : 0 ≤ C_star / (k : ℝ) := by positivity
-      have h1 : 0 ≤ 9 * C_star / (k : ℝ) := by positivity
+      have h0 : 0 ≤ Cf / (k : ℝ) := by positivity
+      have h1 : 0 ≤ 9 * Cf / (k : ℝ) := by positivity
       have h2 : 0 < ε := hε
       have h9_nonneg : (0 : ℝ) ≤ 9 := by norm_num
       have h3 : (3 : ℝ) = Real.sqrt 9 := by
         rw [show (9 : ℝ) = 3 ^ 2 by norm_num]
         rw [Real.sqrt_sq (by norm_num : (0 : ℝ) ≤ 3)]
-      calc 3 * Real.sqrt (C_star / (k : ℝ))
-          = Real.sqrt 9 * Real.sqrt (C_star / (k : ℝ)) := by rw [h3]
-        _ = Real.sqrt (9 * (C_star / (k : ℝ))) := by
-              rw [← Real.sqrt_mul h9_nonneg (C_star / (k : ℝ))]
-        _ = Real.sqrt (9 * C_star / (k : ℝ)) := by
+      calc 3 * Real.sqrt (Cf / (k : ℝ))
+          = Real.sqrt 9 * Real.sqrt (Cf / (k : ℝ)) := by rw [h3]
+        _ = Real.sqrt (9 * (Cf / (k : ℝ))) := by
+              rw [← Real.sqrt_mul h9_nonneg (Cf / (k : ℝ))]
+        _ = Real.sqrt (9 * Cf / (k : ℝ)) := by
               congr 1; ring
         _ < Real.sqrt (ε ^ 2) := by
               apply Real.sqrt_lt_sqrt h1
               exact h_sq
         _ = ε := by
               rw [Real.sqrt_sq (le_of_lt h2)]
-    have hlt : ENNReal.ofReal (3 * Real.sqrt (C_star / k)) < ENNReal.ofReal ε :=
+    have hlt : ENNReal.ofReal (3 * Real.sqrt (Cf / k)) < ENNReal.ofReal ε :=
       (ENNReal.ofReal_lt_ofReal_iff hε).mpr hlt_real
     exact lt_of_le_of_lt bound3 hlt
 
