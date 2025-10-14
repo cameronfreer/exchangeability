@@ -1372,16 +1372,15 @@ lemma l2_bound_two_windows_uniform
 
   have hξ_var : ∀ i : Fin nS, ∫ ω, (ξ i ω - mf)^2 ∂μ = (Real.sqrt σSqf) ^ 2 := by
     intro i
-    convert hvar (idx i) using 1
-    simp [ξ, Y, idx, hY_def, Real.sq_sqrt hσSq_nonneg]
+    simpa [ξ, Y, idx, hY_def, Real.sq_sqrt hσSq_nonneg] using hvar (idx i)
 
   have hξ_cov :
       ∀ i j : Fin nS, i ≠ j →
         ∫ ω, (ξ i ω - mf) * (ξ j ω - mf) ∂μ = (Real.sqrt σSqf) ^ 2 * ρf := by
     intro i j hij
     have hneq : idx i ≠ idx j := h_idx_ne hij
-    convert hcov (idx i) (idx j) hneq using 1
-    simp [ξ, Y, idx, hY_def, hneq, Real.sq_sqrt hσSq_nonneg]
+    simpa [ξ, Y, idx, hY_def, hneq, Real.sq_sqrt hσSq_nonneg] using
+      hcov (idx i) (idx j) hneq
 
   -- Express the δ-weighted sum in terms of the Fin-indexed weights
   have h_sum_p_fin :
@@ -1480,28 +1479,49 @@ lemma l2_bound_two_windows_uniform
           (2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf)) *
               (⨆ i : Fin nS, |p i - q i|)
             ≤ (2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf)) * (1 / (k : ℝ)))
-    convert h using 1
-    · ring
-    · ring
+    simpa [mul_comm, mul_left_comm, mul_assoc]
+      using h
 
   -- Final bound
   have h_sqrt_sq : (Real.sqrt σSqf) ^ 2 = σSqf := Real.sq_sqrt hσSq_nonneg
 
-  calc
-    ∫ ω,
+  have h_eq_integral :
+      ∫ ω,
         ((1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
-        (1 / (k : ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
-        = ∫ ω, (∑ i : Fin nS, p i * ξ i ω - ∑ i : Fin nS, q i * ξ i ω)^2 ∂μ := by
-            congr 1
-            funext ω
-            simpa [h_goal_fin ω]
-  _ ≤ 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) *
-        (⨆ i : Fin nS, |p i - q i|) := h_bound
-  _ ≤ 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) * (1 / (k : ℝ)) := h_bound_sup
-  _ = Cf / k := by
-        have : 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) = Cf := by
-          simp [Cf, h_sqrt_sq, mul_comm, mul_left_comm, mul_assoc]
-        simpa [this, div_eq_mul_inv]
+          (1 / (k : ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ =
+        ∫ ω, (∑ i : Fin nS, p i * ξ i ω - ∑ i : Fin nS, q i * ξ i ω)^2 ∂μ := by
+    congr 1
+    funext ω
+    simpa using
+      congrArg (fun x : ℝ => x ^ 2) (h_goal_fin ω)
+
+  have h_int_le_sup :
+      ∫ ω,
+          ((1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
+            (1 / (k : ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ ≤
+        2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) *
+          (⨆ i : Fin nS, |p i - q i|) := by
+    simpa [h_eq_integral.symm] using h_bound
+
+  have h_int_le :
+      ∫ ω,
+          ((1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
+            (1 / (k : ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ ≤
+        2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) * (1 / (k : ℝ)) :=
+    h_int_le_sup.trans h_bound_sup
+
+  have h_coef_eq :
+      2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) * ((k : ℝ)⁻¹) = Cf / k := by
+    simp [Cf, h_sqrt_sq, div_eq_mul_inv]
+
+  have h_final :
+      ∫ ω,
+          ((1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
+            (1 / (k : ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ ≤
+        Cf / k := by
+    simpa [h_coef_eq, one_div] using h_int_le
+
+  exact h_final
 
 /-- **L² bound wrapper for two starting windows**.
 
