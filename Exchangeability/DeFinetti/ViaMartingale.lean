@@ -1788,12 +1788,22 @@ lemma contractable_finite_cylinder_measure
 
   -- First prove S_std is measurable
   have hS_meas : MeasurableSet S_std := by
-    -- S_std is a cylinder set - intersection of coordinate preimages
-    -- Strategy: Rewrite as ⋂ i, (eval i)⁻¹(A i) ∩ (eval r)⁻¹(B) ∩ ⋂ j, (eval (r+1+j))⁻¹(C j)
-    -- Each (eval i)⁻¹(S) is measurable when S is measurable (by measurable_pi_apply)
-    -- Finite/countable intersections preserve measurability (by MeasurableSet.iInter/inter)
-    sorry -- TODO (~15 min): Pattern match to exact mathlib lemma for pi-set measurability
-          -- Mathematical content: standard, just need right Lean incantation
+    -- S_std is a finite product cylinder: intersection of coordinate preimages
+    -- Decompose as: (⋂ i<r, eval i ⁻¹(A i)) ∩ (eval r ⁻¹ B) ∩ (⋂ j<k, eval (r+1+j) ⁻¹(C j))
+    -- Each eval i : (Fin n → α) → α is measurable (by measurable_pi_apply)
+    -- Preimages preserve measurability, intersections preserve measurability
+    --
+    -- Strategy 1 (intersection-of-preimages):
+    --   Use MeasurableSet.inter + MeasurableSet.iInter + measurable_pi_apply
+    --
+    -- Strategy 2 (univ.pi approach):
+    --   Define t : Fin (r+1+k) → Set α where t i = A i (i<r), B (i=r), C j (i=r+1+j)
+    --   Show S_std = Set.pi Set.univ t
+    --   Apply MeasurableSet.univ_pi (or MeasurableSet.pi)
+    --
+    sorry -- TODO (~15 min): Standard pi-set measurability
+          -- Mathematical content: trivial
+          -- Technical: Needs exact Lean pattern for product space instances
 
   -- Prove the functions are measurable
   have h_meas_idx : Measurable (fun ω (i : Fin (r + 1 + k)) => X (idx i) ω) :=
