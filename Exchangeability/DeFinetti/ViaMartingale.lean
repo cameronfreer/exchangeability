@@ -2187,7 +2187,76 @@ lemma block_coord_condIndep
           (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ
         = (μ ({ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (r + 1 + j.val) ω ∈ C j)})).toReal := by
       intro A hA C hC
-      sorry -- TODO: Requires product measure / Fubini / disintegration infrastructure
+      classical
+      -- Notation for past/future cylinders
+      set f : Ω → ℝ :=
+        Set.indicator B (fun _ => (1 : ℝ)) ∘ X r with hf_def
+      set g : Ω → ℝ :=
+        Exchangeability.Probability.condExpWith μ
+          (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas) f with hg_def
+      set E_past : Set Ω := {ω | ∀ i : Fin r, X i.val ω ∈ A i} with hEp_def
+      set E_future : Set Ω := {ω | ∀ j : Fin k, X (m + 1 + j.val) ω ∈ C j} with hEf_def
+      set E_target := {ω | ∀ i : Fin r, X i.val ω ∈ A i ∧ X r ω ∈ B
+                          ∧ ∀ j : Fin k, X (r + 1 + j.val) ω ∈ C j}
+      have hE_future_meas :
+          MeasurableSet[finFutureSigma X m k] E_future := by
+        classical
+        let futureMap := fun ω => fun j : Fin k => X (m + 1 + j.val) ω
+        have h_preimage :
+            E_future = futureMap ⁻¹' finCylinder (α:=α) k C := by
+          ext ω
+          simp [hEf_def, futureMap, finCylinder, cylinder]
+        simpa [h_preimage, finFutureSigma]
+          using (⟨_, finCylinder_measurable hC, rfl⟩ :
+            MeasurableSet[finFutureSigma X m k] (futureMap ⁻¹' finCylinder (α:=α) k C))
+      have hf_int : Integrable f μ := by
+        classical
+        have : Integrable (fun _ : Ω => (1 : ℝ)) μ := integrable_const (1 : ℝ)
+        simpa [hf_def] using
+          this.indicator (μ := μ) (s := X r ⁻¹' B) ((hX_meas r) hB)
+      have hE_past_meas : MeasurableSet E_past := by
+        simpa [hEp_def] using
+          firstRCylinder_measurable_ambient X r A hX_meas hA
+      have hg_meas :
+          AEStronglyMeasurable[finFutureSigma X m k] g μ := by
+        classical
+        simp [hg_def, Exchangeability.Probability.condExpWith]
+          using stronglyMeasurable_condexp.aestronglyMeasurable
+            (μ := μ) (m := finFutureSigma X m k) (f := f)
+      have hg_int : Integrable g μ := by
+        classical
+        simpa [hg_def, Exchangeability.Probability.condExpWith]
+          using ProbabilityTheory.integrable_condexp
+            (μ := μ)
+            (m := finFutureSigma X m k)
+            (hm := finFutureSigma_le_ambient X m k hX_meas)
+            (f := f)
+      -- Rewrite the integral using indicators for the past/future events
+      have h_integral_rewrite :
+          ∫ ω in {ω | (∀ i, X i.val ω ∈ A i) ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)}, g ω ∂μ
+            = ∫ ω, Set.indicator E_past (fun _ => (1 : ℝ)) ω
+                * Set.indicator E_future (fun _ => (1 : ℝ)) ω * g ω ∂μ := by
+        classical
+        have h_indicator_eq :
+            Set.indicator (E_past ∩ E_future) g
+              = fun ω => Set.indicator E_past (fun _ => (1 : ℝ)) ω
+                  * Set.indicator E_future (fun _ => (1 : ℝ)) ω * g ω := by
+          ext ω
+          by_cases hp : ω ∈ E_past
+          · by_cases hf : ω ∈ E_future
+            · simp [hp, hf, Set.indicator_of_mem]
+            · simp [hp, hf, Set.indicator_of_not_mem, hEp_def, hEf_def]
+          · simp [hp, Set.indicator_of_not_mem, hEp_def]
+        simp [hEp_def, hEf_def, h_indicator_eq, MeasureTheory.integral_indicator, hg_int]
+      -- After rewriting, the integrand involves the past indicator, the future indicator,
+      -- and the conditional expectation.
+      -- TODO: Use `condexp_mul_eq_mul_condexp` (or an equivalent lemma) to replace
+      --       `Set.indicator E_future (fun _ => (1 : ℝ)) ω * g ω` with
+      --       `Set.indicator E_future (fun _ => (1 : ℝ)) ω * f ω` inside the integral.
+      -- TODO: Apply the tower property to push `Set.indicator E_past` through the conditional expectation.
+      -- TODO: Invoke contractability to replace the integrand with the probability of the target set.
+      -- TODO: Translate the resulting integral into `(μ E_target).toReal`.
+      sorry
 
     -- Combine steps 1-3 to show cylinders are in GoodSets
     have cylinders_in_goodsets : ∀ (A : Fin r → Set α) (hA : ∀ i, MeasurableSet (A i))
