@@ -558,19 +558,17 @@ lemma sum_window_eq_sum_fin {β : Type*} [AddCommMonoid β]
   have h_range_to_fin :
       ∑ i ∈ Finset.range k, g (n + i + 1)
         = ∑ i : Fin k, g (n + i.val + 1) := by
-    refine ((Finset.sum_bij (fun (i : Fin k) _ => i.val)
-        ?_ ?_ ?_ ?_) : _ = _).symm
-    · intro i _
-      simpa [Finset.mem_range] using i.is_lt
-    · intro i hi
+    classical
+    refine (Finset.sum_bij (fun (i : Fin k) _ => i.val)
+        (fun i _ => by
+          simp [Finset.mem_range, i.is_lt])
+        (fun i hi j hj h => by
+          exact Fin.ext h)
+        (fun b hb => ?_)
+        (fun i _ => rfl)).symm
+    · rcases Finset.mem_range.mp hb with hb_lt
+      refine ⟨⟨b, hb_lt⟩, ?_, rfl⟩
       simp
-    · intro a ha
-      rcases Finset.mem_range.mp ha with ha_lt
-      refine ⟨⟨a, ha_lt⟩, ?_, ?_⟩
-      · simp
-      · rfl
-    · intro i j hi hj h
-      exact Fin.ext h
   simpa using h_sum_range.trans h_range_to_fin
 
 
@@ -1136,7 +1134,7 @@ lemma l2_bound_two_windows_uniform
       ∑ t ∈ S, (if t ∈ A then (1 / (k : ℝ)) else 0) * Y t ω
           = ∑ t ∈ A, (1 / (k : ℝ)) * Y t ω := h_sum
       _ = (1 / (k : ℝ)) * ∑ t ∈ A, Y t ω := by
-            simp [Finset.mul_sum, mul_comm, mul_left_comm, mul_assoc]
+            simp [Finset.mul_sum]
 
   -- Difference of window averages written as a single sum over S with weights δ
   have h_sum_delta :
@@ -1158,7 +1156,9 @@ lemma l2_bound_two_windows_uniform
           ∑ t ∈ S, (pS t * Y t ω - qS t * Y t ω) := by
       refine Finset.sum_congr rfl ?_
       intro t ht
-      simp [δ, mul_sub]
+      have : (pS t - qS t) * Y t ω = pS t * Y t ω - qS t * Y t ω := by
+        ring
+      simpa [δ] using this
     have h_split :
         ∑ t ∈ S, δ t * Y t ω =
           ∑ t ∈ S, pS t * Y t ω - ∑ t ∈ S, qS t * Y t ω := by
@@ -1204,7 +1204,10 @@ lemma l2_bound_two_windows_uniform
         ∑ t ∈ window n k, (1 / (k : ℝ))
           = (window n k).card * (1 / (k : ℝ)) := by
       simp [Finset.sum_const]
-    simpa [h_sum, h_const, h_one]
+    calc
+      ∑ t ∈ S, pS t = (window n k).card * (1 / (k : ℝ)) := by
+        simpa [h_sum, h_const]
+      _ = 1 := h_one
 
   have h_sum_qS :
       ∑ t ∈ S, qS t = 1 := by
@@ -1231,7 +1234,10 @@ lemma l2_bound_two_windows_uniform
         ∑ t ∈ window m k, (1 / (k : ℝ))
           = (window m k).card * (1 / (k : ℝ)) := by
       simp [Finset.sum_const]
-    simpa [h_sum, h_const, h_one]
+    calc
+      ∑ t ∈ S, qS t = (window m k).card * (1 / (k : ℝ)) := by
+        simpa [h_sum, h_const]
+      _ = 1 := h_one
 
   -- Positivity of the weights
   have hpS_nonneg : ∀ t, 0 ≤ pS t := by
