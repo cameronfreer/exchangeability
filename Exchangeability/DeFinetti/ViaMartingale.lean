@@ -2064,13 +2064,14 @@ lemma block_coord_condIndep
       -- Rewrite the integral using this
       rw [h_indicator_eq]
 
-      -- Now we need: ∫ ω in E_cyl, indicator (X r⁻¹' B) 1 dμ = μ(E_target).toReal
-      -- By integral_indicator: ∫ indicator S dμ = μ(S).toReal (when S is measurable)
-      -- But we have a restricted integral
-      sorry -- TODO (~15 min): setIntegral_indicator pattern
-            -- Need: ∫ ω in E_cyl, indicator (X r⁻¹' B) 1 dμ = (μ.restrict E_cyl)(X r⁻¹' B).toReal
-            -- Then: (μ.restrict E_cyl)(X r⁻¹' B) = μ(E_cyl ∩ X r⁻¹' B)
-            -- Finally: E_cyl ∩ X r⁻¹' B = E_target (by ext + simp)
+      -- Apply setIntegral_indicator to move the indicator inside the domain
+      have hXrB_meas : MeasurableSet (X r ⁻¹' B) := hX_meas r hB
+
+      sorry -- TODO (~10 min): Apply setIntegral_indicator + setIntegral_const
+            -- Pattern issue: Need to match ∫ ω in E_cyl, indicator (X r⁻¹' B) 1 ω dμ
+            -- with setIntegral_indicator signature
+            -- Then: setIntegral_const to get μ(E_cyl ∩ (X r⁻¹' B)).toReal
+            -- Finally: show E_cyl ∩ (X r⁻¹' B) = E_target (by ext + tauto)
 
     -- Step 2: Apply contractability
     have contractability_step : ∀ (A : Fin r → Set α) (hA : ∀ i, MeasurableSet (A i))
