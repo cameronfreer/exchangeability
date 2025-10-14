@@ -2752,7 +2752,9 @@ theorem subsequence_criterion_convergence_in_probability
     calc μ {ω | 1 / (k + 1 : ℝ) ≤ |ξ (max m N) ω - ξ_limit ω|}
         ≤ ENNReal.ofReal ((1 / 2) ^ (k + 1) / 2) := hN (max m N) (le_max_right m N)
       _ < ENNReal.ofReal ((1 / 2) ^ (k + 1)) := by
-          sorry  -- TODO (2 min): ofReal is monotone and (1/2)^(k+1)/2 < (1/2)^(k+1)
+          have h_pos : (0 : ℝ) < (1 / 2) ^ (k + 1) := by positivity
+          have h_ineq : (1 / 2 : ℝ) ^ (k + 1) / 2 < (1 / 2) ^ (k + 1) := by linarith
+          exact (ENNReal.ofReal_lt_ofReal_iff h_pos).mpr h_ineq
 
   -- Build φ recursively using Nat.rec with the helper
   let φ : ℕ → ℕ := Nat.rec
@@ -2803,13 +2805,16 @@ theorem subsequence_criterion_convergence_in_probability
     le_of_lt (hφ_small k)
 
   -- Geometric series: ∑_k (1/2)^(k+1) converges (ratio < 1)
-  have hsum_finite : ∑' k, μ (E k) < ∞ := by
-    sorry  -- TODO (5 min): Use ENNReal.tsum_geometric from mathlib
+  -- TODO: Lean elaboration times out when proving Summable (fun k => (1/2)^(k+1))
+  -- Mathematically trivial: (1/2)^(k+1) = (1/2) * (1/2)^k, and ∑ (1/2)^k converges
+  -- Attempted: summable_geometric_of_lt_one, summable_geometric_two.mul_left, convert
+  -- All cause deterministic timeout at whnf (200k heartbeats)
+  -- Need mathlib expert or set_option maxHeartbeats 400000
+  have hsum_finite : ∑' k, μ (E k) ≠ ⊤ := by sorry
 
   -- Borel-Cantelli
-  have h_BC : ∀ᵐ ω ∂μ, ∀ᶠ k in atTop, ω ∉ E k := by
-    apply measure_limsup_eq_zero
-    exact hsum_finite
+  have h_BC : ∀ᵐ ω ∂μ, ∀ᶠ k in atTop, ω ∉ E k :=
+    ae_eventually_notMem hsum_finite
 
   -- Extract convergence
   refine ⟨φ, hφ_mono, ?_⟩
@@ -2819,19 +2824,22 @@ theorem subsequence_criterion_convergence_in_probability
   rw [Metric.tendsto_atTop]
   intro ε hε
   obtain ⟨K', hK'⟩ := exists_nat_one_div_lt hε
-  use max K K'
+  use max K (K' + 1)
   intro k hk
   simp only [Real.dist_eq]
-  have : ω ∉ E k := hK k (le_trans (le_max_left K K') hk)
+  have hk_ge_K : k ≥ K := le_trans (le_max_left K (K' + 1)) hk
+  have : ω ∉ E k := hK k hk_ge_K
   simp only [E, Set.mem_setOf_eq, not_le] at this
   calc |ξ (φ k) ω - ξ_limit ω|
       < 1 / (k + 1 : ℝ) := this
-    _ ≤ 1 / (max K K' + 1 : ℝ) := by
-        apply div_le_div_of_nonneg_left <;> [norm_num, positivity, omega]
-    _ ≤ 1 / (K' : ℝ) := by
-        apply div_le_div_of_nonneg_left <;> [norm_num, positivity]
-        calc (K' : ℝ) ≤ max K K' := by simp [le_max_right]
-          _ < max K K' + 1 := by linarith
+    _ ≤ 1 / (K' + 1 : ℝ) := by
+        apply div_le_div_of_nonneg_left
+        · norm_num
+        · positivity
+        · have : (K' + 1 : ℝ) ≤ (k : ℝ) := by
+            calc (K' + 1 : ℝ) ≤ (max K (K' + 1) : ℝ) := by exact_mod_cast le_max_right K (K' + 1)
+              _ ≤ (k : ℝ) := by exact_mod_cast hk
+          linarith
     _ < ε := hK'
 
 /-- **OBSOLETE with refactored approach**: This theorem is no longer needed.
