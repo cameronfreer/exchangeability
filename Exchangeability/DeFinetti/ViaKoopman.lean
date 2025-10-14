@@ -1179,14 +1179,66 @@ private lemma condexp_pair_factorization_MET
           rw [hω]
           field_simp
 
-    -- Step 3: Interpret the Cesàro averages inside L² via Birkhoff averages.
     let g₀ : Ω[α] → ℝ := fun ω => g (ω 0)
+    -- Step 3: Interpret the Cesàro averages inside L² via Birkhoff averages.
+    -- Pointwise, the Cesàro average `A n` is exactly the Birkhoff average of `g₀ := g ∘ π₀`
+    -- along the shift.  We record this identity since the right-hand side interacts neatly
+    -- with the Koopman operator acting on `L²`.
+    have hA_eq_birkhoff : ∀ n ω,
+        A n ω = birkhoffAverage ℝ (shift (α := α)) g₀ (n + 1) ω := by
+      intro n ω
+      -- unfold both sides and use the explicit description of iterates of the shift.
+      simp [A, g₀, birkhoffAverage, birkhoffSum, shift_iterate_apply, Finset.mul_sum,
+        Finset.sum_mul, add_comm, add_left_comm, add_assoc, mul_comm, mul_left_comm,
+        mul_assoc]
     have hg₀_memLp : MemLp g₀ 2 μ :=
       MemLp.of_bound
         ((hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable)
         Cg (ae_of_all μ (fun ω => hCg (ω 0)))
     let g₀L2 : Lp ℝ 2 μ := hg₀_memLp.toLp g₀
     have hg₀_ae : g₀L2 =ᵐ[μ] g₀ := MemLp.coeFn_toLp hg₀_memLp
+    -- The iterates of the Koopman operator agree almost everywhere with the pointwise
+    -- iterates of the shift applied to `g₀`.
+    have h_iter : ∀ k : ℕ,
+        ((koopman shift hσ)^[k] g₀L2 : Ω[α] → ℝ)
+          =ᵐ[μ] fun ω => g₀ ((shift^[k]) ω) := by
+      intro k
+      induction k with
+      | zero =>
+          simpa using hg₀_ae
+      | succ k ih =>
+          have h_comp :
+              ((koopman shift hσ)
+                  ((koopman shift hσ)^[k] g₀L2) : Ω[α] → ℝ)
+                =ᵐ[μ] fun ω => ((koopman shift hσ)^[k] g₀L2) (shift ω) := by
+            simpa [koopman] using
+              (MeasureTheory.Lp.coeFn_compMeasurePreserving
+                (μ := μ) (μb := μ)
+                (f := shift (α := α)) (hf := hσ)
+                (g := ((koopman shift hσ)^[k] g₀L2)))
+          have h_shift :
+              (fun ω => ((koopman shift hσ)^[k] g₀L2) (shift ω))
+                =ᵐ[μ] fun ω => g₀ ((shift^[k + 1]) ω) := by
+            have h_q := hσ.quasiMeasurePreserving
+            have := Measure.QuasiMeasurePreserving.ae_eq_comp
+              (μ := μ) (ν := μ) (f := shift (α := α))
+              (g := ((koopman shift hσ)^[k] g₀L2))
+              (g' := fun ω => g₀ ((shift^[k]) ω))
+              h_q ih
+            -- simplify the compositions using the explicit formula for iterates
+            simpa [Function.comp, shift_iterate_apply, Function.iterate_succ] using this
+          exact h_comp.trans h_shift
+    -- Summing over the iterates yields the classical Cesàro sums.
+    have h_sum :
+        (fun ω =>
+            (Finset.range (n + 1)).sum fun k =>
+              ((koopman shift hσ)^[k] g₀L2 : Ω[α] → ℝ) ω)
+          =ᵐ[μ]
+        fun ω =>
+            (Finset.range (n + 1)).sum fun k => g₀ ((shift^[k]) ω) := by
+      apply Finset.eventuallyEq_sum
+      intro k _
+      exact h_iter k
     let A_L2 : ℕ → Lp ℝ 2 μ :=
       fun n => birkhoffAverage ℝ (koopman shift hσ) _root_.id (n + 1) g₀L2
     have hA_L2_tendsto :
@@ -1198,12 +1250,33 @@ private lemma condexp_pair_factorization_MET
         tendsto_add_atTop_iff_nat.2 tendsto_id
       exact this.comp h_add
 
-    have h_met_convergence : ∀ᵐ ω ∂μ,
-        Tendsto (fun n => A n ω) atTop (𝓝 (μ[(fun ω => g (ω 0)) | m] ω)) := by
-      sorry -- TODO: Upgrade L² convergence of Birkhoff averages to pointwise a.e. convergence
+    -- TODO: Having identified `A_L2 n` with the pointwise Cesàro sums, the remaining work in
+    -- this step is to compare `condexpL2 g₀L2` with the classical conditional expectation and
+    -- deduce from `hA_L2_tendsto` that `‖A n - μ[g₀ | m]‖₁ → 0`.
+    -- The comparison above shows that `A_L2 n` realises the same pointwise averages as `A n`.
+    have hA_L2_ae : ∀ n,
+        (A_L2 n : Ω[α] → ℝ) =ᵐ[μ] A n := by
+      intro n
+      have h_avg :
+          (A_L2 n : Ω[α] → ℝ)
+            =ᵐ[μ]
+          fun ω => (1 / (n + 1 : ℝ)) *
+              (Finset.range (n + 1)).sum fun k => g₀ ((shift^[k]) ω) := by
+        refine (h_sum.mono ?_)
+        intro ω hω
+        simp [A_L2, birkhoffAverage, birkhoffSum, hω]
+      refine h_avg.trans ?_
+      -- Convert back to the original Cesàro expression using the definition of `A`.
+      refine (ae_of_all μ ?_)
+      intro ω
+      simp [A, g₀, shift_iterate_apply, Finset.mul_sum, Finset.sum_mul,
+        add_comm, add_left_comm, add_assoc, mul_comm, mul_left_comm, mul_assoc]
 
     -- Step 4: f·A_n → f·CE[g(ω₀)|m] in L¹ (by dominated convergence)
     -- Note: Cf, hCf, Cg, hCg already extracted at h_tower level
+    -- TODO: once the previous step yields the desired L¹ convergence for `A n`, replace
+    -- the dominated-convergence proof below by the short L¹ estimate described in the
+    -- comments (using `‖f·A_n - f·Y‖₁ ≤ Cf · ‖A_n - Y‖₁`).
     have h_product_convergence :
         Tendsto (fun n => ∫ ω, |f (ω 0) * A n ω - f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω| ∂μ)
                 atTop (𝓝 0) := by
@@ -1436,7 +1509,10 @@ private lemma condexp_pair_factorization_MET
     -- Since CE[f·A_n|m] = CE[f·g|m] for all n (step 2),
     -- and CE[f·A_n|m] → CE[f·CE[g|m]|m] in L¹ (step 5),
     -- we have ∫|CE[f·g|m] - CE[f·CE[g|m]|m]| = 0, hence they are ae equal
-    have h_const_limit : μ[(fun ω => f (ω 0) * g (ω 0)) | m]
+      -- TODO: after expressing the previous steps purely in L², this final stage should
+      -- argue directly with L¹ norms (constant sequence + convergence ⇒ 0).  The current
+      -- placeholder will be replaced once the earlier lemmas are filled in.
+      have h_const_limit : μ[(fun ω => f (ω 0) * g (ω 0)) | m]
         =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] := by
       /-
       **THE KEY INSIGHT**: Work entirely in L¹ - no pointwise limits needed!
@@ -1494,6 +1570,8 @@ private lemma condexp_pair_factorization_MET
       set X := μ[(fun ω => f (ω 0) * g (ω 0)) | m]
       set Y := μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m]
 
+      -- TODO: obtain this integrability directly from the L¹ convergence statements once
+      -- the earlier steps are refactored.
       have h_integrable_diff : Integrable (X - Y) μ := by
         sorry -- TODO: Integrability of difference of conditional expectations
 
