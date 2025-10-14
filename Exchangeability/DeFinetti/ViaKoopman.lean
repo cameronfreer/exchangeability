@@ -1179,88 +1179,28 @@ private lemma condexp_pair_factorization_MET
           rw [hω]
           field_simp
 
-    -- Step 3: A_n → CE[g(ω₀)|m] ae (by MET + bounded convergence)
+    -- Step 3: Interpret the Cesàro averages inside L² via Birkhoff averages.
+    let g₀ : Ω[α] → ℝ := fun ω => g (ω 0)
+    have hg₀_memLp : MemLp g₀ 2 μ :=
+      MemLp.of_bound
+        ((hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable)
+        Cg (ae_of_all μ (fun ω => hCg (ω 0)))
+    let g₀L2 : Lp ℝ 2 μ := hg₀_memLp.toLp g₀
+    have hg₀_ae : g₀L2 =ᵐ[μ] g₀ := MemLp.coeFn_toLp hg₀_memLp
+    let A_L2 : ℕ → Lp ℝ 2 μ :=
+      fun n => birkhoffAverage ℝ (koopman shift hσ) _root_.id (n + 1) g₀L2
+    have hA_L2_tendsto :
+        Tendsto (fun n => A_L2 n) atTop
+          (𝓝 (condexpL2 (μ := μ) g₀L2)) := by
+      have := birkhoffAverage_tendsto_condexp (μ := μ) (α := α) hσ g₀L2
+      have h_add :
+          Tendsto (fun n : ℕ => n + 1) atTop atTop :=
+        tendsto_add_atTop_iff_nat.2 tendsto_id
+      exact this.comp h_add
+
     have h_met_convergence : ∀ᵐ ω ∂μ,
         Tendsto (fun n => A n ω) atTop (𝓝 (μ[(fun ω => g (ω 0)) | m] ω)) := by
-      /-
-      **PROOF STRATEGY**:
-
-      The Cesàro average A_n(ω) = (1/(n+1)) Σ g(ω k) is the Birkhoff average
-      of the function g₀ := g ∘ (· 0) : Ω[α] → ℝ under the shift map.
-
-      By the Mean Ergodic Theorem (MET):
-      - Birkhoff averages converge ae to the conditional expectation w.r.t. shift-invariant σ-algebra
-      - That is: A_n → CE[g₀|shiftInvariantSigma] ae
-
-      We need to show CE[g₀|m] = CE[g(ω 0)|m], which is essentially definitional.
-
-      The technical steps are:
-      1. Show A_n is the Birkhoff average of g₀
-      2. Apply MET to get ae convergence
-      3. Identify the limit with CE[g(ω 0)|m]
-      -/
-
-      -- Define g₀ for clarity
-      let g₀ : Ω[α] → ℝ := fun ω => g (ω 0)
-
-      -- Step 3a: A_n is the Birkhoff average of g₀
-      have h_birkhoff : ∀ n ω, A n ω = (1 / (n + 1 : ℝ)) * (Finset.range (n + 1)).sum (fun k => g₀ ((shift^[k]) ω)) := by
-        intro n ω
-        -- Prove general fact: (shift^[k] ω) m = ω (m + k)
-        have h_shift_iter : ∀ k m, (shift^[k] ω) m = ω (m + k) := by
-          intro k
-          induction k with
-          | zero =>
-            intro m
-            simp [Function.iterate_zero]
-          | succ k' ih =>
-            intro m
-            rw [Function.iterate_succ_apply']
-            simp only [shift]
-            rw [ih]
-            ring_nf
-        -- Apply with m=0 to get (shift^[k] ω) 0 = ω k
-        congr 1
-        ext k
-        simp [h_shift_iter]
-
-      -- Step 3b: g₀ is in L²
-      have hg₀_L2 : MemLp g₀ 2 μ := by
-        refine MeasureTheory.MemLp.of_bound (μ := μ) (p := 2)
-          (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable Cg ?_
-        filter_upwards with ω
-        simp [Real.norm_eq_abs, g₀]
-        exact hCg (ω 0)
-
-      -- Step 3c: Apply Pointwise Ergodic Theorem for ae convergence
-      --
-      -- We have:
-      -- - A n ω = (1/(n+1)) * Σ_{k=0}^n g₀((shift^[k]) ω)  [by h_birkhoff]
-      -- - hg₀_L2 : MemLp g₀ 2 μ
-      -- - hσ : MeasurePreserving shift μ μ
-      --
-      -- Need: **Pointwise Ergodic Theorem** (Birkhoff 1931)
-      --   For g₀ ∈ L¹(μ) and measure-preserving shift:
-      --   (1/n) Σ_{k=0}^{n-1} g₀(shift^k ω) → μ[g₀ | shiftInvariantSigma] ω  a.e.
-      --
-      -- Note: birkhoffAverage_tendsto_condexp (line 1841) only gives L² convergence.
-      --       The pointwise ergodic theorem is stronger and remains to be formalized.
-      --
-      -- Strategy once available:
-      --   1. Convert g₀ to Lp element using hg₀_L2
-      --   2. Apply pointwise ergodic theorem
-      --   3. Use MemLp.condExpL2_ae_eq_condExp to relate condExpL2 to condExp
-      have h_met : ∀ᵐ ω ∂μ, Tendsto (fun n => A n ω) atTop (𝓝 (μ[g₀ | m] ω)) := by
-        sorry -- TODO: Apply Pointwise Ergodic Theorem (Birkhoff)
-
-      -- Step 3d: Simplify - CE[g₀|m] = CE[g(ω 0)|m] by definition
-      have h_eq : μ[g₀ | m] =ᵐ[μ] μ[(fun ω => g (ω 0)) | m] := by
-        apply condExp_congr_ae
-        rfl
-
-      -- Combine: A_n → CE[g(ω 0)|m] ae
-      filter_upwards [h_met, h_eq] with ω h_conv h_eq_ω
-      rwa [h_eq_ω] at h_conv
+      sorry -- TODO: Upgrade L² convergence of Birkhoff averages to pointwise a.e. convergence
 
     -- Step 4: f·A_n → f·CE[g(ω₀)|m] in L¹ (by dominated convergence)
     -- Note: Cf, hCf, Cg, hCg already extracted at h_tower level
