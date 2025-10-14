@@ -2140,11 +2140,15 @@ lemma block_coord_condIndep
           exact ⟨_, finCylinder_measurable hC, rfl⟩
 
         -- Intersection is measurable in the sup
-        -- Need: MeasurableSet[m₁] E₁ ∧ MeasurableSet[m₂] E₂ → MeasurableSet[m₁ ⊔ m₂] (E₁ ∩ E₂)
-        -- Strategy: Lift each using σ-algebra ordering, then apply MeasurableSet.inter
-        sorry -- TODO (~10 min): Standard σ-algebra lifting + intersection
-              -- Mathematical content: trivial
-              -- Just need exact Lean pattern for measurability lifting across ≤
+        -- Need: MeasurableSet[m₁] E ∧ m₁ ≤ m → MeasurableSet[m] E
+        -- This is trivial: m₁ ≤ m means m₁ ⊆ m as collections of sets
+        -- So E ∈ m₁ implies E ∈ m
+        sorry -- TODO (~5 min): Standard measurability lifting
+              -- Use: (le_sup_left : firstRSigma X r ≤ ...) applied to hE_past
+              -- And: (le_sup_right : finFutureSigma X m k ≤ ...) applied to hE_future
+              -- Then: MeasurableSet.inter for the intersection
+              -- Mathematical content: completely trivial
+              -- Technical issue: finding exact syntax for applying ≤ to MeasurableSet
       · -- Integral equality
         rw [lhs_computation A hA C hC, rhs_computation A hA C hC]
         rw [contractability_step A hA C hC]
