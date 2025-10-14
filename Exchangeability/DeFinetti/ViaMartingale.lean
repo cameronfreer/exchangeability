@@ -2362,24 +2362,156 @@ lemma block_coord_condIndep
         -- Use measure continuity from above for indicator functions
         -- For decreasing sequences with finite measure
 
-        -- Extract the functions we're integrating
-        let f := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X r ω)
-        let g := fun ω => (Exchangeability.Probability.condExpWith μ
-          (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
-          (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω
-
-        -- For each n, we have ∫_{E_n} f = ∫_{E_n} g
-        have h_eq_n : ∀ n, ∫ ω in E_seq n, f ω ∂μ = ∫ ω in E_seq n, g ω ∂μ := by
-          intro n
-          exact (hE_in n).2
-
-        -- Need to show: ∫_{⋂ E_n} f = ∫_{⋂ E_n} g
+        -- Need to show: ∫_{⋂ E_n} indicator = ∫_{⋂ E_n} condexp
         -- Use dominated convergence for integrals over decreasing sets
         -- Dominating function: constant 1 (since indicator ≤ 1)
-        sorry -- TODO: Apply measure continuity from above + DCT pattern
-              -- Can use: lim ∫_{E_n} f = ∫_{⋂ E_n} f (by DCT, dominated by 1)
-              -- Then: lim (∫_{E_n} f) = lim (∫_{E_n} g) (by h_eq_n)
-              --       ∫_{⋂ E_n} f = ∫_{⋂ E_n} g
+        classical
+        set f₀ := fun ω => Set.indicator (X r ⁻¹' B) (fun _ => (1 : ℝ)) ω with hf₀_def
+        set g₀ := fun ω =>
+          Exchangeability.Probability.condExpWith μ
+            (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
+            (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r) ω with hg₀_def
+
+        -- The previous equality specializes to these definitions
+        have h_eq_n' : ∀ n, ∫ ω in E_seq n, f₀ ω ∂μ = ∫ ω in E_seq n, g₀ ω ∂μ := by
+          intro n
+          simpa [hf₀_def, hg₀_def, Set.indicator, Set.mem_preimage, Function.comp] using
+            (hE_in n).2
+
+        -- Integrability data
+        have hf_meas : MeasurableSet (X r ⁻¹' B) := (hX_meas r) hB
+        have hf_int : Integrable f₀ μ := by
+          have hconst : Integrable (fun _ : Ω => (1 : ℝ)) μ := integrable_const _
+          simpa [hf₀_def] using
+            hconst.indicator (μ := μ) (s := X r ⁻¹' B) hf_meas
+        have hg_int : Integrable g₀ μ := by
+          simpa [hg₀_def, Exchangeability.Probability.condExpWith]
+            using ProbabilityTheory.integrable_condexp
+              (μ := μ)
+              (m := finFutureSigma X m k)
+              (hm := finFutureSigma_le_ambient X m k hX_meas)
+              (f := Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)
+
+        -- Indicator rewriting
+        have hf_set : ∀ n, ∫ ω in E_seq n, f₀ ω ∂μ
+            = ∫ ω, Set.indicator (E_seq n) f₀ ω ∂μ := by
+          intro n; simp [MeasureTheory.integral_indicator, (hE_in n).1, hf_int]
+        have hg_set : ∀ n, ∫ ω in E_seq n, g₀ ω ∂μ
+            = ∫ ω, Set.indicator (E_seq n) g₀ ω ∂μ := by
+          intro n; simp [MeasureTheory.integral_indicator, (hE_in n).1, hg_int]
+
+        -- Dominated convergence for decreasing sequence
+        have h_tendsto_f :
+            Tendsto (fun n => ∫ ω, Set.indicator (E_seq n) f₀ ω ∂μ) atTop
+              (𝓝 (∫ ω, Set.indicator (⋂ n, E_seq n) f₀ ω ∂μ)) := by
+          refine MeasureTheory.tendsto_integral_of_dominated_convergence
+            (fun ω => ‖f₀ ω‖) ?_ hf_int.norm ?_ ?_
+          · intro n; exact (hf_int.aestronglyMeasurable.indicator (hE_in n).1)
+          · intro n; exact Filter.eventually_of_forall fun ω =>
+              by_cases hω : ω ∈ E_seq n
+              <;> simp [Set.indicator_of_mem, Set.indicator_of_not_mem, hω]
+          · refine Filter.eventually_of_forall ?_
+            intro ω
+            classical
+            by_cases hω : ω ∈ ⋂ n, E_seq n
+            · have h_mem : ∀ n, ω ∈ E_seq n := by
+                simpa [Set.mem_iInter] using hω
+              have h_eventual :
+                  ∀ᶠ n in Filter.atTop,
+                    Set.indicator (E_seq n) f₀ ω = f₀ ω :=
+                Filter.eventually_of_forall fun n => by
+                  simp [Set.indicator_of_mem, h_mem n]
+              have h_limit := tendsto_const_nhds (c := f₀ ω)
+              have h_lim_val : Set.indicator (⋂ n, E_seq n) f₀ ω = f₀ ω := by
+                simp [Set.indicator_of_mem, hω]
+              simpa [h_lim_val] using
+                (Filter.tendsto_congr' h_eventual).2 h_limit
+            · have h_not : ∃ N, ω ∉ E_seq N := by
+                simpa [Set.mem_iInter, not_forall] using hω
+              obtain ⟨N, hN⟩ := h_not
+              have h_out : ∀ᶠ n in Filter.atTop, ω ∉ E_seq n := by
+                refine Filter.eventually_atTop.2 ⟨N, ?_⟩
+                intro n hn
+                have hsubset : E_seq n ⊆ E_seq N := hAnti hn
+                exact fun hmem => hN (hsubset hmem)
+              have h_eventual :
+                  ∀ᶠ n in Filter.atTop,
+                    Set.indicator (E_seq n) f₀ ω = (0 : ℝ) :=
+                h_out.mono fun n hn => by
+                  simp [Set.indicator_of_not_mem, hn]
+              have h_limit := tendsto_const_nhds (c := 0 : ℝ)
+              have h_lim_val : Set.indicator (⋂ n, E_seq n) f₀ ω = 0 := by
+                simp [Set.indicator_of_not_mem, hω]
+              simpa [h_lim_val] using
+                (Filter.tendsto_congr' h_eventual).2 h_limit
+
+        have h_tendsto_g :
+            Tendsto (fun n => ∫ ω, Set.indicator (E_seq n) g₀ ω ∂μ) atTop
+              (𝓝 (∫ ω, Set.indicator (⋂ n, E_seq n) g₀ ω ∂μ)) := by
+          refine MeasureTheory.tendsto_integral_of_dominated_convergence
+            (fun ω => ‖g₀ ω‖) ?_ hg_int.norm ?_ ?_
+          · intro n; exact (hg_int.aestronglyMeasurable.indicator (hE_in n).1)
+          · intro n; exact Filter.eventually_of_forall fun ω =>
+              by_cases hω : ω ∈ E_seq n
+              <;> simp [Set.indicator_of_mem, Set.indicator_of_not_mem, hω]
+          · refine Filter.eventually_of_forall ?_
+            intro ω
+            classical
+            by_cases hω : ω ∈ ⋂ n, E_seq n
+            · have h_mem : ∀ n, ω ∈ E_seq n := by
+                simpa [Set.mem_iInter] using hω
+              have h_eventual :
+                  ∀ᶠ n in Filter.atTop,
+                    Set.indicator (E_seq n) g₀ ω = g₀ ω :=
+                Filter.eventually_of_forall fun n => by
+                  simp [Set.indicator_of_mem, h_mem n]
+              have h_limit := tendsto_const_nhds (c := g₀ ω)
+              have h_lim_val : Set.indicator (⋂ n, E_seq n) g₀ ω = g₀ ω := by
+                simp [Set.indicator_of_mem, hω]
+              simpa [h_lim_val] using
+                (Filter.tendsto_congr' h_eventual).2 h_limit
+            · have h_not : ∃ N, ω ∉ E_seq N := by
+                simpa [Set.mem_iInter, not_forall] using hω
+              obtain ⟨N, hN⟩ := h_not
+              have h_out : ∀ᶠ n in Filter.atTop, ω ∉ E_seq n := by
+                refine Filter.eventually_atTop.2 ⟨N, ?_⟩
+                intro n hn
+                have hsubset : E_seq n ⊆ E_seq N := hAnti hn
+                exact fun hmem => hN (hsubset hmem)
+              have h_eventual :
+                  ∀ᶠ n in Filter.atTop,
+                    Set.indicator (E_seq n) g₀ ω = (0 : ℝ) :=
+                h_out.mono fun n hn => by
+                  simp [Set.indicator_of_not_mem, hn]
+              have h_limit := tendsto_const_nhds (c := 0 : ℝ)
+              have h_lim_val : Set.indicator (⋂ n, E_seq n) g₀ ω = 0 := by
+                simp [Set.indicator_of_not_mem, hω]
+              simpa [h_lim_val] using
+                (Filter.tendsto_congr' h_eventual).2 h_limit
+
+        -- Use uniqueness of limits
+        let seq_f := fun n => ∫ ω, Set.indicator (E_seq n) f₀ ω ∂μ
+        let seq_g := fun n => ∫ ω, Set.indicator (E_seq n) g₀ ω ∂μ
+        have h_seq_eq : ∀ n, seq_f n = seq_g n := by
+          intro n; simp [seq_f, seq_g, hf_set n, hg_set n, h_eq_n' n]
+        have h_limit_f : Tendsto seq_f atTop
+            (𝓝 (∫ ω, Set.indicator (⋂ n, E_seq n) f₀ ω ∂μ)) := by
+          simpa [seq_f] using h_tendsto_f
+        have h_limit_g : Tendsto seq_f atTop
+            (𝓝 (∫ ω, Set.indicator (⋂ n, E_seq n) g₀ ω ∂μ)) := by
+          simpa [seq_f, seq_g, h_seq_eq] using h_tendsto_g
+        have h_lim_eq := tendsto_nhds_unique h_limit_f h_limit_g
+
+        -- Final integral equality for the intersection
+        have h_inter :
+            ∫ ω in ⋂ n, E_seq n, f₀ ω ∂μ
+              = ∫ ω in ⋂ n, E_seq n, g₀ ω ∂μ := by
+          simpa [seq_f, MeasureTheory.integral_indicator, hf₀_def, hg₀_def,
+            (MeasurableSet.iInter fun n => (hE_in n).1)] using h_lim_eq
+
+        -- Conclude with the desired formulation
+        simpa [hf₀_def, hg₀_def, Set.indicator, Set.mem_preimage, Function.comp]
+          using h_inter
 
     -- Part C: Apply Dynkin's π-λ theorem
     --
