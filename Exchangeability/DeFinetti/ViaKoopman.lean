@@ -1255,9 +1255,7 @@ private lemma condexp_pair_factorization_MET
     -- equality explicitly.
     have hA_L2_ae : ∀ n, (A_L2 n : Ω[α] → ℝ) =ᵐ[μ] A n := by
       intro n
-      -- start from the equality of Birkhoff sums
       have h_sum_n := h_sum n
-      -- rewrite the averages in terms of `A`
       refine h_sum_n.mono ?_
       intro ω hω
       simp [A_L2, birkhoffAverage, birkhoffSum, A, g₀, hω]
@@ -1267,8 +1265,14 @@ private lemma condexp_pair_factorization_MET
       hg₀_memLp.condExpL2_ae_eq_condExp
         (hm := shiftInvariantSigma_le (α := α))
 
-    -- TODO: Use `hA_L2_tendsto`, `hA_L2_ae`, and `h_condexpL2_ae` to deduce the L² (hence L¹)
-    -- convergence of the concrete averages `A n` to `μ[g₀ | m]`.
+    -- The L² convergence in `Lp` automatically yields convergence of the norms.
+    have hA_L2_norm :
+        Tendsto (fun n => ‖A_L2 n - condexpL2 (μ := μ) g₀L2‖) atTop (𝓝 0) := by
+      have h_sub := hA_L2_tendsto.sub tendsto_const_nhds
+      simpa using (tendsto_iff_norm_tendsto_zero.1 h_sub)
+
+    -- TODO: Use `hA_L2_norm`, together with `hA_L2_ae` and `h_condexpL2_ae`, to transfer the
+    -- convergence to the concrete averages `A n` and derive the desired L¹ limit.
     -- The comparison above shows that `A_L2 n` realises the same pointwise averages as `A n`.
     have hA_L2_ae : ∀ n,
         (A_L2 n : Ω[α] → ℝ) =ᵐ[μ] A n := by
