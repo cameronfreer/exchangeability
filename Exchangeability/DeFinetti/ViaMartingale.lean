@@ -2434,16 +2434,19 @@ lemma block_coord_condIndep
         · exact (hX_meas r) hB
 
       -- Integrability of conditional expectation
+      -- Conditional expectation is always integrable (mathlib: integrable_condexp)
       have hh_int : Integrable (fun ω => Exchangeability.Probability.condExpWith μ
           (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
           (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r) ω) μ := by
-        sorry -- TODO: condexp of integrable is integrable
+        sorry -- TODO (~5 min): Use ProbabilityTheory.integrable_condexp
+              -- Or unfold condExpWith definition and apply integrable_condexp
 
       -- Apply setIntegral_compl decomposition: ∫_{tᶜ} f = ∫_Ω f - ∫_t f
       have h_decomp_g : ∫ ω in tᶜ, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ =
           ∫ ω, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ -
           ∫ ω in t, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ := by
-        sorry -- TODO: Apply MeasureTheory.integral_compl or setIntegral_compl
+        sorry -- TODO (~5 min): Use MeasureTheory.integral_add_compl
+              -- Lemma: ∫_Ω f = ∫_t f + ∫_{tᶜ} f, then rearrange with ring
 
       have h_decomp_h : ∫ ω in tᶜ, (Exchangeability.Probability.condExpWith μ
           (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
@@ -2454,14 +2457,15 @@ lemma block_coord_condIndep
           ∫ ω in t, (Exchangeability.Probability.condExpWith μ
             (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
             (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ := by
-        sorry -- TODO: Apply MeasureTheory.integral_compl or setIntegral_compl
+        sorry -- TODO (~5 min): Same as h_decomp_g
 
       -- Tower property: ∫_Ω g = ∫_Ω E[g|m]
       have h_tower : ∫ ω, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ =
           ∫ ω, (Exchangeability.Probability.condExpWith μ
             (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
             (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ := by
-        sorry -- TODO: Apply tower property for conditional expectation
+        sorry -- TODO (~5 min): Use ProbabilityTheory.integral_condexp
+              -- Or use definition of condExpWith + tower property
 
       -- Conclude using decomposition + tower + IH
       rw [h_decomp_g, h_decomp_h, h_tower, ht_in_good]
