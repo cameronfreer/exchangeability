@@ -2238,21 +2238,14 @@ lemma block_coord_condIndep
           exact ⟨_, finCylinder_measurable hC, rfl⟩
 
         -- Intersection is measurable in the sup
-        sorry -- TODO (~10 min): Standard σ-algebra lifting + intersection
-              -- Mathematical fact: If MeasurableSet[m₁] E and MeasurableSet[m₂] F,
-              -- then MeasurableSet[m₁ ⊔ m₂] (E ∩ F)
-              --
-              -- Attempted approaches:
-              -- 1. le_sup_left/right: These are proofs of ordering, need to apply to sets
-              -- 2. GenerateMeasurable.basic: Unknown identifier (import issue?)
-              -- 3. measurableSet_sup: Unknown identifier (import issue?)
-              --
-              -- Correct pattern should be something like:
-              -- - Use that m₁ ⊔ m₂ = generateFrom (MeasurableSet[m₁] ∪ MeasurableSet[m₂])
-              -- - Lift each set via GenerateMeasurable.basic
-              -- - Apply MeasurableSet.inter
-              --
-              -- OR simpler: Find the right mathlib lemma for σ-algebra monotonicity
+        have hE_past_sup :
+            MeasurableSet[firstRSigma X r ⊔ finFutureSigma X m k] E_past :=
+          (le_sup_left : firstRSigma X r ≤ firstRSigma X r ⊔ finFutureSigma X m k) _ hE_past
+        have hE_future_sup :
+            MeasurableSet[firstRSigma X r ⊔ finFutureSigma X m k] E_future :=
+          (le_sup_right : finFutureSigma X m k ≤ firstRSigma X r ⊔ finFutureSigma X m k) _
+            hE_future
+        simpa [this] using hE_past_sup.inter hE_future_sup
       · -- Integral equality
         rw [lhs_computation A hA C hC, rhs_computation A hA C hC]
         rw [contractability_step A hA C hC]
