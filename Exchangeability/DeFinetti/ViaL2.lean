@@ -531,6 +531,49 @@ lemma mem_window_iff {n k t : ℕ} :
     refine ⟨i, ?_, rfl⟩
     simpa using hi
 
+/-- Sum over a window of length `k` can be reindexed as a sum over `Fin k`. -/
+lemma sum_window_eq_sum_fin {β : Type*} [AddCommMonoid β]
+    (n k : ℕ) (g : ℕ → β) :
+    ∑ t ∈ window n k, g t = ∑ i : Fin k, g (n + i.val + 1) := by
+  classical
+  unfold window
+  -- Show the image map used to define the window is injective
+  have h_inj :
+      ∀ a ∈ Finset.range k, ∀ b ∈ Finset.range k,
+        (n + a + 1 = n + b + 1 → a = b) := by
+    intro a ha b hb h
+    have h' : a + 1 = b + 1 := by
+      have : n + (a + 1) = n + (b + 1) := by
+        simpa [Nat.add_assoc, Nat.add_comm, Nat.succ_eq_add_one] using h
+      exact Nat.add_left_cancel this
+    exact Nat.succ.inj h'
+  -- Convert the window sum to a range sum via the image definition
+  have h_sum_range :
+      ∑ t ∈ Finset.image (fun i => n + i + 1) (Finset.range k), g t
+        = ∑ i ∈ Finset.range k, g (n + i + 1) :=
+    Finset.sum_image <| by
+      intro a ha b hb h
+      exact h_inj a ha b hb h
+  -- Replace the range sum with a sum over `Fin k`
+  have h_range_to_fin :
+      ∑ i ∈ Finset.range k, g (n + i + 1)
+        = ∑ i : Fin k, g (n + i.val + 1) := by
+    refine ((Finset.sum_bij (fun (i : Fin k) _ => i.val)
+        ?_ ?_ ?_ ?_) : _ = _).symm
+    · intro i _
+      simpa [Finset.mem_range] using i.is_lt
+    · intro i hi
+      simp
+    · intro a ha
+      rcases Finset.mem_range.mp ha with ha_lt
+      refine ⟨⟨a, ha_lt⟩, ?_, ?_⟩
+      · simp
+      · rfl
+    · intro i j hi hj h
+      exact Fin.ext h
+  simpa using h_sum_range.trans h_range_to_fin
+
+
 /-!
 ### Covariance structure lemma
 
@@ -1038,349 +1081,351 @@ lemma l2_bound_two_windows_uniform
     · linarith [hρ_bd.2]
 
   refine ⟨Cf, hCf_nonneg, fun n m k hk hdisj => ?_⟩
+  classical
 
-  -- Steps 4-5: Apply l2_contractability_bound with uniform weights and simplify to Cf/k
+  have hk_pos : (0 : ℝ) < k := Nat.cast_pos.mpr hk
+  have hk_ne : (k : ℝ) ≠ 0 := ne_of_gt hk_pos
 
-  -- Construct a sequence of length 2k combining both windows
-  -- ξᵢ = f(X_{n+i+1}) for i < k, ξᵢ = f(X_{m+(i-k)+1}) for i ≥ k
-  let ξ : Fin (2 * k) → Ω → ℝ := fun i ω =>
-    if i.val < k then f (X (n + i.val + 1) ω) else f (X (m + (i.val - k) + 1) ω)
+  -- Index set: union of the two windows
+  set S := window n k ∪ window m k with hS_def
+  have h_subset_n : window n k ⊆ S := by
+    intro t ht
+    exact Finset.mem_union.mpr (Or.inl ht)
+  have h_subset_m : window m k ⊆ S := by
+    intro t ht
+    exact Finset.mem_union.mpr (Or.inr ht)
 
-  -- Weight vectors: p puts weight 1/k on first k positions, q on last k positions
-  let p : Fin (2 * k) → ℝ := fun i => if i.val < k then 1 / (k : ℝ) else 0
-  let q : Fin (2 * k) → ℝ := fun i => if i.val < k then 0 else 1 / (k : ℝ)
+  -- Random family indexed by natural numbers
+  set Y : ℕ → Ω → ℝ := fun t ω => f (X t ω) with hY_def
 
-  -- The goal simplifies to showing that the weighted average difference equals our target
-  have h_goal_eq : ∀ ω, (1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
-                         (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω)
-                       = ∑ i : Fin (2*k), p i * ξ i ω - ∑ i : Fin (2*k), q i * ξ i ω := by
+  -- Weight vectors on the natural numbers (restricted to S)
+  set pS : ℕ → ℝ := fun t => if t ∈ window n k then (1 / (k : ℝ)) else 0 with hpS_def
+  set qS : ℕ → ℝ := fun t => if t ∈ window m k then (1 / (k : ℝ)) else 0 with hqS_def
+  set δ : ℕ → ℝ := fun t => pS t - qS t with hδ_def
+
+  -- Helper lemma: restrict the uniform weight to any subset of S
+  have h_weight_restrict :
+      ∀ (A : Finset ℕ) (hA : A ⊆ S) ω,
+        ∑ t ∈ S, (if t ∈ A then (1 / (k : ℝ)) else 0) * Y t ω
+          = (1 / (k : ℝ)) * ∑ t ∈ A, Y t ω := by
+    intro A hA ω
+    classical
+    have h_filter :
+        S.filter (fun t => t ∈ A) = A := by
+      ext t
+      by_cases htA : t ∈ A
+      · have : t ∈ S := hA htA
+        simp [Finset.mem_filter, htA, this]
+      · simp [Finset.mem_filter, htA]
+    have h_lhs :
+        ∑ t ∈ S, (if t ∈ A then (1 / (k : ℝ)) else 0) * Y t ω
+          = ∑ t ∈ S, (if t ∈ A then (1 / (k : ℝ)) * Y t ω else 0) := by
+      refine Finset.sum_congr rfl ?_
+      intro t ht
+      by_cases htA : t ∈ A
+      · simp [htA]
+      · simp [htA]
+    have h_sum :
+        ∑ t ∈ S, (if t ∈ A then (1 / (k : ℝ)) else 0) * Y t ω =
+          ∑ t ∈ A, (1 / (k : ℝ)) * Y t ω := by
+      have h_indicator :=
+        (Finset.sum_filter (s := S) (p := fun t => t ∈ A)
+            (f := fun t => (1 / (k : ℝ)) * Y t ω)).symm
+      simpa [h_lhs, h_filter] using h_indicator
+    have h_factor :
+        ∑ t ∈ A, (1 / (k : ℝ)) * Y t ω
+          = (1 / (k : ℝ)) * ∑ t ∈ A, Y t ω := by
+      simp [Finset.mul_sum, mul_comm, mul_left_comm, mul_assoc]
+    simpa [h_factor] using h_sum
+
+  -- Difference of window averages written as a single sum over S with weights δ
+  have h_sum_delta :
+      ∀ ω,
+        ∑ t ∈ S, δ t * Y t ω =
+          (1 / (k : ℝ)) * ∑ t ∈ window n k, Y t ω -
+          (1 / (k : ℝ)) * ∑ t ∈ window m k, Y t ω := by
     intro ω
-    -- Split the RHS sums by the condition i.val < k
-    have h_p_split : ∑ i : Fin (2*k), p i * ξ i ω
-        = ∑ i ∈ Finset.filter (fun (i : Fin (2*k)) => i.val < k) Finset.univ,
-            (1/(k:ℝ)) * f (X (n + i.val + 1) ω) := by
-      -- Split sum into two parts based on i.val < k
-      rw [← Finset.sum_filter_add_sum_filter_not (s := Finset.univ) (p := fun i => i.val < k)]
-      -- The second part (i.val ≥ k) sums to 0 since p i = 0 there
-      have h_zero : ∑ i ∈ Finset.filter (fun i => ¬(i.val < k)) Finset.univ, p i * ξ i ω = 0 := by
-        apply Finset.sum_eq_zero
-        intro i hi
-        simp [p]
-        have : ¬(i.val < k) := Finset.mem_filter.mp hi |>.2
-        simp [this]
-      rw [h_zero, add_zero]
-      -- On the first part (i.val < k), we have p i = 1/k and ξ i = f(X_{n+i+1})
-      apply Finset.sum_congr rfl
-      intro i hi
-      have hi_lt : i.val < k := Finset.mem_filter.mp hi |>.2
-      simp [p, ξ, hi_lt]
-    have h_q_split : ∑ i : Fin (2*k), q i * ξ i ω
-        = ∑ i ∈ Finset.filter (fun (i : Fin (2*k)) => ¬(i.val < k)) Finset.univ,
-            (1/(k:ℝ)) * f (X (m + (i.val - k) + 1) ω) := by
-      -- Split sum into two parts based on i.val < k
-      rw [← Finset.sum_filter_add_sum_filter_not (s := Finset.univ) (p := fun i => i.val < k)]
-      -- The first part (i.val < k) sums to 0 since q i = 0 there
-      have h_zero : ∑ i ∈ Finset.filter (fun i => i.val < k) Finset.univ, q i * ξ i ω = 0 := by
-        apply Finset.sum_eq_zero
-        intro i hi
-        simp [q]
-        have : i.val < k := Finset.mem_filter.mp hi |>.2
-        simp [this]
-      rw [h_zero, zero_add]
-      -- On the second part (i.val ≥ k), we have q i = 1/k and ξ i = f(X_{m+(i-k)+1})
-      apply Finset.sum_congr rfl
-      intro i hi
-      have hi_ge : ¬(i.val < k) := Finset.mem_filter.mp hi |>.2
-      simp [q, ξ, hi_ge]
-    rw [h_p_split, h_q_split]
-    -- Now need to show these filtered sums equal the original Fin k sums
-    have h_bij_n : ∑ i ∈ Finset.filter (fun i : Fin (2*k) => i.val < k) Finset.univ,
-                     (1/(k:ℝ)) * f (X (n + i.val + 1) ω)
-                 = (1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) := by
-      trans ((1/(k:ℝ)) * ∑ i ∈ Finset.filter (fun i : Fin (2*k) => i.val < k) Finset.univ, f (X (n + i.val + 1) ω))
-      · simp_rw [Finset.mul_sum]
-      · congr 1
-        exact FinIndexHelpers.sum_filter_fin_val_lt_eq_sum_fin (2*k) k (by omega) (fun j => f (X (n + j + 1) ω))
-    have h_bij_m : ∑ i ∈ Finset.filter (fun i : Fin (2*k) => ¬(i.val < k)) Finset.univ,
-                     (1/(k:ℝ)) * f (X (m + (i.val - k) + 1) ω)
-                 = (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω) := by
-      trans ((1/(k:ℝ)) * ∑ i ∈ Finset.filter (fun i : Fin (2*k) => ¬(i.val < k)) Finset.univ, f (X (m + (i.val - k) + 1) ω))
-      · simp_rw [Finset.mul_sum]
-      · congr 1
-        have h_sub : 2*k - k = k := by omega
-        trans (∑ j : Fin (2*k - k), f (X (m + (k + j.val - k) + 1) ω))
-        · exact FinIndexHelpers.sum_filter_fin_val_ge_eq_sum_fin (2*k) k (by omega) (fun j => f (X (m + (j - k) + 1) ω))
-        · rw [h_sub]
-          congr 1; funext j; congr 2; omega
-    rw [h_bij_n, h_bij_m]
+    have h_sum_p :
+        ∑ t ∈ S, pS t * Y t ω =
+          (1 / (k : ℝ)) * ∑ t ∈ window n k, Y t ω := by
+      simpa [pS] using h_weight_restrict (window n k) h_subset_n ω
+    have h_sum_q :
+        ∑ t ∈ S, qS t * Y t ω =
+          (1 / (k : ℝ)) * ∑ t ∈ window m k, Y t ω := by
+      simpa [qS] using h_weight_restrict (window m k) h_subset_m ω
+    have h_split :
+        ∑ t ∈ S, δ t * Y t ω
+          = ∑ t ∈ S, pS t * Y t ω - ∑ t ∈ S, qS t * Y t ω := by
+      simp [δ, Finset.sum_sub_distrib, mul_sub, sub_eq_add_neg, add_comm, add_left_comm, add_assoc]
+    simpa [h_sum_p, h_sum_q, h_split, sub_eq_add_neg, add_comm, add_left_comm, add_assoc]
+      using h_split
 
-  -- Prove p and q are probability distributions
-  have hp_prob : (∑ i : Fin (2*k), p i) = 1 ∧ ∀ i, 0 ≤ p i := by
+  have h_goal :
+      ∀ ω,
+        (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
+        (1 / (k : ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω)
+          = ∑ t ∈ S, δ t * Y t ω := by
+    intro ω
+    have := h_sum_delta ω
+    simpa [Y, sum_window_eq_sum_fin, sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using this.symm
+
+  -- Total weights
+  have h_sum_pS :
+      ∑ t ∈ S, pS t = 1 := by
+    classical
+    have h_filter :
+        S.filter (fun t => t ∈ window n k) = window n k := by
+      ext t
+      by_cases ht : t ∈ window n k
+      · have : t ∈ S := h_subset_n ht
+        simp [Finset.mem_filter, ht, this]
+      · simp [Finset.mem_filter, ht]
+    have h_sum :
+        ∑ t ∈ S, pS t = ∑ t ∈ window n k, (1 / (k : ℝ)) := by
+      have h_indicator :=
+        (Finset.sum_filter (s := S) (p := fun t => t ∈ window n k)
+            (f := fun _ : ℕ => (1 / (k : ℝ)))).symm
+      simpa [pS, h_filter]
+        using h_indicator
+    have h_const :
+        ∑ t ∈ window n k, (1 / (k : ℝ))
+          = (k : ℝ) * (1 / (k : ℝ)) := by
+      simp [Finset.sum_const, window_card, smul_eq_mul]
+    have h_one : (k : ℝ) * (1 / (k : ℝ)) = 1 := by
+      field_simp [hk_ne]
+    simpa [h_sum, h_const, h_one]
+
+  have h_sum_qS :
+      ∑ t ∈ S, qS t = 1 := by
+    classical
+    have h_filter :
+        S.filter (fun t => t ∈ window m k) = window m k := by
+      ext t
+      by_cases ht : t ∈ window m k
+      · have : t ∈ S := h_subset_m ht
+        simp [Finset.mem_filter, ht, this]
+      · simp [Finset.mem_filter, ht]
+    have h_sum :
+        ∑ t ∈ S, qS t = ∑ t ∈ window m k, (1 / (k : ℝ)) := by
+      have h_indicator :=
+        (Finset.sum_filter (s := S) (p := fun t => t ∈ window m k)
+            (f := fun _ : ℕ => (1 / (k : ℝ)))).symm
+      simpa [qS, h_filter]
+        using h_indicator
+    have h_const :
+        ∑ t ∈ window m k, (1 / (k : ℝ))
+          = (k : ℝ) * (1 / (k : ℝ)) := by
+      simp [Finset.sum_const, window_card, smul_eq_mul]
+    have h_one : (k : ℝ) * (1 / (k : ℝ)) = 1 := by
+      field_simp [hk_ne]
+    simpa [h_sum, h_const, h_one]
+
+  -- Positivity of the weights
+  have hpS_nonneg : ∀ t, 0 ≤ pS t := by
+    intro t
+    by_cases ht : t ∈ window n k
+    · have hk_nonneg : 0 ≤ (1 / (k : ℝ)) := by
+        exact inv_nonneg.mpr (le_of_lt hk_pos)
+      simp [pS, ht, hk_nonneg]
+    · simp [pS, ht]
+
+  have hqS_nonneg : ∀ t, 0 ≤ qS t := by
+    intro t
+    by_cases ht : t ∈ window m k
+    · have hk_nonneg : 0 ≤ (1 / (k : ℝ)) := by
+        exact inv_nonneg.mpr (le_of_lt hk_pos)
+      simp [qS, ht, hk_nonneg]
+    · simp [qS, ht]
+
+  -- Absolute bound on δ on S
+  have hδ_abs_le :
+      ∀ t ∈ S, |δ t| ≤ 1 / (k : ℝ) := by
+    intro t htS
+    by_cases ht_n : t ∈ window n k
+    · by_cases ht_m : t ∈ window m k
+      · have : δ t = 0 := by simp [δ, pS, qS, ht_n, ht_m]
+        simpa [this] using abs_nonneg (δ t)
+      · have : δ t = 1 / (k : ℝ) := by simp [δ, pS, qS, ht_n, ht_m]
+        simpa [this]
+    · by_cases ht_m : t ∈ window m k
+      · have : δ t = - (1 / (k : ℝ)) := by simp [δ, pS, qS, ht_n, ht_m]
+        have : |δ t| = 1 / (k : ℝ) := by simpa [this, abs_neg]
+        simpa [this]
+      · have : δ t = 0 := by simp [δ, pS, qS, ht_n, ht_m]
+        simpa [this] using abs_nonneg (δ t)
+
+  -- Reindex the union set `S` as a finite type
+  let β := {t : ℕ // t ∈ S}
+  let nS : ℕ := Fintype.card β
+  let eβ : Fin nS ≃ β := (Fintype.equivFin β).symm
+  let idx : Fin nS → ℕ := fun i => (eβ i).1
+  have h_idx_mem : ∀ i : Fin nS, idx i ∈ S := fun i => (eβ i).2
+
+  -- Random family indexed by `Fin nS`
+  let ξ : Fin nS → Ω → ℝ := fun i ω => Y (idx i) ω
+
+  -- Weights transferred to `Fin nS`
+  let p : Fin nS → ℝ := fun i => pS (idx i)
+  let q : Fin nS → ℝ := fun i => qS (idx i)
+
+  -- Probability properties for the reindexed weights
+  have hp_prob : (∑ i : Fin nS, p i) = 1 ∧ ∀ i, 0 ≤ p i := by
     constructor
-    · -- Sum equals 1
-      -- Split sum based on i.val < k
-      calc ∑ i : Fin (2*k), p i
-        = ∑ i ∈ Finset.filter (fun i => i.val < k) Finset.univ, p i +
-          ∑ i ∈ Finset.filter (fun i => ¬(i.val < k)) Finset.univ, p i := by
-            rw [← Finset.sum_filter_add_sum_filter_not (s := Finset.univ) (p := fun i => i.val < k)]
-      _ = ∑ i ∈ Finset.filter (fun i : Fin (2*k) => i.val < k) Finset.univ, (1/(k:ℝ)) + 0 := by
-            congr 1
-            · apply Finset.sum_congr rfl
-              intro i hi
-              have : i.val < k := Finset.mem_filter.mp hi |>.2
-              simp [p, this]
-            · apply Finset.sum_eq_zero
-              intro i hi
-              have : ¬(i.val < k) := Finset.mem_filter.mp hi |>.2
-              simp [p, this]
-      _ = (Finset.filter (fun i : Fin (2*k) => i.val < k) Finset.univ).card * (1/(k:ℝ)) := by
-            simp [Finset.sum_const]
-      _ = k * (1/(k:ℝ)) := by
-            congr 1
-            simpa using FinIndexHelpers.card_filter_fin_val_lt_two_mul k
-      _ = 1 := by
-            have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
-            field_simp [ne_of_gt hk_pos]
-    · -- All weights nonnegative
-      intro i
-      simp only [p]
-      split_ifs with h
-      · apply div_nonneg
-        · linarith
-        · exact Nat.cast_nonneg k
-      · linarith
+    · have h_equiv :
+        ∑ i : Fin nS, p i = ∑ t ∈ S, pS t := by
+        classical
+        have h_sum_equiv :
+            ∑ i : Fin nS, pS (idx i) = ∑ b : β, pS b.1 :=
+          (Fintype.sum_equiv eβ (fun b : β => pS b.1)).symm
+        have h_sum_attach :
+            ∑ b : β, pS b.1 = ∑ t ∈ S, pS t := by
+          classical
+          simpa [β] using Finset.sum_attach (s := S) (f := fun t => pS t)
+        simpa [p, idx] using h_sum_equiv.trans h_sum_attach
+      simpa [h_equiv, h_sum_pS]
+    · intro i
+      simpa [p, idx] using hpS_nonneg (idx i)
 
-  have hq_prob : (∑ i : Fin (2*k), q i) = 1 ∧ ∀ i, 0 ≤ q i := by
+  have hq_prob : (∑ i : Fin nS, q i) = 1 ∧ ∀ i, 0 ≤ q i := by
     constructor
-    · -- Sum equals 1
-      calc ∑ i : Fin (2*k), q i
-        = ∑ i ∈ Finset.filter (fun i => i.val < k) Finset.univ, q i +
-          ∑ i ∈ Finset.filter (fun i => ¬(i.val < k)) Finset.univ, q i := by
-            rw [← Finset.sum_filter_add_sum_filter_not (s := Finset.univ) (p := fun i => i.val < k)]
-      _ = 0 + ∑ i ∈ Finset.filter (fun i : Fin (2*k) => ¬(i.val < k)) Finset.univ, (1/(k:ℝ)) := by
-            congr 1
-            · apply Finset.sum_eq_zero
-              intro i hi
-              have : i.val < k := Finset.mem_filter.mp hi |>.2
-              simp [q, this]
-            · apply Finset.sum_congr rfl
-              intro i hi
-              have : ¬(i.val < k) := Finset.mem_filter.mp hi |>.2
-              simp [q, this]
-      _ = (Finset.filter (fun i : Fin (2*k) => ¬(i.val < k)) Finset.univ).card * (1/(k:ℝ)) := by
-            simp [Finset.sum_const]
-      _ = k * (1/(k:ℝ)) := by
-            congr 1
-            simpa [not_lt] using FinIndexHelpers.card_filter_fin_val_ge_two_mul k
-      _ = 1 := by
-            have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
-            field_simp [ne_of_gt hk_pos]
-    · -- All weights nonnegative
-      intro i
-      simp only [q]
-      split_ifs with h
-      · linarith
-      · apply div_nonneg
-        · linarith
-        · exact Nat.cast_nonneg k
+    · have h_equiv :
+        ∑ i : Fin nS, q i = ∑ t ∈ S, qS t := by
+        classical
+        have h_sum_equiv :
+            ∑ i : Fin nS, qS (idx i) = ∑ b : β, qS b.1 :=
+          (Fintype.sum_equiv eβ (fun b : β => qS b.1)).symm
+        have h_sum_attach :
+            ∑ b : β, qS b.1 = ∑ t ∈ S, qS t := by
+          classical
+          simpa [β] using Finset.sum_attach (s := S) (f := fun t => qS t)
+        simpa [q, idx] using h_sum_equiv.trans h_sum_attach
+      simpa [h_equiv, h_sum_qS]
+    · intro i
+      simpa [q, idx] using hqS_nonneg (idx i)
 
-  -- Prove covariance properties for ξ
-  -- Each ξ_i is f(X_j) for some j, so inherits the covariance structure from f∘X
-  have hξ_mean : ∀ i : Fin (2*k), ∫ ω, ξ i ω ∂μ = mf := by
+  -- Supremum bound on the weight difference
+  have h_sup_le :
+      (⨆ i : Fin nS, |p i - q i|) ≤ 1 / (k : ℝ) := by
+    refine iSup_le ?_
     intro i
-    simp [ξ]
-    split_ifs with h
-    · -- Case i.val < k: ξ i = f(X_{n+i.val+1})
-      exact hmean (n + i.val + 1)
-    · -- Case i.val ≥ k: ξ i = f(X_{m+(i.val-k)+1})
-      exact hmean (m + (i.val - k) + 1)
+    have hmem : idx i ∈ S := h_idx_mem i
+    have hδ_bound := hδ_abs_le (idx i) hmem
+    have hδ_eq : δ (idx i) = p i - q i := by simp [δ, p, q, idx]
+    simpa [hδ_eq] using hδ_bound
 
-  have hξ_L2 : ∀ i : Fin (2*k), MemLp (fun ω => ξ i ω - mf) 2 μ := by
+  -- Injectivity of the indexing map
+  have h_idx_ne : ∀ {i j : Fin nS}, i ≠ j → idx i ≠ idx j := by
+    intro i j hij hval
+    have : eβ i = eβ j := by
+      apply Subtype.ext
+      exact hval
+    exact hij (eβ.injective this)
+
+  -- Mean and L² structure for ξ
+  have hξ_mean : ∀ i : Fin nS, ∫ ω, ξ i ω ∂μ = mf := by
     intro i
-    simp [ξ]
-    split_ifs with h
-    · -- Case i.val < k: ξ i = f(X_{n+i.val+1})
-      exact (hfX_L2 (n + i.val + 1)).sub (memLp_const mf)
-    · -- Case i.val ≥ k: ξ i = f(X_{m+(i.val-k)+1})
-      exact (hfX_L2 (m + (i.val - k) + 1)).sub (memLp_const mf)
+    simpa [ξ, Y, idx, hY_def] using hmean (idx i)
 
-  have hξ_var : ∀ i : Fin (2*k), ∫ ω, (ξ i ω - mf)^2 ∂μ = (Real.sqrt σSqf) ^ 2 := by
+  have hξ_L2 : ∀ i : Fin nS, MemLp (fun ω => ξ i ω - mf) 2 μ := by
     intro i
-    have h_sqrt_sq : (Real.sqrt σSqf) ^ 2 = σSqf := Real.sq_sqrt hσSq_nonneg
-    rw [h_sqrt_sq]
-    simp [ξ]
-    split_ifs with h
-    · -- Case i.val < k
-      exact hvar (n + i.val + 1)
-    · -- Case i.val ≥ k
-      exact hvar (m + (i.val - k) + 1)
+    simpa [ξ, Y, idx, hY_def] using
+      (hfX_L2 (idx i)).sub (memLp_const mf)
 
-  have hξ_cov : ∀ i j : Fin (2*k), i ≠ j →
-      ∫ ω, (ξ i ω - mf) * (ξ j ω - mf) ∂μ = (Real.sqrt σSqf) ^ 2 * ρf := by
+  have hξ_var : ∀ i : Fin nS, ∫ ω, (ξ i ω - mf)^2 ∂μ = (Real.sqrt σSqf) ^ 2 := by
+    intro i
+    simpa [ξ, Y, idx, hY_def] using hvar (idx i)
+
+  have hξ_cov :
+      ∀ i j : Fin nS, i ≠ j →
+        ∫ ω, (ξ i ω - mf) * (ξ j ω - mf) ∂μ = (Real.sqrt σSqf) ^ 2 * ρf := by
     intro i j hij
-    have h_sqrt_sq : (Real.sqrt σSqf) ^ 2 = σSqf := Real.sq_sqrt hσSq_nonneg
-    rw [h_sqrt_sq]
-    simp [ξ]
-    -- Split into 4 cases based on which window each index belongs to
-    by_cases hi : i.val < k <;> by_cases hj : j.val < k
-    · -- Case 1: Both in first window (i < k, j < k)
-      simp [hi, hj]
-      -- Need to show n + i.val + 1 ≠ n + j.val + 1
-      have hneq : n + i.val + 1 ≠ n + j.val + 1 := by
-        intro heq
-        have : i.val = j.val := by omega
-        have : i = j := Fin.ext this
-        exact hij this
-      exact hcov (n + i.val + 1) (n + j.val + 1) hneq
-    · -- Case 2: i in first, j in second (i < k, j ≥ k)
-      simp [hi, hj]
-      by_cases heq : n + i.val + 1 = m + (j.val - k) + 1
-      · -- Degenerate case: same X index appears in both windows
-        -- When heq holds: n + i.val + 1 = m + (j.val - k) + 1
-        -- So both ξ i and ξ j refer to the same X index, making them the same random variable
-        -- The covariance of a variable with itself is its variance
-        have h_same_idx : n + i.val + 1 = m + (j.val - k) + 1 := heq
-        -- The goal after simp is: ∫ ω, (f (X (n + i.val + 1) ω) - mf) * (f (X (m + (j.val - k) + 1) ω) - mf) ∂μ = σSqf * ρf
-        -- Use h_same_idx to rewrite the second X index
-        conv_lhs => arg 2; ext ω; arg 1; rw [h_same_idx]
-        -- Now both terms have f(X(m + (j.val - k) + 1)), so it's a variance
-        have h_var : ∫ ω, (f (X (m + (j.val - k) + 1) ω) - mf) * (f (X (m + (j.val - k) + 1) ω) - mf) ∂μ
-                   = ∫ ω, (f (X (m + (j.val - k) + 1) ω) - mf)^2 ∂μ := by
-          congr 1
-          ext ω
-          ring
-        rw [h_var]
-        -- Apply hvar to get σSqf
-        have : ∫ ω, (f (X (m + (j.val - k) + 1) ω) - mf)^2 ∂μ = σSqf := hvar (m + (j.val - k) + 1)
-        rw [this]
-        -- We need to show σSqf = σSqf * ρf
-        -- This is a degenerate case: when the same X index appears in both windows,
-        -- the correlation should be 1 (perfect correlation with itself at lag 0).
-        -- We prove this by using the fact that ρf must equal 1 in this case.
-        by_cases hσ_zero : σSqf = 0
-        · -- If σSqf = 0, both sides equal 0
-          simp [hσ_zero]
-        · -- If σSqf ≠ 0, we need ρf = 1
-          -- At lag 0 (same random variable), correlation equals 1
-          -- This is a fundamental property: Cor(X,X) = Cov(X,X)/√(Var(X)·Var(X)) = Var(X)/Var(X) = 1
-          -- The contractability ρf parameter represents correlation at non-zero lags
-          -- When we have lag 0 (which shouldn't happen with non-overlapping windows),
-          -- we need the correlation to be 1
-          -- For now, we assume this or note that proper window selection avoids this case
-          have h_rho_one : ρf = 1 := by
-            -- DEGENERATE OVERLAP CASE ELIMINATED: The equal index is in both windows,
-            -- contradicting the disjointness hypothesis hdisj.
-            exfalso
-            -- n + i.val + 1 is in window n k
-            have hn_mem : n + i.val + 1 ∈ window n k := by
-              rw [window]
-              apply Finset.mem_image.mpr
-              use i.val
-              exact ⟨Finset.mem_range.mpr hi, rfl⟩
-            -- m + (j.val - k) + 1 is in window m k
-            have hm_mem : m + (j.val - k) + 1 ∈ window m k := by
-              rw [window]
-              apply Finset.mem_image.mpr
-              use j.val - k
-              constructor
-              · apply Finset.mem_range.mpr
-                have : j.val < 2 * k := j.isLt
-                omega
-              · ring
-            -- But heq says they're equal, so the same index is in both windows
-            rw [heq] at hn_mem
-            -- This contradicts disjointness: if x ∈ s and Disjoint s t, then x ∉ t
-            exact Finset.disjoint_left.mp hdisj hn_mem hm_mem
-          rw [h_rho_one]
-          ring
-      · -- Normal case: distinct indices, apply hcov
-        exact hcov (n + i.val + 1) (m + (j.val - k) + 1) heq
-    · -- Case 3: i in second, j in first (i ≥ k, j < k)
-      simp [hi, hj]
-      by_cases heq : m + (i.val - k) + 1 = n + j.val + 1
-      · -- Same degenerate case as Case 2 (symmetric situation)
-        -- When heq holds: m + (i.val - k) + 1 = n + j.val + 1
-        have h_same_idx : m + (i.val - k) + 1 = n + j.val + 1 := heq
-        -- Use h_same_idx to rewrite the first X index
-        conv_lhs => arg 2; ext ω; arg 1; arg 1; rw [h_same_idx]
-        -- Now both terms have f(X(n + j.val + 1)), so it's a variance
-        have h_var : ∫ ω, (f (X (n + j.val + 1) ω) - mf) * (f (X (n + j.val + 1) ω) - mf) ∂μ
-                   = ∫ ω, (f (X (n + j.val + 1) ω) - mf)^2 ∂μ := by
-          congr 1
-          ext ω
-          ring
-        rw [h_var]
-        -- Apply hvar to get σSqf
-        have : ∫ ω, (f (X (n + j.val + 1) ω) - mf)^2 ∂μ = σSqf := hvar (n + j.val + 1)
-        rw [this]
-        -- We need to show σSqf = σSqf * ρf (same degenerate case as Case 2)
-        by_cases hσ_zero : σSqf = 0
-        · -- If σSqf = 0, both sides are 0
-          simp [hσ_zero]
-        · -- If σSqf ≠ 0, we need ρf = 1 (correlation at lag 0)
-          have h_rho_one : ρf = 1 := by
-            -- DEGENERATE OVERLAP CASE ELIMINATED (symmetric to Case 2)
-            -- The equal index is in both windows, contradicting disjointness.
-            exfalso
-            -- m + (i.val - k) + 1 is in window m k
-            have hm_mem : m + (i.val - k) + 1 ∈ window m k := by
-              rw [window]
-              apply Finset.mem_image.mpr
-              use i.val - k
-              constructor
-              · apply Finset.mem_range.mpr
-                have : i.val < 2 * k := i.isLt
-                omega
-              · ring
-            -- n + j.val + 1 is in window n k
-            have hn_mem : n + j.val + 1 ∈ window n k := by
-              rw [window]
-              apply Finset.mem_image.mpr
-              use j.val
-              exact ⟨Finset.mem_range.mpr hj, rfl⟩
-            -- But heq says they're equal, so the same index is in both windows
-            rw [heq] at hm_mem
-            -- This contradicts disjointness: if x ∈ s and Disjoint s t, then x ∉ t
-            exact Finset.disjoint_left.mp hdisj hn_mem hm_mem
-          rw [h_rho_one]
-          ring
-      · -- Normal case: distinct indices, apply hcov
-        exact hcov (m + (i.val - k) + 1) (n + j.val + 1) heq
-    · -- Case 4: Both in second window (i ≥ k, j ≥ k)
-      simp [hi, hj]
-      -- Need to show m + (i.val - k) + 1 ≠ m + (j.val - k) + 1
-      have hneq : m + (i.val - k) + 1 ≠ m + (j.val - k) + 1 := by
-        intro heq
-        have : i.val - k = j.val - k := by omega
-        have : i.val = j.val := by omega
-        have : i = j := Fin.ext this
-        exact hij this
-      exact hcov (m + (i.val - k) + 1) (m + (j.val - k) + 1) hneq
+    have hneq : idx i ≠ idx j := h_idx_ne hij
+    simpa [ξ, Y, idx, hY_def, hneq] using hcov (idx i) (idx j) hneq
 
-  -- Apply l2_contractability_bound
-  have h_bound := @L2Approach.l2_contractability_bound Ω _ μ _ (2*k) ξ mf
-    (Real.sqrt σSqf) ρf hρ_bd hξ_mean hξ_L2 hξ_var hξ_cov
-    p q hp_prob hq_prob
+  -- Express the δ-weighted sum in terms of the Fin-indexed weights
+  have h_sum_p_fin :
+      ∀ ω,
+        ∑ i : Fin nS, p i * ξ i ω =
+          ∑ t ∈ S, pS t * Y t ω := by
+    intro ω
+    classical
+    have h_sum_equiv :
+        ∑ i : Fin nS, p i * ξ i ω = ∑ b : β, pS b.1 * Y b.1 ω :=
+      (Fintype.sum_equiv eβ (fun b : β => pS b.1 * Y b.1 ω)).symm
+    have h_sum_attach :
+        ∑ b : β, pS b.1 * Y b.1 ω =
+          ∑ t ∈ S, pS t * Y t ω := by
+      simpa [β] using
+        Finset.sum_attach (s := S) (f := fun t => pS t * Y t ω)
+    simpa [p, ξ, idx, Y] using h_sum_equiv.trans h_sum_attach
 
-  -- The supremum |pᵢ - qᵢ| = 1/k
-  have h_sup : (⨆ i : Fin (2*k), |p i - q i|) = 1 / (k : ℝ) := by
-    apply sup_two_window_weights hk
-    · rfl
-    · rfl
+  have h_sum_q_fin :
+      ∀ ω,
+        ∑ i : Fin nS, q i * ξ i ω =
+          ∑ t ∈ S, qS t * Y t ω := by
+    intro ω
+    classical
+    have h_sum_equiv :
+        ∑ i : Fin nS, q i * ξ i ω = ∑ b : β, qS b.1 * Y b.1 ω :=
+      (Fintype.sum_equiv eβ (fun b : β => qS b.1 * Y b.1 ω)).symm
+    have h_sum_attach :
+        ∑ b : β, qS b.1 * Y b.1 ω =
+          ∑ t ∈ S, qS t * Y t ω := by
+      simpa [β] using
+        Finset.sum_attach (s := S) (f := fun t => qS t * Y t ω)
+    simpa [q, ξ, idx, Y] using h_sum_equiv.trans h_sum_attach
 
-  -- Simplify: 2·(√σSqf)²·(1-ρf)·(1/k) = 2σSqf(1-ρf)/k = Cf/k
-  have h_simplify : 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) * (1 / (k : ℝ)) = Cf / k := by
-    have h_sqrt_sq : (Real.sqrt σSqf) ^ 2 = σSqf := Real.sq_sqrt hσSq_nonneg
-    simp [Cf, h_sqrt_sq]
-    ring
+  have h_delta_fin :
+      ∀ ω,
+        ∑ t ∈ S, δ t * Y t ω =
+          ∑ i : Fin nS, p i * ξ i ω - ∑ i : Fin nS, q i * ξ i ω := by
+    intro ω
+    have h_sum_p := h_sum_p_fin ω
+    have h_sum_q := h_sum_q_fin ω
+    simp [δ, Finset.sum_sub_distrib, mul_sub, sub_eq_add_neg, add_comm, add_left_comm,
+      add_assoc, h_sum_p, h_sum_q]
 
-  calc ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
-             (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
-    = ∫ ω, (∑ i : Fin (2*k), p i * ξ i ω - ∑ i : Fin (2*k), q i * ξ i ω)^2 ∂μ := by
-        congr 1; ext ω; rw [h_goal_eq ω]
-  _ ≤ 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) * (⨆ i : Fin (2*k), |p i - q i|) := h_bound
-  _ = 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) * (1 / (k : ℝ)) := by rw [h_sup]
-  _ = Cf / k := h_simplify
+  have h_goal_fin :
+      ∀ ω,
+        (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
+        (1 / (k : ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω)
+          = ∑ i : Fin nS, p i * ξ i ω - ∑ i : Fin nS, q i * ξ i ω := by
+    intro ω
+    have h_goal' := h_goal ω
+    have h_delta := h_delta_fin ω
+    simpa [h_goal', h_delta]
+
+  -- Apply the L² contractability bound on the reindexed weights
+  have h_bound :=
+    @L2Approach.l2_contractability_bound Ω _ μ _ nS ξ mf (Real.sqrt σSqf) ρf
+      hρ_bd hξ_mean hξ_L2 hξ_var hξ_cov p q hp_prob hq_prob
+
+  have h_factor_nonneg :
+      0 ≤ 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) := by
+    have hσ_nonneg : 0 ≤ (Real.sqrt σSqf) ^ 2 := by exact sq_nonneg _
+    have hρ_nonneg : 0 ≤ 1 - ρf := sub_nonneg.mpr hρ_bd.2
+    have : 0 ≤ (2 : ℝ) := by norm_num
+    exact mul_nonneg (mul_nonneg this hσ_nonneg) hρ_nonneg
+
+  -- Final bound
+  have h_sqrt_sq : (Real.sqrt σSqf) ^ 2 = σSqf := Real.sq_sqrt hσSq_nonneg
+
+  calc
+    ∫ ω,
+        ((1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
+         (1 / (k : ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
+        = ∫ ω, (∑ i : Fin nS, p i * ξ i ω - ∑ i : Fin nS, q i * ξ i ω)^2 ∂μ := by
+            congr 1
+            funext ω
+            simpa [h_goal_fin ω]
+  _ ≤ 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) *
+        (⨆ i : Fin nS, |p i - q i|) := h_bound
+  _ ≤ 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) * (1 / (k : ℝ)) := by
+        refine mul_le_mul_of_nonneg_left h_sup_le h_factor_nonneg
+  _ = Cf / k := by
+        have : 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) = Cf := by
+          simp [Cf, h_sqrt_sq, mul_comm, mul_left_comm, mul_assoc]
+        simpa [this, div_eq_mul_inv]
 
 /-- **L² bound wrapper for two starting windows**.
 
