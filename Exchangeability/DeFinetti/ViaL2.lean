@@ -1026,7 +1026,7 @@ lemma l2_bound_two_windows_uniform
     (_hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (f : ℝ → ℝ) (hf_meas : Measurable f)
     (hf_bdd : ∃ M, ∀ x, |f x| ≤ M) :
-    ∃ Cf : ℝ, 0 ≤ Cf ∧
+    ∃ Cf : ℝ, 0 ≤ Cf ∧ Cf = 2 * σSqf * (1 - ρf) ∧
       ∀ (n m k : ℕ), 0 < k →
         ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
               (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
@@ -2143,20 +2143,466 @@ theorem weighted_sums_converge_L1
               ring
     exact MemLp.of_bound (hA_meas n m).aestronglyMeasurable M hA_ae_bdd
 
+  -- Covariance structure of f ∘ X
+  have hfX_contract' : Contractable μ (fun n ω => f (X n ω)) :=
+    contractable_comp X hX_contract hX_meas f hf_meas
+
+  have hfX_meas' : ∀ i, Measurable fun ω => f (X i ω) := by
+    intro i
+    exact hf_meas.comp (hX_meas i)
+
+  have hfX_L2' : ∀ i, MemLp (fun ω => f (X i ω)) 2 μ := by
+    intro i
+    obtain ⟨M, hM⟩ := hf_bdd
+    apply MemLp.of_bound (hfX_meas' i).aestronglyMeasurable M
+    filter_upwards with ω
+    simp [Real.norm_eq_abs]
+    exact hM (X i ω)
+
+  obtain ⟨mf, σSqf, ρf, hmean_f, hvar_f, hcov_f, hσSq_nonneg, hρ_bd⟩ :=
+    contractable_covariance_structure
+      (fun n ω => f (X n ω)) hfX_contract' hfX_meas' hfX_L2'
+
+  let Cf : ℝ := 2 * σSqf * (1 - ρf)
+  have hCf_nonneg : 0 ≤ Cf := by
+    have : 0 ≤ 1 - ρf := sub_nonneg.mpr hρ_bd.2
+    nlinarith [hσSq_nonneg, this]
+
+  let Y : ℕ → Ω → ℝ := fun t ω => f (X t ω)
+
+  -- Uniform k-window bound with the explicit constant Cf
+  have h_window_bound :
+      ∀ {n m k : ℕ}, 0 < k →
+        ∫ ω,
+            ((1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
+             (1 / (k : ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
+          ≤ Cf / k := by
+    intro n m k hk
+    classical
+    have hk_pos : (0 : ℝ) < k := Nat.cast_pos.mpr hk
+    let S := window n k ∪ window m k
+    have h_subset_n : window n k ⊆ S := by
+      intro t ht
+      exact Finset.mem_union.mpr (Or.inl ht)
+    have h_subset_m : window m k ⊆ S := by
+      intro t ht
+      exact Finset.mem_union.mpr (Or.inr ht)
+    let pS : ℕ → ℝ := fun t => if t ∈ window n k then (1 / (k : ℝ)) else 0
+    let qS : ℕ → ℝ := fun t => if t ∈ window m k then (1 / (k : ℝ)) else 0
+    let δ : ℕ → ℝ := fun t => pS t - qS t
+    have h_weight_restrict :
+        ∀ (A : Finset ℕ) (hA : A ⊆ S) ω,
+          ∑ t ∈ S, (if t ∈ A then (1 / (k : ℝ)) else 0) * Y t ω
+            = (1 / (k : ℝ)) * ∑ t ∈ A, Y t ω := by
+      intro A hA ω
+      have h_filter :
+          S.filter (fun t => t ∈ A) = A := by
+        ext t
+        by_cases htA : t ∈ A
+        · have : t ∈ S := hA htA
+          simp [Finset.mem_filter, htA, this]
+        · simp [Finset.mem_filter, htA]
+      calc
+        ∑ t ∈ S, (if t ∈ A then (1 / (k : ℝ)) else 0) * Y t ω
+            = ∑ t ∈ A, (1 / (k : ℝ)) * Y t ω := by
+                simpa [h_filter] using
+                  (Finset.sum_filter (s := S) (p := fun t => t ∈ A)
+                    (f := fun t => (1 / (k : ℝ)) * Y t ω)).symm
+        _ = (1 / (k : ℝ)) * ∑ t ∈ A, Y t ω := by
+                simp [Finset.mul_sum]
+    have h_sum_delta :
+        ∀ ω,
+          ∑ t ∈ S, δ t * Y t ω =
+            (1 / (k : ℝ)) * ∑ t ∈ window n k, Y t ω -
+            (1 / (k : ℝ)) * ∑ t ∈ window m k, Y t ω := by
+      intro ω
+      have h_sum_p :
+          ∑ t ∈ S, pS t * Y t ω =
+            (1 / (k : ℝ)) * ∑ t ∈ window n k, Y t ω := by
+        simpa [pS] using h_weight_restrict (window n k) h_subset_n ω
+      have h_sum_q :
+          ∑ t ∈ S, qS t * Y t ω =
+            (1 / (k : ℝ)) * ∑ t ∈ window m k, Y t ω := by
+        simpa [qS] using h_weight_restrict (window m k) h_subset_m ω
+      have h_expand :
+          ∑ t ∈ S, δ t * Y t ω =
+            ∑ t ∈ S, (pS t * Y t ω - qS t * Y t ω) := by
+        refine Finset.sum_congr rfl ?_
+        intro t ht
+        simp [δ]
+      have h_split :
+          ∑ t ∈ S, δ t * Y t ω =
+            ∑ t ∈ S, pS t * Y t ω - ∑ t ∈ S, qS t * Y t ω := by
+        simpa using
+          (h_expand.trans
+            (Finset.sum_sub_distrib (s := S)
+              (f := fun t => pS t * Y t ω)
+              (g := fun t => qS t * Y t ω)))
+      simpa [h_sum_p, h_sum_q] using h_split
+    have h_goal :
+        ∀ ω,
+          (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
+          (1 / (k : ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω)
+            = ∑ t ∈ S, δ t * Y t ω := by
+      intro ω
+      have := h_sum_delta ω
+      simpa [Y, sum_window_eq_sum_fin, sub_eq_add_neg, add_comm, add_left_comm, add_assoc]
+        using this.symm
+    have h_sum_pS : ∑ t ∈ S, pS t = 1 := by
+      have : (window n k).card = k := window_card n k
+      have hk_ne : (k : ℝ) ≠ 0 := ne_of_gt hk_pos
+      calc
+        ∑ t ∈ S, pS t = ∑ t ∈ window n k, (1 / (k : ℝ)) := by
+            simpa [pS] using
+              (Finset.sum_filter (s := S) (p := fun t => t ∈ window n k)
+                (f := fun _ => (1 / (k : ℝ)))).symm
+        _ = (window n k).card * (1 / (k : ℝ)) := by
+            simp [Finset.sum_const]
+        _ = 1 := by simp [this, hk_ne, one_div]
+    have h_sum_qS : ∑ t ∈ S, qS t = 1 := by
+      have : (window m k).card = k := window_card m k
+      have hk_ne : (k : ℝ) ≠ 0 := ne_of_gt hk_pos
+      calc
+        ∑ t ∈ S, qS t = ∑ t ∈ window m k, (1 / (k : ℝ)) := by
+            simpa [qS] using
+              (Finset.sum_filter (s := S) (p := fun t => t ∈ window m k)
+                (f := fun _ => (1 / (k : ℝ)))).symm
+        _ = (window m k).card * (1 / (k : ℝ)) := by
+            simp [Finset.sum_const]
+        _ = 1 := by simp [this, hk_ne, one_div]
+    have hpS_nonneg : ∀ t, 0 ≤ pS t := by
+      intro t
+      by_cases ht : t ∈ window n k
+      · have hk_nonneg : 0 ≤ 1 / (k : ℝ) := div_nonneg zero_le_one (le_of_lt hk_pos)
+        simpa [pS, ht]
+      · simp [pS, ht]
+    have hqS_nonneg : ∀ t, 0 ≤ qS t := by
+      intro t
+      by_cases ht : t ∈ window m k
+      · have hk_nonneg : 0 ≤ 1 / (k : ℝ) := div_nonneg zero_le_one (le_of_lt hk_pos)
+        simpa [qS, ht]
+      · simp [qS, ht]
+    have hδ_abs_le :
+        ∀ t ∈ S, |δ t| ≤ 1 / (k : ℝ) := by
+      intro t htS
+      by_cases ht_n : t ∈ window n k
+      · by_cases ht_m : t ∈ window m k
+        · have : δ t = 0 := by simp [δ, pS, qS, ht_n, ht_m]
+          simpa [this] using abs_nonneg (δ t)
+        · have : δ t = 1 / (k : ℝ) := by simp [δ, pS, qS, ht_n, ht_m]
+          simpa [this]
+      · by_cases ht_m : t ∈ window m k
+        · have : δ t = - (1 / (k : ℝ)) := by simp [δ, pS, qS, ht_n, ht_m]
+          have : |δ t| = 1 / (k : ℝ) := by simpa [this, abs_neg]
+          simpa [this]
+        · have : δ t = 0 := by simp [δ, pS, qS, ht_n, ht_m]
+          simpa [this] using abs_nonneg (δ t)
+    let β := {t : ℕ // t ∈ S}
+    let nS : ℕ := Fintype.card β
+    let eβ : Fin nS ≃ β := (Fintype.equivFin β).symm
+    let idx : Fin nS → ℕ := fun i => (eβ i).1
+    have h_idx_mem : ∀ i : Fin nS, idx i ∈ S := fun i => (eβ i).2
+    let ξ : Fin nS → Ω → ℝ := fun i ω => Y (idx i) ω
+    let p : Fin nS → ℝ := fun i => pS (idx i)
+    let q : Fin nS → ℝ := fun i => qS (idx i)
+    have hp_prob : (∑ i : Fin nS, p i) = 1 ∧ ∀ i, 0 ≤ p i := by
+      constructor
+      · have h_equiv :
+          ∑ i : Fin nS, p i = ∑ t ∈ S, pS t := by
+          classical
+          have h_sum_equiv :
+              ∑ i : Fin nS, pS (idx i) =
+                ∑ b : β, pS b.1 :=
+            Fintype.sum_equiv eβ (fun i : Fin nS => pS (idx i)) (fun b : β => pS b.1)
+              (by intro i; simp [idx])
+          have h_sum_attach :
+              ∑ b : β, pS b.1 = ∑ t ∈ S, pS t := by
+            simpa [β] using Finset.sum_attach (s := S) (f := fun t => pS t)
+          simpa [p, idx] using h_sum_equiv.trans h_sum_attach
+        simpa [h_equiv, h_sum_pS]
+      · intro i
+        simpa [p, idx] using hpS_nonneg (idx i)
+    have hq_prob : (∑ i : Fin nS, q i) = 1 ∧ ∀ i, 0 ≤ q i := by
+      constructor
+      · have h_equiv :
+          ∑ i : Fin nS, q i = ∑ t ∈ S, qS t := by
+          classical
+          have h_sum_equiv :
+              ∑ i : Fin nS, qS (idx i) =
+                ∑ b : β, qS b.1 :=
+            Fintype.sum_equiv eβ (fun i : Fin nS => qS (idx i)) (fun b : β => qS b.1)
+              (by intro i; simp [idx])
+          have h_sum_attach :
+              ∑ b : β, qS b.1 = ∑ t ∈ S, qS t := by
+            simpa [β] using Finset.sum_attach (s := S) (f := fun t => qS t)
+          simpa [q, idx] using h_sum_equiv.trans h_sum_attach
+        simpa [h_equiv, h_sum_qS]
+      · intro i
+        simpa [q, idx] using hqS_nonneg (idx i)
+    have h_sup_le :
+        (⨆ i : Fin nS, |p i - q i|) ≤ 1 / (k : ℝ) := by
+      refine iSup_le ?_
+      intro i
+      have hmem : idx i ∈ S := h_idx_mem i
+      have hδ_bound := hδ_abs_le (idx i) hmem
+      have hδ_eq : δ (idx i) = p i - q i := by simp [δ, p, q, idx]
+      simpa [hδ_eq] using hδ_bound
+    have h_idx_ne : ∀ {i j : Fin nS}, i ≠ j → idx i ≠ idx j := by
+      intro i j hij hval
+      have : eβ i = eβ j := by
+        apply Subtype.ext
+        exact hval
+      exact hij (eβ.injective this)
+    have hξ_mean : ∀ i : Fin nS, ∫ ω, ξ i ω ∂μ = mf := by
+      intro i
+      simpa [ξ, Y, idx] using hmean_f (idx i)
+    have hξ_L2 : ∀ i : Fin nS, MemLp (fun ω => ξ i ω - mf) 2 μ := by
+      intro i
+      simpa [ξ, Y, idx] using
+        (hfX_L2' (idx i)).sub (memLp_const mf)
+    have hξ_var : ∀ i : Fin nS, ∫ ω, (ξ i ω - mf)^2 ∂μ = σSqf := by
+      intro i
+      simpa [ξ, Y, idx] using hvar_f (idx i)
+    have hξ_cov :
+        ∀ i j : Fin nS, i ≠ j →
+          ∫ ω, (ξ i ω - mf) * (ξ j ω - mf) ∂μ = σSqf * ρf := by
+      intro i j hij
+      have hneq : idx i ≠ idx j := h_idx_ne hij
+      simpa [ξ, Y, idx, hneq] using hcov_f (idx i) (idx j) hneq
+    have h_bound :=
+      @L2Approach.l2_contractability_bound Ω _ μ _ nS ξ mf (Real.sqrt σSqf) ρf
+        hρ_bd hξ_mean hξ_L2
+        (by
+          intro i
+          simpa using hξ_var i)
+        (by
+          intro i j hij
+          simpa [Real.sq_sqrt hσSq_nonneg] using
+            (hξ_cov i j hij)) p q hp_prob hq_prob
+    have h_factor_nonneg :
+        0 ≤ 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) := by
+      have hσ_nonneg : 0 ≤ (Real.sqrt σSqf) ^ 2 := sq_nonneg _
+      have hρ_nonneg : 0 ≤ 1 - ρf := sub_nonneg.mpr hρ_bd.2
+      have : 0 ≤ (2 : ℝ) := by norm_num
+      exact mul_nonneg (mul_nonneg this hσ_nonneg) hρ_nonneg
+    have h_sqrt_sq : (Real.sqrt σSqf) ^ 2 = σSqf := Real.sq_sqrt hσSq_nonneg
+    calc
+      ∫ ω,
+          ((1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
+           (1 / (k : ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
+          = ∫ ω, (∑ i : Fin nS, p i * ξ i ω - ∑ i : Fin nS, q i * ξ i ω)^2 ∂μ := by
+              congr 1
+              funext ω
+              simpa using
+                congrArg (fun x : ℝ => x ^ 2) (h_goal ω)
+      _ ≤ 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) *
+            (⨆ i : Fin nS, |p i - q i|) := h_bound
+      _ ≤ 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) * (1 / (k : ℝ)) := by
+            refine mul_le_mul_of_nonneg_left h_sup_le h_factor_nonneg
+      _ = Cf / k := by
+            have : 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) = Cf := by
+              simp [Cf, h_sqrt_sq, mul_comm, mul_left_comm, mul_assoc]
+            simpa [this, div_eq_mul_inv]
+
+  -- Long average vs tail average bound with the same constant Cf
+  have h_long_tail_bound :
+      ∀ {n m k : ℕ}, 0 < k → k ≤ m →
+        ∫ ω,
+            ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
+             (1 / (k : ℝ)) *
+               ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
+          ≤ Cf / k := by
+    intro n m k hk hkm
+    classical
+    have hk_pos : (0 : ℝ) < k := Nat.cast_pos.mpr hk
+    have hm_pos : (0 : ℝ) < m := Nat.cast_pos.mpr (Nat.lt_of_lt_of_le hk hkm)
+    let p : Fin m → ℝ := fun _ => 1 / (m : ℝ)
+    let q : Fin m → ℝ := fun i : Fin m => if i.val < m - k then 0 else 1 / (k : ℝ)
+    let ξ : Fin m → Ω → ℝ := fun i ω => Y (n + i.val + 1) ω
+    have hp_prob : (∑ i : Fin m, p i) = 1 ∧ ∀ i, 0 ≤ p i := by
+      constructor
+      · simp only [p, Finset.sum_const, Finset.card_fin, nsmul_eq_mul]
+        field_simp [ne_of_gt hm_pos]
+      · intro i; simp [p]
+    have hq_prob : (∑ i : Fin m, q i) = 1 ∧ ∀ i, 0 ≤ q i := by
+      constructor
+      · -- Sum equals 1
+        have h_range :
+            ∑ i : Fin m, q i =
+              (Finset.filter (fun i : Fin m => ¬ i.val < m - k) Finset.univ).card *
+                  (1 / (k : ℝ)) := by
+          calc
+            ∑ i : Fin m, q i
+                = ∑ i ∈ Finset.filter (fun i => i.val < m - k) Finset.univ, q i +
+                    ∑ i ∈ Finset.filter (fun i => ¬(i.val < m - k)) Finset.univ, q i := by
+                      rw [← Finset.sum_filter_add_sum_filter_not
+                        (s := Finset.univ) (p := fun i : Fin m => i.val < m - k)]
+            _ = 0 + ∑ i ∈ Finset.filter (fun i : Fin m => ¬ i.val < m - k) Finset.univ, (1 / (k : ℝ)) := by
+                  congr 1
+                  · apply Finset.sum_eq_zero
+                    intro i hi
+                    have : i.val < m - k := (Finset.mem_filter.mp hi).2
+                    simp [q, this]
+                  · apply Finset.sum_congr rfl
+                    intro i hi
+                    have : ¬ i.val < m - k := (Finset.mem_filter.mp hi).2
+                    simp [q, this]
+            _ = (Finset.filter (fun i : Fin m => ¬ i.val < m - k) Finset.univ).card * (1 / (k : ℝ)) := by
+                  simp [Finset.sum_const]
+        have h_card :
+            (Finset.filter (fun i : Fin m => ¬ i.val < m - k) Finset.univ).card = k := by
+          have h_eq :
+              (Finset.filter (fun i : Fin m => ¬ i.val < m - k) Finset.univ)
+                = Finset.image (fun (j : Fin k) => (⟨(m - k) + j.val, by omega⟩ : Fin m))
+                    Finset.univ := by
+            ext i
+            simp only [Finset.mem_filter, Finset.mem_univ, true_and,
+              Finset.mem_image, not_lt]
+            constructor
+            · intro hi
+              use ⟨i.val - (m - k), by omega⟩
+              simp
+              ext; omega
+            · rintro ⟨j, -, rfl⟩
+              simp
+          have h_inj :
+              Function.LeftInverse
+                (fun (x : Fin k) => (⟨(m - k) + x.val, by omega⟩ : Fin m))
+                (fun i => ⟨i.val - (m - k), by
+                    have : m - k ≤ i.val := Nat.le_of_lt_succ (Nat.lt_of_not_ge i.property)
+                    exact by omega⟩) := by
+            intro x
+            ext; simp
+          have :
+              Function.RightInverse
+                (fun (x : Fin k) => (⟨(m - k) + x.val, by omega⟩ : Fin m))
+                (fun i => ⟨i.val - (m - k), by
+                    have : m - k ≤ i.val := Nat.le_of_lt_succ (Nat.lt_of_not_ge i.property)
+                    exact by omega⟩) := by
+            intro x
+            ext; simp
+          have h_injective :
+              Function.LeftInverse
+                  (fun i =>
+                      ⟨i.val - (m - k), by
+                        have : m - k ≤ i.val := Nat.le_of_lt_succ (Nat.lt_of_not_ge i.property)
+                        exact by omega⟩)
+                  (fun x => (⟨(m - k) + x.val, by omega⟩ : Fin m)) := by
+            intro x
+            ext; simp
+          have hinj :
+              Set.InjOn
+                (fun (j : Fin k) =>
+                    (⟨(m - k) + j.val, by omega⟩ : Fin m)) Set.univ := by
+            intro a ha b hb h
+            ext; simpa using congrArg Fin.val h
+          simpa [h_eq] using Finset.card_image_of_injective
+            (s := Finset.univ) (f := fun (j : Fin k) => (⟨(m - k) + j.val, by omega⟩ : Fin m))
+              (by
+                intro a b h
+                simp only [Fin.mk.injEq] at h
+                ext; simpa using h)
+        have hk_ne : (k : ℝ) ≠ 0 := ne_of_gt hk_pos
+        calc
+          ∑ i : Fin m, q i
+              = (Finset.filter (fun i : Fin m => ¬ i.val < m - k) Finset.univ).card *
+                (1 / (k : ℝ)) := h_range
+          _ = 1 := by simp [h_card, hk_ne, one_div]
+      · intro i; simp [q]; split_ifs <;> positivity
+    have hξ_mean :
+        ∀ i : Fin m, ∫ ω, ξ i ω ∂μ = mf := by
+      intro i
+      simpa [ξ, Y] using hmean_f (n + i.val + 1)
+    have hξ_L2 :
+        ∀ i : Fin m, MemLp (fun ω => ξ i ω - mf) 2 μ := by
+      intro i
+      simpa [ξ, Y] using
+        (hfX_L2' (n + i.val + 1)).sub (memLp_const mf)
+    have hξ_var :
+        ∀ i : Fin m, ∫ ω, (ξ i ω - mf)^2 ∂μ = σSqf := by
+      intro i
+      simpa [ξ, Y] using hvar_f (n + i.val + 1)
+    have hξ_cov :
+        ∀ i j : Fin m, i ≠ j →
+          ∫ ω, (ξ i ω - mf) * (ξ j ω - mf) ∂μ = σSqf * ρf := by
+      intro i j hij
+      have hij' : (n + i.val + 1) ≠ (n + j.val + 1) := by
+        have : i.val ≠ j.val := by exact_mod_cast Fin.vne_of_ne hij
+        omega
+      simpa [ξ, Y, hij'] using hcov_f (n + i.val + 1) (n + j.val + 1) hij'
+    have h_bound :=
+      @L2Approach.l2_contractability_bound Ω _ μ _ m ξ mf (Real.sqrt σSqf) ρf
+        hρ_bd hξ_mean hξ_L2
+        (by
+          intro i
+          simpa using hξ_var i)
+        (by
+          intro i j hij
+          simpa [Real.sq_sqrt hσSq_nonneg] using
+            (hξ_cov i j hij)) p q hp_prob hq_prob
+    have h_sup_diff :
+        (⨆ i : Fin m, |p i - q i|) ≤ 1 / (k : ℝ) := by
+      classical
+      haveI : Nonempty (Fin m) :=
+        Fin.pos_iff_nonempty.mp (Nat.lt_of_lt_of_le hk hkm)
+      apply ciSup_le
+      intro i
+      have hi_lt : (i.val < m - k) ∨ (m - k ≤ i.val) := lt_or_ge_of_decidable_lt _
+      have hm_le : (k : ℝ) ≤ m := by exact_mod_cast hkm
+      have hm_inv_pos : 0 < 1 / (m : ℝ) := by
+        have : (0 : ℝ) < m := hm_pos
+        have : 0 < (m : ℝ) := hm_pos
+        exact div_pos zero_lt_one this
+      have hk_inv_pos : 0 < 1 / (k : ℝ) := by exact div_pos zero_lt_one hk_pos
+      simp [p, q]
+      split_ifs with hlt
+      · have : |1 / (m : ℝ) - 0| = 1 / (m : ℝ) := by
+          simpa using abs_of_pos hm_inv_pos
+        simp [this, one_div_le_one_div hm_pos hk_pos, hkm]
+      · have h_order : (1 : ℝ) / m ≤ 1 / k := by
+          exact (one_div_le_one_div hm_pos hk_pos).mpr (Nat.cast_le.mpr hkm)
+        have h_diff_nonpos : (1 : ℝ) / m - 1 / k ≤ 0 := by linarith
+        have h_abs :
+            |1 / (m : ℝ) - 1 / (k : ℝ)| = 1 / (k : ℝ) - 1 / (m : ℝ) := by
+          simpa [abs_of_nonpos h_diff_nonpos, sub_eq_add_neg, add_comm]
+        have h_nonneg : 0 ≤ 1 / (m : ℝ) := by positivity
+        have hk_ge : 0 ≤ 1 / (k : ℝ) := by positivity
+        have : 1 / (k : ℝ) - 1 / (m : ℝ) ≤ 1 / (k : ℝ) := by linarith
+        simpa [h_abs]
+    have h_factor_nonneg :
+        0 ≤ 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) := by
+      have hσ_nonneg : 0 ≤ (Real.sqrt σSqf) ^ 2 := sq_nonneg _
+      have hρ_nonneg : 0 ≤ 1 - ρf := sub_nonneg.mpr hρ_bd.2
+      have : 0 ≤ (2 : ℝ) := by norm_num
+      exact mul_nonneg (mul_nonneg this hσ_nonneg) hρ_nonneg
+    have h_sqrt_sq : (Real.sqrt σSqf) ^ 2 = σSqf := Real.sq_sqrt hσSq_nonneg
+    calc
+      ∫ ω,
+          ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
+           (1 / (k : ℝ)) * ∑ i : Fin k,
+             f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
+          = ∫ ω, (∑ i : Fin m, p i * ξ i ω - ∑ i : Fin m, q i * ξ i ω)^2 ∂μ := by
+              congr 1
+              funext ω
+              simp [ξ, p, q, Y, sum_tail_block_reindex hk hkm]
+      _ ≤ 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) *
+            (⨆ i : Fin m, |p i - q i|) := h_bound
+      _ ≤ 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) * (1 / (k : ℝ)) := by
+            refine mul_le_mul_of_nonneg_left h_sup_diff h_factor_nonneg
+      _ = Cf / k := by
+            have : 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) = Cf := by
+              simp [Cf, h_sqrt_sq, mul_comm, mul_left_comm, mul_assoc]
+            simpa [this, div_eq_mul_inv]
+
   -- Step 1: For n=0, show (A 0 m)_m is Cauchy in L² hence L¹
   have hA_cauchy_L2_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
       eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ < ENNReal.ofReal ε := by
     intro ε hε
-    -- Uniform two-window bound: ∫ (...)^2 ≤ Cf / k
-    obtain ⟨Cf, hCf_nonneg, hCf_unif⟩ :=
-      l2_bound_two_windows_uniform X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
-
     -- Choose N to handle BOTH separated and close cases
     --
     -- SEPARATED CASE: Need 3 * √(C_star/N) < ε
     --   ⟹ 9 * C_star / N < ε²
     --   ⟹ N > 9 * C_star / ε²
-    --   With C_star ≤ 3 * Cf: N > 27 * Cf / ε²
     --
     -- CLOSE CASE: Need 2Mk/ℓ < ε where k = N and ℓ ≥ 2N
     --   With ℓ = 2N: 2Mk/(2N) = Mk/N < ε
@@ -2176,7 +2622,7 @@ theorem weighted_sums_converge_L1
     -- which is sufficient for the proof structure.
 
     obtain ⟨M, hM⟩ := hf_bdd
-    let N : ℕ := Nat.ceil (27 * Cf / (ε ^ 2)) + 1
+    let N : ℕ := Nat.ceil (9 * Cf / (ε ^ 2)) + 1
     have hN_pos : 0 < N := Nat.succ_pos _
     -- Require m, ℓ ≥ 2N to ensure windows are disjoint
     refine ⟨2 * N, ?_⟩
@@ -2196,14 +2642,16 @@ theorem weighted_sums_converge_L1
     -- T1: (0 vs m-k), T2: ((m-k) vs (ℓ-k)), T3: ((ℓ-k) vs 0), all of length k.
     have h1sq :
         ∫ ω, (A 0 k ω - A (m - k) k ω)^2 ∂μ ≤ Cf / k := by
-        simpa [A] using hCf_unif 0 (m - k) k hk_pos
+        simpa [A] using
+          (h_window_bound (n := 0) (m := m - k) (k := k) hk_pos)
     have h2sq :
       ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ ≤ Cf / k := by
-        -- Middle segment: the relaxed uniform bound handles overlapping windows directly.
-        simpa [A] using hCf_unif (m - k) (ℓ - k) k hk_pos
+        simpa [A] using
+          (h_window_bound (n := m - k) (m := ℓ - k) (k := k) hk_pos)
     have h3sq :
       ∫ ω, (A (ℓ - k) k ω - A 0 k ω)^2 ∂μ ≤ Cf / k := by
-      simpa [A] using hCf_unif (ℓ - k) 0 k hk_pos
+      simpa [A] using
+        (h_window_bound (n := ℓ - k) (m := 0) (k := k) hk_pos)
   
     -- Long vs tail comparisons for h1_L2 and h3_L2
     have hkm : k ≤ m := by
@@ -2216,45 +2664,36 @@ theorem weighted_sums_converge_L1
            _ ≤ ℓ := hℓ
   
     -- Get Ctail constants from long-vs-tail bounds
-    obtain ⟨Ctail1, hC1_nonneg, h1sq_long⟩ :=
-      l2_bound_long_vs_tail X hX_contract hX_meas hX_L2 f hf_meas ⟨M, hM⟩ 0 m k hk_pos hkm
+    have h1sq_long :
+        ∫ ω, (A 0 m ω - A (m - k) k ω)^2 ∂μ ≤ Cf / k := by
+      simpa [A] using
+        (h_long_tail_bound (n := 0) (m := m) (k := k) hk_pos hkm)
 
-    obtain ⟨Ctail3, hC3_nonneg, h3sq_long_prelim⟩ :=
-      l2_bound_long_vs_tail X hX_contract hX_meas hX_L2 f hf_meas ⟨M, hM⟩ 0 ℓ k hk_pos hkℓ
-  
-    have h1sq_long : ∫ ω, (A 0 m ω - A (m - k) k ω)^2 ∂μ ≤ Ctail1 / k := by
-      simpa [A] using h1sq_long
-  
-    have h3sq_long : ∫ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 ∂μ ≤ Ctail3 / k := by
+    have h3sq_long :
+        ∫ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 ∂μ ≤ Cf / k := by
       have : ∫ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 ∂μ
            = ∫ ω, (A 0 ℓ ω - A (ℓ - k) k ω)^2 ∂μ := by
         congr 1; ext ω; ring_nf
       rw [this]
-      simpa [A] using h3sq_long_prelim
-  
-    -- Define C_star := max of all three constants
-    let C_star : ℝ := max Cf (max Ctail1 Ctail3)
-    have hC_star_nonneg : 0 ≤ C_star := by
-      apply le_max_iff.mpr
-      left; exact hCf_nonneg
-    have hCf_le_C_star : Cf ≤ C_star := le_max_left _ _
-    have hC1_le_C_star : Ctail1 ≤ C_star := le_trans (le_max_left _ _) (le_max_right _ _)
-    have hC3_le_C_star : Ctail3 ≤ C_star := le_trans (le_max_right _ _) (le_max_right _ _)
-  
-    -- Strengthen the integral bounds to use C_star
+      simpa [A] using
+        (h_long_tail_bound (n := 0) (m := ℓ) (k := k) hk_pos hkℓ)
+
+    -- Strengthen the integral bounds to use Cf
+    let C_star : ℝ := Cf
+    have hC_star_nonneg : 0 ≤ C_star := hCf_nonneg
     have h1sq_C_star : ∫ ω, (A 0 m ω - A (m - k) k ω)^2 ∂μ ≤ C_star / k := by
-      calc ∫ ω, (A 0 m ω - A (m - k) k ω)^2 ∂μ
-          ≤ Ctail1 / k := h1sq_long
-        _ ≤ C_star / k := by exact div_le_div_of_nonneg_right hC1_le_C_star (Nat.cast_nonneg k)
+      calc
+        ∫ ω, (A 0 m ω - A (m - k) k ω)^2 ∂μ ≤ Cf / k := h1sq_long
+        _ = C_star / k := by simp [C_star]
     have h2sq_C_star : ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ ≤ C_star / k := by
-      calc ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ
-          ≤ Cf / k := h2sq
-        _ ≤ C_star / k := by exact div_le_div_of_nonneg_right hCf_le_C_star (Nat.cast_nonneg k)
+      calc
+        ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ ≤ Cf / k := h2sq
+        _ = C_star / k := by simp [C_star]
     have h3sq_C_star : ∫ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 ∂μ ≤ C_star / k := by
-      calc ∫ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 ∂μ
-          ≤ Ctail3 / k := h3sq_long
-        _ ≤ C_star / k := by exact div_le_div_of_nonneg_right hC3_le_C_star (Nat.cast_nonneg k)
-  
+      calc
+        ∫ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 ∂μ ≤ Cf / k := h3sq_long
+        _ = C_star / k := by simp [C_star]
+
     -- Convert each integral bound to an L² eLpNorm bound using C_star
     have h1_L2 :
       eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
@@ -2352,83 +2791,59 @@ theorem weighted_sums_converge_L1
               rw [← ENNReal.ofReal_add h2_nonneg h0]
               ring_nf
   
-    -- Choose k large ⇒ 3 √(C_star/k) < ε
+    -- Choose k large ⇒ 3 √(C_star/k) < ε (here C_star = Cf)
+    have hN_lower : (9 * Cf / ε ^ 2 : ℝ) < N := by
+      have h1 : (9 * Cf / ε ^ 2 : ℝ) ≤ Nat.ceil (9 * Cf / ε ^ 2) := Nat.le_ceil _
+      have h2 :
+          (Nat.ceil (9 * Cf / ε ^ 2) : ℝ) <
+            (Nat.ceil (9 * Cf / ε ^ 2) + 1 : ℕ) := by
+        norm_cast
+        omega
+      have : (Nat.ceil (9 * Cf / ε ^ 2) : ℝ) < N := by
+        exact_mod_cast h2
+      linarith
+    have hε_sq_pos : 0 < ε ^ 2 := by positivity
     have hlt_real : 3 * Real.sqrt (C_star / k) < ε := by
-      -- k = N and N = ceil(27 * Cf / ε²) + 1, so N - 1 ≥ 27 * Cf / ε²
-      -- We have C_star = max(Cf, Ctail1, Ctail3) ≤ 3 * Cf (conservative bound)
-      -- Then: 9 * C_star / N < 9 * 3 * Cf / (27 * Cf / ε²) = ε²
-      -- So: 3 * sqrt(C_star / N) < ε
-  
-      -- First establish C_star ≤ 3 * Cf
-      have hC_star_bound : C_star ≤ 3 * Cf := by
-        -- C_star = max(Cf, Ctail1, Ctail3)
-        --
-        -- MATHEMATICAL FACT: All three constants equal 2 * σSqf * (1 - ρf)
-        -- - Cf from l2_bound_two_windows_uniform (line 1032)
-        -- - Ctail1, Ctail3 from l2_bound_long_vs_tail (line 1869)
-        -- Both lemmas call contractable_covariance_structure on the same f∘X
-        --
-        -- LEAN CHALLENGE: Cf, Ctail1, Ctail3 are existentially quantified separately
-        -- - Cf comes from: obtain ⟨Cf, _, _⟩ := l2_bound_two_windows_uniform ...
-        -- - Ctail1 from: obtain ⟨Ctail1, _, _⟩ := l2_bound_long_vs_tail ... m ...
-        -- - Ctail3 from: obtain ⟨Ctail3, _, _⟩ := l2_bound_long_vs_tail ... ℓ ...
-        --
-        -- Even though they extract from the same covariance structure, Lean sees them
-        -- as different terms. To prove Ctail1 = Cf, we'd need to refactor the lemmas to:
-        -- 1. Extract covariance structure once: obtain ⟨m, σ², ρ, ...⟩ := ...
-        -- 2. Define Cf := 2 * σ² * (1 - ρ) as a concrete value
-        -- 3. Pass this Cf to the lemmas instead of existentially quantifying
-        --
-        -- PRAGMATIC SOLUTION: Use conservative bound C_star ≤ 3 * Cf
-        -- Since C_star = max(Cf, Ctail1, Ctail3) and all equal Cf mathematically:
-        -- C_star = Cf ≤ 3 * Cf (trivially true)
-        --
-        -- The factor of 3 is loose but sufficient for the threshold calculation
-        sorry  -- TODO: Refactor lemmas to share covariance structure extraction
-  
-      -- Lower bound on N
-      have hN_lower : (27 * Cf / ε ^ 2 : ℝ) < N := by
-        have h1 : (27 * Cf / ε ^ 2 : ℝ) ≤ Nat.ceil (27 * Cf / ε ^ 2) := Nat.le_ceil _
-        have h2 : (Nat.ceil (27 * Cf / ε ^ 2) : ℝ) < N := by
-          show (Nat.ceil (27 * Cf / ε ^ 2) : ℝ) < (Nat.ceil (27 * Cf / ε ^ 2) + 1 : ℕ)
-          norm_cast
-          omega
-        linarith
-  
-      -- Calculate the bound
-      have h_sq : 9 * C_star / (k : ℝ) < ε ^ 2 := by
-        -- k = N by definition
-        have hk_eq : (k : ℝ) = N := rfl
-        rw [hk_eq]
-        have hε_sq_pos : 0 < ε ^ 2 := by positivity
-        -- Either Cf > 0 or Cf = 0
-        by_cases hCf_zero : Cf = 0
-        case pos =>
-          -- If Cf = 0, then all bounds are 0, so C_star ≤ C_star_bound ≤ 0, hence C_star = 0
-          have hC_star_le_zero : C_star ≤ 0 := by
-            calc C_star ≤ 3 * Cf := hC_star_bound
-                 _ = 0 := by simp [hCf_zero]
-          have hC_star_zero : C_star = 0 := le_antisymm hC_star_le_zero hC_star_nonneg
-          simp [hC_star_zero]; exact hε_sq_pos
-        case neg =>
-          -- If Cf > 0, use the bound calculation
-          have hCf_pos : 0 < Cf := by
-            push_neg at hCf_zero
-            exact hCf_nonneg.lt_of_ne (Ne.symm hCf_zero)
-          calc 9 * C_star / (N : ℝ)
-              ≤ 9 * (3 * Cf) / (N : ℝ) := by
-                  apply div_le_div_of_nonneg_right
-                  · apply mul_le_mul_of_nonneg_left hC_star_bound
-                    norm_num
-                  · exact Nat.cast_nonneg N
-            _ = 27 * Cf / (N : ℝ) := by ring
-            _ < 27 * Cf / (27 * Cf / ε ^ 2) := by
-                  apply div_lt_div_of_pos_left
-                  · apply mul_pos; norm_num; exact hCf_pos
-                  · apply div_pos; apply mul_pos; norm_num; exact hCf_pos; exact hε_sq_pos
-                  · exact hN_lower
-            _ = ε ^ 2 := by field_simp [ne_of_gt hCf_pos, ne_of_gt hε_sq_pos]
-  
+      have hk_eq : (k : ℝ) = N := rfl
+      by_cases hCf_zero : Cf = 0
+      · have : C_star = 0 := by simpa [C_star, hCf_zero]
+        have hε_pos : 0 < ε := hε
+        simp [this, hk_eq, hε_pos]
+      · have hCf_pos : 0 < Cf := lt_of_le_of_ne hCf_nonneg hCf_zero
+        have hε_sq_ne : ε ^ 2 ≠ 0 := by exact pow_ne_zero _ (ne_of_gt hε)
+        have h_mul : 9 * Cf < (N : ℝ) * ε ^ 2 := by
+          have htemp := mul_lt_mul_of_pos_right hN_lower hε_sq_pos
+          have hleft : (9 * Cf / ε ^ 2) * ε ^ 2 = 9 * Cf := by
+            field_simp [hε_sq_ne]
+          simpa [hleft, hk_eq] using htemp
+        have hN_pos_real : 0 < (N : ℝ) := by exact_mod_cast Nat.succ_pos _
+        have h_sq : 9 * Cf / (k : ℝ) < ε ^ 2 := by
+          have := (div_lt_iff hN_pos_real).mpr (by simpa [mul_comm] using h_mul)
+          simpa [hk_eq] using this
+        have htemp_nonneg : 0 ≤ 9 * (C_star / (k : ℝ)) := by
+          have hk_pos' : 0 < (k : ℝ) := by simpa [hk_eq]
+          positivity
+        have h_sq_root :
+            Real.sqrt (9 * (C_star / (k : ℝ))) < ε := by
+          have htemp :=
+            Real.sqrt_lt.mpr
+              ⟨htemp_nonneg, by positivity,
+                by simpa [C_star, hk_eq] using h_sq⟩
+          simpa [Real.sqrt_sq (le_of_lt hε)] using htemp
+        have hsqrt_mul :
+            Real.sqrt (9 * (C_star / (k : ℝ))) =
+              Real.sqrt 9 * Real.sqrt (C_star / (k : ℝ)) :=
+          Real.sqrt_mul (show (0 : ℝ) ≤ 9 by norm_num)
+            (by positivity : 0 ≤ C_star / (k : ℝ))
+        have h3 : (3 : ℝ) = Real.sqrt 9 := by
+          rw [show (9 : ℝ) = 3 ^ 2 by norm_num]
+          exact Real.sqrt_sq (by norm_num : (0 : ℝ) ≤ 3)
+        have h_sqrt :
+            3 * Real.sqrt (C_star / (k : ℝ)) =
+              Real.sqrt (9 * (C_star / (k : ℝ))) := by
+          simpa [hsqrt_mul, h3, mul_comm] using hsqrt_mul.symm
+        simpa [h_sqrt, C_star, hk_eq] using h_sq_root
+
       -- Take square roots
       have h0 : 0 ≤ C_star / (k : ℝ) := by positivity
       have h1 : 0 ≤ 9 * C_star / (k : ℝ) := by positivity
