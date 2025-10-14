@@ -1788,15 +1788,22 @@ lemma contractable_finite_cylinder_measure
 
   -- First prove S_std is measurable
   have hS_meas : MeasurableSet S_std := by
-    -- S_std is a cylinder set - finite intersection of coordinate preimages
-    -- Each coordinate constraint gives a measurable set
-    simp only [S_std]
-    -- Use measurability of pi sets (product of coordinate conditions)
-    -- The set is: {f | (∀ i : Fin r, f ⟨i, _⟩ ∈ A i) ∧ f ⟨r, _⟩ ∈ B ∧ (∀ j : Fin k, f ⟨r+1+j, _⟩ ∈ C j)}
-
-    -- Use measurableSet_pi to show this is measurable
-    -- Each component is a coordinate preimage of a measurable set
-    sorry -- TODO: Use MeasurableSet.pi or similar lemma for product sets
+    -- S_std is a finite product cylinder: intersection of coordinate preimages
+    -- Decompose as: (⋂ i<r, eval i ⁻¹(A i)) ∩ (eval r ⁻¹ B) ∩ (⋂ j<k, eval (r+1+j) ⁻¹(C j))
+    -- Each eval i : (Fin n → α) → α is measurable (by measurable_pi_apply)
+    -- Preimages preserve measurability, intersections preserve measurability
+    --
+    -- Strategy 1 (intersection-of-preimages):
+    --   Use MeasurableSet.inter + MeasurableSet.iInter + measurable_pi_apply
+    --
+    -- Strategy 2 (univ.pi approach):
+    --   Define t : Fin (r+1+k) → Set α where t i = A i (i<r), B (i=r), C j (i=r+1+j)
+    --   Show S_std = Set.pi Set.univ t
+    --   Apply MeasurableSet.univ_pi (or MeasurableSet.pi)
+    --
+    sorry -- TODO (~15 min): Standard pi-set measurability
+          -- Mathematical content: trivial
+          -- Technical: Needs exact Lean pattern for product space instances
 
   -- Prove the functions are measurable
   have h_meas_idx : Measurable (fun ω (i : Fin (r + 1 + k)) => X (idx i) ω) :=
@@ -2044,16 +2051,20 @@ lemma block_coord_condIndep
       ∫ ω in E_cyl, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ
         = (μ ({ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)})).toReal := by
       intro A hA C hC
-      -- Integral of indicator over E_cyl equals measure of E_cyl ∩ {X_r ∈ B}
+      -- Goal: ∫ ω in E_cyl, indicator B (X r ω) dμ = μ(E_target).toReal
       --
       -- Strategy:
-      -- 1. Rewrite indicator B (X r ω) as indicator (X r ⁻¹' B) ω
-      -- 2. Apply integral_indicator: ∫_{E_cyl} 1_{X r ⁻¹' B} = μ(E_cyl ∩ (X r ⁻¹' B))
-      -- 3. Show E_cyl ∩ (X r ⁻¹' B) = {∀i X_i ∈ A_i, X_r ∈ B, ∀j X_{m+1+j} ∈ C_j}
+      -- 1. The function (ω ↦ indicator B 1 (X r ω)) equals (ω ↦ indicator (X r⁻¹ B) 1 ω)
+      -- 2. Apply integral_indicator: ∫_{E_cyl} indicator S 1 = (μ.restrict E_cyl)(S).toReal
+      -- 3. Show (μ.restrict E_cyl)(X r⁻¹ B) = μ(E_cyl ∩ X r⁻¹ B) = μ E_target
       --
-      -- This is straightforward but has minor technical issues with set equality
-      -- and indicator function rewriting in Lean.
-      sorry
+      sorry -- TODO (~20 min): Standard integral-to-measure conversion
+            -- Mathematical content: trivial
+            -- Technical issues:
+            -- - Indicator function rewriting (composition with X r)
+            -- - integral_indicator application pattern
+            -- - Measure.restrict and intersection equality
+            -- All standard, just need exact Lean incantations
 
     -- Step 2: Apply contractability
     have contractability_step : ∀ (A : Fin r → Set α) (hA : ∀ i, MeasurableSet (A i))
@@ -2114,14 +2125,30 @@ lemma block_coord_condIndep
         -- finFutureSigma is comap of (fun ω j => X (m+1+j) ω), so E_future is preimage
         have hE_future : MeasurableSet[finFutureSigma X m k] E_future := by
           -- E_future = preimage of finite cylinder under the future map
+          -- The future map is: fun ω => fun i : Fin k => X (m + 1 + i.val) ω
+          let futureMap := fun ω => fun i : Fin k => X (m + 1 + i.val) ω
+
+          -- E_future = futureMap ⁻¹' (finCylinder k C)
+          have h_preimage : E_future = futureMap ⁻¹' (finCylinder (α:=α) k C) := by
+            ext ω
+            simp [E_future, futureMap, finCylinder]
+
+          rw [h_preimage]
+          -- finFutureSigma is the comap of futureMap
+          -- A set is measurable in a comap iff it's a preimage of a measurable set
           unfold finFutureSigma
-          sorry -- TODO: Show this is preimage of measurable set under comap function
-                -- Similar pattern to firstRCylinder_measurable_in_firstRSigma
+          exact ⟨_, finCylinder_measurable hC, rfl⟩
 
         -- Intersection is measurable in the sup
-        sorry -- TODO: Standard σ-algebra lifting
-              -- Use: MeasurableSet[m₁] E₁ → m₁ ≤ m → MeasurableSet[m] E₁
-              -- Then: MeasurableSet[m] E₁ → MeasurableSet[m] E₂ → MeasurableSet[m] (E₁ ∩ E₂)
+        -- Need: MeasurableSet[m₁] E ∧ m₁ ≤ m → MeasurableSet[m] E
+        -- This is trivial: m₁ ≤ m means m₁ ⊆ m as collections of sets
+        -- So E ∈ m₁ implies E ∈ m
+        sorry -- TODO (~5 min): Standard measurability lifting
+              -- Use: (le_sup_left : firstRSigma X r ≤ ...) applied to hE_past
+              -- And: (le_sup_right : finFutureSigma X m k ≤ ...) applied to hE_future
+              -- Then: MeasurableSet.inter for the intersection
+              -- Mathematical content: completely trivial
+              -- Technical issue: finding exact syntax for applying ≤ to MeasurableSet
       · -- Integral equality
         rw [lhs_computation A hA C hC, rhs_computation A hA C hC]
         rw [contractability_step A hA C hC]
@@ -2198,19 +2225,28 @@ lemma block_coord_condIndep
 
     -- Part C: Apply Dynkin's π-λ theorem
     --
-    -- Goal: Show E ∈ GoodSets
+    -- Goal: Show E ∈ GoodSets for any E measurable in firstRSigma X r ⊔ finFutureSigma X m k
     --
-    -- Strategy:
-    -- 1. Show cylinders form a π-system (closed under ∩)
-    -- 2. Show GoodSets is a λ-system (Dynkin system):
-    --    - Contains Ω
-    --    - Closed under complements
-    --    - Closed under disjoint increasing unions
-    -- 3. Apply mathlib's Dynkin π-λ theorem: if π-system ⊆ λ-system,
-    --    then σ-algebra generated by π-system ⊆ λ-system
-    -- 4. Since E is in the generated σ-algebra, E ∈ GoodSets
-    sorry -- TODO: Apply MeasureTheory.generateFrom_measurableSet_of_isPiSystem
-          -- or related Dynkin theorem from mathlib
+    -- Strategy (standard Dynkin argument):
+    -- 1. **π-system**: Show cylinders form a π-system (closed under ∩)
+    --    - Cylinder = E_past ∩ E_future where E_past ∈ firstRSigma, E_future ∈ finFutureSigma
+    --    - Intersection of cylinders is a cylinder
+    --    - Use cylinders_in_goodsets to show π-system ⊆ GoodSets
+    --
+    -- 2. **λ-system**: Show GoodSets is a Dynkin system:
+    --    - Contains Ω: ∫_Ω f = ∫_Ω μ[f|m] by tower property
+    --    - Closed under complements: use integral decomposition
+    --    - Closed under disjoint increasing unions: Part B (goodsets_closed_under_monotone_union)
+    --
+    -- 3. **Application**: Apply mathlib's Dynkin π-λ theorem
+    --    - Lemma: `MeasureTheory.generateFrom_eq_iInf` or `isPiSystem.generateFrom_eq`
+    --    - Since π-system ⊆ λ-system, generated σ-algebra ⊆ λ-system
+    --    - Cylinders generate firstRSigma X r ⊔ finFutureSigma X m k
+    --    - Therefore E ∈ GoodSets
+    --
+    sorry -- TODO (~45 min): Standard Dynkin π-λ application
+          -- Mathematical content: textbook argument
+          -- Technical: find exact mathlib Dynkin lemma + prove π-system/λ-system properties
 
   -- **Step 2: Pass to limit as k → ∞ using martingale convergence**
   --

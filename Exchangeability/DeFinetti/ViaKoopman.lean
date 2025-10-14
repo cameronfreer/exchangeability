@@ -886,8 +886,7 @@ private lemma condexp_pair_factorization_MET
       Key property: **Conditional expectation is L¹-Lipschitz continuous**
         ‖CE[X|m] - CE[Y|m]‖₁ ≤ ‖X - Y‖₁
 
-      This is a fundamental property of conditional expectation, also known as the
-      "contraction property" or "non-expansiveness" of the conditional expectation operator.
+      This follows from Jensen's inequality applied to |·|.
 
       Applying this:
       ∫|CE[f(ω₀)·A_n(ω)|m] - CE[f(ω₀)·CE[g(ω₀)|m](ω)|m]| dμ
@@ -895,19 +894,62 @@ private lemma condexp_pair_factorization_MET
 
       Therefore: CE[f·A_n|m] → CE[f·CE[g|m]|m] in L¹
 
-      L¹ convergence implies:
-      1. Existence of subsequence converging ae (standard measure theory)
-      2. Full sequence converges ae (since it's already Cauchy in L¹)
+      L¹ convergence implies ae convergence (of a subsequence, but sequence is Cauchy so full sequence converges).
+      -/
 
-      Technical requirements:
-      - Apply MeasureTheory.Lp.norm_condexp_le or similar for L¹-Lipschitz
-      - Extract ae convergence from L¹ convergence
-      - Use completeness of L¹ space
+      -- Set up notation
+      set X := fun n : ℕ => fun ω => f (ω 0) * A n ω
+      set Y := fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω
+      set CE_X := fun n => μ[X n | m]
+      set CE_Y := μ[Y | m]
 
-      Mathlib lemmas needed:
-      - Conditional expectation contraction in L¹
-      - L¹ convergence → ae convergence (via subsequence)
-      - Or directly: tendsto_in_measure_of_tendsto_Lp
+      -- Step 5a: From step 4, we have L¹ convergence of the inputs
+      -- ∫|X_n - Y| → 0
+      have h_l1_input : Tendsto (fun n => ∫ ω, |X n ω - Y ω| ∂μ) atTop (𝓝 0) := by
+        -- This is exactly h_product_convergence by definition of X and Y
+        show Tendsto (fun n => ∫ ω, |f (ω 0) * A n ω - f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω| ∂μ) atTop (𝓝 0)
+        exact h_product_convergence
+
+      -- Step 5b: Prove L¹-Lipschitz property for conditional expectation
+      -- ∫|CE[X_n|m] - CE[Y|m]| ≤ ∫|X_n - Y|
+      -- This uses condExp_L1_lipschitz (already proved above using Jensen + linearity)
+      have h_lipschitz : ∀ n, ∫ ω, |CE_X n ω - CE_Y ω| ∂μ ≤ ∫ ω, |X n ω - Y ω| ∂μ := by
+        intro n
+        -- Need to establish integrability of X n and Y
+        -- Both are products of bounded functions on a probability space, hence integrable
+        have hX_int : Integrable (X n) μ := by
+          -- X n = f(ω 0) * A_n(ω) where both factors are bounded
+          sorry -- TODO: f bounded, A_n bounded (Cesàro of bounded), probability measure
+        have hY_int : Integrable Y μ := by
+          -- Y = f(ω 0) * CE[g(ω 0)|m] where both factors are bounded
+          sorry -- TODO: f bounded, CE[g|m] bounded (CE preserves bounds), probability measure
+        -- Apply condExp_L1_lipschitz
+        exact condExp_L1_lipschitz hX_int hY_int
+
+      -- Step 5c: Therefore CE_X n → CE_Y in L¹
+      have h_l1_ce : Tendsto (fun n => ∫ ω, |CE_X n ω - CE_Y ω| ∂μ) atTop (𝓝 0) := by
+        apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_l1_input
+        · intro n
+          exact integral_nonneg fun ω => abs_nonneg _
+        · intro n
+          exact h_lipschitz n
+
+      -- Step 5d: Extract ae convergence from L¹ convergence
+      -- Standard result: if ∫|X_n - X| → 0, then ∃ subsequence converging ae
+      -- Since our sequence is also Cauchy (CE[f·A_n|m] converges to CE_Y in L¹),
+      -- the full sequence converges ae to the same limit
+      /-
+      IMPLEMENTATION STRATEGY:
+      1. From h_l1_ce: ∫|CE_X n - CE_Y| → 0, we know CE_X n → CE_Y in L¹
+      2. Standard measure theory: L¹ convergence implies existence of subsequence with ae convergence
+      3. Need to extract: ∀ᵐ ω, CE_X n ω → CE_Y ω
+
+      Possible approaches:
+      - Use tendsto_in_measure_of_tendsto_Lp + measure convergence → ae convergence
+      - Or directly: construct Cauchy sequence, apply completeness of ae limits
+      - Mathlib may have: ae_tendsto_of_tendsto_integral_abs or similar
+
+      This is standard but technically involved in mathlib.
       -/
       sorry
 
