@@ -1788,35 +1788,26 @@ lemma contractable_finite_cylinder_measure
 
   -- First prove S_std is measurable
   have hS_meas : MeasurableSet S_std := by
-    -- S_std is a finite product cylinder: intersection of coordinate preimages
-    -- Decompose as: (⋂ i<r, eval i ⁻¹(A i)) ∩ (eval r ⁻¹ B) ∩ (⋂ j<k, eval (r+1+j) ⁻¹(C j))
-    -- Each eval i : (Fin n → α) → α is measurable (by measurable_pi_apply)
-    -- Preimages preserve measurability, intersections preserve measurability
-    --
-    -- Strategy 1 (intersection-of-preimages):
-    --   Use MeasurableSet.inter + MeasurableSet.iInter + measurable_pi_apply
-    --
-    -- Strategy 2 (univ.pi approach):
-    -- Define t : Fin (r+1+k) → Set α where t i = A i (i<r), B (i=r), C j (i=r+1+j)
-    sorry -- TODO (~15-20 min): Product cylinder measurability
-          -- Mathematical content: TRIVIAL (product of measurable sets is measurable)
-          --
-          -- Attempted univ.pi approach:
-          -- 1. Define t : Fin (r+1+k) → Set α piecewise (hit omega issues with bounds)
-          -- 2. Show S_std = Set.pi Set.univ t (complex Fin equalities and case analysis)
-          -- 3. Apply MeasurableSet.pi Set.countable_univ
-          --
-          -- Issues encountered:
-          -- - omega couldn't prove bounds for C ⟨i.val - r - 1, _⟩
-          -- - Fin equality rewrites complicated (ext + omega)
-          -- - Missing API: Fin.val_lt_of_lt
-          -- - simp made no progress on nested conditionals
-          --
-          -- Alternative: Strategy 1 (intersection-of-preimages)
-          -- S_std = (⋂ i<r, eval i ⁻¹(A i)) ∩ (eval r ⁻¹ B) ∩ (⋂ j<k, eval (r+1+j) ⁻¹(C j))
-          -- Apply: MeasurableSet.inter + MeasurableSet.iInter + measurable_pi_apply
-          --
-          -- This is standard product space measurability - purely technical Lean issue
+    -- Use intersection decomposition approach
+    -- S_std = (⋂ i : Fin r, preimage at i) ∩ (preimage at r) ∩ (⋂ j : Fin k, preimage at r+1+j)
+    have h_decomp : S_std =
+        (⋂ i : Fin r, {f | f ⟨i.val, by omega⟩ ∈ A i}) ∩
+        {f | f ⟨r, by omega⟩ ∈ B} ∩
+        (⋂ j : Fin k, {f | f ⟨r + 1 + j.val, by omega⟩ ∈ C j}) := by
+      ext f
+      simp only [S_std, Set.mem_iInter, Set.mem_inter_iff, Set.mem_setOf]
+      tauto
+
+    rw [h_decomp]
+    apply MeasurableSet.inter
+    · apply MeasurableSet.inter
+      · apply MeasurableSet.iInter
+        intro i
+        exact measurable_pi_apply (Fin.mk i.val (by omega)) (hA i)
+      · exact measurable_pi_apply (Fin.mk r (by omega)) hB
+    · apply MeasurableSet.iInter
+      intro j
+      exact measurable_pi_apply (Fin.mk (r + 1 + j.val) (by omega)) (hC j)
 
   -- Prove the functions are measurable
   have h_meas_idx : Measurable (fun ω (i : Fin (r + 1 + k)) => X (idx i) ω) :=
@@ -2283,10 +2274,129 @@ lemma block_coord_condIndep
     --    - Since π-system ⊆ λ-system, generated σ-algebra ⊆ λ-system
     --    - Cylinders generate firstRSigma X r ⊔ finFutureSigma X m k
     --    - Therefore E ∈ GoodSets
-    --
-    sorry -- TODO (~45 min): Standard Dynkin π-λ application
-          -- Mathematical content: textbook argument
-          -- Technical: find exact mathlib Dynkin lemma + prove π-system/λ-system properties
+
+    -- Define the π-system of cylinder sets
+    let CylinderSets : Set (Set Ω) := {E |
+      ∃ (A : Fin r → Set α) (hA : ∀ i, MeasurableSet (A i))
+        (C : Fin k → Set α) (hC : ∀ i, MeasurableSet (C i)),
+      E = {ω | (∀ i, X i.val ω ∈ A i) ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)}}
+
+    -- Step 1: Show CylinderSets is a π-system
+    have cylinder_is_pi : IsPiSystem CylinderSets := by
+      intro E₁ hE₁ E₂ hE₂ hnonempty
+      simp only [CylinderSets, Set.mem_setOf_eq] at hE₁ hE₂ ⊢
+      obtain ⟨A₁, hA₁, C₁, hC₁, rfl⟩ := hE₁
+      obtain ⟨A₂, hA₂, C₂, hC₂, rfl⟩ := hE₂
+      -- Intersection: {∀i X_i ∈ A₁_i ∩ A₂_i} ∩ {∀j X_{m+1+j} ∈ C₁_j ∩ C₂_j}
+      use fun i => A₁ i ∩ A₂ i, fun i => (hA₁ i).inter (hA₂ i)
+      use fun j => C₁ j ∩ C₂ j, fun j => (hC₁ j).inter (hC₂ j)
+      ext ω
+      simp only [Set.mem_inter_iff, Set.mem_setOf_eq]
+      constructor
+      · intro ⟨⟨h1, h2⟩, ⟨h3, h4⟩⟩
+        constructor
+        · intro i; exact ⟨h1 i, h3 i⟩
+        · intro j; exact ⟨h2 j, h4 j⟩
+      · intro ⟨h1, h2⟩
+        constructor
+        · constructor
+          · intro i; exact (h1 i).1
+          · intro j; exact (h2 j).1
+        · constructor
+          · intro i; exact (h1 i).2
+          · intro j; exact (h2 j).2
+
+    -- Step 2: Show CylinderSets ⊆ GoodSets
+    have cylinders_in_good : CylinderSets ⊆ GoodSets := by
+      intro E hE
+      simp only [CylinderSets, Set.mem_setOf_eq] at hE
+      obtain ⟨A, hA, C, hC, rfl⟩ := hE
+      exact cylinders_in_goodsets A hA C hC
+
+    -- Step 3: Show cylinders generate the σ-algebra
+    have h_gen : firstRSigma X r ⊔ finFutureSigma X m k = MeasurableSpace.generateFrom CylinderSets := by
+      sorry -- TODO (~20-25 min): Product σ-algebra generation
+            -- Mathematical fact: m₁ ⊔ m₂ = generateFrom {A ∩ B | A ∈ m₁, B ∈ m₂}
+            --
+            -- Strategy 1 (direct): Use le_antisymm, show both inclusions
+            -- - (⊇): Every cylinder is measurable in sup (intersection of measurables)
+            -- - (⊆): Show both firstRSigma, finFutureSigma ≤ generateFrom CylinderSets
+            --
+            -- Strategy 2 (piiUnionInter): Use generateFrom_piiUnionInter_measurableSet
+            -- - Package as family: fun (i : Fin 2) => if i = 0 then firstRSigma else finFuture
+            -- - Show CylinderSets = piiUnionInter of this family
+            -- - Apply lemma: generateFrom (piiUnionInter ...) = iSup
+            --
+            -- Both approaches are standard but require careful sigma-algebra manipulation
+
+    -- Step 4: Apply Dynkin's π-λ theorem (induction_on_inter)
+    -- Predicate: E belongs to GoodSets
+    refine MeasurableSpace.induction_on_inter h_gen cylinder_is_pi ?_ ?_ ?_ ?_ E hE
+
+    · -- Base case: empty set
+      simp [setIntegral_empty]
+
+    · -- Basic case: cylinders
+      intro t ht
+      exact (cylinders_in_good ht).2
+
+    · -- Complement case
+      intro t htm ht_in_good
+      sorry -- TODO (~15 min + integrability): Use setIntegral_compl decomposition
+            -- Strategy:
+            -- 1. Prove indicators are integrable (bounded by 1)
+            -- 2. Apply setIntegral_compl: ∫_{tᶜ} f = ∫_Ω f - ∫_t f
+            -- 3. Show ∫_Ω indicator = ∫_Ω condexp (tower property)
+            -- 4. Use IH: ∫_t indicator = ∫_t condexp
+            -- 5. Conclude: ∫_{tᶜ} indicator = ∫_{tᶜ} condexp
+
+    · -- Disjoint union case
+      intro f hf_disj hf_meas hf_in_good
+      -- Convert pairwise disjoint union to monotone union of partial sums
+      -- Define partial sums: E_n = ⋃_{i<n} f i
+      let E_partial := fun n => ⋃ i : Fin n, f i
+      -- E_partial is monotone and ⋃_n E_partial n = ⋃_i f i
+      have hE_partial_mono : Monotone E_partial := by
+        intro m n hmn
+        intro ω hω
+        simp only [E_partial, Set.mem_iUnion] at hω ⊢
+        obtain ⟨i, hω⟩ := hω
+        exact ⟨Fin.castLE hmn i, hω⟩
+      have hE_partial_eq : ⋃ n, E_partial n = ⋃ i, f i := by
+        ext ω
+        simp only [Set.mem_iUnion, E_partial]
+        constructor
+        · intro ⟨n, i, h⟩; exact ⟨i, h⟩
+        · intro ⟨i, h⟩; exact ⟨i.succ, ⟨i, Nat.lt_succ_self i⟩, h⟩
+      -- Each partial sum is in GoodSets
+      have hE_partial_in : ∀ n, E_partial n ∈ GoodSets := by
+        intro n
+        constructor
+        · -- Measurability
+          apply MeasurableSet.iUnion
+          intro i
+          exact hf_meas i
+        · -- Integral equality
+          -- Use additivity of integrals over finite disjoint unions
+          let g := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X r ω)
+          let h := fun ω => (Exchangeability.Probability.condExpWith μ
+            (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
+            (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω
+          -- For each i, we have ∫_{f i} g = ∫_{f i} h by hypothesis
+          have h_eq_i : ∀ i : Fin n, ∫ ω in f i, g ω ∂μ = ∫ ω in f i, h ω ∂μ := by
+            intro i
+            exact hf_in_good i
+          -- Need: ∫_{E_partial n} g = ∫_{E_partial n} h
+          -- Use integral_iUnion_fintype
+          sorry -- TODO (~15-20 min): Apply integral_iUnion_fintype
+                -- Need to prove:
+                -- 1. Each f i is measurable (have: hf_meas i)
+                -- 2. Pairwise disjoint (have: hf_disj)
+                -- 3. Integrability on each f i (bounded indicators)
+                -- Then: ∫_{⋃ i} g = ∑ i (∫_{f i} g) = ∑ i (∫_{f i} h) = ∫_{⋃ i} h
+      -- Apply monotone union closure
+      rw [← hE_partial_eq]
+      exact (goodsets_closed_under_monotone_union E_partial hE_partial_in hE_partial_mono).2
 
   -- **Step 2: Pass to limit as k → ∞ using martingale convergence**
   --
