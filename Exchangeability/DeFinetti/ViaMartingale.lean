@@ -2315,9 +2315,19 @@ lemma block_coord_condIndep
 
     -- Step 3: Show cylinders generate the σ-algebra
     have h_gen : firstRSigma X r ⊔ finFutureSigma X m k = MeasurableSpace.generateFrom CylinderSets := by
-      sorry -- TODO (~15 min): Standard σ-algebra generation
-            -- Use that sup of σ-algebras equals generateFrom of generators
-            -- CylinderSets = {preimages under (firstRBlock X r, finFutureBlock X m k)}
+      sorry -- TODO (~20-25 min): Product σ-algebra generation
+            -- Mathematical fact: m₁ ⊔ m₂ = generateFrom {A ∩ B | A ∈ m₁, B ∈ m₂}
+            --
+            -- Strategy 1 (direct): Use le_antisymm, show both inclusions
+            -- - (⊇): Every cylinder is measurable in sup (intersection of measurables)
+            -- - (⊆): Show both firstRSigma, finFutureSigma ≤ generateFrom CylinderSets
+            --
+            -- Strategy 2 (piiUnionInter): Use generateFrom_piiUnionInter_measurableSet
+            -- - Package as family: fun (i : Fin 2) => if i = 0 then firstRSigma else finFuture
+            -- - Show CylinderSets = piiUnionInter of this family
+            -- - Apply lemma: generateFrom (piiUnionInter ...) = iSup
+            --
+            -- Both approaches are standard but require careful sigma-algebra manipulation
 
     -- Step 4: Apply Dynkin's π-λ theorem (induction_on_inter)
     -- Predicate: E belongs to GoodSets
@@ -2360,10 +2370,30 @@ lemma block_coord_condIndep
         · intro ⟨i, h⟩; exact ⟨i.succ, ⟨i, Nat.lt_succ_self i⟩, h⟩
       -- Each partial sum is in GoodSets
       have hE_partial_in : ∀ n, E_partial n ∈ GoodSets := by
-        sorry -- TODO (~15 min): Prove partial sums satisfy integral equality
-              -- For finite disjoint union ⋃_{i<n} f i:
-              -- ∫_{⋃_{i<n} f i} g = ∑_{i<n} ∫_{f i} g (by additivity)
-              -- This holds for both LHS and RHS, and sums are equal term-by-term
+        intro n
+        constructor
+        · -- Measurability
+          apply MeasurableSet.iUnion
+          intro i
+          exact hf_meas i
+        · -- Integral equality
+          -- Use additivity of integrals over finite disjoint unions
+          let g := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X r ω)
+          let h := fun ω => (Exchangeability.Probability.condExpWith μ
+            (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
+            (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω
+          -- For each i, we have ∫_{f i} g = ∫_{f i} h by hypothesis
+          have h_eq_i : ∀ i : Fin n, ∫ ω in f i, g ω ∂μ = ∫ ω in f i, h ω ∂μ := by
+            intro i
+            exact hf_in_good i
+          -- Need: ∫_{E_partial n} g = ∫_{E_partial n} h
+          -- Use integral_iUnion_fintype
+          sorry -- TODO (~15-20 min): Apply integral_iUnion_fintype
+                -- Need to prove:
+                -- 1. Each f i is measurable (have: hf_meas i)
+                -- 2. Pairwise disjoint (have: hf_disj)
+                -- 3. Integrability on each f i (bounded indicators)
+                -- Then: ∫_{⋃ i} g = ∑ i (∫_{f i} g) = ∑ i (∫_{f i} h) = ∫_{⋃ i} h
       -- Apply monotone union closure
       rw [← hE_partial_eq]
       exact (goodsets_closed_under_monotone_union E_partial hE_partial_in hE_partial_mono).2
