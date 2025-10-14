@@ -1153,13 +1153,21 @@ lemma l2_bound_two_windows_uniform
         ∑ t ∈ S, qS t * Y t ω =
           (1 / (k : ℝ)) * ∑ t ∈ window m k, Y t ω := by
       simpa [qS] using h_weight_restrict (window m k) h_subset_m ω
-    calc
-      ∑ t ∈ S, δ t * Y t ω
-          = ∑ t ∈ S, pS t * Y t ω - ∑ t ∈ S, qS t * Y t ω := by
-              simp [δ, Finset.sum_sub_distrib, mul_sub]
-      _ = (1 / (k : ℝ)) * ∑ t ∈ window n k, Y t ω -
-          (1 / (k : ℝ)) * ∑ t ∈ window m k, Y t ω := by
-              simpa [h_sum_p, h_sum_q]
+    have h_expand :
+        ∑ t ∈ S, δ t * Y t ω =
+          ∑ t ∈ S, (pS t * Y t ω - qS t * Y t ω) := by
+      refine Finset.sum_congr rfl ?_
+      intro t ht
+      simp [δ, mul_sub]
+    have h_split :
+        ∑ t ∈ S, δ t * Y t ω =
+          ∑ t ∈ S, pS t * Y t ω - ∑ t ∈ S, qS t * Y t ω := by
+      simpa using
+        (h_expand.trans
+          (Finset.sum_sub_distrib (s := S)
+            (f := fun t => pS t * Y t ω)
+            (g := fun t => qS t * Y t ω)))
+    simpa [h_sum_p, h_sum_q] using h_split
 
   have h_goal :
       ∀ ω,
@@ -1189,11 +1197,9 @@ lemma l2_bound_two_windows_uniform
       simpa [pS, h_filter]
         using h_indicator
     have h_card : (window n k).card = k := window_card n k
+    have hk_ne' : (k : ℝ) ≠ 0 := ne_of_gt hk_pos
     have h_one : (window n k).card * (1 / (k : ℝ)) = 1 := by
-      have hk_ne' : (k : ℝ) ≠ 0 := hk_ne
-      have hdiv : (1 / (k : ℝ)) = (k : ℝ)⁻¹ := by simp [one_div]
-      have hmul : (k : ℝ) * (k : ℝ)⁻¹ = 1 := mul_inv_cancel hk_ne'
-      simpa [h_card, hdiv] using hmul
+      simp [h_card, one_div, hk_ne']
     have h_const :
         ∑ t ∈ window n k, (1 / (k : ℝ))
           = (window n k).card * (1 / (k : ℝ)) := by
@@ -1218,11 +1224,9 @@ lemma l2_bound_two_windows_uniform
       simpa [qS, h_filter]
         using h_indicator
     have h_card : (window m k).card = k := window_card m k
+    have hk_ne' : (k : ℝ) ≠ 0 := ne_of_gt hk_pos
     have h_one : (window m k).card * (1 / (k : ℝ)) = 1 := by
-      have hk_ne' : (k : ℝ) ≠ 0 := hk_ne
-      have hdiv : (1 / (k : ℝ)) = (k : ℝ)⁻¹ := by simp [one_div]
-      have hmul : (k : ℝ) * (k : ℝ)⁻¹ = 1 := mul_inv_cancel hk_ne'
-      simpa [h_card, hdiv] using hmul
+      simp [h_card, one_div, hk_ne']
     have h_const :
         ∑ t ∈ window m k, (1 / (k : ℝ))
           = (window m k).card * (1 / (k : ℝ)) := by
@@ -1233,14 +1237,14 @@ lemma l2_bound_two_windows_uniform
   have hpS_nonneg : ∀ t, 0 ≤ pS t := by
     intro t
     by_cases ht : t ∈ window n k
-    · have hk_nonneg : 0 ≤ (1 / (k : ℝ)) := div_nonneg zero_le_one (le_of_lt hk_pos)
+    · have hk_nonneg : 0 ≤ 1 / (k : ℝ) := div_nonneg zero_le_one (le_of_lt hk_pos)
       simpa [pS, ht] using hk_nonneg
     · simp [pS, ht]
 
   have hqS_nonneg : ∀ t, 0 ≤ qS t := by
     intro t
     by_cases ht : t ∈ window m k
-    · have hk_nonneg : 0 ≤ (1 / (k : ℝ)) := div_nonneg zero_le_one (le_of_lt hk_pos)
+    · have hk_nonneg : 0 ≤ 1 / (k : ℝ) := div_nonneg zero_le_one (le_of_lt hk_pos)
       simpa [qS, ht] using hk_nonneg
     · simp [qS, ht]
 
@@ -1391,8 +1395,21 @@ lemma l2_bound_two_windows_uniform
     intro ω
     have h_sum_p := h_sum_p_fin ω
     have h_sum_q := h_sum_q_fin ω
-    simp [δ, Finset.sum_sub_distrib, mul_sub, sub_eq_add_neg, add_comm, add_left_comm,
-      add_assoc, h_sum_p, h_sum_q]
+    have h_expand :
+        ∑ t ∈ S, δ t * Y t ω =
+          ∑ t ∈ S, (pS t * Y t ω - qS t * Y t ω) := by
+      refine Finset.sum_congr rfl ?_
+      intro t ht
+      simp [δ, mul_sub]
+    have h_split :
+        ∑ t ∈ S, δ t * Y t ω =
+          ∑ t ∈ S, pS t * Y t ω - ∑ t ∈ S, qS t * Y t ω := by
+      simpa using
+        (h_expand.trans
+          (Finset.sum_sub_distrib (s := S)
+            (f := fun t => pS t * Y t ω)
+            (g := fun t => qS t * Y t ω)))
+    simpa [h_sum_p, h_sum_q] using h_split
 
   have h_goal_fin :
       ∀ ω,
