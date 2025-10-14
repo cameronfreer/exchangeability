@@ -1023,7 +1023,7 @@ lemma l2_bound_two_windows_uniform
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (_hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (f : ℝ → ℝ) (hf_meas : Measurable f)
     (hf_bdd : ∃ M, ∀ x, |f x| ≤ M) :
     ∃ Cf : ℝ, 0 ≤ Cf ∧
@@ -1294,11 +1294,16 @@ lemma l2_bound_two_windows_uniform
         have h_sum_equiv :
             ∑ i : Fin nS, pS (idx i) =
               ∑ b : β, pS b.1 :=
-          (Fintype.sum_equiv eβ (fun b : β => pS b.1)).symm
+          Fintype.sum_equiv eβ
+            (fun i : Fin nS => pS (idx i))
+            (fun b : β => pS b.1) (by intro i; simp [idx])
         have h_sum_attach :
             ∑ b : β, pS b.1 = ∑ t ∈ S, pS t := by
           simpa [β] using Finset.sum_attach (s := S) (f := fun t => pS t)
-        simpa [p, idx] using h_sum_equiv.trans h_sum_attach
+        have h_sum_pi :
+            ∑ i : Fin nS, p i = ∑ i : Fin nS, pS (idx i) := by
+          simp [p]
+        simpa [h_sum_pi] using h_sum_equiv.trans h_sum_attach
       simpa [h_equiv, h_sum_pS]
     · intro i
       simpa [p, idx] using hpS_nonneg (idx i)
@@ -1311,19 +1316,36 @@ lemma l2_bound_two_windows_uniform
         have h_sum_equiv :
             ∑ i : Fin nS, qS (idx i) =
               ∑ b : β, qS b.1 :=
-          (Fintype.sum_equiv eβ (fun b : β => qS b.1)).symm
+          Fintype.sum_equiv eβ
+            (fun i : Fin nS => qS (idx i))
+            (fun b : β => qS b.1) (by intro i; simp [idx])
         have h_sum_attach :
             ∑ b : β, qS b.1 = ∑ t ∈ S, qS t := by
           simpa [β] using Finset.sum_attach (s := S) (f := fun t => qS t)
-        simpa [q, idx] using h_sum_equiv.trans h_sum_attach
+        have h_sum_qi :
+            ∑ i : Fin nS, q i = ∑ i : Fin nS, qS (idx i) := by
+          simp [q]
+        simpa [h_sum_qi] using h_sum_equiv.trans h_sum_attach
       simpa [h_equiv, h_sum_qS]
     · intro i
       simpa [q, idx] using hqS_nonneg (idx i)
 
   -- Supremum bound on the weight difference
+  have h_window_nonempty : (window n k).Nonempty := by
+    classical
+    have hk_pos_nat : 0 < k := hk
+    have hcard_pos : 0 < (window n k).card := by simpa [window_card] using hk_pos_nat
+    exact Finset.card_pos.mp hcard_pos
+  have hβ_nonempty : Nonempty β := by
+    classical
+    obtain ⟨t, ht⟩ := h_window_nonempty
+    exact ⟨⟨t, h_subset_n ht⟩⟩
+  have h_nS_pos : 0 < nS := Fintype.card_pos_iff.mpr hβ_nonempty
   have h_sup_le :
       (⨆ i : Fin nS, |p i - q i|) ≤ 1 / (k : ℝ) := by
-    refine iSup_le ?_
+    classical
+    haveI : Nonempty (Fin nS) := Fin.pos_iff_nonempty.mp h_nS_pos
+    refine ciSup_le ?_
     intro i
     have hmem : idx i ∈ S := h_idx_mem i
     have hδ_bound := hδ_abs_le (idx i) hmem
@@ -1350,14 +1372,16 @@ lemma l2_bound_two_windows_uniform
 
   have hξ_var : ∀ i : Fin nS, ∫ ω, (ξ i ω - mf)^2 ∂μ = (Real.sqrt σSqf) ^ 2 := by
     intro i
-    simpa [ξ, Y, idx, hY_def] using hvar (idx i)
+    convert hvar (idx i) using 1
+    simp [ξ, Y, idx, hY_def, Real.sq_sqrt hσSq_nonneg]
 
   have hξ_cov :
       ∀ i j : Fin nS, i ≠ j →
         ∫ ω, (ξ i ω - mf) * (ξ j ω - mf) ∂μ = (Real.sqrt σSqf) ^ 2 * ρf := by
     intro i j hij
     have hneq : idx i ≠ idx j := h_idx_ne hij
-    simpa [ξ, Y, idx, hY_def, hneq] using hcov (idx i) (idx j) hneq
+    convert hcov (idx i) (idx j) hneq using 1
+    simp [ξ, Y, idx, hY_def, hneq, Real.sq_sqrt hσSq_nonneg]
 
   -- Express the δ-weighted sum in terms of the Fin-indexed weights
   have h_sum_p_fin :
@@ -1369,13 +1393,16 @@ lemma l2_bound_two_windows_uniform
     have h_sum_equiv :
         ∑ i : Fin nS, p i * ξ i ω =
           ∑ b : β, pS b.1 * Y b.1 ω :=
-      (Fintype.sum_equiv eβ (fun b : β => pS b.1 * Y b.1 ω)).symm
+      Fintype.sum_equiv eβ
+        (fun i : Fin nS => p i * ξ i ω)
+        (fun b : β => pS b.1 * Y b.1 ω)
+        (by intro i; simp [p, ξ, idx, Y])
     have h_sum_attach :
         ∑ b : β, pS b.1 * Y b.1 ω =
           ∑ t ∈ S, pS t * Y t ω := by
       simpa [β] using
         Finset.sum_attach (s := S) (f := fun t => pS t * Y t ω)
-    simpa [p, ξ, idx, Y] using h_sum_equiv.trans h_sum_attach
+    simpa using h_sum_equiv.trans h_sum_attach
 
   have h_sum_q_fin :
       ∀ ω,
@@ -1386,13 +1413,16 @@ lemma l2_bound_two_windows_uniform
     have h_sum_equiv :
         ∑ i : Fin nS, q i * ξ i ω =
           ∑ b : β, qS b.1 * Y b.1 ω :=
-      (Fintype.sum_equiv eβ (fun b : β => qS b.1 * Y b.1 ω)).symm
+      Fintype.sum_equiv eβ
+        (fun i : Fin nS => q i * ξ i ω)
+        (fun b : β => qS b.1 * Y b.1 ω)
+        (by intro i; simp [q, ξ, idx, Y])
     have h_sum_attach :
         ∑ b : β, qS b.1 * Y b.1 ω =
           ∑ t ∈ S, qS t * Y t ω := by
       simpa [β] using
         Finset.sum_attach (s := S) (f := fun t => qS t * Y t ω)
-    simpa [q, ξ, idx, Y] using h_sum_equiv.trans h_sum_attach
+    simpa using h_sum_equiv.trans h_sum_attach
 
   have h_delta_fin :
       ∀ ω,
@@ -1406,7 +1436,9 @@ lemma l2_bound_two_windows_uniform
           ∑ t ∈ S, (pS t * Y t ω - qS t * Y t ω) := by
       refine Finset.sum_congr rfl ?_
       intro t ht
-      simp [δ, mul_sub]
+      have : (pS t - qS t) * Y t ω = pS t * Y t ω - qS t * Y t ω := by
+        ring
+      simpa [δ] using this
     have h_split :
         ∑ t ∈ S, δ t * Y t ω =
           ∑ t ∈ S, pS t * Y t ω - ∑ t ∈ S, qS t * Y t ω := by
@@ -1425,7 +1457,7 @@ lemma l2_bound_two_windows_uniform
     intro ω
     have h_goal' := h_goal ω
     have h_delta := h_delta_fin ω
-    simpa [h_goal', h_delta]
+    exact h_goal'.trans h_delta
 
   -- Apply the L² contractability bound on the reindexed weights
   have h_bound :=
@@ -1438,6 +1470,19 @@ lemma l2_bound_two_windows_uniform
     have hρ_nonneg : 0 ≤ 1 - ρf := sub_nonneg.mpr hρ_bd.2
     have : 0 ≤ (2 : ℝ) := by norm_num
     exact mul_nonneg (mul_nonneg this hσ_nonneg) hρ_nonneg
+
+  have h_bound_sup :
+      2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) *
+        (⨆ i : Fin nS, |p i - q i|) ≤
+      2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) * (1 / (k : ℝ)) := by
+    have h :=
+      (mul_le_mul_of_nonneg_left h_sup_le h_factor_nonneg :
+          (2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf)) *
+              (⨆ i : Fin nS, |p i - q i|)
+            ≤ (2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf)) * (1 / (k : ℝ)))
+    convert h using 1
+    · ring
+    · ring
 
   -- Final bound
   have h_sqrt_sq : (Real.sqrt σSqf) ^ 2 = σSqf := Real.sq_sqrt hσSq_nonneg
@@ -1452,8 +1497,7 @@ lemma l2_bound_two_windows_uniform
             simpa [h_goal_fin ω]
   _ ≤ 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) *
         (⨆ i : Fin nS, |p i - q i|) := h_bound
-  _ ≤ 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) * (1 / (k : ℝ)) := by
-        refine mul_le_mul_of_nonneg_left h_sup_le h_factor_nonneg
+  _ ≤ 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) * (1 / (k : ℝ)) := h_bound_sup
   _ = Cf / k := by
         have : 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) = Cf := by
           simp [Cf, h_sqrt_sq, mul_comm, mul_left_comm, mul_assoc]
@@ -1475,7 +1519,7 @@ lemma l2_bound_two_windows
     (f : ℝ → ℝ) (hf_meas : Measurable f)
     (hf_bdd : ∃ M, ∀ x, |f x| ≤ M)
     (n m : ℕ) {k : ℕ} (hk : 0 < k)
-    (hdisj : Disjoint (window n k) (window m k)) :
+    (_hdisj : Disjoint (window n k) (window m k)) :
     ∃ Cf : ℝ, 0 ≤ Cf ∧
       ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
             (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
