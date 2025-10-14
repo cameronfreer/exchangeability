@@ -649,19 +649,21 @@ private lemma condexp_pair_factorization_MET
     -- Define Cesàro averages (pointwise for now, will connect to Birkhoff averages for MET)
     let A (n : ℕ) : Ω[α] → ℝ := fun ω => (1 / (n + 1 : ℝ)) * (Finset.range (n + 1)).sum (fun k => g (ω k))
 
+    -- Extract bounds early so they're available throughout the entire h_tower proof
+    obtain ⟨Cf, hCf⟩ := hf_bd
+    obtain ⟨Cg, hCg⟩ := hg_bd
+
     -- Step 1: CE[A_n|m] = CE[g(ω₀)|m] for all n (by linearity + shift invariance)
     have h_cesaro_ce : ∀ n, μ[A n | m] =ᵐ[μ] μ[(fun ω => g (ω 0)) | m] := by
       intro n
       -- First, establish integrability of g(ω 0)
       have hg0_int : Integrable (fun ω => g (ω 0)) μ := by
-        obtain ⟨Cg, hCg⟩ := hg_bd
         constructor
         · exact (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
         · have h_bd : ∀ (ω : Ω[α]), |g (ω 0)| ≤ Cg := fun ω => hCg (ω 0)
           exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
 
       -- Establish integrability of each g(ω k) term
-      obtain ⟨Cg, hCg⟩ := hg_bd
       have hgk_int : ∀ k ∈ Finset.range (n + 1), Integrable (fun ω => g (ω k)) μ := by
         intro k _
         constructor
@@ -749,13 +751,13 @@ private lemma condexp_pair_factorization_MET
           -- By condexp_pair_lag_constant: CE[f(ω₀)·g(ω(k+1))|m] = CE[f(ω₀)·g(ωk)|m]
           have h_step : μ[(fun ω => f (ω 0) * g (ω (k+1))) | m]
               =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω k)) | m] := by
-            exact condexp_pair_lag_constant hσ f g hf_meas hf_bd hg_meas hg_bd k
+            -- Reconstruct existentials from extracted bounds
+            exact condexp_pair_lag_constant hσ f g hf_meas ⟨Cf, hCf⟩ hg_meas ⟨Cg, hCg⟩ k
           -- Transitivity with IH
           exact h_step.trans IH
 
       -- Establish integrability of each f·g(ω k) term
-      obtain ⟨Cf, hCf⟩ := hf_bd
-      obtain ⟨Cg, hCg⟩ := hg_bd
+      -- Note: Cf, hCf, Cg, hCg already extracted at h_tower level
       have hfgk_int : ∀ k ∈ Finset.range (n + 1), Integrable (fun ω => f (ω 0) * g (ω k)) μ := by
         intro k _
         constructor
@@ -841,8 +843,7 @@ private lemma condexp_pair_factorization_MET
       sorry
 
     -- Step 4: f·A_n → f·CE[g(ω₀)|m] in L¹ (by dominated convergence)
-    obtain ⟨Cf, hCf⟩ := hf_bd
-    obtain ⟨Cg, hCg⟩ := hg_bd
+    -- Note: Cf, hCf, Cg, hCg already extracted at h_tower level
     have h_product_convergence :
         Tendsto (fun n => ∫ ω, |f (ω 0) * A n ω - f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω| ∂μ)
                 atTop (𝓝 0) := by
@@ -900,6 +901,7 @@ private lemma condexp_pair_factorization_MET
       -/
 
       -- Set up notation for clarity
+      -- Note: Cf, hCf, Cg, hCg are already in scope from h_tower level
       set X := fun n : ℕ => fun ω => f (ω 0) * A n ω
       set Y := fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω
       set CE_X := fun n => μ[X n | m]
@@ -913,12 +915,64 @@ private lemma condexp_pair_factorization_MET
       -- Step 5b: Establish integrability
       have hX_int : ∀ n, Integrable (X n) μ := by
         intro n
-        -- f(ω 0) is measurable and bounded, A n ω is bounded (Cesàro average)
-        sorry -- TODO: use integrable_mul_of_ae_bdd_left twice
+        -- X n = f(ω 0) * A n ω where A n is Cesàro average of g
+        -- Show A n is bounded: |A n ω| ≤ Cg
+
+        have hA_bd : ∃ C, ∀ᵐ ω ∂μ, |A n ω| ≤ C := by
+          use Cg
+          apply ae_of_all
+          intro ω
+          -- A n ω = (1/(n+1)) * Σ g(ω k), so |A n ω| ≤ (1/(n+1)) * Σ |g(ω k)| ≤ (1/(n+1)) * (n+1) * Cg = Cg
+          have h_pos : (0 : ℝ) < n + 1 := by positivity
+          calc |A n ω|
+              = |(1 / (n + 1 : ℝ)) * Finset.sum (Finset.range (n + 1)) (fun k => g (ω k))| := rfl
+            _ = (1 / (n + 1 : ℝ)) * |Finset.sum (Finset.range (n + 1)) (fun k => g (ω k))| := by
+                rw [abs_mul, abs_of_nonneg (by positivity : 0 ≤ 1 / (n + 1 : ℝ))]
+            _ ≤ (1 / (n + 1 : ℝ)) * Finset.sum (Finset.range (n + 1)) (fun k => |g (ω k)|) := by
+                gcongr
+                exact Finset.abs_sum_le_sum_abs _ _
+            _ ≤ (1 / (n + 1 : ℝ)) * Finset.sum (Finset.range (n + 1)) (fun _ => Cg) := by
+                gcongr with k _
+                exact hCg (ω k)
+            _ = (1 / (n + 1 : ℝ)) * ((n + 1) * Cg) := by
+                simp [Finset.sum_const, Finset.card_range]
+            _ = Cg := by field_simp
+
+        -- A n is integrable (bounded function on probability space)
+        have hA_int : Integrable (A n) μ := by
+          obtain ⟨C, hC⟩ := hA_bd
+          constructor
+          · sorry -- TODO: measurability of Cesàro average
+          · exact HasFiniteIntegral.of_bounded hC
+
+        -- Apply integrable_mul_of_ae_bdd_left: f(ω 0) is bounded and measurable, A n is integrable
+        exact integrable_mul_of_ae_bdd_left
+          (hf_meas.comp (measurable_pi_apply 0))
+          ⟨Cf, ae_of_all μ (fun w => hCf (w 0))⟩
+          hA_int
 
       have hY_int : Integrable Y μ := by
-        -- f(ω 0) is bounded, CE[g|m] is bounded (CE preserves bounds)
-        sorry -- TODO: use integrable_mul_of_ae_bdd_left
+        -- Y = f(ω 0) * CE[g(ω 0)|m]
+        -- CE[g(ω 0)|m] is bounded by Cg
+        have hCE_bd : ∃ C, ∀ᵐ ω ∂μ, |μ[(fun ω => g (ω 0)) | m] ω| ≤ C := by
+          use Cg
+          -- Use condExp_abs_le_of_abs_le
+          have hg0_int : Integrable (fun ω => g (ω 0)) μ := by
+            constructor
+            · exact (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
+            · have h_bd : ∀ (ω : Ω[α]), |g (ω 0)| ≤ Cg := fun ω => hCg (ω 0)
+              exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
+          exact condExp_abs_le_of_abs_le le_rfl hg0_int (fun x => hCg (x 0))
+
+        -- CE[g(ω 0)|m] is integrable (it's a conditional expectation)
+        have hCE_int : Integrable (μ[(fun ω => g (ω 0)) | m]) μ := by
+          sorry -- TODO: conditional expectation of integrable is integrable
+
+        -- Apply integrable_mul_of_ae_bdd_left: f(ω 0) bounded × CE integrable
+        exact integrable_mul_of_ae_bdd_left
+          (hf_meas.comp (measurable_pi_apply 0))
+          ⟨Cf, ae_of_all μ (fun v => hCf (v 0))⟩
+          hCE_int
 
       -- Step 5c: Apply L¹-Lipschitz property
       have h_lipschitz : ∀ n, ∫ ω, |CE_X n ω - CE_Y ω| ∂μ ≤ ∫ ω, |X n ω - Y ω| ∂μ := by
@@ -977,7 +1031,33 @@ private lemma condexp_pair_factorization_MET
       -- By h_constL1: the integral is constant for all n
       -- By h_limit: this constant sequence tends to 0
       -- Therefore: the constant IS 0, so the functions are ae equal
-      sorry -- TODO: (1) tendsto of constant → value is limit (2) L¹ norm = 0 ⇒ ae equal
+
+      -- Part 1: Constant sequence tending to 0 → value is 0
+      have h_const_is_zero : ∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
+            - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω| ∂μ = 0 := by
+        -- The sequence is constant (by h_constL1) and tends to 0 (by h_limit)
+        have h_const : Tendsto (fun _ : ℕ => ∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
+              - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω| ∂μ)
+              atTop (𝓝 (∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
+              - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω| ∂μ)) :=
+          tendsto_const_nhds
+        exact tendsto_nhds_unique h_const h_limit
+
+      -- Part 2: L¹ norm = 0 → ae equal
+      -- If ∫ |X - Y| = 0 and X - Y is integrable, then X - Y = 0 ae, hence X =ᵐ Y
+      set X := μ[(fun ω => f (ω 0) * g (ω 0)) | m]
+      set Y := μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m]
+
+      have h_integrable_diff : Integrable (X - Y) μ := by
+        sorry -- TODO: Integrability of difference of conditional expectations
+
+      have h_abs_zero : (fun ω => |X ω - Y ω|) =ᵐ[μ] 0 := by
+        apply (integral_eq_zero_iff_of_nonneg_ae (ae_of_all μ (fun _ => abs_nonneg _)) h_integrable_diff.norm).mp
+        simp only [Pi.sub_apply, Real.norm_eq_abs]
+        exact h_const_is_zero
+
+      filter_upwards [h_abs_zero] with ω hω
+      exact sub_eq_zero.mp (abs_eq_zero.mp hω)
 
     exact h_const_limit
 
