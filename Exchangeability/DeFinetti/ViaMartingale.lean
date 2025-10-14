@@ -2904,39 +2904,74 @@ lemma block_coord_condIndep
           exact hf_meas i
         · -- Integral equality
           -- Use additivity of integrals over finite disjoint unions
-          let g := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X r ω)
-          let h := fun ω => (Exchangeability.Probability.condExpWith μ
+          classical
+          set g := fun ω => Set.indicator (X r ⁻¹' B) (fun _ => (1 : ℝ)) ω with hg_def
+          set h := fun ω =>
+            Exchangeability.Probability.condExpWith μ
             (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
-            (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω
-          -- For each i, we have ∫_{f i} g = ∫_{f i} h by hypothesis
+            (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r) ω with hh_def
+          -- For each i, we have ∫_{f i} g = ∫_{f i} h by hypothesis (after rewriting)
           have h_eq_i : ∀ i : Fin n, ∫ ω in f i, g ω ∂μ = ∫ ω in f i, h ω ∂μ := by
             intro i
-            exact hf_in_good i
-          -- Need: ∫_{E_partial n} g = ∫_{E_partial n} h
-          -- Use integral_iUnion_fintype for both sides
-
-          sorry -- TODO (~15-20 min): Apply integral_iUnion_fintype
-                -- Structure attempted but blocked by technical issues:
-                --
-                -- 1. Pairwise disjoint restriction: Need to show
-                --    Pairwise (fun i j : Fin n => Disjoint (f i) (f j))
-                --    from hf_disj : Pairwise (Disjoint on f : ℕ → Set Ω)
-                --
-                -- 2. Measurability lift: hf_meas i gives
-                --    MeasurableSet[firstRSigma ⊔ finFutureSigma] (f i)
-                --    but integral_iUnion_fintype expects
-                --    MeasurableSet[inferInstance] (f i)
-                --    Need witness that sub-σ-algebra ≤ ambient
-                --
-                -- 3. Integrability: indicators bounded by 1
-                --    have hg_int : ∀ i, IntegrableOn g (f i) μ
-                --    have hh_int : ∀ i, IntegrableOn h (f i) μ
-                --
-                -- 4. Then apply: integral_iUnion_fintype to both g and h
-                --    rw [h_g_sum, h_h_sum]
-                --    congr 1; funext i; exact h_eq_i i
-                --
-                -- Mathematical content is clear, blocked on Lean technicalities
+            simpa [hg_def, hh_def, Set.indicator, Set.mem_preimage] using hf_in_good i
+          -- Ambient measurability and integrability
+          have hf_meas_ambient : ∀ i : Fin n, MeasurableSet (f i) :=
+            fun i => (sup_le (firstRSigma_le_ambient X r hX_meas)
+              (finFutureSigma_le_ambient X m k hX_meas)) _ (hf_meas i)
+          have hg_int :
+              Integrable g μ := by
+            have : Integrable (fun _ : Ω => (1 : ℝ)) μ := integrable_const _
+            refine this.indicator (μ := μ) (s := X r ⁻¹' B) ?_
+            exact (hX_meas r) hB
+          have hh_int :
+              Integrable h μ := by
+            simpa [hh_def, Exchangeability.Probability.condExpWith]
+              using ProbabilityTheory.integrable_condexp
+                (μ := μ)
+                (m := finFutureSigma X m k)
+                (hm := finFutureSigma_le_ambient X m k hX_meas)
+                (f := Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)
+          have hg_int_ind :
+              ∀ i : Fin n, Integrable (Set.indicator (f i) g) μ := by
+            intro i
+            exact hg_int.indicator (μ := μ) (s := f i) (hf_meas_ambient i)
+          have hh_int_ind :
+              ∀ i : Fin n, Integrable (Set.indicator (f i) h) μ := by
+            intro i
+            exact hh_int.indicator (μ := μ) (s := f i) (hf_meas_ambient i)
+          -- Disjointness within Fin n
+          have hf_pairwise :
+              Pairwise fun (i j : Fin n) => Disjoint (f i) (f j) := by
+            intro i j hij
+            have hij_nat : (i : ℕ) ≠ (j : ℕ) := by exact_mod_cast hij
+            exact hf_disj hij_nat
+          -- Integral on finite disjoint union equals sum
+          have h_indicator_sum :
+              Set.indicator (E_partial n) g
+                = fun ω => ∑ i : Fin n,
+                    Set.indicator (f i) g ω := by
+            ext ω; simp [E_partial, Set.indicator_iUnion, hf_pairwise]
+          have h_indicator_sum_h :
+              Set.indicator (E_partial n) h
+                = fun ω => ∑ i : Fin n,
+                    Set.indicator (f i) h ω := by
+            ext ω; simp [E_partial, Set.indicator_iUnion, hf_pairwise]
+          have h_integral_g :
+              ∫ ω in E_partial n, g ω ∂μ
+              = ∑ i : Fin n, ∫ ω in f i, g ω ∂μ := by
+            simp [MeasureTheory.integral_indicator, h_indicator_sum,
+              MeasureTheory.integral_finset_sum, hg_int_ind, hf_meas_ambient]
+          have h_integral_h :
+              ∫ ω in E_partial n, h ω ∂μ
+              = ∑ i : Fin n, ∫ ω in f i, h ω ∂μ := by
+            simp [MeasureTheory.integral_indicator, h_indicator_sum_h,
+              MeasureTheory.integral_finset_sum, hh_int_ind, hf_meas_ambient]
+          -- Conclude equality on the finite union
+          have : ∑ i : Fin n, ∫ ω in f i, g ω ∂μ
+                = ∑ i : Fin n, ∫ ω in f i, h ω ∂μ := by
+            exact Finset.sum_congr rfl fun i _ => h_eq_i i
+          simpa [h_integral_g, h_integral_h, hg_def, hh_def, Set.indicator, Set.mem_preimage]
+            using this
       -- Apply monotone union closure
       rw [← hE_partial_eq]
       exact (goodsets_closed_under_monotone_union E_partial hE_partial_in hE_partial_mono).2
