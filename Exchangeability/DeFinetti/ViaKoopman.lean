@@ -524,44 +524,26 @@ private lemma condexp_pair_lag_constant
     μ[(fun ω => f (ω 0) * g (ω (k+1))) | shiftInvariantSigma (α := α)]
       =ᵐ[μ]
     μ[(fun ω => f (ω 0) * g (ω k)) | shiftInvariantSigma (α := α)] := by
-  -- Strategy: Show f(ω₀)·g(ω_{k+1}) = (f(ω₀)·g(ωₖ)) ∘ shift, then apply condexp_precomp_iterate_eq
-  set F := fun ω => f (ω 0) * g (ω k)
+  -- **Option A**: Prove via Cesàro averages + L¹ contraction (no inverse shift needed)
+  --
+  -- Strategy: Show both CE[f·g_k|I] and CE[f·g_{k+1}|I] equal the same Cesàro limit.
+  -- This avoids trying to write f(ω₀)·g(ω_{k+1}) as a single shift of f(ω₀)·g(ωₖ).
 
-  -- Prove F is integrable (bounded function)
+  set m := shiftInvariantSigma (α := α)
   obtain ⟨Cf, hCf⟩ := hf_bd
   obtain ⟨Cg, hCg⟩ := hg_bd
-  have hF_int : Integrable F μ := by
-    refine MeasureTheory.integrable_of_bounded ?_ ?_
-    · exact (hf_meas.comp (measurable_pi_apply 0)).mul (hg_meas.comp (measurable_pi_apply k))
-    · use Cf * Cg
-      intro ω
-      calc |F ω|
-          = |f (ω 0) * g (ω k)| := rfl
-        _ = |f (ω 0)| * |g (ω k)| := abs_mul _ _
-        _ ≤ Cf * Cg := mul_le_mul (hCf _) (hCg _) (abs_nonneg _) (le_trans (abs_nonneg _) (hCf _))
 
-  -- Apply condexp_precomp_iterate_eq with shift count 1
-  have h_key := condexp_precomp_iterate_eq (μ := μ) hσ (k := 1) hF_int
+  -- Define Cesàro averages: A_n(ω) = (1/(n+1)) Σ_{j=0}^n g(ω j)
+  let A : ℕ → Ω[α] → ℝ := fun n ω => (1 / (n + 1 : ℝ)) * (Finset.range (n + 1)).sum (fun j => g (ω j))
 
-  -- Show: (ω ↦ f(ω 0)·g(ω (k+1))) = F ∘ shift
-  suffices h_eq : (fun ω => f (ω 0) * g (ω (k+1))) = (fun ω => F (shift ω)) by
-    rw [h_eq]
-    simpa using h_key
+  -- Key insight: By linearity of CE,
+  --   CE[f(ω₀)·A_n|I] = (1/(n+1)) Σ_{j=0}^n CE[f(ω₀)·g(ωⱼ)|I]
+  -- and similarly for A_n ∘ shift.
+  --
+  -- By MET (via condexp_precomp_iterate_eq), both averages converge in L¹ to CE[f·CE[g|I]|I].
+  -- Taking limits shows the Cesàro difference of pair CEs vanishes, hence all terms are equal.
 
-  ext ω
-  simp only [F, shift]
-  -- Goal: f (ω 0) * g (ω (k+1)) = f ((shift ω) 0) * g ((shift ω) k)
-  -- Issue: (shift ω) 0 = ω 1, not ω 0, so this approach doesn't work directly.
-  --
-  -- The challenge (per comment at line 513): shift moves ALL coordinates simultaneously,
-  -- but we need f(ω₀) to stay fixed while only g(ωₖ) shifts to g(ωₖ₊₁).
-  --
-  -- Alternative approach needed: Use that the function depends on ω only through specific coordinates,
-  -- and the shift-invariant σ-algebra doesn't see differences in individual coordinates.
-  --
-  -- TODO: Complete this proof - likely needs coordinate projection lemmas or
-  --       a version of condexp_precomp_iterate_eq that works coordinate-wise.
-  sorry
+  sorry -- TODO: Implement full Cesàro averaging argument
 
 set_option maxHeartbeats 1000000
 
