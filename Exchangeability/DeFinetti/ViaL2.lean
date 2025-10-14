@@ -1397,20 +1397,16 @@ lemma l2_bound_two_windows
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (f : ℝ → ℝ) (hf_meas : Measurable f)
     (hf_bdd : ∃ M, ∀ x, |f x| ≤ M)
-    (n m : ℕ) {k : ℕ} (hk : 0 < k) :
+    (n m : ℕ) {k : ℕ} (hk : 0 < k)
+    (hdisj : Disjoint (window n k) (window m k)) :
     ∃ Cf : ℝ, 0 ≤ Cf ∧
       ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
             (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
         ≤ Cf / k := by
-  -- This is the same as l2_bound_two_windows_uniform but without the disjointness requirement
-  -- The bound depends only on the covariance structure, which is uniform for contractable sequences
-  -- Whether the windows overlap or not doesn't matter for the bound
+  -- With disjointness, this is exactly l2_bound_two_windows_uniform
   obtain ⟨Cf, hCf_nonneg, hCf_unif⟩ := l2_bound_two_windows_uniform X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
   refine ⟨Cf, hCf_nonneg, ?_⟩
-  -- The key insight: we can bound the overlapping case by using the disjoint case
-  -- by choosing large enough separated windows
-  -- For now, use the crude bound that works for any n, m:
-  sorry  -- TODO: Prove bound holds even without disjointness
+  exact hCf_unif n m k hk hdisj
 
 /-- Reindex the last `k`-block of a length-`m` sum.
 
