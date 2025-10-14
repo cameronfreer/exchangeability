@@ -889,12 +889,22 @@ private lemma condexp_pair_factorization_MET
           exact Tendsto.sub h_prod (tendsto_const_nhds (x := F ω * Y ω))
         simpa using h_sub
 
-      -- Step 4b: Dominating function is 2 * Cf * Cg (constant)
-      have h_bound : ∃ C, ∀ᵐ ω ∂μ, ∀ n, |F ω * A n ω - F ω * Y ω| ≤ C := by
-        use 2 * Cf * Cg
-        apply ae_of_all μ
-        intro ω n
-        -- Prove bounds first
+      -- Step 4b: Dominating function bound (for later use)
+      have h_bound_ae : ∀ᵐ ω ∂μ, ∀ n, |F ω * A n ω - F ω * Y ω| ≤ 2 * Cf * Cg := by
+        -- Get ae bound on Y from condExp
+        have hg0_int : Integrable (fun ω => g (ω 0)) μ := by
+          constructor
+          · exact (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
+          · have h_bd : ∀ (ω : Ω[α]), |g (ω 0)| ≤ Cg := fun ω => hCg (ω 0)
+            exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
+        have h_Y_bd_ae : ∀ᵐ ω ∂μ, |Y ω| ≤ Cg := by
+          exact @condExp_abs_le_of_abs_le (Ω[α]) _ μ _ _ m le_rfl (fun ω => g (ω 0)) hg0_int Cg (fun x => hCg (x 0))
+
+        -- Combine with A_n bound
+        filter_upwards [h_Y_bd_ae] with ω h_Y_bd
+        intro n
+
+        -- Prove A_n bound pointwise
         have h_An_bd : |A n ω| ≤ Cg := by
           have h_pos : (0 : ℝ) < n + 1 := by positivity
           calc |A n ω|
@@ -911,60 +921,45 @@ private lemma condexp_pair_factorization_MET
                 simp [Finset.sum_const, Finset.card_range]
             _ = Cg := by field_simp
 
-        have h_Y_bd : |Y ω| ≤ Cg := by
-          have hg0_int : Integrable (fun ω => g (ω 0)) μ := by
-            constructor
-            · exact (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
-            · have h_bd : ∀ (ω : Ω[α]), |g (ω 0)| ≤ Cg := fun ω => hCg (ω 0)
-              exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
-          have h_ce_bound := @condExp_abs_le_of_abs_le (Ω[α]) _ μ _ _ m le_rfl (fun ω => g (ω 0)) hg0_int Cg (fun x => hCg (x 0))
-          exact h_ce_bound.self_of_ae_mem trivial
-
-        -- Main calc
+        -- Main calc: Bound the product
         calc |F ω * A n ω - F ω * Y ω|
             = |F ω * (A n ω - Y ω)| := by ring_nf
-          _ = |F ω| * |A n ω - Y ω| := abs_mul (F ω) _
+          _ = |F ω| * |A n ω - Y ω| := abs_mul _ _
           _ ≤ Cf * |A n ω - Y ω| := by
               gcongr
               exact hCf (ω 0)
           _ ≤ Cf * (|A n ω| + |Y ω|) := by
-              gcongr
-              exact abs_sub _ _
+              apply mul_le_mul_of_nonneg_left (abs_sub _ _)
+              exact le_trans (abs_nonneg _) (hCf (ω 0))
           _ ≤ Cf * (Cg + Cg) := by
-              gcongr
-              · exact h_An_bd
-              · exact h_Y_bd
+              apply mul_le_mul_of_nonneg_left _ (le_trans (abs_nonneg _) (hCf (ω 0)))
+              exact add_le_add h_An_bd h_Y_bd
           _ = 2 * Cf * Cg := by ring
 
-      -- Step 4c: Dominating function is integrable
-      have h_dom_int : Integrable (fun _ : Ω[α] => 2 * Cf * Cg) μ := by
-        exact integrable_const (2 * Cf * Cg)
-
-      -- Step 4d: Apply DCT
-      have h_conv_to_zero : Tendsto (fun n => ∫ ω, (F ω * A n ω - F ω * Y ω) ∂μ) atTop (𝓝 0) := by
+      -- Step 4c: Apply DCT
+      have h_conv_integral : Tendsto (fun n => ∫ ω, (F ω * A n ω - F ω * Y ω) ∂μ) atTop (𝓝 (∫ ω, 0 ∂μ)) := by
         apply tendsto_integral_of_dominated_convergence (fun _ => 2 * Cf * Cg)
-        · -- Dominating function integrable
-          exact h_dom_int
+        · -- Measurability
+          intro n
+          sorry -- TODO: AE strongly measurable for product differences
+        · -- Bound is integrable
+          exact integrable_const (2 * Cf * Cg)
         · -- Bounded by dominating function
           intro n
-          obtain ⟨C, hC⟩ := h_bound
-          filter_upwards [hC] with ω hω
+          filter_upwards [h_bound_ae] with ω hω
+          simp [Real.norm_eq_abs]
           exact hω n
         · -- Pointwise convergence
           exact h_pointwise
-        · -- Measurability (AE strongly measurable)
-          intro n
-          have : Measurable (fun ω => F ω * A n ω) := by
-            sorry -- TODO: measurability of product
-          have : Measurable (fun ω => F ω * Y ω) := by
-            sorry -- TODO: measurability of product
-          sorry -- TODO: AE strongly measurable difference
+
+      -- Step 4d: Simplify to convergence to 0
+      have h_conv_to_zero : Tendsto (fun n => ∫ ω, (F ω * A n ω - F ω * Y ω) ∂μ) atTop (𝓝 0) := by
+        simpa using h_conv_integral
 
       -- Step 4e: Convert to L¹ norm convergence
-      have h_abs_conv : Tendsto (fun n => ∫ ω, |F ω * A n ω - F ω * Y ω| ∂μ) atTop (𝓝 0) := by
-        sorry -- TODO: integral convergence → absolute integral convergence
-
-      exact h_abs_conv
+      -- We have ∫ (F ω * A_n ω - F ω * Y ω) dμ → 0
+      -- Goal: ∫ |F ω * A_n ω - F ω * Y ω| dμ → 0
+      sorry -- TODO: Use dominated convergence for absolute values or other L¹ convergence lemma
 
     -- Step 5: CE[f·A_n|m] → CE[f·CE[g(ω₀)|m]|m] in L¹ (by L¹-Lipschitz of CE)
     -- We prove L¹ convergence only; no need for ae convergence extraction!
