@@ -2342,13 +2342,30 @@ lemma block_coord_condIndep
 
     · -- Complement case
       intro t htm ht_in_good
-      sorry -- TODO (~15 min + integrability): Use setIntegral_compl decomposition
-            -- Strategy:
-            -- 1. Prove indicators are integrable (bounded by 1)
-            -- 2. Apply setIntegral_compl: ∫_{tᶜ} f = ∫_Ω f - ∫_t f
-            -- 3. Show ∫_Ω indicator = ∫_Ω condexp (tower property)
-            -- 4. Use IH: ∫_t indicator = ∫_t condexp
-            -- 5. Conclude: ∫_{tᶜ} indicator = ∫_{tᶜ} condexp
+      sorry -- TODO (~15-20 min): Apply setIntegral_compl decomposition
+            -- Structure attempted but blocked by let-binding pattern matching:
+            --
+            -- Strategy (clear mathematical content):
+            -- 1. Define g = indicator B ∘ X r, h = condExp[g | finFuture]
+            --
+            -- 2. Prove integrability:
+            --    have hg_int : Integrable g μ  -- bounded by 1
+            --    have hh_int : Integrable h μ  -- condexp of integrable
+            --
+            -- 3. Apply setIntegral_compl to both sides:
+            --    ∫_{tᶜ} g = ∫_Ω g - ∫_t g
+            --    ∫_{tᶜ} h = ∫_Ω h - ∫_t h
+            --
+            -- 4. Tower property: ∫_Ω g = ∫_Ω h
+            --    (∫ f dμ = ∫ E[f|m] dμ for any sub-σ-algebra m)
+            --
+            -- 5. Use IH: ∫_t g = ∫_t h (from ht_in_good)
+            --
+            -- 6. Conclude: ∫_{tᶜ} g = ∫_Ω g - ∫_t g
+            --                       = ∫_Ω h - ∫_t h
+            --                       = ∫_{tᶜ} h
+            --
+            -- Blocked by: setIntegral_compl pattern matching with let-defined functions
 
     · -- Disjoint union case
       intro f hf_disj hf_meas hf_in_good
