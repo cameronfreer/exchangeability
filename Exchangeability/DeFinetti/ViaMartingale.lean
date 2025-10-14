@@ -2274,10 +2274,73 @@ lemma block_coord_condIndep
     --    - Since π-system ⊆ λ-system, generated σ-algebra ⊆ λ-system
     --    - Cylinders generate firstRSigma X r ⊔ finFutureSigma X m k
     --    - Therefore E ∈ GoodSets
-    --
-    sorry -- TODO (~45 min): Standard Dynkin π-λ application
-          -- Mathematical content: textbook argument
-          -- Technical: find exact mathlib Dynkin lemma + prove π-system/λ-system properties
+
+    -- Define the π-system of cylinder sets
+    let CylinderSets : Set (Set Ω) := {E |
+      ∃ (A : Fin r → Set α) (hA : ∀ i, MeasurableSet (A i))
+        (C : Fin k → Set α) (hC : ∀ i, MeasurableSet (C i)),
+      E = {ω | (∀ i, X i.val ω ∈ A i) ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)}}
+
+    -- Step 1: Show CylinderSets is a π-system
+    have cylinder_is_pi : IsPiSystem CylinderSets := by
+      intro E₁ hE₁ E₂ hE₂ hnonempty
+      simp only [CylinderSets, Set.mem_setOf_eq] at hE₁ hE₂ ⊢
+      obtain ⟨A₁, hA₁, C₁, hC₁, rfl⟩ := hE₁
+      obtain ⟨A₂, hA₂, C₂, hC₂, rfl⟩ := hE₂
+      -- Intersection: {∀i X_i ∈ A₁_i ∩ A₂_i} ∩ {∀j X_{m+1+j} ∈ C₁_j ∩ C₂_j}
+      use fun i => A₁ i ∩ A₂ i, fun i => (hA₁ i).inter (hA₂ i)
+      use fun j => C₁ j ∩ C₂ j, fun j => (hC₁ j).inter (hC₂ j)
+      ext ω
+      simp only [Set.mem_inter_iff, Set.mem_setOf_eq]
+      constructor
+      · intro ⟨⟨h1, h2⟩, ⟨h3, h4⟩⟩
+        constructor
+        · intro i; exact ⟨h1 i, h3 i⟩
+        · intro j; exact ⟨h2 j, h4 j⟩
+      · intro ⟨h1, h2⟩
+        constructor
+        · constructor
+          · intro i; exact (h1 i).1
+          · intro j; exact (h2 j).1
+        · constructor
+          · intro i; exact (h1 i).2
+          · intro j; exact (h2 j).2
+
+    -- Step 2: Show CylinderSets ⊆ GoodSets
+    have cylinders_in_good : CylinderSets ⊆ GoodSets := by
+      intro E hE
+      simp only [CylinderSets, Set.mem_setOf_eq] at hE
+      obtain ⟨A, hA, C, hC, rfl⟩ := hE
+      exact cylinders_in_goodsets A hA C hC
+
+    -- Step 3: Show cylinders generate the σ-algebra
+    have h_gen : firstRSigma X r ⊔ finFutureSigma X m k = MeasurableSpace.generateFrom CylinderSets := by
+      sorry -- TODO (~15 min): Standard σ-algebra generation
+            -- Use that sup of σ-algebras equals generateFrom of generators
+            -- CylinderSets = {preimages under (firstRBlock X r, finFutureBlock X m k)}
+
+    -- Step 4: Apply Dynkin's π-λ theorem (induction_on_inter)
+    -- Predicate: E belongs to GoodSets
+    refine MeasurableSpace.induction_on_inter h_gen cylinder_is_pi ?_ ?_ ?_ ?_ E hE
+
+    · -- Base case: empty set
+      sorry -- TODO (~5 min): Show ∅ ∈ GoodSets (integrals are 0)
+
+    · -- Basic case: cylinders
+      intro t ht
+      exact (cylinders_in_good ht).2
+
+    · -- Complement case
+      intro t htm ht_in_good
+      sorry -- TODO (~15 min): Use integral decomposition
+            -- ∫_{tᶜ} f = ∫_Ω f - ∫_t f
+            -- ∫_{tᶜ} g = ∫_Ω g - ∫_t g
+            -- If ∫_t f = ∫_t g and ∫_Ω f = ∫_Ω g, then ∫_{tᶜ} f = ∫_{tᶜ} g
+
+    · -- Disjoint union case
+      intro f hf_disj hf_meas hf_in_good
+      sorry -- TODO (~10 min): Use goodsets_closed_under_monotone_union
+            -- Disjoint union = monotone union of partial sums
 
   -- **Step 2: Pass to limit as k → ∞ using martingale convergence**
   --
