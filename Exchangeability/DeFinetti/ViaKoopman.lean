@@ -514,7 +514,7 @@ The challenge: `condexp_precomp_iterate_eq` gives `CE[F∘shift|I] = CE[F|I]`, b
 shift moves ALL coordinates simultaneously. We need `f(ω₀)` to stay fixed while `g(ωₖ)`
 shifts to `g(ωₖ₊₁)`.
 -/
-axiom condexp_pair_lag_constant
+private lemma condexp_pair_lag_constant
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
     (f g : α → ℝ)
@@ -523,7 +523,45 @@ axiom condexp_pair_lag_constant
     (k : ℕ) :
     μ[(fun ω => f (ω 0) * g (ω (k+1))) | shiftInvariantSigma (α := α)]
       =ᵐ[μ]
-    μ[(fun ω => f (ω 0) * g (ω k)) | shiftInvariantSigma (α := α)]
+    μ[(fun ω => f (ω 0) * g (ω k)) | shiftInvariantSigma (α := α)] := by
+  -- Strategy: Show f(ω₀)·g(ω_{k+1}) = (f(ω₀)·g(ωₖ)) ∘ shift, then apply condexp_precomp_iterate_eq
+  set F := fun ω => f (ω 0) * g (ω k)
+
+  -- Prove F is integrable (bounded function)
+  obtain ⟨Cf, hCf⟩ := hf_bd
+  obtain ⟨Cg, hCg⟩ := hg_bd
+  have hF_int : Integrable F μ := by
+    refine MeasureTheory.integrable_of_bounded ?_ ?_
+    · exact (hf_meas.comp (measurable_pi_apply 0)).mul (hg_meas.comp (measurable_pi_apply k))
+    · use Cf * Cg
+      intro ω
+      calc |F ω|
+          = |f (ω 0) * g (ω k)| := rfl
+        _ = |f (ω 0)| * |g (ω k)| := abs_mul _ _
+        _ ≤ Cf * Cg := mul_le_mul (hCf _) (hCg _) (abs_nonneg _) (le_trans (abs_nonneg _) (hCf _))
+
+  -- Apply condexp_precomp_iterate_eq with shift count 1
+  have h_key := condexp_precomp_iterate_eq (μ := μ) hσ (k := 1) hF_int
+
+  -- Show: (ω ↦ f(ω 0)·g(ω (k+1))) = F ∘ shift
+  suffices h_eq : (fun ω => f (ω 0) * g (ω (k+1))) = (fun ω => F (shift ω)) by
+    rw [h_eq]
+    simpa using h_key
+
+  ext ω
+  simp only [F, shift]
+  -- Goal: f (ω 0) * g (ω (k+1)) = f ((shift ω) 0) * g ((shift ω) k)
+  -- Issue: (shift ω) 0 = ω 1, not ω 0, so this approach doesn't work directly.
+  --
+  -- The challenge (per comment at line 513): shift moves ALL coordinates simultaneously,
+  -- but we need f(ω₀) to stay fixed while only g(ωₖ) shifts to g(ωₖ₊₁).
+  --
+  -- Alternative approach needed: Use that the function depends on ω only through specific coordinates,
+  -- and the shift-invariant σ-algebra doesn't see differences in individual coordinates.
+  --
+  -- TODO: Complete this proof - likely needs coordinate projection lemmas or
+  --       a version of condexp_precomp_iterate_eq that works coordinate-wise.
+  sorry
 
 set_option maxHeartbeats 1000000
 
