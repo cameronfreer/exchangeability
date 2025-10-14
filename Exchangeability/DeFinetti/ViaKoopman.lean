@@ -225,8 +225,28 @@ def shiftInvariantSigmaℤ : MeasurableSpace (Ωℤ[α]) where
   measurableSet_iUnion := by
     intro f hf
     refine ⟨MeasurableSet.iUnion fun n => (hf n).1, ?_⟩
-    -- Proof postponed: transferring shift-invariance through countable unions
-    sorry
+    ext ω
+    constructor
+    · intro hω
+      classical
+      have : shiftℤ (α := α) ω ∈ ⋃ n, f n := by
+        simpa [Set.mem_preimage] using hω
+      rcases Set.mem_iUnion.1 this with ⟨n, hn⟩
+      have h_inv := (hf n).2
+      have : ω ∈ f n := by
+        have : ω ∈ shiftℤ (α := α) ⁻¹' f n := by
+          simpa [Set.mem_preimage] using hn
+        simpa [IsShiftInvariantℤ, h_inv] using this
+      exact Set.mem_iUnion.2 ⟨n, this⟩
+    · intro hω
+      classical
+      rcases Set.mem_iUnion.1 hω with ⟨n, hn⟩
+      have h_inv := (hf n).2
+      have : ω ∈ shiftℤ (α := α) ⁻¹' f n := by
+        simpa [IsShiftInvariantℤ, h_inv] using hn
+      have : shiftℤ (α := α) ω ∈ f n := by
+        simpa [Set.mem_preimage] using this
+      exact Set.mem_iUnion.2 ⟨n, this⟩
 
 lemma shiftInvariantSigmaℤ_le :
     shiftInvariantSigmaℤ (α := α) ≤ (inferInstance : MeasurableSpace (Ωℤ[α])) := by
@@ -238,6 +258,7 @@ structure NaturalExtensionData (μ : Measure (Ω[α])) where
   μhat : Measure (Ωℤ[α])
   μhat_isProb : IsProbabilityMeasure μhat
   shift_preserving : MeasurePreserving (shiftℤ (α := α)) μhat μhat
+  shiftInv_preserving : MeasurePreserving (shiftℤInv (α := α)) μhat μhat
   restrict_pushforward :
     Measure.map (restrictNonneg (α := α)) μhat = μ
 
@@ -259,12 +280,31 @@ axiom naturalExtension_condexp_pullback
         ext.μhat[(fun ωhat => H (restrictNonneg (α := α) ωhat))
           | shiftInvariantSigmaℤ (α := α)]
 
+/-- Pulling an almost-everywhere equality back along the natural extension. -/
+axiom naturalExtension_pullback_ae
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (ext : NaturalExtensionData (μ := μ))
+    {F G : Ω[α] → ℝ}
+    (h : (fun ωhat => F (restrictNonneg (α := α) ωhat))
+        =ᵐ[ext.μhat]
+        (fun ωhat => G (restrictNonneg (α := α) ωhat))) :
+    F =ᵐ[μ] G
+
 /-- Two-sided version of `condexp_precomp_iterate_eq`. -/
 axiom condexp_precomp_iterate_eq_twosided
     {μhat : Measure (Ωℤ[α])} [IsProbabilityMeasure μhat]
     (hσ : MeasurePreserving (shiftℤ (α := α)) μhat μhat) {k : ℕ}
     {f : Ωℤ[α] → ℝ} (hf : Integrable f μhat) :
     μhat[(fun ω => f ((shiftℤ (α := α))^[k] ω))
+        | shiftInvariantSigmaℤ (α := α)]
+      =ᵐ[μhat] μhat[f | shiftInvariantSigmaℤ (α := α)]
+
+/-- Invariance of conditional expectation under the inverse shift. -/
+axiom condexp_precomp_shiftℤInv_eq
+    {μhat : Measure (Ωℤ[α])} [IsProbabilityMeasure μhat]
+    (hσInv : MeasurePreserving (shiftℤInv (α := α)) μhat μhat)
+    {f : Ωℤ[α] → ℝ} (hf : Integrable f μhat) :
+    μhat[(fun ω => f (shiftℤInv (α := α) ω))
         | shiftInvariantSigmaℤ (α := α)]
       =ᵐ[μhat] μhat[f | shiftInvariantSigmaℤ (α := α)]
 
@@ -285,8 +325,21 @@ private lemma condexp_pair_lag_constant_twoSided
   obtain ⟨Cg, hCg⟩ := hg_bd
   let Fk : Ωℤ[α] → ℝ := fun ω => f (ω (-1)) * g (ω k)
   have hFk_int : Integrable Fk ext.μhat := by
-    -- TODO: Bounded × bounded ⇒ integrable on probability space
-    sorry
+    have hφ_meas : Measurable fun ω => f (ω (-1)) :=
+      hf_meas.comp (measurable_pi_apply (-1))
+    have hψ_meas : Measurable fun ω => g (ω k) :=
+      hg_meas.comp (measurable_pi_apply k)
+    have hφ_bd : ∃ C, ∀ ω, |f (ω (-1))| ≤ C := ⟨Cf, fun ω => hCf _⟩
+    have hψ_bd : ∃ C, ∀ ω, |g (ω k)| ≤ C := ⟨Cg, fun ω => hCg _⟩
+    exact integrable_of_bounded_mul (μ := ext.μhat) hφ_meas hφ_bd hψ_meas hψ_bd
+  have hF_int : Integrable (fun ω => f (ω 0) * g (ω (k + 1))) ext.μhat := by
+    have hφ_meas : Measurable fun ω => f (ω 0) :=
+      hf_meas.comp (measurable_pi_apply 0)
+    have hψ_meas : Measurable fun ω => g (ω (k + 1)) :=
+      hg_meas.comp (measurable_pi_apply (k + 1))
+    have hφ_bd : ∃ C, ∀ ω, |f (ω 0)| ≤ C := ⟨Cf, fun ω => hCf _⟩
+    have hψ_bd : ∃ C, ∀ ω, |g (ω (k + 1))| ≤ C := ⟨Cg, fun ω => hCg _⟩
+    exact integrable_of_bounded_mul (μ := ext.μhat) hφ_meas hφ_bd hψ_meas hψ_bd
   have h_shift :
       ext.μhat[(fun ω => Fk ((shiftℤ (α := α)) ω))
         | shiftInvariantSigmaℤ (α := α)]
@@ -308,8 +361,20 @@ private lemma condexp_pair_lag_constant_twoSided
         =ᵐ[ext.μhat]
       ext.μhat[(fun ω => f (ω 0) * g (ω k))
         | shiftInvariantSigmaℤ (α := α)] := by
-    -- exploit shift-invariance of the conditional expectation to replace ω ↦ ω (-1) by ω ↦ ω 0
-    sorry
+    -- Use invariance under the inverse shift to replace the negative index
+    have h_inv :=
+      condexp_precomp_shiftℤInv_eq
+        (μhat := ext.μhat) (α := α)
+        (hσInv := ext.shiftInv_preserving)
+        (f := fun ω => f (ω 0) * g (ω (k + 1)))
+        hF_int
+    have h_ident :
+        (fun ω => f (ω 0) * g (ω (k + 1)))
+          ∘ shiftℤInv (α := α)
+          = Fk := by
+      funext ω
+      simp [Fk, Function.comp_apply, shiftℤInv, add_comm, add_left_comm, add_assoc]
+    simpa [h_ident] using h_inv
   refine h_shift.trans ?_
   simpa [h_shifted_eq] using h_unshifted_eq
 
@@ -669,6 +734,32 @@ private lemma integrable_of_bounded {Ω : Type*} [MeasurableSpace Ω] {μ : Meas
   obtain ⟨C, hC⟩ := hbd
   exact ⟨hf.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hC)⟩
 
+/-- Integrability of a bounded product. -/
+private lemma integrable_of_bounded_mul
+    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ] [Nonempty Ω]
+    {φ ψ : Ω → ℝ}
+    (hφ_meas : Measurable φ) (hφ_bd : ∃ Cφ, ∀ ω, |φ ω| ≤ Cφ)
+    (hψ_meas : Measurable ψ) (hψ_bd : ∃ Cψ, ∀ ω, |ψ ω| ≤ Cψ) :
+    Integrable (fun ω => φ ω * ψ ω) μ := by
+  classical
+  obtain ⟨Cφ, hCφ⟩ := hφ_bd
+  obtain ⟨Cψ, hCψ⟩ := hψ_bd
+  have hCφ_nonneg : 0 ≤ Cφ := by
+    have h := hCφ (Classical.arbitrary Ω)
+    exact (abs_nonneg _).trans h
+  have hCψ_nonneg : 0 ≤ Cψ := by
+    have h := hCψ (Classical.arbitrary Ω)
+    exact (abs_nonneg _).trans h
+  have h_bound : ∀ ω, |φ ω * ψ ω| ≤ Cφ * Cψ := by
+    intro ω
+    have hφ := hCφ ω
+    have hψ := hCψ ω
+    have hmul :=
+      mul_le_mul hφ hψ (abs_nonneg _) hCφ_nonneg
+    simpa [abs_mul] using hmul
+  have h_meas : Measurable fun ω => φ ω * ψ ω := hφ_meas.mul hψ_meas
+  exact integrable_of_bounded h_meas ⟨Cφ * Cψ, h_bound⟩
+
 /-- **Pull-out property with conditional expectation factor on the left**.
 
 For bounded measurable X and integrable Y:
@@ -728,11 +819,21 @@ private lemma condexp_pair_lag_constant
   let Hk : Ω[α] → ℝ := fun ω => f (ω 0) * g (ω k)
   let Hk1 : Ω[α] → ℝ := fun ω => f (ω 0) * g (ω (k + 1))
   have hHk_int : Integrable Hk μ := by
-    -- TODO: bounded product ⇒ integrable
-    sorry
+    have hφ_meas : Measurable fun ω => f (ω 0) :=
+      hf_meas.comp (measurable_pi_apply 0)
+    have hψ_meas : Measurable fun ω => g (ω k) :=
+      hg_meas.comp (measurable_pi_apply k)
+    have hφ_bd : ∃ C, ∀ ω, |f (ω 0)| ≤ C := ⟨Cf, fun ω => hCf _⟩
+    have hψ_bd : ∃ C, ∀ ω, |g (ω k)| ≤ C := ⟨Cg, fun ω => hCg _⟩
+    exact integrable_of_bounded_mul (μ := μ) hφ_meas hφ_bd hψ_meas hψ_bd
   have hHk1_int : Integrable Hk1 μ := by
-    -- TODO: bounded product ⇒ integrable
-    sorry
+    have hφ_meas : Measurable fun ω => f (ω 0) :=
+      hf_meas.comp (measurable_pi_apply 0)
+    have hψ_meas : Measurable fun ω => g (ω (k + 1)) :=
+      hg_meas.comp (measurable_pi_apply (k + 1))
+    have hφ_bd : ∃ C, ∀ ω, |f (ω 0)| ≤ C := ⟨Cf, fun ω => hCf _⟩
+    have hψ_bd : ∃ C, ∀ ω, |g (ω (k + 1))| ≤ C := ⟨Cg, fun ω => hCg _⟩
+    exact integrable_of_bounded_mul (μ := μ) hφ_meas hφ_bd hψ_meas hψ_bd
   -- Move to the natural two-sided extension
   let ext := exists_naturalExtension (μ := μ) (α := α) hσ
   have h_two :
@@ -750,8 +851,17 @@ private lemma condexp_pair_lag_constant
     (μ := μ) (α := α) ext (H := Hk) hHk_int
   -- Combine the three a.e. equalities and push forward along restrictNonneg
   -- to obtain the desired identity on Ω[α].
-  -- TODO: glue the equalities rigorously using ext.restrict_pushforward
-  sorry
+  let Φ₁ :=
+    fun ωhat => μ[Hk1 | shiftInvariantSigma (α := α)]
+      (restrictNonneg (α := α) ωhat)
+  let Φ₂ :=
+    fun ωhat => μ[Hk | shiftInvariantSigma (α := α)]
+      (restrictNonneg (α := α) ωhat)
+  have h_chain : Φ₁ =ᵐ[ext.μhat] Φ₂ := by
+    refine h_pull_left.trans ?_
+    refine (h_two.trans ?_).trans ?_
+    · exact h_pull_right.symm
+  exact naturalExtension_pullback_ae (μ := μ) (α := α) ext h_chain
 
 set_option maxHeartbeats 1000000
 
