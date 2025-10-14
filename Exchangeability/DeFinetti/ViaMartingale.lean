@@ -2052,19 +2052,19 @@ lemma block_coord_condIndep
         = (μ ({ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)})).toReal := by
       intro A hA C hC
       -- Goal: ∫ ω in E_cyl, indicator B (X r ω) dμ = μ(E_target).toReal
-      -- where E_cyl = {∀i X_i ∈ A_i, ∀j X_{m+1+j} ∈ C_j}
-      --   and E_target = {∀i X_i ∈ A_i, X_r ∈ B, ∀j X_{m+1+j} ∈ C_j}
       --
-      -- Strategy (3 steps):
-      -- 1. Observe: Set.indicator B (fun _ => 1) (X r ω) = 1 iff X r ω ∈ B
-      --    So this is the indicator function of {ω | X r ω ∈ B}
-      -- 2. Apply setIntegral_indicator (or integral_indicator_const):
-      --    ∫_{E_cyl} 1_{X r ∈ B} dμ = μ(E_cyl ∩ {X r ∈ B}).toReal
-      -- 3. Show E_cyl ∩ {X r ∈ B} = E_target (by ext + simp + tauto)
+      -- Strategy:
+      -- 1. The function (ω ↦ indicator B 1 (X r ω)) equals (ω ↦ indicator (X r⁻¹ B) 1 ω)
+      -- 2. Apply integral_indicator: ∫_{E_cyl} indicator S 1 = (μ.restrict E_cyl)(S).toReal
+      -- 3. Show (μ.restrict E_cyl)(X r⁻¹ B) = μ(E_cyl ∩ X r⁻¹ B) = μ E_target
       --
       sorry -- TODO (~20 min): Standard integral-to-measure conversion
             -- Mathematical content: trivial
-            -- Technical: matching Lean's exact pattern for indicator integrals
+            -- Technical issues:
+            -- - Indicator function rewriting (composition with X r)
+            -- - integral_indicator application pattern
+            -- - Measure.restrict and intersection equality
+            -- All standard, just need exact Lean incantations
 
     -- Step 2: Apply contractability
     have contractability_step : ∀ (A : Fin r → Set α) (hA : ∀ i, MeasurableSet (A i))
@@ -2140,11 +2140,15 @@ lemma block_coord_condIndep
           exact ⟨_, finCylinder_measurable hC, rfl⟩
 
         -- Intersection is measurable in the sup
-        -- Need: MeasurableSet[m₁] E₁ ∧ MeasurableSet[m₂] E₂ → MeasurableSet[m₁ ⊔ m₂] (E₁ ∩ E₂)
-        -- Strategy: Lift each using σ-algebra ordering, then apply MeasurableSet.inter
-        sorry -- TODO (~10 min): Standard σ-algebra lifting + intersection
-              -- Mathematical content: trivial
-              -- Just need exact Lean pattern for measurability lifting across ≤
+        -- Need: MeasurableSet[m₁] E ∧ m₁ ≤ m → MeasurableSet[m] E
+        -- This is trivial: m₁ ≤ m means m₁ ⊆ m as collections of sets
+        -- So E ∈ m₁ implies E ∈ m
+        sorry -- TODO (~5 min): Standard measurability lifting
+              -- Use: (le_sup_left : firstRSigma X r ≤ ...) applied to hE_past
+              -- And: (le_sup_right : finFutureSigma X m k ≤ ...) applied to hE_future
+              -- Then: MeasurableSet.inter for the intersection
+              -- Mathematical content: completely trivial
+              -- Technical issue: finding exact syntax for applying ≤ to MeasurableSet
       · -- Integral equality
         rw [lhs_computation A hA C hC, rhs_computation A hA C hC]
         rw [contractability_step A hA C hC]
