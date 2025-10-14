@@ -2333,7 +2333,7 @@ lemma block_coord_condIndep
     refine MeasurableSpace.induction_on_inter h_gen cylinder_is_pi ?_ ?_ ?_ ?_ E hE
 
     · -- Base case: empty set
-      sorry -- TODO (~5 min): Show ∅ ∈ GoodSets (integrals are 0)
+      simp [setIntegral_empty]
 
     · -- Basic case: cylinders
       intro t ht
@@ -2348,8 +2348,31 @@ lemma block_coord_condIndep
 
     · -- Disjoint union case
       intro f hf_disj hf_meas hf_in_good
-      sorry -- TODO (~10 min): Use goodsets_closed_under_monotone_union
-            -- Disjoint union = monotone union of partial sums
+      -- Convert pairwise disjoint union to monotone union of partial sums
+      -- Define partial sums: E_n = ⋃_{i<n} f i
+      let E_partial := fun n => ⋃ i : Fin n, f i
+      -- E_partial is monotone and ⋃_n E_partial n = ⋃_i f i
+      have hE_partial_mono : Monotone E_partial := by
+        intro m n hmn
+        intro ω hω
+        simp only [E_partial, Set.mem_iUnion] at hω ⊢
+        obtain ⟨i, hω⟩ := hω
+        exact ⟨Fin.castLE hmn i, hω⟩
+      have hE_partial_eq : ⋃ n, E_partial n = ⋃ i, f i := by
+        ext ω
+        simp only [Set.mem_iUnion, E_partial]
+        constructor
+        · intro ⟨n, i, h⟩; exact ⟨i, h⟩
+        · intro ⟨i, h⟩; exact ⟨i.succ, ⟨i, Nat.lt_succ_self i⟩, h⟩
+      -- Each partial sum is in GoodSets
+      have hE_partial_in : ∀ n, E_partial n ∈ GoodSets := by
+        sorry -- TODO (~15 min): Prove partial sums satisfy integral equality
+              -- For finite disjoint union ⋃_{i<n} f i:
+              -- ∫_{⋃_{i<n} f i} g = ∑_{i<n} ∫_{f i} g (by additivity)
+              -- This holds for both LHS and RHS, and sums are equal term-by-term
+      -- Apply monotone union closure
+      rw [← hE_partial_eq]
+      exact (goodsets_closed_under_monotone_union E_partial hE_partial_in hE_partial_mono).2
 
   -- **Step 2: Pass to limit as k → ∞ using martingale convergence**
   --
