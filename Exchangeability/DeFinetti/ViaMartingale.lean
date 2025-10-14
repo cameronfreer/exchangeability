@@ -1788,15 +1788,12 @@ lemma contractable_finite_cylinder_measure
 
   -- First prove S_std is measurable
   have hS_meas : MeasurableSet S_std := by
-    -- S_std is a cylinder set - finite intersection of coordinate preimages
-    -- Each coordinate constraint gives a measurable set
-    simp only [S_std]
-    -- Use measurability of pi sets (product of coordinate conditions)
-    -- The set is: {f | (∀ i : Fin r, f ⟨i, _⟩ ∈ A i) ∧ f ⟨r, _⟩ ∈ B ∧ (∀ j : Fin k, f ⟨r+1+j, _⟩ ∈ C j)}
-
-    -- Use measurableSet_pi to show this is measurable
-    -- Each component is a coordinate preimage of a measurable set
-    sorry -- TODO: Use MeasurableSet.pi or similar lemma for product sets
+    -- S_std is a cylinder set - intersection of coordinate preimages
+    -- Strategy: Rewrite as ⋂ i, (eval i)⁻¹(A i) ∩ (eval r)⁻¹(B) ∩ ⋂ j, (eval (r+1+j))⁻¹(C j)
+    -- Each (eval i)⁻¹(S) is measurable when S is measurable (by measurable_pi_apply)
+    -- Finite/countable intersections preserve measurability (by MeasurableSet.iInter/inter)
+    sorry -- TODO (~15 min): Pattern match to exact mathlib lemma for pi-set measurability
+          -- Mathematical content: standard, just need right Lean incantation
 
   -- Prove the functions are measurable
   have h_meas_idx : Measurable (fun ω (i : Fin (r + 1 + k)) => X (idx i) ω) :=
@@ -2114,14 +2111,26 @@ lemma block_coord_condIndep
         -- finFutureSigma is comap of (fun ω j => X (m+1+j) ω), so E_future is preimage
         have hE_future : MeasurableSet[finFutureSigma X m k] E_future := by
           -- E_future = preimage of finite cylinder under the future map
+          -- The future map is: fun ω => fun i : Fin k => X (m + 1 + i.val) ω
+          let futureMap := fun ω => fun i : Fin k => X (m + 1 + i.val) ω
+
+          -- E_future = futureMap ⁻¹' (finCylinder k C)
+          have h_preimage : E_future = futureMap ⁻¹' (finCylinder (α:=α) k C) := by
+            ext ω
+            simp [E_future, futureMap, finCylinder]
+
+          rw [h_preimage]
+          -- finFutureSigma is the comap of futureMap
+          -- A set is measurable in a comap iff it's a preimage of a measurable set
           unfold finFutureSigma
-          sorry -- TODO: Show this is preimage of measurable set under comap function
-                -- Similar pattern to firstRCylinder_measurable_in_firstRSigma
+          exact ⟨_, finCylinder_measurable hC, rfl⟩
 
         -- Intersection is measurable in the sup
-        sorry -- TODO: Standard σ-algebra lifting
-              -- Use: MeasurableSet[m₁] E₁ → m₁ ≤ m → MeasurableSet[m] E₁
-              -- Then: MeasurableSet[m] E₁ → MeasurableSet[m] E₂ → MeasurableSet[m] (E₁ ∩ E₂)
+        -- Need: MeasurableSet[m₁] E₁ ∧ MeasurableSet[m₂] E₂ → MeasurableSet[m₁ ⊔ m₂] (E₁ ∩ E₂)
+        -- Strategy: Lift each using σ-algebra ordering, then apply MeasurableSet.inter
+        sorry -- TODO (~10 min): Standard σ-algebra lifting + intersection
+              -- Mathematical content: trivial
+              -- Just need exact Lean pattern for measurability lifting across ≤
       · -- Integral equality
         rw [lhs_computation A hA C hC, rhs_computation A hA C hC]
         rw [contractability_step A hA C hC]
