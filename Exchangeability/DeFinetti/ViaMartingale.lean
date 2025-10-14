@@ -2079,11 +2079,84 @@ lemma block_coord_condIndep
       let E_cyl' := {ω | (∀ i, X i.val ω ∈ A i) ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)}
       let E_target' := {ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)}
 
+      -- Measurability of the relevant sets
+      have hE_past_meas :
+          MeasurableSet {ω | ∀ i, X i.val ω ∈ A i} :=
+        firstRCylinder_measurable_ambient X r A hX_meas hA
+      have hE_future_meas :
+          MeasurableSet {ω | ∀ j : Fin k, X (m + 1 + j.val) ω ∈ C j} := by
+        classical
+        have h_eq :
+            {ω | ∀ j : Fin k, X (m + 1 + j.val) ω ∈ C j}
+              = ⋂ j : Fin k, (fun ω => X (m + 1 + j.val) ω) ⁻¹' C j := by
+          ext ω
+          simp [Set.mem_setOf_eq, Set.mem_iInter]
+        simpa [h_eq] using
+          (MeasurableSet.iInter fun j : Fin k =>
+            (hX_meas (m + 1 + j.val)) (hC j))
+      have hE_cyl'_meas :
+          MeasurableSet E_cyl' := by
+        classical
+        have h_eq :
+            E_cyl' =
+              ({ω | ∀ i, X i.val ω ∈ A i}
+                ∩ {ω | ∀ j : Fin k, X (m + 1 + j.val) ω ∈ C j}) := by
+          rfl
+        simpa [h_eq] using hE_past_meas.inter hE_future_meas
+      have h_inter_meas :
+          MeasurableSet (E_cyl' ∩ (X r ⁻¹' B)) :=
+        hE_cyl'_meas.inter hXrB_meas
+      have h_integrable_const : Integrable (fun _ : Ω => (1 : ℝ)) μ :=
+        integrable_const (1 : ℝ)
+
+      have h_indicator_swap :
+          Set.indicator E_cyl'
+            (fun ω => Set.indicator (X r ⁻¹' B) (fun _ => (1 : ℝ)) ω)
+          = Set.indicator (E_cyl' ∩ (X r ⁻¹' B)) (fun _ => (1 : ℝ)) := by
+        classical
+        ext ω
+        by_cases hω₁ : ω ∈ E_cyl'
+        · by_cases hω₂ : ω ∈ X r ⁻¹' B <;> simp [Set.indicator, hω₁, hω₂]
+        · simp [Set.indicator, hω₁]
+
+      have h_first :
+          ∫ ω in E_cyl', Set.indicator (X r ⁻¹' B) (fun _ => (1 : ℝ)) ω ∂ μ
+            = ∫ ω,
+                Set.indicator (E_cyl' ∩ (X r ⁻¹' B))
+                  (fun _ => (1 : ℝ)) ω ∂ μ := by
+        classical
+        have :
+            ∫ ω in E_cyl', Set.indicator (X r ⁻¹' B) (fun _ => (1 : ℝ)) ω ∂ μ
+              = ∫ ω,
+                  Set.indicator E_cyl'
+                    (fun ω => Set.indicator (X r ⁻¹' B) (fun _ => (1 : ℝ)) ω) ω ∂ μ := by
+          simp [MeasureTheory.integral_indicator, hE_cyl'_meas, h_integrable_const]
+        simpa [this, h_indicator_swap]
+
+      have h_second :
+          ∫ ω in E_cyl' ∩ (X r ⁻¹' B), (fun _ => (1 : ℝ)) ω ∂ μ
+            = ∫ ω,
+                Set.indicator (E_cyl' ∩ (X r ⁻¹' B))
+                  (fun _ => (1 : ℝ)) ω ∂ μ := by
+        classical
+        simp [MeasureTheory.integral_indicator, h_inter_meas, h_integrable_const]
+
+      have h_measure_eq :
+          ∫ ω in E_cyl' ∩ (X r ⁻¹' B), (fun _ => (1 : ℝ)) ω ∂ μ
+            = (μ (E_cyl' ∩ (X r ⁻¹' B))).toReal := by
+        classical
+        have :=
+          MeasureTheory.integral_const
+            (μ := μ.restrict (E_cyl' ∩ (X r ⁻¹' B))) (1 : ℝ)
+        simpa [measure_restrict_univ] using this
+
       calc ∫ ω in E_cyl', Set.indicator (X r ⁻¹' B) (fun _ => (1:ℝ)) ω ∂μ
-          = ∫ ω in E_cyl' ∩ (X r ⁻¹' B), (fun _ => (1:ℝ)) ω ∂μ := by
-              sorry -- Pattern matching issue with setIntegral_indicator
-        _ = (μ (E_cyl' ∩ (X r ⁻¹' B))).toReal := by
-              sorry -- Pattern matching issue with setIntegral_const
+          = ∫ ω,
+              Set.indicator (E_cyl' ∩ (X r ⁻¹' B))
+                (fun _ => (1 : ℝ)) ω ∂ μ := h_first
+        _ = ∫ ω in E_cyl' ∩ (X r ⁻¹' B), (fun _ => (1 : ℝ)) ω ∂ μ :=
+              h_second.symm
+        _ = (μ (E_cyl' ∩ (X r ⁻¹' B))).toReal := h_measure_eq
         _ = (μ E_target').toReal := by
               have h_set_eq : E_cyl' ∩ (X r ⁻¹' B) = E_target' := by
                 ext ω
@@ -2114,7 +2187,76 @@ lemma block_coord_condIndep
           (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ
         = (μ ({ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (r + 1 + j.val) ω ∈ C j)})).toReal := by
       intro A hA C hC
-      sorry -- TODO: Requires product measure / Fubini / disintegration infrastructure
+      classical
+      -- Notation for past/future cylinders
+      set f : Ω → ℝ :=
+        Set.indicator B (fun _ => (1 : ℝ)) ∘ X r with hf_def
+      set g : Ω → ℝ :=
+        Exchangeability.Probability.condExpWith μ
+          (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas) f with hg_def
+      set E_past : Set Ω := {ω | ∀ i : Fin r, X i.val ω ∈ A i} with hEp_def
+      set E_future : Set Ω := {ω | ∀ j : Fin k, X (m + 1 + j.val) ω ∈ C j} with hEf_def
+      set E_target := {ω | ∀ i : Fin r, X i.val ω ∈ A i ∧ X r ω ∈ B
+                          ∧ ∀ j : Fin k, X (r + 1 + j.val) ω ∈ C j}
+      have hE_future_meas :
+          MeasurableSet[finFutureSigma X m k] E_future := by
+        classical
+        let futureMap := fun ω => fun j : Fin k => X (m + 1 + j.val) ω
+        have h_preimage :
+            E_future = futureMap ⁻¹' finCylinder (α:=α) k C := by
+          ext ω
+          simp [hEf_def, futureMap, finCylinder, cylinder]
+        simpa [h_preimage, finFutureSigma]
+          using (⟨_, finCylinder_measurable hC, rfl⟩ :
+            MeasurableSet[finFutureSigma X m k] (futureMap ⁻¹' finCylinder (α:=α) k C))
+      have hf_int : Integrable f μ := by
+        classical
+        have : Integrable (fun _ : Ω => (1 : ℝ)) μ := integrable_const (1 : ℝ)
+        simpa [hf_def] using
+          this.indicator (μ := μ) (s := X r ⁻¹' B) ((hX_meas r) hB)
+      have hE_past_meas : MeasurableSet E_past := by
+        simpa [hEp_def] using
+          firstRCylinder_measurable_ambient X r A hX_meas hA
+      have hg_meas :
+          AEStronglyMeasurable[finFutureSigma X m k] g μ := by
+        classical
+        simp [hg_def, Exchangeability.Probability.condExpWith]
+          using stronglyMeasurable_condexp.aestronglyMeasurable
+            (μ := μ) (m := finFutureSigma X m k) (f := f)
+      have hg_int : Integrable g μ := by
+        classical
+        simpa [hg_def, Exchangeability.Probability.condExpWith]
+          using ProbabilityTheory.integrable_condexp
+            (μ := μ)
+            (m := finFutureSigma X m k)
+            (hm := finFutureSigma_le_ambient X m k hX_meas)
+            (f := f)
+      -- Rewrite the integral using indicators for the past/future events
+      have h_integral_rewrite :
+          ∫ ω in {ω | (∀ i, X i.val ω ∈ A i) ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)}, g ω ∂μ
+            = ∫ ω, Set.indicator E_past (fun _ => (1 : ℝ)) ω
+                * Set.indicator E_future (fun _ => (1 : ℝ)) ω * g ω ∂μ := by
+        classical
+        have h_indicator_eq :
+            Set.indicator (E_past ∩ E_future) g
+              = fun ω => Set.indicator E_past (fun _ => (1 : ℝ)) ω
+                  * Set.indicator E_future (fun _ => (1 : ℝ)) ω * g ω := by
+          ext ω
+          by_cases hp : ω ∈ E_past
+          · by_cases hf : ω ∈ E_future
+            · simp [hp, hf, Set.indicator_of_mem]
+            · simp [hp, hf, Set.indicator_of_not_mem, hEp_def, hEf_def]
+          · simp [hp, Set.indicator_of_not_mem, hEp_def]
+        simp [hEp_def, hEf_def, h_indicator_eq, MeasureTheory.integral_indicator, hg_int]
+      -- After rewriting, the integrand involves the past indicator, the future indicator,
+      -- and the conditional expectation.
+      -- TODO: Use `condexp_mul_eq_mul_condexp` (or an equivalent lemma) to replace
+      --       `Set.indicator E_future (fun _ => (1 : ℝ)) ω * g ω` with
+      --       `Set.indicator E_future (fun _ => (1 : ℝ)) ω * f ω` inside the integral.
+      -- TODO: Apply the tower property to push `Set.indicator E_past` through the conditional expectation.
+      -- TODO: Invoke contractability to replace the integrand with the probability of the target set.
+      -- TODO: Translate the resulting integral into `(μ E_target).toReal`.
+      sorry
 
     -- Combine steps 1-3 to show cylinders are in GoodSets
     have cylinders_in_goodsets : ∀ (A : Fin r → Set α) (hA : ∀ i, MeasurableSet (A i))
@@ -2165,21 +2307,14 @@ lemma block_coord_condIndep
           exact ⟨_, finCylinder_measurable hC, rfl⟩
 
         -- Intersection is measurable in the sup
-        sorry -- TODO (~10 min): Standard σ-algebra lifting + intersection
-              -- Mathematical fact: If MeasurableSet[m₁] E and MeasurableSet[m₂] F,
-              -- then MeasurableSet[m₁ ⊔ m₂] (E ∩ F)
-              --
-              -- Attempted approaches:
-              -- 1. le_sup_left/right: These are proofs of ordering, need to apply to sets
-              -- 2. GenerateMeasurable.basic: Unknown identifier (import issue?)
-              -- 3. measurableSet_sup: Unknown identifier (import issue?)
-              --
-              -- Correct pattern should be something like:
-              -- - Use that m₁ ⊔ m₂ = generateFrom (MeasurableSet[m₁] ∪ MeasurableSet[m₂])
-              -- - Lift each set via GenerateMeasurable.basic
-              -- - Apply MeasurableSet.inter
-              --
-              -- OR simpler: Find the right mathlib lemma for σ-algebra monotonicity
+        have hE_past_sup :
+            MeasurableSet[firstRSigma X r ⊔ finFutureSigma X m k] E_past :=
+          (le_sup_left : firstRSigma X r ≤ firstRSigma X r ⊔ finFutureSigma X m k) _ hE_past
+        have hE_future_sup :
+            MeasurableSet[firstRSigma X r ⊔ finFutureSigma X m k] E_future :=
+          (le_sup_right : finFutureSigma X m k ≤ firstRSigma X r ⊔ finFutureSigma X m k) _
+            hE_future
+        simpa [this] using hE_past_sup.inter hE_future_sup
       · -- Integral equality
         rw [lhs_computation A hA C hC, rhs_computation A hA C hC]
         rw [contractability_step A hA C hC]
@@ -2204,22 +2339,149 @@ lemma block_coord_condIndep
         -- Since equality holds for all E_n, it holds for the limit
 
         -- Extract the functions we're integrating
-        let f := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X r ω)
-        let g := fun ω => (Exchangeability.Probability.condExpWith μ
+        classical
+        set f := fun ω => Set.indicator (X r ⁻¹' B) (fun _ => (1 : ℝ)) ω with hf_def
+        set g := fun ω => Exchangeability.Probability.condExpWith μ
           (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
-          (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω
+          (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r) ω with hg_def
 
         -- For each n, we have ∫_{E_n} f = ∫_{E_n} g
         have h_eq_n : ∀ n, ∫ ω in E_seq n, f ω ∂μ = ∫ ω in E_seq n, g ω ∂μ := by
           intro n
           exact (hE_in n).2
 
-        -- Need to show: ∫_{⋃ E_n} f = ∫_{⋃ E_n} g
-        -- Use monotone convergence for integrals over increasing sets
-        sorry -- TODO: Apply measure continuity + integral_indicator pattern
-              -- Can use: lim ∫_{E_n} f = ∫_{⋃ E_n} f (by MCT for indicators)
-              -- Then: lim (∫_{E_n} f) = lim (∫_{E_n} g) (by h_eq_n)
-              --       ∫_{⋃ E_n} f = ∫_{⋃ E_n} g
+        -- Auxiliary integrability facts
+        have hf_meas : MeasurableSet (X r ⁻¹' B) := (hX_meas r) hB
+        have hf_int : Integrable f μ := by
+          have hconst : Integrable (fun _ : Ω => (1 : ℝ)) μ := integrable_const _
+          simpa [hf_def] using
+            hconst.indicator (μ := μ) (s := X r ⁻¹' B) hf_meas
+        have hg_int : Integrable g μ := by
+          simpa [hg_def, Exchangeability.Probability.condExpWith]
+            using ProbabilityTheory.integrable_condexp
+              (μ := μ)
+              (m := finFutureSigma X m k)
+              (hm := finFutureSigma_le_ambient X m k hX_meas)
+              (f := Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)
+
+        -- Rewrite set-integrals as ordinary integrals
+        have hf_set : ∀ n, ∫ ω in E_seq n, f ω ∂μ
+            = ∫ ω, Set.indicator (E_seq n) f ω ∂μ := by
+          intro n; simp [MeasureTheory.integral_indicator, (hE_in n).1, hf_int]
+        have hg_set : ∀ n, ∫ ω in E_seq n, g ω ∂μ
+            = ∫ ω, Set.indicator (E_seq n) g ω ∂μ := by
+          intro n; simp [MeasureTheory.integral_indicator, (hE_in n).1, hg_int]
+
+        -- Pointwise convergence for indicators and dominated convergence
+        have h_tendsto_f :
+            Tendsto (fun n => ∫ ω, Set.indicator (E_seq n) f ω ∂μ) atTop
+              (𝓝 (∫ ω, Set.indicator (⋃ n, E_seq n) f ω ∂μ)) := by
+          refine MeasureTheory.tendsto_integral_of_dominated_convergence
+            (fun ω => ‖f ω‖) ?_ hf_int.norm ?_ ?_
+          · intro n
+            exact (hf_int.aestronglyMeasurable.indicator (hE_in n).1)
+          · intro n; refine Filter.eventually_of_forall ?_
+            intro ω; by_cases hω : ω ∈ E_seq n
+            · simp [Set.indicator_of_mem, hω]
+            · simp [Set.indicator_of_not_mem, hω]
+          · refine Filter.eventually_of_forall ?_
+            intro ω
+            classical
+            by_cases hω : ω ∈ ⋃ n, E_seq n
+            · obtain ⟨N, hN⟩ := by
+                simpa [Set.mem_iUnion] using hω
+              have h_mem : ∀ ⦃n⦄, N ≤ n → ω ∈ E_seq n := by
+                intro n hn; exact hMono hn hN
+              have h_eventual :
+                  ∀ᶠ n in Filter.atTop,
+                    Set.indicator (E_seq n) f ω = f ω := by
+                refine Filter.eventually_atTop.2 ⟨N, ?_⟩
+                intro n hn; simp [Set.indicator_of_mem, h_mem hn]
+              have h_limit := tendsto_const_nhds (c := f ω)
+              have h_lim_val : Set.indicator (⋃ n, E_seq n) f ω = f ω := by
+                simp [Set.indicator_of_mem, hω]
+              simpa [h_lim_val] using
+                (Filter.tendsto_congr' h_eventual).2 h_limit
+            · have h_not : ∀ n, ω ∉ E_seq n := by
+                intro n
+                have : ω ∉ ⋃ n, E_seq n := hω
+                simpa [Set.mem_iUnion] using this
+              have h_eventual :
+                  ∀ᶠ n in Filter.atTop,
+                    Set.indicator (E_seq n) f ω = (0 : ℝ) :=
+                Filter.eventually_of_forall fun n => by
+                  simp [Set.indicator_of_not_mem, h_not n]
+              have h_limit := tendsto_const_nhds (c := 0 : ℝ)
+              have h_lim_val : Set.indicator (⋃ n, E_seq n) f ω = 0 := by
+                simp [Set.indicator_of_not_mem, hω]
+              simpa [h_lim_val] using
+                (Filter.tendsto_congr' h_eventual).2 h_limit
+
+        have h_tendsto_g :
+            Tendsto (fun n => ∫ ω, Set.indicator (E_seq n) g ω ∂μ) atTop
+              (𝓝 (∫ ω, Set.indicator (⋃ n, E_seq n) g ω ∂μ)) := by
+          refine MeasureTheory.tendsto_integral_of_dominated_convergence
+            (fun ω => ‖g ω‖) ?_ hg_int.norm ?_ ?_
+          · intro n
+            exact (hg_int.aestronglyMeasurable.indicator (hE_in n).1)
+          · intro n; refine Filter.eventually_of_forall ?_
+            intro ω; by_cases hω : ω ∈ E_seq n
+            · simp [Set.indicator_of_mem, hω]
+            · simp [Set.indicator_of_not_mem, hω]
+          · refine Filter.eventually_of_forall ?_
+            intro ω
+            classical
+            by_cases hω : ω ∈ ⋃ n, E_seq n
+            · obtain ⟨N, hN⟩ := by
+                simpa [Set.mem_iUnion] using hω
+              have h_mem : ∀ ⦃n⦄, N ≤ n → ω ∈ E_seq n := by
+                intro n hn; exact hMono hn hN
+              have h_eventual :
+                  ∀ᶠ n in Filter.atTop,
+                    Set.indicator (E_seq n) g ω = g ω := by
+                refine Filter.eventually_atTop.2 ⟨N, ?_⟩
+                intro n hn; simp [Set.indicator_of_mem, h_mem hn]
+              have h_limit := tendsto_const_nhds (c := g ω)
+              have h_lim_val : Set.indicator (⋃ n, E_seq n) g ω = g ω := by
+                simp [Set.indicator_of_mem, hω]
+              simpa [h_lim_val] using
+                (Filter.tendsto_congr' h_eventual).2 h_limit
+            · have h_not : ∀ n, ω ∉ E_seq n := by
+                intro n
+                have : ω ∉ ⋃ n, E_seq n := hω
+                simpa [Set.mem_iUnion] using this
+              have h_eventual :
+                  ∀ᶠ n in Filter.atTop,
+                    Set.indicator (E_seq n) g ω = (0 : ℝ) :=
+                Filter.eventually_of_forall fun n => by
+                  simp [Set.indicator_of_not_mem, h_not n]
+              have h_limit := tendsto_const_nhds (c := 0 : ℝ)
+              have h_lim_val : Set.indicator (⋃ n, E_seq n) g ω = 0 := by
+                simp [Set.indicator_of_not_mem, hω]
+              simpa [h_lim_val] using
+                (Filter.tendsto_congr' h_eventual).2 h_limit
+
+        -- Combine the convergence of the integral sequences
+        have h_union_eq :
+            ∫ ω in ⋃ n, E_seq n, f ω ∂μ = ∫ ω in ⋃ n, E_seq n, g ω ∂μ := by
+          let seq_f := fun n => ∫ ω, Set.indicator (E_seq n) f ω ∂μ
+          let seq_g := fun n => ∫ ω, Set.indicator (E_seq n) g ω ∂μ
+          have h_seq_eq : ∀ n, seq_f n = seq_g n := by
+            intro n; simp [seq_f, seq_g, hf_set n, hg_set n, h_eq_n n]
+          have h₂' :
+              Tendsto seq_f atTop (𝓝 (∫ ω, Set.indicator (⋃ n, E_seq n) g ω ∂μ)) := by
+            simpa [seq_f, seq_g, h_seq_eq] using h_tendsto_g
+          have h₁ : Tendsto seq_f atTop (𝓝 (∫ ω, Set.indicator (⋃ n, E_seq n) f ω ∂μ)) := by
+            simpa [seq_f] using h_tendsto_f
+          have h_unique := tendsto_nhds_unique h₁ h₂'
+          have h_eq := h_unique
+          simpa [MeasureTheory.integral_indicator, hf_int, hg_int, hf_def, hg_def,
+            (MeasurableSet.iUnion fun n => (hE_in n).1)] using h_eq
+
+        -- Rewrite the union integrals in the desired form
+        simpa [hf_set, hg_set, hf_int, hg_int, hf_def, hg_def,
+          MeasureTheory.integral_indicator, (MeasurableSet.iUnion fun n => (hE_in n).1)]
+          using h_union_eq
 
     have goodsets_closed_under_monotone_inter : ∀ (E_seq : ℕ → Set Ω),
         (∀ n, E_seq n ∈ GoodSets) →
@@ -2235,24 +2497,156 @@ lemma block_coord_condIndep
         -- Use measure continuity from above for indicator functions
         -- For decreasing sequences with finite measure
 
-        -- Extract the functions we're integrating
-        let f := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X r ω)
-        let g := fun ω => (Exchangeability.Probability.condExpWith μ
-          (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
-          (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω
-
-        -- For each n, we have ∫_{E_n} f = ∫_{E_n} g
-        have h_eq_n : ∀ n, ∫ ω in E_seq n, f ω ∂μ = ∫ ω in E_seq n, g ω ∂μ := by
-          intro n
-          exact (hE_in n).2
-
-        -- Need to show: ∫_{⋂ E_n} f = ∫_{⋂ E_n} g
+        -- Need to show: ∫_{⋂ E_n} indicator = ∫_{⋂ E_n} condexp
         -- Use dominated convergence for integrals over decreasing sets
         -- Dominating function: constant 1 (since indicator ≤ 1)
-        sorry -- TODO: Apply measure continuity from above + DCT pattern
-              -- Can use: lim ∫_{E_n} f = ∫_{⋂ E_n} f (by DCT, dominated by 1)
-              -- Then: lim (∫_{E_n} f) = lim (∫_{E_n} g) (by h_eq_n)
-              --       ∫_{⋂ E_n} f = ∫_{⋂ E_n} g
+        classical
+        set f₀ := fun ω => Set.indicator (X r ⁻¹' B) (fun _ => (1 : ℝ)) ω with hf₀_def
+        set g₀ := fun ω =>
+          Exchangeability.Probability.condExpWith μ
+            (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
+            (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r) ω with hg₀_def
+
+        -- The previous equality specializes to these definitions
+        have h_eq_n' : ∀ n, ∫ ω in E_seq n, f₀ ω ∂μ = ∫ ω in E_seq n, g₀ ω ∂μ := by
+          intro n
+          simpa [hf₀_def, hg₀_def, Set.indicator, Set.mem_preimage, Function.comp] using
+            (hE_in n).2
+
+        -- Integrability data
+        have hf_meas : MeasurableSet (X r ⁻¹' B) := (hX_meas r) hB
+        have hf_int : Integrable f₀ μ := by
+          have hconst : Integrable (fun _ : Ω => (1 : ℝ)) μ := integrable_const _
+          simpa [hf₀_def] using
+            hconst.indicator (μ := μ) (s := X r ⁻¹' B) hf_meas
+        have hg_int : Integrable g₀ μ := by
+          simpa [hg₀_def, Exchangeability.Probability.condExpWith]
+            using ProbabilityTheory.integrable_condexp
+              (μ := μ)
+              (m := finFutureSigma X m k)
+              (hm := finFutureSigma_le_ambient X m k hX_meas)
+              (f := Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)
+
+        -- Indicator rewriting
+        have hf_set : ∀ n, ∫ ω in E_seq n, f₀ ω ∂μ
+            = ∫ ω, Set.indicator (E_seq n) f₀ ω ∂μ := by
+          intro n; simp [MeasureTheory.integral_indicator, (hE_in n).1, hf_int]
+        have hg_set : ∀ n, ∫ ω in E_seq n, g₀ ω ∂μ
+            = ∫ ω, Set.indicator (E_seq n) g₀ ω ∂μ := by
+          intro n; simp [MeasureTheory.integral_indicator, (hE_in n).1, hg_int]
+
+        -- Dominated convergence for decreasing sequence
+        have h_tendsto_f :
+            Tendsto (fun n => ∫ ω, Set.indicator (E_seq n) f₀ ω ∂μ) atTop
+              (𝓝 (∫ ω, Set.indicator (⋂ n, E_seq n) f₀ ω ∂μ)) := by
+          refine MeasureTheory.tendsto_integral_of_dominated_convergence
+            (fun ω => ‖f₀ ω‖) ?_ hf_int.norm ?_ ?_
+          · intro n; exact (hf_int.aestronglyMeasurable.indicator (hE_in n).1)
+          · intro n; exact Filter.eventually_of_forall fun ω =>
+              by_cases hω : ω ∈ E_seq n
+              <;> simp [Set.indicator_of_mem, Set.indicator_of_not_mem, hω]
+          · refine Filter.eventually_of_forall ?_
+            intro ω
+            classical
+            by_cases hω : ω ∈ ⋂ n, E_seq n
+            · have h_mem : ∀ n, ω ∈ E_seq n := by
+                simpa [Set.mem_iInter] using hω
+              have h_eventual :
+                  ∀ᶠ n in Filter.atTop,
+                    Set.indicator (E_seq n) f₀ ω = f₀ ω :=
+                Filter.eventually_of_forall fun n => by
+                  simp [Set.indicator_of_mem, h_mem n]
+              have h_limit := tendsto_const_nhds (c := f₀ ω)
+              have h_lim_val : Set.indicator (⋂ n, E_seq n) f₀ ω = f₀ ω := by
+                simp [Set.indicator_of_mem, hω]
+              simpa [h_lim_val] using
+                (Filter.tendsto_congr' h_eventual).2 h_limit
+            · have h_not : ∃ N, ω ∉ E_seq N := by
+                simpa [Set.mem_iInter, not_forall] using hω
+              obtain ⟨N, hN⟩ := h_not
+              have h_out : ∀ᶠ n in Filter.atTop, ω ∉ E_seq n := by
+                refine Filter.eventually_atTop.2 ⟨N, ?_⟩
+                intro n hn
+                have hsubset : E_seq n ⊆ E_seq N := hAnti hn
+                exact fun hmem => hN (hsubset hmem)
+              have h_eventual :
+                  ∀ᶠ n in Filter.atTop,
+                    Set.indicator (E_seq n) f₀ ω = (0 : ℝ) :=
+                h_out.mono fun n hn => by
+                  simp [Set.indicator_of_not_mem, hn]
+              have h_limit := tendsto_const_nhds (c := 0 : ℝ)
+              have h_lim_val : Set.indicator (⋂ n, E_seq n) f₀ ω = 0 := by
+                simp [Set.indicator_of_not_mem, hω]
+              simpa [h_lim_val] using
+                (Filter.tendsto_congr' h_eventual).2 h_limit
+
+        have h_tendsto_g :
+            Tendsto (fun n => ∫ ω, Set.indicator (E_seq n) g₀ ω ∂μ) atTop
+              (𝓝 (∫ ω, Set.indicator (⋂ n, E_seq n) g₀ ω ∂μ)) := by
+          refine MeasureTheory.tendsto_integral_of_dominated_convergence
+            (fun ω => ‖g₀ ω‖) ?_ hg_int.norm ?_ ?_
+          · intro n; exact (hg_int.aestronglyMeasurable.indicator (hE_in n).1)
+          · intro n; exact Filter.eventually_of_forall fun ω =>
+              by_cases hω : ω ∈ E_seq n
+              <;> simp [Set.indicator_of_mem, Set.indicator_of_not_mem, hω]
+          · refine Filter.eventually_of_forall ?_
+            intro ω
+            classical
+            by_cases hω : ω ∈ ⋂ n, E_seq n
+            · have h_mem : ∀ n, ω ∈ E_seq n := by
+                simpa [Set.mem_iInter] using hω
+              have h_eventual :
+                  ∀ᶠ n in Filter.atTop,
+                    Set.indicator (E_seq n) g₀ ω = g₀ ω :=
+                Filter.eventually_of_forall fun n => by
+                  simp [Set.indicator_of_mem, h_mem n]
+              have h_limit := tendsto_const_nhds (c := g₀ ω)
+              have h_lim_val : Set.indicator (⋂ n, E_seq n) g₀ ω = g₀ ω := by
+                simp [Set.indicator_of_mem, hω]
+              simpa [h_lim_val] using
+                (Filter.tendsto_congr' h_eventual).2 h_limit
+            · have h_not : ∃ N, ω ∉ E_seq N := by
+                simpa [Set.mem_iInter, not_forall] using hω
+              obtain ⟨N, hN⟩ := h_not
+              have h_out : ∀ᶠ n in Filter.atTop, ω ∉ E_seq n := by
+                refine Filter.eventually_atTop.2 ⟨N, ?_⟩
+                intro n hn
+                have hsubset : E_seq n ⊆ E_seq N := hAnti hn
+                exact fun hmem => hN (hsubset hmem)
+              have h_eventual :
+                  ∀ᶠ n in Filter.atTop,
+                    Set.indicator (E_seq n) g₀ ω = (0 : ℝ) :=
+                h_out.mono fun n hn => by
+                  simp [Set.indicator_of_not_mem, hn]
+              have h_limit := tendsto_const_nhds (c := 0 : ℝ)
+              have h_lim_val : Set.indicator (⋂ n, E_seq n) g₀ ω = 0 := by
+                simp [Set.indicator_of_not_mem, hω]
+              simpa [h_lim_val] using
+                (Filter.tendsto_congr' h_eventual).2 h_limit
+
+        -- Use uniqueness of limits
+        let seq_f := fun n => ∫ ω, Set.indicator (E_seq n) f₀ ω ∂μ
+        let seq_g := fun n => ∫ ω, Set.indicator (E_seq n) g₀ ω ∂μ
+        have h_seq_eq : ∀ n, seq_f n = seq_g n := by
+          intro n; simp [seq_f, seq_g, hf_set n, hg_set n, h_eq_n' n]
+        have h_limit_f : Tendsto seq_f atTop
+            (𝓝 (∫ ω, Set.indicator (⋂ n, E_seq n) f₀ ω ∂μ)) := by
+          simpa [seq_f] using h_tendsto_f
+        have h_limit_g : Tendsto seq_f atTop
+            (𝓝 (∫ ω, Set.indicator (⋂ n, E_seq n) g₀ ω ∂μ)) := by
+          simpa [seq_f, seq_g, h_seq_eq] using h_tendsto_g
+        have h_lim_eq := tendsto_nhds_unique h_limit_f h_limit_g
+
+        -- Final integral equality for the intersection
+        have h_inter :
+            ∫ ω in ⋂ n, E_seq n, f₀ ω ∂μ
+              = ∫ ω in ⋂ n, E_seq n, g₀ ω ∂μ := by
+          simpa [seq_f, MeasureTheory.integral_indicator, hf₀_def, hg₀_def,
+            (MeasurableSet.iInter fun n => (hE_in n).1)] using h_lim_eq
+
+        -- Conclude with the desired formulation
+        simpa [hf₀_def, hg₀_def, Set.indicator, Set.mem_preimage, Function.comp]
+          using h_inter
 
     -- Part C: Apply Dynkin's π-λ theorem
     --
@@ -2324,37 +2718,129 @@ lemma block_coord_condIndep
           -- E is measurable in firstRSigma, so E = (firstRMap X r)⁻¹(A) for some measurable A
           obtain ⟨A, hA, rfl⟩ := hE
           -- Show (firstRMap X r)⁻¹(A) is in generateFrom CylinderSets
-          sorry -- TODO (~15-20 min): Show firstRSigma X r ≤ generateFrom CylinderSets
-                --
-                -- Mathematical strategy:
-                -- Key insight: The σ-algebra on (Fin r → α) is generated by sets
-                -- of the form {f | f i ∈ B} for each coordinate i.
-                --
-                -- For each generator {f | f i ∈ B}:
-                --   (firstRMap X r)⁻¹({f | f i ∈ B}) = {ω | X i ω ∈ B}
-                --   This equals a cylinder with B at position i and univ elsewhere:
-                --   {ω | (∀j, X j ω ∈ A_j) ∧ (∀k, X (m+1+k) ω ∈ C_k)}
-                --   where A_i = B and A_j = univ for j ≠ i, C_k = univ for all k
-                --
-                -- Implementation approach:
-                -- 1. Use MeasurableSpace.generateFrom_induction on the product σ-algebra
-                -- 2. Show generators {f | f i ∈ B} have preimages in generateFrom Cylinders
-                -- 3. Show closure properties (complement, countable union) preserve this
-                --
-                -- Blocker: Need correct induction principle for σ-algebra on (Fin r → α)
+          classical
+          -- Step 1: every coordinate X i is measurable for the cylinder σ-algebra
+          have hXi :
+              ∀ i : Fin r,
+                Measurable[MeasurableSpace.generateFrom CylinderSets]
+                  (fun ω => X i ω) := by
+            intro i
+            classical
+            refine fun s hs => ?_
+            -- Build a cylinder that isolates the i-th coordinate
+            let A' : Fin r → Set α := fun j => if j = i then s else Set.univ
+            have hA' : ∀ j, MeasurableSet (A' j) := by
+              intro j
+              classical
+              by_cases hji : j = i
+              · subst hji; simpa [A'] using hs
+              · simp [A', hji]
+            let C' : Fin k → Set α := fun _ => Set.univ
+            have hC' : ∀ j, MeasurableSet (C' j) := fun _ => MeasurableSet.univ
+            have h_cyl :
+                {ω | (∀ j : Fin r, X j.val ω ∈ A' j) ∧
+                      (∀ j : Fin k, X (m + 1 + j.val) ω ∈ C' j)}
+                ∈ CylinderSets := by
+              refine ⟨A', hA', C', hC', rfl⟩
+            have h_meas_cyl :
+                MeasurableSet[MeasurableSpace.generateFrom CylinderSets]
+                  {ω | (∀ j : Fin r, X j.val ω ∈ A' j) ∧
+                        (∀ j : Fin k, X (m + 1 + j.val) ω ∈ C' j)} :=
+              MeasurableSpace.measurableSet_generateFrom h_cyl
+            have h_eq :
+                (fun ω => X i ω) ⁻¹' s
+                  = {ω | (∀ j : Fin r, X j.val ω ∈ A' j) ∧
+                        (∀ j : Fin k, X (m + 1 + j.val) ω ∈ C' j)} := by
+              ext ω; constructor
+              · intro hω
+                refine ⟨?_, ?_⟩
+                · intro j
+                  by_cases hji : j = i
+                  · subst hji
+                    simpa [A'] using hω
+                  · simp [A', hji]
+                · intro j
+                  simp [C']
+              · intro hω
+                have := hω.1 i
+                simpa [A'] using this
+            simpa [h_eq] using h_meas_cyl
+          -- Step 2: deduce measurability of firstRMap from the coordinates
+          have h_firstRMap :
+              Measurable[MeasurableSpace.generateFrom CylinderSets]
+                (firstRMap X r) := by
+            classical
+            apply (measurable_pi_iff).2
+            intro i
+            simpa [firstRMap] using hXi i
+          -- Step 3: translate back to a σ-algebra inclusion
+          have h_first :
+              firstRSigma X r ≤ MeasurableSpace.generateFrom CylinderSets := by
+            simpa [firstRSigma] using (measurable_iff_comap_le.mp h_firstRMap)
+          exact h_first _ ⟨A, hA, rfl⟩
         · -- finFutureSigma X m k ≤ generateFrom CylinderSets
           intro E hE
           obtain ⟨C, hC, rfl⟩ := hE
-          sorry -- TODO (~15-20 min): Show finFutureSigma X m k ≤ generateFrom CylinderSets
-                --
-                -- Mathematical strategy: Symmetric to firstRSigma case
-                -- For each generator {g | g j ∈ D}:
-                --   (futureMap)⁻¹({g | g j ∈ D}) = {ω | X (m+1+j) ω ∈ D}
-                --   This equals a cylinder with univ for all past coordinates and D at position j:
-                --   {ω | (∀i, X i ω ∈ univ) ∧ (∀k, X (m+1+k) ω ∈ C_k)}
-                --   where C_j = D and C_k = univ for k ≠ j
-                --
-                -- Same implementation approach as firstRSigma case
+          classical
+          -- Step 1: future coordinates are measurable for the cylinder σ-algebra
+          have hXfuture :
+              ∀ j : Fin k,
+                Measurable[MeasurableSpace.generateFrom CylinderSets]
+                  (fun ω => X (m + 1 + j.val) ω) := by
+            intro j
+            classical
+            refine fun s hs => ?_
+            -- Build a cylinder that isolates the (m+1+j)-th coordinate
+            let A' : Fin r → Set α := fun _ => Set.univ
+            have hA' : ∀ i, MeasurableSet (A' i) := fun _ => MeasurableSet.univ
+            let C' : Fin k → Set α := fun j' => if hj : j' = j then s else Set.univ
+            have hC' : ∀ j', MeasurableSet (C' j') := by
+              intro j'
+              classical
+              by_cases hj : j' = j
+              · subst hj; simpa [C'] using hs
+              · simp [C', hj]
+            have h_cyl :
+                {ω | (∀ i : Fin r, X i.val ω ∈ A' i) ∧
+                      (∀ j' : Fin k, X (m + 1 + j'.val) ω ∈ C' j')}
+                ∈ CylinderSets := by
+              refine ⟨A', hA', C', hC', rfl⟩
+            have h_meas_cyl :
+                MeasurableSet[MeasurableSpace.generateFrom CylinderSets]
+                  {ω | (∀ i : Fin r, X i.val ω ∈ A' i) ∧
+                        (∀ j' : Fin k, X (m + 1 + j'.val) ω ∈ C' j')} :=
+              MeasurableSpace.measurableSet_generateFrom h_cyl
+            have h_eq :
+                (fun ω => X (m + 1 + j.val) ω) ⁻¹' s
+                  = {ω | (∀ i : Fin r, X i.val ω ∈ A' i) ∧
+                        (∀ j' : Fin k, X (m + 1 + j'.val) ω ∈ C' j')} := by
+              ext ω; constructor
+              · intro hω
+                refine ⟨?_, ?_⟩
+                · intro i
+                  simp [A']
+                · intro j'
+                  by_cases hj' : j' = j
+                  · subst hj'
+                    simpa [C'] using hω
+                  · simp [C', hj']
+              · intro hω
+                have := hω.2 j
+                simpa [C'] using this
+            simpa [h_eq] using h_meas_cyl
+          -- Step 2: measurability of the finite future map
+          have h_futureMap :
+              Measurable[MeasurableSpace.generateFrom CylinderSets]
+                (fun ω => fun j : Fin k => X (m + 1 + j.val) ω) := by
+            classical
+            apply (measurable_pi_iff).2
+            intro j
+            simpa using hXfuture j
+          -- Step 3: convert to σ-algebra inclusion
+          have h_future :
+              finFutureSigma X m k ≤ MeasurableSpace.generateFrom CylinderSets := by
+            simpa [finFutureSigma] using (measurable_iff_comap_le.mp h_futureMap)
+          exact h_future _ ⟨C, hC, rfl⟩
       · -- (⊇) Show generateFrom CylinderSets ≤ sup
         apply MeasurableSpace.generateFrom_le
         intro E hE
@@ -2427,48 +2913,103 @@ lemma block_coord_condIndep
       -- Goal: Show ∫_{tᶜ} indicator = ∫_{tᶜ} condexp
       -- Have IH: ∫_t indicator = ∫_t condexp
 
+      classical
+      set f := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X r ω) with hf_def
+      set g :=
+          fun ω =>
+            Exchangeability.Probability.condExpWith μ
+              (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
+              (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r) ω with hg_def
+      have htm_ambient :
+          MeasurableSet t :=
+        (sup_le (firstRSigma_le_ambient X r hX_meas)
+            (finFutureSigma_le_ambient X m k hX_meas)) _ htm
       -- Integrability of indicator (bounded by 1)
-      have hg_int : Integrable (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X r ω)) μ := by
+      have hf_int_raw :
+          Integrable (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X r ω)) μ := by
         apply Integrable.indicator
         · exact integrable_const (1 : ℝ)
         · exact (hX_meas r) hB
-
+      have hf_int : Integrable f μ := by
+        simpa [hf_def] using hf_int_raw
       -- Integrability of conditional expectation
-      -- Conditional expectation is always integrable (mathlib: integrable_condexp)
-      have hh_int : Integrable (fun ω => Exchangeability.Probability.condExpWith μ
-          (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
-          (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r) ω) μ := by
-        sorry -- TODO (~5 min): Use ProbabilityTheory.integrable_condexp
-              -- Or unfold condExpWith definition and apply integrable_condexp
-
-      -- Apply setIntegral_compl decomposition: ∫_{tᶜ} f = ∫_Ω f - ∫_t f
-      have h_decomp_g : ∫ ω in tᶜ, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ =
-          ∫ ω, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ -
-          ∫ ω in t, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ := by
-        sorry -- TODO (~5 min): Use MeasureTheory.integral_add_compl
-              -- Lemma: ∫_Ω f = ∫_t f + ∫_{tᶜ} f, then rearrange with ring
-
-      have h_decomp_h : ∫ ω in tᶜ, (Exchangeability.Probability.condExpWith μ
-          (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
-          (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ =
-          ∫ ω, (Exchangeability.Probability.condExpWith μ
-            (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
-            (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ -
-          ∫ ω in t, (Exchangeability.Probability.condExpWith μ
-            (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
-            (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ := by
-        sorry -- TODO (~5 min): Same as h_decomp_g
-
-      -- Tower property: ∫_Ω g = ∫_Ω E[g|m]
-      have h_tower : ∫ ω, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ =
-          ∫ ω, (Exchangeability.Probability.condExpWith μ
-            (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
-            (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ := by
-        sorry -- TODO (~5 min): Use ProbabilityTheory.integral_condexp
-              -- Or use definition of condExpWith + tower property
-
+      have hh_int : Integrable g μ := by
+        simpa [hg_def, Exchangeability.Probability.condExpWith]
+          using ProbabilityTheory.integrable_condexp
+            (μ := μ)
+            (m := finFutureSigma X m k)
+            (hm := finFutureSigma_le_ambient X m k hX_meas)
+            (f := Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)
+      -- Decomposition over complements for f
+      have h_decomp_f : ∫ ω in tᶜ, f ω ∂μ =
+          ∫ ω, f ω ∂μ - ∫ ω in t, f ω ∂μ := by
+        have hf_indic :
+            Integrable (fun ω => Set.indicator t f ω) μ :=
+          hf_int.indicator (μ := μ) (s := t) (ht := htm_ambient)
+        have h_indicator_compl :
+            (fun ω => Set.indicator tᶜ f ω)
+              = fun ω => f ω - Set.indicator t f ω := by
+          funext ω
+          by_cases hω : ω ∈ t
+          · have : ω ∉ tᶜ := by simpa [Set.mem_compl] using hω
+            simp [Set.indicator_of_mem, Set.indicator_of_not_mem, hω, this]
+          · have hωc : ω ∈ tᶜ := by simpa [Set.mem_compl] using hω
+            simp [Set.indicator_of_not_mem, Set.indicator_of_mem, hω, hωc]
+        calc
+          ∫ ω in tᶜ, f ω ∂μ
+              = ∫ ω, Set.indicator tᶜ f ω ∂μ := rfl
+          _ = ∫ ω, (fun ω => f ω - Set.indicator t f ω) ω ∂μ := by
+                simpa [h_indicator_compl]
+          _ = ∫ ω, f ω ∂μ - ∫ ω, Set.indicator t f ω ∂μ := by
+                simpa using MeasureTheory.integral_sub hf_int hf_indic
+          _ = ∫ ω, f ω ∂μ - ∫ ω in t, f ω ∂μ := by
+                simp [MeasureTheory.integral_indicator, f]
+      -- Same decomposition for g
+      have h_decomp_g : ∫ ω in tᶜ, g ω ∂μ =
+          ∫ ω, g ω ∂μ - ∫ ω in t, g ω ∂μ := by
+        have hg_indic :
+            Integrable (fun ω => Set.indicator t g ω) μ :=
+          hh_int.indicator (μ := μ) (s := t) (ht := htm_ambient)
+        have h_indicator_compl :
+            (fun ω => Set.indicator tᶜ g ω)
+              = fun ω => g ω - Set.indicator t g ω := by
+          funext ω
+          by_cases hω : ω ∈ t
+          · have : ω ∉ tᶜ := by simpa [Set.mem_compl] using hω
+            simp [Set.indicator_of_mem, Set.indicator_of_not_mem, hω, this]
+          · have hωc : ω ∈ tᶜ := by simpa [Set.mem_compl] using hω
+            simp [Set.indicator_of_not_mem, Set.indicator_of_mem, hω, hωc]
+        calc
+          ∫ ω in tᶜ, g ω ∂μ
+              = ∫ ω, Set.indicator tᶜ g ω ∂μ := rfl
+          _ = ∫ ω, (fun ω => g ω - Set.indicator t g ω) ω ∂μ := by
+                simpa [h_indicator_compl]
+          _ = ∫ ω, g ω ∂μ - ∫ ω, Set.indicator t g ω ∂μ := by
+                simpa using MeasureTheory.integral_sub hh_int hg_indic
+          _ = ∫ ω, g ω ∂μ - ∫ ω in t, g ω ∂μ := by
+                simp [MeasureTheory.integral_indicator, g]
+      -- Tower property
+      have h_tower :
+          ∫ ω, f ω ∂μ = ∫ ω, g ω ∂μ := by
+        simpa [hf_def, hg_def, Exchangeability.Probability.condExpWith]
+          using ProbabilityTheory.integral_condexp
+            (μ := μ)
+            (m := finFutureSigma X m k)
+            (hm := finFutureSigma_le_ambient X m k hX_meas)
+            (f := Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)
       -- Conclude using decomposition + tower + IH
-      rw [h_decomp_g, h_decomp_h, h_tower, ht_in_good]
+      have h_result :
+          ∫ ω in tᶜ, f ω ∂μ = ∫ ω in tᶜ, g ω ∂μ := by
+        calc
+          ∫ ω in tᶜ, f ω ∂μ
+              = ∫ ω, f ω ∂μ - ∫ ω in t, f ω ∂μ := h_decomp_f
+          _ = ∫ ω, g ω ∂μ - ∫ ω in t, f ω ∂μ := by
+                have h := congrArg (fun x => x - ∫ ω in t, f ω ∂μ) h_tower
+                simpa using h
+          _ = ∫ ω, g ω ∂μ - ∫ ω in t, g ω ∂μ := by
+                simpa [hf_def, hg_def] using ht_in_good
+          _ = ∫ ω in tᶜ, g ω ∂μ := h_decomp_g.symm
+      simpa [hf_def, hg_def] using h_result
 
     · -- Disjoint union case
       intro f hf_disj hf_meas hf_in_good
@@ -2498,39 +3039,74 @@ lemma block_coord_condIndep
           exact hf_meas i
         · -- Integral equality
           -- Use additivity of integrals over finite disjoint unions
-          let g := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X r ω)
-          let h := fun ω => (Exchangeability.Probability.condExpWith μ
+          classical
+          set g := fun ω => Set.indicator (X r ⁻¹' B) (fun _ => (1 : ℝ)) ω with hg_def
+          set h := fun ω =>
+            Exchangeability.Probability.condExpWith μ
             (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
-            (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω
-          -- For each i, we have ∫_{f i} g = ∫_{f i} h by hypothesis
+            (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r) ω with hh_def
+          -- For each i, we have ∫_{f i} g = ∫_{f i} h by hypothesis (after rewriting)
           have h_eq_i : ∀ i : Fin n, ∫ ω in f i, g ω ∂μ = ∫ ω in f i, h ω ∂μ := by
             intro i
-            exact hf_in_good i
-          -- Need: ∫_{E_partial n} g = ∫_{E_partial n} h
-          -- Use integral_iUnion_fintype for both sides
-
-          sorry -- TODO (~15-20 min): Apply integral_iUnion_fintype
-                -- Structure attempted but blocked by technical issues:
-                --
-                -- 1. Pairwise disjoint restriction: Need to show
-                --    Pairwise (fun i j : Fin n => Disjoint (f i) (f j))
-                --    from hf_disj : Pairwise (Disjoint on f : ℕ → Set Ω)
-                --
-                -- 2. Measurability lift: hf_meas i gives
-                --    MeasurableSet[firstRSigma ⊔ finFutureSigma] (f i)
-                --    but integral_iUnion_fintype expects
-                --    MeasurableSet[inferInstance] (f i)
-                --    Need witness that sub-σ-algebra ≤ ambient
-                --
-                -- 3. Integrability: indicators bounded by 1
-                --    have hg_int : ∀ i, IntegrableOn g (f i) μ
-                --    have hh_int : ∀ i, IntegrableOn h (f i) μ
-                --
-                -- 4. Then apply: integral_iUnion_fintype to both g and h
-                --    rw [h_g_sum, h_h_sum]
-                --    congr 1; funext i; exact h_eq_i i
-                --
-                -- Mathematical content is clear, blocked on Lean technicalities
+            simpa [hg_def, hh_def, Set.indicator, Set.mem_preimage] using hf_in_good i
+          -- Ambient measurability and integrability
+          have hf_meas_ambient : ∀ i : Fin n, MeasurableSet (f i) :=
+            fun i => (sup_le (firstRSigma_le_ambient X r hX_meas)
+              (finFutureSigma_le_ambient X m k hX_meas)) _ (hf_meas i)
+          have hg_int :
+              Integrable g μ := by
+            have : Integrable (fun _ : Ω => (1 : ℝ)) μ := integrable_const _
+            refine this.indicator (μ := μ) (s := X r ⁻¹' B) ?_
+            exact (hX_meas r) hB
+          have hh_int :
+              Integrable h μ := by
+            simpa [hh_def, Exchangeability.Probability.condExpWith]
+              using ProbabilityTheory.integrable_condexp
+                (μ := μ)
+                (m := finFutureSigma X m k)
+                (hm := finFutureSigma_le_ambient X m k hX_meas)
+                (f := Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)
+          have hg_int_ind :
+              ∀ i : Fin n, Integrable (Set.indicator (f i) g) μ := by
+            intro i
+            exact hg_int.indicator (μ := μ) (s := f i) (hf_meas_ambient i)
+          have hh_int_ind :
+              ∀ i : Fin n, Integrable (Set.indicator (f i) h) μ := by
+            intro i
+            exact hh_int.indicator (μ := μ) (s := f i) (hf_meas_ambient i)
+          -- Disjointness within Fin n
+          have hf_pairwise :
+              Pairwise fun (i j : Fin n) => Disjoint (f i) (f j) := by
+            intro i j hij
+            have hij_nat : (i : ℕ) ≠ (j : ℕ) := by exact_mod_cast hij
+            exact hf_disj hij_nat
+          -- Integral on finite disjoint union equals sum
+          have h_indicator_sum :
+              Set.indicator (E_partial n) g
+                = fun ω => ∑ i : Fin n,
+                    Set.indicator (f i) g ω := by
+            ext ω; simp [E_partial, Set.indicator_iUnion, hf_pairwise]
+          have h_indicator_sum_h :
+              Set.indicator (E_partial n) h
+                = fun ω => ∑ i : Fin n,
+                    Set.indicator (f i) h ω := by
+            ext ω; simp [E_partial, Set.indicator_iUnion, hf_pairwise]
+          have h_integral_g :
+              ∫ ω in E_partial n, g ω ∂μ
+              = ∑ i : Fin n, ∫ ω in f i, g ω ∂μ := by
+            simp [MeasureTheory.integral_indicator, h_indicator_sum,
+              MeasureTheory.integral_finset_sum, hg_int_ind, hf_meas_ambient]
+          have h_integral_h :
+              ∫ ω in E_partial n, h ω ∂μ
+              = ∑ i : Fin n, ∫ ω in f i, h ω ∂μ := by
+            simp [MeasureTheory.integral_indicator, h_indicator_sum_h,
+              MeasureTheory.integral_finset_sum, hh_int_ind, hf_meas_ambient]
+          -- Conclude equality on the finite union
+          have : ∑ i : Fin n, ∫ ω in f i, g ω ∂μ
+                = ∑ i : Fin n, ∫ ω in f i, h ω ∂μ := by
+            exact Finset.sum_congr rfl fun i _ => h_eq_i i
+          simpa [h_integral_g, h_integral_h, hg_def, hh_def, Set.indicator, Set.mem_preimage]
+            using this
       -- Apply monotone union closure
       rw [← hE_partial_eq]
       exact (goodsets_closed_under_monotone_union E_partial hE_partial_in hE_partial_mono).2
