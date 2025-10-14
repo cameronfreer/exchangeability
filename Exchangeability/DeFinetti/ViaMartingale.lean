@@ -1797,13 +1797,26 @@ lemma contractable_finite_cylinder_measure
     --   Use MeasurableSet.inter + MeasurableSet.iInter + measurable_pi_apply
     --
     -- Strategy 2 (univ.pi approach):
-    --   Define t : Fin (r+1+k) → Set α where t i = A i (i<r), B (i=r), C j (i=r+1+j)
-    --   Show S_std = Set.pi Set.univ t
-    --   Apply MeasurableSet.univ_pi (or MeasurableSet.pi)
-    --
-    sorry -- TODO (~15 min): Standard pi-set measurability
-          -- Mathematical content: trivial
-          -- Technical: Needs exact Lean pattern for product space instances
+    -- Define t : Fin (r+1+k) → Set α where t i = A i (i<r), B (i=r), C j (i=r+1+j)
+    sorry -- TODO (~15-20 min): Product cylinder measurability
+          -- Mathematical content: TRIVIAL (product of measurable sets is measurable)
+          --
+          -- Attempted univ.pi approach:
+          -- 1. Define t : Fin (r+1+k) → Set α piecewise (hit omega issues with bounds)
+          -- 2. Show S_std = Set.pi Set.univ t (complex Fin equalities and case analysis)
+          -- 3. Apply MeasurableSet.pi Set.countable_univ
+          --
+          -- Issues encountered:
+          -- - omega couldn't prove bounds for C ⟨i.val - r - 1, _⟩
+          -- - Fin equality rewrites complicated (ext + omega)
+          -- - Missing API: Fin.val_lt_of_lt
+          -- - simp made no progress on nested conditionals
+          --
+          -- Alternative: Strategy 1 (intersection-of-preimages)
+          -- S_std = (⋂ i<r, eval i ⁻¹(A i)) ∩ (eval r ⁻¹ B) ∩ (⋂ j<k, eval (r+1+j) ⁻¹(C j))
+          -- Apply: MeasurableSet.inter + MeasurableSet.iInter + measurable_pi_apply
+          --
+          -- This is standard product space measurability - purely technical Lean issue
 
   -- Prove the functions are measurable
   have h_meas_idx : Measurable (fun ω (i : Fin (r + 1 + k)) => X (idx i) ω) :=
