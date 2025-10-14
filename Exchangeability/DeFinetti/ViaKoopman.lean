@@ -760,6 +760,29 @@ private lemma integrable_of_bounded_mul
   have h_meas : Measurable fun ω => φ ω * ψ ω := hφ_meas.mul hψ_meas
   exact integrable_of_bounded h_meas ⟨Cφ * Cψ, h_bound⟩
 
+/-- L² integrability of a bounded product. -/
+private lemma memLp_of_bounded_mul
+    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ] [Nonempty Ω]
+    {φ ψ : Ω → ℝ}
+    (hφ_meas : Measurable φ) (hφ_bd : ∃ Cφ, ∀ ω, |φ ω| ≤ Cφ)
+    (hψ_meas : Measurable ψ) (hψ_bd : ∃ Cψ, ∀ ω, |ψ ω| ≤ Cψ) :
+    MemLp (fun ω => φ ω * ψ ω) 2 μ := by
+  classical
+  obtain ⟨Cφ, hCφ⟩ := hφ_bd
+  obtain ⟨Cψ, hCψ⟩ := hψ_bd
+  have h_meas : AEStronglyMeasurable (fun ω => φ ω * ψ ω) μ :=
+    (hφ_meas.mul hψ_meas).aestronglyMeasurable
+  have h_bound : ∀ᵐ ω ∂μ, ‖φ ω * ψ ω‖ ≤ Cφ * Cψ := by
+    refine ae_of_all μ ?_
+    intro ω
+    have hφ := hCφ ω
+    have hψ := hCψ ω
+    have hmul : |φ ω * ψ ω| ≤ Cφ * Cψ :=
+      mul_le_mul hφ hψ (abs_nonneg _) <|
+        (abs_nonneg _).trans <| hCφ (Classical.arbitrary Ω)
+    simpa [Real.norm_eq_abs] using hmul
+  exact MemLp.of_bound h_meas (Cφ * Cψ) h_bound
+
 /-- **Pull-out property with conditional expectation factor on the left**.
 
 For bounded measurable X and integrable Y:
@@ -1156,88 +1179,28 @@ private lemma condexp_pair_factorization_MET
           rw [hω]
           field_simp
 
-    -- Step 3: A_n → CE[g(ω₀)|m] ae (by MET + bounded convergence)
+    -- Step 3: Interpret the Cesàro averages inside L² via Birkhoff averages.
+    let g₀ : Ω[α] → ℝ := fun ω => g (ω 0)
+    have hg₀_memLp : MemLp g₀ 2 μ :=
+      MemLp.of_bound
+        ((hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable)
+        Cg (ae_of_all μ (fun ω => hCg (ω 0)))
+    let g₀L2 : Lp ℝ 2 μ := hg₀_memLp.toLp g₀
+    have hg₀_ae : g₀L2 =ᵐ[μ] g₀ := MemLp.coeFn_toLp hg₀_memLp
+    let A_L2 : ℕ → Lp ℝ 2 μ :=
+      fun n => birkhoffAverage ℝ (koopman shift hσ) _root_.id (n + 1) g₀L2
+    have hA_L2_tendsto :
+        Tendsto (fun n => A_L2 n) atTop
+          (𝓝 (condexpL2 (μ := μ) g₀L2)) := by
+      have := birkhoffAverage_tendsto_condexp (μ := μ) (α := α) hσ g₀L2
+      have h_add :
+          Tendsto (fun n : ℕ => n + 1) atTop atTop :=
+        tendsto_add_atTop_iff_nat.2 tendsto_id
+      exact this.comp h_add
+
     have h_met_convergence : ∀ᵐ ω ∂μ,
         Tendsto (fun n => A n ω) atTop (𝓝 (μ[(fun ω => g (ω 0)) | m] ω)) := by
-      /-
-      **PROOF STRATEGY**:
-
-      The Cesàro average A_n(ω) = (1/(n+1)) Σ g(ω k) is the Birkhoff average
-      of the function g₀ := g ∘ (· 0) : Ω[α] → ℝ under the shift map.
-
-      By the Mean Ergodic Theorem (MET):
-      - Birkhoff averages converge ae to the conditional expectation w.r.t. shift-invariant σ-algebra
-      - That is: A_n → CE[g₀|shiftInvariantSigma] ae
-
-      We need to show CE[g₀|m] = CE[g(ω 0)|m], which is essentially definitional.
-
-      The technical steps are:
-      1. Show A_n is the Birkhoff average of g₀
-      2. Apply MET to get ae convergence
-      3. Identify the limit with CE[g(ω 0)|m]
-      -/
-
-      -- Define g₀ for clarity
-      let g₀ : Ω[α] → ℝ := fun ω => g (ω 0)
-
-      -- Step 3a: A_n is the Birkhoff average of g₀
-      have h_birkhoff : ∀ n ω, A n ω = (1 / (n + 1 : ℝ)) * (Finset.range (n + 1)).sum (fun k => g₀ ((shift^[k]) ω)) := by
-        intro n ω
-        -- Prove general fact: (shift^[k] ω) m = ω (m + k)
-        have h_shift_iter : ∀ k m, (shift^[k] ω) m = ω (m + k) := by
-          intro k
-          induction k with
-          | zero =>
-            intro m
-            simp [Function.iterate_zero]
-          | succ k' ih =>
-            intro m
-            rw [Function.iterate_succ_apply']
-            simp only [shift]
-            rw [ih]
-            ring_nf
-        -- Apply with m=0 to get (shift^[k] ω) 0 = ω k
-        congr 1
-        ext k
-        simp [h_shift_iter]
-
-      -- Step 3b: g₀ is in L²
-      have hg₀_L2 : MemLp g₀ 2 μ := by
-        refine MeasureTheory.MemLp.of_bound (μ := μ) (p := 2)
-          (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable Cg ?_
-        filter_upwards with ω
-        simp [Real.norm_eq_abs, g₀]
-        exact hCg (ω 0)
-
-      -- Step 3c: Apply Pointwise Ergodic Theorem for ae convergence
-      --
-      -- We have:
-      -- - A n ω = (1/(n+1)) * Σ_{k=0}^n g₀((shift^[k]) ω)  [by h_birkhoff]
-      -- - hg₀_L2 : MemLp g₀ 2 μ
-      -- - hσ : MeasurePreserving shift μ μ
-      --
-      -- Need: **Pointwise Ergodic Theorem** (Birkhoff 1931)
-      --   For g₀ ∈ L¹(μ) and measure-preserving shift:
-      --   (1/n) Σ_{k=0}^{n-1} g₀(shift^k ω) → μ[g₀ | shiftInvariantSigma] ω  a.e.
-      --
-      -- Note: birkhoffAverage_tendsto_condexp (line 1841) only gives L² convergence.
-      --       The pointwise ergodic theorem is stronger and remains to be formalized.
-      --
-      -- Strategy once available:
-      --   1. Convert g₀ to Lp element using hg₀_L2
-      --   2. Apply pointwise ergodic theorem
-      --   3. Use MemLp.condExpL2_ae_eq_condExp to relate condExpL2 to condExp
-      have h_met : ∀ᵐ ω ∂μ, Tendsto (fun n => A n ω) atTop (𝓝 (μ[g₀ | m] ω)) := by
-        sorry -- TODO: Apply Pointwise Ergodic Theorem (Birkhoff)
-
-      -- Step 3d: Simplify - CE[g₀|m] = CE[g(ω 0)|m] by definition
-      have h_eq : μ[g₀ | m] =ᵐ[μ] μ[(fun ω => g (ω 0)) | m] := by
-        apply condExp_congr_ae
-        rfl
-
-      -- Combine: A_n → CE[g(ω 0)|m] ae
-      filter_upwards [h_met, h_eq] with ω h_conv h_eq_ω
-      rwa [h_eq_ω] at h_conv
+      sorry -- TODO: Upgrade L² convergence of Birkhoff averages to pointwise a.e. convergence
 
     -- Step 4: f·A_n → f·CE[g(ω₀)|m] in L¹ (by dominated convergence)
     -- Note: Cf, hCf, Cg, hCg already extracted at h_tower level
@@ -2247,8 +2210,106 @@ we show `P(Uf) = Pf` where `P = condexpL2` and `U = koopman shift`:
 lemma condexpL2_koopman_comm (f : Lp ℝ 2 μ) :
     condexpL2 (μ := μ) (koopman shift hσ f) = condexpL2 (μ := μ) f := by
   classical
-  -- TODO: Replace with orthogonal projection argument summarised above
-  sorry
+  -- Abbreviations for the projection and Koopman operator
+  set P := condexpL2 (μ := μ)
+  set U := koopman shift hσ
+  let S := fixedSubspace hσ
+
+  -- Image of `P` equals the fixed subspace
+  have h_range : Set.range P = (S : Set (Lp ℝ 2 μ)) :=
+    range_condexp_eq_fixedSubspace hσ
+
+  -- `P f` and `P (U f)` lie in the fixed subspace
+  have hPf_mem : P f ∈ S := by
+    have : P f ∈ Set.range P := ⟨f, rfl⟩
+    simpa [P, h_range] using this
+  have hPUf_mem : P (U f) ∈ S := by
+    have : P (U f) ∈ Set.range P := ⟨U f, rfl⟩
+    simpa [P, h_range] using this
+
+  -- Elements of the fixed subspace are fixed points of the Koopman operator
+  have h_fix : ∀ g ∈ S, U g = g := by
+    intro g hg
+    exact (mem_fixedSubspace_iff (μ := μ) (α := α) hσ g).1 hg
+
+  -- Decompose `f` into its projection plus orthogonal complement
+  set r := f - P f
+  have h_decomp : f = P f + r := by
+    simp [r, add_comm, add_left_comm, add_assoc]
+
+  -- `r` is orthogonal to the fixed subspace
+  have h_r_orth : ∀ g ∈ S, ⟪r, g⟫_ℝ = 0 := by
+    intro g hg
+    have h_sym :=
+      MeasureTheory.inner_condExpL2_left_eq_right
+        (μ := μ)
+        (m := shiftInvariantSigma (α := α))
+        (hm := shiftInvariantSigma_le (α := α))
+        (f := f)
+        (g := g)
+    have hPg : P g = g := condexpL2_fixes_fixedSubspace (hσ := hσ) hg
+    have hPg' : condexpL2 (μ := μ) g = g := hPg
+    have h_eq :
+        ⟪P f, g⟫_ℝ = ⟪f, g⟫_ℝ := by
+      simpa [P, hPg'] using h_sym
+    have hinner :
+        ⟪r, g⟫_ℝ = ⟪f, g⟫_ℝ - ⟪P f, g⟫_ℝ := by
+      simpa [r] using
+        (inner_sub_left (x := f) (y := P f) (z := g))
+    simpa [h_eq] using hinner
+
+  -- The Koopman operator preserves inner products and fixes the subspace pointwise
+  let Uₗᵢ :=
+    MeasureTheory.Lp.compMeasurePreservingₗᵢ ℝ (shift (α := α)) hσ
+  have hU_coe : ∀ g, U g = Uₗᵢ g := by intro g; rfl
+  have h_r_orth_after :
+      ∀ g ∈ S, ⟪U r, g⟫_ℝ = 0 := by
+    intro g hg
+    have hUg : U g = g := h_fix g hg
+    have h_inner_pres :=
+      Uₗᵢ.inner_map_map r g
+    have h_base : ⟪U r, U g⟫_ℝ = ⟪r, g⟫_ℝ := by
+      simpa [U, hU_coe r, hU_coe g]
+        using h_inner_pres
+    simpa [U, hUg, hU_coe r, hU_coe g, h_r_orth g hg] using h_base
+
+  -- `P (U r)` lies in the subspace and is orthogonal to it, hence zero
+  have hPUr_mem : P (U r) ∈ S := by
+    have : P (U r) ∈ Set.range P := ⟨U r, rfl⟩
+    simpa [P, h_range] using this
+  have hPUr_orth : ∀ g ∈ S, ⟪P (U r), g⟫_ℝ = 0 := by
+    intro g hg
+    have hPg : P g = g := condexpL2_fixes_fixedSubspace (hσ := hσ) hg
+    have h_sym :=
+      MeasureTheory.inner_condExpL2_left_eq_right
+        (μ := μ)
+        (m := shiftInvariantSigma (α := α))
+        (hm := shiftInvariantSigma_le (α := α))
+        (f := U r)
+        (g := g)
+    have h_eq :
+        ⟪P (U r), g⟫_ℝ = ⟪U r, g⟫_ℝ := by
+      simpa [P, hPg] using h_sym
+    simpa [h_eq, h_r_orth_after g hg]
+  have hPUr_zero : P (U r) = 0 := by
+    have hinner := hPUr_orth (P (U r)) hPUr_mem
+    exact
+      (inner_self_eq_zero : ⟪P (U r), P (U r)⟫_ℝ = 0 ↔ P (U r) = 0).mp hinner
+
+  -- Combine the pieces: `P (U f)` equals `P f`
+  have hUf_decomp :
+      U f = U (P f) + U r := by
+    have h := congrArg U h_decomp
+    have hUadd := U.map_add (P f) r
+    simpa [hUadd] using h
+  calc
+    P (U f)
+        = P (U (P f) + U r) := by simpa [hUf_decomp]
+    _ = P (U (P f)) + P (U r) := by
+          simpa [P] using (condexpL2 (μ := μ)).map_add (U (P f)) (U r)
+    _ = P (P f) + 0 := by
+          simp [P, h_fix (P f) hPf_mem, hPUr_zero]
+    _ = P f := by simp [P]
 
 /-
 Full proof sketch using orthogonal projection characterization:
