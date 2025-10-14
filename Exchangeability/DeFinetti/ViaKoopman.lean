@@ -1179,8 +1179,18 @@ private lemma condexp_pair_factorization_MET
           rw [hω]
           field_simp
 
-    -- Step 3: Interpret the Cesàro averages inside L² via Birkhoff averages.
     let g₀ : Ω[α] → ℝ := fun ω => g (ω 0)
+    -- Step 3: Interpret the Cesàro averages inside L² via Birkhoff averages.
+    -- Pointwise, the Cesàro average `A n` is exactly the Birkhoff average of `g₀ := g ∘ π₀`
+    -- along the shift.  We record this identity since the right-hand side interacts neatly
+    -- with the Koopman operator acting on `L²`.
+    have hA_eq_birkhoff : ∀ n ω,
+        A n ω = birkhoffAverage ℝ (shift (α := α)) g₀ (n + 1) ω := by
+      intro n ω
+      -- unfold both sides and use the explicit description of iterates of the shift.
+      simp [A, g₀, birkhoffAverage, birkhoffSum, shift_iterate_apply, Finset.mul_sum,
+        Finset.sum_mul, add_comm, add_left_comm, add_assoc, mul_comm, mul_left_comm,
+        mul_assoc]
     have hg₀_memLp : MemLp g₀ 2 μ :=
       MemLp.of_bound
         ((hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable)
@@ -1198,12 +1208,21 @@ private lemma condexp_pair_factorization_MET
         tendsto_add_atTop_iff_nat.2 tendsto_id
       exact this.comp h_add
 
+    -- TODO: replace the following pointwise convergence statement with the L²/L¹
+    -- convergence discussion sketched above.  In particular, introduce explicit lemmas
+    -- that:
+    -- * compare `A n` with the `Lp` Birkhoff averages `A_L2 n`,
+    -- * compare `condexpL2 g₀L2` with the pointwise CE,
+    -- * deduce `‖A n - μ[g₀ | m]‖₁ → 0` using `birkhoffAverage_tendsto_condexp`.
     have h_met_convergence : ∀ᵐ ω ∂μ,
         Tendsto (fun n => A n ω) atTop (𝓝 (μ[(fun ω => g (ω 0)) | m] ω)) := by
       sorry -- TODO: Upgrade L² convergence of Birkhoff averages to pointwise a.e. convergence
 
     -- Step 4: f·A_n → f·CE[g(ω₀)|m] in L¹ (by dominated convergence)
     -- Note: Cf, hCf, Cg, hCg already extracted at h_tower level
+    -- TODO: once the previous step yields the desired L¹ convergence for `A n`, replace
+    -- the dominated-convergence proof below by the short L¹ estimate described in the
+    -- comments (using `‖f·A_n - f·Y‖₁ ≤ Cf · ‖A_n - Y‖₁`).
     have h_product_convergence :
         Tendsto (fun n => ∫ ω, |f (ω 0) * A n ω - f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω| ∂μ)
                 atTop (𝓝 0) := by
@@ -1436,7 +1455,10 @@ private lemma condexp_pair_factorization_MET
     -- Since CE[f·A_n|m] = CE[f·g|m] for all n (step 2),
     -- and CE[f·A_n|m] → CE[f·CE[g|m]|m] in L¹ (step 5),
     -- we have ∫|CE[f·g|m] - CE[f·CE[g|m]|m]| = 0, hence they are ae equal
-    have h_const_limit : μ[(fun ω => f (ω 0) * g (ω 0)) | m]
+      -- TODO: after expressing the previous steps purely in L², this final stage should
+      -- argue directly with L¹ norms (constant sequence + convergence ⇒ 0).  The current
+      -- placeholder will be replaced once the earlier lemmas are filled in.
+      have h_const_limit : μ[(fun ω => f (ω 0) * g (ω 0)) | m]
         =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] := by
       /-
       **THE KEY INSIGHT**: Work entirely in L¹ - no pointwise limits needed!
@@ -1494,6 +1516,8 @@ private lemma condexp_pair_factorization_MET
       set X := μ[(fun ω => f (ω 0) * g (ω 0)) | m]
       set Y := μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m]
 
+      -- TODO: obtain this integrability directly from the L¹ convergence statements once
+      -- the earlier steps are refactored.
       have h_integrable_diff : Integrable (X - Y) μ := by
         sorry -- TODO: Integrability of difference of conditional expectations
 
