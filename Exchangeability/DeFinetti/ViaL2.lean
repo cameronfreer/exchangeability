@@ -1029,7 +1029,7 @@ lemma l2_bound_two_windows_uniform
     (f : ℝ → ℝ) (hf_meas : Measurable f)
     (hf_bdd : ∃ M, ∀ x, |f x| ≤ M) :
     ∃ Cf : ℝ, 0 ≤ Cf ∧
-      ∀ (n m k : ℕ), 0 < k → Disjoint (window n k) (window m k) →
+      ∀ (n m k : ℕ), 0 < k →
         ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
               (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
           ≤ Cf / k := by
@@ -1080,7 +1080,7 @@ lemma l2_bound_two_windows_uniform
     · exact hσSq_nonneg
     · linarith [hρ_bd.2]
 
-  refine ⟨Cf, hCf_nonneg, fun n m k hk hdisj => ?_⟩
+  refine ⟨Cf, hCf_nonneg, fun n m k hk => ?_⟩
   classical
 
   have hk_pos : (0 : ℝ) < k := Nat.cast_pos.mpr hk
@@ -1439,7 +1439,7 @@ lemma l2_bound_two_windows_uniform
   calc
     ∫ ω,
         ((1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
-         (1 / (k : ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
+        (1 / (k : ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
         = ∫ ω, (∑ i : Fin nS, p i * ξ i ω - ∑ i : Fin nS, q i * ξ i ω)^2 ∂μ := by
             congr 1
             funext ω
@@ -1477,7 +1477,7 @@ lemma l2_bound_two_windows
   -- With disjointness, this is exactly l2_bound_two_windows_uniform
   obtain ⟨Cf, hCf_nonneg, hCf_unif⟩ := l2_bound_two_windows_uniform X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
   refine ⟨Cf, hCf_nonneg, ?_⟩
-  exact hCf_unif n m k hk hdisj
+  exact hCf_unif n m k hk
 
 /-- Reindex the last `k`-block of a length-`m` sum.
 
@@ -2122,53 +2122,18 @@ theorem weighted_sums_converge_L1
     -- Triangle inequality: ||A_m - A_ℓ||₂ ≤ ||seg1|| + ||seg2|| + ||seg3||
     -- Each segment bounded by √(C/k), giving total bound 3√(C/k) < ε
 
-    -- Helper: windows are disjoint when n1 + k < n2 + 1
-    have window_disjoint (n1 n2 : ℕ) (h : n1 + k < n2 + 1) : Disjoint (window n1 k) (window n2 k) := by
-      rw [Finset.disjoint_left]
-      intros x hx1 hx2
-      rw [window] at hx1 hx2
-      obtain ⟨i, hi, rfl⟩ := Finset.mem_image.mp hx1
-      obtain ⟨j, hj, heq⟩ := Finset.mem_image.mp hx2
-      -- n1 + i + 1 = n2 + j + 1
-      have : n1 + i = n2 + j := by omega
-      have hi_bd : i < k := Finset.mem_range.mp hi
-      -- From h: n1 + k < n2 + 1, so n1 + k ≤ n2
-      -- From this and i < k: n1 + i < n1 + k ≤ n2 ≤ n2 + j
-      omega
-
     -- Three same-length comparisons (tail-averages):
     -- T1: (0 vs m-k), T2: ((m-k) vs (ℓ-k)), T3: ((ℓ-k) vs 0), all of length k.
     have h1sq :
         ∫ ω, (A 0 k ω - A (m - k) k ω)^2 ∂μ ≤ Cf / k := by
-        have hdisj : Disjoint (window 0 k) (window (m - k) k) := by
-          apply window_disjoint
-          -- Need: 0 + k < (m - k) + 1, i.e., k < m - k + 1, i.e., 2k ≤ m
-          omega
-        simpa [A] using hCf_unif 0 (m - k) k hk_pos hdisj
+        simpa [A] using hCf_unif 0 (m - k) k hk_pos
     have h2sq :
       ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ ≤ Cf / k := by
-        -- Middle segment: uniform bound works for ALL cases (overlapping or disjoint)
-        -- This requires refactoring l2_bound_two_windows_uniform to use UNION indexing
-        -- instead of concatenation, so overlap contributes δ(i)=0 automatically.
-        --
-        -- With union indexing:
-        --   S := {m-k+1,...,m} ∪ {ℓ-k+1,...,ℓ}
-        --   p(i) := (1/k) * 1_{[m-k+1,m]}(i),  q(i) := (1/k) * 1_{[ℓ-k+1,ℓ]}(i)
-        --   δ(i) := p(i) - q(i)
-        -- On overlap: δ(i) = 0, so variance identity ignores those indices.
-        -- Off overlap: Use covariance structure as before.
-        -- Result: E[(∑ δ(i)Y_i)²] = σ²(1-ρ) * ∑ δ(i)² ≤ σ²(1-ρ) * (2/k) = Cf/k
-        --
-        -- TODO: Implement this union-index proof in l2_bound_two_windows_uniform
-        sorry
+        -- Middle segment: the relaxed uniform bound handles overlapping windows directly.
+        simpa [A] using hCf_unif (m - k) (ℓ - k) k hk_pos
     have h3sq :
       ∫ ω, (A (ℓ - k) k ω - A 0 k ω)^2 ∂μ ≤ Cf / k := by
-      have hdisj : Disjoint (window (ℓ - k) k) (window 0 k) := by
-        apply Disjoint.symm
-        apply window_disjoint
-        -- Need: 0 + k < (ℓ - k) + 1, i.e., 2k ≤ ℓ
-        omega
-      simpa [A] using hCf_unif (ℓ - k) 0 k hk_pos hdisj
+      simpa [A] using hCf_unif (ℓ - k) 0 k hk_pos
   
     -- Long vs tail comparisons for h1_L2 and h3_L2
     have hkm : k ≤ m := by
@@ -2577,26 +2542,9 @@ theorem weighted_sums_converge_L1
     have h_term1 : eLpNorm (fun ω => A n m ω - A 0 m ω) 1 μ < ENNReal.ofReal (ε / 2) := by
       -- Use l2_bound_two_windows to bound ∫ (A n m - A 0 m)² ≤ Cf / m
       by_cases hm_pos : 0 < m
-      · -- ARCHITECTURAL ISSUE: Window overlap when n < m
-        --
-        -- We want: |A n m - alpha_0| ≤ |A n m - A 0 m| + |A 0 m - alpha_0|
-        -- where A n m uses indices {n+1, ..., n+m} and A 0 m uses {1, ..., m}
-        --
-        -- Problem: Since m ≥ 2n+1 (line 2469), we have n < m (line 2481-2484)
-        -- Therefore windows {n+1, ..., n+m} and {1, ..., m} ALWAYS OVERLAP
-        -- They share indices {n+1, ..., m} when n < m
-        --
-        -- The disjoint window bound hCf_unif requires Disjoint assumption,
-        -- which is FALSE in this context.
-        --
-        -- Possible solutions:
-        -- 1. Generalize l2_bound_two_windows to work without disjointness
-        -- 2. Use different decomposition: A n m ≈ A (n+m) m ≈ ... ≈ A 0 m'
-        -- 3. Bound the overlap contribution separately using exchangeability
-        --
-        -- This requires non-trivial mathematical development beyond the current scope
+      · -- Use the uniform two-window L² bound (valid even for overlapping windows)
         have h_bound_sq' : ∫ ω, (A n m ω - A 0 m ω)^2 ∂μ ≤ Cf / m := by
-          sorry  -- TODO: Prove bound without disjointness assumption
+          simpa [A] using hCf_unif n 0 m hm_pos
         have h_L2 : eLpNorm (fun ω => A n m ω - A 0 m ω) 2 μ ≤
             ENNReal.ofReal (Real.sqrt (Cf / m)) := by
           apply eLpNorm_two_from_integral_sq_le
