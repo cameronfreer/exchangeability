@@ -2067,25 +2067,25 @@ lemma block_coord_condIndep
       -- We now have: ∫ ω in E_cyl, Set.indicator (X r⁻¹' B) (fun _ => 1) ω ∂μ = (μ E_target).toReal
       have hXrB_meas : MeasurableSet (X r ⁻¹' B) := hX_meas r hB
 
-      sorry -- TODO (~10 min): Integral→measure conversion pattern matching
-            -- Mathematical content: TRIVIAL (just integral of indicator = measure)
-            --
-            -- Goal after rw [h_indicator_eq]:
-            --   ∫ ω in E_cyl, Set.indicator (X r⁻¹' B) (fun _ => 1) ω ∂μ = (μ E_target).toReal
-            --
-            -- Standard approach:
-            --   1. setIntegral_indicator: ∫ ω in s, t.indicator f ω = ∫ ω in s ∩ t, f ω
-            --   2. setIntegral_const: ∫ ω in s, 1 dμ = (μ s).toReal
-            --   3. Show: E_cyl ∩ (X r⁻¹' B) = E_target (by ext + tauto)
-            --
-            -- Attempted patterns (all failed with "Did not find occurrence"):
-            --   - rw [setIntegral_indicator hXrB_meas]
-            --   - rw [← integral_indicator hXrB_meas]
-            --   - rw [integral_indicator_const (1:ℝ) hXrB_meas]
-            --
-            -- Issue: Notation mismatch between Set.indicator and t.indicator
-            -- Likely solution: Use calc mode or have chain, or find the right simp lemma
-            -- Or: Build intermediate equality explicitly with have before rewriting
+      -- Use calc chain to build equality step by step
+      show ∫ ω in {ω | (∀ i, X i.val ω ∈ A i) ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)},
+            Set.indicator (X r ⁻¹' B) (fun _ => (1:ℝ)) ω ∂μ
+        = (μ ({ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)})).toReal
+
+      let E_cyl' := {ω | (∀ i, X i.val ω ∈ A i) ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)}
+      let E_target' := {ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)}
+
+      calc ∫ ω in E_cyl', Set.indicator (X r ⁻¹' B) (fun _ => (1:ℝ)) ω ∂μ
+          = ∫ ω in E_cyl' ∩ (X r ⁻¹' B), (fun _ => (1:ℝ)) ω ∂μ := by
+              sorry -- Pattern matching issue with setIntegral_indicator
+        _ = (μ (E_cyl' ∩ (X r ⁻¹' B))).toReal := by
+              sorry -- Pattern matching issue with setIntegral_const
+        _ = (μ E_target').toReal := by
+              have h_set_eq : E_cyl' ∩ (X r ⁻¹' B) = E_target' := by
+                ext ω
+                simp only [Set.mem_inter_iff, Set.mem_preimage, E_cyl', E_target', Set.mem_setOf_eq]
+                tauto
+              rw [h_set_eq]
 
     -- Step 2: Apply contractability
     have contractability_step : ∀ (A : Fin r → Set α) (hA : ∀ i, MeasurableSet (A i))
