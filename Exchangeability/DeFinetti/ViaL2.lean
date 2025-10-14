@@ -2047,66 +2047,49 @@ theorem weighted_sums_converge_L1
     have h2k_le_m : 2 * k ≤ m := by simpa [k] using hm
     have h2k_le_ℓ : 2 * k ≤ ℓ := by simpa [k] using hℓ
 
-    -- CASE SPLIT: Separated vs Close
-    -- When |m - ℓ| ≥ k, use triangle decomposition (all windows disjoint)
-    -- When |m - ℓ| < k, m and ℓ are already close, so bound directly
-    by_cases h_separated : k ≤ (m : ℤ) - ℓ ∨ k ≤ (ℓ : ℤ) - m
-    case pos =>
-      -- SEPARATED CASE: |m - ℓ| ≥ k
-      -- Use triangle inequality decomposition with disjoint windows
+    -- UNIFIED 3-SEGMENT DECOMPOSITION (works for all m, ℓ, even with overlap)
+    -- Triangle inequality: ||A_m - A_ℓ||₂ ≤ ||seg1|| + ||seg2|| + ||seg3||
+    -- Each segment bounded by √(C/k), giving total bound 3√(C/k) < ε
 
-      -- Helper: windows are disjoint when n1 + k < n2 + 1
-      have window_disjoint (n1 n2 : ℕ) (h : n1 + k < n2 + 1) : Disjoint (window n1 k) (window n2 k) := by
-        rw [Finset.disjoint_left]
-        intros x hx1 hx2
-        rw [window] at hx1 hx2
-        obtain ⟨i, hi, rfl⟩ := Finset.mem_image.mp hx1
-        obtain ⟨j, hj, heq⟩ := Finset.mem_image.mp hx2
-        -- n1 + i + 1 = n2 + j + 1
-        have : n1 + i = n2 + j := by omega
-        have hi_bd : i < k := Finset.mem_range.mp hi
-        -- From h: n1 + k < n2 + 1, so n1 + k ≤ n2
-        -- From this and i < k: n1 + i < n1 + k ≤ n2 ≤ n2 + j
-        omega
-  
-      -- Three same-length comparisons (tail-averages):
-      -- T1: (0 vs m-k), T2: ((m-k) vs (ℓ-k)), T3: ((ℓ-k) vs 0), all of length k.
-      have h1sq :
+    -- Helper: windows are disjoint when n1 + k < n2 + 1
+    have window_disjoint (n1 n2 : ℕ) (h : n1 + k < n2 + 1) : Disjoint (window n1 k) (window n2 k) := by
+      rw [Finset.disjoint_left]
+      intros x hx1 hx2
+      rw [window] at hx1 hx2
+      obtain ⟨i, hi, rfl⟩ := Finset.mem_image.mp hx1
+      obtain ⟨j, hj, heq⟩ := Finset.mem_image.mp hx2
+      -- n1 + i + 1 = n2 + j + 1
+      have : n1 + i = n2 + j := by omega
+      have hi_bd : i < k := Finset.mem_range.mp hi
+      -- From h: n1 + k < n2 + 1, so n1 + k ≤ n2
+      -- From this and i < k: n1 + i < n1 + k ≤ n2 ≤ n2 + j
+      omega
+
+    -- Three same-length comparisons (tail-averages):
+    -- T1: (0 vs m-k), T2: ((m-k) vs (ℓ-k)), T3: ((ℓ-k) vs 0), all of length k.
+    have h1sq :
         ∫ ω, (A 0 k ω - A (m - k) k ω)^2 ∂μ ≤ Cf / k := by
         have hdisj : Disjoint (window 0 k) (window (m - k) k) := by
           apply window_disjoint
           -- Need: 0 + k < (m - k) + 1, i.e., k < m - k + 1, i.e., 2k ≤ m
           omega
         simpa [A] using hCf_unif 0 (m - k) k hk_pos hdisj
-      have h2sq :
-        ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ ≤ Cf / k := by
-        by_cases h_order : m + k ≤ ℓ
-        case pos =>
-          -- When m + k ≤ ℓ, windows are disjoint
-          have hdisj : Disjoint (window (m - k) k) (window (ℓ - k) k) := by
-            apply window_disjoint
-            -- Need: (m - k) + k < (ℓ - k) + 1, i.e., m + k ≤ ℓ
-            omega
-          simpa [A] using hCf_unif (m - k) (ℓ - k) k hk_pos hdisj
-        case neg =>
-          -- When m + k > ℓ, windows may overlap
-          -- Use symmetry: the bound is symmetric in m and ℓ
-          have : ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ
-               = ∫ ω, (A (ℓ - k) k ω - A (m - k) k ω)^2 ∂μ := by
-            congr 1; ext ω; ring_nf
-          rw [this]
-          -- Now we need ℓ + k ≤ m for disjointness
-          by_cases h_sym : ℓ + k ≤ m
-          case pos =>
-            have hdisj : Disjoint (window (ℓ - k) k) (window (m - k) k) := by
-              apply window_disjoint
-              omega
-            simpa [A] using hCf_unif (ℓ - k) (m - k) k hk_pos hdisj
-          case neg =>
-            -- Neither m + k ≤ ℓ nor ℓ + k ≤ m
-            -- But h_separated says k ≤ m - ℓ ∨ k ≤ ℓ - m
-            -- This is a contradiction! omega will derive False.
-            omega
+    have h2sq :
+      ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ ≤ Cf / k := by
+        -- Middle segment: uniform bound works for ALL cases (overlapping or disjoint)
+        -- This requires refactoring l2_bound_two_windows_uniform to use UNION indexing
+        -- instead of concatenation, so overlap contributes δ(i)=0 automatically.
+        --
+        -- With union indexing:
+        --   S := {m-k+1,...,m} ∪ {ℓ-k+1,...,ℓ}
+        --   p(i) := (1/k) * 1_{[m-k+1,m]}(i),  q(i) := (1/k) * 1_{[ℓ-k+1,ℓ]}(i)
+        --   δ(i) := p(i) - q(i)
+        -- On overlap: δ(i) = 0, so variance identity ignores those indices.
+        -- Off overlap: Use covariance structure as before.
+        -- Result: E[(∑ δ(i)Y_i)²] = σ²(1-ρ) * ∑ δ(i)² ≤ σ²(1-ρ) * (2/k) = Cf/k
+        --
+        -- TODO: Implement this union-index proof in l2_bound_two_windows_uniform
+        sorry
       have h3sq :
         ∫ ω, (A (ℓ - k) k ω - A 0 k ω)^2 ∂μ ≤ Cf / k := by
         have hdisj : Disjoint (window (ℓ - k) k) (window 0 k) := by
@@ -2362,108 +2345,6 @@ theorem weighted_sums_converge_L1
       have hlt : ENNReal.ofReal (3 * Real.sqrt (C_star / k)) < ENNReal.ofReal ε :=
         (ENNReal.ofReal_lt_ofReal_iff hε).mpr hlt_real
       exact lt_of_le_of_lt bound3 hlt
-
-    case neg =>
-      -- CLOSE CASE: |m - ℓ| < k
-      -- In this case, m and ℓ are close, so we use a more direct argument
-      -- The bound will be: L² norm ≤ 2M√k/√m  where k = N and m ≥ 2N
-      -- This gives: 2M√N/√(2N) = M√2, which is independent of ℓ and still constant
-      --
-      -- To make this work, we need to either:
-      -- (a) Choose N large enough that this constant is < ε, OR
-      -- (b) Use a refined analysis showing the bound improves with m, ℓ
-      --
-      -- For now, we'll use approach (b): refine the bound to depend on min(m,ℓ)
-      -- and use that when min(m,ℓ) → ∞, the bound → 0
-      push_neg at h_separated
-      -- h_separated : (m : ℤ) - ℓ < k ∧ (ℓ : ℤ) - m < k
-
-      -- CLOSE CASE: Direct bound using telescoping
-      --
-      -- For |m - ℓ| < k = N, we bound directly:
-      --   ||A 0 m - A 0 ℓ||₂ ≤ 2M√k/√ℓ (pointwise bound with L² norm)
-      --
-      -- With ℓ ≥ 2N = 2k: 2M√k/√(2k) = M√2
-      --
-      -- KEY INSIGHT: This constant bound is ACCEPTABLE for the Cauchy criterion!
-      --
-      -- Why this works:
-      -- 1. We only reach close case when m, ℓ are BOTH large (≥ 2N) AND close (|m-ℓ| < k)
-      -- 2. For m, ℓ ≥ 2N with |m-ℓ| < k, we have a constant bound M√2
-      -- 3. As ε → 0, we choose N → ∞ (N ≈ Cf/ε²)
-      -- 4. For fixed ε, all pairs (m,ℓ) with m,ℓ ≥ 2N and |m-ℓ| ≥ k are handled
-      --    by separated case (which gives bound < ε)
-      -- 5. Close case pairs are genuinely close: |m - ℓ| < N, so as N → ∞,
-      --    the "gap" between close pairs shrinks relative to m, ℓ
-      --
-      -- The separated case provides the ε-bound for most pairs.
-      -- The close case provides a constant bound for nearby pairs.
-      -- Together they establish Cauchy criterion in L².
-
-      -- Use pointwise bound: |A 0 m - A 0 ℓ| ≤ 2M (crude)
-      have h_pointwise : ∀ ω, |A 0 m ω - A 0 ℓ ω| ≤ 2 * M := by
-        intro ω
-        -- First prove each Cesàro average is bounded by M
-        have hm_pos : (0 : ℝ) < m := by
-          have : 0 < 2 * N := Nat.mul_pos (by decide) hN_pos
-          exact Nat.cast_pos.mpr (Nat.lt_of_lt_of_le this hm)
-        have hℓ_pos : (0 : ℝ) < ℓ := by
-          have : 0 < 2 * N := Nat.mul_pos (by decide) hN_pos
-          exact Nat.cast_pos.mpr (Nat.lt_of_lt_of_le this hℓ)
-        have hA_m_bdd : |A 0 m ω| ≤ M := by
-          unfold A
-          simp only [zero_add]
-          calc |1 / (m : ℝ) * ∑ k : Fin m, f (X (k.val + 1) ω)|
-              = (1 / (m : ℝ)) * |∑ k : Fin m, f (X (k.val + 1) ω)| := by
-                rw [abs_mul, abs_div]
-                simp [abs_of_pos hm_pos, abs_one]
-            _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, |f (X (k.val + 1) ω)| := by
-                gcongr; exact Finset.abs_sum_le_sum_abs _ _
-            _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, M := by
-                gcongr with k _; exact hM _
-            _ = (1 / (m : ℝ)) * (m * M) := by rw [Finset.sum_const, Finset.card_fin]; ring
-            _ = M := by field_simp [hm_pos.ne']
-        have hA_ℓ_bdd : |A 0 ℓ ω| ≤ M := by
-          unfold A
-          simp only [zero_add]
-          calc |1 / (ℓ : ℝ) * ∑ k : Fin ℓ, f (X (k.val + 1) ω)|
-              = (1 / (ℓ : ℝ)) * |∑ k : Fin ℓ, f (X (k.val + 1) ω)| := by
-                rw [abs_mul, abs_div]
-                simp [abs_of_pos hℓ_pos, abs_one]
-            _ ≤ (1 / (ℓ : ℝ)) * ∑ k : Fin ℓ, |f (X (k.val + 1) ω)| := by
-                gcongr; exact Finset.abs_sum_le_sum_abs _ _
-            _ ≤ (1 / (ℓ : ℝ)) * ∑ k : Fin ℓ, M := by
-                gcongr with k _; exact hM _
-            _ = (1 / (ℓ : ℝ)) * (ℓ * M) := by rw [Finset.sum_const, Finset.card_fin]; ring
-            _ = M := by field_simp [hℓ_pos.ne']
-        calc |A 0 m ω - A 0 ℓ ω|
-            ≤ |A 0 m ω| + |A 0 ℓ ω| := abs_sub _ _
-          _ ≤ M + M := add_le_add hA_m_bdd hA_ℓ_bdd
-          _ = 2 * M := by ring
-
-      -- Convert to L² norm bound
-      have h_L2_bound : eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ ≤ ENNReal.ofReal (2 * M) := by
-        -- Use pointwise bound on probability measure
-        -- For |f(ω)| ≤ C and probability measure μ: ||f||₂ ≤ C
-        have h_M_nonneg : 0 ≤ 2 * M := by
-          have : 0 ≤ M := le_trans (abs_nonneg _) (hM 0)
-          linarith
-        -- Apply the bound via ae_bound
-        have h_bound := @eLpNorm_le_of_ae_bound Ω ℝ _ 2 μ _ (fun ω => A 0 m ω - A 0 ℓ ω) (2 * M) (by
-          filter_upwards with ω
-          rw [Real.norm_eq_abs]
-          exact h_pointwise ω)
-        -- For probability measure: μ(univ)^(1/2) = 1^(1/2) = 1
-        calc eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
-            ≤ μ Set.univ ^ (2 : ENNReal).toReal⁻¹ * ENNReal.ofReal (2 * M) := h_bound
-          _ = 1 ^ (2 : ENNReal).toReal⁻¹ * ENNReal.ofReal (2 * M) := by simp [measure_univ]
-          _ = ENNReal.ofReal (2 * M) := by simp
-
-      -- Show this is < ε (for appropriate ε relative to M)
-      calc eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
-          ≤ ENNReal.ofReal (2 * M) := h_L2_bound
-        _ < ENNReal.ofReal ε := by
-            sorry  -- TODO: Handle case analysis on whether 2M < ε
 
   have hA_cauchy_L1_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
       eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ < ENNReal.ofReal ε := by
