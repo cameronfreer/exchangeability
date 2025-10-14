@@ -2805,12 +2805,40 @@ theorem subsequence_criterion_convergence_in_probability
     le_of_lt (hφ_small k)
 
   -- Geometric series: ∑_k (1/2)^(k+1) converges (ratio < 1)
-  -- TODO: Lean elaboration times out when proving Summable (fun k => (1/2)^(k+1))
-  -- Mathematically trivial: (1/2)^(k+1) = (1/2) * (1/2)^k, and ∑ (1/2)^k converges
-  -- Attempted: summable_geometric_of_lt_one, summable_geometric_two.mul_left, convert
-  -- All cause deterministic timeout at whnf (200k heartbeats)
-  -- Need mathlib expert or set_option maxHeartbeats 400000
-  have hsum_finite : ∑' k, μ (E k) ≠ ⊤ := by sorry
+  -- We need: ∑' k, μ (E k) ≠ ⊤
+  have hsum_finite : ∑' k, μ (E k) ≠ ⊤ := by
+    -- 1) Summability of the *shifted* geometric series (in ℝ), obtained from the unshifted one
+    have hgeom : Summable (fun k : ℕ => (1 / 2 : ℝ) ^ k) :=
+      summable_geometric_of_lt_one (by norm_num : 0 ≤ (1 / 2 : ℝ))
+                                   (by norm_num : (1 / 2 : ℝ) < 1)
+    have hshift : Summable (fun k : ℕ => (1 / 2 : ℝ) ^ (k + 1)) := by
+      -- (1/2)^(k+1) = (1/2) * (1/2)^k
+      simpa [pow_succ, mul_comm] using hgeom.mul_left (1 / 2 : ℝ)
+
+    -- 2) The ENNReal series ∑ ofReal((1/2)^(k+1)) is finite because it equals ofReal(tsum …)
+    have htsum :
+        ENNReal.ofReal (∑' k, ((1 / 2 : ℝ) ^ (k + 1)))
+          = (∑' k, ENNReal.ofReal ((1 / 2 : ℝ) ^ (k + 1))) :=
+      ENNReal.ofReal_tsum_of_nonneg
+        (by
+          intro k
+          have : 0 ≤ (1 / 2 : ℝ) := by norm_num
+          exact pow_nonneg this (k + 1))
+        hshift
+
+    have htop : (∑' k, ENNReal.ofReal ((1 / 2 : ℝ) ^ (k + 1))) ≠ ⊤ := by
+      -- RHS is ofReal of a real number, hence finite
+      rw [← htsum]
+      exact ENNReal.ofReal_ne_top
+
+    -- 3) Compare termwise with μ (E k) ≤ ofReal((1/2)^(k+1)), then lift to tsums
+    have hle :
+        (∑' k, μ (E k))
+          ≤ (∑' k, ENNReal.ofReal ((1 / 2 : ℝ) ^ (k + 1))) :=
+      ENNReal.tsum_le_tsum hE_small
+
+    -- 4) Conclude our tsum is not ⊤
+    exact ne_top_of_le_ne_top htop hle
 
   -- Borel-Cantelli
   have h_BC : ∀ᵐ ω ∂μ, ∀ᶠ k in atTop, ω ∉ E k :=

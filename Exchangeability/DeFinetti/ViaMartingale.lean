@@ -1788,35 +1788,26 @@ lemma contractable_finite_cylinder_measure
 
   -- First prove S_std is measurable
   have hS_meas : MeasurableSet S_std := by
-    -- S_std is a finite product cylinder: intersection of coordinate preimages
-    -- Decompose as: (⋂ i<r, eval i ⁻¹(A i)) ∩ (eval r ⁻¹ B) ∩ (⋂ j<k, eval (r+1+j) ⁻¹(C j))
-    -- Each eval i : (Fin n → α) → α is measurable (by measurable_pi_apply)
-    -- Preimages preserve measurability, intersections preserve measurability
-    --
-    -- Strategy 1 (intersection-of-preimages):
-    --   Use MeasurableSet.inter + MeasurableSet.iInter + measurable_pi_apply
-    --
-    -- Strategy 2 (univ.pi approach):
-    -- Define t : Fin (r+1+k) → Set α where t i = A i (i<r), B (i=r), C j (i=r+1+j)
-    sorry -- TODO (~15-20 min): Product cylinder measurability
-          -- Mathematical content: TRIVIAL (product of measurable sets is measurable)
-          --
-          -- Attempted univ.pi approach:
-          -- 1. Define t : Fin (r+1+k) → Set α piecewise (hit omega issues with bounds)
-          -- 2. Show S_std = Set.pi Set.univ t (complex Fin equalities and case analysis)
-          -- 3. Apply MeasurableSet.pi Set.countable_univ
-          --
-          -- Issues encountered:
-          -- - omega couldn't prove bounds for C ⟨i.val - r - 1, _⟩
-          -- - Fin equality rewrites complicated (ext + omega)
-          -- - Missing API: Fin.val_lt_of_lt
-          -- - simp made no progress on nested conditionals
-          --
-          -- Alternative: Strategy 1 (intersection-of-preimages)
-          -- S_std = (⋂ i<r, eval i ⁻¹(A i)) ∩ (eval r ⁻¹ B) ∩ (⋂ j<k, eval (r+1+j) ⁻¹(C j))
-          -- Apply: MeasurableSet.inter + MeasurableSet.iInter + measurable_pi_apply
-          --
-          -- This is standard product space measurability - purely technical Lean issue
+    -- Use intersection decomposition approach
+    -- S_std = (⋂ i : Fin r, preimage at i) ∩ (preimage at r) ∩ (⋂ j : Fin k, preimage at r+1+j)
+    have h_decomp : S_std =
+        (⋂ i : Fin r, {f | f ⟨i.val, by omega⟩ ∈ A i}) ∩
+        {f | f ⟨r, by omega⟩ ∈ B} ∩
+        (⋂ j : Fin k, {f | f ⟨r + 1 + j.val, by omega⟩ ∈ C j}) := by
+      ext f
+      simp only [S_std, Set.mem_iInter, Set.mem_inter_iff, Set.mem_setOf]
+      tauto
+
+    rw [h_decomp]
+    apply MeasurableSet.inter
+    · apply MeasurableSet.inter
+      · apply MeasurableSet.iInter
+        intro i
+        exact measurable_pi_apply (Fin.mk i.val (by omega)) (hA i)
+      · exact measurable_pi_apply (Fin.mk r (by omega)) hB
+    · apply MeasurableSet.iInter
+      intro j
+      exact measurable_pi_apply (Fin.mk (r + 1 + j.val) (by omega)) (hC j)
 
   -- Prove the functions are measurable
   have h_meas_idx : Measurable (fun ω (i : Fin (r + 1 + k)) => X (idx i) ω) :=
