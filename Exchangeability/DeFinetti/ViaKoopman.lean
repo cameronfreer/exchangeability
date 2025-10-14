@@ -1229,13 +1229,14 @@ private lemma condexp_pair_factorization_MET
             simpa [Function.comp, shift_iterate_apply, Function.iterate_succ] using this
           exact h_comp.trans h_shift
     -- Summing over the iterates yields the classical Cesàro sums.
-    have h_sum :
+    have h_sum : ∀ n,
         (fun ω =>
             (Finset.range (n + 1)).sum fun k =>
               ((koopman shift hσ)^[k] g₀L2 : Ω[α] → ℝ) ω)
           =ᵐ[μ]
         fun ω =>
             (Finset.range (n + 1)).sum fun k => g₀ ((shift^[k]) ω) := by
+      intro n
       apply Finset.eventuallyEq_sum
       intro k _
       exact h_iter k
@@ -1250,9 +1251,24 @@ private lemma condexp_pair_factorization_MET
         tendsto_add_atTop_iff_nat.2 tendsto_id
       exact this.comp h_add
 
-    -- TODO: Having identified `A_L2 n` with the pointwise Cesàro sums, the remaining work in
-    -- this step is to compare `condexpL2 g₀L2` with the classical conditional expectation and
-    -- deduce from `hA_L2_tendsto` that `‖A n - μ[g₀ | m]‖₁ → 0`.
+    -- Having identified `A_L2 n` with the pointwise Cesàro sums, we record the a.e.
+    -- equality explicitly.
+    have hA_L2_ae : ∀ n, (A_L2 n : Ω[α] → ℝ) =ᵐ[μ] A n := by
+      intro n
+      -- start from the equality of Birkhoff sums
+      have h_sum_n := h_sum n
+      -- rewrite the averages in terms of `A`
+      refine h_sum_n.mono ?_
+      intro ω hω
+      simp [A_L2, birkhoffAverage, birkhoffSum, A, g₀, hω]
+
+    have h_condexpL2_ae :
+        condexpL2 (μ := μ) g₀L2 =ᵐ[μ] μ[g₀ | m] :=
+      hg₀_memLp.condExpL2_ae_eq_condExp
+        (hm := shiftInvariantSigma_le (α := α))
+
+    -- TODO: Use `hA_L2_tendsto`, `hA_L2_ae`, and `h_condexpL2_ae` to deduce the L² (hence L¹)
+    -- convergence of the concrete averages `A n` to `μ[g₀ | m]`.
     -- The comparison above shows that `A_L2 n` realises the same pointwise averages as `A n`.
     have hA_L2_ae : ∀ n,
         (A_L2 n : Ω[α] → ℝ) =ᵐ[μ] A n := by
