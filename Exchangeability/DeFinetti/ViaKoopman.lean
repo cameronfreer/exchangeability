@@ -2247,8 +2247,106 @@ we show `P(Uf) = Pf` where `P = condexpL2` and `U = koopman shift`:
 lemma condexpL2_koopman_comm (f : Lp ℝ 2 μ) :
     condexpL2 (μ := μ) (koopman shift hσ f) = condexpL2 (μ := μ) f := by
   classical
-  -- TODO: Replace with orthogonal projection argument summarised above
-  sorry
+  -- Abbreviations for the projection and Koopman operator
+  set P := condexpL2 (μ := μ)
+  set U := koopman shift hσ
+  let S := fixedSubspace hσ
+
+  -- Image of `P` equals the fixed subspace
+  have h_range : Set.range P = (S : Set (Lp ℝ 2 μ)) :=
+    range_condexp_eq_fixedSubspace hσ
+
+  -- `P f` and `P (U f)` lie in the fixed subspace
+  have hPf_mem : P f ∈ S := by
+    have : P f ∈ Set.range P := ⟨f, rfl⟩
+    simpa [P, h_range] using this
+  have hPUf_mem : P (U f) ∈ S := by
+    have : P (U f) ∈ Set.range P := ⟨U f, rfl⟩
+    simpa [P, h_range] using this
+
+  -- Elements of the fixed subspace are fixed points of the Koopman operator
+  have h_fix : ∀ g ∈ S, U g = g := by
+    intro g hg
+    exact (mem_fixedSubspace_iff (μ := μ) (α := α) hσ g).1 hg
+
+  -- Decompose `f` into its projection plus orthogonal complement
+  set r := f - P f
+  have h_decomp : f = P f + r := by
+    simp [r, add_comm, add_left_comm, add_assoc]
+
+  -- `r` is orthogonal to the fixed subspace
+  have h_r_orth : ∀ g ∈ S, ⟪r, g⟫_ℝ = 0 := by
+    intro g hg
+    have h_sym :=
+      MeasureTheory.inner_condExpL2_left_eq_right
+        (μ := μ)
+        (m := shiftInvariantSigma (α := α))
+        (hm := shiftInvariantSigma_le (α := α))
+        (f := f)
+        (g := g)
+    have hPg : P g = g := condexpL2_fixes_fixedSubspace (hσ := hσ) hg
+    have hPg' : condexpL2 (μ := μ) g = g := hPg
+    have h_eq :
+        ⟪P f, g⟫_ℝ = ⟪f, g⟫_ℝ := by
+      simpa [P, hPg'] using h_sym
+    have hinner :
+        ⟪r, g⟫_ℝ = ⟪f, g⟫_ℝ - ⟪P f, g⟫_ℝ := by
+      simpa [r] using
+        (inner_sub_left (x := f) (y := P f) (z := g))
+    simpa [h_eq] using hinner
+
+  -- The Koopman operator preserves inner products and fixes the subspace pointwise
+  let Uₗᵢ :=
+    MeasureTheory.Lp.compMeasurePreservingₗᵢ ℝ (shift (α := α)) hσ
+  have hU_coe : ∀ g, U g = Uₗᵢ g := by intro g; rfl
+  have h_r_orth_after :
+      ∀ g ∈ S, ⟪U r, g⟫_ℝ = 0 := by
+    intro g hg
+    have hUg : U g = g := h_fix g hg
+    have h_inner_pres :=
+      Uₗᵢ.inner_map_map r g
+    have h_base : ⟪U r, U g⟫_ℝ = ⟪r, g⟫_ℝ := by
+      simpa [U, hU_coe r, hU_coe g]
+        using h_inner_pres
+    simpa [U, hUg, hU_coe r, hU_coe g, h_r_orth g hg] using h_base
+
+  -- `P (U r)` lies in the subspace and is orthogonal to it, hence zero
+  have hPUr_mem : P (U r) ∈ S := by
+    have : P (U r) ∈ Set.range P := ⟨U r, rfl⟩
+    simpa [P, h_range] using this
+  have hPUr_orth : ∀ g ∈ S, ⟪P (U r), g⟫_ℝ = 0 := by
+    intro g hg
+    have hPg : P g = g := condexpL2_fixes_fixedSubspace (hσ := hσ) hg
+    have h_sym :=
+      MeasureTheory.inner_condExpL2_left_eq_right
+        (μ := μ)
+        (m := shiftInvariantSigma (α := α))
+        (hm := shiftInvariantSigma_le (α := α))
+        (f := U r)
+        (g := g)
+    have h_eq :
+        ⟪P (U r), g⟫_ℝ = ⟪U r, g⟫_ℝ := by
+      simpa [P, hPg] using h_sym
+    simpa [h_eq, h_r_orth_after g hg]
+  have hPUr_zero : P (U r) = 0 := by
+    have hinner := hPUr_orth (P (U r)) hPUr_mem
+    exact
+      (inner_self_eq_zero : ⟪P (U r), P (U r)⟫_ℝ = 0 ↔ P (U r) = 0).mp hinner
+
+  -- Combine the pieces: `P (U f)` equals `P f`
+  have hUf_decomp :
+      U f = U (P f) + U r := by
+    have h := congrArg U h_decomp
+    have hUadd := U.map_add (P f) r
+    simpa [hUadd] using h
+  calc
+    P (U f)
+        = P (U (P f) + U r) := by simpa [hUf_decomp]
+    _ = P (U (P f)) + P (U r) := by
+          simpa [P] using (condexpL2 (μ := μ)).map_add (U (P f)) (U r)
+    _ = P (P f) + 0 := by
+          simp [P, h_fix (P f) hPf_mem, hPUr_zero]
+    _ = P f := by simp [P]
 
 /-
 Full proof sketch using orthogonal projection characterization:
