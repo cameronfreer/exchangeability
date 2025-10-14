@@ -2387,13 +2387,30 @@ lemma block_coord_condIndep
             intro i
             exact hf_in_good i
           -- Need: ∫_{E_partial n} g = ∫_{E_partial n} h
-          -- Use integral_iUnion_fintype
+          -- Use integral_iUnion_fintype for both sides
+
           sorry -- TODO (~15-20 min): Apply integral_iUnion_fintype
-                -- Need to prove:
-                -- 1. Each f i is measurable (have: hf_meas i)
-                -- 2. Pairwise disjoint (have: hf_disj)
-                -- 3. Integrability on each f i (bounded indicators)
-                -- Then: ∫_{⋃ i} g = ∑ i (∫_{f i} g) = ∑ i (∫_{f i} h) = ∫_{⋃ i} h
+                -- Structure attempted but blocked by technical issues:
+                --
+                -- 1. Pairwise disjoint restriction: Need to show
+                --    Pairwise (fun i j : Fin n => Disjoint (f i) (f j))
+                --    from hf_disj : Pairwise (Disjoint on f : ℕ → Set Ω)
+                --
+                -- 2. Measurability lift: hf_meas i gives
+                --    MeasurableSet[firstRSigma ⊔ finFutureSigma] (f i)
+                --    but integral_iUnion_fintype expects
+                --    MeasurableSet[inferInstance] (f i)
+                --    Need witness that sub-σ-algebra ≤ ambient
+                --
+                -- 3. Integrability: indicators bounded by 1
+                --    have hg_int : ∀ i, IntegrableOn g (f i) μ
+                --    have hh_int : ∀ i, IntegrableOn h (f i) μ
+                --
+                -- 4. Then apply: integral_iUnion_fintype to both g and h
+                --    rw [h_g_sum, h_h_sum]
+                --    congr 1; funext i; exact h_eq_i i
+                --
+                -- Mathematical content is clear, blocked on Lean technicalities
       -- Apply monotone union closure
       rw [← hE_partial_eq]
       exact (goodsets_closed_under_monotone_union E_partial hE_partial_in hE_partial_mono).2
