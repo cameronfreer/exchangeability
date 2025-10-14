@@ -2064,14 +2064,28 @@ lemma block_coord_condIndep
       -- Rewrite the integral using this
       rw [h_indicator_eq]
 
-      -- Apply setIntegral_indicator to move the indicator inside the domain
+      -- We now have: ∫ ω in E_cyl, Set.indicator (X r⁻¹' B) (fun _ => 1) ω ∂μ = (μ E_target).toReal
       have hXrB_meas : MeasurableSet (X r ⁻¹' B) := hX_meas r hB
 
-      sorry -- TODO (~10 min): Apply setIntegral_indicator + setIntegral_const
-            -- Pattern issue: Need to match ∫ ω in E_cyl, indicator (X r⁻¹' B) 1 ω dμ
-            -- with setIntegral_indicator signature
-            -- Then: setIntegral_const to get μ(E_cyl ∩ (X r⁻¹' B)).toReal
-            -- Finally: show E_cyl ∩ (X r⁻¹' B) = E_target (by ext + tauto)
+      sorry -- TODO (~10 min): Integral→measure conversion pattern matching
+            -- Mathematical content: TRIVIAL (just integral of indicator = measure)
+            --
+            -- Goal after rw [h_indicator_eq]:
+            --   ∫ ω in E_cyl, Set.indicator (X r⁻¹' B) (fun _ => 1) ω ∂μ = (μ E_target).toReal
+            --
+            -- Standard approach:
+            --   1. setIntegral_indicator: ∫ ω in s, t.indicator f ω = ∫ ω in s ∩ t, f ω
+            --   2. setIntegral_const: ∫ ω in s, 1 dμ = (μ s).toReal
+            --   3. Show: E_cyl ∩ (X r⁻¹' B) = E_target (by ext + tauto)
+            --
+            -- Attempted patterns (all failed with "Did not find occurrence"):
+            --   - rw [setIntegral_indicator hXrB_meas]
+            --   - rw [← integral_indicator hXrB_meas]
+            --   - rw [integral_indicator_const (1:ℝ) hXrB_meas]
+            --
+            -- Issue: Notation mismatch between Set.indicator and t.indicator
+            -- Likely solution: Use calc mode or have chain, or find the right simp lemma
+            -- Or: Build intermediate equality explicitly with have before rewriting
 
     -- Step 2: Apply contractability
     have contractability_step : ∀ (A : Fin r → Set α) (hA : ∀ i, MeasurableSet (A i))
