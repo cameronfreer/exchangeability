@@ -258,6 +258,7 @@ structure NaturalExtensionData (μ : Measure (Ω[α])) where
   μhat : Measure (Ωℤ[α])
   μhat_isProb : IsProbabilityMeasure μhat
   shift_preserving : MeasurePreserving (shiftℤ (α := α)) μhat μhat
+  shiftInv_preserving : MeasurePreserving (shiftℤInv (α := α)) μhat μhat
   restrict_pushforward :
     Measure.map (restrictNonneg (α := α)) μhat = μ
 
@@ -279,12 +280,31 @@ axiom naturalExtension_condexp_pullback
         ext.μhat[(fun ωhat => H (restrictNonneg (α := α) ωhat))
           | shiftInvariantSigmaℤ (α := α)]
 
+/-- Pulling an almost-everywhere equality back along the natural extension. -/
+axiom naturalExtension_pullback_ae
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (ext : NaturalExtensionData (μ := μ))
+    {F G : Ω[α] → ℝ}
+    (h : (fun ωhat => F (restrictNonneg (α := α) ωhat))
+        =ᵐ[ext.μhat]
+        (fun ωhat => G (restrictNonneg (α := α) ωhat))) :
+    F =ᵐ[μ] G
+
 /-- Two-sided version of `condexp_precomp_iterate_eq`. -/
 axiom condexp_precomp_iterate_eq_twosided
     {μhat : Measure (Ωℤ[α])} [IsProbabilityMeasure μhat]
     (hσ : MeasurePreserving (shiftℤ (α := α)) μhat μhat) {k : ℕ}
     {f : Ωℤ[α] → ℝ} (hf : Integrable f μhat) :
     μhat[(fun ω => f ((shiftℤ (α := α))^[k] ω))
+        | shiftInvariantSigmaℤ (α := α)]
+      =ᵐ[μhat] μhat[f | shiftInvariantSigmaℤ (α := α)]
+
+/-- Invariance of conditional expectation under the inverse shift. -/
+axiom condexp_precomp_shiftℤInv_eq
+    {μhat : Measure (Ωℤ[α])} [IsProbabilityMeasure μhat]
+    (hσInv : MeasurePreserving (shiftℤInv (α := α)) μhat μhat)
+    {f : Ωℤ[α] → ℝ} (hf : Integrable f μhat) :
+    μhat[(fun ω => f (shiftℤInv (α := α) ω))
         | shiftInvariantSigmaℤ (α := α)]
       =ᵐ[μhat] μhat[f | shiftInvariantSigmaℤ (α := α)]
 
@@ -312,6 +332,14 @@ private lemma condexp_pair_lag_constant_twoSided
     have hφ_bd : ∃ C, ∀ ω, |f (ω (-1))| ≤ C := ⟨Cf, fun ω => hCf _⟩
     have hψ_bd : ∃ C, ∀ ω, |g (ω k)| ≤ C := ⟨Cg, fun ω => hCg _⟩
     exact integrable_of_bounded_mul (μ := ext.μhat) hφ_meas hφ_bd hψ_meas hψ_bd
+  have hF_int : Integrable (fun ω => f (ω 0) * g (ω (k + 1))) ext.μhat := by
+    have hφ_meas : Measurable fun ω => f (ω 0) :=
+      hf_meas.comp (measurable_pi_apply 0)
+    have hψ_meas : Measurable fun ω => g (ω (k + 1)) :=
+      hg_meas.comp (measurable_pi_apply (k + 1))
+    have hφ_bd : ∃ C, ∀ ω, |f (ω 0)| ≤ C := ⟨Cf, fun ω => hCf _⟩
+    have hψ_bd : ∃ C, ∀ ω, |g (ω (k + 1))| ≤ C := ⟨Cg, fun ω => hCg _⟩
+    exact integrable_of_bounded_mul (μ := ext.μhat) hφ_meas hφ_bd hψ_meas hψ_bd
   have h_shift :
       ext.μhat[(fun ω => Fk ((shiftℤ (α := α)) ω))
         | shiftInvariantSigmaℤ (α := α)]
@@ -333,8 +361,20 @@ private lemma condexp_pair_lag_constant_twoSided
         =ᵐ[ext.μhat]
       ext.μhat[(fun ω => f (ω 0) * g (ω k))
         | shiftInvariantSigmaℤ (α := α)] := by
-    -- exploit shift-invariance of the conditional expectation to replace ω ↦ ω (-1) by ω ↦ ω 0
-    sorry
+    -- Use invariance under the inverse shift to replace the negative index
+    have h_inv :=
+      condexp_precomp_shiftℤInv_eq
+        (μhat := ext.μhat) (α := α)
+        (hσInv := ext.shiftInv_preserving)
+        (f := fun ω => f (ω 0) * g (ω (k + 1)))
+        hF_int
+    have h_ident :
+        (fun ω => f (ω 0) * g (ω (k + 1)))
+          ∘ shiftℤInv (α := α)
+          = Fk := by
+      funext ω
+      simp [Fk, Function.comp_apply, shiftℤInv, add_comm, add_left_comm, add_assoc]
+    simpa [h_ident] using h_inv
   refine h_shift.trans ?_
   simpa [h_shifted_eq] using h_unshifted_eq
 
@@ -811,8 +851,17 @@ private lemma condexp_pair_lag_constant
     (μ := μ) (α := α) ext (H := Hk) hHk_int
   -- Combine the three a.e. equalities and push forward along restrictNonneg
   -- to obtain the desired identity on Ω[α].
-  -- TODO: glue the equalities rigorously using ext.restrict_pushforward
-  sorry
+  let Φ₁ :=
+    fun ωhat => μ[Hk1 | shiftInvariantSigma (α := α)]
+      (restrictNonneg (α := α) ωhat)
+  let Φ₂ :=
+    fun ωhat => μ[Hk | shiftInvariantSigma (α := α)]
+      (restrictNonneg (α := α) ωhat)
+  have h_chain : Φ₁ =ᵐ[ext.μhat] Φ₂ := by
+    refine h_pull_left.trans ?_
+    refine (h_two.trans ?_).trans ?_
+    · exact h_pull_right.symm
+  exact naturalExtension_pullback_ae (μ := μ) (α := α) ext h_chain
 
 set_option maxHeartbeats 1000000
 
