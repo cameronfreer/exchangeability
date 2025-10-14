@@ -2519,48 +2519,103 @@ lemma block_coord_condIndep
       -- Goal: Show ∫_{tᶜ} indicator = ∫_{tᶜ} condexp
       -- Have IH: ∫_t indicator = ∫_t condexp
 
+      classical
+      set f := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X r ω) with hf_def
+      set g :=
+          fun ω =>
+            Exchangeability.Probability.condExpWith μ
+              (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
+              (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r) ω with hg_def
+      have htm_ambient :
+          MeasurableSet t :=
+        (sup_le (firstRSigma_le_ambient X r hX_meas)
+            (finFutureSigma_le_ambient X m k hX_meas)) _ htm
       -- Integrability of indicator (bounded by 1)
-      have hg_int : Integrable (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X r ω)) μ := by
+      have hf_int_raw :
+          Integrable (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X r ω)) μ := by
         apply Integrable.indicator
         · exact integrable_const (1 : ℝ)
         · exact (hX_meas r) hB
-
+      have hf_int : Integrable f μ := by
+        simpa [hf_def] using hf_int_raw
       -- Integrability of conditional expectation
-      -- Conditional expectation is always integrable (mathlib: integrable_condexp)
-      have hh_int : Integrable (fun ω => Exchangeability.Probability.condExpWith μ
-          (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
-          (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r) ω) μ := by
-        sorry -- TODO (~5 min): Use ProbabilityTheory.integrable_condexp
-              -- Or unfold condExpWith definition and apply integrable_condexp
-
-      -- Apply setIntegral_compl decomposition: ∫_{tᶜ} f = ∫_Ω f - ∫_t f
-      have h_decomp_g : ∫ ω in tᶜ, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ =
-          ∫ ω, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ -
-          ∫ ω in t, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ := by
-        sorry -- TODO (~5 min): Use MeasureTheory.integral_add_compl
-              -- Lemma: ∫_Ω f = ∫_t f + ∫_{tᶜ} f, then rearrange with ring
-
-      have h_decomp_h : ∫ ω in tᶜ, (Exchangeability.Probability.condExpWith μ
-          (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
-          (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ =
-          ∫ ω, (Exchangeability.Probability.condExpWith μ
-            (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
-            (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ -
-          ∫ ω in t, (Exchangeability.Probability.condExpWith μ
-            (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
-            (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ := by
-        sorry -- TODO (~5 min): Same as h_decomp_g
-
-      -- Tower property: ∫_Ω g = ∫_Ω E[g|m]
-      have h_tower : ∫ ω, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ =
-          ∫ ω, (Exchangeability.Probability.condExpWith μ
-            (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
-            (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ := by
-        sorry -- TODO (~5 min): Use ProbabilityTheory.integral_condexp
-              -- Or use definition of condExpWith + tower property
-
+      have hh_int : Integrable g μ := by
+        simpa [hg_def, Exchangeability.Probability.condExpWith]
+          using ProbabilityTheory.integrable_condexp
+            (μ := μ)
+            (m := finFutureSigma X m k)
+            (hm := finFutureSigma_le_ambient X m k hX_meas)
+            (f := Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)
+      -- Decomposition over complements for f
+      have h_decomp_f : ∫ ω in tᶜ, f ω ∂μ =
+          ∫ ω, f ω ∂μ - ∫ ω in t, f ω ∂μ := by
+        have hf_indic :
+            Integrable (fun ω => Set.indicator t f ω) μ :=
+          hf_int.indicator (μ := μ) (s := t) (ht := htm_ambient)
+        have h_indicator_compl :
+            (fun ω => Set.indicator tᶜ f ω)
+              = fun ω => f ω - Set.indicator t f ω := by
+          funext ω
+          by_cases hω : ω ∈ t
+          · have : ω ∉ tᶜ := by simpa [Set.mem_compl] using hω
+            simp [Set.indicator_of_mem, Set.indicator_of_not_mem, hω, this]
+          · have hωc : ω ∈ tᶜ := by simpa [Set.mem_compl] using hω
+            simp [Set.indicator_of_not_mem, Set.indicator_of_mem, hω, hωc]
+        calc
+          ∫ ω in tᶜ, f ω ∂μ
+              = ∫ ω, Set.indicator tᶜ f ω ∂μ := rfl
+          _ = ∫ ω, (fun ω => f ω - Set.indicator t f ω) ω ∂μ := by
+                simpa [h_indicator_compl]
+          _ = ∫ ω, f ω ∂μ - ∫ ω, Set.indicator t f ω ∂μ := by
+                simpa using MeasureTheory.integral_sub hf_int hf_indic
+          _ = ∫ ω, f ω ∂μ - ∫ ω in t, f ω ∂μ := by
+                simp [MeasureTheory.integral_indicator, f]
+      -- Same decomposition for g
+      have h_decomp_g : ∫ ω in tᶜ, g ω ∂μ =
+          ∫ ω, g ω ∂μ - ∫ ω in t, g ω ∂μ := by
+        have hg_indic :
+            Integrable (fun ω => Set.indicator t g ω) μ :=
+          hh_int.indicator (μ := μ) (s := t) (ht := htm_ambient)
+        have h_indicator_compl :
+            (fun ω => Set.indicator tᶜ g ω)
+              = fun ω => g ω - Set.indicator t g ω := by
+          funext ω
+          by_cases hω : ω ∈ t
+          · have : ω ∉ tᶜ := by simpa [Set.mem_compl] using hω
+            simp [Set.indicator_of_mem, Set.indicator_of_not_mem, hω, this]
+          · have hωc : ω ∈ tᶜ := by simpa [Set.mem_compl] using hω
+            simp [Set.indicator_of_not_mem, Set.indicator_of_mem, hω, hωc]
+        calc
+          ∫ ω in tᶜ, g ω ∂μ
+              = ∫ ω, Set.indicator tᶜ g ω ∂μ := rfl
+          _ = ∫ ω, (fun ω => g ω - Set.indicator t g ω) ω ∂μ := by
+                simpa [h_indicator_compl]
+          _ = ∫ ω, g ω ∂μ - ∫ ω, Set.indicator t g ω ∂μ := by
+                simpa using MeasureTheory.integral_sub hh_int hg_indic
+          _ = ∫ ω, g ω ∂μ - ∫ ω in t, g ω ∂μ := by
+                simp [MeasureTheory.integral_indicator, g]
+      -- Tower property
+      have h_tower :
+          ∫ ω, f ω ∂μ = ∫ ω, g ω ∂μ := by
+        simpa [hf_def, hg_def, Exchangeability.Probability.condExpWith]
+          using ProbabilityTheory.integral_condexp
+            (μ := μ)
+            (m := finFutureSigma X m k)
+            (hm := finFutureSigma_le_ambient X m k hX_meas)
+            (f := Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)
       -- Conclude using decomposition + tower + IH
-      rw [h_decomp_g, h_decomp_h, h_tower, ht_in_good]
+      have h_result :
+          ∫ ω in tᶜ, f ω ∂μ = ∫ ω in tᶜ, g ω ∂μ := by
+        calc
+          ∫ ω in tᶜ, f ω ∂μ
+              = ∫ ω, f ω ∂μ - ∫ ω in t, f ω ∂μ := h_decomp_f
+          _ = ∫ ω, g ω ∂μ - ∫ ω in t, f ω ∂μ := by
+                have h := congrArg (fun x => x - ∫ ω in t, f ω ∂μ) h_tower
+                simpa using h
+          _ = ∫ ω, g ω ∂μ - ∫ ω in t, g ω ∂μ := by
+                simpa [hf_def, hg_def] using ht_in_good
+          _ = ∫ ω in tᶜ, g ω ∂μ := h_decomp_g.symm
+      simpa [hf_def, hg_def] using h_result
 
     · -- Disjoint union case
       intro f hf_disj hf_meas hf_in_good
