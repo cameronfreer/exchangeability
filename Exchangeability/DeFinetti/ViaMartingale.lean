@@ -2052,19 +2052,25 @@ lemma block_coord_condIndep
         = (μ ({ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)})).toReal := by
       intro A hA C hC
       -- Goal: ∫ ω in E_cyl, indicator B (X r ω) dμ = μ(E_target).toReal
-      --
-      -- Strategy:
-      -- 1. The function (ω ↦ indicator B 1 (X r ω)) equals (ω ↦ indicator (X r⁻¹ B) 1 ω)
-      -- 2. Apply integral_indicator: ∫_{E_cyl} indicator S 1 = (μ.restrict E_cyl)(S).toReal
-      -- 3. Show (μ.restrict E_cyl)(X r⁻¹ B) = μ(E_cyl ∩ X r⁻¹ B) = μ E_target
-      --
-      sorry -- TODO (~20 min): Standard integral-to-measure conversion
-            -- Mathematical content: trivial
-            -- Technical issues:
-            -- - Indicator function rewriting (composition with X r)
-            -- - integral_indicator application pattern
-            -- - Measure.restrict and intersection equality
-            -- All standard, just need exact Lean incantations
+      let E_target := {ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)}
+
+      -- The indicator function of B composed with X r is the indicator of X r⁻¹' B
+      have h_indicator_eq : (fun ω => Set.indicator B (fun _ => (1:ℝ)) (X r ω))
+          = Set.indicator (X r ⁻¹' B) (fun _ => (1:ℝ)) := by
+        ext ω
+        simp only [Set.indicator, Set.mem_preimage]
+        by_cases h : X r ω ∈ B <;> simp [h]
+
+      -- Rewrite the integral using this
+      rw [h_indicator_eq]
+
+      -- Now we need: ∫ ω in E_cyl, indicator (X r⁻¹' B) 1 dμ = μ(E_target).toReal
+      -- By integral_indicator: ∫ indicator S dμ = μ(S).toReal (when S is measurable)
+      -- But we have a restricted integral
+      sorry -- TODO (~15 min): setIntegral_indicator pattern
+            -- Need: ∫ ω in E_cyl, indicator (X r⁻¹' B) 1 dμ = (μ.restrict E_cyl)(X r⁻¹' B).toReal
+            -- Then: (μ.restrict E_cyl)(X r⁻¹' B) = μ(E_cyl ∩ X r⁻¹' B)
+            -- Finally: E_cyl ∩ X r⁻¹' B = E_target (by ext + simp)
 
     -- Step 2: Apply contractability
     have contractability_step : ∀ (A : Fin r → Set α) (hA : ∀ i, MeasurableSet (A i))
@@ -2140,15 +2146,21 @@ lemma block_coord_condIndep
           exact ⟨_, finCylinder_measurable hC, rfl⟩
 
         -- Intersection is measurable in the sup
-        -- Need: MeasurableSet[m₁] E ∧ m₁ ≤ m → MeasurableSet[m] E
-        -- This is trivial: m₁ ≤ m means m₁ ⊆ m as collections of sets
-        -- So E ∈ m₁ implies E ∈ m
-        sorry -- TODO (~5 min): Standard measurability lifting
-              -- Use: (le_sup_left : firstRSigma X r ≤ ...) applied to hE_past
-              -- And: (le_sup_right : finFutureSigma X m k ≤ ...) applied to hE_future
-              -- Then: MeasurableSet.inter for the intersection
-              -- Mathematical content: completely trivial
-              -- Technical issue: finding exact syntax for applying ≤ to MeasurableSet
+        sorry -- TODO (~10 min): Standard σ-algebra lifting + intersection
+              -- Mathematical fact: If MeasurableSet[m₁] E and MeasurableSet[m₂] F,
+              -- then MeasurableSet[m₁ ⊔ m₂] (E ∩ F)
+              --
+              -- Attempted approaches:
+              -- 1. le_sup_left/right: These are proofs of ordering, need to apply to sets
+              -- 2. GenerateMeasurable.basic: Unknown identifier (import issue?)
+              -- 3. measurableSet_sup: Unknown identifier (import issue?)
+              --
+              -- Correct pattern should be something like:
+              -- - Use that m₁ ⊔ m₂ = generateFrom (MeasurableSet[m₁] ∪ MeasurableSet[m₂])
+              -- - Lift each set via GenerateMeasurable.basic
+              -- - Apply MeasurableSet.inter
+              --
+              -- OR simpler: Find the right mathlib lemma for σ-algebra monotonicity
       · -- Integral equality
         rw [lhs_computation A hA C hC, rhs_computation A hA C hC]
         rw [contractability_step A hA C hC]
