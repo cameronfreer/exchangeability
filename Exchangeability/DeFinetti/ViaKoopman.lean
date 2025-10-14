@@ -874,10 +874,11 @@ private lemma condexp_pair_factorization_MET
       -/
       sorry
 
-    -- Step 5: CE[f·A_n|m] → CE[f·CE[g(ω₀)|m]|m] ae (by L¹-Lipschitz of CE)
-    have h_ce_limit : ∀ᵐ ω ∂μ,
-        Tendsto (fun n => μ[(fun ω' => f (ω' 0) * A n ω') | m] ω)
-                atTop (𝓝 (μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | m] ω') | m] ω)) := by
+    -- Step 5: CE[f·A_n|m] → CE[f·CE[g(ω₀)|m]|m] in L¹ (by L¹-Lipschitz of CE)
+    -- We prove L¹ convergence only; no need for ae convergence extraction!
+    have h_ce_L1 : Tendsto (fun n => ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | m] ω
+                                          - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | m] ω') | m] ω| ∂μ)
+                            atTop (𝓝 0) := by
       /-
       **PROOF STRATEGY**:
 
@@ -886,7 +887,7 @@ private lemma condexp_pair_factorization_MET
       Key property: **Conditional expectation is L¹-Lipschitz continuous**
         ‖CE[X|m] - CE[Y|m]‖₁ ≤ ‖X - Y‖₁
 
-      This follows from Jensen's inequality applied to |·|.
+      This follows from Jensen's inequality (already proved as condExp_L1_lipschitz).
 
       Applying this:
       ∫|CE[f(ω₀)·A_n(ω)|m] - CE[f(ω₀)·CE[g(ω₀)|m](ω)|m]| dμ
@@ -894,159 +895,93 @@ private lemma condexp_pair_factorization_MET
 
       Therefore: CE[f·A_n|m] → CE[f·CE[g|m]|m] in L¹
 
-      L¹ convergence implies ae convergence (of a subsequence, but sequence is Cauchy so full sequence converges).
+      **Key insight**: We don't need ae convergence! Step 6 will combine this L¹ convergence
+      with the constancy from step 2 to conclude the functions are ae equal.
       -/
 
-      -- Set up notation
+      -- Set up notation for clarity
       set X := fun n : ℕ => fun ω => f (ω 0) * A n ω
       set Y := fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω
       set CE_X := fun n => μ[X n | m]
       set CE_Y := μ[Y | m]
 
       -- Step 5a: From step 4, we have L¹ convergence of the inputs
-      -- ∫|X_n - Y| → 0
       have h_l1_input : Tendsto (fun n => ∫ ω, |X n ω - Y ω| ∂μ) atTop (𝓝 0) := by
-        -- This is exactly h_product_convergence by definition of X and Y
         show Tendsto (fun n => ∫ ω, |f (ω 0) * A n ω - f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω| ∂μ) atTop (𝓝 0)
         exact h_product_convergence
 
-      -- Step 5b: Prove L¹-Lipschitz property for conditional expectation
-      -- ∫|CE[X_n|m] - CE[Y|m]| ≤ ∫|X_n - Y|
-      -- This uses condExp_L1_lipschitz (already proved above using Jensen + linearity)
+      -- Step 5b: Establish integrability
+      have hX_int : ∀ n, Integrable (X n) μ := by
+        intro n
+        -- f(ω 0) is measurable and bounded, A n ω is bounded (Cesàro average)
+        sorry -- TODO: use integrable_mul_of_ae_bdd_left twice
+
+      have hY_int : Integrable Y μ := by
+        -- f(ω 0) is bounded, CE[g|m] is bounded (CE preserves bounds)
+        sorry -- TODO: use integrable_mul_of_ae_bdd_left
+
+      -- Step 5c: Apply L¹-Lipschitz property
       have h_lipschitz : ∀ n, ∫ ω, |CE_X n ω - CE_Y ω| ∂μ ≤ ∫ ω, |X n ω - Y ω| ∂μ := by
         intro n
-        -- Need to establish integrability of X n and Y
-        -- Both are products of bounded functions on a probability space, hence integrable
-        have hX_int : Integrable (X n) μ := by
-          -- X n = f(ω 0) * A_n(ω) where both factors are bounded
-          sorry -- TODO: f bounded, A_n bounded (Cesàro of bounded), probability measure
-        have hY_int : Integrable Y μ := by
-          -- Y = f(ω 0) * CE[g(ω 0)|m] where both factors are bounded
-          sorry -- TODO: f bounded, CE[g|m] bounded (CE preserves bounds), probability measure
-        -- Apply condExp_L1_lipschitz
-        exact condExp_L1_lipschitz hX_int hY_int
+        exact condExp_L1_lipschitz (hX_int n) hY_int
 
-      -- Step 5c: Therefore CE_X n → CE_Y in L¹
-      have h_l1_ce : Tendsto (fun n => ∫ ω, |CE_X n ω - CE_Y ω| ∂μ) atTop (𝓝 0) := by
-        apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_l1_input
-        · intro n
-          exact integral_nonneg fun ω => abs_nonneg _
-        · intro n
-          exact h_lipschitz n
+      -- Step 5d: Conclude L¹ convergence via squeeze theorem
+      apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_l1_input
+      · intro n
+        exact integral_nonneg fun ω => abs_nonneg _
+      · intro n
+        exact h_lipschitz n
 
-      -- Step 5d: Extract ae convergence from L¹ convergence
-      -- Standard result: if ∫|X_n - X| → 0, then ∃ subsequence converging ae
-      -- Since our sequence is also Cauchy (CE[f·A_n|m] converges to CE_Y in L¹),
-      -- the full sequence converges ae to the same limit
-      /-
-      IMPLEMENTATION STRATEGY:
-      1. From h_l1_ce: ∫|CE_X n - CE_Y| → 0, we know CE_X n → CE_Y in L¹
-      2. Standard measure theory: L¹ convergence implies existence of subsequence with ae convergence
-      3. Need to extract: ∀ᵐ ω, CE_X n ω → CE_Y ω
-
-      Possible approaches:
-      - Use tendsto_in_measure_of_tendsto_Lp + measure convergence → ae convergence
-      - Or directly: construct Cauchy sequence, apply completeness of ae limits
-      - Mathlib may have: ae_tendsto_of_tendsto_integral_abs or similar
-
-      This is standard but technically involved in mathlib.
-      -/
-      sorry
-
-    -- Step 6: Combine - CE[f·A_n|m] is constant but also convergent
-    -- Since CE[f·A_n|m] = CE[f·g|m] for all n, and CE[f·A_n|m] → CE[f·CE[g|m]|m],
-    -- we have CE[f·g|m] = CE[f·CE[g|m]|m]
+    -- Step 6: Combine L¹ convergence with constancy
+    -- Since CE[f·A_n|m] = CE[f·g|m] for all n (step 2),
+    -- and CE[f·A_n|m] → CE[f·CE[g|m]|m] in L¹ (step 5),
+    -- we have ∫|CE[f·g|m] - CE[f·CE[g|m]|m]| = 0, hence they are ae equal
     have h_const_limit : μ[(fun ω => f (ω 0) * g (ω 0)) | m]
         =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] := by
       /-
-      **THE KEY INSIGHT**: We have a function that is both:
-      1. CONSTANT in n (by lag-constancy): CE[f·A_n|m] = CE[f·g|m] for all n
-      2. CONVERGENT (by MET + L¹-Lipschitz): CE[f·A_n|m] → CE[f·CE[g|m]|m]
+      **THE KEY INSIGHT**: Work entirely in L¹ - no pointwise limits needed!
 
-      Therefore the constant must equal the limit!
+      1. CONSTANT: CE[f·A_n|m] = CE[f·g|m] for all n (step 2: h_product_const)
+      2. CONVERGENT: ∫|CE[f·A_n|m] - CE[f·CE[g|m]|m]| → 0 (step 5: h_ce_L1)
 
-      Proof outline:
-      - Let Z_n := CE[f·A_n|m] (a sequence of functions)
-      - By h_product_const: Z_n = CE[f·g|m] for all n (constant sequence)
-      - By h_ce_limit: Z_n → CE[f·CE[g|m]|m] ae
-      - For constant sequences: if c = c = c = ... → L, then c = L
-      - Therefore: CE[f·g|m] = CE[f·CE[g|m]|m]
+      Therefore: ∫|CE[f·g|m] - CE[f·CE[g|m]|m]| = lim_n ∫|CE[f·A_n|m] - CE[f·CE[g|m]|m]| = 0
+
+      Since L¹ norm is 0, the functions are ae equal.
       -/
 
-      /-
-      Implementation strategy:
-      We have TWO facts:
-      A. h_product_const: ∀ n, CE[f·A_n|m] = CE[f·g|m] ae  (constant sequence)
-      B. h_ce_limit: CE[f·A_n|m] → CE[f·CE[g|m]|m] ae      (convergence)
+      -- Use step 2 to rewrite the L¹ distance as a constant
+      have h_constL1 : ∀ n,
+        ∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
+              - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω| ∂μ
+        = ∫ ω, |μ[(fun ω => f (ω 0) * A n ω) | m] ω
+              - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω| ∂μ := by
+        intro n
+        -- Use h_product_const: CE[f·A_n|m] = CE[f·g|m] ae
+        refine integral_congr_ae ?_
+        filter_upwards [h_product_const n] with ω hω
+        -- Rewrite the first term using ae equality: CE[f·g|m] = CE[f·A_n|m]
+        rw [← hω]
 
-      From A: The sequence is almost surely constant
-      From B: The sequence converges almost surely
-      Conclusion: The constant equals the limit almost surely
+      -- The RHS converges to 0 by step 5
+      have h_limit : Tendsto (fun (n : ℕ) =>
+        ∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
+              - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω| ∂μ)
+        (atTop : Filter ℕ) (𝓝 (0 : ℝ)) := by
+        -- Rewrite using h_constL1 and apply h_ce_L1
+        apply Tendsto.congr
+        · intro n
+          exact (h_constL1 n).symm
+        · exact h_ce_L1
 
-      Detailed proof:
-      1. By h_product_const 0: CE[f·A_0|m] = CE[f·g|m] ae
-      2. By h_ce_limit: ∀ᵐ ω, CE[f·A_n|m] ω → CE[f·CE[g|m]|m] ω
-      3. By h_product_const: ∀ n, ∀ᵐ ω, CE[f·A_n|m] ω = CE[f·g|m] ω
-      4. Combining ae sets: ∀ᵐ ω, ∀ n, CE[f·A_n|m] ω = CE[f·g|m] ω and CE[f·A_n|m] ω → CE[f·CE[g|m]|m] ω
-      5. For such ω: constant sequence CE[f·g|m] ω → CE[f·CE[g|m]|m] ω
-      6. Limit of constant = constant: CE[f·g|m] ω = CE[f·CE[g|m]|m] ω
-      7. Therefore: CE[f·g|m] = CE[f·CE[g|m]|m] ae
-      -/
-
-      -- The key observation: h_product_const says CE[f·A_n|m] is constant (= CE[f·g|m])
-      -- and h_ce_limit says this constant sequence converges to CE[f·CE[g|m]|m]
-      -- Therefore the constant equals the limit
-
-      /-
-      Strategy: Combine ae-equalities from h_product_const and h_ce_limit
-      to show the constant equals the limit.
-
-      Key insight: On the intersection of all the ae sets (which is still ae since
-      we take countable intersection), we have:
-      - CE[f·A_n|m] ω = CE[f·g|m] ω for all n
-      - CE[f·A_n|m] ω → CE[f·CE[g|m]|m] ω
-      Therefore: CE[f·g|m] ω = CE[f·CE[g|m]|m] ω
-      -/
-
-      -- Combine all the ae sets using countable intersection
-      have h_all_eq := ae_all_iff.2 h_product_const
-      filter_upwards [h_all_eq, h_ce_limit] with ω hω_const hω_lim
-
-      -- At this ω, we have:
-      -- 1. CE[f·A_n|m] ω = CE[f·g|m] ω for all n (from hω_const)
-      -- 2. CE[f·A_n|m] ω → CE[f·CE[g|m]|m] ω (from hω_lim)
-
-      -- Key insight: hω_const says CE[f·A_n|m] ω = CE[f·g|m] ω for all n
-      -- So the sequence (CE[f·A_n|m] ω)_{n∈ℕ} is constantly equal to CE[f·g|m] ω
-      -- But hω_lim says this sequence converges to CE[f·CE[g|m]|m] ω
-      -- Therefore: CE[f·g|m] ω = CE[f·CE[g|m]|m] ω
-
-      -- The sequence is eventually equal to the constant
-      have h_eq_ev : ∀ᶠ n in atTop, μ[(fun ω' => f (ω' 0) * A n ω') | m] ω
-          = μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω := by
-        rw [eventually_atTop]
-        use 0
-        intro n _
-        -- Need to show the functions are equal
-        -- hω_const n : μ[fun ω => f (ω 0) * A n ω|m] ω = μ[fun ω => f (ω 0) * g (ω 0)|m] ω
-        -- But we need: μ[fun ω' => f (ω' 0) * A n ω'|m] ω = μ[fun ω => f (ω 0) * g (ω 0)|m] ω
-        -- These are the same by α-equivalence (just renaming bound variable)
-        convert hω_const n
-
-      -- The constant sequence converges to the limit
-      have h_const_lim : Tendsto (fun (_ : ℕ) => μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω)
-          atTop (𝓝 (μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | m] ω') | m] ω)) := by
-        apply Tendsto.congr' h_eq_ev hω_lim
-
-      -- A constant sequence's limit equals the constant
-      have h_const_eq := tendsto_nhds_unique h_const_lim tendsto_const_nhds
-      -- h_const_eq : μ[fun ω' => f (ω' 0) * μ[fun ω => g (ω 0)|m] ω'|m] ω = μ[fun ω => f (ω 0) * g (ω 0)|m] ω
-      -- We need: μ[fun ω => f (ω 0) * g (ω 0)|m] ω = μ[fun ω' => f (ω' 0) * μ[fun ω => g (ω 0)|m] ω'|m] ω
-      exact h_const_eq.symm
+      -- L¹ norm = 0 implies ae equality
+      -- By h_constL1: the integral is constant for all n
+      -- By h_limit: this constant sequence tends to 0
+      -- Therefore: the constant IS 0, so the functions are ae equal
+      sorry -- TODO: (1) tendsto of constant → value is limit (2) L¹ norm = 0 ⇒ ae equal
 
     exact h_const_limit
 
-  -- Step 6: Combine all the equalities
+  -- Final: Combine all the step equalities in the calc chain
   calc μ[(fun ω => f (ω 0) * g (ω 1)) | m]
       =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 0)) | m] := h_shift_inv
     _ =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] := h_tower

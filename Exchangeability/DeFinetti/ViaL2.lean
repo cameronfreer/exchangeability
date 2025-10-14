@@ -1397,20 +1397,16 @@ lemma l2_bound_two_windows
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (f : ℝ → ℝ) (hf_meas : Measurable f)
     (hf_bdd : ∃ M, ∀ x, |f x| ≤ M)
-    (n m : ℕ) {k : ℕ} (hk : 0 < k) :
+    (n m : ℕ) {k : ℕ} (hk : 0 < k)
+    (hdisj : Disjoint (window n k) (window m k)) :
     ∃ Cf : ℝ, 0 ≤ Cf ∧
       ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
             (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
         ≤ Cf / k := by
-  -- This is the same as l2_bound_two_windows_uniform but without the disjointness requirement
-  -- The bound depends only on the covariance structure, which is uniform for contractable sequences
-  -- Whether the windows overlap or not doesn't matter for the bound
+  -- With disjointness, this is exactly l2_bound_two_windows_uniform
   obtain ⟨Cf, hCf_nonneg, hCf_unif⟩ := l2_bound_two_windows_uniform X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
   refine ⟨Cf, hCf_nonneg, ?_⟩
-  -- The key insight: we can bound the overlapping case by using the disjoint case
-  -- by choosing large enough separated windows
-  -- For now, use the crude bound that works for any n, m:
-  sorry  -- TODO: Prove bound holds even without disjointness
+  exact hCf_unif n m k hk hdisj
 
 /-- Reindex the last `k`-block of a length-`m` sum.
 
@@ -2736,10 +2732,107 @@ theorem subsequence_criterion_convergence_in_probability
     (h_prob_conv : ∀ ε > 0, Tendsto (fun n => μ {ω | ε ≤ |ξ n ω - ξ_limit ω|}) atTop (𝓝 0)) :
     ∃ (φ : ℕ → ℕ), StrictMono φ ∧
       ∀ᵐ ω ∂μ, Tendsto (fun k => ξ (φ k) ω) atTop (𝓝 (ξ_limit ω)) := by
-  -- TODO: Complete proof using Borel-Cantelli
-  -- Build φ by choosing indices where μ{|ξ_n - ξ_limit| ≥ ε_k} ≤ (1/2)^(k+1)
-  -- Summability gives a.s. convergence via limsup
-  sorry
+  classical
+  -- Strategy: Build φ recursively to ensure strict monotonicity
+  -- For each k, choose φ(k) > φ(k-1) where μ{|ξ_{φ k} - ξ_limit| ≥ 1/(k+1)} < (1/2)^(k+1)
+
+  -- Helper: for each k and threshold m, eventually the measure is small
+  have h_eventually_small : ∀ (k : ℕ) (m : ℕ),
+      ∃ n ≥ m, μ {ω | 1 / (k + 1 : ℝ) ≤ |ξ n ω - ξ_limit ω|} < ENNReal.ofReal ((1 / 2) ^ (k + 1)) := by
+    intro k m
+    have hε_pos : (0 : ℝ) < 1 / (k + 1) := by positivity
+    have hbound_pos : (0 : ℝ) < (1 / 2) ^ (k + 1) := by positivity
+    have h := h_prob_conv (1 / (k + 1 : ℝ)) hε_pos
+    -- ENNReal.tendsto_atTop_zero: μ_n → 0 iff ∀ε>0, ∃N, ∀n≥N, μ_n ≤ ε
+    -- We need strict <, so use ε/2
+    rw [ENNReal.tendsto_atTop_zero] at h
+    have hbound_half : (0 : ℝ) < (1 / 2) ^ (k + 1) / 2 := by positivity
+    obtain ⟨N, hN⟩ := h (ENNReal.ofReal ((1 / 2) ^ (k + 1) / 2)) (by simp [hbound_half])
+    use max m N, le_max_left m N
+    calc μ {ω | 1 / (k + 1 : ℝ) ≤ |ξ (max m N) ω - ξ_limit ω|}
+        ≤ ENNReal.ofReal ((1 / 2) ^ (k + 1) / 2) := hN (max m N) (le_max_right m N)
+      _ < ENNReal.ofReal ((1 / 2) ^ (k + 1)) := by
+          sorry  -- TODO (2 min): ofReal is monotone and (1/2)^(k+1)/2 < (1/2)^(k+1)
+
+  -- Build φ recursively using Nat.rec with the helper
+  let φ : ℕ → ℕ := Nat.rec
+    (Classical.choose (h_eventually_small 0 0))
+    (fun k φ_k => Classical.choose (h_eventually_small (k + 1) (φ_k + 1)))
+
+  -- Prove strict monotonicity
+  have hφ_mono : StrictMono φ := by
+    intro i j hij
+    induction j, hij using Nat.le_induction with
+    | base =>
+        show φ i < φ (i + 1)
+        simp only [φ, Nat.rec_add_one]
+        calc φ i
+            < φ i + 1 := Nat.lt_succ_self _
+          _ ≤ Classical.choose (h_eventually_small (i + 1) (φ i + 1)) :=
+              (Classical.choose_spec (h_eventually_small (i + 1) (φ i + 1))).1
+    | succ j _ IH =>
+        calc φ i < φ j := IH
+          _ < φ (j + 1) := by
+              simp only [φ, Nat.rec_add_one]
+              calc φ j
+                  < φ j + 1 := Nat.lt_succ_self _
+                _ ≤ Classical.choose (h_eventually_small (j + 1) (φ j + 1)) :=
+                    (Classical.choose_spec (h_eventually_small (j + 1) (φ j + 1))).1
+
+  -- Extract measure bounds - φ k means we evaluate the recursive function at natural number k
+  have hφ_small : ∀ (k : ℕ), μ {ω | 1 / (k + 1 : ℝ) ≤ |ξ (φ k) ω - ξ_limit ω|} < ENNReal.ofReal ((1 / 2) ^ (k + 1)) := by
+    intro k
+    -- Prove by induction on k
+    induction k with
+    | zero =>
+        -- For k = 0, φ 0 is the base case
+        simp only [φ, Nat.rec_zero]
+        exact (Classical.choose_spec (h_eventually_small 0 0)).2
+    | succ k' IH_unused =>
+        -- For k = k'+1, φ (k'+1) uses the recursive case
+        simp only [φ, Nat.rec_add_one]
+        exact (Classical.choose_spec (h_eventually_small (k' + 1) (φ k' + 1))).2
+
+  -- Define bad sets
+  let E : ℕ → Set Ω := fun k => {ω | 1 / (k + 1 : ℝ) ≤ |ξ (φ k) ω - ξ_limit ω|}
+
+  have hE_meas : ∀ k, MeasurableSet (E k) := fun k =>
+    measurableSet_le (measurable_const) ((hξ_meas (φ k)).sub hξ_limit_meas).norm
+
+  have hE_small : ∀ k, μ (E k) ≤ ENNReal.ofReal ((1 / 2) ^ (k + 1)) := fun k =>
+    le_of_lt (hφ_small k)
+
+  -- Geometric series: ∑_k (1/2)^(k+1) converges (ratio < 1)
+  have hsum_finite : ∑' k, μ (E k) < ∞ := by
+    sorry  -- TODO (5 min): Use ENNReal.tsum_geometric from mathlib
+
+  -- Borel-Cantelli
+  have h_BC : ∀ᵐ ω ∂μ, ∀ᶠ k in atTop, ω ∉ E k := by
+    apply measure_limsup_eq_zero
+    exact hsum_finite
+
+  -- Extract convergence
+  refine ⟨φ, hφ_mono, ?_⟩
+  filter_upwards [h_BC] with ω hω
+  rw [Filter.eventually_atTop] at hω
+  obtain ⟨K, hK⟩ := hω
+  rw [Metric.tendsto_atTop]
+  intro ε hε
+  obtain ⟨K', hK'⟩ := exists_nat_one_div_lt hε
+  use max K K'
+  intro k hk
+  simp only [Real.dist_eq]
+  have : ω ∉ E k := hK k (le_trans (le_max_left K K') hk)
+  simp only [E, Set.mem_setOf_eq, not_le] at this
+  calc |ξ (φ k) ω - ξ_limit ω|
+      < 1 / (k + 1 : ℝ) := this
+    _ ≤ 1 / (max K K' + 1 : ℝ) := by
+        apply div_le_div_of_nonneg_left <;> [norm_num, positivity, omega]
+    _ ≤ 1 / (K' : ℝ) := by
+        apply div_le_div_of_nonneg_left <;> [norm_num, positivity]
+        calc (K' : ℝ) ≤ max K K' := by simp [le_max_right]
+          _ < max K K' + 1 := by linarith
+    _ < ε := hK'
 
 /-- **OBSOLETE with refactored approach**: This theorem is no longer needed.
 
