@@ -2250,9 +2250,82 @@ lemma block_coord_condIndep
         simp [hEp_def, hEf_def, h_indicator_eq, MeasureTheory.integral_indicator, hg_int]
       -- After rewriting, the integrand involves the past indicator, the future indicator,
       -- and the conditional expectation.
-      -- TODO: Use `condexp_mul_eq_mul_condexp` (or an equivalent lemma) to replace
-      --       `Set.indicator E_future (fun _ => (1 : ℝ)) ω * g ω` with
-      --       `Set.indicator E_future (fun _ => (1 : ℝ)) ω * f ω` inside the integral.
+      -- Pull out the future-measurable indicator from the conditional expectation
+      have h_indicator_meas :
+          AEStronglyMeasurable[finFutureSigma X m k]
+            (Set.indicator E_future (fun _ => (1 : ℝ))) μ := by
+        classical
+        have : MeasurableSet[finFutureSigma X m k] E_future := hE_future_meas
+        simpa [hEf_def] using
+          (Measurable.indicator measurable_const this).aestronglyMeasurable
+      have h_indicator_mul_f :
+          Integrable (fun ω => Set.indicator E_future (fun _ => (1 : ℝ)) ω * f ω) μ := by
+        classical
+        have : (fun ω => Set.indicator E_future (fun _ => (1 : ℝ)) ω * f ω)
+              = Set.indicator E_future (fun ω => f ω) := by
+          funext ω
+          by_cases hω : ω ∈ E_future
+          · simp [hω, hf_def, hEf_def]
+          · simp [hω, hf_def, hEf_def]
+        simpa [this] using hf_int.indicator (μ := μ) (s := E_future) hE_future_meas
+      have h_condexp_pullout :
+          (fun ω =>
+              Set.indicator E_future (fun _ => (1 : ℝ)) ω * g ω)
+            =ᵐ[μ]
+          Exchangeability.Probability.condExpWith μ
+            (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
+            (fun ω => Set.indicator E_future (fun _ => (1 : ℝ)) ω * f ω) := by
+        classical
+        have h_ce :
+            μ[(fun ω => Set.indicator E_future (fun _ => (1 : ℝ)) ω * f ω)
+                | finFutureSigma X m k]
+              =ᵐ[μ]
+            (fun ω =>
+                Set.indicator E_future (fun _ => (1 : ℝ)) ω *
+                  μ[f | finFutureSigma X m k] ω) := by
+          have hg_condexp :
+              Integrable f μ := hf_int
+          have h_prod_int :
+              Integrable (fun ω =>
+                  Set.indicator E_future (fun _ => (1 : ℝ)) ω * f ω) μ :=
+            h_indicator_mul_f
+          exact MeasureTheory.condExp_mul_of_aestronglyMeasurable_left
+            (μ := μ) (m := finFutureSigma X m k)
+            h_indicator_meas
+            h_prod_int
+            hg_condexp
+        have h_ce' :
+            (fun ω =>
+                Set.indicator E_future (fun _ => (1 : ℝ)) ω *
+                  μ[f | finFutureSigma X m k] ω)
+              =ᵐ[μ]
+            (fun ω =>
+                Set.indicator E_future (fun _ => (1 : ℝ)) ω * g ω) := by
+          classical
+          have : μ[f | finFutureSigma X m k]
+              =ᵐ[μ]
+            Exchangeability.Probability.condExpWith μ
+              (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas) f := by
+            simpa [Exchangeability.Probability.condExpWith]
+          exact this.mul_left (Set.indicator E_future (fun _ => (1 : ℝ)))
+        have h_combined := h_ce.trans h_ce'
+        -- Unfold condExpWith to obtain the desired identity
+        refine h_combined.symm.trans ?_
+        simpa [Exchangeability.Probability.condExpWith]
+      -- Replace the integrand using the conditional expectation pull-out
+      have h_integral_pullout :
+          ∫ ω, Set.indicator E_past (fun _ => (1 : ℝ)) ω
+                * Set.indicator E_future (fun _ => (1 : ℝ)) ω * g ω ∂μ
+            =
+          ∫ ω, Set.indicator E_past (fun _ => (1 : ℝ)) ω *
+            Exchangeability.Probability.condExpWith μ
+              (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
+              (fun ω => Set.indicator E_future (fun _ => (1 : ℝ)) ω * f ω) ω ∂μ := by
+        classical
+        refine integral_congr_ae ?_
+        filter_upwards [h_condexp_pullout] with ω hω
+        simpa [mul_comm, mul_left_comm, mul_assoc]
+      -- TODO: Apply the tower property to push `Set.indicator E_past` through the conditional expectation.
       -- TODO: Apply the tower property to push `Set.indicator E_past` through the conditional expectation.
       -- TODO: Invoke contractability to replace the integrand with the probability of the target set.
       -- TODO: Translate the resulting integral into `(μ E_target).toReal`.
