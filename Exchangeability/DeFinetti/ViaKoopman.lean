@@ -816,54 +816,102 @@ private lemma condexp_pair_factorization_MET
           rw [hω]
           field_simp
 
-    -- Step 3: A_n → CE[g(ω₀)|m] ae (by MET + Lp→ae convergence)
+    -- Step 3: A_n → CE[g(ω₀)|m] ae (by MET + bounded convergence)
     have h_met_convergence : ∀ᵐ ω ∂μ,
         Tendsto (fun n => A n ω) atTop (𝓝 (μ[(fun ω => g (ω 0)) | m] ω)) := by
-      sorry
       /-
-      **TODO**: This step requires connecting Lp convergence to pointwise convergence,
-      which involves substantial technical machinery:
-      1. Construct Lp representative of g using Memℒp.toLp
-      2. Apply birkhoffAverage_tendsto_condexp to get L² convergence
-      3. Show pointwise A_n equals coeFn of Birkhoff average using measurableEquiv
-      4. Use L² convergence → ae convergence (subsequence)
-      5. Use boundedness to show full sequence converges ae
+      **PROOF STRATEGY**:
 
-      The infrastructure exists in mathlib (Lp.coeFn, Memℒp.toLp, tendsto_of_tendsto_of_tendsto),
-      but requires careful API navigation. Postponing for now to complete proof structure.
+      We have:
+      - A_n = Cesàro average: (1/(n+1))∑_{k=0}^n g(ω k)
+      - birkhoffAverage_tendsto_condexp: Birkhoff averages converge in L² to condexpL2
+      - Boundedness: |g(ω k)| ≤ Cg for all k
+
+      The mathematical content:
+      1. A_n is the pointwise Cesàro/Birkhoff average of the sequence g(ω k)
+      2. By MET, these converge in L² to the conditional expectation
+      3. L² convergence + boundedness → ae convergence (extract convergent subsequence)
+      4. By uniform bounds, the full sequence must converge (Cauchy)
+
+      Technical requirements:
+      - Construct g_Lp : Lp ℝ 2 μ from g using boundedness
+      - Show A_n ω =ᵐ[μ] (birkhoffAverage ... g_Lp) ω pointwise
+      - Apply L² → ae convergence (via subsequence + Cauchy)
+
+      This is standard Lp space analysis but requires careful coeFn/toLp API work.
       -/
+      sorry
 
     -- Step 4: f·A_n → f·CE[g(ω₀)|m] in L¹ (by dominated convergence)
     obtain ⟨Cf, hCf⟩ := hf_bd
+    obtain ⟨Cg, hCg⟩ := hg_bd
     have h_product_convergence :
         Tendsto (fun n => ∫ ω, |f (ω 0) * A n ω - f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω| ∂μ)
                 atTop (𝓝 0) := by
-      sorry
       /-
-      **TODO**: This step uses dominated convergence theorem:
-      1. By h_met_convergence: f(ω₀)·A_n(ω) → f(ω₀)·CE[g(ω₀)|m](ω) ae
-      2. Dominating function: |f(ω₀)·(A_n(ω) - CE[g(ω₀)|m](ω))| ≤ 2·Cf·Cg
-      3. Apply MeasureTheory.tendsto_integral_of_dominated_convergence
-      4. Conclude: ∫|f·A_n - f·CE[g|m]| → 0
+      **PROOF STRATEGY**:
 
-      Requires: integrability lemmas, dominated convergence API. Straightforward but lengthy.
+      By step 3: A_n(ω) → CE[g(ω₀)|m](ω) ae
+
+      Therefore: f(ω₀)·A_n(ω) → f(ω₀)·CE[g(ω₀)|m](ω) ae (by continuity of multiplication)
+
+      To apply dominated convergence theorem:
+      1. Pointwise convergence: ✓ (from h_met_convergence + continuity)
+      2. Dominating function: |f(ω₀)·A_n(ω) - f(ω₀)·CE[g(ω₀)|m](ω)|
+                              = |f(ω₀)|·|A_n(ω) - CE[g(ω₀)|m](ω)|
+                              ≤ Cf·(|A_n(ω)| + |CE[g(ω₀)|m](ω)|)
+                              ≤ Cf·(Cg + Cg) = 2·Cf·Cg
+         where we use:
+         - |A_n(ω)| ≤ Cg (Cesàro average of bounded sequence is bounded)
+         - |CE[g(ω₀)|m](ω)| ≤ Cg (CE preserves bounds)
+      3. Integrability: 2·Cf·Cg is a constant, hence integrable on probability space
+
+      Apply: MeasureTheory.tendsto_integral_of_dominated_convergence
+      Conclude: ∫|f(ω₀)·A_n(ω) - f(ω₀)·CE[g(ω₀)|m](ω)| dμ → 0
+
+      Technical requirements:
+      - Prove |A_n| ≤ Cg from boundedness of g
+      - Prove |CE[g(ω₀)|m]| ≤ Cg (condExp preserves essential bounds)
+      - Set up DCT with explicit dominating function
       -/
+      sorry
 
     -- Step 5: CE[f·A_n|m] → CE[f·CE[g(ω₀)|m]|m] ae (by L¹-Lipschitz of CE)
     have h_ce_limit : ∀ᵐ ω ∂μ,
         Tendsto (fun n => μ[(fun ω' => f (ω' 0) * A n ω') | m] ω)
                 atTop (𝓝 (μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | m] ω') | m] ω)) := by
-      sorry
       /-
-      **TODO**: This step uses the L¹-Lipschitz property of conditional expectation:
-      1. By h_product_convergence: ∫|f·A_n - f·CE[g|m]| → 0 (L¹ convergence)
-      2. Apply Lipschitz property: ∫|CE[f·A_n|m] - CE[f·CE[g|m]|m]| ≤ ∫|f·A_n - f·CE[g|m]|
-      3. Therefore: CE[f·A_n|m] → CE[f·CE[g|m]|m] in L¹
-      4. L¹ convergence → ae convergence (subsequence) → use to extract ae convergence
+      **PROOF STRATEGY**:
 
-      Requires: MeasureTheory.Lp.tendsto_of_forall_integral_tendsto or similar.
-      Could also use: completeness of L¹ + Cauchy criterion.
+      By step 4: ∫|f(ω₀)·A_n(ω) - f(ω₀)·CE[g(ω₀)|m](ω)| dμ → 0 (L¹ convergence)
+
+      Key property: **Conditional expectation is L¹-Lipschitz continuous**
+        ‖CE[X|m] - CE[Y|m]‖₁ ≤ ‖X - Y‖₁
+
+      This is a fundamental property of conditional expectation, also known as the
+      "contraction property" or "non-expansiveness" of the conditional expectation operator.
+
+      Applying this:
+      ∫|CE[f(ω₀)·A_n(ω)|m] - CE[f(ω₀)·CE[g(ω₀)|m](ω)|m]| dμ
+        ≤ ∫|f(ω₀)·A_n(ω) - f(ω₀)·CE[g(ω₀)|m](ω)| dμ → 0
+
+      Therefore: CE[f·A_n|m] → CE[f·CE[g|m]|m] in L¹
+
+      L¹ convergence implies:
+      1. Existence of subsequence converging ae (standard measure theory)
+      2. Full sequence converges ae (since it's already Cauchy in L¹)
+
+      Technical requirements:
+      - Apply MeasureTheory.Lp.norm_condexp_le or similar for L¹-Lipschitz
+      - Extract ae convergence from L¹ convergence
+      - Use completeness of L¹ space
+
+      Mathlib lemmas needed:
+      - Conditional expectation contraction in L¹
+      - L¹ convergence → ae convergence (via subsequence)
+      - Or directly: tendsto_in_measure_of_tendsto_Lp
       -/
+      sorry
 
     -- Step 6: Combine - CE[f·A_n|m] is constant but also convergent
     -- Since CE[f·A_n|m] = CE[f·g|m] for all n, and CE[f·A_n|m] → CE[f·CE[g|m]|m],
