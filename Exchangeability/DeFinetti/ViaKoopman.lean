@@ -760,6 +760,29 @@ private lemma integrable_of_bounded_mul
   have h_meas : Measurable fun ω => φ ω * ψ ω := hφ_meas.mul hψ_meas
   exact integrable_of_bounded h_meas ⟨Cφ * Cψ, h_bound⟩
 
+/-- L² integrability of a bounded product. -/
+private lemma memLp_of_bounded_mul
+    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ] [Nonempty Ω]
+    {φ ψ : Ω → ℝ}
+    (hφ_meas : Measurable φ) (hφ_bd : ∃ Cφ, ∀ ω, |φ ω| ≤ Cφ)
+    (hψ_meas : Measurable ψ) (hψ_bd : ∃ Cψ, ∀ ω, |ψ ω| ≤ Cψ) :
+    MemLp (fun ω => φ ω * ψ ω) 2 μ := by
+  classical
+  obtain ⟨Cφ, hCφ⟩ := hφ_bd
+  obtain ⟨Cψ, hCψ⟩ := hψ_bd
+  have h_meas : AEStronglyMeasurable (fun ω => φ ω * ψ ω) μ :=
+    (hφ_meas.mul hψ_meas).aestronglyMeasurable
+  have h_bound : ∀ᵐ ω ∂μ, ‖φ ω * ψ ω‖ ≤ Cφ * Cψ := by
+    refine ae_of_all μ ?_
+    intro ω
+    have hφ := hCφ ω
+    have hψ := hCψ ω
+    have hmul : |φ ω * ψ ω| ≤ Cφ * Cψ :=
+      mul_le_mul hφ hψ (abs_nonneg _) <|
+        (abs_nonneg _).trans <| hCφ (Classical.arbitrary Ω)
+    simpa [Real.norm_eq_abs] using hmul
+  exact MemLp.of_bound h_meas (Cφ * Cψ) h_bound
+
 /-- **Pull-out property with conditional expectation factor on the left**.
 
 For bounded measurable X and integrable Y:
