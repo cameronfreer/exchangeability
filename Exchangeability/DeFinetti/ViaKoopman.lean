@@ -542,8 +542,8 @@ private lemma condexp_pair_lag_constant
     intro n
     -- Manual construction: AEStronglyMeasurable + HasFiniteIntegral
     constructor
-    · -- Measurability
-      sorry -- TODO: measurability of Cesàro average
+    · -- Measurability: (1/(n+1)) * Σ g(ω j) is measurable
+      measurability
     · -- Bounded, hence finite integral on probability space
       have hA_bd : ∀ ω, |A n ω| ≤ Cg := by
         intro ω
@@ -575,11 +575,12 @@ private lemma condexp_pair_lag_constant
     · exact (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
     · exact HasFiniteIntegral.of_bounded (ae_of_all μ (fun ω => hCg (ω 0)))
 
-  have hCE_g₀ : Integrable (μ[g₀ | m]) μ := by
-    sorry -- TODO: CE of integrable is integrable
+  have hCE_g₀ : Integrable (μ[g₀ | m]) μ := integrable_condExp
 
   have hCE_g₀_bd : ∀ᵐ ω ∂μ, |μ[g₀ | m] ω| ≤ Cg := by
-    sorry -- TODO: Use ae_bdd_condExp_of_ae_bdd pattern
+    -- Apply condExp_abs_le_of_abs_le: |CE[g₀|m]| ≤ CE[|g₀||m] ≤ Cg
+    have : Nonempty Ω[α] := inferInstance
+    exact @condExp_abs_le_of_abs_le (Ω[α]) _ μ _ this m le_rfl g₀ hg₀_int Cg (fun x => hCg (x 0))
 
   -- Step 4: f(ω₀)·CE[g₀|m] is integrable
   have hfCE_int : Integrable (fun ω => f (ω 0) * μ[g₀ | m] ω) μ := by
