@@ -1132,11 +1132,11 @@ lemma l2_bound_two_windows_uniform
         (Finset.sum_filter (s := S) (p := fun t => t ∈ A)
             (f := fun t => (1 / (k : ℝ)) * Y t ω)).symm
       simpa [h_lhs, h_filter] using h_indicator
-    have h_factor :
-        ∑ t ∈ A, (1 / (k : ℝ)) * Y t ω
-          = (1 / (k : ℝ)) * ∑ t ∈ A, Y t ω := by
-      simp [Finset.mul_sum, mul_comm, mul_left_comm, mul_assoc]
-    simpa [h_factor] using h_sum
+    calc
+      ∑ t ∈ S, (if t ∈ A then (1 / (k : ℝ)) else 0) * Y t ω
+          = ∑ t ∈ A, (1 / (k : ℝ)) * Y t ω := h_sum
+      _ = (1 / (k : ℝ)) * ∑ t ∈ A, Y t ω := by
+            simp [Finset.mul_sum, mul_comm, mul_left_comm, mul_assoc]
 
   -- Difference of window averages written as a single sum over S with weights δ
   have h_sum_delta :
@@ -1153,12 +1153,21 @@ lemma l2_bound_two_windows_uniform
         ∑ t ∈ S, qS t * Y t ω =
           (1 / (k : ℝ)) * ∑ t ∈ window m k, Y t ω := by
       simpa [qS] using h_weight_restrict (window m k) h_subset_m ω
+    have h_expand :
+        ∑ t ∈ S, δ t * Y t ω =
+          ∑ t ∈ S, (pS t * Y t ω - qS t * Y t ω) := by
+      refine Finset.sum_congr rfl ?_
+      intro t ht
+      simp [δ, mul_sub]
     have h_split :
-        ∑ t ∈ S, δ t * Y t ω
-          = ∑ t ∈ S, pS t * Y t ω - ∑ t ∈ S, qS t * Y t ω := by
-      simp [δ, Finset.sum_sub_distrib, mul_sub, sub_eq_add_neg, add_comm, add_left_comm, add_assoc]
-    simpa [h_sum_p, h_sum_q, h_split, sub_eq_add_neg, add_comm, add_left_comm, add_assoc]
-      using h_split
+        ∑ t ∈ S, δ t * Y t ω =
+          ∑ t ∈ S, pS t * Y t ω - ∑ t ∈ S, qS t * Y t ω := by
+      simpa using
+        (h_expand.trans
+          (Finset.sum_sub_distrib (s := S)
+            (f := fun t => pS t * Y t ω)
+            (g := fun t => qS t * Y t ω)))
+    simpa [h_sum_p, h_sum_q] using h_split
 
   have h_goal :
       ∀ ω,
@@ -1187,12 +1196,14 @@ lemma l2_bound_two_windows_uniform
             (f := fun _ : ℕ => (1 / (k : ℝ)))).symm
       simpa [pS, h_filter]
         using h_indicator
+    have h_card : (window n k).card = k := window_card n k
+    have hk_ne' : (k : ℝ) ≠ 0 := ne_of_gt hk_pos
+    have h_one : (window n k).card * (1 / (k : ℝ)) = 1 := by
+      simp [h_card, one_div, hk_ne']
     have h_const :
         ∑ t ∈ window n k, (1 / (k : ℝ))
-          = (k : ℝ) * (1 / (k : ℝ)) := by
-      simp [Finset.sum_const, window_card, smul_eq_mul]
-    have h_one : (k : ℝ) * (1 / (k : ℝ)) = 1 := by
-      field_simp [hk_ne]
+          = (window n k).card * (1 / (k : ℝ)) := by
+      simp [Finset.sum_const]
     simpa [h_sum, h_const, h_one]
 
   have h_sum_qS :
@@ -1212,29 +1223,29 @@ lemma l2_bound_two_windows_uniform
             (f := fun _ : ℕ => (1 / (k : ℝ)))).symm
       simpa [qS, h_filter]
         using h_indicator
+    have h_card : (window m k).card = k := window_card m k
+    have hk_ne' : (k : ℝ) ≠ 0 := ne_of_gt hk_pos
+    have h_one : (window m k).card * (1 / (k : ℝ)) = 1 := by
+      simp [h_card, one_div, hk_ne']
     have h_const :
         ∑ t ∈ window m k, (1 / (k : ℝ))
-          = (k : ℝ) * (1 / (k : ℝ)) := by
-      simp [Finset.sum_const, window_card, smul_eq_mul]
-    have h_one : (k : ℝ) * (1 / (k : ℝ)) = 1 := by
-      field_simp [hk_ne]
+          = (window m k).card * (1 / (k : ℝ)) := by
+      simp [Finset.sum_const]
     simpa [h_sum, h_const, h_one]
 
   -- Positivity of the weights
   have hpS_nonneg : ∀ t, 0 ≤ pS t := by
     intro t
     by_cases ht : t ∈ window n k
-    · have hk_nonneg : 0 ≤ (1 / (k : ℝ)) := by
-        exact inv_nonneg.mpr (le_of_lt hk_pos)
-      simp [pS, ht, hk_nonneg]
+    · have hk_nonneg : 0 ≤ 1 / (k : ℝ) := div_nonneg zero_le_one (le_of_lt hk_pos)
+      simpa [pS, ht] using hk_nonneg
     · simp [pS, ht]
 
   have hqS_nonneg : ∀ t, 0 ≤ qS t := by
     intro t
     by_cases ht : t ∈ window m k
-    · have hk_nonneg : 0 ≤ (1 / (k : ℝ)) := by
-        exact inv_nonneg.mpr (le_of_lt hk_pos)
-      simp [qS, ht, hk_nonneg]
+    · have hk_nonneg : 0 ≤ 1 / (k : ℝ) := div_nonneg zero_le_one (le_of_lt hk_pos)
+      simpa [qS, ht] using hk_nonneg
     · simp [qS, ht]
 
   -- Absolute bound on δ on S
@@ -1275,11 +1286,11 @@ lemma l2_bound_two_windows_uniform
         ∑ i : Fin nS, p i = ∑ t ∈ S, pS t := by
         classical
         have h_sum_equiv :
-            ∑ i : Fin nS, pS (idx i) = ∑ b : β, pS b.1 :=
+            ∑ i : Fin nS, pS (idx i) =
+              ∑ b : β, pS b.1 :=
           (Fintype.sum_equiv eβ (fun b : β => pS b.1)).symm
         have h_sum_attach :
             ∑ b : β, pS b.1 = ∑ t ∈ S, pS t := by
-          classical
           simpa [β] using Finset.sum_attach (s := S) (f := fun t => pS t)
         simpa [p, idx] using h_sum_equiv.trans h_sum_attach
       simpa [h_equiv, h_sum_pS]
@@ -1292,11 +1303,11 @@ lemma l2_bound_two_windows_uniform
         ∑ i : Fin nS, q i = ∑ t ∈ S, qS t := by
         classical
         have h_sum_equiv :
-            ∑ i : Fin nS, qS (idx i) = ∑ b : β, qS b.1 :=
+            ∑ i : Fin nS, qS (idx i) =
+              ∑ b : β, qS b.1 :=
           (Fintype.sum_equiv eβ (fun b : β => qS b.1)).symm
         have h_sum_attach :
             ∑ b : β, qS b.1 = ∑ t ∈ S, qS t := by
-          classical
           simpa [β] using Finset.sum_attach (s := S) (f := fun t => qS t)
         simpa [q, idx] using h_sum_equiv.trans h_sum_attach
       simpa [h_equiv, h_sum_qS]
@@ -1350,7 +1361,8 @@ lemma l2_bound_two_windows_uniform
     intro ω
     classical
     have h_sum_equiv :
-        ∑ i : Fin nS, p i * ξ i ω = ∑ b : β, pS b.1 * Y b.1 ω :=
+        ∑ i : Fin nS, p i * ξ i ω =
+          ∑ b : β, pS b.1 * Y b.1 ω :=
       (Fintype.sum_equiv eβ (fun b : β => pS b.1 * Y b.1 ω)).symm
     have h_sum_attach :
         ∑ b : β, pS b.1 * Y b.1 ω =
@@ -1366,7 +1378,8 @@ lemma l2_bound_two_windows_uniform
     intro ω
     classical
     have h_sum_equiv :
-        ∑ i : Fin nS, q i * ξ i ω = ∑ b : β, qS b.1 * Y b.1 ω :=
+        ∑ i : Fin nS, q i * ξ i ω =
+          ∑ b : β, qS b.1 * Y b.1 ω :=
       (Fintype.sum_equiv eβ (fun b : β => qS b.1 * Y b.1 ω)).symm
     have h_sum_attach :
         ∑ b : β, qS b.1 * Y b.1 ω =
@@ -1382,8 +1395,21 @@ lemma l2_bound_two_windows_uniform
     intro ω
     have h_sum_p := h_sum_p_fin ω
     have h_sum_q := h_sum_q_fin ω
-    simp [δ, Finset.sum_sub_distrib, mul_sub, sub_eq_add_neg, add_comm, add_left_comm,
-      add_assoc, h_sum_p, h_sum_q]
+    have h_expand :
+        ∑ t ∈ S, δ t * Y t ω =
+          ∑ t ∈ S, (pS t * Y t ω - qS t * Y t ω) := by
+      refine Finset.sum_congr rfl ?_
+      intro t ht
+      simp [δ, mul_sub]
+    have h_split :
+        ∑ t ∈ S, δ t * Y t ω =
+          ∑ t ∈ S, pS t * Y t ω - ∑ t ∈ S, qS t * Y t ω := by
+      simpa using
+        (h_expand.trans
+          (Finset.sum_sub_distrib (s := S)
+            (f := fun t => pS t * Y t ω)
+            (g := fun t => qS t * Y t ω)))
+    simpa [h_sum_p, h_sum_q] using h_split
 
   have h_goal_fin :
       ∀ ω,
