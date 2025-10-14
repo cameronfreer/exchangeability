@@ -2079,11 +2079,84 @@ lemma block_coord_condIndep
       let E_cyl' := {ω | (∀ i, X i.val ω ∈ A i) ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)}
       let E_target' := {ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)}
 
+      -- Measurability of the relevant sets
+      have hE_past_meas :
+          MeasurableSet {ω | ∀ i, X i.val ω ∈ A i} :=
+        firstRCylinder_measurable_ambient X r A hX_meas hA
+      have hE_future_meas :
+          MeasurableSet {ω | ∀ j : Fin k, X (m + 1 + j.val) ω ∈ C j} := by
+        classical
+        have h_eq :
+            {ω | ∀ j : Fin k, X (m + 1 + j.val) ω ∈ C j}
+              = ⋂ j : Fin k, (fun ω => X (m + 1 + j.val) ω) ⁻¹' C j := by
+          ext ω
+          simp [Set.mem_setOf_eq, Set.mem_iInter]
+        simpa [h_eq] using
+          (MeasurableSet.iInter fun j : Fin k =>
+            (hX_meas (m + 1 + j.val)) (hC j))
+      have hE_cyl'_meas :
+          MeasurableSet E_cyl' := by
+        classical
+        have h_eq :
+            E_cyl' =
+              ({ω | ∀ i, X i.val ω ∈ A i}
+                ∩ {ω | ∀ j : Fin k, X (m + 1 + j.val) ω ∈ C j}) := by
+          rfl
+        simpa [h_eq] using hE_past_meas.inter hE_future_meas
+      have h_inter_meas :
+          MeasurableSet (E_cyl' ∩ (X r ⁻¹' B)) :=
+        hE_cyl'_meas.inter hXrB_meas
+      have h_integrable_const : Integrable (fun _ : Ω => (1 : ℝ)) μ :=
+        integrable_const (1 : ℝ)
+
+      have h_indicator_swap :
+          Set.indicator E_cyl'
+            (fun ω => Set.indicator (X r ⁻¹' B) (fun _ => (1 : ℝ)) ω)
+          = Set.indicator (E_cyl' ∩ (X r ⁻¹' B)) (fun _ => (1 : ℝ)) := by
+        classical
+        ext ω
+        by_cases hω₁ : ω ∈ E_cyl'
+        · by_cases hω₂ : ω ∈ X r ⁻¹' B <;> simp [Set.indicator, hω₁, hω₂]
+        · simp [Set.indicator, hω₁]
+
+      have h_first :
+          ∫ ω in E_cyl', Set.indicator (X r ⁻¹' B) (fun _ => (1 : ℝ)) ω ∂ μ
+            = ∫ ω,
+                Set.indicator (E_cyl' ∩ (X r ⁻¹' B))
+                  (fun _ => (1 : ℝ)) ω ∂ μ := by
+        classical
+        have :
+            ∫ ω in E_cyl', Set.indicator (X r ⁻¹' B) (fun _ => (1 : ℝ)) ω ∂ μ
+              = ∫ ω,
+                  Set.indicator E_cyl'
+                    (fun ω => Set.indicator (X r ⁻¹' B) (fun _ => (1 : ℝ)) ω) ω ∂ μ := by
+          simp [MeasureTheory.integral_indicator, hE_cyl'_meas, h_integrable_const]
+        simpa [this, h_indicator_swap]
+
+      have h_second :
+          ∫ ω in E_cyl' ∩ (X r ⁻¹' B), (fun _ => (1 : ℝ)) ω ∂ μ
+            = ∫ ω,
+                Set.indicator (E_cyl' ∩ (X r ⁻¹' B))
+                  (fun _ => (1 : ℝ)) ω ∂ μ := by
+        classical
+        simp [MeasureTheory.integral_indicator, h_inter_meas, h_integrable_const]
+
+      have h_measure_eq :
+          ∫ ω in E_cyl' ∩ (X r ⁻¹' B), (fun _ => (1 : ℝ)) ω ∂ μ
+            = (μ (E_cyl' ∩ (X r ⁻¹' B))).toReal := by
+        classical
+        have :=
+          MeasureTheory.integral_const
+            (μ := μ.restrict (E_cyl' ∩ (X r ⁻¹' B))) (1 : ℝ)
+        simpa [measure_restrict_univ] using this
+
       calc ∫ ω in E_cyl', Set.indicator (X r ⁻¹' B) (fun _ => (1:ℝ)) ω ∂μ
-          = ∫ ω in E_cyl' ∩ (X r ⁻¹' B), (fun _ => (1:ℝ)) ω ∂μ := by
-              sorry -- Pattern matching issue with setIntegral_indicator
-        _ = (μ (E_cyl' ∩ (X r ⁻¹' B))).toReal := by
-              sorry -- Pattern matching issue with setIntegral_const
+          = ∫ ω,
+              Set.indicator (E_cyl' ∩ (X r ⁻¹' B))
+                (fun _ => (1 : ℝ)) ω ∂ μ := h_first
+        _ = ∫ ω in E_cyl' ∩ (X r ⁻¹' B), (fun _ => (1 : ℝ)) ω ∂ μ :=
+              h_second.symm
+        _ = (μ (E_cyl' ∩ (X r ⁻¹' B))).toReal := h_measure_eq
         _ = (μ E_target').toReal := by
               have h_set_eq : E_cyl' ∩ (X r ⁻¹' B) = E_target' := by
                 ext ω
