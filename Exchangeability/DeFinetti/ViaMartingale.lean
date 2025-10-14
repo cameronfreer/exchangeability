@@ -1823,6 +1823,125 @@ lemma contractable_finite_cylinder_measure
     _ = μ ((fun ω (i : Fin (r + 1 + k)) => X (↑i) ω) ⁻¹' S_std) := by
         rw [Measure.map_apply h_meas_std hS_meas]
 
+/-- Contractability implies equality of the joint law of
+`(X₀,…,X_{r-1}, X_r, X_{m+1}, …, X_{m+k})` and
+`(X₀,…,X_{r-1}, X_r, X_{r+1}, …, X_{r+k})`. -/
+lemma contractable_triple_pushforward
+    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → α)
+    (hX : Contractable μ X)
+    (hX_meas : ∀ n, Measurable (X n))
+    {r m k : ℕ} (hrm : r < m) :
+  let Z_r : Ω → (Fin r → α) := fun ω i => X i.val ω
+  let Y_future : Ω → (Fin k → α) := fun ω j => X (m + 1 + j.val) ω
+  let Y_tail   : Ω → (Fin k → α) := fun ω j => X (r + 1 + j.val) ω
+  Measure.map (fun ω => (Z_r ω, X r ω, Y_future ω)) μ
+    = Measure.map (fun ω => (Z_r ω, X r ω, Y_tail ω)) μ := by
+  classical
+  intro Z_r Y_future Y_tail
+  -- Define cylinder rectangles generating the product σ-algebra.
+  let Rectangles :
+      Set (Set ((Fin r → α) × α × (Fin k → α))) :=
+    {S | ∃ (A : Fin r → Set α) (hA : ∀ i, MeasurableSet (A i))
+          (B : Set α) (hB : MeasurableSet B)
+          (C : Fin k → Set α) (hC : ∀ j, MeasurableSet (C j)),
+        S = (Set.univ.pi A) ×ˢ B ×ˢ (Set.univ.pi C)}
+
+  -- Rectangles form a π-system.
+  have h_pi : IsPiSystem Rectangles := by
+    intro S₁ hS₁ S₂ hS₂ h_ne
+    rcases hS₁ with ⟨A₁, hA₁, B₁, hB₁, C₁, hC₁, rfl⟩
+    rcases hS₂ with ⟨A₂, hA₂, B₂, hB₂, C₂, hC₂, rfl⟩
+    refine ⟨fun i => A₁ i ∩ A₂ i, ?_, B₁ ∩ B₂, hB₁.inter hB₂,
+            fun j => C₁ j ∩ C₂ j, ?_, ?_⟩
+    · intro i; exact (hA₁ i).inter (hA₂ i)
+    · intro j; exact (hC₁ j).inter (hC₂ j)
+    · ext f; simp [Set.mem_univ_pi, Set.mem_inter_iff, Set.preimage, Set.mem_setOf_eq]
+
+  -- Equality on rectangles using the finite cylinder measure lemma.
+  have h_agree :
+      ∀ {S} (hS : S ∈ Rectangles),
+        Measure.map (fun ω => (Z_r ω, X r ω, Y_future ω)) μ S
+          = Measure.map (fun ω => (Z_r ω, X r ω, Y_tail ω)) μ S := by
+    intro S hS
+    rcases hS with ⟨A, hA, B, hB, C, hC, rfl⟩
+    -- Convert preimage of rectangle into the cylinder event.
+    have h_pre_future :
+        (fun ω => (Z_r ω, X r ω, Y_future ω)) ⁻¹'
+          ((Set.univ.pi A) ×ˢ B ×ˢ (Set.univ.pi C))
+          =
+        {ω | (∀ i : Fin r, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧
+              (∀ j : Fin k, X (m + 1 + j.val) ω ∈ C j)} := by
+      ext ω; simp [Z_r, Y_future, Set.mem_univ_pi, Set.mem_setOf_eq]
+    have h_pre_tail :
+        (fun ω => (Z_r ω, X r ω, Y_tail ω)) ⁻¹'
+          ((Set.univ.pi A) ×ˢ B ×ˢ (Set.univ.pi C))
+          =
+        {ω | (∀ i : Fin r, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧
+              (∀ j : Fin k, X (r + 1 + j.val) ω ∈ C j)} := by
+      ext ω; simp [Z_r, Y_tail, Set.mem_univ_pi, Set.mem_setOf_eq]
+    -- Apply the finite cylinder equality.
+    have :=
+      contractable_finite_cylinder_measure
+        (X := X) (μ := μ) (hX := hX) (hX_meas := hX_meas)
+        (hrm := hrm) (A := A) (hA := hA) (B := B) (hB := hB)
+        (C := C) (hC := hC)
+    simpa [Measure.map_apply,
+      h_pre_future, h_pre_tail,
+      Set.mem_univ_pi, Set.mem_setOf_eq,
+      measurable_pi_lambda, hA, hB, hC]
+      using this
+
+  -- Covering family: constant sequence of `Set.univ`.
+  let Bseq : ℕ → Set ((Fin r → α) × α × (Fin k → α)) := fun _ => Set.univ
+  have hBseq_union : ⋃ n, Bseq n = Set.univ := by simp [Bseq]
+  have hBseq_mem : ∀ n, Bseq n ∈ Rectangles := by
+    intro n
+    refine ⟨fun _ => Set.univ, fun _ => MeasurableSet.univ,
+      Set.univ, MeasurableSet.univ, fun _ => Set.univ, fun _ => MeasurableSet.univ, ?_⟩
+    simp [Bseq]
+  have hBseq_finite : ∀ n,
+      (Measure.map (fun ω => (Z_r ω, X r ω, Y_future ω)) μ) (Bseq n) ≠ ∞ := by
+    intro n
+    simpa [Bseq] using
+      (measure_ne_top _
+        (Set.univ : Set ((Fin r → α) × α × (Fin k → α))))
+  have hBseq_finite' : ∀ n,
+      (Measure.map (fun ω => (Z_r ω, X r ω, Y_tail ω)) μ) (Bseq n) ≠ ∞ := by
+    intro n
+    simpa [Bseq] using
+      (measure_ne_top _
+        (Set.univ : Set ((Fin r → α) × α × (Fin k → α))))
+
+  -- Apply the measure extension lemma on the π-system.
+  refine Measure.ext_of_generateFrom_of_iUnion
+    Rectangles Bseq ?_ h_pi hBseq_union hBseq_mem hBseq_finite h_agree
+    ?_ hBseq_finite' ?_ ?_
+  · -- Rectangles generate the product σ-algebra.
+    ext s; constructor
+    · intro hs
+      rcases hs with ⟨A, hA, B, hB, C, hC, rfl⟩
+      refine MeasurableSet.prod ?_ ?_
+      · exact MeasurableSet.prod (MeasurableSet.univ_pi hA) hB
+      · exact MeasurableSet.univ_pi hC
+    · intro hs
+      -- Any measurable set in the product σ-algebra is in the generated σ-algebra.
+      refine MeasurableSet.generateFrom ?_
+      intro s hs
+      rcases hs with ⟨A, hA, B, hB, C, hC, rfl⟩
+      apply MeasurableSet.prod
+      · exact MeasurableSet.prod (MeasurableSet.univ_pi hA) hB
+      · exact MeasurableSet.univ_pi hC
+  · -- The identity on Rectangles is measurable.
+    intro s hs
+    rcases hs with ⟨A, hA, B, hB, C, hC, rfl⟩
+    refine (MeasurableSet.prod ?_ ?_)
+    · exact MeasurableSet.prod (MeasurableSet.univ_pi hA) hB
+    · exact MeasurableSet.univ_pi hC
+  · -- The measures agree on Rectangles (already shown).
+    intro s hs
+    exact h_agree hs
 /-- **Correct conditional independence from contractability (Kallenberg Lemma 1.3).**
 
 For contractable X and r < m, the past block σ(X₀,...,X_{r-1}) and the single coordinate
