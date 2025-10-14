@@ -514,7 +514,7 @@ The challenge: `condexp_precomp_iterate_eq` gives `CE[F∘shift|I] = CE[F|I]`, b
 shift moves ALL coordinates simultaneously. We need `f(ω₀)` to stay fixed while `g(ωₖ)`
 shifts to `g(ωₖ₊₁)`.
 -/
-axiom condexp_pair_lag_constant
+private lemma condexp_pair_lag_constant
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
     (f g : α → ℝ)
@@ -523,7 +523,78 @@ axiom condexp_pair_lag_constant
     (k : ℕ) :
     μ[(fun ω => f (ω 0) * g (ω (k+1))) | shiftInvariantSigma (α := α)]
       =ᵐ[μ]
-    μ[(fun ω => f (ω 0) * g (ω k)) | shiftInvariantSigma (α := α)]
+    μ[(fun ω => f (ω 0) * g (ω k)) | shiftInvariantSigma (α := α)] := by
+  -- **Option A**: Prove via Cesàro averages + L¹ contraction (no inverse shift needed)
+  --
+  -- Strategy: Show both CE[f·g_k|I] and CE[f·g_{k+1}|I] equal the same Cesàro limit.
+  -- This avoids trying to write f(ω₀)·g(ω_{k+1}) as a single shift of f(ω₀)·g(ωₖ).
+
+  set m := shiftInvariantSigma (α := α)
+  obtain ⟨Cf, hCf⟩ := hf_bd
+  obtain ⟨Cg, hCg⟩ := hg_bd
+
+  -- Define Cesàro averages: A_n(ω) = (1/(n+1)) Σ_{j=0}^n g(ω j)
+  let A : ℕ → Ω[α] → ℝ := fun n ω => (1 / (n + 1 : ℝ)) * (Finset.range (n + 1)).sum (fun j => g (ω j))
+  let g₀ : Ω[α] → ℝ := fun ω => g (ω 0)
+
+  -- Step 1: A_n is integrable (bounded averages of bounded functions)
+  have hA_int : ∀ n, Integrable (A n) μ := by
+    intro n
+    -- Manual construction: AEStronglyMeasurable + HasFiniteIntegral
+    constructor
+    · -- Measurability: (1/(n+1)) * Σ g(ω j) is measurable
+      measurability
+    · -- Bounded, hence finite integral on probability space
+      have hA_bd : ∀ ω, |A n ω| ≤ Cg := by
+        intro ω
+        have h_pos : (0 : ℝ) < n + 1 := by positivity
+        calc |A n ω|
+            = |(1 / (n + 1 : ℝ)) * Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))| := rfl
+          _ = (1 / (n + 1 : ℝ)) * |Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))| := by
+              rw [abs_mul, abs_of_nonneg (by positivity : 0 ≤ 1 / (n + 1 : ℝ))]
+          _ ≤ (1 / (n + 1 : ℝ)) * Finset.sum (Finset.range (n + 1)) (fun j => |g (ω j)|) := by
+              gcongr
+              exact Finset.abs_sum_le_sum_abs _ _
+          _ ≤ (1 / (n + 1 : ℝ)) * Finset.sum (Finset.range (n + 1)) (fun _ => Cg) := by
+              gcongr with j _
+              exact hCg (ω j)
+          _ = (1 / (n + 1 : ℝ)) * ((n + 1) * Cg) := by
+              simp [Finset.sum_const, Finset.card_range]
+          _ = Cg := by field_simp
+      exact HasFiniteIntegral.of_bounded (ae_of_all μ hA_bd)
+
+  -- Step 2: f(ω₀)·A_n is integrable (bounded × integrable)
+  have hfA_int : ∀ n, Integrable (fun ω => f (ω 0) * A n ω) μ := by
+    intro n
+    exact integrable_mul_of_ae_bdd_left (hf_meas.comp (measurable_pi_apply 0))
+      ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩ (hA_int n)
+
+  -- Step 3: CE[g₀|m] is integrable and bounded
+  have hg₀_int : Integrable g₀ μ := by
+    constructor
+    · exact (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
+    · exact HasFiniteIntegral.of_bounded (ae_of_all μ (fun ω => hCg (ω 0)))
+
+  have hCE_g₀ : Integrable (μ[g₀ | m]) μ := integrable_condExp
+
+  have hCE_g₀_bd : ∀ᵐ ω ∂μ, |μ[g₀ | m] ω| ≤ Cg := by
+    -- Apply condExp_abs_le_of_abs_le: |CE[g₀|m]| ≤ CE[|g₀||m] ≤ Cg
+    have : Nonempty Ω[α] := inferInstance
+    exact @condExp_abs_le_of_abs_le (Ω[α]) _ μ _ this m le_rfl g₀ hg₀_int Cg (fun x => hCg (x 0))
+
+  -- Step 4: f(ω₀)·CE[g₀|m] is integrable
+  have hfCE_int : Integrable (fun ω => f (ω 0) * μ[g₀ | m] ω) μ := by
+    exact integrable_mul_of_ae_bdd_left (hf_meas.comp (measurable_pi_apply 0))
+      ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩ hCE_g₀
+
+  -- Key insight: By linearity of CE,
+  --   CE[f(ω₀)·A_n|m] = (1/(n+1)) Σ_{j=0}^n CE[f(ω₀)·g(ωⱼ)|m]
+  -- and similarly for A_n ∘ shift.
+  --
+  -- By MET (via condexp_precomp_iterate_eq), both averages converge in L¹ to CE[f·CE[g|m]|m].
+  -- Taking limits shows the Cesàro difference of pair CEs vanishes, hence all terms are equal.
+
+  sorry -- TODO: Complete convergence argument and Cesàro difference conclusion
 
 set_option maxHeartbeats 1000000
 
