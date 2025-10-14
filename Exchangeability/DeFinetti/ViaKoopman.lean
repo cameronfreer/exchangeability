@@ -845,24 +845,52 @@ private lemma condexp_pair_factorization_MET
       -- Step 3a: A_n is the Birkhoff average of g₀
       have h_birkhoff : ∀ n ω, A n ω = (1 / (n + 1 : ℝ)) * (Finset.range (n + 1)).sum (fun k => g₀ ((shift^[k]) ω)) := by
         intro n ω
-        -- A n ω = (1/(n+1)) * Σ g(ω k)
-        -- g₀ ((shift^[k]) ω) = g ((shift^[k] ω) 0) = g (ω k)
+        -- Prove general fact: (shift^[k] ω) m = ω (m + k)
+        have h_shift_iter : ∀ k m, (shift^[k] ω) m = ω (m + k) := by
+          intro k
+          induction k with
+          | zero =>
+            intro m
+            simp [Function.iterate_zero]
+          | succ k' ih =>
+            intro m
+            rw [Function.iterate_succ_apply']
+            simp only [shift]
+            rw [ih]
+            ring_nf
+        -- Apply with m=0 to get (shift^[k] ω) 0 = ω k
         congr 1
         ext k
-        sorry -- TODO: Prove (shift^[k] ω) 0 = ω k
+        simp [h_shift_iter]
 
       -- Step 3b: g₀ is in L²
       have hg₀_L2 : MemLp g₀ 2 μ := by
-        constructor
-        · exact (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
-        · -- Bounded function is in L² on probability space
-          have h_bd : ∀ ω, |g₀ ω| ≤ Cg := fun ω => hCg (ω 0)
-          sorry -- TODO: Bounded function in L² on probability space
+        refine MeasureTheory.MemLp.of_bound (μ := μ) (p := 2)
+          (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable Cg ?_
+        filter_upwards with ω
+        simp [Real.norm_eq_abs, g₀]
+        exact hCg (ω 0)
 
-      -- Step 3c: Apply Mean Ergodic Theorem
-      -- MET says: Birkhoff averages → CE[g₀|shiftInvariantSigma] in L² and ae
+      -- Step 3c: Apply Pointwise Ergodic Theorem for ae convergence
+      --
+      -- We have:
+      -- - A n ω = (1/(n+1)) * Σ_{k=0}^n g₀((shift^[k]) ω)  [by h_birkhoff]
+      -- - hg₀_L2 : MemLp g₀ 2 μ
+      -- - hσ : MeasurePreserving shift μ μ
+      --
+      -- Need: **Pointwise Ergodic Theorem** (Birkhoff 1931)
+      --   For g₀ ∈ L¹(μ) and measure-preserving shift:
+      --   (1/n) Σ_{k=0}^{n-1} g₀(shift^k ω) → μ[g₀ | shiftInvariantSigma] ω  a.e.
+      --
+      -- Note: birkhoffAverage_tendsto_condexp (line 1841) only gives L² convergence.
+      --       The pointwise ergodic theorem is stronger and remains to be formalized.
+      --
+      -- Strategy once available:
+      --   1. Convert g₀ to Lp element using hg₀_L2
+      --   2. Apply pointwise ergodic theorem
+      --   3. Use MemLp.condExpL2_ae_eq_condExp to relate condExpL2 to condExp
       have h_met : ∀ᵐ ω ∂μ, Tendsto (fun n => A n ω) atTop (𝓝 (μ[g₀ | m] ω)) := by
-        sorry -- TODO: Apply MET (birkhoffAverage_tendsto_condexp or similar)
+        sorry -- TODO: Apply Pointwise Ergodic Theorem (Birkhoff)
 
       -- Step 3d: Simplify - CE[g₀|m] = CE[g(ω 0)|m] by definition
       have h_eq : μ[g₀ | m] =ᵐ[μ] μ[(fun ω => g (ω 0)) | m] := by
