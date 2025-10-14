@@ -2325,7 +2325,44 @@ lemma block_coord_condIndep
         refine integral_congr_ae ?_
         filter_upwards [h_condexp_pullout] with ω hω
         simpa [mul_comm, mul_left_comm, mul_assoc]
-      -- TODO: Apply the tower property to push `Set.indicator E_past` through the conditional expectation.
+      -- Step 3: Contractability on triples (past block, current coordinate, finite future)
+      -- Introduce the joint maps that capture the needed coordinates.
+      set Z_r : Ω → (Fin r → α) := fun ω i => X i.val ω
+      set Y_future : Ω → (Fin k → α) := fun ω j => X (m + 1 + j.val) ω
+      set Y_tail : Ω → (Fin k → α) := fun ω j => X (r + 1 + j.val) ω
+      set triple_future := fun ω => (Z_r ω, X r ω, Y_future ω)
+      set triple_tail := fun ω => (Z_r ω, X r ω, Y_tail ω)
+      -- Measurability of the building blocks
+      have hZ_meas : Measurable Z_r := by
+        classical
+        apply measurable_pi_lambda
+        intro i
+        simpa [Z_r] using hX_meas i.val
+      have hY_future_meas : Measurable Y_future := by
+        classical
+        apply measurable_pi_lambda
+        intro j
+        simpa [Y_future] using hX_meas (m + 1 + j.val)
+      have hY_tail_meas : Measurable Y_tail := by
+        classical
+        apply measurable_pi_lambda
+        intro j
+        simpa [Y_tail] using hX_meas (r + 1 + j.val)
+      have h_triple_future :
+          Measurable triple_future := by
+        classical
+        -- View the triple as `(Z_r, (X_r, Y_future))`
+        have h_pair : Measurable (fun ω => (X r ω, Y_future ω)) :=
+          (hX_meas r).prodMk hY_future_meas
+        simpa [triple_future] using hZ_meas.prodMk h_pair
+      have h_triple_tail :
+          Measurable triple_tail := by
+        classical
+        have h_pair : Measurable (fun ω => (X r ω, Y_tail ω)) :=
+          (hX_meas r).prodMk hY_tail_meas
+        simpa [triple_tail] using hZ_meas.prodMk h_pair
+      -- TODO: Use contractability to prove `Measure.map triple_future μ = Measure.map triple_tail μ`.
+      -- TODO: Rewrite the integral using these pushforward measures.
       -- TODO: Apply the tower property to push `Set.indicator E_past` through the conditional expectation.
       -- TODO: Invoke contractability to replace the integrand with the probability of the target set.
       -- TODO: Translate the resulting integral into `(μ E_target).toReal`.
