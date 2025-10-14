@@ -2052,19 +2052,25 @@ lemma block_coord_condIndep
         = (μ ({ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)})).toReal := by
       intro A hA C hC
       -- Goal: ∫ ω in E_cyl, indicator B (X r ω) dμ = μ(E_target).toReal
-      --
-      -- Strategy:
-      -- 1. The function (ω ↦ indicator B 1 (X r ω)) equals (ω ↦ indicator (X r⁻¹ B) 1 ω)
-      -- 2. Apply integral_indicator: ∫_{E_cyl} indicator S 1 = (μ.restrict E_cyl)(S).toReal
-      -- 3. Show (μ.restrict E_cyl)(X r⁻¹ B) = μ(E_cyl ∩ X r⁻¹ B) = μ E_target
-      --
-      sorry -- TODO (~20 min): Standard integral-to-measure conversion
-            -- Mathematical content: trivial
-            -- Technical issues:
-            -- - Indicator function rewriting (composition with X r)
-            -- - integral_indicator application pattern
-            -- - Measure.restrict and intersection equality
-            -- All standard, just need exact Lean incantations
+      let E_target := {ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)}
+
+      -- The indicator function of B composed with X r is the indicator of X r⁻¹' B
+      have h_indicator_eq : (fun ω => Set.indicator B (fun _ => (1:ℝ)) (X r ω))
+          = Set.indicator (X r ⁻¹' B) (fun _ => (1:ℝ)) := by
+        ext ω
+        simp only [Set.indicator, Set.mem_preimage]
+        by_cases h : X r ω ∈ B <;> simp [h]
+
+      -- Rewrite the integral using this
+      rw [h_indicator_eq]
+
+      -- Now we need: ∫ ω in E_cyl, indicator (X r⁻¹' B) 1 dμ = μ(E_target).toReal
+      -- By integral_indicator: ∫ indicator S dμ = μ(S).toReal (when S is measurable)
+      -- But we have a restricted integral
+      sorry -- TODO (~15 min): setIntegral_indicator pattern
+            -- Need: ∫ ω in E_cyl, indicator (X r⁻¹' B) 1 dμ = (μ.restrict E_cyl)(X r⁻¹' B).toReal
+            -- Then: (μ.restrict E_cyl)(X r⁻¹' B) = μ(E_cyl ∩ X r⁻¹' B)
+            -- Finally: E_cyl ∩ X r⁻¹' B = E_target (by ext + simp)
 
     -- Step 2: Apply contractability
     have contractability_step : ∀ (A : Fin r → Set α) (hA : ∀ i, MeasurableSet (A i))
