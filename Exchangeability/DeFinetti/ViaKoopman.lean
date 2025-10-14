@@ -111,9 +111,207 @@ namespace Exchangeability.DeFinetti.ViaKoopman
 
 open MeasureTheory Filter Topology ProbabilityTheory
 open Exchangeability.Ergodic
-open scoped BigOperators
+open scoped BigOperators RealInnerProductSpace
 
 variable {α : Type*} [MeasurableSpace α]
+
+/-! ## Two-sided natural extension infrastructure -/
+
+/-- Bi-infinite path space indexed by `ℤ`. -/
+abbrev Ωℤ (α : Type*) := ℤ → α
+
+notation "Ωℤ[" α "]" => Ωℤ α
+
+/-- The two-sided shift on bi-infinite sequences. -/
+def shiftℤ (ω : Ωℤ[α]) : Ωℤ[α] := fun n => ω (n + 1)
+
+@[simp] lemma shiftℤ_apply (ω : Ωℤ[α]) (n : ℤ) :
+    shiftℤ (α := α) ω n = ω (n + 1) := rfl
+
+/-- The inverse shift on bi-infinite sequences. -/
+def shiftℤInv (ω : Ωℤ[α]) : Ωℤ[α] := fun n => ω (n - 1)
+
+@[simp] lemma shiftℤInv_apply (ω : Ωℤ[α]) (n : ℤ) :
+    shiftℤInv (α := α) ω n = ω (n - 1) := rfl
+
+@[simp] lemma shiftℤ_comp_shiftℤInv (ω : Ωℤ[α]) :
+    shiftℤ (α := α) (shiftℤInv (α := α) ω) = ω := by
+  funext n
+  simp [shiftℤ, shiftℤInv, add_comm, add_left_comm, add_assoc]
+
+@[simp] lemma shiftℤInv_comp_shiftℤ (ω : Ωℤ[α]) :
+    shiftℤInv (α := α) (shiftℤ (α := α) ω) = ω := by
+  funext n
+  simp [shiftℤ, shiftℤInv, add_comm, add_left_comm, add_assoc]
+
+/-- Restrict a bi-infinite path to its nonnegative coordinates. -/
+def restrictNonneg (ω : Ωℤ[α]) : Ω[α] := fun n => ω (Int.ofNat n)
+
+@[simp] lemma restrictNonneg_apply (ω : Ωℤ[α]) (n : ℕ) :
+    restrictNonneg (α := α) ω n = ω (Int.ofNat n) := rfl
+
+/-- Extend a one-sided path to the bi-infinite path space by duplicating the zeroth
+coordinate on the negative side. This is a convenient placeholder when we only need
+the right-infinite coordinates. -/
+def extendByZero (ω : Ω[α]) : Ωℤ[α] :=
+  fun
+  | Int.ofNat n => ω n
+  | Int.negSucc _ => ω 0
+
+@[simp] lemma restrictNonneg_extendByZero (ω : Ω[α]) :
+    restrictNonneg (α := α) (extendByZero (α := α) ω) = ω := by
+  funext n
+  simp [extendByZero]
+
+@[simp] lemma extendByZero_apply_nat (ω : Ω[α]) (n : ℕ) :
+    extendByZero (α := α) ω (Int.ofNat n) = ω n := by
+  simp [extendByZero]
+
+lemma restrictNonneg_shiftℤ (ω : Ωℤ[α]) :
+    restrictNonneg (α := α) (shiftℤ (α := α) ω)
+      = shift (restrictNonneg (α := α) ω) := by
+  funext n
+  simp [restrictNonneg, shiftℤ, shift]
+
+lemma restrictNonneg_shiftℤInv (ω : Ωℤ[α]) :
+    restrictNonneg (α := α) (shiftℤInv (α := α) ω)
+      = fun n => ω (Int.ofNat n - 1) := by
+  funext n
+  simp [restrictNonneg, shiftℤInv]
+
+lemma measurable_shiftℤ : Measurable (shiftℤ (α := α)) := by
+  apply measurable_pi_lambda
+  intro n
+  simpa using measurable_pi_apply (n + 1)
+
+lemma measurable_shiftℤInv : Measurable (shiftℤInv (α := α)) := by
+  apply measurable_pi_lambda
+  intro n
+  simpa using measurable_pi_apply (n - 1)
+
+/-- Two-sided shift-invariant sets. -/
+def IsShiftInvariantℤ (S : Set (Ωℤ[α])) : Prop :=
+  shiftℤ (α := α) ⁻¹' S = S
+
+lemma isShiftInvariantℤ_iff (S : Set (Ωℤ[α])) :
+    IsShiftInvariantℤ (α := α) S ↔
+      ∀ ω, ω ∈ S ↔ shiftℤ (α := α) ω ∈ S := by
+  constructor
+  · intro h ω
+    have := congrArg (fun T : Set (Ωℤ[α]) => ω ∈ T) h
+    simpa [Set.mem_preimage] using this.symm
+  · intro h
+    ext ω
+    constructor <;> intro hω
+    · have : shiftℤ (α := α) ω ∈ S := by
+        simpa [Set.mem_preimage] using hω
+      have : ω ∈ S := (h ω).1 this
+      exact this
+    · have : shiftℤ (α := α) ω ∈ S := (h ω).2 hω
+      simpa [Set.mem_preimage] using this
+
+/-- Shift-invariant σ-algebra on the two-sided path space. -/
+def shiftInvariantSigmaℤ : MeasurableSpace (Ωℤ[α]) where
+  MeasurableSet' := fun s => IsShiftInvariantℤ (α := α) s
+  measurableSet_empty := by
+    refine ⟨MeasurableSet.empty, ?_⟩
+    simp [IsShiftInvariantℤ]
+  measurableSet_compl := by
+    intro s hs
+    obtain ⟨hs_meas, hs_inv⟩ := hs
+    refine ⟨hs_meas.compl, ?_⟩
+    funext ω
+    simp [Set.preimage_compl, IsShiftInvariantℤ, hs_inv]
+  measurableSet_iUnion := by
+    intro f hf
+    refine ⟨MeasurableSet.iUnion fun n => (hf n).1, ?_⟩
+    -- Proof postponed: transferring shift-invariance through countable unions
+    sorry
+
+lemma shiftInvariantSigmaℤ_le :
+    shiftInvariantSigmaℤ (α := α) ≤ (inferInstance : MeasurableSpace (Ωℤ[α])) := by
+  intro s hs
+  exact hs.1
+
+/-- Data describing the natural two-sided extension of a one-sided stationary process. -/
+structure NaturalExtensionData (μ : Measure (Ω[α])) where
+  μhat : Measure (Ωℤ[α])
+  μhat_isProb : IsProbabilityMeasure μhat
+  shift_preserving : MeasurePreserving (shiftℤ (α := α)) μhat μhat
+  restrict_pushforward :
+    Measure.map (restrictNonneg (α := α)) μhat = μ
+
+attribute [instance] NaturalExtensionData.μhat_isProb
+
+/-- Existence of a natural two-sided extension for a measure-preserving shift. -/
+axiom exists_naturalExtension
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving (shift (α := α)) μ μ) :
+    NaturalExtensionData (μ := μ)
+
+/-- Pulling conditional expectation back to the two-sided extension. -/
+axiom naturalExtension_condexp_pullback
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (ext : NaturalExtensionData (μ := μ))
+    {H : Ω[α] → ℝ} (hH : Integrable H μ) :
+    (fun ωhat => μ[H | shiftInvariantSigma (α := α)] (restrictNonneg (α := α) ωhat))
+      =ᵐ[ext.μhat]
+        ext.μhat[(fun ωhat => H (restrictNonneg (α := α) ωhat))
+          | shiftInvariantSigmaℤ (α := α)]
+
+/-- Two-sided version of `condexp_precomp_iterate_eq`. -/
+axiom condexp_precomp_iterate_eq_twosided
+    {μhat : Measure (Ωℤ[α])} [IsProbabilityMeasure μhat]
+    (hσ : MeasurePreserving (shiftℤ (α := α)) μhat μhat) {k : ℕ}
+    {f : Ωℤ[α] → ℝ} (hf : Integrable f μhat) :
+    μhat[(fun ω => f ((shiftℤ (α := α))^[k] ω))
+        | shiftInvariantSigmaℤ (α := α)]
+      =ᵐ[μhat] μhat[f | shiftInvariantSigmaℤ (α := α)]
+
+private lemma condexp_pair_lag_constant_twoSided
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
+    (ext : NaturalExtensionData (μ := μ))
+    (f g : α → ℝ)
+    (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
+    (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C)
+    (k : ℕ) :
+    ext.μhat[(fun ω => f (ω 0) * g (ω (k + 1)))
+        | shiftInvariantSigmaℤ (α := α)]
+      =ᵐ[ext.μhat]
+    ext.μhat[(fun ω => f (ω 0) * g (ω k))
+        | shiftInvariantSigmaℤ (α := α)] := by
+  classical
+  obtain ⟨Cf, hCf⟩ := hf_bd
+  obtain ⟨Cg, hCg⟩ := hg_bd
+  let Fk : Ωℤ[α] → ℝ := fun ω => f (ω (-1)) * g (ω k)
+  have hFk_int : Integrable Fk ext.μhat := by
+    -- TODO: Bounded × bounded ⇒ integrable on probability space
+    sorry
+  have h_shift :
+      ext.μhat[(fun ω => Fk ((shiftℤ (α := α)) ω))
+        | shiftInvariantSigmaℤ (α := α)]
+        =ᵐ[ext.μhat]
+      ext.μhat[Fk | shiftInvariantSigmaℤ (α := α)] := by
+    have := condexp_precomp_iterate_eq_twosided
+      (μhat := ext.μhat) (α := α)
+      (hσ := ext.shift_preserving)
+      (k := 1) (f := Fk) hFk_int
+    simpa [Function.iterate_one, shiftℤ] using this
+  -- Rewrite the shifted integrand in terms of the original coordinates
+  have h_shifted_eq :
+      (fun ω => Fk ((shiftℤ (α := α)) ω))
+        = fun ω => f (ω 0) * g (ω (k + 1)) := by
+    funext ω
+    simp [Fk, shiftℤ, add_comm, add_left_comm, add_assoc]
+  have h_unshifted_eq :
+      ext.μhat[Fk | shiftInvariantSigmaℤ (α := α)]
+        =ᵐ[ext.μhat]
+      ext.μhat[(fun ω => f (ω 0) * g (ω k))
+        | shiftInvariantSigmaℤ (α := α)] := by
+    -- exploit shift-invariance of the conditional expectation to replace ω ↦ ω (-1) by ω ↦ ω 0
+    sorry
+  refine h_shift.trans ?_
+  simpa [h_shifted_eq] using h_unshifted_eq
 
 /-! ## Utility lemmas -/
 
@@ -524,92 +722,36 @@ private lemma condexp_pair_lag_constant
     μ[(fun ω => f (ω 0) * g (ω (k+1))) | shiftInvariantSigma (α := α)]
       =ᵐ[μ]
     μ[(fun ω => f (ω 0) * g (ω k)) | shiftInvariantSigma (α := α)] := by
-  -- **Option A**: Prove via Cesàro averages + L¹ contraction (no inverse shift needed)
-  --
-  -- Strategy: Show both CE[f·g_k|I] and CE[f·g_{k+1}|I] equal the same Cesàro limit.
-  -- This avoids trying to write f(ω₀)·g(ω_{k+1}) as a single shift of f(ω₀)·g(ωₖ).
-
-  set m := shiftInvariantSigma (α := α)
+  classical
   obtain ⟨Cf, hCf⟩ := hf_bd
   obtain ⟨Cg, hCg⟩ := hg_bd
-
-  -- Define Cesàro averages: A_n(ω) = (1/(n+1)) Σ_{j=0}^n g(ω j)
-  let A : ℕ → Ω[α] → ℝ := fun n ω => (1 / (n + 1 : ℝ)) * (Finset.range (n + 1)).sum (fun j => g (ω j))
-  let g₀ : Ω[α] → ℝ := fun ω => g (ω 0)
-
-  -- Step 1: A_n is integrable (bounded averages of bounded functions)
-  have hA_int : ∀ n, Integrable (A n) μ := by
-    intro n
-    -- Manual construction: AEStronglyMeasurable + HasFiniteIntegral
-    constructor
-    · -- Measurability: (1/(n+1)) * Σ g(ω j) is measurable
-      measurability
-    · -- Bounded, hence finite integral on probability space
-      have hA_bd : ∀ ω, |A n ω| ≤ Cg := by
-        intro ω
-        have h_pos : (0 : ℝ) < n + 1 := by positivity
-        calc |A n ω|
-            = |(1 / (n + 1 : ℝ)) * Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))| := rfl
-          _ = (1 / (n + 1 : ℝ)) * |Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))| := by
-              rw [abs_mul, abs_of_nonneg (by positivity : 0 ≤ 1 / (n + 1 : ℝ))]
-          _ ≤ (1 / (n + 1 : ℝ)) * Finset.sum (Finset.range (n + 1)) (fun j => |g (ω j)|) := by
-              gcongr
-              exact Finset.abs_sum_le_sum_abs _ _
-          _ ≤ (1 / (n + 1 : ℝ)) * Finset.sum (Finset.range (n + 1)) (fun _ => Cg) := by
-              gcongr with j _
-              exact hCg (ω j)
-          _ = (1 / (n + 1 : ℝ)) * ((n + 1) * Cg) := by
-              simp [Finset.sum_const, Finset.card_range]
-          _ = Cg := by field_simp
-      exact HasFiniteIntegral.of_bounded (ae_of_all μ hA_bd)
-
-  -- Step 2: f(ω₀)·A_n is integrable (bounded × integrable)
-  have hfA_int : ∀ n, Integrable (fun ω => f (ω 0) * A n ω) μ := by
-    intro n
-    exact integrable_mul_of_ae_bdd_left (hf_meas.comp (measurable_pi_apply 0))
-      ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩ (hA_int n)
-
-  -- Step 3: CE[g₀|m] is integrable and bounded
-  have hg₀_int : Integrable g₀ μ := by
-    constructor
-    · exact (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
-    · exact HasFiniteIntegral.of_bounded (ae_of_all μ (fun ω => hCg (ω 0)))
-
-  have hCE_g₀ : Integrable (μ[g₀ | m]) μ := integrable_condExp
-
-  have hCE_g₀_bd : ∀ᵐ ω ∂μ, |μ[g₀ | m] ω| ≤ Cg := by
-    -- Apply condExp_abs_le_of_abs_le: |CE[g₀|m]| ≤ CE[|g₀||m] ≤ Cg
-    haveI : Nonempty Ω[α] := ⟨fun _ => Classical.arbitrary α⟩
-    exact @condExp_abs_le_of_abs_le (Ω[α]) _ μ _ _ m le_rfl g₀ hg₀_int Cg (fun x => hCg (x 0))
-
-  -- Step 4: f(ω₀)·CE[g₀|m] is integrable
-  have hfCE_int : Integrable (fun ω => f (ω 0) * μ[g₀ | m] ω) μ := by
-    exact integrable_mul_of_ae_bdd_left (hf_meas.comp (measurable_pi_apply 0))
-      ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩ hCE_g₀
-
-  -- Key insight: By linearity of CE,
-  --   CE[f(ω₀)·A_n|m] = (1/(n+1)) Σ_{j=0}^n CE[f(ω₀)·g(ωⱼ)|m]
-  -- and similarly for A_n ∘ shift.
-  --
-  -- By MET (via condexp_precomp_iterate_eq), both averages converge in L¹ to CE[f·CE[g|m]|m].
-  -- Taking limits shows the Cesàro difference of pair CEs vanishes, hence all terms are equal.
-
-  -- This proof will be implemented following the user's Option A strategy:
-  -- 1. A_n → CE[g₀|m] in L² (by MET - would need Pointwise Ergodic Theorem for ae)
-  -- 2. f·A_n → f·CE[g₀|m] in L¹ (bounded × L² on probability space)
-  -- 3. CE[f·A_n|m] → CE[f·CE[g₀|m]|m] in L¹ (by L¹-Lipschitz)
-  -- 4. Same for A_n∘shift using condexp_precomp_iterate_eq
-  -- 5. Express as Cesàro sums via linearity
-  -- 6. Cesàro difference → 0 implies all terms equal
-  --
-  -- However, this requires the Pointwise Ergodic Theorem (Birkhoff 1931) which hasn't
-  -- been formalized yet. The Mean Ergodic Theorem only gives L² convergence.
-  --
-  -- For now, we leave this as sorry. Once the Pointwise Ergodic Theorem is available,
-  -- the implementation will follow the steps outlined above using the helper lemmas
-  -- already in place (condExp_L1_lipschitz, integrable_mul_of_ae_bdd_left, etc.).
-
-  sorry -- TODO: Complete once Pointwise Ergodic Theorem is formalized
+  let Hk : Ω[α] → ℝ := fun ω => f (ω 0) * g (ω k)
+  let Hk1 : Ω[α] → ℝ := fun ω => f (ω 0) * g (ω (k + 1))
+  have hHk_int : Integrable Hk μ := by
+    -- TODO: bounded product ⇒ integrable
+    sorry
+  have hHk1_int : Integrable Hk1 μ := by
+    -- TODO: bounded product ⇒ integrable
+    sorry
+  -- Move to the natural two-sided extension
+  let ext := exists_naturalExtension (μ := μ) (α := α) hσ
+  have h_two :
+      ext.μhat[(fun ω => f (ω 0) * g (ω (k + 1)))
+        | shiftInvariantSigmaℤ (α := α)]
+        =ᵐ[ext.μhat]
+      ext.μhat[(fun ω => f (ω 0) * g (ω k))
+        | shiftInvariantSigmaℤ (α := α)] :=
+    condexp_pair_lag_constant_twoSided
+      (μ := μ) (α := α) ext f g hf_meas hf_bd hg_meas hg_bd k
+  -- Identify both sides with pullbacks of the one-sided conditional expectations
+  have h_pull_left := naturalExtension_condexp_pullback
+    (μ := μ) (α := α) ext (H := Hk1) hHk1_int
+  have h_pull_right := naturalExtension_condexp_pullback
+    (μ := μ) (α := α) ext (H := Hk) hHk_int
+  -- Combine the three a.e. equalities and push forward along restrictNonneg
+  -- to obtain the desired identity on Ω[α].
+  -- TODO: glue the equalities rigorously using ext.restrict_pushforward
+  sorry
 
 set_option maxHeartbeats 1000000
 
@@ -1991,11 +2133,12 @@ we show `P(Uf) = Pf` where `P = condexpL2` and `U = koopman shift`:
 1. Decompose `f = Pf + (f - Pf)` with `Pf ∈ S` and `(f - Pf) ⊥ S` where `S = fixedSubspace`
 2. `U(Pf) = Pf` since `Pf ∈ fixedSubspace` (definition of fixed subspace)
 3. `U(f - Pf) ⊥ S` since `U` is an isometry preserving orthogonality
-4. Therefore `P(Uf) = P(Pf) = Pf` since projection onto invariant subspace commutes
--/
--- Axiomatized for now - ergodic theory result requiring careful inner product notation
-axiom condexpL2_koopman_comm (f : Lp ℝ 2 μ) :
-    condexpL2 (μ := μ) (koopman shift hσ f) = condexpL2 (μ := μ) f
+4. Therefore `P(Uf) = P(Pf) = Pf` since projection onto invariant subspace commutes. -/
+lemma condexpL2_koopman_comm (f : Lp ℝ 2 μ) :
+    condexpL2 (μ := μ) (koopman shift hσ f) = condexpL2 (μ := μ) f := by
+  classical
+  -- TODO: Replace with orthogonal projection argument summarised above
+  sorry
 
 /-
 Full proof sketch using orthogonal projection characterization:
