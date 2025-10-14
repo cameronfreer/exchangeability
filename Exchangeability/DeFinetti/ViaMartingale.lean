@@ -2204,22 +2204,149 @@ lemma block_coord_condIndep
         -- Since equality holds for all E_n, it holds for the limit
 
         -- Extract the functions we're integrating
-        let f := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X r ω)
-        let g := fun ω => (Exchangeability.Probability.condExpWith μ
+        classical
+        set f := fun ω => Set.indicator (X r ⁻¹' B) (fun _ => (1 : ℝ)) ω with hf_def
+        set g := fun ω => Exchangeability.Probability.condExpWith μ
           (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
-          (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω
+          (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r) ω with hg_def
 
         -- For each n, we have ∫_{E_n} f = ∫_{E_n} g
         have h_eq_n : ∀ n, ∫ ω in E_seq n, f ω ∂μ = ∫ ω in E_seq n, g ω ∂μ := by
           intro n
           exact (hE_in n).2
 
-        -- Need to show: ∫_{⋃ E_n} f = ∫_{⋃ E_n} g
-        -- Use monotone convergence for integrals over increasing sets
-        sorry -- TODO: Apply measure continuity + integral_indicator pattern
-              -- Can use: lim ∫_{E_n} f = ∫_{⋃ E_n} f (by MCT for indicators)
-              -- Then: lim (∫_{E_n} f) = lim (∫_{E_n} g) (by h_eq_n)
-              --       ∫_{⋃ E_n} f = ∫_{⋃ E_n} g
+        -- Auxiliary integrability facts
+        have hf_meas : MeasurableSet (X r ⁻¹' B) := (hX_meas r) hB
+        have hf_int : Integrable f μ := by
+          have hconst : Integrable (fun _ : Ω => (1 : ℝ)) μ := integrable_const _
+          simpa [hf_def] using
+            hconst.indicator (μ := μ) (s := X r ⁻¹' B) hf_meas
+        have hg_int : Integrable g μ := by
+          simpa [hg_def, Exchangeability.Probability.condExpWith]
+            using ProbabilityTheory.integrable_condexp
+              (μ := μ)
+              (m := finFutureSigma X m k)
+              (hm := finFutureSigma_le_ambient X m k hX_meas)
+              (f := Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)
+
+        -- Rewrite set-integrals as ordinary integrals
+        have hf_set : ∀ n, ∫ ω in E_seq n, f ω ∂μ
+            = ∫ ω, Set.indicator (E_seq n) f ω ∂μ := by
+          intro n; simp [MeasureTheory.integral_indicator, (hE_in n).1, hf_int]
+        have hg_set : ∀ n, ∫ ω in E_seq n, g ω ∂μ
+            = ∫ ω, Set.indicator (E_seq n) g ω ∂μ := by
+          intro n; simp [MeasureTheory.integral_indicator, (hE_in n).1, hg_int]
+
+        -- Pointwise convergence for indicators and dominated convergence
+        have h_tendsto_f :
+            Tendsto (fun n => ∫ ω, Set.indicator (E_seq n) f ω ∂μ) atTop
+              (𝓝 (∫ ω, Set.indicator (⋃ n, E_seq n) f ω ∂μ)) := by
+          refine MeasureTheory.tendsto_integral_of_dominated_convergence
+            (fun ω => ‖f ω‖) ?_ hf_int.norm ?_ ?_
+          · intro n
+            exact (hf_int.aestronglyMeasurable.indicator (hE_in n).1)
+          · intro n; refine Filter.eventually_of_forall ?_
+            intro ω; by_cases hω : ω ∈ E_seq n
+            · simp [Set.indicator_of_mem, hω]
+            · simp [Set.indicator_of_not_mem, hω]
+          · refine Filter.eventually_of_forall ?_
+            intro ω
+            classical
+            by_cases hω : ω ∈ ⋃ n, E_seq n
+            · obtain ⟨N, hN⟩ := by
+                simpa [Set.mem_iUnion] using hω
+              have h_mem : ∀ ⦃n⦄, N ≤ n → ω ∈ E_seq n := by
+                intro n hn; exact hMono hn hN
+              have h_eventual :
+                  ∀ᶠ n in Filter.atTop,
+                    Set.indicator (E_seq n) f ω = f ω := by
+                refine Filter.eventually_atTop.2 ⟨N, ?_⟩
+                intro n hn; simp [Set.indicator_of_mem, h_mem hn]
+              have h_limit := tendsto_const_nhds (c := f ω)
+              have h_lim_val : Set.indicator (⋃ n, E_seq n) f ω = f ω := by
+                simp [Set.indicator_of_mem, hω]
+              simpa [h_lim_val] using
+                (Filter.tendsto_congr' h_eventual).2 h_limit
+            · have h_not : ∀ n, ω ∉ E_seq n := by
+                intro n
+                have : ω ∉ ⋃ n, E_seq n := hω
+                simpa [Set.mem_iUnion] using this
+              have h_eventual :
+                  ∀ᶠ n in Filter.atTop,
+                    Set.indicator (E_seq n) f ω = (0 : ℝ) :=
+                Filter.eventually_of_forall fun n => by
+                  simp [Set.indicator_of_not_mem, h_not n]
+              have h_limit := tendsto_const_nhds (c := 0 : ℝ)
+              have h_lim_val : Set.indicator (⋃ n, E_seq n) f ω = 0 := by
+                simp [Set.indicator_of_not_mem, hω]
+              simpa [h_lim_val] using
+                (Filter.tendsto_congr' h_eventual).2 h_limit
+
+        have h_tendsto_g :
+            Tendsto (fun n => ∫ ω, Set.indicator (E_seq n) g ω ∂μ) atTop
+              (𝓝 (∫ ω, Set.indicator (⋃ n, E_seq n) g ω ∂μ)) := by
+          refine MeasureTheory.tendsto_integral_of_dominated_convergence
+            (fun ω => ‖g ω‖) ?_ hg_int.norm ?_ ?_
+          · intro n
+            exact (hg_int.aestronglyMeasurable.indicator (hE_in n).1)
+          · intro n; refine Filter.eventually_of_forall ?_
+            intro ω; by_cases hω : ω ∈ E_seq n
+            · simp [Set.indicator_of_mem, hω]
+            · simp [Set.indicator_of_not_mem, hω]
+          · refine Filter.eventually_of_forall ?_
+            intro ω
+            classical
+            by_cases hω : ω ∈ ⋃ n, E_seq n
+            · obtain ⟨N, hN⟩ := by
+                simpa [Set.mem_iUnion] using hω
+              have h_mem : ∀ ⦃n⦄, N ≤ n → ω ∈ E_seq n := by
+                intro n hn; exact hMono hn hN
+              have h_eventual :
+                  ∀ᶠ n in Filter.atTop,
+                    Set.indicator (E_seq n) g ω = g ω := by
+                refine Filter.eventually_atTop.2 ⟨N, ?_⟩
+                intro n hn; simp [Set.indicator_of_mem, h_mem hn]
+              have h_limit := tendsto_const_nhds (c := g ω)
+              have h_lim_val : Set.indicator (⋃ n, E_seq n) g ω = g ω := by
+                simp [Set.indicator_of_mem, hω]
+              simpa [h_lim_val] using
+                (Filter.tendsto_congr' h_eventual).2 h_limit
+            · have h_not : ∀ n, ω ∉ E_seq n := by
+                intro n
+                have : ω ∉ ⋃ n, E_seq n := hω
+                simpa [Set.mem_iUnion] using this
+              have h_eventual :
+                  ∀ᶠ n in Filter.atTop,
+                    Set.indicator (E_seq n) g ω = (0 : ℝ) :=
+                Filter.eventually_of_forall fun n => by
+                  simp [Set.indicator_of_not_mem, h_not n]
+              have h_limit := tendsto_const_nhds (c := 0 : ℝ)
+              have h_lim_val : Set.indicator (⋃ n, E_seq n) g ω = 0 := by
+                simp [Set.indicator_of_not_mem, hω]
+              simpa [h_lim_val] using
+                (Filter.tendsto_congr' h_eventual).2 h_limit
+
+        -- Combine the convergence of the integral sequences
+        have h_union_eq :
+            ∫ ω in ⋃ n, E_seq n, f ω ∂μ = ∫ ω in ⋃ n, E_seq n, g ω ∂μ := by
+          let seq_f := fun n => ∫ ω, Set.indicator (E_seq n) f ω ∂μ
+          let seq_g := fun n => ∫ ω, Set.indicator (E_seq n) g ω ∂μ
+          have h_seq_eq : ∀ n, seq_f n = seq_g n := by
+            intro n; simp [seq_f, seq_g, hf_set n, hg_set n, h_eq_n n]
+          have h₂' :
+              Tendsto seq_f atTop (𝓝 (∫ ω, Set.indicator (⋃ n, E_seq n) g ω ∂μ)) := by
+            simpa [seq_f, seq_g, h_seq_eq] using h_tendsto_g
+          have h₁ : Tendsto seq_f atTop (𝓝 (∫ ω, Set.indicator (⋃ n, E_seq n) f ω ∂μ)) := by
+            simpa [seq_f] using h_tendsto_f
+          have h_unique := tendsto_nhds_unique h₁ h₂'
+          have h_eq := h_unique
+          simpa [MeasureTheory.integral_indicator, hf_int, hg_int, hf_def, hg_def,
+            (MeasurableSet.iUnion fun n => (hE_in n).1)] using h_eq
+
+        -- Rewrite the union integrals in the desired form
+        simpa [hf_set, hg_set, hf_int, hg_int, hf_def, hg_def,
+          MeasureTheory.integral_indicator, (MeasurableSet.iUnion fun n => (hE_in n).1)]
+          using h_union_eq
 
     have goodsets_closed_under_monotone_inter : ∀ (E_seq : ℕ → Set Ω),
         (∀ n, E_seq n ∈ GoodSets) →
