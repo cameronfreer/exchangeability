@@ -822,25 +822,56 @@ private lemma condexp_pair_factorization_MET
     have h_met_convergence : ∀ᵐ ω ∂μ,
         Tendsto (fun n => A n ω) atTop (𝓝 (μ[(fun ω => g (ω 0)) | m] ω)) := by
       /-
-      **IMPLEMENTATION STRATEGY**:
+      **PROOF STRATEGY**:
 
-      The key insight is that we don't need the full Lp machinery here.
-      We've already proved in step 1 that:
-        CE[A_n|m] = CE[g(ω₀)|m] for all n
+      The Cesàro average A_n(ω) = (1/(n+1)) Σ g(ω k) is the Birkhoff average
+      of the function g₀ := g ∘ (· 0) : Ω[α] → ℝ under the shift map.
 
-      This means A_n and CE[g(ω₀)|m] have the same "invariant part" under the shift.
-      Combined with boundedness, this gives us enough control.
+      By the Mean Ergodic Theorem (MET):
+      - Birkhoff averages converge ae to the conditional expectation w.r.t. shift-invariant σ-algebra
+      - That is: A_n → CE[g₀|shiftInvariantSigma] ae
 
-      However, the full MET-based proof requires:
-      1. Construct g₀_Lp : Lp ℝ 2 μ from fun ω => g (ω 0)
-      2. Apply birkhoffAverage_tendsto_condexp to get L² convergence
-      3. Use MemLp.coeFn_toLp to connect pointwise and Lp representatives
-      4. Extract ae convergence from L² convergence
+      We need to show CE[g₀|m] = CE[g(ω 0)|m], which is essentially definitional.
 
-      For now, we'll axiomatize this since it's standard Lp analysis.
-      The mathematical content is complete - only API work remains.
+      The technical steps are:
+      1. Show A_n is the Birkhoff average of g₀
+      2. Apply MET to get ae convergence
+      3. Identify the limit with CE[g(ω 0)|m]
       -/
-      sorry
+
+      -- Define g₀ for clarity
+      let g₀ : Ω[α] → ℝ := fun ω => g (ω 0)
+
+      -- Step 3a: A_n is the Birkhoff average of g₀
+      have h_birkhoff : ∀ n ω, A n ω = (1 / (n + 1 : ℝ)) * (Finset.range (n + 1)).sum (fun k => g₀ ((shift^[k]) ω)) := by
+        intro n ω
+        -- A n ω = (1/(n+1)) * Σ g(ω k)
+        -- g₀ ((shift^[k]) ω) = g ((shift^[k] ω) 0) = g (ω k)
+        congr 1
+        ext k
+        sorry -- TODO: Prove (shift^[k] ω) 0 = ω k
+
+      -- Step 3b: g₀ is in L²
+      have hg₀_L2 : MemLp g₀ 2 μ := by
+        constructor
+        · exact (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
+        · -- Bounded function is in L² on probability space
+          have h_bd : ∀ ω, |g₀ ω| ≤ Cg := fun ω => hCg (ω 0)
+          sorry -- TODO: Bounded function in L² on probability space
+
+      -- Step 3c: Apply Mean Ergodic Theorem
+      -- MET says: Birkhoff averages → CE[g₀|shiftInvariantSigma] in L² and ae
+      have h_met : ∀ᵐ ω ∂μ, Tendsto (fun n => A n ω) atTop (𝓝 (μ[g₀ | m] ω)) := by
+        sorry -- TODO: Apply MET (birkhoffAverage_tendsto_condexp or similar)
+
+      -- Step 3d: Simplify - CE[g₀|m] = CE[g(ω 0)|m] by definition
+      have h_eq : μ[g₀ | m] =ᵐ[μ] μ[(fun ω => g (ω 0)) | m] := by
+        apply condExp_congr_ae
+        rfl
+
+      -- Combine: A_n → CE[g(ω 0)|m] ae
+      filter_upwards [h_met, h_eq] with ω h_conv h_eq_ω
+      rwa [h_eq_ω] at h_conv
 
     -- Step 4: f·A_n → f·CE[g(ω₀)|m] in L¹ (by dominated convergence)
     -- Note: Cf, hCf, Cg, hCg already extracted at h_tower level
