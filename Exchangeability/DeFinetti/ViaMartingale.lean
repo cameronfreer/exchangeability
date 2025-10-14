@@ -2378,19 +2378,13 @@ lemma block_coord_condIndep
 
         -- Show E_past is measurable in the sup
         have hE_past_in_first : MeasurableSet[firstRSigma X r] E_past := by
-          simp only [E_past, firstRSigma]
+          simp only [firstRSigma]
           -- E_past = (firstRMap X r)⁻¹({f | ∀ i, f i ∈ A i})
-          let S := {f : Fin r → α | ∀ i, f i ∈ A i}
-          have hS_meas : MeasurableSet S := by
-            -- S = Set.univ.pi A
-            have hS_eq : S = Set.univ.pi A := by
-              ext f
-              simp only [Set.mem_setOf_eq, Set.mem_pi, Set.mem_univ, true_implies]
-            rw [hS_eq]
-            exact MeasurableSet.univ_pi hA
+          let S := Set.univ.pi A
+          have hS_meas : MeasurableSet S := MeasurableSet.univ_pi hA
           have hE_past_def : E_past = (firstRMap X r) ⁻¹' S := by
             ext ω
-            simp only [E_past, S, firstRMap, Set.mem_preimage, Set.mem_setOf_eq]
+            simp only [E_past, S, firstRMap, Set.mem_preimage, Set.mem_pi, Set.mem_univ, true_implies, Set.mem_setOf]
           rw [hE_past_def]
           -- Witness that E_past is in the comap σ-algebra
           exact ⟨S, hS_meas, rfl⟩
@@ -2400,19 +2394,13 @@ lemma block_coord_condIndep
 
         -- Show E_future is measurable in the sup
         have hE_future_in_fin : MeasurableSet[finFutureSigma X m k] E_future := by
-          simp only [E_future, finFutureSigma]
+          simp only [finFutureSigma]
           -- E_future = (futureMap)⁻¹({g | ∀ j, g j ∈ C j})
-          let T := {g : Fin k → α | ∀ j, g j ∈ C j}
-          have hT_meas : MeasurableSet T := by
-            -- T = Set.univ.pi C
-            have hT_eq : T = Set.univ.pi C := by
-              ext g
-              simp only [Set.mem_setOf_eq, Set.mem_pi, Set.mem_univ, true_implies]
-            rw [hT_eq]
-            exact MeasurableSet.univ_pi hC
+          let T := Set.univ.pi C
+          have hT_meas : MeasurableSet T := MeasurableSet.univ_pi hC
           have hE_future_def : E_future = (fun ω => fun j : Fin k => X (m + 1 + j.val) ω) ⁻¹' T := by
             ext ω
-            simp only [E_future, T, Set.mem_preimage, Set.mem_setOf_eq]
+            simp only [E_future, T, Set.mem_preimage, Set.mem_pi, Set.mem_univ, true_implies, Set.mem_setOf]
           rw [hE_future_def]
           -- Witness that E_future is in the comap σ-algebra
           exact ⟨T, hT_meas, rfl⟩
@@ -2436,30 +2424,47 @@ lemma block_coord_condIndep
 
     · -- Complement case
       intro t htm ht_in_good
-      sorry -- TODO (~15-20 min): Apply setIntegral_compl decomposition
-            -- Structure attempted but blocked by let-binding pattern matching:
-            --
-            -- Strategy (clear mathematical content):
-            -- 1. Define g = indicator B ∘ X r, h = condExp[g | finFuture]
-            --
-            -- 2. Prove integrability:
-            --    have hg_int : Integrable g μ  -- bounded by 1
-            --    have hh_int : Integrable h μ  -- condexp of integrable
-            --
-            -- 3. Apply setIntegral_compl to both sides:
-            --    ∫_{tᶜ} g = ∫_Ω g - ∫_t g
-            --    ∫_{tᶜ} h = ∫_Ω h - ∫_t h
-            --
-            -- 4. Tower property: ∫_Ω g = ∫_Ω h
-            --    (∫ f dμ = ∫ E[f|m] dμ for any sub-σ-algebra m)
-            --
-            -- 5. Use IH: ∫_t g = ∫_t h (from ht_in_good)
-            --
-            -- 6. Conclude: ∫_{tᶜ} g = ∫_Ω g - ∫_t g
-            --                       = ∫_Ω h - ∫_t h
-            --                       = ∫_{tᶜ} h
-            --
-            -- Blocked by: setIntegral_compl pattern matching with let-defined functions
+      -- Goal: Show ∫_{tᶜ} indicator = ∫_{tᶜ} condexp
+      -- Have IH: ∫_t indicator = ∫_t condexp
+
+      -- Integrability of indicator (bounded by 1)
+      have hg_int : Integrable (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X r ω)) μ := by
+        apply Integrable.indicator
+        · exact integrable_const (1 : ℝ)
+        · exact (hX_meas r) hB
+
+      -- Integrability of conditional expectation
+      have hh_int : Integrable (fun ω => Exchangeability.Probability.condExpWith μ
+          (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
+          (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r) ω) μ := by
+        sorry -- TODO: condexp of integrable is integrable
+
+      -- Apply setIntegral_compl decomposition: ∫_{tᶜ} f = ∫_Ω f - ∫_t f
+      have h_decomp_g : ∫ ω in tᶜ, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ =
+          ∫ ω, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ -
+          ∫ ω in t, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ := by
+        sorry -- TODO: Apply MeasureTheory.integral_compl or setIntegral_compl
+
+      have h_decomp_h : ∫ ω in tᶜ, (Exchangeability.Probability.condExpWith μ
+          (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
+          (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ =
+          ∫ ω, (Exchangeability.Probability.condExpWith μ
+            (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
+            (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ -
+          ∫ ω in t, (Exchangeability.Probability.condExpWith μ
+            (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
+            (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ := by
+        sorry -- TODO: Apply MeasureTheory.integral_compl or setIntegral_compl
+
+      -- Tower property: ∫_Ω g = ∫_Ω E[g|m]
+      have h_tower : ∫ ω, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ =
+          ∫ ω, (Exchangeability.Probability.condExpWith μ
+            (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
+            (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ := by
+        sorry -- TODO: Apply tower property for conditional expectation
+
+      -- Conclude using decomposition + tower + IH
+      rw [h_decomp_g, h_decomp_h, h_tower, ht_in_good]
 
     · -- Disjoint union case
       intro f hf_disj hf_meas hf_in_good
