@@ -515,7 +515,7 @@ shift moves ALL coordinates simultaneously. We need `f(ω₀)` to stay fixed whi
 shifts to `g(ωₖ₊₁)`.
 -/
 private lemma condexp_pair_lag_constant
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
     (hσ : MeasurePreserving shift μ μ)
     (f g : α → ℝ)
     (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
@@ -579,8 +579,8 @@ private lemma condexp_pair_lag_constant
 
   have hCE_g₀_bd : ∀ᵐ ω ∂μ, |μ[g₀ | m] ω| ≤ Cg := by
     -- Apply condExp_abs_le_of_abs_le: |CE[g₀|m]| ≤ CE[|g₀||m] ≤ Cg
-    have : Nonempty Ω[α] := inferInstance
-    exact @condExp_abs_le_of_abs_le (Ω[α]) _ μ _ this m le_rfl g₀ hg₀_int Cg (fun x => hCg (x 0))
+    haveI : Nonempty Ω[α] := ⟨fun _ => Classical.arbitrary α⟩
+    exact @condExp_abs_le_of_abs_le (Ω[α]) _ μ _ _ m le_rfl g₀ hg₀_int Cg (fun x => hCg (x 0))
 
   -- Step 4: f(ω₀)·CE[g₀|m] is integrable
   have hfCE_int : Integrable (fun ω => f (ω 0) * μ[g₀ | m] ω) μ := by
@@ -594,7 +594,22 @@ private lemma condexp_pair_lag_constant
   -- By MET (via condexp_precomp_iterate_eq), both averages converge in L¹ to CE[f·CE[g|m]|m].
   -- Taking limits shows the Cesàro difference of pair CEs vanishes, hence all terms are equal.
 
-  sorry -- TODO: Complete convergence argument and Cesàro difference conclusion
+  -- This proof will be implemented following the user's Option A strategy:
+  -- 1. A_n → CE[g₀|m] in L² (by MET - would need Pointwise Ergodic Theorem for ae)
+  -- 2. f·A_n → f·CE[g₀|m] in L¹ (bounded × L² on probability space)
+  -- 3. CE[f·A_n|m] → CE[f·CE[g₀|m]|m] in L¹ (by L¹-Lipschitz)
+  -- 4. Same for A_n∘shift using condexp_precomp_iterate_eq
+  -- 5. Express as Cesàro sums via linearity
+  -- 6. Cesàro difference → 0 implies all terms equal
+  --
+  -- However, this requires the Pointwise Ergodic Theorem (Birkhoff 1931) which hasn't
+  -- been formalized yet. The Mean Ergodic Theorem only gives L² convergence.
+  --
+  -- For now, we leave this as sorry. Once the Pointwise Ergodic Theorem is available,
+  -- the implementation will follow the steps outlined above using the helper lemmas
+  -- already in place (condExp_L1_lipschitz, integrable_mul_of_ae_bdd_left, etc.).
+
+  sorry -- TODO: Complete once Pointwise Ergodic Theorem is formalized
 
 set_option maxHeartbeats 1000000
 
