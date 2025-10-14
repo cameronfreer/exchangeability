@@ -2342,13 +2342,30 @@ lemma block_coord_condIndep
 
     · -- Complement case
       intro t htm ht_in_good
-      sorry -- TODO (~15 min + integrability): Use setIntegral_compl decomposition
-            -- Strategy:
-            -- 1. Prove indicators are integrable (bounded by 1)
-            -- 2. Apply setIntegral_compl: ∫_{tᶜ} f = ∫_Ω f - ∫_t f
-            -- 3. Show ∫_Ω indicator = ∫_Ω condexp (tower property)
-            -- 4. Use IH: ∫_t indicator = ∫_t condexp
-            -- 5. Conclude: ∫_{tᶜ} indicator = ∫_{tᶜ} condexp
+      sorry -- TODO (~15-20 min): Apply setIntegral_compl decomposition
+            -- Structure attempted but blocked by let-binding pattern matching:
+            --
+            -- Strategy (clear mathematical content):
+            -- 1. Define g = indicator B ∘ X r, h = condExp[g | finFuture]
+            --
+            -- 2. Prove integrability:
+            --    have hg_int : Integrable g μ  -- bounded by 1
+            --    have hh_int : Integrable h μ  -- condexp of integrable
+            --
+            -- 3. Apply setIntegral_compl to both sides:
+            --    ∫_{tᶜ} g = ∫_Ω g - ∫_t g
+            --    ∫_{tᶜ} h = ∫_Ω h - ∫_t h
+            --
+            -- 4. Tower property: ∫_Ω g = ∫_Ω h
+            --    (∫ f dμ = ∫ E[f|m] dμ for any sub-σ-algebra m)
+            --
+            -- 5. Use IH: ∫_t g = ∫_t h (from ht_in_good)
+            --
+            -- 6. Conclude: ∫_{tᶜ} g = ∫_Ω g - ∫_t g
+            --                       = ∫_Ω h - ∫_t h
+            --                       = ∫_{tᶜ} h
+            --
+            -- Blocked by: setIntegral_compl pattern matching with let-defined functions
 
     · -- Disjoint union case
       intro f hf_disj hf_meas hf_in_good
@@ -2387,13 +2404,30 @@ lemma block_coord_condIndep
             intro i
             exact hf_in_good i
           -- Need: ∫_{E_partial n} g = ∫_{E_partial n} h
-          -- Use integral_iUnion_fintype
+          -- Use integral_iUnion_fintype for both sides
+
           sorry -- TODO (~15-20 min): Apply integral_iUnion_fintype
-                -- Need to prove:
-                -- 1. Each f i is measurable (have: hf_meas i)
-                -- 2. Pairwise disjoint (have: hf_disj)
-                -- 3. Integrability on each f i (bounded indicators)
-                -- Then: ∫_{⋃ i} g = ∑ i (∫_{f i} g) = ∑ i (∫_{f i} h) = ∫_{⋃ i} h
+                -- Structure attempted but blocked by technical issues:
+                --
+                -- 1. Pairwise disjoint restriction: Need to show
+                --    Pairwise (fun i j : Fin n => Disjoint (f i) (f j))
+                --    from hf_disj : Pairwise (Disjoint on f : ℕ → Set Ω)
+                --
+                -- 2. Measurability lift: hf_meas i gives
+                --    MeasurableSet[firstRSigma ⊔ finFutureSigma] (f i)
+                --    but integral_iUnion_fintype expects
+                --    MeasurableSet[inferInstance] (f i)
+                --    Need witness that sub-σ-algebra ≤ ambient
+                --
+                -- 3. Integrability: indicators bounded by 1
+                --    have hg_int : ∀ i, IntegrableOn g (f i) μ
+                --    have hh_int : ∀ i, IntegrableOn h (f i) μ
+                --
+                -- 4. Then apply: integral_iUnion_fintype to both g and h
+                --    rw [h_g_sum, h_h_sum]
+                --    congr 1; funext i; exact h_eq_i i
+                --
+                -- Mathematical content is clear, blocked on Lean technicalities
       -- Apply monotone union closure
       rw [← hE_partial_eq]
       exact (goodsets_closed_under_monotone_union E_partial hE_partial_in hE_partial_mono).2
