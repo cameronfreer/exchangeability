@@ -2341,10 +2341,13 @@ lemma block_coord_condIndep
 
     · -- Complement case
       intro t htm ht_in_good
-      sorry -- TODO (~15 min): Use integral decomposition
-            -- ∫_{tᶜ} f = ∫_Ω f - ∫_t f
-            -- ∫_{tᶜ} g = ∫_Ω g - ∫_t g
-            -- If ∫_t f = ∫_t g and ∫_Ω f = ∫_Ω g, then ∫_{tᶜ} f = ∫_{tᶜ} g
+      sorry -- TODO (~15 min + integrability): Use setIntegral_compl decomposition
+            -- Strategy:
+            -- 1. Prove indicators are integrable (bounded by 1)
+            -- 2. Apply setIntegral_compl: ∫_{tᶜ} f = ∫_Ω f - ∫_t f
+            -- 3. Show ∫_Ω indicator = ∫_Ω condexp (tower property)
+            -- 4. Use IH: ∫_t indicator = ∫_t condexp
+            -- 5. Conclude: ∫_{tᶜ} indicator = ∫_{tᶜ} condexp
 
     · -- Disjoint union case
       intro f hf_disj hf_meas hf_in_good
