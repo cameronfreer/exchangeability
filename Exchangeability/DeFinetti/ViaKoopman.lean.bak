@@ -891,7 +891,7 @@ private lemma condexp_pair_lag_constant
       ext.μhat[(fun ω => f (ω 0) * g (ω k))
         | shiftInvariantSigmaℤ (α := α)] :=
     condexp_pair_lag_constant_twoSided
-      (μ := μ) (α := α) ext f g hf_meas ⟨Cf, hCf⟩ hg_meas ⟨Cg, hCg⟩ k
+      (μ := μ) (α := α) ext f g hf_meas hf_bd hg_meas hg_bd k
   -- Identify both sides with pullbacks of the one-sided conditional expectations
   have h_pull_left := naturalExtension_condexp_pullback
     (μ := μ) (α := α) ext (H := Hk1) hHk1_int
@@ -1044,6 +1044,595 @@ private lemma condexp_pair_factorization_MET
   -- Extract bounds early so they're available throughout the entire h_tower proof
   -- obtain ⟨Cf, hCf⟩ := hf_bd
   -/
+    have h_cesaro_ce : ∀ n, μ[A n | m] =ᵐ[μ] μ[(fun ω => g (ω 0)) | m] := by
+      intro n
+      -- First, establish integrability of g(ω 0)
+      have hg0_int : Integrable (fun ω => g (ω 0)) μ := by
+        constructor
+        · exact (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
+        · have h_bd : ∀ (ω : Ω[α]), |g (ω 0)| ≤ Cg := fun ω => hCg (ω 0)
+          exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
+
+      -- Establish integrability of each g(ω k) term
+      have hgk_int : ∀ k ∈ Finset.range (n + 1), Integrable (fun ω => g (ω k)) μ := by
+        intro k _
+        constructor
+        · exact (hg_meas.comp (measurable_pi_apply k)).aestronglyMeasurable
+        · have h_bd : ∀ (ω : Ω[α]), |g (ω k)| ≤ Cg := fun ω => hCg (ω k)
+          exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
+
+      -- Derive shift invariance for g from condexp_pair_lag_constant with f = 1
+      have hg_bd' : ∃ C, ∀ x, |g x| ≤ C := ⟨Cg, hCg⟩
+      have h_g_shift : ∀ k, μ[fun ω => g (ω (k+1)) | m] =ᵐ[μ] μ[fun ω => g (ω k) | m] := by
+        intro k
+        -- Use condexp_pair_lag_constant with f = constant 1 function
+        have h_const_meas : Measurable (fun (_ : α) => (1 : ℝ)) := measurable_const
+        have h_const_bd : ∃ C, ∀ x : α, |(1 : ℝ)| ≤ C := ⟨1, fun _ => by simp [abs_one]⟩
+        have h_pair := condexp_pair_lag_constant hσ (fun _ => 1) g h_const_meas h_const_bd hg_meas hg_bd' k
+        -- Simplify 1 * g = g
+        simp only [one_mul] at h_pair
+        exact h_pair
+
+      -- Extend to all k by induction
+      have h_g_shift_all : ∀ k, μ[fun ω => g (ω k) | m] =ᵐ[μ] μ[fun ω => g (ω 0) | m] := by
+        intro k
+        induction k with
+        | zero => rfl
+        | succ k IH => exact (h_g_shift k).trans IH
+
+      -- Now prove the main result
+      -- Step 1a: Apply condExp_finset_sum
+      have h_sum_pre : μ[∑ i ∈ Finset.range (n + 1), fun ω => g (ω i) | m] =ᵐ[μ]
+          ∑ i ∈ Finset.range (n + 1), μ[fun ω => g (ω i) | m] :=
+        condExp_finset_sum hgk_int m
+
+      -- Step 1b: Apply shift invariance to sum - all terms become g(ω 0)
+      have h_sum_shift : ∑ i ∈ Finset.range (n + 1), μ[fun ω => g (ω i) | m] =ᵐ[μ]
+          ∑ i ∈ Finset.range (n + 1), μ[fun ω => g (ω 0) | m] := by
+        apply eventuallyEq_sum
+        intro k _
+        exact h_g_shift_all k
+
+      -- Step 1c: The sum becomes (n+1) copies of CE[g(ω₀)|m]
+      have h_const : ∑ i ∈ Finset.range (n + 1), μ[fun ω => g (ω 0) | m] =ᵐ[μ]
+          fun ω => (n + 1 : ℝ) * μ[fun ω => g (ω 0) | m] ω := by
+        apply ae_of_all
+        intro ω
+        simp [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+
+      -- Step 1d: Use definition of A directly and chain results
+      have h_A_unfold : A n = fun ω => (1 / (n + 1 : ℝ)) * ∑ i ∈ Finset.range (n + 1), g (ω i) := rfl
+
+      -- First, rewrite using the definitional equality, then apply ae-equal reasoning
+      have h_first : μ[A n | m] =ᵐ[μ]
+          μ[(1 / (n + 1 : ℝ)) • (∑ i ∈ Finset.range (n + 1), fun ω' => g (ω' i)) | m] := by
+        conv_lhs => rw [h_A_unfold]
+        apply condExp_congr_ae
+        apply ae_of_all
+        intro ω
+        simp only [Pi.smul_apply, smul_eq_mul, Finset.sum_apply]
+
+      calc μ[A n | m]
+        =ᵐ[μ] μ[(1 / (n + 1 : ℝ)) • (∑ i ∈ Finset.range (n + 1), fun ω' => g (ω' i)) | m] :=
+          h_first
+      _ =ᵐ[μ] (1 / (n + 1 : ℝ)) • μ[∑ i ∈ Finset.range (n + 1), fun ω => g (ω i) | m] :=
+          condExp_smul _ _ m
+      _ =ᵐ[μ] μ[fun ω => g (ω 0) | m] := by
+          -- Apply h_sum_pre, h_sum_shift, and h_const
+          have h_chain := h_sum_pre.trans (h_sum_shift.trans h_const)
+          filter_upwards [h_chain] with ω hω
+          simp only [Pi.smul_apply, smul_eq_mul]
+          rw [hω]
+          field_simp
+
+    -- Step 2: CE[f·A_n|m] = CE[f·g(ω₀)|m] for all n (by lag-constancy)
+    have h_product_const : ∀ n, μ[(fun ω => f (ω 0) * A n ω) | m]
+        =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 0)) | m] := by
+      intro n
+
+      -- Key lemma: For all k, CE[f(ω₀)·g(ω k)|m] = CE[f(ω₀)·g(ω₀)|m]
+      have h_lag_const_all : ∀ k, μ[(fun ω => f (ω 0) * g (ω k)) | m]
+          =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 0)) | m] := by
+        intro k
+        -- Prove by induction on k
+        induction k with
+        | zero => rfl
+        | succ k IH =>
+          -- By condexp_pair_lag_constant: CE[f(ω₀)·g(ω(k+1))|m] = CE[f(ω₀)·g(ωk)|m]
+          have h_step : μ[(fun ω => f (ω 0) * g (ω (k+1))) | m]
+              =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω k)) | m] := by
+            -- Reconstruct existentials from extracted bounds
+            exact condexp_pair_lag_constant hσ f g hf_meas ⟨Cf, hCf⟩ hg_meas ⟨Cg, hCg⟩ k
+          -- Transitivity with IH
+          exact h_step.trans IH
+
+      -- Establish integrability of each f·g(ω k) term
+      -- Note: Cf, hCf, Cg, hCg already extracted at h_tower level
+      have hfgk_int : ∀ k ∈ Finset.range (n + 1), Integrable (fun ω => f (ω 0) * g (ω k)) μ := by
+        intro k _
+        constructor
+        · exact ((hf_meas.comp (measurable_pi_apply 0)).mul (hg_meas.comp (measurable_pi_apply k))).aestronglyMeasurable
+        · have h_bd : ∀ (ω : Ω[α]), |f (ω 0) * g (ω k)| ≤ Cf * Cg := by
+            intro ω
+            calc |f (ω 0) * g (ω k)|
+                = |f (ω 0)| * |g (ω k)| := abs_mul _ _
+              _ ≤ Cf * Cg := mul_le_mul (hCf (ω 0)) (hCg (ω k)) (abs_nonneg _) (by linarith [abs_nonneg (f (ω 0)), hCf (ω 0)])
+          exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
+
+      -- Rewrite f·A_n as a sum
+      have h_product_expand : (fun ω => f (ω 0) * A n ω) =
+          (fun ω => (1 / (n + 1 : ℝ)) * (Finset.range (n + 1)).sum (fun k => f (ω 0) * g (ω k))) := by
+        ext ω
+        simp only [A]
+        rw [mul_comm (f (ω 0)), mul_assoc, ← Finset.mul_sum]
+        ring_nf
+
+      -- Step 2a: Apply condExp_finset_sum to the product sum
+      have h_prod_sum : μ[∑ i ∈ Finset.range (n + 1), fun ω => f (ω 0) * g (ω i) | m] =ᵐ[μ]
+          ∑ i ∈ Finset.range (n + 1), μ[fun ω => f (ω 0) * g (ω i) | m] :=
+        condExp_finset_sum hfgk_int m
+
+      -- Step 2b: Apply lag-constancy - all terms become CE[f·g(ω₀)|m]
+      have h_prod_shift : ∑ i ∈ Finset.range (n + 1), μ[fun ω => f (ω 0) * g (ω i) | m] =ᵐ[μ]
+          ∑ i ∈ Finset.range (n + 1), μ[fun ω => f (ω 0) * g (ω 0) | m] := by
+        apply eventuallyEq_sum
+        intro k _
+        exact h_lag_const_all k
+
+      -- Step 2c: The sum becomes (n+1) copies of CE[f·g(ω₀)|m]
+      have h_prod_const : ∑ i ∈ Finset.range (n + 1), μ[fun ω => f (ω 0) * g (ω 0) | m] =ᵐ[μ]
+          fun ω => (n + 1 : ℝ) * μ[fun ω => f (ω 0) * g (ω 0) | m] ω := by
+        apply ae_of_all
+        intro ω
+        simp [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+
+      -- Step 2d: Rewrite using the expansion and combine all steps
+      have h_first : μ[(fun ω => f (ω 0) * A n ω) | m] =ᵐ[μ]
+          μ[(1 / (n + 1 : ℝ)) • (∑ i ∈ Finset.range (n + 1), fun ω' => f (ω' 0) * g (ω' i)) | m] := by
+        rw [h_product_expand]
+        apply condExp_congr_ae
+        apply ae_of_all
+        intro ω
+        simp only [Pi.smul_apply, smul_eq_mul, Finset.sum_apply]
+
+      calc μ[(fun ω => f (ω 0) * A n ω) | m]
+        =ᵐ[μ] μ[(1 / (n + 1 : ℝ)) • (∑ i ∈ Finset.range (n + 1), fun ω' => f (ω' 0) * g (ω' i)) | m] :=
+          h_first
+      _ =ᵐ[μ] (1 / (n + 1 : ℝ)) • μ[∑ i ∈ Finset.range (n + 1), fun ω => f (ω 0) * g (ω i) | m] :=
+          condExp_smul _ _ m
+      _ =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 0)) | m] := by
+          -- Apply h_prod_sum, h_prod_shift, and h_prod_const
+          have h_chain := h_prod_sum.trans (h_prod_shift.trans h_prod_const)
+          filter_upwards [h_chain] with ω hω
+          simp only [Pi.smul_apply, smul_eq_mul]
+          rw [hω]
+          field_simp
+
+    let g₀ : Ω[α] → ℝ := fun ω => g (ω 0)
+    -- Step 3: Interpret the Cesàro averages inside L² via Birkhoff averages.
+    -- Pointwise, the Cesàro average `A n` is exactly the Birkhoff average of `g₀ := g ∘ π₀`
+    -- along the shift.  We record this identity since the right-hand side interacts neatly
+    -- with the Koopman operator acting on `L²`.
+    have hA_eq_birkhoff : ∀ n ω,
+        A n ω = birkhoffAverage ℝ (shift (α := α)) g₀ (n + 1) ω := by
+      intro n ω
+      -- unfold both sides and use the explicit description of iterates of the shift.
+      simp [A, g₀, birkhoffAverage, birkhoffSum, shift_iterate_apply, Finset.mul_sum,
+        Finset.sum_mul, add_comm, add_left_comm, add_assoc, mul_comm, mul_left_comm,
+        mul_assoc]
+    have hg₀_memLp : MemLp g₀ 2 μ :=
+      MemLp.of_bound
+        ((hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable)
+        Cg (ae_of_all μ (fun ω => hCg (ω 0)))
+    let g₀L2 : Lp ℝ 2 μ := hg₀_memLp.toLp g₀
+    have hg₀_ae : g₀L2 =ᵐ[μ] g₀ := MemLp.coeFn_toLp hg₀_memLp
+    -- The iterates of the Koopman operator agree almost everywhere with the pointwise
+    -- iterates of the shift applied to `g₀`.
+    have h_iter : ∀ k : ℕ,
+        ((koopman shift hσ)^[k] g₀L2 : Ω[α] → ℝ)
+          =ᵐ[μ] fun ω => g₀ ((shift^[k]) ω) := by
+      intro k
+      induction k with
+      | zero =>
+          simpa using hg₀_ae
+      | succ k ih =>
+          have h_comp :
+              ((koopman shift hσ)
+                  ((koopman shift hσ)^[k] g₀L2) : Ω[α] → ℝ)
+                =ᵐ[μ] fun ω => ((koopman shift hσ)^[k] g₀L2) (shift ω) := by
+            simpa [koopman] using
+              (MeasureTheory.Lp.coeFn_compMeasurePreserving
+                (μ := μ) (μb := μ)
+                (f := shift (α := α)) (hf := hσ)
+                (g := ((koopman shift hσ)^[k] g₀L2)))
+          have h_shift :
+              (fun ω => ((koopman shift hσ)^[k] g₀L2) (shift ω))
+                =ᵐ[μ] fun ω => g₀ ((shift^[k + 1]) ω) := by
+            have h_q := hσ.quasiMeasurePreserving
+            have := Measure.QuasiMeasurePreserving.ae_eq_comp
+              (μ := μ) (ν := μ) (f := shift (α := α))
+              (g := ((koopman shift hσ)^[k] g₀L2))
+              (g' := fun ω => g₀ ((shift^[k]) ω))
+              h_q ih
+            -- simplify the compositions using the explicit formula for iterates
+            simpa [Function.comp, shift_iterate_apply, Function.iterate_succ] using this
+          exact h_comp.trans h_shift
+    -- Summing over the iterates yields the classical Cesàro sums.
+    have h_sum : ∀ n,
+        (fun ω =>
+            (Finset.range (n + 1)).sum fun k =>
+              ((koopman shift hσ)^[k] g₀L2 : Ω[α] → ℝ) ω)
+          =ᵐ[μ]
+        fun ω =>
+            (Finset.range (n + 1)).sum fun k => g₀ ((shift^[k]) ω) := by
+      intro n
+      apply Finset.eventuallyEq_sum
+      intro k _
+      exact h_iter k
+    let A_L2 : ℕ → Lp ℝ 2 μ :=
+      fun n => birkhoffAverage ℝ (koopman shift hσ) _root_.id (n + 1) g₀L2
+    have hA_L2_tendsto :
+        Tendsto (fun n => A_L2 n) atTop
+          (𝓝 (condexpL2 (μ := μ) g₀L2)) := by
+      have := birkhoffAverage_tendsto_condexp (μ := μ) (α := α) hσ g₀L2
+      have h_add :
+          Tendsto (fun n : ℕ => n + 1) atTop atTop :=
+        tendsto_add_atTop_iff_nat.2 tendsto_id
+      exact this.comp h_add
+
+    -- Having identified `A_L2 n` with the pointwise Cesàro sums, we record the a.e.
+    -- equality explicitly.
+    have hA_L2_ae : ∀ n, (A_L2 n : Ω[α] → ℝ) =ᵐ[μ] A n := by
+      intro n
+      have h_sum_n := h_sum n
+      refine h_sum_n.mono ?_
+      intro ω hω
+      simp [A_L2, birkhoffAverage, birkhoffSum, A, g₀, hω]
+
+    have h_condexpL2_ae :
+        condexpL2 (μ := μ) g₀L2 =ᵐ[μ] μ[g₀ | m] :=
+      hg₀_memLp.condExpL2_ae_eq_condExp
+        (hm := shiftInvariantSigma_le (α := α))
+
+    -- The L² convergence in `Lp` automatically yields convergence of the norms.
+    have hA_L2_norm :
+        Tendsto (fun n => ‖A_L2 n - condexpL2 (μ := μ) g₀L2‖) atTop (𝓝 0) := by
+      have h_sub := hA_L2_tendsto.sub tendsto_const_nhds
+      simpa using (tendsto_iff_norm_tendsto_zero.1 h_sub)
+
+    -- TODO: Use `hA_L2_norm`, together with `hA_L2_ae` and `h_condexpL2_ae`, to transfer the
+    -- convergence to the concrete averages `A n` and derive the desired L¹ limit.
+    -- The comparison above shows that `A_L2 n` realises the same pointwise averages as `A n`.
+    have hA_L2_ae : ∀ n,
+        (A_L2 n : Ω[α] → ℝ) =ᵐ[μ] A n := by
+      intro n
+      have h_avg :
+          (A_L2 n : Ω[α] → ℝ)
+            =ᵐ[μ]
+          fun ω => (1 / (n + 1 : ℝ)) *
+              (Finset.range (n + 1)).sum fun k => g₀ ((shift^[k]) ω) := by
+        refine (h_sum.mono ?_)
+        intro ω hω
+        simp [A_L2, birkhoffAverage, birkhoffSum, hω]
+      refine h_avg.trans ?_
+      -- Convert back to the original Cesàro expression using the definition of `A`.
+      refine (ae_of_all μ ?_)
+      intro ω
+      simp [A, g₀, shift_iterate_apply, Finset.mul_sum, Finset.sum_mul,
+        add_comm, add_left_comm, add_assoc, mul_comm, mul_left_comm, mul_assoc]
+
+    -- Step 4: f·A_n → f·CE[g(ω₀)|m] in L¹ (by dominated convergence)
+    -- Note: Cf, hCf, Cg, hCg already extracted at h_tower level
+    -- TODO: once the previous step yields the desired L¹ convergence for `A n`, replace
+    -- the dominated-convergence proof below by the short L¹ estimate described in the
+    -- comments (using `‖f·A_n - f·Y‖₁ ≤ Cf · ‖A_n - Y‖₁`).
+    have h_product_convergence :
+        Tendsto (fun n => ∫ ω, |f (ω 0) * A n ω - f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω| ∂μ)
+                atTop (𝓝 0) := by
+      /-
+      **PROOF STRATEGY**:
+
+      By step 3: A_n(ω) → CE[g(ω₀)|m](ω) ae
+
+      Therefore: f(ω₀)·A_n(ω) → f(ω₀)·CE[g(ω₀)|m](ω) ae (by continuity of multiplication)
+
+      To apply dominated convergence theorem:
+      1. Pointwise convergence: ✓ (from h_met_convergence + continuity)
+      2. Dominating function: |f(ω₀)·A_n(ω) - f(ω₀)·CE[g(ω₀)|m](ω)|
+                              = |f(ω₀)|·|A_n(ω) - CE[g(ω₀)|m](ω)|
+                              ≤ Cf·(|A_n(ω)| + |CE[g(ω₀)|m](ω)|)
+                              ≤ Cf·(Cg + Cg) = 2·Cf·Cg
+         where we use:
+         - |A_n(ω)| ≤ Cg (Cesàro average of bounded sequence is bounded)
+         - |CE[g(ω₀)|m](ω)| ≤ Cg (CE preserves bounds)
+      3. Integrability: 2·Cf·Cg is a constant, hence integrable on probability space
+
+      Apply: MeasureTheory.tendsto_integral_of_dominated_convergence
+      Conclude: ∫|f(ω₀)·A_n(ω) - f(ω₀)·CE[g(ω₀)|m](ω)| dμ → 0
+
+      Technical requirements:
+      - Prove |A_n| ≤ Cg from boundedness of g
+      - Prove |CE[g(ω₀)|m]| ≤ Cg (condExp preserves essential bounds)
+      - Set up DCT with explicit dominating function
+      -/
+
+      -- Set up notation
+      let F : Ω[α] → ℝ := fun ω => f (ω 0)
+      let Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | m] ω
+
+      -- Step 4a: Pointwise ae convergence of product
+      have h_pointwise : ∀ᵐ ω ∂μ, Tendsto (fun n => F ω * A n ω - F ω * Y ω) atTop (𝓝 0) := by
+        filter_upwards [h_met_convergence] with ω hω
+        -- A_n ω → Y ω, so F ω * A_n ω → F ω * Y ω
+        have h_prod : Tendsto (fun n => F ω * A n ω) atTop (𝓝 (F ω * Y ω)) := by
+          exact Tendsto.const_mul (F ω) hω
+        -- Therefore F ω * A_n ω - F ω * Y ω → 0
+        have h_sub : Tendsto (fun n => F ω * A n ω - (F ω * Y ω)) atTop (𝓝 (F ω * Y ω - F ω * Y ω)) := by
+          exact Tendsto.sub h_prod (tendsto_const_nhds (x := F ω * Y ω))
+        simpa using h_sub
+
+      -- Step 4b: Dominating function bound (for later use)
+      have h_bound_ae : ∀ᵐ ω ∂μ, ∀ n, |F ω * A n ω - F ω * Y ω| ≤ 2 * Cf * Cg := by
+        -- Get ae bound on Y from condExp
+        have hg0_int : Integrable (fun ω => g (ω 0)) μ := by
+          constructor
+          · exact (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
+          · have h_bd : ∀ (ω : Ω[α]), |g (ω 0)| ≤ Cg := fun ω => hCg (ω 0)
+            exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
+        have h_Y_bd_ae : ∀ᵐ ω ∂μ, |Y ω| ≤ Cg := by
+          exact @condExp_abs_le_of_abs_le (Ω[α]) _ μ _ _ m le_rfl (fun ω => g (ω 0)) hg0_int Cg (fun x => hCg (x 0))
+
+        -- Combine with A_n bound
+        filter_upwards [h_Y_bd_ae] with ω h_Y_bd
+        intro n
+
+        -- Prove A_n bound pointwise
+        have h_An_bd : |A n ω| ≤ Cg := by
+          have h_pos : (0 : ℝ) < n + 1 := by positivity
+          calc |A n ω|
+              = |(1 / (n + 1 : ℝ)) * Finset.sum (Finset.range (n + 1)) (fun k => g (ω k))| := rfl
+            _ = (1 / (n + 1 : ℝ)) * |Finset.sum (Finset.range (n + 1)) (fun k => g (ω k))| := by
+                rw [abs_mul, abs_of_nonneg (by positivity : 0 ≤ 1 / (n + 1 : ℝ))]
+            _ ≤ (1 / (n + 1 : ℝ)) * Finset.sum (Finset.range (n + 1)) (fun k => |g (ω k)|) := by
+                gcongr
+                exact Finset.abs_sum_le_sum_abs _ _
+            _ ≤ (1 / (n + 1 : ℝ)) * Finset.sum (Finset.range (n + 1)) (fun _ => Cg) := by
+                gcongr with k _
+                exact hCg (ω k)
+            _ = (1 / (n + 1 : ℝ)) * ((n + 1) * Cg) := by
+                simp [Finset.sum_const, Finset.card_range]
+            _ = Cg := by field_simp
+
+        -- Main calc: Bound the product
+        calc |F ω * A n ω - F ω * Y ω|
+            = |F ω * (A n ω - Y ω)| := by ring_nf
+          _ = |F ω| * |A n ω - Y ω| := abs_mul _ _
+          _ ≤ Cf * |A n ω - Y ω| := by
+              gcongr
+              exact hCf (ω 0)
+          _ ≤ Cf * (|A n ω| + |Y ω|) := by
+              apply mul_le_mul_of_nonneg_left (abs_sub _ _)
+              exact le_trans (abs_nonneg _) (hCf (ω 0))
+          _ ≤ Cf * (Cg + Cg) := by
+              apply mul_le_mul_of_nonneg_left _ (le_trans (abs_nonneg _) (hCf (ω 0)))
+              exact add_le_add h_An_bd h_Y_bd
+          _ = 2 * Cf * Cg := by ring
+
+      -- Step 4c: Apply DCT
+      have h_conv_integral : Tendsto (fun n => ∫ ω, (F ω * A n ω - F ω * Y ω) ∂μ) atTop (𝓝 (∫ ω, 0 ∂μ)) := by
+        apply tendsto_integral_of_dominated_convergence (fun _ => 2 * Cf * Cg)
+        · -- Measurability
+          intro n
+          sorry -- TODO: AE strongly measurable for product differences
+        · -- Bound is integrable
+          exact integrable_const (2 * Cf * Cg)
+        · -- Bounded by dominating function
+          intro n
+          filter_upwards [h_bound_ae] with ω hω
+          simp [Real.norm_eq_abs]
+          exact hω n
+        · -- Pointwise convergence
+          exact h_pointwise
+
+      -- Step 4d: Simplify to convergence to 0
+      have h_conv_to_zero : Tendsto (fun n => ∫ ω, (F ω * A n ω - F ω * Y ω) ∂μ) atTop (𝓝 0) := by
+        simpa using h_conv_integral
+
+      -- Step 4e: Convert to L¹ norm convergence
+      -- We have ∫ (F ω * A_n ω - F ω * Y ω) dμ → 0
+      -- Goal: ∫ |F ω * A_n ω - F ω * Y ω| dμ → 0
+      sorry -- TODO: Use dominated convergence for absolute values or other L¹ convergence lemma
+
+    -- Step 5: CE[f·A_n|m] → CE[f·CE[g(ω₀)|m]|m] in L¹ (by L¹-Lipschitz of CE)
+    -- We prove L¹ convergence only; no need for ae convergence extraction!
+    have h_ce_L1 : Tendsto (fun n => ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | m] ω
+                                          - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | m] ω') | m] ω| ∂μ)
+                            atTop (𝓝 0) := by
+      /-
+      **PROOF STRATEGY**:
+
+      By step 4: ∫|f(ω₀)·A_n(ω) - f(ω₀)·CE[g(ω₀)|m](ω)| dμ → 0 (L¹ convergence)
+
+      Key property: **Conditional expectation is L¹-Lipschitz continuous**
+        ‖CE[X|m] - CE[Y|m]‖₁ ≤ ‖X - Y‖₁
+
+      This follows from Jensen's inequality (already proved as condExp_L1_lipschitz).
+
+      Applying this:
+      ∫|CE[f(ω₀)·A_n(ω)|m] - CE[f(ω₀)·CE[g(ω₀)|m](ω)|m]| dμ
+        ≤ ∫|f(ω₀)·A_n(ω) - f(ω₀)·CE[g(ω₀)|m](ω)| dμ → 0
+
+      Therefore: CE[f·A_n|m] → CE[f·CE[g|m]|m] in L¹
+
+      **Key insight**: We don't need ae convergence! Step 6 will combine this L¹ convergence
+      with the constancy from step 2 to conclude the functions are ae equal.
+      -/
+
+      -- Set up notation for clarity
+      -- Note: Cf, hCf, Cg, hCg are already in scope from h_tower level
+      set X := fun n : ℕ => fun ω => f (ω 0) * A n ω
+      set Y := fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω
+      set CE_X := fun n => μ[X n | m]
+      set CE_Y := μ[Y | m]
+
+      -- Step 5a: From step 4, we have L¹ convergence of the inputs
+      have h_l1_input : Tendsto (fun n => ∫ ω, |X n ω - Y ω| ∂μ) atTop (𝓝 0) := by
+        show Tendsto (fun n => ∫ ω, |f (ω 0) * A n ω - f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω| ∂μ) atTop (𝓝 0)
+        exact h_product_convergence
+
+      -- Step 5b: Establish integrability
+      have hX_int : ∀ n, Integrable (X n) μ := by
+        intro n
+        -- X n = f(ω 0) * A n ω where A n is Cesàro average of g
+        -- Show A n is bounded: |A n ω| ≤ Cg
+
+        have hA_bd : ∃ C, ∀ᵐ ω ∂μ, |A n ω| ≤ C := by
+          use Cg
+          apply ae_of_all
+          intro ω
+          -- A n ω = (1/(n+1)) * Σ g(ω k), so |A n ω| ≤ (1/(n+1)) * Σ |g(ω k)| ≤ (1/(n+1)) * (n+1) * Cg = Cg
+          have h_pos : (0 : ℝ) < n + 1 := by positivity
+          calc |A n ω|
+              = |(1 / (n + 1 : ℝ)) * Finset.sum (Finset.range (n + 1)) (fun k => g (ω k))| := rfl
+            _ = (1 / (n + 1 : ℝ)) * |Finset.sum (Finset.range (n + 1)) (fun k => g (ω k))| := by
+                rw [abs_mul, abs_of_nonneg (by positivity : 0 ≤ 1 / (n + 1 : ℝ))]
+            _ ≤ (1 / (n + 1 : ℝ)) * Finset.sum (Finset.range (n + 1)) (fun k => |g (ω k)|) := by
+                gcongr
+                exact Finset.abs_sum_le_sum_abs _ _
+            _ ≤ (1 / (n + 1 : ℝ)) * Finset.sum (Finset.range (n + 1)) (fun _ => Cg) := by
+                gcongr with k _
+                exact hCg (ω k)
+            _ = (1 / (n + 1 : ℝ)) * ((n + 1) * Cg) := by
+                simp [Finset.sum_const, Finset.card_range]
+            _ = Cg := by field_simp
+
+        -- A n is integrable (bounded function on probability space)
+        have hA_int : Integrable (A n) μ := by
+          obtain ⟨C, hC⟩ := hA_bd
+          constructor
+          · sorry -- TODO: measurability of Cesàro average
+          · exact HasFiniteIntegral.of_bounded hC
+
+        -- Apply integrable_mul_of_ae_bdd_left: f(ω 0) is bounded and measurable, A n is integrable
+        exact integrable_mul_of_ae_bdd_left
+          (hf_meas.comp (measurable_pi_apply 0))
+          ⟨Cf, ae_of_all μ (fun w => hCf (w 0))⟩
+          hA_int
+
+      have hY_int : Integrable Y μ := by
+        -- Y = f(ω 0) * CE[g(ω 0)|m]
+        -- CE[g(ω 0)|m] is bounded by Cg
+        have hCE_bd : ∃ C, ∀ᵐ ω ∂μ, |μ[(fun ω => g (ω 0)) | m] ω| ≤ C := by
+          use Cg
+          -- Use condExp_abs_le_of_abs_le
+          have hg0_int : Integrable (fun ω => g (ω 0)) μ := by
+            constructor
+            · exact (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
+            · have h_bd : ∀ (ω : Ω[α]), |g (ω 0)| ≤ Cg := fun ω => hCg (ω 0)
+              exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
+          exact condExp_abs_le_of_abs_le le_rfl hg0_int (fun x => hCg (x 0))
+
+        -- CE[g(ω 0)|m] is integrable (it's a conditional expectation)
+        have hCE_int : Integrable (μ[(fun ω => g (ω 0)) | m]) μ := by
+          sorry -- TODO: conditional expectation of integrable is integrable
+
+        -- Apply integrable_mul_of_ae_bdd_left: f(ω 0) bounded × CE integrable
+        exact integrable_mul_of_ae_bdd_left
+          (hf_meas.comp (measurable_pi_apply 0))
+          ⟨Cf, ae_of_all μ (fun v => hCf (v 0))⟩
+          hCE_int
+
+      -- Step 5c: Apply L¹-Lipschitz property
+      have h_lipschitz : ∀ n, ∫ ω, |CE_X n ω - CE_Y ω| ∂μ ≤ ∫ ω, |X n ω - Y ω| ∂μ := by
+        intro n
+        exact condExp_L1_lipschitz (hX_int n) hY_int
+
+      -- Step 5d: Conclude L¹ convergence via squeeze theorem
+      apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_l1_input
+      · intro n
+        exact integral_nonneg fun ω => abs_nonneg _
+      · intro n
+        exact h_lipschitz n
+
+    -- Step 6: Combine L¹ convergence with constancy
+    -- Since CE[f·A_n|m] = CE[f·g|m] for all n (step 2),
+    -- and CE[f·A_n|m] → CE[f·CE[g|m]|m] in L¹ (step 5),
+    -- we have ∫|CE[f·g|m] - CE[f·CE[g|m]|m]| = 0, hence they are ae equal
+      -- TODO: after expressing the previous steps purely in L², this final stage should
+      -- argue directly with L¹ norms (constant sequence + convergence ⇒ 0).  The current
+      -- placeholder will be replaced once the earlier lemmas are filled in.
+      have h_const_limit : μ[(fun ω => f (ω 0) * g (ω 0)) | m]
+        =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] := by
+      /-
+      **THE KEY INSIGHT**: Work entirely in L¹ - no pointwise limits needed!
+
+      1. CONSTANT: CE[f·A_n|m] = CE[f·g|m] for all n (step 2: h_product_const)
+      2. CONVERGENT: ∫|CE[f·A_n|m] - CE[f·CE[g|m]|m]| → 0 (step 5: h_ce_L1)
+
+      Therefore: ∫|CE[f·g|m] - CE[f·CE[g|m]|m]| = lim_n ∫|CE[f·A_n|m] - CE[f·CE[g|m]|m]| = 0
+
+      Since L¹ norm is 0, the functions are ae equal.
+      -/
+
+      -- Use step 2 to rewrite the L¹ distance as a constant
+      have h_constL1 : ∀ n,
+        ∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
+              - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω| ∂μ
+        = ∫ ω, |μ[(fun ω => f (ω 0) * A n ω) | m] ω
+              - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω| ∂μ := by
+        intro n
+        -- Use h_product_const: CE[f·A_n|m] = CE[f·g|m] ae
+        refine integral_congr_ae ?_
+        filter_upwards [h_product_const n] with ω hω
+        -- Rewrite the first term using ae equality: CE[f·g|m] = CE[f·A_n|m]
+        rw [← hω]
+
+      -- The RHS converges to 0 by step 5
+      have h_limit : Tendsto (fun (n : ℕ) =>
+        ∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
+              - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω| ∂μ)
+        (atTop : Filter ℕ) (𝓝 (0 : ℝ)) := by
+        -- Rewrite using h_constL1 and apply h_ce_L1
+        apply Tendsto.congr
+        · intro n
+          exact (h_constL1 n).symm
+        · exact h_ce_L1
+
+      -- L¹ norm = 0 implies ae equality
+      -- By h_constL1: the integral is constant for all n
+      -- By h_limit: this constant sequence tends to 0
+      -- Therefore: the constant IS 0, so the functions are ae equal
+
+      -- Part 1: Constant sequence tending to 0 → value is 0
+      have h_const_is_zero : ∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
+            - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω| ∂μ = 0 := by
+        -- The sequence is constant (by h_constL1) and tends to 0 (by h_limit)
+        have h_const : Tendsto (fun _ : ℕ => ∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
+              - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω| ∂μ)
+              atTop (𝓝 (∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
+              - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω| ∂μ)) :=
+          tendsto_const_nhds
+        exact tendsto_nhds_unique h_const h_limit
+
+      -- Part 2: L¹ norm = 0 → ae equal
+      -- If ∫ |X - Y| = 0 and X - Y is integrable, then X - Y = 0 ae, hence X =ᵐ Y
+      set X := μ[(fun ω => f (ω 0) * g (ω 0)) | m]
+      set Y := μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m]
+
+      -- TODO: obtain this integrability directly from the L¹ convergence statements once
+      -- the earlier steps are refactored.
+      have h_integrable_diff : Integrable (X - Y) μ := by
+        sorry -- TODO: Integrability of difference of conditional expectations
+
+      have h_abs_zero : (fun ω => |X ω - Y ω|) =ᵐ[μ] 0 := by
+        apply (integral_eq_zero_iff_of_nonneg_ae (ae_of_all μ (fun _ => abs_nonneg _)) h_integrable_diff.norm).mp
+        simp only [Pi.sub_apply, Real.norm_eq_abs]
+        exact h_const_is_zero
+
+      filter_upwards [h_abs_zero] with ω hω
+      exact sub_eq_zero.mp (abs_eq_zero.mp hω)
+
+    exact h_const_limit
 
   -- Final: Combine all the step equalities in the calc chain
   calc μ[(fun ω => f (ω 0) * g (ω 1)) | m]
