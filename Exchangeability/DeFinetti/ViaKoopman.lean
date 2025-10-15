@@ -1162,11 +1162,17 @@ private theorem h_tower_of_lagConst
           -- hInd: sum over s = s.card * Y
           -- hj': g(ω j) term = Y  
           -- Need: sum over (insert j s) = (insert j s).card * Y
-          refine (hInd.add hj').trans ?_
-          refine ae_of_all μ (fun ω => by
-            rw [Finset.sum_insert hj, Finset.card_insert_of_not_mem hj]
+          have h_eq : (fun ω => ∑ j ∈ insert j s, μ[fun ω => g (ω j)|m] ω) 
+                    = ((fun ω => ∑ j ∈ s, μ[fun ω => g (ω j)|m] ω) + (fun ω => μ[fun ω => g (ω j)|m] ω)) := by
+            ext ω; simp [Finset.sum_insert hj, add_comm]
+          rw [h_eq]
+          trans
+          · exact hInd.add hj'
+          · refine ae_of_all μ (fun ω => ?_)
+            show ((fun ω => ↑s.card * Y ω) + fun ω => Y ω) ω = ↑(insert j s).card * Y ω
+            rw [Finset.card_insert_of_notMem hj]
             simp only [Nat.cast_add, Nat.cast_one]
-            ring)
+            ring
       simpa [Finset.card_range] using h' (Finset.range (n + 1))
 
     -- Assemble: push → sum → collapse → cancel (1/(n+1))·(n+1)
@@ -1183,7 +1189,7 @@ private theorem h_tower_of_lagConst
             (Finset.range (n + 1)).sum
               (fun j => μ[(fun ω => g (ω j)) | m] ω)) := by
       refine h_sum.mono ?_
-      intro ω hω; simpa [hω]
+      intro ω hω; simp [hω]
     refine h2.trans ?_
     have h3 :
         (fun ω =>
@@ -1195,7 +1201,7 @@ private theorem h_tower_of_lagConst
           (1 / (n + 1 : ℝ)) *
             ((n + 1 : ℝ) * Y ω)) := by
       refine h_sum_const.mono ?_
-      intro ω hω; simpa [hω]
+      intro ω hω; simp [hω]
     refine h3.trans ?_
     exact ae_of_all μ (fun ω => by
       simp [Y]
@@ -1304,7 +1310,7 @@ private theorem h_tower_of_lagConst
             (Finset.range (n + 1)).sum
               (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | m] ω)) := by
       refine h_sum.mono ?_
-      intro ω hω; simpa [hω]
+      intro ω hω; simp [hω]
     refine h2.trans ?_
     have h3 :
         (fun ω =>
@@ -1317,7 +1323,7 @@ private theorem h_tower_of_lagConst
             ((n + 1 : ℝ) *
               μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω)) := by
       refine h_sum_const.mono ?_
-      intro ω hω; simpa [hω]
+      intro ω hω; simp [hω]
     refine h3.trans ?_
     exact ae_of_all μ (fun ω => by
       field_simp [one_div, hne, mul_comm, mul_left_comm, mul_assoc])
