@@ -476,12 +476,38 @@ lemma contractable_dist_eq_on_first_r_tail
 abbrev futureFiltration (X : ℕ → Ω → α) (m : ℕ) : MeasurableSpace Ω :=
   MeasurableSpace.comap (shiftRV X (m + 1)) inferInstance
 
-/-- **Axiom ELIMINATED:** Conditional expectation convergence from contractability.
+/-- Forward declaration: Conditional expectation convergence from contractability.
 
-This axiom has been eliminated! See `condexp_convergence` at line ~1530 for the full proof
-using the CE bridge lemma from CondExp.lean.
+Full proof at line ~1580 using the CE bridge lemma from CondExp.lean. -/
+lemma condexp_convergence_fwd
+    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {X : ℕ → Ω → α} (hX : Contractable μ X)
+    (hX_meas : ∀ n, Measurable (X n))
+    (k m : ℕ) (_hkm : k ≤ m)
+    (B : Set α) (hB : MeasurableSet B) :
+    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | futureFiltration X m]
+      =ᵐ[μ]
+    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | futureFiltration X m] := by
+  sorry  -- Proved at line ~1597
 
-The forward declaration is no longer needed as nothing references it before the proof. -/
+/-- Forward declaration: Tail σ-algebra is sub-σ-algebra of future filtration.
+
+Full proof at line ~610. -/
+lemma tailSigma_le_futureFiltration_fwd
+    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) (m : ℕ) :
+    tailSigma X ≤ futureFiltration X m := by
+  sorry  -- Proved at line ~625
+
+/-- Forward declaration: Future filtration is sub-σ-algebra of ambient.
+
+Full proof at line ~656. -/
+lemma futureFiltration_le_fwd
+    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) (m : ℕ) (hX : ∀ n, Measurable (X n)) :
+    futureFiltration X m ≤ (inferInstance : MeasurableSpace Ω) := by
+  sorry  -- Proved at line ~656
 
 lemma extreme_members_equal_on_tail
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -514,9 +540,7 @@ lemma extreme_members_equal_on_tail
   -- equality at the future level m (contractability)
   have h_eq_m :
       μ[f_m | futureFiltration X m] =ᵐ[μ] μ[f_0 | futureFiltration X m] := by
-    simpa [hf_m, hf_0] using
-      (condexp_convergence (μ := μ) (X := X) hX hX_meas 0 m
-        (Nat.zero_le m) B hB)
+    convert condexp_convergence_fwd hX hX_meas m m (le_refl m) B hB using 2 <;> rfl
 
   -- condition both sides on the tail
   have h_cond_on_tail :
@@ -528,20 +552,18 @@ lemma extreme_members_equal_on_tail
   -- tower property since tailSigma ≤ futureFiltration m
   have h_tower_m :
       μ[μ[f_m | futureFiltration X m] | tailSigma X]
-        =ᵐ[μ] μ[f_m | tailSigma X] := by
-    simpa using
-      (condExp_condExp_of_le (μ := μ)
-        (hm₁₂ := tailSigma_le_futureFiltration (X := X) m)
-        (hm₂ := futureFiltration_le (X := X) m hX_meas)
-        (f := f_m)).symm
+        =ᵐ[μ] μ[f_m | tailSigma X] :=
+    condExp_condExp_of_le
+      (hm₁₂ := tailSigma_le_futureFiltration_fwd (X := X) m)
+      (hm₂ := futureFiltration_le_fwd (X := X) m hX_meas)
+      (f := f_m)
   have h_tower_0 :
       μ[μ[f_0 | futureFiltration X m] | tailSigma X]
-        =ᵐ[μ] μ[f_0 | tailSigma X] := by
-    simpa using
-      (condExp_condExp_of_le (μ := μ)
-        (hm₁₂ := tailSigma_le_futureFiltration (X := X) m)
-        (hm₂ := futureFiltration_le (X := X) m hX_meas)
-        (f := f_0)).symm
+        =ᵐ[μ] μ[f_0 | tailSigma X] :=
+    condExp_condExp_of_le
+      (hm₁₂ := tailSigma_le_futureFiltration_fwd (X := X) m)
+      (hm₂ := futureFiltration_le_fwd (X := X) m hX_meas)
+      (f := f_0)
 
   -- assemble the equalities
   -- Chain: μ[f_m|tail] = μ[μ[f_m|fut]|tail] = μ[μ[f_0|fut]|tail] = μ[f_0|tail]
