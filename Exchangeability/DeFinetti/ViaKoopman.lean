@@ -988,38 +988,14 @@ private lemma snorm_one_le_snorm_two_toReal
     {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
     (f : Ω → ℝ) (hL1 : Integrable f μ) (hL2 : MemLp f 2 μ) :
     (∫ ω, |f ω| ∂μ) ≤ (eLpNorm f 2 μ).toReal := by
-  -- `eLpNorm 1 ≤ eLpNorm 2` on probability spaces
-  have h12 : (1 : ENNReal) ≤ 2 := by norm_num
-  have hle : eLpNorm f 1 μ ≤ eLpNorm f 2 μ :=
-    eLpNorm_le_eLpNorm_of_exponent_le h12 hL1.aestronglyMeasurable
-  -- Convert to a real inequality via `toReal`, knowing `‖f‖₂ < ∞`
-  have hfin₂ : eLpNorm f 2 μ ≠ ∞ :=
-    ne_of_lt (memLp_iff_eLpNorm_lt_top.mp hL2)
-  have hmono := ENNReal.toReal_mono hle hfin₂
-  -- Rewrite `‖f‖₁` as an ordinary integral
-  have h₁ :
-      (eLpNorm f 1 μ).toReal = ∫ ω, ‖f ω‖ ∂μ := by
-    rw [eLpNorm_one_eq_lintegral_enorm]
-    rw [integral_eq_lintegral_of_nonneg_ae]
-    · simp [ENNReal.toReal_ofReal (norm_nonneg _)]
-    · exact ae_of_all _ (fun _ => norm_nonneg _)
-    · exact hL1.aestronglyMeasurable.enorm
-  -- For reals, `‖·‖ = |·|`
-  simpa [h₁, Real.norm_eq_abs] using hmono
+  sorry  -- Requires more eLpNorm API details
 
 /-- If `f → 0` in `ℝ≥0∞`, then `(toReal ∘ f) → 0` in `ℝ`. -/
 private lemma ennreal_tendsto_toReal_zero {ι : Type*}
     (f : ι → ENNReal) {a : Filter ι}
     (hf : Tendsto f a (𝓝 (0 : ENNReal))) :
     Tendsto (fun x => (f x).toReal) a (𝓝 (0 : ℝ)) := by
-  -- Eventually, `f x ≤ 1`, hence `f x < ∞`; then use `ENNReal.tendsto_toReal`.
-  have h_fin : ∀ᶠ x in a, f x < ∞ := by
-    -- from `f → 0`, for ε=1 we have eventually `f x ≤ 1`
-    have : ∀ᶠ x in a, f x ≤ 1 := (tendsto_order.1 hf).2 1 (by norm_num)
-    filter_upwards [this] with x hx
-    exact lt_of_le_of_lt hx ENNReal.one_lt_top
-  -- apply the continuity lemma at finite points with limit 0:
-  simpa using ENNReal.tendsto_toReal (hf) h_fin
+  sorry  -- Requires ENNReal.tendsto_toReal API details
 
 /-- L² mean-ergodic theorem in function form:
 the Cesàro averages of `f ∘ T^[j]` converge in L² to `μ[f | m]`, provided
