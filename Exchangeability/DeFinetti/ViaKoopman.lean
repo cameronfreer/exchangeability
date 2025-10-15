@@ -1331,8 +1331,7 @@ private theorem h_tower_of_lagConst
               atTop (𝓝 0) := by
     set Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | m] ω
     -- Step 1: L² statement from Birkhoff lemma (function-level version)
-    have hL2 :
-        Tendsto (fun n => snorm (fun ω => A n ω - Y ω) 2 μ) atTop (𝓝 0) := by
+    have hL2 : Tendsto (fun n => snorm (fun ω => A n ω - Y ω) 2 μ) atTop (𝓝 0) := by
       -- Mean Ergodic Theorem: Cesàro averages converge to CE in L²
       have hg_0_int : Integrable (fun ω => g (ω 0)) μ := by
         obtain ⟨Cg, hCg⟩ := hg_bd
@@ -1343,6 +1342,8 @@ private theorem h_tower_of_lagConst
           (shiftInvariantSigma_le (α := α))
           (fun s hs => (mem_shiftInvariantSigma_iff (s := s)).mp hs |>.2)
           (fun ω => g (ω 0)) hg_0_int
+    -- Explicit type: hL2 converges to 0 in ℝ≥0∞
+    have hL2' : Tendsto (fun n => snorm (fun ω => A n ω - Y ω) 2 μ) atTop (𝓝 (0 : ℝ≥0∞)) := hL2
 
     -- Step 2: On a probability space, ‖·‖₁ ≤ ‖·‖₂
     have h_upper : ∀ n,
@@ -1364,7 +1365,7 @@ private theorem h_tower_of_lagConst
         Tendsto (fun n => (snorm (fun ω => A n ω - Y ω) 2 μ).toReal)
                 atTop (𝓝 0) := by
       -- ENNReal.toReal is continuous at 0
-      exact ennreal_tendsto_toReal_zero (fun n => snorm (fun ω => A n ω - Y ω) 2 μ) hL2
+      exact ennreal_tendsto_toReal_zero (fun n => snorm (fun ω => A n ω - Y ω) 2 μ) hL2'
 
     -- Squeeze: 0 ≤ L¹ ≤ (‖·‖₂).toReal → 0
     exact squeeze_zero' h_nonneg h_upper h_toReal
