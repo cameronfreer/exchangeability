@@ -982,13 +982,30 @@ private lemma integrable_of_bounded_measurable
     simpa [Real.norm_eq_abs] using hf_bd ω
   exact HasFiniteIntegral.of_bounded h_bd
 
-/-- On probability spaces, L¹ norm ≤ L² norm (Hölder inequality).
-**Mathematical content**: ‖f‖₁ ≤ ‖f‖₂ when μ is a probability measure
-**Mathlib source**: Should be derivable from Hölder inequality after finding correct snorm API. -/
-private axiom snorm_one_le_snorm_two_toReal
+/-- On a probability space, `‖f‖₁ ≤ ‖f‖₂`.  Version with real integral on the left.
+**Proof sketch**: Uses `snorm_le_snorm_of_exponent_le` for 1 ≤ 2 on probability spaces,
+then applies `ENNReal.toReal_mono` and rewrites `snorm 1` as the L¹ integral.
+-/
+private lemma snorm_one_le_snorm_two_toReal
     {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (f : Ω → ℝ) :
-    (∫ ω, |f ω| ∂μ) ≤ (snorm f 2 μ).toReal
+    (f : Ω → ℝ) (hf : Integrable f μ) :
+    (∫ ω, |f ω| ∂μ) ≤ (snorm f 2 μ).toReal := by
+  /-
+  Step 1: `snorm 1 ≤ snorm 2` in ℝ≥0∞
+  have h12 : MeasureTheory.snorm f 1 μ ≤ MeasureTheory.snorm f 2 μ := by
+    have hle : (1 : ℝ≥0∞) ≤ 2 := by norm_num
+    simpa using MeasureTheory.snorm_le_snorm_of_exponent_le (μ := μ) (f := f) hle
+  
+  Step 2: take `toReal` and rewrite `snorm 1` as the L¹ integral
+  have hreal : (MeasureTheory.snorm f 1 μ).toReal = ∫ ω, |f ω| ∂μ := by
+    simpa [MeasureTheory.snorm, ENNReal.one_toReal, hf.norm.integral_coe_fn]
+      using MeasureTheory.snorm_one_toReal_eq_integral_norm (μ := μ) (f := f) hf
+  
+  have hmono := ENNReal.toReal_mono h12
+  simpa [hreal] using hmono
+  -/
+  -- Temporarily using admit until our snorm axiom is replaced with mathlib's full API
+  admit
 
 /-- ENNReal.toReal is continuous at 0. -/
 private lemma ennreal_tendsto_toReal_zero
@@ -1325,7 +1342,10 @@ private theorem h_tower_of_lagConst
           ≤ (snorm (fun ω => A n ω - Y ω) 2 μ).toReal := by
       intro n
       -- On probability spaces: ‖·‖₁ ≤ ‖·‖₂ by Hölder inequality
-      exact snorm_one_le_snorm_two_toReal (fun ω => A n ω - Y ω)
+      -- Need to show integrability of A n - Y
+      have hint : Integrable (fun ω => A n ω - Y ω) μ := by
+        sorry  -- Both A n and Y are bounded and integrable
+      exact snorm_one_le_snorm_two_toReal (fun ω => A n ω - Y ω) hint
 
     -- Nonnegativity of the LHS integrals
     have h_nonneg : ∀ n, 0 ≤ ∫ ω, |A n ω - Y ω| ∂μ := by
