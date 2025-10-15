@@ -21,53 +21,38 @@ de Finetti proofs.
 
 ## Main Components
 
-### 1. Conditional Probability
-- `condProb`: Conditional probability P[A | 𝒢] for events
-- Properties relating conditional probability to conditional expectation
+### 1. Conditional Independence
+- `condIndep_of_indicator_condexp_eq`: Establish conditional independence from projection property
+- `condExp_indicator_mul_indicator_of_condIndep`: Product formula for indicators
+- `condexp_indicator_inter_bridge`: Bridge lemma managing typeclass instances
 
-### 2. Conditional Independence (Doob's Characterization)
-- `condIndep_iff_condexp_eq`: Doob's characterization (FMP 6.6)
-  ```
-  𝒻 ⊥⊥_𝒢 ℋ ⟺ P[H | 𝒻 ∨ 𝒢] = P[H | 𝒢] a.s. for all H ∈ ℋ
-  ```
-- Helper lemmas for establishing conditional independence from distributional equalities
+### 2. Distributional Equality ⇒ Conditional Expectation Equality
+- `condexp_indicator_eq_of_pair_law_eq`: Core lemma using uniqueness of conditional expectation
+- `condexp_indicator_eq_of_agree_on_future_rectangles`: Application to exchangeable sequences
 
-### 3. Reverse Martingale Convergence
-- Convergence of conditional expectations with respect to decreasing σ-algebras
-- Applied to tail σ-algebras: σ(θ_n X) ↓ ⋂_n σ(θ_n X)
-
-### 4. Integration with Existing Mathlib
-- Re-exports from `Mathlib.Probability.ConditionalExpectation`
-- Additional lemmas building on mathlib infrastructure
+### 3. Sub-σ-algebra Infrastructure
+- `condExpWith`: Explicit instance management for conditioning on sub-σ-algebras
+- `isFiniteMeasure_trim`, `sigmaFinite_trim`: Measure trimming instances
+- `AgreeOnFutureRectangles`: Structure for distributional agreement
 
 ## Implementation Status
 
-This file integrates mathlib's probability theory infrastructure and provides a specialized API:
+This file provides specialized lemmas for conditional independence and conditional expectation
+equality under distributional assumptions, used in the de Finetti theorem proof.
 
-**Implemented using mathlib:**
-- `condProb`: Defined using mathlib's `condExp` notation `μ[f|m]`
-- `CondIndep`: Available as `ProbabilityTheory.CondIndep` from mathlib
-- Documented mathlib's martingale theory (`Martingale`, `Supermartingale`, etc.)
-- Documented key conditional expectation lemmas (`setIntegral_condExp`, `condExp_indicator`, etc.)
+**Key results:**
+- `condIndep_of_indicator_condexp_eq`: Establish conditional independence from projection property
+- `condExp_indicator_mul_indicator_of_condIndep`: Product formula under conditional independence
+- `condexp_indicator_eq_of_pair_law_eq`: Conditional expectations equal when pair laws match
+- `condexp_indicator_eq_of_agree_on_future_rectangles`: Application to sequence-valued tails
 
-**Completed proofs:**
-- `condProb_ae_nonneg_le_one`: Bounds on conditional probability
-  (using `condExp_nonneg`, `condExp_mono`)
-- `condProb_integral_eq`: Averaging property (using `setIntegral_condExp`)
-- `condIndep_of_condProb_eq`: Wrapper for conditional independence
-  (one-liner using Doob's characterization)
+**Supporting infrastructure:**
+- `condExpWith`: Wrapper managing typeclass instances for sub-σ-algebras
+- `isFiniteMeasure_trim`, `sigmaFinite_trim`: Instances for trimmed measures
+- `condexp_indicator_inter_bridge`: Bridge lemma for ViaMartingale.lean
 
-**Remaining as stubs (proof strategies documented):**
-- `condIndep_iff_condexp_eq`: Doob's characterization
-  (TODO: derive from `condIndep_iff` product formula)
-- `condProb_eq_of_eq_on_pi_system`: π-system extension (TODO: use `condIndepSets.condIndep'`)
-- `bounded_martingale_l2_eq`: L² identification (TODO: use `MemLp.condExpL2_ae_eq_condExp`)
-- `reverse_martingale_convergence`: Requires martingale convergence theory
-- `condexp_same_dist`: Distributional invariance (TODO: use `condExpKernel`, `condDistrib`)
-- `condexp_indicator_eq_of_agree_on_future_rectangles`: Pair-law equality with
-  a common future tail implies equality of conditional indicators
-
-The goal is to incrementally replace stubs with proofs as needed by the de Finetti development.
+All main results are proven. Additional conditional expectation utilities and conditional
+probability definitions are in `CondExpBasic.lean` and `CondProb.lean`.
 
 ## References
 
