@@ -877,7 +877,8 @@ private theorem h_tower_of_lagConst
   ------------------------------------------------------------------
   have h_cesaro_ce : ∀ n, μ[A n | m] =ᵐ[μ] μ[(fun ω => g (ω 0)) | m] := by
     intro n
-    sorry -- TODO: Implement Cesàro CE derivation using condExp_finset_sum
+    -- Derivation: CE[(1/(n+1)) Σ g(ω_j) | m] = (1/(n+1)) Σ CE[g(ω_j)|m] = (1/(n+1))(n+1)CE[g(ω_0)|m]
+    sorry -- Requires: MeasureTheory.condexp_finset_sum, condexp_const_smul from mathlib
 
   ------------------------------------------------------------------
   -- (2) CE[f·A_n | m] is constant in n (lag-constancy termwise)
@@ -887,7 +888,9 @@ private theorem h_tower_of_lagConst
       =ᵐ[μ]
     μ[(fun ω => f (ω 0) * g (ω 0)) | m] := by
     intro n
-    sorry -- TODO: Implement product constancy using lag_const
+    -- By lag_const hypothesis: CE[f(ω_0)·g(ω_j)|m] = CE[f(ω_0)·g(ω_0)|m] for all j
+    -- So CE[f(ω_0)·((1/(n+1)) Σ g(ω_j))|m] = CE[f(ω_0)·g(ω_0)|m]
+    sorry -- Requires: linearity of CE + lag_const iterated application
 
   ------------------------------------------------------------------
   -- (3) L² MET ⇒ L¹ convergence of A_n to CE[g(ω0)|m]
@@ -907,7 +910,9 @@ private theorem h_tower_of_lagConst
         ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | m] ω
              - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | m] ω') | m] ω| ∂μ)
         atTop (𝓝 0) := by
-    sorry -- TODO: Implement L¹-Lipschitz argument
+    -- Strategy: condExp_L1_lipschitz gives ∫|CE[Z] - CE[W]| ≤ ∫|Z - W|
+    -- With Z = f·A_n, W = f·CE[g], get ≤ ∫|f|·|A_n - CE[g]| ≤ Cf·∫|A_n - CE[g]| → 0
+    sorry -- TODO: Apply condExp_L1_lipschitz (line 624) + squeeze with h_L1_An_to_CE
 
   ------------------------------------------------------------------
   -- (5) The constant sequence's L¹ limit is 0 ⇒ a.e. equality
@@ -915,14 +920,49 @@ private theorem h_tower_of_lagConst
   have h_const_is_zero :
       ∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
             - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω| ∂μ = 0 := by
-    sorry -- TODO: Use h_product_const + h_L1_CE + tendsto_nhds_unique
+    -- The LHS integrand is constant in n (by h_product_const)
+    -- The RHS (h_L1_CE) says the same integral → 0
+    -- So the constant equals 0
+    have h_rewrite : ∀ n,
+      ∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
+            - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω| ∂μ
+      =
+      ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | m] ω
+            - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | m] ω') | m] ω| ∂μ := by
+      intro n
+      refine integral_congr_ae ?_
+      filter_upwards [h_product_const n] with ω hω
+      simp [hω]
+    -- Constant sequence
+    have h_const : Tendsto (fun _ : ℕ =>
+      ∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
+            - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω| ∂μ)
+      atTop
+      (𝓝 (∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
+                  - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω| ∂μ)) :=
+      tendsto_const_nhds
+    -- Apply uniqueness: h_const says constant sequence, h_L1_CE says → 0, so constant = 0
+    have : (fun n => ∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
+              - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω| ∂μ)
+         = (fun n => ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | m] ω
+              - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | m] ω') | m] ω| ∂μ) := by
+      funext n
+      exact h_rewrite n
+    rw [this] at h_const
+    exact tendsto_nhds_unique h_const h_L1_CE
 
   -- turn `∫ |h| = 0` into a.e. equality
   have h_abs_zero :
       (fun ω =>
         |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
         - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω|) =ᵐ[μ] 0 := by
-    sorry -- TODO: Use integral_eq_zero_iff_of_nonneg_ae
+    -- Standard: if ∫|h| = 0 and h ≥ 0 and h integrable, then h = 0 a.e.
+    have hint : Integrable (fun ω =>
+      |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
+      - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω|) μ := by
+      apply Integrable.abs
+      apply Integrable.sub <;> exact integrable_condExp
+    exact integral_eq_zero_iff_of_nonneg_ae (ae_of_all _ (fun _ => abs_nonneg _)) hint |>.mp h_const_is_zero
 
   -- done: a.e. equality of the two conditional expectations
   filter_upwards [h_abs_zero] with ω hω
