@@ -13,49 +13,89 @@ import Mathlib.MeasureTheory.Function.ConditionalExpectation.CondexpL2
 /-!
 # Conditional Expectation API for Exchangeability Proofs
 
-This file provides a specialized API for conditional expectations, conditional
-independence, and martingale convergence, tailored for the exchangeability and
-de Finetti proofs.
+This file provides a reusable API for conditional expectations, conditional independence,
+and distributional equality, designed to eliminate repeated boilerplate in the de Finetti
+theorem proofs (ViaMartingale, ViaL2, ViaKoopman).
+
+## Purpose
+
+The exchangeability proofs repeatedly need to:
+1. Show bounded indicator compositions are integrable
+2. Establish conditional independence via projection properties
+3. Transfer conditional expectation equalities from distributional assumptions
+4. Manage typeclass instances for sub-σ-algebras
+
+This file centralizes these patterns to keep the main proofs clean and maintainable.
 
 ## Main Components
 
-### 1. Conditional Independence
-- `condIndep_of_indicator_condexp_eq`: Establish conditional independence from projection property
-- `condExp_indicator_mul_indicator_of_condIndep`: Product formula for indicators
-- `condexp_indicator_inter_bridge`: Bridge lemma managing typeclass instances
+### 1. Integrability Infrastructure
+- **`integrable_indicator_comp`**: Bounded indicator composition `(1_B ∘ X)` is integrable
+  - **Used in**: ViaMartingale (lines 2897, 2904), CommonEnding, multiple locations
+  - **Eliminates**: Repeated `(integrable_const 1).indicator` boilerplate
+  - **Key insight**: Bounded measurable functions on finite measures are always integrable
 
-### 2. Distributional Equality ⇒ Conditional Expectation Equality
-- `condexp_indicator_eq_of_pair_law_eq`: Core lemma using uniqueness of conditional expectation
-- `condexp_indicator_eq_of_agree_on_future_rectangles`: Application to exchangeable sequences
+### 2. Conditional Independence (Doob's Characterization)
+- **`condIndep_of_indicator_condexp_eq`**: Projection property ⇒ conditional independence
+  - **Used in**: ViaMartingale conditional independence arguments
+  - **Key insight**: Uses mathlib's `ProbabilityTheory.CondIndep` product formula
+  
+- **`condExp_indicator_mul_indicator_of_condIndep`**: Product formula for indicators
+  - Direct application of `ProbabilityTheory.condIndep_iff`
+  
+- **`condexp_indicator_inter_bridge`**: Typeclass-safe wrapper for ViaMartingale.lean
+  - Manages `IsFiniteMeasure` and `SigmaFinite` instances automatically
 
-### 3. Sub-σ-algebra Infrastructure
-- `condExpWith`: Explicit instance management for conditioning on sub-σ-algebras
-- `isFiniteMeasure_trim`, `sigmaFinite_trim`: Measure trimming instances
-- `AgreeOnFutureRectangles`: Structure for distributional agreement
+### 3. Distributional Equality ⇒ Conditional Expectation Equality
+- **`condexp_indicator_eq_of_pair_law_eq`**: Core lemma for Axiom 1 (condexp_convergence)
+  - **Proof strategy**: If `(Y,Z)` and `(Y',Z)` have same law, then for measurable `B`:
+    ```
+    𝔼[1_{Y ∈ B} | σ(Z)] = 𝔼[1_{Y' ∈ B} | σ(Z)]  a.e.
+    ```
+  - **Used in**: ViaMartingale contractability arguments (with Y=X_m, Y'=X_k, Z=shift)
+  - **Key technique**: Uniqueness of conditional expectation via integral identity
+  
+- **`condexp_indicator_eq_of_agree_on_future_rectangles`**: Application to sequences
+  - Wrapper for exchangeable sequence contexts
 
-## Implementation Status
+### 4. Sub-σ-algebra Infrastructure
+- **`condExpWith`**: Explicit instance management wrapper
+  - **Purpose**: Avoids typeclass metavariable issues in `μ[f | m]`
+  - **Used in**: ViaMartingale finite-future sigma algebras
+  
+- **`isFiniteMeasure_trim`**, **`sigmaFinite_trim`**: Trimmed measure instances
+  - **Used in**: ViaMartingale (line 582), multiple sub-σ-algebra constructions
+  - **Key fact**: Trimmed finite measures remain finite
 
-This file provides specialized lemmas for conditional independence and conditional expectation
-equality under distributional assumptions, used in the de Finetti theorem proof.
+- **`AgreeOnFutureRectangles`**: Distributional agreement structure
+  - Simple wrapper for measure equality (future: extend to proper rectangle agreement)
 
-**Key results:**
-- `condIndep_of_indicator_condexp_eq`: Establish conditional independence from projection property
-- `condExp_indicator_mul_indicator_of_condIndep`: Product formula under conditional independence
-- `condexp_indicator_eq_of_pair_law_eq`: Conditional expectations equal when pair laws match
-- `condexp_indicator_eq_of_agree_on_future_rectangles`: Application to sequence-valued tails
+## Design Philosophy
 
-**Supporting infrastructure:**
-- `condExpWith`: Wrapper managing typeclass instances for sub-σ-algebras
-- `isFiniteMeasure_trim`, `sigmaFinite_trim`: Instances for trimmed measures
-- `condexp_indicator_inter_bridge`: Bridge lemma for ViaMartingale.lean
+**Extract patterns that:**
+1. Appear 3+ times across proof files
+2. Have 5+ lines of boilerplate
+3. Require careful typeclass management
+4. Encode reusable probabilistic insights
 
-All main results are proven. Additional conditional expectation utilities and conditional
-probability definitions are in `CondExpBasic.lean` and `CondProb.lean`.
+**Keep in main proofs:**
+- Domain-specific constructions (finFutureSigma, tailSigma, etc.)
+- Proof-specific calculations
+- High-level proof architecture
+
+## Related Files
+
+- **CondExpBasic.lean**: Basic conditional expectation utilities
+- **CondProb.lean**: Conditional probability definitions
+- **ViaMartingale.lean**: Main consumer of this API
+- **ViaL2.lean**: Uses integrability lemmas
+- **ViaKoopman.lean**: Uses integrability and independence lemmas
 
 ## References
 
 * Kallenberg, *Probabilistic Symmetries and Invariance Principles* (2005)
-* Mathlib's conditional expectation infrastructure
+* Mathlib's conditional expectation infrastructure (`MeasureTheory.Function.ConditionalExpectation`)
+* Mathlib's conditional independence (`ProbabilityTheory.CondIndep`)
 -/
 
 noncomputable section
@@ -65,6 +105,36 @@ open MeasureTheory Filter Set Function
 namespace Exchangeability.Probability
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+
+/-! ### Integrability lemmas for indicators -/
+
+/-- **Integrability of bounded indicator compositions.**
+
+Given a measurable function `X : Ω → α`, a measurable set `B : Set α`, the indicator
+composition `(Set.indicator B (fun _ => (1 : ℝ))) ∘ X` is integrable on any finite
+measure space. This is immediate since the function is bounded by 1 and measurable.
+
+This lemma is used repeatedly in de Finetti proofs when showing conditional expectations
+of indicators are integrable. -/
+lemma integrable_indicator_comp
+    {μ : Measure Ω} [IsFiniteMeasure μ]
+    {X : Ω → α} (hX : Measurable X)
+    {B : Set α} (hB : MeasurableSet B) :
+    Integrable ((Set.indicator B (fun _ => (1 : ℝ))) ∘ X) μ := by
+  -- Measurability of the composition
+  have h_meas : Measurable ((Set.indicator B (fun _ : α => (1 : ℝ))) ∘ X) :=
+    (measurable_const.indicator hB).comp hX
+  
+  -- Boundedness: ‖indicator ∘ X‖ ≤ 1 everywhere
+  have h_bound : ∀ᵐ ω ∂μ, ‖((Set.indicator B (fun _ => (1 : ℝ))) ∘ X) ω‖ ≤ (1 : ℝ) := by
+    apply ae_of_all
+    intro ω
+    by_cases hω : X ω ∈ B
+    · simp [Function.comp, Set.indicator_of_mem hω]
+    · simp [Function.comp, Set.indicator_of_notMem hω]
+  
+  -- Bounded measurable function on finite measure space is integrable
+  exact Integrable.of_bound h_meas.aestronglyMeasurable 1 h_bound
 
 /-! ### Pair-law ⇒ conditional indicator equality (stub) -/
 

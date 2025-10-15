@@ -2582,7 +2582,7 @@ lemma block_coord_condIndep
         -- f is integrable (bounded indicator function)
         have hf_int : IntegrableOn f (⋃ n, E_seq n) μ := by
           apply Integrable.integrableOn
-          exact (integrable_const (1 : ℝ)).indicator (hX_meas r hB)
+          exact Exchangeability.Probability.integrable_indicator_comp (hX_meas r) hB
 
         -- g is integrable (conditional expectation)
         have hg_int : IntegrableOn g (⋃ n, E_seq n) μ := by
@@ -2630,7 +2630,7 @@ lemma block_coord_condIndep
         have hf_int : ∃ i, IntegrableOn f (E_seq i) μ := by
           use 0
           apply Integrable.integrableOn
-          exact (integrable_const (1 : ℝ)).indicator (hX_meas r hB)
+          exact Exchangeability.Probability.integrable_indicator_comp (hX_meas r) hB
 
         -- g is integrable on E_seq 0 (conditional expectation)
         have hg_int : ∃ i, IntegrableOn g (E_seq i) μ := by
@@ -2882,43 +2882,17 @@ lemma block_coord_condIndep
             Exchangeability.Probability.condExpWith μ
               (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
               (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r) ω with hg_def
-      have htm_ambient :
-          MeasurableSet t :=
-        (sup_le (firstRSigma_le_ambient X r hX_meas)
-            (finFutureSigma_le_ambient X m k hX_meas)) _ htm
       -- Integrability of indicator (bounded by 1)
-      have hf_int_raw :
-          Integrable (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X r ω)) μ := by
-        apply Integrable.indicator
-        · exact integrable_const (1 : ℝ)
-        · exact (hX_meas r) hB
       have hf_int : Integrable f μ := by
-        simpa [hf_def] using hf_int_raw
+        simpa [hf_def] using Exchangeability.Probability.integrable_indicator_comp (hX_meas r) hB
       -- Integrability of conditional expectation
-      -- Strategy: First prove g = (Set.indicator B (fun _ => (1 : ℝ))) ∘ X r is integrable,
-      -- then use that conditional expectations of integrable functions are integrable.
-      have hh_int : Integrable (fun ω => Exchangeability.Probability.condExpWith μ
-          (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
-          (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r) ω) μ := by
-        -- Step 1: Prove g is measurable and bounded, hence integrable
-        have h_g_meas : Measurable ((Set.indicator B (fun _ : α => (1 : ℝ))) ∘ X r) :=
-          (measurable_const.indicator hB).comp (hX_meas r)
-        
-        have h_g_bound : ∀ᵐ ω ∂μ, ‖((Set.indicator B (fun _ => (1 : ℝ))) ∘ X r) ω‖ ≤ (1 : ℝ) := by
-          refine eventually_of_forall ?_
-          intro ω
-          by_cases hω : X r ω ∈ B
-          · simp [Function.comp, Set.indicator_of_mem hω]
-          · simp [Function.comp, Set.indicator_of_not_mem hω]
-        
-        -- Bounded measurable function on probability space is integrable
-        have hμ_fin : μ Set.univ < ∞ := measure_univ
-        have h_g_int : Integrable ((Set.indicator B (fun _ => (1 : ℝ))) ∘ X r) μ :=
-          Integrable.of_bound h_g_meas.aestronglyMeasurable 1 h_g_bound
-        
-        -- Step 2: Conditional expectation of integrable function is integrable
-        simp only [Exchangeability.Probability.condExpWith]
-        exact integrable_condExp
+      -- Use the extracted lemma from CondExp.lean
+      have hg_int : Integrable g μ := by
+        -- Apply integrable_indicator_comp: bounded indicator composition is integrable
+        have h_indicator_int : Integrable ((Set.indicator B (fun _ => (1 : ℝ))) ∘ X r) μ :=
+          Exchangeability.Probability.integrable_indicator_comp (hX_meas r) hB
+        -- Conditional expectation of integrable function is integrable
+        simpa [hg_def, Exchangeability.Probability.condExpWith] using integrable_condExp
 
       -- Lift measurability of t from sub-σ-algebra to ambient
       have htm_ambient : MeasurableSet t := by
@@ -2929,24 +2903,17 @@ lemma block_coord_condIndep
         exact h_sup_le t htm
 
       -- Apply setIntegral_compl decomposition: ∫_{tᶜ} f = ∫_Ω f - ∫_t f
-      have h_decomp_g : ∫ ω in tᶜ, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ =
+      have h_decomp_f : ∫ ω in tᶜ, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ =
           ∫ ω, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ -
           ∫ ω in t, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ := by
         -- Use integral_add_compl: ∫_t f + ∫_{tᶜ} f = ∫_Ω f, then rearrange
-        have h := integral_add_compl htm_ambient hg_int
+        have h := integral_add_compl htm_ambient hf_int
         linarith
 
-      have h_decomp_h : ∫ ω in tᶜ, (Exchangeability.Probability.condExpWith μ
-          (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
-          (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ =
-          ∫ ω, (Exchangeability.Probability.condExpWith μ
-            (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
-            (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ -
-          ∫ ω in t, (Exchangeability.Probability.condExpWith μ
-            (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
-            (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ := by
-        -- Same as h_decomp_g: use integral_add_compl and rearrange
-        have h_eq := integral_add_compl htm_ambient hh_int
+      have h_decomp_g : ∫ ω in tᶜ, g ω ∂μ =
+          ∫ ω, g ω ∂μ - ∫ ω in t, g ω ∂μ := by
+        -- Same as h_decomp_f: use integral_add_compl and rearrange
+        have h_eq := integral_add_compl htm_ambient hg_int
         linarith
 
       -- Tower property: ∫_Ω g = ∫_Ω E[g|m]
@@ -3062,7 +3029,7 @@ lemma block_coord_condIndep
             intro i
             refine Integrable.integrableOn ?_
             -- Indicator of constant 1 on measurable set B is integrable
-            exact (integrable_const (1 : ℝ)).indicator ((hX_meas r) hB)
+            exact Exchangeability.Probability.integrable_indicator_comp (hX_meas r) hB
 
           -- Prove integrability of h on each f_fin i
           have hh_int : ∀ i : Fin n, IntegrableOn h (f_fin i) μ := by
