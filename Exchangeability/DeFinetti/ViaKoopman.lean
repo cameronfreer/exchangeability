@@ -1007,13 +1007,21 @@ private lemma snorm_one_le_snorm_two_toReal
   -- Temporarily using admit until our snorm axiom is replaced with mathlib's full API
   admit
 
-/-- ENNReal.toReal is continuous at 0. -/
-private lemma ennreal_tendsto_toReal_zero
-    {ι : Type*} {a : Filter ι} (f : ι → ℝ≥0∞) (hf : Tendsto f a (𝓝 0)) :
-    Tendsto (fun x => (f x).toReal) a (𝓝 0) := by
-  -- toReal is continuous at 0
-  have hcont : ContinuousAt ENNReal.toReal 0 := ENNReal.continuousAt_toReal (by simp)
-  exact hcont.tendsto.comp hf
+/-- If `f → 0` in `ℝ≥0∞`, then `(toReal ∘ f) → 0` in `ℝ`. -/
+private lemma ennreal_tendsto_toReal_zero {α : Type*}
+    (f : α → ℝ≥0∞) (a : Filter α)
+    (hf : Tendsto f a (𝓝 (0 : ℝ≥0∞))) :
+    Tendsto (fun x => (f x).toReal) a (𝓝 (0 : ℝ)) := by
+  -- Eventually, `f x ≤ 1`, hence `f x < ∞`; then use `ENNReal.tendsto_toReal`.
+  have h_fin : ∀ᶠ x in a, f x < ∞ := by
+    -- from `f → 0`, for ε=1 we have eventually `f x ≤ 1`
+    have : ∀ᶠ x in a, f x ≤ 1 := by
+      have h := (tendsto_order.1 hf).2 1 (by norm_num) -- eventually ≤ 1
+      exact h
+    filter_upwards [this] with x hx
+    exact lt_of_le_of_lt hx (by simp) -- `1 < ∞`
+  -- apply the continuity lemma at finite points with limit 0:
+  simpa using ENNReal.tendsto_toReal (hf) h_fin
 
 /-- L² mean-ergodic theorem in function form:
 the Cesàro averages of `f ∘ T^[j]` converge in L² to `μ[f | m]`, provided
