@@ -987,20 +987,23 @@ where the function is bounded (hence in L²).
 private lemma snorm_one_le_snorm_two_toReal
     {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
     (f : Ω → ℝ) (hL1 : Integrable f μ) (hL2 : MemLp f 2 μ) :
-    (∫ ω, |f ω| ∂μ) ≤ (MeasureTheory.snorm f 2 μ).toReal := by
-  -- `snorm 1 ≤ snorm 2` on probability spaces
+    (∫ ω, |f ω| ∂μ) ≤ (eLpNorm f 2 μ).toReal := by
+  -- `eLpNorm 1 ≤ eLpNorm 2` on probability spaces
   have h12 : (1 : ℝ≥0∞) ≤ 2 := by simp
-  have hle : MeasureTheory.snorm f 1 μ ≤ MeasureTheory.snorm f 2 μ :=
-    MeasureTheory.snorm_le_snorm_of_exponent_le (μ := μ) (f := f) h12
+  have hle : eLpNorm f 1 μ ≤ eLpNorm f 2 μ :=
+    eLpNorm_mono_exponent (μ := μ) (f := f) h12
   -- Convert to a real inequality via `toReal`, knowing `‖f‖₂ < ∞`
-  have hfin₂ : MeasureTheory.snorm f 2 μ ≠ ∞ := by
-    exact (ne_of_lt (MeasureTheory.memLp_iff_snorm_lt_top.mp hL2))
+  have hfin₂ : eLpNorm f 2 μ ≠ ∞ := by
+    exact (ne_of_lt (memLp_iff_eLpNorm_lt_top.mp hL2))
   have hmono := ENNReal.toReal_mono hle hfin₂
   -- Rewrite `‖f‖₁` as an ordinary integral
   have h₁ :
-      (MeasureTheory.snorm f 1 μ).toReal = ∫ ω, ‖f ω‖ ∂μ := by
-    simpa using
-      (MeasureTheory.snorm_one_toReal_eq_integral_norm (μ := μ) (f := f) hL1)
+      (eLpNorm f 1 μ).toReal = ∫ ω, ‖f ω‖ ∂μ := by
+    rw [eLpNorm_one_eq_lintegral_enorm]
+    rw [integral_eq_lintegral_of_nonneg_ae]
+    · simp [ENNReal.toReal_ofReal (norm_nonneg _)]
+    · exact ae_of_all _ (fun _ => norm_nonneg _)
+    · exact hL1.aestronglyMeasurable.enorm
   -- For reals, `‖·‖ = |·|`
   simpa [h₁, Real.norm_eq_abs] using hmono
 
@@ -1031,7 +1034,7 @@ private theorem birkhoffAverage_tendsto_condexp_L2
     (h_inv : ∀ s, MeasurableSet[m] s → T ⁻¹' s = s)
     (f : Ω → ℝ) (hf_int : Integrable f μ) :
     Tendsto (fun n =>
-      snorm
+      eLpNorm
         (fun ω =>
           (1 / ((n : ℕ) + 1 : ℝ)) *
               (Finset.range ((n : ℕ) + 1)).sum (fun j => f (T^[j] ω))
@@ -1328,7 +1331,7 @@ private theorem h_tower_of_lagConst
               atTop (𝓝 0) := by
     set Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | m] ω
     -- Step 1: L² statement from Birkhoff lemma (function-level version)
-    have hL2 : Tendsto (fun n => snorm (fun ω => A n ω - Y ω) 2 μ) atTop (𝓝 0) := by
+    have hL2 : Tendsto (fun n => eLpNorm (fun ω => A n ω - Y ω) 2 μ) atTop (𝓝 0) := by
       -- Mean Ergodic Theorem: Cesàro averages converge to CE in L²
       have hg_0_int : Integrable (fun ω => g (ω 0)) μ := by
         obtain ⟨Cg, hCg⟩ := hg_bd
@@ -1340,12 +1343,12 @@ private theorem h_tower_of_lagConst
           (fun s hs => (mem_shiftInvariantSigma_iff (s := s)).mp hs |>.2)
           (fun ω => g (ω 0)) hg_0_int
     -- Explicit type: hL2 converges to 0 in ℝ≥0∞
-    have hL2' : Tendsto (fun n => snorm (fun ω => A n ω - Y ω) 2 μ) atTop (𝓝 (0 : ℝ≥0∞)) := hL2
+    have hL2' : Tendsto (fun n => eLpNorm (fun ω => A n ω - Y ω) 2 μ) atTop (𝓝 (0 : ℝ≥0∞)) := hL2
 
     -- Step 2: On a probability space, ‖·‖₁ ≤ ‖·‖₂
     have h_upper : ∀ n,
         (∫ ω, |A n ω - Y ω| ∂μ)
-          ≤ (snorm (fun ω => A n ω - Y ω) 2 μ).toReal := by
+          ≤ (eLpNorm (fun ω => A n ω - Y ω) 2 μ).toReal := by
       intro n
       -- On probability spaces: ‖·‖₁ ≤ ‖·‖₂ by Hölder inequality
       -- Need to show integrability of A n - Y
@@ -1359,10 +1362,10 @@ private theorem h_tower_of_lagConst
 
     -- `toReal` is continuous at 0, so the upper bound tends to 0
     have h_toReal :
-        Tendsto (fun n => (snorm (fun ω => A n ω - Y ω) 2 μ).toReal)
+        Tendsto (fun n => (eLpNorm (fun ω => A n ω - Y ω) 2 μ).toReal)
                 atTop (𝓝 0) := by
       -- ENNReal.toReal is continuous at 0
-      exact ennreal_tendsto_toReal_zero (fun n => snorm (fun ω => A n ω - Y ω) 2 μ) hL2'
+      exact ennreal_tendsto_toReal_zero (fun n => eLpNorm (fun ω => A n ω - Y ω) 2 μ) hL2'
 
     -- Squeeze: 0 ≤ L¹ ≤ (‖·‖₂).toReal → 0
     exact squeeze_zero' h_nonneg h_upper h_toReal
