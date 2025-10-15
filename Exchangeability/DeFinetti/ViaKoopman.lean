@@ -1008,8 +1008,8 @@ private lemma snorm_one_le_snorm_two_toReal
   admit
 
 /-- If `f → 0` in `ℝ≥0∞`, then `(toReal ∘ f) → 0` in `ℝ`. -/
-private lemma ennreal_tendsto_toReal_zero {α : Type*}
-    (f : α → ℝ≥0∞) (a : Filter α)
+private lemma ennreal_tendsto_toReal_zero {ι : Type*}
+    (f : ι → ℝ≥0∞) {a : Filter ι}
     (hf : Tendsto f a (𝓝 (0 : ℝ≥0∞))) :
     Tendsto (fun x => (f x).toReal) a (𝓝 (0 : ℝ)) := by
   -- Eventually, `f x ≤ 1`, hence `f x < ∞`; then use `ENNReal.tendsto_toReal`.
