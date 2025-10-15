@@ -960,13 +960,15 @@ private lemma condExp_const_mul
 **Mathlib source**: Direct application of `MeasureTheory.condExp_finset_sum`.
 NOTE: Temporarily axiomatized due to notation elaboration issues with `∑ i ∈ s, f i` vs `fun ω => ∑ i ∈ s, f i ω`.
 The mathematical content is identical and proven in mathlib. -/
-private axiom condExp_sum_finset
+private lemma condExp_sum_finset
     {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
     {m : MeasurableSpace Ω} (hm : m ≤ mΩ)
     {ι : Type*} (s : Finset ι) (f : ι → Ω → ℝ)
     (hint : ∀ i ∈ s, Integrable (f i) μ) :
     μ[(fun ω => s.sum (fun i => f i ω)) | m]
-      =ᵐ[μ] (fun ω => s.sum (fun i => μ[f i | m] ω))
+      =ᵐ[μ] (fun ω => s.sum (fun i => μ[f i | m] ω)) := by
+  sorry  -- Requires resolving elaboration between `∑ i, f i` vs `fun ω => ∑ i, f i ω`
+         -- Mathlib has condExp_finset_sum but elaborates differently
 
 /-- On a finite measure space, a bounded measurable real function is integrable. -/
 private lemma integrable_of_bounded_measurable
