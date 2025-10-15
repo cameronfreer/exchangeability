@@ -2438,15 +2438,19 @@ lemma block_coord_condIndep
       have hh_int : Integrable (fun ω => Exchangeability.Probability.condExpWith μ
           (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
           (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r) ω) μ := by
-        sorry -- TODO (~5 min): Use ProbabilityTheory.integrable_condexp
-              -- Or unfold condExpWith definition and apply integrable_condexp
+        -- condExpWith unfolds to μ[f | m], and conditional expectation is always integrable
+        simp only [Exchangeability.Probability.condExpWith]
+        exact integrable_condExp
 
       -- Apply setIntegral_compl decomposition: ∫_{tᶜ} f = ∫_Ω f - ∫_t f
       have h_decomp_g : ∫ ω in tᶜ, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ =
           ∫ ω, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ -
           ∫ ω in t, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ := by
-        sorry -- TODO (~5 min): Use MeasureTheory.integral_add_compl
-              -- Lemma: ∫_Ω f = ∫_t f + ∫_{tᶜ} f, then rearrange with ring
+        sorry -- TODO (~10-15 min): Integral decomposition over complement
+              -- Mathematical strategy: ∫_Ω f = ∫_t f + ∫_{tᶜ} f (integral_add_compl),
+              -- then rearrange: ∫_{tᶜ} f = ∫_Ω f - ∫_t f
+              -- Blocked on: Finding correct signature for integral_add_compl in mathlib
+              -- (typeclass instance issues with NormedSpace ℝ)
 
       have h_decomp_h : ∫ ω in tᶜ, (Exchangeability.Probability.condExpWith μ
           (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
@@ -2457,15 +2461,18 @@ lemma block_coord_condIndep
           ∫ ω in t, (Exchangeability.Probability.condExpWith μ
             (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
             (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ := by
-        sorry -- TODO (~5 min): Same as h_decomp_g
+        sorry -- TODO (~10-15 min): Same as h_decomp_g but for conditional expectation
+              -- Blocked on same issue as h_decomp_g
 
       -- Tower property: ∫_Ω g = ∫_Ω E[g|m]
       have h_tower : ∫ ω, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ =
           ∫ ω, (Exchangeability.Probability.condExpWith μ
             (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
             (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ := by
-        sorry -- TODO (~5 min): Use ProbabilityTheory.integral_condexp
-              -- Or use definition of condExpWith + tower property
+        sorry -- TODO (~10-15 min): Tower property for conditional expectation
+              -- Mathematical strategy: ∫ f dμ = ∫ μ[f|m] dμ (tower property)
+              -- condExpWith unfolds to μ[f | m]
+              -- Blocked on: Finding correct lemma name (tried integral_condExp.symm)
 
       -- Conclude using decomposition + tower + IH
       rw [h_decomp_g, h_decomp_h, h_tower, ht_in_good]
@@ -2509,28 +2516,48 @@ lemma block_coord_condIndep
           -- Need: ∫_{E_partial n} g = ∫_{E_partial n} h
           -- Use integral_iUnion_fintype for both sides
 
-          sorry -- TODO (~15-20 min): Apply integral_iUnion_fintype
-                -- Structure attempted but blocked by technical issues:
+          -- Apply additivity of setIntegrals over finite disjoint unions
+          -- For finite n, ⋃ i : Fin n, f i is a finite union
+          -- Use: ∫_{⋃ i, s i} f = ∑ i, ∫_{s i} f when sets are pairwise disjoint
+
+          -- First establish pairwise disjoint on Fin n
+          have hf_disj_fin : ∀ (i j : Fin n), i ≠ j → Disjoint (f i) (f j) := by
+            intro i j hij
+            have : (i : ℕ) ≠ (j : ℕ) := by
+              intro h
+              exact hij (Fin.ext h)
+            exact hf_disj this
+
+          -- Show E_partial n as finite union
+          have hE_partial_n_eq : E_partial n = ⋃ i : Fin n, f i := rfl
+
+          -- Apply setIntegral over finite disjoint union
+          -- Mathematical fact: ∫_{⋃ i < n, s_i} f = ∑_{i < n} ∫_{s_i} f for pairwise disjoint s_i
+
+          sorry -- TODO (~10-15 min): Find correct mathlib lemma for finite disjoint union integral
+                -- Blocked on: Unknown correct lemma name (tried setIntegral_iUnion_fintype)
                 --
-                -- 1. Pairwise disjoint restriction: Need to show
-                --    Pairwise (fun i j : Fin n => Disjoint (f i) (f j))
-                --    from hf_disj : Pairwise (Disjoint on f : ℕ → Set Ω)
+                -- Mathematical strategy (COMPLETE):
+                -- 1. Pairwise disjoint on Fin n: hf_disj_fin ✓ (proved above)
+                -- 2. For g: ∫_{E_partial n} g = ∑ i, ∫_{f i} g  (need lemma)
+                -- 3. For h: ∫_{E_partial n} h = ∑ i, ∫_{f i} h  (need lemma)
+                -- 4. Term-by-term equality: h_eq_i i gives ∫_{f i} g = ∫_{f i} h
+                -- 5. Therefore: ∫_{E_partial n} g = ∑ i, ∫_{f i} g
+                --                                  = ∑ i, ∫_{f i} h  (by h_eq_i)
+                --                                  = ∫_{E_partial n} h
                 --
-                -- 2. Measurability lift: hf_meas i gives
-                --    MeasurableSet[firstRSigma ⊔ finFutureSigma] (f i)
-                --    but integral_iUnion_fintype expects
-                --    MeasurableSet[inferInstance] (f i)
-                --    Need witness that sub-σ-algebra ≤ ambient
+                -- Likely lemma names to try:
+                -- - MeasureTheory.setIntegral_iUnion (with Fintype instance)
+                -- - MeasureTheory.setIntegral_biUnion_finset
+                -- - MeasureTheory.integral_finset_biUnion
                 --
-                -- 3. Integrability: indicators bounded by 1
-                --    have hg_int : ∀ i, IntegrableOn g (f i) μ
-                --    have hh_int : ∀ i, IntegrableOn h (f i) μ
-                --
-                -- 4. Then apply: integral_iUnion_fintype to both g and h
-                --    rw [h_g_sum, h_h_sum]
-                --    congr 1; funext i; exact h_eq_i i
-                --
-                -- Mathematical content is clear, blocked on Lean technicalities
+                -- Once found, structure will be:
+                -- have hg_sum : ∫ ω in E_partial n, g ω ∂μ = ∑ i, ∫ ω in f i, g ω ∂μ := by
+                --   rw [hE_partial_n_eq]
+                --   apply [LEMMA_NAME]
+                --   · exact hf_disj_fin
+                --   · intro i; exact hf_meas i
+                -- (similar for h, then rw [hg_sum, hh_sum]; congr; funext i; exact h_eq_i i)
       -- Apply monotone union closure
       rw [← hE_partial_eq]
       exact (goodsets_closed_under_monotone_union E_partial hE_partial_in hE_partial_mono).2
