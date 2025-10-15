@@ -2207,10 +2207,125 @@ theorem weighted_sums_converge_L1
   -- Step 1: For n=0, show (A 0 m)_m is Cauchy in L² hence L¹
   have hA_cauchy_L2_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
       eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ < ENNReal.ofReal ε := by
-    -- TODO: Cauchy proof has compilation errors from stubbed h_window_bound and h_long_tail_bound
-    -- The proof uses 3-segment decomposition with triangle inequality
-    -- See commit history for complete proof structure
-    sorry
+    intro ε hε
+
+    -- 3-segment decomposition strategy:
+    -- For m, ℓ ≥ 2N with k = N, decompose ‖A 0 m - A 0 ℓ‖₂ via triangle inequality:
+    -- ‖A 0 m - A 0 ℓ‖₂ ≤ ‖A 0 m - A (m-k) k‖₂ + ‖A (m-k) k - A (ℓ-k) k‖₂ + ‖A (ℓ-k) k - A 0 ℓ‖₂
+    --
+    -- Each segment bounded by √(Cf/k):
+    -- - Segments 1 & 3: h_long_tail_bound (long avg vs tail avg) → ∫ (...)² ≤ Cf/k
+    -- - Segment 2: h_window_bound (two equal-size windows) → ∫ (...)² ≤ Cf/k
+    --
+    -- Total bound: 3√(Cf/k) < ε
+    -- Required: k > 9Cf/ε²
+
+    let k := Nat.ceil (9 * Cf / (ε ^ 2)) + 1
+    have hk_pos : 0 < k := Nat.succ_pos _
+
+    -- Require m, ℓ ≥ 2k to ensure k ≤ m and k ≤ ℓ
+    refine ⟨2 * k, ?_⟩
+    intro m ℓ hm hℓ
+
+    have hk_le_m : k ≤ m := by omega
+    have hk_le_ℓ : k ≤ ℓ := by omega
+
+    -- Segment 1: ‖A 0 m - A (m-k) k‖₂² ≤ Cf/k
+    have h1 : ∫ ω, (A 0 m ω - A (m - k) k ω)^2 ∂μ ≤ Cf / k := by
+      -- TODO: simpa only [A] using h_long_tail_bound hk_pos hk_le_m causes timeouts
+      -- Need to convert A definition to match h_long_tail_bound's conclusion
+      sorry
+
+    -- Segment 2: ‖A (m-k) k - A (ℓ-k) k‖₂² ≤ Cf/k
+    have h2 : ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ ≤ Cf / k := by
+      -- TODO: simpa only [A] using h_window_bound hk_pos causes timeouts
+      -- Need to convert A definition to match h_window_bound's conclusion
+      sorry
+
+    -- Segment 3: ‖A (ℓ-k) k - A 0 ℓ‖₂² ≤ Cf/k
+    have h3 : ∫ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 ∂μ ≤ Cf / k := by
+      have h_sq : ∫ ω, (A 0 ℓ ω - A (ℓ - k) k ω)^2 ∂μ ≤ Cf / k := by
+        -- TODO: simpa only [A] using h_long_tail_bound hk_pos hk_le_ℓ causes timeouts
+        sorry
+      have : ∀ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 = (A 0 ℓ ω - A (ℓ - k) k ω)^2 := by
+        intro ω; ring
+      simp_rw [this]; exact h_sq
+
+    -- Convert to eLpNorm bounds
+    have h1_norm : eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
+        ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
+      apply eLpNorm_two_from_integral_sq_le
+      · exact (hA_memLp_two 0 m).sub (hA_memLp_two (m - k) k)
+      · apply div_nonneg hCf_nonneg; exact Nat.cast_nonneg k
+      · exact h1
+
+    have h2_norm : eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
+        ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
+      apply eLpNorm_two_from_integral_sq_le
+      · exact (hA_memLp_two (m - k) k).sub (hA_memLp_two (ℓ - k) k)
+      · apply div_nonneg hCf_nonneg; exact Nat.cast_nonneg k
+      · exact h2
+
+    have h3_norm : eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ
+        ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
+      apply eLpNorm_two_from_integral_sq_le
+      · exact (hA_memLp_two (ℓ - k) k).sub (hA_memLp_two 0 ℓ)
+      · apply div_nonneg hCf_nonneg; exact Nat.cast_nonneg k
+      · exact h3
+
+    -- Apply triangle inequality and combine
+    calc eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 2 μ
+        = eLpNorm (fun ω => (A 0 m ω - A (m - k) k ω) +
+                            (A (m - k) k ω - A (ℓ - k) k ω) +
+                            (A (ℓ - k) k ω - A 0 ℓ ω)) 2 μ := by
+          congr 1; ext ω; ring
+      _ ≤ eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ +
+          eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ +
+          eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ := by
+          -- Apply triangle inequality twice: ‖f + g + h‖ ≤ ‖f + g‖ + ‖h‖ ≤ ‖f‖ + ‖g‖ + ‖h‖
+          have h_decomp : (fun ω => (A 0 m ω - A (m - k) k ω) +
+                                     (A (m - k) k ω - A (ℓ - k) k ω) +
+                                     (A (ℓ - k) k ω - A 0 ℓ ω)) =
+              fun ω => ((A 0 m ω - A (m - k) k ω) +
+                        (A (m - k) k ω - A (ℓ - k) k ω)) +
+                       (A (ℓ - k) k ω - A 0 ℓ ω) := by
+            ext ω; ring
+          rw [h_decomp]
+          calc eLpNorm (fun ω => ((A 0 m ω - A (m - k) k ω) +
+                                  (A (m - k) k ω - A (ℓ - k) k ω)) +
+                                 (A (ℓ - k) k ω - A 0 ℓ ω)) 2 μ
+              ≤ eLpNorm (fun ω => (A 0 m ω - A (m - k) k ω) +
+                                  (A (m - k) k ω - A (ℓ - k) k ω)) 2 μ +
+                eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ := by
+                  apply eLpNorm_add_le
+                  · exact ((hA_meas 0 m).sub (hA_meas (m - k) k)).add
+                          ((hA_meas (m - k) k).sub (hA_meas (ℓ - k) k)) |>.aestronglyMeasurable
+                  · exact (hA_meas (ℓ - k) k).sub (hA_meas 0 ℓ) |>.aestronglyMeasurable
+                  · norm_num
+            _ ≤ eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ +
+                eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ +
+                eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ := by
+                  gcongr
+                  apply eLpNorm_add_le
+                  · exact (hA_meas 0 m).sub (hA_meas (m - k) k) |>.aestronglyMeasurable
+                  · exact (hA_meas (m - k) k).sub (hA_meas (ℓ - k) k) |>.aestronglyMeasurable
+                  · norm_num
+      _ ≤ ENNReal.ofReal (3 * Real.sqrt (Cf / k)) := by
+          -- Each term bounded by √(Cf/k), so sum bounded by 3√(Cf/k)
+          calc eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ +
+               eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ +
+               eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ
+              ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) +
+                ENNReal.ofReal (Real.sqrt (Cf / k)) +
+                ENNReal.ofReal (Real.sqrt (Cf / k)) := by
+                  gcongr
+            _ = ENNReal.ofReal (3 * Real.sqrt (Cf / k)) := by
+                  -- TODO: Fix ENNReal.ofReal_add usage
+                  sorry
+      _ < ENNReal.ofReal ε := by
+          -- TODO: Fix ENNReal.ofReal_lt_ofReal_iff_of_nonneg and complete final bound proof
+          -- Mathematical idea: k ≥ ⌈9Cf/ε²⌉ + 1 > 9Cf/ε², so Cf/k < ε²/9, so √(Cf/k) < ε/3, thus 3√(Cf/k) < ε
+          sorry
 
   have hA_cauchy_L1_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
       eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ < ENNReal.ofReal ε := by
