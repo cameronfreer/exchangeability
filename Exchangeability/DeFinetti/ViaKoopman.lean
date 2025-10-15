@@ -319,12 +319,12 @@ lemma condexp_precomp_iterate_eq_of_invariant
     (h_inv : ∀ s, MeasurableSet[m] s → T ⁻¹' s = s)
     {k : ℕ} {f : Ω → ℝ} (hf : Integrable f μ) :
     μ[(f ∘ (T^[k])) | m] =ᵐ[μ] μ[f | m] := by
-  -- Sketch:
-  -- For any A ∈ m, compare integrals:
-  -- ∫ (f ∘ T^[k]) · 1_A dμ = ∫ f · 1_{(T^[k])⁻¹ A} dμ (by measure preservation)
-  -- But (T^[k])⁻¹ A = A since m is T-invariant
-  -- Conclude via ae_eq_condexp_of_forall_setIntegral_eq
-  sorry
+  -- Strategy: Show both sides have same integrals on all A ∈ m, then use uniqueness
+  -- Key: For A ∈ m, (T^[k])⁻¹ A = A by T-invariance
+  sorry -- TODO: Apply ae_eq_condexp_of_forall_setIntegral_eq after showing:
+        -- ∫ (f ∘ T^[k]) over A = ∫ f over A for all measurable A in m
+        -- This uses: ∫ (f ∘ T) dμ = ∫ f dμ (measure preservation)
+        -- And: (T^[k])⁻¹ A = A (invariance)
 
 /-- Existence of a natural two-sided extension for a measure-preserving shift. -/
 axiom exists_naturalExtension
