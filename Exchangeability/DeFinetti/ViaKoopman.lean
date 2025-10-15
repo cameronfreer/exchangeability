@@ -944,14 +944,18 @@ axiom snorm {Ω : Type*} [MeasurableSpace Ω] (f : Ω → ℝ) (p : ℝ≥0∞) 
 
 /-! ### Conditional expectation linearity helpers -/
 
-/-- Conditional expectation commutes with scalar multiplication.
+/-- Scalar linearity of conditional expectation.
 **Mathematical content**: CE[c·f|m] = c·CE[f|m]
-**Mathlib source**: Should wrap `MeasureTheory.condExp_smul` after resolving type class issues. -/
-private axiom condExp_const_mul
+**Mathlib source**: `MeasureTheory.condexp_smul` for scalar multiplication. -/
+private lemma condExp_const_mul
     {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
     {m : MeasurableSpace Ω} (hm : m ≤ mΩ)
     (c : ℝ) (f : Ω → ℝ) :
-    μ[(fun ω => c * f ω) | m] =ᵐ[μ] (fun ω => c * μ[f | m] ω)
+    μ[(fun ω => c * f ω) | m] =ᵐ[μ] (fun ω => c * μ[f | m] ω) := by
+  -- `condExp_smul` in mathlib states exactly this for real scalars
+  -- (as `smul`, equal to `(*)` over ℝ).
+  simpa [Pi.mul_apply, smul_eq_mul] using
+    (MeasureTheory.condExp_smul (μ := μ) (m := m) (c := c) (f := f))
 
 /-- Conditional expectation commutes with finite sums.
 **Mathematical content**: CE[Σᵢfᵢ|m] = ΣᵢCE[fᵢ|m]
