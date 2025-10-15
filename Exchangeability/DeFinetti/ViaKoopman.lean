@@ -992,7 +992,7 @@ private axiom snorm_one_le_snorm_two_toReal
 
 /-- ENNReal.toReal is continuous at 0. -/
 private lemma ennreal_tendsto_toReal_zero
-    {α : Type*} {a : Filter α} (f : α → ℝ≥0∞) (hf : Tendsto f a (𝓝 0)) :
+    {ι : Type*} {a : Filter ι} (f : ι → ℝ≥0∞) (hf : Tendsto f a (𝓝 0)) :
     Tendsto (fun x => (f x).toReal) a (𝓝 0) := by
   -- toReal is continuous at 0
   have hcont : ContinuousAt ENNReal.toReal 0 := ENNReal.continuousAt_toReal (by simp)
@@ -1097,8 +1097,13 @@ private theorem h_tower_of_lagConst
         (fun ω =>
           (Finset.range (n + 1)).sum (fun j => μ[(fun ω => g (ω j)) | m] ω)) := by
       -- CE[Σᵢ Zᵢ|m] = Σᵢ CE[Zᵢ|m] (linearity: finite sums commute with CE)
+      have hint : ∀ j ∈ Finset.range (n + 1), Integrable (fun ω => g (ω j)) μ := by
+        intro j _
+        obtain ⟨Cg, hCg⟩ := hg_bd
+        exact integrable_of_bounded_measurable
+          (hg_meas.comp (measurable_pi_apply j)) Cg (fun ω => hCg (ω j))
       exact condExp_sum_finset (shiftInvariantSigma_le (α := α))
-        (Finset.range (n + 1)) (fun j => fun ω => g (ω j))
+        (Finset.range (n + 1)) (fun j => fun ω => g (ω j)) hint
 
     -- Each term μ[g(ωⱼ)|m] =ᵐ μ[g(ω₀)|m]
     have h_term : ∀ j,
@@ -1205,8 +1210,16 @@ private theorem h_tower_of_lagConst
           (Finset.range (n + 1)).sum
             (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | m] ω)) := by
       -- CE[Σᵢ Zᵢ|m] = Σᵢ CE[Zᵢ|m] (linearity: finite sums commute with CE)
+      have hint : ∀ j ∈ Finset.range (n + 1), Integrable (fun ω => f (ω 0) * g (ω j)) μ := by
+        intro j _
+        obtain ⟨Cf, hCf⟩ := hf_bd
+        obtain ⟨Cg, hCg⟩ := hg_bd
+        exact integrable_of_bounded_measurable
+          (hf_meas.comp (measurable_pi_apply 0) |>.mul (hg_meas.comp (measurable_pi_apply j)))
+          (Cf * Cg)
+          (fun ω => by simpa [abs_mul] using mul_le_mul (hCf (ω 0)) (hCg (ω j)) (abs_nonneg _) (le_trans (abs_nonneg _) (hCf (ω 0))))
       exact condExp_sum_finset (shiftInvariantSigma_le (α := α))
-        (Finset.range (n + 1)) (fun j => fun ω => f (ω 0) * g (ω j))
+        (Finset.range (n + 1)) (fun j => fun ω => f (ω 0) * g (ω j)) hint
 
     -- From lag_const: every term is a.e.-equal to the j=0 term
     have h_term_const : ∀ j,
