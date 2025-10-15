@@ -2489,10 +2489,10 @@ lemma block_coord_condIndep
           let h := fun ω => (Exchangeability.Probability.condExpWith μ
             (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
             (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω
-          -- For each i, we have ∫_{f i} g = ∫_{f i} h by hypothesis
-          have h_eq_i : ∀ i : Fin n, ∫ ω in f i, g ω ∂μ = ∫ ω in f i, h ω ∂μ := by
+          -- For each i : Fin n, we have ∫_{f i.val} g = ∫_{f i.val} h by hypothesis
+          have h_eq_i : ∀ i : Fin n, ∫ ω in f i.val, g ω ∂μ = ∫ ω in f i.val, h ω ∂μ := by
             intro i
-            exact hf_in_good i
+            exact hf_in_good i.val
           -- Need: ∫_{E_partial n} g = ∫_{E_partial n} h
           -- Use integral_iUnion_fintype for both sides
 
@@ -2501,7 +2501,7 @@ lemma block_coord_condIndep
           -- Use: ∫_{⋃ i, s i} f = ∑ i, ∫_{s i} f when sets are pairwise disjoint
 
           -- First establish pairwise disjoint on Fin n
-          have hf_disj_fin : ∀ (i j : Fin n), i ≠ j → Disjoint (f i) (f j) := by
+          have hf_disj_fin : ∀ (i j : Fin n), i ≠ j → Disjoint (f i.val) (f j.val) := by
             intro i j hij
             have : (i : ℕ) ≠ (j : ℕ) := by
               intro h
@@ -2509,35 +2509,61 @@ lemma block_coord_condIndep
             exact hf_disj this
 
           -- Show E_partial n as finite union
-          have hE_partial_n_eq : E_partial n = ⋃ i : Fin n, f i := rfl
+          have hE_partial_n_eq : E_partial n = ⋃ i : Fin n, f i.val := rfl
 
-          -- Apply setIntegral over finite disjoint union
-          -- Mathematical fact: ∫_{⋃ i < n, s_i} f = ∑_{i < n} ∫_{s_i} f for pairwise disjoint s_i
+          -- Apply setIntegral over finite disjoint union using integral_iUnion_fintype
 
-          sorry -- TODO (~10-15 min): Find correct mathlib lemma for finite disjoint union integral
-                -- Blocked on: Unknown correct lemma name (tried setIntegral_iUnion_fintype)
-                --
-                -- Mathematical strategy (COMPLETE):
-                -- 1. Pairwise disjoint on Fin n: hf_disj_fin ✓ (proved above)
-                -- 2. For g: ∫_{E_partial n} g = ∑ i, ∫_{f i} g  (need lemma)
-                -- 3. For h: ∫_{E_partial n} h = ∑ i, ∫_{f i} h  (need lemma)
-                -- 4. Term-by-term equality: h_eq_i i gives ∫_{f i} g = ∫_{f i} h
-                -- 5. Therefore: ∫_{E_partial n} g = ∑ i, ∫_{f i} g
-                --                                  = ∑ i, ∫_{f i} h  (by h_eq_i)
-                --                                  = ∫_{E_partial n} h
-                --
-                -- Likely lemma names to try:
-                -- - MeasureTheory.setIntegral_iUnion (with Fintype instance)
-                -- - MeasureTheory.setIntegral_biUnion_finset
-                -- - MeasureTheory.integral_finset_biUnion
-                --
-                -- Once found, structure will be:
-                -- have hg_sum : ∫ ω in E_partial n, g ω ∂μ = ∑ i, ∫ ω in f i, g ω ∂μ := by
-                --   rw [hE_partial_n_eq]
-                --   apply [LEMMA_NAME]
-                --   · exact hf_disj_fin
-                --   · intro i; exact hf_meas i
-                -- (similar for h, then rw [hg_sum, hh_sum]; congr; funext i; exact h_eq_i i)
+          -- Define the restricted function for clearer types
+          let f_fin : Fin n → Set Ω := fun i => f i.val
+
+          -- Lift measurability from sub-σ-algebra to ambient
+          have hf_meas_ambient : ∀ i : Fin n, MeasurableSet (f_fin i) := by
+            intro i
+            sorry -- TODO (~5-10 min): Lift measurability from sub-σ-algebra to ambient
+                  -- Have: hf_meas i.val : MeasurableSet[firstRSigma X r ⊔ finFutureSigma X m k] (f i.val)
+                  -- Need: MeasurableSet[ambient] (f i.val)
+                  -- The Dynkin induction is over the sub-σ-algebra, but integral_iUnion_fintype
+                  -- requires ambient measurability. Need to find correct coercion/lifting lemma.
+
+          -- Convert pairwise disjoint to Pairwise form
+          have hf_disj_pairwise : Pairwise (Function.onFun Disjoint f_fin) := by
+            intro i j hij
+            exact hf_disj_fin i j hij
+
+          -- Prove integrability of g on each f_fin i
+          -- g is indicator of B under X r, which is integrable (bounded by 1)
+          have hg_int : ∀ i : Fin n, IntegrableOn g (f_fin i) μ := by
+            intro i
+            refine Integrable.integrableOn ?_
+            -- Indicator of constant 1 on measurable set B is integrable
+            exact (integrable_const (1 : ℝ)).indicator ((hX_meas r) hB)
+
+          -- Prove integrability of h on each f_fin i
+          have hh_int : ∀ i : Fin n, IntegrableOn h (f_fin i) μ := by
+            intro i
+            -- h is a conditional expectation, which is integrable
+            apply Integrable.integrableOn
+            simp only [h, Exchangeability.Probability.condExpWith]
+            exact integrable_condExp
+
+          -- Rewrite E_partial using f_fin
+          have hE_partial_n_eq' : E_partial n = ⋃ i : Fin n, f_fin i := by simp [f_fin, hE_partial_n_eq]
+
+          -- Apply integral_iUnion_fintype for g
+          have hg_sum : ∫ ω in E_partial n, g ω ∂μ = ∑ i, ∫ ω in f_fin i, g ω ∂μ := by
+            rw [hE_partial_n_eq']
+            exact integral_iUnion_fintype hf_meas_ambient hf_disj_pairwise hg_int
+
+          -- Apply integral_iUnion_fintype for h
+          have hh_sum : ∫ ω in E_partial n, h ω ∂μ = ∑ i, ∫ ω in f_fin i, h ω ∂μ := by
+            rw [hE_partial_n_eq']
+            exact integral_iUnion_fintype hf_meas_ambient hf_disj_pairwise hh_int
+
+          -- Conclude using term-by-term equality
+          rw [hg_sum, hh_sum]
+          congr 1
+          funext i
+          exact h_eq_i i
       -- Apply monotone union closure
       rw [← hE_partial_eq]
       exact (goodsets_closed_under_monotone_union E_partial hE_partial_in hE_partial_mono).2
