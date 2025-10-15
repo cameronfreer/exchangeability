@@ -1289,12 +1289,21 @@ private theorem h_tower_of_lagConst
                 =ᵐ[μ]
               (fun ω =>
                 μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω) := h_term_const j
-          have := hInd.add hj'
-          refine this.trans ?_
-          refine ae_of_all μ (fun ω => by
-            simp [Finset.sum_insert, hj, Nat.cast_add, Nat.cast_one,
-                  add_comm, add_left_comm, add_assoc, mul_add, add_mul,
-                  mul_comm, mul_left_comm, mul_assoc])
+          have h_eq : (fun ω => ∑ j ∈ insert j s, μ[(fun ω => f (ω 0) * g (ω j)) | m] ω)
+                    = ((fun ω => ∑ j ∈ s, μ[(fun ω => f (ω 0) * g (ω j)) | m] ω) + 
+                       (fun ω => μ[(fun ω => f (ω 0) * g (ω j)) | m] ω)) := by
+            ext ω; simp [Finset.sum_insert hj, add_comm]
+          rw [h_eq]
+          calc (fun ω => ∑ j ∈ s, μ[(fun ω => f (ω 0) * g (ω j)) | m] ω) + 
+                 (fun ω => μ[(fun ω => f (ω 0) * g (ω j)) | m] ω)
+              =ᵐ[μ] (fun ω => ↑s.card * μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω) + 
+                     (fun ω => μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω) := hInd.add hj'
+            _ =ᵐ[μ] (fun ω => ↑(insert j s).card * μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω) := by
+                refine ae_of_all μ (fun ω => ?_)
+                simp only [Pi.add_apply]
+                rw [Finset.card_insert_of_notMem hj]
+                simp only [Nat.cast_add, Nat.cast_one]
+                ring
       simpa [Finset.card_range] using h' (Finset.range (n + 1))
 
     -- Assemble and cancel the average
