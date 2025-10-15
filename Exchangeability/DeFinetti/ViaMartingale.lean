@@ -146,6 +146,7 @@ def tailCylinder (r : ℕ) (C : Fin r → Set α) : Set (ℕ → α) :=
 
 variable [MeasurableSpace α]
 
+set_option linter.unusedSectionVars false in
 /-- Basic measurability for tail cylinders. -/
 lemma tailCylinder_measurable {r : ℕ} {C : Fin r → Set α}
     (hC : ∀ i, MeasurableSet (C i)) :
@@ -214,6 +215,7 @@ lemma strictMono_fin_cases
     cases j using Fin.cases with
     | zero =>
       have : (Fin.succ i : Fin (n + 1)).1 < 0 := by
+        set_option linter.unnecessarySimpa false in
         simpa [Fin.lt_iff_val_lt_val] using hij
       exact absurd this (Nat.not_lt.mpr (Nat.zero_le _))
     | succ j =>
