@@ -492,7 +492,61 @@ lemma extreme_members_equal_on_tail
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X m) | tailSigma X]
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] := by
-  sorry  -- TODO: Uses futureFiltration defined later in file
+  classical
+  -- abbreviations
+  set f_m : Ω → ℝ := (Set.indicator B (fun _ => (1 : ℝ))) ∘ X m with hf_m
+  set f_0 : Ω → ℝ := (Set.indicator B (fun _ => (1 : ℝ))) ∘ X 0 with hf_0
+
+  -- bounded indicators are integrable
+  have hf_m_int :
+      Integrable f_m μ :=
+    by
+      simpa [hf_m] using
+        Exchangeability.Probability.integrable_indicator_comp
+          (μ := μ) (X := X m) (hX := hX_meas m) hB
+  have hf_0_int :
+      Integrable f_0 μ :=
+    by
+      simpa [hf_0] using
+        Exchangeability.Probability.integrable_indicator_comp
+          (μ := μ) (X := X 0) (hX := hX_meas 0) hB
+
+  -- equality at the future level m (contractability)
+  have h_eq_m :
+      μ[f_m | futureFiltration X m] =ᵐ[μ] μ[f_0 | futureFiltration X m] := by
+    simpa [hf_m, hf_0] using
+      (condexp_convergence (μ := μ) (X := X) hX hX_meas 0 m
+        (Nat.zero_le m) B hB)
+
+  -- condition both sides on the tail
+  have h_cond_on_tail :
+      μ[μ[f_m | futureFiltration X m] | tailSigma X]
+        =ᵐ[μ]
+      μ[μ[f_0 | futureFiltration X m] | tailSigma X] :=
+    condExp_congr_ae h_eq_m
+
+  -- tower property since tailSigma ≤ futureFiltration m
+  have h_tower_m :
+      μ[μ[f_m | futureFiltration X m] | tailSigma X]
+        =ᵐ[μ] μ[f_m | tailSigma X] := by
+    simpa using
+      (condExp_condExp_of_le (μ := μ)
+        (hm₁₂ := tailSigma_le_futureFiltration (X := X) m)
+        (hm₂ := futureFiltration_le (X := X) m hX_meas)
+        (f := f_m)
+        (hf := hf_m_int)).symm
+  have h_tower_0 :
+      μ[μ[f_0 | futureFiltration X m] | tailSigma X]
+        =ᵐ[μ] μ[f_0 | tailSigma X] := by
+    simpa using
+      (condExp_condExp_of_le (μ := μ)
+        (hm₁₂ := tailSigma_le_futureFiltration (X := X) m)
+        (hm₂ := futureFiltration_le (X := X) m hX_meas)
+        (f := f_0)
+        (hf := hf_0_int)).symm
+
+  -- assemble the equalities
+  exact h_cond_on_tail.trans (h_tower_m.trans h_tower_0.symm)
 
 /-! ## Future filtration (additive)
 
