@@ -9,8 +9,6 @@ import Mathlib.Probability.Independence.Basic
 import Mathlib.Probability.Independence.Conditional
 import Mathlib.Probability.Martingale.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.CondexpL2
-import Mathlib.MeasureTheory.PiSystem
-import Mathlib.MeasureTheory.OuterMeasure.BorelCantelli
 
 /-!
 # Conditional Expectation API for Exchangeability Proofs
@@ -67,14 +65,6 @@ open MeasureTheory Filter Set Function
 namespace Exchangeability.Probability
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
-
-/-
-Note on linter warnings: Some theorems in this file explicitly include `{m₀ : MeasurableSpace Ω}`
-as a parameter, which makes the section variable `[MeasurableSpace Ω]` unused for those theorems.
-This is intentional: these theorems need to work with multiple measurable space structures on Ω
-(e.g., m₀, m₁, m₂, mF, mG, mH) and explicitly naming m₀ makes the statements clearer. We disable
-the unusedSectionVars linter for such theorems with `set_option linter.unusedSectionVars false`.
--/
 
 /-! ### Pair-law ⇒ conditional indicator equality (stub) -/
 
@@ -274,7 +264,7 @@ This wrapper "freezes" the conditioning σ-algebra and installs the necessary
 sigma-finite instances before calling `μ[f | m]`, avoiding typeclass metavariable issues. -/
 noncomputable
 def condExpWith {Ω : Type*} {m₀ : MeasurableSpace Ω}
-    (μ : Measure Ω) [IsProbabilityMeasure μ]
+    (μ : Measure Ω) [IsFiniteMeasure μ]
     (m : MeasurableSpace Ω) (_hm : m ≤ m₀)
     (f : Ω → ℝ) : Ω → ℝ := by
   classical
@@ -341,7 +331,7 @@ Use with Y = X_m, Y' = X_k, Z = shiftRV X (m+1), and the equality comes from con
 via `contractable_dist_eq`. -/
 lemma condexp_indicator_eq_of_pair_law_eq
     {Ω α β : Type*} [mΩ : MeasurableSpace Ω] [MeasurableSpace α] [mβ : MeasurableSpace β]
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {μ : Measure Ω} [IsFiniteMeasure μ]
     (Y Y' : Ω → α) (Z : Ω → β)
     (hY : Measurable Y) (hY' : Measurable Y') (hZ : Measurable Z)
     (hpair : Measure.map (fun ω => (Y ω, Z ω)) μ
@@ -446,7 +436,7 @@ lemma condexp_indicator_eq_of_pair_law_eq
 This is a direct application of `condexp_indicator_eq_of_pair_law_eq` with the sequence type. -/
 lemma condexp_indicator_eq_of_agree_on_future_rectangles
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {μ : Measure Ω} [IsFiniteMeasure μ]
     {X₁ X₂ : Ω → α} {Y : Ω → ℕ → α}
     (hX₁ : Measurable X₁) (hX₂ : Measurable X₂) (hY : Measurable Y)
     (hagree : AgreeOnFutureRectangles
