@@ -2232,21 +2232,24 @@ theorem weighted_sums_converge_L1
 
     -- Segment 1: ‖A 0 m - A (m-k) k‖₂² ≤ Cf/k
     have h1 : ∫ ω, (A 0 m ω - A (m - k) k ω)^2 ∂μ ≤ Cf / k := by
-      -- TODO: simpa only [A] using h_long_tail_bound hk_pos hk_le_m causes timeouts
-      -- Need to convert A definition to match h_long_tail_bound's conclusion
-      sorry
+      have h := @h_long_tail_bound 0 m k hk_pos hk_le_m
+      convert h using 2
+      ext ω
+      simp only [A]
+      congr 2 <;> (congr 1; apply Finset.sum_congr rfl; intro i _; congr; omega)
 
     -- Segment 2: ‖A (m-k) k - A (ℓ-k) k‖₂² ≤ Cf/k
     have h2 : ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ ≤ Cf / k := by
-      -- TODO: simpa only [A] using h_window_bound hk_pos causes timeouts
-      -- Need to convert A definition to match h_window_bound's conclusion
-      sorry
+      simpa only [A] using @h_window_bound (m - k) (ℓ - k) k hk_pos
 
     -- Segment 3: ‖A (ℓ-k) k - A 0 ℓ‖₂² ≤ Cf/k
     have h3 : ∫ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 ∂μ ≤ Cf / k := by
       have h_sq : ∫ ω, (A 0 ℓ ω - A (ℓ - k) k ω)^2 ∂μ ≤ Cf / k := by
-        -- TODO: simpa only [A] using h_long_tail_bound hk_pos hk_le_ℓ causes timeouts
-        sorry
+        have h := @h_long_tail_bound 0 ℓ k hk_pos hk_le_ℓ
+        convert h using 2
+        ext ω
+        simp only [A]
+        congr 2 <;> (congr 1; apply Finset.sum_congr rfl; intro i _; congr; omega)
       have : ∀ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 = (A 0 ℓ ω - A (ℓ - k) k ω)^2 := by
         intro ω; ring
       simp_rw [this]; exact h_sq
@@ -2320,12 +2323,64 @@ theorem weighted_sums_converge_L1
                 ENNReal.ofReal (Real.sqrt (Cf / k)) := by
                   gcongr
             _ = ENNReal.ofReal (3 * Real.sqrt (Cf / k)) := by
-                  -- TODO: Fix ENNReal.ofReal_add usage
-                  sorry
+                  set r : ℝ := Real.sqrt (Cf / k)
+                  have hr_nonneg : 0 ≤ r := Real.sqrt_nonneg _
+                  -- Add three ofReal r terms
+                  calc ENNReal.ofReal r + ENNReal.ofReal r + ENNReal.ofReal r
+                      = (ENNReal.ofReal r + ENNReal.ofReal r) + ENNReal.ofReal r := by
+                          rfl
+                    _ = ENNReal.ofReal (r + r) + ENNReal.ofReal r := by
+                          rw [ENNReal.ofReal_add hr_nonneg hr_nonneg]
+                    _ = ENNReal.ofReal ((r + r) + r) := by
+                          have h2r : 0 ≤ r + r := by linarith
+                          rw [ENNReal.ofReal_add h2r hr_nonneg]
+                    _ = ENNReal.ofReal (3 * r) := by
+                          congr 1; ring
       _ < ENNReal.ofReal ε := by
-          -- TODO: Fix ENNReal.ofReal_lt_ofReal_iff_of_nonneg and complete final bound proof
-          -- Mathematical idea: k ≥ ⌈9Cf/ε²⌉ + 1 > 9Cf/ε², so Cf/k < ε²/9, so √(Cf/k) < ε/3, thus 3√(Cf/k) < ε
-          sorry
+          -- Show 3√(Cf/k) < ε using k > 9Cf/ε²
+          have hε_pos : 0 < ε := hε
+          -- First establish k > 9Cf/ε²
+          have h_k_large : 9 * Cf / ε ^ 2 < (k : ℝ) := by
+            have h_ceil : 9 * Cf / ε ^ 2 ≤ Nat.ceil (9 * Cf / ε ^ 2) := Nat.le_ceil _
+            have h_succ : (Nat.ceil (9 * Cf / ε ^ 2) : ℝ) < k := by
+              simp only [k]
+              norm_cast
+              omega
+            linarith
+          -- Now show Cf/k < ε²/9
+          have h_frac : Cf / k < ε ^ 2 / 9 := by
+            have hk_pos_real : 0 < (k : ℝ) := Nat.cast_pos.mpr hk_pos
+            have h_nine_pos : (0 : ℝ) < 9 := by norm_num
+            by_cases hCf_zero : Cf = 0
+            · rw [hCf_zero]
+              simp only [zero_div]
+              exact div_pos (sq_pos_of_pos hε_pos) h_nine_pos
+            · have hCf_pos : 0 < Cf := by
+                rcases hCf_nonneg.lt_or_eq with h | h
+                · exact h
+                · exact absurd h.symm hCf_zero
+              have h_denom : 0 < 9 * Cf / ε ^ 2 := by
+                apply div_pos
+                · exact mul_pos h_nine_pos hCf_pos
+                · exact sq_pos_of_pos hε_pos
+              have h_eq : Cf / (9 * Cf / ε ^ 2) = ε ^ 2 / 9 := by field_simp
+              calc Cf / k < Cf / (9 * Cf / ε ^ 2) := div_lt_div_of_pos_left hCf_pos h_denom h_k_large
+                _ = ε ^ 2 / 9 := h_eq
+          -- So √(Cf/k) < ε/3
+          have h_sqrt : Real.sqrt (Cf / k) < ε / 3 := by
+            have h_bound : Cf / k < (ε / 3) ^ 2 := by
+              calc Cf / k < ε ^ 2 / 9 := h_frac
+                _ = (ε / 3) ^ 2 := by ring
+            have hε3_pos : 0 < ε / 3 := by linarith
+            rw [← Real.sqrt_sq (le_of_lt hε3_pos)]
+            exact Real.sqrt_lt_sqrt (div_nonneg hCf_nonneg (Nat.cast_nonneg k)) h_bound
+          -- Therefore 3√(Cf/k) < ε
+          have h_real : 3 * Real.sqrt (Cf / k) < ε := by
+            calc 3 * Real.sqrt (Cf / k)
+                < 3 * (ε / 3) := mul_lt_mul_of_pos_left h_sqrt (by norm_num : (0 : ℝ) < 3)
+              _ = ε := by ring
+          -- Lift to ENNReal
+          exact ENNReal.ofReal_lt_ofReal_iff hε_pos |>.mpr h_real
 
   have hA_cauchy_L1_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
       eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ < ENNReal.ofReal ε := by
