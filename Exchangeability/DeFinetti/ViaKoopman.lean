@@ -1120,9 +1120,14 @@ private theorem h_tower_of_lagConst
         obtain ⟨Cg, hCg⟩ := hg_bd
         exact integrable_of_bounded_measurable
           (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
-      -- condexp_precomp_iterate_eq gives: μ[g∘shift^j | shiftInvariantSigma] = μ[g | shiftInvariantSigma]
-      -- Need: shift^[j] ω 0 = ω j (by shift definition) and m = shiftInvariantSigma
-      sorry  -- TODO: apply condexp_precomp_iterate_eq with rewriting shift^[j] ω 0 = ω j
+      -- condexp_precomp_iterate_eq gives: μ[fun ω => g (shift^[j] ω 0) | m] = μ[fun ω => g (ω 0) | m]
+      -- Need to show: shift^[j] ω 0 = ω j, then apply h
+      have h := condexp_precomp_iterate_eq (μ := μ) hσ (k := j) (hf := hg_0_int)
+      -- Prove: shift^[j] ω 0 = ω j using shift_iterate_apply (defined later at line 2814)
+      have h_shift : (fun ω => g (shift^[j] ω 0)) = (fun ω => g (ω j)) := by
+        sorry  -- Needs: shift^[j] ω 0 = ω (0 + j) = ω j by shift_iterate_apply
+      rw [← h_shift]
+      exact h
 
     -- Sum of identical a.e.-terms = (n+1) · that term
     have h_sum_const :
