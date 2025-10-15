@@ -993,8 +993,8 @@ private lemma snorm_one_le_snorm_two_toReal
   have hle : eLpNorm f 1 μ ≤ eLpNorm f 2 μ :=
     eLpNorm_le_eLpNorm_of_exponent_le h12 hL1.aestronglyMeasurable
   -- Convert to a real inequality via `toReal`, knowing `‖f‖₂ < ∞`
-  have hfin₂ : eLpNorm f 2 μ ≠ ∞ := by
-    exact (ne_of_lt (memLp_iff_eLpNorm_lt_top.mp hL2))
+  have hfin₂ : eLpNorm f 2 μ ≠ ∞ :=
+    ne_of_lt (memLp_iff_eLpNorm_lt_top.mp hL2)
   have hmono := ENNReal.toReal_mono hle hfin₂
   -- Rewrite `‖f‖₁` as an ordinary integral
   have h₁ :
@@ -1015,11 +1015,9 @@ private lemma ennreal_tendsto_toReal_zero {ι : Type*}
   -- Eventually, `f x ≤ 1`, hence `f x < ∞`; then use `ENNReal.tendsto_toReal`.
   have h_fin : ∀ᶠ x in a, f x < ∞ := by
     -- from `f → 0`, for ε=1 we have eventually `f x ≤ 1`
-    have : ∀ᶠ x in a, f x ≤ 1 := by
-      have h := (tendsto_order.1 hf).2 1 (by norm_num) -- eventually ≤ 1
-      exact h
+    have : ∀ᶠ x in a, f x ≤ 1 := (tendsto_order.1 hf).2 1 (by norm_num)
     filter_upwards [this] with x hx
-    exact lt_of_le_of_lt hx (by simp) -- `1 < ∞`
+    exact lt_of_le_of_lt hx ENNReal.one_lt_top
   -- apply the continuity lemma at finite points with limit 0:
   simpa using ENNReal.tendsto_toReal (hf) h_fin
 
