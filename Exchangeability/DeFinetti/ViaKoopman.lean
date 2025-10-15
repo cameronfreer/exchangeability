@@ -957,13 +957,16 @@ private lemma condExp_const_mul
   simpa [Pi.mul_apply, smul_eq_mul] using
     (MeasureTheory.condExp_smul (μ := μ) (m := m) (c := c) (f := f))
 
-/-- Conditional expectation commutes with finite sums.
+/-- Finite sum linearity of conditional expectation.
 **Mathematical content**: CE[Σᵢfᵢ|m] = ΣᵢCE[fᵢ|m]
-**Mathlib source**: Should wrap `MeasureTheory.condExp_finset_sum` after resolving integrability requirements. -/
+**Mathlib source**: Direct application of `MeasureTheory.condExp_finset_sum`.
+NOTE: Temporarily axiomatized due to notation elaboration issues with `∑ i ∈ s, f i` vs `fun ω => ∑ i ∈ s, f i ω`.
+The mathematical content is identical and proven in mathlib. -/
 private axiom condExp_sum_finset
     {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
     {m : MeasurableSpace Ω} (hm : m ≤ mΩ)
-    {ι : Type*} (s : Finset ι) (f : ι → Ω → ℝ) :
+    {ι : Type*} (s : Finset ι) (f : ι → Ω → ℝ)
+    (hint : ∀ i ∈ s, Integrable (f i) μ) :
     μ[(fun ω => s.sum (fun i => f i ω)) | m]
       =ᵐ[μ] (fun ω => s.sum (fun i => μ[f i | m] ω))
 
