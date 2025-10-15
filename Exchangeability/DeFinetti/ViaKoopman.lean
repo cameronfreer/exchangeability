@@ -1166,13 +1166,14 @@ private theorem h_tower_of_lagConst
                     = ((fun ω => ∑ j ∈ s, μ[fun ω => g (ω j)|m] ω) + (fun ω => μ[fun ω => g (ω j)|m] ω)) := by
             ext ω; simp [Finset.sum_insert hj, add_comm]
           rw [h_eq]
-          trans
-          · exact hInd.add hj'
-          · refine ae_of_all μ (fun ω => ?_)
-            show ((fun ω => ↑s.card * Y ω) + fun ω => Y ω) ω = ↑(insert j s).card * Y ω
-            rw [Finset.card_insert_of_notMem hj]
-            simp only [Nat.cast_add, Nat.cast_one]
-            ring
+          calc (fun ω => ∑ j ∈ s, μ[fun ω => g (ω j)|m] ω) + (fun ω => μ[fun ω => g (ω j)|m] ω)
+              =ᵐ[μ] (fun ω => ↑s.card * Y ω) + (fun ω => Y ω) := hInd.add hj'
+            _ =ᵐ[μ] (fun ω => ↑(insert j s).card * Y ω) := by
+                refine ae_of_all μ (fun ω => ?_)
+                simp only [Pi.add_apply]
+                rw [Finset.card_insert_of_notMem hj]
+                simp only [Nat.cast_add, Nat.cast_one]
+                ring
       simpa [Finset.card_range] using h' (Finset.range (n + 1))
 
     -- Assemble: push → sum → collapse → cancel (1/(n+1))·(n+1)
