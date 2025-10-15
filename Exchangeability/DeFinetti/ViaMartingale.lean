@@ -2895,11 +2895,28 @@ lemma block_coord_condIndep
       have hf_int : Integrable f μ := by
         simpa [hf_def] using hf_int_raw
       -- Integrability of conditional expectation
-      -- Conditional expectation is always integrable (mathlib: integrable_condexp)
+      -- Strategy: First prove g = (Set.indicator B (fun _ => (1 : ℝ))) ∘ X r is integrable,
+      -- then use that conditional expectations of integrable functions are integrable.
       have hh_int : Integrable (fun ω => Exchangeability.Probability.condExpWith μ
           (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
           (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r) ω) μ := by
-        -- condExpWith unfolds to μ[f | m], and conditional expectation is always integrable
+        -- Step 1: Prove g is measurable and bounded, hence integrable
+        have h_g_meas : Measurable ((Set.indicator B (fun _ : α => (1 : ℝ))) ∘ X r) :=
+          (measurable_const.indicator hB).comp (hX_meas r)
+        
+        have h_g_bound : ∀ᵐ ω ∂μ, ‖((Set.indicator B (fun _ => (1 : ℝ))) ∘ X r) ω‖ ≤ (1 : ℝ) := by
+          refine eventually_of_forall ?_
+          intro ω
+          by_cases hω : X r ω ∈ B
+          · simp [Function.comp, Set.indicator_of_mem hω]
+          · simp [Function.comp, Set.indicator_of_not_mem hω]
+        
+        -- Bounded measurable function on probability space is integrable
+        have hμ_fin : μ Set.univ < ∞ := measure_univ
+        have h_g_int : Integrable ((Set.indicator B (fun _ => (1 : ℝ))) ∘ X r) μ :=
+          Integrable.of_bound h_g_meas.aestronglyMeasurable 1 h_g_bound
+        
+        -- Step 2: Conditional expectation of integrable function is integrable
         simp only [Exchangeability.Probability.condExpWith]
         exact integrable_condExp
 
