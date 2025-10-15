@@ -213,7 +213,7 @@ def shiftInvariantSigmaℤ : MeasurableSpace (Ωℤ[α]) where
   MeasurableSet' := fun s => IsShiftInvariantℤ (α := α) s
   measurableSet_empty := by
     refine ⟨MeasurableSet.empty, ?_⟩
-    simp [IsShiftInvariantℤ]
+    simp
   measurableSet_compl := by
     intro s hs
     obtain ⟨hs_meas, hs_eq⟩ := hs
@@ -335,8 +335,8 @@ axiom exists_naturalExtension
 /-- Pulling conditional expectation back to the two-sided extension.
 
 **Can be derived from `condexp_pullback_factor`** by specializing with:
-- `g := restrictNonneg`, 
-- `μ' := ext.μhat`, 
+- `g := restrictNonneg`,
+- `μ' := ext.μhat`,
 - `m := shiftInvariantSigma` (pulls back to `shiftInvariantSigmaℤ`)
 - `hpush := ext.restrict_pushforward` -/
 axiom naturalExtension_condexp_pullback
@@ -1250,9 +1250,9 @@ private theorem h_tower_of_lagConst
                 =ᵐ[μ]
               (fun ω => Y ω) := h_term j
           -- hInd: sum over s = s.card * Y
-          -- hj': g(ω j) term = Y  
+          -- hj': g(ω j) term = Y
           -- Need: sum over (insert j s) = (insert j s).card * Y
-          have h_eq : (fun ω => ∑ j ∈ insert j s, μ[fun ω => g (ω j)|m] ω) 
+          have h_eq : (fun ω => ∑ j ∈ insert j s, μ[fun ω => g (ω j)|m] ω)
                     = ((fun ω => ∑ j ∈ s, μ[fun ω => g (ω j)|m] ω) + (fun ω => μ[fun ω => g (ω j)|m] ω)) := by
             ext ω; simp [Finset.sum_insert hj, add_comm]
           rw [h_eq]
@@ -1382,13 +1382,13 @@ private theorem h_tower_of_lagConst
               (fun ω =>
                 μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω) := h_term_const j
           have h_eq : (fun ω => ∑ j ∈ insert j s, μ[(fun ω => f (ω 0) * g (ω j)) | m] ω)
-                    = ((fun ω => ∑ j ∈ s, μ[(fun ω => f (ω 0) * g (ω j)) | m] ω) + 
+                    = ((fun ω => ∑ j ∈ s, μ[(fun ω => f (ω 0) * g (ω j)) | m] ω) +
                        (fun ω => μ[(fun ω => f (ω 0) * g (ω j)) | m] ω)) := by
             ext ω; simp [Finset.sum_insert hj, add_comm]
           rw [h_eq]
-          calc (fun ω => ∑ j ∈ s, μ[(fun ω => f (ω 0) * g (ω j)) | m] ω) + 
+          calc (fun ω => ∑ j ∈ s, μ[(fun ω => f (ω 0) * g (ω j)) | m] ω) +
                  (fun ω => μ[(fun ω => f (ω 0) * g (ω j)) | m] ω)
-              =ᵐ[μ] (fun ω => ↑s.card * μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω) + 
+              =ᵐ[μ] (fun ω => ↑s.card * μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω) +
                      (fun ω => μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω) := hInd.add hj'
             _ =ᵐ[μ] (fun ω => ↑(insert j s).card * μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω) := by
                 refine ae_of_all μ (fun ω => ?_)
@@ -1466,7 +1466,7 @@ private theorem h_tower_of_lagConst
           obtain ⟨Cg, hCg⟩ := hg_bd
           refine integrable_of_bounded_measurable ?_ Cg ?_
           · -- A n is measurable (finite average of measurable functions)
-            exact Measurable.div_const 
+            exact Measurable.div_const
               (Measurable.finset_sum _ (fun j _ => hg_meas.comp (measurable_pi_apply j)))
               _
           · -- |A n ω| ≤ Cg pointwise
@@ -1479,7 +1479,7 @@ private theorem h_tower_of_lagConst
               _ ≤ (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), |g (ω j)| := by
                   exact mul_le_mul_of_nonneg_left (abs_sum_le_sum_abs _ _) (by positivity)
               _ ≤ (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), Cg := by
-                  exact mul_le_mul_of_nonneg_left 
+                  exact mul_le_mul_of_nonneg_left
                     (Finset.sum_le_sum (fun j _ => hCg (ω j))) (by positivity)
               _ = (1 / (↑n + 1)) * ((↑n + 1) * Cg) := by simp [Finset.sum_const, Finset.card_range]
               _ = Cg := by field_simp; ring
@@ -1535,7 +1535,7 @@ private theorem h_tower_of_lagConst
         · -- A n is integrable (from Block 3, line 1375)
           obtain ⟨Cg, hCg⟩ := hg_bd
           refine integrable_of_bounded_measurable ?_ Cg ?_
-          · exact Measurable.div_const 
+          · exact Measurable.div_const
               (Measurable.finset_sum _ (fun j _ => hg_meas.comp (measurable_pi_apply j)))
               _
           · intro ω
@@ -1549,7 +1549,7 @@ private theorem h_tower_of_lagConst
                   ≤ ∑ j ∈ Finset.range (n + 1), |g (ω j)| := abs_sum_le_sum_abs _ _
                 _ ≤ ∑ j ∈ Finset.range (n + 1), Cg := Finset.sum_le_sum (fun j _ => hCg (ω j))
               _ = Cg := by simp [Finset.sum_const, Finset.card_range]; field_simp; ring
-      -- Integrability of W = f(ω 0) * Y ω  
+      -- Integrability of W = f(ω 0) * Y ω
       have hW_int : Integrable (fun ω => f (ω 0) * Y ω) μ := by
         refine Integrable.mul ?_ ?_
         · exact integrable_of_bounded_measurable
@@ -1590,7 +1590,7 @@ private theorem h_tower_of_lagConst
           have hA_int : Integrable (A n) μ := by
             obtain ⟨Cg, hCg⟩ := hg_bd
             refine integrable_of_bounded_measurable ?_ Cg ?_
-            · exact Measurable.div_const 
+            · exact Measurable.div_const
                 (Measurable.finset_sum _ (fun j _ => hg_meas.comp (measurable_pi_apply j)))
                 _
             · intro ω
@@ -1618,7 +1618,7 @@ private theorem h_tower_of_lagConst
         have hA_int : Integrable (A n) μ := by
           obtain ⟨Cg, hCg⟩ := hg_bd
           refine integrable_of_bounded_measurable ?_ Cg ?_
-          · exact Measurable.div_const 
+          · exact Measurable.div_const
               (Measurable.finset_sum _ (fun j _ => hg_meas.comp (measurable_pi_apply j)))
               _
           · intro ω
