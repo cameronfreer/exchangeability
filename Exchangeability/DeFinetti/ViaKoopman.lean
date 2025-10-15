@@ -989,9 +989,9 @@ private lemma snorm_one_le_snorm_two_toReal
     (f : Ω → ℝ) (hL1 : Integrable f μ) (hL2 : MemLp f 2 μ) :
     (∫ ω, |f ω| ∂μ) ≤ (eLpNorm f 2 μ).toReal := by
   -- `eLpNorm 1 ≤ eLpNorm 2` on probability spaces
-  have h12 : (1 : ℝ≥0∞) ≤ (2 : ℝ≥0∞) := by norm_num
+  have h12 : (1 : ENNReal) ≤ 2 := by norm_num
   have hle : eLpNorm f 1 μ ≤ eLpNorm f 2 μ :=
-    eLpNorm_mono_exponent (μ := μ) (f := f) h12
+    eLpNorm_le_eLpNorm_of_exponent_le h12 hL1.aestronglyMeasurable
   -- Convert to a real inequality via `toReal`, knowing `‖f‖₂ < ∞`
   have hfin₂ : eLpNorm f 2 μ ≠ ∞ := by
     exact (ne_of_lt (memLp_iff_eLpNorm_lt_top.mp hL2))
@@ -1009,8 +1009,8 @@ private lemma snorm_one_le_snorm_two_toReal
 
 /-- If `f → 0` in `ℝ≥0∞`, then `(toReal ∘ f) → 0` in `ℝ`. -/
 private lemma ennreal_tendsto_toReal_zero {ι : Type*}
-    (f : ι → ℝ≥0∞) {a : Filter ι}
-    (hf : Tendsto f a (𝓝 (0 : ℝ≥0∞))) :
+    (f : ι → ENNReal) {a : Filter ι}
+    (hf : Tendsto f a (𝓝 (0 : ENNReal))) :
     Tendsto (fun x => (f x).toReal) a (𝓝 (0 : ℝ)) := by
   -- Eventually, `f x ≤ 1`, hence `f x < ∞`; then use `ENNReal.tendsto_toReal`.
   have h_fin : ∀ᶠ x in a, f x < ∞ := by
