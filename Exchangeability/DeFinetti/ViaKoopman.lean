@@ -2832,18 +2832,7 @@ follows:
 The wrappers below make these connections explicit for our setting.
 -/
 
-
-set_option linter.unusedSectionVars false in
-/-- Helper: shift^[k] y n = y (n + k) -/
-lemma shift_iterate_apply (k n : ℕ) (y : Ω[α]) :
-    (shift (α := α))^[k] y n = y (n + k) := by
-  induction k generalizing n with
-  | zero => simp
-  | succ k ih =>
-    rw [Function.iterate_succ_apply']
-    simp only [shift]
-    rw [ih]
-    ring_nf
+-- Note: shift_iterate_apply was moved up to line 1043 for earlier use
 
 set_option linter.unusedSectionVars false in
 /-- The k-th coordinate equals the 0-th coordinate after k shifts. -/
