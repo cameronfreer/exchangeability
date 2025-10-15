@@ -3314,7 +3314,7 @@ lemma finite_level_factorization
           rw [Fin.prod_univ_castSucc]
           simp only [Cinit, Clast, Fin.last]
 
-/-- **Tail factorization on finite cylinders.**
+/-- **Tail factorization on finite cylinders (formerly Axiom 4).**
 
 Assume you have, for all large enough `m`, the finite‑level factorization
 at the future filtration:
@@ -3330,7 +3330,7 @@ Then the same factorization holds **at the tail σ‑algebra**:
 
 This passes the finite‑level equality to the tail using bounded
 dominated convergence together with reverse martingale convergence. -/
-axiom tail_factorization_from_future
+lemma tail_factorization_from_future
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α)
@@ -3355,51 +3355,54 @@ axiom tail_factorization_from_future
     μ[indProd X r C | tailSigma X]
       =ᵐ[μ]
     (fun ω => ∏ i : Fin r,
-        μ[Set.indicator (C i) (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] ω)
+        μ[Set.indicator (C i) (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] ω) := by
+  classical
+  -- Strategy: Use reverse martingale convergence for the LHS
+  -- The future filtration decreases to the tail σ-algebra, so reverse martingale
+  -- convergence gives: μ[f | futureFiltration X m] → μ[f | tailSigma X] ae
+  
+  -- LHS reverse martingale convergence for the product
+  have h_lhs_conv : ∀ᵐ ω ∂μ,
+      Tendsto (fun m => μ[indProd X r C | futureFiltration X m] ω)
+              atTop
+              (𝓝 (μ[indProd X r C | tailSigma X] ω)) := by
+    -- Apply reverse martingale convergence (from mathlib or Martingale.lean)
+    -- tailSigma X = ⨅ m, futureFiltration X m
+    sorry  -- TODO: Apply condexp_tendsto_tail or similar
+  
+  -- RHS convergence: product of convergent sequences
+  have h_rhs_conv : ∀ᵐ ω ∂μ,
+      Tendsto (fun m => ∏ i : Fin r,
+                  μ[Set.indicator (C i) (fun _ => (1 : ℝ)) ∘ (X 0) | futureFiltration X m] ω)
+              atTop
+              (𝓝 (∏ i : Fin r,
+                  μ[Set.indicator (C i) (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] ω)) := by
+    -- Product of tendsto gives tendsto of product (finitely many factors)
+    have h_ae := ae_all_iff.mpr h_rev
+    filter_upwards [h_ae] with ω hω
+    exact tendsto_finset_prod _ (fun i _ => hω i)
+  
+  -- Both LHS and RHS converge, and they're equal at each finite level for large m
+  -- Therefore their limits are equal
+  have h_eq_ae : ∀ᵐ ω ∂μ,
+      μ[indProd X r C | tailSigma X] ω
+        = (∏ i : Fin r,
+            μ[Set.indicator (C i) (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] ω) := by
+    -- Combine the three ae sets
+    have h_fact_large : ∀ᵐ ω ∂μ, ∀ m ≥ r,
+        μ[indProd X r C | futureFiltration X m] ω
+          = (∏ i : Fin r,
+              μ[Set.indicator (C i) (fun _ => (1 : ℝ)) ∘ (X 0) | futureFiltration X m] ω) := by
+      -- Convert the ae hypothesis h_fact to a pointwise statement
+      sorry  -- TODO: Use ae_all_iff or similar to convert sequence of ae to ae sequence
+    
+    filter_upwards [h_lhs_conv, h_rhs_conv, h_fact_large] with ω hlhs hrhs hfact
+    -- At ω, both sequences converge and are eventually equal, so limits are equal
+    exact tendsto_nhds_unique hlhs (hrhs.congr' (eventually_atTop.mpr ⟨r, hfact⟩))
+  
+  exact h_eq_ae
 
-/-- **Key lemma: All coordinates have identical conditional distributions.**
-
-For a contractable sequence, all coordinates X_m have the same conditional law given
-the tail σ-algebra. This follows immediately from `extreme_members_equal_on_tail`. -/
-lemma identical_conditional_laws
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {X : ℕ → Ω → α}
-    (hX : Contractable μ X)
-    (hX_meas : ∀ n, Measurable (X n))
-    (m : ℕ) :
-    ∀ B : Set α, MeasurableSet B →
-      μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X m) | tailSigma X]
-        =ᵐ[μ]
-      μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] :=
-  fun B hB => extreme_members_equal_on_tail hX hX_meas m B hB
-
-/-- **Aldous' third proof of de Finetti's theorem.**
-
-If `X` is contractable, then `X₁, X₂, ...` are conditionally i.i.d. given the
-tail σ-algebra `𝒯_X = ⋂_n σ(θ_n X)`.
-
-**Proof structure:**
-1. From contractability: `(X_m, θ_{m+1} X) =^d (X_k, θ_{m+1} X)` for `k ≤ m ≤ n`
-2. Define `𝒯_X = ⋂_n σ(θ_n X)` (tail σ-algebra)
-3. Apply Lemma 1.3 + reverse martingale convergence:
-   ```
-   P[X_m ∈ B | θ_{m+1} X] = P[X_k ∈ B | θ_{m+1} X] → P[X_k ∈ B | 𝒯_X]
-   ```
-4. Conclude: `P[X_m ∈ B | θ_{m+1} X] = P[X_m ∈ B | 𝒯_X] = P[X_1 ∈ B | 𝒯_X]`
-5. First equality: `X_m ⊥⊥_{𝒯_X} θ_{m+1} X` for all `m`
-6. By iteration: `X₁, X₂, ...` conditionally independent given `𝒯_X`
-7. Second equality: conditional laws agree, giving conditional i.i.d.
-
-*Kallenberg (2005), third proof of Theorem 1.1 (page 28).* -/
-theorem deFinetti_viaMartingale
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {X : ℕ → Ω → α}
-    (hX : Contractable μ X)
-    (hX_meas : ∀ n, Measurable (X n)) :
-    ConditionallyIID μ X := by
-  sorry  -- TODO: Complete martingale proof of de Finetti
-
-/-! ### Step 1: Constructing the directing measure ν
+/-! ### Directing measure construction
 
 From conditional expectations on indicators, we need to build a measurable family
 of probability measures `ν : Ω → Measure α`.
@@ -3411,9 +3414,13 @@ The construction uses the standard Borel machinery: for each `ω`, define
 This requires StandardBorelSpace assumption on α to ensure existence.
 -/
 
-/-- Construction of the directing measure from conditional expectations.
-For each `ω : Ω`, `ν ω` is the conditional distribution of `X₀` given the tail σ-algebra. -/
-axiom directingMeasure_of_contractable
+/-- Construction of the directing measure from conditional expectations (formerly Axiom 5).
+For each `ω : Ω`, `ν ω` is the conditional distribution of `X₀` given the tail σ-algebra.
+
+This uses mathlib's `condExpKernel` to construct a regular conditional probability kernel.
+The kernel `condExpKernel μ (tailSigma X)` gives the conditional distribution on the entire
+path space; composing with the projection `X 0` gives the desired marginal on α. -/
+noncomputable def directingMeasure_of_contractable
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
     (X : ℕ → Ω → α)
@@ -3422,9 +3429,20 @@ axiom directingMeasure_of_contractable
       (∀ ω, IsProbabilityMeasure (ν ω)) ∧
       (∀ B : Set α, MeasurableSet B →
         (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X]) ∧
-      (∀ B : Set α, MeasurableSet B → Measurable (fun ω => ν ω B)) }
+      (∀ B : Set α, MeasurableSet B → Measurable (fun ω => ν ω B)) } := by
+  classical
+  -- **Construction strategy:**
+  -- 1. Use condExpKernel μ (tailSigma X) to get a kernel κ : Ω → Measure Ω
+  -- 2. Define ν ω := (κ ω).map (X 0) (pushforward along X 0)
+  -- 3. Prove probability: κ ω is a probability measure, X 0 is measurable
+  -- 4. Prove CE property: Use condExp_ae_eq_integral_condExpKernel and integral_map
+  -- 5. Prove measurability: Use Kernel.measurable_coe composed with map
+  
+  -- Need StandardBorelSpace Ω for condExpKernel to exist
+  -- This should be added as a hypothesis or derived from StandardBorelSpace α
+  sorry  -- TODO: Complete kernel construction using ProbabilityTheory.condExpKernel
 
-/-! ### Step 2: Identical conditional laws -/
+/-! ### Conditional law equality -/
 
 /-- All `X_n` have the same conditional law `ν`.
 This follows from `extreme_members_equal_on_tail`. -/
@@ -3443,9 +3461,9 @@ lemma conditional_law_eq_directingMeasure
   have hn := extreme_members_equal_on_tail hX hX_meas n B hB
   exact ae_eq_trans h0 hn.symm
 
-/-! ### Step 3: Conditional independence -/
+/-! ### Finite-dimensional product formula -/
 
-/-- Finite-dimensional product formula for conditionally i.i.d. sequences.
+/-- Finite-dimensional product formula for conditionally i.i.d. sequences (formerly Axiom 6).
 
 **Proof strategy:**
 1. Use `finite_level_factorization` to get factorization at future levels
@@ -3457,7 +3475,7 @@ lemma conditional_law_eq_directingMeasure
    (rectangles generate the product σ-algebra)
 
 This is the key step that assembles all the machinery. -/
-axiom finite_product_formula
+lemma finite_product_formula
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
     (X : ℕ → Ω → α)
@@ -3470,26 +3488,33 @@ axiom finite_product_formula
         (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X])
     (m : ℕ) (k : Fin m → ℕ) :
     Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
-      = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)
+      = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) := by
+  classical
+  -- **Proof outline:**
+  -- 
+  -- **Step 1:** Prove for rectangles using the factorization machinery
+  -- For measurable sets C : Fin m → Set α, prove:
+  --   μ {ω | ∀ i, X (k i) ω ∈ C i} = ∫ ω, ∏ i, (ν ω) (C i) ∂μ
+  --
+  -- Sub-steps:
+  -- a) Apply finite_level_factorization at sufficiently large future level
+  -- b) Apply tail_factorization_from_future with reverse martingale convergence
+  -- c) Use tower property: integrate both sides to get the measure equality
+  -- d) Use hν_law to replace CE[1_{X_n ∈ C}|tail] with (ν ω) C
+  --
+  -- **Step 2:** Extend from rectangles to full σ-algebra
+  -- Use π-λ theorem (monotone class): rectangles form a π-system that generates
+  -- the product σ-algebra, and equality of measures on a generating π-system
+  -- implies equality of measures.
+  
+  sorry  -- TODO: Apply finite_level_factorization + tail_factorization_from_future + π-λ theorem
 
-/-! ### Main theorem -/
+/-!
+## Notes
 
-theorem deFinetti_martingale
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
-    (X : ℕ → Ω → α)
-    (hX : Contractable μ X)
-    (hX_meas : ∀ n, Measurable (X n)) :
-    ConditionallyIID μ X := by
-  -- Step 1: Construct the directing measure ν
-  obtain ⟨ν, hν_prob, hν_law, hν_meas⟩ := directingMeasure_of_contractable (μ:=μ) X hX_meas
-
-  -- Step 2: Verify it's a ConditionallyIID certificate
-  refine ⟨ν, hν_prob, fun m k => ?_⟩
-
-  -- Step 3: Prove finite-dimensional product formula
-  exact finite_product_formula X hX hX_meas ν hν_prob hν_meas
-    (fun n B hB => conditional_law_eq_directingMeasure X hX hX_meas ν hν_law n B hB) m k
+The main de Finetti theorem using this machinery is in `TheoremViaMartingale.lean`.
+This file provides the proof infrastructure (helper lemmas and constructions).
+-/
 
 end ViaMartingale
 end DeFinetti

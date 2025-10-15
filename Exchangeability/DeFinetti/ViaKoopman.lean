@@ -1108,12 +1108,18 @@ private lemma integrable_of_bounded_measurable
 /-- On a probability space, `‖f‖₁ ≤ ‖f‖₂`. Version with real integral on the left.
 We assume `MemLp f 2 μ` so the right-hand side is finite; this matches all uses below
 where the function is bounded (hence in L²).
+
+**Proof strategy** (from user's specification):
+- Use `snorm_mono_exponent` or `memℒp_one_of_memℒp_two` to get `MemLp f 1 μ` from `MemLp f 2 μ`
+- Show both `snorm f 1 μ` and `snorm f 2 μ` are finite
+- Apply exponent monotonicity: `snorm f 1 μ ≤ snorm f 2 μ` on probability spaces
+- Convert `∫|f|` to `(snorm f 1 μ).toReal` and apply `ENNReal.toReal_le_toReal`
 -/
 private lemma snorm_one_le_snorm_two_toReal
     {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
     (f : Ω → ℝ) (hL1 : Integrable f μ) (hL2 : MemLp f 2 μ) :
     (∫ ω, |f ω| ∂μ) ≤ (eLpNorm f 2 μ).toReal := by
-  sorry  -- Requires more eLpNorm API details
+  sorry  -- TODO: Use snorm monotonicity on probability spaces (mathlib API mismatch)
 
 /-- If `f → 0` in `ℝ≥0∞`, then `(toReal ∘ f) → 0` in `ℝ`. -/
 private lemma ennreal_tendsto_toReal_zero {ι : Type*}
