@@ -970,17 +970,28 @@ private axiom condExp_sum_finset
     μ[(fun ω => s.sum (fun i => f i ω)) | m]
       =ᵐ[μ] (fun ω => s.sum (fun i => μ[f i | m] ω))
 
-/-- Bounded measurable functions are integrable on finite measure spaces. -/
+/-- On a finite measure space, a bounded measurable real function is integrable. -/
 private lemma integrable_of_bounded_measurable
     {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
     {f : Ω → ℝ} (hf_meas : Measurable f) (C : ℝ) (hf_bd : ∀ ω, |f ω| ≤ C) :
     Integrable f μ := by
-  refine ⟨hf_meas.aestronglyMeasurable, ?_⟩
-  -- Bounded by C on finite measure space ⇒ finite integral
-  have h_bd : ∀ᵐ ω ∂μ, ‖f ω‖ ≤ C := by
-    filter_upwards with ω
-    simpa [Real.norm_eq_abs] using hf_bd ω
-  exact hasFiniteIntegral_of_bounded h_bd
+  have h_asmeas : AEStronglyMeasurable f μ := hf_meas.aestronglyMeasurable
+  -- bound the (lin-)integral of ‖f‖ by a constant times μ(univ)
+  have h_bd_ae : ∀ᵐ ω ∂μ, ENNReal.ofReal ‖f ω‖ ≤ ENNReal.ofReal C := by
+    refine ae_of_all μ ?_
+    intro ω
+    have : (‖f ω‖ : ℝ) ≤ C := by simpa [Real.norm_eq_abs] using hf_bd ω
+    exact ENNReal.ofReal_le_ofReal this
+  have h_lint :
+      ∫⁻ ω, ENNReal.ofReal ‖f ω‖ ∂μ ≤ ENNReal.ofReal C * μ Set.univ := by
+    have := lintegral_mono_ae h_bd_ae
+    simpa [lintegral_const, mul_comm] using this
+  have h_fin : (∫⁻ ω, ENNReal.ofReal ‖f ω‖ ∂μ) < ∞ := by
+    have : ENNReal.ofReal C * μ Set.univ < ∞ := by
+      have hμ : μ Set.univ < ∞ := measure_univ_lt_top
+      exact (ENNReal.mul_lt_top (by simp) hμ.ne)
+    exact lt_of_le_of_lt h_lint this
+  exact ⟨h_asmeas, by simpa [hasFiniteIntegral_iff_ofReal_norm] using h_fin⟩
 
 /-- On probability spaces, L¹ norm ≤ L² norm (Hölder inequality).
 **Mathematical content**: ‖f‖₁ ≤ ‖f‖₂ when μ is a probability measure
