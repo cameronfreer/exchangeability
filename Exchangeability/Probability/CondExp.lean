@@ -280,7 +280,7 @@ lemma isFiniteMeasure_trim {Ω : Type*} {m₀ : MeasurableSpace Ω}
     rw [trim_measurableSet_eq hm MeasurableSet.univ]
   -- Now measure_univ_lt_top comes from [IsFiniteMeasure μ]
   refine ⟨?_⟩
-  simpa [hU] using (measure_lt_top μ Set.univ)
+  simp [hU, measure_lt_top]
 
 /-- Helper lemma: Trimmed measure is sigma-finite when the original measure is finite. -/
 lemma sigmaFinite_trim {Ω : Type*} {m₀ : MeasurableSpace Ω}
@@ -418,8 +418,8 @@ lemma condexp_indicator_eq_of_pair_law_eq
     have h_meas_eq : μ (Y ⁻¹' B ∩ Z ⁻¹' E) = μ (Y' ⁻¹' B ∩ Z ⁻¹' E) := by
       -- The pushforward measures agree on rectangles
       have := congr_arg (fun ν => ν (B ×ˢ E)) hpair
-      simp only [Measure.map_apply (hY.prod_mk hZ) (hB.prod hE),
-                 Measure.map_apply (hY'.prod_mk hZ) (hB.prod hE)] at this
+      simp only [Measure.map_apply (hY.prodMk hZ) (hB.prod hE),
+                 Measure.map_apply (hY'.prodMk hZ) (hB.prod hE)] at this
       -- Convert product preimage to intersection
       have h1 : (fun ω => (Y ω, Z ω)) ⁻¹' (B ×ˢ E) = Y ⁻¹' B ∩ Z ⁻¹' E := by
         ext ω; simp [Set.mem_prod]
