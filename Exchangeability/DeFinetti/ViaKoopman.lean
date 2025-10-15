@@ -1371,7 +1371,36 @@ private theorem h_tower_of_lagConst
       -- On probability spaces: ‖·‖₁ ≤ ‖·‖₂ by Hölder inequality
       -- Need to show integrability of A n - Y
       have hint : Integrable (fun ω => A n ω - Y ω) μ := by
-        sorry  -- Both A n and Y are bounded and integrable
+        -- A n is bounded (it's a Cesàro average of bounded functions)
+        have hA_int : Integrable (A n) μ := by
+          obtain ⟨Cg, hCg⟩ := hg_bd
+          refine integrable_of_bounded_measurable ?_ Cg ?_
+          · -- A n is measurable (finite average of measurable functions)
+            exact Measurable.div_const 
+              (Measurable.finset_sum _ (fun j _ => hg_meas.comp (measurable_pi_apply j)))
+              _
+          · -- |A n ω| ≤ Cg pointwise
+            intro ω
+            simp [A]
+            calc |1 / (↑n + 1) * ∑ j ∈ Finset.range (n + 1), g (ω j)|
+              = (1 / (↑n + 1)) * |∑ j ∈ Finset.range (n + 1), g (ω j)| := by
+                  rw [abs_mul, abs_div, abs_one, one_div]
+                  simp [abs_of_nonneg]; norm_num
+              _ ≤ (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), |g (ω j)| := by
+                  exact mul_le_mul_of_nonneg_left (abs_sum_le_sum_abs _ _) (by positivity)
+              _ ≤ (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), Cg := by
+                  exact mul_le_mul_of_nonneg_left 
+                    (Finset.sum_le_sum (fun j _ => hCg (ω j))) (by positivity)
+              _ = (1 / (↑n + 1)) * ((↑n + 1) * Cg) := by simp [Finset.sum_const, Finset.card_range]
+              _ = Cg := by field_simp; ring
+        -- Y is integrable (it's a conditional expectation of an integrable function)
+        have hY_int : Integrable Y μ := by
+          have hg_0_int : Integrable (fun ω => g (ω 0)) μ := by
+            obtain ⟨Cg, hCg⟩ := hg_bd
+            exact integrable_of_bounded_measurable
+              (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
+          sorry -- Conditional expectation preserves integrability (standard result)
+        exact hA_int.sub hY_int
       exact snorm_one_le_snorm_two_toReal (fun ω => A n ω - Y ω) hint
 
     -- Nonnegativity of the LHS integrals
