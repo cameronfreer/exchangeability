@@ -36,7 +36,12 @@ namespace Exchangeability.Probability
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
-/-! ### Conditional Probability -/
+/-! ### Conditional Probability
+
+Note: Many lemmas in this file explicitly include `{m₀ : MeasurableSpace Ω}` as a parameter
+to work with multiple measurable space structures on Ω (e.g., m₀, m for conditioning). This makes
+the section variable `[MeasurableSpace Ω]` unused for those lemmas, requiring `set_option
+linter.unusedSectionVars false` before each affected declaration. -/
 
 /-- Conditional probability of an event `A` given a σ-algebra `m`.
 This is the conditional expectation of the indicator function of `A`.

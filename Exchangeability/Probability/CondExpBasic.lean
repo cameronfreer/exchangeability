@@ -55,7 +55,12 @@ lemma setIntegral_congr_ae_of_ae
     ∫ x in s, f x ∂μ = ∫ x in s, g x ∂μ :=
   setIntegral_congr_ae' (ae_restrict_of_ae hfgμ)
 
-/-! ### Helper lemmas for σ-finiteness and indicators -/
+/-! ### Helper lemmas for σ-finiteness and indicators
+
+Note: Some lemmas in this section explicitly include `{m m₀ : MeasurableSpace Ω}` as parameters
+to work with multiple measurable space structures (e.g., for trimmed measures). This makes the
+section variable `[MeasurableSpace Ω]` unused for those lemmas, requiring `set_option
+linter.unusedSectionVars false`. -/
 
 set_option linter.unusedSectionVars false in
 /-- If `μ` is finite, then any trim of `μ` is σ-finite. -/

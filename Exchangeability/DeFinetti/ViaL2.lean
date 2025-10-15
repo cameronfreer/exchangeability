@@ -88,6 +88,12 @@ variable (X : ℕ → Ω → ℝ)
 variable (hX_contract : Contractable μ X)
 variable (hX_meas : ∀ i, Measurable (X i))
 
+/-
+Note: Some lemmas in this section explicitly include type and measurability parameters that shadow
+section variables. This makes certain section variables unused for those lemmas, requiring
+`set_option linter.unusedSectionVars false` before each affected declaration.
+-/
+
 /-- The unique element of Fin 1. -/
 private def fin1Zero : Fin 1 := ⟨0, by decide⟩
 /-- First element of Fin 2. -/

@@ -1793,7 +1793,7 @@ Proof of base case (m = 0) - kept for reference:
     sorry
 -/
 
-/-- **Bridge axiom** for ENNReal version needed by `CommonEnding`.
+/- **Bridge axiom** for ENNReal version needed by `CommonEnding`.
 
 **Proof Strategy**:
 1. Apply `condexp_product_factorization_ax` to indicator functions
@@ -1811,9 +1811,10 @@ Proof of base case (m = 0) - kept for reference:
 
 This connects the conditional expectation factorization to measure-theoretic form.
 -/
--- Helper lemma: product of indicators equals the product function
--- Note: MeasurableSpace α is not needed here, but it's a section variable so we can't omit it
--- without restructuring. The linter warning can be safely ignored - it's about automatic inclusion.
+
+-- Helper lemma: product of indicators equals the product function.
+-- Note: MeasurableSpace α is not needed here, but it's a section variable.
+set_option linter.unusedSectionVars false in
 private lemma ofReal_prod_indicator_univ {m : ℕ} (k : Fin m → ℕ) (B : Fin m → Set α) (ω : Ω[α]) :
     ENNReal.ofReal (∏ i : Fin m, (B i).indicator (fun _ => (1 : ℝ)) (ω (k i)))
       = ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) := by
@@ -2540,6 +2541,12 @@ section ExtremeMembers
 
 variable {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
 variable (hσ : MeasurePreserving shift μ μ)
+
+/-
+Note: Some lemmas in this section explicitly include `(α := α)` type parameters that shadow
+the section-level `[MeasurableSpace α]`. This makes the section variable unused for those
+lemmas, requiring `set_option linter.unusedSectionVars false` before each affected declaration.
+-/
 
 /-- The "extreme members agree" lemma (Kallenberg's key step).
 
