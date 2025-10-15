@@ -877,8 +877,29 @@ private theorem h_tower_of_lagConst
   ------------------------------------------------------------------
   have h_cesaro_ce : ∀ n, μ[A n | m] =ᵐ[μ] μ[(fun ω => g (ω 0)) | m] := by
     intro n
-    -- Derivation: CE[(1/(n+1)) Σ g(ω_j) | m] = (1/(n+1)) Σ CE[g(ω_j)|m] = (1/(n+1))(n+1)CE[g(ω_0)|m]
-    sorry -- Requires: MeasureTheory.condexp_finset_sum, condexp_const_smul from mathlib
+    -- TODO Block 1: Cesàro CE derivation
+    --
+    -- GOAL: CE[(1/(n+1)) · Σⱼ g(ωⱼ) | m] =ᵐ CE[g(ω₀) | m]
+    --
+    -- STEP 1: Push CE through scalar multiplication
+    --   CE[(1/(n+1)) · Z | m] =ᵐ (1/(n+1)) · CE[Z | m]
+    --   Search for: MeasureTheory.condexp_smul or condexp_const_smul
+    --   Alternative: Use linearity directly with condExp_sub/condExp_add
+    --
+    -- STEP 2: Push CE through finite sum
+    --   CE[Σⱼ g(ωⱼ) | m] =ᵐ Σⱼ CE[g(ωⱼ) | m]
+    --   Search for: MeasureTheory.condexp_sum or use Finset.sum_induction
+    --   Pattern: refine Finset.induction ?base ?step; intro j s hj hInd
+    --
+    -- STEP 3: Apply shift invariance termwise
+    --   Each CE[g(ωⱼ) | m] =ᵐ CE[g(ω₀) | m] by condexp_precomp_iterate_eq (line 2173)
+    --   Use: condexp_precomp_iterate_eq (μ := μ) hσ (k := j) ...
+    --
+    -- STEP 4: Simplify
+    --   (1/(n+1)) · Σⱼ CE[g(ω₀)|m] = (1/(n+1)) · (n+1) · CE[g(ω₀)|m] = CE[g(ω₀)|m]
+    --   Use: Finset.sum_const, field_simp
+    --
+    sorry -- Implementation: ~50 lines, similar to user's original Block 1
 
   ------------------------------------------------------------------
   -- (2) CE[f·A_n | m] is constant in n (lag-constancy termwise)
@@ -888,9 +909,33 @@ private theorem h_tower_of_lagConst
       =ᵐ[μ]
     μ[(fun ω => f (ω 0) * g (ω 0)) | m] := by
     intro n
-    -- By lag_const hypothesis: CE[f(ω_0)·g(ω_j)|m] = CE[f(ω_0)·g(ω_0)|m] for all j
-    -- So CE[f(ω_0)·((1/(n+1)) Σ g(ω_j))|m] = CE[f(ω_0)·g(ω_0)|m]
-    sorry -- Requires: linearity of CE + lag_const iterated application
+    -- TODO Block 2: Product constancy via lag_const
+    --
+    -- GOAL: CE[f(ω₀)·Aₙ | m] =ᵐ CE[f(ω₀)·g(ω₀) | m]
+    -- where Aₙ = (1/(n+1)) Σⱼ g(ωⱼ)
+    --
+    -- KEY INSIGHT: lag_const says CE[f(ω₀)·g(ωⱼ₊₁)|m] =ᵐ CE[f(ω₀)·g(ωⱼ)|m]
+    -- By induction: CE[f(ω₀)·g(ωⱼ)|m] =ᵐ CE[f(ω₀)·g(ω₀)|m] for all j
+    --
+    -- STEP 1: Expand A_n and distribute f(ω₀)
+    --   f(ω₀)·Aₙ = (1/(n+1)) · Σⱼ f(ω₀)·g(ωⱼ)
+    --
+    -- STEP 2: Push CE through scalar and sum (same as Block 1)
+    --   CE[(1/(n+1))·Σⱼ f(ω₀)·g(ωⱼ) | m] =ᵐ (1/(n+1))·Σⱼ CE[f(ω₀)·g(ωⱼ)|m]
+    --
+    -- STEP 3: Apply lag_const termwise
+    --   Build helper: ∀ j, CE[f(ω₀)·g(ωⱼ)|m] =ᵐ CE[f(ω₀)·g(ω₀)|m]
+    --   Method: Nat.rec j with base (j=0: refl) and step (use lag_const k + IH)
+    --   Pattern from user code:
+    --     revert j
+    --     refine Nat.rec ?h0 ?hstep
+    --     · intro; simpa
+    --     · intro k hk; have := lag_const k; exact this.trans hk
+    --
+    -- STEP 4: Simplify sum of constants
+    --   (1/(n+1)) · Σⱼ CE[f(ω₀)·g(ω₀)|m] = CE[f(ω₀)·g(ω₀)|m]
+    --
+    sorry -- Implementation: ~60 lines, parallel structure to Block 1
 
   ------------------------------------------------------------------
   -- (3) L² MET ⇒ L¹ convergence of A_n to CE[g(ω0)|m]
@@ -899,7 +944,47 @@ private theorem h_tower_of_lagConst
       Tendsto (fun n =>
         ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | m] ω| ∂μ)
               atTop (𝓝 0) := by
-    sorry -- TODO: Implement L² to L¹ convergence using birkhoffAverage_tendsto_condexp
+    -- TODO Block 3: L² MET → L¹ convergence (MOST COMPLEX)
+    --
+    -- GOAL: ∫|Aₙ - CE[g(ω₀)|m]| → 0
+    -- where Aₙ = (1/(n+1)) Σⱼ g(ωⱼ) is Cesàro average
+    --
+    -- CHALLENGE: birkhoffAverage_tendsto_condexp (line 1716) has signature:
+    --   theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
+    --     Tendsto (birkhoffAverage ℝ (koopman shift hσ) id n f) atTop (𝓝 (condexpL2 f))
+    -- But we have g : α → ℝ, not Lp ℝ 2 μ
+    --
+    -- STRATEGY A: Convert via Lp space (RECOMMENDED)
+    --   STEP 1: Build gLp : Lp ℝ 2 μ from g
+    --     - Need: g measurable (have: hg_meas)
+    --     - Need: g ∈ L² (from boundedness hg_bd + prob measure)
+    --     - Use: Lp.memℒp or bounded functions → L²
+    --
+    --   STEP 2: Identify Aₙ with birkhoffAverage
+    --     - birkhoffAverage is: (1/(n+1)) Σⱼ (T^j f)
+    --     - Our Aₙ is: (1/(n+1)) Σⱼ g(ωⱼ)
+    --     - Connection: g(ωⱼ) = g ∘ πⱼ where πⱼ(ω) = ω(j)
+    --     - Need to relate coordinate projection to koopman operator
+    --
+    --   STEP 3: Apply birkhoffAverage_tendsto_condexp
+    --     Get: ‖birkhoffAverage - condexpL2 gLp‖₂ → 0
+    --
+    --   STEP 4: Convert L² to L¹
+    --     On probability space: ‖h‖₁ ≤ ‖h‖₂
+    --     Search for: snorm_one_le_snorm_two or Lp.norm_le_of_le
+    --     Pattern: have := snorm_one_le_snorm_two (f := ...)
+    --
+    --   STEP 5: Identify condexpL2 with μ[·|m]
+    --     condexpL2 is the L² version of conditional expectation
+    --     Need: condexpL2 f =ᵐ μ[f|m] (should be in mathlib)
+    --
+    -- STRATEGY B: Direct proof without birkhoffAverage (EASIER but less elegant)
+    --   Use h_cesaro_ce (Block 1): CE[Aₙ|m] =ᵐ CE[g(ω₀)|m]
+    --   So Aₙ - CE[g] =ᵐ CE[Aₙ|m] - CE[Aₙ|m] + (Aₙ - CE[Aₙ|m])
+    --   By martingale: ∫|Z - CE[Z|m]| ≤ ... (need martingale bounds)
+    --   This may be easier but requires different machinery
+    --
+    sorry -- Implementation: ~80 lines, needs Lp space expertise or martingale bounds
 
   ------------------------------------------------------------------
   -- (4) L¹-Lipschitz for CE + |f| bounded pulls the convergence through CE
@@ -910,9 +995,42 @@ private theorem h_tower_of_lagConst
         ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | m] ω
              - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | m] ω') | m] ω| ∂μ)
         atTop (𝓝 0) := by
-    -- Strategy: condExp_L1_lipschitz gives ∫|CE[Z] - CE[W]| ≤ ∫|Z - W|
-    -- With Z = f·A_n, W = f·CE[g], get ≤ ∫|f|·|A_n - CE[g]| ≤ Cf·∫|A_n - CE[g]| → 0
-    sorry -- TODO: Apply condExp_L1_lipschitz (line 624) + squeeze with h_L1_An_to_CE
+    -- TODO Block 4: L¹-Lipschitz argument
+    --
+    -- GOAL: ∫|CE[f·Aₙ|m] - CE[f·CE[g|m]|m]| → 0
+    --
+    -- STEP 1: Apply condExp_L1_lipschitz (line 624)
+    --   Lemma signature:
+    --     {Z W : Ω[α] → ℝ} (hZ : Integrable Z μ) (hW : Integrable W μ) :
+    --     ∫|μ[Z|m] - μ[W|m]| ≤ ∫|Z - W|
+    --
+    --   Set Z = f(ω₀)·Aₙ(ω), W = f(ω₀)·CE[g(ω₀)|m](ω)
+    --   Get: ∫|CE[f·Aₙ|m] - CE[f·CE[g]|m]| ≤ ∫|f·Aₙ - f·CE[g]|
+    --
+    --   Need integrability:
+    --     - hZ: f bounded + Aₙ bounded → integrable (use integrable_of_bounded_mul)
+    --     - hW: f bounded + CE[g] integrable → integrable
+    --
+    -- STEP 2: Factor out |f|
+    --   ∫|f·Aₙ - f·CE[g]| = ∫|f|·|Aₙ - CE[g]|
+    --   Use: abs_mul, then pull out |f|
+    --
+    -- STEP 3: Bound by Cf
+    --   Since |f| ≤ Cf a.e., get:
+    --   ∫|f|·|Aₙ - CE[g]| ≤ ∫ Cf·|Aₙ - CE[g]| = Cf·∫|Aₙ - CE[g]|
+    --
+    --   Use: integral_mono_ae with filter_upwards
+    --   Then: integral_const_mul or pull Cf out
+    --
+    -- STEP 4: Apply h_L1_An_to_CE (Block 3)
+    --   Cf·∫|Aₙ - CE[g]| → Cf·0 = 0
+    --   Use: Tendsto.const_mul or tendsto_const_nhds.mul
+    --
+    -- STEP 5: Squeeze theorem
+    --   0 ≤ ∫|CE[f·Aₙ] - CE[f·CE[g]]| ≤ Cf·∫|Aₙ - CE[g]| → 0
+    --   Use: tendsto_of_tendsto_of_tendsto_of_le_of_le
+    --
+    sorry -- Implementation: ~40 lines, straightforward once Block 3 is done
 
   ------------------------------------------------------------------
   -- (5) The constant sequence's L¹ limit is 0 ⇒ a.e. equality
