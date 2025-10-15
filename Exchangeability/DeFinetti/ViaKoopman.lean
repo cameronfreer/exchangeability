@@ -276,20 +276,15 @@ lemma ae_pullback_iff
   constructor
   · intro h
     -- F =ᵐ[μ] G means {F ≠ G} is μ-null
-    -- Since map g μ' = μ, this means g⁻¹'{F ≠ G} is μ'-null
+    -- Since map g μ' = μ, g⁻¹'{F ≠ G} is μ'-null
     -- And g⁻¹'{F ≠ G} = {F∘g ≠ G∘g}
-    have : (F ∘ g) =ᵐ[μ'] (G ∘ g) := by
-      rw [EventuallyEq, ae_iff] at h ⊢
-      have eq_sets : g ⁻¹' {ω | F ω ≠ G ω} = {ω' | (F ∘ g) ω' ≠ (G ∘ g) ω'} := by
-        ext ω'; simp [Function.comp]
-      rw [← hpush] at h
-      calc μ' {ω' | (F ∘ g) ω' ≠ (G ∘ g) ω'}
-          = μ' (g ⁻¹' {ω | F ω ≠ G ω}) := by rw [← eq_sets]
-        _ = Measure.map g μ' {ω | F ω ≠ G ω} := by
-            -- Need: MeasurableSet {ω | F ω ≠ G ω} or use outer measure
-            sorry
-        _ = 0 := h
-    exact this
+    --
+    -- Mathematical fact: For pushforward measure, μ S = 0 iff μ' (g⁻¹' S) = 0
+    -- This is the definition of map g μ' = μ
+    --
+    -- With ae_measurable, we can work with measurable representatives
+    -- and use outer measure arguments if needed
+    sorry -- TODO: Use Measure.map_apply or ae_measurable representatives
   · intro h
     -- (F∘g =ᵐ[μ'] G∘g) means {F∘g ≠ G∘g} is μ'-null
     -- Since map g μ' = μ and {F ≠ G} ⊆ g '' {F∘g ≠ G∘g} (almost everywhere)
