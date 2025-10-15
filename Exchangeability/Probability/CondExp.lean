@@ -105,35 +105,6 @@ structure AgreeOnFutureRectangles {α : Type*} [MeasurableSpace α]
     (μ ν : Measure (α × (ℕ → α))) : Prop where
   measure_eq : μ = ν
 
-/-- If (X₁,Y) and (X₂,Y) have the same distribution, then
-E[1_{X₁∈B} | σ(Y)] = E[1_{X₂∈B} | σ(Y)] a.e.
-
-**Mathematical idea:** The hypothesis `hagree.measure_eq` says the pushforward measures
-`μ ∘ (X₁,Y)⁻¹` and `μ ∘ (X₂,Y)⁻¹` are equal. This implies that for any measurable
-rectangle B × E, we have μ(X₁⁻¹(B) ∩ Y⁻¹(E)) = μ(X₂⁻¹(B) ∩ Y⁻¹(E)).
-Computing set integrals ∫_{Y⁻¹(E)} 1_{Xᵢ∈B} dμ as measures of these intersections
-shows they're equal for all E. By uniqueness of conditional expectation
-(`ae_eq_condExp_of_forall_setIntegral_eq`), the conditional expectations are equal a.e.
-
-**TODO:** This proof has Lean 4 technical issues with measurable space instance resolution
-when working with sub-σ-algebras. The mathematical content is straightforward. -/
--- TODO: This lemma is proven below after condexp_indicator_eq_of_pair_law_eq is defined.
--- See line ~397 for the actual proof.
-axiom condexp_indicator_eq_of_agree_on_future_rectangles
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {α : Type*} [MeasurableSpace α]
-    {X₁ X₂ : Ω → α} {Y : Ω → ℕ → α}
-    (hX₁ : Measurable X₁) (hX₂ : Measurable X₂) (hY : Measurable Y)
-    (hagree : AgreeOnFutureRectangles
-      (Measure.map (fun ω => (X₁ ω, Y ω)) μ)
-      (Measure.map (fun ω => (X₂ ω, Y ω)) μ))
-    (B : Set α) (hB : MeasurableSet B) :
-    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₁
-        | MeasurableSpace.comap Y inferInstance]
-      =ᵐ[μ]
-    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂
-        | MeasurableSpace.comap Y inferInstance]
-
 -- Note: Conditional probability definitions and lemmas (condProb and related results)
 -- have been moved to Exchangeability.Probability.CondProb
 
@@ -497,11 +468,10 @@ lemma condexp_indicator_eq_of_pair_law_eq
     -- Combine: ∫_{Z⁻¹(E)} f dμ = ∫_{Z⁻¹(E)} μ[f' | σ(Z)] dμ
     rw [h_lhs, h_rhs_ce, h_rhs, h_meas_eq]
 
-/-- **Proof of condexp_indicator_eq_of_agree_on_future_rectangles forward-declared at line ~122.**
+/-- **Proof of condexp_indicator_eq_of_agree_on_future_rectangles.**
 
-This is a direct application of `condexp_indicator_eq_of_pair_law_eq` with the sequence type.
-The forward declaration was necessary because this lemma is referenced earlier in the file. -/
-lemma condexp_indicator_eq_of_agree_on_future_rectangles_proof
+This is a direct application of `condexp_indicator_eq_of_pair_law_eq` with the sequence type. -/
+lemma condexp_indicator_eq_of_agree_on_future_rectangles
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {X₁ X₂ : Ω → α} {Y : Ω → ℕ → α}
