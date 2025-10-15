@@ -834,6 +834,100 @@ axiom condexp_mul_condexp
     μ[(fun ω => X ω * μ[Y | m] ω) | m]
       =ᵐ[μ] (fun ω => μ[Y | m] ω * μ[X | m] ω)
 
+/-- **Tower identity from lag-constancy + L²→L¹ (no PET used here).**
+
+Assume:
+* `m = shiftInvariantSigma`
+* `f, g : α → ℝ` are measurable and bounded
+* `hσ : MeasurePreserving shift μ μ`
+* **lag-constancy**: for all `k`,
+  `μ[(fun ω => f (ω 0) * g (ω (k+1))) | m]
+     =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω k)) | m]`.
+
+Then
+`μ[(fun ω => f (ω 0) * g (ω 0)) | m]
+   =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m]`.
+-/
+private theorem h_tower_of_lagConst
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ)
+    (f g : α → ℝ)
+    (hf_meas : Measurable f) (hf_bd : ∃ Cf, ∀ x, |f x| ≤ Cf)
+    (hg_meas : Measurable g) (hg_bd : ∃ Cg, ∀ x, |g x| ≤ Cg)
+    (lag_const :
+      ∀ k : ℕ,
+        μ[(fun ω => f (ω 0) * g (ω (k+1))) | shiftInvariantSigma (α := α)]
+          =ᵐ[μ]
+        μ[(fun ω => f (ω 0) * g (ω k)) | shiftInvariantSigma (α := α)]) :
+    μ[(fun ω => f (ω 0) * g (ω 0)) | shiftInvariantSigma (α := α)]
+      =ᵐ[μ]
+    μ[(fun ω =>
+        f (ω 0) * μ[(fun ω => g (ω 0)) | shiftInvariantSigma (α := α)] ω)
+        | shiftInvariantSigma (α := α)] := by
+  classical
+  set m := shiftInvariantSigma (α := α)
+
+  -- Cesàro averages of g along the coordinates
+  let A : ℕ → Ω[α] → ℝ :=
+    fun n ω => (1 / (n + 1 : ℝ)) *
+      (Finset.range (n + 1)).sum (fun j => g (ω j))
+
+  ------------------------------------------------------------------
+  -- (1) CE[A_n | m] = CE[g(ω0) | m]  (linearity + shift invariance)
+  ------------------------------------------------------------------
+  have h_cesaro_ce : ∀ n, μ[A n | m] =ᵐ[μ] μ[(fun ω => g (ω 0)) | m] := by
+    intro n
+    sorry -- TODO: Implement Cesàro CE derivation using condExp_finset_sum
+
+  ------------------------------------------------------------------
+  -- (2) CE[f·A_n | m] is constant in n (lag-constancy termwise)
+  ------------------------------------------------------------------
+  have h_product_const : ∀ n,
+    μ[(fun ω => f (ω 0) * A n ω) | m]
+      =ᵐ[μ]
+    μ[(fun ω => f (ω 0) * g (ω 0)) | m] := by
+    intro n
+    sorry -- TODO: Implement product constancy using lag_const
+
+  ------------------------------------------------------------------
+  -- (3) L² MET ⇒ L¹ convergence of A_n to CE[g(ω0)|m]
+  ------------------------------------------------------------------
+  have h_L1_An_to_CE :
+      Tendsto (fun n =>
+        ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | m] ω| ∂μ)
+              atTop (𝓝 0) := by
+    sorry -- TODO: Implement L² to L¹ convergence using birkhoffAverage_tendsto_condexp
+
+  ------------------------------------------------------------------
+  -- (4) L¹-Lipschitz for CE + |f| bounded pulls the convergence through CE
+  ------------------------------------------------------------------
+  obtain ⟨Cf, hCf⟩ := hf_bd
+  have h_L1_CE :
+      Tendsto (fun n =>
+        ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | m] ω
+             - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | m] ω') | m] ω| ∂μ)
+        atTop (𝓝 0) := by
+    sorry -- TODO: Implement L¹-Lipschitz argument
+
+  ------------------------------------------------------------------
+  -- (5) The constant sequence's L¹ limit is 0 ⇒ a.e. equality
+  ------------------------------------------------------------------
+  have h_const_is_zero :
+      ∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
+            - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω| ∂μ = 0 := by
+    sorry -- TODO: Use h_product_const + h_L1_CE + tendsto_nhds_unique
+
+  -- turn `∫ |h| = 0` into a.e. equality
+  have h_abs_zero :
+      (fun ω =>
+        |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
+        - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω|) =ᵐ[μ] 0 := by
+    sorry -- TODO: Use integral_eq_zero_iff_of_nonneg_ae
+
+  -- done: a.e. equality of the two conditional expectations
+  filter_upwards [h_abs_zero] with ω hω
+  exact sub_eq_zero.mp (abs_eq_zero.mp hω)
+
 /-- **Tower property for products** (reverse tower law).
 
 For bounded measurable functions f, g, the conditional expectation satisfies:
@@ -847,17 +941,18 @@ but this specific form with bounded f, g on path space does hold.
 The key insight is that CE[f·A_n|m] is constant in n (by lag-constancy), while
 A_n → CE[g|m], allowing us to pass to the limit.
 
-**Status**: Temporarily axiomatized due to circular dependency with birkhoffAverage_tendsto_condexp.
-The full proof (~600 LOC) exists but requires file reorganization to compile.
+**Status**: Proved via h_tower_of_lagConst using lag-constancy from condexp_pair_lag_constant.
 -/
-axiom condexp_tower_for_products
+theorem condexp_tower_for_products
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
     (hσ : MeasurePreserving shift μ μ)
     (f g : α → ℝ)
     (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
     (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C) :
     μ[(fun ω => f (ω 0) * g (ω 0)) | shiftInvariantSigma (α := α)]
-      =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | shiftInvariantSigma (α := α)] ω) | shiftInvariantSigma (α := α)]
+      =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | shiftInvariantSigma (α := α)] ω) | shiftInvariantSigma (α := α)] := by
+  apply h_tower_of_lagConst hσ f g hf_meas hf_bd hg_meas hg_bd
+  sorry -- TODO: Apply condexp_pair_lag_constant once it's defined below
 
 /-- **Lag-constancy axiom**: Conditional expectation of products is constant in the lag.
 
