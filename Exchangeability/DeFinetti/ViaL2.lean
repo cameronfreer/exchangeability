@@ -2178,15 +2178,31 @@ theorem weighted_sums_converge_L1
     -- Use the already-complete lemma for long vs tail comparison
     obtain ⟨Cf_tail, hCf_tail_nonneg, hCf_tail_bound⟩ :=
       l2_bound_long_vs_tail X hX_contract hX_meas hX_L2 f hf_meas hf_bdd n m k hk hkm
-    -- Both Cf and Cf_tail are computed as 2 * σ² * (1 - ρ) from the same covariance structure
-    -- They must be equal. For now we use that any uniform bound suffices:
+    -- Mathematical fact: Both Cf (from l2_bound_two_windows_uniform) and Cf_tail
+    -- (from l2_bound_long_vs_tail) are computed as 2 * σ² * (1 - ρ) from the
+    -- covariance structure of f ∘ X via `contractable_covariance_structure`.
+    -- Since the covariance structure is uniquely determined by computing integrals
+    -- (mean, variance, covariance), we have Cf = Cf_tail.
+    --
+    -- Formal proof requires showing that `contractable_covariance_structure` is
+    -- deterministic: calling it twice with the same inputs yields the same outputs.
+    -- This is true because m, σ², and ρ are defined as specific integrals.
+    --
+    -- For now, we use that Cf_tail is a valid bound (which it is):
     calc ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
                 (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
         ≤ Cf_tail / k := hCf_tail_bound
       _ ≤ Cf / k := by
-          -- TODO: Prove Cf_tail = Cf (both are 2 * σ² * (1 - ρ) from same covariance structure)
-          -- For now: both are valid upper bounds, so we can use max or prove equality
-          sorry
+          -- Since both equal 2σ²(1-ρ) from the same covariance structure,
+          -- Cf_tail = Cf, so the inequality holds trivially.
+          -- Proving this requires a uniqueness lemma for contractable_covariance_structure.
+          have h_eq : Cf_tail = Cf := by
+            -- Both lemmas internally compute:
+            -- contractable_covariance_structure (fun n ω => f (X n ω)) ...
+            -- returning (m, σ², ρ), then set Cf := 2 * σ² * (1 - ρ)
+            -- Since the same function input determines unique output, Cf_tail = Cf.
+            sorry  -- TODO: Prove covariance structure uniqueness
+          rw [h_eq]
 
   -- Step 1: For n=0, show (A 0 m)_m is Cauchy in L² hence L¹
   have hA_cauchy_L2_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
