@@ -3056,7 +3056,79 @@ lemma cdf_from_alpha_bounds
       _ ≤ alphaIic X hX_contract hX_meas hX_L2 (hne.some : ℝ) ω := ciInf_le hbdd hne.some
       _ ≤ 1 := (alphaIic_bound X hX_contract hX_meas hX_L2 (hne.some : ℝ) ω).2
 
-/-- F(ω,t) → 0 as t → -∞, and F(ω,t) → 1 as t → +∞. -/
+/-- Helper lemma: α_{Iic t}(ω) → 0 as t → -∞.
+
+This requires showing that the L¹ limit of Cesàro averages of 1_{(-∞,t]} converges to 0
+as t → -∞. The proof strategy:
+
+1. For each fixed ω, as t → -∞, the indicators 1_{(-∞,t]}(X_i(ω)) → 0 pointwise
+2. By dominated convergence, the Cesàro averages converge to 0 in L¹ uniformly in n
+3. Since alphaIic is the L¹ limit (clipped to [0,1]), it must also converge to 0
+
+The challenge is interchanging two limits:
+- The Cesàro limit (m → ∞)
+- The threshold limit (t → -∞)
+
+This requires careful application of dominated convergence and diagonal arguments.
+-/
+private lemma alphaIic_tendsto_zero_at_bot
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (ω : Ω) :
+    ∀ ε > 0, ∃ T : ℝ, ∀ t < T,
+      alphaIic X hX_contract hX_meas hX_L2 t ω < ε := by
+  intro ε hε_pos
+  -- Key observation: For any fixed ω, the sequence X_i(ω) is a sequence of reals.
+  -- For indicators 1_{(-∞,t]}(X_i(ω)):
+  -- - As t → -∞, each indicator eventually becomes 0
+  -- - The Cesàro averages (1/m) Σ 1_{(-∞,t]}(X_i(ω)) → 0 pointwise
+  --
+  -- Since alphaIic is the L¹ limit of these Cesàro averages (clipped to [0,1]),
+  -- and we have pointwise control via clipping, alphaIic t ω → 0 as t → -∞.
+  --
+  -- Rigorous proof requires:
+  -- 1. Dominated convergence to interchange limits
+  -- 2. Extracting pointwise convergence from L¹ convergence
+  -- 3. Uniform convergence argument or diagonal extraction
+  --
+  -- This is substantial infrastructure work. For now:
+  sorry
+
+/-- Helper lemma: α_{Iic t}(ω) → 1 as t → +∞.
+
+This is the dual of the previous lemma. As t → +∞:
+- Indicators 1_{(-∞,t]}(x) → 1 for all x (monotone convergence)
+- Cesàro averages converge to 1 in L¹
+- alphaIic t ω → 1
+
+The proof uses monotone convergence since the indicators increase to 1.
+-/
+private lemma alphaIic_tendsto_one_at_top
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (ω : Ω) :
+    ∀ ε > 0, ∃ T : ℝ, ∀ t > T,
+      1 - ε < alphaIic X hX_contract hX_meas hX_L2 t ω := by
+  intro ε hε_pos
+  -- As t → +∞, indIic t (x) → 1 for all x (since (-∞, t] eventually contains all of ℝ)
+  -- The Cesàro averages (1/m) Σ 1_{(-∞,t]}(X_i(ω)) → 1 for each ω
+  -- and alphaIic t ω → 1 as t → +∞
+  --
+  -- This is the monotone convergence case: indicators increase to 1.
+  -- By dominated convergence (bounded by 1), the L¹ limits also converge to 1.
+  --
+  -- Same infrastructure requirements as the t → -∞ case. For now:
+  sorry
+
+/-- F(ω,t) → 0 as t → -∞, and F(ω,t) → 1 as t → +∞.
+
+Given the helper lemmas about alphaIic convergence, this follows from the definition
+of cdf_from_alpha as the infimum of alphaIic values over rationals greater than t.
+-/
 lemma cdf_from_alpha_limits
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
@@ -3068,83 +3140,28 @@ lemma cdf_from_alpha_limits
   constructor
   · -- Limit at -∞: F(ω,t) → 0 as t → -∞
     -- Strategy: F(ω,t) = inf_{q>t} α_{Iic q}(ω)
-    -- Show: ∀ ε > 0, ∃ T, ∀ t < T, F(ω,t) < ε
-    -- Since F(ω,t) ≤ α_{Iic q}(ω) for any q > t,
-    -- it suffices to show α_{Iic q}(ω) → 0 as q → -∞
-
-    -- Key lemma needed: For indicators 1_{(-∞,t]}, as t → -∞:
-    -- 1) The indicators converge to 0 pointwise for any x
-    -- 2) By dominated convergence, the Cesàro averages converge to 0 in L¹
-    -- 3) L¹ convergence + subsequence gives pointwise convergence a.e.
-    -- 4) alphaIic is one such limit, so alphaIic t ω → 0 as t → -∞ (for a.e. ω)
-
-    -- For now, assume we have a lemma:
-    have h_alpha_limit : ∀ ε > 0, ∃ T : ℝ, ∀ t < T,
-        alphaIic X hX_contract hX_meas hX_L2 t ω < ε := by
-      intro ε hε_pos
-      -- Since ε > 0 and alphaIic is bounded in [0,1], we can always find such a T.
-      -- The challenge is that alphaIic is defined as an L¹ limit (via .choose),
-      -- which only gives us a function determined up to a.e. equivalence.
-      --
-      -- However, we've already clipped alphaIic to [0,1] pointwise, so we have
-      -- pointwise control. The question is: does alphaIic t ω → 0 as t → -∞?
-      --
-      -- Key observation: For any fixed ω, the sequence X_i(ω) is a sequence of reals.
-      -- For indicators 1_{(-∞,t]}(X_i(ω)):
-      -- - When t < min_i X_i(ω), all indicators are 0
-      -- - So for sufficiently small t, the Cesàro averages are 0
-      --
-      -- However, we're dealing with limits in L¹, not pointwise convergence.
-      -- The alphaIic is the L¹ limit of Cesàro averages, but that limit is only
-      -- determined a.e., and we've taken a particular representative (via clipping).
-      --
-      -- The proper proof would show that:
-      -- 1. For each t, alphaIic t is close to the Cesàro average for large m (in L¹)
-      -- 2. As t → -∞, these Cesàro averages → 0 pointwise for each ω
-      -- 3. By a diagonal argument or uniform convergence, alphaIic t ω → 0
-      --
-      -- This requires substantial infrastructure. Accept as axiom:
-      sorry
-
-    -- Use h_alpha_limit to show F(ω,·) → 0
-    -- The proof would:
-    -- 1. Use h_alpha_limit to get T such that alphaIic t ω < ε for t < T
-    -- 2. Since cdf_from_alpha ω t = inf_{q>t} alphaIic q ω ≤ alphaIic q ω for any q > t
-    -- 3. Pick rational q with t < q < T to get cdf_from_alpha ω t < ε
-    -- 4. Express this as Filter.Tendsto using the appropriate API
+    -- Since alphaIic q ω → 0 as q → -∞ (by helper lemma alphaIic_tendsto_zero_at_bot),
+    -- and F(ω,t) ≤ alphaIic q ω for any q > t,
+    -- we get F(ω,t) → 0 as t → -∞
     --
-    -- The technical details require navigating mathlib's Filter/Metric API.
-    -- Accept as sorry for now:
+    -- The full proof would:
+    -- 1. Use alphaIic_tendsto_zero_at_bot to get T such that alphaIic t ω < ε for t < T
+    -- 2. For t < T, pick rational q with t < q < T
+    -- 3. Then F(ω,t) ≤ alphaIic q ω < ε
+    -- 4. Express this using mathlib's Filter.Tendsto API for atBot
+    --
+    -- This requires navigating mathlib's Filter/Metric API.
     sorry
 
   · -- Limit at +∞: F(ω,t) → 1 as t → +∞
-    -- Similar strategy: Show α_{Iic q}(ω) → 1 as q → +∞
-    -- This uses dominated convergence on indicators 1_{(-∞,t]} → 1 as t → +∞
-
-    have h_alpha_limit : ∀ ε > 0, ∃ T : ℝ, ∀ t > T,
-        1 - ε < alphaIic X hX_contract hX_meas hX_L2 t ω := by
-      intro ε hε_pos
-      -- Dual strategy to the t → -∞ case:
-      -- As t → +∞, indIic t (x) → 1 for all x (since (-∞, t] eventually contains all of ℝ)
-      -- So the Cesàro averages (1/m) Σ 1_{(-∞,t]}(X_i(ω)) → 1 for each ω
-      -- and alphaIic t ω → 1 as t → +∞
-      --
-      -- This is the monotone convergence side: indicators increase to 1.
-      -- By dominated convergence (bounded by 1), the L¹ limits also converge to 1.
-      --
-      -- Accept as axiom for now - same issue of interchanging limits:
-      sorry
-
-    -- Use h_alpha_limit to show F(ω,·) → 1
-    -- The proof would:
-    -- 1. Use h_alpha_limit to get T such that alphaIic t ω > 1 - ε for t > T
-    -- 2. Since cdf_from_alpha ω t = inf_{q>t} alphaIic q ω, we get cdf_from_alpha ω t ≥ 1 - ε
-    -- 3. For STRICT inequality (needed for open ball), either:
-    --    a) Use ε/2 trick in the limit statement, or
-    --    b) Use right-continuity of CDF more carefully
-    -- 4. Express this as Filter.Tendsto using the appropriate API
+    -- Similar strategy using alphaIic_tendsto_one_at_top
     --
-    -- Accept as sorry for now:
+    -- For any ε > 0, find T such that for t > T:
+    -- - For all q > t > T: 1 - ε < alphaIic q ω (by helper lemma)
+    -- - So F(ω,t) = inf_{q>t} alphaIic q ω ≥ 1 - ε
+    -- - Thus F(ω,t) → 1
+    --
+    -- Full proof requires mathlib's Filter API.
     sorry
 
 /-- Build the directing measure ν from the CDF.
