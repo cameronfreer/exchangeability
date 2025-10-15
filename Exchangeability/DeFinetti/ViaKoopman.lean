@@ -1099,7 +1099,7 @@ private theorem h_tower_of_lagConst
             μ[(fun ω =>
                 (Finset.range (n + 1)).sum (fun j => g (ω j))) | m] ω) := by
       -- CE[c·Z|m] = c·CE[Z|m] (linearity: scalar commutes with CE)
-      have := condExp_const_mul (μ := μ) (m := m) (hm := shiftInvariantSigma_le (α := α))
+      have := condExp_const_mul (hm := shiftInvariantSigma_le (α := α))
         (c := 1 / (n + 1 : ℝ)) (f := fun ω => (Finset.range (n + 1)).sum (fun j => g (ω j)))
       simpa [A] using this
 
