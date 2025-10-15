@@ -950,10 +950,9 @@ private lemma condExp_const_mul
     {m : MeasurableSpace Ω} (hm : m ≤ mΩ)
     (c : ℝ) (f : Ω → ℝ) :
     μ[(fun ω => c * f ω) | m] =ᵐ[μ] (fun ω => c * μ[f | m] ω) := by
-  -- `condExp_smul` in mathlib states exactly this for real scalars
-  -- (as `smul`, equal to `(*)` over ℝ).
+  -- `condExp_smul` in mathlib takes m as explicit positional parameter
   simpa [Pi.mul_apply, smul_eq_mul] using
-    (MeasureTheory.condExp_smul (μ := μ) (m := m) (c := c) (f := f))
+    (MeasureTheory.condExp_smul c f m)
 
 /-- Finite sum linearity of conditional expectation.
 **Mathematical content**: CE[Σᵢfᵢ|m] = ΣᵢCE[fᵢ|m]
@@ -968,12 +967,9 @@ private lemma condExp_sum_finset
     μ[(fun ω => s.sum (fun i => f i ω)) | m]
       =ᵐ[μ] (fun ω => s.sum (fun i => μ[f i | m] ω)) := by
   classical
-  -- Mathlib has: μ[∑ i ∈ s, f i | m] =ᵐ[μ] ∑ i ∈ s, μ[f i | m]
-  -- We need:      μ[(fun ω => s.sum ...) | m] =ᵐ[μ] (fun ω => s.sum ...)
-  -- These are mathematically identical but the conditional expectation
-  -- notation `μ[· | m]` elaborates them to different internal forms.
-  -- Requires: applying condExp_congr_ae or unfolding the notation manually
-  sorry  -- Method A requires resolving conditional expectation notation elaboration
+  -- condExp_finset_sum takes m as explicit positional parameter
+  -- but the notation elaboration issue remains unsolved
+  sorry  -- TODO: Fix conditional expectation notation elaboration
 
 /-- On a finite measure space, a bounded measurable real function is integrable. -/
 private lemma integrable_of_bounded_measurable
@@ -1039,6 +1035,17 @@ private theorem birkhoffAverage_tendsto_condexp_L2
   -- temporarily keep this as an axiom and depend on it from Block 3.
   admit
 
+/-- Helper: shift^[k] y n = y (n + k) -/
+private lemma shift_iterate_apply (k n : ℕ) (y : Ω[α]) :
+    (shift (α := α))^[k] y n = y (n + k) := by
+  induction k generalizing n with
+  | zero => simp
+  | succ k ih =>
+    rw [Function.iterate_succ_apply']
+    simp only [shift]
+    rw [ih]
+    ring_nf
+
 /-- **Tower identity from lag-constancy + L²→L¹ (no PET used here).**
 
 Assume:
@@ -1092,8 +1099,9 @@ private theorem h_tower_of_lagConst
             μ[(fun ω =>
                 (Finset.range (n + 1)).sum (fun j => g (ω j))) | m] ω) := by
       -- CE[c·Z|m] = c·CE[Z|m] (linearity: scalar commutes with CE)
-      simpa [A] using @condExp_const_mul _ _ μ _ m (shiftInvariantSigma_le (α := α))
-        (1 / (n + 1 : ℝ)) (fun ω => (Finset.range (n + 1)).sum (fun j => g (ω j)))
+      have := condExp_const_mul (μ := μ) (m := m) (hm := shiftInvariantSigma_le (α := α))
+        (c := 1 / (n + 1 : ℝ)) (f := fun ω => (Finset.range (n + 1)).sum (fun j => g (ω j)))
+      simpa [A] using this
 
     -- Push CE through the finite sum
     have h_sum :
@@ -1123,9 +1131,12 @@ private theorem h_tower_of_lagConst
       -- condexp_precomp_iterate_eq gives: μ[fun ω => g (shift^[j] ω 0) | m] = μ[fun ω => g (ω 0) | m]
       -- Need to show: shift^[j] ω 0 = ω j, then apply h
       have h := condexp_precomp_iterate_eq (μ := μ) hσ (k := j) (hf := hg_0_int)
-      -- Prove: shift^[j] ω 0 = ω j using shift_iterate_apply (defined later at line 2814)
+      -- Prove: shift^[j] ω 0 = ω j using shift_iterate_apply
       have h_shift : (fun ω => g (shift^[j] ω 0)) = (fun ω => g (ω j)) := by
-        sorry  -- Needs: shift^[j] ω 0 = ω (0 + j) = ω j by shift_iterate_apply
+        ext ω
+        congr 1
+        rw [shift_iterate_apply]
+        simp
       rw [← h_shift]
       exact h
 
