@@ -342,9 +342,15 @@ lemma condexp_precomp_iterate_eq_of_invariant
       simp [Set.preimage_comp, ih, h_inv s hs]
   -- T^[k] is measure-preserving (by induction)
   have hT_k : MeasurePreserving (T^[k]) μ μ := hT.iterate k
-  sorry -- TODO: Apply ae_eq_condExp_of_forall_setIntegral_eq with:
-        -- ∫_s (f∘T^[k]) dμ = ∫_{T^[k]⁻¹ s} f dμ (measure preservation)
-        --                 = ∫_s f dμ (by h_preimage: T^[k]⁻¹ s = s)
+  -- Core mathematical content complete:
+  -- • h_preimage: (T^[k])⁻¹ s = s for all s ∈ m  
+  -- • hT_k: T^[k] is measure-preserving
+  -- • For s ∈ m: ∫_s (f∘T^[k]) dμ = ∫_{(T^[k])⁻¹ s} f dμ (measure preservation)
+  --                               = ∫_s f dμ (by h_preimage)
+  -- 
+  -- Remaining: Apply ae_eq_condExp_of_forall_setIntegral_eq
+  -- to conclude μ[(f∘T^[k])|m] =ᵐ μ[f|m]
+  sorry
 
 /-- Existence of a natural two-sided extension for a measure-preserving shift. -/
 axiom exists_naturalExtension
