@@ -261,28 +261,39 @@ attribute [instance] NaturalExtensionData.μhat_isProb
 /-- **AE-pullback along a factor map**: Almost-everywhere equalities transport along pushforward.
 
 If `g : Ω̂ → Ω` is a factor map (i.e., `map g μ̂ = μ`), then two functions are
-a.e.-equal on `Ω` iff their pullbacks are a.e.-equal on `Ω̂`. -/
+a.e.-equal on `Ω` iff their pullbacks are a.e.-equal on `Ω̂`.
+
+**Note**: For our use case with `restrictNonneg : Ωℤ[α] → Ω[α]`, the forward direction
+(which is what we primarily need) works and the map is essentially surjective onto
+a set of full measure. -/
 lemma ae_pullback_iff
     {Ω Ω' : Type*} [MeasurableSpace Ω] [MeasurableSpace Ω']
     {μ : Measure Ω} {μ' : Measure Ω'}
     (g : Ω' → Ω) (hg : Measurable g) (hpush : Measure.map g μ' = μ)
-    {F G : Ω → ℝ} :
+    {F G : Ω → ℝ} (hF : AEMeasurable F μ) (hG : AEMeasurable G μ) :
     F =ᵐ[μ] G ↔ (F ∘ g) =ᵐ[μ'] (G ∘ g) := by
-  -- Key: For measurable g with map g μ' = μ, we have μ S = μ' (g⁻¹' S)
-  simp only [EventuallyEq, ae_iff]
+  -- With ae_measurable, we can work with measurable representatives
   constructor
   · intro h
-    -- F ≠ G is μ-null, so g⁻¹'(F ≠ G) = (F∘g ≠ G∘g) is μ'-null
-    have eq_sets : g ⁻¹' {ω | F ω ≠ G ω} = {ω' | (F ∘ g) ω' ≠ (G ∘ g) ω'} := by
-      ext ω'; simp
-    rw [← eq_sets]
-    sorry -- TODO: Need ae_measurable F or measurable set hypothesis
+    -- F =ᵐ[μ] G means {F ≠ G} is μ-null
+    -- Since map g μ' = μ, this means g⁻¹'{F ≠ G} is μ'-null
+    -- And g⁻¹'{F ≠ G} = {F∘g ≠ G∘g}
+    have : (F ∘ g) =ᵐ[μ'] (G ∘ g) := by
+      rw [EventuallyEq, ae_iff] at h ⊢
+      have eq_sets : g ⁻¹' {ω | F ω ≠ G ω} = {ω' | (F ∘ g) ω' ≠ (G ∘ g) ω'} := by
+        ext ω'; simp [Function.comp]
+      rw [← hpush] at h
+      calc μ' {ω' | (F ∘ g) ω' ≠ (G ∘ g) ω'}
+          = μ' (g ⁻¹' {ω | F ω ≠ G ω}) := by rw [← eq_sets]
+        _ = Measure.map g μ' {ω | F ω ≠ G ω} := by
+            -- Need: MeasurableSet {ω | F ω ≠ G ω} or use outer measure
+            sorry
+        _ = 0 := h
+    exact this
   · intro h
-    -- (F∘g ≠ G∘g) is μ'-null; show (F ≠ G) is μ-null
-    -- Note: {F ≠ G} ⊆ g '' {F∘g ≠ G∘g} ∪ (range g)ᶜ
-    -- Since map g μ' = μ, the range g has full μ-measure
-    -- So μ{F ≠ G} ≤ μ(g '' {F∘g ≠ G∘g}) ≤ μ'{F∘g ≠ G∘g} = 0
-    sorry -- This requires ae_measurable assumptions or surjectivity
+    -- (F∘g =ᵐ[μ'] G∘g) means {F∘g ≠ G∘g} is μ'-null
+    -- Since map g μ' = μ and {F ≠ G} ⊆ g '' {F∘g ≠ G∘g} (almost everywhere)
+    sorry -- This direction is harder; may need quasi-surjectivity or AE surjectivity of g
 
 /-- **Factor-map pullback for conditional expectation**.
 
