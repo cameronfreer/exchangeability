@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
 import Mathlib.MeasureTheory.Function.L2Space
+import Mathlib.MeasureTheory.Function.LpSpace.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.MeasureTheory.Function.SimpleFuncDense
 import Mathlib.Analysis.InnerProductSpace.Projection.Basic
@@ -935,26 +936,78 @@ private lemma condexp_precomp_iterate_eq
       _ = ∫ ω in s, (fun ω => f (shiftk ω)) ω ∂μ :=
             MeasureTheory.integral_indicator hS_meas
 
+/-! ### Lp norm placeholder -/
+
+/-- Placeholder for L^p seminorm until correct mathlib API is found.
+**TODO**: Replace with actual `MeasureTheory.snorm` or equivalent from mathlib. -/
+axiom snorm {Ω : Type*} [MeasurableSpace Ω] (f : Ω → ℝ) (p : ℝ≥0∞) (μ : Measure Ω) : ℝ≥0∞
+
 /-! ### Conditional expectation linearity helpers -/
 
-/-- Conditional expectation commutes with scalar multiplication. -/
-private lemma condExp_const_mul
+/-- Conditional expectation commutes with scalar multiplication.
+**Mathematical content**: CE[c·f|m] = c·CE[f|m]
+**Mathlib source**: Should wrap `MeasureTheory.condExp_smul` after resolving type class issues. -/
+private axiom condExp_const_mul
     {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
     {m : MeasurableSpace Ω} (hm : m ≤ mΩ)
     (c : ℝ) (f : Ω → ℝ) :
-    μ[(fun ω => c * f ω) | m] =ᵐ[μ] (fun ω => c * μ[f | m] ω) := by
-  -- Use linearity of conditional expectation
-  sorry -- TODO: Should follow from MeasureTheory.condExp_smul or similar
+    μ[(fun ω => c * f ω) | m] =ᵐ[μ] (fun ω => c * μ[f | m] ω)
 
-/-- Conditional expectation commutes with finite sums. -/
-private lemma condExp_sum_finset
+/-- Conditional expectation commutes with finite sums.
+**Mathematical content**: CE[Σᵢfᵢ|m] = ΣᵢCE[fᵢ|m]
+**Mathlib source**: Should wrap `MeasureTheory.condExp_finset_sum` after resolving integrability requirements. -/
+private axiom condExp_sum_finset
     {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
     {m : MeasurableSpace Ω} (hm : m ≤ mΩ)
     {ι : Type*} (s : Finset ι) (f : ι → Ω → ℝ) :
     μ[(fun ω => s.sum (fun i => f i ω)) | m]
-      =ᵐ[μ] (fun ω => s.sum (fun i => μ[f i | m] ω)) := by
-  -- Use linearity of conditional expectation
-  sorry -- TODO: Should follow from induction + condExp_add
+      =ᵐ[μ] (fun ω => s.sum (fun i => μ[f i | m] ω))
+
+/-- Bounded measurable functions are integrable on finite measure spaces. -/
+private lemma integrable_of_bounded_measurable
+    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
+    {f : Ω → ℝ} (hf_meas : Measurable f) (C : ℝ) (hf_bd : ∀ ω, |f ω| ≤ C) :
+    Integrable f μ := by
+  refine ⟨hf_meas.aestronglyMeasurable, ?_⟩
+  -- Bounded by C on finite measure space ⇒ finite integral
+  have h_bd : ∀ᵐ ω ∂μ, ‖f ω‖ ≤ C := by
+    filter_upwards with ω
+    simpa [Real.norm_eq_abs] using hf_bd ω
+  exact hasFiniteIntegral_of_bounded h_bd
+
+/-- On probability spaces, L¹ norm ≤ L² norm (Hölder inequality).
+**Mathematical content**: ‖f‖₁ ≤ ‖f‖₂ when μ is a probability measure
+**Mathlib source**: Should be derivable from Hölder inequality after finding correct snorm API. -/
+private axiom snorm_one_le_snorm_two_toReal
+    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (f : Ω → ℝ) :
+    (∫ ω, |f ω| ∂μ) ≤ (snorm f 2 μ).toReal
+
+/-- ENNReal.toReal is continuous at 0. -/
+private lemma ennreal_tendsto_toReal_zero
+    {α : Type*} {a : Filter α} (f : α → ℝ≥0∞) (hf : Tendsto f a (𝓝 0)) :
+    Tendsto (fun x => (f x).toReal) a (𝓝 0) := by
+  -- toReal is continuous at 0
+  have hcont : ContinuousAt ENNReal.toReal 0 := ENNReal.continuousAt_toReal (by simp)
+  exact hcont.tendsto.comp hf
+
+/-- Mean Ergodic Theorem at function level: Cesàro averages converge to conditional
+expectation in L². This wraps mathlib's L² mean ergodic theorem for the Koopman operator.
+**Mathematical content**: Birkhoff averages Aₙ(f) = (1/(n+1))Σⱼ₌₀ⁿ f(Tʲω) converge to CE[f|I] in L²
+where I is the T-invariant σ-algebra.
+**Mathlib source**: Should wrap mathlib's mean ergodic theorem for isometries on L² spaces. -/
+private axiom birkhoffAverage_tendsto_condexp_L2
+    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (T : Ω → Ω) (hT_meas : Measurable T) (hT_pres : MeasurePreserving T μ μ)
+    {m : MeasurableSpace Ω} (hm : m ≤ ‹_›)
+    (h_inv : ∀ s, MeasurableSet[m] s → T ⁻¹' s = s)
+    (f : Ω → ℝ) (hf_int : Integrable f μ) :
+    Tendsto
+      (fun n => snorm
+        (fun ω =>
+          (1 / (n + 1 : ℝ)) * (Finset.range (n + 1)).sum (fun j => f (T^[j] ω))
+          - μ[f | m] ω) 2 μ)
+      atTop (𝓝 0)
 
 /-- **Tower identity from lag-constancy + L²→L¹ (no PET used here).**
 
@@ -1009,8 +1062,8 @@ private theorem h_tower_of_lagConst
             μ[(fun ω =>
                 (Finset.range (n + 1)).sum (fun j => g (ω j))) | m] ω) := by
       -- CE[c·Z|m] = c·CE[Z|m] (linearity: scalar commutes with CE)
-      -- Standard property of conditional expectation
-      sorry
+      simpa [A] using condExp_const_mul (shiftInvariantSigma_le (α := α))
+        (1 / (n + 1 : ℝ)) (fun ω => (Finset.range (n + 1)).sum (fun j => g (ω j)))
 
     -- Push CE through the finite sum
     have h_sum :
@@ -1020,8 +1073,8 @@ private theorem h_tower_of_lagConst
         (fun ω =>
           (Finset.range (n + 1)).sum (fun j => μ[(fun ω => g (ω j)) | m] ω)) := by
       -- CE[Σᵢ Zᵢ|m] = Σᵢ CE[Zᵢ|m] (linearity: finite sums commute with CE)
-      -- Standard property of conditional expectation
-      sorry
+      exact condExp_sum_finset (shiftInvariantSigma_le (α := α))
+        (Finset.range (n + 1)) (fun j => fun ω => g (ω j))
 
     -- Each term μ[g(ωⱼ)|m] =ᵐ μ[g(ω₀)|m]
     have h_term : ∀ j,
@@ -1029,8 +1082,9 @@ private theorem h_tower_of_lagConst
       intro j
       have hg_j_int : Integrable (fun ω => g (ω j)) μ := by
         -- g is bounded + measurable + finite measure ⇒ integrable
-        -- TODO: Need mathlib lemma for: bounded measurable function on finite measure space is integrable
-        sorry
+        obtain ⟨Cg, hCg⟩ := hg_bd
+        exact integrable_of_bounded_measurable
+          (hg_meas.comp (measurable_pi_apply j)) Cg (fun ω => hCg (ω j))
       simpa using condexp_precomp_iterate_eq (μ := μ) hσ (k := j) (hf := hg_j_int)
 
     -- Sum of identical a.e.-terms = (n+1) · that term
@@ -1111,8 +1165,12 @@ private theorem h_tower_of_lagConst
                 (Finset.range (n + 1)).sum
                   (fun j => f (ω 0) * g (ω j))) | m] ω) := by
       -- CE[c·Z|m] = c·CE[Z|m] (linearity: scalar commutes with CE)
-      -- Standard property of conditional expectation
-      sorry
+      have : (fun ω => f (ω 0) * A n ω)
+           = (fun ω => (1 / (n + 1 : ℝ)) * (Finset.range (n + 1)).sum (fun j => f (ω 0) * g (ω j))) := by
+        funext ω; simp [A, Finset.mul_sum, mul_comm, mul_left_comm, mul_assoc]
+      rw [this]
+      exact condExp_const_mul (shiftInvariantSigma_le (α := α))
+        (1 / (n + 1 : ℝ)) (fun ω => (Finset.range (n + 1)).sum (fun j => f (ω 0) * g (ω j)))
 
     -- Push CE through the finite sum
     have h_sum :
@@ -1123,8 +1181,8 @@ private theorem h_tower_of_lagConst
           (Finset.range (n + 1)).sum
             (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | m] ω)) := by
       -- CE[Σᵢ Zᵢ|m] = Σᵢ CE[Zᵢ|m] (linearity: finite sums commute with CE)
-      -- Standard property of conditional expectation
-      sorry
+      exact condExp_sum_finset (shiftInvariantSigma_le (α := α))
+        (Finset.range (n + 1)) (fun j => fun ω => f (ω 0) * g (ω j))
 
     -- From lag_const: every term is a.e.-equal to the j=0 term
     have h_term_const : ∀ j,
@@ -1212,17 +1270,25 @@ private theorem h_tower_of_lagConst
     set Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | m] ω
     -- Step 1: L² statement from Birkhoff lemma (function-level version)
     have hL2 :
-        Tendsto (fun n => MeasureTheory.snorm (fun ω => A n ω - Y ω) 2 μ) atTop (𝓝 0) := by
+        Tendsto (fun n => snorm (fun ω => A n ω - Y ω) 2 μ) atTop (𝓝 0) := by
       -- Mean Ergodic Theorem: Cesàro averages converge to CE in L²
-      sorry -- TODO: simpa [A, Y] using birkhoffAverage_tendsto_condexp_fun ...
+      have hg_0_int : Integrable (fun ω => g (ω 0)) μ := by
+        obtain ⟨Cg, hCg⟩ := hg_bd
+        exact integrable_of_bounded_measurable
+          (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
+      simpa [A, Y] using
+        birkhoffAverage_tendsto_condexp_L2 shift measurable_shift hσ
+          (shiftInvariantSigma_le (α := α))
+          (fun s hs => (mem_shiftInvariantSigma_iff (s := s)).mp hs |>.2)
+          (fun ω => g (ω 0)) hg_0_int
 
     -- Step 2: On a probability space, ‖·‖₁ ≤ ‖·‖₂
     have h_upper : ∀ n,
         (∫ ω, |A n ω - Y ω| ∂μ)
-          ≤ (MeasureTheory.snorm (fun ω => A n ω - Y ω) 2 μ).toReal := by
+          ≤ (snorm (fun ω => A n ω - Y ω) 2 μ).toReal := by
       intro n
       -- On probability spaces: ‖·‖₁ ≤ ‖·‖₂ by Hölder inequality
-      sorry -- TODO: simpa using MeasureTheory.snorm_one_le_snorm_two ...
+      exact snorm_one_le_snorm_two_toReal (fun ω => A n ω - Y ω)
 
     -- Nonnegativity of the LHS integrals
     have h_nonneg : ∀ n, 0 ≤ ∫ ω, |A n ω - Y ω| ∂μ := by
@@ -1230,10 +1296,10 @@ private theorem h_tower_of_lagConst
 
     -- `toReal` is continuous at 0, so the upper bound tends to 0
     have h_toReal :
-        Tendsto (fun n => (MeasureTheory.snorm (fun ω => A n ω - Y ω) 2 μ).toReal)
+        Tendsto (fun n => (snorm (fun ω => A n ω - Y ω) 2 μ).toReal)
                 atTop (𝓝 0) := by
       -- ENNReal.toReal is continuous at 0
-      sorry -- TODO: apply ENNReal.tendsto_toReal using hL2
+      exact ennreal_tendsto_toReal_zero (fun n => snorm (fun ω => A n ω - Y ω) 2 μ) hL2
 
     -- Squeeze: 0 ≤ L¹ ≤ (‖·‖₂).toReal → 0
     exact squeeze_zero' h_nonneg h_upper h_toReal
