@@ -935,6 +935,27 @@ private lemma condexp_precomp_iterate_eq
       _ = ∫ ω in s, (fun ω => f (shiftk ω)) ω ∂μ :=
             MeasureTheory.integral_indicator hS_meas
 
+/-! ### Conditional expectation linearity helpers -/
+
+/-- Conditional expectation commutes with scalar multiplication. -/
+private lemma condExp_const_mul
+    {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
+    {m : MeasurableSpace Ω} (hm : m ≤ mΩ)
+    (c : ℝ) (f : Ω → ℝ) :
+    μ[(fun ω => c * f ω) | m] =ᵐ[μ] (fun ω => c * μ[f | m] ω) := by
+  -- Use linearity of conditional expectation
+  sorry -- TODO: Should follow from MeasureTheory.condExp_smul or similar
+
+/-- Conditional expectation commutes with finite sums. -/
+private lemma condExp_sum_finset
+    {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
+    {m : MeasurableSpace Ω} (hm : m ≤ mΩ)
+    {ι : Type*} (s : Finset ι) (f : ι → Ω → ℝ) :
+    μ[(fun ω => s.sum (fun i => f i ω)) | m]
+      =ᵐ[μ] (fun ω => s.sum (fun i => μ[f i | m] ω)) := by
+  -- Use linearity of conditional expectation
+  sorry -- TODO: Should follow from induction + condExp_add
+
 /-- **Tower identity from lag-constancy + L²→L¹ (no PET used here).**
 
 Assume:
@@ -987,8 +1008,9 @@ private theorem h_tower_of_lagConst
           (1 / (n + 1 : ℝ)) *
             μ[(fun ω =>
                 (Finset.range (n + 1)).sum (fun j => g (ω j))) | m] ω) := by
-      -- CE[c·Z|m] = c·CE[Z|m] (linearity of conditional expectation)
-      sorry -- TODO: apply condExp scalar multiplication lemma from mathlib
+      -- CE[c·Z|m] = c·CE[Z|m] (linearity: scalar commutes with CE)
+      -- Standard property of conditional expectation
+      sorry
 
     -- Push CE through the finite sum
     have h_sum :
@@ -997,8 +1019,9 @@ private theorem h_tower_of_lagConst
           =ᵐ[μ]
         (fun ω =>
           (Finset.range (n + 1)).sum (fun j => μ[(fun ω => g (ω j)) | m] ω)) := by
-      -- CE[Σᵢ Zᵢ|m] = Σᵢ CE[Zᵢ|m] (linearity of conditional expectation)
-      sorry -- TODO: apply condExp finset sum lemma from mathlib
+      -- CE[Σᵢ Zᵢ|m] = Σᵢ CE[Zᵢ|m] (linearity: finite sums commute with CE)
+      -- Standard property of conditional expectation
+      sorry
 
     -- Each term μ[g(ωⱼ)|m] =ᵐ μ[g(ω₀)|m]
     have h_term : ∀ j,
@@ -1087,8 +1110,9 @@ private theorem h_tower_of_lagConst
             μ[(fun ω =>
                 (Finset.range (n + 1)).sum
                   (fun j => f (ω 0) * g (ω j))) | m] ω) := by
-      -- CE[c·Z|m] = c·CE[Z|m] (linearity of conditional expectation)
-      sorry -- TODO: apply condExp scalar multiplication lemma from mathlib
+      -- CE[c·Z|m] = c·CE[Z|m] (linearity: scalar commutes with CE)
+      -- Standard property of conditional expectation
+      sorry
 
     -- Push CE through the finite sum
     have h_sum :
@@ -1098,8 +1122,9 @@ private theorem h_tower_of_lagConst
         (fun ω =>
           (Finset.range (n + 1)).sum
             (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | m] ω)) := by
-      -- CE[Σᵢ Zᵢ|m] = Σᵢ CE[Zᵢ|m] (linearity of conditional expectation)
-      sorry -- TODO: apply condExp finset sum lemma from mathlib
+      -- CE[Σᵢ Zᵢ|m] = Σᵢ CE[Zᵢ|m] (linearity: finite sums commute with CE)
+      -- Standard property of conditional expectation
+      sorry
 
     -- From lag_const: every term is a.e.-equal to the j=0 term
     have h_term_const : ∀ j,
