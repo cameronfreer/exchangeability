@@ -1823,6 +1823,125 @@ lemma contractable_finite_cylinder_measure
     _ = μ ((fun ω (i : Fin (r + 1 + k)) => X (↑i) ω) ⁻¹' S_std) := by
         rw [Measure.map_apply h_meas_std hS_meas]
 
+/-- Contractability implies equality of the joint law of
+`(X₀,…,X_{r-1}, X_r, X_{m+1}, …, X_{m+k})` and
+`(X₀,…,X_{r-1}, X_r, X_{r+1}, …, X_{r+k})`. -/
+lemma contractable_triple_pushforward
+    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → α)
+    (hX : Contractable μ X)
+    (hX_meas : ∀ n, Measurable (X n))
+    {r m k : ℕ} (hrm : r < m) :
+  let Z_r : Ω → (Fin r → α) := fun ω i => X i.val ω
+  let Y_future : Ω → (Fin k → α) := fun ω j => X (m + 1 + j.val) ω
+  let Y_tail   : Ω → (Fin k → α) := fun ω j => X (r + 1 + j.val) ω
+  Measure.map (fun ω => (Z_r ω, X r ω, Y_future ω)) μ
+    = Measure.map (fun ω => (Z_r ω, X r ω, Y_tail ω)) μ := by
+  classical
+  intro Z_r Y_future Y_tail
+  -- Define cylinder rectangles generating the product σ-algebra.
+  let Rectangles :
+      Set (Set ((Fin r → α) × α × (Fin k → α))) :=
+    {S | ∃ (A : Fin r → Set α) (hA : ∀ i, MeasurableSet (A i))
+          (B : Set α) (hB : MeasurableSet B)
+          (C : Fin k → Set α) (hC : ∀ j, MeasurableSet (C j)),
+        S = (Set.univ.pi A) ×ˢ B ×ˢ (Set.univ.pi C)}
+
+  -- Rectangles form a π-system.
+  have h_pi : IsPiSystem Rectangles := by
+    intro S₁ hS₁ S₂ hS₂ h_ne
+    rcases hS₁ with ⟨A₁, hA₁, B₁, hB₁, C₁, hC₁, rfl⟩
+    rcases hS₂ with ⟨A₂, hA₂, B₂, hB₂, C₂, hC₂, rfl⟩
+    refine ⟨fun i => A₁ i ∩ A₂ i, ?_, B₁ ∩ B₂, hB₁.inter hB₂,
+            fun j => C₁ j ∩ C₂ j, ?_, ?_⟩
+    · intro i; exact (hA₁ i).inter (hA₂ i)
+    · intro j; exact (hC₁ j).inter (hC₂ j)
+    · ext f; simp [Set.mem_univ_pi, Set.mem_inter_iff, Set.preimage, Set.mem_setOf_eq]
+
+  -- Equality on rectangles using the finite cylinder measure lemma.
+  have h_agree :
+      ∀ {S} (hS : S ∈ Rectangles),
+        Measure.map (fun ω => (Z_r ω, X r ω, Y_future ω)) μ S
+          = Measure.map (fun ω => (Z_r ω, X r ω, Y_tail ω)) μ S := by
+    intro S hS
+    rcases hS with ⟨A, hA, B, hB, C, hC, rfl⟩
+    -- Convert preimage of rectangle into the cylinder event.
+    have h_pre_future :
+        (fun ω => (Z_r ω, X r ω, Y_future ω)) ⁻¹'
+          ((Set.univ.pi A) ×ˢ B ×ˢ (Set.univ.pi C))
+          =
+        {ω | (∀ i : Fin r, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧
+              (∀ j : Fin k, X (m + 1 + j.val) ω ∈ C j)} := by
+      ext ω; simp [Z_r, Y_future, Set.mem_univ_pi, Set.mem_setOf_eq]
+    have h_pre_tail :
+        (fun ω => (Z_r ω, X r ω, Y_tail ω)) ⁻¹'
+          ((Set.univ.pi A) ×ˢ B ×ˢ (Set.univ.pi C))
+          =
+        {ω | (∀ i : Fin r, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧
+              (∀ j : Fin k, X (r + 1 + j.val) ω ∈ C j)} := by
+      ext ω; simp [Z_r, Y_tail, Set.mem_univ_pi, Set.mem_setOf_eq]
+    -- Apply the finite cylinder equality.
+    have :=
+      contractable_finite_cylinder_measure
+        (X := X) (μ := μ) (hX := hX) (hX_meas := hX_meas)
+        (hrm := hrm) (A := A) (hA := hA) (B := B) (hB := hB)
+        (C := C) (hC := hC)
+    simpa [Measure.map_apply,
+      h_pre_future, h_pre_tail,
+      Set.mem_univ_pi, Set.mem_setOf_eq,
+      measurable_pi_lambda, hA, hB, hC]
+      using this
+
+  -- Covering family: constant sequence of `Set.univ`.
+  let Bseq : ℕ → Set ((Fin r → α) × α × (Fin k → α)) := fun _ => Set.univ
+  have hBseq_union : ⋃ n, Bseq n = Set.univ := by simp [Bseq]
+  have hBseq_mem : ∀ n, Bseq n ∈ Rectangles := by
+    intro n
+    refine ⟨fun _ => Set.univ, fun _ => MeasurableSet.univ,
+      Set.univ, MeasurableSet.univ, fun _ => Set.univ, fun _ => MeasurableSet.univ, ?_⟩
+    simp [Bseq]
+  have hBseq_finite : ∀ n,
+      (Measure.map (fun ω => (Z_r ω, X r ω, Y_future ω)) μ) (Bseq n) ≠ ∞ := by
+    intro n
+    simpa [Bseq] using
+      (measure_ne_top _
+        (Set.univ : Set ((Fin r → α) × α × (Fin k → α))))
+  have hBseq_finite' : ∀ n,
+      (Measure.map (fun ω => (Z_r ω, X r ω, Y_tail ω)) μ) (Bseq n) ≠ ∞ := by
+    intro n
+    simpa [Bseq] using
+      (measure_ne_top _
+        (Set.univ : Set ((Fin r → α) × α × (Fin k → α))))
+
+  -- Apply the measure extension lemma on the π-system.
+  refine Measure.ext_of_generateFrom_of_iUnion
+    Rectangles Bseq ?_ h_pi hBseq_union hBseq_mem hBseq_finite h_agree
+    ?_ hBseq_finite' ?_ ?_
+  · -- Rectangles generate the product σ-algebra.
+    ext s; constructor
+    · intro hs
+      rcases hs with ⟨A, hA, B, hB, C, hC, rfl⟩
+      refine MeasurableSet.prod ?_ ?_
+      · exact MeasurableSet.prod (MeasurableSet.univ_pi hA) hB
+      · exact MeasurableSet.univ_pi hC
+    · intro hs
+      -- Any measurable set in the product σ-algebra is in the generated σ-algebra.
+      refine MeasurableSet.generateFrom ?_
+      intro s hs
+      rcases hs with ⟨A, hA, B, hB, C, hC, rfl⟩
+      apply MeasurableSet.prod
+      · exact MeasurableSet.prod (MeasurableSet.univ_pi hA) hB
+      · exact MeasurableSet.univ_pi hC
+  · -- The identity on Rectangles is measurable.
+    intro s hs
+    rcases hs with ⟨A, hA, B, hB, C, hC, rfl⟩
+    refine (MeasurableSet.prod ?_ ?_)
+    · exact MeasurableSet.prod (MeasurableSet.univ_pi hA) hB
+    · exact MeasurableSet.univ_pi hC
+  · -- The measures agree on Rectangles (already shown).
+    intro s hs
+    exact h_agree hs
 /-- **Correct conditional independence from contractability (Kallenberg Lemma 1.3).**
 
 For contractable X and r < m, the past block σ(X₀,...,X_{r-1}) and the single coordinate
@@ -2079,6 +2198,77 @@ lemma block_coord_condIndep
       let E_cyl' := {ω | (∀ i, X i.val ω ∈ A i) ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)}
       let E_target' := {ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)}
 
+      -- Measurability of the relevant sets
+      have hE_past_meas :
+          MeasurableSet {ω | ∀ i, X i.val ω ∈ A i} :=
+        firstRCylinder_measurable_ambient X r A hX_meas hA
+      have hE_future_meas :
+          MeasurableSet {ω | ∀ j : Fin k, X (m + 1 + j.val) ω ∈ C j} := by
+        classical
+        have h_eq :
+            {ω | ∀ j : Fin k, X (m + 1 + j.val) ω ∈ C j}
+              = ⋂ j : Fin k, (fun ω => X (m + 1 + j.val) ω) ⁻¹' C j := by
+          ext ω
+          simp [Set.mem_setOf_eq, Set.mem_iInter]
+        simpa [h_eq] using
+          (MeasurableSet.iInter fun j : Fin k =>
+            (hX_meas (m + 1 + j.val)) (hC j))
+      have hE_cyl'_meas :
+          MeasurableSet E_cyl' := by
+        classical
+        have h_eq :
+            E_cyl' =
+              ({ω | ∀ i, X i.val ω ∈ A i}
+                ∩ {ω | ∀ j : Fin k, X (m + 1 + j.val) ω ∈ C j}) := by
+          rfl
+        simpa [h_eq] using hE_past_meas.inter hE_future_meas
+      have h_inter_meas :
+          MeasurableSet (E_cyl' ∩ (X r ⁻¹' B)) :=
+        hE_cyl'_meas.inter hXrB_meas
+      have h_integrable_const : Integrable (fun _ : Ω => (1 : ℝ)) μ :=
+        integrable_const (1 : ℝ)
+
+      have h_indicator_swap :
+          Set.indicator E_cyl'
+            (fun ω => Set.indicator (X r ⁻¹' B) (fun _ => (1 : ℝ)) ω)
+          = Set.indicator (E_cyl' ∩ (X r ⁻¹' B)) (fun _ => (1 : ℝ)) := by
+        classical
+        ext ω
+        by_cases hω₁ : ω ∈ E_cyl'
+        · by_cases hω₂ : ω ∈ X r ⁻¹' B <;> simp [Set.indicator, hω₁, hω₂]
+        · simp [Set.indicator, hω₁]
+
+      have h_first :
+          ∫ ω in E_cyl', Set.indicator (X r ⁻¹' B) (fun _ => (1 : ℝ)) ω ∂ μ
+            = ∫ ω,
+                Set.indicator (E_cyl' ∩ (X r ⁻¹' B))
+                  (fun _ => (1 : ℝ)) ω ∂ μ := by
+        classical
+        have :
+            ∫ ω in E_cyl', Set.indicator (X r ⁻¹' B) (fun _ => (1 : ℝ)) ω ∂ μ
+              = ∫ ω,
+                  Set.indicator E_cyl'
+                    (fun ω => Set.indicator (X r ⁻¹' B) (fun _ => (1 : ℝ)) ω) ω ∂ μ := by
+          simp [MeasureTheory.integral_indicator, hE_cyl'_meas, h_integrable_const]
+        simpa [this, h_indicator_swap]
+
+      have h_second :
+          ∫ ω in E_cyl' ∩ (X r ⁻¹' B), (fun _ => (1 : ℝ)) ω ∂ μ
+            = ∫ ω,
+                Set.indicator (E_cyl' ∩ (X r ⁻¹' B))
+                  (fun _ => (1 : ℝ)) ω ∂ μ := by
+        classical
+        simp [MeasureTheory.integral_indicator, h_inter_meas, h_integrable_const]
+
+      have h_measure_eq :
+          ∫ ω in E_cyl' ∩ (X r ⁻¹' B), (fun _ => (1 : ℝ)) ω ∂ μ
+            = (μ (E_cyl' ∩ (X r ⁻¹' B))).toReal := by
+        classical
+        have :=
+          MeasureTheory.integral_const
+            (μ := μ.restrict (E_cyl' ∩ (X r ⁻¹' B))) (1 : ℝ)
+        simpa [measure_restrict_univ] using this
+
       calc ∫ ω in E_cyl', Set.indicator (X r ⁻¹' B) (fun _ => (1:ℝ)) ω ∂μ
           = ∫ ω in E_cyl' ∩ (X r ⁻¹' B), (fun _ => (1:ℝ)) ω ∂μ := by
               exact setIntegral_indicator hXrB_meas
@@ -2115,7 +2305,186 @@ lemma block_coord_condIndep
           (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ
         = (μ ({ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (r + 1 + j.val) ω ∈ C j)})).toReal := by
       intro A hA C hC
-      sorry -- TODO: Requires product measure / Fubini / disintegration infrastructure
+      classical
+      -- Notation for past/future cylinders
+      set f : Ω → ℝ :=
+        Set.indicator B (fun _ => (1 : ℝ)) ∘ X r with hf_def
+      set g : Ω → ℝ :=
+        Exchangeability.Probability.condExpWith μ
+          (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas) f with hg_def
+      set E_past : Set Ω := {ω | ∀ i : Fin r, X i.val ω ∈ A i} with hEp_def
+      set E_future : Set Ω := {ω | ∀ j : Fin k, X (m + 1 + j.val) ω ∈ C j} with hEf_def
+      set E_target := {ω | ∀ i : Fin r, X i.val ω ∈ A i ∧ X r ω ∈ B
+                          ∧ ∀ j : Fin k, X (r + 1 + j.val) ω ∈ C j}
+      have hE_future_meas :
+          MeasurableSet[finFutureSigma X m k] E_future := by
+        classical
+        let futureMap := fun ω => fun j : Fin k => X (m + 1 + j.val) ω
+        have h_preimage :
+            E_future = futureMap ⁻¹' finCylinder (α:=α) k C := by
+          ext ω
+          simp [hEf_def, futureMap, finCylinder, cylinder]
+        simpa [h_preimage, finFutureSigma]
+          using (⟨_, finCylinder_measurable hC, rfl⟩ :
+            MeasurableSet[finFutureSigma X m k] (futureMap ⁻¹' finCylinder (α:=α) k C))
+      have hf_int : Integrable f μ := by
+        classical
+        have : Integrable (fun _ : Ω => (1 : ℝ)) μ := integrable_const (1 : ℝ)
+        simpa [hf_def] using
+          this.indicator (μ := μ) (s := X r ⁻¹' B) ((hX_meas r) hB)
+      have hE_past_meas : MeasurableSet E_past := by
+        simpa [hEp_def] using
+          firstRCylinder_measurable_ambient X r A hX_meas hA
+      have hg_meas :
+          AEStronglyMeasurable[finFutureSigma X m k] g μ := by
+        classical
+        simp [hg_def, Exchangeability.Probability.condExpWith]
+          using stronglyMeasurable_condexp.aestronglyMeasurable
+            (μ := μ) (m := finFutureSigma X m k) (f := f)
+      have hg_int : Integrable g μ := by
+        classical
+        simpa [hg_def, Exchangeability.Probability.condExpWith]
+          using ProbabilityTheory.integrable_condexp
+            (μ := μ)
+            (m := finFutureSigma X m k)
+            (hm := finFutureSigma_le_ambient X m k hX_meas)
+            (f := f)
+      -- Rewrite the integral using indicators for the past/future events
+      have h_integral_rewrite :
+          ∫ ω in {ω | (∀ i, X i.val ω ∈ A i) ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)}, g ω ∂μ
+            = ∫ ω, Set.indicator E_past (fun _ => (1 : ℝ)) ω
+                * Set.indicator E_future (fun _ => (1 : ℝ)) ω * g ω ∂μ := by
+        classical
+        have h_indicator_eq :
+            Set.indicator (E_past ∩ E_future) g
+              = fun ω => Set.indicator E_past (fun _ => (1 : ℝ)) ω
+                  * Set.indicator E_future (fun _ => (1 : ℝ)) ω * g ω := by
+          ext ω
+          by_cases hp : ω ∈ E_past
+          · by_cases hf : ω ∈ E_future
+            · simp [hp, hf, Set.indicator_of_mem]
+            · simp [hp, hf, Set.indicator_of_not_mem, hEp_def, hEf_def]
+          · simp [hp, Set.indicator_of_not_mem, hEp_def]
+        simp [hEp_def, hEf_def, h_indicator_eq, MeasureTheory.integral_indicator, hg_int]
+      -- After rewriting, the integrand involves the past indicator, the future indicator,
+      -- and the conditional expectation.
+      -- Pull out the future-measurable indicator from the conditional expectation
+      have h_indicator_meas :
+          AEStronglyMeasurable[finFutureSigma X m k]
+            (Set.indicator E_future (fun _ => (1 : ℝ))) μ := by
+        classical
+        have : MeasurableSet[finFutureSigma X m k] E_future := hE_future_meas
+        simpa [hEf_def] using
+          (Measurable.indicator measurable_const this).aestronglyMeasurable
+      have h_indicator_mul_f :
+          Integrable (fun ω => Set.indicator E_future (fun _ => (1 : ℝ)) ω * f ω) μ := by
+        classical
+        have : (fun ω => Set.indicator E_future (fun _ => (1 : ℝ)) ω * f ω)
+              = Set.indicator E_future (fun ω => f ω) := by
+          funext ω
+          by_cases hω : ω ∈ E_future
+          · simp [hω, hf_def, hEf_def]
+          · simp [hω, hf_def, hEf_def]
+        simpa [this] using hf_int.indicator (μ := μ) (s := E_future) hE_future_meas
+      have h_condexp_pullout :
+          (fun ω =>
+              Set.indicator E_future (fun _ => (1 : ℝ)) ω * g ω)
+            =ᵐ[μ]
+          Exchangeability.Probability.condExpWith μ
+            (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
+            (fun ω => Set.indicator E_future (fun _ => (1 : ℝ)) ω * f ω) := by
+        classical
+        have h_ce :
+            μ[(fun ω => Set.indicator E_future (fun _ => (1 : ℝ)) ω * f ω)
+                | finFutureSigma X m k]
+              =ᵐ[μ]
+            (fun ω =>
+                Set.indicator E_future (fun _ => (1 : ℝ)) ω *
+                  μ[f | finFutureSigma X m k] ω) := by
+          have hg_condexp :
+              Integrable f μ := hf_int
+          have h_prod_int :
+              Integrable (fun ω =>
+                  Set.indicator E_future (fun _ => (1 : ℝ)) ω * f ω) μ :=
+            h_indicator_mul_f
+          exact MeasureTheory.condExp_mul_of_aestronglyMeasurable_left
+            (μ := μ) (m := finFutureSigma X m k)
+            h_indicator_meas
+            h_prod_int
+            hg_condexp
+        have h_ce' :
+            (fun ω =>
+                Set.indicator E_future (fun _ => (1 : ℝ)) ω *
+                  μ[f | finFutureSigma X m k] ω)
+              =ᵐ[μ]
+            (fun ω =>
+                Set.indicator E_future (fun _ => (1 : ℝ)) ω * g ω) := by
+          classical
+          have : μ[f | finFutureSigma X m k]
+              =ᵐ[μ]
+            Exchangeability.Probability.condExpWith μ
+              (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas) f := by
+            simpa [Exchangeability.Probability.condExpWith]
+          exact this.mul_left (Set.indicator E_future (fun _ => (1 : ℝ)))
+        have h_combined := h_ce.trans h_ce'
+        -- Unfold condExpWith to obtain the desired identity
+        refine h_combined.symm.trans ?_
+        simpa [Exchangeability.Probability.condExpWith]
+      -- Replace the integrand using the conditional expectation pull-out
+      have h_integral_pullout :
+          ∫ ω, Set.indicator E_past (fun _ => (1 : ℝ)) ω
+                * Set.indicator E_future (fun _ => (1 : ℝ)) ω * g ω ∂μ
+            =
+          ∫ ω, Set.indicator E_past (fun _ => (1 : ℝ)) ω *
+            Exchangeability.Probability.condExpWith μ
+              (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
+              (fun ω => Set.indicator E_future (fun _ => (1 : ℝ)) ω * f ω) ω ∂μ := by
+        classical
+        refine integral_congr_ae ?_
+        filter_upwards [h_condexp_pullout] with ω hω
+        simpa [mul_comm, mul_left_comm, mul_assoc]
+      -- Step 3: Contractability on triples (past block, current coordinate, finite future)
+      -- Introduce the joint maps that capture the needed coordinates.
+      set Z_r : Ω → (Fin r → α) := fun ω i => X i.val ω
+      set Y_future : Ω → (Fin k → α) := fun ω j => X (m + 1 + j.val) ω
+      set Y_tail : Ω → (Fin k → α) := fun ω j => X (r + 1 + j.val) ω
+      set triple_future := fun ω => (Z_r ω, X r ω, Y_future ω)
+      set triple_tail := fun ω => (Z_r ω, X r ω, Y_tail ω)
+      -- Measurability of the building blocks
+      have hZ_meas : Measurable Z_r := by
+        classical
+        apply measurable_pi_lambda
+        intro i
+        simpa [Z_r] using hX_meas i.val
+      have hY_future_meas : Measurable Y_future := by
+        classical
+        apply measurable_pi_lambda
+        intro j
+        simpa [Y_future] using hX_meas (m + 1 + j.val)
+      have hY_tail_meas : Measurable Y_tail := by
+        classical
+        apply measurable_pi_lambda
+        intro j
+        simpa [Y_tail] using hX_meas (r + 1 + j.val)
+      have h_triple_future :
+          Measurable triple_future := by
+        classical
+        -- View the triple as `(Z_r, (X_r, Y_future))`
+        have h_pair : Measurable (fun ω => (X r ω, Y_future ω)) :=
+          (hX_meas r).prodMk hY_future_meas
+        simpa [triple_future] using hZ_meas.prodMk h_pair
+      have h_triple_tail :
+          Measurable triple_tail := by
+        classical
+        have h_pair : Measurable (fun ω => (X r ω, Y_tail ω)) :=
+          (hX_meas r).prodMk hY_tail_meas
+        simpa [triple_tail] using hZ_meas.prodMk h_pair
+      -- TODO: Use contractability to prove `Measure.map triple_future μ = Measure.map triple_tail μ`.
+      -- TODO: Rewrite the integral using these pushforward measures.
+      -- TODO: Apply the tower property to push `Set.indicator E_past` through the conditional expectation.
+      -- TODO: Invoke contractability to replace the integrand with the probability of the target set.
+      -- TODO: Translate the resulting integral into `(μ E_target).toReal`.
+      sorry
 
     -- Combine steps 1-3 to show cylinders are in GoodSets
     have cylinders_in_goodsets : ∀ (A : Fin r → Set α) (hA : ∀ i, MeasurableSet (A i))
@@ -2196,10 +2565,11 @@ lemma block_coord_condIndep
         -- Since equality holds for all E_n, it holds for the limit
 
         -- Extract the functions we're integrating
-        let f := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X r ω)
-        let g := fun ω => (Exchangeability.Probability.condExpWith μ
+        classical
+        set f := fun ω => Set.indicator (X r ⁻¹' B) (fun _ => (1 : ℝ)) ω with hf_def
+        set g := fun ω => Exchangeability.Probability.condExpWith μ
           (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
-          (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω
+          (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r) ω with hg_def
 
         -- For each n, we have ∫_{E_n} f = ∫_{E_n} g
         have h_eq_n : ∀ n, ∫ ω in E_seq n, f ω ∂μ = ∫ ω in E_seq n, g ω ∂μ := by
@@ -2253,18 +2623,7 @@ lemma block_coord_condIndep
         -- Use measure continuity from above for indicator functions
         -- For decreasing sequences with finite measure
 
-        -- Extract the functions we're integrating
-        let f := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X r ω)
-        let g := fun ω => (Exchangeability.Probability.condExpWith μ
-          (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
-          (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω
-
-        -- For each n, we have ∫_{E_n} f = ∫_{E_n} g
-        have h_eq_n : ∀ n, ∫ ω in E_seq n, f ω ∂μ = ∫ ω in E_seq n, g ω ∂μ := by
-          intro n
-          exact (hE_in n).2
-
-        -- Need to show: ∫_{⋂ E_n} f = ∫_{⋂ E_n} g
+        -- Need to show: ∫_{⋂ E_n} indicator = ∫_{⋂ E_n} condexp
         -- Use dominated convergence for integrals over decreasing sets
 
         -- f is integrable on E_seq 0 (bounded indicator function)
@@ -2516,12 +2875,25 @@ lemma block_coord_condIndep
       -- Goal: Show ∫_{tᶜ} indicator = ∫_{tᶜ} condexp
       -- Have IH: ∫_t indicator = ∫_t condexp
 
+      classical
+      set f := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X r ω) with hf_def
+      set g :=
+          fun ω =>
+            Exchangeability.Probability.condExpWith μ
+              (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
+              (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r) ω with hg_def
+      have htm_ambient :
+          MeasurableSet t :=
+        (sup_le (firstRSigma_le_ambient X r hX_meas)
+            (finFutureSigma_le_ambient X m k hX_meas)) _ htm
       -- Integrability of indicator (bounded by 1)
-      have hg_int : Integrable (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X r ω)) μ := by
+      have hf_int_raw :
+          Integrable (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X r ω)) μ := by
         apply Integrable.indicator
         · exact integrable_const (1 : ℝ)
         · exact (hX_meas r) hB
-
+      have hf_int : Integrable f μ := by
+        simpa [hf_def] using hf_int_raw
       -- Integrability of conditional expectation
       -- Conditional expectation is always integrable (mathlib: integrable_condexp)
       have hh_int : Integrable (fun ω => Exchangeability.Probability.condExpWith μ
@@ -2577,7 +2949,18 @@ lemma block_coord_condIndep
             (f := f)).symm
 
       -- Conclude using decomposition + tower + IH
-      rw [h_decomp_g, h_decomp_h, h_tower, ht_in_good]
+      have h_result :
+          ∫ ω in tᶜ, f ω ∂μ = ∫ ω in tᶜ, g ω ∂μ := by
+        calc
+          ∫ ω in tᶜ, f ω ∂μ
+              = ∫ ω, f ω ∂μ - ∫ ω in t, f ω ∂μ := h_decomp_f
+          _ = ∫ ω, g ω ∂μ - ∫ ω in t, f ω ∂μ := by
+                have h := congrArg (fun x => x - ∫ ω in t, f ω ∂μ) h_tower
+                simpa using h
+          _ = ∫ ω, g ω ∂μ - ∫ ω in t, g ω ∂μ := by
+                simpa [hf_def, hg_def] using ht_in_good
+          _ = ∫ ω in tᶜ, g ω ∂μ := h_decomp_g.symm
+      simpa [hf_def, hg_def] using h_result
 
     · -- Disjoint union case
       intro f hf_disj hf_meas hf_in_good
@@ -2607,8 +2990,10 @@ lemma block_coord_condIndep
           exact hf_meas i
         · -- Integral equality
           -- Use additivity of integrals over finite disjoint unions
-          let g := fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X r ω)
-          let h := fun ω => (Exchangeability.Probability.condExpWith μ
+          classical
+          set g := fun ω => Set.indicator (X r ⁻¹' B) (fun _ => (1 : ℝ)) ω with hg_def
+          set h := fun ω =>
+            Exchangeability.Probability.condExpWith μ
             (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
             (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω
           -- For each i : Fin n, we have ∫_{f i.val} g = ∫_{f i.val} h by hypothesis
