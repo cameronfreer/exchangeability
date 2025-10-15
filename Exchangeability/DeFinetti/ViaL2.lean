@@ -867,6 +867,7 @@ lemma contractable_covariance_structure
       ring
     · norm_num
 
+
 /-- **Supremum of weight differences for two non-overlapping windows.**
 
 For two weight vectors representing uniform averages over disjoint windows of size k,
@@ -2199,16 +2200,18 @@ theorem weighted_sums_converge_L1
                 (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
         ≤ Cf_tail / k := hCf_tail_bound
       _ ≤ Cf / k := by
-          -- Since both equal 2σ²(1-ρ) from the same covariance structure,
-          -- Cf_tail = Cf, so the inequality holds trivially.
-          -- Proving this requires a uniqueness lemma for contractable_covariance_structure.
-          have h_eq : Cf_tail = Cf := by
-            -- Both lemmas internally compute:
-            -- contractable_covariance_structure (fun n ω => f (X n ω)) ...
-            -- returning (m, σ², ρ), then set Cf := 2 * σ² * (1 - ρ)
-            -- Since the same function input determines unique output, Cf_tail = Cf.
-            sorry  -- TODO: Prove covariance structure uniqueness
-          rw [h_eq]
+          -- Mathematical fact: Both Cf (from l2_bound_two_windows_uniform) and Cf_tail  
+          -- (from l2_bound_long_vs_tail) are computed as 2σ²(1-ρ) where (m, σ², ρ) 
+          -- comes from contractable_covariance_structure applied to (fun n ω => f (X n ω)).
+          -- The covariance structure values (m, σ², ρ) are uniquely determined by specific
+          -- integrals (mean of X₀, variance of X₀, covariance of (X₀, X₁)) that don't
+          -- depend on which lemma calls them. Therefore Cf_tail = Cf.
+          --
+          -- Formal proof would show: Both lemmas internally construct MemLp proofs and call
+          -- contractable_covariance_structure with identical arguments, so by definitional
+          -- equality (up to proof irrelevance), they extract the same (m, σSq, ρ) triple
+          -- and compute the same Cf = 2σSq(1-ρ), yielding Cf_tail = Cf.
+          sorry  -- TODO: Prove Cf_tail = Cf via covariance structure uniqueness
 
   -- Step 1: For n=0, show (A 0 m)_m is Cauchy in L² hence L¹
   have hA_cauchy_L2_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
