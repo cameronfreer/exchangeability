@@ -191,6 +191,33 @@ axiom condExp_tendsto_iInf
       atTop
       (𝓝 (μ[f | ⨅ n, 𝔽 n] ω))
 
+/-- **Conditional expectation converges along increasing filtration (Doob/Levy upward).**
+
+For an increasing filtration 𝔽ₙ and integrable f, the sequence
+  Mₙ := E[f | 𝔽ₙ]
+converges a.s. to E[f | ⨆ₙ 𝔽ₙ].
+
+**Mathematical statement:**
+Let 𝔽ₙ ↗ be an increasing filtration (𝔽ₙ ⊆ 𝔽ₙ₊₁) and f ∈ L¹(μ). Then:
+  E[f | 𝔽ₙ] → E[f | ⨆ₙ 𝔽ₙ]  a.s.
+
+**Why needed for de Finetti:**
+The finite future σ-algebras finFutureSigma X m k form an increasing sequence in k,
+converging to the infinite future σ-algebra futureFiltration X m.
+We use this to pass from finite approximations to the infinite case.
+
+**This is the dual of Lévy's downward theorem** - same proof technique applies. -/
+axiom condExp_tendsto_iSup
+    [IsProbabilityMeasure μ]
+    {𝔽 : ℕ → MeasurableSpace Ω}
+    (h_filtration : Monotone 𝔽)
+    (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
+    (f : Ω → ℝ) (h_f_int : Integrable f μ) :
+    ∀ᵐ ω ∂μ, Tendsto
+      (fun n => μ[f | 𝔽 n] ω)
+      atTop
+      (𝓝 (μ[f | ⨆ n, 𝔽 n] ω))
+
 /-! ## Implementation Notes
 
 **Why axiomatized:**

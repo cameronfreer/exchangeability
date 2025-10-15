@@ -21,53 +21,38 @@ de Finetti proofs.
 
 ## Main Components
 
-### 1. Conditional Probability
-- `condProb`: Conditional probability P[A | 𝒢] for events
-- Properties relating conditional probability to conditional expectation
+### 1. Conditional Independence
+- `condIndep_of_indicator_condexp_eq`: Establish conditional independence from projection property
+- `condExp_indicator_mul_indicator_of_condIndep`: Product formula for indicators
+- `condexp_indicator_inter_bridge`: Bridge lemma managing typeclass instances
 
-### 2. Conditional Independence (Doob's Characterization)
-- `condIndep_iff_condexp_eq`: Doob's characterization (FMP 6.6)
-  ```
-  𝒻 ⊥⊥_𝒢 ℋ ⟺ P[H | 𝒻 ∨ 𝒢] = P[H | 𝒢] a.s. for all H ∈ ℋ
-  ```
-- Helper lemmas for establishing conditional independence from distributional equalities
+### 2. Distributional Equality ⇒ Conditional Expectation Equality
+- `condexp_indicator_eq_of_pair_law_eq`: Core lemma using uniqueness of conditional expectation
+- `condexp_indicator_eq_of_agree_on_future_rectangles`: Application to exchangeable sequences
 
-### 3. Reverse Martingale Convergence
-- Convergence of conditional expectations with respect to decreasing σ-algebras
-- Applied to tail σ-algebras: σ(θ_n X) ↓ ⋂_n σ(θ_n X)
-
-### 4. Integration with Existing Mathlib
-- Re-exports from `Mathlib.Probability.ConditionalExpectation`
-- Additional lemmas building on mathlib infrastructure
+### 3. Sub-σ-algebra Infrastructure
+- `condExpWith`: Explicit instance management for conditioning on sub-σ-algebras
+- `isFiniteMeasure_trim`, `sigmaFinite_trim`: Measure trimming instances
+- `AgreeOnFutureRectangles`: Structure for distributional agreement
 
 ## Implementation Status
 
-This file integrates mathlib's probability theory infrastructure and provides a specialized API:
+This file provides specialized lemmas for conditional independence and conditional expectation
+equality under distributional assumptions, used in the de Finetti theorem proof.
 
-**Implemented using mathlib:**
-- `condProb`: Defined using mathlib's `condExp` notation `μ[f|m]`
-- `CondIndep`: Available as `ProbabilityTheory.CondIndep` from mathlib
-- Documented mathlib's martingale theory (`Martingale`, `Supermartingale`, etc.)
-- Documented key conditional expectation lemmas (`setIntegral_condExp`, `condExp_indicator`, etc.)
+**Key results:**
+- `condIndep_of_indicator_condexp_eq`: Establish conditional independence from projection property
+- `condExp_indicator_mul_indicator_of_condIndep`: Product formula under conditional independence
+- `condexp_indicator_eq_of_pair_law_eq`: Conditional expectations equal when pair laws match
+- `condexp_indicator_eq_of_agree_on_future_rectangles`: Application to sequence-valued tails
 
-**Completed proofs:**
-- `condProb_ae_nonneg_le_one`: Bounds on conditional probability
-  (using `condExp_nonneg`, `condExp_mono`)
-- `condProb_integral_eq`: Averaging property (using `setIntegral_condExp`)
-- `condIndep_of_condProb_eq`: Wrapper for conditional independence
-  (one-liner using Doob's characterization)
+**Supporting infrastructure:**
+- `condExpWith`: Wrapper managing typeclass instances for sub-σ-algebras
+- `isFiniteMeasure_trim`, `sigmaFinite_trim`: Instances for trimmed measures
+- `condexp_indicator_inter_bridge`: Bridge lemma for ViaMartingale.lean
 
-**Remaining as stubs (proof strategies documented):**
-- `condIndep_iff_condexp_eq`: Doob's characterization
-  (TODO: derive from `condIndep_iff` product formula)
-- `condProb_eq_of_eq_on_pi_system`: π-system extension (TODO: use `condIndepSets.condIndep'`)
-- `bounded_martingale_l2_eq`: L² identification (TODO: use `MemLp.condExpL2_ae_eq_condExp`)
-- `reverse_martingale_convergence`: Requires martingale convergence theory
-- `condexp_same_dist`: Distributional invariance (TODO: use `condExpKernel`, `condDistrib`)
-- `condexp_indicator_eq_of_agree_on_future_rectangles`: Pair-law equality with
-  a common future tail implies equality of conditional indicators
-
-The goal is to incrementally replace stubs with proofs as needed by the de Finetti development.
+All main results are proven. Additional conditional expectation utilities and conditional
+probability definitions are in `CondExpBasic.lean` and `CondProb.lean`.
 
 ## References
 
@@ -93,9 +78,6 @@ the unusedSectionVars linter for such theorems with `set_option linter.unusedSec
 
 /-! ### Pair-law ⇒ conditional indicator equality (stub) -/
 
--- Note: Helper lemmas for set integration, σ-finiteness, and indicators
--- have been moved to Exchangeability.Probability.CondExpBasic
-
 /-- Standard cylinder on the first `r` coordinates starting at index 0. -/
 def cylinder (α : Type*) (r : ℕ) (C : Fin r → Set α) : Set (ℕ → α) :=
   {f | ∀ i : Fin r, f i ∈ C i}
@@ -104,38 +86,6 @@ def cylinder (α : Type*) (r : ℕ) (C : Fin r → Set α) : Set (ℕ → α) :=
 structure AgreeOnFutureRectangles {α : Type*} [MeasurableSpace α]
     (μ ν : Measure (α × (ℕ → α))) : Prop where
   measure_eq : μ = ν
-
-/-- If (X₁,Y) and (X₂,Y) have the same distribution, then
-E[1_{X₁∈B} | σ(Y)] = E[1_{X₂∈B} | σ(Y)] a.e.
-
-**Mathematical idea:** The hypothesis `hagree.measure_eq` says the pushforward measures
-`μ ∘ (X₁,Y)⁻¹` and `μ ∘ (X₂,Y)⁻¹` are equal. This implies that for any measurable
-rectangle B × E, we have μ(X₁⁻¹(B) ∩ Y⁻¹(E)) = μ(X₂⁻¹(B) ∩ Y⁻¹(E)).
-Computing set integrals ∫_{Y⁻¹(E)} 1_{Xᵢ∈B} dμ as measures of these intersections
-shows they're equal for all E. By uniqueness of conditional expectation
-(`ae_eq_condExp_of_forall_setIntegral_eq`), the conditional expectations are equal a.e.
-
-**TODO:** This proof has Lean 4 technical issues with measurable space instance resolution
-when working with sub-σ-algebras. The mathematical content is straightforward. -/
--- TODO: This lemma is proven below after condexp_indicator_eq_of_pair_law_eq is defined.
--- See line ~397 for the actual proof.
-axiom condexp_indicator_eq_of_agree_on_future_rectangles
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {α : Type*} [MeasurableSpace α]
-    {X₁ X₂ : Ω → α} {Y : Ω → ℕ → α}
-    (hX₁ : Measurable X₁) (hX₂ : Measurable X₂) (hY : Measurable Y)
-    (hagree : AgreeOnFutureRectangles
-      (Measure.map (fun ω => (X₁ ω, Y ω)) μ)
-      (Measure.map (fun ω => (X₂ ω, Y ω)) μ))
-    (B : Set α) (hB : MeasurableSet B) :
-    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₁
-        | MeasurableSpace.comap Y inferInstance]
-      =ᵐ[μ]
-    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂
-        | MeasurableSpace.comap Y inferInstance]
-
--- Note: Conditional probability definitions and lemmas (condProb and related results)
--- have been moved to Exchangeability.Probability.CondProb
 
 /-! ### Conditional Independence (Doob's Characterization)
 
@@ -170,9 +120,6 @@ This characterization follows from the product formula in `condIndep_iff`:
 
 Note: Requires StandardBorelSpace assumption from mathlib's CondIndep definition.
 -/
-
--- Note: Large sections with compilation errors have been moved to CondExpExtras.lean
--- This file now contains only what's used by downstream code (ViaMartingale.lean)
 
 lemma condIndep_of_indicator_condexp_eq
     {Ω : Type*} {mΩ : MeasurableSpace Ω} [StandardBorelSpace Ω]
@@ -261,9 +208,6 @@ lemma condIndep_of_indicator_condexp_eq
 
 /-! ### Axioms for Conditional Independence Factorization -/
 
--- Note: bounded_martingale_l2_eq and related L² proofs have been moved to CondExpExtras.lean
-
-
 /-- **Product formula for conditional expectations of indicators** under conditional independence.
 
 If `mF` and `mH` are conditionally independent given `m`, then for
@@ -309,7 +253,7 @@ lemma isFiniteMeasure_trim {Ω : Type*} {m₀ : MeasurableSpace Ω}
     rw [trim_measurableSet_eq hm MeasurableSet.univ]
   -- Now measure_univ_lt_top comes from [IsFiniteMeasure μ]
   refine ⟨?_⟩
-  simpa [hU] using (measure_lt_top μ Set.univ)
+  simp [hU, measure_lt_top]
 
 /-- Helper lemma: Trimmed measure is sigma-finite when the original measure is finite. -/
 lemma sigmaFinite_trim {Ω : Type*} {m₀ : MeasurableSpace Ω}
@@ -447,8 +391,8 @@ lemma condexp_indicator_eq_of_pair_law_eq
     have h_meas_eq : μ (Y ⁻¹' B ∩ Z ⁻¹' E) = μ (Y' ⁻¹' B ∩ Z ⁻¹' E) := by
       -- The pushforward measures agree on rectangles
       have := congr_arg (fun ν => ν (B ×ˢ E)) hpair
-      simp only [Measure.map_apply (hY.prod_mk hZ) (hB.prod hE),
-                 Measure.map_apply (hY'.prod_mk hZ) (hB.prod hE)] at this
+      simp only [Measure.map_apply (hY.prodMk hZ) (hB.prod hE),
+                 Measure.map_apply (hY'.prodMk hZ) (hB.prod hE)] at this
       -- Convert product preimage to intersection
       have h1 : (fun ω => (Y ω, Z ω)) ⁻¹' (B ×ˢ E) = Y ⁻¹' B ∩ Z ⁻¹' E := by
         ext ω; simp [Set.mem_prod]
@@ -497,11 +441,10 @@ lemma condexp_indicator_eq_of_pair_law_eq
     -- Combine: ∫_{Z⁻¹(E)} f dμ = ∫_{Z⁻¹(E)} μ[f' | σ(Z)] dμ
     rw [h_lhs, h_rhs_ce, h_rhs, h_meas_eq]
 
-/-- **Proof of condexp_indicator_eq_of_agree_on_future_rectangles forward-declared at line ~122.**
+/-- **Proof of condexp_indicator_eq_of_agree_on_future_rectangles.**
 
-This is a direct application of `condexp_indicator_eq_of_pair_law_eq` with the sequence type.
-The forward declaration was necessary because this lemma is referenced earlier in the file. -/
-lemma condexp_indicator_eq_of_agree_on_future_rectangles_proof
+This is a direct application of `condexp_indicator_eq_of_pair_law_eq` with the sequence type. -/
+lemma condexp_indicator_eq_of_agree_on_future_rectangles
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {X₁ X₂ : Ω → α} {Y : Ω → ℕ → α}
