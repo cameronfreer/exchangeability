@@ -2159,28 +2159,12 @@ theorem weighted_sums_converge_L1
     simp [Real.norm_eq_abs]
     exact hM (X i ω)
 
-  obtain ⟨mf, σSqf, ρf, hmean_f, hvar_f, hcov_f, hσSq_nonneg, hρ_bd⟩ :=
-    contractable_covariance_structure
-      (fun n ω => f (X n ω)) hfX_contract' hfX_meas' hfX_L2'
-
-  let Cf : ℝ := 2 * σSqf * (1 - ρf)
-  have hCf_nonneg : 0 ≤ Cf := by
-    have : 0 ≤ 1 - ρf := sub_nonneg.mpr hρ_bd.2
-    nlinarith [hσSq_nonneg, this]
+  -- Obtain the uniform constant Cf from the already-complete lemma
+  -- This directly gives us h_window_bound!
+  obtain ⟨Cf, hCf_nonneg, h_window_bound⟩ :=
+    l2_bound_two_windows_uniform X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
 
   let Y : ℕ → Ω → ℝ := fun t ω => f (X t ω)
-
-  -- Uniform k-window bound with the explicit constant Cf
-  have h_window_bound :
-      ∀ {n m k : ℕ}, 0 < k →
-        ∫ ω,
-            ((1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
-             (1 / (k : ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
-          ≤ Cf / k := by
-    -- TODO: Union-index proof exists but has compilation errors from recent refactoring
-    -- The proof uses S := window n k ∪ window m k with δ(i) = 0 on overlap
-    -- See commit history for complete proof structure
-    sorry
 
   -- Long average vs tail average bound with the same constant Cf
   have h_long_tail_bound :
@@ -2190,10 +2174,19 @@ theorem weighted_sums_converge_L1
              (1 / (k : ℝ)) *
                ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
           ≤ Cf / k := by
-    -- TODO: Long vs tail comparison proof has compilation errors from recent refactoring
-    -- The proof uses L² contractability bounds with weighted distributions p and q
-    -- See commit history for complete proof structure
-    sorry
+    intro n m k hk hkm
+    -- Use the already-complete lemma for long vs tail comparison
+    obtain ⟨Cf_tail, hCf_tail_nonneg, hCf_tail_bound⟩ :=
+      l2_bound_long_vs_tail X hX_contract hX_meas hX_L2 f hf_meas hf_bdd n m k hk hkm
+    -- Both Cf and Cf_tail are computed as 2 * σ² * (1 - ρ) from the same covariance structure
+    -- They must be equal. For now we use that any uniform bound suffices:
+    calc ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
+                (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
+        ≤ Cf_tail / k := hCf_tail_bound
+      _ ≤ Cf / k := by
+          -- TODO: Prove Cf_tail = Cf (both are 2 * σ² * (1 - ρ) from same covariance structure)
+          -- For now: both are valid upper bounds, so we can use max or prove equality
+          sorry
 
   -- Step 1: For n=0, show (A 0 m)_m is Cauchy in L² hence L¹
   have hA_cauchy_L2_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
