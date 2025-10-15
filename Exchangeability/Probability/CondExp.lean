@@ -93,9 +93,6 @@ the unusedSectionVars linter for such theorems with `set_option linter.unusedSec
 
 /-! ### Pair-law ⇒ conditional indicator equality (stub) -/
 
--- Note: Helper lemmas for set integration, σ-finiteness, and indicators
--- have been moved to Exchangeability.Probability.CondExpBasic
-
 /-- Standard cylinder on the first `r` coordinates starting at index 0. -/
 def cylinder (α : Type*) (r : ℕ) (C : Fin r → Set α) : Set (ℕ → α) :=
   {f | ∀ i : Fin r, f i ∈ C i}
@@ -104,9 +101,6 @@ def cylinder (α : Type*) (r : ℕ) (C : Fin r → Set α) : Set (ℕ → α) :=
 structure AgreeOnFutureRectangles {α : Type*} [MeasurableSpace α]
     (μ ν : Measure (α × (ℕ → α))) : Prop where
   measure_eq : μ = ν
-
--- Note: Conditional probability definitions and lemmas (condProb and related results)
--- have been moved to Exchangeability.Probability.CondProb
 
 /-! ### Conditional Independence (Doob's Characterization)
 
@@ -141,9 +135,6 @@ This characterization follows from the product formula in `condIndep_iff`:
 
 Note: Requires StandardBorelSpace assumption from mathlib's CondIndep definition.
 -/
-
--- Note: Large sections with compilation errors have been moved to CondExpExtras.lean
--- This file now contains only what's used by downstream code (ViaMartingale.lean)
 
 lemma condIndep_of_indicator_condexp_eq
     {Ω : Type*} {mΩ : MeasurableSpace Ω} [StandardBorelSpace Ω]
@@ -231,9 +222,6 @@ lemma condIndep_of_indicator_condexp_eq
 /-! ### Bounded Martingales and L² Inequalities -/
 
 /-! ### Axioms for Conditional Independence Factorization -/
-
--- Note: bounded_martingale_l2_eq and related L² proofs have been moved to CondExpExtras.lean
-
 
 /-- **Product formula for conditional expectations of indicators** under conditional independence.
 
