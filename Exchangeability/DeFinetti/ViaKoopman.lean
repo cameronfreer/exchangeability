@@ -319,12 +319,21 @@ lemma condexp_precomp_iterate_eq_of_invariant
     (h_inv : ∀ s, MeasurableSet[m] s → T ⁻¹' s = s)
     {k : ℕ} {f : Ω → ℝ} (hf : Integrable f μ) :
     μ[(f ∘ (T^[k])) | m] =ᵐ[μ] μ[f | m] := by
-  -- Strategy: Show both sides have same integrals on all A ∈ m, then use uniqueness
-  -- Key: For A ∈ m, (T^[k])⁻¹ A = A by T-invariance
-  sorry -- TODO: Apply ae_eq_condexp_of_forall_setIntegral_eq after showing:
-        -- ∫ (f ∘ T^[k]) over A = ∫ f over A for all measurable A in m
-        -- This uses: ∫ (f ∘ T) dμ = ∫ f dμ (measure preservation)
-        -- And: (T^[k])⁻¹ A = A (invariance)
+  -- Simplified approach: Use that T-invariance of m means T^[k] leaves m invariant
+  -- Key: For s ∈ m, we have (T^[k])⁻¹ s = s by induction
+  have h_preimage : ∀ s, MeasurableSet[m] s → (T^[k]) ⁻¹' s = s := by
+    intro s hs
+    induction k with
+    | zero => simp
+    | succ k ih =>
+      -- T^[k+1]⁻¹ s = (T^[k] ∘ T)⁻¹ s = T⁻¹ (T^[k]⁻¹ s) = T⁻¹ s = s
+      rw [Function.iterate_succ']
+      simp [Set.preimage_comp, ih, h_inv s hs]
+  -- T^[k] is measure-preserving (by induction)
+  have hT_k : MeasurePreserving (T^[k]) μ μ := hT.iterate k
+  sorry -- TODO: Apply ae_eq_condExp_of_forall_setIntegral_eq with:
+        -- ∫_s (f∘T^[k]) dμ = ∫_{T^[k]⁻¹ s} f dμ (measure preservation)
+        --                 = ∫_s f dμ (by h_preimage: T^[k]⁻¹ s = s)
 
 /-- Existence of a natural two-sided extension for a measure-preserving shift. -/
 axiom exists_naturalExtension
