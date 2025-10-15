@@ -2416,15 +2416,21 @@ lemma block_coord_condIndep
         simp only [Exchangeability.Probability.condExpWith]
         exact integrable_condExp
 
+      -- Lift measurability of t from sub-σ-algebra to ambient
+      have htm_ambient : MeasurableSet t := by
+        have h_sup_le : firstRSigma X r ⊔ finFutureSigma X m k ≤ (inferInstance : MeasurableSpace Ω) := by
+          apply sup_le
+          · exact firstRSigma_le_ambient X r hX_meas
+          · exact finFutureSigma_le_ambient X m k hX_meas
+        exact h_sup_le t htm
+
       -- Apply setIntegral_compl decomposition: ∫_{tᶜ} f = ∫_Ω f - ∫_t f
       have h_decomp_g : ∫ ω in tᶜ, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ =
           ∫ ω, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ -
           ∫ ω in t, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ := by
-        sorry -- TODO (~10-15 min): Integral decomposition over complement
-              -- Mathematical strategy: ∫_Ω f = ∫_t f + ∫_{tᶜ} f (integral_add_compl),
-              -- then rearrange: ∫_{tᶜ} f = ∫_Ω f - ∫_t f
-              -- Blocked on: Finding correct signature for integral_add_compl in mathlib
-              -- (typeclass instance issues with NormedSpace ℝ)
+        -- Use integral_add_compl: ∫_t f + ∫_{tᶜ} f = ∫_Ω f, then rearrange
+        have h := integral_add_compl htm_ambient hg_int
+        linarith
 
       have h_decomp_h : ∫ ω in tᶜ, (Exchangeability.Probability.condExpWith μ
           (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
@@ -2435,8 +2441,9 @@ lemma block_coord_condIndep
           ∫ ω in t, (Exchangeability.Probability.condExpWith μ
             (finFutureSigma X m k) (finFutureSigma_le_ambient X m k hX_meas)
             (Set.indicator B (fun _ => (1 : ℝ)) ∘ X r)) ω ∂μ := by
-        sorry -- TODO (~10-15 min): Same as h_decomp_g but for conditional expectation
-              -- Blocked on same issue as h_decomp_g
+        -- Same as h_decomp_g: use integral_add_compl and rearrange
+        have h_eq := integral_add_compl htm_ambient hh_int
+        linarith
 
       -- Tower property: ∫_Ω g = ∫_Ω E[g|m]
       have h_tower : ∫ ω, Set.indicator B (fun _ => (1 : ℝ)) (X r ω) ∂μ =
