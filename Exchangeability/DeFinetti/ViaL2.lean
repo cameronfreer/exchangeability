@@ -2753,20 +2753,23 @@ private lemma alphaIic_tendsto_zero_at_bot
     ∀ ε > 0, ∃ T : ℝ, ∀ t < T,
       alphaIic X hX_contract hX_meas hX_L2 t ω < ε := by
   intro ε hε_pos
-  -- Key observation: For any fixed ω, the sequence X_i(ω) is a sequence of reals.
-  -- For indicators 1_{(-∞,t]}(X_i(ω)):
-  -- - As t → -∞, each indicator eventually becomes 0
-  -- - The Cesàro averages (1/m) Σ 1_{(-∞,t]}(X_i(ω)) → 0 pointwise
-  --
-  -- Since alphaIic is the L¹ limit of these Cesàro averages (clipped to [0,1]),
-  -- and we have pointwise control via clipping, alphaIic t ω → 0 as t → -∞.
-  --
-  -- Rigorous proof requires:
-  -- 1. Dominated convergence to interchange limits
-  -- 2. Extracting pointwise convergence from L¹ convergence
-  -- 3. Uniform convergence argument or diagonal extraction
-  --
-  -- This is substantial infrastructure work. For now:
+  -- Strategy: For fixed ω, choose T smaller than all X_i(ω) for i ≤ K
+  -- Then for t < T, the Cesàro averages are bounded by (K/m) → 0 as m → ∞
+  -- Since alphaIic is the L¹ limit (clipped), it must be ≤ ε for large enough offset
+  
+  -- The key is that alphaIic is bounded in [0,1], so we can use compactness
+  -- For any sequence in [0,1] that converges in L¹ to alphaIic, 
+  -- we can extract subsequences that converge pointwise a.e.
+  
+  -- By definition, alphaIic t ω is the L¹ limit (clipped to [0,1])
+  -- For t → -∞, the Cesàro averages converge to 0 uniformly in the starting index
+  -- because eventually all X_i(ω) > t
+  
+  -- Take T to be smaller than the minimum of finitely many X_i(ω)
+  -- This ensures finite support, making Cesàro averages → 0
+  
+  -- TODO: Formalize using L¹ convergence properties and boundedness
+  -- The full proof requires showing that the L¹ limit inherits the pointwise behavior
   sorry
 
 /-- Helper lemma: α_{Iic t}(ω) → 1 as t → +∞.
