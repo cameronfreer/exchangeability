@@ -1028,7 +1028,7 @@ We use `l2_contractability_bound` from L2Approach directly by positing that f∘
 a uniform covariance structure (which it must, by contractability). -/
 lemma l2_bound_two_windows_uniform
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (X : ℕ → Ω → ℝ) (_hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
     (_hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (f : ℝ → ℝ) (hf_meas : Measurable f)
@@ -1036,7 +1036,7 @@ lemma l2_bound_two_windows_uniform
     -- Accept Cf and covariance structure as arguments
     (Cf mf σSqf ρf : ℝ)
     (hCf_def : Cf = 2 * σSqf * (1 - ρf))
-    (hCf_nonneg : 0 ≤ Cf)
+    (_hCf_nonneg : 0 ≤ Cf)
     (hmean : ∀ n, ∫ ω, f (X n ω) ∂μ = mf)
     (hvar : ∀ n, ∫ ω, (f (X n ω) - mf)^2 ∂μ = σSqf)
     (hcov : ∀ n m, n ≠ m → ∫ ω, (f (X n ω) - mf) * (f (X m ω) - mf) ∂μ = σSqf * ρf)
@@ -1176,7 +1176,7 @@ lemma l2_bound_two_windows_uniform
       simp [Finset.sum_const]
     calc
       ∑ t ∈ S, pS t = (window n k).card * (1 / (k : ℝ)) := by
-        simpa [h_sum, h_const]
+        simp only [h_sum, h_const]
       _ = 1 := h_one
 
   have h_sum_qS :
@@ -1194,8 +1194,9 @@ lemma l2_bound_two_windows_uniform
       have h_indicator :=
         (Finset.sum_filter (s := S) (p := fun t => t ∈ window m k)
             (f := fun _ : ℕ => (1 / (k : ℝ)))).symm
-      simpa [qS, h_filter]
-        using h_indicator
+      simp only [qS] at h_indicator
+      rw [h_filter] at h_indicator
+      exact h_indicator
     have h_card : (window m k).card = k := window_card m k
     have hk_ne' : (k : ℝ) ≠ 0 := ne_of_gt hk_pos
     have h_one : (window m k).card * (1 / (k : ℝ)) = 1 := by
@@ -1206,7 +1207,7 @@ lemma l2_bound_two_windows_uniform
       simp [Finset.sum_const]
     calc
       ∑ t ∈ S, qS t = (window m k).card * (1 / (k : ℝ)) := by
-        simpa [h_sum, h_const]
+        simp only [h_sum, h_const]
       _ = 1 := h_one
 
   -- Positivity of the weights
@@ -1214,14 +1215,14 @@ lemma l2_bound_two_windows_uniform
     intro t
     by_cases ht : t ∈ window n k
     · have hk_nonneg : 0 ≤ 1 / (k : ℝ) := div_nonneg zero_le_one (le_of_lt hk_pos)
-      simpa [pS, ht] using hk_nonneg
+      simp only [pS, ht, ite_true, hk_nonneg]
     · simp [pS, ht]
 
   have hqS_nonneg : ∀ t, 0 ≤ qS t := by
     intro t
     by_cases ht : t ∈ window m k
     · have hk_nonneg : 0 ≤ 1 / (k : ℝ) := div_nonneg zero_le_one (le_of_lt hk_pos)
-      simpa [qS, ht] using hk_nonneg
+      simp only [qS, ht, ite_true, hk_nonneg]
     · simp [qS, ht]
 
   -- Absolute bound on δ on S
@@ -1231,15 +1232,15 @@ lemma l2_bound_two_windows_uniform
     by_cases ht_n : t ∈ window n k
     · by_cases ht_m : t ∈ window m k
       · have : δ t = 0 := by simp [δ, pS, qS, ht_n, ht_m]
-        simpa [this] using abs_nonneg (δ t)
+        simp [this]
       · have : δ t = 1 / (k : ℝ) := by simp [δ, pS, qS, ht_n, ht_m]
-        simpa [this]
+        simp [this]
     · by_cases ht_m : t ∈ window m k
       · have : δ t = - (1 / (k : ℝ)) := by simp [δ, pS, qS, ht_n, ht_m]
-        have : |δ t| = 1 / (k : ℝ) := by simpa [this, abs_neg]
-        simpa [this]
+        have : |δ t| = 1 / (k : ℝ) := by simp [this, abs_neg]
+        simp [this]
       · have : δ t = 0 := by simp [δ, pS, qS, ht_n, ht_m]
-        simpa [this] using abs_nonneg (δ t)
+        simp [this]
 
   -- Reindex the union set `S` as a finite type
   let β := {t : ℕ // t ∈ S}
@@ -1269,14 +1270,17 @@ lemma l2_bound_two_windows_uniform
             (fun b : β => pS b.1) (by intro i; simp [idx])
         have h_sum_attach :
             ∑ b : β, pS b.1 = ∑ t ∈ S, pS t := by
-          simpa [β] using Finset.sum_attach (s := S) (f := fun t => pS t)
+          simp [β]
+          exact Finset.sum_attach (s := S) (f := fun t => pS t)
         have h_sum_pi :
             ∑ i : Fin nS, p i = ∑ i : Fin nS, pS (idx i) := by
           simp [p]
-        simpa [h_sum_pi] using h_sum_equiv.trans h_sum_attach
-      simpa [h_equiv, h_sum_pS]
+        simp [h_sum_pi]
+        exact h_sum_equiv.trans h_sum_attach
+      simp [h_equiv, h_sum_pS]
     · intro i
-      simpa [p, idx] using hpS_nonneg (idx i)
+      simp only [p, idx]
+      exact hpS_nonneg (idx i)
 
   have hq_prob : (∑ i : Fin nS, q i) = 1 ∧ ∀ i, 0 ≤ q i := by
     constructor
@@ -1291,14 +1295,17 @@ lemma l2_bound_two_windows_uniform
             (fun b : β => qS b.1) (by intro i; simp [idx])
         have h_sum_attach :
             ∑ b : β, qS b.1 = ∑ t ∈ S, qS t := by
-          simpa [β] using Finset.sum_attach (s := S) (f := fun t => qS t)
+          simp [β]
+          exact Finset.sum_attach (s := S) (f := fun t => qS t)
         have h_sum_qi :
             ∑ i : Fin nS, q i = ∑ i : Fin nS, qS (idx i) := by
           simp [q]
-        simpa [h_sum_qi] using h_sum_equiv.trans h_sum_attach
-      simpa [h_equiv, h_sum_qS]
+        simp [h_sum_qi]
+        exact h_sum_equiv.trans h_sum_attach
+      simp [h_equiv, h_sum_qS]
     · intro i
-      simpa [q, idx] using hqS_nonneg (idx i)
+      simp [q, idx]
+      exact hqS_nonneg (idx i)
 
   -- Supremum bound on the weight difference
   have h_window_nonempty : (window n k).Nonempty := by
@@ -1625,7 +1632,7 @@ This is the key lemma needed to complete the Cauchy argument in weighted_sums_co
 -/
 private lemma l2_bound_long_vs_tail
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (X : ℕ → Ω → ℝ) (_hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
     (_hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (f : ℝ → ℝ) (hf_meas : Measurable f)
@@ -2017,18 +2024,18 @@ private lemma l2_bound_long_vs_tail
               constructor
               · intro hi
                 use ⟨i.val - (m - k), by omega⟩
-                simp only [Finset.mem_univ, true_and]
+                simp only [true_and]
                 ext
-                simp only [Fin.val_mk]
+                simp only
                 omega
               · rintro ⟨j, _, rfl⟩
-                simp only [Fin.val_mk]
+                simp only
                 omega
             · -- Now the sum is over an image, apply sum_image with injectivity
               rw [Finset.sum_image]
               · congr 1
                 ext j
-                simp only [Fin.val_mk]
+                simp only
                 ring
               -- Prove injectivity
               · intro j₁ _ j₂ _ h
@@ -2672,7 +2679,7 @@ theorem subsequence_criterion_convergence_in_probability
     induction j, hij using Nat.le_induction with
     | base =>
         show φ i < φ (i + 1)
-        simp only [φ, Nat.rec_add_one]
+        simp only [φ]
         calc φ i
             < φ i + 1 := Nat.lt_succ_self _
           _ ≤ Classical.choose (h_eventually_small (i + 1) (φ i + 1)) :=
@@ -2680,7 +2687,7 @@ theorem subsequence_criterion_convergence_in_probability
     | succ j _ IH =>
         calc φ i < φ j := IH
           _ < φ (j + 1) := by
-              simp only [φ, Nat.rec_add_one]
+              simp only [φ]
               calc φ j
                   < φ j + 1 := Nat.lt_succ_self _
                 _ ≤ Classical.choose (h_eventually_small (j + 1) (φ j + 1)) :=
@@ -2693,11 +2700,11 @@ theorem subsequence_criterion_convergence_in_probability
     induction k with
     | zero =>
         -- For k = 0, φ 0 is the base case
-        simp only [φ, Nat.rec_zero]
+        simp only [φ]
         exact (Classical.choose_spec (h_eventually_small 0 0)).2
     | succ k' IH_unused =>
         -- For k = k'+1, φ (k'+1) uses the recursive case
-        simp only [φ, Nat.rec_add_one]
+        simp only [φ]
         exact (Classical.choose_spec (h_eventually_small (k' + 1) (φ k' + 1))).2
 
   -- Define bad sets
