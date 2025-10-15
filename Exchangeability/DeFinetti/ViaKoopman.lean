@@ -1092,7 +1092,7 @@ private theorem h_tower_of_lagConst
             μ[(fun ω =>
                 (Finset.range (n + 1)).sum (fun j => g (ω j))) | m] ω) := by
       -- CE[c·Z|m] = c·CE[Z|m] (linearity: scalar commutes with CE)
-      simpa [A] using condExp_const_mul (shiftInvariantSigma_le (α := α))
+      simpa [A] using condExp_const_mul (m := m) (shiftInvariantSigma_le (α := α))
         (1 / (n + 1 : ℝ)) (fun ω => (Finset.range (n + 1)).sum (fun j => g (ω j)))
 
     -- Push CE through the finite sum
@@ -1108,19 +1108,21 @@ private theorem h_tower_of_lagConst
         obtain ⟨Cg, hCg⟩ := hg_bd
         exact integrable_of_bounded_measurable
           (hg_meas.comp (measurable_pi_apply j)) Cg (fun ω => hCg (ω j))
-      exact condExp_sum_finset (shiftInvariantSigma_le (α := α))
+      exact condExp_sum_finset (m := m) (shiftInvariantSigma_le (α := α))
         (Finset.range (n + 1)) (fun j => fun ω => g (ω j)) hint
 
     -- Each term μ[g(ωⱼ)|m] =ᵐ μ[g(ω₀)|m]
     have h_term : ∀ j,
         μ[(fun ω => g (ω j)) | m] =ᵐ[μ] μ[(fun ω => g (ω 0)) | m] := by
       intro j
-      have hg_j_int : Integrable (fun ω => g (ω j)) μ := by
+      have hg_0_int : Integrable (fun ω => g (ω 0)) μ := by
         -- g is bounded + measurable + finite measure ⇒ integrable
         obtain ⟨Cg, hCg⟩ := hg_bd
         exact integrable_of_bounded_measurable
-          (hg_meas.comp (measurable_pi_apply j)) Cg (fun ω => hCg (ω j))
-      simpa using condexp_precomp_iterate_eq (μ := μ) hσ (k := j) (hf := hg_j_int)
+          (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
+      -- condexp_precomp_iterate_eq gives: μ[g∘shift^j | shiftInvariantSigma] = μ[g | shiftInvariantSigma]
+      -- Need: shift^[j] ω 0 = ω j (by shift definition) and m = shiftInvariantSigma
+      sorry  -- TODO: apply condexp_precomp_iterate_eq with rewriting shift^[j] ω 0 = ω j
 
     -- Sum of identical a.e.-terms = (n+1) · that term
     have h_sum_const :
