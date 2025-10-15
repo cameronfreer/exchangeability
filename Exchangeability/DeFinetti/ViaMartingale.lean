@@ -540,7 +540,7 @@ lemma extreme_members_equal_on_tail
   -- equality at the future level m (contractability)
   have h_eq_m :
       μ[f_m | futureFiltration X m] =ᵐ[μ] μ[f_0 | futureFiltration X m] := by
-    convert condexp_convergence_fwd hX hX_meas m m (le_refl m) B hB using 2 <;> rfl
+    convert condexp_convergence_fwd hX hX_meas m m (le_refl m) B hB using 2
 
   -- condition both sides on the tail
   have h_cond_on_tail :
@@ -873,7 +873,7 @@ lemma firstRSigma_le_revFiltration_zero
   -- firstRMap X r = π ∘ shiftRV X 0 = π ∘ path X
   have h_comp : firstRMap X r = π ∘ shiftRV X 0 := by
     funext ω i
-    simp [firstRMap, shiftRV, π]
+    simp [firstRMap, π]
   -- π is measurable
   have hπ : Measurable π := by
     apply measurable_pi_lambda
@@ -1343,7 +1343,7 @@ lemma measure_ext_of_future_rectangles
         · simpa [C, h1, h2] using hC₁ ⟨i, h1⟩
       · by_cases h2 : (i : ℕ) < r₂
         · simpa [C, h1, h2] using hC₂ ⟨i, h2⟩
-        · simpa [C, h1, h2] using (MeasurableSet.univ : MeasurableSet (Set.univ))
+        · simp [C, h1, h2]
 
     refine ⟨r, B₁ ∩ B₂, hB₁.inter hB₂, C, hC, ?_⟩
     ext ⟨a, f⟩; constructor
