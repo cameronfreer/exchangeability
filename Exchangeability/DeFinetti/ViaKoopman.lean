@@ -263,11 +263,11 @@ attribute [instance] NaturalExtensionData.μhat_isProb
 If `g : Ω̂ → Ω` is a factor map (i.e., `map g μ̂ = μ`), then two functions are
 a.e.-equal on `Ω` iff their pullbacks are a.e.-equal on `Ω̂`. -/
 lemma ae_pullback_iff
-    {Ω Ω̂ : Type*} [MeasurableSpace Ω] [MeasurableSpace Ω̂]
-    {μ : Measure Ω} {μ̂ : Measure Ω̂}
-    (g : Ω̂ → Ω) (hpush : Measure.map g μ̂ = μ)
+    {Ω Ω' : Type*} [MeasurableSpace Ω] [MeasurableSpace Ω']
+    {μ : Measure Ω} {μ' : Measure Ω'}
+    (g : Ω' → Ω) (hpush : Measure.map g μ' = μ)
     {F G : Ω → ℝ} :
-    F =ᵐ[μ] G ↔ (F ∘ g) =ᵐ[μ̂] (G ∘ g) := by
+    F =ᵐ[μ] G ↔ (F ∘ g) =ᵐ[μ'] (G ∘ g) := by
   constructor
   · intro h
     -- μ-null set pulls back to μ̂-null set via the pushforward
@@ -276,13 +276,61 @@ lemma ae_pullback_iff
     -- μ̂-null set for F ∘ g ≠ G ∘ g pushes forward to μ-null set
     sorry
 
+/-- **Factor-map pullback for conditional expectation**.
+
+If `g : Ω' → Ω` is a factor map (i.e., `map g μ' = μ`), then conditional expectation
+pulls back correctly: `CE[H | 𝒢] ∘ g = CE[H ∘ g | comap g 𝒢]` a.e.
+
+This is the key lemma for transporting conditional expectations between spaces. -/
+lemma condexp_pullback_factor
+    {Ω Ω' : Type*} [MeasurableSpace Ω] [MeasurableSpace Ω']
+    {μ : Measure Ω} [IsFiniteMeasure μ] {μ' : Measure Ω'} [IsFiniteMeasure μ']
+    (g : Ω' → Ω) (hg : Measurable g) (hpush : Measure.map g μ' = μ)
+    (m : MeasurableSpace Ω) (hm : m ≤ ‹MeasurableSpace Ω›)
+    {H : Ω → ℝ} (hH : Integrable H μ) :
+    (fun ω' => μ[H | m] (g ω'))
+      =ᵐ[μ'] μ'[(H ∘ g) | m.comap g] := by
+  -- Sketch:
+  -- 1. Both sides are m.comap g-measurable and integrable
+  -- 2. For any A ∈ m.comap g, write A = g ⁻¹' B with B ∈ m
+  -- 3. Compare integrals using hpush to transport between μ' and μ
+  -- 4. Apply uniqueness: ae_eq_condexp_of_forall_setIntegral_eq
+  sorry
+
+/-- **Invariance of conditional expectation under iterates**.
+
+If `T` is measure-preserving and `𝒢` is the T-invariant σ-algebra (i.e., `T⁻¹'s = s` for all `s ∈ 𝒢`),
+then conditional expectation is invariant: `CE[f ∘ T^[k] | 𝒢] = CE[f | 𝒢]` a.e.
+
+This is the key for proving lag-constancy and other invariance properties. -/
+lemma condexp_precomp_iterate_eq_of_invariant
+    {Ω : Type*} [MeasurableSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (T : Ω → Ω) (hT : MeasurePreserving T μ μ)
+    (m : MeasurableSpace Ω) (hm : m ≤ ‹MeasurableSpace Ω›)
+    (h_inv : ∀ s, MeasurableSet[m] s → T ⁻¹' s = s)
+    {k : ℕ} {f : Ω → ℝ} (hf : Integrable f μ) :
+    μ[(f ∘ (T^[k])) | m] =ᵐ[μ] μ[f | m] := by
+  -- Sketch:
+  -- For any A ∈ m, compare integrals:
+  -- ∫ (f ∘ T^[k]) · 1_A dμ = ∫ f · 1_{(T^[k])⁻¹ A} dμ (by measure preservation)
+  -- But (T^[k])⁻¹ A = A since m is T-invariant
+  -- Conclude via ae_eq_condexp_of_forall_setIntegral_eq
+  sorry
+
 /-- Existence of a natural two-sided extension for a measure-preserving shift. -/
 axiom exists_naturalExtension
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving (shift (α := α)) μ μ) :
     NaturalExtensionData (μ := μ)
 
-/-- Pulling conditional expectation back to the two-sided extension. -/
+/-- Pulling conditional expectation back to the two-sided extension.
+
+**Can be derived from `condexp_pullback_factor`** by specializing with:
+- `g := restrictNonneg`, 
+- `μ' := ext.μhat`, 
+- `m := shiftInvariantSigma` (pulls back to `shiftInvariantSigmaℤ`)
+- `hpush := ext.restrict_pushforward` -/
 axiom naturalExtension_condexp_pullback
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (ext : NaturalExtensionData (μ := μ))
@@ -292,7 +340,12 @@ axiom naturalExtension_condexp_pullback
         ext.μhat[(fun ωhat => H (restrictNonneg (α := α) ωhat))
           | shiftInvariantSigmaℤ (α := α)]
 
-/-- Pulling an almost-everywhere equality back along the natural extension. -/
+/-- Pulling an almost-everywhere equality back along the natural extension.
+
+**Can be derived from `ae_pullback_iff`** by specializing with:
+- `g := restrictNonneg`,
+- `μ' := ext.μhat`,
+- `hpush := ext.restrict_pushforward` -/
 axiom naturalExtension_pullback_ae
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (ext : NaturalExtensionData (μ := μ))
@@ -302,7 +355,12 @@ axiom naturalExtension_pullback_ae
         (fun ωhat => G (restrictNonneg (α := α) ωhat))) :
     F =ᵐ[μ] G
 
-/-- Two-sided version of `condexp_precomp_iterate_eq`. -/
+/-- Two-sided version of `condexp_precomp_iterate_eq`.
+
+**Can be derived from `condexp_precomp_iterate_eq_of_invariant`** by specializing with:
+- `T := shiftℤ`,
+- `m := shiftInvariantSigmaℤ`,
+- `h_inv := ` proof that `shiftℤ` leaves `shiftInvariantSigmaℤ` invariant -/
 axiom condexp_precomp_iterate_eq_twosided
     {μhat : Measure (Ωℤ[α])} [IsProbabilityMeasure μhat]
     (hσ : MeasurePreserving (shiftℤ (α := α)) μhat μhat) {k : ℕ}
@@ -311,7 +369,11 @@ axiom condexp_precomp_iterate_eq_twosided
         | shiftInvariantSigmaℤ (α := α)]
       =ᵐ[μhat] μhat[f | shiftInvariantSigmaℤ (α := α)]
 
-/-- Invariance of conditional expectation under the inverse shift. -/
+/-- Invariance of conditional expectation under the inverse shift.
+
+**Can be derived from `condexp_precomp_iterate_eq_of_invariant`** by specializing with:
+- `T := shiftℤInv` (also measure-preserving and leaves invariant σ-algebra fixed)
+- Alternatively: use `shiftℤ` is an automorphism, so invariance under T implies invariance under T⁻¹ -/
 axiom condexp_precomp_shiftℤInv_eq
     {μhat : Measure (Ωℤ[α])} [IsProbabilityMeasure μhat]
     (hσInv : MeasurePreserving (shiftℤInv (α := α)) μhat μhat)
