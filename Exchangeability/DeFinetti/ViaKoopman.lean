@@ -1435,14 +1435,61 @@ private theorem h_tower_of_lagConst
       ≤
       ∫ ω, | f (ω 0) * (A n ω - μ[(fun ω => g (ω 0)) | m] ω) | ∂μ := by
       intro n
-      sorry -- TODO: simpa [mul_sub, sub_eq_add_neg, abs_mul] using condExp_L1_lipschitz ...
+      set Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | m] ω
+      -- Integrability of Z = f(ω 0) * A n ω
+      have hZ_int : Integrable (fun ω => f (ω 0) * A n ω) μ := by
+        refine Integrable.mul ?_ ?_
+        · -- f(ω 0) is integrable (bounded + measurable)
+          exact integrable_of_bounded_measurable
+            (hf_meas.comp (measurable_pi_apply 0)) Cf (fun ω => hCf (ω 0))
+        · -- A n is integrable (from Block 3, line 1375)
+          obtain ⟨Cg, hCg⟩ := hg_bd
+          refine integrable_of_bounded_measurable ?_ Cg ?_
+          · exact Measurable.div_const 
+              (Measurable.finset_sum _ (fun j _ => hg_meas.comp (measurable_pi_apply j)))
+              _
+          · intro ω
+            simp [A]
+            calc |1 / (↑n + 1) * ∑ j ∈ Finset.range (n + 1), g (ω j)|
+              ≤ (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), Cg := by
+                rw [abs_mul, abs_div, abs_one, one_div]
+                simp [abs_of_nonneg]
+                refine mul_le_mul_of_nonneg_left ?_ (by positivity)
+                calc |∑ j ∈ Finset.range (n + 1), g (ω j)|
+                  ≤ ∑ j ∈ Finset.range (n + 1), |g (ω j)| := abs_sum_le_sum_abs _ _
+                _ ≤ ∑ j ∈ Finset.range (n + 1), Cg := Finset.sum_le_sum (fun j _ => hCg (ω j))
+              _ = Cg := by simp [Finset.sum_const, Finset.card_range]; field_simp; ring
+      -- Integrability of W = f(ω 0) * Y ω  
+      have hW_int : Integrable (fun ω => f (ω 0) * Y ω) μ := by
+        refine Integrable.mul ?_ ?_
+        · exact integrable_of_bounded_measurable
+            (hf_meas.comp (measurable_pi_apply 0)) Cf (fun ω => hCf (ω 0))
+        · sorry -- Y = CE[g(ω 0)] is integrable (CE preserves integrability)
+      -- Apply condExp_L1_lipschitz
+      convert condExp_L1_lipschitz (m := m) (hm := shiftInvariantSigma_le (α := α))
+        hZ_int hW_int using 2
+      ext ω
+      simp [Y, abs_mul, mul_sub]
+      ring
 
     -- Step 2: |f| ≤ Cf a.e. ⇒ pull Cf outside the integral
     have h₂ : ∀ n,
       ∫ ω, | f (ω 0) * (A n ω - μ[(fun ω => g (ω 0)) | m] ω) | ∂μ
       ≤ Cf * ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | m] ω| ∂μ := by
       intro n
-      sorry -- TODO: pointwise bound + integral_mono_ae + integral_const_mul
+      set Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | m] ω
+      -- Pointwise: |f(ω 0)| ≤ Cf
+      have hpt : ∀ᵐ ω ∂μ, |f (ω 0) * (A n ω - Y ω)| ≤ Cf * |A n ω - Y ω| := by
+        refine ae_of_all μ (fun ω => ?_)
+        rw [abs_mul]
+        exact mul_le_mul_of_nonneg_right (hCf (ω 0)) (abs_nonneg _)
+      -- Both sides are integrable
+      have hint_lhs : Integrable (fun ω => |f (ω 0) * (A n ω - Y ω)|) μ := by
+        sorry -- |f * (A_n - Y)| integrable (from product of bounded & integrable)
+      have hint_rhs : Integrable (fun ω => Cf * |A n ω - Y ω|) μ := by
+        sorry -- Cf * |A_n - Y| integrable (constant times integrable)
+      -- Apply integral_mono_ae
+      exact integral_mono_ae hint_lhs hint_rhs hpt
 
     -- Step 3: conclude with Block 3
     refine tendsto_of_tendsto_of_le_of_le
