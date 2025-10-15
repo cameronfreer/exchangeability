@@ -2081,9 +2081,10 @@ lemma block_coord_condIndep
 
       calc ∫ ω in E_cyl', Set.indicator (X r ⁻¹' B) (fun _ => (1:ℝ)) ω ∂μ
           = ∫ ω in E_cyl' ∩ (X r ⁻¹' B), (fun _ => (1:ℝ)) ω ∂μ := by
-              sorry -- Pattern matching issue with setIntegral_indicator
+              exact setIntegral_indicator hXrB_meas
         _ = (μ (E_cyl' ∩ (X r ⁻¹' B))).toReal := by
-              sorry -- Pattern matching issue with setIntegral_const
+              rw [setIntegral_const]
+              simp [Measure.real]
         _ = (μ E_target').toReal := by
               have h_set_eq : E_cyl' ∩ (X r ⁻¹' B) = E_target' := by
                 ext ω
@@ -2165,21 +2166,12 @@ lemma block_coord_condIndep
           exact ⟨_, finCylinder_measurable hC, rfl⟩
 
         -- Intersection is measurable in the sup
-        sorry -- TODO (~10 min): Standard σ-algebra lifting + intersection
-              -- Mathematical fact: If MeasurableSet[m₁] E and MeasurableSet[m₂] F,
-              -- then MeasurableSet[m₁ ⊔ m₂] (E ∩ F)
-              --
-              -- Attempted approaches:
-              -- 1. le_sup_left/right: These are proofs of ordering, need to apply to sets
-              -- 2. GenerateMeasurable.basic: Unknown identifier (import issue?)
-              -- 3. measurableSet_sup: Unknown identifier (import issue?)
-              --
-              -- Correct pattern should be something like:
-              -- - Use that m₁ ⊔ m₂ = generateFrom (MeasurableSet[m₁] ∪ MeasurableSet[m₂])
-              -- - Lift each set via GenerateMeasurable.basic
-              -- - Apply MeasurableSet.inter
-              --
-              -- OR simpler: Find the right mathlib lemma for σ-algebra monotonicity
+        -- Lift each set to the sup using le_sup_left/right, then apply MeasurableSet.inter
+        have hE_past_sup : MeasurableSet[firstRSigma X r ⊔ finFutureSigma X m k] E_past :=
+          @le_sup_left _ _ (firstRSigma X r) (finFutureSigma X m k) _ hE_past
+        have hE_future_sup : MeasurableSet[firstRSigma X r ⊔ finFutureSigma X m k] E_future :=
+          @le_sup_right _ _ (firstRSigma X r) (finFutureSigma X m k) _ hE_future
+        exact MeasurableSet.inter hE_past_sup hE_future_sup
       · -- Integral equality
         rw [lhs_computation A hA C hC, rhs_computation A hA C hC]
         rw [contractability_step A hA C hC]
@@ -2216,10 +2208,36 @@ lemma block_coord_condIndep
 
         -- Need to show: ∫_{⋃ E_n} f = ∫_{⋃ E_n} g
         -- Use monotone convergence for integrals over increasing sets
-        sorry -- TODO: Apply measure continuity + integral_indicator pattern
-              -- Can use: lim ∫_{E_n} f = ∫_{⋃ E_n} f (by MCT for indicators)
-              -- Then: lim (∫_{E_n} f) = lim (∫_{E_n} g) (by h_eq_n)
-              --       ∫_{⋃ E_n} f = ∫_{⋃ E_n} g
+
+        -- f is integrable (bounded indicator function)
+        have hf_int : IntegrableOn f (⋃ n, E_seq n) μ := by
+          apply Integrable.integrableOn
+          exact (integrable_const (1 : ℝ)).indicator (hX_meas r hB)
+
+        -- g is integrable (conditional expectation)
+        have hg_int : IntegrableOn g (⋃ n, E_seq n) μ := by
+          apply Integrable.integrableOn
+          exact integrable_condExp
+
+        -- Measurability of sets (lift from sup to ambient)
+        have hE_meas : ∀ n, MeasurableSet (E_seq n) := by
+          intro n
+          have h_sup_le : firstRSigma X r ⊔ finFutureSigma X m k ≤ (inferInstance : MeasurableSpace Ω) := by
+            apply sup_le
+            · exact firstRSigma_le_ambient X r hX_meas
+            · exact finFutureSigma_le_ambient X m k hX_meas
+          exact h_sup_le (E_seq n) (hE_in n).1
+
+        -- Apply tendsto_setIntegral_of_monotone
+        have hf_lim := tendsto_setIntegral_of_monotone hE_meas hMono hf_int
+        have hg_lim := tendsto_setIntegral_of_monotone hE_meas hMono hg_int
+
+        -- The sequences are equal for all n
+        have : Tendsto (fun n => ∫ ω in E_seq n, f ω ∂μ) atTop (nhds (∫ ω in ⋃ n, E_seq n, g ω ∂μ)) := by
+          rw [tendsto_congr' (Eventually.of_forall h_eq_n)]
+          exact hg_lim
+
+        exact tendsto_nhds_unique hf_lim this
 
     have goodsets_closed_under_monotone_inter : ∀ (E_seq : ℕ → Set Ω),
         (∀ n, E_seq n ∈ GoodSets) →
@@ -2248,11 +2266,38 @@ lemma block_coord_condIndep
 
         -- Need to show: ∫_{⋂ E_n} f = ∫_{⋂ E_n} g
         -- Use dominated convergence for integrals over decreasing sets
-        -- Dominating function: constant 1 (since indicator ≤ 1)
-        sorry -- TODO: Apply measure continuity from above + DCT pattern
-              -- Can use: lim ∫_{E_n} f = ∫_{⋂ E_n} f (by DCT, dominated by 1)
-              -- Then: lim (∫_{E_n} f) = lim (∫_{E_n} g) (by h_eq_n)
-              --       ∫_{⋂ E_n} f = ∫_{⋂ E_n} g
+
+        -- f is integrable on E_seq 0 (bounded indicator function)
+        have hf_int : ∃ i, IntegrableOn f (E_seq i) μ := by
+          use 0
+          apply Integrable.integrableOn
+          exact (integrable_const (1 : ℝ)).indicator (hX_meas r hB)
+
+        -- g is integrable on E_seq 0 (conditional expectation)
+        have hg_int : ∃ i, IntegrableOn g (E_seq i) μ := by
+          use 0
+          apply Integrable.integrableOn
+          exact integrable_condExp
+
+        -- Measurability of sets (lift from sup to ambient)
+        have hE_meas : ∀ n, MeasurableSet (E_seq n) := by
+          intro n
+          have h_sup_le : firstRSigma X r ⊔ finFutureSigma X m k ≤ (inferInstance : MeasurableSpace Ω) := by
+            apply sup_le
+            · exact firstRSigma_le_ambient X r hX_meas
+            · exact finFutureSigma_le_ambient X m k hX_meas
+          exact h_sup_le (E_seq n) (hE_in n).1
+
+        -- Apply tendsto_setIntegral_of_antitone
+        have hf_lim := tendsto_setIntegral_of_antitone hE_meas hAnti hf_int
+        have hg_lim := tendsto_setIntegral_of_antitone hE_meas hAnti hg_int
+
+        -- The sequences are equal for all n
+        have : Tendsto (fun n => ∫ ω in E_seq n, f ω ∂μ) atTop (nhds (∫ ω in ⋂ n, E_seq n, g ω ∂μ)) := by
+          rw [tendsto_congr' (Eventually.of_forall h_eq_n)]
+          exact hg_lim
+
+        exact tendsto_nhds_unique hf_lim this
 
     -- Part C: Apply Dynkin's π-λ theorem
     --
