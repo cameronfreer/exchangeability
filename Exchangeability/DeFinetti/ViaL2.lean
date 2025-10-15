@@ -1032,60 +1032,23 @@ lemma l2_bound_two_windows_uniform
     (hX_meas : ∀ i, Measurable (X i))
     (_hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (f : ℝ → ℝ) (hf_meas : Measurable f)
-    (hf_bdd : ∃ M, ∀ x, |f x| ≤ M) :
-    ∃ Cf : ℝ, 0 ≤ Cf ∧
-      ∀ (n m k : ℕ), 0 < k →
-        ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
-              (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
-          ≤ Cf / k := by
-  -- Strategy: Apply l2_contractability_bound from L2Approach
-  -- For any window of size k starting at positions n and m, we have:
-  -- - ξ_i = f(X_{n+i+1}) or f(X_{m+i+1})
-  -- - By contractability, these have uniform covariance structure (m, σ², ρ)
-  -- - Equal weights: p_i = q_i = 1/k (different windows)
-  -- - For different starting positions, one weight vector is for indices n+1..n+k,
-  --   the other for m+1..m+k
-
-  -- The cleanest approach: use that the bound depends only on the covariance structure,
-  -- which is the same for all windows by contractability
-
-  -- We use Hölder's inequality (p=q=2 case) to bound the L² distance
-  -- between window averages. The key is that the bound depends only on
-  -- the covariance structure of f∘X, which is uniform by contractability.
-
-  -- NEW APPROACH: Use l2_contractability_bound with covariance structure
-
-  -- Step 1: Show f∘X is contractable
-  have hfX_contract : Contractable μ (fun n ω => f (X n ω)) :=
-    @contractable_comp Ω _ μ _ X hX_contract hX_meas f hf_meas
-
-  -- Step 2: Get covariance structure (m, σ², ρ) of f∘X
-  obtain ⟨M, hM⟩ := hf_bdd
-  have hfX_L2 : ∀ i, MemLp (fun ω => f (X i ω)) 2 μ := by
-    intro i
-    apply MemLp.of_bound (hf_meas.comp (hX_meas i)).aestronglyMeasurable M
-    filter_upwards with ω
-    simp [Real.norm_eq_abs]
-    exact hM (X i ω)
-
-  have hfX_meas : ∀ i, Measurable (fun ω => f (X i ω)) := by
-    intro i
-    exact hf_meas.comp (hX_meas i)
-
-  obtain ⟨mf, σSqf, ρf, hmean, hvar, hcov, hσSq_nonneg, hρ_bd⟩ :=
-    contractable_covariance_structure
-      (fun n ω => f (X n ω)) hfX_contract hfX_meas hfX_L2
-
-  -- Step 3: Set Cf = 2σ²(1-ρ)
-  let Cf := 2 * σSqf * (1 - ρf)
-  have hCf_nonneg : 0 ≤ Cf := by
-    apply mul_nonneg
-    apply mul_nonneg
-    · norm_num
-    · exact hσSq_nonneg
-    · linarith [hρ_bd.2]
-
-  refine ⟨Cf, hCf_nonneg, fun n m k hk => ?_⟩
+    (hf_bdd : ∃ M, ∀ x, |f x| ≤ M)
+    -- Accept Cf and covariance structure as arguments
+    (Cf mf σSqf ρf : ℝ)
+    (hCf_def : Cf = 2 * σSqf * (1 - ρf))
+    (hCf_nonneg : 0 ≤ Cf)
+    (hmean : ∀ n, ∫ ω, f (X n ω) ∂μ = mf)
+    (hvar : ∀ n, ∫ ω, (f (X n ω) - mf)^2 ∂μ = σSqf)
+    (hcov : ∀ n m, n ≠ m → ∫ ω, (f (X n ω) - mf) * (f (X m ω) - mf) ∂μ = σSqf * ρf)
+    (hσSq_nonneg : 0 ≤ σSqf)
+    (hρ_bd : -1 ≤ ρf ∧ ρf ≤ 1) :
+    ∀ (n m k : ℕ), 0 < k →
+      ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
+            (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
+        ≤ Cf / k := by
+  -- Use the provided covariance structure to bound window differences
+  -- The bound Cf/k comes from l2_contractability_bound applied to weight vectors
+  intro n m k hk
   classical
 
   have hk_pos : (0 : ℝ) < k := Nat.cast_pos.mpr hk
@@ -1374,8 +1337,14 @@ lemma l2_bound_two_windows_uniform
 
   have hξ_L2 : ∀ i : Fin nS, MemLp (fun ω => ξ i ω - mf) 2 μ := by
     intro i
-    simpa [ξ, Y, idx, hY_def] using
-      (hfX_L2 (idx i)).sub (memLp_const mf)
+    -- Reconstruct MemLp from boundedness
+    obtain ⟨M, hM⟩ := hf_bdd
+    have : MemLp (fun ω => f (X (idx i) ω)) 2 μ := by
+      apply MemLp.of_bound (hf_meas.comp (hX_meas (idx i))).aestronglyMeasurable M
+      filter_upwards with ω
+      simp [Real.norm_eq_abs]
+      exact hM (X (idx i) ω)
+    simpa [ξ, Y, idx, hY_def] using this.sub (memLp_const mf)
 
   have hξ_var : ∀ i : Fin nS, ∫ ω, (ξ i ω - mf)^2 ∂μ = (Real.sqrt σSqf) ^ 2 := by
     intro i
@@ -1519,7 +1488,8 @@ lemma l2_bound_two_windows_uniform
 
   have h_coef_eq :
       2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) * ((k : ℝ)⁻¹) = Cf / k := by
-    simp [Cf, h_sqrt_sq, div_eq_mul_inv]
+    rw [hCf_def, h_sqrt_sq]
+    simp [div_eq_mul_inv]
 
   have h_final :
       ∫ ω,
@@ -1529,6 +1499,65 @@ lemma l2_bound_two_windows_uniform
     simpa [h_coef_eq, one_div] using h_int_le
 
   exact h_final
+
+/-- **Compute the L² contractability constant for f ∘ X.**
+
+This helper extracts the common covariance structure computation needed by both
+`l2_bound_two_windows_uniform` and `l2_bound_long_vs_tail`.
+
+Returns `Cf = 2σ²(1-ρ)` where `(mf, σ², ρ)` is the covariance structure of
+`f ∘ X` obtained from `contractable_covariance_structure`.
+
+**Design rationale**: Computing the covariance structure once and passing it to
+both bound lemmas ensures they use the same constant, avoiding the need to prove
+equality of opaque existential witnesses. -/
+private lemma get_covariance_constant
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (f : ℝ → ℝ) (hf_meas : Measurable f)
+    (hf_bdd : ∃ M, ∀ x, |f x| ≤ M) :
+    ∃ (Cf : ℝ) (mf σSqf ρf : ℝ),
+      Cf = 2 * σSqf * (1 - ρf) ∧
+      0 ≤ Cf ∧
+      -- Covariance structure properties
+      (∀ n, ∫ ω, f (X n ω) ∂μ = mf) ∧
+      (∀ n, ∫ ω, (f (X n ω) - mf)^2 ∂μ = σSqf) ∧
+      (∀ n m, n ≠ m → ∫ ω, (f (X n ω) - mf) * (f (X m ω) - mf) ∂μ = σSqf * ρf) ∧
+      0 ≤ σSqf ∧
+      -1 ≤ ρf ∧ ρf ≤ 1 := by
+  -- Step 1: Show f∘X is contractable
+  have hfX_contract : Contractable μ (fun n ω => f (X n ω)) :=
+    @contractable_comp Ω _ μ _ X hX_contract hX_meas f hf_meas
+
+  -- Step 2: Get covariance structure (m, σ², ρ) of f∘X
+  obtain ⟨M, hM⟩ := hf_bdd
+  have hfX_L2 : ∀ i, MemLp (fun ω => f (X i ω)) 2 μ := by
+    intro i
+    apply MemLp.of_bound (hf_meas.comp (hX_meas i)).aestronglyMeasurable M
+    filter_upwards with ω
+    simp [Real.norm_eq_abs]
+    exact hM (X i ω)
+
+  have hfX_meas : ∀ i, Measurable (fun ω => f (X i ω)) := by
+    intro i
+    exact hf_meas.comp (hX_meas i)
+
+  obtain ⟨mf, σSqf, ρf, hmean, hvar, hcov, hσSq_nonneg, hρ_bd⟩ :=
+    contractable_covariance_structure
+      (fun n ω => f (X n ω)) hfX_contract hfX_meas hfX_L2
+
+  -- Step 3: Set Cf = 2σ²(1-ρ)
+  let Cf := 2 * σSqf * (1 - ρf)
+  have hCf_nonneg : 0 ≤ Cf := by
+    apply mul_nonneg
+    apply mul_nonneg
+    · norm_num
+    · exact hσSq_nonneg
+    · linarith [hρ_bd.2]
+
+  exact ⟨Cf, mf, σSqf, ρf, rfl, hCf_nonneg, hmean, hvar, hcov, hσSq_nonneg, hρ_bd.1, hρ_bd.2⟩
 
 /-- **L² bound wrapper for two starting windows**.
 
@@ -1551,10 +1580,13 @@ lemma l2_bound_two_windows
       ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
             (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
         ≤ Cf / k := by
-  -- With disjointness, this is exactly l2_bound_two_windows_uniform
-  obtain ⟨Cf, hCf_nonneg, hCf_unif⟩ := l2_bound_two_windows_uniform X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
+  -- Get covariance constant and structure
+  obtain ⟨Cf, mf, σSqf, ρf, hCf_def, hCf_nonneg, hmean, hvar, hcov, hσSq_nn, hρ_bd1, hρ_bd2⟩ :=
+    get_covariance_constant X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
+  -- Apply uniform bound with the covariance structure
   refine ⟨Cf, hCf_nonneg, ?_⟩
-  exact hCf_unif n m k hk
+  exact l2_bound_two_windows_uniform X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
+    Cf mf σSqf ρf hCf_def hCf_nonneg hmean hvar hcov hσSq_nn ⟨hρ_bd1, hρ_bd2⟩ n m k hk
 
 /-- Reindex the last `k`-block of a length-`m` sum.
 
@@ -1595,14 +1627,22 @@ private lemma l2_bound_long_vs_tail
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (_hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (f : ℝ → ℝ) (hf_meas : Measurable f)
     (hf_bdd : ∃ M, ∀ x, |f x| ≤ M)
+    -- Accept Cf and covariance structure as arguments
+    (Cf mf σSqf ρf : ℝ)
+    (hCf_def : Cf = 2 * σSqf * (1 - ρf))
+    (_hCf_nonneg : 0 ≤ Cf)
+    (hmean : ∀ n, ∫ ω, f (X n ω) ∂μ = mf)
+    (hvar : ∀ n, ∫ ω, (f (X n ω) - mf)^2 ∂μ = σSqf)
+    (hcov : ∀ n m, n ≠ m → ∫ ω, (f (X n ω) - mf) * (f (X m ω) - mf) ∂μ = σSqf * ρf)
+    (hσSq_nonneg : 0 ≤ σSqf)
+    (hρ_bd : -1 ≤ ρf ∧ ρf ≤ 1)
     (n m k : ℕ) (hk : 0 < k) (hkm : k ≤ m) :
-    ∃ Cf : ℝ, 0 ≤ Cf ∧
-      ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
-            (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
-        ≤ Cf / k := by
+    ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
+          (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
+      ≤ Cf / k := by
   -- Strategy: The key observation is that comparing a long average (1/m) with
   -- a tail average (1/k over last k terms) is the same as comparing two different
   -- weight vectors over the same m terms.
@@ -1763,25 +1803,7 @@ private lemma l2_bound_long_vs_tail
   --   q = (0, ..., 0, 1/k, ..., 1/k)  [m-k zeros, then k terms of 1/k]
   -- The sup |p - q| = 1/k, giving bound 2σ²(1-ρ) · (1/k) = Cf/k
 
-  -- First, get the covariance structure of f∘X
-  have hfX_contract : Contractable μ (fun n ω => f (X n ω)) :=
-    @contractable_comp Ω _ μ _ X hX_contract hX_meas f hf_meas
-
-  have hfX_L2' : ∀ i, MemLp (fun ω => f (X i ω)) 2 μ := by
-    intro i
-    apply MemLp.of_bound (hf_meas.comp (hX_meas i)).aestronglyMeasurable M
-    filter_upwards with ω
-    simp [Real.norm_eq_abs]
-    exact hM (X i ω)
-
-  have hfX_meas' : ∀ i, Measurable (fun ω => f (X i ω)) := by
-    intro i
-    exact hf_meas.comp (hX_meas i)
-
-  obtain ⟨mf, σSqf, ρf, hmean_f, hvar_f, hcov_f, hσSq_nonneg, hρ_bd⟩ :=
-    contractable_covariance_structure (fun n ω => f (X n ω)) hfX_contract hfX_meas' hfX_L2'
-
-  -- Cf = 2σ²(1-ρ) by definition in the calling context
+  -- Use the provided covariance structure (passed as arguments)
   -- We need to relate this to Cf from the hypothesis
   -- Actually, hCf_unif tells us the bound is Cf/k, so we can deduce what Cf must be
 
@@ -1849,26 +1871,31 @@ private lemma l2_bound_long_vs_tail
   have hξ_mean : ∀ i, ∫ ω, ξ i ω ∂μ = mf := by
     intro i
     simp [ξ]
-    exact hmean_f (n + i.val + 1)
+    exact hmean (n + i.val + 1)
 
   have hξ_L2 : ∀ i, MemLp (fun ω => ξ i ω - mf) 2 μ := by
     intro i
-    simp [ξ]
-    exact (hfX_L2' (n + i.val + 1)).sub (memLp_const mf)
+    -- Reconstruct MemLp from boundedness (M, hM already available from line 1690)
+    have : MemLp (fun ω => f (X (n + i.val + 1) ω)) 2 μ := by
+      apply MemLp.of_bound (hf_meas.comp (hX_meas (n + i.val + 1))).aestronglyMeasurable M
+      filter_upwards with ω
+      simp [Real.norm_eq_abs]
+      exact hM (X (n + i.val + 1) ω)
+    simpa [ξ] using this.sub (memLp_const mf)
 
   have hξ_var : ∀ i, ∫ ω, (ξ i ω - mf)^2 ∂μ = (Real.sqrt σSqf) ^ 2 := by
     intro i
     simp [ξ]
     have : (Real.sqrt σSqf) ^ 2 = σSqf := Real.sq_sqrt hσSq_nonneg
     rw [this]
-    exact hvar_f (n + i.val + 1)
+    exact hvar (n + i.val + 1)
 
   have hξ_cov : ∀ i j, i ≠ j → ∫ ω, (ξ i ω - mf) * (ξ j ω - mf) ∂μ = (Real.sqrt σSqf) ^ 2 * ρf := by
     intro i j hij
     simp [ξ]
     have : (Real.sqrt σSqf) ^ 2 = σSqf := Real.sq_sqrt hσSq_nonneg
     rw [this]
-    apply hcov_f
+    apply hcov
     omega
 
   -- Apply l2_contractability_bound
@@ -2009,24 +2036,12 @@ private lemma l2_bound_long_vs_tail
                 exact Fin.ext (by omega)
     rw [h_q_sum]
 
-  -- Define Cf from the covariance structure
-  let Cf := 2 * σSqf * (1 - ρf)
-  have hCf_nonneg : 0 ≤ Cf := by
-    have : 0 ≤ 1 - ρf := by linarith [hρ_bd.2]
-    nlinarith [hσSq_nonneg, this]
-
-  -- Prove the bound with Cf
-  have h_bound_with_Cf : ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
-            (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
-        ≤ Cf / k := by
-    calc ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
-                (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
-        = ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ := h_lhs_eq.symm
-      _ ≤ 2 * σSqf * (1 - ρf) * (1 / (k : ℝ)) := h_bound_strengthened
-      _ = Cf * (1 / (k : ℝ)) := rfl
-      _ = Cf / k := by ring
-
-  exact ⟨Cf, hCf_nonneg, h_bound_with_Cf⟩
+  -- Prove the bound directly using the provided Cf
+  calc ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
+              (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
+      = ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ := h_lhs_eq.symm
+    _ ≤ 2 * σSqf * (1 - ρf) * (1 / (k : ℝ)) := h_bound_strengthened
+    _ = Cf / k := by rw [hCf_def]; ring
 
 /-- **Weighted sums converge in L¹ for contractable sequences.**
 
@@ -2166,14 +2181,20 @@ theorem weighted_sums_converge_L1
     simp [Real.norm_eq_abs]
     exact hM (X i ω)
 
-  -- Obtain the uniform constant Cf from the already-complete lemma
-  -- This directly gives us h_window_bound!
-  obtain ⟨Cf, hCf_nonneg, h_window_bound⟩ :=
+  -- **Phase 2: Compute covariance structure once and pass to both lemmas**
+  -- This eliminates the need to prove Cf = Cf_tail (they're the same by construction!)
+  obtain ⟨Cf, mf, σSqf, ρf, hCf_def, hCf_nonneg, hmean, hvar, hcov, hσSq_nn, hρ_bd1, hρ_bd2⟩ :=
+    get_covariance_constant X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
+
+  -- Apply l2_bound_two_windows_uniform with the shared covariance structure
+  have h_window_bound :=
     l2_bound_two_windows_uniform X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
+      Cf mf σSqf ρf hCf_def hCf_nonneg hmean hvar hcov hσSq_nn ⟨hρ_bd1, hρ_bd2⟩
 
   let Y : ℕ → Ω → ℝ := fun t ω => f (X t ω)
 
   -- Long average vs tail average bound with the same constant Cf
+  -- ✅ Both lemmas now use the SAME Cf by construction → no proof needed!
   have h_long_tail_bound :
       ∀ {n m k : ℕ}, 0 < k → k ≤ m →
         ∫ ω,
@@ -2182,55 +2203,11 @@ theorem weighted_sums_converge_L1
                ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
           ≤ Cf / k := by
     intro n m k hk hkm
-    -- Use the already-complete lemma for long vs tail comparison
-    obtain ⟨Cf_tail, hCf_tail_nonneg, hCf_tail_bound⟩ :=
-      l2_bound_long_vs_tail X hX_contract hX_meas hX_L2 f hf_meas hf_bdd n m k hk hkm
-    -- Mathematical fact: Both Cf (from l2_bound_two_windows_uniform) and Cf_tail
-    -- (from l2_bound_long_vs_tail) are computed as 2 * σ² * (1 - ρ) from the
-    -- covariance structure of f ∘ X via `contractable_covariance_structure`.
-    -- Since the covariance structure is uniquely determined by computing integrals
-    -- (mean, variance, covariance), we have Cf = Cf_tail.
-    --
-    -- Formal proof requires showing that `contractable_covariance_structure` is
-    -- deterministic: calling it twice with the same inputs yields the same outputs.
-    -- This is true because m, σ², and ρ are defined as specific integrals.
-    --
-    -- For now, we use that Cf_tail is a valid bound (which it is):
-    calc ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
-                (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
-        ≤ Cf_tail / k := hCf_tail_bound
-      _ ≤ Cf / k := by
-          -- Both Cf and Cf_tail are computed as 2σ²(1-ρ) from calling
-          -- contractable_covariance_structure on the same function (fun n ω => f (X n ω))
-          -- with the same measurability and L² proofs.
-          -- 
-          -- Since covariance structure is deterministic (computes specific integrals),
-          -- both lemmas get the same σSqf and ρf, hence Cf = Cf_tail = 2σSqf(1-ρf).
-          -- 
-          -- However, Cf and Cf_tail are opaque existential witnesses from separate
-          -- lemma calls, so we can't use rfl. Instead, we observe that:
-          -- 1. Both bounds are valid (proven in respective lemmas)
-          -- 2. The uniform bound Cf applies to all window comparisons
-          -- 3. For our specific case, Cf_tail is the specialized bound
-          -- 
-          -- Since both compute the same value from the same covariance structure,
-          -- and we need Cf_tail ≤ Cf, we use that Cf is the universal constant.
-          apply div_le_div_of_nonneg_right _ (Nat.cast_nonneg k)
-          -- **Known limitation**: Both constants equal 2σ²(1-ρ) from the same
-          -- covariance structure, but they're opaque existential witnesses.
-          -- 
-          -- Mathematical fact: contractable_covariance_structure is deterministic
-          -- (computes specific integrals), so:
-          --   l2_bound_two_windows_uniform → Cf = 2σ²(1-ρ)
-          --   l2_bound_long_vs_tail → Cf_tail = 2σ²(1-ρ)
-          --   with SAME σ² and ρ from SAME function (fun n ω => f (X n ω))
-          --   Therefore: Cf = Cf_tail
-          --
-          -- **To fix**: Refactor to compute covariance structure once and pass
-          -- to both lemmas, making equality definitional. This is a structural
-          -- issue, not a mathematical gap. For now, we accept Cf_tail ≤ Cf as
-          -- a fact about the construction that's tedious but not deep to prove.
-          sorry
+    -- Apply l2_bound_long_vs_tail with the shared covariance structure
+    -- No more existential unpacking, no more sorry - just a direct bound!
+    exact l2_bound_long_vs_tail X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
+      Cf mf σSqf ρf hCf_def hCf_nonneg hmean hvar hcov hσSq_nn ⟨hρ_bd1, hρ_bd2⟩
+      n m k hk hkm
 
   -- Step 1: For n=0, show (A 0 m)_m is Cauchy in L² hence L¹
   have hA_cauchy_L2_0 : ∀ ε > 0, ∃ N, ∀ m ℓ, m ≥ N → ℓ ≥ N →
@@ -2516,8 +2493,8 @@ theorem weighted_sums_converge_L1
     -- Get M₁ such that ‖A 0 m - alpha_0‖₁ < ε/2 for m ≥ M₁
     rcases halpha_0_conv (ε / 2) hε2_pos with ⟨M₁, hM₁⟩
 
-    -- Get uniform bound constant
-    obtain ⟨Cf, hCf_nonneg, hCf_unif⟩ := l2_bound_two_windows_uniform X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
+    -- Get uniform bound constant (already computed above, reuse it)
+    -- Note: Cf, mf, σSqf, ρf are already in scope from line 2186
 
     -- Choose M₂ large enough that √(Cf/M₂) < ε/2
     -- This means Cf/M₂ < ε²/4, so M₂ > 4Cf/ε²
@@ -2572,7 +2549,7 @@ theorem weighted_sums_converge_L1
       by_cases hm_pos : 0 < m
       · -- Use the uniform two-window L² bound (valid even for overlapping windows)
         have h_bound_sq' : ∫ ω, (A n m ω - A 0 m ω)^2 ∂μ ≤ Cf / m := by
-          simpa [A] using hCf_unif n 0 m hm_pos
+          simpa [A] using h_window_bound n 0 m hm_pos
         have h_L2 : eLpNorm (fun ω => A n m ω - A 0 m ω) 2 μ ≤
             ENNReal.ofReal (Real.sqrt (Cf / m)) := by
           apply eLpNorm_two_from_integral_sq_le
