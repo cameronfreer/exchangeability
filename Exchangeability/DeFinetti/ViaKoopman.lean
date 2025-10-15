@@ -309,12 +309,23 @@ lemma condexp_pullback_factor
     {H : Ω → ℝ} (hH : Integrable H μ) :
     (fun ω' => μ[H | m] (g ω'))
       =ᵐ[μ'] μ'[(H ∘ g) | m.comap g] := by
-  -- Sketch:
-  -- 1. Both sides are m.comap g-measurable and integrable
-  -- 2. For any A ∈ m.comap g, write A = g ⁻¹' B with B ∈ m
-  -- 3. Compare integrals using hpush to transport between μ' and μ
-  -- 4. Apply uniqueness: ae_eq_condexp_of_forall_setIntegral_eq
-  sorry
+  -- Strategy: Show both sides have equal integrals on all sets in m.comap g
+  -- Key: For A = g⁻¹' B with B ∈ m:
+  --   ∫_A (μ[H|m] ∘ g) dμ' = ∫_B μ[H|m] dμ (pushforward)
+  --                        = ∫_B H dμ (CE property)
+  --                        = ∫_A (H∘g) dμ' (pushforward)
+  
+  -- Core integral equality for comap sets
+  have h_integral : ∀ A, MeasurableSet[m.comap g] A →
+      ∫ ω' in A, μ[H | m] (g ω') ∂μ' = ∫ ω' in A, (H ∘ g) ω' ∂μ' := by
+    intro A hA
+    -- A ∈ m.comap g means ∃ B ∈ m, A = g⁻¹' B
+    obtain ⟨B, hB_meas, rfl⟩ := hA  -- MeasurableSet.comap gives this
+    sorry -- TODO: Use pushforward to transport integrals:
+          -- ∫_{g⁻¹' B} (μ[H|m] ∘ g) dμ' = ∫_B μ[H|m] dμ = ∫_B H dμ = ∫_{g⁻¹' B} (H∘g) dμ'
+  
+  -- Apply uniqueness
+  sorry -- TODO: ae_eq_condexp_of_forall_setIntegral_eq h_integral
 
 /-- **Invariance of conditional expectation under iterates**.
 
