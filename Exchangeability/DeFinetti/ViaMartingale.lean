@@ -2519,11 +2519,13 @@ lemma block_coord_condIndep
           -- Lift measurability from sub-σ-algebra to ambient
           have hf_meas_ambient : ∀ i : Fin n, MeasurableSet (f_fin i) := by
             intro i
-            sorry -- TODO (~5-10 min): Lift measurability from sub-σ-algebra to ambient
-                  -- Have: hf_meas i.val : MeasurableSet[firstRSigma X r ⊔ finFutureSigma X m k] (f i.val)
-                  -- Need: MeasurableSet[ambient] (f i.val)
-                  -- The Dynkin induction is over the sub-σ-algebra, but integral_iUnion_fintype
-                  -- requires ambient measurability. Need to find correct coercion/lifting lemma.
+            -- Show that sup ≤ ambient
+            have h_sup_le : firstRSigma X r ⊔ finFutureSigma X m k ≤ (inferInstance : MeasurableSpace Ω) := by
+              apply sup_le
+              · exact firstRSigma_le_ambient X r hX_meas
+              · exact finFutureSigma_le_ambient X m k hX_meas
+            -- Lift measurability using ≤
+            exact h_sup_le (f_fin i) (hf_meas i.val)
 
           -- Convert pairwise disjoint to Pairwise form
           have hf_disj_pairwise : Pairwise (Function.onFun Disjoint f_fin) := by
