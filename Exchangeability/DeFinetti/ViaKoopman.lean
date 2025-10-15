@@ -1113,9 +1113,9 @@ private theorem h_tower_of_lagConst
       have hint : ∀ j ∈ Finset.range (n + 1), Integrable (fun ω => g (ω j)) μ := by
         intro j _
         obtain ⟨Cg, hCg⟩ := hg_bd
-        exact @integrable_of_bounded_measurable _ _ μ _ (fun ω => g (ω j))
+        exact @integrable_of_bounded_measurable _ inferInstance μ _ (fun ω => g (ω j))
           (hg_meas.comp (measurable_pi_apply j)) Cg (fun ω => hCg (ω j))
-      exact @condExp_sum_finset _ _ μ _ m (shiftInvariantSigma_le (α := α)) _
+      exact @condExp_sum_finset _ inferInstance μ _ m (shiftInvariantSigma_le (α := α)) _
         (Finset.range (n + 1)) (fun j => fun ω => g (ω j)) hint
 
     -- Each term μ[g(ωⱼ)|m] =ᵐ μ[g(ω₀)|m]
@@ -1125,7 +1125,7 @@ private theorem h_tower_of_lagConst
       have hg_0_int : Integrable (fun ω => g (ω 0)) μ := by
         -- g is bounded + measurable + finite measure ⇒ integrable
         obtain ⟨Cg, hCg⟩ := hg_bd
-        exact @integrable_of_bounded_measurable _ _ μ _ (fun ω => g (ω 0))
+        exact @integrable_of_bounded_measurable _ inferInstance μ _ (fun ω => g (ω 0))
           (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
       -- condexp_precomp_iterate_eq gives: μ[fun ω => g (shift^[j] ω 0) | m] = μ[fun ω => g (ω 0) | m]
       -- Need to show: shift^[j] ω 0 = ω j, then apply h
