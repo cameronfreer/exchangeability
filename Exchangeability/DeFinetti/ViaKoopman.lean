@@ -1360,8 +1360,8 @@ private theorem h_tower_of_lagConst
           (shiftInvariantSigma_le (α := α))
           (fun s hs => (mem_shiftInvariantSigma_iff (s := s)).mp hs |>.2)
           (fun ω => g (ω 0)) hg_0_int
-    -- Explicit type: hL2 converges to 0 in ℝ≥0∞
-    have hL2' : Tendsto (fun n => eLpNorm (fun ω => A n ω - Y ω) 2 μ) atTop (𝓝 (0 : ℝ≥0∞)) := hL2
+    -- Explicit type: hL2 converges to 0 in ENNReal
+    have hL2' : Tendsto (fun n => eLpNorm (fun ω => A n ω - Y ω) 2 μ) atTop (𝓝 (0 : ENNReal)) := hL2
 
     -- Step 2: On a probability space, ‖·‖₁ ≤ ‖·‖₂
     have h_upper : ∀ n,
