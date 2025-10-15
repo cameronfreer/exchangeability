@@ -256,6 +256,26 @@ structure NaturalExtensionData (μ : Measure (Ω[α])) where
 
 attribute [instance] NaturalExtensionData.μhat_isProb
 
+/-! ## General infrastructure lemmas for factor maps and invariance -/
+
+/-- **AE-pullback along a factor map**: Almost-everywhere equalities transport along pushforward.
+
+If `g : Ω̂ → Ω` is a factor map (i.e., `map g μ̂ = μ`), then two functions are
+a.e.-equal on `Ω` iff their pullbacks are a.e.-equal on `Ω̂`. -/
+lemma ae_pullback_iff
+    {Ω Ω̂ : Type*} [MeasurableSpace Ω] [MeasurableSpace Ω̂]
+    {μ : Measure Ω} {μ̂ : Measure Ω̂}
+    (g : Ω̂ → Ω) (hpush : Measure.map g μ̂ = μ)
+    {F G : Ω → ℝ} :
+    F =ᵐ[μ] G ↔ (F ∘ g) =ᵐ[μ̂] (G ∘ g) := by
+  constructor
+  · intro h
+    -- μ-null set pulls back to μ̂-null set via the pushforward
+    sorry
+  · intro h
+    -- μ̂-null set for F ∘ g ≠ G ∘ g pushes forward to μ-null set
+    sorry
+
 /-- Existence of a natural two-sided extension for a measure-preserving shift. -/
 axiom exists_naturalExtension
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
