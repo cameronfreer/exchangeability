@@ -834,6 +834,107 @@ axiom condexp_mul_condexp
     μ[(fun ω => X ω * μ[Y | m] ω) | m]
       =ᵐ[μ] (fun ω => μ[Y | m] ω * μ[X | m] ω)
 
+/-- **Shift-invariance of conditional expectation**: For measure-preserving shift,
+`CE[f ∘ shift^k | I] = CE[f | I]` where `I` is the shift-invariant σ-algebra.
+
+This is the key technical lemma for establishing that `CE[g(ωⱼ)|m] = CE[g(ω₀)|m]`
+for all `j`, which is needed in the Cesàro averaging proof. -/
+private lemma condexp_precomp_iterate_eq
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ) {k : ℕ}
+    {f : Ω[α] → ℝ} (hf : Integrable f μ) :
+    μ[(fun ω => f ((shift (α := α))^[k] ω)) | shiftInvariantSigma (α := α)]
+      =ᵐ[μ] μ[f | shiftInvariantSigma (α := α)] := by
+  classical
+  set shiftk := (shift (α := α))^[k] with hshiftk_def
+  have h_shiftk_pres : MeasurePreserving shiftk μ μ := hσ.iterate k
+  have h_shiftk_meas : AEMeasurable shiftk μ :=
+    (measurable_shift (α := α)).iterate k |>.aemeasurable
+  have h_int_shift : Integrable (fun ω => f (shiftk ω)) μ :=
+    h_shiftk_pres.integrable_comp_of_integrable hf
+  have h_condexp_int : Integrable (μ[f | shiftInvariantSigma (α := α)]) μ :=
+    MeasureTheory.integrable_condExp
+  refine (MeasureTheory.ae_eq_condExp_of_forall_setIntegral_eq
+        (μ := μ) (m := shiftInvariantSigma (α := α))
+        (hm := shiftInvariantSigma_le (α := α))
+        (f := fun ω => f (shiftk ω))
+        (g := μ[f | shiftInvariantSigma (α := α)])
+        (hf := h_int_shift)
+        (hg_int_finite := ?hg_int_finite)
+        (hg_eq := ?hg_eq)
+        (hgm := (MeasureTheory.stronglyMeasurable_condExp (μ := μ)).aestronglyMeasurable)).symm
+  case hg_int_finite =>
+    intro s hs _
+    have h_int : Integrable (μ[f | shiftInvariantSigma (α := α)]) μ := integrable_condExp
+    exact h_int.integrableOn
+  case hg_eq =>
+    intro s hs _
+    have hS := (mem_shiftInvariantSigma_iff (α := α) (s := s)).1 hs
+    have hS_meas : MeasurableSet s := hS.1
+    have hS_shift : shift ⁻¹' s = s := hS.2
+    have hS_iter : shiftk ⁻¹' s = s := by
+      rw [hshiftk_def]
+      clear hshiftk_def shiftk h_shiftk_pres h_shiftk_meas h_int_shift h_condexp_int
+      induction k with
+      | zero => rfl
+      | succ k hk =>
+        rw [Function.iterate_succ']
+        simp only [Set.preimage_comp, hk, hS_shift]
+    have h_indicator_int : Integrable (s.indicator f) μ :=
+      hf.indicator hS_meas
+    have h_indicator_meas :
+        AEStronglyMeasurable (s.indicator f) μ :=
+      hf.aestronglyMeasurable.indicator hS_meas
+    have hfm : AEStronglyMeasurable (s.indicator f) (Measure.map shiftk μ) := by
+      simpa [h_shiftk_pres.map_eq] using h_indicator_meas
+    have h_indicator_comp :
+        ∫ ω, s.indicator f ω ∂μ
+          = ∫ ω, s.indicator f (shiftk ω) ∂μ := by
+      have :=
+        MeasureTheory.integral_map
+          (μ := μ) (φ := shiftk)
+          (f := s.indicator f)
+          (hφ := h_shiftk_meas)
+          (hfm := hfm)
+      simpa [h_shiftk_pres.map_eq] using this
+    have h_mem_equiv : ∀ ω, (shiftk ω ∈ s) ↔ ω ∈ s := by
+      intro ω
+      constructor
+      · intro hmem
+        have : ω ∈ shiftk ⁻¹' s := by simpa [Set.mem_preimage] using hmem
+        simpa [hS_iter] using this
+      · intro hω
+        have : ω ∈ shiftk ⁻¹' s := by simpa [hS_iter] using hω
+        simpa [Set.mem_preimage] using this
+    have h_indicator_comp' :
+        ∫ ω, s.indicator f (shiftk ω) ∂μ
+          = ∫ ω, s.indicator (fun ω => f (shiftk ω)) ω ∂μ := by
+      refine integral_congr_ae (ae_of_all _ ?_)
+      intro ω
+      by_cases hω : ω ∈ s
+      · have h_shiftk_mem : shiftk ω ∈ s := (h_mem_equiv ω).mpr hω
+        simp [Set.indicator, hω, h_shiftk_mem]
+      · have h_shiftk_mem : shiftk ω ∉ s := by
+          intro hcontr
+          exact hω ((h_mem_equiv ω).mp hcontr)
+        simp [Set.indicator, hω, h_shiftk_mem]
+    have h_indicator_eq :
+        ∫ ω, s.indicator f ω ∂μ
+          = ∫ ω, s.indicator (fun ω => f (shiftk ω)) ω ∂μ :=
+      h_indicator_comp.trans h_indicator_comp'
+    calc
+      ∫ ω in s, μ[f | shiftInvariantSigma (α := α)] ω ∂μ
+          = ∫ ω in s, f ω ∂μ :=
+            MeasureTheory.setIntegral_condExp
+              (μ := μ) (m := shiftInvariantSigma (α := α))
+              (hm := shiftInvariantSigma_le (α := α))
+              (hf := hf) (hs := hs)
+      _ = ∫ ω, s.indicator f ω ∂μ :=
+            (MeasureTheory.integral_indicator hS_meas).symm
+      _ = ∫ ω, s.indicator (fun ω => f (shiftk ω)) ω ∂μ := h_indicator_eq
+      _ = ∫ ω in s, (fun ω => f (shiftk ω)) ω ∂μ :=
+            MeasureTheory.integral_indicator hS_meas
+
 /-- **Tower identity from lag-constancy + L²→L¹ (no PET used here).**
 
 Assume:
@@ -877,29 +978,97 @@ private theorem h_tower_of_lagConst
   ------------------------------------------------------------------
   have h_cesaro_ce : ∀ n, μ[A n | m] =ᵐ[μ] μ[(fun ω => g (ω 0)) | m] := by
     intro n
-    -- TODO Block 1: Cesàro CE derivation
-    --
-    -- GOAL: CE[(1/(n+1)) · Σⱼ g(ωⱼ) | m] =ᵐ CE[g(ω₀) | m]
-    --
-    -- STEP 1: Push CE through scalar multiplication
-    --   CE[(1/(n+1)) · Z | m] =ᵐ (1/(n+1)) · CE[Z | m]
-    --   Search for: MeasureTheory.condexp_smul or condexp_const_smul
-    --   Alternative: Use linearity directly with condExp_sub/condExp_add
-    --
-    -- STEP 2: Push CE through finite sum
-    --   CE[Σⱼ g(ωⱼ) | m] =ᵐ Σⱼ CE[g(ωⱼ) | m]
-    --   Search for: MeasureTheory.condexp_sum or use Finset.sum_induction
-    --   Pattern: refine Finset.induction ?base ?step; intro j s hj hInd
-    --
-    -- STEP 3: Apply shift invariance termwise
-    --   Each CE[g(ωⱼ) | m] =ᵐ CE[g(ω₀) | m] by condexp_precomp_iterate_eq (line 2173)
-    --   Use: condexp_precomp_iterate_eq (μ := μ) hσ (k := j) ...
-    --
-    -- STEP 4: Simplify
-    --   (1/(n+1)) · Σⱼ CE[g(ω₀)|m] = (1/(n+1)) · (n+1) · CE[g(ω₀)|m] = CE[g(ω₀)|m]
-    --   Use: Finset.sum_const, field_simp
-    --
-    sorry -- Implementation: ~50 lines, similar to user's original Block 1
+    set Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | m] ω
+    -- Push CE through the outer scalar
+    have h_push :
+        μ[A n | m]
+          =ᵐ[μ]
+        (fun ω =>
+          (1 / (n + 1 : ℝ)) *
+            μ[(fun ω =>
+                (Finset.range (n + 1)).sum (fun j => g (ω j))) | m] ω) := by
+      -- CE[c·Z|m] = c·CE[Z|m] (linearity of conditional expectation)
+      sorry -- TODO: apply condExp scalar multiplication lemma from mathlib
+
+    -- Push CE through the finite sum
+    have h_sum :
+        μ[(fun ω =>
+            (Finset.range (n + 1)).sum (fun j => g (ω j))) | m]
+          =ᵐ[μ]
+        (fun ω =>
+          (Finset.range (n + 1)).sum (fun j => μ[(fun ω => g (ω j)) | m] ω)) := by
+      -- CE[Σᵢ Zᵢ|m] = Σᵢ CE[Zᵢ|m] (linearity of conditional expectation)
+      sorry -- TODO: apply condExp finset sum lemma from mathlib
+
+    -- Each term μ[g(ωⱼ)|m] =ᵐ μ[g(ω₀)|m]
+    have h_term : ∀ j,
+        μ[(fun ω => g (ω j)) | m] =ᵐ[μ] μ[(fun ω => g (ω 0)) | m] := by
+      intro j
+      have hg_j_int : Integrable (fun ω => g (ω j)) μ := by
+        -- g is bounded + measurable + finite measure ⇒ integrable
+        -- TODO: Need mathlib lemma for: bounded measurable function on finite measure space is integrable
+        sorry
+      simpa using condexp_precomp_iterate_eq (μ := μ) hσ (k := j) (hf := hg_j_int)
+
+    -- Sum of identical a.e.-terms = (n+1) · that term
+    have h_sum_const :
+        (fun ω =>
+          (Finset.range (n + 1)).sum (fun j => μ[(fun ω => g (ω j)) | m] ω))
+          =ᵐ[μ]
+        (fun ω =>
+          (n + 1 : ℝ) * Y ω) := by
+      have h' : ∀ s : Finset ℕ,
+          (fun ω =>
+            s.sum (fun j => μ[(fun ω => g (ω j)) | m] ω))
+            =ᵐ[μ]
+          (fun ω =>
+            (s.card : ℝ) * Y ω) := by
+        refine Finset.induction ?base ?step
+        · exact ae_of_all μ (fun ω => by simp)
+        · intro j s hj hInd
+          have hj' :
+              (fun ω => μ[(fun ω => g (ω j)) | m] ω)
+                =ᵐ[μ]
+              (fun ω => Y ω) := h_term j
+          have := hInd.add hj'
+          refine this.trans ?_
+          refine ae_of_all μ (fun ω => by
+            simp [Finset.sum_insert, hj, Nat.cast_add, Nat.cast_one,
+                  add_comm, add_left_comm, add_assoc, mul_add, add_mul,
+                  mul_comm, mul_left_comm, mul_assoc])
+      simpa [Finset.card_range] using h' (Finset.range (n + 1))
+
+    -- Assemble: push → sum → collapse → cancel (1/(n+1))·(n+1)
+    have hne : (n + 1 : ℝ) ≠ 0 := by exact_mod_cast (Nat.succ_ne_zero n)
+    refine h_push.trans ?_
+    have h2 :
+        (fun ω =>
+          (1 / (n + 1 : ℝ)) *
+            μ[(fun ω =>
+                (Finset.range (n + 1)).sum (fun j => g (ω j))) | m] ω)
+          =ᵐ[μ]
+        (fun ω =>
+          (1 / (n + 1 : ℝ)) *
+            (Finset.range (n + 1)).sum
+              (fun j => μ[(fun ω => g (ω j)) | m] ω)) := by
+      refine h_sum.mono ?_
+      intro ω hω; simpa [hω]
+    refine h2.trans ?_
+    have h3 :
+        (fun ω =>
+          (1 / (n + 1 : ℝ)) *
+            (Finset.range (n + 1)).sum
+              (fun j => μ[(fun ω => g (ω j)) | m] ω))
+          =ᵐ[μ]
+        (fun ω =>
+          (1 / (n + 1 : ℝ)) *
+            ((n + 1 : ℝ) * Y ω)) := by
+      refine h_sum_const.mono ?_
+      intro ω hω; simpa [hω]
+    refine h3.trans ?_
+    exact ae_of_all μ (fun ω => by
+      simp [Y]
+      field_simp [one_div, hne, mul_comm, mul_left_comm, mul_assoc])
 
   ------------------------------------------------------------------
   -- (2) CE[f·A_n | m] is constant in n (lag-constancy termwise)
@@ -909,33 +1078,104 @@ private theorem h_tower_of_lagConst
       =ᵐ[μ]
     μ[(fun ω => f (ω 0) * g (ω 0)) | m] := by
     intro n
-    -- TODO Block 2: Product constancy via lag_const
-    --
-    -- GOAL: CE[f(ω₀)·Aₙ | m] =ᵐ CE[f(ω₀)·g(ω₀) | m]
-    -- where Aₙ = (1/(n+1)) Σⱼ g(ωⱼ)
-    --
-    -- KEY INSIGHT: lag_const says CE[f(ω₀)·g(ωⱼ₊₁)|m] =ᵐ CE[f(ω₀)·g(ωⱼ)|m]
-    -- By induction: CE[f(ω₀)·g(ωⱼ)|m] =ᵐ CE[f(ω₀)·g(ω₀)|m] for all j
-    --
-    -- STEP 1: Expand A_n and distribute f(ω₀)
-    --   f(ω₀)·Aₙ = (1/(n+1)) · Σⱼ f(ω₀)·g(ωⱼ)
-    --
-    -- STEP 2: Push CE through scalar and sum (same as Block 1)
-    --   CE[(1/(n+1))·Σⱼ f(ω₀)·g(ωⱼ) | m] =ᵐ (1/(n+1))·Σⱼ CE[f(ω₀)·g(ωⱼ)|m]
-    --
-    -- STEP 3: Apply lag_const termwise
-    --   Build helper: ∀ j, CE[f(ω₀)·g(ωⱼ)|m] =ᵐ CE[f(ω₀)·g(ω₀)|m]
-    --   Method: Nat.rec j with base (j=0: refl) and step (use lag_const k + IH)
-    --   Pattern from user code:
-    --     revert j
-    --     refine Nat.rec ?h0 ?hstep
-    --     · intro; simpa
-    --     · intro k hk; have := lag_const k; exact this.trans hk
-    --
-    -- STEP 4: Simplify sum of constants
-    --   (1/(n+1)) · Σⱼ CE[f(ω₀)·g(ω₀)|m] = CE[f(ω₀)·g(ω₀)|m]
-    --
-    sorry -- Implementation: ~60 lines, parallel structure to Block 1
+    -- Push CE through scalar
+    have h_push :
+        μ[(fun ω => f (ω 0) * A n ω) | m]
+          =ᵐ[μ]
+        (fun ω =>
+          (1 / (n + 1 : ℝ)) *
+            μ[(fun ω =>
+                (Finset.range (n + 1)).sum
+                  (fun j => f (ω 0) * g (ω j))) | m] ω) := by
+      -- CE[c·Z|m] = c·CE[Z|m] (linearity of conditional expectation)
+      sorry -- TODO: apply condExp scalar multiplication lemma from mathlib
+
+    -- Push CE through the finite sum
+    have h_sum :
+        μ[(fun ω =>
+            (Finset.range (n + 1)).sum (fun j => f (ω 0) * g (ω j))) | m]
+          =ᵐ[μ]
+        (fun ω =>
+          (Finset.range (n + 1)).sum
+            (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | m] ω)) := by
+      -- CE[Σᵢ Zᵢ|m] = Σᵢ CE[Zᵢ|m] (linearity of conditional expectation)
+      sorry -- TODO: apply condExp finset sum lemma from mathlib
+
+    -- From lag_const: every term is a.e.-equal to the j=0 term
+    have h_term_const : ∀ j,
+        μ[(fun ω => f (ω 0) * g (ω j)) | m]
+          =ᵐ[μ]
+        μ[(fun ω => f (ω 0) * g (ω 0)) | m] := by
+      refine Nat.rec ?h0 ?hstep
+      · -- base case: j = 0
+        rfl
+      · -- step case: if true for k, then true for k+1
+        intro k hk
+        exact (lag_const k).trans hk
+
+    -- Sum collapses to (n+1)·CE[f·g₀|m]
+    have h_sum_const :
+        (fun ω =>
+          (Finset.range (n + 1)).sum
+            (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | m] ω))
+          =ᵐ[μ]
+        (fun ω =>
+          (n + 1 : ℝ) *
+            μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω) := by
+      have h' : ∀ s : Finset ℕ,
+          (fun ω =>
+            s.sum (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | m] ω))
+            =ᵐ[μ]
+          (fun ω =>
+            (s.card : ℝ) *
+              μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω) := by
+        refine Finset.induction ?base ?step
+        · exact ae_of_all μ (fun ω => by simp)
+        · intro j s hj hInd
+          have hj' :
+              (fun ω => μ[(fun ω => f (ω 0) * g (ω j)) | m] ω)
+                =ᵐ[μ]
+              (fun ω =>
+                μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω) := h_term_const j
+          have := hInd.add hj'
+          refine this.trans ?_
+          refine ae_of_all μ (fun ω => by
+            simp [Finset.sum_insert, hj, Nat.cast_add, Nat.cast_one,
+                  add_comm, add_left_comm, add_assoc, mul_add, add_mul,
+                  mul_comm, mul_left_comm, mul_assoc])
+      simpa [Finset.card_range] using h' (Finset.range (n + 1))
+
+    -- Assemble and cancel the average
+    have hne : (n + 1 : ℝ) ≠ 0 := by exact_mod_cast (Nat.succ_ne_zero n)
+    refine h_push.trans ?_
+    have h2 :
+        (fun ω =>
+          (1 / (n + 1 : ℝ)) *
+            μ[(fun ω =>
+                (Finset.range (n + 1)).sum (fun j => f (ω 0) * g (ω j))) | m] ω)
+          =ᵐ[μ]
+        (fun ω =>
+          (1 / (n + 1 : ℝ)) *
+            (Finset.range (n + 1)).sum
+              (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | m] ω)) := by
+      refine h_sum.mono ?_
+      intro ω hω; simpa [hω]
+    refine h2.trans ?_
+    have h3 :
+        (fun ω =>
+          (1 / (n + 1 : ℝ)) *
+            (Finset.range (n + 1)).sum
+              (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | m] ω))
+          =ᵐ[μ]
+        (fun ω =>
+          (1 / (n + 1 : ℝ)) *
+            ((n + 1 : ℝ) *
+              μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω)) := by
+      refine h_sum_const.mono ?_
+      intro ω hω; simpa [hω]
+    refine h3.trans ?_
+    exact ae_of_all μ (fun ω => by
+      field_simp [one_div, hne, mul_comm, mul_left_comm, mul_assoc])
 
   ------------------------------------------------------------------
   -- (3) L² MET ⇒ L¹ convergence of A_n to CE[g(ω0)|m]
@@ -944,47 +1184,34 @@ private theorem h_tower_of_lagConst
       Tendsto (fun n =>
         ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | m] ω| ∂μ)
               atTop (𝓝 0) := by
-    -- TODO Block 3: L² MET → L¹ convergence (MOST COMPLEX)
-    --
-    -- GOAL: ∫|Aₙ - CE[g(ω₀)|m]| → 0
-    -- where Aₙ = (1/(n+1)) Σⱼ g(ωⱼ) is Cesàro average
-    --
-    -- CHALLENGE: birkhoffAverage_tendsto_condexp (line 1716) has signature:
-    --   theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
-    --     Tendsto (birkhoffAverage ℝ (koopman shift hσ) id n f) atTop (𝓝 (condexpL2 f))
-    -- But we have g : α → ℝ, not Lp ℝ 2 μ
-    --
-    -- STRATEGY A: Convert via Lp space (RECOMMENDED)
-    --   STEP 1: Build gLp : Lp ℝ 2 μ from g
-    --     - Need: g measurable (have: hg_meas)
-    --     - Need: g ∈ L² (from boundedness hg_bd + prob measure)
-    --     - Use: Lp.memℒp or bounded functions → L²
-    --
-    --   STEP 2: Identify Aₙ with birkhoffAverage
-    --     - birkhoffAverage is: (1/(n+1)) Σⱼ (T^j f)
-    --     - Our Aₙ is: (1/(n+1)) Σⱼ g(ωⱼ)
-    --     - Connection: g(ωⱼ) = g ∘ πⱼ where πⱼ(ω) = ω(j)
-    --     - Need to relate coordinate projection to koopman operator
-    --
-    --   STEP 3: Apply birkhoffAverage_tendsto_condexp
-    --     Get: ‖birkhoffAverage - condexpL2 gLp‖₂ → 0
-    --
-    --   STEP 4: Convert L² to L¹
-    --     On probability space: ‖h‖₁ ≤ ‖h‖₂
-    --     Search for: snorm_one_le_snorm_two or Lp.norm_le_of_le
-    --     Pattern: have := snorm_one_le_snorm_two (f := ...)
-    --
-    --   STEP 5: Identify condexpL2 with μ[·|m]
-    --     condexpL2 is the L² version of conditional expectation
-    --     Need: condexpL2 f =ᵐ μ[f|m] (should be in mathlib)
-    --
-    -- STRATEGY B: Direct proof without birkhoffAverage (EASIER but less elegant)
-    --   Use h_cesaro_ce (Block 1): CE[Aₙ|m] =ᵐ CE[g(ω₀)|m]
-    --   So Aₙ - CE[g] =ᵐ CE[Aₙ|m] - CE[Aₙ|m] + (Aₙ - CE[Aₙ|m])
-    --   By martingale: ∫|Z - CE[Z|m]| ≤ ... (need martingale bounds)
-    --   This may be easier but requires different machinery
-    --
-    sorry -- Implementation: ~80 lines, needs Lp space expertise or martingale bounds
+    set Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | m] ω
+    -- Step 1: L² statement from Birkhoff lemma (function-level version)
+    have hL2 :
+        Tendsto (fun n => MeasureTheory.snorm (fun ω => A n ω - Y ω) 2 μ) atTop (𝓝 0) := by
+      -- Mean Ergodic Theorem: Cesàro averages converge to CE in L²
+      sorry -- TODO: simpa [A, Y] using birkhoffAverage_tendsto_condexp_fun ...
+
+    -- Step 2: On a probability space, ‖·‖₁ ≤ ‖·‖₂
+    have h_upper : ∀ n,
+        (∫ ω, |A n ω - Y ω| ∂μ)
+          ≤ (MeasureTheory.snorm (fun ω => A n ω - Y ω) 2 μ).toReal := by
+      intro n
+      -- On probability spaces: ‖·‖₁ ≤ ‖·‖₂ by Hölder inequality
+      sorry -- TODO: simpa using MeasureTheory.snorm_one_le_snorm_two ...
+
+    -- Nonnegativity of the LHS integrals
+    have h_nonneg : ∀ n, 0 ≤ ∫ ω, |A n ω - Y ω| ∂μ := by
+      intro n; exact integral_nonneg (fun ω => abs_nonneg _)
+
+    -- `toReal` is continuous at 0, so the upper bound tends to 0
+    have h_toReal :
+        Tendsto (fun n => (MeasureTheory.snorm (fun ω => A n ω - Y ω) 2 μ).toReal)
+                atTop (𝓝 0) := by
+      -- ENNReal.toReal is continuous at 0
+      sorry -- TODO: apply ENNReal.tendsto_toReal using hL2
+
+    -- Squeeze: 0 ≤ L¹ ≤ (‖·‖₂).toReal → 0
+    exact squeeze_zero' h_nonneg h_upper h_toReal
 
   ------------------------------------------------------------------
   -- (4) L¹-Lipschitz for CE + |f| bounded pulls the convergence through CE
@@ -995,42 +1222,30 @@ private theorem h_tower_of_lagConst
         ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | m] ω
              - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | m] ω') | m] ω| ∂μ)
         atTop (𝓝 0) := by
-    -- TODO Block 4: L¹-Lipschitz argument
-    --
-    -- GOAL: ∫|CE[f·Aₙ|m] - CE[f·CE[g|m]|m]| → 0
-    --
-    -- STEP 1: Apply condExp_L1_lipschitz (line 624)
-    --   Lemma signature:
-    --     {Z W : Ω[α] → ℝ} (hZ : Integrable Z μ) (hW : Integrable W μ) :
-    --     ∫|μ[Z|m] - μ[W|m]| ≤ ∫|Z - W|
-    --
-    --   Set Z = f(ω₀)·Aₙ(ω), W = f(ω₀)·CE[g(ω₀)|m](ω)
-    --   Get: ∫|CE[f·Aₙ|m] - CE[f·CE[g]|m]| ≤ ∫|f·Aₙ - f·CE[g]|
-    --
-    --   Need integrability:
-    --     - hZ: f bounded + Aₙ bounded → integrable (use integrable_of_bounded_mul)
-    --     - hW: f bounded + CE[g] integrable → integrable
-    --
-    -- STEP 2: Factor out |f|
-    --   ∫|f·Aₙ - f·CE[g]| = ∫|f|·|Aₙ - CE[g]|
-    --   Use: abs_mul, then pull out |f|
-    --
-    -- STEP 3: Bound by Cf
-    --   Since |f| ≤ Cf a.e., get:
-    --   ∫|f|·|Aₙ - CE[g]| ≤ ∫ Cf·|Aₙ - CE[g]| = Cf·∫|Aₙ - CE[g]|
-    --
-    --   Use: integral_mono_ae with filter_upwards
-    --   Then: integral_const_mul or pull Cf out
-    --
-    -- STEP 4: Apply h_L1_An_to_CE (Block 3)
-    --   Cf·∫|Aₙ - CE[g]| → Cf·0 = 0
-    --   Use: Tendsto.const_mul or tendsto_const_nhds.mul
-    --
-    -- STEP 5: Squeeze theorem
-    --   0 ≤ ∫|CE[f·Aₙ] - CE[f·CE[g]]| ≤ Cf·∫|Aₙ - CE[g]| → 0
-    --   Use: tendsto_of_tendsto_of_tendsto_of_le_of_le
-    --
-    sorry -- Implementation: ~40 lines, straightforward once Block 3 is done
+    -- Step 1: condExp is 1-Lipschitz in L¹
+    have h₁ : ∀ n,
+      ∫ ω, |
+          μ[(fun ω' => f (ω' 0) * A n ω') | m] ω
+        - μ[(fun ω' => f (ω' 0) *
+                       μ[(fun ω => g (ω 0)) | m] ω') | m] ω | ∂μ
+      ≤
+      ∫ ω, | f (ω 0) * (A n ω - μ[(fun ω => g (ω 0)) | m] ω) | ∂μ := by
+      intro n
+      sorry -- TODO: simpa [mul_sub, sub_eq_add_neg, abs_mul] using condExp_L1_lipschitz ...
+
+    -- Step 2: |f| ≤ Cf a.e. ⇒ pull Cf outside the integral
+    have h₂ : ∀ n,
+      ∫ ω, | f (ω 0) * (A n ω - μ[(fun ω => g (ω 0)) | m] ω) | ∂μ
+      ≤ Cf * ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | m] ω| ∂μ := by
+      intro n
+      sorry -- TODO: pointwise bound + integral_mono_ae + integral_const_mul
+
+    -- Step 3: conclude with Block 3
+    refine tendsto_of_tendsto_of_le_of_le
+      h_L1_An_to_CE
+      (eventually_of_forall (fun _ => by
+        have := integral_nonneg (fun ω => abs_nonneg _); simpa))
+      (eventually_of_forall (fun n => (h₁ n).trans (h₂ n)))
 
   ------------------------------------------------------------------
   -- (5) The constant sequence's L¹ limit is 0 ⇒ a.e. equality
@@ -2422,102 +2637,6 @@ follows:
   applications of the two-point factorisation combined with conditional
   independence already available at the kernel level.
 -/
-
-private lemma condexp_precomp_iterate_eq
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    (hσ : MeasurePreserving shift μ μ) {k : ℕ}
-    {f : Ω[α] → ℝ} (hf : Integrable f μ) :
-    μ[(fun ω => f ((shift (α := α))^[k] ω)) | shiftInvariantSigma (α := α)]
-      =ᵐ[μ] μ[f | shiftInvariantSigma (α := α)] := by
-  classical
-  set shiftk := (shift (α := α))^[k] with hshiftk_def
-  have h_shiftk_pres : MeasurePreserving shiftk μ μ := hσ.iterate k
-  have h_shiftk_meas : AEMeasurable shiftk μ :=
-    (measurable_shift (α := α)).iterate k |>.aemeasurable
-  have h_int_shift : Integrable (fun ω => f (shiftk ω)) μ :=
-    h_shiftk_pres.integrable_comp_of_integrable hf
-  have h_condexp_int : Integrable (μ[f | shiftInvariantSigma (α := α)]) μ :=
-    MeasureTheory.integrable_condExp
-  refine (MeasureTheory.ae_eq_condExp_of_forall_setIntegral_eq
-        (μ := μ) (m := shiftInvariantSigma (α := α))
-        (hm := shiftInvariantSigma_le (α := α))
-        (f := fun ω => f (shiftk ω))
-        (g := μ[f | shiftInvariantSigma (α := α)])
-        (hf := h_int_shift)
-        (hg_int_finite := ?hg_int_finite)
-        (hg_eq := ?hg_eq)
-        (hgm := (MeasureTheory.stronglyMeasurable_condExp (μ := μ)).aestronglyMeasurable)).symm
-  case hg_int_finite =>
-    intro s hs _
-    have h_int : Integrable (μ[f | shiftInvariantSigma (α := α)]) μ := integrable_condExp
-    exact h_int.integrableOn
-  case hg_eq =>
-    intro s hs _
-    have hS := (mem_shiftInvariantSigma_iff (α := α) (s := s)).1 hs
-    have hS_meas : MeasurableSet s := hS.1
-    have hS_shift : shift ⁻¹' s = s := hS.2
-    have hS_iter : shiftk ⁻¹' s = s := by
-      rw [hshiftk_def]
-      clear hshiftk_def shiftk h_shiftk_pres h_shiftk_meas h_int_shift h_condexp_int
-      induction k with
-      | zero => rfl
-      | succ k hk =>
-        rw [Function.iterate_succ']
-        simp only [Set.preimage_comp, hk, hS_shift]
-    have h_indicator_int : Integrable (s.indicator f) μ :=
-      hf.indicator hS_meas
-    have h_indicator_meas :
-        AEStronglyMeasurable (s.indicator f) μ :=
-      hf.aestronglyMeasurable.indicator hS_meas
-    have hfm : AEStronglyMeasurable (s.indicator f) (Measure.map shiftk μ) := by
-      simpa [h_shiftk_pres.map_eq] using h_indicator_meas
-    have h_indicator_comp :
-        ∫ ω, s.indicator f ω ∂μ
-          = ∫ ω, s.indicator f (shiftk ω) ∂μ := by
-      have :=
-        MeasureTheory.integral_map
-          (μ := μ) (φ := shiftk)
-          (f := s.indicator f)
-          (hφ := h_shiftk_meas)
-          (hfm := hfm)
-      simpa [h_shiftk_pres.map_eq] using this
-    have h_mem_equiv : ∀ ω, (shiftk ω ∈ s) ↔ ω ∈ s := by
-      intro ω
-      constructor
-      · intro hmem
-        have : ω ∈ shiftk ⁻¹' s := by simpa [Set.mem_preimage] using hmem
-        simpa [hS_iter] using this
-      · intro hω
-        have : ω ∈ shiftk ⁻¹' s := by simpa [hS_iter] using hω
-        simpa [Set.mem_preimage] using this
-    have h_indicator_comp' :
-        ∫ ω, s.indicator f (shiftk ω) ∂μ
-          = ∫ ω, s.indicator (fun ω => f (shiftk ω)) ω ∂μ := by
-      refine integral_congr_ae (ae_of_all _ ?_)
-      intro ω
-      by_cases hω : ω ∈ s
-      · have h_shiftk_mem : shiftk ω ∈ s := (h_mem_equiv ω).mpr hω
-        simp [Set.indicator, hω, h_shiftk_mem]
-      · have h_shiftk_mem : shiftk ω ∉ s := by
-          intro hcontr
-          exact hω ((h_mem_equiv ω).mp hcontr)
-        simp [Set.indicator, hω, h_shiftk_mem]
-    have h_indicator_eq :
-        ∫ ω, s.indicator f ω ∂μ
-          = ∫ ω, s.indicator (fun ω => f (shiftk ω)) ω ∂μ :=
-      h_indicator_comp.trans h_indicator_comp'
-    calc
-      ∫ ω in s, μ[f | shiftInvariantSigma (α := α)] ω ∂μ
-          = ∫ ω in s, f ω ∂μ :=
-            MeasureTheory.setIntegral_condExp
-              (μ := μ) (m := shiftInvariantSigma (α := α))
-              (hm := shiftInvariantSigma_le (α := α))
-              (hf := hf) (hs := hs)
-      _ = ∫ ω, s.indicator f ω ∂μ :=
-            (MeasureTheory.integral_indicator hS_meas).symm
-      _ = ∫ ω, s.indicator (fun ω => f (shiftk ω)) ω ∂μ := h_indicator_eq
-      _ = ∫ ω in s, (fun ω => f (shiftk ω)) ω ∂μ :=
-            MeasureTheory.integral_indicator hS_meas
 
 /-! ### Mathlib infrastructure for conditional independence
 
