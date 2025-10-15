@@ -1149,12 +1149,14 @@ private theorem h_tower_of_lagConst
               (fun ω => μ[(fun ω => g (ω j)) | m] ω)
                 =ᵐ[μ]
               (fun ω => Y ω) := h_term j
-          have := hInd.add hj'
-          refine this.trans ?_
+          -- hInd: sum over s = s.card * Y
+          -- hj': g(ω j) term = Y  
+          -- Need: sum over (insert j s) = (insert j s).card * Y
+          refine (hInd.add hj').trans ?_
           refine ae_of_all μ (fun ω => by
-            simp [Finset.sum_insert, hj, Nat.cast_add, Nat.cast_one,
-                  add_comm, add_left_comm, add_assoc, mul_add, add_mul,
-                  mul_comm, mul_left_comm, mul_assoc])
+            rw [Finset.sum_insert hj, Finset.card_insert_of_not_mem hj]
+            simp only [Nat.cast_add, Nat.cast_one]
+            ring)
       simpa [Finset.card_range] using h' (Finset.range (n + 1))
 
     -- Assemble: push → sum → collapse → cancel (1/(n+1))·(n+1)
