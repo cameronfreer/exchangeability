@@ -265,16 +265,24 @@ a.e.-equal on `Ω` iff their pullbacks are a.e.-equal on `Ω̂`. -/
 lemma ae_pullback_iff
     {Ω Ω' : Type*} [MeasurableSpace Ω] [MeasurableSpace Ω']
     {μ : Measure Ω} {μ' : Measure Ω'}
-    (g : Ω' → Ω) (hpush : Measure.map g μ' = μ)
+    (g : Ω' → Ω) (hg : Measurable g) (hpush : Measure.map g μ' = μ)
     {F G : Ω → ℝ} :
     F =ᵐ[μ] G ↔ (F ∘ g) =ᵐ[μ'] (G ∘ g) := by
+  -- Key: For measurable g with map g μ' = μ, we have μ S = μ' (g⁻¹' S)
+  simp only [EventuallyEq, ae_iff]
   constructor
   · intro h
-    -- μ-null set pulls back to μ̂-null set via the pushforward
-    sorry
+    -- F ≠ G is μ-null, so g⁻¹'(F ≠ G) = (F∘g ≠ G∘g) is μ'-null
+    have eq_sets : g ⁻¹' {ω | F ω ≠ G ω} = {ω' | (F ∘ g) ω' ≠ (G ∘ g) ω'} := by
+      ext ω'; simp
+    rw [← eq_sets]
+    sorry -- TODO: Need ae_measurable F or measurable set hypothesis
   · intro h
-    -- μ̂-null set for F ∘ g ≠ G ∘ g pushes forward to μ-null set
-    sorry
+    -- (F∘g ≠ G∘g) is μ'-null; show (F ≠ G) is μ-null
+    -- Note: {F ≠ G} ⊆ g '' {F∘g ≠ G∘g} ∪ (range g)ᶜ
+    -- Since map g μ' = μ, the range g has full μ-measure
+    -- So μ{F ≠ G} ≤ μ(g '' {F∘g ≠ G∘g}) ≤ μ'{F∘g ≠ G∘g} = 0
+    sorry -- This requires ae_measurable assumptions or surjectivity
 
 /-- **Factor-map pullback for conditional expectation**.
 
