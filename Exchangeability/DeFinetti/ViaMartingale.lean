@@ -533,8 +533,7 @@ lemma extreme_members_equal_on_tail
       (condExp_condExp_of_le (μ := μ)
         (hm₁₂ := tailSigma_le_futureFiltration (X := X) m)
         (hm₂ := futureFiltration_le (X := X) m hX_meas)
-        (f := f_m)
-        (hf := hf_m_int)).symm
+        (f := f_m)).symm
   have h_tower_0 :
       μ[μ[f_0 | futureFiltration X m] | tailSigma X]
         =ᵐ[μ] μ[f_0 | tailSigma X] := by
@@ -542,11 +541,11 @@ lemma extreme_members_equal_on_tail
       (condExp_condExp_of_le (μ := μ)
         (hm₁₂ := tailSigma_le_futureFiltration (X := X) m)
         (hm₂ := futureFiltration_le (X := X) m hX_meas)
-        (f := f_0)
-        (hf := hf_0_int)).symm
+        (f := f_0)).symm
 
   -- assemble the equalities
-  exact h_cond_on_tail.trans (h_tower_m.trans h_tower_0.symm)
+  -- Chain: μ[f_m|tail] = μ[μ[f_m|fut]|tail] = μ[μ[f_0|fut]|tail] = μ[f_0|tail]
+  exact h_tower_m.symm.trans (h_cond_on_tail.trans h_tower_0)
 
 /-! ## Future filtration (additive)
 
