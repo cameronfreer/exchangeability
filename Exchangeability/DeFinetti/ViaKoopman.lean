@@ -989,7 +989,7 @@ private lemma snorm_one_le_snorm_two_toReal
     (f : Ω → ℝ) (hL1 : Integrable f μ) (hL2 : MemLp f 2 μ) :
     (∫ ω, |f ω| ∂μ) ≤ (eLpNorm f 2 μ).toReal := by
   -- `eLpNorm 1 ≤ eLpNorm 2` on probability spaces
-  have h12 : (1 : ℝ≥0∞) ≤ 2 := by norm_num
+  have h12 : (1 : ℝ≥0∞) ≤ (2 : ℝ≥0∞) := by norm_num
   have hle : eLpNorm f 1 μ ≤ eLpNorm f 2 μ :=
     eLpNorm_mono_exponent (μ := μ) (f := f) h12
   -- Convert to a real inequality via `toReal`, knowing `‖f‖₂ < ∞`
