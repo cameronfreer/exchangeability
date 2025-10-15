@@ -1139,11 +1139,11 @@ lemma contractable_dist_eq_on_rectangles_future
   have hpre₁ :
       ψ₁ ⁻¹' (B ×ˢ cylinder (α:=α) r C)
         = {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + 1 + i.1) ω ∈ C i} := by
-    simpa [ψ₁, preimage_rect_future (X:=X) m m r B C]
+    simp [ψ₁, preimage_rect_future (X:=X) m m r B C]
   have hpre₂ :
       ψ₂ ⁻¹' (B ×ˢ cylinder (α:=α) r C)
         = {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + 1 + i.1) ω ∈ C i} := by
-    simpa [ψ₂, preimage_rect_future (X:=X) k m r B C]
+    simp [ψ₂, preimage_rect_future (X:=X) k m r B C]
   have hfd :
     μ {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
       =
@@ -3360,7 +3360,7 @@ lemma tail_factorization_from_future
   -- Strategy: Use reverse martingale convergence for the LHS
   -- The future filtration decreases to the tail σ-algebra, so reverse martingale
   -- convergence gives: μ[f | futureFiltration X m] → μ[f | tailSigma X] ae
-  
+
   -- LHS reverse martingale convergence for the product
   have h_lhs_conv : ∀ᵐ ω ∂μ,
       Tendsto (fun m => μ[indProd X r C | futureFiltration X m] ω)
@@ -3369,7 +3369,7 @@ lemma tail_factorization_from_future
     -- Apply reverse martingale convergence (from mathlib or Martingale.lean)
     -- tailSigma X = ⨅ m, futureFiltration X m
     sorry  -- TODO: Apply condexp_tendsto_tail or similar
-  
+
   -- RHS convergence: product of convergent sequences
   have h_rhs_conv : ∀ᵐ ω ∂μ,
       Tendsto (fun m => ∏ i : Fin r,
@@ -3381,7 +3381,7 @@ lemma tail_factorization_from_future
     have h_ae := ae_all_iff.mpr h_rev
     filter_upwards [h_ae] with ω hω
     exact tendsto_finset_prod _ (fun i _ => hω i)
-  
+
   -- Both LHS and RHS converge, and they're equal at each finite level for large m
   -- Therefore their limits are equal
   have h_eq_ae : ∀ᵐ ω ∂μ,
@@ -3394,12 +3394,21 @@ lemma tail_factorization_from_future
           = (∏ i : Fin r,
               μ[Set.indicator (C i) (fun _ => (1 : ℝ)) ∘ (X 0) | futureFiltration X m] ω) := by
       -- Convert the ae hypothesis h_fact to a pointwise statement
-      sorry  -- TODO: Use ae_all_iff or similar to convert sequence of ae to ae sequence
-    
+      -- h_fact : ∀ m ≥ r, (ae equality)
+      -- We need: ∀ᵐ ω, ∀ m ≥ r, (pointwise equality at ω)
+      --
+      -- Strategy: Since {m : ℕ | m ≥ r} is countable, we can take the intersection
+      -- of countably many full-measure sets. The result is:
+      -- - Use a lemma like `ae_ball` or `ae_all` for countable index sets
+      -- - The subtype {m // m ≥ r} is countable
+      -- - Apply h_fact m hm for each such m to get the ae set
+      -- - Combine using filter_upwards or countable intersection
+      sorry  -- TODO: Countable ae intersection - needs mathlib API like ae_ball or Filter.iInter_mem
+
     filter_upwards [h_lhs_conv, h_rhs_conv, h_fact_large] with ω hlhs hrhs hfact
     -- At ω, both sequences converge and are eventually equal, so limits are equal
     exact tendsto_nhds_unique hlhs (hrhs.congr' (eventually_atTop.mpr ⟨r, hfact⟩))
-  
+
   exact h_eq_ae
 
 /-! ### Directing measure construction
@@ -3437,7 +3446,7 @@ noncomputable def directingMeasure_of_contractable
   -- 3. Prove probability: κ ω is a probability measure, X 0 is measurable
   -- 4. Prove CE property: Use condExp_ae_eq_integral_condExpKernel and integral_map
   -- 5. Prove measurability: Use Kernel.measurable_coe composed with map
-  
+
   -- Need StandardBorelSpace Ω for condExpKernel to exist
   -- This should be added as a hypothesis or derived from StandardBorelSpace α
   sorry  -- TODO: Complete kernel construction using ProbabilityTheory.condExpKernel
@@ -3491,7 +3500,7 @@ lemma finite_product_formula
       = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) := by
   classical
   -- **Proof outline:**
-  -- 
+  --
   -- **Step 1:** Prove for rectangles using the factorization machinery
   -- For measurable sets C : Fin m → Set α, prove:
   --   μ {ω | ∀ i, X (k i) ω ∈ C i} = ∫ ω, ∏ i, (ν ω) (C i) ∂μ
@@ -3506,7 +3515,7 @@ lemma finite_product_formula
   -- Use π-λ theorem (monotone class): rectangles form a π-system that generates
   -- the product σ-algebra, and equality of measures on a generating π-system
   -- implies equality of measures.
-  
+
   sorry  -- TODO: Apply finite_level_factorization + tail_factorization_from_future + π-λ theorem
 
 /-!
