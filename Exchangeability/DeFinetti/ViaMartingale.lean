@@ -107,6 +107,7 @@ variable {β : Type*} [MeasurableSpace β]
 /-- Shift a sequence by dropping the first `d` entries. -/
 def shiftSeq (d : ℕ) (f : ℕ → β) : ℕ → β := fun n => f (n + d)
 
+omit [MeasurableSpace β] in
 @[simp]
 lemma shiftSeq_apply {d : ℕ} (f : ℕ → β) (n : ℕ) :
     shiftSeq d f n = f (n + d) := rfl
@@ -171,7 +172,7 @@ lemma orderEmbOfFin_strictMono {s : Finset ℕ} :
 lemma orderEmbOfFin_mem {s : Finset ℕ} {i : Fin s.card} :
     s.orderEmbOfFin rfl i ∈ s := by
   classical
-  simpa using Finset.orderEmbOfFin_mem (s:=s) (h:=rfl) i
+  simp [Finset.orderEmbOfFin_mem (s:=s) (h:=rfl) i]
 
 lemma orderEmbOfFin_surj {s : Finset ℕ} {x : ℕ} (hx : x ∈ s) :
     ∃ i : Fin s.card, s.orderEmbOfFin rfl i = x := by
@@ -293,6 +294,7 @@ lemma shiftProcess_apply (X : ℕ → Ω → α) (m n ω) :
 abbrev revFiltration (X : ℕ → Ω → α) (m : ℕ) : MeasurableSpace Ω :=
   MeasurableSpace.comap (shiftRV X m) inferInstance
 
+omit [MeasurableSpace Ω] in
 @[simp]
 lemma revFiltration_zero (X : ℕ → Ω → α) :
     revFiltration X 0 = MeasurableSpace.comap (path X) inferInstance := by
@@ -418,8 +420,7 @@ lemma contractable_dist_eq_on_first_r_tail
       Nat.add_lt_add_left this m
   have hm_lt : ∀ i, m < f i := by
     intro i
-    have : 0 < i.1 + 1 := Nat.succ_pos _
-    simpa [f] using Nat.lt_add_of_pos_right this
+    simp [f]
   have hk_lt : ∀ i, k < f i := fun i => lt_of_le_of_lt hk (hm_lt i)
   let s₁ : Fin (r+1) → ℕ := Fin.cases m f
   let s₂ : Fin (r+1) → ℕ := Fin.cases k f
