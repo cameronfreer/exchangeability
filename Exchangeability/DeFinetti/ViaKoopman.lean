@@ -938,9 +938,7 @@ private lemma condexp_precomp_iterate_eq
 
 /-! ### Lp norm placeholder -/
 
-/-- Placeholder for L^p seminorm until correct mathlib API is found.
-**TODO**: Replace with actual `MeasureTheory.snorm` or equivalent from mathlib. -/
-axiom snorm {Ω : Type*} [MeasurableSpace Ω] (f : Ω → ℝ) (p : ℝ≥0∞) (μ : Measure Ω) : ℝ≥0∞
+/-! ### Lp seminorm: use mathlib's `MeasureTheory.snorm` -/
 
 /-! ### Conditional expectation linearity helpers -/
 
@@ -982,30 +980,29 @@ private lemma integrable_of_bounded_measurable
     simpa [Real.norm_eq_abs] using hf_bd ω
   exact HasFiniteIntegral.of_bounded h_bd
 
-/-- On a probability space, `‖f‖₁ ≤ ‖f‖₂`.  Version with real integral on the left.
-**Proof sketch**: Uses `snorm_le_snorm_of_exponent_le` for 1 ≤ 2 on probability spaces,
-then applies `ENNReal.toReal_mono` and rewrites `snorm 1` as the L¹ integral.
+/-- On a probability space, `‖f‖₁ ≤ ‖f‖₂`. Version with real integral on the left.
+We assume `MemLp f 2 μ` so the right-hand side is finite; this matches all uses below
+where the function is bounded (hence in L²).
 -/
 private lemma snorm_one_le_snorm_two_toReal
     {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (f : Ω → ℝ) (hf : Integrable f μ) :
-    (∫ ω, |f ω| ∂μ) ≤ (snorm f 2 μ).toReal := by
-  /-
-  Step 1: `snorm 1 ≤ snorm 2` in ℝ≥0∞
-  have h12 : MeasureTheory.snorm f 1 μ ≤ MeasureTheory.snorm f 2 μ := by
-    have hle : (1 : ℝ≥0∞) ≤ 2 := by norm_num
-    simpa using MeasureTheory.snorm_le_snorm_of_exponent_le (μ := μ) (f := f) hle
-  
-  Step 2: take `toReal` and rewrite `snorm 1` as the L¹ integral
-  have hreal : (MeasureTheory.snorm f 1 μ).toReal = ∫ ω, |f ω| ∂μ := by
-    simpa [MeasureTheory.snorm, ENNReal.one_toReal, hf.norm.integral_coe_fn]
-      using MeasureTheory.snorm_one_toReal_eq_integral_norm (μ := μ) (f := f) hf
-  
-  have hmono := ENNReal.toReal_mono h12
-  simpa [hreal] using hmono
-  -/
-  -- Temporarily using admit until our snorm axiom is replaced with mathlib's full API
-  admit
+    (f : Ω → ℝ) (hL1 : Integrable f μ) (hL2 : MemLp f 2 μ) :
+    (∫ ω, |f ω| ∂μ) ≤ (MeasureTheory.snorm f 2 μ).toReal := by
+  -- `snorm 1 ≤ snorm 2` on probability spaces
+  have h12 : (1 : ℝ≥0∞) ≤ 2 := by simp
+  have hle : MeasureTheory.snorm f 1 μ ≤ MeasureTheory.snorm f 2 μ :=
+    MeasureTheory.snorm_le_snorm_of_exponent_le (μ := μ) (f := f) h12
+  -- Convert to a real inequality via `toReal`, knowing `‖f‖₂ < ∞`
+  have hfin₂ : MeasureTheory.snorm f 2 μ ≠ ∞ := by
+    exact (ne_of_lt (MeasureTheory.memLp_iff_snorm_lt_top.mp hL2))
+  have hmono := ENNReal.toReal_mono hle hfin₂
+  -- Rewrite `‖f‖₁` as an ordinary integral
+  have h₁ :
+      (MeasureTheory.snorm f 1 μ).toReal = ∫ ω, ‖f ω‖ ∂μ := by
+    simpa using
+      (MeasureTheory.snorm_one_toReal_eq_integral_norm (μ := μ) (f := f) hL1)
+  -- For reals, `‖·‖ = |·|`
+  simpa [h₁, Real.norm_eq_abs] using hmono
 
 /-- If `f → 0` in `ℝ≥0∞`, then `(toReal ∘ f) → 0` in `ℝ`. -/
 private lemma ennreal_tendsto_toReal_zero {ι : Type*}
