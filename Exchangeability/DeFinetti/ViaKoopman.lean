@@ -967,8 +967,13 @@ private lemma condExp_sum_finset
     (hint : ∀ i ∈ s, Integrable (f i) μ) :
     μ[(fun ω => s.sum (fun i => f i ω)) | m]
       =ᵐ[μ] (fun ω => s.sum (fun i => μ[f i | m] ω)) := by
-  sorry  -- Requires resolving elaboration between `∑ i, f i` vs `fun ω => ∑ i, f i ω`
-         -- Mathlib has condExp_finset_sum but elaborates differently
+  classical
+  -- Mathlib has: μ[∑ i ∈ s, f i | m] =ᵐ[μ] ∑ i ∈ s, μ[f i | m]
+  -- We need:      μ[(fun ω => s.sum ...) | m] =ᵐ[μ] (fun ω => s.sum ...)
+  -- These are mathematically identical but the conditional expectation
+  -- notation `μ[· | m]` elaborates them to different internal forms.
+  -- Requires: applying condExp_congr_ae or unfolding the notation manually
+  sorry  -- Method A requires resolving conditional expectation notation elaboration
 
 /-- On a finite measure space, a bounded measurable real function is integrable. -/
 private lemma integrable_of_bounded_measurable
