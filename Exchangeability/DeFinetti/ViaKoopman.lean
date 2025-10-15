@@ -1464,7 +1464,12 @@ private theorem h_tower_of_lagConst
         refine Integrable.mul ?_ ?_
         · exact integrable_of_bounded_measurable
             (hf_meas.comp (measurable_pi_apply 0)) Cf (fun ω => hCf (ω 0))
-        · sorry -- Y = CE[g(ω 0)] is integrable (CE preserves integrability)
+        · -- Y = CE[g(ω 0)] is integrable (CE preserves integrability)
+          have hg_0_int : Integrable (fun ω => g (ω 0)) μ := by
+            obtain ⟨Cg, hCg⟩ := hg_bd
+            exact integrable_of_bounded_measurable
+              (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
+          exact integrable_condExp.mpr hg_0_int
       -- Apply condExp_L1_lipschitz
       convert condExp_L1_lipschitz (m := m) (hm := shiftInvariantSigma_le (α := α))
         hZ_int hW_int using 2
@@ -1485,9 +1490,64 @@ private theorem h_tower_of_lagConst
         exact mul_le_mul_of_nonneg_right (hCf (ω 0)) (abs_nonneg _)
       -- Both sides are integrable
       have hint_lhs : Integrable (fun ω => |f (ω 0) * (A n ω - Y ω)|) μ := by
-        sorry -- |f * (A_n - Y)| integrable (from product of bounded & integrable)
+        -- |f * (A_n - Y)| integrable (from product of bounded & integrable)
+        apply Integrable.abs
+        refine Integrable.mul ?_ ?_
+        · -- f(ω 0) is integrable (bounded)
+          exact integrable_of_bounded_measurable
+            (hf_meas.comp (measurable_pi_apply 0)) Cf (fun ω => hCf (ω 0))
+        · -- A_n - Y is integrable (from Block 3, line 1373+)
+          have hA_int : Integrable (A n) μ := by
+            obtain ⟨Cg, hCg⟩ := hg_bd
+            refine integrable_of_bounded_measurable ?_ Cg ?_
+            · exact Measurable.div_const 
+                (Measurable.finset_sum _ (fun j _ => hg_meas.comp (measurable_pi_apply j)))
+                _
+            · intro ω
+              simp [A]
+              calc |1 / (↑n + 1) * ∑ j ∈ Finset.range (n + 1), g (ω j)|
+                ≤ (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), Cg := by
+                  rw [abs_mul, abs_div, abs_one, one_div]; simp [abs_of_nonneg]
+                  refine mul_le_mul_of_nonneg_left ?_ (by positivity)
+                  calc |∑ j ∈ Finset.range (n + 1), g (ω j)|
+                    ≤ ∑ j ∈ Finset.range (n + 1), |g (ω j)| := abs_sum_le_sum_abs _ _
+                  _ ≤ ∑ j ∈ Finset.range (n + 1), Cg := Finset.sum_le_sum (fun j _ => hCg (ω j))
+                _ = Cg := by simp [Finset.sum_const, Finset.card_range]; field_simp; ring
+          have hY_int : Integrable Y μ := by
+            have hg_0_int : Integrable (fun ω => g (ω 0)) μ := by
+              obtain ⟨Cg, hCg⟩ := hg_bd
+              exact integrable_of_bounded_measurable
+                (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
+            exact integrable_condExp.mpr hg_0_int
+          exact hA_int.sub hY_int
       have hint_rhs : Integrable (fun ω => Cf * |A n ω - Y ω|) μ := by
-        sorry -- Cf * |A_n - Y| integrable (constant times integrable)
+        -- Cf * |A_n - Y| integrable (constant times integrable)
+        apply Integrable.const_mul
+        apply Integrable.abs
+        -- A_n - Y is integrable (same as above)
+        have hA_int : Integrable (A n) μ := by
+          obtain ⟨Cg, hCg⟩ := hg_bd
+          refine integrable_of_bounded_measurable ?_ Cg ?_
+          · exact Measurable.div_const 
+              (Measurable.finset_sum _ (fun j _ => hg_meas.comp (measurable_pi_apply j)))
+              _
+          · intro ω
+            simp [A]
+            calc |1 / (↑n + 1) * ∑ j ∈ Finset.range (n + 1), g (ω j)|
+              ≤ (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), Cg := by
+                rw [abs_mul, abs_div, abs_one, one_div]; simp [abs_of_nonneg]
+                refine mul_le_mul_of_nonneg_left ?_ (by positivity)
+                calc |∑ j ∈ Finset.range (n + 1), g (ω j)|
+                  ≤ ∑ j ∈ Finset.range (n + 1), |g (ω j)| := abs_sum_le_sum_abs _ _
+                _ ≤ ∑ j ∈ Finset.range (n + 1), Cg := Finset.sum_le_sum (fun j _ => hCg (ω j))
+              _ = Cg := by simp [Finset.sum_const, Finset.card_range]; field_simp; ring
+        have hY_int : Integrable Y μ := by
+          have hg_0_int : Integrable (fun ω => g (ω 0)) μ := by
+            obtain ⟨Cg, hCg⟩ := hg_bd
+            exact integrable_of_bounded_measurable
+              (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
+          exact integrable_condExp.mpr hg_0_int
+        exact hA_int.sub hY_int
       -- Apply integral_mono_ae
       exact integral_mono_ae hint_lhs hint_rhs hpt
 
