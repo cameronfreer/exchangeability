@@ -2065,18 +2065,76 @@ lemma conditional_law_eq_directingMeasure
 
 /-! ### Finite-dimensional product formula -/
 
-/-- Finite-dimensional product formula for conditionally i.i.d. sequences (formerly Axiom 6).
+/-- **Finite product formula for the first m coordinates** (identity case).
+
+This is the core case where we prove the product formula for `(X₀, X₁, ..., X_{m-1})`.
+The general case for strictly monotone subsequences reduces to this via contractability.
+
+**Important**: The statement with arbitrary `k : Fin m → ℕ` is **false** if `k` has duplicates
+(e.g., `(X₀, X₀)` is not an independent product unless ν is Dirac). We avoid this by:
+1. Proving the identity case here (no index map)
+2. Reducing strict-monotone subsequences to the identity case via contractability
 
 **Proof strategy:**
-1. Use `finite_level_factorization` to get factorization at future levels
-2. Apply `tail_factorization_from_future` with reverse martingale convergence
-   (`condexp_tendsto_tail`) to lift to the tail σ-algebra
-3. Use identical conditional laws (from `conditional_law_eq_directingMeasure`)
-   to replace each `Xᵢ` with `X₀` in the product
-4. Extend from rectangles to all measurable sets via π-system/monotone class
-   (rectangles generate the product σ-algebra)
+1. Show equality on rectangles using factorization machinery
+2. Extend from rectangles to full σ-algebra via π-λ theorem -/
+lemma finite_product_formula_id
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+    (X : ℕ → Ω → α)
+    (hX : Contractable μ X)
+    (hX_meas : ∀ n, Measurable (X n))
+    (ν : Ω → Measure α)
+    (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
+    (hν_meas : ∀ B : Set α, MeasurableSet B → Measurable (fun ω => ν ω B))
+    (hν_law : ∀ n B, MeasurableSet B →
+        (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X])
+    (m : ℕ) :
+    Measure.map (fun ω => fun i : Fin m => X i ω) μ
+      = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) := by
+  classical
+  -- TODO: Full implementation following the detailed proof strategy:
+  -- 1. Define π-system of rectangles
+  -- 2. Show measures agree on rectangles using:
+  --    - finite_level_factorization
+  --    - tail_factorization_from_future
+  --    - Tower property + hν_law
+  -- 3. Extend via π-λ theorem
+  sorry
 
-This is the key step that assembles all the machinery. -/
+/-- **Finite product formula for strictly monotone subsequences**.
+
+For any strictly increasing subsequence `k`, the joint law of `(X_{k(0)}, ..., X_{k(m-1)})`
+equals the independent product under the directing measure ν.
+
+This reduces to the identity case via contractability. -/
+lemma finite_product_formula_strictMono
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+    (X : ℕ → Ω → α)
+    (hX : Contractable μ X)
+    (hX_meas : ∀ n, Measurable (X n))
+    (ν : Ω → Measure α)
+    (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
+    (hν_meas : ∀ B : Set α, MeasurableSet B → Measurable (fun ω => ν ω B))
+    (hν_law : ∀ n B, MeasurableSet B →
+        (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X])
+    (m : ℕ) (k : Fin m → ℕ) (hk : StrictMono k) :
+    Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
+      = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) := by
+  classical
+  -- Contractability gives equality with the identity map
+  have hmap := hX m k hk
+  calc
+    Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
+        = Measure.map (fun ω => fun i : Fin m => X i ω) μ := by simpa using hmap
+    _   = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) :=
+          finite_product_formula_id X hX hX_meas ν hν_prob hν_meas hν_law m
+
+/-- **Finite product formula** (wrapper with StrictMono requirement).
+
+This is the main statement: for strictly monotone index sequences, the joint law
+is the independent product. This is what we need for de Finetti's theorem. -/
 lemma finite_product_formula
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
@@ -2088,58 +2146,10 @@ lemma finite_product_formula
     (hν_meas : ∀ B : Set α, MeasurableSet B → Measurable (fun ω => ν ω B))
     (hν_law : ∀ n B, MeasurableSet B →
         (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X])
-    (m : ℕ) (k : Fin m → ℕ) :
+    (m : ℕ) (k : Fin m → ℕ) (hk : StrictMono k) :
     Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
-      = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) := by
-  classical
-  -- **Proof outline:**
-  --
-  -- **Step 1:** Prove for rectangles using the factorization machinery
-  -- For measurable sets C : Fin m → Set α, prove:
-  --   μ {ω | ∀ i, X (k i) ω ∈ C i} = ∫ ω, ∏ i, (ν ω) (C i) ∂μ
-  --
-  -- Sub-steps:
-  -- a) Apply finite_level_factorization at sufficiently large future level
-  -- b) Apply tail_factorization_from_future with reverse martingale convergence
-  -- c) Use tower property: integrate both sides to get the measure equality
-  -- d) Use hν_law to replace CE[1_{X_n ∈ C}|tail] with (ν ω) C
-  --
-  -- **Step 2:** Extend from rectangles to full σ-algebra
-  -- Use π-λ theorem (monotone class): rectangles form a π-system that generates
-  -- the product σ-algebra, and equality of measures on a generating π-system
-  -- implies equality of measures.
-
-  sorry
-  -- Proof outline (requires ~50 lines of technical work):
-  --
-  -- Use `Measure.ext` or `Measure.ext_of_generateFrom_of_iUnion` to reduce to rectangles.
-  --
-  -- **For each rectangle** {f | ∀ i, f i ∈ C i}:
-  --
-  -- 1. **Compute LHS**: pushforward measure
-  --    μ.map (fun ω => fun i => X (k i) ω) {f | ∀ i, f i ∈ C i}
-  --    = μ {ω | ∀ i, X (k i) ω ∈ C i}
-  --
-  -- 2. **Compute RHS**: bind/integral
-  --    μ.bind (fun ω => Measure.pi (fun _ => ν ω)) {f | ∀ i, f i ∈ C i}
-  --    = ∫ ω, ∏ i, (ν ω (C i)).toReal ∂μ   (after ENNReal.toReal conversion)
-  --
-  -- 3. **Main work**: Show these are equal using the factorization machinery
-  --    a) Let m' := max(k i) + 1
-  --    b) Use contractability to relate {ω | ∀ i, X (k i) ω ∈ C i} to indProd
-  --    c) Apply `finite_level_factorization` at m' to get future-level factorization
-  --    d) Apply `tail_factorization_from_future` to lift to tail σ-algebra
-  --    e) Integrate both sides: ∫ μ[f|tail] = ∫ f (tower property)
-  --    f) Cylinder measure equals ∫ indProd (indicator integral formula)
-  --    g) Replace μ[1_{X₀∈C}|tail] with (ν ω) C using `hν_law`
-  --    h) Combine to get: μ {cylinder} = ∫ ∏ (ν ω C_i)
-  --
-  -- Technical lemmas needed:
-  -- - ENNReal ↔ ℝ conversions for probability measures
-  -- - Measure.bind API for pi measures (Measure.pi_pi)
-  -- - integral_condExp (tower property)
-  -- - ae_all_iff for finite products of ae sets
-  -- - Reindexing cylinders via contractability
+      = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) :=
+  finite_product_formula_strictMono X hX hX_meas ν hν_prob hν_meas hν_law m k hk
 
 /-!
 ## Notes
