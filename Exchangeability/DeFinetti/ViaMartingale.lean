@@ -2995,9 +2995,17 @@ lemma tail_factorization_from_future
       Tendsto (fun m => μ[indProd X r C | futureFiltration X m] ω)
               atTop
               (𝓝 (μ[indProd X r C | tailSigma X] ω)) := by
-    -- Apply reverse martingale convergence (from mathlib or Martingale.lean)
-    -- tailSigma X = ⨅ m, futureFiltration X m
-    sorry  -- TODO: Apply condexp_tendsto_tail or similar
+    -- Apply Lévy's reverse martingale convergence directly
+    have h_conv := Exchangeability.Probability.condExp_tendsto_iInf
+      (μ := μ)
+      (𝔽 := futureFiltration X)
+      (h_filtration := futureFiltration_antitone X)
+      (h_le := fun n => futureFiltration_le X n hX)
+      (f := indProd X r C)
+      (h_f_int := indProd_integrable X r C hX hC)
+    -- Convert ⨅ n, futureFiltration X n to tailSigma X
+    simp only [← tailSigmaFuture_eq_iInf, tailSigmaFuture_eq_tailSigma] at h_conv
+    exact h_conv
 
   -- RHS convergence: product of convergent sequences
   have h_rhs_conv : ∀ᵐ ω ∂μ,
@@ -3022,21 +3030,24 @@ lemma tail_factorization_from_future
         μ[indProd X r C | futureFiltration X m] ω
           = (∏ i : Fin r,
               μ[Set.indicator (C i) (fun _ => (1 : ℝ)) ∘ (X 0) | futureFiltration X m] ω) := by
-      -- Convert the ae hypothesis h_fact to a pointwise statement
-      -- h_fact : ∀ m ≥ r, (ae equality)
-      -- We need: ∀ᵐ ω, ∀ m ≥ r, (pointwise equality at ω)
-      --
-      -- Strategy: Since {m : ℕ | m ≥ r} is countable, we can take the intersection
-      -- of countably many full-measure sets. The result is:
-      -- - Use a lemma like `ae_ball` or `ae_all` for countable index sets
-      -- - The subtype {m // m ≥ r} is countable
-      -- - Apply h_fact m hm for each such m to get the ae set
-      -- - Combine using filter_upwards or countable intersection
-      sorry  -- TODO: Countable ae intersection - needs mathlib API like ae_ball or Filter.iInter_mem
+      -- Countable intersection of ae sets
+      -- For each m ≥ r, we have an ae set where equality holds
+      -- Take countable intersection indexed by {m // m ≥ r}
+      have h_count_inter : ∀ᵐ ω ∂μ, ∀ m : {m // m ≥ r},
+          μ[indProd X r C | futureFiltration X m] ω
+            = (∏ i : Fin r,
+                μ[Set.indicator (C i) (fun _ => (1 : ℝ)) ∘ (X 0) | futureFiltration X m] ω) := by
+        -- Use ae_all_iff for countable intersection
+        rw [ae_all_iff]
+        intro ⟨m, hm⟩
+        exact h_fact m hm
+      -- Convert from subtype to ∀ m ≥ r
+      filter_upwards [h_count_inter] with ω hω m hm
+      exact hω ⟨m, hm⟩
 
     filter_upwards [h_lhs_conv, h_rhs_conv, h_fact_large] with ω hlhs hrhs hfact
     -- At ω, both sequences converge and are eventually equal, so limits are equal
-    exact tendsto_nhds_unique hlhs (hrhs.congr' (eventually_atTop.mpr ⟨r, hfact⟩))
+    exact tendsto_nhds_unique hlhs (hrhs.congr' (eventually_atTop.mpr ⟨r, fun m hm => (hfact m hm).symm⟩))
 
   exact h_eq_ae
 
