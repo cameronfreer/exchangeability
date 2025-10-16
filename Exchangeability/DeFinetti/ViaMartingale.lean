@@ -12,6 +12,7 @@ import Exchangeability.ConditionallyIID
 import Exchangeability.Probability.CondExp
 import Exchangeability.Probability.Martingale
 import Exchangeability.DeFinetti.MartingaleHelpers
+import Exchangeability.DeFinetti.CommonEnding
 
 /-!
 # de Finetti's Theorem via Reverse Martingales
@@ -2368,13 +2369,9 @@ lemma finite_product_formula_id
           = ∫⁻ ω, (Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C) ∂μ := by
         -- Need AEMeasurable kernel
         have h_ae_meas : AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ := by
-          sorry  -- TODO: aemeasurable_measure_pi from CommonEnding.lean
-                 -- This is a non-trivial proof requiring:
-                 -- 1. Show measurability on rectangles (product formula)
-                 -- 2. Extend to full σ-algebra via π-λ induction
-                 -- The complete 50-line proof is in CommonEnding.lean:538-590
-                 -- Uses: rectangles_generate_pi_sigma, Measure.pi_pi, induction_on_inter
-                 -- Requires: hν_meas and hν_prob
+          sorry  -- TODO: Use aemeasurable_measure_pi from CommonEnding.lean
+                 -- The lemma exists but may need namespace or import fix
+                 -- Proof: aemeasurable_measure_pi ν hν_prob hν_meas
         -- Apply Measure.bind_apply
         refine Measure.bind_apply ?_ h_ae_meas
         -- Set.univ.pi C is measurable
@@ -2396,12 +2393,14 @@ lemma finite_product_formula_id
               have h_finite : ∀ ω, (∏ i : Fin m, ν ω (C i)) ≠ ⊤ := by
                 intro ω
                 sorry  -- TODO: Product of finite ENNReals is finite
-                       -- Each ν ω (C i) ≠ ⊤ by measure_ne_top
-                       -- Need lemma: ∏ i, a i ≠ ⊤ when all a i ≠ ⊤
-              sorry  -- TODO: Apply integral_toReal or lintegral_coe_eq_integral
-                     -- Have: h_finite shows product is finite everywhere
-                     -- Need: ∫⁻ ω, f ω = ENNReal.ofReal (∫ ω, (f ω).toReal) when f ω ≠ ∞
-                     -- Mathlib should have: integral_toReal or ENNReal.toReal_lintegral
+                       -- Each ν ω (C i) < ∞ by measure_ne_top
+                       -- Need: ∏ (a_i < ∞) → ∏ a_i < ∞
+                       -- Should use ENNReal product lemmas
+              sorry  -- TODO: lintegral ↔ integral conversion
+                     -- Goal: ∫⁻ ω, (∏ i, ν ω (C i)) = ENNReal.ofReal (∫ ω, (∏ i, (ν ω (C i)).toReal))
+                     -- Have: h_finite shows ∏ ν ω (C i) ≠ ⊤ for all ω
+                     -- Strategy: Use lintegral_coe_eq_integral or integral_eq_lintegral_of_nonneg_ae
+                     -- The product is nonnegative, finite, and integrable (bounded by 1)
     
     -- Combine all pieces: hL = ... = h_int_tail = (by h_swap) = ... = hR
     calc (Measure.map (fun ω => fun i : Fin m => X i ω) μ) (Set.univ.pi C)
@@ -2430,7 +2429,7 @@ lemma finite_product_formula_id
     constructor
     -- Need AEMeasurable kernel (same as h_ae_meas from earlier)
     have h_ae_meas : AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ := by
-      sorry  -- Same as line 2371
+      sorry  -- Same as line 2371 - use aemeasurable_measure_pi ν hν_prob hν_meas
     rw [Measure.bind_apply MeasurableSet.univ h_ae_meas]
     -- Each (pi fun _ => ν ω) is probability measure with measure univ = 1
     conv_lhs => arg 2; ext ω; rw [measure_univ]
