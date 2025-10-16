@@ -2246,7 +2246,7 @@ lemma finite_product_formula_id
       rcases hs with ⟨C, hC, rfl⟩
       -- Rectangle is finite intersection of coordinate preimages
       have h_eq : Set.univ.pi C = ⋂ i : Fin m, (fun f : Fin m → α => f i) ⁻¹' (C i) := by
-        ext f; simp [Set.mem_univ_pi, Set.mem_iInter]
+        ext f; simp [Set.mem_iInter]
       rw [h_eq]
       -- Finite intersection is measurable in generated σ-algebra
       apply MeasurableSet.iInter
@@ -2426,9 +2426,13 @@ lemma finite_product_formula_id
     exact measure_univ
   have hprob2 : IsProbabilityMeasure (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) := by
     constructor
-    sorry  -- TODO: Show (bind μ κ) univ = 1
-           -- Use: bind_apply with univ, then ∫⁻ ω, κ ω univ = ∫⁻ ω, 1 = 1
-           -- Each κ ω is probability measure, so κ ω univ = 1  
+    -- Need AEMeasurable kernel (same as h_ae_meas from earlier)
+    have h_ae_meas : AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ := by
+      sorry  -- Same as line 2371
+    rw [Measure.bind_apply MeasurableSet.univ h_ae_meas]
+    -- Each (pi fun _ => ν ω) is probability measure with measure univ = 1
+    conv_lhs => arg 2; ext ω; rw [measure_univ]
+    simp [lintegral_const, measure_univ]  
   -- Apply π-λ theorem: measures agreeing on π-system are equal
   have h_univ : (Measure.map (fun ω => fun i : Fin m => X i ω) μ) Set.univ
       = (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) Set.univ := by
