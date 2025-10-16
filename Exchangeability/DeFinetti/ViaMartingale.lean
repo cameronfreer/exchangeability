@@ -2138,7 +2138,18 @@ lemma finite_product_formula_id
           atTop
           (𝓝 (μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | tailSigma X] ω))) := by
       intro i
-      sorry  -- TODO: Apply condExp_tendsto_iInf as in tail_factorization_from_future
+      -- Apply Lévy's downward theorem for conditional expectations
+      have := Exchangeability.Probability.condExp_tendsto_iInf
+        (μ := μ) (𝔽 := futureFiltration X)
+        (h_filtration := futureFiltration_antitone X)
+        (h_le := fun n => futureFiltration_le X n hX_meas)
+        (f := (Set.indicator (C i) (fun _ => (1:ℝ))) ∘ X 0)
+        (h_f_int := by
+          simpa using
+            Exchangeability.Probability.integrable_indicator_comp
+              (μ := μ) (X := X 0) (hX := hX_meas 0) (hB := hC i))
+      -- Rewrite ⨅ futureFiltration to tailSigma
+      simpa [← tailSigmaFuture_eq_iInf, tailSigmaFuture_eq_tailSigma] using this
     
     -- Tail factorization
     have h_tail : μ[indProd X m C | tailSigma X] =ᵐ[μ]
@@ -2150,13 +2161,21 @@ lemma finite_product_formula_id
     have h_int_tail : ∫ ω, indProd X m C ω ∂μ
         = ∫ ω, (∏ i : Fin m,
             μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | tailSigma X] ω) ∂μ := by
-      sorry  -- TODO: Use integral_condExp and h_tail
+      sorry  -- TODO: Tower property ∫ f = ∫ μ[f|tail] + use h_tail for a.e. equality
+             -- This is standard:  integral_condExp + EventuallyEq.integral_eq
     
     -- Replace each CE with ν ω (C i).toReal using hν_law
     have h_swap : (fun ω => ∏ i : Fin m,
           μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | tailSigma X] ω)
         =ᵐ[μ] (fun ω => ∏ i : Fin m, (ν ω (C i)).toReal) := by
-      sorry  -- TODO: Use hν_law for each coordinate
+      -- Product of a.e. equal functions is a.e. equal
+      -- For each i, we have hν_law: (ν · (C i)).toReal =ᵐ μ[indicator | tail]
+      have h_each : ∀ i : Fin m,
+          (fun ω => μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | tailSigma X] ω)
+            =ᵐ[μ] (fun ω => (ν ω (C i)).toReal) :=
+        fun i => (hν_law 0 (C i) (hC i)).symm
+      -- Combine using finite product
+      sorry  -- TODO: Use ae_all_iff + Finset.prod_congr to get product equality
     
     -- RHS: bind measure on rectangle
     have hR : (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) (Set.univ.pi C)
