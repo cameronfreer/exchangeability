@@ -232,6 +232,7 @@ abbrev firstRSigma (X : ℕ → Ω → α) (r : ℕ) : MeasurableSpace Ω :=
 def firstRCylinder (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α) : Set Ω :=
   {ω | ∀ i : Fin r, X i ω ∈ C i}
 
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
 /-- As expected, the block cylinder is the preimage of a finite cylinder
    under the `firstRMap`. -/
 lemma firstRCylinder_eq_preimage_finCylinder
@@ -239,6 +240,7 @@ lemma firstRCylinder_eq_preimage_finCylinder
     firstRCylinder X r C
       = (firstRMap X r) ⁻¹' (finCylinder (α:=α) r C) := rfl
 
+omit [MeasurableSpace Ω] in
 /-- **Measurable in the first-`r` σ‑algebra.**
 If each `C i` is measurable in `α`, then the block cylinder is measurable in
 `firstRSigma X r` (no measurability assumptions on the `X i` are needed for this
@@ -281,6 +283,7 @@ lemma firstRSigma_le_ambient
   obtain ⟨t, ht, rfl⟩ := hs
   exact (measurable_firstRMap X r hX) ht
 
+omit [MeasurableSpace Ω] in
 /-- Stronger version: firstRSigma increases with r. -/
 lemma firstRSigma_mono
     (X : ℕ → Ω → α) {r s : ℕ} (hrs : r ≤ s) :
@@ -305,6 +308,7 @@ lemma firstRSigma_mono
   rw [h_comp, Set.preimage_comp]
   exact ⟨π ⁻¹' u, hπ hu, rfl⟩
 
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
 /-- The empty cylinder (r = 0) is the whole space. -/
 @[simp]
 lemma firstRCylinder_zero (X : ℕ → Ω → α) (C : Fin 0 → Set α) :
@@ -312,16 +316,19 @@ lemma firstRCylinder_zero (X : ℕ → Ω → α) (C : Fin 0 → Set α) :
   ext ω
   simp [firstRCylinder]
 
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
 /-- Cylinder membership characterization. -/
 lemma mem_firstRCylinder_iff (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α) (ω : Ω) :
     ω ∈ firstRCylinder X r C ↔ ∀ i : Fin r, X i ω ∈ C i :=
   Iff.rfl
 
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
 /-- firstRCylinder on universal sets is the whole space. -/
 lemma firstRCylinder_univ (X : ℕ → Ω → α) (r : ℕ) :
     firstRCylinder X r (fun _ => Set.univ) = Set.univ := by
   ext ω; simp [firstRCylinder]
 
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
 /-- Intersection of firstRCylinders equals coordinate-wise intersection. -/
 lemma firstRCylinder_inter (X : ℕ → Ω → α) {r : ℕ} {C D : Fin r → Set α} :
     firstRCylinder X r C ∩ firstRCylinder X r D = firstRCylinder X r (fun i => C i ∩ D i) := by
@@ -392,12 +399,14 @@ variable {α : Type*} [MeasurableSpace α]
 /-- Drop the first coordinate of a path. -/
 def drop (f : ℕ → α) : ℕ → α := shiftSeq (β:=α) 1 f
 
+omit [MeasurableSpace α] in
 @[simp] lemma drop_apply (f : ℕ → α) (n : ℕ) :
     drop f n = f (n + 1) := rfl
 
 lemma measurable_drop : Measurable (drop : (ℕ → α) → (ℕ → α)) := by
   simpa [drop] using (measurable_shiftSeq (β:=α) (d:=1))
 
+omit [MeasurableSpace α] in
 /-- `tailCylinder` is the preimage of a standard cylinder under `drop`. -/
 lemma tailCylinder_eq_preimage_cylinder
     {r : ℕ} {C : Fin r → Set α} :
@@ -408,9 +417,11 @@ lemma tailCylinder_eq_preimage_cylinder
   · simpa [tailCylinder, drop, shiftSeq, cylinder]
   · simpa [tailCylinder, drop, shiftSeq, cylinder]
 
+omit [MeasurableSpace α] in
 @[simp] lemma mem_cylinder_iff {r : ℕ} {C : Fin r → Set α} {f : ℕ → α} :
     f ∈ cylinder (α:=α) r C ↔ ∀ i : Fin r, f i ∈ C i := Iff.rfl
 
+omit [MeasurableSpace α] in
 @[simp] lemma mem_tailCylinder_iff {r : ℕ} {C : Fin r → Set α} {f : ℕ → α} :
     f ∈ tailCylinder (α:=α) r C ↔ ∀ i : Fin r, f (i.1 + 1) ∈ C i := Iff.rfl
 
@@ -420,22 +431,27 @@ lemma cylinder_measurable_set {r : ℕ} {C : Fin r → Set α}
     MeasurableSet (cylinder (α:=α) r C) :=
   cylinder_measurable hC
 
+omit [MeasurableSpace α] in
 /-- Empty cylinder is the whole space. -/
 @[simp] lemma cylinder_zero : cylinder (α:=α) 0 (fun _ => Set.univ) = Set.univ := by
   ext f; simp [cylinder]
 
+omit [MeasurableSpace α] in
 /-- Empty tail cylinder is the whole space. -/
 @[simp] lemma tailCylinder_zero' : tailCylinder (α:=α) 0 (fun _ => Set.univ) = Set.univ := by
   ext f; simp [tailCylinder]
 
+omit [MeasurableSpace α] in
 /-- Cylinder on universal sets is the whole space. -/
 lemma cylinder_univ {r : ℕ} : cylinder (α:=α) r (fun _ => Set.univ) = Set.univ := by
   ext f; simp [cylinder]
 
+omit [MeasurableSpace α] in
 /-- Tail cylinder on universal sets is the whole space. -/
 lemma tailCylinder_univ {r : ℕ} : tailCylinder (α:=α) r (fun _ => Set.univ) = Set.univ := by
   ext f; simp [tailCylinder]
 
+omit [MeasurableSpace α] in
 /-- Cylinders form intersections coordinate-wise. -/
 lemma cylinder_inter {r : ℕ} {C D : Fin r → Set α} :
     cylinder (α:=α) r C ∩ cylinder (α:=α) r D = cylinder (α:=α) r (fun i => C i ∩ D i) := by
