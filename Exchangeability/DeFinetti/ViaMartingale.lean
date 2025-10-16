@@ -2222,9 +2222,26 @@ lemma finite_product_formula_id
     have hL :
       (Measure.map (fun ω => fun i : Fin m => X i ω) μ) (Set.univ.pi C)
         = ENNReal.ofReal (∫ ω, indProd X m C ω ∂μ) := by
-      sorry  -- TODO: Preimage = firstRCylinder, then μ(firstRCylinder) = ∫ indicator
-             -- Use integral_indicator_const and indProd_eq_firstRCylinder_indicator
-             -- Then convert measure to ENNReal.ofReal of integral
+      -- Preimage of rectangle equals firstRCylinder
+      have hpre :
+        ((fun ω => fun i : Fin m => X i ω) ⁻¹' (Set.univ.pi C))
+          = firstRCylinder X m C := by
+        ext ω; simp [firstRCylinder]
+      -- indProd equals indicator of firstRCylinder
+      have hind := indProd_eq_firstRCylinder_indicator X m C
+      -- Measure equals integral via indicator
+      have h_meas_eq : μ (firstRCylinder X m C)
+          = ENNReal.ofReal (∫ ω, indProd X m C ω ∂μ) := by
+        sorry  -- TODO: Standard - for indicator of measurable set:
+               -- μ S = ENNReal.ofReal (∫ indicator S 1)
+               -- Use: indProd = indicator (firstRCylinder) and integral_indicator_one
+               -- Then: ENNReal.ofReal ((μ S).toReal) = μ S for finite measure
+      -- Apply to map measure
+      calc (Measure.map (fun ω => fun i : Fin m => X i ω) μ) (Set.univ.pi C)
+          = μ ((fun ω => fun i : Fin m => X i ω) ⁻¹' (Set.univ.pi C)) := by
+              sorry  -- TODO: Measure.map_apply with measurability
+        _ = μ (firstRCylinder X m C) := by rw [hpre]
+        _ = ENNReal.ofReal (∫ ω, indProd X m C ω ∂μ) := h_meas_eq
     
     -- Use factorization machinery
     have h_fact : ∀ M ≥ m,
