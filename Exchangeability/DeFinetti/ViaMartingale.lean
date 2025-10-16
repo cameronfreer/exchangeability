@@ -2392,13 +2392,16 @@ lemma finite_product_formula_id
         _ = ∫⁻ ω, (∏ i : Fin m, ν ω (C i)) ∂μ := by
               congr 1; ext ω; exact h_pi ω
         _ = ENNReal.ofReal (∫ ω, (∏ i : Fin m, (ν ω (C i)).toReal) ∂μ) := by
-              sorry  -- TODO: lintegral to integral conversion
-                     -- Mathematical content: ∫⁻ ω, (∏ i, ν ω (C i)) = ENNReal.ofReal (∫ ω, (∏ i, (ν ω (C i)).toReal))
-                     -- Key facts:
-                     -- 1. Product is nonnegative: ∀ ω, 0 ≤ (∏ i, (ν ω (C i)).toReal)
-                     -- 2. Product is finite a.e.: ∀ ω, (∏ i, ν ω (C i)) < ∞ (each factor ≤ 1)
-                     -- 3. Product is integrable (bounded by 1)
-                     -- Use: lintegral_coe_eq_integral or integral_toReal with ENNReal.ofReal
+              -- Convert lintegral to integral via toReal
+              have h_finite : ∀ ω, (∏ i : Fin m, ν ω (C i)) ≠ ⊤ := by
+                intro ω
+                sorry  -- TODO: Product of finite ENNReals is finite
+                       -- Each ν ω (C i) ≠ ⊤ by measure_ne_top
+                       -- Need lemma: ∏ i, a i ≠ ⊤ when all a i ≠ ⊤
+              sorry  -- TODO: Apply integral_toReal or lintegral_coe_eq_integral
+                     -- Have: h_finite shows product is finite everywhere
+                     -- Need: ∫⁻ ω, f ω = ENNReal.ofReal (∫ ω, (f ω).toReal) when f ω ≠ ∞
+                     -- Mathlib should have: integral_toReal or ENNReal.toReal_lintegral
     
     -- Combine all pieces: hL = ... = h_int_tail = (by h_swap) = ... = hR
     calc (Measure.map (fun ω => fun i : Fin m => X i ω) μ) (Set.univ.pi C)
