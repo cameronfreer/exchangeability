@@ -2079,6 +2079,7 @@ The general case for strictly monotone subsequences reduces to this via contract
 1. Show equality on rectangles using factorization machinery
 2. Extend from rectangles to full σ-algebra via π-λ theorem -/
 lemma finite_product_formula_id
+    [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
     (X : ℕ → Ω → α)
@@ -2093,14 +2094,80 @@ lemma finite_product_formula_id
     Measure.map (fun ω => fun i : Fin m => X i ω) μ
       = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) := by
   classical
-  -- TODO: Full implementation following the detailed proof strategy:
-  -- 1. Define π-system of rectangles
-  -- 2. Show measures agree on rectangles using:
-  --    - finite_level_factorization
-  --    - tail_factorization_from_future
-  --    - Tower property + hν_law
-  -- 3. Extend via π-λ theorem
-  sorry
+  -- π-system of rectangles in (Fin m → α)
+  let Rectangles : Set (Set (Fin m → α)) :=
+    {S | ∃ (C : Fin m → Set α), (∀ i, MeasurableSet (C i)) ∧ S = Set.univ.pi C}
+
+  -- Step 1: Rectangles form a π-system
+  have h_pi : IsPiSystem Rectangles := by
+    intro S₁ hS₁ S₂ hS₂ hne
+    rcases hS₁ with ⟨C₁, hC₁, rfl⟩
+    rcases hS₂ with ⟨C₂, hC₂, rfl⟩
+    refine ⟨fun i => C₁ i ∩ C₂ i, ?_, ?_⟩
+    · intro i; exact (hC₁ i).inter (hC₂ i)
+    · ext f; simp only [Set.mem_univ_pi, Set.mem_inter_iff]
+      constructor
+      · intro ⟨h1, h2⟩ i; exact ⟨h1 i, h2 i⟩
+      · intro h; exact ⟨fun i => (h i).1, fun i => (h i).2⟩
+
+  -- Step 2: Show both measures agree on rectangles
+  have h_agree :
+    ∀ s ∈ Rectangles,
+      (Measure.map (fun ω => fun i : Fin m => X i ω) μ) s
+        = (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) s := by
+    intro s hs
+    rcases hs with ⟨C, hC, rfl⟩
+    
+    -- LHS: map measure on rectangle = integral of product indicator
+    have hL : (Measure.map (fun ω => fun i : Fin m => X i ω) μ) (Set.univ.pi C)
+        = ENNReal.ofReal (∫ ω, indProd X m C ω ∂μ) := by
+      sorry  -- TODO: Standard measure theory - preimage equals firstRCylinder,
+             -- then use integral_indicator and ENNReal conversion
+    
+    -- Use factorization machinery to express as tail-level product
+    have h_fact : ∀ M ≥ m,
+        μ[indProd X m C | futureFiltration X M] =ᵐ[μ]
+        (fun ω => ∏ i : Fin m,
+          μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | futureFiltration X M] ω) :=
+      fun M hMm => finite_level_factorization X hX hX_meas m C hC M hMm
+    
+    -- Reverse martingale convergence for each coordinate
+    have h_conv : ∀ i : Fin m,
+        (∀ᵐ ω ∂μ, Tendsto (fun M =>
+          μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | futureFiltration X M] ω)
+          atTop
+          (𝓝 (μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | tailSigma X] ω))) := by
+      intro i
+      sorry  -- TODO: Apply condExp_tendsto_iInf as in tail_factorization_from_future
+    
+    -- Tail factorization
+    have h_tail : μ[indProd X m C | tailSigma X] =ᵐ[μ]
+        (fun ω => ∏ i : Fin m,
+          μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | tailSigma X] ω) :=
+      tail_factorization_from_future X hX_meas m C hC h_fact h_conv
+    
+    -- Integrate both sides (tower property)
+    have h_int_tail : ∫ ω, indProd X m C ω ∂μ
+        = ∫ ω, (∏ i : Fin m,
+            μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | tailSigma X] ω) ∂μ := by
+      sorry  -- TODO: Use integral_condExp and h_tail
+    
+    -- Replace each CE with ν ω (C i).toReal using hν_law
+    have h_swap : (fun ω => ∏ i : Fin m,
+          μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | tailSigma X] ω)
+        =ᵐ[μ] (fun ω => ∏ i : Fin m, (ν ω (C i)).toReal) := by
+      sorry  -- TODO: Use hν_law for each coordinate
+    
+    -- RHS: bind measure on rectangle
+    have hR : (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) (Set.univ.pi C)
+        = ENNReal.ofReal (∫ ω, (∏ i : Fin m, (ν ω (C i)).toReal) ∂μ) := by
+      sorry  -- TODO: Standard bind/pi formula for rectangles + ENNReal conversion
+    
+    -- Combine: both equal after using hL, h_int_tail, h_swap, hR
+    sorry  -- TODO: Chain the equalities with toReal conversions
+
+  -- Step 3: Extend from rectangles to full σ-algebra via π-λ theorem
+  sorry  -- TODO: Apply Measure.ext_of_generateFrom_of_iUnion with h_pi and h_agree
 
 /-- **Finite product formula for strictly monotone subsequences**.
 
@@ -2109,6 +2176,7 @@ equals the independent product under the directing measure ν.
 
 This reduces to the identity case via contractability. -/
 lemma finite_product_formula_strictMono
+    [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
     (X : ℕ → Ω → α)
@@ -2136,6 +2204,7 @@ lemma finite_product_formula_strictMono
 This is the main statement: for strictly monotone index sequences, the joint law
 is the independent product. This is what we need for de Finetti's theorem. -/
 lemma finite_product_formula
+    [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
     (X : ℕ → Ω → α)
