@@ -1571,9 +1571,30 @@ lemma join_eq_comap_pair_finFuture
     (fun ω => (fun i : Fin r => X i.1 ω,
                fun j : Fin k => X (m + 1 + j.1) ω))
     inferInstance := by
-  sorry  -- TODO: Prove σ-algebra equality via generators
-         -- LHS is join of two comaps, RHS is comap of product
-         -- Standard: comap f ⊔ comap g = comap (f △ g) for products
+  -- LHS is join of two comaps, RHS is comap of product
+  -- Key: Product σ-algebra = comap Prod.fst ⊔ comap Prod.snd
+  -- So: comap f ⊔ comap g = comap (f, g) using the product structure
+  
+  -- Define the two component maps
+  let f : Ω → (Fin r → α) := fun ω i => X i.1 ω
+  let g : Ω → (Fin k → α) := fun ω j => X (m + 1 + j.1) ω
+  
+  -- LHS: comap f ⊔ comap g
+  have h_lhs : firstRSigma X r ⊔ finFutureSigma X m k
+      = MeasurableSpace.comap f inferInstance ⊔ MeasurableSpace.comap g inferInstance := by
+    rfl
+  
+  -- RHS: comap of the pair (f, g)
+  have h_rhs : (fun ω => (fun i : Fin r => X i.1 ω, fun j : Fin k => X (m + 1 + j.1) ω))
+      = fun ω => (f ω, g ω) := rfl
+  
+  rw [h_lhs, h_rhs]
+  -- The comap of a function into a product space equals the join of comaps of components
+  -- This follows from the fact that the product σ-algebra is comap fst ⊔ comap snd
+  -- Proof requires showing both directions of the inclusion
+  sorry  -- TODO: Standard result about comap and product σ-algebras
+         -- Need: comap (f, g) (comap fst ⊔ comap snd) = comap (fst ∘ (f,g)) ⊔ comap (snd ∘ (f,g))
+         -- This is a general fact about pullback σ-algebras and products
 
 /-- **Finite-level bridge:** if `(Z_r, X_r, θ_{m+1}^{(k)})` and `(X_r, θ_{m+1}^{(k)})` 
 have the same law after projecting away `Z_r`, then dropping `Z_r` from the conditioning
@@ -1593,11 +1614,28 @@ lemma condexp_indicator_eq_on_join_of_triple_law
     =ᵐ[μ]
   μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y
        | MeasurableSpace.comap θk inferInstance] := by
-  -- The join comap equals comap of the pair by definition/construction
-  -- Then apply tower property: conditioning on larger σ-algebra then projecting equals
-  -- conditioning on smaller σ-algebra when the function is already measurable w.r.t. smaller one
-  sorry  -- TODO: This needs tower property + the fact that comap (Zr, θk) = comap Zr ⊔ comap θk
-         -- The bridge lemma gives us something slightly different; need to adapt
+  -- Strategy: Use the fact that (Y, θk) and (Y, θk') have the same law,
+  -- so conditioning on (Zr, θk) gives the same result as conditioning on (Zr, θk').
+  -- Then use tower property to drop Zr from the conditioning.
+  
+  -- First, we want to show that conditioning on (Zr, θk) equals conditioning on (Zr, θk')
+  -- This follows from the fact that (Y, θk) =ᵈ (Y, θk')
+  
+  -- Apply the general bridge lemma: if (Y, θk) =ᵈ (Y, θk'), then
+  -- E[1_B(Y) | (Zr, θk)] = E[1_B(Y) | (Zr, θk')]
+  
+  -- But we need a more direct approach using the given hypothesis hpush
+  -- The key is that the larger σ-algebra doesn't add information about Y
+  -- when Zr is independent of Y given θk
+  
+  -- For now, this requires the tower property combined with conditional independence
+  -- or a direct application of the uniqueness of conditional expectation
+  sorry  -- TODO: This follows from:
+         -- 1. (Y, θk) =ᵈ (Y, θk') implies E[1_B(Y) | θk] = E[1_B(Y) | θk']
+         -- 2. Tower property: E[1_B(Y) | (Zr, θk)] = E[E[1_B(Y) | θk] | (Zr, θk)]
+         -- 3. Since E[1_B(Y) | θk] is θk-measurable, conditioning on (Zr, θk) doesn't change it
+         -- 4. Therefore E[1_B(Y) | (Zr, θk)] = E[1_B(Y) | θk]
+         -- This is the "bridge" property needed for the martingale convergence
 
 /-- **Correct conditional independence from contractability (Kallenberg Lemma 1.3).**
 
