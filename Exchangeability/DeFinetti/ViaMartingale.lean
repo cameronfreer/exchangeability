@@ -66,7 +66,8 @@ namespace Exchangeability
 namespace DeFinetti
 namespace ViaMartingale
 
-open MeasureTheory Filter MartingaleHelpers
+open MeasureTheory Filter
+open Exchangeability.DeFinetti.MartingaleHelpers
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
@@ -738,7 +739,7 @@ variable {X : ℕ → Ω → α}
 lemma preimage_rect_future
     (k m r : ℕ) (B : Set α) (C : Fin r → Set α) :
     let ψ := fun ω => (X k ω, shiftRV X (m + 1) ω)
-    ψ ⁻¹' (B ×ˢ cylinder (α:=α) r C)
+    ψ ⁻¹' (B ×ˢ @cylinder _ α r C)
       = {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + 1 + i.1) ω ∈ C i} := by
   classical
   intro ψ
@@ -747,7 +748,7 @@ lemma preimage_rect_future
     refine ⟨?_, ?_⟩
     · simpa [ψ]
     · intro i
-      have : (shiftRV X (m + 1) ω) ∈ cylinder (α:=α) r C := hC
+      have : (shiftRV X (m + 1) ω) ∈ @cylinder _ α r C := hC
       simpa [ψ, cylinder, shiftRV, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
         using this i
   · rcases h with ⟨hB, hC⟩
