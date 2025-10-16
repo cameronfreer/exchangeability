@@ -2369,11 +2369,12 @@ lemma finite_product_formula_id
           = ∫⁻ ω, (Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C) ∂μ := by
         -- Need AEMeasurable kernel
         have h_ae_meas : AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ := by
-          sorry  -- TODO: Apply aemeasurable_measure_pi with type adjustment
-                 -- Lemma: Exchangeability.DeFinetti.CommonEnding.aemeasurable_measure_pi
-                 -- Issue: Requires ∀ s, Measurable (λ ω, ν ω s)
-                 -- Have: ∀ B, MeasurableSet B → Measurable (λ ω, ν ω B)
-                 -- Need wrapper to show: measurability on measurable sets suffices
+          sorry  -- TODO: Extend hν_meas to all sets (not just measurable ones)
+                 -- Current: ∀ B, MeasurableSet B → Measurable (λ ω, ν ω B)
+                 -- Need: ∀ s, Measurable (λ ω, ν ω s)
+                 -- For non-measurable s, ν ω s uses outer measure
+                 -- Should be provable using measure extension properties
+                 -- Then apply: CommonEnding.aemeasurable_measure_pi ν hν_prob hν_meas'
         -- Apply Measure.bind_apply
         refine Measure.bind_apply ?_ h_ae_meas
         -- Set.univ.pi C is measurable
@@ -2397,11 +2398,32 @@ lemma finite_product_formula_id
                 apply ENNReal.prod_ne_top
                 intro i _
                 exact measure_ne_top (ν ω) (C i)
-              sorry  -- TODO: lintegral ↔ integral conversion
-                     -- Goal: ∫⁻ ω, (∏ i, ν ω (C i)) = ENNReal.ofReal (∫ ω, (∏ i, (ν ω (C i)).toReal))
-                     -- Have: h_finite shows ∏ ν ω (C i) ≠ ⊤ for all ω
-                     -- Strategy: Use lintegral_coe_eq_integral or integral_eq_lintegral_of_nonneg_ae
-                     -- The product is nonnegative, finite, and integrable (bounded by 1)
+              -- Use integral_eq_lintegral_of_nonneg_ae
+              have h_nonneg : 0 ≤ᵐ[μ] (fun ω => ∏ i : Fin m, (ν ω (C i)).toReal) := by
+                apply ae_of_all
+                intro ω
+                apply Finset.prod_nonneg
+                intro i _
+                exact ENNReal.toReal_nonneg
+              have h_aemeas : AEStronglyMeasurable (fun ω => ∏ i : Fin m, (ν ω (C i)).toReal) μ := by
+                sorry  -- TODO: Product of measurable functions is measurable
+                       -- Each λ ω, (ν ω (C i)).toReal is measurable (from hν_meas)
+                       -- Finite product preserves measurability
+              have h_eq_ofReal : ∀ᵐ ω ∂μ,
+                  ENNReal.ofReal (∏ i : Fin m, (ν ω (C i)).toReal) = ∏ i : Fin m, ν ω (C i) := by
+                apply ae_of_all
+                intro ω
+                sorry  -- TODO: ENNReal.ofReal_toReal for products
+                       -- Need: ofReal (∏ toReal a_i) = ∏ a_i when all a_i ≠ ⊤
+                       -- Use h_finite and product properties
+              rw [integral_eq_lintegral_of_nonneg_ae h_nonneg h_aemeas, ENNReal.ofReal_toReal]
+              apply lintegral_congr_ae
+              filter_upwards [h_eq_ofReal] with ω hω
+              exact hω.symm
+              -- Show the lintegral is finite
+              sorry  -- TODO: lintegral is finite
+                     -- Use that each factor is ≤ 1 so product ≤ 1
+                     -- Therefore lintegral ≤ μ univ = 1 < ∞
     
     -- Combine all pieces: hL = ... = h_int_tail = (by h_swap) = ... = hR
     calc (Measure.map (fun ω => fun i : Fin m => X i ω) μ) (Set.univ.pi C)
