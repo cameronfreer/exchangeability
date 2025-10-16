@@ -3156,7 +3156,37 @@ lemma finite_product_formula
   -- the product σ-algebra, and equality of measures on a generating π-system
   -- implies equality of measures.
 
-  sorry  -- TODO: Apply finite_level_factorization + tail_factorization_from_future + π-λ theorem
+  sorry
+  -- Proof outline (requires ~50 lines of technical work):
+  --
+  -- Use `Measure.ext` or `Measure.ext_of_generateFrom_of_iUnion` to reduce to rectangles.
+  --
+  -- **For each rectangle** {f | ∀ i, f i ∈ C i}:
+  --
+  -- 1. **Compute LHS**: pushforward measure
+  --    μ.map (fun ω => fun i => X (k i) ω) {f | ∀ i, f i ∈ C i}
+  --    = μ {ω | ∀ i, X (k i) ω ∈ C i}
+  --
+  -- 2. **Compute RHS**: bind/integral  
+  --    μ.bind (fun ω => Measure.pi (fun _ => ν ω)) {f | ∀ i, f i ∈ C i}
+  --    = ∫ ω, ∏ i, (ν ω (C i)).toReal ∂μ   (after ENNReal.toReal conversion)
+  --
+  -- 3. **Main work**: Show these are equal using the factorization machinery
+  --    a) Let m' := max(k i) + 1
+  --    b) Use contractability to relate {ω | ∀ i, X (k i) ω ∈ C i} to indProd
+  --    c) Apply `finite_level_factorization` at m' to get future-level factorization
+  --    d) Apply `tail_factorization_from_future` to lift to tail σ-algebra
+  --    e) Integrate both sides: ∫ μ[f|tail] = ∫ f (tower property)
+  --    f) Cylinder measure equals ∫ indProd (indicator integral formula)
+  --    g) Replace μ[1_{X₀∈C}|tail] with (ν ω) C using `hν_law`
+  --    h) Combine to get: μ {cylinder} = ∫ ∏ (ν ω C_i)
+  --
+  -- Technical lemmas needed:
+  -- - ENNReal ↔ ℝ conversions for probability measures
+  -- - Measure.bind API for pi measures (Measure.pi_pi)
+  -- - integral_condExp (tower property)
+  -- - ae_all_iff for finite products of ae sets
+  -- - Reindexing cylinders via contractability
 
 /-!
 ## Notes
