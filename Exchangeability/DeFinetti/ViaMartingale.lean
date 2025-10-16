@@ -2366,8 +2366,16 @@ lemma finite_product_formula_id
       -- Step 1: Apply bind definition
       have h_bind : μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C)
           = ∫⁻ ω, (Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C) ∂μ := by
-        sorry  -- TODO: Measure.bind_apply
-               -- Need measurability of the kernel
+        -- Need AEMeasurable kernel
+        have h_ae_meas : AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ := by
+          sorry  -- TODO: aemeasurable_measure_pi
+                 -- Standard: product of measurable probability measures is AEMeasurable
+                 -- Needs hν_meas and hν_prob
+        -- Apply Measure.bind_apply
+        refine Measure.bind_apply ?_ h_ae_meas
+        -- Set.univ.pi C is measurable
+        classical
+        exact MeasurableSet.univ_pi hC
       -- Step 2: Product measure on rectangle
       have h_pi : ∀ ω, (Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C)
           = ∏ i : Fin m, ν ω (C i) := by
@@ -2396,21 +2404,21 @@ lemma finite_product_formula_id
       _ = (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) (Set.univ.pi C) := hR.symm
 
   -- 3) Extend equality from rectangles to all measurable sets via π-λ theorem
-  sorry  -- TODO: Full π-λ extension
-         -- Structure:
-         -- 1. Both measures are probability measures (need to prove)
-         --    - Map of probability measure is probability
-         --    - Bind of probability kernel is probability
-         -- 2. Apply Measure.ext
-         -- 3. For each measurable set s:
-         --    - Use h_gen: s ∈ generateFrom Rectangles
-         --    - Use h_agree: measures agree on all Rectangles
-         --    - Use h_pi: Rectangles is a π-system
-         --    - Apply π-λ uniqueness theorem:
-         --      * Measures agreeing on π-system that generates σ-algebra
-         --      * With finite measure on space
-         --      * Are equal on entire σ-algebra
-         -- Likely needs: Measure.ext_of_generateFrom_of_cover_subset or similar
+  -- Both measures are probability measures
+  have hprob1 : IsProbabilityMeasure (Measure.map (fun ω => fun i : Fin m => X i ω) μ) := by
+    sorry  -- TODO: Map of probability measure is probability
+  have hprob2 : IsProbabilityMeasure (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) := by
+    sorry  -- TODO: Bind of probability kernel is probability  
+  -- Apply π-λ theorem: measures agreeing on π-system are equal
+  sorry  -- TODO: Use Measure.ext_of_generate_finite or similar
+         -- Have:
+         -- - h_pi: IsPiSystem Rectangles
+         -- - h_gen: MeasurableSpace = generateFrom Rectangles
+         -- - h_agree: ∀ s ∈ Rectangles, measure1 s = measure2 s
+         -- - hprob1, hprob2: both are probability measures
+         -- Standard result: Two probability measures agreeing on a π-system
+         -- that generates the σ-algebra are equal.
+         -- This is mathlib's Measure.ext_of_generate_finite
 
 /-- **Finite product formula for strictly monotone subsequences**.
 
