@@ -973,7 +973,10 @@ lemma measure_ext_of_future_rectangles
         apply MeasurableSpace.measurableSet_generateFrom
         refine ⟨0, A, hA, (fun _ => Set.univ), (fun _ => MeasurableSet.univ), ?_⟩
         ext ⟨a, f⟩
-        simp only [Set.mem_prod, Set.mem_univ, true_and, cylinder]
+        simp only [Set.mem_prod, Set.mem_univ, true_and]
+        constructor
+        · intro ha; exact ⟨ha, fun _ => trivial⟩
+        · intro ⟨ha, _⟩; exact ha
 
       -- Second, show that Prod.snd maps cylinders to measurable sets
       have h_snd : ∀ (r : ℕ) (C : Fin r → Set α),
@@ -1051,7 +1054,7 @@ lemma measure_ext_of_future_rectangles
                 · exact MeasurableSet.univ
               have h_eq : ((fun f : ℕ → α => f i) ⁻¹' A) = cylinder r C := by
                 ext f
-                simp [cylinder, C, r]
+                simp only [C, r, Set.mem_preimage, cylinder]
                 constructor
                 · intro hf j
                   by_cases h : j.val = i
@@ -1119,7 +1122,7 @@ lemma measure_ext_of_future_rectangles
     intro n
     refine ⟨0, Set.univ, MeasurableSet.univ,
       (fun _ => Set.univ), (fun _ => MeasurableSet.univ), ?_⟩
-    ext ⟨a, f⟩; simp [Bseq, cylinder]
+    ext ⟨a, f⟩; simp only [Bseq, Set.mem_prod, Set.mem_univ, true_and, cylinder]
   have hμB : ∀ n, μ (Bseq n) ≠ ⊤ := by
     intro n
     simp only [Bseq]
@@ -1965,7 +1968,7 @@ lemma block_coord_condIndep
         have h_preimage :
             E_future = futureMap ⁻¹' finCylinder (α:=α) k C := by
           ext ω
-          simp [hEf_def, futureMap, finCylinder, cylinder]
+          simp only [hEf_def, futureMap, finCylinder, cylinder, Set.mem_preimage]
         simpa [h_preimage, finFutureSigma]
           using (⟨_, finCylinder_measurable hC, rfl⟩ :
             MeasurableSet[finFutureSigma X m k] (futureMap ⁻¹' finCylinder (α:=α) k C))
