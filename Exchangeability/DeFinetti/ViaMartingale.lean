@@ -2207,8 +2207,15 @@ lemma finite_product_formula_id
   have h_gen :
       (inferInstance : MeasurableSpace (Fin m → α))
         = MeasurableSpace.generateFrom Rectangles := by
-    sorry  -- TODO: Standard - Π σ-algebra equals generateFrom(rectangles)
-           -- Use MeasurableSpace.pi_eq_generateFrom and show rectangles generate it
+    sorry  -- TODO: Standard result - product σ-algebra = generateFrom(rectangles)
+           -- Approach:
+           -- 1. Product σ-algebra is smallest making all projections measurable
+           -- 2. Rectangles = sets of form {f | ∀i, f i ∈ C i}
+           -- 3. Show: (a) Rectangles ⊆ product σ-algebra (easy)
+           --         (b) generateFrom(Rectangles) makes projections measurable
+           --         (c) Therefore they're equal by minimality
+           -- May need: MeasurableSpace.pi_generateFrom or similar
+           -- Or: Direct proof that cylinder sets generate product σ-algebra
 
   -- 2) Show both measures agree on rectangles
   have h_agree :
@@ -2320,9 +2327,12 @@ lemma finite_product_formula_id
     have hR :
       (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) (Set.univ.pi C)
         = ENNReal.ofReal (∫ ω, (∏ i : Fin m, (ν ω (C i)).toReal) ∂μ) := by
-      sorry  -- TODO: Measure.bind_apply + finite product-measure rectangle formula
-             -- Product measure on rectangle: ∏ i, ν ω (C i)
-             -- Then ∫ kernel = ∫ (∏ measures) and convert via toReal
+      sorry  -- TODO: Complex - needs several steps:
+             -- 1. Measure.bind_apply: (bind μ κ) S = ∫⁻ ω, κ ω S ∂μ
+             -- 2. Measure.pi_univ_pi: (pi ν) (univ.pi C) = ∏ i, ν i (C i)
+             -- 3. lintegral of product = integral via toReal for probability measures
+             -- 4. Convert ENNReal integral to Real integral
+             -- This requires careful handling of measure kernels and product measures
     
     -- Combine all pieces: hL = ... = h_int_tail = (by h_swap) = ... = hR
     calc (Measure.map (fun ω => fun i : Fin m => X i ω) μ) (Set.univ.pi C)
@@ -2335,10 +2345,19 @@ lemma finite_product_formula_id
             exact integral_congr_ae h_swap
       _ = (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) (Set.univ.pi C) := hR.symm
 
-  -- 3) Extend equality from rectangles to all measurable sets
-  sorry  -- TODO: Apply Measure.ext_of_generateFrom_of_iUnion
-         -- with Rectangles, h_pi, h_gen, h_agree
-         -- Check finiteness conditions (both measures are probability measures on univ)
+  -- 3) Extend equality from rectangles to all measurable sets via π-λ theorem
+  refine Measure.ext fun s hs => ?_
+  sorry  -- TODO: Use π-λ theorem (Dynkin/monotone class)
+         -- Available approaches:
+         -- 1. Measure.ext_of_generateFrom_of_iUnion (requires iUnion condition)
+         -- 2. Show both measures agree on generating π-system (Rectangles)
+         --    Then extend via uniqueness (both are probability measures)
+         -- Key facts:
+         -- - h_pi: Rectangles is a π-system
+         -- - h_gen: Rectangles generate the σ-algebra
+         -- - h_agree: Both measures agree on Rectangles
+         -- - Both measures are probability measures (finite, normalized)
+         -- Standard π-λ: Two finite measures agreeing on π-system = on σ-algebra
 
 /-- **Finite product formula for strictly monotone subsequences**.
 
