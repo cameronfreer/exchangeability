@@ -455,9 +455,11 @@ lemma futureFiltration_antitone (X : ℕ → Ω → α) :
 def tailSigmaFuture (X : ℕ → Ω → α) : MeasurableSpace Ω :=
   ⨅ m, futureFiltration X m
 
+omit [MeasurableSpace Ω] in
 @[simp] lemma tailSigmaFuture_eq_iInf (X : ℕ → Ω → α) :
     tailSigmaFuture X = ⨅ m, futureFiltration X m := rfl
 
+omit [MeasurableSpace Ω] in
 @[simp] lemma futureFiltration_eq_rev_succ (X : ℕ → Ω → α) (m : ℕ) :
     futureFiltration X m = revFiltration X (m + 1) := rfl
 
@@ -465,7 +467,7 @@ lemma tailSigmaFuture_eq_tailSigma (X : ℕ → Ω → α) :
     tailSigmaFuture X = tailSigma X := by
   classical
   have hfut : tailSigmaFuture X = ⨅ n, revFiltration X (n + 1) := by
-    simpa [tailSigmaFuture, futureFiltration_eq_rev_succ]
+    simp [tailSigmaFuture, futureFiltration_eq_rev_succ]
   have htail : tailSigma X = ⨅ n, revFiltration X n := rfl
   refine le_antisymm ?_ ?_
   · -- `tailSigmaFuture ≤ tailSigma`
@@ -735,6 +737,7 @@ variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 variable {μ : Measure Ω} [IsProbabilityMeasure μ]
 variable {X : ℕ → Ω → α}
 
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
 /-- Preimage calculation for rectangles with `(X k, θ_{m+1}X)` and a standard cylinder. -/
 lemma preimage_rect_future
     (k m r : ℕ) (B : Set α) (C : Fin r → Set α) :
@@ -840,7 +843,7 @@ end FutureRectangles
 
 /-- Two measures agree on all future rectangles (sets of form B ×ˢ cylinder r C). -/
 def AgreeOnFutureRectangles (μ ν : Measure (α × (ℕ → α))) : Prop :=
-  ∀ (r : ℕ) (B : Set α) (hB : MeasurableSet B) (C : Fin r → Set α) (hC : ∀ i, MeasurableSet (C i)),
+  ∀ (r : ℕ) (B : Set α) (_hB : MeasurableSet B) (C : Fin r → Set α) (_hC : ∀ i, MeasurableSet (C i)),
     μ (B ×ˢ cylinder (α:=α) r C) = ν (B ×ˢ cylinder (α:=α) r C)
 
 lemma agree_on_future_rectangles_of_contractable
@@ -1269,6 +1272,7 @@ lemma finFutureSigma_le_ambient
   obtain ⟨t, ht, rfl⟩ := hs
   exact (measurable_pi_lambda _ (fun i => hX (m + 1 + i.val))) ht
 
+omit [MeasurableSpace Ω] in
 lemma finFutureSigma_le_futureFiltration
     (X : ℕ → Ω → α) (m k : ℕ) :
     finFutureSigma X m k ≤ futureFiltration X m := by
@@ -1529,14 +1533,14 @@ lemma contractable_triple_pushforward
           =
         {ω | (∀ i : Fin r, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧
               (∀ j : Fin k, X (m + 1 + j.val) ω ∈ C j)} := by
-      ext ω; simp [Z_r, Y_future, Set.mem_univ_pi, Set.mem_setOf_eq]
+      ext ω; simp [Z_r, Y_future, Set.mem_setOf_eq]
     have h_pre_tail :
         (fun ω => (Z_r ω, X r ω, Y_tail ω)) ⁻¹'
           ((Set.univ.pi A) ×ˢ B ×ˢ (Set.univ.pi C))
           =
         {ω | (∀ i : Fin r, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧
               (∀ j : Fin k, X (r + 1 + j.val) ω ∈ C j)} := by
-      ext ω; simp [Z_r, Y_tail, Set.mem_univ_pi, Set.mem_setOf_eq]
+      ext ω; simp [Z_r, Y_tail, Set.mem_setOf_eq]
     -- Apply the finite cylinder equality.
     have h_cyl :=
       contractable_finite_cylinder_measure
