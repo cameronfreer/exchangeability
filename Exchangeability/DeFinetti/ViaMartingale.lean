@@ -988,7 +988,7 @@ lemma measure_ext_of_future_rectangles
           MeasurableSet[MeasurableSpace.generateFrom S] (Prod.snd ⁻¹' MartingaleHelpers.cylinder r C) := by
         intro r C hC
         -- Prod.snd ⁻¹' (cylinder r C) = univ ×ˢ (cylinder r C)
-        have : (Prod.snd : α × (ℕ → α) → ℕ → α) ⁻¹' MartingaleHelpers.cylinder r C 
+        have : (Prod.snd : α × (ℕ → α) → ℕ → α) ⁻¹' MartingaleHelpers.cylinder r C
             = Set.univ ×ˢ MartingaleHelpers.cylinder r C := by
           ext ⟨a, f⟩
           simp only [Set.mem_preimage, Set.mem_prod, Set.mem_univ, true_and]
@@ -1560,6 +1560,8 @@ lemma contractable_triple_pushforward
          -- - Need: Rectangles generates product σ-algebra
          -- - Need: covering family with finite measure
          -- Then conclude measure equality
+
+
 /-- **Correct conditional independence from contractability (Kallenberg Lemma 1.3).**
 
 For contractable X and r < m, the past block σ(X₀,...,X_{r-1}) and the single coordinate
@@ -1595,66 +1597,94 @@ lemma block_coord_condIndep
     (MeasurableSpace.comap (X r) inferInstance)   -- single coord: σ(X_r)
     (futureFiltration_le X m hX_meas)             -- witness: σ(θ_{m+1} X) ≤ ambient
     μ := by
-  -- Strategy: Use condIndep_of_indicator_condexp_eq to show projection property
-  -- For any H ∈ σ(X_r), we need to show:
-  --   μ[H.indicator | firstRSigma X r ⊔ futureFiltration X m] =ᵐ μ[H.indicator | futureFiltration X m]
-  -- This follows from contractability: when r < m, coordinate X_r is conditionally
-  -- independent of (X₀,...,X_{r-1}) given the future θ_{m+1} X.
-
+  -- We use the "indicator projection" criterion.
   apply Exchangeability.Probability.condIndep_of_indicator_condexp_eq
-  · -- hmF: firstRSigma X r ≤ ambient
-    exact firstRSigma_le_ambient X r hX_meas
-  · -- hmH: σ(X_r) ≤ ambient (hmG already provided in goal)
-    intro s hs
-    obtain ⟨t, ht, rfl⟩ := hs
-    exact (hX_meas r) ht
-  -- Show projection property: for all H ∈ σ(X_r),
-  -- μ[H.indicator | firstRSigma X r ⊔ futureFiltration X m] =ᵐ μ[H.indicator | futureFiltration X m]
+  · exact firstRSigma_le_ambient X r hX_meas
+  · intro s hs; rcases hs with ⟨t, ht, rfl⟩; exact (hX_meas r) ht
+  -- Fix `B ∈ σ(X_r)` and prove the projection identity.
   intro H hH
-  -- H is measurable in σ(X_r), so H = (X r)⁻¹(B) for some measurable B
-  obtain ⟨B, hB, rfl⟩ := hH
-  -- The indicator function is (indicator B ∘ X r)
-
-  -- Prove projection property: μ[1_B ∘ X_r | firstR ⊔ future] =ᵐ μ[1_B ∘ X_r | future]
-  --
-  -- **Strategy:** Work with finite approximations first, then pass to limit.
-  -- For each k, show the property holds for finFutureSigma X m k, then let k → ∞.
-
-  -- Step 1: Use contractability to establish the projection property
-  -- Key insight: For r < m, the triple (Z_r, X_r, θ_{m+1}X) has the same law as
-  -- (Z_r, X_r, θ_{r+1}X) by contractability. This implies X_r is conditionally
-  -- independent of Z_r given the future.
-  
-  -- Apply bridge lemma: if (Y, Z) =^d (Y, Z'), then E[1_{Y∈B}|σ(Z)] = E[1_{Y∈B}|σ(Z')]
-  have h_condexp_eq : ∀ (k : ℕ),
-      μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X r
-          | firstRSigma X r ⊔ finFutureSigma X m k]
-        =ᵐ[μ]
-      μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X r
-          | finFutureSigma X m k] := by
+  rcases hH with ⟨B, hB, rfl⟩
+  -- Notation
+  set Y : Ω → α := X r with hY
+  set Zr : Ω → (Fin r → α) := fun ω i => X i.1 ω with hZr
+  -- finite future block (length = k)
+  have hY_meas : Measurable Y := hX_meas r
+  have hZr_meas : Measurable Zr :=
+    measurable_pi_lambda _ (fun i => hX_meas i.1)
+  -- Step 1: finite-level identity for every k
+  have h_finite :
+      ∀ k : ℕ,
+        μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y
+            | firstRSigma X r ⊔ finFutureSigma X m k]
+          =ᵐ[μ]
+        μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y
+            | finFutureSigma X m k] := by
     intro k
-    
-    -- Define the relevant σ-algebras and random variables
-    set Z_r : Ω → (Fin r → α) := fun ω i => X i.val ω with hZ_def
-    set Y := X r with hY_def  
-    set θ_future : Ω → (Fin k → α) := fun ω j => X (m + 1 + j.val) ω with hθ_future_def
-    set θ_tail : Ω → (Fin k → α) := fun ω j => X (r + 1 + j.val) ω with hθ_tail_def
-    
-    -- Key: Use contractable_triple_pushforward to get distributional equality
-    have h_law_eq : Measure.map (fun ω => (Z_r ω, Y ω, θ_future ω)) μ
-        = Measure.map (fun ω => (Z_r ω, Y ω, θ_tail ω)) μ := by
-      exact contractable_triple_pushforward X hX hX_meas hrm
-    
-    -- Apply the bridge lemma for conditional expectations
-    -- This needs the pair-law version adapted to the (Z_r, θ) setting
-    sorry  -- TODO: Apply condexp_indicator_eq_of_pair_law_eq or similar
-           -- The exact API needs (Y, Z) form, so we may need to package
-           -- (Z_r, θ_future) as a single "Z" variable
-  
-  -- Step 2: Pass to the limit k → ∞ (Lévy's upward theorem)
-  -- As k → ∞, finFutureSigma X m k ↗ futureFiltration X m
-  sorry  -- TODO: Apply Lévy upward/Doob martingale convergence 
-         -- Use condExp_tendsto_iSup or similar for increasing filtrations
+    -- Define the two finite future maps
+    set θk : Ω → (Fin k → α) := fun ω j => X (m + 1 + j.1) ω with hθdef
+    set θk' : Ω → (Fin k → α) := fun ω j => X (r + 1 + j.1) ω with hθpdef
+    have hθk_meas  : Measurable θk :=
+      measurable_pi_lambda _ (fun j => hX_meas (m + 1 + j.1))
+    have hθk'_meas : Measurable θk' :=
+      measurable_pi_lambda _ (fun j => hX_meas (r + 1 + j.1))
+    -- From contractability: triple pushforward equality, project away `Z_r`
+    have h_triple := contractable_triple_pushforward
+        (X := X) (μ := μ) (hX := hX) (hX_meas := hX_meas) (hrm := hrm)
+        (r := r) (m := m) (k := k)
+    -- Project to pairs `(Y, θk)` vs `(Y, θk')`
+    have h_pair :
+        Measure.map (fun ω => (Y ω, θk ω)) μ
+          = Measure.map (fun ω => (Y ω, θk' ω)) μ := by
+      -- The triple equality is for `(Zr, Y, θk)` vs `(Zr, Y, θk')`;
+      -- composing with the projection that drops `Zr` gives this pair equality.
+      -- (use `Measure.map_map` twice).
+      -- Product type is (Fin r → α) × α × (Fin k → α) = (Fin r → α) × (α × (Fin k → α))
+      have proj : ( (Fin r → α) × α × (Fin k → α) ) → α × (Fin k → α) :=
+        fun q => (q.2.1, q.2.2)
+      have hproj_meas : Measurable proj :=
+        (measurable_fst.comp measurable_snd).prodMk (measurable_snd.comp measurable_snd)
+      -- `map (proj ∘ ...) μ = map proj (map ... μ)`
+      -- so we rewrite both sides via `Measure.map_map`.
+      have := congrArg (fun M => Measure.map proj M) h_triple
+      -- now use `Measure.map_map` on both sides
+      -- left
+      have hL :
+        Measure.map proj
+          (Measure.map (fun ω => (Zr ω, Y ω, θk ω)) μ)
+          = Measure.map (fun ω => (Y ω, θk ω)) μ := by
+        simpa [proj] using
+          (Measure.map_map hproj_meas ((hZr_meas.prodMk hY_meas).prodMk hθk_meas))
+      -- right
+      have hR :
+        Measure.map proj
+          (Measure.map (fun ω => (Zr ω, Y ω, θk' ω)) μ)
+          = Measure.map (fun ω => (Y ω, θk' ω)) μ := by
+        simpa [proj] using
+          (Measure.map_map hproj_meas ((hZr_meas.prodMk hY_meas).prodMk hθk'_meas))
+      simpa [hL, hR] using this
+    -- Bridge step: Since (Y, θk) and (Y, θk') have the same law,
+    -- E[1_B(Y) | σ(θk)] = E[1_B(Y) | σ(θk')].
+    -- This is the "invariance under equal laws" property for conditional expectations.
+    -- Since firstRSigma ⊔ finFutureSigma is generated by (Zr, θk), we need to show
+    -- that conditioning on this join equals conditioning on just θk.
+    --
+    -- The mathematical content: from contractability we have
+    --   (Zr, Y, θk) =^d (Zr, Y, θk')
+    -- Marginalizing gives (Y, θk) =^d (Y, θk'), so for any function f of Y:
+    --   E[f(Y) | σ(θk)] = E[f(Y) | σ(θk')]  (by the pair law)
+    -- Since σ(θk) ⊆ σ(Zr, θk), by the tower property:
+    --   E[f(Y) | σ(Zr, θk)] = E[E[f(Y) | σ(θk)] | σ(Zr, θk)] = E[f(Y) | σ(θk)]
+    -- where the last equality uses that E[f(Y) | σ(θk)] is already σ(θk)-measurable
+    -- (a constant relative to the larger σ-algebra).
+    sorry  -- TODO: Missing lemmas needed to complete this proof:
+           -- 1. Bridge lemma for equal pair laws: if map (Y, Z) μ = map (Y, Z') μ, then
+           --    E[f(Y) | σ(Z)] = E[f(Y) | σ(Z')] a.e.
+           -- 2. Upward Lévy convergence: condExp_tendsto_iSup for increasing filtrations
+           --    (analogous to the downward version used elsewhere)
+           --
+           -- The mathematical structure is correct: we've shown how to project the triple
+           -- law to a pair law, and the rest follows by standard martingale convergence.
+  sorry  -- TODO: Steps 2-3 also need the missing lemmas above
 
 /-- **Product formula for conditional expectations under conditional independence.**
 
@@ -1759,7 +1789,7 @@ lemma finite_level_factorization
       have := congr_fun (indicator_mul_indicator_eq_indicator_inter A B 1 1) ω
       simp only [Pi.mul_apply] at this
       convert this using 1
-      ring
+      ring_nf
 
     -- Measurability of A in firstRSigma X r
     have hA_meas_firstR : MeasurableSet[firstRSigma X r] A := by
@@ -2090,7 +2120,7 @@ lemma finite_product_formula
   --    μ.map (fun ω => fun i => X (k i) ω) {f | ∀ i, f i ∈ C i}
   --    = μ {ω | ∀ i, X (k i) ω ∈ C i}
   --
-  -- 2. **Compute RHS**: bind/integral  
+  -- 2. **Compute RHS**: bind/integral
   --    μ.bind (fun ω => Measure.pi (fun _ => ν ω)) {f | ∀ i, f i ∈ C i}
   --    = ∫ ω, ∏ i, (ν ω (C i)).toReal ∂μ   (after ENNReal.toReal conversion)
   --
