@@ -1672,28 +1672,11 @@ lemma block_coord_condIndep
     have h_pair :
         Measure.map (fun ω => (Y ω, θk ω)) μ
           = Measure.map (fun ω => (Y ω, θk' ω)) μ := by
-      -- The triple equality is for `(Zr, Y, θk)` vs `(Zr, Y, θk')`;
-      -- composing with the projection that drops `Zr` gives this pair equality.
-      -- The triple type `(Fin r → α) × α × (Fin k → α)` is right-associated as
-      -- `(Fin r → α) × (α × (Fin k → α))`, so Prod.snd gives us (Y, θk).
-      have := congrArg (fun M => Measure.map Prod.snd M) h_triple
-      -- now use `Measure.map_map` on both sides
-      -- left
-      have hL :
-        Measure.map Prod.snd
-          (Measure.map (fun ω => (Zr ω, Y ω, θk ω)) μ)
-          = Measure.map (fun ω => (Y ω, θk ω)) μ := by
-        rw [← Measure.map_map measurable_snd (hZr_meas.prodMk (hY_meas.prodMk hθk_meas))]
-        rfl
-      -- right
-      have hR :
-        Measure.map Prod.snd
-          (Measure.map (fun ω => (Zr ω, Y ω, θk' ω)) μ)
-          = Measure.map (fun ω => (Y ω, θk' ω)) μ := by
-        rw [← Measure.map_map measurable_snd (hZr_meas.prodMk (hY_meas.prodMk hθk'_meas))]
-        rfl
-      rw [hL, hR] at this
-      exact this
+      -- The triple equality gives us measures on triples; we project to pairs.
+      -- h_triple uses local definitions, so we work with it directly via simp/convert
+      sorry  -- TODO: Standard measure projection via Measure.map Prod.snd
+             -- The triple type is right-associated: (Fin r → α) × (α × (Fin k → α))
+             -- so Prod.snd drops Zr. Need to unfold h_triple's local definitions carefully.
     -- Bridge: drop `Z_r` from conditioning at level k
     -- first rewrite the join as a comap of the pair `(Zr, θk)`
     have h_join :
@@ -1740,58 +1723,16 @@ lemma block_coord_condIndep
         = (firstRSigma X r ⊔ futureFiltration X m) := by
     simp [hiSup_fin, iSup_sup_eq]  -- uses lattice lemmas
   -- Upward convergence on both sides, then identify the limits by equality levelwise
-  have h_up_left :
-      Tendsto (fun k => μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y
-                            | firstRSigma X r ⊔ finFutureSigma X m k])
-              atTop
-              (𝓝 (μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y
-                        | firstRSigma X r ⊔ futureFiltration X m])) := by
-    -- bounded indicators are integrable
-    have h_int : Integrable ((Set.indicator B (fun _ => (1 : ℝ))) ∘ Y) μ := by
-      simpa using
-        Exchangeability.Probability.integrable_indicator_comp
-          (μ := μ) (X := Y) (hX := hY_meas) hB
-    -- CE converges along ↑-chains of σ-algebras to the CE on the `iSup`
-    exact Exchangeability.Probability.condExp_tendsto_iSup
-            (μ := μ)
-            (𝔽 := fun k => firstRSigma X r ⊔ finFutureSigma X m k)
-            (h_filtration := by intro k ℓ hkℓ; exact sup_le_sup le_rfl (hmono_fin hkℓ))
-            (h_le := by intro k; sorry)  -- TODO: Need sub-σ-algebra witness
-            (f := (Set.indicator B (fun _ => (1 : ℝ))) ∘ Y)
-            (h_f_int := h_int)
-  have h_up_right :
-      Tendsto (fun k => μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y
-                            | finFutureSigma X m k])
-              atTop
-              (𝓝 (μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y
-                        | futureFiltration X m])) := by
-    have h_int : Integrable ((Set.indicator B (fun _ => (1 : ℝ))) ∘ Y) μ := by
-      simpa using
-        Exchangeability.Probability.integrable_indicator_comp
-          (μ := μ) (X := Y) (hX := hY_meas) hB
-    exact Exchangeability.Probability.condExp_tendsto_iSup
-            (μ := μ)
-            (𝔽 := fun k => finFutureSigma X m k)
-            (h_filtration := hmono_fin)
-            (h_le := by intro k; sorry)  -- TODO: Need sub-σ-algebra witness
-            (f := (Set.indicator B (fun _ => (1 : ℝ))) ∘ Y)
-            (h_f_int := h_int)
-  -- Since the two sequences are a.e.-equal at each k (h_finite),
-  -- their limits are a.e.-equal; this is `tendsto_nhds_unique`.
-  have h_eq_lim :
-      μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y
-          | firstRSigma X r ⊔ futureFiltration X m]
-      =ᵐ[μ]
-      μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y
-          | futureFiltration X m] := by
-    refine tendsto_nhds_unique h_up_left ?_ ?_
-    · refine h_up_right.congr' ?eventually_eq
-      -- from `h_finite`: levelwise equality along k
-      exact eventually_atTop.mpr ⟨0, fun k _ => (h_finite k).symm⟩
-    · refine h_up_right
-  -- This is exactly the projection identity requested by
-  -- `condIndep_of_indicator_condexp_eq`.
-  exact h_eq_lim
+  -- The axiom condExp_tendsto_iSup gives pointwise a.e. convergence;
+  -- we need to extract function-level convergence in L¹ or a.e. sense.
+  sorry  -- TODO: Apply condExp_tendsto_iSup (Lévy upward) to get pointwise convergence,
+         -- then lift to function convergence using:
+         -- - h_up_left: convergence on join
+         -- - h_up_right: convergence on finFutureSigma
+         -- - Use h_finite for levelwise equality
+         -- - Apply tendsto_nhds_unique to conclude limits are a.e. equal
+         --
+         -- The structure is correct but needs proper handling of pointwise vs function convergence
 
 /-- **Product formula for conditional expectations under conditional independence.**
 
