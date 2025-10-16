@@ -2413,17 +2413,24 @@ lemma finite_product_formula_id
                   ENNReal.ofReal (∏ i : Fin m, (ν ω (C i)).toReal) = ∏ i : Fin m, ν ω (C i) := by
                 apply ae_of_all
                 intro ω
-                sorry  -- TODO: ENNReal.ofReal_toReal for products
-                       -- Need: ofReal (∏ toReal a_i) = ∏ a_i when all a_i ≠ ⊤
-                       -- Use h_finite and product properties
+                -- For each i, (ν ω (C i)).toReal is the real value, so ofReal ∘ toReal = id
+                have h_each : ∀ i : Fin m, ENNReal.ofReal (ν ω (C i)).toReal = ν ω (C i) := by
+                  intro i
+                  apply ENNReal.ofReal_toReal
+                  exact measure_ne_top (ν ω) (C i)
+                -- Product commutes: ofReal (∏ toReal a_i) = ∏ (ofReal (toReal a_i)) = ∏ a_i
+                sorry  -- TODO: ENNReal.ofReal preserves products
+                       -- Need: ofReal (∏ x_i) = ∏ (ofReal x_i) when all x_i ≥ 0
+                       -- Then use h_each to get ∏ (ofReal (toReal a_i)) = ∏ a_i
               rw [integral_eq_lintegral_of_nonneg_ae h_nonneg h_aemeas, ENNReal.ofReal_toReal]
               apply lintegral_congr_ae
               filter_upwards [h_eq_ofReal] with ω hω
               exact hω.symm
               -- Show the lintegral is finite
-              sorry  -- TODO: lintegral is finite
-                     -- Use that each factor is ≤ 1 so product ≤ 1
-                     -- Therefore lintegral ≤ μ univ = 1 < ∞
+              sorry  -- TODO: lintegral is finite (proof structured)
+                     -- have h_le_one : ∀ᵐ ω, ∏ i, ν ω (C i) ≤ 1 (each factor ≤ 1)
+                     -- Therefore ∫⁻ ω, ∏ i, ν ω (C i) ≤ ∫⁻ ω, 1 = μ univ = 1 < ∞
+                     -- Use lintegral_mono_ae with prob_le_one
     
     -- Combine all pieces: hL = ... = h_int_tail = (by h_swap) = ... = hR
     calc (Measure.map (fun ω => fun i : Fin m => X i ω) μ) (Set.univ.pi C)
