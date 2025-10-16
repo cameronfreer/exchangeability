@@ -2363,12 +2363,26 @@ lemma finite_product_formula_id
     have hR :
       (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) (Set.univ.pi C)
         = ENNReal.ofReal (∫ ω, (∏ i : Fin m, (ν ω (C i)).toReal) ∂μ) := by
-      sorry  -- TODO: Complex - needs several steps:
-             -- 1. Measure.bind_apply: (bind μ κ) S = ∫⁻ ω, κ ω S ∂μ
-             -- 2. Measure.pi_univ_pi: (pi ν) (univ.pi C) = ∏ i, ν i (C i)
-             -- 3. lintegral of product = integral via toReal for probability measures
-             -- 4. Convert ENNReal integral to Real integral
-             -- This requires careful handling of measure kernels and product measures
+      -- Step 1: Apply bind definition
+      have h_bind : μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C)
+          = ∫⁻ ω, (Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C) ∂μ := by
+        sorry  -- TODO: Measure.bind_apply
+               -- Need measurability of the kernel
+      -- Step 2: Product measure on rectangle
+      have h_pi : ∀ ω, (Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C)
+          = ∏ i : Fin m, ν ω (C i) := by
+        intro ω
+        sorry  -- TODO: Measure.pi_univ_pi or similar
+               -- Product measure on rectangle = product of marginals
+      -- Step 3: Combine and convert to Real integral
+      calc μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C)
+          = ∫⁻ ω, (Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C) ∂μ := h_bind
+        _ = ∫⁻ ω, (∏ i : Fin m, ν ω (C i)) ∂μ := by
+              congr 1; ext ω; exact h_pi ω
+        _ = ENNReal.ofReal (∫ ω, (∏ i : Fin m, (ν ω (C i)).toReal) ∂μ) := by
+              sorry  -- TODO: lintegral_eq_integral_of_nonneg_ae + ENNReal.ofReal_toReal
+                     -- For probability measures: ∫⁻ f = ENNReal.ofReal (∫ f.toReal)
+                     -- Need: f ≥ 0, f < ∞ a.e., and integrability
     
     -- Combine all pieces: hL = ... = h_int_tail = (by h_swap) = ... = hR
     calc (Measure.map (fun ω => fun i : Fin m => X i ω) μ) (Set.univ.pi C)
