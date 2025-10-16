@@ -2369,9 +2369,11 @@ lemma finite_product_formula_id
           = ∫⁻ ω, (Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C) ∂μ := by
         -- Need AEMeasurable kernel
         have h_ae_meas : AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ := by
-          sorry  -- TODO: Use aemeasurable_measure_pi from CommonEnding.lean
-                 -- The lemma exists but may need namespace or import fix
-                 -- Proof: aemeasurable_measure_pi ν hν_prob hν_meas
+          sorry  -- TODO: Apply aemeasurable_measure_pi with type adjustment
+                 -- Lemma: Exchangeability.DeFinetti.CommonEnding.aemeasurable_measure_pi
+                 -- Issue: Requires ∀ s, Measurable (λ ω, ν ω s)
+                 -- Have: ∀ B, MeasurableSet B → Measurable (λ ω, ν ω B)
+                 -- Need wrapper to show: measurability on measurable sets suffices
         -- Apply Measure.bind_apply
         refine Measure.bind_apply ?_ h_ae_meas
         -- Set.univ.pi C is measurable
@@ -2392,10 +2394,9 @@ lemma finite_product_formula_id
               -- Convert lintegral to integral via toReal
               have h_finite : ∀ ω, (∏ i : Fin m, ν ω (C i)) ≠ ⊤ := by
                 intro ω
-                sorry  -- TODO: Product of finite ENNReals is finite
-                       -- Each ν ω (C i) < ∞ by measure_ne_top
-                       -- Need: ∏ (a_i < ∞) → ∏ a_i < ∞
-                       -- Should use ENNReal product lemmas
+                apply ENNReal.prod_ne_top
+                intro i _
+                exact measure_ne_top (ν ω) (C i)
               sorry  -- TODO: lintegral ↔ integral conversion
                      -- Goal: ∫⁻ ω, (∏ i, ν ω (C i)) = ENNReal.ofReal (∫ ω, (∏ i, (ν ω (C i)).toReal))
                      -- Have: h_finite shows ∏ ν ω (C i) ≠ ⊤ for all ω
@@ -2429,7 +2430,7 @@ lemma finite_product_formula_id
     constructor
     -- Need AEMeasurable kernel (same as h_ae_meas from earlier)
     have h_ae_meas : AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ := by
-      sorry  -- Same as line 2371 - use aemeasurable_measure_pi ν hν_prob hν_meas
+      sorry  -- Same as line 2371
     rw [Measure.bind_apply MeasurableSet.univ h_ae_meas]
     -- Each (pi fun _ => ν ω) is probability measure with measure univ = 1
     conv_lhs => arg 2; ext ω; rw [measure_univ]
