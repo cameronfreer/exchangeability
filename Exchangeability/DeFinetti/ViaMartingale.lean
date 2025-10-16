@@ -1507,7 +1507,13 @@ lemma contractable_triple_pushforward
             fun j => C₁ j ∩ C₂ j, ?_, ?_⟩
     · intro i; exact (hA₁ i).inter (hA₂ i)
     · intro j; exact (hC₁ j).inter (hC₂ j)
-    · ext f; simp [Set.mem_univ_pi, Set.mem_inter_iff, Set.preimage, Set.mem_setOf_eq]
+    · ext ⟨z, y, c⟩
+      simp only [Set.mem_inter_iff, Set.mem_prod, Set.mem_univ_pi]
+      constructor
+      · intro ⟨⟨hz1, hy1, hc1⟩, hz2, hy2, hc2⟩
+        exact ⟨fun i => ⟨hz1 i, hz2 i⟩, ⟨hy1, hy2⟩, fun j => ⟨hc1 j, hc2 j⟩⟩
+      · intro ⟨hz, hy, hc⟩
+        exact ⟨⟨fun i => (hz i).1, hy.1, fun j => (hc j).1⟩, fun i => (hz i).2, hy.2, fun j => (hc j).2⟩
 
   -- Equality on rectangles using the finite cylinder measure lemma.
   have h_agree :
@@ -1532,66 +1538,24 @@ lemma contractable_triple_pushforward
               (∀ j : Fin k, X (r + 1 + j.val) ω ∈ C j)} := by
       ext ω; simp [Z_r, Y_tail, Set.mem_univ_pi, Set.mem_setOf_eq]
     -- Apply the finite cylinder equality.
-    have :=
+    have h_cyl :=
       contractable_finite_cylinder_measure
         (X := X) (μ := μ) (hX := hX) (hX_meas := hX_meas)
         (hrm := hrm) (A := A) (hA := hA) (B := B) (hB := hB)
         (C := C) (hC := hC)
-    simpa [Measure.map_apply,
-      h_pre_future, h_pre_tail,
-      Set.mem_univ_pi, Set.mem_setOf_eq,
-      measurable_pi_lambda, hA, hB, hC]
-      using this
+    -- Convert to map equality
+    sorry  -- TODO: Complete measurability proof and application
+           -- The structure is correct: need to apply h_cyl via Measure.map_apply
+           -- Issues: measurable_pi_lambda API, product measurability composition
 
-  -- Covering family: constant sequence of `Set.univ`.
-  let Bseq : ℕ → Set ((Fin r → α) × α × (Fin k → α)) := fun _ => Set.univ
-  have hBseq_union : ⋃ n, Bseq n = Set.univ := by simp [Bseq]
-  have hBseq_mem : ∀ n, Bseq n ∈ Rectangles := by
-    intro n
-    refine ⟨fun _ => Set.univ, fun _ => MeasurableSet.univ,
-      Set.univ, MeasurableSet.univ, fun _ => Set.univ, fun _ => MeasurableSet.univ, ?_⟩
-    simp [Bseq]
-  have hBseq_finite : ∀ n,
-      (Measure.map (fun ω => (Z_r ω, X r ω, Y_future ω)) μ) (Bseq n) ≠ ∞ := by
-    intro n
-    simpa [Bseq] using
-      (measure_ne_top _
-        (Set.univ : Set ((Fin r → α) × α × (Fin k → α))))
-  have hBseq_finite' : ∀ n,
-      (Measure.map (fun ω => (Z_r ω, X r ω, Y_tail ω)) μ) (Bseq n) ≠ ∞ := by
-    intro n
-    simpa [Bseq] using
-      (measure_ne_top _
-        (Set.univ : Set ((Fin r → α) × α × (Fin k → α))))
-
-  -- Apply the measure extension lemma on the π-system.
-  refine Measure.ext_of_generateFrom_of_iUnion
-    Rectangles Bseq ?_ h_pi hBseq_union hBseq_mem hBseq_finite h_agree
-    ?_ hBseq_finite' ?_ ?_
-  · -- Rectangles generate the product σ-algebra.
-    ext s; constructor
-    · intro hs
-      rcases hs with ⟨A, hA, B, hB, C, hC, rfl⟩
-      refine MeasurableSet.prod ?_ ?_
-      · exact MeasurableSet.prod (MeasurableSet.univ_pi hA) hB
-      · exact MeasurableSet.univ_pi hC
-    · intro hs
-      -- Any measurable set in the product σ-algebra is in the generated σ-algebra.
-      refine MeasurableSet.generateFrom ?_
-      intro s hs
-      rcases hs with ⟨A, hA, B, hB, C, hC, rfl⟩
-      apply MeasurableSet.prod
-      · exact MeasurableSet.prod (MeasurableSet.univ_pi hA) hB
-      · exact MeasurableSet.univ_pi hC
-  · -- The identity on Rectangles is measurable.
-    intro s hs
-    rcases hs with ⟨A, hA, B, hB, C, hC, rfl⟩
-    refine (MeasurableSet.prod ?_ ?_)
-    · exact MeasurableSet.prod (MeasurableSet.univ_pi hA) hB
-    · exact MeasurableSet.univ_pi hC
-  · -- The measures agree on Rectangles (already shown).
-    intro s hs
-    exact h_agree hs
+  -- Apply π-λ theorem to extend from Rectangles to full σ-algebra
+  sorry  -- TODO: Apply Measure.ext_of_generateFrom_of_iUnion
+         -- Structure:
+         -- - h_pi: Rectangles is π-system ✓
+         -- - h_agree: measures agree on Rectangles (needs fix at line 1547)
+         -- - Need: Rectangles generates product σ-algebra
+         -- - Need: covering family with finite measure
+         -- Then conclude measure equality
 /-- **Correct conditional independence from contractability (Kallenberg Lemma 1.3).**
 
 For contractable X and r < m, the past block σ(X₀,...,X_{r-1}) and the single coordinate
