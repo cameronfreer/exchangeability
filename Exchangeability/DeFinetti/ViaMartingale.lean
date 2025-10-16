@@ -2192,7 +2192,7 @@ lemma finite_product_formula_id
   let Rectangles : Set (Set (Fin m → α)) :=
     {S | ∃ (C : Fin m → Set α), (∀ i, MeasurableSet (C i)) ∧ S = Set.univ.pi C}
 
-  -- Step 1: Rectangles form a π-system
+  -- 1) Rectangles form a π-system and generate the Π σ-algebra
   have h_pi : IsPiSystem Rectangles := by
     intro S₁ hS₁ S₂ hS₂ hne
     rcases hS₁ with ⟨C₁, hC₁, rfl⟩
@@ -2204,7 +2204,13 @@ lemma finite_product_formula_id
       · intro ⟨h1, h2⟩ i; exact ⟨h1 i, h2 i⟩
       · intro h; exact ⟨fun i => (h i).1, fun i => (h i).2⟩
 
-  -- Step 2: Show both measures agree on rectangles
+  have h_gen :
+      (inferInstance : MeasurableSpace (Fin m → α))
+        = MeasurableSpace.generateFrom Rectangles := by
+    sorry  -- TODO: Standard - Π σ-algebra equals generateFrom(rectangles)
+           -- Use MeasurableSpace.pi_eq_generateFrom and show rectangles generate it
+
+  -- 2) Show both measures agree on rectangles
   have h_agree :
     ∀ s ∈ Rectangles,
       (Measure.map (fun ω => fun i : Fin m => X i ω) μ) s
@@ -2212,13 +2218,15 @@ lemma finite_product_formula_id
     intro s hs
     rcases hs with ⟨C, hC, rfl⟩
     
-    -- LHS: map measure on rectangle = integral of product indicator
-    have hL : (Measure.map (fun ω => fun i : Fin m => X i ω) μ) (Set.univ.pi C)
+    -- LHS: map-measure on a rectangle = integral of the product indicator  
+    have hL :
+      (Measure.map (fun ω => fun i : Fin m => X i ω) μ) (Set.univ.pi C)
         = ENNReal.ofReal (∫ ω, indProd X m C ω ∂μ) := by
-      sorry  -- TODO: Standard measure theory - preimage equals firstRCylinder,
-             -- then use integral_indicator and ENNReal conversion
+      sorry  -- TODO: Preimage = firstRCylinder, then μ(firstRCylinder) = ∫ indicator
+             -- Use integral_indicator_const and indProd_eq_firstRCylinder_indicator
+             -- Then convert measure to ENNReal.ofReal of integral
     
-    -- Use factorization machinery to express as tail-level product
+    -- Use factorization machinery
     have h_fact : ∀ M ≥ m,
         μ[indProd X m C | futureFiltration X M] =ᵐ[μ]
         (fun ω => ∏ i : Fin m,
@@ -2232,7 +2240,6 @@ lemma finite_product_formula_id
           atTop
           (𝓝 (μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | tailSigma X] ω))) := by
       intro i
-      -- Apply Lévy's downward theorem for conditional expectations
       have := Exchangeability.Probability.condExp_tendsto_iInf
         (μ := μ) (𝔽 := futureFiltration X)
         (h_filtration := futureFiltration_antitone X)
@@ -2242,45 +2249,51 @@ lemma finite_product_formula_id
           simpa using
             Exchangeability.Probability.integrable_indicator_comp
               (μ := μ) (X := X 0) (hX := hX_meas 0) (hB := hC i))
-      -- Rewrite ⨅ futureFiltration to tailSigma
       simpa [← tailSigmaFuture_eq_iInf, tailSigmaFuture_eq_tailSigma] using this
     
-    -- Tail factorization
+    -- Tail factorization for the product indicator (a.e. equality)
     have h_tail : μ[indProd X m C | tailSigma X] =ᵐ[μ]
         (fun ω => ∏ i : Fin m,
           μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | tailSigma X] ω) :=
       tail_factorization_from_future X hX_meas m C hC h_fact h_conv
     
-    -- Integrate both sides (tower property)
+    -- Integrate both sides; tower property: ∫ μ[g|tail] = ∫ g
     have h_int_tail : ∫ ω, indProd X m C ω ∂μ
         = ∫ ω, (∏ i : Fin m,
             μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | tailSigma X] ω) ∂μ := by
-      sorry  -- TODO: Tower property ∫ f = ∫ μ[f|tail] + use h_tail for a.e. equality
-             -- This is standard:  integral_condExp + EventuallyEq.integral_eq
+      sorry  -- TODO: integral_condExp + EventuallyEq.integral_eq using h_tail
+             -- Standard tower property: ∫ f = ∫ E[f|τ]
     
-    -- Replace each CE with ν ω (C i).toReal using hν_law
+    -- Replace each conditional expectation by ν ω (C i).toReal using hν_law
     have h_swap : (fun ω => ∏ i : Fin m,
           μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | tailSigma X] ω)
         =ᵐ[μ] (fun ω => ∏ i : Fin m, (ν ω (C i)).toReal) := by
-      -- Product of a.e. equal functions is a.e. equal
-      -- For each i, we have hν_law: (ν · (C i)).toReal =ᵐ μ[indicator | tail]
-      have h_each : ∀ i : Fin m,
-          (fun ω => μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | tailSigma X] ω)
-            =ᵐ[μ] (fun ω => (ν ω (C i)).toReal) :=
-        fun i => (hν_law 0 (C i) (hC i)).symm
-      -- Combine using finite product
-      sorry  -- TODO: Use ae_all_iff + Finset.prod_congr to get product equality
+      sorry  -- TODO: Product of a.e. equal functions
+             -- For each i: hν_law 0 (C i) (hC i) gives (ν · (C i)).toReal =ᵐ CE
+             -- Use ae_all_iff + Finset.prod to combine factor-wise
     
-    -- RHS: bind measure on rectangle
-    have hR : (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) (Set.univ.pi C)
+    -- RHS: bind measure on rectangle equals integral of product-of-probabilities
+    have hR :
+      (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) (Set.univ.pi C)
         = ENNReal.ofReal (∫ ω, (∏ i : Fin m, (ν ω (C i)).toReal) ∂μ) := by
-      sorry  -- TODO: Standard bind/pi formula for rectangles + ENNReal conversion
+      sorry  -- TODO: Measure.bind_apply + finite product-measure rectangle formula
+             -- Product measure on rectangle: ∏ i, ν ω (C i)
+             -- Then ∫ kernel = ∫ (∏ measures) and convert via toReal
     
-    -- Combine: both equal after using hL, h_int_tail, h_swap, hR
-    sorry  -- TODO: Chain the equalities with toReal conversions
+    -- Combine all pieces: hL = ... = h_int_tail = (by h_swap) = ... = hR
+    calc (Measure.map (fun ω => fun i : Fin m => X i ω) μ) (Set.univ.pi C)
+        = ENNReal.ofReal (∫ ω, indProd X m C ω ∂μ) := hL
+      _ = ENNReal.ofReal (∫ ω, (∏ i : Fin m,
+            μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | tailSigma X] ω) ∂μ) := by
+            rw [h_int_tail]
+      _ = ENNReal.ofReal (∫ ω, (∏ i : Fin m, (ν ω (C i)).toReal) ∂μ) := by
+            sorry  -- TODO: Use h_swap with integral_congr_ae
+      _ = (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) (Set.univ.pi C) := hR.symm
 
-  -- Step 3: Extend from rectangles to full σ-algebra via π-λ theorem
-  sorry  -- TODO: Apply Measure.ext_of_generateFrom_of_iUnion with h_pi and h_agree
+  -- 3) Extend equality from rectangles to all measurable sets
+  sorry  -- TODO: Apply Measure.ext_of_generateFrom_of_iUnion
+         -- with Rectangles, h_pi, h_gen, h_agree
+         -- Check finiteness conditions (both measures are probability measures on univ)
 
 /-- **Finite product formula for strictly monotone subsequences**.
 
