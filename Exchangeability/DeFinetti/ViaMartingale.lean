@@ -2380,8 +2380,10 @@ lemma finite_product_formula_id
       have h_pi : ∀ ω, (Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C)
           = ∏ i : Fin m, ν ω (C i) := by
         intro ω
-        sorry  -- TODO: Measure.pi_univ_pi or similar
-               -- Product measure on rectangle = product of marginals
+        sorry  -- TODO: Measure.pi_pi or Measure.pi_univ_pi
+               -- Mathematical content: (pi μ₁ ... μₙ) (Set.univ.pi C) = ∏ i, μᵢ (C i)
+               -- This is the defining property of product measures on rectangles
+               -- Mathlib has Measure.pi_pi for this, may need type coercion
       -- Step 3: Combine and convert to Real integral
       calc μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C)
           = ∫⁻ ω, (Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C) ∂μ := h_bind
