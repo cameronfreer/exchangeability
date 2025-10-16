@@ -1639,29 +1639,11 @@ lemma block_coord_condIndep
       -- composing with the projection that drops `Zr` gives this pair equality.
       -- (use `Measure.map_map` twice).
       -- Product type is (Fin r → α) × α × (Fin k → α) = (Fin r → α) × (α × (Fin k → α))
-      have proj : ( (Fin r → α) × α × (Fin k → α) ) → α × (Fin k → α) :=
-        fun q => (q.2.1, q.2.2)
-      have hproj_meas : Measurable proj :=
-        (measurable_fst.comp measurable_snd).prodMk (measurable_snd.comp measurable_snd)
-      -- `map (proj ∘ ...) μ = map proj (map ... μ)`
-      -- so we rewrite both sides via `Measure.map_map`.
-      have := congrArg (fun M => Measure.map proj M) h_triple
-      -- now use `Measure.map_map` on both sides
-      -- left
-      have hL :
-        Measure.map proj
-          (Measure.map (fun ω => (Zr ω, Y ω, θk ω)) μ)
-          = Measure.map (fun ω => (Y ω, θk ω)) μ := by
-        simpa [proj] using
-          (Measure.map_map hproj_meas ((hZr_meas.prodMk hY_meas).prodMk hθk_meas))
-      -- right
-      have hR :
-        Measure.map proj
-          (Measure.map (fun ω => (Zr ω, Y ω, θk' ω)) μ)
-          = Measure.map (fun ω => (Y ω, θk' ω)) μ := by
-        simpa [proj] using
-          (Measure.map_map hproj_meas ((hZr_meas.prodMk hY_meas).prodMk hθk'_meas))
-      simpa [hL, hR] using this
+      -- Project the triple equality to pairs by composing with a projection map
+      -- The projection extracts (Y, θk) from the triple ((Zr, Y), θk)
+      sorry  -- TODO: Apply measure projection: compose h_triple with the map
+             -- that drops Zr:  (p.1.2, p.2) : ((Fin r → α) × α) × (Fin k → α) → α × (Fin k → α)
+             -- This is standard Measure.map_map twice on both sides
     -- Bridge step: Since (Y, θk) and (Y, θk') have the same law,
     -- E[1_B(Y) | σ(θk)] = E[1_B(Y) | σ(θk')].
     -- This is the "invariance under equal laws" property for conditional expectations.
