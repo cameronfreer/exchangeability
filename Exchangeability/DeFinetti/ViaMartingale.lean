@@ -2261,16 +2261,32 @@ lemma finite_product_formula_id
     have h_int_tail : ∫ ω, indProd X m C ω ∂μ
         = ∫ ω, (∏ i : Fin m,
             μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | tailSigma X] ω) ∂μ := by
-      sorry  -- TODO: integral_condExp + EventuallyEq.integral_eq using h_tail
-             -- Standard tower property: ∫ f = ∫ E[f|τ]
+      -- Tower property: ∫ f = ∫ E[f|τ] and use h_tail
+      symm
+      calc ∫ ω, (∏ i : Fin m,
+            μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | tailSigma X] ω) ∂μ
+          = ∫ ω, μ[indProd X m C | tailSigma X] ω ∂μ :=
+              integral_congr_ae h_tail.symm
+        _ = ∫ ω, indProd X m C ω ∂μ := by
+              sorry  -- TODO: Apply integral_condExp - standard tower property
+                     -- Need: ∫ μ[f | m] = ∫ f for integrable f
+                     -- This is mathlib's MeasureTheory.integral_condExp
     
     -- Replace each conditional expectation by ν ω (C i).toReal using hν_law
     have h_swap : (fun ω => ∏ i : Fin m,
           μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | tailSigma X] ω)
         =ᵐ[μ] (fun ω => ∏ i : Fin m, (ν ω (C i)).toReal) := by
-      sorry  -- TODO: Product of a.e. equal functions
-             -- For each i: hν_law 0 (C i) (hC i) gives (ν · (C i)).toReal =ᵐ CE
-             -- Use ae_all_iff + Finset.prod to combine factor-wise
+      -- For each coordinate i, we have a.e. equality from hν_law
+      have h_each : ∀ i : Fin m,
+          (μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | tailSigma X])
+            =ᵐ[μ] (fun ω => (ν ω (C i)).toReal) :=
+        fun i => (hν_law 0 (C i) (hC i)).symm
+      -- Combine using Finset.prod over a.e. equal functions
+      -- The product of a.e. equal functions is a.e. equal
+      have h_all := ae_all_iff.mpr h_each
+      filter_upwards [h_all] with ω hω
+      -- Both sides are products over Fin m, equal pointwise
+      exact Finset.prod_congr rfl (fun i _ => hω i)
     
     -- RHS: bind measure on rectangle equals integral of product-of-probabilities
     have hR :
@@ -2287,7 +2303,8 @@ lemma finite_product_formula_id
             μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | tailSigma X] ω) ∂μ) := by
             rw [h_int_tail]
       _ = ENNReal.ofReal (∫ ω, (∏ i : Fin m, (ν ω (C i)).toReal) ∂μ) := by
-            sorry  -- TODO: Use h_swap with integral_congr_ae
+            congr 1
+            exact integral_congr_ae h_swap
       _ = (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) (Set.univ.pi C) := hR.symm
 
   -- 3) Extend equality from rectangles to all measurable sets
