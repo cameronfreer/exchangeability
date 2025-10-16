@@ -2232,14 +2232,25 @@ lemma finite_product_formula_id
       -- Measure equals integral via indicator
       have h_meas_eq : μ (firstRCylinder X m C)
           = ENNReal.ofReal (∫ ω, indProd X m C ω ∂μ) := by
-        sorry  -- TODO: Standard - for indicator of measurable set:
-               -- μ S = ENNReal.ofReal (∫ indicator S 1)
-               -- Use: indProd = indicator (firstRCylinder) and integral_indicator_one
-               -- Then: ENNReal.ofReal ((μ S).toReal) = μ S for finite measure
+        rw [hind]
+        -- For probability measure: μ S = ENNReal.ofReal ((μ S).toReal)
+        rw [← ENNReal.ofReal_toReal (measure_ne_top μ _)]
+        congr 1
+        -- ∫ indicator S 1 = Measure.real μ S = (μ S).toReal
+        have h_int := @integral_indicator_one _ _ μ (firstRCylinder X m C)
+          (firstRCylinder_measurable_ambient X m C hX_meas hC)
+        simp only [Measure.real] at h_int
+        exact h_int.symm
       -- Apply to map measure
       calc (Measure.map (fun ω => fun i : Fin m => X i ω) μ) (Set.univ.pi C)
           = μ ((fun ω => fun i : Fin m => X i ω) ⁻¹' (Set.univ.pi C)) := by
-              sorry  -- TODO: Measure.map_apply with measurability
+              -- Standard: (map f μ) S = μ (f⁻¹ S) for measurable f and S
+              refine Measure.map_apply ?_ ?_
+              · exact measurable_pi_lambda _ (fun i => hX_meas i)
+              · -- Set.univ.pi C is measurable in product σ-algebra
+                classical
+                apply MeasurableSet.univ_pi
+                exact hC
         _ = μ (firstRCylinder X m C) := by rw [hpre]
         _ = ENNReal.ofReal (∫ ω, indProd X m C ω ∂μ) := h_meas_eq
     
@@ -2285,9 +2296,9 @@ lemma finite_product_formula_id
           = ∫ ω, μ[indProd X m C | tailSigma X] ω ∂μ :=
               integral_congr_ae h_tail.symm
         _ = ∫ ω, indProd X m C ω ∂μ := by
-              sorry  -- TODO: Apply integral_condExp - standard tower property
-                     -- Need: ∫ μ[f | m] = ∫ f for integrable f
-                     -- This is mathlib's MeasureTheory.integral_condExp
+              -- Tower property: ∫ E[f|m] = ∫ f
+              sorry  -- TODO: MeasureTheory.integral_condExp tower property
+                     -- Need proper signature/application
     
     -- Replace each conditional expectation by ν ω (C i).toReal using hν_law
     have h_swap : (fun ω => ∏ i : Fin m,
