@@ -2368,9 +2368,12 @@ lemma finite_product_formula_id
           = ∫⁻ ω, (Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C) ∂μ := by
         -- Need AEMeasurable kernel
         have h_ae_meas : AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ := by
-          sorry  -- TODO: aemeasurable_measure_pi
-                 -- Standard: product of measurable probability measures is AEMeasurable
-                 -- Needs hν_meas and hν_prob
+          sorry  -- TODO: This follows from hν_meas and hν_prob
+                 -- The pattern from CommonEnding.lean shows this requires:
+                 -- 1. Measurability on rectangles (generateFrom approach)
+                 -- 2. Extension to full σ-algebra
+                 -- Mathlib should have: measurability of finite products of measurable kernels
+                 -- See: MeasureTheory.Measure.FiniteMeasurePi or similar
         -- Apply Measure.bind_apply
         refine Measure.bind_apply ?_ h_ae_meas
         -- Set.univ.pi C is measurable
@@ -2380,19 +2383,23 @@ lemma finite_product_formula_id
       have h_pi : ∀ ω, (Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C)
           = ∏ i : Fin m, ν ω (C i) := by
         intro ω
-        sorry  -- TODO: Measure.pi_pi or Measure.pi_univ_pi
+        sorry  -- TODO: Measure.pi_pi with proper type coercion
                -- Mathematical content: (pi μ₁ ... μₙ) (Set.univ.pi C) = ∏ i, μᵢ (C i)
-               -- This is the defining property of product measures on rectangles
-               -- Mathlib has Measure.pi_pi for this, may need type coercion
+               -- Mathlib has Measure.pi_pi: (pi μ) (pi S) = ∏ i, μ i (S i)
+               -- Need: Set.univ.pi C = {f | ∀ i, f i ∈ C i} matches mathlib's Set.pi format
       -- Step 3: Combine and convert to Real integral
       calc μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C)
           = ∫⁻ ω, (Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C) ∂μ := h_bind
         _ = ∫⁻ ω, (∏ i : Fin m, ν ω (C i)) ∂μ := by
               congr 1; ext ω; exact h_pi ω
         _ = ENNReal.ofReal (∫ ω, (∏ i : Fin m, (ν ω (C i)).toReal) ∂μ) := by
-              sorry  -- TODO: lintegral_eq_integral_of_nonneg_ae + ENNReal.ofReal_toReal
-                     -- For probability measures: ∫⁻ f = ENNReal.ofReal (∫ f.toReal)
-                     -- Need: f ≥ 0, f < ∞ a.e., and integrability
+              sorry  -- TODO: lintegral to integral conversion
+                     -- Mathematical content: ∫⁻ ω, (∏ i, ν ω (C i)) = ENNReal.ofReal (∫ ω, (∏ i, (ν ω (C i)).toReal))
+                     -- Key facts:
+                     -- 1. Product is nonnegative: ∀ ω, 0 ≤ (∏ i, (ν ω (C i)).toReal)
+                     -- 2. Product is finite a.e.: ∀ ω, (∏ i, ν ω (C i)) < ∞ (each factor ≤ 1)
+                     -- 3. Product is integrable (bounded by 1)
+                     -- Use: lintegral_coe_eq_integral or integral_toReal with ENNReal.ofReal
     
     -- Combine all pieces: hL = ... = h_int_tail = (by h_swap) = ... = hR
     calc (Measure.map (fun ω => fun i : Fin m => X i ω) μ) (Set.univ.pi C)
