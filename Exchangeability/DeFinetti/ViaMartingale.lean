@@ -2406,9 +2406,20 @@ lemma finite_product_formula_id
   -- 3) Extend equality from rectangles to all measurable sets via π-λ theorem
   -- Both measures are probability measures
   have hprob1 : IsProbabilityMeasure (Measure.map (fun ω => fun i : Fin m => X i ω) μ) := by
-    sorry  -- TODO: Map of probability measure is probability
+    constructor
+    -- Need to show (map f μ) univ = 1
+    have h_meas : Measurable (fun ω => fun i : Fin m => X i ω) := measurable_pi_lambda _ (fun i => hX_meas i)
+    rw [Measure.map_apply h_meas MeasurableSet.univ]
+    -- Preimage of univ is univ
+    have : (fun ω => fun i : Fin m => X i ω) ⁻¹' Set.univ = Set.univ := by
+      ext; simp
+    rw [this]
+    exact measure_univ
   have hprob2 : IsProbabilityMeasure (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) := by
-    sorry  -- TODO: Bind of probability kernel is probability  
+    constructor
+    sorry  -- TODO: Show (bind μ κ) univ = 1
+           -- Use: bind_apply with univ, then ∫⁻ ω, κ ω univ = ∫⁻ ω, 1 = 1
+           -- Each κ ω is probability measure, so κ ω univ = 1  
   -- Apply π-λ theorem: measures agreeing on π-system are equal
   have h_univ : (Measure.map (fun ω => fun i : Fin m => X i ω) μ) Set.univ
       = (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) Set.univ := by
