@@ -2382,17 +2382,21 @@ lemma finite_product_formula_id
       _ = (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) (Set.univ.pi C) := hR.symm
 
   -- 3) Extend equality from rectangles to all measurable sets via π-λ theorem
-  sorry  -- TODO: Apply π-λ uniqueness theorem via Measure.ext or similar
-         -- Goal: Two measures agreeing on π-system Rectangles are equal
-         -- Available:
-         -- - h_pi: IsPiSystem Rectangles
-         -- - h_gen: Product σ-algebra = generateFrom Rectangles
-         -- - h_agree: measures agree on all rectangles
-         -- - Both are probability measures
-         -- Approaches:
-         -- 1. Use: Measure.ext + induction on generateFrom using h_agree
-         -- 2. Or: Find mathlib's π-λ theorem for measures (if available)
-         -- The measures are both probability measures so finiteness is automatic
+  sorry  -- TODO: Full π-λ extension
+         -- Structure:
+         -- 1. Both measures are probability measures (need to prove)
+         --    - Map of probability measure is probability
+         --    - Bind of probability kernel is probability
+         -- 2. Apply Measure.ext
+         -- 3. For each measurable set s:
+         --    - Use h_gen: s ∈ generateFrom Rectangles
+         --    - Use h_agree: measures agree on all Rectangles
+         --    - Use h_pi: Rectangles is a π-system
+         --    - Apply π-λ uniqueness theorem:
+         --      * Measures agreeing on π-system that generates σ-algebra
+         --      * With finite measure on space
+         --      * Are equal on entire σ-algebra
+         -- Likely needs: Measure.ext_of_generateFrom_of_cover_subset or similar
 
 /-- **Finite product formula for strictly monotone subsequences**.
 
