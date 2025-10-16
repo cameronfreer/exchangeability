@@ -2302,10 +2302,9 @@ lemma finite_product_formula_id
             μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | tailSigma X] ω) ∂μ
           = ∫ ω, μ[indProd X m C | tailSigma X] ω ∂μ :=
               integral_congr_ae h_tail.symm
-        _ = ∫ ω, indProd X m C ω ∂μ := by
+        _ = ∫ ω, indProd X m C ω ∂μ :=
               -- Tower property: ∫ E[f|m] = ∫ f
-              sorry  -- TODO: MeasureTheory.integral_condExp tower property
-                     -- Need proper signature/application
+              integral_condExp (tailSigma_le X hX_meas)
     
     -- Replace each conditional expectation by ν ω (C i).toReal using hν_law
     have h_swap : (fun ω => ∏ i : Fin m,
@@ -2346,18 +2345,17 @@ lemma finite_product_formula_id
       _ = (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) (Set.univ.pi C) := hR.symm
 
   -- 3) Extend equality from rectangles to all measurable sets via π-λ theorem
-  refine Measure.ext fun s hs => ?_
-  sorry  -- TODO: Use π-λ theorem (Dynkin/monotone class)
-         -- Available approaches:
-         -- 1. Measure.ext_of_generateFrom_of_iUnion (requires iUnion condition)
-         -- 2. Show both measures agree on generating π-system (Rectangles)
-         --    Then extend via uniqueness (both are probability measures)
-         -- Key facts:
-         -- - h_pi: Rectangles is a π-system
-         -- - h_gen: Rectangles generate the σ-algebra
-         -- - h_agree: Both measures agree on Rectangles
-         -- - Both measures are probability measures (finite, normalized)
-         -- Standard π-λ: Two finite measures agreeing on π-system = on σ-algebra
+  sorry  -- TODO: Apply π-λ uniqueness theorem via Measure.ext or similar
+         -- Goal: Two measures agreeing on π-system Rectangles are equal
+         -- Available:
+         -- - h_pi: IsPiSystem Rectangles
+         -- - h_gen: Product σ-algebra = generateFrom Rectangles
+         -- - h_agree: measures agree on all rectangles
+         -- - Both are probability measures
+         -- Approaches:
+         -- 1. Use: Measure.ext + induction on generateFrom using h_agree
+         -- 2. Or: Find mathlib's π-λ theorem for measures (if available)
+         -- The measures are both probability measures so finiteness is automatic
 
 /-- **Finite product formula for strictly monotone subsequences**.
 
