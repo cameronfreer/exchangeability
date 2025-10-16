@@ -2368,12 +2368,13 @@ lemma finite_product_formula_id
           = ∫⁻ ω, (Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C) ∂μ := by
         -- Need AEMeasurable kernel
         have h_ae_meas : AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ := by
-          sorry  -- TODO: This follows from hν_meas and hν_prob
-                 -- The pattern from CommonEnding.lean shows this requires:
-                 -- 1. Measurability on rectangles (generateFrom approach)
-                 -- 2. Extension to full σ-algebra
-                 -- Mathlib should have: measurability of finite products of measurable kernels
-                 -- See: MeasureTheory.Measure.FiniteMeasurePi or similar
+          sorry  -- TODO: aemeasurable_measure_pi from CommonEnding.lean
+                 -- This is a non-trivial proof requiring:
+                 -- 1. Show measurability on rectangles (product formula)
+                 -- 2. Extend to full σ-algebra via π-λ induction
+                 -- The complete 50-line proof is in CommonEnding.lean:538-590
+                 -- Uses: rectangles_generate_pi_sigma, Measure.pi_pi, induction_on_inter
+                 -- Requires: hν_meas and hν_prob
         -- Apply Measure.bind_apply
         refine Measure.bind_apply ?_ h_ae_meas
         -- Set.univ.pi C is measurable
@@ -2383,10 +2384,8 @@ lemma finite_product_formula_id
       have h_pi : ∀ ω, (Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C)
           = ∏ i : Fin m, ν ω (C i) := by
         intro ω
-        sorry  -- TODO: Measure.pi_pi with proper type coercion
-               -- Mathematical content: (pi μ₁ ... μₙ) (Set.univ.pi C) = ∏ i, μᵢ (C i)
-               -- Mathlib has Measure.pi_pi: (pi μ) (pi S) = ∏ i, μ i (S i)
-               -- Need: Set.univ.pi C = {f | ∀ i, f i ∈ C i} matches mathlib's Set.pi format
+        -- Product measure on rectangle: (pi μ) (univ.pi C) = ∏ μ i (C i)
+        simp only [Measure.pi_pi]
       -- Step 3: Combine and convert to Real integral
       calc μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C)
           = ∫⁻ ω, (Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C) ∂μ := h_bind
