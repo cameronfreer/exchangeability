@@ -739,7 +739,7 @@ variable {X : ℕ → Ω → α}
 lemma preimage_rect_future
     (k m r : ℕ) (B : Set α) (C : Fin r → Set α) :
     let ψ := fun ω => (X k ω, shiftRV X (m + 1) ω)
-    ψ ⁻¹' (B ×ˢ @cylinder _ α r C)
+    ψ ⁻¹' (B ×ˢ cylinder (α:=α) r C)
       = {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + 1 + i.1) ω ∈ C i} := by
   classical
   intro ψ
@@ -748,15 +748,15 @@ lemma preimage_rect_future
     refine ⟨?_, ?_⟩
     · simpa [ψ]
     · intro i
-      have : (shiftRV X (m + 1) ω) ∈ @cylinder _ α r C := hC
-      simpa [ψ, cylinder, shiftRV, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
+      have : (shiftRV X (m + 1) ω) ∈ cylinder (α:=α) r C := hC
+      simpa [ψ, shiftRV, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
         using this i
   · rcases h with ⟨hB, hC⟩
     refine ⟨?_, ?_⟩
     · simpa [ψ]
     · intro i
       have : X (m + 1 + i.1) ω ∈ C i := hC i
-      simpa [ψ, cylinder, shiftRV, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
+      simpa [ψ, shiftRV, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
         using this
 
 /-- **Finite-dimensional equality on future rectangles with standard cylinders.**
@@ -973,7 +973,7 @@ lemma measure_ext_of_future_rectangles
         apply MeasurableSpace.measurableSet_generateFrom
         refine ⟨0, A, hA, (fun _ => Set.univ), (fun _ => MeasurableSet.univ), ?_⟩
         ext ⟨a, f⟩
-        simp [cylinder]
+        simp only [Set.mem_prod, Set.mem_univ, true_and, cylinder]
 
       -- Second, show that Prod.snd maps cylinders to measurable sets
       have h_snd : ∀ (r : ℕ) (C : Fin r → Set α),
@@ -983,7 +983,7 @@ lemma measure_ext_of_future_rectangles
         -- Prod.snd ⁻¹' (cylinder r C) = univ ×ˢ (cylinder r C)
         have : (Prod.snd : α × (ℕ → α) → ℕ → α) ⁻¹' cylinder r C = Set.univ ×ˢ cylinder r C := by
           ext ⟨a, f⟩
-          simp [cylinder]
+          simp only [Set.mem_preimage, Set.mem_prod, Set.mem_univ, true_and]
         rw [this]
         -- univ ×ˢ cylinder r C is in S
         apply MeasurableSpace.measurableSet_generateFrom
