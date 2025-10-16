@@ -2410,15 +2410,10 @@ lemma finite_product_formula_id
   have hprob2 : IsProbabilityMeasure (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) := by
     sorry  -- TODO: Bind of probability kernel is probability  
   -- Apply π-λ theorem: measures agreeing on π-system are equal
-  sorry  -- TODO: Use Measure.ext_of_generate_finite or similar
-         -- Have:
-         -- - h_pi: IsPiSystem Rectangles
-         -- - h_gen: MeasurableSpace = generateFrom Rectangles
-         -- - h_agree: ∀ s ∈ Rectangles, measure1 s = measure2 s
-         -- - hprob1, hprob2: both are probability measures
-         -- Standard result: Two probability measures agreeing on a π-system
-         -- that generates the σ-algebra are equal.
-         -- This is mathlib's Measure.ext_of_generate_finite
+  have h_univ : (Measure.map (fun ω => fun i : Fin m => X i ω) μ) Set.univ
+      = (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) Set.univ := by
+    simp [measure_univ]  -- Both are probability measures
+  exact ext_of_generate_finite Rectangles h_gen h_pi h_agree h_univ
 
 /-- **Finite product formula for strictly monotone subsequences**.
 
