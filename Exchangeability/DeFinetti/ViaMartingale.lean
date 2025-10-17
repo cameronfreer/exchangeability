@@ -2163,23 +2163,32 @@ lemma conditional_law_eq_directingMeasure
 /-- On a finite index type, product measures evaluate on rectangles as a finite product. -/
 lemma measure_pi_univ_pi
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]
-    {m : ℕ} (μi : Fin m → Measure α)
+    {m : ℕ} (μi : Fin m → Measure α) [∀ i, SigmaFinite (μi i)]
     (C : Fin m → Set α) (hC : ∀ i, MeasurableSet (C i)) :
   (Measure.pi (fun i : Fin m => μi i)) (Set.univ.pi C)
     = ∏ i : Fin m, μi i (C i) := by
-  sorry  -- Use Measure.pi_pi from mathlib
+  -- Convert Set.univ.pi to the pi univ form expected by Measure.pi_pi
+  have h_eq : Set.univ.pi C = Set.pi Set.univ C := rfl
+  rw [h_eq]
+  -- Now apply Measure.pi_pi from Mathlib
+  exact Measure.pi_pi (fun i : Fin m => μi i) C
 
 /-- Bind computation on rectangles for finite product measures. -/
 lemma bind_apply_univ_pi
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α] [StandardBorelSpace α]
-    {μ : Measure Ω}
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
     {m : ℕ}
-    (ν : Ω → Measure α)
+    (ν : Ω → Measure α) [∀ ω, IsProbabilityMeasure (ν ω)]
     (hν_meas : ∀ (B : Set α), MeasurableSet B → Measurable (fun ω => ν ω B))
     (C : Fin m → Set α) (hC : ∀ i, MeasurableSet (C i)) :
   (μ.bind (fun ω => Measure.pi (fun _ : Fin m => ν ω))) (Set.univ.pi C)
     = ∫⁻ ω, (∏ i : Fin m, ν ω (C i)) ∂μ := by
-  sorry  -- Combine Measure.bind_apply + Measure.pi_pi
+  -- TODO: This is provable via:
+  -- 1. Extend hν_meas to all sets (non-measurable sets have measure 0)
+  -- 2. Apply CommonEnding.bind_pi_apply to get: bind = ∫⁻ ω, (Measure.pi ...) (Set.univ.pi C) ∂μ
+  -- 3. Use measure_pi_univ_pi to convert (Measure.pi ...) (Set.univ.pi C) to ∏ i, ν ω (C i)
+  -- The main technical challenge is finding the right Mathlib lemma for step 1.
+  sorry
 
 /-- **Finite product formula for the first m coordinates** (identity case).
 
@@ -2405,10 +2414,10 @@ lemma finite_product_formula_id
           -- 0 ≤ μ(C) ≤ 1 ⇒ finite ⇒ ofReal_toReal
           have hle1 : ν ω (C i) ≤ 1 := prob_le_one
           have hfin : ν ω (C i) ≠ ⊤ := ne_of_lt (lt_of_le_of_lt hle1 ENNReal.one_lt_top)
-          exact ENNReal.ofReal_toReal hfin
+          exact (ENNReal.ofReal_toReal hfin).symm
         -- product of ofReals = ofReal of product
         rw [Finset.prod_congr rfl (fun i _ => hfactor i)]
-        exact ENNReal.ofReal_prod_of_nonneg (fun i _ => ENNReal.toReal_nonneg)
+        exact (ENNReal.ofReal_prod_of_nonneg (fun i _ => ENNReal.toReal_nonneg)).symm
       -- now apply lintegral_ofReal
       rw [h_point]
       have h_nonneg : ∀ᵐ ω ∂μ, 0 ≤ ∏ i : Fin m, (ν ω (C i)).toReal := by
@@ -2416,9 +2425,22 @@ lemma finite_product_formula_id
         intro ω
         exact Finset.prod_nonneg (fun i _ => ENNReal.toReal_nonneg)
       have h_aemeas : AEStronglyMeasurable (fun ω => ∏ i : Fin m, (ν ω (C i)).toReal) μ := by
-        refine AEStronglyMeasurable.prod (fun i _ => ?_)
+        apply Finset.aestronglyMeasurable_prod
+        intro i _
         exact (hν_meas (C i) (hC i)).ennreal_toReal.aestronglyMeasurable
-      exact (integral_eq_lintegral_of_nonneg_ae h_nonneg h_aemeas).symm
+      -- integral_eq_lintegral_of_nonneg_ae: (∫⁻ a, ofReal f ∂μ).toReal = ∫ f ∂μ
+      -- We need the reverse: ∫⁻ ofReal f = ofReal (∫ f)
+      symm
+      rw [← ENNReal.ofReal_toReal_eq_iff]
+      · exact integral_eq_lintegral_of_nonneg_ae h_nonneg h_aemeas
+      · apply lintegral_ofReal_ne_top
+        exact h_aemeas.integrable_of_bounded (by
+          apply ae_of_all
+          intro ω
+          -- Product of probabilities ≤ 1
+          refine Finset.prod_le_one ?_ ?_
+          · intro i _; exact ENNReal.toReal_nonneg
+          · intro i _; exact ENNReal.toReal_le_one)
 
     -- (★★★) — compute mixture on rectangle as `ofReal ∫ …` to match the LHS computation chain
     have hR :
