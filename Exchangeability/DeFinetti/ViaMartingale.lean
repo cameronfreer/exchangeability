@@ -1556,9 +1556,31 @@ lemma contractable_triple_pushforward
         (hrm := hrm) (A := A) (hA := hA) (B := B) (hB := hB)
         (C := C) (hC := hC)
     -- Convert to map equality
-    sorry  -- TODO: Complete measurability proof and application
-           -- The structure is correct: need to apply h_cyl via Measure.map_apply
-           -- Issues: measurable_pi_lambda API, product measurability composition
+    -- First, prove measurability of the triple functions
+    have h_meas_future : Measurable (fun ω => (Z_r ω, X r ω, Y_future ω)) := by
+      refine Measurable.prodMk ?_ (Measurable.prodMk (hX_meas r) ?_)
+      · exact measurable_pi_lambda _ fun i => hX_meas i.val
+      · exact measurable_pi_lambda _ fun j => hX_meas (m + 1 + j.val)
+    have h_meas_tail : Measurable (fun ω => (Z_r ω, X r ω, Y_tail ω)) := by
+      refine Measurable.prodMk ?_ (Measurable.prodMk (hX_meas r) ?_)
+      · exact measurable_pi_lambda _ fun i => hX_meas i.val
+      · exact measurable_pi_lambda _ fun j => hX_meas (r + 1 + j.val)
+    -- The rectangle is measurable
+    have h_meas_rect : MeasurableSet ((Set.univ.pi A) ×ˢ B ×ˢ (Set.univ.pi C)) := by
+      show MeasurableSet ((Set.univ.pi A) ×ˢ (B ×ˢ (Set.univ.pi C)))
+      exact (MeasurableSet.univ_pi hA).prod (hB.prod (MeasurableSet.univ_pi hC))
+    -- Apply Measure.map_apply and rewrite using preimage equalities
+    calc Measure.map (fun ω => (Z_r ω, X r ω, Y_future ω)) μ ((Set.univ.pi A) ×ˢ B ×ˢ (Set.univ.pi C))
+        = μ ((fun ω => (Z_r ω, X r ω, Y_future ω)) ⁻¹' ((Set.univ.pi A) ×ˢ B ×ˢ (Set.univ.pi C))) := by
+          rw [Measure.map_apply h_meas_future h_meas_rect]
+      _ = μ {ω | (∀ i : Fin r, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j : Fin k, X (m + 1 + j.val) ω ∈ C j)} := by
+          rw [h_pre_future]
+      _ = μ {ω | (∀ i : Fin r, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j : Fin k, X (r + 1 + j.val) ω ∈ C j)} := by
+          exact h_cyl
+      _ = μ ((fun ω => (Z_r ω, X r ω, Y_tail ω)) ⁻¹' ((Set.univ.pi A) ×ˢ B ×ˢ (Set.univ.pi C))) := by
+          rw [h_pre_tail]
+      _ = Measure.map (fun ω => (Z_r ω, X r ω, Y_tail ω)) μ ((Set.univ.pi A) ×ˢ B ×ˢ (Set.univ.pi C)) := by
+          rw [Measure.map_apply h_meas_tail h_meas_rect]
 
   -- Apply π-λ theorem to extend from Rectangles to full σ-algebra
   sorry  -- TODO: Apply Measure.ext_of_generateFrom_of_iUnion
