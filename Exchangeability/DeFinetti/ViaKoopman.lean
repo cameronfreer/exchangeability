@@ -1123,48 +1123,48 @@ private lemma snorm_one_le_snorm_two_toReal
   -- 1) Turn the L¹ integrability hypothesis into `MemLp f 1 μ`
   --    (two interchangeable ways; use whichever is available in your setup):
   --    EITHER by the dedicated lemma on prob. spaces:
-  -- have hL1' : MemLp f (1 : ℝ≥0∞) μ := memLp_one_of_memLp_two (μ := μ) (f := f) hL2
+  -- have hL1' : MemLp f (1 : ENNReal) μ := memLp_one_of_memLp_two (μ := μ) (f := f) hL2
   --    OR directly from integrability (works for real-valued):
-  have hL1' : MemLp f (1 : ℝ≥0∞) μ := (memLp_one_iff_integrable).2 hL1
+  have hL1' : MemLp f (1 : ENNReal) μ := (memLp_one_iff_integrable).2 hL1
 
   -- 2) Monotonicity of `snorm` in the exponent on probability spaces: `‖f‖₁ ≤ ‖f‖₂`.
-  --    This lands in `ℝ≥0∞`.
-  have hmono : snorm f (1 : ℝ≥0∞) μ ≤ snorm f (2 : ℝ≥0∞) μ := by
-    -- On `ℝ≥0∞`, we have `(1 : ℝ≥0∞) ≤ 2`.
-    have h12 : (1 : ℝ≥0∞) ≤ (2 : ℝ≥0∞) := by norm_num
+  --    This lands in ENNReal.
+  have hmono : MeasureTheory.snorm f (1 : ENNReal) μ ≤ MeasureTheory.snorm f (2 : ENNReal) μ := by
+    -- On ENNReal, we have (1 : ENNReal) ≤ 2.
+    have h12 : (1 : ENNReal) ≤ (2 : ENNReal) := by norm_num
     -- `snorm_mono_exponent` is the standard statement on probability spaces.
-    simpa using snorm_mono_exponent (μ := μ) (f := f) h12
+    simpa using MeasureTheory.snorm_mono_exponent (μ := μ) (f := f) h12
 
   -- 3) Both `snorm f 1 μ` and `snorm f 2 μ` are finite, so we can safely apply `toReal`.
-  have hfin1 : snorm f (1 : ℝ≥0∞) μ ≠ ∞ := hL1'.snorm_ne_top
-  have hfin2 : snorm f (2 : ℝ≥0∞) μ ≠ ∞ := (hL2 : MemLp f (2 : ℝ≥0∞) μ).snorm_ne_top
+  have hfin1 : MeasureTheory.snorm f (1 : ENNReal) μ ≠ ∞ := hL1'.snorm_ne_top
+  have hfin2 : MeasureTheory.snorm f (2 : ENNReal) μ ≠ ∞ := (hL2 : MemLp f (2 : ENNReal) μ).snorm_ne_top
 
   -- 4) Push the inequality through `ENNReal.toReal`.
   have htoReal :
-      (snorm f (1 : ℝ≥0∞) μ).toReal ≤ (snorm f (2 : ℝ≥0∞) μ).toReal :=
+      (MeasureTheory.snorm f (1 : ENNReal) μ).toReal ≤ (MeasureTheory.snorm f (2 : ENNReal) μ).toReal :=
     ENNReal.toReal_le_toReal hfin1 hfin2 hmono
 
   -- 5) Identify `(snorm f 1 μ).toReal` with the real L¹ integral `∫ |f|`.
   --    `snorm_one_eq_lintegral_nnnorm` turns `snorm` into a `∫⁻ ‖f‖₊`;
   --    `integral_norm_eq_lintegral_nnnorm` then converts `∫⁻` to the real integral via `toReal`.
   have hleft :
-      (∫ ω, |f ω| ∂μ) = (snorm f (1 : ℝ≥0∞) μ).toReal := by
+      (∫ ω, |f ω| ∂μ) = (MeasureTheory.snorm f (1 : ENNReal) μ).toReal := by
     -- For real-valued functions, `‖f‖ = |f|`.
-    simpa [snorm_one_eq_lintegral_nnnorm, Real.norm_eq_abs]
+    simpa [MeasureTheory.snorm_one_eq_lintegral_nnnorm, Real.norm_eq_abs]
       using (integral_norm_eq_lintegral_nnnorm (μ := μ) (f := f) hL1)
 
   -- 6) Conclude. If in your code `eLpNorm` is definitionally `snorm`, the next `simpa`
   --    closes the goal. If `eLpNorm` is a thin wrapper over `snorm`, you may need
   --    `simp [eLpNorm]` here (or a lemma equating them at finite `p`).
-  simpa [hleft] using htoReal.trans_eq (by rfl : (snorm f (2 : ℝ≥0∞) μ).toReal = (eLpNorm f 2 μ).toReal)
+  simpa [hleft] using htoReal.trans_eq (by rfl : (MeasureTheory.snorm f (2 : ENNReal) μ).toReal = (eLpNorm f 2 μ).toReal)
 
-/-- If `f → 0` in `ℝ≥0∞`, then `(toReal ∘ f) → 0` in `ℝ`. -/
+/-- If `f → 0` in ENNReal, then `(toReal ∘ f) → 0` in `ℝ`. -/
 private lemma ennreal_tendsto_toReal_zero {ι : Type*}
     (f : ι → ENNReal) {a : Filter ι}
     (hf : Tendsto f a (𝓝 (0 : ENNReal))) :
     Tendsto (fun x => (f x).toReal) a (𝓝 (0 : ℝ)) := by
   -- `toReal` is continuous at any finite point; in particular at `0`.
-  have hcont : ContinuousAt ENNReal.toReal (0 : ℝ≥0∞) :=
+  have hcont : ContinuousAt ENNReal.toReal (0 : ENNReal) :=
     ENNReal.continuousAt_toReal ENNReal.zero_ne_top
   -- Compose the limits.
   simpa [ENNReal.toReal_zero] using hcont.tendsto.comp hf
@@ -1617,13 +1617,13 @@ private theorem h_tower_of_lagConst
           · intro ω
             simp [A]
             calc |1 / (↑n + 1) * ∑ j ∈ Finset.range (n + 1), g (ω j)|
-              ≤ (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), Cg := by
-                rw [abs_mul, abs_div, abs_one, one_div]
-                simp [abs_of_nonneg]
-                refine mul_le_mul_of_nonneg_left ?_ (by positivity)
-                calc |∑ j ∈ Finset.range (n + 1), g (ω j)|
-                  ≤ ∑ j ∈ Finset.range (n + 1), |g (ω j)| := abs_sum_le_sum_abs _ _
-                _ ≤ ∑ j ∈ Finset.range (n + 1), Cg := Finset.sum_le_sum (fun j _ => hCg (ω j))
+                ≤ (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), Cg := by
+                  rw [abs_mul, abs_div, abs_one, one_div]
+                  simp [abs_of_nonneg]
+                  refine mul_le_mul_of_nonneg_left ?_ (by positivity)
+                  calc |∑ j ∈ Finset.range (n + 1), g (ω j)|
+                      ≤ ∑ j ∈ Finset.range (n + 1), |g (ω j)| := abs_sum_le_sum_abs _ _
+                    _ ≤ ∑ j ∈ Finset.range (n + 1), Cg := Finset.sum_le_sum (fun j _ => hCg (ω j))
               _ = Cg := by simp [Finset.sum_const, Finset.card_range]; field_simp; ring
       -- Integrability of W = f(ω 0) * Y ω
       have hW_int : Integrable (fun ω => f (ω 0) * Y ω) μ := by
