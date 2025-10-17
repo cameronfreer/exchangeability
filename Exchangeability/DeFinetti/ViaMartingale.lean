@@ -1594,12 +1594,9 @@ lemma join_eq_comap_pair_finFuture
       = fun ω => (f ω, g ω) := rfl
   
   rw [h_lhs, h_rhs]
-  -- The comap of a function into a product space equals the join of comaps of components
-  -- This follows from the fact that the product σ-algebra is comap fst ⊔ comap snd
-  -- Proof requires showing both directions of the inclusion
-  sorry  -- TODO: Standard result about comap and product σ-algebras
-         -- Need: comap (f, g) (comap fst ⊔ comap snd) = comap (fst ∘ (f,g)) ⊔ comap (snd ∘ (f,g))
-         -- This is a general fact about pullback σ-algebras and products
+  -- Apply MeasurableSpace.comap_prodMk from Mathlib
+  -- This states: (m₁.prod m₂).comap (fun ω => (f ω, g ω)) = m₁.comap f ⊔ m₂.comap g
+  exact (MeasurableSpace.comap_prodMk f g).symm
 
 /-- **Finite-level bridge:** if `(Z_r, X_r, θ_{m+1}^{(k)})` and `(X_r, θ_{m+1}^{(k)})` 
 have the same law after projecting away `Z_r`, then dropping `Z_r` from the conditioning
