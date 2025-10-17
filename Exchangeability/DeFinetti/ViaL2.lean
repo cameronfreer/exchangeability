@@ -2895,9 +2895,8 @@ lemma alphaIicCE_L1_tendsto_zero_atBot
     -- Apply tendsto_measure_iInter_atTop
     have h_meas : ∀ (n : ℕ), NullMeasurableSet (X 0 ⁻¹' Set.Iic (-(n : ℝ))) μ := fun n =>
       (measurableSet_preimage (hX_meas 0) measurableSet_Iic).nullMeasurableSet
-    have h_fin : ∃ (n : ℕ), μ (X 0 ⁻¹' Set.Iic (-(n : ℝ))) ≠ ∞ := by
-      refine ⟨0, ?_⟩
-      exact measure_ne_top μ _
+    have h_fin : ∃ n, μ (X 0 ⁻¹' Set.Iic (-(n : ℝ))) ≠ ∞ :=
+      ⟨0, measure_ne_top μ (X 0 ⁻¹' Set.Iic (-(0 : ℝ)))⟩
     simpa [h_empty] using tendsto_measure_iInter_atTop (μ := μ) h_meas h_antitone h_fin
 
   -- Step 2: L¹ contraction - ‖condExp f‖₁ ≤ ‖f‖₁
@@ -2984,9 +2983,8 @@ lemma alphaIicCE_L1_tendsto_one_atTop
       linarith
     have h_meas : ∀ (n : ℕ), NullMeasurableSet (X 0 ⁻¹' Set.Ioi (n : ℝ)) μ := fun n =>
       (measurableSet_preimage (hX_meas 0) measurableSet_Ioi).nullMeasurableSet
-    have h_fin : ∃ (n : ℕ), μ (X 0 ⁻¹' Set.Ioi (n : ℝ)) ≠ ∞ := by
-      refine ⟨0, ?_⟩
-      exact measure_ne_top μ _
+    have h_fin : ∃ n, μ (X 0 ⁻¹' Set.Ioi (n : ℝ)) ≠ ∞ :=
+      ⟨0, measure_ne_top μ (X 0 ⁻¹' Set.Ioi (0 : ℝ))⟩
     simpa [h_empty] using tendsto_measure_iInter_atTop (μ := μ) h_meas h_antitone h_fin
 
   -- Step 2: L¹ contraction - ‖condExp f - condExp 1‖₁ ≤ ‖f - 1‖₁
