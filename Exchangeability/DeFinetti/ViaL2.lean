@@ -2848,19 +2848,22 @@ lemma alphaIicCE_L1_tendsto_zero_atBot
     rfl
 
   -- Step 1: Show ∫ |(indIic (-(n:ℝ))) ∘ X 0| → 0
-  -- This is equivalent to showing μ(X 0 ∈ (-∞, -n]) → 0
-  -- which follows from continuity of probability measure
+  -- Indicator integral = measure of set {X 0 ≤ -n} → 0 by continuity
   have h_indicator_tendsto : Tendsto (fun n : ℕ =>
       ∫ ω, |(indIic (-(n : ℝ))) (X 0 ω)| ∂μ) atTop (𝓝 0) := by
-    -- ∫ |indicator| = ∫ indicator (since indicator ∈ {0,1})
-    --                = μ(X 0 ∈ (-∞, -n])
-    --                = μ(X 0 ≤ -n) → 0
-    sorry
+    sorry  -- TODO: Use integral_indicator_one and tendsto_measure_iInter
 
-  -- Step 2: Use L¹ contraction of conditional expectation
-  -- ‖μ[f | m]‖₁ ≤ ‖f‖₁
-  -- This gives ‖alphaIicCE (-(n:ℝ))‖₁ ≤ ∫ |(indIic (-(n:ℝ))) ∘ X 0| → 0
-  sorry
+  -- Step 2: L¹ contraction - ‖condExp f‖₁ ≤ ‖f‖₁
+  have h_contraction : ∀ n : ℕ,
+      ∫ ω, |alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω| ∂μ
+      ≤ ∫ ω, |(indIic (-(n : ℝ))) (X 0 ω)| ∂μ := by
+    intro n
+    sorry  -- TODO: Use snorm_condExp_le or similar L¹ contraction lemma
+
+  -- Apply squeeze theorem: 0 ≤ ‖alphaIicCE‖₁ ≤ ‖indicator‖₁ → 0
+  refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_indicator_tendsto ?_ h_contraction
+  intro n
+  exact integral_nonneg (fun ω => abs_nonneg _)
 
 /-- **L¹ endpoint limit at +∞**: As t → +∞, alphaIicCE → 1 in L¹.
 
@@ -2883,19 +2886,23 @@ lemma alphaIicCE_L1_tendsto_one_atTop
   haveI : Fact (TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
 
   -- Step 1: Show ∫ |(indIic (n:ℝ)) ∘ X 0 - 1| → 0
-  -- This is equivalent to showing μ(X 0 > n) → 0
-  -- because (indIic n)(x) = 1 ⟺ x ≤ n, so 1 - (indIic n)(x) = indicator of (n, ∞)
+  -- Integral of |indicator - 1| = μ(X 0 > n) → 0 by continuity
   have h_indicator_tendsto : Tendsto (fun n : ℕ =>
       ∫ ω, |(indIic (n : ℝ)) (X 0 ω) - 1| ∂μ) atTop (𝓝 0) := by
-    -- ∫ |(indIic n) - 1| = ∫ |indicator of (-∞,n] - 1|
-    --                     = ∫ indicator of (n, ∞)  (since values are in {0,1})
-    --                     = μ(X 0 > n) → 0
-    sorry
+    sorry  -- TODO: Use integral of complement indicator and measure continuity
 
-  -- Step 2: Use L¹ contraction of conditional expectation
-  -- ‖μ[f | m] - μ[1 | m]‖₁ ≤ ‖f - 1‖₁
-  -- Since μ[1 | m] = 1, we get ‖alphaIicCE (n:ℝ) - 1‖₁ ≤ ∫ |(indIic (n:ℝ)) ∘ X 0 - 1| → 0
-  sorry
+  -- Step 2: L¹ contraction - ‖condExp f - condExp 1‖₁ ≤ ‖f - 1‖₁
+  -- Since condExp 1 = 1, get ‖alphaIicCE - 1‖₁ ≤ ‖indicator - 1‖₁
+  have h_contraction : ∀ n : ℕ,
+      ∫ ω, |alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω - 1| ∂μ
+      ≤ ∫ ω, |(indIic (n : ℝ)) (X 0 ω) - 1| ∂μ := by
+    intro n
+    sorry  -- TODO: Use L¹ contraction of condExp for differences
+
+  -- Apply squeeze theorem: 0 ≤ ‖alphaIicCE - 1‖₁ ≤ ‖indicator - 1‖₁ → 0
+  refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_indicator_tendsto ?_ h_contraction
+  intro n
+  exact integral_nonneg (fun ω => abs_nonneg _)
 
 /-- **A.e. pointwise endpoint limit at -∞**.
 
