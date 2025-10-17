@@ -361,7 +361,9 @@ lemma condexp_convergence_fwd
 
 /-- Forward declaration: Tail σ-algebra is sub-σ-algebra of future filtration.
 
-Full proof at line ~501. -/
+This is needed early for `extreme_members_equal_on_tail`.
+Proof: tailSigma = ⨅ n, revFiltration X n, and futureFiltration X m = revFiltration X (m+1),
+so the infimum is ≤ any component. Main definition with alternative proof at line ~506. -/
 lemma tailSigma_le_futureFiltration_fwd
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) (m : ℕ) :
@@ -372,7 +374,9 @@ lemma tailSigma_le_futureFiltration_fwd
 
 /-- Forward declaration: Future filtration is sub-σ-algebra of ambient.
 
-Full proof at line ~533. -/
+This is needed early for conditional expectation tower properties.
+Proof: futureFiltration X m = revFiltration X (m + 1), which is a sub-σ-algebra by
+`revFiltration_le`. Main definition at line ~537. -/
 lemma futureFiltration_le_fwd
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) (m : ℕ) (hX : ∀ n, Measurable (X n)) :
@@ -502,12 +506,12 @@ lemma tailSigma_le {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
   refine iInf_le_of_le 0 ?_
   exact revFiltration_le X hX 0
 
-/-- Future filtration is always at least as fine as the tail σ-algebra. -/
+/-- Future filtration is always at least as fine as the tail σ-algebra.
+Alternative proof via tailSigmaFuture. -/
 lemma tailSigma_le_futureFiltration {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) (m : ℕ) :
-    tailSigma X ≤ futureFiltration X m := by
-  rw [← tailSigmaFuture_eq_tailSigma]
-  exact iInf_le (fun m => futureFiltration X m) m
+    tailSigma X ≤ futureFiltration X m :=
+  tailSigma_le_futureFiltration_fwd X m
 
 /-- Indicators of tail-measurable sets are tail-measurable functions. -/
 lemma indicator_tailMeasurable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
@@ -535,10 +539,8 @@ lemma sigmaFinite_trim_tailSigma {Ω α : Type*} {m₀ : MeasurableSpace Ω} [Me
 /-- The future filtration at level m is a sub-σ-algebra of the ambient σ-algebra. -/
 lemma futureFiltration_le {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) (m : ℕ) (hX : ∀ n, Measurable (X n)) :
-    futureFiltration X m ≤ (inferInstance : MeasurableSpace Ω) := by
-  -- futureFiltration X m = revFiltration X (m + 1)
-  simp only [futureFiltration]
-  exact revFiltration_le X hX (m + 1)
+    futureFiltration X m ≤ (inferInstance : MeasurableSpace Ω) :=
+  futureFiltration_le_fwd X m hX
 
 /-- The preimage of a measurable set under X_{m+k} is measurable in futureFiltration X m.
 Note: This requires k ≥ 1 since futureFiltration X m = σ(X_{m+1}, X_{m+2}, ...). -/
