@@ -344,20 +344,18 @@ abbrev futureFiltration (X : ℕ → Ω → α) (m : ℕ) : MeasurableSpace Ω :
   MeasurableSpace.comap (shiftRV X (m + 1)) inferInstance
 
 /-- Forward declaration: Conditional expectation convergence from contractability.
-
-Full proof at line ~1187 using the CE bridge lemma from CondExp.lean. -/
+Needed early for `extreme_members_equal_on_tail`. Full proof at line ~1176 as `condexp_convergence`. -/
 lemma condexp_convergence_fwd
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {X : ℕ → Ω → α} (hX : Contractable μ X)
     (hX_meas : ∀ n, Measurable (X n))
-    (k m : ℕ) (_hkm : k ≤ m)
+    (k m : ℕ) (hk : k ≤ m)
     (B : Set α) (hB : MeasurableSet B) :
-    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | futureFiltration X m]
+    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X m) | futureFiltration X m]
       =ᵐ[μ]
-    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | futureFiltration X m] := by
-  sorry  -- Forward declaration - actual proof at line ~1187
-         -- This would use condexp_convergence which is defined later
+    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | futureFiltration X m] := by
+  sorry  -- Forward declaration - full proof at line ~1176
 
 /-- Forward declaration: Tail σ-algebra is sub-σ-algebra of future filtration.
 
@@ -416,7 +414,9 @@ lemma extreme_members_equal_on_tail
   -- equality at the future level m (contractability)
   have h_eq_m :
       μ[f_m | futureFiltration X m] =ᵐ[μ] μ[f_0 | futureFiltration X m] := by
-    convert condexp_convergence_fwd hX hX_meas m m (le_refl m) B hB using 2
+    -- Use condexp_convergence (via forward declaration)
+    -- μ[f_m|F_m] = μ[f_0|F_m] from contractability
+    exact condexp_convergence_fwd hX hX_meas 0 m (Nat.zero_le m) B hB
 
   -- condition both sides on the tail
   have h_cond_on_tail :
@@ -1619,28 +1619,25 @@ lemma condexp_indicator_eq_on_join_of_triple_law
     =ᵐ[μ]
   μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y
        | MeasurableSpace.comap θk inferInstance] := by
-  -- Strategy: Use the fact that (Y, θk) and (Y, θk') have the same law,
-  -- so conditioning on (Zr, θk) gives the same result as conditioning on (Zr, θk').
-  -- Then use tower property to drop Zr from the conditioning.
-  
-  -- First, we want to show that conditioning on (Zr, θk) equals conditioning on (Zr, θk')
-  -- This follows from the fact that (Y, θk) =ᵈ (Y, θk')
-  
-  -- Apply the general bridge lemma: if (Y, θk) =ᵈ (Y, θk'), then
-  -- E[1_B(Y) | (Zr, θk)] = E[1_B(Y) | (Zr, θk')]
-  
-  -- But we need a more direct approach using the given hypothesis hpush
-  -- The key is that the larger σ-algebra doesn't add information about Y
-  -- when Zr is independent of Y given θk
-  
-  -- For now, this requires the tower property combined with conditional independence
-  -- or a direct application of the uniqueness of conditional expectation
-  sorry  -- TODO: This follows from:
-         -- 1. (Y, θk) =ᵈ (Y, θk') implies E[1_B(Y) | θk] = E[1_B(Y) | θk']
-         -- 2. Tower property: E[1_B(Y) | (Zr, θk)] = E[E[1_B(Y) | θk] | (Zr, θk)]
-         -- 3. Since E[1_B(Y) | θk] is θk-measurable, conditioning on (Zr, θk) doesn't change it
-         -- 4. Therefore E[1_B(Y) | (Zr, θk)] = E[1_B(Y) | θk]
-         -- This is the "bridge" property needed for the martingale convergence
+  -- Bridge + tower pattern: use a.e.-equalities outside conditional expectation
+  -- Key insight: comap θk ≤ comap (Zr, θk), so by tower property,
+  -- conditioning on the larger σ-algebra and then the smaller equals just the smaller.
+
+  let f := Set.indicator B (fun _ => (1 : ℝ)) ∘ Y
+  let m_small := MeasurableSpace.comap θk inferInstance
+  let m_large := MeasurableSpace.comap (fun ω => (Zr ω, θk ω)) inferInstance
+
+  -- Use tower property directly: since θk = Prod.snd ∘ (Zr, θk),
+  -- we have comap θk ≤ comap (Zr, θk), so E[f | comap θk] = E[E[f | comap (Zr, θk)] | comap θk]
+  -- But also E[E[f | comap θk] | comap (Zr, θk)] = E[f | comap θk] since θk-measurable functions
+  -- stay the same when conditioned on the larger σ-algebra.
+
+  -- For now, use sorry as this requires careful σ-algebra manipulations
+  sorry  -- TODO: Full proof using tower property
+           -- The key steps are:
+           -- 1. Show comap θk ≤ comap (Zr, θk) via Prod.snd projection
+           -- 2. Apply tower: E[f | large] = E[E[f | small] | large] when small ≤ large
+           -- 3. Use that E[f | small] is small-measurable, so E[E[f | small] | large] = E[f | small]
 
 /-- **Correct conditional independence from contractability (Kallenberg Lemma 1.3).**
 
@@ -1715,11 +1712,19 @@ lemma block_coord_condIndep
     have h_pair :
         Measure.map (fun ω => (Y ω, θk ω)) μ
           = Measure.map (fun ω => (Y ω, θk' ω)) μ := by
-      -- The triple equality gives us measures on triples; we project to pairs.
-      -- h_triple uses local definitions, so we work with it directly via simp/convert
-      sorry  -- TODO: Standard measure projection via Measure.map Prod.snd
-             -- The triple type is right-associated: (Fin r → α) × (α × (Fin k → α))
-             -- so Prod.snd drops Zr. Need to unfold h_triple's local definitions carefully.
+      -- Project the triple equality to pairs using Prod.snd
+      -- Triple type: (Fin r → α) × (α × (Fin k → α)), so Prod.snd drops Z_r
+      -- We have: map (Z_r, Y, θk) μ = map (Z_r, Y, θk') μ  (from h_triple)
+      -- By Measure.map composition: map (Prod.snd) (map (Z_r, Y, θk) μ) = map (Prod.snd) (map (Z_r, Y, θk') μ)
+      -- Which simplifies to: map (Y, θk) μ = map (Y, θk') μ
+
+      sorry  -- TODO: Complete projection proof
+             -- The technique is correct: compose h_triple with Prod.snd
+             -- Difficulty: h_triple has local `have` definitions that need careful unfolding
+             -- Key steps:
+             -- 1. Show (Y, θk) = Prod.snd ∘ (Zr, Y, θk) by funext
+             -- 2. Use Measure.map_map to factor composition
+             -- 3. Apply h_triple to get equality
     -- Bridge: drop `Z_r` from conditioning at level k
     -- first rewrite the join as a comap of the pair `(Zr, θk)`
     have h_join :
