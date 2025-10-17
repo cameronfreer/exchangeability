@@ -2683,6 +2683,150 @@ lemma alphaIicCE_measurable
     Measurable (alphaIicCE X hX_contract hX_meas hX_L2 t) := by
   sorry
 
+/-!
+### Identification lemma and endpoint limits for alphaIicCE
+
+The key results that solve the endpoint limit problem:
+1. **Identification**: The existential `alphaIic` equals the canonical `alphaIicCE` a.e.
+2. **L¹ endpoint limits**: Using L¹ contraction of condExp, we get integral convergence
+3. **A.e. endpoint limits**: Monotonicity + boundedness + L¹ limits ⇒ a.e. pointwise limits
+-/
+
+/-- **Identification lemma**: alphaIic equals alphaIicCE almost everywhere.
+
+**Proof strategy:**
+Both are L¹ limits of the same Cesàro averages `(1/m) ∑ᵢ (indIic t) ∘ X_{n+i}`:
+- `alphaIic` is defined as the L¹ limit from `weighted_sums_converge_L1`
+- `alphaIicCE` is the conditional expectation `μ[(indIic t) ∘ X_0 | tailSigma X]`
+
+By the reverse martingale convergence theorem (or direct L² analysis), the Cesàro averages
+converge in L² (hence L¹) to the conditional expectation. Since L¹ limits are unique up
+to a.e. equality, we get `alphaIic =ᵐ alphaIicCE`.
+
+TODO: Implement using reverse martingale convergence or L² projection argument. -/
+lemma alphaIic_ae_eq_alphaIicCE
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (t : ℝ) :
+    alphaIic X hX_contract hX_meas hX_L2 t
+      =ᵐ[μ] alphaIicCE X hX_contract hX_meas hX_L2 t := by
+  sorry
+
+/-- **L¹ endpoint limit at -∞**: As t → -∞, alphaIicCE → 0 in L¹.
+
+**Proof strategy:**
+- For t → -∞, the indicator `1_{(-∞,t]}(X_0 ω)` → 0 for each fixed ω
+- By dominated convergence (bounded by 1), `‖1_{(-∞,t]} ∘ X_0‖₁ → 0`
+- By L¹ contraction of conditional expectation:
+  ```
+  ‖alphaIicCE t - 0‖₁ = ‖μ[1_{(-∞,t]} ∘ X_0 | tailSigma] - μ[0 | tailSigma]‖₁
+                      ≤ ‖1_{(-∞,t]} ∘ X_0 - 0‖₁ → 0
+  ```
+-/
+lemma alphaIicCE_L1_tendsto_zero_atBot
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+    Tendsto (fun n : ℕ =>
+      ∫ ω, |alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω| ∂μ)
+      atTop (𝓝 0) := by
+  -- Strategy: Use L¹ contraction property of conditional expectation
+  -- ‖condExp m f‖₁ ≤ ‖f‖₁
+  -- First show ‖(indIic (-(n:ℝ))) ∘ X 0‖₁ → 0 by dominated convergence
+
+  -- Set up the tail σ-algebra Fact instance (needed for condExp)
+  have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
+    TailSigma.tailSigma_le X hX_meas
+  haveI : Fact (TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
+
+  -- For each n, alphaIicCE (-(n:ℝ)) = μ[(indIic (-(n:ℝ))) ∘ X 0 | tailSigma]
+  have h_def : ∀ n, alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ))
+      = μ[(indIic (-(n : ℝ))) ∘ (X 0) | TailSigma.tailSigma X] := by
+    intro n
+    rfl
+
+  -- Step 1: Show ∫ |(indIic (-(n:ℝ))) ∘ X 0| → 0
+  -- This is equivalent to showing μ(X 0 ∈ (-∞, -n]) → 0
+  -- which follows from continuity of probability measure
+  have h_indicator_tendsto : Tendsto (fun n : ℕ =>
+      ∫ ω, |(indIic (-(n : ℝ))) (X 0 ω)| ∂μ) atTop (𝓝 0) := by
+    -- ∫ |indicator| = ∫ indicator (since indicator ∈ {0,1})
+    --                = μ(X 0 ∈ (-∞, -n])
+    --                = μ(X 0 ≤ -n) → 0
+    sorry
+
+  -- Step 2: Use L¹ contraction of conditional expectation
+  -- ‖μ[f | m]‖₁ ≤ ‖f‖₁
+  -- This gives ‖alphaIicCE (-(n:ℝ))‖₁ ≤ ∫ |(indIic (-(n:ℝ))) ∘ X 0| → 0
+  sorry
+
+/-- **L¹ endpoint limit at +∞**: As t → +∞, alphaIicCE → 1 in L¹.
+
+**Proof strategy:**
+Similar to the -∞ case, but `1_{(-∞,t]}(X_0 ω)` → 1 as t → +∞. -/
+lemma alphaIicCE_L1_tendsto_one_atTop
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+    Tendsto (fun n : ℕ =>
+      ∫ ω, |alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω - 1| ∂μ)
+      atTop (𝓝 0) := by
+  -- Strategy: Similar to atBot case, but now (indIic (n:ℝ)) → 1 pointwise
+  -- So ∫ |(indIic (n:ℝ)) ∘ X 0 - 1| → 0
+
+  -- Set up the tail σ-algebra Fact instance (needed for condExp)
+  have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
+    TailSigma.tailSigma_le X hX_meas
+  haveI : Fact (TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
+
+  -- Step 1: Show ∫ |(indIic (n:ℝ)) ∘ X 0 - 1| → 0
+  -- This is equivalent to showing μ(X 0 > n) → 0
+  -- because (indIic n)(x) = 1 ⟺ x ≤ n, so 1 - (indIic n)(x) = indicator of (n, ∞)
+  have h_indicator_tendsto : Tendsto (fun n : ℕ =>
+      ∫ ω, |(indIic (n : ℝ)) (X 0 ω) - 1| ∂μ) atTop (𝓝 0) := by
+    -- ∫ |(indIic n) - 1| = ∫ |indicator of (-∞,n] - 1|
+    --                     = ∫ indicator of (n, ∞)  (since values are in {0,1})
+    --                     = μ(X 0 > n) → 0
+    sorry
+
+  -- Step 2: Use L¹ contraction of conditional expectation
+  -- ‖μ[f | m] - μ[1 | m]‖₁ ≤ ‖f - 1‖₁
+  -- Since μ[1 | m] = 1, we get ‖alphaIicCE (n:ℝ) - 1‖₁ ≤ ∫ |(indIic (n:ℝ)) ∘ X 0 - 1| → 0
+  sorry
+
+/-- **A.e. pointwise endpoint limit at -∞**.
+
+**Proof strategy:**
+Combine monotonicity (from conditional expectation), boundedness (0 ≤ alphaIicCE ≤ 1),
+and L¹ → 0 to conclude a.e. pointwise → 0 along integers. -/
+lemma alphaIicCE_ae_tendsto_zero_atBot
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+    ∀ᵐ ω ∂μ, Tendsto (fun n : ℕ =>
+      alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω)
+      atTop (𝓝 0) := by
+  sorry
+
+/-- **A.e. pointwise endpoint limit at +∞**.
+
+**Proof strategy:**
+Similar to the -∞ case, using monotonicity + boundedness + L¹ → 1. -/
+lemma alphaIicCE_ae_tendsto_one_atTop
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+    ∀ᵐ ω ∂μ, Tendsto (fun n : ℕ =>
+      alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω)
+      atTop (𝓝 1) := by
+  sorry
+
 /-- Right-continuous CDF from α via countable rational envelope:
 F(ω,t) := inf_{q∈ℚ, t<q} α_{Iic q}(ω).
 This is monotone increasing and right-continuous in t. -/
