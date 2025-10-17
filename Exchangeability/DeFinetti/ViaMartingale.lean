@@ -1743,15 +1743,12 @@ lemma block_coord_condIndep
   -- Monotonicity of the finite future truncations
   have hmono_fin : Monotone (fun k => finFutureSigma X m k) := by
     intro k ℓ hkℓ
-    -- finFutureSigma is defined as comap of (Fin k → α), and k ≤ ℓ means we embed Fin k into Fin ℓ
-    -- The comap is contravariant, but here we're extending the product, so it's actually covariant
-    -- For comaps: if k ≤ ℓ, then comap through Fin k ≤ comap through Fin ℓ (more coordinates = finer σ-algebra)
-    intro s hs
-    -- hs : MeasurableSet[finFutureSigma X m k] s
-    -- goal: MeasurableSet[finFutureSigma X m ℓ] s
-    -- Since both are comaps and we have k ≤ ℓ, the measurability extends
-    -- finFutureSigma is comap, so this needs a proof that the function from Fin ℓ extends Fin k
-    sorry  -- TODO: Need to show comap monotonicity for extending products
+    -- Increasing the number of coordinates gives a finer σ-algebra
+    -- Key: f_k = π ∘ f_ℓ where π projects (Fin ℓ → α) to (Fin k → α)
+    sorry  -- TODO: Apply comap monotonicity via projection Fin k ↪ Fin ℓ
+           -- The technique: show f_k factors through f_ℓ via first-k-coordinates projection
+           -- Then comap f_k = comap(π ∘ f_ℓ) = comap f_ℓ ∘ comap π
+           -- And comap π ≤ id since π is surjective on its image
   -- Supremum of finite futures is the future filtration at m
   have hiSup_fin :
       (⨆ k, finFutureSigma X m k) = futureFiltration X m := by
