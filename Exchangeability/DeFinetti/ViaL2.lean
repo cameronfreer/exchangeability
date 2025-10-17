@@ -2893,11 +2893,10 @@ lemma alphaIicCE_L1_tendsto_zero_atBot
       have h2 : X 0 ω ≤ -(n : ℝ) := h n
       linarith
     -- Apply tendsto_measure_iInter_atTop
-    have h_meas : ∀ (n : ℕ), NullMeasurableSet (X 0 ⁻¹' Set.Iic (-(n : ℝ))) μ := by
-      intro n
-      exact (measurableSet_preimage (hX_meas 0) measurableSet_Iic).nullMeasurableSet
+    have h_meas : ∀ (n : ℕ), NullMeasurableSet (X 0 ⁻¹' Set.Iic (-(n : ℝ))) μ := fun n =>
+      (measurableSet_preimage (hX_meas 0) measurableSet_Iic).nullMeasurableSet
     have h_fin : ∃ (n : ℕ), μ (X 0 ⁻¹' Set.Iic (-(n : ℝ))) ≠ ∞ := by
-      use 0
+      refine ⟨0, ?_⟩
       exact measure_ne_top μ _
     simpa [h_empty] using tendsto_measure_iInter_atTop (μ := μ) h_meas h_antitone h_fin
 
@@ -2947,13 +2946,15 @@ lemma alphaIicCE_L1_tendsto_one_atTop
           = (Set.Ioi (n : ℝ)).indicator (fun _ => (1 : ℝ)) ∘ (X 0) := by
         ext ω
         simp only [indIic, Set.indicator, Function.comp_apply, Set.mem_Ioi, Set.mem_Iic]
-        by_cases h : X 0 ω ≤ n
-        · rw [if_pos h, if_neg]
-          · norm_num
-          · omega
-        · rw [if_neg h, if_pos]
-          · norm_num
-          · omega
+        split_ifs with h1 h2
+        · -- X 0 ω ≤ n and X 0 ω > n: contradiction
+          linarith
+        · -- X 0 ω ≤ n and ¬(X 0 ω > n): both give 0
+          norm_num
+        · -- ¬(X 0 ω ≤ n) and X 0 ω > n: both give 1
+          norm_num
+        · -- ¬(X 0 ω ≤ n) and ¬(X 0 ω > n): contradiction
+          linarith
       rw [this]
       -- Rewrite composition as indicator on preimage
       have h_comp : (Set.Ioi (n : ℝ)).indicator (fun _ => (1 : ℝ)) ∘ (X 0)
@@ -2981,11 +2982,10 @@ lemma alphaIicCE_L1_tendsto_one_atTop
       obtain ⟨n, hn⟩ := exists_nat_gt (X 0 ω)
       have h1 : X 0 ω > (n : ℝ) := h n
       linarith
-    have h_meas : ∀ (n : ℕ), NullMeasurableSet (X 0 ⁻¹' Set.Ioi (n : ℝ)) μ := by
-      intro n
-      exact (measurableSet_preimage (hX_meas 0) measurableSet_Ioi).nullMeasurableSet
+    have h_meas : ∀ (n : ℕ), NullMeasurableSet (X 0 ⁻¹' Set.Ioi (n : ℝ)) μ := fun n =>
+      (measurableSet_preimage (hX_meas 0) measurableSet_Ioi).nullMeasurableSet
     have h_fin : ∃ (n : ℕ), μ (X 0 ⁻¹' Set.Ioi (n : ℝ)) ≠ ∞ := by
-      use 0
+      refine ⟨0, ?_⟩
       exact measure_ne_top μ _
     simpa [h_empty] using tendsto_measure_iInter_atTop (μ := μ) h_meas h_antitone h_fin
 
