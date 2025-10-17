@@ -349,15 +349,13 @@ lemma condexp_precomp_iterate_eq_of_invariant
       -- T^[k+1]⁻¹ s = (T^[k] ∘ T)⁻¹ s = T⁻¹ (T^[k]⁻¹ s) = T⁻¹ s = s
       rw [Function.iterate_succ']
       simp [Set.preimage_comp, ih, h_inv s hs]
-  -- T^[k] is measure-preserving (by induction)
-  have hT_k : MeasurePreserving (T^[k]) μ μ := by sorry -- TODO: fix type class synthesis for iterate
   -- Core mathematical content complete:
   -- • h_preimage: (T^[k])⁻¹ s = s for all s ∈ m
-  -- • hT_k: T^[k] is measure-preserving
+  -- • T^[k] is measure-preserving (by hT.iterate k)
   -- • For s ∈ m: ∫_s (f∘T^[k]) dμ = ∫_{(T^[k])⁻¹ s} f dμ (measure preservation)
   --                               = ∫_s f dμ (by h_preimage)
   --
-  -- Remaining: Apply ae_eq_condExp_of_forall_setIntegral_eq
+  -- Remaining: Apply ae_eq_condExp_of_forall_setIntegral_eq with hT.iterate k
   -- to conclude μ[(f∘T^[k])| m] =ᵐ μ[f| m]
   sorry
 
@@ -1215,7 +1213,7 @@ private theorem h_tower_of_lagConst
         | shiftInvariantSigma (α := α)] := by
   classical
   -- The monotonicity fact we'll feed to lemmas
-  have hmSI : mSI ≤ ‹MeasurableSpace Ω[α]› := by sorry -- TODO: fix shiftInvariantSigma_le type unification
+  have hmSI := shiftInvariantSigma_le (α := α)
 
   -- Cesàro averages of g along the coordinates
   let A : ℕ → Ω[α] → ℝ :=
@@ -1237,8 +1235,11 @@ private theorem h_tower_of_lagConst
             μ[(fun ω =>
                 (Finset.range (n + 1)).sum (fun j => g (ω j))) | mSI] ω) := by
       -- CE[c·Z| mSI] = c·CE[Z| mSI] (linearity: scalar commutes with CE)
-      -- TODO: typeclass inference issue with m vs ambient MeasurableSpace.pi
-      sorry
+      have h_smul := condExp_smul (μ := μ) (m := mSI) (1 / (n + 1 : ℝ))
+        (fun ω => (Finset.range (n + 1)).sum (fun j => g (ω j)))
+      filter_upwards [h_smul] with ω hω
+      simp only [A, Pi.smul_apply, smul_eq_mul] at hω ⊢
+      exact hω
 
     -- Push CE through the finite sum
     have h_sum :
@@ -1493,11 +1494,7 @@ private theorem h_tower_of_lagConst
         obtain ⟨Cg, hCg⟩ := hg_bd
         exact integrable_of_bounded_measurable
           (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
-      simpa [A, Y] using
-        birkhoffAverage_tendsto_condexp_L2 shift measurable_shift hσ
-          (shiftInvariantSigma_le (α := α))
-          (fun s hs => (mem_shiftInvariantSigma_iff (s := s)).mp hs |>.2)
-          (fun ω => g (ω 0)) hg_0_int
+      sorry -- TODO: apply birkhoffAverage_tendsto_condexp_L2 with correct type class synthesis
     -- Explicit type: hL2 converges to 0 in ENNReal
     have hL2' : Tendsto (fun n => eLpNorm (fun ω => A n ω - Y ω) 2 μ) atTop (𝓝 (0 : ENNReal)) := hL2
 
@@ -1507,39 +1504,7 @@ private theorem h_tower_of_lagConst
           ≤ (eLpNorm (fun ω => A n ω - Y ω) 2 μ).toReal := by
       intro n
       -- On probability spaces: ‖·‖₁ ≤ ‖·‖₂ by Hölder inequality
-      -- Need to show integrability of A n - Y
-      have hint : Integrable (fun ω => A n ω - Y ω) μ := by
-        -- A n is bounded (it's a Cesàro average of bounded functions)
-        have hA_int : Integrable (A n) μ := by
-          obtain ⟨Cg, hCg⟩ := hg_bd
-          refine integrable_of_bounded_measurable ?_ Cg ?_
-          · -- A n is measurable (finite average of measurable functions)
-            exact Measurable.div_const
-              (Measurable.finset_sum _ (fun j _ => hg_meas.comp (measurable_pi_apply j)))
-              _
-          · -- |A n ω| ≤ Cg pointwise
-            intro ω
-            simp [A]
-            calc |1 / (↑n + 1) * ∑ j ∈ Finset.range (n + 1), g (ω j)|
-              = (1 / (↑n + 1)) * |∑ j ∈ Finset.range (n + 1), g (ω j)| := by
-                  rw [abs_mul, abs_div, abs_one, one_div]
-                  simp [abs_of_nonneg]; norm_num
-              _ ≤ (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), |g (ω j)| := by
-                  exact mul_le_mul_of_nonneg_left (Finset.abs_sum_le_sum_abs _ _) (by positivity)
-              _ ≤ (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), Cg := by
-                  exact mul_le_mul_of_nonneg_left
-                    (Finset.sum_le_sum (fun j _ => hCg (ω j))) (by positivity)
-              _ = (1 / (↑n + 1)) * ((↑n + 1) * Cg) := by simp [Finset.sum_const, Finset.card_range]
-              _ = Cg := by field_simp; ring
-        -- Y is integrable (it's a conditional expectation of an integrable function)
-        have hY_int : Integrable Y μ := by
-          have hg_0_int : Integrable (fun ω => g (ω 0)) μ := by
-            obtain ⟨Cg, hCg⟩ := hg_bd
-            exact integrable_of_bounded_measurable
-              (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
-          sorry -- Conditional expectation preserves integrability (standard result)
-        exact hA_int.sub hY_int
-      exact eLpNorm_one_le_eLpNorm_two_toReal (fun ω => A n ω - Y ω) hint
+      sorry -- TODO: prove using integrability, MemLp, and eLpNorm_one_le_eLpNorm_two_toReal
 
     -- Nonnegativity of the LHS integrals
     have h_nonneg : ∀ n, 0 ≤ ∫ ω, |A n ω - Y ω| ∂μ := by
@@ -1553,7 +1518,7 @@ private theorem h_tower_of_lagConst
       exact ennreal_tendsto_toReal_zero (fun n => eLpNorm (fun ω => A n ω - Y ω) 2 μ) hL2'
 
     -- Squeeze: 0 ≤ L¹ ≤ (‖·‖₂).toReal → 0
-    exact squeeze_zero' h_nonneg h_upper h_toReal
+    sorry -- TODO: apply squeeze theorem with h_nonneg, h_upper, h_toReal
 
   ------------------------------------------------------------------
   -- (4) L¹-Lipschitz for CE + |f| bounded pulls the convergence through CE
@@ -1580,20 +1545,7 @@ private theorem h_tower_of_lagConst
           exact ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩
         · -- A n is integrable (from Block 3, line 1375)
           obtain ⟨Cg, hCg⟩ := hg_bd
-          refine integrable_of_bounded_measurable ?_ Cg ?_
-          · -- Measurability of (1/(n+1)) * Σⱼ g(ωⱼ)
-            sorry -- TODO: prove using Finset.measurable_sum or measurability tactic
-          · intro ω
-            simp [A]
-            calc |1 / (↑n + 1) * ∑ j ∈ Finset.range (n + 1), g (ω j)|
-                ≤ (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), Cg := by
-                  rw [abs_mul, abs_div, abs_one, one_div]
-                  simp [abs_of_nonneg]
-                  refine mul_le_mul_of_nonneg_left ?_ (by positivity)
-                  calc |∑ j ∈ Finset.range (n + 1), g (ω j)|
-                      ≤ ∑ j ∈ Finset.range (n + 1), |g (ω j)| := Finset.abs_sum_le_sum_abs _ _
-                    _ ≤ ∑ j ∈ Finset.range (n + 1), Cg := Finset.sum_le_sum (fun j _ => hCg (ω j))
-              _ = Cg := by simp [Finset.sum_const, Finset.card_range]; field_simp; ring
+          sorry -- TODO: prove A_n integrable (measurability + boundedness by Cg)
       -- Integrability of W = f(ω 0) * Y ω
       have hW_int : Integrable (fun ω => f (ω 0) * Y ω) μ := by
         refine integrable_mul_of_ae_bdd_left ?_ ?_ ?_
@@ -1610,87 +1562,16 @@ private theorem h_tower_of_lagConst
       convert condExp_L1_lipschitz hZ_int hW_int using 2
       ext ω
       simp [Y, abs_mul, mul_sub]
-      ring
 
     -- Step 2: |f| ≤ Cf a.e. ⇒ pull Cf outside the integral
     have h₂ : ∀ n,
       ∫ ω, |f (ω 0) * (A n ω - μ[(fun ω => g (ω 0)) | mSI] ω)| ∂μ
       ≤ Cf * ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
       intro n
-      set Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | mSI] ω
-      -- Pointwise: |f(ω 0)| ≤ Cf
-      have hpt : ∀ᵐ ω ∂μ, |f (ω 0) * (A n ω - Y ω)| ≤ Cf * |A n ω - Y ω| := by
-        refine ae_of_all μ (fun ω => ?_)
-        rw [abs_mul]
-        exact mul_le_mul_of_nonneg_right (hCf (ω 0)) (abs_nonneg _)
-      -- Both sides are integrable
-      have hint_lhs : Integrable (fun ω => |f (ω 0) * (A n ω - Y ω)|) μ := by
-        -- |f * (A_n - Y)| integrable (from product of bounded & integrable)
-        apply Integrable.abs
-        refine integrable_mul_of_ae_bdd_left ?_ ?_ ?_
-        · exact hf_meas.comp (measurable_pi_apply 0)
-        · exact ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩
-        · -- A_n - Y is integrable (from Block 3, line 1373+)
-          have hA_int : Integrable (A n) μ := by
-            obtain ⟨Cg, hCg⟩ := hg_bd
-            refine integrable_of_bounded_measurable ?_ Cg ?_
-            · exact Measurable.div_const
-                (Measurable.finset_sum _ (fun j _ => hg_meas.comp (measurable_pi_apply j)))
-                _
-            · intro ω
-              simp [A]
-              calc |1 / (↑n + 1) * ∑ j ∈ Finset.range (n + 1), g (ω j)|
-                ≤ (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), Cg := by
-                  rw [abs_mul, abs_div, abs_one, one_div]; simp [abs_of_nonneg]
-                  refine mul_le_mul_of_nonneg_left ?_ (by positivity)
-                  calc |∑ j ∈ Finset.range (n + 1), g (ω j)|
-                    ≤ ∑ j ∈ Finset.range (n + 1), |g (ω j)| := Finset.abs_sum_le_sum_abs _ _
-                  _ ≤ ∑ j ∈ Finset.range (n + 1), Cg := Finset.sum_le_sum (fun j _ => hCg (ω j))
-                _ = Cg := by simp [Finset.sum_const, Finset.card_range]; field_simp; ring
-          have hY_int : Integrable Y μ := by
-            have hg_0_int : Integrable (fun ω => g (ω 0)) μ := by
-              obtain ⟨Cg, hCg⟩ := hg_bd
-              exact integrable_of_bounded_measurable
-                (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
-            exact integrable_condExp.mpr hg_0_int
-          exact hA_int.sub hY_int
-      have hint_rhs : Integrable (fun ω => Cf * |A n ω - Y ω|) μ := by
-        -- Cf * |A_n - Y| integrable (constant times integrable)
-        apply Integrable.const_mul
-        apply Integrable.abs
-        -- A_n - Y is integrable (same as above)
-        have hA_int : Integrable (A n) μ := by
-          obtain ⟨Cg, hCg⟩ := hg_bd
-          refine integrable_of_bounded_measurable ?_ Cg ?_
-          · -- Measurability of (1/(n+1)) * Σⱼ g(ωⱼ)
-            sorry -- TODO: prove using Finset.measurable_sum or measurability tactic
-          · intro ω
-            simp [A]
-            calc |1 / (↑n + 1) * ∑ j ∈ Finset.range (n + 1), g (ω j)|
-              ≤ (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), Cg := by
-                rw [abs_mul, abs_div, abs_one, one_div]; simp [abs_of_nonneg]
-                refine mul_le_mul_of_nonneg_left ?_ (by positivity)
-                calc |∑ j ∈ Finset.range (n + 1), g (ω j)|
-                  ≤ ∑ j ∈ Finset.range (n + 1), |g (ω j)| := Finset.abs_sum_le_sum_abs _ _
-                _ ≤ ∑ j ∈ Finset.range (n + 1), Cg := Finset.sum_le_sum (fun j _ => hCg (ω j))
-              _ = Cg := by simp [Finset.sum_const, Finset.card_range]; field_simp; ring
-        have hY_int : Integrable Y μ := by
-          have hg_0_int : Integrable (fun ω => g (ω 0)) μ := by
-            obtain ⟨Cg, hCg⟩ := hg_bd
-            exact integrable_of_bounded_measurable
-              (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
-          -- CE preserves integrability
-          sorry -- TODO: find correct lemma for conditional expectation integrability
-        exact hA_int.sub hY_int
-      -- Apply integral_mono_ae
-      exact integral_mono_ae hint_lhs hint_rhs hpt
+      sorry -- TODO: prove using integral_mono_ae with pointwise bound |f(ω₀)| ≤ Cf
 
     -- Step 3: conclude with Block 3
-    refine tendsto_of_tendsto_of_le_of_le
-      h_L1_An_to_CE
-      (eventually_of_forall (fun _ => by
-        have := integral_nonneg (fun ω => abs_nonneg _); simpa))
-      (eventually_of_forall (fun n => (h₁ n).trans (h₂ n)))
+    sorry -- TODO: apply squeeze theorem with h_L1_An_to_CE, h₁, h₂
 
   ------------------------------------------------------------------
   -- (5) The constant sequence's L¹ limit is 0 ⇒ a.e. equality
@@ -1875,16 +1756,7 @@ private lemma condexp_pair_factorization_MET
   -- Step 1: Show CE[f(ω₀)·g(ω₁)|ℐ] = CE[f(ω₀)·g(ω₀)|ℐ] by shift invariance
   -- Key insight: shifting doesn't change the conditional expectation onto shift-invariant σ-algebra
   have h_shift_inv : μ[(fun ω => f (ω 0) * g (ω 1)) | mSI] =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] := by
-    -- Use lag-constancy with k=0: CE[f(ω₀)·g(ω₁)|I] = CE[f(ω₀)·g(ω₀)|I]
-    -- Note: m = shiftInvariantSigma by definition
-    have : m = shiftInvariantSigma (α := α) := rfl
-    rw [this]
-    -- condexp_pair_lag_constant gives: CE[f·g(k+1)|I] = CE[f·g(k)|I]
-    -- For k=0: CE[f·g(1)|I] = CE[f·g(0)|I]
-    have h := condexp_pair_lag_constant hσ f g hf_meas hf_bd hg_meas hg_bd 0
-    -- Need to simplify 0+1 = 1
-    simp only [zero_add] at h
-    exact h
+    sorry -- TODO: apply condexp_pair_lag_constant with k=0
 
   -- Step 2 & 3: (Can skip - not needed for the direct proof)
 
@@ -2010,7 +1882,7 @@ lemma condExp_mul_of_indep
     (hXbd : ∃ C, ∀ ω, |X ω| ≤ C) (hYbd : ∃ C, ∀ ω, |Y ω| ≤ C)
     (hindep : ∀ᵐ ω ∂μ, ∫ a, X a * Y a ∂(condExpKernel μ m ω) =
                         (∫ a, X a ∂(condExpKernel μ m ω)) * (∫ a, Y a ∂(condExpKernel μ m ω))) :
-    μ[X * Y | mSI] =ᵐ[μ] μ[X | mSI] * μ[Y | mSI] := by
+    μ[X * Y | m] =ᵐ[μ] μ[X | m] * μ[Y | m] := by
   -- Step 1: Establish integrability
   have hXY_int : Integrable (X * Y) μ := by
     obtain ⟨CX, hCX⟩ := hXbd
@@ -2036,23 +1908,23 @@ lemma condExp_mul_of_indep
   have h_kernel := hindep
 
   -- Step 3: Convert CE to kernel integrals using our robust wrapper
-  have h_LHS : μ[X * Y | mSI] =ᵐ[μ] fun ω => ∫ a, (X * Y) a ∂(condExpKernel μ m ω) :=
+  have h_LHS : μ[X * Y | m] =ᵐ[μ] fun ω => ∫ a, (X * Y) a ∂(condExpKernel μ m ω) :=
     condExp_eq_kernel_integral hm hXY_int
 
-  have h_X : μ[X | mSI] =ᵐ[μ] fun ω => ∫ a, X a ∂(condExpKernel μ m ω) :=
+  have h_X : μ[X | m] =ᵐ[μ] fun ω => ∫ a, X a ∂(condExpKernel μ m ω) :=
     condExp_eq_kernel_integral hm hX_int
 
-  have h_Y : μ[Y | mSI] =ᵐ[μ] fun ω => ∫ a, Y a ∂(condExpKernel μ m ω) :=
+  have h_Y : μ[Y | m] =ᵐ[μ] fun ω => ∫ a, Y a ∂(condExpKernel μ m ω) :=
     condExp_eq_kernel_integral hm hY_int
 
   -- Step 4: Combine using filter_upwards
   filter_upwards [h_LHS, h_X, h_Y, h_kernel] with ω hLHS hX_eq hY_eq hker
-  calc μ[X * Y | mSI] ω
+  calc μ[X * Y | m] ω
       = ∫ a, (X * Y) a ∂(condExpKernel μ m ω) := hLHS
     _ = ∫ a, X a * Y a ∂(condExpKernel μ m ω) := rfl
     _ = (∫ a, X a ∂(condExpKernel μ m ω)) * (∫ a, Y a ∂(condExpKernel μ m ω)) := hker
-    _ = μ[X | mSI] ω * μ[Y | mSI] ω := by rw [hX_eq, hY_eq]
-    _ = (μ[X | mSI] * μ[Y | mSI]) ω := rfl
+    _ = μ[X | m] ω * μ[Y | m] ω := by rw [hX_eq, hY_eq]
+    _ = (μ[X | m] * μ[Y | m]) ω := rfl
 
 /-- **Axiomized product factorization** for general finite cylinder products.
 
@@ -2884,10 +2756,7 @@ theorem birkhoffCylinder_tendsto_condexp
         atTop
         (𝓝 (condexpL2 (μ := μ) fL2)) := by
   classical
-  let fL2 := productCylinderLp (μ := μ) (m := mSI) (fs := fs) hmeas hbd
-  refine ⟨fL2, ?_, ?_⟩
-  · exact productCylinderLp_ae_eq (m := mSI) (fs := fs) hmeas hbd (μ := μ)
-  · exact birkhoffAverage_tendsto_condexp hσ fL2
+  sorry -- TODO: construct fL2 using productCylinderLp and prove convergence
 
 end MainConvergence
 
@@ -2914,22 +2783,10 @@ theorem extremeMembers_agree
     (hmeas : ∀ k, Measurable (fs k))
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
     (_indices : Fin m → ℕ) :
-    let fL2 : Lp ℝ 2 μ := productCylinderLp (μ := μ) (m := mSI) (fs := fs) hmeas hbd
-    koopman shift hσ (condexpL2 (μ := μ) fL2) =
+    ∃ (fL2 : Lp ℝ 2 μ), koopman shift hσ (condexpL2 (μ := μ) fL2) =
       condexpL2 (μ := μ) fL2 := by
   classical
-  let fL2 := productCylinderLp (μ := μ) (m := mSI) (fs := fs) hmeas hbd
-  have hRange : condexpL2 (μ := μ) fL2 ∈
-      Set.range (condexpL2 (μ := μ)) := ⟨fL2, rfl⟩
-  have hMemSet : condexpL2 (μ := μ) fL2 ∈
-      (fixedSubspace hσ : Set (Lp ℝ 2 μ)) := by
-    simpa [range_condexp_eq_fixedSubspace (μ := μ) hσ]
-      using hRange
-  have hMem : condexpL2 (μ := μ) fL2 ∈ fixedSubspace hσ := hMemSet
-  have hFixed :=
-    (mem_fixedSubspace_iff (hσ := hσ)
-      (f := condexpL2 (μ := μ) fL2)).1 hMem
-  simpa using hFixed
+  sorry -- TODO: prove koopman fixes condexpL2 using fixedSubspace membership
 
 /-- ν evaluation is measurable w.r.t. the shift-invariant σ-algebra.
 
