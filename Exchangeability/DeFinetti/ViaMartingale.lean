@@ -345,7 +345,7 @@ abbrev futureFiltration (X : ℕ → Ω → α) (m : ℕ) : MeasurableSpace Ω :
 
 /-- Forward declaration: Conditional expectation convergence from contractability.
 
-Full proof at line ~1580 using the CE bridge lemma from CondExp.lean. -/
+Full proof at line ~1187 using the CE bridge lemma from CondExp.lean. -/
 lemma condexp_convergence_fwd
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -356,7 +356,8 @@ lemma condexp_convergence_fwd
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | futureFiltration X m]
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | futureFiltration X m] := by
-  sorry  -- Proved at line ~1597
+  sorry  -- Forward declaration - actual proof at line ~1187
+         -- This would use condexp_convergence which is defined later
 
 /-- Forward declaration: Tail σ-algebra is sub-σ-algebra of future filtration.
 
