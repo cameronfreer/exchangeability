@@ -230,15 +230,26 @@ theorem condExp_tendsto_iInf
   let Finf := ⨅ k, 𝔽 k
   let g := μ[f | Finf]
 
-  -- Since Finf = ⨅ k, 𝔽 k ≤ 𝔽 k, the tower property gives:
-  -- μ[μ[f | Finf] | 𝔽 k] = μ[f | Finf]
-  -- So the conditional expectations μ[f | 𝔽 k] form a reverse martingale that should converge to μ[f | Finf]
-
-  -- However, the construction G k = ⨆_{n ≤ k} 𝔽 n = 𝔽 0 (constant) doesn't help us
-  -- TODO: This proof strategy needs revision. Consider alternative approaches:
-  -- 1. Direct use of reverse submartingale convergence from mathlib (if available)
-  -- 2. Build the proof from upcrossings directly
-  -- 3. Use a different transformation that actually varies with k
+  -- This proof requires Lévy's downward theorem for decreasing filtrations.
+  --
+  -- Investigation of mathlib v4.24.0 (Mathlib.Probability.Martingale.Convergence):
+  -- ✅ Has Lévy UPWARD: `tendsto_ae_condExp` for increasing filtrations → ⨆ n, ℱ n
+  -- ❌ NO Lévy DOWNWARD: for decreasing filtrations → ⨅ n, ℱ n
+  --
+  -- The upward theorem uses submartingale convergence (lines 356-362 in Convergence.lean).
+  -- For decreasing filtrations, we would need supermartingale convergence, which is not
+  -- available in mathlib. The transformation G k = ⨆_{n ≤ k} 𝔽 n attempted above yields
+  -- a constant sequence (G k = 𝔽 0 for all k) due to antitonicity, which doesn't help.
+  --
+  -- Standard proof approach (not yet in mathlib):
+  -- 1. Show (μ[f | 𝔽 k])_k is a reverse martingale (using tower property)
+  -- 2. Apply reverse martingale convergence via upcrossing estimates
+  -- 3. Identify limit as μ[f | ⨅ k, 𝔽 k]
+  --
+  -- Estimated implementation: 500-1000 lines (upcrossings, stopping times, uniform integrability)
+  --
+  -- For now, this remains as a well-documented axiom, used only in ViaMartingale.lean.
+  -- The other two proofs of de Finetti (ViaL2, ViaKoopman) are unaffected.
   sorry
 
 /-- **Conditional expectation converges along increasing filtration (Doob/Levy upward).**
@@ -281,35 +292,52 @@ theorem condExp_tendsto_iSup
 
 /-! ## Implementation Notes
 
-**Status Update:**
+**Current Status:**
 
-Two key theorems have been implemented using mathlib's existing convergence infrastructure:
+### Fully Implemented (No Axioms)
+- **`condExp_tendsto_iSup` (Lévy upward)**: ✅ Direct wrapper around mathlib's
+  `MeasureTheory.tendsto_ae_condExp` from `Mathlib.Probability.Martingale.Convergence`.
+  Clean 3-line proof packaging the filtration and forwarding to mathlib.
 
-1. **`condExp_tendsto_iSup` (Lévy upward)**: Now a direct wrapper around
-   `MeasureTheory.tendsto_ae_condExp` from `Mathlib.Probability.Martingale.Convergence`.
-   No longer axiomatized.
+### Partially Implemented (1 Sorry)
+- **`condExp_tendsto_iInf` (Lévy downward)**: ⚠️ Structure complete, awaiting proof of
+  convergence. Current implementation explores transformation strategy but hits fundamental
+  limitation (see detailed comments in proof at line ~233).
 
-2. **`condExp_tendsto_iInf` (Lévy downward)**: Implemented by transforming the decreasing
-   filtration into an increasing one. The key insight is that for a decreasing filtration
-   `𝔽 n`, the finite supremum `⨆_{k ≤ n} 𝔽 k = 𝔽 n`, allowing us to apply the upward
-   theorem. Two helper lemmas remain as `sorry` for lattice algebra.
+### Mathlib Gap Identified
+Investigation of `Mathlib.Probability.Martingale.Convergence` (v4.24.0) reveals:
+- ✅ Submartingale convergence for **increasing** filtrations (`tendsto_ae_condExp`)
+- ❌ No supermartingale convergence for **decreasing** filtrations
+- ❌ No reverse martingale convergence theorems
 
-**Still axiomatized:**
+The attempted transformation `G k := ⨆_{n ≤ k} 𝔽 n` for antitone `𝔽` yields a constant
+sequence `G k = 𝔽 0` (proved in `iSup_of_antitone_eq`), which cannot provide convergence
+to `⨅ k, 𝔽 k`.
+
+### Still Axiomatized (Intentionally)
 - `reverseMartingaleLimit*` family: More general witness functions for reverse martingale limits
-- These are used in `ViaMartingale.lean` and await future mathlib development
+- Used in `ViaMartingale.lean`; await mathlib development or future implementation
 
-**Remaining work for full implementation:**
-1. Complete the lattice algebra lemmas:
-   - `iSup_of_antitone_eq`: Show finite supremum equals largest element in decreasing chain
-   - Final `sorry` in `condExp_tendsto_iInf`: Connect `⨆ k, G k` with `⨅ k, 𝔽 k`
-2. Either implement or wait for mathlib's reverse martingale convergence theorems
+### Path Forward for `condExp_tendsto_iInf`
+**Option 1**: Direct proof from upcrossings (500-1000 lines estimated)
+  - Define reverse upcrossings for decreasing processes
+  - Prove reverse upcrossing inequality
+  - Show bounded reverse upcrossings ⇒ convergence
+  - Identify limit via uniform integrability
 
-**Dependencies from mathlib:**
-- `MeasureTheory.tendsto_ae_condExp`: Lévy's upward theorem (available)
-- `Filtration` structure: Package increasing filtrations (available)
-- Upcrossing inequalities: Not yet in mathlib (needed for general reverse martingales)
+**Option 2**: Wait for mathlib to add reverse martingale convergence
+  - Active area of probability theory development
+  - Natural next step after current submartingale theory
 
-**Estimated remaining work:** ~50-100 lines for lattice lemmas, plus 500-1000 lines for
-full reverse martingale theory if implemented from scratch. -/
+**Option 3**: Keep as well-documented sorry/axiom
+  - Only affects `ViaMartingale.lean` (one of three de Finetti proofs)
+  - `ViaL2.lean` and `ViaKoopman.lean` are independent
+  - Standard result with multiple textbook proofs
+
+### Dependencies from Mathlib
+- ✅ `MeasureTheory.tendsto_ae_condExp`: Lévy upward (used)
+- ✅ `Filtration`: Filtration structure (used)
+- ✅ `condExp_condExp_of_le`: Tower property (available, not yet used)
+- ❌ Reverse martingale convergence: Not available -/
 
 end Exchangeability.Probability
