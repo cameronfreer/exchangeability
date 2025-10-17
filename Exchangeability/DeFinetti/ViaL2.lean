@@ -2811,6 +2811,34 @@ lemma alphaIicCE_ae_tendsto_zero_atBot
     ∀ᵐ ω ∂μ, Tendsto (fun n : ℕ =>
       alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω)
       atTop (𝓝 0) := by
+  -- Strategy:
+  -- 1. alphaIicCE is monotone decreasing in the sequence (-(n:ℝ))
+  --    (since t ↦ alphaIicCE t is monotone increasing)
+  -- 2. alphaIicCE ∈ [0,1] (bounded)
+  -- 3. By monotone convergence, the sequence converges a.e. to some limit L
+  -- 4. By L¹ convergence to 0, we have L = 0 a.e.
+
+  -- Step 1: Monotonicity - for each ω, alphaIicCE (-(n+1):ℝ) ω ≤ alphaIicCE (-(n:ℝ)) ω
+  have h_mono : ∀ᵐ ω ∂μ, ∀ n m : ℕ, n ≤ m →
+      alphaIicCE X hX_contract hX_meas hX_L2 (-(m : ℝ)) ω
+      ≤ alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω := by
+    -- This follows from monotonicity of t ↦ alphaIicCE t (as condExp of monotone indicator)
+    sorry
+
+  -- Step 2: Boundedness - 0 ≤ alphaIicCE ≤ 1
+  have h_bound : ∀ᵐ ω ∂μ, ∀ n : ℕ,
+      0 ≤ alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω
+      ∧ alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω ≤ 1 := by
+    -- Conditional expectation of indicator is in [0,1]
+    sorry
+
+  -- Step 3: Monotone bounded sequences converge a.e.
+  have h_ae_conv : ∀ᵐ ω ∂μ, ∃ L : ℝ, Tendsto (fun n : ℕ =>
+      alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω) atTop (𝓝 L) := by
+    sorry
+
+  -- Step 4: The limit is 0 by L¹ convergence
+  -- If f_n → L a.e. and f_n → 0 in L¹, then L = 0 a.e.
   sorry
 
 /-- **A.e. pointwise endpoint limit at +∞**.
@@ -2825,6 +2853,33 @@ lemma alphaIicCE_ae_tendsto_one_atTop
     ∀ᵐ ω ∂μ, Tendsto (fun n : ℕ =>
       alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω)
       atTop (𝓝 1) := by
+  -- Strategy: Similar to atBot case
+  -- 1. alphaIicCE is monotone increasing in n
+  -- 2. alphaIicCE ∈ [0,1] (bounded)
+  -- 3. By monotone convergence, the sequence converges a.e. to some limit L
+  -- 4. By L¹ convergence to 1, we have L = 1 a.e.
+
+  -- Step 1: Monotonicity - for each ω, alphaIicCE (n:ℝ) ω ≤ alphaIicCE ((n+1):ℝ) ω
+  have h_mono : ∀ᵐ ω ∂μ, ∀ n m : ℕ, n ≤ m →
+      alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω
+      ≤ alphaIicCE X hX_contract hX_meas hX_L2 (m : ℝ) ω := by
+    -- This follows from monotonicity of t ↦ alphaIicCE t
+    sorry
+
+  -- Step 2: Boundedness - 0 ≤ alphaIicCE ≤ 1
+  have h_bound : ∀ᵐ ω ∂μ, ∀ n : ℕ,
+      0 ≤ alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω
+      ∧ alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω ≤ 1 := by
+    -- Conditional expectation of indicator is in [0,1]
+    sorry
+
+  -- Step 3: Monotone bounded sequences converge a.e.
+  have h_ae_conv : ∀ᵐ ω ∂μ, ∃ L : ℝ, Tendsto (fun n : ℕ =>
+      alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω) atTop (𝓝 L) := by
+    sorry
+
+  -- Step 4: The limit is 1 by L¹ convergence
+  -- If f_n → L a.e. and f_n → 1 in L¹, then L = 1 a.e.
   sorry
 
 /-- Right-continuous CDF from α via countable rational envelope:
