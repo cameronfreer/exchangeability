@@ -355,7 +355,9 @@ lemma condexp_convergence_fwd
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X m) | futureFiltration X m]
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | futureFiltration X m] := by
-  sorry  -- Forward declaration - full proof at line ~1176
+  sorry  -- Forward declaration - full proof at line 1191 as `condexp_convergence`
+         -- Cannot forward-reference here due to file ordering
+         -- This sorry remains until circular dependencies are resolved
 
 /-- Forward declaration: Tail σ-algebra is sub-σ-algebra of future filtration.
 
