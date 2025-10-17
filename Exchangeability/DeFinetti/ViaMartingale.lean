@@ -2160,6 +2160,27 @@ lemma conditional_law_eq_directingMeasure
 
 /-! ### Finite-dimensional product formula -/
 
+/-- On a finite index type, product measures evaluate on rectangles as a finite product. -/
+lemma measure_pi_univ_pi
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]
+    {m : ℕ} (μi : Fin m → Measure α)
+    (C : Fin m → Set α) (hC : ∀ i, MeasurableSet (C i)) :
+  (Measure.pi (fun i : Fin m => μi i)) (Set.univ.pi C)
+    = ∏ i : Fin m, μi i (C i) := by
+  sorry  -- Use Measure.pi_pi from mathlib
+
+/-- Bind computation on rectangles for finite product measures. -/
+lemma bind_apply_univ_pi
+    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α] [StandardBorelSpace α]
+    {μ : Measure Ω}
+    {m : ℕ}
+    (ν : Ω → Measure α)
+    (hν_meas : ∀ (B : Set α), MeasurableSet B → Measurable (fun ω => ν ω B))
+    (C : Fin m → Set α) (hC : ∀ i, MeasurableSet (C i)) :
+  (μ.bind (fun ω => Measure.pi (fun _ : Fin m => ν ω))) (Set.univ.pi C)
+    = ∫⁻ ω, (∏ i : Fin m, ν ω (C i)) ∂μ := by
+  sorry  -- Combine Measure.bind_apply + Measure.pi_pi
+
 /-- **Finite product formula for the first m coordinates** (identity case).
 
 This is the core case where we prove the product formula for `(X₀, X₁, ..., X_{m-1})`.
@@ -2360,155 +2381,106 @@ lemma finite_product_formula_id
       -- Both sides are products over Fin m, equal pointwise
       exact Finset.prod_congr rfl (fun i _ => hω i)
     
-    -- RHS: bind measure on rectangle equals integral of product-of-probabilities
+    -- RHS (mixture) on rectangle:
+    -- (★) — bind on rectangles reduces to a lintegral of a finite product
+    have h_bind :
+      (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) (Set.univ.pi C)
+        = ∫⁻ ω, (∏ i : Fin m, ν ω (C i)) ∂μ :=
+      bind_apply_univ_pi ν hν_meas C hC
+
+    -- (★★) — turn lintegral of a product of ENNReal probabilities into `ofReal` of a real integral
+    have h_toReal :
+      ∫⁻ ω, (∏ i : Fin m, ν ω (C i)) ∂μ
+        = ENNReal.ofReal (∫ ω, (∏ i : Fin m, (ν ω (C i)).toReal) ∂μ) := by
+      -- Each factor ν ω (C i) ≤ 1, hence the product p(ω) ≤ 1 < ∞ and
+      -- p(ω) = ENNReal.ofReal (p(ω).toReal). Use `lintegral_ofReal`.
+      have h_point :
+          (fun ω => (∏ i : Fin m, ν ω (C i)))
+            = (fun ω => ENNReal.ofReal (∏ i : Fin m, (ν ω (C i)).toReal)) := by
+        funext ω
+        -- turn each factor into ofReal of its toReal (since it's ≤ 1 < ∞)
+        have hfactor :
+            ∀ i : Fin m, ν ω (C i) = ENNReal.ofReal ((ν ω (C i)).toReal) := by
+          intro i
+          -- 0 ≤ μ(C) ≤ 1 ⇒ finite ⇒ ofReal_toReal
+          have hle1 : ν ω (C i) ≤ 1 := prob_le_one
+          have hfin : ν ω (C i) ≠ ⊤ := ne_of_lt (lt_of_le_of_lt hle1 ENNReal.one_lt_top)
+          exact ENNReal.ofReal_toReal hfin
+        -- product of ofReals = ofReal of product
+        rw [Finset.prod_congr rfl (fun i _ => hfactor i)]
+        exact ENNReal.ofReal_prod_of_nonneg (fun i _ => ENNReal.toReal_nonneg)
+      -- now apply lintegral_ofReal
+      rw [h_point]
+      have h_nonneg : ∀ᵐ ω ∂μ, 0 ≤ ∏ i : Fin m, (ν ω (C i)).toReal := by
+        apply ae_of_all
+        intro ω
+        exact Finset.prod_nonneg (fun i _ => ENNReal.toReal_nonneg)
+      have h_aemeas : AEStronglyMeasurable (fun ω => ∏ i : Fin m, (ν ω (C i)).toReal) μ := by
+        refine AEStronglyMeasurable.prod (fun i _ => ?_)
+        exact (hν_meas (C i) (hC i)).ennreal_toReal.aestronglyMeasurable
+      exact (integral_eq_lintegral_of_nonneg_ae h_nonneg h_aemeas).symm
+
+    -- (★★★) — compute mixture on rectangle as `ofReal ∫ …` to match the LHS computation chain
     have hR :
       (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) (Set.univ.pi C)
         = ENNReal.ofReal (∫ ω, (∏ i : Fin m, (ν ω (C i)).toReal) ∂μ) := by
-      -- Step 1: Apply bind definition
-      have h_bind : μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C)
-          = ∫⁻ ω, (Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C) ∂μ := by
-        -- Need AEMeasurable kernel
-        have h_ae_meas : AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ := by
-          sorry  -- TODO: Extend hν_meas to all sets (not just measurable ones)
-                 -- Current: ∀ B, MeasurableSet B → Measurable (λ ω, ν ω B)
-                 -- Need: ∀ s, Measurable (λ ω, ν ω s)
-                 -- For non-measurable s, ν ω s uses outer measure
-                 -- Should be provable using measure extension properties
-                 -- Then apply: CommonEnding.aemeasurable_measure_pi ν hν_prob hν_meas'
-        -- Apply Measure.bind_apply
-        refine Measure.bind_apply ?_ h_ae_meas
-        -- Set.univ.pi C is measurable
-        classical
-        exact MeasurableSet.univ_pi hC
-      -- Step 2: Product measure on rectangle
-      have h_pi : ∀ ω, (Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C)
-          = ∏ i : Fin m, ν ω (C i) := by
-        intro ω
-        -- Product measure on rectangle: (pi μ) (univ.pi C) = ∏ μ i (C i)
-        simp only [Measure.pi_pi]
-      -- Step 3: Combine and convert to Real integral
-      calc μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C)
-          = ∫⁻ ω, (Measure.pi fun _ : Fin m => ν ω) (Set.univ.pi C) ∂μ := h_bind
-        _ = ∫⁻ ω, (∏ i : Fin m, ν ω (C i)) ∂μ := by
-              congr 1; ext ω; exact h_pi ω
-        _ = ENNReal.ofReal (∫ ω, (∏ i : Fin m, (ν ω (C i)).toReal) ∂μ) := by
-              -- Convert lintegral to integral via toReal
-              have h_finite : ∀ ω, (∏ i : Fin m, ν ω (C i)) ≠ ⊤ := by
-                intro ω
-                apply ENNReal.prod_ne_top
-                intro i _
-                exact measure_ne_top (ν ω) (C i)
-              -- Use integral_eq_lintegral_of_nonneg_ae
-              have h_nonneg : 0 ≤ᵐ[μ] (fun ω => ∏ i : Fin m, (ν ω (C i)).toReal) := by
-                apply ae_of_all
-                intro ω
-                apply Finset.prod_nonneg
-                intro i _
-                exact ENNReal.toReal_nonneg
-              have h_aemeas : AEStronglyMeasurable (fun ω => ∏ i : Fin m, (ν ω (C i)).toReal) μ := by
-                sorry  -- TODO: Product of measurable functions is AEStronglyMeasurable
-                       -- Each (fun ω => (ν ω (C i)).toReal) is measurable:
-                       --   - Measurable (fun ω => ν ω (C i)) from hν_meas
-                       --   - ENNReal.toReal is continuous
-                       --   - Composition is measurable
-                       -- Then Finset.aestronglyMeasurable_prod gives the product
-              have h_eq_ofReal : ∀ᵐ ω ∂μ,
-                  ENNReal.ofReal (∏ i : Fin m, (ν ω (C i)).toReal) = ∏ i : Fin m, ν ω (C i) := by
-                apply ae_of_all
-                intro ω
-                -- For each i, (ν ω (C i)).toReal is the real value, so ofReal ∘ toReal = id
-                have h_each : ∀ i : Fin m, ENNReal.ofReal (ν ω (C i)).toReal = ν ω (C i) := by
-                  intro i
-                  apply ENNReal.ofReal_toReal
-                  exact measure_ne_top (ν ω) (C i)
-                -- Product commutes: ofReal (∏ toReal a_i) = ∏ (ofReal (toReal a_i)) = ∏ a_i
-                calc ENNReal.ofReal (∏ i : Fin m, (ν ω (C i)).toReal)
-                    = ∏ i : Fin m, ENNReal.ofReal (ν ω (C i)).toReal := by
-                        apply ENNReal.ofReal_prod_of_nonneg
-                        intro i _
-                        exact ENNReal.toReal_nonneg
-                  _ = ∏ i : Fin m, ν ω (C i) := by
-                        congr 1
-                        ext i
-                        exact h_each i
-              rw [integral_eq_lintegral_of_nonneg_ae h_nonneg h_aemeas, ENNReal.ofReal_toReal]
-              apply lintegral_congr_ae
-              filter_upwards [h_eq_ofReal] with ω hω
-              exact hω.symm
-              -- Show the lintegral is finite
-              have h_le_one : ∀ᵐ ω ∂μ, ∏ i : Fin m, ν ω (C i) ≤ 1 := by
-                apply ae_of_all
-                intro ω
-                sorry  -- TODO: Product of probabilities ≤ 1
-                       -- Each ν ω (C i) ≤ 1 by prob_le_one
-                       -- So ∏ i, ν ω (C i) ≤ ∏ i, 1 = 1
-                       -- Should use Finset.prod_le_prod' or similar
-              sorry  -- TODO: Show ∫⁻ ω, ∏ i, ν ω (C i) ∂μ ≠ ∞
-                     -- Have h_le_one: ∀ᵐ ω, ∏ i, ν ω (C i) ≤ 1
-                     -- So ∫⁻ ω, ∏ i, ν ω (C i) ≤ ∫⁻ ω, 1 = μ univ = 1 < ∞
-                     -- Need: lintegral_mono_ae or similar
-    
-    -- Combine all pieces: hL = ... = h_int_tail = (by h_swap) = ... = hR
+      rw [h_bind, h_toReal]
+
+    -- (★★★★) — assemble the chain and finish equality on rectangles
     calc (Measure.map (fun ω => fun i : Fin m => X i ω) μ) (Set.univ.pi C)
         = ENNReal.ofReal (∫ ω, indProd X m C ω ∂μ) := hL
       _ = ENNReal.ofReal (∫ ω, (∏ i : Fin m,
             μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | tailSigma X] ω) ∂μ) := by
             rw [h_int_tail]
       _ = ENNReal.ofReal (∫ ω, (∏ i : Fin m, (ν ω (C i)).toReal) ∂μ) := by
-            congr 1
-            exact integral_congr_ae h_swap
+            congr 1; exact integral_congr_ae h_swap
       _ = (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) (Set.univ.pi C) := hR.symm
 
-  -- 3) Extend equality from rectangles to all measurable sets via π-λ theorem
-  -- Both measures are probability measures
-  have hprob1 : IsProbabilityMeasure (Measure.map (fun ω => fun i : Fin m => X i ω) μ) := by
-    constructor
-    -- Need to show (map f μ) univ = 1
-    have h_meas : Measurable (fun ω => fun i : Fin m => X i ω) := measurable_pi_lambda _ (fun i => hX_meas i)
-    rw [Measure.map_apply h_meas MeasurableSet.univ]
-    -- Preimage of univ is univ
-    have : (fun ω => fun i : Fin m => X i ω) ⁻¹' Set.univ = Set.univ := by
-      ext; simp
-    rw [this]
-    exact measure_univ
-  have hprob2 : IsProbabilityMeasure (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) := by
-    constructor
-    -- Need AEMeasurable kernel (same as h_ae_meas from earlier)
-    have h_ae_meas : AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ := by
-      sorry  -- Same as line 2371
-    rw [Measure.bind_apply MeasurableSet.univ h_ae_meas]
-    -- Each (pi fun _ => ν ω) is probability measure with measure univ = 1
-    conv_lhs => arg 2; ext ω; rw [measure_univ]
-    simp [lintegral_const, measure_univ]  
-  -- Apply π-λ theorem: measures agreeing on π-system are equal
-  have h_univ : (Measure.map (fun ω => fun i : Fin m => X i ω) μ) Set.univ
-      = (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) Set.univ := by
-    simp [measure_univ]  -- Both are probability measures
-  exact ext_of_generate_finite Rectangles h_gen h_pi h_agree h_univ
+  -- π–λ extension to all measurable sets (your standard pattern)
+  -- Both measures are finite (indeed probability); you can either show `univ = 1` on both
+  -- or reuse the general "iUnion = univ" cover with `IsFiniteMeasure`.
+  have h_univ :
+      (Measure.map (fun ω => fun i : Fin m => X i ω) μ) Set.univ
+        = (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) Set.univ := by
+    -- both are probabilities
+    haveI : IsProbabilityMeasure (Measure.map (fun ω => fun i : Fin m => X i ω) μ) := by
+      constructor
+      have hme : Measurable (fun ω => fun i : Fin m => X i ω) :=
+        measurable_pi_lambda _ (fun i => hX_meas i)
+      rw [Measure.map_apply hme MeasurableSet.univ]
+      have : (fun ω => fun i : Fin m => X i ω) ⁻¹' Set.univ = Set.univ := by ext; simp
+      rw [this]
+      exact measure_univ
+    haveI : IsProbabilityMeasure (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) := by
+      constructor
+      -- bind of probabilities is a probability
+      -- (κ ω) univ = 1 for all ω since each ν ω is prob and product of probs is prob.
+      -- Then ∫⁻ ω, 1 ∂μ = 1.
+      have huniv :
+        (fun ω => (Measure.pi (fun _ : Fin m => ν ω)) Set.univ) = (fun _ => (1 : ℝ≥0∞)) := by
+        funext ω
+        -- product of marginal univ's: ∏ i (ν ω univ) = 1
+        rw [measure_pi_univ_pi (fun _ : Fin m => ν ω) (fun _ => Set.univ) (fun _ => MeasurableSet.univ)]
+        simp [measure_univ]
+      calc (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) Set.univ
+          = ∫⁻ ω, (Measure.pi (fun _ : Fin m => ν ω)) Set.univ ∂μ := by
+              -- same rectangle computation (with C ≡ univ)
+              exact bind_apply_univ_pi ν hν_meas (fun _ => Set.univ) (fun _ => MeasurableSet.univ)
+        _ = ∫⁻ ω, (1 : ℝ≥0∞) ∂μ := by rw [huniv]
+        _ = 1 := by simp
+    simp [measure_univ]
 
-/-- On a finite index type, product measures evaluate on rectangles as a finite product. -/
-lemma measure_pi_univ_pi
-    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]
-    {m : ℕ} (μi : Fin m → Measure α)
-    (C : Fin m → Set α) (hC : ∀ i, MeasurableSet (C i)) :
-  (Measure.pi (fun i : Fin m => μi i)) (Set.univ.pi C)
-    = ∏ i : Fin m, μi i (C i) := by
-  sorry  -- TODO: Use Measure.pi_pi from mathlib
-         -- This is the standard rectangle = product of marginals formula
-
-/-- Bind computation on rectangles for finite product measures. -/
-lemma bind_apply_univ_pi
-    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α] [StandardBorelSpace α]
-    {μ : Measure Ω}
-    {m : ℕ}
-    (ν : Ω → Measure α)
-    (hν_meas : ∀ (B : Set α), MeasurableSet B → Measurable (fun ω => ν ω B))
-    (C : Fin m → Set α) (hC : ∀ i, MeasurableSet (C i)) :
-  (μ.bind (fun ω => Measure.pi (fun _ : Fin m => ν ω))) (Set.univ.pi C)
-    = ∫⁻ ω, (∏ i : Fin m, ν ω (C i)) ∂μ := by
-  sorry  -- TODO: Combine Measure.bind_apply + Measure.pi_pi
-         -- (μ.bind κ)(rect) = ∫⁻ ω, κ ω rect = ∫⁻ ω, ∏ i, ν ω (C i)
-         -- Section is measurable as finite product of measurable maps
+  -- π–λ theorem: equality on the generating π-system + equality on univ ⇒ equality of measures
+  exact
+    Measure.ext_of_generateFrom_of_iUnion
+      Rectangles
+      (fun _ => Set.univ)              -- covering family
+      h_gen
+      h_pi
+      (by simp)                        -- ⋃ n univ = univ
+      (by intro _; exact ⟨(fun _ => Set.univ), (fun _ => MeasurableSet.univ), rfl⟩)
+      (by intro _; simp)               -- finite measure on each cover set
+      h_agree
 
 /-- **Finite product formula for strictly monotone subsequences**.
 
