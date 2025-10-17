@@ -2486,6 +2486,30 @@ lemma finite_product_formula_id
     simp [measure_univ]  -- Both are probability measures
   exact ext_of_generate_finite Rectangles h_gen h_pi h_agree h_univ
 
+/-- On a finite index type, product measures evaluate on rectangles as a finite product. -/
+lemma measure_pi_univ_pi
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]
+    {m : ℕ} (μi : Fin m → Measure α)
+    (C : Fin m → Set α) (hC : ∀ i, MeasurableSet (C i)) :
+  (Measure.pi (fun i : Fin m => μi i)) (Set.univ.pi C)
+    = ∏ i : Fin m, μi i (C i) := by
+  sorry  -- TODO: Use Measure.pi_pi from mathlib
+         -- This is the standard rectangle = product of marginals formula
+
+/-- Bind computation on rectangles for finite product measures. -/
+lemma bind_apply_univ_pi
+    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α] [StandardBorelSpace α]
+    {μ : Measure Ω}
+    {m : ℕ}
+    (ν : Ω → Measure α)
+    (hν_meas : ∀ (B : Set α), MeasurableSet B → Measurable (fun ω => ν ω B))
+    (C : Fin m → Set α) (hC : ∀ i, MeasurableSet (C i)) :
+  (μ.bind (fun ω => Measure.pi (fun _ : Fin m => ν ω))) (Set.univ.pi C)
+    = ∫⁻ ω, (∏ i : Fin m, ν ω (C i)) ∂μ := by
+  sorry  -- TODO: Combine Measure.bind_apply + Measure.pi_pi
+         -- (μ.bind κ)(rect) = ∫⁻ ω, κ ω rect = ∫⁻ ω, ∏ i, ν ω (C i)
+         -- Section is measurable as finite product of measurable maps
+
 /-- **Finite product formula for strictly monotone subsequences**.
 
 For any strictly increasing subsequence `k`, the joint law of `(X_{k(0)}, ..., X_{k(m-1)})`
