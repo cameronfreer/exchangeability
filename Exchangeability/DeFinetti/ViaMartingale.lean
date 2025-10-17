@@ -2406,9 +2406,12 @@ lemma finite_product_formula_id
                 intro i _
                 exact ENNReal.toReal_nonneg
               have h_aemeas : AEStronglyMeasurable (fun ω => ∏ i : Fin m, (ν ω (C i)).toReal) μ := by
-                sorry  -- TODO: Product of measurable functions is measurable
-                       -- Each λ ω, (ν ω (C i)).toReal is measurable (from hν_meas)
-                       -- Finite product preserves measurability
+                sorry  -- TODO: Product of measurable functions is AEStronglyMeasurable
+                       -- Each (fun ω => (ν ω (C i)).toReal) is measurable:
+                       --   - Measurable (fun ω => ν ω (C i)) from hν_meas
+                       --   - ENNReal.toReal is continuous
+                       --   - Composition is measurable
+                       -- Then Finset.aestronglyMeasurable_prod gives the product
               have h_eq_ofReal : ∀ᵐ ω ∂μ,
                   ENNReal.ofReal (∏ i : Fin m, (ν ω (C i)).toReal) = ∏ i : Fin m, ν ω (C i) := by
                 apply ae_of_all
