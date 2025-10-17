@@ -1723,18 +1723,35 @@ lemma block_coord_condIndep
         Measure.map (fun ω => (Y ω, θk ω)) μ
           = Measure.map (fun ω => (Y ω, θk' ω)) μ := by
       -- Project the triple equality to pairs using Prod.snd
-      -- Triple type: (Fin r → α) × (α × (Fin k → α)), so Prod.snd drops Z_r
-      -- We have: map (Z_r, Y, θk) μ = map (Z_r, Y, θk') μ  (from h_triple)
-      -- By Measure.map composition: map (Prod.snd) (map (Z_r, Y, θk) μ) = map (Prod.snd) (map (Z_r, Y, θk') μ)
-      -- Which simplifies to: map (Y, θk) μ = map (Y, θk') μ
+      -- h_triple gives: map (Zr, Y, θk_future) μ = map (Zr, Y, θk_tail) μ
+      -- where the functions are defined in the `let` bindings of h_triple
 
-      sorry  -- TODO: Complete projection proof
-             -- The technique is correct: compose h_triple with Prod.snd
-             -- Difficulty: h_triple has local `have` definitions that need careful unfolding
-             -- Key steps:
-             -- 1. Show (Y, θk) = Prod.snd ∘ (Zr, Y, θk) by funext
-             -- 2. Use Measure.map_map to factor composition
-             -- 3. Apply h_triple to get equality
+      -- First, show that our Zr, Y, θk match the definitions in h_triple
+      have hZr_eq : Zr = fun ω i => X i.val ω := by rfl
+      have hY_eq : Y = X r := by rfl
+      have hθk_eq : θk = fun ω j => X (m + 1 + j.val) ω := by rfl
+      have hθk'_eq : θk' = fun ω j => X (r + 1 + j.val) ω := by rfl
+
+      -- Rewrite h_triple in terms of our variables
+      have h_triple' : Measure.map (fun ω => (Zr ω, Y ω, θk ω)) μ
+          = Measure.map (fun ω => (Zr ω, Y ω, θk' ω)) μ := by
+        simp only [hZr_eq, hY_eq, hθk_eq, hθk'_eq]
+        exact h_triple
+
+      -- Now project using Prod.snd
+      have h_θk_proj : (fun ω => (Y ω, θk ω)) = Prod.snd ∘ (fun ω => (Zr ω, Y ω, θk ω)) := by
+        funext ω; simp
+      have h_θk'_proj : (fun ω => (Y ω, θk' ω)) = Prod.snd ∘ (fun ω => (Zr ω, Y ω, θk' ω)) := by
+        funext ω; simp
+
+      calc Measure.map (fun ω => (Y ω, θk ω)) μ
+          = Measure.map (Prod.snd ∘ (fun ω => (Zr ω, Y ω, θk ω))) μ := by rw [h_θk_proj]
+        _ = Measure.map Prod.snd (Measure.map (fun ω => (Zr ω, Y ω, θk ω)) μ) := by
+            rw [Measure.map_map measurable_snd (Measurable.prodMk hZr_meas (Measurable.prodMk hY_meas hθk_meas))]
+        _ = Measure.map Prod.snd (Measure.map (fun ω => (Zr ω, Y ω, θk' ω)) μ) := by rw [h_triple']
+        _ = Measure.map (Prod.snd ∘ (fun ω => (Zr ω, Y ω, θk' ω))) μ := by
+            rw [Measure.map_map measurable_snd (Measurable.prodMk hZr_meas (Measurable.prodMk hY_meas hθk'_meas))]
+        _ = Measure.map (fun ω => (Y ω, θk' ω)) μ := by rw [h_θk'_proj]
     -- Bridge: drop `Z_r` from conditioning at level k
     -- first rewrite the join as a comap of the pair `(Zr, θk)`
     have h_join :
@@ -1753,15 +1770,24 @@ lemma block_coord_condIndep
   -- Monotonicity of the finite future truncations
   have hmono_fin : Monotone (fun k => finFutureSigma X m k) := by
     intro k ℓ hkℓ
-    -- Proof strategy (95% complete - minor typeclass issue):
-    -- 1. Define π : (Fin ℓ → α) → (Fin k → α) as projection (g ↦ g ∘ castLE)
-    -- 2. Show f_k = π ∘ f_ℓ where f_k(ω)(i) = X(m+1+i)(ω)
-    -- 3. Use comap_comp: comap (π ∘ f_ℓ) = comap f_ℓ ∘ comap π
-    -- 4. Apply comap_mono with le_top : comap π inferInstance ≤ inferInstance
-    --
-    -- Issue: Type class resolution for le_top on MeasurableSpace (Fin ℓ → α)
-    -- All mathematical steps are correct, just needs explicit instance management
-    sorry  -- TODO: Fix typeclass resolution or use explicit OrderTop instance
+    unfold finFutureSigma
+    -- Direct σ-algebra inclusion proof
+    intro s hs
+    -- s is measurable in comap of (ω ↦ (i ↦ X (m+1+i) ω) : Fin k → α)
+    -- Need to show s is measurable in comap of (ω ↦ (j ↦ X (m+1+j) ω) : Fin ℓ → α)
+    obtain ⟨S, hS_meas, rfl⟩ := hs
+    -- s = preimage of S under the k-coordinate map
+    -- We need to lift S from (Fin k → α) to (Fin ℓ → α)
+    let S' : Set (Fin ℓ → α) := {g | (fun i => g (Fin.castLE hkℓ i)) ∈ S}
+    use S'
+    constructor
+    · -- S' is measurable
+      have : S' = (fun g => fun i => g (Fin.castLE hkℓ i)) ⁻¹' S := rfl
+      exact MeasurableSet.preimage hS_meas (measurable_pi_lambda _ fun i => measurable_pi_apply _)
+    · -- Preimage equality
+      ext ω
+      simp only [Set.mem_preimage, S']
+      rfl
   -- Supremum of finite futures is the future filtration at m
   have hiSup_fin :
       (⨆ k, finFutureSigma X m k) = futureFiltration X m := by
