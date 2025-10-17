@@ -2696,7 +2696,40 @@ lemma alphaIicCE_mono
   -- alphaIicCE is conditional expectation of (indIic ·) ∘ X 0
   -- indIic is monotone: s ≤ t ⇒ indIic s ≤ indIic t
   -- Conditional expectation preserves monotonicity a.e.
-  sorry
+  intro s t hst
+
+  -- Set up tail σ-algebra infrastructure
+  have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
+    TailSigma.tailSigma_le X hX_meas
+  haveI : Fact (TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
+
+  -- Show indIic s ≤ indIic t pointwise
+  have h_ind_mono : (indIic s) ∘ (X 0) ≤ᵐ[μ] (indIic t) ∘ (X 0) := by
+    apply ae_of_all
+    intro ω
+    simp [indIic, Set.indicator]
+    split_ifs with h1 h2
+    · norm_num  -- Both in set: 1 ≤ 1
+    · -- X 0 ω ≤ s but not ≤ t: contradiction since s ≤ t
+      exfalso
+      exact h2 (le_trans h1 hst)
+    · norm_num  -- s not satisfied but t is: 0 ≤ 1
+    · norm_num  -- Neither satisfied: 0 ≤ 0
+
+  -- Integrability of both functions
+  have h_int_s : Integrable ((indIic s) ∘ (X 0)) μ := by
+    have : indIic s = Set.indicator (Set.Iic s) (fun _ => (1 : ℝ)) := rfl
+    rw [this]
+    exact Exchangeability.Probability.integrable_indicator_comp (hX_meas 0) measurableSet_Iic
+
+  have h_int_t : Integrable ((indIic t) ∘ (X 0)) μ := by
+    have : indIic t = Set.indicator (Set.Iic t) (fun _ => (1 : ℝ)) := rfl
+    rw [this]
+    exact Exchangeability.Probability.integrable_indicator_comp (hX_meas 0) measurableSet_Iic
+
+  -- Apply condExp_mono
+  unfold alphaIicCE
+  exact condExp_mono (μ := μ) (m := TailSigma.tailSigma X) h_int_s h_int_t h_ind_mono
 
 /-- alphaIicCE is bounded in [0,1] almost everywhere. -/
 lemma alphaIicCE_nonneg_le_one
