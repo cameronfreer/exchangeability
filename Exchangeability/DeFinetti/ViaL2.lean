@@ -7,6 +7,7 @@ import Exchangeability.DeFinetti.L2Approach
 import Exchangeability.DeFinetti.L2Helpers
 import Exchangeability.Contractability
 import Exchangeability.ConditionallyIID
+import Exchangeability.Probability.CondExp
 import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
@@ -2708,7 +2709,45 @@ lemma alphaIicCE_nonneg_le_one
              ∧ alphaIicCE X hX_contract hX_meas hX_L2 t ω ≤ 1 := by
   -- alphaIicCE = condExp of (indIic t) ∘ X 0
   -- Since 0 ≤ indIic t ≤ 1, we have 0 ≤ condExp(...) ≤ 1 a.e.
-  sorry
+
+  -- Set up tail σ-algebra infrastructure
+  have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
+    TailSigma.tailSigma_le X hX_meas
+  haveI : Fact (TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
+
+  -- Nonnegativity: 0 ≤ indIic t ∘ X 0 implies 0 ≤ condExp
+  have h₀ : 0 ≤ᵐ[μ] alphaIicCE X hX_contract hX_meas hX_L2 t := by
+    have : 0 ≤ᵐ[μ] (indIic t) ∘ (X 0) := by
+      apply ae_of_all
+      intro ω
+      -- indIic t is an indicator function, so it's 0 or 1
+      simp [indIic, Set.indicator]
+      split_ifs <;> norm_num
+    unfold alphaIicCE
+    convert condExp_nonneg (μ := μ) (m := TailSigma.tailSigma X) this using 2
+
+  -- Upper bound: indIic t ∘ X 0 ≤ 1 implies condExp ≤ 1
+  have h₁ : alphaIicCE X hX_contract hX_meas hX_L2 t ≤ᵐ[μ] fun _ => (1 : ℝ) := by
+    have h_le : (indIic t) ∘ (X 0) ≤ᵐ[μ] fun _ => (1 : ℝ) := by
+      apply ae_of_all
+      intro ω
+      -- indIic t is an indicator function, so it's 0 or 1
+      simp [indIic, Set.indicator]
+      split_ifs <;> norm_num
+    -- Need integrability
+    have h_int : Integrable ((indIic t) ∘ (X 0)) μ := by
+      -- Bounded indicator composition is integrable
+      have : indIic t = Set.indicator (Set.Iic t) (fun _ => (1 : ℝ)) := rfl
+      rw [this]
+      exact Exchangeability.Probability.integrable_indicator_comp (hX_meas 0) measurableSet_Iic
+    unfold alphaIicCE
+    have h_mono := condExp_mono (μ := μ) (m := TailSigma.tailSigma X)
+      h_int (integrable_const (1 : ℝ)) h_le
+    rw [condExp_const (μ := μ) (m := TailSigma.tailSigma X) hm_le (1 : ℝ)] at h_mono
+    exact h_mono
+
+  filter_upwards [h₀, h₁] with ω h0 h1
+  exact ⟨h0, h1⟩
 
 /-!
 ### Identification lemma and endpoint limits for alphaIicCE
