@@ -2419,18 +2419,31 @@ lemma finite_product_formula_id
                   apply ENNReal.ofReal_toReal
                   exact measure_ne_top (ν ω) (C i)
                 -- Product commutes: ofReal (∏ toReal a_i) = ∏ (ofReal (toReal a_i)) = ∏ a_i
-                sorry  -- TODO: ENNReal.ofReal preserves products
-                       -- Need: ofReal (∏ x_i) = ∏ (ofReal x_i) when all x_i ≥ 0
-                       -- Then use h_each to get ∏ (ofReal (toReal a_i)) = ∏ a_i
+                calc ENNReal.ofReal (∏ i : Fin m, (ν ω (C i)).toReal)
+                    = ∏ i : Fin m, ENNReal.ofReal (ν ω (C i)).toReal := by
+                        apply ENNReal.ofReal_prod_of_nonneg
+                        intro i _
+                        exact ENNReal.toReal_nonneg
+                  _ = ∏ i : Fin m, ν ω (C i) := by
+                        congr 1
+                        ext i
+                        exact h_each i
               rw [integral_eq_lintegral_of_nonneg_ae h_nonneg h_aemeas, ENNReal.ofReal_toReal]
               apply lintegral_congr_ae
               filter_upwards [h_eq_ofReal] with ω hω
               exact hω.symm
               -- Show the lintegral is finite
-              sorry  -- TODO: lintegral is finite (proof structured)
-                     -- have h_le_one : ∀ᵐ ω, ∏ i, ν ω (C i) ≤ 1 (each factor ≤ 1)
-                     -- Therefore ∫⁻ ω, ∏ i, ν ω (C i) ≤ ∫⁻ ω, 1 = μ univ = 1 < ∞
-                     -- Use lintegral_mono_ae with prob_le_one
+              have h_le_one : ∀ᵐ ω ∂μ, ∏ i : Fin m, ν ω (C i) ≤ 1 := by
+                apply ae_of_all
+                intro ω
+                sorry  -- TODO: Product of probabilities ≤ 1
+                       -- Each ν ω (C i) ≤ 1 by prob_le_one
+                       -- So ∏ i, ν ω (C i) ≤ ∏ i, 1 = 1
+                       -- Should use Finset.prod_le_prod' or similar
+              sorry  -- TODO: Show ∫⁻ ω, ∏ i, ν ω (C i) ∂μ ≠ ∞
+                     -- Have h_le_one: ∀ᵐ ω, ∏ i, ν ω (C i) ≤ 1
+                     -- So ∫⁻ ω, ∏ i, ν ω (C i) ≤ ∫⁻ ω, 1 = μ univ = 1 < ∞
+                     -- Need: lintegral_mono_ae or similar
     
     -- Combine all pieces: hL = ... = h_int_tail = (by h_swap) = ... = hR
     calc (Measure.map (fun ω => fun i : Fin m => X i ω) μ) (Set.univ.pi C)
