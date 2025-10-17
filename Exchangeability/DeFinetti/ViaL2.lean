@@ -2851,14 +2851,62 @@ lemma alphaIicCE_L1_tendsto_zero_atBot
   -- Indicator integral = measure of set {X 0 ≤ -n} → 0 by continuity
   have h_indicator_tendsto : Tendsto (fun n : ℕ =>
       ∫ ω, |(indIic (-(n : ℝ))) (X 0 ω)| ∂μ) atTop (𝓝 0) := by
-    sorry  -- TODO: Use integral_indicator_one and tendsto_measure_iInter
+    -- Rewrite as integral = measure
+    have h_eq : ∀ n : ℕ, ∫ ω, |(indIic (-(n : ℝ))) (X 0 ω)| ∂μ
+        = (μ (X 0 ⁻¹' Set.Iic (-(n : ℝ)))).toReal := by
+      intro n
+      -- Indicator is nonnegative, so |indicator| = indicator
+      have : (fun ω => |(indIic (-(n : ℝ))) (X 0 ω)|) = (indIic (-(n : ℝ))) ∘ (X 0) := by
+        ext ω
+        simp [indIic, Set.indicator, abs_of_nonneg]
+        split_ifs <;> norm_num
+      rw [this]
+      -- Integral of indicator of measurable set = measure
+      -- Rewrite composition as indicator on preimage
+      have h_comp : (indIic (-(n : ℝ))) ∘ (X 0)
+          = (X 0 ⁻¹' Set.Iic (-(n : ℝ))).indicator (fun _ => (1 : ℝ)) := by
+        ext ω
+        simp only [indIic, Function.comp_apply, Set.indicator_apply]
+        rfl
+      rw [h_comp, integral_indicator (measurableSet_preimage (hX_meas 0) measurableSet_Iic),
+          setIntegral_one_eq_measureReal]
+      rfl
+    simp only [h_eq]
+    -- The sets {X 0 ≤ -n} decrease to empty
+    have h_antitone : Antitone (fun n : ℕ => X 0 ⁻¹' Set.Iic (-(n : ℝ))) := by
+      intro n m hnm
+      apply Set.preimage_mono
+      intro x hx
+      simp only [Set.mem_Iic] at hx ⊢
+      calc x ≤ -(m : ℝ) := hx
+           _ ≤ -(n : ℝ) := by simp [neg_le_neg_iff, Nat.cast_le, hnm]
+    have h_empty : (⋂ (n : ℕ), X 0 ⁻¹' Set.Iic (-(n : ℝ))) = ∅ := by
+      ext ω
+      simp only [Set.mem_iInter, Set.mem_preimage, Set.mem_Iic, Set.mem_empty_iff_false, iff_false]
+      intro h
+      -- For all n, X 0 ω ≤ -n, which means X 0 ω ≤ -n for arbitrarily large n
+      -- This is impossible for any real number
+      -- Use Archimedean property: exists n with -X 0 ω < n
+      obtain ⟨n, hn⟩ := exists_nat_gt (-X 0 ω)
+      -- This gives X 0 ω > -n, contradicting h n
+      have h1 : X 0 ω > -(n : ℝ) := by linarith
+      have h2 : X 0 ω ≤ -(n : ℝ) := h n
+      linarith
+    -- Apply tendsto_measure_iInter_atTop
+    have h_meas : ∀ (n : ℕ), MeasurableSet (X 0 ⁻¹' Set.Iic (-(n : ℝ))) := by
+      intro n
+      exact measurableSet_preimage (hX_meas 0) measurableSet_Iic
+    have h_fin : ∃ (n : ℕ), μ (X 0 ⁻¹' Set.Iic (-(n : ℝ))) < ∞ := ⟨0, measure_lt_top μ _⟩
+    simpa [h_empty] using tendsto_measure_iInter_atTop (μ := μ) h_meas h_antitone h_fin
 
   -- Step 2: L¹ contraction - ‖condExp f‖₁ ≤ ‖f‖₁
   have h_contraction : ∀ n : ℕ,
       ∫ ω, |alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω| ∂μ
       ≤ ∫ ω, |(indIic (-(n : ℝ))) (X 0 ω)| ∂μ := by
     intro n
-    sorry  -- TODO: Use snorm_condExp_le or similar L¹ contraction lemma
+    -- alphaIicCE is conditional expectation, so use integral_abs_condExp_le
+    unfold alphaIicCE
+    exact integral_abs_condExp_le (μ := μ) (m := TailSigma.tailSigma X) _
 
   -- Apply squeeze theorem: 0 ≤ ‖alphaIicCE‖₁ ≤ ‖indicator‖₁ → 0
   refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_indicator_tendsto ?_ h_contraction
@@ -2889,7 +2937,50 @@ lemma alphaIicCE_L1_tendsto_one_atTop
   -- Integral of |indicator - 1| = μ(X 0 > n) → 0 by continuity
   have h_indicator_tendsto : Tendsto (fun n : ℕ =>
       ∫ ω, |(indIic (n : ℝ)) (X 0 ω) - 1| ∂μ) atTop (𝓝 0) := by
-    sorry  -- TODO: Use integral of complement indicator and measure continuity
+    -- |indIic n - 1| = indicator of (n, ∞) since indIic n = indicator of (-∞, n]
+    have h_eq : ∀ n : ℕ, ∫ ω, |(indIic (n : ℝ)) (X 0 ω) - 1| ∂μ
+        = (μ (X 0 ⁻¹' Set.Ioi (n : ℝ))).toReal := by
+      intro n
+      have : (fun ω => |(indIic (n : ℝ)) (X 0 ω) - 1|)
+          = (Set.Ioi (n : ℝ)).indicator (fun _ => (1 : ℝ)) ∘ (X 0) := by
+        ext ω
+        simp only [indIic, Set.indicator, Function.comp_apply]
+        by_cases h : X 0 ω ≤ n
+        · simp [h, Set.mem_Ioi, Set.mem_Iic, abs_of_nonneg, le_refl]
+        · push_neg at h
+          simp [h, Set.mem_Ioi, Set.mem_Iic, abs_of_pos, le_of_lt]
+      rw [this]
+      -- Rewrite composition as indicator on preimage
+      have h_comp : (Set.Ioi (n : ℝ)).indicator (fun _ => (1 : ℝ)) ∘ (X 0)
+          = (X 0 ⁻¹' Set.Ioi (n : ℝ)).indicator (fun _ => (1 : ℝ)) := by
+        ext ω
+        simp only [Function.comp_apply, Set.indicator_apply]
+        rfl
+      rw [h_comp, integral_indicator (measurableSet_preimage (hX_meas 0) measurableSet_Ioi),
+          setIntegral_one_eq_measureReal]
+      rfl
+    simp only [h_eq]
+    -- The sets {X 0 > n} decrease to empty
+    have h_antitone : Antitone (fun n : ℕ => X 0 ⁻¹' Set.Ioi (n : ℝ)) := by
+      intro n m hnm
+      apply Set.preimage_mono
+      intro x hx
+      simp only [Set.mem_Ioi] at hx ⊢
+      calc x > (m : ℝ) := hx
+           _ ≥ (n : ℝ) := by simp [Nat.cast_le, hnm]
+    have h_empty : (⋂ (n : ℕ), X 0 ⁻¹' Set.Ioi (n : ℝ)) = ∅ := by
+      ext ω
+      simp only [Set.mem_iInter, Set.mem_preimage, Set.mem_Ioi, Set.mem_empty_iff_false, iff_false]
+      intro h
+      -- For all n, X 0 ω > n, impossible by Archimedean property
+      obtain ⟨n, hn⟩ := exists_nat_gt (X 0 ω)
+      have h1 : X 0 ω > (n : ℝ) := h n
+      linarith
+    have h_meas : ∀ (n : ℕ), MeasurableSet (X 0 ⁻¹' Set.Ioi (n : ℝ)) := by
+      intro n
+      exact measurableSet_preimage (hX_meas 0) measurableSet_Ioi
+    have h_fin : ∃ (n : ℕ), μ (X 0 ⁻¹' Set.Ioi (n : ℝ)) < ∞ := ⟨0, measure_lt_top μ _⟩
+    simpa [h_empty] using tendsto_measure_iInter_atTop (μ := μ) h_meas h_antitone h_fin
 
   -- Step 2: L¹ contraction - ‖condExp f - condExp 1‖₁ ≤ ‖f - 1‖₁
   -- Since condExp 1 = 1, get ‖alphaIicCE - 1‖₁ ≤ ‖indicator - 1‖₁
@@ -2897,7 +2988,24 @@ lemma alphaIicCE_L1_tendsto_one_atTop
       ∫ ω, |alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω - 1| ∂μ
       ≤ ∫ ω, |(indIic (n : ℝ)) (X 0 ω) - 1| ∂μ := by
     intro n
-    sorry  -- TODO: Use L¹ contraction of condExp for differences
+    -- Use linearity: alphaIicCE - 1 = condExp(indicator) - condExp(1) = condExp(indicator - 1)
+    have h_const : (fun _ : Ω => (1 : ℝ)) =ᵐ[μ]
+        μ[(fun _ : Ω => (1 : ℝ)) | TailSigma.tailSigma X] :=
+      (condExp_const (μ := μ) (m := TailSigma.tailSigma X) hm_le (1 : ℝ)).symm.eventuallyEq
+    have h_ae : (fun ω => alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω - 1)
+        =ᵐ[μ] μ[(fun ω => (indIic (n : ℝ)) (X 0 ω) - 1) | TailSigma.tailSigma X] := by
+      unfold alphaIicCE
+      have h_int : Integrable ((indIic (n : ℝ)) ∘ (X 0)) μ := by
+        have : indIic (n : ℝ) = Set.indicator (Set.Iic (n : ℝ)) (fun _ => (1 : ℝ)) := rfl
+        rw [this]
+        exact Exchangeability.Probability.integrable_indicator_comp (hX_meas 0) measurableSet_Iic
+      filter_upwards [h_const, condExp_sub (μ := μ) (m := TailSigma.tailSigma X)
+        h_int (integrable_const (1 : ℝ))] with ω h_const_ω h_sub_ω
+      simp only [Pi.sub_apply] at h_sub_ω
+      rw [h_const_ω] at h_sub_ω
+      exact h_sub_ω
+    rw [integral_congr_ae (ae_eq_refl.abs.comp h_ae)]
+    exact integral_abs_condExp_le (μ := μ) (m := TailSigma.tailSigma X) _
 
   -- Apply squeeze theorem: 0 ≤ ‖alphaIicCE - 1‖₁ ≤ ‖indicator - 1‖₁ → 0
   refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_indicator_tendsto ?_ h_contraction
