@@ -1543,9 +1543,15 @@ private theorem h_tower_of_lagConst
           exact hf_meas.comp (measurable_pi_apply 0)
         · -- f(ω 0) is bounded
           exact ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩
-        · -- A n is integrable (from Block 3, line 1375)
+        · -- A n is integrable (scalar times integrable sum)
           obtain ⟨Cg, hCg⟩ := hg_bd
-          sorry -- TODO: prove A_n integrable (measurability + boundedness by Cg)
+          have h_sum_int : Integrable (fun ω => (Finset.range (n + 1)).sum (fun j => g (ω j))) μ := by
+            refine integrable_finset_sum (Finset.range (n + 1)) (fun j _ => ?_)
+            exact integrable_of_bounded_measurable
+              (hg_meas.comp (measurable_pi_apply j)) Cg (fun ω => hCg (ω j))
+          have := h_sum_int.smul (1 / (n + 1 : ℝ))
+          simp only [A, Pi.smul_apply, smul_eq_mul] at this
+          exact this
       -- Integrability of W = f(ω 0) * Y ω
       have hW_int : Integrable (fun ω => f (ω 0) * Y ω) μ := by
         refine integrable_mul_of_ae_bdd_left ?_ ?_ ?_
@@ -1557,7 +1563,7 @@ private theorem h_tower_of_lagConst
             exact integrable_of_bounded_measurable
               (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
           -- CE preserves integrability
-          sorry -- TODO: find correct lemma for conditional expectation integrability
+          exact integrable_condExp
       -- Apply condExp_L1_lipschitz
       convert condExp_L1_lipschitz hZ_int hW_int using 2
       ext ω
