@@ -1525,7 +1525,7 @@ private theorem h_tower_of_lagConst
                   rw [abs_mul, abs_div, abs_one, one_div]
                   simp [abs_of_nonneg]; norm_num
               _ ≤ (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), |g (ω j)| := by
-                  exact mul_le_mul_of_nonneg_left (abs_sum_le_sum_abs _ _) (by positivity)
+                  exact mul_le_mul_of_nonneg_left (Finset.abs_sum_le_sum_abs _ _) (by positivity)
               _ ≤ (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), Cg := by
                   exact mul_le_mul_of_nonneg_left
                     (Finset.sum_le_sum (fun j _ => hCg (ω j))) (by positivity)
@@ -1581,9 +1581,8 @@ private theorem h_tower_of_lagConst
         · -- A n is integrable (from Block 3, line 1375)
           obtain ⟨Cg, hCg⟩ := hg_bd
           refine integrable_of_bounded_measurable ?_ Cg ?_
-          · exact Measurable.div_const
-              (Measurable.finset_sum _ (fun j _ => hg_meas.comp (measurable_pi_apply j)))
-              _
+          · -- Measurability of (1/(n+1)) * Σⱼ g(ωⱼ)
+            sorry -- TODO: prove using Finset.measurable_sum or measurability tactic
           · intro ω
             simp [A]
             calc |1 / (↑n + 1) * ∑ j ∈ Finset.range (n + 1), g (ω j)|
@@ -1592,7 +1591,7 @@ private theorem h_tower_of_lagConst
                   simp [abs_of_nonneg]
                   refine mul_le_mul_of_nonneg_left ?_ (by positivity)
                   calc |∑ j ∈ Finset.range (n + 1), g (ω j)|
-                      ≤ ∑ j ∈ Finset.range (n + 1), |g (ω j)| := abs_sum_le_sum_abs _ _
+                      ≤ ∑ j ∈ Finset.range (n + 1), |g (ω j)| := Finset.abs_sum_le_sum_abs _ _
                     _ ≤ ∑ j ∈ Finset.range (n + 1), Cg := Finset.sum_le_sum (fun j _ => hCg (ω j))
               _ = Cg := by simp [Finset.sum_const, Finset.card_range]; field_simp; ring
       -- Integrability of W = f(ω 0) * Y ω
@@ -1605,7 +1604,8 @@ private theorem h_tower_of_lagConst
             obtain ⟨Cg, hCg⟩ := hg_bd
             exact integrable_of_bounded_measurable
               (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
-          exact integrable_condExp.mpr hg_0_int
+          -- CE preserves integrability
+          sorry -- TODO: find correct lemma for conditional expectation integrability
       -- Apply condExp_L1_lipschitz
       convert condExp_L1_lipschitz hZ_int hW_int using 2
       ext ω
@@ -1644,7 +1644,7 @@ private theorem h_tower_of_lagConst
                   rw [abs_mul, abs_div, abs_one, one_div]; simp [abs_of_nonneg]
                   refine mul_le_mul_of_nonneg_left ?_ (by positivity)
                   calc |∑ j ∈ Finset.range (n + 1), g (ω j)|
-                    ≤ ∑ j ∈ Finset.range (n + 1), |g (ω j)| := abs_sum_le_sum_abs _ _
+                    ≤ ∑ j ∈ Finset.range (n + 1), |g (ω j)| := Finset.abs_sum_le_sum_abs _ _
                   _ ≤ ∑ j ∈ Finset.range (n + 1), Cg := Finset.sum_le_sum (fun j _ => hCg (ω j))
                 _ = Cg := by simp [Finset.sum_const, Finset.card_range]; field_simp; ring
           have hY_int : Integrable Y μ := by
@@ -1662,9 +1662,8 @@ private theorem h_tower_of_lagConst
         have hA_int : Integrable (A n) μ := by
           obtain ⟨Cg, hCg⟩ := hg_bd
           refine integrable_of_bounded_measurable ?_ Cg ?_
-          · exact Measurable.div_const
-              (Measurable.finset_sum _ (fun j _ => hg_meas.comp (measurable_pi_apply j)))
-              _
+          · -- Measurability of (1/(n+1)) * Σⱼ g(ωⱼ)
+            sorry -- TODO: prove using Finset.measurable_sum or measurability tactic
           · intro ω
             simp [A]
             calc |1 / (↑n + 1) * ∑ j ∈ Finset.range (n + 1), g (ω j)|
@@ -1672,7 +1671,7 @@ private theorem h_tower_of_lagConst
                 rw [abs_mul, abs_div, abs_one, one_div]; simp [abs_of_nonneg]
                 refine mul_le_mul_of_nonneg_left ?_ (by positivity)
                 calc |∑ j ∈ Finset.range (n + 1), g (ω j)|
-                  ≤ ∑ j ∈ Finset.range (n + 1), |g (ω j)| := abs_sum_le_sum_abs _ _
+                  ≤ ∑ j ∈ Finset.range (n + 1), |g (ω j)| := Finset.abs_sum_le_sum_abs _ _
                 _ ≤ ∑ j ∈ Finset.range (n + 1), Cg := Finset.sum_le_sum (fun j _ => hCg (ω j))
               _ = Cg := by simp [Finset.sum_const, Finset.card_range]; field_simp; ring
         have hY_int : Integrable Y μ := by
@@ -1680,7 +1679,8 @@ private theorem h_tower_of_lagConst
             obtain ⟨Cg, hCg⟩ := hg_bd
             exact integrable_of_bounded_measurable
               (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
-          exact integrable_condExp.mpr hg_0_int
+          -- CE preserves integrability
+          sorry -- TODO: find correct lemma for conditional expectation integrability
         exact hA_int.sub hY_int
       -- Apply integral_mono_ae
       exact integral_mono_ae hint_lhs hint_rhs hpt
