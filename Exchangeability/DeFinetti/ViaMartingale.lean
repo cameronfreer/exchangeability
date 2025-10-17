@@ -2543,12 +2543,35 @@ lemma finite_product_formula_id
       rw [this]
       exact measure_univ
     haveI : IsProbabilityMeasure (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) := by
-      -- Product of probability measures is a probability measure
-      sorry  -- TODO: Standard result - bind of probability kernels is probability
-             -- For each ω, Measure.pi (fun _ => ν ω) is a probability measure
-             -- (product of probabilities), so bind gives probability measure
-    sorry  -- TODO: Need to show h_univ: both measures = 1 on Set.univ
-           -- This follows from both being probability measures
+      constructor
+      -- Need to show: (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) Set.univ = 1
+      -- Strategy: bind of constant 1 over probability measure μ equals 1
+      -- First need AEMeasurability of the kernel
+      have h_aemeas : AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ := by
+        sorry  -- TODO: Needs to be derived from hν_meas
+               -- This states that ω ↦ Measure.pi (fun _ : Fin m => ν ω) is AE measurable
+               -- Should follow from hν_meas: ∀ B, MeasurableSet B → Measurable (ν · B)
+               -- Likely need Measure.pi.aemeasurable or similar from mathlib
+      rw [Measure.bind_apply MeasurableSet.univ h_aemeas]
+      -- ∫⁻ ω, (Measure.pi (fun _ : Fin m => ν ω)) Set.univ ∂μ
+      -- For each ω, Measure.pi is a product of probability measures, so it's a probability measure
+      have h_pi_prob : ∀ ω, (Measure.pi (fun _ : Fin m => ν ω)) Set.univ = 1 := by
+        intro ω
+        -- Measure.pi of probability measures is a probability measure
+        haveI : ∀ i : Fin m, IsProbabilityMeasure (ν ω) := fun i => inferInstance
+        -- Product measure gives measure 1 to univ
+        have : IsProbabilityMeasure (Measure.pi (fun _ : Fin m => ν ω)) := by
+          sorry  -- TODO: Mathlib should have this - product of probability measures is probability
+                 -- This is Measure.pi.isProbabilityMeasure or similar
+        exact measure_univ
+      -- Integrate constant 1: ∫⁻ ω, 1 ∂μ = 1 * μ Set.univ = 1
+      simp only [h_pi_prob]
+      rw [lintegral_const]
+      simp [measure_univ]
+    -- Now both are probability measures, so both equal 1 on univ
+    calc (Measure.map (fun ω => fun i : Fin m => X i ω) μ) Set.univ
+        = 1 := measure_univ
+      _ = (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) Set.univ := measure_univ.symm
 
   -- π–λ theorem: equality on the generating π-system + equality on univ ⇒ equality of measures
   -- Since both are probability measures and agree on rectangles, they are equal
