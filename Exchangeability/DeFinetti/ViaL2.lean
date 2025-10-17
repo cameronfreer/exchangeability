@@ -2683,6 +2683,33 @@ lemma alphaIicCE_measurable
     Measurable (alphaIicCE X hX_contract hX_meas hX_L2 t) := by
   sorry
 
+/-- alphaIicCE is monotone nondecreasing in t (for each fixed ω). -/
+lemma alphaIicCE_mono
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+    ∀ s t : ℝ, s ≤ t → ∀ᵐ ω ∂μ,
+      alphaIicCE X hX_contract hX_meas hX_L2 s ω
+      ≤ alphaIicCE X hX_contract hX_meas hX_L2 t ω := by
+  -- alphaIicCE is conditional expectation of (indIic ·) ∘ X 0
+  -- indIic is monotone: s ≤ t ⇒ indIic s ≤ indIic t
+  -- Conditional expectation preserves monotonicity a.e.
+  sorry
+
+/-- alphaIicCE is bounded in [0,1] almost everywhere. -/
+lemma alphaIicCE_nonneg_le_one
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (t : ℝ) :
+    ∀ᵐ ω ∂μ, 0 ≤ alphaIicCE X hX_contract hX_meas hX_L2 t ω
+             ∧ alphaIicCE X hX_contract hX_meas hX_L2 t ω ≤ 1 := by
+  -- alphaIicCE = condExp of (indIic t) ∘ X 0
+  -- Since 0 ≤ indIic t ≤ 1, we have 0 ≤ condExp(...) ≤ 1 a.e.
+  sorry
+
 /-!
 ### Identification lemma and endpoint limits for alphaIicCE
 
