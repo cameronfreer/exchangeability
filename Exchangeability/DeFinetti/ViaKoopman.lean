@@ -66,11 +66,11 @@ Theorem and Koopman operator. This proof has the **heaviest dependencies**.
 **Remaining sorries** (14 total: 6 in h_tower MET proof + 2 inductive steps + 6 deprecated/infrastructure):
 
 **Category 1: h_tower MET/Cesàro proof** (condexp_pair_factorization_MET, lines 644-708):
-1. Line 644: `h_cesaro_ce` - CE[A_n|m] = CE[g(ω₀)|m] via linearity + shift invariance
-2. Line 662: `h_product_const` - CE[f·A_n|m] = CE[f·g(ω₀)|m] via lag-constancy axiom
-3. Line 673: `h_met_convergence` - A_n → CE[g|m] ae via birkhoffAverage_tendsto_condexp
-4. Line 686: `h_product_convergence` - f·A_n → f·CE[g|m] in L¹ via boundedness
-5. Line 696: `h_ce_limit` - CE[f·A_n|m] → CE[f·CE[g|m]|m] via condExp_L1_lipschitz
+1. Line 644: `h_cesaro_ce` - CE[A_n| mSI] = CE[g(ω₀)| mSI] via linearity + shift invariance
+2. Line 662: `h_product_const` - CE[f·A_n| mSI] = CE[f·g(ω₀)| mSI] via lag-constancy axiom
+3. Line 673: `h_met_convergence` - A_n → CE[g| mSI] ae via birkhoffAverage_tendsto_condexp
+4. Line 686: `h_product_convergence` - f·A_n → f·CE[g| mSI] in L¹ via boundedness
+5. Line 696: `h_ce_limit` - CE[f·A_n| mSI] → CE[f·CE[g| mSI]| mSI] via condExp_L1_lipschitz
 6. Line 708: `h_const_limit` - constant sequence equals its limit (key insight!)
 
 **Category 2: Inductive steps requiring conditional independence**:
@@ -306,10 +306,10 @@ lemma condexp_pullback_factor
       =ᵐ[μ'] μ'[(H ∘ g) | m.comap g] := by
   -- Strategy: Show both sides have equal integrals on all sets in m.comap g
   -- Key: For A = g⁻¹' B with B ∈ m:
-  --   ∫_A (μ[H|m] ∘ g) dμ' = ∫_B μ[H|m] dμ (pushforward)
+  --   ∫_A (μ[H| m] ∘ g) dμ' = ∫_B μ[H| m] dμ (pushforward)
   --                        = ∫_B H dμ (CE property)
   --                        = ∫_A (H∘g) dμ' (pushforward)
-  
+
   -- Core integral equality for comap sets
   have h_integral : ∀ A, MeasurableSet[m.comap g] A →
       ∫ ω' in A, μ[H | m] (g ω') ∂μ' = ∫ ω' in A, (H ∘ g) ω' ∂μ' := by
@@ -317,7 +317,7 @@ lemma condexp_pullback_factor
     -- A ∈ m.comap g means ∃ B ∈ m, A = g⁻¹' B
     obtain ⟨B, hB_meas, rfl⟩ := hA  -- MeasurableSet.comap gives this
     sorry -- TODO: Use pushforward to transport integrals:
-          -- ∫_{g⁻¹' B} (μ[H|m] ∘ g) dμ' = ∫_B μ[H|m] dμ = ∫_B H dμ = ∫_{g⁻¹' B} (H∘g) dμ'
+          -- ∫_{g⁻¹' B} (μ[H| m] ∘ g) dμ' = ∫_B μ[H| m] dμ = ∫_B H dμ = ∫_{g⁻¹' B} (H∘g) dμ'
   
   -- Apply uniqueness
   sorry -- TODO: ae_eq_condexp_of_forall_setIntegral_eq h_integral
@@ -349,13 +349,13 @@ lemma condexp_precomp_iterate_eq_of_invariant
   -- T^[k] is measure-preserving (by induction)
   have hT_k : MeasurePreserving (T^[k]) μ μ := hT.iterate k
   -- Core mathematical content complete:
-  -- • h_preimage: (T^[k])⁻¹ s = s for all s ∈ m  
+  -- • h_preimage: (T^[k])⁻¹ s = s for all s ∈ m
   -- • hT_k: T^[k] is measure-preserving
   -- • For s ∈ m: ∫_s (f∘T^[k]) dμ = ∫_{(T^[k])⁻¹ s} f dμ (measure preservation)
   --                               = ∫_s f dμ (by h_preimage)
-  -- 
+  --
   -- Remaining: Apply ae_eq_condExp_of_forall_setIntegral_eq
-  -- to conclude μ[(f∘T^[k])|m] =ᵐ μ[f|m]
+  -- to conclude μ[(f∘T^[k])| m] =ᵐ μ[f| m]
   sorry
 
 /-- Existence of a natural two-sided extension for a measure-preserving shift. -/
@@ -704,7 +704,7 @@ lemma ν_eval_measurable
 /-! ## Helper lemmas for factorization via Mean Ergodic Theorem -/
 
 /-- Conditional expectation preserves pointwise bounds: if |X| ≤ C everywhere,
-then |CE[X|m]| ≤ C almost everywhere. This follows from the tower property and
+then |CE[X| mSI]| ≤ C almost everywhere. This follows from the tower property and
 Jensen's inequality for conditional expectation. -/
 private lemma condExp_abs_le_of_abs_le
     {Ω : Type*} {_ : MeasurableSpace Ω} {μ : Measure Ω} [IsFiniteMeasure μ] [Nonempty Ω]
@@ -749,7 +749,7 @@ private lemma condExp_L1_lipschitz
     {Z W : Ω[α] → ℝ} (hZ : Integrable Z μ) (hW : Integrable W μ) :
     ∫ ω, |μ[Z | shiftInvariantSigma (α := α)] ω - μ[W | shiftInvariantSigma (α := α)] ω| ∂μ
       ≤ ∫ ω, |Z ω - W ω| ∂μ := by
-  -- Step 1: CE[Z-W|m] = CE[Z|m] - CE[W|m] a.e. (by condExp_sub)
+  -- Step 1: CE[Z-W| mSI] = CE[Z| mSI] - CE[W| mSI] a.e. (by condExp_sub)
   have h_sub : μ[(Z - W) | shiftInvariantSigma]
               =ᵐ[μ] μ[Z | shiftInvariantSigma] - μ[W | shiftInvariantSigma] :=
     condExp_sub hZ hW shiftInvariantSigma
@@ -764,7 +764,7 @@ private lemma condExp_L1_lipschitz
           exact integral_abs_condExp_le (Z - W)
 
 /-- Pull-out property: if Z is measurable w.r.t. the conditioning σ-algebra and a.e.-bounded,
-then CE[Z·Y | m] = Z·CE[Y | m] a.e. This is the standard "taking out what is known". -/
+then CE[Z·Y | mSI] = Z·CE[Y | mSI] a.e. This is the standard "taking out what is known". -/
 private lemma condExp_mul_pullout
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     {Z Y : Ω[α] → ℝ}
@@ -929,21 +929,21 @@ private lemma memLp_of_bounded_mul
 /-- **Pull-out property with conditional expectation factor on the left**.
 
 For bounded measurable X and integrable Y:
-  CE[X · CE[Y|m] | m] = CE[Y|m] · CE[X|m]
+  CE[X · CE[Y| mSI] | mSI] = CE[Y| mSI] · CE[X| mSI]
 
-This is the correct "take out what is known" rule with the m-measurable factor CE[Y|m]
-on the left. The factor CE[Y|m] is m-ae-strongly-measurable, so we can apply the
+This is the correct "take out what is known" rule with the m-measurable factor CE[Y| mSI]
+on the left. The factor CE[Y| mSI] is m-ae-strongly-measurable, so we can apply the
 standard pull-out lemma from mathlib.
 
-**Why the naive "tower for products" CE[X·CE[Y|m]|m] = CE[X·Y|m] is FALSE:**
+**Why the naive "tower for products" CE[X·CE[Y| mSI]| mSI] = CE[X·Y| mSI] is FALSE:**
 Taking m = {∅,Ω} (trivial σ-algebra), the naive identity reduces to:
   E[X·E[Y]] = E[X·Y]
 which only holds when Cov(X,Y) = 0. This is not true in general.
 
 **Proof strategy:** Use `condExp_mul_of_aestronglyMeasurable_left` from mathlib with:
-- Left factor: CE[Y|m] (m-ae-strongly-measurable by stronglyMeasurable_condExp)
+- Left factor: CE[Y| mSI] (m-ae-strongly-measurable by stronglyMeasurable_condExp)
 - Right factor: X (bounded, hence integrable on finite measure space)
-- Product: CE[Y|m]·X is integrable by Integrable.bdd_mul'
+- Product: CE[Y| mSI]·X is integrable by Integrable.bdd_mul'
 
 **Status:** Axiomatized due to Lean 4 type class instance issues with multiple
 measurable space structures. The mathematical content is straightforward.
@@ -960,7 +960,7 @@ axiom condexp_mul_condexp
 /-- **Shift-invariance of conditional expectation**: For measure-preserving shift,
 `CE[f ∘ shift^k | I] = CE[f | I]` where `I` is the shift-invariant σ-algebra.
 
-This is the key technical lemma for establishing that `CE[g(ωⱼ)|m] = CE[g(ω₀)|m]`
+This is the key technical lemma for establishing that `CE[g(ωⱼ)| mSI] = CE[g(ω₀)| mSI]`
 for all `j`, which is needed in the Cesàro averaging proof. -/
 private lemma condexp_precomp_iterate_eq
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
@@ -1060,12 +1060,12 @@ private lemma condexp_precomp_iterate_eq
 
 /-! ### Lp norm placeholder -/
 
-/-! ### Lp seminorm: use mathlib's `MeasureTheory.snorm` -/
+/-! ### Lp seminorm: use mathlib's `eLpNorm` -/
 
 /-! ### Conditional expectation linearity helpers -/
 
 /-- Scalar linearity of conditional expectation.
-**Mathematical content**: CE[c·f|m] = c·CE[f|m]
+**Mathematical content**: CE[c·f| mSI] = c·CE[f| mSI]
 **Mathlib source**: `MeasureTheory.condexp_smul` for scalar multiplication. -/
 private lemma condExp_const_mul
     {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
@@ -1077,7 +1077,7 @@ private lemma condExp_const_mul
     (MeasureTheory.condExp_smul c f m)
 
 /-- Finite sum linearity of conditional expectation.
-**Mathematical content**: CE[Σᵢfᵢ|m] = ΣᵢCE[fᵢ|m]
+**Mathematical content**: CE[Σᵢfᵢ| mSI] = ΣᵢCE[fᵢ| mSI]
 **Mathlib source**: Direct application of `MeasureTheory.condExp_finset_sum`.
 NOTE: Temporarily axiomatized due to notation elaboration issues with `∑ i ∈ s, f i` vs `fun ω => ∑ i ∈ s, f i ω`.
 The mathematical content is identical and proven in mathlib. -/
@@ -1111,52 +1111,17 @@ where the function is bounded (hence in L²).
 
 **Proof strategy** (from user's specification):
 - Use `snorm_mono_exponent` or `memℒp_one_of_memℒp_two` to get `MemLp f 1 μ` from `MemLp f 2 μ`
-- Show both `snorm f 1 μ` and `snorm f 2 μ` are finite
-- Apply exponent monotonicity: `snorm f 1 μ ≤ snorm f 2 μ` on probability spaces
-- Convert `∫|f|` to `(snorm f 1 μ).toReal` and apply `ENNReal.toReal_le_toReal`
+- Show both `eLpNorm f 1 μ` and `eLpNorm f 2 μ` are finite
+- Apply exponent monotonicity: `eLpNorm f 1 μ ≤ eLpNorm f 2 μ` on probability spaces
+- Convert `∫|f|` to `(eLpNorm f 1 μ).toReal` and apply `ENNReal.toReal_le_toReal`
 -/
-private lemma snorm_one_le_snorm_two_toReal
+private lemma eLpNorm_one_le_eLpNorm_two_toReal
     {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
     (f : Ω → ℝ) (hL1 : Integrable f μ) (hL2 : MemLp f 2 μ) :
     (∫ ω, |f ω| ∂μ) ≤ (eLpNorm f 2 μ).toReal := by
-  classical
-  -- 1) Turn the L¹ integrability hypothesis into `MemLp f 1 μ`
-  --    (two interchangeable ways; use whichever is available in your setup):
-  --    EITHER by the dedicated lemma on prob. spaces:
-  -- have hL1' : MemLp f (1 : ENNReal) μ := memLp_one_of_memLp_two (μ := μ) (f := f) hL2
-  --    OR directly from integrability (works for real-valued):
-  have hL1' : MemLp f (1 : ENNReal) μ := (memLp_one_iff_integrable).2 hL1
-
-  -- 2) Monotonicity of `snorm` in the exponent on probability spaces: `‖f‖₁ ≤ ‖f‖₂`.
-  --    This lands in ENNReal.
-  have hmono : MeasureTheory.snorm f (1 : ENNReal) μ ≤ MeasureTheory.snorm f (2 : ENNReal) μ := by
-    -- On ENNReal, we have (1 : ENNReal) ≤ 2.
-    have h12 : (1 : ENNReal) ≤ (2 : ENNReal) := by norm_num
-    -- `snorm_mono_exponent` is the standard statement on probability spaces.
-    simpa using MeasureTheory.snorm_mono_exponent (μ := μ) (f := f) h12
-
-  -- 3) Both `snorm f 1 μ` and `snorm f 2 μ` are finite, so we can safely apply `toReal`.
-  have hfin1 : MeasureTheory.snorm f (1 : ENNReal) μ ≠ ∞ := hL1'.snorm_ne_top
-  have hfin2 : MeasureTheory.snorm f (2 : ENNReal) μ ≠ ∞ := (hL2 : MemLp f (2 : ENNReal) μ).snorm_ne_top
-
-  -- 4) Push the inequality through `ENNReal.toReal`.
-  have htoReal :
-      (MeasureTheory.snorm f (1 : ENNReal) μ).toReal ≤ (MeasureTheory.snorm f (2 : ENNReal) μ).toReal :=
-    ENNReal.toReal_le_toReal hfin1 hfin2 hmono
-
-  -- 5) Identify `(snorm f 1 μ).toReal` with the real L¹ integral `∫ |f|`.
-  --    `snorm_one_eq_lintegral_nnnorm` turns `snorm` into a `∫⁻ ‖f‖₊`;
-  --    `integral_norm_eq_lintegral_nnnorm` then converts `∫⁻` to the real integral via `toReal`.
-  have hleft :
-      (∫ ω, |f ω| ∂μ) = (MeasureTheory.snorm f (1 : ENNReal) μ).toReal := by
-    -- For real-valued functions, `‖f‖ = |f|`.
-    simpa [MeasureTheory.snorm_one_eq_lintegral_nnnorm, Real.norm_eq_abs]
-      using (integral_norm_eq_lintegral_nnnorm (μ := μ) (f := f) hL1)
-
-  -- 6) Conclude. If in your code `eLpNorm` is definitionally `snorm`, the next `simpa`
-  --    closes the goal. If `eLpNorm` is a thin wrapper over `snorm`, you may need
-  --    `simp [eLpNorm]` here (or a lemma equating them at finite `p`).
-  simpa [hleft] using htoReal.trans_eq (by rfl : (MeasureTheory.snorm f (2 : ENNReal) μ).toReal = (eLpNorm f 2 μ).toReal)
+  -- TODO: User-provided proof uses lemma names not available in current mathlib version
+  -- Need to find correct lemma names for: snorm_mono_exponent, snorm_ne_top, snorm_one_eq_lintegral_nnnorm
+  sorry
 
 /-- If `f → 0` in ENNReal, then `(toReal ∘ f) → 0` in `ℝ`. -/
 private lemma ennreal_tendsto_toReal_zero {ι : Type*}
@@ -1170,7 +1135,7 @@ private lemma ennreal_tendsto_toReal_zero {ι : Type*}
   simpa [ENNReal.toReal_zero] using hcont.tendsto.comp hf
 
 /-- L² mean-ergodic theorem in function form:
-the Cesàro averages of `f ∘ T^[j]` converge in L² to `μ[f | m]`, provided
+the Cesàro averages of `f ∘ T^[j]` converge in L² to `μ[f | mSI]`, provided
 `m` is `T`-invariant.  This is a thin wrapper around mathlib's L² MET.
 -/
 private theorem birkhoffAverage_tendsto_condexp_L2
@@ -1196,7 +1161,7 @@ private theorem birkhoffAverage_tendsto_condexp_L2
        projection `P g` onto the U-invariant subspace.
     4. Identify `P` with conditional expectation onto the `T`-invariant
        σ-algebra `m` under the hypothesis `T⁻¹ s = s` for all `s ∈ m`.
-    5. Unwrap to functions and rewrite `snorm` of the difference.
+    5. Unwrap to functions and rewrite `eLpNorm` of the difference.
   -/
   -- Implementation detail is long and uses mathlib's MET; keep as `by`
   -- if you prefer to keep the heavy proof in a separate file.
@@ -1222,12 +1187,12 @@ Assume:
 * `f, g : α → ℝ` are measurable and bounded
 * `hσ : MeasurePreserving shift μ μ`
 * **lag-constancy**: for all `k`,
-  `μ[(fun ω => f (ω 0) * g (ω (k+1))) | m]
-     =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω k)) | m]`.
+  `μ[(fun ω => f (ω 0) * g (ω (k+1))) | mSI]
+     =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω k)) | mSI]`.
 
 Then
-`μ[(fun ω => f (ω 0) * g (ω 0)) | m]
-   =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m]`.
+`μ[(fun ω => f (ω 0) * g (ω 0)) | mSI]
+   =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI]`.
 -/
 private theorem h_tower_of_lagConst
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
@@ -1246,7 +1211,10 @@ private theorem h_tower_of_lagConst
         f (ω 0) * μ[(fun ω => g (ω 0)) | shiftInvariantSigma (α := α)] ω)
         | shiftInvariantSigma (α := α)] := by
   classical
-  set m := shiftInvariantSigma (α := α)
+  -- Short, unambiguous alias for the invariant σ-algebra
+  set mSI := shiftInvariantSigma (α := α) with hmSI_def
+  -- The monotonicity fact we'll feed to lemmas
+  have hmSI : mSI ≤ ‹MeasurableSpace Ω[α]› := hmSI_def ▸ shiftInvariantSigma_le (α := α)
 
   -- Cesàro averages of g along the coordinates
   let A : ℕ → Ω[α] → ℝ :=
@@ -1254,49 +1222,49 @@ private theorem h_tower_of_lagConst
       (Finset.range (n + 1)).sum (fun j => g (ω j))
 
   ------------------------------------------------------------------
-  -- (1) CE[A_n | m] = CE[g(ω0) | m]  (linearity + shift invariance)
+  -- (1) CE[A_n | mSI] = CE[g(ω0) | mSI]  (linearity + shift invariance)
   ------------------------------------------------------------------
-  have h_cesaro_ce : ∀ n, μ[A n | m] =ᵐ[μ] μ[(fun ω => g (ω 0)) | m] := by
+  have h_cesaro_ce : ∀ n, μ[A n | mSI] =ᵐ[μ] μ[(fun ω => g (ω 0)) | mSI] := by
     intro n
-    set Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | m] ω
+    set Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | mSI] ω
     -- Push CE through the outer scalar
     have h_push :
-        μ[A n | m]
+        μ[A n | mSI]
           =ᵐ[μ]
         (fun ω =>
           (1 / (n + 1 : ℝ)) *
             μ[(fun ω =>
-                (Finset.range (n + 1)).sum (fun j => g (ω j))) | m] ω) := by
-      -- CE[c·Z|m] = c·CE[Z|m] (linearity: scalar commutes with CE)
+                (Finset.range (n + 1)).sum (fun j => g (ω j))) | mSI] ω) := by
+      -- CE[c·Z| mSI] = c·CE[Z| mSI] (linearity: scalar commutes with CE)
       -- TODO: typeclass inference issue with m vs ambient MeasurableSpace.pi
       sorry
 
     -- Push CE through the finite sum
     have h_sum :
         μ[(fun ω =>
-            (Finset.range (n + 1)).sum (fun j => g (ω j))) | m]
+            (Finset.range (n + 1)).sum (fun j => g (ω j))) | mSI]
           =ᵐ[μ]
         (fun ω =>
-          (Finset.range (n + 1)).sum (fun j => μ[(fun ω => g (ω j)) | m] ω)) := by
-      -- CE[Σᵢ Zᵢ|m] = Σᵢ CE[Zᵢ|m] (linearity: finite sums commute with CE)
+          (Finset.range (n + 1)).sum (fun j => μ[(fun ω => g (ω j)) | mSI] ω)) := by
+      -- CE[Σᵢ Zᵢ| mSI] = Σᵢ CE[Zᵢ| mSI] (linearity: finite sums commute with CE)
       have hint : ∀ j ∈ Finset.range (n + 1), Integrable (fun ω => g (ω j)) μ := by
         intro j _
         obtain ⟨Cg, hCg⟩ := hg_bd
-        exact @integrable_of_bounded_measurable _ inferInstance μ _ _
+        exact integrable_of_bounded_measurable
           (hg_meas.comp (measurable_pi_apply j)) Cg (fun ω => hCg (ω j))
-      exact @condExp_sum_finset _ inferInstance μ _ m (shiftInvariantSigma_le (α := α)) _
+      exact condExp_sum_finset (m := mSI) (hm := hmSI)
         (Finset.range (n + 1)) (fun j => fun ω => g (ω j)) hint
 
-    -- Each term μ[g(ωⱼ)|m] =ᵐ μ[g(ω₀)|m]
+    -- Each term μ[g(ωⱼ)| mSI] =ᵐ μ[g(ω₀)| mSI]
     have h_term : ∀ j,
-        μ[(fun ω => g (ω j)) | m] =ᵐ[μ] μ[(fun ω => g (ω 0)) | m] := by
+        μ[(fun ω => g (ω j)) | mSI] =ᵐ[μ] μ[(fun ω => g (ω 0)) | mSI] := by
       intro j
       have hg_0_int : Integrable (fun ω => g (ω 0)) μ := by
         -- g is bounded + measurable + finite measure ⇒ integrable
         obtain ⟨Cg, hCg⟩ := hg_bd
-        exact @integrable_of_bounded_measurable _ inferInstance μ _ _
+        exact integrable_of_bounded_measurable
           (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
-      -- condexp_precomp_iterate_eq gives: μ[fun ω => g (shift^[j] ω 0) | m] = μ[fun ω => g (ω 0) | m]
+      -- condexp_precomp_iterate_eq gives: μ[fun ω => g (shift^[j] ω 0) | mSI] = μ[fun ω => g (ω 0) | mSI]
       -- Need to show: shift^[j] ω 0 = ω j, then apply h
       have h := condexp_precomp_iterate_eq (μ := μ) hσ (k := j) (hf := hg_0_int)
       -- Prove: shift^[j] ω 0 = ω j using shift_iterate_apply
@@ -1311,13 +1279,13 @@ private theorem h_tower_of_lagConst
     -- Sum of identical a.e.-terms = (n+1) · that term
     have h_sum_const :
         (fun ω =>
-          (Finset.range (n + 1)).sum (fun j => μ[(fun ω => g (ω j)) | m] ω))
+          (Finset.range (n + 1)).sum (fun j => μ[(fun ω => g (ω j)) | mSI] ω))
           =ᵐ[μ]
         (fun ω =>
           (n + 1 : ℝ) * Y ω) := by
       have h' : ∀ s : Finset ℕ,
           (fun ω =>
-            s.sum (fun j => μ[(fun ω => g (ω j)) | m] ω))
+            s.sum (fun j => μ[(fun ω => g (ω j)) | mSI] ω))
             =ᵐ[μ]
           (fun ω =>
             (s.card : ℝ) * Y ω) := by
@@ -1325,17 +1293,17 @@ private theorem h_tower_of_lagConst
         · exact ae_of_all μ (fun ω => by simp)
         · intro j s hj hInd
           have hj' :
-              (fun ω => μ[(fun ω => g (ω j)) | m] ω)
+              (fun ω => μ[(fun ω => g (ω j)) | mSI] ω)
                 =ᵐ[μ]
               (fun ω => Y ω) := h_term j
           -- hInd: sum over s = s.card * Y
           -- hj': g(ω j) term = Y
           -- Need: sum over (insert j s) = (insert j s).card * Y
-          have h_eq : (fun ω => ∑ j ∈ insert j s, μ[fun ω => g (ω j)|m] ω)
-                    = ((fun ω => ∑ j ∈ s, μ[fun ω => g (ω j)|m] ω) + (fun ω => μ[fun ω => g (ω j)|m] ω)) := by
+          have h_eq : (fun ω => ∑ j ∈ insert j s, μ[fun ω => g (ω j)| mSI] ω)
+                    = ((fun ω => ∑ j ∈ s, μ[fun ω => g (ω j)| mSI] ω) + (fun ω => μ[fun ω => g (ω j)| mSI] ω)) := by
             ext ω; simp [Finset.sum_insert hj, add_comm]
           rw [h_eq]
-          calc (fun ω => ∑ j ∈ s, μ[fun ω => g (ω j)|m] ω) + (fun ω => μ[fun ω => g (ω j)|m] ω)
+          calc (fun ω => ∑ j ∈ s, μ[fun ω => g (ω j)| mSI] ω) + (fun ω => μ[fun ω => g (ω j)| mSI] ω)
               =ᵐ[μ] (fun ω => ↑s.card * Y ω) + (fun ω => Y ω) := hInd.add hj'
             _ =ᵐ[μ] (fun ω => ↑(insert j s).card * Y ω) := by
                 refine ae_of_all μ (fun ω => ?_)
@@ -1352,12 +1320,12 @@ private theorem h_tower_of_lagConst
         (fun ω =>
           (1 / (n + 1 : ℝ)) *
             μ[(fun ω =>
-                (Finset.range (n + 1)).sum (fun j => g (ω j))) | m] ω)
+                (Finset.range (n + 1)).sum (fun j => g (ω j))) | mSI] ω)
           =ᵐ[μ]
         (fun ω =>
           (1 / (n + 1 : ℝ)) *
             (Finset.range (n + 1)).sum
-              (fun j => μ[(fun ω => g (ω j)) | m] ω)) := by
+              (fun j => μ[(fun ω => g (ω j)) | mSI] ω)) := by
       refine h_sum.mono ?_
       intro ω hω; simp [hω]
     refine h2.trans ?_
@@ -1365,7 +1333,7 @@ private theorem h_tower_of_lagConst
         (fun ω =>
           (1 / (n + 1 : ℝ)) *
             (Finset.range (n + 1)).sum
-              (fun j => μ[(fun ω => g (ω j)) | m] ω))
+              (fun j => μ[(fun ω => g (ω j)) | mSI] ω))
           =ᵐ[μ]
         (fun ω =>
           (1 / (n + 1 : ℝ)) *
@@ -1378,23 +1346,23 @@ private theorem h_tower_of_lagConst
       field_simp [one_div, hne, mul_comm, mul_left_comm, mul_assoc])
 
   ------------------------------------------------------------------
-  -- (2) CE[f·A_n | m] is constant in n (lag-constancy termwise)
+  -- (2) CE[f·A_n | mSI] is constant in n (lag-constancy termwise)
   ------------------------------------------------------------------
   have h_product_const : ∀ n,
-    μ[(fun ω => f (ω 0) * A n ω) | m]
+    μ[(fun ω => f (ω 0) * A n ω) | mSI]
       =ᵐ[μ]
-    μ[(fun ω => f (ω 0) * g (ω 0)) | m] := by
+    μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] := by
     intro n
     -- Push CE through scalar
     have h_push :
-        μ[(fun ω => f (ω 0) * A n ω) | m]
+        μ[(fun ω => f (ω 0) * A n ω) | mSI]
           =ᵐ[μ]
         (fun ω =>
           (1 / (n + 1 : ℝ)) *
             μ[(fun ω =>
                 (Finset.range (n + 1)).sum
-                  (fun j => f (ω 0) * g (ω j))) | m] ω) := by
-      -- CE[c·Z|m] = c·CE[Z|m] (linearity: scalar commutes with CE)
+                  (fun j => f (ω 0) * g (ω j))) | mSI] ω) := by
+      -- CE[c·Z| mSI] = c·CE[Z| mSI] (linearity: scalar commutes with CE)
       have : (fun ω => f (ω 0) * A n ω)
            = (fun ω => (1 / (n + 1 : ℝ)) * (Finset.range (n + 1)).sum (fun j => f (ω 0) * g (ω j))) := by
         funext ω; simp [A, Finset.mul_sum, mul_comm, mul_left_comm, mul_assoc]
@@ -1405,12 +1373,12 @@ private theorem h_tower_of_lagConst
     -- Push CE through the finite sum
     have h_sum :
         μ[(fun ω =>
-            (Finset.range (n + 1)).sum (fun j => f (ω 0) * g (ω j))) | m]
+            (Finset.range (n + 1)).sum (fun j => f (ω 0) * g (ω j))) | mSI]
           =ᵐ[μ]
         (fun ω =>
           (Finset.range (n + 1)).sum
-            (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | m] ω)) := by
-      -- CE[Σᵢ Zᵢ|m] = Σᵢ CE[Zᵢ|m] (linearity: finite sums commute with CE)
+            (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω)) := by
+      -- CE[Σᵢ Zᵢ| mSI] = Σᵢ CE[Zᵢ| mSI] (linearity: finite sums commute with CE)
       have hint : ∀ j ∈ Finset.range (n + 1), Integrable (fun ω => f (ω 0) * g (ω j)) μ := by
         intro j _
         obtain ⟨Cf, hCf⟩ := hf_bd
@@ -1424,9 +1392,9 @@ private theorem h_tower_of_lagConst
 
     -- From lag_const: every term is a.e.-equal to the j=0 term
     have h_term_const : ∀ j,
-        μ[(fun ω => f (ω 0) * g (ω j)) | m]
+        μ[(fun ω => f (ω 0) * g (ω j)) | mSI]
           =ᵐ[μ]
-        μ[(fun ω => f (ω 0) * g (ω 0)) | m] := by
+        μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] := by
       refine Nat.rec ?h0 ?hstep
       · -- base case: j = 0
         rfl
@@ -1434,42 +1402,42 @@ private theorem h_tower_of_lagConst
         intro k hk
         exact (lag_const k).trans hk
 
-    -- Sum collapses to (n+1)·CE[f·g₀|m]
+    -- Sum collapses to (n+1)·CE[f·g₀| mSI]
     have h_sum_const :
         (fun ω =>
           (Finset.range (n + 1)).sum
-            (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | m] ω))
+            (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω))
           =ᵐ[μ]
         (fun ω =>
           (n + 1 : ℝ) *
-            μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω) := by
+            μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω) := by
       have h' : ∀ s : Finset ℕ,
           (fun ω =>
-            s.sum (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | m] ω))
+            s.sum (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω))
             =ᵐ[μ]
           (fun ω =>
             (s.card : ℝ) *
-              μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω) := by
+              μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω) := by
         apply Finset.induction
         · -- base case: empty set
           exact ae_of_all μ (fun ω => by simp)
         · -- step case: insert j into s
           intro j s hj hInd
           have hj' :
-              (fun ω => μ[(fun ω => f (ω 0) * g (ω j)) | m] ω)
+              (fun ω => μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω)
                 =ᵐ[μ]
               (fun ω =>
-                μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω) := h_term_const j
-          have h_eq : (fun ω => ∑ j ∈ insert j s, μ[(fun ω => f (ω 0) * g (ω j)) | m] ω)
-                    = ((fun ω => ∑ j ∈ s, μ[(fun ω => f (ω 0) * g (ω j)) | m] ω) +
-                       (fun ω => μ[(fun ω => f (ω 0) * g (ω j)) | m] ω)) := by
+                μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω) := h_term_const j
+          have h_eq : (fun ω => ∑ j ∈ insert j s, μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω)
+                    = ((fun ω => ∑ j ∈ s, μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω) +
+                       (fun ω => μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω)) := by
             ext ω; simp [Finset.sum_insert hj, add_comm]
           rw [h_eq]
-          calc (fun ω => ∑ j ∈ s, μ[(fun ω => f (ω 0) * g (ω j)) | m] ω) +
-                 (fun ω => μ[(fun ω => f (ω 0) * g (ω j)) | m] ω)
-              =ᵐ[μ] (fun ω => ↑s.card * μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω) +
-                     (fun ω => μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω) := hInd.add hj'
-            _ =ᵐ[μ] (fun ω => ↑(insert j s).card * μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω) := by
+          calc (fun ω => ∑ j ∈ s, μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω) +
+                 (fun ω => μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω)
+              =ᵐ[μ] (fun ω => ↑s.card * μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω) +
+                     (fun ω => μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω) := hInd.add hj'
+            _ =ᵐ[μ] (fun ω => ↑(insert j s).card * μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω) := by
                 refine ae_of_all μ (fun ω => ?_)
                 simp only [Pi.add_apply]
                 rw [Finset.card_insert_of_notMem hj]
@@ -1484,12 +1452,12 @@ private theorem h_tower_of_lagConst
         (fun ω =>
           (1 / (n + 1 : ℝ)) *
             μ[(fun ω =>
-                (Finset.range (n + 1)).sum (fun j => f (ω 0) * g (ω j))) | m] ω)
+                (Finset.range (n + 1)).sum (fun j => f (ω 0) * g (ω j))) | mSI] ω)
           =ᵐ[μ]
         (fun ω =>
           (1 / (n + 1 : ℝ)) *
             (Finset.range (n + 1)).sum
-              (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | m] ω)) := by
+              (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω)) := by
       refine h_sum.mono ?_
       intro ω hω; simp [hω]
     refine h2.trans ?_
@@ -1497,12 +1465,12 @@ private theorem h_tower_of_lagConst
         (fun ω =>
           (1 / (n + 1 : ℝ)) *
             (Finset.range (n + 1)).sum
-              (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | m] ω))
+              (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω))
           =ᵐ[μ]
         (fun ω =>
           (1 / (n + 1 : ℝ)) *
             ((n + 1 : ℝ) *
-              μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω)) := by
+              μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω)) := by
       refine h_sum_const.mono ?_
       intro ω hω; simp [hω]
     refine h3.trans ?_
@@ -1510,13 +1478,13 @@ private theorem h_tower_of_lagConst
       field_simp [one_div, hne, mul_comm, mul_left_comm, mul_assoc])
 
   ------------------------------------------------------------------
-  -- (3) L² MET ⇒ L¹ convergence of A_n to CE[g(ω0)|m]
+  -- (3) L² MET ⇒ L¹ convergence of A_n to CE[g(ω0)| mSI]
   ------------------------------------------------------------------
   have h_L1_An_to_CE :
       Tendsto (fun n =>
-        ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | m] ω| ∂μ)
+        ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ)
               atTop (𝓝 0) := by
-    set Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | m] ω
+    set Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | mSI] ω
     -- Step 1: L² statement from Birkhoff lemma (function-level version)
     have hL2 : Tendsto (fun n => eLpNorm (fun ω => A n ω - Y ω) 2 μ) atTop (𝓝 0) := by
       -- Mean Ergodic Theorem: Cesàro averages converge to CE in L²
@@ -1570,7 +1538,7 @@ private theorem h_tower_of_lagConst
               (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
           sorry -- Conditional expectation preserves integrability (standard result)
         exact hA_int.sub hY_int
-      exact snorm_one_le_snorm_two_toReal (fun ω => A n ω - Y ω) hint
+      exact eLpNorm_one_le_eLpNorm_two_toReal (fun ω => A n ω - Y ω) hint
 
     -- Nonnegativity of the LHS integrals
     have h_nonneg : ∀ n, 0 ≤ ∫ ω, |A n ω - Y ω| ∂μ := by
@@ -1592,19 +1560,19 @@ private theorem h_tower_of_lagConst
   obtain ⟨Cf, hCf⟩ := hf_bd
   have h_L1_CE :
       Tendsto (fun n =>
-        ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | m] ω
-             - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | m] ω') | m] ω| ∂μ)
+        ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | mSI] ω
+             - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ)
         atTop (𝓝 0) := by
     -- Step 1: condExp is 1-Lipschitz in L¹
     have h₁ : ∀ n,
-      ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | m] ω
-        - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | m] ω') | m] ω| ∂μ
-      ≤ ∫ ω, |f (ω 0) * (A n ω - μ[(fun ω => g (ω 0)) | m] ω)| ∂μ := by
+      ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | mSI] ω
+        - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ
+      ≤ ∫ ω, |f (ω 0) * (A n ω - μ[(fun ω => g (ω 0)) | mSI] ω)| ∂μ := by
       intro n
-      set Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | m] ω
+      set Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | mSI] ω
       -- Integrability of Z = f(ω 0) * A n ω
       have hZ_int : Integrable (fun ω => f (ω 0) * A n ω) μ := by
-        refine Integrable.mul ?_ ?_
+        refine integrable_mul_of_ae_bdd_left ?_ ?_
         · -- f(ω 0) is integrable (bounded + measurable)
           exact integrable_of_bounded_measurable
             (hf_meas.comp (measurable_pi_apply 0)) Cf (fun ω => hCf (ω 0))
@@ -1627,7 +1595,7 @@ private theorem h_tower_of_lagConst
               _ = Cg := by simp [Finset.sum_const, Finset.card_range]; field_simp; ring
       -- Integrability of W = f(ω 0) * Y ω
       have hW_int : Integrable (fun ω => f (ω 0) * Y ω) μ := by
-        refine Integrable.mul ?_ ?_
+        refine integrable_mul_of_ae_bdd_left ?_ ?_
         · exact integrable_of_bounded_measurable
             (hf_meas.comp (measurable_pi_apply 0)) Cf (fun ω => hCf (ω 0))
         · -- Y = CE[g(ω 0)] is integrable (CE preserves integrability)
@@ -1637,18 +1605,17 @@ private theorem h_tower_of_lagConst
               (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
           exact integrable_condExp.mpr hg_0_int
       -- Apply condExp_L1_lipschitz
-      convert condExp_L1_lipschitz (m := m) (hm := shiftInvariantSigma_le (α := α))
-        hZ_int hW_int using 2
+      convert condExp_L1_lipschitz hZ_int hW_int using 2
       ext ω
       simp [Y, abs_mul, mul_sub]
       ring
 
     -- Step 2: |f| ≤ Cf a.e. ⇒ pull Cf outside the integral
     have h₂ : ∀ n,
-      ∫ ω, | f (ω 0) * (A n ω - μ[(fun ω => g (ω 0)) | m] ω) | ∂μ
-      ≤ Cf * ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | m] ω| ∂μ := by
+      ∫ ω, |f (ω 0) * (A n ω - μ[(fun ω => g (ω 0)) | mSI] ω)| ∂μ
+      ≤ Cf * ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
       intro n
-      set Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | m] ω
+      set Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | mSI] ω
       -- Pointwise: |f(ω 0)| ≤ Cf
       have hpt : ∀ᵐ ω ∂μ, |f (ω 0) * (A n ω - Y ω)| ≤ Cf * |A n ω - Y ω| := by
         refine ae_of_all μ (fun ω => ?_)
@@ -1658,7 +1625,7 @@ private theorem h_tower_of_lagConst
       have hint_lhs : Integrable (fun ω => |f (ω 0) * (A n ω - Y ω)|) μ := by
         -- |f * (A_n - Y)| integrable (from product of bounded & integrable)
         apply Integrable.abs
-        refine Integrable.mul ?_ ?_
+        refine integrable_mul_of_ae_bdd_left ?_ ?_
         · -- f(ω 0) is integrable (bounded)
           exact integrable_of_bounded_measurable
             (hf_meas.comp (measurable_pi_apply 0)) Cf (fun ω => hCf (ω 0))
@@ -1728,34 +1695,34 @@ private theorem h_tower_of_lagConst
   -- (5) The constant sequence's L¹ limit is 0 ⇒ a.e. equality
   ------------------------------------------------------------------
   have h_const_is_zero :
-      ∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
-            - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω| ∂μ = 0 := by
+      ∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω
+            - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω| ∂μ = 0 := by
     -- The LHS integrand is constant in n (by h_product_const)
     -- The RHS (h_L1_CE) says the same integral → 0
     -- So the constant equals 0
     have h_rewrite : ∀ n,
-      ∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
-            - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω| ∂μ
+      ∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω
+            - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω| ∂μ
       =
-      ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | m] ω
-            - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | m] ω') | m] ω| ∂μ := by
+      ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | mSI] ω
+            - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ := by
       intro n
       refine integral_congr_ae ?_
       filter_upwards [h_product_const n] with ω hω
       simp [hω]
     -- Constant sequence
     have h_const : Tendsto (fun _ : ℕ =>
-      ∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
-            - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω| ∂μ)
+      ∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω
+            - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω| ∂μ)
       atTop
-      (𝓝 (∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
-                  - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω| ∂μ)) :=
+      (𝓝 (∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω
+                  - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω| ∂μ)) :=
       tendsto_const_nhds
     -- Apply uniqueness: h_const says constant sequence, h_L1_CE says → 0, so constant = 0
-    have : (fun n => ∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
-              - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω| ∂μ)
-         = (fun n => ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | m] ω
-              - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | m] ω') | m] ω| ∂μ) := by
+    have : (fun n => ∫ ω, |μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω
+              - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω| ∂μ)
+         = (fun n => ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | mSI] ω
+              - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ) := by
       funext n
       exact h_rewrite n
     rw [this] at h_const
@@ -1764,12 +1731,12 @@ private theorem h_tower_of_lagConst
   -- turn `∫ |h| = 0` into a.e. equality
   have h_abs_zero :
       (fun ω =>
-        |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
-        - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω|) =ᵐ[μ] 0 := by
+        |μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω
+        - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω|) =ᵐ[μ] 0 := by
     -- Standard: if ∫|h| = 0 and h ≥ 0 and h integrable, then h = 0 a.e.
     have hint : Integrable (fun ω =>
-      |μ[(fun ω => f (ω 0) * g (ω 0)) | m] ω
-      - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] ω|) μ := by
+      |μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω
+      - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω|) μ := by
       apply Integrable.abs
       apply Integrable.sub <;> exact integrable_condExp
     exact integral_eq_zero_iff_of_nonneg_ae (ae_of_all _ (fun _ => abs_nonneg _)) hint |>.mp h_const_is_zero
@@ -1781,15 +1748,15 @@ private theorem h_tower_of_lagConst
 /-- **Tower property for products** (reverse tower law).
 
 For bounded measurable functions f, g, the conditional expectation satisfies:
-  CE[f·g | m] = CE[f·CE[g|m] | m]
+  CE[f·g | mSI] = CE[f·CE[g| mSI] | mSI]
 
 This is the "reverse" direction of the tower property. The naive identity
-CE[X·CE[Y|m] | m] = CE[X·Y | m] is FALSE in general (fails for trivial σ-algebra),
+CE[X·CE[Y| mSI] | mSI] = CE[X·Y | mSI] is FALSE in general (fails for trivial σ-algebra),
 but this specific form with bounded f, g on path space does hold.
 
 **Proof strategy**: Use Mean Ergodic Theorem + Cesàro averaging + L¹-Lipschitz property.
-The key insight is that CE[f·A_n|m] is constant in n (by lag-constancy), while
-A_n → CE[g|m], allowing us to pass to the limit.
+The key insight is that CE[f·A_n| mSI] is constant in n (by lag-constancy), while
+A_n → CE[g| mSI], allowing us to pass to the limit.
 
 **Status**: Proved via h_tower_of_lagConst using lag-constancy from condexp_pair_lag_constant.
 -/
@@ -1906,7 +1873,7 @@ private lemma condexp_pair_factorization_MET
 
   -- Step 1: Show CE[f(ω₀)·g(ω₁)|ℐ] = CE[f(ω₀)·g(ω₀)|ℐ] by shift invariance
   -- Key insight: shifting doesn't change the conditional expectation onto shift-invariant σ-algebra
-  have h_shift_inv : μ[(fun ω => f (ω 0) * g (ω 1)) | m] =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 0)) | m] := by
+  have h_shift_inv : μ[(fun ω => f (ω 0) * g (ω 1)) | mSI] =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] := by
     -- Use lag-constancy with k=0: CE[f(ω₀)·g(ω₁)|I] = CE[f(ω₀)·g(ω₀)|I]
     -- Note: m = shiftInvariantSigma by definition
     have : m = shiftInvariantSigma (α := α) := rfl
@@ -1922,16 +1889,16 @@ private lemma condexp_pair_factorization_MET
 
   -- Step 4: The main factorization via pullout property
   -- CE[f(ω₀)·CE[g(ω₀)|ℐ] | ℐ] = CE[g(ω₀)|ℐ]·CE[f(ω₀)|ℐ]
-  have h_pullout : μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m]
-      =ᵐ[μ] (fun ω => μ[(fun ω => g (ω 0)) | m] ω * μ[(fun ω => f (ω 0)) | m] ω) := by
-    -- Z := CE[g(ω₀)|m]
-    set Z := μ[(fun ω => g (ω 0)) | m]
+  have h_pullout : μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI]
+      =ᵐ[μ] (fun ω => μ[(fun ω => g (ω 0)) | mSI] ω * μ[(fun ω => f (ω 0)) | mSI] ω) := by
+    -- Z := CE[g(ω₀)| mSI]
+    set Z := μ[(fun ω => g (ω 0)) | mSI]
 
     -- Z is m-measurable (automatic from stronglyMeasurable_condExp)
-    have hZ_meas : Measurable[m] Z := by
+    have hZ_meas : Measurable[mSI] Z := by
       exact stronglyMeasurable_condExp.measurable
 
-    -- Z is bounded: |CE[g|m]| ≤ C a.e. by Jensen's inequality
+    -- Z is bounded: |CE[g| mSI]| ≤ C a.e. by Jensen's inequality
     have hZ_bd : ∃ C, ∀ᵐ ω ∂μ, |Z ω| ≤ C := by
       obtain ⟨Cg, hCg⟩ := hg_bd
       use Cg
@@ -1941,7 +1908,7 @@ private lemma condexp_pair_factorization_MET
         · exact (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
         · have h_bd : ∀ (ω : Ω[α]), |g (ω 0)| ≤ Cg := fun ω => hCg (ω 0)
           exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
-      -- Apply condExp_abs_le_of_abs_le: |CE[g∘π₀|m]| ≤ Cg a.e.
+      -- Apply condExp_abs_le_of_abs_le: |CE[g∘π₀| mSI]| ≤ Cg a.e.
       -- Inline the proof to avoid type inference issues with 'set m := ...'
       have h_bd' : ∀ (ω : Ω[α]), |g (ω 0)| ≤ Cg := fun ω => hCg (ω 0)
       -- Cg ≥ 0 since |g x| ≤ Cg and |g x| ≥ 0
@@ -1953,7 +1920,7 @@ private lemma condexp_pair_factorization_MET
         filter_upwards [hCg_ae] with ω hω
         rwa [Real.coe_toNNReal _ hCg_nn]
       -- Apply mathlib's ae_bdd_condExp_of_ae_bdd
-      have := ae_bdd_condExp_of_ae_bdd (m := m) hCg_ae'
+      have := ae_bdd_condExp_of_ae_bdd (m := mSI) hCg_ae'
       -- Convert back from NNReal
       filter_upwards [this] with ω hω
       rwa [Real.coe_toNNReal _ hCg_nn] at hω
@@ -1971,23 +1938,23 @@ private lemma condexp_pair_factorization_MET
         have h_bd : ∀ (ω : Ω[α]), |f (ω 0)| ≤ Cf := fun ω => hCf (ω 0)
         exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
 
-    -- Apply condExp_mul_pullout: CE[Z·Y | m] = Z·CE[Y | m]
+    -- Apply condExp_mul_pullout: CE[Z·Y | mSI] = Z·CE[Y | mSI]
     have h := condExp_mul_pullout hZ_meas hZ_bd hY_int
-    -- h gives: CE[Z * Y | m] = Z * CE[Y | m] where Y = f∘π₀
-    -- But goal needs: CE[Y * Z | m] = Z * CE[Y | m]
+    -- h gives: CE[Z * Y | mSI] = Z * CE[Y | mSI] where Y = f∘π₀
+    -- But goal needs: CE[Y * Z | mSI] = Z * CE[Y | mSI]
     -- Use commutativity: Y * Z = Z * Y
-    calc μ[(fun ω => f (ω 0) * Z ω) | m]
-        =ᵐ[μ] μ[(fun ω => Z ω * f (ω 0)) | m] := by
+    calc μ[(fun ω => f (ω 0) * Z ω) | mSI]
+        =ᵐ[μ] μ[(fun ω => Z ω * f (ω 0)) | mSI] := by
           -- Functions are equal since multiplication commutes
           have : (fun ω => f (ω 0) * Z ω) = (fun ω => Z ω * f (ω 0)) := by
             ext ω; ring
           rw [this]
-      _ =ᵐ[μ] (fun ω => Z ω * μ[(fun ω => f (ω 0)) | m] ω) := h
+      _ =ᵐ[μ] (fun ω => Z ω * μ[(fun ω => f (ω 0)) | mSI] ω) := h
 
   -- Step 5: CE[f(ω₀)·g(ω₀)|ℐ] = CE[f(ω₀)·CE[g(ω₀)|ℐ]|ℐ]
   -- Use the tower property axiom (full proof exists but requires file reorg)
-  have h_tower : μ[(fun ω => f (ω 0) * g (ω 0)) | m]
-      =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] :=
+  have h_tower : μ[(fun ω => f (ω 0) * g (ω 0)) | mSI]
+      =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] :=
     condexp_tower_for_products hσ f g hf_meas hf_bd hg_meas hg_bd
 
   /-
@@ -1996,9 +1963,9 @@ private lemma condexp_pair_factorization_MET
   The proof exists starting at line 1035 (commented out) and can be restored once file
   organization allows birkhoffAverage_tendsto_condexp to be defined earlier.
 
-  **Proof strategy**: The key insight is that CE[f·A_n|m] is CONSTANT in n (by lag-constancy),
-  while A_n → CE[g|m]. Therefore:
-    CE[f·g|m] = CE[f·A_n|m] → CE[f·CE[g|m]|m]
+  **Proof strategy**: The key insight is that CE[f·A_n| mSI] is CONSTANT in n (by lag-constancy),
+  while A_n → CE[g| mSI]. Therefore:
+    CE[f·g| mSI] = CE[f·A_n| mSI] → CE[f·CE[g| mSI]| mSI]
   where the left equality holds for all n, and the limit uses L¹-Lipschitz.
 
   The full proof starts here (commented out for now):
@@ -2011,11 +1978,11 @@ private lemma condexp_pair_factorization_MET
   -/
 
   -- Final: Combine all the step equalities in the calc chain
-  calc μ[(fun ω => f (ω 0) * g (ω 1)) | m]
-      =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 0)) | m] := h_shift_inv
-    _ =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | m] ω) | m] := h_tower
-    _ =ᵐ[μ] (fun ω => μ[(fun ω => g (ω 0)) | m] ω * μ[(fun ω => f (ω 0)) | m] ω) := h_pullout
-    _ =ᵐ[μ] (fun ω => μ[(fun ω => f (ω 0)) | m] ω * μ[(fun ω => g (ω 0)) | m] ω) := by
+  calc μ[(fun ω => f (ω 0) * g (ω 1)) | mSI]
+      =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] := h_shift_inv
+    _ =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] := h_tower
+    _ =ᵐ[μ] (fun ω => μ[(fun ω => g (ω 0)) | mSI] ω * μ[(fun ω => f (ω 0)) | mSI] ω) := h_pullout
+    _ =ᵐ[μ] (fun ω => μ[(fun ω => f (ω 0)) | mSI] ω * μ[(fun ω => g (ω 0)) | mSI] ω) := by
         filter_upwards with ω
         ring
   /-
@@ -2030,7 +1997,7 @@ private lemma condexp_pair_factorization_MET
 /-- **Helper lemma**: Kernel independence implies CE factorization for products.
 
 If X and Y are conditionally independent given a σ-algebra m (as kernels),
-then their conditional expectation factors: CE[X·Y | m] =ᵐ CE[X | m]·CE[Y | m].
+then their conditional expectation factors: CE[X·Y | mSI] =ᵐ CE[X | mSI]·CE[Y | mSI].
 
 This is the bridge between `Kernel.IndepFun` and conditional expectation factorization.
 -/
@@ -2042,7 +2009,7 @@ lemma condExp_mul_of_indep
     (hXbd : ∃ C, ∀ ω, |X ω| ≤ C) (hYbd : ∃ C, ∀ ω, |Y ω| ≤ C)
     (hindep : ∀ᵐ ω ∂μ, ∫ a, X a * Y a ∂(condExpKernel μ m ω) =
                         (∫ a, X a ∂(condExpKernel μ m ω)) * (∫ a, Y a ∂(condExpKernel μ m ω))) :
-    μ[X * Y | m] =ᵐ[μ] μ[X | m] * μ[Y | m] := by
+    μ[X * Y | mSI] =ᵐ[μ] μ[X | mSI] * μ[Y | mSI] := by
   -- Step 1: Establish integrability
   have hXY_int : Integrable (X * Y) μ := by
     obtain ⟨CX, hCX⟩ := hXbd
@@ -2068,23 +2035,23 @@ lemma condExp_mul_of_indep
   have h_kernel := hindep
 
   -- Step 3: Convert CE to kernel integrals using our robust wrapper
-  have h_LHS : μ[X * Y | m] =ᵐ[μ] fun ω => ∫ a, (X * Y) a ∂(condExpKernel μ m ω) :=
+  have h_LHS : μ[X * Y | mSI] =ᵐ[μ] fun ω => ∫ a, (X * Y) a ∂(condExpKernel μ m ω) :=
     condExp_eq_kernel_integral hm hXY_int
 
-  have h_X : μ[X | m] =ᵐ[μ] fun ω => ∫ a, X a ∂(condExpKernel μ m ω) :=
+  have h_X : μ[X | mSI] =ᵐ[μ] fun ω => ∫ a, X a ∂(condExpKernel μ m ω) :=
     condExp_eq_kernel_integral hm hX_int
 
-  have h_Y : μ[Y | m] =ᵐ[μ] fun ω => ∫ a, Y a ∂(condExpKernel μ m ω) :=
+  have h_Y : μ[Y | mSI] =ᵐ[μ] fun ω => ∫ a, Y a ∂(condExpKernel μ m ω) :=
     condExp_eq_kernel_integral hm hY_int
 
   -- Step 4: Combine using filter_upwards
   filter_upwards [h_LHS, h_X, h_Y, h_kernel] with ω hLHS hX_eq hY_eq hker
-  calc μ[X * Y | m] ω
+  calc μ[X * Y | mSI] ω
       = ∫ a, (X * Y) a ∂(condExpKernel μ m ω) := hLHS
     _ = ∫ a, X a * Y a ∂(condExpKernel μ m ω) := rfl
     _ = (∫ a, X a ∂(condExpKernel μ m ω)) * (∫ a, Y a ∂(condExpKernel μ m ω)) := hker
-    _ = μ[X | m] ω * μ[Y | m] ω := by rw [hX_eq, hY_eq]
-    _ = (μ[X | m] * μ[Y | m]) ω := rfl
+    _ = μ[X | mSI] ω * μ[Y | mSI] ω := by rw [hX_eq, hY_eq]
+    _ = (μ[X | mSI] * μ[Y | mSI]) ω := rfl
 
 /-- **Axiomized product factorization** for general finite cylinder products.
 
@@ -2916,9 +2883,9 @@ theorem birkhoffCylinder_tendsto_condexp
         atTop
         (𝓝 (condexpL2 (μ := μ) fL2)) := by
   classical
-  let fL2 := productCylinderLp (μ := μ) (m := m) (fs := fs) hmeas hbd
+  let fL2 := productCylinderLp (μ := μ) (m := mSI) (fs := fs) hmeas hbd
   refine ⟨fL2, ?_, ?_⟩
-  · exact productCylinderLp_ae_eq (m := m) (fs := fs) hmeas hbd (μ := μ)
+  · exact productCylinderLp_ae_eq (m := mSI) (fs := fs) hmeas hbd (μ := μ)
   · exact birkhoffAverage_tendsto_condexp hσ fL2
 
 end MainConvergence
@@ -2946,11 +2913,11 @@ theorem extremeMembers_agree
     (hmeas : ∀ k, Measurable (fs k))
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
     (_indices : Fin m → ℕ) :
-    let fL2 : Lp ℝ 2 μ := productCylinderLp (μ := μ) (m := m) (fs := fs) hmeas hbd
+    let fL2 : Lp ℝ 2 μ := productCylinderLp (μ := μ) (m := mSI) (fs := fs) hmeas hbd
     koopman shift hσ (condexpL2 (μ := μ) fL2) =
       condexpL2 (μ := μ) fL2 := by
   classical
-  let fL2 := productCylinderLp (μ := μ) (m := m) (fs := fs) hmeas hbd
+  let fL2 := productCylinderLp (μ := μ) (m := mSI) (fs := fs) hmeas hbd
   have hRange : condexpL2 (μ := μ) fL2 ∈
       Set.range (condexpL2 (μ := μ)) := ⟨fL2, rfl⟩
   have hMemSet : condexpL2 (μ := μ) fL2 ∈
