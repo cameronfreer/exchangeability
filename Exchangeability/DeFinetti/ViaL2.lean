@@ -2658,12 +2658,22 @@ noncomputable def alphaIicCE
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
-    (t : ℝ) : Ω → ℝ :=
-  -- Placeholder: Should be condExp μ (TailSigma.tailSigma X) ((indIic t) ∘ (X 0))
-  -- TODO: Fix typeclass instance resolution for conditional expectation
-  alphaIic X hX_contract hX_meas hX_L2 t
+    (t : ℝ) : Ω → ℝ := by
+  classical
+  -- Set up the tail σ-algebra and its sub-σ-algebra relation
+  have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
+    TailSigma.tailSigma_le X hX_meas
+  -- Create the Fact instance for the sub-σ-algebra relation
+  haveI : Fact (TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
+  -- Now we can call condExp with the tail σ-algebra
+  exact μ[(indIic t) ∘ (X 0) | TailSigma.tailSigma X]
 
-/-- Measurability of alphaIicCE. -/
+/-- Measurability of alphaIicCE.
+
+TODO: Currently a sorry due to BorelSpace typeclass instance resolution issues.
+The conditional expectation `condExp μ (tailSigma X) f` is measurable by
+`stronglyMeasurable_condExp.measurable`, but Lean can't synthesize the required
+`BorelSpace` instance automatically. This should be straightforward to fix. -/
 lemma alphaIicCE_measurable
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
@@ -2671,9 +2681,7 @@ lemma alphaIicCE_measurable
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (t : ℝ) :
     Measurable (alphaIicCE X hX_contract hX_meas hX_L2 t) := by
-  unfold alphaIicCE
-  simp only []
-  exact stronglyMeasurable_condExp.measurable
+  sorry
 
 /-- Right-continuous CDF from α via countable rational envelope:
 F(ω,t) := inf_{q∈ℚ, t<q} α_{Iic q}(ω).
