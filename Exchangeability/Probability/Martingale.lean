@@ -175,16 +175,17 @@ axiom reverseMartingaleNat_convergence
 
 The specific case needed for the martingale proof of de Finetti. -/
 
-/-- Helper: In a decreasing chain of σ-algebras, the finite supremum up to k equals 𝔽 k. -/
+/-- Helper: In a decreasing chain of σ-algebras, the finite supremum up to k equals 𝔽 0,
+    the largest element. -/
 private lemma iSup_of_antitone_eq {𝔽 : ℕ → MeasurableSpace Ω} (h_antitone : Antitone 𝔽) (k : ℕ) :
-    (⨆ (n : ℕ) (hn : n ≤ k), 𝔽 n) = 𝔽 k := by
-  sorry
-
-/-- Helper: The supremum of the increasing filtration built from a decreasing chain. -/
-private lemma iSup_increasing_of_decreasing {𝔽 : ℕ → MeasurableSpace Ω}
-    (h_antitone : Antitone 𝔽) (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω)) :
-    (⨆ k, (⨆ (n : ℕ) (hn : n ≤ k), 𝔽 n)) = 𝔽 0 := by
-  sorry
+    (⨆ (n : ℕ) (hn : n ≤ k), 𝔽 n) = 𝔽 0 := by
+  apply le_antisymm
+  · -- ⨆_{n ≤ k} 𝔽 n ≤ 𝔽 0
+    refine iSup₂_le fun n hn => ?_
+    exact h_antitone (Nat.zero_le n)
+  · -- 𝔽 0 ≤ ⨆_{n ≤ k} 𝔽 n
+    have h0k : (0 : ℕ) ≤ k := Nat.zero_le k
+    exact @le_iSup₂ (MeasurableSpace Ω) ℕ (fun n => n ≤ k) _ (fun n _ => 𝔽 n) 0 h0k
 
 /-- **Conditional expectation converges along decreasing filtration (Lévy's downward theorem).**
 
@@ -222,28 +223,22 @@ theorem condExp_tendsto_iInf
       mono' := G_mono
       le'   := fun k => iSup₂_le fun n _ => h_le n }
 
-  -- Key fact: G k = 𝔽 k for all k
-  have G_eq : ∀ k, G.seq k = 𝔽 k := iSup_of_antitone_eq h_filtration
+  -- Key observation: G k = 𝔽 0 for all k (since 𝔽 is antitone)
+  have G_eq : ∀ k, G.seq k = 𝔽 0 := iSup_of_antitone_eq h_filtration
 
-  -- Apply Lévy's upward theorem to f along the increasing filtration G
-  have h_conv := MeasureTheory.tendsto_ae_condExp (μ := μ) (ℱ := G) f
+  -- Define tail σ-algebra and target function
+  let Finf := ⨅ k, 𝔽 k
+  let g := μ[f | Finf]
 
-  -- Rewrite the convergence in terms of 𝔽 instead of G
-  refine h_conv.mono fun ω hω => ?_
+  -- Since Finf = ⨅ k, 𝔽 k ≤ 𝔽 k, the tower property gives:
+  -- μ[μ[f | Finf] | 𝔽 k] = μ[f | Finf]
+  -- So the conditional expectations μ[f | 𝔽 k] form a reverse martingale that should converge to μ[f | Finf]
 
-  have seq_eq : ∀ k, μ[f | G.seq k] ω = μ[f | 𝔽 k] ω := by
-    intro k
-    congr 1
-    exact G_eq k
-
-  simp only [seq_eq] at hω
-
-  -- Show μ[f | ⨆ k, G.seq k] ω = μ[f | ⨅ k, 𝔽 k] ω
-  convert hω using 1
-  congr 1
-  -- ⨆ k, G k = ⨆ k, 𝔽 k = 𝔽 0 in a decreasing chain
-  -- But we want ⨅ k, 𝔽 k
-  -- This requires tower property arguments
+  -- However, the construction G k = ⨆_{n ≤ k} 𝔽 n = 𝔽 0 (constant) doesn't help us
+  -- TODO: This proof strategy needs revision. Consider alternative approaches:
+  -- 1. Direct use of reverse submartingale convergence from mathlib (if available)
+  -- 2. Build the proof from upcrossings directly
+  -- 3. Use a different transformation that actually varies with k
   sorry
 
 /-- **Conditional expectation converges along increasing filtration (Doob/Levy upward).**
