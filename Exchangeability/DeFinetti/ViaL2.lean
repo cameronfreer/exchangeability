@@ -2924,28 +2924,31 @@ lemma alphaIicCE_ae_tendsto_zero_atBot
   -- 3. By monotone convergence, the sequence converges a.e. to some limit L
   -- 4. By L¹ convergence to 0, we have L = 0 a.e.
 
-  -- Step 1: Monotonicity - for each ω, alphaIicCE (-(n+1):ℝ) ω ≤ alphaIicCE (-(n:ℝ)) ω
+  -- Step 1: Monotonicity - for each ω, alphaIicCE (-(m):ℝ) ω ≤ alphaIicCE (-(n):ℝ)) ω when n ≤ m
   have h_mono : ∀ᵐ ω ∂μ, ∀ n m : ℕ, n ≤ m →
       alphaIicCE X hX_contract hX_meas hX_L2 (-(m : ℝ)) ω
       ≤ alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω := by
-    -- This follows from monotonicity of t ↦ alphaIicCE t (as condExp of monotone indicator)
-    sorry
+    -- Use alphaIicCE_mono: s ≤ t implies alphaIicCE s ≤ alphaIicCE t a.e.
+    -- When n ≤ m, we have -(m : ℝ) ≤ -(n : ℝ)
+    -- Need to combine countably many ae statements
+    sorry  -- TODO: Use ae_all_iff.mpr to handle ∀ n m
 
   -- Step 2: Boundedness - 0 ≤ alphaIicCE ≤ 1
   have h_bound : ∀ᵐ ω ∂μ, ∀ n : ℕ,
       0 ≤ alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω
       ∧ alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω ≤ 1 := by
-    -- Conditional expectation of indicator is in [0,1]
-    sorry
+    -- Use alphaIicCE_nonneg_le_one for each t
+    sorry  -- TODO: Use ae_all_iff.mpr for countable union
 
   -- Step 3: Monotone bounded sequences converge a.e.
   have h_ae_conv : ∀ᵐ ω ∂μ, ∃ L : ℝ, Tendsto (fun n : ℕ =>
       alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω) atTop (𝓝 L) := by
-    sorry
+    -- Monotone decreasing bounded sequence converges (monotone convergence theorem)
+    sorry  -- TODO: Use monotone convergence theorem with h_mono and h_bound
 
   -- Step 4: The limit is 0 by L¹ convergence
   -- If f_n → L a.e. and f_n → 0 in L¹, then L = 0 a.e.
-  sorry
+  sorry  -- TODO: Use L¹ limit uniqueness
 
 /-- **A.e. pointwise endpoint limit at +∞**.
 
@@ -2965,28 +2968,29 @@ lemma alphaIicCE_ae_tendsto_one_atTop
   -- 3. By monotone convergence, the sequence converges a.e. to some limit L
   -- 4. By L¹ convergence to 1, we have L = 1 a.e.
 
-  -- Step 1: Monotonicity - for each ω, alphaIicCE (n:ℝ) ω ≤ alphaIicCE ((n+1):ℝ) ω
+  -- Step 1: Monotonicity - for each ω, alphaIicCE (n:ℝ) ω ≤ alphaIicCE (m:ℝ) ω when n ≤ m
   have h_mono : ∀ᵐ ω ∂μ, ∀ n m : ℕ, n ≤ m →
       alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω
       ≤ alphaIicCE X hX_contract hX_meas hX_L2 (m : ℝ) ω := by
-    -- This follows from monotonicity of t ↦ alphaIicCE t
-    sorry
+    -- Use alphaIicCE_mono with countable ae union
+    sorry  -- TODO: Use ae_all_iff.mpr
 
   -- Step 2: Boundedness - 0 ≤ alphaIicCE ≤ 1
   have h_bound : ∀ᵐ ω ∂μ, ∀ n : ℕ,
       0 ≤ alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω
       ∧ alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω ≤ 1 := by
-    -- Conditional expectation of indicator is in [0,1]
-    sorry
+    -- Use alphaIicCE_nonneg_le_one with countable ae union
+    sorry  -- TODO: Use ae_all_iff.mpr
 
   -- Step 3: Monotone bounded sequences converge a.e.
   have h_ae_conv : ∀ᵐ ω ∂μ, ∃ L : ℝ, Tendsto (fun n : ℕ =>
       alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω) atTop (𝓝 L) := by
-    sorry
+    -- Monotone increasing bounded sequence converges (monotone convergence theorem)
+    sorry  -- TODO: Use monotone convergence theorem with h_mono and h_bound
 
   -- Step 4: The limit is 1 by L¹ convergence
   -- If f_n → L a.e. and f_n → 1 in L¹, then L = 1 a.e.
-  sorry
+  sorry  -- TODO: Use L¹ limit uniqueness
 
 /-- Right-continuous CDF from α via countable rational envelope:
 F(ω,t) := inf_{q∈ℚ, t<q} α_{Iic q}(ω).
