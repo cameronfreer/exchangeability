@@ -360,21 +360,25 @@ lemma condexp_convergence_fwd
 
 /-- Forward declaration: Tail σ-algebra is sub-σ-algebra of future filtration.
 
-Full proof at line ~610. -/
+Full proof at line ~501. -/
 lemma tailSigma_le_futureFiltration_fwd
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) (m : ℕ) :
     tailSigma X ≤ futureFiltration X m := by
-  sorry  -- Proved at line ~625
+  -- tailSigma = ⨅ n, revFiltration X n ≤ revFiltration X (m+1) = futureFiltration X m
+  refine iInf_le_of_le (m + 1) ?_
+  rfl
 
 /-- Forward declaration: Future filtration is sub-σ-algebra of ambient.
 
-Full proof at line ~656. -/
+Full proof at line ~533. -/
 lemma futureFiltration_le_fwd
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) (m : ℕ) (hX : ∀ n, Measurable (X n)) :
     futureFiltration X m ≤ (inferInstance : MeasurableSpace Ω) := by
-  sorry  -- Proved at line ~656
+  -- futureFiltration X m = revFiltration X (m + 1)
+  simp only [futureFiltration]
+  exact revFiltration_le X hX (m + 1)
 
 lemma extreme_members_equal_on_tail
     {μ : Measure Ω} [IsProbabilityMeasure μ]
