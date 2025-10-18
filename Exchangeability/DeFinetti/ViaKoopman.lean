@@ -1547,7 +1547,64 @@ private theorem h_tower_of_lagConst
           ≤ (eLpNorm (fun ω => A n ω - Y ω) 2 μ).toReal := by
       intro n
       -- On probability spaces: ‖·‖₁ ≤ ‖·‖₂ by Hölder inequality
-      sorry -- TODO: prove using integrability, MemLp, and eLpNorm_one_le_eLpNorm_two_toReal
+      -- Need to show: A n - Y is integrable and in L²
+      have hA_int : Integrable (A n) μ := by
+        obtain ⟨Cg, hCg⟩ := hg_bd
+        have h_sum_int : Integrable (fun ω => (Finset.range (n + 1)).sum (fun j => g (ω j))) μ := by
+          refine integrable_finset_sum (Finset.range (n + 1)) (fun j _ => ?_)
+          exact integrable_of_bounded_measurable
+            (hg_meas.comp (measurable_pi_apply j)) Cg (fun ω => hCg (ω j))
+        have := h_sum_int.smul (1 / (n + 1 : ℝ))
+        simp only [A, Pi.smul_apply, smul_eq_mul] at this
+        exact this
+      have hAY_int : Integrable (fun ω => A n ω - Y ω) μ := by
+        exact Integrable.sub hA_int integrable_condExp
+      -- A n - Y is in L² (bounded, hence in L²)
+      have hAY_L2 : MemLp (fun ω => A n ω - Y ω) 2 μ := by
+        obtain ⟨Cg, hCg⟩ := hg_bd
+        -- A n is bounded by Cg
+        have hA_bd : ∀ᵐ ω ∂μ, |A n ω| ≤ Cg := by
+          apply ae_of_all
+          intro ω
+          simp only [A]
+          calc |1 / (n + 1 : ℝ) * (Finset.range (n + 1)).sum (fun j => g (ω j))|
+              ≤ (1 / (n + 1 : ℝ)) * |(Finset.range (n + 1)).sum (fun j => g (ω j))| := by
+                  rw [abs_mul, abs_of_nonneg (by positivity : 0 ≤ 1 / (n + 1 : ℝ))]
+            _ ≤ (1 / (n + 1 : ℝ)) * ((n + 1) * Cg) := by
+                  refine mul_le_mul_of_nonneg_left ?_ (by positivity)
+                  calc |(Finset.range (n + 1)).sum (fun j => g (ω j))|
+                      ≤ (Finset.range (n + 1)).sum (fun j => |g (ω j)|) := Finset.abs_sum_le_sum_abs _ _
+                    _ ≤ (Finset.range (n + 1)).sum (fun j => Cg) := Finset.sum_le_sum (fun j _ => hCg (ω j))
+                    _ = (n + 1) * Cg := by simp [Finset.card_range]
+            _ = Cg := by field_simp [Nat.cast_add_one_ne_zero n]
+
+        -- Y = CE[g(·0)] is also bounded by |Cg| (CE preserves boundedness)
+        -- Use ae_bdd_condExp_of_ae_bdd with ℝ≥0 bound
+        have hg_0_bd_nonneg : ∀ᵐ ω ∂μ, |g (ω 0)| ≤ |Cg| := by
+          refine ae_of_all μ (fun ω => ?_)
+          calc |g (ω 0)|
+              ≤ Cg := hCg (ω 0)
+            _ ≤ |Cg| := le_abs_self Cg
+        have hY_bd : ∀ᵐ ω ∂μ, |Y ω| ≤ |Cg| := by
+          simp only [Y]
+          exact ae_bdd_condExp_of_ae_bdd (R := ⟨|Cg|, abs_nonneg Cg⟩) hg_0_bd_nonneg
+
+        -- A n - Y is bounded by 2*|Cg|
+        have hAY_bd : ∀ᵐ ω ∂μ, ‖A n ω - Y ω‖ ≤ 2 * |Cg| := by
+          filter_upwards [hA_bd, hY_bd] with ω hA hY
+          rw [Real.norm_eq_abs]
+          calc |A n ω - Y ω|
+              ≤ |A n ω| + |Y ω| := abs_sub (A n ω) (Y ω)
+            _ ≤ Cg + |Cg| := add_le_add hA hY
+            _ ≤ |Cg| + |Cg| := by
+                refine add_le_add_right ?_ _
+                exact le_abs_self Cg
+            _ = 2 * |Cg| := by ring
+
+        -- Apply MemLp.of_bound
+        refine MemLp.of_bound hAY_int.aestronglyMeasurable (2 * |Cg|) hAY_bd
+
+      exact eLpNorm_one_le_eLpNorm_two_toReal (fun ω => A n ω - Y ω) hAY_int hAY_L2
 
     -- Nonnegativity of the LHS integrals
     have h_nonneg : ∀ n, 0 ≤ ∫ ω, |A n ω - Y ω| ∂μ := by
