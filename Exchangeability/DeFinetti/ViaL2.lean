@@ -3225,13 +3225,24 @@ lemma alphaIicCE_ae_tendsto_zero_atBot
       have hL_bound : ∀ᵐ ω ∂μ, ‖L_fun ω‖ ≤ 1 := by
         filter_upwards [hL_nonneg, h_bound] with ω hω_nn h_bound_ω
         rw [Real.norm_eq_abs, abs_of_nonneg hω_nn]
-        -- Standard fact: infimum of values all ≤ 1 is also ≤ 1
-        sorry
+        -- L_fun ω = ⨅ n, f(n) where each f(n) ≤ 1, so L_fun ω ≤ 1
+        -- Use that infimum is ≤ any particular value
+        calc L_fun ω
+            = ⨅ (n : ℕ), alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω := rfl
+          _ ≤ alphaIicCE X hX_contract hX_meas hX_L2 (-((0 : ℕ) : ℝ)) ω := by
+              apply ciInf_le
+              -- Bounded below by 0 (from alphaIicCE_nonneg_le_one)
+              refine ⟨0, fun y hy => ?_⟩
+              obtain ⟨k, hk⟩ := hy
+              rw [← hk]
+              exact (h_bound_ω k).1
+          _ ≤ 1 := (h_bound_ω 0).2
       -- L_fun is AEStronglyMeasurable as the a.e. limit of measurable functions
       have hL_meas : AEStronglyMeasurable L_fun μ := by
         -- Standard fact: iInf of countably many AEStronglyMeasurable functions is AEStronglyMeasurable
         -- Each alphaIicCE (-(n:ℝ)) is AEStronglyMeasurable (it's a conditional expectation)
-        sorry  -- TODO: Use appropriate iInf measurability lemma from mathlib
+        -- This requires proper measurability infrastructure (BorelSpace ℝ, etc.)
+        sorry  -- Will be provided in helper file
       exact Integrable.of_bound hL_meas 1 hL_bound
     -- Now apply integral_eq_zero_iff_of_nonneg_ae
     rw [← integral_eq_zero_iff_of_nonneg_ae hL_nonneg hL_int]
@@ -3388,8 +3399,14 @@ lemma alphaIicCE_ae_tendsto_one_atTop
       have hU_bound : ∀ᵐ ω ∂μ, ‖U_fun ω‖ ≤ 1 := by
         filter_upwards [hU_nonneg, h_bound] with ω hω_nn h_bound_ω
         rw [Real.norm_eq_abs, abs_of_nonneg hω_nn]
-        -- Standard fact: supremum of values all ≤ 1 is also ≤ 1
-        sorry
+        -- U_fun ω = ⨆ n, f(n) where each f(n) ≤ 1, so U_fun ω ≤ 1
+        -- Use that 1 is an upper bound for all values
+        calc U_fun ω
+            = ⨆ (n : ℕ), alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω := rfl
+          _ ≤ 1 := by
+              apply ciSup_le
+              intro n
+              exact (h_bound_ω n).2
       have hU_meas : AEStronglyMeasurable U_fun μ := by
         -- Standard fact: iSup of countably many AEStronglyMeasurable functions is AEStronglyMeasurable
         sorry
