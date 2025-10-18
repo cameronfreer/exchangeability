@@ -423,17 +423,20 @@ axiom condexp_precomp_shiftℤInv_eq
         | shiftInvariantSigmaℤ (α := α)]
       =ᵐ[μhat] μhat[f | shiftInvariantSigmaℤ (α := α)]
 
-/-- **Lag-constancy in two-sided extension**.
+/-
+**Lag-constancy in two-sided extension**.
 
-**Temporarily axiomatized**: Type class inference issues with `measurable_pi_apply` for `ℤ` indices
-after axiomatizing `shiftInvariantSigmaℤ`.
+Previously axiomatized due to type class inference issues with `measurable_pi_apply` for `ℤ` indices.
+Now attempting to prove by fixing type class synthesis.
 
 **Proof strategy**:
 1. Define Fk using negative index: `Fk ω = f(ω(-1)) * g(ω k)`
 2. Show Fk ∘ shift = f(ω 0) * g(ω(k+1)) by index arithmetic
 3. Use shift-invariance of conditional expectation
 4. Use inverse shift to relate back to f(ω 0) * g(ω k)
--/
+
+COMMENTED OUT AXIOM:
+
 private axiom condexp_pair_lag_constant_twoSided
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
     (ext : NaturalExtensionData (μ := μ))
@@ -446,9 +449,40 @@ private axiom condexp_pair_lag_constant_twoSided
       =ᵐ[ext.μhat]
     ext.μhat[(fun ω => f (ω 0) * g (ω k))
         | shiftInvariantSigmaℤ (α := α)]
+-/
 
-/-
-COMMENTED OUT - Type class issues with measurable_pi_apply for ℤ indices:
+/-- Helper: Integrability of a bounded function on a finite measure space. -/
+private lemma integrable_of_bounded_helper {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
+    [IsFiniteMeasure μ] {f : Ω → ℝ} (hf : Measurable f) (hbd : ∃ C, ∀ ω, |f ω| ≤ C) :
+    Integrable f μ := by
+  obtain ⟨C, hC⟩ := hbd
+  exact ⟨hf.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hC)⟩
+
+/-- Helper: Integrability of a bounded product on a finite measure space. -/
+private lemma integrable_of_bounded_mul_helper
+    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ] [Nonempty Ω]
+    {φ ψ : Ω → ℝ}
+    (hφ_meas : Measurable φ) (hφ_bd : ∃ Cφ, ∀ ω, |φ ω| ≤ Cφ)
+    (hψ_meas : Measurable ψ) (hψ_bd : ∃ Cψ, ∀ ω, |ψ ω| ≤ Cψ) :
+    Integrable (fun ω => φ ω * ψ ω) μ := by
+  classical
+  obtain ⟨Cφ, hCφ⟩ := hφ_bd
+  obtain ⟨Cψ, hCψ⟩ := hψ_bd
+  have hCφ_nonneg : 0 ≤ Cφ := by
+    have h := hCφ (Classical.arbitrary Ω)
+    exact (abs_nonneg _).trans h
+  have hCψ_nonneg : 0 ≤ Cψ := by
+    have h := hCψ (Classical.arbitrary Ω)
+    exact (abs_nonneg _).trans h
+  have h_bound : ∀ ω, |φ ω * ψ ω| ≤ Cφ * Cψ := by
+    intro ω
+    have hφ := hCφ ω
+    have hψ := hCψ ω
+    have hmul :=
+      mul_le_mul hφ hψ (abs_nonneg _) hCφ_nonneg
+    simpa [abs_mul] using hmul
+  have h_meas : Measurable fun ω => φ ω * ψ ω := hφ_meas.mul hψ_meas
+  exact integrable_of_bounded_helper h_meas ⟨Cφ * Cψ, h_bound⟩
 
 private lemma condexp_pair_lag_constant_twoSided
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
@@ -465,23 +499,23 @@ private lemma condexp_pair_lag_constant_twoSided
   classical
   obtain ⟨Cf, hCf⟩ := hf_bd
   obtain ⟨Cg, hCg⟩ := hg_bd
-  let Fk : Ωℤ[α] → ℝ := fun ω => f (ω (-1)) * g (ω k)
+  let Fk : Ωℤ[α] → ℝ := fun ω => f (ω (-1)) * g (ω (k : ℤ))
   have hFk_int : Integrable Fk ext.μhat := by
-    have hφ_meas : Measurable (fun (ω : Ωℤ[α]) => f (ω (-1))) :=
-      hf_meas.comp (measurable_pi_apply (-1))
-    have hψ_meas : Measurable (fun (ω : Ωℤ[α]) => g (ω k)) :=
-      hg_meas.comp (measurable_pi_apply k)
+    have hφ_meas : Measurable (fun (ω : ℤ → α) => f (ω (-1))) := by
+      exact hf_meas.comp (measurable_pi_apply (-1 : ℤ))
+    have hψ_meas : Measurable (fun (ω : ℤ → α) => g (ω (k : ℤ))) := by
+      exact hg_meas.comp (measurable_pi_apply (k : ℤ))
     have hφ_bd : ∃ C, ∀ (ω : Ωℤ[α]), |f (ω (-1))| ≤ C := ⟨Cf, fun ω => hCf _⟩
-    have hψ_bd : ∃ C, ∀ (ω : Ωℤ[α]), |g (ω k)| ≤ C := ⟨Cg, fun ω => hCg _⟩
-    exact integrable_of_bounded_mul (μ := ext.μhat) hφ_meas hφ_bd hψ_meas hψ_bd
-  have hF_int : Integrable (fun (ω : Ωℤ[α]) => f (ω 0) * g (ω (k + 1))) ext.μhat := by
-    have hφ_meas : Measurable (fun (ω : Ωℤ[α]) => f (ω 0)) :=
-      hf_meas.comp (measurable_pi_apply 0)
-    have hψ_meas : Measurable (fun (ω : Ωℤ[α]) => g (ω (k + 1))) :=
-      hg_meas.comp (measurable_pi_apply (k + 1))
+    have hψ_bd : ∃ C, ∀ (ω : Ωℤ[α]), |g (ω (k : ℤ))| ≤ C := ⟨Cg, fun ω => hCg _⟩
+    exact integrable_of_bounded_mul_helper (μ := ext.μhat) hφ_meas hφ_bd hψ_meas hψ_bd
+  have hF_int : Integrable (fun (ω : Ωℤ[α]) => f (ω 0) * g (ω ((k : ℤ) + 1))) ext.μhat := by
+    have hφ_meas : Measurable (fun (ω : ℤ → α) => f (ω 0)) := by
+      exact hf_meas.comp (measurable_pi_apply (0 : ℤ))
+    have hψ_meas : Measurable (fun (ω : ℤ → α) => g (ω ((k : ℤ) + 1))) := by
+      exact hg_meas.comp (measurable_pi_apply ((k : ℤ) + 1))
     have hφ_bd : ∃ C, ∀ (ω : Ωℤ[α]), |f (ω 0)| ≤ C := ⟨Cf, fun ω => hCf _⟩
-    have hψ_bd : ∃ C, ∀ (ω : Ωℤ[α]), |g (ω (k + 1))| ≤ C := ⟨Cg, fun ω => hCg _⟩
-    exact integrable_of_bounded_mul (μ := ext.μhat) hφ_meas hφ_bd hψ_meas hψ_bd
+    have hψ_bd : ∃ C, ∀ (ω : Ωℤ[α]), |g (ω ((k : ℤ) + 1))| ≤ C := ⟨Cg, fun ω => hCg _⟩
+    exact integrable_of_bounded_mul_helper (μ := ext.μhat) hφ_meas hφ_bd hψ_meas hψ_bd
   have h_shift :
       ext.μhat[(fun ω => Fk ((shiftℤ (α := α)) ω))
         | shiftInvariantSigmaℤ (α := α)]
@@ -495,23 +529,32 @@ private lemma condexp_pair_lag_constant_twoSided
   -- Rewrite the shifted integrand in terms of the original coordinates
   have h_shifted_eq :
       (fun ω => Fk ((shiftℤ (α := α)) ω))
-        = fun ω => f (ω 0) * g (ω (k + 1)) := by
+        = fun ω => f (ω 0) * g (ω ((k : ℤ) + 1)) := by
     funext ω
     simp [Fk, shiftℤ, add_comm, add_left_comm, add_assoc]
   have h_unshifted_eq :
       ext.μhat[Fk | shiftInvariantSigmaℤ (α := α)]
         =ᵐ[ext.μhat]
-      ext.μhat[(fun ω => f (ω 0) * g (ω k))
+      ext.μhat[(fun ω => f (ω 0) * g (ω (k : ℤ)))
         | shiftInvariantSigmaℤ (α := α)] := by
     -- Use invariance under the inverse shift to replace the negative index
     have h_inv :=
       condexp_precomp_shiftℤInv_eq
         (μhat := ext.μhat) (α := α)
         (hσInv := ext.shiftInv_preserving)
-        (f := fun ω => f (ω 0) * g (ω (k + 1)))
-        hF_int
+        (f := fun ω => f (ω 0) * g (ω (k : ℤ)))
+        (by
+          have : Integrable (fun (ω : ℤ → α) => f (ω 0) * g (ω (k : ℤ))) ext.μhat := by
+            have hφ_meas : Measurable (fun (ω : ℤ → α) => f (ω 0)) := by
+              exact hf_meas.comp (measurable_pi_apply (0 : ℤ))
+            have hψ_meas : Measurable (fun (ω : ℤ → α) => g (ω (k : ℤ))) := by
+              exact hg_meas.comp (measurable_pi_apply (k : ℤ))
+            have hφ_bd : ∃ C, ∀ (ω : Ωℤ[α]), |f (ω 0)| ≤ C := ⟨Cf, fun ω' => hCf (ω' 0)⟩
+            have hψ_bd : ∃ C, ∀ (ω : Ωℤ[α]), |g (ω (k : ℤ))| ≤ C := ⟨Cg, fun ω' => hCg (ω' (k : ℤ))⟩
+            exact integrable_of_bounded_mul_helper (μ := ext.μhat) hφ_meas hφ_bd hψ_meas hψ_bd
+          exact this)
     have h_ident :
-        (fun ω => f (ω 0) * g (ω (k + 1)))
+        (fun ω => f (ω 0) * g (ω (k : ℤ)))
           ∘ shiftℤInv (α := α)
           = Fk := by
       funext ω
@@ -519,9 +562,41 @@ private lemma condexp_pair_lag_constant_twoSided
     simpa [h_ident] using h_inv
   refine h_shift.trans ?_
   simpa [h_shifted_eq] using h_unshifted_eq
--/
 
 /-! ## Utility lemmas -/
+
+/-- Integrability of a bounded function on a finite measure space. -/
+private lemma integrable_of_bounded {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
+    [IsFiniteMeasure μ] {f : Ω → ℝ} (hf : Measurable f) (hbd : ∃ C, ∀ ω, |f ω| ≤ C) :
+    Integrable f μ := by
+  obtain ⟨C, hC⟩ := hbd
+  exact ⟨hf.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hC)⟩
+
+/-- Integrability of a bounded product on a finite measure space. -/
+private lemma integrable_of_bounded_mul
+    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ] [Nonempty Ω]
+    {φ ψ : Ω → ℝ}
+    (hφ_meas : Measurable φ) (hφ_bd : ∃ Cφ, ∀ ω, |φ ω| ≤ Cφ)
+    (hψ_meas : Measurable ψ) (hψ_bd : ∃ Cψ, ∀ ω, |ψ ω| ≤ Cψ) :
+    Integrable (fun ω => φ ω * ψ ω) μ := by
+  classical
+  obtain ⟨Cφ, hCφ⟩ := hφ_bd
+  obtain ⟨Cψ, hCψ⟩ := hψ_bd
+  have hCφ_nonneg : 0 ≤ Cφ := by
+    have h := hCφ (Classical.arbitrary Ω)
+    exact (abs_nonneg _).trans h
+  have hCψ_nonneg : 0 ≤ Cψ := by
+    have h := hCψ (Classical.arbitrary Ω)
+    exact (abs_nonneg _).trans h
+  have h_bound : ∀ ω, |φ ω * ψ ω| ≤ Cφ * Cψ := by
+    intro ω
+    have hφ := hCφ ω
+    have hψ := hCψ ω
+    have hmul :=
+      mul_le_mul hφ hψ (abs_nonneg _) hCφ_nonneg
+    simpa [abs_mul] using hmul
+  have h_meas : Measurable fun ω => φ ω * ψ ω := hφ_meas.mul hψ_meas
+  exact integrable_of_bounded h_meas ⟨Cφ * Cψ, h_bound⟩
 
 /-- **Robust wrapper for CE ↔ kernel integral conversion**.
 
@@ -868,40 +943,6 @@ axiom kernel_integral_product_factorization
 This is the **KEY BREAKTHROUGH**: We can prove factorization directly from MET without
 needing kernel independence or ergodic decomposition. This eliminates the deepest axioms!
 -/
-
-/-- Integrability from pointwise bounds: if f is measurable and |f| ≤ C everywhere,
-then f is integrable under any finite measure. -/
-private lemma integrable_of_bounded {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
-    [IsFiniteMeasure μ] {f : Ω → ℝ} (hf : Measurable f) (hbd : ∃ C, ∀ ω, |f ω| ≤ C) :
-    Integrable f μ := by
-  obtain ⟨C, hC⟩ := hbd
-  exact ⟨hf.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hC)⟩
-
-/-- Integrability of a bounded product. -/
-private lemma integrable_of_bounded_mul
-    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ] [Nonempty Ω]
-    {φ ψ : Ω → ℝ}
-    (hφ_meas : Measurable φ) (hφ_bd : ∃ Cφ, ∀ ω, |φ ω| ≤ Cφ)
-    (hψ_meas : Measurable ψ) (hψ_bd : ∃ Cψ, ∀ ω, |ψ ω| ≤ Cψ) :
-    Integrable (fun ω => φ ω * ψ ω) μ := by
-  classical
-  obtain ⟨Cφ, hCφ⟩ := hφ_bd
-  obtain ⟨Cψ, hCψ⟩ := hψ_bd
-  have hCφ_nonneg : 0 ≤ Cφ := by
-    have h := hCφ (Classical.arbitrary Ω)
-    exact (abs_nonneg _).trans h
-  have hCψ_nonneg : 0 ≤ Cψ := by
-    have h := hCψ (Classical.arbitrary Ω)
-    exact (abs_nonneg _).trans h
-  have h_bound : ∀ ω, |φ ω * ψ ω| ≤ Cφ * Cψ := by
-    intro ω
-    have hφ := hCφ ω
-    have hψ := hCψ ω
-    have hmul :=
-      mul_le_mul hφ hψ (abs_nonneg _) hCφ_nonneg
-    simpa [abs_mul] using hmul
-  have h_meas : Measurable fun ω => φ ω * ψ ω := hφ_meas.mul hψ_meas
-  exact integrable_of_bounded h_meas ⟨Cφ * Cψ, h_bound⟩
 
 /-- L² integrability of a bounded product. -/
 private lemma memLp_of_bounded_mul
