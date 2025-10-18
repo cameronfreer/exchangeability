@@ -1574,7 +1574,53 @@ private theorem h_tower_of_lagConst
       ∫ ω, |f (ω 0) * (A n ω - μ[(fun ω => g (ω 0)) | mSI] ω)| ∂μ
       ≤ Cf * ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
       intro n
-      sorry -- TODO: prove using integral_mono_ae with pointwise bound |f(ω₀)| ≤ Cf
+      set Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | mSI] ω
+      -- Pointwise: |f(ω 0) * (A n ω - Y ω)| ≤ Cf * |A n ω - Y ω|
+      have hpt : ∀ᵐ ω ∂μ, |f (ω 0) * (A n ω - Y ω)| ≤ Cf * |A n ω - Y ω| := by
+        refine ae_of_all μ (fun ω => ?_)
+        rw [abs_mul]
+        exact mul_le_mul_of_nonneg_right (hCf (ω 0)) (abs_nonneg _)
+      -- Both sides integrable
+      have hint_lhs : Integrable (fun ω => |f (ω 0) * (A n ω - Y ω)|) μ := by
+        have hZ : Integrable (fun ω => f (ω 0) * A n ω) μ := by
+          refine integrable_mul_of_ae_bdd_left ?_ ?_ ?_
+          · exact hf_meas.comp (measurable_pi_apply 0)
+          · exact ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩
+          · obtain ⟨Cg, hCg⟩ := hg_bd
+            have h_sum_int : Integrable (fun ω => (Finset.range (n + 1)).sum (fun j => g (ω j))) μ := by
+              refine integrable_finset_sum (Finset.range (n + 1)) (fun j _ => ?_)
+              exact integrable_of_bounded_measurable
+                (hg_meas.comp (measurable_pi_apply j)) Cg (fun ω => hCg (ω j))
+            have := h_sum_int.smul (1 / (n + 1 : ℝ))
+            simp only [A, Pi.smul_apply, smul_eq_mul] at this
+            exact this
+        have hW : Integrable (fun ω => f (ω 0) * Y ω) μ := by
+          refine integrable_mul_of_ae_bdd_left ?_ ?_ ?_
+          · exact hf_meas.comp (measurable_pi_apply 0)
+          · exact ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩
+          · exact integrable_condExp
+        have : Integrable (fun ω => f (ω 0) * (A n ω - Y ω)) μ := by
+          simp only [mul_sub]
+          exact Integrable.sub hZ hW
+        exact this.abs
+      have hint_rhs : Integrable (fun ω => Cf * |A n ω - Y ω|) μ := by
+        have hAY : Integrable (fun ω => A n ω - Y ω) μ := by
+          -- A n is integrable, Y is integrable
+          have hA : Integrable (A n) μ := by
+            obtain ⟨Cg, hCg⟩ := hg_bd
+            have h_sum_int : Integrable (fun ω => (Finset.range (n + 1)).sum (fun j => g (ω j))) μ := by
+              refine integrable_finset_sum (Finset.range (n + 1)) (fun j _ => ?_)
+              exact integrable_of_bounded_measurable
+                (hg_meas.comp (measurable_pi_apply j)) Cg (fun ω => hCg (ω j))
+            have := h_sum_int.smul (1 / (n + 1 : ℝ))
+            simp only [A, Pi.smul_apply, smul_eq_mul] at this
+            exact this
+          exact Integrable.sub hA integrable_condExp
+        exact (hAY.abs.const_mul Cf)
+      -- Apply integral_mono_ae then integral_const_mul
+      calc ∫ ω, |f (ω 0) * (A n ω - Y ω)| ∂μ
+          ≤ ∫ ω, Cf * |A n ω - Y ω| ∂μ := integral_mono_ae hint_lhs hint_rhs hpt
+        _ = Cf * ∫ ω, |A n ω - Y ω| ∂μ := integral_const_mul Cf _
 
     -- Step 3: conclude with Block 3
     sorry -- TODO: apply squeeze theorem with h_L1_An_to_CE, h₁, h₂
