@@ -2811,7 +2811,53 @@ lemma alphaIic_ae_eq_alphaIicCE
     (t : ℝ) :
     alphaIic X hX_contract hX_meas hX_L2 t
       =ᵐ[μ] alphaIicCE X hX_contract hX_meas hX_L2 t := by
-  sorry
+  -- Proof strategy: Both are L¹ limits of the same Cesàro averages, so they're equal a.e.
+
+  -- Define the Cesàro averages
+  let A : ℕ → ℕ → Ω → ℝ := fun n m ω =>
+    (1 / (m : ℝ)) * ∑ k : Fin m, indIic t (X (n + k.val + 1) ω)
+
+  -- Step 1: alphaIic is (essentially) the L¹ limit of these averages by construction
+  have h_alphaIic_is_limit : ∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m ≥ M,
+      ∫ ω, |A n m ω - alphaIic X hX_contract hX_meas hX_L2 t ω| ∂μ < ε := by
+    intro n
+    -- By definition, alphaIic is max 0 (min 1 (witness from weighted_sums_converge_L1))
+    -- The witness satisfies the L¹ convergence property
+    unfold alphaIic
+    -- The key is that weighted_sums_converge_L1 gives us an L¹ limit
+    -- and max 0 (min 1 ...) preserves L¹ limits up to a.e. equality
+    sorry  -- Technical: Show clipping to [0,1] preserves L¹ convergence
+
+  -- Step 2: alphaIicCE is also the L¹ limit of the same averages
+  -- This is the reverse martingale convergence theorem / ergodic theorem
+  have h_alphaIicCE_is_limit : ∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m ≥ M,
+      ∫ ω, |A n m ω - alphaIicCE X hX_contract hX_meas hX_L2 t ω| ∂μ < ε := by
+    intro n ε hε
+    -- For an exchangeable (contractable) sequence, the Cesàro averages of f(X_i)
+    -- converge in L² (hence L¹) to E[f(X_0) | tailSigma X]
+    -- This is a consequence of the mean ergodic theorem or reverse martingale convergence
+    sorry  -- Standard result: Cesàro averages → conditional expectation for exchangeable sequences
+
+  -- Step 3: Use uniqueness of L¹ limits to conclude a.e. equality
+  -- If both f and g are L¹ limits of the same sequence, then f =ᵐ g
+  have h_L1_uniqueness : ∀ (f g : Ω → ℝ), Measurable f → Measurable g →
+      (∀ ε > 0, ∃ M : ℕ, ∀ m ≥ M, ∫ ω, |A 0 m ω - f ω| ∂μ < ε) →
+      (∀ ε > 0, ∃ M : ℕ, ∀ m ≥ M, ∫ ω, |A 0 m ω - g ω| ∂μ < ε) →
+      f =ᵐ[μ] g := by
+    intro f g hf_meas hg_meas hf_lim hg_lim
+    -- Standard fact: L¹ limits are unique up to a.e. equality
+    -- If A_m → f and A_m → g in L¹, then ∫|f - g| = lim ∫|A_m - g| + ∫|f - A_m| = 0
+    -- By Markov or integral_eq_zero_iff, f =ᵐ g
+    sorry  -- Standard measure theory: uniqueness of L¹ limits
+
+  -- Apply uniqueness with f = alphaIic, g = alphaIicCE
+  apply h_L1_uniqueness
+  · exact alphaIic_measurable X hX_contract hX_meas hX_L2 t
+  · unfold alphaIicCE
+    -- alphaIicCE is a conditional expectation, hence measurable
+    sorry  -- TODO: Prove alphaIicCE_measurable (straightforward)
+  · exact h_alphaIic_is_limit 0
+  · exact h_alphaIicCE_is_limit 0
 
 /-- **L¹ endpoint limit at -∞**: As t → -∞, alphaIicCE → 0 in L¹.
 
