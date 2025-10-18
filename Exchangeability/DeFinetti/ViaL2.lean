@@ -2892,14 +2892,21 @@ lemma alphaIicCE_L1_tendsto_zero_atBot
       have h1 : X 0 ω > -(n : ℝ) := by linarith
       have h2 : X 0 ω ≤ -(n : ℝ) := h n
       linarith
-    -- Apply tendsto_measure_iInter_atTop
-    have h_meas : ∀ (n : ℕ), NullMeasurableSet (X 0 ⁻¹' Set.Iic (-(n : ℝ))) μ := by
-      intro n
-      exact (measurableSet_preimage (hX_meas 0) measurableSet_Iic).nullMeasurableSet
-    have h_fin : ∃ (n : ℕ), μ (X 0 ⁻¹' Set.Iic (-(n : ℝ))) ≠ ∞ := by
+    -- Apply tendsto_measure_iInter_atTop to get ENNReal convergence, then convert to Real
+    have h_meas : ∀ (n : ℕ), NullMeasurableSet (X 0 ⁻¹' Set.Iic (-(n : ℝ))) μ := fun n =>
+      (measurableSet_preimage (hX_meas 0) measurableSet_Iic).nullMeasurableSet
+    have h_fin : ∃ (n : ℕ), μ (X 0 ⁻¹' Set.Iic (-(n : ℝ))) ≠ ⊤ := by
       use 0
       exact measure_ne_top μ _
-    simpa [h_empty] using tendsto_measure_iInter_atTop (μ := μ) h_meas h_antitone h_fin
+    have h_tendsto_ennreal : Tendsto (fun n => μ (X 0 ⁻¹' Set.Iic (-(n : ℝ)))) atTop (𝓝 0) := by
+      have := tendsto_measure_iInter_atTop (μ := μ) h_meas h_antitone h_fin
+      simp only [h_empty, measure_empty, Function.comp_apply] at this
+      convert this using 2
+      rfl
+    -- Convert from ENNReal to Real using ENNReal.tendsto_toReal
+    have h_ne_top : ∀ n, μ (X 0 ⁻¹' Set.Iic (-(n : ℝ))) ≠ ⊤ := fun n => measure_ne_top μ _
+    convert ENNReal.tendsto_toReal h_tendsto_ennreal (fun _ => h_ne_top _)
+    simp
 
   -- Step 2: L¹ contraction - ‖condExp f‖₁ ≤ ‖f‖₁
   have h_contraction : ∀ n : ℕ,
@@ -2947,13 +2954,15 @@ lemma alphaIicCE_L1_tendsto_one_atTop
           = (Set.Ioi (n : ℝ)).indicator (fun _ => (1 : ℝ)) ∘ (X 0) := by
         ext ω
         simp only [indIic, Set.indicator, Function.comp_apply, Set.mem_Ioi, Set.mem_Iic]
-        by_cases h : X 0 ω ≤ n
-        · rw [if_pos h, if_neg]
-          · norm_num
-          · omega
-        · rw [if_neg h, if_pos]
-          · norm_num
-          · omega
+        split_ifs with h1 h2
+        · -- X 0 ω ≤ n and X 0 ω > n: contradiction
+          linarith
+        · -- X 0 ω ≤ n and ¬(X 0 ω > n): both give 0
+          norm_num
+        · -- ¬(X 0 ω ≤ n) and X 0 ω > n: both give 1
+          norm_num
+        · -- ¬(X 0 ω ≤ n) and ¬(X 0 ω > n): contradiction
+          linarith
       rw [this]
       -- Rewrite composition as indicator on preimage
       have h_comp : (Set.Ioi (n : ℝ)).indicator (fun _ => (1 : ℝ)) ∘ (X 0)
@@ -2981,13 +2990,20 @@ lemma alphaIicCE_L1_tendsto_one_atTop
       obtain ⟨n, hn⟩ := exists_nat_gt (X 0 ω)
       have h1 : X 0 ω > (n : ℝ) := h n
       linarith
-    have h_meas : ∀ (n : ℕ), NullMeasurableSet (X 0 ⁻¹' Set.Ioi (n : ℝ)) μ := by
-      intro n
-      exact (measurableSet_preimage (hX_meas 0) measurableSet_Ioi).nullMeasurableSet
-    have h_fin : ∃ (n : ℕ), μ (X 0 ⁻¹' Set.Ioi (n : ℝ)) ≠ ∞ := by
+    have h_meas : ∀ (n : ℕ), NullMeasurableSet (X 0 ⁻¹' Set.Ioi (n : ℝ)) μ := fun n =>
+      (measurableSet_preimage (hX_meas 0) measurableSet_Ioi).nullMeasurableSet
+    have h_fin : ∃ (n : ℕ), μ (X 0 ⁻¹' Set.Ioi (n : ℝ)) ≠ ⊤ := by
       use 0
       exact measure_ne_top μ _
-    simpa [h_empty] using tendsto_measure_iInter_atTop (μ := μ) h_meas h_antitone h_fin
+    have h_tendsto_ennreal : Tendsto (fun n => μ (X 0 ⁻¹' Set.Ioi (n : ℝ))) atTop (𝓝 0) := by
+      have := tendsto_measure_iInter_atTop (μ := μ) h_meas h_antitone h_fin
+      simp only [h_empty, measure_empty, Function.comp_apply] at this
+      convert this using 2
+      rfl
+    -- Convert from ENNReal to Real using ENNReal.tendsto_toReal
+    have h_ne_top : ∀ n, μ (X 0 ⁻¹' Set.Ioi (n : ℝ)) ≠ ⊤ := fun n => measure_ne_top μ _
+    convert ENNReal.tendsto_toReal h_tendsto_ennreal (fun _ => h_ne_top _)
+    simp
 
   -- Step 2: L¹ contraction - ‖condExp f - condExp 1‖₁ ≤ ‖f - 1‖₁
   -- Since condExp 1 = 1, get ‖alphaIicCE - 1‖₁ ≤ ‖indicator - 1‖₁
@@ -3045,25 +3061,59 @@ lemma alphaIicCE_ae_tendsto_zero_atBot
       ≤ alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω := by
     -- Use alphaIicCE_mono: s ≤ t implies alphaIicCE s ≤ alphaIicCE t a.e.
     -- When n ≤ m, we have -(m : ℝ) ≤ -(n : ℝ)
-    -- Need to combine countably many ae statements
-    sorry  -- TODO: Use ae_all_iff.mpr to handle ∀ n m
+    -- Combine countably many ae statements using ae_all_iff
+    rw [ae_all_iff]
+    intro n
+    rw [ae_all_iff]
+    intro m
+    by_cases hnm : n ≤ m
+    · -- When n ≤ m, use alphaIicCE_mono with -(m:ℝ) ≤ -(n:ℝ)
+      have h_le : -(m : ℝ) ≤ -(n : ℝ) := by
+        simp [neg_le_neg_iff, Nat.cast_le, hnm]
+      filter_upwards [alphaIicCE_mono X hX_contract hX_meas hX_L2 (-(m : ℝ)) (-(n : ℝ)) h_le] with ω hω
+      intro _
+      exact hω
+    · -- When ¬(n ≤ m), the implication is vacuously true
+      exact ae_of_all μ (fun ω h_contra => absurd h_contra hnm)
 
   -- Step 2: Boundedness - 0 ≤ alphaIicCE ≤ 1
   have h_bound : ∀ᵐ ω ∂μ, ∀ n : ℕ,
       0 ≤ alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω
       ∧ alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω ≤ 1 := by
-    -- Use alphaIicCE_nonneg_le_one for each t
-    sorry  -- TODO: Use ae_all_iff.mpr for countable union
+    -- Use alphaIicCE_nonneg_le_one for each t, combine with ae_all_iff
+    rw [ae_all_iff]
+    intro n
+    exact alphaIicCE_nonneg_le_one X hX_contract hX_meas hX_L2 (-(n : ℝ))
 
   -- Step 3: Monotone bounded sequences converge a.e.
   have h_ae_conv : ∀ᵐ ω ∂μ, ∃ L : ℝ, Tendsto (fun n : ℕ =>
       alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω) atTop (𝓝 L) := by
     -- Monotone decreasing bounded sequence converges (monotone convergence theorem)
-    sorry  -- TODO: Use monotone convergence theorem with h_mono and h_bound
+    filter_upwards [h_mono, h_bound] with ω h_mono_ω h_bound_ω
+    -- For this ω, the sequence is antitone and bounded, so it converges
+    refine ⟨⨅ (n : ℕ), alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω, ?_⟩
+    apply tendsto_atTop_ciInf
+    · -- Antitone: n ≤ m implies f m ≤ f n
+      intro n m hnm
+      exact h_mono_ω n m hnm
+    · -- Bounded below by 0
+      refine ⟨0, ?_⟩
+      rintro _ ⟨k, rfl⟩
+      exact (h_bound_ω k).1
 
   -- Step 4: The limit is 0 by L¹ convergence
   -- If f_n → L a.e. and f_n → 0 in L¹, then L = 0 a.e.
-  sorry  -- TODO: Use L¹ limit uniqueness
+  -- We have: for a.e. ω, f_n(ω) → (⨅ n, f_n(ω))
+  -- And: ∫ |f_n| → 0 (from alphaIicCE_L1_tendsto_zero_atBot)
+  -- By Fatou: ∫ |L| ≤ liminf ∫ |f_n| = 0, so L = 0 a.e.
+  filter_upwards [h_ae_conv, h_bound, h_mono] with ω ⟨L, hL⟩ h_bound_ω h_mono_ω
+  -- The limit L = ⨅ n, f_n(ω) and 0 ≤ L ≤ 1
+  have hL_eq : L = ⨅ (n : ℕ), alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω :=
+    tendsto_nhds_unique hL (tendsto_atTop_ciInf h_mono_ω
+      ⟨0, fun _ ⟨k, rfl⟩ => (h_bound_ω k).1⟩)
+  --  From L¹ convergence ∫|f_n| → 0 and f_n(ω) ≥ 0, we get L = 0
+  -- (This uses that L¹ convergence to 0 + a.e. convergence to L implies L = 0 a.e.)
+  sorry  -- TODO: Complete L¹ uniqueness argument once alphaIicCE_L1_tendsto_zero_atBot compiles
 
 /-- **A.e. pointwise endpoint limit at +∞**.
 
@@ -3088,24 +3138,53 @@ lemma alphaIicCE_ae_tendsto_one_atTop
       alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω
       ≤ alphaIicCE X hX_contract hX_meas hX_L2 (m : ℝ) ω := by
     -- Use alphaIicCE_mono with countable ae union
-    sorry  -- TODO: Use ae_all_iff.mpr
+    rw [ae_all_iff]
+    intro n
+    rw [ae_all_iff]
+    intro m
+    by_cases hnm : n ≤ m
+    · -- When n ≤ m, use alphaIicCE_mono with (n:ℝ) ≤ (m:ℝ)
+      have h_le : (n : ℝ) ≤ (m : ℝ) := Nat.cast_le.mpr hnm
+      filter_upwards [alphaIicCE_mono X hX_contract hX_meas hX_L2 (n : ℝ) (m : ℝ) h_le] with ω hω
+      intro _
+      exact hω
+    · -- When ¬(n ≤ m), the implication is vacuously true
+      exact ae_of_all μ (fun ω h_contra => absurd h_contra hnm)
 
   -- Step 2: Boundedness - 0 ≤ alphaIicCE ≤ 1
   have h_bound : ∀ᵐ ω ∂μ, ∀ n : ℕ,
       0 ≤ alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω
       ∧ alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω ≤ 1 := by
     -- Use alphaIicCE_nonneg_le_one with countable ae union
-    sorry  -- TODO: Use ae_all_iff.mpr
+    rw [ae_all_iff]
+    intro n
+    exact alphaIicCE_nonneg_le_one X hX_contract hX_meas hX_L2 (n : ℝ)
 
   -- Step 3: Monotone bounded sequences converge a.e.
   have h_ae_conv : ∀ᵐ ω ∂μ, ∃ L : ℝ, Tendsto (fun n : ℕ =>
       alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω) atTop (𝓝 L) := by
     -- Monotone increasing bounded sequence converges (monotone convergence theorem)
-    sorry  -- TODO: Use monotone convergence theorem with h_mono and h_bound
+    filter_upwards [h_mono, h_bound] with ω h_mono_ω h_bound_ω
+    -- For this ω, the sequence is monotone and bounded, so it converges
+    refine ⟨⨆ (n : ℕ), alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω, ?_⟩
+    apply tendsto_atTop_ciSup
+    · -- Monotone: n ≤ m implies f n ≤ f m
+      intro n m hnm
+      exact h_mono_ω n m hnm
+    · -- Bounded above by 1
+      refine ⟨1, ?_⟩
+      rintro _ ⟨k, rfl⟩
+      exact (h_bound_ω k).2
 
   -- Step 4: The limit is 1 by L¹ convergence
   -- If f_n → L a.e. and f_n → 1 in L¹, then L = 1 a.e.
-  sorry  -- TODO: Use L¹ limit uniqueness
+  filter_upwards [h_ae_conv, h_bound, h_mono] with ω ⟨L, hL⟩ h_bound_ω h_mono_ω
+  -- The limit L = ⨆ n, f_n(ω) and 0 ≤ L ≤ 1
+  have hL_eq : L = ⨆ (n : ℕ), alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω :=
+    tendsto_nhds_unique hL (tendsto_atTop_ciSup h_mono_ω
+      ⟨1, fun _ ⟨k, rfl⟩ => (h_bound_ω k).2⟩)
+  -- From L¹ convergence ∫|f_n - 1| → 0 and f_n(ω) ≤ 1, we get L = 1
+  sorry  -- TODO: Complete L¹ uniqueness argument once alphaIicCE_L1_tendsto_one_atTop compiles
 
 /-- Right-continuous CDF from α via countable rational envelope:
 F(ω,t) := inf_{q∈ℚ, t<q} α_{Iic q}(ω).
