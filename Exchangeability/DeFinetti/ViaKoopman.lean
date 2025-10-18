@@ -261,6 +261,48 @@ attribute [instance] NaturalExtensionData.μhat_isProb
 
 /-! ## General infrastructure lemmas for factor maps and invariance -/
 
+section Helpers
+variable {Ω Ω' : Type*} [MeasurableSpace Ω] [MeasurableSpace Ω']
+variable {μ : Measure Ω} {μ' : Measure Ω'} {g : Ω' → Ω}
+
+/-- Push AE along a factor map using only null sets and a measurable null *superset*. -/
+lemma ae_comp_of_pushforward
+    (hg : Measurable g) (hpush : Measure.map g μ' = μ)
+    {P : Ω → Prop} :
+    (∀ᶠ x in ae μ, P x) → (∀ᶠ x' in ae μ', P (g x')) := by
+  classical
+  intro h
+  -- Turn AE into a measurable null *superset*
+  have h0 : μ {x | ¬ P x} = 0 := (ae_iff).1 h
+  obtain ⟨T, hTmeas, hsubset, hTzero⟩ :=
+    exists_measurable_superset_of_null (s := {x | ¬ P x}) h0
+  -- Push the measurable null set through the factor map
+  have : μ' (g ⁻¹' T) = 0 := by
+    -- `map g μ' = μ` gives the preimage formula on measurable sets
+    -- (use the standard `MeasurePreserving` wrapper to avoid naming issues)
+    have hmp : MeasurePreserving g μ' μ := ⟨hg, by simpa [hpush]⟩
+    simpa [hmp.measure_preimage hTmeas, hTzero]
+  -- Conclude AE via `measure_mono_null`
+  refine (ae_iff).2 ?_
+  -- `{x' | ¬ P (g x') } ⊆ g ⁻¹' T`
+  have hsub : {x' | ¬ P (g x')} ⊆ g ⁻¹' T := by
+    intro x' hx'
+    have : g x' ∈ {x | ¬ P x} := by simpa
+    exact hsubset this
+  exact measure_mono_null hsub this
+
+/-- Indicator pulls through a preimage under composition. -/
+lemma indicator_preimage_comp {B : Set Ω} (K : Ω → ℝ) :
+    (Set.indicator (g ⁻¹' B) (K ∘ g))
+  = (fun x' => Set.indicator B K (g x')) := by
+  classical
+  funext x'
+  by_cases hx : g x' ∈ B
+  · simp [Set.indicator, hx]
+  · simp [Set.indicator, hx]
+
+end Helpers
+
 /-- **AE-pullback along a factor map**: Almost-everywhere equalities transport along pushforward.
 
 If `g : Ω̂ → Ω` is a factor map (i.e., `map g μ̂ = μ`), then two functions are
@@ -273,9 +315,78 @@ lemma ae_pullback_iff
     {Ω Ω' : Type*} [MeasurableSpace Ω] [MeasurableSpace Ω']
     {μ : Measure Ω} {μ' : Measure Ω'}
     (g : Ω' → Ω) (hg : Measurable g) (hpush : Measure.map g μ' = μ)
-    {F G : Ω → ℝ} (_hF : AEMeasurable F μ) (_hG : AEMeasurable G μ) :
+    {F G : Ω → ℝ} (hF : AEMeasurable F μ) (hG : AEMeasurable G μ) :
     F =ᵐ[μ] G ↔ (F ∘ g) =ᵐ[μ'] (G ∘ g) := by
-  sorry  -- Infrastructure lemma blocked by ae_map elaboration
+  classical
+  -- Replace by measurable modifications so the {≠}-sets are measurable.
+  let Fm := hF.mk F
+  let Gm := hG.mk G
+  have hF_eq : F =ᵐ[μ] Fm := hF.ae_eq_mk
+  have hG_eq : G =ᵐ[μ] Gm := hG.ae_eq_mk
+  have hFm_meas : Measurable Fm := hF.measurable_mk
+  have hGm_meas : Measurable Gm := hG.measurable_mk
+
+  -- Reduce both directions to the measurable representatives.
+  have h_left :
+      (F =ᵐ[μ] G) ↔ (Fm =ᵐ[μ] Gm) := by
+    constructor
+    · intro h; exact hF_eq.symm.trans (h.trans hG_eq)
+    · intro h; exact hF_eq.trans (h.trans hG_eq.symm)
+
+  have h_right :
+      (F ∘ g =ᵐ[μ'] G ∘ g) ↔ (Fm ∘ g =ᵐ[μ'] Gm ∘ g) := by
+    constructor
+    · intro h
+      -- strengthen both sides using AE equivalence pushed along g
+      have hF' : (F ∘ g) =ᵐ[μ'] (Fm ∘ g) :=
+        ae_comp_of_pushforward (μ := μ) (μ' := μ') (g := g) hg hpush hF_eq
+      have hG' : (G ∘ g) =ᵐ[μ'] (Gm ∘ g) :=
+        ae_comp_of_pushforward (μ := μ) (μ' := μ') (g := g) hg hpush hG_eq
+      exact hF'.symm.trans (h.trans hG')
+    · intro h
+      have hF' : (F ∘ g) =ᵐ[μ'] (Fm ∘ g) :=
+        ae_comp_of_pushforward (μ := μ) (μ' := μ') (g := g) hg hpush hF_eq
+      have hG' : (G ∘ g) =ᵐ[μ'] (Gm ∘ g) :=
+        ae_comp_of_pushforward (μ := μ) (μ' := μ') (g := g) hg hpush hG_eq
+      exact hF'.trans (h.trans hG'.symm)
+
+  -- Now prove the equivalence for measurable reps by null-set/preimage.
+  have h_core :
+      (Fm =ᵐ[μ] Gm) ↔ (Fm ∘ g =ᵐ[μ'] Gm ∘ g) := by
+    -- Use measurable {x | Fm x ≠ Gm x}.
+    have hSmeas :
+        MeasurableSet {x | Fm x ≠ Gm x} := by
+      -- `{f ≠ g} = {f < g} ∪ {g < f}`
+      have h1 : MeasurableSet {x | Fm x < Gm x} :=
+        measurableSet_lt hFm_meas hGm_meas
+      have h2 : MeasurableSet {x | Gm x < Fm x} :=
+        measurableSet_lt hGm_meas hFm_meas
+      simpa [Set.setOf_or] using h1.union h2
+    constructor
+    · intro h
+      -- μ S = 0 → μ' (g ⁻¹' S) = 0  → AE on μ' after composing with g.
+      have : μ {x | Fm x ≠ Gm x} = 0 := (ae_iff).1 h
+      -- push it through the factor map using measurability
+      have hmp : MeasurePreserving g μ' μ := ⟨hg, by simpa [hpush]⟩
+      have : μ' (g ⁻¹' {x | Fm x ≠ Gm x}) = 0 := by
+        simpa [hmp.measure_preimage hSmeas, this]
+      -- identify the preimage set with the set for the composed functions
+      have : μ' {x' | (Fm ∘ g) x' ≠ (Gm ∘ g) x'} = 0 := by
+        simpa using this
+      exact (ae_iff).2 this
+    · intro h
+      have : μ' {x' | (Fm ∘ g) x' ≠ (Gm ∘ g) x'} = 0 := (ae_iff).1 h
+      -- convert back using the same preimage identity and measure-preserving fact
+      have hmp : MeasurePreserving g μ' μ := ⟨hg, by simpa [hpush]⟩
+      -- `{x' | (Fm∘g) x' ≠ (Gm∘g) x'} = g ⁻¹' {x | Fm x ≠ Gm x}`
+      have : μ' (g ⁻¹' {x | Fm x ≠ Gm x}) = 0 := by simpa using this
+      -- and `μ S = μ' (g ⁻¹' S)` for S measurable
+      have : μ {x | Fm x ≠ Gm x} = 0 := by
+        simpa [hmp.measure_preimage hSmeas] using this
+      exact (ae_iff).2 this
+
+  -- Stitch the three equivalences together.
+  simpa [h_left, h_right] using h_core
 
 /-- **Factor-map pullback for conditional expectation**.
 
@@ -291,8 +402,57 @@ lemma condexp_pullback_factor
     {H : Ω → ℝ} (hH : Integrable H μ) :
     (fun ω' => μ[H | m] (g ω'))
       =ᵐ[μ'] μ'[(H ∘ g) | MeasurableSpace.comap g m] := by
-  -- Requires convert tactics for integral_map elaboration
-  sorry
+  classical
+  -- `g` is measure-preserving as a structure (handy API)
+  have hmp : MeasurePreserving g μ' μ := ⟨hg, by simpa [hpush]⟩
+
+  -- 1) Set-integral equality on every comap set
+  have h_sets :
+      ∀ s, MeasurableSet[MeasurableSpace.comap g m] s →
+        ∫ x in s, (μ[H | m] ∘ g) x ∂ μ' = ∫ x in s, (H ∘ g) x ∂ μ' :=
+  by
+    intro s hs
+    rcases hs with ⟨B, hBm, rfl⟩
+    -- Turn set integrals into whole integrals of indicators and change variables
+    have hCEint : Integrable (μ[H | m]) μ := integrable_condExp (μ := μ) (m := m) hm hH
+    have hCEind_int : Integrable (Set.indicator B (μ[H | m])) μ :=
+      hCEint.indicator hBm
+    have hHind_int : Integrable (Set.indicator B H) μ :=
+      hH.indicator hBm
+
+    calc
+      ∫ x in g ⁻¹' B, (μ[H | m] ∘ g) x ∂ μ'
+          = ∫ (Set.indicator (g ⁻¹' B) (μ[H | m] ∘ g)) ∂ μ' := by
+              simp [setIntegral, integral_indicator_of_subset]
+      _ = ∫ ((Set.indicator B (μ[H | m])) ∘ g) ∂ μ' := by
+              -- pull the indicator through the preimage
+              simpa [indicator_preimage_comp (μ := μ) (μ' := μ') (g := g) (K := μ[H | m])]
+      _ = ∫ (Set.indicator B (μ[H | m])) ∂ μ := by
+              -- change of variables for measure-preserving maps on *whole* integrals
+              simpa using hmp.integral_comp hCEind_int
+      _ = ∫ x in B, μ[H | m] x ∂ μ := by
+              simp [setIntegral]
+      _ = ∫ x in B, H x ∂ μ := by
+              -- defining property of CE on m-measurable sets
+              exact setIntegral_condExp (μ := μ) (m := m) hm hH hBm
+      _ = ∫ (Set.indicator B H) ∂ μ := by
+              simp [setIntegral]
+      _ = ∫ ((Set.indicator B H) ∘ g) ∂ μ' := by
+              simpa using (hmp.integral_comp hHind_int).symm
+      _ = ∫ (Set.indicator (g ⁻¹' B) (H ∘ g)) ∂ μ' := by
+              -- pull indicator back again
+              simpa [indicator_preimage_comp (μ := μ) (μ' := μ') (g := g) (K := H)]
+      _ = ∫ x in g ⁻¹' B, (H ∘ g) x ∂ μ' := by
+              simp [setIntegral]
+
+  -- 2) Uniqueness of the conditional expectation on `m.comap g`
+  have hm' : MeasurableSpace.comap g m ≤ ‹MeasurableSpace Ω'› := by
+    intro s hs; rcases hs with ⟨B, hBm, rfl⟩; simpa using hBm.preimage hg
+  have hHg' : Integrable (H ∘ g) μ' := hH.comp_measurePreserving hmp
+
+  exact
+    ae_eq_condExp_of_forall_setIntegral_eq
+      (μ := μ') (m := MeasurableSpace.comap g m) (hm := hm') hHg' h_sets
 
 /-- **Invariance of conditional expectation under iterates**.
 
@@ -300,39 +460,57 @@ If `T` is measure-preserving and `𝒢` is the T-invariant σ-algebra (i.e., `T�
 then conditional expectation is invariant: `CE[f ∘ T^[k] | 𝒢] = CE[f | 𝒢]` a.e.
 
 This is the key for proving lag-constancy and other invariance properties. -/
-/-
-**AXIOMATIZED - Type class elaboration challenges**
-
-This lemma is mathematically standard but proving it in Lean 4 has similar elaboration
-issues as `condexp_pullback_factor`.
-
-**Proof sketch**:
-1. Prove by induction: (T^[k])⁻¹ s = s for all s ∈ m (✅ this part works)
-2. For each s ∈ m, show ∫_s (f ∘ T^[k]) dμ = ∫_s f dμ by:
-   - ∫_s (f ∘ T^[k]) dμ = ∫_{(T^[k])⁻¹ s} f dμ (by measure preservation)
-   - ∫_{(T^[k])⁻¹ s} f dμ = ∫_s f dμ (by h_preimage)
-3. Apply `ae_eq_condExp_of_forall_setIntegral_eq`
-
-**Challenge**: Step 2 requires proving
-`Measure.map (T^[k]) (μ.restrict ((T^[k])⁻¹ s)) = μ.restrict s` using `ext`.
-Lean can't find an extensionality theorem for this measure equality, and attempting
-to manually prove it with `Measure.map_apply` and `Measure.restrict_apply` hits
-type class synthesis issues.
-
-Also, `Integrable.comp_measurePreserving` may not exist in current mathlib, requiring
-manual construction of integrability proof.
-
-**Recommendation**: As with `condexp_pullback_factor`, this needs micro-lemmas with
-explicit type class handling or mathlib expert guidance.
--/
-axiom condexp_precomp_iterate_eq_of_invariant
+lemma condexp_precomp_iterate_eq_of_invariant
     {Ω : Type*} [MeasurableSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (T : Ω → Ω) (hT : MeasurePreserving T μ μ)
     (m : MeasurableSpace Ω) (hm : m ≤ ‹MeasurableSpace Ω›)
     (h_inv : ∀ s, MeasurableSet[m] s → T ⁻¹' s = s)
     {k : ℕ} {f : Ω → ℝ} (hf : Integrable f μ) :
-    μ[(f ∘ (T^[k])) | m] =ᵐ[μ] μ[f | m]
+    μ[(f ∘ (T^[k])) | m] =ᵐ[μ] μ[f | m] := by
+  classical
+  -- iterate is measure-preserving
+  have hTk : MeasurePreserving (T^[k]) μ μ := hT.iterate k
+
+  -- Prove: ∀ s ∈ m, (T^[k]) ⁻¹' s = s
+  have h_preimage :
+      ∀ s, MeasurableSet[m] s → (T^[k]) ⁻¹' s = s := by
+    intro s hs
+    induction k with
+    | zero => simp [Function.iterate]
+    | succ n ih =>
+      simp only [Function.iterate_succ', Set.preimage_comp]
+      rw [ih, h_inv s hs]
+
+  -- Set-integral equality on `m`-measurable sets
+  have h_sets :
+      ∀ s, MeasurableSet[m] s →
+        ∫ x in s, (f ∘ (T^[k])) x ∂ μ = ∫ x in s, f x ∂ μ :=
+  by
+    intro s hs
+    have hs' : MeasurableSet s := hm _ hs
+    have hf_ind : Integrable (Set.indicator s f) μ := hf.indicator hs'
+    -- indicator trick + whole-space change of variables
+    calc
+      ∫ x in s, (f ∘ (T^[k])) x ∂ μ
+          = ∫ (Set.indicator s (f ∘ (T^[k]))) ∂ μ := by
+              simp [setIntegral]
+      _ = ∫ ((Set.indicator ((T^[k]) ⁻¹' s) f) ∘ (T^[k])) ∂ μ := by
+              -- move the indicator across the preimage
+              have := indicator_preimage_comp (μ := μ) (μ' := μ) (g := T^[k]) (K := f)
+              -- the previous lemma is stated with `(g, K)`; rewrite its sides
+              simpa [Function.comp] using this
+      _ = ∫ (Set.indicator ((T^[k]) ⁻¹' s) f) ∂ μ := by
+              simpa using (hTk.integral_comp (hf.indicator (by
+                simpa [h_preimage s hs] using (hs'.preimage (hTk.measurable)))))
+      _ = ∫ (Set.indicator s f) ∂ μ := by
+              -- use invariance of the set
+              simpa [h_preimage s hs]
+      _ = ∫ x in s, f x ∂ μ := by
+              simp [setIntegral]
+
+  -- Uniqueness of conditional expectation on `m`
+  exact ae_eq_condExp_of_forall_setIntegral_eq hm hf h_sets
 
 /-- Existence of a natural two-sided extension for a measure-preserving shift. -/
 axiom exists_naturalExtension
