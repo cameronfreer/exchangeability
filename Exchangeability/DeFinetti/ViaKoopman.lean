@@ -1120,9 +1120,26 @@ private lemma eLpNorm_one_le_eLpNorm_two_toReal
     {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
     (f : Ω → ℝ) (hL1 : Integrable f μ) (hL2 : MemLp f 2 μ) :
     (∫ ω, |f ω| ∂μ) ≤ (eLpNorm f 2 μ).toReal := by
-  -- TODO: User-provided proof uses lemma names not available in current mathlib version
-  -- Need to find correct lemma names for: snorm_mono_exponent, snorm_ne_top, snorm_one_eq_lintegral_nnnorm
-  sorry
+  -- Step 1: Connect ∫|f| to eLpNorm f 1 μ using norm
+  have h_eq : ENNReal.ofReal (∫ ω, |f ω| ∂μ) = eLpNorm f 1 μ := by
+    have h_norm : ∫ ω, |f ω| ∂μ = ∫ ω, ‖f ω‖ ∂μ := integral_congr_ae (ae_of_all μ (fun ω => (Real.norm_eq_abs (f ω)).symm))
+    rw [h_norm, ofReal_integral_norm_eq_lintegral_enorm hL1]
+    exact eLpNorm_one_eq_lintegral_enorm.symm
+
+  -- Step 2: eLpNorm f 1 μ ≤ eLpNorm f 2 μ on probability spaces
+  have h_mono : eLpNorm f 1 μ ≤ eLpNorm f 2 μ := by
+    have h_ae : AEStronglyMeasurable f μ := hL1.aestronglyMeasurable
+    refine eLpNorm_le_eLpNorm_of_exponent_le ?_ h_ae
+    norm_num
+
+  -- Step 3: Convert to toReal inequality
+  have h_fin : eLpNorm f 2 μ ≠ ⊤ := hL2.eLpNorm_ne_top
+  have h_nonneg : 0 ≤ ∫ ω, |f ω| ∂μ := integral_nonneg (fun ω => abs_nonneg _)
+  calc (∫ ω, |f ω| ∂μ)
+      = (ENNReal.ofReal (∫ ω, |f ω| ∂μ)).toReal := by
+          rw [ENNReal.toReal_ofReal h_nonneg]
+    _ = (eLpNorm f 1 μ).toReal := by rw [h_eq]
+    _ ≤ (eLpNorm f 2 μ).toReal := ENNReal.toReal_mono h_fin h_mono
 
 /-- If `f → 0` in ENNReal, then `(toReal ∘ f) → 0` in `ℝ`. -/
 private lemma ennreal_tendsto_toReal_zero {ι : Type*}
@@ -1518,7 +1535,9 @@ private theorem h_tower_of_lagConst
       exact ennreal_tendsto_toReal_zero (fun n => eLpNorm (fun ω => A n ω - Y ω) 2 μ) hL2'
 
     -- Squeeze: 0 ≤ L¹ ≤ (‖·‖₂).toReal → 0
-    sorry -- TODO: apply squeeze theorem with h_nonneg, h_upper, h_toReal
+    refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_toReal ?_ ?_
+    · exact fun n => h_nonneg n
+    · exact fun n => h_upper n
 
   ------------------------------------------------------------------
   -- (4) L¹-Lipschitz for CE + |f| bounded pulls the convergence through CE
@@ -1623,7 +1642,29 @@ private theorem h_tower_of_lagConst
         _ = Cf * ∫ ω, |A n ω - Y ω| ∂μ := integral_const_mul Cf _
 
     -- Step 3: conclude with Block 3
-    sorry -- TODO: apply squeeze theorem with h_L1_An_to_CE, h₁, h₂
+    -- Chain h₁ and h₂ to get overall upper bound
+    have h_upper : ∀ n,
+      ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | mSI] ω
+           - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ
+      ≤ Cf * ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
+      intro n
+      exact le_trans (h₁ n) (h₂ n)
+
+    -- Upper bound tends to 0
+    have h_bound_to_zero : Tendsto (fun n =>
+      Cf * ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ) atTop (𝓝 0) := by
+      simpa using h_L1_An_to_CE.const_mul Cf
+
+    -- Nonnegativity
+    have h_nonneg : ∀ n, 0 ≤ ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | mSI] ω
+         - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ := by
+      intro n
+      exact integral_nonneg (fun ω => abs_nonneg _)
+
+    -- Apply squeeze theorem
+    refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_bound_to_zero ?_ ?_
+    · exact fun n => h_nonneg n
+    · exact fun n => h_upper n
 
   ------------------------------------------------------------------
   -- (5) The constant sequence's L¹ limit is 0 ⇒ a.e. equality
