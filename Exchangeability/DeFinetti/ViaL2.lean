@@ -3384,8 +3384,22 @@ lemma alphaIicCE_ae_tendsto_one_atTop
       rw [EventuallyEq, eventually_atTop]
       use 0
       intro n _
-      -- Standard facts: integrability + algebra
-      sorry
+      -- Show: 1 - ∫ (1 - f) = ∫ f
+      have h_f_int : Integrable (fun ω => alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω) μ := by
+        refine Integrable.of_bound (stronglyMeasurable_condExp.aestronglyMeasurable.mono hm_le) 1 ?_
+        filter_upwards [alphaIicCE_nonneg_le_one X hX_contract hX_meas hX_L2 (n : ℝ)] with ω hω
+        rw [Real.norm_eq_abs, abs_of_nonneg hω.1]
+        exact hω.2
+      calc 1 - ∫ ω, (1 - alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω) ∂μ
+          = 1 - (∫ ω, 1 ∂μ - ∫ ω, alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω ∂μ) := by
+              rw [integral_sub (integrable_const 1) h_f_int]
+          _ = 1 - (μ.real Set.univ - ∫ ω, alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω ∂μ) := by
+              rw [integral_const, smul_eq_mul, mul_one]
+          _ = 1 - (1 - ∫ ω, alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω ∂μ) := by
+              simp only [Measure.real]
+              rw [measure_univ]
+              simp
+          _ = ∫ ω, alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω ∂μ := by ring
     rw [← tendsto_nhds_unique h_lim h_int_conv]
 
   -- Conclude U_fun = 1 a.e.
