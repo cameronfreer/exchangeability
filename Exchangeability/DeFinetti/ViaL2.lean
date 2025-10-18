@@ -3112,21 +3112,81 @@ lemma alphaIicCE_ae_tendsto_zero_atBot
       exact (h_bound_ω k).1
 
   -- Step 4: The limit is 0 by L¹ convergence
-  -- If f_n → L a.e. and f_n → 0 in L¹, then L = 0 a.e.
-  -- We have: for a.e. ω, f_n(ω) → (⨅ n, f_n(ω))
-  -- And: ∫ |f_n| → 0 (from alphaIicCE_L1_tendsto_zero_atBot)
-  -- By Fatou: ∫ |L| ≤ liminf ∫ |f_n| = 0, so L = 0 a.e.
-  filter_upwards [h_ae_conv, h_bound, h_mono] with ω ⟨L, hL⟩ h_bound_ω h_mono_ω
-  -- The limit L = ⨅ n, f_n(ω) and 0 ≤ L ≤ 1
-  have hL_eq : L = ⨅ (n : ℕ), alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω :=
-    tendsto_nhds_unique hL (tendsto_atTop_ciInf h_mono_ω
-      ⟨0, fun y hy => by
-        obtain ⟨k, hk⟩ := hy
-        rw [← hk]
-        exact (h_bound_ω k).1⟩)
-  --  From L¹ convergence ∫|f_n| → 0 and f_n(ω) ≥ 0, we get L = 0
-  -- (This uses that L¹ convergence to 0 + a.e. convergence to L implies L = 0 a.e.)
-  sorry  -- TODO: Complete L¹ uniqueness argument once alphaIicCE_L1_tendsto_zero_atBot compiles
+  -- Define the limit function L : Ω → ℝ
+  -- For each ω in the convergence set, L(ω) = lim f_n(ω) = ⨅ n, f_n(ω)
+  let L_fun : Ω → ℝ := fun ω => ⨅ (n : ℕ), alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω
+
+  -- L_fun ≥ 0 a.e. (since each f_n ≥ 0 a.e.)
+  have hL_nonneg : 0 ≤ᵐ[μ] L_fun := by
+    filter_upwards [h_bound] with ω h_bound_ω
+    apply le_ciInf
+    intro n
+    exact (h_bound_ω n).1
+
+  -- From L¹ convergence ∫|f_n| → 0 and f_n ≥ 0, we get ∫ f_n → 0
+  have h_L1_conv : Tendsto (fun n : ℕ =>
+      ∫ ω, alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω ∂μ) atTop (𝓝 0) := by
+    have h_abs := alphaIicCE_L1_tendsto_zero_atBot X hX_contract hX_meas hX_L2
+    -- Since alphaIicCE ≥ 0 a.e., we have |alphaIicCE| = alphaIicCE a.e.
+    -- Therefore ∫|f| = ∫ f
+    refine h_abs.congr' ?_
+    rw [EventuallyEq, eventually_atTop]
+    use 0
+    intro n _
+    apply integral_congr_ae
+    filter_upwards [alphaIicCE_nonneg_le_one X hX_contract hX_meas hX_L2 (-(n : ℝ))] with ω hω
+    exact abs_of_nonneg hω.1
+
+  -- By dominated convergence: ∫ L_fun = lim ∫ f_n = 0
+  have hL_integral_zero : ∫ ω, L_fun ω ∂μ = 0 := by
+    -- Use dominated convergence theorem with bound = 1 (constant function)
+    have h_conv_ae : ∀ᵐ ω ∂μ, Tendsto (fun n => alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω)
+        atTop (𝓝 (L_fun ω)) := by
+      filter_upwards [h_ae_conv, h_bound, h_mono] with ω ⟨L, hL⟩ h_bound_ω h_mono_ω
+      have hL_is_inf : L = ⨅ (n : ℕ), alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω := by
+        apply tendsto_nhds_unique hL
+        apply tendsto_atTop_ciInf h_mono_ω
+        exact ⟨0, fun y hy => by obtain ⟨k, hk⟩ := hy; rw [← hk]; exact (h_bound_ω k).1⟩
+      rw [hL_is_inf]
+    have h_meas : ∀ n, AEStronglyMeasurable (fun ω => alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω) μ := by
+      intro n
+      -- alphaIicCE is conditional expectation, hence measurable
+      sorry  -- TODO: Prove alphaIicCE is AEStronglyMeasurable
+    have h_bound_ae : ∀ n, ∀ᵐ ω ∂μ, ‖alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω‖ ≤ (1 : ℝ) := by
+      intro n
+      filter_upwards [alphaIicCE_nonneg_le_one X hX_contract hX_meas hX_L2 (-(n : ℝ))] with ω hω
+      rw [Real.norm_eq_abs, abs_of_nonneg hω.1]
+      exact hω.2
+    have h_int : Integrable (fun _ : Ω => (1 : ℝ)) μ := integrable_const 1
+    have h_lim := tendsto_integral_of_dominated_convergence (fun _ => (1 : ℝ))
+      h_meas h_int h_bound_ae h_conv_ae
+    rw [← tendsto_nhds_unique h_lim h_L1_conv]
+    simp
+
+  -- Since L_fun ≥ 0 a.e. and ∫ L_fun = 0, we have L_fun = 0 a.e.
+  have hL_ae_zero : L_fun =ᵐ[μ] 0 := by
+    -- Need to show L_fun is integrable first
+    have hL_int : Integrable L_fun μ := by
+      -- L_fun is bounded by 1 a.e., so it's integrable on a probability space
+      have hL_bound : ∀ᵐ ω ∂μ, ‖L_fun ω‖ ≤ 1 := by
+        filter_upwards [hL_nonneg, h_bound] with ω hω_nn h_bound_ω
+        rw [Real.norm_eq_abs, abs_of_nonneg hω_nn]
+        apply le_ciInf
+        intro n
+        exact (h_bound_ω n).2
+      exact Integrable.of_bound (aestronglyMeasurable_const.sup (aestronglyMeasurable_const)) 1 hL_bound
+    -- Now apply integral_eq_zero_iff_of_nonneg_ae
+    rw [← integral_eq_zero_iff_of_nonneg_ae hL_nonneg hL_int]
+    exact hL_integral_zero
+
+  -- Now show Tendsto f_n (𝓝 0) at a.e. ω
+  filter_upwards [h_ae_conv, hL_ae_zero, h_bound, h_mono] with ω ⟨L, hL⟩ hL_zero h_bound_ω h_mono_ω
+  -- At this ω, we have f_n → L and L_fun(ω) = 0
+  have hL_eq : L = L_fun ω := by
+    apply tendsto_nhds_unique hL
+    apply tendsto_atTop_ciInf h_mono_ω
+    exact ⟨0, fun y hy => by obtain ⟨k, hk⟩ := hy; rw [← hk]; exact (h_bound_ω k).1⟩
+  rw [hL_eq, hL_zero]
 
 /-- **A.e. pointwise endpoint limit at +∞**.
 
