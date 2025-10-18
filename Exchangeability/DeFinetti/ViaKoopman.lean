@@ -1090,9 +1090,17 @@ private lemma condExp_sum_finset
     μ[(fun ω => s.sum (fun i => f i ω)) | m]
       =ᵐ[μ] (fun ω => s.sum (fun i => μ[f i | m] ω)) := by
   classical
-  -- condExp_finset_sum takes m as explicit positional parameter
-  -- but the notation elaboration issue remains unsolved
-  sorry  -- TODO: Fix conditional expectation notation elaboration
+  -- Rewrite using η-reduction: (fun ω => ∑ i ∈ s, f i ω) = ∑ i ∈ s, f i
+  have h_sum_eta : (fun ω => ∑ i ∈ s, f i ω) = ∑ i ∈ s, f i := by
+    funext ω
+    simp only [Finset.sum_apply]
+  have h_ce_sum_eta : (fun ω => ∑ i ∈ s, μ[f i | m] ω) = ∑ i ∈ s, μ[f i | m] := by
+    funext ω
+    simp only [Finset.sum_apply]
+  -- Rewrite goal using η-reduction
+  rw [h_sum_eta, h_ce_sum_eta]
+  -- Apply condExp_finset_sum
+  exact condExp_finset_sum hint m
 
 /-- On a finite measure space, a bounded measurable real function is integrable. -/
 private lemma integrable_of_bounded_measurable
