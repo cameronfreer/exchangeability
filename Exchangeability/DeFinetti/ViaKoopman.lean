@@ -273,25 +273,22 @@ lemma ae_pullback_iff
     {Ω Ω' : Type*} [MeasurableSpace Ω] [MeasurableSpace Ω']
     {μ : Measure Ω} {μ' : Measure Ω'}
     (g : Ω' → Ω) (hg : Measurable g) (hpush : Measure.map g μ' = μ)
-    {F G : Ω → ℝ} (hF : AEMeasurable F μ) (hG : AEMeasurable G μ) :
+    {F G : Ω → ℝ} (_hF : AEMeasurable F μ) (_hG : AEMeasurable G μ) :
     F =ᵐ[μ] G ↔ (F ∘ g) =ᵐ[μ'] (G ∘ g) := by
-  -- With ae_measurable, we can work with measurable representatives
+  -- `→` direction: use ae_map_iff to transport ae equality through pushforward
   constructor
   · intro h
-    -- F =ᵐ[μ] G means {F ≠ G} is μ-null
-    -- Since map g μ' = μ, g⁻¹'{F ≠ G} is μ'-null
-    -- And g⁻¹'{F ≠ G} = {F∘g ≠ G∘g}
-    --
-    -- Mathematical fact: For pushforward measure, μ S = 0 iff μ' (g⁻¹' S) = 0
-    -- This is the definition of map g μ' = μ
-    --
-    -- With ae_measurable, we can work with measurable representatives
-    -- and use outer measure arguments if needed
-    sorry -- TODO: Use Measure.map_apply or ae_measurable representatives
+    -- move from μ to map g μ' and then use `ae_map_iff`
+    have h' : (∀ᶠ y in (Measure.map g μ').ae, F y = G y) := by
+      simpa [hpush] using h
+    have h'' : (∀ᶠ x' in μ'.ae, F (g x') = G (g x')) :=
+      (ae_map_iff hg _).1 h'
+    simpa [Function.comp] using h''
+  -- `←` direction: push forward from μ' to map g μ' by `ae_map_iff`, then rewrite with `hpush`
   · intro h
-    -- (F∘g =ᵐ[μ'] G∘g) means {F∘g ≠ G∘g} is μ'-null
-    -- Since map g μ' = μ and {F ≠ G} ⊆ g '' {F∘g ≠ G∘g} (almost everywhere)
-    sorry -- This direction is harder; may need quasi-surjectivity or AE surjectivity of g
+    have h' : (∀ᶠ y in (Measure.map g μ').ae, F y = G y) :=
+      (ae_map_iff hg _).2 (by simpa [Function.comp] using h)
+    simpa [hpush] using h'
 
 /-- **Factor-map pullback for conditional expectation**.
 
@@ -307,23 +304,49 @@ lemma condexp_pullback_factor
     {H : Ω → ℝ} (hH : Integrable H μ) :
     (fun ω' => μ[H | m] (g ω'))
       =ᵐ[μ'] μ'[(H ∘ g) | m.comap g] := by
-  -- Strategy: Show both sides have equal integrals on all sets in m.comap g
-  -- Key: For A = g⁻¹' B with B ∈ m:
-  --   ∫_A (μ[H| m] ∘ g) dμ' = ∫_B μ[H| m] dμ (pushforward)
-  --                        = ∫_B H dμ (CE property)
-  --                        = ∫_A (H∘g) dμ' (pushforward)
-
-  -- Core integral equality for comap sets
-  have h_integral : ∀ A, MeasurableSet[m.comap g] A →
-      ∫ ω' in A, μ[H | m] (g ω') ∂μ' = ∫ ω' in A, (H ∘ g) ω' ∂μ' := by
-    intro A hA
-    -- A ∈ m.comap g means ∃ B ∈ m, A = g⁻¹' B
-    obtain ⟨B, hB_meas, rfl⟩ := hA  -- MeasurableSet.comap gives this
-    sorry -- TODO: Use pushforward to transport integrals:
-          -- ∫_{g⁻¹' B} (μ[H| m] ∘ g) dμ' = ∫_B μ[H| m] dμ = ∫_B H dμ = ∫_{g⁻¹' B} (H∘g) dμ'
-  
-  -- Apply uniqueness
-  sorry -- TODO: ae_eq_condexp_of_forall_setIntegral_eq h_integral
+  classical
+  -- Step 1: equality of set integrals on every set in m.comap g
+  have h_sets :
+      ∀ s, MeasurableSet[m.comap g] s →
+        ∫ x in s, (μ[H | m] ∘ g) x ∂ μ' = ∫ x in s, (H ∘ g) x ∂ μ' := by
+    intro s hs
+    -- by definition of comap, s = g ⁻¹' B for some B ∈ m
+    rcases hs with ⟨B, hBm, rfl⟩
+    -- The key: both sides are set integrals that can be related through pushforward
+    have hB_meas : MeasurableSet B := hm B hBm
+    -- LHS: ∫_{g⁻¹' B} (CE[H|m] ∘ g) dμ'
+    -- = ∫_B CE[H|m] dμ  (by pushforward)
+    -- = ∫_B H dμ (by CE property)
+    have h_lhs : ∫ x in g ⁻¹' B, (μ[H | m] ∘ g) x ∂ μ' = ∫ x in B, H x ∂ μ := by
+      have : ∫ x in g ⁻¹' B, μ[H | m] (g x) ∂ μ' = ∫ x in B, μ[H | m] x ∂ μ := by
+        rw [← hpush]
+        have h_restrict := Measure.restrict_map hg hB_meas
+        rw [setIntegral, setIntegral, ← h_restrict]
+        rfl
+      rw [this]
+      exact setIntegral_condexp (μ := μ) (m := m) hm hH hBm
+    -- RHS: ∫_{g⁻¹' B} (H ∘ g) dμ' = ∫_B H dμ (by pushforward)
+    have h_rhs : ∫ x in g ⁻¹' B, (H ∘ g) x ∂ μ' = ∫ x in B, H x ∂ μ := by
+      rw [← hpush]
+      have h_restrict := Measure.restrict_map hg hB_meas
+      rw [setIntegral, setIntegral, ← h_restrict]
+      rfl
+    rw [h_lhs, h_rhs]
+  -- Step 2: apply uniqueness of CE on m.comap g
+  have hm' : m.comap g ≤ ‹MeasurableSpace Ω'› := by
+    -- comap-sets are preimages of m-sets under a measurable g
+    intro s hs
+    rcases hs with ⟨B, hBm, rfl⟩
+    simpa using hBm.preimage hg
+  -- integrability of the pulled-back function
+  have hHg' : Integrable (H ∘ g) μ' :=
+    (hH.comp_measurePreserving ⟨hg, hpush⟩)
+  -- now: (μ[H|m] ∘ g) has the right set integrals on all comap-sets,
+  -- so it is the CE of H∘g given m.comap g
+  exact
+    ae_eq_condExp_of_forall_setIntegral_eq
+      (μ := μ') (m := m.comap g)
+      (hm := hm') (hHg') h_sets
 
 /-- **Invariance of conditional expectation under iterates**.
 
@@ -339,25 +362,55 @@ lemma condexp_precomp_iterate_eq_of_invariant
     (h_inv : ∀ s, MeasurableSet[m] s → T ⁻¹' s = s)
     {k : ℕ} {f : Ω → ℝ} (hf : Integrable f μ) :
     μ[(f ∘ (T^[k])) | m] =ᵐ[μ] μ[f | m] := by
-  -- Simplified approach: Use that T-invariance of m means T^[k] leaves m invariant
-  -- Key: For s ∈ m, we have (T^[k])⁻¹ s = s by induction
+  classical
+  -- Measure preservation for the iterate
+  have hTk : MeasurePreserving (T^[k]) μ μ := hT.iterate k
+
+  -- Proof that (T^[k])⁻¹ s = s for all s ∈ m (by induction)
   have h_preimage : ∀ s, MeasurableSet[m] s → (T^[k]) ⁻¹' s = s := by
     intro s hs
     induction k with
-    | zero => simp
+    | zero =>
+        simp [Function.iterate_zero, Set.preimage_id]
     | succ k ih =>
-      -- T^[k+1]⁻¹ s = (T^[k] ∘ T)⁻¹ s = T⁻¹ (T^[k]⁻¹ s) = T⁻¹ s = s
-      rw [Function.iterate_succ']
-      simp [Set.preimage_comp, ih, h_inv s hs]
-  -- Core mathematical content complete:
-  -- • h_preimage: (T^[k])⁻¹ s = s for all s ∈ m
-  -- • T^[k] is measure-preserving (by hT.iterate k)
-  -- • For s ∈ m: ∫_s (f∘T^[k]) dμ = ∫_{(T^[k])⁻¹ s} f dμ (measure preservation)
-  --                               = ∫_s f dμ (by h_preimage)
-  --
-  -- Remaining: Apply ae_eq_condExp_of_forall_setIntegral_eq with hT.iterate k
-  -- to conclude μ[(f∘T^[k])| m] =ᵐ μ[f| m]
-  sorry
+        rw [Function.iterate_succ']
+        simp [Set.preimage_comp, ih s hs, h_inv s hs]
+
+  -- set-integral equality on all m-sets
+  have h_sets :
+      ∀ s, MeasurableSet[m] s →
+        ∫ x in s, (f ∘ (T^[k])) x ∂ μ = ∫ x in s, f x ∂ μ := by
+    intro s hs
+    have hs' : MeasurableSet s := hm _ hs
+    -- restricted pushforward identity:
+    have hmap_restrict :
+        Measure.map (T^[k]) (μ.restrict ((T^[k]) ⁻¹' s)) = μ.restrict s := by
+      -- Use measure preservation and the preimage identity
+      ext t ht
+      rw [Measure.map_apply hTk.measurable ht]
+      rw [Measure.restrict_apply ht, Measure.restrict_apply (hTk.measurable ht)]
+      rw [Set.preimage_inter]
+      rw [hTk.measure_preimage (hTk.measurable ht)]
+      congr 1
+      exact h_preimage s hs
+    -- Now use change of variables
+    calc
+      ∫ x in s, (f ∘ (T^[k])) x ∂ μ
+          = ∫ (f ∘ (T^[k])) ∂ μ.restrict s := rfl
+      _ = ∫ (f ∘ (T^[k])) ∂ Measure.map (T^[k]) (μ.restrict ((T^[k]) ⁻¹' s)) := by
+            rw [hmap_restrict]
+      _ = ∫ f ∂ μ.restrict ((T^[k]) ⁻¹' s) := by
+            -- change variables through the map
+            rw [← Measure.integral_map hTk.measurable]
+            · simp [Function.comp]
+      _ = ∫ x in s, f x ∂ μ := by
+            rw [h_preimage s hs]
+  -- integrability of the precomposed function
+  have hfk : Integrable (f ∘ (T^[k])) μ := hf.comp_measurePreserving hTk
+
+  -- Uniqueness of conditional expectation on m
+  exact
+    ae_eq_condExp_of_forall_setIntegral_eq hm hfk h_sets
 
 /-- Existence of a natural two-sided extension for a measure-preserving shift. -/
 axiom exists_naturalExtension
