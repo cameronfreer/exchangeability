@@ -3065,6 +3065,10 @@ lemma alphaIicCE_ae_tendsto_zero_atBot
   -- 3. By monotone convergence, the sequence converges a.e. to some limit L
   -- 4. By L¹ convergence to 0, we have L = 0 a.e.
 
+  -- Set up the tail σ-algebra (needed for conditional expectation)
+  have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
+    TailSigma.tailSigma_le X hX_meas
+
   -- Step 1: Monotonicity - for each ω, alphaIicCE (-(m):ℝ) ω ≤ alphaIicCE (-(n):ℝ)) ω when n ≤ m
   have h_mono : ∀ᵐ ω ∂μ, ∀ n m : ℕ, n ≤ m →
       alphaIicCE X hX_contract hX_meas hX_L2 (-(m : ℝ)) ω
@@ -3140,19 +3144,22 @@ lemma alphaIicCE_ae_tendsto_zero_atBot
   -- By dominated convergence: ∫ L_fun = lim ∫ f_n = 0
   have hL_integral_zero : ∫ ω, L_fun ω ∂μ = 0 := by
     -- Use dominated convergence theorem with bound = 1 (constant function)
-    have h_conv_ae : ∀ᵐ ω ∂μ, Tendsto (fun n => alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω)
+    have h_conv_ae : ∀ᵐ ω ∂μ, Tendsto (fun (n : ℕ) => alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω)
         atTop (𝓝 (L_fun ω)) := by
       filter_upwards [h_ae_conv, h_bound, h_mono] with ω ⟨L, hL⟩ h_bound_ω h_mono_ω
-      have hL_is_inf : L = ⨅ (n : ℕ), alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω := by
-        apply tendsto_nhds_unique hL
-        apply tendsto_atTop_ciInf h_mono_ω
-        exact ⟨0, fun y hy => by obtain ⟨k, hk⟩ := hy; rw [← hk]; exact (h_bound_ω k).1⟩
-      rw [hL_is_inf]
-    have h_meas : ∀ n, AEStronglyMeasurable (fun ω => alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω) μ := by
+      convert hL using 1
+      apply tendsto_nhds_unique hL
+      apply tendsto_atTop_ciInf h_mono_ω
+      exact ⟨0, fun y hy => by obtain ⟨k, hk⟩ := hy; rw [← hk]; exact (h_bound_ω k).1⟩
+    have h_meas : ∀ (n : ℕ), AEStronglyMeasurable (fun ω => alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω) μ := by
       intro n
-      -- alphaIicCE is conditional expectation, hence measurable
-      sorry  -- TODO: Prove alphaIicCE is AEStronglyMeasurable
-    have h_bound_ae : ∀ n, ∀ᵐ ω ∂μ, ‖alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω‖ ≤ (1 : ℝ) := by
+      -- alphaIicCE is conditional expectation μ[·|m], which is:
+      -- 1. StronglyMeasurable[m] by stronglyMeasurable_condExp
+      -- 2. AEStronglyMeasurable[m] by .aestronglyMeasurable
+      -- 3. AEStronglyMeasurable[m₀] by .mono hm_le (where m ≤ m₀)
+      unfold alphaIicCE
+      exact stronglyMeasurable_condExp.aestronglyMeasurable.mono hm_le
+    have h_bound_ae : ∀ (n : ℕ), ∀ᵐ ω ∂μ, ‖alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω‖ ≤ (1 : ℝ) := by
       intro n
       filter_upwards [alphaIicCE_nonneg_le_one X hX_contract hX_meas hX_L2 (-(n : ℝ))] with ω hω
       rw [Real.norm_eq_abs, abs_of_nonneg hω.1]
@@ -3171,10 +3178,14 @@ lemma alphaIicCE_ae_tendsto_zero_atBot
       have hL_bound : ∀ᵐ ω ∂μ, ‖L_fun ω‖ ≤ 1 := by
         filter_upwards [hL_nonneg, h_bound] with ω hω_nn h_bound_ω
         rw [Real.norm_eq_abs, abs_of_nonneg hω_nn]
-        apply le_ciInf
-        intro n
-        exact (h_bound_ω n).2
-      exact Integrable.of_bound (aestronglyMeasurable_const.sup (aestronglyMeasurable_const)) 1 hL_bound
+        -- L_fun ω = ⨅ n, f_n(ω) ≤ f_0(ω) ≤ 1
+        calc ⨅ (n : ℕ), alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω
+            ≤ alphaIicCE X hX_contract hX_meas hX_L2 (-(0 : ℝ)) ω := ciInf_le ⟨1, fun _ ⟨k, hk⟩ => by rw [← hk]; exact (h_bound_ω k).2⟩ 0
+          _ ≤ 1 := (h_bound_ω 0).2
+      -- L_fun is AEStronglyMeasurable as the infimum of measurable functions
+      have hL_meas : AEStronglyMeasurable L_fun μ := by
+        sorry  -- TODO: Prove L_fun is AEStronglyMeasurable (limit of measurable functions)
+      exact Integrable.of_bound hL_meas 1 hL_bound
     -- Now apply integral_eq_zero_iff_of_nonneg_ae
     rw [← integral_eq_zero_iff_of_nonneg_ae hL_nonneg hL_int]
     exact hL_integral_zero
@@ -3183,7 +3194,7 @@ lemma alphaIicCE_ae_tendsto_zero_atBot
   filter_upwards [h_ae_conv, hL_ae_zero, h_bound, h_mono] with ω ⟨L, hL⟩ hL_zero h_bound_ω h_mono_ω
   -- At this ω, we have f_n → L and L_fun(ω) = 0
   have hL_eq : L = L_fun ω := by
-    apply tendsto_nhds_unique hL
+    convert tendsto_nhds_unique hL _
     apply tendsto_atTop_ciInf h_mono_ω
     exact ⟨0, fun y hy => by obtain ⟨k, hk⟩ := hy; rw [← hk]; exact (h_bound_ω k).1⟩
   rw [hL_eq, hL_zero]
