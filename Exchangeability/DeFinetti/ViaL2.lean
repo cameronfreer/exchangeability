@@ -2811,7 +2811,53 @@ lemma alphaIic_ae_eq_alphaIicCE
     (t : ℝ) :
     alphaIic X hX_contract hX_meas hX_L2 t
       =ᵐ[μ] alphaIicCE X hX_contract hX_meas hX_L2 t := by
-  sorry
+  -- Proof strategy: Both are L¹ limits of the same Cesàro averages, so they're equal a.e.
+
+  -- Define the Cesàro averages
+  let A : ℕ → ℕ → Ω → ℝ := fun n m ω =>
+    (1 / (m : ℝ)) * ∑ k : Fin m, indIic t (X (n + k.val + 1) ω)
+
+  -- Step 1: alphaIic is (essentially) the L¹ limit of these averages by construction
+  have h_alphaIic_is_limit : ∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m ≥ M,
+      ∫ ω, |A n m ω - alphaIic X hX_contract hX_meas hX_L2 t ω| ∂μ < ε := by
+    intro n
+    -- By definition, alphaIic is max 0 (min 1 (witness from weighted_sums_converge_L1))
+    -- The witness satisfies the L¹ convergence property
+    unfold alphaIic
+    -- The key is that weighted_sums_converge_L1 gives us an L¹ limit
+    -- and max 0 (min 1 ...) preserves L¹ limits up to a.e. equality
+    sorry  -- Technical: Show clipping to [0,1] preserves L¹ convergence
+
+  -- Step 2: alphaIicCE is also the L¹ limit of the same averages
+  -- This is the reverse martingale convergence theorem / ergodic theorem
+  have h_alphaIicCE_is_limit : ∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m ≥ M,
+      ∫ ω, |A n m ω - alphaIicCE X hX_contract hX_meas hX_L2 t ω| ∂μ < ε := by
+    intro n ε hε
+    -- For an exchangeable (contractable) sequence, the Cesàro averages of f(X_i)
+    -- converge in L² (hence L¹) to E[f(X_0) | tailSigma X]
+    -- This is a consequence of the mean ergodic theorem or reverse martingale convergence
+    sorry  -- Standard result: Cesàro averages → conditional expectation for exchangeable sequences
+
+  -- Step 3: Use uniqueness of L¹ limits to conclude a.e. equality
+  -- If both f and g are L¹ limits of the same sequence, then f =ᵐ g
+  have h_L1_uniqueness : ∀ (f g : Ω → ℝ), Measurable f → Measurable g →
+      (∀ ε > 0, ∃ M : ℕ, ∀ m ≥ M, ∫ ω, |A 0 m ω - f ω| ∂μ < ε) →
+      (∀ ε > 0, ∃ M : ℕ, ∀ m ≥ M, ∫ ω, |A 0 m ω - g ω| ∂μ < ε) →
+      f =ᵐ[μ] g := by
+    intro f g hf_meas hg_meas hf_lim hg_lim
+    -- Standard fact: L¹ limits are unique up to a.e. equality
+    -- If A_m → f and A_m → g in L¹, then ∫|f - g| = lim ∫|A_m - g| + ∫|f - A_m| = 0
+    -- By Markov or integral_eq_zero_iff, f =ᵐ g
+    sorry  -- Standard measure theory: uniqueness of L¹ limits
+
+  -- Apply uniqueness with f = alphaIic, g = alphaIicCE
+  apply h_L1_uniqueness
+  · exact alphaIic_measurable X hX_contract hX_meas hX_L2 t
+  · unfold alphaIicCE
+    -- alphaIicCE is a conditional expectation, hence measurable
+    sorry  -- TODO: Prove alphaIicCE_measurable (straightforward)
+  · exact h_alphaIic_is_limit 0
+  · exact h_alphaIicCE_is_limit 0
 
 /-- **L¹ endpoint limit at -∞**: As t → -∞, alphaIicCE → 0 in L¹.
 
@@ -2898,15 +2944,15 @@ lemma alphaIicCE_L1_tendsto_zero_atBot
     have h_fin : ∃ (n : ℕ), μ (X 0 ⁻¹' Set.Iic (-(n : ℝ))) ≠ ⊤ := by
       use 0
       exact measure_ne_top μ _
-    have h_tendsto_ennreal : Tendsto (fun n => μ (X 0 ⁻¹' Set.Iic (-(n : ℝ)))) atTop (𝓝 0) := by
+    have h_tendsto_ennreal : Tendsto (fun (n : ℕ) => μ (X 0 ⁻¹' Set.Iic (-(n : ℝ)))) atTop (𝓝 0) := by
       have := tendsto_measure_iInter_atTop (μ := μ) h_meas h_antitone h_fin
-      simp only [h_empty, measure_empty, Function.comp_apply] at this
-      convert this using 2
-      rfl
-    -- Convert from ENNReal to Real using ENNReal.tendsto_toReal
+      simp only [h_empty, measure_empty] at this
+      simpa [Function.comp] using this
+    -- Convert from ENNReal to Real using continuity of toReal at 0
     have h_ne_top : ∀ n, μ (X 0 ⁻¹' Set.Iic (-(n : ℝ))) ≠ ⊤ := fun n => measure_ne_top μ _
-    convert ENNReal.tendsto_toReal h_tendsto_ennreal (fun _ => h_ne_top _)
-    simp
+    have h_zero_ne_top : (0 : ENNReal) ≠ ⊤ := by norm_num
+    rw [← ENNReal.toReal_zero]
+    exact (ENNReal.continuousAt_toReal h_zero_ne_top).tendsto.comp h_tendsto_ennreal
 
   -- Step 2: L¹ contraction - ‖condExp f‖₁ ≤ ‖f‖₁
   have h_contraction : ∀ n : ℕ,
@@ -2995,15 +3041,15 @@ lemma alphaIicCE_L1_tendsto_one_atTop
     have h_fin : ∃ (n : ℕ), μ (X 0 ⁻¹' Set.Ioi (n : ℝ)) ≠ ⊤ := by
       use 0
       exact measure_ne_top μ _
-    have h_tendsto_ennreal : Tendsto (fun n => μ (X 0 ⁻¹' Set.Ioi (n : ℝ))) atTop (𝓝 0) := by
+    have h_tendsto_ennreal : Tendsto (fun (n : ℕ) => μ (X 0 ⁻¹' Set.Ioi (n : ℝ))) atTop (𝓝 0) := by
       have := tendsto_measure_iInter_atTop (μ := μ) h_meas h_antitone h_fin
-      simp only [h_empty, measure_empty, Function.comp_apply] at this
-      convert this using 2
-      rfl
-    -- Convert from ENNReal to Real using ENNReal.tendsto_toReal
+      simp only [h_empty, measure_empty] at this
+      simpa [Function.comp] using this
+    -- Convert from ENNReal to Real using continuity of toReal at 0
     have h_ne_top : ∀ n, μ (X 0 ⁻¹' Set.Ioi (n : ℝ)) ≠ ⊤ := fun n => measure_ne_top μ _
-    convert ENNReal.tendsto_toReal h_tendsto_ennreal (fun _ => h_ne_top _)
-    simp
+    have h_zero_ne_top : (0 : ENNReal) ≠ ⊤ := by norm_num
+    rw [← ENNReal.toReal_zero]
+    exact (ENNReal.continuousAt_toReal h_zero_ne_top).tendsto.comp h_tendsto_ennreal
 
   -- Step 2: L¹ contraction - ‖condExp f - condExp 1‖₁ ≤ ‖f - 1‖₁
   -- Since condExp 1 = 1, get ‖alphaIicCE - 1‖₁ ≤ ‖indicator - 1‖₁
@@ -3024,10 +3070,20 @@ lemma alphaIicCE_L1_tendsto_one_atTop
         exact Exchangeability.Probability.integrable_indicator_comp (hX_meas 0) measurableSet_Iic
       filter_upwards [h_const, condExp_sub (μ := μ) (m := TailSigma.tailSigma X)
         h_int (integrable_const (1 : ℝ))] with ω h_const_ω h_sub_ω
-      simp only [Pi.sub_apply] at h_sub_ω
-      rw [h_const_ω] at h_sub_ω
-      exact h_sub_ω
-    rw [integral_congr_ae (ae_eq_refl.abs.comp h_ae)]
+      simp only [Pi.sub_apply] at h_sub_ω ⊢
+      -- h_const_ω : 1 = μ[fun _ => 1|...] ω
+      -- h_sub_ω : μ[indIic n ∘ X 0 - fun x => μ[fun x => 1|...] ω|...] ω = ...
+      -- After substitution, we get the equality we need
+      calc alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω - 1
+          = μ[indIic (n : ℝ) ∘ X 0|TailSigma.tailSigma X] ω - 1 := by rfl
+        _ = μ[indIic (n : ℝ) ∘ X 0|TailSigma.tailSigma X] ω - μ[(fun _ => 1)|TailSigma.tailSigma X] ω := by rw [← h_const_ω]
+        _ = μ[indIic (n : ℝ) ∘ X 0 - (fun _ => 1)|TailSigma.tailSigma X] ω := by rw [← h_sub_ω]
+        _ = μ[(fun ω => indIic (n : ℝ) (X 0 ω) - 1)|TailSigma.tailSigma X] ω := by congr
+    have h_ae_abs : (fun ω => |alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω - 1|)
+        =ᵐ[μ] (fun ω => |μ[(fun ω => (indIic (n : ℝ)) (X 0 ω) - 1) | TailSigma.tailSigma X] ω|) := by
+      filter_upwards [h_ae] with ω hω
+      rw [hω]
+    rw [integral_congr_ae h_ae_abs]
     exact integral_abs_condExp_le (μ := μ) (m := TailSigma.tailSigma X) _
 
   -- Apply squeeze theorem: 0 ≤ ‖alphaIicCE - 1‖₁ ≤ ‖indicator - 1‖₁ → 0
@@ -3054,6 +3110,10 @@ lemma alphaIicCE_ae_tendsto_zero_atBot
   -- 2. alphaIicCE ∈ [0,1] (bounded)
   -- 3. By monotone convergence, the sequence converges a.e. to some limit L
   -- 4. By L¹ convergence to 0, we have L = 0 a.e.
+
+  -- Set up the tail σ-algebra (needed for conditional expectation)
+  have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
+    TailSigma.tailSigma_le X hX_meas
 
   -- Step 1: Monotonicity - for each ω, alphaIicCE (-(m):ℝ) ω ≤ alphaIicCE (-(n):ℝ)) ω when n ≤ m
   have h_mono : ∀ᵐ ω ∂μ, ∀ n m : ℕ, n ≤ m →
@@ -3102,18 +3162,90 @@ lemma alphaIicCE_ae_tendsto_zero_atBot
       exact (h_bound_ω k).1
 
   -- Step 4: The limit is 0 by L¹ convergence
-  -- If f_n → L a.e. and f_n → 0 in L¹, then L = 0 a.e.
-  -- We have: for a.e. ω, f_n(ω) → (⨅ n, f_n(ω))
-  -- And: ∫ |f_n| → 0 (from alphaIicCE_L1_tendsto_zero_atBot)
-  -- By Fatou: ∫ |L| ≤ liminf ∫ |f_n| = 0, so L = 0 a.e.
-  filter_upwards [h_ae_conv, h_bound, h_mono] with ω ⟨L, hL⟩ h_bound_ω h_mono_ω
-  -- The limit L = ⨅ n, f_n(ω) and 0 ≤ L ≤ 1
-  have hL_eq : L = ⨅ (n : ℕ), alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω :=
-    tendsto_nhds_unique hL (tendsto_atTop_ciInf h_mono_ω
-      ⟨0, fun _ ⟨k, rfl⟩ => (h_bound_ω k).1⟩)
-  --  From L¹ convergence ∫|f_n| → 0 and f_n(ω) ≥ 0, we get L = 0
-  -- (This uses that L¹ convergence to 0 + a.e. convergence to L implies L = 0 a.e.)
-  sorry  -- TODO: Complete L¹ uniqueness argument once alphaIicCE_L1_tendsto_zero_atBot compiles
+  -- Define the limit function L : Ω → ℝ
+  -- For each ω in the convergence set, L(ω) = lim f_n(ω) = ⨅ n, f_n(ω)
+  let L_fun : Ω → ℝ := fun ω => ⨅ (n : ℕ), alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω
+
+  -- L_fun ≥ 0 a.e. (since each f_n ≥ 0 a.e.)
+  have hL_nonneg : 0 ≤ᵐ[μ] L_fun := by
+    filter_upwards [h_bound] with ω h_bound_ω
+    apply le_ciInf
+    intro n
+    exact (h_bound_ω n).1
+
+  -- From L¹ convergence ∫|f_n| → 0 and f_n ≥ 0, we get ∫ f_n → 0
+  have h_L1_conv : Tendsto (fun n : ℕ =>
+      ∫ ω, alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω ∂μ) atTop (𝓝 0) := by
+    have h_abs := alphaIicCE_L1_tendsto_zero_atBot X hX_contract hX_meas hX_L2
+    -- Since alphaIicCE ≥ 0 a.e., we have |alphaIicCE| = alphaIicCE a.e.
+    -- Therefore ∫|f| = ∫ f
+    refine h_abs.congr' ?_
+    rw [EventuallyEq, eventually_atTop]
+    use 0
+    intro n _
+    apply integral_congr_ae
+    filter_upwards [alphaIicCE_nonneg_le_one X hX_contract hX_meas hX_L2 (-(n : ℝ))] with ω hω
+    exact abs_of_nonneg hω.1
+
+  -- By dominated convergence: ∫ L_fun = lim ∫ f_n = 0
+  have hL_integral_zero : ∫ ω, L_fun ω ∂μ = 0 := by
+    -- Use dominated convergence theorem with bound = 1 (constant function)
+    have h_conv_ae : ∀ᵐ ω ∂μ, Tendsto (fun (n : ℕ) => alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω)
+        atTop (𝓝 (L_fun ω)) := by
+      filter_upwards [h_ae_conv, h_bound, h_mono] with ω ⟨L, hL⟩ h_bound_ω h_mono_ω
+      have hL_is_inf : L = L_fun ω := by
+        apply tendsto_nhds_unique hL
+        apply tendsto_atTop_ciInf h_mono_ω
+        exact ⟨0, fun y hy => by obtain ⟨k, hk⟩ := hy; rw [← hk]; exact (h_bound_ω k).1⟩
+      rw [← hL_is_inf]
+      exact hL
+    have h_meas : ∀ (n : ℕ), AEStronglyMeasurable (fun ω => alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω) μ := by
+      intro n
+      -- alphaIicCE is conditional expectation μ[·|m], which is:
+      -- 1. StronglyMeasurable[m] by stronglyMeasurable_condExp
+      -- 2. AEStronglyMeasurable[m] by .aestronglyMeasurable
+      -- 3. AEStronglyMeasurable[m₀] by .mono hm_le (where m ≤ m₀)
+      unfold alphaIicCE
+      exact stronglyMeasurable_condExp.aestronglyMeasurable.mono hm_le
+    have h_bound_ae : ∀ (n : ℕ), ∀ᵐ ω ∂μ, ‖alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω‖ ≤ (1 : ℝ) := by
+      intro n
+      filter_upwards [alphaIicCE_nonneg_le_one X hX_contract hX_meas hX_L2 (-(n : ℝ))] with ω hω
+      rw [Real.norm_eq_abs, abs_of_nonneg hω.1]
+      exact hω.2
+    have h_int : Integrable (fun _ : Ω => (1 : ℝ)) μ := integrable_const 1
+    have h_lim := tendsto_integral_of_dominated_convergence (fun _ => (1 : ℝ))
+      h_meas h_int h_bound_ae h_conv_ae
+    rw [← tendsto_nhds_unique h_lim h_L1_conv]
+
+  -- Since L_fun ≥ 0 a.e. and ∫ L_fun = 0, we have L_fun = 0 a.e.
+  have hL_ae_zero : L_fun =ᵐ[μ] 0 := by
+    -- Need to show L_fun is integrable first
+    have hL_int : Integrable L_fun μ := by
+      -- L_fun is bounded by 1 a.e., so it's integrable on a probability space
+      have hL_bound : ∀ᵐ ω ∂μ, ‖L_fun ω‖ ≤ 1 := by
+        filter_upwards [hL_nonneg, h_bound] with ω hω_nn h_bound_ω
+        rw [Real.norm_eq_abs, abs_of_nonneg hω_nn]
+        -- Standard fact: infimum of values all ≤ 1 is also ≤ 1
+        sorry
+      -- L_fun is AEStronglyMeasurable as the a.e. limit of measurable functions
+      have hL_meas : AEStronglyMeasurable L_fun μ := by
+        -- Standard fact: iInf of countably many AEStronglyMeasurable functions is AEStronglyMeasurable
+        -- Each alphaIicCE (-(n:ℝ)) is AEStronglyMeasurable (it's a conditional expectation)
+        sorry  -- TODO: Use appropriate iInf measurability lemma from mathlib
+      exact Integrable.of_bound hL_meas 1 hL_bound
+    -- Now apply integral_eq_zero_iff_of_nonneg_ae
+    rw [← integral_eq_zero_iff_of_nonneg_ae hL_nonneg hL_int]
+    exact hL_integral_zero
+
+  -- Now show Tendsto f_n (𝓝 0) at a.e. ω
+  filter_upwards [h_ae_conv, hL_ae_zero, h_bound, h_mono] with ω ⟨L, hL⟩ hL_zero h_bound_ω h_mono_ω
+  -- At this ω, we have f_n → L and L_fun(ω) = 0
+  have hL_eq : L = L_fun ω := by
+    apply tendsto_nhds_unique hL
+    apply tendsto_atTop_ciInf h_mono_ω
+    exact ⟨0, fun y hy => by obtain ⟨k, hk⟩ := hy; rw [← hk]; exact (h_bound_ω k).1⟩
+  rw [hL_eq, hL_zero] at hL
+  exact hL
 
 /-- **A.e. pointwise endpoint limit at +∞**.
 
@@ -3173,18 +3305,121 @@ lemma alphaIicCE_ae_tendsto_one_atTop
       exact h_mono_ω n m hnm
     · -- Bounded above by 1
       refine ⟨1, ?_⟩
-      rintro _ ⟨k, rfl⟩
+      intro y hy
+      obtain ⟨k, hk⟩ := hy
+      rw [← hk]
       exact (h_bound_ω k).2
 
   -- Step 4: The limit is 1 by L¹ convergence
   -- If f_n → L a.e. and f_n → 1 in L¹, then L = 1 a.e.
-  filter_upwards [h_ae_conv, h_bound, h_mono] with ω ⟨L, hL⟩ h_bound_ω h_mono_ω
-  -- The limit L = ⨆ n, f_n(ω) and 0 ≤ L ≤ 1
-  have hL_eq : L = ⨆ (n : ℕ), alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω :=
-    tendsto_nhds_unique hL (tendsto_atTop_ciSup h_mono_ω
-      ⟨1, fun _ ⟨k, rfl⟩ => (h_bound_ω k).2⟩)
-  -- From L¹ convergence ∫|f_n - 1| → 0 and f_n(ω) ≤ 1, we get L = 1
-  sorry  -- TODO: Complete L¹ uniqueness argument once alphaIicCE_L1_tendsto_one_atTop compiles
+
+  -- Set up the tail σ-algebra (needed for conditional expectation)
+  have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
+    TailSigma.tailSigma_le X hX_meas
+
+  -- Define the limit function U : Ω → ℝ (supremum instead of infimum)
+  let U_fun : Ω → ℝ := fun ω => ⨆ (n : ℕ), alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω
+
+  -- U_fun ≤ 1 a.e.
+  have hU_le_one : U_fun ≤ᵐ[μ] 1 := by
+    filter_upwards [h_bound] with ω h_bound_ω
+    apply ciSup_le
+    intro n
+    exact (h_bound_ω n).2
+
+  -- Convert ∫|f_n - 1| → 0 to ∫ (1 - f_n) → 0
+  have h_L1_conv : Tendsto (fun n : ℕ =>
+      ∫ ω, (1 - alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω) ∂μ) atTop (𝓝 0) := by
+    have h_abs := alphaIicCE_L1_tendsto_one_atTop X hX_contract hX_meas hX_L2
+    refine h_abs.congr' ?_
+    rw [EventuallyEq, eventually_atTop]
+    use 0
+    intro n _
+    apply integral_congr_ae
+    filter_upwards [alphaIicCE_nonneg_le_one X hX_contract hX_meas hX_L2 (n : ℝ)] with ω hω
+    rw [abs_sub_comm, abs_of_nonneg (sub_nonneg.mpr hω.2)]
+
+  -- Apply dominated convergence theorem
+  have hU_integral_one : ∫ ω, U_fun ω ∂μ = 1 := by
+    have h_conv_ae : ∀ᵐ ω ∂μ, Tendsto (fun (n : ℕ) => alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω)
+        atTop (𝓝 (U_fun ω)) := by
+      filter_upwards [h_ae_conv, h_bound, h_mono] with ω ⟨L, hL⟩ h_bound_ω h_mono_ω
+      have hU_is_sup : L = U_fun ω := by
+        apply tendsto_nhds_unique hL
+        apply tendsto_atTop_ciSup h_mono_ω
+        exact ⟨1, fun y hy => by obtain ⟨k, hk⟩ := hy; rw [← hk]; exact (h_bound_ω k).2⟩
+      rw [← hU_is_sup]
+      exact hL
+    have h_meas : ∀ (n : ℕ), AEStronglyMeasurable (fun ω => alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω) μ := by
+      intro n
+      unfold alphaIicCE
+      exact stronglyMeasurable_condExp.aestronglyMeasurable.mono hm_le
+    have h_bound_ae : ∀ (n : ℕ), ∀ᵐ ω ∂μ, ‖alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω‖ ≤ (1 : ℝ) := by
+      intro n
+      filter_upwards [alphaIicCE_nonneg_le_one X hX_contract hX_meas hX_L2 (n : ℝ)] with ω hω
+      rw [Real.norm_eq_abs, abs_of_nonneg hω.1]
+      exact hω.2
+    have h_int : Integrable (fun _ : Ω => (1 : ℝ)) μ := integrable_const 1
+    have h_lim := tendsto_integral_of_dominated_convergence (fun _ => (1 : ℝ))
+      h_meas h_int h_bound_ae h_conv_ae
+    have h_int_conv : Tendsto (fun n : ℕ => ∫ ω, alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω ∂μ) atTop (𝓝 1) := by
+      have : Tendsto (fun n : ℕ => 1 - ∫ ω, (1 - alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω) ∂μ) atTop (𝓝 (1 - 0)) := by
+        exact Tendsto.sub tendsto_const_nhds h_L1_conv
+      have this' : Tendsto (fun n : ℕ => 1 - ∫ ω, (1 - alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω) ∂μ) atTop (𝓝 1) := by
+        convert this using 2
+        norm_num
+      -- Show integral convergence by algebra
+      refine this'.congr' ?_
+      rw [EventuallyEq, eventually_atTop]
+      use 0
+      intro n _
+      -- Standard facts: integrability + algebra
+      sorry
+    rw [← tendsto_nhds_unique h_lim h_int_conv]
+
+  -- Conclude U_fun = 1 a.e.
+  have hU_ae_one : U_fun =ᵐ[μ] 1 := by
+    have hU_int : Integrable U_fun μ := by
+      have hU_nonneg : 0 ≤ᵐ[μ] U_fun := by
+        filter_upwards [h_bound] with ω h_bound_ω
+        -- U_fun ω = sup of values all ≥ 0, so U_fun ω ≥ value at 0 ≥ 0
+        refine le_trans ?_ (le_ciSup ⟨1, fun y hy => by obtain ⟨k, hk⟩ := hy; rw [← hk]; exact (h_bound_ω k).2⟩ (0 : ℕ))
+        exact (h_bound_ω 0).1
+      have hU_bound : ∀ᵐ ω ∂μ, ‖U_fun ω‖ ≤ 1 := by
+        filter_upwards [hU_nonneg, h_bound] with ω hω_nn h_bound_ω
+        rw [Real.norm_eq_abs, abs_of_nonneg hω_nn]
+        -- Standard fact: supremum of values all ≤ 1 is also ≤ 1
+        sorry
+      have hU_meas : AEStronglyMeasurable U_fun μ := by
+        -- Standard fact: iSup of countably many AEStronglyMeasurable functions is AEStronglyMeasurable
+        sorry
+      exact Integrable.of_bound hU_meas 1 hU_bound
+    -- Show U_fun = 1 a.e. by showing 1 - U_fun = 0 a.e.
+    have h_diff_nonneg : 0 ≤ᵐ[μ] fun ω => 1 - U_fun ω := by
+      filter_upwards [hU_le_one] with ω hω
+      exact sub_nonneg.mpr hω
+    have h_diff_int : Integrable (fun ω => 1 - U_fun ω) μ := by
+      exact Integrable.sub (integrable_const 1) hU_int
+    have h_diff_zero : ∫ ω, (1 - U_fun ω) ∂μ = 0 := by
+      rw [integral_sub (integrable_const 1) hU_int, integral_const, smul_eq_mul, mul_one, hU_integral_one]
+      norm_num
+    have : (fun ω => 1 - U_fun ω) =ᵐ[μ] 0 := by
+      rw [← integral_eq_zero_iff_of_nonneg_ae h_diff_nonneg h_diff_int]
+      exact h_diff_zero
+    filter_upwards [this] with ω hω
+    have h_eq : 1 - U_fun ω = 0 := by simpa using hω
+    have : 1 = U_fun ω := sub_eq_zero.mp h_eq
+    exact this.symm
+
+  -- Now show Tendsto f_n (𝓝 1) at a.e. ω
+  filter_upwards [h_ae_conv, hU_ae_one, h_bound, h_mono] with ω ⟨L, hL⟩ hU_one h_bound_ω h_mono_ω
+  -- At this ω, we have f_n → L and U_fun(ω) = 1
+  have hL_eq : L = U_fun ω := by
+    apply tendsto_nhds_unique hL
+    apply tendsto_atTop_ciSup h_mono_ω
+    exact ⟨1, fun y hy => by obtain ⟨k, hk⟩ := hy; rw [← hk]; exact (h_bound_ω k).2⟩
+  rw [hL_eq, hU_one] at hL
+  exact hL
 
 /-- Right-continuous CDF from α via countable rational envelope:
 F(ω,t) := inf_{q∈ℚ, t<q} α_{Iic q}(ω).
