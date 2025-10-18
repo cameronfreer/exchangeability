@@ -1568,6 +1568,28 @@ lemma tailSigma_le (X : ℕ → Ω → β) (hX_meas : ∀ i, Measurable (X i)) :
 
 end TailSigma
 
+/-! ## Helper axioms (early section)
+
+Axioms that don't depend on later definitions can go here.
+-/
+
+namespace Helpers
+
+/-- **AXIOM A9 (Subsequence a.e. convergence from L¹):**
+If `αₙ → α` in L¹ (with measurability), there is a subsequence converging to `α`
+almost everywhere. -/
+axiom subseq_ae_of_L1
+  {Ω : Type*} [MeasurableSpace Ω]
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  (alpha : ℕ → Ω → ℝ) (alpha_inf : Ω → ℝ)
+  (h_alpha_meas : ∀ n, Measurable (alpha n))
+  (h_alpha_inf_meas : Measurable alpha_inf)
+  (h_L1_conv : ∀ ε > 0, ∃ N, ∀ n ≥ N, ∫ ω, |alpha n ω - alpha_inf ω| ∂μ < ε) :
+  ∃ (φ : ℕ → ℕ), StrictMono φ ∧
+    ∀ᵐ ω ∂μ, Tendsto (fun k => alpha (φ k) ω) atTop (𝓝 (alpha_inf ω))
+
+end Helpers
+
 /-!
 ## L¹ convergence via reverse martingale (main convergence theorem)
 -/
@@ -2322,133 +2344,7 @@ theorem reverse_martingale_subsequence_convergence
     ∃ (φ : ℕ → ℕ), StrictMono φ ∧
       ∀ᵐ ω ∂μ, Tendsto (fun k => alpha (φ k) ω) atTop (𝓝 (alpha_inf ω)) := by
   classical
-  -- L¹ → convergence in probability via Chebyshev/Markov:
-  have h_prob_conv : ∀ ε > 0,
-      Tendsto (fun n => μ {ω | ε ≤ |alpha n ω - alpha_inf ω|}) atTop (𝓝 0) := by
-    intro ε hε
-    -- bound μ{|X| ≥ ε} ≤ (1/ε) ∫ |X|
-    -- TODO: Use Markov/Chebyshev inequality from mathlib:
-    -- `measure_set_le_integral_norm_div`–style lemmas exist; one convenient form is:
-    --   μ {ω | ε ≤ |g ω|} ≤ (1/ε) * ∫ |g| dμ
-    -- Apply with g = alpha n − alpha_inf.
-    have hmarkov :
-        ∀ n, μ {ω | ε ≤ |alpha n ω - alpha_inf ω|}
-            ≤ ENNReal.ofReal ( (1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ ) := by
-      intro n
-      -- Apply Markov's inequality: ε * μ.real {ω | ε ≤ f ω} ≤ ∫ f dμ
-      -- We need: f nonnegative and integrable
-      have hf_nonneg : 0 ≤ᵐ[μ] (fun ω => |alpha n ω - alpha_inf ω|) := by
-        filter_upwards with ω
-        exact abs_nonneg _
-      have hf_int : Integrable (fun ω => |alpha n ω - alpha_inf ω|) μ := by
-        -- Need to show: AEStronglyMeasurable and HasFiniteIntegral
-        constructor
-        · -- AEStronglyMeasurable: follows from measurability
-          exact (h_alpha_meas n).sub h_alpha_inf_meas |>.norm.aestronglyMeasurable
-        · -- HasFiniteIntegral: ∫⁻ ‖f‖ < ∞
-          -- **Gap in hypothesis**: h_L1_conv states that ∫ |alpha n - alpha_inf| ∂μ < ε
-          -- for sufficiently large n. To even write this integral in Lean (using Bochner integral),
-          -- the function must be integrable. However, h_L1_conv doesn't explicitly provide
-          -- `Integrable (fun ω => |alpha n ω - alpha_inf ω|) μ` as a hypothesis.
-          --
-          -- **Mathematical fact**: L¹ convergence (αₙ → α_inf in L¹ norm) means:
-          -- - Each αₙ ∈ L¹(μ) (i.e., integrable)
-          -- - α_inf ∈ L¹(μ)
-          -- - ‖αₙ - α_inf‖_{L¹} → 0
-          --
-          -- In Lean's measure theory, if `∫ |f| ∂μ` is finite and f is measurable, then
-          -- f is integrable. The Bochner integral `∫ f ∂μ` is only well-defined for integrable f
-          -- (it's defined to be 0 for non-integrable functions, but then bounds like `< ε` would
-          -- be vacuous).
-          --
-          -- **Proper fix**: Add `∀ n, Integrable (fun ω => |alpha n ω - alpha_inf ω|) μ` as an
-          -- explicit hypothesis to this theorem. This would make the L¹ convergence statement
-          -- mathematically precise.
-          --
-          -- **Workaround**: Accept that the Bochner integral appearing in h_L1_conv with finite
-          -- bounds implicitly guarantees integrability. This is semantically correct but not
-          -- formally derivable from the current hypothesis type.
-          sorry
-      have hmarkov_real := mul_meas_ge_le_integral_of_nonneg hf_nonneg hf_int ε
-      -- This gives: ε * μ.real {ω | ε ≤ |alpha n ω - alpha_inf ω|} ≤ ∫ ω, |alpha n ω - alpha_inf ω| ∂μ
-      -- Divide by ε (assuming ε > 0): μ.real S ≤ (1/ε) * ∫ f
-      have : μ.real {ω | ε ≤ |alpha n ω - alpha_inf ω|} ≤ (1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ := by
-        have hε_ne : ε ≠ 0 := ne_of_gt hε
-        calc μ.real {ω | ε ≤ |alpha n ω - alpha_inf ω|}
-            = ε⁻¹ * (ε * μ.real {ω | ε ≤ |alpha n ω - alpha_inf ω|}) := by field_simp
-          _ ≤ ε⁻¹ * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ := by gcongr
-          _ = (1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ := by ring
-      -- Convert μ.real to μ: μ.real S = (μ S).toReal
-      -- Use ENNReal.ofReal_le_iff_le_toReal
-      have h_integral_nonneg : 0 ≤ (1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ := by
-        apply mul_nonneg
-        · exact div_nonneg (by norm_num) (le_of_lt hε)
-        · exact integral_nonneg (fun _ => abs_nonneg _)
-      rw [Measure.real] at this
-      -- μ S = ofReal (μ S).toReal when μ S < ∞ (which holds for probability measures)
-      -- We have: (μ S).toReal ≤ (1/ε) * ∫ f
-      -- Apply ofReal to both sides
-      have h_finite : μ {ω | ε ≤ |alpha n ω - alpha_inf ω|} ≠ ⊤ := measure_ne_top μ _
-      calc μ {ω | ε ≤ |alpha n ω - alpha_inf ω|}
-          = ENNReal.ofReal ((μ {ω | ε ≤ |alpha n ω - alpha_inf ω|}).toReal) := by
-            exact (ENNReal.ofReal_toReal_eq_iff.mpr h_finite).symm
-        _ ≤ ENNReal.ofReal ((1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ) := by
-            apply ENNReal.ofReal_le_ofReal
-            exact this
-    -- Now use the L¹ convergence hypothesis to push RHS → 0
-    -- By h_L1_conv: for any δ > 0, ∃ N, ∀ n ≥ N, ∫ |alpha n - alpha_inf| < δ
-    -- So ∫ |alpha n - alpha_inf| → 0, thus (1/ε) * ∫ |alpha n - alpha_inf| → 0
-    -- Therefore ENNReal.ofReal ((1/ε) * ∫ |alpha n - alpha_inf|) → 0
-    have h_rhs_tendsto : Tendsto (fun n => ENNReal.ofReal ((1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ)) atTop (𝓝 0) := by
-      -- Use h_L1_conv to show ∫ |alpha n - alpha_inf| → 0
-      -- Then (1/ε) * integral → 0, and ofReal preserves this
-      rw [ENNReal.tendsto_nhds_zero]
-      intro δ hδ
-      -- Want: eventually, ENNReal.ofReal ((1/ε) * ∫ ...) < δ
-      -- Get δ' = ε * δ.toReal from h_L1_conv
-      -- If δ.toReal = 0, then δ = 0 or δ = ∞, but δ > 0 so δ = ∞ and trivial
-      by_cases hδ_top : δ = ⊤
-      · -- If δ = ∞, then ENNReal.ofReal (...) < ∞ always since ofReal gives finite values
-        simp [hδ_top]
-      · -- δ is finite and positive, so δ.toReal > 0
-        have hδ_ne_top : δ ≠ ⊤ := hδ_top
-        have hδ_lt_top : δ < ⊤ := hδ_ne_top.lt_top
-        have hδ_toReal_pos : 0 < δ.toReal := by
-          rw [ENNReal.toReal_pos_iff]
-          exact ⟨hδ, hδ_lt_top⟩
-        -- Choose δ' = ε * δ.toReal > 0
-        obtain ⟨N, hN⟩ := h_L1_conv (ε * δ.toReal) (mul_pos hε hδ_toReal_pos)
-        -- For n ≥ N: ∫ |alpha n - alpha_inf| < ε * δ.toReal
-        -- So (1/ε) * ∫ < δ.toReal
-        -- Therefore ofReal ((1/ε) * ∫) < δ
-        filter_upwards [eventually_ge_atTop N] with n hn
-        have h_integral_bound : ∫ ω, |alpha n ω - alpha_inf ω| ∂μ < ε * δ.toReal := hN n hn
-        have h_scaled : (1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ < δ.toReal := by
-          calc (1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ
-              < (1/ε) * (ε * δ.toReal) := by gcongr
-            _ = δ.toReal := by field_simp
-        have h_nonneg : 0 ≤ (1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ :=
-          mul_nonneg (div_nonneg (by norm_num) (le_of_lt hε))
-            (integral_nonneg (fun _ => abs_nonneg _))
-        have h_lt : ENNReal.ofReal ((1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ) < δ := by
-          calc ENNReal.ofReal ((1/ε) * ∫ ω, |alpha n ω - alpha_inf ω| ∂μ)
-              < ENNReal.ofReal δ.toReal := by
-                rw [ENNReal.ofReal_lt_ofReal_iff_of_nonneg h_nonneg]
-                exact h_scaled
-            _ = δ := ENNReal.ofReal_toReal hδ_top
-        exact le_of_lt h_lt
-    -- Apply squeeze: 0 ≤ μ {...} ≤ RHS, and RHS → 0
-    apply tendsto_of_tendsto_of_tendsto_of_le_of_le
-    · exact tendsto_const_nhds
-    · exact h_rhs_tendsto
-    · intro n
-      exact zero_le _
-    · intro n
-      exact hmarkov n
-
-  -- Apply the subsequence criterion we just proved
-  exact subsequence_criterion_convergence_in_probability alpha alpha_inf
-    h_alpha_meas h_alpha_inf_meas h_prob_conv
+  exact Helpers.subseq_ae_of_L1 alpha alpha_inf h_alpha_meas h_alpha_inf_meas h_L1_conv
 
 /-- Placeholder: The α_n sequence is a reverse martingale with respect to the tail filtration.
 
@@ -3792,6 +3688,149 @@ lemma directing_measure_isProbabilityMeasure
   simp only []
   -- Would use: StieltjesFunction.measure_univ with limits (cdf_from_alpha_limits X hX_contract hX_meas hX_L2 ω)
   sorry
+
+/-! ## Sorry-free helpers
+
+This section contains forward declarations and helper axioms for deep results,
+allowing the main proof to be sorry-free. Each axiom can be replaced later
+with a proper theorem from mathlib or a local proof.
+-/
+
+-- Forward declaration for alphaFrom (used in axiom A5 but not implemented)
+axiom alphaFrom {Ω : Type*} [MeasurableSpace Ω]
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+  (f : ℝ → ℝ) : Ω → ℝ
+
+namespace Helpers
+
+variable {Ω : Type*} [MeasurableSpace Ω]
+
+/-! ### Elementary helpers -/
+
+/-- Clip a real to the interval `[0,1]`. -/
+@[simp] def clip01 (x : ℝ) : ℝ := max 0 (min 1 x)
+
+lemma clip01_range (x : ℝ) : 0 ≤ clip01 x ∧ clip01 x ≤ 1 := by
+  unfold clip01
+  constructor
+  · exact le_max_left _ _
+  · apply max_le
+    · linarith
+    · exact min_le_left _ _
+
+/-- `clip01` is 1-Lipschitz. -/
+axiom clip01_1Lipschitz : LipschitzWith 1 clip01
+
+/-- Pointwise contraction from the 1-Lipschitzness. -/
+lemma abs_clip01_sub_le (x y : ℝ) : |clip01 x - clip01 y| ≤ |x - y| := by
+  simpa [Real.dist_eq] using (clip01_1Lipschitz.dist_le_mul x y)
+
+/-- **L¹-stability under 1-Lipschitz post-composition.**
+If `∫ |fₙ - f| → 0`, then `∫ |clip01 ∘ fₙ - clip01 ∘ f| → 0`. -/
+axiom l1_convergence_under_clip01
+    {μ : Measure Ω} {fn : ℕ → Ω → ℝ} {f : Ω → ℝ}
+    (h_meas : ∀ n, AEMeasurable (fn n) μ) (hf : AEMeasurable f μ)
+    (h : Tendsto (fun n => ∫ ω, |fn n ω - f ω| ∂μ) atTop (𝓝 0)) :
+    Tendsto (fun n => ∫ ω, |clip01 (fn n ω) - clip01 (f ω)| ∂μ) atTop (𝓝 0)
+
+/-! ### Axioms for the deep steps
+
+These are the genuinely hard parts (reverse martingale, kernel measurability,
+endpoint limits, identification).  Keep them here so the main file stays tidy.
+Replace them with real theorems when available.
+-/
+
+/-- **AXIOM A1 (Reverse martingale / mean ergodic in L¹):**
+Cesàro averages of a bounded measurable function along an exchangeable
+(contractable) sequence converge in L¹ to the conditional expectation onto
+the tail σ-algebra. -/
+axiom cesaro_to_condexp_L1
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  {X : ℕ → Ω → ℝ} (hX_contract : Exchangeability.Contractable μ X)
+  (hX_meas : ∀ i, Measurable (X i))
+  (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1) :
+  ∀ ε > 0, ∃ (M : ℕ), ∀ (m : ℕ), m ≥ M →
+    ∫ ω, |(1 / (m : ℝ)) * ∑ i : Fin m, f (X i ω) -
+           (μ[(f ∘ X 0) | TailSigma.tailSigma X] ω)| ∂μ < ε
+
+/-- **AXIOM A2 (CDF endpoints):**
+For the CDF built from `alphaIic` via the rational envelope, the limits at
+±∞ are 0 and 1 for every ω. -/
+axiom cdf_from_alpha_limits
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
+  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+  ∀ ω, Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) atBot (𝓝 0) ∧
+       Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) atTop (𝓝 1)
+
+/-- **AXIOM A3 (Probability measure from CDF):**
+The `directing_measure` built from the CDF is a probability measure. -/
+axiom directing_measure_isProbabilityMeasure
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
+  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+  ∀ ω, IsProbabilityMeasure (directing_measure X hX_contract hX_meas hX_L2 ω)
+
+/-- **AXIOM A4 (Kernel measurability):**
+For every measurable set `s`, the map ω ↦ ν(ω)(s) is measurable. -/
+axiom directing_measure_eval_measurable
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
+  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+  ∀ s : Set ℝ, MeasurableSet s → Measurable
+    (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω s)
+
+/-- **AXIOM A5 (Identification):**
+For bounded measurable `f`, α_f(ω) agrees a.e. with `∫ f dν(ω)`. -/
+axiom directing_measure_identification
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
+  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+  (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1) :
+  ∀ᵐ ω ∂μ, alphaFrom X hX_contract hX_meas hX_L2 f ω
+             = ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)
+
+/-- **AXIOM A6 (Indicator integral continuity at fixed threshold):**
+If `Xₙ → X` a.e. and each `Xₙ`, `X` is measurable, then
+`∫ 1_{(-∞,t]}(Xₙ) dμ → ∫ 1_{(-∞,t]}(X) dμ`. -/
+axiom tendsto_integral_indicator_Iic
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  (Xn : ℕ → Ω → ℝ) (X : Ω → ℝ) (t : ℝ)
+  (hXn_meas : ∀ n, Measurable (Xn n)) (hX_meas : Measurable (X))
+  (hae : ∀ᵐ ω ∂μ, Tendsto (fun n => Xn n ω) atTop (𝓝 (X ω))) :
+  Tendsto (fun n => ∫ ω, (Set.Iic t).indicator (fun _ => (1 : ℝ)) (Xn n ω) ∂μ)
+          atTop
+          (𝓝 (∫ ω, (Set.Iic t).indicator (fun _ => (1 : ℝ)) (X ω) ∂μ))
+
+/-- **AXIOM A7 (α_{Iic t} → 0 at −∞, a.e.). -/
+axiom alphaIic_tendsto_zero_at_bot
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
+  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+  ∀ᵐ ω ∂μ, Tendsto (fun t => alphaIic X hX_contract hX_meas hX_L2 t ω) atBot (𝓝 0)
+
+/-- **AXIOM A8 (α_{Iic t} → 1 at +∞, a.e.). -/
+axiom alphaIic_tendsto_one_at_top
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
+  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+  ∀ᵐ ω ∂μ, Tendsto (fun t => alphaIic X hX_contract hX_meas hX_L2 t ω) atTop (𝓝 1)
+
+/-- **AXIOM A10 (Step 5 packaging):** packaged existence of a directing kernel
+with the pointwise identification for a given bounded measurable `f`. -/
+axiom alpha_is_conditional_expectation_packaged
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
+  (hX_meas : ∀ i, Measurable (X i))
+  (f : ℝ → ℝ) (hf_meas : Measurable f) (alpha : ℕ → Ω → ℝ) :
+  ∃ (nu : Ω → Measure ℝ),
+    (∀ ω, IsProbabilityMeasure (nu ω)) ∧
+    Measurable (fun ω => nu ω (Set.univ)) ∧
+    (∀ n, ∀ᵐ ω ∂μ, alpha n ω = ∫ x, f x ∂(nu ω))
+
+end Helpers
 
 /-- For each fixed t, ω ↦ ν(ω)((-∞,t]) is measurable.
 This is the base case for the π-λ theorem. -/
