@@ -2898,15 +2898,15 @@ lemma alphaIicCE_L1_tendsto_zero_atBot
     have h_fin : ∃ (n : ℕ), μ (X 0 ⁻¹' Set.Iic (-(n : ℝ))) ≠ ⊤ := by
       use 0
       exact measure_ne_top μ _
-    have h_tendsto_ennreal : Tendsto (fun n => μ (X 0 ⁻¹' Set.Iic (-(n : ℝ)))) atTop (𝓝 0) := by
+    have h_tendsto_ennreal : Tendsto (fun (n : ℕ) => μ (X 0 ⁻¹' Set.Iic (-(n : ℝ)))) atTop (𝓝 0) := by
       have := tendsto_measure_iInter_atTop (μ := μ) h_meas h_antitone h_fin
-      simp only [h_empty, measure_empty, Function.comp_apply] at this
-      convert this using 2
-      rfl
-    -- Convert from ENNReal to Real using ENNReal.tendsto_toReal
+      simp only [h_empty, measure_empty] at this
+      simpa [Function.comp] using this
+    -- Convert from ENNReal to Real using continuity of toReal at 0
     have h_ne_top : ∀ n, μ (X 0 ⁻¹' Set.Iic (-(n : ℝ))) ≠ ⊤ := fun n => measure_ne_top μ _
-    convert ENNReal.tendsto_toReal h_tendsto_ennreal (fun _ => h_ne_top _)
-    simp
+    have h_zero_ne_top : (0 : ENNReal) ≠ ⊤ := by norm_num
+    rw [← ENNReal.toReal_zero]
+    exact (ENNReal.continuousAt_toReal h_zero_ne_top).tendsto.comp h_tendsto_ennreal
 
   -- Step 2: L¹ contraction - ‖condExp f‖₁ ≤ ‖f‖₁
   have h_contraction : ∀ n : ℕ,
@@ -2995,15 +2995,15 @@ lemma alphaIicCE_L1_tendsto_one_atTop
     have h_fin : ∃ (n : ℕ), μ (X 0 ⁻¹' Set.Ioi (n : ℝ)) ≠ ⊤ := by
       use 0
       exact measure_ne_top μ _
-    have h_tendsto_ennreal : Tendsto (fun n => μ (X 0 ⁻¹' Set.Ioi (n : ℝ))) atTop (𝓝 0) := by
+    have h_tendsto_ennreal : Tendsto (fun (n : ℕ) => μ (X 0 ⁻¹' Set.Ioi (n : ℝ))) atTop (𝓝 0) := by
       have := tendsto_measure_iInter_atTop (μ := μ) h_meas h_antitone h_fin
-      simp only [h_empty, measure_empty, Function.comp_apply] at this
-      convert this using 2
-      rfl
-    -- Convert from ENNReal to Real using ENNReal.tendsto_toReal
+      simp only [h_empty, measure_empty] at this
+      simpa [Function.comp] using this
+    -- Convert from ENNReal to Real using continuity of toReal at 0
     have h_ne_top : ∀ n, μ (X 0 ⁻¹' Set.Ioi (n : ℝ)) ≠ ⊤ := fun n => measure_ne_top μ _
-    convert ENNReal.tendsto_toReal h_tendsto_ennreal (fun _ => h_ne_top _)
-    simp
+    have h_zero_ne_top : (0 : ENNReal) ≠ ⊤ := by norm_num
+    rw [← ENNReal.toReal_zero]
+    exact (ENNReal.continuousAt_toReal h_zero_ne_top).tendsto.comp h_tendsto_ennreal
 
   -- Step 2: L¹ contraction - ‖condExp f - condExp 1‖₁ ≤ ‖f - 1‖₁
   -- Since condExp 1 = 1, get ‖alphaIicCE - 1‖₁ ≤ ‖indicator - 1‖₁
@@ -3024,10 +3024,20 @@ lemma alphaIicCE_L1_tendsto_one_atTop
         exact Exchangeability.Probability.integrable_indicator_comp (hX_meas 0) measurableSet_Iic
       filter_upwards [h_const, condExp_sub (μ := μ) (m := TailSigma.tailSigma X)
         h_int (integrable_const (1 : ℝ))] with ω h_const_ω h_sub_ω
-      simp only [Pi.sub_apply] at h_sub_ω
-      rw [h_const_ω] at h_sub_ω
-      exact h_sub_ω
-    rw [integral_congr_ae (ae_eq_refl.abs.comp h_ae)]
+      simp only [Pi.sub_apply] at h_sub_ω ⊢
+      -- h_const_ω : 1 = μ[fun _ => 1|...] ω
+      -- h_sub_ω : μ[indIic n ∘ X 0 - fun x => μ[fun x => 1|...] ω|...] ω = ...
+      -- After substitution, we get the equality we need
+      calc alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω - 1
+          = μ[indIic (n : ℝ) ∘ X 0|TailSigma.tailSigma X] ω - 1 := by rfl
+        _ = μ[indIic (n : ℝ) ∘ X 0|TailSigma.tailSigma X] ω - μ[(fun _ => 1)|TailSigma.tailSigma X] ω := by rw [← h_const_ω]
+        _ = μ[indIic (n : ℝ) ∘ X 0 - (fun _ => 1)|TailSigma.tailSigma X] ω := by rw [← h_sub_ω]
+        _ = μ[(fun ω => indIic (n : ℝ) (X 0 ω) - 1)|TailSigma.tailSigma X] ω := by congr
+    have h_ae_abs : (fun ω => |alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω - 1|)
+        =ᵐ[μ] (fun ω => |μ[(fun ω => (indIic (n : ℝ)) (X 0 ω) - 1) | TailSigma.tailSigma X] ω|) := by
+      filter_upwards [h_ae] with ω hω
+      rw [hω]
+    rw [integral_congr_ae h_ae_abs]
     exact integral_abs_condExp_le (μ := μ) (m := TailSigma.tailSigma X) _
 
   -- Apply squeeze theorem: 0 ≤ ‖alphaIicCE - 1‖₁ ≤ ‖indicator - 1‖₁ → 0
@@ -3110,7 +3120,10 @@ lemma alphaIicCE_ae_tendsto_zero_atBot
   -- The limit L = ⨅ n, f_n(ω) and 0 ≤ L ≤ 1
   have hL_eq : L = ⨅ (n : ℕ), alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω :=
     tendsto_nhds_unique hL (tendsto_atTop_ciInf h_mono_ω
-      ⟨0, fun _ ⟨k, rfl⟩ => (h_bound_ω k).1⟩)
+      ⟨0, fun y hy => by
+        obtain ⟨k, hk⟩ := hy
+        rw [← hk]
+        exact (h_bound_ω k).1⟩)
   --  From L¹ convergence ∫|f_n| → 0 and f_n(ω) ≥ 0, we get L = 0
   -- (This uses that L¹ convergence to 0 + a.e. convergence to L implies L = 0 a.e.)
   sorry  -- TODO: Complete L¹ uniqueness argument once alphaIicCE_L1_tendsto_zero_atBot compiles
@@ -3173,7 +3186,9 @@ lemma alphaIicCE_ae_tendsto_one_atTop
       exact h_mono_ω n m hnm
     · -- Bounded above by 1
       refine ⟨1, ?_⟩
-      rintro _ ⟨k, rfl⟩
+      intro y hy
+      obtain ⟨k, hk⟩ := hy
+      rw [← hk]
       exact (h_bound_ω k).2
 
   -- Step 4: The limit is 1 by L¹ convergence
@@ -3182,7 +3197,10 @@ lemma alphaIicCE_ae_tendsto_one_atTop
   -- The limit L = ⨆ n, f_n(ω) and 0 ≤ L ≤ 1
   have hL_eq : L = ⨆ (n : ℕ), alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω :=
     tendsto_nhds_unique hL (tendsto_atTop_ciSup h_mono_ω
-      ⟨1, fun _ ⟨k, rfl⟩ => (h_bound_ω k).2⟩)
+      ⟨1, fun y hy => by
+        obtain ⟨k, hk⟩ := hy
+        rw [← hk]
+        exact (h_bound_ω k).2⟩)
   -- From L¹ convergence ∫|f_n - 1| → 0 and f_n(ω) ≤ 1, we get L = 1
   sorry  -- TODO: Complete L¹ uniqueness argument once alphaIicCE_L1_tendsto_one_atTop compiles
 
