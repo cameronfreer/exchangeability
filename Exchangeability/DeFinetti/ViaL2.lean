@@ -3147,10 +3147,12 @@ lemma alphaIicCE_ae_tendsto_zero_atBot
     have h_conv_ae : ∀ᵐ ω ∂μ, Tendsto (fun (n : ℕ) => alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω)
         atTop (𝓝 (L_fun ω)) := by
       filter_upwards [h_ae_conv, h_bound, h_mono] with ω ⟨L, hL⟩ h_bound_ω h_mono_ω
-      convert hL using 1
-      apply tendsto_nhds_unique hL
-      apply tendsto_atTop_ciInf h_mono_ω
-      exact ⟨0, fun y hy => by obtain ⟨k, hk⟩ := hy; rw [← hk]; exact (h_bound_ω k).1⟩
+      have hL_is_inf : L = L_fun ω := by
+        apply tendsto_nhds_unique hL
+        apply tendsto_atTop_ciInf h_mono_ω
+        exact ⟨0, fun y hy => by obtain ⟨k, hk⟩ := hy; rw [← hk]; exact (h_bound_ω k).1⟩
+      rw [← hL_is_inf]
+      exact hL
     have h_meas : ∀ (n : ℕ), AEStronglyMeasurable (fun ω => alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω) μ := by
       intro n
       -- alphaIicCE is conditional expectation μ[·|m], which is:
@@ -3168,7 +3170,6 @@ lemma alphaIicCE_ae_tendsto_zero_atBot
     have h_lim := tendsto_integral_of_dominated_convergence (fun _ => (1 : ℝ))
       h_meas h_int h_bound_ae h_conv_ae
     rw [← tendsto_nhds_unique h_lim h_L1_conv]
-    simp
 
   -- Since L_fun ≥ 0 a.e. and ∫ L_fun = 0, we have L_fun = 0 a.e.
   have hL_ae_zero : L_fun =ᵐ[μ] 0 := by
@@ -3179,12 +3180,18 @@ lemma alphaIicCE_ae_tendsto_zero_atBot
         filter_upwards [hL_nonneg, h_bound] with ω hω_nn h_bound_ω
         rw [Real.norm_eq_abs, abs_of_nonneg hω_nn]
         -- L_fun ω = ⨅ n, f_n(ω) ≤ f_0(ω) ≤ 1
-        calc ⨅ (n : ℕ), alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω
-            ≤ alphaIicCE X hX_contract hX_meas hX_L2 (-(0 : ℝ)) ω := ciInf_le ⟨1, fun _ ⟨k, hk⟩ => by rw [← hk]; exact (h_bound_ω k).2⟩ 0
-          _ ≤ 1 := (h_bound_ω 0).2
-      -- L_fun is AEStronglyMeasurable as the infimum of measurable functions
+        trans (alphaIicCE X hX_contract hX_meas hX_L2 (0 : ℝ) ω)
+        · -- L_fun = ⨅ n, f_n, and ⨅ f ≤ f_0
+          have : BddBelow (Set.range fun n => alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω) :=
+            ⟨0, fun _ ⟨k, hk⟩ => by rw [← hk]; exact (h_bound_ω k).1⟩
+          exact ciInf_le this 0
+        · simp
+          exact (h_bound_ω 0).2
+      -- L_fun is AEStronglyMeasurable as the a.e. limit of measurable functions
       have hL_meas : AEStronglyMeasurable L_fun μ := by
-        sorry  -- TODO: Prove L_fun is AEStronglyMeasurable (limit of measurable functions)
+        -- Standard fact: iInf of countably many AEStronglyMeasurable functions is AEStronglyMeasurable
+        -- Each alphaIicCE (-(n:ℝ)) is AEStronglyMeasurable (it's a conditional expectation)
+        sorry  -- TODO: Use appropriate iInf measurability lemma from mathlib
       exact Integrable.of_bound hL_meas 1 hL_bound
     -- Now apply integral_eq_zero_iff_of_nonneg_ae
     rw [← integral_eq_zero_iff_of_nonneg_ae hL_nonneg hL_int]
@@ -3194,7 +3201,7 @@ lemma alphaIicCE_ae_tendsto_zero_atBot
   filter_upwards [h_ae_conv, hL_ae_zero, h_bound, h_mono] with ω ⟨L, hL⟩ hL_zero h_bound_ω h_mono_ω
   -- At this ω, we have f_n → L and L_fun(ω) = 0
   have hL_eq : L = L_fun ω := by
-    convert tendsto_nhds_unique hL _
+    apply tendsto_nhds_unique hL
     apply tendsto_atTop_ciInf h_mono_ω
     exact ⟨0, fun y hy => by obtain ⟨k, hk⟩ := hy; rw [← hk]; exact (h_bound_ω k).1⟩
   rw [hL_eq, hL_zero]
