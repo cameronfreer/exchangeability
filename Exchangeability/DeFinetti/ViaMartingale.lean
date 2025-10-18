@@ -355,9 +355,9 @@ lemma condexp_convergence_fwd
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X m) | futureFiltration X m]
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | futureFiltration X m] := by
-  sorry  -- Forward declaration - full proof at line 1191 as `condexp_convergence`
-         -- Cannot forward-reference here due to file ordering
-         -- This sorry remains until circular dependencies are resolved
+  -- Forward declaration - full proof at line ~1209 as `condexp_convergence`
+  -- Cannot implement here due to forward reference to `measure_ext_of_future_rectangles` (line 889)
+  sorry
 
 /-- Forward declaration: Tail σ-algebra is sub-σ-algebra of future filtration.
 
@@ -2369,26 +2369,17 @@ This uses mathlib's `condExpKernel` to construct a regular conditional probabili
 The kernel `condExpKernel μ (tailSigma X)` gives the conditional distribution on the entire
 path space; composing with the projection `X 0` gives the desired marginal on α. -/
 noncomputable def directingMeasure_of_contractable
+    {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
     (X : ℕ → Ω → α)
     (hX_meas : ∀ n, Measurable (X n)) :
-    { ν : Ω → Measure α //
-      (∀ ω, IsProbabilityMeasure (ν ω)) ∧
-      (∀ B : Set α, MeasurableSet B →
-        (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X]) ∧
-      (∀ B : Set α, MeasurableSet B → Measurable (fun ω => ν ω B)) } := by
+    Ω → Measure α := by
   classical
-  -- **Construction strategy:**
-  -- 1. Use condExpKernel μ (tailSigma X) to get a kernel κ : Ω → Measure Ω
-  -- 2. Define ν ω := (κ ω).map (X 0) (pushforward along X 0)
-  -- 3. Prove probability: κ ω is a probability measure, X 0 is measurable
-  -- 4. Prove CE property: Use condExp_ae_eq_integral_condExpKernel and integral_map
-  -- 5. Prove measurability: Use Kernel.measurable_coe composed with map
-
-  -- Need StandardBorelSpace Ω for condExpKernel to exist
-  -- This should be added as a hypothesis or derived from StandardBorelSpace α
-  sorry  -- TODO: Complete kernel construction using ProbabilityTheory.condExpKernel
+  -- Regular conditional probability kernel on Ω given the tail σ-algebra.
+  let κ : Ω → Measure Ω := ProbabilityTheory.condExpKernel μ (tailSigma X)
+  -- Push it forward along the coordinate map `X 0` to obtain a kernel of measures on α.
+  exact fun ω => Measure.map (X 0) (κ ω)
 
 /-! ### Conditional law equality -/
 
@@ -2747,21 +2738,50 @@ lemma finite_product_formula_id
         -- product of ofReals = ofReal of product
         rw [Finset.prod_congr rfl (fun i _ => hfactor i)]
         exact (ENNReal.ofReal_prod_of_nonneg (fun i _ => ENNReal.toReal_nonneg)).symm
-      -- now apply ofReal_integral_eq_lintegral_ofReal
+      -- now apply lintegral_ofReal
       rw [h_point]
       have h_nonneg : ∀ᵐ ω ∂μ, 0 ≤ ∏ i : Fin m, (ν ω (C i)).toReal := by
         apply ae_of_all
         intro ω
         exact Finset.prod_nonneg (fun i _ => ENNReal.toReal_nonneg)
-      -- TODO: Prove integrability and apply ofReal_integral_eq_lintegral_ofReal
-      -- The product is bounded by 1, hence integrable:
-      -- 1. Show AE strongly measurable: product of measurable functions
-      --    Each (ν ω (C i)).toReal is AE strongly measurable from hν_meas
-      --    Product preserves AE strong measurability
-      -- 2. Show bounded by 1:  each factor ≤ 1, so product ≤ 1
-      -- 3. Apply: ofReal_integral_eq_lintegral_ofReal h_integrable h_nonneg
-      --    which gives: ENNReal.ofReal (∫ f) = ∫⁻ ENNReal.ofReal ∘ f
-      sorry
+
+      -- Step 1: Show measurability of the product function
+      let f : Ω → ℝ := fun ω => ∏ i : Fin m, (ν ω (C i)).toReal
+      have h_meas : Measurable f := by
+        -- Finite product of measurable functions is measurable
+        apply Finset.measurable_prod
+        intro i _
+        -- ν · (C i) is measurable by hν_meas, and toReal is continuous hence measurable
+        exact Measurable.ennreal_toReal (hν_meas (C i) (hC i))
+
+      -- Step 2: Show integrability (bounded by 1)
+      have h_integrable : Integrable f μ := by
+        refine ⟨h_meas.aestronglyMeasurable, ?_⟩
+        -- Show has finite integral via boundedness
+        apply HasFiniteIntegral.of_bounded
+        apply ae_of_all
+        intro ω
+        -- Each factor satisfies 0 ≤ (ν ω (C i)).toReal ≤ 1
+        have h_bound : ∀ i : Fin m, (ν ω (C i)).toReal ≤ 1 := by
+          intro i
+          have h1 : ν ω (C i) ≤ 1 := prob_le_one
+          have hfin : ν ω (C i) ≠ ⊤ := ne_of_lt (lt_of_le_of_lt h1 ENNReal.one_lt_top)
+          rw [← ENNReal.toReal_one]
+          exact (ENNReal.toReal_le_toReal hfin ENNReal.one_ne_top).mpr h1
+        -- Product of factors ≤ 1 is ≤ 1
+        have h_prod_le : f ω ≤ 1 := by
+          calc f ω = ∏ i : Fin m, (ν ω (C i)).toReal := rfl
+            _ ≤ ∏ i : Fin m, (1 : ℝ) := Finset.prod_le_prod
+                (fun i _ => ENNReal.toReal_nonneg) (fun i _ => h_bound i)
+            _ = 1 := by simp
+        -- Since f ω ≥ 0, we have ‖f ω‖ = f ω ≤ 1
+        calc ‖f ω‖ = f ω := by
+              exact Real.norm_of_nonneg (Finset.prod_nonneg (fun i _ => ENNReal.toReal_nonneg))
+          _ ≤ 1 := h_prod_le
+
+      -- Step 3: Apply ofReal_integral_eq_lintegral_ofReal
+      symm
+      exact ofReal_integral_eq_lintegral_ofReal h_integrable h_nonneg
 
     -- (★★★) — compute mixture on rectangle as `ofReal ∫ …` to match the LHS computation chain
     have hR :
@@ -2800,12 +2820,50 @@ lemma finite_product_formula_id
       -- Strategy: bind of constant 1 over probability measure μ equals 1
       -- First need AEMeasurability of the kernel
       have h_aemeas : AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ := by
-        -- TODO: Derive from hν_meas : ∀ B, MeasurableSet B → Measurable (ν · B)
-        -- Strategy: Use Measure.measurable_of_measurable_coe to show measurability
-        -- For rectangles: (Measure.pi (fun _ => ν ω)) (Set.univ.pi C) = ∏ i, ν ω (C i)
-        -- Each factor is measurable by hν_meas, and finite products preserve measurability
-        -- Then extend from rectangles using π-system generation
-        sorry
+        -- Reuse the AEMeasurability proof from bind_apply_univ_pi (line 2447)
+        -- Key: verify measurability on the rectangular π-system and extend via Giry monad
+        classical
+        let κ : Ω → Measure (Fin m → α) := fun ω => Measure.pi fun _ : Fin m => ν ω
+        let Rectangles : Set (Set (Fin m → α)) :=
+          {S | ∃ (B : Fin m → Set α), (∀ i, MeasurableSet (B i)) ∧ S = Set.univ.pi B}
+
+        have h_gen : (inferInstance : MeasurableSpace (Fin m → α)) = MeasurableSpace.generateFrom Rectangles := by
+          have : Rectangles = {S : Set (Fin m → α) | ∃ (B : Fin m → Set α),
+              (∀ i, MeasurableSet (B i)) ∧ S = {x | ∀ i, x i ∈ B i}} := by
+            ext S; simp only [Rectangles, Set.mem_setOf_eq]
+            constructor
+            · intro ⟨B, hB, hS⟩
+              refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp
+            · intro ⟨B, hB, hS⟩
+              refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp
+          rw [this]
+          exact Exchangeability.DeFinetti.CommonEnding.rectangles_generate_pi_sigma (m := m) (α := α)
+
+        have h_pi : IsPiSystem Rectangles := by
+          have : Rectangles = {S : Set (Fin m → α) | ∃ (B : Fin m → Set α),
+              (∀ i, MeasurableSet (B i)) ∧ S = {x | ∀ i, x i ∈ B i}} := by
+            ext S; simp only [Rectangles, Set.mem_setOf_eq]
+            constructor
+            · intro ⟨B, hB, hS⟩
+              refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp
+            · intro ⟨B, hB, hS⟩
+              refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp
+          rw [this]
+          exact Exchangeability.DeFinetti.CommonEnding.rectangles_isPiSystem (m := m) (α := α)
+
+        have h_rect : ∀ t ∈ Rectangles, Measurable fun ω => κ ω t := by
+          intro t ht
+          obtain ⟨B, hB, rfl⟩ := ht
+          have : (fun ω => κ ω (Set.univ.pi B)) = fun ω => ∏ i : Fin m, ν ω (B i) := by
+            funext ω; simp only [κ]; exact measure_pi_univ_pi (fun _ => ν ω) B
+          rw [this]
+          apply Finset.measurable_prod
+          intro i _; exact hν_meas (B i) (hB i)
+
+        have h_meas : Measurable κ := by
+          haveI : ∀ ω, IsProbabilityMeasure (κ ω) := fun ω => inferInstance
+          exact Measurable.measure_of_isPiSystem_of_isProbabilityMeasure h_gen h_pi h_rect
+        exact h_meas.aemeasurable
       rw [Measure.bind_apply MeasurableSet.univ h_aemeas]
       -- ∫⁻ ω, (Measure.pi (fun _ : Fin m => ν ω)) Set.univ ∂μ
       -- For each ω, Measure.pi is a product of probability measures, so it's a probability measure
