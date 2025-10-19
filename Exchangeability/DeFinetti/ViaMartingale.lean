@@ -355,9 +355,9 @@ lemma condexp_convergence_fwd
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X m) | futureFiltration X m]
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | futureFiltration X m] := by
-  sorry  -- Forward declaration - full proof at line 1191 as `condexp_convergence`
-         -- Cannot forward-reference here due to file ordering
-         -- This sorry remains until circular dependencies are resolved
+  -- Forward declaration - full proof at line ~1209 as `condexp_convergence`
+  -- Cannot implement here due to forward reference to `measure_ext_of_future_rectangles` (line 889)
+  sorry
 
 /-- Forward declaration: Tail σ-algebra is sub-σ-algebra of future filtration.
 
@@ -1807,9 +1807,9 @@ lemma condexp_indicator_eq_on_join_of_triple_law
     (Y : Ω → α) (Zr : Ω → (Fin r → α)) (θk θk' : Ω → (Fin k → α))
     (hY : Measurable Y) (hZr : Measurable Zr) (hθk : Measurable θk)
     (hθk' : Measurable θk')
-    (hpush :
-      Measure.map (fun ω => (Y ω, θk ω)) μ
-        = Measure.map (fun ω => (Y ω, θk' ω)) μ)
+    (htriple :
+      Measure.map (fun ω => (Zr ω, Y ω, θk ω)) μ
+        = Measure.map (fun ω => (Zr ω, Y ω, θk' ω)) μ)
     (B : Set α) (hB : MeasurableSet B) :
   μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y
        | MeasurableSpace.comap (fun ω => (Zr ω, θk ω)) inferInstance]
@@ -1915,25 +1915,23 @@ lemma block_coord_condIndep
     have h_triple := contractable_triple_pushforward
         (X := X) (μ := μ) (hX := hX) (hX_meas := hX_meas) (hrm := hrm)
         (r := r) (m := m) (k := k)
+
+    -- Rewrite h_triple in terms of our local variables
+    have hZr_eq : Zr = fun ω i => X i.val ω := by rfl
+    have hY_eq : Y = X r := by rfl
+    have hθk_eq : θk = fun ω j => X (m + 1 + j.val) ω := by rfl
+    have hθk'_eq : θk' = fun ω j => X (r + 1 + j.val) ω := by rfl
+
+    have h_triple' : Measure.map (fun ω => (Zr ω, Y ω, θk ω)) μ
+        = Measure.map (fun ω => (Zr ω, Y ω, θk' ω)) μ := by
+      simp only [hZr_eq, hY_eq, hθk_eq, hθk'_eq]
+      exact h_triple
+
     -- Project to pairs `(Y, θk)` vs `(Y, θk')`
     have h_pair :
         Measure.map (fun ω => (Y ω, θk ω)) μ
           = Measure.map (fun ω => (Y ω, θk' ω)) μ := by
       -- Project the triple equality to pairs using Prod.snd
-      -- h_triple gives: map (Zr, Y, θk_future) μ = map (Zr, Y, θk_tail) μ
-      -- where the functions are defined in the `let` bindings of h_triple
-
-      -- First, show that our Zr, Y, θk match the definitions in h_triple
-      have hZr_eq : Zr = fun ω i => X i.val ω := by rfl
-      have hY_eq : Y = X r := by rfl
-      have hθk_eq : θk = fun ω j => X (m + 1 + j.val) ω := by rfl
-      have hθk'_eq : θk' = fun ω j => X (r + 1 + j.val) ω := by rfl
-
-      -- Rewrite h_triple in terms of our variables
-      have h_triple' : Measure.map (fun ω => (Zr ω, Y ω, θk ω)) μ
-          = Measure.map (fun ω => (Zr ω, Y ω, θk' ω)) μ := by
-        simp only [hZr_eq, hY_eq, hθk_eq, hθk'_eq]
-        exact h_triple
 
       -- Now project using Prod.snd
       have h_θk_proj : (fun ω => (Y ω, θk ω)) = Prod.snd ∘ (fun ω => (Zr ω, Y ω, θk ω)) := by
@@ -1960,7 +1958,7 @@ lemma block_coord_condIndep
       finFutureSigma X m k = MeasurableSpace.comap θk inferInstance := rfl
     -- now apply the packaged bridge lemma
     have h_bridge := condexp_indicator_eq_on_join_of_triple_law
-        Y Zr θk θk' hY_meas hZr_meas hθk_meas hθk'_meas h_pair B hB
+        Y Zr θk θk' hY_meas hZr_meas hθk_meas hθk'_meas h_triple' B hB
     -- Convert using the σ-algebra equalities (convert closes goals via defeq)
     convert h_bridge using 2
   -- Step 2: pass to the limit k → ∞ (Lévy upward)
@@ -2021,16 +2019,50 @@ lemma block_coord_condIndep
         = (firstRSigma X r ⊔ futureFiltration X m) := by
     simp [hiSup_fin, iSup_sup_eq]  -- uses lattice lemmas
   -- Upward convergence on both sides, then identify the limits by equality levelwise
-  -- The axiom condExp_tendsto_iSup gives pointwise a.e. convergence;
-  -- we need to extract function-level convergence in L¹ or a.e. sense.
-  sorry  -- TODO: Apply condExp_tendsto_iSup (Lévy upward) to get pointwise convergence,
-         -- then lift to function convergence using:
-         -- - h_up_left: convergence on join
-         -- - h_up_right: convergence on finFutureSigma
-         -- - Use h_finite for levelwise equality
-         -- - Apply tendsto_nhds_unique to conclude limits are a.e. equal
-         --
-         -- The structure is correct but needs proper handling of pointwise vs function convergence
+  -- Apply Lévy upward (condExp_tendsto_iSup) to both sequences of σ-algebras
+  have h_integrable : Integrable (Set.indicator B (fun _ => (1 : ℝ)) ∘ Y) μ := by
+    refine Integrable.indicator ?_ (hY_meas hB)
+    exact integrable_const (1 : ℝ)
+  -- Left side: convergence on the join
+  have h_up_left : ∀ᵐ ω ∂μ, Tendsto
+      (fun k => μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | firstRSigma X r ⊔ finFutureSigma X m k] ω)
+      atTop
+      (𝓝 (μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | firstRSigma X r ⊔ futureFiltration X m] ω)) := by
+    have hmono_join : Monotone (fun k => firstRSigma X r ⊔ finFutureSigma X m k) :=
+      fun _ _ hkℓ => sup_le_sup_left (hmono_fin hkℓ) _
+    have hle_join : ∀ k, firstRSigma X r ⊔ finFutureSigma X m k ≤ (inferInstance : MeasurableSpace Ω) :=
+      fun _ => sup_le (firstRSigma_le_ambient X r hX_meas) (finFutureSigma_le_ambient X m _ hX_meas)
+    rw [← hiSup_join]
+    exact Exchangeability.Probability.condExp_tendsto_iSup hmono_join hle_join _ h_integrable
+  -- Right side: convergence on finFutureSigma
+  have h_up_right : ∀ᵐ ω ∂μ, Tendsto
+      (fun k => μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | finFutureSigma X m k] ω)
+      atTop
+      (𝓝 (μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | futureFiltration X m] ω)) := by
+    have hle_fin : ∀ k, finFutureSigma X m k ≤ (inferInstance : MeasurableSpace Ω) :=
+      fun k => finFutureSigma_le_ambient X m k hX_meas
+    rw [← hiSup_fin]
+    exact Exchangeability.Probability.condExp_tendsto_iSup hmono_fin hle_fin _ h_integrable
+  -- Combine: levelwise equality + both converge ⇒ limits are a.e. equal
+  -- For ae ω, both sequences converge, and they agree at each level k
+  -- Build the ae-set where everything holds
+  have h_ae_eq : ∀ k, ∀ᵐ ω ∂μ,
+      μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | firstRSigma X r ⊔ finFutureSigma X m k] ω
+        = μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | finFutureSigma X m k] ω :=
+    fun k => h_finite k
+  -- Extract ae-set where all equalities hold
+  have h_eventually_eq : ∀ᵐ ω ∂μ, ∀ k,
+      μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | firstRSigma X r ⊔ finFutureSigma X m k] ω
+        = μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | finFutureSigma X m k] ω := by
+    rw [ae_all_iff]
+    exact h_ae_eq
+  filter_upwards [h_up_left, h_up_right, h_eventually_eq] with ω h_left h_right h_eq
+  -- At this ω: both sequences converge and agree levelwise, so limits are equal
+  have h_eq_seq : (fun k => μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | firstRSigma X r ⊔ finFutureSigma X m k] ω)
+                = (fun k => μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | finFutureSigma X m k] ω) := by
+    ext k; exact h_eq k
+  rw [h_eq_seq] at h_left
+  exact tendsto_nhds_unique h_left h_right
 
 /-- **Product formula for conditional expectations under conditional independence.**
 
@@ -2369,26 +2401,17 @@ This uses mathlib's `condExpKernel` to construct a regular conditional probabili
 The kernel `condExpKernel μ (tailSigma X)` gives the conditional distribution on the entire
 path space; composing with the projection `X 0` gives the desired marginal on α. -/
 noncomputable def directingMeasure_of_contractable
+    {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
     (X : ℕ → Ω → α)
     (hX_meas : ∀ n, Measurable (X n)) :
-    { ν : Ω → Measure α //
-      (∀ ω, IsProbabilityMeasure (ν ω)) ∧
-      (∀ B : Set α, MeasurableSet B →
-        (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X]) ∧
-      (∀ B : Set α, MeasurableSet B → Measurable (fun ω => ν ω B)) } := by
+    Ω → Measure α := by
   classical
-  -- **Construction strategy:**
-  -- 1. Use condExpKernel μ (tailSigma X) to get a kernel κ : Ω → Measure Ω
-  -- 2. Define ν ω := (κ ω).map (X 0) (pushforward along X 0)
-  -- 3. Prove probability: κ ω is a probability measure, X 0 is measurable
-  -- 4. Prove CE property: Use condExp_ae_eq_integral_condExpKernel and integral_map
-  -- 5. Prove measurability: Use Kernel.measurable_coe composed with map
-
-  -- Need StandardBorelSpace Ω for condExpKernel to exist
-  -- This should be added as a hypothesis or derived from StandardBorelSpace α
-  sorry  -- TODO: Complete kernel construction using ProbabilityTheory.condExpKernel
+  -- Regular conditional probability kernel on Ω given the tail σ-algebra.
+  let κ : Ω → Measure Ω := ProbabilityTheory.condExpKernel μ (tailSigma X)
+  -- Push it forward along the coordinate map `X 0` to obtain a kernel of measures on α.
+  exact fun ω => Measure.map (X 0) (κ ω)
 
 /-! ### Conditional law equality -/
 
