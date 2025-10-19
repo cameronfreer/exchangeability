@@ -286,6 +286,41 @@ lemma generateFrom_prefixCylinders :
       (α:=fun _ : ℕ => α)] using h_subset
 
 /--
+Helper lemma: Measures agree on total mass if they agree on all finite marginals.
+
+The key insight is that the 1-dimensional marginal determines the total measure
+of the entire space.
+-/
+private lemma totalMass_eq_of_fin_marginals_eq {μ ν : Measure (ℕ → α)}
+    [IsFiniteMeasure μ] [IsFiniteMeasure ν]
+    (h : ∀ n (S : Set (Fin n → α)) (_hS : MeasurableSet S),
+        Measure.map (prefixProj (α:=α) n) μ S =
+        Measure.map (prefixProj (α:=α) n) ν S) :
+    μ Set.univ = ν Set.univ := by
+  classical
+  simpa [Measure.map_apply_of_aemeasurable
+    ((measurable_prefixProj (α:=α) (n:=1)).aemeasurable)]
+    using h 1 Set.univ MeasurableSet.univ
+
+/--
+Helper lemma: Measures agree on prefix cylinders if they agree on finite marginals.
+
+Any prefix cylinder is the preimage of a measurable set under a finite projection,
+so agreement on marginals implies agreement on cylinders.
+-/
+private lemma prefixCylinders_eq_of_fin_marginals_eq {μ ν : Measure (ℕ → α)}
+    (h : ∀ n (S : Set (Fin n → α)) (_hS : MeasurableSet S),
+        Measure.map (prefixProj (α:=α) n) μ S =
+        Measure.map (prefixProj (α:=α) n) ν S)
+    (A : Set (ℕ → α)) (hA : A ∈ prefixCylinders (α:=α)) :
+    μ A = ν A := by
+  classical
+  obtain ⟨n, S, hS, rfl⟩ := hA
+  simp only [prefixCylinder, ← Measure.map_apply_of_aemeasurable
+    ((measurable_prefixProj (α:=α) (n:=n)).aemeasurable) hS]
+  exact h n S hS
+
+/--
 Finite measures with matching finite-dimensional marginals are equal.
 
 If two finite measures on `ℕ → α` induce the same distribution on each
@@ -294,6 +329,11 @@ consequence of the π-system uniqueness theorem applied to prefix cylinders.
 
 **Mathematical content:** This is a Kolmogorov extension-type result showing
 that infinite-dimensional measures are determined by their finite marginals.
+
+**Proof structure:** The proof decomposes into three steps:
+1. Measures agree on total mass (via 1-dimensional marginal)
+2. Measures agree on all prefix cylinders (direct from marginals)
+3. Apply π-system uniqueness to extend agreement to all measurable sets
 -/
 theorem measure_eq_of_fin_marginals_eq {μ ν : Measure (ℕ → α)}
     [IsFiniteMeasure μ] [IsFiniteMeasure ν]
@@ -301,19 +341,11 @@ theorem measure_eq_of_fin_marginals_eq {μ ν : Measure (ℕ → α)}
         Measure.map (prefixProj (α:=α) n) μ S =
         Measure.map (prefixProj (α:=α) n) ν S) : μ = ν := by
   classical
-  have h_univ : μ Set.univ = ν Set.univ := by
-    simpa [Measure.map_apply_of_aemeasurable
-      ((measurable_prefixProj (α:=α) (n:=1)).aemeasurable)]
-      using h 1 Set.univ MeasurableSet.univ
   apply MeasureTheory.ext_of_generate_finite (C:=prefixCylinders (α:=α))
   · simp [generateFrom_prefixCylinders (α:=α)]
   · exact isPiSystem_prefixCylinders (α:=α)
-  · intro A hA
-    obtain ⟨n, S, hS, rfl⟩ := hA
-    simp only [prefixCylinder, ← Measure.map_apply_of_aemeasurable
-      ((measurable_prefixProj (α:=α) (n:=n)).aemeasurable) hS]
-    exact h n S hS
-  · simpa using h_univ
+  · exact prefixCylinders_eq_of_fin_marginals_eq (α:=α) h
+  · exact totalMass_eq_of_fin_marginals_eq (α:=α) h
 
 /-- Convenience wrapper of `measure_eq_of_fin_marginals_eq` for probability measures. -/
 theorem measure_eq_of_fin_marginals_eq_prob {μ ν : Measure (ℕ → α)}

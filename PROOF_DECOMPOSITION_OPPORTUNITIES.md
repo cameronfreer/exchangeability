@@ -200,3 +200,126 @@ theorem tailProcess_eq_iInf_revFiltration :=
 ---
 
 **Note:** This is documentation for future work. Current priority is completing Tier 1 refactoring (IntegrationHelpers + StrictMono).
+
+---
+
+## Additional Refactoring Tiers (For Later)
+
+### Tier 2: Medium-Value Consolidation (deferred)
+
+#### Extract CE Utilities from ViaKoopman (~half day, -120 lines)
+
+**Current status:** ViaKoopman has extensive conditional expectation utilities tightly coupled with proof
+
+**Files to extract to:**
+- `Probability/CondExp.lean` (already exists)
+- `Probability/CondExpExtras.lean` (already exists)
+
+**Key utilities to extract:**
+- `condexp_pullback_factor` (line 463) - CE pullback along factor maps
+- `condexp_precomp_iterate_eq_of_invariant` (line 542) - CE invariance under measure-preserving iterates
+- Various axioms that could be proven lemmas
+
+**Why deferred:**
+- ViaKoopman still has compilation issues
+- CE utilities are tightly coupled with Koopman operator proof
+- Better to wait until proof stabilizes
+- Estimated effort: ~4 hours
+
+**Expected impact:**
+- Reduce ViaKoopman by ~120 lines
+- Make CE utilities available to other proofs
+- Cleaner separation of concerns
+
+---
+
+### Tier 3: Long-Term Organization (1-2 weeks, mathlib contribution)
+
+#### Extract Ergodic Theory Infrastructure
+
+**VERY HIGH VALUE for mathlib community contribution**
+
+**Components ready for extraction:**
+
+1. **KoopmanMeanErgodic.lean** (347 lines) → `Mathlib.Dynamics.Ergodic.MeanErgodic`
+   - Koopman operator definition
+   - Fixed-point subspace characterization
+   - Mean Ergodic Theorem: `birkhoffAverage_tendsto_metProjection`
+   - **Pure ergodic theory** - not de Finetti-specific
+
+2. **ProjectionLemmas.lean** (227 lines) → `Mathlib.Analysis.InnerProductSpace.Projection`
+   - Orthogonal projection uniqueness
+   - Hilbert space machinery
+   - **Pure functional analysis**
+
+3. **InvariantSigma.lean** (~200 lines extractable) → `Mathlib.Dynamics.Ergodic.Invariant`
+   - Shift-invariant σ-algebra (general theory)
+   - Connection to conditional expectation
+   - **General ergodic theory**
+
+4. **Natural Extension Infrastructure** (ViaKoopman lines 122-425)
+   - `Ωℤ[α]` - Bi-infinite path space
+   - `shiftℤ`, `shiftℤInv` - Two-sided shift operators
+   - `NaturalExtensionData` structure
+   - Extract to `Exchangeability/Ergodic/NaturalExtension.lean`
+
+**Recommended process:**
+1. Extract to `Ergodic/` directory as staging area (3 days)
+2. Polish to mathlib standards (2 days)
+3. Write comprehensive documentation (1 day)
+4. Submit mathlib PRs when de Finetti proof is published (1 week review cycle)
+
+**Why this is valuable:**
+- ~774 lines of pure mathematics that belong in mathlib
+- Not used by ViaL2 or ViaMartingale - purely Koopman-specific
+- Fills gaps in mathlib's ergodic theory library
+- Community contribution opportunity
+
+**Why deferred:**
+- Long-term project (1-2 weeks total)
+- Should wait until de Finetti proofs are complete and published
+- Mathlib submission has overhead (review process, documentation standards)
+- Not blocking current proof development
+
+**Impact:**
+- ~774 lines moved to mathlib (external to project)
+- Cleaner project structure
+- Community contribution
+- Better separation of general theory vs. application
+
+---
+
+### Tier 4: Advanced Optimizations (future consideration)
+
+#### Stieltjes/CDF Infrastructure Extraction
+
+**Current status:** 700+ lines of CDF/Stieltjes infrastructure in ViaL2.lean (lines 2555-3423)
+
+**Potential extraction:** `Probability/StieltjesMeasureHelpers.lean`
+
+**Components:**
+- `indIic` - Indicator for `(-∞, t]` intervals
+- `alphaIic` - Raw CDF from Cesàro averages
+- `alphaIicCE` - Canonical conditional expectation version
+- `cdf_from_alpha` - Right-continuous CDF via rational envelope
+- `directing_measure` - Stieltjes measure construction
+
+**Reusability:** Medium-High
+- Rational envelope technique for right-continuity is general
+- Endpoint limit infrastructure uses only dominated convergence
+- Stieltjes measure construction is generic
+
+**Why deferred:**
+- Currently ViaL2-specific (depends on contractability and L² bounds)
+- Integrated into the L² proof flow
+- Only extract if ViaMartingale or ViaKoopman need CDF construction
+- Estimated extractable: ~300 lines of generic infrastructure
+
+**Decision criteria:**
+- **Extract if:** Other proofs need similar CDF constructions
+- **Keep in ViaL2 if:** Only used by L² proof
+
+---
+
+**Updated:** 2025-10-19
+**Note:** Tiers 2-4 should be considered after all three de Finetti proofs compile successfully.
