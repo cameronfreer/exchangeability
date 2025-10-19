@@ -95,39 +95,98 @@ def tailShift (α : Type*) [MeasurableSpace α] : MeasurableSpace (ℕ → α) :
 
 namespace MeasurableSpace
 
-/-- Swap sides in the adjunction `comap_le_iff_le_map` to get a
-    convenient form for goals of the shape `map f _ ≤ _`. -/
-lemma map_le_iff_le_comap {α β : Type*} (f : α → β)
-    {mα : MeasurableSpace α} {mβ : MeasurableSpace β} :
-  MeasurableSpace.map f mα ≤ mβ ↔ mα ≤ MeasurableSpace.comap f mβ :=
-  ⟨fun h => MeasurableSpace.comap_le_iff_le_map.mpr h,
-   fun h => MeasurableSpace.comap_le_iff_le_map.mp h⟩
+/-- Preimage is injective on sets when `f` is surjective. -/
+lemma preimage_injective_of_surjective {α β} {f : α → β}
+    (hf : Function.Surjective f) :
+  Function.Injective (fun (s : Set β) => f ⁻¹' s) := by
+  intro s t hpre
+  ext y
+  rcases hf y with ⟨x, rfl⟩
+  -- compare membership in equal preimages
+  simpa using congrArg (fun (A : Set α) => x ∈ A) hpre
+
+/-- If `f` is surjective, then `map f (comap f m) = m`. -/
+lemma map_comap_eq_of_surjective {α β} {f : α → β}
+    (hf : Function.Surjective f) (m : MeasurableSpace β) :
+  MeasurableSpace.map f (MeasurableSpace.comap f m) = m := by
+  classical
+  -- Prove by extensionality on measurable sets.
+  ext S; constructor
+  · -- `S ∈ map f (comap f m)` iff `f ⁻¹' S ∈ comap f m`
+    intro hS
+    change MeasurableSet[MeasurableSpace.comap f m] (f ⁻¹' S) at hS
+    rcases hS with ⟨T, hT, hpre⟩
+    -- injectivity of preimage under surjectivity identifies `S = T`
+    have hinj := preimage_injective_of_surjective (α := α) (β := β) hf
+    have : S = T := hinj hpre
+    simpa [this]
+  · -- unit inequality `m ≤ map f (comap f m)`
+    intro hS
+    change MeasurableSet[MeasurableSpace.comap f m] (f ⁻¹' S)
+    exact ⟨S, hS, rfl⟩
 
 end MeasurableSpace
 
 omit [MeasurableSpace Ω] [MeasurableSpace α] in
-/-- `comap` preserves arbitrary infima (right adjoint property).
+/-- `comap` distributes over `iInf` unconditionally (≤ direction only).
 
-    Key insight: In the Galois connection `map f ⊣ comap f`, the RIGHT adjoint `comap`
-    preserves all infima, while the LEFT adjoint `map` preserves all suprema.
-    This is why `comap_iInf` holds unconditionally (no surjectivity needed). -/
-lemma comap_iInf {ι : Sort*} (f : α → β) (m : ι → MeasurableSpace β) :
-    MeasurableSpace.comap f (iInf m) = iInf (fun i => MeasurableSpace.comap f (m i)) := by
-  refine le_antisymm ?le ?ge
-  · -- `≤` by monotonicity
+    The inequality `comap f (⨅ i, m i) ≤ ⨅ i, comap f (m i)` holds by monotonicity.
+    The reverse inequality (and hence equality) requires `f` to be surjective.
+    See `iInf_comap_eq_comap_iInf_of_surjective` for the surjective case. -/
+lemma comap_iInf_le {ι : Sort*} (f : α → β) (m : ι → MeasurableSpace β) :
+    MeasurableSpace.comap f (iInf m) ≤ iInf (fun i => MeasurableSpace.comap f (m i)) := by
+  refine le_iInf (fun i => ?_)
+  exact MeasurableSpace.comap_mono (iInf_le m i)
+
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
+/-- With `f` surjective and a nonempty index type, `comap` commutes with `⨅`. -/
+lemma iInf_comap_eq_comap_iInf_of_surjective
+    {ι : Type*} [Nonempty ι] {α β : Type*} {f : α → β}
+    (hf : Function.Surjective f)
+    (m : ι → MeasurableSpace β) :
+  iInf (fun i => MeasurableSpace.comap f (m i))
+    = MeasurableSpace.comap f (iInf m) := by
+  classical
+  -- We'll prove both inequalities by elementwise (membership) arguments.
+
+  -- (≥) direction holds unconditionally (monotonicity).
+  have hge :
+      MeasurableSpace.comap f (iInf m)
+        ≤ iInf (fun i => MeasurableSpace.comap f (m i)) := by
     refine le_iInf (fun i => ?_)
-    exact MeasurableSpace.comap_mono (iInf_le m i)
-  · -- `≥` via the adjunction: show `map f (⨅ i, comap f (m i)) ≤ ⨅ i, m i`
-    -- and translate back with `map_le_iff_le_comap`.
-    -- First build the componentwise inequalities:
-    have hcomp :
-        MeasurableSpace.map f (iInf fun j => MeasurableSpace.comap f (m j))
-          ≤ iInf m :=
-      le_iInf (fun i =>
-        (MeasurableSpace.map_le_iff_le_comap (f := f)).2
-          (iInf_le (fun j => MeasurableSpace.comap f (m j)) i))
-    -- Flip using the equivalence:
-    exact (MeasurableSpace.map_le_iff_le_comap (f := f)).1 hcomp
+    exact MeasurableSpace.comap_mono (iInf_le _ i)
+
+  -- (≤) direction uses surjectivity to unify the witnesses.
+  have hle :
+      iInf (fun i => MeasurableSpace.comap f (m i))
+        ≤ MeasurableSpace.comap f (iInf m) := by
+    -- Unfold the `≤` relation for measurable spaces: elementwise on measurable sets.
+    intro s hs
+    -- In `⨅ i, comap f (m i)`, measurability is "for all i, there exists Tᵢ with s = f ⁻¹' Tᵢ".
+    -- Choose the witnesses Tᵢ along with measurability and the preimage identity.
+    choose T hTmeas hspre using
+      (fun i => by
+        rcases hs i with ⟨Ti, hmi, rfl⟩
+        exact ⟨Ti, hmi, rfl⟩)
+    -- All `T i` are equal because their preimages are all `s` and `f` is surjective.
+    have hinj := MeasurableSpace.preimage_injective_of_surjective (α := α) (β := β) hf
+    have Tall : ∀ i j, T i = T j := by
+      intro i j; apply hinj; simpa [hspre i, hspre j]
+    -- Fix an index `i₀` and set `T₀ := T i₀`.
+    rcases ‹Nonempty ι› with ⟨i₀⟩
+    let T0 : Set β := T i₀
+    have T_all : ∀ i, T i = T0 := fun i => Tall i i₀
+    -- Rewrite the data with `T0`.
+    have s_pre : s = f ⁻¹' T0 := by simpa [T_all i₀] using hspre i₀
+    have T0_meas_all : ∀ i, MeasurableSet[m i] T0 := fun i => by simpa [T_all i] using hTmeas i
+    -- Conclude: `s` is the preimage of a set measurable in every `m i`,
+    -- hence `s` is measurable in `comap f (⨅ i, m i)`.
+    refine ⟨T0, ?_, s_pre.symm⟩
+    -- Measurable in `⨅ i, m i` means measurable in every slice.
+    intro i
+    exact T0_meas_all i
+
+  exact le_antisymm hle hge
 
 /-! ### Bridge Lemmas (LOAD-BEARING - Phase 1a) -/
 
@@ -190,21 +249,46 @@ lemma tailProcess_coords_eq_tailShift :
   exact (comap_shift_eq_iSup_comap_coords n).symm
 
 omit [MeasurableSpace Ω] in
-/-- **Bridge 2 (pullback along sample-path map).**
-    Let `Φ : Ω → (ℕ → α)` be `Φ ω k := X k ω`. Then the process tail equals the
-    pullback of the path tail along `Φ`.
+/-- **Bridge 2a (unconditional inequality).**
+    The process tail is always at least as coarse as the pullback of the path tail.
 
-    **Proof strategy:** Use that `comap` preserves `iInf` (right adjoint property). -/
-lemma tailProcess_eq_comap_path (X : ℕ → Ω → α) :
-    tailProcess X
-      =
-    MeasurableSpace.comap (fun ω : Ω => fun k => X k ω) (tailShift α) := by
-  -- Everything folds by definitions + `comap_iInf` and our slice lemma.
+    **Note:** Equality holds when the sample-path map is surjective.
+    See `tailProcess_eq_comap_path_of_surjective`. -/
+lemma comap_path_tailShift_le_tailProcess (X : ℕ → Ω → α) :
+    MeasurableSpace.comap (fun ω : Ω => fun k => X k ω) (tailShift α) ≤ tailProcess X := by
   simp only [tailProcess, tailShift]
-  rw [comap_iInf]
-  congr 1
-  funext n
-  exact tailFamily_eq_comap_sample_path_shift X n
+  trans (iInf (fun n => MeasurableSpace.comap (fun ω : Ω => fun k => X k ω)
+    (MeasurableSpace.comap (fun (ω : ℕ → α) => fun k => ω (n + k)) inferInstance)))
+  · exact comap_iInf_le _ _
+  · apply le_iInf
+    intro n
+    have eq_n := tailFamily_eq_comap_sample_path_shift X n
+    rw [← eq_n]
+    apply iInf_le
+
+omit [MeasurableSpace Ω] in
+/-- **Bridge 2b (surjective equality).**
+    When the sample-path map `Φ : Ω → (ℕ → α)` given by `Φ ω k := X k ω` is surjective,
+    the process tail equals the pullback of the path tail along `Φ`.
+
+    **Proof strategy:** Use `iInf_comap_eq_comap_iInf_of_surjective` with `Nonempty ℕ`. -/
+lemma tailProcess_eq_comap_path_of_surjective
+    (X : ℕ → Ω → α)
+    (hΦ : Function.Surjective (fun ω : Ω => fun k => X k ω)) :
+  tailProcess X
+    =
+  MeasurableSpace.comap (fun ω : Ω => fun k => X k ω) (tailShift α) := by
+  classical
+  simp only [tailProcess, tailShift]
+  have step1 : iInf (tailFamily X) =
+      iInf (fun n => MeasurableSpace.comap (fun ω k => X k ω)
+        (MeasurableSpace.comap (fun ω k => ω (n + k)) inferInstance)) := by
+    congr 1
+    funext n
+    exact tailFamily_eq_comap_sample_path_shift X n
+  rw [step1]
+  haveI : Nonempty ℕ := ⟨0⟩
+  exact (iInf_comap_eq_comap_iInf_of_surjective (α := Ω) (β := (ℕ → α)) hΦ _).symm
 
 omit [MeasurableSpace Ω] in
 /-- **Bridge 3 (to ViaMartingale's revFiltration).**
