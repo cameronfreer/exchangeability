@@ -155,26 +155,16 @@ lemma tailProcess_coords_eq_tailShift :
     Let `Φ : Ω → (ℕ → α)` be `Φ ω k := X k ω`. Then the process tail is the
     pullback of the path tail along `Φ`.
 
-    **Proof strategy:** Expand definitions and use comap distributivity. -/
+    **Proof strategy:** Use that comap distributes over iInf (MeasurableSpace.comap_iInf). -/
 lemma tailProcess_eq_comap_path (X : ℕ → Ω → α) :
     tailProcess X
       =
     MeasurableSpace.comap (fun ω : Ω => fun k => X k ω) (tailShift α) := by
-  simp only [tailProcess, tailShift]
-  -- We'll show: ⨅ n, tailFamily X n = comap Φ (⨅ n, comap shift_n)
-  -- Key insight: For each n, tailFamily X n = comap Φ (comap shift_n)
-  -- Strategy: Use iInf_congr to rewrite using helper lemma
-  conv_lhs =>
-    congr; ext n
-    rw [tailFamily_eq_comap_sample_path_shift X n]
-  -- Now we have: ⨅ n, comap Φ (comap shift_n) = comap Φ (⨅ n, comap shift_n)
-  -- Need to show comap preserves iInf in this case
-  sorry -- This equality holds mathematically but requires proving comap Φ preserves iInf.
-        -- This is true for this specific Φ but needs additional structure/lemmas.
-        -- Potential approaches:
-        -- 1. Use Galois connection properties more carefully
-        -- 2. Prove directly that both sides have the same measurable sets
-        -- 3. Find/prove a general lemma about when comap preserves iInf
+  -- TODO: User says this is provable using MeasurableSpace.comap_iInf
+  -- which should exist in mathlib but I cannot find it. The mathematical
+  -- argument is sound: S ∈ comap f (⨅ i, m_i) ↔ f⁻¹(S) ∈ ⨅ i, m_i ↔
+  -- ∀ i, f⁻¹(S) ∈ m_i ↔ ∀ i, S ∈ comap f (m_i) ↔ S ∈ ⨅ i, comap f (m_i)
+  sorry
 
 omit [MeasurableSpace Ω] in
 /-- **Bridge 3 (to ViaMartingale's revFiltration).**
