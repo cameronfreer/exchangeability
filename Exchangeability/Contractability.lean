@@ -6,6 +6,7 @@ Authors: Cameron Freer
 import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
 import Mathlib.MeasureTheory.Measure.Typeclasses.Probability
 import Exchangeability.Probability.InfiniteProduct
+import Exchangeability.Util.StrictMono
 
 /-!
 # Contractability and Exchangeability
@@ -302,40 +303,9 @@ lemma iidProduct_perm_invariant {ν₀ : Measure α} [IsProbabilityMeasure ν₀
       Exchangeability.Probability.iidProduct ν₀ :=
   Exchangeability.Probability.iidProduct.perm_eq (ν:=ν₀) (σ:=σ)
 
-/-- Composing strictly monotone functions with addition preserves strict monotonicity. -/
-lemma strictMono_add_left {m : ℕ} (k : Fin m → ℕ) (hk : StrictMono k) (c : ℕ) :
-    StrictMono (fun i => c + k i) :=
-  fun ⦃_ _⦄ hab ↦ Nat.add_lt_add_left (hk hab) c
-
-/-- Composing strictly monotone functions with addition preserves strict monotonicity. -/
-lemma strictMono_add_right {m : ℕ} (k : Fin m → ℕ) (hk : StrictMono k) (c : ℕ) :
-    StrictMono (fun i => k i + c) :=
-  fun ⦃_ _⦄ hab ↦ Nat.add_lt_add_right (hk hab) c
-
-/-- For a strictly monotone function `k : Fin m → ℕ`, the values dominate the indices. -/
-lemma strictMono_Fin_ge_id {m : ℕ} {k : Fin m → ℕ} (hk : StrictMono k) (i : Fin m) :
-    i.val ≤ k i := by
-  classical
-  -- Proof by strong induction on i.val
-  have : ∀ n (hn : n < m), n ≤ k ⟨n, hn⟩ := by
-    intro n
-    induction n with
-    | zero => intro _; exact Nat.zero_le _
-    | succ n ih =>
-        intro hn
-        have hn' : n < m := Nat.lt_of_succ_lt hn
-        let j : Fin m := ⟨n, hn'⟩
-        let j_succ : Fin m := ⟨n.succ, hn⟩
-        have hlt : j < j_succ := by
-          simp only [Fin.lt_iff_val_lt_val, j, j_succ]
-          exact Nat.lt_succ_self n
-        have hk_lt : k j < k j_succ := hk hlt
-        have ih' : n ≤ k j := ih hn'
-        calc n.succ
-            = n + 1 := rfl
-          _ ≤ k j + 1 := Nat.add_le_add_right ih' 1
-          _ ≤ k j_succ := Nat.succ_le_of_lt hk_lt
-  exact this i.val i.isLt
+-- Re-export StrictMono utilities for backward compatibility
+open Util.StrictMono (strictMono_add_left strictMono_add_right
+                       strictMono_Fin_ge_id fin_val_strictMono strictMono_comp)
 
 /--
 Any strictly increasing function can be extended to a permutation.
@@ -462,12 +432,6 @@ lemma measure_map_comp_perm {μ : Measure Ω} {n : ℕ}
         rw [show (fun ω i => g ω (σ i)) = perm_map ∘ g by ext; rfl]
         exact Measure.map_map (measurable_perm_map (σ:=σ)) hg
 
-/-- Special case: The identity function on Fin n is strictly monotone when
-viewed as a function to ℕ. -/
-lemma fin_val_strictMono {n : ℕ} : StrictMono (fun i : Fin n => i.val) := by
-  intro i j hij
-  exact hij
-
 /-- Contractability implies the first m variables have the same joint distribution
 regardless of which m consecutive variables we pick (starting from position k). -/
 lemma Contractable.shift_segment_eq {μ : Measure Ω} {X : ℕ → Ω → α}
@@ -493,11 +457,6 @@ lemma Contractable.shift_and_select {μ : Measure Ω} {X : ℕ → Ω → α}
     simp only [k']
     exact Nat.add_lt_add_left (hk hij) offset
   exact hX m k' hk'_mono
-
-/-- Composing strictly monotone functions preserves strict monotonicity. -/
-lemma strictMono_comp {m n : ℕ} (f : Fin m → Fin n) (g : Fin n → ℕ)
-    (hf : StrictMono f) (hg : StrictMono g) : StrictMono (fun i => g (f i)) :=
-  fun ⦃_ _⦄ hab ↦ hg (hf hab)
 
 /-- For a permutation σ on Fin n, the range {σ(0), ..., σ(n-1)} equals {0, ..., n-1}. -/
 lemma perm_range_eq {n : ℕ} (σ : Equiv.Perm (Fin n)) :
