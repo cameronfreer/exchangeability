@@ -134,7 +134,10 @@ omit [MeasurableSpace Ω] [MeasurableSpace α] in
 @[simp]
 lemma shiftRV_comp_shiftProcess (X : ℕ → Ω → α) (m k : ℕ) :
     shiftRV (shiftProcess X m) k = shiftRV X (m + k) := by
-  funext ω n; simp [shiftRV, shiftProcess, Nat.add_assoc]
+  funext ω n
+  simp only [shiftRV, shiftProcess]
+  congr 1
+  omega
 
 omit [MeasurableSpace Ω] [MeasurableSpace α] in
 @[simp]
@@ -145,7 +148,10 @@ omit [MeasurableSpace Ω] [MeasurableSpace α] in
 @[simp]
 lemma shiftProcess_add (X : ℕ → Ω → α) (m k : ℕ) :
     shiftProcess (shiftProcess X m) k = shiftProcess X (m + k) := by
-  funext n ω; simp [shiftProcess, Nat.add_assoc]
+  funext n ω
+  simp only [shiftProcess]
+  congr 1
+  omega
 
 /-- If all coordinates of X are measurable, so are all coordinates of shifted process. -/
 lemma measurable_shiftProcess (X : ℕ → Ω → α) (m : ℕ)
@@ -325,11 +331,12 @@ lemma contractable_dist_eq_on_first_r_tail
     intro i j hij
     have hij' : i.1 < j.1 := (Fin.lt_iff_val_lt_val).1 hij
     have : i.1 + 1 < j.1 + 1 := Nat.succ_lt_succ hij'
-    simpa [f, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using
-      Nat.add_lt_add_left this m
+    simp only [f]
+    omega
   have hm_lt : ∀ i, m < f i := by
     intro i
-    simp [f]
+    simp only [f]
+    omega
   have hk_lt : ∀ i, k < f i := fun i => lt_of_le_of_lt hk (hm_lt i)
   let s₁ : Fin (r+1) → ℕ := Fin.cases m f
   let s₂ : Fin (r+1) → ℕ := Fin.cases k f
@@ -793,15 +800,15 @@ lemma preimage_rect_future
     · simpa [ψ]
     · intro i
       have : (shiftRV X (m + 1) ω) ∈ cylinder (α:=α) r C := hC
-      simpa [ψ, shiftRV, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
-        using this i
+      simp only [shiftRV] at this
+      exact this i
   · rcases h with ⟨hB, hC⟩
     refine ⟨?_, ?_⟩
     · simpa [ψ]
     · intro i
       have : X (m + 1 + i.1) ω ∈ C i := hC i
-      simpa [ψ, shiftRV, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
-        using this
+      simp only [ψ, shiftRV]
+      exact this
 
 /-- **Finite-dimensional equality on future rectangles with standard cylinders.**
 For `k ≤ m` and measurable `B`, the measures of
@@ -834,9 +841,9 @@ lemma contractable_dist_eq_on_rectangles_future
     μ {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
       =
     μ {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
-    simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using
-      (contractable_dist_eq_on_first_r_tail
-        (μ:=μ) (X:=X) hX hX_meas k m r hk B hB C hC)
+    have := contractable_dist_eq_on_first_r_tail
+        (μ:=μ) (X:=X) hX hX_meas k m r hk B hB C hC
+    convert this using 2 <;> { ext ω; simp only [Set.mem_setOf]; tauto }
   -- Show the sets are equal modulo arithmetic
   have hset_eq₁ : {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + 1 + i.1) ω ∈ C i}
                 = {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by

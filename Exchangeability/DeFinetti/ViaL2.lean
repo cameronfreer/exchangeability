@@ -97,10 +97,10 @@ lemma window_card (n k : ℕ) : (window n k).card = k := by
   · intro a ha b hb h
     have h' : n + a = n + b := by
       apply Nat.succ.inj
-      simpa [Nat.succ_eq_add_one, Nat.add_left_comm, Nat.add_assoc, Nat.add_comm]
-        using h
+      simp only [Nat.succ_eq_add_one] at h ⊢
+      omega
     exact Nat.add_left_cancel h'
-  · simp
+  · simp only [Finset.card_range]
 
 /-- Characterization of window membership. -/
 lemma mem_window_iff {n k t : ℕ} :
@@ -131,7 +131,7 @@ lemma sum_window_eq_sum_fin {β : Type*} [AddCommMonoid β]
     intro a ha b hb h
     have h' : a + 1 = b + 1 := by
       have : n + (a + 1) = n + (b + 1) := by
-        simpa [Nat.add_assoc, Nat.add_comm, Nat.succ_eq_add_one] using h
+        omega
       exact Nat.add_left_cancel this
     exact Nat.succ.inj h'
   -- Convert the window sum to a range sum via the image definition
@@ -597,7 +597,8 @@ lemma l2_bound_two_windows_uniform
           = ∑ t ∈ S, δ t * Y t ω := by
     intro ω
     have := h_sum_delta ω
-    simpa [Y, sum_window_eq_sum_fin, sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using this.symm
+    simp only [Y, sum_window_eq_sum_fin] at this ⊢
+    linarith
 
   -- Total weights
   have h_sum_pS :
