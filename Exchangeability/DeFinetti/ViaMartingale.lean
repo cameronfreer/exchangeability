@@ -355,8 +355,44 @@ lemma condexp_convergence_fwd
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X m) | futureFiltration X m]
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | futureFiltration X m] := by
-  -- Forward declaration - full proof at line ~1209 as `condexp_convergence`
-  -- Cannot implement here due to forward reference to `measure_ext_of_future_rectangles` (line 889)
+  -- ═══════════════════════════════════════════════════════════════════════════════
+  -- FORWARD DECLARATION - Full proof exists at line 1209 as `condexp_convergence`
+  -- ═══════════════════════════════════════════════════════════════════════════════
+  --
+  -- **Why this is sorry:**
+  -- This proof requires `measure_ext_of_future_rectangles` (defined at line 889),
+  -- creating a forward reference that Lean cannot resolve.
+  --
+  -- **Complete proof strategy (implemented at line 1209):**
+  --
+  -- 1. **Upgrade contractability to measure equality:**
+  --    ```
+  --    have hmeas_eq : Measure.map (fun ω => (X m ω, shiftRV X (m + 1) ω)) μ
+  --                  = Measure.map (fun ω => (X k ω, shiftRV X (m + 1) ω)) μ
+  --    ```
+  --    - Use `measure_ext_of_future_rectangles` (π-λ theorem application)
+  --    - Feed it `agree_on_future_rectangles_of_contractable hX hX_meas k m hk`
+  --    - Converts finite-dimensional agreement to full measure equality
+  --
+  -- 2. **Apply CE bridge lemma:**
+  --    ```
+  --    have h := Exchangeability.Probability.condexp_indicator_eq_of_pair_law_eq
+  --      (X m) (X k) (shiftRV X (m + 1))
+  --      (hX_meas m) (hX_meas k) (measurable_shiftRV hX_meas)
+  --      hmeas_eq hB
+  --    ```
+  --    - Key: If (Y, Z) and (Y', Z) have same law, then E[1_B(Y) | σ(Z)] = E[1_B(Y') | σ(Z)]
+  --
+  -- 3. **Simplify using filtration definition:**
+  --    ```
+  --    simpa [futureFiltration] using h
+  --    ```
+  --    - futureFiltration X m = MeasurableSpace.comap (shiftRV X (m + 1)) inferInstance
+  --
+  -- **Resolution options:**
+  -- A. Keep as forward declaration (current approach)
+  -- B. Reorganize file to move `measure_ext_of_future_rectangles` before this lemma
+  -- C. Inline the π-λ theorem application directly (would duplicate significant code)
   sorry
 
 /-- Forward declaration: Tail σ-algebra is sub-σ-algebra of future filtration.
@@ -1816,35 +1852,113 @@ lemma condexp_indicator_eq_on_join_of_triple_law
     =ᵐ[μ]
   μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y
        | MeasurableSpace.comap θk inferInstance] := by
-  -- Bridge + tower pattern: use a.e.-equalities outside conditional expectation
-  -- Key insight: comap θk ≤ comap (Zr, θk), so by tower property,
-  -- conditioning on the larger σ-algebra and then the smaller equals just the smaller.
-
-  -- This lemma is subtle! The hypothesis hpush says (Y, θk) =^d (Y, θk'), but
-  -- the conclusion doesn't mention θk' at all. The proof strategy should be:
+  -- ═══════════════════════════════════════════════════════════════════════════════
+  -- DEEP THEORY REQUIRED - Conditional independence from distributional equality
+  -- ═══════════════════════════════════════════════════════════════════════════════
   --
-  -- From the calling context, we actually have the TRIPLE equality:
-  --   (Zr, Y, θk) =^d (Zr, Y, θk')  (from contractable_triple_pushforward)
+  -- **Goal:** E[1_B(Y) | σ(Zr, θk)] = E[1_B(Y) | σ(θk)]  a.e.
   --
-  -- This triple equality implies a form of conditional independence:
-  --   Zr ⊥⊥_{θk} Y  (Zr and Y are conditionally independent given θk)
+  -- **Given:** (Zr, Y, θk) =^d (Zr, Y, θk')  (triple distributional equality)
   --
-  -- With conditional independence, E[f(Y) | σ(Zr, θk)] = E[f(Y) | σ(θk)]
+  -- **Why this is subtle:**
+  -- The hypothesis mentions θk' but the conclusion doesn't! The triple equality
+  -- encodes that "Zr doesn't provide information about Y beyond what θk provides."
   --
-  -- The proof would use:
-  -- 1. Extract conditional independence from triple distributional equality
-  -- 2. Apply conditional independence characterization for conditional expectations
-  -- 3. Use that f only depends on Y
+  -- ───────────────────────────────────────────────────────────────────────────────
+  -- PLAN A: Conditional Independence Route (Kallenberg's approach)
+  -- ───────────────────────────────────────────────────────────────────────────────
   --
-  -- This is a deep result that might require substantial infrastructure from mathlib
-  -- about conditional independence and its relationship to distributional equality.
-
-  sorry  -- TODO: Prove using conditional independence from triple equality
-         -- Key insight: (Zr, Y, θk) =^d (Zr, Y, θk') implies Zr ⊥⊥_{θk} Y
-         -- Then conditional independence gives E[f(Y) | σ(Zr, θk)] = E[f(Y) | σ(θk)]
-         --
-         -- Alternative approach: Use uniqueness of conditional expectation
-         -- Show that both sides have the same conditional expectation property
+  -- **Step 1: Extract conditional independence from triple equality**
+  --
+  -- From (Zr, Y, θk) =^d (Zr, Y, θk'), derive:
+  --   Zr ⊥⊥_{θk} Y    (Zr and Y are conditionally independent given θk)
+  --
+  -- This is **Kallenberg Lemma 1.3** (contraction-independence):
+  --   "If (ξ, η) =^d (ξ, ζ) and σ(η) ⊆ σ(ζ), then ξ ⊥⊥_η ζ"
+  --
+  -- In our case:
+  --   - ξ = (Zr, Y)  (the "contracted" variables)
+  --   - η = θk       (the smaller future)
+  --   - ζ = θk'      (the larger future)
+  --   - σ(θk) ⊆ σ(θk') holds when θk is obtained by truncating θk'
+  --
+  -- **Required infrastructure (not in mathlib):**
+  -- ```
+  -- lemma condIndep_of_triple_law_and_le
+  --     {ξ η ζ : Ω → β}
+  --     (h_law : Measure.map (fun ω => (ξ ω, η ω)) μ
+  --            = Measure.map (fun ω => (ξ ω, ζ ω)) μ)
+  --     (h_le : MeasurableSpace.comap η inferInstance
+  --          ≤ MeasurableSpace.comap ζ inferInstance) :
+  --     ProbabilityTheory.CondIndep
+  --       (MeasurableSpace.comap ξ inferInstance)
+  --       (MeasurableSpace.comap η inferInstance)
+  --       ...
+  -- ```
+  --
+  -- **Step 2: Apply CI characterization for conditional expectations**
+  --
+  -- With Zr ⊥⊥_{θk} Y, we have for f depending only on Y:
+  --   E[f(Y) | σ(Zr, θk)] = E[f(Y) | σ(θk)]  a.e.
+  --
+  -- This follows from the conditional independence product formula:
+  --   E[g(Zr) · f(Y) | σ(θk)] = E[g(Zr) | σ(θk)] · E[f(Y) | σ(θk)]
+  --
+  -- Setting g = 1 gives the projection property.
+  --
+  -- **Required infrastructure (partially in mathlib):**
+  -- Mathlib has `ProbabilityTheory.condIndep_iff` product formula, but we need:
+  -- ```
+  -- lemma condExp_of_indep_of_measurable_wrt_second
+  --     (h_CI : CondIndep m_cond m_Z m_Y ...)
+  --     (h_meas : Measurable[m_Y] f) :
+  --     μ[f | m_Z ⊔ m_cond] =ᵐ[μ] μ[f | m_cond]
+  -- ```
+  --
+  -- ───────────────────────────────────────────────────────────────────────────────
+  -- PLAN B: Direct Uniqueness Argument
+  -- ───────────────────────────────────────────────────────────────────────────────
+  --
+  -- **Idea:** Show both sides satisfy the same conditional expectation property.
+  --
+  -- For any g measurable w.r.t. σ(θk), need to show:
+  --   ∫ (E[1_B(Y) | σ(Zr, θk)]) · g dμ = ∫ (E[1_B(Y) | σ(θk)]) · g dμ
+  --
+  -- **Step 1:** Left side via CE property:
+  --   ∫ (E[1_B(Y) | σ(Zr, θk)]) · g dμ = ∫ 1_B(Y) · g dμ
+  --
+  -- **Step 2:** Right side via CE property:
+  --   ∫ (E[1_B(Y) | σ(θk)]) · g dμ = ∫ 1_B(Y) · g dμ
+  --
+  -- **Step 3:** Therefore both sides equal, so ae-equal by uniqueness.
+  --
+  -- **The catch:** Step 1 requires g to be σ(Zr, θk)-measurable, but we only
+  -- know g is σ(θk)-measurable. Since σ(θk) ≤ σ(Zr, θk), this works!
+  --
+  -- Actually this gives the result immediately by the tower property:
+  --   E[E[1_B(Y) | σ(Zr, θk)] | σ(θk)] = E[1_B(Y) | σ(θk)]
+  --
+  -- But we want E[1_B(Y) | σ(Zr, θk)] = E[1_B(Y) | σ(θk)], not just their
+  -- conditional expectations given σ(θk) are equal.
+  --
+  -- So Plan B needs more work - we'd need to show the triple law implies
+  -- the stronger statement.
+  --
+  -- ───────────────────────────────────────────────────────────────────────────────
+  -- RECOMMENDED PATH FORWARD
+  -- ───────────────────────────────────────────────────────────────────────────────
+  --
+  -- 1. Prove Kallenberg Lemma 1.3 as a standalone mathlib contribution:
+  --    `condIndep_of_pair_law_eq_and_le` (contraction-independence)
+  --
+  -- 2. Prove the conditional independence projection lemma:
+  --    `condExp_eq_of_indep_and_measurable_wrt_cond`
+  --
+  -- 3. Apply both lemmas here
+  --
+  -- These are fundamental results in probability theory that would benefit mathlib.
+  --
+  sorry
 
 /-- **Correct conditional independence from contractability (Kallenberg Lemma 1.3).**
 
@@ -1992,26 +2106,102 @@ lemma block_coord_condIndep
       intro k; exact finFutureSigma_le_futureFiltration X m k
     -- `≥`: each cylinder in the infinite future uses finitely many coordinates
     have hge : futureFiltration X m ≤ (⨆ k, finFutureSigma X m k) := by
-      -- Mathematical fact: The Pi σ-algebra on ℕ → α equals the supremum of
-      -- σ-algebras generated by finite truncations to Fin k → α.
+      -- ═════════════════════════════════════════════════════════════════════════════
+      -- MISSING MATHLIB LEMMA - Product σ-algebra structure for countable products
+      -- ═════════════════════════════════════════════════════════════════════════════
       --
-      -- Strategy:
-      -- 1. futureFiltration X m = comap (shiftRV X (m+1)) (Pi σ-algebra on ℕ → α)
-      -- 2. finFutureSigma X m k = comap (fun ω i => X(m+1+i) ω) (Pi σ-algebra on Fin k → α)
-      -- 3. The function (fun ω i => X(m+1+i) ω) = (restrict to Fin k) ∘ (shiftRV X (m+1))
-      -- 4. By Pi σ-algebra structure: Pi on ℕ → α = ⨆_k (comap (restrict to Fin k) (Pi on Fin k → α))
-      -- 5. Apply comap (shiftRV X (m+1)) to both sides using comap_iSup
+      -- **Goal:** Show Pi σ-algebra on ℕ → α equals supremum of finite projections
       --
-      -- This requires:
-      -- - MeasurableSpace.pi_eq_iSup_nat: Pi ℕ α = ⨆ k, comap (ρ_k) (Pi (Fin k) α)
-      --   where ρ_k : (ℕ → α) → (Fin k → α) is restriction to first k coordinates
-      -- - MeasurableSpace.comap_iSup: comap f (⨆ m_i) = ⨆ (comap f m_i)
-      -- - Comap composition lemma or direct equality proof
+      -- **Mathematical fact:**
+      -- For any measurable space α, the product σ-algebra on ℕ → α equals the
+      -- supremum of σ-algebras pulled back from finite coordinate projections:
       --
-      -- For now, this is a standard but technical result about product σ-algebras.
-      sorry  -- TODO: Complete using mathlib Pi σ-algebra structure
-             -- Main missing piece: MeasurableSpace.pi_eq_iSup_nat or equivalent
-             -- This may require contributing to mathlib if not available
+      --   inferInstance = ⨆ k : ℕ, MeasurableSpace.comap (π_k) (Pi.measurableSpace)
+      --
+      -- where π_k : (ℕ → α) → (Fin k → α) restricts to first k coordinates.
+      --
+      -- **Why this is true:**
+      -- The Pi σ-algebra is the smallest making all coordinate projections measurable.
+      -- But for ℕ-indexed products, this equals the smallest making all *finite*
+      -- coordinate tuples measurable, since every measurable cylinder set depends on
+      -- only finitely many coordinates.
+      --
+      -- ─────────────────────────────────────────────────────────────────────────────
+      -- PROOF STRATEGY
+      -- ─────────────────────────────────────────────────────────────────────────────
+      --
+      -- **Step 1: Establish the general Pi σ-algebra identity**
+      --
+      -- ```
+      -- lemma pi_eq_iSup_finRestrict {ι : Type*} [Encodable ι] {α : Type*}
+      --     [MeasurableSpace α] :
+      --     (Pi.measurableSpace : MeasurableSpace (ι → α))
+      --       = ⨆ (s : Finset ι), MeasurableSpace.comap (restrict s) inferInstance
+      -- ```
+      --
+      -- For ι = ℕ, this specializes to:
+      -- ```
+      -- lemma pi_nat_eq_iSup_fin {α : Type*} [MeasurableSpace α] :
+      --     (inferInstance : MeasurableSpace (ℕ → α))
+      --       = ⨆ k, MeasurableSpace.comap (fun f i => f i.val) inferInstance
+      -- ```
+      -- where the RHS projects to Fin k → α for each k.
+      --
+      -- **Step 2: Apply comap (shiftRV X (m+1)) to both sides**
+      --
+      -- We have:
+      --   futureFiltration X m = MeasurableSpace.comap (shiftRV X (m+1)) inferInstance
+      --
+      -- Using `MeasurableSpace.comap_iSup`:
+      --   comap f (⨆ i, m_i) = ⨆ i, comap f m_i
+      --
+      -- We get:
+      --   futureFiltration X m
+      --     = comap (shiftRV X (m+1)) (⨆ k, comap π_k inferInstance)
+      --     = ⨆ k, comap (shiftRV X (m+1)) (comap π_k inferInstance)
+      --     = ⨆ k, comap (π_k ∘ shiftRV X (m+1)) inferInstance
+      --     = ⨆ k, finFutureSigma X m k
+      --
+      -- **Step 3: Verify composition matches finFutureSigma**
+      --
+      -- ```
+      -- have h_comp : ∀ k, π_k ∘ shiftRV X (m+1)
+      --                  = fun ω i => X (m + 1 + i.val) ω := by
+      --   intro k; ext ω i
+      --   simp [shiftRV, π_k]
+      -- ```
+      --
+      -- ─────────────────────────────────────────────────────────────────────────────
+      -- REQUIRED MATHLIB CONTRIBUTIONS
+      -- ─────────────────────────────────────────────────────────────────────────────
+      --
+      -- 1. **Main lemma:** `MeasurableSpace.pi_nat_eq_iSup_fin`
+      --    Location: `Mathlib/MeasureTheory/Constructions/Pi.lean` or similar
+      --
+      --    This is a standard result in product measure theory. The proof uses:
+      --    - Every measurable set in Pi σ-algebra is in generateFrom of rectangles
+      --    - Every measurable rectangle depends on finitely many coordinates
+      --    - Therefore Pi σ-algebra ≤ ⨆ finite projections
+      --    - Reverse direction follows from each finite projection ≤ Pi
+      --
+      -- 2. **Supporting lemma:** `MeasurableSpace.comap_iSup`
+      --    May already exist in mathlib's lattice theory for MeasurableSpace
+      --
+      -- 3. **Composition lemma:** `MeasurableSpace.comap_comap`
+      --    Likely exists: comap f (comap g m) = comap (g ∘ f) m
+      --
+      -- ─────────────────────────────────────────────────────────────────────────────
+      -- ALTERNATIVE: Direct proof without general lemma
+      -- ─────────────────────────────────────────────────────────────────────────────
+      --
+      -- Could prove directly for this specific case:
+      -- - Show every set in futureFiltration X m is a.e. in some finFutureSigma X m k
+      -- - Use that cylinder sets in ℕ → α depend on finitely many coordinates
+      -- - Would be ~50-100 lines but avoids waiting for mathlib contribution
+      --
+      -- However, the general lemma is more valuable for the library.
+      --
+      sorry
     exact le_antisymm hle hge
   -- For the joins, the `iSup` commutes with `⊔`.
   have hiSup_join :
