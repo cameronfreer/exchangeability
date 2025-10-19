@@ -515,16 +515,37 @@ lemma condexp_pullback_factor
 
   -- 2) Uniqueness of the conditional expectation on `m.comap g`
   have hm' : MeasurableSpace.comap g m ≤ ‹MeasurableSpace Ω'› := by
-    sorry
-    /- OLD PROOF:  intro s hs; rcases hs with ⟨B, hBm, rfl⟩; simpa using hBm.preimage hg
-    ERROR: Application type mismatch in hBm.preimage hg -/
+    intro s hs
+    rcases hs with ⟨B, hBm, rfl⟩
+    -- Lift measurability from m to ambient inst, then apply preimage
+    have hB_inst : @MeasurableSet Ω inst B := hm B hBm
+    exact hB_inst.preimage hg
   have hHg' : Integrable (H ∘ g) μ' := by
     sorry
-    /- OLD PROOF IDEA (integrable_map_measure instance issues):
-    have : Integrable H (Measure.map g μ') := by rwa [hpush]
-    exact (integrable_map_measure (hf := hg.aemeasurable) (hg := hH.aestronglyMeasurable)).mpr this
+    /- UPDATED OLD PROOF IDEA (integrable_map_measure instance issues persist):
+    The goal is to show Integrable (H ∘ g) μ'.
+    We have:
+    - hH : Integrable H μ
+    - hpush : Measure.map g μ' = μ
+    - hg : Measurable g
 
-    ERROR: May need explicit MeasurableSpace instance for Measure.map
+    The standard approach is:
+      have : Integrable H (Measure.map g μ') := by convert hH; exact hpush.symm
+      exact (integrable_map_measure hg.aemeasurable hH.aestronglyMeasurable).mpr this
+
+    BUT: integrable_map_measure synthesizes the wrong MeasurableSpace instance.
+    The problem: hH.aestronglyMeasurable has instance `inst`, but integrable_map_measure infers `m`.
+
+    Attempted fixes that didn't work:
+    - Using @ syntax with explicit instances → type mismatches
+    - Using rw at hH → can't rewrite in Integrable
+    - Using convert → still has instance issues
+    - Using .1 accessor → same instance problem
+
+    TODO: This needs either:
+    1. A custom lemma that handles the instance carefully
+    2. Manual construction of the Integrable proof without using integrable_map_measure
+    3. Better understanding of how to guide Lean's instance synthesis
     -/
 
   sorry
