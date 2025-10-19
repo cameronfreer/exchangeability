@@ -1588,6 +1588,20 @@ axiom subseq_ae_of_L1
   ∃ (φ : ℕ → ℕ), StrictMono φ ∧
     ∀ᵐ ω ∂μ, Tendsto (fun k => alpha (φ k) ω) atTop (𝓝 (alpha_inf ω))
 
+/-- **AXIOM A1 (Reverse martingale / mean ergodic in L¹):**
+Cesàro averages of a bounded measurable function along an exchangeable
+(contractable) sequence converge in L¹ to the conditional expectation onto
+the tail σ-algebra. -/
+axiom cesaro_to_condexp_L1
+  {Ω : Type*} [MeasurableSpace Ω]
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  {X : ℕ → Ω → ℝ} (hX_contract : Exchangeability.Contractable μ X)
+  (hX_meas : ∀ i, Measurable (X i))
+  (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1) :
+  ∀ ε > 0, ∃ (M : ℕ), ∀ (m : ℕ), m ≥ M →
+    ∫ ω, |(1 / (m : ℝ)) * ∑ i : Fin m, f (X i ω) -
+           (μ[(f ∘ X 0) | TailSigma.tailSigma X] ω)| ∂μ < ε
+
 end Helpers
 
 /-!
@@ -2578,7 +2592,7 @@ lemma alphaIicCE_measurable
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (t : ℝ) :
     Measurable (alphaIicCE X hX_contract hX_meas hX_L2 t) := by
-  sorry
+  sorry  -- BorelSpace typeclass issue - needs resolution
 
 /-- alphaIicCE is monotone nondecreasing in t (for each fixed ω). -/
 lemma alphaIicCE_mono
@@ -2732,7 +2746,9 @@ lemma alphaIic_ae_eq_alphaIicCE
     -- For an exchangeable (contractable) sequence, the Cesàro averages of f(X_i)
     -- converge in L² (hence L¹) to E[f(X_0) | tailSigma X]
     -- This is a consequence of the mean ergodic theorem or reverse martingale convergence
-    sorry  -- Standard result: Cesàro averages → conditional expectation for exchangeable sequences
+    -- Deep input (reverse martingale). See `Helpers.cesaro_to_condexp_L1`.
+    exact Exchangeability.DeFinetti.ViaL2.Helpers.cesaro_to_condexp_L1 hX_contract hX_meas (indIic t)
+      (indIic_measurable t) (indIic_bdd t) ε hε
 
   -- Step 3: Use uniqueness of L¹ limits to conclude a.e. equality
   -- If both f and g are L¹ limits of the same sequence, then f =ᵐ g
@@ -3681,13 +3697,8 @@ lemma directing_measure_isProbabilityMeasure
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (ω : Ω) :
     IsProbabilityMeasure (directing_measure X hX_contract hX_meas hX_L2 ω) := by
-  -- The limits at ±∞ guarantee total mass 1 via StieltjesFunction.measure_univ
-  -- However, cdf_from_alpha_limits is currently a sorry, so we must sorry this too
-  constructor
-  unfold directing_measure
-  simp only []
-  -- Would use: StieltjesFunction.measure_univ with limits (cdf_from_alpha_limits X hX_contract hX_meas hX_L2 ω)
-  sorry
+  -- Probability measure instance from axiom (A3):
+  exact (Exchangeability.DeFinetti.ViaL2.Helpers.directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω)
 
 /-! ## Sorry-free helpers
 
@@ -3741,19 +3752,6 @@ These are the genuinely hard parts (reverse martingale, kernel measurability,
 endpoint limits, identification).  Keep them here so the main file stays tidy.
 Replace them with real theorems when available.
 -/
-
-/-- **AXIOM A1 (Reverse martingale / mean ergodic in L¹):**
-Cesàro averages of a bounded measurable function along an exchangeable
-(contractable) sequence converge in L¹ to the conditional expectation onto
-the tail σ-algebra. -/
-axiom cesaro_to_condexp_L1
-  {μ : Measure Ω} [IsProbabilityMeasure μ]
-  {X : ℕ → Ω → ℝ} (hX_contract : Exchangeability.Contractable μ X)
-  (hX_meas : ∀ i, Measurable (X i))
-  (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1) :
-  ∀ ε > 0, ∃ (M : ℕ), ∀ (m : ℕ), m ≥ M →
-    ∫ ω, |(1 / (m : ℝ)) * ∑ i : Fin m, f (X i ω) -
-           (μ[(f ∘ X 0) | TailSigma.tailSigma X] ω)| ∂μ < ε
 
 /-- **AXIOM A2 (CDF endpoints):**
 For the CDF built from `alphaIic` via the rational envelope, the limits at
