@@ -189,12 +189,12 @@ lemma tailProcess_coords_eq_tailShift :
   -- Goal: ⨆ k, comap (fun ω => ω (n+k)) = comap (shift n) pi
   exact (comap_shift_eq_iSup_comap_coords n).symm
 
+omit [MeasurableSpace Ω] in
 /-- **Bridge 2 (pullback along sample-path map).**
     Let `Φ : Ω → (ℕ → α)` be `Φ ω k := X k ω`. Then the process tail equals the
     pullback of the path tail along `Φ`.
 
     **Proof strategy:** Use that `comap` preserves `iInf` (right adjoint property). -/
-omit [MeasurableSpace Ω] in
 lemma tailProcess_eq_comap_path (X : ℕ → Ω → α) :
     tailProcess X
       =
