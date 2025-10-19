@@ -1807,9 +1807,9 @@ lemma condexp_indicator_eq_on_join_of_triple_law
     (Y : Ω → α) (Zr : Ω → (Fin r → α)) (θk θk' : Ω → (Fin k → α))
     (hY : Measurable Y) (hZr : Measurable Zr) (hθk : Measurable θk)
     (hθk' : Measurable θk')
-    (hpush :
-      Measure.map (fun ω => (Y ω, θk ω)) μ
-        = Measure.map (fun ω => (Y ω, θk' ω)) μ)
+    (htriple :
+      Measure.map (fun ω => (Zr ω, Y ω, θk ω)) μ
+        = Measure.map (fun ω => (Zr ω, Y ω, θk' ω)) μ)
     (B : Set α) (hB : MeasurableSet B) :
   μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y
        | MeasurableSpace.comap (fun ω => (Zr ω, θk ω)) inferInstance]
@@ -1915,25 +1915,23 @@ lemma block_coord_condIndep
     have h_triple := contractable_triple_pushforward
         (X := X) (μ := μ) (hX := hX) (hX_meas := hX_meas) (hrm := hrm)
         (r := r) (m := m) (k := k)
+
+    -- Rewrite h_triple in terms of our local variables
+    have hZr_eq : Zr = fun ω i => X i.val ω := by rfl
+    have hY_eq : Y = X r := by rfl
+    have hθk_eq : θk = fun ω j => X (m + 1 + j.val) ω := by rfl
+    have hθk'_eq : θk' = fun ω j => X (r + 1 + j.val) ω := by rfl
+
+    have h_triple' : Measure.map (fun ω => (Zr ω, Y ω, θk ω)) μ
+        = Measure.map (fun ω => (Zr ω, Y ω, θk' ω)) μ := by
+      simp only [hZr_eq, hY_eq, hθk_eq, hθk'_eq]
+      exact h_triple
+
     -- Project to pairs `(Y, θk)` vs `(Y, θk')`
     have h_pair :
         Measure.map (fun ω => (Y ω, θk ω)) μ
           = Measure.map (fun ω => (Y ω, θk' ω)) μ := by
       -- Project the triple equality to pairs using Prod.snd
-      -- h_triple gives: map (Zr, Y, θk_future) μ = map (Zr, Y, θk_tail) μ
-      -- where the functions are defined in the `let` bindings of h_triple
-
-      -- First, show that our Zr, Y, θk match the definitions in h_triple
-      have hZr_eq : Zr = fun ω i => X i.val ω := by rfl
-      have hY_eq : Y = X r := by rfl
-      have hθk_eq : θk = fun ω j => X (m + 1 + j.val) ω := by rfl
-      have hθk'_eq : θk' = fun ω j => X (r + 1 + j.val) ω := by rfl
-
-      -- Rewrite h_triple in terms of our variables
-      have h_triple' : Measure.map (fun ω => (Zr ω, Y ω, θk ω)) μ
-          = Measure.map (fun ω => (Zr ω, Y ω, θk' ω)) μ := by
-        simp only [hZr_eq, hY_eq, hθk_eq, hθk'_eq]
-        exact h_triple
 
       -- Now project using Prod.snd
       have h_θk_proj : (fun ω => (Y ω, θk ω)) = Prod.snd ∘ (fun ω => (Zr ω, Y ω, θk ω)) := by
@@ -1960,7 +1958,7 @@ lemma block_coord_condIndep
       finFutureSigma X m k = MeasurableSpace.comap θk inferInstance := rfl
     -- now apply the packaged bridge lemma
     have h_bridge := condexp_indicator_eq_on_join_of_triple_law
-        Y Zr θk θk' hY_meas hZr_meas hθk_meas hθk'_meas h_pair B hB
+        Y Zr θk θk' hY_meas hZr_meas hθk_meas hθk'_meas h_triple' B hB
     -- Convert using the σ-algebra equalities (convert closes goals via defeq)
     convert h_bridge using 2
   -- Step 2: pass to the limit k → ∞ (Lévy upward)
@@ -2021,16 +2019,50 @@ lemma block_coord_condIndep
         = (firstRSigma X r ⊔ futureFiltration X m) := by
     simp [hiSup_fin, iSup_sup_eq]  -- uses lattice lemmas
   -- Upward convergence on both sides, then identify the limits by equality levelwise
-  -- The axiom condExp_tendsto_iSup gives pointwise a.e. convergence;
-  -- we need to extract function-level convergence in L¹ or a.e. sense.
-  sorry  -- TODO: Apply condExp_tendsto_iSup (Lévy upward) to get pointwise convergence,
-         -- then lift to function convergence using:
-         -- - h_up_left: convergence on join
-         -- - h_up_right: convergence on finFutureSigma
-         -- - Use h_finite for levelwise equality
-         -- - Apply tendsto_nhds_unique to conclude limits are a.e. equal
-         --
-         -- The structure is correct but needs proper handling of pointwise vs function convergence
+  -- Apply Lévy upward (condExp_tendsto_iSup) to both sequences of σ-algebras
+  have h_integrable : Integrable (Set.indicator B (fun _ => (1 : ℝ)) ∘ Y) μ := by
+    refine Integrable.indicator ?_ (hY_meas hB)
+    exact integrable_const (1 : ℝ)
+  -- Left side: convergence on the join
+  have h_up_left : ∀ᵐ ω ∂μ, Tendsto
+      (fun k => μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | firstRSigma X r ⊔ finFutureSigma X m k] ω)
+      atTop
+      (𝓝 (μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | firstRSigma X r ⊔ futureFiltration X m] ω)) := by
+    have hmono_join : Monotone (fun k => firstRSigma X r ⊔ finFutureSigma X m k) :=
+      fun _ _ hkℓ => sup_le_sup_left (hmono_fin hkℓ) _
+    have hle_join : ∀ k, firstRSigma X r ⊔ finFutureSigma X m k ≤ (inferInstance : MeasurableSpace Ω) :=
+      fun _ => sup_le (firstRSigma_le_ambient X r hX_meas) (finFutureSigma_le_ambient X m _ hX_meas)
+    rw [← hiSup_join]
+    exact Exchangeability.Probability.condExp_tendsto_iSup hmono_join hle_join _ h_integrable
+  -- Right side: convergence on finFutureSigma
+  have h_up_right : ∀ᵐ ω ∂μ, Tendsto
+      (fun k => μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | finFutureSigma X m k] ω)
+      atTop
+      (𝓝 (μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | futureFiltration X m] ω)) := by
+    have hle_fin : ∀ k, finFutureSigma X m k ≤ (inferInstance : MeasurableSpace Ω) :=
+      fun k => finFutureSigma_le_ambient X m k hX_meas
+    rw [← hiSup_fin]
+    exact Exchangeability.Probability.condExp_tendsto_iSup hmono_fin hle_fin _ h_integrable
+  -- Combine: levelwise equality + both converge ⇒ limits are a.e. equal
+  -- For ae ω, both sequences converge, and they agree at each level k
+  -- Build the ae-set where everything holds
+  have h_ae_eq : ∀ k, ∀ᵐ ω ∂μ,
+      μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | firstRSigma X r ⊔ finFutureSigma X m k] ω
+        = μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | finFutureSigma X m k] ω :=
+    fun k => h_finite k
+  -- Extract ae-set where all equalities hold
+  have h_eventually_eq : ∀ᵐ ω ∂μ, ∀ k,
+      μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | firstRSigma X r ⊔ finFutureSigma X m k] ω
+        = μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | finFutureSigma X m k] ω := by
+    rw [ae_all_iff]
+    exact h_ae_eq
+  filter_upwards [h_up_left, h_up_right, h_eventually_eq] with ω h_left h_right h_eq
+  -- At this ω: both sequences converge and agree levelwise, so limits are equal
+  have h_eq_seq : (fun k => μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | firstRSigma X r ⊔ finFutureSigma X m k] ω)
+                = (fun k => μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | finFutureSigma X m k] ω) := by
+    ext k; exact h_eq k
+  rw [h_eq_seq] at h_left
+  exact tendsto_nhds_unique h_left h_right
 
 /-- **Product formula for conditional expectations under conditional independence.**
 
