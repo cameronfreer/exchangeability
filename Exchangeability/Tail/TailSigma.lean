@@ -1,10 +1,10 @@
 /-
-Copyright (c) 2025 The Exchangeability Contributors.
+Copyright (c) 2025 Cameron Freer.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Claude Code
+Authors: Cameron Freer
 -/
 
-import Mathlib.MeasureTheory.MeasurableSpace.Basic
+import Mathlib.MeasureTheory.MeasurableSpace.Pi
 import Mathlib.MeasureTheory.Measure.MeasureSpace
 
 /-!
@@ -102,10 +102,16 @@ lemma comap_shift_eq_iSup_comap_coords (n : ℕ) :
     iSup (fun k : ℕ =>
       MeasurableSpace.comap (fun (ω : ℕ → α) => ω (n + k))
         (inferInstance : MeasurableSpace α)) := by
-  -- TODO: Prove using product σ-algebra characterization
-  -- Key: product σ-algebra = ⨆ k, comap (eval k)
-  -- Then: comap shift (⨆ k, comap eval_k) = ⨆ k, comap (eval_k ∘ shift) = ⨆ k, comap eval_(n+k)
-  sorry
+  -- Product σ-algebra is the supremum of coordinate pullbacks
+  conv_lhs => rw [show (inferInstance : MeasurableSpace (ℕ → α)) = MeasurableSpace.pi from rfl]
+  -- Expand pi as supremum of coordinate comaps
+  rw [show MeasurableSpace.pi = iSup (fun k : ℕ => MeasurableSpace.comap (fun ω => ω k) inferInstance) from rfl]
+  -- Distribute comap over supremum
+  rw [MeasurableSpace.comap_iSup]
+  -- Compose: (eval k) ∘ (shift n) = eval (n+k)
+  congr 1
+  ext k
+  rw [MeasurableSpace.comap_comp]
 
 /-- **Bridge 1 (path ↔ process).**
     For the coordinate process on path space, `tailProcess` equals `tailShift`.
@@ -113,20 +119,21 @@ lemma comap_shift_eq_iSup_comap_coords (n : ℕ) :
     **Proof strategy:** Apply iInf_congr using comap_shift_eq_iSup_comap_coords. -/
 lemma tailProcess_coords_eq_tailShift :
     tailProcess (fun k (ω : ℕ → α) => ω k) = tailShift α := by
-  -- TODO: Complete proof once comap_shift_eq_iSup_comap_coords is proven
+  simp only [tailProcess, tailShift, tailFamily]
+  -- TODO: Apply funext properly to avoid typeclass issues
   sorry
 
 /-- **Bridge 2 (pullback along sample-path map).**
     Let `Φ : Ω → (ℕ → α)` be `Φ ω k := X k ω`. Then the process tail is the
     pullback of the path tail along `Φ`.
 
-    **Proof strategy:** Use antisymmetry and universal properties of inf/sup. -/
+    **Proof strategy:** Expand definitions and use comap distributivity. -/
 lemma tailProcess_eq_comap_path (X : ℕ → Ω → α) :
     tailProcess X
       =
     MeasurableSpace.comap (fun ω : Ω => fun k => X k ω) (tailShift α) := by
-  -- TODO: Prove that comap commutes with iInf in this special case
-  -- or use a different characterization
+  -- TODO: Complete this proof using comap properties and the bridge lemma
+  -- Key insight: Φ ∘ shift_n = λ ω k, X (n+k) ω
   sorry
 
 /-- **Bridge 3 (to ViaMartingale's revFiltration).**
@@ -151,13 +158,14 @@ lemma tailProcess_eq_iInf_revFiltration
 
 /-! ### General Properties -/
 
-/-- Tail σ-algebra is sub-σ-algebra of ambient space. -/
+/-- Tail σ-algebra is sub-σ-algebra of ambient space (when X is measurable). -/
 lemma tailProcess_le_ambient (X : ℕ → Ω → α) :
     tailProcess X ≤ (inferInstance : MeasurableSpace Ω) := by
   apply iInf_le_of_le 0
   apply iSup_le
   intro k
-  -- Each comap is ≤ the ambient measurable space
+  -- TODO: Need to assume X k is measurable to conclude comap (X k) ≤ ambient
+  -- This should use: Measurable (X k) → comap (X k) inferInstance ≤ inferInstance
   sorry
 
 /-! NOTE: For probability/finite measures, trimming to the tail σ-algebra preserves
