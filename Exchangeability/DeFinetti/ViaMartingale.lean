@@ -1807,9 +1807,9 @@ lemma condexp_indicator_eq_on_join_of_triple_law
     (Y : Ω → α) (Zr : Ω → (Fin r → α)) (θk θk' : Ω → (Fin k → α))
     (hY : Measurable Y) (hZr : Measurable Zr) (hθk : Measurable θk)
     (hθk' : Measurable θk')
-    (hpush :
-      Measure.map (fun ω => (Y ω, θk ω)) μ
-        = Measure.map (fun ω => (Y ω, θk' ω)) μ)
+    (htriple :
+      Measure.map (fun ω => (Zr ω, Y ω, θk ω)) μ
+        = Measure.map (fun ω => (Zr ω, Y ω, θk' ω)) μ)
     (B : Set α) (hB : MeasurableSet B) :
   μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y
        | MeasurableSpace.comap (fun ω => (Zr ω, θk ω)) inferInstance]
@@ -1915,25 +1915,23 @@ lemma block_coord_condIndep
     have h_triple := contractable_triple_pushforward
         (X := X) (μ := μ) (hX := hX) (hX_meas := hX_meas) (hrm := hrm)
         (r := r) (m := m) (k := k)
+
+    -- Rewrite h_triple in terms of our local variables
+    have hZr_eq : Zr = fun ω i => X i.val ω := by rfl
+    have hY_eq : Y = X r := by rfl
+    have hθk_eq : θk = fun ω j => X (m + 1 + j.val) ω := by rfl
+    have hθk'_eq : θk' = fun ω j => X (r + 1 + j.val) ω := by rfl
+
+    have h_triple' : Measure.map (fun ω => (Zr ω, Y ω, θk ω)) μ
+        = Measure.map (fun ω => (Zr ω, Y ω, θk' ω)) μ := by
+      simp only [hZr_eq, hY_eq, hθk_eq, hθk'_eq]
+      exact h_triple
+
     -- Project to pairs `(Y, θk)` vs `(Y, θk')`
     have h_pair :
         Measure.map (fun ω => (Y ω, θk ω)) μ
           = Measure.map (fun ω => (Y ω, θk' ω)) μ := by
       -- Project the triple equality to pairs using Prod.snd
-      -- h_triple gives: map (Zr, Y, θk_future) μ = map (Zr, Y, θk_tail) μ
-      -- where the functions are defined in the `let` bindings of h_triple
-
-      -- First, show that our Zr, Y, θk match the definitions in h_triple
-      have hZr_eq : Zr = fun ω i => X i.val ω := by rfl
-      have hY_eq : Y = X r := by rfl
-      have hθk_eq : θk = fun ω j => X (m + 1 + j.val) ω := by rfl
-      have hθk'_eq : θk' = fun ω j => X (r + 1 + j.val) ω := by rfl
-
-      -- Rewrite h_triple in terms of our variables
-      have h_triple' : Measure.map (fun ω => (Zr ω, Y ω, θk ω)) μ
-          = Measure.map (fun ω => (Zr ω, Y ω, θk' ω)) μ := by
-        simp only [hZr_eq, hY_eq, hθk_eq, hθk'_eq]
-        exact h_triple
 
       -- Now project using Prod.snd
       have h_θk_proj : (fun ω => (Y ω, θk ω)) = Prod.snd ∘ (fun ω => (Zr ω, Y ω, θk ω)) := by
@@ -1960,7 +1958,7 @@ lemma block_coord_condIndep
       finFutureSigma X m k = MeasurableSpace.comap θk inferInstance := rfl
     -- now apply the packaged bridge lemma
     have h_bridge := condexp_indicator_eq_on_join_of_triple_law
-        Y Zr θk θk' hY_meas hZr_meas hθk_meas hθk'_meas h_pair B hB
+        Y Zr θk θk' hY_meas hZr_meas hθk_meas hθk'_meas h_triple' B hB
     -- Convert using the σ-algebra equalities (convert closes goals via defeq)
     convert h_bridge using 2
   -- Step 2: pass to the limit k → ∞ (Lévy upward)
