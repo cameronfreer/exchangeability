@@ -2019,16 +2019,50 @@ lemma block_coord_condIndep
         = (firstRSigma X r ⊔ futureFiltration X m) := by
     simp [hiSup_fin, iSup_sup_eq]  -- uses lattice lemmas
   -- Upward convergence on both sides, then identify the limits by equality levelwise
-  -- The axiom condExp_tendsto_iSup gives pointwise a.e. convergence;
-  -- we need to extract function-level convergence in L¹ or a.e. sense.
-  sorry  -- TODO: Apply condExp_tendsto_iSup (Lévy upward) to get pointwise convergence,
-         -- then lift to function convergence using:
-         -- - h_up_left: convergence on join
-         -- - h_up_right: convergence on finFutureSigma
-         -- - Use h_finite for levelwise equality
-         -- - Apply tendsto_nhds_unique to conclude limits are a.e. equal
-         --
-         -- The structure is correct but needs proper handling of pointwise vs function convergence
+  -- Apply Lévy upward (condExp_tendsto_iSup) to both sequences of σ-algebras
+  have h_integrable : Integrable (Set.indicator B (fun _ => (1 : ℝ)) ∘ Y) μ := by
+    refine Integrable.indicator ?_ (hY_meas hB)
+    exact integrable_const (1 : ℝ)
+  -- Left side: convergence on the join
+  have h_up_left : ∀ᵐ ω ∂μ, Tendsto
+      (fun k => μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | firstRSigma X r ⊔ finFutureSigma X m k] ω)
+      atTop
+      (𝓝 (μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | firstRSigma X r ⊔ futureFiltration X m] ω)) := by
+    have hmono_join : Monotone (fun k => firstRSigma X r ⊔ finFutureSigma X m k) :=
+      fun _ _ hkℓ => sup_le_sup_left (hmono_fin hkℓ) _
+    have hle_join : ∀ k, firstRSigma X r ⊔ finFutureSigma X m k ≤ (inferInstance : MeasurableSpace Ω) :=
+      fun _ => sup_le (firstRSigma_le_ambient X r hX_meas) (finFutureSigma_le_ambient X m _ hX_meas)
+    rw [← hiSup_join]
+    exact Exchangeability.Probability.condExp_tendsto_iSup hmono_join hle_join _ h_integrable
+  -- Right side: convergence on finFutureSigma
+  have h_up_right : ∀ᵐ ω ∂μ, Tendsto
+      (fun k => μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | finFutureSigma X m k] ω)
+      atTop
+      (𝓝 (μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | futureFiltration X m] ω)) := by
+    have hle_fin : ∀ k, finFutureSigma X m k ≤ (inferInstance : MeasurableSpace Ω) :=
+      fun k => finFutureSigma_le_ambient X m k hX_meas
+    rw [← hiSup_fin]
+    exact Exchangeability.Probability.condExp_tendsto_iSup hmono_fin hle_fin _ h_integrable
+  -- Combine: levelwise equality + both converge ⇒ limits are a.e. equal
+  -- For ae ω, both sequences converge, and they agree at each level k
+  -- Build the ae-set where everything holds
+  have h_ae_eq : ∀ k, ∀ᵐ ω ∂μ,
+      μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | firstRSigma X r ⊔ finFutureSigma X m k] ω
+        = μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | finFutureSigma X m k] ω :=
+    fun k => h_finite k
+  -- Extract ae-set where all equalities hold
+  have h_eventually_eq : ∀ᵐ ω ∂μ, ∀ k,
+      μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | firstRSigma X r ⊔ finFutureSigma X m k] ω
+        = μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | finFutureSigma X m k] ω := by
+    rw [ae_all_iff]
+    exact h_ae_eq
+  filter_upwards [h_up_left, h_up_right, h_eventually_eq] with ω h_left h_right h_eq
+  -- At this ω: both sequences converge and agree levelwise, so limits are equal
+  have h_eq_seq : (fun k => μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | firstRSigma X r ⊔ finFutureSigma X m k] ω)
+                = (fun k => μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y | finFutureSigma X m k] ω) := by
+    ext k; exact h_eq k
+  rw [h_eq_seq] at h_left
+  exact tendsto_nhds_unique h_left h_right
 
 /-- **Product formula for conditional expectations under conditional independence.**
 
