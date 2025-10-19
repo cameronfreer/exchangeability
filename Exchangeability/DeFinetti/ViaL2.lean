@@ -3,7 +3,6 @@ Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
-import Exchangeability.DeFinetti.L2Approach
 import Exchangeability.DeFinetti.L2Helpers
 import Exchangeability.Contractability
 import Exchangeability.ConditionallyIID
