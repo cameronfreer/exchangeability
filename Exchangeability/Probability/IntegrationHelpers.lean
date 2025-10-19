@@ -40,13 +40,25 @@ variable {Ω : Type*} [MeasurableSpace Ω]
 For integrable functions f, g in L²(μ):
   |∫ f·g dμ| ≤ (∫ f² dμ)^(1/2) · (∫ g² dμ)^(1/2)
 
-This is Hölder's inequality specialized to p = q = 2. -/
+This is Hölder's inequality specialized to p = q = 2.
+
+We use the fact that `MemLp f 2 μ` means f is in L²(μ), and apply the
+L² inner product Cauchy-Schwarz inequality. -/
 lemma abs_integral_mul_le_L2
     {μ : Measure Ω} {f g : Ω → ℝ}
     (hf : MemLp f 2 μ) (hg : MemLp g 2 μ) :
     |∫ ω, f ω * g ω ∂μ|
       ≤ (∫ ω, (f ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (g ω) ^ 2 ∂μ) ^ (1/2 : ℝ) := by
-  sorry
+  -- Use the fact that MemLp implies integrable
+  have hf_int : Integrable f μ := hf.integrable one_le_two
+  have hg_int : Integrable g μ := hg.integrable one_le_two
+  -- The product is integrable
+  have hfg_int : Integrable (f * g) μ := hf_int.mul hg_int
+  -- Apply Hölder's inequality: for p = q = 2, we have conjugate exponents
+  -- The key is to use NNReal.IsConjExponent or the direct L2 inner product bound
+  sorry  -- TODO: Find the right mathlib lemma for this
+  -- The mathlib theorem should be something like:
+  -- integral_mul_le_Lp_mul_Lq or a Cauchy-Schwarz variant
 
 /-! ### Pushforward Measure Integrals -/
 
