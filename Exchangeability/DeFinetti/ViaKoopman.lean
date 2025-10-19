@@ -362,7 +362,13 @@ lemma ae_pullback_iff
         measurableSet_lt hFm_meas hGm_meas
       have h2 : MeasurableSet {x | Gm x < Fm x} :=
         measurableSet_lt hGm_meas hFm_meas
-      simpa [Set.setOf_or] using h1.union h2
+      have : {x | Fm x ≠ Gm x} = {x | Fm x < Gm x} ∪ {x | Gm x < Fm x} := by
+        ext x
+        constructor
+        · intro h; exact ne_iff_lt_or_gt.mp h
+        · intro h; exact ne_iff_lt_or_gt.mpr h
+      rw [this]
+      exact h1.union h2
     constructor
     · intro h
       -- μ S = 0 → μ' (g ⁻¹' S) = 0  → AE on μ' after composing with g.
@@ -398,10 +404,10 @@ pulls back correctly: `CE[H | 𝒢] ∘ g = CE[H ∘ g | comap g 𝒢]` a.e.
 
 This is the key lemma for transporting conditional expectations between spaces. -/
 lemma condexp_pullback_factor
-    {Ω Ω' : Type*} [MeasurableSpace Ω] [MeasurableSpace Ω']
+    {Ω Ω' : Type*} [inst_Ω : MeasurableSpace Ω] [MeasurableSpace Ω']
     {μ : Measure Ω} [IsFiniteMeasure μ] {μ' : Measure Ω'} [IsFiniteMeasure μ']
     (g : Ω' → Ω) (hg : Measurable g) (hpush : Measure.map g μ' = μ)
-    (m : MeasurableSpace Ω) (hm : m ≤ ‹MeasurableSpace Ω›)
+    (m : MeasurableSpace Ω) (hm : m ≤ inst_Ω)
     {H : Ω → ℝ} (hH : Integrable H μ) :
     (fun ω' => μ[H | m] (g ω'))
       =ᵐ[μ'] μ'[(H ∘ g) | MeasurableSpace.comap g m] := by
@@ -418,16 +424,17 @@ lemma condexp_pullback_factor
     rcases hs with ⟨B, hBm, rfl⟩
     -- Turn set integrals into whole integrals of indicators and change variables
     have hCEint : Integrable (μ[H | m]) μ := integrable_condExp
-    have hBm' : MeasurableSet B := hm _ hBm
     have hCEind_int : Integrable (Set.indicator B (μ[H | m])) μ :=
-      hCEint.indicator hBm'
+      hCEint.indicator (hm _ hBm)
     have hHind_int : Integrable (Set.indicator B H) μ :=
-      hH.indicator hBm'
+      hH.indicator (hm _ hBm)
 
     calc
       ∫ x in g ⁻¹' B, (μ[H | m] ∘ g) x ∂ μ'
           = ∫ x, (Set.indicator (g ⁻¹' B) (μ[H | m] ∘ g)) x ∂ μ' := by
-              sorry  -- set integral to indicator integral conversion
+              -- set integral to indicator integral conversion
+              have hgBm : MeasurableSet (g ⁻¹' B) := (hm _ hBm).preimage hg
+              exact (MeasureTheory.integral_indicator hgBm).symm
       _ = ∫ x, ((Set.indicator B (μ[H | m])) ∘ g) x ∂ μ' := by
               -- pull the indicator through the preimage
               have := @indicator_preimage_comp μ μ' _ _ _ _ g B (μ[H | m])
@@ -436,12 +443,14 @@ lemma condexp_pullback_factor
               -- change of variables for measure-preserving maps on *whole* integrals
               exact hmp.integral_comp hCEind_int
       _ = ∫ x in B, μ[H | m] x ∂ μ := by
-              sorry  -- indicator to set integral conversion
+              -- indicator to set integral conversion
+              exact MeasureTheory.integral_indicator (hm _ hBm)
       _ = ∫ x in B, H x ∂ μ := by
               -- defining property of CE on m-measurable sets
-              exact setIntegral_condExp hm hH hBm'
+              exact setIntegral_condExp hm hH (hm _ hBm)
       _ = ∫ x, (Set.indicator B H) x ∂ μ := by
-              sorry  -- set to indicator
+              -- set to indicator
+              exact (MeasureTheory.integral_indicator (hm _ hBm)).symm
       _ = ∫ x, ((Set.indicator B H) ∘ g) x ∂ μ' := by
               exact (hmp.integral_comp hHind_int).symm
       _ = ∫ x, (Set.indicator (g ⁻¹' B) (H ∘ g)) x ∂ μ' := by
@@ -449,12 +458,16 @@ lemma condexp_pullback_factor
               have := @indicator_preimage_comp μ μ' _ _ _ _ g B H
               simp only [this]
       _ = ∫ x in g ⁻¹' B, (H ∘ g) x ∂ μ' := by
-              sorry  -- indicator to set
+              -- indicator to set
+              have hgBm : MeasurableSet (g ⁻¹' B) := (hm _ hBm).preimage hg
+              exact MeasureTheory.integral_indicator hgBm
 
   -- 2) Uniqueness of the conditional expectation on `m.comap g`
   have hm' : MeasurableSpace.comap g m ≤ ‹MeasurableSpace Ω'› := by
     intro s hs; rcases hs with ⟨B, hBm, rfl⟩; simpa using hBm.preimage hg
-  have hHg' : Integrable (H ∘ g) μ' := hH.comp_measurePreserving hmp
+  have hHg' : Integrable (H ∘ g) μ' := by
+    have : Integrable H (Measure.map g μ') := by rwa [hpush]
+    exact (integrable_map_measure (hf := hg.aemeasurable) (hg := hH.aestronglyMeasurable)).mpr this
 
   exact
     ae_eq_condExp_of_forall_setIntegral_eq
@@ -467,10 +480,10 @@ then conditional expectation is invariant: `CE[f ∘ T^[k] | 𝒢] = CE[f | 𝒢
 
 This is the key for proving lag-constancy and other invariance properties. -/
 lemma condexp_precomp_iterate_eq_of_invariant
-    {Ω : Type*} [MeasurableSpace Ω]
+    {Ω : Type*} [inst_Ω : MeasurableSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (T : Ω → Ω) (hT : MeasurePreserving T μ μ)
-    (m : MeasurableSpace Ω) (hm : m ≤ ‹MeasurableSpace Ω›)
+    (m : MeasurableSpace Ω) (hm : m ≤ inst_Ω)
     (h_inv : ∀ s, MeasurableSet[m] s → T ⁻¹' s = s)
     {k : ℕ} {f : Ω → ℝ} (hf : Integrable f μ) :
     μ[(f ∘ (T^[k])) | m] =ᵐ[μ] μ[f | m] := by
@@ -485,9 +498,11 @@ lemma condexp_precomp_iterate_eq_of_invariant
     induction k with
     | zero => rfl
     | succ n ih =>
-      -- T^[n+1] = T ∘ T^[n]
-      show (T ∘ (T^[n])) ⁻¹' s = s
-      rw [Set.preimage_comp, ih, h_inv s hs]
+      -- T^[n+1] = T ∘ T^[n] as functions
+      have : (T^[n + 1]) = (T ∘ (T^[n])) := by
+        funext x
+        simp [Function.iterate_succ_apply']
+      rw [this, Set.preimage_comp, ih, h_inv s hs]
 
   -- Set-integral equality on `m`-measurable sets
   have h_sets :
@@ -501,7 +516,8 @@ lemma condexp_precomp_iterate_eq_of_invariant
     calc
       ∫ x in s, (f ∘ (T^[k])) x ∂ μ
           = ∫ x, (Set.indicator s (f ∘ (T^[k]))) x ∂ μ := by
-              sorry  -- set to indicator
+              -- set to indicator
+              exact (MeasureTheory.integral_indicator hs').symm
       _ = ∫ x, ((Set.indicator ((T^[k]) ⁻¹' s) f) ∘ (T^[k])) x ∂ μ := by
               -- move the indicator across the preimage
               have := @indicator_preimage_comp μ μ _ _ _ _ (T^[k]) ((T^[k]) ⁻¹' s) f
@@ -515,7 +531,8 @@ lemma condexp_precomp_iterate_eq_of_invariant
               -- use invariance of the set
               rw [h_preimage s hs]
       _ = ∫ x in s, f x ∂ μ := by
-              sorry  -- indicator to set
+              -- indicator to set
+              exact MeasureTheory.integral_indicator hs'
 
   -- Uniqueness of conditional expectation on `m`
   exact ae_eq_condExp_of_forall_setIntegral_eq hm hf h_sets
