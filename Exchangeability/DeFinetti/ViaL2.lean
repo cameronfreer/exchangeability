@@ -3718,6 +3718,19 @@ noncomputable def directing_measure
     }
     F_ω.measure
 
+namespace Helpers
+
+/-- **AXIOM A3 (Probability measure from CDF):**
+The `directing_measure` built from the CDF is a probability measure. -/
+axiom directing_measure_isProbabilityMeasure
+  {Ω : Type*} [MeasurableSpace Ω]
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
+  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+  ∀ ω, IsProbabilityMeasure (directing_measure X hX_contract hX_meas hX_L2 ω)
+
+end Helpers
+
 /-- The directing measure is a probability measure. -/
 lemma directing_measure_isProbabilityMeasure
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -3726,9 +3739,8 @@ lemma directing_measure_isProbabilityMeasure
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (ω : Ω) :
     IsProbabilityMeasure (directing_measure X hX_contract hX_meas hX_L2 ω) := by
-  -- The limits at ±∞ guarantee total mass 1 via StieltjesFunction.measure_univ
-  -- TODO: Use Helpers.directing_measure_isProbabilityMeasure once namespace issues resolved
-  sorry
+  -- Probability measure instance from axiom (A3):
+  exact (Helpers.directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω)
 
 /-! ## Sorry-free helpers
 
@@ -3782,14 +3794,6 @@ These are the genuinely hard parts (reverse martingale, kernel measurability,
 endpoint limits, identification).  Keep them here so the main file stays tidy.
 Replace them with real theorems when available.
 -/
-
-/-- **AXIOM A3 (Probability measure from CDF):**
-The `directing_measure` built from the CDF is a probability measure. -/
-axiom directing_measure_isProbabilityMeasure
-  {μ : Measure Ω} [IsProbabilityMeasure μ]
-  (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
-  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-  ∀ ω, IsProbabilityMeasure (directing_measure X hX_contract hX_meas hX_L2 ω)
 
 /-- **AXIOM A4 (Kernel measurability):**
 For every measurable set `s`, the map ω ↦ ν(ω)(s) is measurable. -/
