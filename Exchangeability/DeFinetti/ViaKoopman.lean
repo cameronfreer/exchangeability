@@ -442,6 +442,7 @@ lemma condexp_pullback_factor
               simp only [this]
       _ = ∫ x, (Set.indicator B (μ[H | m])) x ∂ μ := by
               -- change of variables for measure-preserving maps on *whole* integrals
+              letI : MeasurableSpace Ω := inst_Ω
               have hmp : MeasurePreserving g μ' μ := ⟨hg, hpush_eq⟩
               exact hmp.integral_comp hCEind_int
       _ = ∫ x in B, μ[H | m] x ∂ μ := by
@@ -454,6 +455,7 @@ lemma condexp_pullback_factor
               -- set to indicator
               exact (MeasureTheory.integral_indicator hBm_ambient).symm
       _ = ∫ x, ((Set.indicator B H) ∘ g) x ∂ μ' := by
+              letI : MeasurableSpace Ω := inst_Ω
               have hmp : MeasurePreserving g μ' μ := ⟨hg, hpush_eq⟩
               exact (hmp.integral_comp hHind_int).symm
       _ = ∫ x, (Set.indicator (g ⁻¹' B) (H ∘ g)) x ∂ μ' := by
