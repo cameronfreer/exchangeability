@@ -279,6 +279,86 @@ end Exchangeability.Tail
 - Stated with hypothesis `hrev` to fit any house definition
 - If `revFiltration` is literally `iSup (k ↦ comap (X (m+k)))`, specializes with `rfl`
 
+#### Attribute Guidelines
+
+**What to tag with `@[simp]`:**
+- ✅ `tailProcess_def`: Just a definitional alias (helpful and harmless)
+- ✅ `mem_firstRCylinder`: Crisp membership iff (very stable)
+- ❌ `comap_shift_eq_iSup_comap_coords`: σ-algebra equalities too powerful for global simp
+- ❌ `tailProcess_coords_eq_tailShift`: Keep for targeted rewrites (it's a "theorem")
+- ❌ `tailFamily_antitone`: Monotonicity lemmas better invoked explicitly
+
+**What to tag with `@[measurability]`:**
+- ✅ `firstRCylinder_measurable`: Classic target for measurability tactic
+- ✅ `cylinderFunction_measurable`: Automation for cylinder functions
+- ✅ `indProd_measurable`: If exposed
+- ✅ Any CE measurability wrappers
+- ❌ Integration lemmas (`*_integrable`): Call explicitly, not auto-simplifiers
+
+**General principle:**
+- Keep `@[simp]` off σ-algebra equalities except definitional `_def` lemmas
+- Use `@[measurability]` for any lemma whose conclusion is `Measurable[…]` with standard hypotheses
+- Avoid attributes on norm/L¹ inequalities (used via `apply`/`have`)
+
+#### Key Mathlib Lemmas to Use
+
+**MeasurableSpace/σ-algebra plumbing:**
+```lean
+import Mathlib.MeasureTheory.MeasurableSpace.Basic
+
+-- Composition of comaps
+MeasurableSpace.comap_comp :
+  MeasurableSpace.comap (g ∘ f) m = MeasurableSpace.comap f (MeasurableSpace.comap g m)
+
+-- Comap distributes over ⨆ and ⨅
+MeasurableSpace.comap_iSup :
+  MeasurableSpace.comap f (⨆ i, m i) = ⨆ i, MeasurableSpace.comap f (m i)
+
+MeasurableSpace.comap_iInf :
+  MeasurableSpace.comap f (⨅ i, m i) = ⨅ i, MeasurableSpace.comap f (m i)
+```
+
+**Complete-lattice operations (Order core):**
+```lean
+-- Basic inequalities
+iInf_le : (⨅ i, f i) ≤ f i
+le_iSup : f i ≤ (⨆ i, f i)
+
+-- Assemble equalities
+le_antisymm : a ≤ b → b ≤ a → a = b
+
+-- Pointwise bounds
+iInf_le_of_le : (⨅ i, f i) ≤ g j  -- from f j ≤ g j
+le_iSup_of_le : g j ≤ (⨆ i, f i)  -- from g j ≤ f j
+
+-- Rewrite slices
+iInf_congr : (∀ i, f i = g i) → (⨅ i, f i) = (⨅ i, g i)
+iSup_congr : (∀ i, f i = g i) → (⨆ i, f i) = (⨆ i, g i)
+
+-- Bundle inequalities
+iSup_le : (∀ i, f i ≤ a) → (⨆ i, f i) ≤ a
+le_iInf : (∀ i, a ≤ f i) → a ≤ (⨅ i, f i)
+```
+
+**Micro-recipes for bridge proofs:**
+
+1. **`comap_shift_eq_iSup_comap_coords`:**
+   - Treat coordinates as generators of product σ-algebra
+   - Use `comap_comp` with `eval (n+k) = (eval k) ∘ (shift^[n])`
+   - Bundle all coordinates via `iSup_congr`
+
+2. **`tailProcess_coords_eq_tailShift`:**
+   - Rewrite n-slice using `comap_shift_eq_iSup_comap_coords`
+   - Apply `iInf_congr` over `n`
+   - Done!
+
+3. **`tailProcess_eq_comap_path`:**
+   - Expand `tailShift`, push comap through ⨅ via `comap_iInf`
+   - Inside each slice, use `comap_iSup` and `comap_comp`
+   - Assemble with `iInf_congr` and `iSup_congr`
+
+**Note:** No global "iInf_iSup distributivity" needed! Work slice-by-slice to stay in ZF-safe complete lattice reasoning.
+
 #### Files to Update
 
 **ViaL2.lean:**
@@ -466,6 +546,26 @@ open PathSpace (cylinderFunction productCylinder)
 - When `h` true: product of 1s equals 1
 - When `h` false: some factor is 0, so product is 0
 - Key lemma: `Finset.prod_eq_one_iff` and `Finset.prod_eq_zero_iff`
+
+#### Attribute Guidelines for Cylinder Helpers
+
+**Apply `@[simp]`:**
+- ✅ `mem_firstRCylinder`: Crisp membership iff (∀ i, ω i ∈ S i)
+- ❌ `indProd_eq_indicator`: Big equality, keep for directed rewriting
+- ❌ `cylinderFunction_bounded`: Not a simplifier
+
+**Apply `@[measurability]`:**
+- ✅ `firstRCylinder_measurable`: Standard measurability goal
+- ✅ `cylinderFunction_measurable`: Classic automation target
+- ✅ `indProd_measurable`: If you expose it
+- ❌ `indProd_integrable`: Integration fact, call explicitly
+
+**Required imports:**
+```lean
+import Mathlib.MeasureTheory.MeasurableSpace.Basic  -- For measurability
+import Mathlib.Data.Finset.Basic                   -- For Finset.prod
+import Mathlib.Data.Set.Basic                      -- For Set.indicator
+```
 
 #### Estimated Impact
 
