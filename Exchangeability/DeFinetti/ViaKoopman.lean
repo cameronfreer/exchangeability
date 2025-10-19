@@ -413,16 +413,14 @@ pulls back correctly: `CE[H | 𝒢] ∘ g = CE[H ∘ g | comap g 𝒢]` a.e.
 
 This is the key lemma for transporting conditional expectations between spaces. -/
 lemma condexp_pullback_factor
-    {Ω Ω' : Type*} [MeasurableSpace Ω] [MeasurableSpace Ω']
+    {Ω Ω' : Type*} [inst : MeasurableSpace Ω] [MeasurableSpace Ω']
     {μ : Measure Ω} [IsFiniteMeasure μ] {μ' : Measure Ω'} [IsFiniteMeasure μ']
     (g : Ω' → Ω) (hg : Measurable g) (hpush : Measure.map g μ' = μ)
-    (m : MeasurableSpace Ω) (hm : m ≤ ‹MeasurableSpace Ω›)
-    {H : Ω → ℝ} (hH : Integrable H μ) :
+    {H : Ω → ℝ} (hH : Integrable H μ)
+    (m : MeasurableSpace Ω) (hm : m ≤ inst) :
     (fun ω' => μ[H | m] (g ω'))
       =ᵐ[μ'] μ'[(H ∘ g) | MeasurableSpace.comap g m] := by
   classical
-  -- Name the ambient instance (but don't install it)
-  let ambientΩ : MeasurableSpace Ω := inferInstance
 
   -- 1) Set-integral equality on every comap set
   have h_sets :
@@ -433,44 +431,42 @@ lemma condexp_pullback_factor
     rcases hs with ⟨B, hBm, rfl⟩
     -- Turn set integrals into whole integrals of indicators and change variables
     have hCEint : Integrable (μ[H | m]) μ := integrable_condExp
-    -- Lift measurability from m to ambient
-    have hBm_ambient : @MeasurableSet Ω ambientΩ B := hm B hBm
+    -- Lift measurability from m to ambient inst (Pattern C from user)
+    have hBm' : @MeasurableSet Ω inst B := hm B hBm
     have hCEind_int : Integrable (Set.indicator B (μ[H | m])) μ :=
-      hCEint.indicator hBm_ambient
+      hCEint.indicator hBm'
     have hHind_int : Integrable (Set.indicator B H) μ :=
-      hH.indicator hBm_ambient
+      hH.indicator hBm'
 
     calc
       ∫ x in g ⁻¹' B, (μ[H | m] ∘ g) x ∂ μ'
           = ∫ x, (Set.indicator (g ⁻¹' B) (μ[H | m] ∘ g)) x ∂ μ' := by
               -- set integral to indicator integral conversion
-              have hgBm : MeasurableSet (g ⁻¹' B) := hBm_ambient.preimage hg
+              have hgBm : MeasurableSet (g ⁻¹' B) := hBm'.preimage hg
               exact (MeasureTheory.integral_indicator hgBm).symm
       _ = ∫ x, ((Set.indicator B (μ[H | m])) ∘ g) x ∂ μ' := by
               -- pull the indicator through the preimage
-              have := @indicator_preimage_comp μ μ' _ _ _ _ g B (μ[H | m])
-              simp only [this]
+              convert (indicator_preimage_comp (K := μ[H | m]) (B := B))
       _ = ∫ x, (Set.indicator B (μ[H | m])) x ∂ μ := by
               -- change of variables for measure-preserving maps on *whole* integrals
               exact (mpOfPushforward g hg hpush).integral_comp hCEind_int
       _ = ∫ x in B, μ[H | m] x ∂ μ := by
               -- indicator to set integral conversion
-              exact MeasureTheory.integral_indicator hBm_ambient
+              exact MeasureTheory.integral_indicator hBm'
       _ = ∫ x in B, H x ∂ μ := by
               -- defining property of CE on m-measurable sets
-              exact setIntegral_condExp hm hH hBm_ambient
+              exact setIntegral_condExp hm hH hBm'
       _ = ∫ x, (Set.indicator B H) x ∂ μ := by
               -- set to indicator
-              exact (MeasureTheory.integral_indicator hBm_ambient).symm
+              exact (MeasureTheory.integral_indicator hBm').symm
       _ = ∫ x, ((Set.indicator B H) ∘ g) x ∂ μ' := by
               exact ((mpOfPushforward g hg hpush).integral_comp hHind_int).symm
       _ = ∫ x, (Set.indicator (g ⁻¹' B) (H ∘ g)) x ∂ μ' := by
               -- pull indicator back again
-              have := @indicator_preimage_comp μ μ' _ _ _ _ g B H
-              simp only [this]
+              convert (indicator_preimage_comp (K := H) (B := B))
       _ = ∫ x in g ⁻¹' B, (H ∘ g) x ∂ μ' := by
               -- indicator to set
-              have hgBm : MeasurableSet (g ⁻¹' B) := hBm_ambient.preimage hg
+              have hgBm : MeasurableSet (g ⁻¹' B) := hBm'.preimage hg
               exact MeasureTheory.integral_indicator hgBm
 
   -- 2) Uniqueness of the conditional expectation on `m.comap g`
@@ -491,16 +487,14 @@ then conditional expectation is invariant: `CE[f ∘ T^[k] | 𝒢] = CE[f | 𝒢
 
 This is the key for proving lag-constancy and other invariance properties. -/
 lemma condexp_precomp_iterate_eq_of_invariant
-    {Ω : Type*} [MeasurableSpace Ω]
+    {Ω : Type*} [inst : MeasurableSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (T : Ω → Ω) (hT : MeasurePreserving T μ μ)
-    (m : MeasurableSpace Ω) (hm : m ≤ ‹MeasurableSpace Ω›)
-    (h_inv : ∀ s, MeasurableSet[m] s → T ⁻¹' s = s)
-    {k : ℕ} {f : Ω → ℝ} (hf : Integrable f μ) :
+    {k : ℕ} {f : Ω → ℝ} (hf : Integrable f μ)
+    (m : MeasurableSpace Ω) (hm : m ≤ inst)
+    (h_inv : ∀ s, MeasurableSet[m] s → T ⁻¹' s = s) :
     μ[(f ∘ (T^[k])) | m] =ᵐ[μ] μ[f | m] := by
   classical
-  -- Name the ambient instance (but don't install it)
-  let ambientΩ : MeasurableSpace Ω := inferInstance
   -- iterate is measure-preserving
   have hTk : MeasurePreserving (T^[k]) μ μ := hT.iterate k
 
@@ -523,24 +517,26 @@ lemma condexp_precomp_iterate_eq_of_invariant
         ∫ x in s, (f ∘ (T^[k])) x ∂ μ = ∫ x in s, f x ∂ μ :=
   by
     intro s hs
-    -- Lift measurability from m to ambient
-    have hs_ambient : @MeasurableSet Ω ambientΩ s := hm s hs
+    -- Lift measurability from m to ambient inst (Pattern C from user)
+    have hs' : @MeasurableSet Ω inst s := hm s hs
     have hf_ind : Integrable (Set.indicator s f) μ :=
-      hf.indicator hs_ambient
+      hf.indicator hs'
     -- indicator trick + whole-space change of variables
     calc
       ∫ x in s, (f ∘ (T^[k])) x ∂ μ
           = ∫ x, (Set.indicator s (f ∘ (T^[k]))) x ∂ μ := by
               -- set to indicator
-              exact (MeasureTheory.integral_indicator hs_ambient).symm
+              exact (MeasureTheory.integral_indicator hs').symm
       _ = ∫ x, ((Set.indicator ((T^[k]) ⁻¹' s) f) ∘ (T^[k])) x ∂ μ := by
-              -- move the indicator across the preimage
-              have := @indicator_preimage_comp μ μ _ _ _ _ (T^[k]) ((T^[k]) ⁻¹' s) f
-              simp only [this]
+              -- move the indicator across the preimage: indicator (T⁻¹'s) (f ∘ T) = (indicator s f) ∘ T
+              funext x
+              by_cases hx : (T^[k]) x ∈ s
+              · simp [Set.indicator, Set.mem_preimage, hx]
+              · simp [Set.indicator, Set.mem_preimage, hx]
       _ = ∫ x, (Set.indicator ((T^[k]) ⁻¹' s) f) x ∂ μ := by
               have hinv_meas : MeasurableSet ((T^[k]) ⁻¹' s) := by
                 rw [h_preimage s hs]
-                exact hs_ambient
+                exact hs'
               have hf_ind_inv : Integrable (Set.indicator ((T^[k]) ⁻¹' s) f) μ :=
                 hf.indicator hinv_meas
               exact hTk.integral_comp hf_ind_inv
@@ -549,7 +545,7 @@ lemma condexp_precomp_iterate_eq_of_invariant
               rw [h_preimage s hs]
       _ = ∫ x in s, f x ∂ μ := by
               -- indicator to set
-              exact MeasureTheory.integral_indicator hs_ambient
+              exact MeasureTheory.integral_indicator hs'
 
   -- Uniqueness of conditional expectation on `m`
   exact ae_eq_condExp_of_forall_setIntegral_eq hm hf h_sets
