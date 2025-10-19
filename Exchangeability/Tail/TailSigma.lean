@@ -100,11 +100,12 @@ lemma preimage_injective_of_surjective {α β} {f : α → β}
     (hf : Function.Surjective f) :
   Function.Injective (fun (s : Set β) => f ⁻¹' s) := by
   intro s t hpre
+  have : f ⁻¹' s = f ⁻¹' t := hpre
   ext y
   rcases hf y with ⟨x, rfl⟩
   -- compare membership in equal preimages
-  suffices h : x ∈ f ⁻¹' s ↔ x ∈ f ⁻¹' t by simpa
-  rw [hpre]
+  have := congrArg (fun A => x ∈ A) this
+  simpa using this
 
 /-- If `f` is surjective, then `map f (comap f m) = m`. -/
 lemma map_comap_eq_of_surjective {α β} {f : α → β}
@@ -119,7 +120,9 @@ lemma map_comap_eq_of_surjective {α β} {f : α → β}
     rcases hS with ⟨T, hT, hpre⟩
     -- injectivity of preimage under surjectivity identifies `S = T`
     have hinj := preimage_injective_of_surjective (α := α) (β := β) hf
-    have : S = T := hinj hpre
+    have : S = T := by
+      apply hinj
+      exact hpre.symm
     simpa [this]
   · -- unit inequality `m ≤ map f (comap f m)`
     intro hS
@@ -165,17 +168,24 @@ lemma iInf_comap_eq_comap_iInf_of_surjective
     intro s hs
     -- In `⨅ i, comap f (m i)`, measurability is "for all i, there exists Tᵢ with s = f ⁻¹' Tᵢ".
     -- For each i, hs gives us that s is measurable in each comap.
+    have hs_all : ∀ i, MeasurableSet[MeasurableSpace.comap f (m i)] s := by
+      rw [MeasurableSpace.measurableSet_iInf] at hs
+      exact hs
     have : ∀ i, ∃ (T : Set β), MeasurableSet[m i] T ∧ s = f ⁻¹' T := by
       intro i
-      exact @hs _ (iInf_le (fun i => MeasurableSpace.comap f (m i)) i)
+      -- Measurability in comap means s = f ⁻¹' T for some measurable T
+      have hi := hs_all i
+      rw [MeasurableSpace.measurableSet_comap] at hi
+      rcases hi with ⟨T, hT, hpre⟩
+      exact ⟨T, hT, hpre.symm⟩
     -- Choose the witnesses Tᵢ along with measurability and the preimage identity.
     choose T hTmeas hspre using this
     -- All `T i` are equal because their preimages are all `s` and `f` is surjective.
     have hinj := MeasurableSpace.preimage_injective_of_surjective (α := α) (β := β) hf
     have Tall : ∀ i j, T i = T j := by
       intro i j
-      apply hinj
-      rw [← hspre i, ← hspre j]
+      have : f ⁻¹' T i = f ⁻¹' T j := by rw [← hspre i, ← hspre j]
+      exact hinj this
     -- Fix an index `i₀` and set `T₀ := T i₀`.
     rcases ‹Nonempty ι› with ⟨i₀⟩
     let T0 : Set β := T i₀
@@ -187,8 +197,8 @@ lemma iInf_comap_eq_comap_iInf_of_surjective
     -- hence `s` is measurable in `comap f (⨅ i, m i)`.
     refine ⟨T0, ?_, s_pre.symm⟩
     -- Measurable in `⨅ i, m i` means measurable in every slice.
-    intro k
-    exact T0_meas_all k
+    rw [MeasurableSpace.measurableSet_iInf]
+    exact T0_meas_all
 
   exact le_antisymm hle hge
 
@@ -266,10 +276,13 @@ lemma comap_path_tailShift_le_tailProcess (X : ℕ → Ω → α) :
   · exact comap_iInf_le _ _
   · apply le_iInf
     intro m
-    calc MeasurableSpace.comap (fun ω k => X k ω)
-            (MeasurableSpace.comap (fun ω k => ω (m + k)) inferInstance)
-        = tailFamily X m := (tailFamily_eq_comap_sample_path_shift X m).symm
-      _ ≤ iInf (tailFamily X) := iInf_le (tailFamily X) m
+    have : tailFamily X m =
+        MeasurableSpace.comap (fun ω k => X k ω)
+          (MeasurableSpace.comap (fun ω k => ω (m + k)) inferInstance) :=
+      tailFamily_eq_comap_sample_path_shift X m
+    rw [this]
+    exact iInf_le (fun n => MeasurableSpace.comap (fun ω k => X k ω)
+      (MeasurableSpace.comap (fun ω k => ω (n + k)) inferInstance)) m
 
 omit [MeasurableSpace Ω] in
 /-- **Bridge 2b (surjective equality).**
