@@ -194,6 +194,7 @@ lemma tailProcess_coords_eq_tailShift :
     pullback of the path tail along `Φ`.
 
     **Proof strategy:** Use that `comap` preserves `iInf` (right adjoint property). -/
+omit [MeasurableSpace Ω] in
 lemma tailProcess_eq_comap_path (X : ℕ → Ω → α) :
     tailProcess X
       =
