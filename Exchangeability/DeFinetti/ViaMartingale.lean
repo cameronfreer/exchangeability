@@ -11,6 +11,7 @@ import Exchangeability.Contractability
 import Exchangeability.ConditionallyIID
 import Exchangeability.Probability.CondExp
 import Exchangeability.Probability.Martingale
+import Exchangeability.Tail.TailSigma
 import Exchangeability.DeFinetti.MartingaleHelpers
 import Exchangeability.DeFinetti.CommonEnding
 
@@ -211,6 +212,22 @@ omit [MeasurableSpace Ω] in
 @[simp]
 lemma tailSigma_eq_iInf_rev (X : ℕ → Ω → α) :
     tailSigma X = ⨅ m, revFiltration X m := rfl
+
+omit [MeasurableSpace Ω] in
+/-- Bridge to canonical tail definition: ViaMartingale's `revFiltration` matches the pattern
+    required by `Tail.tailProcess_eq_iInf_revFiltration`. -/
+lemma revFiltration_eq_tailFamily (X : ℕ → Ω → α) (m : ℕ) :
+    revFiltration X m =
+    ⨆ k : ℕ, MeasurableSpace.comap (fun ω => X (m + k) ω) inferInstance := by
+  simp only [revFiltration, shiftRV]
+  -- comap (fun ω n => X (m + n) ω) = ⨆ k, comap (fun ω => X (m + k) ω)
+  exact Exchangeability.Tail.comap_shift_eq_iSup_comap_coords m
+
+omit [MeasurableSpace Ω] in
+/-- ViaMartingale's `tailSigma` equals the canonical `Tail.tailProcess`. -/
+lemma tailSigma_eq_canonical (X : ℕ → Ω → α) :
+    tailSigma X = Exchangeability.Tail.tailProcess X :=
+  Exchangeability.Tail.tailProcess_eq_iInf_revFiltration X revFiltration revFiltration_eq_tailFamily
 
 section Measurability
 
