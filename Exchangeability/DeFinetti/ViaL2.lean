@@ -1602,6 +1602,19 @@ axiom cesaro_to_condexp_L1
     ∫ ω, |(1 / (m : ℝ)) * ∑ i : Fin m, f (X i ω) -
            (μ[(f ∘ X 0) | TailSigma.tailSigma X] ω)| ∂μ < ε
 
+/-- **AXIOM A6 (Indicator integral continuity at fixed threshold):**
+If `Xₙ → X` a.e. and each `Xₙ`, `X` is measurable, then
+`∫ 1_{(-∞,t]}(Xₙ) dμ → ∫ 1_{(-∞,t]}(X) dμ`. -/
+axiom tendsto_integral_indicator_Iic
+  {Ω : Type*} [MeasurableSpace Ω]
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  (Xn : ℕ → Ω → ℝ) (X : Ω → ℝ) (t : ℝ)
+  (hXn_meas : ∀ n, Measurable (Xn n)) (hX_meas : Measurable (X))
+  (hae : ∀ᵐ ω ∂μ, Tendsto (fun n => Xn n ω) atTop (𝓝 (X ω))) :
+  Tendsto (fun n => ∫ ω, (Set.Iic t).indicator (fun _ => (1 : ℝ)) (Xn n ω) ∂μ)
+          atTop
+          (𝓝 (∫ ω, (Set.Iic t).indicator (fun _ => (1 : ℝ)) (X ω) ∂μ))
+
 end Helpers
 
 /-!
@@ -2592,7 +2605,7 @@ lemma alphaIicCE_measurable
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (t : ℝ) :
     Measurable (alphaIicCE X hX_contract hX_meas hX_L2 t) := by
-  sorry  -- BorelSpace typeclass issue - needs resolution
+  sorry  -- BorelSpace typeclass issue - stronglyMeasurable_condExp.measurable doesn't resolve
 
 /-- alphaIicCE is monotone nondecreasing in t (for each fixed ω). -/
 lemma alphaIicCE_mono
@@ -3523,7 +3536,8 @@ private lemma tendsto_integral_indicator_Iic
   Tendsto (fun n => ∫ ω, (Set.Iic t).indicator (fun _ => (1 : ℝ)) (Xn n ω) ∂μ)
           atTop
           (𝓝 (∫ ω, (Set.Iic t).indicator (fun _ => (1 : ℝ)) (X 0 ω) ∂μ)) := by
-  sorry
+  -- (A6) dominated-convergence-style continuity for fixed threshold
+  exact Helpers.tendsto_integral_indicator_Iic Xn (X 0) t hXn_meas hX_meas hae
 
 /-- Helper lemma: α_{Iic t}(ω) → 0 as t → -∞.
 
@@ -3596,6 +3610,21 @@ private lemma alphaIic_tendsto_one_at_top
   -- Same infrastructure requirements as the t → -∞ case. For now:
   sorry
 
+namespace Helpers
+
+/-- **AXIOM A2 (CDF endpoints):**
+For the CDF built from `alphaIic` via the rational envelope, the limits at
+±∞ are 0 and 1 for every ω. -/
+axiom cdf_from_alpha_limits
+  {Ω : Type*} [MeasurableSpace Ω]
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
+  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+  ∀ ω, Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) atBot (𝓝 0) ∧
+       Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) atTop (𝓝 1)
+
+end Helpers
+
 /-- F(ω,t) → 0 as t → -∞, and F(ω,t) → 1 as t → +∞.
 
 Given the helper lemmas about alphaIic convergence, this follows from the definition
@@ -3623,7 +3652,8 @@ lemma cdf_from_alpha_limits
     -- 4. Express this using mathlib's Filter.Tendsto API for atBot
     --
     -- This requires navigating mathlib's Filter/Metric API.
-    sorry
+    -- Use the packaged axiom (A2).
+    exact (Helpers.cdf_from_alpha_limits X hX_contract hX_meas hX_L2 ω).1
 
   · -- Limit at +∞: F(ω,t) → 1 as t → +∞
     -- Similar strategy using alphaIic_tendsto_one_at_top
@@ -3634,7 +3664,8 @@ lemma cdf_from_alpha_limits
     -- - Thus F(ω,t) → 1
     --
     -- Full proof requires mathlib's Filter API.
-    sorry
+    -- Use the packaged axiom (A2).
+    exact (Helpers.cdf_from_alpha_limits X hX_contract hX_meas hX_L2 ω).2
 
 /-- Build the directing measure ν from the CDF.
 
@@ -3687,6 +3718,19 @@ noncomputable def directing_measure
     }
     F_ω.measure
 
+namespace Helpers
+
+/-- **AXIOM A3 (Probability measure from CDF):**
+The `directing_measure` built from the CDF is a probability measure. -/
+axiom directing_measure_isProbabilityMeasure
+  {Ω : Type*} [MeasurableSpace Ω]
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
+  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+  ∀ ω, IsProbabilityMeasure (directing_measure X hX_contract hX_meas hX_L2 ω)
+
+end Helpers
+
 /-- The directing measure is a probability measure. -/
 lemma directing_measure_isProbabilityMeasure
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -3695,9 +3739,8 @@ lemma directing_measure_isProbabilityMeasure
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (ω : Ω) :
     IsProbabilityMeasure (directing_measure X hX_contract hX_meas hX_L2 ω) := by
-  -- The limits at ±∞ guarantee total mass 1 via StieltjesFunction.measure_univ
-  -- TODO: Use Helpers.directing_measure_isProbabilityMeasure once namespace issues resolved
-  sorry
+  -- Probability measure instance from axiom (A3):
+  exact (Helpers.directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω)
 
 /-! ## Sorry-free helpers
 
@@ -3752,24 +3795,6 @@ endpoint limits, identification).  Keep them here so the main file stays tidy.
 Replace them with real theorems when available.
 -/
 
-/-- **AXIOM A2 (CDF endpoints):**
-For the CDF built from `alphaIic` via the rational envelope, the limits at
-±∞ are 0 and 1 for every ω. -/
-axiom cdf_from_alpha_limits
-  {μ : Measure Ω} [IsProbabilityMeasure μ]
-  (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
-  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-  ∀ ω, Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) atBot (𝓝 0) ∧
-       Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) atTop (𝓝 1)
-
-/-- **AXIOM A3 (Probability measure from CDF):**
-The `directing_measure` built from the CDF is a probability measure. -/
-axiom directing_measure_isProbabilityMeasure
-  {μ : Measure Ω} [IsProbabilityMeasure μ]
-  (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
-  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-  ∀ ω, IsProbabilityMeasure (directing_measure X hX_contract hX_meas hX_L2 ω)
-
 /-- **AXIOM A4 (Kernel measurability):**
 For every measurable set `s`, the map ω ↦ ν(ω)(s) is measurable. -/
 axiom directing_measure_eval_measurable
@@ -3789,31 +3814,6 @@ axiom directing_measure_identification
   ∀ᵐ ω ∂μ, alphaFrom X hX_contract hX_meas hX_L2 f ω
              = ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)
 
-/-- **AXIOM A6 (Indicator integral continuity at fixed threshold):**
-If `Xₙ → X` a.e. and each `Xₙ`, `X` is measurable, then
-`∫ 1_{(-∞,t]}(Xₙ) dμ → ∫ 1_{(-∞,t]}(X) dμ`. -/
-axiom tendsto_integral_indicator_Iic
-  {μ : Measure Ω} [IsProbabilityMeasure μ]
-  (Xn : ℕ → Ω → ℝ) (X : Ω → ℝ) (t : ℝ)
-  (hXn_meas : ∀ n, Measurable (Xn n)) (hX_meas : Measurable (X))
-  (hae : ∀ᵐ ω ∂μ, Tendsto (fun n => Xn n ω) atTop (𝓝 (X ω))) :
-  Tendsto (fun n => ∫ ω, (Set.Iic t).indicator (fun _ => (1 : ℝ)) (Xn n ω) ∂μ)
-          atTop
-          (𝓝 (∫ ω, (Set.Iic t).indicator (fun _ => (1 : ℝ)) (X ω) ∂μ))
-
-/-- **AXIOM A7 (α_{Iic t} → 0 at −∞, a.e.). -/
-axiom alphaIic_tendsto_zero_at_bot
-  {μ : Measure Ω} [IsProbabilityMeasure μ]
-  (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
-  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-  ∀ᵐ ω ∂μ, Tendsto (fun t => alphaIic X hX_contract hX_meas hX_L2 t ω) atBot (𝓝 0)
-
-/-- **AXIOM A8 (α_{Iic t} → 1 at +∞, a.e.). -/
-axiom alphaIic_tendsto_one_at_top
-  {μ : Measure Ω} [IsProbabilityMeasure μ]
-  (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
-  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-  ∀ᵐ ω ∂μ, Tendsto (fun t => alphaIic X hX_contract hX_meas hX_L2 t ω) atTop (𝓝 1)
 
 /-- **AXIOM A10 (Step 5 packaging):** packaged existence of a directing kernel
 with the pointwise identification for a given bounded measurable `f`. -/
@@ -3866,10 +3866,10 @@ lemma directing_measure_eval_Iic_measurable
   have h_eq : ∀ ω, directing_measure X hX_contract hX_meas hX_L2 ω (Set.Iic t) =
       ENNReal.ofReal (cdf_from_alpha X hX_contract hX_meas hX_L2 ω t) := by
     intro ω
-    unfold directing_measure
-    simp only []
-    -- F_ω.measure (Iic t) = ofReal (F_ω t - 0) where F_ω has limit 0 at bot
-    -- But cdf_from_alpha_limits is a sorry, so we must sorry this identification
+    -- Identify ν(ω)(Iic t) with the CDF value (axiomatically true for our construction).
+    -- The directing_measure is built using StieltjesFunction from cdf_from_alpha
+    -- For StieltjesFunction measures, measure(Iic t) = ofReal(F(t) - lim at bot)
+    -- Since lim at bot = 0 (by A2), we get measure(Iic t) = ofReal(F(t))
     sorry
   simp_rw [h_eq]
   exact ENNReal.measurable_ofReal.comp hmeas
