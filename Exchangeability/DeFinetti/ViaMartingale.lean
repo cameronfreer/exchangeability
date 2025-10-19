@@ -58,6 +58,32 @@ convergence:
 * Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*,
   Lemma 1.3 and page 28: "Third proof of Theorem 1.1"
 * Aldous (1983), *Exchangeability and related topics*
+
+## Remaining Work (3 sorries)
+
+This file builds successfully but has 3 remaining sorries with complete proof documentation:
+
+### Sorry #1 (line ~396): `condexp_convergence_fwd` - Forward Declaration ⚠️ ARCHITECTURAL
+**Status:** Intentional forward declaration with full proof at line ~1209
+**Blocker:** Forward reference to `measure_ext_of_future_rectangles` (line ~889)
+**Resolution:** Keep as forward declaration OR reorganize file structure
+**Proof:** Complete 3-step strategy documented inline (π-λ theorem → CE bridge → simplify)
+
+### Sorry #2 (line ~1961): `condexp_indicator_eq_on_join_of_triple_law` - Bridge Lemma 🔬 DEEP THEORY
+**Status:** Requires conditional independence from distributional equality
+**Blocker:** Missing mathlib infrastructure for Kallenberg Lemma 1.3
+**Resolution:** Contribute to mathlib:
+  - `condIndep_of_pair_law_eq_and_le` (contraction-independence)
+  - `condExp_eq_of_indep_and_measurable_wrt_cond` (CI projection)
+**Proof:** Two complete approaches documented inline (Plan A: CI route, Plan B: uniqueness)
+
+### Sorry #3 (line ~2204): Pi σ-algebra supremum 📐 MISSING MATHLIB LEMMA
+**Status:** Standard product σ-algebra structure result
+**Blocker:** Missing `MeasurableSpace.pi_nat_eq_iSup_fin` in mathlib
+**Resolution:** Contribute to mathlib OR direct 50-100 line proof
+**Proof:** Complete proof strategy documented inline (3 steps with lemma signatures)
+
+**To resume next session:** Search for "═══" to jump to sorry documentation blocks.
 -/
 
 noncomputable section
