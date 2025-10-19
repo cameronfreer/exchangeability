@@ -2746,9 +2746,7 @@ lemma alphaIic_ae_eq_alphaIicCE
     -- For an exchangeable (contractable) sequence, the Cesàro averages of f(X_i)
     -- converge in L² (hence L¹) to E[f(X_0) | tailSigma X]
     -- This is a consequence of the mean ergodic theorem or reverse martingale convergence
-    -- Deep input (reverse martingale). See `Helpers.cesaro_to_condexp_L1`.
-    exact Exchangeability.DeFinetti.ViaL2.Helpers.cesaro_to_condexp_L1 hX_contract hX_meas (indIic t)
-      (indIic_measurable t) (indIic_bdd t) ε hε
+    sorry  -- TODO: Apply Helpers.cesaro_to_condexp_L1 with appropriate index handling
 
   -- Step 3: Use uniqueness of L¹ limits to conclude a.e. equality
   -- If both f and g are L¹ limits of the same sequence, then f =ᵐ g
@@ -3697,8 +3695,9 @@ lemma directing_measure_isProbabilityMeasure
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (ω : Ω) :
     IsProbabilityMeasure (directing_measure X hX_contract hX_meas hX_L2 ω) := by
-  -- Probability measure instance from axiom (A3):
-  exact (Exchangeability.DeFinetti.ViaL2.Helpers.directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω)
+  -- The limits at ±∞ guarantee total mass 1 via StieltjesFunction.measure_univ
+  -- TODO: Use Helpers.directing_measure_isProbabilityMeasure once namespace issues resolved
+  sorry
 
 /-! ## Sorry-free helpers
 
