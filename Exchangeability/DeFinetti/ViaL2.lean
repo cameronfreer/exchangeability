@@ -2605,7 +2605,7 @@ lemma alphaIicCE_measurable
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (t : ℝ) :
     Measurable (alphaIicCE X hX_contract hX_meas hX_L2 t) := by
-  sorry  -- BorelSpace typeclass issue - needs resolution
+  sorry  -- BorelSpace typeclass issue - stronglyMeasurable_condExp.measurable doesn't resolve
 
 /-- alphaIicCE is monotone nondecreasing in t (for each fixed ω). -/
 lemma alphaIicCE_mono
