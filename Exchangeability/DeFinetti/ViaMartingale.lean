@@ -692,54 +692,6 @@ lemma indProd_integrable
   · exact integrable_const 1
   · exact firstRCylinder_measurable_ambient X r C hX hC
 
-/-! ### Indicator algebra helpers for factorization -/
-
-/-- The product of two indicator functions equals the indicator of their intersection. -/
-lemma indicator_mul_indicator_eq_indicator_inter
-    {Ω : Type*} [MeasurableSpace Ω]
-    (A B : Set Ω) (c d : ℝ) :
-    (A.indicator (fun _ => c)) * (B.indicator (fun _ => d))
-      = (A ∩ B).indicator (fun _ => c * d) := by
-  ext ω
-  by_cases hA : ω ∈ A <;> by_cases hB : ω ∈ B <;>
-    simp [Set.indicator, hA, hB, Set.mem_inter_iff]
-
-/-- Indicator function composed with preimage. -/
-lemma indicator_comp_preimage
-    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
-    (f : Ω → α) (B : Set α) (c : ℝ) :
-    (B.indicator (fun _ => c)) ∘ f = (f ⁻¹' B).indicator (fun _ => c) := by
-  ext ω
-  simp only [Function.comp_apply, Set.indicator, Set.mem_preimage]
-  rfl
-
-/-- Binary indicator takes values in {0, 1}. -/
-lemma indicator_binary
-    {Ω : Type*} [MeasurableSpace Ω]
-    (A : Set Ω) (ω : Ω) :
-    A.indicator (fun _ => (1 : ℝ)) ω = 0 ∨ A.indicator (fun _ => (1 : ℝ)) ω = 1 := by
-  by_cases h : ω ∈ A
-  · simp [Set.indicator, h]
-  · simp [Set.indicator, h]
-
-/-- Indicator is bounded by its constant. -/
-lemma indicator_le_const
-    {Ω : Type*} [MeasurableSpace Ω]
-    (A : Set Ω) (c : ℝ) (hc : 0 ≤ c) (ω : Ω) :
-    A.indicator (fun _ => c) ω ≤ c := by
-  by_cases h : ω ∈ A
-  · simp [Set.indicator, h]
-  · simp [Set.indicator, h, hc]
-
-/-- Indicator is nonnegative when constant is nonnegative. -/
-lemma indicator_nonneg
-    {Ω : Type*} [MeasurableSpace Ω]
-    (A : Set Ω) (c : ℝ) (hc : 0 ≤ c) (ω : Ω) :
-    0 ≤ A.indicator (fun _ => c) ω := by
-  by_cases h : ω ∈ A
-  · simp [Set.indicator, h, hc]
-  · simp [Set.indicator, h]
-
 /-- indProd is strongly measurable when coordinates and sets are measurable. -/
 lemma indProd_stronglyMeasurable
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
