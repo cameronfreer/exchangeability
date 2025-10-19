@@ -119,9 +119,13 @@ lemma comap_shift_eq_iSup_comap_coords (n : ℕ) :
     **Proof strategy:** Apply iInf_congr using comap_shift_eq_iSup_comap_coords. -/
 lemma tailProcess_coords_eq_tailShift :
     tailProcess (fun k (ω : ℕ → α) => ω k) = tailShift α := by
+  -- The key observation: for X = (fun k ω => ω k), we have X (n+k) ω = ω (n+k)
   simp only [tailProcess, tailShift, tailFamily]
-  -- TODO: Apply funext properly to avoid typeclass issues
-  sorry
+  -- Both sides are iInf over n of the same expression (by comap_shift_eq_iSup_comap_coords)
+  congr 1
+  funext n
+  -- Goal: ⨆ k, comap (fun ω => ω (n+k)) = comap (shift n) pi
+  exact (comap_shift_eq_iSup_comap_coords n).symm
 
 /-- **Bridge 2 (pullback along sample-path map).**
     Let `Φ : Ω → (ℕ → α)` be `Φ ω k := X k ω`. Then the process tail is the
@@ -132,8 +136,9 @@ lemma tailProcess_eq_comap_path (X : ℕ → Ω → α) :
     tailProcess X
       =
     MeasurableSpace.comap (fun ω : Ω => fun k => X k ω) (tailShift α) := by
-  -- TODO: Complete this proof using comap properties and the bridge lemma
-  -- Key insight: Φ ∘ shift_n = λ ω k, X (n+k) ω
+  -- This proof requires showing that comap commutes with iInf in this special case
+  -- Key insight: Φ ∘ shift_n = fun ω k => X (n+k) ω
+  -- TODO: Complete using careful manipulation of comap and composition
   sorry
 
 /-- **Bridge 3 (to ViaMartingale's revFiltration).**
@@ -158,15 +163,16 @@ lemma tailProcess_eq_iInf_revFiltration
 
 /-! ### General Properties -/
 
-/-- Tail σ-algebra is sub-σ-algebra of ambient space (when X is measurable). -/
-lemma tailProcess_le_ambient (X : ℕ → Ω → α) :
+/-- Tail σ-algebra is sub-σ-algebra of ambient space when all X_k are measurable. -/
+lemma tailProcess_le_ambient (X : ℕ → Ω → α) (hX : ∀ k, Measurable (X k)) :
     tailProcess X ≤ (inferInstance : MeasurableSpace Ω) := by
   apply iInf_le_of_le 0
   apply iSup_le
   intro k
-  -- TODO: Need to assume X k is measurable to conclude comap (X k) ≤ ambient
-  -- This should use: Measurable (X k) → comap (X k) inferInstance ≤ inferInstance
-  sorry
+  -- comap (X (0+k)) ≤ ambient iff ambient ≤ map (X (0+k)) ambient
+  -- which holds because X (0+k) is measurable
+  rw [MeasurableSpace.comap_le_iff_le_map]
+  exact (hX (0 + k)).le_map
 
 /-! NOTE: For probability/finite measures, trimming to the tail σ-algebra preserves
     sigma-finiteness. This is automatic via type class inference in mathlib. -/
