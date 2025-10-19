@@ -799,28 +799,39 @@ private lemma condexp_pair_lag_constant_twoSided
         | shiftInvariantSigmaℤ (α := α)] := by
     sorry
     /-
-    OLD PROOF (unsolved goals at line 798, type mismatch at line 801):
+    ATTEMPTED FIX (Failed - arithmetic doesn't work out):
 
-    Use invariance under the inverse shift to replace the negative index
-    have h_inv :=
-      condexp_precomp_shiftℤInv_eq
-        (μhat := ext.μhat) (α := α)
-        (hσInv := ext.shiftInv_preserving)
-        (f := fun ω => f (ω 0) * g (ω (k : ℤ)))
-        (integrability proof...)
+    Goal: Show CE[f(ω(-1)) * g(ω k)] = CE[f(ω 0) * g(ω k)]
 
-    have h_ident :
-        (fun ω => f (ω 0) * g (ω (k : ℤ))) ∘ shiftℤInv (α := α) = Fk := by
-      funext ω
-      simp [Fk, Function.comp_apply, shiftℤInv, add_comm, add_left_comm, add_assoc]
-      **ERROR: unsolved goals**
+    This is "lag constancy in the first coordinate" - shifting the time index
+    of f from -1 to 0 while keeping g at k doesn't change the conditional expectation
+    onto the shift-invariant σ-algebra.
 
-    simpa [h_ident] using h_inv
-    **ERROR: Type mismatch - h_inv has type involving f (ω (-1)) but expected type involves Fk**
+    Attempted approach using condexp_precomp_shiftℤInv_eq:
+    - That axiom gives: CE[F ∘ shiftℤInv] = CE[F]
+    - Tried to apply with F = (fun ω => f (ω 0) * g (ω k))
+    - Then F ∘ shiftℤInv = (fun ω => f (ω (-1)) * g (ω (k-1)))
+    - But Fk = (fun ω => f (ω (-1)) * g (ω k)), not g(ω (k-1))!
+    - The second coordinate doesn't match
 
-    BLOCKERS:
-    - Unsolved goal in h_ident funext proof
-    - Type mismatch when applying h_ident in simpa
+    Why it failed:
+    - shiftℤInv shifts ALL coordinates: shiftℤInv ω i = ω (i - 1)
+    - So both f and g coordinates get shifted
+    - But we only want to shift the f coordinate
+
+    What's actually needed:
+    - A lemma about "lag constancy" that says CE is constant in the lag
+    - OR: A different invariance property specific to products
+    - OR: Use naturality/factorization properties of CE
+
+    This is likely related to the axiomatized `condexp_pair_lag_constant_twoSided`
+    which is commented out at line 700, but that shifts the SECOND coordinate,
+    not the first.
+
+    TODO: Either:
+    1. Prove this using properties of shift-invariant σ-algebra
+    2. Axiomatize as a "first-coordinate lag constancy" lemma
+    3. Find a different proof strategy that doesn't need this equality
     -/
   refine h_shift.trans ?_
   simpa [h_shifted_eq] using h_unshifted_eq
