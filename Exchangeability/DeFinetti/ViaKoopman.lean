@@ -11,8 +11,8 @@ import Mathlib.Analysis.InnerProductSpace.Projection.Basic
 import Mathlib.Probability.Kernel.Condexp
 import Mathlib.Probability.Independence.Kernel
 import Exchangeability.Ergodic.KoopmanMeanErgodic
-import Exchangeability.DeFinetti.InvariantSigma
-import Exchangeability.DeFinetti.ProjectionLemmas
+import Exchangeability.Ergodic.InvariantSigma
+import Exchangeability.Ergodic.ProjectionLemmas
 import Exchangeability.DeFinetti.CommonEnding
 import Exchangeability.ConditionallyIID
 

@@ -9,7 +9,7 @@ import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.Analysis.InnerProductSpace.Projection.Basic
 import Mathlib.Topology.Algebra.Order.LiminfLimsup
 import Exchangeability.Ergodic.KoopmanMeanErgodic
-import Exchangeability.DeFinetti.ProjectionLemmas
+import Exchangeability.Ergodic.ProjectionLemmas
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.CondexpL2
 
 /-!
