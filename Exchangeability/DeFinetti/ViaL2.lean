@@ -47,9 +47,6 @@ Supporting lemmas:
 * `weighted_sums_converge_L1`: L² bound implies L¹ convergence
 * `reverse_martingale_limit`: Tail-measurable limit via reverse martingale
 
-Auxiliary results (in separate file):
-* `CovarianceStructure.contractable_covariance_structure`: Uniform covariance structure
-
 ## Why this proof is default
 
 ✅ **Elementary** - Only uses basic L² space theory and Cauchy-Schwarz
