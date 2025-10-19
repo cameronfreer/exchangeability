@@ -9,6 +9,7 @@ import Mathlib.Probability.Kernel.Basic
 import Mathlib.Dynamics.Ergodic.Ergodic
 import Exchangeability.Contractability
 import Exchangeability.ConditionallyIID
+import Exchangeability.Tail.TailSigma
 
 /-!
 # Common Ending for de Finetti Proofs
@@ -144,13 +145,14 @@ def IsAlmostShiftInvariant {α : Type*} [MeasurableSpace α]
 
 /-- The **tail σ-algebra** for infinite sequences consists of events that are
 "asymptotically independent" of the first n coordinates for all n.
-Equivalently (for exchangeable sequences), it's the σ-field of shift-invariant events.
 
-TODO: Prove these are equivalent using FMP 10.3-10.4. -/
+Now using the canonical definition from `Exchangeability.Tail.tailShift`,
+defined as `⨅ n, comap (shift^n) inferInstance`.
+
+For exchangeable sequences, this equals the shift-invariant σ-field
+(to be proven using FMP 10.3-10.4). -/
 def tailSigmaAlgebra (α : Type*) [MeasurableSpace α] : MeasurableSpace (ℕ → α) :=
-  -- Placeholder: should be defined as ⋂ n, σ(X_{n+1}, X_{n+2}, ...)
-  -- For now, use the invariant σ-field as a proxy
-  invariantSigmaField α
+  Exchangeability.Tail.tailShift α
 
 /-- A function on the path space is **tail-measurable** if it's measurable with respect
 to the tail σ-algebra. By FMP 10.3, this is equivalent to being (almost) shift-invariant. -/

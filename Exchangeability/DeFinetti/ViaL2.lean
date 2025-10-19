@@ -1522,12 +1522,10 @@ def tailFamily := @Exchangeability.Tail.tailFamily
 def tailSigma := @Exchangeability.Tail.tailProcess
 
 -- Re-export the lemmas for backward compatibility
-omit [MeasurableSpace Ω] [MeasurableSpace β] in
 lemma antitone_tailFamily {Ω β : Type*} [MeasurableSpace Ω] [MeasurableSpace β]
     (X : ℕ → Ω → β) : Antitone (tailFamily X) :=
   Exchangeability.Tail.tailFamily_antitone X
 
-omit [MeasurableSpace Ω] [MeasurableSpace β] in
 lemma tailSigma_le_tailFamily {Ω β : Type*} [MeasurableSpace Ω] [MeasurableSpace β]
     (X : ℕ → Ω → β) (n : ℕ) : tailSigma X ≤ tailFamily X n :=
   Exchangeability.Tail.tailProcess_le_tailFamily X n
