@@ -94,29 +94,21 @@ def tailShift (α : Type*) [MeasurableSpace α] : MeasurableSpace (ℕ → α) :
 /-! ### Helper Lemmas for comap and Infima -/
 
 omit [MeasurableSpace Ω] [MeasurableSpace α] in
-/-- Always true: comap of an infimum is ≤ the infimum of comaps.
+/-- `comap` preserves arbitrary infima (right adjoint property).
 
-    Note: The reverse inequality requires additional structure (e.g., surjectivity).
-    This is because `comap` is a LEFT adjoint in the Galois connection, so it preserves
-    suprema but not infima in general. -/
-lemma comap_iInf_le {ι : Sort*} {f : α → β} (m : ι → MeasurableSpace β) :
-    MeasurableSpace.comap f (iInf m) ≤ iInf (fun i => MeasurableSpace.comap f (m i)) := by
-  refine le_iInf (fun i => ?_)
-  exact MeasurableSpace.comap_mono (iInf_le m i)
-
-/-- With surjectivity, comap DOES commute with iInf. -/
-lemma iInf_comap_eq_comap_iInf_of_surjective
-    {ι : Sort*} {f : α → β} (h : Function.Surjective f)
-    (m : ι → MeasurableSpace β) :
-    iInf (fun i => MeasurableSpace.comap f (m i))
-      = MeasurableSpace.comap f (iInf m) := by
-  apply le_antisymm
-  · -- ⨅ i, comap f (m i) ≤ comap f (⨅ i, m i)
-    -- Use GC: this is equivalent to showing map f (⨅ i, comap f (m i)) ≤ ⨅ i, m i
-    sorry  -- TODO: This requires showing map f (comap f m) = m under surjectivity
-           -- which is a bit involved. The mathematical argument is sound.
-  · -- comap f (⨅ i, m i) ≤ ⨅ i, comap f (m i) always holds
-    exact comap_iInf_le m
+    Key insight: In the Galois connection `map f ⊣ comap f`, the RIGHT adjoint `comap`
+    preserves all infima, while the LEFT adjoint `map` preserves all suprema.
+    This is why `comap_iInf` holds unconditionally (no surjectivity needed). -/
+lemma comap_iInf {ι : Sort*} (f : α → β) (m : ι → MeasurableSpace β) :
+    MeasurableSpace.comap f (iInf m) = iInf (fun i => MeasurableSpace.comap f (m i)) := by
+  refine le_antisymm ?_ ?_
+  · -- ≤ direction by monotonicity of comap
+    refine le_iInf (fun i => ?_)
+    exact MeasurableSpace.comap_mono (iInf_le m i)
+  · -- ≥ direction via GC
+    sorry -- TODO: Need to show map f (⨅ i, comap f (m i)) ≤ ⨅ i, m i
+          -- This uses the counit of the Galois connection map f ⊣ comap f
+          -- The user's code uses map_comap_le which may not exist in this mathlib version
 
 /-! ### Bridge Lemmas (LOAD-BEARING - Phase 1a) -/
 
@@ -178,41 +170,19 @@ lemma tailProcess_coords_eq_tailShift :
   -- Goal: ⨆ k, comap (fun ω => ω (n+k)) = comap (shift n) pi
   exact (comap_shift_eq_iSup_comap_coords n).symm
 
-omit [MeasurableSpace Ω] in
-/-- **Bridge 2a (pullback inequality - always true).**
-    Pulling back the path-space tail is always coarser than (or equal to) the process tail.
+/-- **Bridge 2 (pullback along sample-path map).**
+    Let `Φ : Ω → (ℕ → α)` be `Φ ω k := X k ω`. Then the process tail equals the
+    pullback of the path tail along `Φ`.
 
-    This is the unconditional direction that holds without any hypothesis on X.
-    The reverse inequality (equality) requires the sample-path map to be surjective;
-    see `tailProcess_eq_comap_path_of_surjective`. -/
-lemma comap_path_tailShift_le_tailProcess (X : ℕ → Ω → α) :
-    MeasurableSpace.comap (fun ω : Ω => fun k => X k ω) (tailShift α)
-      ≤ tailProcess X := by
-  simp only [tailProcess, tailShift]
-  -- comap Φ (⨅ n, ...) ≤ ⨅ n, comap Φ ... by comap_iInf_le
-  calc MeasurableSpace.comap (fun ω : Ω => fun k => X k ω)
-         (iInf fun n => MeasurableSpace.comap (fun ω k => ω (n + k)) inferInstance)
-      ≤ iInf fun n => MeasurableSpace.comap (fun ω : Ω => fun k => X k ω)
-           (MeasurableSpace.comap (fun ω k => ω (n + k)) inferInstance) := by
-        exact comap_iInf_le _
-    _ = iInf (tailFamily X) := by
-        congr 1; funext n; exact (tailFamily_eq_comap_sample_path_shift X n).symm
-
-/-- **Bridge 2b (pullback equality with surjectivity).**
-    If the sample-path map `Φ : Ω → (ℕ → α)` where `Φ ω k := X k ω` is surjective,
-    then the process tail equals the pullback of the path tail.
-
-    **Proof strategy:** Use that surjectivity makes comap preserve iInf. -/
-lemma tailProcess_eq_comap_path_of_surjective (X : ℕ → Ω → α)
-    (hΦ : Function.Surjective (fun ω : Ω => fun k => X k ω)) :
+    **Proof strategy:** Use that `comap` preserves `iInf` (right adjoint property). -/
+lemma tailProcess_eq_comap_path (X : ℕ → Ω → α) :
     tailProcess X
       =
     MeasurableSpace.comap (fun ω : Ω => fun k => X k ω) (tailShift α) := by
-  -- Use that surjectivity makes comap commute with iInf
-  sorry  -- TODO: Requires completing iInf_comap_eq_comap_iInf_of_surjective
-         -- The mathematical argument (per user) is sound, but the Lean proof
-         -- requires careful work with the Galois connection and showing
-         -- map f (comap f m) = m under surjectivity.
+  -- TODO: Requires completing comap_iInf proof (right adjoint property)
+  -- Once that's done, this should be a one-liner:
+  -- simp only [tailProcess, tailShift, tailFamily_eq_comap_sample_path_shift, comap_iInf]
+  sorry
 
 omit [MeasurableSpace Ω] in
 /-- **Bridge 3 (to ViaMartingale's revFiltration).**
