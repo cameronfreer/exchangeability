@@ -473,65 +473,68 @@ lemma condexp_pullback_factor
   -- 1) Set-integral equality on every comap set
   have h_sets :
       ∀ s, MeasurableSet[MeasurableSpace.comap g m] s →
-        ∫ x in s, (μ[H | m] ∘ g) x ∂ μ' = ∫ x in s, (H ∘ g) x ∂ μ' :=
-  by
+        ∫ x in s, (μ[H | m] ∘ g) x ∂ μ' = ∫ x in s, (H ∘ g) x ∂ μ' := by
     intro s hs
     rcases hs with ⟨B, hBm, rfl⟩
-    -- Turn set integrals into whole integrals of indicators and change variables
-    have hCEint : Integrable (μ[H | m]) μ := integrable_condExp
-    -- Lift measurability from m to ambient inst (Pattern C from user)
+    -- Lift measurability from m to ambient inst
     have hBm' : @MeasurableSet Ω inst B := hm B hBm
-    have hCEind_int : Integrable (Set.indicator B (μ[H | m])) μ :=
-      hCEint.indicator hBm'
-    have hHind_int : Integrable (Set.indicator B H) μ :=
-      hH.indicator hBm'
+    sorry
+    /-
+    OLD PROOF IDEA (Type class synthesis issues with m vs inst):
 
-    calc
+    Turn set integrals into whole integrals of indicators and change variables.
+    The key steps are:
+    1. Convert set integral to indicator integral
+    2. Pull indicator through preimage
+    3. Change of variables using measure-preserving property
+    4. Apply defining property of conditional expectation on m-measurable sets
+    5. Reverse the process for H
+
+    This requires careful instance management:
+    - hCEint : Integrable (μ[H | m]) μ := integrable_condExp
+    - hCEind_int : Integrable (Set.indicator B (μ[H | m])) μ := hCEint.indicator hBm'
+    - hHind_int : Integrable (Set.indicator B H) μ := hH.indicator hBm'
+
+    calc chain:
       ∫ x in g ⁻¹' B, (μ[H | m] ∘ g) x ∂ μ'
-          = ∫ x, (Set.indicator (g ⁻¹' B) (μ[H | m] ∘ g)) x ∂ μ' := by
-              -- set integral to indicator integral conversion
-              have hgBm : MeasurableSet (g ⁻¹' B) := hBm'.preimage hg
-              exact (MeasureTheory.integral_indicator hgBm).symm
-      _ = ∫ x, ((Set.indicator B (μ[H | m])) ∘ g) x ∂ μ' := by
-              -- pull the indicator through the preimage
-              convert (indicator_preimage_comp (K := μ[H | m]) (B := B))
-      _ = ∫ x, (Set.indicator B (μ[H | m])) x ∂ μ := by
-              -- change of variables for measure-preserving maps on *whole* integrals
-              -- ERROR HERE: type class synthesis choosing `m` instead of `inst`
-              -- Need to ensure mpOfPushforward uses ambient instance
-              exact (mpOfPushforward g hg hpush).integral_comp hCEind_int
-      _ = ∫ x in B, μ[H | m] x ∂ μ := by
-              -- indicator to set integral conversion
-              exact MeasureTheory.integral_indicator hBm'
-      _ = ∫ x in B, H x ∂ μ := by
-              -- defining property of CE on m-measurable sets
-              -- ERROR HERE: setIntegral_condExp may need explicit instance annotations
-              exact setIntegral_condExp hm hH hBm'
-      _ = ∫ x, (Set.indicator B H) x ∂ μ := by
-              -- set to indicator
-              exact (MeasureTheory.integral_indicator hBm').symm
-      _ = ∫ x, ((Set.indicator B H) ∘ g) x ∂ μ' := by
-              -- ERROR HERE: same type class synthesis issue as line 502
-              exact ((mpOfPushforward g hg hpush).integral_comp hHind_int).symm
-      _ = ∫ x, (Set.indicator (g ⁻¹' B) (H ∘ g)) x ∂ μ' := by
-              -- pull indicator back again
-              convert (indicator_preimage_comp (K := H) (B := B))
-      _ = ∫ x in g ⁻¹' B, (H ∘ g) x ∂ μ' := by
-              -- indicator to set
-              have hgBm : MeasurableSet (g ⁻¹' B) := hBm'.preimage hg
-              exact MeasureTheory.integral_indicator hgBm
+      = ∫ x, (Set.indicator (g ⁻¹' B) (μ[H | m] ∘ g)) x ∂ μ'  [integral_indicator]
+      = ∫ x, ((Set.indicator B (μ[H | m])) ∘ g) x ∂ μ'        [indicator_preimage_comp]
+      = ∫ x, (Set.indicator B (μ[H | m])) x ∂ μ                [mpOfPushforward integral_comp] **ERROR: instance synthesis**
+      = ∫ x in B, μ[H | m] x ∂ μ                               [integral_indicator]
+      = ∫ x in B, H x ∂ μ                                       [setIntegral_condExp] **ERROR: instance annotations needed**
+      = ∫ x, (Set.indicator B H) x ∂ μ                          [integral_indicator]
+      = ∫ x, ((Set.indicator B H) ∘ g) x ∂ μ'                   [mpOfPushforward integral_comp] **ERROR: same as above**
+      = ∫ x, (Set.indicator (g ⁻¹' B) (H ∘ g)) x ∂ μ'          [indicator_preimage_comp]
+      = ∫ x in g ⁻¹' B, (H ∘ g) x ∂ μ'                          [integral_indicator]
+
+    BLOCKERS:
+    - mpOfPushforward needs explicit @-syntax for type class arguments
+    - setIntegral_condExp may need (m := m) (inst := inst) annotations
+    - May need convert instead of exact for definitional equality issues
+    -/
 
   -- 2) Uniqueness of the conditional expectation on `m.comap g`
   have hm' : MeasurableSpace.comap g m ≤ ‹MeasurableSpace Ω'› := by
-    intro s hs; rcases hs with ⟨B, hBm, rfl⟩; simpa using hBm.preimage hg
+    sorry
+    /- OLD PROOF:  intro s hs; rcases hs with ⟨B, hBm, rfl⟩; simpa using hBm.preimage hg
+    ERROR: Application type mismatch in hBm.preimage hg -/
   have hHg' : Integrable (H ∘ g) μ' := by
+    sorry
+    /- OLD PROOF IDEA (integrable_map_measure instance issues):
     have : Integrable H (Measure.map g μ') := by rwa [hpush]
-    -- ERROR HERE: integrable_map_measure may need explicit instance for Measure.map
     exact (integrable_map_measure (hf := hg.aemeasurable) (hg := hH.aestronglyMeasurable)).mpr this
 
+    ERROR: May need explicit MeasurableSpace instance for Measure.map
+    -/
+
+  sorry
+  /- OLD PROOF:
   exact
     ae_eq_condExp_of_forall_setIntegral_eq
       (μ := μ') (m := MeasurableSpace.comap g m) (hm := hm') hHg' h_sets
+
+  ERROR: Application type mismatch in ae_eq_condExp_of_forall_setIntegral_eq
+  -/
 
 /-- **Invariance of conditional expectation under iterates**.
 
@@ -547,6 +550,10 @@ lemma condexp_precomp_iterate_eq_of_invariant
     (m : MeasurableSpace Ω) (hm : m ≤ inst)
     (h_inv : ∀ s, MeasurableSet[m] s → T ⁻¹' s = s) :
     μ[(f ∘ (T^[k])) | m] =ᵐ[μ] μ[f | m] := by
+  sorry
+  /-
+  OLD PROOF (Multiple type class instance errors):
+
   classical
   -- iterate is measure-preserving
   have hTk : MeasurePreserving (T^[k]) μ μ := hT.iterate k
@@ -562,7 +569,7 @@ lemma condexp_precomp_iterate_eq_of_invariant
       have : (T^[n + 1]) = (T ∘ (T^[n])) := by
         funext x
         simp [Function.iterate_succ_apply']
-      rw [this, Set.preimage_comp, ih, h_inv s hs]
+      rw [this, Set.preimage_comp, ih, h_inv s hs]  **ERROR: rewrite failed**
 
   -- Set-integral equality on `m`-measurable sets
   have h_sets :
@@ -570,38 +577,26 @@ lemma condexp_precomp_iterate_eq_of_invariant
         ∫ x in s, (f ∘ (T^[k])) x ∂ μ = ∫ x in s, f x ∂ μ :=
   by
     intro s hs
-    -- Lift measurability from m to ambient inst (Pattern C from user)
-    have hs' : @MeasurableSet Ω inst s := hm s hs
-    have hf_ind : Integrable (Set.indicator s f) μ :=
-      hf.indicator hs'
-    -- indicator trick + whole-space change of variables
+    have hs' : @MeasurableSpace Ω inst s := hm s hs
+    have hf_ind : Integrable (Set.indicator s f) μ := hf.indicator hs'
+
     calc
       ∫ x in s, (f ∘ (T^[k])) x ∂ μ
-          = ∫ x, (Set.indicator s (f ∘ (T^[k]))) x ∂ μ := by
-              -- set to indicator
-              exact (MeasureTheory.integral_indicator hs').symm
-      _ = ∫ x, ((Set.indicator ((T^[k]) ⁻¹' s) f) ∘ (T^[k])) x ∂ μ := by
-              -- move the indicator across the preimage: indicator (T⁻¹'s) (f ∘ T) = (indicator s f) ∘ T
-              funext x
-              by_cases hx : (T^[k]) x ∈ s
-              · simp [Set.indicator, Set.mem_preimage, hx]
-              · simp [Set.indicator, Set.mem_preimage, hx]
-      _ = ∫ x, (Set.indicator ((T^[k]) ⁻¹' s) f) x ∂ μ := by
-              have hinv_meas : MeasurableSet ((T^[k]) ⁻¹' s) := by
-                rw [h_preimage s hs]
-                exact hs'
-              have hf_ind_inv : Integrable (Set.indicator ((T^[k]) ⁻¹' s) f) μ :=
-                hf.indicator hinv_meas
-              exact hTk.integral_comp hf_ind_inv
-      _ = ∫ x, (Set.indicator s f) x ∂ μ := by
-              -- use invariance of the set
-              rw [h_preimage s hs]
-      _ = ∫ x in s, f x ∂ μ := by
-              -- indicator to set
-              exact MeasureTheory.integral_indicator hs'
+      = ∫ x, (Set.indicator s (f ∘ (T^[k]))) x ∂ μ  [integral_indicator]
+      = ∫ x, ((Set.indicator ((T^[k]) ⁻¹' s) f) ∘ (T^[k])) x ∂ μ  [funext + indicator manipulation] **ERROR: apply funext failed**
+      = ∫ x, (Set.indicator ((T^[k]) ⁻¹' s) f) x ∂ μ  [hTk.integral_comp] **ERROR: Type mismatch**
+      = ∫ x, (Set.indicator s f) x ∂ μ  [use h_preimage]  **ERROR: Application type mismatch**
+      = ∫ x in s, f x ∂ μ  [integral_indicator]
 
   -- Uniqueness of conditional expectation on `m`
-  exact ae_eq_condExp_of_forall_setIntegral_eq hm hf h_sets
+  exact ae_eq_condExp_of_forall_setIntegral_eq hm hf h_sets  **ERROR: Application type mismatch**
+
+  BLOCKERS:
+  - Instance synthesis issues throughout
+  - Rewrite failures with h_inv
+  - funext application issues
+  - Type mismatches in MeasurePreserving.integral_comp
+  -/
 
 /-- Existence of a natural two-sided extension for a measure-preserving shift. -/
 axiom exists_naturalExtension
@@ -781,29 +776,31 @@ private lemma condexp_pair_lag_constant_twoSided
         =ᵐ[ext.μhat]
       ext.μhat[(fun ω => f (ω 0) * g (ω (k : ℤ)))
         | shiftInvariantSigmaℤ (α := α)] := by
-    -- Use invariance under the inverse shift to replace the negative index
+    sorry
+    /-
+    OLD PROOF (unsolved goals at line 798, type mismatch at line 801):
+
+    Use invariance under the inverse shift to replace the negative index
     have h_inv :=
       condexp_precomp_shiftℤInv_eq
         (μhat := ext.μhat) (α := α)
         (hσInv := ext.shiftInv_preserving)
         (f := fun ω => f (ω 0) * g (ω (k : ℤ)))
-        (by
-          have : Integrable (fun (ω : ℤ → α) => f (ω 0) * g (ω (k : ℤ))) ext.μhat := by
-            have hφ_meas : Measurable (fun (ω : ℤ → α) => f (ω 0)) := by
-              exact hf_meas.comp (measurable_pi_apply (0 : ℤ))
-            have hψ_meas : Measurable (fun (ω : ℤ → α) => g (ω (k : ℤ))) := by
-              exact hg_meas.comp (measurable_pi_apply (k : ℤ))
-            have hφ_bd : ∃ C, ∀ (ω : Ωℤ[α]), |f (ω 0)| ≤ C := ⟨Cf, fun ω' => hCf (ω' 0)⟩
-            have hψ_bd : ∃ C, ∀ (ω : Ωℤ[α]), |g (ω (k : ℤ))| ≤ C := ⟨Cg, fun ω' => hCg (ω' (k : ℤ))⟩
-            exact integrable_of_bounded_mul_helper (μ := ext.μhat) hφ_meas hφ_bd hψ_meas hψ_bd
-          exact this)
+        (integrability proof...)
+
     have h_ident :
-        (fun ω => f (ω 0) * g (ω (k : ℤ)))
-          ∘ shiftℤInv (α := α)
-          = Fk := by
+        (fun ω => f (ω 0) * g (ω (k : ℤ))) ∘ shiftℤInv (α := α) = Fk := by
       funext ω
       simp [Fk, Function.comp_apply, shiftℤInv, add_comm, add_left_comm, add_assoc]
+      **ERROR: unsolved goals**
+
     simpa [h_ident] using h_inv
+    **ERROR: Type mismatch - h_inv has type involving f (ω (-1)) but expected type involves Fk**
+
+    BLOCKERS:
+    - Unsolved goal in h_ident funext proof
+    - Type mismatch when applying h_ident in simpa
+    -/
   refine h_shift.trans ?_
   simpa [h_shifted_eq] using h_unshifted_eq
 
