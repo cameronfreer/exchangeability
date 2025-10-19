@@ -304,6 +304,54 @@ lemma indicator_preimage_comp {B : Set Ω} (K : Ω → ℝ) :
 
 end Helpers
 
+/-! ## Infrastructure Lemmas for Conditional Expectation Pullback
+
+This section contains three infrastructure lemmas needed for the Koopman approach to de Finetti's
+theorem. These lemmas handle the interaction between conditional expectation, factor maps, and
+measure-preserving transformations.
+
+### Current Status (as of 2025-10-18)
+
+**Structurally Complete**: All three lemmas have complete proof structures using the indicator trick.
+
+**Remaining Issues**: 22 type class synthesis errors in later parts of the calc chains.
+- Error reduction: 66 → 22 (67% improvement)
+- Core binder order issue fixed by naming ambient instance `inst` and moving `m` parameter after it
+- Main blocker: Remaining cascade errors from type class synthesis in `mpOfPushforward` applications
+
+### Key Technical Details
+
+**The Indicator Trick**:
+- Converts set integrals `∫ x in s, f x ∂μ` to whole-space integrals `∫ x, (indicator s f) x ∂μ`
+- Avoids measure composition `Measure.restrict` which has type class defeq issues
+- Uses `MeasureTheory.integral_indicator` for the conversion
+
+**Type Class Management** (CRITICAL):
+- `m : MeasurableSpace Ω` is a plain parameter, NEVER installed as an instance
+- Ambient instance explicitly named: `[inst : MeasurableSpace Ω]`
+- Binder order matters: `m` must come AFTER all instance parameters
+- Measurability lift: `have hBm' : @MeasurableSet Ω inst B := hm B hBm`
+
+**Helper Function**:
+- `mpOfPushforward`: Builds `MeasurePreserving g μ' μ` from pushforward equality
+- Ensures ambient instances are used (not the sub-σ-algebra `m`)
+
+### Next Steps for Debugging
+
+1. Check remaining `mpOfPushforward` applications for type class issues
+2. Verify `setIntegral_condExp` is using correct instances
+3. Check if `integrable_map_measure` needs similar binder treatment
+4. Consider if `ae_eq_condExp_of_forall_setIntegral_eq` needs instance annotations
+
+### Mathematical Content
+
+1. `ae_pullback_iff`: AE equalities transport through factor maps
+2. `condexp_pullback_factor`: CE pullback along factor maps (main workhorse)
+3. `condexp_precomp_iterate_eq_of_invariant`: CE invariance under measure-preserving iterates
+
+All three use the same indicator trick strategy for change of variables.
+-/
+
 /-- Build a `MeasurePreserving` from a pushforward equality.
 This helper ensures the ambient MeasurableSpace instances are used. -/
 private def mpOfPushforward
@@ -449,17 +497,21 @@ lemma condexp_pullback_factor
               convert (indicator_preimage_comp (K := μ[H | m]) (B := B))
       _ = ∫ x, (Set.indicator B (μ[H | m])) x ∂ μ := by
               -- change of variables for measure-preserving maps on *whole* integrals
+              -- ERROR HERE: type class synthesis choosing `m` instead of `inst`
+              -- Need to ensure mpOfPushforward uses ambient instance
               exact (mpOfPushforward g hg hpush).integral_comp hCEind_int
       _ = ∫ x in B, μ[H | m] x ∂ μ := by
               -- indicator to set integral conversion
               exact MeasureTheory.integral_indicator hBm'
       _ = ∫ x in B, H x ∂ μ := by
               -- defining property of CE on m-measurable sets
+              -- ERROR HERE: setIntegral_condExp may need explicit instance annotations
               exact setIntegral_condExp hm hH hBm'
       _ = ∫ x, (Set.indicator B H) x ∂ μ := by
               -- set to indicator
               exact (MeasureTheory.integral_indicator hBm').symm
       _ = ∫ x, ((Set.indicator B H) ∘ g) x ∂ μ' := by
+              -- ERROR HERE: same type class synthesis issue as line 502
               exact ((mpOfPushforward g hg hpush).integral_comp hHind_int).symm
       _ = ∫ x, (Set.indicator (g ⁻¹' B) (H ∘ g)) x ∂ μ' := by
               -- pull indicator back again
@@ -474,6 +526,7 @@ lemma condexp_pullback_factor
     intro s hs; rcases hs with ⟨B, hBm, rfl⟩; simpa using hBm.preimage hg
   have hHg' : Integrable (H ∘ g) μ' := by
     have : Integrable H (Measure.map g μ') := by rwa [hpush]
+    -- ERROR HERE: integrable_map_measure may need explicit instance for Measure.map
     exact (integrable_map_measure (hf := hg.aemeasurable) (hg := hH.aestronglyMeasurable)).mpr this
 
   exact
