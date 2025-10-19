@@ -97,8 +97,7 @@ theorem deFinetti_RyllNardzewski_equivalence
 
     -- Apply CommonEnding to complete the proof
     have hCIID : ConditionallyIID μ X := by
-      sorry  -- TODO: exact CommonEnding.complete_from_directing_measure X hX_meas hContract ν hν_prob hν_meas h_bridge
-      -- Note: This exact line works but depends on ViaL2.lean which currently has compilation errors
+      exact CommonEnding.complete_from_directing_measure X hX_meas hContract ν hν_prob hν_meas h_bridge
 
     constructor
     · -- (i) → (ii): Contractable → Exchangeable (via ConditionallyIID)
