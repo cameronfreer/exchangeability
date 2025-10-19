@@ -1,47 +1,309 @@
 /-
-Copyright (c) 2025 The Exchangeability Contributors.
+Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Claude Code
+Authors: Cameron Freer
 -/
-
-import Mathlib.MeasureTheory.MeasurableSpace.Basic
+import Mathlib.MeasureTheory.MeasurableSpace.Constructions
 
 /-!
-# Cylinder Sets and Functions on Path Space
+# Cylinder Sets on Path Space
 
-This file provides general infrastructure for cylinder sets and functions on path space `ℕ → α`,
-independent of any specific proof strategy.
+This file contains infrastructure for working with cylinder sets on path space `(ℕ → α)`.
+Cylinder sets are fundamental objects in probability theory on sequence spaces,
+consisting of events determined by finitely many coordinates.
+
+Originally extracted from `MartingaleHelpers.lean` for broader reusability.
 
 ## Main definitions
 
-* `firstRCylinder`: Cylinder determined by first `r` coordinates
-* `indProd`: Product of indicator functions for finite cylinders
-* `cylinderFunction`: Functions depending only on finitely many coordinates
+* `tailCylinder r C`: Cylinder on the first `r` tail coordinates (shifted by one)
+* `cylinder r C`: Standard cylinder on the first `r` coordinates starting at index 0
+* `finCylinder r C`: Cylinder for functions with domain `Fin r`
+* `firstRMap X r`: Map collecting the first `r` coordinates of a process
+* `firstRCylinder X r C`: Finite block cylinder event on the first `r` coordinates
+* `drop`: Drop the first coordinate of a path
 
 ## Main results
 
-* Extensionality and measurability lemmas for cylinders
-* Product indicator equals cylinder indicator
+* Measurability lemmas for all cylinder types
+* Extensionality properties (universal sets, intersections)
+* Bridge lemmas connecting different cylinder formulations
 
 ## Implementation notes
 
-This infrastructure is neutral (not martingale-specific) and designed to be reusable across
-different proof approaches. It will be populated in Phase 1.2 of the refactoring plan.
-
+This file is designed to be general-purpose infrastructure, not specific to any
+particular proof approach (martingale, Koopman, L²). It only imports mathlib
+and has no project dependencies.
 -/
 
-namespace Exchangeability.PathSpace
+noncomputable section
+open scoped MeasureTheory
 
-open MeasureTheory
+namespace Exchangeability
+namespace PathSpace
+
+section TailCylinders
 
 variable {α : Type*} [MeasurableSpace α]
 
-/-!
-### Skeleton placeholder
+/-- Cylinder on the first `r` tail coordinates (shifted by one). -/
+def tailCylinder (r : ℕ) (C : Fin r → Set α) : Set (ℕ → α) :=
+  {f | ∀ i : Fin r, f (i.1 + 1) ∈ C i}
 
-This file will be populated with cylinder infrastructure during Phase 1.2 of refactoring.
-For now, it serves as a placeholder to establish the correct directory structure.
+set_option linter.unusedSectionVars false in
+/-- Basic measurability for tail cylinders. -/
+lemma tailCylinder_measurable {r : ℕ} {C : Fin r → Set α}
+    (hC : ∀ i, MeasurableSet (C i)) :
+    MeasurableSet (tailCylinder (α:=α) r C) := by
+  classical
+  simp only [tailCylinder, Set.setOf_forall]
+  exact MeasurableSet.iInter fun i => by
+    have : (fun f : ℕ → α => f (i.val + 1)) ⁻¹' C i = {f | f (i.1 + 1) ∈ C i} := by
+      ext f; simp [Set.mem_preimage]
+    rw [← this]
+    exact (hC i).preimage (measurable_pi_apply (i.val + 1))
 
--/
+end TailCylinders
 
-end Exchangeability.PathSpace
+section FutureCylinders
+
+variable {α : Type*}
+
+/-- Standard cylinder on the first `r` coordinates starting at index 0. -/
+def cylinder (r : ℕ) (C : Fin r → Set α) : Set (ℕ → α) :=
+  {f | ∀ i : Fin r, f i ∈ C i}
+
+/-- Cylinder for functions with domain Fin r. -/
+def finCylinder (r : ℕ) (C : Fin r → Set α) : Set (Fin r → α) :=
+  {f | ∀ i : Fin r, f i ∈ C i}
+
+variable [MeasurableSpace α]
+
+lemma finCylinder_measurable {r : ℕ} {C : Fin r → Set α}
+    (hC : ∀ i, MeasurableSet (C i)) :
+    MeasurableSet (finCylinder r C) := by
+  classical
+  simp only [finCylinder, Set.setOf_forall]
+  exact MeasurableSet.iInter fun i => by
+    have : (fun f : Fin r → α => f i) ⁻¹' C i = {f | f i ∈ C i} := by
+      ext f; simp [Set.mem_preimage]
+    rw [← this]
+    exact (hC i).preimage (measurable_pi_apply i)
+
+lemma cylinder_measurable {r : ℕ} {C : Fin r → Set α}
+    (hC : ∀ i, MeasurableSet (C i)) :
+    MeasurableSet (cylinder (α:=α) r C) := by
+  classical
+  simp only [cylinder, Set.setOf_forall]
+  exact MeasurableSet.iInter fun i => by
+    have : (fun f : ℕ → α => f i.val) ⁻¹' C i = {f | f i ∈ C i} := by
+      ext f; simp [Set.mem_preimage]
+    rw [← this]
+    exact (hC i).preimage (measurable_pi_apply i.val)
+
+end FutureCylinders
+
+section FirstBlockCylinder
+
+variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+
+/-- The map collecting the first `r` coordinates. -/
+def firstRMap (X : ℕ → Ω → α) (r : ℕ) : Ω → (Fin r → α) :=
+  fun ω i => X i ω
+
+/-- The σ‑algebra generated by the first `r` coordinates. -/
+abbrev firstRSigma (X : ℕ → Ω → α) (r : ℕ) : MeasurableSpace Ω :=
+  MeasurableSpace.comap (firstRMap X r) inferInstance
+
+/-- The finite block cylinder event on the first `r` coordinates. -/
+def firstRCylinder (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α) : Set Ω :=
+  {ω | ∀ i : Fin r, X i ω ∈ C i}
+
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
+/-- As expected, the block cylinder is the preimage of a finite cylinder
+   under the `firstRMap`. -/
+lemma firstRCylinder_eq_preimage_finCylinder
+    (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α) :
+    firstRCylinder X r C
+      = (firstRMap X r) ⁻¹' (finCylinder (α:=α) r C) := rfl
+
+omit [MeasurableSpace Ω] in
+/-- **Measurable in the first-`r` σ‑algebra.**
+If each `C i` is measurable in `α`, then the block cylinder is measurable in
+`firstRSigma X r` (no measurability assumptions on the `X i` are needed for this
+comap‑level statement). -/
+lemma firstRCylinder_measurable_in_firstRSigma
+    (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α)
+    (hC : ∀ i, MeasurableSet (C i)) :
+    MeasurableSet[firstRSigma X r] (firstRCylinder X r C) := by
+  -- firstRSigma X r = comap (firstRMap X r)
+  -- A set is measurable in the comap iff it's a preimage of a measurable set
+  rw [firstRCylinder_eq_preimage_finCylinder]
+  exact ⟨_, finCylinder_measurable hC, rfl⟩
+
+/-- **Measurable in the ambient σ‑algebra.**
+If each coordinate `X i` is measurable, then the block cylinder is measurable
+in the ambient σ‑algebra (useful for `Integrable.indicator`). -/
+lemma firstRCylinder_measurable_ambient
+    (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α)
+    (hX : ∀ i, Measurable (X i)) (hC : ∀ i, MeasurableSet (C i)) :
+    MeasurableSet (firstRCylinder X r C) := by
+  classical
+  -- Directly as an intersection over `Fin r`.
+  simp only [firstRCylinder, Set.setOf_forall]
+  exact MeasurableSet.iInter fun i => (hX i) (hC i)
+
+/-- The firstRMap is measurable when all coordinates are measurable. -/
+lemma measurable_firstRMap
+    (X : ℕ → Ω → α) (r : ℕ) (hX : ∀ i, Measurable (X i)) :
+    Measurable (firstRMap X r) := by
+  apply measurable_pi_lambda
+  intro i
+  exact hX i
+
+/-- The first-r σ-algebra is a sub-σ-algebra of the ambient σ-algebra when coordinates are measurable. -/
+lemma firstRSigma_le_ambient
+    (X : ℕ → Ω → α) (r : ℕ) (hX : ∀ i, Measurable (X i)) :
+    firstRSigma X r ≤ (inferInstance : MeasurableSpace Ω) := by
+  simp only [firstRSigma]
+  intro s hs
+  obtain ⟨t, ht, rfl⟩ := hs
+  exact (measurable_firstRMap X r hX) ht
+
+omit [MeasurableSpace Ω] in
+/-- Stronger version: firstRSigma increases with r. -/
+lemma firstRSigma_mono
+    (X : ℕ → Ω → α) {r s : ℕ} (hrs : r ≤ s) :
+    firstRSigma X r ≤ firstRSigma X s := by
+  -- Strategy: firstRMap X r factors through firstRMap X s via projection
+  simp only [firstRSigma]
+  intro t ht
+  obtain ⟨u, hu, rfl⟩ := ht
+  -- Define projection π : (Fin s → α) → (Fin r → α) taking first r coords
+  let π : (Fin s → α) → (Fin r → α) := fun f i => f ⟨i.val, Nat.lt_of_lt_of_le i.isLt hrs⟩
+  -- Show firstRMap X r = π ∘ firstRMap X s
+  have h_comp : firstRMap X r = π ∘ firstRMap X s := by
+    funext ω i
+    simp [firstRMap, π]
+  -- π is measurable (composition of coordinate projections)
+  have hπ : Measurable π := by
+    rw [measurable_pi_iff]
+    intro i
+    simp only [π]
+    exact measurable_pi_apply _
+  -- Preimage factors through composition
+  rw [h_comp, Set.preimage_comp]
+  exact ⟨π ⁻¹' u, hπ hu, rfl⟩
+
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
+/-- The empty cylinder (r = 0) is the whole space. -/
+@[simp]
+lemma firstRCylinder_zero (X : ℕ → Ω → α) (C : Fin 0 → Set α) :
+    firstRCylinder X 0 C = Set.univ := by
+  ext ω
+  simp [firstRCylinder]
+
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
+/-- Cylinder membership characterization. -/
+lemma mem_firstRCylinder_iff (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α) (ω : Ω) :
+    ω ∈ firstRCylinder X r C ↔ ∀ i : Fin r, X i ω ∈ C i :=
+  Iff.rfl
+
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
+/-- firstRCylinder on universal sets is the whole space. -/
+lemma firstRCylinder_univ (X : ℕ → Ω → α) (r : ℕ) :
+    firstRCylinder X r (fun _ => Set.univ) = Set.univ := by
+  ext ω; simp [firstRCylinder]
+
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
+/-- Intersection of firstRCylinders equals coordinate-wise intersection. -/
+lemma firstRCylinder_inter (X : ℕ → Ω → α) {r : ℕ} {C D : Fin r → Set α} :
+    firstRCylinder X r C ∩ firstRCylinder X r D = firstRCylinder X r (fun i => C i ∩ D i) := by
+  ext ω
+  simp [firstRCylinder, Set.mem_inter_iff]
+  constructor
+  · intro ⟨hC, hD⟩ i
+    exact ⟨hC i, hD i⟩
+  · intro h
+    exact ⟨fun i => (h i).1, fun i => (h i).2⟩
+
+end FirstBlockCylinder
+
+section CylinderBridge
+
+variable {α : Type*} [MeasurableSpace α]
+
+/-- Drop the first coordinate of a path. -/
+def drop (f : ℕ → α) : ℕ → α := fun n => f (n + 1)
+
+omit [MeasurableSpace α] in
+@[simp] lemma drop_apply (f : ℕ → α) (n : ℕ) :
+    drop f n = f (n + 1) := rfl
+
+lemma measurable_drop : Measurable (drop : (ℕ → α) → (ℕ → α)) := by
+  rw [measurable_pi_iff]
+  intro n
+  simp only [drop]
+  exact measurable_pi_apply (n + 1)
+
+omit [MeasurableSpace α] in
+/-- `tailCylinder` is the preimage of a standard cylinder under `drop`. -/
+lemma tailCylinder_eq_preimage_cylinder
+    {r : ℕ} {C : Fin r → Set α} :
+    tailCylinder (α:=α) r C
+      = (drop : (ℕ → α) → (ℕ → α)) ⁻¹' (cylinder (α:=α) r C) := by
+  ext f
+  constructor <;> intro hf
+  · simpa [tailCylinder, drop, cylinder]
+  · simpa [tailCylinder, drop, cylinder]
+
+omit [MeasurableSpace α] in
+@[simp] lemma mem_cylinder_iff {r : ℕ} {C : Fin r → Set α} {f : ℕ → α} :
+    f ∈ cylinder (α:=α) r C ↔ ∀ i : Fin r, f i ∈ C i := Iff.rfl
+
+omit [MeasurableSpace α] in
+@[simp] lemma mem_tailCylinder_iff {r : ℕ} {C : Fin r → Set α} {f : ℕ → α} :
+    f ∈ tailCylinder (α:=α) r C ↔ ∀ i : Fin r, f (i.1 + 1) ∈ C i := Iff.rfl
+
+/-- The cylinder set is measurable when each component set is measurable. -/
+lemma cylinder_measurable_set {r : ℕ} {C : Fin r → Set α}
+    (hC : ∀ i, MeasurableSet (C i)) :
+    MeasurableSet (cylinder (α:=α) r C) :=
+  cylinder_measurable hC
+
+omit [MeasurableSpace α] in
+/-- Empty cylinder is the whole space. -/
+@[simp] lemma cylinder_zero : cylinder (α:=α) 0 (fun _ => Set.univ) = Set.univ := by
+  ext f; simp [cylinder]
+
+omit [MeasurableSpace α] in
+/-- Empty tail cylinder is the whole space. -/
+@[simp] lemma tailCylinder_zero' : tailCylinder (α:=α) 0 (fun _ => Set.univ) = Set.univ := by
+  ext f; simp [tailCylinder]
+
+omit [MeasurableSpace α] in
+/-- Cylinder on universal sets is the whole space. -/
+lemma cylinder_univ {r : ℕ} : cylinder (α:=α) r (fun _ => Set.univ) = Set.univ := by
+  ext f; simp [cylinder]
+
+omit [MeasurableSpace α] in
+/-- Tail cylinder on universal sets is the whole space. -/
+lemma tailCylinder_univ {r : ℕ} : tailCylinder (α:=α) r (fun _ => Set.univ) = Set.univ := by
+  ext f; simp [tailCylinder]
+
+omit [MeasurableSpace α] in
+/-- Cylinders form intersections coordinate-wise. -/
+lemma cylinder_inter {r : ℕ} {C D : Fin r → Set α} :
+    cylinder (α:=α) r C ∩ cylinder (α:=α) r D = cylinder (α:=α) r (fun i => C i ∩ D i) := by
+  ext f
+  simp [cylinder, Set.mem_inter_iff]
+  constructor
+  · intro ⟨hC, hD⟩ i
+    exact ⟨hC i, hD i⟩
+  · intro h
+    exact ⟨fun i => (h i).1, fun i => (h i).2⟩
+
+end CylinderBridge
+
+end PathSpace
+end Exchangeability
