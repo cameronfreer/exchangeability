@@ -1,8 +1,15 @@
 # Refactoring Plan: Shared Infrastructure Extraction
 
 **Generated:** 2025-10-18
+**Last Updated:** 2025-10-18 (Revised with structural improvements)
 **Status:** Planning phase - to be executed when proofs are more complete
 **Goal:** Eliminate duplication across ViaL2, ViaKoopman, and ViaMartingale proof approaches
+
+**Key Design Principles:**
+- **Mathlib-ready modules:** Infrastructure that plugs mathlib holes should be written modularly for eventual contribution
+- **Two tail viewpoints:** Distinguish path-space (shift-based) vs process-relative tail σ-algebras
+- **Proof decomposition:** Long proofs should be broken into sublemmas (per Lean 4 skill guidelines)
+- **Neutral naming:** Avoid "martingale-branded" names for general infrastructure
 
 ---
 
@@ -48,259 +55,437 @@ Based on systematic analysis of all three de Finetti proof approaches:
 
 ---
 
+## 🎯 PHASE 0: Immediate Quick Wins (Zero Risk)
+
+**Estimated effort:** 1-2 hours
+**Priority:** CRITICAL - Execute NOW (no prerequisites)
+
+These changes are zero-risk deletions and neutral reorganizations that reduce diff noise for later phases.
+
+### 0.1 Delete Exact Indicator Duplicates
+
+**From ViaMartingale.lean (lines 636-679):**
+
+Delete the following 5 lemmas that are **exact duplicates** of MartingaleHelpers.lean (lines 347-392):
+
+1. `indicator_mul_indicator_eq_indicator_inter` (line 636)
+2. `indicator_comp_preimage` (line 646)
+3. `indicator_binary` (line 655)
+4. `indicator_le_const` (line 664)
+5. `indicator_nonneg` (line 673)
+
+**Action:** Simply delete lines 636-679 from ViaMartingale.lean
+
+**Verification:** ViaMartingale should still compile (it already imports MartingaleHelpers)
+
+**Impact:** -44 lines of 100% duplication
+
+### 0.2 Create Neutral Cylinder Infrastructure Home
+
+**Problem:** Cylinder sets are general path-space infrastructure, but currently live in `MartingaleHelpers.lean` (martingale-branded)
+
+**Solution:** Create `PathSpace/CylinderHelpers.lean` as neutral home
+
+**Actions:**
+1. Create new file `Exchangeability/PathSpace/CylinderHelpers.lean`
+2. Add skeleton with proper namespace and imports
+3. Leave empty for now (content will be moved in Phase 1.2)
+
+**Rationale:**
+- Clearer import graph (cylinders are not martingale-specific)
+- Better organization for eventual mathlib contribution
+- Prevents confusion about what "MartingaleHelpers" contains
+
+**Impact:** Preparatory work for Phase 1.2 (no immediate line changes)
+
+### Phase 0 Summary
+
+**Time investment:** 1-2 hours
+**Risk:** Zero (deletions only, no semantic changes)
+**Immediate benefit:** -44 lines of duplication
+**Future benefit:** Cleaner structure for Phase 1
+
+---
+
 ## 🎯 PHASE 1: Fix Critical Duplication (High Impact)
 
-**Estimated effort:** 2-3 days
+**Estimated effort:** 3-4 days (revised)
 **Priority:** HIGH - Execute when ViaL2 reaches 95%+ completion
 
-### 1.1 Create TailSigmaHelpers.lean
+**CRITICAL CHANGE:** Phase 1 now has **two sub-phases**:
+- **Phase 1a:** Prove load-bearing bridge lemmas FIRST
+- **Phase 1b:** Extract infrastructure using those bridges
 
-**Purpose:** Consolidate 4 different tail σ-algebra definitions into one canonical version
+### 1.1 Create Tail/TailSigma.lean (Two-Viewpoint Approach)
+
+**Purpose:** Unify 4 different tail σ-algebra approaches using TWO canonical forms
+
+**CRITICAL INSIGHT:** Don't conflate path-space tail vs. process tail—they are equivalent but NOT definitionally equal.
 
 #### Current Duplication
 
-**InvariantSigma.lean (line 86) - Canonical definition:**
-```lean
-def tailSigma : MeasurableSpace (Ω[α]) :=
-  ⨅ n : ℕ, MeasurableSpace.comap (fun ω => (shift^[n]) ω) inferInstance
-```
+**Four incompatible formulations exist:**
 
-**ViaL2.lean (lines 1527-1568) - Via intermediate `tailFamily`:**
-```lean
-def tailFamily (X : ℕ → Ω → β) (n : ℕ) : MeasurableSpace Ω :=
-  ⨆ k : ℕ, MeasurableSpace.comap (fun ω => X (n + k) ω) ‹_›
+1. **InvariantSigma.lean:** `⨅ n, comap (shift^[n])` on path space
+2. **ViaL2.lean:** `⨅ n, (⨆ k, comap (X (n+k)))` for process X
+3. **ViaMartingale.lean:** `⨅ m, revFiltration X m`
+4. **CommonEnding.lean:** Placeholder using `invariantSigmaField`
 
-def tailSigma (X : ℕ → Ω → β) : MeasurableSpace Ω :=
-  ⨅ n : ℕ, tailFamily X n
-```
-- Also includes: `antitone_tailFamily`, `tailSigma_le_tailFamily`, `tailSigma_le`
-
-**ViaMartingale.lean (lines 160-537) - Via `revFiltration`:**
-```lean
-def tailSigma (X : ℕ → Ω → α) : MeasurableSpace Ω :=
-  ⨅ m, revFiltration X m
-```
-- Also includes: 9 supporting lemmas (`tailSigma_le_futureFiltration`, `indicator_tailMeasurable`, etc.)
-
-**CommonEnding.lean (line 150) - Placeholder:**
-```lean
-def tailSigmaAlgebra (α : Type*) [MeasurableSpace α] : MeasurableSpace (ℕ → α) :=
-  -- Placeholder: uses invariantSigmaField α as proxy
-  invariantSigmaField α
-```
+**Problem:** These are NOT definitionally equal, causing `rfl` failures and type mismatches
 
 #### Extraction Plan
 
-**New file:** `Exchangeability/DeFinetti/TailSigmaHelpers.lean`
+**New file:** `Exchangeability/Tail/TailSigma.lean`
+
+**Complete implementation with mathlib-style signatures:**
 
 ```lean
--- Exchangeability/DeFinetti/TailSigmaHelpers.lean
+/-
+  Exchangeability/Tail/TailSigma.lean
+  Tail σ-algebras on path space and for a general process, with bridge lemmas.
+-/
 
-import Exchangeability.DeFinetti.InvariantSigma
+import Mathlib.MeasureTheory.MeasurableSpace
 
-namespace Exchangeability.DeFinetti
+namespace Exchangeability.Tail
 
-/-- Canonical tail σ-algebra definition (re-exported from InvariantSigma) -/
-open InvariantSigma (tailSigma)
+open MeasureTheory
 
-/-- Bridge lemma: Canonical characterization as infinite intersection -/
-lemma tailSigma_eq_iInf_comap_shift {α : Type*} [MeasurableSpace α] :
-    tailSigma = ⨅ n : ℕ, MeasurableSpace.comap (shift^[n]) inferInstance :=
-  rfl
+section Tail
 
-/-- Bridge lemma: Connection to martingale formulation via reverse filtration -/
-lemma tailSigma_eq_iInf_futureFiltration {Ω : Type*} [MeasurableSpace Ω]
-    (X : ℕ → Ω → α) :
-    tailSigma X = ⨅ m, revFiltration X m :=
-  sorry -- Prove equivalence
+variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
-/-- Bridge lemma: Connection to L² formulation via tailFamily -/
-lemma tailSigma_eq_iInf_tailFamily {Ω : Type*} [MeasurableSpace Ω]
-    (X : ℕ → Ω → α) :
-    tailSigma X = ⨅ n : ℕ, (⨆ k : ℕ, MeasurableSpace.comap (X (n + k)) ‹_›) :=
-  sorry -- Prove equivalence
+/-! ### Index Arithmetic (isolate Nat arithmetic once) -/
 
-/-- General lemma: Tail σ-algebra is sub-σ-algebra of ambient space -/
-lemma tailSigma_le_ambient {Ω : Type*} [MeasurableSpace Ω] (X : ℕ → Ω → α) :
-    tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
+section NatIndexArithmetic
+
+@[simp] lemma nat_add_assoc (n m k : ℕ) : n + (m + k) = (n + m) + k := add_assoc n m k
+
+-- Add more as needed for shift^[n+m] rewriting
+
+end NatIndexArithmetic
+
+/-! ### Process-Relative Tail -/
+
+/-- The `n`-th reverse (future) σ-algebra generated by the tails of `X`. -/
+def tailFamily (X : ℕ → Ω → α) (n : ℕ) : MeasurableSpace Ω :=
+  iSup (fun k : ℕ => MeasurableSpace.comap (fun ω => X (n + k) ω) inferInstance)
+
+/-- Tail σ-algebra of a process `X : ℕ → Ω → α`. -/
+def tailProcess (X : ℕ → Ω → α) : MeasurableSpace Ω :=
+  iInf (tailFamily X)
+
+@[simp] lemma tailProcess_def (X : ℕ → Ω → α) :
+    tailProcess X = iInf (tailFamily X) := rfl
+
+lemma tailFamily_antitone (X : ℕ → Ω → α) :
+    Antitone (tailFamily X) := by
+  -- `n ≤ m` ⇒ generators for `m` include those for `n`
   sorry
 
-/-- General lemma: Indicators of tail sets are tail-measurable -/
-lemma indicator_tailMeasurable {Ω : Type*} [MeasurableSpace Ω]
-    (X : ℕ → Ω → α) {S : Set Ω} (hS : MeasurableSet[tailSigma X] S) :
-    Measurable[tailSigma X] (S.indicator (fun _ => (1 : ℝ))) :=
+lemma tailProcess_le_tailFamily (X : ℕ → Ω → α) (n : ℕ) :
+    tailProcess X ≤ tailFamily X n := by
+  -- `iInf_le` on index `n`
   sorry
 
-/-- General lemma: σ-finiteness property -/
-lemma sigmaFinite_trim_tailSigma {Ω : Type*} [MeasurableSpace Ω]
-    {μ : Measure Ω} [SigmaFinite μ] (X : ℕ → Ω → α) :
-    SigmaFinite (μ.trim (tailSigma_le_ambient X)) :=
+/-! ### Path-Space Tail -/
+
+/-- Tail σ-algebra on path space `(ℕ → α)` defined via one-sided shifts. -/
+def tailShift (α : Type*) [MeasurableSpace α] : MeasurableSpace (ℕ → α) :=
+  iInf (fun n : ℕ =>
+    MeasurableSpace.comap
+      (fun (ω : ℕ → α) => fun k => ω (n + k))
+      (inferInstance : MeasurableSpace (ℕ → α)))
+
+/-! ### Bridge Lemmas (LOAD-BEARING - Prove in Phase 1a!) -/
+
+/-- On path space: the pullback of the product σ-algebra by the `n`-fold shift equals
+    the join of the coordinate pullbacks at indices `n+k`. -/
+lemma comap_shift_eq_iSup_comap_coords (n : ℕ) :
+    MeasurableSpace.comap (fun (ω : ℕ → α) => fun k => ω (n + k))
+        (inferInstance : MeasurableSpace (ℕ → α))
+      =
+    iSup (fun k : ℕ =>
+      MeasurableSpace.comap (fun (ω : ℕ → α) => ω (n + k))
+        (inferInstance : MeasurableSpace α)) := by
+  -- Idea: product σ-algebra on `(ℕ → α)` is generated by coordinates;
+  -- use `comap_comp` and `eval k ∘ shift^n = eval (n+k)`.
   sorry
 
-end Exchangeability.DeFinetti
+/-- **Bridge 1 (path ↔ process).**
+    For the coordinate process on path space, `tailProcess` equals `tailShift`. -/
+lemma tailProcess_coords_eq_tailShift :
+    tailProcess (fun k (ω : ℕ → α) => ω k) = tailShift α := by
+  -- Rewrite the `n`-slice via `comap_shift_eq_iSup_comap_coords` and use `iInf_congr`.
+  sorry
+
+/-- **Bridge 2 (pullback along sample-path map).**
+    Let `Φ : Ω → (ℕ → α)` be `Φ ω k := X k ω`. Then the process tail is the
+    pullback of the path tail along `Φ`. -/
+lemma tailProcess_eq_comap_path (X : ℕ → Ω → α) :
+    tailProcess X
+      =
+    MeasurableSpace.comap (fun ω : Ω => fun k => X k ω) (tailShift α) := by
+  -- Expand `tailShift`, then use `comap_comp`, and commute `iInf`/`iSup` as needed.
+  sorry
+
+/-- **Bridge 3 (to ViaMartingale's revFiltration).**
+    If `revFiltration X m` is defined as the σ-algebra generated by all `X (m+k)`,
+    then the tail equals `⨅ m, revFiltration X m`. -/
+lemma tailProcess_eq_iInf_revFiltration
+    (X : ℕ → Ω → α)
+    (hrev :
+      ∀ m, revFiltration X m
+            =
+          iSup (fun k : ℕ =>
+            MeasurableSpace.comap (fun ω => X (m + k) ω) inferInstance)) :
+    tailProcess X = iInf (fun m => revFiltration X m) := by
+  -- Rewrite each slice using `hrev`, then unfold `tailProcess`.
+  sorry
+
+/-! ### General Properties -/
+
+/-- Tail σ-algebra is sub-σ-algebra of ambient space. -/
+lemma tailProcess_le_ambient (X : ℕ → Ω → α) :
+    tailProcess X ≤ (inferInstance : MeasurableSpace Ω) := by
+  sorry
+
+/-- For probability/finite measures, trimming to tail σ-algebra preserves sigma-finiteness. -/
+instance tailProcess_sigmaFinite [IsProbabilityMeasure μ] (X : ℕ → Ω → α) :
+    SigmaFinite (μ.trim (tailProcess_le_ambient X)) :=
+  inferInstance  -- Automatic for finite measures
+
+end Tail
+
+end Exchangeability.Tail
 ```
+
+#### Implementation Notes (Proof Sketches)
+
+**For `comap_shift_eq_iSup_comap_coords`:**
+- Use that product σ-algebra on `(ℕ → α)` is generated by coordinate maps `ω ↦ ω k`
+- Key: `fun ω => ω (n+k) = (fun ω => (fun j => ω (n+j))) k`
+- Combine `MeasurableSpace.comap_comp` with `iSup_le`/`le_iSup_iff`
+
+**For `tailProcess_coords_eq_tailShift`:**
+- Follow from `iInf_congr` on `n` using previous lemma
+- This is THE critical bridge between path-space and process formulations
+
+**For `tailProcess_eq_comap_path`:**
+- Most convenient in practice: pulls everything back from path space
+- Proof: unfold and rearrange `comap`/`iSup`/`iInf`
+
+**For `tailProcess_eq_iInf_revFiltration`:**
+- Stated with hypothesis `hrev` to fit any house definition
+- If `revFiltration` is literally `iSup (k ↦ comap (X (m+k)))`, specializes with `rfl`
 
 #### Files to Update
 
 **ViaL2.lean:**
 ```lean
--- Add import at top
-import Exchangeability.DeFinetti.TailSigmaHelpers
+import Exchangeability.Tail.TailSigma
 
--- Keep tailFamily (ViaL2-specific)
--- Replace tailSigma definition with:
-abbrev tailSigma (X : ℕ → Ω → β) : MeasurableSpace Ω :=
-  TailSigmaHelpers.tailSigma X
-
--- Use bridge lemma in proofs that need equivalence
+-- Keep local tailFamily (ViaL2-specific) if needed
+-- Replace tailSigma with:
+def tailSigma (X : ℕ → Ω → β) : MeasurableSpace Ω :=
+  Tail.tailProcess X
+@[simp] lemma tailSigma_def : tailSigma X = Tail.tailProcess X := rfl
 ```
 
 **ViaMartingale.lean:**
 ```lean
--- Add import
-import Exchangeability.DeFinetti.TailSigmaHelpers
+import Exchangeability.Tail.TailSigma
 
--- Replace tailSigma definition with import
+def tailSigma (X : ℕ → Ω → α) : MeasurableSpace Ω :=
+  Tail.tailProcess X
+
 -- Keep revFiltration and futureFiltration (proof-specific)
--- Use bridge lemma where needed
+-- Use Tail.tailProcess_eq_iInf_revFiltration where needed
 ```
 
 **CommonEnding.lean:**
 ```lean
--- Replace tailSigmaAlgebra with:
-import Exchangeability.DeFinetti.TailSigmaHelpers
-abbrev tailSigmaAlgebra := TailSigmaHelpers.tailSigma
+import Exchangeability.Tail.TailSigma
+
+def tailSigmaAlgebra (α : Type*) [MeasurableSpace α] : MeasurableSpace (ℕ → α) :=
+  Tail.tailShift α
 ```
 
 #### Estimated Impact
 
-- **Lines extracted to TailSigmaHelpers:** ~100 lines
+- **Lines in Tail/TailSigma.lean:** ~150 lines (includes bridges + proofs)
 - **Duplication eliminated:** ~150-200 lines across 3 files
-- **Net reduction:** -50 to -100 lines
+- **Net reduction:** 0 to -50 lines
 - **ViaL2:** -50 lines
 - **ViaMartingale:** -50 lines
 - **CommonEnding:** -10 lines
+- **Benefit:** Type-safe bridges prevent `rfl` failures
 
 ---
 
-### 1.2 Extract Product Measure Infrastructure
+### 1.2 Extract Cylinder and Product Infrastructure
 
-**Purpose:** Centralize cylinder sets, projections, and indicator product infrastructure
+**Purpose:** Centralize cylinder sets, product indicators, and path-space infrastructure
 
-#### Already Extracted to MartingaleHelpers.lean
+**CRITICAL CHANGE:** Move to neutral `PathSpace/CylinderHelpers.lean` (NOT MartingaleHelpers)
 
-**Current status:** ViaMartingale has already extracted some infrastructure to MartingaleHelpers.lean
+**Rationale:** Cylinder sets are general path-space infrastructure, not martingale-specific
 
-**In MartingaleHelpers.lean (lines 100-460):**
-- `tailCylinder` (line 100) + 6 lemmas
-- `cylinder` (line 186) + 5 lemmas
-- `finCylinder` (line 190) + 3 lemmas
-- `firstRCylinder` (line 232) + 8 lemmas
-- `firstRMap` / `firstRSigma` (lines 224-288) + 3 lemmas
-- `drop` (line 400) + 4 lemmas
+#### Current Status
+
+**Already in MartingaleHelpers.lean (lines 100-460):**
+- `tailCylinder` + 6 lemmas
+- `cylinder` + 5 lemmas
+- `finCylinder` + 3 lemmas
+- `firstRCylinder` + 8 lemmas
+- `firstRMap` / `firstRSigma` + 3 lemmas
+- `drop` + 4 lemmas
 - **Indicator algebra:** 5 lemmas (lines 348-391)
 
-**Total already extracted:** ~27 definitions/lemmas
+**Note:** Lines 636-679 in ViaMartingale are EXACT DUPLICATES (deleted in Phase 0.1)
 
 #### Still Needs Extraction
 
-**From ViaMartingale.lean:**
+**From ViaMartingale.lean (lines 579-740):**
+- `indProd` definition + 10 supporting lemmas (~160 lines)
 
-1. **Lines 636-679: DELETE (exact duplicates)**
-   - `indicator_mul_indicator_eq_indicator_inter` (line 636)
-   - `indicator_comp_preimage` (line 646)
-   - `indicator_binary` (line 655)
-   - `indicator_le_const` (line 664)
-   - `indicator_nonneg` (line 673)
-   - **Action:** Delete these 5 lemmas (already in MartingaleHelpers 348-391)
-
-2. **Lines 579-740: Extract `indProd` infrastructure (~160 lines)**
-   ```lean
-   def indProd (r : ℕ) (S : Fin r → Set α) : (ℕ → α) → ℝ := ...
-   ```
-   - `indProd_as_indicator` (line 583)
-   - `indProd_eq_firstRCylinder_indicator` (line 611)
-   - `indProd_integrable` (line 620)
-   - `indProd_stronglyMeasurable` (line 682)
-   - `indProd_nonneg_le_one` (line 693)
-   - `indProd_zero` (line 702)
-   - `indProd_univ` (line 709)
-   - `indProd_measurable` (line 716)
-   - `indProd_mul` (line 723)
-   - `indProd_inter_eq` (line 735)
-   - **Total:** 1 definition + 10 lemmas
-
-**From ViaKoopman.lean:**
-
-3. **Lines 2554-2640: Extract cylinder function infrastructure (~90 lines)**
-   ```lean
-   def cylinderFunction (m : ℕ) (f : Fin m → α → ℝ) : (ℕ → α) → ℝ := ...
-   def productCylinder (m : ℕ) (f : Fin m → α → ℝ) : (ℕ → α) → ℝ := ...
-   ```
-   - `productCylinder_eq_cylinder` (line 2562)
-   - `measurable_cylinderFunction` (line 2567)
-   - `measurable_productCylinder` (line 2578)
-   - `productCylinder_bounded` (line 2590)
-   - `productCylinder_memLp` (line 2616)
-   - **Total:** 2 definitions + 5 lemmas
+**From ViaKoopman.lean (lines 2554-2640):**
+- `cylinderFunction`, `productCylinder` + 5 lemmas (~90 lines)
 
 #### Extraction Plan
 
-**Extend:** `Exchangeability/DeFinetti/MartingaleHelpers.lean`
-
-Add after existing cylinder infrastructure (around line 460):
+**New/Extended file:** `Exchangeability/PathSpace/CylinderHelpers.lean`
 
 ```lean
+/-
+  Exchangeability/PathSpace/CylinderHelpers.lean
+  Cylinder sets, product indicators, and functions on path space.
+-/
+
+import Mathlib.MeasureTheory.Constructs.Prod
+
+namespace Exchangeability.PathSpace
+
+open MeasureTheory
+
+variable {α : Type*} [MeasurableSpace α]
+
+/-! ### Cylinder Sets -/
+
+/-- Cylinder determined by first `r` coordinates. -/
+def firstRCylinder (r : ℕ) (S : Fin r → Set α) : Set (ℕ → α) :=
+  {ω | ∀ i : Fin r, ω i ∈ S i}
+
+/-! ### Extensionality One-Liners (CRITICAL for downstream proofs) -/
+
+/-- Membership characterization. -/
+@[simp] lemma mem_firstRCylinder {r : ℕ} {S : Fin r → Set α} {ω : ℕ → α} :
+    ω ∈ firstRCylinder r S ↔ ∀ i, ω i ∈ S i := Iff.rfl
+
+/-- Measurability automation. -/
+@[measurability]
+lemma firstRCylinder_measurable {r : ℕ} {S : Fin r → Set α}
+    [∀ i, MeasurableSet (S i)] :
+    MeasurableSet (firstRCylinder r S) := by
+  sorry
+
 /-! ### Product Indicators -/
 
-/-- Product of indicator functions for finite cylinder -/
+/-- Product of indicator functions for finite cylinder. -/
 def indProd (r : ℕ) (S : Fin r → Set α) : (ℕ → α) → ℝ :=
   fun ω => ∏ i : Fin r, (S i).indicator (fun _ => (1 : ℝ)) (ω i)
 
-lemma indProd_as_indicator (r : ℕ) (S : Fin r → Set α) :
-    indProd r S = (firstRCylinder r S).indicator (fun _ => (1 : ℝ)) := sorry
+/-- indProd equals indicator of cylinder. -/
+@[simp] lemma indProd_eq_indicator (r : ℕ) (S : Fin r → Set α) :
+    indProd r S = (firstRCylinder r S).indicator (fun _ => (1 : ℝ)) := by
+  -- Strategy: by_cases on membership, use Finset.prod_eq_one
+  sorry
 
--- ... (9 more lemmas)
+-- Additional properties:
+lemma indProd_integrable [IsProbabilityMeasure μ] ... := sorry
+lemma indProd_nonneg_le_one ... := sorry
+lemma indProd_measurable [∀ i, MeasurableSet (S i)] :
+    Measurable (indProd r S) := by
+  sorry
 
 /-! ### Cylinder Functions -/
 
-/-- Function on path space depending only on finitely many coordinates -/
+/-- Function on path space depending only on finitely many coordinates. -/
 def cylinderFunction (m : ℕ) (f : Fin m → α → ℝ) : (ℕ → α) → ℝ :=
   fun ω => ∏ k : Fin m, f k (ω k)
 
-/-- Product cylinder (alias for cylinderFunction) -/
 abbrev productCylinder := cylinderFunction
 
--- ... (5 lemmas)
+/-- Measurability of cylinder functions. -/
+@[measurability]
+lemma cylinderFunction_measurable {m : ℕ} {f : Fin m → α → ℝ}
+    [∀ i, Measurable (f i)] :
+    Measurable (cylinderFunction m f) := by
+  sorry
+
+lemma cylinderFunction_bounded
+    {m : ℕ} {f : Fin m → α → ℝ}
+    (hf : ∀ i, ∃ C, ∀ x, |f i x| ≤ C) :
+    ∃ C, ∀ ω, |cylinderFunction m f ω| ≤ C := by
+  sorry
+
+end Exchangeability.PathSpace
 ```
 
 #### Files to Update
 
 **ViaMartingale.lean:**
-- **Delete lines 636-679** (duplicate indicator algebra)
-- **Move lines 579-740** to MartingaleHelpers.lean
-- Add `open MartingaleHelpers (indProd)` to namespace
+```lean
+import Exchangeability.PathSpace.CylinderHelpers
+open PathSpace (indProd firstRCylinder)
+
+-- Delete lines 579-740 (moved to CylinderHelpers)
+-- Delete lines 636-679 (duplicates, already done in Phase 0)
+```
 
 **ViaKoopman.lean:**
-- **Move lines 2554-2640** to MartingaleHelpers.lean
-- Add import and open statement
+```lean
+import Exchangeability.PathSpace.CylinderHelpers
+open PathSpace (cylinderFunction productCylinder)
+
+-- Delete lines 2554-2640 (moved to CylinderHelpers)
+```
+
+**MartingaleHelpers.lean:**
+```lean
+-- Keep martingale-specific content
+-- Existing cylinder infrastructure can stay OR be moved to PathSpace
+-- (decision: move to PathSpace for clarity)
+```
+
+#### Implementation Notes
+
+**For `indProd_eq_indicator`:**
+- Expand both sides pointwise
+- Use `by_cases h : ω ∈ firstRCylinder r S`
+- When `h` true: product of 1s equals 1
+- When `h` false: some factor is 0, so product is 0
+- Key lemma: `Finset.prod_eq_one_iff` and `Finset.prod_eq_zero_iff`
 
 #### Estimated Impact
 
-- **Lines added to MartingaleHelpers:** ~250 lines
-- **Lines deleted from ViaMartingale:** ~295 lines (160 moved + 45 duplicates + 90 reorganization)
+- **Lines in PathSpace/CylinderHelpers.lean:** ~300 lines (new file)
+- **Lines deleted from ViaMartingale:** ~250 lines (moved content + duplicates)
 - **Lines deleted from ViaKoopman:** ~90 lines
+- **Lines moved from MartingaleHelpers:** ~200 lines (optional cleanup)
 - **Net change:**
-  - **ViaMartingale:** -295 lines (-11%)
-  - **ViaKoopman:** -90 lines (-2%)
-  - **MartingaleHelpers:** +250 lines
-  - **Total:** -135 lines
+  - **ViaMartingale:** -250 lines (-9.5%)
+  - **ViaKoopman:** -90 lines (-1.8%)
+  - **PathSpace/CylinderHelpers:** +300 lines (new)
+  - **Total:** -40 lines + better organization
 
 ---
 
-### 1.3 Centralize Conditional Expectation Lemmas
+### 1.3 Centralize Conditional Expectation Lemmas (Operator Norm Approach)
 
-**Purpose:** Extract general conditional expectation infrastructure from proof-specific files
+**Purpose:** Extract general conditional expectation infrastructure using operator-theoretic viewpoint
+
+**KEY INSIGHT:** CE is an L¹-contraction (operator norm ≤ 1), so many lemmas follow from this
 
 #### Current Situation
 
@@ -314,52 +499,26 @@ abbrev productCylinder := cylinderFunction
 
 **Scattered in ViaKoopman.lean (general infrastructure, should be centralized):**
 
-1. **Line 874 AND 2464: `integrable_of_bounded` (EXACT DUPLICATE!)**
-   ```lean
-   private lemma integrable_of_bounded
-       {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
-       {f : Ω → ℝ} (hf : Measurable f) (hbd : ∃ C, ∀ ω, |f ω| ≤ C) :
-       Integrable f μ
-   ```
-   - **Action:** Delete one copy, move the other to CondExp.lean
+1. **Lines 874 AND 2464: `integrable_of_bounded` (EXACT DUPLICATE!)**
+   - Delete one copy, move the other to CondExp.lean
+   - **Note:** Check if this exists in mathlib first!
 
 2. **Line 881: `integrable_of_bounded_mul`**
-   ```lean
-   lemma integrable_of_bounded_mul [IsFiniteMeasure μ]
-       {f g : Ω → ℝ} (hf : Integrable f μ) (hg : Measurable g)
-       (hbd : ∃ C, ∀ ω, |g ω| ≤ C) :
-       Integrable (f * g) μ
-   ```
-   - **Action:** Move to CondExp.lean (general utility)
+   - General utility for product of integrable × bounded
 
 3. **Line 710: `condExp_abs_le_of_abs_le`**
-   ```lean
-   lemma condExp_abs_le_of_abs_le {m : MeasurableSpace Ω} [hm : m ≤ ‹_›]
-       {f g : Ω → ℝ} (hf : Integrable f μ) (hg : Integrable g μ)
-       (hfg : ∀ ω, |f ω| ≤ |g ω|) :
-       ∀ᵐ ω ∂μ, |μ[f|m] ω| ≤ |μ[g|m] ω|
-   ```
-   - **Action:** Move to CondExp.lean (general CE property)
+   - Monotonicity property of CE
 
-4. **Line 748: `condExp_L1_lipschitz`**
-   ```lean
-   lemma condExp_L1_lipschitz {m : MeasurableSpace Ω} [hm : m ≤ ‹_›]
-       {f g : Ω → ℝ} (hf : Integrable f μ) (hg : Integrable g μ) :
-       ∫ ω, |μ[f|m] ω - μ[g|m] ω| ∂μ ≤ ∫ ω, |f ω - g ω| ∂μ
-   ```
-   - **Action:** Move to CondExp.lean (general CE property)
+4. **Line 748: `condExp_L1_lipschitz`** (LOAD-BEARING)
+   - **This is the key lemma:** CE is nonexpansive in L¹
+   - Prove using operator norm viewpoint
 
 5. **Line 769: `condExp_mul_pullout`**
-   ```lean
-   lemma condExp_mul_pullout {m : MeasurableSpace Ω} [hm : m ≤ ‹_›]
-       {f g : Ω → ℝ} (hf : Integrable f μ) (hg_meas : Measurable[m] g)
-       (hg_bd : ∃ C, ∀ ω, |g ω| ≤ C) (hfg : Integrable (f * g) μ) :
-       μ[f * g|m] =ᵐ[μ] μ[f|m] * g
-   ```
-   - **Action:** Move to CondExp.lean (standard pull-out property)
+   - Standard pull-out property
+   - Can be derived as corollary of L¹-Lipschitz + bounded multiplication
 
 **Proof-specific (keep in ViaKoopman.lean):**
-- All ergodic theory / Koopman-specific CE lemmas (~16 lemmas)
+- Ergodic theory / Koopman-specific CE lemmas (~16 lemmas)
 - Factorization lemmas specific to shift-invariance
 - Birkhoff averaging lemmas
 
@@ -367,89 +526,142 @@ abbrev productCylinder := cylinderFunction
 
 **Add to:** `Exchangeability/Probability/CondExp.lean`
 
-Add section around line 600 (after existing infrastructure):
-
 ```lean
 /-! ### General Conditional Expectation Utilities -/
 
-/-- Bounded measurable functions are integrable on finite measures -/
-lemma integrable_of_bounded
-    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
+variable {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
+
+/-- Bounded measurable functions are integrable on finite measures.
+    TODO: Check if this exists in mathlib! -/
+lemma integrable_of_bounded [IsFiniteMeasure μ]
     {f : Ω → ℝ} (hf : Measurable f) (hbd : ∃ C, ∀ ω, |f ω| ≤ C) :
     Integrable f μ := by
-  sorry
+  obtain ⟨C, hC⟩ := hbd
+  apply Integrable.of_bounded
+  · exact hf.aestronglyMeasurable
+  · exact ⟨C, eventually_of_forall hC⟩
 
-/-- Product of integrable and bounded functions is integrable -/
+/-- Product of integrable and bounded functions is integrable. -/
 lemma integrable_of_bounded_mul [IsFiniteMeasure μ]
     {f g : Ω → ℝ} (hf : Integrable f μ) (hg : Measurable g)
     (hbd : ∃ C, ∀ ω, |g ω| ≤ C) :
     Integrable (f * g) μ := by
   sorry
 
-/-! ### Conditional Expectation Bounds and Inequalities -/
+/-! ### Conditional Expectation as L¹-Contraction -/
 
-/-- Conditional expectation preserves pointwise absolute value bounds -/
-lemma condExp_abs_le_of_abs_le {m : MeasurableSpace Ω} [hm : m ≤ ‹_›]
+/-- Conditional expectation preserves pointwise absolute value bounds. -/
+lemma condExp_abs_le_of_abs_le [IsFiniteMeasure μ]
+    {m : MeasurableSpace Ω} [hm : m ≤ ‹_›]
     {f g : Ω → ℝ} (hf : Integrable f μ) (hg : Integrable g μ)
     (hfg : ∀ ω, |f ω| ≤ |g ω|) :
     ∀ᵐ ω ∂μ, |μ[f|m] ω| ≤ |μ[g|m] ω| := by
   sorry
 
-/-- Conditional expectation is L¹-Lipschitz -/
-lemma condExp_L1_lipschitz {m : MeasurableSpace Ω} [hm : m ≤ ‹_›]
+/-- **LOAD-BEARING:** Conditional expectation is L¹-nonexpansive (operator norm ≤ 1).
+
+    Proof strategy: CE is the L¹-orthogonal projection onto m-measurable functions.
+    First prove for g = 0, then apply to f - g. -/
+lemma condExp_L1_lipschitz [IsFiniteMeasure μ]
+    {m : MeasurableSpace Ω} [hm : m ≤ ‹_›]
     {f g : Ω → ℝ} (hf : Integrable f μ) (hg : Integrable g μ) :
     ∫ ω, |μ[f|m] ω - μ[g|m] ω| ∂μ ≤ ∫ ω, |f ω - g ω| ∂μ := by
+  -- Strategy:
+  -- 1. Rewrite LHS as ∫ |μ[f - g|m]|
+  -- 2. Use that CE is contractive: ‖CE(h)‖₁ ≤ ‖h‖₁
+  -- 3. This follows from CE being projection with operator norm = 1
   sorry
 
-/-! ### Conditional Expectation Pull-Out Property -/
+/-! ### Conditional Expectation Pull-Out (Corollary) -/
 
-/-- Pull out m-measurable bounded functions from conditional expectation -/
-lemma condExp_mul_pullout {m : MeasurableSpace Ω} [hm : m ≤ ‹_›]
+/-- Pull out m-measurable bounded functions from conditional expectation.
+
+    This can be derived from condExp_L1_lipschitz + bounded multiplication. -/
+lemma condExp_mul_pullout [IsFiniteMeasure μ]
+    {m : MeasurableSpace Ω} [hm : m ≤ ‹_›]
     {f g : Ω → ℝ} (hf : Integrable f μ) (hg_meas : Measurable[m] g)
     (hg_bd : ∃ C, ∀ ω, |g ω| ≤ C) (hfg : Integrable (f * g) μ) :
     μ[f * g|m] =ᵐ[μ] μ[f|m] * g := by
+  -- Standard proof via pull-out property for m-measurable functions
   sorry
 ```
+
+#### Implementation Notes
+
+**For `condExp_L1_lipschitz` (THE key lemma):**
+
+1. **Operator viewpoint:** CE is L¹ → L¹(m) projection
+2. **Key fact:** Projections have operator norm ≤ 1
+3. **Proof sketch:**
+   - First show for `g = 0`: `‖μ[f|m]‖₁ ≤ ‖f‖₁`
+   - Then apply to `f - g` using linearity
+4. **Mathlib lemmas to use:**
+   - `MeasureTheory.condexp_L1_norm_le` (if exists)
+   - Or build from projection properties
+
+**For `condExp_mul_pullout`:**
+- This is standard; may already exist in mathlib as `condexp_smul`
+- Otherwise, prove using tower property
 
 #### Files to Update
 
 **ViaKoopman.lean:**
-- **Delete line 2464** (duplicate `integrable_of_bounded`)
-- **Delete lines 710-881** (move to CondExp.lean)
-- **Add import:** `open CondExp (integrable_of_bounded condExp_abs_le_of_abs_le ...)`
-- Keep all Koopman-specific CE lemmas
+```lean
+import Exchangeability.Probability.CondExp
+
+-- Delete line 2464 (duplicate integrable_of_bounded)
+-- Delete lines 710-881 (move to CondExp.lean)
+open CondExp (integrable_of_bounded condExp_L1_lipschitz condExp_mul_pullout)
+
+-- Keep all Koopman-specific CE lemmas
+```
 
 #### Estimated Impact
 
-- **Lines moved to CondExp.lean:** ~80 lines
-- **Lines deleted from ViaKoopman:** ~120 lines (80 moved + 40 duplicate)
+- **Lines moved to CondExp.lean:** ~100 lines (including documentation)
+- **Lines deleted from ViaKoopman:** ~120 lines (moved + duplicate)
 - **Net change:**
   - **ViaKoopman:** -120 lines (-2.5%)
-  - **CondExp.lean:** +80 lines
-  - **Total:** -40 lines
+  - **CondExp.lean:** +100 lines
+  - **Total:** -20 lines
+- **Benefit:** Operator-theoretic approach is more modular and mathlib-ready
 
 ---
 
 ### Phase 1 Summary
 
-**Total Impact:**
-- **New helper files:** TailSigmaHelpers.lean (~100 lines)
-- **Extended files:** MartingaleHelpers.lean (+250 lines), CondExp.lean (+80 lines)
-- **Reductions:**
-  - ViaL2: -50 lines (-1.3%)
-  - ViaKoopman: -210 lines (-4.3%)
-  - ViaMartingale: -295 lines (-11.3%)
-- **Net project change:** +90 lines (+0.8%)
-- **Duplication eliminated:** ~560 lines
+**Total Impact (including Phase 0):**
+
+**New infrastructure created:**
+- **Tail/TailSigma.lean:** ~150 lines (two canonical viewpoints + bridges)
+- **PathSpace/CylinderHelpers.lean:** ~300 lines (neutral cylinder infrastructure)
+- **CondExp.lean additions:** ~100 lines (operator-theoretic approach)
+
+**Reductions:**
+- **ViaL2:** -50 lines (-1.3%)
+- **ViaKoopman:** -210 lines (-4.3%)
+- **ViaMartingale:** -290 lines (-11%) (250 cylinder + 44 duplicates from Phase 0)
+
+**Net project change:** +210 lines (+1.9%)
+**Duplication eliminated:** ~580 lines
+
+**Critical Success Factors:**
+1. **Phase 1a load-bearing proofs must succeed:**
+   - `tailProcess_coords_eq_tailShift` (bridge path ↔ process)
+   - `condExp_L1_lipschitz` (operator norm)
+2. **Type safety:** Bridges prevent `rfl` failures
+3. **Modular design:** Ready for eventual mathlib contribution
 
 **Compilation verification checklist:**
-- [ ] TailSigmaHelpers.lean compiles standalone
-- [ ] MartingaleHelpers.lean compiles with new additions
+- [ ] **Phase 1a:** Bridge lemmas proven and compile
+- [ ] Tail/TailSigma.lean compiles standalone
+- [ ] PathSpace/CylinderHelpers.lean compiles standalone
 - [ ] CondExp.lean compiles with new lemmas
 - [ ] ViaL2.lean compiles with new imports
 - [ ] ViaKoopman.lean compiles with new imports
 - [ ] ViaMartingale.lean compiles with deletions
 - [ ] All three Via* files still prove their main theorems
+- [ ] No circular dependencies (verify with `lake exe graph`)
 
 ---
 
@@ -645,31 +857,58 @@ grep -r "lemma.*measurable" Exchangeability/DeFinetti/Via*.lean
 
 **Dependency chain should be:**
 ```
-Core.lean, Contractability.lean, ConditionallyIID.lean
+Mathlib
   ↓
-TailSigmaHelpers.lean, MartingaleHelpers.lean, CondExp.lean
+Core.lean, Contractability.lean, ConditionallyIID.lean, InvariantSigma.lean
+  ↓
+Probability/CondExp.lean (general CE utilities)
+  ↓
+Tail/TailSigma.lean (two canonical viewpoints + bridges)
+PathSpace/CylinderHelpers.lean (neutral cylinder infrastructure)
+  ↓
+DeFinetti/MartingaleHelpers.lean (martingale-specific only)
+DeFinetti/L2Helpers.lean
   ↓
 ViaL2.lean, ViaKoopman.lean, ViaMartingale.lean
   ↓
 Theorem.lean, TheoremViaL2.lean, TheoremViaKoopman.lean, TheoremViaMartingale.lean
 ```
 
+**Key import constraints:**
+- **Tail/TailSigma.lean:** Only imports mathlib (no project dependencies)
+- **PathSpace/CylinderHelpers.lean:** Only imports mathlib
+- **Probability/CondExp.lean:** Only imports mathlib
+- **Via\* files:** Import helpers, NEVER each other
+- **MartingaleHelpers:** Can import PathSpace, NOT Via\*
+
 **Verification commands:**
 ```bash
 # Check import graph
+lake exe graph Exchangeability.Tail.TailSigma > /tmp/tail_deps.dot
+lake exe graph Exchangeability.PathSpace.CylinderHelpers > /tmp/cylinder_deps.dot
 lake exe graph Exchangeability.DeFinetti.ViaL2 > /tmp/vial2_deps.dot
 lake exe graph Exchangeability.DeFinetti.ViaKoopman > /tmp/viakoopman_deps.dot
 lake exe graph Exchangeability.DeFinetti.ViaMartingale > /tmp/viamartingale_deps.dot
 
 # Look for cycles
-grep "TailSigmaHelpers.*Via" /tmp/*.dot
+grep "Tail.*Via" /tmp/*.dot
+grep "PathSpace.*Via" /tmp/*.dot
 grep "MartingaleHelpers.*Via" /tmp/*.dot
+
+# Verify helpers have minimal dependencies
+grep -v "Mathlib\|std" /tmp/tail_deps.dot  # Should be empty
+grep -v "Mathlib\|std" /tmp/cylinder_deps.dot  # Should be empty
 ```
 
 **If circular dependencies found:**
 - Identify the problematic import
 - Either move the lemma or split the file
 - Re-verify after fix
+
+**Expected dependency counts (as sanity check):**
+- Tail/TailSigma: ~5-10 mathlib imports
+- PathSpace/CylinderHelpers: ~5-10 mathlib imports
+- ViaL2/ViaKoopman/ViaMartingale: ~20-30 total imports each
 
 ---
 
@@ -984,69 +1223,108 @@ git checkout -b refactor/shared-infrastructure
 
 ---
 
-### Phase 1 Implementation (2-3 days)
+### Phase 0 Implementation (1-2 hours) — DO NOW
 
-#### Day 1: TailSigmaHelpers.lean
+**Immediate quick wins (no prerequisites):**
 
-**Morning:**
-1. Create `Exchangeability/DeFinetti/TailSigmaHelpers.lean`
-2. Write canonical `tailSigma` re-export
-3. Write bridge lemmas (with sorry placeholders)
-4. Verify file compiles standalone
+1. **Delete duplicate indicator lemmas from ViaMartingale.lean (lines 636-679)**
+   ```bash
+   # Edit ViaMartingale.lean, delete lines 636-679
+   lake build Exchangeability.DeFinetti.ViaMartingale  # Verify still compiles
+   git commit -m "refactor: Remove duplicate indicator algebra from ViaMartingale"
+   ```
 
-**Afternoon:**
-5. Update `ViaL2.lean` to import TailSigmaHelpers
-6. Replace ViaL2's `tailSigma` with import
-7. Update proofs to use bridge lemmas
-8. Verify ViaL2 compiles
+2. **Create PathSpace/CylinderHelpers.lean skeleton**
+   ```bash
+   mkdir -p Exchangeability/PathSpace
+   # Create skeleton file with namespace and imports
+   lake build Exchangeability.PathSpace.CylinderHelpers  # Verify compiles
+   git commit -m "feat: Add PathSpace/CylinderHelpers skeleton for neutral cylinder infrastructure"
+   ```
 
-**Evening:**
-9. Update `ViaMartingale.lean` similarly
-10. Update `CommonEnding.lean`
-11. Verify all files compile
-12. Commit: `feat: Add TailSigmaHelpers with canonical tail σ-algebra`
-
----
-
-#### Day 2: ProductMeasureHelpers.lean (extend MartingaleHelpers)
-
-**Morning:**
-1. Delete duplicate indicator algebra from ViaMartingale (lines 636-679)
-2. Verify ViaMartingale still compiles (should import from MartingaleHelpers)
-3. Commit: `refactor: Remove duplicate indicator algebra from ViaMartingale`
-
-**Afternoon:**
-4. Extract `indProd` from ViaMartingale to MartingaleHelpers
-5. Update ViaMartingale to import `indProd`
-6. Verify ViaMartingale compiles
-
-**Evening:**
-7. Extract `productCylinder` from ViaKoopman to MartingaleHelpers
-8. Update ViaKoopman to import `productCylinder`
-9. Verify ViaKoopman compiles (may still have pre-existing errors)
-10. Commit: `feat: Centralize product measure infrastructure in MartingaleHelpers`
+**Time:** 1-2 hours
+**Risk:** Zero
+**Benefit:** -44 lines, cleaner base for Phase 1
 
 ---
 
-#### Day 3: ConditionalExpectationHelpers (extend CondExp.lean)
+### Phase 1 Implementation (3-4 days) — REVISED WITH PHASE 1a/1b
+
+**CRITICAL:** Phase 1 now has TWO sub-phases to prove load-bearing lemmas FIRST
+
+#### Phase 1a: Prove Load-Bearing Bridge Lemmas (Day 1)
+
+**Goal:** Get the critical bridges working BEFORE extracting infrastructure
 
 **Morning:**
-1. Add `integrable_of_bounded` to CondExp.lean
-2. Add other 4 general CE lemmas to CondExp.lean
-3. Verify CondExp.lean compiles
+1. Create `Exchangeability/Tail/TailSigma.lean` with complete signatures (from plan)
+2. Implement `comap_shift_eq_iSup_comap_coords` proof
+   - Use mathlib's product σ-algebra properties
+   - Key lemmas: `comap_comp`, `iSup_le`, `le_iSup_iff`
+3. Verify compiles
 
 **Afternoon:**
-4. Delete duplicate `integrable_of_bounded` from ViaKoopman (line 2464)
-5. Delete/move other CE lemmas from ViaKoopman
-6. Update ViaKoopman imports
-7. Verify ViaKoopman compiles
+4. Implement `tailProcess_coords_eq_tailShift` proof
+   - Use `iInf_congr` + previous lemma
+5. Implement `tailProcess_eq_comap_path` proof
+   - Unfold and rearrange `comap`/`iInf`/`iSup`
+6. Verify all bridges compile
 
 **Evening:**
-8. Run full project build: `lake build`
-9. Check for new warnings or errors
-10. Update CLAUDE.md with new file structure
-11. Commit: `feat: Centralize general CE lemmas in CondExp.lean`
-12. **MERGE CHECKPOINT:** Phase 1 complete
+7. Add `condExp_L1_lipschitz` to CondExp.lean
+   - Prove using operator norm ≤ 1 viewpoint
+   - Check mathlib for `condexp_L1_norm_le`
+8. Verify CondExp.lean compiles
+9. **CHECKPOINT:** Commit with all bridges proven
+
+**Commit:** `feat: Add load-bearing bridge lemmas (tail σ-algebra + CE operator norm)`
+
+---
+
+#### Phase 1b: Extract Infrastructure Using Bridges (Days 2-3)
+
+**Day 2: Tail Infrastructure**
+
+**Morning:**
+1. Complete `Tail/TailSigma.lean` with all supporting lemmas
+2. Verify file compiles standalone
+3. Test bridges with small examples
+
+**Afternoon:**
+4. Update `ViaL2.lean` to import and use `Tail.tailProcess`
+5. Update proofs to use bridge lemmas where needed
+6. Verify ViaL2 compiles
+
+**Evening:**
+7. Update `ViaMartingale.lean` to use `Tail.tailProcess`
+8. Update `CommonEnding.lean` to use `Tail.tailShift`
+9. Verify all files compile
+10. Commit: `feat: Extract tail σ-algebra infrastructure with two canonical viewpoints`
+
+---
+
+**Day 3: Cylinder and CE Infrastructure**
+
+**Morning:**
+1. Complete `PathSpace/CylinderHelpers.lean` with content from ViaMartingale/ViaKoopman
+2. Add extensionality and measurability one-liners
+3. Verify file compiles standalone
+
+**Afternoon:**
+4. Update ViaMartingale to import `PathSpace.CylinderHelpers`
+5. Delete extracted cylinder content (lines 579-740)
+6. Update ViaKoopman to import cylinder functions
+7. Delete extracted content (lines 2554-2640)
+8. Verify both files compile
+
+**Evening:**
+9. Complete CondExp.lean CE utilities (building on Phase 1a)
+10. Update ViaKoopman to import and use new CE lemmas
+11. Delete duplicate/extracted CE content from ViaKoopman
+12. Run full project build: `lake build`
+13. Update CLAUDE.md with new file structure
+14. Commit: `feat: Extract cylinder and CE infrastructure to neutral locations`
+15. **MERGE CHECKPOINT:** Phase 1 complete
 
 ---
 
@@ -1186,16 +1464,35 @@ git push origin refactoring-complete
 - `StyleGuidelines/MATHLIB_STYLE_CHECKLIST.md` - Mathlib conventions
 
 ### Key Files Modified
-- `Exchangeability/DeFinetti/ViaL2.lean` (3,801 lines)
-- `Exchangeability/DeFinetti/ViaKoopman.lean` (4,862 lines)
-- `Exchangeability/DeFinetti/ViaMartingale.lean` (2,620 lines)
-- `Exchangeability/DeFinetti/InvariantSigma.lean` (tail σ-algebra)
-- `Exchangeability/DeFinetti/MartingaleHelpers.lean` (cylinder sets)
-- `Exchangeability/Probability/CondExp.lean` (conditional expectation)
+- `Exchangeability/DeFinetti/ViaL2.lean` (3,801 lines → ~3,650 lines)
+- `Exchangeability/DeFinetti/ViaKoopman.lean` (4,862 lines → ~4,600 lines)
+- `Exchangeability/DeFinetti/ViaMartingale.lean` (2,620 lines → ~2,250 lines)
+- `Exchangeability/Probability/CondExp.lean` (extended with ~100 lines)
 
-### New Files Created
-- `Exchangeability/DeFinetti/TailSigmaHelpers.lean` (~100 lines)
-- Possibly: `Exchangeability/Probability/IndicatorIntegrals.lean` (~50 lines)
+### New Files Created (Phase 0-1)
+- `Exchangeability/Tail/TailSigma.lean` (~150 lines)
+  - Two canonical tail viewpoints (path-space vs. process)
+  - Load-bearing bridge lemmas
+- `Exchangeability/PathSpace/CylinderHelpers.lean` (~300 lines)
+  - Neutral cylinder infrastructure
+  - Extensionality and measurability one-liners
+- **MartingaleHelpers.lean:** Keep for martingale-specific content only
+
+### Proposed Files (Phase 4) — REVISED
+
+**Note:** Most "gaps" are actually mathlib wrappers, not true gaps!
+
+- `Exchangeability/Probability/IntegrationHelpers.lean` (~60 lines)
+  - Mathlib wrappers: `abs_integral_mul_le_L2` (Hölder p=q=2)
+  - Convenience: `integral_pushforward_id`, `integral_pushforward_sq_diff`
+  - **Imports:** `Mathlib.MeasureTheory.Integral.Bochner.Basic`
+- `Exchangeability/Util/StrictMono.lean` (~40 lines)
+  - Only 2 Fin-specific lemmas: `strictMono_Fin_ge_id`, `strictMono_fin_cases`
+  - Rest handled by mathlib's `StrictMono.comp`, `OrderIso.strictMono`
+
+**Total new code:** ~100 lines (not ~380!)
+**Total duplication eliminated:** ~420 lines
+**Net savings:** ~320 lines
 
 ---
 
@@ -1210,66 +1507,91 @@ This section documents additional refactoring opportunities discovered through c
 
 ### 4.1 Integration and L^p Space Utilities
 
-**Analysis findings:**
+**REVISED ASSESSMENT:** Most of these are mathlib wrappers, not gaps!
 
-**HIGH PRIORITY: Hölder/Cauchy-Schwarz Duplication (170 lines)**
+**HIGH PRIORITY: Cauchy-Schwarz Wrapper (Eliminates 170 lines)**
 
-**Exact 90-line duplication found:**
-- `CovarianceStructure.lean` (lines 213-290): Cauchy-Schwarz via Hölder inequality
-- `ViaL2.lean` (lines 329-386): Identical proof structure
+**What we need:** Thin wrapper around mathlib's Hölder inequality (p=q=2)
 
-**Recommended action:** Create `Exchangeability/Probability/HolderHelpers.lean`
+**Mathlib already has:** `MeasureTheory.integral_mul_norm_le_Lp_mul_Lq`
+- Location: `Mathlib.MeasureTheory.Integral.Bochner.Basic`
+- This IS Cauchy-Schwarz when specialized to p=q=2
+
+**Our wrapper (in `Probability/IntegrationHelpers.lean`):**
 
 ```lean
-/-- Cauchy-Schwarz for L² functions via Hölder inequality. -/
-lemma integral_mul_le_sqrt_integral_sq_mul_sqrt_integral_sq
-    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
+import Mathlib.MeasureTheory.Integral.Bochner.Basic
+
+/-- Cauchy-Schwarz for real-valued L² functions (wrapper around Hölder). -/
+lemma abs_integral_mul_le_L2
+    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
     {f g : Ω → ℝ} (hf : MemLp f 2 μ) (hg : MemLp g 2 μ) :
     |∫ ω, f ω * g ω ∂μ|
-      ≤ Real.sqrt (∫ ω, (f ω)^2 ∂μ) * Real.sqrt (∫ ω, (g ω)^2 ∂μ)
+      ≤ Real.sqrt (∫ ω, (‖f ω‖)^2 ∂μ) * Real.sqrt (∫ ω, (‖g ω‖)^2 ∂μ) := by
+  -- Call mathlib's Hölder with p=q=2
+  have h := integral_mul_norm_le_Lp_mul_Lq hf hg
+  -- Rewrite L²-norms using MemLp.eLpNorm_eq_integral_rpow_norm
+  -- Simplify ‖f ω‖ to |f ω| for ℝ
+  sorry
 ```
 
-**Impact:** Eliminates 170 lines of duplication
+**Impact:** Eliminates 170 lines by delegating to mathlib
 
-**MEDIUM PRIORITY: `integral_map` Boilerplate Pattern (54 lines)**
+**MEDIUM PRIORITY: `integral_map` Boilerplate Wrappers (54 call sites)**
 
-**Pattern appearing 18+ times across files:**
+**Mathlib already has:** `MeasureTheory.integral_map`
+- Location: `Mathlib.MeasureTheory.Integral.Bochner.Basic`
+- We just need convenience wrappers
+
+**Pattern appearing 18+ times:**
 ```lean
 have h_ae : AEStronglyMeasurable (id : ℝ → ℝ) (Measure.map (X k) μ) :=
   aestronglyMeasurable_id
 exact (integral_map (hX_meas k).aemeasurable h_ae).symm
 ```
 
-**Locations:**
-- CovarianceStructure.lean: 8 times
-- ViaL2.lean: 10 times
-- ViaKoopman.lean: 1 time
-
-**Recommended action:** Create helper in `IntegrationHelpers.lean`:
+**Our wrappers (in `Probability/IntegrationHelpers.lean`):**
 
 ```lean
-lemma integral_pushforward_id {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+/-- Convenience wrapper for integral_map with identity function. -/
+lemma integral_pushforward_id {Ω : Type*} [MeasurableSpace Ω]
     {μ : Measure Ω} {f : Ω → ℝ} (hf : Measurable f) :
-    ∫ ω, f ω ∂μ = ∫ x, x ∂(Measure.map f μ)
+    ∫ ω, f ω ∂μ = ∫ x, x ∂(Measure.map f μ) := by
+  have h_ae : AEStronglyMeasurable (id : ℝ → ℝ) (Measure.map f μ) :=
+    aestronglyMeasurable_id
+  exact (integral_map hf.aemeasurable h_ae).symm
 
+/-- Convenience wrapper for squared differences under pushforward. -/
 lemma integral_pushforward_sq_diff {Ω : Type*} [MeasurableSpace Ω]
     {μ : Measure Ω} {f : Ω → ℝ} (hf : Measurable f) (c : ℝ) :
-    ∫ ω, (f ω - c)^2 ∂μ = ∫ x, (x - c)^2 ∂(Measure.map f μ)
+    ∫ ω, (f ω - c)^2 ∂μ = ∫ x, (x - c)^2 ∂(Measure.map f μ) := by
+  sorry -- Apply integral_map with (fun x => (x - c)^2)
 ```
 
-**Impact:** Eliminates 54 lines of boilerplate
+**Impact:** Eliminates 54 boilerplate instances
 
-**LOW PRIORITY: Indicator Integration Lemmas**
+**LOW PRIORITY: Indicator Integration**
 
-Already in ViaKoopman.lean (lines 2472-2488), could be moved to shared location:
-- `integral_indicator_one`
-- `integral_indicator_const`
+**Mathlib already has:**
+- **Bochner (ℝ-valued):** `integral_const`, `integral_indicator₂`
+  - Location: `Mathlib.MeasureTheory.Integral.Bochner.Basic`
+- **Lebesgue (ℝ≥0∞-valued):** `lintegral_indicator_const`, `lintegral_indicator_one`
+  - Location: `Mathlib.MeasureTheory.Integral.Lebesgue.Basic`
 
-**Decision:** Move to `IntegrationHelpers.lean` for consistency
+**Decision:** Use mathlib directly, no wrappers needed
+
+**Required imports for IntegrationHelpers.lean:**
+```lean
+import Mathlib.MeasureTheory.Integral.Bochner.Basic     -- Hölder, integral_map, integral_const
+import Mathlib.MeasureTheory.Integral.Lebesgue.Basic    -- lintegral_indicator_*
+import Mathlib.MeasureTheory.Integral.MeanInequalities  -- (optional) Hölder variants
+```
 
 ---
 
 ### 4.2 StrictMono (Strictly Monotone) Utilities
+
+**REVISED ASSESSMENT:** Most are already in mathlib via general order API!
 
 **Analysis findings:**
 
@@ -1278,34 +1600,52 @@ Already in ViaKoopman.lean (lines 2472-2488), could be moved to shared location:
 - `L2Helpers.lean` (lines 121-137): 2 lemmas
 - `MartingaleHelpers.lean` (lines 158-177): 1 lemma
 
-**Core lemmas to extract:**
+**Classification:**
 
-```lean
--- Arithmetic preservation
-lemma strictMono_add_left {m : ℕ} (k : Fin m → ℕ) (hk : StrictMono k) (c : ℕ) :
-    StrictMono (fun i => c + k i)
+**Already in mathlib (use directly, don't re-declare):**
 
-lemma strictMono_add_right {m : ℕ} (k : Fin m → ℕ) (hk : StrictMono k) (c : ℕ) :
-    StrictMono (fun i => k i + c)
+1. **Composition:** `StrictMono.comp`
+   - Location: General order API
+   - Use for your `Fin m → Fin n → ℕ` composition chains
+   - Don't create project-specific `strictMono_comp`
 
--- Composition
-lemma strictMono_comp {m n : ℕ} (f : Fin m → Fin n) (g : Fin n → ℕ)
-    (hf : StrictMono f) (hg : StrictMono g) : StrictMono (fun i => g (f i))
+2. **Add/subtract constants:** Via `OrderIso`
+   - `i ↦ i + c` is an `OrderIso`, hence `StrictMono`
+   - Use `OrderIso.strictMono` (2-3 line derivation)
+   - Don't create `strictMono_add_left`/`strictMono_add_right`
 
--- Identity and bounds
-lemma strictMono_Fin_ge_id {m : ℕ} {k : Fin m → ℕ} (hk : StrictMono k) (i : Fin m) :
-    i.val ≤ k i
+3. **Fin → ℕ coercion:** Via `OrderEmbedding`
+   - `(fun i : Fin n => (i : ℕ))` is an order embedding
+   - Use `OrderEmbedding.strictMono`
+   - If you need a named lemma, consider PR to `Mathlib.Data.Fin.Basic`
 
-lemma fin_val_strictMono {n : ℕ} : StrictMono (fun i : Fin n => i.val)
+**Project-specific (keep in `Util/StrictMono.lean`):**
 
--- Fin.cases extension
-lemma strictMono_fin_cases {n : ℕ} {f : Fin n → ℕ} (hf : StrictMono f) {a : ℕ}
-    (ha : ∀ i, a < f i) : StrictMono (Fin.cases a (fun i => f i))
-```
+1. **`strictMono_Fin_ge_id`:**
+   ```lean
+   /-- Strictly monotone functions on Fin dominate the identity. -/
+   lemma strictMono_Fin_ge_id {m : ℕ} {k : Fin m → ℕ} (hk : StrictMono k) (i : Fin m) :
+       i.val ≤ k i := by
+     sorry -- Tailored to CDF/index arguments
+   ```
 
-**Recommended action:** Create `Exchangeability/Util/StrictMono.lean`
+2. **`strictMono_fin_cases`:**
+   ```lean
+   /-- Strict monotonicity preserved by Fin.cases with compatible initial value. -/
+   lemma strictMono_fin_cases {n : ℕ} {f : Fin n → ℕ} (hf : StrictMono f) {a : ℕ}
+       (ha : ∀ i, a < f i) : StrictMono (Fin.cases a (fun i => f i)) := by
+     sorry -- Structural lemma for your constructions
+   ```
 
-**Impact:** Consolidates ~200 lines of StrictMono infrastructure
+**Recommended action:**
+- **DELETE** from plan: `strictMono_add_left`, `strictMono_add_right`, `strictMono_comp`
+- **CREATE** `Util/StrictMono.lean` with ONLY the 2 Fin-specific lemmas above
+- **USE** mathlib's general API for composition and arithmetic
+
+**Revised impact:**
+- Consolidates ~200 lines of duplication
+- **But:** Only ~40 lines of actual new code (just the 2 Fin lemmas)
+- Remaining ~160 lines replaced by mathlib calls
 
 ---
 
@@ -1439,16 +1779,22 @@ lemma strictMono_fin_cases {n : ℕ} {f : Fin n → ℕ} (hf : StrictMono f) {a 
 
 ---
 
-## Summary of Additional Opportunities
+## Summary of Additional Opportunities (REVISED)
 
 ### New Files to Create (Phase 4)
 
+**REVISED UNDERSTANDING:** Most are mathlib wrappers, not gaps!
+
 | File | Purpose | Lines | Priority | Impact |
 |------|---------|-------|----------|--------|
-| `Probability/HolderHelpers.lean` | Cauchy-Schwarz duplication | ~100 | **HIGH** | -170 lines |
-| `Probability/IntegrationHelpers.lean` | integral_map boilerplate | ~80 | **MEDIUM** | -54 lines |
-| `Util/StrictMono.lean` | StrictMono utilities | ~200 | **MEDIUM** | -200 lines |
+| `Probability/IntegrationHelpers.lean` | Wrappers around mathlib (Hölder, integral_map) | ~60 | **HIGH** | -220 lines (170 C-S + 54 boilerplate) |
+| `Util/StrictMono.lean` | 2 Fin-specific lemmas only | ~40 | **MEDIUM** | -200 lines (rest via mathlib) |
 | `Ergodic/NaturalExtension.lean` | Two-sided systems | ~300 | **LOW** | Organization |
+
+**Key changes:**
+- **Merged** HolderHelpers into IntegrationHelpers (both are just mathlib wrappers)
+- **Drastically reduced** StrictMono (only 2 project-specific lemmas; rest via `StrictMono.comp`, `OrderIso`)
+- **Total new code:** ~100 lines (not ~380!), but **eliminates ~420 lines** of duplication
 
 ### Files to Delete/Merge
 
@@ -1504,21 +1850,29 @@ lemma strictMono_fin_cases {n : ℕ} {f : Fin n → ℕ} (hf : StrictMono f) {a 
 
 ## Implementation Priority Ranking
 
-### Tier 1: Immediate High-Value Actions (1-2 days)
+### Tier 1: Immediate High-Value Actions (1 day) — REVISED
 
 1. **Delete ViaMartingale.lean lines 636-679** - Exact duplicates (5 minutes)
-2. **Create HolderHelpers.lean** - Eliminates 170-line duplication (3 hours)
+2. **Create IntegrationHelpers.lean** - Mathlib wrappers for Hölder + integral_map (3 hours)
+   - Includes `abs_integral_mul_le_L2` (Cauchy-Schwarz wrapper)
+   - Includes `integral_pushforward_id`, `integral_pushforward_sq_diff`
+   - **Eliminates:** 170 (C-S) + 54 (boilerplate) = 224 lines
 3. **Delete CovarianceStructure.lean** - Orphaned file (30 minutes)
 4. **Merge L2Approach into L2Helpers** - Consolidate structure (2 hours)
 
-**Total impact:** -653 lines, 1 day effort
+**Total impact:** -677 lines, 1 day effort
 
-### Tier 2: Medium-Value Refactoring (2-3 days)
+### Tier 2: Medium-Value Refactoring (2 hours) — DRASTICALLY SIMPLIFIED
 
-5. **Create IntegrationHelpers.lean** - Eliminates 54+ boilerplate instances (1 day)
-6. **Create StrictMono.lean** - Consolidates utilities (1 day)
+5. **Create StrictMono.lean** - Just 2 Fin-specific lemmas (2 hours)
+   - `strictMono_Fin_ge_id`
+   - `strictMono_fin_cases`
+   - Rest replaced by mathlib's `StrictMono.comp`, `OrderIso.strictMono`
+   - **Eliminates:** 200 lines, **creates:** ~40 lines
 
-**Total impact:** -254 lines, 2 days effort
+**Total impact:** -200 lines (net -160), 2 hours effort
+
+**Combined Tier 1+2:** -877 lines eliminated, ~100 lines new helpers, **net -777 lines**, 1.25 days
 
 ### Tier 3: Long-Term Organization (1-2 weeks)
 
@@ -1613,6 +1967,62 @@ lemma strictMono_fin_cases {n : ℕ} {f : Fin n → ℕ} (hf : StrictMono f) {a 
 
 **End of Refactoring Plan**
 
+---
+
+## 📋 Summary of Major Revisions (2025-10-18)
+
+This plan has been significantly updated from the original version with the following structural improvements:
+
+### Architectural Changes
+
+1. **Phase 0 Added:** Immediate zero-risk quick wins (delete duplicates, create skeletons)
+
+2. **Two Canonical Tail Viewpoints:**
+   - Separated `tailShift` (path-space) from `tailProcess` (process-relative)
+   - Added explicit bridge lemmas to connect viewpoints
+   - Prevents `rfl` failures and type mismatches
+
+3. **Neutral Infrastructure Naming:**
+   - Created `PathSpace/CylinderHelpers.lean` instead of extending "MartingaleHelpers"
+   - Better organization for eventual mathlib contribution
+
+4. **Phase 1 Split into 1a/1b:**
+   - **Phase 1a:** Prove load-bearing bridges FIRST
+   - **Phase 1b:** Extract infrastructure using those bridges
+   - Reduces risk of extraction failure
+
+5. **Operator-Theoretic CE Approach:**
+   - `condExp_L1_lipschitz` as central lemma
+   - Pull-out as corollary, not independent proof
+   - Mathlib-ready formulation
+
+6. **Mathlib-Ready Design:**
+   - Helper files only import mathlib (no project dependencies)
+   - Modular single-topic organization
+   - Comprehensive docstrings for contribution
+
+7. **Mathlib Wrapper Identification (Phase 4 Revision):**
+   - **Cauchy-Schwarz:** Already exists as Hölder with p=q=2 (`integral_mul_norm_le_Lp_mul_Lq`)
+   - **StrictMono:** Composition and arithmetic via `StrictMono.comp` and `OrderIso`
+   - **Integration helpers:** Wrappers around `integral_map`, not true gaps
+   - **Result:** Phase 4 creates ~100 lines (not ~380!), eliminates ~420 lines
+
+### Key Success Criteria
+
+- **Load-bearing proofs** (`tailProcess_coords_eq_tailShift`, `condExp_L1_lipschitz`) must be proven in Phase 1a
+- **Type safety** via bridges, not `abbrev` aliases
+- **Minimal dependencies** for helper files (mathlib only)
+- **Proof decomposition** into reusable sublemmas
+
+### Execution Gates
+
+- **Phase 0:** Execute NOW (no prerequisites)
+- **Phase 1:** Execute when ViaL2 reaches ~95% completion
+- **Phase 2-4:** Execute after Phase 1 is stable
+
+---
+
 *This document should be reviewed and updated when the project reaches 95%+ completion on ViaL2 and ViaKoopman compilation errors are resolved.*
 
-*Extended analysis completed 2025-10-18. Phase 4 recommendations add significant additional refactoring opportunities beyond original plan.*
+*Original analysis completed 2025-10-18.*
+*Major structural revision completed 2025-10-18 incorporating two-viewpoint tail approach, operator-theoretic CE, and mathlib-ready design principles.*
