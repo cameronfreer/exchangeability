@@ -93,6 +93,18 @@ def tailShift (α : Type*) [MeasurableSpace α] : MeasurableSpace (ℕ → α) :
 
 /-! ### Helper Lemmas for comap and Infima -/
 
+namespace MeasurableSpace
+
+/-- Swap sides in the adjunction `comap_le_iff_le_map` to get a
+    convenient form for goals of the shape `map f _ ≤ _`. -/
+lemma map_le_iff_le_comap {α β : Type*} (f : α → β)
+    {mα : MeasurableSpace α} {mβ : MeasurableSpace β} :
+  MeasurableSpace.map f mα ≤ mβ ↔ mα ≤ MeasurableSpace.comap f mβ :=
+  ⟨fun h => MeasurableSpace.comap_le_iff_le_map.mpr h,
+   fun h => MeasurableSpace.comap_le_iff_le_map.mp h⟩
+
+end MeasurableSpace
+
 omit [MeasurableSpace Ω] [MeasurableSpace α] in
 /-- `comap` preserves arbitrary infima (right adjoint property).
 
@@ -101,14 +113,21 @@ omit [MeasurableSpace Ω] [MeasurableSpace α] in
     This is why `comap_iInf` holds unconditionally (no surjectivity needed). -/
 lemma comap_iInf {ι : Sort*} (f : α → β) (m : ι → MeasurableSpace β) :
     MeasurableSpace.comap f (iInf m) = iInf (fun i => MeasurableSpace.comap f (m i)) := by
-  refine le_antisymm ?_ ?_
-  · -- ≤ direction by monotonicity of comap
+  refine le_antisymm ?le ?ge
+  · -- `≤` by monotonicity
     refine le_iInf (fun i => ?_)
     exact MeasurableSpace.comap_mono (iInf_le m i)
-  · -- ≥ direction via GC
-    sorry -- TODO: Need to show map f (⨅ i, comap f (m i)) ≤ ⨅ i, m i
-          -- This uses the counit of the Galois connection map f ⊣ comap f
-          -- The user's code uses map_comap_le which may not exist in this mathlib version
+  · -- `≥` via the adjunction: show `map f (⨅ i, comap f (m i)) ≤ ⨅ i, m i`
+    -- and translate back with `map_le_iff_le_comap`.
+    -- First build the componentwise inequalities:
+    have hcomp :
+        MeasurableSpace.map f (iInf fun j => MeasurableSpace.comap f (m j))
+          ≤ iInf m :=
+      le_iInf (fun i =>
+        (MeasurableSpace.map_le_iff_le_comap (f := f)).2
+          (iInf_le (fun j => MeasurableSpace.comap f (m j)) i))
+    -- Flip using the equivalence:
+    exact (MeasurableSpace.map_le_iff_le_comap (f := f)).1 hcomp
 
 /-! ### Bridge Lemmas (LOAD-BEARING - Phase 1a) -/
 
@@ -179,10 +198,12 @@ lemma tailProcess_eq_comap_path (X : ℕ → Ω → α) :
     tailProcess X
       =
     MeasurableSpace.comap (fun ω : Ω => fun k => X k ω) (tailShift α) := by
-  -- TODO: Requires completing comap_iInf proof (right adjoint property)
-  -- Once that's done, this should be a one-liner:
-  -- simp only [tailProcess, tailShift, tailFamily_eq_comap_sample_path_shift, comap_iInf]
-  sorry
+  -- Everything folds by definitions + `comap_iInf` and our slice lemma.
+  simp only [tailProcess, tailShift]
+  rw [comap_iInf]
+  congr 1
+  funext n
+  exact tailFamily_eq_comap_sample_path_shift X n
 
 omit [MeasurableSpace Ω] in
 /-- **Bridge 3 (to ViaMartingale's revFiltration).**
