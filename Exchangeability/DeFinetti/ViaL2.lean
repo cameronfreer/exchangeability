@@ -2752,9 +2752,7 @@ lemma alphaIic_ae_eq_alphaIicCE
   -- Apply uniqueness with f = alphaIic, g = alphaIicCE
   apply h_L1_uniqueness
   · exact alphaIic_measurable X hX_contract hX_meas hX_L2 t
-  · unfold alphaIicCE
-    -- alphaIicCE is a conditional expectation, hence measurable
-    sorry  -- TODO: Prove alphaIicCE_measurable (straightforward)
+  · exact alphaIicCE_measurable X hX_contract hX_meas hX_L2 t
   · exact h_alphaIic_is_limit 0
   · exact h_alphaIicCE_is_limit 0
 
