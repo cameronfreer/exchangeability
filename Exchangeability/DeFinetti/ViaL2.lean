@@ -686,7 +686,7 @@ lemma l2_bound_two_windows_uniform
       have h_indicator :=
         (Finset.sum_filter (s := S) (p := fun t => t ∈ window m k)
             (f := fun _ : ℕ => (1 / (k : ℝ)))).symm
-      simp only [qS] at h_indicator
+      simp only at h_indicator
       rw [h_filter] at h_indicator
       exact h_indicator
     have h_card : (window m k).card = k := window_card m k
@@ -1472,7 +1472,7 @@ private lemma l2_bound_long_vs_tail
               constructor
               · intro hi
                 use ⟨i.val - (m - k), by omega⟩
-                simp only [true_and]
+                simp only
                 ext
                 simp only
                 omega
@@ -1645,7 +1645,7 @@ theorem tendsto_integral_indicator_Iic
   -- 3. Indicators are bounded by 1
   · intro n
     filter_upwards with ω
-    simp [Set.indicator, abs_of_nonneg]
+    simp [Set.indicator]
     split_ifs <;> norm_num
 
   -- 4. Pointwise convergence of indicators
@@ -2274,7 +2274,7 @@ theorem subsequence_criterion_convergence_in_probability
     -- We need strict <, so use ε/2
     rw [ENNReal.tendsto_atTop_zero] at h
     have hbound_half : (0 : ℝ) < (1 / 2) ^ (k + 1) / 2 := by positivity
-    obtain ⟨N, hN⟩ := h (ENNReal.ofReal ((1 / 2) ^ (k + 1) / 2)) (by simp [hbound_half])
+    obtain ⟨N, hN⟩ := h (ENNReal.ofReal ((1 / 2) ^ (k + 1) / 2)) (by positivity)
     use max m N, le_max_left m N
     calc μ {ω | 1 / (k + 1 : ℝ) ≤ |ξ (max m N) ω - ξ_limit ω|}
         ≤ ENNReal.ofReal ((1 / 2) ^ (k + 1) / 2) := hN (max m N) (le_max_right m N)
@@ -2904,7 +2904,7 @@ lemma alphaIicCE_L1_tendsto_zero_atBot
       -- Indicator is nonnegative, so |indicator| = indicator
       have : (fun ω => |(indIic (-(n : ℝ))) (X 0 ω)|) = (indIic (-(n : ℝ))) ∘ (X 0) := by
         ext ω
-        simp [indIic, Set.indicator, abs_of_nonneg]
+        simp [indIic, Set.indicator]
         split_ifs <;> norm_num
       rw [this]
       -- Integral of indicator of measurable set = measure
