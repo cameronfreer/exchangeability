@@ -469,12 +469,11 @@ lemma condexp_indicator_eq_of_pair_law_eq
       have hf_eq : f = (Y ⁻¹' B).indicator (fun _ => (1:ℝ)) := by
         ext ω
         simp only [f, Function.comp_apply, Set.indicator, Set.mem_preimage]
-      rw [hf_eq]
       -- Set integral of indicator: ∫_{Z⁻¹E} 1_{Y⁻¹B} = μ(Y⁻¹B ∩ Z⁻¹E)
-      rw [integral_indicator (hY hB)]
+      simp_rw [hf_eq, integral_indicator (hY hB)]
       simp only [integral_const]
       -- Double restriction: μ.restrict(Z⁻¹E).restrict(Y⁻¹B) univ = μ(Y⁻¹B ∩ Z⁻¹E)
-      rw [Measure.restrict_restrict (hY hB)]
+      simp_rw [Measure.restrict_restrict (hY hB)]
       simp only [smul_eq_mul, mul_one]
       -- (μ.restrict S).real univ = (μ S).toReal
       simp [Measure.real, Measure.restrict_apply MeasurableSet.univ, Set.univ_inter]
@@ -489,18 +488,17 @@ lemma condexp_indicator_eq_of_pair_law_eq
       have hf'_eq : f' = (Y' ⁻¹' B).indicator (fun _ => (1:ℝ)) := by
         ext ω
         simp only [f', Function.comp_apply, Set.indicator, Set.mem_preimage]
-      rw [hf'_eq]
       -- Set integral of indicator: ∫_{Z⁻¹E} 1_{Y'⁻¹B} = μ(Y'⁻¹B ∩ Z⁻¹E)
-      rw [integral_indicator (hY' hB)]
+      simp_rw [hf'_eq, integral_indicator (hY' hB)]
       simp only [integral_const]
       -- Double restriction: μ.restrict(Z⁻¹E).restrict(Y'⁻¹B) univ = μ(Y'⁻¹B ∩ Z⁻¹E)
-      rw [Measure.restrict_restrict (hY' hB)]
+      simp_rw [Measure.restrict_restrict (hY' hB)]
       simp only [smul_eq_mul, mul_one]
       -- (μ.restrict S).real univ = (μ S).toReal
       simp [Measure.real, Measure.restrict_apply MeasurableSet.univ, Set.univ_inter]
 
     -- Combine: ∫_{Z⁻¹(E)} f dμ = ∫_{Z⁻¹(E)} μ[f' | σ(Z)] dμ
-    rw [h_lhs, h_rhs_ce, h_rhs, h_meas_eq]
+    simp_rw [h_lhs, h_rhs_ce, h_rhs, h_meas_eq]
 
 /-- **Proof of condexp_indicator_eq_of_agree_on_future_rectangles.**
 
