@@ -2733,24 +2733,26 @@ private lemma prod_ofReal_toReal_meas {m : ℕ} (ν : Ω[α] → Measure α) (B 
   congr; funext i
   exact ENNReal.ofReal_toReal (hν i)
 
-lemma indicator_product_bridge_ax
-    (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
-    (hσ : MeasurePreserving shift μ μ)
+/-! ### Helper lemmas for indicator_product_bridge_ax -/
+
+private lemma indicator_product_properties
+    (μ : Measure (Ω[α])) [IsProbabilityMeasure μ]
     (m : ℕ) (k : Fin m → ℕ) (B : Fin m → Set α)
     (hB_meas : ∀ i, MeasurableSet (B i)) :
-    ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
-      = ∫⁻ ω, ∏ i : Fin m, (ν (μ := μ) ω) (B i) ∂μ := by
-  classical
-
-  -- Define real-valued product function
+    let F : Ω[α] → ℝ := fun ω => ∏ i : Fin m, (B i).indicator (fun _ => (1 : ℝ)) (ω (k i))
+    Measurable F ∧
+    (∀ ω, |F ω| ≤ 1) ∧
+    (0 ≤ᵐ[μ] F) ∧
+    Integrable F μ := by
   let F : Ω[α] → ℝ := fun ω => ∏ i : Fin m, (B i).indicator (fun _ => (1 : ℝ)) (ω (k i))
 
-  -- F is measurable and bounded
+  -- F is measurable
   have hF_meas : Measurable F := by
     apply Finset.measurable_prod
     intro i _
     exact Measurable.indicator measurable_const (hB_meas i) |>.comp (measurable_pi_apply (k i))
 
+  -- F is bounded by 1
   have hF_bd : ∀ ω, |F ω| ≤ 1 := by
     intro ω
     have h01 : ∀ i, 0 ≤ (B i).indicator (fun _ => (1 : ℝ)) (ω (k i))
@@ -2769,27 +2771,39 @@ lemma indicator_product_bridge_ax
     rw [abs_of_nonneg h_nonneg]
     exact h_le_one
 
+  -- F is nonnegative ae
   have hF_nonneg : 0 ≤ᵐ[μ] F := ae_of_all _ (fun ω =>
     Finset.prod_nonneg (fun i _ => Set.indicator_nonneg (fun _ _ => zero_le_one) _))
 
+  -- F is integrable
   have hF_int : Integrable F μ :=
     ⟨hF_meas.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hF_bd)⟩
 
-  -- LHS: Convert ENNReal integral to real integral
-  have hL : ∫⁻ ω, ENNReal.ofReal (F ω) ∂μ = ENNReal.ofReal (∫ ω, F ω ∂μ) :=
-    (ofReal_integral_eq_lintegral_ofReal hF_int hF_nonneg).symm
+  exact ⟨hF_meas, hF_bd, hF_nonneg, hF_int⟩
 
-  -- RHS: Product of kernel measures
+private lemma kernel_measure_product_properties
+    (μ : Measure (Ω[α])) [IsProbabilityMeasure μ]
+    (m : ℕ) (B : Fin m → Set α)
+    (hB_meas : ∀ i, MeasurableSet (B i)) :
+    let G : Ω[α] → ℝ := fun ω => ∏ i, ((ν (μ := μ) ω) (B i)).toReal
+    Measurable G ∧
+    (0 ≤ᵐ[μ] G) ∧
+    (∀ ω, |G ω| ≤ 1) ∧
+    Integrable G μ ∧
+    (∀ i ω, ∫ x, (B i).indicator (fun _ => (1 : ℝ)) x ∂(ν (μ := μ) ω) = ((ν (μ := μ) ω) (B i)).toReal) := by
   let G : Ω[α] → ℝ := fun ω => ∏ i, ((ν (μ := μ) ω) (B i)).toReal
 
+  -- G is measurable
   have hG_meas : Measurable G := by
     apply Finset.measurable_prod
     intro i _
     exact Measurable.ennreal_toReal (ν_eval_measurable (hB_meas i))
 
+  -- G is nonnegative ae
   have hG_nonneg : 0 ≤ᵐ[μ] G := ae_of_all _ (fun ω =>
     Finset.prod_nonneg fun i _ => ENNReal.toReal_nonneg)
 
+  -- G is bounded by 1
   have hG_bd : ∀ ω, |G ω| ≤ 1 := by
     intro ω
     have h01 : ∀ i, 0 ≤ ((ν (μ := μ) ω) (B i)).toReal ∧ ((ν (μ := μ) ω) (B i)).toReal ≤ 1 := by
@@ -2823,14 +2837,41 @@ lemma indicator_product_bridge_ax
     rw [abs_of_nonneg h_nonneg]
     exact h_le_one
 
+  -- G is integrable
   have hG_int : Integrable G μ :=
     ⟨hG_meas.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hG_bd)⟩
 
-  -- Key fact: ∫ indicator dν = ν(B).toReal for each coordinate
+  -- Indicator integral identity
   have h_indicator_integral : ∀ i ω, ∫ x, (B i).indicator (fun _ => (1 : ℝ)) x ∂(ν (μ := μ) ω)
                                      = ((ν (μ := μ) ω) (B i)).toReal := by
     intro i ω
     exact integral_indicator_one (hB_meas i)
+
+  exact ⟨hG_meas, hG_nonneg, hG_bd, hG_int, h_indicator_integral⟩
+
+lemma indicator_product_bridge_ax
+    (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ)
+    (m : ℕ) (k : Fin m → ℕ) (B : Fin m → Set α)
+    (hB_meas : ∀ i, MeasurableSet (B i)) :
+    ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
+      = ∫⁻ ω, ∏ i : Fin m, (ν (μ := μ) ω) (B i) ∂μ := by
+  classical
+
+  -- Define real-valued product functions
+  let F : Ω[α] → ℝ := fun ω => ∏ i : Fin m, (B i).indicator (fun _ => (1 : ℝ)) (ω (k i))
+  let G : Ω[α] → ℝ := fun ω => ∏ i, ((ν (μ := μ) ω) (B i)).toReal
+
+  -- F properties from helper
+  obtain ⟨hF_meas, hF_bd, hF_nonneg, hF_int⟩ := indicator_product_properties μ m k B hB_meas
+
+  -- G properties from helper
+  obtain ⟨hG_meas, hG_nonneg, hG_bd, hG_int, h_indicator_integral⟩ :=
+    kernel_measure_product_properties μ m B hB_meas
+
+  -- LHS: Convert ENNReal integral to real integral
+  have hL : ∫⁻ ω, ENNReal.ofReal (F ω) ∂μ = ENNReal.ofReal (∫ ω, F ω ∂μ) :=
+    (ofReal_integral_eq_lintegral_ofReal hF_int hF_nonneg).symm
 
   -- Now prove: ∫ F dμ = ∫ G dμ using the factorization axiom
   have h_eq_integrals : ∫ ω, F ω ∂μ = ∫ ω, G ω ∂μ := by
