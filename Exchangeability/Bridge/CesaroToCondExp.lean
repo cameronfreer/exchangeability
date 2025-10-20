@@ -11,6 +11,7 @@ import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
 import Mathlib.Topology.Algebra.Module.Basic
 
 -- Project-local imports
+import Exchangeability.Core
 import Exchangeability.Contractability
 import Exchangeability.Tail.TailSigma
 import Exchangeability.Probability.CondExp
@@ -90,27 +91,29 @@ open Exchangeability
 
 /-- **BRIDGE 1.** Contractable sequences induce shift-invariant laws on path space.
 
-**TODO:** Replace sorry with your project's stationarity lemma, e.g.:
-  `exact hX.shift_invariant_path_law`
-or prove directly via cylinder-set argument. -/
-lemma contractable_shift_invariant_law
-    {X : ℕ → Ω → ℝ} (hX : Contractable μ X) :
-    Measure.map (shift (α := ℝ)) (μ_path μ X) = (μ_path μ X) := by
-  /-  Proof sketch:
-      * Contractable ⇒ finite-dimensional distributions are shift-invariant
-      * Cylinders generate the path σ-algebra
-      * Conclude map shift (μ_path X) = μ_path X
-  -/
-  sorry  -- TODO: Use existing stationarity lemma from Contractability.lean
-
+**Proof strategy:** Use π-system uniqueness (measure_eq_of_fin_marginals_eq_prob).
+Contractability implies that (X₁, X₂, ..., Xₙ) ~ (X₀, X₁, ..., X_{n-1}) for all n,
+since (1,2,...,n) is an increasing sequence. This gives agreement of all finite marginals,
+hence equality of measures by π-system uniqueness. -/
 lemma measurable_shift_real : Measurable (shift (α := ℝ)) :=
   Exchangeability.Ergodic.measurable_shift
 
+lemma contractable_shift_invariant_law
+    {X : ℕ → Ω → ℝ} (hX : Contractable μ X) (hX_meas : ∀ i, Measurable (X i)) :
+    Measure.map (shift (α := ℝ)) (μ_path μ X) = (μ_path μ X) := by
+  haveI inst1 : IsProbabilityMeasure (μ_path μ X) := isProbabilityMeasure_μ_path hX_meas
+  haveI inst2 : IsProbabilityMeasure (Measure.map shift (μ_path μ X)) := by
+    constructor
+    rw [Measure.map_apply measurable_shift_real MeasurableSet.univ, Set.preimage_univ]
+    exact measure_univ
+
+  sorry  -- TODO: Apply measure_eq_of_fin_marginals_eq_prob and contractability
+
 /-- **BRIDGE 1'.** Package as `MeasurePreserving` for applying the Mean Ergodic Theorem. -/
 lemma measurePreserving_shift_path (X : ℕ → Ω → ℝ)
-    (hX : Contractable μ X) :
+    (hX : Contractable μ X) (hX_meas : ∀ i, Measurable (X i)) :
     MeasurePreserving (shift (α := ℝ)) (μ_path μ X) (μ_path μ X) :=
-  ⟨measurable_shift_real, by simpa using contractable_shift_invariant_law (μ := μ) (X := X) hX⟩
+  ⟨measurable_shift_real, by simpa using contractable_shift_invariant_law (μ := μ) (X := X) hX hX_meas⟩
 
 /-! ## C. Bridge 2: Fixed Space = Tail σ-algebra -/
 
@@ -136,7 +139,7 @@ axiom metProjection_eq_condexp_tail_on_path
     haveI : IsProbabilityMeasure (μ_path μ X) := isProbabilityMeasure_μ_path hX_meas
     Exchangeability.Ergodic.metProjection
       (shift (α := ℝ))
-      (measurePreserving_shift_path X hX) h
+      (measurePreserving_shift_path X hX hX_meas) h
       = (μ_path μ X)[(h) | tail_on_path]
   /- Proof sketch: Fixed points of shift = tail-measurable functions.
      Orthogonal projection onto this closed subspace = condexp_L2.
@@ -205,7 +208,7 @@ theorem cesaro_to_condexp_L1
 
   -- Bridge 1: Shift is measure-preserving on path space
   have hMP : MeasurePreserving (shift (α := ℝ)) ν ν :=
-    measurePreserving_shift_path (μ := μ) (X := X) hX_contract
+    measurePreserving_shift_path (μ := μ) (X := X) hX_contract hX_meas
 
   -- Define observable g(ω) = f(ω 0) on path space
   let g : (ℕ → ℝ) → ℝ := fun ω => f (ω 0)
