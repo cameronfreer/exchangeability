@@ -3163,10 +3163,23 @@ lemma alphaIicCE_ae_tendsto_zero_atBot
           _ ≤ 1 := (h_bound_ω 0).2
       -- L_fun is AEStronglyMeasurable as the a.e. limit of measurable functions
       have hL_meas : AEStronglyMeasurable L_fun μ := by
-        -- Standard fact: iInf of countably many AEStronglyMeasurable functions is AEStronglyMeasurable
-        -- Each alphaIicCE (-(n:ℝ)) is AEStronglyMeasurable (it's a conditional expectation)
-        -- This requires proper measurability infrastructure (BorelSpace ℝ, etc.)
-        sorry  -- Will be provided in helper file
+        -- Each alphaIicCE (-(n:ℝ)) is AEStronglyMeasurable (conditional expectation)
+        have h_meas_n : ∀ (n : ℕ), AEStronglyMeasurable (fun ω => alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω) μ := by
+          intro n
+          unfold alphaIicCE
+          exact stronglyMeasurable_condExp.aestronglyMeasurable.mono hm_le
+        -- They converge a.e. to L_fun (by monotone convergence)
+        have h_conv_ae_n : ∀ᵐ ω ∂μ, Tendsto (fun (n : ℕ) => alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω)
+            atTop (𝓝 (L_fun ω)) := by
+          filter_upwards [h_ae_conv, h_bound, h_mono] with ω ⟨L, hL⟩ h_bound_ω h_mono_ω
+          have hL_is_inf : L = L_fun ω := by
+            apply tendsto_nhds_unique hL
+            apply tendsto_atTop_ciInf h_mono_ω
+            exact ⟨0, fun y hy => by obtain ⟨k, hk⟩ := hy; rw [← hk]; exact (h_bound_ω k).1⟩
+          rw [← hL_is_inf]
+          exact hL
+        -- Apply aestronglyMeasurable_of_tendsto_ae
+        exact aestronglyMeasurable_of_tendsto_ae atTop h_meas_n h_conv_ae_n
       exact Integrable.of_bound hL_meas 1 hL_bound
     -- Now apply integral_eq_zero_iff_of_nonneg_ae
     rw [← integral_eq_zero_iff_of_nonneg_ae hL_nonneg hL_int]
@@ -3346,8 +3359,23 @@ lemma alphaIicCE_ae_tendsto_one_atTop
               intro n
               exact (h_bound_ω n).2
       have hU_meas : AEStronglyMeasurable U_fun μ := by
-        -- Standard fact: iSup of countably many AEStronglyMeasurable functions is AEStronglyMeasurable
-        sorry
+        -- Each alphaIicCE (n:ℝ) is AEStronglyMeasurable (conditional expectation)
+        have h_meas_n : ∀ (n : ℕ), AEStronglyMeasurable (fun ω => alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω) μ := by
+          intro n
+          unfold alphaIicCE
+          exact stronglyMeasurable_condExp.aestronglyMeasurable.mono hm_le
+        -- They converge a.e. to U_fun (by monotone convergence)
+        have h_conv_ae_n : ∀ᵐ ω ∂μ, Tendsto (fun (n : ℕ) => alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω)
+            atTop (𝓝 (U_fun ω)) := by
+          filter_upwards [h_ae_conv, h_bound, h_mono] with ω ⟨L, hL⟩ h_bound_ω h_mono_ω
+          have hU_is_sup : L = U_fun ω := by
+            apply tendsto_nhds_unique hL
+            apply tendsto_atTop_ciSup h_mono_ω
+            exact ⟨1, fun y hy => by obtain ⟨k, hk⟩ := hy; rw [← hk]; exact (h_bound_ω k).2⟩
+          rw [← hU_is_sup]
+          exact hL
+        -- Apply aestronglyMeasurable_of_tendsto_ae
+        exact aestronglyMeasurable_of_tendsto_ae atTop h_meas_n h_conv_ae_n
       exact Integrable.of_bound hU_meas 1 hU_bound
     -- Show U_fun = 1 a.e. by showing 1 - U_fun = 0 a.e.
     have h_diff_nonneg : 0 ≤ᵐ[μ] fun ω => 1 - U_fun ω := by
