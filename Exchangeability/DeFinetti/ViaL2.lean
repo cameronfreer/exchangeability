@@ -473,12 +473,49 @@ private lemma sup_two_window_weights {k : ℕ} (hk : 0 < k)
   exact ciSup_const
 
 
-/-- Uniform version of l2_bound_two_windows: The constant Cf is the same for all
-window positions. This follows because Cf = 2σ²(1-ρ) depends only on the covariance
-structure of f∘X, which is uniform by contractability.
+-- Uniform version of l2_bound_two_windows: The constant Cf is the same for all
+-- window positions. This follows because Cf = 2σ²(1-ρ) depends only on the covariance
+-- structure of f∘X, which is uniform by contractability.
+--
+-- We use `l2_contractability_bound` from L2Approach directly by positing that f∘X has
+-- a uniform covariance structure (which it must, by contractability).
 
-We use `l2_contractability_bound` from L2Approach directly by positing that f∘X has
-a uniform covariance structure (which it must, by contractability). -/
+/-- **Helper: Reindexed weights preserve probability properties.**
+
+When reindexing weights from a finset S to Fin n via an equivalence,
+the total sum and nonnegativity are preserved.
+-/
+private lemma reindexed_weights_prob
+    {S : Finset ℕ} {wS : ℕ → ℝ}
+    (h_sum_one : ∑ t ∈ S, wS t = 1)
+    (h_nonneg : ∀ t, 0 ≤ wS t)
+    {nS : ℕ} (eβ : Fin nS ≃ {t // t ∈ S})
+    (w : Fin nS → ℝ)
+    (h_w_def : ∀ i, w i = wS ((eβ i).1)) :
+    (∑ i : Fin nS, w i) = 1 ∧ ∀ i, 0 ≤ w i := by
+  constructor
+  · have h_equiv : ∑ i : Fin nS, w i = ∑ t ∈ S, wS t := by
+      classical
+      have h_sum_equiv :
+          ∑ i : Fin nS, wS ((eβ i).1) =
+            ∑ b : {t // t ∈ S}, wS b.1 :=
+        Fintype.sum_equiv eβ
+          (fun i : Fin nS => wS ((eβ i).1))
+          (fun b => wS b.1) (by intro i; rfl)
+      have h_sum_attach :
+          ∑ b : {t // t ∈ S}, wS b.1 = ∑ t ∈ S, wS t := by
+        exact Finset.sum_attach (s := S) (f := fun t => wS t)
+      have h_sum_w :
+          ∑ i : Fin nS, w i = ∑ i : Fin nS, wS ((eβ i).1) := by
+        refine Finset.sum_congr rfl fun i _ => ?_
+        exact h_w_def i
+      simp [h_sum_w]
+      exact h_sum_equiv.trans h_sum_attach
+    simp [h_equiv, h_sum_one]
+  · intro i
+    rw [h_w_def]
+    exact h_nonneg _
+
 lemma l2_bound_two_windows_uniform
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (_hX_contract : Contractable μ X)
@@ -711,55 +748,11 @@ lemma l2_bound_two_windows_uniform
   let q : Fin nS → ℝ := fun i => qS (idx i)
 
   -- Probability properties for the reindexed weights
-  have hp_prob : (∑ i : Fin nS, p i) = 1 ∧ ∀ i, 0 ≤ p i := by
-    constructor
-    · have h_equiv :
-        ∑ i : Fin nS, p i = ∑ t ∈ S, pS t := by
-        classical
-        have h_sum_equiv :
-            ∑ i : Fin nS, pS (idx i) =
-              ∑ b : β, pS b.1 :=
-          Fintype.sum_equiv eβ
-            (fun i : Fin nS => pS (idx i))
-            (fun b : β => pS b.1) (by intro i; simp [idx])
-        have h_sum_attach :
-            ∑ b : β, pS b.1 = ∑ t ∈ S, pS t := by
-          simp [β]
-          exact Finset.sum_attach (s := S) (f := fun t => pS t)
-        have h_sum_pi :
-            ∑ i : Fin nS, p i = ∑ i : Fin nS, pS (idx i) := by
-          simp [p]
-        simp [h_sum_pi]
-        exact h_sum_equiv.trans h_sum_attach
-      simp [h_equiv, h_sum_pS]
-    · intro i
-      simp only [p, idx]
-      exact hpS_nonneg (idx i)
+  have hp_prob : (∑ i : Fin nS, p i) = 1 ∧ ∀ i, 0 ≤ p i :=
+    reindexed_weights_prob h_sum_pS hpS_nonneg eβ p (by intro i; rfl)
 
-  have hq_prob : (∑ i : Fin nS, q i) = 1 ∧ ∀ i, 0 ≤ q i := by
-    constructor
-    · have h_equiv :
-        ∑ i : Fin nS, q i = ∑ t ∈ S, qS t := by
-        classical
-        have h_sum_equiv :
-            ∑ i : Fin nS, qS (idx i) =
-              ∑ b : β, qS b.1 :=
-          Fintype.sum_equiv eβ
-            (fun i : Fin nS => qS (idx i))
-            (fun b : β => qS b.1) (by intro i; simp [idx])
-        have h_sum_attach :
-            ∑ b : β, qS b.1 = ∑ t ∈ S, qS t := by
-          simp [β]
-          exact Finset.sum_attach (s := S) (f := fun t => qS t)
-        have h_sum_qi :
-            ∑ i : Fin nS, q i = ∑ i : Fin nS, qS (idx i) := by
-          simp [q]
-        simp [h_sum_qi]
-        exact h_sum_equiv.trans h_sum_attach
-      simp [h_equiv, h_sum_qS]
-    · intro i
-      simp [q, idx]
-      exact hqS_nonneg (idx i)
+  have hq_prob : (∑ i : Fin nS, q i) = 1 ∧ ∀ i, 0 ≤ q i :=
+    reindexed_weights_prob h_sum_qS hqS_nonneg eβ q (by intro i; rfl)
 
   -- Supremum bound on the weight difference
   have h_window_nonempty : (window n k).Nonempty := by
