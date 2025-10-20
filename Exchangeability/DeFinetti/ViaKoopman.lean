@@ -1630,6 +1630,419 @@ This proof has 5 clear sections that could be extracted as helper lemmas:
 Current decision: Leave as-is. The proof is well-commented and the `sorry` at line ~1925 blocks
 extraction. Revisit subdivision after the ergodic theory machinery is complete.
 -/
+
+/-- **Section 1 helper**: Cesàro averages have constant conditional expectation.
+
+For a bounded measurable function g on a shift-invariant measure space,
+the conditional expectation of the Cesàro average `A_n = (1/(n+1)) Σⱼ g(ωⱼ)`
+equals `CE[g(ω₀) | mSI]` for all n.
+
+This uses linearity of conditional expectation and shift-invariance. -/
+private lemma cesaro_ce_eq_condexp
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ)
+    (g : α → ℝ)
+    (hg_meas : Measurable g) (hg_bd : ∃ Cg, ∀ x, |g x| ≤ Cg)
+    (n : ℕ) :
+    μ[(fun ω => (1 / ((n + 1) : ℝ)) * (Finset.range (n + 1)).sum (fun j => g (ω j))) | mSI]
+      =ᵐ[μ]
+    μ[(fun ω => g (ω 0)) | mSI] := by
+  classical
+  have hmSI := shiftInvariantSigma_le (α := α)
+  let A : Ω[α] → ℝ := fun ω => (1 / ((n + 1) : ℝ)) * (Finset.range (n + 1)).sum (fun j => g (ω j))
+  set Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | mSI] ω
+
+  -- Push CE through the outer scalar
+  have h_push :
+      μ[A | mSI]
+        =ᵐ[μ]
+      (fun ω =>
+        (1 / (n + 1 : ℝ)) *
+          μ[(fun ω =>
+              (Finset.range (n + 1)).sum (fun j => g (ω j))) | mSI] ω) := by
+    have h_smul := condExp_smul (μ := μ) (m := mSI) (1 / (n + 1 : ℝ))
+      (fun ω => (Finset.range (n + 1)).sum (fun j => g (ω j)))
+    filter_upwards [h_smul] with ω hω
+    simp only [A, Pi.smul_apply, smul_eq_mul] at hω ⊢
+    exact hω
+
+  -- Push CE through the finite sum
+  have h_sum :
+      μ[(fun ω =>
+          (Finset.range (n + 1)).sum (fun j => g (ω j))) | mSI]
+        =ᵐ[μ]
+      (fun ω =>
+        (Finset.range (n + 1)).sum (fun j => μ[(fun ω => g (ω j)) | mSI] ω)) := by
+    have hint : ∀ j ∈ Finset.range (n + 1), Integrable (fun ω => g (ω j)) μ := by
+      intro j _
+      obtain ⟨Cg, hCg⟩ := hg_bd
+      exact integrable_of_bounded_measurable
+        (hg_meas.comp (measurable_pi_apply j)) Cg (fun ω => hCg (ω j))
+    exact condExp_sum_finset (m := mSI) (_hm := hmSI)
+      (Finset.range (n + 1)) (fun j => fun ω => g (ω j)) hint
+
+  -- Each term μ[g(ωⱼ)| mSI] =ᵐ μ[g(ω₀)| mSI]
+  have h_term : ∀ j,
+      μ[(fun ω => g (ω j)) | mSI] =ᵐ[μ] μ[(fun ω => g (ω 0)) | mSI] := by
+    intro j
+    have hg_0_int : Integrable (fun ω => g (ω 0)) μ := by
+      obtain ⟨Cg, hCg⟩ := hg_bd
+      exact integrable_of_bounded_measurable
+        (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
+    have h := condexp_precomp_iterate_eq (μ := μ) hσ (k := j) (hf := hg_0_int)
+    have h_shift : (fun ω => g (shift^[j] ω 0)) = (fun ω => g (ω j)) := by
+      ext ω; congr 1; rw [shift_iterate_apply]; simp
+    rw [← h_shift]
+    exact h
+
+  -- Sum of identical a.e.-terms = (n+1) · that term
+  have h_sum_const :
+      (fun ω =>
+        (Finset.range (n + 1)).sum (fun j => μ[(fun ω => g (ω j)) | mSI] ω))
+        =ᵐ[μ]
+      (fun ω =>
+        (n + 1 : ℝ) * Y ω) := by
+    have h' : ∀ s : Finset ℕ,
+        (fun ω =>
+          s.sum (fun j => μ[(fun ω => g (ω j)) | mSI] ω))
+          =ᵐ[μ]
+        (fun ω =>
+          (s.card : ℝ) * Y ω) := by
+      refine Finset.induction ?base ?step
+      · exact ae_of_all μ (fun ω => by simp)
+      · intro j s hj hInd
+        have hj' :
+            (fun ω => μ[(fun ω => g (ω j)) | mSI] ω)
+              =ᵐ[μ]
+            (fun ω => Y ω) := h_term j
+        have h_eq : (fun ω => ∑ j ∈ insert j s, μ[fun ω => g (ω j)| mSI] ω)
+                  = ((fun ω => ∑ j ∈ s, μ[fun ω => g (ω j)| mSI] ω) + (fun ω => μ[fun ω => g (ω j)| mSI] ω)) := by
+          ext ω; simp [Finset.sum_insert hj, add_comm]
+        rw [h_eq]
+        calc (fun ω => ∑ j ∈ s, μ[fun ω => g (ω j)| mSI] ω) + (fun ω => μ[fun ω => g (ω j)| mSI] ω)
+            =ᵐ[μ] (fun ω => ↑s.card * Y ω) + (fun ω => Y ω) := hInd.add hj'
+          _ =ᵐ[μ] (fun ω => ↑(insert j s).card * Y ω) := by
+              refine ae_of_all μ (fun ω => ?_)
+              simp only [Pi.add_apply]
+              rw [Finset.card_insert_of_notMem hj]
+              simp only [Nat.cast_add, Nat.cast_one]
+              ring
+    simpa [Finset.card_range] using h' (Finset.range (n + 1))
+
+  -- Assemble: push → sum → collapse → cancel (1/(n+1))·(n+1)
+  have hne : ((n + 1) : ℝ) ≠ 0 := by simp
+  refine h_push.trans ?_
+  have h2 :
+      (fun ω =>
+        (1 / (n + 1 : ℝ)) *
+          μ[(fun ω =>
+              (Finset.range (n + 1)).sum (fun j => g (ω j))) | mSI] ω)
+        =ᵐ[μ]
+      (fun ω =>
+        (1 / (n + 1 : ℝ)) *
+          (Finset.range (n + 1)).sum
+            (fun j => μ[(fun ω => g (ω j)) | mSI] ω)) := by
+    refine h_sum.mono ?_
+    intro ω hω; simp [hω]
+  refine h2.trans ?_
+  have h3 :
+      (fun ω =>
+        (1 / (n + 1 : ℝ)) *
+          (Finset.range (n + 1)).sum
+            (fun j => μ[(fun ω => g (ω j)) | mSI] ω))
+        =ᵐ[μ]
+      (fun ω =>
+        (1 / (n + 1 : ℝ)) *
+          ((n + 1 : ℝ) * Y ω)) := by
+    refine h_sum_const.mono ?_
+    intro ω hω; simp [hω]
+  refine h3.trans ?_
+  exact ae_of_all μ (fun ω => by
+    simp [Y]
+    field_simp [one_div, hne, mul_comm, mul_left_comm, mul_assoc])
+
+/-- **Section 2 helper**: Product CE is constant in n under lag-constancy.
+
+Given lag-constancy (CE[f·g_{k+1}] = CE[f·g_k] for all k), proves that
+`CE[f·A_n | mSI] = CE[f·g₀ | mSI]` for all n, where A_n is the Cesàro average.
+
+This uses the lag-constancy hypothesis to collapse the sum termwise. -/
+private lemma product_ce_constant_of_lag_const
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (f g : α → ℝ)
+    (hf_meas : Measurable f) (hf_bd : ∃ Cf, ∀ x, |f x| ≤ Cf)
+    (hg_meas : Measurable g) (hg_bd : ∃ Cg, ∀ x, |g x| ≤ Cg)
+    (lag_const :
+      ∀ k : ℕ,
+        μ[(fun ω => f (ω 0) * g (ω (k+1))) | shiftInvariantSigma (α := α)]
+          =ᵐ[μ]
+        μ[(fun ω => f (ω 0) * g (ω k)) | shiftInvariantSigma (α := α)])
+    (n : ℕ) :
+    let A := fun ω => (1 / ((n + 1) : ℝ)) * (Finset.range (n + 1)).sum (fun j => g (ω j))
+    μ[(fun ω => f (ω 0) * A ω) | mSI]
+      =ᵐ[μ]
+    μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] := by
+  classical
+  intro A
+  -- Push CE through scalar
+  have h_push :
+      μ[(fun ω => f (ω 0) * A ω) | mSI]
+        =ᵐ[μ]
+      (fun ω =>
+        (1 / ((n + 1) : ℝ)) *
+          μ[(fun ω =>
+              (Finset.range (n + 1)).sum
+                (fun j => f (ω 0) * g (ω j))) | mSI] ω) := by
+    have : (fun ω => f (ω 0) * A ω)
+         = (fun ω => (1 / ((n + 1) : ℝ)) * (Finset.range (n + 1)).sum (fun j => f (ω 0) * g (ω j))) := by
+      funext ω; simp [A, Finset.mul_sum, mul_comm, mul_left_comm, mul_assoc]
+    rw [this]
+    exact condExp_const_mul (shiftInvariantSigma_le (α := α))
+      (1 / ((n + 1) : ℝ)) (fun ω => (Finset.range (n + 1)).sum (fun j => f (ω 0) * g (ω j)))
+
+  -- Push CE through the finite sum
+  have h_sum :
+      μ[(fun ω =>
+          (Finset.range (n + 1)).sum (fun j => f (ω 0) * g (ω j))) | mSI]
+        =ᵐ[μ]
+      (fun ω =>
+        (Finset.range (n + 1)).sum
+          (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω)) := by
+    have hint : ∀ j ∈ Finset.range (n + 1), Integrable (fun ω => f (ω 0) * g (ω j)) μ := by
+      intro j _
+      obtain ⟨Cf, hCf⟩ := hf_bd
+      obtain ⟨Cg, hCg⟩ := hg_bd
+      exact integrable_of_bounded_measurable
+        (hf_meas.comp (measurable_pi_apply 0) |>.mul (hg_meas.comp (measurable_pi_apply j)))
+        (Cf * Cg)
+        (fun ω => by simpa [abs_mul] using mul_le_mul (hCf (ω 0)) (hCg (ω j)) (abs_nonneg _) (le_trans (abs_nonneg _) (hCf (ω 0))))
+    exact condExp_sum_finset (shiftInvariantSigma_le (α := α))
+      (Finset.range (n + 1)) (fun j => fun ω => f (ω 0) * g (ω j)) hint
+
+  -- From lag_const: every term is a.e.-equal to the j=0 term
+  have h_term_const : ∀ j,
+      μ[(fun ω => f (ω 0) * g (ω j)) | mSI]
+        =ᵐ[μ]
+      μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] := by
+    refine Nat.rec ?h0 ?hstep
+    · rfl
+    · intro k hk
+      exact (lag_const k).trans hk
+
+  -- Sum collapses to (n+1)·CE[f·g₀| mSI]
+  have h_sum_const :
+      (fun ω =>
+        (Finset.range (n + 1)).sum
+          (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω))
+        =ᵐ[μ]
+      (fun ω =>
+        ((n + 1) : ℝ) *
+          μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω) := by
+    have h' : ∀ s : Finset ℕ,
+        (fun ω =>
+          s.sum (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω))
+          =ᵐ[μ]
+        (fun ω =>
+          (s.card : ℝ) *
+            μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω) := by
+      apply Finset.induction
+      · exact ae_of_all μ (fun ω => by simp)
+      · intro j s hj hInd
+        have hj' :
+            (fun ω => μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω)
+              =ᵐ[μ]
+            (fun ω =>
+              μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω) := h_term_const j
+        have h_eq : (fun ω => ∑ j ∈ insert j s, μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω)
+                  = ((fun ω => ∑ j ∈ s, μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω) +
+                     (fun ω => μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω)) := by
+          ext ω; simp [Finset.sum_insert hj, add_comm]
+        rw [h_eq]
+        calc (fun ω => ∑ j ∈ s, μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω) +
+               (fun ω => μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω)
+            =ᵐ[μ] (fun ω => ↑s.card * μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω) +
+                   (fun ω => μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω) := hInd.add hj'
+          _ =ᵐ[μ] (fun ω => ↑(insert j s).card * μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω) := by
+              refine ae_of_all μ (fun ω => ?_)
+              simp only [Pi.add_apply]
+              rw [Finset.card_insert_of_notMem hj]
+              simp only [Nat.cast_add, Nat.cast_one]
+              ring
+    simpa [Finset.card_range] using h' (Finset.range (n + 1))
+
+  -- Assemble and cancel the average
+  have hne : ((n + 1) : ℝ) ≠ 0 := by simp
+  refine h_push.trans ?_
+  have h2 :
+      (fun ω =>
+        (1 / ((n + 1) : ℝ)) *
+          μ[(fun ω =>
+              (Finset.range (n + 1)).sum (fun j => f (ω 0) * g (ω j))) | mSI] ω)
+        =ᵐ[μ]
+      (fun ω =>
+        (1 / ((n + 1) : ℝ)) *
+          (Finset.range (n + 1)).sum
+            (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω)) := by
+    refine h_sum.mono ?_
+    intro ω hω; simp [hω]
+  refine h2.trans ?_
+  have h3 :
+      (fun ω =>
+        (1 / ((n + 1) : ℝ)) *
+          (Finset.range (n + 1)).sum
+            (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω))
+        =ᵐ[μ]
+      (fun ω =>
+        (1 / ((n + 1) : ℝ)) *
+          (((n + 1) : ℝ) *
+            μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω)) := by
+    refine h_sum_const.mono ?_
+    intro ω hω; simp [hω]
+  refine h3.trans ?_
+  exact ae_of_all μ (fun ω => by
+    field_simp [one_div, hne, mul_comm, mul_left_comm, mul_assoc])
+
+/-- **Section 3 helper**: L² Mean Ergodic Theorem implies L¹ convergence of Cesàro averages.
+
+Proves that Cesàro averages `A_n` converge to `CE[g(ω₀) | mSI]` in L¹.
+Uses:
+- Mean Ergodic Theorem for L² convergence (currently `sorry`)
+- Hölder inequality: ‖·‖₁ ≤ ‖·‖₂ on probability spaces
+- Squeeze theorem
+
+NOTE: Contains `sorry` pending completion of `birkhoffAverage_tendsto_condexp_L2`. -/
+private lemma L1_cesaro_convergence
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ)
+    (g : α → ℝ)
+    (hg_meas : Measurable g) (hg_bd : ∃ Cg, ∀ x, |g x| ≤ Cg) :
+    let A := fun n : ℕ => fun ω => (1 / ((n + 1) : ℝ)) * (Finset.range (n + 1)).sum (fun j => g (ω j))
+    Tendsto (fun n =>
+      ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ)
+            atTop (𝓝 0) := by
+  classical
+  intro A
+  have hmSI := shiftInvariantSigma_le (α := α)
+  set Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | mSI] ω
+
+  -- Step 1: L² statement from Birkhoff lemma (function-level version)
+  have hL2 : Tendsto (fun n => eLpNorm (fun ω => A n ω - Y ω) 2 μ) atTop (𝓝 0) := by
+    -- Mean Ergodic Theorem: Cesàro averages converge to CE in L²
+    have hg_0_int : Integrable (fun ω => g (ω 0)) μ := by
+      obtain ⟨Cg, hCg⟩ := hg_bd
+      exact integrable_of_bounded_measurable
+        (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
+
+    -- Apply birkhoffAverage_tendsto_condexp_L2 with shift
+    have h_inv : ∀ s, MeasurableSet[mSI] s → shift ⁻¹' s = s := by
+      intro s hs
+      exact ((mem_shiftInvariantSigma_iff (s := s)).mp hs).2
+
+    -- Rewrite A n ω using shift iterates
+    have h_A_eq : ∀ n ω,
+      A n ω = (1 / ((n + 1) : ℝ)) * (Finset.range (n + 1)).sum (fun j => g ((shift^[j]) ω 0)) := by
+      intro n ω
+      simp only [A]
+      congr 1
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [shift_iterate_apply]
+      ring_nf
+
+    -- Apply Mean Ergodic Theorem via birkhoffAverage_tendsto_condexp_L2
+    -- This shows: Cesàro averages of g∘shift^[j] converge to μ[g(·0)|mSI] in L²
+    sorry
+    -- TODO: Once birkhoffAverage_tendsto_condexp_L2 is proved (currently `admit` at line 1188),
+    -- the proof is:
+    --   have h_met := birkhoffAverage_tendsto_condexp_L2 shift measurable_shift hσ hmSI h_inv (fun ω => g (ω 0)) hg_0_int
+    --   simp_rw [← h_A_eq] at h_met
+    --   exact h_met
+    -- Where:
+    --   - h_inv : ∀ s, MeasurableSet[mSI] s → shift ⁻¹' s = s (shift-invariance)
+    --   - h_A_eq : A n ω = Cesàro average of g∘shift^[j]
+  -- Explicit type: hL2 converges to 0 in ENNReal
+  have hL2' : Tendsto (fun n => eLpNorm (fun ω => A n ω - Y ω) 2 μ) atTop (𝓝 (0 : ENNReal)) := hL2
+
+  -- Step 2: On a probability space, ‖·‖₁ ≤ ‖·‖₂
+  have h_upper : ∀ n,
+      (∫ ω, |A n ω - Y ω| ∂μ)
+        ≤ (eLpNorm (fun ω => A n ω - Y ω) 2 μ).toReal := by
+    intro n
+    -- On probability spaces: ‖·‖₁ ≤ ‖·‖₂ by Hölder inequality
+    -- Need to show: A n - Y is integrable and in L²
+    have hA_int : Integrable (A n) μ := by
+      obtain ⟨Cg, hCg⟩ := hg_bd
+      have h_sum_int : Integrable (fun ω => (Finset.range (n + 1)).sum (fun j => g (ω j))) μ := by
+        refine integrable_finset_sum (Finset.range (n + 1)) (fun j _ => ?_)
+        exact integrable_of_bounded_measurable
+          (hg_meas.comp (measurable_pi_apply j)) Cg (fun ω => hCg (ω j))
+      have := h_sum_int.smul (1 / ((n + 1) : ℝ))
+      simp only [A, Pi.smul_apply, smul_eq_mul] at this
+      exact this
+    have hAY_int : Integrable (fun ω => A n ω - Y ω) μ := by
+      exact Integrable.sub hA_int integrable_condExp
+    -- A n - Y is in L² (bounded, hence in L²)
+    have hAY_L2 : MemLp (fun ω => A n ω - Y ω) 2 μ := by
+      obtain ⟨Cg, hCg⟩ := hg_bd
+      -- A n is bounded by Cg
+      have hA_bd : ∀ᵐ ω ∂μ, |A n ω| ≤ Cg := by
+        apply ae_of_all
+        intro ω
+        simp only [A]
+        calc |1 / ((n + 1) : ℝ) * (Finset.range (n + 1)).sum (fun j => g (ω j))|
+            ≤ (1 / ((n + 1) : ℝ)) * |(Finset.range (n + 1)).sum (fun j => g (ω j))| := by
+                rw [abs_mul, abs_of_nonneg (by positivity : 0 ≤ 1 / ((n + 1) : ℝ))]
+          _ ≤ (1 / ((n + 1) : ℝ)) * ((n + 1) * Cg) := by
+                refine mul_le_mul_of_nonneg_left ?_ (by positivity)
+                calc |(Finset.range (n + 1)).sum (fun j => g (ω j))|
+                    ≤ (Finset.range (n + 1)).sum (fun j => |g (ω j)|) := Finset.abs_sum_le_sum_abs _ _
+                  _ ≤ (Finset.range (n + 1)).sum (fun j => Cg) := Finset.sum_le_sum (fun j _ => hCg (ω j))
+                  _ = (n + 1) * Cg := by simp [Finset.card_range]
+          _ = Cg := by field_simp [Nat.cast_add_one_ne_zero n]
+
+      -- Y = CE[g(·0)] is also bounded by |Cg| (CE preserves boundedness)
+      -- Use ae_bdd_condExp_of_ae_bdd with ℝ≥0 bound
+      have hg_0_bd_nonneg : ∀ᵐ ω ∂μ, |g (ω 0)| ≤ |Cg| := by
+        refine ae_of_all μ (fun ω => ?_)
+        calc |g (ω 0)|
+            ≤ Cg := hCg (ω 0)
+          _ ≤ |Cg| := le_abs_self Cg
+      have hY_bd : ∀ᵐ ω ∂μ, |Y ω| ≤ |Cg| := by
+        simp only [Y]
+        exact ae_bdd_condExp_of_ae_bdd (R := ⟨|Cg|, abs_nonneg Cg⟩) hg_0_bd_nonneg
+
+      -- A n - Y is bounded by 2*|Cg|
+      have hAY_bd : ∀ᵐ ω ∂μ, ‖A n ω - Y ω‖ ≤ 2 * |Cg| := by
+        filter_upwards [hA_bd, hY_bd] with ω hA hY
+        rw [Real.norm_eq_abs]
+        calc |A n ω - Y ω|
+            ≤ |A n ω| + |Y ω| := abs_sub (A n ω) (Y ω)
+          _ ≤ Cg + |Cg| := add_le_add hA hY
+          _ ≤ |Cg| + |Cg| := by
+              refine add_le_add_right ?_ _
+              exact le_abs_self Cg
+          _ = 2 * |Cg| := by ring
+
+      -- Apply MemLp.of_bound
+      refine MemLp.of_bound hAY_int.aestronglyMeasurable (2 * |Cg|) hAY_bd
+
+    exact eLpNorm_one_le_eLpNorm_two_toReal (fun ω => A n ω - Y ω) hAY_int hAY_L2
+
+  -- Nonnegativity of the LHS integrals
+  have h_nonneg : ∀ n, 0 ≤ ∫ ω, |A n ω - Y ω| ∂μ := by
+    intro n; exact integral_nonneg (fun ω => abs_nonneg _)
+
+  -- `toReal` is continuous at 0, so the upper bound tends to 0
+  have h_toReal :
+      Tendsto (fun n => (eLpNorm (fun ω => A n ω - Y ω) 2 μ).toReal)
+              atTop (𝓝 0) := by
+    -- ENNReal.toReal is continuous at 0
+    exact ennreal_tendsto_toReal_zero (fun n => eLpNorm (fun ω => A n ω - Y ω) 2 μ) hL2'
+
+  -- Squeeze: 0 ≤ L¹ ≤ (‖·‖₂).toReal → 0
+  refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_toReal ?_ ?_
+  · exact fun n => h_nonneg n
+  · exact fun n => h_upper n
+
 private theorem h_tower_of_lagConst
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
@@ -1658,129 +2071,8 @@ private theorem h_tower_of_lagConst
   ------------------------------------------------------------------
   -- (1) CE[A_n | mSI] = CE[g(ω0) | mSI]  (linearity + shift invariance)
   ------------------------------------------------------------------
-  have h_cesaro_ce : ∀ n, μ[A n | mSI] =ᵐ[μ] μ[(fun ω => g (ω 0)) | mSI] := by
-    intro n
-    set Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | mSI] ω
-    -- Push CE through the outer scalar
-    have h_push :
-        μ[A n | mSI]
-          =ᵐ[μ]
-        (fun ω =>
-          (1 / (n + 1 : ℝ)) *
-            μ[(fun ω =>
-                (Finset.range (n + 1)).sum (fun j => g (ω j))) | mSI] ω) := by
-      -- CE[c·Z| mSI] = c·CE[Z| mSI] (linearity: scalar commutes with CE)
-      have h_smul := condExp_smul (μ := μ) (m := mSI) (1 / (n + 1 : ℝ))
-        (fun ω => (Finset.range (n + 1)).sum (fun j => g (ω j)))
-      filter_upwards [h_smul] with ω hω
-      simp only [A, Pi.smul_apply, smul_eq_mul] at hω ⊢
-      exact hω
-
-    -- Push CE through the finite sum
-    have h_sum :
-        μ[(fun ω =>
-            (Finset.range (n + 1)).sum (fun j => g (ω j))) | mSI]
-          =ᵐ[μ]
-        (fun ω =>
-          (Finset.range (n + 1)).sum (fun j => μ[(fun ω => g (ω j)) | mSI] ω)) := by
-      -- CE[Σᵢ Zᵢ| mSI] = Σᵢ CE[Zᵢ| mSI] (linearity: finite sums commute with CE)
-      have hint : ∀ j ∈ Finset.range (n + 1), Integrable (fun ω => g (ω j)) μ := by
-        intro j _
-        obtain ⟨Cg, hCg⟩ := hg_bd
-        exact integrable_of_bounded_measurable
-          (hg_meas.comp (measurable_pi_apply j)) Cg (fun ω => hCg (ω j))
-      exact condExp_sum_finset (m := mSI) (_hm := hmSI)
-        (Finset.range (n + 1)) (fun j => fun ω => g (ω j)) hint
-
-    -- Each term μ[g(ωⱼ)| mSI] =ᵐ μ[g(ω₀)| mSI]
-    have h_term : ∀ j,
-        μ[(fun ω => g (ω j)) | mSI] =ᵐ[μ] μ[(fun ω => g (ω 0)) | mSI] := by
-      intro j
-      have hg_0_int : Integrable (fun ω => g (ω 0)) μ := by
-        -- g is bounded + measurable + finite measure ⇒ integrable
-        obtain ⟨Cg, hCg⟩ := hg_bd
-        exact integrable_of_bounded_measurable
-          (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
-      -- condexp_precomp_iterate_eq gives: μ[fun ω => g (shift^[j] ω 0) | mSI] = μ[fun ω => g (ω 0) | mSI]
-      -- Need to show: shift^[j] ω 0 = ω j, then apply h
-      have h := condexp_precomp_iterate_eq (μ := μ) hσ (k := j) (hf := hg_0_int)
-      -- Prove: shift^[j] ω 0 = ω j using shift_iterate_apply
-      have h_shift : (fun ω => g (shift^[j] ω 0)) = (fun ω => g (ω j)) := by
-        ext ω
-        congr 1
-        rw [shift_iterate_apply]
-        simp
-      rw [← h_shift]
-      exact h
-
-    -- Sum of identical a.e.-terms = (n+1) · that term
-    have h_sum_const :
-        (fun ω =>
-          (Finset.range (n + 1)).sum (fun j => μ[(fun ω => g (ω j)) | mSI] ω))
-          =ᵐ[μ]
-        (fun ω =>
-          (n + 1 : ℝ) * Y ω) := by
-      have h' : ∀ s : Finset ℕ,
-          (fun ω =>
-            s.sum (fun j => μ[(fun ω => g (ω j)) | mSI] ω))
-            =ᵐ[μ]
-          (fun ω =>
-            (s.card : ℝ) * Y ω) := by
-        refine Finset.induction ?base ?step
-        · exact ae_of_all μ (fun ω => by simp)
-        · intro j s hj hInd
-          have hj' :
-              (fun ω => μ[(fun ω => g (ω j)) | mSI] ω)
-                =ᵐ[μ]
-              (fun ω => Y ω) := h_term j
-          -- hInd: sum over s = s.card * Y
-          -- hj': g(ω j) term = Y
-          -- Need: sum over (insert j s) = (insert j s).card * Y
-          have h_eq : (fun ω => ∑ j ∈ insert j s, μ[fun ω => g (ω j)| mSI] ω)
-                    = ((fun ω => ∑ j ∈ s, μ[fun ω => g (ω j)| mSI] ω) + (fun ω => μ[fun ω => g (ω j)| mSI] ω)) := by
-            ext ω; simp [Finset.sum_insert hj, add_comm]
-          rw [h_eq]
-          calc (fun ω => ∑ j ∈ s, μ[fun ω => g (ω j)| mSI] ω) + (fun ω => μ[fun ω => g (ω j)| mSI] ω)
-              =ᵐ[μ] (fun ω => ↑s.card * Y ω) + (fun ω => Y ω) := hInd.add hj'
-            _ =ᵐ[μ] (fun ω => ↑(insert j s).card * Y ω) := by
-                refine ae_of_all μ (fun ω => ?_)
-                simp only [Pi.add_apply]
-                rw [Finset.card_insert_of_notMem hj]
-                simp only [Nat.cast_add, Nat.cast_one]
-                ring
-      simpa [Finset.card_range] using h' (Finset.range (n + 1))
-
-    -- Assemble: push → sum → collapse → cancel (1/(n+1))·(n+1)
-    have hne : (n + 1 : ℝ) ≠ 0 := by exact_mod_cast (Nat.succ_ne_zero n)
-    refine h_push.trans ?_
-    have h2 :
-        (fun ω =>
-          (1 / (n + 1 : ℝ)) *
-            μ[(fun ω =>
-                (Finset.range (n + 1)).sum (fun j => g (ω j))) | mSI] ω)
-          =ᵐ[μ]
-        (fun ω =>
-          (1 / (n + 1 : ℝ)) *
-            (Finset.range (n + 1)).sum
-              (fun j => μ[(fun ω => g (ω j)) | mSI] ω)) := by
-      refine h_sum.mono ?_
-      intro ω hω; simp [hω]
-    refine h2.trans ?_
-    have h3 :
-        (fun ω =>
-          (1 / (n + 1 : ℝ)) *
-            (Finset.range (n + 1)).sum
-              (fun j => μ[(fun ω => g (ω j)) | mSI] ω))
-          =ᵐ[μ]
-        (fun ω =>
-          (1 / (n + 1 : ℝ)) *
-            ((n + 1 : ℝ) * Y ω)) := by
-      refine h_sum_const.mono ?_
-      intro ω hω; simp [hω]
-    refine h3.trans ?_
-    exact ae_of_all μ (fun ω => by
-      simp [Y]
-      field_simp [one_div, hne, mul_comm, mul_left_comm, mul_assoc])
+  have h_cesaro_ce : ∀ n, μ[A n | mSI] =ᵐ[μ] μ[(fun ω => g (ω 0)) | mSI] :=
+    cesaro_ce_eq_condexp hσ g hg_meas hg_bd
 
   ------------------------------------------------------------------
   -- (2) CE[f·A_n | mSI] is constant in n (lag-constancy termwise)
@@ -1788,131 +2080,8 @@ private theorem h_tower_of_lagConst
   have h_product_const : ∀ n,
     μ[(fun ω => f (ω 0) * A n ω) | mSI]
       =ᵐ[μ]
-    μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] := by
-    intro n
-    -- Push CE through scalar
-    have h_push :
-        μ[(fun ω => f (ω 0) * A n ω) | mSI]
-          =ᵐ[μ]
-        (fun ω =>
-          (1 / (n + 1 : ℝ)) *
-            μ[(fun ω =>
-                (Finset.range (n + 1)).sum
-                  (fun j => f (ω 0) * g (ω j))) | mSI] ω) := by
-      -- CE[c·Z| mSI] = c·CE[Z| mSI] (linearity: scalar commutes with CE)
-      have : (fun ω => f (ω 0) * A n ω)
-           = (fun ω => (1 / (n + 1 : ℝ)) * (Finset.range (n + 1)).sum (fun j => f (ω 0) * g (ω j))) := by
-        funext ω; simp [A, Finset.mul_sum, mul_comm, mul_left_comm, mul_assoc]
-      rw [this]
-      exact condExp_const_mul (shiftInvariantSigma_le (α := α))
-        (1 / (n + 1 : ℝ)) (fun ω => (Finset.range (n + 1)).sum (fun j => f (ω 0) * g (ω j)))
-
-    -- Push CE through the finite sum
-    have h_sum :
-        μ[(fun ω =>
-            (Finset.range (n + 1)).sum (fun j => f (ω 0) * g (ω j))) | mSI]
-          =ᵐ[μ]
-        (fun ω =>
-          (Finset.range (n + 1)).sum
-            (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω)) := by
-      -- CE[Σᵢ Zᵢ| mSI] = Σᵢ CE[Zᵢ| mSI] (linearity: finite sums commute with CE)
-      have hint : ∀ j ∈ Finset.range (n + 1), Integrable (fun ω => f (ω 0) * g (ω j)) μ := by
-        intro j _
-        obtain ⟨Cf, hCf⟩ := hf_bd
-        obtain ⟨Cg, hCg⟩ := hg_bd
-        exact integrable_of_bounded_measurable
-          (hf_meas.comp (measurable_pi_apply 0) |>.mul (hg_meas.comp (measurable_pi_apply j)))
-          (Cf * Cg)
-          (fun ω => by simpa [abs_mul] using mul_le_mul (hCf (ω 0)) (hCg (ω j)) (abs_nonneg _) (le_trans (abs_nonneg _) (hCf (ω 0))))
-      exact condExp_sum_finset (shiftInvariantSigma_le (α := α))
-        (Finset.range (n + 1)) (fun j => fun ω => f (ω 0) * g (ω j)) hint
-
-    -- From lag_const: every term is a.e.-equal to the j=0 term
-    have h_term_const : ∀ j,
-        μ[(fun ω => f (ω 0) * g (ω j)) | mSI]
-          =ᵐ[μ]
-        μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] := by
-      refine Nat.rec ?h0 ?hstep
-      · -- base case: j = 0
-        rfl
-      · -- step case: if true for k, then true for k+1
-        intro k hk
-        exact (lag_const k).trans hk
-
-    -- Sum collapses to (n+1)·CE[f·g₀| mSI]
-    have h_sum_const :
-        (fun ω =>
-          (Finset.range (n + 1)).sum
-            (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω))
-          =ᵐ[μ]
-        (fun ω =>
-          (n + 1 : ℝ) *
-            μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω) := by
-      have h' : ∀ s : Finset ℕ,
-          (fun ω =>
-            s.sum (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω))
-            =ᵐ[μ]
-          (fun ω =>
-            (s.card : ℝ) *
-              μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω) := by
-        apply Finset.induction
-        · -- base case: empty set
-          exact ae_of_all μ (fun ω => by simp)
-        · -- step case: insert j into s
-          intro j s hj hInd
-          have hj' :
-              (fun ω => μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω)
-                =ᵐ[μ]
-              (fun ω =>
-                μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω) := h_term_const j
-          have h_eq : (fun ω => ∑ j ∈ insert j s, μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω)
-                    = ((fun ω => ∑ j ∈ s, μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω) +
-                       (fun ω => μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω)) := by
-            ext ω; simp [Finset.sum_insert hj, add_comm]
-          rw [h_eq]
-          calc (fun ω => ∑ j ∈ s, μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω) +
-                 (fun ω => μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω)
-              =ᵐ[μ] (fun ω => ↑s.card * μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω) +
-                     (fun ω => μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω) := hInd.add hj'
-            _ =ᵐ[μ] (fun ω => ↑(insert j s).card * μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω) := by
-                refine ae_of_all μ (fun ω => ?_)
-                simp only [Pi.add_apply]
-                rw [Finset.card_insert_of_notMem hj]
-                simp only [Nat.cast_add, Nat.cast_one]
-                ring
-      simpa [Finset.card_range] using h' (Finset.range (n + 1))
-
-    -- Assemble and cancel the average
-    have hne : (n + 1 : ℝ) ≠ 0 := by exact_mod_cast (Nat.succ_ne_zero n)
-    refine h_push.trans ?_
-    have h2 :
-        (fun ω =>
-          (1 / (n + 1 : ℝ)) *
-            μ[(fun ω =>
-                (Finset.range (n + 1)).sum (fun j => f (ω 0) * g (ω j))) | mSI] ω)
-          =ᵐ[μ]
-        (fun ω =>
-          (1 / (n + 1 : ℝ)) *
-            (Finset.range (n + 1)).sum
-              (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω)) := by
-      refine h_sum.mono ?_
-      intro ω hω; simp [hω]
-    refine h2.trans ?_
-    have h3 :
-        (fun ω =>
-          (1 / (n + 1 : ℝ)) *
-            (Finset.range (n + 1)).sum
-              (fun j => μ[(fun ω => f (ω 0) * g (ω j)) | mSI] ω))
-          =ᵐ[μ]
-        (fun ω =>
-          (1 / (n + 1 : ℝ)) *
-            ((n + 1 : ℝ) *
-              μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω)) := by
-      refine h_sum_const.mono ?_
-      intro ω hω; simp [hω]
-    refine h3.trans ?_
-    exact ae_of_all μ (fun ω => by
-      field_simp [one_div, hne, mul_comm, mul_left_comm, mul_assoc])
+    μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] :=
+    product_ce_constant_of_lag_const f g hf_meas hf_bd hg_meas hg_bd lag_const
 
   ------------------------------------------------------------------
   -- (3) L² MET ⇒ L¹ convergence of A_n to CE[g(ω0)| mSI]
@@ -1920,125 +2089,8 @@ private theorem h_tower_of_lagConst
   have h_L1_An_to_CE :
       Tendsto (fun n =>
         ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ)
-              atTop (𝓝 0) := by
-    set Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | mSI] ω
-    -- Step 1: L² statement from Birkhoff lemma (function-level version)
-    have hL2 : Tendsto (fun n => eLpNorm (fun ω => A n ω - Y ω) 2 μ) atTop (𝓝 0) := by
-      -- Mean Ergodic Theorem: Cesàro averages converge to CE in L²
-      have hg_0_int : Integrable (fun ω => g (ω 0)) μ := by
-        obtain ⟨Cg, hCg⟩ := hg_bd
-        exact integrable_of_bounded_measurable
-          (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
-
-      -- Apply birkhoffAverage_tendsto_condexp_L2 with shift
-      have h_inv : ∀ s, MeasurableSet[mSI] s → shift ⁻¹' s = s := by
-        intro s hs
-        exact ((mem_shiftInvariantSigma_iff (s := s)).mp hs).2
-
-      -- Rewrite A n ω using shift iterates
-      have h_A_eq : ∀ n ω,
-        A n ω = (1 / (n + 1 : ℝ)) * (Finset.range (n + 1)).sum (fun j => g ((shift^[j]) ω 0)) := by
-        intro n ω
-        simp only [A]
-        congr 1
-        refine Finset.sum_congr rfl (fun j _ => ?_)
-        rw [shift_iterate_apply]
-        ring_nf
-
-      -- Apply Mean Ergodic Theorem via birkhoffAverage_tendsto_condexp_L2
-      -- This shows: Cesàro averages of g∘shift^[j] converge to μ[g(·0)|mSI] in L²
-      sorry
-      -- TODO: Once birkhoffAverage_tendsto_condexp_L2 is proved (currently `admit` at line 1188),
-      -- the proof is:
-      --   have h_met := birkhoffAverage_tendsto_condexp_L2 shift measurable_shift hσ hmSI h_inv (fun ω => g (ω 0)) hg_0_int
-      --   simp_rw [← h_A_eq] at h_met
-      --   exact h_met
-      -- Where:
-      --   - h_inv : ∀ s, MeasurableSet[mSI] s → shift ⁻¹' s = s (shift-invariance)
-      --   - h_A_eq : A n ω = Cesàro average of g∘shift^[j]
-    -- Explicit type: hL2 converges to 0 in ENNReal
-    have hL2' : Tendsto (fun n => eLpNorm (fun ω => A n ω - Y ω) 2 μ) atTop (𝓝 (0 : ENNReal)) := hL2
-
-    -- Step 2: On a probability space, ‖·‖₁ ≤ ‖·‖₂
-    have h_upper : ∀ n,
-        (∫ ω, |A n ω - Y ω| ∂μ)
-          ≤ (eLpNorm (fun ω => A n ω - Y ω) 2 μ).toReal := by
-      intro n
-      -- On probability spaces: ‖·‖₁ ≤ ‖·‖₂ by Hölder inequality
-      -- Need to show: A n - Y is integrable and in L²
-      have hA_int : Integrable (A n) μ := by
-        obtain ⟨Cg, hCg⟩ := hg_bd
-        have h_sum_int : Integrable (fun ω => (Finset.range (n + 1)).sum (fun j => g (ω j))) μ := by
-          refine integrable_finset_sum (Finset.range (n + 1)) (fun j _ => ?_)
-          exact integrable_of_bounded_measurable
-            (hg_meas.comp (measurable_pi_apply j)) Cg (fun ω => hCg (ω j))
-        have := h_sum_int.smul (1 / (n + 1 : ℝ))
-        simp only [A, Pi.smul_apply, smul_eq_mul] at this
-        exact this
-      have hAY_int : Integrable (fun ω => A n ω - Y ω) μ := by
-        exact Integrable.sub hA_int integrable_condExp
-      -- A n - Y is in L² (bounded, hence in L²)
-      have hAY_L2 : MemLp (fun ω => A n ω - Y ω) 2 μ := by
-        obtain ⟨Cg, hCg⟩ := hg_bd
-        -- A n is bounded by Cg
-        have hA_bd : ∀ᵐ ω ∂μ, |A n ω| ≤ Cg := by
-          apply ae_of_all
-          intro ω
-          simp only [A]
-          calc |1 / (n + 1 : ℝ) * (Finset.range (n + 1)).sum (fun j => g (ω j))|
-              ≤ (1 / (n + 1 : ℝ)) * |(Finset.range (n + 1)).sum (fun j => g (ω j))| := by
-                  rw [abs_mul, abs_of_nonneg (by positivity : 0 ≤ 1 / (n + 1 : ℝ))]
-            _ ≤ (1 / (n + 1 : ℝ)) * ((n + 1) * Cg) := by
-                  refine mul_le_mul_of_nonneg_left ?_ (by positivity)
-                  calc |(Finset.range (n + 1)).sum (fun j => g (ω j))|
-                      ≤ (Finset.range (n + 1)).sum (fun j => |g (ω j)|) := Finset.abs_sum_le_sum_abs _ _
-                    _ ≤ (Finset.range (n + 1)).sum (fun j => Cg) := Finset.sum_le_sum (fun j _ => hCg (ω j))
-                    _ = (n + 1) * Cg := by simp [Finset.card_range]
-            _ = Cg := by field_simp [Nat.cast_add_one_ne_zero n]
-
-        -- Y = CE[g(·0)] is also bounded by |Cg| (CE preserves boundedness)
-        -- Use ae_bdd_condExp_of_ae_bdd with ℝ≥0 bound
-        have hg_0_bd_nonneg : ∀ᵐ ω ∂μ, |g (ω 0)| ≤ |Cg| := by
-          refine ae_of_all μ (fun ω => ?_)
-          calc |g (ω 0)|
-              ≤ Cg := hCg (ω 0)
-            _ ≤ |Cg| := le_abs_self Cg
-        have hY_bd : ∀ᵐ ω ∂μ, |Y ω| ≤ |Cg| := by
-          simp only [Y]
-          exact ae_bdd_condExp_of_ae_bdd (R := ⟨|Cg|, abs_nonneg Cg⟩) hg_0_bd_nonneg
-
-        -- A n - Y is bounded by 2*|Cg|
-        have hAY_bd : ∀ᵐ ω ∂μ, ‖A n ω - Y ω‖ ≤ 2 * |Cg| := by
-          filter_upwards [hA_bd, hY_bd] with ω hA hY
-          rw [Real.norm_eq_abs]
-          calc |A n ω - Y ω|
-              ≤ |A n ω| + |Y ω| := abs_sub (A n ω) (Y ω)
-            _ ≤ Cg + |Cg| := add_le_add hA hY
-            _ ≤ |Cg| + |Cg| := by
-                refine add_le_add_right ?_ _
-                exact le_abs_self Cg
-            _ = 2 * |Cg| := by ring
-
-        -- Apply MemLp.of_bound
-        refine MemLp.of_bound hAY_int.aestronglyMeasurable (2 * |Cg|) hAY_bd
-
-      exact eLpNorm_one_le_eLpNorm_two_toReal (fun ω => A n ω - Y ω) hAY_int hAY_L2
-
-    -- Nonnegativity of the LHS integrals
-    have h_nonneg : ∀ n, 0 ≤ ∫ ω, |A n ω - Y ω| ∂μ := by
-      intro n; exact integral_nonneg (fun ω => abs_nonneg _)
-
-    -- `toReal` is continuous at 0, so the upper bound tends to 0
-    have h_toReal :
-        Tendsto (fun n => (eLpNorm (fun ω => A n ω - Y ω) 2 μ).toReal)
-                atTop (𝓝 0) := by
-      -- ENNReal.toReal is continuous at 0
-      exact ennreal_tendsto_toReal_zero (fun n => eLpNorm (fun ω => A n ω - Y ω) 2 μ) hL2'
-
-    -- Squeeze: 0 ≤ L¹ ≤ (‖·‖₂).toReal → 0
-    refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_toReal ?_ ?_
-    · exact fun n => h_nonneg n
-    · exact fun n => h_upper n
+              atTop (𝓝 0) :=
+    L1_cesaro_convergence hσ g hg_meas hg_bd
 
   ------------------------------------------------------------------
   -- (4) L¹-Lipschitz for CE + |f| bounded pulls the convergence through CE
