@@ -405,58 +405,6 @@ lemma contractable_dist_eq_on_first_r_tail
 abbrev futureFiltration (X : ℕ → Ω → α) (m : ℕ) : MeasurableSpace Ω :=
   MeasurableSpace.comap (shiftRV X (m + 1)) inferInstance
 
-/-- Forward declaration: Conditional expectation convergence from contractability.
-Needed early for `extreme_members_equal_on_tail`. Full proof at line ~1176 as `condexp_convergence`. -/
-lemma condexp_convergence_fwd
-    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {X : ℕ → Ω → α} (hX : Contractable μ X)
-    (hX_meas : ∀ n, Measurable (X n))
-    (k m : ℕ) (hk : k ≤ m)
-    (B : Set α) (hB : MeasurableSet B) :
-    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X m) | futureFiltration X m]
-      =ᵐ[μ]
-    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | futureFiltration X m] := by
-  -- ═══════════════════════════════════════════════════════════════════════════════
-  -- FORWARD DECLARATION - Full proof exists at line 1209 as `condexp_convergence`
-  -- ═══════════════════════════════════════════════════════════════════════════════
-  --
-  -- **Why this is sorry:**
-  -- This proof requires `measure_ext_of_future_rectangles` (defined at line 889),
-  -- creating a forward reference that Lean cannot resolve.
-  --
-  -- **Complete proof strategy (implemented at line 1209):**
-  --
-  -- 1. **Upgrade contractability to measure equality:**
-  --    ```
-  --    have hmeas_eq : Measure.map (fun ω => (X m ω, shiftRV X (m + 1) ω)) μ
-  --                  = Measure.map (fun ω => (X k ω, shiftRV X (m + 1) ω)) μ
-  --    ```
-  --    - Use `measure_ext_of_future_rectangles` (π-λ theorem application)
-  --    - Feed it `agree_on_future_rectangles_of_contractable hX hX_meas k m hk`
-  --    - Converts finite-dimensional agreement to full measure equality
-  --
-  -- 2. **Apply CE bridge lemma:**
-  --    ```
-  --    have h := Exchangeability.Probability.condexp_indicator_eq_of_pair_law_eq
-  --      (X m) (X k) (shiftRV X (m + 1))
-  --      (hX_meas m) (hX_meas k) (measurable_shiftRV hX_meas)
-  --      hmeas_eq hB
-  --    ```
-  --    - Key: If (Y, Z) and (Y', Z) have same law, then E[1_B(Y) | σ(Z)] = E[1_B(Y') | σ(Z)]
-  --
-  -- 3. **Simplify using filtration definition:**
-  --    ```
-  --    simpa [futureFiltration] using h
-  --    ```
-  --    - futureFiltration X m = MeasurableSpace.comap (shiftRV X (m + 1)) inferInstance
-  --
-  -- **Resolution options:**
-  -- A. Keep as forward declaration (current approach)
-  -- B. Reorganize file to move `measure_ext_of_future_rectangles` before this lemma
-  -- C. Inline the π-λ theorem application directly (would duplicate significant code)
-  sorry
-
 /-- Forward declaration: Tail σ-algebra is sub-σ-algebra of future filtration.
 
 This is needed early for `extreme_members_equal_on_tail`.
@@ -482,68 +430,6 @@ lemma futureFiltration_le_fwd
   -- futureFiltration X m = revFiltration X (m + 1)
   simp only [futureFiltration]
   exact revFiltration_le X hX (m + 1)
-
-lemma extreme_members_equal_on_tail
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {X : ℕ → Ω → α}
-    (hX : Contractable μ X)
-    (hX_meas : ∀ n, Measurable (X n))
-    (m : ℕ) (B : Set α) (hB : MeasurableSet B) :
-    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X m) | tailSigma X]
-      =ᵐ[μ]
-    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] := by
-  classical
-  -- abbreviations
-  set f_m : Ω → ℝ := (Set.indicator B (fun _ => (1 : ℝ))) ∘ X m with hf_m
-  set f_0 : Ω → ℝ := (Set.indicator B (fun _ => (1 : ℝ))) ∘ X 0 with hf_0
-
-  -- bounded indicators are integrable
-  have hf_m_int :
-      Integrable f_m μ :=
-    by
-      simpa [hf_m] using
-        Exchangeability.Probability.integrable_indicator_comp
-          (μ := μ) (X := X m) (hX := hX_meas m) hB
-  have hf_0_int :
-      Integrable f_0 μ :=
-    by
-      simpa [hf_0] using
-        Exchangeability.Probability.integrable_indicator_comp
-          (μ := μ) (X := X 0) (hX := hX_meas 0) hB
-
-  -- equality at the future level m (contractability)
-  have h_eq_m :
-      μ[f_m | futureFiltration X m] =ᵐ[μ] μ[f_0 | futureFiltration X m] := by
-    -- Use condexp_convergence (via forward declaration)
-    -- μ[f_m|F_m] = μ[f_0|F_m] from contractability
-    exact condexp_convergence_fwd hX hX_meas 0 m (Nat.zero_le m) B hB
-
-  -- condition both sides on the tail
-  have h_cond_on_tail :
-      μ[μ[f_m | futureFiltration X m] | tailSigma X]
-        =ᵐ[μ]
-      μ[μ[f_0 | futureFiltration X m] | tailSigma X] :=
-    condExp_congr_ae h_eq_m
-
-  -- tower property since tailSigma ≤ futureFiltration m
-  have h_tower_m :
-      μ[μ[f_m | futureFiltration X m] | tailSigma X]
-        =ᵐ[μ] μ[f_m | tailSigma X] :=
-    condExp_condExp_of_le
-      (hm₁₂ := tailSigma_le_futureFiltration_fwd (X := X) m)
-      (hm₂ := futureFiltration_le_fwd (X := X) m hX_meas)
-      (f := f_m)
-  have h_tower_0 :
-      μ[μ[f_0 | futureFiltration X m] | tailSigma X]
-        =ᵐ[μ] μ[f_0 | tailSigma X] :=
-    condExp_condExp_of_le
-      (hm₁₂ := tailSigma_le_futureFiltration_fwd (X := X) m)
-      (hm₂ := futureFiltration_le_fwd (X := X) m hX_meas)
-      (f := f_0)
-
-  -- assemble the equalities
-  -- Chain: μ[f_m|tail] = μ[μ[f_m|fut]|tail] = μ[μ[f_0|fut]|tail] = μ[f_0|tail]
-  exact h_tower_m.symm.trans (h_cond_on_tail.trans h_tower_0)
 
 /-! ## Future filtration (additive)
 
@@ -1267,6 +1153,67 @@ lemma condexp_convergence
 
   -- Simplify: futureFiltration X m = MeasurableSpace.comap (shiftRV X (m + 1)) inferInstance
   simpa [futureFiltration] using h
+
+lemma extreme_members_equal_on_tail
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {X : ℕ → Ω → α}
+    (hX : Contractable μ X)
+    (hX_meas : ∀ n, Measurable (X n))
+    (m : ℕ) (B : Set α) (hB : MeasurableSet B) :
+    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X m) | tailSigma X]
+      =ᵐ[μ]
+    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] := by
+  classical
+  -- abbreviations
+  set f_m : Ω → ℝ := (Set.indicator B (fun _ => (1 : ℝ))) ∘ X m with hf_m
+  set f_0 : Ω → ℝ := (Set.indicator B (fun _ => (1 : ℝ))) ∘ X 0 with hf_0
+
+  -- bounded indicators are integrable
+  have hf_m_int :
+      Integrable f_m μ :=
+    by
+      simpa [hf_m] using
+        Exchangeability.Probability.integrable_indicator_comp
+          (μ := μ) (X := X m) (hX := hX_meas m) hB
+  have hf_0_int :
+      Integrable f_0 μ :=
+    by
+      simpa [hf_0] using
+        Exchangeability.Probability.integrable_indicator_comp
+          (μ := μ) (X := X 0) (hX := hX_meas 0) hB
+
+  -- equality at the future level m (contractability)
+  have h_eq_m :
+      μ[f_m | futureFiltration X m] =ᵐ[μ] μ[f_0 | futureFiltration X m] := by
+    -- Use condexp_convergence from contractability
+    exact condexp_convergence hX hX_meas 0 m (Nat.zero_le m) B hB
+
+  -- condition both sides on the tail
+  have h_cond_on_tail :
+      μ[μ[f_m | futureFiltration X m] | tailSigma X]
+        =ᵐ[μ]
+      μ[μ[f_0 | futureFiltration X m] | tailSigma X] :=
+    condExp_congr_ae h_eq_m
+
+  -- tower property since tailSigma ≤ futureFiltration m
+  have h_tower_m :
+      μ[μ[f_m | futureFiltration X m] | tailSigma X]
+        =ᵐ[μ] μ[f_m | tailSigma X] :=
+    condExp_condExp_of_le
+      (hm₁₂ := tailSigma_le_futureFiltration_fwd (X := X) m)
+      (hm₂ := futureFiltration_le_fwd (X := X) m hX_meas)
+      (f := f_m)
+  have h_tower_0 :
+      μ[μ[f_0 | futureFiltration X m] | tailSigma X]
+        =ᵐ[μ] μ[f_0 | tailSigma X] :=
+    condExp_condExp_of_le
+      (hm₁₂ := tailSigma_le_futureFiltration_fwd (X := X) m)
+      (hm₂ := futureFiltration_le_fwd (X := X) m hX_meas)
+      (f := f_0)
+
+  -- assemble the equalities
+  -- Chain: μ[f_m|tail] = μ[μ[f_m|fut]|tail] = μ[μ[f_0|fut]|tail] = μ[f_0|tail]
+  exact h_tower_m.symm.trans (h_cond_on_tail.trans h_tower_0)
 
 
 section reverse_martingale
