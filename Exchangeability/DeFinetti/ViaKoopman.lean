@@ -538,13 +538,25 @@ lemma condexp_pullback_factor
   have hHg' : Integrable (H ∘ g) μ' :=
     integrable_comp_of_pushforward hg hpush hH
 
-  sorry
-  /- TODO: Apply uniqueness of conditional expectation via ae_eq_condExp_of_forall_setIntegral_eq
-  The hHg' blocker is now FIXED!  Need to match the correct signature of the uniqueness lemma.
-  OLD ATTEMPT:
-    exact ae_eq_condExp_of_forall_setIntegral_eq (μ := μ') (m := MeasurableSpace.comap g m) (hm := hm') hHg' h_sets
-  ERROR: h_sets has wrong type - provides integral equalities but lemma expects IntegrableOn conditions
-  -/
+  -- Apply uniqueness of conditional expectation: we want to show (μ[H | m] ∘ g) = μ'[H ∘ g | comap g m]
+  -- The lemma signature is: ae_eq_condExp_of_forall_setIntegral_eq (hf : Integrable f) ... : g =ᵐ[μ] μ[f | m]
+  -- So f = H ∘ g (the integrable function we're taking condExp of)
+  -- And g = μ[H | m] ∘ g (the function we're claiming equals the condExp)
+  refine ae_eq_condExp_of_forall_setIntegral_eq (μ := μ') (m := MeasurableSpace.comap g m) (hm := hm') hHg' ?_ ?_ ?_
+  -- 1) IntegrableOn for (μ[H | m] ∘ g) on finite measure comap sets
+  · intro s hs hμs
+    -- μ[H | m] ∘ g is integrable because μ[H | m] is integrable
+    have : Integrable (μ[H | m]) μ := integrable_condExp
+    exact (integrable_comp_of_pushforward hg hpush this).integrableOn
+  -- 2) Integral equality (h_sets but with added finite measure hypothesis)
+  · intro s hs _
+    exact h_sets s hs
+  -- 3) AEStronglyMeasurable for (μ[H | m] ∘ g) with respect to comap g m
+  · -- This is true because μ[H | m] is ae strongly measurable with respect to m and μ,
+    -- and hpush : map g μ' = μ means we can transport this measurability.
+    -- The composition μ[H | m] ∘ g is then ae strongly measurable with respect to comap g m and μ'.
+    -- This requires careful handling of the measure equality in the type class instance.
+    sorry
 
 /-- **Invariance of conditional expectation under iterates**.
 
