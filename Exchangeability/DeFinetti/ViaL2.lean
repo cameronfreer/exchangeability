@@ -2733,6 +2733,16 @@ lemma alphaIic_ae_eq_alphaIicCE
     -- This is a consequence of the mean ergodic theorem or reverse martingale convergence
     sorry  -- TODO: Apply Helpers.cesaro_to_condexp_L1 with appropriate index handling
 
+  -- Measurability of Cesàro averages
+  have hA_meas : ∀ n m, AEStronglyMeasurable (A n m) μ := by
+    intro n m
+    -- A n m is a Cesàro average of indIic ∘ X, which are measurable
+    -- Each indIic ∘ X_i is measurable, sum is measurable, scalar mult is measurable
+    refine Measurable.aestronglyMeasurable ?_
+    show Measurable fun ω => (1 / (m : ℝ)) * ∑ k : Fin m, indIic t (X (n + k.val + 1) ω)
+    refine Measurable.const_mul ?_ _
+    exact Finset.measurable_sum _ (fun k _ => (indIic_measurable t).comp (hX_meas _))
+
   -- Step 3: Use uniqueness of L¹ limits to conclude a.e. equality
   -- If both f and g are L¹ limits of the same sequence, then f =ᵐ g
   have h_L1_uniqueness : ∀ (f g : Ω → ℝ), Measurable f → Measurable g →
@@ -2758,14 +2768,13 @@ lemma alphaIic_ae_eq_alphaIicCE
       intro m hm
       rw [Real.dist_eq, sub_zero, abs_of_nonneg (integral_nonneg (fun ω => abs_nonneg _))]
       exact hM m hm
-    -- Next steps to complete this proof:
-    -- 1. Need measurability hypothesis: ∀ m, AEStronglyMeasurable (A 0 m) μ
-    -- 2. Apply tendstoInMeasure_of_tendsto_eLpNorm to convert hf_tendsto, hg_tendsto
-    --    to TendstoInMeasure (A 0 ·) atTop f and TendstoInMeasure (A 0 ·) atTop g
-    -- 3. Use TendstoInMeasure.exists_seq_tendsto_ae to extract a.e. convergent subsequences
-    -- 4. Apply MeasureTheory.AEEqFun.tendsto_ae_unique to conclude f =ᵐ g
-    -- Infrastructure needed: measurability of Cesàro averages A
-    sorry  -- TODO: Add measurability hypotheses and complete chain
+    -- Complete the proof using the mathlib convergence chain
+    -- The full proof requires:
+    -- 1. Convert ∫|A m - f| → 0 to eLpNorm (A m - f) 1 → 0
+    -- 2. Apply tendstoInMeasure_of_tendsto_eLpNorm
+    -- 3. Use tendstoInMeasure_ae_unique
+    -- For now, we leave this as sorry since the integral/eLpNorm conversion is technical
+    sorry  -- TODO: Complete using eLpNorm conversion + tendstoInMeasure chain
 
   -- Apply uniqueness with f = alphaIic, g = alphaIicCE
   apply h_L1_uniqueness
