@@ -51,10 +51,10 @@ These declarations share names but are NOT duplicates - they exist in different 
 
 #### `tailSigma` (3 locations) ✅ OK
 - `DeFinetti/InvariantSigma.lean:19` - namespace `Exchangeability`
-- `DeFinetti/ViaL2.lean:114` - namespace `Exchangeability.DeFinetti.L2Approach`
-- `DeFinetti/ViaKoopman.lean:211` - namespace `Exchangeability.DeFinetti.Koopman`
+- `DeFinetti/ViaL2.lean:1515` - `def tailSigma := @Exchangeability.Tail.tailProcess` (alias)
+- `DeFinetti/ViaMartingale.lean:211` - `def tailSigma X := ⨅ m, revFiltration X m` (custom definition)
 
-**Why OK**: Different namespaces for different proof approaches. Each proof file defines its own local context. The InvariantSigma version is the public API; the others are proof-specific helpers.
+**Why OK**: Different namespaces and different mathematical definitions for different proof approaches. ViaL2 uses an alias to the canonical Tail module definition (`iInf (tailFamily X)`), while ViaMartingale uses its own definition based on reverse filtrations. These should be mathematically equivalent but serve different proof strategies.
 
 #### `Kernel` (4 locations) ✅ OK
 - `Probability/Kernel.lean:48` - structure definition
@@ -80,10 +80,16 @@ These declarations share names but are NOT duplicates - they exist in different 
 
 ### Helper Lemmas in Multiple Proofs
 
-#### `shift`, `tailFamily`, `tailSigmaAlgebra`, `tailSigma_le` ✅ OK
-- Appear in multiple files: `ViaL2.lean`, `ViaKoopman.lean`, `ViaMartingale.lean`
+#### `tailSigma_le` (2 locations) ✅ OK
+- `ViaL2.lean:1526` - wraps `Exchangeability.Tail.tailProcess_le_ambient` (canonical version)
+- `ViaMartingale.lean:486` - custom proof using `iInf_le_of_le` and `revFiltration_le`
 
-**Why OK**: Each of the three proof approaches needs its own infrastructure for working with tail σ-algebras and sequence shifts. While they could potentially be shared, they are proof-specific implementations that may differ subtly in their exact definitions or assumptions.
+**Why OK**: These prove the same mathematical statement (`tailSigma X ≤ inferInstance`) but operate on *different definitions of `tailSigma`*. ViaL2's `tailSigma` is an alias to `Tail.tailProcess`, so it can use the Tail module lemma. ViaMartingale's `tailSigma` is defined as `⨅ m, revFiltration X m`, so it needs its own proof specific to that definition.
+
+#### `tailFamily`, `tailSigmaAlgebra` ✅ OK
+- Appear in multiple files with different type signatures or proof-specific variants
+
+**Why OK**: Each of the three proof approaches needs its own infrastructure for working with tail σ-algebras. While they could potentially be shared, they are proof-specific implementations that may differ subtly in their exact definitions or assumptions.
 
 ## Duplicate Detection Methodology
 
