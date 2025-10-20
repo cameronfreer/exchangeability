@@ -3887,6 +3887,111 @@ implies integral factorization almost everywhere.
 
 This is the key building block for the general bounded function case.
 -/
+/-! ### Helper lemmas for Kernel.IndepFun.integral_mul_simple -/
+
+private lemma integral_product_of_simple_functions
+    {Ω ι κι : Type*} [MeasurableSpace Ω] [Fintype ι] [Fintype κι]
+    {ν : Measure Ω} [IsFiniteMeasure ν]
+    (a_coef : ι → ℝ) (A : ι → Set Ω)
+    (b_coef : κι → ℝ) (B : κι → Set Ω)
+    (hA_meas : ∀ i, MeasurableSet (A i))
+    (hB_meas : ∀ j, MeasurableSet (B j)) :
+    ∫ ω, (∑ i, (A i).indicator (fun _ => a_coef i) ω) *
+          (∑ j, (B j).indicator (fun _ => b_coef j) ω) ∂ν
+    = ∑ i, ∑ j, (a_coef i) * (b_coef j) * (ν (A i ∩ B j)).toReal := by
+  -- Step 1: Expand the product of sums into a double sum
+  have h_expand : ∀ ω, (∑ i, (A i).indicator (fun _ => a_coef i) ω) *
+                         (∑ j, (B j).indicator (fun _ => b_coef j) ω)
+                      = ∑ i, ∑ j, (A i).indicator (fun _ => a_coef i) ω *
+                                   (B j).indicator (fun _ => b_coef j) ω := by
+    intro ω
+    rw [Finset.sum_mul]
+    congr 1
+    ext i
+    rw [Finset.mul_sum]
+
+  -- Step 2: Use the fact that product of indicators equals indicator of intersection
+  have h_indicator_mul : ∀ ω i j,
+      (A i).indicator (fun _ => a_coef i) ω * (B j).indicator (fun _ => b_coef j) ω
+      = (A i ∩ B j).indicator (fun _ => a_coef i * b_coef j) ω := by
+    intro ω i j
+    by_cases ha : ω ∈ A i <;> by_cases hb : ω ∈ B j <;>
+      simp [Set.indicator, ha, hb, Set.mem_inter_iff]
+
+  calc ∫ ω, (∑ i, (A i).indicator (fun _ => a_coef i) ω) *
+             (∑ j, (B j).indicator (fun _ => b_coef j) ω) ∂ν
+      = ∫ ω, ∑ i, ∑ j, (A i).indicator (fun _ => a_coef i) ω *
+                        (B j).indicator (fun _ => b_coef j) ω ∂ν := by
+          congr 1; ext ω; exact h_expand ω
+    _ = ∫ ω, ∑ i, ∑ j, (A i ∩ B j).indicator (fun _ => a_coef i * b_coef j) ω ∂ν := by
+          congr 1; ext ω; congr 1; ext i; congr 1; ext j
+          exact h_indicator_mul ω i j
+    _ = ∑ i, ∑ j, ∫ ω, (A i ∩ B j).indicator (fun _ => a_coef i * b_coef j) ω ∂ν := by
+          rw [integral_finset_sum]
+          · congr 1; ext i
+            rw [integral_finset_sum]
+            intro j _
+            apply Integrable.indicator
+            · exact integrable_const _
+            · exact (hA_meas i).inter (hB_meas j)
+          · intro i _
+            refine integrable_finset_sum _ (fun j _ => ?_)
+            apply Integrable.indicator
+            · exact integrable_const _
+            · exact (hA_meas i).inter (hB_meas j)
+    _ = ∑ i, ∑ j, (a_coef i) * (b_coef j) * (ν (A i ∩ B j)).toReal := by
+          congr 1; ext i; congr 1; ext j
+          rw [integral_indicator_const]
+          · simp [Measure.real, mul_comm]
+          · exact (hA_meas i).inter (hB_meas j)
+
+private lemma product_of_integrals_of_simple_functions
+    {Ω ι κι : Type*} [MeasurableSpace Ω] [Fintype ι] [Fintype κι]
+    {ν : Measure Ω} [IsFiniteMeasure ν]
+    (a_coef : ι → ℝ) (A : ι → Set Ω)
+    (b_coef : κι → ℝ) (B : κι → Set Ω)
+    (hA_meas : ∀ i, MeasurableSet (A i))
+    (hB_meas : ∀ j, MeasurableSet (B j)) :
+    (∫ ω, ∑ i, (A i).indicator (fun _ => a_coef i) ω ∂ν) *
+    (∫ ω, ∑ j, (B j).indicator (fun _ => b_coef j) ω ∂ν)
+    = (∑ i, (a_coef i) * (ν (A i)).toReal) *
+      (∑ j, (b_coef j) * (ν (B j)).toReal) := by
+  -- Simplify each integral separately
+  have h1 : ∫ ω, ∑ i, (A i).indicator (fun _ => a_coef i) ω ∂ν
+          = ∑ i, (a_coef i) * (ν (A i)).toReal := by
+    -- First, swap integral and finite sum
+    rw [integral_finset_sum]
+    · -- Now we have ∑ i, ∫ (A i).indicator (fun _ => a_coef i) ∂ν
+      congr 1
+      ext i
+      -- For each i, simplify ∫ (A i).indicator (fun _ => a_coef i) ∂ν
+      rw [integral_indicator_const]
+      · simp [Measure.real, mul_comm]
+      · exact hA_meas i
+    · -- Integrability of each indicator function
+      intro i _
+      apply Integrable.indicator
+      · exact integrable_const _
+      · exact hA_meas i
+
+  have h2 : ∫ ω, ∑ j, (B j).indicator (fun _ => b_coef j) ω ∂ν
+          = ∑ j, (b_coef j) * (ν (B j)).toReal := by
+    -- First, swap integral and finite sum
+    rw [integral_finset_sum]
+    · -- Now we have ∑ j, ∫ (B j).indicator (fun _ => b_coef j) ∂ν
+      congr 1
+      ext j
+      -- For each j, simplify ∫ (B j).indicator (fun _ => b_coef j) ∂ν
+      rw [integral_indicator_const]
+      · simp [Measure.real, mul_comm]
+      · exact hB_meas j
+    · -- Integrability of each indicator function
+      intro j _
+      apply Integrable.indicator
+      · exact integrable_const _
+      · exact hB_meas j
+  rw [h1, h2]
+
 private lemma Kernel.IndepFun.integral_mul_simple
     {α Ω ι κι : Type*} [MeasurableSpace α] [MeasurableSpace Ω]
     [Fintype ι] [Fintype κι]
@@ -3932,98 +4037,15 @@ private lemma Kernel.IndepFun.integral_mul_simple
   -- Expand left side: ∫ (∑ᵢ aᵢ·1_{Aᵢ})(∑ⱼ bⱼ·1_{Bⱼ}) = ∫ ∑ᵢ ∑ⱼ aᵢbⱼ·1_{Aᵢ∩Bⱼ}
   have h_left : ∫ ω, (∑ i, (A i).indicator (fun _ => a_coef i) ω) *
                        (∑ j, (B j).indicator (fun _ => b_coef j) ω) ∂(κ t)
-              = ∑ i, ∑ j, (a_coef i) * (b_coef j) * (κ t (A i ∩ B j)).toReal := by
-    -- Step 1: Expand the product of sums into a double sum
-    have h_expand : ∀ ω, (∑ i, (A i).indicator (fun _ => a_coef i) ω) *
-                           (∑ j, (B j).indicator (fun _ => b_coef j) ω)
-                        = ∑ i, ∑ j, (A i).indicator (fun _ => a_coef i) ω *
-                                     (B j).indicator (fun _ => b_coef j) ω := by
-      intro ω
-      rw [Finset.sum_mul]
-      congr 1
-      ext i
-      rw [Finset.mul_sum]
-
-    -- Step 2: Use the fact that product of indicators equals indicator of intersection
-    have h_indicator_mul : ∀ ω i j,
-        (A i).indicator (fun _ => a_coef i) ω * (B j).indicator (fun _ => b_coef j) ω
-        = (A i ∩ B j).indicator (fun _ => a_coef i * b_coef j) ω := by
-      intro ω i j
-      by_cases ha : ω ∈ A i <;> by_cases hb : ω ∈ B j <;>
-        simp [Set.indicator, ha, hb, Set.mem_inter_iff]
-
-    calc ∫ ω, (∑ i, (A i).indicator (fun _ => a_coef i) ω) *
-               (∑ j, (B j).indicator (fun _ => b_coef j) ω) ∂(κ t)
-        = ∫ ω, ∑ i, ∑ j, (A i).indicator (fun _ => a_coef i) ω *
-                          (B j).indicator (fun _ => b_coef j) ω ∂(κ t) := by
-            congr 1; ext ω; exact h_expand ω
-      _ = ∫ ω, ∑ i, ∑ j, (A i ∩ B j).indicator (fun _ => a_coef i * b_coef j) ω ∂(κ t) := by
-            congr 1; ext ω; congr 1; ext i; congr 1; ext j
-            exact h_indicator_mul ω i j
-      _ = ∑ i, ∑ j, ∫ ω, (A i ∩ B j).indicator (fun _ => a_coef i * b_coef j) ω ∂(κ t) := by
-            rw [integral_finset_sum]
-            · congr 1; ext i
-              rw [integral_finset_sum]
-              intro j _
-              apply Integrable.indicator
-              · exact integrable_const _
-              · exact (hA_meas_ambient i).inter (hB_meas_ambient j)
-            · intro i _
-              refine integrable_finset_sum _ (fun j _ => ?_)
-              apply Integrable.indicator
-              · exact integrable_const _
-              · exact (hA_meas_ambient i).inter (hB_meas_ambient j)
-      _ = ∑ i, ∑ j, (a_coef i) * (b_coef j) * (κ t (A i ∩ B j)).toReal := by
-            congr 1; ext i; congr 1; ext j
-            rw [integral_indicator_const]
-            · simp [Measure.real, mul_comm]
-            · exact (hA_meas_ambient i).inter (hB_meas_ambient j)
+              = ∑ i, ∑ j, (a_coef i) * (b_coef j) * (κ t (A i ∩ B j)).toReal :=
+    integral_product_of_simple_functions a_coef A b_coef B hA_meas_ambient hB_meas_ambient
 
   -- Expand right side: (∫ ∑ᵢ aᵢ·1_{Aᵢ})(∫ ∑ⱼ bⱼ·1_{Bⱼ}) = (∑ᵢ aᵢ·μ(Aᵢ))(∑ⱼ bⱼ·μ(Bⱼ))
   have h_right : (∫ ω, ∑ i, (A i).indicator (fun _ => a_coef i) ω ∂(κ t)) *
                  (∫ ω, ∑ j, (B j).indicator (fun _ => b_coef j) ω ∂(κ t))
               = (∑ i, (a_coef i) * (κ t (A i)).toReal) *
-                (∑ j, (b_coef j) * (κ t (B j)).toReal) := by
-    -- Simplify each integral separately
-    have h1 : ∫ ω, ∑ i, (A i).indicator (fun _ => a_coef i) ω ∂(κ t)
-            = ∑ i, (a_coef i) * (κ t (A i)).toReal := by
-      -- First, swap integral and finite sum
-      rw [integral_finset_sum]
-      · -- Now we have ∑ i, ∫ (A i).indicator (fun _ => a_coef i) ∂(κ t)
-        congr 1
-        ext i
-        -- For each i, simplify ∫ (A i).indicator (fun _ => a_coef i) ∂(κ t)
-        rw [integral_indicator_const]
-        · -- Goal: (κ t).real (A i) • a_coef i = a_coef i * ((κ t) (A i)).toReal
-          -- These are the same by commutativity and the definition of Measure.real
-          simp [Measure.real, mul_comm]
-        · -- Use the ambient measurability assumption
-          exact hA_meas_ambient i
-      · -- Integrability of each indicator function
-        intro i _
-        apply Integrable.indicator
-        · exact integrable_const _
-        · exact hA_meas_ambient i
-    have h2 : ∫ ω, ∑ j, (B j).indicator (fun _ => b_coef j) ω ∂(κ t)
-            = ∑ j, (b_coef j) * (κ t (B j)).toReal := by
-      -- First, swap integral and finite sum
-      rw [integral_finset_sum]
-      · -- Now we have ∑ j, ∫ (B j).indicator (fun _ => b_coef j) ∂(κ t)
-        congr 1
-        ext j
-        -- For each j, simplify ∫ (B j).indicator (fun _ => b_coef j) ∂(κ t)
-        rw [integral_indicator_const]
-        · -- Goal: (κ t).real (B j) • b_coef j = b_coef j * ((κ t) (B j)).toReal
-          -- These are the same by commutativity and the definition of Measure.real
-          simp [Measure.real, mul_comm]
-        · -- Use the ambient measurability assumption
-          exact hB_meas_ambient j
-      · -- Integrability of each indicator function
-        intro j _
-        apply Integrable.indicator
-        · exact integrable_const _
-        · exact hB_meas_ambient j
-    rw [h1, h2]
+                (∑ j, (b_coef j) * (κ t (B j)).toReal) :=
+    product_of_integrals_of_simple_functions a_coef A b_coef B hA_meas_ambient hB_meas_ambient
 
   -- Use independence to connect the two
   have h_connection : ∑ i, ∑ j, (a_coef i) * (b_coef j) * (κ t (A i ∩ B j)).toReal

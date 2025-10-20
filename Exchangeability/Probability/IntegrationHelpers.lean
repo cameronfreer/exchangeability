@@ -5,6 +5,7 @@ Authors: Cameron Freer
 -/
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
 import Mathlib.MeasureTheory.Function.L2Space
+import Mathlib.Analysis.InnerProductSpace.Basic
 
 /-!
 # Integration Helper Lemmas
@@ -35,23 +36,38 @@ variable {Ω : Type*} [MeasurableSpace Ω]
 
 /-! ### Cauchy-Schwarz Inequality -/
 
+omit [MeasurableSpace Ω] in
 /-- **Cauchy-Schwarz inequality for L² real-valued functions.**
 
 For integrable functions f, g in L²(μ):
   |∫ f·g dμ| ≤ (∫ f² dμ)^(1/2) · (∫ g² dμ)^(1/2)
 
-This is Hölder's inequality specialized to p = q = 2.
-
-We use the fact that `MemLp f 2 μ` means f is in L²(μ), and apply the
-L² inner product Cauchy-Schwarz inequality. -/
+This is Hölder's inequality specialized to p = q = 2. We derive it from the
+nonnegative version by observing that |∫ f·g| ≤ ∫ |f|·|g| and |f|² = f². -/
 lemma abs_integral_mul_le_L2
     [IsFiniteMeasure μ] {f g : Ω → ℝ}
     (hf : MemLp f 2 μ) (hg : MemLp g 2 μ) :
     |∫ ω, f ω * g ω ∂μ|
       ≤ (∫ ω, (f ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (g ω) ^ 2 ∂μ) ^ (1/2 : ℝ) := by
-  -- TODO: Apply Hölder's inequality for p = q = 2
-  -- See CAUCHY_SCHWARZ_RESEARCH_NOTES.md for mathlib API details
-  sorry
+  -- Reduce to nonnegative case using |f·g| = |f|·|g| and |f|² = f²
+  have hf_abs : MemLp (fun ω => |f ω|) (ENNReal.ofReal 2) μ := by
+    convert hf.abs; norm_num
+  have hg_abs : MemLp (fun ω => |g ω|) (ENNReal.ofReal 2) μ := by
+    convert hg.abs; norm_num
+  have h_conj : (2 : ℝ).HolderConjugate 2 := by
+    constructor <;> norm_num
+  calc |∫ ω, f ω * g ω ∂μ|
+      ≤ ∫ ω, |f ω * g ω| ∂μ := by
+        have : |∫ ω, f ω * g ω ∂μ| = ‖∫ ω, f ω * g ω ∂μ‖ := Real.norm_eq_abs _
+        rw [this]; exact norm_integral_le_integral_norm _
+    _ = ∫ ω, |f ω| * |g ω| ∂μ := by
+        congr 1 with ω; exact abs_mul (f ω) (g ω)
+    _ ≤ (∫ ω, |f ω| ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, |g ω| ^ 2 ∂μ) ^ (1/2 : ℝ) := by
+        convert integral_mul_le_Lp_mul_Lq_of_nonneg h_conj ?_ ?_ hf_abs hg_abs using 2 <;> norm_num
+        · apply ae_of_all; intro; positivity
+        · apply ae_of_all; intro; positivity
+    _ = (∫ ω, (f ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (g ω) ^ 2 ∂μ) ^ (1/2 : ℝ) := by
+        simp only [sq_abs]
 
 /-! ### Pushforward Measure Integrals -/
 
