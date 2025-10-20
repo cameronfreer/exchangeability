@@ -111,14 +111,10 @@ lemma contractable_shift_invariant_law
   apply _root_.Exchangeability.measure_eq_of_fin_marginals_eq_prob
   intro n S hS
 
-  -- TODO: Show all finite marginals agree
-  -- Strategy:
-  --   1. Use Measure.map_map to compose: prefixProj ∘ shift ∘ pathify
-  --   2. Observe that (prefixProj n ∘ shift ∘ pathify X) ω = (X 1 ω, X 2 ω, ..., X n ω)
-  --   3. And (prefixProj n ∘ pathify X) ω = (X 0 ω, X 1 ω, ..., X (n-1) ω)
-  --   4. Define k : Fin n → ℕ by k i = i.val + 1 (strictly increasing)
-  --   5. Apply hX with this k to get the distributions are equal
-  sorry
+  -- Show all finite marginals agree via contractability
+  -- Key: (X₁, X₂, ..., Xₙ) has same distribution as (X₀, X₁, ..., X_{n-1})
+
+  sorry  -- TODO: Complete using the 5-step strategy documented above
 
 /-- **BRIDGE 1'.** Package as `MeasurePreserving` for applying the Mean Ergodic Theorem. -/
 lemma measurePreserving_shift_path (X : ℕ → Ω → ℝ)
@@ -133,9 +129,10 @@ abbrev tail_on_path : MeasurableSpace (ℕ → ℝ) :=
   tailShift ℝ
 
 lemma tail_on_path_le : tail_on_path ≤ (inferInstance : MeasurableSpace (ℕ → ℝ)) := by
-  -- Standard σ-algebra fact: iInf of sub-σ-algebras is a sub-σ-algebra
-  -- Proof: iInf (fun n => comap ...) ≤ comap (id) = inferInstance
-  sorry
+  -- tailShift = iInf (fun n => comap (shift by n))
+  -- For n=0, comap of identity ≤ inferInstance
+  -- Thus iInf ... ≤ inferInstance
+  sorry  -- TODO: Apply iInf_le with n=0, then show comap id = inferInstance
 
 /-- **BRIDGE 2.** For the shift on path space, the fixed-point subspace equals L²(tail).
 
