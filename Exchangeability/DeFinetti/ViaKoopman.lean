@@ -265,6 +265,15 @@ section Helpers
 variable {Ω Ω' : Type*} [MeasurableSpace Ω] [MeasurableSpace Ω']
 variable {μ : Measure Ω} {μ' : Measure Ω'} {g : Ω' → Ω}
 
+/-- Construct MeasurePreserving from a pushforward equality.
+This is a simple wrapper but avoids repeating the `by simp [hpush]` pattern. -/
+private lemma measurePreserving_of_map_eq
+    {Ω Ω' : Type*} [MeasurableSpace Ω] [MeasurableSpace Ω']
+    {μ : Measure Ω} {μ' : Measure Ω'} {g : Ω' → Ω}
+    (hg : Measurable g) (hpush : Measure.map g μ' = μ) :
+    MeasurePreserving g μ' μ :=
+  ⟨hg, by simp [hpush]⟩
+
 /-- Push AE along a factor map using only null sets and a measurable null *superset*. -/
 lemma ae_comp_of_pushforward
     (hg : Measurable g) (hpush : Measure.map g μ' = μ)
@@ -279,8 +288,7 @@ lemma ae_comp_of_pushforward
   -- Push the measurable null set through the factor map
   have : μ' (g ⁻¹' T) = 0 := by
     -- `map g μ' = μ` gives the preimage formula on measurable sets
-    -- (use the standard `MeasurePreserving` wrapper to avoid naming issues)
-    have hmp : MeasurePreserving g μ' μ := ⟨hg, by simp [hpush]⟩
+    have hmp : MeasurePreserving g μ' μ := measurePreserving_of_map_eq hg hpush
     rw [hmp.measure_preimage hTmeas.nullMeasurableSet]
     exact hTzero
   -- Conclude AE via `measure_mono_null`
@@ -431,7 +439,7 @@ lemma ae_pullback_iff
       -- μ S = 0 → μ' (g ⁻¹' S) = 0  → AE on μ' after composing with g.
       have : μ {x | Fm x ≠ Gm x} = 0 := (ae_iff).1 h
       -- push it through the factor map using measurability
-      have hmp : MeasurePreserving g μ' μ := ⟨hg, by simp [hpush]⟩
+      have hmp : MeasurePreserving g μ' μ := measurePreserving_of_map_eq hg hpush
       have : μ' (g ⁻¹' {x | Fm x ≠ Gm x}) = 0 := by
         rw [hmp.measure_preimage hSmeas.nullMeasurableSet]
         exact this
@@ -442,7 +450,7 @@ lemma ae_pullback_iff
     · intro h
       have : μ' {x' | (Fm ∘ g) x' ≠ (Gm ∘ g) x'} = 0 := (ae_iff).1 h
       -- convert back using the same preimage identity and measure-preserving fact
-      have hmp : MeasurePreserving g μ' μ := ⟨hg, by simp [hpush]⟩
+      have hmp : MeasurePreserving g μ' μ := measurePreserving_of_map_eq hg hpush
       -- `{x' | (Fm∘g) x' ≠ (Gm∘g) x'} = g ⁻¹' {x | Fm x ≠ Gm x}`
       have : μ' (g ⁻¹' {x | Fm x ≠ Gm x}) = 0 := by simpa using this
       -- and `μ S = μ' (g ⁻¹' S)` for S measurable
