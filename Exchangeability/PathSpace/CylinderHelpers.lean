@@ -154,12 +154,11 @@ lemma firstRCylinder_measurable_ambient
   exact MeasurableSet.iInter fun i => (hX i) (hC i)
 
 /-- The firstRMap is measurable when all coordinates are measurable. -/
+@[measurability]
 lemma measurable_firstRMap
     (X : ℕ → Ω → α) (r : ℕ) (hX : ∀ i, Measurable (X i)) :
     Measurable (firstRMap X r) := by
-  apply measurable_pi_lambda
-  intro i
-  exact hX i
+  measurability
 
 /-- The first-r σ-algebra is a sub-σ-algebra of the ambient σ-algebra when coordinates are measurable. -/
 lemma firstRSigma_le_ambient
