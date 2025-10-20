@@ -14,7 +14,9 @@ import Exchangeability.Ergodic.KoopmanMeanErgodic
 import Exchangeability.Ergodic.InvariantSigma
 import Exchangeability.Ergodic.ProjectionLemmas
 import Exchangeability.DeFinetti.CommonEnding
+import Exchangeability.DeFinetti.MartingaleHelpers
 import Exchangeability.ConditionallyIID
+import Exchangeability.Probability.CondExp
 
 /-!
 # de Finetti's Theorem via Koopman Operator
@@ -112,6 +114,7 @@ namespace Exchangeability.DeFinetti.ViaKoopman
 
 open MeasureTheory Filter Topology ProbabilityTheory
 open Exchangeability.Ergodic
+open Exchangeability.DeFinetti.MartingaleHelpers (comap_comp_le)
 open scoped BigOperators RealInnerProductSpace
 
 variable {α : Type*} [MeasurableSpace α]
@@ -948,24 +951,6 @@ This is just an alias for the mathlib theorem with explicit parameter names
 to help with elaboration.
 -/
 alias condExp_eq_kernel_integral := ProbabilityTheory.condExp_ae_eq_integral_condExpKernel
-
-/-- If `g` is measurable, then `comap (g ∘ f) ≤ comap f`.
-
-This is a standard fact about σ-algebra comap: composing with a measurable function
-can only make the σ-algebra smaller (generate fewer sets).
--/
-lemma comap_comp_le
-    {X Y Z : Type*} [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpace Z]
-    (f : X → Y) (g : Y → Z) (hg : Measurable g) :
-    MeasurableSpace.comap (g ∘ f) (inferInstance : MeasurableSpace Z)
-      ≤ MeasurableSpace.comap f (inferInstance : MeasurableSpace Y) := by
-  intro s hs
-  -- s is a set in the comap (g ∘ f) algebra, so s = (g ∘ f) ⁻¹' t for some t
-  obtain ⟨t, ht, rfl⟩ := hs
-  -- Show (g ∘ f) ⁻¹' t is in comap f
-  refine ⟨g ⁻¹' t, hg ht, ?_⟩
-  ext x
-  simp [Set.mem_preimage, Function.comp_apply]
 
 /-! ## Axioms for de Finetti's theorem
 
@@ -2993,15 +2978,6 @@ axiom exchangeable_implies_ciid_modulo_bridge_ax
 
 namespace MeasureTheory
 
-/-- Helper lemma: A measurable real-valued function bounded in absolute value is integrable
-under a probability measure. -/
-theorem integrable_of_bounded {Ω : Type*} [MeasurableSpace Ω]
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {f : Ω → ℝ} (hmeas : Measurable f) (hbd : ∃ C, ∀ ω, |f ω| ≤ C) :
-    Integrable f μ := by
-  obtain ⟨C, hC⟩ := hbd
-  exact ⟨hmeas.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hC)⟩
-
 /-- Integral of indicator of a set with constant value 1. -/
 @[simp] lemma integral_indicator_one {Ω : Type*} [MeasurableSpace Ω]
     {μ : Measure Ω} {s : Set Ω} (hs : MeasurableSet s) :
@@ -3744,7 +3720,7 @@ private lemma condexp_product_shift_invariant
   have hF_int : Integrable F μ := by
     obtain ⟨Cf, hCf⟩ := hf_bd
     obtain ⟨Cg, hCg⟩ := hg_bd
-    refine MeasureTheory.integrable_of_bounded ?_ ?_
+    refine Exchangeability.Probability.integrable_of_bounded ?_ ?_
     · exact (hf_meas.comp (measurable_pi_apply 0)).mul (hg_meas.comp (measurable_pi_apply k))
     · use Cf * Cg
       intro ω
@@ -3786,11 +3762,11 @@ lemma identicalConditionalMarginals_integral
   -- Setup integrability
   obtain ⟨C, hC⟩ := hbd
   have hf_comp_coord_int : Integrable (fun ω : Ω[α] => f (ω k)) μ := by
-    refine MeasureTheory.integrable_of_bounded ?_ ?_
+    refine Exchangeability.Probability.integrable_of_bounded ?_ ?_
     · exact hf.comp (measurable_pi_apply k)
     · exact ⟨C, fun ω => hC (ω k)⟩
   have hf_comp_pi0_int : Integrable (fun ω : Ω[α] => f (π0 ω)) μ := by
-    refine MeasureTheory.integrable_of_bounded ?_ ?_
+    refine Exchangeability.Probability.integrable_of_bounded ?_ ?_
     · exact hf.comp (measurable_pi0 (α := α))
     · exact ⟨C, fun ω => hC (π0 ω)⟩
 
@@ -4133,17 +4109,17 @@ via dyadic approximation. This can be used to eventually prove the axiom
   obtain ⟨CY, hCY⟩ := hY_bd
 
   have hX_int : ∀ a, Integrable X (κ a) := fun a => by
-    refine MeasureTheory.integrable_of_bounded ?_ ?_
+    refine Exchangeability.Probability.integrable_of_bounded ?_ ?_
     · exact hX
     · exact ⟨CX, fun ω => hCX ω⟩
 
   have hY_int : ∀ a, Integrable Y (κ a) := fun a => by
-    refine MeasureTheory.integrable_of_bounded ?_ ?_
+    refine Exchangeability.Probability.integrable_of_bounded ?_ ?_
     · exact hY
     · exact ⟨CY, fun ω => hCY ω⟩
 
   have hXY_int : ∀ a, Integrable (fun ω => X ω * Y ω) (κ a) := fun a => by
-    refine MeasureTheory.integrable_of_bounded ?_ ?_
+    refine Exchangeability.Probability.integrable_of_bounded ?_ ?_
     · exact hX.mul hY
     · exact ⟨CX * CY, fun ω => by
         have : |X ω * Y ω| = |X ω| * |Y ω| := abs_mul (X ω) (Y ω)
@@ -4979,7 +4955,7 @@ private lemma condexp_pair_factorization
     have h_int : Integrable (fun (ω : Ω[α]) => f (ω 0) * g (ω 1)) μ := by
       obtain ⟨C_f, hC_f⟩ := hf_bd
       obtain ⟨C_g, hC_g⟩ := hg_bd
-      refine MeasureTheory.integrable_of_bounded h_meas ⟨C_f * C_g, fun ω => ?_⟩
+      refine Exchangeability.Probability.integrable_of_bounded h_meas ⟨C_f * C_g, fun ω => ?_⟩
       calc |f (ω 0) * g (ω 1)|
           = |f (ω 0)| * |g (ω 1)| := abs_mul _ _
         _ ≤ C_f * C_g := mul_le_mul (hC_f _) (hC_g _) (abs_nonneg _) (by linarith [abs_nonneg (f (ω 0)), hC_f (ω 0)])
@@ -5041,7 +5017,7 @@ private lemma condexp_pair_factorization
   rcases hf_bd with ⟨Cf, hCf⟩
   rcases hg_bd with ⟨Cg, hCg⟩
   have h_int : Integrable (fun ω : Ω[α] => f (ω 0) * g (ω 1)) μ := by
-    refine MeasureTheory.integrable_of_bounded
+    refine Exchangeability.Probability.integrable_of_bounded
       (hmeas := (hf_meas.comp (measurable_pi_apply 0)).mul
         (hg_meas.comp (measurable_pi_apply 1)))
       (μ := μ) ⟨Cf * Cg, ?_⟩

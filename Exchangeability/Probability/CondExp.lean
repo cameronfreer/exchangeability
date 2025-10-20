@@ -138,7 +138,11 @@ lemma integrable_indicator_comp
 
 /-! ### Pair-law ⇒ conditional indicator equality (stub) -/
 
-/-- Standard cylinder on the first `r` coordinates starting at index 0. -/
+/-- Standard cylinder on the first `r` coordinates starting at index 0.
+
+**NOTE**: This is intentionally duplicated from `PathSpace.CylinderHelpers.cylinder` to
+avoid a circular import. CondExp is a low-level module that cannot import PathSpace,
+but needs this definition for the `AgreeOnFutureRectangles` structure below. -/
 def cylinder (α : Type*) (r : ℕ) (C : Fin r → Set α) : Set (ℕ → α) :=
   {f | ∀ i : Fin r, f i ∈ C i}
 
@@ -532,10 +536,8 @@ NOTE: Check if this exists in mathlib! This is a standard result. -/
 lemma integrable_of_bounded [IsFiniteMeasure μ]
     {f : Ω → ℝ} (hf : Measurable f) (hbd : ∃ C, ∀ ω, |f ω| ≤ C) :
     Integrable f μ := by
-  sorry
-  -- TODO: Find correct mathlib API for this
-  -- Strategy: Use Integrable.mk with AEStronglyMeasurable and HasFiniteIntegral
-  -- or find a direct lemma about bounded + measurable => integrable on finite measures
+  obtain ⟨C, hC⟩ := hbd
+  exact ⟨hf.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hC)⟩
 
 /-- Product of integrable and bounded measurable functions is integrable. -/
 lemma integrable_of_bounded_mul [IsFiniteMeasure μ]
