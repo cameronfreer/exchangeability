@@ -520,4 +520,78 @@ lemma condexp_indicator_eq_of_agree_on_future_rectangles
         | MeasurableSpace.comap Y inferInstance] :=
   condexp_indicator_eq_of_pair_law_eq X₁ X₂ Y hX₁ hX₂ hY hagree.measure_eq hB
 
+/-! ### Operator-Theoretic Conditional Expectation Utilities -/
+
+section OperatorTheoretic
+
+variable {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
+
+/-- Bounded measurable functions are integrable on finite measures.
+
+NOTE: Check if this exists in mathlib! This is a standard result. -/
+lemma integrable_of_bounded [IsFiniteMeasure μ]
+    {f : Ω → ℝ} (hf : Measurable f) (hbd : ∃ C, ∀ ω, |f ω| ≤ C) :
+    Integrable f μ := by
+  sorry
+  -- TODO: Find correct mathlib API for this
+  -- Strategy: Use Integrable.mk with AEStronglyMeasurable and HasFiniteIntegral
+  -- or find a direct lemma about bounded + measurable => integrable on finite measures
+
+/-- Product of integrable and bounded measurable functions is integrable. -/
+lemma integrable_of_bounded_mul [IsFiniteMeasure μ]
+    {f g : Ω → ℝ} (hf : Integrable f μ) (hg : Measurable g)
+    (hbd : ∃ C, ∀ ω, |g ω| ≤ C) :
+    Integrable (f * g) μ := by
+  sorry
+  -- TODO: This should follow from Integrable.bdd_mul or similar
+  -- Strategy: |f·g| ≤ C·|f|, so ∫|f·g| ≤ C·∫|f| < ∞
+
+/-- Conditional expectation preserves monotonicity (in absolute value).
+
+If |f| ≤ |g| everywhere, then |E[f|m]| ≤ E[|g||m]. -/
+lemma condExp_abs_le_of_abs_le [IsFiniteMeasure μ]
+    {m : MeasurableSpace Ω} (hm : m ≤ ‹_›)
+    {f g : Ω → ℝ} (hf : Integrable f μ) (hg : Integrable g μ)
+    (h : ∀ ω, |f ω| ≤ |g ω|) :
+    ∀ᵐ ω ∂μ, |μ[f|m] ω| ≤ μ[(fun ω' => |g ω'|)|m] ω := by
+  sorry
+  -- Strategy:
+  -- 1. Use that CE is linear and monotone
+  -- 2. -|g| ≤ f ≤ |g| implies E[-|g||m] ≤ E[f|m] ≤ E[|g||m]
+  -- 3. Therefore |E[f|m]| ≤ E[|g||m]
+
+/-- **Conditional expectation is L¹-nonexpansive** (load-bearing lemma).
+
+For integrable functions f, g, the conditional expectation is contractive in L¹:
+  ‖E[f|m] - E[g|m]‖₁ ≤ ‖f - g‖₁
+
+This is the key operator-theoretic property that makes CE well-behaved. -/
+lemma condExp_L1_lipschitz [IsFiniteMeasure μ]
+    {m : MeasurableSpace Ω} (hm : m ≤ ‹_›)
+    {f g : Ω → ℝ} (hf : Integrable f μ) (hg : Integrable g μ) :
+    ∫ ω, |μ[f|m] ω - μ[g|m] ω| ∂μ ≤ ∫ ω, |f ω - g ω| ∂μ := by
+  sorry
+  -- Strategy:
+  -- 1. Rewrite LHS as ∫ |μ[f - g|m]|
+  -- 2. Use that CE is a contractive projection: ‖CE(h)‖₁ ≤ ‖h‖₁
+  -- 3. This follows from CE having operator norm = 1 as an L¹ → L¹ map
+  -- 4. Apply Jensen's inequality or use mathlib's condexp_L1_clm properties
+
+/-- Conditional expectation pull-out property for bounded measurable functions.
+
+If g is m-measurable and bounded, then E[f·g|m] = E[f|m]·g a.e. -/
+lemma condExp_mul_pullout [IsFiniteMeasure μ]
+    {m : MeasurableSpace Ω} (hm : m ≤ ‹_›)
+    {f g : Ω → ℝ} (hf : Integrable f μ)
+    (hg_meas : @Measurable Ω ℝ m _ g)
+    (hg_bd : ∃ C, ∀ ω, |g ω| ≤ C) :
+    μ[f * g|m] =ᵐ[μ] fun ω => μ[f|m] ω * g ω := by
+  sorry
+  -- Strategy:
+  -- 1. This is a standard pull-out property for m-measurable g
+  -- 2. Can be derived from condExp_L1_lipschitz + approximation
+  -- 3. Or use mathlib's condexp_smul if g is simple, then approximate
+
+end OperatorTheoretic
+
 end Exchangeability.Probability
