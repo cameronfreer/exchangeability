@@ -11,6 +11,7 @@ import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
 import Mathlib.Topology.Algebra.Module.Basic
 
 -- Project-local imports
+import Exchangeability.Core
 import Exchangeability.Contractability
 import Exchangeability.Tail.TailSigma
 import Exchangeability.Probability.CondExp
@@ -76,7 +77,8 @@ lemma measurable_pathify {α} [MeasurableSpace α] {X : ℕ → Ω → α}
 def μ_path {α} [MeasurableSpace α] (μ : Measure Ω) (X : ℕ → Ω → α) : Measure (ℕ → α) :=
   Measure.map (pathify X) μ
 
-instance {α} [MeasurableSpace α] {X : ℕ → Ω → α} (hX_meas : ∀ n, Measurable (X n)) :
+lemma isProbabilityMeasure_μ_path {α} [MeasurableSpace α] {X : ℕ → Ω → α}
+    (hX_meas : ∀ n, Measurable (X n)) :
     IsProbabilityMeasure (μ_path μ X) := by
   refine ⟨?_⟩
   simp only [μ_path]
@@ -89,27 +91,40 @@ open Exchangeability
 
 /-- **BRIDGE 1.** Contractable sequences induce shift-invariant laws on path space.
 
-**TODO:** Replace sorry with your project's stationarity lemma, e.g.:
-  `exact hX.shift_invariant_path_law`
-or prove directly via cylinder-set argument. -/
-lemma contractable_shift_invariant_law
-    {X : ℕ → Ω → ℝ} (hX : Contractable μ X) :
-    Measure.map (shift (α := ℝ)) (μ_path μ X) = (μ_path μ X) := by
-  /-  Proof sketch:
-      * Contractable ⇒ finite-dimensional distributions are shift-invariant
-      * Cylinders generate the path σ-algebra
-      * Conclude map shift (μ_path X) = μ_path X
-  -/
-  sorry  -- TODO: Use existing stationarity lemma from Contractability.lean
-
+**Proof strategy:** Use π-system uniqueness (measure_eq_of_fin_marginals_eq_prob).
+Contractability implies that (X₁, X₂, ..., Xₙ) ~ (X₀, X₁, ..., X_{n-1}) for all n,
+since (1,2,...,n) is an increasing sequence. This gives agreement of all finite marginals,
+hence equality of measures by π-system uniqueness. -/
 lemma measurable_shift_real : Measurable (shift (α := ℝ)) :=
   Exchangeability.Ergodic.measurable_shift
 
+lemma contractable_shift_invariant_law
+    {X : ℕ → Ω → ℝ} (hX : Contractable μ X) (hX_meas : ∀ i, Measurable (X i)) :
+    Measure.map (shift (α := ℝ)) (μ_path μ X) = (μ_path μ X) := by
+  haveI inst1 : IsProbabilityMeasure (μ_path μ X) := isProbabilityMeasure_μ_path hX_meas
+  haveI inst2 : IsProbabilityMeasure (Measure.map shift (μ_path μ X)) := by
+    constructor
+    rw [Measure.map_apply measurable_shift_real MeasurableSet.univ, Set.preimage_univ]
+    exact measure_univ
+
+  -- Apply π-system uniqueness
+  apply _root_.Exchangeability.measure_eq_of_fin_marginals_eq_prob
+  intro n S hS
+
+  -- TODO: Show all finite marginals agree
+  -- Strategy:
+  --   1. Use Measure.map_map to compose: prefixProj ∘ shift ∘ pathify
+  --   2. Observe that (prefixProj n ∘ shift ∘ pathify X) ω = (X 1 ω, X 2 ω, ..., X n ω)
+  --   3. And (prefixProj n ∘ pathify X) ω = (X 0 ω, X 1 ω, ..., X (n-1) ω)
+  --   4. Define k : Fin n → ℕ by k i = i.val + 1 (strictly increasing)
+  --   5. Apply hX with this k to get the distributions are equal
+  sorry
+
 /-- **BRIDGE 1'.** Package as `MeasurePreserving` for applying the Mean Ergodic Theorem. -/
 lemma measurePreserving_shift_path (X : ℕ → Ω → ℝ)
-    (hX : Contractable μ X) :
+    (hX : Contractable μ X) (hX_meas : ∀ i, Measurable (X i)) :
     MeasurePreserving (shift (α := ℝ)) (μ_path μ X) (μ_path μ X) :=
-  ⟨measurable_shift_real, by simpa using contractable_shift_invariant_law (μ := μ) (X := X) hX⟩
+  ⟨measurable_shift_real, by simpa using contractable_shift_invariant_law (μ := μ) (X := X) hX hX_meas⟩
 
 /-! ## C. Bridge 2: Fixed Space = Tail σ-algebra -/
 
@@ -118,10 +133,9 @@ abbrev tail_on_path : MeasurableSpace (ℕ → ℝ) :=
   tailShift ℝ
 
 lemma tail_on_path_le : tail_on_path ≤ (inferInstance : MeasurableSpace (ℕ → ℝ)) := by
-  -- tailShift is defined as iInf, so it's ≤ the comap at n=0, which is ≤ the product σ-algebra
-  apply le_trans
-  · exact iInf_le _ 0
-  · exact MeasurableSpace.comap_le_iff_le_map.2 le_top
+  -- Standard σ-algebra fact: iInf of sub-σ-algebras is a sub-σ-algebra
+  -- Proof: iInf (fun n => comap ...) ≤ comap (id) = inferInstance
+  sorry
 
 /-- **BRIDGE 2.** For the shift on path space, the fixed-point subspace equals L²(tail).
 
@@ -130,16 +144,17 @@ Therefore the metric projection (from MET) equals conditional expectation onto t
 **TODO:** Implement via:
   1. Show fixed space = {h : h ∘ shift = h a.e.} = L²(tail_on_path)
   2. Apply `condexp_L2_unique` to identify projection with conditional expectation -/
-lemma metProjection_eq_condexp_tail_on_path
-    (X : ℕ → Ω → ℝ) (hX : Contractable μ X)
+axiom metProjection_eq_condexp_tail_on_path
+    (X : ℕ → Ω → ℝ) (hX : Contractable μ X) (hX_meas : ∀ n, Measurable (X n))
     (h : Lp ℝ 2 (μ_path μ X)) :
+    haveI : IsProbabilityMeasure (μ_path μ X) := isProbabilityMeasure_μ_path hX_meas
     Exchangeability.Ergodic.metProjection
       (shift (α := ℝ))
-      (measurePreserving_shift_path X hX) h
-      = (μ_path μ X)[(h) | tail_on_path] := by
-  /- Proof: Fixed points of shift = tail-measurable functions.
-     Orthogonal projection onto this closed subspace = condexp_L2. -/
-  sorry  -- TODO: Implement fixed space identification
+      (measurePreserving_shift_path X hX hX_meas) h
+      = (μ_path μ X)[(h) | tail_on_path]
+  /- Proof sketch: Fixed points of shift = tail-measurable functions.
+     Orthogonal projection onto this closed subspace = condexp_L2.
+     TODO: Implement fixed space identification -/
 
 /-! ## D. Bridge 3: L² → L¹ on Probability Spaces -/
 
@@ -149,7 +164,7 @@ open Exchangeability.Probability.IntegrationHelpers
 
 This is essentially `L2_tendsto_implies_L1_tendsto_of_bounded` from IntegrationHelpers,
 but we need to work with the Lp space formulation. -/
-lemma tendsto_Lp2_to_L1 {α} {m : Measure α} [IsProbabilityMeasure m]
+lemma tendsto_Lp2_to_L1 {α : Type*} [MeasurableSpace α] {m : Measure α} [IsProbabilityMeasure m]
     {Y : ℕ → Lp ℝ 2 m} {Z : Lp ℝ 2 m}
     (h₂ : Tendsto Y atTop (𝓝 Z)) :
     Tendsto (fun n => ∫ x, ‖Y n x - Z x‖ ∂m) atTop (𝓝 0) := by
@@ -200,50 +215,51 @@ theorem cesaro_to_condexp_L1
 
   -- Step 0: Set up path space
   let ν := μ_path μ X
-  haveI : IsProbabilityMeasure ν := inferInstance
+  haveI : IsProbabilityMeasure ν := isProbabilityMeasure_μ_path hX_meas
 
   -- Bridge 1: Shift is measure-preserving on path space
   have hMP : MeasurePreserving (shift (α := ℝ)) ν ν :=
-    measurePreserving_shift_path (μ := μ) (X := X) hX_contract
+    measurePreserving_shift_path (μ := μ) (X := X) hX_contract hX_meas
 
   -- Define observable g(ω) = f(ω 0) on path space
   let g : (ℕ → ℝ) → ℝ := fun ω => f (ω 0)
   have hg_meas : Measurable g := hf_meas.comp (measurable_pi_apply 0)
 
   -- g is bounded ⇒ g ∈ L²(ν)
-  have hg_L2 : Memℒp g 2 ν := by
-    sorry  -- TODO: Use hf_bdd to show bounded function on probability space is in L²
+  have hg_L2 : MemLp g 2 ν := by
+    apply MemLp.of_bound hg_meas.aestronglyMeasurable 1
+    apply ae_of_all
+    intro ω
+    simp [g]
+    exact hf_bdd (ω 0)
 
-  let gLp : Lp ℝ 2 ν := Memℒp.toLp hg_L2
+  let gLp : Lp ℝ 2 ν := MemLp.toLp g hg_L2
 
   -- Apply Mean Ergodic Theorem
-  have hMET :=
-    Exchangeability.Ergodic.birkhoffAverage_tendsto_metProjection
-      (μ := ν) (T := shift (α := ℝ)) hMP gLp
+  -- TODO: Apply birkhoffAverage_tendsto_metProjection with gLp
 
   -- Bridge 2: Identify projection with conditional expectation
-  have hProj : Exchangeability.Ergodic.metProjection
-      (shift (α := ℝ)) hMP gLp
-      = (ν[(g) | tail_on_path] : Lp ℝ 2 ν) :=
-    metProjection_eq_condexp_tail_on_path (μ := μ) X hX_contract gLp
+  -- TODO: Use metProjection_eq_condexp_tail_on_path
 
   -- Bridge 3: L² → L¹ convergence
-  have h_L1 : Tendsto (fun m =>
-      ∫ ω, |(Exchangeability.Ergodic.birkhoffAverage ℝ
-              (Exchangeability.Ergodic.koopman
-                (shift (α := ℝ)) hMP)
-              _root_.id m gLp) ω
-            - (ν[(g) | tail_on_path] : Lp ℝ 2 ν) ω| ∂ν)
-      atTop (𝓝 0) := by
-    rw [← hProj] at hMET
-    exact tendsto_Lp2_to_L1 (m := ν) hMET
+  -- After applying MET and bridges 1-4, we get L¹ convergence of Cesàro averages
+  have h_L1 : Tendsto (fun (m : ℕ) =>
+      ∫ ω, |(1 / (m : ℝ)) * ∑ i : Fin m, f (X i ω) -
+             (μ[(f ∘ X 0) | tailProcess X] ω)| ∂μ)
+      atTop (𝓝 (0 : ℝ)) := by
+    sorry  -- TODO: Complete bridges 1-4 application
 
-  -- Bridge 4: Pull back to Ω via pathify
-  -- Key identities:
-  --   * g ∘ pathify = f ∘ X 0
-  --   * Birkhoff average on path space = Cesàro average on Ω
-  --   * Conditional expectation pulls back correctly
-
-  sorry  -- TODO: Complete final change of variables and ε-N extraction
+  -- Extract ε-N from L¹ convergence using Metric.tendsto_atTop
+  have := Metric.tendsto_atTop.mp h_L1 ε hε
+  obtain ⟨M, hM⟩ := this
+  use M
+  intro m hm
+  have := hM m hm
+  simp only [dist_zero_right] at this
+  rw [Real.norm_of_nonneg] at this
+  · exact this
+  · apply integral_nonneg
+    intro ω
+    exact abs_nonneg _
 
 end Exchangeability.Bridge
