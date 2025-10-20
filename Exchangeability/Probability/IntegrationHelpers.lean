@@ -5,6 +5,8 @@ Authors: Cameron Freer
 -/
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
 import Mathlib.MeasureTheory.Function.L2Space
+import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
+import Mathlib.MeasureTheory.Function.ConvergenceInMeasure
 import Mathlib.Analysis.InnerProductSpace.Basic
 
 /-!
@@ -16,6 +18,8 @@ lemmas for common patterns in the de Finetti proofs.
 ## Main Results
 
 * `abs_integral_mul_le_L2`: Cauchy-Schwarz inequality for L² functions
+* `eLpNorm_one_eq_integral_abs`: Connection between L¹ integral and eLpNorm
+* `L2_tendsto_implies_L1_tendsto_of_bounded`: L² → L¹ convergence for bounded functions
 * `integral_pushforward_id`: Integral of identity under pushforward measure
 * `integral_pushforward_sq_diff`: Integral of squared difference under pushforward
 
@@ -30,7 +34,7 @@ noncomputable section
 
 namespace Exchangeability.Probability.IntegrationHelpers
 
-open MeasureTheory
+open MeasureTheory Filter Topology
 
 variable {Ω : Type*} [MeasurableSpace Ω]
 
@@ -68,6 +72,60 @@ lemma abs_integral_mul_le_L2
         · apply ae_of_all; intro; positivity
     _ = (∫ ω, (f ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (g ω) ^ 2 ∂μ) ^ (1/2 : ℝ) := by
         simp only [sq_abs]
+
+/-! ### Lp Norm Connections and Convergence -/
+
+/-- **Connection between L¹ Bochner integral and eLpNorm.**
+
+For integrable real-valued functions, the L¹ norm (eLpNorm with p=1) equals
+the ENNReal coercion of the integral of absolute value.
+
+This bridges the gap between Real-valued integrals (∫ |f| ∂μ : ℝ) and
+ENNReal-valued Lp norms (eLpNorm f 1 μ : ℝ≥0∞), which is essential for
+applying mathlib's convergence in measure machinery. -/
+lemma eLpNorm_one_eq_integral_abs
+    {μ : Measure Ω} [IsFiniteMeasure μ]
+    {f : Ω → ℝ} (hf : Integrable f μ) :
+    eLpNorm f 1 μ = ENNReal.ofReal (∫ ω, |f ω| ∂μ) := by
+  -- Strategy:
+  -- 1. eLpNorm f 1 μ = ∫⁻ ‖f‖ₑ ∂μ  (by definition for p=1)
+  -- 2. ∫⁻ ‖f‖ₑ ∂μ = ENNReal.ofReal (∫ ‖f‖ ∂μ)  (for integrable f)
+  -- 3. For real f: ‖f ω‖ = |f ω|
+  --
+  -- Key lemmas:
+  -- - eLpNorm_one_eq_lintegral_nnnorm: eLpNorm f 1 μ = ∫⁻ ‖f‖₊ ∂μ
+  -- - ofReal_integral_eq_lintegral_ofReal: Connection for nonneg functions
+  -- - For real f: ‖f‖ = |f|
+  sorry
+
+/-- **L² convergence implies L¹ convergence for uniformly bounded functions.**
+
+On a probability space, if fₙ → g in L² and the functions are uniformly bounded,
+then fₙ → g in L¹.
+
+This follows from Cauchy-Schwarz: ∫|f - g| ≤ (∫(f-g)²)^(1/2) · (∫ 1)^(1/2) = (∫(f-g)²)^(1/2)
+
+This lemma provides the key bridge between the Mean Ergodic Theorem (which gives
+L² convergence) and applications requiring L¹ convergence (such as ViaL2's
+Cesàro average convergence). -/
+lemma L2_tendsto_implies_L1_tendsto_of_bounded
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (f : ℕ → Ω → ℝ) (g : Ω → ℝ)
+    (hf_meas : ∀ n, Measurable (f n)) (hg_meas : Measurable g)
+    (hf_bdd : ∃ M, ∀ n ω, |f n ω| ≤ M)
+    (hL2 : Tendsto (fun n => ∫ ω, (f n ω - g ω)^2 ∂μ) atTop (𝓝 0)) :
+    Tendsto (fun n => ∫ ω, |f n ω - g ω| ∂μ) atTop (𝓝 0) := by
+  -- Apply Cauchy-Schwarz to each term: ∫|fₙ - g| ≤ (∫(fₙ-g)²)^(1/2) · (∫ 1)^(1/2)
+  -- On a probability space: (∫ 1)^(1/2) = 1
+  -- So: ∫|fₙ - g| ≤ (∫(fₙ-g)²)^(1/2)
+  -- As (∫(fₙ-g)²) → 0, we have (∫(fₙ-g)²)^(1/2) → 0
+  -- Therefore ∫|fₙ - g| → 0 by squeeze theorem
+  --
+  -- Key steps:
+  -- 1. Show each (f n - g) is in L² using boundedness
+  -- 2. Apply abs_integral_mul_le_L2 with g = 1
+  -- 3. Use tendsto_of_tendsto_of_tendsto_of_le_of_le (squeeze)
+  sorry
 
 /-! ### Pushforward Measure Integrals -/
 

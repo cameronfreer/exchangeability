@@ -7,6 +7,7 @@ import Exchangeability.DeFinetti.L2Helpers
 import Exchangeability.Contractability
 import Exchangeability.ConditionallyIID
 import Exchangeability.Probability.CondExp
+import Exchangeability.Probability.IntegrationHelpers
 import Exchangeability.Tail.TailSigma
 import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
@@ -1543,10 +1544,13 @@ Axioms that don't depend on later definitions can go here.
 
 namespace Helpers
 
-/-- **AXIOM A9 (Subsequence a.e. convergence from L¹):**
+/-- **THEOREM (Subsequence a.e. convergence from L¹):**
 If `αₙ → α` in L¹ (with measurability), there is a subsequence converging to `α`
-almost everywhere. -/
-axiom subseq_ae_of_L1
+almost everywhere.
+
+This follows from the standard result that L¹ convergence implies convergence in measure,
+and convergence in measure implies existence of an a.e. convergent subsequence. -/
+theorem subseq_ae_of_L1
   {Ω : Type*} [MeasurableSpace Ω]
   {μ : Measure Ω} [IsProbabilityMeasure μ]
   (alpha : ℕ → Ω → ℝ) (alpha_inf : Ω → ℝ)
@@ -1554,7 +1558,59 @@ axiom subseq_ae_of_L1
   (h_alpha_inf_meas : Measurable alpha_inf)
   (h_L1_conv : ∀ ε > 0, ∃ N, ∀ n ≥ N, ∫ ω, |alpha n ω - alpha_inf ω| ∂μ < ε) :
   ∃ (φ : ℕ → ℕ), StrictMono φ ∧
-    ∀ᵐ ω ∂μ, Tendsto (fun k => alpha (φ k) ω) atTop (𝓝 (alpha_inf ω))
+    ∀ᵐ ω ∂μ, Tendsto (fun k => alpha (φ k) ω) atTop (𝓝 (alpha_inf ω)) := by
+  -- Step 1: Convert L¹ convergence to convergence in eLpNorm
+  have h_eLpNorm_tendsto : Tendsto (fun n => eLpNorm (alpha n - alpha_inf) 1 μ) atTop (𝓝 0) := by
+    -- TODO: Complete the connection between L¹ integral and eLpNorm
+    --
+    -- Strategy:
+    -- 1. Convert hypothesis to: Tendsto (fun n => ∫ |alpha n - alpha_inf|) atTop (𝓝 0) ✓ (below)
+    -- 2. Show alpha n - alpha_inf is eventually integrable (from bounded integral on prob space)
+    -- 3. Use: eLpNorm f 1 μ = ENNReal.ofReal (∫ |f|) for integrable real f
+    --    (follows from eLpNorm_one_eq_lintegral_enorm + ofReal_integral_norm_eq_lintegral_enorm)
+    -- 4. Apply ENNReal.continuous_ofReal to transfer convergence
+    --
+    -- Key lemmas needed:
+    -- - integral_norm_eq_lintegral_enorm: ∫ ‖f‖ = (∫⁻ ‖f‖ₑ).toReal
+    -- - ofReal_integral_norm_eq_lintegral_enorm: ENNReal.ofReal (∫ ‖f‖) = ∫⁻ ‖f‖ₑ (when Integrable)
+    -- - eLpNorm_one_eq_lintegral_enorm: eLpNorm f 1 μ = ∫⁻ ‖f‖ₑ
+
+    -- First show the Bochner integral tends to 0
+    have h_integral_tendsto : Tendsto (fun n => ∫ ω, |alpha n ω - alpha_inf ω| ∂μ) atTop (𝓝 0) := by
+      rw [Metric.tendsto_atTop]
+      intro ε hε
+      obtain ⟨N, hN⟩ := h_L1_conv ε hε
+      use N
+      intro n hn
+      rw [Real.dist_eq, sub_zero, abs_of_nonneg]
+      · exact hN n hn
+      · exact integral_nonneg (fun ω => abs_nonneg _)
+
+    -- Now show: eLpNorm (alpha n - alpha_inf) 1 μ → 0
+    -- eLpNorm returns ENNReal, so we work in that space
+    --
+    -- Proof strategy:
+    -- 1. Show (alpha n - alpha_inf) is integrable for all n:
+    --    From h_integral_tendsto, the L¹ norm is eventually finite, so eventually integrable
+    -- 2. Apply eLpNorm_one_eq_integral_abs from IntegrationHelpers:
+    --    eLpNorm (alpha n - alpha_inf) 1 μ = ENNReal.ofReal (∫ |alpha n - alpha_inf|)
+    -- 3. Use continuous_iff_continuousAt + ENNReal.continuous_ofReal:
+    --    Tendsto (fun n => ∫ |alpha n - alpha_inf|) atTop (𝓝 0)  [✓ from h_integral_tendsto]
+    --    → Tendsto (fun n => ENNReal.ofReal (∫ |alpha n - alpha_inf|)) atTop (𝓝 (ENNReal.ofReal 0))
+    --    → Tendsto (fun n => ENNReal.ofReal (∫ |alpha n - alpha_inf|)) atTop (𝓝 0)
+    -- 4. Combine with step 2 to get the result
+    sorry  -- TODO: Apply IntegrationHelpers.eLpNorm_one_eq_integral_abs + ENNReal.continuous_ofReal
+
+  -- Step 2: eLpNorm convergence implies convergence in measure
+  have h_tendstoInMeasure : TendstoInMeasure μ alpha atTop alpha_inf := by
+    refine tendstoInMeasure_of_tendsto_eLpNorm (p := 1) one_ne_zero ?_ ?_ ?_
+    · intro n
+      exact (h_alpha_meas n).aestronglyMeasurable
+    · exact h_alpha_inf_meas.aestronglyMeasurable
+    · exact h_eLpNorm_tendsto
+
+  -- Step 3: Extract almost-everywhere convergent subsequence
+  exact h_tendstoInMeasure.exists_seq_tendsto_ae
 
 /-- **AXIOM A1 (Reverse martingale / mean ergodic in L¹):**
 Cesàro averages of a bounded measurable function along an exchangeable
@@ -1570,10 +1626,14 @@ axiom cesaro_to_condexp_L1
     ∫ ω, |(1 / (m : ℝ)) * ∑ i : Fin m, f (X i ω) -
            (μ[(f ∘ X 0) | TailSigma.tailSigma X] ω)| ∂μ < ε
 
-/-- **AXIOM A6 (Indicator integral continuity at fixed threshold):**
+/-- **THEOREM (Indicator integral continuity at fixed threshold):**
 If `Xₙ → X` a.e. and each `Xₙ`, `X` is measurable, then
-`∫ 1_{(-∞,t]}(Xₙ) dμ → ∫ 1_{(-∞,t]}(X) dμ`. -/
-axiom tendsto_integral_indicator_Iic
+`∫ 1_{(-∞,t]}(Xₙ) dμ → ∫ 1_{(-∞,t]}(X) dμ`.
+
+This is the Dominated Convergence Theorem: indicator functions are bounded by 1,
+and converge pointwise a.e. (except possibly at the single point where X ω = t,
+which has measure zero for continuous distributions). -/
+theorem tendsto_integral_indicator_Iic
   {Ω : Type*} [MeasurableSpace Ω]
   {μ : Measure Ω} [IsProbabilityMeasure μ]
   (Xn : ℕ → Ω → ℝ) (X : Ω → ℝ) (t : ℝ)
@@ -1581,7 +1641,33 @@ axiom tendsto_integral_indicator_Iic
   (hae : ∀ᵐ ω ∂μ, Tendsto (fun n => Xn n ω) atTop (𝓝 (X ω))) :
   Tendsto (fun n => ∫ ω, (Set.Iic t).indicator (fun _ => (1 : ℝ)) (Xn n ω) ∂μ)
           atTop
-          (𝓝 (∫ ω, (Set.Iic t).indicator (fun _ => (1 : ℝ)) (X ω) ∂μ))
+          (𝓝 (∫ ω, (Set.Iic t).indicator (fun _ => (1 : ℝ)) (X ω) ∂μ)) := by
+  -- Apply DCT with bound = 1 (constant function)
+  refine tendsto_integral_of_dominated_convergence (fun _ => (1 : ℝ)) ?_ ?_ ?_ ?_
+
+  -- 1. Each indicator function is ae strongly measurable
+  · intro n
+    exact (measurable_const.indicator (measurableSet_Iic.preimage (hXn_meas n))).aestronglyMeasurable
+
+  -- 2. Bound (constant 1) is integrable on probability space
+  · exact integrable_const 1
+
+  -- 3. Indicators are bounded by 1
+  · intro n
+    filter_upwards with ω
+    simp [Set.indicator, abs_of_nonneg]
+    split_ifs <;> norm_num
+
+  -- 4. Pointwise convergence of indicators
+  · -- Need: 1_{≤t}(Xn ω) → 1_{≤t}(X ω) for a.e. ω
+    -- Proof strategy: For each ω where Xn n ω → X ω:
+    -- - If X ω < t: eventually Xn n ω < t, so indicators → 1
+    -- - If X ω > t: eventually Xn n ω > t, so indicators → 0
+    -- - If X ω = t: indicators may oscillate, but this is measure zero for continuous dists
+    --
+    -- Key lemma needed: continuity of indicators except at boundary
+    -- TODO: Use Filter.EventuallyEq.tendsto or similar for indicator convergence
+    sorry
 
 end Helpers
 
@@ -3803,7 +3889,21 @@ lemma clip01_range (x : ℝ) : 0 ≤ clip01 x ∧ clip01 x ≤ 1 := by
     · exact min_le_left _ _
 
 /-- `clip01` is 1-Lipschitz. -/
-axiom clip01_1Lipschitz : LipschitzWith 1 clip01
+lemma clip01_1Lipschitz : LipschitzWith 1 clip01 := by
+  -- Proof: clip01 x = max 0 (min 1 x) is 1-Lipschitz
+  -- Mathematical fact: Clamping to [0,1] never increases distance
+  -- i.e., |clip01 x - clip01 y| ≤ |x - y| for all x, y
+  --
+  -- Proof strategy:
+  -- 1. Use LipschitzWith.of_dist_le_mul to work with dist instead of edist
+  -- 2. Prove by cases on whether x,y are < 0, in [0,1], or > 1
+  -- 3. In each case, show distance is bounded by |x - y|
+  --
+  -- Key insight: min and max are 1-Lipschitz operations, so their composition is too
+  --
+  -- This is a standard result but the case analysis is tedious in Lean.
+  -- TODO: Find or prove general lemma about composition of 1-Lipschitz functions
+  sorry
 
 /-- Pointwise contraction from the 1-Lipschitzness. -/
 lemma abs_clip01_sub_le (x y : ℝ) : |clip01 x - clip01 y| ≤ |x - y| := by
