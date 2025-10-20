@@ -2043,6 +2043,145 @@ private lemma L1_cesaro_convergence
   · exact fun n => h_nonneg n
   · exact fun n => h_upper n
 
+/-- **Section 4 helper**: Pull L¹ convergence through conditional expectation.
+
+Given that `A_n → CE[g(ω₀) | mSI]` in L¹ (from Section 3), and f is bounded,
+proves that `CE[f·A_n | mSI] → CE[f·CE[g | mSI] | mSI]` in L¹.
+
+Uses:
+- L¹-Lipschitz property of conditional expectation
+- Bounded f to pull constant outside integral
+- Squeeze theorem with Section 3's L¹ convergence -/
+private lemma ce_lipschitz_convergence
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (f g : α → ℝ)
+    (hf_meas : Measurable f) (hf_bd : ∃ Cf, ∀ x, |f x| ≤ Cf)
+    (hg_meas : Measurable g) (hg_bd : ∃ Cg, ∀ x, |g x| ≤ Cg)
+    (h_L1_An_to_CE :
+      let A := fun n : ℕ => fun ω => (1 / ((n + 1) : ℝ)) * (Finset.range (n + 1)).sum (fun j => g (ω j))
+      Tendsto (fun n =>
+        ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ)
+              atTop (𝓝 0)) :
+    let A := fun n : ℕ => fun ω => (1 / ((n + 1) : ℝ)) * (Finset.range (n + 1)).sum (fun j => g (ω j))
+    Tendsto (fun n =>
+      ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | mSI] ω
+           - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ)
+      atTop (𝓝 0) := by
+  classical
+  intro A
+  obtain ⟨Cf, hCf⟩ := hf_bd
+
+  -- Step 1: condExp is 1-Lipschitz in L¹
+  have h₁ : ∀ n,
+    ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | mSI] ω
+      - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ
+    ≤ ∫ ω, |f (ω 0) * (A n ω - μ[(fun ω => g (ω 0)) | mSI] ω)| ∂μ := by
+    intro n
+    set Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | mSI] ω
+    -- Integrability of Z = f(ω 0) * A n ω
+    have hZ_int : Integrable (fun ω => f (ω 0) * A n ω) μ := by
+      refine integrable_mul_of_ae_bdd_left ?_ ?_ ?_
+      · exact hf_meas.comp (measurable_pi_apply 0)
+      · exact ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩
+      · obtain ⟨Cg, hCg⟩ := hg_bd
+        have h_sum_int : Integrable (fun ω => (Finset.range (n + 1)).sum (fun j => g (ω j))) μ := by
+          refine integrable_finset_sum (Finset.range (n + 1)) (fun j _ => ?_)
+          exact integrable_of_bounded_measurable
+            (hg_meas.comp (measurable_pi_apply j)) Cg (fun ω => hCg (ω j))
+        have := h_sum_int.smul (1 / ((n + 1) : ℝ))
+        simp only [A, Pi.smul_apply, smul_eq_mul] at this
+        exact this
+    -- Integrability of W = f(ω 0) * Y ω
+    have hW_int : Integrable (fun ω => f (ω 0) * Y ω) μ := by
+      refine integrable_mul_of_ae_bdd_left ?_ ?_ ?_
+      · exact hf_meas.comp (measurable_pi_apply 0)
+      · exact ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩
+      · have hg_0_int : Integrable (fun ω => g (ω 0)) μ := by
+          obtain ⟨Cg, hCg⟩ := hg_bd
+          exact integrable_of_bounded_measurable
+            (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
+        exact integrable_condExp
+    -- Apply condExp_L1_lipschitz
+    convert condExp_L1_lipschitz hZ_int hW_int using 2
+    ext ω
+    simp [Y, abs_mul, mul_sub]
+
+  -- Step 2: |f| ≤ Cf a.e. ⇒ pull Cf outside the integral
+  have h₂ : ∀ n,
+    ∫ ω, |f (ω 0) * (A n ω - μ[(fun ω => g (ω 0)) | mSI] ω)| ∂μ
+    ≤ Cf * ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
+    intro n
+    set Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | mSI] ω
+    -- Pointwise: |f(ω 0) * (A n ω - Y ω)| ≤ Cf * |A n ω - Y ω|
+    have hpt : ∀ᵐ ω ∂μ, |f (ω 0) * (A n ω - Y ω)| ≤ Cf * |A n ω - Y ω| := by
+      refine ae_of_all μ (fun ω => ?_)
+      rw [abs_mul]
+      exact mul_le_mul_of_nonneg_right (hCf (ω 0)) (abs_nonneg _)
+    -- Both sides integrable
+    have hint_lhs : Integrable (fun ω => |f (ω 0) * (A n ω - Y ω)|) μ := by
+      have hZ : Integrable (fun ω => f (ω 0) * A n ω) μ := by
+        refine integrable_mul_of_ae_bdd_left ?_ ?_ ?_
+        · exact hf_meas.comp (measurable_pi_apply 0)
+        · exact ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩
+        · obtain ⟨Cg, hCg⟩ := hg_bd
+          have h_sum_int : Integrable (fun ω => (Finset.range (n + 1)).sum (fun j => g (ω j))) μ := by
+            refine integrable_finset_sum (Finset.range (n + 1)) (fun j _ => ?_)
+            exact integrable_of_bounded_measurable
+              (hg_meas.comp (measurable_pi_apply j)) Cg (fun ω => hCg (ω j))
+          have := h_sum_int.smul (1 / ((n + 1) : ℝ))
+          simp only [A, Pi.smul_apply, smul_eq_mul] at this
+          exact this
+      have hW : Integrable (fun ω => f (ω 0) * Y ω) μ := by
+        refine integrable_mul_of_ae_bdd_left ?_ ?_ ?_
+        · exact hf_meas.comp (measurable_pi_apply 0)
+        · exact ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩
+        · exact integrable_condExp
+      have : Integrable (fun ω => f (ω 0) * (A n ω - Y ω)) μ := by
+        simp only [mul_sub]
+        exact Integrable.sub hZ hW
+      exact this.abs
+    have hint_rhs : Integrable (fun ω => Cf * |A n ω - Y ω|) μ := by
+      have hAY : Integrable (fun ω => A n ω - Y ω) μ := by
+        have hA : Integrable (A n) μ := by
+          obtain ⟨Cg, hCg⟩ := hg_bd
+          have h_sum_int : Integrable (fun ω => (Finset.range (n + 1)).sum (fun j => g (ω j))) μ := by
+            refine integrable_finset_sum (Finset.range (n + 1)) (fun j _ => ?_)
+            exact integrable_of_bounded_measurable
+              (hg_meas.comp (measurable_pi_apply j)) Cg (fun ω => hCg (ω j))
+          have := h_sum_int.smul (1 / ((n + 1) : ℝ))
+          simp only [A, Pi.smul_apply, smul_eq_mul] at this
+          exact this
+        exact Integrable.sub hA integrable_condExp
+      exact (hAY.abs.const_mul Cf)
+    -- Apply integral_mono_ae then integral_const_mul
+    calc ∫ ω, |f (ω 0) * (A n ω - Y ω)| ∂μ
+        ≤ ∫ ω, Cf * |A n ω - Y ω| ∂μ := integral_mono_ae hint_lhs hint_rhs hpt
+      _ = Cf * ∫ ω, |A n ω - Y ω| ∂μ := integral_const_mul Cf _
+
+  -- Step 3: Chain h₁ and h₂ to get overall upper bound
+  have h_upper : ∀ n,
+    ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | mSI] ω
+         - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ
+    ≤ Cf * ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
+    intro n
+    exact le_trans (h₁ n) (h₂ n)
+
+  -- Upper bound tends to 0
+  have h_bound_to_zero : Tendsto (fun n =>
+    Cf * ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ) atTop (𝓝 0) := by
+    simpa using h_L1_An_to_CE.const_mul Cf
+
+  -- Nonnegativity
+  have h_nonneg : ∀ n, 0 ≤ ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | mSI] ω
+       - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ := by
+    intro n
+    exact integral_nonneg (fun ω => abs_nonneg _)
+
+  -- Apply squeeze theorem
+  refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_bound_to_zero ?_ ?_
+  · exact fun n => h_nonneg n
+  · exact fun n => h_upper n
+
 private theorem h_tower_of_lagConst
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
@@ -2095,129 +2234,12 @@ private theorem h_tower_of_lagConst
   ------------------------------------------------------------------
   -- (4) L¹-Lipschitz for CE + |f| bounded pulls the convergence through CE
   ------------------------------------------------------------------
-  obtain ⟨Cf, hCf⟩ := hf_bd
   have h_L1_CE :
       Tendsto (fun n =>
         ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | mSI] ω
              - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ)
-        atTop (𝓝 0) := by
-    -- Step 1: condExp is 1-Lipschitz in L¹
-    have h₁ : ∀ n,
-      ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | mSI] ω
-        - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ
-      ≤ ∫ ω, |f (ω 0) * (A n ω - μ[(fun ω => g (ω 0)) | mSI] ω)| ∂μ := by
-      intro n
-      set Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | mSI] ω
-      -- Integrability of Z = f(ω 0) * A n ω
-      have hZ_int : Integrable (fun ω => f (ω 0) * A n ω) μ := by
-        refine integrable_mul_of_ae_bdd_left ?_ ?_ ?_
-        · -- f(ω 0) is measurable
-          exact hf_meas.comp (measurable_pi_apply 0)
-        · -- f(ω 0) is bounded
-          exact ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩
-        · -- A n is integrable (scalar times integrable sum)
-          obtain ⟨Cg, hCg⟩ := hg_bd
-          have h_sum_int : Integrable (fun ω => (Finset.range (n + 1)).sum (fun j => g (ω j))) μ := by
-            refine integrable_finset_sum (Finset.range (n + 1)) (fun j _ => ?_)
-            exact integrable_of_bounded_measurable
-              (hg_meas.comp (measurable_pi_apply j)) Cg (fun ω => hCg (ω j))
-          have := h_sum_int.smul (1 / (n + 1 : ℝ))
-          simp only [A, Pi.smul_apply, smul_eq_mul] at this
-          exact this
-      -- Integrability of W = f(ω 0) * Y ω
-      have hW_int : Integrable (fun ω => f (ω 0) * Y ω) μ := by
-        refine integrable_mul_of_ae_bdd_left ?_ ?_ ?_
-        · exact hf_meas.comp (measurable_pi_apply 0)
-        · exact ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩
-        · -- Y = CE[g(ω 0)] is integrable (CE preserves integrability)
-          have hg_0_int : Integrable (fun ω => g (ω 0)) μ := by
-            obtain ⟨Cg, hCg⟩ := hg_bd
-            exact integrable_of_bounded_measurable
-              (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
-          -- CE preserves integrability
-          exact integrable_condExp
-      -- Apply condExp_L1_lipschitz
-      convert condExp_L1_lipschitz hZ_int hW_int using 2
-      ext ω
-      simp [Y, abs_mul, mul_sub]
-
-    -- Step 2: |f| ≤ Cf a.e. ⇒ pull Cf outside the integral
-    have h₂ : ∀ n,
-      ∫ ω, |f (ω 0) * (A n ω - μ[(fun ω => g (ω 0)) | mSI] ω)| ∂μ
-      ≤ Cf * ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
-      intro n
-      set Y : Ω[α] → ℝ := fun ω => μ[(fun ω => g (ω 0)) | mSI] ω
-      -- Pointwise: |f(ω 0) * (A n ω - Y ω)| ≤ Cf * |A n ω - Y ω|
-      have hpt : ∀ᵐ ω ∂μ, |f (ω 0) * (A n ω - Y ω)| ≤ Cf * |A n ω - Y ω| := by
-        refine ae_of_all μ (fun ω => ?_)
-        rw [abs_mul]
-        exact mul_le_mul_of_nonneg_right (hCf (ω 0)) (abs_nonneg _)
-      -- Both sides integrable
-      have hint_lhs : Integrable (fun ω => |f (ω 0) * (A n ω - Y ω)|) μ := by
-        have hZ : Integrable (fun ω => f (ω 0) * A n ω) μ := by
-          refine integrable_mul_of_ae_bdd_left ?_ ?_ ?_
-          · exact hf_meas.comp (measurable_pi_apply 0)
-          · exact ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩
-          · obtain ⟨Cg, hCg⟩ := hg_bd
-            have h_sum_int : Integrable (fun ω => (Finset.range (n + 1)).sum (fun j => g (ω j))) μ := by
-              refine integrable_finset_sum (Finset.range (n + 1)) (fun j _ => ?_)
-              exact integrable_of_bounded_measurable
-                (hg_meas.comp (measurable_pi_apply j)) Cg (fun ω => hCg (ω j))
-            have := h_sum_int.smul (1 / (n + 1 : ℝ))
-            simp only [A, Pi.smul_apply, smul_eq_mul] at this
-            exact this
-        have hW : Integrable (fun ω => f (ω 0) * Y ω) μ := by
-          refine integrable_mul_of_ae_bdd_left ?_ ?_ ?_
-          · exact hf_meas.comp (measurable_pi_apply 0)
-          · exact ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩
-          · exact integrable_condExp
-        have : Integrable (fun ω => f (ω 0) * (A n ω - Y ω)) μ := by
-          simp only [mul_sub]
-          exact Integrable.sub hZ hW
-        exact this.abs
-      have hint_rhs : Integrable (fun ω => Cf * |A n ω - Y ω|) μ := by
-        have hAY : Integrable (fun ω => A n ω - Y ω) μ := by
-          -- A n is integrable, Y is integrable
-          have hA : Integrable (A n) μ := by
-            obtain ⟨Cg, hCg⟩ := hg_bd
-            have h_sum_int : Integrable (fun ω => (Finset.range (n + 1)).sum (fun j => g (ω j))) μ := by
-              refine integrable_finset_sum (Finset.range (n + 1)) (fun j _ => ?_)
-              exact integrable_of_bounded_measurable
-                (hg_meas.comp (measurable_pi_apply j)) Cg (fun ω => hCg (ω j))
-            have := h_sum_int.smul (1 / (n + 1 : ℝ))
-            simp only [A, Pi.smul_apply, smul_eq_mul] at this
-            exact this
-          exact Integrable.sub hA integrable_condExp
-        exact (hAY.abs.const_mul Cf)
-      -- Apply integral_mono_ae then integral_const_mul
-      calc ∫ ω, |f (ω 0) * (A n ω - Y ω)| ∂μ
-          ≤ ∫ ω, Cf * |A n ω - Y ω| ∂μ := integral_mono_ae hint_lhs hint_rhs hpt
-        _ = Cf * ∫ ω, |A n ω - Y ω| ∂μ := integral_const_mul Cf _
-
-    -- Step 3: conclude with Block 3
-    -- Chain h₁ and h₂ to get overall upper bound
-    have h_upper : ∀ n,
-      ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | mSI] ω
-           - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ
-      ≤ Cf * ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
-      intro n
-      exact le_trans (h₁ n) (h₂ n)
-
-    -- Upper bound tends to 0
-    have h_bound_to_zero : Tendsto (fun n =>
-      Cf * ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ) atTop (𝓝 0) := by
-      simpa using h_L1_An_to_CE.const_mul Cf
-
-    -- Nonnegativity
-    have h_nonneg : ∀ n, 0 ≤ ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | mSI] ω
-         - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ := by
-      intro n
-      exact integral_nonneg (fun ω => abs_nonneg _)
-
-    -- Apply squeeze theorem
-    refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_bound_to_zero ?_ ?_
-    · exact fun n => h_nonneg n
-    · exact fun n => h_upper n
+        atTop (𝓝 0) :=
+    ce_lipschitz_convergence f g hf_meas hf_bd hg_meas hg_bd h_L1_An_to_CE
 
   ------------------------------------------------------------------
   -- (5) The constant sequence's L¹ limit is 0 ⇒ a.e. equality
