@@ -107,7 +107,18 @@ lemma contractable_shift_invariant_law
     rw [Measure.map_apply measurable_shift_real MeasurableSet.univ, Set.preimage_univ]
     exact measure_univ
 
-  sorry  -- TODO: Apply measure_eq_of_fin_marginals_eq_prob and contractability
+  -- Apply π-system uniqueness
+  apply _root_.Exchangeability.measure_eq_of_fin_marginals_eq_prob
+  intro n S hS
+
+  -- TODO: Show all finite marginals agree
+  -- Strategy:
+  --   1. Use Measure.map_map to compose: prefixProj ∘ shift ∘ pathify
+  --   2. Observe that (prefixProj n ∘ shift ∘ pathify X) ω = (X 1 ω, X 2 ω, ..., X n ω)
+  --   3. And (prefixProj n ∘ pathify X) ω = (X 0 ω, X 1 ω, ..., X (n-1) ω)
+  --   4. Define k : Fin n → ℕ by k i = i.val + 1 (strictly increasing)
+  --   5. Apply hX with this k to get the distributions are equal
+  sorry
 
 /-- **BRIDGE 1'.** Package as `MeasurePreserving` for applying the Mean Ergodic Theorem. -/
 lemma measurePreserving_shift_path (X : ℕ → Ω → ℝ)
