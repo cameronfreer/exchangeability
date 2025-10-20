@@ -1963,7 +1963,69 @@ lemma condexp_indicator_eq_on_join_of_triple_law
   --
   -- These are fundamental results in probability theory that would benefit mathlib.
   --
-  sorry
+  -- ═══════════════════════════════════════════════════════════════════════════════
+  -- PROOF ATTEMPT: Using tower property and uniqueness
+  -- ═══════════════════════════════════════════════════════════════════════════════
+
+  -- Step 1: Extract pair law from triple law
+  -- From (Zr, Y, θk) =ᵈ (Zr, Y, θk'), we get ((Zr, θk), Y) =ᵈ ((Zr, θk'), Y)
+  -- This follows because the map (Zr, Y, θk) ↦ ((Zr, θk), Y) is measurable and deterministic
+  have h_pair : Measure.map (fun ω => ((Zr ω, θk ω), Y ω)) μ
+              = Measure.map (fun ω => ((Zr ω, θk' ω), Y ω)) μ := by
+    -- Given: (a, (b, c)) =ᵈ (a, (b, c'))  [htriple]
+    -- Want:  ((a, c), b) =ᵈ ((a, c'), b)
+    -- Apply reordering map ρ : (a, (b, c)) ↦ ((a, c), b) to both sides
+
+    -- Define the reordering function
+    let ρ : ((Fin r → α) × (α × (Fin k → α))) → (((Fin r → α) × (Fin k → α)) × α) :=
+      fun ⟨a, b, c⟩ => ((a, c), b)
+
+    -- Show the goal functions factor through ρ
+    have h1 : (fun ω => ((Zr ω, θk ω), Y ω)) = ρ ∘ (fun ω => (Zr ω, Y ω, θk ω)) := rfl
+    have h2 : (fun ω => ((Zr ω, θk' ω), Y ω)) = ρ ∘ (fun ω => (Zr ω, Y ω, θk' ω)) := rfl
+
+    -- Rewrite using the factorization
+    rw [h1, h2]
+
+    -- Prove measurability
+    have h_meas_ρ : Measurable ρ := by
+      apply Measurable.prod_mk
+      · apply Measurable.prod_mk measurable_fst (measurable_snd.comp measurable_snd)
+      · exact measurable_fst.comp measurable_snd
+
+    have h_meas1 : Measurable (fun ω => (Zr ω, Y ω, θk ω)) := hZr.prodMk (hY.prodMk hθk)
+    have h_meas2 : Measurable (fun ω => (Zr ω, Y ω, θk' ω)) := hZr.prodMk (hY.prodMk hθk')
+
+    -- Apply map_map: map (ρ ∘ f) μ = map ρ (map f μ)
+    -- But we have the composition already, so we need the reverse direction
+    conv_lhs => rw [← Measure.map_map h_meas_ρ h_meas1]
+    conv_rhs => rw [← Measure.map_map h_meas_ρ h_meas2]
+    simp only [htriple]
+
+  -- Step 2: We have σ(θk) ≤ σ(Zr, θk) since comap θk ≤ comap (Zr, θk)
+  have h_le : MeasurableSpace.comap θk inferInstance
+            ≤ MeasurableSpace.comap (fun ω => (Zr ω, θk ω)) inferInstance := by
+    -- This follows from comap_prodMk: comap (Zr, θk) = comap Zr ⊔ comap θk
+    -- and comap θk ≤ comap Zr ⊔ comap θk
+    calc MeasurableSpace.comap θk inferInstance
+        = MeasurableSpace.comap (fun ω => θk ω) inferInstance := rfl
+      _ ≤ MeasurableSpace.comap Zr inferInstance ⊔ MeasurableSpace.comap θk inferInstance :=
+          le_sup_right
+      _ = MeasurableSpace.comap (fun ω => (Zr ω, θk ω)) inferInstance :=
+          (MeasurableSpace.comap_prodMk Zr θk).symm
+
+  -- At this point, we have reduced the problem to showing that the triple law h_pair
+  -- combined with h_le implies the result. This requires one of:
+  --
+  -- (A) Kallenberg Lemma 1.3: (ξ, η) =ᵈ (ξ, ζ) and σ(η) ⊆ σ(ζ) ⇒ ξ ⊥⊥_η ζ
+  --     Then apply the conditional independence projection property.
+  --
+  -- (B) A direct uniqueness argument showing both conditional expectations
+  --     have the same integral against σ(θk)-measurable test functions.
+  --
+  -- Without either infrastructure, we cannot complete the proof.
+
+  sorry  -- Requires Kallenberg Lemma 1.3 or equivalent mathlib infrastructure
 
 /-- **Correct conditional independence from contractability (Kallenberg Lemma 1.3).**
 
