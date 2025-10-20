@@ -573,7 +573,32 @@ lemma condexp_precomp_iterate_eq_of_invariant
     μ[(f ∘ (T^[k])) | m] =ᵐ[μ] μ[f | m] := by
   sorry
   /-
-  OLD PROOF (Multiple type class instance errors):
+  PARTIAL FIX ATTEMPTED (Still has instance synthesis and convert issues):
+
+  ✅ FIXED: Induction for h_preimage (line 576-583)
+  - Changed order of rewrites: rw [Set.preimage_comp, h_inv s hs, ih]
+  - This works because after preimage_comp, goal is T^[n]⁻¹'(T⁻¹'s) = s
+  - First apply h_inv to get T⁻¹'s = s, then ih gives result
+
+  ⚠️ REMAINING ISSUES:
+
+  1. Line 598-607: Indicator equality proof (unsolved goals)
+     - Goal: indicator s (f ∘ T^[k]) = (indicator (T^[k]⁻¹'s) f) ∘ T^[k]
+     - The logic is correct but the proof doesn't go through
+     - Issue: After simp, still have unresolved goals about membership
+
+  2. Line 609: integral_comp has instance synthesis issue
+     - synthesized: m, inferred: inst
+     - Same pattern as hHg' blocker
+
+  3. Line 616-620: ae_eq_condExp_of_forall_setIntegral_eq signature mismatch
+     - Using `convert ... using 2` but the _ placeholders don't match signature
+     - Need to check exact signature of ae_eq_condExp_of_forall_setIntegral_eq
+
+  ROOT CAUSE: Same as hHg' - pervasive instance synthesis issues between m and inst.
+
+  /-
+  ORIGINAL OLD PROOF (Multiple type class instance errors):
 
   classical
   -- iterate is measure-preserving
@@ -617,6 +642,7 @@ lemma condexp_precomp_iterate_eq_of_invariant
   - Rewrite failures with h_inv
   - funext application issues
   - Type mismatches in MeasurePreserving.integral_comp
+  -/
   -/
 
 /-- Existence of a natural two-sided extension for a measure-preserving shift. -/
