@@ -3277,6 +3277,62 @@ axiom condexpL2_koopman_comm (f : Lp ℝ 2 μ) :
 /-
 COMMENTED OUT - Inner product notation type class issues:
 
+/-! ### Helper lemmas for condexpL2_koopman_comm -/
+
+private lemma orthogonal_complement_of_condexpL2
+    (f : Lp ℝ 2 μ) :
+    let P := condexpL2 (μ := μ)
+    let S := fixedSubspace hσ
+    let r := f - P f
+    ∀ g ∈ S, ⟪r, g⟫_ℝ = 0 := by
+  intro g hg
+  set P := condexpL2 (μ := μ)
+  set S := fixedSubspace hσ
+  set r := f - P f
+
+  have h_sym :=
+    MeasureTheory.inner_condExpL2_left_eq_right
+      (μ := μ)
+      (m := shiftInvariantSigma (α := α))
+      (hm := shiftInvariantSigma_le (α := α))
+      (f := f)
+      (g := g)
+  have hPg : P g = g := condexpL2_fixes_fixedSubspace (hσ := hσ) hg
+  have hPg' : condexpL2 (μ := μ) g = g := hPg
+  have h_eq :
+      ⟪P f, g⟫_ℝ = ⟪f, g⟫_ℝ := by
+    simpa [P, hPg'] using h_sym
+  have hinner :
+      ⟪r, g⟫_ℝ = ⟪f, g⟫_ℝ - ⟪P f, g⟫_ℝ := by
+    simpa [r] using
+      (inner_sub_left (x := f) (y := P f) (z := g))
+  simpa [h_eq] using hinner
+
+private lemma koopman_preserves_orthogonality_to_fixed_subspace
+    (r : Lp ℝ 2 μ)
+    (h_r_orth : ∀ g ∈ fixedSubspace hσ, ⟪r, g⟫_ℝ = 0)
+    (h_fix : ∀ g ∈ fixedSubspace hσ, koopman shift hσ g = g) :
+    ∀ g ∈ fixedSubspace hσ, ⟪koopman shift hσ r, g⟫_ℝ = 0 := by
+  set U := koopman shift hσ
+  set S := fixedSubspace hσ
+  let Uₗᵢ := MeasureTheory.Lp.compMeasurePreservingₗᵢ ℝ (shift (α := α)) hσ
+  have hU_coe : ∀ g, U g = Uₗᵢ g := by intro g; rfl
+
+  intro g hg
+  have hUg : U g = g := h_fix g hg
+  have h_inner_pres := Uₗᵢ.inner_map_map r g
+  have h_base : ⟪U r, U g⟫_ℝ = ⟪r, g⟫_ℝ := by
+    simpa [U, hU_coe r, hU_coe g] using h_inner_pres
+  simpa [U, hUg, hU_coe r, hU_coe g, h_r_orth g hg] using h_base
+
+private lemma zero_from_subspace_and_orthogonal
+    (x : Lp ℝ 2 μ)
+    (hx_mem : x ∈ fixedSubspace hσ)
+    (hx_orth : ∀ g ∈ fixedSubspace hσ, ⟪x, g⟫_ℝ = 0) :
+    x = 0 := by
+  have hinner := hx_orth x hx_mem
+  exact (inner_self_eq_zero : ⟪x, x⟫_ℝ = 0 ↔ x = 0).mp hinner
+
 lemma condexpL2_koopman_comm (f : Lp ℝ 2 μ) :
     condexpL2 (μ := μ) (koopman shift hσ f) = condexpL2 (μ := μ) f := by
   classical
@@ -3308,45 +3364,18 @@ lemma condexpL2_koopman_comm (f : Lp ℝ 2 μ) :
     simp [r, add_comm, add_left_comm, add_assoc]
 
   -- `r` is orthogonal to the fixed subspace
-  have h_r_orth : ∀ g ∈ S, ⟪r, g⟫_ℝ = 0 := by
-    intro g hg
-    have h_sym :=
-      MeasureTheory.inner_condExpL2_left_eq_right
-        (μ := μ)
-        (m := shiftInvariantSigma (α := α))
-        (hm := shiftInvariantSigma_le (α := α))
-        (f := f)
-        (g := g)
-    have hPg : P g = g := condexpL2_fixes_fixedSubspace (hσ := hσ) hg
-    have hPg' : condexpL2 (μ := μ) g = g := hPg
-    have h_eq :
-        ⟪P f, g⟫_ℝ = ⟪f, g⟫_ℝ := by
-      simpa [P, hPg'] using h_sym
-    have hinner :
-        ⟪r, g⟫_ℝ = ⟪f, g⟫_ℝ - ⟪P f, g⟫_ℝ := by
-      simpa [r] using
-        (inner_sub_left (x := f) (y := P f) (z := g))
-    simpa [h_eq] using hinner
+  have h_r_orth : ∀ g ∈ S, ⟪r, g⟫_ℝ = 0 := orthogonal_complement_of_condexpL2 f
 
-  -- The Koopman operator preserves inner products and fixes the subspace pointwise
-  let Uₗᵢ :=
-    MeasureTheory.Lp.compMeasurePreservingₗᵢ ℝ (shift (α := α)) hσ
-  have hU_coe : ∀ g, U g = Uₗᵢ g := by intro g; rfl
-  have h_r_orth_after :
-      ∀ g ∈ S, ⟪U r, g⟫_ℝ = 0 := by
-    intro g hg
-    have hUg : U g = g := h_fix g hg
-    have h_inner_pres :=
-      Uₗᵢ.inner_map_map r g
-    have h_base : ⟪U r, U g⟫_ℝ = ⟪r, g⟫_ℝ := by
-      simpa [U, hU_coe r, hU_coe g]
-        using h_inner_pres
-    simpa [U, hUg, hU_coe r, hU_coe g, h_r_orth g hg] using h_base
+  -- The Koopman operator preserves orthogonality
+  have h_r_orth_after : ∀ g ∈ S, ⟪U r, g⟫_ℝ = 0 :=
+    koopman_preserves_orthogonality_to_fixed_subspace r h_r_orth h_fix
 
-  -- `P (U r)` lies in the subspace and is orthogonal to it, hence zero
+  -- `P (U r)` lies in the subspace
   have hPUr_mem : P (U r) ∈ S := by
     have : P (U r) ∈ Set.range P := ⟨U r, rfl⟩
     simpa [P, h_range] using this
+
+  -- `P (U r)` is orthogonal to the fixed subspace
   have hPUr_orth : ∀ g ∈ S, ⟪P (U r), g⟫_ℝ = 0 := by
     intro g hg
     have hPg : P g = g := condexpL2_fixes_fixedSubspace (hσ := hσ) hg
@@ -3357,14 +3386,12 @@ lemma condexpL2_koopman_comm (f : Lp ℝ 2 μ) :
         (hm := shiftInvariantSigma_le (α := α))
         (f := U r)
         (g := g)
-    have h_eq :
-        ⟪P (U r), g⟫_ℝ = ⟪U r, g⟫_ℝ := by
+    have h_eq : ⟪P (U r), g⟫_ℝ = ⟪U r, g⟫_ℝ := by
       simpa [P, hPg] using h_sym
     simpa [h_eq, h_r_orth_after g hg]
-  have hPUr_zero : P (U r) = 0 := by
-    have hinner := hPUr_orth (P (U r)) hPUr_mem
-    exact
-      (inner_self_eq_zero : ⟪P (U r), P (U r)⟫_ℝ = 0 ↔ P (U r) = 0).mp hinner
+
+  -- Element in S ∩ S⊥ is zero
+  have hPUr_zero : P (U r) = 0 := zero_from_subspace_and_orthogonal (P (U r)) hPUr_mem hPUr_orth
 
   -- Combine the pieces: `P (U f)` equals `P f`
   have hUf_decomp :
