@@ -468,6 +468,21 @@ private lemma integrable_comp_of_pushforward
   -- then pull integrability back along g
   simpa [Function.comp] using hH_map.comp_measurable hg
 
+/-- Transport ae strong measurability across a pushforward equality and then pull back by composition.
+This would be the measurability analogue of `integrable_comp_of_pushforward`, but the sub-σ-algebra
+parameter in `AEStronglyMeasurable[m]` prevents the same `simpa [hpush]` trick from working.
+The issue is that `AEStronglyMeasurable[m] H μ` and `AEStronglyMeasurable[m] H (map g μ')` have
+different type class instance parameters that cannot be unified by rewriting. -/
+private lemma aestronglyMeasurable_comp_of_pushforward
+    {Ω Ω' β : Type*} [mΩ : MeasurableSpace Ω] [mΩ' : MeasurableSpace Ω'] [TopologicalSpace β]
+    {μ : Measure Ω} {μ' : Measure Ω'} {g : Ω' → Ω} {H : Ω → β}
+    {m : MeasurableSpace Ω}
+    (hg : Measurable g) (hpush : Measure.map g μ' = μ)
+    (hH : AEStronglyMeasurable[m] H μ) :
+    AEStronglyMeasurable[MeasurableSpace.comap g m] (H ∘ g) μ' := by
+  -- Unlike integrable_comp_of_pushforward, the sub-σ-algebra parameter blocks the simpa trick
+  sorry
+
 /-- **Factor-map pullback for conditional expectation**.
 
 If `g : Ω' → Ω` is a factor map (i.e., `map g μ' = μ`), then conditional expectation
