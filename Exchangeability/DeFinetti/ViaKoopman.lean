@@ -560,7 +560,22 @@ lemma condexp_precomp_iterate_eq_of_invariant
     (m : MeasurableSpace Ω) (hm : m ≤ inst)
     (h_inv : ∀ s, MeasurableSet[m] s → T ⁻¹' s = s) :
     μ[(f ∘ (T^[k])) | m] =ᵐ[μ] μ[f | m] := by
+  -- T^[k] is measure-preserving
+  have hTk : MeasurePreserving (T^[k]) μ μ := hT.iterate k
+
+  -- Integrability of f ∘ T^[k] using our helper lemma
+  have hfk : Integrable (f ∘ T^[k]) μ :=
+    integrable_comp_of_pushforward hTk.measurable hTk.map_eq hf
+
   sorry
+  /- TODO: Complete the proof showing CE[f ∘ T^[k] | m] = CE[f | m]
+  The integrability blocker is now FIXED!
+
+  Remaining steps:
+  1. Prove T^[k] ⁻¹' s = s for all s ∈ m (using h_inv and induction)
+  2. Show set-integral equality: ∫ x in s, (f ∘ T^[k]) x ∂μ = ∫ x in s, f x ∂μ
+  3. Apply uniqueness of conditional expectation
+  -/
   /-
   PARTIAL FIX ATTEMPTED (Still has instance synthesis and convert issues):
 
