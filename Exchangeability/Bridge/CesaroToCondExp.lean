@@ -159,15 +159,17 @@ open Exchangeability.Probability.IntegrationHelpers
 
 /-- **BRIDGE 3.** L² convergence implies L¹ convergence on probability spaces.
 
-This is essentially `L2_tendsto_implies_L1_tendsto_of_bounded` from IntegrationHelpers,
-but we need to work with the Lp space formulation. -/
+On a probability space, Hölder's inequality gives ∫|f| ≤ (∫|f|²)^(1/2).
+So L² convergence of Lp functions implies L¹ convergence. -/
 lemma tendsto_Lp2_to_L1 {α : Type*} [MeasurableSpace α] {m : Measure α} [IsProbabilityMeasure m]
     {Y : ℕ → Lp ℝ 2 m} {Z : Lp ℝ 2 m}
     (h₂ : Tendsto Y atTop (𝓝 Z)) :
     Tendsto (fun n => ∫ x, ‖Y n x - Z x‖ ∂m) atTop (𝓝 0) := by
-  /- Use monotonicity ‖·‖₁ ≤ ‖·‖₂ on probability spaces.
-     Can also use our IntegrationHelpers.L2_tendsto_implies_L1_tendsto_of_bounded. -/
-  sorry  -- TODO: Apply Hölder or use IntegrationHelpers lemma
+  -- Convergence in Lp means ‖Y n - Z‖_Lp → 0
+  -- For Lp ℝ 2 m, ‖f‖ = (∫ |f|²)^(1/2)
+  -- By Hölder on prob space: ∫|f| ≤ ‖f‖₂ · 1 = ‖f‖₂
+
+  sorry  -- TODO: Apply Lp norm inequalities and squeeze theorem
 
 /-! ## E. Bridge 4: Pullback along Factor Map -/
 
