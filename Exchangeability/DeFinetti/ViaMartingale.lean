@@ -1839,7 +1839,61 @@ lemma join_eq_comap_pair_finFuture
   -- This states: (m₁.prod m₂).comap (fun ω => (f ω, g ω)) = m₁.comap f ⊔ m₂.comap g
   exact (MeasurableSpace.comap_prodMk f g).symm
 
-/-- **Finite-level bridge:** if `(Z_r, X_r, θ_{m+1}^{(k)})` and `(X_r, θ_{m+1}^{(k)})` 
+/-- **Kallenberg 1.3 Conditional Expectation Form (Route A):**
+If `(ξ, η) =ᵈ (ξ, ζ)` and `σ(η) ≤ σ(ζ)`, then conditioning ξ on ζ is the same as
+conditioning on η.
+
+This is the "drop information" form of Kallenberg's Lemma 1.3, stating that ζ provides
+no additional information about ξ beyond what η provides.
+
+**Mathematical statement:**
+```
+E[1_B(ξ) | σ(ζ)] = E[1_B(ξ) | σ(η)]  a.e.
+```
+
+**Proof sketch:**
+Uses conditional expectation kernels and uniqueness of disintegration. Since the pair
+laws agree and η is a σ(ζ)-measurable function, the conditional distributions of ξ
+given ζ and given η must agree. -/
+lemma condexp_indicator_drop_info_of_pair_law
+    {Ω α β : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
+    [MeasurableSpace α] [StandardBorelSpace α]
+    [MeasurableSpace β]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (ξ : Ω → α) (η ζ : Ω → β)
+    (hξ : Measurable ξ) (hη : Measurable η) (hζ : Measurable ζ)
+    (h_law :
+      Measure.map (fun ω => (ξ ω, η ω)) μ
+        = Measure.map (fun ω => (ξ ω, ζ ω)) μ)
+    (h_le :
+      MeasurableSpace.comap η inferInstance ≤
+      MeasurableSpace.comap ζ inferInstance)
+    {B : Set α} (hB : MeasurableSet B) :
+  μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ
+        | MeasurableSpace.comap ζ inferInstance]
+    =ᵐ[μ]
+  μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ
+        | MeasurableSpace.comap η inferInstance] := by
+  classical
+  -- This is the core of Kallenberg Lemma 1.3 applied to conditional expectations.
+  --
+  -- Strategy: Use conditional expectation kernels to turn the problem into a statement
+  -- about probability measures on α.
+  --
+  -- Key insight: h_law says the joint distributions (ξ, η) and (ξ, ζ) are equal.
+  -- Combined with h_le (η is determined by ζ), this implies the conditional
+  -- distributions are equal: P(ξ ∈ · | ζ) = P(ξ ∈ · | η) almost surely.
+  --
+  -- The proof requires:
+  -- 1. Expressing both conditional expectations using condExpKernel
+  -- 2. Showing the kernels agree by uniqueness of disintegration
+  -- 3. Applying the integral representation of conditional expectation
+  --
+  -- This would require substantial kernel infrastructure not yet in the file.
+  -- For now, we admit this as a fundamental lemma.
+  sorry
+
+/-- **Finite-level bridge:** if `(Z_r, X_r, θ_{m+1}^{(k)})` and `(X_r, θ_{m+1}^{(k)})`
 have the same law after projecting away `Z_r`, then dropping `Z_r` from the conditioning
 does not change the conditional expectation of `1_{X_r ∈ B}`. -/
 lemma condexp_indicator_eq_on_join_of_triple_law
@@ -1989,8 +2043,8 @@ lemma condexp_indicator_eq_on_join_of_triple_law
 
     -- Prove measurability
     have h_meas_ρ : Measurable ρ := by
-      apply Measurable.prod_mk
-      · apply Measurable.prod_mk measurable_fst (measurable_snd.comp measurable_snd)
+      apply Measurable.prodMk
+      · apply Measurable.prodMk measurable_fst (measurable_snd.comp measurable_snd)
       · exact measurable_fst.comp measurable_snd
 
     have h_meas1 : Measurable (fun ω => (Zr ω, Y ω, θk ω)) := hZr.prodMk (hY.prodMk hθk)
@@ -2014,18 +2068,28 @@ lemma condexp_indicator_eq_on_join_of_triple_law
       _ = MeasurableSpace.comap (fun ω => (Zr ω, θk ω)) inferInstance :=
           (MeasurableSpace.comap_prodMk Zr θk).symm
 
-  -- At this point, we have reduced the problem to showing that the triple law h_pair
-  -- combined with h_le implies the result. This requires one of:
+  -- Step 3: Apply Kallenberg 1.3 (Route A) to complete the proof
   --
-  -- (A) Kallenberg Lemma 1.3: (ξ, η) =ᵈ (ξ, ζ) and σ(η) ⊆ σ(ζ) ⇒ ξ ⊥⊥_η ζ
-  --     Then apply the conditional independence projection property.
+  -- We have:
+  -- - htriple: (Zr, Y, θk) =ᵈ (Zr, Y, θk')
+  -- - h_pair: ((Zr, θk), Y) =ᵈ ((Zr, θk'), Y) (derived above)
+  -- - h_le: σ(θk) ≤ σ(Zr, θk)
   --
-  -- (B) A direct uniqueness argument showing both conditional expectations
-  --     have the same integral against σ(θk)-measurable test functions.
+  -- We want: E[1_B(Y) | σ(Zr, θk)] = E[1_B(Y) | σ(θk)]
   --
-  -- Without either infrastructure, we cannot complete the proof.
-
-  sorry  -- Requires Kallenberg Lemma 1.3 or equivalent mathlib infrastructure
+  -- The standard approach would be to apply Kallenberg 1.3 conditional expectation form.
+  -- However, the proof requires relating three objects (Zr, θk, θk') in a specific way
+  -- that depends on the structure of contractability.
+  --
+  -- The key insight is that from the triple law, we can show that θk' encodes enough
+  -- information to make Zr redundant for predicting Y. This is a consequence of
+  -- the disintegration theorem and uniqueness of conditional distributions.
+  --
+  -- The full proof requires kernel infrastructure (condExpKernel, disintegration,
+  -- uniqueness lemmas) that would be substantial additions to this file.
+  --
+  -- For now, we admit this as the core application of Kallenberg Lemma 1.3.
+  sorry
 
 /-- **Correct conditional independence from contractability (Kallenberg Lemma 1.3).**
 
