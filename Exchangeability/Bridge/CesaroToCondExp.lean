@@ -128,9 +128,9 @@ abbrev tail_on_path : MeasurableSpace (ℕ → ℝ) :=
 
 lemma tail_on_path_le : tail_on_path ≤ (inferInstance : MeasurableSpace (ℕ → ℝ)) := by
   -- tailShift = iInf (fun n => comap (shift by n))
-  -- For n=0, comap of identity ≤ inferInstance
-  -- Thus iInf ... ≤ inferInstance
-  sorry  -- TODO: Apply iInf_le with n=0, then show comap id = inferInstance
+  -- For n=0, the shift by 0 is the identity
+  -- So iInf ... ≤ comap id inferInstance = inferInstance
+  sorry  -- TODO: Apply iInf_le with n=0, then show comap id ≤ inferInstance
 
 /-- **BRIDGE 2.** For the shift on path space, the fixed-point subspace equals L²(tail).
 
