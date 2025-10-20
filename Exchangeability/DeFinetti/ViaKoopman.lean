@@ -1604,6 +1604,31 @@ Assume:
 Then
 `μ[(fun ω => f (ω 0) * g (ω 0)) | mSI]
    =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI]`.
+
+**Proof structure** (591 lines total):
+This proof has 5 clear sections that could be extracted as helper lemmas:
+
+1. **h_cesaro_ce** (lines ~1636-1759): Show `CE[A_n | mSI] = CE[g(ω0) | mSI]`
+   - Uses linearity of CE and shift-invariance
+   - Could extract as: `cesaro_ce_eq_condexp`
+
+2. **h_product_const** (lines ~1763-1891): Show `CE[f·A_n | mSI]` constant in n
+   - Uses lag_const hypothesis and Section 1
+   - Could extract as: `product_ce_constant_of_lag_const`
+
+3. **h_L1_An_to_CE** (lines ~1895-2017): L² MET ⇒ L¹ convergence of Cesàro averages
+   - Currently has `sorry` at line ~1925 pending `birkhoffAverage_tendsto_condexp_L2`
+   - Could extract as: `L1_cesaro_convergence`
+
+4. **h_L1_CE** (lines ~2021-2144): Pull convergence through CE using L¹-Lipschitz property
+   - Uses Section 3 and condExp_L1_lipschitz
+   - Could extract as: `ce_lipschitz_convergence`
+
+5. **Final assembly** (lines ~2148-2197): Constant sequence = 0 ⇒ a.e. equality
+   - Short, should stay in main theorem
+
+Current decision: Leave as-is. The proof is well-commented and the `sorry` at line ~1925 blocks
+extraction. Revisit subdivision after the ergodic theory machinery is complete.
 -/
 private theorem h_tower_of_lagConst
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
@@ -2605,6 +2630,15 @@ Proof of base case (m = 0) - kept for reference:
    - Indicators take values in [0,1], so conversion is clean
 
 This connects the conditional expectation factorization to measure-theoretic form.
+
+**Proof structure note** (191 lines, lines 2653-2843):
+Well-structured proof with clear sections:
+- Setup: Define F (real-valued product) and G (kernel product)
+- Prove F, G measurable, bounded, integrable
+- Show ∫ F = ∫ G using tower property and condexp_product_factorization_ax
+- Convert to ENNReal using ofReal_integral correspondence
+
+The proof is straightforward measure theory with clear dependencies. No subdivision needed.
 -/
 
 -- Helper lemma: product of indicators equals the product function.
@@ -4939,7 +4973,21 @@ private lemma condexp_pair_factorization
 
 Assuming conditional independence of coordinates given the tail σ-algebra,
 the conditional expectation of a product equals the product of integrals
-against the conditional distribution ν. -/
+against the conditional distribution ν.
+
+**Proof structure note** (218 lines, lines 4977-5194):
+The proof body is commented out and delegated to `condexp_product_factorization_ax`.
+The commented-out proof shows the intended inductive structure:
+- Base case: m = 0 (trivial)
+- Inductive step: split product into (first m factors) * (last factor)
+  - Apply IH to first m factors
+  - Use `condexp_coordinate_via_ν` for last factor
+  - Combine using conditional independence
+
+This proof is blocked on finishing the conditional independence machinery.
+Once `hciid` is properly implemented (currently `True`), the proof can be uncommented
+and refined. No immediate subdivision needed - the inductive structure is natural.
+-/
 theorem condexp_product_factorization
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
