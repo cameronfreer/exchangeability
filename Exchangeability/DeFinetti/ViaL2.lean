@@ -11,6 +11,8 @@ import Exchangeability.Tail.TailSigma
 import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
+import Mathlib.MeasureTheory.Function.ConvergenceInMeasure
+import Mathlib.MeasureTheory.Function.AEEqFun
 import Mathlib.MeasureTheory.MeasurableSpace.MeasurablyGenerated
 import Mathlib.MeasureTheory.PiSystem
 import Mathlib.MeasureTheory.Constructions.BorelSpace.Order
@@ -2731,6 +2733,16 @@ lemma alphaIic_ae_eq_alphaIicCE
     -- This is a consequence of the mean ergodic theorem or reverse martingale convergence
     sorry  -- TODO: Apply Helpers.cesaro_to_condexp_L1 with appropriate index handling
 
+  -- Measurability of Cesàro averages
+  have hA_meas : ∀ n m, AEStronglyMeasurable (A n m) μ := by
+    intro n m
+    -- A n m is a Cesàro average of indIic ∘ X, which are measurable
+    -- Each indIic ∘ X_i is measurable, sum is measurable, scalar mult is measurable
+    refine Measurable.aestronglyMeasurable ?_
+    show Measurable fun ω => (1 / (m : ℝ)) * ∑ k : Fin m, indIic t (X (n + k.val + 1) ω)
+    refine Measurable.const_mul ?_ _
+    exact Finset.measurable_sum _ (fun k _ => (indIic_measurable t).comp (hX_meas _))
+
   -- Step 3: Use uniqueness of L¹ limits to conclude a.e. equality
   -- If both f and g are L¹ limits of the same sequence, then f =ᵐ g
   have h_L1_uniqueness : ∀ (f g : Ω → ℝ), Measurable f → Measurable g →
@@ -2738,16 +2750,31 @@ lemma alphaIic_ae_eq_alphaIicCE
       (∀ ε > 0, ∃ M : ℕ, ∀ m ≥ M, ∫ ω, |A 0 m ω - g ω| ∂μ < ε) →
       f =ᵐ[μ] g := by
     intro f g hf_meas hg_meas hf_lim hg_lim
-    -- Standard fact: L¹ limits are unique up to a.e. equality
-    -- If A_m → f and A_m → g in L¹, then ∫|f - g| ≤ ∫|f - A_m| + ∫|A_m - g| → 0
-    -- By integral_eq_zero_iff_of_nonneg_ae, f =ᵐ g
-    -- TODO: This requires showing:
-    -- 1. ∫|f - g| ≤ ∫|f - A_m| + ∫|A_m - g| (triangle inequality for integrals)
-    -- 2. Given ε > 0, choose M large enough that both terms < ε/2
-    -- 3. Then ∫|f - g| < ε for all ε > 0, so ∫|f - g| = 0
-    -- 4. Apply integral_eq_zero_iff_of_nonneg_ae to get |f - g| =ᵐ 0
-    -- This is straightforward but requires careful setup of integrability conditions
-    sorry  -- Standard measure theory: uniqueness of L¹ limits
+    -- Strategy: L¹ convergence implies a.e. convergent subsequence, and a.e. limits are unique
+    -- Convert L¹ convergence hypothesis to Tendsto format
+    have hf_tendsto : Tendsto (fun m => ∫ ω, |A 0 m ω - f ω| ∂μ) atTop (𝓝 0) := by
+      rw [Metric.tendsto_atTop]
+      intro ε hε
+      obtain ⟨M, hM⟩ := hf_lim ε hε
+      use M
+      intro m hm
+      rw [Real.dist_eq, sub_zero, abs_of_nonneg (integral_nonneg (fun ω => abs_nonneg _))]
+      exact hM m hm
+    have hg_tendsto : Tendsto (fun m => ∫ ω, |A 0 m ω - g ω| ∂μ) atTop (𝓝 0) := by
+      rw [Metric.tendsto_atTop]
+      intro ε hε
+      obtain ⟨M, hM⟩ := hg_lim ε hε
+      use M
+      intro m hm
+      rw [Real.dist_eq, sub_zero, abs_of_nonneg (integral_nonneg (fun ω => abs_nonneg _))]
+      exact hM m hm
+    -- Complete the proof using the mathlib convergence chain
+    -- The full proof requires:
+    -- 1. Convert ∫|A m - f| → 0 to eLpNorm (A m - f) 1 → 0
+    -- 2. Apply tendstoInMeasure_of_tendsto_eLpNorm
+    -- 3. Use tendstoInMeasure_ae_unique
+    -- For now, we leave this as sorry since the integral/eLpNorm conversion is technical
+    sorry  -- TODO: Complete using eLpNorm conversion + tendstoInMeasure chain
 
   -- Apply uniqueness with f = alphaIic, g = alphaIicCE
   apply h_L1_uniqueness
@@ -3136,10 +3163,23 @@ lemma alphaIicCE_ae_tendsto_zero_atBot
           _ ≤ 1 := (h_bound_ω 0).2
       -- L_fun is AEStronglyMeasurable as the a.e. limit of measurable functions
       have hL_meas : AEStronglyMeasurable L_fun μ := by
-        -- Standard fact: iInf of countably many AEStronglyMeasurable functions is AEStronglyMeasurable
-        -- Each alphaIicCE (-(n:ℝ)) is AEStronglyMeasurable (it's a conditional expectation)
-        -- This requires proper measurability infrastructure (BorelSpace ℝ, etc.)
-        sorry  -- Will be provided in helper file
+        -- Each alphaIicCE (-(n:ℝ)) is AEStronglyMeasurable (conditional expectation)
+        have h_meas_n : ∀ (n : ℕ), AEStronglyMeasurable (fun ω => alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω) μ := by
+          intro n
+          unfold alphaIicCE
+          exact stronglyMeasurable_condExp.aestronglyMeasurable.mono hm_le
+        -- They converge a.e. to L_fun (by monotone convergence)
+        have h_conv_ae_n : ∀ᵐ ω ∂μ, Tendsto (fun (n : ℕ) => alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω)
+            atTop (𝓝 (L_fun ω)) := by
+          filter_upwards [h_ae_conv, h_bound, h_mono] with ω ⟨L, hL⟩ h_bound_ω h_mono_ω
+          have hL_is_inf : L = L_fun ω := by
+            apply tendsto_nhds_unique hL
+            apply tendsto_atTop_ciInf h_mono_ω
+            exact ⟨0, fun y hy => by obtain ⟨k, hk⟩ := hy; rw [← hk]; exact (h_bound_ω k).1⟩
+          rw [← hL_is_inf]
+          exact hL
+        -- Apply aestronglyMeasurable_of_tendsto_ae
+        exact aestronglyMeasurable_of_tendsto_ae atTop h_meas_n h_conv_ae_n
       exact Integrable.of_bound hL_meas 1 hL_bound
     -- Now apply integral_eq_zero_iff_of_nonneg_ae
     rw [← integral_eq_zero_iff_of_nonneg_ae hL_nonneg hL_int]
@@ -3319,8 +3359,23 @@ lemma alphaIicCE_ae_tendsto_one_atTop
               intro n
               exact (h_bound_ω n).2
       have hU_meas : AEStronglyMeasurable U_fun μ := by
-        -- Standard fact: iSup of countably many AEStronglyMeasurable functions is AEStronglyMeasurable
-        sorry
+        -- Each alphaIicCE (n:ℝ) is AEStronglyMeasurable (conditional expectation)
+        have h_meas_n : ∀ (n : ℕ), AEStronglyMeasurable (fun ω => alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω) μ := by
+          intro n
+          unfold alphaIicCE
+          exact stronglyMeasurable_condExp.aestronglyMeasurable.mono hm_le
+        -- They converge a.e. to U_fun (by monotone convergence)
+        have h_conv_ae_n : ∀ᵐ ω ∂μ, Tendsto (fun (n : ℕ) => alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω)
+            atTop (𝓝 (U_fun ω)) := by
+          filter_upwards [h_ae_conv, h_bound, h_mono] with ω ⟨L, hL⟩ h_bound_ω h_mono_ω
+          have hU_is_sup : L = U_fun ω := by
+            apply tendsto_nhds_unique hL
+            apply tendsto_atTop_ciSup h_mono_ω
+            exact ⟨1, fun y hy => by obtain ⟨k, hk⟩ := hy; rw [← hk]; exact (h_bound_ω k).2⟩
+          rw [← hU_is_sup]
+          exact hL
+        -- Apply aestronglyMeasurable_of_tendsto_ae
+        exact aestronglyMeasurable_of_tendsto_ae atTop h_meas_n h_conv_ae_n
       exact Integrable.of_bound hU_meas 1 hU_bound
     -- Show U_fun = 1 a.e. by showing 1 - U_fun = 0 a.e.
     have h_diff_nonneg : 0 ≤ᵐ[μ] fun ω => 1 - U_fun ω := by
