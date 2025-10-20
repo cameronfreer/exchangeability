@@ -31,6 +31,18 @@ These were genuine duplicates that have been resolved:
 - **Fix**: Removed from CondExpExtras.lean
 - **Reason**: Core infrastructure, not experimental
 
+### 6. `shift` ✅ Fixed (new file created)
+- **Was at**: `CommonEnding.lean:91`, `KoopmanMeanErgodic.lean:106`
+- **Fix**: Created central `PathSpace/Shift.lean` with comprehensive shift operator definition
+- **Reason**: Fundamental operation on path space (ℕ → α) used across ergodic theory and de Finetti proofs
+- **Details**: Combined best parts of both definitions (shift, shift_measurable, IsShiftInvariant, etc.)
+
+### 7. `AgreeOnFutureRectangles` ✅ Fixed (removed from CondExp)
+- **Was at**: `CondExp.lean:150` (structure wrapping μ = ν), `ViaMartingale.lean:896` (def for rectangle agreement)
+- **Fix**: Removed useless structure from CondExp.lean
+- **Reason**: CondExp version was just wrapping equality in a structure. ViaMartingale has the real definition that proves rectangle agreement implies equality.
+- **Details**: Updated `condexp_indicator_eq_of_agree_on_future_rectangles` to take measure equality directly instead of wrapping it in a structure
+
 ## False Positives (By Design)
 
 These declarations share names but are NOT duplicates - they exist in different contexts/namespaces or serve different purposes:
@@ -101,9 +113,12 @@ This finds declarations with duplicate names but requires manual inspection to d
 
 ## Summary
 
-- **Real duplicates fixed**: 5 (integrable_of_bounded, comap_comp_le, cylinder documentation, 2 from CondExpExtras)
+- **Real duplicates fixed**: 7 total
+  - 5 from previous session (integrable_of_bounded, comap_comp_le, cylinder documentation, 2 from CondExpExtras)
+  - 2 from this session (shift, AgreeOnFutureRectangles)
 - **False positives explained**: ~20+ declarations across categories above
 - **Remaining duplicates**: None requiring action
+- **New files created**: `PathSpace/Shift.lean` (canonical shift operator definition)
 
 The false positives are primarily:
 1. Namespace-scoped definitions in different proof approaches (by design)

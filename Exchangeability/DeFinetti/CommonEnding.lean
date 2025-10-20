@@ -10,6 +10,7 @@ import Mathlib.Dynamics.Ergodic.Ergodic
 import Exchangeability.Contractability
 import Exchangeability.ConditionallyIID
 import Exchangeability.Tail.TailSigma
+import Exchangeability.PathSpace.Shift
 
 /-!
 # Common Ending for de Finetti Proofs
@@ -53,6 +54,7 @@ noncomputable section
 namespace Exchangeability.DeFinetti.CommonEnding
 
 open MeasureTheory ProbabilityTheory
+open Exchangeability.PathSpace (shift shift_measurable IsShiftInvariant isShiftInvariant_iff)
 open scoped BigOperators
 open Set
 open Exchangeability
@@ -86,50 +88,9 @@ This is essential for showing that ν defines a proper conditional kernel.
 TODO: Formalize tail σ-algebra for sequences and prove it equals the shift-invariant σ-field.
 -/
 
-/-- The shift operator on infinite sequences. This is the natural transformation for
-studying exchangeable sequences. -/
-def shift {α : Type*} : (ℕ → α) → (ℕ → α) := fun ξ n => ξ (n + 1)
-
-@[simp]
-lemma shift_apply {α : Type*} (ξ : ℕ → α) (n : ℕ) : shift ξ n = ξ (n + 1) := rfl
-
-/-- Composing shift with itself is shift by 2. More generally, shift^n shifts by n. -/
-lemma shift_comp_shift {α : Type*} : @shift α ∘ shift = fun ξ n => ξ (n + 2) := by
-  ext ξ n
-  simp only [Function.comp_apply, shift_apply]
-
-/-- The shift operator is measurable.
-
-Proof: shift is measurable iff for all i, the composition (shift ξ) i is measurable.
-Since (shift ξ) i = ξ (i + 1), this is the projection onto coordinate (i + 1),
-which is measurable by definition of the product σ-algebra.
--/
-lemma shift_measurable {α : Type*} [MeasurableSpace α] : Measurable (@shift α) := by
-  -- A function to a pi type is measurable iff each component is measurable
-  rw [measurable_pi_iff]
-  intro i
-  -- The i-th component of shift ξ is ξ (i + 1)
-  -- This is just the projection onto coordinate (i + 1)
-  exact measurable_pi_apply (i + 1)
-
-/-- A set in the path space is **shift-invariant** if it equals its preimage under the shift.
-This is the analogue of T⁻¹I = I from FMP 10.2. -/
-def IsShiftInvariant {α : Type*} (S : Set (ℕ → α)) : Prop :=
-  shift ⁻¹' S = S
-
-lemma isShiftInvariant_iff {α : Type*} (S : Set (ℕ → α)) :
-    IsShiftInvariant S ↔ ∀ ξ, ξ ∈ S ↔ shift ξ ∈ S := by
-  unfold IsShiftInvariant
-  constructor
-  · intro h ξ
-    -- turn set equality into pointwise membership equivalence
-    have := congrArg (fun T : Set (ℕ → α) => ξ ∈ T) h
-    -- note: ξ ∈ shift ⁻¹' S ↔ shift ξ ∈ S is definitionally true
-    simpa using this.symm
-  · intro h
-    ext ξ
-    -- again use the definitional equivalence for preimages
-    simpa using (h ξ).symm
+-- NOTE: shift operator, IsShiftInvariant, and related lemmas are imported from PathSpace.Shift
+-- The shift operator (shift ξ) n = ξ (n + 1) is fundamental to studying exchangeable sequences
+-- and is now defined in Exchangeability.PathSpace.Shift to avoid duplication across the codebase.
 
 /-- The **invariant σ-field** ℐ consists of all measurable shift-invariant sets.
 Following FMP 10.2, this forms a σ-field. -/
