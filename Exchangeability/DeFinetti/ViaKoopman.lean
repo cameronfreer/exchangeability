@@ -186,15 +186,13 @@ lemma restrictNonneg_shiftℤInv (ω : Ωℤ[α]) :
   funext n
   simp [restrictNonneg, shiftℤInv]
 
+@[measurability]
 lemma measurable_shiftℤ : Measurable (shiftℤ (α := α)) := by
-  apply measurable_pi_lambda
-  intro n
-  simpa using measurable_pi_apply (n + 1)
+  measurability
 
+@[measurability]
 lemma measurable_shiftℤInv : Measurable (shiftℤInv (α := α)) := by
-  apply measurable_pi_lambda
-  intro n
-  simpa using measurable_pi_apply (n - 1)
+  measurability
 
 /-- Two-sided shift-invariant sets. A set is shift-invariant if it is measurable and equals its preimage under the shift. -/
 def IsShiftInvariantℤ (S : Set (Ωℤ[α])) : Prop :=
@@ -3079,9 +3077,7 @@ lemma measurable_cylinderFunction {m : ℕ} {φ : (Fin m → α) → ℝ}
     Measurable (cylinderFunction φ) := by
   classical
   have hproj : Measurable fun ω : Ω[α] => fun k : Fin m => ω k.val := by
-    refine measurable_pi_lambda _ ?_
-    intro k
-    simpa using (measurable_pi_apply (k.val))
+    measurability
   simpa [cylinderFunction] using _hφ.comp hproj
 
 /-- Measurability of product cylinders. -/

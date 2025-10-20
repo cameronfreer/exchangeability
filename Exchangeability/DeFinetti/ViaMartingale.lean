@@ -1274,7 +1274,8 @@ lemma finFutureSigma_le_ambient
     finFutureSigma X m k ≤ (inferInstance : MeasurableSpace Ω) := by
   intro s hs
   obtain ⟨t, ht, rfl⟩ := hs
-  exact (measurable_pi_lambda _ (fun i => hX (m + 1 + i.val))) ht
+  have : Measurable (fun ω => fun i : Fin k => X (m + 1 + i.val) ω) := by measurability
+  exact this ht
 
 omit [MeasurableSpace Ω] in
 lemma finFutureSigma_le_futureFiltration
@@ -1555,12 +1556,12 @@ lemma contractable_triple_pushforward
     -- First, prove measurability of the triple functions
     have h_meas_future : Measurable (fun ω => (Z_r ω, X r ω, Y_future ω)) := by
       refine Measurable.prodMk ?_ (Measurable.prodMk (hX_meas r) ?_)
-      · exact measurable_pi_lambda _ fun i => hX_meas i.val
-      · exact measurable_pi_lambda _ fun j => hX_meas (m + 1 + j.val)
+      · measurability
+      · measurability
     have h_meas_tail : Measurable (fun ω => (Z_r ω, X r ω, Y_tail ω)) := by
       refine Measurable.prodMk ?_ (Measurable.prodMk (hX_meas r) ?_)
-      · exact measurable_pi_lambda _ fun i => hX_meas i.val
-      · exact measurable_pi_lambda _ fun j => hX_meas (r + 1 + j.val)
+      · measurability
+      · measurability
     -- The rectangle is measurable
     have h_meas_rect : MeasurableSet ((Set.univ.pi A) ×ˢ B ×ˢ (Set.univ.pi C)) := by
       show MeasurableSet ((Set.univ.pi A) ×ˢ (B ×ˢ (Set.univ.pi C)))
@@ -2091,8 +2092,8 @@ lemma block_coord_condIndep
   set Zr : Ω → (Fin r → α) := fun ω i => X i.1 ω with hZr
   -- finite future block (length = k)
   have hY_meas : Measurable Y := hX_meas r
-  have hZr_meas : Measurable Zr :=
-    measurable_pi_lambda _ (fun i => hX_meas i.1)
+  have hZr_meas : Measurable Zr := by
+    measurability
   -- Step 1: finite-level identity for every k
   have h_finite :
       ∀ k : ℕ,
@@ -2105,10 +2106,10 @@ lemma block_coord_condIndep
     -- Define the two finite future maps
     set θk : Ω → (Fin k → α) := fun ω j => X (m + 1 + j.1) ω with hθdef
     set θk' : Ω → (Fin k → α) := fun ω j => X (r + 1 + j.1) ω with hθpdef
-    have hθk_meas  : Measurable θk :=
-      measurable_pi_lambda _ (fun j => hX_meas (m + 1 + j.1))
-    have hθk'_meas : Measurable θk' :=
-      measurable_pi_lambda _ (fun j => hX_meas (r + 1 + j.1))
+    have hθk_meas  : Measurable θk := by
+      measurability
+    have hθk'_meas : Measurable θk' := by
+      measurability
     -- From contractability: triple pushforward equality, project away `Z_r`
     have h_triple := contractable_triple_pushforward
         (X := X) (μ := μ) (hX := hX) (hX_meas := hX_meas) (hrm := hrm)
@@ -2176,7 +2177,8 @@ lemma block_coord_condIndep
     constructor
     · -- S' is measurable
       have : S' = (fun g => fun i => g (Fin.castLE hkℓ i)) ⁻¹' S := rfl
-      exact MeasurableSet.preimage hS_meas (measurable_pi_lambda _ fun i => measurable_pi_apply _)
+      have : Measurable (fun g => fun i => g (Fin.castLE hkℓ i)) := by measurability
+      exact MeasurableSet.preimage hS_meas this
     · -- Preimage equality
       ext ω
       simp only [Set.mem_preimage, S']
@@ -2911,7 +2913,7 @@ lemma finite_product_formula_id
           = μ ((fun ω => fun i : Fin m => X i ω) ⁻¹' (Set.univ.pi C)) := by
               -- Standard: (map f μ) S = μ (f⁻¹ S) for measurable f and S
               refine Measure.map_apply ?_ ?_
-              · exact measurable_pi_lambda _ (fun i => hX_meas i)
+              · measurability
               · -- Set.univ.pi C is measurable in product σ-algebra
                 classical
                 apply MeasurableSet.univ_pi
@@ -3078,8 +3080,8 @@ lemma finite_product_formula_id
     -- both are probabilities
     haveI : IsProbabilityMeasure (Measure.map (fun ω => fun i : Fin m => X i ω) μ) := by
       constructor
-      have hme : Measurable (fun ω => fun i : Fin m => X i ω) :=
-        measurable_pi_lambda _ (fun i => hX_meas i)
+      have hme : Measurable (fun ω => fun i : Fin m => X i ω) := by
+        measurability
       rw [Measure.map_apply hme MeasurableSet.univ]
       have : (fun ω => fun i : Fin m => X i ω) ⁻¹' Set.univ = Set.univ := by ext; simp
       rw [this]

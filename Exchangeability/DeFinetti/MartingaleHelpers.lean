@@ -80,13 +80,10 @@ omit [MeasurableSpace β] in
 lemma shiftSeq_apply {d : ℕ} (f : ℕ → β) (n : ℕ) :
     shiftSeq d f n = f (n + d) := rfl
 
+@[measurability]
 lemma measurable_shiftSeq {d : ℕ} :
     Measurable (shiftSeq (β:=β) d) := by
-  classical
-  refine measurable_pi_iff.mpr fun n => ?_
-  -- Evaluation at `n + d` is measurable in the product σ-algebra.
-  simp only [shiftSeq]
-  exact measurable_pi_apply (n + d)
+  measurability
 
 lemma forall_mem_erase {γ : Type*} [DecidableEq γ]
     {s : Finset γ} {a : γ} {P : γ → Prop} (ha : a ∈ s) :
