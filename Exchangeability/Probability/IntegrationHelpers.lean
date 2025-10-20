@@ -87,16 +87,8 @@ lemma eLpNorm_one_eq_integral_abs
     {μ : Measure Ω} [IsFiniteMeasure μ]
     {f : Ω → ℝ} (hf : Integrable f μ) :
     eLpNorm f 1 μ = ENNReal.ofReal (∫ ω, |f ω| ∂μ) := by
-  -- Strategy:
-  -- 1. eLpNorm f 1 μ = ∫⁻ ‖f‖ₑ ∂μ  (by definition for p=1)
-  -- 2. ∫⁻ ‖f‖ₑ ∂μ = ENNReal.ofReal (∫ ‖f‖ ∂μ)  (for integrable f)
-  -- 3. For real f: ‖f ω‖ = |f ω|
-  --
-  -- Key lemmas:
-  -- - eLpNorm_one_eq_lintegral_nnnorm: eLpNorm f 1 μ = ∫⁻ ‖f‖₊ ∂μ
-  -- - ofReal_integral_eq_lintegral_ofReal: Connection for nonneg functions
-  -- - For real f: ‖f‖ = |f|
-  sorry
+  simp only [eLpNorm_one_eq_lintegral_enorm, ← ofReal_integral_norm_eq_lintegral_enorm hf,
+    Real.norm_eq_abs]
 
 /-- **L² convergence implies L¹ convergence for uniformly bounded functions.**
 

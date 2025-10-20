@@ -1544,6 +1544,8 @@ Axioms that don't depend on later definitions can go here.
 
 namespace Helpers
 
+open Exchangeability.Probability.IntegrationHelpers
+
 /-- **THEOREM (Subsequence a.e. convergence from L¹):**
 If `αₙ → α` in L¹ (with measurability), there is a subsequence converging to `α`
 almost everywhere.
@@ -1587,19 +1589,14 @@ theorem subseq_ae_of_L1
       · exact integral_nonneg (fun ω => abs_nonneg _)
 
     -- Now show: eLpNorm (alpha n - alpha_inf) 1 μ → 0
-    -- eLpNorm returns ENNReal, so we work in that space
+    -- Strategy: Use eLpNorm_one_eq_integral_abs + continuous_ofReal
     --
-    -- Proof strategy:
-    -- 1. Show (alpha n - alpha_inf) is integrable for all n:
-    --    From h_integral_tendsto, the L¹ norm is eventually finite, so eventually integrable
-    -- 2. Apply eLpNorm_one_eq_integral_abs from IntegrationHelpers:
-    --    eLpNorm (alpha n - alpha_inf) 1 μ = ENNReal.ofReal (∫ |alpha n - alpha_inf|)
-    -- 3. Use continuous_iff_continuousAt + ENNReal.continuous_ofReal:
-    --    Tendsto (fun n => ∫ |alpha n - alpha_inf|) atTop (𝓝 0)  [✓ from h_integral_tendsto]
-    --    → Tendsto (fun n => ENNReal.ofReal (∫ |alpha n - alpha_inf|)) atTop (𝓝 (ENNReal.ofReal 0))
-    --    → Tendsto (fun n => ENNReal.ofReal (∫ |alpha n - alpha_inf|)) atTop (𝓝 0)
-    -- 4. Combine with step 2 to get the result
-    sorry  -- TODO: Apply IntegrationHelpers.eLpNorm_one_eq_integral_abs + ENNReal.continuous_ofReal
+    -- On a probability space, measurable real functions are integrable,
+    -- so we can apply our helper. Then use continuity to transfer convergence.
+    sorry  -- TODO: Fix integrability and ENNReal.tendsto lemma names
+    -- The proof structure is correct but needs:
+    -- 1. Correct lemma for Measurable → Integrable on probability spaces
+    -- 2. Correct ENNReal.tendsto_ofReal lemma name (or use Tendsto.comp)
 
   -- Step 2: eLpNorm convergence implies convergence in measure
   have h_tendstoInMeasure : TendstoInMeasure μ alpha atTop alpha_inf := by
