@@ -225,11 +225,20 @@ omit [MeasurableSpace Ω] in
 lemma revFiltration_eq_tailFamily (X : ℕ → Ω → α) (m : ℕ) :
     revFiltration X m =
     ⨆ k : ℕ, MeasurableSpace.comap (fun ω => X (m + k) ω) inferInstance := by
-  -- TODO: Need process-specific version of Tail.comap_shift_eq_iSup_comap_coords
-  -- The library lemma works on path space (ℕ → α), but ViaMartingale uses
-  -- shiftRV X m : Ω → (ℕ → α), which is a process formulation.
-  -- See OPTION_A_SUMMARY.md for fix strategies.
-  sorry
+  -- Unfold revFiltration: σ(shiftRV X m) = σ(ω ↦ (n ↦ X(m+n) ω))
+  simp only [revFiltration]
+  -- The product σ-algebra on (ℕ → α) equals ⨆ k, σ(eval_k)
+  conv_lhs => rw [show (inferInstance : MeasurableSpace (ℕ → α)) = MeasurableSpace.pi from rfl]
+  -- Expand pi as supremum of coordinate comaps
+  rw [show MeasurableSpace.pi = ⨆ k, MeasurableSpace.comap (fun f : ℕ → α => f k) inferInstance from rfl]
+  -- Push comap through supremum: comap f (⨆ σᵢ) = ⨆ comap f σᵢ
+  rw [MeasurableSpace.comap_iSup]
+  -- Simplify: comap (shiftRV X m) (comap eval_k) = comap (eval_k ∘ shiftRV X m)
+  congr 1
+  funext k
+  rw [MeasurableSpace.comap_comp]
+  -- Simplify composition: (eval_k ∘ shiftRV X m) ω = X (m + k) ω
+  rfl
 
 omit [MeasurableSpace Ω] in
 /-- ViaMartingale's `tailSigma` equals the canonical `Tail.tailProcess`. -/
