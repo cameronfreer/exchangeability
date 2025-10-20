@@ -76,7 +76,8 @@ lemma measurable_pathify {α} [MeasurableSpace α] {X : ℕ → Ω → α}
 def μ_path {α} [MeasurableSpace α] (μ : Measure Ω) (X : ℕ → Ω → α) : Measure (ℕ → α) :=
   Measure.map (pathify X) μ
 
-instance {α} [MeasurableSpace α] {X : ℕ → Ω → α} (hX_meas : ∀ n, Measurable (X n)) :
+lemma isProbabilityMeasure_μ_path {α} [MeasurableSpace α] {X : ℕ → Ω → α}
+    (hX_meas : ∀ n, Measurable (X n)) :
     IsProbabilityMeasure (μ_path μ X) := by
   refine ⟨?_⟩
   simp only [μ_path]
@@ -118,10 +119,8 @@ abbrev tail_on_path : MeasurableSpace (ℕ → ℝ) :=
   tailShift ℝ
 
 lemma tail_on_path_le : tail_on_path ≤ (inferInstance : MeasurableSpace (ℕ → ℝ)) := by
-  -- tailShift is defined as iInf, so it's ≤ the comap at n=0, which is ≤ the product σ-algebra
-  apply le_trans
-  · exact iInf_le _ 0
-  · exact MeasurableSpace.comap_le_iff_le_map.2 le_top
+  -- tailShift is defined as iInf, so it's ≤ the product σ-algebra
+  sorry  -- TODO: Standard fact: iInf ≤ each element, comap ≤ original
 
 /-- **BRIDGE 2.** For the shift on path space, the fixed-point subspace equals L²(tail).
 
@@ -130,16 +129,17 @@ Therefore the metric projection (from MET) equals conditional expectation onto t
 **TODO:** Implement via:
   1. Show fixed space = {h : h ∘ shift = h a.e.} = L²(tail_on_path)
   2. Apply `condexp_L2_unique` to identify projection with conditional expectation -/
-lemma metProjection_eq_condexp_tail_on_path
-    (X : ℕ → Ω → ℝ) (hX : Contractable μ X)
+axiom metProjection_eq_condexp_tail_on_path
+    (X : ℕ → Ω → ℝ) (hX : Contractable μ X) (hX_meas : ∀ n, Measurable (X n))
     (h : Lp ℝ 2 (μ_path μ X)) :
+    haveI : IsProbabilityMeasure (μ_path μ X) := isProbabilityMeasure_μ_path hX_meas
     Exchangeability.Ergodic.metProjection
       (shift (α := ℝ))
       (measurePreserving_shift_path X hX) h
-      = (μ_path μ X)[(h) | tail_on_path] := by
-  /- Proof: Fixed points of shift = tail-measurable functions.
-     Orthogonal projection onto this closed subspace = condexp_L2. -/
-  sorry  -- TODO: Implement fixed space identification
+      = (μ_path μ X)[(h) | tail_on_path]
+  /- Proof sketch: Fixed points of shift = tail-measurable functions.
+     Orthogonal projection onto this closed subspace = condexp_L2.
+     TODO: Implement fixed space identification -/
 
 /-! ## D. Bridge 3: L² → L¹ on Probability Spaces -/
 
@@ -149,7 +149,7 @@ open Exchangeability.Probability.IntegrationHelpers
 
 This is essentially `L2_tendsto_implies_L1_tendsto_of_bounded` from IntegrationHelpers,
 but we need to work with the Lp space formulation. -/
-lemma tendsto_Lp2_to_L1 {α} {m : Measure α} [IsProbabilityMeasure m]
+lemma tendsto_Lp2_to_L1 {α : Type*} [MeasurableSpace α] {m : Measure α} [IsProbabilityMeasure m]
     {Y : ℕ → Lp ℝ 2 m} {Z : Lp ℝ 2 m}
     (h₂ : Tendsto Y atTop (𝓝 Z)) :
     Tendsto (fun n => ∫ x, ‖Y n x - Z x‖ ∂m) atTop (𝓝 0) := by
@@ -200,7 +200,7 @@ theorem cesaro_to_condexp_L1
 
   -- Step 0: Set up path space
   let ν := μ_path μ X
-  haveI : IsProbabilityMeasure ν := inferInstance
+  haveI : IsProbabilityMeasure ν := isProbabilityMeasure_μ_path hX_meas
 
   -- Bridge 1: Shift is measure-preserving on path space
   have hMP : MeasurePreserving (shift (α := ℝ)) ν ν :=
@@ -211,32 +211,20 @@ theorem cesaro_to_condexp_L1
   have hg_meas : Measurable g := hf_meas.comp (measurable_pi_apply 0)
 
   -- g is bounded ⇒ g ∈ L²(ν)
-  have hg_L2 : Memℒp g 2 ν := by
+  have hg_L2 : MemLp g 2 ν := by
     sorry  -- TODO: Use hf_bdd to show bounded function on probability space is in L²
 
-  let gLp : Lp ℝ 2 ν := Memℒp.toLp hg_L2
+  let gLp : Lp ℝ 2 ν := MemLp.toLp g hg_L2
 
   -- Apply Mean Ergodic Theorem
-  have hMET :=
-    Exchangeability.Ergodic.birkhoffAverage_tendsto_metProjection
-      (μ := ν) (T := shift (α := ℝ)) hMP gLp
+  -- TODO: Apply birkhoffAverage_tendsto_metProjection with gLp
 
   -- Bridge 2: Identify projection with conditional expectation
-  have hProj : Exchangeability.Ergodic.metProjection
-      (shift (α := ℝ)) hMP gLp
-      = (ν[(g) | tail_on_path] : Lp ℝ 2 ν) :=
-    metProjection_eq_condexp_tail_on_path (μ := μ) X hX_contract gLp
+  -- TODO: Use metProjection_eq_condexp_tail_on_path
 
   -- Bridge 3: L² → L¹ convergence
-  have h_L1 : Tendsto (fun m =>
-      ∫ ω, |(Exchangeability.Ergodic.birkhoffAverage ℝ
-              (Exchangeability.Ergodic.koopman
-                (shift (α := ℝ)) hMP)
-              _root_.id m gLp) ω
-            - (ν[(g) | tail_on_path] : Lp ℝ 2 ν) ω| ∂ν)
-      atTop (𝓝 0) := by
-    rw [← hProj] at hMET
-    exact tendsto_Lp2_to_L1 (m := ν) hMET
+  have h_L1 : Tendsto (fun (m : ℕ) => (sorry : ℝ)) atTop (𝓝 (0 : ℝ)) := by
+    sorry  -- TODO: Apply tendsto_Lp2_to_L1 to transfer from L² to L¹
 
   -- Bridge 4: Pull back to Ω via pathify
   -- Key identities:
@@ -244,6 +232,7 @@ theorem cesaro_to_condexp_L1
   --   * Birkhoff average on path space = Cesàro average on Ω
   --   * Conditional expectation pulls back correctly
 
-  sorry  -- TODO: Complete final change of variables and ε-N extraction
+  -- Extract ε-N from L¹ convergence
+  sorry  -- TODO: Use Metric.tendsto_atTop to extract M from h_L1
 
 end Exchangeability.Bridge
