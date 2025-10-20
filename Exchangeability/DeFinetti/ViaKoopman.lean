@@ -1470,7 +1470,7 @@ private lemma condexp_precomp_iterate_eq
 **Mathlib source**: `MeasureTheory.condexp_smul` for scalar multiplication. -/
 private lemma condExp_const_mul
     {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
-    {m : MeasurableSpace Ω} (hm : m ≤ mΩ)
+    {m : MeasurableSpace Ω} (_hm : m ≤ mΩ)
     (c : ℝ) (f : Ω → ℝ) :
     μ[(fun ω => c * f ω) | m] =ᵐ[μ] (fun ω => c * μ[f | m] ω) := by
   -- `condExp_smul` in mathlib takes m as explicit positional parameter
@@ -1484,7 +1484,7 @@ NOTE: Temporarily axiomatized due to notation elaboration issues with `∑ i ∈
 The mathematical content is identical and proven in mathlib. -/
 private lemma condExp_sum_finset
     {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
-    {m : MeasurableSpace Ω} (hm : m ≤ mΩ)
+    {m : MeasurableSpace Ω} (_hm : m ≤ mΩ)
     {ι : Type*} (s : Finset ι) (f : ι → Ω → ℝ)
     (hint : ∀ i ∈ s, Integrable (f i) μ) :
     μ[(fun ω => s.sum (fun i => f i ω)) | m]
@@ -1679,7 +1679,7 @@ private theorem h_tower_of_lagConst
         obtain ⟨Cg, hCg⟩ := hg_bd
         exact integrable_of_bounded_measurable
           (hg_meas.comp (measurable_pi_apply j)) Cg (fun ω => hCg (ω j))
-      exact condExp_sum_finset (m := mSI) (hm := hmSI)
+      exact condExp_sum_finset (m := mSI) (_hm := hmSI)
         (Finset.range (n + 1)) (fun j => fun ω => g (ω j)) hint
 
     -- Each term μ[g(ωⱼ)| mSI] =ᵐ μ[g(ω₀)| mSI]
@@ -1933,7 +1933,7 @@ private theorem h_tower_of_lagConst
         congr 1
         refine Finset.sum_congr rfl (fun j _ => ?_)
         rw [shift_iterate_apply]
-        ring
+        ring_nf
 
       -- Apply Mean Ergodic Theorem via birkhoffAverage_tendsto_condexp_L2
       -- This shows: Cesàro averages of g∘shift^[j] converge to μ[g(·0)|mSI] in L²
