@@ -172,10 +172,29 @@ lemma tendsto_Lp2_to_L1 {α : Type*} [MeasurableSpace α] {m : Measure α} [IsPr
   -- On probability spaces: ∫|f| ≤ ‖f‖_{L²} by Cauchy-Schwarz
   -- Key inequality: ∫|f| ≤ (∫|f|²)^(1/2) · (∫ 1²)^(1/2) = (∫|f|²)^(1/2) · 1
 
-  -- Approach: Use squeeze theorem
-  -- 0 ≤ ∫|Y_n - Z| ≤ ‖Y_n - Z‖_{L²} → 0
+  -- Step 1: Convert Lp convergence to norm convergence
+  have h_norm : Tendsto (fun n => ‖Y n - Z‖) atTop (𝓝 0) := by
+    rw [Metric.tendsto_atTop] at h₂ ⊢
+    intro ε hε
+    obtain ⟨N, hN⟩ := h₂ ε hε
+    use N
+    intro n hn
+    specialize hN n hn
+    simp only [dist_zero_right, Real.norm_eq_abs, abs_of_nonneg (norm_nonneg _)]
+    rw [dist_comm, dist_eq_norm] at hN
+    rwa [norm_sub_rev]
 
-  sorry  -- TODO: Apply Lp.norm_le_norm_of_exponent_le or similar + squeeze
+  -- Step 2: Show integral is bounded by L² norm
+  -- Key: On probability spaces, Hölder gives ∫|f| ≤ (∫|f|²)^(1/2) = ‖f‖₂
+  have h_bound : ∀ n, ∫ x, ‖Y n x - Z x‖ ∂m ≤ ‖Y n - Z‖ := by
+    intro n
+    sorry  -- TODO: Need lemma connecting integral to Lp 2 norm on probability space
+          -- Likely: use snorm/eLpNorm API or integral_mul_le_Lp_mul_Lq_of_nonneg with q=2
+
+  -- Step 3: Apply squeeze theorem
+  refine' tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_norm _ h_bound
+  · intro n
+    exact integral_nonneg (fun x => norm_nonneg _)
 
 /-! ## E. Bridge 4: Pullback along Factor Map -/
 
