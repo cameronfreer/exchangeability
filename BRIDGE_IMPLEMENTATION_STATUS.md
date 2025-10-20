@@ -4,8 +4,8 @@
 
 **File:** `Exchangeability/Bridge/CesaroToCondExp.lean`
 **Purpose:** Connect Mean Ergodic Theorem to `cesaro_to_condexp_L1` for ViaL2.lean
-**Status:** 273 lines, builds cleanly with 5 documented sorries
-**Progress:** ~75% complete (2/7 proofs done, 5 with clear strategies)
+**Status:** 276 lines, builds cleanly with 4 documented sorries
+**Progress:** ~80% complete (3/7 proofs done, 4 with clear strategies)
 
 ## Architecture: The Four Bridges
 
@@ -20,9 +20,9 @@ Mean Ergodic Theorem (KoopmanMeanErgodic.lean)
 cesaro_to_condexp_L1 (needed by ViaL2.lean)
 ```
 
-## Completed Proofs (2/7) ✅
+## Completed Proofs (3/7) ✅
 
-### 1. `hg_L2` (lines 226-231) ✅
+### 1. `hg_L2` (lines 229-234) ✅
 **Proves:** Bounded functions on probability spaces are in L²
 
 ```lean
@@ -55,9 +55,23 @@ rw [Real.norm_of_nonneg] at this
 **Status:** Complete, builds successfully
 **Key insight:** Standard ε-N argument using `Metric.tendsto_atTop`
 
-## Remaining Sorries (5/7) with Strategies 📋
+### 3. `tail_on_path_le` (lines 129-138) ✅
+**Proves:** Tail σ-algebra is a sub-σ-algebra of the product σ-algebra
 
-### 3. Bridge 1: `contractable_shift_invariant_law` (line 115) 🔧
+```lean
+lemma tail_on_path_le : tail_on_path ≤ (inferInstance : MeasurableSpace (ℕ → ℝ)) := by
+  unfold tail_on_path tailShift
+  refine iInf_le (fun n => MeasurableSpace.comap _ _) 0 |>.trans ?_
+  simp only [zero_add]
+  exact MeasurableSpace.comap_id.le
+```
+
+**Status:** Complete, builds successfully
+**Key insight:** Use `iInf_le` at n=0 where shift is identity, then `comap id = id`
+
+## Remaining Sorries (4/7) with Strategies 📋
+
+### 4. Bridge 1: `contractable_shift_invariant_law` (line 99) 🔧
 
 **Statement:** Contractable sequences induce shift-invariant measures on path space
 
@@ -71,19 +85,7 @@ rw [Real.norm_of_nonneg] at this
 **Technical challenge:** Measure.map rewrites are complex in Lean
 **Mathematical difficulty:** Low (straightforward application)
 
-### 4. `tail_on_path_le` (line 133) 🔧
-
-**Statement:** Tail σ-algebra is a sub-σ-algebra
-
-**Strategy:**
-1. Unfold `tailShift = iInf (fun n => comap (shift by n))`
-2. Apply `iInf_le` with n=0
-3. Show comap id ≤ inferInstance (should be trivial)
-
-**Technical challenge:** Typeclass inference for `iInf_le`
-**Mathematical difficulty:** Trivial
-
-### 5. Bridge 3: `tendsto_Lp2_to_L1` (line 172) 🔧
+### 5. Bridge 3: `tendsto_Lp2_to_L1` (line 167) 🔧
 
 **Statement:** L² convergence implies L¹ convergence on probability spaces
 
@@ -97,7 +99,7 @@ rw [Real.norm_of_nonneg] at this
 
 **Alternative:** Use `L2_tendsto_implies_L1_tendsto_of_bounded` from IntegrationHelpers.lean (line 103)
 
-### 6. Bridge 4: `condexp_pullback_along_pathify` (line 191) 🔧
+### 6. Bridge 4: `condexp_pullback_along_pathify` (line 188) 🔧
 
 **Statement:** Conditional expectation commutes with factor maps
 
@@ -109,7 +111,7 @@ rw [Real.norm_of_nonneg] at this
 **Technical challenge:** Finding the right mathlib lemma
 **Mathematical difficulty:** Low (standard measure theory)
 
-### 7. Main Theorem: `h_L1` (line 257) 🔧
+### 7. Main Theorem: `h_L1` (line 211) 🔧
 
 **Statement:** Chain all 4 bridges to prove L¹ convergence
 
@@ -131,10 +133,10 @@ rw [Real.norm_of_nonneg] at this
 
 ## File Statistics
 
-- **Total lines:** 273
-- **Complete proofs:** 2
-- **Documented sorries:** 5
-- **Commits:** 6
+- **Total lines:** 276
+- **Complete proofs:** 3
+- **Documented sorries:** 4
+- **Commits:** 9
 - **Build status:** ✅ Clean build
 
 ## Dependencies
@@ -198,6 +200,8 @@ When complete, this bridge file will:
 6. `93505fd` - docs: Update Bridge 3 strategy with clearer Hölder approach
 7. `2a512cd` - fix: Correct shift namespace imports and type parameters
 8. `ab2f1a3` - wip: Attempt tail_on_path_le proof (reverted to sorry)
+9. `4e951f1` - fix: Resolve ViaL2 simp linter warnings (5 locations)
+10. `c5f5e3b` - feat: Complete tail_on_path_le proof
 
 ## Technical Notes
 
@@ -206,6 +210,8 @@ When complete, this bridge file will:
 - `ae_of_all` for universal → a.e. conversion
 - `Metric.tendsto_atTop` for ε-N extraction
 - `birkhoffAverage_tendsto_metProjection` for Mean Ergodic Theorem
+- `iInf_le` with explicit index for infimum inequalities
+- `MeasurableSpace.comap_id.le` for σ-algebra comparisons
 
 ### Known Technical Challenges
 1. **Measure.map rewrites:** Bridge 1 requires careful composition of measure maps
