@@ -67,9 +67,6 @@ This file centralizes these patterns to keep the main proofs clean and maintaina
   - **Used in**: ViaMartingale (line 582), multiple sub-σ-algebra constructions
   - **Key fact**: Trimmed finite measures remain finite
 
-- **`AgreeOnFutureRectangles`**: Distributional agreement structure
-  - Simple wrapper for measure equality (future: extend to proper rectangle agreement)
-
 ## Design Philosophy
 
 **Extract patterns that:**
@@ -142,14 +139,14 @@ lemma integrable_indicator_comp
 
 **NOTE**: This is intentionally duplicated from `PathSpace.CylinderHelpers.cylinder` to
 avoid a circular import. CondExp is a low-level module that cannot import PathSpace,
-but needs this definition for the `AgreeOnFutureRectangles` structure below. -/
+but needs this definition for working with product measures on sequence spaces. -/
 def cylinder (α : Type*) (r : ℕ) (C : Fin r → Set α) : Set (ℕ → α) :=
   {f | ∀ i : Fin r, f i ∈ C i}
 
-/-- Agreement on future rectangles property (inlined to avoid circular dependency). -/
-structure AgreeOnFutureRectangles {α : Type*} [MeasurableSpace α]
-    (μ ν : Measure (α × (ℕ → α))) : Prop where
-  measure_eq : μ = ν
+-- NOTE: AgreeOnFutureRectangles was removed - it was just wrapping measure equality.
+-- The real AgreeOnFutureRectangles definition (rectangle agreement implies equality)
+-- is in ViaMartingale.lean where it's actually used to prove measure equality from
+-- agreement on generating sets.
 
 /-! ### Conditional Independence (Doob's Characterization)
 
@@ -513,16 +510,14 @@ lemma condexp_indicator_eq_of_agree_on_future_rectangles
     {μ : Measure Ω} [IsFiniteMeasure μ]
     {X₁ X₂ : Ω → α} {Y : Ω → ℕ → α}
     (hX₁ : Measurable X₁) (hX₂ : Measurable X₂) (hY : Measurable Y)
-    (hagree : AgreeOnFutureRectangles
-      (Measure.map (fun ω => (X₁ ω, Y ω)) μ)
-      (Measure.map (fun ω => (X₂ ω, Y ω)) μ))
+    (heq : Measure.map (fun ω => (X₁ ω, Y ω)) μ = Measure.map (fun ω => (X₂ ω, Y ω)) μ)
     (B : Set α) (hB : MeasurableSet B) :
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₁
         | MeasurableSpace.comap Y inferInstance]
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂
         | MeasurableSpace.comap Y inferInstance] :=
-  condexp_indicator_eq_of_pair_law_eq X₁ X₂ Y hX₁ hX₂ hY hagree.measure_eq hB
+  condexp_indicator_eq_of_pair_law_eq X₁ X₂ Y hX₁ hX₂ hY heq hB
 
 /-! ### Operator-Theoretic Conditional Expectation Utilities -/
 
