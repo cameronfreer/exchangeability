@@ -11,6 +11,8 @@ import Exchangeability.Tail.TailSigma
 import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
+import Mathlib.MeasureTheory.Function.ConvergenceInMeasure
+import Mathlib.MeasureTheory.Function.AEEqFun
 import Mathlib.MeasureTheory.MeasurableSpace.MeasurablyGenerated
 import Mathlib.MeasureTheory.PiSystem
 import Mathlib.MeasureTheory.Constructions.BorelSpace.Order
@@ -2738,16 +2740,32 @@ lemma alphaIic_ae_eq_alphaIicCE
       (∀ ε > 0, ∃ M : ℕ, ∀ m ≥ M, ∫ ω, |A 0 m ω - g ω| ∂μ < ε) →
       f =ᵐ[μ] g := by
     intro f g hf_meas hg_meas hf_lim hg_lim
-    -- Standard fact: L¹ limits are unique up to a.e. equality
-    -- If A_m → f and A_m → g in L¹, then ∫|f - g| ≤ ∫|f - A_m| + ∫|A_m - g| → 0
-    -- By integral_eq_zero_iff_of_nonneg_ae, f =ᵐ g
-    -- TODO: This requires showing:
-    -- 1. ∫|f - g| ≤ ∫|f - A_m| + ∫|A_m - g| (triangle inequality for integrals)
-    -- 2. Given ε > 0, choose M large enough that both terms < ε/2
-    -- 3. Then ∫|f - g| < ε for all ε > 0, so ∫|f - g| = 0
-    -- 4. Apply integral_eq_zero_iff_of_nonneg_ae to get |f - g| =ᵐ 0
-    -- This is straightforward but requires careful setup of integrability conditions
-    sorry  -- Standard measure theory: uniqueness of L¹ limits
+    -- Strategy: L¹ convergence implies a.e. convergent subsequence, and a.e. limits are unique
+    -- Convert L¹ convergence hypothesis to Tendsto format
+    have hf_tendsto : Tendsto (fun m => ∫ ω, |A 0 m ω - f ω| ∂μ) atTop (𝓝 0) := by
+      rw [Metric.tendsto_atTop]
+      intro ε hε
+      obtain ⟨M, hM⟩ := hf_lim ε hε
+      use M
+      intro m hm
+      rw [Real.dist_eq, sub_zero, abs_of_nonneg (integral_nonneg (fun ω => abs_nonneg _))]
+      exact hM m hm
+    have hg_tendsto : Tendsto (fun m => ∫ ω, |A 0 m ω - g ω| ∂μ) atTop (𝓝 0) := by
+      rw [Metric.tendsto_atTop]
+      intro ε hε
+      obtain ⟨M, hM⟩ := hg_lim ε hε
+      use M
+      intro m hm
+      rw [Real.dist_eq, sub_zero, abs_of_nonneg (integral_nonneg (fun ω => abs_nonneg _))]
+      exact hM m hm
+    -- Next steps to complete this proof:
+    -- 1. Need measurability hypothesis: ∀ m, AEStronglyMeasurable (A 0 m) μ
+    -- 2. Apply tendstoInMeasure_of_tendsto_eLpNorm to convert hf_tendsto, hg_tendsto
+    --    to TendstoInMeasure (A 0 ·) atTop f and TendstoInMeasure (A 0 ·) atTop g
+    -- 3. Use TendstoInMeasure.exists_seq_tendsto_ae to extract a.e. convergent subsequences
+    -- 4. Apply MeasureTheory.AEEqFun.tendsto_ae_unique to conclude f =ᵐ g
+    -- Infrastructure needed: measurability of Cesàro averages A
+    sorry  -- TODO: Add measurability hypotheses and complete chain
 
   -- Apply uniqueness with f = alphaIic, g = alphaIicCE
   apply h_L1_uniqueness
