@@ -454,6 +454,20 @@ lemma ae_pullback_iff
   -- Stitch the three equivalences together.
   simpa [h_left, h_right] using h_core
 
+/-- Transport integrability across a pushforward equality and then pull back by composition.
+This avoids instance gymnastics by rewriting the measure explicitly, then using `comp_measurable`. -/
+private lemma integrable_comp_of_pushforward
+    {Ω Ω' : Type*} [mΩ : MeasurableSpace Ω] [mΩ' : MeasurableSpace Ω']
+    {μ : Measure Ω} {μ' : Measure Ω'} {g : Ω' → Ω} {H : Ω → ℝ}
+    (hg : Measurable g) (hpush : Measure.map g μ' = μ)
+    (hH : Integrable H μ) :
+    Integrable (H ∘ g) μ' := by
+  -- first, switch μ to (Measure.map g μ') using the equality
+  have hH_map : Integrable H (Measure.map g μ') := by
+    simpa [hpush] using hH
+  -- then pull integrability back along g
+  simpa [Function.comp] using hH_map.comp_measurable hg
+
 /-- **Factor-map pullback for conditional expectation**.
 
 If `g : Ω' → Ω` is a factor map (i.e., `map g μ' = μ`), then conditional expectation
@@ -520,101 +534,16 @@ lemma condexp_pullback_factor
     -- Lift measurability from m to ambient inst, then apply preimage
     have hB_inst : @MeasurableSet Ω inst B := hm B hBm
     exact hB_inst.preimage hg
-  have hHg' : Integrable (H ∘ g) μ' := by
-    sorry
-    /-
-    FUNDAMENTAL LEAN 4 LIMITATION - Instance Transport Impossible:
-
-    Goal: Integrable (H ∘ g) μ'
-
-    We have:
-    - hH : Integrable H μ
-    - hpush : Measure.map g μ' = μ
-    - hg : Measurable g
-
-    Standard mathlib approach using integrable_map_measure:
-      integrable_map_measure : Integrable H (map g μ') ↔ Integrable (H ∘ g) μ'
-
-    We need the mpr direction. The LHS should follow from hH + hpush, but:
-
-    PROBLEM: Cannot construct `Integrable H (Measure.map g μ')` from
-    `Integrable H μ` even though `Measure.map g μ' = μ`, because:
-
-    1. `Integrable` has a MeasurableSpace instance parameter
-    2. `Integrable H μ` has type `@Integrable Ω inst μ H`
-    3. `Integrable H (map g μ')` has type `@Integrable Ω inst (map g μ') H`
-    4. These are definitionally different types despite μ = map g μ'
-
-    Attempted fixes (all failed):
-    - `convert hH; exact hpush.symm` → Creates goal `m = inst` (impossible!)
-    - `hpush.symm ▸ hH` → ▸ doesn't find pattern match
-    - `rw [hpush]` in AEStronglyMeasurable → can't rewrite in instance parameter
-    - Manual construction of Integrable → hits same instance issues
-
-    This is a pervasive Lean 4 issue with sub-σ-algebras and instance synthesis.
-    The correct mathematical statement is trivial, but the formalization hits
-    fundamental limitations of dependent type theory with instance parameters.
-
-    Resolution: Accept this as axiom/sorry for now. The mathematical content is
-    sound - we're just transporting integrability across equal measures.
-    -/
-    /-
-   BREAKTHROUGH ATTEMPT (Still fails - instance transport impossible):
-
-    The issue: We have hH : Integrable H μ and hpush : map g μ' = μ.
-    We want: Integrable (H ∘ g) μ'.
-
-    Standard approach:
-      have hH_map : Integrable H (Measure.map g μ') := ...  -- transport hH
-      exact (integrable_map_measure hH_map.1 hg.aemeasurable).mp hH_map
-
-    BUT: Cannot transport hH to Integrable H (map g μ') because:
-    - hH has type: @Integrable Ω inst μ H
-    - Need type: @Integrable Ω inst (Measure.map g μ') H
-    - These are definitionally different even though map g μ' = μ as measures!
-
-    Attempted fixes:
-    1. convert hH; exact hpush → Tries to unify m and inst (wrong!)
-    2. hpush ▸ hH → Transport doesn't work (instance parameter)
-    3. Manual construction with AEStronglyMeasurable + HasFiniteIntegral → Instance issues
-
-    The REAL problem: Lean synthesizes MeasurableSpace instance as `m` in some contexts
-    even though it should be `inst`. This is a pervasive issue throughout the lemma.
-    -/
-
-    /- UPDATED OLD PROOF IDEA (integrable_map_measure instance issues persist):
-    The goal is to show Integrable (H ∘ g) μ'.
-    We have:
-    - hH : Integrable H μ
-    - hpush : Measure.map g μ' = μ
-    - hg : Measurable g
-
-    The standard approach is:
-      have : Integrable H (Measure.map g μ') := by convert hH; exact hpush.symm
-      exact (integrable_map_measure hg.aemeasurable hH.aestronglyMeasurable).mpr this
-
-    BUT: integrable_map_measure synthesizes the wrong MeasurableSpace instance.
-    The problem: hH.aestronglyMeasurable has instance `inst`, but integrable_map_measure infers `m`.
-
-    Attempted fixes that didn't work:
-    - Using @ syntax with explicit instances → type mismatches
-    - Using rw at hH → can't rewrite in Integrable
-    - Using convert → still has instance issues
-    - Using .1 accessor → same instance problem
-
-    TODO: This needs either:
-    1. A custom lemma that handles the instance carefully
-    2. Manual construction of the Integrable proof without using integrable_map_measure
-    3. Better understanding of how to guide Lean's instance synthesis
-    -/
+  -- Integrability of the pulled-back function (no instance shenanigans)
+  have hHg' : Integrable (H ∘ g) μ' :=
+    integrable_comp_of_pushforward hg hpush hH
 
   sorry
-  /- OLD PROOF:
-  exact
-    ae_eq_condExp_of_forall_setIntegral_eq
-      (μ := μ') (m := MeasurableSpace.comap g m) (hm := hm') hHg' h_sets
-
-  ERROR: Application type mismatch in ae_eq_condExp_of_forall_setIntegral_eq
+  /- TODO: Apply uniqueness of conditional expectation via ae_eq_condExp_of_forall_setIntegral_eq
+  The hHg' blocker is now FIXED!  Need to match the correct signature of the uniqueness lemma.
+  OLD ATTEMPT:
+    exact ae_eq_condExp_of_forall_setIntegral_eq (μ := μ') (m := MeasurableSpace.comap g m) (hm := hm') hHg' h_sets
+  ERROR: h_sets has wrong type - provides integral equalities but lemma expects IntegrableOn conditions
   -/
 
 /-- **Invariance of conditional expectation under iterates**.
