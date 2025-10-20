@@ -2739,8 +2739,14 @@ lemma alphaIic_ae_eq_alphaIicCE
       f =ᵐ[μ] g := by
     intro f g hf_meas hg_meas hf_lim hg_lim
     -- Standard fact: L¹ limits are unique up to a.e. equality
-    -- If A_m → f and A_m → g in L¹, then ∫|f - g| = lim ∫|A_m - g| + ∫|f - A_m| = 0
-    -- By Markov or integral_eq_zero_iff, f =ᵐ g
+    -- If A_m → f and A_m → g in L¹, then ∫|f - g| ≤ ∫|f - A_m| + ∫|A_m - g| → 0
+    -- By integral_eq_zero_iff_of_nonneg_ae, f =ᵐ g
+    -- TODO: This requires showing:
+    -- 1. ∫|f - g| ≤ ∫|f - A_m| + ∫|A_m - g| (triangle inequality for integrals)
+    -- 2. Given ε > 0, choose M large enough that both terms < ε/2
+    -- 3. Then ∫|f - g| < ε for all ε > 0, so ∫|f - g| = 0
+    -- 4. Apply integral_eq_zero_iff_of_nonneg_ae to get |f - g| =ᵐ 0
+    -- This is straightforward but requires careful setup of integrability conditions
     sorry  -- Standard measure theory: uniqueness of L¹ limits
 
   -- Apply uniqueness with f = alphaIic, g = alphaIicCE
