@@ -83,9 +83,7 @@ lemma prefixProj_apply {n : ℕ} (x : ℕ → α) (i : Fin n) :
 
 lemma measurable_prefixProj {n : ℕ} :
     Measurable (prefixProj (α:=α) n) := by
-  classical
-  refine measurable_pi_lambda _ (fun i => ?_)
-  exact measurable_pi_apply (i : ℕ)
+  measurability
 
 /--
 Cylinder set determined by the first `n` coordinates.
@@ -196,14 +194,10 @@ set_option linter.unusedSectionVars false
 
 lemma takePrefix_measurable {m n : ℕ} (hmn : m ≤ n) :
     Measurable (takePrefix (α:=α) hmn) := by
-  classical
-  refine measurable_pi_lambda _ (fun i => ?_)
-  change Measurable fun x : Fin n → α => x (Fin.castLE hmn i)
-  exact measurable_pi_apply _
+  measurability
 
 lemma extendSet_measurable {m n : ℕ} {S : Set (Fin m → α)} {hmn : m ≤ n}
     (hS : MeasurableSet S) : MeasurableSet (extendSet (α:=α) hmn S) := by
-  classical
   exact (takePrefix_measurable (α:=α) hmn) hS
 
 /--
@@ -242,9 +236,7 @@ lemma cylinder_subset_prefixCylinders {s : Finset ℕ} {S : Set (∀ _ : s, α)}
   let ι : s → Fin N := fun x => ⟨x.1, h_mem x.1 x.2⟩
   let pull : (Fin N → α) → (∀ i : s, α) := fun x => fun y => x (ι y)
   have hpull_meas : Measurable pull := by
-    refine measurable_pi_lambda _ (fun y => ?_)
-    change Measurable fun x : Fin N → α => x (ι y)
-    exact measurable_pi_apply _
+    measurability
   have hs_eq :
       MeasureTheory.cylinder (α:=fun _ : ℕ => α) s S =
         prefixCylinder (α:=α) (pull ⁻¹' S) := by
@@ -396,10 +388,7 @@ lemma reindex_apply {π : Equiv.Perm ℕ} (x : ℕ → α) (i : ℕ) :
 
 lemma measurable_reindex {π : Equiv.Perm ℕ} :
     Measurable (reindex (α:=α) π) := by
-  classical
-  refine measurable_pi_lambda _ (fun i => ?_)
-  change Measurable fun x : ℕ → α => x (π i)
-  exact measurable_pi_apply _
+  measurability
 
 attribute [measurability] measurable_prefixProj takePrefix_measurable measurable_reindex
 

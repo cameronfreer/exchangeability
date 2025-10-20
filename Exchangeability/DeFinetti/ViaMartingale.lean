@@ -162,10 +162,7 @@ lemma measurable_shiftProcess (X : ℕ → Ω → α) (m : ℕ)
 /-- The path map is measurable when all coordinates are measurable. -/
 lemma measurable_path (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) :
     Measurable (path X) := by
-  apply measurable_pi_lambda
-  intro n
-  simp only [path]
-  exact hX n
+  measurability
 
 omit [MeasurableSpace Ω] [MeasurableSpace α] in
 lemma path_eq_shiftRV_zero (X : ℕ → Ω → α) : path X = shiftRV X 0 :=
@@ -1299,7 +1296,7 @@ lemma finFutureSigma_le_futureFiltration
     simp only [Function.comp_apply, proj, shiftRV]
 
   -- Since proj is measurable, proj ⁻¹' t is measurable in (ℕ → α)
-  have h_proj_meas : Measurable proj := measurable_pi_lambda _ (fun i => measurable_pi_apply i.val)
+  have h_proj_meas : Measurable proj := by measurability
   have h_proj_t_meas : MeasurableSet (proj ⁻¹' t) := h_proj_meas ht
 
   -- Provide witness for comap: s ∈ futureFiltration means ∃ t', s = (shiftRV X (m+1)) ⁻¹' t'
@@ -1471,10 +1468,10 @@ lemma contractable_finite_cylinder_measure
       exact measurable_pi_apply (Fin.mk (r + 1 + j.val) (by omega)) (hC j)
 
   -- Prove the functions are measurable
-  have h_meas_idx : Measurable (fun ω (i : Fin (r + 1 + k)) => X (idx i) ω) :=
-    measurable_pi_lambda _ (fun i => hX_meas (idx i))
-  have h_meas_std : Measurable (fun ω (i : Fin (r + 1 + k)) => X (↑i) ω) :=
-    measurable_pi_lambda _ (fun i => hX_meas (↑i))
+  have h_meas_idx : Measurable (fun ω (i : Fin (r + 1 + k)) => X (idx i) ω) := by
+    fun_prop (disch := measurability)
+  have h_meas_std : Measurable (fun ω (i : Fin (r + 1 + k)) => X (↑i) ω) := by
+    fun_prop (disch := measurability)
 
   calc μ ((fun ω (i : Fin (r + 1 + k)) => X (idx i) ω) ⁻¹' S_std)
       = Measure.map (fun ω i => X (idx i) ω) μ S_std := by
