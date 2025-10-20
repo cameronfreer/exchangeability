@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
 import Exchangeability.Probability.CondExpBasic
+import Exchangeability.Probability.CondExp
 import Exchangeability.Probability.CondProb
 import Mathlib.Probability.Independence.Basic
 import Mathlib.Probability.Independence.Conditional
@@ -17,15 +18,19 @@ import Mathlib.MeasureTheory.OuterMeasure.BorelCantelli
 # Conditional Expectation Lemmas Parked for Future Use
 
 This file gathers results about conditional expectations, conditional independence, and
-martingale-style arguments that are currently not needed by the main de Finetti development.
+martingale-style arguments that are not yet needed by the main de Finetti development.
 Keeping them in a separate module lets `CondExp.lean` stay lightweight while we iterate on
 potential mathlib contributions.
 
 The main themes covered here are:
 
-* characterisations of conditional independence phrased using indicator functions;
-* an L² identification lemma for conditional expectations;
-* auxiliary lemmas such as product formulas for indicators.
+* L² identification lemmas for conditional expectations;
+* distributional equality and conditional expectation relationships;
+* auxiliary conditional independence characterizations via conditional probabilities;
+* product formulas for conditional expectations of indicators.
+
+**Note:** The main conditional independence characterization `condIndep_of_indicator_condexp_eq`
+(used in ViaMartingale.lean) is in `CondExp.lean`, not here.
 
 Whenever a statement from this file becomes part of mathlib or is required in the main
 development, it should be moved out of this “parking lot”.
@@ -38,105 +43,6 @@ open MeasureTheory Filter Set Function
 namespace Exchangeability.Probability
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
-
-/-! ### Conditional independence lemmas -/
-
-lemma condIndep_of_indicator_condexp_eq
-    {Ω : Type*} {mΩ : MeasurableSpace Ω} [StandardBorelSpace Ω]
-    {μ : Measure Ω} [IsFiniteMeasure μ]
-    {mF mG mH : MeasurableSpace Ω}
-    (hmF : mF ≤ mΩ) (hmG : mG ≤ mΩ) (hmH : mH ≤ mΩ)
-    (h : ∀ H, MeasurableSet[mH] H →
-      μ[H.indicator (fun _ => (1 : ℝ)) | mF ⊔ mG]
-        =ᵐ[μ] μ[H.indicator (fun _ => (1 : ℝ)) | mG]) :
-    ProbabilityTheory.CondIndep mG mF mH hmG μ := by
-  classical
-  -- Use the product formula characterization for conditional independence.
-  refine (ProbabilityTheory.condIndep_iff mG mF mH hmG hmF hmH μ).2 ?_
-  intro tF tH htF htH
-  -- Names for the two indicators we will multiply.
-  set f1 : Ω → ℝ := tF.indicator (fun _ : Ω => (1 : ℝ))
-  set f2 : Ω → ℝ := tH.indicator (fun _ : Ω => (1 : ℝ))
-  -- Integrability & measurability facts for indicators.
-  have hf1_int : Integrable f1 μ :=
-    (integrable_const (1 : ℝ)).indicator (hmF _ htF)
-  have hf2_int : Integrable f2 μ :=
-    (integrable_const (1 : ℝ)).indicator (hmH _ htH)
-  have hf1_aesm :
-      AEStronglyMeasurable[mF ⊔ mG] f1 μ :=
-    ((stronglyMeasurable_const.indicator htF).aestronglyMeasurable).mono
-      (le_sup_left : mF ≤ mF ⊔ mG)
-  -- Hypothesis specialized to `tH`.
-  have hProj : μ[f2 | mF ⊔ mG] =ᵐ[μ] μ[f2 | mG] := h tH htH
-  -- Tower property from `mG` up to `mF ⊔ mG`.
-  have h_tower :
-      μ[(fun ω => f1 ω * f2 ω) | mG]
-        =ᵐ[μ] μ[ μ[(fun ω => f1 ω * f2 ω) | mF ⊔ mG] | mG] := by
-    -- `condExp_condExp_of_le` (tower) with `mG ≤ mF ⊔ mG`.
-    simpa using
-      (condExp_condExp_of_le (μ := μ)
-        (hm₁₂ := le_sup_right)
-        (hm₂ := sup_le hmF hmG)
-        (f := fun ω => f1 ω * f2 ω)).symm
-  -- Pull out the `mF ⊔ mG`-measurable factor `f1` at the middle level.
-  have h_pull_middle :
-      μ[(fun ω => f1 ω * f2 ω) | mF ⊔ mG]
-        =ᵐ[μ] f1 * μ[f2 | mF ⊔ mG] :=
-    condExp_mul_of_aestronglyMeasurable_left
-      (μ := μ) (m := mF ⊔ mG)
-      hf1_aesm
-      (by
-        -- f1 * f2 = indicator of tF ∩ tH
-        show Integrable (fun ω => f1 ω * f2 ω) μ
-        have : (fun ω => f1 ω * f2 ω) = (tF ∩ tH).indicator (fun _ => (1 : ℝ)) := by
-          ext ω
-          simp [f1, f2, Set.indicator_apply]
-          by_cases h1 : ω ∈ tF <;> by_cases h2 : ω ∈ tH <;> simp [h1, h2]
-        rw [this]
-        exact (integrable_const (1 : ℝ)).indicator (MeasurableSet.inter (hmF _ htF) (hmH _ htH)))
-      hf2_int
-  -- Substitute the projection property to drop `mF` at the middle.
-  have h_middle_to_G :
-      μ[(fun ω => f1 ω * f2 ω) | mF ⊔ mG]
-        =ᵐ[μ] f1 * μ[f2 | mG] :=
-    h_pull_middle.trans <| EventuallyEq.mul EventuallyEq.rfl hProj
-  -- Pull out the `mG`-measurable factor at the outer level.
-  have h_pull_outer :
-      μ[f1 * μ[f2 | mG] | mG]
-        =ᵐ[μ] μ[f1 | mG] * μ[f2 | mG] :=
-    condExp_mul_of_aestronglyMeasurable_right
-      (μ := μ) (m := mG)
-      (stronglyMeasurable_condExp (μ := μ) (m := mG) (f := f2)).aestronglyMeasurable
-      (by
-        -- f1 is indicator of tF, so f1 * μ[f2 | mG] = indicator of tF applied to μ[f2 | mG]
-        show Integrable (fun ω => f1 ω * μ[f2 | mG] ω) μ
-        have : (fun ω => f1 ω * μ[f2 | mG] ω) = fun ω => tF.indicator (μ[f2 | mG]) ω := by
-          ext ω
-          simp only [f1, Set.indicator_apply]
-          by_cases h : ω ∈ tF <;> simp [h]
-        rw [this]
-        exact (integrable_condExp (μ := μ) (m := mG) (f := f2)).indicator (hmF _ htF))
-      hf1_int
-  -- Chain the equalities into the product formula.
-  -- Note: f1 * f2 = (tF ∩ tH).indicator (fun _ => 1)
-  have f_eq : (fun ω => f1 ω * f2 ω) = (tF ∩ tH).indicator (fun _ => (1 : ℝ)) := by
-    ext ω
-    simp [f1, f2, Set.indicator_apply]
-    by_cases h1 : ω ∈ tF <;> by_cases h2 : ω ∈ tH <;> simp [h1, h2]
-  -- Step 1: Apply tower property
-  have step1 := h_tower
-  -- Step 2: Use condExp_congr_ae with h_middle_to_G to substitute in the inner condExp
-  have step2 : μ[μ[(fun ω => f1 ω * f2 ω) | mF ⊔ mG] | mG] =ᵐ[μ] μ[f1 * μ[f2 | mG] | mG] :=
-    condExp_congr_ae h_middle_to_G
-  -- Step 3: Combine step1 and step2
-  have step3 : μ[(fun ω => f1 ω * f2 ω) | mG] =ᵐ[μ] μ[f1 * μ[f2 | mG] | mG] :=
-    step1.trans step2
-  -- Step 4: Apply h_pull_outer
-  have step4 : μ[(fun ω => f1 ω * f2 ω) | mG] =ᵐ[μ] μ[f1 | mG] * μ[f2 | mG] :=
-    step3.trans h_pull_outer
-  -- Step 5: Rewrite using f_eq
-  rw [f_eq] at step4
-  exact step4
 
 /-! ### L² martingale lemma -/
 
@@ -375,33 +281,8 @@ lemma condIndep_of_condProb_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     ProbabilityTheory.CondIndep mG mF mH hmG μ :=
   condIndep_of_indicator_condexp_eq hmF hmG hmH h
 
-/-- **Product formula for conditional expectations of indicators** under conditional independence.
-
-If `mF` and `mH` are conditionally independent given `m`, then for
-`A ∈ mF` and `B ∈ mH` we have
-```
-μ[(1_{A∩B}) | m] = (μ[1_A | m]) · (μ[1_B | m])   a.e.
-```
-This is a direct consequence of `ProbabilityTheory.condIndep_iff` (set version).
-
-NOTE: This is exactly the product formula from `condIndep_iff` and is now proved with a simple
-one-line proof using the mathlib API.
--/
-lemma condExp_indicator_mul_indicator_of_condIndep
-    {Ω : Type*} {m₀ : MeasurableSpace Ω} [StandardBorelSpace Ω]
-    {m mF mH : MeasurableSpace Ω} {μ : @Measure Ω m₀}
-    [IsFiniteMeasure μ]
-    (hm  : m  ≤ m₀) (hmF : mF ≤ m₀) (hmH : mH ≤ m₀)
-    (hCI : ProbabilityTheory.CondIndep m mF mH hm μ)
-    {A B : Set Ω} (hA : MeasurableSet[mF] A) (hB : MeasurableSet[mH] B) :
-  μ[(A ∩ B).indicator (fun _ => (1 : ℝ)) | m]
-    =ᵐ[μ]
-  (μ[A.indicator (fun _ => (1 : ℝ)) | m]
-   * μ[B.indicator (fun _ => (1 : ℝ)) | m]) :=
-  -- This is exactly the product formula from condIndep_iff
-  (ProbabilityTheory.condIndep_iff m mF mH hm hmF hmH μ).mp hCI A B hA hB
-
-/-- **Pull‑out corollary**: if, in addition, `B` is `m`‑measurable then
+/-- **Pull‑out corollary of condExp_indicator_mul_indicator_of_condIndep**:
+If, in addition, `B` is `m`‑measurable then
 `μ[1_B | m] = 1_B` a.e., so we can pull the right factor out (as an indicator).
 
 Formally:
