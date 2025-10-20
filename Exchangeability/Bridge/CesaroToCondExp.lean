@@ -119,8 +119,9 @@ abbrev tail_on_path : MeasurableSpace (ℕ → ℝ) :=
   tailShift ℝ
 
 lemma tail_on_path_le : tail_on_path ≤ (inferInstance : MeasurableSpace (ℕ → ℝ)) := by
-  -- tailShift is defined as iInf, so it's ≤ the product σ-algebra
-  sorry  -- TODO: Standard fact: iInf ≤ each element, comap ≤ original
+  -- Standard σ-algebra fact: iInf of sub-σ-algebras is a sub-σ-algebra
+  -- Proof: iInf (fun n => comap ...) ≤ comap (id) = inferInstance
+  sorry
 
 /-- **BRIDGE 2.** For the shift on path space, the fixed-point subspace equals L²(tail).
 
@@ -212,7 +213,11 @@ theorem cesaro_to_condexp_L1
 
   -- g is bounded ⇒ g ∈ L²(ν)
   have hg_L2 : MemLp g 2 ν := by
-    sorry  -- TODO: Use hf_bdd to show bounded function on probability space is in L²
+    apply MemLp.of_bound hg_meas.aestronglyMeasurable 1
+    apply ae_of_all
+    intro ω
+    simp [g]
+    exact hf_bdd (ω 0)
 
   let gLp : Lp ℝ 2 ν := MemLp.toLp g hg_L2
 
@@ -223,16 +228,24 @@ theorem cesaro_to_condexp_L1
   -- TODO: Use metProjection_eq_condexp_tail_on_path
 
   -- Bridge 3: L² → L¹ convergence
-  have h_L1 : Tendsto (fun (m : ℕ) => (sorry : ℝ)) atTop (𝓝 (0 : ℝ)) := by
-    sorry  -- TODO: Apply tendsto_Lp2_to_L1 to transfer from L² to L¹
+  -- After applying MET and bridges 1-4, we get L¹ convergence of Cesàro averages
+  have h_L1 : Tendsto (fun (m : ℕ) =>
+      ∫ ω, |(1 / (m : ℝ)) * ∑ i : Fin m, f (X i ω) -
+             (μ[(f ∘ X 0) | tailProcess X] ω)| ∂μ)
+      atTop (𝓝 (0 : ℝ)) := by
+    sorry  -- TODO: Complete bridges 1-4 application
 
-  -- Bridge 4: Pull back to Ω via pathify
-  -- Key identities:
-  --   * g ∘ pathify = f ∘ X 0
-  --   * Birkhoff average on path space = Cesàro average on Ω
-  --   * Conditional expectation pulls back correctly
-
-  -- Extract ε-N from L¹ convergence
-  sorry  -- TODO: Use Metric.tendsto_atTop to extract M from h_L1
+  -- Extract ε-N from L¹ convergence using Metric.tendsto_atTop
+  have := Metric.tendsto_atTop.mp h_L1 ε hε
+  obtain ⟨M, hM⟩ := this
+  use M
+  intro m hm
+  have := hM m hm
+  simp only [dist_zero_right] at this
+  rw [Real.norm_of_nonneg] at this
+  · exact this
+  · apply integral_nonneg
+    intro ω
+    exact abs_nonneg _
 
 end Exchangeability.Bridge
