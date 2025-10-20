@@ -9,6 +9,7 @@ import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.Analysis.InnerProductSpace.Projection.Basic
 import Mathlib.Analysis.InnerProductSpace.MeanErgodic
 import Mathlib.Dynamics.Ergodic.MeasurePreserving
+import Exchangeability.PathSpace.Shift
 
 /-!
 # Koopman Operator and the Mean Ergodic Theorem
@@ -74,6 +75,7 @@ noncomputable section
 namespace Exchangeability.Ergodic
 
 open MeasureTheory Filter Topology
+open Exchangeability.PathSpace (shift shift_measurable measurable_shift)
 
 open scoped ENNReal
 
@@ -89,33 +91,9 @@ notation3 "Ω[" α "]" => PathSpace α
 
 variable {Ω : Type*} [MeasurableSpace Ω]
 
-/--
-The left shift on path space.
-
-**Definition:** `(shift ω) n = ω(n+1)` - removes the first element of the sequence.
-
-**Example:** `shift (ω₀, ω₁, ω₂, ...) = (ω₁, ω₂, ω₃, ...)`
-
-**Intuition:** This is the discrete-time analog of the flow map in continuous dynamical
-systems. Iterating the shift corresponds to looking further along the sequence.
-
-**Role in de Finetti:** For exchangeable sequences, the shift preserves the measure.
-Functions that are invariant under shift form the tail σ-algebra, which is central
-to de Finetti's representation.
--/
-def shift (ω : Ω[α]) : Ω[α] := fun n => ω (n + 1)
-
-/--
-The shift map is measurable.
-
-**Proof:** The shift is measurable because each coordinate `(shift ω) n = ω(n+1)` is a
-composition of measurable projection maps.
--/
-lemma measurable_shift : Measurable (shift (α := α)) := by
-  -- shift is the composition of measurable coordinate projections
-  apply measurable_pi_lambda
-  intro n
-  exact measurable_pi_apply (n + 1)
+-- NOTE: shift definition and measurability lemmas are imported from PathSpace.Shift
+-- The shift operator (shift ω) n = ω(n+1) is fundamental to ergodic theory and
+-- is now defined in a central location to avoid duplication.
 
 -- Product measure setup will need specific API from mathlib
 -- For now we work with abstract measure-preserving assumptions
