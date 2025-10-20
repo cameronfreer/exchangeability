@@ -52,7 +52,8 @@ abstract ergodic theory and concrete probability.
 noncomputable section
 open scoped BigOperators ENNReal
 open MeasureTheory Filter Topology
-open Exchangeability.Ergodic (shift)
+open Exchangeability.PathSpace (shift measurable_shift)
+open Exchangeability.Ergodic (koopman metProjection birkhoffAverage_tendsto_metProjection)
 open Exchangeability.Tail (tailProcess tailShift)
 
 namespace Exchangeability.Bridge
@@ -95,16 +96,13 @@ open Exchangeability
 Contractability implies that (X₁, X₂, ..., Xₙ) ~ (X₀, X₁, ..., X_{n-1}) for all n,
 since (1,2,...,n) is an increasing sequence. This gives agreement of all finite marginals,
 hence equality of measures by π-system uniqueness. -/
-lemma measurable_shift_real : Measurable (shift (α := ℝ)) :=
-  Exchangeability.Ergodic.measurable_shift
-
 lemma contractable_shift_invariant_law
     {X : ℕ → Ω → ℝ} (hX : Contractable μ X) (hX_meas : ∀ i, Measurable (X i)) :
-    Measure.map (shift (α := ℝ)) (μ_path μ X) = (μ_path μ X) := by
+    Measure.map shift (μ_path μ X) = (μ_path μ X) := by
   haveI inst1 : IsProbabilityMeasure (μ_path μ X) := isProbabilityMeasure_μ_path hX_meas
   haveI inst2 : IsProbabilityMeasure (Measure.map shift (μ_path μ X)) := by
     constructor
-    rw [Measure.map_apply measurable_shift_real MeasurableSet.univ, Set.preimage_univ]
+    rw [Measure.map_apply measurable_shift MeasurableSet.univ, Set.preimage_univ]
     exact measure_univ
 
   -- Apply π-system uniqueness
@@ -119,8 +117,8 @@ lemma contractable_shift_invariant_law
 /-- **BRIDGE 1'.** Package as `MeasurePreserving` for applying the Mean Ergodic Theorem. -/
 lemma measurePreserving_shift_path (X : ℕ → Ω → ℝ)
     (hX : Contractable μ X) (hX_meas : ∀ i, Measurable (X i)) :
-    MeasurePreserving (shift (α := ℝ)) (μ_path μ X) (μ_path μ X) :=
-  ⟨measurable_shift_real, by simpa using contractable_shift_invariant_law (μ := μ) (X := X) hX hX_meas⟩
+    MeasurePreserving shift (μ_path μ X) (μ_path μ X) :=
+  ⟨measurable_shift, by simpa using contractable_shift_invariant_law (μ := μ) (X := X) hX hX_meas⟩
 
 /-! ## C. Bridge 2: Fixed Space = Tail σ-algebra -/
 
@@ -217,7 +215,7 @@ theorem cesaro_to_condexp_L1
   haveI : IsProbabilityMeasure ν := isProbabilityMeasure_μ_path hX_meas
 
   -- Bridge 1: Shift is measure-preserving on path space
-  have hMP : MeasurePreserving (shift (α := ℝ)) ν ν :=
+  have hMP : MeasurePreserving shift ν ν :=
     measurePreserving_shift_path (μ := μ) (X := X) hX_contract hX_meas
 
   -- Define observable g(ω) = f(ω 0) on path space
@@ -234,19 +232,29 @@ theorem cesaro_to_condexp_L1
 
   let gLp : Lp ℝ 2 ν := MemLp.toLp g hg_L2
 
-  -- Apply Mean Ergodic Theorem
-  -- TODO: Apply birkhoffAverage_tendsto_metProjection with gLp
+  -- Apply Mean Ergodic Theorem: Birkhoff averages converge in L² to projection
+  have hMET : Tendsto (fun n => birkhoffAverage ℝ (koopman shift hMP) _root_.id n gLp)
+      atTop (𝓝 (metProjection shift hMP gLp)) :=
+    birkhoffAverage_tendsto_metProjection shift hMP gLp
 
-  -- Bridge 2: Identify projection with conditional expectation
-  -- TODO: Use metProjection_eq_condexp_tail_on_path
+  -- Bridge 2: metProjection = condexp_L2 onto tail σ-algebra
+  have hBridge2 : metProjection shift hMP gLp = (ν)[gLp | tail_on_path] :=
+    metProjection_eq_condexp_tail_on_path X hX_contract hX_meas gLp
 
-  -- Bridge 3: L² → L¹ convergence
-  -- After applying MET and bridges 1-4, we get L¹ convergence of Cesàro averages
+  -- Bridge 3: L² convergence implies L¹ convergence
+  have hL2_to_L1 : Tendsto (fun n => ∫ x, ‖birkhoffAverage ℝ (koopman shift hMP) _root_.id n gLp x
+                                         - metProjection shift hMP gLp x‖ ∂ν)
+      atTop (𝓝 0) :=
+    tendsto_Lp2_to_L1 hMET
+
+  -- Bridge 4: Pull back to original space
+  -- The Birkhoff average on path space corresponds to Cesàro average on original space
+  -- And conditional expectation pulls back via pathify
   have h_L1 : Tendsto (fun (m : ℕ) =>
       ∫ ω, |(1 / (m : ℝ)) * ∑ i : Fin m, f (X i ω) -
              (μ[(f ∘ X 0) | tailProcess X] ω)| ∂μ)
       atTop (𝓝 (0 : ℝ)) := by
-    sorry  -- TODO: Complete bridges 1-4 application
+    sorry  -- TODO: Apply Bridge 4 and reindex
 
   -- Extract ε-N from L¹ convergence using Metric.tendsto_atTop
   have := Metric.tendsto_atTop.mp h_L1 ε hε
