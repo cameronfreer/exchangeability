@@ -163,11 +163,14 @@ lemma tendsto_Lp2_to_L1 {α : Type*} [MeasurableSpace α] {m : Measure α} [IsPr
     {Y : ℕ → Lp ℝ 2 m} {Z : Lp ℝ 2 m}
     (h₂ : Tendsto Y atTop (𝓝 Z)) :
     Tendsto (fun n => ∫ x, ‖Y n x - Z x‖ ∂m) atTop (𝓝 0) := by
-  -- Convergence in Lp means ‖Y n - Z‖_Lp → 0
-  -- For Lp ℝ 2 m, ‖f‖ = (∫ |f|²)^(1/2)
-  -- By Hölder on prob space: ∫|f| ≤ ‖f‖₂ · 1 = ‖f‖₂
+  -- Convergence in Lp 2 means ‖Y n - Z‖_{Lp 2} → 0
+  -- On probability spaces: ∫|f| ≤ ‖f‖_{L²} by Cauchy-Schwarz
+  -- Key inequality: ∫|f| ≤ (∫|f|²)^(1/2) · (∫ 1²)^(1/2) = (∫|f|²)^(1/2) · 1
 
-  sorry  -- TODO: Apply Lp norm inequalities and squeeze theorem
+  -- Approach: Use squeeze theorem
+  -- 0 ≤ ∫|Y_n - Z| ≤ ‖Y_n - Z‖_{L²} → 0
+
+  sorry  -- TODO: Apply Lp.norm_le_norm_of_exponent_le or similar + squeeze
 
 /-! ## E. Bridge 4: Pullback along Factor Map -/
 
