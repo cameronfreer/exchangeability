@@ -1590,39 +1590,37 @@ for any integrable `f`:
 4. Therefore the conditional expectations agree a.e.
 -/
 private lemma condexp_comp_T_eq_condexp
-    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {m : MeasurableSpace Ω} (hm : m ≤ ‹MeasurableSpace Ω›)
+    {Ω : Type*} [inst : MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {m : MeasurableSpace Ω} (hm : m ≤ inst)
     (T : Ω → Ω) (hT_meas : Measurable T) (hT_pres : MeasurePreserving T μ μ)
-    (h_inv : ∀ s, MeasurableSet[m] s → T ⁻¹' s = s)
+    (h_inv : ∀ s, @MeasurableSet Ω m s → T ⁻¹' s = s)
     (f : Ω → ℝ) (hf : Integrable f μ) :
-    MeasureTheory.condExp m μ (f ∘ T) =ᵐ[μ] MeasureTheory.condExp m μ f := by
+    MeasureTheory.condExp (m := m) (μ := μ) (f ∘ T) =ᵐ[μ] MeasureTheory.condExp (m := m) (μ := μ) f := by
   -- Use uniqueness of conditional expectation
   symm
-  apply MeasureTheory.ae_eq_condExp_of_forall_setIntegral_eq hm
-  -- f ∘ T is integrable
-  · exact hf.comp_measurePreserving hT_pres
-  -- For m-measurable s with μ s < ∞, condExp m μ f is integrable on s
-  · intro s hs hμs
-    exact (MeasureTheory.integrable_condExp.integrableOn : IntegrableOn (MeasureTheory.condExp m μ f) s μ)
-  -- Show integral equality: ∫ x in s, condExp[f] dμ = ∫ x in s, f ∘ T dμ
-  · intro s hs hμs
-    rw [MeasureTheory.setIntegral_condExp hm hf hs]
+  refine MeasureTheory.ae_eq_condExp_of_forall_setIntegral_eq (μ := μ) (m := m) (m₀ := inst) (hm := hm) ?hf ?hg_int ?hg_eq ?hgm
+  case hf => exact hf.comp_measurePreserving hT_pres
+  case hg_int =>
+    intro s hs hμs
+    exact (MeasureTheory.integrable_condExp (m := m) (μ := μ) (hm := hm)).integrableOn
+  case hg_eq =>
+    intro s hs hμs
+    rw [MeasureTheory.setIntegral_condExp (m := m) (μ := μ) (hm := hm) hf (@MeasurableSet.mono Ω m inst s hs hm)]
     -- Need: ∫ x in s, f x ∂μ = ∫ x in s, f (T x) ∂μ
-    rw [← hT_pres.setIntegral_preimage_emb hT_meas (hm s hs) hf.integrableOn]
+    rw [← hT_pres.setIntegral_preimage_emb hT_meas (@MeasurableSet.mono Ω m inst s hs hm) hf.integrableOn]
     -- Use T⁻¹ s = s from h_inv
     congr 1
     exact (h_inv s hs).symm
-  -- condExp m μ f is ae strongly measurable w.r.t. m
-  · exact MeasureTheory.stronglyMeasurable_condExp.aestronglyMeasurable
+  case hgm => exact (MeasureTheory.stronglyMeasurable_condExp (m := m) (μ := μ) (hm := hm)).aestronglyMeasurable
 
 /-- Extension to iterated composition: 𝔼[f ∘ T^[k] | m] = 𝔼[f | m] for all k. -/
 private lemma condexp_comp_T_pow_eq_condexp
-    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {m : MeasurableSpace Ω} (hm : m ≤ ‹MeasurableSpace Ω›)
+    {Ω : Type*} [inst : MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {m : MeasurableSpace Ω} (hm : m ≤ inst)
     (T : Ω → Ω) (hT_meas : Measurable T) (hT_pres : MeasurePreserving T μ μ)
-    (h_inv : ∀ s, MeasurableSet[m] s → T ⁻¹' s = s)
+    (h_inv : ∀ s, @MeasurableSet Ω m s → T ⁻¹' s = s)
     (f : Ω → ℝ) (hf : Integrable f μ) (k : ℕ) :
-    MeasureTheory.condExp m μ (f ∘ (T^[k])) =ᵐ[μ] MeasureTheory.condExp m μ f := by
+    MeasureTheory.condExp (m := m) (μ := μ) (f ∘ (T^[k])) =ᵐ[μ] MeasureTheory.condExp (m := m) (μ := μ) f := by
   induction k with
   | zero => simp
   | succ k ih =>
@@ -1637,11 +1635,11 @@ private lemma condexp_comp_T_pow_eq_condexp
       rw [hT_k_pres.integrable_comp hf.aestronglyMeasurable]
       exact hf
     -- Apply the base case to (f ∘ T^[k]) ∘ T
-    calc MeasureTheory.condExp m μ (f ∘ (T^[k+1]))
-        = MeasureTheory.condExp m μ ((f ∘ (T^[k])) ∘ T) := by rw [h_comp]
-      _ =ᵐ[μ] MeasureTheory.condExp m μ (f ∘ (T^[k])) :=
+    calc MeasureTheory.condExp (m := m) (μ := μ) (f ∘ (T^[k+1]))
+        = MeasureTheory.condExp (m := m) (μ := μ) ((f ∘ (T^[k])) ∘ T) := by rw [h_comp]
+      _ =ᵐ[μ] MeasureTheory.condExp (m := m) (μ := μ) (f ∘ (T^[k])) :=
           condexp_comp_T_eq_condexp hm T hT_meas hT_pres h_inv (f ∘ (T^[k])) hf_Tk_int
-      _ =ᵐ[μ] MeasureTheory.condExp m μ f := ih
+      _ =ᵐ[μ] MeasureTheory.condExp (m := m) (μ := μ) f := ih
 
 /-- **Projected MET**: The conditional expectation of Birkhoff averages onto a
 T-invariant σ-algebra is constant and equals 𝔼[f | m].
