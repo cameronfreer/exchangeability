@@ -201,7 +201,26 @@ lemma tendsto_Lp2_to_L1 {α : Type*} [MeasurableSpace α] {m : Measure α} [IsPr
       simp only [measure_univ, ENNReal.one_rpow, mul_one] at this
       exact this
 
-    sorry -- TODO: Connect eLpNorm 1 to integral and eLpNorm 2 to Lp norm
+    -- Connect integral to eLpNorm 1
+    have h1 : ∫ x, ‖(Y n - Z) x‖ ∂m = (eLpNorm (Y n - Z) 1 m).toReal := by
+      rw [integral_norm_eq_lintegral_enorm hf_aesm, eLpNorm_one_eq_lintegral_enorm]
+
+    -- Connect Lp norm to eLpNorm 2
+    have h2 : ‖Y n - Z‖ = (eLpNorm (Y n - Z) 2 m).toReal := rfl
+
+    -- Combine via monotonicity
+    -- Note: (Y n - Z) as an Lp function equals Y n - Z pointwise a.e.
+    have h_ae_eq : ↑↑(Y n - Z) =ᶠ[ae m] ↑↑(Y n) - ↑↑Z := Lp.coeFn_sub (Y n) Z
+
+    calc ∫ x, ‖Y n x - Z x‖ ∂m
+        = ∫ x, ‖(Y n - Z) x‖ ∂m := by
+            refine integral_congr_ae ?_
+            filter_upwards [h_ae_eq.symm] with x hx
+            simp only [Pi.sub_apply] at hx
+            rw [hx]
+      _ = (eLpNorm (Y n - Z) 1 m).toReal := h1
+      _ ≤ (eLpNorm (Y n - Z) 2 m).toReal := ENNReal.toReal_mono (Lp.eLpNorm_ne_top _) key_ineq
+      _ = ‖Y n - Z‖ := h2.symm
 
   -- Step 3: Apply squeeze theorem
   refine' tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_norm _ h_bound
