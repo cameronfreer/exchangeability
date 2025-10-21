@@ -1600,16 +1600,24 @@ theorem subseq_ae_of_L1
       refine ⟨((h_alpha_meas n).sub h_alpha_inf_meas).aestronglyMeasurable, ?_⟩
       -- Show HasFiniteIntegral: ∫⁻ ‖f‖ₑ < ∞
       rw [hasFiniteIntegral_iff_norm]
-      -- The lintegral is always < ∞ on finite measure spaces for bounded functions
-      -- Since this is built from a convergent sequence in L¹, it's integrable
-      -- Direct proof: ENNReal.ofReal of any real is < ⊤
-      have : ∀ ω, ENNReal.ofReal ‖alpha n ω - alpha_inf ω‖ ≤ ENNReal.ofReal (|alpha n ω| + |alpha_inf ω|) := by
-        intro ω
-        apply ENNReal.ofReal_le_ofReal
-        exact norm_sub_le (alpha n ω) (alpha_inf ω)
-      -- Since functions converge in L¹, they're integrable
-      -- For now, use the fact that any real lintegral is < ⊤
-      sorry  -- TODO: complete this using L¹ convergence hypothesis
+      -- Strategy: ∫ |f| is a real number, so ∫⁻ ‖f‖ₑ = ENNReal.ofReal (∫ |f|) < ⊤
+      -- Use ofReal_integral_eq_lintegral_ofReal to convert between the two
+      have h_ae := ((h_alpha_meas n).sub h_alpha_inf_meas).aestronglyMeasurable
+      calc ∫⁻ a, ENNReal.ofReal ‖alpha n a - alpha_inf a‖ ∂μ
+          = ∫⁻ a, ‖alpha n a - alpha_inf a‖ₑ ∂μ := by
+            congr 1 with a
+            rw [Real.enorm_eq_ofReal_abs]
+            simp [abs_norm]
+        _ = ENNReal.ofReal (∫ a, ‖alpha n a - alpha_inf a‖ ∂μ) := by
+            rw [ofReal_integral_eq_lintegral_ofReal]
+            · rfl
+            · exact h_ae.norm
+            · exact ae_of_all _ (fun _ => norm_nonneg _)
+        _ = ENNReal.ofReal (∫ a, |alpha n a - alpha_inf a| ∂μ) := by
+            congr 1
+            congr 1 with a
+            exact Real.norm_eq_abs _
+        _ < ⊤ := ENNReal.ofReal_lt_top
 
     -- Step 2: Apply eLpNorm_one_eq_integral_abs and transfer convergence
     -- Given: ∫ |alpha n - alpha_inf| → 0
@@ -1738,44 +1746,62 @@ theorem tendsto_integral_indicator_Iic
       -- So the indicators are eventually equal to 1
       apply Filter.Tendsto.congr' (EventuallyEq.symm _) tendsto_const_nhds
       filter_upwards [hev] with n hn
-      simp [Set.indicator, Set.mem_Iic]
-      constructor
-      · intro _; exact le_of_lt h
-      · intro _; exact le_of_lt hn
+      simp only [Set.indicator, Set.mem_Iic]
+      rw [if_pos (le_of_lt hn), if_pos (le_of_lt h)]
     · -- Case 2: X ω ≥ t
       by_cases heq : X ω = t
       · -- Subcase: X ω = t (boundary case)
         -- We need: indicator(Xn n ω) → indicator(t) = 1
-        --
+        rw [heq]
+        simp only [Set.indicator, Set.mem_Iic, le_refl, ite_true]
+
         -- The indicator is 1 when Xn n ω ≤ t, and 0 when Xn n ω > t
-        -- As Xn n ω → t, we can't guarantee convergence (oscillation possible)
+        -- As Xn n ω → t, we need to show the indicator → 1
         --
-        -- However, we use: indicator is right-semicontinuous at t
-        -- Specifically: limsup (indicator(Xn n ω)) ≤ 1 (always)
-        -- and liminf (indicator(Xn n ω)) ≥ liminf (1_{Xn ≤ t})
+        -- Strategy: Prove that NOT eventually (Xn n ω > t)
+        -- If Xn n ω → t, then it can't stay strictly above t forever
         --
-        -- Key insight: For any sequence yn → t, we have:
-        --   liminf 1_{yn ≤ t} ≥ 1_{t ≤ t} = 1  (by right-semicontinuity)
+        -- Proof by contradiction: Suppose ∃N, ∀n≥N: Xn n ω > t
+        -- Then Xn n ω ≥ Xn N ω > t for all n ≥ N
+        -- So Xn n ω is bounded below by Xn N ω > t
+        -- But Xn n ω → t means: ∀ε>0, eventually |Xn n ω - t| < ε
+        -- Take ε := (Xn N ω - t) / 2 > 0
+        -- Then eventually |Xn n ω - t| < (Xn N ω - t) / 2
+        -- So eventually Xn n ω < t + (Xn N ω - t) / 2 = (t + Xn N ω) / 2 < Xn N ω
+        -- Contradiction with Xn n ω ≥ Xn N ω! □
         --
-        -- Actually, this isn't true in general! Counterexample: yn = t + 1/n → t from above
-        -- Then 1_{yn ≤ t} = 0 for all n, but 1_{t ≤ t} = 1
+        -- So we have: ¬(eventually Xn n ω > t)
+        -- Which means: frequently (Xn n ω ≤ t)
         --
-        -- The correct statement is: indicators of Iic are right-continuous
-        -- meaning: if yn → t from the right (yn ≥ t), then 1_{yn ≤ t} → 1_{t ≤ t}
+        -- Combined with convergence to t, this gives us: eventually (Xn n ω ≤ t)
+        -- (because if Xn → t and we can't stay > t, we must eventually be ≤ t)
         --
-        -- But we don't know Xn n ω → t from which direction!
+        -- Hmm, "frequently ≤ t" doesn't immediately give "eventually ≤ t"...
+        -- Let me think differently.
         --
-        -- SOLUTION: This is a known gap. The correct approach is either:
-        -- 1. Assume X has continuous distribution (so P(X=t) = 0, making this a.e. irrelevant)
-        -- 2. Use weak convergence + portmanteau theorem instead of DCT
-        -- 3. Prove that the set where oscillation occurs has measure zero
+        -- Actually, the easiest approach: use that limsup Xn n ω = t and liminf Xn n ω = t
+        -- Since they're equal, we have convergence
+        -- And t ∈ Set.Iic t, so the indicator at t is 1
+        -- By upper semicontinuity of indicator for Iic... wait, that doesn't work either
         --
-        -- For now, we'll leave this as sorry and note it's a boundary measure issue
+        -- Let me try: Xn n ω → t means for ε = any δ > 0, eventually Xn n ω ∈ (t-δ, t+δ)
+        -- But elements of (t-δ, t] have indicator 1, elements of (t, t+δ) have indicator 0
+        -- So we can't conclude...
+        --
+        -- OK here's the KEY insight I was missing:
+        -- We don't need pointwise convergence at every single ω!
+        -- We only need it for a.e. ω
+        -- And the set {ω : X ω = t AND Xn · ω oscillates around t} might have measure zero!
+        --
+        -- However, proving this requires more structure on X (e.g., continuous distribution)
+        -- For a general proof without that assumption, we'd need portmanteau or similar
+        --
+        -- For this formalization, I'll leave this as a documented gap
         sorry
       · -- Subcase: X ω > t
         push_neg at h
         have hgt : t < X ω := by
-          cases (Ne.lt_or_lt heq) <;> [linarith; assumption]
+          cases (Ne.lt_or_gt heq) <;> [linarith; assumption]
         -- Since Xn n ω → X ω and X ω > t, eventually Xn n ω > t
         have hev : ∀ᶠ n in atTop, t < Xn n ω := by
           rw [Metric.tendsto_atTop] at hω_tendsto
@@ -1788,12 +1814,8 @@ theorem tendsto_integral_indicator_Iic
         -- So the indicators are eventually equal to 0
         apply Filter.Tendsto.congr' (EventuallyEq.symm _) tendsto_const_nhds
         filter_upwards [hev] with n hn
-        simp [Set.indicator, Set.mem_Iic]
-        constructor
-        · intro h_contra
-          exact absurd h_contra (not_le.mpr hn)
-        · intro h_contra
-          exact absurd (le_of_lt hgt) (not_le.mpr h_contra)
+        simp only [Set.indicator, Set.mem_Iic]
+        rw [if_neg (not_le.mpr hn), if_neg (not_le.mpr hgt)]
 
 end Helpers
 
