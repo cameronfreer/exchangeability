@@ -11,65 +11,161 @@ This document outlines potential publication angles from the de Finetti formaliz
 
 ---
 
-## Main Publication Concepts
+## Main Publication: Single AFM Paper
 
-### Concept 1: "Three Proofs, One Theorem: Formalizing de Finetti's Theorem in Lean 4"
-**Focus:** Comparative study of three proof approaches to the same deep theorem
+### "Formalizing de Finetti's Theorem in Lean 4: Three Proofs and Mathematical Insights"
 
-**Key angles:**
-- **Proof diversity:** L² approach vs. Ergodic theory vs. Martingale convergence
-- **Dependency analysis:** L² is lightest, Ergodic requires heavy theory, Martingale blocked by mathlib gaps
-- **Formalization trade-offs:** Elementary proofs vs. conceptual proofs
-- **When to choose which approach:** Practical guidance for formalizers
+**Core Premise:** Three independent formalizations of the same deep theorem reveal formalization trade-offs, mathematical insights, and infrastructure needs.
 
-**Narrative arc:**
-1. Mathematical background: de Finetti's theorem and the Ryll-Nardzewski equivalence
-2. Three proof approaches from Kallenberg (2005)
-3. Formalization challenges for each approach
-4. Comparative analysis: LOC, dependencies, mathlib gaps revealed
-5. Lessons for formalizing probability theory
+**Primary Focus:** Comparative study showing how proof approach affects formalization complexity, revealing both mathematical and implementation insights.
 
-**Target audience:** Formal methods community, proof assistant users, probability theorists interested in formalization
+**Target Venue:** Annals of Formalized Mathematics (primary)
+
+**Alternative Venues:**
+- ITP/CPP (shorter conference version focusing on proof assistant contributions)
+- Lean Together (extended abstract for community feedback)
+- Mathematics of Computation (if emphasizing mathematical insights over formalization)
 
 ---
 
-### Concept 2: "Conditional Expectations and Type Classes: Lessons from Measure-Theoretic Formalization"
-**Focus:** Deep dive into the `condExpWith` pattern discovery and type class issues
+#### Core Content: Three Proof Approaches
 
-**Key angles:**
-- **The anonymous instance anti-pattern:** How `‹_›` fails with sub-σ-algebras
-- **Root cause analysis:** Type class resolution with multiple structures
-- **The canonical solution:** `condExpWith` pattern and explicit instance management
-- **Broader implications:** Sub-structure patterns in formalization (filtrations, stopping times, etc.)
+**1. ViaL2: Elementary L² Bounds**
+- Kallenberg's "second proof" - most elementary mathematically
+- Minimal dependencies, complete formalization
+- Key contribution: L² → L¹ convergence infrastructure
+- **Insight:** Elementary proofs can be easiest to formalize
 
-**Narrative arc:**
-1. The problem: 4 critical conditional expectation lemmas blocked
-2. The debugging journey: Cryptic errors to root cause discovery
-3. The pattern: `condExpWith` as canonical solution
-4. Generalization: When and why this pattern is needed
-5. Proposals for Lean 4 improvements
+**2. ViaKoopman: Mean Ergodic Theorem**
+- Kallenberg's "first proof" - deepest connection to ergodic theory
+- Heavy infrastructure needs, clever reformulation discovered
+- Key contribution: "Project first, then average" bypasses Koopman machinery
+- **Insight:** Type-level mismatches can block entire approaches, reformulation saves the day
 
-**Target audience:** Lean 4 developers, mathlib contributors, type theory community
+**3. ViaMartingale: Reverse Martingale Convergence**
+- Kallenberg's "third proof" - most probabilistically elegant
+- Reveals mathlib gaps (kernel uniqueness, disintegration)
+- Key contribution: Systematic blocker elimination strategy
+- **Insight:** Missing infrastructure can be staged locally for extraction
 
 ---
 
-### Concept 3: "Formalizing Infinite-Dimensional Probability: π-Systems, Cylinder Sets, and Measure Uniqueness"
-**Focus:** General infrastructure for infinite product spaces in probability
+#### Sub-Theme 1: Formalization as Mathematical Explanation
 
-**Key angles:**
-- **π-system machinery:** Cylinder sets as generators
-- **Measure uniqueness:** Finite marginals determine infinite measures
-- **Formalization challenges:** Balancing generality and usability
-- **Applications beyond de Finetti:** Stochastic processes, random sequences
+**Novel Contribution: "Equation Archeology"**
 
-**Narrative arc:**
-1. Mathematical need: Infinite product measures in probability
-2. Formalization approach: π-systems and generating sets
-3. Key lemma: `measure_eq_of_fin_marginals_eq`
-4. Design decisions: Generality vs. convenience
-5. Future work: Kolmogorov extension theorem
+Traditional textbook proofs present calculation chains without explanation:
+```
+E[f(X_n+1) | X_1,...,X_n] = E[E[f(X_n+1) | σ(X_1,X_2,...)] | X_1,...,X_n]    (1.2a)
+                           = E[α(X_1,X_2,...) | X_1,...,X_n]                  (1.2b)
+                           = α(X_1,...,X_n)                                    (1.2c)
+```
 
-**Target audience:** Probability theorists, mathlib contributors, formal methods in mathematics
+**Formalization forces explicit reasoning:**
+1. **Formalize the chain completely** - every step must be justified
+2. **Factor out the general principle** - extract reusable lemma for each step
+3. **Name the principle** - the lemma name documents the "why"
+
+**Example from our formalization:**
+```lean
+-- Step (1.2a) → (1.2b): "Tower property collapses nested conditional expectations"
+lemma condExp_condExp_le (hm₁ : m₁ ≤ m₂) (hm₂ : m₂ ≤ m₃) :
+    E[E[f|m₃]|m₁] =ᵐ[μ] E[f|m₁]
+
+-- Step (1.2b) → (1.2c): "Measurable functions are fixed points of conditional expectation"
+lemma condExp_of_stronglyMeasurable (hf : StronglyMeasurable[m] f) :
+    E[f|m] =ᵐ[μ] f
+```
+
+**Meta-insight:** The formalized lemmas **are** the explanations. Instead of guessing why each step works, we have:
+- **Precise conditions** (what hypotheses are actually needed)
+- **Generality** (exactly when this principle applies)
+- **Verified truth** (not textbook hand-waving)
+- **Reusability** (same lemma for all similar calculations)
+
+**Impact on mathematical exposition:**
+- Textbooks could cite formalized lemmas as references
+- Each equation gets a "certified explanation"
+- Students see the general principle, not just the specific instance
+- Mathematical intuition becomes rigorous
+
+**Example narrative for paper:**
+> "Kallenberg's proof contains the calculation chain (1.2). While experienced
+> probabilists recognize these as applications of the tower property and
+> measurability, the formalization makes this explicit through two general lemmas.
+> This transforms 'obvious' steps into documented, reusable principles with
+> precise applicability conditions. The formalization doesn't just verify the
+> calculation—it explains why each step is valid."
+
+---
+
+#### Sub-Theme 2: Type Classes and Sub-σ-Algebras
+
+**The condExpWith Pattern Discovery**
+- Type class resolution failures with anonymous instance notation
+- Root cause: `‹_›` resolves to wrong measurable space
+- Solution: Explicit ambient space + instance management
+- **Broader application:** Pattern for all sub-structure work in Lean 4
+
+**Can be expanded to separate ITP paper if needed**
+
+---
+
+#### Sub-Theme 3: Infrastructure for Infinite-Dimensional Probability
+
+**π-System Machinery**
+- Cylinder sets as generators for product σ-algebra
+- Measure uniqueness via finite marginals
+- Enables proof: exchangeable ⟺ fully exchangeable
+
+**Integration Theory Contributions**
+- L² → L¹ convergence for bounded sequences
+- Cauchy-Schwarz specialized to probability spaces
+- Pushforward integral helpers
+
+**Conditional Expectation Extensions**
+- 4 operator-theoretic properties (abs preservation, Lipschitz, pullout, integrability)
+- condExpWith pattern as canonical approach
+- Designed for mathlib contribution
+
+**Can be expanded to separate AFM infrastructure paper after mathlib PRs accepted**
+
+---
+
+#### Sub-Theme 4: Formalization Methodology
+
+**"Unblock-First, Upstream-Second" Strategy**
+- Local infrastructure with TODO markers
+- Proofs proceed while extraction path preserved
+- Example: 3 ViaMartingale blockers → 0 application sorries, 3 infrastructure sorries
+
+**"Multiple Approaches as Risk Mitigation"**
+- Three proofs started simultaneously
+- ViaL2 emerged as most tractable
+- Others provide fallback and completeness
+
+**"Proof Restructuring for Reusability"**
+- Generic helpers take properties as hypotheses
+- Prove specific bounds at call site
+- Enables reuse across different instantiations
+
+**Can be excerpted for methodology-focused workshop papers**
+
+---
+
+#### Sub-Theme 5: Type Systems as Both Help and Hindrance
+
+**When Types Block Progress**
+- Koopman operator / sub-σ-algebra mismatch
+- Ambient vs. restricted space confusion
+- Effort estimates: 1-2 weeks to fix vs. 1 day to reformulate
+
+**When Types Enable Insight**
+- Explicit measurability requirements prevent errors
+- Type-driven proof search reveals dependencies
+- Refactoring safety from type checking
+
+**Can be expanded for type theory / PL audience**
 
 ---
 
@@ -447,14 +543,14 @@ exact condDistrib_factor_indicator_agree h_law h_le
 
 ---
 
-## Potential Publication Outlines
+## Paper Outline (AFM Primary Version)
 
-### AFM Paper 1: "Formalizing de Finetti's Theorem in Lean 4: Three Proofs and Their Infrastructure"
-**Target venue:** Annals of Formalized Mathematics
-**Length:** 20-30 pages (journal format)
-**Type:** Full formalization paper with mathematical focus
+### "Formalizing de Finetti's Theorem in Lean 4: Three Proofs and Mathematical Insights"
 
-**AFM-aligned structure emphasizing the 9 virtues:**
+**Target venue:** Annals of Formalized Mathematics (20-30 pages)
+**Alternative venues:** ITP/CPP (12-15 pages, technical focus), Mathematics of Computation (mathematical focus)
+
+**Structure emphasizing AFM's 9 virtues + "equation archeology" contribution:**
 
 1. **Introduction** (accessible to general mathematical audience)
    - de Finetti's theorem: exchangeability and its characterization
@@ -496,6 +592,16 @@ exact condDistrib_factor_indicator_agree h_law h_le
      * Reveals mathlib gaps: kernel uniqueness, disintegration
    - **Mathematical insights:** Type-level mismatches, proof reformulations
    - Dependency comparison: LOC counts, mathlib imports, completion status
+
+4a. **"Equation Archeology": Formalization as Explanation** (NEW CONTRIBUTION)
+   - Case study: Kallenberg's equation chain (1.2)
+   - How formalization reveals the "why" behind each step
+   - Extracted general lemmas as certified explanations:
+     * Tower property: `condExp_condExp_le`
+     * Fixed point property: `condExp_of_stronglyMeasurable`
+   - Meta-principle: Formalized lemmas document mathematical reasoning
+   - Benefit: Textbooks could cite formalized lemmas for justification
+   - Transforms "obvious to experts" into "verified and explained"
 
 5. **Key Infrastructure Contributions** (integration and generality)
    - π-system uniqueness for infinite products
@@ -550,94 +656,29 @@ exact condDistrib_factor_indicator_agree h_law h_le
 
 ---
 
-### ITP Paper 2: "The condExpWith Pattern: Type Classes and Sub-σ-Algebras in Lean 4"
-**Target venue:** ITP (Interactive Theorem Proving) or CPP
-**Length:** 12-15 pages (conference paper)
-**Type:** Technical contribution paper
-**Note:** More focused and technical than AFM paper, targets proof assistant community
+## Potential Spin-off Papers (from sub-themes)
 
-**Outline:**
-1. Introduction
-   - Conditional expectation in probability theory
-   - Sub-σ-algebras and filtrations
-   - Formalization challenges
+These sub-themes can be expanded into separate publications for different venues/audiences:
 
-2. The Problem
-   - Type class resolution with multiple structures
-   - Anonymous instance notation pitfall
-   - Manifestation in CondExp work
+### ITP Paper: "The condExpWith Pattern" (Sub-Theme 2)
+**Target:** ITP or CPP (12-15 pages)
+**Focus:** Technical implementation details for proof assistant community
+**Timeline:** Can be written concurrently with AFM paper, submitted to ITP 2026
 
-3. The Solution
-   - The `condExpWith` pattern
-   - Explicit instance management
-   - Why it works
+### AFM Infrastructure Paper: "Infinite-Dimensional Probability in mathlib" (Sub-Theme 3)
+**Target:** AFM (15-25 pages)
+**Focus:** After mathlib PRs accepted, document the contributed infrastructure
+**Timeline:** 1-2 years after initial submission
 
-4. Generalization
-   - Other sub-structure patterns in mathematics
-   - Design principles for Lean 4
-   - Proposals for language improvements
+### Workshop Paper: "Formalization Methodology Patterns" (Sub-Theme 4)
+**Target:** Lean Together or FLOC workshops (6-8 pages)
+**Focus:** Unblock-first strategy and other methodologies
+**Timeline:** Can extract from main paper for early feedback
 
-5. Impact
-   - Unblocking 4 critical lemmas
-   - Applications to filtrations and stochastic processes
-   - Mathlib contributions
-
-**Estimated writing time:** 2-3 months
-
-**Note:** This is a companion technical paper to the AFM submission, focusing on implementation details rather than mathematical content. Could be submitted concurrently or after AFM acceptance.
-
-
-
----
-
-### Optional AFM Paper 3: "Infrastructure for Infinite-Dimensional Probability in mathlib"
-**Target venue:** Annals of Formalized Mathematics (after mathlib contributions complete)
-**Length:** 15-25 pages
-**Type:** Infrastructure paper
-**Timeline:** 1-2 years after initial AFM submission (after mathlib PRs accepted)
-
-**Outline:**
-1. Introduction
-   - Infinite-dimensional probability theory
-   - Formalization challenges
-   - Overview of contributions
-
-2. Mathematical Background
-   - Infinite product spaces
-   - Cylinder sets and π-systems
-   - Measure uniqueness theorems
-
-3. Formalization in Lean 4
-   - Product σ-algebra construction
-   - Prefix projections and cylinders
-   - π-system lemmas
-
-4. Key Results
-   - `measure_eq_of_fin_marginals_eq`
-   - Exchangeable iff fully exchangeable
-   - Applications to de Finetti
-
-5. Integration Theory
-   - L² → L¹ convergence
-   - Pushforward measure integrals
-   - Helper lemmas for probability
-
-6. Conditional Expectation
-   - Operator-theoretic properties
-   - Sub-σ-algebra patterns
-   - API design
-
-7. Applications
-   - de Finetti's theorem
-   - Stochastic processes framework
-   - Future directions
-
-8. Mathlib Contributions
-   - Current contributions
-   - Planned PRs
-   - Long-term roadmap
-
-**Estimated writing time:** 4-6 months
+### PL Paper: "Type Systems in Mathematical Formalization" (Sub-Theme 5)
+**Target:** POPL workshops or type theory venues (8-12 pages)
+**Focus:** When types help vs. hinder, targeted at PL researchers
+**Timeline:** Optional, if type theory angle proves particularly interesting
 
 ---
 
