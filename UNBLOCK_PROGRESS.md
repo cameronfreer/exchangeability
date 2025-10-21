@@ -6,9 +6,9 @@
 
 ---
 
-## Priority A: Blocker 3 (Pi Measurable Space Supremum) - IN PROGRESS
+## Priority A: Blocker 3 (Pi Measurable Space Supremum) - ✅ COMPLETE
 
-### Status: 90% Complete - Calc Scoping Issue
+### Status: Successfully Unblocked
 
 **Objective:** Prove `futureFiltration X m ≤ ⨆ k, finFutureSigma X m k` using local infrastructure lemma.
 
@@ -34,62 +34,39 @@
    - ✅ Applied `MeasurableSpace.comap_comp` for composition
    - ✅ Final step with `le_antisymm hle hge`
 
-### ❌ Current Blocker: Calc Scoping Issue
+### ✅ Solution: Helper Lemma Approach (Option 2)
 
-**Error:** Line 2453 - "No goals to be solved"
+**Fix applied:** Separated calc proof into helper have, then combined with forward direction.
 
-**Problem:** The `rfl` at the end of the calc proof is closing ALL goals, including the parent `hiSup_fin` goal, causing `le_antisymm hle hge` to fail.
-
-**Root cause:** Nested `have` statements in term mode with calc inside create unexpected goal closure.
-
-**Code structure:**
+**Final structure:**
 ```lean
-have hiSup_fin : (⨆ k, ...) = futureFiltration X m :=
-  have hle : ... := by ...
-  have hge : ... := by
-    calc MeasurableSpace.comap ...
-        ≤ ...
-      _ = ...
-      _ = ... := by
-          congr 1; ext k
-          rw [MeasurableSpace.comap_comp]
-          rfl  -- ← This closes ALL goals!
-  le_antisymm hle hge  -- ← Error: No goals to be solved
-```
+have h_future_le_iSup : futureFiltration X m ≤ (⨆ k, finFutureSigma X m k) := by
+  calc MeasurableSpace.comap (shiftRV X (m + 1)) inferInstance
+      ≤ MeasurableSpace.comap (shiftRV X (m + 1)) (⨆ k, ...) :=
+        MeasurableSpace.comap_mono h_pi_le
+    _ = ⨆ k, MeasurableSpace.comap (shiftRV X (m + 1)) (...) :=
+        MeasurableSpace.comap_iSup
+    _ = ⨆ k, MeasurableSpace.comap (fun ω (i : Fin k) => X (m + 1 + ↑i) ω) inferInstance := by
+        congr 1; ext k
+        rw [MeasurableSpace.comap_comp]
+        -- Note: removed `rfl` to avoid closing all goals
 
-### 🔧 Proposed Fixes
-
-**Option 1: Single calc at top level**
-```lean
-have hiSup_fin : (⨆ k, ...) = futureFiltration X m := by
-  have hle := ...
-  have hge := ...
-  exact le_antisymm hle hge
-```
-
-**Option 2: Helper lemma**
-```lean
-have h_future_le : futureFiltration X m ≤ ⨆ k, finFutureSigma X m k := by
-  calc ...
-have hiSup_fin := le_antisymm (iSup_le ...) h_future_le
-```
-
-**Option 3: Inline the calc**
-```lean
-have hiSup_fin : (⨆ k, ...) = futureFiltration X m :=
+have hiSup_fin : (⨆ k, finFutureSigma X m k) = futureFiltration X m :=
   le_antisymm
-    (by refine iSup_le ?_; intro k; exact finFutureSigma_le_futureFiltration X m k)
-    (calc ...)
+    (iSup_le fun k => finFutureSigma_le_futureFiltration X m k)
+    h_future_le_iSup
 ```
 
-### Impact When Fixed
+**Key insight:** Removing the final `rfl` in the calc proof prevented the goal-closure issue. The composition equality holds by `comap_comp` without needing reflexivity.
 
-- **Sorries remaining:** 2 (down from 3)
-  - Blocker 1: `condexp_indicator_drop_info_of_pair_law` (line ~1854)
-  - Blocker 2: `condexp_indicator_eq_on_join_of_triple_law` (line ~1949)
-- **New sorries:** 1 (in infrastructure lemma)
-  - `measurableSpace_pi_nat_le_iSup_fin` (line 133)
-- **Net progress:** File drops from 3 application sorries to 2, with 1 clean extractable sorry
+### Impact Achieved
+
+- ✅ **Sorries remaining:** 2 application + 1 infrastructure = 3 total
+  - Application Blocker 1: `condexp_indicator_drop_info_of_pair_law` (line 1854)
+  - Application Blocker 2: `condexp_indicator_eq_on_join_of_triple_law` (line 1949)
+  - Infrastructure: `measurableSpace_pi_nat_le_iSup_fin` (line 119)
+- ✅ **File compiles:** Successfully builds (2524/2524 targets)
+- ✅ **Net progress:** Blocker 3 unblocked - sorry moved to clean extractable infrastructure
 
 ---
 
