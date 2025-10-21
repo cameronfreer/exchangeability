@@ -1596,12 +1596,17 @@ theorem subseq_ae_of_L1
     -- On a probability space, if ∫|f| is bounded, then f is integrable
     have h_integrable : ∀ n, Integrable (fun ω => alpha n ω - alpha_inf ω) μ := by
       intro n
-      -- Since h_L1_conv gives us ∀ ε > 0, ∃ N, the integrals are eventually bounded
-      -- On a finite measure space, finite integral implies integrability for measurable functions
-      -- We use a crude but effective bound
-      sorry  -- TODO: Prove integrability from bounded L1 norm
-      -- Strategy: Show HasFiniteIntegral using hasFiniteIntegral_iff_norm
-      -- and the fact that ∫⁻ ‖f‖ₑ < ∞ when ∫ |f| < ∞ on finite measures
+      -- Integrable = AEStronglyMeasurable + HasFiniteIntegral
+      refine ⟨((h_alpha_meas n).sub h_alpha_inf_meas).aestronglyMeasurable, ?_⟩
+      -- Show HasFiniteIntegral: ∫⁻ ‖f‖ₑ < ∞
+      rw [hasFiniteIntegral_iff_norm]
+      -- We use integral_norm_eq_lintegral_enorm: ∫ ‖f‖ = (∫⁻ ‖f‖ₑ).toReal
+      -- So if ∫ ‖f‖ is a finite real number, then ∫⁻ ‖f‖ₑ < ∞
+      have h_ae := ((h_alpha_meas n).sub h_alpha_inf_meas).aestronglyMeasurable
+      rw [← integral_norm_eq_lintegral_enorm h_ae]
+      -- Now: need (ENNReal.ofReal (∫ ‖alpha n - alpha_inf‖)) < ∞
+      -- This is true for any finite real number
+      simp only [ENNReal.ofReal_lt_top]
 
     -- Step 2: Apply eLpNorm_one_eq_integral_abs and transfer convergence
     -- Given: ∫ |alpha n - alpha_inf| → 0
@@ -1628,10 +1633,15 @@ theorem subseq_ae_of_L1
     obtain ⟨N, hN⟩ := h_integral_tendsto δ hδ_pos
     use N
     intro n hn
-    -- Show eLpNorm (alpha n - alpha_inf) 1 μ < ENNReal.ofReal δ
+    -- Show eLpNorm (alpha n - alpha_inf) 1 μ ≤ ENNReal.ofReal δ
     rw [eLpNorm_one_eq_integral_abs (h_integrable n)]
-    rw [ENNReal.ofReal_lt_ofReal_iff hδ_pos]
-    exact hN n hn
+    rw [ENNReal.ofReal_le_ofReal_iff (le_of_lt hδ_pos)]
+    -- We have dist (∫ |alpha n - alpha_inf|) 0 < δ
+    -- which means |∫ |alpha n - alpha_inf|| < δ
+    -- Since ∫ |alpha n - alpha_inf| ≥ 0, this means ∫ |alpha n - alpha_inf| < δ
+    have h_dist := hN n hn
+    rw [Real.dist_eq, sub_zero, abs_of_nonneg (integral_nonneg (fun ω => abs_nonneg _))] at h_dist
+    exact le_of_lt h_dist
 
   -- Step 2: eLpNorm convergence implies convergence in measure
   have h_tendstoInMeasure : TendstoInMeasure μ alpha atTop alpha_inf := by
