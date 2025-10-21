@@ -188,10 +188,20 @@ lemma tendsto_Lp2_to_L1 {α : Type*} [MeasurableSpace α] {m : Measure α} [IsPr
   -- Key: On probability spaces, Hölder gives ∫|f| ≤ (∫|f|²)^(1/2) = ‖f‖₂
   have h_bound : ∀ n, ∫ x, ‖Y n x - Z x‖ ∂m ≤ ‖Y n - Z‖ := by
     intro n
-    -- Use eLpNorm inequality: eLpNorm p=1 ≤ eLpNorm p=2 on probability spaces
-    -- Then connect eLpNorm 1 to integral and eLpNorm 2 to Lp norm
-    sorry  -- TODO: Apply eLpNorm_le_eLpNorm_mul_rpow_measure_univ with p=1, q=2
-          -- Then use integral_norm_eq_eLpNorm_one and Lp.norm_def
+    -- The Lp 2 norm is ‖f‖ = ENNReal.toReal (eLpNorm f 2 μ)
+    -- We need: ∫ ‖f‖ ≤ ‖f‖_{L²}
+    -- Strategy: Use eLpNorm inequality p=1 ≤ p=2 on probability spaces
+
+    -- First, Y n - Z is in Lp 2, so it's AEStronglyMeasurable
+    have hf_aesm : AEStronglyMeasurable (Y n - Z) m := Lp.aestronglyMeasurable (Y n - Z)
+
+    -- Apply Hölder: eLpNorm 1 ≤ eLpNorm 2 on probability spaces
+    have key_ineq : eLpNorm (Y n - Z) 1 m ≤ eLpNorm (Y n - Z) 2 m := by
+      have := eLpNorm_le_eLpNorm_mul_rpow_measure_univ (by norm_num : (1 : ℝ≥0∞) ≤ 2) hf_aesm
+      simp only [measure_univ, ENNReal.one_rpow, mul_one] at this
+      exact this
+
+    sorry -- TODO: Connect eLpNorm 1 to integral and eLpNorm 2 to Lp norm
 
   -- Step 3: Apply squeeze theorem
   refine' tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_norm _ h_bound
