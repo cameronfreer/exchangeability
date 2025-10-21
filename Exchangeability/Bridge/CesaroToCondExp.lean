@@ -306,28 +306,32 @@ lemma condexp_changeOfVariables
     (hg : Integrable g (@Measure.map α β _ m₀ f μ)) :
     ((@Measure.map α β _ m₀ f μ)[g | m']) ∘ f
       =ᵐ[μ] μ[g ∘ f | MeasurableSpace.comap f m'] := by
-  /-  **Proof strategy (mathematically complete, needs typeclass management):**
+  -- Set up notation
+  set ν := @Measure.map α β _ m₀ f μ with hν_def
 
-  Both sides are `comap f m'`-measurable and integrable. For any `A ∈ m'`, we have
-  `f⁻¹(A) ∈ comap f m'`. The defining property gives:
+  -- The LHS is (ν[g | m']) ∘ f
+  -- The RHS is μ[g ∘ f | comap f m']
 
-  ```
-  ∫_{f⁻¹(A)} (ν[g|m'] ∘ f) dμ
-    = ∫_A ν[g|m'] dν              (change of variables: integral_map)
-    = ∫_A g dν                    (defining property: setIntegral_condExp)
-    = ∫_{f⁻¹(A)} (g ∘ f) dμ       (change of variables back)
-  ```
+  -- Strategy: Use uniqueness of conditional expectation via setIntegral equality
+  -- We'll show: for all A with @MeasurableSet β m' A,
+  --   ∫ ω in f⁻¹' A, (ν[g | m'] ∘ f) ω ∂μ = ∫ ω in f⁻¹' A, (g ∘ f) ω ∂μ
 
-  By uniqueness of conditional expectation (`ae_eq_condExp_of_forall_setIntegral_eq`),
-  the two functions are equal μ-a.e.
+  -- Step 1: Show g ∘ f is integrable
+  -- This requires integrable_map_measure, which has the same typeclass issue
+  have hgf_int : Integrable (g ∘ f) μ := by sorry
 
-  **Technical challenge:** MeasurableSpace typeclass management. The measure
-  `Measure.map f μ` has type `@Measure β m₀`, but conditional expectation needs
-  careful handling of the sub-σ-algebra `m' ≤ m₀`. Each `integral_map` application
-  requires `AEMeasurable` with correct MeasurableSpace instances.
+  -- Step 2: Show the LHS is measurable w.r.t. comap f m'
+  have hLHS_meas : @Measurable α ℝ (MeasurableSpace.comap f m') _ ((ν)[g | m'] ∘ f) := by sorry
 
-  This is a **mathlib gap** - the lemma is mathematically standard but requires
-  careful formalization of MeasurableSpace polymorphism. -/
+  -- Step 3: The key integral equality for all measurable sets
+  -- For any A with @MeasurableSet β m' A, we have f⁻¹(A) ∈ comap f m' and:
+  --   ∫ ω in f⁻¹' A, (ν[g | m'] ∘ f) ω ∂μ
+  --     = ∫ y in A, ν[g | m'] y ∂ν            (integral_map)
+  --     = ∫ y in A, g y ∂ν                    (setIntegral_condExp)
+  --     = ∫ ω in f⁻¹' A, (g ∘ f) ω ∂μ         (integral_map)
+
+  -- Apply uniqueness of conditional expectation
+  -- This requires careful MeasurableSpace instance management
   sorry
 
 /-- **Key fact:** The tail σ-algebra pulls back correctly via pathify.
@@ -350,6 +354,7 @@ For H : (ℕ → ℝ) → ℝ and the factor map pathify:
 lemma condexp_pullback_along_pathify
     {X : ℕ → Ω → ℝ} (hX_meas : ∀ i, Measurable (X i))
     (H : (ℕ → ℝ) → ℝ) (hH_meas : Measurable H)
+    (hH_bdd : ∃ C, ∀ ω, |H ω| ≤ C)
     (hΦ : Function.Surjective (pathify X)) :
     (μ_path μ X)[H | tail_on_path] ∘ (pathify X)
       =ᵐ[μ] μ[(H ∘ (pathify X)) | tailProcess X] := by
@@ -371,7 +376,13 @@ lemma condexp_pullback_along_pathify
 
   -- Need: H is integrable with respect to μ_path μ X
   have hH_int : Integrable H (μ_path μ X) := by
-    sorry  -- TODO: Derive from hH_meas and probability measure structure
+    -- Bounded measurable functions on probability spaces are integrable
+    obtain ⟨C, hC⟩ := hH_bdd
+    haveI : IsProbabilityMeasure (μ_path μ X) := isProbabilityMeasure_μ_path hX_meas
+    apply Integrable.of_bound hH_meas.aestronglyMeasurable (C := C)
+    apply ae_of_all
+    intro ω
+    exact hC ω
 
   -- Apply the change-of-variables formula
   exact condexp_changeOfVariables μ (pathify X) (measurable_pathify hX_meas)
@@ -445,7 +456,42 @@ theorem cesaro_to_condexp_L1
       ∫ ω, |(1 / (m : ℝ)) * ∑ i : Fin m, f (X i ω) -
              (μ[(f ∘ X 0) | tailProcess X] ω)| ∂μ)
       atTop (𝓝 (0 : ℝ)) := by
-    sorry  -- TODO: Apply Bridge 4 and reindex
+    /-  **Proof strategy (depends on completing condexp_changeOfVariables):**
+
+    We have convergence on path space (hL2_to_L1):
+      ∫ x, ‖birkhoffAverage ... gLp x - metProjection ... gLp x‖ ∂ν → 0
+
+    **Step 1: Identify Birkhoff average with Cesàro average**
+    For ω = pathify X ω':
+      birkhoffAverage ℝ (koopman shift) id n gLp (pathify X ω')
+        = (1/n) * ∑ k < n, gLp (shift^k (pathify X ω'))
+        = (1/n) * ∑ k < n, g (shift^k (pathify X ω'))   (gLp coerces to g a.e.)
+        = (1/n) * ∑ k < n, f ((shift^k (pathify X ω')) 0)
+        = (1/n) * ∑ k < n, f ((pathify X ω') k)
+        = (1/n) * ∑ k < n, f (X k ω')
+
+    **Step 2: Pull back conditional expectation**
+    Apply Bridge 2: metProjection ... gLp = ν[gLp | tail_on_path]
+    Apply Bridge 4 with H = g (and boundedness from hf_bdd):
+      ν[g | tail_on_path] ∘ pathify X =ᵐ[μ] μ[g ∘ pathify X | tailProcess X]
+
+    Note: g ∘ pathify X = fun ω' => g (pathify X ω') = fun ω' => f (X 0 ω') = f ∘ X 0
+
+    **Step 3: Change of variables for integral**
+    Use integral_map with f = pathify X:
+      ∫ x, ‖...‖ ∂ν = ∫ x, ‖... ∘ pathify X x‖ ∂μ
+
+    The integrand becomes:
+      |(1/m) * ∑ i, f (X i ω') - μ[f ∘ X 0 | tailProcess X] ω'|
+
+    which is exactly what we need.
+
+    **Technical notes:**
+    - Need surjectivity of pathify X (can assume WLOG for probability)
+    - Need to handle Lp coercions carefully
+    - Bridge 4 requires completing condexp_changeOfVariables first
+    -/
+    sorry
 
   -- Extract ε-N from L¹ convergence using Metric.tendsto_atTop
   have := Metric.tendsto_atTop.mp h_L1 ε hε
