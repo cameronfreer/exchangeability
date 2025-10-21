@@ -2980,11 +2980,13 @@ lemma alphaIic_ae_eq_alphaIicCE
 
   -- Step 3: Use uniqueness of L¹ limits to conclude a.e. equality
   -- If both f and g are L¹ limits of the same sequence, then f =ᵐ g
-  have h_L1_uniqueness : ∀ (f g : Ω → ℝ), Measurable f → Measurable g →
+  have h_L1_uniqueness : ∀ (f g : Ω → ℝ),
+      AEStronglyMeasurable f μ → AEStronglyMeasurable g μ →
+      (∀ᵐ ω ∂μ, ‖f ω‖ ≤ 1) → (∀ᵐ ω ∂μ, ‖g ω‖ ≤ 1) →
       (∀ ε > 0, ∃ M : ℕ, ∀ m ≥ M, ∫ ω, |A 0 m ω - f ω| ∂μ < ε) →
       (∀ ε > 0, ∃ M : ℕ, ∀ m ≥ M, ∫ ω, |A 0 m ω - g ω| ∂μ < ε) →
       f =ᵐ[μ] g := by
-    intro f g hf_meas hg_meas hf_lim hg_lim
+    intro f g hf_meas hg_meas hf_bdd hg_bdd hf_lim hg_lim
     -- Strategy: L¹ convergence implies a.e. convergent subsequence, and a.e. limits are unique
     -- Convert L¹ convergence hypothesis to Tendsto format
     have hf_tendsto : Tendsto (fun m => ∫ ω, |A 0 m ω - f ω| ∂μ) atTop (𝓝 0) := by
@@ -3036,22 +3038,8 @@ lemma alphaIic_ae_eq_alphaIicCE
               split_ifs <;> norm_num
           _ = (1 / (m : ℝ)) * m := by simp
           _ = 1 := by field_simp
-      · -- f is bounded: f = alphaIic which is max 0 (min 1 ...), so f ∈ [0,1]
-        refine Integrable.of_bound hf_meas.aestronglyMeasurable 1 ?_
-        filter_upwards with ω
-        -- f is alphaIic which is max 0 (min 1 ...), so |f| ≤ 1
-        calc ‖f ω‖
-            ≤ 1 := by
-              -- alphaIic = max 0 (min 1 limit), so it's in [0,1]
-              unfold alphaIic at f
-              simp only [Real.norm_eq_abs]
-              apply abs_le_one_iff_sq_le_one.mpr
-              have h1 : 0 ≤ f ω := by apply le_max_left
-              have h2 : f ω ≤ 1 := by
-                apply max_le
-                · norm_num
-                · apply min_le_left
-              nlinarith [sq_nonneg (f ω)]
+      · -- f is bounded by hypothesis hf_bdd
+        exact Integrable.of_bound hf_meas 1 hf_bdd
 
     have hAg_integrable : ∀ m, Integrable (fun ω => A 0 m ω - g ω) μ := by
       intro m
@@ -3076,23 +3064,8 @@ lemma alphaIic_ae_eq_alphaIicCE
               split_ifs <;> norm_num
           _ = (1 / (m : ℝ)) * m := by simp
           _ = 1 := by field_simp
-      · -- g is bounded: g = alphaIicCE = μ[indIic t ∘ X 0 | tailSigma]
-        -- Conditional expectation of a bounded function is bounded a.e. by the same bound
-        -- Since indIic ∈ [0,1], we have g ∈ [0,1] a.e.
-        refine Integrable.of_bound hg_meas.aestronglyMeasurable 1 ?_
-
-        -- g is a conditional expectation, which preserves [0,1] bounds a.e.
-        -- For now, we'll use sorry for the conditional expectation bound preservation
-        filter_upwards with ω
-        calc ‖g ω‖
-            = |g ω| := Real.norm_eq_abs _
-          _ ≤ 1 := by
-              -- TODO: This needs a proper lemma showing condExp preserves [0,1] bounds
-              -- The proof would use:
-              -- 1. indIic ∘ X 0 takes values in [0,1]
-              -- 2. condExp_nonneg for lower bound
-              -- 3. condExp_mono with condExp_of_aestronglyMeasurable' for upper bound
-              sorry
+      · -- g is bounded by hypothesis hg_bdd
+        exact Integrable.of_bound hg_meas 1 hg_bdd
 
     -- Step 1b: Convert L¹ to eLpNorm using IntegrationHelpers.eLpNorm_one_eq_integral_abs
     have hf_eLpNorm : Tendsto (fun m => eLpNorm (fun ω => A 0 m ω - f ω) 1 μ) atTop (𝓝 0) := by
@@ -3153,8 +3126,27 @@ lemma alphaIic_ae_eq_alphaIicCE
 
   -- Apply uniqueness with f = alphaIic, g = alphaIicCE
   apply h_L1_uniqueness
-  · exact alphaIic_measurable X hX_contract hX_meas hX_L2 t
-  · exact alphaIicCE_measurable X hX_contract hX_meas hX_L2 t
+  · -- alphaIic is ae strongly measurable
+    exact (alphaIic_measurable X hX_contract hX_meas hX_L2 t).aestronglyMeasurable
+  · -- alphaIicCE is ae strongly measurable
+    exact (alphaIicCE_measurable X hX_contract hX_meas hX_L2 t).aestronglyMeasurable
+  · -- alphaIic is bounded by 1
+    filter_upwards with ω
+    -- alphaIic = max 0 (min 1 ...), so it's in [0,1]
+    unfold alphaIic
+    simp only [Real.norm_eq_abs]
+    apply abs_le_one_iff_sq_le_one.mpr
+    have h1 : 0 ≤ max 0 (min 1 _) := le_max_left _ _
+    have h2 : max 0 (min 1 _) ≤ 1 := by
+      apply max_le
+      · norm_num
+      · apply min_le_left
+    nlinarith [sq_nonneg (max 0 (min 1 _))]
+  · -- alphaIicCE is bounded by 1 (using alphaIicCE_nonneg_le_one)
+    have := alphaIicCE_nonneg_le_one X hX_contract hX_meas hX_L2 t
+    filter_upwards [this] with ω ⟨h0, h1⟩
+    simp only [Real.norm_eq_abs]
+    exact abs_le_one_iff_sq_le_one.mpr (by nlinarith [sq_nonneg (alphaIicCE X hX_contract hX_meas hX_L2 t ω)])
   · exact h_alphaIic_is_limit 0
   · exact h_alphaIicCE_is_limit 0
 
