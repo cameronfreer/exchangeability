@@ -5,6 +5,7 @@ Authors: Cameron Freer
 -/
 import Exchangeability.Probability.CondExpBasic
 import Exchangeability.Probability.CondProb
+import Exchangeability.Probability.IntegrationHelpers
 import Mathlib.Probability.Independence.Basic
 import Mathlib.Probability.Independence.Conditional
 import Mathlib.Probability.Martingale.Basic
@@ -537,9 +538,11 @@ lemma integrable_of_bounded_mul [IsFiniteMeasure μ]
     {f g : Ω → ℝ} (hf : Integrable f μ) (hg : Measurable g)
     (hbd : ∃ C, ∀ ω, |g ω| ≤ C) :
     Integrable (f * g) μ := by
-  sorry
-  -- TODO: This should follow from Integrable.bdd_mul or similar
-  -- Strategy: |f·g| ≤ C·|f|, so ∫|f·g| ≤ C·∫|f| < ∞
+  -- Rewrite as g * f to match Integrable.bdd_mul signature
+  have : f * g = fun ω => g ω * f ω := by ext ω; exact mul_comm _ _
+  rw [this]
+  -- Apply Integrable.bdd_mul with g bounded, f integrable
+  exact Integrable.bdd_mul hf hg.aestronglyMeasurable hbd
 
 /-- Conditional expectation preserves monotonicity (in absolute value).
 
@@ -549,11 +552,25 @@ lemma condExp_abs_le_of_abs_le [IsFiniteMeasure μ]
     {f g : Ω → ℝ} (hf : Integrable f μ) (hg : Integrable g μ)
     (h : ∀ ω, |f ω| ≤ |g ω|) :
     ∀ᵐ ω ∂μ, |μ[f|m] ω| ≤ μ[(fun ω' => |g ω'|)|m] ω := by
-  sorry
-  -- Strategy:
-  -- 1. Use that CE is linear and monotone
-  -- 2. -|g| ≤ f ≤ |g| implies E[-|g||m] ≤ E[f|m] ≤ E[|g||m]
-  -- 3. Therefore |E[f|m]| ≤ E[|g||m]
+  -- From |f| ≤ |g|, we get -|g| ≤ f ≤ |g|
+  -- |f| ≤ |g| means -|g| ≤ -|f|, and neg_abs_le gives -|f| ≤ f, so -|g| ≤ -|f| ≤ f
+  have h_lower : ∀ ω, -(|g ω|) ≤ f ω := fun ω =>
+    (neg_le_neg (h ω)).trans (neg_abs_le (f ω))
+  have h_upper : ∀ ω, f ω ≤ |g ω| := fun ω => (le_abs_self (f ω)).trans (h ω)
+
+  -- Apply monotonicity to get bounds on condExp
+  have hg_abs : Integrable (fun ω => |g ω|) μ := hg.abs
+  have lower_bd := condExp_mono (m := m) hg_abs.neg hf (ae_of_all μ h_lower)
+  have upper_bd := condExp_mono (m := m) hf hg_abs (ae_of_all μ h_upper)
+
+  -- Use linearity: μ[-|g||m] = -μ[|g||m]
+  have : μ[(fun ω => -(|g ω|))|m] =ᵐ[μ] fun ω => -(μ[(fun ω' => |g ω'|)|m] ω) :=
+    condExp_neg (fun ω => |g ω|)
+
+  -- Combine: -μ[|g||m] ≤ μ[f|m] ≤ μ[|g||m] implies |μ[f|m]| ≤ μ[|g||m]
+  filter_upwards [lower_bd, upper_bd, this] with ω hlower hupper hneg
+  rw [hneg] at hlower
+  exact abs_le.mpr ⟨hlower, hupper⟩
 
 /-- **Conditional expectation is L¹-nonexpansive** (load-bearing lemma).
 
@@ -565,12 +582,18 @@ lemma condExp_L1_lipschitz [IsFiniteMeasure μ]
     {m : MeasurableSpace Ω} (hm : m ≤ ‹_›)
     {f g : Ω → ℝ} (hf : Integrable f μ) (hg : Integrable g μ) :
     ∫ ω, |μ[f|m] ω - μ[g|m] ω| ∂μ ≤ ∫ ω, |f ω - g ω| ∂μ := by
-  sorry
-  -- Strategy:
-  -- 1. Rewrite LHS as ∫ |μ[f - g|m]|
-  -- 2. Use that CE is a contractive projection: ‖CE(h)‖₁ ≤ ‖h‖₁
-  -- 3. This follows from CE having operator norm = 1 as an L¹ → L¹ map
-  -- 4. Apply Jensen's inequality or use mathlib's condexp_L1_clm properties
+  -- Use the mathlib lemma integral_abs_condExp_le which gives ∫|E[f|m]| ≤ ∫|f|
+  -- Apply to f - g to get the result
+  have h_linear : ∀ᵐ ω ∂μ, μ[f|m] ω - μ[g|m] ω = μ[(f - g)|m] ω := by
+    exact EventuallyEq.symm (condExp_sub hf hg m)
+
+  calc ∫ ω, |μ[f|m] ω - μ[g|m] ω| ∂μ
+      = ∫ ω, |μ[(f - g)|m] ω| ∂μ := by
+          apply integral_congr_ae
+          filter_upwards [h_linear] with ω h
+          rw [h]
+    _ ≤ ∫ ω, |(f - g) ω| ∂μ := integral_abs_condExp_le (f - g)
+    _ = ∫ ω, |f ω - g ω| ∂μ := rfl
 
 /-- Conditional expectation pull-out property for bounded measurable functions.
 
@@ -581,11 +604,18 @@ lemma condExp_mul_pullout [IsFiniteMeasure μ]
     (hg_meas : @Measurable Ω ℝ m _ g)
     (hg_bd : ∃ C, ∀ ω, |g ω| ≤ C) :
     μ[f * g|m] =ᵐ[μ] fun ω => μ[f|m] ω * g ω := by
-  sorry
-  -- Strategy:
-  -- 1. This is a standard pull-out property for m-measurable g
-  -- 2. Can be derived from condExp_L1_lipschitz + approximation
-  -- 3. Or use mathlib's condexp_smul if g is simple, then approximate
+  -- Use mathlib's condExp_stronglyMeasurable_mul_of_bound
+  -- g is m-measurable, so it's m-strongly measurable
+  have hg_strong : StronglyMeasurable[m] g := hg_meas.stronglyMeasurable
+
+  -- g is bounded
+  obtain ⟨C, hC⟩ := hg_bd
+  have hg_bound : ∀ᵐ ω ∂μ, ‖g ω‖ ≤ C := ae_of_all μ fun ω => (Real.norm_eq_abs _).le.trans (hC ω)
+
+  -- Apply the pull-out property
+  -- The lemma condExp_stronglyMeasurable_mul_of_bound needs [IsFiniteMeasure μ]
+  haveI : IsFiniteMeasure μ := inferInstance
+  exact condExp_stronglyMeasurable_mul_of_bound hm hg_strong hf C hg_bound
 
 end OperatorTheoretic
 
