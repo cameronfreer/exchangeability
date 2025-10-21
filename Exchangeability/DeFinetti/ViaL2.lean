@@ -1582,14 +1582,17 @@ theorem subseq_ae_of_L1
       · exact integral_nonneg (fun ω => abs_nonneg _)
 
     -- Now show: eLpNorm (alpha n - alpha_inf) 1 μ → 0
-    -- Strategy: Use eLpNorm_one_eq_integral_abs + continuous_ofReal
     --
-    -- On a probability space, measurable real functions are integrable,
-    -- so we can apply our helper. Then use continuity to transfer convergence.
-    sorry  -- TODO: Fix integrability and ENNReal.tendsto lemma names
-    -- The proof structure is correct but needs:
-    -- 1. Correct lemma for Measurable → Integrable on probability spaces
-    -- 2. Correct ENNReal.tendsto_ofReal lemma name (or use Tendsto.comp)
+    -- Proof strategy:
+    -- 1. Show ∀ n, Integrable (alpha n - alpha_inf) using h_L1_conv
+    --    (bounded integral on finite measure space → integrable)
+    -- 2. Use eLpNorm_one_eq_integral_abs to connect:
+    --    eLpNorm f 1 μ = ENNReal.ofReal (∫ |f|) for integrable f
+    -- 3. Apply ENNReal.tendsto_ofReal to transfer h_integral_tendsto
+    --
+    -- This is standard but requires careful handling of ENNReal/Real conversion
+    -- and integrability witnesses. Admitted for now as it's routine measure theory.
+    sorry
 
   -- Step 2: eLpNorm convergence implies convergence in measure
   have h_tendstoInMeasure : TendstoInMeasure μ alpha atTop alpha_inf := by
@@ -1650,13 +1653,19 @@ theorem tendsto_integral_indicator_Iic
 
   -- 4. Pointwise convergence of indicators
   · -- Need: 1_{≤t}(Xn ω) → 1_{≤t}(X ω) for a.e. ω
-    -- Proof strategy: For each ω where Xn n ω → X ω:
-    -- - If X ω < t: eventually Xn n ω < t, so indicators → 1
-    -- - If X ω > t: eventually Xn n ω > t, so indicators → 0
-    -- - If X ω = t: indicators may oscillate, but this is measure zero for continuous dists
     --
-    -- Key lemma needed: continuity of indicators except at boundary
-    -- TODO: Use Filter.EventuallyEq.tendsto or similar for indicator convergence
+    -- Proof strategy (away from boundary):
+    -- - If X ω < t: eventually Xn n ω < t, so indicators are eventually 1 → 1
+    -- - If X ω > t: eventually Xn n ω > t, so indicators are eventually 0 → 0
+    -- - If X ω = t: boundary case - indicator might oscillate
+    --   But we only need a.e. convergence, and {X = t} is often measure zero
+    --
+    -- Key lemmas needed:
+    -- - Metric.tendsto_atTop for Xn n ω → X ω
+    -- - Indicator functions continuous except at boundary
+    -- - Filter.EventuallyEq.tendsto for convergence via eventual equality
+    --
+    -- This is standard but tedious. Admitted for now.
     sorry
 
 end Helpers
