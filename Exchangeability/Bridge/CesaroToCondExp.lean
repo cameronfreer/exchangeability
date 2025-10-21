@@ -62,26 +62,31 @@ pullback along factor maps. -/
 lemma aestronglyMeasurable_comp_comap
     {α β : Type*} [MeasurableSpace α] {m₀ : MeasurableSpace β}
     {μ : Measure α} (f : α → β) (hf : @Measurable α β _ m₀ f)
-    (m' : MeasurableSpace β)
+    (m' : MeasurableSpace β) (hm' : m' ≤ m₀)
     {h : β → ℝ} :
-    AEStronglyMeasurable[m'] h (Measure.map f μ) →
-    AEStronglyMeasurable[MeasurableSpace.comap f m'] (h ∘ f) μ := by
+    AEStronglyMeasurable[m'] h (@Measure.map α β _ m₀ f μ) →
+    AEStronglyMeasurable[MeasurableSpace.comap f m'] (h ∘ f) μ := fun hh => by
   classical
-  intro hh
+  letI : MeasurableSpace β := m₀
+  have hf' : Measurable f := hf
+
   -- Choose a strongly measurable representative (w.r.t. `m'`) for `h` under `ν = map f μ`.
-  rcases hh with ⟨h', h'hSM, h_ae⟩
-  -- Compose the representative with `f`; this is strongly measurable w.r.t. `comap f m'`.
-  -- Need measurability of f w.r.t. comap
-  have hf_comap : @Measurable α β _ (MeasurableSpace.comap f m') f := by
-    intro s ⟨t, ht, rfl⟩
-    exact ⟨t, ht, rfl⟩
-  have hSM_comp : StronglyMeasurable[MeasurableSpace.comap f m'] (h' ∘ f) :=
-    h'hSM.comp_measurable hf_comap
-  -- Transport the a.e. equality through the pushforward using `ae_map_iff`.
-  have h_ae_comp : (h ∘ f) =ᵐ[μ] (h' ∘ f) := by
-    have : h =ᵐ[Measure.map f μ] h' := h_ae
-    exact (ae_map_iff hf.aemeasurable (measurableSet_preimage hf_comap)).1 this
-  -- Package as `AEStronglyMeasurable[comap f m']`.
+  obtain ⟨h', h'hSM, h_ae⟩ := hh
+
+  -- The composition h' ∘ f is strongly measurable w.r.t. comap f m'
+  have hSM_comp : StronglyMeasurable[MeasurableSpace.comap f m'] (h' ∘ f) := by
+    -- First prove f is measurable from (α, comap f m') to (β, m')
+    have hf_meas_comap : @Measurable α β (MeasurableSpace.comap f m') m' f := fun s hs => ⟨s, hs, rfl⟩
+    -- h' is StronglyMeasurable w.r.t. m', so compose with f
+    -- comp_measurable signature: {α β γ} [TopologicalSpace β] {_ : MeasurableSpace α} {_ : MeasurableSpace γ}
+    --   {f : α → β} {g : γ → α} (hf : StronglyMeasurable f) (hg : Measurable g) : StronglyMeasurable (f ∘ g)
+    -- We have: h' : β → ℝ is StronglyMeasurable w.r.t. m', f : α → β is Measurable w.r.t. comap f m'
+    -- So: α_lemma=β, β_lemma=ℝ, γ_lemma=α, f_lemma=h', g_lemma=f
+    exact @StronglyMeasurable.comp_measurable β ℝ α _ m' (MeasurableSpace.comap f m') h' f h'hSM hf_meas_comap
+
+  -- Transport the a.e. equality through the pushforward
+  have h_ae_comp : (h ∘ f) =ᵐ[μ] (h' ∘ f) := ae_of_ae_map hf'.aemeasurable h_ae
+
   exact ⟨h' ∘ f, hSM_comp, h_ae_comp⟩
 
 /-! ## A. Path Space and Factor Map -/
@@ -219,7 +224,7 @@ If `ν = Measure.map f μ` and `m' ≤ m₀` is a sub-σ-algebra on the codomain
 then `(ν[g | m']) ∘ f =ᵐ[μ] μ[(g ∘ f) | MeasurableSpace.comap f m']`. -/
 lemma condexp_changeOfVariables
     {α β : Type*} [MeasurableSpace α] {m₀ : MeasurableSpace β}
-    (μ : Measure α) (f : α → β) (hf : @Measurable α β _ m₀ f)
+    (μ : Measure α) [IsFiniteMeasure μ] (f : α → β) (hf : @Measurable α β _ m₀ f)
     (m' : MeasurableSpace β) (hm' : m' ≤ m₀)
     {g : β → ℝ}
     (hg : Integrable g (@Measure.map α β _ m₀ f μ)) :
@@ -238,7 +243,7 @@ lemma condexp_changeOfVariables
   have hf_m' : @Measurable α β _ m' f := fun s hs => hf' (hm' s hs)
   have h_meas_left :
       @AEStronglyMeasurable α ℝ _ (MeasurableSpace.comap f m') _ (((ν[g | m']) : β → ℝ) ∘ f) μ :=
-    aestronglyMeasurable_comp_comap f hf' m'
+    aestronglyMeasurable_comp_comap f hf' m' hm'
       (stronglyMeasurable_condExp (μ := ν) (m := m') (f := g)).aestronglyMeasurable
 
   have h_int_left :
@@ -298,7 +303,9 @@ lemma condexp_changeOfVariables
             haveI : IsFiniteMeasure ν := by
               have : ν Set.univ = μ Set.univ := by
                 simp [hν, Measure.map_apply_of_aemeasurable hf'.aemeasurable]
-              exact ⟨by simpa [this] using measure_univ_lt_top⟩
+              refine ⟨?_⟩
+              simp only [this]
+              exact measure_lt_top μ Set.univ
             -- Now IsFiniteMeasure gives us SigmaFinite
             exact setIntegral_condExp (μ := ν) (hm := hm'_inst) hg hs'
       _ = ∫ y, Set.indicator s g y ∂ ν :=
@@ -329,10 +336,9 @@ lemma condexp_changeOfVariables
     exact (hm' _ hs).preimage hf'
 
   -- μ is a probability measure (available in calling context via variable declaration)
-  -- Materialize SigmaFinite instance for trimmed measure
-  -- From IsProbabilityMeasure μ we get IsFiniteMeasure μ, which gives SigmaFinite μ
-  -- Then trim preserves sigma-finiteness
-  haveI : SigmaFinite (μ.trim hm_le) := inferInstance
+  -- Materialize SigmaFinite instance for trimmed measure using project's helper lemma
+  -- From IsFiniteMeasure μ we get SigmaFinite (μ.trim hm_le)
+  haveI : SigmaFinite (μ.trim hm_le) := Exchangeability.Probability.sigmaFinite_trim μ hm_le
 
   refine ae_eq_condExp_of_forall_setIntegral_eq hm_le h_int_right ?_ h_sets ?_
   · -- IntegrableOn for LHS
