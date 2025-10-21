@@ -3003,13 +3003,89 @@ lemma alphaIic_ae_eq_alphaIicCE
       intro m hm
       rw [Real.dist_eq, sub_zero, abs_of_nonneg (integral_nonneg (fun ω => abs_nonneg _))]
       exact hM m hm
-    -- Complete the proof using the mathlib convergence chain
-    -- The full proof requires:
-    -- 1. Convert ∫|A m - f| → 0 to eLpNorm (A m - f) 1 → 0
+    -- Complete the proof using the mathlib convergence chain:
+    -- 1. Convert L¹ convergence to eLpNorm convergence
     -- 2. Apply tendstoInMeasure_of_tendsto_eLpNorm
     -- 3. Use tendstoInMeasure_ae_unique
-    -- For now, we leave this as sorry since the integral/eLpNorm conversion is technical
-    sorry  -- TODO: Complete using eLpNorm conversion + tendstoInMeasure chain
+
+    -- Step 1a: Show A m - f is integrable for all m (needed for eLpNorm_one_eq_integral_abs)
+    have hAf_integrable : ∀ m, Integrable (fun ω => A 0 m ω - f ω) μ := by
+      intro m
+      refine Integrable.sub ?_ ?_
+      · exact (hA_meas 0 m).aestronglyMeasurable.integrable_of_isBounded ?_
+        use 1
+        filter_upwards with ω
+        -- A is a Cesàro average of indicators, bounded by 1
+        sorry  -- TODO: Show |A 0 m ω| ≤ 1 from definition
+      · exact hf_meas.aestronglyMeasurable.integrable_of_isBounded ?_
+        sorry  -- TODO: Show f is bounded (from context)
+
+    have hAg_integrable : ∀ m, Integrable (fun ω => A 0 m ω - g ω) μ := by
+      intro m
+      refine Integrable.sub ?_ ?_
+      · exact (hA_meas 0 m).aestronglyMeasurable.integrable_of_isBounded ?_
+        use 1
+        filter_upwards with ω
+        sorry  -- TODO: Show |A 0 m ω| ≤ 1
+      · exact hg_meas.aestronglyMeasurable.integrable_of_isBounded ?_
+        sorry  -- TODO: Show g is bounded
+
+    -- Step 1b: Convert L¹ to eLpNorm using IntegrationHelpers.eLpNorm_one_eq_integral_abs
+    have hf_eLpNorm : Tendsto (fun m => eLpNorm (fun ω => A 0 m ω - f ω) 1 μ) atTop (𝓝 0) := by
+      rw [ENNReal.tendsto_nhds_zero]
+      intro ε hε
+      rw [Metric.tendsto_atTop] at hf_tendsto
+      by_cases h_top : ε = ⊤
+      · use 0
+        intro m _
+        rw [h_top]
+        exact le_top
+      · have ε_pos : 0 < ε.toReal := ENNReal.toReal_pos hε.ne' h_top
+        obtain ⟨M, hM⟩ := hf_tendsto ε.toReal ε_pos
+        use M
+        intro m hm
+        rw [eLpNorm_one_eq_integral_abs (hAf_integrable m)]
+        rw [ENNReal.ofReal_le_ofReal_iff ε_pos.le]
+        have := hM m hm
+        rw [Real.dist_eq, sub_zero, abs_of_nonneg (integral_nonneg (fun ω => abs_nonneg _))] at this
+        rw [← ENNReal.ofReal_toReal h_top]
+        exact this.le
+
+    have hg_eLpNorm : Tendsto (fun m => eLpNorm (fun ω => A 0 m ω - g ω) 1 μ) atTop (𝓝 0) := by
+      rw [ENNReal.tendsto_nhds_zero]
+      intro ε hε
+      rw [Metric.tendsto_atTop] at hg_tendsto
+      by_cases h_top : ε = ⊤
+      · use 0
+        intro m _
+        rw [h_top]
+        exact le_top
+      · have ε_pos : 0 < ε.toReal := ENNReal.toReal_pos hε.ne' h_top
+        obtain ⟨M, hM⟩ := hg_tendsto ε.toReal ε_pos
+        use M
+        intro m hm
+        rw [eLpNorm_one_eq_integral_abs (hAg_integrable m)]
+        rw [ENNReal.ofReal_le_ofReal_iff ε_pos.le]
+        have := hM m hm
+        rw [Real.dist_eq, sub_zero, abs_of_nonneg (integral_nonneg (fun ω => abs_nonneg _))] at this
+        rw [← ENNReal.ofReal_toReal h_top]
+        exact this.le
+
+    -- Step 2: Apply tendstoInMeasure
+    have hf_meas_conv : TendstoInMeasure μ (A 0) atTop f := by
+      apply tendstoInMeasure_of_tendsto_eLpNorm (p := 1) one_ne_zero
+      · intro m; exact hA_meas 0 m
+      · exact hf_meas.aestronglyMeasurable
+      · exact hf_eLpNorm
+
+    have hg_meas_conv : TendstoInMeasure μ (A 0) atTop g := by
+      apply tendstoInMeasure_of_tendsto_eLpNorm (p := 1) one_ne_zero
+      · intro m; exact hA_meas 0 m
+      · exact hg_meas.aestronglyMeasurable
+      · exact hg_eLpNorm
+
+    -- Step 3: Apply uniqueness
+    exact tendstoInMeasure_ae_unique hf_meas_conv hg_meas_conv
 
   -- Apply uniqueness with f = alphaIic, g = alphaIicCE
   apply h_L1_uniqueness
