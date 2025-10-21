@@ -120,9 +120,44 @@ lemma L2_tendsto_implies_L1_tendsto_of_bounded
   -- Step 2: Bound ∫|f-g| by (∫(f-g)²)^(1/2) using Cauchy-Schwarz
   have hbound : ∀ n, ∫ ω, |f n ω - g ω| ∂μ ≤ (∫ ω, (f n ω - g ω)^2 ∂μ) ^ (1/2 : ℝ) := by
     intro n
-    -- Use Cauchy-Schwarz: ∫|h|·1 ≤ (∫h²)^(1/2) · (∫1²)^(1/2) = (∫h²)^(1/2) on probability spaces
-    -- This follows from abs_integral_mul_le_L2 specialized to |f-g| and 1
-    sorry -- TODO: Apply Hölder/Cauchy-Schwarz for L² on probability spaces
+    -- Use Cauchy-Schwarz: ∫|h| = ∫(|h|·1) ≤ (∫|h|²)^(1/2) · (∫1²)^(1/2) = (∫h²)^(1/2) on probability spaces
+
+    -- Apply abs_integral_mul_le_L2 with f = f n - g and g = 1
+    have h_memLp : MemLp (fun ω => f n ω - g ω) 2 μ := by
+      sorry -- TODO: Derive from boundedness + L² convergence
+
+    have one_memLp : MemLp (fun ω => (1 : ℝ)) 2 μ := by
+      sorry -- TODO: Constant functions are in L² on finite measures
+
+    -- We'll apply cs to |f n - g| and 1, but cs is for general f, g
+    -- So we need a version where we plug in |f n - g| for the first argument
+    have h_abs_memLp : MemLp (fun ω => |f n ω - g ω|) 2 μ := by
+      sorry -- TODO: |h| ∈ L² when h ∈ L²
+
+    have cs_abs := abs_integral_mul_le_L2 h_abs_memLp one_memLp
+
+    -- Simplify: ∫|h|·1 = ∫|h|, and |h|² = h², and ∫1² = 1 on probability spaces
+    calc ∫ ω, |f n ω - g ω| ∂μ
+        = ∫ ω, |f n ω - g ω| * 1 ∂μ := by simp only [mul_one]
+      _ = |∫ ω, |f n ω - g ω| * 1 ∂μ| := by
+          symm; exact abs_of_nonneg (integral_nonneg (fun ω => by positivity))
+      _ ≤ (∫ ω, (|f n ω - g ω|) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (1 : ℝ) ^ 2 ∂μ) ^ (1/2 : ℝ) := cs_abs
+      _ = (∫ ω, (f n ω - g ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (1 : ℝ) ^ 2 ∂μ) ^ (1/2 : ℝ) := by
+          congr 1
+          apply congr_arg (· ^ (1/2 : ℝ))
+          apply integral_congr_ae
+          filter_upwards with ω
+          exact sq_abs _
+      _ = (∫ ω, (f n ω - g ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * 1 := by
+          congr 2
+          -- Show (∫ 1² ∂μ)^(1/2) = 1 for probability measure
+          have : ∫ ω, (1 : ℝ) ^ 2 ∂μ = 1 := by
+            simp only [one_pow, integral_const, smul_eq_mul, mul_one]
+            rw [Measure.real]
+            simp [measure_univ]
+          rw [this]
+          norm_num
+      _ = (∫ ω, (f n ω - g ω) ^ 2 ∂μ) ^ (1/2 : ℝ) := by ring
 
   -- Step 3: Apply squeeze theorem
   refine tendsto_of_tendsto_of_tendsto_of_le_of_le' tendsto_const_nhds hL2_sqrt ?_ ?_
