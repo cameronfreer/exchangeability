@@ -265,7 +265,9 @@ lemma gRep_measurable {g0 : Ω[α] → ℝ} (hg0 : Measurable g0) :
     exact measurable_coe_real_ereal.comp hreal
   have h_meas_ereal : Measurable fun ω => gLimsupE g0 ω := by
     simpa [gLimsupE] using (Measurable.limsup hstep)
-  simpa [gRep, gLimsupE] using measurable_ereal_toReal.comp h_meas_ereal
+  have : Measurable fun ω => (gLimsupE g0 ω).toReal := by
+    fun_prop (disch := measurability)
+  simpa [gRep, gLimsupE] using this
 
 omit [MeasurableSpace α] in
 lemma gRep_shiftInvariant {g0 : Ω[α] → ℝ} :
