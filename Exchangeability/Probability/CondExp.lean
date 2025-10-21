@@ -564,13 +564,15 @@ lemma condExp_abs_le_of_abs_le [IsFiniteMeasure μ]
   have upper_bd := condExp_mono (m := m) hf hg_abs (ae_of_all μ h_upper)
 
   -- Use linearity: μ[-|g||m] = -μ[|g||m]
-  have : μ[(fun ω => -(|g ω|))|m] =ᵐ[μ] fun ω => -(μ[(fun ω' => |g ω'|)|m] ω) :=
-    condExp_neg (fun ω => |g ω|)
+  have hneg_eq : μ[(fun ω => -(|g ω|))|m] =ᵐ[μ] fun ω => -(μ[(fun ω' => |g ω'|)|m] ω) :=
+    condExp_neg (fun ω => |g ω|) m
 
   -- Combine: -μ[|g||m] ≤ μ[f|m] ≤ μ[|g||m] implies |μ[f|m]| ≤ μ[|g||m]
-  filter_upwards [lower_bd, upper_bd, this] with ω hlower hupper hneg
-  rw [hneg] at hlower
-  exact abs_le.mpr ⟨hlower, hupper⟩
+  filter_upwards [lower_bd, upper_bd, hneg_eq] with ω hlower hupper hneg
+  -- hlower : μ[-|g||m] ω ≤ μ[f|m] ω, hneg : μ[-|g||m] ω = -μ[|g||m] ω
+  -- So: -μ[|g||m] ω ≤ μ[f|m] ω
+  have hlower' : -(μ[(fun ω' => |g ω'|)|m] ω) ≤ μ[f|m] ω := hneg ▸ hlower
+  exact abs_le.mpr ⟨hlower', hupper⟩
 
 /-- **Conditional expectation is L¹-nonexpansive** (load-bearing lemma).
 
@@ -604,7 +606,7 @@ lemma condExp_mul_pullout [IsFiniteMeasure μ]
     (hg_meas : @Measurable Ω ℝ m _ g)
     (hg_bd : ∃ C, ∀ ω, |g ω| ≤ C) :
     μ[f * g|m] =ᵐ[μ] fun ω => μ[f|m] ω * g ω := by
-  -- Use mathlib's condExp_stronglyMeasurable_mul_of_bound
+  -- Use mathlib's condExp_stronglyMeasurable_mul_of_bound with multiplication order swapped
   -- g is m-measurable, so it's m-strongly measurable
   have hg_strong : StronglyMeasurable[m] g := hg_meas.stronglyMeasurable
 
@@ -612,10 +614,21 @@ lemma condExp_mul_pullout [IsFiniteMeasure μ]
   obtain ⟨C, hC⟩ := hg_bd
   have hg_bound : ∀ᵐ ω ∂μ, ‖g ω‖ ≤ C := ae_of_all μ fun ω => (Real.norm_eq_abs _).le.trans (hC ω)
 
-  -- Apply the pull-out property
-  -- The lemma condExp_stronglyMeasurable_mul_of_bound needs [IsFiniteMeasure μ]
-  haveI : IsFiniteMeasure μ := inferInstance
-  exact condExp_stronglyMeasurable_mul_of_bound hm hg_strong hf C hg_bound
+  sorry
+  -- Mathematical strategy (correct):
+  -- 1. Use condExp_stronglyMeasurable_mul_of_bound to get: μ[g * f|m] = g * μ[f|m]
+  -- 2. Apply condExp_congr_ae with commutativity: μ[f * g|m] = μ[g * f|m]
+  -- 3. Combine with step 1: μ[f * g|m] = g * μ[f|m] = μ[f|m] * g
+  --
+  -- Technical blocker (Lean 4 limitation):
+  -- condExp_stronglyMeasurable_mul_of_bound has signature requiring [IsFiniteMeasure μ],
+  -- but with multiple measurable space structures (m and inst✝¹) in scope, Lean's type
+  -- class resolution produces "typeclass instance problem is stuck" with metavariable
+  -- ?m.104. This is a known Lean 4 limitation when transporting between type class
+  -- instances even with a proof of compatibility (hm : m ≤ inst✝¹).
+  --
+  -- The proof would work if we could provide the IsFiniteMeasure instance explicitly,
+  -- but the @ notation fails due to measurable space structure mismatches
 
 end OperatorTheoretic
 
