@@ -1562,6 +1562,93 @@ private lemma ennreal_tendsto_toReal_zero {ι : Type*}
   -- Compose the limits.
   simpa [ENNReal.toReal_zero] using hcont.tendsto.comp hf
 
+/-! ### Option A: Projected Mean Ergodic Theorem
+
+This section implements the "project first, then average" approach that avoids
+the ambient/sub-σ-algebra mismatch entirely.
+
+**Mathematical idea**: For T-invariant m, conditional expectation commutes with
+composition by T, so the m-projected Birkhoff averages are constant:
+
+  𝔼[Birkhoff average | m] = 𝔼[f | m]  for all n
+
+This bypasses the need to identify the Koopman fixed-point subspace with Lp(m).
+-/
+
+/-- **Key lemma**: Conditional expectation onto a T-invariant σ-algebra commutes
+with precomposition by T.
+
+If `m` is a sub-σ-algebra such that `T⁻¹ s = s` for all `m`-measurable `s`, then
+for any integrable `f`:
+
+  𝔼[f ∘ T | m] = 𝔼[f | m]  (μ-a.e.)
+
+**Proof sketch**:
+1. Both sides are characterized by their integrals over `m`-measurable sets
+2. For `A ∈ m`: `∫ (f ∘ T) · 1_A dμ = ∫ f · 1_{T⁻¹ A} dμ`
+3. Since `T⁻¹ A = A` and T is measure-preserving, these equal `∫ f · 1_A dμ`
+4. Therefore the conditional expectations agree a.e.
+-/
+private lemma condexp_comp_T_eq_condexp
+    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {m : MeasurableSpace Ω} (hm : m ≤ ‹MeasurableSpace Ω›)
+    (T : Ω → Ω) (hT_meas : Measurable T) (hT_pres : MeasurePreserving T μ μ)
+    (h_inv : ∀ s, MeasurableSet[m] s → T ⁻¹' s = s)
+    (f : Ω → ℝ) (hf : Integrable f μ) :
+    μ[(f ∘ T) | m] =ᵐ[μ] μ[f | m] := by
+  sorry  -- TODO: Use integral characterization + T⁻¹ s = s
+
+/-- Extension to iterated composition: 𝔼[f ∘ T^[k] | m] = 𝔼[f | m] for all k. -/
+private lemma condexp_comp_T_pow_eq_condexp
+    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {m : MeasurableSpace Ω} (hm : m ≤ ‹MeasurableSpace Ω›)
+    (T : Ω → Ω) (hT_meas : Measurable T) (hT_pres : MeasurePreserving T μ μ)
+    (h_inv : ∀ s, MeasurableSet[m] s → T ⁻¹' s = s)
+    (f : Ω → ℝ) (hf : Integrable f μ) (k : ℕ) :
+    μ[(f ∘ (T^[k])) | m] =ᵐ[μ] μ[f | m] := by
+  induction k with
+  | zero => simp
+  | succ k ih =>
+    -- f ∘ T^[k+1] = (f ∘ T^[k]) ∘ T
+    have h_comp : (f ∘ (T^[k+1])) = ((f ∘ (T^[k])) ∘ T) := by
+      ext ω
+      simp [Function.iterate_succ_apply']
+    rw [h_comp]
+    sorry  -- Apply condexp_comp_T_eq_condexp + ih + measurability
+
+/-- **Projected MET**: The conditional expectation of Birkhoff averages onto a
+T-invariant σ-algebra is constant and equals 𝔼[f | m].
+
+This is the "project first, then average" approach that completely bypasses the
+ambient/sub-σ-algebra mismatch in the Koopman infrastructure.
+
+**Corollary**: This immediately implies the L² convergence statement, since a
+constant sequence trivially converges in any norm.
+-/
+private theorem birkhoffAverage_condexp_m_constant
+    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {m : MeasurableSpace Ω} (hm : m ≤ ‹MeasurableSpace Ω›)
+    (T : Ω → Ω) (hT_meas : Measurable T) (hT_pres : MeasurePreserving T μ μ)
+    (h_inv : ∀ s, MeasurableSet[m] s → T ⁻¹' s = s)
+    (f : Ω → ℝ) (hf_int : Integrable f μ) (n : ℕ) (hn : n > 0) :
+    μ[(fun ω => (1 / (n : ℝ)) *
+        (Finset.range n).sum (fun j => f (T^[j] ω))) | m]
+      =ᵐ[μ] μ[f | m] := by
+  -- Linearity of conditional expectation
+  have h_linear : μ[(fun ω => (1 / (n : ℝ)) *
+        (Finset.range n).sum (fun j => f (T^[j] ω))) | m]
+      =ᵐ[μ] (fun ω => (1 / (n : ℝ)) *
+        (Finset.range n).sum (fun j => μ[(f ∘ T^[j]) | m] ω)) := by
+    sorry  -- Use linearity of condexp
+
+  -- Each term equals 𝔼[f | m]
+  have h_each : ∀ j ∈ Finset.range n,
+      μ[(f ∘ T^[j]) | m] =ᵐ[μ] μ[f | m] :=
+    fun j _ => condexp_comp_T_pow_eq_condexp hm T hT_meas hT_pres h_inv f hf_int j
+
+  -- Sum of n copies of 𝔼[f | m] divided by n equals 𝔼[f | m]
+  sorry  -- Combine the above
+
 /-- L² mean-ergodic theorem in function form:
 the Cesàro averages of `f ∘ T^[j]` converge in L² to `μ[f | mSI]`, provided
 `m` is `T`-invariant.  This is a thin wrapper around mathlib's L² MET.
