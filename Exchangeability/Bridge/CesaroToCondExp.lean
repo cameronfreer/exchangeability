@@ -14,6 +14,7 @@ import Exchangeability.Contractability
 import Exchangeability.Tail.TailSigma
 import Exchangeability.Probability.CondExp
 import Exchangeability.Ergodic.KoopmanMeanErgodic
+import Exchangeability.PathSpace.Shift
 
 /-!
 # Bridge: Mean Ergodic Theorem to Cesàro-Conditional Expectation Convergence
@@ -82,11 +83,12 @@ instance {α} (X : ℕ → Ω → α) : IsProbabilityMeasure (μ_path X) := by
 /-! ## B. Bridge 1: Contractable → Shift Invariance -/
 
 open Exchangeability
+open Exchangeability.PathSpace  -- For shift operator
 
 /-- **Bridge 1.** `Contractable` ⇒ shift-invariant law on path space. -/
 lemma contractable_shift_invariant_law
     {X : ℕ → Ω → ℝ} (hX : Exchangeability.Contractable μ X) :
-    Measure.map (Exchangeability.Ergodic.shift (α := ℝ)) (μ_path X) = (μ_path X) := by
+    Measure.map (shift (α := ℝ)) (μ_path X) = (μ_path X) := by
   /- Intuition: `Contractable` ⇒ the finite-dimensional distributions are shift invariant,
      hence the pushforward measure is invariant under `shift`. Your project should already
      have this; if it has a lemma under a different name, replace the next line by it. -/
@@ -100,14 +102,14 @@ lemma contractable_shift_invariant_law
   --
   sorry
 
-/-- Measurability of `shift` on path space (from your Koopman file). -/
-lemma measurable_shift_real : Measurable (Exchangeability.Ergodic.shift (α := ℝ)) :=
-  Exchangeability.Ergodic.measurable_shift
+/-- Measurability of `shift` on path space. -/
+lemma measurable_shift_real : Measurable (shift (α := ℝ)) :=
+  shift_measurable
 
 /-- **Bridge 1'.** Package the previous lemma as `MeasurePreserving` for MET. -/
 lemma measurePreserving_shift_path (X : ℕ → Ω → ℝ)
     (hX : Exchangeability.Contractable μ X) :
-    MeasurePreserving (Exchangeability.Ergodic.shift (α := ℝ)) (μ_path X) (μ_path X) := by
+    MeasurePreserving (shift (α := ℝ)) (μ_path X) (μ_path X) := by
   refine ⟨measurable_shift_real, ?_⟩
   simpa using contractable_shift_invariant_law (μ := μ) (X := X) hX
 
@@ -116,17 +118,16 @@ lemma measurePreserving_shift_path (X : ℕ → Ω → ℝ)
 -- Shorthand: the canonical coordinate process on path space
 def coord : ℕ → Ω[ℝ] → ℝ := fun n ω => ω n
 
--- The tail σ-algebra on path space (re-using your project's notation via re-export)
--- NOTE: you re-export `TailSigma.tailSigma := Exchangeability.Tail.tailProcess`
+-- The tail σ-algebra on path space
 abbrev tail_on_path : MeasurableSpace (Ω[ℝ]) :=
-  TailSigma.tailSigma (coord)
+  Tail.tailProcess (coord)
 
 lemma tail_on_path_le : tail_on_path ≤ (inferInstance : MeasurableSpace (Ω[ℝ])) :=
   by
-    -- trivial since `tailSigma` is a sub-σ-algebra
-    change TailSigma.tailSigma coord ≤ _
+    -- trivial since `tailProcess` is a sub-σ-algebra
+    change Tail.tailProcess coord ≤ _
     -- your project already has this
-    simpa using TailSigma.tailSigma_le (X := coord) (by intro n; exact measurable_pi_apply n)
+    exact Tail.tailProcess_le_ambient coord (by intro n; exact measurable_pi_apply n)
 
 /-- **Bridge 2.** For the left shift on one-sided path space, the fixed-point subspace of the
 Koopman operator equals the closed subspace `L²(tail_on_path)`; consequently the
@@ -326,7 +327,7 @@ theorem cesaro_to_condexp_L1
   (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1) :
   ∀ ε > 0, ∃ (M : ℕ), ∀ (m : ℕ), m ≥ M →
     ∫ ω, |(1 / (m : ℝ)) * ∑ i : Fin m, f (X i ω) -
-           (μ[(f ∘ X 0) | TailSigma.tailSigma X] ω)| ∂μ < ε := by
+           (μ[(f ∘ X 0) | Tail.tailProcess X] ω)| ∂μ < ε := by
   classical
   -- Step 0: work on path space with law μ_path.
   let ν := μ_path X
