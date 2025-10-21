@@ -59,6 +59,7 @@ then `h ∘ f : α → ℝ` is a.e. strongly measurable w.r.t. `comap f m'` unde
 
 This is the key technical lemma for proving conditional expectation commutes with
 pullback along factor maps. -/
+@[fun_prop]
 lemma aestronglyMeasurable_comp_comap
     {α β : Type*} [MeasurableSpace α] {m₀ : MeasurableSpace β}
     {μ : Measure α} (f : α → β) (hf : @Measurable α β _ m₀ f)

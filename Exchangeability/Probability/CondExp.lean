@@ -119,8 +119,8 @@ lemma integrable_indicator_comp
     {B : Set α} (hB : MeasurableSet B) :
     Integrable ((Set.indicator B (fun _ => (1 : ℝ))) ∘ X) μ := by
   -- Measurability of the composition
-  have h_meas : Measurable ((Set.indicator B (fun _ : α => (1 : ℝ))) ∘ X) :=
-    (measurable_const.indicator hB).comp hX
+  have h_meas : Measurable ((Set.indicator B (fun _ : α => (1 : ℝ))) ∘ X) := by
+    fun_prop (disch := measurability)
   
   -- Boundedness: ‖indicator ∘ X‖ ≤ 1 everywhere
   have h_bound : ∀ᵐ ω ∂μ, ‖((Set.indicator B (fun _ => (1 : ℝ))) ∘ X) ω‖ ≤ (1 : ℝ) := by

@@ -4972,8 +4972,8 @@ private lemma condexp_pair_factorization
       (fun ω => ∫ y, f (y 0) * g (y 1)
           ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) := by
     -- Prove integrability from boundedness
-    have h_meas : Measurable (fun (ω : Ω[α]) => f (ω 0) * g (ω 1)) :=
-      (hf_meas.comp (measurable_pi_apply 0)).mul (hg_meas.comp (measurable_pi_apply 1))
+    have h_meas : Measurable (fun (ω : Ω[α]) => f (ω 0) * g (ω 1)) := by
+      fun_prop (disch := measurability)
     have h_int : Integrable (fun (ω : Ω[α]) => f (ω 0) * g (ω 1)) μ := by
       obtain ⟨C_f, hC_f⟩ := hf_bd
       obtain ⟨C_g, hC_g⟩ := hg_bd
@@ -5237,8 +5237,10 @@ theorem condexp_product_factorization
           (f := fun ω => (∏ k : Fin m, fs' k (ω (k : ℕ))) * fs (Fin.last m) (ω m))
           (hf := by
             apply Measurable.mul
-            · exact Finset.measurable_prod _ (fun k _ => (hmeas' k).comp (measurable_pi_apply k))
-            · exact (hmeas (Fin.last m)).comp (measurable_pi_apply m))
+            · apply Finset.measurable_prod
+              intro k _
+              fun_prop (disch := measurability)
+            · fun_prop (disch := measurability))
 
       -- Apply Kernel.IndepFun.integral_mul to the composite functions
       -- We use h_indep_finsets composed with the product function and single evaluation
