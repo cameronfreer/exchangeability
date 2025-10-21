@@ -2161,16 +2161,12 @@ private lemma L1_cesaro_convergence
       ring_nf
 
     -- Apply Mean Ergodic Theorem via birkhoffAverage_tendsto_condexp_L2
-    -- This shows: Cesàro averages of g∘shift^[j] converge to μ[g(·0)|mSI] in L²
-    sorry
-    -- TODO: Once birkhoffAverage_tendsto_condexp_L2 is proved (currently `admit` at line 1188),
-    -- the proof is:
+    -- BLOCKED: birkhoffAverage_tendsto_condexp_L2 (line 1735) has compilation errors
+    -- Once that theorem is fixed, this should be:
     --   have h_met := birkhoffAverage_tendsto_condexp_L2 shift measurable_shift hσ hmSI h_inv (fun ω => g (ω 0)) hg_0_int
     --   simp_rw [← h_A_eq] at h_met
     --   exact h_met
-    -- Where:
-    --   - h_inv : ∀ s, MeasurableSet[mSI] s → shift ⁻¹' s = s (shift-invariance)
-    --   - h_A_eq : A n ω = Cesàro average of g∘shift^[j]
+    sorry
   -- Explicit type: hL2 converges to 0 in ENNReal
   have hL2' : Tendsto (fun n => eLpNorm (fun ω => A n ω - Y ω) 2 μ) atTop (𝓝 (0 : ENNReal)) := hL2
 
