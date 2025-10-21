@@ -3249,8 +3249,16 @@ lemma alphaIic_ae_eq_alphaIicCE
         _ ≤ ε/2 + ε/2 := by linarith [h_small]
         _ = ε := by ring
 
-    · -- Case n ≠ 0: Similar argument with shifted indices
-      sorry -- TODO: Generalize to arbitrary n
+    · -- Case n ≠ 0: Requires shift invariance of tail σ-algebra
+      -- For contractable/exchangeable sequences, the tail σ-algebra is shift-invariant,
+      -- meaning μ[f∘X_n | tail] = μ[f∘X_0 | tail] for all n.
+      --
+      -- Two approaches:
+      -- 1. Prove shift invariance directly (requires ergodic theory infrastructure)
+      -- 2. Modify cesaro_to_condexp_L1 axiom to support arbitrary starting index
+      --
+      -- For now, we leave this as sorry. The n=0 case demonstrates the full technique.
+      sorry -- TODO: Generalize using shift invariance or extended axiom
 
   -- Measurability of Cesàro averages
   have hA_meas : ∀ n m, AEStronglyMeasurable (A n m) μ := by
