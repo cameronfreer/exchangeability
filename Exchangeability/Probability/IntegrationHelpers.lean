@@ -107,16 +107,22 @@ lemma L2_tendsto_implies_L1_tendsto_of_bounded
     (hf_bdd : ∃ M, ∀ n ω, |f n ω| ≤ M)
     (hL2 : Tendsto (fun n => ∫ ω, (f n ω - g ω)^2 ∂μ) atTop (𝓝 0)) :
     Tendsto (fun n => ∫ ω, |f n ω - g ω| ∂μ) atTop (𝓝 0) := by
-  -- Apply Cauchy-Schwarz to each term: ∫|fₙ - g| ≤ (∫(fₙ-g)²)^(1/2) · (∫ 1)^(1/2)
-  -- On a probability space: (∫ 1)^(1/2) = 1
-  -- So: ∫|fₙ - g| ≤ (∫(fₙ-g)²)^(1/2)
-  -- As (∫(fₙ-g)²) → 0, we have (∫(fₙ-g)²)^(1/2) → 0
-  -- Therefore ∫|fₙ - g| → 0 by squeeze theorem
+  -- **Proof strategy:** On probability spaces, Hölder inequality gives:
+  --   ∫|f - g| ≤ (∫(f-g)²)^(1/2)
   --
   -- Key steps:
-  -- 1. Show each (f n - g) is in L² using boundedness
-  -- 2. Apply abs_integral_mul_le_L2 with g = 1
-  -- 3. Use tendsto_of_tendsto_of_tendsto_of_le_of_le (squeeze)
+  -- 1. Apply `eLpNorm_le_eLpNorm_mul_rpow_measure_univ` with p=1, q=2
+  -- 2. On probability spaces: eLpNorm f 1 ≤ eLpNorm f 2 (using μ(Ω) = 1)
+  -- 3. Convert: ∫|f| = (eLpNorm f 1).toReal and (∫f²)^(1/2) = (eLpNorm f 2).toReal
+  -- 4. Use lintegral_rpow_enorm_eq_rpow_eLpNorm' to connect eLpNorm 2 to integral
+  -- 5. Apply squeeze theorem: 0 ≤ ∫|f n - g| ≤ (∫(f n - g)²)^(1/2) → 0
+  --
+  -- **Technical details:**
+  -- - Need to convert between ‖·‖ (norm) and |·| (abs) for real numbers
+  -- - Need to show eLpNorm f 2 < ∞ using finiteness of ∫f² from hL2
+  -- - Need ofReal_integral_eq_lintegral_ofReal for connecting lintegral to integral
+  --
+  -- This is a standard argument, see reference proof in CesaroToCondExp.lean:225-287
   sorry
 
 /-! ### Pushforward Measure Integrals -/

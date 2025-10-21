@@ -11,6 +11,10 @@ import Mathlib.Topology.Algebra.Order.LiminfLimsup
 import Exchangeability.Ergodic.KoopmanMeanErgodic
 import Exchangeability.Ergodic.ProjectionLemmas
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.CondexpL2
+import Exchangeability.PathSpace.Shift
+
+-- NOTE: shift was moved from KoopmanMeanErgodic to PathSpace.Shift in Oct 2025
+-- to avoid duplication with CommonEnding. See commit 57890e9.
 
 /-!
 # Shift-invariant σ-algebra and conditional expectation
@@ -79,6 +83,7 @@ namespace Exchangeability.DeFinetti
 
 open MeasureTheory Filter Topology
 open Exchangeability.Ergodic
+open Exchangeability.PathSpace
 
 variable {α : Type*} [MeasurableSpace α]
 
