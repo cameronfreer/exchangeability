@@ -7,6 +7,8 @@ import Mathlib.Probability.ConditionalExpectation
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
 import Mathlib.Probability.Martingale.Basic
+import Mathlib.Probability.Kernel.CondDistrib
+import Mathlib.Probability.Kernel.Condexp
 import Exchangeability.Contractability
 import Exchangeability.ConditionallyIID
 import Exchangeability.Probability.CondExp
@@ -1811,8 +1813,8 @@ laws agree and η is a σ(ζ)-measurable function, the conditional distributions
 given ζ and given η must agree. -/
 lemma condexp_indicator_drop_info_of_pair_law
     {Ω α β : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
-    [MeasurableSpace α] [StandardBorelSpace α]
-    [MeasurableSpace β]
+    [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+    [MeasurableSpace β] [Nonempty β]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (ξ : Ω → α) (η ζ : Ω → β)
     (hξ : Measurable ξ) (hη : Measurable η) (hζ : Measurable ζ)
@@ -1829,22 +1831,43 @@ lemma condexp_indicator_drop_info_of_pair_law
   μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ
         | MeasurableSpace.comap η inferInstance] := by
   classical
-  -- This is the core of Kallenberg Lemma 1.3 applied to conditional expectations.
+  -- ═══════════════════════════════════════════════════════════════════════════════
+  -- PROOF STRATEGY (Kallenberg Lemma 1.3 - Uniqueness of Disintegration)
+  -- ═══════════════════════════════════════════════════════════════════════════════
   --
-  -- Strategy: Use conditional expectation kernels to turn the problem into a statement
-  -- about probability measures on α.
+  -- **Goal:** E[1_B(ξ) | σ(ζ)] = E[1_B(ξ) | σ(η)]  a.e.
   --
-  -- Key insight: h_law says the joint distributions (ξ, η) and (ξ, ζ) are equal.
-  -- Combined with h_le (η is determined by ζ), this implies the conditional
-  -- distributions are equal: P(ξ ∈ · | ζ) = P(ξ ∈ · | η) almost surely.
+  -- **Given:**
+  --   • h_law: (ξ, η) =^d (ξ, ζ)  (pair laws agree)
+  --   • h_le: σ(η) ⊆ σ(ζ)  (η determined by ζ)
   --
-  -- The proof requires:
-  -- 1. Expressing both conditional expectations using condExpKernel
-  -- 2. Showing the kernels agree by uniqueness of disintegration
-  -- 3. Applying the integral representation of conditional expectation
+  -- **Mathematical approach using conditional distributions:**
   --
-  -- This would require substantial kernel infrastructure not yet in the file.
-  -- For now, we admit this as a fundamental lemma.
+  -- 1. Express both sides using kernel integral representation:
+  --      E[1_B(ξ) | σ(ζ)] = ∫ 1_B(a) d[condDistrib ξ ζ μ](ζ ω, da)
+  --      E[1_B(ξ) | σ(η)] = ∫ 1_B(a) d[condDistrib ξ η μ](η ω, da)
+  --
+  -- 2. Show kernels agree via uniqueness of disintegration:
+  --    From h_law + h_le, derive that the conditional distributions agree:
+  --      condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (η ω)  for a.e. ω
+  --
+  --    This is the **uniqueness of regular conditional distributions**:
+  --      "If (ξ, η) =^d (ξ, ζ) and η = g(ζ), then P(ξ ∈ · | ζ) = P(ξ ∈ · | η = g(ζ))"
+  --
+  -- 3. Conclude by transitivity of a.e. equality.
+  --
+  -- ───────────────────────────────────────────────────────────────────────────────
+  -- IMPLEMENTATION STATUS
+  -- ───────────────────────────────────────────────────────────────────────────────
+  --
+  -- The full proof requires:
+  --   • ProbabilityTheory.condExp_ae_eq_integral_condDistrib (available in mathlib)
+  --   • Uniqueness theorem for condDistrib (NOT YET in mathlib)
+  --   • Type class wrangling for StandardBorelSpace + Nonempty
+  --
+  -- For now, we admit this as a single sorry representing the missing mathlib
+  -- infrastructure for kernel uniqueness.
+  --
   sorry
 
 /-- **Finite-level bridge:** if `(Z_r, X_r, θ_{m+1}^{(k)})` and `(X_r, θ_{m+1}^{(k)})`
