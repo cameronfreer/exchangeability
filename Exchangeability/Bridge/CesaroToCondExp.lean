@@ -115,12 +115,62 @@ lemma contractable_shift_invariant_law
   -- LHS: Marginal of the shifted measure = distribution of (X₁, ..., Xₙ)
   -- RHS: Marginal of the original measure = distribution of (X₀, ..., X_{n-1})
 
-  -- By contractability with k(i) = i + 1 (strictly increasing), these are equal
+  -- Expand LHS using Measure.map composition
+  calc (Measure.map (prefixProj ℝ n) (Measure.map shift (μ_path μ X))) S
+      = Measure.map shift (μ_path μ X) ((prefixProj ℝ n) ⁻¹' S) := by
+          rw [Measure.map_apply measurable_prefixProj hS]
+    _ = μ_path μ X (shift ⁻¹' ((prefixProj ℝ n) ⁻¹' S)) := by
+          rw [Measure.map_apply measurable_shift]
+          · exact measurable_prefixProj hS
+    _ = μ_path μ X ((prefixProj ℝ n ∘ shift) ⁻¹' S) := by
+          rfl
+    _ = μ ((pathify X) ⁻¹' ((prefixProj ℝ n ∘ shift) ⁻¹' S)) := by
+          rw [μ_path, Measure.map_apply (measurable_pathify hX_meas)]
+          · exact (measurable_prefixProj.comp measurable_shift) hS
+    _ = μ ((prefixProj ℝ n ∘ shift ∘ pathify X) ⁻¹' S) := by
+          rfl
+    _ = μ ((prefixProj ℝ n ∘ pathify X) ⁻¹' S) := by
+          -- Apply contractability: shift ∘ pathify X extracts (X₁, X₂, ...)
+          --                        pathify X extracts (X₀, X₁, ...)
+          -- Define k : Fin n → ℕ with k(i) = i + 1
+          let k : Fin n → ℕ := fun i => (i : ℕ) + 1
+          have hk : StrictMono k := fun i j hij => Nat.add_lt_add_right (Fin.val_strictMono hij) 1
 
-  -- The key insight: We need to show the finite-dimensional distributions match
-  -- This requires careful manipulation of Measure.map compositions
+          -- Apply contractability with this k to get measure equality
+          have h_contract : Measure.map (fun ω i => X (k i) ω) μ =
+                           Measure.map (fun ω (i : Fin n) => X (i : ℕ) ω) μ := hX n k hk
 
-  sorry  -- TODO: Apply contractability with shifted indices k(i) = i + 1
+          -- Show that prefixProj ∘ shift ∘ pathify X = fun ω i => X (k i) ω
+          have h1 : (prefixProj ℝ n ∘ shift ∘ pathify X) = (fun ω i => X (k i) ω) := by
+            ext ω i
+            simp [prefixProj, pathify, shift, k]
+
+          -- Show that prefixProj ∘ pathify X = fun ω i => X (i : ℕ) ω
+          have h2 : (prefixProj ℝ n ∘ pathify X) = (fun ω (i : Fin n) => X (i : ℕ) ω) := by
+            ext ω i
+            simp [prefixProj, pathify]
+
+          -- Rewrite the goal using function equalities
+          rw [h1, h2]
+
+          -- Now convert using Measure.map_apply
+          have hf1 : Measurable (fun ω i => X (k i) ω) := by
+            have : Measurable (prefixProj ℝ n ∘ shift ∘ pathify X) :=
+              measurable_prefixProj.comp (measurable_shift.comp (measurable_pathify hX_meas))
+            rw [← h1]; exact this
+          have hf2 : Measurable (fun ω (i : Fin n) => X (i : ℕ) ω) := by
+            have : Measurable (prefixProj ℝ n ∘ pathify X) :=
+              measurable_prefixProj.comp (measurable_pathify hX_meas)
+            rw [← h2]; exact this
+
+          rw [← Measure.map_apply hf1 hS, ← Measure.map_apply hf2 hS, h_contract]
+
+    _ = μ ((pathify X) ⁻¹' ((prefixProj ℝ n) ⁻¹' S)) := by
+          rfl  -- Preimage composition: (f ∘ g)⁻¹' S = g⁻¹' (f⁻¹' S)
+    _ = μ_path μ X ((prefixProj ℝ n) ⁻¹' S) := by
+          rw [μ_path, Measure.map_apply (measurable_pathify hX_meas) (measurable_prefixProj hS)]
+    _ = (Measure.map (prefixProj ℝ n) (μ_path μ X)) S := by
+          rw [Measure.map_apply measurable_prefixProj hS]
 
 /-- **BRIDGE 1'.** Package as `MeasurePreserving` for applying the Mean Ergodic Theorem. -/
 lemma measurePreserving_shift_path (X : ℕ → Ω → ℝ)
@@ -237,6 +287,49 @@ lemma tendsto_Lp2_to_L1 {α : Type*} [MeasurableSpace α] {m : Measure α} [IsPr
 
 /-! ## E. Bridge 4: Pullback along Factor Map -/
 
+/-- **Change-of-variables for conditional expectation under pushforward.**
+
+If `ν = Measure.map f μ` and `m'` is a sub-σ-algebra on the codomain,
+then `(ν[g | m']) ∘ f =ᵐ[μ] μ[(g ∘ f) | MeasurableSpace.comap f m']`.
+
+**Mathematical proof:** Both sides are `comap f m'`-measurable and integrable.
+For every `A ∈ m'`, we have `f⁻¹(A) ∈ comap f m'`, and:
+```
+∫_{f⁻¹(A)} (ν[g|m'] ∘ f) dμ = ∫_A ν[g|m'] dν = ∫_A g dν = ∫_{f⁻¹(A)} (g∘f) dμ
+```
+By uniqueness of conditional expectation, the functions are equal μ-a.e. -/
+lemma condexp_changeOfVariables
+    {α β : Type*} [MeasurableSpace α] {m₀ : MeasurableSpace β}
+    (μ : Measure α) (f : α → β) (hf : @Measurable α β _ m₀ f)
+    (m' : MeasurableSpace β) (hm' : m' ≤ m₀)
+    {g : β → ℝ}
+    (hg : Integrable g (@Measure.map α β _ m₀ f μ)) :
+    ((@Measure.map α β _ m₀ f μ)[g | m']) ∘ f
+      =ᵐ[μ] μ[g ∘ f | MeasurableSpace.comap f m'] := by
+  /-  **Proof strategy (mathematically complete, needs typeclass management):**
+
+  Both sides are `comap f m'`-measurable and integrable. For any `A ∈ m'`, we have
+  `f⁻¹(A) ∈ comap f m'`. The defining property gives:
+
+  ```
+  ∫_{f⁻¹(A)} (ν[g|m'] ∘ f) dμ
+    = ∫_A ν[g|m'] dν              (change of variables: integral_map)
+    = ∫_A g dν                    (defining property: setIntegral_condExp)
+    = ∫_{f⁻¹(A)} (g ∘ f) dμ       (change of variables back)
+  ```
+
+  By uniqueness of conditional expectation (`ae_eq_condExp_of_forall_setIntegral_eq`),
+  the two functions are equal μ-a.e.
+
+  **Technical challenge:** MeasurableSpace typeclass management. The measure
+  `Measure.map f μ` has type `@Measure β m₀`, but conditional expectation needs
+  careful handling of the sub-σ-algebra `m' ≤ m₀`. Each `integral_map` application
+  requires `AEMeasurable` with correct MeasurableSpace instances.
+
+  This is a **mathlib gap** - the lemma is mathematically standard but requires
+  careful formalization of MeasurableSpace polymorphism. -/
+  sorry
+
 /-- **Key fact:** The tail σ-algebra pulls back correctly via pathify.
 
 This uses the surjective equality from TailSigma.lean. For probability applications,
@@ -271,25 +364,18 @@ lemma condexp_pullback_along_pathify
   -- Rewrite the RHS using this equality
   rw [h_sigma]
 
-  -- Now we need to show:
-  -- (μ_path μ X)[H | tail_on_path] ∘ pathify X
-  --   =ᵐ[μ] μ[H ∘ pathify X | comap (pathify X) tail_on_path]
-  --
-  -- This is the fundamental change-of-variables formula for conditional expectation:
-  --   If ν = f₊μ (pushforward) and m' is a sub-σ-algebra on the target,
-  --   then: ν[g | m'] ∘ f =ᵐ[μ] μ[g ∘ f | f⁻¹(m')]
-  --
-  -- In our case:
-  --   f = pathify X : Ω → (ℕ → ℝ)
-  --   μ = original measure
+  -- Now apply the change-of-variables lemma with:
+  --   f = pathify X,  μ = μ,  g = H
   --   ν = μ_path μ X = Measure.map (pathify X) μ
   --   m' = tail_on_path
-  --   g = H
-  --
-  -- This lemma may not exist in mathlib. If not, it needs to be proved from
-  -- the characterizing property of conditional expectation.
 
-  sorry  -- TODO: Find or prove condexp factor map change of variables
+  -- Need: H is integrable with respect to μ_path μ X
+  have hH_int : Integrable H (μ_path μ X) := by
+    sorry  -- TODO: Derive from hH_meas and probability measure structure
+
+  -- Apply the change-of-variables formula
+  exact condexp_changeOfVariables μ (pathify X) (measurable_pathify hX_meas)
+    tail_on_path tail_on_path_le hH_int
 
 /-! ## F. Main Theorem: Removing the Axiom -/
 
