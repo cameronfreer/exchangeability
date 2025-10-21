@@ -156,12 +156,14 @@ lemma shiftProcess_add (X : ℕ → Ω → α) (m k : ℕ) :
   omega
 
 /-- If all coordinates of X are measurable, so are all coordinates of shifted process. -/
+@[measurability, fun_prop]
 lemma measurable_shiftProcess (X : ℕ → Ω → α) (m : ℕ)
     (hX : ∀ n, Measurable (X n)) (n : ℕ) :
     Measurable (shiftProcess X m n) :=
   hX (m + n)
 
 /-- The path map is measurable when all coordinates are measurable. -/
+@[measurability, fun_prop]
 lemma measurable_path (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) :
     Measurable (path X) := by
   measurability
@@ -250,6 +252,7 @@ section Measurability
 
 variable {X : ℕ → Ω → α}
 
+@[measurability, fun_prop]
 lemma measurable_shiftRV (hX : ∀ n, Measurable (X n)) {m : ℕ} :
     Measurable (shiftRV X m) := by
   classical
@@ -614,6 +617,7 @@ lemma indProd_integrable
   · exact firstRCylinder_measurable_ambient X r C hX hC
 
 /-- indProd is strongly measurable when coordinates and sets are measurable. -/
+@[measurability, fun_prop]
 lemma indProd_stronglyMeasurable
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α)
@@ -648,6 +652,7 @@ lemma indProd_univ {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
   simp [indProd, Set.indicator]
 
 /-- indProd is measurable when coordinates are measurable. -/
+@[measurability, fun_prop]
 lemma indProd_measurable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α)
     (hX : ∀ n, Measurable (X n)) (hC : ∀ i, MeasurableSet (C i)) :

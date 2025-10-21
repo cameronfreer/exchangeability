@@ -220,9 +220,7 @@ lemma measurable_indicator_comp {Ω α : Type*} [MeasurableSpace Ω] [Measurable
     Measurable fun ω => ENNReal.ofReal (s.indicator (fun _ => (1 : ℝ)) (f ω)) := by
   -- The indicator function is measurable when composed with a measurable function
   have : Measurable fun ω => s.indicator (fun _ => (1 : ℝ)) (f ω) := by
-    apply Measurable.indicator
-    · exact measurable_const
-    · exact hf hs
+    fun_prop (disch := measurability)
   exact ENNReal.measurable_ofReal.comp this
 
 /-- The product of bounded functions is bounded.

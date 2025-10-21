@@ -2532,6 +2532,7 @@ This is the "lightest path" mentioned in the original plan.
 private def indIic (t : ℝ) : ℝ → ℝ :=
   (Set.Iic t).indicator (fun _ => (1 : ℝ))
 
+@[fun_prop]
 private lemma indIic_measurable (t : ℝ) : Measurable (indIic t) := by
   simpa [indIic] using (measurable_const.indicator measurableSet_Iic)
 

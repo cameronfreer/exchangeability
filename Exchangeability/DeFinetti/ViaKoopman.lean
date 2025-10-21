@@ -188,11 +188,11 @@ lemma restrictNonneg_shiftℤInv (ω : Ωℤ[α]) :
   funext n
   simp [restrictNonneg, shiftℤInv]
 
-@[measurability]
+@[measurability, fun_prop]
 lemma measurable_shiftℤ : Measurable (shiftℤ (α := α)) := by
   measurability
 
-@[measurability]
+@[measurability, fun_prop]
 lemma measurable_shiftℤInv : Measurable (shiftℤInv (α := α)) := by
   measurability
 
@@ -835,17 +835,17 @@ private lemma condexp_pair_lag_constant_twoSided
   let Fk : Ωℤ[α] → ℝ := fun ω => f (ω (-1)) * g (ω (k : ℤ))
   have hFk_int : Integrable Fk ext.μhat := by
     have hφ_meas : Measurable (fun (ω : ℤ → α) => f (ω (-1))) := by
-      exact hf_meas.comp (measurable_pi_apply (-1 : ℤ))
+      fun_prop (disch := measurability)
     have hψ_meas : Measurable (fun (ω : ℤ → α) => g (ω (k : ℤ))) := by
-      exact hg_meas.comp (measurable_pi_apply (k : ℤ))
+      fun_prop (disch := measurability)
     have hφ_bd : ∃ C, ∀ (ω : Ωℤ[α]), |f (ω (-1))| ≤ C := ⟨Cf, fun ω => hCf _⟩
     have hψ_bd : ∃ C, ∀ (ω : Ωℤ[α]), |g (ω (k : ℤ))| ≤ C := ⟨Cg, fun ω => hCg _⟩
     exact integrable_of_bounded_mul_helper (μ := ext.μhat) hφ_meas hφ_bd hψ_meas hψ_bd
   have hF_int : Integrable (fun (ω : Ωℤ[α]) => f (ω 0) * g (ω ((k : ℤ) + 1))) ext.μhat := by
     have hφ_meas : Measurable (fun (ω : ℤ → α) => f (ω 0)) := by
-      exact hf_meas.comp (measurable_pi_apply (0 : ℤ))
+      fun_prop (disch := measurability)
     have hψ_meas : Measurable (fun (ω : ℤ → α) => g (ω ((k : ℤ) + 1))) := by
-      exact hg_meas.comp (measurable_pi_apply ((k : ℤ) + 1))
+      fun_prop (disch := measurability)
     have hφ_bd : ∃ C, ∀ (ω : Ωℤ[α]), |f (ω 0)| ≤ C := ⟨Cf, fun ω => hCf _⟩
     have hψ_bd : ∃ C, ∀ (ω : Ωℤ[α]), |g (ω ((k : ℤ) + 1))| ≤ C := ⟨Cg, fun ω => hCg _⟩
     exact integrable_of_bounded_mul_helper (μ := ext.μhat) hφ_meas hφ_bd hψ_meas hψ_bd
@@ -2736,7 +2736,7 @@ private lemma indicator_product_properties
   have hF_meas : Measurable F := by
     apply Finset.measurable_prod
     intro i _
-    exact Measurable.indicator measurable_const (hB_meas i) |>.comp (measurable_pi_apply (k i))
+    fun_prop (disch := measurability)
 
   -- F is bounded by 1
   have hF_bd : ∀ ω, |F ω| ≤ 1 := by
