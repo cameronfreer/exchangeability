@@ -178,22 +178,143 @@ lemma tendsto_L2_to_L1 {α} {m : Measure α} [IsProbabilityMeasure m]
 
 /-! ## E. Bridge 4: Pullback Along Factor Map -/
 
+/-- **Change-of-variables for conditional expectation under pushforward.**
+
+If `ν = Measure.map f μ` and `m' ≤ m₀` is a sub-σ-algebra on the codomain,
+then `(ν[g | m']) ∘ f =ᵐ[μ] μ[(g ∘ f) | MeasurableSpace.comap f m']`. -/
+lemma condexp_changeOfVariables
+    {α β : Type*} [MeasurableSpace α] {m₀ : MeasurableSpace β}
+    (μ : Measure α) (f : α → β) (hf : @Measurable α β _ m₀ f)
+    (m' : MeasurableSpace β) (hm' : m' ≤ m₀)
+    {g : β → ℝ}
+    (hg : Integrable g (@Measure.map α β _ m₀ f μ)) :
+    ((@Measure.map α β _ m₀ f μ)[g | m']) ∘ f
+      =ᵐ[μ] μ[g ∘ f | MeasurableSpace.comap f m'] := by
+  classical
+  -- Work with `β` carrying `m₀` as its instance, so that `map f μ : Measure β` is well-typed.
+  letI : MeasurableSpace β := m₀
+  have hf' : Measurable f := hf
+  set ν : Measure β := Measure.map f μ with hν
+
+  -- Integrability of RHS integrand and measurability/integrability of LHS candidate.
+  have h_int_right : Integrable (g ∘ f) μ := hg.comp_measurable hf'
+  have h_meas_left :
+      AEStronglyMeasurable (((ν[g | m']) : β → ℝ) ∘ f) μ := by
+    have h := stronglyMeasurable_condExp (μ := ν) (m := m') (f := g)
+    -- Need measurability w.r.t. m', but hf is w.r.t. m₀ and m' ≤ m₀
+    have hf_m' : @Measurable α β _ m' f := fun s hs => hf' (hm' s hs)
+    exact h.aestronglyMeasurable.comp_measurable hf_m'
+  have h_int_left :
+      Integrable (((ν[g | m']) : β → ℝ) ∘ f) μ := by
+    have hν_int : Integrable (ν[g | m']) ν := integrable_condExp (μ := ν) (m := m') (f := g)
+    exact hν_int.comp_measurable hf'
+
+  -- Key set-integral identity on preimages of `m'`-measurable sets.
+  -- We prove: for all `s ∈ m'`,
+  --   ∫_{f⁻¹ s} (ν[g|m'] ∘ f) dμ = ∫_{f⁻¹ s} (g ∘ f) dμ.
+  have h_sets_preimage :
+      ∀ s, MeasurableSet[m'] s →
+        ∫ x in f ⁻¹' s, (((ν[g | m']) : β → ℝ) ∘ f) x ∂μ
+          = ∫ x in f ⁻¹' s, (g ∘ f) x ∂μ := by
+    intro s hs'
+    -- upgrade `s` to `m₀`-measurable (`hm' : m' ≤ m₀`)
+    have hs₀ : MeasurableSet s := hm' _ hs'
+    have h_pre : MeasurableSet (f ⁻¹' s) := hs₀.preimage hf'
+    -- indicator-of-composition equals composition-of-indicator (pointwise)
+    have hcomp₁ :
+        (Set.indicator (f ⁻¹' s) (((ν[g | m']) : β → ℝ) ∘ f))
+        = (Set.indicator s ((ν[g | m'])) ) ∘ f := by
+      funext x; by_cases hx : f x ∈ s <;> simp [Set.indicator, hx]
+    have hcomp₂ :
+        (Set.indicator (f ⁻¹' s) (g ∘ f))
+        = (Set.indicator s g) ∘ f := by
+      funext x; by_cases hx : f x ∈ s <;> simp [Set.indicator, hx]
+
+    -- Both indicators are integrable (needed for `integral_indicator`).
+    have h_int_cond : Integrable (ν[g | m']) ν :=
+      integrable_condExp (μ := ν) (m := m') (f := g)
+    have h_int_ind_left  : Integrable (Set.indicator s (ν[g | m'])) ν :=
+      h_int_cond.indicator hs₀
+    have h_int_ind_right : Integrable (Set.indicator s g) ν :=
+      hg.indicator hs₀
+
+    -- Rewrite set integrals as indicator integrals; change variables via `integral_map`;
+    -- use the defining property of `condexp` on `ν` over the `m'`-set `s`;
+    -- change variables back; rewrite indicators as set integrals again.
+    calc
+      ∫ x in f ⁻¹' s, (((ν[g | m']) : β → ℝ) ∘ f) x ∂ μ
+          = ∫ x, Set.indicator (f ⁻¹' s) (((ν[g | m']) : β → ℝ) ∘ f) x ∂ μ :=
+            (integral_indicator h_pre).symm
+      _ = ∫ x, ((Set.indicator s (ν[g | m'])) ∘ f) x ∂ μ := by
+            rw [hcomp₁]
+      _ = ∫ y, Set.indicator s (ν[g | m']) y ∂ ν := by
+            -- change of variables (pushforward) - ν is already Measure.map f μ
+            exact (integral_map hf'.aemeasurable h_int_ind_left.aestronglyMeasurable).symm
+      _ = ∫ y in s, (ν[g | m']) y ∂ ν :=
+            integral_indicator hs₀
+      _ = ∫ y in s, g y ∂ ν := by
+            -- defining property of conditional expectation on the set `s ∈ m'`
+            -- Since we fixed MeasurableSpace β := m₀, we have m' ≤ m₀ = instance
+            have hm'_inst : m' ≤ (inferInstance : MeasurableSpace β) := hm'
+            -- TODO: Derive SigmaFinite instance from μ being SigmaFinite
+            have : SigmaFinite (ν.trim hm'_inst) := sorry
+            exact setIntegral_condExp (μ := ν) (hm := hm'_inst) hg hs'
+      _ = ∫ y, Set.indicator s g y ∂ ν :=
+            (integral_indicator hs₀).symm
+      _ = ∫ x, ((Set.indicator s g) ∘ f) x ∂ μ := by
+            -- change of variables back
+            exact integral_map hf'.aemeasurable h_int_ind_right.aestronglyMeasurable
+      _ = ∫ x, Set.indicator (f ⁻¹' s) (g ∘ f) x ∂ μ := by
+            rw [hcomp₂]
+      _ = ∫ x in f ⁻¹' s, (g ∘ f) x ∂ μ :=
+            integral_indicator h_pre
+
+  -- Turn the previous statement into the exact hypothesis that characterizes `condexp`.
+  -- For any `t` measurable in `comap f m'`, we can write `t = f ⁻¹' s` with `s ∈ m'`.
+  have h_sets :
+      ∀ t, MeasurableSet[MeasurableSpace.comap f m'] t → μ t < ∞ →
+        ∫ x in t, (((ν[g | m']) : β → ℝ) ∘ f) x ∂ μ
+          = ∫ x in t, (g ∘ f) x ∂ μ := by
+    intro t ht _
+    -- Unfold the definition of `MeasurableSpace.comap` to obtain `t = f ⁻¹' s` for some `s ∈ m'`.
+    obtain ⟨s, hs, rfl⟩ := ht
+    exact h_sets_preimage s hs
+
+  -- Conclude by the uniqueness characterization of conditional expectation.
+  have hm_le : MeasurableSpace.comap f m' ≤ (inferInstance : MeasurableSpace α) := by
+    intro t ⟨s, hs, ht⟩
+    rw [← ht]
+    exact (hm' _ hs).preimage hf'
+
+  -- Need SigmaFinite instance for trimmed measure
+  -- TODO: Derive from α having SigmaFinite μ
+  have : SigmaFinite (μ.trim hm_le) := sorry
+
+  refine ae_eq_condExp_of_forall_setIntegral_eq hm_le h_int_right ?_ h_sets ?_
+  · -- IntegrableOn for LHS
+    intro s hs hμs
+    exact h_int_left.integrableOn
+  · -- AEStronglyMeasurable w.r.t. comap
+    -- Need to show AEStronglyMeasurable[comap f m'] from AEStronglyMeasurable
+    sorry
+
 /-- **Bridge 4.** Conditional expectation commutes with the factor map:
-`(μ_path X)[G | tail_on_path] ∘ pathify = μ[ G ∘ pathify | TailSigma.tailSigma X ]`.
+`(μ_path X)[G | tail_on_path] ∘ pathify = μ[ G ∘ pathify | Tail.tailProcess X ]`.
 
 We only need this for the specific `G ω := f(ω 0)` used below. -/
 lemma condexp_pullback_along_pathify
     {X : ℕ → Ω → ℝ} (hX_meas : ∀ i, Measurable (X i))
     (H : Ω[ℝ] → ℝ) (hH_meas : Measurable H)
-    -- NOTE: your project already packages `μ[ _ | _ ]` as an `L¹/L²` object.
-    :
+    (hH_int : Integrable H (μ_path X)) :
     ((μ_path X)[H | (tail_on_path)] ) ∘ (pathify X)
-      =ᵐ[μ] μ[(H ∘ (pathify X)) | TailSigma.tailSigma X] := by
-  /- Standard "change of variables" for conditional expectations under measure-preserving maps;
-     it follows from the defining property of condexp and `μ_path = map (pathify X) μ`.
-     In mathlib you can adapt lemmas around `condexp_comp` / `condexp_preimage` if present
-     in your codebase. -/
-  sorry
+      =ᵐ[μ] μ[(H ∘ (pathify X)) | Tail.tailProcess X] := by
+  -- Apply the general change-of-variables lemma
+  have := condexp_changeOfVariables
+    (μ := μ) (f := pathify X) (hf := measurable_pathify hX_meas)
+    (m' := tail_on_path) (hm' := tail_on_path_le)
+    (g := H) (hg := hH_int)
+  -- Note: tail_on_path = TailSigma.tailSigma coord and Tail.tailProcess X = comap (pathify X) tail_on_path
+  sorry -- Need to show: Tail.tailProcess X = MeasurableSpace.comap (pathify X) tail_on_path
 
 /-! ## F. Main Theorem -/
 
