@@ -2999,14 +2999,14 @@ lemma alphaIic_ae_eq_alphaIicCE
     have hA_clip_eq : ∀ ω, max 0 (min 1 (A n m ω)) = A n m ω := by
       intro ω
       obtain ⟨h0, h1⟩ := hA_in_01 ω
-      simp [max_eq_right h0, min_eq_left h1]
+      simp only [max_eq_right h0, min_eq_left h1]
 
     -- Use the fact that A n m = max 0 (min 1 (A n m)) to rewrite the goal
     calc ∫ ω, |A n m ω - max 0 (min 1 (alpha ω))| ∂μ
         = ∫ ω, |max 0 (min 1 (A n m ω)) - max 0 (min 1 (alpha ω))| ∂μ := by
-          congr 1; ext ω; simp [hA_clip_eq ω]
+          congr 1; ext ω; rw [hA_clip_eq ω]
       _ = ∫ ω, |A n m ω - alpha ω| ∂μ := by
-          congr 1; ext ω; simp [hA_clip_eq ω]
+          congr 1; ext ω; rw [hA_clip_eq ω]
       _ < ε := hM m hm
 
   -- Step 2: alphaIicCE is also the L¹ limit of the same averages
@@ -3065,13 +3065,34 @@ lemma alphaIic_ae_eq_alphaIicCE
           --        Right sum = f(X₀) + f(X₁) + ... + f(X_{m-1})
           --        Middle terms cancel, leaving f(Xₘ) - f(X₀)
 
-          -- This is a standard telescoping sum identity.
-          -- Mathematically obvious: the middle terms f(X₁), ..., f(X_{m-1}) appear in both
-          -- sums and cancel, leaving only f(Xₘ) - f(X₀).
-          --
-          -- The formal proof requires careful Fin/Finset manipulation (sum_bij, sum_range, etc.)
-          -- which is tedious but straightforward. We leave it as sorry for now.
-          sorry -- TODO: Prove via Finset.sum_bij or sum_range telescoping
+          -- First convert Fin m sums to range sums for easier manipulation
+          have h_left : ∑ k : Fin m, indIic t (X (k.val + 1) ω) =
+                        (Finset.range m).sum (fun k => indIic t (X (k + 1) ω)) := by
+            rw [Fin.sum_univ_eq_sum_range]
+          have h_right : ∑ i : Fin m, indIic t (X i ω) =
+                         (Finset.range m).sum (fun i => indIic t (X i ω)) := by
+            rw [Fin.sum_univ_eq_sum_range]
+          rw [h_left, h_right]
+
+          -- Now prove by induction on m
+          clear h_left h_right
+          induction m with
+          | zero =>
+              -- Base case: m = 0, both sums are empty
+              simp [Finset.sum_range_zero]
+          | succ m' ih =>
+              -- Inductive step: assume true for m', prove for m'+1
+              -- Split off the last term from each sum
+              rw [Finset.sum_range_succ, Finset.sum_range_succ]
+
+              -- Now we have:
+              -- (∑_{k<m'} f(X(k+1)) + f(X(m'+1))) - (∑_{i<m'} f(X i) + f(X m'))
+              -- = f(X(m'+1)) - f(X₀)
+
+              -- Rearrange using the inductive hypothesis
+              ring_nf
+              rw [ih]
+              ring
 
         calc ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) -
                    (1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)| ∂μ
