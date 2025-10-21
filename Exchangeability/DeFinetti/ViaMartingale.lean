@@ -1870,8 +1870,17 @@ lemma condexp_indicator_drop_info_of_pair_law
   --   • Uniqueness theorem for condDistrib (NOT YET in mathlib)
   --   • Type class wrangling for StandardBorelSpace + Nonempty
   --
-  -- For now, we admit this as a single sorry representing the missing mathlib
-  -- infrastructure for kernel uniqueness.
+  -- For now, we admit this as a clean sorry representing the missing mathlib
+  -- infrastructure for kernel uniqueness. The full proof would:
+  --
+  -- 1. Apply condExp_ae_eq_integral_condDistrib to express both sides as kernel integrals
+  -- 2. Use the uniqueness of condDistrib given h_law and h_le
+  -- 3. Conclude by ae-equality of the integrals
+  --
+  -- TODO: Extract the uniqueness theorem to mathlib as:
+  --   `condDistrib_of_map_eq_map_and_comap_le :
+  --      If map (ξ, η) μ = map (ξ, ζ) μ and comap η ≤ comap ζ,
+  --      then condDistrib ξ ζ μ ∘ ζ =ᵐ[μ] condDistrib ξ η μ ∘ η`
   --
   sorry
 
@@ -2070,8 +2079,41 @@ lemma condexp_indicator_eq_on_join_of_triple_law
   -- The full proof requires kernel infrastructure (condExpKernel, disintegration,
   -- uniqueness lemmas) that would be substantial additions to this file.
   --
-  -- For now, we admit this as the core application of Kallenberg Lemma 1.3.
-  sorry
+  -- ═══════════════════════════════════════════════════════════════════════════════
+  -- DIRECT PROOF: Modular approach with clean mathlib extraction path
+  -- ═══════════════════════════════════════════════════════════════════════════════
+
+  -- **Placeholder axiom (TODO: extract to mathlib as Kallenberg Lemma 1.3)**
+  --
+  -- The missing infrastructure is the conditional independence characterization:
+  -- "If (ξ, η, ζ) =ᵈ (ξ, η, ζ') and σ(ζ) ≤ σ(ζ'), then Y ⊥⊥_{ζ} ξ"
+  --
+  -- which then gives us the conditional expectation projection property:
+  -- "If Y ⊥⊥_{ζ} ξ conditionally, then E[f(Y) | σ(ξ, ζ)] = E[f(Y) | σ(ζ)]"
+  have h_condexp_projection :
+      μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y
+         | MeasurableSpace.comap (fun ω => (Zr ω, θk ω)) inferInstance]
+      =ᵐ[μ]
+      μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y
+         | MeasurableSpace.comap θk inferInstance] := by
+    -- TODO: Contribute to mathlib as two-step theorem:
+    --
+    -- Step 1: `condIndep_of_triple_law_and_le`:
+    --   Given: (ζ, Y, θ) =ᵈ (ζ, Y, θ') and σ(θ) ≤ σ(θ')
+    --   Prove: Y ⊥⊥_{θ} ζ  (conditional independence)
+    --
+    -- Step 2: `condExp_of_condIndep_projection`:
+    --   Given: Y ⊥⊥_{θ} ζ and f measurable w.r.t. σ(Y)
+    --   Prove: E[f | σ(ζ, θ)] = E[f | σ(θ)]
+    --
+    -- Then apply with:
+    --   ζ = Zr, Y = Y, θ = θk, θ' = θk'
+    --   htriple: (Zr, Y, θk) =ᵈ (Zr, Y, θk')
+    --   h_le: σ(θk) ≤ σ(Zr, θk)
+    --   f = indicator function B
+    sorry
+
+  exact h_condexp_projection
 
 /-- **Correct conditional independence from contractability (Kallenberg Lemma 1.3).**
 
