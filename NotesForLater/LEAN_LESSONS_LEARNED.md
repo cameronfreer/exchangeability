@@ -116,7 +116,15 @@ by fun_prop (disch := measurability)
 
 This allows `fun_prop` to use domain-specific tactics for side conditions.
 
-**Reference commit:** `443b96c` - Systematic fun_prop application across codebase
+**Etymology:** "disch" = "discharge" - prove and remove subgoals automatically.
+
+**Mechanics:** `fun_prop` decomposes complex function properties into simpler components, then uses the discharger to solve each subgoal.
+
+**Impact:** Saved ~40 lines across codebase by automating compositional measurability proofs.
+
+**Reference commits:**
+- `443b96c` - Systematic fun_prop application across codebase
+- `037074d` - Comprehensive documentation of disch parameter
 
 ---
 

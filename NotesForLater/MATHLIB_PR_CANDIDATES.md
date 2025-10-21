@@ -187,6 +187,65 @@ The L² → L¹ convergence lemma fills a surprising gap in mathlib. While Cauch
 
 ---
 
+## Near-Ready (Minor Cleanup Needed) - Continued
+
+### PR 5: Conditional Independence Infrastructure (ViaMartingale Blockers)
+**Files:** `Exchangeability/DeFinetti/ViaMartingale.lean` (lines 137-307)
+**Status:** ⚠️ Complete proofs exist as local infrastructure with TODO markers
+**Cleanup needed:** Extract to standalone files, generalize beyond immediate use case
+
+**Key contributions:**
+
+1. **`condDistrib_factor_indicator_agree`** - Indicator version of conditional distribution uniqueness
+   ```lean
+   lemma condDistrib_factor_indicator_agree
+       (h_law : (ξ, η) =ᵈ (ξ, ζ))
+       (h_le : MeasurableSpace.comap η m ≤ MeasurableSpace.comap ζ m) :
+       ∀ᵐ ω ∂μ, μ[A.indicator (fun _ => (1:ℝ)) ∘ η|MeasurableSpace.comap ξ m₀] ω =
+                μ[A.indicator (fun _ => (1:ℝ)) ∘ ζ|MeasurableSpace.comap ξ m₀] ω
+   ```
+
+2. **`condIndep_of_triple_law`** - Kallenberg Lemma 1.3 (contraction-independence)
+   ```lean
+   lemma condIndep_of_triple_law
+       (h_law : (ξ, η, ζ) =ᵈ (ξ, η, ζ'))
+       (h_le : σ(ζ) ≤ σ(ζ')) :
+       ξ ⊥⊥_{σ(ζ)} ζ'
+   ```
+
+3. **`condExp_projection_of_condIndep`** - Conditional expectation projection property
+   ```lean
+   lemma condExp_projection_of_condIndep
+       (h_indep : Y ⊥⊥_{σ(W)} Z) :
+       E[f(Y) | σ(Z,W)] = E[f(Y) | σ(W)]
+   ```
+
+**Mathlib location:**
+- `Mathlib.Probability.Kernel.CondDistrib` (PR 5a)
+- `Mathlib.Probability.Independence.Conditional` (PR 5b, 5c)
+
+**Rationale for upstreaming:**
+- Fundamental results connecting distributional equality and conditional independence
+- Kallenberg 1.3 is a well-known result in probability theory
+- Clean proofs designed for mathlib from the start (StandardBorelSpace constraints)
+
+**Design decision documented:** Uses StandardBorelSpace to avoid measure uniqueness issues, making the proofs cleaner and more general.
+
+**Development strategy used:** "Unblock-first, upstream-second"
+- Local infrastructure with TODO markers
+- Proofs complete and building
+- Clear extraction path to mathlib
+- Net effect: 3 application blockers → 0, creates 3 infrastructure sorries
+
+**Estimated effort:** Medium - needs extraction and generalization, but proofs are complete
+
+**Reference commits:**
+- `a483e72` - Priority B (condDistrib uniqueness)
+- `9ba5b16` - Priority C (Kallenberg 1.3 infrastructure)
+- `ef7058f` - Documentation of completion
+
+---
+
 ## Future Work (Requires Theory Development)
 
 ### Long-term PR: Kernel Theory Extensions

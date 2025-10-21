@@ -207,7 +207,51 @@ Constant sequences trivially converge, bypassing the entire Mean Ergodic Theorem
 
 ---
 
-### Lesson 5: Conditional Expectation API Needs Expansion
+### Lesson 5: Type-Level Mismatches Can Block Entire Approaches
+
+**What happened:**
+- ViaKoopman initially planned to use general Mean Ergodic Theorem (MET)
+- Koopman operator defined for **ambient** MeasurableSpace
+- Our theorem needs conditional expectation on **sub-σ-algebra** `m`
+- Type-level mismatch: cannot connect Koopman machinery to sub-σ-algebra
+
+**The blocker:**
+```lean
+-- Koopman operator expects ambient space
+def koopman (T : Ω → Ω) : (Ω → ℝ) → (Ω → ℝ) := fun f ω => f (T ω)
+
+-- Our theorem needs: E[·|m] where m ≤ m₀ (sub-σ-algebra)
+-- But: condExp operates on ambient space, not Koopman's L² space
+-- Mismatch: No way to apply MET to get convergence on sub-σ-algebra
+```
+
+**Why shift-specific version worked:**
+- `shiftInvariantSigma` IS the ambient σ-algebra in that construction
+- No type mismatch because we constructed the space that way
+- But can't generalize to arbitrary (T, m) pairs
+
+**Solution chosen:**
+- Discovered "project first, then average" reformulation
+- Avoided entire Koopman infrastructure via conditional expectation properties
+- Proof from ~500 lines (impossible) to ~90 lines (complete)
+
+**Publication angle:**
+- Type systems as both help and hindrance in formalization
+- When infrastructure gaps are fundamental vs. fixable
+- Cost-benefit analysis of workarounds vs. infrastructure building
+- Transforming blockers into precise technical specifications
+
+**Effort estimates for fixing (from analysis):**
+- Generalize Koopman: 1-2 weeks
+- Restriction lemma: 3-5 days
+- Direct MET proof: 2-3 weeks
+- Clever reformulation: 1 day ✅ (chosen)
+
+**Reference commits:** `df58f73` (root cause analysis), `fe4d4c3` (reformulation)
+
+---
+
+### Lesson 6: Conditional Expectation API Needs Expansion
 **What happened:**
 - 4 fundamental lemmas missing: absolute value preservation, Lipschitz continuity, multiplication pullout, bounded product integrability
 - Had to prove from first principles
