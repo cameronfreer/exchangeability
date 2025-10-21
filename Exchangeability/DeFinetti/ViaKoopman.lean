@@ -1715,7 +1715,7 @@ private lemma cesaro_ce_eq_condexp
     simpa [Finset.card_range] using h' (Finset.range (n + 1))
 
   -- Assemble: push → sum → collapse → cancel (1/(n+1))·(n+1)
-  have hne : ((n + 1) : ℝ) ≠ 0 := by simp
+  have hne : ((n + 1) : ℝ) ≠ 0 := by positivity
   refine h_push.trans ?_
   have h2 :
       (fun ω =>
@@ -1856,7 +1856,7 @@ private lemma product_ce_constant_of_lag_const
     simpa [Finset.card_range] using h' (Finset.range (n + 1))
 
   -- Assemble and cancel the average
-  have hne : ((n + 1) : ℝ) ≠ 0 := by simp
+  have hne : ((n + 1) : ℝ) ≠ 0 := by positivity
   refine h_push.trans ?_
   have h2 :
       (fun ω =>
@@ -2154,7 +2154,8 @@ private lemma ce_lipschitz_convergence
   -- Upper bound tends to 0
   have h_bound_to_zero : Tendsto (fun n =>
     Cf * ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ) atTop (𝓝 0) := by
-    simpa using h_L1_An_to_CE.const_mul Cf
+    convert Tendsto.const_mul Cf h_L1_An_to_CE using 1
+    simp
 
   -- Nonnegativity
   have h_nonneg : ∀ n, 0 ≤ ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | mSI] ω
