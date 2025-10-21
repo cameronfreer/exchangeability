@@ -111,7 +111,49 @@ This document outlines potential publication angles from the de Finetti formaliz
 
 ---
 
-### Lesson 3: Integration Theory Has Surprising Gaps
+### Lesson 3: Proof Restructuring for Reusability
+
+**What happened:**
+- L¹ uniqueness lemma initially had inline boundedness proofs
+- Abstract helper couldn't prove specific properties of `alphaIicCE`
+- 30+ lines of duplicated calc-chain proofs
+
+**The restructuring:**
+```lean
+-- Before: Try to prove everything inside the helper
+lemma h_L1_uniqueness (f g : Ω → ℝ) (hf : Measurable f) (hg : Measurable g) ... := by
+  -- Can't prove f is bounded without unfolding definition!
+  sorry
+
+-- After: Pass boundedness as hypotheses
+lemma h_L1_uniqueness (f g : Ω → ℝ)
+    (hf : AEStronglyMeasurable f μ) (hg : AEStronglyMeasurable g μ)
+    (hf_bdd : ∀ᵐ ω ∂μ, ‖f ω‖ ≤ 1) (hg_bdd : ∀ᵐ ω ∂μ, ‖g ω‖ ≤ 1) ... := by
+  -- Now we can use the hypotheses!
+  exact Integrable.of_bound hf 1 hf_bdd
+
+-- Prove specific bounds at call site using existing lemmas
+apply h_L1_uniqueness
+· exact alphaIicCE_nonneg_le_one  -- Reuse existing lemma!
+```
+
+**Why it matters:**
+- Generic helpers should take properties as hypotheses
+- Prove specific properties where you have definition access
+- Enables reuse: same helper for `alphaIic`, `alphaIicCE`, future uses
+- Reduced code: 66 lines changed, 37 deletions
+
+**Publication angle:**
+- Design patterns for reusable formal lemmas
+- When to abstract vs. when to instantiate
+- Balancing genericity with provability
+- Leveraging existing infrastructure
+
+**Reference commit:** `c0e369b` - L¹ uniqueness restructuring
+
+---
+
+### Lesson 4: Integration Theory Has Surprising Gaps
 **What happened:**
 - L² → L¹ convergence for bounded functions: Not in mathlib!
 - Needed custom `L2_tendsto_implies_L1_tendsto_of_bounded`
@@ -257,7 +299,51 @@ Constant sequences trivially converge, bypassing the entire Mean Ergodic Theorem
 
 ---
 
-### Methodology 2: "Multiple Proof Approaches as Risk Mitigation"
+### Methodology 2: "Unblock-First, Upstream-Second" Strategy
+
+**What we did:**
+- Identified 3 critical blockers in ViaMartingale proof
+- Created local infrastructure lemmas to unblock immediately
+- Marked them with TODO for future mathlib contribution
+- Proof proceeds while infrastructure can be upstreamed later
+
+**The pattern:**
+```lean
+/-! ## Local Infrastructure (TODO: Contribute to mathlib)
+
+This section contains lemmas that should be upstreamed to mathlib but
+are implemented locally to unblock the proof. -/
+
+-- TODO: Contribute to Mathlib.Probability.Kernel.CondDistrib
+lemma condDistrib_factor_indicator_agree ... := by sorry
+
+-- Application site uses the infrastructure immediately
+exact condDistrib_factor_indicator_agree h_law h_le
+```
+
+**Why it worked:**
+- Proof development doesn't wait for mathlib review process
+- Clear separation: application code vs. extractable infrastructure
+- Infrastructure lemmas designed for mathlib from the start
+- Net progress: sorries moved from application to clean extractable helpers
+
+**Results:**
+- 3 application blockers → 0 application blockers
+- 0 infrastructure sorries → 3 infrastructure sorries
+- File compiles ✅
+- Clear roadmap for mathlib contributions
+
+**Publication angle:**
+- Managing dependencies in large formalizations
+- Balancing "perfect is the enemy of good" with quality standards
+- Strategic use of axioms/sorries during development
+- Designing for extractability from the start
+
+**Reference commits:** `a483e72` (Priority B), `9ba5b16` (Priority C), `ef7058f` (completion)
+
+---
+
+### Methodology 3: "Multiple Proof Approaches as Risk Mitigation"
 **What we did:**
 - Started formalizing all three proofs simultaneously
 - Discovered ViaL2 was most tractable
