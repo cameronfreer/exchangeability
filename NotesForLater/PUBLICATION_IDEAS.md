@@ -130,7 +130,42 @@ This document outlines potential publication angles from the de Finetti formaliz
 
 ---
 
-### Lesson 4: Conditional Expectation API Needs Expansion
+### Lesson 4: Avoiding Heavy Infrastructure via Clever Problem Reformulation
+
+**What happened:**
+- ViaKoopman initially needed full Koopman operator theory on L²
+- Heavy infrastructure: operator algebras, spectral theory, Mean Ergodic Theorem
+- Discovered clever reformulation: "project first, then average" approach
+
+**The insight:**
+For T-invariant σ-algebras, conditional expectation commutes with shift:
+```
+𝔼[f ∘ T | m] = 𝔼[f | m]
+```
+
+This means Birkhoff averages become **constant sequences** after projection:
+```
+𝔼[Birkhoff average | m] = 𝔼[f | m]  (constant!)
+```
+
+Constant sequences trivially converge, bypassing the entire Mean Ergodic Theorem machinery!
+
+**Why it matters:**
+- Reduced dependency from "full ergodic theory" to "conditional expectation properties"
+- Proof from ~500 lines (with heavy infrastructure) to ~90 lines (self-contained)
+- Mathematical elegance: the same as before, but formalization complexity dramatically different
+
+**Publication angle:**
+- Case study in formalization-driven proof discovery
+- Sometimes the "right" proof for formalization differs from the textbook proof
+- Reformulation can eliminate entire dependency chains
+- Interplay between mathematical insight and formalization pragmatism
+
+**Reference commits:** `fe4d4c3` (roadmap), `e1941fe` (implementation)
+
+---
+
+### Lesson 5: Conditional Expectation API Needs Expansion
 **What happened:**
 - 4 fundamental lemmas missing: absolute value preservation, Lipschitz continuity, multiplication pullout, bounded product integrability
 - Had to prove from first principles
@@ -240,7 +275,30 @@ This document outlines potential publication angles from the de Finetti formaliz
 
 ---
 
-### Methodology 3: "Pattern Discovery Through Debugging"
+### Methodology 3: "Tactic Modernization as Refactoring"
+
+**What we did:**
+- Systematically applied modern `fun_prop` tactic across codebase
+- Replaced manual measurability composition proofs
+- Added `@[fun_prop]` attributes to enable automation
+
+**Why it worked:**
+- Reduced proof brittleness (less dependent on specific API)
+- Improved readability (intent clearer with `by fun_prop`)
+- Enabled custom dischargers for domain-specific reasoning
+- Made proofs more maintainable for future mathlib updates
+
+**Publication angle:**
+- Maintaining formalization codebases as tactics evolve
+- When to refactor vs. when to leave working proofs alone
+- Building automation layers incrementally
+- Community best practices for tactic usage
+
+**Reference commit:** `443b96c` - Systematic fun_prop application
+
+---
+
+### Methodology 4: "Pattern Discovery Through Debugging"
 **What we did:**
 - Hit type class errors in CondExp
 - Debugged systematically to find root cause
@@ -338,6 +396,10 @@ This document outlines potential publication angles from the de Finetti formaliz
    - Mathlib contributions
 
 **Estimated writing time:** 1 month
+
+**Alternative angle:** Could also be submitted as a Lean Together extended abstract or workshop paper to get early feedback before full publication.
+
+
 
 ---
 

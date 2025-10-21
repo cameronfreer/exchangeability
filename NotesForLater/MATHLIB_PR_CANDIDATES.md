@@ -56,6 +56,11 @@ This document outlines components from the de Finetti formalization that could b
 
 **Estimated effort:** Low - file is already clean and documented
 
+**Key achievement from formalization:**
+The L² → L¹ convergence lemma fills a surprising gap in mathlib. While Cauchy-Schwarz is available in general form (Hölder's inequality), the specialized form for probability spaces wasn't readily accessible. This infrastructure was essential for the ViaL2 proof approach and demonstrates how formalization reveals "obvious" gaps in standard libraries.
+
+**Reference commit:** `8bea05e` - Complete L² → L¹ convergence with no sorries
+
 ---
 
 ### PR 2: Conditional Expectation Extensions

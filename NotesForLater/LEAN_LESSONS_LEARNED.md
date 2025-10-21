@@ -4,8 +4,9 @@ This document captures lessons learned during the de Finetti formalization proje
 
 ## Table of Contents
 1. [Type Class Resolution Issues](#type-class-resolution-issues)
-2. [Proposed Lean Improvements](#proposed-lean-improvements)
-3. [Best Practices Discovered](#best-practices-discovered)
+2. [Tactic Modernization](#tactic-modernization)
+3. [Proposed Lean Improvements](#proposed-lean-improvements)
+4. [Best Practices Discovered](#best-practices-discovered)
 
 ---
 
@@ -70,6 +71,52 @@ haveI : SigmaFinite (μ.trim hm) := sigmaFinite_trim μ hm
 ```
 
 **Why this is needed:** Mathlib's conditional expectation lemmas internally use `μ.trim hm`, and Lean's type class resolution doesn't automatically derive instances for trimmed measures.
+
+---
+
+## Tactic Modernization
+
+### Issue 3: `fun_prop` Tactic Adoption
+
+**Background:** Lean 4 introduced the `fun_prop` tactic for automated reasoning about function properties (measurability, continuity, etc.), but older code still uses manual composition proofs.
+
+**Manual approach (old style):**
+```lean
+-- Prove measurability of f ∘ g manually
+have : Measurable (f ∘ g) := measurable_f.comp measurable_g
+```
+
+**Modern approach with `fun_prop`:**
+```lean
+-- Let the tactic handle composition automatically
+have : Measurable (f ∘ g) := by fun_prop
+```
+
+**Benefits discovered:**
+- **Reduced boilerplate:** Manual composition chains replaced with single tactic call
+- **Better maintainability:** Proofs robust to API changes
+- **Clearer intent:** `fun_prop` makes the goal explicit
+- **Handles complex compositions:** Automatically chains through multiple levels
+
+**Application in project:**
+Applied across multiple files with significant simplification:
+- **CondExp.lean (line 123):** Indicator composition
+  ```lean
+  -- Before: (measurable_const.indicator hB).comp hX
+  -- After: by fun_prop
+  ```
+- **ViaKoopman.lean:** Product measurability (lines 4976, 5240-5243)
+- **CesaroToCondExp.lean:** Composition automation with `@[fun_prop]` attribute
+
+**Special technique: Custom dischargers**
+```lean
+-- Use fun_prop with domain-specific discharger
+by fun_prop (disch := measurability)
+```
+
+This allows `fun_prop` to use domain-specific tactics for side conditions.
+
+**Reference commit:** `443b96c` - Systematic fun_prop application across codebase
 
 ---
 
@@ -170,7 +217,28 @@ def/lemma your_condexp_result
 
 ---
 
-### Practice 3: Explicit Instance Management with `haveI`
+### Practice 3: Use Modern Tactics (fun_prop, measurability)
+
+**Prefer automated tactics for standard reasoning:**
+```lean
+-- Instead of manual composition
+have : Measurable (f ∘ g ∘ h) := measurable_f.comp (measurable_g.comp measurable_h)
+
+-- Use fun_prop
+have : Measurable (f ∘ g ∘ h) := by fun_prop
+```
+
+**When to use custom dischargers:**
+```lean
+-- For domain-specific side conditions
+by fun_prop (disch := measurability)
+```
+
+**Why:** Modern tactics are more robust, maintainable, and concise. They adapt to API changes automatically.
+
+---
+
+### Practice 4: Explicit Instance Management with `haveI`
 
 **When working with derived structures** (trimmed measures, restricted σ-algebras, etc.), explicitly provide instances before calling mathlib lemmas:
 
