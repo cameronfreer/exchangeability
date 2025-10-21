@@ -17,6 +17,7 @@ import Exchangeability.DeFinetti.CommonEnding
 import Exchangeability.DeFinetti.MartingaleHelpers
 import Exchangeability.ConditionallyIID
 import Exchangeability.Probability.CondExp
+import Exchangeability.PathSpace.Shift
 
 /-!
 # de Finetti's Theorem via Koopman Operator
@@ -114,6 +115,7 @@ namespace Exchangeability.DeFinetti.ViaKoopman
 
 open MeasureTheory Filter Topology ProbabilityTheory
 open Exchangeability.Ergodic
+open Exchangeability.PathSpace
 open Exchangeability.DeFinetti.MartingaleHelpers (comap_comp_le)
 open scoped BigOperators RealInnerProductSpace
 
@@ -477,20 +479,27 @@ private lemma integrable_comp_of_pushforward
   -- then pull integrability back along g
   simpa [Function.comp] using hH_map.comp_measurable hg
 
-/-- Transport ae strong measurability across a pushforward equality and then pull back by composition.
+/-
+Transport ae strong measurability across a pushforward equality and then pull back by composition.
 This would be the measurability analogue of `integrable_comp_of_pushforward`, but the sub-σ-algebra
 parameter in `AEStronglyMeasurable[m]` prevents the same `simpa [hpush]` trick from working.
 The issue is that `AEStronglyMeasurable[m] H μ` and `AEStronglyMeasurable[m] H (map g μ')` have
-different type class instance parameters that cannot be unified by rewriting. -/
+different type class instance parameters that cannot be unified by rewriting.
+
+DEPRECATED: This lemma has type issues with sub-σ-algebras and is not currently used.
+The issue is that μ : Measure Ω is defined with respect to mΩ, not m.
+When working with sub-σ-algebras, we need proper coercions.
+
 private lemma aestronglyMeasurable_comp_of_pushforward
     {Ω Ω' β : Type*} [mΩ : MeasurableSpace Ω] [mΩ' : MeasurableSpace Ω'] [TopologicalSpace β]
     {μ : Measure Ω} {μ' : Measure Ω'} {g : Ω' → Ω} {H : Ω → β}
-    {m : MeasurableSpace Ω}
+    (m : MeasurableSpace Ω) (hm : m ≤ mΩ)
     (hg : Measurable g) (hpush : Measure.map g μ' = μ)
-    (hH : AEStronglyMeasurable[m] H μ) :
-    AEStronglyMeasurable[MeasurableSpace.comap g m] (H ∘ g) μ' := by
+    (hH : @AEStronglyMeasurable Ω m β _ H μ) :
+    @AEStronglyMeasurable Ω' (MeasurableSpace.comap g m) β _ (H ∘ g) μ' := by
   -- Unlike integrable_comp_of_pushforward, the sub-σ-algebra parameter blocks the simpa trick
   sorry
+-/
 
 /-- **Factor-map pullback for conditional expectation**.
 
@@ -560,7 +569,7 @@ lemma condexp_pullback_factor
     exact hB_inst.preimage hg
   -- Integrability of the pulled-back function (no instance shenanigans)
   have hHg' : Integrable (H ∘ g) μ' :=
-    integrable_comp_of_pushforward hg hpush hH
+    @integrable_comp_of_pushforward Ω Ω' inst _ μ μ' g H hg hpush hH
 
   -- Apply uniqueness of conditional expectation: we want to show (μ[H | m] ∘ g) = μ'[H ∘ g | comap g m]
   -- The lemma signature is: ae_eq_condExp_of_forall_setIntegral_eq (hf : Integrable f) ... : g =ᵐ[μ] μ[f | m]
@@ -571,7 +580,7 @@ lemma condexp_pullback_factor
   · intro s hs hμs
     -- μ[H | m] ∘ g is integrable because μ[H | m] is integrable
     have : Integrable (μ[H | m]) μ := integrable_condExp
-    exact (integrable_comp_of_pushforward hg hpush this).integrableOn
+    exact (@integrable_comp_of_pushforward Ω Ω' inst _ μ μ' g (μ[H | m]) hg hpush this).integrableOn
   -- 2) Integral equality (h_sets but with added finite measure hypothesis)
   · intro s hs _
     exact h_sets s hs
@@ -582,44 +591,36 @@ lemma condexp_pullback_factor
     -- This requires careful handling of the measure equality in the type class instance.
     sorry
 
-/-- **Invariance of conditional expectation under iterates**.
+/-
+**Invariance of conditional expectation under iterates**.
 
 If `T` is measure-preserving and `𝒢` is the T-invariant σ-algebra (i.e., `T⁻¹'s = s` for all `s ∈ 𝒢`),
 then conditional expectation is invariant: `CE[f ∘ T^[k] | 𝒢] = CE[f | 𝒢]` a.e.
 
-This is the key for proving lag-constancy and other invariance properties. -/
-lemma condexp_precomp_iterate_eq_of_invariant
+This is the key for proving lag-constancy and other invariance properties.
+
+TODO: Complete the proof. The strategy is:
+1. Use iteration to show T^[k] is measure-preserving
+2. Prove T^[k] preserves m-measurable sets via induction
+3. Show set-integral equality on m-measurable sets using change of variables
+4. Apply uniqueness of conditional expectation
+
+Axiom temporarily commented out due to type class elaboration issues with sub-σ-algebras
+TODO: Fix the type annotation for condExp with explicit sub-σ-algebra parameter
+-/
+/-
+axiom condexp_precomp_iterate_eq_of_invariant
     {Ω : Type*} [inst : MeasurableSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (T : Ω → Ω) (hT : MeasurePreserving T μ μ)
     {k : ℕ} {f : Ω → ℝ} (hf : Integrable f μ)
     (m : MeasurableSpace Ω) (hm : m ≤ inst)
     (h_inv : ∀ s, MeasurableSet[m] s → T ⁻¹' s = s) :
-    μ[(f ∘ (T^[k])) | m] =ᵐ[μ] μ[f | m] := by
-  -- T^[k] is measure-preserving
-  have hTk : MeasurePreserving (T^[k]) μ μ := hT.iterate k
+    ∀ᵐ ω ∂μ, (@condExp Ω ℝ _ _ inst m _ μ _ (f ∘ (T^[k]))) ω = (@condExp Ω ℝ _ _ inst m _ μ _ f) ω
+-/
 
-  -- Integrability of f ∘ T^[k] using our helper lemma
-  have hfk : Integrable (f ∘ T^[k]) μ :=
-    integrable_comp_of_pushforward hTk.measurable hTk.map_eq hf
-
-  -- T^[k] preserves m-measurable sets (proof by induction on k)
-  have h_inv_k : ∀ s, MeasurableSet[m] s → T^[k] ⁻¹' s = s := by
-    intro s hs
-    -- Use induction on k outside the function
-    sorry  -- This requires a separate induction lemma
-
-  -- Set-integral equality on m-measurable sets
-  have h_int_eq : ∀ s, MeasurableSet[m] s → ∫ x in s, (f ∘ T^[k]) x ∂μ = ∫ x in s, f x ∂μ := by
-    intro s hs
-    rw [h_inv_k s hs]
-    -- Now we have ∫ x in s, (f ∘ T^[k]) x ∂μ = ∫ x in s, f x ∂μ using change of variables
-    sorry
-
-  -- Apply uniqueness of conditional expectation
-  sorry
-  /-
-  PARTIAL FIX ATTEMPTED (Still has instance synthesis and convert issues):
+/-
+OLD PROOF ATTEMPT (commented out due to instance synthesis issues):
 
   ✅ FIXED: Induction for h_preimage (line 576-583)
   - Changed order of rewrites: rw [Set.preimage_comp, h_inv s hs, ih]
@@ -683,13 +684,13 @@ lemma condexp_precomp_iterate_eq_of_invariant
   -- Uniqueness of conditional expectation on `m`
   exact ae_eq_condExp_of_forall_setIntegral_eq hm hf h_sets  **ERROR: Application type mismatch**
 
-  BLOCKERS:
-  - Instance synthesis issues throughout
-  - Rewrite failures with h_inv
-  - funext application issues
-  - Type mismatches in MeasurePreserving.integral_comp
-  -/
-  -/
+BLOCKERS:
+- Instance synthesis issues throughout
+- Rewrite failures with h_inv
+- funext application issues
+- Type mismatches in MeasurePreserving.integral_comp
+-/
+-/
 
 /-- Existence of a natural two-sided extension for a measure-preserving shift. -/
 axiom exists_naturalExtension
@@ -1574,7 +1575,8 @@ private lemma shift_iterate_apply (k n : ℕ) (y : Ω[α]) :
     rw [ih]
     ring_nf
 
-/-- **Tower identity from lag-constancy + L²→L¹ (no PET used here).**
+/-
+**Tower identity from lag-constancy + L²→L¹ (no PET used here).**
 
 Assume:
 * `m = shiftInvariantSigma`
@@ -2765,7 +2767,7 @@ private lemma indicator_product_properties
   exact ⟨hF_meas, hF_bd, hF_nonneg, hF_int⟩
 
 private lemma kernel_measure_product_properties
-    (μ : Measure (Ω[α])) [IsProbabilityMeasure μ]
+    (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (m : ℕ) (B : Fin m → Set α)
     (hB_meas : ∀ i, MeasurableSet (B i)) :
     let G : Ω[α] → ℝ := fun ω => ∏ i, ((ν (μ := μ) ω) (B i)).toReal
@@ -3874,16 +3876,17 @@ lemma coord_indicator_via_ν
 
   exact (ENNReal.toReal_eq_toReal_iff' (measure_ne_top _ _) (measure_ne_top _ _)).mp h_toReal
 
-/-! ### Kernel independence and integral factorization -/
+/-! ### Kernel independence and integral factorization
 
-/-- **Step A: Simple function factorization under kernel independence.**
+**Step A: Simple function factorization under kernel independence.**
 
 For finite simple functions built from sets in σ(X) and σ(Y), kernel independence
 implies integral factorization almost everywhere.
 
 This is the key building block for the general bounded function case.
 -/
-/-! ### Helper lemmas for Kernel.IndepFun.integral_mul_simple -/
+
+/-! #### Helper lemmas for Kernel.IndepFun.integral_mul_simple -/
 
 private lemma integral_product_of_simple_functions
     {Ω ι κι : Type*} [MeasurableSpace Ω] [Fintype ι] [Fintype κι]
@@ -5421,7 +5424,7 @@ theorem deFinetti_viaKoopman
   · -- ν(ω) is a probability measure a.e.
     apply ae_of_all
     intro ω
-    exact ν_isProbabilityMeasure (μ := μ) ω
+    infer_instance
   · -- Conditional factorization
     intro m fs hmeas hbd
     -- Apply condexp_product_factorization
