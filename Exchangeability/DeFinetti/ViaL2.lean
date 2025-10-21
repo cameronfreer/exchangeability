@@ -1584,15 +1584,54 @@ theorem subseq_ae_of_L1
     -- Now show: eLpNorm (alpha n - alpha_inf) 1 μ → 0
     --
     -- Proof strategy:
-    -- 1. Show ∀ n, Integrable (alpha n - alpha_inf) using h_L1_conv
-    --    (bounded integral on finite measure space → integrable)
-    -- 2. Use eLpNorm_one_eq_integral_abs to connect:
-    --    eLpNorm f 1 μ = ENNReal.ofReal (∫ |f|) for integrable f
-    -- 3. Apply ENNReal.tendsto_ofReal to transfer h_integral_tendsto
+    -- We have ∫ |alpha n - alpha_inf| → 0 from h_integral_tendsto
+    -- We need to show eLpNorm (alpha n - alpha_inf) 1 μ → 0
     --
-    -- This is standard but requires careful handling of ENNReal/Real conversion
-    -- and integrability witnesses. Admitted for now as it's routine measure theory.
-    sorry
+    -- Key insight: For integrable f, eLpNorm_one_eq_integral_abs gives:
+    --   eLpNorm f 1 μ = ENNReal.ofReal (∫ ω, |f ω| ∂μ)
+    --
+    -- So we need to show the functions are integrable, then apply continuous_ofReal
+
+    -- Step 1: Establish integrability for all n
+    -- On a probability space, if ∫|f| is bounded, then f is integrable
+    have h_integrable : ∀ n, Integrable (fun ω => alpha n ω - alpha_inf ω) μ := by
+      intro n
+      -- Since h_L1_conv gives us ∀ ε > 0, ∃ N, the integrals are eventually bounded
+      -- On a finite measure space, finite integral implies integrability for measurable functions
+      -- We use a crude but effective bound
+      sorry  -- TODO: Prove integrability from bounded L1 norm
+      -- Strategy: Show HasFiniteIntegral using hasFiniteIntegral_iff_norm
+      -- and the fact that ∫⁻ ‖f‖ₑ < ∞ when ∫ |f| < ∞ on finite measures
+
+    -- Step 2: Apply eLpNorm_one_eq_integral_abs and transfer convergence
+    -- Given: ∫ |alpha n - alpha_inf| → 0
+    -- Show: eLpNorm (alpha n - alpha_inf) 1 μ → 0
+    -- Use: for ε > 0, eventually eLpNorm < ε
+    rw [ENNReal.tendsto_atTop_zero]
+    intro ε hε
+    -- Get δ such that ENNReal.ofReal δ = ε (or close enough)
+    -- Since ε > 0 in ENNReal, we can find a positive real δ
+    have ⟨δ, hδ_pos, hδ_eq⟩ : ∃ δ > 0, ENNReal.ofReal δ = ε := by
+      by_cases h_top : ε = ⊤
+      · use 1
+        constructor
+        · norm_num
+        · simp [h_top]
+      · have : ε ≠ 0 := hε.ne'
+        use ε.toReal
+        constructor
+        · exact ENNReal.toReal_pos this h_top
+        · exact ENNReal.ofReal_toReal h_top
+    rw [← hδ_eq]
+    -- Now get N such that ∫ |alpha n - alpha_inf| < δ for n ≥ N
+    rw [Metric.tendsto_atTop] at h_integral_tendsto
+    obtain ⟨N, hN⟩ := h_integral_tendsto δ hδ_pos
+    use N
+    intro n hn
+    -- Show eLpNorm (alpha n - alpha_inf) 1 μ < ENNReal.ofReal δ
+    rw [eLpNorm_one_eq_integral_abs (h_integrable n)]
+    rw [ENNReal.ofReal_lt_ofReal_iff hδ_pos]
+    exact hN n hn
 
   -- Step 2: eLpNorm convergence implies convergence in measure
   have h_tendstoInMeasure : TendstoInMeasure μ alpha atTop alpha_inf := by
