@@ -4,8 +4,8 @@
 
 **File:** `Exchangeability/Bridge/CesaroToCondExp.lean`
 **Purpose:** Connect Mean Ergodic Theorem to `cesaro_to_condexp_L1` for ViaL2.lean
-**Status:** 276 lines, builds cleanly with 4 documented sorries
-**Progress:** ~80% complete (3/7 proofs done, 4 with clear strategies)
+**Status:** 330 lines, builds cleanly with 3 documented sorries
+**Progress:** ~85% complete (4/7 proofs done, 3 with clear strategies)
 
 ## Architecture: The Four Bridges
 
@@ -20,7 +20,7 @@ Mean Ergodic Theorem (KoopmanMeanErgodic.lean)
 cesaro_to_condexp_L1 (needed by ViaL2.lean)
 ```
 
-## Completed Proofs (3/7) ✅
+## Completed Proofs (4/7) ✅
 
 ### 1. `hg_L2` (lines 229-234) ✅
 **Proves:** Bounded functions on probability spaces are in L²
@@ -69,7 +69,29 @@ lemma tail_on_path_le : tail_on_path ≤ (inferInstance : MeasurableSpace (ℕ �
 **Status:** Complete, builds successfully
 **Key insight:** Use `iInf_le` at n=0 where shift is identity, then `comap id = id`
 
-## Remaining Sorries (4/7) with Strategies 📋
+### 4. Bridge 3: `tendsto_Lp2_to_L1` (lines 167-227) ✅
+**Proves:** L² convergence implies L¹ convergence on probability spaces via Hölder's inequality
+
+**Implementation:**
+```lean
+-- Step 1: Lp convergence → norm convergence (lines 175-185)
+have h_norm : Tendsto (fun n => ‖Y n - Z‖) atTop (𝓝 0) := ...
+  -- Uses Metric.tendsto_atTop, dist_eq_norm, norm_sub_rev
+
+-- Step 2: Integral bound ∫‖f‖ ≤ ‖f‖₂ (lines 187-222)
+have h_bound : ∀ n, ∫ x, ‖Y n x - Z x‖ ∂m ≤ ‖Y n - Z‖ := ...
+  -- Apply eLpNorm_le_eLpNorm_mul_rpow_measure_univ with p=1, q=2
+  -- Connect integral to eLpNorm 1 via integral_norm_eq_lintegral_enorm
+  -- Use Lp.coeFn_sub with EventuallyEq for a.e. equality
+
+-- Step 3: Squeeze theorem (lines 224-227)
+refine' tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_norm ...
+```
+
+**Status:** Complete, builds successfully (60 lines)
+**Key insight:** Use `Lp.coeFn_sub` with `.symm` and `Pi.sub_apply` to handle EventuallyEq coercions
+
+## Remaining Sorries (3/7) with Strategies 📋
 
 ### 4. Bridge 1: `contractable_shift_invariant_law` (line 99) 🔧
 
@@ -85,21 +107,7 @@ lemma tail_on_path_le : tail_on_path ≤ (inferInstance : MeasurableSpace (ℕ �
 **Technical challenge:** Measure.map rewrites are complex in Lean
 **Mathematical difficulty:** Low (straightforward application)
 
-### 5. Bridge 3: `tendsto_Lp2_to_L1` (line 167) 🔧
-
-**Statement:** L² convergence implies L¹ convergence on probability spaces
-
-**Strategy:**
-1. Use Hölder's inequality: ∫|f| ≤ ‖f‖₂ · ‖1‖₂ = ‖f‖₂ on probability spaces
-2. Convergence in Lp means ‖Y n - Z‖_Lp → 0
-3. Apply squeeze theorem with L² norms
-
-**Technical challenge:** Working with Lp spaces and norms
-**Mathematical difficulty:** Low (standard functional analysis)
-
-**Alternative:** Use `L2_tendsto_implies_L1_tendsto_of_bounded` from IntegrationHelpers.lean (line 103)
-
-### 6. Bridge 4: `condexp_pullback_along_pathify` (line 188) 🔧
+### 5. Bridge 4: `condexp_pullback_along_pathify` (line 261) 🔧
 
 **Statement:** Conditional expectation commutes with factor maps
 
@@ -133,10 +141,10 @@ lemma tail_on_path_le : tail_on_path ≤ (inferInstance : MeasurableSpace (ℕ �
 
 ## File Statistics
 
-- **Total lines:** 276
-- **Complete proofs:** 3
-- **Documented sorries:** 4
-- **Commits:** 9
+- **Total lines:** 330
+- **Complete proofs:** 4
+- **Documented sorries:** 3
+- **Commits:** 15
 - **Build status:** ✅ Clean build
 
 ## Dependencies
@@ -153,11 +161,9 @@ lemma tail_on_path_le : tail_on_path ≤ (inferInstance : MeasurableSpace (ℕ �
 ## Next Steps
 
 ### Priority 1: Complete remaining sorries
-1. Bridge 3: Should be straightforward with Lp norm API
-2. Bridge 4: Find mathlib conditional expectation change of variables
-3. Main h_L1: Apply Bridge 4 and fix indices
-4. Bridge 1: Resolve Measure.map rewriting issues
-5. tail_on_path_le: Fix typeclass inference
+1. Bridge 4: Find mathlib conditional expectation change of variables
+2. Main h_L1: Apply Bridge 4 and fix indices
+3. Bridge 1: Resolve Measure.map rewriting issues
 
 ### Priority 2: Integration with ViaL2
 1. Import bridge in ViaL2.lean
@@ -202,6 +208,12 @@ When complete, this bridge file will:
 8. `ab2f1a3` - wip: Attempt tail_on_path_le proof (reverted to sorry)
 9. `4e951f1` - fix: Resolve ViaL2 simp linter warnings (5 locations)
 10. `c5f5e3b` - feat: Complete tail_on_path_le proof
+11. `0b436df` - docs: Create comprehensive bridge implementation status document
+12. `c122d47` - docs: Improve Bridge 3 strategy with more specific approach
+13. `42c927a` - wip: Implement Bridge 3 structure with Step 1 complete
+14. `7073cd7` - docs: Update Bridge 3 Step 2 strategy with eLpNorm approach
+15. `c69872c` - wip: Add Hölder inequality application to Bridge 3 Step 2
+16. `14be339` - feat: Complete Bridge 3 (L² → L¹ convergence) with Hölder inequality
 
 ## Technical Notes
 
@@ -212,12 +224,19 @@ When complete, this bridge file will:
 - `birkhoffAverage_tendsto_metProjection` for Mean Ergodic Theorem
 - `iInf_le` with explicit index for infimum inequalities
 - `MeasurableSpace.comap_id.le` for σ-algebra comparisons
+- `eLpNorm_le_eLpNorm_mul_rpow_measure_univ` for Hölder inequality
+- `Lp.coeFn_sub` with `.symm` for EventuallyEq handling
+- `integral_norm_eq_lintegral_enorm` for connecting integrals to eLpNorm
+- `tendsto_of_tendsto_of_tendsto_of_le_of_le` for squeeze theorem
 
 ### Known Technical Challenges
 1. **Measure.map rewrites:** Bridge 1 requires careful composition of measure maps
-2. **Typeclass inference:** `iInf_le` requires specific typeclass instances
-3. **Lp space API:** Bridge 3 needs to work with Lp norms and inequalities
-4. **Index coordination:** Main theorem needs to match Birkhoff and Cesàro indices
+2. **Index coordination:** Main theorem needs to match Birkhoff and Cesàro indices
+
+### Solved Technical Challenges
+1. **Typeclass inference:** Solved using `iInf_le` with explicit index (tail_on_path_le)
+2. **Lp space API:** Solved using `Lp.coeFn_sub` with EventuallyEq (Bridge 3)
+3. **EventuallyEq coercions:** Solved using `.symm` and `Pi.sub_apply` pattern (Bridge 3)
 
 ### Design Decisions
 - Used `abbrev` for `tail_on_path` to avoid type issues
