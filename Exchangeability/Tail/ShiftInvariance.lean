@@ -85,13 +85,24 @@ finite initial segments without changing the distribution, so in particular we c
 
 For now, we leave this as sorry - proving it is the main technical work needed.
 -/
-lemma tailSigma_shift_invariant
+lemma tailSigma_shift_invariant_for_contractable
     (X : ℕ → Ω → α)
-    (hX_exch : Exchangeability.Exchangeable μ X)
+    (hX : Exchangeability.Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i)) :
-    ∀ (S : Set Ω), MeasurableSet[tailProcess X] S →
-      μ (S ∩ {ω | shift (fun k => X k ω) ∈ S}) = μ S := by
-  sorry -- TODO: Prove using exchangeability and tail σ-algebra approximation
+    ∀ m : ℕ, Measure.map (fun ω i => X (1 + i) ω) μ =
+              Measure.map (fun ω i => X i ω) μ := by
+  intro m
+
+  -- This follows from Contractable.shift_segment_eq
+  -- The key observation: shifting all indices by 1 is a special case of
+  -- selecting a strictly increasing subsequence
+
+  have h_shift := Exchangeability.Contractable.shift_segment_eq hX m 1
+
+  -- The shift_segment_eq gives us exactly what we need:
+  -- (X_1, X_2, ..., X_m) has the same distribution as (X_0, X_1, ..., X_{m-1})
+
+  sorry  -- Need to apply h_shift correctly with proper type coercions
 
 /-- **BONUS THEOREM: Conditional expectation is shift-invariant for exchangeable sequences.**
 
@@ -124,19 +135,31 @@ lemma condExp_shift_eq_condExp
     (hf_int : Integrable (f ∘ X 0) μ)
     (n : ℕ) :
     μ[f ∘ X n | tailProcess X] =ᵐ[μ] μ[f ∘ X 0 | tailProcess X] := by
-  -- Contractable implies exchangeable
-  have hX_exch : Exchangeability.Exchangeable μ X :=
-    Exchangeability.exchangeable_of_contractable hX_contract hX_meas
-
   -- For n=0, trivial
   by_cases hn : n = 0
   · subst hn
     rfl
 
-  -- For n>0, use shift invariance
-  -- The key idea: X_n and X_0 have the same conditional distribution given the tail
-  -- because the tail σ-algebra is shift-invariant
-  sorry -- TODO: Apply shift invariance to prove equality
+  -- For n>0, we need to show that f∘X_n and f∘X_0 have the same conditional expectation
+  -- given the tail σ-algebra.
+  --
+  -- Strategy: Use the fact that for contractable sequences, the distribution
+  -- is invariant under any subsequence selection. In particular, the sequences
+  -- (X_0, X_1, X_2, ...) and (X_n, X_0, X_1, ..., X_{n-1}, X_{n+1}, ...)
+  -- have the same distribution by Contractable.shift_segment_eq.
+  --
+  -- This is a deep result requiring:
+  -- 1. Understanding that tail events are measurable with respect to the tail σ-algebra
+  -- 2. Showing that the distribution of (X_n | tail events) equals (X_0 | tail events)
+  -- 3. Using the tower property of conditional expectation
+  --
+  -- The full proof requires:
+  -- - tailSigma_shift_invariant_for_contractable (which uses shift_segment_eq)
+  -- - Properties of conditional expectation under measure-preserving transformations
+  -- - Uniqueness of conditional expectation
+  --
+  -- This is technically involved ergodic theory.
+  sorry
 
 /-! ## Application to Cesàro Averages
 
