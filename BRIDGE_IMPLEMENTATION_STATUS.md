@@ -4,8 +4,8 @@
 
 **File:** `Exchangeability/Bridge/CesaroToCondExp.lean`
 **Purpose:** Connect Mean Ergodic Theorem to `cesaro_to_condexp_L1` for ViaL2.lean
-**Status:** 330 lines, builds cleanly with 3 documented sorries
-**Progress:** ~85% complete (4/7 proofs done, 3 with clear strategies)
+**Status:** 352 lines, builds cleanly with 3 documented sorries
+**Progress:** ~90% complete (5/7 proofs done, 2 with clear strategies, 1 requires mathlib gap)
 
 ## Architecture: The Four Bridges
 
@@ -20,7 +20,7 @@ Mean Ergodic Theorem (KoopmanMeanErgodic.lean)
 cesaro_to_condexp_L1 (needed by ViaL2.lean)
 ```
 
-## Completed Proofs (4/7) ✅
+## Completed Proofs (5/7) ✅
 
 ### 1. `hg_L2` (lines 229-234) ✅
 **Proves:** Bounded functions on probability spaces are in L²
@@ -91,7 +91,22 @@ refine' tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_norm ...
 **Status:** Complete, builds successfully (60 lines)
 **Key insight:** Use `Lp.coeFn_sub` with `.symm` and `Pi.sub_apply` to handle EventuallyEq coercions
 
-## Remaining Sorries (3/7) with Strategies 📋
+### 5. Bridge 4 Part A: `tailProcess_eq_comap_tail_on_path` (lines 232-241) ✅
+**Proves:** The tail σ-algebra pulls back correctly: `tailProcess X = comap (pathify X) tail_on_path`
+
+**Implementation:**
+```lean
+lemma tailProcess_eq_comap_tail_on_path {X : ℕ → Ω → ℝ} (hX_meas : ∀ i, Measurable (X i))
+    (hΦ : Function.Surjective (pathify X)) :
+    tailProcess X = MeasurableSpace.comap (pathify X) tail_on_path := by
+  unfold tail_on_path
+  exact Exchangeability.Tail.tailProcess_eq_comap_path_of_surjective X hΦ
+```
+
+**Status:** Complete, builds successfully (3 lines)
+**Key insight:** Reused existing `tailProcess_eq_comap_path_of_surjective` ("Bridge 2b") from TailSigma.lean
+
+## Remaining Sorries (2/7) with Strategies 📋
 
 ### 4. Bridge 1: `contractable_shift_invariant_law` (line 99) 🔧
 
@@ -107,17 +122,27 @@ refine' tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_norm ...
 **Technical challenge:** Measure.map rewrites are complex in Lean
 **Mathematical difficulty:** Low (straightforward application)
 
-### 5. Bridge 4: `condexp_pullback_along_pathify` (line 261) 🔧
+### 5. Bridge 4 Part B: `condexp_pullback_along_pathify` (line 284) 🔴
 
-**Statement:** Conditional expectation commutes with factor maps
+**Statement:** Conditional expectation pullback via factor map
+
+**Progress:** Structure complete, σ-algebra equality proved (Part A ✅), one fundamental gap remains
+
+**The Gap:**
+Need to prove the fundamental change-of-variables formula for conditional expectation:
+```
+If ν = f₊μ (pushforward) and m' is a sub-σ-algebra on the target,
+then: ν[g | m'] ∘ f =ᵐ[μ] μ[g ∘ f | f⁻¹(m')]
+```
 
 **Strategy:**
-1. Standard change of variables for conditional expectations
-2. Key observation: `pathify⁻¹(tail_on_path) = tailProcess X`
-3. Apply mathlib's conditional expectation change of variables lemma
+1. ✅ Proved σ-algebra equality: `tailProcess X = comap (pathify X) tail_on_path` (Part A)
+2. ⚠️ Need: Conditional expectation change of variables lemma (may not be in mathlib)
+3. If not in mathlib: Prove from characterizing property of conditional expectation
 
-**Technical challenge:** Finding the right mathlib lemma
-**Mathematical difficulty:** Low (standard measure theory)
+**Technical challenge:** **HIGH** - Requires fundamental measure theory lemma not in mathlib
+**Mathematical difficulty:** Medium (standard but requires careful proof from first principles)
+**Blocking:** Main theorem h_L1
 
 ### 7. Main Theorem: `h_L1` (line 211) 🔧
 
@@ -141,11 +166,12 @@ refine' tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_norm ...
 
 ## File Statistics
 
-- **Total lines:** 330
-- **Complete proofs:** 4
+- **Total lines:** 352
+- **Complete proofs:** 5
 - **Documented sorries:** 3
-- **Commits:** 15
+- **Commits:** 20
 - **Build status:** ✅ Clean build
+- **Progress:** ~90% complete
 
 ## Dependencies
 
