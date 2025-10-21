@@ -1,12 +1,126 @@
-# Progress Summary: Martingale Proof Infrastructure
+# Progress Summary: Recent Development Work
 
-## Session Overview
+## Overview
 
-This document summarizes recent progress on the martingale proof of de Finetti's theorem in `Exchangeability/DeFinetti/ViaMartingale.lean`.
+This document summarizes recent development work across multiple files in the de Finetti formalization project, with major progress on integration infrastructure, conditional expectation theory, and the three proof approaches.
 
-## Commits in This Session (6 total)
+## Current Build Status
 
-### 1. Surgical Patch: Replace Axiom-Based Factorization
+**Project-wide build:** 5071/5081 targets completed
+- **CondExp.lean:** ✅ Builds successfully (2 linter warnings only)
+- **IntegrationHelpers.lean:** ✅ Builds cleanly (no errors)
+- **ViaL2.lean:** ❌ 2 compilation errors, 10 sorries
+- **ViaMartingale.lean:** ⚠️ Builds with 3 sorries (linter warnings only)
+- **ViaKoopman.lean:** ⚠️ Builds with 6 sorries (linter warnings only)
+
+## Major Completed Work
+
+### 1. IntegrationHelpers.lean - L²→L¹ Convergence Infrastructure ✅
+
+**Status:** Complete with no sorries or errors
+
+**Commits:**
+- `8bea05e` - feat: Complete L2→L1 convergence lemma with no sorries
+- `4e6e5f2` - feat: Complete Cauchy-Schwarz proof chain for L2→L1 convergence
+- `29b7acb` - feat: Implement L2→L1 convergence proof structure
+- `7493924` - feat: Complete eLpNorm_one_eq_integral_abs helper
+- `7ae96b9` - feat: Add Lp convergence infrastructure to IntegrationHelpers
+
+**Key achievements:**
+- Implemented complete L²→L¹ convergence theory
+- Proved `L2_tendsto_implies_L1_tendsto_of_bounded` without sorries
+- Added Cauchy-Schwarz machinery for eLpNorm conversions
+- Helper lemma `eLpNorm_one_eq_integral_abs` connecting L¹ norms to integrals
+- Critical infrastructure for ViaL2.lean proof completion
+
+**Technical infrastructure added:**
+- L² convergence implies L¹ convergence for bounded sequences
+- eLpNorm conversion utilities between different Lp spaces
+- Integration bounds using Cauchy-Schwarz inequality
+- Proper handling of ENNReal vs Real conversions in norms
+
+### 2. CondExp.lean - Error Resolution and Proof Completion ✅
+
+**Status:** Now builds successfully (down from multiple compilation errors)
+
+**Commits:**
+- `c223a5f` - fix: Complete condExp_mul_pullout proof with explicit instance management
+- `514e728` - fix: Complete condExp_abs_le_of_abs_le and condExp_L1_lipschitz proofs
+- `3f5d34e` - feat: Replace 4 sorries in CondExp.lean with proof implementations
+- `6942c55` - docs: Document type class synthesis blocker in condexp_pullback_factor
+
+**Key achievements:**
+- Resolved all compilation errors (only 2 linter warnings remain)
+- Completed 4+ previously sorry'd proofs
+- Fixed type class synthesis issues with explicit instance management
+- Documented remaining blockers for future work
+
+**Proofs completed:**
+- `condExp_mul_pullout`: Conditional expectation pullout with measurability
+- `condExp_abs_le_of_abs_le`: Absolute value inequality preservation
+- `condExp_L1_lipschitz`: L¹ Lipschitz continuity of conditional expectation
+- Multiple helper lemmas for σ-algebra relationships
+
+### 3. Tactic Modernization - fun_prop Application
+
+**Commits:**
+- `443b96c` - refactor: Use fun_prop tactic to simplify composition proofs
+- `1e000f2` - refactor: Apply fun_prop optimizations to measurability proofs
+- `bea3648` - refactor: Replace manual measurability proofs with fun_prop in Core.lean
+- `037074d` - docs: Add comprehensive fun_prop (disch := ...) explanation
+
+**Changes:**
+- Applied modern `fun_prop` tactic across Core.lean, ViaMartingale.lean, and others
+- Simplified measurability proofs with automated composition reasoning
+- Documented `fun_prop (disch := measurability)` pattern for future use
+- Reduced proof size and improved readability
+
+### 4. ViaKoopman.lean - Error Resolution
+
+**Commits:**
+- `28f524f` - fix: Resolve three type-checking errors in ViaKoopman.lean
+- `666bee8` - fix: Resolve build errors in ViaKoopman.lean
+- `caeb3ba` - fix: Resolve three API errors in CesaroToCondExp.lean
+
+**Current status:** Builds successfully with 6 sorries
+- Sorries are intentional development placeholders
+- No compilation errors blocking the build
+- Ready for continued proof development
+
+### 5. ViaMartingale.lean - Type Checking Fixes
+
+**Commits:**
+- `472ef67` - fix: Add type annotations to resolve ViaMartingale.lean line 2208 errors
+- `eb1d2e6` - fix: Use fun_prop with measurability discharger in ViaMartingale
+
+**Current status:** Builds successfully with 3 sorries
+- Down from previous error state
+- Type annotations resolved inference issues
+- fun_prop integration improved automation
+
+## Remaining Work in ViaL2.lean
+
+**Current errors (2):**
+
+1. **Line 1619:** ENNReal top case handling in L¹ convergence
+   - Converting ε = ⊤ case to contradiction
+   - Needs: Proof that finite measure cannot have infinite ε
+
+2. **Line 1632:** eLpNorm function vs pointwise representation mismatch
+   - Pattern: `eLpNorm (alpha n - alpha_inf) 1 μ`
+   - Target: `eLpNorm (fun ω => alpha n ω - alpha_inf ω) 1 μ`
+   - Needs: Eta-conversion or function extensionality lemma
+
+**Remaining sorries (10):**
+- Lines 1668, 2528, 2826, 3711, 3748, 3931, 4002, 4055, 4208, 4259
+- Most are in Step B (dyadic approximation) and Step C sections
+- Related to L² contractability bounds and convergence arguments
+
+## Historical Context: Martingale Proof Infrastructure
+
+### Prior Session Work (October 11)
+
+#### 1. Surgical Patch: Replace Axiom-Based Factorization
 **Commit:** `5ee4329` - feat: Replace axiom-based factorization with indicator algebra
 
 **Changes:**
@@ -88,10 +202,8 @@ This document summarizes recent progress on the martingale proof of de Finetti's
   - Requires: CondIndep unfolding and condexp properties
   - Blocked by: Conditional independence theory development
 
-### Blocking Issues
-- `Exchangeability/Probability/CondExp.lean` has pre-existing compilation errors
-  - These errors are **not** from our work
-  - They block full project compilation but don't affect ViaMartingale.lean directly
+#### Prior Status Note
+The earlier version of this document noted blocking compilation errors in CondExp.lean. These have since been resolved (see section 2 above).
 
 ## Technical Achievements
 
@@ -121,32 +233,42 @@ All new helper lemmas:
 ## Next Steps
 
 ### High Priority
-1. **Conditional independence theory development**
-   - Understand CondIndep in Mathlib
-   - Develop connection between `coordinate_future_condIndep` and required form
-   - This unblocks the remaining sorry in `finite_level_factorization`
+1. **ViaL2.lean compilation errors**
+   - Fix ENNReal top case handling (line 1619)
+   - Resolve eLpNorm eta-conversion issue (line 1632)
+   - These are blocking the default proof from building
 
-2. **CondExp.lean error resolution**
-   - Fix pre-existing compilation errors
-   - Required for full project build
+2. **ViaL2.lean sorry completion**
+   - Complete 10 remaining sorries in Steps B and C
+   - Apply IntegrationHelpers infrastructure to convergence proofs
+   - Critical for completing the default L² proof approach
+
+3. **ViaMartingale.lean conditional independence**
+   - Develop theory connecting `coordinate_future_condIndep` to required form
+   - Complete 3 remaining sorries
+   - Unblocks the martingale proof approach
 
 ### Medium Priority
-3. **Prove `condexp_indicator_inter_of_condIndep`**
+4. **ViaKoopman.lean sorry completion**
+   - Complete 6 remaining sorries in dyadic approximation
+   - Finalize Mean Ergodic Theorem application
+   - This completes the ergodic theory proof approach
+
+5. **Prove `condexp_indicator_inter_of_condIndep`**
    - Unfold CondIndep definition
    - Apply conditional expectation properties
-   - This provides clean non-axiomatic factorization
-
-4. **Additional helper infrastructure**
-   - More σ-algebra relationship lemmas
-   - Composition lemmas for shifts and cylinders
-   - Integration and expectation lemmas
+   - Provides clean non-axiomatic factorization for ViaMartingale
 
 ### Long Term
-5. **Axiom reduction**
+6. **Remove Canonical dependency from ViaL2**
+   - Replace Canonical tactics with standard mathlib approaches
+   - Required before the proof can be published
+
+7. **Additional axiom reduction in ViaMartingale**
    - `tail_factorization_from_future`
    - `directingMeasure_of_contractable`
    - `finite_product_formula`
-   - These require substantial CondExp.lean infrastructure
+   - These require additional CondExp.lean infrastructure
 
 ## Continued Session Progress
 
@@ -180,23 +302,48 @@ After user fixed some CondExp.lean issues, continued adding infrastructure:
 - **Session 2:** 7 additional helper lemmas (2 commits)
 - **Total:** 19 new helper lemmas across 8 feature commits
 
-### CondExp.lean Status
+### CondExp.lean Status Update
 
-User has fixed some CondExp.lean compilation errors:
+CondExp.lean compilation errors have been fully resolved:
 - Fixed: Missing σ-algebra arguments in condExp_add/sub
 - Fixed: Invalid Integrable.const_smul usage
-- Remaining: Some errors still present but reduced
+- Fixed: Type class synthesis issues with explicit instances
+- Current: Builds successfully with only 2 linter warnings
 
-## Repository Status
+## Repository Status (Updated)
 
 - **Branch:** main
-- **Total commits:** 9 (including merges and user fixes)
-- **Feature commits:** 8
+- **Recent commits:** 30+ since October 11
 - **Working tree:** Clean
-- **Build status:** Improved (some CondExp.lean errors remain)
+- **Build status:** 5071/5081 targets (98.8% complete)
+  - Only ViaL2.lean has compilation errors (2 errors)
+  - All other proof files build successfully
+
+## Summary Statistics
+
+### Infrastructure Completed
+- **IntegrationHelpers.lean:** Complete L²→L¹ convergence theory (5+ commits)
+- **CondExp.lean:** 4+ proofs completed, all errors resolved (4+ commits)
+- **Tactic modernization:** fun_prop applied across multiple files (4 commits)
+- **Total new lemmas:** 19+ helper lemmas for martingale proof (prior session) + substantial integration theory
+
+### Proof Approach Status
+1. **ViaL2 (L² approach - default):** 2 errors, 10 sorries - IN PROGRESS
+2. **ViaMartingale (martingale approach):** 3 sorries - BUILDS
+3. **ViaKoopman (ergodic approach):** 6 sorries - BUILDS
+
+### Key Blockers Resolved
+- ✅ CondExp.lean compilation errors (was blocking full build)
+- ✅ IntegrationHelpers infrastructure (was needed for ViaL2)
+- ✅ ViaKoopman type checking errors (now builds)
+- ✅ ViaMartingale type inference issues (now builds)
+
+### Remaining Blockers
+- ❌ ViaL2.lean ENNReal and eLpNorm errors (2 errors blocking default proof)
+- ⚠️ Sorry placeholders across all three proofs (19 total)
 
 ---
 
-*Generated: 2025-10-11*
-*Session focus: Surgical patch for finite_level_factorization + infrastructure*
-*Updated: 2025-10-11 (Session 2 - continued infrastructure)*
+*Originally generated: 2025-10-11*
+*Major update: 2025-10-21*
+*Focus: Project-wide infrastructure completion and build stabilization*
