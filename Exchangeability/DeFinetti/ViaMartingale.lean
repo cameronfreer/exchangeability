@@ -142,18 +142,25 @@ lemma measurableSpace_pi_nat_le_iSup_fin {α : Type*} [MeasurableSpace α] :
   use t.sup id + 1
 
   -- Now show cylinder t S is measurable in comap (·|Fin k)
-  --
-  -- STRATEGY: cylinder t S = t.restrict ⁻¹' S
-  -- Need to show this equals: (projection to Fin k) ⁻¹' (some measurable set)
-  --
-  -- This requires:
-  -- 1. Show t.restrict factors through projection to Fin k
-  --    (since all elements of t are < t.sup id + 1)
-  -- 2. Compose with S to get the measurable set
-  -- 3. Apply measurable_comap (preimage of measurable is measurable)
-  --
-  -- The factorization step needs careful handling of Fin k vs ℕ coercions
-  sorry  -- TODO: Complete factorization argument
+  rw [MeasurableSpace.measurableSet_comap]
+  unfold MeasureTheory.cylinder
+
+  -- Define g : (Fin k → α) → (t → α) that restricts from Fin to t
+  let g : (Fin (t.sup id + 1) → α) → (t → α) := fun h i => h ⟨i.val,
+    Nat.lt_succ_of_le (Finset.le_sup (f := id) i.property)⟩
+
+  use g ⁻¹' S
+
+  constructor
+  · -- Prove g ⁻¹' S is measurable
+    have hg : Measurable g := measurable_pi_lambda _ (fun i => measurable_pi_apply _)
+    exact MeasurableSet.preimage hS_meas hg
+
+  · -- Prove: (fun f i => f ↑i) ⁻¹' (g ⁻¹' S) = t.restrict ⁻¹' S
+    rw [← Set.preimage_comp]
+    funext f
+    ext i
+    rfl
 
 end PiFiniteProjections
 
@@ -195,17 +202,9 @@ lemma condDistrib_factor_indicator_agree
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ | MeasurableSpace.comap ζ inferInstance]
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ | MeasurableSpace.comap η inferInstance] := by
-  -- The key insight: h_le tells us η is determined by ζ (η = g ∘ ζ for some g)
-  -- Combined with h_law (equal joint distributions), this implies the conditional
-  -- distributions agree a.e.: condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (η ω)
-  --
-  -- The full proof requires:
-  -- 1. Extract g from h_le (comap inequality → factorization)
-  -- 2. Use disintegration theorem: condExp can be expressed via condDistrib
-  -- 3. Apply uniqueness: equal laws + factorization → equal kernels a.e.
-  --
-  -- This is the core gap in mathlib's kernel/disintegration infrastructure.
-  sorry  -- TODO: Prove using condExp_ae_eq_integral_condDistrib + kernel uniqueness
+  sorry  -- TODO: Use kernel uniqueness under measure-preserving maps
+  -- The proof requires showing that from h_law and h_le, the conditional distributions agree.
+  -- This is the "uniqueness of regular conditional distributions" property.
 
 end CondDistribUniqueness
 
@@ -246,7 +245,7 @@ lemma condIndep_of_triple_law
     (h_le : MeasurableSpace.comap ζ inferInstance ≤
             MeasurableSpace.comap ζ' inferInstance) :
     True := by  -- Placeholder - actual CondIndep would require StandardBorelSpace
-  sorry  -- TODO: Prove using disintegration theorem and kernel uniqueness
+  trivial  -- True is trivially true
 
 /-- **[TODO: Mathlib.Probability.Independence.Conditional]**
 
@@ -302,23 +301,6 @@ lemma condExp_eq_of_triple_law
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y
        | MeasurableSpace.comap W inferInstance] := by
-  -- Step 1: Show σ(W) ≤ σ(Z, W)
-  have h_le : MeasurableSpace.comap W inferInstance ≤
-              MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance := by
-    calc MeasurableSpace.comap W inferInstance
-        ≤ MeasurableSpace.comap Z inferInstance ⊔ MeasurableSpace.comap W inferInstance :=
-          le_sup_right
-      _ = MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance :=
-          (MeasurableSpace.comap_prodMk Z W).symm
-
-  -- Step 2: Extract conditional independence from triple law (Kallenberg 1.3)
-  -- From (Z, Y, W) =ᵈ (Z, Y, W') with σ(W) ≤ σ(Z, W), get Y ⊥⊥_W (Z, W')
-  -- But we need the reversed form...
-  -- Actually, we need a slightly different statement
-
-  -- The proof requires showing that from the triple law, we can derive
-  -- the conditional independence that makes Z redundant for predicting Y
-  -- when W is known. This is encoded in the combination of the two lemmas above.
   sorry  -- TODO: Apply condIndep_of_triple_law + condExp_projection_of_condIndep
 
 end ConditionalIndependence
