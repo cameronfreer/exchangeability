@@ -1729,7 +1729,7 @@ private theorem birkhoffAverage_condexp_m_constant
     _ = MeasureTheory.condExp m μ f := rfl
 
 /-- L² mean-ergodic theorem in function form:
-the Cesàro averages of `f ∘ T^[j]` converge in L² to `μ[f | mSI]`, provided
+the Cesàro averages of `f ∘ T^[j]` converge in L² to `condExp m μ f`, provided
 `m` is `T`-invariant.  This is a thin wrapper around mathlib's L² MET.
 -/
 private theorem birkhoffAverage_tendsto_condexp_L2
@@ -1743,7 +1743,7 @@ private theorem birkhoffAverage_tendsto_condexp_L2
         (fun ω =>
           (1 / ((n : ℕ) + 1 : ℝ)) *
               (Finset.range ((n : ℕ) + 1)).sum (fun j => f (T^[j] ω))
-          - μ[f | m] ω) 2 μ)
+          - MeasureTheory.condExp m μ f ω) 2 μ)
       atTop (𝓝 0) := by
   /-
     **Option A Proof Strategy**: "Project first, then average"
