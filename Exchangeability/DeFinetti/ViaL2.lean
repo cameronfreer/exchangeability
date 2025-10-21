@@ -3012,23 +3012,84 @@ lemma alphaIic_ae_eq_alphaIicCE
     have hAf_integrable : ∀ m, Integrable (fun ω => A 0 m ω - f ω) μ := by
       intro m
       refine Integrable.sub ?_ ?_
-      · exact (hA_meas 0 m).aestronglyMeasurable.integrable_of_isBounded ?_
-        use 1
+      · -- A is a Cesàro average of indicators, bounded by 1
+        refine Integrable.of_bound (hA_meas 0 m) 1 ?_
         filter_upwards with ω
-        -- A is a Cesàro average of indicators, bounded by 1
-        sorry  -- TODO: Show |A 0 m ω| ≤ 1 from definition
-      · exact hf_meas.aestronglyMeasurable.integrable_of_isBounded ?_
-        sorry  -- TODO: Show f is bounded (from context)
+        -- A n m ω = (1/m) * ∑_{k<m} indIic t (X (n+k+1) ω)
+        -- Each indIic t x ∈ {0, 1}, so the sum is in [0, m]
+        -- Therefore A n m ω ∈ [0, 1]
+        unfold A
+        simp only [Real.norm_eq_abs, abs_mul, abs_div]
+        calc |1 / (m : ℝ) * ∑ k : Fin m, indIic t (X (0 + ↑k + 1) ω)|
+            = (1 / (m : ℝ)) * |∑ k : Fin m, indIic t (X (↑k + 1) ω)| := by
+              rw [abs_mul, abs_of_nonneg (by positivity : 0 ≤ 1 / (m : ℝ))]
+              ring_nf
+          _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, |indIic t (X (↑k + 1) ω)| :=
+              mul_le_mul_of_nonneg_left (abs_sum_le_sum_abs _ _) (by positivity)
+          _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
+              apply mul_le_mul_of_nonneg_left _ (by positivity)
+              apply Finset.sum_le_sum
+              intro k _
+              -- |indIic t x| ≤ 1 since indIic is indicator of a set
+              unfold indIic
+              simp [Set.indicator, abs_of_nonneg]
+              split_ifs <;> norm_num
+          _ = (1 / (m : ℝ)) * m := by simp
+          _ = 1 := by field_simp
+      · -- f is bounded: f = alphaIic which is max 0 (min 1 ...), so f ∈ [0,1]
+        refine Integrable.of_bound hf_meas 1 ?_
+        filter_upwards with ω
+        -- f is alphaIic which is max 0 (min 1 ...), so |f| ≤ 1
+        calc ‖f ω‖
+            ≤ 1 := by
+              -- alphaIic = max 0 (min 1 limit), so it's in [0,1]
+              unfold alphaIic at f
+              simp only [Real.norm_eq_abs]
+              apply abs_le_one_iff_sq_le_one.mpr
+              have h1 : 0 ≤ f ω := by apply le_max_left
+              have h2 : f ω ≤ 1 := by
+                apply max_le
+                · norm_num
+                · apply min_le_left
+              nlinarith [sq_nonneg (f ω)]
 
     have hAg_integrable : ∀ m, Integrable (fun ω => A 0 m ω - g ω) μ := by
       intro m
       refine Integrable.sub ?_ ?_
-      · exact (hA_meas 0 m).aestronglyMeasurable.integrable_of_isBounded ?_
-        use 1
+      · -- A is a Cesàro average of indicators, bounded by 1 (same proof as above)
+        refine Integrable.of_bound (hA_meas 0 m) 1 ?_
         filter_upwards with ω
-        sorry  -- TODO: Show |A 0 m ω| ≤ 1
-      · exact hg_meas.aestronglyMeasurable.integrable_of_isBounded ?_
-        sorry  -- TODO: Show g is bounded
+        unfold A
+        simp only [Real.norm_eq_abs, abs_mul, abs_div]
+        calc |1 / (m : ℝ) * ∑ k : Fin m, indIic t (X (0 + ↑k + 1) ω)|
+            = (1 / (m : ℝ)) * |∑ k : Fin m, indIic t (X (↑k + 1) ω)| := by
+              rw [abs_mul, abs_of_nonneg (by positivity : 0 ≤ 1 / (m : ℝ))]
+              ring_nf
+          _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, |indIic t (X (↑k + 1) ω)| :=
+              mul_le_mul_of_nonneg_left (abs_sum_le_sum_abs _ _) (by positivity)
+          _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
+              apply mul_le_mul_of_nonneg_left _ (by positivity)
+              apply Finset.sum_le_sum
+              intro k _
+              unfold indIic
+              simp [Set.indicator, abs_of_nonneg]
+              split_ifs <;> norm_num
+          _ = (1 / (m : ℝ)) * m := by simp
+          _ = 1 := by field_simp
+      · -- g is bounded: g = alphaIicCE = μ[indIic t ∘ X 0 | tailSigma]
+        -- Conditional expectation of a bounded function is bounded a.e. by the same bound
+        -- Since indIic ∈ [0,1], we have g ∈ [0,1] a.e.
+        refine Integrable.of_bound hg_meas 1 ?_
+        filter_upwards with ω
+        -- g = condExp of indIic ∘ X 0, which is in [0,1]
+        -- So condExp is also in [0,1] a.e. (it's a conditional mean of [0,1]-valued r.v.)
+        calc ‖g ω‖
+            ≤ 1 := by
+              -- alphaIicCE is a conditional expectation of indIic ∘ X 0
+              -- which takes values in [0,1], so its conditional expectation is also in [0,1]
+              -- This follows from the fact that condExp preserves bounds a.e.
+              -- For now, we use the fact that condExp of a [0,1]-valued function is [0,1]-valued
+              sorry  -- TODO: Need lemma about condExp preserving [0,1] bounds
 
     -- Step 1b: Convert L¹ to eLpNorm using IntegrationHelpers.eLpNorm_one_eq_integral_abs
     have hf_eLpNorm : Tendsto (fun m => eLpNorm (fun ω => A 0 m ω - f ω) 1 μ) atTop (𝓝 0) := by
