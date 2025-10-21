@@ -3015,22 +3015,73 @@ lemma alphaIic_ae_eq_alphaIicCE
       ∫ ω, |A n m ω - alphaIicCE X hX_contract hX_meas hX_L2 t ω| ∂μ < ε := by
     intro n ε hε
 
-    -- cesaro_to_condexp_L1 axiom: (1/m) ∑_{i<m} f(X i) → μ[f∘X₀|tail]  in L¹
-    -- Our A n m:                  (1/m) ∑_{k<m} f(X(n+k+1))
-    --
-    -- For n=0: A 0 m = (1/m) ∑_{k<m} f(X(k+1))  [indices 1,...,m]
-    --          axiom  = (1/m) ∑_{i<m} f(X(i))    [indices 0,...,m-1]
-    --
-    -- Key observation: For contractable/exchangeable sequences, shifting indices
-    -- by a finite amount doesn't affect the limit. The tail σ-algebra is shift-invariant.
-    --
-    -- Two approaches:
-    -- 1. Prove that for contractable X, the conditional expectation μ[f∘X₁|tail] = μ[f∘X₀|tail]
-    --    (shift invariance of tail σ-algebra)
-    -- 2. Or show that the O(1/m) error from the off-by-one vanishes in the limit
-    --
-    -- For now, we leave this as sorry. The mathematical content is standard ergodic theory.
-    sorry -- TODO: Apply cesaro_to_condexp_L1 with shift invariance
+    -- Strategy: Use asymptotic negligibility
+    -- A n m uses X(n+k+1) for k ∈ {0,...,m-1}, i.e., X_{n+1},...,X_{n+m}
+    -- cesaro_to_condexp_L1 uses X(n+k) for k ∈ {0,...,m-1}, i.e., X_n,...,X_{n+m-1}
+    -- Difference: (1/m)[f(X_n) - f(X_{n+m})] → 0 in L¹ as m → ∞
+
+    -- For simplicity, work with n=0 first
+    by_cases hn : n = 0
+    · subst hn
+      unfold A alphaIicCE
+      simp only [zero_add]
+
+      -- Define the "standard" Cesàro average (matching axiom indexing)
+      let B : ℕ → Ω → ℝ := fun m ω => (1 / (m : ℝ)) * ∑ i : Fin m, indIic t (X i ω)
+
+      -- Apply cesaro_to_condexp_L1 for B
+      have h_axiom := cesaro_to_condexp_L1 hX_contract hX_meas (indIic t)
+                       (indIic_measurable t) (indIic_bdd t) (ε/2) (by linarith)
+      obtain ⟨M₁, hM₁⟩ := h_axiom
+
+      -- The difference between A 0 m and B m is O(1/m)
+      -- A 0 m = (1/m)[f(X₁) + ... + f(Xₘ)]
+      -- B m   = (1/m)[f(X₀) + ... + f(X_{m-1})]
+      -- Diff  = (1/m)[f(Xₘ) - f(X₀)]
+
+      have h_diff_small : ∀ m : ℕ, m > 0 →
+          ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) - B m ω| ∂μ ≤ 2/(m:ℝ) := by
+        intro m hm_pos
+        -- Unfold B and simplify
+        simp only [B]
+
+        -- The difference telescopes: (1/m)[∑ f(X(k+1)) - ∑ f(X(k))] = (1/m)[f(Xₘ) - f(X₀)]
+        -- We'll bound this by (1/m)[|f(Xₘ)| + |f(X₀)|] ≤ 2/m
+
+        have h_telescope : ∀ ω,
+            |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) -
+             (1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)|
+            = |(1/(m:ℝ)) * (indIic t (X m ω) - indIic t (X 0 ω))| := by
+          intro ω
+          sorry -- TODO: Prove telescoping identity
+
+        calc ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) -
+                   (1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)| ∂μ
+            = ∫ ω, |(1/(m:ℝ)) * (indIic t (X m ω) - indIic t (X 0 ω))| ∂μ := by
+                congr 1; ext ω; exact h_telescope ω
+          _ = ∫ ω, (1/(m:ℝ)) * |indIic t (X m ω) - indIic t (X 0 ω)| ∂μ := by
+                congr 1; ext ω
+                have hm_pos' : 0 < (m : ℝ) := Nat.cast_pos.mpr hm_pos
+                rw [abs_mul, abs_of_pos (one_div_pos.mpr hm_pos')]
+          _ = (1/(m:ℝ)) * ∫ ω, |indIic t (X m ω) - indIic t (X 0 ω)| ∂μ := by
+                rw [integral_mul_left]
+          _ ≤ (1/(m:ℝ)) * ∫ ω, |indIic t (X m ω)| + |indIic t (X 0 ω)| ∂μ := by
+                gcongr
+                apply integral_mono <;> sorry -- TODO: integrability + abs triangle ineq
+          _ = (1/(m:ℝ)) * (∫ ω, |indIic t (X m ω)| ∂μ + ∫ ω, |indIic t (X 0 ω)| ∂μ) := by
+                sorry -- TODO: integral_add
+          _ ≤ (1/(m:ℝ)) * (1 + 1) := by
+                sorry -- TODO: Each integral ≤ 1 since |indIic| ≤ 1
+          _ = 2/(m:ℝ) := by ring
+
+      -- Choose M large enough for both axiom and negligibility
+      use max M₁ (Nat.ceil (4/ε))
+      intro m hm
+
+      sorry -- TODO: Triangle inequality to combine axiom and negligibility
+
+    · -- Case n ≠ 0: Similar argument with shifted indices
+      sorry -- TODO: Generalize to arbitrary n
 
   -- Measurability of Cesàro averages
   have hA_meas : ∀ n m, AEStronglyMeasurable (A n m) μ := by
