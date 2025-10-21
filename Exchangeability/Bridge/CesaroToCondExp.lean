@@ -248,12 +248,40 @@ For H : (ℕ → ℝ) → ℝ and the factor map pathify:
 **TODO:** Use `condexp_comp` / `condexp_preimage` pattern from mathlib. -/
 lemma condexp_pullback_along_pathify
     {X : ℕ → Ω → ℝ} (hX_meas : ∀ i, Measurable (X i))
-    (H : (ℕ → ℝ) → ℝ) (hH_meas : Measurable H) :
+    (H : (ℕ → ℝ) → ℝ) (hH_meas : Measurable H)
+    (hΦ : Function.Surjective (pathify X)) :
     (μ_path μ X)[H | tail_on_path] ∘ (pathify X)
       =ᵐ[μ] μ[(H ∘ (pathify X)) | tailProcess X] := by
   /- Standard change of variables for conditional expectations.
-     Key: pathify⁻¹(tail_on_path) = tailProcess X (proved above) -/
-  sorry  -- TODO: Apply condexp change of variables with tailProcess_eq_comap_tail_on_path
+     Strategy: Use the fact that tailProcess X = comap (pathify X) tail_on_path,
+     combined with the characterizing property of conditional expectation. -/
+
+  -- First, use the σ-algebra equality
+  have h_sigma : tailProcess X = MeasurableSpace.comap (pathify X) tail_on_path :=
+    tailProcess_eq_comap_tail_on_path hX_meas hΦ
+
+  -- Rewrite the RHS using this equality
+  rw [h_sigma]
+
+  -- Now we need to show:
+  -- (μ_path μ X)[H | tail_on_path] ∘ pathify X
+  --   =ᵐ[μ] μ[H ∘ pathify X | comap (pathify X) tail_on_path]
+  --
+  -- This is the fundamental change-of-variables formula for conditional expectation:
+  --   If ν = f₊μ (pushforward) and m' is a sub-σ-algebra on the target,
+  --   then: ν[g | m'] ∘ f =ᵐ[μ] μ[g ∘ f | f⁻¹(m')]
+  --
+  -- In our case:
+  --   f = pathify X : Ω → (ℕ → ℝ)
+  --   μ = original measure
+  --   ν = μ_path μ X = Measure.map (pathify X) μ
+  --   m' = tail_on_path
+  --   g = H
+  --
+  -- This lemma may not exist in mathlib. If not, it needs to be proved from
+  -- the characterizing property of conditional expectation.
+
+  sorry  -- TODO: Find or prove condexp factor map change of variables
 
 /-! ## F. Main Theorem: Removing the Axiom -/
 
