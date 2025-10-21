@@ -1600,13 +1600,24 @@ theorem subseq_ae_of_L1
       refine ⟨((h_alpha_meas n).sub h_alpha_inf_meas).aestronglyMeasurable, ?_⟩
       -- Show HasFiniteIntegral: ∫⁻ ‖f‖ₑ < ∞
       rw [hasFiniteIntegral_iff_norm]
-      -- We use integral_norm_eq_lintegral_enorm: ∫ ‖f‖ = (∫⁻ ‖f‖ₑ).toReal
-      -- So if ∫ ‖f‖ is a finite real number, then ∫⁻ ‖f‖ₑ < ∞
+      -- Strategy: ∫ |f| is a real number, so ∫⁻ ‖f‖ₑ = ENNReal.ofReal (∫ |f|) < ⊤
+      -- Use ofReal_integral_eq_lintegral_ofReal to convert between the two
       have h_ae := ((h_alpha_meas n).sub h_alpha_inf_meas).aestronglyMeasurable
-      rw [← integral_norm_eq_lintegral_enorm h_ae]
-      -- Now: need (ENNReal.ofReal (∫ ‖alpha n - alpha_inf‖)) < ∞
-      -- This is true for any finite real number
-      simp only [ENNReal.ofReal_lt_top]
+      calc ∫⁻ a, ENNReal.ofReal ‖alpha n a - alpha_inf a‖ ∂μ
+          = ∫⁻ a, ‖alpha n a - alpha_inf a‖ₑ ∂μ := by
+            congr 1 with a
+            rw [Real.enorm_eq_ofReal_abs]
+            simp [abs_norm]
+        _ = ENNReal.ofReal (∫ a, ‖alpha n a - alpha_inf a‖ ∂μ) := by
+            rw [ofReal_integral_eq_lintegral_ofReal]
+            · rfl
+            · exact h_ae.norm
+            · exact ae_of_all _ (fun _ => norm_nonneg _)
+        _ = ENNReal.ofReal (∫ a, |alpha n a - alpha_inf a| ∂μ) := by
+            congr 1
+            congr 1 with a
+            exact Real.norm_eq_abs _
+        _ < ⊤ := ENNReal.ofReal_lt_top
 
     -- Step 2: Apply eLpNorm_one_eq_integral_abs and transfer convergence
     -- Given: ∫ |alpha n - alpha_inf| → 0
@@ -1616,32 +1627,39 @@ theorem subseq_ae_of_L1
     intro ε hε
     -- Get δ such that ENNReal.ofReal δ = ε (or close enough)
     -- Since ε > 0 in ENNReal, we can find a positive real δ
-    have ⟨δ, hδ_pos, hδ_eq⟩ : ∃ δ > 0, ENNReal.ofReal δ = ε := by
+    have ⟨δ, hδ_pos, hδ_le⟩ : ∃ δ > 0, ENNReal.ofReal δ ≤ ε := by
       by_cases h_top : ε = ⊤
-      · use 1
+      · -- When ε = ⊤, any finite value works
+        use 1
         constructor
         · norm_num
-        · simp [h_top]
-      · have : ε ≠ 0 := hε.ne'
+        · rw [h_top]
+          exact le_top
+      · -- When ε ≠ ⊤, we can use ε.toReal
+        have : ε ≠ 0 := hε.ne'
         use ε.toReal
         constructor
         · exact ENNReal.toReal_pos this h_top
-        · exact ENNReal.ofReal_toReal h_top
-    rw [← hδ_eq]
+        · rw [ENNReal.ofReal_toReal h_top]
     -- Now get N such that ∫ |alpha n - alpha_inf| < δ for n ≥ N
     rw [Metric.tendsto_atTop] at h_integral_tendsto
     obtain ⟨N, hN⟩ := h_integral_tendsto δ hδ_pos
     use N
     intro n hn
-    -- Show eLpNorm (alpha n - alpha_inf) 1 μ ≤ ENNReal.ofReal δ
-    rw [eLpNorm_one_eq_integral_abs (h_integrable n)]
-    rw [ENNReal.ofReal_le_ofReal_iff (le_of_lt hδ_pos)]
-    -- We have dist (∫ |alpha n - alpha_inf|) 0 < δ
-    -- which means |∫ |alpha n - alpha_inf|| < δ
-    -- Since ∫ |alpha n - alpha_inf| ≥ 0, this means ∫ |alpha n - alpha_inf| < δ
-    have h_dist := hN n hn
-    rw [Real.dist_eq, sub_zero, abs_of_nonneg (integral_nonneg (fun ω => abs_nonneg _))] at h_dist
-    exact le_of_lt h_dist
+    -- Show eLpNorm (alpha n - alpha_inf) 1 μ ≤ ε
+    -- We'll show it's ≤ ENNReal.ofReal δ ≤ ε
+    calc eLpNorm (fun ω => alpha n ω - alpha_inf ω) 1 μ
+        = ENNReal.ofReal (∫ ω, |alpha n ω - alpha_inf ω| ∂μ) :=
+          eLpNorm_one_eq_integral_abs (h_integrable n)
+      _ ≤ ENNReal.ofReal δ := by
+          apply ENNReal.ofReal_le_ofReal
+          -- We have dist (∫ |alpha n - alpha_inf|) 0 < δ
+          -- which means |∫ |alpha n - alpha_inf|| < δ
+          -- Since ∫ |alpha n - alpha_inf| ≥ 0, this means ∫ |alpha n - alpha_inf| < δ
+          have h_dist := hN n hn
+          rw [Real.dist_eq, sub_zero, abs_of_nonneg (integral_nonneg (fun ω => abs_nonneg _))] at h_dist
+          exact le_of_lt h_dist
+      _ ≤ ε := hδ_le
 
   -- Step 2: eLpNorm convergence implies convergence in measure
   have h_tendstoInMeasure : TendstoInMeasure μ alpha atTop alpha_inf := by
@@ -1703,19 +1721,101 @@ theorem tendsto_integral_indicator_Iic
   -- 4. Pointwise convergence of indicators
   · -- Need: 1_{≤t}(Xn ω) → 1_{≤t}(X ω) for a.e. ω
     --
-    -- Proof strategy (away from boundary):
-    -- - If X ω < t: eventually Xn n ω < t, so indicators are eventually 1 → 1
-    -- - If X ω > t: eventually Xn n ω > t, so indicators are eventually 0 → 0
-    -- - If X ω = t: boundary case - indicator might oscillate
-    --   But we only need a.e. convergence, and {X = t} is often measure zero
+    -- Strategy: Indicators converge when X ω ≠ t (away from the boundary)
+    -- The set {ω : X ω = t} may have positive measure, so we need to handle it
     --
-    -- Key lemmas needed:
-    -- - Metric.tendsto_atTop for Xn n ω → X ω
-    -- - Indicator functions continuous except at boundary
-    -- - Filter.EventuallyEq.tendsto for convergence via eventual equality
+    -- Actually, we'll use a simpler approach: show convergence on {X ≠ t}
+    -- and rely on the fact that even if {X = t} has positive measure,
+    -- we can still use DCT because the indicators are bounded
     --
-    -- This is standard but tedious. Admitted for now.
-    sorry
+    -- For X ω ≠ t:
+    -- - If X ω < t: eventually Xn n ω < t, so both indicators are 1
+    -- - If X ω > t: eventually Xn n ω > t, so both indicators are 0
+    filter_upwards [hae] with ω hω_tendsto
+    by_cases h : X ω < t
+    · -- Case 1: X ω < t
+      -- Since Xn n ω → X ω and X ω < t, eventually Xn n ω < t
+      have hev : ∀ᶠ n in atTop, Xn n ω < t := by
+        rw [Metric.tendsto_atTop] at hω_tendsto
+        have ε_pos : 0 < (t - X ω) / 2 := by linarith
+        obtain ⟨N, hN⟩ := hω_tendsto ((t - X ω) / 2) ε_pos
+        refine Filter.eventually_atTop.mpr ⟨N, fun n hn => ?_⟩
+        have := hN n hn
+        rw [Real.dist_eq] at this
+        linarith
+      -- So the indicators are eventually equal to 1
+      apply Filter.Tendsto.congr' (EventuallyEq.symm _) tendsto_const_nhds
+      filter_upwards [hev] with n hn
+      simp only [Set.indicator, Set.mem_Iic]
+      rw [if_pos (le_of_lt hn), if_pos (le_of_lt h)]
+    · -- Case 2: X ω ≥ t
+      by_cases heq : X ω = t
+      · -- Subcase: X ω = t (boundary case)
+        -- We need: indicator(Xn n ω) → indicator(t) = 1
+        rw [heq]
+        simp only [Set.indicator, Set.mem_Iic, le_refl, ite_true]
+
+        -- The indicator is 1 when Xn n ω ≤ t, and 0 when Xn n ω > t
+        -- As Xn n ω → t, we need to show the indicator → 1
+        --
+        -- Strategy: Prove that NOT eventually (Xn n ω > t)
+        -- If Xn n ω → t, then it can't stay strictly above t forever
+        --
+        -- Proof by contradiction: Suppose ∃N, ∀n≥N: Xn n ω > t
+        -- Then Xn n ω ≥ Xn N ω > t for all n ≥ N
+        -- So Xn n ω is bounded below by Xn N ω > t
+        -- But Xn n ω → t means: ∀ε>0, eventually |Xn n ω - t| < ε
+        -- Take ε := (Xn N ω - t) / 2 > 0
+        -- Then eventually |Xn n ω - t| < (Xn N ω - t) / 2
+        -- So eventually Xn n ω < t + (Xn N ω - t) / 2 = (t + Xn N ω) / 2 < Xn N ω
+        -- Contradiction with Xn n ω ≥ Xn N ω! □
+        --
+        -- So we have: ¬(eventually Xn n ω > t)
+        -- Which means: frequently (Xn n ω ≤ t)
+        --
+        -- Combined with convergence to t, this gives us: eventually (Xn n ω ≤ t)
+        -- (because if Xn → t and we can't stay > t, we must eventually be ≤ t)
+        --
+        -- Hmm, "frequently ≤ t" doesn't immediately give "eventually ≤ t"...
+        -- Let me think differently.
+        --
+        -- Actually, the easiest approach: use that limsup Xn n ω = t and liminf Xn n ω = t
+        -- Since they're equal, we have convergence
+        -- And t ∈ Set.Iic t, so the indicator at t is 1
+        -- By upper semicontinuity of indicator for Iic... wait, that doesn't work either
+        --
+        -- Let me try: Xn n ω → t means for ε = any δ > 0, eventually Xn n ω ∈ (t-δ, t+δ)
+        -- But elements of (t-δ, t] have indicator 1, elements of (t, t+δ) have indicator 0
+        -- So we can't conclude...
+        --
+        -- OK here's the KEY insight I was missing:
+        -- We don't need pointwise convergence at every single ω!
+        -- We only need it for a.e. ω
+        -- And the set {ω : X ω = t AND Xn · ω oscillates around t} might have measure zero!
+        --
+        -- However, proving this requires more structure on X (e.g., continuous distribution)
+        -- For a general proof without that assumption, we'd need portmanteau or similar
+        --
+        -- For this formalization, I'll leave this as a documented gap
+        sorry
+      · -- Subcase: X ω > t
+        push_neg at h
+        have hgt : t < X ω := by
+          cases (Ne.lt_or_gt heq) <;> [linarith; assumption]
+        -- Since Xn n ω → X ω and X ω > t, eventually Xn n ω > t
+        have hev : ∀ᶠ n in atTop, t < Xn n ω := by
+          rw [Metric.tendsto_atTop] at hω_tendsto
+          have ε_pos : 0 < (X ω - t) / 2 := by linarith
+          obtain ⟨N, hN⟩ := hω_tendsto ((X ω - t) / 2) ε_pos
+          refine Filter.eventually_atTop.mpr ⟨N, fun n hn => ?_⟩
+          have := hN n hn
+          rw [Real.dist_eq] at this
+          linarith
+        -- So the indicators are eventually equal to 0
+        apply Filter.Tendsto.congr' (EventuallyEq.symm _) tendsto_const_nhds
+        filter_upwards [hev] with n hn
+        simp only [Set.indicator, Set.mem_Iic]
+        rw [if_neg (not_le.mpr hn), if_neg (not_le.mpr hgt)]
 
 end Helpers
 
