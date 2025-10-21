@@ -136,11 +136,10 @@ lemma L2_tendsto_implies_L1_tendsto_of_bounded
 
   -- Upper bound (∫(f n - g)²)^(1/2) tends to 0
   have h_upper_to_zero : Tendsto (fun n => (∫ ω, (f n ω - g ω)^2 ∂μ) ^ (1/2 : ℝ)) atTop (𝓝 0) := by
-    -- Since f^(1/2) is continuous at 0+ and ∫(f n - g)² → 0,
-    -- we have (∫(f n - g)²)^(1/2) → 0
-    -- Use: Filter.Tendsto.rpow (for continuous rpow at limits)
-    -- or: continuousAt_rpow_const with Tendsto.comp
-    sorry
+    -- Since x ↦ x^(1/2) is continuous and ∫(f n - g)² → 0, composition gives the result
+    have : (0 : ℝ) ^ (1/2 : ℝ) = 0 := by norm_num
+    rw [← this]
+    exact (Real.continuous_rpow_const (by norm_num : (0 : ℝ) ≤ (1/2 : ℝ))).tendsto 0 |>.comp hL2
 
   refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_upper_to_zero h_nonneg h_bound
 
