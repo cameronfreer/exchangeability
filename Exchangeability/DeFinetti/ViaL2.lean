@@ -3053,7 +3053,21 @@ lemma alphaIic_ae_eq_alphaIicCE
              (1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)|
             = |(1/(m:ℝ)) * (indIic t (X m ω) - indIic t (X 0 ω))| := by
           intro ω
-          sorry -- TODO: Prove telescoping identity
+          -- Factor out (1/m) and show the sums telescope
+          congr 1
+          rw [mul_sub]
+          congr 1
+
+          -- The key telescoping identity:
+          -- ∑_{k<m} f(X(k+1)) - ∑_{i<m} f(X i) = f(Xₘ) - f(X₀)
+          --
+          -- Proof: Left sum  = f(X₁) + f(X₂) + ... + f(Xₘ)
+          --        Right sum = f(X₀) + f(X₁) + ... + f(X_{m-1})
+          --        Middle terms cancel, leaving f(Xₘ) - f(X₀)
+          --
+          -- This is provable, but requires careful Fin/Finset manipulation.
+          -- For now, we leave it as sorry to keep momentum on the main proof.
+          sorry -- TODO: Prove telescoping via Finset.sum_bij or induction
 
         calc ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) -
                    (1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)| ∂μ
@@ -3067,18 +3081,122 @@ lemma alphaIic_ae_eq_alphaIicCE
                 rw [integral_mul_left]
           _ ≤ (1/(m:ℝ)) * ∫ ω, |indIic t (X m ω)| + |indIic t (X 0 ω)| ∂μ := by
                 gcongr
-                apply integral_mono <;> sorry -- TODO: integrability + abs triangle ineq
+                -- Need: ∫ |f - g| ≤ ∫ (|f| + |g|)
+                -- This follows from |a - b| ≤ |a| + |b| and integral_mono
+                apply integral_mono
+                · -- Integrability of |f - g|
+                  apply Integrable.abs
+                  apply Integrable.sub
+                  · exact (indIic_measurable t).comp (hX_meas m) |>.integrable_of_isBounded_measure
+                  · exact (indIic_measurable t).comp (hX_meas 0) |>.integrable_of_isBounded_measure
+                · -- Integrability of |f| + |g|
+                  apply Integrable.add
+                  · exact ((indIic_measurable t).comp (hX_meas m)).abs.integrable_of_isBounded_measure
+                  · exact ((indIic_measurable t).comp (hX_meas 0)).abs.integrable_of_isBounded_measure
+                · -- Pointwise bound: |a - b| ≤ |a| + |b|
+                  filter_upwards with ω
+                  exact abs_sub_abs_le_abs_sub _ _
           _ = (1/(m:ℝ)) * (∫ ω, |indIic t (X m ω)| ∂μ + ∫ ω, |indIic t (X 0 ω)| ∂μ) := by
-                sorry -- TODO: integral_add
+                congr 1
+                rw [integral_add]
+                · exact ((indIic_measurable t).comp (hX_meas m)).abs.integrable_of_isBounded_measure
+                · exact ((indIic_measurable t).comp (hX_meas 0)).abs.integrable_of_isBounded_measure
           _ ≤ (1/(m:ℝ)) * (1 + 1) := by
-                sorry -- TODO: Each integral ≤ 1 since |indIic| ≤ 1
+                gcongr
+                · -- ∫ |indIic t (X m)| ≤ 1
+                  have : ∫ ω, |indIic t (X m ω)| ∂μ ≤ ∫ ω, (1 : ℝ) ∂μ := by
+                    apply integral_mono
+                    · exact ((indIic_measurable t).comp (hX_meas m)).abs.integrable_of_isBounded_measure
+                    · exact integrable_const 1
+                    · filter_upwards with ω
+                      unfold indIic
+                      simp [Set.indicator, abs_of_nonneg]
+                      split_ifs <;> norm_num
+                  calc ∫ ω, |indIic t (X m ω)| ∂μ
+                      ≤ ∫ ω, (1 : ℝ) ∂μ := this
+                    _ = 1 := by simp [measure_univ]
+                · -- ∫ |indIic t (X 0)| ≤ 1
+                  have : ∫ ω, |indIic t (X 0 ω)| ∂μ ≤ ∫ ω, (1 : ℝ) ∂μ := by
+                    apply integral_mono
+                    · exact ((indIic_measurable t).comp (hX_meas 0)).abs.integrable_of_isBounded_measure
+                    · exact integrable_const 1
+                    · filter_upwards with ω
+                      unfold indIic
+                      simp [Set.indicator, abs_of_nonneg]
+                      split_ifs <;> norm_num
+                  calc ∫ ω, |indIic t (X 0 ω)| ∂μ
+                      ≤ ∫ ω, (1 : ℝ) ∂μ := this
+                    _ = 1 := by simp [measure_univ]
           _ = 2/(m:ℝ) := by ring
 
       -- Choose M large enough for both axiom and negligibility
+      -- M₁: ensures ∫ |B m - target| < ε/2 (from axiom)
+      -- ⌈4/ε⌉: ensures 2/m ≤ ε/2 (from negligibility)
       use max M₁ (Nat.ceil (4/ε))
       intro m hm
 
-      sorry -- TODO: Triangle inequality to combine axiom and negligibility
+      -- Triangle inequality: ∫ |A 0 m - target| ≤ ∫ |A 0 m - B m| + ∫ |B m - target|
+      unfold A alphaIicCE
+      simp only [zero_add]
+
+      -- We need to show: ∫ |A 0 m - μ[indIic t ∘ X 0|tail]| < ε
+      -- We have:
+      --   1. ∫ |A 0 m - B m| ≤ 2/m (from h_diff_small)
+      --   2. ∫ |B m - μ[indIic t ∘ X 0|tail]| < ε/2 (from h_axiom/hM₁)
+
+      have h1 : (m : ℝ) ≥ M₁ := by
+        calc (m : ℝ)
+            ≥ max M₁ (Nat.ceil (4/ε)) := Nat.cast_le.mpr hm
+          _ ≥ M₁ := le_max_left _ _
+
+      have h2 : (m : ℝ) ≥ Nat.ceil (4/ε) := by
+        calc (m : ℝ)
+            ≥ max M₁ (Nat.ceil (4/ε)) := Nat.cast_le.mpr hm
+          _ ≥ Nat.ceil (4/ε) := le_max_right _ _
+
+      -- From h2, we get 2/m ≤ ε/2
+      have h_small : 2/(m:ℝ) ≤ ε/2 := by
+        have hm_pos'' : 0 < (m : ℝ) := by
+          calc (m : ℝ)
+              ≥ Nat.ceil (4/ε) := h2
+            _ > 0 := Nat.cast_pos.mpr (Nat.ceil_pos.mpr (by linarith))
+        have : (m : ℝ) ≥ 4/ε := Nat.le_ceil _  ▸ h2
+        calc 2/(m:ℝ)
+            ≤ 2/(4/ε) := by gcongr; exact this
+          _ = ε/2 := by field_simp; ring
+
+      -- Apply the axiom
+      have hB_conv : ∫ ω, |B m ω - μ[indIic t ∘ X 0|TailSigma.tailSigma X] ω| ∂μ < ε/2 := by
+        convert hM₁ m (Nat.cast_le.mp h1) using 2
+        simp [B]
+
+      -- Apply h_diff_small
+      have hm_pos' : m > 0 := by omega
+      have hAB_diff : ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) - B m ω| ∂μ ≤ 2/(m:ℝ) :=
+        h_diff_small m hm_pos'
+
+      -- Triangle inequality for integrals
+      calc ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) -
+                 μ[indIic t ∘ X 0|TailSigma.tailSigma X] ω| ∂μ
+          ≤ ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) - B m ω| ∂μ +
+            ∫ ω, |B m ω - μ[indIic t ∘ X 0|TailSigma.tailSigma X] ω| ∂μ := by
+              -- Use pointwise triangle inequality: |a - c| ≤ |a - b| + |b - c|
+              rw [← integral_add]
+              · apply integral_mono
+                · -- Integrability of |A - target|
+                  sorry -- TODO: prove integrability
+                · -- Integrability of |A - B| + |B - target|
+                  sorry -- TODO: prove integrability
+                · -- Pointwise bound
+                  filter_upwards with ω
+                  exact abs_sub_le _ _ _
+              · -- Integrability of |A - B|
+                sorry -- TODO: prove integrability
+              · -- Integrability of |B - target|
+                sorry -- TODO: prove integrability
+        _ ≤ 2/(m:ℝ) + ε/2 := by linarith [hAB_diff, hB_conv]
+        _ ≤ ε/2 + ε/2 := by linarith [h_small]
+        _ = ε := by ring
 
     · -- Case n ≠ 0: Similar argument with shifted indices
       sorry -- TODO: Generalize to arbitrary n
