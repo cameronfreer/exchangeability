@@ -107,10 +107,27 @@ lemma L2_tendsto_implies_L1_tendsto_of_bounded
     (hf_bdd : ∃ M, ∀ n ω, |f n ω| ≤ M)
     (hL2 : Tendsto (fun n => ∫ ω, (f n ω - g ω)^2 ∂μ) atTop (𝓝 0)) :
     Tendsto (fun n => ∫ ω, |f n ω - g ω| ∂μ) atTop (𝓝 0) := by
-  -- Strategy: On probability spaces, ‖·‖₁ ≤ ‖·‖₂, so if ‖f_n - g‖₂ → 0 then ‖f_n - g‖₁ → 0
-  -- by squeeze theorem: 0 ≤ ‖·‖₁ ≤ ‖·‖₂ → 0
+  -- Strategy: Use Cauchy-Schwarz to bound L¹ by L² on probability spaces
+  -- ∫|f-g| ≤ (∫(f-g)²)^(1/2) · (∫ 1)^(1/2) = (∫(f-g)²)^(1/2)
+  -- Apply squeeze theorem: 0 ≤ ∫|f-g| ≤ (∫(f-g)²)^(1/2) → 0
 
-  sorry -- Implementing the eLpNorm-based proof requires more mathlib infrastructure than initially expected
+  -- Step 1: Get convergence of the square root
+  have hL2_sqrt : Tendsto (fun n => (∫ ω, (f n ω - g ω)^2 ∂μ) ^ (1/2 : ℝ)) atTop (𝓝 0) := by
+    have : (0 : ℝ) ^ (1/2 : ℝ) = 0 := by norm_num
+    rw [← this]
+    exact Tendsto.rpow hL2 tendsto_const_nhds (Or.inr (by norm_num : 0 < (1/2 : ℝ)))
+
+  -- Step 2: Bound ∫|f-g| by (∫(f-g)²)^(1/2) using Cauchy-Schwarz
+  have hbound : ∀ n, ∫ ω, |f n ω - g ω| ∂μ ≤ (∫ ω, (f n ω - g ω)^2 ∂μ) ^ (1/2 : ℝ) := by
+    intro n
+    -- Use Cauchy-Schwarz: ∫|h|·1 ≤ (∫h²)^(1/2) · (∫1²)^(1/2) = (∫h²)^(1/2) on probability spaces
+    -- This follows from abs_integral_mul_le_L2 specialized to |f-g| and 1
+    sorry -- TODO: Apply Hölder/Cauchy-Schwarz for L² on probability spaces
+
+  -- Step 3: Apply squeeze theorem
+  refine tendsto_of_tendsto_of_tendsto_of_le_of_le' tendsto_const_nhds hL2_sqrt ?_ ?_
+  · exact Filter.Eventually.of_forall fun n => integral_nonneg (fun ω => abs_nonneg _)
+  · exact Filter.Eventually.of_forall hbound
 
 /-! ### Pushforward Measure Integrals -/
 
