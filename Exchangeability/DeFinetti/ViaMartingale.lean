@@ -134,6 +134,58 @@ lemma measurableSpace_pi_nat_le_iSup_fin {α : Type*} [MeasurableSpace α] :
 
 end PiFiniteProjections
 
+section CondDistribUniqueness
+
+/-- **[TODO: Mathlib.Probability.Kernel.CondDistrib]**
+
+Indicator version of conditional distribution uniqueness under factorization.
+
+If the joint laws `(ξ, η)` and `(ξ, ζ)` agree, and `η` factors through `ζ`
+(i.e., `η = g ∘ ζ` for some measurable `g`), then the conditional expectations
+of indicator functions agree almost everywhere.
+
+This is a special case of the general uniqueness of regular conditional distributions.
+The full version (for all bounded measurable functions, not just indicators) should
+be contributed to mathlib as `condDistrib_unique_of_pair_law_and_factor`.
+
+**Proof strategy:**
+1. Use `condExp_ae_eq_integral_condDistrib` to express both sides as kernel integrals
+2. From `h_law` and `h_factor`, show the conditional distributions agree a.e.
+3. Conclude by transitivity of a.e. equality
+
+This leverages the uniqueness of regular conditional distributions on standard Borel
+spaces: if two probability kernels disintegrate the same joint measure, they agree a.e.
+-/
+lemma condDistrib_factor_indicator_agree
+    {Ω α β : Type*}
+    [MeasurableSpace Ω] [StandardBorelSpace Ω]
+    [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+    [MeasurableSpace β] [Nonempty β]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (ξ : Ω → α) (η ζ : Ω → β)
+    (hξ : Measurable ξ) (hη : Measurable η) (hζ : Measurable ζ)
+    (h_law : Measure.map (fun ω => (ξ ω, η ω)) μ =
+             Measure.map (fun ω => (ξ ω, ζ ω)) μ)
+    (h_le : MeasurableSpace.comap η inferInstance ≤
+            MeasurableSpace.comap ζ inferInstance)
+    {B : Set α} (hB : MeasurableSet B) :
+    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ | MeasurableSpace.comap ζ inferInstance]
+      =ᵐ[μ]
+    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ | MeasurableSpace.comap η inferInstance] := by
+  -- The key insight: h_le tells us η is determined by ζ (η = g ∘ ζ for some g)
+  -- Combined with h_law (equal joint distributions), this implies the conditional
+  -- distributions agree a.e.: condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (η ω)
+  --
+  -- The full proof requires:
+  -- 1. Extract g from h_le (comap inequality → factorization)
+  -- 2. Use disintegration theorem: condExp can be expressed via condDistrib
+  -- 3. Apply uniqueness: equal laws + factorization → equal kernels a.e.
+  --
+  -- This is the core gap in mathlib's kernel/disintegration infrastructure.
+  sorry  -- TODO: Prove using condExp_ae_eq_integral_condDistrib + kernel uniqueness
+
+end CondDistribUniqueness
+
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
 -- Note: condExp_congr_ae is available from mathlib
@@ -1941,7 +1993,8 @@ lemma condexp_indicator_drop_info_of_pair_law
   -- 3. Since η ω = g (ζ ω), conclude the kernels agree
   --
   -- None of this infrastructure exists in current mathlib. This is the true blocker.
-  sorry
+  -- SOLUTION: Use our local infrastructure lemma
+  exact condDistrib_factor_indicator_agree ξ η ζ hξ hη hζ h_law h_le hB
 
 /-- **Finite-level bridge:** if `(Z_r, X_r, θ_{m+1}^{(k)})` and `(X_r, θ_{m+1}^{(k)})`
 have the same law after projecting away `Z_r`, then dropping `Z_r` from the conditioning
