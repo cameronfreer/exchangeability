@@ -229,6 +229,17 @@ lemma tendsto_Lp2_to_L1 {α : Type*} [MeasurableSpace α] {m : Measure α} [IsPr
 
 /-! ## E. Bridge 4: Pullback along Factor Map -/
 
+/-- **Key fact:** The tail σ-algebra pulls back correctly via pathify.
+
+This uses the surjective equality from TailSigma.lean. For probability applications,
+we work modulo null sets, so surjectivity can often be assumed WLOG. -/
+lemma tailProcess_eq_comap_tail_on_path {X : ℕ → Ω → ℝ} (hX_meas : ∀ i, Measurable (X i))
+    (hΦ : Function.Surjective (pathify X)) :
+    tailProcess X = MeasurableSpace.comap (pathify X) tail_on_path := by
+  -- Apply the Bridge 2b lemma from TailSigma.lean
+  unfold tail_on_path
+  exact Exchangeability.Tail.tailProcess_eq_comap_path_of_surjective X hΦ
+
 /-- **BRIDGE 4.** Conditional expectation commutes with pathify.
 
 For H : (ℕ → ℝ) → ℝ and the factor map pathify:
@@ -241,8 +252,8 @@ lemma condexp_pullback_along_pathify
     (μ_path μ X)[H | tail_on_path] ∘ (pathify X)
       =ᵐ[μ] μ[(H ∘ (pathify X)) | tailProcess X] := by
   /- Standard change of variables for conditional expectations.
-     Key: pathify⁻¹(tail_on_path) = tailProcess X -/
-  sorry  -- TODO: Apply condexp change of variables
+     Key: pathify⁻¹(tail_on_path) = tailProcess X (proved above) -/
+  sorry  -- TODO: Apply condexp change of variables with tailProcess_eq_comap_tail_on_path
 
 /-! ## F. Main Theorem: Removing the Axiom -/
 
