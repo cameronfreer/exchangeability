@@ -1591,11 +1591,33 @@ private theorem birkhoffAverage_tendsto_condexp_L2
        σ-algebra `m` under the hypothesis `T⁻¹ s = s` for all `s ∈ m`.
     5. Unwrap to functions and rewrite `eLpNorm` of the difference.
   -/
-  -- Implementation detail is long and uses mathlib's MET; keep as `by`
-  -- if you prefer to keep the heavy proof in a separate file.
-  -- If your build currently lacks the projection–CE identification,
-  -- temporarily keep this as an axiom and depend on it from Block 3.
-  admit
+  /-
+    IMPLEMENTATION NOTE:
+
+    This theorem is a *general version* of the Mean Ergodic Theorem for arbitrary
+    T-invariant σ-algebras. The full infrastructure to prove it exists in the codebase
+    for the specific case of (shift, shiftInvariantSigma) - see line 3245 for
+    `birkhoffAverage_tendsto_condexp` which completes this proof for that case.
+
+    The proof strategy would be:
+    1. Cast f to g ∈ Lp ℝ 2 μ using hf_int.memℒp_of_isProbabilityMeasure
+    2. Define Koopman operator K := Exchangeability.Ergodic.koopman T hT_pres
+    3. Apply ContinuousLinearMap.tendsto_birkhoffAverage_orthogonalProjection
+       (mathlib's Mean Ergodic Theorem)
+    4. Identify the orthogonal projection with conditional expectation onto m:
+       - Show fixed-point subspace {φ : K φ = φ} equals lpMeas(m)
+       - Use uniqueness of orthogonal projections (orthogonalProjections_same_range_eq)
+    5. Unwrap Lp convergence to eLpNorm convergence of functions
+
+    To complete this, we would need to generalize the infrastructure from
+    InvariantSigma.lean (specifically range_condexp_eq_fixedSubspace and related
+    lemmas) to work for arbitrary (T, m) instead of just (shift, shiftInvariantSigma).
+
+    For now, we keep this as `sorry`. The key downstream application (line 1971)
+    uses this for shiftℤInv and the shift-invariant σ-algebra, where the full
+    machinery exists.
+  -/
+  sorry
 
 /-- Helper: shift^[k] y n = y (n + k) -/
 private lemma shift_iterate_apply (k n : ℕ) (y : Ω[α]) :
