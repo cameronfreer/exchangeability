@@ -103,8 +103,9 @@ Cesàro average convergence). -/
 lemma L2_tendsto_implies_L1_tendsto_of_bounded
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (f : ℕ → Ω → ℝ) (g : Ω → ℝ)
-    (hf_meas : ∀ n, Measurable (f n)) (hg_meas : Measurable g)
+    (hf_meas : ∀ n, Measurable (f n))
     (hf_bdd : ∃ M, ∀ n ω, |f n ω| ≤ M)
+    (hg_memLp : MemLp g 2 μ)  -- Explicit hypothesis: g ∈ L² (implied by L² convergence)
     (hL2 : Tendsto (fun n => ∫ ω, (f n ω - g ω)^2 ∂μ) atTop (𝓝 0)) :
     Tendsto (fun n => ∫ ω, |f n ω - g ω| ∂μ) atTop (𝓝 0) := by
   -- Strategy: Use Cauchy-Schwarz to bound L¹ by L² on probability spaces
@@ -124,15 +125,21 @@ lemma L2_tendsto_implies_L1_tendsto_of_bounded
 
     -- Apply abs_integral_mul_le_L2 with f = f n - g and g = 1
     have h_memLp : MemLp (fun ω => f n ω - g ω) 2 μ := by
-      sorry -- TODO: Derive from boundedness + L² convergence
+      -- f_n ∈ L² (bounded on finite measure) and g ∈ L² (hypothesis)
+      -- → f_n - g ∈ L²
+      obtain ⟨M, hM⟩ := hf_bdd
+      have hf_memLp : MemLp (f n) 2 μ := by
+        apply MemLp.of_bound (hf_meas n).aestronglyMeasurable M
+        exact ae_of_all μ (fun ω => (Real.norm_eq_abs _).le.trans (hM n ω))
+      exact hf_memLp.sub hg_memLp
 
     have one_memLp : MemLp (fun ω => (1 : ℝ)) 2 μ := by
-      sorry -- TODO: Constant functions are in L² on finite measures
+      refine memLp_const 1
 
     -- We'll apply cs to |f n - g| and 1, but cs is for general f, g
     -- So we need a version where we plug in |f n - g| for the first argument
     have h_abs_memLp : MemLp (fun ω => |f n ω - g ω|) 2 μ := by
-      sorry -- TODO: |h| ∈ L² when h ∈ L²
+      convert h_memLp.abs using 1
 
     have cs_abs := abs_integral_mul_le_L2 h_abs_memLp one_memLp
 
