@@ -2204,8 +2204,8 @@ lemma block_coord_condIndep
     use S'
     constructor
     · -- S' is measurable
-      have : S' = (fun g => fun i => g (Fin.castLE hkℓ i)) ⁻¹' S := rfl
-      have : Measurable (fun g => fun i => g (Fin.castLE hkℓ i)) := by measurability
+      have : S' = (fun (g : Fin ℓ → α) => fun (i : Fin k) => g (Fin.castLE hkℓ i)) ⁻¹' S := rfl
+      have : Measurable (fun (g : Fin ℓ → α) => fun (i : Fin k) => g (Fin.castLE hkℓ i)) := by measurability
       exact MeasurableSet.preimage hS_meas this
     · -- Preimage equality
       ext ω
