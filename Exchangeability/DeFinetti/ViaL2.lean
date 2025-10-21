@@ -3014,17 +3014,23 @@ lemma alphaIic_ae_eq_alphaIicCE
   have h_alphaIicCE_is_limit : ∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m ≥ M,
       ∫ ω, |A n m ω - alphaIicCE X hX_contract hX_meas hX_L2 t ω| ∂μ < ε := by
     intro n ε hε
-    -- For an exchangeable (contractable) sequence, the Cesàro averages of f(X_i)
-    -- converge in L² (hence L¹) to E[f(X_0) | tailSigma X]
-    -- This is a consequence of the mean ergodic theorem or reverse martingale convergence
 
-    -- Apply cesaro_to_condexp_L1
-    -- The axiom gives convergence for ∑_{i<m} f(X i), but we have ∑_{k<m} f(X (n+k+1))
-    -- For contractable sequences, shifting doesn't affect the limit (tail σ-algebra is shift-invariant)
-
-    -- For now, use the axiom directly for n=0 case, and note that the general case
-    -- requires showing tail σ-algebra invariance under shifts
-    sorry -- TODO: Use cesaro_to_condexp_L1 + shift invariance of contractability
+    -- cesaro_to_condexp_L1 axiom: (1/m) ∑_{i<m} f(X i) → μ[f∘X₀|tail]  in L¹
+    -- Our A n m:                  (1/m) ∑_{k<m} f(X(n+k+1))
+    --
+    -- For n=0: A 0 m = (1/m) ∑_{k<m} f(X(k+1))  [indices 1,...,m]
+    --          axiom  = (1/m) ∑_{i<m} f(X(i))    [indices 0,...,m-1]
+    --
+    -- Key observation: For contractable/exchangeable sequences, shifting indices
+    -- by a finite amount doesn't affect the limit. The tail σ-algebra is shift-invariant.
+    --
+    -- Two approaches:
+    -- 1. Prove that for contractable X, the conditional expectation μ[f∘X₁|tail] = μ[f∘X₀|tail]
+    --    (shift invariance of tail σ-algebra)
+    -- 2. Or show that the O(1/m) error from the off-by-one vanishes in the limit
+    --
+    -- For now, we leave this as sorry. The mathematical content is standard ergodic theory.
+    sorry -- TODO: Apply cesaro_to_condexp_L1 with shift invariance
 
   -- Measurability of Cesàro averages
   have hA_meas : ∀ n m, AEStronglyMeasurable (A n m) μ := by
