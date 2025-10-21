@@ -600,13 +600,16 @@ lemma condExp_L1_lipschitz [IsFiniteMeasure μ]
 /-- Conditional expectation pull-out property for bounded measurable functions.
 
 If g is m-measurable and bounded, then E[f·g|m] = E[f|m]·g a.e. -/
-lemma condExp_mul_pullout [IsFiniteMeasure μ]
-    {m : MeasurableSpace Ω} (hm : m ≤ ‹_›)
+lemma condExp_mul_pullout {Ω : Type*} {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+    [IsFiniteMeasure μ]
+    {m : MeasurableSpace Ω} (hm : m ≤ m₀)
     {f g : Ω → ℝ} (hf : Integrable f μ)
     (hg_meas : @Measurable Ω ℝ m _ g)
     (hg_bd : ∃ C, ∀ ω, |g ω| ≤ C) :
     μ[f * g|m] =ᵐ[μ] fun ω => μ[f|m] ω * g ω := by
-  -- Use mathlib's condExp_stronglyMeasurable_mul_of_bound with multiplication order swapped
+  -- Use mathlib's condExp_stronglyMeasurable_mul_of_bound with explicit instance management
+  -- following the pattern from condExpWith (line 338)
+
   -- g is m-measurable, so it's m-strongly measurable
   have hg_strong : StronglyMeasurable[m] g := hg_meas.stronglyMeasurable
 
@@ -614,21 +617,25 @@ lemma condExp_mul_pullout [IsFiniteMeasure μ]
   obtain ⟨C, hC⟩ := hg_bd
   have hg_bound : ∀ᵐ ω ∂μ, ‖g ω‖ ≤ C := ae_of_all μ fun ω => (Real.norm_eq_abs _).le.trans (hC ω)
 
-  sorry
-  -- Mathematical strategy (correct):
-  -- 1. Use condExp_stronglyMeasurable_mul_of_bound to get: μ[g * f|m] = g * μ[f|m]
-  -- 2. Apply condExp_congr_ae with commutativity: μ[f * g|m] = μ[g * f|m]
-  -- 3. Combine with step 1: μ[f * g|m] = g * μ[f|m] = μ[f|m] * g
-  --
-  -- Technical blocker (Lean 4 limitation):
-  -- condExp_stronglyMeasurable_mul_of_bound has signature requiring [IsFiniteMeasure μ],
-  -- but with multiple measurable space structures (m and inst✝¹) in scope, Lean's type
-  -- class resolution produces "typeclass instance problem is stuck" with metavariable
-  -- ?m.104. This is a known Lean 4 limitation when transporting between type class
-  -- instances even with a proof of compatibility (hm : m ≤ inst✝¹).
-  --
-  -- The proof would work if we could provide the IsFiniteMeasure instance explicitly,
-  -- but the @ notation fails due to measurable space structure mismatches
+  -- Provide typeclass instances explicitly (key insight from condExpWith pattern!)
+  haveI : IsFiniteMeasure μ := inferInstance
+  haveI : IsFiniteMeasure (μ.trim hm) := isFiniteMeasure_trim μ hm
+  haveI : SigmaFinite (μ.trim hm) := sigmaFinite_trim μ hm
+
+  -- Now condExp_stronglyMeasurable_mul_of_bound can resolve instances
+  have h := condExp_stronglyMeasurable_mul_of_bound hm hg_strong hf C hg_bound
+
+  -- Commute to get μ[f * g|m] = μ[f|m] * g
+  calc μ[f * g|m]
+      =ᵐ[μ] μ[g * f|m] := by
+          apply condExp_congr_ae
+          filter_upwards with ω
+          simp only [Pi.mul_apply]
+          ring
+    _ =ᵐ[μ] fun ω => g ω * μ[f|m] ω := h
+    _ =ᵐ[μ] fun ω => μ[f|m] ω * g ω := by
+          filter_upwards with ω
+          ring
 
 end OperatorTheoretic
 
