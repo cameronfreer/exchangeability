@@ -103,8 +103,9 @@ Cesàro average convergence). -/
 lemma L2_tendsto_implies_L1_tendsto_of_bounded
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (f : ℕ → Ω → ℝ) (g : Ω → ℝ)
-    (hf_meas : ∀ n, Measurable (f n)) (hg_meas : Measurable g)
+    (hf_meas : ∀ n, Measurable (f n))
     (hf_bdd : ∃ M, ∀ n ω, |f n ω| ≤ M)
+    (hg_memLp : MemLp g 2 μ)  -- Explicit hypothesis: g ∈ L² (implied by L² convergence)
     (hL2 : Tendsto (fun n => ∫ ω, (f n ω - g ω)^2 ∂μ) atTop (𝓝 0)) :
     Tendsto (fun n => ∫ ω, |f n ω - g ω| ∂μ) atTop (𝓝 0) := by
   -- Strategy: Use Cauchy-Schwarz to bound L¹ by L² on probability spaces
@@ -124,20 +125,13 @@ lemma L2_tendsto_implies_L1_tendsto_of_bounded
 
     -- Apply abs_integral_mul_le_L2 with f = f n - g and g = 1
     have h_memLp : MemLp (fun ω => f n ω - g ω) 2 μ := by
-      -- Key insight: hL2 converges to 0, so each integral ∫ (f n - g)² dμ is finite
-      -- This means (f n - g)² is integrable, hence f n - g ∈ L²
-      rw [memLp_two_iff_integrable_sq ((hf_meas n).sub hg_meas).aestronglyMeasurable]
-      -- A sequence converging to 0 has bounded terms, so the integral is finite
-      have h_integrable_sq : Integrable (fun ω => (f n ω - g ω)^2) μ := by
-        have h_ae : AEStronglyMeasurable (fun ω => (f n ω - g ω)^2) μ :=
-          ((hf_meas n).sub hg_meas).aestronglyMeasurable.pow _
-        have h_nonneg : 0 ≤ᵐ[μ] (fun ω => (f n ω - g ω)^2) :=
-          ae_of_all μ (fun ω => sq_nonneg _)
-        rw [← lintegral_ofReal_ne_top_iff_integrable h_ae h_nonneg]
-        -- The lintegral equals ofReal of the integral (when both are well-defined)
-        -- We need to show the lintegral is finite
-        sorry -- TODO: Use convergence to show finiteness
-      exact h_integrable_sq
+      -- f_n ∈ L² (bounded on finite measure) and g ∈ L² (hypothesis)
+      -- → f_n - g ∈ L²
+      obtain ⟨M, hM⟩ := hf_bdd
+      have hf_memLp : MemLp (f n) 2 μ := by
+        apply MemLp.of_bound (hf_meas n).aestronglyMeasurable M
+        exact ae_of_all μ (fun ω => (Real.norm_eq_abs _).le.trans (hM n ω))
+      exact hf_memLp.sub hg_memLp
 
     have one_memLp : MemLp (fun ω => (1 : ℝ)) 2 μ := by
       refine memLp_const 1
