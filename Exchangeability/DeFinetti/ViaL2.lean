@@ -1602,8 +1602,7 @@ theorem subseq_ae_of_L1
       rw [hasFiniteIntegral_iff_norm]
       -- We use integral_norm_eq_lintegral_enorm: ∫ ‖f‖ = (∫⁻ ‖f‖ₑ).toReal
       -- So if ∫ ‖f‖ is a finite real number, then ∫⁻ ‖f‖ₑ < ∞
-      have h_ae := ((h_alpha_meas n).sub h_alpha_inf_meas).aestronglyMeasurable
-      rw [← integral_norm_eq_lintegral_enorm h_ae]
+      rw [← integral_norm_eq_lintegral_enorm ((h_alpha_meas n).sub h_alpha_inf_meas).aestronglyMeasurable]
       -- Now: need (ENNReal.ofReal (∫ ‖alpha n - alpha_inf‖)) < ∞
       -- This is true for any finite real number
       simp only [ENNReal.ofReal_lt_top]
@@ -1616,32 +1615,39 @@ theorem subseq_ae_of_L1
     intro ε hε
     -- Get δ such that ENNReal.ofReal δ = ε (or close enough)
     -- Since ε > 0 in ENNReal, we can find a positive real δ
-    have ⟨δ, hδ_pos, hδ_eq⟩ : ∃ δ > 0, ENNReal.ofReal δ = ε := by
+    have ⟨δ, hδ_pos, hδ_le⟩ : ∃ δ > 0, ENNReal.ofReal δ ≤ ε := by
       by_cases h_top : ε = ⊤
-      · use 1
+      · -- When ε = ⊤, any finite value works
+        use 1
         constructor
         · norm_num
-        · simp [h_top]
-      · have : ε ≠ 0 := hε.ne'
+        · rw [h_top]
+          exact le_top
+      · -- When ε ≠ ⊤, we can use ε.toReal
+        have : ε ≠ 0 := hε.ne'
         use ε.toReal
         constructor
         · exact ENNReal.toReal_pos this h_top
-        · exact ENNReal.ofReal_toReal h_top
-    rw [← hδ_eq]
+        · rw [ENNReal.ofReal_toReal h_top]
     -- Now get N such that ∫ |alpha n - alpha_inf| < δ for n ≥ N
     rw [Metric.tendsto_atTop] at h_integral_tendsto
     obtain ⟨N, hN⟩ := h_integral_tendsto δ hδ_pos
     use N
     intro n hn
-    -- Show eLpNorm (alpha n - alpha_inf) 1 μ ≤ ENNReal.ofReal δ
-    rw [eLpNorm_one_eq_integral_abs (h_integrable n)]
-    rw [ENNReal.ofReal_le_ofReal_iff (le_of_lt hδ_pos)]
-    -- We have dist (∫ |alpha n - alpha_inf|) 0 < δ
-    -- which means |∫ |alpha n - alpha_inf|| < δ
-    -- Since ∫ |alpha n - alpha_inf| ≥ 0, this means ∫ |alpha n - alpha_inf| < δ
-    have h_dist := hN n hn
-    rw [Real.dist_eq, sub_zero, abs_of_nonneg (integral_nonneg (fun ω => abs_nonneg _))] at h_dist
-    exact le_of_lt h_dist
+    -- Show eLpNorm (alpha n - alpha_inf) 1 μ ≤ ε
+    -- We'll show it's ≤ ENNReal.ofReal δ ≤ ε
+    calc eLpNorm (fun ω => alpha n ω - alpha_inf ω) 1 μ
+        = ENNReal.ofReal (∫ ω, |alpha n ω - alpha_inf ω| ∂μ) :=
+          eLpNorm_one_eq_integral_abs (h_integrable n)
+      _ ≤ ENNReal.ofReal δ := by
+          apply ENNReal.ofReal_le_ofReal
+          -- We have dist (∫ |alpha n - alpha_inf|) 0 < δ
+          -- which means |∫ |alpha n - alpha_inf|| < δ
+          -- Since ∫ |alpha n - alpha_inf| ≥ 0, this means ∫ |alpha n - alpha_inf| < δ
+          have h_dist := hN n hn
+          rw [Real.dist_eq, sub_zero, abs_of_nonneg (integral_nonneg (fun ω => abs_nonneg _))] at h_dist
+          exact le_of_lt h_dist
+      _ ≤ ε := hδ_le
 
   -- Step 2: eLpNorm convergence implies convergence in measure
   have h_tendstoInMeasure : TendstoInMeasure μ alpha atTop alpha_inf := by
