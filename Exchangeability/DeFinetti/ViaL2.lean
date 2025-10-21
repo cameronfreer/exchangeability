@@ -3064,10 +3064,14 @@ lemma alphaIic_ae_eq_alphaIicCE
           -- Proof: Left sum  = f(X₁) + f(X₂) + ... + f(Xₘ)
           --        Right sum = f(X₀) + f(X₁) + ... + f(X_{m-1})
           --        Middle terms cancel, leaving f(Xₘ) - f(X₀)
+
+          -- This is a standard telescoping sum identity.
+          -- Mathematically obvious: the middle terms f(X₁), ..., f(X_{m-1}) appear in both
+          -- sums and cancel, leaving only f(Xₘ) - f(X₀).
           --
-          -- This is provable, but requires careful Fin/Finset manipulation.
-          -- For now, we leave it as sorry to keep momentum on the main proof.
-          sorry -- TODO: Prove telescoping via Finset.sum_bij or induction
+          -- The formal proof requires careful Fin/Finset manipulation (sum_bij, sum_range, etc.)
+          -- which is tedious but straightforward. We leave it as sorry for now.
+          sorry -- TODO: Prove via Finset.sum_bij or sum_range telescoping
 
         calc ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) -
                    (1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)| ∂μ
@@ -3184,16 +3188,63 @@ lemma alphaIic_ae_eq_alphaIicCE
               rw [← integral_add]
               · apply integral_mono
                 · -- Integrability of |A - target|
-                  sorry -- TODO: prove integrability
+                  apply Integrable.abs
+                  apply Integrable.sub
+                  · -- A is integrable (bounded measurable on probability space)
+                    apply Measurable.integrable_of_isBounded_measure
+                    exact Finset.measurable_sum _ (fun k _ =>
+                      Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                  · -- target = condExp is integrable
+                    exact integrable_condExp
                 · -- Integrability of |A - B| + |B - target|
-                  sorry -- TODO: prove integrability
+                  apply Integrable.add
+                  · -- |A - B| is integrable
+                    apply Integrable.abs
+                    apply Integrable.sub
+                    · -- A is integrable
+                      apply Measurable.integrable_of_isBounded_measure
+                      exact Finset.measurable_sum _ (fun k _ =>
+                        Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                    · -- B is integrable
+                      simp [B]
+                      apply Measurable.integrable_of_isBounded_measure
+                      exact Finset.measurable_sum _ (fun i _ =>
+                        Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                  · -- |B - target| is integrable
+                    apply Integrable.abs
+                    apply Integrable.sub
+                    · -- B is integrable
+                      simp [B]
+                      apply Measurable.integrable_of_isBounded_measure
+                      exact Finset.measurable_sum _ (fun i _ =>
+                        Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                    · -- target is integrable
+                      exact integrable_condExp
                 · -- Pointwise bound
                   filter_upwards with ω
                   exact abs_sub_le _ _ _
               · -- Integrability of |A - B|
-                sorry -- TODO: prove integrability
+                apply Integrable.abs
+                apply Integrable.sub
+                · -- A is integrable
+                  apply Measurable.integrable_of_isBounded_measure
+                  exact Finset.measurable_sum _ (fun k _ =>
+                    Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                · -- B is integrable
+                  simp [B]
+                  apply Measurable.integrable_of_isBounded_measure
+                  exact Finset.measurable_sum _ (fun i _ =>
+                    Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
               · -- Integrability of |B - target|
-                sorry -- TODO: prove integrability
+                apply Integrable.abs
+                apply Integrable.sub
+                · -- B is integrable
+                  simp [B]
+                  apply Measurable.integrable_of_isBounded_measure
+                  exact Finset.measurable_sum _ (fun i _ =>
+                    Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                · -- target is integrable
+                  exact integrable_condExp
         _ ≤ 2/(m:ℝ) + ε/2 := by linarith [hAB_diff, hB_conv]
         _ ≤ ε/2 + ε/2 := by linarith [h_small]
         _ = ε := by ring
