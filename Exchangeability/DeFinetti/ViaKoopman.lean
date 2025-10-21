@@ -903,39 +903,41 @@ private lemma condexp_pair_lag_constant_twoSided
         | shiftInvariantSigmaℤ (α := α)] := by
     sorry
     /-
-    ATTEMPTED FIX (Failed - arithmetic doesn't work out):
+    BLOCKER: First-coordinate shift invariance not derivable from available axioms
 
-    Goal: Show CE[f(ω(-1)) * g(ω k)] = CE[f(ω 0) * g(ω k)]
+    Goal: CE[f(ω(-1)) * g(ω k)] = CE[f(ω 0) * g(ω k)]
 
-    This is "lag constancy in the first coordinate" - shifting the time index
-    of f from -1 to 0 while keeping g at k doesn't change the conditional expectation
-    onto the shift-invariant σ-algebra.
+    This equality requires shifting ONLY the first coordinate (f's time index) from -1 to 0
+    while keeping the second coordinate (g's time index) fixed at k.
 
-    Attempted approach using condexp_precomp_shiftℤInv_eq:
-    - That axiom gives: CE[F ∘ shiftℤInv] = CE[F]
-    - Tried to apply with F = (fun ω => f (ω 0) * g (ω k))
-    - Then F ∘ shiftℤInv = (fun ω => f (ω (-1)) * g (ω (k-1)))
-    - But Fk = (fun ω => f (ω (-1)) * g (ω k)), not g(ω (k-1))!
-    - The second coordinate doesn't match
+    **Why available axioms don't help:**
 
-    Why it failed:
-    - shiftℤInv shifts ALL coordinates: shiftℤInv ω i = ω (i - 1)
-    - So both f and g coordinates get shifted
-    - But we only want to shift the f coordinate
+    Available: condexp_precomp_shiftℤInv_eq states CE[F ∘ shiftℤInv] = CE[F]
+    - For F(ω) = f(ω 0) * g(ω k):
+      F(shiftℤInv ω) = f(ω(-1)) * g(ω(k-1))   [both coordinates shift]
+    - For F(ω) = f(ω 0) * g(ω(k+1)):
+      F(shiftℤInv ω) = f(ω(-1)) * g(ω k)      [gives CE[f(ω(-1))*g(ω k)] = CE[f(ω 0)*g(ω(k+1))]]
 
-    What's actually needed:
-    - A lemma about "lag constancy" that says CE is constant in the lag
-    - OR: A different invariance property specific to products
-    - OR: Use naturality/factorization properties of CE
+    Available: condexp_precomp_iterate_eq_twosided states CE[F ∘ shiftℤ^k] = CE[F]
+    - Similar issue: shifts all coordinates simultaneously
 
-    This is likely related to the axiomatized `condexp_pair_lag_constant_twoSided`
-    which is commented out at line 700, but that shifts the SECOND coordinate,
-    not the first.
+    **Root cause:** shiftℤ and shiftℤInv are global transformations that shift the entire
+    sequence. They cannot shift individual coordinate indices independently.
 
-    TODO: Either:
-    1. Prove this using properties of shift-invariant σ-algebra
-    2. Axiomatize as a "first-coordinate lag constancy" lemma
-    3. Find a different proof strategy that doesn't need this equality
+    **Why this lemma was previously axiomatized:**
+    The commented-out axiom at line 804 (`condexp_pair_lag_constant_twoSided`) directly
+    states this property. The current lemma is an ATTEMPT to derive it from more basic
+    axioms, but this derivation requires a "partial shift" operation not available in
+    the current axiom set.
+
+    **Potential solutions:**
+    1. Re-axiomatize this specific property (as was done previously)
+    2. Add a more general "coordinate-wise shift" axiom to the foundation
+    3. Prove using a different characterization of shift-invariant σ-algebras
+    4. Use conditional independence/factorization instead of lag constancy
+
+    **Impact:** This sorry BLOCKS two downstream lemmas (lines 2330, 2429) that depend on
+    lag constancy for their proofs.
     -/
   refine h_shift.trans ?_
   simpa [h_shifted_eq] using h_unshifted_eq
