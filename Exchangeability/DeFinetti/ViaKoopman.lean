@@ -1651,14 +1651,14 @@ ambient/sub-σ-algebra mismatch in the Koopman infrastructure.
 constant sequence trivially converges in any norm.
 -/
 private theorem birkhoffAverage_condexp_m_constant
-    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {m : MeasurableSpace Ω} (hm : m ≤ ‹MeasurableSpace Ω›)
+    {Ω : Type*} [inst : MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {m : MeasurableSpace Ω} (hm : m ≤ inst)
     (T : Ω → Ω) (hT_meas : Measurable T) (hT_pres : MeasurePreserving T μ μ)
-    (h_inv : ∀ s, MeasurableSet[m] s → T ⁻¹' s = s)
+    (h_inv : ∀ s, @MeasurableSet Ω m s → T ⁻¹' s = s)
     (f : Ω → ℝ) (hf_int : Integrable f μ) (n : ℕ) (hn : n > 0) :
-    MeasureTheory.condExp m μ (fun ω => (1 / (n : ℝ)) *
+    MeasureTheory.condExp (m := m) (μ := μ) (fun ω => (1 / (n : ℝ)) *
         (Finset.range n).sum (fun j => f (T^[j] ω)))
-      =ᵐ[μ] MeasureTheory.condExp m μ f := by
+      =ᵐ[μ] MeasureTheory.condExp (m := m) (μ := μ) f := by
   -- First show each f ∘ T^[j] is integrable
   have hf_Tj_int : ∀ j, Integrable (f ∘ T^[j]) μ := fun j => by
     rw [(hT_pres.iterate j).integrable_comp hf_int.aestronglyMeasurable]
@@ -1666,65 +1666,61 @@ private theorem birkhoffAverage_condexp_m_constant
 
   -- The sum is integrable
   have h_sum_int : Integrable (fun ω => (Finset.range n).sum (fun j => f (T^[j] ω))) μ := by
-    apply Integrable.finset_sum
-    intro j _
+    refine Integrable.finset_sum (Finset.range n) (fun j _ => ?_)
     exact hf_Tj_int j
 
   -- Use linearity: condExp of scalar * sum = scalar * condExp of sum
-  have h_smul : MeasureTheory.condExp m μ (fun ω => (1 / (n : ℝ)) *
+  have h_smul : MeasureTheory.condExp (m := m) (μ := μ) (fun ω => (1 / (n : ℝ)) *
         (Finset.range n).sum (fun j => f (T^[j] ω)))
-      =ᵐ[μ] (fun ω => (1 / (n : ℝ)) * MeasureTheory.condExp m μ
+      =ᵐ[μ] (fun ω => (1 / (n : ℝ)) * MeasureTheory.condExp (m := m) (μ := μ)
         (fun ω => (Finset.range n).sum (fun j => f (T^[j] ω))) ω) := by
-    exact MeasureTheory.condExp_smul (1 / (n : ℝ))
-        (fun ω => (Finset.range n).sum (fun j => f (T^[j] ω)))
+    convert MeasureTheory.condExp_smul (m := m) (μ := μ) (c := 1 / (n : ℝ)) h_sum_int using 2
+    ext ω; simp [smul_eq_mul]
 
   -- condExp of sum = sum of condExps
-  have h_sum : MeasureTheory.condExp m μ (fun ω => (Finset.range n).sum (fun j => f (T^[j] ω)))
+  have h_sum : MeasureTheory.condExp (m := m) (μ := μ) (fun ω => (Finset.range n).sum (fun j => f (T^[j] ω)))
       =ᵐ[μ] (fun ω => (Finset.range n).sum (fun j =>
-        MeasureTheory.condExp m μ (f ∘ T^[j]) ω)) := by
-    apply MeasureTheory.condExp_finset_sum
-    intro j _
-    exact hf_Tj_int j
+        MeasureTheory.condExp (m := m) (μ := μ) (f ∘ T^[j]) ω)) := by
+    convert MeasureTheory.condExp_finset_sum (m := m) (μ := μ) (s := Finset.range n) (fun j _ => hf_Tj_int j) using 2
+    ext ω; rfl
 
-  -- Each condExp m μ (f ∘ T^[j]) = condExp m μ f
+  -- Each condExp (f ∘ T^[j]) = condExp f
   have h_each : ∀ j ∈ Finset.range n,
-      MeasureTheory.condExp m μ (f ∘ T^[j]) =ᵐ[μ] MeasureTheory.condExp m μ f :=
+      MeasureTheory.condExp (m := m) (μ := μ) (f ∘ T^[j]) =ᵐ[μ] MeasureTheory.condExp (m := m) (μ := μ) f :=
     fun j _ => condexp_comp_T_pow_eq_condexp hm T hT_meas hT_pres h_inv f hf_int j
 
-  -- Sum of n copies of condExp m μ f equals n * condExp m μ f
+  -- Sum of n copies of condExp f equals n * condExp f
   have h_sum_const : (fun ω => (Finset.range n).sum (fun j =>
-        MeasureTheory.condExp m μ (f ∘ T^[j]) ω))
-      =ᵐ[μ] (fun ω => (Finset.range n).sum (fun _ => MeasureTheory.condExp m μ f ω)) := by
-    apply Filter.EventuallyEq.finset_sum
-    intro j hj
-    exact h_each j hj
+        MeasureTheory.condExp (m := m) (μ := μ) (f ∘ T^[j]) ω))
+      =ᵐ[μ] (fun ω => (Finset.range n).sum (fun _ => MeasureTheory.condExp (m := m) (μ := μ) f ω)) := by
+    refine Filter.EventuallyEq.finset_sum (fun j hj => h_each j hj)
 
   -- Sum of n identical terms
-  have h_n_times : (fun ω => (Finset.range n).sum (fun _ => MeasureTheory.condExp m μ f ω))
-      = (fun ω => (n : ℝ) * MeasureTheory.condExp m μ f ω) := by
+  have h_n_times : (fun ω => (Finset.range n).sum (fun _ => MeasureTheory.condExp (m := m) (μ := μ) f ω))
+      = (fun ω => (n : ℝ) * MeasureTheory.condExp (m := m) (μ := μ) f ω) := by
     ext ω
     simp [Finset.sum_const, Finset.card_range]
 
   -- Combine everything
-  calc MeasureTheory.condExp m μ (fun ω => (1 / (n : ℝ)) *
+  calc MeasureTheory.condExp (m := m) (μ := μ) (fun ω => (1 / (n : ℝ)) *
           (Finset.range n).sum (fun j => f (T^[j] ω)))
-      =ᵐ[μ] (fun ω => (1 / (n : ℝ)) * MeasureTheory.condExp m μ
+      =ᵐ[μ] (fun ω => (1 / (n : ℝ)) * MeasureTheory.condExp (m := m) (μ := μ)
           (fun ω => (Finset.range n).sum (fun j => f (T^[j] ω))) ω) := h_smul
     _ =ᵐ[μ] (fun ω => (1 / (n : ℝ)) * (Finset.range n).sum (fun j =>
-          MeasureTheory.condExp m μ (f ∘ T^[j]) ω)) := by
+          MeasureTheory.condExp (m := m) (μ := μ) (f ∘ T^[j]) ω)) := by
         apply Filter.EventuallyEq.mul_left
         exact h_sum
     _ =ᵐ[μ] (fun ω => (1 / (n : ℝ)) * (Finset.range n).sum (fun _ =>
-          MeasureTheory.condExp m μ f ω)) := by
+          MeasureTheory.condExp (m := m) (μ := μ) f ω)) := by
         apply Filter.EventuallyEq.mul_left
         exact h_sum_const
-    _ = (fun ω => (1 / (n : ℝ)) * ((n : ℝ) * MeasureTheory.condExp m μ f ω)) := by
+    _ = (fun ω => (1 / (n : ℝ)) * ((n : ℝ) * MeasureTheory.condExp (m := m) (μ := μ) f ω)) := by
         rw [h_n_times]
-    _ = (fun ω => MeasureTheory.condExp m μ f ω) := by
+    _ = (fun ω => MeasureTheory.condExp (m := m) (μ := μ) f ω) := by
         ext ω
         field_simp
         ring
-    _ = MeasureTheory.condExp m μ f := rfl
+    _ = MeasureTheory.condExp (m := m) (μ := μ) f := rfl
 
 /-- L² mean-ergodic theorem in function form:
 the Cesàro averages of `f ∘ T^[j]` converge in L² to `condExp m μ f`, provided
