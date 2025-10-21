@@ -107,23 +107,42 @@ lemma L2_tendsto_implies_L1_tendsto_of_bounded
     (hf_bdd : ∃ M, ∀ n ω, |f n ω| ≤ M)
     (hL2 : Tendsto (fun n => ∫ ω, (f n ω - g ω)^2 ∂μ) atTop (𝓝 0)) :
     Tendsto (fun n => ∫ ω, |f n ω - g ω| ∂μ) atTop (𝓝 0) := by
-  -- **Proof strategy:** On probability spaces, Hölder inequality gives:
-  --   ∫|f - g| ≤ (∫(f-g)²)^(1/2)
-  --
-  -- Key steps:
-  -- 1. Apply `eLpNorm_le_eLpNorm_mul_rpow_measure_univ` with p=1, q=2
-  -- 2. On probability spaces: eLpNorm f 1 ≤ eLpNorm f 2 (using μ(Ω) = 1)
-  -- 3. Convert: ∫|f| = (eLpNorm f 1).toReal and (∫f²)^(1/2) = (eLpNorm f 2).toReal
-  -- 4. Use lintegral_rpow_enorm_eq_rpow_eLpNorm' to connect eLpNorm 2 to integral
-  -- 5. Apply squeeze theorem: 0 ≤ ∫|f n - g| ≤ (∫(f n - g)²)^(1/2) → 0
-  --
-  -- **Technical details:**
-  -- - Need to convert between ‖·‖ (norm) and |·| (abs) for real numbers
-  -- - Need to show eLpNorm f 2 < ∞ using finiteness of ∫f² from hL2
-  -- - Need ofReal_integral_eq_lintegral_ofReal for connecting lintegral to integral
-  --
-  -- This is a standard argument, see reference proof in CesaroToCondExp.lean:225-287
-  sorry
+  -- On probability spaces, eLpNorm is monotone: eLpNorm f 1 ≤ eLpNorm f 2
+  -- This gives us ∫|h| ≤ (∫h²)^(1/2) for any h
+
+  -- First establish the key inequality for each n: ∫|h| ≤ (∫h²)^(1/2)
+  -- This follows from Hölder/Cauchy-Schwarz on probability spaces
+  have h_bound : ∀ n, ∫ ω, |f n ω - g ω| ∂μ ≤ (∫ ω, (f n ω - g ω)^2 ∂μ) ^ (1/2 : ℝ) := by
+    intro n
+    -- The proof requires:
+    -- 1. eLpNorm_le_eLpNorm_of_exponent_le: on probability spaces, eLpNorm f 1 ≤ eLpNorm f 2
+    -- 2. eLpNorm_one_eq_integral_abs: eLpNorm f 1 = ENNReal.ofReal (∫|f|)
+    -- 3. Connection between eLpNorm 2 and ∫f²:
+    --    (eLpNorm f 2)² = ∫f² (via lintegral_rpow_enorm_eq_rpow_eLpNorm')
+    -- 4. ENNReal.toReal monotonicity
+    -- 5. Finiteness from hL2
+    --
+    -- This is a standard mathlib argument but requires careful navigation of
+    -- ENNReal ↔ ℝ conversions and eLpNorm ↔ integral connections.
+    -- The full proof is ~30 lines of technical ENNReal arithmetic.
+    sorry
+
+  -- Apply squeeze theorem: 0 ≤ ∫|f n - g| ≤ (∫(f n - g)²)^(1/2) → 0
+  have h_nonneg : ∀ n, 0 ≤ ∫ ω, |f n ω - g ω| ∂μ := by
+    intro n
+    apply integral_nonneg
+    intro ω
+    exact abs_nonneg _
+
+  -- Upper bound (∫(f n - g)²)^(1/2) tends to 0
+  have h_upper_to_zero : Tendsto (fun n => (∫ ω, (f n ω - g ω)^2 ∂μ) ^ (1/2 : ℝ)) atTop (𝓝 0) := by
+    -- Since f^(1/2) is continuous at 0+ and ∫(f n - g)² → 0,
+    -- we have (∫(f n - g)²)^(1/2) → 0
+    -- Use: Filter.Tendsto.rpow (for continuous rpow at limits)
+    -- or: continuousAt_rpow_const with Tendsto.comp
+    sorry
+
+  refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_upper_to_zero h_nonneg h_bound
 
 /-! ### Pushforward Measure Integrals -/
 
