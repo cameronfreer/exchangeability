@@ -1599,19 +1599,21 @@ private lemma condexp_comp_T_eq_condexp
   -- Use uniqueness of conditional expectation
   symm
   refine MeasureTheory.ae_eq_condExp_of_forall_setIntegral_eq (μ := μ) (m := m) (m₀ := inst) (hm := hm) ?hf ?hg_int ?hg_eq ?hgm
-  case hf => exact hf.comp_measurePreserving hT_pres
+  case hf =>
+    rw [hT_pres.integrable_comp hf.aestronglyMeasurable]
+    exact hf
   case hg_int =>
     intro s hs hμs
-    exact (MeasureTheory.integrable_condExp (m := m) (μ := μ) (hm := hm)).integrableOn
+    exact (MeasureTheory.integrable_condExp (m := m) (μ := μ)).integrableOn
   case hg_eq =>
     intro s hs hμs
-    rw [MeasureTheory.setIntegral_condExp (m := m) (μ := μ) (hm := hm) hf (@MeasurableSet.mono Ω m inst s hs hm)]
+    rw [MeasureTheory.setIntegral_condExp (m := m) (μ := μ) (hm := hm) hf (hm s hs)]
     -- Need: ∫ x in s, f x ∂μ = ∫ x in s, f (T x) ∂μ
-    rw [← hT_pres.setIntegral_preimage_emb hT_meas (@MeasurableSet.mono Ω m inst s hs hm) hf.integrableOn]
+    rw [← hT_pres.setIntegral_preimage_emb hT_meas (hm s hs) hf.integrableOn]
     -- Use T⁻¹ s = s from h_inv
     congr 1
     exact (h_inv s hs).symm
-  case hgm => exact (MeasureTheory.stronglyMeasurable_condExp (m := m) (μ := μ) (hm := hm)).aestronglyMeasurable
+  case hgm => exact (MeasureTheory.stronglyMeasurable_condExp (m := m) (μ := μ)).aestronglyMeasurable
 
 /-- Extension to iterated composition: 𝔼[f ∘ T^[k] | m] = 𝔼[f | m] for all k. -/
 private lemma condexp_comp_T_pow_eq_condexp
@@ -1666,7 +1668,7 @@ private theorem birkhoffAverage_condexp_m_constant
 
   -- The sum is integrable
   have h_sum_int : Integrable (fun ω => (Finset.range n).sum (fun j => f (T^[j] ω))) μ := by
-    refine Integrable.finset_sum (Finset.range n) (fun j _ => ?_)
+    refine integrable_finset_sum (Finset.range n) (fun j _ => ?_)
     exact hf_Tj_int j
 
   -- Use linearity: condExp of scalar * sum = scalar * condExp of sum
@@ -1674,15 +1676,21 @@ private theorem birkhoffAverage_condexp_m_constant
         (Finset.range n).sum (fun j => f (T^[j] ω)))
       =ᵐ[μ] (fun ω => (1 / (n : ℝ)) * MeasureTheory.condExp (m := m) (μ := μ)
         (fun ω => (Finset.range n).sum (fun j => f (T^[j] ω))) ω) := by
-    convert MeasureTheory.condExp_smul (m := m) (μ := μ) (c := 1 / (n : ℝ)) h_sum_int using 2
+    have := @MeasureTheory.condExp_smul _ _ _ _ _ _ _ μ _ _ (1 / (n : ℝ)) (fun ω => (Finset.range n).sum (fun j => f (T^[j] ω))) m
+    convert this using 2
     ext ω; simp [smul_eq_mul]
 
   -- condExp of sum = sum of condExps
   have h_sum : MeasureTheory.condExp (m := m) (μ := μ) (fun ω => (Finset.range n).sum (fun j => f (T^[j] ω)))
       =ᵐ[μ] (fun ω => (Finset.range n).sum (fun j =>
         MeasureTheory.condExp (m := m) (μ := μ) (f ∘ T^[j]) ω)) := by
-    convert MeasureTheory.condExp_finset_sum (m := m) (μ := μ) (s := Finset.range n) (fun j _ => hf_Tj_int j) using 2
-    ext ω; rfl
+    have := @MeasureTheory.condExp_finset_sum _ _ _ _ _ _ _ _ μ _ _ (Finset.range n) (fun j => f ∘ T^[j]) (fun j _ => hf_Tj_int j) m
+    convert this using 2
+    ext ω
+    simp only [Finset.sum_apply]
+    congr 1
+    ext j
+    rfl
 
   -- Each condExp (f ∘ T^[j]) = condExp f
   have h_each : ∀ j ∈ Finset.range n,
@@ -1693,7 +1701,10 @@ private theorem birkhoffAverage_condexp_m_constant
   have h_sum_const : (fun ω => (Finset.range n).sum (fun j =>
         MeasureTheory.condExp (m := m) (μ := μ) (f ∘ T^[j]) ω))
       =ᵐ[μ] (fun ω => (Finset.range n).sum (fun _ => MeasureTheory.condExp (m := m) (μ := μ) f ω)) := by
-    refine Filter.EventuallyEq.finset_sum (fun j hj => h_each j hj)
+    -- Use filter_upwards to combine the ae equalities
+    filter_upwards [Filter.eventually_all.mpr h_each] with ω hω
+    simp only [Finset.sum_apply]
+    exact Finset.sum_congr rfl hω
 
   -- Sum of n identical terms
   have h_n_times : (fun ω => (Finset.range n).sum (fun _ => MeasureTheory.condExp (m := m) (μ := μ) f ω))
