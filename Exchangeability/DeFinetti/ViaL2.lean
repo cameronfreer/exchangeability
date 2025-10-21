@@ -2950,23 +2950,87 @@ lemma alphaIic_ae_eq_alphaIicCE
   -- Step 1: alphaIic is (essentially) the L¹ limit of these averages by construction
   have h_alphaIic_is_limit : ∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m ≥ M,
       ∫ ω, |A n m ω - alphaIic X hX_contract hX_meas hX_L2 t ω| ∂μ < ε := by
-    intro n
+    intro n ε hε
     -- By definition, alphaIic is max 0 (min 1 (witness from weighted_sums_converge_L1))
     -- The witness satisfies the L¹ convergence property
     unfold alphaIic
-    -- The key is that weighted_sums_converge_L1 gives us an L¹ limit
-    -- and max 0 (min 1 ...) preserves L¹ limits up to a.e. equality
-    sorry  -- Technical: Show clipping to [0,1] preserves L¹ convergence
+
+    -- Get the witness alpha from weighted_sums_converge_L1
+    let alpha := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
+                    (indIic t) (indIic_measurable t) ⟨1, indIic_bdd t⟩).choose
+    have h_alpha_conv := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
+                    (indIic t) (indIic_measurable t) ⟨1, indIic_bdd t⟩).choose_spec.2.2
+
+    -- Use L¹ convergence of A n m to alpha
+    obtain ⟨M, hM⟩ := h_alpha_conv n ε hε
+    use M
+    intro m hm
+
+    -- Strategy: Show A n m is already in [0,1], so clipping doesn't change it
+    -- A n m = (1/m) * ∑ indIic, and each indIic ∈ {0,1}, so A n m ∈ [0,1]
+    have hA_in_01 : ∀ ω, 0 ≤ A n m ω ∧ A n m ω ≤ 1 := by
+      intro ω
+      unfold A
+      constructor
+      · -- 0 ≤ A
+        apply mul_nonneg
+        · positivity
+        · apply Finset.sum_nonneg
+          intro k _
+          unfold indIic
+          simp [Set.indicator]
+          split_ifs <;> norm_num
+      · -- A ≤ 1
+        by_cases hm_pos : m = 0
+        · simp [hm_pos, A]
+        · have hm_cast : 0 < (m : ℝ) := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hm_pos)
+          calc (1 / (m : ℝ)) * ∑ k : Fin m, indIic t (X (n + ↑k + 1) ω)
+              ≤ (1 / (m : ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
+                apply mul_le_mul_of_nonneg_left _ (by positivity)
+                apply Finset.sum_le_sum
+                intro k _
+                unfold indIic
+                simp [Set.indicator]
+                split_ifs <;> norm_num
+            _ = (1 / (m : ℝ)) * m := by simp
+            _ = 1 := by field_simp [hm_cast.ne']
+
+    -- Since A n m ∈ [0,1], we have max 0 (min 1 (A n m)) = A n m
+    have hA_clip_eq : ∀ ω, max 0 (min 1 (A n m ω)) = A n m ω := by
+      intro ω
+      obtain ⟨h0, h1⟩ := hA_in_01 ω
+      simp [max_eq_right h0, min_eq_left h1]
+
+    -- Use the fact that A n m = max 0 (min 1 (A n m)) to rewrite the goal
+    calc ∫ ω, |A n m ω - max 0 (min 1 (alpha ω))| ∂μ
+        = ∫ ω, |max 0 (min 1 (A n m ω)) - max 0 (min 1 (alpha ω))| ∂μ := by
+          congr 1; ext ω; simp [hA_clip_eq ω]
+      _ = ∫ ω, |A n m ω - alpha ω| ∂μ := by
+          congr 1; ext ω; simp [hA_clip_eq ω]
+      _ < ε := hM m hm
 
   -- Step 2: alphaIicCE is also the L¹ limit of the same averages
   -- This is the reverse martingale convergence theorem / ergodic theorem
   have h_alphaIicCE_is_limit : ∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m ≥ M,
       ∫ ω, |A n m ω - alphaIicCE X hX_contract hX_meas hX_L2 t ω| ∂μ < ε := by
     intro n ε hε
-    -- For an exchangeable (contractable) sequence, the Cesàro averages of f(X_i)
-    -- converge in L² (hence L¹) to E[f(X_0) | tailSigma X]
-    -- This is a consequence of the mean ergodic theorem or reverse martingale convergence
-    sorry  -- TODO: Apply Helpers.cesaro_to_condexp_L1 with appropriate index handling
+
+    -- cesaro_to_condexp_L1 axiom: (1/m) ∑_{i<m} f(X i) → μ[f∘X₀|tail]  in L¹
+    -- Our A n m:                  (1/m) ∑_{k<m} f(X(n+k+1))
+    --
+    -- For n=0: A 0 m = (1/m) ∑_{k<m} f(X(k+1))  [indices 1,...,m]
+    --          axiom  = (1/m) ∑_{i<m} f(X(i))    [indices 0,...,m-1]
+    --
+    -- Key observation: For contractable/exchangeable sequences, shifting indices
+    -- by a finite amount doesn't affect the limit. The tail σ-algebra is shift-invariant.
+    --
+    -- Two approaches:
+    -- 1. Prove that for contractable X, the conditional expectation μ[f∘X₁|tail] = μ[f∘X₀|tail]
+    --    (shift invariance of tail σ-algebra)
+    -- 2. Or show that the O(1/m) error from the off-by-one vanishes in the limit
+    --
+    -- For now, we leave this as sorry. The mathematical content is standard ergodic theory.
+    sorry -- TODO: Apply cesaro_to_condexp_L1 with shift invariance
 
   -- Measurability of Cesàro averages
   have hA_meas : ∀ n m, AEStronglyMeasurable (A n m) μ := by
