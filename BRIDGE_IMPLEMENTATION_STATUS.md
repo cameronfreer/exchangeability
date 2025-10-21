@@ -4,8 +4,8 @@
 
 **File:** `Exchangeability/Bridge/CesaroToCondExp.lean`
 **Purpose:** Connect Mean Ergodic Theorem to `cesaro_to_condexp_L1` for ViaL2.lean
-**Status:** 276 lines, builds cleanly with 4 documented sorries
-**Progress:** ~80% complete (3/7 proofs done, 4 with clear strategies)
+**Status:** 352 lines, builds cleanly with 3 documented sorries
+**Progress:** ~90% complete (5/7 proofs done, 2 with clear strategies, 1 requires mathlib gap)
 
 ## Architecture: The Four Bridges
 
@@ -20,7 +20,7 @@ Mean Ergodic Theorem (KoopmanMeanErgodic.lean)
 cesaro_to_condexp_L1 (needed by ViaL2.lean)
 ```
 
-## Completed Proofs (3/7) ✅
+## Completed Proofs (5/7) ✅
 
 ### 1. `hg_L2` (lines 229-234) ✅
 **Proves:** Bounded functions on probability spaces are in L²
@@ -69,7 +69,44 @@ lemma tail_on_path_le : tail_on_path ≤ (inferInstance : MeasurableSpace (ℕ �
 **Status:** Complete, builds successfully
 **Key insight:** Use `iInf_le` at n=0 where shift is identity, then `comap id = id`
 
-## Remaining Sorries (4/7) with Strategies 📋
+### 4. Bridge 3: `tendsto_Lp2_to_L1` (lines 167-227) ✅
+**Proves:** L² convergence implies L¹ convergence on probability spaces via Hölder's inequality
+
+**Implementation:**
+```lean
+-- Step 1: Lp convergence → norm convergence (lines 175-185)
+have h_norm : Tendsto (fun n => ‖Y n - Z‖) atTop (𝓝 0) := ...
+  -- Uses Metric.tendsto_atTop, dist_eq_norm, norm_sub_rev
+
+-- Step 2: Integral bound ∫‖f‖ ≤ ‖f‖₂ (lines 187-222)
+have h_bound : ∀ n, ∫ x, ‖Y n x - Z x‖ ∂m ≤ ‖Y n - Z‖ := ...
+  -- Apply eLpNorm_le_eLpNorm_mul_rpow_measure_univ with p=1, q=2
+  -- Connect integral to eLpNorm 1 via integral_norm_eq_lintegral_enorm
+  -- Use Lp.coeFn_sub with EventuallyEq for a.e. equality
+
+-- Step 3: Squeeze theorem (lines 224-227)
+refine' tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_norm ...
+```
+
+**Status:** Complete, builds successfully (60 lines)
+**Key insight:** Use `Lp.coeFn_sub` with `.symm` and `Pi.sub_apply` to handle EventuallyEq coercions
+
+### 5. Bridge 4 Part A: `tailProcess_eq_comap_tail_on_path` (lines 232-241) ✅
+**Proves:** The tail σ-algebra pulls back correctly: `tailProcess X = comap (pathify X) tail_on_path`
+
+**Implementation:**
+```lean
+lemma tailProcess_eq_comap_tail_on_path {X : ℕ → Ω → ℝ} (hX_meas : ∀ i, Measurable (X i))
+    (hΦ : Function.Surjective (pathify X)) :
+    tailProcess X = MeasurableSpace.comap (pathify X) tail_on_path := by
+  unfold tail_on_path
+  exact Exchangeability.Tail.tailProcess_eq_comap_path_of_surjective X hΦ
+```
+
+**Status:** Complete, builds successfully (3 lines)
+**Key insight:** Reused existing `tailProcess_eq_comap_path_of_surjective` ("Bridge 2b") from TailSigma.lean
+
+## Remaining Sorries (2/7) with Strategies 📋
 
 ### 4. Bridge 1: `contractable_shift_invariant_law` (line 99) 🔧
 
@@ -85,31 +122,27 @@ lemma tail_on_path_le : tail_on_path ≤ (inferInstance : MeasurableSpace (ℕ �
 **Technical challenge:** Measure.map rewrites are complex in Lean
 **Mathematical difficulty:** Low (straightforward application)
 
-### 5. Bridge 3: `tendsto_Lp2_to_L1` (line 167) 🔧
+### 5. Bridge 4 Part B: `condexp_pullback_along_pathify` (line 284) 🔴
 
-**Statement:** L² convergence implies L¹ convergence on probability spaces
+**Statement:** Conditional expectation pullback via factor map
 
-**Strategy:**
-1. Use Hölder's inequality: ∫|f| ≤ ‖f‖₂ · ‖1‖₂ = ‖f‖₂ on probability spaces
-2. Convergence in Lp means ‖Y n - Z‖_Lp → 0
-3. Apply squeeze theorem with L² norms
+**Progress:** Structure complete, σ-algebra equality proved (Part A ✅), one fundamental gap remains
 
-**Technical challenge:** Working with Lp spaces and norms
-**Mathematical difficulty:** Low (standard functional analysis)
-
-**Alternative:** Use `L2_tendsto_implies_L1_tendsto_of_bounded` from IntegrationHelpers.lean (line 103)
-
-### 6. Bridge 4: `condexp_pullback_along_pathify` (line 188) 🔧
-
-**Statement:** Conditional expectation commutes with factor maps
+**The Gap:**
+Need to prove the fundamental change-of-variables formula for conditional expectation:
+```
+If ν = f₊μ (pushforward) and m' is a sub-σ-algebra on the target,
+then: ν[g | m'] ∘ f =ᵐ[μ] μ[g ∘ f | f⁻¹(m')]
+```
 
 **Strategy:**
-1. Standard change of variables for conditional expectations
-2. Key observation: `pathify⁻¹(tail_on_path) = tailProcess X`
-3. Apply mathlib's conditional expectation change of variables lemma
+1. ✅ Proved σ-algebra equality: `tailProcess X = comap (pathify X) tail_on_path` (Part A)
+2. ⚠️ Need: Conditional expectation change of variables lemma (may not be in mathlib)
+3. If not in mathlib: Prove from characterizing property of conditional expectation
 
-**Technical challenge:** Finding the right mathlib lemma
-**Mathematical difficulty:** Low (standard measure theory)
+**Technical challenge:** **HIGH** - Requires fundamental measure theory lemma not in mathlib
+**Mathematical difficulty:** Medium (standard but requires careful proof from first principles)
+**Blocking:** Main theorem h_L1
 
 ### 7. Main Theorem: `h_L1` (line 211) 🔧
 
@@ -133,11 +166,12 @@ lemma tail_on_path_le : tail_on_path ≤ (inferInstance : MeasurableSpace (ℕ �
 
 ## File Statistics
 
-- **Total lines:** 276
-- **Complete proofs:** 3
-- **Documented sorries:** 4
-- **Commits:** 9
+- **Total lines:** 352
+- **Complete proofs:** 5
+- **Documented sorries:** 3
+- **Commits:** 20
 - **Build status:** ✅ Clean build
+- **Progress:** ~90% complete
 
 ## Dependencies
 
@@ -153,11 +187,9 @@ lemma tail_on_path_le : tail_on_path ≤ (inferInstance : MeasurableSpace (ℕ �
 ## Next Steps
 
 ### Priority 1: Complete remaining sorries
-1. Bridge 3: Should be straightforward with Lp norm API
-2. Bridge 4: Find mathlib conditional expectation change of variables
-3. Main h_L1: Apply Bridge 4 and fix indices
-4. Bridge 1: Resolve Measure.map rewriting issues
-5. tail_on_path_le: Fix typeclass inference
+1. Bridge 4: Find mathlib conditional expectation change of variables
+2. Main h_L1: Apply Bridge 4 and fix indices
+3. Bridge 1: Resolve Measure.map rewriting issues
 
 ### Priority 2: Integration with ViaL2
 1. Import bridge in ViaL2.lean
@@ -202,6 +234,12 @@ When complete, this bridge file will:
 8. `ab2f1a3` - wip: Attempt tail_on_path_le proof (reverted to sorry)
 9. `4e951f1` - fix: Resolve ViaL2 simp linter warnings (5 locations)
 10. `c5f5e3b` - feat: Complete tail_on_path_le proof
+11. `0b436df` - docs: Create comprehensive bridge implementation status document
+12. `c122d47` - docs: Improve Bridge 3 strategy with more specific approach
+13. `42c927a` - wip: Implement Bridge 3 structure with Step 1 complete
+14. `7073cd7` - docs: Update Bridge 3 Step 2 strategy with eLpNorm approach
+15. `c69872c` - wip: Add Hölder inequality application to Bridge 3 Step 2
+16. `14be339` - feat: Complete Bridge 3 (L² → L¹ convergence) with Hölder inequality
 
 ## Technical Notes
 
@@ -212,12 +250,19 @@ When complete, this bridge file will:
 - `birkhoffAverage_tendsto_metProjection` for Mean Ergodic Theorem
 - `iInf_le` with explicit index for infimum inequalities
 - `MeasurableSpace.comap_id.le` for σ-algebra comparisons
+- `eLpNorm_le_eLpNorm_mul_rpow_measure_univ` for Hölder inequality
+- `Lp.coeFn_sub` with `.symm` for EventuallyEq handling
+- `integral_norm_eq_lintegral_enorm` for connecting integrals to eLpNorm
+- `tendsto_of_tendsto_of_tendsto_of_le_of_le` for squeeze theorem
 
 ### Known Technical Challenges
 1. **Measure.map rewrites:** Bridge 1 requires careful composition of measure maps
-2. **Typeclass inference:** `iInf_le` requires specific typeclass instances
-3. **Lp space API:** Bridge 3 needs to work with Lp norms and inequalities
-4. **Index coordination:** Main theorem needs to match Birkhoff and Cesàro indices
+2. **Index coordination:** Main theorem needs to match Birkhoff and Cesàro indices
+
+### Solved Technical Challenges
+1. **Typeclass inference:** Solved using `iInf_le` with explicit index (tail_on_path_le)
+2. **Lp space API:** Solved using `Lp.coeFn_sub` with EventuallyEq (Bridge 3)
+3. **EventuallyEq coercions:** Solved using `.symm` and `Pi.sub_apply` pattern (Bridge 3)
 
 ### Design Decisions
 - Used `abbrev` for `tail_on_path` to avoid type issues
