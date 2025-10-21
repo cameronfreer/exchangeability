@@ -199,12 +199,16 @@ lemma condexp_changeOfVariables
 
   -- Integrability of RHS integrand and measurability/integrability of LHS candidate.
   have h_int_right : Integrable (g ∘ f) μ := hg.comp_measurable hf'
+
+  -- Measurability of LHS w.r.t. comap f m'
+  have hf_m' : @Measurable α β _ m' f := fun s hs => hf' (hm' s hs)
   have h_meas_left :
-      AEStronglyMeasurable (((ν[g | m']) : β → ℝ) ∘ f) μ := by
-    have h := stronglyMeasurable_condExp (μ := ν) (m := m') (f := g)
-    -- Need measurability w.r.t. m', but hf is w.r.t. m₀ and m' ≤ m₀
-    have hf_m' : @Measurable α β _ m' f := fun s hs => hf' (hm' s hs)
-    exact h.aestronglyMeasurable.comp_measurable hf_m'
+      @AEStronglyMeasurable α ℝ _ (MeasurableSpace.comap f m') _ (((ν[g | m']) : β → ℝ) ∘ f) μ := by
+    -- TODO: ν[g|m'] is m'-measurable; composition with measurable f should give comap measurability
+    -- Need to find the right mathlib lemma for composing AEStronglyMeasurable functions
+    -- with measurable maps between different sigma-algebras
+    sorry
+
   have h_int_left :
       Integrable (((ν[g | m']) : β → ℝ) ∘ f) μ := by
     have hν_int : Integrable (ν[g | m']) ν := integrable_condExp (μ := ν) (m := m') (f := g)
@@ -257,8 +261,12 @@ lemma condexp_changeOfVariables
             -- defining property of conditional expectation on the set `s ∈ m'`
             -- Since we fixed MeasurableSpace β := m₀, we have m' ≤ m₀ = instance
             have hm'_inst : m' ≤ (inferInstance : MeasurableSpace β) := hm'
-            -- TODO: Derive SigmaFinite instance from μ being SigmaFinite
-            have : SigmaFinite (ν.trim hm'_inst) := sorry
+            -- ν = Measure.map f μ where μ is a probability measure
+            -- Probability → Finite → trim is Finite → Sigma-finite
+            haveI : IsFiniteMeasure ν := by
+              rw [hν]
+              infer_instance
+            -- Now isFiniteMeasure_trim and IsFiniteMeasure.toSigmaFinite give us SigmaFinite
             exact setIntegral_condExp (μ := ν) (hm := hm'_inst) hg hs'
       _ = ∫ y, Set.indicator s g y ∂ ν :=
             (integral_indicator hs₀).symm
@@ -287,17 +295,17 @@ lemma condexp_changeOfVariables
     rw [← ht]
     exact (hm' _ hs).preimage hf'
 
-  -- Need SigmaFinite instance for trimmed measure
-  -- TODO: Derive from α having SigmaFinite μ
-  have : SigmaFinite (μ.trim hm_le) := sorry
+  -- μ is a probability measure (available in calling context via variable declaration)
+  -- Probability → Finite → trim is Finite → Sigma-finite
+  -- The instances isFiniteMeasure_trim and IsFiniteMeasure.toSigmaFinite handle this
 
   refine ae_eq_condExp_of_forall_setIntegral_eq hm_le h_int_right ?_ h_sets ?_
   · -- IntegrableOn for LHS
     intro s hs hμs
     exact h_int_left.integrableOn
   · -- AEStronglyMeasurable w.r.t. comap
-    -- Need to show AEStronglyMeasurable[comap f m'] from AEStronglyMeasurable
-    sorry
+    -- We already established this at h_meas_left
+    exact h_meas_left
 
 /-- **Bridge 4.** Conditional expectation commutes with the factor map:
 `(μ_path X)[G | tail_on_path] ∘ pathify = μ[ G ∘ pathify | Tail.tailProcess X ]`.
