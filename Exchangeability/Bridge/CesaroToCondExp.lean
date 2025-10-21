@@ -188,8 +188,10 @@ lemma tendsto_Lp2_to_L1 {α : Type*} [MeasurableSpace α] {m : Measure α} [IsPr
   -- Key: On probability spaces, Hölder gives ∫|f| ≤ (∫|f|²)^(1/2) = ‖f‖₂
   have h_bound : ∀ n, ∫ x, ‖Y n x - Z x‖ ∂m ≤ ‖Y n - Z‖ := by
     intro n
-    sorry  -- TODO: Need lemma connecting integral to Lp 2 norm on probability space
-          -- Likely: use snorm/eLpNorm API or integral_mul_le_Lp_mul_Lq_of_nonneg with q=2
+    -- Use eLpNorm inequality: eLpNorm p=1 ≤ eLpNorm p=2 on probability spaces
+    -- Then connect eLpNorm 1 to integral and eLpNorm 2 to Lp norm
+    sorry  -- TODO: Apply eLpNorm_le_eLpNorm_mul_rpow_measure_univ with p=1, q=2
+          -- Then use integral_norm_eq_eLpNorm_one and Lp.norm_def
 
   -- Step 3: Apply squeeze theorem
   refine' tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_norm _ h_bound
