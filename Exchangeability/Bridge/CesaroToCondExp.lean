@@ -62,7 +62,7 @@ pullback along factor maps. -/
 lemma aestronglyMeasurable_comp_comap
     {α β : Type*} [MeasurableSpace α] {m₀ : MeasurableSpace β}
     {μ : Measure α} (f : α → β) (hf : @Measurable α β _ m₀ f)
-    (m' : MeasurableSpace β) (hm' : m' ≤ m₀)
+    (m' : MeasurableSpace β) (_hm' : m' ≤ m₀)
     {h : β → ℝ} :
     AEStronglyMeasurable[m'] h (@Measure.map α β _ m₀ f μ) →
     AEStronglyMeasurable[MeasurableSpace.comap f m'] (h ∘ f) μ := fun hh => by
