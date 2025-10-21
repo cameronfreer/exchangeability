@@ -2305,17 +2305,32 @@ lemma block_coord_condIndep
       --    Likely exists: comap f (comap g m) = comap (g ∘ f) m
       --
       -- ─────────────────────────────────────────────────────────────────────────────
-      -- ALTERNATIVE: Direct proof without general lemma
+      -- DIRECT PROOF: Placeholder axiom (TODO: extract to mathlib)
       -- ─────────────────────────────────────────────────────────────────────────────
       --
-      -- Could prove directly for this specific case:
-      -- - Show every set in futureFiltration X m is a.e. in some finFutureSigma X m k
-      -- - Use that cylinder sets in ℕ → α depend on finitely many coordinates
-      -- - Would be ~50-100 lines but avoids waiting for mathlib contribution
+      -- This is the core missing piece: showing that the Pi measurable space on ℕ → α
+      -- equals the supremum of finite coordinate projections. This is a standard result
+      -- in product measure theory that should be contributed to mathlib.
       --
-      -- However, the general lemma is more valuable for the library.
+      -- The proof strategy is outlined in the comments above. Once mathlib has the
+      -- general `pi_nat_eq_iSup_fin` lemma, this axiom can be eliminated by applying
+      -- `comap_iSup` and `comap_comp`.
       --
-      sorry
+      have h_pi_supremum : (inferInstance : MeasurableSpace (ℕ → α)) =
+          ⨆ k, MeasurableSpace.comap (fun f (i : Fin k) => f i.val) inferInstance := by
+        sorry  -- TODO: Contribute to mathlib as pi_nat_eq_iSup_fin
+      -- Now apply comap to both sides
+      unfold futureFiltration finFutureSigma
+      rw [h_pi_supremum, MeasurableSpace.comap_iSup]
+      -- The comap compositions must agree
+      have h_comp : ∀ k, MeasurableSpace.comap (shiftRV X (m + 1))
+          (MeasurableSpace.comap (fun f (i : Fin k) => f i.val) inferInstance) =
+          MeasurableSpace.comap (fun ω (i : Fin k) => X (m + 1 + ↑i) ω) inferInstance := by
+        intro k
+        rw [MeasurableSpace.comap_comp]
+        rfl  -- The functions are definitionally equal
+      simp_rw [h_comp]
+      rfl  -- Both sides are now the same supremum
     exact le_antisymm hle hge
   -- For the joins, the `iSup` commutes with `⊔`.
   have hiSup_join :
