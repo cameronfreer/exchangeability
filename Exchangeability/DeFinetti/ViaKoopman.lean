@@ -527,6 +527,37 @@ lemma condexp_pullback_factor
     have hBm' : @MeasurableSet Ω inst B := hm B hBm
     sorry
     /-
+    PROOF STRATEGY (blocked by type class synthesis for sub-σ-algebras):
+
+    Goal: ∫ x in g⁻¹'B, (μ[H|m] ∘ g) x ∂μ' = ∫ x in g⁻¹'B, (H ∘ g) x ∂μ'
+
+    The proof follows a three-step calc chain:
+    1. Change variables: ∫ x in g⁻¹'B, (μ[H|m] ∘ g) x ∂μ' = ∫ x in B, μ[H|m] x ∂μ
+       - Use setIntegral_map with hpush : map g μ' = μ
+       - Requires: AEStronglyMeasurable (μ[H|m]) (map g μ')
+
+    2. Conditional expectation: ∫ x in B, μ[H|m] x ∂μ = ∫ x in B, H x ∂μ
+       - Use setIntegral_condExp hm hH hBm
+
+    3. Reverse change of variables: ∫ x in B, H x ∂μ = ∫ x in g⁻¹'B, (H ∘ g) x ∂μ'
+       - Use setIntegral_map with hpush
+       - Requires: AEStronglyMeasurable H (map g μ')
+
+    BLOCKER: Lean's type class synthesis gets confused between the sub-σ-algebra `m`
+    and the ambient measurable space `inst` when applying setIntegral_map. The lemma
+    expects the ambient space, but conditional expectation μ[H|m] is defined with
+    respect to `m`, causing "synthesized type class instance is not definitionally
+    equal to expression inferred by typing rules" errors.
+
+    POTENTIAL FIXES:
+    1. Use fully explicit @-syntax for all lemmas with manual type class arguments
+    2. Reformulate using indicator functions and whole-space integrals
+    3. Wait for mathlib to add better support for sub-σ-algebra type class synthesis
+    4. Use convert_to instead of rw to handle definitional inequality
+
+    This is a known limitation when working with sub-σ-algebras in measure theory.
+    -/
+    /-
     OLD PROOF IDEA (Type class synthesis issues with m vs inst):
 
     Turn set integrals into whole integrals of indicators and change variables.
