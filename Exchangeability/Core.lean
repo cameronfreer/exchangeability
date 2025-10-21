@@ -8,6 +8,7 @@ import Mathlib.Logic.Equiv.Fintype
 import Mathlib.MeasureTheory.Constructions.Cylinders
 import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
 import Mathlib.MeasureTheory.Measure.Typeclasses.Finite
+import Mathlib.Tactic.Measurability
 import Exchangeability.Contractability
 
 /-!
@@ -407,8 +408,8 @@ lemma pathLaw_map_prefix (μ : Measure Ω) (X : ℕ → Ω → α)
     Measure.map (prefixProj (α:=α) n) (pathLaw (α:=α) μ X) =
       Measure.map (fun ω => fun i : Fin n => X i ω) μ := by
   classical
-  have hmeas : Measurable fun ω => fun i : ℕ => X i ω :=
-    measurable_pi_lambda _ (fun i => hX i)
+  have hmeas : Measurable fun ω => fun i : ℕ => X i ω := by
+    fun_prop
   refine Measure.map_map (μ:=μ)
     (f:=fun ω => fun i : ℕ => X i ω)
     (g:=prefixProj (α:=α) n)
@@ -423,8 +424,8 @@ lemma pathLaw_map_prefix_perm (μ : Measure Ω) (X : ℕ → Ω → α)
   classical
   have hreindex :
       Measurable fun x : ℕ → α => reindex (α:=α) π x := measurable_reindex (α:=α) (π:=π)
-  have hmeas : Measurable fun ω => fun i : ℕ => X i ω :=
-    measurable_pi_lambda _ (fun i => hX i)
+  have hmeas : Measurable fun ω => fun i : ℕ => X i ω := by
+    fun_prop
   calc
     Measure.map (prefixProj (α:=α) n)
         (Measure.map (reindex (α:=α) π) (pathLaw (α:=α) μ X))
