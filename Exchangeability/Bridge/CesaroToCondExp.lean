@@ -112,7 +112,15 @@ lemma contractable_shift_invariant_law
   -- Show all finite marginals agree via contractability
   -- Key: (X₁, X₂, ..., Xₙ) has same distribution as (X₀, X₁, ..., X_{n-1})
 
-  sorry  -- TODO: Complete using the 5-step strategy documented above
+  -- LHS: Marginal of the shifted measure = distribution of (X₁, ..., Xₙ)
+  -- RHS: Marginal of the original measure = distribution of (X₀, ..., X_{n-1})
+
+  -- By contractability with k(i) = i + 1 (strictly increasing), these are equal
+
+  -- The key insight: We need to show the finite-dimensional distributions match
+  -- This requires careful manipulation of Measure.map compositions
+
+  sorry  -- TODO: Apply contractability with shifted indices k(i) = i + 1
 
 /-- **BRIDGE 1'.** Package as `MeasurePreserving` for applying the Mean Ergodic Theorem. -/
 lemma measurePreserving_shift_path (X : ℕ → Ω → ℝ)
