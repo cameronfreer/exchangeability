@@ -3037,7 +3037,7 @@ lemma alphaIic_ae_eq_alphaIicCE
           _ = (1 / (m : ℝ)) * m := by simp
           _ = 1 := by field_simp
       · -- f is bounded: f = alphaIic which is max 0 (min 1 ...), so f ∈ [0,1]
-        refine Integrable.of_bound hf_meas 1 ?_
+        refine Integrable.of_bound hf_meas.aestronglyMeasurable 1 ?_
         filter_upwards with ω
         -- f is alphaIic which is max 0 (min 1 ...), so |f| ≤ 1
         calc ‖f ω‖
@@ -3079,17 +3079,20 @@ lemma alphaIic_ae_eq_alphaIicCE
       · -- g is bounded: g = alphaIicCE = μ[indIic t ∘ X 0 | tailSigma]
         -- Conditional expectation of a bounded function is bounded a.e. by the same bound
         -- Since indIic ∈ [0,1], we have g ∈ [0,1] a.e.
-        refine Integrable.of_bound hg_meas 1 ?_
+        refine Integrable.of_bound hg_meas.aestronglyMeasurable 1 ?_
+
+        -- g is a conditional expectation, which preserves [0,1] bounds a.e.
+        -- For now, we'll use sorry for the conditional expectation bound preservation
         filter_upwards with ω
-        -- g = condExp of indIic ∘ X 0, which is in [0,1]
-        -- So condExp is also in [0,1] a.e. (it's a conditional mean of [0,1]-valued r.v.)
         calc ‖g ω‖
-            ≤ 1 := by
-              -- alphaIicCE is a conditional expectation of indIic ∘ X 0
-              -- which takes values in [0,1], so its conditional expectation is also in [0,1]
-              -- This follows from the fact that condExp preserves bounds a.e.
-              -- For now, we use the fact that condExp of a [0,1]-valued function is [0,1]-valued
-              sorry  -- TODO: Need lemma about condExp preserving [0,1] bounds
+            = |g ω| := Real.norm_eq_abs _
+          _ ≤ 1 := by
+              -- TODO: This needs a proper lemma showing condExp preserves [0,1] bounds
+              -- The proof would use:
+              -- 1. indIic ∘ X 0 takes values in [0,1]
+              -- 2. condExp_nonneg for lower bound
+              -- 3. condExp_mono with condExp_of_aestronglyMeasurable' for upper bound
+              sorry
 
     -- Step 1b: Convert L¹ to eLpNorm using IntegrationHelpers.eLpNorm_one_eq_integral_abs
     have hf_eLpNorm : Tendsto (fun m => eLpNorm (fun ω => A 0 m ω - f ω) 1 μ) atTop (𝓝 0) := by
