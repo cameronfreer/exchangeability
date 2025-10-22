@@ -243,16 +243,27 @@ lemma condDistrib_factor_indicator_agree
       =ᵐ[μ] μ[f | MeasurableSpace.comap ζ inferInstance] := by
     -- To show: μ[μ[f|σ(ζ)]|σ(η)] = μ[f|σ(ζ)]
     -- This is equivalent to: μ[f|σ(ζ)] is σ(η)-measurable
-    --
-    -- We use h_law: (ξ, η) =ᵈ (ξ, ζ) to show that conditional expectations
-    -- with respect to ζ must actually factor through η
+
+    -- Observation: For any σ(η)-measurable set S, both conditional expectations
+    -- have the same integral over S:
+    have hint_match : ∀ S : Set Ω, MeasurableSet[MeasurableSpace.comap η inferInstance] S →
+        ∫ x in S, μ[f | MeasurableSpace.comap ζ inferInstance] x ∂μ =
+        ∫ x in S, f x ∂μ := by
+      intro S hS
+      -- S is σ(η)-measurable, hence also σ(ζ)-measurable by h_le
+      have hS_ζ : MeasurableSet[MeasurableSpace.comap ζ inferInstance] S := h_le S hS
+      -- Apply conditional expectation property
+      have : SigmaFinite (μ.trim hζ_le) := by infer_instance
+      exact setIntegral_condExp hζ_le hf_int hS_ζ
+
+    -- The integrals match on all σ(η)-measurable sets, but this alone doesn't prove
+    -- μ[f|σ(ζ)] is σ(η)-measurable! We need h_law for that.
     sorry
-    -- This step requires proving:
-    -- ∀ S : Set Ω, MeasurableSet[σ(η)] S →
-    --   ∫ x in S, μ[f|σ(ζ)] x ∂μ = ∫ x in S, μ[f|σ(η)] x ∂μ
+    -- The distributional equality h_law: (ξ, η) =ᵈ (ξ, ζ) combined with
+    -- h_le: σ(η) ≤ σ(ζ) implies E[f(ξ) | ζ] is a function of η.
     --
-    -- Both equal ∫ x in S, f x ∂μ by conditional expectation properties,
-    -- but showing μ[f|σ(ζ)] is σ(η)-measurable requires using h_law
+    -- This requires conditional distribution uniqueness: if (ξ, η) and (ξ, ζ)
+    -- have the same law, then P(ξ ∈ · | η) = P(ξ ∈ · | ζ) as functions of η.
 
   -- Combine with tower property
   calc μ[f | MeasurableSpace.comap ζ inferInstance]
