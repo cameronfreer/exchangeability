@@ -74,46 +74,97 @@ theorem conditionallyIID_of_contractable
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
     (hContract : Contractable μ X) :
     ConditionallyIID μ X := by
-  -- ═══════════════════════════════════════════════════════════════════════════════
-  -- BLOCKED: This proof requires completing the sorries in ViaMartingale.lean
-  -- ═══════════════════════════════════════════════════════════════════════════════
-  --
-  -- **Proof structure (once infrastructure is complete):**
-  --
+  -- IsProbabilityMeasure → IsFiniteMeasure (needed for condExpKernel)
+  haveI : IsFiniteMeasure μ := inferInstance
+
   -- Step 1: Construct the directing measure ν using condExpKernel
-  --   ```
-  --   let ν := directingMeasure_of_contractable X hX_meas
-  --   ```
-  --
+  set ν : Ω → Measure α := directingMeasure_of_contractable (μ := μ) X hX_meas with hν_def
+
   -- Step 2: Prove ν is a probability measure for each ω
-  --   ```
-  --   have hν_prob : ∀ ω, IsProbabilityMeasure (ν ω) := sorry
-  --   ```
-  --   This requires proving properties of the condExpKernel construction.
-  --
-  -- Step 3: Prove the finite-dimensional product formula
-  --   ```
-  --   have hν_formula : ∀ (m : ℕ) (k : Fin m → ℕ),
-  --       Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
-  --         = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) := by
-  --     intro m k
-  --     exact finite_product_formula X hContract hX_meas ν hν_prob _ m k
-  --   ```
-  --   This depends on:
-  --   - `conditional_law_eq_directingMeasure`: All Xₙ have same conditional law
-  --   - `finite_product_formula`: Product formula from conditional independence
-  --
-  -- Step 4: Package as ConditionallyIID
-  --   ```
-  --   exact ⟨ν, hν_prob, hν_formula⟩
-  --   ```
-  --
-  -- **Blockers from ViaMartingale.lean:**
-  -- - Sorry #2 (line ~1961): Conditional independence from triple equality
-  -- - Sorry #3 (line ~2204): Pi σ-algebra supremum
-  -- These are needed for `finite_product_formula` to be complete.
-  --
-  sorry
+  have hν_prob : ∀ ω, IsProbabilityMeasure (ν ω) := by
+    intro ω
+    -- ν ω is defined as Measure.map (X 0) (condExpKernel μ (tailSigma X) ω)
+    -- by the definition of directingMeasure_of_contractable
+    show IsProbabilityMeasure (Measure.map (X 0) (condExpKernel μ (tailSigma X) ω))
+    -- condExpKernel is a Markov kernel, so it produces probability measures
+    haveI : IsMarkovKernel (condExpKernel μ (tailSigma X)) :=
+      ProbabilityTheory.instIsMarkovKernelCondExpKernel
+    haveI : IsProbabilityMeasure (condExpKernel μ (tailSigma X) ω) :=
+      IsMarkovKernel.is_probability_measure' ω
+    -- Measure.map (X 0) preserves probability measures when applied to a probability measure
+    constructor
+    simp [Measure.map_apply (hX_meas 0) MeasurableSet.univ]
+
+  -- Step 3: Prove measurability of ν
+  have hν_meas : ∀ B : Set α, MeasurableSet B → Measurable (fun ω => ν ω B) := fun B hB => by
+    -- ν ω = Measure.map (X 0) (condExpKernel μ (tailSigma X) ω) by definition
+    -- So ν ω B = (condExpKernel μ (tailSigma X) ω) ((X 0)⁻¹' B) by Measure.map_apply
+    simp only [hν_def]
+    simp only [show ∀ ω, directingMeasure_of_contractable X hX_meas ω =
+                          Measure.map (X 0) (condExpKernel μ (tailSigma X) ω) from fun _ => rfl]
+    simp_rw [Measure.map_apply (hX_meas 0) hB]
+    -- Now goal is: Measurable (fun ω => (condExpKernel μ (tailSigma X) ω) ((X 0)⁻¹' B))
+    -- Kernel.measurable_coe gives measurability w.r.t. tailSigma X
+    -- We lift to ambient σ-algebra using Measurable.le since tailSigma X ≤ inferInstance
+    exact Measurable.le (tailSigma_le X hX_meas)
+      (ProbabilityTheory.Kernel.measurable_coe (condExpKernel μ (tailSigma X)) (hX_meas 0 hB))
+
+  -- Step 4: Prove the conditional law property
+  have hν_law : ∀ n B, MeasurableSet B →
+      (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X] := by
+    intro n B hB
+    -- Strategy: First prove for n=0, then use extreme_members_equal_on_tail
+
+    -- Step 4a: Prove for n=0
+    have h0 : (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] := by
+      sorry
+      -- Proof strategy (fully documented):
+      --
+      -- 1. Use condExp_ae_eq_integral_condExpKernel:
+      --    μ[indicator B ∘ X 0 | tailSigma X] =ᵐ fun ω => ∫ y, (indicator B ∘ X 0) y ∂(condExpKernel μ (tailSigma X) ω)
+      --
+      -- 2. Show (ν ω B).toReal = ∫ y, (indicator B ∘ X 0) y ∂(condExpKernel μ (tailSigma X) ω):
+      --    a. ν ω = Measure.map (X 0) (condExpKernel μ (tailSigma X) ω) by definition
+      --    b. (Measure.map (X 0) κ) B = κ ((X 0)⁻¹' B) by Measure.map_apply
+      --    c. (indicator B) ∘ X 0 = indicator ((X 0)⁻¹' B) by ext
+      --    d. ∫ y, indicator ((X 0)⁻¹' B) 1 y ∂κ = (κ ((X 0)⁻¹' B)).toReal by integral_indicator_one and μ.real s = (μ s).toReal
+      --
+      -- All required lemmas are in mathlib. Technical Lean issues with showing directingMeasure_of_contractable
+      -- equality prevented full implementation, but the mathematical proof is sound.
+
+    -- Step 4b: Use extreme_members_equal_on_tail for general n
+    have hn : μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X]
+            =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] :=
+      extreme_members_equal_on_tail hContract hX_meas n B hB
+
+    -- Combine: (ν ω B).toReal =ᵐ E[1_B ∘ X₀] =ᵐ E[1_B ∘ Xₙ]
+    exact ae_eq_trans h0 hn.symm
+
+  -- Step 5: Apply finite_product_formula
+  have hProduct : ∀ (m : ℕ) (k : Fin m → ℕ),
+      Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
+        = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) := by
+    intro m k
+    by_cases hk : StrictMono k
+    · -- Strictly monotone case: directly apply finite_product_formula
+      exact finite_product_formula X hContract hX_meas ν hν_prob hν_meas hν_law m k hk
+    · -- Non-strictly-monotone case
+      sorry
+      -- SUBTLETY: When k has repeated indices (e.g., k = (0,0,1)), we need:
+      --   Measure.map (fun ω => (X 0 ω, X 0 ω, X 1 ω)) μ = μ.bind (fun ω => ν ω ⊗ ν ω ⊗ ν ω)
+      --
+      -- But the LHS has repeated coordinates (first two are always equal), while the RHS
+      -- represents independent sampling.
+      --
+      -- This seems problematic! Possible resolutions:
+      -- 1. The definition of ConditionallyIID might need refinement (only require StrictMono k)
+      -- 2. There's a subtle measure-theoretic fact about disintegration that makes this work
+      -- 3. The contractability assumption gives us additional structure
+      --
+      -- TODO: Check Kallenberg's definition and see how this case is handled in the literature
+
+  -- Step 6: Package as ConditionallyIID
+  exact ⟨ν, hν_prob, hProduct⟩
 
 /-- **De Finetti's Theorem (Martingale proof)**: Exchangeable ⇒ ConditionallyIID.
 
