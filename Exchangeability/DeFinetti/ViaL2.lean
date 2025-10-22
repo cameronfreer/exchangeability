@@ -3207,7 +3207,17 @@ lemma alphaIic_ae_eq_alphaIicCE
                   apply Integrable.of_bound hA_meas.aestronglyMeasurable 1
                   filter_upwards with ω
                   simp [Real.norm_eq_abs]
-                  sorry  -- |weighted sum of indicators| ≤ 1
+                  -- Each indicator is in [0,1], so sum ≤ m, hence (1/m)*sum ≤ 1
+                  calc |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)|
+                      = (1/(m:ℝ)) * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
+                          rw [abs_mul]; simp [abs_of_pos]; positivity
+                    _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
+                          gcongr; exact Finset.abs_sum_le_sum_abs _ _
+                    _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
+                          gcongr with k
+                          unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
+                    _ = (1/(m:ℝ)) * m := by simp [Finset.sum_const, Finset.card_fin]
+                    _ = 1 := by field_simp
                 · -- target = condExp is integrable
                   exact integrable_condExp
               · -- Integrability of |A - B| + |B - target|
@@ -3220,14 +3230,34 @@ lemma alphaIic_ae_eq_alphaIicCE
                       Finset.measurable_sum _ (fun k _ =>
                         Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
                     apply Integrable.of_bound hA_meas.aestronglyMeasurable 1
-                    filter_upwards with ω; simp [Real.norm_eq_abs]; sorry
+                    filter_upwards with ω; simp [Real.norm_eq_abs]
+                    calc |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)|
+                        = (1/(m:ℝ)) * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
+                            rw [abs_mul]; simp [abs_of_pos]; positivity
+                      _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
+                            gcongr; exact Finset.abs_sum_le_sum_abs _ _
+                      _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
+                            gcongr with k
+                            unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
+                      _ = (1/(m:ℝ)) * m := by simp [Finset.sum_const, Finset.card_fin]
+                      _ = 1 := by field_simp
                   · -- B is integrable
                     simp [B]
                     have hB_meas : Measurable (fun ω => (1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)) :=
                       Finset.measurable_sum _ (fun i _ =>
                         Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
                     apply Integrable.of_bound hB_meas.aestronglyMeasurable 1
-                    filter_upwards with ω; simp [Real.norm_eq_abs]; sorry
+                    filter_upwards with ω; simp [Real.norm_eq_abs]
+                    calc |(1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)|
+                        = (1/(m:ℝ)) * |∑ i : Fin m, indIic t (X i ω)| := by
+                            rw [abs_mul]; simp [abs_of_pos]; positivity
+                      _ ≤ (1/(m:ℝ)) * ∑ i : Fin m, |indIic t (X i ω)| := by
+                            gcongr; exact Finset.abs_sum_le_sum_abs _ _
+                      _ ≤ (1/(m:ℝ)) * ∑ i : Fin m, (1 : ℝ) := by
+                            gcongr with i
+                            unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
+                      _ = (1/(m:ℝ)) * m := by simp [Finset.sum_const, Finset.card_fin]
+                      _ = 1 := by field_simp
                 · -- |B - target| is integrable
                   apply Integrable.abs
                   apply Integrable.sub
@@ -3237,7 +3267,17 @@ lemma alphaIic_ae_eq_alphaIicCE
                       Finset.measurable_sum _ (fun i _ =>
                         Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
                     apply Integrable.of_bound hB_meas.aestronglyMeasurable 1
-                    filter_upwards with ω; simp [Real.norm_eq_abs]; sorry
+                    filter_upwards with ω; simp [Real.norm_eq_abs]
+                    calc |(1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)|
+                        = (1/(m:ℝ)) * |∑ i : Fin m, indIic t (X i ω)| := by
+                            rw [abs_mul]; simp [abs_of_pos]; positivity
+                      _ ≤ (1/(m:ℝ)) * ∑ i : Fin m, |indIic t (X i ω)| := by
+                            gcongr; exact Finset.abs_sum_le_sum_abs _ _
+                      _ ≤ (1/(m:ℝ)) * ∑ i : Fin m, (1 : ℝ) := by
+                            gcongr with i
+                            unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
+                      _ = (1/(m:ℝ)) * m := by simp [Finset.sum_const, Finset.card_fin]
+                      _ = 1 := by field_simp
                   · -- target is integrable
                     exact integrable_condExp
               · -- Pointwise bound
@@ -3251,14 +3291,34 @@ lemma alphaIic_ae_eq_alphaIicCE
                   Finset.measurable_sum _ (fun k _ =>
                     Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
                 apply Integrable.of_bound hA_meas.aestronglyMeasurable 1
-                filter_upwards with ω; simp [Real.norm_eq_abs]; sorry
+                filter_upwards with ω; simp [Real.norm_eq_abs]
+                calc |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)|
+                    = (1/(m:ℝ)) * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
+                        rw [abs_mul]; simp [abs_of_pos]; positivity
+                  _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
+                        gcongr; exact Finset.abs_sum_le_sum_abs _ _
+                  _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
+                        gcongr with k
+                        unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
+                  _ = (1/(m:ℝ)) * m := by simp [Finset.sum_const, Finset.card_fin]
+                  _ = 1 := by field_simp
               · -- B is integrable
                 simp [B]
                 have hB_meas : Measurable (fun ω => (1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)) :=
                   Finset.measurable_sum _ (fun i _ =>
                     Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
                 apply Integrable.of_bound hB_meas.aestronglyMeasurable 1
-                filter_upwards with ω; simp [Real.norm_eq_abs]; sorry
+                filter_upwards with ω; simp [Real.norm_eq_abs]
+                calc |(1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)|
+                    = (1/(m:ℝ)) * |∑ i : Fin m, indIic t (X i ω)| := by
+                        rw [abs_mul]; simp [abs_of_pos]; positivity
+                  _ ≤ (1/(m:ℝ)) * ∑ i : Fin m, |indIic t (X i ω)| := by
+                        gcongr; exact Finset.abs_sum_le_sum_abs _ _
+                  _ ≤ (1/(m:ℝ)) * ∑ i : Fin m, (1 : ℝ) := by
+                        gcongr with i
+                        unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
+                  _ = (1/(m:ℝ)) * m := by simp [Finset.sum_const, Finset.card_fin]
+                  _ = 1 := by field_simp
             · -- Integrability of |B - target|
               apply Integrable.abs
               apply Integrable.sub
@@ -3268,7 +3328,17 @@ lemma alphaIic_ae_eq_alphaIicCE
                   Finset.measurable_sum _ (fun i _ =>
                     Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
                 apply Integrable.of_bound hB_meas.aestronglyMeasurable 1
-                filter_upwards with ω; simp [Real.norm_eq_abs]; sorry
+                filter_upwards with ω; simp [Real.norm_eq_abs]
+                calc |(1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)|
+                    = (1/(m:ℝ)) * |∑ i : Fin m, indIic t (X i ω)| := by
+                        rw [abs_mul]; simp [abs_of_pos]; positivity
+                  _ ≤ (1/(m:ℝ)) * ∑ i : Fin m, |indIic t (X i ω)| := by
+                        gcongr; exact Finset.abs_sum_le_sum_abs _ _
+                  _ ≤ (1/(m:ℝ)) * ∑ i : Fin m, (1 : ℝ) := by
+                        gcongr with i
+                        unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
+                  _ = (1/(m:ℝ)) * m := by simp [Finset.sum_const, Finset.card_fin]
+                  _ = 1 := by field_simp
               · -- target is integrable
                 exact integrable_condExp
       _ ≤ 2/(m:ℝ) + ε/2 := by linarith [hAB_diff, hB_conv]
