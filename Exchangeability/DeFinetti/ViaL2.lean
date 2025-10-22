@@ -3213,7 +3213,7 @@ lemma alphaIic_ae_eq_alphaIicCE
                   -- Each indicator is in [0,1], so sum ≤ m, hence (1/m)*sum ≤ 1
                   calc |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)|
                       = (1/(m:ℝ)) * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
-                          rw [abs_mul]; simp [abs_of_pos]; positivity
+                          rw [abs_mul, abs_of_pos]; positivity
                     _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
                           gcongr; exact Finset.abs_sum_le_sum_abs _ _
                     _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
@@ -3236,7 +3236,7 @@ lemma alphaIic_ae_eq_alphaIicCE
                     filter_upwards with ω; simp [Real.norm_eq_abs]
                     calc |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)|
                         = (1/(m:ℝ)) * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
-                            rw [abs_mul]; simp [abs_of_pos]; positivity
+                            rw [abs_mul, abs_of_pos]; positivity
                       _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
                             gcongr; exact Finset.abs_sum_le_sum_abs _ _
                       _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
@@ -3253,7 +3253,7 @@ lemma alphaIic_ae_eq_alphaIicCE
                     filter_upwards with ω; simp [Real.norm_eq_abs]
                     calc |(1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)|
                         = (1/(m:ℝ)) * |∑ i : Fin m, indIic t (X i ω)| := by
-                            rw [abs_mul]; simp [abs_of_pos]; positivity
+                            rw [abs_mul, abs_of_pos]; positivity
                       _ ≤ (1/(m:ℝ)) * ∑ i : Fin m, |indIic t (X i ω)| := by
                             gcongr; exact Finset.abs_sum_le_sum_abs _ _
                       _ ≤ (1/(m:ℝ)) * ∑ i : Fin m, (1 : ℝ) := by
@@ -3273,7 +3273,7 @@ lemma alphaIic_ae_eq_alphaIicCE
                     filter_upwards with ω; simp [Real.norm_eq_abs]
                     calc |(1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)|
                         = (1/(m:ℝ)) * |∑ i : Fin m, indIic t (X i ω)| := by
-                            rw [abs_mul]; simp [abs_of_pos]; positivity
+                            rw [abs_mul, abs_of_pos]; positivity
                       _ ≤ (1/(m:ℝ)) * ∑ i : Fin m, |indIic t (X i ω)| := by
                             gcongr; exact Finset.abs_sum_le_sum_abs _ _
                       _ ≤ (1/(m:ℝ)) * ∑ i : Fin m, (1 : ℝ) := by
@@ -3297,7 +3297,7 @@ lemma alphaIic_ae_eq_alphaIicCE
                 filter_upwards with ω; simp [Real.norm_eq_abs]
                 calc |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)|
                     = (1/(m:ℝ)) * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
-                        rw [abs_mul]; simp [abs_of_pos]; positivity
+                        rw [abs_mul, abs_of_pos]; positivity
                   _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
                         gcongr; exact Finset.abs_sum_le_sum_abs _ _
                   _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
@@ -3314,7 +3314,7 @@ lemma alphaIic_ae_eq_alphaIicCE
                 filter_upwards with ω; simp [Real.norm_eq_abs]
                 calc |(1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)|
                     = (1/(m:ℝ)) * |∑ i : Fin m, indIic t (X i ω)| := by
-                        rw [abs_mul]; simp [abs_of_pos]; positivity
+                        rw [abs_mul, abs_of_pos]; positivity
                   _ ≤ (1/(m:ℝ)) * ∑ i : Fin m, |indIic t (X i ω)| := by
                         gcongr; exact Finset.abs_sum_le_sum_abs _ _
                   _ ≤ (1/(m:ℝ)) * ∑ i : Fin m, (1 : ℝ) := by
@@ -3334,7 +3334,7 @@ lemma alphaIic_ae_eq_alphaIicCE
                 filter_upwards with ω; simp [Real.norm_eq_abs]
                 calc |(1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)|
                     = (1/(m:ℝ)) * |∑ i : Fin m, indIic t (X i ω)| := by
-                        rw [abs_mul]; simp [abs_of_pos]; positivity
+                        rw [abs_mul, abs_of_pos]; positivity
                   _ ≤ (1/(m:ℝ)) * ∑ i : Fin m, |indIic t (X i ω)| := by
                         gcongr; exact Finset.abs_sum_le_sum_abs _ _
                   _ ≤ (1/(m:ℝ)) * ∑ i : Fin m, (1 : ℝ) := by
