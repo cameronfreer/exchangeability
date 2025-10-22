@@ -3754,9 +3754,26 @@ private theorem optionB_L1_convergence_bounded
       rw [← Lp.tendsto_Lp_iff_tendsto_eLpNorm']
       exact hfL2_tendsto
 
-    -- Use dominated convergence with L² → L¹ on probability spaces
-    -- On a probability space: ‖f‖₁ ≤ ‖f‖₂ (Hölder with q = ∞, using measure_univ = 1)
-    sorry -- TODO: Apply eLpNorm_le_eLpNorm_of_exponent_le and convert to integral
+    -- Use L² → L¹ inequality on probability spaces: ‖f‖₁ ≤ ‖f‖₂
+    -- Key: eLpNorm_le_eLpNorm_of_exponent_le with 1 ≤ 2 and μ univ = 1
+    have heLp1_conv : Tendsto (fun n =>
+        eLpNorm (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2) 1 μ)
+        atTop (𝓝 0) := by
+      apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds heLp_conv
+      · intro n; exact zero_le _
+      · intro n
+        refine eLpNorm_le_eLpNorm_of_exponent_le (by norm_num : (1 : ℝ≥0∞) ≤ 2) ?_ ?_
+        · simp [measure_univ]
+        · sorry -- measurability of difference
+
+    -- Convert eLpNorm 1 to integral
+    have h_integral_conv : Tendsto (fun n =>
+        ∫ ω, |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω| ∂μ)
+        atTop (𝓝 0) := by
+      sorry -- TODO: Use eLpNorm_one_eq_lintegral_enorm and convert to integral
+
+    -- Transfer to B_n and Y using a.e. equalities
+    sorry -- TODO: Use hB_eq_birkhoff and hY_eq to transfer convergence
 
   -- Step 4b: A_n and B_n differ negligibly due to indexing
   -- |A_n ω - B_n ω| ≤ 2*Cg/(n+1) since g is bounded
