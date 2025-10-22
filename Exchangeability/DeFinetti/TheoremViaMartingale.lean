@@ -74,46 +74,33 @@ theorem conditionallyIID_of_contractable
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
     (hContract : Contractable μ X) :
     ConditionallyIID μ X := by
-  -- ═══════════════════════════════════════════════════════════════════════════════
-  -- BLOCKED: This proof requires completing the sorries in ViaMartingale.lean
-  -- ═══════════════════════════════════════════════════════════════════════════════
-  --
-  -- **Proof structure (once infrastructure is complete):**
-  --
   -- Step 1: Construct the directing measure ν using condExpKernel
-  --   ```
-  --   let ν := directingMeasure_of_contractable X hX_meas
-  --   ```
-  --
+  let ν : Ω → Measure α := directingMeasure_of_contractable (μ := μ) X hX_meas
+
   -- Step 2: Prove ν is a probability measure for each ω
-  --   ```
-  --   have hν_prob : ∀ ω, IsProbabilityMeasure (ν ω) := sorry
-  --   ```
-  --   This requires proving properties of the condExpKernel construction.
-  --
-  -- Step 3: Prove the finite-dimensional product formula
-  --   ```
-  --   have hν_formula : ∀ (m : ℕ) (k : Fin m → ℕ),
-  --       Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
-  --         = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) := by
-  --     intro m k
-  --     exact finite_product_formula X hContract hX_meas ν hν_prob _ m k
-  --   ```
-  --   This depends on:
-  --   - `conditional_law_eq_directingMeasure`: All Xₙ have same conditional law
-  --   - `finite_product_formula`: Product formula from conditional independence
-  --
-  -- Step 4: Package as ConditionallyIID
-  --   ```
-  --   exact ⟨ν, hν_prob, hν_formula⟩
-  --   ```
-  --
-  -- **Blockers from ViaMartingale.lean:**
-  -- - Sorry #2 (line ~1961): Conditional independence from triple equality
-  -- - Sorry #3 (line ~2204): Pi σ-algebra supremum
-  -- These are needed for `finite_product_formula` to be complete.
-  --
+  have hν_prob : ∀ ω, IsProbabilityMeasure (ν ω) := by
+    intro ω
+    -- ν ω is defined as Measure.map (X 0) (condExpKernel μ (tailSigma X) ω)
+    -- by the definition of directingMeasure_of_contractable
+    show IsProbabilityMeasure (Measure.map (X 0) (condExpKernel μ (tailSigma X) ω))
+    -- condExpKernel is a Markov kernel, so it produces probability measures
+    haveI : IsMarkovKernel (condExpKernel μ (tailSigma X)) :=
+      ProbabilityTheory.instIsMarkovKernelCondExpKernel
+    haveI : IsProbabilityMeasure (condExpKernel μ (tailSigma X) ω) :=
+      IsMarkovKernel.is_probability_measure' ω
+    -- Measure.map (X 0) preserves probability measures when applied to a probability measure
+    constructor
+    simp [Measure.map_apply (hX_meas 0) MeasurableSet.univ]
+
+  -- Step 3: We need measurability of ν and the conditional law property
+  -- These are provided by the infrastructure in ViaMartingale.lean
   sorry
+  -- TODO: Complete this using conditional_law_eq_directingMeasure and finite_product_formula
+  -- The remaining work is to show:
+  -- 1. ν is measurable: ∀ B, MeasurableSet B → Measurable (fun ω => ν ω B)
+  -- 2. ν satisfies the conditional law property with respect to tailSigma X
+  -- 3. Apply finite_product_formula to get the product formula
+  -- 4. Package as ConditionallyIID: ⟨ν, hν_prob, product_formula⟩
 
 /-- **De Finetti's Theorem (Martingale proof)**: Exchangeable ⇒ ConditionallyIID.
 
