@@ -501,6 +501,46 @@ private lemma aestronglyMeasurable_comp_of_pushforward
   sorry
 -/
 
+/-! ### Instance-locking shims for conditional expectation
+
+These wrappers lock the ambient measurable space instance to prevent Lean from synthesizing
+the sub-σ-algebra as the ambient instance in type class arguments. -/
+
+namespace MeasureTheory
+
+/-- CE is a.e.-strongly measurable w.r.t. the *sub* σ-algebra, with ambient locked. -/
+lemma aestronglyMeasurable_condExp'
+    {Ω β} [mΩ : MeasurableSpace Ω] [NormedAddCommGroup β] [NormedSpace ℝ β] [CompleteSpace β]
+    {μ : Measure Ω} (m : MeasurableSpace Ω) (hm : m ≤ mΩ)
+    (f : Ω → β) :
+    AEStronglyMeasurable[m] (condExp m μ f) μ :=
+  @stronglyMeasurable_condExp Ω β mΩ _ _ _ _ μ m hm f |>.aestronglyMeasurable
+
+/-- The defining property of conditional expectation on `m`-measurable sets, with ambient locked. -/
+lemma setIntegral_condExp'
+    {Ω} [mΩ : MeasurableSpace Ω] {μ : Measure Ω}
+    (m : MeasurableSpace Ω) (hm : m ≤ mΩ) [SigmaFinite (μ.trim hm)]
+    {s : Set Ω} (hs : MeasurableSet[m] s)
+    {f : Ω → ℝ} (hf : Integrable f μ) :
+    ∫ x in s, condExp m μ f x ∂μ = ∫ x in s, f x ∂μ :=
+  @setIntegral_condExp Ω mΩ μ m f s hm _ hf hs
+
+/-- Set integral change of variables for pushforward measures.
+
+If `g : Ω' → Ω` pushes forward `μ'` to `μ`, then integrating `f ∘ g` over `g ⁻¹' s`
+equals integrating `f` over `s`. -/
+lemma setIntegral_map_preimage
+    {Ω Ω' : Type*} [MeasurableSpace Ω] [MeasurableSpace Ω']
+    {μ : Measure Ω} {μ' : Measure Ω'}
+    (g : Ω' → Ω) (hg : Measurable g) (hpush : Measure.map g μ' = μ)
+    (f : Ω → ℝ) (s : Set Ω) (hs : MeasurableSet s)
+    (hf : AEStronglyMeasurable f μ) :
+    ∫ x in g ⁻¹' s, (f ∘ g) x ∂μ' = ∫ x in s, f x ∂μ := by
+  rw [← hpush]
+  exact (setIntegral_map hs (hf.mono_measure (le_refl _)) hg.aemeasurable).symm
+
+end MeasureTheory
+
 /-- **Factor-map pullback for conditional expectation**.
 
 If `g : Ω' → Ω` is a factor map (i.e., `map g μ' = μ`), then conditional expectation
@@ -525,7 +565,19 @@ lemma condexp_pullback_factor
     rcases hs with ⟨B, hBm, rfl⟩
     -- Lift measurability from m to ambient inst
     have hBm' : @MeasurableSet Ω inst B := hm B hBm
-    sorry
+    -- AE strong measurability for the functions
+    have hCE_aesm : AEStronglyMeasurable (condExp m μ H) μ :=
+      (MeasureTheory.aestronglyMeasurable_condExp' m hm H).mono_ac (le_refl _)
+    have hH_aesm : AEStronglyMeasurable H μ := hH.aestronglyMeasurable
+    -- Three-step calc: change variables, apply CE property, change back
+    calc
+      ∫ x in g ⁻¹' B, (condExp m μ H ∘ g) x ∂μ'
+          = ∫ x in B, condExp m μ H x ∂μ := by
+              exact MeasureTheory.setIntegral_map_preimage g hg hpush (condExp m μ H) B hBm' hCE_aesm
+        _ = ∫ x in B, H x ∂μ := by
+              exact MeasureTheory.setIntegral_condExp' m hm hBm hH
+        _ = ∫ x in g ⁻¹' B, (H ∘ g) x ∂μ' := by
+              exact (MeasureTheory.setIntegral_map_preimage g hg hpush H B hBm' hH_aesm).symm
     /-
     PROOF STRATEGY (blocked by type class synthesis for sub-σ-algebras):
 
@@ -616,11 +668,15 @@ lemma condexp_pullback_factor
   · intro s hs _
     exact h_sets s hs
   -- 3) AEStronglyMeasurable for (μ[H | m] ∘ g) with respect to comap g m
-  · -- This is true because μ[H | m] is ae strongly measurable with respect to m and μ,
-    -- and hpush : map g μ' = μ means we can transport this measurability.
-    -- The composition μ[H | m] ∘ g is then ae strongly measurable with respect to comap g m and μ'.
-    -- This requires careful handling of the measure equality in the type class instance.
-    sorry
+  · -- Use the instance-locked shim to get AEStronglyMeasurable[m] for condExp
+    have hCE_aesm : AEStronglyMeasurable[m] (condExp m μ H) μ :=
+      MeasureTheory.aestronglyMeasurable_condExp' (μ := μ) m hm H
+    -- Pull AEStronglyMeasurable back along g using comp_measurable
+    -- The comap structure ensures the sub-σ-algebra tags align correctly
+    have := @AEStronglyMeasurable.comp_measurable Ω Ω' _ _ μ μ' _ _
+              (condExp m μ H) g hCE_aesm hg
+    -- Rewrite to use the pushforward equality and simplify to comap g m
+    simpa [MeasurableSpace.comap] using this
 
 /-
 **Invariance of conditional expectation under iterates**.
