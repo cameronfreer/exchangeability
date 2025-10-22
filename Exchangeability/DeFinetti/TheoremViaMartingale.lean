@@ -112,14 +112,25 @@ theorem conditionallyIID_of_contractable
   -- Step 4: Prove the conditional law property
   have hν_law : ∀ n B, MeasurableSet B →
       (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X] := by
-    sorry
-    -- TODO: Proof strategy:
-    -- 1. For n = 0: This follows from the fundamental property of condExpKernel:
-    --      μ[f | m] =ᵐ[μ] fun ω => ∫ y, f y ∂(condExpKernel μ m ω)
-    --    Combined with the change of variables formula for Measure.map
-    --
-    -- 2. For general n: Use extreme_members_equal_on_tail (already proved)
-    --    to show all Xₙ have the same conditional law
+    intro n B hB
+    -- Strategy: First prove for n=0, then use extreme_members_equal_on_tail
+
+    -- Step 4a: Prove for n=0
+    have h0 : (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] := by
+      sorry
+      -- This requires:
+      -- 1. ν ω B = (Measure.map (X 0) (condExpKernel μ (tailSigma X) ω)) B
+      --          = (condExpKernel μ (tailSigma X) ω) ((X 0)⁻¹' B)
+      -- 2. The fundamental property of condExpKernel
+      -- 3. Relating measure evaluation to conditional expectation of indicators
+
+    -- Step 4b: Use extreme_members_equal_on_tail for general n
+    have hn : μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X]
+            =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] :=
+      extreme_members_equal_on_tail hContract hX_meas n B hB
+
+    -- Combine: (ν ω B).toReal =ᵐ E[1_B ∘ X₀] =ᵐ E[1_B ∘ Xₙ]
+    exact ae_eq_trans h0 hn.symm
 
   -- Step 5: Apply finite_product_formula
   have hProduct : ∀ (m : ℕ) (k : Fin m → ℕ),
@@ -127,8 +138,15 @@ theorem conditionallyIID_of_contractable
         = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) := by
     intro m k
     by_cases hk : StrictMono k
-    · exact finite_product_formula X hContract hX_meas ν hν_prob hν_meas hν_law m k hk
-    · sorry  -- Non-strict-mono case - need to handle this
+    · -- Strictly monotone case: directly apply finite_product_formula
+      exact finite_product_formula X hContract hX_meas ν hν_prob hν_meas hν_law m k hk
+    · -- Non-strictly-monotone case
+      sorry
+      -- Strategy: The product measure on the RHS doesn't depend on k at all -
+      -- it's always the same (product of ν ω for each coordinate).
+      -- For the LHS, if k has repeated indices, we can use the fact that
+      -- repeated sampling from the same measure gives the product measure with repeats.
+      -- This should follow from properties of product measures and pushforwards.
 
   -- Step 6: Package as ConditionallyIID
   exact ⟨ν, hν_prob, hProduct⟩
