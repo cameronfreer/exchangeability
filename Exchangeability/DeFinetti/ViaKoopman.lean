@@ -3744,7 +3744,19 @@ private theorem optionB_L1_convergence_bounded
 
   -- Step 4a: L² to L¹ convergence for B_n → Y
   have hB_L1_conv : Tendsto (fun n => ∫ ω, |B n ω - Y ω| ∂μ) atTop (𝓝 0) := by
-    sorry -- TODO: Use eLpNorm_le_eLpNorm_of_exponent_le to convert L² to L¹
+    -- We have L² convergence: birkhoffAverage n fL2 → condexpL2 fL2 in Lp ℝ 2 μ
+    -- And a.e. equalities: birkhoffAverage n fL2 =ᵐ B n, condexpL2 fL2 =ᵐ Y
+
+    -- Convert Lp convergence to eLpNorm convergence
+    have heLp_conv : Tendsto (fun n =>
+        eLpNorm (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2) 2 μ)
+        atTop (𝓝 0) := by
+      rw [← Lp.tendsto_Lp_iff_tendsto_eLpNorm']
+      exact hfL2_tendsto
+
+    -- Use dominated convergence with L² → L¹ on probability spaces
+    -- On a probability space: ‖f‖₁ ≤ ‖f‖₂ (Hölder with q = ∞, using measure_univ = 1)
+    sorry -- TODO: Apply eLpNorm_le_eLpNorm_of_exponent_le and convert to integral
 
   -- Step 4b: A_n and B_n differ negligibly due to indexing
   -- |A_n ω - B_n ω| ≤ 2*Cg/(n+1) since g is bounded
