@@ -3045,8 +3045,10 @@ lemma alphaIic_ae_eq_alphaIicCE
         intro ω
         -- Factor out (1/m) and show the sums telescope
         congr 1
-        rw [mul_sub]
+        -- After congr 1, goal is the argument to | · |
+        rw [←mul_sub]
         congr 1
+        -- Now goal is: ∑ k, f(k+1) - ∑ i, f(i) = f(m) - f(0)
 
         -- The key telescoping identity:
         -- ∑_{k<m} f(X(k+1)) - ∑_{i<m} f(X i) = f(Xₘ) - f(X₀)
@@ -3056,30 +3058,37 @@ lemma alphaIic_ae_eq_alphaIicCE
         --        Middle terms cancel, leaving f(Xₘ) - f(X₀)
 
         -- First convert Fin m sums to range sums for easier manipulation
-        -- Convert Fin sums to Finset.range sums
+        -- Use Fin.sum_univ_eq_sum_range: ∑ i : Fin m, f ↑i = ∑ i ∈ range m, f i
+        -- Note: k.val and ↑k are definitionally equal for Fin
         have h_left : ∑ k : Fin m, indIic t (X (k.val + 1) ω) =
                       (Finset.range m).sum (fun k => indIic t (X (k + 1) ω)) :=
-          Fin.sum_univ_eq_sum_range (fun k => indIic t (X (k + 1) ω))
+          Fin.sum_univ_eq_sum_range (fun k => indIic t (X (k + 1) ω)) m
         have h_right : ∑ i : Fin m, indIic t (X i ω) =
                        (Finset.range m).sum (fun i => indIic t (X i ω)) :=
-          Fin.sum_univ_eq_sum_range (fun i => indIic t (X i ω))
+          Fin.sum_univ_eq_sum_range (fun i => indIic t (X i ω)) m
 
         -- Prove telescoping: ∑_{k<m} f(k+1) - ∑_{i<m} f(i) = f(m) - f(0)
         have h_telescope_sum : (Finset.range m).sum (fun k => indIic t (X (k + 1) ω)) -
                                 (Finset.range m).sum (fun i => indIic t (X i ω)) =
                                 indIic t (X m ω) - indIic t (X 0 ω) := by
+          clear h_left h_right hm_pos -- Don't use outer context
           induction m with
           | zero => simp [Finset.sum_range_zero]
           | succ m' ih =>
-              rw [Finset.sum_range_succ, Finset.sum_range_succ]
-              ring_nf
-              rw [ih]
+              rw [Finset.sum_range_succ (f := fun k => indIic t (X (k + 1) ω))]
+              rw [Finset.sum_range_succ (f := fun i => indIic t (X i ω))]
+              --  Goal: (∑ x < m', f(x+1)) + f(m'+1) - ((∑ x < m', f(x)) + f(m')) = f(m'+1) - f(0)
+              -- Simplify LHS algebraically to expose the IH pattern
+              have : (∑ x ∈ Finset.range m', indIic t (X (x + 1) ω)) + indIic t (X (m' + 1) ω) -
+                     ((∑ x ∈ Finset.range m', indIic t (X x ω)) + indIic t (X m' ω))
+                   = (∑ x ∈ Finset.range m', indIic t (X (x + 1) ω)) - (∑ x ∈ Finset.range m', indIic t (X x ω))
+                     + (indIic t (X (m' + 1) ω) - indIic t (X m' ω)) := by ring
+              rw [this, ih]
               ring
 
-        -- Now apply to our goal with the (1/m) factor
+        -- Now apply to our goal: ∑ k : Fin m, f(k+1) - ∑ i : Fin m, f(i) = f(m) - f(0)
+        -- Use h_left and h_right to convert Fin sums to range sums, then apply h_telescope_sum
         rw [h_left, h_right]
-        rw [mul_sub_left_distrib, mul_sub_left_distrib]
-        congr 1
         exact h_telescope_sum
 
       calc ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) -
