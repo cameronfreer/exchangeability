@@ -12,6 +12,7 @@ import Mathlib.Probability.Kernel.Condexp
 import Exchangeability.Contractability
 import Exchangeability.ConditionallyIID
 import Exchangeability.Probability.CondExp
+import Exchangeability.Probability.CondExpHelpers
 import Exchangeability.Probability.Martingale
 import Exchangeability.Tail.TailSigma
 import Exchangeability.DeFinetti.MartingaleHelpers
@@ -208,7 +209,52 @@ lemma condDistrib_factor_indicator_agree
 
   set f := Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ
 
-  sorry
+  -- Use condExp_eq_of_setIntegral_eq from CondExpHelpers
+  -- Key: μ[f | σ(ζ)] satisfies the defining property of μ[f | σ(η)]
+
+  -- Comap measurable spaces are sub-σ-algebras of ambient space
+  have hη_le : MeasurableSpace.comap η inferInstance ≤ (inferInstance : MeasurableSpace Ω) := by
+    intro s hs
+    obtain ⟨t, ht, rfl⟩ := hs
+    exact hη ht
+  have hζ_le : MeasurableSpace.comap ζ inferInstance ≤ (inferInstance : MeasurableSpace Ω) := by
+    intro s hs
+    obtain ⟨t, ht, rfl⟩ := hs
+    exact hζ ht
+
+  -- f is integrable: bounded indicator function on probability space
+  have hf_int : Integrable f μ := by
+    apply Integrable.comp_measurable _ hξ
+    exact integrable_const (1 : ℝ) |>.indicator hB
+
+  -- μ[f | σ(ζ)] is σ(η)-measurable because σ(η) ≤ σ(ζ)
+  have hcond_ζ_meas : Measurable[MeasurableSpace.comap η inferInstance]
+      (μ[f | MeasurableSpace.comap ζ inferInstance]) := by
+    have : Measurable[MeasurableSpace.comap ζ inferInstance]
+        (μ[f | MeasurableSpace.comap ζ inferInstance]) := stronglyMeasurable_condExp.measurable
+    exact Measurable.mono this h_le le_rfl
+
+  -- μ[f | σ(ζ)] is integrable
+  have hcond_ζ_int : Integrable (μ[f | MeasurableSpace.comap ζ inferInstance]) μ :=
+    integrable_condExp
+
+  -- For any η-measurable set A, show ∫_A μ[f | σ(ζ)] dμ = ∫_A f dμ
+  have hint_eq : ∀ A, MeasurableSet[MeasurableSpace.comap η inferInstance] A → μ A < ⊤ →
+      ∫ ω in A, (μ[f | MeasurableSpace.comap ζ inferInstance]) ω ∂μ =
+      ∫ ω in A, f ω ∂μ := by
+    intro A hA_η hμA
+    -- A is η-measurable, hence also ζ-measurable by h_le
+    have hA_ζ : MeasurableSet[MeasurableSpace.comap ζ inferInstance] A := h_le A hA_η
+    -- Use the defining property of conditional expectation on ζ-measurable sets
+    have : SigmaFinite (μ.trim hζ_le) := by infer_instance
+    exact setIntegral_condExp hζ_le hf_int hA_ζ
+
+  -- Apply condExp_eq_of_setIntegral_eq
+  have : SigmaFinite (μ.trim hη_le) := by infer_instance
+  symm
+  exact MeasureTheory.condExp_eq_of_setIntegral_eq
+    (MeasurableSpace.comap η inferInstance) inferInstance hη_le
+    hcond_ζ_meas hf_int hcond_ζ_int hint_eq
   -- ═══════════════════════════════════════════════════════════════════════════════
   -- MATHLIB GAP: Conditional distribution uniqueness under factorization
   -- ═══════════════════════════════════════════════════════════════════════════════
