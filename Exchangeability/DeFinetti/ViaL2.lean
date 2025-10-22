@@ -2990,14 +2990,32 @@ lemma alphaIic_ae_eq_alphaIicCE
     have hA_clip_eq : ∀ ω, max 0 (min 1 (A n m ω)) = A n m ω := by
       intro ω
       obtain ⟨h0, h1⟩ := hA_in_01 ω
-      simp only [max_eq_right h0, min_eq_left h1]
+      rw [min_eq_left h1, max_eq_right h0]
 
-    -- Use the fact that A n m = max 0 (min 1 (A n m)) to rewrite the goal
+    -- Use the fact that clipping can only make things closer when A n m ∈ [0,1]
     calc ∫ ω, |A n m ω - max 0 (min 1 (alpha ω))| ∂μ
-        = ∫ ω, |max 0 (min 1 (A n m ω)) - max 0 (min 1 (alpha ω))| ∂μ := by
-          congr 1; ext ω; rw [hA_clip_eq ω]
-      _ = ∫ ω, |A n m ω - alpha ω| ∂μ := by
-          congr 1; ext ω; rw [hA_clip_eq ω]
+        ≤ ∫ ω, |A n m ω - alpha ω| ∂μ := by
+          apply integral_mono_of_nonneg
+          · intro ω; exact abs_nonneg _
+          · exact hA_memLp n m |>.integrable_norm_rpow (by norm_num)
+          · intro ω
+            -- For A ∈ [0,1], |A - clip(alpha)| ≤ |A - alpha|
+            obtain ⟨hA0, hA1⟩ := hA_in_01 ω
+            by_cases halpha : alpha ω < 0
+            · calc |A n m ω - max 0 (min 1 (alpha ω))|
+                  = |A n m ω - 0| := by simp [max_eq_left (le_of_lt halpha)]
+                _ = A n m ω := by simp [abs_of_nonneg hA0]
+                _ ≤ A n m ω - alpha ω := by linarith
+                _ ≤ |A n m ω - alpha ω| := le_abs_self _
+            · by_cases halpha1 : 1 < alpha ω
+              · calc |A n m ω - max 0 (min 1 (alpha ω))|
+                    = |A n m ω - 1| := by simp [min_eq_right (le_of_lt halpha1), max_eq_right (by linarith : (0 : ℝ) ≤ 1)]
+                  _ = 1 - A n m ω := by simp [abs_of_nonpos (by linarith : A n m ω - 1 ≤ 0)]
+                  _ ≤ alpha ω - A n m ω := by linarith
+                  _ ≤ |A n m ω - alpha ω| := by rw [abs_sub_comm]; exact le_abs_self _
+              · -- alpha ∈ [0,1], so clipping does nothing
+                push_neg at halpha halpha1
+                simp [min_eq_left halpha1, max_eq_right halpha]
       _ < ε := hM m hm
 
   -- Step 2: alphaIicCE is also the L¹ limit of the same averages (at n=0)
