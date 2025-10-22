@@ -3767,10 +3767,23 @@ private theorem optionB_L1_convergence_bounded
         · sorry -- measurability of difference
 
     -- Convert eLpNorm 1 to integral
+    -- Key: ∫ |f| dμ = (∫⁻ ‖f‖ₑ dμ).toReal = (eLpNorm f 1 μ).toReal
     have h_integral_conv : Tendsto (fun n =>
         ∫ ω, |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω| ∂μ)
         atTop (𝓝 0) := by
-      sorry -- TODO: Use eLpNorm_one_eq_lintegral_enorm and convert to integral
+      -- Show the integral equals (eLpNorm _ 1 μ).toReal
+      have h_eq : ∀ n, ∫ ω, |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω| ∂μ =
+          (eLpNorm (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2) 1 μ).toReal := by
+        intro n
+        rw [← eLpNorm_one_eq_lintegral_enorm]
+        rw [integral_norm_eq_lintegral_enorm]
+        · congr 1
+          -- ‖|f|‖ = |f| for real functions
+          sorry -- Show ‖|f ω|‖ = |f ω|
+        · sorry -- measurability
+      -- Apply tendsto with the equality
+      simp_rw [h_eq]
+      exact ENNReal.tendsto_toReal heLp1_conv
 
     -- Transfer to B_n and Y using a.e. equalities
     sorry -- TODO: Use hB_eq_birkhoff and hY_eq to transfer convergence
