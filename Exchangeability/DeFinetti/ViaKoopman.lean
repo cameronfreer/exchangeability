@@ -1662,9 +1662,8 @@ private theorem birkhoffAverage_condexp_m_constant
         (Finset.range n).sum (fun j => f (T^[j] ω)))
       =ᵐ[μ] MeasureTheory.condExp m μ f := by
   -- First show each f ∘ T^[j] is integrable
-  have hf_Tj_int : ∀ j, Integrable (f ∘ T^[j]) μ := fun j => by
-    rw [(hT_pres.iterate j).integrable_comp hf_int.aestronglyMeasurable]
-    exact hf_int
+  have hf_Tj_int : ∀ j, Integrable (f ∘ T^[j]) μ := fun j =>
+    (hT_pres.iterate j).integrable_comp_iff.mpr hf_int
 
   -- The sum is integrable
   have h_sum_int : Integrable (fun ω => (Finset.range n).sum (fun j => f (T^[j] ω))) μ := by
