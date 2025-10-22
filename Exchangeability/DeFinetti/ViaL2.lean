@@ -3024,7 +3024,7 @@ lemma alphaIic_ae_eq_alphaIicCE
         apply Finset.measurable_sum
         intro k _
         exact (indIic_measurable t).comp (hX_meas _)
-      refine Integrable.of_bound hA_meas_nm 1 ?_
+      refine Integrable.of_bound hA_meas_nm.aestronglyMeasurable 1 ?_
       filter_upwards with ω
       unfold A
       simp only [Real.norm_eq_abs]
@@ -3058,7 +3058,7 @@ lemma alphaIic_ae_eq_alphaIicCE
             apply Integrable.sub hA_int
             have : Measurable (fun ω => max 0 (min 1 (alpha ω))) :=
               Measurable.max measurable_const (Measurable.min measurable_const halpha_meas)
-            apply Integrable.of_bound this 1
+            apply Integrable.of_bound this.aestronglyMeasurable 1
             filter_upwards with ω
             simp [Real.norm_eq_abs]
             -- max 0 (min 1 x) is always in [0,1]
@@ -3070,7 +3070,7 @@ lemma alphaIic_ae_eq_alphaIicCE
                 norm_num
               · push_neg at h h1
                 rw [min_eq_right (le_of_lt h1), max_eq_right (le_of_lt h)]
-                exact abs_of_pos h |>.trans (le_of_lt h1)
+                exact abs_of_pos h |>.trans_le (le_of_lt h1)
           · exact (hA_int.sub halpha_int).abs
           · filter_upwards with ω; exact h_clip_le ω
       _ < ε := hM m hm
