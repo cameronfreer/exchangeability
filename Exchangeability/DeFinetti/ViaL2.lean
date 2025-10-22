@@ -3149,9 +3149,6 @@ lemma alphaIic_ae_eq_alphaIicCE
     intro m hm
 
     -- Triangle inequality: ∫ |A 0 m - target| ≤ ∫ |A 0 m - B m| + ∫ |B m - target|
-    unfold A alphaIicCE
-    simp only [zero_add]
-
     -- We need to show: ∫ |A 0 m - μ[indIic t ∘ X 0|tail]| < ε
     -- We have:
     --   1. ∫ |A 0 m - B m| ≤ 2/m (from h_diff_small)
