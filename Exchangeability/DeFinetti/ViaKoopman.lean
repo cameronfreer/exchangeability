@@ -3764,7 +3764,7 @@ private theorem optionB_L1_convergence_bounded
       · intro n
         refine eLpNorm_le_eLpNorm_of_exponent_le (by norm_num : (1 : ℝ≥0∞) ≤ 2) ?_ ?_
         · simp [measure_univ]
-        · sorry -- measurability of difference
+        · exact Lp.aestronglyMeasurable (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2)
 
     -- Convert eLpNorm 1 to integral
     -- Key: ∫ |f| dμ = (∫⁻ ‖f‖ₑ dμ).toReal = (eLpNorm f 1 μ).toReal
@@ -3778,15 +3778,44 @@ private theorem optionB_L1_convergence_bounded
         rw [← eLpNorm_one_eq_lintegral_enorm]
         rw [integral_norm_eq_lintegral_enorm]
         · congr 1
-          -- ‖|f|‖ = |f| for real functions
-          sorry -- Show ‖|f ω|‖ = |f ω|
-        · sorry -- measurability
+          -- For real functions: ‖|f|‖ = |f|
+          ext ω
+          simp only [Pi.sub_apply]
+          -- |r| for r : ℝ is the norm
+          exact norm_abs (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω)
+        · -- Measurability: difference of Lp functions is aestronglyMeasurable
+          exact (Lp.aestronglyMeasurable (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2)).abs
       -- Apply tendsto with the equality
       simp_rw [h_eq]
       exact ENNReal.tendsto_toReal heLp1_conv
 
     -- Transfer to B_n and Y using a.e. equalities
-    sorry -- TODO: Use hB_eq_birkhoff and hY_eq to transfer convergence
+    -- We have: ∫ |birkhoffAverage n fL2 - condexpL2 fL2| ∂μ → 0
+    -- Need: ∫ |B n - Y| ∂μ → 0
+    -- Use: birkhoffAverage n fL2 =ᵐ B n and condexpL2 fL2 =ᵐ Y
+    have h_ae_transfer : ∀ n > 0,
+        (fun ω => |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω|)
+        =ᵐ[μ] (fun ω => |B n ω - Y ω|) := by
+      intro n hn
+      -- Use a.e. equality of the functions
+      have hB := hB_eq_birkhoff n hn
+      have hY := hY_eq
+      filter_upwards [hB, hY] with ω hBω hYω
+      simp only [hBω, hYω]
+    -- Apply integral_congr_ae to show integrals are equal
+    have h_int_eq : ∀ n > 0, ∫ ω, |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω| ∂μ
+        = ∫ ω, |B n ω - Y ω| ∂μ := by
+      intro n hn
+      exact integral_congr_ae (h_ae_transfer n hn)
+    -- Transfer convergence using the equality for large n
+    have : ∀ᶠ n in atTop, ∫ ω, |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω| ∂μ
+        = ∫ ω, |B n ω - Y ω| ∂μ := by
+      apply eventually_of_forall
+      intro n
+      by_cases hn : n > 0
+      · exact h_int_eq n hn
+      · simp [B, hn]
+    exact (tendsto_congr' this).mp h_integral_conv
 
   -- Step 4b: A_n and B_n differ negligibly due to indexing
   -- |A_n ω - B_n ω| ≤ 2*Cg/(n+1) since g is bounded
