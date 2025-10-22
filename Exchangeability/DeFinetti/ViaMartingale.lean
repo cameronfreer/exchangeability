@@ -142,18 +142,25 @@ lemma measurableSpace_pi_nat_le_iSup_fin {α : Type*} [MeasurableSpace α] :
   use t.sup id + 1
 
   -- Now show cylinder t S is measurable in comap (·|Fin k)
-  --
-  -- STRATEGY: cylinder t S = t.restrict ⁻¹' S
-  -- Need to show this equals: (projection to Fin k) ⁻¹' (some measurable set)
-  --
-  -- This requires:
-  -- 1. Show t.restrict factors through projection to Fin k
-  --    (since all elements of t are < t.sup id + 1)
-  -- 2. Compose with S to get the measurable set
-  -- 3. Apply measurable_comap (preimage of measurable is measurable)
-  --
-  -- The factorization step needs careful handling of Fin k vs ℕ coercions
-  sorry  -- TODO: Complete factorization argument
+  rw [MeasurableSpace.measurableSet_comap]
+  unfold MeasureTheory.cylinder
+
+  -- Define g : (Fin k → α) → (t → α) that restricts from Fin to t
+  let g : (Fin (t.sup id + 1) → α) → (t → α) := fun h i => h ⟨i.val,
+    Nat.lt_succ_of_le (Finset.le_sup (f := id) i.property)⟩
+
+  use g ⁻¹' S
+
+  constructor
+  · -- Prove g ⁻¹' S is measurable
+    have hg : Measurable g := measurable_pi_lambda _ (fun i => measurable_pi_apply _)
+    exact MeasurableSet.preimage hS_meas hg
+
+  · -- Prove: (fun f i => f ↑i) ⁻¹' (g ⁻¹' S) = t.restrict ⁻¹' S
+    rw [← Set.preimage_comp]
+    funext f
+    ext i
+    rfl
 
 end PiFiniteProjections
 
@@ -195,17 +202,32 @@ lemma condDistrib_factor_indicator_agree
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ | MeasurableSpace.comap ζ inferInstance]
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ | MeasurableSpace.comap η inferInstance] := by
-  -- The key insight: h_le tells us η is determined by ζ (η = g ∘ ζ for some g)
-  -- Combined with h_law (equal joint distributions), this implies the conditional
-  -- distributions agree a.e.: condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (η ω)
+  -- Strategy: Use ae_eq_condExp_of_forall_setIntegral_eq
+  -- to show E[f|σ(ζ)] has the defining property of E[f|σ(η)]
+
+  set f := Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ
+
+  sorry
+  -- ═══════════════════════════════════════════════════════════════════════════════
+  -- MATHLIB GAP: Conditional distribution uniqueness under factorization
+  -- ═══════════════════════════════════════════════════════════════════════════════
   --
-  -- The full proof requires:
-  -- 1. Extract g from h_le (comap inequality → factorization)
-  -- 2. Use disintegration theorem: condExp can be expressed via condDistrib
-  -- 3. Apply uniqueness: equal laws + factorization → equal kernels a.e.
+  -- **What's needed:** Uniqueness of regular conditional distributions when one
+  -- random variable factors through another.
   --
-  -- This is the core gap in mathlib's kernel/disintegration infrastructure.
-  sorry  -- TODO: Prove using condExp_ae_eq_integral_condDistrib + kernel uniqueness
+  -- **Mathematical statement:** If (ξ, η) =^d (ξ, ζ) and η = g(ζ), then
+  -- the conditional distributions agree: P(ξ ∈ · | ζ) = P(ξ ∈ · | η = g(ζ)) a.e.
+  --
+  -- **Proof strategy:**
+  -- 1. Use ae_eq_condExp_of_forall_setIntegral_eq to characterize E[1_B(ξ)|σ(η)]
+  -- 2. For each η-measurable set A = η⁻¹(E), show:
+  --      ∫_A E[1_B(ξ)|σ(ζ)] dμ = ∫_A 1_B(ξ) dμ
+  -- 3. From h_le, write A = ζ⁻¹(g⁻¹(E)) for some measurable g
+  -- 4. Use h_law to relate μ(ξ⁻¹(B) ∩ ζ⁻¹(F)) = μ(ξ⁻¹(B) ∩ η⁻¹(E))
+  -- 5. Apply conditional expectation property on ζ-measurable sets
+  --
+  -- **Mathlib contribution target:** Mathlib.Probability.Kernel.CondDistrib
+  -- **Estimated effort:** 2-3 weeks (requires extending disintegration theory)
 
 end CondDistribUniqueness
 
@@ -246,7 +268,7 @@ lemma condIndep_of_triple_law
     (h_le : MeasurableSpace.comap ζ inferInstance ≤
             MeasurableSpace.comap ζ' inferInstance) :
     True := by  -- Placeholder - actual CondIndep would require StandardBorelSpace
-  sorry  -- TODO: Prove using disintegration theorem and kernel uniqueness
+  trivial  -- True is trivially true
 
 /-- **[TODO: Mathlib.Probability.Independence.Conditional]**
 
@@ -276,7 +298,24 @@ lemma condExp_projection_of_condIndep
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y
        | MeasurableSpace.comap W inferInstance] := by
-  sorry  -- TODO: Prove using conditional independence product formula
+  sorry
+  -- ═══════════════════════════════════════════════════════════════════════════════
+  -- MATHLIB GAP: Conditional expectation projection from conditional independence
+  -- ═══════════════════════════════════════════════════════════════════════════════
+  --
+  -- **What's needed:** If Y ⊥⊥_W Z (conditional independence), then
+  -- E[f(Y) | σ(Z,W)] = E[f(Y) | σ(W)] a.e.
+  --
+  -- **Proof strategy:**
+  -- 1. Show σ(W) ≤ σ(Z,W) by product σ-algebra structure
+  -- 2. Apply tower property: E[f(Y)|σ(W)] = E[E[f(Y)|σ(Z,W)]|σ(W)]
+  -- 3. From conditional independence, E[f(Y)|σ(Z,W)] depends only on W, not Z
+  -- 4. Therefore it's σ(W)-measurable, so E[E[·]|σ(W)] = identity
+  --
+  -- **Missing:** Formal definition of conditional independence and its properties
+  --
+  -- **Mathlib contribution target:** Mathlib.Probability.Independence.Conditional
+  -- **Estimated effort:** 3-4 weeks (requires formalizing conditional independence)
 
 /-- **Combined lemma:** Conditional expectation projection from triple distributional equality.
 
@@ -302,24 +341,32 @@ lemma condExp_eq_of_triple_law
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y
        | MeasurableSpace.comap W inferInstance] := by
-  -- Step 1: Show σ(W) ≤ σ(Z, W)
-  have h_le : MeasurableSpace.comap W inferInstance ≤
-              MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance := by
-    calc MeasurableSpace.comap W inferInstance
-        ≤ MeasurableSpace.comap Z inferInstance ⊔ MeasurableSpace.comap W inferInstance :=
-          le_sup_right
-      _ = MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance :=
-          (MeasurableSpace.comap_prodMk Z W).symm
-
-  -- Step 2: Extract conditional independence from triple law (Kallenberg 1.3)
-  -- From (Z, Y, W) =ᵈ (Z, Y, W') with σ(W) ≤ σ(Z, W), get Y ⊥⊥_W (Z, W')
-  -- But we need the reversed form...
-  -- Actually, we need a slightly different statement
-
-  -- The proof requires showing that from the triple law, we can derive
-  -- the conditional independence that makes Z redundant for predicting Y
-  -- when W is known. This is encoded in the combination of the two lemmas above.
-  sorry  -- TODO: Apply condIndep_of_triple_law + condExp_projection_of_condIndep
+  sorry
+  -- ═══════════════════════════════════════════════════════════════════════════════
+  -- MATHLIB GAP: Kallenberg Lemma 1.3 application (contraction-independence)
+  -- ═══════════════════════════════════════════════════════════════════════════════
+  --
+  -- **What's needed:** Derive conditional expectation projection from triple law
+  --
+  -- **Mathematical statement:** If (Z, Y, W) =^d (Z, Y, W'), then
+  -- E[f(Y) | σ(Z,W)] = E[f(Y) | σ(W)] a.e.
+  --
+  -- **Proof strategy (Kallenberg's approach):**
+  -- 1. From distributional equality + "contraction", derive Y ⊥⊥_W Z
+  --    (this is Kallenberg Lemma 1.3 - the "contraction-independence" property)
+  -- 2. Apply condExp_projection_of_condIndep to get the projection property
+  --
+  -- **Alternative direct proof:**
+  -- 1. Show σ(W) ≤ σ(Z,W) by structure
+  -- 2. Apply tower property: E[f(Y)|σ(W)] = E[E[f(Y)|σ(Z,W)]|σ(W)]
+  -- 3. Use h_triple to show E[f(Y)|σ(Z,W)] is actually σ(W)-measurable
+  -- 4. Therefore the inner conditional expectation reduces to identity
+  --
+  -- **Missing:** Either (a) Kallenberg 1.3 + CondIndep theory, or (b) direct proof
+  -- that distributional equality implies the needed measurability
+  --
+  -- **Mathlib contribution target:** Mathlib.Probability.Independence.Conditional
+  -- **Estimated effort:** 4-6 weeks (most complex of the three gaps)
 
 end ConditionalIndependence
 
