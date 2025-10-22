@@ -3121,21 +3121,21 @@ lemma alphaIic_ae_eq_alphaIicCE
                 exact abs_sub (indIic t (X m ω)) (indIic t (X 0 ω))
         _ = (1/(m:ℝ)) * (∫ ω, |indIic t (X m ω)| ∂μ + ∫ ω, |indIic t (X 0 ω)| ∂μ) := by
               congr 1
-              rw [integral_add (Integrable.abs hf_int) (Integrable.abs hg_int)]
+              exact integral_add (Integrable.abs hf_int) (Integrable.abs hg_int)
         _ ≤ (1/(m:ℝ)) * (1 + 1) := by
               gcongr
               · -- ∫ |indIic t (X m)| ≤ 1
                 have : ∫ ω, |indIic t (X m ω)| ∂μ ≤ ∫ ω, (1 : ℝ) ∂μ := by
-                  apply integral_mono (Integrable.abs hf_int) (integrable_const 1)
-                  filter_upwards with ω
+                  refine integral_mono (Integrable.abs hf_int) (integrable_const 1) ?_
+                  intro ω
                   unfold indIic; simp [Set.indicator, abs_of_nonneg]; split_ifs <;> norm_num
                 calc ∫ ω, |indIic t (X m ω)| ∂μ
                     ≤ ∫ ω, (1 : ℝ) ∂μ := this
                   _ = 1 := by simp [measure_univ]
               · -- ∫ |indIic t (X 0)| ≤ 1
                 have : ∫ ω, |indIic t (X 0 ω)| ∂μ ≤ ∫ ω, (1 : ℝ) ∂μ := by
-                  apply integral_mono (Integrable.abs hg_int) (integrable_const 1)
-                  filter_upwards with ω
+                  refine integral_mono (Integrable.abs hg_int) (integrable_const 1) ?_
+                  intro ω
                   unfold indIic; simp [Set.indicator, abs_of_nonneg]; split_ifs <;> norm_num
                 calc ∫ ω, |indIic t (X 0 ω)| ∂μ
                     ≤ ∫ ω, (1 : ℝ) ∂μ := this
