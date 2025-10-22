@@ -3028,8 +3028,11 @@ lemma alphaIic_ae_eq_alphaIicCE
     let B : ℕ → Ω → ℝ := fun m ω => (1 / (m : ℝ)) * ∑ i : Fin m, indIic t (X i ω)
 
     -- Apply cesaro_to_condexp_L1 for B
-    have h_axiom := @cesaro_to_condexp_L1 Ω _ μ _ X hX_contract hX_meas (indIic t)
-                     (indIic_measurable t) (indIic_bdd t) (ε/2) (by linarith)
+    -- TODO: Fix axiom accessibility issue (axiom defined at line 1680 but not recognized)
+    have h_axiom : ∃ (M : ℕ), ∀ (m : ℕ), m ≥ M →
+        ∫ ω, |(1 / (m : ℝ)) * ∑ i : Fin m, indIic t (X i ω) -
+              (μ[(indIic t ∘ X 0) | TailSigma.tailSigma X] ω)| ∂μ < ε/2 := by
+      sorry -- Should use cesaro_to_condexp_L1 axiom
     obtain ⟨M₁, hM₁⟩ := h_axiom
 
     -- The difference between A 0 m and B m is O(1/m)
@@ -3327,7 +3330,7 @@ lemma alphaIic_ae_eq_alphaIicCE
               rw [abs_mul, abs_of_nonneg (by positivity : 0 ≤ 1 / (m : ℝ))]
               ring_nf
           _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, |indIic t (X (↑k + 1) ω)| :=
-              mul_le_mul_of_nonneg_left (abs_sum_le_sum_abs _ _) (by positivity)
+              mul_le_mul_of_nonneg_left (Finset.abs_sum_le_sum_abs _ _) (by positivity)
           _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
               apply mul_le_mul_of_nonneg_left _ (by positivity)
               apply Finset.sum_le_sum
@@ -3354,7 +3357,7 @@ lemma alphaIic_ae_eq_alphaIicCE
               rw [abs_mul, abs_of_nonneg (by positivity : 0 ≤ 1 / (m : ℝ))]
               ring_nf
           _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, |indIic t (X (↑k + 1) ω)| :=
-              mul_le_mul_of_nonneg_left (abs_sum_le_sum_abs _ _) (by positivity)
+              mul_le_mul_of_nonneg_left (Finset.abs_sum_le_sum_abs _ _) (by positivity)
           _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
               apply mul_le_mul_of_nonneg_left _ (by positivity)
               apply Finset.sum_le_sum
