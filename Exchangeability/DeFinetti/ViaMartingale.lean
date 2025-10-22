@@ -16,6 +16,7 @@ import Exchangeability.Probability.Martingale
 import Exchangeability.Tail.TailSigma
 import Exchangeability.DeFinetti.MartingaleHelpers
 import Exchangeability.DeFinetti.CommonEnding
+import Exchangeability.Probability.MeasureKernels
 
 /-!
 # de Finetti's Theorem via Reverse Martingales
@@ -3166,7 +3167,7 @@ lemma bind_apply_univ_pi
           ext x
           simp
       rw [this]
-      exact Exchangeability.DeFinetti.CommonEnding.rectangles_generate_pi_sigma (m := m) (α := α)
+      exact rectangles_generate_pi_sigma (m := m) (α := α)
 
     have h_pi : IsPiSystem Rectangles := by
       have : Rectangles = {S : Set (Fin m → α) | ∃ (B : Fin m → Set α),
@@ -3184,7 +3185,7 @@ lemma bind_apply_univ_pi
           ext x
           simp
       rw [this]
-      exact Exchangeability.DeFinetti.CommonEnding.rectangles_isPiSystem (m := m) (α := α)
+      exact rectangles_isPiSystem (m := m) (α := α)
 
     -- Measurability on rectangles
     have h_rect : ∀ t ∈ Rectangles, Measurable fun ω => κ ω t := by
@@ -3260,7 +3261,7 @@ lemma finite_product_formula_id
       · intro ⟨B, hB, hS⟩
         refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp
     rw [this]
-    exact Exchangeability.DeFinetti.CommonEnding.rectangles_isPiSystem (m := m) (α := α)
+    exact rectangles_isPiSystem (m := m) (α := α)
 
   have h_gen : (inferInstance : MeasurableSpace (Fin m → α))
       = MeasurableSpace.generateFrom Rectangles := by
@@ -3273,7 +3274,7 @@ lemma finite_product_formula_id
       · intro ⟨B, hB, hS⟩
         refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp
     rw [this]
-    exact Exchangeability.DeFinetti.CommonEnding.rectangles_generate_pi_sigma (m := m) (α := α)
+    exact rectangles_generate_pi_sigma (m := m) (α := α)
 
   -- 2) Show both measures agree on rectangles
   have h_agree :
@@ -3507,7 +3508,7 @@ lemma finite_product_formula_id
             · intro ⟨B, hB, hS⟩
               refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp
           rw [this]
-          exact Exchangeability.DeFinetti.CommonEnding.rectangles_generate_pi_sigma (m := m) (α := α)
+          exact rectangles_generate_pi_sigma (m := m) (α := α)
 
         have h_pi : IsPiSystem Rectangles := by
           have : Rectangles = {S : Set (Fin m → α) | ∃ (B : Fin m → Set α),
@@ -3519,7 +3520,7 @@ lemma finite_product_formula_id
             · intro ⟨B, hB, hS⟩
               refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp
           rw [this]
-          exact Exchangeability.DeFinetti.CommonEnding.rectangles_isPiSystem (m := m) (α := α)
+          exact rectangles_isPiSystem (m := m) (α := α)
 
         have h_rect : ∀ t ∈ Rectangles, Measurable fun ω => κ ω t := by
           intro t ht
