@@ -8,6 +8,7 @@ import Mathlib.MeasureTheory.Measure.Typeclasses.Probability
 import Mathlib.MeasureTheory.Measure.GiryMonad
 import Mathlib.MeasureTheory.Constructions.Pi
 import Exchangeability.Contractability
+import Exchangeability.Probability.MeasureKernels
 
 /-!
 # Conditionally i.i.d. Sequences and de Finetti's Theorem
@@ -200,6 +201,7 @@ Theorem 1.1 (page 27-28).
 def ConditionallyIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
   ∃ ν : Ω → Measure α,
     (∀ ω, IsProbabilityMeasure (ν ω)) ∧
+    (∀ B, MeasurableSet B → Measurable (fun ω => ν ω B)) ∧
       ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
         Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
           = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)
@@ -255,7 +257,7 @@ theorem exchangeable_of_conditionallyIID {μ : Measure Ω} {X : ℕ → Ω → �
     (hX_meas : ∀ i, Measurable (X i)) (hX : ConditionallyIID μ X) :
     Exchangeable μ X := by
   intro n σ
-  obtain ⟨ν, hν_prob, hν_eq⟩ := hX
+  obtain ⟨ν, hν_prob, hν_meas_coe, hν_eq⟩ := hX
   -- Product formula for identity (which is strictly monotone)
   have h_id : Measure.map (fun ω i => X i.val ω) μ =
               μ.bind (fun ω => Measure.pi fun _ : Fin n => ν ω) := by
@@ -269,6 +271,9 @@ theorem exchangeable_of_conditionallyIID {μ : Measure Ω} {X : ℕ → Ω → �
   -- Measurability of permutation on finite functions
   have hperm_meas : Measurable (fun f : Fin n → α => f ∘ σ) := by
     exact measurable_pi_lambda _ (fun i => measurable_pi_apply (σ i))
+  -- Measurability of the product measure kernel
+  have hν_meas : Measurable fun ω => Measure.pi fun _ : Fin n => ν ω := by
+    exact measurable_measure_pi ν hν_prob hν_meas_coe
   -- Show permuted version equals the same mixture
   calc Measure.map (fun ω i => X (σ i).val ω) μ
       -- Factor as permutation composed with identity
@@ -280,8 +285,6 @@ theorem exchangeable_of_conditionallyIID {μ : Measure Ω} {X : ℕ → Ω → �
           rw [h_id]
     _ -- Push permutation through bind (Giry monad functoriality)
       = μ.bind (fun ω => Measure.map (fun f => f ∘ σ) (Measure.pi fun _ : Fin n => ν ω)) := by
-          -- Need measurability of ν
-          have hν_meas : Measurable fun ω => Measure.pi fun _ : Fin n => ν ω := sorry
           rw [MeasureTheory.Measure.bind_map_comm hν_meas hperm_meas]
     _ -- Product measures are permutation-invariant
       = μ.bind (fun ω => Measure.pi fun _ : Fin n => ν ω) := by

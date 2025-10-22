@@ -162,7 +162,7 @@ theorem conditionallyIID_of_contractable
   -- For non-strictly-monotone functions (with repeated indices), the correct law
   -- involves a duplication map from the distinct-indices product, which follows
   -- trivially from the StrictMono case. See ConditionallyIID.lean for details.
-  exact ⟨ν, hν_prob, hProduct⟩
+  exact ⟨ν, hν_prob, hν_meas, hProduct⟩
 
 /-- **De Finetti's Theorem (Martingale proof)**: Exchangeable ⇒ ConditionallyIID.
 
