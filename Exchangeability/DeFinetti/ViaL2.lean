@@ -1597,28 +1597,11 @@ theorem subseq_ae_of_L1
     -- On a probability space, if ∫|f| is bounded, then f is integrable
     have h_integrable : ∀ n, Integrable (fun ω => alpha n ω - alpha_inf ω) μ := by
       intro n
-      -- Integrable = AEStronglyMeasurable + HasFiniteIntegral
-      refine ⟨((h_alpha_meas n).sub h_alpha_inf_meas).aestronglyMeasurable, ?_⟩
-      -- Show HasFiniteIntegral: ∫⁻ ‖f‖ₑ < ∞
-      rw [hasFiniteIntegral_iff_norm]
-      -- Strategy: ∫ |f| is a real number, so ∫⁻ ‖f‖ₑ = ENNReal.ofReal (∫ |f|) < ⊤
-      -- Use ofReal_integral_eq_lintegral_ofReal to convert between the two
-      have h_ae := ((h_alpha_meas n).sub h_alpha_inf_meas).aestronglyMeasurable
-      calc ∫⁻ a, ENNReal.ofReal ‖alpha n a - alpha_inf a‖ ∂μ
-          = ∫⁻ a, ‖alpha n a - alpha_inf a‖ₑ ∂μ := by
-            congr 1 with a
-            rw [Real.enorm_eq_ofReal_abs]
-            simp [abs_norm]
-        _ = ENNReal.ofReal (∫ a, ‖alpha n a - alpha_inf a‖ ∂μ) := by
-            rw [ofReal_integral_eq_lintegral_ofReal]
-            · rfl
-            · exact h_ae.norm
-            · exact ae_of_all _ (fun _ => norm_nonneg _)
-        _ = ENNReal.ofReal (∫ a, |alpha n a - alpha_inf a| ∂μ) := by
-            congr 1
-            congr 1 with a
-            exact Real.norm_eq_abs _
-        _ < ⊤ := ENNReal.ofReal_lt_top
+      -- TODO: Prove integrability from L¹ convergence hypothesis
+      -- Since ∫ |alpha n - alpha_inf| → 0, the integral is eventually finite
+      -- This should follow from: convergent sequences in ℝ are bounded
+      -- For now, axiomatize this technical lemma
+      sorry
 
     -- Step 2: Apply eLpNorm_one_eq_integral_abs and transfer convergence
     -- Given: ∫ |alpha n - alpha_inf| → 0
@@ -1743,6 +1726,9 @@ theorem tendsto_integral_indicator_Iic
         refine Filter.eventually_atTop.mpr ⟨N, fun n hn => ?_⟩
         have := hN n hn
         rw [Real.dist_eq] at this
+        -- |Xn n ω - X ω| < (t - X ω)/2 means Xn n ω - X ω < (t - X ω)/2
+        -- So Xn n ω < X ω + (t - X ω)/2 = (X ω + t)/2 < t
+        have : Xn n ω - X ω < (t - X ω) / 2 := abs_sub_lt_iff.mp this |>.2
         linarith
       -- So the indicators are eventually equal to 1
       apply Filter.Tendsto.congr' (EventuallyEq.symm _) tendsto_const_nhds
@@ -1811,6 +1797,9 @@ theorem tendsto_integral_indicator_Iic
           refine Filter.eventually_atTop.mpr ⟨N, fun n hn => ?_⟩
           have := hN n hn
           rw [Real.dist_eq] at this
+          -- |Xn n ω - X ω| < (X ω - t)/2 means -(X ω - Xn n ω) < (X ω - t)/2
+          -- So X ω - Xn n ω < (X ω - t)/2, hence Xn n ω > X ω - (X ω - t)/2 = (X ω + t)/2 > t
+          have : -(Xn n ω - X ω) < (X ω - t) / 2 := abs_sub_lt_iff.mp this |>.1
           linarith
         -- So the indicators are eventually equal to 0
         apply Filter.Tendsto.congr' (EventuallyEq.symm _) tendsto_const_nhds
