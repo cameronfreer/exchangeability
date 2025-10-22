@@ -3157,12 +3157,16 @@ lemma alphaIic_ae_eq_alphaIicCE
     have h1 : (m : ℝ) ≥ M₁ := by
       calc (m : ℝ)
           ≥ max M₁ (Nat.ceil (4/ε)) := Nat.cast_le.mpr hm
-        _ ≥ M₁ := by simp [max_def]; split_ifs <;> linarith
+        _ ≥ M₁ := by
+            have : max (M₁ : ℝ) (Nat.ceil (4/ε) : ℝ) ≥ M₁ := le_max_left _ _
+            simpa [Nat.cast_max] using this
 
     have h2 : (m : ℝ) ≥ Nat.ceil (4/ε) := by
       calc (m : ℝ)
           ≥ max M₁ (Nat.ceil (4/ε)) := Nat.cast_le.mpr hm
-        _ ≥ Nat.ceil (4/ε) := by simp [max_def]; split_ifs <;> linarith
+        _ ≥ Nat.ceil (4/ε) := by
+            have : max (M₁ : ℝ) (Nat.ceil (4/ε) : ℝ) ≥ Nat.ceil (4/ε) := le_max_right _ _
+            simpa [Nat.cast_max] using this
 
     -- From h2, we get 2/m ≤ ε/2
     have h_small : 2/(m:ℝ) ≤ ε/2 := by
