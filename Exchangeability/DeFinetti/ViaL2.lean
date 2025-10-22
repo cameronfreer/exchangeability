@@ -3359,8 +3359,8 @@ lemma alphaIic_ae_eq_alphaIicCE
                       _ = 1 := by field_simp
                   · -- target is integrable
                     exact integrable_condExp
-              · -- Pointwise bound
-                filter_upwards with ω
+              · -- Pointwise bound: |a - c| ≤ |a - b| + |b - c|
+                intro ω
                 exact abs_sub_le _ _ _
             · -- Integrability of |A - B|
               apply Integrable.abs
@@ -3388,15 +3388,14 @@ lemma alphaIic_ae_eq_alphaIicCE
                     ((indIic_measurable t).comp (hX_meas _)))) _
                 apply Integrable.of_bound hB_meas.aestronglyMeasurable 1
                 filter_upwards with ω; simp [Real.norm_eq_abs]
-                calc |(1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)|
-                    = (1/(m:ℝ)) * |∑ i : Fin m, indIic t (X i ω)| := by
-                        rw [abs_mul, abs_of_pos]; positivity
-                  _ ≤ (1/(m:ℝ)) * ∑ i : Fin m, |indIic t (X i ω)| := by
+                -- Note: simp already converted |(m:ℝ)⁻¹ * ∑...| to (m:ℝ)⁻¹ * |∑...|
+                calc (m:ℝ)⁻¹ * |∑ i : Fin m, indIic t (X i ω)|
+                  _ ≤ (m:ℝ)⁻¹ * ∑ i : Fin m, |indIic t (X i ω)| := by
                         gcongr; exact Finset.abs_sum_le_sum_abs _ _
-                  _ ≤ (1/(m:ℝ)) * ∑ i : Fin m, (1 : ℝ) := by
+                  _ ≤ (m:ℝ)⁻¹ * ∑ i : Fin m, (1 : ℝ) := by
                         gcongr with i
                         unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
-                  _ = (1/(m:ℝ)) * m := by simp [Finset.sum_const, Finset.card_fin]
+                  _ = (m:ℝ)⁻¹ * m := by simp [Finset.sum_const, Finset.card_fin]
                   _ = 1 := by field_simp
             · -- Integrability of |B - target|
               apply Integrable.abs
@@ -3408,15 +3407,14 @@ lemma alphaIic_ae_eq_alphaIicCE
                     ((indIic_measurable t).comp (hX_meas _)))) _
                 apply Integrable.of_bound hB_meas.aestronglyMeasurable 1
                 filter_upwards with ω; simp [Real.norm_eq_abs]
-                calc |(1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)|
-                    = (1/(m:ℝ)) * |∑ i : Fin m, indIic t (X i ω)| := by
-                        rw [abs_mul, abs_of_pos]; positivity
-                  _ ≤ (1/(m:ℝ)) * ∑ i : Fin m, |indIic t (X i ω)| := by
+                -- Note: simp already converted |(m:ℝ)⁻¹ * ∑...| to (m:ℝ)⁻¹ * |∑...|
+                calc (m:ℝ)⁻¹ * |∑ i : Fin m, indIic t (X i ω)|
+                  _ ≤ (m:ℝ)⁻¹ * ∑ i : Fin m, |indIic t (X i ω)| := by
                         gcongr; exact Finset.abs_sum_le_sum_abs _ _
-                  _ ≤ (1/(m:ℝ)) * ∑ i : Fin m, (1 : ℝ) := by
+                  _ ≤ (m:ℝ)⁻¹ * ∑ i : Fin m, (1 : ℝ) := by
                         gcongr with i
                         unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
-                  _ = (1/(m:ℝ)) * m := by simp [Finset.sum_const, Finset.card_fin]
+                  _ = (m:ℝ)⁻¹ * m := by simp [Finset.sum_const, Finset.card_fin]
                   _ = 1 := by field_simp
               · -- target is integrable
                 exact integrable_condExp
