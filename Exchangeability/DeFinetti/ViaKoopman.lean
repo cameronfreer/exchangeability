@@ -3702,7 +3702,12 @@ private theorem optionB_L1_convergence_bounded
   set fs : Fin 1 → α → ℝ := fun _ => g
   have hG_eq : G = productCylinder fs := by
     ext ω
-    simp [G, productCylinder, Finset.prod_fin_eq_prod_range, Finset.prod_range_one]
+    simp only [G, productCylinder]
+    -- ∏ k : Fin 1, fs k (ω k.val) = fs 0 (ω 0) = g (ω 0)
+    rw [Finset.prod_eq_single (0 : Fin 1)]
+    · rfl
+    · intro b _ hb; exact absurd rfl hb
+    · intro h; exact absurd (Finset.mem_univ 0) h
 
   -- Step 2: Apply birkhoffCylinder_tendsto_condexp to get L² convergence
   have hmeas_fs : ∀ k, Measurable (fs k) := fun _ => hg_meas
@@ -3713,7 +3718,7 @@ private theorem optionB_L1_convergence_bounded
 
   -- fL2 = G a.e., so fL2 = g(ω 0) a.e.
   have hfL2_eq : fL2 =ᵐ[μ] G := by
-    rw [hG_eq] at hfL2_ae
+    rw [← hG_eq]
     exact hfL2_ae
 
   -- Step 3: Define B_n to match birkhoffAverage exactly
@@ -3773,7 +3778,20 @@ private theorem optionB_L1_convergence_bounded
     · sorry -- Show |A n ω - B n ω| → 0 pointwise
 
   -- Step 4c: Triangle inequality: |A_n - Y| ≤ |A_n - B_n| + |B_n - Y|
-  sorry -- TODO: Apply tendsto_add for the final conclusion
+  have h_triangle : ∀ n, ∫ ω, |A n ω - Y ω| ∂μ ≤
+      ∫ ω, |A n ω - B n ω| ∂μ + ∫ ω, |B n ω - Y ω| ∂μ := by
+    intro n
+    apply integral_mono_of_nonneg
+    · exact ae_of_all _ (fun ω => abs_nonneg _)
+    · sorry -- integrability of |A n - Y|
+    · sorry -- integrability of |A n - B n| + |B n - Y|
+    · apply ae_of_all; intro ω
+      exact abs_sub_abs_le_abs_sub (A n ω) (B n ω) (Y ω)
+  -- Combine the two convergences
+  apply squeeze_zero
+  · exact ae_of_all _ (fun n => integral_nonneg (ae_of_all _ (fun ω => abs_nonneg _)))
+  · exact eventually_of_forall h_triangle
+  · exact Tendsto.add hA_B_close hB_L1_conv
 
 end OptionB_L1Convergence
 
