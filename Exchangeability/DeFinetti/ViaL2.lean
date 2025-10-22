@@ -3264,8 +3264,9 @@ lemma alphaIic_ae_eq_alphaIicCE
     -- Apply h_diff_small
     have hm_pos' : m > 0 := Nat.pos_of_ne_zero (by
       intro h
-      rw [h] at h2
-      norm_num at h2)
+      simp [h] at h2
+      have : (4 : ℝ) / ε > 0 := by positivity
+      linarith)
     have hAB_diff : ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) - B m ω| ∂μ ≤ 2/(m:ℝ) :=
       h_diff_small m hm_pos'
 
@@ -3370,11 +3371,8 @@ lemma alphaIic_ae_eq_alphaIicCE
                     ((indIic_measurable t).comp (hX_meas _)))) _
                 apply Integrable.of_bound hA_meas.aestronglyMeasurable 1
                 filter_upwards with ω; simp [Real.norm_eq_abs]
-                calc |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)|
-                    = |↑m⁻¹ * ∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
-                        rw [one_div]
-                  _ = (m:ℝ)⁻¹ * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
-                        rw [abs_mul, abs_of_pos]; positivity
+                -- Note: simp already converted |(1/m) * ∑...| to m⁻¹ * |∑...|
+                calc (m:ℝ)⁻¹ * |∑ k : Fin m, indIic t (X (k.val + 1) ω)|
                   _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
                         gcongr; exact Finset.abs_sum_le_sum_abs _ _
                   _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, (1 : ℝ) := by
