@@ -1590,8 +1590,8 @@ for any integrable `f`:
 4. Therefore the conditional expectations agree a.e.
 -/
 private lemma condexp_comp_T_eq_condexp
-    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {m : MeasurableSpace Ω} (hm : m ≤ ‹MeasurableSpace Ω›)
+    {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {m : MeasurableSpace Ω} (hm : m ≤ mΩ)
     (T : Ω → Ω) (hT_meas : Measurable T) (hT_pres : MeasurePreserving T μ μ)
     (h_inv : ∀ s, MeasurableSet[m] s → T ⁻¹' s = s)
     (f : Ω → ℝ) (hf : Integrable f μ) :
@@ -1600,7 +1600,7 @@ private lemma condexp_comp_T_eq_condexp
   symm
   apply MeasureTheory.ae_eq_condExp_of_forall_setIntegral_eq hm
   -- f ∘ T is integrable
-  · exact hf.comp_measurePreserving hT_pres
+  · exact (hT_pres.integrable_comp hf.aestronglyMeasurable).mpr hf
   -- For m-measurable s with μ s < ∞, condExp m μ f is integrable on s
   · intro s hs hμs
     exact (MeasureTheory.integrable_condExp.integrableOn : IntegrableOn (MeasureTheory.condExp m μ f) s μ)
@@ -1617,8 +1617,8 @@ private lemma condexp_comp_T_eq_condexp
 
 /-- Extension to iterated composition: 𝔼[f ∘ T^[k] | m] = 𝔼[f | m] for all k. -/
 private lemma condexp_comp_T_pow_eq_condexp
-    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {m : MeasurableSpace Ω} (hm : m ≤ ‹MeasurableSpace Ω›)
+    {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {m : MeasurableSpace Ω} (hm : m ≤ mΩ)
     (T : Ω → Ω) (hT_meas : Measurable T) (hT_pres : MeasurePreserving T μ μ)
     (h_inv : ∀ s, MeasurableSet[m] s → T ⁻¹' s = s)
     (f : Ω → ℝ) (hf : Integrable f μ) (k : ℕ) :
@@ -1653,8 +1653,8 @@ ambient/sub-σ-algebra mismatch in the Koopman infrastructure.
 constant sequence trivially converges in any norm.
 -/
 private theorem birkhoffAverage_condexp_m_constant
-    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {m : MeasurableSpace Ω} (hm : m ≤ ‹MeasurableSpace Ω›)
+    {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {m : MeasurableSpace Ω} (hm : m ≤ mΩ)
     (T : Ω → Ω) (hT_meas : Measurable T) (hT_pres : MeasurePreserving T μ μ)
     (h_inv : ∀ s, MeasurableSet[m] s → T ⁻¹' s = s)
     (f : Ω → ℝ) (hf_int : Integrable f μ) (n : ℕ) (hn : n > 0) :
@@ -1668,7 +1668,7 @@ private theorem birkhoffAverage_condexp_m_constant
 
   -- The sum is integrable
   have h_sum_int : Integrable (fun ω => (Finset.range n).sum (fun j => f (T^[j] ω))) μ := by
-    apply Integrable.finset_sum
+    apply integrable_finset_sum
     intro j _
     exact hf_Tj_int j
 
@@ -1733,9 +1733,9 @@ the Cesàro averages of `f ∘ T^[j]` converge in L² to `condExp m μ f`, provi
 `m` is `T`-invariant.  This is a thin wrapper around mathlib's L² MET.
 -/
 private theorem birkhoffAverage_tendsto_condexp_L2
-    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
     (T : Ω → Ω) (hT_meas : Measurable T) (hT_pres : MeasurePreserving T μ μ)
-    {m : MeasurableSpace Ω} (hm : m ≤ ‹MeasurableSpace Ω›)
+    {m : MeasurableSpace Ω} (hm : m ≤ mΩ)
     (h_inv : ∀ s, MeasurableSet[m] s → T ⁻¹' s = s)
     (f : Ω → ℝ) (hf_int : Integrable f μ) :
     Tendsto (fun n =>
@@ -1777,7 +1777,7 @@ private theorem birkhoffAverage_tendsto_condexp_L2
       (1 / ((n : ℕ) + 1 : ℝ)) * (Finset.range ((n : ℕ) + 1)).sum (fun j => f (T^[j] ω))
       - MeasureTheory.condExp m μ f ω) 2 μ = 0 := by
     intro n
-    exact eLpNorm_eq_zero_iff.mpr (Or.inr (h_ae_zero n))
+    exact eLpNorm_eq_zero_of_ae_zero (h_ae_zero n)
 
   -- Convergence to 0 is trivial
   simp_rw [h_eLpNorm_zero]
@@ -1788,9 +1788,6 @@ private theorem birkhoffAverage_tendsto_condexp_L2
   --
   -- Step 5: Unwrap to eLpNorm
   -- Use Lp.norm_def: ‖·‖_Lp = ENNReal.toReal (eLpNorm · p μ)
-  --
-  sorry  -- Complete proof would go here using the above steps
-
 /-- Helper: shift^[k] y n = y (n + k) -/
 private lemma shift_iterate_apply (k n : ℕ) (y : Ω[α]) :
     (shift (α := α))^[k] y n = y (n + k) := by
@@ -2161,16 +2158,12 @@ private lemma L1_cesaro_convergence
       ring_nf
 
     -- Apply Mean Ergodic Theorem via birkhoffAverage_tendsto_condexp_L2
-    -- This shows: Cesàro averages of g∘shift^[j] converge to μ[g(·0)|mSI] in L²
-    sorry
-    -- TODO: Once birkhoffAverage_tendsto_condexp_L2 is proved (currently `admit` at line 1188),
-    -- the proof is:
+    -- BLOCKED: birkhoffAverage_tendsto_condexp_L2 (line 1735) has compilation errors
+    -- Once that theorem is fixed, this should be:
     --   have h_met := birkhoffAverage_tendsto_condexp_L2 shift measurable_shift hσ hmSI h_inv (fun ω => g (ω 0)) hg_0_int
     --   simp_rw [← h_A_eq] at h_met
     --   exact h_met
-    -- Where:
-    --   - h_inv : ∀ s, MeasurableSet[mSI] s → shift ⁻¹' s = s (shift-invariance)
-    --   - h_A_eq : A n ω = Cesàro average of g∘shift^[j]
+    sorry
   -- Explicit type: hL2 converges to 0 in ENNReal
   have hL2' : Tendsto (fun n => eLpNorm (fun ω => A n ω - Y ω) 2 μ) atTop (𝓝 (0 : ENNReal)) := hL2
 

@@ -9,6 +9,7 @@ import Exchangeability.ConditionallyIID
 import Exchangeability.Probability.CondExp
 import Exchangeability.Probability.IntegrationHelpers
 import Exchangeability.Tail.TailSigma
+import Exchangeability.Tail.ShiftInvariance
 import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
@@ -2999,266 +3000,271 @@ lemma alphaIic_ae_eq_alphaIicCE
     have hA_clip_eq : ∀ ω, max 0 (min 1 (A n m ω)) = A n m ω := by
       intro ω
       obtain ⟨h0, h1⟩ := hA_in_01 ω
-      simp [max_eq_right h0, min_eq_left h1]
+      simp only [max_eq_right h0, min_eq_left h1]
 
     -- Use the fact that A n m = max 0 (min 1 (A n m)) to rewrite the goal
     calc ∫ ω, |A n m ω - max 0 (min 1 (alpha ω))| ∂μ
         = ∫ ω, |max 0 (min 1 (A n m ω)) - max 0 (min 1 (alpha ω))| ∂μ := by
-          congr 1; ext ω; simp [hA_clip_eq ω]
+          congr 1; ext ω; rw [hA_clip_eq ω]
       _ = ∫ ω, |A n m ω - alpha ω| ∂μ := by
-          congr 1; ext ω; simp [hA_clip_eq ω]
+          congr 1; ext ω; rw [hA_clip_eq ω]
       _ < ε := hM m hm
 
-  -- Step 2: alphaIicCE is also the L¹ limit of the same averages
+  -- Step 2: alphaIicCE is also the L¹ limit of the same averages (at n=0)
   -- This is the reverse martingale convergence theorem / ergodic theorem
-  have h_alphaIicCE_is_limit : ∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m ≥ M,
-      ∫ ω, |A n m ω - alphaIicCE X hX_contract hX_meas hX_L2 t ω| ∂μ < ε := by
-    intro n ε hε
+  -- Note: We only need n=0 for the uniqueness argument below
+  have h_alphaIicCE_is_limit : ∀ ε > 0, ∃ M : ℕ, ∀ m ≥ M,
+      ∫ ω, |A 0 m ω - alphaIicCE X hX_contract hX_meas hX_L2 t ω| ∂μ < ε := by
+    intro ε hε
 
     -- Strategy: Use asymptotic negligibility
-    -- A n m uses X(n+k+1) for k ∈ {0,...,m-1}, i.e., X_{n+1},...,X_{n+m}
-    -- cesaro_to_condexp_L1 uses X(n+k) for k ∈ {0,...,m-1}, i.e., X_n,...,X_{n+m-1}
-    -- Difference: (1/m)[f(X_n) - f(X_{n+m})] → 0 in L¹ as m → ∞
+    -- A 0 m uses X(k+1) for k ∈ {0,...,m-1}, i.e., X_1,...,X_m
+    -- cesaro_to_condexp_L1 uses X(k) for k ∈ {0,...,m-1}, i.e., X_0,...,X_{m-1}
 
-    -- For simplicity, work with n=0 first
-    by_cases hn : n = 0
-    · subst hn
-      unfold A alphaIicCE
-      simp only [zero_add]
+    unfold A alphaIicCE
+    simp only [zero_add]
 
-      -- Define the "standard" Cesàro average (matching axiom indexing)
-      let B : ℕ → Ω → ℝ := fun m ω => (1 / (m : ℝ)) * ∑ i : Fin m, indIic t (X i ω)
+    -- Define the "standard" Cesàro average (matching axiom indexing)
+    let B : ℕ → Ω → ℝ := fun m ω => (1 / (m : ℝ)) * ∑ i : Fin m, indIic t (X i ω)
 
-      -- Apply cesaro_to_condexp_L1 for B
-      have h_axiom := cesaro_to_condexp_L1 hX_contract hX_meas (indIic t)
-                       (indIic_measurable t) (indIic_bdd t) (ε/2) (by linarith)
-      obtain ⟨M₁, hM₁⟩ := h_axiom
+    -- Apply cesaro_to_condexp_L1 for B
+    -- TODO: Fix axiom accessibility issue (axiom defined at line 1680 but not recognized)
+    have h_axiom : ∃ (M : ℕ), ∀ (m : ℕ), m ≥ M →
+        ∫ ω, |(1 / (m : ℝ)) * ∑ i : Fin m, indIic t (X i ω) -
+              (μ[(indIic t ∘ X 0) | TailSigma.tailSigma X] ω)| ∂μ < ε/2 := by
+      sorry -- Should use cesaro_to_condexp_L1 axiom
+    obtain ⟨M₁, hM₁⟩ := h_axiom
 
-      -- The difference between A 0 m and B m is O(1/m)
-      -- A 0 m = (1/m)[f(X₁) + ... + f(Xₘ)]
-      -- B m   = (1/m)[f(X₀) + ... + f(X_{m-1})]
-      -- Diff  = (1/m)[f(Xₘ) - f(X₀)]
+    -- The difference between A 0 m and B m is O(1/m)
+    -- A 0 m = (1/m)[f(X₁) + ... + f(Xₘ)]
+    -- B m   = (1/m)[f(X₀) + ... + f(X_{m-1})]
+    -- Diff  = (1/m)[f(Xₘ) - f(X₀)]
 
-      have h_diff_small : ∀ m : ℕ, m > 0 →
-          ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) - B m ω| ∂μ ≤ 2/(m:ℝ) := by
-        intro m hm_pos
-        -- Unfold B and simplify
-        simp only [B]
+    have h_diff_small : ∀ m : ℕ, m > 0 →
+        ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) - B m ω| ∂μ ≤ 2/(m:ℝ) := by
+      intro m hm_pos
+      -- Unfold B and simplify
+      simp only [B]
 
-        -- The difference telescopes: (1/m)[∑ f(X(k+1)) - ∑ f(X(k))] = (1/m)[f(Xₘ) - f(X₀)]
-        -- We'll bound this by (1/m)[|f(Xₘ)| + |f(X₀)|] ≤ 2/m
+      -- The difference telescopes: (1/m)[∑ f(X(k+1)) - ∑ f(X(k))] = (1/m)[f(Xₘ) - f(X₀)]
+      -- We'll bound this by (1/m)[|f(Xₘ)| + |f(X₀)|] ≤ 2/m
 
-        have h_telescope : ∀ ω,
-            |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) -
-             (1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)|
-            = |(1/(m:ℝ)) * (indIic t (X m ω) - indIic t (X 0 ω))| := by
-          intro ω
-          -- Factor out (1/m) and show the sums telescope
-          congr 1
-          rw [mul_sub]
-          congr 1
+      have h_telescope : ∀ ω,
+          |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) -
+           (1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)|
+          = |(1/(m:ℝ)) * (indIic t (X m ω) - indIic t (X 0 ω))| := by
+        intro ω
+        -- Factor out (1/m) and show the sums telescope
+        congr 1
+        rw [mul_sub]
+        congr 1
 
-          -- The key telescoping identity:
-          -- ∑_{k<m} f(X(k+1)) - ∑_{i<m} f(X i) = f(Xₘ) - f(X₀)
-          --
-          -- Proof: Left sum  = f(X₁) + f(X₂) + ... + f(Xₘ)
-          --        Right sum = f(X₀) + f(X₁) + ... + f(X_{m-1})
-          --        Middle terms cancel, leaving f(Xₘ) - f(X₀)
+        -- The key telescoping identity:
+        -- ∑_{k<m} f(X(k+1)) - ∑_{i<m} f(X i) = f(Xₘ) - f(X₀)
+        --
+        -- Proof: Left sum  = f(X₁) + f(X₂) + ... + f(Xₘ)
+        --        Right sum = f(X₀) + f(X₁) + ... + f(X_{m-1})
+        --        Middle terms cancel, leaving f(Xₘ) - f(X₀)
 
-          -- This is a standard telescoping sum identity.
-          -- Mathematically obvious: the middle terms f(X₁), ..., f(X_{m-1}) appear in both
-          -- sums and cancel, leaving only f(Xₘ) - f(X₀).
-          --
-          -- The formal proof requires careful Fin/Finset manipulation (sum_bij, sum_range, etc.)
-          -- which is tedious but straightforward. We leave it as sorry for now.
-          sorry -- TODO: Prove via Finset.sum_bij or sum_range telescoping
+        -- First convert Fin m sums to range sums for easier manipulation
+        have h_left : ∑ k : Fin m, indIic t (X (k.val + 1) ω) =
+                      (Finset.range m).sum (fun k => indIic t (X (k + 1) ω)) := by
+          sorry -- TODO: Prove Fin sum equals range sum
+        have h_right : ∑ i : Fin m, indIic t (X i ω) =
+                       (Finset.range m).sum (fun i => indIic t (X i ω)) := by
+          sorry -- TODO: Prove Fin sum equals range sum
+        rw [h_left, h_right]
 
-        calc ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) -
-                   (1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)| ∂μ
-            = ∫ ω, |(1/(m:ℝ)) * (indIic t (X m ω) - indIic t (X 0 ω))| ∂μ := by
-                congr 1; ext ω; exact h_telescope ω
-          _ = ∫ ω, (1/(m:ℝ)) * |indIic t (X m ω) - indIic t (X 0 ω)| ∂μ := by
-                congr 1; ext ω
-                have hm_pos' : 0 < (m : ℝ) := Nat.cast_pos.mpr hm_pos
-                rw [abs_mul, abs_of_pos (one_div_pos.mpr hm_pos')]
-          _ = (1/(m:ℝ)) * ∫ ω, |indIic t (X m ω) - indIic t (X 0 ω)| ∂μ := by
-                rw [integral_mul_left]
-          _ ≤ (1/(m:ℝ)) * ∫ ω, |indIic t (X m ω)| + |indIic t (X 0 ω)| ∂μ := by
-                gcongr
-                -- Need: ∫ |f - g| ≤ ∫ (|f| + |g|)
-                -- This follows from |a - b| ≤ |a| + |b| and integral_mono
-                apply integral_mono
-                · -- Integrability of |f - g|
-                  apply Integrable.abs
-                  apply Integrable.sub
-                  · exact (indIic_measurable t).comp (hX_meas m) |>.integrable_of_isBounded_measure
-                  · exact (indIic_measurable t).comp (hX_meas 0) |>.integrable_of_isBounded_measure
-                · -- Integrability of |f| + |g|
-                  apply Integrable.add
-                  · exact ((indIic_measurable t).comp (hX_meas m)).abs.integrable_of_isBounded_measure
-                  · exact ((indIic_measurable t).comp (hX_meas 0)).abs.integrable_of_isBounded_measure
-                · -- Pointwise bound: |a - b| ≤ |a| + |b|
-                  filter_upwards with ω
-                  exact abs_sub_abs_le_abs_sub _ _
-          _ = (1/(m:ℝ)) * (∫ ω, |indIic t (X m ω)| ∂μ + ∫ ω, |indIic t (X 0 ω)| ∂μ) := by
-                congr 1
-                rw [integral_add]
-                · exact ((indIic_measurable t).comp (hX_meas m)).abs.integrable_of_isBounded_measure
-                · exact ((indIic_measurable t).comp (hX_meas 0)).abs.integrable_of_isBounded_measure
-          _ ≤ (1/(m:ℝ)) * (1 + 1) := by
-                gcongr
-                · -- ∫ |indIic t (X m)| ≤ 1
-                  have : ∫ ω, |indIic t (X m ω)| ∂μ ≤ ∫ ω, (1 : ℝ) ∂μ := by
-                    apply integral_mono
-                    · exact ((indIic_measurable t).comp (hX_meas m)).abs.integrable_of_isBounded_measure
-                    · exact integrable_const 1
-                    · filter_upwards with ω
-                      unfold indIic
-                      simp [Set.indicator, abs_of_nonneg]
-                      split_ifs <;> norm_num
-                  calc ∫ ω, |indIic t (X m ω)| ∂μ
-                      ≤ ∫ ω, (1 : ℝ) ∂μ := this
-                    _ = 1 := by simp [measure_univ]
-                · -- ∫ |indIic t (X 0)| ≤ 1
-                  have : ∫ ω, |indIic t (X 0 ω)| ∂μ ≤ ∫ ω, (1 : ℝ) ∂μ := by
-                    apply integral_mono
-                    · exact ((indIic_measurable t).comp (hX_meas 0)).abs.integrable_of_isBounded_measure
-                    · exact integrable_const 1
-                    · filter_upwards with ω
-                      unfold indIic
-                      simp [Set.indicator, abs_of_nonneg]
-                      split_ifs <;> norm_num
-                  calc ∫ ω, |indIic t (X 0 ω)| ∂μ
-                      ≤ ∫ ω, (1 : ℝ) ∂μ := this
-                    _ = 1 := by simp [measure_univ]
-          _ = 2/(m:ℝ) := by ring
+        -- Now prove by induction on m
+        clear h_left h_right
+        induction m with
+        | zero =>
+            -- Base case: m = 0, both sums are empty
+            simp [Finset.sum_range_zero]
+        | succ m' ih =>
+            -- Inductive step: assume true for m', prove for m'+1
+            -- Split off the last term from each sum
+            rw [Finset.sum_range_succ, Finset.sum_range_succ]
 
-      -- Choose M large enough for both axiom and negligibility
-      -- M₁: ensures ∫ |B m - target| < ε/2 (from axiom)
-      -- ⌈4/ε⌉: ensures 2/m ≤ ε/2 (from negligibility)
-      use max M₁ (Nat.ceil (4/ε))
-      intro m hm
+            -- Now we have:
+            -- (∑_{k<m'} f(X(k+1)) + f(X(m'+1))) - (∑_{i<m'} f(X i) + f(X m'))
+            -- = f(X(m'+1)) - f(X₀)
 
-      -- Triangle inequality: ∫ |A 0 m - target| ≤ ∫ |A 0 m - B m| + ∫ |B m - target|
-      unfold A alphaIicCE
-      simp only [zero_add]
+            -- Rearrange using the inductive hypothesis
+            ring_nf
+            rw [ih]
+            ring
 
-      -- We need to show: ∫ |A 0 m - μ[indIic t ∘ X 0|tail]| < ε
-      -- We have:
-      --   1. ∫ |A 0 m - B m| ≤ 2/m (from h_diff_small)
-      --   2. ∫ |B m - μ[indIic t ∘ X 0|tail]| < ε/2 (from h_axiom/hM₁)
-
-      have h1 : (m : ℝ) ≥ M₁ := by
-        calc (m : ℝ)
-            ≥ max M₁ (Nat.ceil (4/ε)) := Nat.cast_le.mpr hm
-          _ ≥ M₁ := le_max_left _ _
-
-      have h2 : (m : ℝ) ≥ Nat.ceil (4/ε) := by
-        calc (m : ℝ)
-            ≥ max M₁ (Nat.ceil (4/ε)) := Nat.cast_le.mpr hm
-          _ ≥ Nat.ceil (4/ε) := le_max_right _ _
-
-      -- From h2, we get 2/m ≤ ε/2
-      have h_small : 2/(m:ℝ) ≤ ε/2 := by
-        have hm_pos'' : 0 < (m : ℝ) := by
-          calc (m : ℝ)
-              ≥ Nat.ceil (4/ε) := h2
-            _ > 0 := Nat.cast_pos.mpr (Nat.ceil_pos.mpr (by linarith))
-        have : (m : ℝ) ≥ 4/ε := Nat.le_ceil _  ▸ h2
-        calc 2/(m:ℝ)
-            ≤ 2/(4/ε) := by gcongr; exact this
-          _ = ε/2 := by field_simp; ring
-
-      -- Apply the axiom
-      have hB_conv : ∫ ω, |B m ω - μ[indIic t ∘ X 0|TailSigma.tailSigma X] ω| ∂μ < ε/2 := by
-        convert hM₁ m (Nat.cast_le.mp h1) using 2
-        simp [B]
-
-      -- Apply h_diff_small
-      have hm_pos' : m > 0 := by omega
-      have hAB_diff : ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) - B m ω| ∂μ ≤ 2/(m:ℝ) :=
-        h_diff_small m hm_pos'
-
-      -- Triangle inequality for integrals
       calc ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) -
-                 μ[indIic t ∘ X 0|TailSigma.tailSigma X] ω| ∂μ
-          ≤ ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) - B m ω| ∂μ +
-            ∫ ω, |B m ω - μ[indIic t ∘ X 0|TailSigma.tailSigma X] ω| ∂μ := by
-              -- Use pointwise triangle inequality: |a - c| ≤ |a - b| + |b - c|
-              rw [← integral_add]
-              · apply integral_mono
-                · -- Integrability of |A - target|
-                  apply Integrable.abs
-                  apply Integrable.sub
-                  · -- A is integrable (bounded measurable on probability space)
-                    apply Measurable.integrable_of_isBounded_measure
-                    exact Finset.measurable_sum _ (fun k _ =>
-                      Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
-                  · -- target = condExp is integrable
-                    exact integrable_condExp
-                · -- Integrability of |A - B| + |B - target|
-                  apply Integrable.add
-                  · -- |A - B| is integrable
-                    apply Integrable.abs
-                    apply Integrable.sub
-                    · -- A is integrable
-                      apply Measurable.integrable_of_isBounded_measure
-                      exact Finset.measurable_sum _ (fun k _ =>
-                        Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
-                    · -- B is integrable
-                      simp [B]
-                      apply Measurable.integrable_of_isBounded_measure
-                      exact Finset.measurable_sum _ (fun i _ =>
-                        Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
-                  · -- |B - target| is integrable
-                    apply Integrable.abs
-                    apply Integrable.sub
-                    · -- B is integrable
-                      simp [B]
-                      apply Measurable.integrable_of_isBounded_measure
-                      exact Finset.measurable_sum _ (fun i _ =>
-                        Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
-                    · -- target is integrable
-                      exact integrable_condExp
-                · -- Pointwise bound
-                  filter_upwards with ω
-                  exact abs_sub_le _ _ _
-              · -- Integrability of |A - B|
+                 (1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)| ∂μ
+          = ∫ ω, |(1/(m:ℝ)) * (indIic t (X m ω) - indIic t (X 0 ω))| ∂μ := by
+              congr 1; ext ω; exact h_telescope ω
+        _ = ∫ ω, (1/(m:ℝ)) * |indIic t (X m ω) - indIic t (X 0 ω)| ∂μ := by
+              congr 1; ext ω
+              have hm_pos' : 0 < (m : ℝ) := Nat.cast_pos.mpr hm_pos
+              rw [abs_mul, abs_of_pos (one_div_pos.mpr hm_pos')]
+        _ = (1/(m:ℝ)) * ∫ ω, |indIic t (X m ω) - indIic t (X 0 ω)| ∂μ := by
+              rw [integral_mul_left]
+        _ ≤ (1/(m:ℝ)) * ∫ ω, |indIic t (X m ω)| + |indIic t (X 0 ω)| ∂μ := by
+              gcongr
+              -- Need: ∫ |f - g| ≤ ∫ (|f| + |g|)
+              -- This follows from |a - b| ≤ |a| + |b| and integral_mono
+              have hf_int := (indIic_measurable t).comp (hX_meas m) |>.integrable_of_isBounded_measure
+              have hg_int := (indIic_measurable t).comp (hX_meas 0) |>.integrable_of_isBounded_measure
+              apply MeasureTheory.integral_mono (Integrable.abs (Integrable.sub hf_int hg_int))
+              · apply Integrable.add
+                · exact (Measurable.abs ((indIic_measurable t).comp (hX_meas m))).integrable_of_isBounded_measure
+                · exact (Measurable.abs ((indIic_measurable t).comp (hX_meas 0))).integrable_of_isBounded_measure
+              · filter_upwards with ω
+                exact abs_sub_abs_le_abs_sub _ _
+        _ = (1/(m:ℝ)) * (∫ ω, |indIic t (X m ω)| ∂μ + ∫ ω, |indIic t (X 0 ω)| ∂μ) := by
+              congr 1
+              rw [integral_add]
+              · exact (Measurable.abs ((indIic_measurable t).comp (hX_meas m))).integrable_of_isBounded_measure
+              · exact (Measurable.abs ((indIic_measurable t).comp (hX_meas 0))).integrable_of_isBounded_measure
+        _ ≤ (1/(m:ℝ)) * (1 + 1) := by
+              gcongr
+              · -- ∫ |indIic t (X m)| ≤ 1
+                have : ∫ ω, |indIic t (X m ω)| ∂μ ≤ ∫ ω, (1 : ℝ) ∂μ := by
+                  apply integral_mono
+                  · exact (Measurable.abs ((indIic_measurable t).comp (hX_meas m))).integrable_of_isBounded_measure
+                  · exact integrable_const 1
+                  · filter_upwards with ω
+                    unfold indIic
+                    simp [Set.indicator, abs_of_nonneg]
+                    split_ifs <;> norm_num
+                calc ∫ ω, |indIic t (X m ω)| ∂μ
+                    ≤ ∫ ω, (1 : ℝ) ∂μ := this
+                  _ = 1 := by simp [measure_univ]
+              · -- ∫ |indIic t (X 0)| ≤ 1
+                have : ∫ ω, |indIic t (X 0 ω)| ∂μ ≤ ∫ ω, (1 : ℝ) ∂μ := by
+                  apply integral_mono
+                  · exact (Measurable.abs ((indIic_measurable t).comp (hX_meas 0))).integrable_of_isBounded_measure
+                  · exact integrable_const 1
+                  · filter_upwards with ω
+                    unfold indIic
+                    simp [Set.indicator, abs_of_nonneg]
+                    split_ifs <;> norm_num
+                calc ∫ ω, |indIic t (X 0 ω)| ∂μ
+                    ≤ ∫ ω, (1 : ℝ) ∂μ := this
+                  _ = 1 := by simp [measure_univ]
+        _ = 2/(m:ℝ) := by ring
+
+    -- Choose M large enough for both axiom and negligibility
+    -- M₁: ensures ∫ |B m - target| < ε/2 (from axiom)
+    -- ⌈4/ε⌉: ensures 2/m ≤ ε/2 (from negligibility)
+    use max M₁ (Nat.ceil (4/ε))
+    intro m hm
+
+    -- Triangle inequality: ∫ |A 0 m - target| ≤ ∫ |A 0 m - B m| + ∫ |B m - target|
+    unfold A alphaIicCE
+    simp only [zero_add]
+
+    -- We need to show: ∫ |A 0 m - μ[indIic t ∘ X 0|tail]| < ε
+    -- We have:
+    --   1. ∫ |A 0 m - B m| ≤ 2/m (from h_diff_small)
+    --   2. ∫ |B m - μ[indIic t ∘ X 0|tail]| < ε/2 (from h_axiom/hM₁)
+
+    have h1 : (m : ℝ) ≥ M₁ := by
+      calc (m : ℝ)
+          ≥ max M₁ (Nat.ceil (4/ε)) := Nat.cast_le.mpr hm
+        _ ≥ M₁ := le_max_left _ _
+
+    have h2 : (m : ℝ) ≥ Nat.ceil (4/ε) := by
+      calc (m : ℝ)
+          ≥ max M₁ (Nat.ceil (4/ε)) := Nat.cast_le.mpr hm
+        _ ≥ Nat.ceil (4/ε) := le_max_right _ _
+
+    -- From h2, we get 2/m ≤ ε/2
+    have h_small : 2/(m:ℝ) ≤ ε/2 := by
+      have hm_pos'' : 0 < (m : ℝ) := by
+        calc (m : ℝ)
+            ≥ Nat.ceil (4/ε) := h2
+          _ > 0 := Nat.cast_pos.mpr (Nat.ceil_pos.mpr (by linarith))
+      have : (m : ℝ) ≥ 4/ε := Nat.le_ceil _  ▸ h2
+      calc 2/(m:ℝ)
+          ≤ 2/(4/ε) := by gcongr; exact this
+        _ = ε/2 := by field_simp; ring
+
+    -- Apply the axiom
+    have hB_conv : ∫ ω, |B m ω - μ[indIic t ∘ X 0|TailSigma.tailSigma X] ω| ∂μ < ε/2 := by
+      convert hM₁ m (Nat.cast_le.mp h1) using 2
+      simp [B]
+
+    -- Apply h_diff_small
+    have hm_pos' : m > 0 := by omega
+    have hAB_diff : ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) - B m ω| ∂μ ≤ 2/(m:ℝ) :=
+      h_diff_small m hm_pos'
+
+    -- Triangle inequality for integrals
+    calc ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) -
+               μ[indIic t ∘ X 0|TailSigma.tailSigma X] ω| ∂μ
+        ≤ ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) - B m ω| ∂μ +
+          ∫ ω, |B m ω - μ[indIic t ∘ X 0|TailSigma.tailSigma X] ω| ∂μ := by
+            -- Use pointwise triangle inequality: |a - c| ≤ |a - b| + |b - c|
+            rw [← integral_add]
+            · apply integral_mono
+              · -- Integrability of |A - target|
                 apply Integrable.abs
                 apply Integrable.sub
-                · -- A is integrable
+                · -- A is integrable (bounded measurable on probability space)
                   apply Measurable.integrable_of_isBounded_measure
                   exact Finset.measurable_sum _ (fun k _ =>
                     Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
-                · -- B is integrable
-                  simp [B]
-                  apply Measurable.integrable_of_isBounded_measure
-                  exact Finset.measurable_sum _ (fun i _ =>
-                    Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
-              · -- Integrability of |B - target|
-                apply Integrable.abs
-                apply Integrable.sub
-                · -- B is integrable
-                  simp [B]
-                  apply Measurable.integrable_of_isBounded_measure
-                  exact Finset.measurable_sum _ (fun i _ =>
-                    Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
-                · -- target is integrable
+                · -- target = condExp is integrable
                   exact integrable_condExp
-        _ ≤ 2/(m:ℝ) + ε/2 := by linarith [hAB_diff, hB_conv]
-        _ ≤ ε/2 + ε/2 := by linarith [h_small]
-        _ = ε := by ring
-
-    · -- Case n ≠ 0: Requires shift invariance of tail σ-algebra
-      -- For contractable/exchangeable sequences, the tail σ-algebra is shift-invariant,
-      -- meaning μ[f∘X_n | tail] = μ[f∘X_0 | tail] for all n.
-      --
-      -- Two approaches:
-      -- 1. Prove shift invariance directly (requires ergodic theory infrastructure)
-      -- 2. Modify cesaro_to_condexp_L1 axiom to support arbitrary starting index
-      --
-      -- For now, we leave this as sorry. The n=0 case demonstrates the full technique.
-      sorry -- TODO: Generalize using shift invariance or extended axiom
+              · -- Integrability of |A - B| + |B - target|
+                apply Integrable.add
+                · -- |A - B| is integrable
+                  apply Integrable.abs
+                  apply Integrable.sub
+                  · -- A is integrable
+                    apply Measurable.integrable_of_isBounded_measure
+                    exact Finset.measurable_sum _ (fun k _ =>
+                      Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                  · -- B is integrable
+                    simp [B]
+                    apply Measurable.integrable_of_isBounded_measure
+                    exact Finset.measurable_sum _ (fun i _ =>
+                      Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                · -- |B - target| is integrable
+                  apply Integrable.abs
+                  apply Integrable.sub
+                  · -- B is integrable
+                    simp [B]
+                    apply Measurable.integrable_of_isBounded_measure
+                    exact Finset.measurable_sum _ (fun i _ =>
+                      Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                  · -- target is integrable
+                    exact integrable_condExp
+              · -- Pointwise bound
+                filter_upwards with ω
+                exact abs_sub_le _ _ _
+            · -- Integrability of |A - B|
+              apply Integrable.abs
+              apply Integrable.sub
+              · -- A is integrable
+                apply Measurable.integrable_of_isBounded_measure
+                exact Finset.measurable_sum _ (fun k _ =>
+                  Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+              · -- B is integrable
+                simp [B]
+                apply Measurable.integrable_of_isBounded_measure
+                exact Finset.measurable_sum _ (fun i _ =>
+                  Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+            · -- Integrability of |B - target|
+              apply Integrable.abs
+              apply Integrable.sub
+              · -- B is integrable
+                simp [B]
+                apply Measurable.integrable_of_isBounded_measure
+                exact Finset.measurable_sum _ (fun i _ =>
+                  Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+              · -- target is integrable
+                exact integrable_condExp
+      _ ≤ 2/(m:ℝ) + ε/2 := by linarith [hAB_diff, hB_conv]
+      _ ≤ ε/2 + ε/2 := by linarith [h_small]
+      _ = ε := by ring
 
   -- Measurability of Cesàro averages
   have hA_meas : ∀ n m, AEStronglyMeasurable (A n m) μ := by
@@ -3319,7 +3325,7 @@ lemma alphaIic_ae_eq_alphaIicCE
               rw [abs_mul, abs_of_nonneg (by positivity : 0 ≤ 1 / (m : ℝ))]
               ring_nf
           _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, |indIic t (X (↑k + 1) ω)| :=
-              mul_le_mul_of_nonneg_left (abs_sum_le_sum_abs _ _) (by positivity)
+              mul_le_mul_of_nonneg_left (Finset.abs_sum_le_sum_abs _ _) (by positivity)
           _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
               apply mul_le_mul_of_nonneg_left _ (by positivity)
               apply Finset.sum_le_sum
@@ -3346,7 +3352,7 @@ lemma alphaIic_ae_eq_alphaIicCE
               rw [abs_mul, abs_of_nonneg (by positivity : 0 ≤ 1 / (m : ℝ))]
               ring_nf
           _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, |indIic t (X (↑k + 1) ω)| :=
-              mul_le_mul_of_nonneg_left (abs_sum_le_sum_abs _ _) (by positivity)
+              mul_le_mul_of_nonneg_left (Finset.abs_sum_le_sum_abs _ _) (by positivity)
           _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
               apply mul_le_mul_of_nonneg_left _ (by positivity)
               apply Finset.sum_le_sum
