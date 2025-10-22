@@ -117,20 +117,28 @@ theorem conditionallyIID_of_contractable
 
     -- Step 4a: Prove for n=0
     have h0 : (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] := by
-      sorry
-      -- Proof strategy (fully documented):
-      --
-      -- 1. Use condExp_ae_eq_integral_condExpKernel:
-      --    μ[indicator B ∘ X 0 | tailSigma X] =ᵐ fun ω => ∫ y, (indicator B ∘ X 0) y ∂(condExpKernel μ (tailSigma X) ω)
-      --
-      -- 2. Show (ν ω B).toReal = ∫ y, (indicator B ∘ X 0) y ∂(condExpKernel μ (tailSigma X) ω):
-      --    a. ν ω = Measure.map (X 0) (condExpKernel μ (tailSigma X) ω) by definition
-      --    b. (Measure.map (X 0) κ) B = κ ((X 0)⁻¹' B) by Measure.map_apply
-      --    c. (indicator B) ∘ X 0 = indicator ((X 0)⁻¹' B) by ext
-      --    d. ∫ y, indicator ((X 0)⁻¹' B) 1 y ∂κ = (κ ((X 0)⁻¹' B)).toReal by integral_indicator_one and μ.real s = (μ s).toReal
-      --
-      -- All required lemmas are in mathlib. Technical Lean issues with showing directingMeasure_of_contractable
-      -- equality prevented full implementation, but the mathematical proof is sound.
+      -- Use condExp_ae_eq_integral_condExpKernel to express conditional expectation as integral
+      -- Need to show: tailSigma X ≤ the ambient σ-algebra and integrability
+      have hle : tailSigma X ≤ _ := tailSigma_le X hX_meas
+      have hint : Integrable (Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0)) μ := by
+        apply Integrable.indicator
+        · exact integrable_const 1
+        · exact hX_meas 0 hB
+      have key := ProbabilityTheory.condExp_ae_eq_integral_condExpKernel hle hint
+      -- We need to show the LHS equals this integral
+      refine ae_eq_trans ?_ key.symm
+      -- Show: (fun ω => (ν ω B).toReal) =ᵐ[μ] (fun ω => ∫ y, (indicator B (1 : ℝ) ∘ X 0) y ∂(condExpKernel μ (tailSigma X) ω))
+      apply Filter.EventuallyEq.of_eq
+      funext ω
+      -- Unfold ν using hν_def and show pointwise equality
+      simp only [hν_def]
+      calc (directingMeasure_of_contractable X hX_meas ω B).toReal
+        = ((Measure.map (X 0) (condExpKernel μ (tailSigma X) ω)) B).toReal := by rfl
+      _ = ((condExpKernel μ (tailSigma X) ω) ((X 0)⁻¹' B)).toReal := by rw [Measure.map_apply (hX_meas 0) hB]
+      _ = (condExpKernel μ (tailSigma X) ω).real ((X 0)⁻¹' B) := by rfl  -- measureReal_def
+      _ = ∫ y, ((X 0)⁻¹' B).indicator (fun _ => (1 : ℝ)) y ∂(condExpKernel μ (tailSigma X) ω) :=
+          (MeasureTheory.integral_indicator_one (hX_meas 0 hB)).symm
+      _ = ∫ y, (Set.indicator B (fun _ => (1 : ℝ)) ∘ X 0) y ∂(condExpKernel μ (tailSigma X) ω) := rfl
 
     -- Step 4b: Use extreme_members_equal_on_tail for general n
     have hn : μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X]
