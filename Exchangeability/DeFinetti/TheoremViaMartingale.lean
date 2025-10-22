@@ -104,8 +104,10 @@ theorem conditionallyIID_of_contractable
                           Measure.map (X 0) (condExpKernel μ (tailSigma X) ω) from fun _ => rfl]
     simp_rw [Measure.map_apply (hX_meas 0) hB]
     -- Now goal is: Measurable (fun ω => (condExpKernel μ (tailSigma X) ω) ((X 0)⁻¹' B))
-    letI : IsFiniteMeasure μ := inferInstance
-    exact ProbabilityTheory.measurable_condExpKernel (hX_meas 0 hB)
+    -- Kernel.measurable_coe gives measurability w.r.t. tailSigma X
+    -- We lift to ambient σ-algebra using Measurable.le since tailSigma X ≤ inferInstance
+    exact Measurable.le (tailSigma_le X hX_meas)
+      (ProbabilityTheory.Kernel.measurable_coe (condExpKernel μ (tailSigma X)) (hX_meas 0 hB))
 
   -- Step 4: Prove the conditional law property
   have hν_law : ∀ n B, MeasurableSet B →
