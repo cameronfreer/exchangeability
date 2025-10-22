@@ -3091,6 +3091,14 @@ lemma alphaIic_ae_eq_alphaIicCE
         rw [h_left, h_right]
         exact h_telescope_sum
 
+      -- Integrability facts needed throughout the calc chain
+      have hf_int : Integrable (indIic t ∘ X m) μ := by
+        apply Integrable.of_bound ((indIic_measurable t).comp (hX_meas m) |>.aestronglyMeasurable) 1
+        filter_upwards with x; unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
+      have hg_int : Integrable (indIic t ∘ X 0) μ := by
+        apply Integrable.of_bound ((indIic_measurable t).comp (hX_meas 0) |>.aestronglyMeasurable) 1
+        filter_upwards with x; unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
+
       calc ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) -
                  (1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)| ∂μ
           = ∫ ω, |(1/(m:ℝ)) * (indIic t (X m ω) - indIic t (X 0 ω))| ∂μ := by
@@ -3105,16 +3113,10 @@ lemma alphaIic_ae_eq_alphaIicCE
               gcongr
               -- Need: ∫ |f - g| ≤ ∫ (|f| + |g|)
               -- This follows from |a - b| ≤ |a| + |b| and integral_mono
-              -- Integrability of indicators: they're bounded by 1
-              have hf_int : Integrable (indIic t ∘ X m) μ := by
-                apply Integrable.of_bound ((indIic_measurable t).comp (hX_meas m) |>.aestronglyMeasurable) 1
-                filter_upwards with x; unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
-              have hg_int : Integrable (indIic t ∘ X 0) μ := by
-                apply Integrable.of_bound ((indIic_measurable t).comp (hX_meas 0) |>.aestronglyMeasurable) 1
-                filter_upwards with x; unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
+              -- Use hf_int and hg_int defined above
               refine MeasureTheory.integral_mono ?_ ?_ ?_
               · exact Integrable.abs (Integrable.sub hf_int hg_int)
-              · exact Integrable.abs hf_int |> Integrable.add (Integrable.abs hg_int)
+              · exact Integrable.add (Integrable.abs hf_int) (Integrable.abs hg_int)
               · intro ω
                 exact abs_sub_abs_le_abs_sub _ _
         _ = (1/(m:ℝ)) * (∫ ω, |indIic t (X m ω)| ∂μ + ∫ ω, |indIic t (X 0 ω)| ∂μ) := by
