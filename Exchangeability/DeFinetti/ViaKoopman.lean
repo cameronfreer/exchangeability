@@ -3680,13 +3680,13 @@ using the cylinder function approach (Option B). This avoids MET and sub-σ-alge
 section OptionB_L1Convergence
 
 variable {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
-variable (hσ : MeasurePreserving shift μ μ)
 
 /-- **Option B bounded case implementation**: L¹ convergence for bounded functions.
 
 For a bounded measurable function g : α → ℝ, the Cesàro averages A_n(ω) = (1/(n+1)) ∑_j g(ω j)
 converge in L¹ to CE[g(ω₀) | mSI]. Uses the fact that g(ω 0) is a cylinder function. -/
 private theorem optionB_L1_convergence_bounded
+    (hσ : MeasurePreserving shift μ μ)
     (g : α → ℝ)
     (hg_meas : Measurable g) (hg_bd : ∃ Cg, ∀ x, |g x| ≤ Cg) :
     let A := fun n : ℕ => fun ω => (1 / ((n + 1) : ℝ)) * (Finset.range (n + 1)).sum (fun j => g (ω j))
@@ -3706,7 +3706,10 @@ private theorem optionB_L1_convergence_bounded
     -- ∏ k : Fin 1, fs k (ω k.val) = fs 0 (ω 0) = g (ω 0)
     rw [Finset.prod_eq_single (0 : Fin 1)]
     · rfl
-    · intro b _ hb; exact absurd rfl hb
+    · intro b _ hb
+      -- b : Fin 1, but Fin 1 has only one element, so b = 0
+      have : b = 0 := Fin.eq_zero b
+      contradiction
     · intro h; exact absurd (Finset.mem_univ 0) h
 
   -- Step 2: Apply birkhoffCylinder_tendsto_condexp to get L² convergence
@@ -3718,8 +3721,9 @@ private theorem optionB_L1_convergence_bounded
 
   -- fL2 = G a.e., so fL2 = g(ω 0) a.e.
   have hfL2_eq : fL2 =ᵐ[μ] G := by
-    rw [← hG_eq]
-    exact hfL2_ae
+    have : fL2 =ᵐ[μ] productCylinder fs := hfL2_ae
+    rw [hG_eq] at this
+    exact this
 
   -- Step 3: Define B_n to match birkhoffAverage exactly
   -- birkhoffAverage n averages over {0, ..., n-1}, while A n averages over {0, ..., n}
@@ -3731,7 +3735,30 @@ private theorem optionB_L1_convergence_bounded
   have hB_eq_birkhoff : ∀ n > 0,
       birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 =ᵐ[μ] B n := by
     intro n hn
-    sorry -- TODO: Implement pointwise correspondence
+    -- Goal: birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 =ᵐ[μ] B n
+    -- where B n ω = (1/n) * ∑_{k=0}^{n-1} g(ω k)
+    --
+    -- Mathematical proof:
+    -- 1. birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2
+    --    = (1/n) * ∑_{k=0}^{n-1} (koopman shift hσ)^k fL2     [by def]
+    -- 2. (koopman shift hσ)^k fL2 = fL2 ∘ shift^k  a.e.      [by def of koopman]
+    -- 3. fL2 ∘ shift^k = g(· k)  a.e.                        [since fL2 = g(· 0) and shift^k ω 0 = ω k]
+    -- 4. Therefore: birkhoffAverage = (1/n) * ∑ g(· k) = B n  a.e.
+    --
+    -- Technical steps needed:
+    -- (a) Lp.coeFn_compMeasurePreserving: koopman f ω = f(shift ω) a.e.
+    -- (b) Iterate this to get (koopman)^k f ω = f(shift^k ω) a.e.
+    -- (c) Use hfL2_eq: fL2 = g(· 0) a.e.
+    -- (d) shift^k ω n = ω (n+k), so shift^k ω 0 = ω k
+    -- (e) Combine a.e. equalities over the finite sum
+    -- (f) Unfold birkhoffAverage using birkhoffAverage.eq_1 and birkhoffSum.eq_1
+    --
+    -- This is straightforward but requires careful bookkeeping of a.e. equalities
+    -- and Lp function evaluation. The key technical lemmas are in mathlib:
+    -- - MeasureTheory.Lp.coeFn_compMeasurePreserving
+    -- - MeasureTheory.ae_sum (for combining a.e. equalities)
+    -- - Dynamics.BirkhoffSum lemmas
+    sorry
 
   -- Step 3b: condexpL2 fL2 and condExp mSI μ G are the same a.e.
   have hY_eq : condexpL2 (μ := μ) fL2 =ᵐ[μ] Y := by
@@ -3833,9 +3860,33 @@ private theorem optionB_L1_convergence_bounded
           Finset.sum_union (by simp : Disjoint (Finset.range n) {n}),
           Finset.sum_singleton]
       -- Now A n ω = (1/(n+1)) * (∑_{k<n} g(ω k) + g(ω n))
-      ring_nf
-      -- Bound using |g(ω k)| ≤ Cg
-      sorry -- Need to complete the algebra and apply boundedness
+      -- Let S = ∑_{k<n} g(ω k)
+      set S := (Finset.range n).sum fun j => g (ω j)
+      -- A n ω - B n ω = S/(n+1) + g(ω n)/(n+1) - S/n
+      --               = -S/(n(n+1)) + g(ω n)/(n+1)
+      calc |1 / (↑n + 1) * (S + g (ω n)) - 1 / ↑n * S|
+          = |S / (↑n + 1) + g (ω n) / (↑n + 1) - S / ↑n| := by ring
+        _ = |-S / (↑n * (↑n + 1)) + g (ω n) / (↑n + 1)| := by ring
+        _ ≤ |S / (↑n * (↑n + 1))| + |g (ω n) / (↑n + 1)| := abs_add _ _
+        _ ≤ |S| / (↑n * (↑n + 1)) + Cg / (↑n + 1) := by
+            gcongr
+            · exact abs_div _ _
+            · exact hCg_bd (ω n)
+        _ ≤ (n * Cg) / (↑n * (↑n + 1)) + Cg / (↑n + 1) := by
+            gcongr
+            -- |S| ≤ n * Cg since |g(ω k)| ≤ Cg for all k
+            calc |S|
+                ≤ (Finset.range n).sum (fun j => |g (ω j)|) := by
+                  exact abs_sum_le_sum_abs _ _
+              _ ≤ (Finset.range n).sum (fun j => Cg) := by
+                  apply Finset.sum_le_sum
+                  intro j _
+                  exact hCg_bd (ω j)
+              _ = n * Cg := by
+                  rw [Finset.sum_const, Finset.card_range]
+                  ring
+        _ = Cg / (↑n + 1) + Cg / (↑n + 1) := by ring
+        _ = 2 * Cg / (↑n + 1) := by ring
     -- Apply dominated convergence
     refine tendsto_integral_of_dominated_convergence
       (fun n => 2 * Cg / (n + 1))
@@ -3845,8 +3896,14 @@ private theorem optionB_L1_convergence_bounded
       (ae_of_all μ fun ω => ?_) -- pointwise convergence
     · exact Integrable.abs (integrable_const (2 * Cg))
     · intro n; exact h_bd n (Nat.zero_lt_succ n) ω
-    · sorry -- Show ∫ (2*Cg/(n+1)) dμ = 2*Cg/(n+1) → 0
-    · sorry -- Show |A n ω - B n ω| → 0 pointwise
+    · -- ∫ (2*Cg/(n+1)) dμ = 2*Cg/(n+1) → 0
+      simp only [integral_const, measure_univ, ENNReal.one_toReal, smul_eq_mul, mul_one]
+      exact tendsto_const_div_atTop_nhds_zero_nat (2 * Cg)
+    · -- |A n ω - B n ω| ≤ 2*Cg/(n+1) → 0 by squeeze
+      apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds
+        (tendsto_const_div_atTop_nhds_zero_nat (2 * Cg))
+      · intro n; exact abs_nonneg _
+      · intro n; exact h_bd n (Nat.zero_lt_succ n) ω
 
   -- Step 4c: Triangle inequality: |A_n - Y| ≤ |A_n - B_n| + |B_n - Y|
   have h_triangle : ∀ n, ∫ ω, |A n ω - Y ω| ∂μ ≤
@@ -3854,8 +3911,56 @@ private theorem optionB_L1_convergence_bounded
     intro n
     apply integral_mono_of_nonneg
     · exact ae_of_all _ (fun ω => abs_nonneg _)
-    · sorry -- integrability of |A n - Y|
-    · sorry -- integrability of |A n - B n| + |B n - Y|
+    · -- |A n - Y| is integrable: both bounded by Cg + integrability of Y
+      obtain ⟨Cg, hCg_bd⟩ := hg_bd
+      refine Integrable.abs (Integrable.sub ?_ ?_)
+      · -- A n is integrable (bounded by Cg)
+        apply Integrable.of_bounded
+        swap; · exact ⟨Cg, ?_⟩
+        · apply ae_of_all; intro ω
+          simp only [A]
+          calc |1 / (↑n + 1) * (Finset.range (n + 1)).sum (fun j => g (ω j))|
+              ≤ (1 / (↑n + 1)) * |(Finset.range (n + 1)).sum (fun j => g (ω j))| := by
+                  rw [abs_mul]; gcongr; exact abs_of_pos (by positivity)
+            _ ≤ (1 / (↑n + 1)) * ((n + 1) * Cg) := by
+                gcongr
+                calc |(Finset.range (n + 1)).sum (fun j => g (ω j))|
+                    ≤ (Finset.range (n + 1)).sum (fun j => |g (ω j)|) := abs_sum_le_sum_abs _ _
+                  _ ≤ (Finset.range (n + 1)).sum (fun j => Cg) := by
+                      apply Finset.sum_le_sum; intro j _; exact hCg_bd (ω j)
+                  _ = (n + 1) * Cg := by rw [Finset.sum_const, Finset.card_range]; ring
+            _ = Cg := by field_simp; ring
+        · exact integrable_const Cg
+      · -- Y is integrable (condexp of bounded G)
+        exact Integrable.condExp mSI G
+    · -- |A n - B n| + |B n - Y| is integrable
+      obtain ⟨Cg, hCg_bd⟩ := hg_bd
+      refine Integrable.add ?_ ?_
+      · -- |A n - B n| ≤ 2*Cg/(n+1) is constant
+        exact (integrable_const (2 * Cg / (n + 1))).abs
+      · -- |B n - Y| is integrable
+        refine Integrable.abs (Integrable.sub ?_ ?_)
+        · -- B n is integrable (similar to A n)
+          by_cases hn : n = 0
+          · simp [B, hn]; exact integrable_zero _ _ _
+          · apply Integrable.of_bounded
+            swap; · exact ⟨Cg, ?_⟩
+            · apply ae_of_all; intro ω
+              simp only [B, hn, ↓reduceIte]
+              calc |1 / ↑n * (Finset.range n).sum (fun j => g (ω j))|
+                  ≤ (1 / ↑n) * |(Finset.range n).sum (fun j => g (ω j))| := by
+                      rw [abs_mul]; gcongr; exact abs_of_pos (by positivity)
+                _ ≤ (1 / ↑n) * (n * Cg) := by
+                    gcongr
+                    calc |(Finset.range n).sum (fun j => g (ω j))|
+                        ≤ (Finset.range n).sum (fun j => |g (ω j)|) := abs_sum_le_sum_abs _ _
+                      _ ≤ (Finset.range n).sum (fun j => Cg) := by
+                          apply Finset.sum_le_sum; intro j _; exact hCg_bd (ω j)
+                      _ = n * Cg := by rw [Finset.sum_const, Finset.card_range]; ring
+                _ = Cg := by field_simp; ring
+            · exact integrable_const Cg
+        · -- Y is integrable
+          exact Integrable.condExp mSI G
     · apply ae_of_all; intro ω
       exact abs_sub_abs_le_abs_sub (A n ω) (B n ω) (Y ω)
   -- Combine the two convergences
