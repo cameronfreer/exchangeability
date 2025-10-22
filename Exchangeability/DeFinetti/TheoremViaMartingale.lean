@@ -92,15 +92,36 @@ theorem conditionallyIID_of_contractable
     constructor
     simp [Measure.map_apply (hX_meas 0) MeasurableSet.univ]
 
-  -- Step 3: We need measurability of ν and the conditional law property
-  -- These are provided by the infrastructure in ViaMartingale.lean
-  sorry
-  -- TODO: Complete this using conditional_law_eq_directingMeasure and finite_product_formula
-  -- The remaining work is to show:
-  -- 1. ν is measurable: ∀ B, MeasurableSet B → Measurable (fun ω => ν ω B)
-  -- 2. ν satisfies the conditional law property with respect to tailSigma X
-  -- 3. Apply finite_product_formula to get the product formula
-  -- 4. Package as ConditionallyIID: ⟨ν, hν_prob, product_formula⟩
+  -- Step 3: Prove measurability of ν
+  have hν_meas : ∀ B : Set α, MeasurableSet B → Measurable (fun ω => ν ω B) := by
+    sorry
+    -- TODO: This requires proving that Measure.map preserves measurability of measure-valued functions
+    -- The key is that fun ω => condExpKernel μ (tailSigma X) ω is measurable (from mathlib)
+    -- and fun κ => Measure.map (X 0) κ is measurable (from Measure.measurable_map)
+
+  -- Step 4: Prove the conditional law property
+  have hν_law : ∀ n B, MeasurableSet B →
+      (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X] := by
+    sorry
+    -- TODO: Proof strategy:
+    -- 1. For n = 0: This follows from the fundamental property of condExpKernel:
+    --      μ[f | m] =ᵐ[μ] fun ω => ∫ y, f y ∂(condExpKernel μ m ω)
+    --    Combined with the change of variables formula for Measure.map
+    --
+    -- 2. For general n: Use extreme_members_equal_on_tail (already proved)
+    --    to show all Xₙ have the same conditional law
+
+  -- Step 5: Apply finite_product_formula
+  have hProduct : ∀ (m : ℕ) (k : Fin m → ℕ),
+      Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
+        = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) := by
+    intro m k
+    by_cases hk : StrictMono k
+    · exact finite_product_formula X hContract hX_meas ν hν_prob hν_meas hν_law m k hk
+    · sorry  -- Non-strict-mono case - need to handle this
+
+  -- Step 6: Package as ConditionallyIID
+  exact ⟨ν, hν_prob, hProduct⟩
 
 /-- **De Finetti's Theorem (Martingale proof)**: Exchangeable ⇒ ConditionallyIID.
 
