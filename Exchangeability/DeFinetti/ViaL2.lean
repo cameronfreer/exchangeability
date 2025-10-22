@@ -3398,22 +3398,16 @@ lemma alphaIic_ae_eq_alphaIicCE
         -- Each indIic t x ∈ {0, 1}, so the sum is in [0, m]
         -- Therefore A n m ω ∈ [0, 1]
         unfold A
-        simp only [Real.norm_eq_abs, abs_mul, abs_div]
-        calc |1 / (m : ℝ) * ∑ k : Fin m, indIic t (X (0 + ↑k + 1) ω)|
-            = (1 / (m : ℝ)) * |∑ k : Fin m, indIic t (X (↑k + 1) ω)| := by
-              rw [abs_mul, abs_of_nonneg (by positivity : 0 ≤ 1 / (m : ℝ))]
-              ring_nf
-          _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, |indIic t (X (↑k + 1) ω)| :=
-              mul_le_mul_of_nonneg_left (Finset.abs_sum_le_sum_abs _ _) (by positivity)
-          _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
-              apply mul_le_mul_of_nonneg_left _ (by positivity)
-              apply Finset.sum_le_sum
-              intro k _
-              -- |indIic t x| ≤ 1 since indIic is indicator of a set
-              unfold indIic
-              simp [Set.indicator, abs_of_nonneg]
-              split_ifs <;> norm_num
-          _ = (1 / (m : ℝ)) * m := by simp
+        simp only [Real.norm_eq_abs, zero_add]
+        calc |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)|
+            = (1/(m:ℝ)) * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
+                rw [abs_mul]; simp [abs_of_pos]; positivity
+          _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
+                gcongr; exact Finset.abs_sum_le_sum_abs _ _
+          _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
+                gcongr with k
+                unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
+          _ = (1/(m:ℝ)) * m := by simp [Finset.sum_const, Finset.card_fin]
           _ = 1 := by field_simp
       · -- f is bounded by hypothesis hf_bdd
         exact Integrable.of_bound hf_meas 1 hf_bdd
@@ -3425,21 +3419,16 @@ lemma alphaIic_ae_eq_alphaIicCE
         refine Integrable.of_bound (hA_meas 0 m) 1 ?_
         filter_upwards with ω
         unfold A
-        simp only [Real.norm_eq_abs, abs_mul, abs_div]
-        calc |1 / (m : ℝ) * ∑ k : Fin m, indIic t (X (0 + ↑k + 1) ω)|
-            = (1 / (m : ℝ)) * |∑ k : Fin m, indIic t (X (↑k + 1) ω)| := by
-              rw [abs_mul, abs_of_nonneg (by positivity : 0 ≤ 1 / (m : ℝ))]
-              ring_nf
-          _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, |indIic t (X (↑k + 1) ω)| :=
-              mul_le_mul_of_nonneg_left (Finset.abs_sum_le_sum_abs _ _) (by positivity)
-          _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
-              apply mul_le_mul_of_nonneg_left _ (by positivity)
-              apply Finset.sum_le_sum
-              intro k _
-              unfold indIic
-              simp [Set.indicator, abs_of_nonneg]
-              split_ifs <;> norm_num
-          _ = (1 / (m : ℝ)) * m := by simp
+        simp only [Real.norm_eq_abs, zero_add]
+        calc |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)|
+            = (1/(m:ℝ)) * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
+                rw [abs_mul]; simp [abs_of_pos]; positivity
+          _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
+                gcongr; exact Finset.abs_sum_le_sum_abs _ _
+          _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
+                gcongr with k
+                unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
+          _ = (1/(m:ℝ)) * m := by simp [Finset.sum_const, Finset.card_fin]
           _ = 1 := by field_simp
       · -- g is bounded by hypothesis hg_bdd
         exact Integrable.of_bound hg_meas 1 hg_bdd
