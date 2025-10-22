@@ -148,30 +148,20 @@ theorem conditionallyIID_of_contractable
     -- Combine: (ν ω B).toReal =ᵐ E[1_B ∘ X₀] =ᵐ E[1_B ∘ Xₙ]
     exact ae_eq_trans h0 hn.symm
 
-  -- Step 5: Apply finite_product_formula
-  have hProduct : ∀ (m : ℕ) (k : Fin m → ℕ),
+  -- Step 5: Apply finite_product_formula (only needed for StrictMono k per refined definition)
+  have hProduct : ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
       Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
         = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) := by
-    intro m k
-    by_cases hk : StrictMono k
-    · -- Strictly monotone case: directly apply finite_product_formula
-      exact finite_product_formula X hContract hX_meas ν hν_prob hν_meas hν_law m k hk
-    · -- Non-strictly-monotone case
-      sorry
-      -- SUBTLETY: When k has repeated indices (e.g., k = (0,0,1)), we need:
-      --   Measure.map (fun ω => (X 0 ω, X 0 ω, X 1 ω)) μ = μ.bind (fun ω => ν ω ⊗ ν ω ⊗ ν ω)
-      --
-      -- But the LHS has repeated coordinates (first two are always equal), while the RHS
-      -- represents independent sampling.
-      --
-      -- This seems problematic! Possible resolutions:
-      -- 1. The definition of ConditionallyIID might need refinement (only require StrictMono k)
-      -- 2. There's a subtle measure-theoretic fact about disintegration that makes this work
-      -- 3. The contractability assumption gives us additional structure
-      --
-      -- TODO: Check Kallenberg's definition and see how this case is handled in the literature
+    intro m k hk
+    -- Strictly monotone case: directly apply finite_product_formula
+    exact finite_product_formula X hContract hX_meas ν hν_prob hν_meas hν_law m k hk
 
   -- Step 6: Package as ConditionallyIID
+  -- Note: With the refined definition of ConditionallyIID (requiring StrictMono k),
+  -- we only need to verify the product formula for strictly monotone index functions.
+  -- For non-strictly-monotone functions (with repeated indices), the correct law
+  -- involves a duplication map from the distinct-indices product, which follows
+  -- trivially from the StrictMono case. See ConditionallyIID.lean for details.
   exact ⟨ν, hν_prob, hProduct⟩
 
 /-- **De Finetti's Theorem (Martingale proof)**: Exchangeable ⇒ ConditionallyIID.
@@ -221,6 +211,6 @@ theorem deFinetti_equivalence_exch_condIID
     have hContract := contractable_of_exchangeable hExch hX_meas
     exact conditionallyIID_of_contractable X hX_meas hContract
   · -- ConditionallyIID → Exchangeable
-    exact exchangeable_of_conditionallyIID
+    exact exchangeable_of_conditionallyIID hX_meas
 
 end Exchangeability.DeFinetti

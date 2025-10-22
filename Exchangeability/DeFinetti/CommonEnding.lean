@@ -697,11 +697,11 @@ theorem conditional_iid_from_directing_measure
       --
       -- STEP 1: Package ν as satisfying the ConditionallyIID definition
       -- The definition requires: ∃ ν, (∀ ω, IsProbabilityMeasure (ν ω)) ∧
-      --   ∀ m k, Measure.map (fun ω i => X (k i) ω) μ =
+      --   ∀ m k, StrictMono k → Measure.map (fun ω i => X (k i) ω) μ =
       --     μ.bind (fun ω => Measure.pi fun _ => ν ω)
       use ν, hν_prob
 
-      intro m k
+      intro m k _hk  -- _hk : StrictMono k (not used in proof, but required by definition)
 
       -- STEP 2: Show the finite-dimensional distributions match
       -- Need: Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ

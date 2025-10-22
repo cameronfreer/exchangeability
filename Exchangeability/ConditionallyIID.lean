@@ -169,9 +169,9 @@ A sequence is **conditionally i.i.d.** if there exists a random probability meas
 making the coordinates independent.
 
 **Definition:** `X` is conditionally i.i.d. if there exists a probability kernel
-`ν : Ω → Measure α` such that for every finite selection of indices `k : Fin m → ℕ`,
-the joint law of `(X_{k(0)}, ..., X_{k(m-1)})` equals `𝔼[ν^m]`, where `ν^m` is the
-m-fold product of `ν`.
+`ν : Ω → Measure α` such that for every finite selection of **distinct** indices
+`k : Fin m → ℕ` (i.e., strictly monotone), the joint law of `(X_{k(0)}, ..., X_{k(m-1)})`
+equals `𝔼[ν^m]`, where `ν^m` is the m-fold product of `ν`.
 
 **Intuition:** There exists a random distribution `ν`, and conditionally on `ν`, the
 sequence is i.i.d. with marginal distribution `ν`. Different sample paths may have
@@ -182,19 +182,25 @@ that distribution.
 of the drawn color each time. The limiting proportion of colors is random, and
 conditionally on this proportion, the draws are i.i.d. Bernoulli.
 
-**Mathematical formulation:** For each finite selection, we have:
+**Mathematical formulation:** For each finite selection of distinct indices, we have:
   `P{(X_{k(0)}, ..., X_{k(m-1)}) ∈ ·} = ∫ ν(ω)^m μ(dω)`
 
 **Implementation:** Uses mathlib's `Measure.bind` (Giry monad) and `Measure.pi`
 (product measure) to express the mixture of i.i.d. distributions.
 
-**Note:** We require this for ALL finite selections, not just increasing ones, to
-prove exchangeability directly.
+**Note on repeated indices:** This definition only requires the product formula for
+strictly monotone index functions (distinct coordinates). For non-strictly-monotone
+functions (e.g., `k = (0,0,1)`), the correct law involves a duplication map, which
+follows trivially from the distinct-indices case. This matches Kallenberg (2005),
+Theorem 1.1.
+
+**Reference:** Kallenberg (2005), "Probabilistic Symmetries and Invariance Principles",
+Theorem 1.1 (page 27-28).
 -/
 def ConditionallyIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
   ∃ ν : Ω → Measure α,
     (∀ ω, IsProbabilityMeasure (ν ω)) ∧
-      ∀ (m : ℕ) (k : Fin m → ℕ),
+      ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
         Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
           = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)
 
@@ -228,14 +234,15 @@ under finite permutations).
 
 **Proof strategy:**
 1. By `ConditionallyIID`, the law of `(X_0, ..., X_{n-1})` is `μ.bind(λω. ν(ω)^n)`
-2. By `ConditionallyIID`, the law of `(X_{σ(0)}, ..., X_{σ(n-1)})` is also `μ.bind(λω. ν(ω)^n)`
-3. Both equal the same mixture because permuting a product measure `ν^n` gives `ν^n` back
-   (by `pi_comp_perm`)
-4. Therefore `X` is exchangeable
+   (using the identity function, which is strictly monotone)
+2. Show that permuting coordinates after sampling from this mixture gives the same measure
+3. Use `pi_comp_perm` to show that permuting a product measure `ν^n` gives `ν^n` back
+4. Use `bind_map_comm` to push the permutation through the bind operation
+5. Therefore the law of `(X_{σ(0)}, ..., X_{σ(n-1)})` equals the law of `(X_0, ..., X_{n-1})`
 
 **Intuition:** Permuting the indices doesn't change the distribution because:
 - We're still integrating over the same random measure `ν`
-- For each fixed `ν`, permuting i.i.d. samples gives the same distribution
+- For each fixed `ν`, permuting i.i.d. samples gives the same distribution (by `pi_comp_perm`)
 
 **Mathematical significance:** This proves one direction of de Finetti's theorem.
 The converse (exchangeable ⇒ conditionally i.i.d.) is the deep content of de Finetti's
@@ -245,14 +252,40 @@ tail σ-algebra.
 This is the "easy" direction because we're given the mixing measure `ν` explicitly.
 -/
 theorem exchangeable_of_conditionallyIID {μ : Measure Ω} {X : ℕ → Ω → α}
-    (hX : ConditionallyIID μ X) : Exchangeable μ X := by
+    (hX_meas : ∀ i, Measurable (X i)) (hX : ConditionallyIID μ X) :
+    Exchangeable μ X := by
   intro n σ
   obtain ⟨ν, hν_prob, hν_eq⟩ := hX
-  -- Both identity and permuted selections equal the same mixture
-  have h_id := hν_eq n (fun i => i.val)
-  have h_σ := hν_eq n (fun i => (σ i).val)
+  -- Product formula for identity (which is strictly monotone)
+  have h_id : Measure.map (fun ω i => X i.val ω) μ =
+              μ.bind (fun ω => Measure.pi fun _ : Fin n => ν ω) := by
+    apply hν_eq n (fun i => i.val)
+    -- Fin.val is strictly monotone
+    intro i j hij
+    exact hij
+  -- Measurability of the vector map
+  have hXvec_meas : Measurable (fun ω => fun i : Fin n => X i.val ω) := by
+    exact measurable_pi_lambda _ (fun i => hX_meas i.val)
+  -- Measurability of permutation on finite functions
+  have hperm_meas : Measurable (fun f : Fin n → α => f ∘ σ) := by
+    exact measurable_pi_lambda _ (fun i => measurable_pi_apply (σ i))
+  -- Show permuted version equals the same mixture
   calc Measure.map (fun ω i => X (σ i).val ω) μ
-      = μ.bind (fun ω => Measure.pi fun _ : Fin n => ν ω) := h_σ
+      -- Factor as permutation composed with identity
+      = Measure.map (fun f => f ∘ σ) (Measure.map (fun ω i => X i.val ω) μ) := by
+          rw [Measure.map_map hperm_meas hXvec_meas]
+          rfl
+    _ -- Apply product formula for identity
+      = Measure.map (fun f => f ∘ σ) (μ.bind (fun ω => Measure.pi fun _ : Fin n => ν ω)) := by
+          rw [h_id]
+    _ -- Push permutation through bind (Giry monad functoriality)
+      = μ.bind (fun ω => Measure.map (fun f => f ∘ σ) (Measure.pi fun _ : Fin n => ν ω)) := by
+          -- Need measurability of ν
+          have hν_meas : Measurable fun ω => Measure.pi fun _ : Fin n => ν ω := sorry
+          rw [MeasureTheory.Measure.bind_map_comm hν_meas hperm_meas]
+    _ -- Product measures are permutation-invariant
+      = μ.bind (fun ω => Measure.pi fun _ : Fin n => ν ω) := by
+          simp_rw [MeasureTheory.Measure.pi_comp_perm σ]
     _ = Measure.map (fun ω i => X i.val ω) μ := h_id.symm
 
 end Exchangeability
