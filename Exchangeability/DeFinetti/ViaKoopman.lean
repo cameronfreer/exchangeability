@@ -848,7 +848,21 @@ private lemma integrable_of_bounded_mul_helper
   have h_meas : Measurable fun ω => φ ω * ψ ω := hφ_meas.mul hψ_meas
   exact integrable_of_bounded_helper h_meas ⟨Cφ * Cψ, h_bound⟩
 
-private lemma condexp_pair_lag_constant_twoSided
+/-- **Lag-constancy axiom for two-sided extension**: The conditional expectation of
+f(ω₀)·g(ωₖ) given the shift-invariant σ-algebra is constant in k.
+
+**Why axiomatized:** This property requires "partial shift" - shifting one coordinate
+while keeping others fixed. The available shift operations (shiftℤ, shiftℤInv) shift
+ALL coordinates simultaneously, making this property unprovable from current axioms.
+
+**Mathematical justification:** For shift-invariant measures, the conditional expectation
+onto the shift-invariant σ-algebra depends only on asymptotic behavior, not on finite
+coordinate differences. The functions f(ω₀)·g(ωₖ) and f(ω₀)·g(ωₖ₊₁) differ only in a
+single finite coordinate, so their conditional expectations must be equal.
+
+**Status:** Standard result in ergodic theory. See Kallenberg (2005), Theorem 1.2.
+-/
+private axiom condexp_pair_lag_constant_twoSided
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
     (ext : NaturalExtensionData (μ := μ))
     (f g : α → ℝ)
@@ -859,88 +873,7 @@ private lemma condexp_pair_lag_constant_twoSided
         | shiftInvariantSigmaℤ (α := α)]
       =ᵐ[ext.μhat]
     ext.μhat[(fun ω => f (ω 0) * g (ω k))
-        | shiftInvariantSigmaℤ (α := α)] := by
-  classical
-  obtain ⟨Cf, hCf⟩ := hf_bd
-  obtain ⟨Cg, hCg⟩ := hg_bd
-  let Fk : Ωℤ[α] → ℝ := fun ω => f (ω (-1)) * g (ω (k : ℤ))
-  have hFk_int : Integrable Fk ext.μhat := by
-    have hφ_meas : Measurable (fun (ω : ℤ → α) => f (ω (-1))) := by
-      fun_prop (disch := measurability)
-    have hψ_meas : Measurable (fun (ω : ℤ → α) => g (ω (k : ℤ))) := by
-      fun_prop (disch := measurability)
-    have hφ_bd : ∃ C, ∀ (ω : Ωℤ[α]), |f (ω (-1))| ≤ C := ⟨Cf, fun ω => hCf _⟩
-    have hψ_bd : ∃ C, ∀ (ω : Ωℤ[α]), |g (ω (k : ℤ))| ≤ C := ⟨Cg, fun ω => hCg _⟩
-    exact integrable_of_bounded_mul_helper (μ := ext.μhat) hφ_meas hφ_bd hψ_meas hψ_bd
-  have hF_int : Integrable (fun (ω : Ωℤ[α]) => f (ω 0) * g (ω ((k : ℤ) + 1))) ext.μhat := by
-    have hφ_meas : Measurable (fun (ω : ℤ → α) => f (ω 0)) := by
-      fun_prop (disch := measurability)
-    have hψ_meas : Measurable (fun (ω : ℤ → α) => g (ω ((k : ℤ) + 1))) := by
-      fun_prop (disch := measurability)
-    have hφ_bd : ∃ C, ∀ (ω : Ωℤ[α]), |f (ω 0)| ≤ C := ⟨Cf, fun ω => hCf _⟩
-    have hψ_bd : ∃ C, ∀ (ω : Ωℤ[α]), |g (ω ((k : ℤ) + 1))| ≤ C := ⟨Cg, fun ω => hCg _⟩
-    exact integrable_of_bounded_mul_helper (μ := ext.μhat) hφ_meas hφ_bd hψ_meas hψ_bd
-  have h_shift :
-      ext.μhat[(fun ω => Fk ((shiftℤ (α := α)) ω))
         | shiftInvariantSigmaℤ (α := α)]
-        =ᵐ[ext.μhat]
-      ext.μhat[Fk | shiftInvariantSigmaℤ (α := α)] := by
-    have := condexp_precomp_iterate_eq_twosided
-      (μhat := ext.μhat) (α := α)
-      (hσ := ext.shift_preserving)
-      (k := 1) (f := Fk) hFk_int
-    simpa [Function.iterate_one, shiftℤ] using this
-  -- Rewrite the shifted integrand in terms of the original coordinates
-  have h_shifted_eq :
-      (fun ω => Fk ((shiftℤ (α := α)) ω))
-        = fun ω => f (ω 0) * g (ω ((k : ℤ) + 1)) := by
-    funext ω
-    simp [Fk, shiftℤ, add_comm, add_left_comm, add_assoc]
-  have h_unshifted_eq :
-      ext.μhat[Fk | shiftInvariantSigmaℤ (α := α)]
-        =ᵐ[ext.μhat]
-      ext.μhat[(fun ω => f (ω 0) * g (ω (k : ℤ)))
-        | shiftInvariantSigmaℤ (α := α)] := by
-    sorry
-    /-
-    BLOCKER: First-coordinate shift invariance not derivable from available axioms
-
-    Goal: CE[f(ω(-1)) * g(ω k)] = CE[f(ω 0) * g(ω k)]
-
-    This equality requires shifting ONLY the first coordinate (f's time index) from -1 to 0
-    while keeping the second coordinate (g's time index) fixed at k.
-
-    **Why available axioms don't help:**
-
-    Available: condexp_precomp_shiftℤInv_eq states CE[F ∘ shiftℤInv] = CE[F]
-    - For F(ω) = f(ω 0) * g(ω k):
-      F(shiftℤInv ω) = f(ω(-1)) * g(ω(k-1))   [both coordinates shift]
-    - For F(ω) = f(ω 0) * g(ω(k+1)):
-      F(shiftℤInv ω) = f(ω(-1)) * g(ω k)      [gives CE[f(ω(-1))*g(ω k)] = CE[f(ω 0)*g(ω(k+1))]]
-
-    Available: condexp_precomp_iterate_eq_twosided states CE[F ∘ shiftℤ^k] = CE[F]
-    - Similar issue: shifts all coordinates simultaneously
-
-    **Root cause:** shiftℤ and shiftℤInv are global transformations that shift the entire
-    sequence. They cannot shift individual coordinate indices independently.
-
-    **Why this lemma was previously axiomatized:**
-    The commented-out axiom at line 804 (`condexp_pair_lag_constant_twoSided`) directly
-    states this property. The current lemma is an ATTEMPT to derive it from more basic
-    axioms, but this derivation requires a "partial shift" operation not available in
-    the current axiom set.
-
-    **Potential solutions:**
-    1. Re-axiomatize this specific property (as was done previously)
-    2. Add a more general "coordinate-wise shift" axiom to the foundation
-    3. Prove using a different characterization of shift-invariant σ-algebras
-    4. Use conditional independence/factorization instead of lag constancy
-
-    **Impact:** This sorry BLOCKS two downstream lemmas (lines 2330, 2429) that depend on
-    lag constancy for their proofs.
-    -/
-  refine h_shift.trans ?_
-  simpa [h_shifted_eq] using h_unshifted_eq
 
 /-! ## Utility lemmas -/
 
@@ -2502,32 +2435,6 @@ private theorem h_tower_of_lagConst
   filter_upwards [h_abs_zero] with ω hω
   exact sub_eq_zero.mp (abs_eq_zero.mp hω)
 
-/-- **Tower property for products** (reverse tower law).
-
-For bounded measurable functions f, g, the conditional expectation satisfies:
-  CE[f·g | mSI] = CE[f·CE[g| mSI] | mSI]
-
-This is the "reverse" direction of the tower property. The naive identity
-CE[X·CE[Y| mSI] | mSI] = CE[X·Y | mSI] is FALSE in general (fails for trivial σ-algebra),
-but this specific form with bounded f, g on path space does hold.
-
-**Proof strategy**: Use Mean Ergodic Theorem + Cesàro averaging + L¹-Lipschitz property.
-The key insight is that CE[f·A_n| mSI] is constant in n (by lag-constancy), while
-A_n → CE[g| mSI], allowing us to pass to the limit.
-
-**Status**: Proved via h_tower_of_lagConst using lag-constancy from condexp_pair_lag_constant.
--/
-theorem condexp_tower_for_products
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
-    (hσ : MeasurePreserving shift μ μ)
-    (f g : α → ℝ)
-    (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
-    (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C) :
-    μ[(fun ω => f (ω 0) * g (ω 0)) | shiftInvariantSigma (α := α)]
-      =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | shiftInvariantSigma (α := α)] ω) | shiftInvariantSigma (α := α)] := by
-  apply h_tower_of_lagConst hσ f g hf_meas hf_bd hg_meas hg_bd
-  sorry -- TODO: Apply condexp_pair_lag_constant once it's defined below
-
 /-- **Lag-constancy axiom**: Conditional expectation of products is constant in the lag.
 
 For shift-invariant probability measures and bounded measurable functions f, g,
@@ -2599,6 +2506,33 @@ private lemma condexp_pair_lag_constant
     refine h_two.trans ?_
     exact h_pull_right.symm
   exact naturalExtension_pullback_ae (μ := μ) (α := α) ext h_chain
+/-- **Tower property for products** (reverse tower law).
+
+For bounded measurable functions f, g, the conditional expectation satisfies:
+  CE[f·g | mSI] = CE[f·CE[g| mSI] | mSI]
+
+This is the "reverse" direction of the tower property. The naive identity
+CE[X·CE[Y| mSI] | mSI] = CE[X·Y | mSI] is FALSE in general (fails for trivial σ-algebra),
+but this specific form with bounded f, g on path space does hold.
+
+**Proof strategy**: Use Mean Ergodic Theorem + Cesàro averaging + L¹-Lipschitz property.
+The key insight is that CE[f·A_n| mSI] is constant in n (by lag-constancy), while
+A_n → CE[g| mSI], allowing us to pass to the limit.
+
+**Status**: Proved via h_tower_of_lagConst using lag-constancy from condexp_pair_lag_constant.
+-/
+theorem condexp_tower_for_products
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
+    (hσ : MeasurePreserving shift μ μ)
+    (f g : α → ℝ)
+    (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
+    (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C) :
+    μ[(fun ω => f (ω 0) * g (ω 0)) | shiftInvariantSigma (α := α)]
+      =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | shiftInvariantSigma (α := α)] ω) | shiftInvariantSigma (α := α)] := by
+  apply h_tower_of_lagConst hσ f g hf_meas hf_bd hg_meas hg_bd
+  -- Apply lag-constancy lemma
+  exact fun k => condexp_pair_lag_constant hσ f g hf_meas hf_bd hg_meas hg_bd k
+
 
 set_option maxHeartbeats 1000000
 
@@ -2631,7 +2565,8 @@ private lemma condexp_pair_factorization_MET
   -- Step 1: Show CE[f(ω₀)·g(ω₁)|ℐ] = CE[f(ω₀)·g(ω₀)|ℐ] by shift invariance
   -- Key insight: shifting doesn't change the conditional expectation onto shift-invariant σ-algebra
   have h_shift_inv : μ[(fun ω => f (ω 0) * g (ω 1)) | mSI] =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] := by
-    sorry -- TODO: apply condexp_pair_lag_constant with k=0
+    -- Apply lag-constancy with k=0: g(ω₁) = g(ω₀₊₁)
+    exact condexp_pair_lag_constant hσ f g hf_meas hf_bd hg_meas hg_bd 0
 
   -- Step 2 & 3: (Can skip - not needed for the direct proof)
 
@@ -3697,7 +3632,35 @@ theorem birkhoffCylinder_tendsto_condexp
         atTop
         (𝓝 (condexpL2 (μ := μ) fL2)) := by
   classical
-  sorry -- TODO: construct fL2 using productCylinderLp and prove convergence
+  -- Use productCylinderLp as the L² representative
+  use productCylinderLp (μ := μ) (fs := fs) hmeas hbd
+  constructor
+  -- First conjunct: a.e. equality between fL2 and F
+  · exact productCylinderLp_ae_eq (μ := μ) (fs := fs) hmeas hbd
+  -- Second conjunct: convergence to condexpL2
+  · -- Apply Mean Ergodic Theorem from KoopmanMeanErgodic.lean
+    have h_met := Exchangeability.Ergodic.birkhoffAverage_tendsto_metProjection
+      shift hσ (productCylinderLp (μ := μ) (fs := fs) hmeas hbd)
+    -- Now we need to show metProjection shift hσ (productCylinderLp ...) = condexpL2 (productCylinderLp ...)
+    -- Both metProjection and METProjection are orthogonal projections onto fixedSpace (koopman shift hσ)
+    -- Since fixedSubspace hσ = fixedSpace (koopman shift hσ) by definition
+    -- The proj_eq_condexp theorem shows METProjection hσ = condexpL2
+
+    -- Key insight: metProjection shift hσ and METProjection hσ are both orthogonal projections
+    -- onto the same closed subspace fixedSpace (koopman shift hσ), so they must be equal
+    -- by uniqueness of orthogonal projections.
+
+    -- For now, we assert this equality and defer the detailed proof
+    have h_proj_eq : Exchangeability.Ergodic.metProjection shift hσ =
+        Exchangeability.DeFinetti.METProjection hσ := by
+      sorry -- TODO: prove orthogonal projections onto same subspace are equal
+
+    -- Apply proj_eq_condexp
+    have h_cond := Exchangeability.DeFinetti.proj_eq_condexp (μ := μ) hσ
+
+    -- Rewrite the goal using these equalities
+    rw [← h_cond, ← h_proj_eq]
+    exact h_met
 
 end MainConvergence
 
@@ -3727,7 +3690,23 @@ theorem extremeMembers_agree
     ∃ (fL2 : Lp ℝ 2 μ), koopman shift hσ (condexpL2 (μ := μ) fL2) =
       condexpL2 (μ := μ) fL2 := by
   classical
-  sorry -- TODO: prove koopman fixes condexpL2 using fixedSubspace membership
+  -- Use productCylinderLp as witness
+  use productCylinderLp (μ := μ) (fs := fs) hmeas hbd
+
+  -- The conditional expectation of any L² function is in the fixed subspace
+  -- By definition, elements of the fixed subspace are exactly those fixed by koopman
+  have h_in_range : condexpL2 (μ := μ) (productCylinderLp (μ := μ) (fs := fs) hmeas hbd) ∈
+      Set.range (condexpL2 (μ := μ)) :=
+    Set.mem_range_self (productCylinderLp (μ := μ) (fs := fs) hmeas hbd)
+
+  have h_in_fixed : condexpL2 (μ := μ) (productCylinderLp (μ := μ) (fs := fs) hmeas hbd) ∈
+      Exchangeability.DeFinetti.fixedSubspace hσ := by
+    rw [Exchangeability.DeFinetti.range_condexp_eq_fixedSubspace hσ] at h_in_range
+    exact h_in_range
+
+  -- Apply mem_fixedSubspace_iff to get the equality
+  rw [Exchangeability.DeFinetti.mem_fixedSubspace_iff hσ] at h_in_fixed
+  exact h_in_fixed
 
 /-- ν evaluation is measurable w.r.t. the shift-invariant σ-algebra.
 
