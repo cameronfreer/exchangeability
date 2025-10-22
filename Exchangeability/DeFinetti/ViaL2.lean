@@ -1728,7 +1728,7 @@ theorem tendsto_integral_indicator_Iic
         rw [Real.dist_eq] at this
         -- |Xn n ω - X ω| < (t - X ω)/2 means Xn n ω - X ω < (t - X ω)/2
         -- So Xn n ω < X ω + (t - X ω)/2 = (X ω + t)/2 < t
-        have : Xn n ω - X ω < (t - X ω) / 2 := abs_sub_lt_iff.mp this |>.2
+        have : Xn n ω - X ω < (t - X ω) / 2 := abs_sub_lt_iff.mp this |>.1
         linarith
       -- So the indicators are eventually equal to 1
       apply Filter.Tendsto.congr' (EventuallyEq.symm _) tendsto_const_nhds
@@ -1797,9 +1797,9 @@ theorem tendsto_integral_indicator_Iic
           refine Filter.eventually_atTop.mpr ⟨N, fun n hn => ?_⟩
           have := hN n hn
           rw [Real.dist_eq] at this
-          -- |Xn n ω - X ω| < (X ω - t)/2 means -(X ω - Xn n ω) < (X ω - t)/2
-          -- So X ω - Xn n ω < (X ω - t)/2, hence Xn n ω > X ω - (X ω - t)/2 = (X ω + t)/2 > t
-          have : -(Xn n ω - X ω) < (X ω - t) / 2 := abs_sub_lt_iff.mp this |>.1
+          -- |Xn n ω - X ω| < (X ω - t)/2 means X ω - Xn n ω < (X ω - t)/2
+          -- So Xn n ω > X ω - (X ω - t)/2 = (X ω + t)/2 > t
+          have : X ω - Xn n ω < (X ω - t) / 2 := abs_sub_lt_iff.mp this |>.2
           linarith
         -- So the indicators are eventually equal to 0
         apply Filter.Tendsto.congr' (EventuallyEq.symm _) tendsto_const_nhds
@@ -3157,12 +3157,12 @@ lemma alphaIic_ae_eq_alphaIicCE
     have h1 : (m : ℝ) ≥ M₁ := by
       calc (m : ℝ)
           ≥ max M₁ (Nat.ceil (4/ε)) := Nat.cast_le.mpr hm
-        _ ≥ M₁ := le_max_left _ _
+        _ ≥ M₁ := by simp [max_def]; split_ifs <;> linarith
 
     have h2 : (m : ℝ) ≥ Nat.ceil (4/ε) := by
       calc (m : ℝ)
           ≥ max M₁ (Nat.ceil (4/ε)) := Nat.cast_le.mpr hm
-        _ ≥ Nat.ceil (4/ε) := le_max_right _ _
+        _ ≥ Nat.ceil (4/ε) := by simp [max_def]; split_ifs <;> linarith
 
     -- From h2, we get 2/m ≤ ε/2
     have h_small : 2/(m:ℝ) ≤ ε/2 := by
@@ -3170,7 +3170,10 @@ lemma alphaIic_ae_eq_alphaIicCE
         calc (m : ℝ)
             ≥ Nat.ceil (4/ε) := h2
           _ > 0 := Nat.cast_pos.mpr (Nat.ceil_pos.mpr (by linarith))
-      have : (m : ℝ) ≥ 4/ε := Nat.le_ceil _  ▸ h2
+      have : (m : ℝ) ≥ 4/ε := by
+        calc (m : ℝ)
+            ≥ Nat.ceil (4/ε) := h2
+          _ ≥ 4/ε := Nat.le_ceil _
       calc 2/(m:ℝ)
           ≤ 2/(4/ε) := by gcongr; exact this
         _ = ε/2 := by field_simp; ring
