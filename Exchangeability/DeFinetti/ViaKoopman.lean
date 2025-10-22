@@ -2127,14 +2127,32 @@ private lemma L1_cesaro_convergence_bounded
             atTop (𝓝 0) := by
   classical
   intro A
-  -- TODO Option B implementation:
-  -- (i) For any ε > 0, approximate g by a cylinder simple function F
-  --     using L¹ density of simple functions (mathlib: Lp.simpleFunc_dense)
-  --     and cylinder generation of the product σ-algebra
-  -- (ii) Apply birkhoffCylinder_tendsto_condexp to F (already proven at line 3687)
-  --     This gives L² convergence, hence L¹ convergence on probability space
-  -- (iii) Uniform control: boundedness gives ‖A_n(g) - A_n(F)‖₁ ≤ ‖g - F‖₁ < ε uniformly in n
-  -- (iv) ε/3 argument: ‖A_n(g) - CE[g]‖₁ ≤ ‖A_n(g-F)‖₁ + ‖A_n(F) - CE[F]‖₁ + ‖CE[F-g]‖₁
+  /-  **Implementation strategy for Option B bounded case:**
+
+  Step 1: Recognize that G(ω) = g(ω 0) is a cylinder function.
+    - G = productCylinder fs where fs : Fin 1 → α → ℝ with fs 0 = g
+    - This requires `productCylinder` which is defined later at line 3208
+
+  Step 2: Apply birkhoffCylinder_tendsto_condexp (line 3607) to get L² convergence
+    - birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 → condexpL2 fL2 in L²
+    - where fL2 = G a.e.
+
+  Step 3: Connect birkhoffAverage to Cesàro average A_n
+    - birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2
+      = (1/(n+1)) ∑_{j=0}^n (koopman shift)^j fL2
+      = (1/(n+1)) ∑_{j=0}^n fL2 ∘ shift^[j]
+      = (1/(n+1)) ∑_{j=0}^n g((shift^[j] ω) 0)  [using fL2 = g(ω 0) a.e.]
+      = (1/(n+1)) ∑_{j=0}^n g(ω j)              [shift^[j] ω n = ω (n+j)]
+      = A_n ω
+
+  Step 4: L² → L¹ on probability space
+    - Use ‖·‖₁ ≤ ‖·‖₂ for probability measures (Hölder)
+    - condexpL2 fL2 = condExp mSI μ G as functions (a.e.)
+    - Conclude: ∫|A_n - CE[G|mSI]| dμ → 0
+
+  **NOTE:** This requires moving the implementation to after line 3607 where
+  `productCylinder` and `birkhoffCylinder_tendsto_condexp` are available.
+  -/
   sorry
 
 /-- **Option B general case**: L¹ convergence via truncation.
