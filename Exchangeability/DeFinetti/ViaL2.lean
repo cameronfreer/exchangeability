@@ -3111,14 +3111,14 @@ lemma alphaIic_ae_eq_alphaIicCE
               rw [integral_mul_left]
         _ ≤ (1/(m:ℝ)) * ∫ ω, |indIic t (X m ω)| + |indIic t (X 0 ω)| ∂μ := by
               gcongr
-              -- Need: ∫ |f - g| ≤ ∫ (|f| + |g|)
-              -- This follows from |a - b| ≤ |a| + |b| and integral_mono
-              -- Use hf_int and hg_int defined above
-              refine MeasureTheory.integral_mono ?_ ?_ ?_
-              · exact Integrable.abs (Integrable.sub hf_int hg_int)
-              · exact Integrable.add (Integrable.abs hf_int) (Integrable.abs hg_int)
-              · intro ω
-                exact abs_sub_abs_le_abs_sub _ _
+              -- gcongr creates 3 goals: integrability of LHS, RHS, and pointwise inequality
+              · -- Integrable (fun x => |f x - g x|)
+                exact Integrable.abs (Integrable.sub hf_int hg_int)
+              · -- Integrable (fun x => |f x| + |g x|)
+                exact Integrable.add (Integrable.abs hf_int) (Integrable.abs hg_int)
+              · -- Pointwise: |f x - g x| ≤ |f x| + |g x|
+                intro ω
+                exact abs_sub (indIic t (X m ω)) (indIic t (X 0 ω))
         _ = (1/(m:ℝ)) * (∫ ω, |indIic t (X m ω)| ∂μ + ∫ ω, |indIic t (X 0 ω)| ∂μ) := by
               congr 1
               rw [integral_add (Integrable.abs hf_int) (Integrable.abs hg_int)]
