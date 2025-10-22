@@ -3288,11 +3288,8 @@ lemma alphaIic_ae_eq_alphaIicCE
                   filter_upwards with ω
                   simp [Real.norm_eq_abs]
                   -- Each indicator is in [0,1], so sum ≤ m, hence (1/m)*sum ≤ 1
-                  calc |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)|
-                      = |(m:ℝ)⁻¹ * ∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
-                          rw [one_div]
-                    _ = (m:ℝ)⁻¹ * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
-                          rw [abs_mul, abs_of_pos]; positivity
+                  -- Note: simp already converted |(1/m) * ∑...| to m⁻¹ * |∑...|
+                  calc (m:ℝ)⁻¹ * |∑ k : Fin m, indIic t (X (k.val + 1) ω)|
                     _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
                           gcongr; exact Finset.abs_sum_le_sum_abs _ _
                     _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, (1 : ℝ) := by
@@ -3314,11 +3311,8 @@ lemma alphaIic_ae_eq_alphaIicCE
                         ((indIic_measurable t).comp (hX_meas _)))) _
                     apply Integrable.of_bound hA_meas.aestronglyMeasurable 1
                     filter_upwards with ω; simp [Real.norm_eq_abs]
-                    calc |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)|
-                        = |↑m⁻¹ * ∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
-                            rw [one_div]
-                      _ = (m:ℝ)⁻¹ * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
-                            rw [abs_mul, abs_of_pos]; positivity
+                    -- Note: simp already converted |(1/m) * ∑...| to m⁻¹ * |∑...|
+                    calc (m:ℝ)⁻¹ * |∑ k : Fin m, indIic t (X (k.val + 1) ω)|
                       _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
                             gcongr; exact Finset.abs_sum_le_sum_abs _ _
                       _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, (1 : ℝ) := by
@@ -3334,9 +3328,8 @@ lemma alphaIic_ae_eq_alphaIicCE
                         ((indIic_measurable t).comp (hX_meas _)))) _
                     apply Integrable.of_bound hB_meas.aestronglyMeasurable 1
                     filter_upwards with ω; simp [Real.norm_eq_abs]
-                    calc |(m:ℝ)⁻¹ * ∑ i : Fin m, indIic t (X i ω)|
-                        = (m:ℝ)⁻¹ * |∑ i : Fin m, indIic t (X i ω)| := by
-                            rw [abs_mul, abs_of_pos]; positivity
+                    -- Note: simp already converted |(m:ℝ)⁻¹ * ∑...| to (m:ℝ)⁻¹ * |∑...|
+                    calc (m:ℝ)⁻¹ * |∑ i : Fin m, indIic t (X i ω)|
                       _ ≤ (m:ℝ)⁻¹ * ∑ i : Fin m, |indIic t (X i ω)| := by
                             gcongr; exact Finset.abs_sum_le_sum_abs _ _
                       _ ≤ (m:ℝ)⁻¹ * ∑ i : Fin m, (1 : ℝ) := by
@@ -3354,9 +3347,8 @@ lemma alphaIic_ae_eq_alphaIicCE
                         ((indIic_measurable t).comp (hX_meas _)))) _
                     apply Integrable.of_bound hB_meas.aestronglyMeasurable 1
                     filter_upwards with ω; simp [Real.norm_eq_abs]
-                    calc |(m:ℝ)⁻¹ * ∑ i : Fin m, indIic t (X i ω)|
-                        = (m:ℝ)⁻¹ * |∑ i : Fin m, indIic t (X i ω)| := by
-                            rw [abs_mul, abs_of_pos]; positivity
+                    -- Note: simp already converted |(m:ℝ)⁻¹ * ∑...| to (m:ℝ)⁻¹ * |∑...|
+                    calc (m:ℝ)⁻¹ * |∑ i : Fin m, indIic t (X i ω)|
                       _ ≤ (m:ℝ)⁻¹ * ∑ i : Fin m, |indIic t (X i ω)| := by
                             gcongr; exact Finset.abs_sum_le_sum_abs _ _
                       _ ≤ (m:ℝ)⁻¹ * ∑ i : Fin m, (1 : ℝ) := by
