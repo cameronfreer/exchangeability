@@ -237,13 +237,22 @@ lemma condDistrib_factor_indicator_agree
   -- Now show μ[μ[f|σ(ζ)]|σ(η)] = μ[f|σ(ζ)]
   -- This is equivalent to showing μ[f|σ(ζ)] is σ(η)-measurable
 
-  -- For now, we'll use sorry for the key step that requires h_law
+  -- Key step: Show μ[f|σ(ζ)] is σ(η)-measurable
+  -- Strategy: Show μ[f|σ(ζ)] has the same integrals as μ[f|σ(η)] on all σ(η)-measurable sets
   have key : μ[μ[f | MeasurableSpace.comap ζ inferInstance] | MeasurableSpace.comap η inferInstance]
       =ᵐ[μ] μ[f | MeasurableSpace.comap ζ inferInstance] := by
+    -- To show: μ[μ[f|σ(ζ)]|σ(η)] = μ[f|σ(ζ)]
+    -- This is equivalent to: μ[f|σ(ζ)] is σ(η)-measurable
+    --
+    -- We use h_law: (ξ, η) =ᵈ (ξ, ζ) to show that conditional expectations
+    -- with respect to ζ must actually factor through η
     sorry
-    -- This requires showing μ[f|σ(ζ)] is σ(η)-measurable
-    -- The proof needs to use h_law to show the conditional expectation
-    -- factors through η despite being conditioned on ζ
+    -- This step requires proving:
+    -- ∀ S : Set Ω, MeasurableSet[σ(η)] S →
+    --   ∫ x in S, μ[f|σ(ζ)] x ∂μ = ∫ x in S, μ[f|σ(η)] x ∂μ
+    --
+    -- Both equal ∫ x in S, f x ∂μ by conditional expectation properties,
+    -- but showing μ[f|σ(ζ)] is σ(η)-measurable requires using h_law
 
   -- Combine with tower property
   calc μ[f | MeasurableSpace.comap ζ inferInstance]
