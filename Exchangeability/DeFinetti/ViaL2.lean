@@ -1728,7 +1728,7 @@ theorem tendsto_integral_indicator_Iic
         rw [Real.dist_eq] at this
         -- |Xn n ω - X ω| < (t - X ω)/2 means Xn n ω - X ω < (t - X ω)/2
         -- So Xn n ω < X ω + (t - X ω)/2 = (X ω + t)/2 < t
-        have : Xn n ω - X ω < (t - X ω) / 2 := abs_sub_lt_iff.mp this |>.2
+        have : Xn n ω - X ω < (t - X ω) / 2 := abs_sub_lt_iff.mp this |>.1
         linarith
       -- So the indicators are eventually equal to 1
       apply Filter.Tendsto.congr' (EventuallyEq.symm _) tendsto_const_nhds
@@ -1799,7 +1799,8 @@ theorem tendsto_integral_indicator_Iic
           rw [Real.dist_eq] at this
           -- |Xn n ω - X ω| < (X ω - t)/2 means -(X ω - Xn n ω) < (X ω - t)/2
           -- So X ω - Xn n ω < (X ω - t)/2, hence Xn n ω > X ω - (X ω - t)/2 = (X ω + t)/2 > t
-          have : -(Xn n ω - X ω) < (X ω - t) / 2 := abs_sub_lt_iff.mp this |>.1
+          have h_tmp : X ω - Xn n ω < (X ω - t) / 2 := abs_sub_lt_iff.mp this |>.2
+          have : -(Xn n ω - X ω) < (X ω - t) / 2 := by rw [neg_sub]; exact h_tmp
           linarith
         -- So the indicators are eventually equal to 0
         apply Filter.Tendsto.congr' (EventuallyEq.symm _) tendsto_const_nhds
