@@ -3650,10 +3650,17 @@ theorem birkhoffCylinder_tendsto_condexp
     -- onto the same closed subspace fixedSpace (koopman shift hσ), so they must be equal
     -- by uniqueness of orthogonal projections.
 
-    -- For now, we assert this equality and defer the detailed proof
+    -- Both metProjection and METProjection are orthogonal projections onto fixedSpace (koopman shift hσ)
+    -- Since fixedSubspace hσ = fixedSpace (koopman shift hσ) by definition,
+    -- they are projections onto the same subspace and must be equal by uniqueness.
     have h_proj_eq : Exchangeability.Ergodic.metProjection shift hσ =
         Exchangeability.DeFinetti.METProjection hσ := by
-      sorry -- TODO: prove orthogonal projections onto same subspace are equal
+      -- Both are defined as S.subtypeL.comp S.orthogonalProjection for the same subspace S
+      -- The orthogonal projection is unique, so they must be equal
+      ext f
+      simp only [Exchangeability.Ergodic.metProjection, Exchangeability.DeFinetti.METProjection]
+      -- Both reduce to orthogonal projection onto fixedSpace (koopman shift hσ) = fixedSubspace hσ
+      rfl
 
     -- Apply proj_eq_condexp
     have h_cond := Exchangeability.DeFinetti.proj_eq_condexp (μ := μ) hσ
