@@ -2989,7 +2989,7 @@ lemma alphaIic_ae_eq_alphaIicCE
     have hA_clip_eq : ∀ ω, max 0 (min 1 (A n m ω)) = A n m ω := by
       intro ω
       obtain ⟨h0, h1⟩ := hA_in_01 ω
-      rw [min_eq_left h1, max_eq_right h0]
+      rw [min_comm, min_eq_left h1, max_eq_right h0]
 
     -- Use the fact that clipping can only make things closer when A n m ∈ [0,1]
     -- Since A n m ∈ [0,1], we have |A - clip(alpha)| ≤ |A - alpha| for all alpha
@@ -2998,51 +2998,78 @@ lemma alphaIic_ae_eq_alphaIicCE
       obtain ⟨hA0, hA1⟩ := hA_in_01 ω
       by_cases halpha : alpha ω < 0
       · calc |A n m ω - max 0 (min 1 (alpha ω))|
-            = |A n m ω - 0| := by simp [max_eq_left (le_of_lt halpha)]
-          _ = A n m ω := by simp [abs_of_nonneg hA0]
+            = |A n m ω - max 0 (alpha ω)| := by rw [min_eq_right (by linarith : alpha ω ≤ 1)]
+          _ = |A n m ω - 0| := by rw [max_eq_left (by linarith : 0 ≥ alpha ω)]
+          _ = A n m ω := by rw [sub_zero, abs_of_nonneg hA0]
           _ ≤ A n m ω - alpha ω := by linarith
           _ ≤ |A n m ω - alpha ω| := le_abs_self _
       · by_cases halpha1 : 1 < alpha ω
         · calc |A n m ω - max 0 (min 1 (alpha ω))|
-              = |A n m ω - 1| := by simp [min_eq_right (le_of_lt halpha1), max_eq_right (by linarith : (0 : ℝ) ≤ 1)]
-            _ = 1 - A n m ω := by simp [abs_of_nonpos (by linarith : A n m ω - 1 ≤ 0)]
+              = |A n m ω - max 0 1| := by rw [min_eq_left (by linarith : 1 ≤ alpha ω)]
+            _ = |A n m ω - 1| := by rw [max_eq_right (by linarith : (0 : ℝ) ≤ 1)]
+            _ = 1 - A n m ω := by rw [abs_of_nonpos (by linarith : A n m ω - 1 ≤ 0)]
             _ ≤ alpha ω - A n m ω := by linarith
             _ ≤ |A n m ω - alpha ω| := by rw [abs_sub_comm]; exact le_abs_self _
         · -- alpha ∈ [0,1], so clipping does nothing
           push_neg at halpha halpha1
-          simp [min_eq_left halpha1, max_eq_right halpha]
+          rw [min_comm, min_eq_left halpha1, max_eq_right halpha, abs_sub_self]
 
     -- Prove integrability of A n m
     have hA_int : Integrable (A n m) μ := by
-      refine Integrable.of_bound (hA_meas n m) 1 ?_
+      have hA_meas_nm : Measurable (A n m) := by
+        simp only [A]
+        apply Measurable.const_mul
+        apply Finset.measurable_sum
+        intro k _
+        exact (indIic_measurable t).comp (hX_meas _)
+      refine Integrable.of_bound hA_meas_nm 1 ?_
       filter_upwards with ω
       unfold A
       simp only [Real.norm_eq_abs]
-      calc |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (n + k.val + 1) ω)|
-          = (1/(m:ℝ)) * |∑ k : Fin m, indIic t (X (n + k.val + 1) ω)| := by
-              rw [abs_mul]; simp [abs_of_pos]; positivity
-        _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, |indIic t (X (n + k.val + 1) ω)| := by
-              gcongr; exact Finset.abs_sum_le_sum_abs _ _
-        _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
-              gcongr with k
-              unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
-        _ = (1/(m:ℝ)) * m := by simp [Finset.sum_const, Finset.card_fin]
-        _ = 1 := by
-          by_cases hm_zero : m = 0
-          · simp [hm_zero]
-          · field_simp [Nat.cast_ne_zero.mpr hm_zero]
+      by_cases hm : m = 0
+      · simp [hm]
+      · have hm_pos : 0 < (m : ℝ) := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hm)
+        calc |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (n + k.val + 1) ω)|
+            = (1/(m:ℝ)) * |∑ k : Fin m, indIic t (X (n + k.val + 1) ω)| := by
+                rw [abs_mul, abs_of_pos (one_div_pos.mpr hm_pos)]
+          _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, |indIic t (X (n + k.val + 1) ω)| := by
+                gcongr; exact Finset.abs_sum_le_sum_abs _ _
+          _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
+                gcongr with k
+                unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
+          _ = (1/(m:ℝ)) * m := by simp [Finset.sum_const, Finset.card_fin]
+          _ = 1 := by field_simp [hm]
 
     -- Prove integrability of alpha (from weighted_sums_converge_L1)
-    have h_alpha_memLp : MemLp alpha 1 μ :=
+    have halpha_meas : Measurable alpha :=
       (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
         (indIic t) (indIic_measurable t) ⟨1, indIic_bdd t⟩).choose_spec.1
+    have h_alpha_memLp : MemLp alpha 1 μ :=
+      (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
+        (indIic t) (indIic_measurable t) ⟨1, indIic_bdd t⟩).choose_spec.2.1
     have halpha_int : Integrable alpha μ := memLp_one_iff_integrable.mp h_alpha_memLp
 
     calc ∫ ω, |A n m ω - max 0 (min 1 (alpha ω))| ∂μ
         ≤ ∫ ω, |A n m ω - alpha ω| ∂μ := by
           apply integral_mono_ae
-          · exact hA_int.abs.sub (Integrable.abs halpha_int |>.const_mul (max 0 (min 1 _)))
-          · exact hA_int.abs.sub halpha_int.abs
+          · apply Integrable.abs
+            apply Integrable.sub hA_int
+            have : Measurable (fun ω => max 0 (min 1 (alpha ω))) :=
+              Measurable.max measurable_const (Measurable.min measurable_const halpha_meas)
+            apply Integrable.of_bound this 1
+            filter_upwards with ω
+            simp [Real.norm_eq_abs]
+            -- max 0 (min 1 x) is always in [0,1]
+            by_cases h : alpha ω ≤ 0
+            · rw [min_eq_right (by linarith : alpha ω ≤ 1), max_eq_left h, abs_zero]
+              norm_num
+            · by_cases h1 : 1 ≤ alpha ω
+              · rw [min_eq_left h1, max_eq_right (by linarith : 0 ≤ (1:ℝ)), abs_of_nonneg (by linarith : 0 ≤ (1:ℝ))]
+                norm_num
+              · push_neg at h h1
+                rw [min_eq_right (le_of_lt h1), max_eq_right (le_of_lt h)]
+                exact abs_of_pos h |>.trans (le_of_lt h1)
+          · exact (hA_int.sub halpha_int).abs
           · filter_upwards with ω; exact h_clip_le ω
       _ < ε := hM m hm
 
