@@ -1575,6 +1575,18 @@ composition by T, so the m-projected Birkhoff averages are constant:
 This bypasses the need to identify the Koopman fixed-point subspace with Lp(m).
 -/
 
+/-! ### Option A Supporting Lemmas (COMMENTED OUT - TYPE CLASS SYNTHESIS ISSUES)
+
+The following lemmas implement the "project first, then average" approach but are
+currently broken due to Lean 4's type class synthesis with sub-σ-algebras. Even with
+the naming pattern `[mΩ : MeasurableSpace Ω]` and `hm : m ≤ mΩ`, mathlib lemmas
+synthesize `m` when they should infer `mΩ`, causing 18+ type class errors.
+
+These lemmas are kept for reference but commented out. See the documentation in
+`birkhoffAverage_tendsto_condexp_L2` below for details.
+-/
+
+/-
 /-- **Key lemma**: Conditional expectation onto a T-invariant σ-algebra commutes
 with precomposition by T.
 
@@ -1662,9 +1674,8 @@ private theorem birkhoffAverage_condexp_m_constant
         (Finset.range n).sum (fun j => f (T^[j] ω)))
       =ᵐ[μ] MeasureTheory.condExp m μ f := by
   -- First show each f ∘ T^[j] is integrable
-  have hf_Tj_int : ∀ j, Integrable (f ∘ T^[j]) μ := fun j => by
-    rw [(hT_pres.iterate j).integrable_comp hf_int.aestronglyMeasurable]
-    exact hf_int
+  have hf_Tj_int : ∀ j, Integrable (f ∘ T^[j]) μ := fun j =>
+    (hT_pres.iterate j).integrable_comp_iff.mpr hf_int
 
   -- The sum is integrable
   have h_sum_int : Integrable (fun ω => (Finset.range n).sum (fun j => f (T^[j] ω))) μ := by
@@ -1678,15 +1689,15 @@ private theorem birkhoffAverage_condexp_m_constant
       =ᵐ[μ] (fun ω => (1 / (n : ℝ)) * MeasureTheory.condExp m μ
         (fun ω => (Finset.range n).sum (fun j => f (T^[j] ω))) ω) := by
     exact MeasureTheory.condExp_smul (1 / (n : ℝ))
-        (fun ω => (Finset.range n).sum (fun j => f (T^[j] ω)))
+        (fun ω => (Finset.range n).sum (fun j => f (T^[j] ω))) m
 
   -- condExp of sum = sum of condExps
   have h_sum : MeasureTheory.condExp m μ (fun ω => (Finset.range n).sum (fun j => f (T^[j] ω)))
       =ᵐ[μ] (fun ω => (Finset.range n).sum (fun j =>
         MeasureTheory.condExp m μ (f ∘ T^[j]) ω)) := by
-    apply MeasureTheory.condExp_finset_sum
-    intro j _
-    exact hf_Tj_int j
+    convert MeasureTheory.condExp_finset_sum (fun j _ => hf_Tj_int j) m
+    ext ω; simp
+    ext ω; simp
 
   -- Each condExp m μ (f ∘ T^[j]) = condExp m μ f
   have h_each : ∀ j ∈ Finset.range n,
@@ -1727,6 +1738,15 @@ private theorem birkhoffAverage_condexp_m_constant
         field_simp
         ring
     _ = MeasureTheory.condExp m μ f := rfl
+-/
+
+/-! ### Mean Ergodic Theorem for General (T, m)
+
+The following theorem states L² convergence of Birkhoff averages to conditional expectation
+for a general measure-preserving transformation T and T-invariant sub-σ-algebra m.
+
+Currently left as `sorry` due to type class synthesis issues. See theorem body for details.
+-/
 
 /-- L² mean-ergodic theorem in function form:
 the Cesàro averages of `f ∘ T^[j]` converge in L² to `condExp m μ f`, provided
@@ -1746,48 +1766,29 @@ private theorem birkhoffAverage_tendsto_condexp_L2
           - MeasureTheory.condExp m μ f ω) 2 μ)
       atTop (𝓝 0) := by
   /-
-    **Option A Proof Strategy**: "Project first, then average"
+    **BLOCKER**: Type class synthesis issues with sub-σ-algebras
 
+    **Attempted approach (Option A)**: "Project first, then average"
     Key insight: For T-invariant m, conditional expectation commutes with T, so:
       𝔼[Birkhoff average_n | m] = 𝔼[f | m]  for all n
 
-    Therefore the projected Birkhoff averages are constant, making convergence trivial.
-    This bypasses the need for Koopman infrastructure entirely.
+    This would make convergence trivial, but the implementation is blocked by Lean 4's
+    type class synthesis for sub-σ-algebras. Even with the naming pattern:
+      `[mΩ : MeasurableSpace Ω]` with `hm : m ≤ mΩ`
+    Lean still synthesizes `m` when it should infer `mΩ` in mathlib lemmas.
+
+    **The supporting lemmas** (`condexp_comp_T_eq_condexp`, etc.) have 18+ type class errors.
+
+    **Alternative approaches**:
+    - Option B (Koopman): Use existing MET infrastructure from `KoopmanMeanErgodic.lean`,
+      but this requires connecting ambient σ-algebra Koopman operator with sub-σ-algebra
+      conditional expectation (see `MET_IMPLEMENTATION_FINDINGS.md`)
+    - Direct proof: Prove MET for sub-σ-algebras without Koopman (2-3 weeks effort)
+
+    **For now**: Leave as sorry to unblock downstream work. The general (T, m) version
+    is not needed for the main shift-based proof which works correctly.
   -/
-  -- The key lemma: conditional expectation of Birkhoff averages is constant
-  have h_const : ∀ n > 0, MeasureTheory.condExp m μ (fun ω =>
-      (1 / (n : ℝ)) * (Finset.range n).sum (fun j => f (T^[j] ω)))
-    =ᵐ[μ] MeasureTheory.condExp m μ f := by
-    intro n hn
-    exact birkhoffAverage_condexp_m_constant hm T hT_meas hT_pres h_inv f hf_int n hn
-
-  -- Since the Birkhoff average equals condExp[f | m] a.e., the difference is 0 a.e.
-  have h_ae_zero : ∀ n : ℕ, (fun ω =>
-      (1 / ((n : ℕ) + 1 : ℝ)) * (Finset.range ((n : ℕ) + 1)).sum (fun j => f (T^[j] ω))
-      - MeasureTheory.condExp m μ f ω)
-    =ᵐ[μ] 0 := by
-    intro n
-    have hn_pos : (n : ℕ) + 1 > 0 := Nat.succ_pos n
-    have := h_const ((n : ℕ) + 1) hn_pos
-    filter_upwards [this] with ω hω
-    simp [hω]
-
-  -- L² norm of an a.e.-zero function is zero
-  have h_eLpNorm_zero : ∀ n : ℕ, eLpNorm (fun ω =>
-      (1 / ((n : ℕ) + 1 : ℝ)) * (Finset.range ((n : ℕ) + 1)).sum (fun j => f (T^[j] ω))
-      - MeasureTheory.condExp m μ f ω) 2 μ = 0 := by
-    intro n
-    exact eLpNorm_eq_zero_of_ae_zero (h_ae_zero n)
-
-  -- Convergence to 0 is trivial
-  simp_rw [h_eLpNorm_zero]
-  exact tendsto_const_nhds
-  --
-  -- Step 4: Identify projection with condexp (see InvariantSigma.lean for shift case)
-  -- have h_proj_eq_condexp : orthogonalProjection = condexpL2 m
-  --
-  -- Step 5: Unwrap to eLpNorm
-  -- Use Lp.norm_def: ‖·‖_Lp = ENNReal.toReal (eLpNorm · p μ)
+  sorry
 /-- Helper: shift^[k] y n = y (n + k) -/
 private lemma shift_iterate_apply (k n : ℕ) (y : Ω[α]) :
     (shift (α := α))^[k] y n = y (n + k) := by
