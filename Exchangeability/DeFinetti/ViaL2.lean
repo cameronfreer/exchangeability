@@ -3007,12 +3007,14 @@ lemma alphaIic_ae_eq_alphaIicCE
         · calc |A n m ω - max 0 (min 1 (alpha ω))|
               = |A n m ω - max 0 1| := by rw [min_eq_left (by linarith : 1 ≤ alpha ω)]
             _ = |A n m ω - 1| := by rw [max_eq_right (by linarith : (0 : ℝ) ≤ 1)]
-            _ = 1 - A n m ω := by rw [abs_of_nonpos (by linarith : A n m ω - 1 ≤ 0)]
+            _ = 1 - A n m ω := by
+                rw [abs_of_nonpos (by linarith : A n m ω - 1 ≤ 0)]
+                ring
             _ ≤ alpha ω - A n m ω := by linarith
             _ ≤ |A n m ω - alpha ω| := by rw [abs_sub_comm]; exact le_abs_self _
         · -- alpha ∈ [0,1], so clipping does nothing
           push_neg at halpha halpha1
-          rw [min_comm, min_eq_left halpha1, max_eq_right halpha, abs_sub_self]
+          rw [min_comm, min_eq_left halpha1, max_eq_right halpha]
 
     -- Prove integrability of A n m
     have hA_int : Integrable (A n m) μ := by
