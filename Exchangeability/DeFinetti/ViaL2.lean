@@ -3064,14 +3064,13 @@ lemma alphaIic_ae_eq_alphaIicCE
             -- max 0 (min 1 x) is always in [0,1]
             by_cases h : alpha ω ≤ 0
             · rw [min_eq_right (by linarith : alpha ω ≤ 1), max_eq_left h, abs_zero]
+              norm_num
             · by_cases h1 : 1 ≤ alpha ω
               · rw [min_eq_left h1, max_eq_right (by linarith : 0 ≤ (1:ℝ)), abs_of_nonneg (by linarith : 0 ≤ (1:ℝ))]
+                norm_num
               · push_neg at h h1
                 rw [min_eq_right (le_of_lt h1), max_eq_right (le_of_lt h)]
-                calc |alpha ω|
-                    = alpha ω := abs_of_pos h
-                  _ < 1 := h1
-                  _ ≤ 1 := le_refl _
+                exact abs_of_pos h |>.trans_le (le_of_lt h1)
           · exact (hA_int.sub halpha_int).abs
           · filter_upwards with ω; exact h_clip_le ω
       _ < ε := hM m hm
