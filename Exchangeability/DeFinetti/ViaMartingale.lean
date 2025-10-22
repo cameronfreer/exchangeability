@@ -209,8 +209,9 @@ lemma condDistrib_factor_indicator_agree
 
   set f := Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ
 
-  -- Use condExp_eq_of_setIntegral_eq from CondExpHelpers
-  -- Key: μ[f | σ(ζ)] satisfies the defining property of μ[f | σ(η)]
+  -- Strategy: Use tower property and uniqueness
+  -- By tower property: μ[f|σ(η)] = μ[μ[f|σ(ζ)]|σ(η)]
+  -- We'll show μ[μ[f|σ(ζ)]|σ(η)] = μ[f|σ(ζ)] by proving μ[f|σ(ζ)] is σ(η)-measurable
 
   -- Comap measurable spaces are sub-σ-algebras of ambient space
   have hη_le : MeasurableSpace.comap η inferInstance ≤ (inferInstance : MeasurableSpace Ω) := by
@@ -227,34 +228,27 @@ lemma condDistrib_factor_indicator_agree
     apply Integrable.comp_measurable _ hξ
     exact integrable_const (1 : ℝ) |>.indicator hB
 
-  -- μ[f | σ(ζ)] is σ(η)-measurable because σ(η) ≤ σ(ζ)
-  have hcond_ζ_meas : Measurable[MeasurableSpace.comap η inferInstance]
-      (μ[f | MeasurableSpace.comap ζ inferInstance]) := by
-    have : Measurable[MeasurableSpace.comap ζ inferInstance]
-        (μ[f | MeasurableSpace.comap ζ inferInstance]) := stronglyMeasurable_condExp.measurable
-    exact Measurable.mono this h_le le_rfl
-
-  -- μ[f | σ(ζ)] is integrable
-  have hcond_ζ_int : Integrable (μ[f | MeasurableSpace.comap ζ inferInstance]) μ :=
-    integrable_condExp
-
-  -- For any η-measurable set A, show ∫_A μ[f | σ(ζ)] dμ = ∫_A f dμ
-  have hint_eq : ∀ A, MeasurableSet[MeasurableSpace.comap η inferInstance] A → μ A < ⊤ →
-      ∫ ω in A, (μ[f | MeasurableSpace.comap ζ inferInstance]) ω ∂μ =
-      ∫ ω in A, f ω ∂μ := by
-    intro A hA_η hμA
-    -- A is η-measurable, hence also ζ-measurable by h_le
-    have hA_ζ : MeasurableSet[MeasurableSpace.comap ζ inferInstance] A := h_le A hA_η
-    -- Use the defining property of conditional expectation on ζ-measurable sets
+  -- Apply tower property: μ[f|σ(η)] = μ[μ[f|σ(ζ)]|σ(η)]
+  have tower : μ[f | MeasurableSpace.comap η inferInstance] =ᵐ[μ]
+      μ[μ[f | MeasurableSpace.comap ζ inferInstance] | MeasurableSpace.comap η inferInstance] := by
     have : SigmaFinite (μ.trim hζ_le) := by infer_instance
-    exact setIntegral_condExp hζ_le hf_int hA_ζ
+    exact (condExp_condExp_of_le h_le hζ_le).symm
 
-  -- Apply condExp_eq_of_setIntegral_eq
-  have : SigmaFinite (μ.trim hη_le) := by infer_instance
-  symm
-  exact MeasureTheory.condExp_eq_of_setIntegral_eq
-    (MeasurableSpace.comap η inferInstance) inferInstance hη_le
-    hcond_ζ_meas hf_int hcond_ζ_int hint_eq
+  -- Now show μ[μ[f|σ(ζ)]|σ(η)] = μ[f|σ(ζ)]
+  -- This is equivalent to showing μ[f|σ(ζ)] is σ(η)-measurable
+
+  -- For now, we'll use sorry for the key step that requires h_law
+  have key : μ[μ[f | MeasurableSpace.comap ζ inferInstance] | MeasurableSpace.comap η inferInstance]
+      =ᵐ[μ] μ[f | MeasurableSpace.comap ζ inferInstance] := by
+    sorry
+    -- This requires showing μ[f|σ(ζ)] is σ(η)-measurable
+    -- The proof needs to use h_law to show the conditional expectation
+    -- factors through η despite being conditioned on ζ
+
+  -- Combine with tower property
+  calc μ[f | MeasurableSpace.comap ζ inferInstance]
+      =ᵐ[μ] μ[μ[f | MeasurableSpace.comap ζ inferInstance] | MeasurableSpace.comap η inferInstance] := key.symm
+    _ =ᵐ[μ] μ[f | MeasurableSpace.comap η inferInstance] := tower.symm
   -- ═══════════════════════════════════════════════════════════════════════════════
   -- MATHLIB GAP: Conditional distribution uniqueness under factorization
   -- ═══════════════════════════════════════════════════════════════════════════════
