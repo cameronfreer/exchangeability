@@ -3109,42 +3109,35 @@ lemma alphaIic_ae_eq_alphaIicCE
               gcongr
               -- Need: ∫ |f - g| ≤ ∫ (|f| + |g|)
               -- This follows from |a - b| ≤ |a| + |b| and integral_mono
-              have hf_int := (indIic_measurable t).comp (hX_meas m) |>.integrable_of_isBounded_measure
-              have hg_int := (indIic_measurable t).comp (hX_meas 0) |>.integrable_of_isBounded_measure
+              -- Integrability of indicators: they're bounded by 1
+              have hf_int : Integrable (indIic t ∘ X m) μ := by
+                apply Integrable.of_bound ((indIic_measurable t).comp (hX_meas m) |>.aestronglyMeasurable) 1
+                filter_upwards with x; unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
+              have hg_int : Integrable (indIic t ∘ X 0) μ := by
+                apply Integrable.of_bound ((indIic_measurable t).comp (hX_meas 0) |>.aestronglyMeasurable) 1
+                filter_upwards with x; unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
               apply MeasureTheory.integral_mono (Integrable.abs (Integrable.sub hf_int hg_int))
-              · apply Integrable.add
-                · exact (Measurable.abs ((indIic_measurable t).comp (hX_meas m))).integrable_of_isBounded_measure
-                · exact (Measurable.abs ((indIic_measurable t).comp (hX_meas 0))).integrable_of_isBounded_measure
+              · apply Integrable.add (Integrable.abs hf_int) (Integrable.abs hg_int)
               · filter_upwards with ω
                 exact abs_sub_abs_le_abs_sub _ _
         _ = (1/(m:ℝ)) * (∫ ω, |indIic t (X m ω)| ∂μ + ∫ ω, |indIic t (X 0 ω)| ∂μ) := by
               congr 1
-              rw [integral_add]
-              · exact (Measurable.abs ((indIic_measurable t).comp (hX_meas m))).integrable_of_isBounded_measure
-              · exact (Measurable.abs ((indIic_measurable t).comp (hX_meas 0))).integrable_of_isBounded_measure
+              rw [integral_add (Integrable.abs hf_int) (Integrable.abs hg_int)]
         _ ≤ (1/(m:ℝ)) * (1 + 1) := by
               gcongr
               · -- ∫ |indIic t (X m)| ≤ 1
                 have : ∫ ω, |indIic t (X m ω)| ∂μ ≤ ∫ ω, (1 : ℝ) ∂μ := by
-                  apply integral_mono
-                  · exact (Measurable.abs ((indIic_measurable t).comp (hX_meas m))).integrable_of_isBounded_measure
-                  · exact integrable_const 1
-                  · filter_upwards with ω
-                    unfold indIic
-                    simp [Set.indicator, abs_of_nonneg]
-                    split_ifs <;> norm_num
+                  apply integral_mono (Integrable.abs hf_int) (integrable_const 1)
+                  filter_upwards with ω
+                  unfold indIic; simp [Set.indicator, abs_of_nonneg]; split_ifs <;> norm_num
                 calc ∫ ω, |indIic t (X m ω)| ∂μ
                     ≤ ∫ ω, (1 : ℝ) ∂μ := this
                   _ = 1 := by simp [measure_univ]
               · -- ∫ |indIic t (X 0)| ≤ 1
                 have : ∫ ω, |indIic t (X 0 ω)| ∂μ ≤ ∫ ω, (1 : ℝ) ∂μ := by
-                  apply integral_mono
-                  · exact (Measurable.abs ((indIic_measurable t).comp (hX_meas 0))).integrable_of_isBounded_measure
-                  · exact integrable_const 1
-                  · filter_upwards with ω
-                    unfold indIic
-                    simp [Set.indicator, abs_of_nonneg]
-                    split_ifs <;> norm_num
+                  apply integral_mono (Integrable.abs hg_int) (integrable_const 1)
+                  filter_upwards with ω
+                  unfold indIic; simp [Set.indicator, abs_of_nonneg]; split_ifs <;> norm_num
                 calc ∫ ω, |indIic t (X 0 ω)| ∂μ
                     ≤ ∫ ω, (1 : ℝ) ∂μ := this
                   _ = 1 := by simp [measure_univ]
@@ -3208,9 +3201,13 @@ lemma alphaIic_ae_eq_alphaIicCE
                 apply Integrable.abs
                 apply Integrable.sub
                 · -- A is integrable (bounded measurable on probability space)
-                  apply Measurable.integrable_of_isBounded_measure
-                  exact Finset.measurable_sum _ (fun k _ =>
-                    Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                  have hA_meas : Measurable (fun ω => (1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)) :=
+                    Finset.measurable_sum _ (fun k _ =>
+                      Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                  apply Integrable.of_bound hA_meas.aestronglyMeasurable 1
+                  filter_upwards with ω
+                  simp [Real.norm_eq_abs]
+                  sorry  -- |weighted sum of indicators| ≤ 1
                 · -- target = condExp is integrable
                   exact integrable_condExp
               · -- Integrability of |A - B| + |B - target|
@@ -3219,22 +3216,28 @@ lemma alphaIic_ae_eq_alphaIicCE
                   apply Integrable.abs
                   apply Integrable.sub
                   · -- A is integrable
-                    apply Measurable.integrable_of_isBounded_measure
-                    exact Finset.measurable_sum _ (fun k _ =>
-                      Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                    have hA_meas : Measurable (fun ω => (1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)) :=
+                      Finset.measurable_sum _ (fun k _ =>
+                        Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                    apply Integrable.of_bound hA_meas.aestronglyMeasurable 1
+                    filter_upwards with ω; simp [Real.norm_eq_abs]; sorry
                   · -- B is integrable
                     simp [B]
-                    apply Measurable.integrable_of_isBounded_measure
-                    exact Finset.measurable_sum _ (fun i _ =>
-                      Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                    have hB_meas : Measurable (fun ω => (1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)) :=
+                      Finset.measurable_sum _ (fun i _ =>
+                        Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                    apply Integrable.of_bound hB_meas.aestronglyMeasurable 1
+                    filter_upwards with ω; simp [Real.norm_eq_abs]; sorry
                 · -- |B - target| is integrable
                   apply Integrable.abs
                   apply Integrable.sub
                   · -- B is integrable
                     simp [B]
-                    apply Measurable.integrable_of_isBounded_measure
-                    exact Finset.measurable_sum _ (fun i _ =>
-                      Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                    have hB_meas : Measurable (fun ω => (1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)) :=
+                      Finset.measurable_sum _ (fun i _ =>
+                        Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                    apply Integrable.of_bound hB_meas.aestronglyMeasurable 1
+                    filter_upwards with ω; simp [Real.norm_eq_abs]; sorry
                   · -- target is integrable
                     exact integrable_condExp
               · -- Pointwise bound
@@ -3244,22 +3247,28 @@ lemma alphaIic_ae_eq_alphaIicCE
               apply Integrable.abs
               apply Integrable.sub
               · -- A is integrable
-                apply Measurable.integrable_of_isBounded_measure
-                exact Finset.measurable_sum _ (fun k _ =>
-                  Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                have hA_meas : Measurable (fun ω => (1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)) :=
+                  Finset.measurable_sum _ (fun k _ =>
+                    Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                apply Integrable.of_bound hA_meas.aestronglyMeasurable 1
+                filter_upwards with ω; simp [Real.norm_eq_abs]; sorry
               · -- B is integrable
                 simp [B]
-                apply Measurable.integrable_of_isBounded_measure
-                exact Finset.measurable_sum _ (fun i _ =>
-                  Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                have hB_meas : Measurable (fun ω => (1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)) :=
+                  Finset.measurable_sum _ (fun i _ =>
+                    Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                apply Integrable.of_bound hB_meas.aestronglyMeasurable 1
+                filter_upwards with ω; simp [Real.norm_eq_abs]; sorry
             · -- Integrability of |B - target|
               apply Integrable.abs
               apply Integrable.sub
               · -- B is integrable
                 simp [B]
-                apply Measurable.integrable_of_isBounded_measure
-                exact Finset.measurable_sum _ (fun i _ =>
-                  Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                have hB_meas : Measurable (fun ω => (1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)) :=
+                  Finset.measurable_sum _ (fun i _ =>
+                    Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                apply Integrable.of_bound hB_meas.aestronglyMeasurable 1
+                filter_upwards with ω; simp [Real.norm_eq_abs]; sorry
               · -- target is integrable
                 exact integrable_condExp
       _ ≤ 2/(m:ℝ) + ε/2 := by linarith [hAB_diff, hB_conv]
