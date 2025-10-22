@@ -74,6 +74,9 @@ theorem conditionallyIID_of_contractable
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
     (hContract : Contractable μ X) :
     ConditionallyIID μ X := by
+  -- IsProbabilityMeasure → IsFiniteMeasure (needed for condExpKernel)
+  haveI : IsFiniteMeasure μ := inferInstance
+
   -- Step 1: Construct the directing measure ν using condExpKernel
   let ν : Ω → Measure α := directingMeasure_of_contractable (μ := μ) X hX_meas
 
@@ -94,10 +97,17 @@ theorem conditionallyIID_of_contractable
 
   -- Step 3: Prove measurability of ν
   have hν_meas : ∀ B : Set α, MeasurableSet B → Measurable (fun ω => ν ω B) := by
+    intro B hB
+    -- ν ω = Measure.map (X 0) (condExpKernel μ (tailSigma X) ω)
+    -- So ν ω B = (condExpKernel μ (tailSigma X) ω) ((X 0)⁻¹' B)
+    -- We use the fact that fun ω => condExpKernel μ m ω is a measurable kernel
+    -- and Measure.map f is measurable in the measure argument
     sorry
-    -- TODO: This requires proving that Measure.map preserves measurability of measure-valued functions
-    -- The key is that fun ω => condExpKernel μ (tailSigma X) ω is measurable (from mathlib)
-    -- and fun κ => Measure.map (X 0) κ is measurable (from Measure.measurable_map)
+    -- TODO: This requires composition of measurable measure-valued functions
+    -- The key lemmas needed:
+    -- 1. measurable_condExpKernel: fun ω => condExpKernel μ m ω s is measurable
+    -- 2. Measure.measurable_map: fun κ => Measure.map f κ is measurable
+    -- These need to be composed, but the composition is not straightforward
 
   -- Step 4: Prove the conditional law property
   have hν_law : ∀ n B, MeasurableSet B →
