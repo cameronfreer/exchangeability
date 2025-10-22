@@ -2911,6 +2911,7 @@ The key results that solve the endpoint limit problem:
 3. **A.e. endpoint limits**: Monotonicity + boundedness + L¹ limits ⇒ a.e. pointwise limits
 -/
 
+set_option maxHeartbeats 400000 in
 /-- **Identification lemma**: alphaIic equals alphaIicCE almost everywhere.
 
 **Proof strategy:**
@@ -2923,7 +2924,6 @@ converge in L² (hence L¹) to the conditional expectation. Since L¹ limits are
 to a.e. equality, we get `alphaIic =ᵐ alphaIicCE`.
 
 TODO: Implement using reverse martingale convergence or L² projection argument. -/
-set_option maxHeartbeats 400000
 lemma alphaIic_ae_eq_alphaIicCE
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
@@ -3093,11 +3093,11 @@ lemma alphaIic_ae_eq_alphaIicCE
     let B : ℕ → Ω → ℝ := fun m ω => (1 / (m : ℝ)) * ∑ i : Fin m, indIic t (X i ω)
 
     -- Apply cesaro_to_condexp_L1 for B
-    -- TODO: Fix axiom accessibility issue (axiom defined at line 1680 but not recognized)
+    -- TODO: Fix axiom scoping issue - axiom defined at line 1663 but not visible here
     have h_axiom : ∃ (M : ℕ), ∀ (m : ℕ), m ≥ M →
         ∫ ω, |(1 / (m : ℝ)) * ∑ i : Fin m, indIic t (X i ω) -
               (μ[(indIic t ∘ X 0) | TailSigma.tailSigma X] ω)| ∂μ < ε/2 := by
-      sorry -- Should use cesaro_to_condexp_L1 axiom
+      sorry  -- Should use: cesaro_to_condexp_L1 hX_contract hX_meas (indIic t) (indIic_measurable t) (indIic_bdd t) (ε/2)
     obtain ⟨M₁, hM₁⟩ := h_axiom
 
     -- The difference between A 0 m and B m is O(1/m)
@@ -3479,15 +3479,16 @@ lemma alphaIic_ae_eq_alphaIicCE
         simp only [Real.norm_eq_abs, zero_add]
         by_cases hm : m = 0
         · simp [hm]
-        · -- simp converted |(1/m) * ∑...| to (m:ℝ)⁻¹ * |∑...|
-          calc (m:ℝ)⁻¹ * |∑ k : Fin m, indIic t (X (k.val + 1) ω)|
-            _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
-                  gcongr; exact Finset.abs_sum_le_sum_abs _ _
-            _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, (1 : ℝ) := by
-                  gcongr with k
-                  unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
-            _ = (m:ℝ)⁻¹ * m := by simp [Finset.sum_const, Finset.card_fin]
-            _ = 1 := by field_simp [hm]
+        · calc |1 / (m:ℝ) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)|
+                = (m:ℝ)⁻¹ * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
+                      rw [one_div, abs_mul, abs_of_pos]; positivity
+              _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
+                    gcongr; exact Finset.abs_sum_le_sum_abs _ _
+              _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, (1 : ℝ) := by
+                    gcongr with k
+                    unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
+              _ = (m:ℝ)⁻¹ * m := by simp [Finset.sum_const, Finset.card_fin]
+              _ = 1 := by field_simp [hm]
       · -- f is bounded by hypothesis hf_bdd
         exact Integrable.of_bound hf_meas 1 hf_bdd
 
@@ -3501,15 +3502,16 @@ lemma alphaIic_ae_eq_alphaIicCE
         simp only [Real.norm_eq_abs, zero_add]
         by_cases hm : m = 0
         · simp [hm]
-        · -- simp converted |(1/m) * ∑...| to (m:ℝ)⁻¹ * |∑...|
-          calc (m:ℝ)⁻¹ * |∑ k : Fin m, indIic t (X (k.val + 1) ω)|
-            _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
-                  gcongr; exact Finset.abs_sum_le_sum_abs _ _
-            _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, (1 : ℝ) := by
-                  gcongr with k
-                  unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
-            _ = (m:ℝ)⁻¹ * m := by simp [Finset.sum_const, Finset.card_fin]
-            _ = 1 := by field_simp [hm]
+        · calc |1 / (m:ℝ) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)|
+                = (m:ℝ)⁻¹ * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
+                      rw [one_div, abs_mul, abs_of_pos]; positivity
+              _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
+                    gcongr; exact Finset.abs_sum_le_sum_abs _ _
+              _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, (1 : ℝ) := by
+                    gcongr with k
+                    unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
+              _ = (m:ℝ)⁻¹ * m := by simp [Finset.sum_const, Finset.card_fin]
+              _ = 1 := by field_simp [hm]
       · -- g is bounded by hypothesis hg_bdd
         exact Integrable.of_bound hg_meas 1 hg_bdd
 
