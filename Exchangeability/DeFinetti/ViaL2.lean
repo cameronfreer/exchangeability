@@ -3214,12 +3214,15 @@ lemma alphaIic_ae_eq_alphaIicCE
                   calc |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)|
                       = (1/(m:ℝ)) * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
                           rw [abs_mul, abs_of_pos]; positivity
-                    _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
+                    _ = (m:ℝ)⁻¹ * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
+                          rw [one_div]
+                    _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
                           gcongr; exact Finset.abs_sum_le_sum_abs _ _
-                    _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
+                    _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, (1 : ℝ) := by
                           gcongr with k
                           unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
-                    _ = (1/(m:ℝ)) * m := by simp [Finset.sum_const, Finset.card_fin]
+                    _ = (1/(m:ℝ)) * m := by
+                          rw [← one_div]; simp [Finset.sum_const, Finset.card_fin]
                     _ = 1 := by field_simp
                 · -- target = condExp is integrable
                   exact integrable_condExp
@@ -3237,12 +3240,15 @@ lemma alphaIic_ae_eq_alphaIicCE
                     calc |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)|
                         = (1/(m:ℝ)) * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
                             rw [abs_mul, abs_of_pos]; positivity
-                      _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
+                      _ = (m:ℝ)⁻¹ * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
+                            rw [one_div]
+                      _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
                             gcongr; exact Finset.abs_sum_le_sum_abs _ _
-                      _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
+                      _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, (1 : ℝ) := by
                             gcongr with k
                             unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
-                      _ = (1/(m:ℝ)) * m := by simp [Finset.sum_const, Finset.card_fin]
+                      _ = (1/(m:ℝ)) * m := by
+                            rw [← one_div]; simp [Finset.sum_const, Finset.card_fin]
                       _ = 1 := by field_simp
                   · -- B is integrable
                     simp [B]
@@ -3298,12 +3304,15 @@ lemma alphaIic_ae_eq_alphaIicCE
                 calc |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)|
                     = (1/(m:ℝ)) * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
                         rw [abs_mul, abs_of_pos]; positivity
-                  _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
+                  _ = (m:ℝ)⁻¹ * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
+                        rw [one_div]
+                  _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
                         gcongr; exact Finset.abs_sum_le_sum_abs _ _
-                  _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
+                  _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, (1 : ℝ) := by
                         gcongr with k
                         unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
-                  _ = (1/(m:ℝ)) * m := by simp [Finset.sum_const, Finset.card_fin]
+                  _ = (1/(m:ℝ)) * m := by
+                        rw [← one_div]; simp [Finset.sum_const, Finset.card_fin]
                   _ = 1 := by field_simp
               · -- B is integrable
                 simp [B]
@@ -3402,16 +3411,24 @@ lemma alphaIic_ae_eq_alphaIicCE
         -- Therefore A n m ω ∈ [0, 1]
         unfold A
         simp only [Real.norm_eq_abs, zero_add]
-        calc |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)|
-            = (1/(m:ℝ)) * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
-                rw [abs_mul]; simp [abs_of_pos]; positivity
-          _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
-                gcongr; exact Finset.abs_sum_le_sum_abs _ _
-          _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
-                gcongr with k
-                unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
-          _ = (1/(m:ℝ)) * m := by simp [Finset.sum_const, Finset.card_fin]
-          _ = 1 := by field_simp
+        by_cases hm : m = 0
+        · -- Case m = 0: both sides are 0
+          simp [hm]
+        · -- Case m > 0
+          have hm_pos : 0 < (m : ℝ) := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hm)
+          calc |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)|
+              = (1/(m:ℝ)) * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
+                  rw [abs_mul, abs_of_pos (one_div_pos.mpr hm_pos)]
+            _ = (m:ℝ)⁻¹ * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
+                  rw [one_div]
+            _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
+                  gcongr; exact Finset.abs_sum_le_sum_abs _ _
+            _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, (1 : ℝ) := by
+                  gcongr with k
+                  unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
+            _ = (1/(m:ℝ)) * m := by
+                  rw [← one_div]; simp [Finset.sum_const, Finset.card_fin]
+            _ = 1 := by field_simp [hm]
       · -- f is bounded by hypothesis hf_bdd
         exact Integrable.of_bound hf_meas 1 hf_bdd
 
@@ -3423,16 +3440,24 @@ lemma alphaIic_ae_eq_alphaIicCE
         filter_upwards with ω
         unfold A
         simp only [Real.norm_eq_abs, zero_add]
-        calc |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)|
-            = (1/(m:ℝ)) * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
-                rw [abs_mul]; simp [abs_of_pos]; positivity
-          _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
-                gcongr; exact Finset.abs_sum_le_sum_abs _ _
-          _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
-                gcongr with k
-                unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
-          _ = (1/(m:ℝ)) * m := by simp [Finset.sum_const, Finset.card_fin]
-          _ = 1 := by field_simp
+        by_cases hm : m = 0
+        · -- Case m = 0: both sides are 0
+          simp [hm]
+        · -- Case m > 0
+          have hm_pos : 0 < (m : ℝ) := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hm)
+          calc |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)|
+              = (1/(m:ℝ)) * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
+                  rw [abs_mul, abs_of_pos (one_div_pos.mpr hm_pos)]
+            _ = (m:ℝ)⁻¹ * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
+                  rw [one_div]
+            _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
+                  gcongr; exact Finset.abs_sum_le_sum_abs _ _
+            _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, (1 : ℝ) := by
+                  gcongr with k
+                  unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
+            _ = (1/(m:ℝ)) * m := by
+                  rw [← one_div]; simp [Finset.sum_const, Finset.card_fin]
+            _ = 1 := by field_simp [hm]
       · -- g is bounded by hypothesis hg_bdd
         exact Integrable.of_bound hg_meas 1 hg_bdd
 
