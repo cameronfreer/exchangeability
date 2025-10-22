@@ -3201,8 +3201,8 @@ lemma alphaIic_ae_eq_alphaIicCE
                 apply Integrable.sub
                 · -- A is integrable (bounded measurable on probability space)
                   have hA_meas : Measurable (fun ω => (1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)) :=
-                    Finset.measurable_sum _ (fun k _ =>
-                      Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                    Measurable.const_mul (Finset.measurable_sum _ (fun k _ =>
+                      ((indIic_measurable t).comp (hX_meas _)))) _
                   apply Integrable.of_bound hA_meas.aestronglyMeasurable 1
                   filter_upwards with ω
                   simp [Real.norm_eq_abs]
@@ -3226,8 +3226,8 @@ lemma alphaIic_ae_eq_alphaIicCE
                   apply Integrable.sub
                   · -- A is integrable
                     have hA_meas : Measurable (fun ω => (1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)) :=
-                      Finset.measurable_sum _ (fun k _ =>
-                        Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                      Measurable.const_mul (Finset.measurable_sum _ (fun k _ =>
+                        ((indIic_measurable t).comp (hX_meas _)))) _
                     apply Integrable.of_bound hA_meas.aestronglyMeasurable 1
                     filter_upwards with ω; simp [Real.norm_eq_abs]
                     calc |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)|
@@ -3243,8 +3243,8 @@ lemma alphaIic_ae_eq_alphaIicCE
                   · -- B is integrable
                     simp [B]
                     have hB_meas : Measurable (fun ω => (1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)) :=
-                      Finset.measurable_sum _ (fun i _ =>
-                        Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                      Measurable.const_mul (Finset.measurable_sum _ (fun i _ =>
+                        ((indIic_measurable t).comp (hX_meas _)))) _
                     apply Integrable.of_bound hB_meas.aestronglyMeasurable 1
                     filter_upwards with ω; simp [Real.norm_eq_abs]
                     calc |(1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)|
@@ -3263,8 +3263,8 @@ lemma alphaIic_ae_eq_alphaIicCE
                   · -- B is integrable
                     simp [B]
                     have hB_meas : Measurable (fun ω => (1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)) :=
-                      Finset.measurable_sum _ (fun i _ =>
-                        Measurable.const_mul ((indIic_measurable t).comp (hX_meas _)) _)
+                      Measurable.const_mul (Finset.measurable_sum _ (fun i _ =>
+                        ((indIic_measurable t).comp (hX_meas _)))) _
                     apply Integrable.of_bound hB_meas.aestronglyMeasurable 1
                     filter_upwards with ω; simp [Real.norm_eq_abs]
                     calc |(1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)|
