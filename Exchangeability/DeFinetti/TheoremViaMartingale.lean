@@ -78,7 +78,7 @@ theorem conditionallyIID_of_contractable
   haveI : IsFiniteMeasure μ := inferInstance
 
   -- Step 1: Construct the directing measure ν using condExpKernel
-  let ν : Ω → Measure α := directingMeasure_of_contractable (μ := μ) X hX_meas
+  set ν : Ω → Measure α := directingMeasure_of_contractable (μ := μ) X hX_meas with hν_def
 
   -- Step 2: Prove ν is a probability measure for each ω
   have hν_prob : ∀ ω, IsProbabilityMeasure (ν ω) := by
@@ -96,26 +96,16 @@ theorem conditionallyIID_of_contractable
     simp [Measure.map_apply (hX_meas 0) MeasurableSet.univ]
 
   -- Step 3: Prove measurability of ν
-  have hν_meas : ∀ B : Set α, MeasurableSet B → Measurable (fun ω => ν ω B) := by
-    intro B hB
-    sorry
-    -- Complete proof strategy (verified in LSP, pending technical resolution):
-    --
-    -- Goal: Measurable (fun ω => ν ω B)
-    -- where ν ω = Measure.map (X 0) (condExpKernel μ (tailSigma X) ω)
-    --
-    -- Approach:
-    -- 1. Rewrite goal as: Measurable (fun ω => (condExpKernel μ (tailSigma X) ω) ((X 0)⁻¹' B))
-    --    using: (Measure.map (X 0) κ) B = κ ((X 0)⁻¹' B) [Measure.map_apply]
-    --
-    -- 2. Apply: measurable_condExpKernel (m := tailSigma X) with hB' : MeasurableSet ((X 0)⁻¹' B)
-    --
-    -- Technical blocker: MeasurableSpace instance unification between:
-    --    - tailSigma X (sub-σ-algebra)
-    --    - inferInstance (ambient σ-algebra)
-    -- Multiple approaches tried (convert, suffices, explicit @-application) all hit same issue.
-    --
-    -- Resolution path: Add simp/equation lemma for directingMeasure_of_contractable in ViaMartingale.lean
+  have hν_meas : ∀ B : Set α, MeasurableSet B → Measurable (fun ω => ν ω B) := fun B hB => by
+    -- ν ω = Measure.map (X 0) (condExpKernel μ (tailSigma X) ω) by definition
+    -- So ν ω B = (condExpKernel μ (tailSigma X) ω) ((X 0)⁻¹' B) by Measure.map_apply
+    simp only [hν_def]
+    simp only [show ∀ ω, directingMeasure_of_contractable X hX_meas ω =
+                          Measure.map (X 0) (condExpKernel μ (tailSigma X) ω) from fun _ => rfl]
+    simp_rw [Measure.map_apply (hX_meas 0) hB]
+    -- Now goal is: Measurable (fun ω => (condExpKernel μ (tailSigma X) ω) ((X 0)⁻¹' B))
+    letI : IsFiniteMeasure μ := inferInstance
+    exact ProbabilityTheory.measurable_condExpKernel (hX_meas 0 hB)
 
   -- Step 4: Prove the conditional law property
   have hν_law : ∀ n B, MeasurableSet B →
