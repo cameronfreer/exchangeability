@@ -98,16 +98,16 @@ theorem conditionallyIID_of_contractable
   -- Step 3: Prove measurability of ν
   have hν_meas : ∀ B : Set α, MeasurableSet B → Measurable (fun ω => ν ω B) := by
     intro B hB
-    -- ν ω = Measure.map (X 0) (condExpKernel μ (tailSigma X) ω)
-    -- So ν ω B = (condExpKernel μ (tailSigma X) ω) ((X 0)⁻¹' B)
-    -- We use the fact that fun ω => condExpKernel μ m ω is a measurable kernel
-    -- and Measure.map f is measurable in the measure argument
-    sorry
-    -- TODO: This requires composition of measurable measure-valued functions
-    -- The key lemmas needed:
-    -- 1. measurable_condExpKernel: fun ω => condExpKernel μ m ω s is measurable
-    -- 2. Measure.measurable_map: fun κ => Measure.map f κ is measurable
-    -- These need to be composed, but the composition is not straightforward
+    -- ν ω B = (Measure.map (X 0) (condExpKernel μ (tailSigma X) ω)) B
+    --       = (condExpKernel μ (tailSigma X) ω) ((X 0)⁻¹' B)  by Measure.map_apply
+    -- Since (X 0)⁻¹' B is measurable, we can apply measurable_condExpKernel
+    have hB' : MeasurableSet ((X 0) ⁻¹' B) := (hX_meas 0).measurableSet_preimage hB
+    -- This gives us measurability directly
+    convert ProbabilityTheory.measurable_condExpKernel hB'
+    ext ω
+    -- Show ν ω B = (condExpKernel μ (tailSigma X) ω) ((X 0)⁻¹' B)
+    simp only [directingMeasure_of_contractable]
+    rw [Measure.map_apply (hX_meas 0) hB]
 
   -- Step 4: Prove the conditional law property
   have hν_law : ∀ n B, MeasurableSet B →
@@ -117,12 +117,32 @@ theorem conditionallyIID_of_contractable
 
     -- Step 4a: Prove for n=0
     have h0 : (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] := by
+      -- tailSigma X is a sub-σ-algebra
+      have hm : tailSigma X ≤ inferInstance := fun s hs => hs
+
+      -- The indicator function we're conditioning
+      set f := Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) with hf_def
+
+      -- f is integrable
+      have hf_int : Integrable f μ := by
+        apply Integrable.comp_measurable
+        · apply integrable_indicator_const
+          exact Or.inr (measure_lt_top μ Set.univ)
+        · exact hX_meas 0
+
+      -- Step 1: Apply condExp_ae_eq_integral_condExpKernel
+      have key := ProbabilityTheory.condExp_ae_eq_integral_condExpKernel hm hf_int
+
+      -- Now we need to show: (ν ω B).toReal = ∫ y, f y ∂(condExpKernel μ (tailSigma X) ω)
+      refine key.symm.trans ?_
+
+      -- Show: (fun ω => (ν ω B).toReal) =ᵐ[μ] (fun ω => ∫ y, f y ∂(condExpKernel μ (tailSigma X) ω))
+      apply Filter.eventually_of_forall
+      intro ω
+
       sorry
-      -- This requires:
-      -- 1. ν ω B = (Measure.map (X 0) (condExpKernel μ (tailSigma X) ω)) B
-      --          = (condExpKernel μ (tailSigma X) ω) ((X 0)⁻¹' B)
-      -- 2. The fundamental property of condExpKernel
-      -- 3. Relating measure evaluation to conditional expectation of indicators
+      -- Need to show: (ν ω B).toReal = ∫ y, (indicator B (const 1) ∘ X 0) y ∂(condExpKernel μ (tailSigma X) ω)
+      -- This requires connecting the integral to the measure evaluation
 
     -- Step 4b: Use extreme_members_equal_on_tail for general n
     have hn : μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X]
@@ -142,11 +162,18 @@ theorem conditionallyIID_of_contractable
       exact finite_product_formula X hContract hX_meas ν hν_prob hν_meas hν_law m k hk
     · -- Non-strictly-monotone case
       sorry
-      -- Strategy: The product measure on the RHS doesn't depend on k at all -
-      -- it's always the same (product of ν ω for each coordinate).
-      -- For the LHS, if k has repeated indices, we can use the fact that
-      -- repeated sampling from the same measure gives the product measure with repeats.
-      -- This should follow from properties of product measures and pushforwards.
+      -- SUBTLETY: When k has repeated indices (e.g., k = (0,0,1)), we need:
+      --   Measure.map (fun ω => (X 0 ω, X 0 ω, X 1 ω)) μ = μ.bind (fun ω => ν ω ⊗ ν ω ⊗ ν ω)
+      --
+      -- But the LHS has repeated coordinates (first two are always equal), while the RHS
+      -- represents independent sampling.
+      --
+      -- This seems problematic! Possible resolutions:
+      -- 1. The definition of ConditionallyIID might need refinement (only require StrictMono k)
+      -- 2. There's a subtle measure-theoretic fact about disintegration that makes this work
+      -- 3. The contractability assumption gives us additional structure
+      --
+      -- TODO: Check Kallenberg's definition and see how this case is handled in the literature
 
   -- Step 6: Package as ConditionallyIID
   exact ⟨ν, hν_prob, hProduct⟩
