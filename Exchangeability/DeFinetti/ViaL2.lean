@@ -3056,33 +3056,31 @@ lemma alphaIic_ae_eq_alphaIicCE
         --        Middle terms cancel, leaving f(Xₘ) - f(X₀)
 
         -- First convert Fin m sums to range sums for easier manipulation
+        -- Convert Fin sums to Finset.range sums
         have h_left : ∑ k : Fin m, indIic t (X (k.val + 1) ω) =
-                      (Finset.range m).sum (fun k => indIic t (X (k + 1) ω)) := by
-          sorry -- TODO: Prove Fin sum equals range sum
+                      (Finset.range m).sum (fun k => indIic t (X (k + 1) ω)) :=
+          Fin.sum_univ_eq_sum_range (fun k => indIic t (X (k + 1) ω))
         have h_right : ∑ i : Fin m, indIic t (X i ω) =
-                       (Finset.range m).sum (fun i => indIic t (X i ω)) := by
-          sorry -- TODO: Prove Fin sum equals range sum
+                       (Finset.range m).sum (fun i => indIic t (X i ω)) :=
+          Fin.sum_univ_eq_sum_range (fun i => indIic t (X i ω))
+
+        -- Prove telescoping: ∑_{k<m} f(k+1) - ∑_{i<m} f(i) = f(m) - f(0)
+        have h_telescope_sum : (Finset.range m).sum (fun k => indIic t (X (k + 1) ω)) -
+                                (Finset.range m).sum (fun i => indIic t (X i ω)) =
+                                indIic t (X m ω) - indIic t (X 0 ω) := by
+          induction m with
+          | zero => simp [Finset.sum_range_zero]
+          | succ m' ih =>
+              rw [Finset.sum_range_succ, Finset.sum_range_succ]
+              ring_nf
+              rw [ih]
+              ring
+
+        -- Now apply to our goal with the (1/m) factor
         rw [h_left, h_right]
-
-        -- Now prove by induction on m
-        clear h_left h_right
-        induction m with
-        | zero =>
-            -- Base case: m = 0, both sums are empty
-            simp [Finset.sum_range_zero]
-        | succ m' ih =>
-            -- Inductive step: assume true for m', prove for m'+1
-            -- Split off the last term from each sum
-            rw [Finset.sum_range_succ, Finset.sum_range_succ]
-
-            -- Now we have:
-            -- (∑_{k<m'} f(X(k+1)) + f(X(m'+1))) - (∑_{i<m'} f(X i) + f(X m'))
-            -- = f(X(m'+1)) - f(X₀)
-
-            -- Rearrange using the inductive hypothesis
-            ring_nf
-            rw [ih]
-            ring
+        rw [mul_sub_left_distrib, mul_sub_left_distrib]
+        congr 1
+        exact h_telescope_sum
 
       calc ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) -
                  (1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)| ∂μ
@@ -3105,8 +3103,9 @@ lemma alphaIic_ae_eq_alphaIicCE
               have hg_int : Integrable (indIic t ∘ X 0) μ := by
                 apply Integrable.of_bound ((indIic_measurable t).comp (hX_meas 0) |>.aestronglyMeasurable) 1
                 filter_upwards with x; unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
-              apply MeasureTheory.integral_mono (Integrable.abs (Integrable.sub hf_int hg_int))
-              · apply Integrable.add (Integrable.abs hf_int) (Integrable.abs hg_int)
+              apply MeasureTheory.integral_mono
+              · exact Integrable.abs (Integrable.sub hf_int hg_int)
+              · exact Integrable.add (Integrable.abs hf_int) (Integrable.abs hg_int)
               · filter_upwards with ω
                 exact abs_sub_abs_le_abs_sub _ _
         _ = (1/(m:ℝ)) * (∫ ω, |indIic t (X m ω)| ∂μ + ∫ ω, |indIic t (X 0 ω)| ∂μ) := by
