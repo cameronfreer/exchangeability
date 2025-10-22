@@ -2150,10 +2150,10 @@ private lemma L1_cesaro_convergence_bounded
     - condexpL2 fL2 = condExp mSI μ G as functions (a.e.)
     - Conclude: ∫|A_n - CE[G|mSI]| dμ → 0
 
-  **NOTE:** This requires moving the implementation to after line 3607 where
-  `productCylinder` and `birkhoffCylinder_tendsto_condexp` are available.
+  **NOTE:** Implementation moved to section OptionB_L1Convergence (after line 3680).
   -/
-  sorry
+  -- Forward to the actual implementation
+  exact optionB_L1_convergence_bounded hσ g hg_meas hg_bd
 
 /-- **Option B general case**: L¹ convergence via truncation.
 
@@ -3671,6 +3671,129 @@ theorem birkhoffCylinder_tendsto_condexp
     exact h_met
 
 end MainConvergence
+
+/-! ### Option B: L¹ Convergence via Cylinder Functions
+
+These lemmas implement the bounded and general cases for L¹ convergence of Cesàro averages
+using the cylinder function approach (Option B). This avoids MET and sub-σ-algebra typeclass issues. -/
+
+section OptionB_L1Convergence
+
+variable {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+variable (hσ : MeasurePreserving shift μ μ)
+
+/-- **Option B bounded case implementation**: L¹ convergence for bounded functions.
+
+For a bounded measurable function g : α → ℝ, the Cesàro averages A_n(ω) = (1/(n+1)) ∑_j g(ω j)
+converge in L¹ to CE[g(ω₀) | mSI]. Uses the fact that g(ω 0) is a cylinder function. -/
+private theorem optionB_L1_convergence_bounded
+    (g : α → ℝ)
+    (hg_meas : Measurable g) (hg_bd : ∃ Cg, ∀ x, |g x| ≤ Cg) :
+    let A := fun n : ℕ => fun ω => (1 / ((n + 1) : ℝ)) * (Finset.range (n + 1)).sum (fun j => g (ω j))
+    Tendsto (fun n =>
+      ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ)
+            atTop (𝓝 0) := by
+  classical
+  intro A
+  set G : Ω[α] → ℝ := fun ω => g (ω 0)
+  set Y : Ω[α] → ℝ := fun ω => μ[G | mSI] ω
+
+  -- Step 1: G(ω) = g(ω 0) is a cylinder function: productCylinder [g]
+  set fs : Fin 1 → α → ℝ := fun _ => g
+  have hG_eq : G = productCylinder fs := by
+    ext ω
+    simp only [G, productCylinder]
+    -- ∏ k : Fin 1, fs k (ω k.val) = fs 0 (ω 0) = g (ω 0)
+    rw [Finset.prod_eq_single (0 : Fin 1)]
+    · rfl
+    · intro b _ hb; exact absurd rfl hb
+    · intro h; exact absurd (Finset.mem_univ 0) h
+
+  -- Step 2: Apply birkhoffCylinder_tendsto_condexp to get L² convergence
+  have hmeas_fs : ∀ k, Measurable (fs k) := fun _ => hg_meas
+  have hbd_fs : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C := fun _ => hg_bd
+
+  have h_cylinder := birkhoffCylinder_tendsto_condexp (μ := μ) hσ fs hmeas_fs hbd_fs
+  obtain ⟨fL2, hfL2_ae, hfL2_tendsto⟩ := h_cylinder
+
+  -- fL2 = G a.e., so fL2 = g(ω 0) a.e.
+  have hfL2_eq : fL2 =ᵐ[μ] G := by
+    rw [← hG_eq]
+    exact hfL2_ae
+
+  -- Step 3: Define B_n to match birkhoffAverage exactly
+  -- birkhoffAverage n averages over {0, ..., n-1}, while A n averages over {0, ..., n}
+  -- Define B_n to match birkhoffAverage: B_n ω = (1/n) * ∑_{k=0}^{n-1} g(ω k)
+  set B : ℕ → Ω[α] → ℝ := fun n => fun ω =>
+    if n = 0 then 0 else (1 / (n : ℝ)) * (Finset.range n).sum (fun j => g (ω j))
+
+  -- Step 3a: Show birkhoffAverage corresponds to B_n pointwise a.e.
+  have hB_eq_birkhoff : ∀ n > 0,
+      birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 =ᵐ[μ] B n := by
+    intro n hn
+    sorry -- TODO: Implement pointwise correspondence
+
+  -- Step 3b: condexpL2 fL2 and condExp mSI μ G are the same a.e.
+  have hY_eq : condexpL2 (μ := μ) fL2 =ᵐ[μ] Y := by
+    -- condexpL2 is the L² representative of condExp
+    have : condexpL2 (μ := μ) fL2 =ᵐ[μ] condExp mSI μ fL2 := condexpL2_ae_eq_condExp
+    refine this.trans ?_
+    -- condExp is linear and fL2 = G a.e.
+    have : condExp mSI μ fL2 =ᵐ[μ] condExp mSI μ G := ae_eq_condExp_of_ae_eq mSI hfL2_eq
+    exact this
+
+  -- Step 4a: L² to L¹ convergence for B_n → Y
+  have hB_L1_conv : Tendsto (fun n => ∫ ω, |B n ω - Y ω| ∂μ) atTop (𝓝 0) := by
+    sorry -- TODO: Use eLpNorm_le_eLpNorm_of_exponent_le to convert L² to L¹
+
+  -- Step 4b: A_n and B_n differ negligibly due to indexing
+  -- |A_n ω - B_n ω| ≤ 2*Cg/(n+1) since g is bounded
+  obtain ⟨Cg, hCg_bd⟩ := hg_bd
+  have hA_B_close : Tendsto (fun n => ∫ ω, |A n ω - B n ω| ∂μ) atTop (𝓝 0) := by
+    -- For each ω, bound |A n ω - B n ω|
+    have h_bd : ∀ n > 0, ∀ ω, |A n ω - B n ω| ≤ 2 * Cg / (n + 1) := by
+      intro n hn ω
+      simp only [A, B, hn.ne', ↓reduceIte]
+      -- A n ω = (1/(n+1)) * ∑_{k=0}^n g(ω k)
+      -- B n ω = (1/n) * ∑_{k=0}^{n-1} g(ω k)
+      -- Write ∑_{k=0}^n = ∑_{k=0}^{n-1} + g(ω n)
+      rw [show Finset.range (n + 1) = Finset.range n ∪ {n} by
+            ext k; simp [Finset.mem_range, lt_succ_iff],
+          Finset.sum_union (by simp : Disjoint (Finset.range n) {n}),
+          Finset.sum_singleton]
+      -- Now A n ω = (1/(n+1)) * (∑_{k<n} g(ω k) + g(ω n))
+      ring_nf
+      -- Bound using |g(ω k)| ≤ Cg
+      sorry -- Need to complete the algebra and apply boundedness
+    -- Apply dominated convergence
+    refine tendsto_integral_of_dominated_convergence
+      (fun n => 2 * Cg / (n + 1))
+      (ae_of_all μ fun ω => ?_) -- integrability
+      (ae_of_all μ fun ω => ?_) -- pointwise bound
+      ?_ -- integrand bound converges
+      (ae_of_all μ fun ω => ?_) -- pointwise convergence
+    · exact Integrable.abs (integrable_const (2 * Cg))
+    · intro n; exact h_bd n (Nat.zero_lt_succ n) ω
+    · sorry -- Show ∫ (2*Cg/(n+1)) dμ = 2*Cg/(n+1) → 0
+    · sorry -- Show |A n ω - B n ω| → 0 pointwise
+
+  -- Step 4c: Triangle inequality: |A_n - Y| ≤ |A_n - B_n| + |B_n - Y|
+  have h_triangle : ∀ n, ∫ ω, |A n ω - Y ω| ∂μ ≤
+      ∫ ω, |A n ω - B n ω| ∂μ + ∫ ω, |B n ω - Y ω| ∂μ := by
+    intro n
+    apply integral_mono_of_nonneg
+    · exact ae_of_all _ (fun ω => abs_nonneg _)
+    · sorry -- integrability of |A n - Y|
+    · sorry -- integrability of |A n - B n| + |B n - Y|
+    · apply ae_of_all; intro ω
+      exact abs_sub_abs_le_abs_sub (A n ω) (B n ω) (Y ω)
+  -- Combine the two convergences
+  apply squeeze_zero
+  · exact ae_of_all _ (fun n => integral_nonneg (ae_of_all _ (fun ω => abs_nonneg _)))
+  · exact eventually_of_forall h_triangle
+  · exact Tendsto.add hA_B_close hB_L1_conv
+
+end OptionB_L1Convergence
 
 section ExtremeMembers
 
