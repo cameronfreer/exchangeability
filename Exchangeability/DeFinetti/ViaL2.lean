@@ -3521,14 +3521,10 @@ lemma alphaIic_ae_eq_alphaIicCE
       intro ε hε
       rw [Metric.tendsto_atTop] at hf_tendsto
       by_cases h_top : ε = ⊤
-      · use 0
-        intro m _
-        rw [h_top]
-        exact le_top
+      · simp [h_top, Filter.eventually_of_forall]
       · have ε_pos : 0 < ε.toReal := ENNReal.toReal_pos hε.ne' h_top
         obtain ⟨M, hM⟩ := hf_tendsto ε.toReal ε_pos
-        use M
-        intro m hm
+        refine Filter.eventually_atTop.mpr ⟨M, fun m hm => ?_⟩
         rw [eLpNorm_one_eq_integral_abs (hAf_integrable m)]
         rw [ENNReal.ofReal_le_ofReal_iff ε_pos.le]
         have := hM m hm
@@ -3541,14 +3537,10 @@ lemma alphaIic_ae_eq_alphaIicCE
       intro ε hε
       rw [Metric.tendsto_atTop] at hg_tendsto
       by_cases h_top : ε = ⊤
-      · use 0
-        intro m _
-        rw [h_top]
-        exact le_top
+      · simp [h_top, Filter.eventually_of_forall]
       · have ε_pos : 0 < ε.toReal := ENNReal.toReal_pos hε.ne' h_top
         obtain ⟨M, hM⟩ := hg_tendsto ε.toReal ε_pos
-        use M
-        intro m hm
+        refine Filter.eventually_atTop.mpr ⟨M, fun m hm => ?_⟩
         rw [eLpNorm_one_eq_integral_abs (hAg_integrable m)]
         rw [ENNReal.ofReal_le_ofReal_iff ε_pos.le]
         have := hM m hm
@@ -3560,13 +3552,13 @@ lemma alphaIic_ae_eq_alphaIicCE
     have hf_meas_conv : TendstoInMeasure μ (A 0) atTop f := by
       apply tendstoInMeasure_of_tendsto_eLpNorm (p := 1) one_ne_zero
       · intro m; exact hA_meas 0 m
-      · exact hf_meas.aestronglyMeasurable
+      · exact hf_meas
       · exact hf_eLpNorm
 
     have hg_meas_conv : TendstoInMeasure μ (A 0) atTop g := by
       apply tendstoInMeasure_of_tendsto_eLpNorm (p := 1) one_ne_zero
       · intro m; exact hA_meas 0 m
-      · exact hg_meas.aestronglyMeasurable
+      · exact hg_meas
       · exact hg_eLpNorm
 
     -- Step 3: Apply uniqueness
@@ -3583,7 +3575,7 @@ lemma alphaIic_ae_eq_alphaIicCE
     -- alphaIic = max 0 (min 1 ...), so it's in [0,1]
     unfold alphaIic
     simp only [Real.norm_eq_abs]
-    apply abs_le_one_iff_sq_le_one.mpr
+    rw [abs_le_one_iff_mul_self_le_one]
     have h1 : 0 ≤ max 0 (min 1 _) := le_max_left _ _
     have h2 : max 0 (min 1 _) ≤ 1 := by
       apply max_le
@@ -3594,7 +3586,8 @@ lemma alphaIic_ae_eq_alphaIicCE
     have := alphaIicCE_nonneg_le_one X hX_contract hX_meas hX_L2 t
     filter_upwards [this] with ω ⟨h0, h1⟩
     simp only [Real.norm_eq_abs]
-    exact abs_le_one_iff_sq_le_one.mpr (by nlinarith [sq_nonneg (alphaIicCE X hX_contract hX_meas hX_L2 t ω)])
+    rw [abs_le_one_iff_mul_self_le_one]
+    nlinarith [sq_nonneg (alphaIicCE X hX_contract hX_meas hX_L2 t ω)]
   · exact h_alphaIic_is_limit 0
   · exact h_alphaIicCE_is_limit 0
 
