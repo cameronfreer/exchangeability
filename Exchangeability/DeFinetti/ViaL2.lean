@@ -3419,7 +3419,7 @@ lemma alphaIic_ae_eq_alphaIicCE
                   _ = 1 := by field_simp
               · -- target is integrable
                 exact integrable_condExp
-      _ ≤ 2/(m:ℝ) + ε/2 := by linarith [hAB_diff, hB_conv]
+      _ < 2/(m:ℝ) + ε/2 := by linarith [hAB_diff, hB_conv]
       _ ≤ ε/2 + ε/2 := by linarith [h_small]
       _ = ε := by ring
 
@@ -3578,16 +3578,10 @@ lemma alphaIic_ae_eq_alphaIicCE
     exact (alphaIicCE_measurable X hX_contract hX_meas hX_L2 t).aestronglyMeasurable
   · -- alphaIic is bounded by 1
     filter_upwards with ω
-    -- alphaIic = max 0 (min 1 ...), so it's in [0,1]
-    unfold alphaIic
     simp only [Real.norm_eq_abs]
     rw [abs_le_one_iff_mul_self_le_one]
-    have h1 : 0 ≤ max 0 (min 1 _) := le_max_left _ _
-    have h2 : max 0 (min 1 _) ≤ 1 := by
-      apply max_le
-      · norm_num
-      · apply min_le_left
-    nlinarith [sq_nonneg (max 0 (min 1 _))]
+    have ⟨h0, h1⟩ := alphaIic_bound X hX_contract hX_meas hX_L2 t ω
+    nlinarith [sq_nonneg (alphaIic X hX_contract hX_meas hX_L2 t ω)]
   · -- alphaIicCE is bounded by 1 (using alphaIicCE_nonneg_le_one)
     have := alphaIicCE_nonneg_le_one X hX_contract hX_meas hX_L2 t
     filter_upwards [this] with ω ⟨h0, h1⟩
