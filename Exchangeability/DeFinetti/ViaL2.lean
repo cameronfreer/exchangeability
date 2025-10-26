@@ -3521,15 +3521,18 @@ lemma alphaIic_ae_eq_alphaIicCE
       intro ε hε
       rw [Metric.tendsto_atTop] at hf_tendsto
       by_cases h_top : ε = ⊤
-      · simp [h_top, Filter.eventually_of_forall]
+      · simp [h_top]
       · have ε_pos : 0 < ε.toReal := ENNReal.toReal_pos hε.ne' h_top
         obtain ⟨M, hM⟩ := hf_tendsto ε.toReal ε_pos
         refine Filter.eventually_atTop.mpr ⟨M, fun m hm => ?_⟩
-        rw [eLpNorm_one_eq_integral_abs (hAf_integrable m)]
+        rw [Exchangeability.Probability.IntegrationHelpers.eLpNorm_one_eq_integral_abs (hAf_integrable m)]
+        -- Goal: ENNReal.ofReal (∫ |...|) ≤ ε
+        rw [← ENNReal.ofReal_toReal h_top]
+        -- Goal: ENNReal.ofReal (∫ |...|) ≤ ENNReal.ofReal ε.toReal
         rw [ENNReal.ofReal_le_ofReal_iff ε_pos.le]
+        -- Goal: ∫ |...| ≤ ε.toReal
         have := hM m hm
         rw [Real.dist_eq, sub_zero, abs_of_nonneg (integral_nonneg (fun ω => abs_nonneg _))] at this
-        rw [← ENNReal.ofReal_toReal h_top]
         exact this.le
 
     have hg_eLpNorm : Tendsto (fun m => eLpNorm (fun ω => A 0 m ω - g ω) 1 μ) atTop (𝓝 0) := by
@@ -3537,15 +3540,18 @@ lemma alphaIic_ae_eq_alphaIicCE
       intro ε hε
       rw [Metric.tendsto_atTop] at hg_tendsto
       by_cases h_top : ε = ⊤
-      · simp [h_top, Filter.eventually_of_forall]
+      · simp [h_top]
       · have ε_pos : 0 < ε.toReal := ENNReal.toReal_pos hε.ne' h_top
         obtain ⟨M, hM⟩ := hg_tendsto ε.toReal ε_pos
         refine Filter.eventually_atTop.mpr ⟨M, fun m hm => ?_⟩
-        rw [eLpNorm_one_eq_integral_abs (hAg_integrable m)]
+        rw [Exchangeability.Probability.IntegrationHelpers.eLpNorm_one_eq_integral_abs (hAg_integrable m)]
+        -- Goal: ENNReal.ofReal (∫ |...|) ≤ ε
+        rw [← ENNReal.ofReal_toReal h_top]
+        -- Goal: ENNReal.ofReal (∫ |...|) ≤ ENNReal.ofReal ε.toReal
         rw [ENNReal.ofReal_le_ofReal_iff ε_pos.le]
+        -- Goal: ∫ |...| ≤ ε.toReal
         have := hM m hm
         rw [Real.dist_eq, sub_zero, abs_of_nonneg (integral_nonneg (fun ω => abs_nonneg _))] at this
-        rw [← ENNReal.ofReal_toReal h_top]
         exact this.le
 
     -- Step 2: Apply tendstoInMeasure
@@ -3589,7 +3595,7 @@ lemma alphaIic_ae_eq_alphaIicCE
     rw [abs_le_one_iff_mul_self_le_one]
     nlinarith [sq_nonneg (alphaIicCE X hX_contract hX_meas hX_L2 t ω)]
   · exact h_alphaIic_is_limit 0
-  · exact h_alphaIicCE_is_limit 0
+  · exact h_alphaIicCE_is_limit
 
 /-- **L¹ endpoint limit at -∞**: As t → -∞, alphaIicCE → 0 in L¹.
 
