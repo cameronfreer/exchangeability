@@ -3722,7 +3722,7 @@ private theorem optionB_L1_convergence_bounded
   -- fL2 = G a.e., so fL2 = g(ω 0) a.e.
   have hfL2_eq : fL2 =ᵐ[μ] G := by
     have : fL2 =ᵐ[μ] productCylinder fs := hfL2_ae
-    rw [hG_eq] at this
+    rw [← hG_eq] at this
     exact this
 
   -- Step 3: Define B_n to match birkhoffAverage exactly
@@ -3735,30 +3735,97 @@ private theorem optionB_L1_convergence_bounded
   have hB_eq_birkhoff : ∀ n > 0,
       birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 =ᵐ[μ] B n := by
     intro n hn
-    -- Goal: birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 =ᵐ[μ] B n
-    -- where B n ω = (1/n) * ∑_{k=0}^{n-1} g(ω k)
-    --
-    -- Mathematical proof:
-    -- 1. birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2
-    --    = (1/n) * ∑_{k=0}^{n-1} (koopman shift hσ)^k fL2     [by def]
-    -- 2. (koopman shift hσ)^k fL2 = fL2 ∘ shift^k  a.e.      [by def of koopman]
-    -- 3. fL2 ∘ shift^k = g(· k)  a.e.                        [since fL2 = g(· 0) and shift^k ω 0 = ω k]
-    -- 4. Therefore: birkhoffAverage = (1/n) * ∑ g(· k) = B n  a.e.
-    --
-    -- Technical steps needed:
-    -- (a) Lp.coeFn_compMeasurePreserving: koopman f ω = f(shift ω) a.e.
-    -- (b) Iterate this to get (koopman)^k f ω = f(shift^k ω) a.e.
-    -- (c) Use hfL2_eq: fL2 = g(· 0) a.e.
-    -- (d) shift^k ω n = ω (n+k), so shift^k ω 0 = ω k
-    -- (e) Combine a.e. equalities over the finite sum
-    -- (f) Unfold birkhoffAverage using birkhoffAverage.eq_1 and birkhoffSum.eq_1
-    --
-    -- This is straightforward but requires careful bookkeeping of a.e. equalities
-    -- and Lp function evaluation. The key technical lemmas are in mathlib:
-    -- - MeasureTheory.Lp.coeFn_compMeasurePreserving
-    -- - MeasureTheory.ae_sum (for combining a.e. equalities)
-    -- - Dynamics.BirkhoffSum lemmas
-    sorry
+    -- Step 1: Show (koopman shift hσ)^[k] fL2 =ᵐ (fun ω => fL2 (shift^[k] ω))
+    have hkoopman_iterate : ∀ k, (fun ω => ((koopman shift hσ)^[k] fL2) ω) =ᵐ[μ] (fun ω => fL2 (shift^[k] ω)) := by
+      intro k
+      induction k with
+      | zero => simp
+      | succ k' ih =>
+        -- (koopman)^[k'+1] fL2 = koopman ((koopman)^[k'] fL2)
+        have : (koopman shift hσ)^[k' + 1] fL2 = koopman shift hσ ((koopman shift hσ)^[k'] fL2) := by
+          rw [Function.iterate_succ_apply']
+        -- koopman f =ᵐ (fun ω => f (shift ω))
+        have hkoopman_step : (fun ω => koopman shift hσ ((koopman shift hσ)^[k'] fL2) ω)
+            =ᵐ[μ] (fun ω => ((koopman shift hσ)^[k'] fL2) (shift ω)) := by
+          change MeasureTheory.Lp.compMeasurePreserving shift hσ ((koopman shift hσ)^[k'] fL2) =ᵐ[μ] _
+          simpa [koopman] using MeasureTheory.Lp.coeFn_compMeasurePreserving ((koopman shift hσ)^[k'] fL2) hσ
+        -- Combine: koopman^[k'+1] fL2 =ᵐ fL2 ∘ shift^[k'+1]
+        simp only [this]
+        have : (fun ω => ((koopman shift hσ)^[k'] fL2) (shift ω)) =ᵐ[μ] (fun ω => fL2 (shift^[k'] (shift ω))) := by
+          exact MeasurePreserving.ae_eq_comp hσ ih
+        refine hkoopman_step.trans this
+
+    -- Step 2: Show fL2 (shift^[k] ω) = g (ω k) a.e.
+    have hshift_eval : ∀ k, (fun ω => fL2 (shift^[k] ω)) =ᵐ[μ] (fun ω => g (ω k)) := by
+      intro k
+      -- fL2 = G = g(· 0) a.e.
+      have h1 : (fun ω => fL2 (shift^[k] ω)) =ᵐ[μ] (fun ω => G (shift^[k] ω)) := by
+        exact (MeasurePreserving.ae_eq_comp (MeasurePreserving.iterate hσ k) hfL2_eq).symm
+      -- G (shift^[k] ω) = g ((shift^[k] ω) 0) = g (ω k)
+      have h2 : (fun ω => G (shift^[k] ω)) =ᵐ[μ] (fun ω => g (ω k)) := by
+        apply ae_of_all; intro ω
+        simp only [G]
+        -- Prove: shift^[k] ω 0 = ω k
+        induction k with
+        | zero => simp
+        | succ k' ih =>
+          rw [Function.iterate_succ_apply']
+          simp only [shift_apply]
+          rw [ih]
+      exact h1.trans h2
+
+    -- Step 3: Combine to show each summand is correct
+    have hterms : ∀ k, (fun ω => ((koopman shift hσ)^[k] fL2) ω) =ᵐ[μ] (fun ω => g (ω k)) := by
+      intro k
+      exact (hkoopman_iterate k).trans (hshift_eval k)
+
+    -- Step 4: Show the sum equals B n
+    -- birkhoffAverage = (1/n) • ∑ k ∈ range n, (koopman^[k] fL2) ω
+    -- B n ω = (1/n) * ∑ k ∈ range n, g(ω k)
+    simp only [B, hn.ne', ↓reduceIte]
+
+    -- Unfold birkhoffAverage
+    have hbirk_def : ∀ ω, birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω
+        = (n : ℝ)⁻¹ • birkhoffSum (koopman shift hσ) _root_.id n fL2 ω := by
+      intro ω; exact birkhoffAverage.eq_1 ℝ (koopman shift hσ) _root_.id n fL2 ω
+
+    -- Unfold birkhoffSum
+    have hsum_def : ∀ ω, birkhoffSum (koopman shift hσ) _root_.id n fL2 ω
+        = ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω := by
+      intro ω
+      rw [birkhoffSum.eq_1]
+      simp only [_root_.id]
+
+    -- Combine a.e. equalities: for a.e. ω, each term equals g(ω k)
+    have hsum_ae : (fun ω => ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω)
+        =ᵐ[μ] (fun ω => ∑ k ∈ Finset.range n, g (ω k)) := by
+      -- Use filter_upwards to combine finitely many a.e. conditions
+      have : ∀ᵐ ω ∂μ, ∀ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω = g (ω k) := by
+        apply ae_all_iff.mpr
+        intro k _
+        exact hterms k
+      filter_upwards [this] with ω hω
+      apply Finset.sum_congr rfl
+      intro k hk
+      exact hω k hk
+
+    -- Combine to get birkhoffAverage = B n a.e.
+    have : (fun ω => birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω)
+        =ᵐ[μ] (fun ω => (n : ℝ)⁻¹ * ∑ k ∈ Finset.range n, g (ω k)) := by
+      have h1 : (fun ω => birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω)
+          =ᵐ[μ] (fun ω => (n : ℝ)⁻¹ • ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω) := by
+        apply ae_of_all; intro ω
+        simp [hbirk_def, hsum_def]
+      have h2 : (fun ω => (n : ℝ)⁻¹ • ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω)
+          =ᵐ[μ] (fun ω => (n : ℝ)⁻¹ • ∑ k ∈ Finset.range n, g (ω k)) := by
+        filter_upwards [hsum_ae] with ω hω
+        simp [hω]
+      have h3 : (fun ω => (n : ℝ)⁻¹ • ∑ k ∈ Finset.range n, g (ω k))
+          =ᵐ[μ] (fun ω => (n : ℝ)⁻¹ * ∑ k ∈ Finset.range n, g (ω k)) := by
+        apply ae_of_all; intro ω
+        simp [smul_eq_mul]
+      exact h1.trans (h2.trans h3)
+    exact this
 
   -- Step 3b: condexpL2 fL2 and condExp mSI μ G are the same a.e.
   have hY_eq : condexpL2 (μ := μ) fL2 =ᵐ[μ] Y := by
@@ -3789,7 +3856,8 @@ private theorem optionB_L1_convergence_bounded
       apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds heLp_conv
       · intro n; exact zero_le _
       · intro n
-        refine eLpNorm_le_eLpNorm_of_exponent_le (by norm_num : (1 : ℝ≥0∞) ≤ 2) ?_ ?_
+        have h1 : (1 : ℝ≥0∞) ≤ 2 := by norm_num
+        refine eLpNorm_le_eLpNorm_of_exponent_le h1 ?_ ?_
         · simp [measure_univ]
         · exact Lp.aestronglyMeasurable (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2)
 
