@@ -282,28 +282,46 @@ theorem condExp_project_of_condIndepFun
       μ[ f ∘ Y | mW ] * μ[ (Z ⁻¹' B).indicator (1 : Ω → ℝ) | mW ] := by
     intro B hB
 
-    -- For now, we defer this substantial proof (~100-200 lines) and show
-    -- how it completes the theorem. The proof structure would be:
+    -- **Detailed Implementation Roadmap:**
     --
-    -- Step 1: For f = 1_A (indicator), apply condIndepFun_iff_condExp_inter_preimage_eq_mul
-    --         to get the factorization for indicator pairs
+    -- **Step 1: Indicator Case (~20 lines)**
+    -- For f = 1_A (indicator of A : Set βY):
+    --   • f ∘ Y = (Y ⁻¹' A).indicator 1
+    --   • (f ∘ Y) * (Z ⁻¹' B).indicator 1 = (Y ⁻¹' A ∩ Z ⁻¹' B).indicator 1
+    --   • Apply condIndepFun_iff_condExp_inter_preimage_eq_mul:
+    --       μ⟦Y ⁻¹' A ∩ Z ⁻¹' B | mW⟧ =ᵐ[μ] fun ω ↦ μ⟦Y ⁻¹' A | mW⟧ ω * μ⟦Z ⁻¹' B | mW⟧ ω
+    --   • Use notation: μ⟦S | m⟧ = μ[S.indicator 1 | m]
+    --   • Result: Direct factorization for indicator functions
     --
-    -- Step 2: For f = Σᵢ aᵢ 1_{Aᵢ} (simple function), use:
-    --         - Linearity of conditional expectation
-    --         - Distributivity of multiplication
-    --         - Apply Step 1 to each indicator
+    -- **Step 2: Simple Functions (~40-60 lines)**
+    -- For f = Σᵢ aᵢ 1_{Aᵢ} (simple function):
+    --   • Express: f ∘ Y = Σᵢ aᵢ (Y ⁻¹' Aᵢ).indicator 1
+    --   • Expand product: (Σᵢ aᵢ 1_{Aᵢ}) * 1_B = Σᵢ aᵢ (1_{Aᵢ} * 1_B)
+    --   • Use condExp_add: μ[h₁ + h₂ | m] = μ[h₁ | m] + μ[h₂ | m]
+    --   • Use condExp_const_mul: μ[c * h | m] = c * μ[h | m]
+    --   • Apply Step 1 to each indicator term
+    --   • Factor back: (Σᵢ aᵢ μ[1_{Aᵢ} | m]) * μ[1_B | m]
     --
-    -- Step 3: For general bounded measurable f:
-    --         - Approximate f by simple functions fₙ using SimpleFunc.approxOn
-    --         - Show fₙ → f pointwise and |fₙ| ≤ C for some bound
-    --         - Apply Step 2 to each fₙ
-    --         - Pass to limit using dominated convergence for conditional expectations
+    -- **Step 3: Bounded Measurables (~60-100 lines)**
+    -- For general bounded measurable f (with bound C):
+    --   • Use StronglyMeasurable.approxBounded to get simple functions fₙ
+    --   • Properties: fₙ → f pointwise, ‖fₙ‖ ≤ C uniformly
+    --   • Apply Step 2 to each fₙ:
+    --       μ[fₙ(Y) * 1_B | mW] =ᵐ[μ] μ[fₙ(Y) | mW] * μ[1_B | mW]
+    --   • Use dominated convergence (via condExp_stronglyMeasurable_mul_of_bound proof pattern):
+    --     - Show integrability: |fₙ(Y) * 1_B| ≤ C * 1 = C
+    --     - Show pointwise convergence: fₙ(Y) → f(Y)
+    --     - Pass to limit on both sides
+    --   • Result: μ[f(Y) * 1_B | mW] =ᵐ[μ] μ[f(Y) | mW] * μ[1_B | mW]
     --
-    -- Key mathlib lemmas needed:
-    --   - condIndepFun_iff_condExp_inter_preimage_eq_mul (from Conditional.lean)
-    --   - condExp_add, condExp_smul (linearity)
-    --   - SimpleFunc.approxOn (approximation)
-    --   - Dominated convergence for condExp (would need to locate or prove)
+    -- **Key mathlib lemmas:**
+    --   - condIndepFun_iff_condExp_inter_preimage_eq_mul (indicator factorization)
+    --   - Set.indicator_inter_mul (indicator arithmetic)
+    --   - condExp_add, condExp_const_mul (linearity)
+    --   - StronglyMeasurable.approxBounded (approximation with bound)
+    --   - tendsto_condExp_unique (dominated convergence pattern, from condExp_stronglyMeasurable_mul_of_bound)
+    --
+    -- **Total estimate:** ~100-200 lines of technical but standard measure theory
     --
     sorry
 
