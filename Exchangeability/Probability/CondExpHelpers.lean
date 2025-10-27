@@ -334,8 +334,54 @@ theorem condExp_project_of_condIndepFun
       - Could be factored into a separate lemma file
       - For now, keep as sorry with complete documentation
 
-    **Recommendation:** Option 3 for now (keep as sorry), then return to prove
-    the extension lemma separately. This unblocks the rest of the proof structure.
+    **Recommendation:** Option 1 - Prove extension lemma separately.
+
+    **Detailed Implementation Plan for Extension Lemma:**
+
+    The key lemma needed:
+    ```
+    lemma condIndepFun_condExp_mul (hCI : CondIndepFun mW hw Y Z μ)
+        (hf : Integrable (f ∘ Y) μ) (hB : MeasurableSet B) :
+        μ[ (f ∘ Y) * (Z ⁻¹' B).indicator 1 | mW ] =ᵐ[μ]
+        μ[ f ∘ Y | mW ] * μ[ (Z ⁻¹' B).indicator 1 | mW ]
+    ```
+
+    **Proof Strategy (Monotone Class):**
+
+    1. **For simple functions:** If f = Σᵢ aᵢ·1_{Aᵢ}, use linearity:
+       - E[(Σᵢ aᵢ·1_{Aᵢ}∘Y)·1_B|W] = Σᵢ aᵢ·E[1_{Y∈Aᵢ}·1_{Z∈B}|W]
+       - Apply CondIndepFun to each indicator pair
+       - = Σᵢ aᵢ·E[1_{Y∈Aᵢ}|W]·E[1_{Z∈B}|W]
+       - = (Σᵢ aᵢ·E[1_{Aᵢ}∘Y|W])·E[1_B|W]
+       - = E[f∘Y|W]·E[1_B|W]
+
+    2. **For bounded measurables:** Approximate f by simple functions fₙ:
+       - Use SimpleFunc.approxOn or similar from mathlib
+       - Show fₙ → f pointwise and in L¹
+       - Apply dominated convergence to conditional expectations
+       - Pass factorization to limit
+
+    3. **Apply to h_rect:** Once we have this lemma:
+       - LHS: ∫_{S∩Z⁻¹(B)} g = E[g·1_S·1_{Z∈B}]
+              = E[E[f∘Y|W]·1_S·1_{Z∈B}]  (by definition of g)
+              = E[E[f∘Y·1_S·1_{Z∈B}|W]]  (pull in 1_S which is mW-measurable)
+       - RHS: ∫_{S∩Z⁻¹(B)} f∘Y = E[f∘Y·1_S·1_{Z∈B}]
+              = E[E[f∘Y·1_S·1_{Z∈B}|W]]  (tower)
+       - By extension lemma with h=1_S:
+              E[(f∘Y·1_S)·1_{Z∈B}|W] = E[f∘Y·1_S|W]·E[1_{Z∈B}|W]
+                                      = E[f∘Y|W]·1_S·E[1_{Z∈B}|W]
+                                      = g·1_S·E[1_{Z∈B}|W]
+       - Take expectation: E[g·1_S·E[1_{Z∈B}|W]]
+       - This completes the proof
+
+    **Technical Lemmas Needed:**
+    - condExp_indicator_mul: E[h·1_A·g|m] = h·E[1_A·g|m] when h is m-measurable
+    - Or condExp_smul: E[c·f|m] = c·E[f|m] when c is m-measurable
+    - These should be in mathlib or easy to derive
+
+    **Status:** This is the only remaining substantive gap. The mathematical
+    argument is sound and all the pieces are standard techniques. Implementation
+    would likely be 100-200 lines for the extension lemma + application.
     -/
 
   -- Step 2: π-λ extension to all σ(Z,W)-sets
