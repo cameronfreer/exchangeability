@@ -435,30 +435,58 @@ theorem condExp_project_of_condIndepFun
       -- LHS: Apply condExp_finset_sum to distribute condExp over the sum
       have step1 : μ[ fun ω => ∑ i ∈ s, (a i * (A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω) | mW ]
                  =ᵐ[μ] fun ω => ∑ i ∈ s, μ[ fun ω' => a i * (A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω := by
-        -- TODO: Apply condExp_finset_sum with proper Finset.sum_apply conversion
-        sorry
+        -- condExp_finset_sum: μ[∑ f | m] =ᵐ ∑ μ[f | m]
+        -- Need to show both sides match the form that condExp_finset_sum expects
+        have h_lhs_eq : (fun ω => ∑ i ∈ s, a i * (A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω) =
+                        ∑ i ∈ s, fun ω => a i * (A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω := by
+          ext ω
+          rw [Finset.sum_apply]
+        rw [h_lhs_eq]
+        convert condExp_finset_sum h_int_products mW using 1
+        ext ω
+        rw [Finset.sum_apply]
 
       -- For each term: apply condIndep_indicator and condExp_smul to factor
       have step2 : (fun ω => ∑ i ∈ s, μ[ fun ω' => a i * (A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω)
                  =ᵐ[μ] fun ω => ∑ i ∈ s, (a i * (μ[ (A i).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)) := by
-        -- TODO: For each i, apply condExp_smul + condIndep_indicator
-        sorry
+        -- For each i in the sum: use condExp_smul to pull out scalar, then condIndep_indicator
+        -- Work pointwise using filter_upwards
+        filter_upwards with ω
+        congr 1
+        ext i : 1
+        -- For this specific i: show μ[a i * ind * ind|W] ω = a i * (μ[ind|W] ω * μ[ind|W] ω)
+        sorry -- TODO: Apply condExp_smul + condIndep_indicator for term i
 
       -- Algebraic: factor out μ[(Z⁻¹B).indicator|W] from the sum
       have step3 : (fun ω => ∑ i ∈ s, (a i * (μ[ (A i).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)))
                  =ᵐ[μ] fun ω => (∑ i ∈ s, a i * μ[ (A i).indicator 1 | mW ] ω) * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
-        -- TODO: Use Finset.sum_mul to factor
-        sorry
+        -- Use Finset.sum_mul to factor out the common term
+        filter_upwards with ω
+        congr 1
+        ext i : 1
+        ring
 
       -- RHS: Apply condExp_finset_sum.symm on the Y side
       have step4 : (fun ω => ∑ i ∈ s, μ[ fun ω' => a i * (A i).indicator 1 ω' | mW ] ω)
                  =ᵐ[μ] μ[ fun ω => ∑ i ∈ s, a i * (A i).indicator 1 ω | mW ] := by
-        -- TODO: Apply condExp_finset_sum.symm with proper conversion
-        sorry
+        -- Apply condExp_finset_sum in reverse
+        have h_sum_eq : (fun ω => ∑ i ∈ s, a i * (A i).indicator 1 ω) =
+                        ∑ i ∈ s, fun ω => a i * (A i).indicator 1 ω := by
+          ext ω
+          rw [Finset.sum_apply]
+        rw [h_sum_eq]
+        have h_lhs_eq : (fun ω => ∑ i ∈ s, μ[ fun ω' => a i * (A i).indicator 1 ω' | mW ] ω) =
+                        ∑ i ∈ s, μ[ fun ω => a i * (A i).indicator 1 ω | mW ] := by
+          ext ω
+          rw [Finset.sum_apply]
+        rw [h_lhs_eq]
+        exact (condExp_finset_sum h_int_Y_terms mW).symm
 
       have step5 : (fun ω => (∑ i ∈ s, a i * μ[ (A i).indicator 1 | mW ] ω) * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
                  =ᵐ[μ] fun ω => μ[ fun ω' => ∑ i ∈ s, a i * (A i).indicator 1 ω' | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
-        -- TODO: Use Filter.EventuallyEq.mul with step4
+        -- Need to first apply condExp_smul to each term, then use step4
+        -- TODO: Complete this by showing a i * μ[(A i).indicator 1|mW] ω = μ[a i * (A i).indicator 1|mW] ω
+        --       for each i (using condExp_smul), then apply step4
         sorry
 
       -- Chain all steps together
