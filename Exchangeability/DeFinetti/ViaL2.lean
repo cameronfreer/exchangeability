@@ -1601,8 +1601,7 @@ theorem subseq_ae_of_L1
 
   -- Step 2: eLpNorm convergence implies convergence in measure
   have h_tendstoInMeasure : TendstoInMeasure μ alpha atTop alpha_inf := by
-    refine @tendstoInMeasure_of_tendsto_eLpNorm Ω ℕ ℝ _ μ _ 1 alpha alpha_inf atTop
-      one_ne_zero ?_ ?_ ?_
+    refine tendstoInMeasure_of_tendsto_eLpNorm one_ne_zero ?_ ?_ ?_
     · intro n
       exact (h_alpha_meas n).aestronglyMeasurable
     · exact h_alpha_inf_meas.aestronglyMeasurable
@@ -2409,22 +2408,200 @@ lemma cesaro_to_condexp_L2
     -- Apply l2_contractability_bound: ∫ (weighted sum)² ≤ C_f · sup|weights|
     -- Choose N s.t. C_f/N < ε²
 
-    sorry  -- TODO: Complete Cauchy property proof
-    /-
-    Detailed steps:
-    1. Define: m := E[f(X_0)], Z i := f(X_i) - m, C_f := E[(Z_0 - Z_1)²]
-    2. Show Z is contractable (using contractable_comp + constant shift)
-    3. Show Z has uniform covariance structure via contractability:
-       - For variance: E[Z_i²] = E[Z_0²] via contractable_map_single
-       - For covariance: E[Z_i Z_j] = E[Z_0 Z_1] for i<j via contractable_map_pair
-    4. Express: blockAvg n - blockAvg n' = ∑ c_i Z_i where c_i = 1/n (i<n) - 1/n' (i<n')
-    5. Apply l2_contractability_bound: ∫ (∑ c_i Z_i)² ≤ 2·σ²·(1-ρ)·sup|c_i|
-       where σ² = Var(Z_0) and ρ = Cov(Z_0,Z_1)/σ²
-    6. Bound: sup|c_i| ≤ max(1/n, 1/n') ≤ 1/N
-    7. Choose N via Archimedean s.t. C_f/N < (ε.toReal)²
-    8. Get: ∫ (blockAvg n - blockAvg n')² ≤ C_f/N < ε²
-    9. Convert: eLpNorm_lt_of_integral_sq_lt gives eLpNorm < ε
-    -/
+    -- Step 1: Define centered variables
+    let m := ∫ ω, f (X 0 ω) ∂μ
+    let Z := fun i ω => f (X i ω) - m
+
+    -- Z is measurable
+    have hZ_meas : ∀ i, Measurable (Z i) := fun i =>
+      (hf_meas.comp (hX_meas i)).sub measurable_const
+
+    -- Step 2: Show Z is contractable
+    -- Z = f ∘ X - m, and contractability is preserved under composition + constant shift
+    have hZ_contract : Contractable μ Z := by
+      -- First show f ∘ X is contractable using contractable_comp
+      have hfX_contract : Contractable μ (fun i ω => f (X i ω)) :=
+        L2Helpers.contractable_comp (X := X) hX_contract hX_meas f hf_meas
+      -- Subtracting a constant preserves contractability
+      intro n k hk
+      -- Need: map (fun ω i => Z (k i) ω) μ = map (fun ω i => Z i ω) μ
+      simp only [Z]
+      -- This equals: map (fun ω i => f(X(k i) ω) - m) μ = map (fun ω i => f(X i ω) - m) μ
+
+      -- From hfX_contract: map (fun ω i => f(X(k i) ω)) μ = map (fun ω i => f(X i ω)) μ
+      -- Subtracting m from each coordinate gives the same measure equality
+      have h_eq := hfX_contract n k hk
+
+      -- The subtraction by m is the same measurable transformation on both sides
+      -- Strategy: Use Measure.map_map to factor the constant subtraction
+      sorry  -- TODO: Apply Measure.map_map
+      -- Define sub_m v i := v i - m
+      -- Show sub_m is measurable (measurable coordinate-wise subtraction)
+      -- Then: map (fun ω i => f(X(k i) ω) - m) μ
+      --     = map sub_m (map (fun ω i => f(X(k i) ω)) μ)  [by map_map]
+      --     = map sub_m (map (fun ω i => f(X i ω)) μ)      [by h_eq]
+      --     = map (fun ω i => f(X i ω) - m) μ              [by map_map]
+
+    -- Step 3: Show uniform variance via contractability
+    -- E[Z_i²] = E[Z_0²] for all i
+    have hZ_var_uniform : ∀ i, ∫ ω, (Z i ω)^2 ∂μ = ∫ ω, (Z 0 ω)^2 ∂μ := by
+      intro i
+      -- From contractability: map (Z i) μ = map (Z 0) μ
+      have h_map_eq : Measure.map (Z i) μ = Measure.map (Z 0) μ :=
+        L2Helpers.contractable_map_single (X := Z) hZ_contract hZ_meas (i := i)
+
+      -- Strategy: Use integral_map to rewrite both sides
+      -- ∫ (Z i ω)² dμ = ∫ x² d(map (Z i) μ) [by integral_map]
+      --               = ∫ x² d(map (Z 0) μ) [by h_map_eq]
+      --               = ∫ (Z 0 ω)² dμ     [by integral_map]
+
+      -- Z i is measurable, so we can apply integral_map
+      have hZi_meas : AEMeasurable (Z i) μ := (hZ_meas i).aemeasurable
+      have hZ0_meas : AEMeasurable (Z 0) μ := (hZ_meas 0).aemeasurable
+
+      -- Apply integral_map on both sides and use measure equality
+      -- The function x ↦ x² is continuous, hence strongly measurable
+      rw [← integral_map hZi_meas (continuous_pow 2).aestronglyMeasurable]
+      rw [← integral_map hZ0_meas (continuous_pow 2).aestronglyMeasurable]
+      rw [h_map_eq]
+
+    -- Step 4: Show mean of Z is zero
+    have hZ_mean_zero : ∀ i, ∫ ω, Z i ω ∂μ = 0 := by
+      intro i
+      simp only [Z]
+      -- E[Z_i] = E[f(X_i) - m] = E[f(X_i)] - m
+      -- By contractability: E[f(X_i)] = E[f(X_0)] = m
+      -- Therefore: E[Z_i] = m - m = 0
+
+      -- f is bounded, so f ∘ X i is integrable
+      have hfX_int : Integrable (fun ω => f (X i ω)) μ := by
+        apply Integrable.of_bound
+        · exact (hf_meas.comp (hX_meas i)).aestronglyMeasurable
+        · filter_upwards [] with ω
+          exact hf_bdd (X i ω)
+
+      rw [integral_sub hfX_int (integrable_const m)]
+      -- Now show ∫ f(X i) = m, so that ∫ f(X i) - m = m - m = 0
+
+      -- Strategy: contractable_map_single gives map (X i) μ = map (X 0) μ
+      -- Then integral_map gives: ∫ f(X i) dμ = ∫ f d(map (X i) μ) = ∫ f d(map (X 0) μ) = ∫ f(X 0) dμ = m
+
+      -- Use contractability to get measure equality
+      have h_map_eq : Measure.map (X i) μ = Measure.map (X 0) μ :=
+        L2Helpers.contractable_map_single (X := X) hX_contract hX_meas (i := i)
+
+      -- f is measurable and bounded, so we can apply integral_map
+      have hXi_meas : AEMeasurable (X i) μ := (hX_meas i).aemeasurable
+      have hX0_meas : AEMeasurable (X 0) μ := (hX_meas 0).aemeasurable
+
+      -- Apply integral_map to show ∫ f(X i) = ∫ f(X 0)
+      have h_int_eq : ∫ ω, f (X i ω) ∂μ = ∫ ω, f (X 0 ω) ∂μ := by
+        rw [← integral_map hXi_meas hf_meas.aestronglyMeasurable]
+        rw [← integral_map hX0_meas hf_meas.aestronglyMeasurable]
+        rw [h_map_eq]
+
+      -- From h_int_eq: ∫ f(X i) = ∫ f(X 0) = m
+      -- So ∫ f(X i) - m = m - m = 0
+      simp only [integral_const, smul_eq_mul]
+      rw [h_int_eq]
+      simp [m]
+
+    -- Step 5: Show uniform covariance via contractability
+    -- For i ≠ j, E[Z_i Z_j] = E[Z_0 Z_1]
+    have hZ_cov_uniform : ∀ i j, i ≠ j →
+        ∫ ω, Z i ω * Z j ω ∂μ = ∫ ω, Z 0 ω * Z 1 ω ∂μ := by
+      intro i j hij
+      sorry -- TODO: Use contractable_map_pair + symmetry argument from ContractableVsExchangeable.lean
+      -- Strategy: If i < j, use contractable_map_pair directly
+      --           If i > j, use contractable_map_pair on (j,i) + symmetry of multiplication
+
+    -- Step 6: Key observation - relate blockAvg of f to blockAvg of Z
+    -- blockAvg f X 0 n = (1/n)∑ f(X_i) = (1/n)∑ (Z_i + m) = (1/n)∑ Z_i + m
+    -- So: blockAvg f X 0 n - blockAvg f X 0 n' = (1/n)∑_{i<n} Z_i - (1/n')∑_{i<n'} Z_i
+
+    -- Step 7: Apply l2_contractability_bound to get Cauchy property
+    -- The key is that Z has uniform variance and covariance structure
+    -- So we can bound ∫ (blockAvg_n - blockAvg_n')²
+
+    -- For ε > 0, we need to find N such that for all n, n' ≥ N:
+    -- eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ < ε
+
+    -- Step 7a: Define variance and correlation parameters
+    let σSq := ∫ ω, (Z 0 ω)^2 ∂μ  -- Variance of Z_0 (mean is 0)
+    let covZ := ∫ ω, Z 0 ω * Z 1 ω ∂μ  -- Covariance of (Z_0, Z_1)
+
+    -- Step 7b: Assume σ² > 0 (non-degenerate case)
+    -- If σ² = 0, then Z is constant a.e. and convergence is trivial
+    by_cases hσ_pos : σSq > 0
+    · -- Non-degenerate case: σ² > 0
+      let ρ := covZ / σSq  -- Correlation coefficient
+
+      -- Bound |ρ| ≤ 1 (from Cauchy-Schwarz)
+      have hρ_bd : -1 ≤ ρ ∧ ρ ≤ 1 := by
+        sorry  -- TODO: Derive from Cauchy-Schwarz inequality
+
+      -- Define the constant from the L² bound
+      let Cf := 2 * σSq * (1 - ρ)
+
+      -- Cf is positive (since 1 - ρ ≥ 0 when ρ ≤ 1)
+      have hCf_pos : Cf > 0 := by
+        simp only [Cf]
+        -- Need: 2 * σSq * (1 - ρ) > 0
+        -- Strategy: Show each factor is positive
+        have h2_pos : (2 : ℝ) > 0 := by norm_num
+        -- For 1 - ρ > 0, need ρ < 1 (not just ρ ≤ 1)
+        -- If ρ = 1, would mean perfect correlation, handle separately
+        by_cases hρ_lt : ρ < 1
+        · -- Case ρ < 1: then 1 - ρ > 0
+          have h_one_sub_ρ : 1 - ρ > 0 := by linarith
+          calc 2 * σSq * (1 - ρ)
+              = (2 * σSq) * (1 - ρ) := by ring
+            _ > 0 := mul_pos (mul_pos h2_pos hσ_pos) h_one_sub_ρ
+        · -- Case ρ ≥ 1: But hρ_bd.2 says ρ ≤ 1, so ρ = 1
+          have hρ_eq : ρ = 1 := le_antisymm hρ_bd.2 (le_of_not_lt hρ_lt)
+          -- If ρ = 1, then covZ = σSq (perfect correlation)
+          -- This is a degenerate case that needs special handling
+          sorry -- TODO: Handle perfect correlation case
+          -- In practice, this may not occur for contractable sequences
+
+      -- Step 7c: Choose N via Archimedean property
+      -- We want Cf / N < (ε.toReal)²
+      -- Equivalently: N > Cf / (ε.toReal)²
+      obtain ⟨N, hN⟩ : ∃ N : ℕ, N > 0 ∧ Cf / N < (ε.toReal) ^ 2 := by
+        sorry -- TODO: Use Archimedean property
+        -- Strategy:
+        -- 1. Show ε.toReal ^ 2 > 0 from ε > 0
+        -- 2. Use exists_nat_gt to find N' : ℕ with ↑N' > Cf / (ε.toReal)²
+        -- 3. This gives Cf / ↑N' < ε.toReal ^ 2 by rearranging
+        -- 4. Take N = max N' 1 to ensure N > 0
+        -- 5. Show Cf / ↑N ≤ Cf / ↑N' < ε.toReal ^ 2 by monotonicity
+
+      use N
+      intros n n' hn_ge hn'_ge
+
+      -- Step 7d: Apply l2_contractability_bound
+      -- Need to work with finite prefixes to match the signature
+      let m := max n n'
+      let ξ : Fin m → Ω → ℝ := fun i ω => Z i ω
+
+      -- Express block averages using CesaroHelpers.cesaroCoeff
+      sorry  -- TODO: Complete the application
+      /-
+      Remaining substeps:
+      7d1. Express blockAvg 0 n = ∑_{i<m} (cesaroCoeff 0 n i) * ξ i
+      7d2. Express blockAvg 0 n' = ∑_{i<m} (cesaroCoeff 0 n' i) * ξ i
+      7d3. Show cesaroCoeff 0 n and cesaroCoeff 0 n' are probability distributions
+           (they sum to 1 and are nonnegative)
+      7d4. Apply l2_contractability_bound to get:
+           ∫ (blockAvg_n - blockAvg_n')² ≤ 2·σ²·(1-ρ)·sup|cesaroCoeff n i - cesaroCoeff n' i|
+      7d5. Apply cesaroCoeff_sup_le: sup|cesaroCoeff n i - cesaroCoeff n' i| ≤ max(1/n, 1/n')
+      7d6. Since n, n' ≥ N, we have max(1/n, 1/n') ≤ 1/N
+      7d7. Get: ∫ (blockAvg_n - blockAvg_n')² ≤ Cf/N < (ε.toReal)²
+      7d8. Apply eLpNorm_lt_of_integral_sq_lt: eLpNorm (blockAvg_n - blockAvg_n') 2 < ε
+      -/
+    · -- Degenerate case: σ² = 0, so Z is constant a.e.
+      -- In this case, blockAvg converges trivially to the constant
+      sorry  -- TODO: Handle degenerate case
 
   -- Step 2: Extract L² limit using completeness of Hilbert space
   -- Lp(2, μ) is complete (Hilbert space), so Cauchy sequence converges
