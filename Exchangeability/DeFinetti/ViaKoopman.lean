@@ -3865,14 +3865,23 @@ private theorem optionB_L1_convergence_bounded
       exact (h1_k k).trans (h2_k k)
 
     -- Combine finite a.e. conditions for the sum
-    -- This step has elaboration complexity issues - use sorry
     have hsum : (fun ω => ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω) =ᵐ[μ]
         (fun ω => ∑ k ∈ Finset.range n, g (ω k)) := by
-      -- Mathematical proof: Combine finitely many a.e. conditions using ae_ball_iff
-      -- For each k < n, we have hterms k: koopman^[k] fL2 =ᵐ g(· k)
-      -- The finite intersection of these a.e. sets still has full measure
-      -- Therefore the sums are equal a.e.
-      sorry
+      -- Combine finitely many a.e. conditions
+      -- Use list of a.e. conditions and filter_upwards
+      have h_list : ∀ k ∈ Finset.range n, (fun ω => ((koopman shift hσ)^[k] fL2) ω) =ᵐ[μ] (fun ω => g (ω k)) :=
+        fun k _ => hterms k
+      -- Build the combined a.e. set
+      classical
+      let ae_sets := Finset.range n |>.attach.map (fun ⟨k, hk⟩ => {ω | ((koopman shift hσ)^[k] fL2) ω = g (ω k)})
+      -- Each has full measure, so their finite intersection has full measure
+      -- Then sums are equal on this set
+      have : ∀ᵐ ω ∂μ, ∀ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω = g (ω k) := by
+        -- Finite version of ae_ball_iff
+        apply Measure.ae_ball_iff.mpr
+        exact h_list
+      filter_upwards [this] with ω hω
+      exact Finset.sum_congr rfl hω
 
     -- Unfold birkhoffAverage and match with B n
     simp only [B, hn.ne', ↓reduceIte]
@@ -3880,8 +3889,11 @@ private theorem optionB_L1_convergence_bounded
         (n : ℝ)⁻¹ * ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω := by
       intro ω
       rw [birkhoffAverage.eq_1, birkhoffSum.eq_1]
-      -- Coercion of scalar multiplication in Lp space
-      sorry
+      -- birkhoffAverage = (↑n)⁻¹ • ∑ k, id ((koopman)^[k] fL2) ω
+      -- Need to show: smul = mul for real-valued Lp functions
+      simp only [_root_.id]
+      -- Convert smul to mul: for real functions, r • f = r * f pointwise
+      rw [smul_eq_mul]
     -- Transfer via hsum
     filter_upwards [hsum] with ω hω
     rw [hbirk, hω]
