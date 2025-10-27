@@ -1753,14 +1753,22 @@ lemma kallenberg_L2_bound
         have hZk_L2 : MemLp (Z k) 2 μ := hZ_L2 k hk
 
         have hZ0_L2 : MemLp (Z 0) 2 μ := by
-          sorry -- TODO: Use equal distributions via contractable_map_single
+          by_cases h : k = 0
+          · subst h; exact hZk_L2
+          · -- Use contractable_map_single to show Z k and Z 0 have same distribution
+            -- Then transfer MemLp via equal eLpNorm
+            sorry -- TODO: Transfer MemLp across equal distributions
         have hZ1_L2 : MemLp (Z 1) 2 μ := by
-          sorry -- TODO: Use equal distributions via contractable_map_single
+          by_cases h : k = 1
+          · subst h; exact hZk_L2
+          · -- Use contractable_map_single to show Z k and Z 1 have same distribution
+            -- Then transfer MemLp via equal eLpNorm
+            sorry -- TODO: Transfer MemLp across equal distributions
 
         -- Now Z i - m ∈ L² for i = 0, 1
         have hm : MemLp (fun _ : Ω => m) 2 μ := memLp_const m
-        have hf : MemLp (fun ω => Z 0 ω - m) 2 μ := hZ0_L2.sub hm
-        have hg : MemLp (fun ω => Z 1 ω - m) 2 μ := hZ1_L2.sub hm
+        have hf : MemLp (fun ω => Z 0 ω - m) 2 μ := MemLp.sub hZ0_L2 hm
+        have hg : MemLp (fun ω => Z 1 ω - m) 2 μ := MemLp.sub hZ1_L2 hm
 
         -- Apply Cauchy-Schwarz
         calc |∫ ω, (Z 0 ω - m) * (Z 1 ω - m) ∂μ|
@@ -1975,13 +1983,17 @@ lemma kallenberg_L2_bound
     have hZk_L2 : MemLp (Z k) 2 μ := hZ_L2 k hk
 
     have hZ0_L2 : MemLp (Z 0) 2 μ := by
-      -- Use that Z 0 has same distribution as Z k via contractability
-      -- Equal distributions imply equal eLpNorm, hence MemLp transfers
-      sorry -- TODO: Use h_dist and eLpNorm equality
+      by_cases h : k = 0
+      · subst h; exact hZk_L2
+      · -- Use that Z 0 has same distribution as Z k via contractability
+        -- Equal distributions imply equal eLpNorm, hence MemLp transfers
+        sorry -- TODO: Use h_dist and eLpNorm equality
     have hZ1_L2 : MemLp (Z 1) 2 μ := by
-      -- Use that Z 1 has same distribution as Z k via contractability
-      -- Equal distributions imply equal eLpNorm, hence MemLp transfers
-      sorry -- TODO: Use h_dist and eLpNorm equality
+      by_cases h : k = 1
+      · subst h; exact hZk_L2
+      · -- Use that Z 1 has same distribution as Z k via contractability
+        -- Equal distributions imply equal eLpNorm, hence MemLp transfers
+        sorry -- TODO: Use h_dist and eLpNorm equality
 
     -- (Z i - m)² is integrable when Z i ∈ L²
     have hint_sq0 : Integrable (fun ω => (Z 0 ω - m)^2) μ := by
@@ -2006,8 +2018,8 @@ lemma kallenberg_L2_bound
     -- (Z 0 - m) * (Z 1 - m) is integrable (product of L² functions)
     have hint_prod : Integrable (fun ω => (Z 0 ω - m) * (Z 1 ω - m)) μ := by
       have hm : MemLp (fun _ : Ω => m) 2 μ := memLp_const m
-      have hf : MemLp (fun ω => Z 0 ω - m) 2 μ := hZ0_L2.sub hm
-      have hg : MemLp (fun ω => Z 1 ω - m) 2 μ := hZ1_L2.sub hm
+      have hf : MemLp (fun ω => Z 0 ω - m) 2 μ := MemLp.sub hZ0_L2 hm
+      have hg : MemLp (fun ω => Z 1 ω - m) 2 μ := MemLp.sub hZ1_L2 hm
       exact MemLp.integrable_mul hf hg
 
     -- Algebraically, (Z_0 - Z_1)² = (Z_0 - m)² + (Z_1 - m)² - 2(Z_0 - m)(Z_1 - m)
