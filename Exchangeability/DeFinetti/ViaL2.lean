@@ -1988,7 +1988,28 @@ lemma kallenberg_L2_bound
 
     -- Algebraically, (Z_0 - Z_1)² = (Z_0 - m)² + (Z_1 - m)² - 2(Z_0 - m)(Z_1 - m)
     -- Taking expectations: E[(Z_0 - Z_1)²] = σ² + σ² - 2·cov = 2σ²(1 - ρ)
-    sorry -- TODO: Complete algebraic expansion and integral manipulation
+
+    -- First prove Z 1 has same variance as Z 0
+    have hvar1 : ∫ ω, (Z 1 ω - m)^2 ∂μ = σSq := by
+      -- Use contractability: Z 1 has same distribution as Z 0
+      have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+        (X := Z) hZ_contract hZ_meas (i := 1)
+      simp only [σSq]
+      rw [← Exchangeability.Probability.IntegrationHelpers.integral_pushforward_sq_diff (hZ_meas 1) m,
+          h_dist,
+          Exchangeability.Probability.IntegrationHelpers.integral_pushforward_sq_diff (hZ_meas 0) m]
+
+    -- Now compute the integral using the expansion
+    calc ∫ ω, (Z 0 ω - Z 1 ω)^2 ∂μ
+        = ∫ ω, ((Z 0 ω - m)^2 + (Z 1 ω - m)^2 - 2 * (Z 0 ω - m) * (Z 1 ω - m)) ∂μ := by
+            apply integral_congr_ae
+            filter_upwards with ω
+            exact h_expand ω
+      _ = 2 * σSq * (1 - ρ) := by
+            -- Distribute integrals: ∫(f+g-h) = ∫f + ∫g - ∫h
+            -- Then substitute: ∫(Z 0 - m)² = σ², ∫(Z 1 - m)² = σ² (by hvar1), ∫(Z 0 - m)(Z 1 - m) = covOffDiag
+            -- Finally: σ² + σ² - 2·covOffDiag = σ² + σ² - 2·σ²·ρ = 2σ²(1-ρ)
+            sorry -- TODO: Complete integral linearity and algebraic simplification
 
   -- Apply l2_contractability_bound to get the bound in terms of ξ, p', q'
   have h_bound := Exchangeability.DeFinetti.L2Approach.l2_contractability_bound
