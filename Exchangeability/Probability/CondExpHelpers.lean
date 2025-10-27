@@ -413,12 +413,40 @@ theorem condExp_project_of_condIndepFun
         μ[ (fun ω => ∑ i ∈ s, a i * (A i).indicator 1 ω) * (Z ⁻¹' B).indicator 1 | mW ] =ᵐ[μ]
         μ[ (fun ω => ∑ i ∈ s, a i * (A i).indicator 1 ω) | mW ] * μ[ (Z ⁻¹' B).indicator 1 | mW ] := by
       intro s a A hA_meas hA_preimage hsum_int
-      -- The proof follows by:
-      -- 1. Distributing the product over the sum
-      -- 2. Using linearity to pull the sum outside the conditional expectation
-      -- 3. Applying condIndep_indicator to each term
-      -- 4. Factoring back
-      sorry -- ~30 lines of Finset sum manipulation
+
+      -- Step 1: Distribute the product over the sum
+      have h_distrib : (fun ω => ∑ i ∈ s, a i * (A i).indicator 1 ω) * (Z ⁻¹' B).indicator 1
+                      = fun ω => ∑ i ∈ s, (a i * (A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω) := by
+        ext ω
+        simp only [Pi.mul_apply, Finset.sum_mul]
+        congr 1
+        ext i
+        ring
+
+      -- Step 2: Apply linearity - pull sum outside conditional expectation on LHS
+      calc μ[ (fun ω => ∑ i ∈ s, a i * (A i).indicator 1 ω) * (Z ⁻¹' B).indicator 1 | mW ]
+          = μ[ fun ω => ∑ i ∈ s, (a i * (A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω) | mW ] := by
+              rw [h_distrib]
+        _ =ᵐ[μ] fun ω => ∑ i ∈ s, μ[ fun ω' => a i * (A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω := by
+              -- Use condExp_finset_sum to pull sum outside
+              sorry -- Need to verify integrability of each term
+        _ =ᵐ[μ] fun ω => ∑ i ∈ s, (a i * (μ[ (A i).indicator 1 * (Z ⁻¹' B).indicator 1 | mW ] ω)) := by
+              -- Pull out scalar aᵢ using condExp_smul
+              sorry -- ~10 lines
+        _ =ᵐ[μ] fun ω => ∑ i ∈ s, (a i * (μ[ (A i).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)) := by
+              -- Apply condIndep_indicator to each term
+              sorry -- Need to apply to each i ∈ s
+        _ =ᵐ[μ] fun ω => (∑ i ∈ s, a i * μ[ (A i).indicator 1 | mW ] ω) * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
+              -- Factor out μ[(Z⁻¹B).indicator 1|W] from the sum
+              ext ω
+              rw [Finset.sum_mul]
+              congr 1
+              ext i
+              ring
+        _ =ᵐ[μ] μ[ fun ω => ∑ i ∈ s, a i * (A i).indicator 1 ω | mW ] * μ[ (Z ⁻¹' B).indicator 1 | mW ] := by
+              -- RHS: apply linearity
+              congr 1
+              sorry -- Apply condExp_finset_sum to RHS
 
     -- ** STAGE 3: General Integrable Functions **
     -- For general integrable f : βY → ℝ:
