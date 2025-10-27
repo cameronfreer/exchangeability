@@ -4007,9 +4007,9 @@ private lemma optionB_Step4c_triangle
       exact abs_sub_abs_le_abs_sub (A n ω) (B n ω) (Y ω)
   -- Combine the two convergences via squeeze theorem
   apply squeeze_zero
-  · exact eventually_of_forall (fun _ =>
+  · exact Filter.eventually_of_forall (fun _ =>
       integral_nonneg_of_ae (ae_of_all _ (fun _ => abs_nonneg _)))
-  · exact eventually_of_forall h_triangle
+  · exact Filter.eventually_of_forall h_triangle
   · exact Tendsto.add hA_B_close hB_L1_conv
 
 /-- **Option B bounded case implementation**: L¹ convergence for bounded functions.
