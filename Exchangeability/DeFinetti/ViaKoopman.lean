@@ -3677,7 +3677,7 @@ end MainConvergence
 These lemmas implement the bounded and general cases for L¹ convergence of Cesàro averages
 using the cylinder function approach (Option B). This avoids MET and sub-σ-algebra typeclass issues. -/
 
-set_option maxHeartbeats 4000000
+set_option maxHeartbeats 8000000
 
 section OptionB_L1Convergence
 
@@ -3912,8 +3912,6 @@ private theorem optionB_L1_convergence_bounded
     exact h1.trans h2
 
   -- Step 4a: L² to L¹ convergence for B_n → Y
-  -- Increase heartbeat limit due to complex type inference
-  set_option maxHeartbeats 2000000 in
   have hB_L1_conv : Tendsto (fun n => ∫ ω, |B n ω - Y ω| ∂μ) atTop (𝓝 0) := by
     -- We have L² convergence: birkhoffAverage n fL2 → condexpL2 fL2 in Lp ℝ 2 μ
     -- And a.e. equalities: birkhoffAverage n fL2 =ᵐ B n, condexpL2 fL2 =ᵐ Y
@@ -3991,7 +3989,6 @@ private theorem optionB_L1_convergence_bounded
   -- Step 4b: A_n and B_n differ negligibly due to indexing
   -- |A_n ω - B_n ω| ≤ 2*Cg/(n+1) since g is bounded
   obtain ⟨Cg, hCg_bd⟩ := hg_bd
-  set_option maxHeartbeats 2000000 in
   have hA_B_close : Tendsto (fun n => ∫ ω, |A n ω - B n ω| ∂μ) atTop (𝓝 0) := by
     -- For each ω, bound |A n ω - B n ω|
     have h_bd : ∀ n > 0, ∀ ω, |A n ω - B n ω| ≤ 2 * Cg / (n + 1) := by
@@ -4051,7 +4048,6 @@ private theorem optionB_L1_convergence_bounded
       · intro n; exact h_bd n (Nat.zero_lt_succ n) ω
 
   -- Step 4c: Triangle inequality: |A_n - Y| ≤ |A_n - B_n| + |B_n - Y|
-  set_option maxHeartbeats 2000000 in
   have h_triangle : ∀ n, ∫ ω, |A n ω - Y ω| ∂μ ≤
       ∫ ω, |A n ω - B n ω| ∂μ + ∫ ω, |B n ω - Y ω| ∂μ := by
     intro n
