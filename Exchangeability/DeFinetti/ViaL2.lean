@@ -1597,10 +1597,17 @@ theorem subseq_ae_of_L1
     -- On a probability space, if ∫|f| is bounded, then f is integrable
     have h_integrable : ∀ n, Integrable (fun ω => alpha n ω - alpha_inf ω) μ := by
       intro n
-      -- TODO: Prove integrability from L¹ convergence hypothesis
-      -- Since ∫ |alpha n - alpha_inf| → 0, the integral is eventually finite
-      -- This should follow from: convergent sequences in ℝ are bounded
-      -- For now, axiomatize this technical lemma
+      -- Since ∫ |alpha n - alpha_inf| → 0, the integrals are bounded
+      -- This means the functions are integrable
+      --
+      -- Technical proof: From h_L1_conv, for ε=1, ∃N such that ∫|alpha n - alpha_inf| < 1 for n≥N
+      -- For n<N, we need individual integrability proofs (details depend on how alpha is constructed)
+      --
+      -- The key insight: measurable + finite integral => integrable (by definition of Integrable)
+      -- Since convergent sequences are bounded, all the integrals are finite
+      --
+      -- TODO: Complete using proper bounds on alpha n, alpha_inf from construction
+      -- For now, accept this technical lemma
       sorry
 
     -- Step 2: Apply eLpNorm_one_eq_integral_abs and transfer convergence
