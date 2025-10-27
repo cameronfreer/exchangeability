@@ -3917,7 +3917,7 @@ private lemma optionB_Step4b_AB_close
     -- B n ω = (1/n) * ∑_{k=0}^{n-1} g(ω k)
     -- Write ∑_{k=0}^n = ∑_{k=0}^{n-1} + g(ω n)
     rw [show Finset.range (n + 1) = Finset.range n ∪ {n} by
-          ext k; simp [Finset.mem_range, Nat.lt_succ],
+          ext k; simp [Finset.mem_range, Nat.lt_succ]; omega,
         Finset.sum_union (by simp : Disjoint (Finset.range n) {n}),
         Finset.sum_singleton]
     -- Now A n ω = (1/(n+1)) * (∑_{k<n} g(ω k) + g(ω n))
@@ -3926,11 +3926,11 @@ private lemma optionB_Step4b_AB_close
     -- A n ω - B n ω = S/(n+1) + g(ω n)/(n+1) - S/n
     --               = -S/(n(n+1)) + g(ω n)/(n+1)
     calc |1 / (↑n + 1) * (S + g (ω n)) - 1 / ↑n * S|
-        = |S / (↑n + 1) + g (ω n) / (↑n + 1) - S / ↑n| := by ring
-      _ = |-S / (↑n * (↑n + 1)) + g (ω n) / (↑n + 1)| := by ring
+        = |S / (↑n + 1) + g (ω n) / (↑n + 1) - S / ↑n| := by ring_nf; ring
+      _ = |-S / (↑n * (↑n + 1)) + g (ω n) / (↑n + 1)| := by ring_nf; ring
       _ ≤ |-S / (↑n * (↑n + 1))| + |g (ω n) / (↑n + 1)| := by
             -- triangle inequality |x + y| ≤ |x| + |y|
-            simpa using (abs_add (-S / (↑n * (↑n + 1))) (g (ω n) / (↑n + 1)))
+            exact abs_add _ _
       _ = |S| / (↑n * (↑n + 1)) + |g (ω n)| / (↑n + 1) := by
             -- pull denominators out of |·| since denominators are ≥ 0
             have h₁ : 0 ≤ (↑n * (↑n + 1)) := by
@@ -3957,7 +3957,7 @@ private lemma optionB_Step4b_AB_close
             _ = n * Cg := by
                 rw [Finset.sum_const, Finset.card_range]
                 ring
-      _ = Cg / (↑n + 1) + Cg / (↑n + 1) := by ring
+      _ = Cg / (↑n + 1) + Cg / (↑n + 1) := by ring_nf; ring
       _ = 2 * Cg / (↑n + 1) := by ring
   -- Integrate the pointwise bound and squeeze to 0
   have h_upper : ∀ n > 0,
