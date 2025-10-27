@@ -323,10 +323,7 @@ lemma exists_perm_extending_strictMono {m n : ℕ} (k : Fin m → ℕ)
   let ι : Fin m → Fin n := fun i => ⟨i.val, Nat.lt_of_lt_of_le i.isLt hmn⟩
   let p : Fin n → Prop := fun x => x.val < m
   let q : Fin n → Prop := fun x => ∃ i : Fin m, x = ⟨k i, hk_bound i⟩
-  have hι_mem : ∀ i : Fin m, p (ι i) := by
-    intro i
-    dsimp [p, ι]
-    exact i.isLt
+  have hι_mem : ∀ i : Fin m, p (ι i) := fun i => i.isLt
   let kFin : Fin m → Fin n := fun i => ⟨k i, hk_bound i⟩
   have hk_mem : ∀ i : Fin m, q (kFin i) := fun i => ⟨i, rfl⟩
   haveI : DecidablePred p := fun x => inferInstance
@@ -347,12 +344,8 @@ lemma exists_perm_extending_strictMono {m n : ℕ} (k : Fin m → ℕ)
             simp [ι] }
   -- Equivalence between the image of `k` and `Fin m`.
   -- For injectivity of k, we use that it's strictly monotone
-  have hk_inj : Function.Injective kFin := by
-    intro i j hij
-    have : k i = k j := by
-      have := Fin.ext_iff.mp hij
-      simpa [kFin] using this
-    exact hk_mono.injective this
+  have hk_inj : Function.Injective kFin :=
+    fun i j hij => hk_mono.injective (Fin.ext_iff.mp hij)
   let e_cod : Fin m ≃ {x : Fin n // q x} :=
     { toFun := fun i => ⟨kFin i, hk_mem i⟩
       , invFun := fun y => Classical.choose y.2
@@ -373,19 +366,12 @@ lemma exists_perm_extending_strictMono {m n : ℕ} (k : Fin m → ℕ)
   let σ : Equiv.Perm (Fin n) := Equiv.extendSubtype e
   have hσ_apply : ∀ i : Fin m, σ (ι i) = kFin i := by
     intro i
-    have hmem : p (ι i) := hι_mem i
-    have h_apply := Equiv.extendSubtype_apply_of_mem (e:=e) (x:=ι i) hmem
-    -- Evaluate the right-hand side explicitly.
+    have h_apply := Equiv.extendSubtype_apply_of_mem (e:=e) (x:=ι i) (hι_mem i)
     dsimp [σ, e, Equiv.trans, e_dom, e_cod, ι, Fin.castLEEmb, kFin] at h_apply
     simpa using h_apply
-  refine ⟨σ, ?_⟩
-  intro i
-  have hi_eq : (⟨i.val, Nat.lt_of_lt_of_le i.isLt hmn⟩ : Fin n) = ι i := by
-    simp [ι]
-  have hσ_val : (σ (ι i)).val = k i := by
-    have := congrArg Fin.val (hσ_apply i)
-    simpa [kFin] using this
-  simpa [hi_eq] using hσ_val
+  refine ⟨σ, fun i => ?_⟩
+  have hσ_val : (σ (ι i)).val = k i := by simpa [kFin] using congrArg Fin.val (hσ_apply i)
+  simpa [ι] using hσ_val
 
 /-- Helper: relabeling coordinates by a finite permutation is measurable as a map
 from (Fin n → α) to itself (with product σ-algebra). -/
@@ -417,16 +403,16 @@ regardless of which m consecutive variables we pick (starting from position k). 
 lemma Contractable.shift_segment_eq {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX : Contractable μ X) (m k : ℕ) :
     Measure.map (fun ω (i : Fin m) => X (k + i.val) ω) μ =
-      Measure.map (fun ω (i : Fin m) => X i.val ω) μ := by
-  exact hX m (fun i => k + i.val) (fun i j hij => Nat.add_lt_add_left hij k)
+      Measure.map (fun ω (i : Fin m) => X i.val ω) μ :=
+  hX m (fun i => k + i.val) (fun _ _ hij => Nat.add_lt_add_left hij k)
 
 /-- Contractable sequences are invariant under taking strictly increasing subsequences
 with offsets. -/
 lemma Contractable.shift_and_select {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX : Contractable μ X) (m : ℕ) (k : Fin m → ℕ) (offset : ℕ) (hk : StrictMono k) :
     Measure.map (fun ω i => X (offset + k i) ω) μ =
-      Measure.map (fun ω i => X i.val ω) μ := by
-  exact hX m (fun i => offset + k i) (fun i j hij => Nat.add_lt_add_left (hk hij) offset)
+      Measure.map (fun ω i => X i.val ω) μ :=
+  hX m (fun i => offset + k i) (fun _ _ hij => Nat.add_lt_add_left (hk hij) offset)
 
 /-- For a permutation σ on Fin n, the range {σ(0), ..., σ(n-1)} equals {0, ..., n-1}. -/
 lemma perm_range_eq {n : ℕ} (σ : Equiv.Perm (Fin n)) :
@@ -506,26 +492,19 @@ theorem contractable_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
     let f_id : Ω → (Fin n → α) := fun ω j => X j.val ω
     let f_perm : Ω → (Fin n → α) := fun ω j => X (σ j).val ω
 
-    have hf_id_meas : Measurable f_id := measurable_pi_lambda _ (fun j => hX_meas j.val)
-    have hf_perm_meas : Measurable f_perm := measurable_pi_lambda _ (fun j => hX_meas (σ j).val)
-
     -- Combine: push forward hexch by proj and simplify using map_map
     have hproj_eq : Measure.map (proj ∘ f_perm) μ = Measure.map (proj ∘ f_id) μ := by
-      rw [← Measure.map_map hproj_meas hf_perm_meas,
-          ← Measure.map_map hproj_meas hf_id_meas]
+      rw [← Measure.map_map hproj_meas (measurable_pi_lambda _ (fun j => hX_meas (σ j).val)),
+          ← Measure.map_map hproj_meas (measurable_pi_lambda _ (fun j => hX_meas j.val))]
       exact congrArg (Measure.map proj) hexch
-    
+
     -- Now show that proj ∘ f_perm = (fun ω i => X (k i) ω)
     -- and proj ∘ f_id = (fun ω i => X i.val ω)
     have hlhs_eq : (proj ∘ f_perm) = (fun ω i => X (k i) ω) := by
-      ext ω i
-      simp only [proj, f_perm, Function.comp_apply, ι]
-      have : (σ ⟨i.val, Nat.lt_of_lt_of_le i.isLt hmn⟩).val = k i := hσ i
-      rw [this]
-    
+      ext ω i; simp only [proj, f_perm, Function.comp_apply, ι]; rw [hσ i]
+
     have hrhs_eq : (proj ∘ f_id) = (fun ω i => X i.val ω) := by
-      ext ω i
-      simp only [proj, f_id, Function.comp_apply, ι]
+      ext ω i; simp only [proj, f_id, Function.comp_apply, ι]
 
     rwa [hlhs_eq, hrhs_eq] at hproj_eq
 
