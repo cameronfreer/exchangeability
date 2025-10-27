@@ -159,9 +159,7 @@ lemma FullyExchangeable.exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
     simp [Function.comp, proj, π, extendFinPerm, Fin.is_lt]
   have hprojid :
       proj ∘ (fun ω => fun i : ℕ => X i ω)
-        = fun ω => fun i : Fin n => X i.val ω := by
-    ext ω i
-    rfl
+        = fun ω => fun i : Fin n => X i.val ω := rfl
   -- Project both laws to the first n coordinates and compare
   calc Measure.map (fun ω i => X (σ i).val ω) μ
       = Measure.map (proj ∘ fun ω i => X (π i) ω) μ := by rw [hprojσ]
@@ -212,7 +210,7 @@ subsequences have the same distribution. -/
 lemma contractable_same_range {μ : Measure Ω} {X : ℕ → Ω → α} {m : ℕ}
     (k₁ k₂ : Fin m → ℕ) (h_range : ∀ i, k₁ i = k₂ i) :
     Measure.map (fun ω i => X (k₁ i) ω) μ = Measure.map (fun ω i => X (k₂ i) ω) μ := by
-  congr 1; ext ω i; rw [h_range]
+  simp only [h_range]
 
 /-- Contractability is preserved under prefix: if X is contractable, so is any finite prefix. -/
 lemma Contractable.prefix {μ : Measure Ω} {X : ℕ → Ω → α}
@@ -383,7 +381,6 @@ lemma exists_perm_extending_strictMono {m n : ℕ} (k : Fin m → ℕ)
   refine ⟨σ, ?_⟩
   intro i
   have hi_eq : (⟨i.val, Nat.lt_of_lt_of_le i.isLt hmn⟩ : Fin n) = ι i := by
-    apply Fin.ext
     simp [ι]
   have hσ_val : (σ (ι i)).val = k i := by
     have := congrArg Fin.val (hσ_apply i)
@@ -467,9 +464,7 @@ theorem contractable_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
   cases m with
   | zero =>
     -- Both sides map to (Fin 0 → α), which has a unique element
-    congr
-    ext ω i
-    exact Fin.elim0 i
+    congr; ext ω i; exact Fin.elim0 i
   | succ m' =>
     -- Choose n large enough to contain all k(i)
     -- We need n > k(m'-1) since k is strictly monotone
@@ -531,8 +526,7 @@ theorem contractable_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
     have hrhs_eq : (proj ∘ f_id) = (fun ω i => X i.val ω) := by
       ext ω i
       simp only [proj, f_id, Function.comp_apply, ι]
-    
-    rw [hlhs_eq, hrhs_eq] at hproj_eq
-    exact hproj_eq
+
+    rwa [hlhs_eq, hrhs_eq] at hproj_eq
 
 end Exchangeability

@@ -96,7 +96,7 @@ instance pi_isProbabilityMeasure {ι : Type*} [Fintype ι] {α : ι → Type*}
     [∀ i, IsProbabilityMeasure (μ i)] [∀ i, SigmaFinite (μ i)] :
     IsProbabilityMeasure (Measure.pi μ) := by
   constructor
-  rw [show (Set.univ : Set (∀ i, α i)) = Set.univ.pi (fun _ => Set.univ) by ext; simp,
+  rw [show (Set.univ : Set (∀ i, α i)) = Set.univ.pi (fun _ => Set.univ) by simp,
       Measure.pi_pi]
   simp [measure_univ]
 

@@ -3677,7 +3677,7 @@ end MainConvergence
 These lemmas implement the bounded and general cases for L¹ convergence of Cesàro averages
 using the cylinder function approach (Option B). This avoids MET and sub-σ-algebra typeclass issues. -/
 
-set_option maxHeartbeats 4000000
+set_option maxHeartbeats 8000000
 
 section OptionB_L1Convergence
 
@@ -3748,14 +3748,252 @@ private lemma iterate_shift_eval (k n : ℕ) (ω : Ω[α]) :
   | succ k ih =>
       rw [Function.iterate_succ']
       simp only [shift_apply, Function.comp_apply]
-      rw [ih, Nat.succ_add]
-      omega
+      rw [ih]
+      ac_rfl
 
 /-- Evaluate the k-th shift at 0: shift^[k] ω 0 = ω k. -/
 private lemma iterate_shift_eval0 (k : ℕ) (ω : Ω[α]) :
     (shift^[k] ω) 0 = ω k := by
   rw [iterate_shift_eval]
   simp
+
+/-! ### Option B Helper Lemmas
+
+These lemmas extract Steps 4a-4c from the main theorem to reduce elaboration complexity.
+Each lemma is self-contained with ~50-80 lines, well below timeout thresholds. -/
+
+/-- **Step 4a helper**: L² to L¹ convergence for birkhoffAverage.
+
+Given L² convergence of birkhoffAverage to condexpL2, proves L¹ convergence
+of the corresponding functions B_n → Y using:
+1. Lp convergence ⟺ eLpNorm convergence
+2. L² → L¹ inequality (‖f‖₁ ≤ ‖f‖₂ on probability spaces)
+3. Transfer via a.e. equalities -/
+private lemma optionB_Step4a_L2_to_L1
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ)
+    (fL2 : Lp ℝ 2 μ)
+    (hfL2_tendsto : Tendsto (birkhoffAverage ℝ (koopman shift hσ) _root_.id · fL2) atTop (𝓝[Lp ℝ 2 μ] condexpL2 (μ := μ) fL2))
+    (B : ℕ → Ω[α] → ℝ)
+    (Y : Ω[α] → ℝ)
+    (hB_eq_birkhoff : ∀ n > 0, (fun ω => birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω) =ᵐ[μ] B n)
+    (hY_eq : condexpL2 (μ := μ) fL2 =ᵐ[μ] Y) :
+    Tendsto (fun n => ∫ ω, |B n ω - Y ω| ∂μ) atTop (𝓝 0) := by
+  -- We have L² convergence: birkhoffAverage n fL2 → condexpL2 fL2 in Lp ℝ 2 μ
+  -- And a.e. equalities: birkhoffAverage n fL2 =ᵐ B n, condexpL2 fL2 =ᵐ Y
+
+  -- Convert Lp convergence to eLpNorm convergence
+  have heLp_conv : Tendsto (fun n =>
+      eLpNorm (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2) 2 μ)
+      atTop (𝓝 0) := by
+    rw [← Lp.tendsto_Lp_iff_tendsto_eLpNorm']
+    exact hfL2_tendsto
+
+  -- Use L² → L¹ inequality on probability spaces: ‖f‖₁ ≤ ‖f‖₂
+  -- Key: eLpNorm_le_eLpNorm_of_exponent_le with 1 ≤ 2 and μ univ = 1
+  have heLp1_conv : Tendsto (fun n =>
+      eLpNorm (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2) 1 μ)
+      atTop (𝓝 0) := by
+    apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds heLp_conv
+    · intro n; exact zero_le _
+    · intro n
+      refine eLpNorm_le_eLpNorm_of_exponent_le (by norm_num) ?_ ?_
+      · simp [measure_univ]
+      · exact Lp.aestronglyMeasurable (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2)
+
+  -- Convert eLpNorm 1 to integral
+  -- Key: ∫ |f| dμ = (∫⁻ ‖f‖ₑ dμ).toReal = (eLpNorm f 1 μ).toReal
+  have h_integral_conv : Tendsto (fun n =>
+      ∫ ω, |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω| ∂μ)
+      atTop (𝓝 0) := by
+    -- Show the integral equals (eLpNorm _ 1 μ).toReal
+    have h_eq : ∀ n, ∫ ω, |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω| ∂μ =
+        (eLpNorm (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2) 1 μ).toReal := by
+      intro n
+      rw [← eLpNorm_one_eq_lintegral_enorm]
+      rw [integral_norm_eq_lintegral_enorm]
+      · congr 1
+        -- For real functions: ‖|f|‖ = |f|
+        ext ω
+        simp only [Pi.sub_apply]
+        -- |r| for r : ℝ is the norm
+        exact norm_abs (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω)
+      · -- Measurability: difference of Lp functions is aestronglyMeasurable
+        exact (Lp.aestronglyMeasurable (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2)).abs
+    -- Apply tendsto with the equality
+    simp_rw [h_eq]
+    exact ENNReal.tendsto_toReal heLp1_conv
+
+  -- Transfer to B_n and Y using a.e. equalities
+  -- We have: ∫ |birkhoffAverage n fL2 - condexpL2 fL2| ∂μ → 0
+  -- Need: ∫ |B n - Y| ∂μ → 0
+  -- Use: birkhoffAverage n fL2 =ᵐ B n and condexpL2 fL2 =ᵐ Y
+  have h_ae_transfer : ∀ n > 0,
+      (fun ω => |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω|)
+      =ᵐ[μ] (fun ω => |B n ω - Y ω|) := by
+    intro n hn
+    -- Use a.e. equality of the functions
+    have hB := hB_eq_birkhoff n hn
+    have hY := hY_eq
+    filter_upwards [hB, hY] with ω hBω hYω
+    simp only [hBω, hYω]
+  -- Apply integral_congr_ae to show integrals are equal
+  have h_int_eq : ∀ n > 0, ∫ ω, |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω| ∂μ
+      = ∫ ω, |B n ω - Y ω| ∂μ := by
+    intro n hn
+    exact integral_congr_ae (h_ae_transfer n hn)
+  -- Transfer convergence using the equality for large n
+  have : ∀ᶠ n in atTop, ∫ ω, |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω| ∂μ
+      = ∫ ω, |B n ω - Y ω| ∂μ := by
+    apply eventually_of_forall
+    intro n
+    by_cases hn : n > 0
+    · exact h_int_eq n hn
+    · simp [B, hn]
+  exact (tendsto_congr' this).mp h_integral_conv
+
+/-- **Step 4b helper**: A_n and B_n differ negligibly.
+
+For bounded g, shows |A_n ω - B_n ω| ≤ 2·Cg/(n+1) → 0 via dominated convergence. -/
+private lemma optionB_Step4b_AB_close
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (g : α → ℝ) (Cg : ℝ) (hCg_bd : ∀ x, |g x| ≤ Cg)
+    (A B : ℕ → Ω[α] → ℝ)
+    (hA_def : A = fun n ω => 1 / (↑n + 1) * (Finset.range (n + 1)).sum (fun j => g (ω j)))
+    (hB_def : B = fun n ω => if n = 0 then 0 else 1 / ↑n * (Finset.range n).sum (fun j => g (ω j))) :
+    Tendsto (fun n => ∫ ω, |A n ω - B n ω| ∂μ) atTop (𝓝 0) := by
+  -- For each ω, bound |A n ω - B n ω|
+  have h_bd : ∀ n > 0, ∀ ω, |A n ω - B n ω| ≤ 2 * Cg / (n + 1) := by
+    intro n hn ω
+    rw [hA_def, hB_def]; simp only [hn.ne', ↓reduceIte]
+    -- A n ω = (1/(n+1)) * ∑_{k=0}^n g(ω k)
+    -- B n ω = (1/n) * ∑_{k=0}^{n-1} g(ω k)
+    -- Write ∑_{k=0}^n = ∑_{k=0}^{n-1} + g(ω n)
+    rw [show Finset.range (n + 1) = Finset.range n ∪ {n} by
+          ext k; simp [Finset.mem_range, Nat.lt_succ],
+        Finset.sum_union (by simp : Disjoint (Finset.range n) {n}),
+        Finset.sum_singleton]
+    -- Now A n ω = (1/(n+1)) * (∑_{k<n} g(ω k) + g(ω n))
+    -- Let S = ∑_{k<n} g(ω k)
+    set S := (Finset.range n).sum fun j => g (ω j)
+    -- A n ω - B n ω = S/(n+1) + g(ω n)/(n+1) - S/n
+    --               = -S/(n(n+1)) + g(ω n)/(n+1)
+    calc |1 / (↑n + 1) * (S + g (ω n)) - 1 / ↑n * S|
+        = |S / (↑n + 1) + g (ω n) / (↑n + 1) - S / ↑n| := by ring
+      _ = |-S / (↑n * (↑n + 1)) + g (ω n) / (↑n + 1)| := by ring
+      _ ≤ |S / (↑n * (↑n + 1))| + |g (ω n) / (↑n + 1)| := abs_sub_abs_le_abs_sub _ _
+      _ ≤ |S| / (↑n * (↑n + 1)) + Cg / (↑n + 1) := by
+          gcongr
+          · exact abs_div _ _
+          · exact hCg_bd (ω n)
+      _ ≤ (n * Cg) / (↑n * (↑n + 1)) + Cg / (↑n + 1) := by
+          gcongr
+          -- |S| ≤ n * Cg since |g(ω k)| ≤ Cg for all k
+          calc |S|
+              ≤ (Finset.range n).sum (fun j => |g (ω j)|) := by
+                exact Finset.abs_sum_le_sum_abs _ _
+            _ ≤ (Finset.range n).sum (fun j => Cg) := by
+                apply Finset.sum_le_sum
+                intro j _
+                exact hCg_bd (ω j)
+            _ = n * Cg := by
+                rw [Finset.sum_const, Finset.card_range]
+                ring
+      _ = Cg / (↑n + 1) + Cg / (↑n + 1) := by ring
+      _ = 2 * Cg / (↑n + 1) := by ring
+  -- Apply dominated convergence
+  refine tendsto_integral_of_dominated_convergence
+    (fun n => 2 * Cg / (n + 1))
+    (ae_of_all μ fun ω => ?_) -- integrability
+    (ae_of_all μ fun ω => ?_) -- pointwise bound
+    ?_ -- integrand bound converges
+    (ae_of_all μ fun ω => ?_) -- pointwise convergence
+  · exact Integrable.abs (integrable_const (2 * Cg))
+  · intro n; exact h_bd n (Nat.zero_lt_succ n) ω
+  · -- ∫ (2*Cg/(n+1)) dμ = 2*Cg/(n+1) → 0
+    simp only [integral_const, measure_univ, ENNReal.one_toReal, smul_eq_mul, mul_one]
+    exact tendsto_const_div_atTop_nhds_zero_nat (2 * Cg)
+  · -- |A n ω - B n ω| ≤ 2*Cg/(n+1) → 0 by squeeze
+    apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds
+      (tendsto_const_div_atTop_nhds_zero_nat (2 * Cg))
+    · intro n; exact abs_nonneg _
+    · intro n; exact h_bd n (Nat.zero_lt_succ n) ω
+
+/-- **Step 4c helper**: Triangle inequality to combine convergences.
+
+Given ∫|B_n - Y| → 0 and ∫|A_n - B_n| → 0, proves ∫|A_n - Y| → 0 via squeeze theorem. -/
+private lemma optionB_Step4c_triangle
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (g : α → ℝ) (hg_bd : ∃ Cg, ∀ x, |g x| ≤ Cg)
+    (A B : ℕ → Ω[α] → ℝ) (Y : Ω[α] → ℝ) (G : Ω[α] → ℝ)
+    (hA_def : A = fun n ω => 1 / (↑n + 1) * (Finset.range (n + 1)).sum (fun j => g (ω j)))
+    (hB_def : B = fun n ω => if n = 0 then 0 else 1 / ↑n * (Finset.range n).sum (fun j => g (ω j)))
+    (hB_L1_conv : Tendsto (fun n => ∫ ω, |B n ω - Y ω| ∂μ) atTop (𝓝 0))
+    (hA_B_close : Tendsto (fun n => ∫ ω, |A n ω - B n ω| ∂μ) atTop (𝓝 0)) :
+    Tendsto (fun n => ∫ ω, |A n ω - Y ω| ∂μ) atTop (𝓝 0) := by
+  -- Triangle inequality: |A_n - Y| ≤ |A_n - B_n| + |B_n - Y|
+  have h_triangle : ∀ n, ∫ ω, |A n ω - Y ω| ∂μ ≤
+      ∫ ω, |A n ω - B n ω| ∂μ + ∫ ω, |B n ω - Y ω| ∂μ := by
+    intro n
+    apply integral_mono_of_nonneg
+    · exact ae_of_all _ (fun ω => abs_nonneg _)
+    · -- |A n - Y| is integrable: both bounded by Cg + integrability of Y
+      obtain ⟨Cg, hCg_bd⟩ := hg_bd
+      refine Integrable.abs (Integrable.sub ?_ ?_)
+      · -- A n is integrable (bounded by Cg)
+        apply Integrable.of_bounded
+        swap; · exact ⟨Cg, ?_⟩
+        · apply ae_of_all; intro ω
+          rw [hA_def]; simp only []
+          calc |1 / (↑n + 1) * (Finset.range (n + 1)).sum (fun j => g (ω j))|
+              ≤ (1 / (↑n + 1)) * |(Finset.range (n + 1)).sum (fun j => g (ω j))| := by
+                  rw [abs_mul]; gcongr; exact abs_of_pos (by positivity)
+            _ ≤ (1 / (↑n + 1)) * ((n + 1) * Cg) := by
+                gcongr
+                calc |(Finset.range (n + 1)).sum (fun j => g (ω j))|
+                    ≤ (Finset.range (n + 1)).sum (fun j => |g (ω j)|) := abs_sum_le_sum_abs _ _
+                  _ ≤ (Finset.range (n + 1)).sum (fun j => Cg) := by
+                      apply Finset.sum_le_sum; intro j _; exact hCg_bd (ω j)
+                  _ = (n + 1) * Cg := by rw [Finset.sum_const, Finset.card_range]; ring
+            _ = Cg := by field_simp; ring
+        · exact integrable_const Cg
+      · -- Y is integrable (condexp of bounded G)
+        exact Integrable.condExp mSI G
+    · -- |A n - B n| + |B n - Y| is integrable
+      obtain ⟨Cg, hCg_bd⟩ := hg_bd
+      refine Integrable.add ?_ ?_
+      · -- |A n - B n| ≤ 2*Cg/(n+1) is constant
+        exact (integrable_const (2 * Cg / (n + 1))).abs
+      · -- |B n - Y| is integrable
+        refine Integrable.abs (Integrable.sub ?_ ?_)
+        · -- B n is integrable (similar to A n)
+          by_cases hn : n = 0
+          · simp [B, hn]; exact integrable_zero _ _ _
+          · apply Integrable.of_bounded
+            swap; · exact ⟨Cg, ?_⟩
+            · apply ae_of_all; intro ω
+              simp only [B, hn, ↓reduceIte]
+              calc |1 / ↑n * (Finset.range n).sum (fun j => g (ω j))|
+                  ≤ (1 / ↑n) * |(Finset.range n).sum (fun j => g (ω j))| := by
+                      rw [abs_mul]; gcongr; exact abs_of_pos (by positivity)
+                _ ≤ (1 / ↑n) * (n * Cg) := by
+                    gcongr
+                    calc |(Finset.range n).sum (fun j => g (ω j))|
+                        ≤ (Finset.range n).sum (fun j => |g (ω j)|) := abs_sum_le_sum_abs _ _
+                      _ ≤ (Finset.range n).sum (fun j => Cg) := by
+                          apply Finset.sum_le_sum; intro j _; exact hCg_bd (ω j)
+                      _ = n * Cg := by rw [Finset.sum_const, Finset.card_range]; ring
+                _ = Cg := by field_simp; ring
+            · exact integrable_const Cg
+        · -- Y is integrable
+          exact Integrable.condExp mSI G
+    · apply ae_of_all; intro ω
+      exact abs_sub_abs_le_abs_sub (A n ω) (B n ω) (Y ω)
+  -- Combine the two convergences via squeeze theorem
+  apply squeeze_zero
+  · exact ae_of_all _ (fun n => integral_nonneg (ae_of_all _ (fun ω => abs_nonneg _)))
+  · exact eventually_of_forall h_triangle
+  · exact Tendsto.add hA_B_close hB_L1_conv
 
 /-- **Option B bounded case implementation**: L¹ convergence for bounded functions.
 
@@ -3865,18 +4103,13 @@ private theorem optionB_L1_convergence_bounded
     -- Combine finite a.e. conditions for the sum
     have hsum : (fun ω => ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω) =ᵐ[μ]
         (fun ω => ∑ k ∈ Finset.range n, g (ω k)) := by
-      -- Combine finitely many a.e. conditions
-      -- Use list of a.e. conditions and filter_upwards
+      -- Combine finitely many a.e. conditions using Measure.ae_ball_iff
       have h_list : ∀ k ∈ Finset.range n, (fun ω => ((koopman shift hσ)^[k] fL2) ω) =ᵐ[μ] (fun ω => g (ω k)) :=
         fun k _ => hterms k
-      -- Build the combined a.e. set
-      classical
-      let ae_sets := Finset.range n |>.attach.map (fun ⟨k, hk⟩ => {ω | ((koopman shift hσ)^[k] fL2) ω = g (ω k)})
-      -- Each has full measure, so their finite intersection has full measure
-      -- Then sums are equal on this set
+      -- Each a.e. condition has full measure, so their finite intersection has full measure
       have : ∀ᵐ ω ∂μ, ∀ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω = g (ω k) := by
-        -- Finite version of ae_ball_iff
-        apply Measure.ae_ball_iff.mpr
+        have hcount : (Finset.range n : Set ℕ).Countable := Finset.countable_toSet _
+        apply (MeasureTheory.ae_ball_iff hcount).mp
         exact h_list
       filter_upwards [this] with ω hω
       exact Finset.sum_congr rfl hω
@@ -3917,208 +4150,17 @@ private theorem optionB_L1_convergence_bounded
     exact h1.trans h2
 
   -- Step 4a: L² to L¹ convergence for B_n → Y
-  -- Increase heartbeat limit due to complex type inference
-  set_option maxHeartbeats 2000000 in
-  have hB_L1_conv : Tendsto (fun n => ∫ ω, |B n ω - Y ω| ∂μ) atTop (𝓝 0) := by
-    -- We have L² convergence: birkhoffAverage n fL2 → condexpL2 fL2 in Lp ℝ 2 μ
-    -- And a.e. equalities: birkhoffAverage n fL2 =ᵐ B n, condexpL2 fL2 =ᵐ Y
-
-    -- Convert Lp convergence to eLpNorm convergence
-    have heLp_conv : Tendsto (fun n =>
-        eLpNorm (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2) 2 μ)
-        atTop (𝓝 0) := by
-      rw [← Lp.tendsto_Lp_iff_tendsto_eLpNorm']
-      exact hfL2_tendsto
-
-    -- Use L² → L¹ inequality on probability spaces: ‖f‖₁ ≤ ‖f‖₂
-    -- Key: eLpNorm_le_eLpNorm_of_exponent_le with 1 ≤ 2 and μ univ = 1
-    have heLp1_conv : Tendsto (fun n =>
-        eLpNorm (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2) 1 μ)
-        atTop (𝓝 0) := by
-      apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds heLp_conv
-      · intro n; exact zero_le _
-      · intro n
-        refine eLpNorm_le_eLpNorm_of_exponent_le (by norm_num) ?_ ?_
-        · simp [measure_univ]
-        · exact Lp.aestronglyMeasurable (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2)
-
-    -- Convert eLpNorm 1 to integral
-    -- Key: ∫ |f| dμ = (∫⁻ ‖f‖ₑ dμ).toReal = (eLpNorm f 1 μ).toReal
-    have h_integral_conv : Tendsto (fun n =>
-        ∫ ω, |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω| ∂μ)
-        atTop (𝓝 0) := by
-      -- Show the integral equals (eLpNorm _ 1 μ).toReal
-      have h_eq : ∀ n, ∫ ω, |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω| ∂μ =
-          (eLpNorm (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2) 1 μ).toReal := by
-        intro n
-        rw [← eLpNorm_one_eq_lintegral_enorm]
-        rw [integral_norm_eq_lintegral_enorm]
-        · congr 1
-          -- For real functions: ‖|f|‖ = |f|
-          ext ω
-          simp only [Pi.sub_apply]
-          -- |r| for r : ℝ is the norm
-          exact norm_abs (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω)
-        · -- Measurability: difference of Lp functions is aestronglyMeasurable
-          exact (Lp.aestronglyMeasurable (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2)).abs
-      -- Apply tendsto with the equality
-      simp_rw [h_eq]
-      exact ENNReal.tendsto_toReal heLp1_conv
-
-    -- Transfer to B_n and Y using a.e. equalities
-    -- We have: ∫ |birkhoffAverage n fL2 - condexpL2 fL2| ∂μ → 0
-    -- Need: ∫ |B n - Y| ∂μ → 0
-    -- Use: birkhoffAverage n fL2 =ᵐ B n and condexpL2 fL2 =ᵐ Y
-    have h_ae_transfer : ∀ n > 0,
-        (fun ω => |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω|)
-        =ᵐ[μ] (fun ω => |B n ω - Y ω|) := by
-      intro n hn
-      -- Use a.e. equality of the functions
-      have hB := hB_eq_birkhoff n hn
-      have hY := hY_eq
-      filter_upwards [hB, hY] with ω hBω hYω
-      simp only [hBω, hYω]
-    -- Apply integral_congr_ae to show integrals are equal
-    have h_int_eq : ∀ n > 0, ∫ ω, |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω| ∂μ
-        = ∫ ω, |B n ω - Y ω| ∂μ := by
-      intro n hn
-      exact integral_congr_ae (h_ae_transfer n hn)
-    -- Transfer convergence using the equality for large n
-    have : ∀ᶠ n in atTop, ∫ ω, |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω| ∂μ
-        = ∫ ω, |B n ω - Y ω| ∂μ := by
-      apply eventually_of_forall
-      intro n
-      by_cases hn : n > 0
-      · exact h_int_eq n hn
-      · simp [B, hn]
-    exact (tendsto_congr' this).mp h_integral_conv
+  have hB_L1_conv : Tendsto (fun n => ∫ ω, |B n ω - Y ω| ∂μ) atTop (𝓝 0) :=
+    optionB_Step4a_L2_to_L1 hσ fL2 hfL2_tendsto B Y hB_eq_birkhoff hY_eq
 
   -- Step 4b: A_n and B_n differ negligibly due to indexing
   -- |A_n ω - B_n ω| ≤ 2*Cg/(n+1) since g is bounded
   obtain ⟨Cg, hCg_bd⟩ := hg_bd
-  set_option maxHeartbeats 2000000 in
-  have hA_B_close : Tendsto (fun n => ∫ ω, |A n ω - B n ω| ∂μ) atTop (𝓝 0) := by
-    -- For each ω, bound |A n ω - B n ω|
-    have h_bd : ∀ n > 0, ∀ ω, |A n ω - B n ω| ≤ 2 * Cg / (n + 1) := by
-      intro n hn ω
-      simp only [A, B, hn.ne', ↓reduceIte]
-      -- A n ω = (1/(n+1)) * ∑_{k=0}^n g(ω k)
-      -- B n ω = (1/n) * ∑_{k=0}^{n-1} g(ω k)
-      -- Write ∑_{k=0}^n = ∑_{k=0}^{n-1} + g(ω n)
-      rw [show Finset.range (n + 1) = Finset.range n ∪ {n} by
-            ext k; simp [Finset.mem_range, lt_succ_iff],
-          Finset.sum_union (by simp : Disjoint (Finset.range n) {n}),
-          Finset.sum_singleton]
-      -- Now A n ω = (1/(n+1)) * (∑_{k<n} g(ω k) + g(ω n))
-      -- Let S = ∑_{k<n} g(ω k)
-      set S := (Finset.range n).sum fun j => g (ω j)
-      -- A n ω - B n ω = S/(n+1) + g(ω n)/(n+1) - S/n
-      --               = -S/(n(n+1)) + g(ω n)/(n+1)
-      calc |1 / (↑n + 1) * (S + g (ω n)) - 1 / ↑n * S|
-          = |S / (↑n + 1) + g (ω n) / (↑n + 1) - S / ↑n| := by ring
-        _ = |-S / (↑n * (↑n + 1)) + g (ω n) / (↑n + 1)| := by ring
-        _ ≤ |S / (↑n * (↑n + 1))| + |g (ω n) / (↑n + 1)| := abs_add _ _
-        _ ≤ |S| / (↑n * (↑n + 1)) + Cg / (↑n + 1) := by
-            gcongr
-            · exact abs_div _ _
-            · exact hCg_bd (ω n)
-        _ ≤ (n * Cg) / (↑n * (↑n + 1)) + Cg / (↑n + 1) := by
-            gcongr
-            -- |S| ≤ n * Cg since |g(ω k)| ≤ Cg for all k
-            calc |S|
-                ≤ (Finset.range n).sum (fun j => |g (ω j)|) := by
-                  exact abs_sum_le_sum_abs _ _
-              _ ≤ (Finset.range n).sum (fun j => Cg) := by
-                  apply Finset.sum_le_sum
-                  intro j _
-                  exact hCg_bd (ω j)
-              _ = n * Cg := by
-                  rw [Finset.sum_const, Finset.card_range]
-                  ring
-        _ = Cg / (↑n + 1) + Cg / (↑n + 1) := by ring
-        _ = 2 * Cg / (↑n + 1) := by ring
-    -- Apply dominated convergence
-    refine tendsto_integral_of_dominated_convergence
-      (fun n => 2 * Cg / (n + 1))
-      (ae_of_all μ fun ω => ?_) -- integrability
-      (ae_of_all μ fun ω => ?_) -- pointwise bound
-      ?_ -- integrand bound converges
-      (ae_of_all μ fun ω => ?_) -- pointwise convergence
-    · exact Integrable.abs (integrable_const (2 * Cg))
-    · intro n; exact h_bd n (Nat.zero_lt_succ n) ω
-    · -- ∫ (2*Cg/(n+1)) dμ = 2*Cg/(n+1) → 0
-      simp only [integral_const, measure_univ, ENNReal.one_toReal, smul_eq_mul, mul_one]
-      exact tendsto_const_div_atTop_nhds_zero_nat (2 * Cg)
-    · -- |A n ω - B n ω| ≤ 2*Cg/(n+1) → 0 by squeeze
-      apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds
-        (tendsto_const_div_atTop_nhds_zero_nat (2 * Cg))
-      · intro n; exact abs_nonneg _
-      · intro n; exact h_bd n (Nat.zero_lt_succ n) ω
+  have hA_B_close : Tendsto (fun n => ∫ ω, |A n ω - B n ω| ∂μ) atTop (𝓝 0) :=
+    optionB_Step4b_AB_close g Cg hCg_bd A B
 
   -- Step 4c: Triangle inequality: |A_n - Y| ≤ |A_n - B_n| + |B_n - Y|
-  set_option maxHeartbeats 2000000 in
-  have h_triangle : ∀ n, ∫ ω, |A n ω - Y ω| ∂μ ≤
-      ∫ ω, |A n ω - B n ω| ∂μ + ∫ ω, |B n ω - Y ω| ∂μ := by
-    intro n
-    apply integral_mono_of_nonneg
-    · exact ae_of_all _ (fun ω => abs_nonneg _)
-    · -- |A n - Y| is integrable: both bounded by Cg + integrability of Y
-      obtain ⟨Cg, hCg_bd⟩ := hg_bd
-      refine Integrable.abs (Integrable.sub ?_ ?_)
-      · -- A n is integrable (bounded by Cg)
-        apply Integrable.of_bounded
-        swap; · exact ⟨Cg, ?_⟩
-        · apply ae_of_all; intro ω
-          simp only [A]
-          calc |1 / (↑n + 1) * (Finset.range (n + 1)).sum (fun j => g (ω j))|
-              ≤ (1 / (↑n + 1)) * |(Finset.range (n + 1)).sum (fun j => g (ω j))| := by
-                  rw [abs_mul]; gcongr; exact abs_of_pos (by positivity)
-            _ ≤ (1 / (↑n + 1)) * ((n + 1) * Cg) := by
-                gcongr
-                calc |(Finset.range (n + 1)).sum (fun j => g (ω j))|
-                    ≤ (Finset.range (n + 1)).sum (fun j => |g (ω j)|) := abs_sum_le_sum_abs _ _
-                  _ ≤ (Finset.range (n + 1)).sum (fun j => Cg) := by
-                      apply Finset.sum_le_sum; intro j _; exact hCg_bd (ω j)
-                  _ = (n + 1) * Cg := by rw [Finset.sum_const, Finset.card_range]; ring
-            _ = Cg := by field_simp; ring
-        · exact integrable_const Cg
-      · -- Y is integrable (condexp of bounded G)
-        exact Integrable.condExp mSI G
-    · -- |A n - B n| + |B n - Y| is integrable
-      obtain ⟨Cg, hCg_bd⟩ := hg_bd
-      refine Integrable.add ?_ ?_
-      · -- |A n - B n| ≤ 2*Cg/(n+1) is constant
-        exact (integrable_const (2 * Cg / (n + 1))).abs
-      · -- |B n - Y| is integrable
-        refine Integrable.abs (Integrable.sub ?_ ?_)
-        · -- B n is integrable (similar to A n)
-          by_cases hn : n = 0
-          · simp [B, hn]; exact integrable_zero _ _ _
-          · apply Integrable.of_bounded
-            swap; · exact ⟨Cg, ?_⟩
-            · apply ae_of_all; intro ω
-              simp only [B, hn, ↓reduceIte]
-              calc |1 / ↑n * (Finset.range n).sum (fun j => g (ω j))|
-                  ≤ (1 / ↑n) * |(Finset.range n).sum (fun j => g (ω j))| := by
-                      rw [abs_mul]; gcongr; exact abs_of_pos (by positivity)
-                _ ≤ (1 / ↑n) * (n * Cg) := by
-                    gcongr
-                    calc |(Finset.range n).sum (fun j => g (ω j))|
-                        ≤ (Finset.range n).sum (fun j => |g (ω j)|) := abs_sum_le_sum_abs _ _
-                      _ ≤ (Finset.range n).sum (fun j => Cg) := by
-                          apply Finset.sum_le_sum; intro j _; exact hCg_bd (ω j)
-                      _ = n * Cg := by rw [Finset.sum_const, Finset.card_range]; ring
-                _ = Cg := by field_simp; ring
-            · exact integrable_const Cg
-        · -- Y is integrable
-          exact Integrable.condExp mSI G
-    · apply ae_of_all; intro ω
-      exact abs_sub_abs_le_abs_sub (A n ω) (B n ω) (Y ω)
-  -- Combine the two convergences
-  apply squeeze_zero
-  · exact ae_of_all _ (fun n => integral_nonneg (ae_of_all _ (fun ω => abs_nonneg _)))
-  · exact eventually_of_forall h_triangle
-  · exact Tendsto.add hA_B_close hB_L1_conv
+  exact optionB_Step4c_triangle g hg_bd A B Y G mSI hB_L1_conv hA_B_close
 
 end OptionB_L1Convergence
 
