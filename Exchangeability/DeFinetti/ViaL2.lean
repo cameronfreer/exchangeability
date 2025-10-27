@@ -2446,20 +2446,81 @@ lemma cesaro_to_condexp_L2
       · sorry -- E[f(X_i)] - m = 0 since E[f(X_i)] = E[f(X_0)] = m by contractability
       all_goals sorry -- Integrability conditions
 
-    sorry  -- TODO: Complete the rest of the proof
-    /-
-    Remaining steps:
-    4. Show uniform covariance: E[Z_i Z_j] = E[Z_0 Z_1] for i≠j via contractable_map_pair
-    5. Express: blockAvg n - blockAvg n' = (1/n)∑_{i<n} Z_i - (1/n')∑_{i<n'} Z_i
-       Note: Z has mean 0 by construction, so blockAvg of Z equals blockAvg of f minus m
-    6. For large enough n, n', the blockAvg difference has small L² norm
-       - Use Cauchy criterion for Cesàro sums
-       - The variance of (1/n)∑ Z_i is O(1/n) by l2_contractability_bound
-       - So ‖blockAvg_n - blockAvg_n'‖₂ → 0 as n,n' → ∞
-    7. Choose N via Archimedean s.t. C_f/N < (ε.toReal)²
-    8. Get: ∫ (blockAvg n - blockAvg n')² ≤ C_f/N < ε²
-    9. Convert: eLpNorm_lt_of_integral_sq_lt gives eLpNorm < ε
-    -/
+    -- Step 5: Show uniform covariance via contractability
+    -- For i ≠ j, E[Z_i Z_j] = E[Z_0 Z_1]
+    have hZ_cov_uniform : ∀ i j, i ≠ j →
+        ∫ ω, Z i ω * Z j ω ∂μ = ∫ ω, Z 0 ω * Z 1 ω ∂μ := by
+      intro i j hij
+      sorry -- TODO: Use contractable_map_pair + symmetry argument from ContractableVsExchangeable.lean
+      -- Strategy: If i < j, use contractable_map_pair directly
+      --           If i > j, use contractable_map_pair on (j,i) + symmetry of multiplication
+
+    -- Step 6: Key observation - relate blockAvg of f to blockAvg of Z
+    -- blockAvg f X 0 n = (1/n)∑ f(X_i) = (1/n)∑ (Z_i + m) = (1/n)∑ Z_i + m
+    -- So: blockAvg f X 0 n - blockAvg f X 0 n' = (1/n)∑_{i<n} Z_i - (1/n')∑_{i<n'} Z_i
+
+    -- Step 7: Apply l2_contractability_bound to get Cauchy property
+    -- The key is that Z has uniform variance and covariance structure
+    -- So we can bound ∫ (blockAvg_n - blockAvg_n')²
+
+    -- For ε > 0, we need to find N such that for all n, n' ≥ N:
+    -- eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ < ε
+
+    -- Step 7a: Define variance and correlation parameters
+    let σSq := ∫ ω, (Z 0 ω)^2 ∂μ  -- Variance of Z_0 (mean is 0)
+    let covZ := ∫ ω, Z 0 ω * Z 1 ω ∂μ  -- Covariance of (Z_0, Z_1)
+
+    -- Step 7b: Assume σ² > 0 (non-degenerate case)
+    -- If σ² = 0, then Z is constant a.e. and convergence is trivial
+    by_cases hσ_pos : σSq > 0
+    · -- Non-degenerate case: σ² > 0
+      let ρ := covZ / σSq  -- Correlation coefficient
+
+      -- Bound |ρ| ≤ 1 (from Cauchy-Schwarz)
+      have hρ_bd : -1 ≤ ρ ∧ ρ ≤ 1 := by
+        sorry  -- TODO: Derive from Cauchy-Schwarz inequality
+
+      -- Define the constant from the L² bound
+      let Cf := 2 * σSq * (1 - ρ)
+
+      -- Cf is positive (since 1 - ρ ≥ 0 when ρ ≤ 1)
+      have hCf_pos : Cf > 0 := by
+        sorry  -- TODO: Show from σ² > 0 and ρ ≤ 1
+
+      -- Step 7c: Choose N via Archimedean property
+      -- We want Cf / N < (ε.toReal)²
+      -- Equivalently: N > Cf / (ε.toReal)²
+      obtain ⟨N, hN⟩ : ∃ N : ℕ, N > 0 ∧ Cf / N < (ε.toReal) ^ 2 := by
+        sorry  -- TODO: Use Archimedean property of ℝ
+        -- Strategy: Since ε > 0, we have (ε.toReal)² > 0
+        --           Choose N > Cf / (ε.toReal)² via Archimedean property
+
+      use N
+      intros n n' hn_ge hn'_ge
+
+      -- Step 7d: Apply l2_contractability_bound
+      -- Need to work with finite prefixes to match the signature
+      let m := max n n'
+      let ξ : Fin m → Ω → ℝ := fun i ω => Z i ω
+
+      -- Express block averages using CesaroHelpers.cesaroCoeff
+      sorry  -- TODO: Complete the application
+      /-
+      Remaining substeps:
+      7d1. Express blockAvg 0 n = ∑_{i<m} (cesaroCoeff 0 n i) * ξ i
+      7d2. Express blockAvg 0 n' = ∑_{i<m} (cesaroCoeff 0 n' i) * ξ i
+      7d3. Show cesaroCoeff 0 n and cesaroCoeff 0 n' are probability distributions
+           (they sum to 1 and are nonnegative)
+      7d4. Apply l2_contractability_bound to get:
+           ∫ (blockAvg_n - blockAvg_n')² ≤ 2·σ²·(1-ρ)·sup|cesaroCoeff n i - cesaroCoeff n' i|
+      7d5. Apply cesaroCoeff_sup_le: sup|cesaroCoeff n i - cesaroCoeff n' i| ≤ max(1/n, 1/n')
+      7d6. Since n, n' ≥ N, we have max(1/n, 1/n') ≤ 1/N
+      7d7. Get: ∫ (blockAvg_n - blockAvg_n')² ≤ Cf/N < (ε.toReal)²
+      7d8. Apply eLpNorm_lt_of_integral_sq_lt: eLpNorm (blockAvg_n - blockAvg_n') 2 < ε
+      -/
+    · -- Degenerate case: σ² = 0, so Z is constant a.e.
+      -- In this case, blockAvg converges trivially to the constant
+      sorry  -- TODO: Handle degenerate case
 
   -- Step 2: Extract L² limit using completeness of Hilbert space
   -- Lp(2, μ) is complete (Hilbert space), so Cauchy sequence converges
