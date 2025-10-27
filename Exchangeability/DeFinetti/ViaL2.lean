@@ -1777,7 +1777,12 @@ lemma kallenberg_L2_bound
           _ = (∫ ω, (Z 0 ω - m) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 0 ω - m) ^ 2 ∂μ) ^ (1/2 : ℝ) := by
                 -- Use equal distributions: Z 1 has same variance as Z 0
                 congr 1
-                sorry -- TODO: Prove variances equal via contractability
+                -- Use contractability: Z 1 has same distribution as Z 0
+                have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+                  (X := Z) hZ_contract hZ_meas (i := 1)
+                rw [← Exchangeability.Probability.IntegrationHelpers.integral_pushforward_sq_diff (hZ_meas 1) m,
+                    h_dist,
+                    Exchangeability.Probability.IntegrationHelpers.integral_pushforward_sq_diff (hZ_meas 0) m]
           _ = ∫ ω, (Z 0 ω - m) ^ 2 ∂μ := by
                 have h_nonneg : 0 ≤ ∫ ω, (Z 0 ω - m) ^ 2 ∂μ := integral_nonneg (fun ω => by positivity)
                 rw [← Real.sqrt_eq_rpow]
