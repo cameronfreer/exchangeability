@@ -448,6 +448,24 @@ theorem condExp_project_of_condIndepFun
       --
       -- The conditional independence insight is entirely in condIndep_indicator above ✅
       --
+      -- **TECHNICAL OBSTACLES ENCOUNTERED IN IMPLEMENTATION ATTEMPTS:**
+      -- Multiple implementation attempts across sessions have encountered:
+      -- - Type mismatches between measurability σ-algebras (mΩ, mZ, mZW, mW)
+      -- - No direct mathlib lemma for "∀ i ∈ s, f i =ᵐ g i → ∑ f =ᵐ ∑ g"
+      -- - Finset.induction approaches hitting timeout (>200k heartbeats)
+      -- - Integrability proofs for indicator products requiring careful bounds
+      --
+      -- **IMPLEMENTATION PATH:** (for future completion)
+      -- Build 5-step calc chain:
+      --   step1: Apply condExp_finset_sum to distribute on LHS
+      --   step2: Factor each term using condIndep_indicator + condExp_smul (⚠ most complex)
+      --   step3: Algebraic factorization with Finset.sum_mul
+      --   step4: Apply condExp_finset_sum.symm on RHS
+      --   step5: Combine to complete equality
+      --
+      -- Step 2 is the bottleneck: requires combining ae equalities across Finset terms,
+      -- which needs either manual Finset.induction or finding the right combinator lemma.
+      --
       sorry
 
     -- ** STAGE 3: General Integrable Functions **
