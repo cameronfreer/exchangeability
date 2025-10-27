@@ -2069,9 +2069,16 @@ lemma kallenberg_L2_bound
           -- Supremum reindexing via enum: ⨆ k : Fin n, |p' k - q' k| = s.sup' hs fun i => |p i - q i|
           congr 1
           simp only [p', q']
-          sorry -- TODO: Prove supremum reindexing using enum bijection
-          -- Strategy: Show that sup over Fin n via (enum k).val equals sup over s
-          -- Can use Finset.sup'_image and the fact that enum is a bijection
+          -- TODO: Prove supremum reindexing using enum bijection
+          -- Strategy:
+          -- 1. Convert iSup to Finset.sup' using: iSup (fun k => f k) = Finset.univ.sup' _ f
+          -- 2. Show: Finset.univ.sup' _ (fun k => |p (enum k).val - q (enum k).val|) =
+          --          s.sup' hs (fun i => |p i - q i|)
+          -- 3. Use le_antisymm:
+          --    - Forward: For each k ∈ Finset.univ, have (enum k).val ∈ s, so can apply Finset.le_sup'
+          --    - Backward: For each i ∈ s, use surjectivity of enum to get k with (enum k).val = i
+          -- 4. Similar structure to sum reindexing proofs above
+          sorry
 
 /-- **Cesàro averages converge in L² to a tail-measurable limit.**
 
