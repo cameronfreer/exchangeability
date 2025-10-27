@@ -2511,9 +2511,70 @@ lemma cesaro_to_condexp_L2
     have hZ_cov_uniform : ∀ i j, i ≠ j →
         ∫ ω, Z i ω * Z j ω ∂μ = ∫ ω, Z 0 ω * Z 1 ω ∂μ := by
       intro i j hij
-      sorry -- TODO: Use contractable_map_pair + symmetry argument from ContractableVsExchangeable.lean
       -- Strategy: If i < j, use contractable_map_pair directly
       --           If i > j, use contractable_map_pair on (j,i) + symmetry of multiplication
+      by_cases h_lt : i < j
+      · -- Case i < j: use contractable_map_pair directly
+        have h_map_eq : Measure.map (fun ω => (Z i ω, Z j ω)) μ =
+            Measure.map (fun ω => (Z 0 ω, Z 1 ω)) μ :=
+          L2Helpers.contractable_map_pair (X := Z) hZ_contract hZ_meas h_lt
+
+        -- The function (x, y) ↦ x * y is continuous, hence measurable
+        have h_mul_meas : Measurable (fun p : ℝ × ℝ => p.1 * p.2) :=
+          (continuous_fst.mul continuous_snd).measurable
+
+        -- Z i and Z j are measurable
+        have hZi_meas : AEMeasurable (Z i) μ := (hZ_meas i).aemeasurable
+        have hZj_meas : AEMeasurable (Z j) μ := (hZ_meas j).aemeasurable
+        have hZ0_meas : AEMeasurable (Z 0) μ := (hZ_meas 0).aemeasurable
+        have hZ1_meas : AEMeasurable (Z 1) μ := (hZ_meas 1).aemeasurable
+
+        -- Product measurability
+        have h_prod_ij : AEMeasurable (fun ω => (Z i ω, Z j ω)) μ :=
+          hZi_meas.prod_mk hZj_meas
+        have h_prod_01 : AEMeasurable (fun ω => (Z 0 ω, Z 1 ω)) μ :=
+          hZ0_meas.prod_mk hZ1_meas
+
+        -- Apply integral_map
+        rw [← integral_map h_prod_ij h_mul_meas.aestronglyMeasurable]
+        rw [← integral_map h_prod_01 h_mul_meas.aestronglyMeasurable]
+        rw [h_map_eq]
+
+      · -- Case i > j: use contractable_map_pair on (j,i) + symmetry
+        have hji : j < i := Nat.lt_of_le_of_ne (Nat.le_of_not_lt h_lt) (hij.symm)
+
+        -- Symmetry of multiplication: Z i * Z j = Z j * Z i
+        have h_sym_ij : ∫ ω, Z i ω * Z j ω ∂μ = ∫ ω, Z j ω * Z i ω ∂μ := by
+          congr 1
+          ext ω
+          ring
+
+        -- Now use contractable_map_pair on (j, i)
+        have h_map_eq : Measure.map (fun ω => (Z j ω, Z i ω)) μ =
+            Measure.map (fun ω => (Z 0 ω, Z 1 ω)) μ :=
+          L2Helpers.contractable_map_pair (X := Z) hZ_contract hZ_meas hji
+
+        -- The function (x, y) ↦ x * y is continuous, hence measurable
+        have h_mul_meas : Measurable (fun p : ℝ × ℝ => p.1 * p.2) :=
+          (continuous_fst.mul continuous_snd).measurable
+
+        -- Measurability
+        have hZi_meas : AEMeasurable (Z i) μ := (hZ_meas i).aemeasurable
+        have hZj_meas : AEMeasurable (Z j) μ := (hZ_meas j).aemeasurable
+        have hZ0_meas : AEMeasurable (Z 0) μ := (hZ_meas 0).aemeasurable
+        have hZ1_meas : AEMeasurable (Z 1) μ := (hZ_meas 1).aemeasurable
+
+        -- Product measurability
+        have h_prod_ji : AEMeasurable (fun ω => (Z j ω, Z i ω)) μ :=
+          hZj_meas.prod_mk hZi_meas
+        have h_prod_01 : AEMeasurable (fun ω => (Z 0 ω, Z 1 ω)) μ :=
+          hZ0_meas.prod_mk hZ1_meas
+
+        -- Apply integral_map and symmetry
+        rw [h_sym_ij]
+        rw [← integral_map h_prod_ji h_mul_meas.aestronglyMeasurable]
+        rw [← integral_map h_prod_01 h_mul_meas.aestronglyMeasurable]
+        rw [h_map_eq]
 
     -- Step 6: Key observation - relate blockAvg of f to blockAvg of Z
     -- blockAvg f X 0 n = (1/n)∑ f(X_i) = (1/n)∑ (Z_i + m) = (1/n)∑ Z_i + m
