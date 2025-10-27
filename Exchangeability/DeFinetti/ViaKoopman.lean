@@ -3718,9 +3718,11 @@ private lemma EventuallyEq.comp_measurePreserving {f g : Ω[α] → ℝ}
     (f ∘ shift) =ᵐ[μ] (g ∘ shift) := by
   -- The set where f ≠ g has μ-measure zero
   -- The preimage of this set under shift also has measure zero since shift preserves μ
-  have : {ω | f (shift ω) ≠ g (shift ω)} = shift ⁻¹' {ω | f ω ≠ g ω} := by
-    ext ω; simp [Set.mem_preimage]
-  rw [EventuallyEq, this]
+  have : {ω | (f ∘ shift) ω ≠ (g ∘ shift) ω} = shift ⁻¹' {ω | f ω ≠ g ω} := by
+    ext ω
+    simp only [Set.mem_setOf, Set.mem_preimage, Function.comp_apply]
+  rw [Filter.EventuallyEq, Filter.eventually_iff] at hfg ⊢
+  rw [this]
   exact hT.ae_map_le hfg
 
 /-- Iterate of a measure-preserving map is measure-preserving.
@@ -3738,18 +3740,18 @@ private lemma MeasurePreserving.iterate (hT : MeasurePreserving shift μ μ) (k 
 /-- General evaluation formula for shift iteration. -/
 private lemma iterate_shift_eval (k n : ℕ) (ω : Ω[α]) :
     (shift^[k] ω) n = ω (k + n) := by
-  induction k with
+  induction k generalizing n with
   | zero => simp
   | succ k ih =>
       rw [Function.iterate_succ']
       simp only [shift_apply, Function.comp_apply]
       rw [ih]
-      ring_nf
+      rw [Nat.succ_add]
 
 /-- Evaluate the k-th shift at 0: shift^[k] ω 0 = ω k. -/
 private lemma iterate_shift_eval0 (k : ℕ) (ω : Ω[α]) :
     (shift^[k] ω) 0 = ω k := by
-  convert iterate_shift_eval k 0 ω
+  rw [iterate_shift_eval]
   simp
 
 /-- **Option B bounded case implementation**: L¹ convergence for bounded functions.
@@ -3830,9 +3832,9 @@ private theorem optionB_L1_convergence_bounded
           have hpull : (fun ω => (fL2 : Ω[α] → ℝ) (shift^[k'] (shift ω))) =ᵐ[μ]
               (fun ω => (fL2 : Ω[α] → ℝ) (shift^[k'+1] ω)) := by
             apply ae_of_all; intro ω
-            simp [Function.iterate_succ_apply']
+            rw [Function.iterate_succ']
+            rfl
           have hcomp := EventuallyEq.comp_measurePreserving hσ ih
-          simp only [Function.comp] at hcomp
           exact hstep.trans (hcomp.trans hpull)
 
     -- Pass 2: fL2 ∘ shift^k equals g(· k)
@@ -3848,8 +3850,10 @@ private theorem optionB_L1_convergence_bounded
         -- This follows from the same logic as comp_measurePreserving
         have : {ω | (fL2 : Ω[α] → ℝ) (shift^[k] ω) ≠ G (shift^[k] ω)} =
                (shift^[k]) ⁻¹' {ω | (fL2 : Ω[α] → ℝ) ω ≠ G ω} := by
-          ext ω; simp [Set.mem_preimage]
-        rw [EventuallyEq, this]
+          ext ω
+          simp only [Set.mem_setOf, Set.mem_preimage]
+        rw [Filter.EventuallyEq, Filter.eventually_iff] at hfL2_eq ⊢
+        rw [this]
         exact hk_pres.ae_map_le hfL2_eq
       -- Now use iterate_shift_eval0: shift^[k] ω 0 = ω k
       have heval : (fun ω => G (shift^[k] ω)) =ᵐ[μ] (fun ω => g (ω k)) := by
