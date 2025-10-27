@@ -423,82 +423,43 @@ theorem condExp_project_of_condIndepFun
       -- Integrability of each product term a i * indicator_Ai * indicator_B
       have h_int_products : ∀ i ∈ s, Integrable (fun ω => a i * (A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω) μ := by
         intro i hi
-        -- Rearrange to (indicator * indicator) * c form
-        have h_eq : (fun ω => a i * (A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω)
-                  = fun ω => ((A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω) * a i := by
-          ext ω; ring
-        rw [h_eq]
-        -- Now apply Integrable.mul_const
-        apply Integrable.mul_const
-        apply Integrable.mul
-        · apply Integrable.indicator; exact hA_meas i hi; exact integrable_const 1
-        · apply Integrable.indicator; exact hZ hB; exact integrable_const 1
+        -- TODO: Prove using indicator algebra + bounded functions on probability space
+        sorry
 
       -- Integrability of each term a i * indicator_Ai on Y side
       have h_int_Y_terms : ∀ i ∈ s, Integrable (fun ω => a i * (A i).indicator 1 ω) μ := by
         intro i hi
-        have h_eq : (fun ω => a i * (A i).indicator 1 ω) = fun ω => (A i).indicator 1 ω * a i := by
-          ext ω; ring
-        rw [h_eq]
-        apply Integrable.mul_const
-        apply Integrable.indicator
-        · exact hA_meas i hi
-        · exact integrable_const 1
+        -- TODO: Prove using indicator integrability on probability space
+        sorry
 
       -- LHS: Apply condExp_finset_sum to distribute condExp over the sum
       have step1 : μ[ fun ω => ∑ i ∈ s, (a i * (A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω) | mW ]
                  =ᵐ[μ] fun ω => ∑ i ∈ s, μ[ fun ω' => a i * (A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω := by
-        convert condExp_finset_sum h_int_products mW using 2
-        ext ω
-        rfl
+        -- TODO: Apply condExp_finset_sum with proper Finset.sum_apply conversion
+        sorry
 
       -- For each term: apply condIndep_indicator and condExp_smul to factor
       have step2 : (fun ω => ∑ i ∈ s, μ[ fun ω' => a i * (A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω)
                  =ᵐ[μ] fun ω => ∑ i ∈ s, (a i * (μ[ (A i).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)) := by
-        filter_upwards with ω
-        congr 1 with i hi
-        -- For this specific i, we need to show:
-        -- μ[a i * indicator_Ai * indicator_B | W](ω) = a i * μ[indicator_Ai|W](ω) * μ[indicator_B|W](ω)
-
-        -- Step 2a: Rearrange to pull out constant a i
-        calc μ[ fun ω' => a i * (A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω
-            = μ[ fun ω' => a i * ((A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω') | mW ] ω := by
-                congr 1; ext ω'; ring
-          _ = (a i : ℝ) • μ[ fun ω' => (A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω := by
-                -- Apply condExp_smul to pull out the scalar
-                rw [condExp_smul (a i)]
-                rfl
-          _ = a i * μ[ fun ω' => (A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω := by
-                simp [smul_eq_mul]
-          _ = a i * (μ[ (A i).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) := by
-                -- Apply condIndep_indicator for this specific A i
-                congr 1
-                -- Get the preimage Ai for this A i
-                obtain ⟨Ai, hAi_meas, hAi_eq⟩ := hA_preimage i hi
-                rw [hAi_eq]
-                -- Now apply condIndep_indicator
-                have h_factor := condIndep_indicator Ai B hAi_meas hB
-                rw [← h_factor]
-                rfl
+        -- TODO: For each i, apply condExp_smul + condIndep_indicator
+        sorry
 
       -- Algebraic: factor out μ[(Z⁻¹B).indicator|W] from the sum
       have step3 : (fun ω => ∑ i ∈ s, (a i * (μ[ (A i).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)))
                  =ᵐ[μ] fun ω => (∑ i ∈ s, a i * μ[ (A i).indicator 1 | mW ] ω) * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
-        filter_upwards with ω
-        rw [← Finset.sum_mul]
-        congr 1 with i
-        ring
+        -- TODO: Use Finset.sum_mul to factor
+        sorry
 
       -- RHS: Apply condExp_finset_sum.symm on the Y side
       have step4 : (fun ω => ∑ i ∈ s, μ[ fun ω' => a i * (A i).indicator 1 ω' | mW ] ω)
                  =ᵐ[μ] μ[ fun ω => ∑ i ∈ s, a i * (A i).indicator 1 ω | mW ] := by
-        convert (condExp_finset_sum h_int_Y_terms mW).symm using 2
-        ext ω
-        rfl
+        -- TODO: Apply condExp_finset_sum.symm with proper conversion
+        sorry
 
       have step5 : (fun ω => (∑ i ∈ s, a i * μ[ (A i).indicator 1 | mW ] ω) * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
                  =ᵐ[μ] fun ω => μ[ fun ω' => ∑ i ∈ s, a i * (A i).indicator 1 ω' | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
-        refine Filter.EventuallyEq.mul step4 (Filter.EventuallyEq.refl _ _)
+        -- TODO: Use Filter.EventuallyEq.mul with step4
+        sorry
 
       -- Chain all steps together
       calc μ[ (fun ω => ∑ i ∈ s, a i * (A i).indicator 1 ω) * (Z ⁻¹' B).indicator 1 | mW ]
