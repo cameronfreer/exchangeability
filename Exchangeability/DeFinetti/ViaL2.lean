@@ -12,13 +12,20 @@ import Exchangeability.Tail.TailSigma
 import Exchangeability.Tail.ShiftInvariance
 import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
+import Mathlib.MeasureTheory.Function.LpSpace.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.MeasureTheory.Function.ConvergenceInMeasure
 import Mathlib.MeasureTheory.Function.AEEqFun
 import Mathlib.MeasureTheory.MeasurableSpace.MeasurablyGenerated
 import Mathlib.MeasureTheory.PiSystem
 import Mathlib.MeasureTheory.Constructions.BorelSpace.Order
+import Mathlib.MeasureTheory.Measure.Stieltjes
+import Mathlib.Analysis.InnerProductSpace.MeanErgodic
 import Mathlib.Probability.Kernel.Basic
+import Mathlib.Probability.Kernel.Condexp
+import Mathlib.Probability.Kernel.Disintegration.CondCDF
+import Mathlib.Probability.CDF
+import Mathlib.Algebra.Order.Group.MinMax
 import Canonical
 
 /-!
@@ -1556,21 +1563,9 @@ theorem subseq_ae_of_L1
   ∃ (φ : ℕ → ℕ), StrictMono φ ∧
     ∀ᵐ ω ∂μ, Tendsto (fun k => alpha (φ k) ω) atTop (𝓝 (alpha_inf ω)) := by
   -- Step 1: Convert L¹ convergence to convergence in eLpNorm
+  -- Use the fact that for integrable functions, eLpNorm 1 = ofReal (∫ |·|)
+  -- Then transfer convergence via continuous_ofReal
   have h_eLpNorm_tendsto : Tendsto (fun n => eLpNorm (alpha n - alpha_inf) 1 μ) atTop (𝓝 0) := by
-    -- TODO: Complete the connection between L¹ integral and eLpNorm
-    --
-    -- Strategy:
-    -- 1. Convert hypothesis to: Tendsto (fun n => ∫ |alpha n - alpha_inf|) atTop (𝓝 0) ✓ (below)
-    -- 2. Show alpha n - alpha_inf is eventually integrable (from bounded integral on prob space)
-    -- 3. Use: eLpNorm f 1 μ = ENNReal.ofReal (∫ |f|) for integrable real f
-    --    (follows from eLpNorm_one_eq_lintegral_enorm + ofReal_integral_norm_eq_lintegral_enorm)
-    -- 4. Apply ENNReal.continuous_ofReal to transfer convergence
-    --
-    -- Key lemmas needed:
-    -- - integral_norm_eq_lintegral_enorm: ∫ ‖f‖ = (∫⁻ ‖f‖ₑ).toReal
-    -- - ofReal_integral_norm_eq_lintegral_enorm: ENNReal.ofReal (∫ ‖f‖) = ∫⁻ ‖f‖ₑ (when Integrable)
-    -- - eLpNorm_one_eq_lintegral_enorm: eLpNorm f 1 μ = ∫⁻ ‖f‖ₑ
-
     -- First show the Bochner integral tends to 0
     have h_integral_tendsto : Tendsto (fun n => ∫ ω, |alpha n ω - alpha_inf ω| ∂μ) atTop (𝓝 0) := by
       rw [Metric.tendsto_atTop]
@@ -1582,75 +1577,20 @@ theorem subseq_ae_of_L1
       · exact hN n hn
       · exact integral_nonneg (fun ω => abs_nonneg _)
 
-    -- Now show: eLpNorm (alpha n - alpha_inf) 1 μ → 0
-    --
-    -- Proof strategy:
-    -- We have ∫ |alpha n - alpha_inf| → 0 from h_integral_tendsto
-    -- We need to show eLpNorm (alpha n - alpha_inf) 1 μ → 0
-    --
-    -- Key insight: For integrable f, eLpNorm_one_eq_integral_abs gives:
-    --   eLpNorm f 1 μ = ENNReal.ofReal (∫ ω, |f ω| ∂μ)
-    --
-    -- So we need to show the functions are integrable, then apply continuous_ofReal
-
-    -- Step 1: Establish integrability for all n
-    -- On a probability space, if ∫|f| is bounded, then f is integrable
+    -- Establish integrability: measurable + bounded integral on finite measure => integrable
+    -- This follows from the fact that alpha n and alpha_inf come from L² functions
     have h_integrable : ∀ n, Integrable (fun ω => alpha n ω - alpha_inf ω) μ := by
       intro n
-      -- Since ∫ |alpha n - alpha_inf| → 0, the integrals are bounded
-      -- This means the functions are integrable
-      --
-      -- Technical proof: From h_L1_conv, for ε=1, ∃N such that ∫|alpha n - alpha_inf| < 1 for n≥N
-      -- For n<N, we need individual integrability proofs (details depend on how alpha is constructed)
-      --
-      -- The key insight: measurable + finite integral => integrable (by definition of Integrable)
-      -- Since convergent sequences are bounded, all the integrals are finite
-      --
-      -- TODO: Complete using proper bounds on alpha n, alpha_inf from construction
-      -- For now, accept this technical lemma
-      sorry
+      sorry  -- TODO: Need to track back to where alpha comes from (it's from L² functions)
 
-    -- Step 2: Apply eLpNorm_one_eq_integral_abs and transfer convergence
-    -- Given: ∫ |alpha n - alpha_inf| → 0
-    -- Show: eLpNorm (alpha n - alpha_inf) 1 μ → 0
-    -- Use: for ε > 0, eventually eLpNorm < ε
-    rw [ENNReal.tendsto_atTop_zero]
-    intro ε hε
-    -- Get δ such that ENNReal.ofReal δ = ε (or close enough)
-    -- Since ε > 0 in ENNReal, we can find a positive real δ
-    have ⟨δ, hδ_pos, hδ_le⟩ : ∃ δ > 0, ENNReal.ofReal δ ≤ ε := by
-      by_cases h_top : ε = ⊤
-      · -- When ε = ⊤, any finite value works
-        use 1
-        constructor
-        · norm_num
-        · rw [h_top]
-          exact le_top
-      · -- When ε ≠ ⊤, we can use ε.toReal
-        have : ε ≠ 0 := hε.ne'
-        use ε.toReal
-        constructor
-        · exact ENNReal.toReal_pos this h_top
-        · rw [ENNReal.ofReal_toReal h_top]
-    -- Now get N such that ∫ |alpha n - alpha_inf| < δ for n ≥ N
-    rw [Metric.tendsto_atTop] at h_integral_tendsto
-    obtain ⟨N, hN⟩ := h_integral_tendsto δ hδ_pos
-    use N
-    intro n hn
-    -- Show eLpNorm (alpha n - alpha_inf) 1 μ ≤ ε
-    -- We'll show it's ≤ ENNReal.ofReal δ ≤ ε
-    calc eLpNorm (fun ω => alpha n ω - alpha_inf ω) 1 μ
-        = ENNReal.ofReal (∫ ω, |alpha n ω - alpha_inf ω| ∂μ) :=
-          eLpNorm_one_eq_integral_abs (h_integrable n)
-      _ ≤ ENNReal.ofReal δ := by
-          apply ENNReal.ofReal_le_ofReal
-          -- We have dist (∫ |alpha n - alpha_inf|) 0 < δ
-          -- which means |∫ |alpha n - alpha_inf|| < δ
-          -- Since ∫ |alpha n - alpha_inf| ≥ 0, this means ∫ |alpha n - alpha_inf| < δ
-          have h_dist := hN n hn
-          rw [Real.dist_eq, sub_zero, abs_of_nonneg (integral_nonneg (fun ω => abs_nonneg _))] at h_dist
-          exact le_of_lt h_dist
-      _ ≤ ε := hδ_le
+    -- Now transfer convergence via eLpNorm_one_eq_integral_abs and continuity of ofReal
+    have : Tendsto (fun n => ENNReal.ofReal (∫ ω, |alpha n ω - alpha_inf ω| ∂μ)) atTop (𝓝 0) := by
+      rw [← ENNReal.ofReal_zero]
+      exact ENNReal.tendsto_ofReal h_integral_tendsto
+    have h_eq : ∀ n, eLpNorm (alpha n - alpha_inf) 1 μ = ENNReal.ofReal (∫ ω, |alpha n ω - alpha_inf ω| ∂μ) := by
+      intro n; exact eLpNorm_one_eq_integral_abs (h_integrable n)
+    simp only [h_eq]
+    exact this
 
   -- Step 2: eLpNorm convergence implies convergence in measure
   have h_tendstoInMeasure : TendstoInMeasure μ alpha atTop alpha_inf := by
@@ -4619,32 +4559,29 @@ lemma clip01_range (x : ℝ) : 0 ≤ clip01 x ∧ clip01 x ≤ 1 := by
 
 /-- `clip01` is 1-Lipschitz. -/
 lemma clip01_1Lipschitz : LipschitzWith 1 clip01 := by
-  -- Proof: clip01 x = max 0 (min 1 x) is 1-Lipschitz
-  -- Mathematical fact: Projection onto a convex set (here [0,1]) is non-expansive
-  -- i.e., |clip01 x - clip01 y| ≤ |x - y| for all x, y
-  --
-  -- This is a standard result in convex analysis. The proof requires exhaustive
-  -- case analysis on the 3×3 = 9 cases based on which region each of x,y falls into:
-  -- x ≤ 0, 0 < x < 1, or 1 ≤ x (and similarly for y)
-  --
-  -- Alternative approach: Use that min and max are both 1-Lipschitz, and compositions
-  -- of Lipschitz functions with constants L₁ and L₂ give Lipschitz constant L₁·L₂.
-  --
-  -- TODO: Either complete the case analysis or find/prove general lemma about
-  -- composition of Lipschitz functions with the same constant.
-  sorry
+  -- clip01 x = max 0 (min 1 x) = projIcc 0 1
+  -- Projection onto [0,1] is 1-Lipschitz by mathlib's LipschitzWith.projIcc
+  -- We compose: min 1 is 1-Lipschitz, then max 0 is 1-Lipschitz
+  exact (LipschitzWith.id.const_min 1).const_max 0
 
 /-- Pointwise contraction from the 1-Lipschitzness. -/
 lemma abs_clip01_sub_le (x y : ℝ) : |clip01 x - clip01 y| ≤ |x - y| := by
   simpa [Real.dist_eq] using (clip01_1Lipschitz.dist_le_mul x y)
 
 /-- **L¹-stability under 1-Lipschitz post-composition.**
-If `∫ |fₙ - f| → 0`, then `∫ |clip01 ∘ fₙ - clip01 ∘ f| → 0`. -/
-axiom l1_convergence_under_clip01
+If `∫ |fₙ - f| → 0`, then `∫ |clip01 ∘ fₙ - clip01 ∘ f| → 0`.
+
+This follows from mathlib's `LipschitzWith.norm_compLp_sub_le`: Since `clip01` is 1-Lipschitz
+and maps 0 to 0, we have `‖clip01 ∘ f - clip01 ∘ g‖₁ ≤ 1 * ‖f - g‖₁`. -/
+lemma l1_convergence_under_clip01
     {μ : Measure Ω} {fn : ℕ → Ω → ℝ} {f : Ω → ℝ}
     (h_meas : ∀ n, AEMeasurable (fn n) μ) (hf : AEMeasurable f μ)
     (h : Tendsto (fun n => ∫ ω, |fn n ω - f ω| ∂μ) atTop (𝓝 0)) :
-    Tendsto (fun n => ∫ ω, |clip01 (fn n ω) - clip01 (f ω)| ∂μ) atTop (𝓝 0)
+    Tendsto (fun n => ∫ ω, |clip01 (fn n ω) - clip01 (f ω)| ∂μ) atTop (𝓝 0) := by
+  -- The proof requires working with Lp spaces
+  -- Strategy: Convert L¹ integral convergence to Lp norm convergence, apply Lipschitz lemma, convert back
+  -- For now, this is a technical lemma about transferring between integral and Lp formulations
+  sorry
 
 /-! ### Axioms for the deep steps
 
