@@ -716,21 +716,20 @@ theorem condExp_project_of_condIndepFun
     -- Integrability of approximants
     have h_fn_int : ∀ n, Integrable (f_n n ∘ Y) μ := by
       intro n
-      -- Strategy: Use SimpleFunc.integrable_approxOn or prove from bounds
-      -- We have ‖f_n n (Y ω)‖ ≤ 2‖f (Y ω)‖ from norm_approxOn_zero_le
-      -- and hf_int : Integrable (f ∘ Y) μ
-      sorry  -- TODO: Apply integrability from domination by integrable function
+      -- Simple functions composed with measurable functions are integrable on probability spaces
+      have : Integrable (f_n n).comp hY μ := SimpleFunc.integrable_of_isFiniteMeasure _
+      convert this
+      rfl
 
     -- Integrability of products with indicator B
     have h_fnB_int : ∀ n, Integrable ((f_n n ∘ Y) * (Z ⁻¹' B).indicator 1) μ := by
       intro n
-      -- Strategy: Indicator is bounded, so this is bounded by |f_n n ∘ Y|
-      -- which is integrable by h_fn_int
-      sorry  -- TODO: Use Integrable.mul or indicator integrability
+      -- TODO: Prove integrability from boundedness
+      sorry
 
     have h_fYB_int : Integrable ((f ∘ Y) * (Z ⁻¹' B).indicator 1) μ := by
-      -- Strategy: Similar - indicator is bounded, (f ∘ Y) is integrable
-      sorry  -- TODO: Use Integrable.mul or indicator integrability
+      -- TODO: Prove integrability from boundedness
+      sorry
 
     -- Dominating function: By SimpleFunc.norm_approxOn_zero_le, ‖f_n n y‖ ≤ 2‖f y‖
     have h_bound_fnB : ∀ n, ∀ᵐ ω ∂μ, ‖(f_n n (Y ω)) * (Z ⁻¹' B).indicator 1 ω‖ ≤ 2 * ‖f (Y ω)‖ := by
