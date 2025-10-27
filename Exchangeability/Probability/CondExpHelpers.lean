@@ -20,6 +20,8 @@ the three key lemmas about conditional independence and factorization.
 ## Main results
 
 * `sigma_factor_le`: Pullback σ-algebra inequality for factorizations
+* `condExp_eq_of_setIntegral_eq`: Conditional expectation uniqueness via set integrals
+* `condExp_project_of_le`: Tower/projection property μ[μ[f|m']|m] = μ[f|m] for m ≤ m'
 
 ## Implementation notes
 
@@ -137,6 +139,62 @@ lemma condExp_eq_of_setIntegral_eq {α : Type*} (m m₀ : MeasurableSpace α) {�
 
   -- Lift equality from trimmed measure to original measure
   exact ae_eq_of_ae_eq_trim heq_trim
+
+/-- **Conditional expectation projection property.**
+
+If m ≤ m' are sub-σ-algebras, then projecting from m' down to m via conditional
+expectation is idempotent: μ[μ[f|m']|m] = μ[f|m] almost everywhere.
+
+**Mathematical content:** This is the "tower property" or "projection property" for
+conditional expectations. It says that conditioning twice (first on the finer σ-algebra m',
+then on the coarser σ-algebra m) gives the same result as conditioning once on m.
+
+**Intuition:** If you know less information (m ⊆ m'), then averaging over the additional
+information in m' brings you back to what you'd get by conditioning on m directly.
+
+**Application:** This is the key lemma for de Finetti's theorem Route 1, where we have
+σ(η) ≤ σ(ζ) and need to show that μ[μ[f|σ(ζ)]|σ(η)] = μ[f|σ(η)].
+
+**Proof strategy:** Use the uniqueness characterization (`condExp_eq_of_setIntegral_eq`):
+1. Define Yproj := μ[μ[f|m']|m], which is automatically m-measurable
+2. Show that for every m-measurable set S, ∫_S Yproj = ∫_S f via two-step projection:
+   - First: ∫_S Yproj = ∫_S μ[f|m'] (by CE property on m-sets)
+   - Second: ∫_S μ[f|m'] = ∫_S f (by CE property, using m ≤ m' so S is also m'-measurable)
+3. By uniqueness, Yproj = μ[f|m] a.e.
+-/
+lemma condExp_project_of_le {α : Type*} (m m' m₀ : MeasurableSpace α) {μ : Measure α}
+    (hm : m ≤ m₀) (hm' : m' ≤ m₀) (h_le : m ≤ m')
+    [SigmaFinite (Measure.trim μ hm)] [SigmaFinite (Measure.trim μ hm')]
+    {f : α → ℝ} (hf_int : Integrable f μ) :
+    μ[ μ[f | m'] | m ] =ᵐ[μ] μ[f | m] := by
+  -- Define the projected representative
+  set Yproj := μ[ μ[f | m'] | m ]
+
+  -- Show integrals match on m-measurable sets via two-step projection
+  have hYproj_integrals : ∀ s, MeasurableSet[m] s → μ s < ∞ →
+      ∫ x in s, Yproj x ∂μ = ∫ x in s, f x ∂μ := by
+    intro s hs hμs
+    -- First projection step: use CE property on m-sets
+    have step1 : ∫ x in s, Yproj x ∂μ = ∫ x in s, μ[f | m'] x ∂μ := by
+      have : SigmaFinite (μ.trim hm) := inferInstance
+      simpa [Yproj] using setIntegral_condExp hm integrable_condExp hs
+    -- Second step: s is also m'-measurable since m ≤ m'
+    calc
+      ∫ x in s, Yproj x ∂μ
+          = ∫ x in s, μ[f | m'] x ∂μ := step1
+      _   = ∫ x in s, f x ∂μ := by
+        have hs' : MeasurableSet[m'] s := h_le s hs
+        have : SigmaFinite (μ.trim hm') := inferInstance
+        simpa using setIntegral_condExp hm' hf_int hs'
+
+  -- Apply uniqueness
+  have hYproj : Yproj =ᵐ[μ] μ[f | m] := by
+    refine ae_eq_condExp_of_forall_setIntegral_eq hm hf_int ?integrableOn hYproj_integrals ?sm
+    · intro s hs hμs
+      exact integrable_condExp.integrableOn
+    · exact stronglyMeasurable_condExp.aestronglyMeasurable
+
+  exact hYproj
 
 end MeasureTheory
 

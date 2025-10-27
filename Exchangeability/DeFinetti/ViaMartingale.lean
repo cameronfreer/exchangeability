@@ -232,46 +232,13 @@ lemma condDistrib_factor_indicator_agree
     apply Integrable.comp_measurable _ hξ
     exact integrable_const (1 : ℝ) |>.indicator hB
 
-  -- Define the σ(η)-measurable representative
-  set Yeta :=
-    μ[ μ[f | MeasurableSpace.comap ζ inferInstance]
-     | MeasurableSpace.comap η inferInstance ]
-
-  -- Show integrals match on σ(η)-sets
-  have hYeta_integrals : ∀ (S : Set Ω), MeasurableSet[MeasurableSpace.comap η inferInstance] S → μ S ≠ ⊤ → ∫ x in S, Yeta x ∂μ = ∫ x in S, f x ∂μ := by
-    intro S hS hμS
-    -- First projection step
-    have : ∫ x in S, Yeta x ∂μ
-           = ∫ x in S, μ[f | MeasurableSpace.comap ζ inferInstance] x ∂μ := by
-      -- Conditional expectation property on σ(η)-sets
-      have : SigmaFinite (μ.trim hη_le) := inferInstance
-      simpa [Yeta] using
-        setIntegral_condExp hη_le integrable_condExp hS
-    -- Then use your integral-matching on σ(η)-sets via h_le : σ(η) ≤ σ(ζ)
-    calc
-      ∫ x in S, Yeta x ∂μ
-          = ∫ x in S, μ[f | MeasurableSpace.comap ζ inferInstance] x ∂μ := this
-      _   = ∫ x in S, f x ∂μ := by
-        have hSζ :
-          MeasurableSet[MeasurableSpace.comap ζ inferInstance] S := h_le S hS
-        have : SigmaFinite (μ.trim hζ_le) := inferInstance
-        simpa using setIntegral_condExp hζ_le hf_int hSζ
-  -- Uniqueness: Yeta is the CE of f onto σ(η)
-  have hYeta :
-    Yeta =ᵐ[μ] μ[f | MeasurableSpace.comap η inferInstance] := by
-    refine ae_eq_condExp_of_forall_setIntegral_eq
-             hη_le hf_int ?integrableOn ?matching ?sm
-    · -- Integrability on finite-measure σ(η)-sets
-      intro S hS hμS
-      exact integrable_condExp.integrableOn
-    · -- Matching integrals (convert ≠ ⊤ to < ⊤)
-      intro S hS hμS
-      exact hYeta_integrals S hS (lt_top_iff_ne_top.mp hμS)
-    · -- Strong measurability (since Yeta is a CE onto σ(η))
-      exact stronglyMeasurable_condExp.aestronglyMeasurable
-
-  -- This is exactly what Route 1 gives: μ[ μ[f|σ(ζ)] | σ(η) ] = μ[f|σ(η)]  (a.e.)
-  exact hYeta
+  -- Apply the tower/projection property: μ[μ[f|σ(ζ)]|σ(η)] = μ[f|σ(η)]
+  -- This is exactly what condExp_project_of_le provides!
+  exact condExp_project_of_le
+    (MeasurableSpace.comap η inferInstance)
+    (MeasurableSpace.comap ζ inferInstance)
+    inferInstance
+    hη_le hζ_le h_le hf_int
 
   -- ══════════════════════════════════════════════════════════════════════════════
   -- THREE ROUTES TO COMPLETE THIS PROOF
