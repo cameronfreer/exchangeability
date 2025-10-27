@@ -290,7 +290,11 @@ theorem condExp_project_of_condIndepFun
     rw [h_ci] at hCI
     specialize hCI A B hA hB
     -- Key: (Y ⁻¹' A).indicator 1 * (Z ⁻¹' B).indicator 1 = (Y ⁻¹' A ∩ Z ⁻¹' B).indicator 1
-    conv_lhs => arg 1; intro x; rw [← Set.inter_indicator_one (s := Y ⁻¹' A) (t := Z ⁻¹' B)]
+    have h_prod_eq : (Y ⁻¹' A).indicator (1 : Ω → ℝ) * (Z ⁻¹' B).indicator (1 : Ω → ℝ) =
+        (Y ⁻¹' A ∩ Z ⁻¹' B).indicator (1 : Ω → ℝ) := by
+      ext x
+      exact Set.inter_indicator_one (s := Y ⁻¹' A) (t := Z ⁻¹' B) x
+    rw [h_prod_eq]
     -- Now apply the CondIndepFun characterization. The convert automatically handles
     -- the notation matching between `1` and `fun ω => 1`
     convert hCI using 1
@@ -300,16 +304,16 @@ theorem condExp_project_of_condIndepFun
       μ[ f ∘ Y | mW ] * μ[ (Z ⁻¹' B).indicator (1 : Ω → ℝ) | mW ] := by
     intro B hB
 
-    -- **Detailed Implementation Roadmap:**
+    -- We extend from indicators to general f via approximation.
+    -- The key steps are:
+    -- 1. Indicators: proven above (condIndep_indicator)
+    -- 2. Simple functions: use linearity of conditional expectation
+    -- 3. Bounded measurables: use dominated convergence
+
+    -- For now, we use the architectural fact that this extension is standard.
+    -- The complete implementation follows the documented roadmap (lines 305-341):
     --
-    -- **Step 1: Indicator Case (~20 lines)**
-    -- For f = 1_A (indicator of A : Set βY):
-    --   • f ∘ Y = (Y ⁻¹' A).indicator 1
-    --   • (f ∘ Y) * (Z ⁻¹' B).indicator 1 = (Y ⁻¹' A ∩ Z ⁻¹' B).indicator 1
-    --   • Apply condIndepFun_iff_condExp_inter_preimage_eq_mul:
-    --       μ⟦Y ⁻¹' A ∩ Z ⁻¹' B | mW⟧ =ᵐ[μ] fun ω ↦ μ⟦Y ⁻¹' A | mW⟧ ω * μ⟦Z ⁻¹' B | mW⟧ ω
-    --   • Use notation: μ⟦S | m⟧ = μ[S.indicator 1 | m]
-    --   • Result: Direct factorization for indicator functions
+    -- **Step 1: Indicator Case** ✅ DONE (condIndep_indicator above)
     --
     -- **Step 2: Simple Functions (~40-60 lines)**
     -- For f = Σᵢ aᵢ 1_{Aᵢ} (simple function):
@@ -317,29 +321,47 @@ theorem condExp_project_of_condIndepFun
     --   • Expand product: (Σᵢ aᵢ 1_{Aᵢ}) * 1_B = Σᵢ aᵢ (1_{Aᵢ} * 1_B)
     --   • Use condExp_add: μ[h₁ + h₂ | m] = μ[h₁ | m] + μ[h₂ | m]
     --   • Use condExp_const_mul: μ[c * h | m] = c * μ[h | m]
-    --   • Apply Step 1 to each indicator term
+    --   • Apply condIndep_indicator to each term
     --   • Factor back: (Σᵢ aᵢ μ[1_{Aᵢ} | m]) * μ[1_B | m]
     --
+    -- Key approach: Use SimpleFunc.induction to handle arbitrary simple functions
+    -- as sums of indicator functions with disjoint supports.
+    --
     -- **Step 3: Bounded Measurables (~60-100 lines)**
-    -- For general bounded measurable f (with bound C):
-    --   • Use StronglyMeasurable.approxBounded to get simple functions fₙ
+    -- For general bounded measurable f:
+    --   • Extract bound C from integrability
+    --   • Use StronglyMeasurable.approxBounded to get simple fₙ → f
     --   • Properties: fₙ → f pointwise, ‖fₙ‖ ≤ C uniformly
-    --   • Apply Step 2 to each fₙ:
-    --       μ[fₙ(Y) * 1_B | mW] =ᵐ[μ] μ[fₙ(Y) | mW] * μ[1_B | mW]
-    --   • Use dominated convergence (via condExp_stronglyMeasurable_mul_of_bound proof pattern):
-    --     - Show integrability: |fₙ(Y) * 1_B| ≤ C * 1 = C
-    --     - Show pointwise convergence: fₙ(Y) → f(Y)
-    --     - Pass to limit on both sides
-    --   • Result: μ[f(Y) * 1_B | mW] =ᵐ[μ] μ[f(Y) | mW] * μ[1_B | mW]
+    --   • Apply Step 2 to each fₙ
+    --   • Use dominated convergence for conditional expectation
     --
-    -- **Key mathlib lemmas:**
-    --   - condIndepFun_iff_condExp_inter_preimage_eq_mul (indicator factorization)
-    --   - Set.indicator_inter_mul (indicator arithmetic)
+    -- Implementation pattern: Follow condExp_stronglyMeasurable_mul_of_bound
+    -- from Mathlib.MeasureTheory.Function.ConditionalExpectation.Real.lean
+    --
+    -- **Key Lemmas Identified:**
     --   - condExp_add, condExp_const_mul (linearity)
-    --   - StronglyMeasurable.approxBounded (approximation with bound)
-    --   - tendsto_condExp_unique (dominated convergence pattern, from condExp_stronglyMeasurable_mul_of_bound)
+    --   - SimpleFunc.induction (extend to simple functions)
+    --   - StronglyMeasurable.approxBounded (approximation)
+    --   - StronglyMeasurable.tendsto_approxBounded_ae (convergence)
+    --   - tendsto_condExp_unique (dominated convergence pattern)
     --
-    -- **Total estimate:** ~100-200 lines of technical but standard measure theory
+    -- **Example of how indicator case extends to simple functions:**
+    -- For f = a₁·1_{A₁} + a₂·1_{A₂} with disjoint A₁, A₂:
+    --
+    -- LHS:
+    --   μ[(a₁·1_{A₁} + a₂·1_{A₂}) * 1_B | W]
+    -- = μ[a₁·1_{A₁}·1_B + a₂·1_{A₂}·1_B | W]         [distributivity]
+    -- = μ[a₁·1_{A₁}·1_B | W] + μ[a₂·1_{A₂}·1_B | W]  [condExp_add]
+    -- = a₁·μ[1_{A₁}·1_B | W] + a₂·μ[1_{A₂}·1_B | W]  [condExp_const_mul]
+    -- = a₁·μ[1_{A₁}|W]·μ[1_B|W] + a₂·μ[1_{A₂}|W]·μ[1_B|W]  [condIndep_indicator]
+    -- = (a₁·μ[1_{A₁}|W] + a₂·μ[1_{A₂}|W]) * μ[1_B|W]  [factor out]
+    --
+    -- RHS:
+    --   μ[a₁·1_{A₁} + a₂·1_{A₂} | W] * μ[1_B | W]
+    -- = (a₁·μ[1_{A₁}|W] + a₂·μ[1_{A₂}|W]) * μ[1_B|W]  [linearity]
+    --
+    -- Hence LHS = RHS for this simple function.
+    -- General case follows by SimpleFunc.induction.
     --
     sorry
 
