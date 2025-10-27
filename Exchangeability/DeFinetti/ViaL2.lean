@@ -1603,19 +1603,122 @@ theorem subseq_ae_of_L1
   -- Step 3: Extract almost-everywhere convergent subsequence
   exact h_tendstoInMeasure.exists_seq_tendsto_ae
 
-/-- **AXIOM A1 (Reverse martingale / mean ergodic in L¹):**
-Cesàro averages of a bounded measurable function along an exchangeable
-(contractable) sequence converge in L¹ to the conditional expectation onto
-the tail σ-algebra. -/
-axiom cesaro_to_condexp_L1
-  {Ω : Type*} [MeasurableSpace Ω]
-  {μ : Measure Ω} [IsProbabilityMeasure μ]
-  {X : ℕ → Ω → ℝ} (hX_contract : Exchangeability.Contractable μ X)
-  (hX_meas : ∀ i, Measurable (X i))
-  (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1) :
-  ∀ ε > 0, ∃ (M : ℕ), ∀ (m : ℕ), m ≥ M →
-    ∫ ω, |(1 / (m : ℝ)) * ∑ i : Fin m, f (X i ω) -
-           (μ[(f ∘ X 0) | TailSigma.tailSigma X] ω)| ∂μ < ε
+/-! ## Kallenberg's L² Approach (Lemma 1.2 + Second Proof)
+
+This section implements Kallenberg's "second proof" of de Finetti's theorem using
+elementary L² bounds. The key is **Lemma 1.2**: for exchangeable sequences, weighted
+averages satisfy a simple variance bound that makes Cesàro averages Cauchy in L².
+
+**No ergodic theory is used** - only:
+1. Exchangeability → constant pairwise second moments
+2. Algebraic identity for variance of weighted sums
+3. Completeness of L²
+
+This is the lightest-dependency route to de Finetti.
+
+**References:**
+- Kallenberg (2005), *Probabilistic Symmetries*, Chapter 1, pp. 27-28
+  - Lemma 1.2 (L² bound for exchangeable weighted sums)
+  - "Second proof of Theorem 1.1" (the L² route to de Finetti)
+-/
+
+/-- **Block Cesàro average** of a function along a sequence.
+
+For a function `f : α → ℝ` and sequence `X : ℕ → Ω → α`, the block average
+starting at index `m` with length `n` is:
+
+  A_{m,n}(ω) := (1/n) ∑_{k=0}^{n-1} f(X_{m+k}(ω))
+
+This is the building block for Kallenberg's L² convergence proof. -/
+def blockAvg (f : α → ℝ) (X : ℕ → Ω → α) (m n : ℕ) (ω : Ω) : ℝ :=
+  (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (m + k) ω))
+
+/-- **Kallenberg's L² bound (Lemma 1.2)** - Core of the elementary proof.
+
+For an exchangeable sequence and centered variables Z_i := f(X_i) - E[f(X_1)],
+the L² distance between any two weighted averages satisfies:
+
+  ‖∑ p_i Z_i - ∑ q_i Z_i‖²_L² ≤ C_f · sup_i |p_i - q_i|
+
+where C_f := E[(Z_1 - Z_2)²].
+
+**Key application:** For uniform block averages of length n,
+  ‖A_{m,n} - A_{m',n}‖_L² ≤ √(C_f/n)
+
+making the family {A_{m,n}}_m Cauchy in L² as n→∞.
+
+**Proof:** Pure algebra + exchangeability:
+1. Expand ‖∑ c_i Z_i‖² = ∑ c_i² E[Z_i²] + ∑_{i≠j} c_i c_j E[Z_i Z_j]
+2. By exchangeability: E[Z_i²] = E[Z_1²], E[Z_i Z_j] = E[Z_1 Z_2] for i≠j
+3. For c_i = p_i - q_i (differences of probability weights): ∑ c_i = 0
+4. Algebraic bound: ∑ c_i² ≤ (∑|c_i|) · sup|c_i| ≤ 2 · sup|c_i|
+5. Substitute and simplify to get the bound
+
+This is **exactly** Kallenberg's Lemma 1.2. No ergodic theory needed! -/
+lemma kallenberg_L2_bound
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (Z : ℕ → Ω → ℝ) (hZ_exch : Exchangeable μ Z)
+    (p q : ℕ → ℝ) (s : Finset ℕ) (hs : s.Nonempty)
+    (hp_prob : (s.sum p = 1) ∧ (∀ i ∈ s, 0 ≤ p i))
+    (hq_prob : (s.sum q = 1) ∧ (∀ i ∈ s, 0 ≤ q i))
+    (hZ_L2 : ∀ i ∈ s, MemLp (Z i) 2 μ) :
+    ∫ ω, ((s.sum fun i => (p i - q i) * Z i ω) ^ 2) ∂μ
+      ≤ (∫ ω, (Z 0 ω - Z 1 ω)^2 ∂μ) * (s.sup' hs (fun i => |(p i - q i)|)) := by
+  -- TODO: Implement the algebraic proof from Kallenberg Lemma 1.2
+  -- This is pure second-moment computation + exchangeability
+  sorry
+
+/-- **Cesàro averages converge in L² to a tail-measurable limit.**
+
+This is the elementary L² route to de Finetti (Kallenberg's "second proof"):
+1. Kallenberg L² bound → Cesàro averages are Cauchy in L²
+2. Completeness of L² → limit α_f exists
+3. Block averages A_{N,n} are σ(X_{>N})-measurable → α_f is tail-measurable
+4. Tail measurability + L² limit → α_f = E[f(X_1) | tail σ-algebra]
+
+**No Mean Ergodic Theorem, no martingales** - just elementary L² space theory! -/
+lemma cesaro_to_condexp_L2
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {X : ℕ → Ω → ℝ} (hX_contract : Exchangeability.Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1) :
+    ∃ (α_f : Ω → ℝ), MemLp α_f 2 μ ∧
+      Measurable[TailSigma.tailSigma X] α_f ∧
+      Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0) ∧
+      α_f =ᵐ[μ] μ[(f ∘ X 0) | TailSigma.tailSigma X] := by
+  -- TODO: Implement Kallenberg's second proof
+  -- Step 1: Use kallenberg_L2_bound to show {A_{m,n}}_m is Cauchy
+  -- Step 2: Extract limit α_f in L² (completeness)
+  -- Step 3: Show α_f is tail-measurable (limits of σ(X_{>N})-measurable functions)
+  -- Step 4: Identify α_f = E[f(X_1)|tail] via tail-event integrals
+  sorry
+
+/-- **L¹ version via L² → L¹ conversion.**
+
+For bounded functions on probability spaces, L² convergence implies L¹ convergence
+(by Cauchy-Schwarz: ‖f‖₁ ≤ ‖f‖₂ · ‖1‖₂ = ‖f‖₂).
+
+This gives the L¹ convergence needed for the rest of the ViaL2 proof. -/
+lemma cesaro_to_condexp_L1
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {X : ℕ → Ω → ℝ} (hX_contract : Exchangeability.Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1) :
+    ∀ ε > 0, ∃ (M : ℕ), ∀ (m : ℕ), m ≥ M →
+      ∫ ω, |(1 / (m : ℝ)) * ∑ i : Fin m, f (X i ω) -
+             (μ[(f ∘ X 0) | TailSigma.tailSigma X] ω)| ∂μ < ε := by
+  -- Get L² convergence from cesaro_to_condexp_L2
+  obtain ⟨α_f, hα_L2, hα_tail, hα_conv, hα_eq⟩ := cesaro_to_condexp_L2 hX_contract hX_meas f hf_meas hf_bdd
+
+  intro ε hε
+
+  -- Convert L² convergence to L¹ convergence
+  -- On probability spaces: ‖f - g‖₁ ≤ ‖f - g‖₂ (by Cauchy-Schwarz with ‖1‖₂ = 1)
+  -- So L² → 0 implies L¹ → 0
+
+  -- TODO: Complete the L² → L¹ conversion
+  -- Use IntegrationHelpers.L2_tendsto_implies_L1_tendsto_of_bounded or similar
+  sorry
 
 /-- **THEOREM (Indicator integral continuity at fixed threshold):**
 If `Xₙ → X` a.e. and each `Xₙ`, `X` is measurable, then
