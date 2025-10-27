@@ -3965,7 +3965,7 @@ private lemma optionB_Step4b_AB_close
     intro n hn
     -- AE bound
     have h_bd_ae : ∀ᵐ ω ∂μ, |A n ω - B n ω| ≤ 2 * Cg / (n + 1) :=
-      Filter.eventually_of_forall (h_bd n hn)
+      eventually_of_forall (h_bd n hn)
     -- Both sides integrable (constant is integrable; the left is bounded by a constant on a prob space)
     have h_int_right : Integrable (fun _ => 2 * Cg / (n + 1)) μ := integrable_const _
     have h_int_left  : Integrable (fun ω => |A n ω - B n ω|) μ :=
@@ -3976,8 +3976,8 @@ private lemma optionB_Step4b_AB_close
 
   -- Done: squeeze to 0
   refine squeeze_zero
-    (Filter.eventually_of_forall (fun _ => integral_nonneg_of_ae (ae_of_all _ (fun _ => abs_nonneg _))))
-    (Filter.eventually_atTop.2 ⟨1, by intro n hn; exact h_upper n hn⟩)
+    (eventually_of_forall (fun _ => integral_nonneg_of_ae (ae_of_all _ (fun _ => abs_nonneg _))))
+    (eventually_atTop.2 ⟨1, by intro n hn; exact h_upper n hn⟩)
     (tendsto_const_div_atTop_nhds_zero_nat (2 * Cg))
 
 /-- **Step 4c helper**: Triangle inequality to combine convergences.
