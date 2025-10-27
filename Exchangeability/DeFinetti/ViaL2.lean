@@ -2433,9 +2433,14 @@ lemma cesaro_to_condexp_L2
       have h_eq := hfX_contract n k hk
 
       -- The subtraction by m is the same measurable transformation on both sides
-      -- map (v ↦ v - m) is the same function applied to equal measures
-      sorry  -- TODO: Use map_map to factor the constant subtraction
-      -- This is a straightforward application but requires careful type management
+      -- Strategy: Use Measure.map_map to factor the constant subtraction
+      sorry  -- TODO: Apply Measure.map_map
+      -- Define sub_m v i := v i - m
+      -- Show sub_m is measurable (measurable coordinate-wise subtraction)
+      -- Then: map (fun ω i => f(X(k i) ω) - m) μ
+      --     = map sub_m (map (fun ω i => f(X(k i) ω)) μ)  [by map_map]
+      --     = map sub_m (map (fun ω i => f(X i ω)) μ)      [by h_eq]
+      --     = map (fun ω i => f(X i ω) - m) μ              [by map_map]
 
     -- Step 3: Show uniform variance via contractability
     -- E[Z_i²] = E[Z_0²] for all i
