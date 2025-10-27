@@ -1688,11 +1688,22 @@ lemma kallenberg_L2_bound
   -- Step 5: Combine to get final bound
   -- E[(∑ c_i Z_i)²] ≤ C_f · sup|c_i| where C_f = E[(Z_0 - Z_1)²]
 
-  -- TODO: Complete the detailed calculation
-  -- This requires:
-  -- 1. integral_sum_sq expansion lemma
-  -- 2. Exchangeability second-moment identification
-  -- 3. Algebraic inequality for coefficients
+  -- TODO: Complete the detailed algebraic calculation
+  -- This is a sophisticated proof requiring:
+  -- 1. Expand ∫(∑ c_i Z_i)² using integral_finset_sum and related lemmas
+  -- 2. Apply Finset.sum_mul_sum to get: (∑ c_i Z_i)² = ∑_i ∑_j c_i c_j Z_i Z_j
+  -- 3. Use exchangeability to identify second moments:
+  --    - ∫ Z_i² = ∫ Z_0² for all i (exchangeability)
+  --    - ∫ Z_i Z_j = ∫ Z_0 Z_1 for all i≠j (exchangeability)
+  -- 4. Separate diagonal (i=j) and off-diagonal (i≠j) terms:
+  --    ∫(∑ c_i Z_i)² = (∑ c_i²)(∫ Z_0²) + (∑_{i≠j} c_i c_j)(∫ Z_0 Z_1)
+  -- 5. Use ∑ c_i = 0 to show: ∑_{i≠j} c_i c_j = (∑ c_i)² - ∑ c_i² = -∑ c_i²
+  -- 6. Combine: ∫(∑ c_i Z_i)² = (∑ c_i²)(∫ Z_0² - ∫ Z_0 Z_1)
+  --                           = (∑ c_i²) · ∫(Z_0 - Z_1)²/2  (after expanding)
+  -- 7. Bound ∑ c_i² ≤ sup|c_i| · ∑|c_i| ≤ sup|c_i| · 2  (triangle inequality on probabilities)
+  --
+  -- This matches Kallenberg's Lemma 1.2 exactly.
+  -- The proof is elementary but requires careful bookkeeping with Finset sums.
   sorry
 
 /-- **Cesàro averages converge in L² to a tail-measurable limit.**
@@ -1725,15 +1736,29 @@ lemma cesaro_to_condexp_L2
   have hCauchy : ∀ ε > 0, ∃ N, ∀ {n n'}, n ≥ N → n' ≥ N →
       eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ < ε := by
     intro ε hε
-    -- Use kallenberg_L2_bound to get C_f/√n bound
-    -- Choose N such that C_f/√N < ε
+    -- TODO: Apply kallenberg_L2_bound to show Cauchy property
+    -- Key steps:
+    -- 1. Express blockAvg difference as weighted sum: blockAvg f X 0 n - blockAvg f X 0 n' = ∑ c_i Z_i
+    --    where c_i are probability weights (1/n for i<n, -1/n' for i<n', etc.)
+    -- 2. Apply kallenberg_L2_bound to get: ‖blockAvg n - blockAvg n'‖²_L² ≤ C_f · sup|c_i|
+    -- 3. Bound sup|c_i| ≤ max(1/n, 1/n') ≤ 1/min(n,n') ≤ 1/N for n,n' ≥ N
+    -- 4. Choose N large enough so C_f/N < ε²
+    -- 5. Take square root to get eLpNorm (with p=2) bound
     sorry
 
   -- Step 2: Extract L² limit using completeness of Hilbert space
   -- Lp(2, μ) is complete (Hilbert space), so Cauchy sequence converges
   have ⟨α_f, hα_memLp, hα_limit⟩ : ∃ α_f, MemLp α_f 2 μ ∧
       Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0) := by
-    -- Use completeness of L²
+    -- TODO: Use completeness of L²(μ) to extract limit from Cauchy sequence
+    -- Key steps:
+    -- 1. L²(μ) is a Hilbert space (see MeasureTheory.Lp.instInnerProductSpace)
+    -- 2. Hilbert spaces are complete (all Cauchy sequences converge)
+    -- 3. From hCauchy, {blockAvg f X 0 n}_n is Cauchy in eLpNorm sense
+    -- 4. Apply completeness to get α_f : Lp 2 μ with ‖blockAvg n - α_f‖_L² → 0
+    -- 5. Extract the underlying function from the Lp equivalence class
+    --
+    -- Mathlib API: Look for MeasureTheory.Lp.completeSpace or similar
     sorry
 
   use α_f
@@ -1743,6 +1768,16 @@ lemma cesaro_to_condexp_L2
   -- For each N, A_{N,n} is σ(X_{>N})-measurable
   -- α_f = limit of A_{N,n} as n→∞, so α_f ∈ ⋂_N σ(X_{>N}) = tail σ-algebra
   · -- Tail measurability
+    -- TODO: Prove tail measurability via measurability of block averages
+    -- Key steps:
+    -- 1. For each N, blockAvg f X N n only depends on X_N, X_{N+1}, ..., X_{N+n-1}
+    -- 2. Therefore blockAvg f X N n is σ(X_{≥N})-measurable
+    -- 3. As N→∞, σ(X_{≥N}) ↓ tail σ-algebra
+    -- 4. Show α_f = lim_{n→∞} blockAvg f X 0 n is also = lim_{N→∞} lim_{n→∞} blockAvg f X N n
+    -- 5. Each blockAvg f X N n is σ(X_{≥N})-measurable
+    -- 6. Limit of σ(X_{≥N})-measurable functions is measurable w.r.t. ⋂_N σ(X_{≥N}) = tail
+    --
+    -- This requires diagonal argument and measure theory for limits of measurable functions
     sorry
 
   -- Step 4: Identify α_f = E[f(X_1)|tail] using tail-event integrals
@@ -1753,6 +1788,17 @@ lemma cesaro_to_condexp_L2
   --                 = E[α_f 1_A] (by L² convergence)
   -- Therefore α_f is the conditional expectation
   · -- Identification as conditional expectation
+    -- TODO: Use characterization of conditional expectation
+    -- Key steps:
+    -- 1. Need to show: ∀ A ∈ tail σ-algebra, ∫_A f∘X_0 = ∫_A α_f
+    -- 2. For tail event A, use exchangeability: ∫_A f∘X_j = ∫_A f∘X_0 for all j
+    -- 3. Average over first n indices: ∫_A (1/n ∑ f∘X_j) = ∫_A f∘X_0
+    -- 4. Take limit n→∞: LHS → ∫_A α_f (by L² convergence + dominated convergence)
+    -- 5. RHS stays ∫_A f∘X_0 (constant)
+    -- 6. Therefore ∫_A α_f = ∫_A f∘X_0 for all tail events A
+    -- 7. By uniqueness of conditional expectation, α_f =ᵐ E[f∘X_0 | tail]
+    --
+    -- This requires: setIntegral convergence lemmas, L²→L¹ on sets, condExp uniqueness
     sorry
 
 /-- **L¹ version via L² → L¹ conversion.**
@@ -1779,7 +1825,19 @@ lemma cesaro_to_condexp_L1
   -- So L² → 0 implies L¹ → 0
 
   -- TODO: Complete the L² → L¹ conversion
-  -- Use IntegrationHelpers.L2_tendsto_implies_L1_tendsto_of_bounded or similar
+  -- Key steps:
+  -- 1. From cesaro_to_condexp_L2, we have eLpNorm (blockAvg f X 0 n - α_f) 2 μ → 0
+  -- 2. Note that blockAvg f X 0 n = (1/n) ∑ i<n, f(X_i) is exactly what we want
+  -- 3. Need to convert eLpNorm convergence to integral of absolute value
+  -- 4. Use relationship: eLpNorm g 2 μ = (∫ |g|² dμ)^(1/2)
+  -- 5. Apply IntegrationHelpers.L2_tendsto_implies_L1_tendsto_of_bounded with:
+  --    - f n = blockAvg f X 0 n (these are bounded by |f| ≤ 1)
+  --    - g = α_f (the L² limit)
+  --    - hL2 : ∫ (blockAvg n - α_f)² → 0 (from hα_conv after unwrapping eLpNorm)
+  -- 6. This gives: ∫ |blockAvg n - α_f| → 0 which is exactly what we need
+  -- 7. Use α_f =ᵐ E[f∘X_0|tail] (from hα_eq) to replace α_f with the condExp
+  --
+  -- Main obstacle: Need to convert between eLpNorm formulation and plain integrals
   sorry
 
 /-- **THEOREM (Indicator integral continuity at fixed threshold):**
