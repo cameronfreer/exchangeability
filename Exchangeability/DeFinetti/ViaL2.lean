@@ -2505,19 +2505,36 @@ lemma cesaro_to_condexp_L2
 
       -- Cf is positive (since 1 - ρ ≥ 0 when ρ ≤ 1)
       have hCf_pos : Cf > 0 := by
-        sorry  -- TODO: 2 * σ² * (1 - ρ) > 0 from σ² > 0 and ρ ≤ 1
-        -- Strategy: Use mul_pos twice (2 > 0, σ² > 0 by hσ_pos, 1 - ρ > 0 by hρ_bd.2)
+        simp only [Cf]
+        -- Need: 2 * σSq * (1 - ρ) > 0
+        -- Strategy: Show each factor is positive
+        have h2_pos : (2 : ℝ) > 0 := by norm_num
+        -- For 1 - ρ > 0, need ρ < 1 (not just ρ ≤ 1)
+        -- If ρ = 1, would mean perfect correlation, handle separately
+        by_cases hρ_lt : ρ < 1
+        · -- Case ρ < 1: then 1 - ρ > 0
+          have h_one_sub_ρ : 1 - ρ > 0 := by linarith
+          calc 2 * σSq * (1 - ρ)
+              = (2 * σSq) * (1 - ρ) := by ring
+            _ > 0 := mul_pos (mul_pos h2_pos hσ_pos) h_one_sub_ρ
+        · -- Case ρ ≥ 1: But hρ_bd.2 says ρ ≤ 1, so ρ = 1
+          have hρ_eq : ρ = 1 := le_antisymm hρ_bd.2 (le_of_not_lt hρ_lt)
+          -- If ρ = 1, then covZ = σSq (perfect correlation)
+          -- This is a degenerate case that needs special handling
+          sorry -- TODO: Handle perfect correlation case
+          -- In practice, this may not occur for contractable sequences
 
       -- Step 7c: Choose N via Archimedean property
       -- We want Cf / N < (ε.toReal)²
       -- Equivalently: N > Cf / (ε.toReal)²
       obtain ⟨N, hN⟩ : ∃ N : ℕ, N > 0 ∧ Cf / N < (ε.toReal) ^ 2 := by
-        sorry  -- TODO: Use exists_nat_gt and Archimedean property
+        sorry -- TODO: Use Archimedean property
         -- Strategy:
-        -- 1. Show (ε.toReal)² > 0 using ENNReal.toReal_pos
-        -- 2. Use exists_nat_gt to find N' > Cf / (ε.toReal)²
-        -- 3. Take N = max N' 1 to ensure N > 0
-        -- 4. Show Cf/N ≤ Cf/N' < (ε.toReal)² by monotonicity of division
+        -- 1. Show ε.toReal ^ 2 > 0 from ε > 0
+        -- 2. Use exists_nat_gt to find N' : ℕ with ↑N' > Cf / (ε.toReal)²
+        -- 3. This gives Cf / ↑N' < ε.toReal ^ 2 by rearranging
+        -- 4. Take N = max N' 1 to ensure N > 0
+        -- 5. Show Cf / ↑N ≤ Cf / ↑N' < ε.toReal ^ 2 by monotonicity
 
       use N
       intros n n' hn_ge hn'_ge
