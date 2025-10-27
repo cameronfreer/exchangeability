@@ -3748,8 +3748,8 @@ private lemma iterate_shift_eval (k n : ℕ) (ω : Ω[α]) :
   | succ k ih =>
       rw [Function.iterate_succ']
       simp only [shift_apply, Function.comp_apply]
-      rw [ih, Nat.succ_add]
-      omega
+      rw [ih]
+      ac_rfl
 
 /-- Evaluate the k-th shift at 0: shift^[k] ω 0 = ω k. -/
 private lemma iterate_shift_eval0 (k : ℕ) (ω : Ω[α]) :
@@ -3865,18 +3865,13 @@ private theorem optionB_L1_convergence_bounded
     -- Combine finite a.e. conditions for the sum
     have hsum : (fun ω => ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω) =ᵐ[μ]
         (fun ω => ∑ k ∈ Finset.range n, g (ω k)) := by
-      -- Combine finitely many a.e. conditions
-      -- Use list of a.e. conditions and filter_upwards
+      -- Combine finitely many a.e. conditions using Measure.ae_ball_iff
       have h_list : ∀ k ∈ Finset.range n, (fun ω => ((koopman shift hσ)^[k] fL2) ω) =ᵐ[μ] (fun ω => g (ω k)) :=
         fun k _ => hterms k
-      -- Build the combined a.e. set
-      classical
-      let ae_sets := Finset.range n |>.attach.map (fun ⟨k, hk⟩ => {ω | ((koopman shift hσ)^[k] fL2) ω = g (ω k)})
-      -- Each has full measure, so their finite intersection has full measure
-      -- Then sums are equal on this set
+      -- Each a.e. condition has full measure, so their finite intersection has full measure
       have : ∀ᵐ ω ∂μ, ∀ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω = g (ω k) := by
-        -- Finite version of ae_ball_iff
-        apply Measure.ae_ball_iff.mpr
+        have hcount : (Finset.range n : Set ℕ).Countable := Finset.countable_toSet _
+        apply (MeasureTheory.ae_ball_iff hcount).mp
         exact h_list
       filter_upwards [this] with ω hω
       exact Finset.sum_congr rfl hω
