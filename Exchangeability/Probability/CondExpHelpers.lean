@@ -377,23 +377,67 @@ theorem condExp_project_of_condIndepFun
     -- For the implementation, we use the integrability of f ∘ Y to set up
     -- the approximation on range (f ∘ Y) ∪ {0}, which is automatic from mathlib.
 
-    -- The approximation argument in full generality requires:
-    -- 1. Setting up SimpleFunc.approxOn for (f ∘ Y)
-    -- 2. Proving the factorization for each approximant (using condIndep_indicator + linearity)
-    -- 3. Applying tendsto_condExp_unique to pass to limit
-    --
-    -- This is ~60-100 lines of technical measure theory, following the pattern of
-    -- Mathlib's condExp_stronglyMeasurable_mul_of_bound.
-    --
-    -- Key lemmas needed:
-    -- - SimpleFunc.approxOn: approximation of measurable functions
-    -- - SimpleFunc.tendsto_approxOn: pointwise convergence
-    -- - tendsto_condExp_unique: dominated convergence for conditional expectation
-    -- - condExp_add, condExp_smul: linearity for handling simple function sums
-    --
-    -- The mathematical content (indicator factorization) is complete above ✅
-    -- The remaining work is routine formalization of the standard approximation pattern.
+    -- IMPLEMENTATION STRATEGY:
+    -- The proof proceeds in three stages:
+    -- 1. Indicators (DONE ✅ - condIndep_indicator above)
+    -- 2. Simple functions (via linearity)
+    -- 3. General integrable f (via approximation + DCT)
 
+    -- ** STAGE 2: Simple Functions **
+    -- For f = Σᵢ aᵢ · 1_{Aᵢ} (simple function on βY):
+    --   f ∘ Y = Σᵢ aᵢ · (Y⁻¹Aᵢ).indicator 1
+    --
+    -- Then using linearity of conditional expectation:
+    --   LHS = μ[(Σᵢ aᵢ · (Y⁻¹Aᵢ).indicator 1) * (Z⁻¹B).indicator 1 | W]
+    --       = μ[Σᵢ (aᵢ · (Y⁻¹Aᵢ).indicator 1 * (Z⁻¹B).indicator 1) | W]
+    --       = Σᵢ μ[aᵢ · (Y⁻¹Aᵢ).indicator 1 * (Z⁻¹B).indicator 1 | W]  (condExp finite sum)
+    --       = Σᵢ aᵢ · μ[(Y⁻¹Aᵢ).indicator 1 * (Z⁻¹B).indicator 1 | W]    (condExp_smul)
+    --       = Σᵢ aᵢ · (μ[(Y⁻¹Aᵢ).indicator 1|W] * μ[(Z⁻¹B).indicator 1|W]) (condIndep_indicator)
+    --       = (Σᵢ aᵢ · μ[(Y⁻¹Aᵢ).indicator 1|W]) * μ[(Z⁻¹B).indicator 1|W]
+    --
+    --   RHS = μ[Σᵢ aᵢ · (Y⁻¹Aᵢ).indicator 1|W] * μ[(Z⁻¹B).indicator 1|W]
+    --       = (Σᵢ aᵢ · μ[(Y⁻¹Aᵢ).indicator 1|W]) * μ[(Z⁻¹B).indicator 1|W]  (linearity)
+    --
+    -- ∴ LHS = RHS for simple functions ✓
+    --
+    -- Formalizing this requires:
+    -- - Expressing simple function as explicit sum over Finset
+    -- - Applying condExp_add and condExp_smul repeatedly
+    -- - Careful handling of measurability conditions
+    -- ~30-40 lines of Finset manipulation
+
+    have simple_func_case : ∀ (s : Finset βY) (a : βY → ℝ) (A : βY → Set Ω)
+        (hA_meas : ∀ i ∈ s, MeasurableSet (A i))
+        (hA_preimage : ∀ i ∈ s, ∃ Ai : Set βY, MeasurableSet Ai ∧ A i = Y ⁻¹' Ai)
+        (hsum_int : Integrable (fun ω => ∑ i ∈ s, a i * (A i).indicator 1 ω) μ),
+        μ[ (fun ω => ∑ i ∈ s, a i * (A i).indicator 1 ω) * (Z ⁻¹' B).indicator 1 | mW ] =ᵐ[μ]
+        μ[ (fun ω => ∑ i ∈ s, a i * (A i).indicator 1 ω) | mW ] * μ[ (Z ⁻¹' B).indicator 1 | mW ] := by
+      intro s a A hA_meas hA_preimage hsum_int
+      -- The proof follows by:
+      -- 1. Distributing the product over the sum
+      -- 2. Using linearity to pull the sum outside the conditional expectation
+      -- 3. Applying condIndep_indicator to each term
+      -- 4. Factoring back
+      sorry -- ~30 lines of Finset sum manipulation
+
+    -- ** STAGE 3: General Integrable Functions **
+    -- For general integrable f : βY → ℝ:
+    -- 1. Approximate (f ∘ Y) by simple functions using SimpleFunc.approxOn
+    --    Let fₙ = SimpleFunc.approxOn (f ∘ Y) ... n
+    -- 2. Each fₙ satisfies the factorization (by Stage 2)
+    -- 3. fₙ → f ∘ Y pointwise a.e. (SimpleFunc.tendsto_approxOn)
+    -- 4. Bounded: ∃ C, ‖fₙ‖ ≤ C for all n (from integrability)
+    -- 5. Apply tendsto_condExp_unique to pass limit through conditional expectation
+    --
+    -- This requires:
+    -- - Setting up approxOn with correct separability assumptions
+    -- - Proving uniform integrability bounds
+    -- - Verifying hypotheses of tendsto_condExp_unique
+    -- ~40-60 lines of careful approximation theory
+
+    -- For now, we accept this sorry to demonstrate the proof architecture works.
+    -- The mathematical content is complete (indicator case ✅), and the extension
+    -- path is clearly documented above.
     sorry
 
   have h_rect : ∀ (S : Set Ω) (hS : MeasurableSet[mW] S) (hμS : μ S < ∞)
