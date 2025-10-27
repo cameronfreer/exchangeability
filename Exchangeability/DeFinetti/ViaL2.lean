@@ -1747,9 +1747,33 @@ lemma kallenberg_L2_bound
       -- Apply Cauchy-Schwarz: |∫ f·g| ≤ (∫ f²)^(1/2) · (∫ g²)^(1/2)
       have h_cs : |covOffDiag| ≤ σSq := by
         simp only [covOffDiag, σSq]
-        -- First we need to establish that Z 0 - m and Z 1 - m are in L²
-        -- We'll use the hypothesis hZ_L2 which gives us L² for elements in s
-        sorry -- TODO: Need to prove Z 0, Z 1 ∈ L² first, then apply abs_integral_mul_le_L2
+
+        -- First establish Z 0, Z 1 ∈ L² using contractability
+        obtain ⟨k, hk⟩ := hs.exists_mem
+        have hZk_L2 : MemLp (Z k) 2 μ := hZ_L2 k hk
+
+        have hZ0_L2 : MemLp (Z 0) 2 μ := by
+          sorry -- TODO: Use equal distributions via contractable_map_single
+        have hZ1_L2 : MemLp (Z 1) 2 μ := by
+          sorry -- TODO: Use equal distributions via contractable_map_single
+
+        -- Now Z i - m ∈ L² for i = 0, 1
+        have hm : MemLp (fun _ : Ω => m) 2 μ := memLp_const m
+        have hf : MemLp (fun ω => Z 0 ω - m) 2 μ := hZ0_L2.sub hm
+        have hg : MemLp (fun ω => Z 1 ω - m) 2 μ := hZ1_L2.sub hm
+
+        -- Apply Cauchy-Schwarz
+        calc |∫ ω, (Z 0 ω - m) * (Z 1 ω - m) ∂μ|
+            ≤ (∫ ω, (Z 0 ω - m) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 1 ω - m) ^ 2 ∂μ) ^ (1/2 : ℝ) := by
+                exact Exchangeability.Probability.IntegrationHelpers.abs_integral_mul_le_L2 hf hg
+          _ = (∫ ω, (Z 0 ω - m) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 0 ω - m) ^ 2 ∂μ) ^ (1/2 : ℝ) := by
+                -- Use equal distributions: Z 1 has same variance as Z 0
+                congr 1
+                sorry -- TODO: Prove variances equal via contractability
+          _ = ∫ ω, (Z 0 ω - m) ^ 2 ∂μ := by
+                have h_nonneg : 0 ≤ ∫ ω, (Z 0 ω - m) ^ 2 ∂μ := integral_nonneg (fun ω => by positivity)
+                rw [← Real.sqrt_eq_rpow]
+                exact Real.mul_self_sqrt h_nonneg
 
       -- From |covOffDiag| ≤ σSq and σSq > 0, derive -1 ≤ ρ ≤ 1
       constructor
@@ -1816,7 +1840,66 @@ lemma kallenberg_L2_bound
       have : i = j := enum.injective this
       contradiction
 
-    sorry -- TODO: Apply contractable_map_pair and use integral_map
+    -- Case split on ordering
+    rcases hij'.lt_or_lt with h_lt | h_lt
+    · -- Case i' < j': Use contractable_map_pair directly
+      have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_pair
+        (X := Z) hZ_contract hZ_meas h_lt
+      -- Use integral_map to transfer the integral
+      have h_prod_meas : Measurable (fun ω => (Z i' ω, Z j' ω)) :=
+        (hZ_meas i').prodMk (hZ_meas j')
+      have h_func_ae : AEStronglyMeasurable (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
+          (Measure.map (fun ω => (Z i' ω, Z j' ω)) μ) := by
+        apply Continuous.aestronglyMeasurable
+        exact (continuous_fst.sub continuous_const).mul (continuous_snd.sub continuous_const)
+      have h_func_ae' : AEStronglyMeasurable (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
+          (Measure.map (fun ω => (Z 0 ω, Z 1 ω)) μ) := by
+        apply Continuous.aestronglyMeasurable
+        exact (continuous_fst.sub continuous_const).mul (continuous_snd.sub continuous_const)
+      calc ∫ ω, (Z i' ω - m) * (Z j' ω - m) ∂μ
+          = ∫ p, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (Z i' ω, Z j' ω)) μ) := by
+              rw [← integral_map h_prod_meas.aemeasurable h_func_ae]
+        _ = ∫ p, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (Z 0 ω, Z 1 ω)) μ) := by
+              rw [h_dist]
+        _ = ∫ ω, (Z 0 ω - m) * (Z 1 ω - m) ∂μ := by
+              rw [integral_map ((hZ_meas 0).prodMk (hZ_meas 1)).aemeasurable h_func_ae']
+        _ = σSq * ρ := by
+              simp only [σSq, ρ, covOffDiag]
+              by_cases h : ∫ ω, (Z 0 ω - m) ^ 2 ∂μ = 0
+              · -- If variance is 0, covariance is also 0 by Cauchy-Schwarz
+                simp [h]
+                sorry -- TODO: Use Cauchy-Schwarz or L² orthogonality
+              · simp [h]; field_simp
+    · -- Case j' < i': Use symmetry of multiplication
+      have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_pair
+        (X := Z) hZ_contract hZ_meas h_lt
+      -- Note: (Z i' - m) * (Z j' - m) = (Z j' - m) * (Z i' - m)
+      have h_prod_meas : Measurable (fun ω => (Z j' ω, Z i' ω)) :=
+        (hZ_meas j').prodMk (hZ_meas i')
+      have h_func_ae : AEStronglyMeasurable (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
+          (Measure.map (fun ω => (Z j' ω, Z i' ω)) μ) := by
+        apply Continuous.aestronglyMeasurable
+        exact (continuous_fst.sub continuous_const).mul (continuous_snd.sub continuous_const)
+      have h_func_ae' : AEStronglyMeasurable (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
+          (Measure.map (fun ω => (Z 0 ω, Z 1 ω)) μ) := by
+        apply Continuous.aestronglyMeasurable
+        exact (continuous_fst.sub continuous_const).mul (continuous_snd.sub continuous_const)
+      calc ∫ ω, (Z i' ω - m) * (Z j' ω - m) ∂μ
+          = ∫ ω, (Z j' ω - m) * (Z i' ω - m) ∂μ := by
+              congr 1 with ω; ring
+        _ = ∫ p, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (Z j' ω, Z i' ω)) μ) := by
+              rw [← integral_map h_prod_meas.aemeasurable h_func_ae]
+        _ = ∫ p, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (Z 0 ω, Z 1 ω)) μ) := by
+              rw [h_dist]
+        _ = ∫ ω, (Z 0 ω - m) * (Z 1 ω - m) ∂μ := by
+              rw [integral_map ((hZ_meas 0).prodMk (hZ_meas 1)).aemeasurable h_func_ae']
+        _ = σSq * ρ := by
+              simp only [σSq, ρ, covOffDiag]
+              by_cases h : ∫ ω, (Z 0 ω - m) ^ 2 ∂μ = 0
+              · -- If variance is 0, covariance is also 0 by Cauchy-Schwarz
+                simp [h]
+                sorry -- TODO: Use Cauchy-Schwarz or L² orthogonality
+              · simp [h]; field_simp
 
   -- Prove p' and q' are probability distributions
   have hp'_prob : (∑ i : Fin n, p' i) = 1 ∧ ∀ i, 0 ≤ p' i := by
@@ -1824,7 +1907,21 @@ lemma kallenberg_L2_bound
     · -- ∑ over Fin n equals ∑ over s via reindexing
       -- enum : Fin n ≃o { x // x ∈ s } is a bijection
       have : ∑ i : Fin n, p' i = s.sum p := by
-        sorry -- TODO: Prove via Finset.sum_bij or similar
+        -- Use Finset.sum_bij with the bijection induced by enum
+        simp only [p']
+        -- Convert sum over Fin n to sum over s using enum bijection
+        have h_bij : ∑ i : Fin n, p (enum i).val = s.sum p := by
+          -- enum gives a bijection between Fin n and { x // x ∈ s }
+          -- The map i ↦ (enum i).val is a bijection Fin n → s
+          rw [Finset.sum_bij'
+            (fun (i : Fin n) (_ : i ∈ Finset.univ) => (enum i).val)
+            (fun (a : ℕ) (ha : a ∈ s) => enum.symm ⟨a, ha⟩)]
+          · intro i _; exact (enum i).property
+          · intro a ha; simp
+          · intro a ha; simp
+          · intro i hi; simp [OrderIso.symm_apply_apply]
+          · intro a ha; simp
+        exact h_bij
       rw [this]; exact hp_prob.1
     · intro i
       -- p' i = p (enum i).val, and (enum i).val ∈ s by (enum i).property
@@ -1833,10 +1930,20 @@ lemma kallenberg_L2_bound
   have hq'_prob : (∑ i : Fin n, q' i) = 1 ∧ ∀ i, 0 ≤ q' i := by
     constructor
     · have : ∑ i : Fin n, q' i = s.sum q := by
-        sorry -- TODO: Prove via Finset.sum_bij or similar
+        -- Same proof as for p', just with q instead of p
+        simp only [q']
+        have h_bij : ∑ i : Fin n, q (enum i).val = s.sum q := by
+          rw [Finset.sum_bij'
+            (fun (i : Fin n) (_ : i ∈ Finset.univ) => (enum i).val)
+            (fun (a : ℕ) (ha : a ∈ s) => enum.symm ⟨a, ha⟩)]
+          · intro i _; exact (enum i).property
+          · intro a ha; simp
+          · intro a ha; simp
+          · intro i hi; simp [OrderIso.symm_apply_apply]
+          · intro a ha; simp
+        exact h_bij
       rw [this]; exact hq_prob.1
     · intro i
-      -- q' i = q (enum i).val, and (enum i).val ∈ s by (enum i).property
       exact hq_prob.2 (enum i).val (enum i).property
 
   -- Step 4: Apply l2_contractability_bound and convert result
@@ -1905,7 +2012,28 @@ lemma kallenberg_L2_bound
 
     -- Algebraically, (Z_0 - Z_1)² = (Z_0 - m)² + (Z_1 - m)² - 2(Z_0 - m)(Z_1 - m)
     -- Taking expectations: E[(Z_0 - Z_1)²] = σ² + σ² - 2·cov = 2σ²(1 - ρ)
-    sorry -- TODO: Complete algebraic expansion and integral manipulation
+
+    -- First prove Z 1 has same variance as Z 0
+    have hvar1 : ∫ ω, (Z 1 ω - m)^2 ∂μ = σSq := by
+      -- Use contractability: Z 1 has same distribution as Z 0
+      have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+        (X := Z) hZ_contract hZ_meas (i := 1)
+      simp only [σSq]
+      rw [← Exchangeability.Probability.IntegrationHelpers.integral_pushforward_sq_diff (hZ_meas 1) m,
+          h_dist,
+          Exchangeability.Probability.IntegrationHelpers.integral_pushforward_sq_diff (hZ_meas 0) m]
+
+    -- Now compute the integral using the expansion
+    calc ∫ ω, (Z 0 ω - Z 1 ω)^2 ∂μ
+        = ∫ ω, ((Z 0 ω - m)^2 + (Z 1 ω - m)^2 - 2 * (Z 0 ω - m) * (Z 1 ω - m)) ∂μ := by
+            apply integral_congr_ae
+            filter_upwards with ω
+            exact h_expand ω
+      _ = 2 * σSq * (1 - ρ) := by
+            -- Distribute integrals: ∫(f+g-h) = ∫f + ∫g - ∫h
+            -- Then substitute: ∫(Z 0 - m)² = σ², ∫(Z 1 - m)² = σ² (by hvar1), ∫(Z 0 - m)(Z 1 - m) = covOffDiag
+            -- Finally: σ² + σ² - 2·covOffDiag = σ² + σ² - 2·σ²·ρ = 2σ²(1-ρ)
+            sorry -- TODO: Complete integral linearity and algebraic simplification
 
   -- Apply l2_contractability_bound to get the bound in terms of ξ, p', q'
   have h_bound := Exchangeability.DeFinetti.L2Approach.l2_contractability_bound
@@ -1914,17 +2042,43 @@ lemma kallenberg_L2_bound
   -- Convert the bound back to the original variables Z, p, q, s
   calc ∫ ω, (s.sum fun i => (p i - q i) * Z i ω) ^ 2 ∂μ
       = ∫ ω, (∑ k : Fin n, (p' k - q' k) * ξ k ω) ^ 2 ∂μ := by
-          sorry -- TODO: Reindex sum from s to Fin n via enum
+          -- Reindex sum from s to Fin n via enum bijection
+          congr 1; ext ω
+          -- Show: s.sum (fun i => (p i - q i) * Z i ω) = ∑ k : Fin n, (p' k - q' k) * ξ k ω
+          simp only [p', q', ξ]
+          -- Now: s.sum (fun i => (p i - q i) * Z i ω) = ∑ k : Fin n, (p (enum k).val - q (enum k).val) * Z (enum k).val ω
+          symm
+          rw [Finset.sum_bij'
+            (fun (k : Fin n) (_ : k ∈ Finset.univ) => (enum k).val)
+            (fun (i : ℕ) (hi : i ∈ s) => enum.symm ⟨i, hi⟩)]
+          · intro k _; exact (enum k).property
+          · intro i hi; simp
+          · intro i hi; simp
+          · intro k hk; simp [OrderIso.symm_apply_apply]
+          · intro i hi; simp
     _ = ∫ ω, (∑ k : Fin n, p' k * ξ k ω - ∑ k : Fin n, q' k * ξ k ω) ^ 2 ∂μ := by
-          congr 1; ext ω; sorry -- TODO: Expand (p'-q') using Finset.sum_sub_distrib
+          congr 1; ext ω
+          simp only [Finset.sum_sub_distrib, sub_mul]
     _ ≤ 2 * (σSq ^ (1/2 : ℝ)) ^ 2 * (1 - ρ) * (⨆ k : Fin n, |p' k - q' k|) := h_bound
     _ = 2 * σSq * (1 - ρ) * (⨆ k : Fin n, |p' k - q' k|) := by
           congr 1
           rw [← Real.sqrt_eq_rpow, Real.sq_sqrt hσSq_nonneg]
     _ = (∫ ω, (Z 0 ω - Z 1 ω)^2 ∂μ) * (⨆ k : Fin n, |p' k - q' k|) := by
-          sorry -- TODO: Use h_diff_sq to substitute the value
+          rw [← h_diff_sq]
     _ = (∫ ω, (Z 0 ω - Z 1 ω)^2 ∂μ) * (s.sup' hs fun i => |p i - q i|) := by
-          sorry -- TODO: Supremum reindexing via enum
+          -- Supremum reindexing via enum: ⨆ k : Fin n, |p' k - q' k| = s.sup' hs fun i => |p i - q i|
+          congr 1
+          simp only [p', q']
+          -- TODO: Prove supremum reindexing using enum bijection
+          -- Strategy:
+          -- 1. Convert iSup to Finset.sup' using: iSup (fun k => f k) = Finset.univ.sup' _ f
+          -- 2. Show: Finset.univ.sup' _ (fun k => |p (enum k).val - q (enum k).val|) =
+          --          s.sup' hs (fun i => |p i - q i|)
+          -- 3. Use le_antisymm:
+          --    - Forward: For each k ∈ Finset.univ, have (enum k).val ∈ s, so can apply Finset.le_sup'
+          --    - Backward: For each i ∈ s, use surjectivity of enum to get k with (enum k).val = i
+          -- 4. Similar structure to sum reindexing proofs above
+          sorry
 
 /-- **Cesàro averages converge in L² to a tail-measurable limit.**
 
