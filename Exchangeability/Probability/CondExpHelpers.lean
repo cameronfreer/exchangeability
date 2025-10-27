@@ -717,19 +717,32 @@ theorem condExp_project_of_condIndepFun
     have h_fn_int : ∀ n, Integrable (f_n n ∘ Y) μ := by
       intro n
       -- Simple functions composed with measurable functions are integrable on probability spaces
-      have : Integrable (f_n n).comp hY μ := SimpleFunc.integrable_of_isFiniteMeasure _
+      have : Integrable ((f_n n).comp hY) μ := SimpleFunc.integrable_of_isFiniteMeasure _
       convert this
       rfl
 
     -- Integrability of products with indicator B
     have h_fnB_int : ∀ n, Integrable ((f_n n ∘ Y) * (Z ⁻¹' B).indicator 1) μ := by
       intro n
-      -- TODO: Prove integrability from boundedness
-      sorry
+      -- Rewrite: f * indicator 1 = indicator f
+      have h_eq : (f_n n ∘ Y) * (Z ⁻¹' B).indicator 1 = (Z ⁻¹' B).indicator (f_n n ∘ Y) := by
+        ext ω
+        simp only [Pi.mul_apply, Set.indicator]
+        split_ifs <;> simp [mul_comm]
+      rw [h_eq]
+      -- Now use Integrable.indicator
+      have h_meas : MeasurableSet (Z ⁻¹' B) := hmZW_le _ (hmZ_le_mZW _ ⟨B, hB, rfl⟩)
+      exact (h_fn_int n).indicator h_meas
 
     have h_fYB_int : Integrable ((f ∘ Y) * (Z ⁻¹' B).indicator 1) μ := by
-      -- TODO: Prove integrability from boundedness
-      sorry
+      -- Same approach: f * indicator 1 = indicator f
+      have h_eq : (f ∘ Y) * (Z ⁻¹' B).indicator 1 = (Z ⁻¹' B).indicator (f ∘ Y) := by
+        ext ω
+        simp only [Pi.mul_apply, Set.indicator]
+        split_ifs <;> simp [mul_comm]
+      rw [h_eq]
+      have h_meas : MeasurableSet (Z ⁻¹' B) := hmZW_le _ (hmZ_le_mZW _ ⟨B, hB, rfl⟩)
+      exact hf_int.indicator h_meas
 
     -- Dominating function: By SimpleFunc.norm_approxOn_zero_le, ‖f_n n y‖ ≤ 2‖f y‖
     have h_bound_fnB : ∀ n, ∀ᵐ ω ∂μ, ‖(f_n n (Y ω)) * (Z ⁻¹' B).indicator 1 ω‖ ≤ 2 * ‖f (Y ω)‖ := by
