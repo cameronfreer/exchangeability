@@ -3883,7 +3883,7 @@ private lemma optionB_Step4b_AB_close
     calc |1 / (↑n + 1) * (S + g (ω n)) - 1 / ↑n * S|
         = |S / (↑n + 1) + g (ω n) / (↑n + 1) - S / ↑n| := by ring
       _ = |-S / (↑n * (↑n + 1)) + g (ω n) / (↑n + 1)| := by ring
-      _ ≤ | -S / (↑n * (↑n + 1))| + |g (ω n) / (↑n + 1)| := by
+      _ ≤ |-S / (↑n * (↑n + 1))| + |g (ω n) / (↑n + 1)| := by
             -- triangle inequality |x + y| ≤ |x| + |y|
             simpa using (abs_add (-S / (↑n * (↑n + 1))) (g (ω n) / (↑n + 1)))
       _ = |S| / (↑n * (↑n + 1)) + |g (ω n)| / (↑n + 1) := by
@@ -4182,7 +4182,7 @@ private theorem optionB_L1_convergence_bounded
     optionB_Step4b_AB_close (μ := μ) g Cg hCg_bd A B rfl rfl
 
   -- Step 4c: Triangle inequality: |A_n - Y| ≤ |A_n - B_n| + |B_n - Y|
-  exact optionB_Step4c_triangle g hg_bd A B Y G mSI hB_L1_conv hA_B_close
+  exact optionB_Step4c_triangle g ⟨Cg, hCg_bd⟩ A B Y G mSI hB_L1_conv hA_B_close
 
 end OptionB_L1Convergence
 
