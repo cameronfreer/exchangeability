@@ -1747,9 +1747,33 @@ lemma kallenberg_L2_bound
       -- Apply Cauchy-Schwarz: |∫ f·g| ≤ (∫ f²)^(1/2) · (∫ g²)^(1/2)
       have h_cs : |covOffDiag| ≤ σSq := by
         simp only [covOffDiag, σSq]
-        -- First we need to establish that Z 0 - m and Z 1 - m are in L²
-        -- We'll use the hypothesis hZ_L2 which gives us L² for elements in s
-        sorry -- TODO: Need to prove Z 0, Z 1 ∈ L² first, then apply abs_integral_mul_le_L2
+
+        -- First establish Z 0, Z 1 ∈ L² using contractability
+        obtain ⟨k, hk⟩ := hs.exists_mem
+        have hZk_L2 : MemLp (Z k) 2 μ := hZ_L2 k hk
+
+        have hZ0_L2 : MemLp (Z 0) 2 μ := by
+          sorry -- TODO: Use equal distributions via contractable_map_single
+        have hZ1_L2 : MemLp (Z 1) 2 μ := by
+          sorry -- TODO: Use equal distributions via contractable_map_single
+
+        -- Now Z i - m ∈ L² for i = 0, 1
+        have hm : MemLp (fun _ : Ω => m) 2 μ := memLp_const m
+        have hf : MemLp (fun ω => Z 0 ω - m) 2 μ := hZ0_L2.sub hm
+        have hg : MemLp (fun ω => Z 1 ω - m) 2 μ := hZ1_L2.sub hm
+
+        -- Apply Cauchy-Schwarz
+        calc |∫ ω, (Z 0 ω - m) * (Z 1 ω - m) ∂μ|
+            ≤ (∫ ω, (Z 0 ω - m) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 1 ω - m) ^ 2 ∂μ) ^ (1/2 : ℝ) := by
+                exact Exchangeability.Probability.IntegrationHelpers.abs_integral_mul_le_L2 hf hg
+          _ = (∫ ω, (Z 0 ω - m) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 0 ω - m) ^ 2 ∂μ) ^ (1/2 : ℝ) := by
+                -- Use equal distributions: Z 1 has same variance as Z 0
+                congr 1
+                sorry -- TODO: Prove variances equal via contractability
+          _ = ∫ ω, (Z 0 ω - m) ^ 2 ∂μ := by
+                have h_nonneg : 0 ≤ ∫ ω, (Z 0 ω - m) ^ 2 ∂μ := integral_nonneg (fun ω => by positivity)
+                rw [← Real.sqrt_eq_rpow]
+                exact Real.mul_self_sqrt h_nonneg
 
       -- From |covOffDiag| ≤ σSq and σSq > 0, derive -1 ≤ ρ ≤ 1
       constructor
@@ -1816,7 +1840,66 @@ lemma kallenberg_L2_bound
       have : i = j := enum.injective this
       contradiction
 
-    sorry -- TODO: Apply contractable_map_pair and use integral_map
+    -- Case split on ordering
+    rcases hij'.lt_or_lt with h_lt | h_lt
+    · -- Case i' < j': Use contractable_map_pair directly
+      have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_pair
+        (X := Z) hZ_contract hZ_meas h_lt
+      -- Use integral_map to transfer the integral
+      have h_prod_meas : Measurable (fun ω => (Z i' ω, Z j' ω)) :=
+        (hZ_meas i').prodMk (hZ_meas j')
+      have h_func_ae : AEStronglyMeasurable (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
+          (Measure.map (fun ω => (Z i' ω, Z j' ω)) μ) := by
+        apply Continuous.aestronglyMeasurable
+        exact (continuous_fst.sub continuous_const).mul (continuous_snd.sub continuous_const)
+      have h_func_ae' : AEStronglyMeasurable (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
+          (Measure.map (fun ω => (Z 0 ω, Z 1 ω)) μ) := by
+        apply Continuous.aestronglyMeasurable
+        exact (continuous_fst.sub continuous_const).mul (continuous_snd.sub continuous_const)
+      calc ∫ ω, (Z i' ω - m) * (Z j' ω - m) ∂μ
+          = ∫ p, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (Z i' ω, Z j' ω)) μ) := by
+              rw [← integral_map h_prod_meas.aemeasurable h_func_ae]
+        _ = ∫ p, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (Z 0 ω, Z 1 ω)) μ) := by
+              rw [h_dist]
+        _ = ∫ ω, (Z 0 ω - m) * (Z 1 ω - m) ∂μ := by
+              rw [integral_map ((hZ_meas 0).prodMk (hZ_meas 1)).aemeasurable h_func_ae']
+        _ = σSq * ρ := by
+              simp only [σSq, ρ, covOffDiag]
+              by_cases h : ∫ ω, (Z 0 ω - m) ^ 2 ∂μ = 0
+              · -- If variance is 0, covariance is also 0 by Cauchy-Schwarz
+                simp [h]
+                sorry -- TODO: Use Cauchy-Schwarz or L² orthogonality
+              · simp [h]; field_simp
+    · -- Case j' < i': Use symmetry of multiplication
+      have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_pair
+        (X := Z) hZ_contract hZ_meas h_lt
+      -- Note: (Z i' - m) * (Z j' - m) = (Z j' - m) * (Z i' - m)
+      have h_prod_meas : Measurable (fun ω => (Z j' ω, Z i' ω)) :=
+        (hZ_meas j').prodMk (hZ_meas i')
+      have h_func_ae : AEStronglyMeasurable (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
+          (Measure.map (fun ω => (Z j' ω, Z i' ω)) μ) := by
+        apply Continuous.aestronglyMeasurable
+        exact (continuous_fst.sub continuous_const).mul (continuous_snd.sub continuous_const)
+      have h_func_ae' : AEStronglyMeasurable (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
+          (Measure.map (fun ω => (Z 0 ω, Z 1 ω)) μ) := by
+        apply Continuous.aestronglyMeasurable
+        exact (continuous_fst.sub continuous_const).mul (continuous_snd.sub continuous_const)
+      calc ∫ ω, (Z i' ω - m) * (Z j' ω - m) ∂μ
+          = ∫ ω, (Z j' ω - m) * (Z i' ω - m) ∂μ := by
+              congr 1 with ω; ring
+        _ = ∫ p, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (Z j' ω, Z i' ω)) μ) := by
+              rw [← integral_map h_prod_meas.aemeasurable h_func_ae]
+        _ = ∫ p, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (Z 0 ω, Z 1 ω)) μ) := by
+              rw [h_dist]
+        _ = ∫ ω, (Z 0 ω - m) * (Z 1 ω - m) ∂μ := by
+              rw [integral_map ((hZ_meas 0).prodMk (hZ_meas 1)).aemeasurable h_func_ae']
+        _ = σSq * ρ := by
+              simp only [σSq, ρ, covOffDiag]
+              by_cases h : ∫ ω, (Z 0 ω - m) ^ 2 ∂μ = 0
+              · -- If variance is 0, covariance is also 0 by Cauchy-Schwarz
+                simp [h]
+                sorry -- TODO: Use Cauchy-Schwarz or L² orthogonality
+              · simp [h]; field_simp
 
   -- Prove p' and q' are probability distributions
   have hp'_prob : (∑ i : Fin n, p' i) = 1 ∧ ∀ i, 0 ≤ p' i := by
