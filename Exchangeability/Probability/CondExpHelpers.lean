@@ -539,8 +539,14 @@ theorem condExp_project_of_condIndepFun
       -- Algebraic: factor out μ[(Z⁻¹B).indicator|W] from the sum
       have step3 : (fun ω => ∑ i ∈ s, (a i * (μ[ (A i).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)))
                  =ᵐ[μ] fun ω => (∑ i ∈ s, a i * μ[ (A i).indicator 1 | mW ] ω) * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
-        -- Pure algebra: a * (b * c) = (a * b) * c, then factor c out
-        sorry
+        -- Pure algebra: ∑(a_i * b_i * c) = (∑ a_i * b_i) * c
+        filter_upwards with ω
+        -- Each term: a_i * (b_i * c) = (a_i * b_i) * c
+        have h_term_eq : ∀ i ∈ s, a i * (μ[ (A i).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) =
+                                   (a i * μ[ (A i).indicator 1 | mW ] ω) * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
+          intro i _
+          ring
+        rw [Finset.sum_congr rfl h_term_eq, Finset.sum_mul]
 
       -- RHS: Apply condExp_finset_sum.symm on the Y side
       have step4 : (fun ω => ∑ i ∈ s, μ[ fun ω' => a i * (A i).indicator 1 ω' | mW ] ω)
@@ -560,7 +566,9 @@ theorem condExp_project_of_condIndepFun
 
       have step5 : (fun ω => (∑ i ∈ s, a i * μ[ (A i).indicator 1 | mW ] ω) * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
                  =ᵐ[μ] fun ω => μ[ fun ω' => ∑ i ∈ s, a i * (A i).indicator 1 ω' | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
-        -- Multiply step4 by indicator term
+        -- The key observation: by step4, we can go from ∑ μ[...] to μ[∑ ...]
+        -- But we need to connect a i * μ[...] with μ[a i * ...]
+        -- This was already done in step2! We can reuse that pattern.
         sorry
 
       -- Chain all steps together
