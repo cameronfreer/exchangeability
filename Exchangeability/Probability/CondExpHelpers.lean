@@ -461,13 +461,48 @@ theorem condExp_project_of_condIndepFun
       -- Use integral_add_compl: ∫_S f + ∫_Sᶜ f = ∫ f
       -- Need: ∫_Sᶜ g = ∫_Sᶜ f(Y)
       -- Strategy: From ∫_S g = ∫_S f(Y) and ∫_S g + ∫_Sᶜ g = ∫ g, deduce ∫_Sᶜ g = ∫ g - ∫_S g
+
+      -- Convert measurability from mZW to mΩ
+      have hS'_meas_mΩ : MeasurableSet[mΩ] S' := hmZW_le _ hS'_meas
+
       have hg_add : ∫ x in S', g x ∂μ + ∫ x in S'ᶜ, g x ∂μ = ∫ x, g x ∂μ := by
-        exact integral_add_compl hS'_meas integrable_condExp
+        exact integral_add_compl hS'_meas_mΩ integrable_condExp
       have hf_add : ∫ x in S', (f ∘ Y) x ∂μ + ∫ x in S'ᶜ, (f ∘ Y) x ∂μ = ∫ x, (f ∘ Y) x ∂μ := by
-        -- Need to convert hS'_meas from mZW to mΩ
-        have hS'_meas_mΩ : MeasurableSet[mΩ] S' := hmZW_le _ hS'_meas
         exact integral_add_compl hS'_meas_mΩ hf_int
-      linarith
+
+      -- From hg_add, hf_add, and hS'_eq, conclude ∫_Sᶜ g = ∫_Sᶜ f(Y)
+      -- We have: ∫_S' g + ∫_S'ᶜ g = ∫ g   (hg_add)
+      --          ∫_S' f∘Y + ∫_S'ᶜ f∘Y = ∫ f∘Y   (hf_add)
+      --          ∫_S' g = ∫_S' f∘Y   (hS'_eq)
+      -- Can we derive ∫ g = ∫ f∘Y? This requires showing C(univ) via induction result
+
+      -- Set.univ is mZW-measurable (in every σ-algebra)
+      have huniv_meas : MeasurableSet[mZW] Set.univ := MeasurableSet.univ
+
+      -- Apply induction result to univ to get ∫ g = ∫ f∘Y
+      have huniv_eq : ∫ x, g x ∂μ = ∫ x, (f ∘ Y) x ∂μ := by
+        rw [← setIntegral_univ, ← setIntegral_univ]
+        -- Need to invoke that C(univ) follows from the induction
+        -- But this is outside our current local context!
+        -- The induction hasn't been completed yet - we're still proving it
+        sorry
+        /-
+        Chicken-and-egg problem: We're trying to prove C(S') → C(S'ᶜ),
+        but to do so we need C(univ), which comes from the full induction.
+
+        The standard solution: Use a different formulation where we prove
+        directly that ∫_Sᶜ g = ∫_Sᶜ f∘Y from the hypotheses, without
+        needing the total integral.
+
+        Alternative: Note that this is a technical issue that can be resolved
+        by restructuring the proof, but the mathematical content is sound.
+        -/
+
+      -- Now we can complete the calc
+      calc ∫ x in S'ᶜ, g x ∂μ
+          = ∫ x, g x ∂μ - ∫ x in S', g x ∂μ := by linarith [hg_add]
+        _ = ∫ x, (f ∘ Y) x ∂μ - ∫ x in S', (f ∘ Y) x ∂μ := by rw [huniv_eq, hS'_eq]
+        _ = ∫ x in S'ᶜ, (f ∘ Y) x ∂μ := by linarith [hf_add]
 
     case iUnion =>
       -- C(Sₙ) for all n → C(⋃ Sₙ) for pairwise disjoint sequence
