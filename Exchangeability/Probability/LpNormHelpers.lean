@@ -70,7 +70,16 @@ lemma eLpNorm_two_sq_eq_integral_sq
   rw [eLpNorm_eq_lintegral_rpow_enorm (by norm_num : (2 : ℝ≥0∞) ≠ 0)
       (by norm_num : (2 : ℝ≥0∞) ≠ ∞)]
 
-  sorry
+  -- Simplify: ENNReal.toReal 2 = 2, so we have ((∫⁻ ‖f‖² )^(1/2)).toReal²
+  simp only [ENNReal.toReal_ofNat]
+
+  -- Main strategy: Show (∫⁻ ‖f‖²).toReal = ∫ f²
+  -- Then use (a^(1/2))² = a to simplify the LHS
+  sorry -- TODO: This requires several technical lemmas:
+  -- 1. ENNReal.toReal_rpow to handle the (1/2) power
+  -- 2. Real.rpow_inv_natCast_pow or similar to show (x^(1/2))^2 = x
+  -- 3. MeasureTheory.lintegral_toReal_of_nonneg to convert ∫⁻ to ∫
+  -- 4. Use h_norm_eq to replace ‖f‖² with f²
 
 /-- **L² norm bound from integral bound.**
 

@@ -2409,18 +2409,53 @@ lemma cesaro_to_condexp_L2
     -- Apply l2_contractability_bound: ∫ (weighted sum)² ≤ C_f · sup|weights|
     -- Choose N s.t. C_f/N < ε²
 
-    sorry  -- TODO: Complete Cauchy property proof
+    -- Step 1: Define centered variables
+    let m := ∫ ω, f (X 0 ω) ∂μ
+    let Z := fun i ω => f (X i ω) - m
+
+    -- Z is measurable
+    have hZ_meas : ∀ i, Measurable (Z i) := fun i =>
+      (hf_meas.comp (hX_meas i)).sub measurable_const
+
+    -- Step 2: Show Z is contractable
+    -- Z = f ∘ X - m, and contractability is preserved under composition + constant shift
+    have hZ_contract : Contractable μ Z := by
+      -- First show f ∘ X is contractable using contractable_comp
+      have hfX_contract : Contractable μ (fun i ω => f (X i ω)) :=
+        L2Helpers.contractable_comp (X := X) hX_contract hX_meas f hf_meas
+      -- Subtracting a constant preserves contractability
+      intro n k hk
+      -- Need: map (fun ω i => Z (k i) ω) μ = map (fun ω i => Z i ω) μ
+      simp only [Z]
+      -- This equals: map (fun ω i => f(X(k i) ω) - m) μ = map (fun ω i => f(X i ω) - m) μ
+      -- From hfX_contract: map (fun ω i => f(X(k i) ω)) μ = map (fun ω i => f(X i ω)) μ
+      sorry -- TODO: Show constant shift preserves measure equality
+      -- Strategy: Use Measure.map_map to factor through the subtraction function
+
+    -- Step 3: Show uniform variance via contractability
+    -- E[Z_i²] = E[Z_0²] for all i
+    have hZ_var_uniform : ∀ i, ∫ ω, (Z i ω)^2 ∂μ = ∫ ω, (Z 0 ω)^2 ∂μ := by
+      intro i
+      sorry -- TODO: Use contractable_map_single + integral_map
+
+    -- Step 4: Show mean of Z is zero
+    have hZ_mean_zero : ∀ i, ∫ ω, Z i ω ∂μ = 0 := by
+      intro i
+      simp only [Z]
+      rw [integral_sub]
+      · sorry -- E[f(X_i)] - m = 0 since E[f(X_i)] = E[f(X_0)] = m by contractability
+      all_goals sorry -- Integrability conditions
+
+    sorry  -- TODO: Complete the rest of the proof
     /-
-    Detailed steps:
-    1. Define: m := E[f(X_0)], Z i := f(X_i) - m, C_f := E[(Z_0 - Z_1)²]
-    2. Show Z is contractable (using contractable_comp + constant shift)
-    3. Show Z has uniform covariance structure via contractability:
-       - For variance: E[Z_i²] = E[Z_0²] via contractable_map_single
-       - For covariance: E[Z_i Z_j] = E[Z_0 Z_1] for i<j via contractable_map_pair
-    4. Express: blockAvg n - blockAvg n' = ∑ c_i Z_i where c_i = 1/n (i<n) - 1/n' (i<n')
-    5. Apply l2_contractability_bound: ∫ (∑ c_i Z_i)² ≤ 2·σ²·(1-ρ)·sup|c_i|
-       where σ² = Var(Z_0) and ρ = Cov(Z_0,Z_1)/σ²
-    6. Bound: sup|c_i| ≤ max(1/n, 1/n') ≤ 1/N
+    Remaining steps:
+    4. Show uniform covariance: E[Z_i Z_j] = E[Z_0 Z_1] for i≠j via contractable_map_pair
+    5. Express: blockAvg n - blockAvg n' = (1/n)∑_{i<n} Z_i - (1/n')∑_{i<n'} Z_i
+       Note: Z has mean 0 by construction, so blockAvg of Z equals blockAvg of f minus m
+    6. For large enough n, n', the blockAvg difference has small L² norm
+       - Use Cauchy criterion for Cesàro sums
+       - The variance of (1/n)∑ Z_i is O(1/n) by l2_contractability_bound
+       - So ‖blockAvg_n - blockAvg_n'‖₂ → 0 as n,n' → ∞
     7. Choose N via Archimedean s.t. C_f/N < (ε.toReal)²
     8. Get: ∫ (blockAvg n - blockAvg n')² ≤ C_f/N < ε²
     9. Convert: eLpNorm_lt_of_integral_sq_lt gives eLpNorm < ε
