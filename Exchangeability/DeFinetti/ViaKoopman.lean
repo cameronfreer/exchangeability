@@ -3888,9 +3888,18 @@ private theorem optionB_L1_convergence_bounded
       intro ω
       rw [birkhoffAverage.eq_1, birkhoffSum.eq_1]
       simp only [_root_.id]
-      -- Unfold the Lp coercion manually
-      -- The sum of Lp elements coerces to the sum of their coercions
-      -- The scalar multiplication distributes
+      -- Goal: ↑↑((↑n)⁻¹ • ∑ x ∈ Finset.range n, fL2_x) ω =
+      --       (↑n)⁻¹ * ∑ k ∈ Finset.range n, ↑↑fL2_k ω
+      --
+      -- Need two Lp coercion lemmas:
+      -- 1. Lp.coeFn_smul: (c • f) =ᵐ c • f (EXISTS in mathlib)
+      -- 2. Lp.coeFn_sum: (∑ i, f i) = ∑ i, f i (MISSING for measure space Lp)
+      --
+      -- Mathlib has lp.coeFn_sum (lowercase, sequence spaces):
+      --   ⇑(∑ i ∈ s, f i) = ∑ i ∈ s, ⇑(f i)
+      -- But NOT Lp.coeFn_sum (capital, measure spaces).
+      --
+      -- Without this API, can't convert sum of Lp elements to sum of functions.
       sorry
     -- Transfer via hsum
     filter_upwards [hsum] with ω hω
