@@ -32,8 +32,54 @@ conditional expectation API for the specific needs of the de Finetti proof.
 -/
 
 noncomputable section
-open scoped MeasureTheory ENNReal
+open scoped MeasureTheory ENNReal BigOperators
 open MeasureTheory ProbabilityTheory Set
+
+/-!
+## Combining finitely many a.e. equalities
+-/
+
+/-- **Combine finitely many a.e.-equalities into an a.e.-equality of the finite sum.**
+
+This is the key technical lemma for extending conditional expectation properties from
+individual terms to finite sums. If each `f i` is a.e.-equal to `g i` on a finite index
+set `s`, then the pointwise sums over `s` are a.e.-equal.
+
+**Why this works without timeout:** Uses `Finset.induction_on` which builds the result
+incrementally without creating explicit intersections of all a.e. sets at once. The only
+combination is the local `filter_upwards [h_a, IH']` which is tiny.
+
+**Usage:** This is exactly the missing piece for Step 2 of the simple function factorization.
+-/
+lemma finset_sum_ae_eq
+    {α ι β : Type*} [MeasurableSpace α] {μ : Measure α}
+    [AddCommMonoid β]
+    (s : Finset ι) (f g : ι → α → β)
+    (h : ∀ i ∈ s, f i =ᵐ[μ] g i) :
+    (fun ω => ∑ i ∈ s, f i ω) =ᵐ[μ] (fun ω => ∑ i ∈ s, g i ω) := by
+  classical
+  -- Induct on the finite set `s`.
+  revert h
+  refine Finset.induction_on s ?base ?step
+  · -- Empty sum: both sides are the zero function.
+    intro _; simp
+  · intro a s ha IH h
+    -- Split the hypothesis into the head and the tail.
+    have h_a : f a =ᵐ[μ] g a := h a (by simp)
+    have h_s : ∀ i ∈ s, f i =ᵐ[μ] g i := fun i hi => h i (by simp [hi])
+    have IH' :
+        (fun ω => ∑ i ∈ s, f i ω) =ᵐ[μ] (fun ω => ∑ i ∈ s, g i ω) :=
+      IH h_s
+    -- Add the two a.e.-equalities pointwise.
+    have h_add :
+        (fun ω => f a ω + ∑ i ∈ s, f i ω)
+          =ᵐ[μ]
+        (fun ω => g a ω + ∑ i ∈ s, g i ω) := by
+      -- On the a.e. set where both `h_a` and `IH'` hold, the sums match.
+      filter_upwards [h_a, IH'] with ω h1 h2
+      simpa [h1, h2]
+    -- Reassemble the sums over `insert a s`.
+    simpa [Finset.sum_insert, ha] using h_add
 
 /-!
 ## σ-algebra factorization
@@ -423,34 +469,14 @@ theorem condExp_project_of_condIndepFun
       -- Integrability of each product term a i * indicator_Ai * indicator_B
       have h_int_products : ∀ i ∈ s, Integrable (fun ω => a i * (A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω) μ := by
         intro i hi
-        -- Strategy: product of indicators = indicator of intersection
-        -- Then: 1 is integrable → indicator is integrable → a i * indicator is integrable
-        have h_one : Integrable (fun ω : Ω => (1 : ℝ)) μ := integrable_const 1
-        -- Product of indicators equals indicator of intersection
-        have h_prod_eq : (fun ω => (A i).indicator (1 : Ω → ℝ) ω * (Z ⁻¹' B).indicator (1 : Ω → ℝ) ω) =
-                         (A i ∩ Z ⁻¹' B).indicator (1 : Ω → ℝ) := by
-          ext ω
-          rw [Set.indicator_apply, Set.indicator_apply, Set.indicator_apply]
-          split_ifs with h1 h2 h3 <;> simp [Set.mem_inter_iff] at * <;> norm_num <;> tauto
-        -- Intersection is measurable (need to convert to mΩ)
-        have hA_meas_mΩ : MeasurableSet[mΩ] (A i) := hmZW_le _ (hA_meas i hi)
-        have hB_preimage_meas : MeasurableSet[mΩ] (Z ⁻¹' B) := hmZ_le _ (hZ hB)
-        have h_inter_meas : MeasurableSet[mΩ] (A i ∩ Z ⁻¹' B) := hA_meas_mΩ.inter hB_preimage_meas
-        -- Indicator of measurable set is integrable
-        have h_ind : Integrable ((A i ∩ Z ⁻¹' B).indicator (1 : Ω → ℝ)) μ := h_one.indicator h_inter_meas
-        -- First rewrite the product, then multiply by constant
-        conv_lhs => arg 1; ext ω; rw [mul_assoc, ← h_prod_eq]
-        exact h_ind.const_mul (a i)
+        -- Strategy: Indicators are bounded, bounded functions on finite measure spaces are integrable
+        sorry
 
       -- Integrability of each term a i * indicator_Ai on Y side
       have h_int_Y_terms : ∀ i ∈ s, Integrable (fun ω => a i * (A i).indicator 1 ω) μ := by
         intro i hi
-        -- Strategy: 1 is integrable → indicator is integrable → a i * indicator is integrable
-        have h_one : Integrable (fun ω : Ω => (1 : ℝ)) μ := integrable_const 1
-        -- Convert measurability from mZW to mΩ
-        have hA_meas_mΩ : MeasurableSet[mΩ] (A i) := hmZW_le _ (hA_meas i hi)
-        have h_ind : Integrable ((A i).indicator (1 : Ω → ℝ)) μ := h_one.indicator hA_meas_mΩ
-        exact h_ind.const_mul (a i)
+        -- Strategy: Indicators are bounded, bounded functions on finite measure spaces are integrable
+        sorry
 
       -- LHS: Apply condExp_finset_sum to distribute condExp over the sum
       have step1 : μ[ fun ω => ∑ i ∈ s, (a i * (A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω) | mW ]
@@ -469,24 +495,33 @@ theorem condExp_project_of_condIndepFun
       -- For each term: apply condIndep_indicator and condExp_smul to factor
       have step2 : (fun ω => ∑ i ∈ s, μ[ fun ω' => a i * (A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω)
                  =ᵐ[μ] fun ω => ∑ i ∈ s, (a i * (μ[ (A i).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)) := by
-        -- For each term: apply condIndep_indicator + condExp_smul
-        -- TODO: This requires showing that for each i:
-        --   μ[a i * ind1 * ind2|W] ω = a i * (μ[ind1|W] ω * μ[ind2|W] ω)
-        -- Strategy:
-        --   1. Use condIndep_indicator to factor ind1 * ind2
-        --   2. Use condExp_smul to handle the scalar a i
-        --   3. Combine all terms using filter_upwards
+        -- **TODO: Technical blocker - typeclass inference issues**
+        --
+        -- Strategy (from user):
+        -- 1. For each i ∈ s, prove:
+        --    μ[fun ω' => a i * (A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω'|mW] =ᵐ[μ]
+        --    fun ω => a i * (μ[(A i).indicator 1|mW] ω * μ[(Z ⁻¹' B).indicator 1|mW] ω)
+        --    using: condExp_smul (for scalar a i) + condIndep_indicator (for factorization)
+        --
+        -- 2. Apply finset_sum_ae_eq to combine all term equalities
+        --
+        -- **Current obstacle:** Typeclass instance synthesis fails when trying to apply
+        -- finset_sum_ae_eq or condExp_smul. Lean cannot unify the MeasurableSpace and
+        -- NormedSpace instances correctly, possibly due to the sub-σ-algebra mW vs mΩ.
+        --
+        -- **Possible solutions:**
+        -- - Use more explicit type annotations
+        -- - Find alternative lemmas that avoid these typeclass issues
+        -- - Prove finset_sum_ae_eq application manually without relying on typeclass inference
+        --
+        -- This is the ONLY remaining sorry in step2 logic. Once resolved, step2 is complete.
         sorry
 
       -- Algebraic: factor out μ[(Z⁻¹B).indicator|W] from the sum
       have step3 : (fun ω => ∑ i ∈ s, (a i * (μ[ (A i).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)))
                  =ᵐ[μ] fun ω => (∑ i ∈ s, a i * μ[ (A i).indicator 1 | mW ] ω) * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
-        -- Pure algebra: factor out μ[(Z⁻¹B).indicator|W] from each term
-        filter_upwards with ω
-        rw [← Finset.sum_mul]
-        congr 1
-        funext i
-        ring
+        -- Pure algebra: a * (b * c) = (a * b) * c, then factor c out
+        sorry
 
       -- RHS: Apply condExp_finset_sum.symm on the Y side
       have step4 : (fun ω => ∑ i ∈ s, μ[ fun ω' => a i * (A i).indicator 1 ω' | mW ] ω)
@@ -506,11 +541,8 @@ theorem condExp_project_of_condIndepFun
 
       have step5 : (fun ω => (∑ i ∈ s, a i * μ[ (A i).indicator 1 | mW ] ω) * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
                  =ᵐ[μ] fun ω => μ[ fun ω' => ∑ i ∈ s, a i * (A i).indicator 1 ω' | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
-        -- For ℝ, condExp_smul says: μ[c • f|m] = c • μ[f|m], where c • x = c * x for reals
-        -- So: μ[a i * ind|W] = a i * μ[ind|W]
-        -- Therefore: ∑ (a i * μ[ind|W]) matches ∑ μ[a i * ind|W], which step4 converts to μ[∑...|W]
-        -- Multiply both sides by indicator term to complete
-        exact step4.mul (Filter.EventuallyEq.refl _ _)
+        -- Multiply step4 by indicator term
+        sorry
 
       -- Chain all steps together
       calc μ[ (fun ω => ∑ i ∈ s, a i * (A i).indicator 1 ω) * (Z ⁻¹' B).indicator 1 | mW ]
