@@ -155,8 +155,7 @@ lemma FullyExchangeable.exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
   have hprojσ :
       proj ∘ (fun ω => fun i : ℕ => X (π i) ω)
         = fun ω => fun i : Fin n => X (σ i) ω := by
-    funext ω i
-    simp [Function.comp, proj, π, extendFinPerm, Fin.is_lt]
+    funext ω i; simp [Function.comp, proj, π, extendFinPerm, Fin.is_lt]
   have hprojid :
       proj ∘ (fun ω => fun i : ℕ => X i ω)
         = fun ω => fun i : Fin n => X i.val ω := by
@@ -341,9 +340,7 @@ lemma exists_perm_extending_strictMono {m n : ℕ} (k : Fin m → ℕ)
           exact i.isLt⟩
       , left_inv := by
           rintro ⟨x, hx⟩
-          apply Subtype.ext
-          apply Fin.ext
-          simp [ι]
+          ext; simp [ι]
       , right_inv := by
           intro i
           cases i with
@@ -436,10 +433,7 @@ lemma Contractable.shift_and_select {μ : Measure Ω} {X : ℕ → Ω → α}
 /-- For a permutation σ on Fin n, the range {σ(0), ..., σ(n-1)} equals {0, ..., n-1}. -/
 lemma perm_range_eq {n : ℕ} (σ : Equiv.Perm (Fin n)) :
     Finset.image (fun i : Fin n => σ i) Finset.univ = Finset.univ := by
-  ext x
-  simp only [Finset.mem_image, Finset.mem_univ, true_and, iff_true]
-  use σ.symm x
-  simp
+  ext x; simp only [Finset.mem_image, Finset.mem_univ, true_and, iff_true]; use σ.symm x; simp
 
 /--
 **Main theorem:** Every exchangeable sequence is contractable.
@@ -489,9 +483,8 @@ theorem contractable_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
     -- We need m ≤ n to apply exists_perm_extending_strictMono
     have hmn : m' + 1 ≤ n := by
       simp only [n]
-      have : m' ≤ k ⟨m', Nat.lt_succ_self m'⟩ := by
-        have h := strictMono_Fin_ge_id hk_mono ⟨m', Nat.lt_succ_self m'⟩
-        simpa using h
+      have : m' ≤ k ⟨m', Nat.lt_succ_self m'⟩ :=
+        strictMono_Fin_ge_id hk_mono ⟨m', Nat.lt_succ_self m'⟩
       omega
     
     -- Get the permutation extending k
