@@ -1757,13 +1757,46 @@ lemma kallenberg_L2_bound
           · subst h; exact hZk_L2
           · -- Use contractable_map_single to show Z k and Z 0 have same distribution
             -- Then transfer MemLp via equal eLpNorm
-            sorry -- TODO: Transfer MemLp across equal distributions
+            have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+              hZ_contract hZ_meas (i := k)
+            -- h_dist : Measure.map (Z k) μ = Measure.map (Z 0) μ
+            -- Transfer eLpNorm: show eLpNorm (Z 0) 2 μ = eLpNorm (Z k) 2 μ
+            have h_Lpnorm_eq : eLpNorm (Z 0) 2 μ = eLpNorm (Z k) 2 μ := by
+              symm
+              calc eLpNorm (Z k) 2 μ
+                  = eLpNorm id 2 (Measure.map (Z k) μ) := by
+                      symm
+                      exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
+                _ = eLpNorm id 2 (Measure.map (Z 0) μ) := by rw [h_dist]
+                _ = eLpNorm (Z 0) 2 μ := by
+                      exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 0).aemeasurable
+            -- Now transfer MemLp using equal eLpNorm
+            rw [memLp_iff_eLpNorm_lt_top, h_Lpnorm_eq]
+            exact hZk_L2.eLpNorm_lt_top
         have hZ1_L2 : MemLp (Z 1) 2 μ := by
           by_cases h : k = 1
           · subst h; exact hZk_L2
           · -- Use contractable_map_single to show Z k and Z 1 have same distribution
             -- Then transfer MemLp via equal eLpNorm
-            sorry -- TODO: Transfer MemLp across equal distributions
+            have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+              hZ_contract hZ_meas (i := k)
+            -- h_dist : Measure.map (Z k) μ = Measure.map (Z 0) μ
+            have h_dist1 := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+              hZ_contract hZ_meas (i := 1)
+            -- h_dist1 : Measure.map (Z 1) μ = Measure.map (Z 0) μ
+            -- Transfer eLpNorm: show eLpNorm (Z 1) 2 μ = eLpNorm (Z k) 2 μ
+            have h_Lpnorm_eq : eLpNorm (Z 1) 2 μ = eLpNorm (Z k) 2 μ := by
+              calc eLpNorm (Z 1) 2 μ
+                  = eLpNorm id 2 (Measure.map (Z 1) μ) := by
+                      symm
+                      exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 1).aemeasurable
+                _ = eLpNorm id 2 (Measure.map (Z 0) μ) := by rw [h_dist1]
+                _ = eLpNorm id 2 (Measure.map (Z k) μ) := by rw [← h_dist]
+                _ = eLpNorm (Z k) 2 μ := by
+                      exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
+            -- Now transfer MemLp using equal eLpNorm
+            rw [memLp_iff_eLpNorm_lt_top, h_Lpnorm_eq]
+            exact hZk_L2.eLpNorm_lt_top
 
         -- Now Z i - m ∈ L² for i = 0, 1
         have hm : MemLp (fun _ : Ω => m) 2 μ := memLp_const m
@@ -1881,7 +1914,52 @@ lemma kallenberg_L2_bound
               by_cases h : ∫ ω, (Z 0 ω - m) ^ 2 ∂μ = 0
               · -- If variance is 0, covariance is also 0 by Cauchy-Schwarz
                 simp [h]
-                sorry -- TODO: Use Cauchy-Schwarz or L² orthogonality
+                -- Goal: ∫ (Z 0 - m)(Z 1 - m) = 0
+                -- Get MemLp for Z 0 and Z 1
+                obtain ⟨k, hk⟩ := hs.exists_mem
+                have hZk_L2 : MemLp (Z k) 2 μ := hZ_L2 k hk
+                have hZ0_L2_local : MemLp (Z 0) 2 μ := by
+                  by_cases h' : k = 0
+                  · subst h'; exact hZk_L2
+                  · have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+                      hZ_contract hZ_meas (i := k)
+                    have h_Lpnorm_eq : eLpNorm (Z 0) 2 μ = eLpNorm (Z k) 2 μ := by
+                      symm
+                      calc eLpNorm (Z k) 2 μ
+                          = eLpNorm id 2 (Measure.map (Z k) μ) := by
+                              symm; exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
+                        _ = eLpNorm id 2 (Measure.map (Z 0) μ) := by rw [h_dist]
+                        _ = eLpNorm (Z 0) 2 μ := by
+                              exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 0).aemeasurable
+                    rw [memLp_iff_eLpNorm_lt_top, h_Lpnorm_eq]
+                    exact hZk_L2.eLpNorm_lt_top
+                have hZ1_L2_local : MemLp (Z 1) 2 μ := by
+                  by_cases h' : k = 1
+                  · subst h'; exact hZk_L2
+                  · have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+                      hZ_contract hZ_meas (i := k)
+                    have h_dist1 := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+                      hZ_contract hZ_meas (i := 1)
+                    have h_Lpnorm_eq : eLpNorm (Z 1) 2 μ = eLpNorm (Z k) 2 μ := by
+                      calc eLpNorm (Z 1) 2 μ
+                          = eLpNorm id 2 (Measure.map (Z 1) μ) := by
+                              symm; exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 1).aemeasurable
+                        _ = eLpNorm id 2 (Measure.map (Z 0) μ) := by rw [h_dist1]
+                        _ = eLpNorm id 2 (Measure.map (Z k) μ) := by rw [← h_dist]
+                        _ = eLpNorm (Z k) 2 μ := by
+                              exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
+                    rw [memLp_iff_eLpNorm_lt_top, h_Lpnorm_eq]
+                    exact hZk_L2.eLpNorm_lt_top
+                -- Centered versions
+                have hm_const : MemLp (fun _ : Ω => m) 2 μ := memLp_const m
+                have hf_local : MemLp (fun ω => Z 0 ω - m) 2 μ := MemLp.sub hZ0_L2_local hm_const
+                have hg_local : MemLp (fun ω => Z 1 ω - m) 2 μ := MemLp.sub hZ1_L2_local hm_const
+                -- Cauchy-Schwarz: |∫fg| ≤ √(∫f²) * √(∫g²)
+                have cs := Exchangeability.Probability.IntegrationHelpers.abs_integral_mul_le_L2 hf_local hg_local
+                -- Use h : ∫(Z 0 - m)² = 0 to show bound is 0
+                have : (∫ ω, (Z 0 ω - m) ^ 2 ∂μ) ^ (1/2 : ℝ) = 0 := by rw [h]; norm_num
+                rw [this, zero_mul] at cs
+                exact abs_eq_zero.mp (le_antisymm cs (abs_nonneg _))
               · simp [h]; field_simp
     · -- Case j' < i': Use symmetry of multiplication
       have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_pair
@@ -1911,7 +1989,52 @@ lemma kallenberg_L2_bound
               by_cases h : ∫ ω, (Z 0 ω - m) ^ 2 ∂μ = 0
               · -- If variance is 0, covariance is also 0 by Cauchy-Schwarz
                 simp [h]
-                sorry -- TODO: Use Cauchy-Schwarz or L² orthogonality
+                -- Goal: ∫ (Z 0 - m)(Z 1 - m) = 0
+                -- Get MemLp for Z 0 and Z 1
+                obtain ⟨k, hk⟩ := hs.exists_mem
+                have hZk_L2 : MemLp (Z k) 2 μ := hZ_L2 k hk
+                have hZ0_L2_local : MemLp (Z 0) 2 μ := by
+                  by_cases h' : k = 0
+                  · subst h'; exact hZk_L2
+                  · have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+                      hZ_contract hZ_meas (i := k)
+                    have h_Lpnorm_eq : eLpNorm (Z 0) 2 μ = eLpNorm (Z k) 2 μ := by
+                      symm
+                      calc eLpNorm (Z k) 2 μ
+                          = eLpNorm id 2 (Measure.map (Z k) μ) := by
+                              symm; exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
+                        _ = eLpNorm id 2 (Measure.map (Z 0) μ) := by rw [h_dist]
+                        _ = eLpNorm (Z 0) 2 μ := by
+                              exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 0).aemeasurable
+                    rw [memLp_iff_eLpNorm_lt_top, h_Lpnorm_eq]
+                    exact hZk_L2.eLpNorm_lt_top
+                have hZ1_L2_local : MemLp (Z 1) 2 μ := by
+                  by_cases h' : k = 1
+                  · subst h'; exact hZk_L2
+                  · have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+                      hZ_contract hZ_meas (i := k)
+                    have h_dist1 := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+                      hZ_contract hZ_meas (i := 1)
+                    have h_Lpnorm_eq : eLpNorm (Z 1) 2 μ = eLpNorm (Z k) 2 μ := by
+                      calc eLpNorm (Z 1) 2 μ
+                          = eLpNorm id 2 (Measure.map (Z 1) μ) := by
+                              symm; exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 1).aemeasurable
+                        _ = eLpNorm id 2 (Measure.map (Z 0) μ) := by rw [h_dist1]
+                        _ = eLpNorm id 2 (Measure.map (Z k) μ) := by rw [← h_dist]
+                        _ = eLpNorm (Z k) 2 μ := by
+                              exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
+                    rw [memLp_iff_eLpNorm_lt_top, h_Lpnorm_eq]
+                    exact hZk_L2.eLpNorm_lt_top
+                -- Centered versions
+                have hm_const : MemLp (fun _ : Ω => m) 2 μ := memLp_const m
+                have hf_local : MemLp (fun ω => Z 0 ω - m) 2 μ := MemLp.sub hZ0_L2_local hm_const
+                have hg_local : MemLp (fun ω => Z 1 ω - m) 2 μ := MemLp.sub hZ1_L2_local hm_const
+                -- Cauchy-Schwarz: |∫fg| ≤ √(∫f²) * √(∫g²)
+                have cs := Exchangeability.Probability.IntegrationHelpers.abs_integral_mul_le_L2 hf_local hg_local
+                -- Use h : ∫(Z 0 - m)² = 0 to show bound is 0
+                have : (∫ ω, (Z 0 ω - m) ^ 2 ∂μ) ^ (1/2 : ℝ) = 0 := by rw [h]; norm_num
+                rw [this, zero_mul] at cs
+                exact abs_eq_zero.mp (le_antisymm cs (abs_nonneg _))
               · simp [h]; field_simp
 
   -- Prove p' and q' are probability distributions
@@ -1992,13 +2115,41 @@ lemma kallenberg_L2_bound
       · subst h; exact hZk_L2
       · -- Use that Z 0 has same distribution as Z k via contractability
         -- Equal distributions imply equal eLpNorm, hence MemLp transfers
-        sorry -- TODO: Use h_dist and eLpNorm equality
+        have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+          hZ_contract hZ_meas (i := k)
+        -- Transfer eLpNorm using equal distributions
+        have h_Lpnorm_eq : eLpNorm (Z 0) 2 μ = eLpNorm (Z k) 2 μ := by
+          symm
+          calc eLpNorm (Z k) 2 μ
+              = eLpNorm id 2 (Measure.map (Z k) μ) := by
+                  symm
+                  exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
+            _ = eLpNorm id 2 (Measure.map (Z 0) μ) := by rw [h_dist]
+            _ = eLpNorm (Z 0) 2 μ := by
+                  exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 0).aemeasurable
+        rw [memLp_iff_eLpNorm_lt_top, h_Lpnorm_eq]
+        exact hZk_L2.eLpNorm_lt_top
     have hZ1_L2 : MemLp (Z 1) 2 μ := by
       by_cases h : k = 1
       · subst h; exact hZk_L2
       · -- Use that Z 1 has same distribution as Z k via contractability
         -- Equal distributions imply equal eLpNorm, hence MemLp transfers
-        sorry -- TODO: Use h_dist and eLpNorm equality
+        have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+          hZ_contract hZ_meas (i := k)
+        have h_dist1 := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+          hZ_contract hZ_meas (i := 1)
+        -- Transfer eLpNorm using equal distributions
+        have h_Lpnorm_eq : eLpNorm (Z 1) 2 μ = eLpNorm (Z k) 2 μ := by
+          calc eLpNorm (Z 1) 2 μ
+              = eLpNorm id 2 (Measure.map (Z 1) μ) := by
+                  symm
+                  exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 1).aemeasurable
+            _ = eLpNorm id 2 (Measure.map (Z 0) μ) := by rw [h_dist1]
+            _ = eLpNorm id 2 (Measure.map (Z k) μ) := by rw [← h_dist]
+            _ = eLpNorm (Z k) 2 μ := by
+                  exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
+        rw [memLp_iff_eLpNorm_lt_top, h_Lpnorm_eq]
+        exact hZk_L2.eLpNorm_lt_top
 
     -- (Z i - m)² is integrable when Z i ∈ L²
     have hint_sq0 : Integrable (fun ω => (Z 0 ω - m)^2) μ := by
@@ -2047,17 +2198,33 @@ lemma kallenberg_L2_bound
             filter_upwards with ω
             exact h_expand ω
       _ = 2 * σSq * (1 - ρ) := by
-            -- TODO: Complete integral linearity and algebraic simplification
-            -- Strategy:
-            -- 1. Use integral_sub, integral_add, integral_const_mul to distribute
-            --    ∫((Z 0 - m)² + (Z 1 - m)² - 2(Z 0 - m)(Z 1 - m)) =
-            --    ∫(Z 0 - m)² + ∫(Z 1 - m)² - 2∫(Z 0 - m)(Z 1 - m)
-            -- 2. Substitute: ∫(Z 0 - m)² = σ², ∫(Z 1 - m)² = σ² (by hvar1),
-            --               ∫(Z 0 - m)(Z 1 - m) = covOffDiag
-            -- 3. Simplify: σ² + σ² - 2·covOffDiag = σ² + σ² - 2·σ²·ρ = 2σ²(1-ρ)
-            --    Using: covOffDiag = σ² * ρ (by definition of ρ)
-            -- 4. Edge case: When σ² = 0, need covOffDiag = 0 (Cauchy-Schwarz)
-            sorry
+            -- Distribute the integral using linearity
+            have h1 : ∫ ω, ((Z 0 ω - m)^2 + (Z 1 ω - m)^2) ∂μ = ∫ ω, (Z 0 ω - m)^2 ∂μ + ∫ ω, (Z 1 ω - m)^2 ∂μ :=
+              integral_add hint_sq0 hint_sq1
+            have h_int_prod : Integrable (fun ω => 2 * (Z 0 ω - m) * (Z 1 ω - m)) μ := by
+              convert hint_prod.const_mul 2 using 1
+              ext ω
+              ring
+            have h2 : ∫ ω, ((Z 0 ω - m)^2 + (Z 1 ω - m)^2 - 2 * (Z 0 ω - m) * (Z 1 ω - m)) ∂μ =
+                     ∫ ω, ((Z 0 ω - m)^2 + (Z 1 ω - m)^2) ∂μ - ∫ ω, 2 * (Z 0 ω - m) * (Z 1 ω - m) ∂μ :=
+              integral_sub (hint_sq0.add hint_sq1) h_int_prod
+            have h3 : ∫ ω, 2 * (Z 0 ω - m) * (Z 1 ω - m) ∂μ = 2 * ∫ ω, (Z 0 ω - m) * (Z 1 ω - m) ∂μ := by
+              have : (fun ω => 2 * (Z 0 ω - m) * (Z 1 ω - m)) = (fun ω => 2 * ((Z 0 ω - m) * (Z 1 ω - m))) := by
+                ext ω; ring
+              rw [this, integral_const_mul]
+            calc ∫ ω, ((Z 0 ω - m)^2 + (Z 1 ω - m)^2 - 2 * (Z 0 ω - m) * (Z 1 ω - m)) ∂μ
+                = ∫ ω, ((Z 0 ω - m)^2 + (Z 1 ω - m)^2) ∂μ - ∫ ω, 2 * (Z 0 ω - m) * (Z 1 ω - m) ∂μ := h2
+              _ = (∫ ω, (Z 0 ω - m)^2 ∂μ + ∫ ω, (Z 1 ω - m)^2 ∂μ) - ∫ ω, 2 * (Z 0 ω - m) * (Z 1 ω - m) ∂μ := by rw [h1]
+              _ = (∫ ω, (Z 0 ω - m)^2 ∂μ + ∫ ω, (Z 1 ω - m)^2 ∂μ) - 2 * ∫ ω, (Z 0 ω - m) * (Z 1 ω - m) ∂μ := by rw [h3]
+              _ = (σSq + σSq) - 2 * covOffDiag := by simp only [σSq, covOffDiag]; rw [hvar1]
+              _ = 2 * σSq - 2 * covOffDiag := by ring
+              _ = 2 * σSq - 2 * (σSq * ρ) := by
+                    congr 1
+                    simp only [ρ, covOffDiag]
+                    by_cases h : σSq = 0
+                    · simp [h]
+                    · simp [h]; field_simp
+              _ = 2 * σSq * (1 - ρ) := by ring
 
   -- Apply l2_contractability_bound to get the bound in terms of ξ, p', q'
   have h_bound := Exchangeability.DeFinetti.L2Approach.l2_contractability_bound
@@ -2093,11 +2260,22 @@ lemma kallenberg_L2_bound
           -- Supremum reindexing via enum: ⨆ k : Fin n, |p' k - q' k| = s.sup' hs fun i => |p i - q i|
           congr 1
           simp only [p', q']
-          -- TODO: Prove supremum reindexing using enum bijection
-          -- Strategy: Use Finset.sup'_bij or le_antisymm with:
-          -- - Forward: ⨆ k ≤ s.sup' (for each k, (enum k).val ∈ s)
-          -- - Backward: s.sup' ≤ ⨆ k (for each i ∈ s, exists k via enum.symm)
-          sorry
+          -- Prove equality using le_antisymm
+          apply le_antisymm
+          · -- Forward: ⨆ k ≤ s.sup'
+            -- For each k, (enum k).val ∈ s, so |p (enum k).val - q (enum k).val| ≤ s.sup'
+            apply ciSup_le
+            intro k
+            apply Finset.le_sup'
+            exact (enum k).property
+          · -- Backward: s.sup' ≤ ⨆ k
+            -- For each i ∈ s, enum.symm ⟨i, hi⟩ gives k : Fin n with (enum k).val = i
+            apply Finset.sup'_le
+            intro i hi
+            have : i = (enum (enum.symm ⟨i, hi⟩)).val := by simp
+            rw [this]
+            exact le_ciSup (f := fun k => |(p ∘ Subtype.val ∘ enum) k - (q ∘ Subtype.val ∘ enum) k|)
+              (bddAbove_range _) (enum.symm ⟨i, hi⟩)
 
 /-- **Cesàro averages converge in L² to a tail-measurable limit.**
 
