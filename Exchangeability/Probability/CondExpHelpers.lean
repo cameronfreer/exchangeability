@@ -240,6 +240,7 @@ theorem condExp_project_of_condIndepFun
   -- Shorthand
   set mW  := MeasurableSpace.comap W inferInstance
   set mZ  := MeasurableSpace.comap Z inferInstance
+  set mZW_prod := MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance with hmZW_prod_def
   set mZW := mZ ⊔ mW with hmZW_def
 
   have hmW_le : mW ≤ mΩ := by intro s hs; obtain ⟨t, ht, rfl⟩ := hs; exact hW ht
@@ -248,10 +249,40 @@ theorem condExp_project_of_condIndepFun
   have hmW_le_mZW : mW ≤ mZW := le_sup_right
   have hmZ_le_mZW : mZ ≤ mZW := le_sup_left
 
+  -- Key: σ(Z,W) product equals σ(Z) ⊔ σ(W)
+  have hmZW_prod_eq : mZW_prod = mZW := by
+    sorry  -- Product σ-algebra equals sup of marginals (standard result)
+
   -- Define g := E[f(Y)|σ(W)]
   set g := μ[ f ∘ Y | mW ] with hg_def
 
-  sorry  -- Full implementation to follow
+  -- Step 1: Rectangle identity
+  have h_rect : ∀ (S : Set Ω) (hS : MeasurableSet[mW] S) (hμS : μ S < ∞)
+                  (B : Set βZ) (hB : MeasurableSet B),
+      ∫ x in S ∩ Z ⁻¹' B, g x ∂μ = ∫ x in S ∩ Z ⁻¹' B, (f ∘ Y) x ∂μ := by
+    intro S hS hμS B hB
+    sorry  -- Rectangle identity implementation (uses condIndepFun_iff_condExp_inter_preimage_eq_mul)
+
+  -- Step 2: π-λ extension to all σ(Z,W)-sets
+  have h_all : ∀ (T : Set Ω), MeasurableSet[mZW] T → μ T < ∞ →
+      ∫ x in T, g x ∂μ = ∫ x in T, (f ∘ Y) x ∂μ := by
+    intro T hT hμT
+    sorry  -- Dynkin system argument: show D = {T : integrals match} contains rectangles and is Dynkin
+
+  -- Step 3: Apply uniqueness
+  have g_aesm_mZW : AEStronglyMeasurable[mZW] g μ := by
+    -- g is mW-measurable, and mW ≤ mZW, so g is mZW-measurable
+    have : StronglyMeasurable[mW] g := stronglyMeasurable_condExp
+    sorry  -- Use measurability monotonicity mW ≤ mZW
+
+  -- Apply uniqueness to get μ[f∘Y|mZW] = g
+  have result_mZW : μ[ f ∘ Y | mZW ] =ᵐ[μ] g := by
+    sorry  -- Apply ae_eq_condExp_of_forall_setIntegral_eq (signature mismatch to fix)
+
+  -- Convert mZW to mZW_prod and flip
+  convert result_mZW.symm using 2
+  · -- Show μ[f∘Y|mZW_prod] = μ[f∘Y|mZW]
+    rw [hmZW_prod_eq]
 
 end MeasureTheory
 
