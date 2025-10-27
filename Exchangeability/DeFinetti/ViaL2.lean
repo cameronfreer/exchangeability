@@ -2446,8 +2446,14 @@ lemma cesaro_to_condexp_L2
     -- E[Z_i²] = E[Z_0²] for all i
     have hZ_var_uniform : ∀ i, ∫ ω, (Z i ω)^2 ∂μ = ∫ ω, (Z 0 ω)^2 ∂μ := by
       intro i
-      sorry  -- TODO: Use contractable_map_single + integral_map to show equal variances
-      -- Strategy: map (Z i) μ = map (Z 0) μ ⟹ ∫ x² d(map (Z i) μ) = ∫ x² d(map (Z 0) μ)
+      -- From contractability: map (Z i) μ = map (Z 0) μ
+      have h_map_eq : Measure.map (Z i) μ = Measure.map (Z 0) μ :=
+        L2Helpers.contractable_map_single (X := Z) hZ_contract hZ_meas (i := i)
+      -- Use integral_map to transfer integrals across equal measures
+      sorry  -- TODO: Apply integral_map on both sides
+      -- ∫ (Z i ω)² dμ = ∫ x² d(map (Z i) μ) [by integral_map]
+      --               = ∫ x² d(map (Z 0) μ) [by h_map_eq]
+      --               = ∫ (Z 0 ω)² dμ     [by integral_map]
 
     -- Step 4: Show mean of Z is zero
     have hZ_mean_zero : ∀ i, ∫ ω, Z i ω ∂μ = 0 := by
