@@ -3677,9 +3677,83 @@ end MainConvergence
 These lemmas implement the bounded and general cases for L¹ convergence of Cesàro averages
 using the cylinder function approach (Option B). This avoids MET and sub-σ-algebra typeclass issues. -/
 
+set_option maxHeartbeats 4000000
+
 section OptionB_L1Convergence
 
 variable {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+
+-- Helper lemmas for Step 3b: connecting condexpL2 to condExp
+
+/-- Our condexpL2 operator agrees a.e. with classical conditional expectation. -/
+private lemma condexpL2_ae_eq_condExp (f : Lp ℝ 2 μ) :
+    (condexpL2 (μ := μ) f : Ω[α] → ℝ) =ᵐ[μ] μ[f | shiftInvariantSigma] := by
+  -- condexpL2 is defined as composition of MeasureTheory.condExpL2 with subtype inclusion
+  -- Use mathlib's MemLp.condExpL2_ae_eq_condExp which connects condExpL2 to condExp
+
+  -- First, get that the coercion of f is in MemLp
+  have hf_memLp : MemLp (f : Ω[α] → ℝ) 2 μ := Lp.memℒp f
+
+  -- Apply mathlib's lemma
+  have h := hf_memLp.condExpL2_ae_eq_condExp shiftInvariantSigma_le
+
+  -- h says: condExpL2 ℝ ℝ shiftInvariantSigma_le hf_memLp.toLp =ᵐ μ[↑f|shiftInvariantSigma]
+  -- We need to show: condexpL2 f =ᵐ μ[↑f|shiftInvariantSigma]
+
+  -- Key: hf_memLp.toLp should be the same as f (same Lp equivalence class)
+  have : hf_memLp.toLp = f := by
+    sorry  -- This requires showing Lp extensionality
+
+  -- Now use this to transfer
+  simp only [condexpL2]
+  sorry  -- Need to connect our wrapped version to mathlib's
+
+-- Helper lemmas for Step 3a: a.e. equality through measure-preserving maps
+--
+-- These are standard measure-theoretic facts that Lean's elaborator struggles with
+-- due to complexity of nested a.e. manipulations. Documented with full proofs.
+
+/-- Pull a.e. equality back along a measure-preserving map.
+    Standard fact: if f =ᵐ g and T preserves μ, then f ∘ T =ᵐ g ∘ T.
+    Proof: The exceptional set for f = g has measure zero, and T preserves μ. -/
+private lemma EventuallyEq.comp_measurePreserving {f g : Ω[α] → ℝ}
+    (hT : MeasurePreserving shift μ μ) (hfg : f =ᵐ[μ] g) :
+    (f ∘ shift) =ᵐ[μ] (g ∘ shift) := by
+  -- The set where f ≠ g has μ-measure zero
+  -- The preimage of this set under shift also has measure zero since shift preserves μ
+  have : {ω | f (shift ω) ≠ g (shift ω)} = shift ⁻¹' {ω | f ω ≠ g ω} := by
+    ext ω; simp [Set.mem_preimage]
+  rw [EventuallyEq, this]
+  exact hT.ae_map_le hfg
+
+/-- Iterate of a measure-preserving map is measure-preserving.
+    Proof: By induction; identity is measure-preserving, and composition preserves the property. -/
+private lemma MeasurePreserving.iterate (hT : MeasurePreserving shift μ μ) (k : ℕ) :
+    MeasurePreserving (shift^[k]) μ μ := by
+  induction k with
+  | zero =>
+      simp only [Function.iterate_zero]
+      exact MeasurePreserving.id μ
+  | succ k ih =>
+      simp only [Function.iterate_succ']
+      exact hT.comp ih
+
+/-- General evaluation formula for shift iteration. -/
+private lemma iterate_shift_eval (k n : ℕ) (ω : Ω[α]) :
+    (shift^[k] ω) n = ω (k + n) := by
+  induction k with
+  | zero => simp
+  | succ k ih =>
+      rw [Function.iterate_succ']
+      simp only [shift_apply, Function.comp_apply]
+      rw [ih]
+      ring_nf
+
+/-- Evaluate the k-th shift at 0: shift^[k] ω 0 = ω k. -/
+private lemma iterate_shift_eval0 (k : ℕ) (ω : Ω[α]) :
+    (shift^[k] ω) 0 = ω k := by
+  convert iterate_shift_eval k 0 ω
+  simp
 
 /-- **Option B bounded case implementation**: L¹ convergence for bounded functions.
 
@@ -3731,123 +3805,104 @@ private theorem optionB_L1_convergence_bounded
   set B : ℕ → Ω[α] → ℝ := fun n => fun ω =>
     if n = 0 then 0 else (1 / (n : ℝ)) * (Finset.range n).sum (fun j => g (ω j))
 
-  -- Step 3a: Show birkhoffAverage corresponds to B_n pointwise a.e.
+  -- Step 3a: birkhoffAverage to B_n correspondence
+  --
+  -- Three-pass proof using helper lemmas to avoid elaboration issues:
+  -- Pass 1: koopman iteration → fL2 ∘ shift^k
+  -- Pass 2: fL2 ∘ shift^k → g(· k)
+  -- Pass 3: Combine into birkhoffAverage = B_n
+  --
   have hB_eq_birkhoff : ∀ n > 0,
       (fun ω => birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω) =ᵐ[μ] B n := by
     intro n hn
-    -- Step 1: Show (koopman shift hσ)^[k] fL2 =ᵐ (fun ω => fL2 (shift^[k] ω))
-    have hkoopman_iterate : ∀ k, (fun ω => ((koopman shift hσ)^[k] fL2) ω) =ᵐ[μ] (fun ω => fL2 (shift^[k] ω)) := by
+
+    -- Pass 1: Each koopman iterate equals fL2 after shift^k
+    have h1_k : ∀ k, (fun ω => ((koopman shift hσ)^[k] fL2) ω) =ᵐ[μ]
+        (fun ω => (fL2 : Ω[α] → ℝ) (shift^[k] ω)) := by
       intro k
       induction k with
-      | zero => simp
+      | zero => simp [koopman]
       | succ k' ih =>
-        -- (koopman)^[k'+1] fL2 = koopman ((koopman)^[k'] fL2)
-        have : (koopman shift hσ)^[k' + 1] fL2 = koopman shift hσ ((koopman shift hσ)^[k'] fL2) := by
-          rw [Function.iterate_succ_apply']
-        -- koopman f =ᵐ (fun ω => f (shift ω))
-        have hkoopman_step : (fun ω => koopman shift hσ ((koopman shift hσ)^[k'] fL2) ω)
-            =ᵐ[μ] (fun ω => ((koopman shift hσ)^[k'] fL2) (shift ω)) := by
-          change MeasureTheory.Lp.compMeasurePreserving shift hσ ((koopman shift hσ)^[k'] fL2) =ᵐ[μ] _
-          simpa [koopman] using MeasureTheory.Lp.coeFn_compMeasurePreserving ((koopman shift hσ)^[k'] fL2) hσ
-        -- Combine: koopman^[k'+1] fL2 =ᵐ fL2 ∘ shift^[k'+1]
-        simp only [this]
-        have : (fun ω => ((koopman shift hσ)^[k'] fL2) (shift ω)) =ᵐ[μ] (fun ω => fL2 (shift^[k'] (shift ω))) := by
-          -- Use that shift is measure-preserving to push ih through
-          filter_upwards [ih] with ω hω
-          exact hω
-        refine hkoopman_step.trans this
+          -- koopman^[k'+1] = koopman ∘ koopman^[k']
+          have hstep : (fun ω => ((koopman shift hσ)^[k'+1] fL2) ω) =ᵐ[μ]
+              (fun ω => ((koopman shift hσ)^[k'] fL2) (shift ω)) := by
+            rw [Function.iterate_succ_apply']
+            change (koopman shift hσ ((koopman shift hσ)^[k'] fL2) : Ω[α] → ℝ) =ᵐ[μ] _
+            exact Lp.coeFn_compMeasurePreserving ((koopman shift hσ)^[k'] fL2) hσ
+          -- Use ih and measure-preserving property
+          have hpull : (fun ω => (fL2 : Ω[α] → ℝ) (shift^[k'] (shift ω))) =ᵐ[μ]
+              (fun ω => (fL2 : Ω[α] → ℝ) (shift^[k'+1] ω)) := by
+            apply ae_of_all; intro ω
+            simp [Function.iterate_succ_apply']
+          have hcomp := EventuallyEq.comp_measurePreserving hσ ih
+          simp only [Function.comp] at hcomp
+          exact hstep.trans (hcomp.trans hpull)
 
-    -- Step 2: Show fL2 (shift^[k] ω) = g (ω k) a.e.
-    have hshift_eval : ∀ k, (fun ω => fL2 (shift^[k] ω)) =ᵐ[μ] (fun ω => g (ω k)) := by
+    -- Pass 2: fL2 ∘ shift^k equals g(· k)
+    have h2_k : ∀ k, (fun ω => (fL2 : Ω[α] → ℝ) (shift^[k] ω)) =ᵐ[μ]
+        (fun ω => g (ω k)) := by
       intro k
-      -- fL2 = G = g(· 0) a.e.
-      have h1 : (fun ω => fL2 (shift^[k] ω)) =ᵐ[μ] (fun ω => G (shift^[k] ω)) := by
-        -- Use that fL2 = G a.e.
-        filter_upwards [hfL2_eq] with ω hω
-        simp [hω]
-      -- G (shift^[k] ω) = g ((shift^[k] ω) 0) = g (ω k)
-      have h2 : (fun ω => G (shift^[k] ω)) =ᵐ[μ] (fun ω => g (ω k)) := by
+      -- fL2 = G a.e., and shift^[k] is measure-preserving
+      have hk_pres := MeasurePreserving.iterate hσ k
+      -- Pull hfL2_eq back along shift^[k]
+      -- We need a version of comp_measurePreserving that works for shift^[k]
+      have hpull : (fun ω => (fL2 : Ω[α] → ℝ) (shift^[k] ω)) =ᵐ[μ]
+          (fun ω => G (shift^[k] ω)) := by
+        -- This follows from the same logic as comp_measurePreserving
+        have : {ω | (fL2 : Ω[α] → ℝ) (shift^[k] ω) ≠ G (shift^[k] ω)} =
+               (shift^[k]) ⁻¹' {ω | (fL2 : Ω[α] → ℝ) ω ≠ G ω} := by
+          ext ω; simp [Set.mem_preimage]
+        rw [EventuallyEq, this]
+        exact hk_pres.ae_map_le hfL2_eq
+      -- Now use iterate_shift_eval0: shift^[k] ω 0 = ω k
+      have heval : (fun ω => G (shift^[k] ω)) =ᵐ[μ] (fun ω => g (ω k)) := by
         apply ae_of_all; intro ω
         simp only [G]
-        -- Prove: shift^[k] ω 0 = ω k
-        induction k with
-        | zero => simp
-        | succ k' ih =>
-          rw [Function.iterate_succ_apply']
-          simp only [shift_apply]
-          rw [ih]
-      exact h1.trans h2
+        exact congr_arg g (iterate_shift_eval0 k ω)
+      exact hpull.trans heval
 
-    -- Step 3: Combine to show each summand is correct
-    have hterms : ∀ k, (fun ω => ((koopman shift hσ)^[k] fL2) ω) =ᵐ[μ] (fun ω => g (ω k)) := by
+    -- Pass 3: Combine summands and unfold birkhoffAverage
+    have hterms : ∀ k, (fun ω => ((koopman shift hσ)^[k] fL2) ω) =ᵐ[μ]
+        (fun ω => g (ω k)) := by
       intro k
-      exact (hkoopman_iterate k).trans (hshift_eval k)
+      exact (h1_k k).trans (h2_k k)
 
-    -- Step 4: Show the sum equals B n
-    -- birkhoffAverage = (1/n) • ∑ k ∈ range n, (koopman^[k] fL2) ω
-    -- B n ω = (1/n) * ∑ k ∈ range n, g(ω k)
+    -- Combine finite a.e. conditions for the sum
+    have hsum : (fun ω => ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω) =ᵐ[μ]
+        (fun ω => ∑ k ∈ Finset.range n, g (ω k)) := by
+      -- Use finite intersection of a.e. sets
+      have hall : ∀ᵐ ω ∂μ, ∀ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω = g (ω k) := by
+        -- Combine finitely many a.e. conditions
+        apply ae_of_all; intro ω k hk
+        exact (hterms k).self_of_ae ω
+      filter_upwards [hall] with ω hω
+      exact Finset.sum_congr rfl hω
+
+    -- Unfold birkhoffAverage and match with B n
     simp only [B, hn.ne', ↓reduceIte]
-
-    -- Unfold birkhoffAverage
-    have hbirk_def : ∀ ω, birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω
-        = (n : ℝ)⁻¹ • birkhoffSum (koopman shift hσ) _root_.id n fL2 ω := by
-      intro ω; exact birkhoffAverage.eq_1 ℝ (koopman shift hσ) _root_.id n fL2 ω
-
-    -- Unfold birkhoffSum
-    have hsum_def : ∀ ω, birkhoffSum (koopman shift hσ) _root_.id n fL2 ω
-        = ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω := by
+    have hbirk : ∀ ω, birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω =
+        (n : ℝ)⁻¹ * ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω := by
       intro ω
-      rw [birkhoffSum.eq_1]
-      simp only [_root_.id]
-
-    -- Combine a.e. equalities: for a.e. ω, each term equals g(ω k)
-    have hsum_ae : (fun ω => ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω)
-        =ᵐ[μ] (fun ω => ∑ k ∈ Finset.range n, g (ω k)) := by
-      -- Combine finitely many a.e. conditions
-      -- Collect all the a.e. sets for each k
-      have : ∀ᵐ ω ∂μ, ∀ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω = g (ω k) := by
-        -- Get the list of all a.e. equalities
-        have h_list := fun k => hterms k
-        -- Intersect finitely many ae sets
-        apply Filter.eventually_all.mpr
-        intro k
-        exact h_list k
-      filter_upwards [this] with ω hω
-      apply Finset.sum_congr rfl
-      intro k hk
-      exact hω k hk
-
-    -- Combine to get birkhoffAverage = B n a.e.
-    have : (fun ω => birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω)
-        =ᵐ[μ] (fun ω => (n : ℝ)⁻¹ * ∑ k ∈ Finset.range n, g (ω k)) := by
-      have h1 : (fun ω => birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω)
-          =ᵐ[μ] (fun ω => (n : ℝ)⁻¹ • ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω) := by
-        apply ae_of_all; intro ω
-        simp [hbirk_def, hsum_def]
-      have h2 : (fun ω => (n : ℝ)⁻¹ • ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω)
-          =ᵐ[μ] (fun ω => (n : ℝ)⁻¹ • ∑ k ∈ Finset.range n, g (ω k)) := by
-        filter_upwards [hsum_ae] with ω hω
-        simp [hω]
-      have h3 : (fun ω => (n : ℝ)⁻¹ • ∑ k ∈ Finset.range n, g (ω k))
-          =ᵐ[μ] (fun ω => (n : ℝ)⁻¹ * ∑ k ∈ Finset.range n, g (ω k)) := by
-        apply ae_of_all; intro ω
-        simp [smul_eq_mul]
-      have h4 : (fun ω => (n : ℝ)⁻¹ * ∑ k ∈ Finset.range n, g (ω k))
-          =ᵐ[μ] (fun ω => 1 / (n : ℝ) * ∑ j ∈ Finset.range n, g (ω j)) := by
-        apply ae_of_all; intro ω
-        rw [one_div]
-      exact h1.trans (h2.trans (h3.trans h4))
-    exact this
+      rw [birkhoffAverage.eq_1, birkhoffSum.eq_1]
+      simp only [_root_.id, smul_eq_mul]
+    -- Transfer via hsum
+    filter_upwards [hsum] with ω hω
+    rw [hbirk, hω]
+    simp [one_div]
 
   -- Step 3b: condexpL2 fL2 and condExp mSI μ G are the same a.e.
   have hY_eq : condexpL2 (μ := μ) fL2 =ᵐ[μ] Y := by
-    -- condexpL2 is the L² representative of condExp
-    -- Need: (1) condexpL2 f =ᵐ condExp m μ f
-    --       (2) condExp m μ preserves a.e. equality
-    -- These are standard facts about conditional expectation
-    sorry
+    -- Use helper lemma: condexpL2 = condExp a.e.
+    have h1 := condexpL2_ae_eq_condExp fL2
+    -- condExp preserves a.e. equality
+    have h2 : μ[fL2 | mSI] =ᵐ[μ] μ[G | mSI] := by
+      exact MeasureTheory.condExp_congr_ae hfL2_eq
+    simp only [Y]
+    exact h1.trans h2
 
   -- Step 4a: L² to L¹ convergence for B_n → Y
+  -- Increase heartbeat limit due to complex type inference
+  set_option maxHeartbeats 2000000 in
   have hB_L1_conv : Tendsto (fun n => ∫ ω, |B n ω - Y ω| ∂μ) atTop (𝓝 0) := by
     -- We have L² convergence: birkhoffAverage n fL2 → condexpL2 fL2 in Lp ℝ 2 μ
     -- And a.e. equalities: birkhoffAverage n fL2 =ᵐ B n, condexpL2 fL2 =ᵐ Y
@@ -3925,6 +3980,7 @@ private theorem optionB_L1_convergence_bounded
   -- Step 4b: A_n and B_n differ negligibly due to indexing
   -- |A_n ω - B_n ω| ≤ 2*Cg/(n+1) since g is bounded
   obtain ⟨Cg, hCg_bd⟩ := hg_bd
+  set_option maxHeartbeats 2000000 in
   have hA_B_close : Tendsto (fun n => ∫ ω, |A n ω - B n ω| ∂μ) atTop (𝓝 0) := by
     -- For each ω, bound |A n ω - B n ω|
     have h_bd : ∀ n > 0, ∀ ω, |A n ω - B n ω| ≤ 2 * Cg / (n + 1) := by
@@ -3984,6 +4040,7 @@ private theorem optionB_L1_convergence_bounded
       · intro n; exact h_bd n (Nat.zero_lt_succ n) ω
 
   -- Step 4c: Triangle inequality: |A_n - Y| ≤ |A_n - B_n| + |B_n - Y|
+  set_option maxHeartbeats 2000000 in
   have h_triangle : ∀ n, ∫ ω, |A n ω - Y ω| ∂μ ≤
       ∫ ω, |A n ω - B n ω| ∂μ + ∫ ω, |B n ω - Y ω| ∂μ := by
     intro n
