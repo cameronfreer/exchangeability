@@ -201,11 +201,16 @@ lemma condExp_project_of_le {α : Type*} (m m' m₀ : MeasurableSpace α) {μ : 
 ## Conditional expectation projection under conditional independence
 -/
 
-/-- **Helper: set integral equals integral of indicator product.** -/
+/-- **Helper: set integral equals integral of indicator product.**
+
+This helper is currently not used in the main proof but documents a standard identity.
+-/
 private lemma setIntegral_eq_integral_indicator {α : Type*} [MeasurableSpace α] {μ : Measure α}
     {s : Set α} (hs : MeasurableSet s) {f : α → ℝ} :
     ∫ x in s, f x ∂μ = ∫ x, f x * (s.indicator (1 : α → ℝ)) x ∂μ := by
-  sorry  -- TODO: Standard rewriting with indicator - mechanical
+  sorry
+  -- Standard identity that can be derived from integral_indicator and properties of set integrals
+  -- Not currently used in the main proof below
 
 /-- **Projection under conditional independence (rectangle + π-λ approach).**
 
@@ -257,31 +262,132 @@ theorem condExp_project_of_condIndepFun
   -- Define g := E[f(Y)|σ(W)]
   set g := μ[ f ∘ Y | mW ] with hg_def
 
-  -- Step 1: Rectangle identity
+  -- Step 1: Rectangle identity (key conditional independence application)
   have h_rect : ∀ (S : Set Ω) (hS : MeasurableSet[mW] S) (hμS : μ S < ∞)
                   (B : Set βZ) (hB : MeasurableSet B),
       ∫ x in S ∩ Z ⁻¹' B, g x ∂μ = ∫ x in S ∩ Z ⁻¹' B, (f ∘ Y) x ∂μ := by
     intro S hS hμS B hB
-    -- Key: Use conditional independence to factor integrals
-    -- LHS: ∫_{S∩Z⁻¹(B)} g = E[g·1_S·E[1_{Z∈B}|W]] (g·1_S is σ(W)-measurable)
-    -- RHS: ∫_{S∩Z⁻¹(B)} f(Y) = E[E[f(Y)|W]·E[1_{Z∈B}|W]·1_S] (by CondIndep)
-    -- Since g = E[f(Y)|W], both sides equal
-
-    sorry -- TODO: Implement using condIndepFun_iff_condExp_inter_preimage_eq_mul
+    sorry
     /-
-    Detailed steps:
-    1. Rewrite set integrals as expectations with indicators
-    2. Apply conditional expectation property for σ(W)-measurable functions
-    3. Use condIndepFun_iff_condExp_inter_preimage_eq_mul to factor:
-       μ⟦Y⁻¹A ∩ Z⁻¹B | W⟧ = μ⟦Y⁻¹A | W⟧ * μ⟦Z⁻¹B | W⟧
-    4. Both sides reduce to E[g·1_S·μ⟦Z⁻¹B | W⟧]
+    **Mathematical Argument (conditional independence factorization):**
+
+    **Goal:** ∫_{S∩Z⁻¹(B)} g = ∫_{S∩Z⁻¹(B)} f(Y)
+
+    **LHS computation:**
+    1. g = E[f(Y)|W] is σ(W)-measurable (by stronglyMeasurable_condExp)
+    2. S ∈ σ(W) (hypothesis), so g·1_S is σ(W)-measurable
+    3. ∫_{S∩Z⁻¹(B)} g = ∫ g·1_S·1_{Z⁻¹(B)} = E[g·1_S·1_{Z⁻¹(B)}]
+    4. By tower property: = E[E[g·1_S·1_{Z⁻¹(B)}|W]]
+    5. Pull out σ(W)-measurable function g·1_S:
+       = E[g·1_S·E[1_{Z⁻¹(B)}|W]]
+
+    **RHS computation:**
+    1. ∫_{S∩Z⁻¹(B)} f(Y) = E[f(Y)·1_S·1_{Z⁻¹(B)}]
+    2. Tower property: = E[E[f(Y)·1_S·1_{Z⁻¹(B)}|W]]
+    3. Pull out σ(W)-measurable indicator 1_S:
+       = E[1_S·E[f(Y)·1_{Z⁻¹(B)}|W]]
+
+    **Conditional independence step (KEY):**
+    4. By CondIndepFun, need to show:
+       E[f(Y)·1_{Z⁻¹(B)}|W] = E[f(Y)|W]·E[1_{Z⁻¹(B)}|W]
+
+    5. This requires extending CondIndepFun from indicators to bounded measurable functions.
+       The definition CondIndepFun uses indicator functions, but we need it for f(Y).
+
+    6. Once we have factorization:
+       E[1_S·E[f(Y)·1_{Z⁻¹(B)}|W]] = E[1_S·g·E[1_{Z⁻¹(B)}|W]]
+                                      = E[g·1_S·E[1_{Z⁻¹(B)}|W]]
+       which matches the LHS!
+
+    **Implementation challenges:**
+
+    A. **Extension to bounded measurables:**
+       - CondIndepFun is defined via indicator factorization
+       - Need lemma: CondIndepFun + f integrable → factorization for f
+       - This is the "monotone class" extension from the definition comments
+       - Could use: approximate f by simple functions, pass to limit
+
+    B. **Pulling out measurable functions from CE:**
+       - Need: E[h·g|m] = h·E[g|m] when h is m-measurable
+       - Mathlib has: condExp_smul or similar
+       - For indicators: use condExp_set_eq or setIntegral_condExp
+
+    C. **Tower property application:**
+       - Need: E[E[g|W]|W] = E[g|W]
+       - This is just condExp_condExp_of_le
+
+    **Proposed implementation path:**
+
+    Option 1: Prove extension lemma separately
+      lemma condIndepFun_integral_eq : CondIndepFun m hm Y Z μ →
+        Integrable (f ∘ Y) μ → Integrable (1_{Z⁻¹(B)}) μ →
+        E[f(Y)·1_{Z⁻¹(B)}|W] = E[f(Y)|W]·E[1_{Z⁻¹(B)}|W]
+      Then use this in h_rect.
+
+    Option 2: Use approximation directly in this proof
+      - Approximate f by simple functions fₙ
+      - Apply CondIndepFun to each simple function piece
+      - Pass to limit using dominated convergence
+
+    Option 3: Acknowledge complexity and defer
+      - This is mathematically sound but technically demanding
+      - Could be factored into a separate lemma file
+      - For now, keep as sorry with complete documentation
+
+    **Recommendation:** Option 3 for now (keep as sorry), then return to prove
+    the extension lemma separately. This unblocks the rest of the proof structure.
     -/
 
   -- Step 2: π-λ extension to all σ(Z,W)-sets
   have h_all : ∀ (T : Set Ω), MeasurableSet[mZW] T → μ T < ∞ →
       ∫ x in T, g x ∂μ = ∫ x in T, (f ∘ Y) x ∂μ := by
     intro T hT hμT
-    sorry  -- Dynkin system argument: show D = {T : integrals match} contains rectangles and is Dynkin
+
+    -- Define the class of sets where integral equality holds
+    -- C(T) := (T ∈ σ(Z,W) ∧ μ T < ∞ → ∫_T g = ∫_T f(Y))
+
+    -- Apply induction_on_inter (π-λ induction principle)
+    -- Key mathlib lemma: MeasurableSpace.induction_on_inter
+    sorry
+    /-
+    **Dynkin System (π-λ) Argument using mathlib's induction_on_inter:**
+
+    **Key mathlib lemma:** MeasurableSpace.induction_on_inter
+    This provides induction over σ-algebras generated by π-systems with Dynkin properties.
+
+    **Step 1: Define rectangles generating σ(Z,W)**
+    Let R := {S ∩ Z⁻¹(B) : S ∈ σ(W), B ∈ B_Z}
+
+    We need to show:
+    a) R is a π-system (closed under intersections)
+    b) generateFrom R = mZW
+    c) For all T ∈ R with μ T < ∞: ∫_T g = ∫_T f(Y) (by h_rect)
+
+    **Step 2: Apply induction_on_inter**
+    Use: MeasurableSpace.induction_on_inter (h_eq : mZW = generateFrom R) (h_inter : IsPiSystem R)
+
+    Verify the Dynkin properties for C(T) := (μ T < ∞ → ∫_T g = ∫_T f(Y)):
+
+    1. **Empty set:** ∫_∅ g = 0 = ∫_∅ f(Y) ✓
+
+    2. **Basic (rectangles):** For T ∈ R, this holds by h_rect ✓
+
+    3. **Complement:** If C(T) holds and μ Tᶜ < ∞, then:
+       ∫_Tᶜ g = ∫_Ω g - ∫_T g = ∫_Ω f(Y) - ∫_T f(Y) = ∫_Tᶜ f(Y)
+       (Uses: IsProbabilityMeasure so μ Ω = 1 < ∞)
+
+    4. **Disjoint union:** If C(Tₙ) for pairwise disjoint {Tₙ} and μ(⋃ Tₙ) < ∞, then:
+       ∫_{⋃ Tₙ} g = ∑ ∫_{Tₙ} g = ∑ ∫_{Tₙ} f(Y) = ∫_{⋃ Tₙ} f(Y)
+       (Uses: lintegral_iUnion or tsum_integral)
+
+    **Implementation:**
+    - Use `refine induction_on_inter hmZW_eq_R h_piSystem ?empty ?basic ?compl ?union`
+    - Each case is a standard integral manipulation
+    - Main technical work: defining R and proving it generates mZW
+
+    **Alternative:** If defining R is complex, could use direct Dynkin system construction
+    with DynkinSystem.generate and generateFrom_eq.
+    -/
 
   -- Step 3: Apply uniqueness
   have g_aesm_mZW : AEStronglyMeasurable[mZW] g μ := by
