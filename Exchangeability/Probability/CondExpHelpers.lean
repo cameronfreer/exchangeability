@@ -469,13 +469,15 @@ theorem condExp_project_of_condIndepFun
       -- Integrability of each product term a i * indicator_Ai * indicator_B
       have h_int_products : ∀ i ∈ s, Integrable (fun ω => a i * (A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω) μ := by
         intro i hi
-        -- Strategy: Indicators are bounded, bounded functions on finite measure spaces are integrable
+        -- Indicators bounded by 1 → product bounded by |a i| → integrable on probability space
+        -- Technical note: exact lemma requires careful type matching (Integrable.indicator, integrable_const, bdd_mul)
         sorry
 
       -- Integrability of each term a i * indicator_Ai on Y side
       have h_int_Y_terms : ∀ i ∈ s, Integrable (fun ω => a i * (A i).indicator 1 ω) μ := by
         intro i hi
-        -- Strategy: Indicators are bounded, bounded functions on finite measure spaces are integrable
+        -- Indicator bounded by 1 → scaled by |a i| → integrable on probability space
+        -- Technical note: use Integrable.indicator with integrable_const
         sorry
 
       -- LHS: Apply condExp_finset_sum to distribute condExp over the sum
