@@ -1907,7 +1907,21 @@ lemma kallenberg_L2_bound
     · -- ∑ over Fin n equals ∑ over s via reindexing
       -- enum : Fin n ≃o { x // x ∈ s } is a bijection
       have : ∑ i : Fin n, p' i = s.sum p := by
-        sorry -- TODO: Prove via Finset.sum_bij or similar
+        -- Use Finset.sum_bij with the bijection induced by enum
+        simp only [p']
+        -- Convert sum over Fin n to sum over s using enum bijection
+        have h_bij : ∑ i : Fin n, p (enum i).val = s.sum p := by
+          -- enum gives a bijection between Fin n and { x // x ∈ s }
+          -- The map i ↦ (enum i).val is a bijection Fin n → s
+          rw [Finset.sum_bij'
+            (fun (i : Fin n) (_ : i ∈ Finset.univ) => (enum i).val)
+            (fun (a : ℕ) (ha : a ∈ s) => enum.symm ⟨a, ha⟩)]
+          · intro i _; exact (enum i).property
+          · intro a ha; simp
+          · intro a ha; simp
+          · intro i hi; simp [OrderIso.symm_apply_apply]
+          · intro a ha; simp
+        exact h_bij
       rw [this]; exact hp_prob.1
     · intro i
       -- p' i = p (enum i).val, and (enum i).val ∈ s by (enum i).property
@@ -1916,10 +1930,20 @@ lemma kallenberg_L2_bound
   have hq'_prob : (∑ i : Fin n, q' i) = 1 ∧ ∀ i, 0 ≤ q' i := by
     constructor
     · have : ∑ i : Fin n, q' i = s.sum q := by
-        sorry -- TODO: Prove via Finset.sum_bij or similar
+        -- Same proof as for p', just with q instead of p
+        simp only [q']
+        have h_bij : ∑ i : Fin n, q (enum i).val = s.sum q := by
+          rw [Finset.sum_bij'
+            (fun (i : Fin n) (_ : i ∈ Finset.univ) => (enum i).val)
+            (fun (a : ℕ) (ha : a ∈ s) => enum.symm ⟨a, ha⟩)]
+          · intro i _; exact (enum i).property
+          · intro a ha; simp
+          · intro a ha; simp
+          · intro i hi; simp [OrderIso.symm_apply_apply]
+          · intro a ha; simp
+        exact h_bij
       rw [this]; exact hq_prob.1
     · intro i
-      -- q' i = q (enum i).val, and (enum i).val ∈ s by (enum i).property
       exact hq_prob.2 (enum i).val (enum i).property
 
   -- Step 4: Apply l2_contractability_bound and convert result
