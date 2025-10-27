@@ -3752,7 +3752,9 @@ private theorem optionB_L1_convergence_bounded
         -- Combine: koopman^[k'+1] fL2 =ᵐ fL2 ∘ shift^[k'+1]
         simp only [this]
         have : (fun ω => ((koopman shift hσ)^[k'] fL2) (shift ω)) =ᵐ[μ] (fun ω => fL2 (shift^[k'] (shift ω))) := by
-          exact MeasurePreserving.ae_eq_comp hσ ih
+          -- Use that shift is measure-preserving to push ih through
+          filter_upwards [ih] with ω hω
+          exact hω
         refine hkoopman_step.trans this
 
     -- Step 2: Show fL2 (shift^[k] ω) = g (ω k) a.e.
@@ -3760,7 +3762,9 @@ private theorem optionB_L1_convergence_bounded
       intro k
       -- fL2 = G = g(· 0) a.e.
       have h1 : (fun ω => fL2 (shift^[k] ω)) =ᵐ[μ] (fun ω => G (shift^[k] ω)) := by
-        exact (MeasurePreserving.ae_eq_comp (MeasurePreserving.iterate hσ k) hfL2_eq).symm
+        -- Use that fL2 = G a.e.
+        filter_upwards [hfL2_eq] with ω hω
+        simp [hω]
       -- G (shift^[k] ω) = g ((shift^[k] ω) 0) = g (ω k)
       have h2 : (fun ω => G (shift^[k] ω)) =ᵐ[μ] (fun ω => g (ω k)) := by
         apply ae_of_all; intro ω
@@ -3799,11 +3803,15 @@ private theorem optionB_L1_convergence_bounded
     -- Combine a.e. equalities: for a.e. ω, each term equals g(ω k)
     have hsum_ae : (fun ω => ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω)
         =ᵐ[μ] (fun ω => ∑ k ∈ Finset.range n, g (ω k)) := by
-      -- Use filter_upwards to combine finitely many a.e. conditions
+      -- Combine finitely many a.e. conditions
+      -- Collect all the a.e. sets for each k
       have : ∀ᵐ ω ∂μ, ∀ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω = g (ω k) := by
-        apply ae_all_iff.mpr
-        intro k _
-        exact hterms k
+        -- Get the list of all a.e. equalities
+        have h_list := fun k => hterms k
+        -- Intersect finitely many ae sets
+        apply Filter.eventually_all.mpr
+        intro k
+        exact h_list k
       filter_upwards [this] with ω hω
       apply Finset.sum_congr rfl
       intro k hk

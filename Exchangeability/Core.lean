@@ -198,8 +198,8 @@ lemma takePrefix_measurable {m n : ℕ} (hmn : m ≤ n) :
   measurability
 
 lemma extendSet_measurable {m n : ℕ} {S : Set (Fin m → α)} {hmn : m ≤ n}
-    (hS : MeasurableSet S) : MeasurableSet (extendSet (α:=α) hmn S) := by
-  exact (takePrefix_measurable (α:=α) hmn) hS
+    (hS : MeasurableSet S) : MeasurableSet (extendSet (α:=α) hmn S) :=
+  (takePrefix_measurable (α:=α) hmn) hS
 
 /--
 The prefix cylinders form a π-system.
@@ -230,9 +230,8 @@ lemma cylinder_subset_prefixCylinders {s : Finset ℕ} {S : Set (∀ _ : s, α)}
   let N := s.sup id + 1
   have h_mem : ∀ i ∈ s, i < N := by
     intro i hi
-    have hle : i ≤ s.sup id := by
-      convert Finset.le_sup (f := id) hi
-    exact Nat.lt_of_le_of_lt hle (Nat.lt_succ_self _)
+    have hle : i ≤ s.sup id := by convert Finset.le_sup (f := id) hi
+    omega
   -- Transport `S` along the inclusion into the initial segment.
   let ι : s → Fin N := fun x => ⟨x.1, h_mem x.1 x.2⟩
   let pull : (Fin N → α) → (∀ i : s, α) := fun x => fun y => x (ι y)
@@ -511,10 +510,7 @@ def approxEquiv :
       { toFun := ?_, invFun := ?_, left_inv := ?_, right_inv := ?_ }
     · intro x
       have hx := x.property
-      let i : Fin n := ⟨x.1, hx⟩
-      have hi : (π i : ℕ) < permBound π n := lt_permBound_fin (π:=π) (n:=n) (i:=i)
-      refine ⟨⟨π i, hi⟩, ?_⟩
-      exact ⟨i, rfl⟩
+      let i : Fin n := ⟨x.1, hx⟩; refine ⟨⟨π i, lt_permBound_fin (π:=π) (n:=n) (i:=i)⟩, ?_⟩; exact ⟨i, rfl⟩
     · intro y
       let j := Classical.choose y.property
       have hj := Classical.choose_spec y.property
