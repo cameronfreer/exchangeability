@@ -693,9 +693,15 @@ theorem condExp_project_of_condIndepFun
         μ[ (f_n n ∘ Y) * (Z ⁻¹' B).indicator 1 | mW ] =ᵐ[μ]
         μ[ f_n n ∘ Y | mW ] * μ[ (Z ⁻¹' B).indicator 1 | mW ] := by
       intro n
-      -- f_n n is a simple function, so f_n n ∘ Y is a finite sum of indicators of Y-preimages
-      -- This is exactly the form required by simple_func_case
-      sorry
+      -- f_n n is a simple function on βY: f_n n = ∑ i ∈ range, i * indicator (fiber i)
+      -- Composing with Y: f_n n ∘ Y = ∑ i ∈ range, i * indicator (Y⁻¹(fiber i))
+      -- This matches simple_func_case with:
+      --   s = (f_n n).range
+      --   a i = i
+      --   A i = Y ⁻¹' (f_n n ⁻¹' {i})
+
+      -- Apply simple_func_case
+      sorry  -- TODO: Extract range, construct preimage sets, verify conditions, apply lemma
 
     -- Pointwise convergence: f_n ∘ Y → f ∘ Y pointwise a.e. on Ω
     have h_fY_ptwise : ∀ᵐ ω ∂μ, Filter.Tendsto (fun n => f_n n (Y ω)) Filter.atTop (nhds (f (Y ω))) := by
@@ -709,14 +715,22 @@ theorem condExp_project_of_condIndepFun
 
     -- Integrability of approximants
     have h_fn_int : ∀ n, Integrable (f_n n ∘ Y) μ := by
-      sorry
+      intro n
+      -- Strategy: Use SimpleFunc.integrable_approxOn or prove from bounds
+      -- We have ‖f_n n (Y ω)‖ ≤ 2‖f (Y ω)‖ from norm_approxOn_zero_le
+      -- and hf_int : Integrable (f ∘ Y) μ
+      sorry  -- TODO: Apply integrability from domination by integrable function
 
     -- Integrability of products with indicator B
     have h_fnB_int : ∀ n, Integrable ((f_n n ∘ Y) * (Z ⁻¹' B).indicator 1) μ := by
-      sorry
+      intro n
+      -- Strategy: Indicator is bounded, so this is bounded by |f_n n ∘ Y|
+      -- which is integrable by h_fn_int
+      sorry  -- TODO: Use Integrable.mul or indicator integrability
 
     have h_fYB_int : Integrable ((f ∘ Y) * (Z ⁻¹' B).indicator 1) μ := by
-      sorry
+      -- Strategy: Similar - indicator is bounded, (f ∘ Y) is integrable
+      sorry  -- TODO: Use Integrable.mul or indicator integrability
 
     -- Dominating function: By SimpleFunc.norm_approxOn_zero_le, ‖f_n n y‖ ≤ 2‖f y‖
     have h_bound_fnB : ∀ n, ∀ᵐ ω ∂μ, ‖(f_n n (Y ω)) * (Z ⁻¹' B).indicator 1 ω‖ ≤ 2 * ‖f (Y ω)‖ := by
@@ -734,12 +748,20 @@ theorem condExp_project_of_condIndepFun
         _ ≤ ‖f (Y ω)‖ + ‖f (Y ω)‖ := SimpleFunc.norm_approxOn_zero_le hf (by simp) (Y ω) n
         _ = 2 * ‖f (Y ω)‖ := by ring
 
-    -- Apply tendsto_condExp_unique with:
-    -- fs n = (f_n n ∘ Y) * indicator B
-    -- gs n = (μ[f_n n ∘ Y | mW]) * (μ[indicator B | mW])
-    -- f = (f ∘ Y) * indicator B
-    -- g = (μ[f ∘ Y | mW]) * (μ[indicator B | mW])
-    sorry
+    -- Apply tendsto_condExp_unique to pass factorization to the limit
+    --
+    -- We have for each n:
+    --   μ[(f_n n ∘ Y) * indicator B | mW] =ᵐ μ[f_n n ∘ Y | mW] * μ[indicator B | mW]  (by h_factorization)
+    --
+    -- The RHS is mW-measurable, so it equals its own conditional expectation.
+    -- Thus μ[RHS | mW] =ᵐ RHS.
+    --
+    -- By dominated convergence (tendsto_condExp_unique):
+    --   - LHS converges to μ[(f ∘ Y) * indicator B | mW] in L¹
+    --   - RHS converges to μ[f ∘ Y | mW] * μ[indicator B | mW] in L¹
+    --   - Therefore they are equal a.e.
+
+    sorry  -- TODO: Apply tendsto_condExp_unique with these sequences and bounds
     /-
     **Next steps with measurable f:**
 
