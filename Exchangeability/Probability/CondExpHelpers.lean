@@ -423,14 +423,19 @@ theorem condExp_project_of_condIndepFun
       -- Integrability of each product term a i * indicator_Ai * indicator_B
       have h_int_products : ∀ i ∈ s, Integrable (fun ω => a i * (A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω) μ := by
         intro i hi
-        -- TODO: Prove using indicator algebra + bounded functions on probability space
-        sorry
+        -- Indicators are bounded by 1, product of bounded functions on probability space is integrable
+        -- Strategy: const * indicator * indicator is integrable
+        -- 1. Show 1 is integrable (trivial on probability space)
+        -- 2. Apply Integrable.indicator twice
+        -- 3. Multiply by constant a i
+        sorry -- TODO: Use integrable_const + Integrable.indicator + const_mul
 
       -- Integrability of each term a i * indicator_Ai on Y side
       have h_int_Y_terms : ∀ i ∈ s, Integrable (fun ω => a i * (A i).indicator 1 ω) μ := by
         intro i hi
-        -- TODO: Prove using indicator integrability on probability space
-        sorry
+        -- Simpler: constant times indicator
+        -- Strategy: const * indicator is integrable on probability space
+        sorry -- TODO: Use integrable_const + Integrable.indicator + const_mul
 
       -- LHS: Apply condExp_finset_sum to distribute condExp over the sum
       have step1 : μ[ fun ω => ∑ i ∈ s, (a i * (A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω) | mW ]
@@ -463,8 +468,9 @@ theorem condExp_project_of_condIndepFun
                  =ᵐ[μ] fun ω => (∑ i ∈ s, a i * μ[ (A i).indicator 1 | mW ] ω) * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
         -- Use Finset.sum_mul to factor out the common term
         filter_upwards with ω
+        rw [← Finset.sum_mul]
         congr 1
-        ext i : 1
+        funext i
         ring
 
       -- RHS: Apply condExp_finset_sum.symm on the Y side
