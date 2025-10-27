@@ -8,6 +8,7 @@ import Exchangeability.Contractability
 import Exchangeability.ConditionallyIID
 import Exchangeability.Probability.CondExp
 import Exchangeability.Probability.IntegrationHelpers
+import Exchangeability.Probability.LpNormHelpers
 import Exchangeability.Tail.TailSigma
 import Exchangeability.Tail.ShiftInvariance
 import Mathlib.MeasureTheory.Function.L2Space
@@ -2559,14 +2560,50 @@ lemma cesaro_to_condexp_L2
     -- Strategy: Use eLpNorm² = ∫ |·|² and take square roots
     -- For p = 2: eLpNorm g 2 μ = (∫ g² dμ)^(1/2) since g² = |g|² for real functions
 
+    -- blockAvg is measurable
+    have h_blockAvg_meas : ∀ m, Measurable (blockAvg f X 0 m) := by
+      intro m
+      simp only [blockAvg]
+      -- (m : ℝ)⁻¹ * ∑_{k<m} f(X_k) is measurable
+      -- Constant times sum of measurables is measurable
+      apply Measurable.const_mul
+      -- ∑_{k<m} f(X_k) is measurable (finite sum of measurables)
+      apply Finset.measurable_sum
+      intro k _
+      -- f(X_k) is measurable (composition of measurables)
+      exact hf_meas.comp (hX_meas (0 + k))
+
+    -- blockAvg is bounded by the bound on f
+    have h_blockAvg_bdd : ∀ m, ∀ ω, |blockAvg f X 0 m ω| ≤ 1 := by
+      intro m ω
+      simp only [blockAvg]
+      by_cases hm : m = 0
+      · simp [hm]
+      · have hm_pos : 0 < m := Nat.pos_of_ne_zero hm
+        calc |(m : ℝ)⁻¹ * (Finset.range m).sum (fun k => f (X (0 + k) ω))|
+            = (m : ℝ)⁻¹ * |(Finset.range m).sum (fun k => f (X (0 + k) ω))| := by
+                rw [abs_mul, abs_of_nonneg (inv_nonneg.mpr (Nat.cast_nonneg m))]
+          _ ≤ (m : ℝ)⁻¹ * (Finset.range m).sum (fun k => |f (X (0 + k) ω)|) := by
+                apply mul_le_mul_of_nonneg_left
+                · exact Finset.abs_sum_le_sum_abs _ _
+                · exact inv_nonneg.mpr (Nat.cast_nonneg m)
+          _ ≤ (m : ℝ)⁻¹ * (Finset.range m).sum (fun k => (1 : ℝ)) := by
+                apply mul_le_mul_of_nonneg_left
+                · apply Finset.sum_le_sum
+                  intro k _
+                  exact hf_bdd (X (0 + k) ω)
+                · exact inv_nonneg.mpr (Nat.cast_nonneg m)
+          _ = (m : ℝ)⁻¹ * m := by simp
+          _ = 1 := by field_simp; ring
+
     -- First show the difference is in L²
     have h_memLp_diff : MemLp (fun ω => blockAvg f X 0 n ω - blockAvg f X 0 n' ω) 2 μ := by
       -- Both blockAvg terms are bounded, hence in L²
       apply MemLp.sub
       · -- blockAvg f X 0 n is bounded by 1, hence in L²
-        sorry
+        apply MeasureTheory.memLp_two_of_bounded (h_blockAvg_meas n) (h_blockAvg_bdd n)
       · -- blockAvg f X 0 n' is bounded by 1, hence in L²
-        sorry
+        apply MeasureTheory.memLp_two_of_bounded (h_blockAvg_meas n') (h_blockAvg_bdd n')
 
     -- Now convert ∫ (blockAvg - blockAvg')² < ε² to eLpNorm (blockAvg - blockAvg') 2 < ε
     -- The key insight: if ∫ g² < ε², then (∫ g²)^(1/2) < ε
