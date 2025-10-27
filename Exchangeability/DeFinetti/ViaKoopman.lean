@@ -3957,7 +3957,7 @@ private lemma optionB_Step4b_AB_close
             _ = n * Cg := by
                 rw [Finset.sum_const, Finset.card_range]
                 ring
-      _ = Cg / (↑n + 1) + Cg / (↑n + 1) := by ring_nf; ring
+      _ = Cg / (↑n + 1) + Cg / (↑n + 1) := by field_simp; ring
       _ = 2 * Cg / (↑n + 1) := by ring
   -- Integrate the pointwise bound and squeeze to 0
   have h_upper : ∀ n > 0,
@@ -3968,9 +3968,8 @@ private lemma optionB_Step4b_AB_close
       eventually_of_forall (h_bd n hn)
     -- Both sides integrable (constant is integrable; the left is bounded by a constant on a prob space)
     have h_int_right : Integrable (fun _ => 2 * Cg / (n + 1)) μ := integrable_const _
-    have h_int_left  : Integrable (fun ω => |A n ω - B n ω|) μ :=
-      (Integrable.const _).mono_of_nonneg_of_le
-        (by intro ω; exact abs_nonneg _) (by exact h_bd n hn ω |>.trans (le_of_eq rfl)) -- any constant bound suffices
+    have h_int_left  : Integrable (fun ω => |A n ω - B n ω|) μ := by
+      sorry  -- TODO: bounded measurable functions are integrable on finite measure spaces
     -- Monotonicity of the integral under AE ≤
     exact integral_mono_ae h_int_left h_int_right h_bd_ae
 
