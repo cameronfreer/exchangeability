@@ -247,6 +247,9 @@ lemma condExp_project_of_le {α : Type*} (m m' m₀ : MeasurableSpace α) {μ : 
 ## Conditional expectation projection under conditional independence
 -/
 
+/-
+**Note:** The following helper was not used in the main proof and has been commented out.
+
 /-- **Helper: set integral equals integral of indicator product.**
 
 This helper is currently not used in the main proof but documents a standard identity.
@@ -257,6 +260,7 @@ private lemma setIntegral_eq_integral_indicator {α : Type*} [MeasurableSpace α
   sorry
   -- Standard identity that can be derived from integral_indicator and properties of set integrals
   -- Not currently used in the main proof below
+-/
 
 /-- **Projection under conditional independence (rectangle + π-λ approach).**
 
@@ -469,16 +473,51 @@ theorem condExp_project_of_condIndepFun
       -- Integrability of each product term a i * indicator_Ai * indicator_B
       have h_int_products : ∀ i ∈ s, Integrable (fun ω => a i * (A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω) μ := by
         intro i hi
-        -- Indicators bounded by 1 → product bounded by |a i| → integrable on probability space
-        -- Technical note: exact lemma requires careful type matching (Integrable.indicator, integrable_const, bdd_mul)
-        sorry
+        -- Strategy: show this is a.e. equal to a constant times an indicator of a measurable set
+        -- (A i ∩ Z⁻¹B).indicator (a i) is integrable on a probability space
+        have h_eq : (fun ω => a i * (A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω)
+                  = fun ω => (A i ∩ Z ⁻¹' B).indicator (fun _ => a i) ω := by
+          ext ω
+          by_cases hA : ω ∈ A i <;> by_cases hB : ω ∈ Z ⁻¹' B
+          · -- Both indicators are 1
+            simp [Set.indicator_of_mem hA, Set.indicator_of_mem hB, Set.mem_inter hA hB]
+          · -- First indicator 1, second 0: LHS = 0, RHS = 0
+            rw [Set.indicator_of_mem hA, Set.indicator_of_notMem hB, mul_zero]
+            symm
+            rw [Set.indicator_of_notMem]
+            exact fun ⟨_, h⟩ => hB h
+          · -- First indicator 0, second 1: LHS = 0, RHS = 0
+            rw [Set.indicator_of_notMem hA]
+            simp
+            rw [Set.indicator_of_notMem]
+            exact fun ⟨h, _⟩ => hA h
+          · -- Both indicators 0: LHS = 0, RHS = 0
+            rw [Set.indicator_of_notMem hA, Set.indicator_of_notMem hB]
+            simp
+            rw [Set.indicator_of_notMem]
+            exact fun ⟨h, _⟩ => hA h
+        rw [h_eq]
+        -- indicator of constant on measurable set is integrable on finite measure
+        -- Both A i and Z⁻¹B are mZW-measurable, so their intersection is mZW-measurable
+        -- Then lift to mΩ-measurable since mZW ≤ mΩ
+        have hAB_meas_mZW : MeasurableSet[mZW] (A i ∩ Z ⁻¹' B) :=
+          (hA_meas i hi).inter (hmZ_le_mZW _ ⟨B, hB, rfl⟩)
+        have hAB_meas : MeasurableSet[mΩ] (A i ∩ Z ⁻¹' B) := hmZW_le _ hAB_meas_mZW
+        exact (integrable_const (a i)).indicator hAB_meas
 
       -- Integrability of each term a i * indicator_Ai on Y side
       have h_int_Y_terms : ∀ i ∈ s, Integrable (fun ω => a i * (A i).indicator 1 ω) μ := by
         intro i hi
-        -- Indicator bounded by 1 → scaled by |a i| → integrable on probability space
-        -- Technical note: use Integrable.indicator with integrable_const
-        sorry
+        -- Strategy: show this equals (A i).indicator (a i) which is integrable
+        have h_eq : (fun ω => a i * (A i).indicator 1 ω) = fun ω => (A i).indicator (fun _ => a i) ω := by
+          ext ω
+          by_cases h : ω ∈ A i
+          · simp [Set.indicator_of_mem h]
+          · simp [Set.indicator_of_notMem h]
+        rw [h_eq]
+        -- A i is mZW-measurable, lift to mΩ-measurable since mZW ≤ mΩ
+        have hA_meas_mΩ : MeasurableSet[mΩ] (A i) := hmZW_le _ (hA_meas i hi)
+        exact (integrable_const (a i)).indicator hA_meas_mΩ
 
       -- LHS: Apply condExp_finset_sum to distribute condExp over the sum
       have step1 : μ[ fun ω => ∑ i ∈ s, (a i * (A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω) | mW ]
