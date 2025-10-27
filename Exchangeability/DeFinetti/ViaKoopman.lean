@@ -3757,6 +3757,53 @@ private lemma iterate_shift_eval0 (k : ℕ) (ω : Ω[α]) :
   rw [iterate_shift_eval]
   simp
 
+/-! ### Option B Helper Lemmas
+
+These lemmas extract Steps 4a-4c from the main theorem to reduce elaboration complexity.
+Each lemma is self-contained with ~50-80 lines, well below timeout thresholds. -/
+
+/-- **Step 4a helper**: L² to L¹ convergence for birkhoffAverage.
+
+Given L² convergence of birkhoffAverage to condexpL2, proves L¹ convergence
+of the corresponding functions B_n → Y using:
+1. Lp convergence ⟺ eLpNorm convergence
+2. L² → L¹ inequality (‖f‖₁ ≤ ‖f‖₂ on probability spaces)
+3. Transfer via a.e. equalities -/
+private lemma optionB_Step4a_L2_to_L1
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ)
+    (fL2 : Lp ℝ 2 μ)
+    (hfL2_tendsto : Tendsto (birkhoffAverage ℝ (koopman shift hσ) _root_.id · fL2) atTop (𝓝[Lp ℝ 2 μ] condexpL2 (μ := μ) fL2))
+    (B : ℕ → Ω[α] → ℝ)
+    (Y : Ω[α] → ℝ)
+    (hB_eq_birkhoff : ∀ n > 0, (fun ω => birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω) =ᵐ[μ] B n)
+    (hY_eq : condexpL2 (μ := μ) fL2 =ᵐ[μ] Y) :
+    Tendsto (fun n => ∫ ω, |B n ω - Y ω| ∂μ) atTop (𝓝 0) := by
+  sorry
+
+/-- **Step 4b helper**: A_n and B_n differ negligibly.
+
+For bounded g, shows |A_n ω - B_n ω| ≤ 2·Cg/(n+1) → 0 via dominated convergence. -/
+private lemma optionB_Step4b_AB_close
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (g : α → ℝ) (Cg : ℝ) (hCg_bd : ∀ x, |g x| ≤ Cg)
+    (A B : ℕ → Ω[α] → ℝ) :
+    Tendsto (fun n => ∫ ω, |A n ω - B n ω| ∂μ) atTop (𝓝 0) := by
+  sorry
+
+/-- **Step 4c helper**: Triangle inequality to combine convergences.
+
+Given ∫|B_n - Y| → 0 and ∫|A_n - B_n| → 0, proves ∫|A_n - Y| → 0 via squeeze theorem. -/
+private lemma optionB_Step4c_triangle
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (g : α → ℝ) (hg_bd : ∃ Cg, ∀ x, |g x| ≤ Cg)
+    (A B : ℕ → Ω[α] → ℝ) (Y : Ω[α] → ℝ) (G : Ω[α] → ℝ)
+    (mSI : MeasurableSpace (Ω[α]))
+    (hB_L1_conv : Tendsto (fun n => ∫ ω, |B n ω - Y ω| ∂μ) atTop (𝓝 0))
+    (hA_B_close : Tendsto (fun n => ∫ ω, |A n ω - B n ω| ∂μ) atTop (𝓝 0)) :
+    Tendsto (fun n => ∫ ω, |A n ω - Y ω| ∂μ) atTop (𝓝 0) := by
+  sorry
+
 /-- **Option B bounded case implementation**: L¹ convergence for bounded functions.
 
 For a bounded measurable function g : α → ℝ, the Cesàro averages A_n(ω) = (1/(n+1)) ∑_j g(ω j)
