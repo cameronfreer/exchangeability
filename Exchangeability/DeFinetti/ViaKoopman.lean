@@ -18,6 +18,8 @@ import Exchangeability.DeFinetti.MartingaleHelpers
 import Exchangeability.ConditionallyIID
 import Exchangeability.Probability.CondExp
 import Exchangeability.PathSpace.Shift
+import Mathlib.Tactic
+import Mathlib.Tactic.FieldSimp
 
 /-!
 # de Finetti's Theorem via Koopman Operator
@@ -3845,7 +3847,7 @@ private lemma optionB_Step4a_L2_to_L1
   -- Transfer convergence using the equality for large n
   have : ∀ᶠ n in atTop, ∫ ω, |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω| ∂μ
       = ∫ ω, |B n ω - Y ω| ∂μ := by
-    apply eventually_of_forall
+    apply Filter.eventually_of_forall
     intro n
     by_cases hn : n > 0
     · exact h_int_eq n hn
@@ -3881,11 +3883,22 @@ private lemma optionB_Step4b_AB_close
     calc |1 / (↑n + 1) * (S + g (ω n)) - 1 / ↑n * S|
         = |S / (↑n + 1) + g (ω n) / (↑n + 1) - S / ↑n| := by ring
       _ = |-S / (↑n * (↑n + 1)) + g (ω n) / (↑n + 1)| := by ring
-      _ ≤ |S / (↑n * (↑n + 1))| + |g (ω n) / (↑n + 1)| := abs_sub_abs_le_abs_sub _ _
+      _ ≤ | -S / (↑n * (↑n + 1))| + |g (ω n) / (↑n + 1)| := by
+            -- triangle inequality |x + y| ≤ |x| + |y|
+            simpa using (abs_add (-S / (↑n * (↑n + 1))) (g (ω n) / (↑n + 1)))
+      _ = |S| / (↑n * (↑n + 1)) + |g (ω n)| / (↑n + 1) := by
+            -- pull denominators out of |·| since denominators are ≥ 0
+            have h₁ : 0 ≤ (↑n * (↑n + 1)) := by
+              have hn0 : 0 ≤ (n : ℝ) := by exact_mod_cast Nat.zero_le _
+              have hnp1 : 0 ≤ (n : ℝ) + 1 := by linarith
+              exact mul_nonneg hn0 hnp1
+            have h₂ : 0 ≤ (↑n + 1) := by
+              have : 0 ≤ (n : ℝ) := by exact_mod_cast Nat.zero_le _
+              linarith
+            simp [abs_div, abs_of_nonneg, h₁, h₂]
       _ ≤ |S| / (↑n * (↑n + 1)) + Cg / (↑n + 1) := by
-          gcongr
-          · exact abs_div _ _
-          · exact hCg_bd (ω n)
+            gcongr
+            exact hCg_bd (ω n)
       _ ≤ (n * Cg) / (↑n * (↑n + 1)) + Cg / (↑n + 1) := by
           gcongr
           -- |S| ≤ n * Cg since |g(ω k)| ≤ Cg for all k
@@ -3901,23 +3914,26 @@ private lemma optionB_Step4b_AB_close
                 ring
       _ = Cg / (↑n + 1) + Cg / (↑n + 1) := by ring
       _ = 2 * Cg / (↑n + 1) := by ring
-  -- Apply dominated convergence
-  refine tendsto_integral_of_dominated_convergence
-    (fun n => 2 * Cg / (n + 1))
-    (ae_of_all μ fun ω => ?_) -- integrability
-    (ae_of_all μ fun ω => ?_) -- pointwise bound
-    ?_ -- integrand bound converges
-    (ae_of_all μ fun ω => ?_) -- pointwise convergence
-  · exact Integrable.abs (integrable_const (2 * Cg))
-  · intro n; exact h_bd n (Nat.zero_lt_succ n) ω
-  · -- ∫ (2*Cg/(n+1)) dμ = 2*Cg/(n+1) → 0
-    simp only [integral_const, measure_univ, ENNReal.one_toReal, smul_eq_mul, mul_one]
-    exact tendsto_const_div_atTop_nhds_zero_nat (2 * Cg)
-  · -- |A n ω - B n ω| ≤ 2*Cg/(n+1) → 0 by squeeze
-    apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds
-      (tendsto_const_div_atTop_nhds_zero_nat (2 * Cg))
-    · intro n; exact abs_nonneg _
-    · intro n; exact h_bd n (Nat.zero_lt_succ n) ω
+  -- Integrate the pointwise bound and squeeze to 0
+  have h_upper : ∀ n > 0,
+      ∫ ω, |A n ω - B n ω| ∂μ ≤ 2 * Cg / (n + 1) := by
+    intro n hn
+    -- AE bound
+    have h_bd_ae : ∀ᵐ ω ∂μ, |A n ω - B n ω| ≤ 2 * Cg / (n + 1) :=
+      Filter.eventually_of_forall (h_bd n hn)
+    -- Both sides integrable (constant is integrable; the left is bounded by a constant on a prob space)
+    have h_int_right : Integrable (fun _ => 2 * Cg / (n + 1)) μ := integrable_const _
+    have h_int_left  : Integrable (fun ω => |A n ω - B n ω|) μ :=
+      (Integrable.const _).mono_of_nonneg_of_le
+        (by intro ω; exact abs_nonneg _) (by exact h_bd n hn ω |>.trans (le_of_eq rfl)) -- any constant bound suffices
+    -- Monotonicity of the integral under AE ≤
+    exact integral_mono_ae h_int_left h_int_right h_bd_ae
+
+  -- Done: squeeze to 0
+  refine squeeze_zero
+    (Filter.eventually_of_forall (fun _ => integral_nonneg_of_ae (ae_of_all _ (fun _ => abs_nonneg _))))
+    (Filter.eventually_atTop.2 ⟨1, by intro n hn; exact h_upper n hn⟩)
+    (tendsto_const_div_atTop_nhds_zero_nat (2 * Cg))
 
 /-- **Step 4c helper**: Triangle inequality to combine convergences.
 
@@ -3991,8 +4007,9 @@ private lemma optionB_Step4c_triangle
       exact abs_sub_abs_le_abs_sub (A n ω) (B n ω) (Y ω)
   -- Combine the two convergences via squeeze theorem
   apply squeeze_zero
-  · exact ae_of_all _ (fun n => integral_nonneg (ae_of_all _ (fun ω => abs_nonneg _)))
-  · exact eventually_of_forall h_triangle
+  · exact Filter.eventually_of_forall (fun _ =>
+      integral_nonneg_of_ae (ae_of_all _ (fun _ => abs_nonneg _)))
+  · exact Filter.eventually_of_forall h_triangle
   · exact Tendsto.add hA_B_close hB_L1_conv
 
 /-- **Option B bounded case implementation**: L¹ convergence for bounded functions.
@@ -4103,14 +4120,18 @@ private theorem optionB_L1_convergence_bounded
     -- Combine finite a.e. conditions for the sum
     have hsum : (fun ω => ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω) =ᵐ[μ]
         (fun ω => ∑ k ∈ Finset.range n, g (ω k)) := by
-      -- Combine finitely many a.e. conditions using Measure.ae_ball_iff
-      have h_list : ∀ k ∈ Finset.range n, (fun ω => ((koopman shift hσ)^[k] fL2) ω) =ᵐ[μ] (fun ω => g (ω k)) :=
+      -- Combine finitely many a.e. conditions using MeasureTheory.ae_ball_iff
+      have h_list :
+          ∀ k ∈ Finset.range n,
+            (fun ω => ((koopman shift hσ)^[k] fL2) ω) =ᵐ[μ] (fun ω => g (ω k)) :=
         fun k _ => hterms k
+
       -- Each a.e. condition has full measure, so their finite intersection has full measure
-      have : ∀ᵐ ω ∂μ, ∀ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω = g (ω k) := by
+      have : ∀ᵐ ω ∂μ, ∀ k ∈ Finset.range n,
+          ((koopman shift hσ)^[k] fL2) ω = g (ω k) := by
         have hcount : (Finset.range n : Set ℕ).Countable := Finset.countable_toSet _
-        apply (MeasureTheory.ae_ball_iff hcount).mp
-        exact h_list
+        exact (MeasureTheory.ae_ball_iff hcount).mpr h_list
+
       filter_upwards [this] with ω hω
       exact Finset.sum_congr rfl hω
 
@@ -4156,8 +4177,9 @@ private theorem optionB_L1_convergence_bounded
   -- Step 4b: A_n and B_n differ negligibly due to indexing
   -- |A_n ω - B_n ω| ≤ 2*Cg/(n+1) since g is bounded
   obtain ⟨Cg, hCg_bd⟩ := hg_bd
-  have hA_B_close : Tendsto (fun n => ∫ ω, |A n ω - B n ω| ∂μ) atTop (𝓝 0) :=
-    optionB_Step4b_AB_close g Cg hCg_bd A B
+  have hA_B_close :
+      Tendsto (fun n => ∫ ω, |A n ω - B n ω| ∂μ) atTop (𝓝 0) :=
+    optionB_Step4b_AB_close (μ := μ) g Cg hCg_bd A B rfl rfl
 
   -- Step 4c: Triangle inequality: |A_n - Y| ≤ |A_n - B_n| + |B_n - Y|
   exact optionB_Step4c_triangle g hg_bd A B Y G mSI hB_L1_conv hA_B_close

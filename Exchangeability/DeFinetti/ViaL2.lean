@@ -1662,7 +1662,54 @@ making the family {A_{m,n}}_m Cauchy in L² as n→∞.
 4. Algebraic bound: ∑ c_i² ≤ (∑|c_i|) · sup|c_i| ≤ 2 · sup|c_i|
 5. Substitute and simplify to get the bound
 
-This is **exactly** Kallenberg's Lemma 1.2. No ergodic theory needed! -/
+This is **exactly** Kallenberg's Lemma 1.2. No ergodic theory needed!
+
+## Why this proof uses `l2_contractability_bound` instead of `kallenberg_L2_bound`
+
+**The Circularity Problem:**
+
+The de Finetti theorem we're proving establishes: **Contractable ↔ Exchangeable**
+
+- `contractable_of_exchangeable` (✓ proved in Contractability.lean): Exchangeable → Contractable
+- `cesaro_to_condexp_L2` (this file): Contractable → Exchangeable (via conditionally i.i.d.)
+
+Since we're trying to prove Contractable → Exchangeable, we **cannot assume exchangeability**
+in this proof - that would be circular!
+
+**Why `kallenberg_L2_bound` requires exchangeability:**
+
+`kallenberg_L2_bound` needs `Exchangeable μ Z` to establish uniform second moments:
+- E[Z_i²] = E[Z_0²] for all i (uniform variance)
+- E[Z_i Z_j] = E[Z_0 Z_1] for all i≠j (uniform pairwise covariance)
+
+Exchangeability gives this via permutation invariance: swapping indices doesn't change the distribution.
+
+**Why contractability is insufficient for `kallenberg_L2_bound`:**
+
+Contractability only tells us about *increasing* subsequences:
+- For any increasing k : Fin m → ℕ, the subsequence (Z_{k(0)}, ..., Z_{k(m-1)}) has the
+  same distribution as (Z_0, ..., Z_{m-1})
+
+This is weaker than exchangeability:
+- ✓ We know (Z_0, Z_1) has same distribution as (Z_1, Z_2), (Z_2, Z_3), etc.
+- ✗ We DON'T know (Z_0, Z_1) has same distribution as (Z_1, Z_0) - contractability doesn't
+  give permutation invariance!
+
+**However: contractability DOES give uniform covariance!**
+
+Even though contractability ≠ exchangeability, contractability is *sufficient* for:
+- E[Z_i²] = E[Z_0²] for all i (from the increasing subsequence {i})
+- E[Z_i Z_j] = E[Z_0 Z_1] for all i<j (from the increasing subsequence {i,j})
+
+This is exactly the covariance structure needed by `l2_contractability_bound` from
+L2Helpers.lean, which doesn't assume full exchangeability.
+
+**Note:** By the end of this proof, we'll have shown Contractable → Exchangeable, so
+contractable sequences ARE exchangeable. But we can't use that equivalence while
+proving it - that would be begging the question!
+
+-/
+
 lemma kallenberg_L2_bound
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (Z : ℕ → Ω → ℝ) (hZ_exch : Exchangeable μ Z) (hZ_meas : ∀ i, Measurable (Z i))
@@ -1673,6 +1720,8 @@ lemma kallenberg_L2_bound
     ∫ ω, ((s.sum fun i => (p i - q i) * Z i ω) ^ 2) ∂μ
       ≤ (∫ ω, (Z 0 ω - Z 1 ω)^2 ∂μ) * (s.sup' hs (fun i => |(p i - q i)|)) := by
   -- Kallenberg Lemma 1.2: Pure algebraic proof using exchangeability
+  -- NOTE: This lemma requires Exchangeable, but cesaro_to_condexp_L2 uses
+  -- l2_contractability_bound instead (see comment above)
 
   -- Notation: c_i := p_i - q_i (differences of probability weights)
   let c := fun i => p i - q i
@@ -2345,15 +2394,36 @@ lemma cesaro_to_condexp_L2
       eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ < ε := by
     intro ε hε
 
-    sorry  -- TODO: Complete Cauchy property proof using kallenberg_L2_bound
+    -- Strategy: Use l2_contractability_bound (NOT kallenberg_L2_bound)
+    --
+    -- IMPORTANT: We cannot use kallenberg_L2_bound here because it requires
+    -- Exchangeable μ Z, but we're trying to PROVE contractable → exchangeable!
+    -- Using exchangeability here would be circular.
+    --
+    -- Instead, we use l2_contractability_bound from L2Helpers.lean, which only
+    -- requires uniform covariance structure. Contractability is sufficient to
+    -- establish this covariance structure (see detailed explanation above).
+    --
+    -- Define centered variables Z_i = f(X_i) - E[f(X_0)]
+    -- Show Z is contractable, derive uniform covariance
+    -- Apply l2_contractability_bound: ∫ (weighted sum)² ≤ C_f · sup|weights|
+    -- Choose N s.t. C_f/N < ε²
+
+    sorry  -- TODO: Complete Cauchy property proof
     /-
-    Strategy:
-    1. Define C_f := E[(Z_0 - Z_1)²] (constant from Kallenberg bound)
-    2. Choose N via Archimedean: N large s.t. C_f / N < ε²
-    3. For n, n' ≥ N, express blockAvg difference as weighted sum
-    4. Apply kallenberg_L2_bound to get ‖diff‖²_L² ≤ C_f · sup|coeffs|
-    5. Bound sup|coeffs| ≤ 1/N to get ‖diff‖²_L² < ε²
-    6. Take square root to get eLpNorm < ε
+    Detailed steps:
+    1. Define: m := E[f(X_0)], Z i := f(X_i) - m, C_f := E[(Z_0 - Z_1)²]
+    2. Show Z is contractable (using contractable_comp + constant shift)
+    3. Show Z has uniform covariance structure via contractability:
+       - For variance: E[Z_i²] = E[Z_0²] via contractable_map_single
+       - For covariance: E[Z_i Z_j] = E[Z_0 Z_1] for i<j via contractable_map_pair
+    4. Express: blockAvg n - blockAvg n' = ∑ c_i Z_i where c_i = 1/n (i<n) - 1/n' (i<n')
+    5. Apply l2_contractability_bound: ∫ (∑ c_i Z_i)² ≤ 2·σ²·(1-ρ)·sup|c_i|
+       where σ² = Var(Z_0) and ρ = Cov(Z_0,Z_1)/σ²
+    6. Bound: sup|c_i| ≤ max(1/n, 1/n') ≤ 1/N
+    7. Choose N via Archimedean s.t. C_f/N < (ε.toReal)²
+    8. Get: ∫ (blockAvg n - blockAvg n')² ≤ C_f/N < ε²
+    9. Convert: eLpNorm_lt_of_integral_sq_lt gives eLpNorm < ε
     -/
 
   -- Step 2: Extract L² limit using completeness of Hilbert space
