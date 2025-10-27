@@ -96,8 +96,6 @@ instance pi_isProbabilityMeasure {ι : Type*} [Fintype ι] {α : ι → Type*}
     [∀ i, IsProbabilityMeasure (μ i)] [∀ i, SigmaFinite (μ i)] :
     IsProbabilityMeasure (Measure.pi μ) := by
   constructor
-  rw [show (Set.univ : Set (∀ i, α i)) = Set.univ.pi (fun _ => Set.univ) by simp,
-      Measure.pi_pi]
   simp [measure_univ]
 
 /--
@@ -119,15 +117,10 @@ theorem pi_comp_perm {ι : Type*} [Fintype ι] {α : Type*} [MeasurableSpace α]
     Measure.map (fun f : ι → α => f ∘ σ) (Measure.pi fun _ : ι => ν) =
       Measure.pi fun _ : ι => ν := by
   classical
-  have h := (MeasureTheory.measurePreserving_piCongrLeft
-    (α:=fun _ : ι => α) (μ:=fun _ : ι => ν) (f:=σ.symm)).map_eq
-  -- Show that (fun f => f ∘ σ) equals the measurable equiv
-  have hfun : (fun f : ι → α => f ∘ σ) =
-      (MeasurableEquiv.piCongrLeft (fun _ : ι => α) σ.symm : (ι → α) → (ι → α)) := by
-    ext g i
-    simp [Function.comp, MeasurableEquiv.coe_piCongrLeft,
-          Equiv.piCongrLeft_apply (P:=fun _ : ι => α) (e:=σ.symm)]
-  simpa [hfun]
+  convert (MeasureTheory.measurePreserving_piCongrLeft
+    (α:=fun _ : ι => α) (μ:=fun _ : ι => ν) (f:=σ.symm)).map_eq using 2
+  ext g i
+  simp [Function.comp, MeasurableEquiv.coe_piCongrLeft, Equiv.piCongrLeft_apply]
 
 /--
 Giry monad functoriality: mapping commutes with binding.
@@ -226,7 +219,7 @@ theorem pi_perm_comm {ι : Type*} [Fintype ι] {α : Type*} [MeasurableSpace α]
     Measure.pi (fun _ : ι => ν) =
       Measure.map (fun f : ι → α => f ∘ σ.symm) (Measure.pi fun _ : ι => ν) := by
   classical
-  simpa using (MeasureTheory.Measure.pi_comp_perm (ν:=ν) (σ:=σ.symm)).symm
+  exact (MeasureTheory.Measure.pi_comp_perm (ν:=ν) (σ:=σ.symm)).symm
 
 /--
 **Main theorem:** Conditionally i.i.d. sequences are exchangeable.
@@ -258,36 +251,23 @@ theorem exchangeable_of_conditionallyIID {μ : Measure Ω} {X : ℕ → Ω → �
     Exchangeable μ X := by
   intro n σ
   obtain ⟨ν, hν_prob, hν_meas_coe, hν_eq⟩ := hX
-  -- Product formula for identity (which is strictly monotone)
   have h_id : Measure.map (fun ω i => X i.val ω) μ =
-              μ.bind (fun ω => Measure.pi fun _ : Fin n => ν ω) := by
-    apply hν_eq n (fun i => i.val)
-    -- Fin.val is strictly monotone
-    intro i j hij
-    exact hij
-  -- Measurability of the vector map
+              μ.bind (fun ω => Measure.pi fun _ : Fin n => ν ω) :=
+    hν_eq n (fun i => i.val) (fun _ _ => id)
   have hXvec_meas : Measurable (fun ω => fun i : Fin n => X i.val ω) :=
     measurable_pi_lambda _ (fun i => hX_meas i.val)
-  -- Measurability of permutation on finite functions
   have hperm_meas : Measurable (fun f : Fin n → α => f ∘ σ) :=
     measurable_pi_lambda _ (fun i => measurable_pi_apply (σ i))
-  -- Measurability of the product measure kernel
   have hν_meas : Measurable fun ω => Measure.pi fun _ : Fin n => ν ω :=
     measurable_measure_pi ν hν_prob hν_meas_coe
-  -- Show permuted version equals the same mixture
   calc Measure.map (fun ω i => X (σ i).val ω) μ
-      -- Factor as permutation composed with identity
-      = Measure.map (fun f => f ∘ σ) (Measure.map (fun ω i => X i.val ω) μ) := by
-          rw [Measure.map_map hperm_meas hXvec_meas]
-          rfl
-    _ -- Apply product formula for identity
-      = Measure.map (fun f => f ∘ σ) (μ.bind (fun ω => Measure.pi fun _ : Fin n => ν ω)) := by
+      = Measure.map (fun f => f ∘ σ) (Measure.map (fun ω i => X i.val ω) μ) :=
+          (Measure.map_map hperm_meas hXvec_meas).symm
+    _ = Measure.map (fun f => f ∘ σ) (μ.bind (fun ω => Measure.pi fun _ : Fin n => ν ω)) := by
           rw [h_id]
-    _ -- Push permutation through bind (Giry monad functoriality)
-      = μ.bind (fun ω => Measure.map (fun f => f ∘ σ) (Measure.pi fun _ : Fin n => ν ω)) := by
-          rw [MeasureTheory.Measure.bind_map_comm hν_meas hperm_meas]
-    _ -- Product measures are permutation-invariant
-      = μ.bind (fun ω => Measure.pi fun _ : Fin n => ν ω) := by
+    _ = μ.bind (fun ω => Measure.map (fun f => f ∘ σ) (Measure.pi fun _ : Fin n => ν ω)) :=
+          MeasureTheory.Measure.bind_map_comm hν_meas hperm_meas
+    _ = μ.bind (fun ω => Measure.pi fun _ : Fin n => ν ω) := by
           simp_rw [MeasureTheory.Measure.pi_comp_perm σ]
     _ = Measure.map (fun ω i => X i.val ω) μ := h_id.symm
 
