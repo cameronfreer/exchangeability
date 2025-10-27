@@ -2241,7 +2241,22 @@ lemma kallenberg_L2_bound
                     congr 1
                     simp only [ρ, covOffDiag]
                     by_cases h : σSq = 0
-                    · simp [h]
+                    · -- When σSq = 0, variance is 0, so Z 0 ω - m = 0 a.e.
+                      -- Therefore the covariance integral is also 0
+                      simp [h]
+                      -- σSq = ∫ (Z 0 - m)² = 0 and integrand ≥ 0, so Z 0 - m = 0 a.e.
+                      have : (fun ω => (Z 0 ω - m) * (Z 1 ω - m)) =ᵐ[μ] 0 := by
+                        have h_sq_zero : ∀ᵐ ω ∂μ, (Z 0 ω - m) ^ 2 = 0 := by
+                          rw [← h] at hσSq_nonneg
+                          have : ∫ (ω : Ω), (Z 0 ω - m) ^ 2 ∂μ = 0 := h
+                          exact (integral_eq_zero_iff_of_nonneg_ae (Eventually.of_forall (fun ω => sq_nonneg _)) hint_sq0).mp this
+                        filter_upwards [h_sq_zero] with ω hω
+                        have : Z 0 ω - m = 0 := by
+                          have := sq_eq_zero_iff.mp hω
+                          exact this
+                        simp [this]
+                      rw [integral_congr_ae this]
+                      simp
                     · simp [h]; field_simp
               _ = 2 * σSq * (1 - ρ) := by ring
 
