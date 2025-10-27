@@ -1664,8 +1664,35 @@ lemma kallenberg_L2_bound
     (hZ_L2 : ∀ i ∈ s, MemLp (Z i) 2 μ) :
     ∫ ω, ((s.sum fun i => (p i - q i) * Z i ω) ^ 2) ∂μ
       ≤ (∫ ω, (Z 0 ω - Z 1 ω)^2 ∂μ) * (s.sup' hs (fun i => |(p i - q i)|)) := by
-  -- TODO: Implement the algebraic proof from Kallenberg Lemma 1.2
-  -- This is pure second-moment computation + exchangeability
+  -- Kallenberg Lemma 1.2: Pure algebraic proof using exchangeability
+
+  -- Notation: c_i := p_i - q_i (differences of probability weights)
+  let c := fun i => p i - q i
+
+  -- Key fact: ∑ c_i = 0 (since both p and q sum to 1)
+  have hc_sum_zero : s.sum c = 0 := by
+    simp only [c, Finset.sum_sub_distrib, hp_prob.1, hq_prob.1]
+    norm_num
+
+  -- Step 1: Expand E[(∑ c_i Z_i)²]
+  -- E[(∑ c_i Z_i)²] = ∑ c_i² E[Z_i²] + ∑_{i≠j} c_i c_j E[Z_i Z_j]
+
+  -- Step 2: Use exchangeability to identify second moments
+  -- By exchangeability: E[Z_i²] = E[Z_0²] and E[Z_i Z_j] = E[Z_0 Z_1] for i≠j
+
+  -- Step 3: Algebraic simplification using ∑ c_i = 0
+  -- ∑_{i≠j} c_i c_j = (∑ c_i)² - ∑ c_i² = -∑ c_i²
+
+  -- Step 4: Bound ∑ c_i² ≤ (∑|c_i|) · sup|c_i| ≤ 2 · sup|c_i|
+
+  -- Step 5: Combine to get final bound
+  -- E[(∑ c_i Z_i)²] ≤ C_f · sup|c_i| where C_f = E[(Z_0 - Z_1)²]
+
+  -- TODO: Complete the detailed calculation
+  -- This requires:
+  -- 1. integral_sum_sq expansion lemma
+  -- 2. Exchangeability second-moment identification
+  -- 3. Algebraic inequality for coefficients
   sorry
 
 /-- **Cesàro averages converge in L² to a tail-measurable limit.**
@@ -1686,12 +1713,47 @@ lemma cesaro_to_condexp_L2
       Measurable[TailSigma.tailSigma X] α_f ∧
       Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0) ∧
       α_f =ᵐ[μ] μ[(f ∘ X 0) | TailSigma.tailSigma X] := by
-  -- TODO: Implement Kallenberg's second proof
-  -- Step 1: Use kallenberg_L2_bound to show {A_{m,n}}_m is Cauchy
-  -- Step 2: Extract limit α_f in L² (completeness)
-  -- Step 3: Show α_f is tail-measurable (limits of σ(X_{>N})-measurable functions)
-  -- Step 4: Identify α_f = E[f(X_1)|tail] via tail-event integrals
-  sorry
+  -- Kallenberg's second proof (elementary L² approach)
+
+  -- Define Z_i := f(X_i) - E[f(X_0)] (centered variables)
+  let Z := fun i ω => f (X i ω) - ∫ ω', f (X 0 ω') ∂μ
+
+  -- Step 1: Show {A_{0,n}}_n is Cauchy in L² using Kallenberg bound
+  -- For any m, m' and large n: ‖A_{m,n} - A_{m',n}‖_L² ≤ C_f/√n
+  -- Setting m=m'=0 with different n values: need to relate A_{0,n} and A_{0,n'}
+
+  have hCauchy : ∀ ε > 0, ∃ N, ∀ {n n'}, n ≥ N → n' ≥ N →
+      eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ < ε := by
+    intro ε hε
+    -- Use kallenberg_L2_bound to get C_f/√n bound
+    -- Choose N such that C_f/√N < ε
+    sorry
+
+  -- Step 2: Extract L² limit using completeness of Hilbert space
+  -- Lp(2, μ) is complete (Hilbert space), so Cauchy sequence converges
+  have ⟨α_f, hα_memLp, hα_limit⟩ : ∃ α_f, MemLp α_f 2 μ ∧
+      Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0) := by
+    -- Use completeness of L²
+    sorry
+
+  use α_f
+  refine ⟨hα_memLp, ?_, hα_limit, ?_⟩
+
+  -- Step 3: Show α_f is tail-measurable
+  -- For each N, A_{N,n} is σ(X_{>N})-measurable
+  -- α_f = limit of A_{N,n} as n→∞, so α_f ∈ ⋂_N σ(X_{>N}) = tail σ-algebra
+  · -- Tail measurability
+    sorry
+
+  -- Step 4: Identify α_f = E[f(X_1)|tail] using tail-event integrals
+  -- For any tail event A:
+  --   E[f(X_1) 1_A] = E[f(X_j) 1_A] for any j (by exchangeability + tail invariance)
+  --                 = lim_{n→∞} (1/n) ∑ E[f(X_j) 1_A] (average over large block)
+  --                 = lim_{n→∞} E[A_{0,n} 1_A] (by linearity)
+  --                 = E[α_f 1_A] (by L² convergence)
+  -- Therefore α_f is the conditional expectation
+  · -- Identification as conditional expectation
+    sorry
 
 /-- **L¹ version via L² → L¹ conversion.**
 
