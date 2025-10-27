@@ -335,36 +335,65 @@ theorem condExp_project_of_condIndepFun
 
     sorry
     /-
-    **Proof outline (using condIndep_factor):**
+    **Detailed Implementation Guide (~30-50 lines):**
 
-    Goal: ∫_{S∩Z⁻¹(B)} g dμ = ∫_{S∩Z⁻¹(B)} f(Y) dμ
-
+    **Goal:** ∫_{S∩Z⁻¹(B)} g dμ = ∫_{S∩Z⁻¹(B)} f(Y) dμ
     where S ∈ σ(W), B ∈ B_Z, g = E[f(Y)|W]
 
-    **LHS computation:**
-    ∫_{S∩Z⁻¹(B)} g dμ
-      = ∫ g·1_S·1_{Z⁻¹(B)} dμ                      [convert to indicators]
-      = E[g·1_S·1_{Z⁻¹(B)}]                         [integral is expectation]
-      = E[E[g·1_S·1_{Z⁻¹(B)}|W]]                    [tower property: E[·] = E[E[·|W]]]
-      = E[g·1_S·E[1_{Z⁻¹(B)}|W]]                    [pull out mW-measurable g·1_S]
+    **Mathematical Strategy:**
+    Both sides integrate over S ∩ Z⁻¹(B). We'll show they equal the same expression:
+      E[g · 1_S · E[1_{Z⁻¹(B)} | W]]
 
-    **RHS computation:**
-    ∫_{S∩Z⁻¹(B)} f(Y) dμ
-      = ∫ f(Y)·1_S·1_{Z⁻¹(B)} dμ
-      = E[f(Y)·1_S·1_{Z⁻¹(B)}]
-      = E[E[f(Y)·1_S·1_{Z⁻¹(B)}|W]]                 [tower property]
-      = E[1_S·E[f(Y)·1_{Z⁻¹(B)}|W]]                 [pull out mW-measurable 1_S]
-      = E[1_S·g·E[1_{Z⁻¹(B)}|W]]                    [by condIndep_factor: E[f(Y)·1_B|W] = g·E[1_B|W]]
-      = E[g·1_S·E[1_{Z⁻¹(B)}|W]]                    [commutativity]
+    **Implementation Steps:**
 
-    Therefore LHS = RHS. ∎
+    **Step 1: Convert LHS to conditional expectation form**
+    ```lean
+    calc ∫ x in S ∩ Z ⁻¹' B, g x ∂μ
+        = ∫ x, (S ∩ Z ⁻¹' B).indicator g x ∂μ           [use setIntegral_eq_integral_indicator]
+      _ = ∫ x, g x * (S ∩ Z ⁻¹' B).indicator 1 x ∂μ     [indicator_mul_left]
+      _ = ∫ x, g x * S.indicator 1 x * (Z ⁻¹' B).indicator 1 x ∂μ  [indicator_inter_mul]
+    ```
 
-    **Implementation steps:**
-    1. Rewrite both integrals using set indicators
-    2. Apply setIntegral_condExp to relate integrals to conditional expectations
-    3. Use condExp_stronglyMeasurable_mul to pull out S-measurable factors
-    4. Apply h_factor for the key factorization
-    5. Conclude by symmetry
+    **Step 2: Apply tower property to LHS**
+    Since g = E[f∘Y | mW] and integrating against 1 gives expectation:
+    ```lean
+      _ = ∫ x, μ[g * S.indicator 1 * (Z ⁻¹' B).indicator 1 | mW] x ∂μ  [integral_condExp]
+    ```
+
+    **Step 3: Pull out mW-measurable factors from LHS**
+    Since g and S.indicator 1 are both mW-measurable:
+    ```lean
+      _ = ∫ x, (g x * S.indicator 1 x) * μ[(Z ⁻¹' B).indicator 1 | mW] x ∂μ
+            [use condExp_mul_of_stronglyMeasurable_left]
+    ```
+
+    **Step 4: Convert RHS similarly**
+    ```lean
+    ∫ x in S ∩ Z ⁻¹' B, (f ∘ Y) x ∂μ
+      = ∫ x, (f ∘ Y) x * S.indicator 1 x * (Z ⁻¹' B).indicator 1 x ∂μ
+      = ∫ x, S.indicator 1 x * ((f ∘ Y) x * (Z ⁻¹' B).indicator 1 x) ∂μ
+    ```
+
+    **Step 5: Apply conditional factorization to RHS**
+    ```lean
+      _ = ∫ x, S.indicator 1 x * μ[(f ∘ Y) * (Z ⁻¹' B).indicator 1 | mW] x ∂μ
+            [integral_condExp and pull-out]
+      _ = ∫ x, S.indicator 1 x * (g x * μ[(Z ⁻¹' B).indicator 1 | mW] x) ∂μ
+            [apply h_factor: E[f(Y)·1_B|W] = g·E[1_B|W]]
+      _ = ∫ x, (g x * S.indicator 1 x) * μ[(Z ⁻¹' B).indicator 1 | mW] x ∂μ
+            [commutativity and reassociation]
+    ```
+
+    **Step 6: Conclude**
+    Both sides equal the same expression, so LHS = RHS. ∎
+
+    **Key Lemmas:**
+    - `setIntegral_eq_integral_indicator` (convert set integral to indicator)
+    - `Set.indicator_inter_mul` (split intersection indicator)
+    - `integral_condExp` (tower property: ∫ f = ∫ E[f|m])
+    - `condExp_mul_of_stronglyMeasurable_left` (pull out measurable factors)
+    - `h_factor` (conditional independence factorization)
+    - `mul_comm`, `mul_assoc` (arithmetic rearrangement)
     -/
     /-
     **Mathematical Argument (conditional independence factorization):**
