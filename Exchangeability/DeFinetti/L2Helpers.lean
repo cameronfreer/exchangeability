@@ -85,10 +85,7 @@ lemma contractable_map_single (hX_contract : Contractable μ X) (hX_meas : ∀ i
   let k : Fin 1 → ℕ := fun _ => i
   have hk : StrictMono k := by
     intro a b hab
-    -- In Fin 1, both a and b must be 0, so a < b is impossible
-    have : a = 0 := Fin.eq_zero a
-    have : b = 0 := Fin.eq_zero b
-    simp_all
+    simp_all [Fin.eq_zero a, Fin.eq_zero b]
   have h_map := hX_contract 1 k hk
   let eval : (Fin 1 → ℝ) → ℝ := fun g => g fin1Zero
   have h_eval_meas : Measurable eval := measurable_eval_fin1
@@ -122,10 +119,10 @@ private lemma strictMono_two {i j : ℕ} (hij : i < j) :
   have hval : a.val < b.val := Fin.lt_iff_val_lt_val.mp hlt
   have hb_val_le : b.val ≤ 1 := Nat.lt_succ_iff.mp (show b.val < 2 by simp [b.is_lt])
   have hb_ne_zero : b.val ≠ 0 := by intro hb; simp [hb] at hval
-  have hb_val : b.val = 1 := by
-    exact le_antisymm hb_val_le (Nat.succ_le_of_lt (Nat.pos_of_ne_zero hb_ne_zero))
-  have ha_val : a.val = 0 := by
-    exact Nat.lt_one_iff.mp (by simp only [hb_val] at hval; exact hval)
+  have hb_val : b.val = 1 :=
+    le_antisymm hb_val_le (Nat.succ_le_of_lt (Nat.pos_of_ne_zero hb_ne_zero))
+  have ha_val : a.val = 0 :=
+    Nat.lt_one_iff.mp (by simp only [hb_val] at hval; exact hval)
   -- Apply to conclusion
   have ha : a = fin2Zero := by ext; simp [fin2Zero, ha_val]
   have hb : b = fin2One := by ext; simp [fin2One, hb_val]
@@ -267,8 +264,8 @@ lemma toReal_lt_of_lt_ofReal {x : ENNReal} {ε : ℝ}
     (_hx : x ≠ ⊤) (hε : 0 ≤ ε) :
     x < ENNReal.ofReal ε → ENNReal.toReal x < ε := by
   intro h
-  have : ENNReal.toReal x < ENNReal.toReal (ENNReal.ofReal ε) := by
-    exact ENNReal.toReal_strict_mono (ENNReal.ofReal_ne_top) h
+  have : ENNReal.toReal x < ENNReal.toReal (ENNReal.ofReal ε) :=
+    ENNReal.toReal_strict_mono (ENNReal.ofReal_ne_top) h
   simp [ENNReal.toReal_ofReal hε] at this
   exact this
 
@@ -290,21 +287,17 @@ lemma sqrt_div_lt_half_eps_of_nat
   by_cases hCf0 : Cf = 0
   · simp [hCf0, div_pos hε (by norm_num : (0:ℝ) < 2)]
   have hCfpos : 0 < Cf := lt_of_le_of_ne hCf (Ne.symm hCf0)
-  have hmpos : 0 < (m : ℝ) := by
-    calc (0 : ℝ) < 4*Cf/ε^2 := by positivity
-      _ < m := hA_lt_m
+  have hmpos : 0 < (m : ℝ) := by linarith [show 0 < 4*Cf/ε^2 by positivity, hA_lt_m]
   have hdenom_pos : 0 < 4*Cf/ε^2 := by positivity
-  have hdiv : Cf / (m : ℝ) < Cf / (4*Cf/ε^2) := by
-    exact div_lt_div_of_pos_left hCfpos hdenom_pos hA_lt_m
+  have hdiv : Cf / (m : ℝ) < Cf / (4*Cf/ε^2) :=
+    div_lt_div_of_pos_left hCfpos hdenom_pos hA_lt_m
   have heq : Cf / (4*Cf/ε^2) = ε^2 / 4 := by
     field_simp [ne_of_gt hCfpos]
   have hlt : Cf / (m : ℝ) < ε^2 / 4 := by
-    calc Cf / (m : ℝ)
-        < Cf / (4*Cf/ε^2) := hdiv
-      _ = ε^2 / 4 := heq
+    rw [← heq]; exact hdiv
   have hnonneg : 0 ≤ Cf / (m : ℝ) := div_nonneg hCf (Nat.cast_nonneg m)
-  have hsqrt : Real.sqrt (Cf / m) < Real.sqrt (ε^2 / 4) := by
-    exact Real.sqrt_lt_sqrt hnonneg hlt
+  have hsqrt : Real.sqrt (Cf / m) < Real.sqrt (ε^2 / 4) :=
+    Real.sqrt_lt_sqrt hnonneg hlt
   calc Real.sqrt (Cf / m)
       < Real.sqrt (ε^2 / 4) := hsqrt
     _ = Real.sqrt ((ε/2)^2) := by
@@ -332,21 +325,17 @@ lemma sqrt_div_lt_third_eps_of_nat
   by_cases hCf0 : Cf = 0
   · simp [hCf0, hε]
   have hCfpos : 0 < Cf := lt_of_le_of_ne hCf (Ne.symm hCf0)
-  have hmpos : 0 < (m : ℝ) := by
-    calc (0 : ℝ) < 9*Cf/ε^2 := by positivity
-      _ < m := hA_lt_m
+  have hmpos : 0 < (m : ℝ) := by linarith [show 0 < 9*Cf/ε^2 by positivity, hA_lt_m]
   have hdenom_pos : 0 < 9*Cf/ε^2 := by positivity
-  have hdiv : Cf / (m : ℝ) < Cf / (9*Cf/ε^2) := by
-    exact div_lt_div_of_pos_left hCfpos hdenom_pos hA_lt_m
+  have hdiv : Cf / (m : ℝ) < Cf / (9*Cf/ε^2) :=
+    div_lt_div_of_pos_left hCfpos hdenom_pos hA_lt_m
   have heq : Cf / (9*Cf/ε^2) = ε^2 / 9 := by
     field_simp [ne_of_gt hCfpos]
   have hlt : Cf / (m : ℝ) < ε^2 / 9 := by
-    calc Cf / (m : ℝ)
-        < Cf / (9*Cf/ε^2) := hdiv
-      _ = ε^2 / 9 := heq
+    rw [← heq]; exact hdiv
   have hnonneg : 0 ≤ Cf / (m : ℝ) := div_nonneg hCf (Nat.cast_nonneg m)
-  have hsqrt : Real.sqrt (Cf / m) < Real.sqrt (ε^2 / 9) := by
-    exact Real.sqrt_lt_sqrt hnonneg hlt
+  have hsqrt : Real.sqrt (Cf / m) < Real.sqrt (ε^2 / 9) :=
+    Real.sqrt_lt_sqrt hnonneg hlt
   have h_sqrt_simpl : Real.sqrt (ε^2 / 9) = ε / 3 := by
     rw [Real.sqrt_div (sq_nonneg ε), Real.sqrt_sq (le_of_lt hε)]
     rw [show (9 : ℝ) = 3^2 by norm_num, Real.sqrt_sq (by norm_num : (0 : ℝ) ≤ 3)]
