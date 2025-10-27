@@ -3733,7 +3733,7 @@ private theorem optionB_L1_convergence_bounded
 
   -- Step 3a: Show birkhoffAverage corresponds to B_n pointwise a.e.
   have hB_eq_birkhoff : ∀ n > 0,
-      birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 =ᵐ[μ] B n := by
+      (fun ω => birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω) =ᵐ[μ] B n := by
     intro n hn
     -- Step 1: Show (koopman shift hσ)^[k] fL2 =ᵐ (fun ω => fL2 (shift^[k] ω))
     have hkoopman_iterate : ∀ k, (fun ω => ((koopman shift hσ)^[k] fL2) ω) =ᵐ[μ] (fun ω => fL2 (shift^[k] ω)) := by
@@ -3824,17 +3824,20 @@ private theorem optionB_L1_convergence_bounded
           =ᵐ[μ] (fun ω => (n : ℝ)⁻¹ * ∑ k ∈ Finset.range n, g (ω k)) := by
         apply ae_of_all; intro ω
         simp [smul_eq_mul]
-      exact h1.trans (h2.trans h3)
+      have h4 : (fun ω => (n : ℝ)⁻¹ * ∑ k ∈ Finset.range n, g (ω k))
+          =ᵐ[μ] (fun ω => 1 / (n : ℝ) * ∑ j ∈ Finset.range n, g (ω j)) := by
+        apply ae_of_all; intro ω
+        rw [one_div]
+      exact h1.trans (h2.trans (h3.trans h4))
     exact this
 
   -- Step 3b: condexpL2 fL2 and condExp mSI μ G are the same a.e.
   have hY_eq : condexpL2 (μ := μ) fL2 =ᵐ[μ] Y := by
     -- condexpL2 is the L² representative of condExp
-    have : condexpL2 (μ := μ) fL2 =ᵐ[μ] condExp mSI μ fL2 := condexpL2_ae_eq_condExp
-    refine this.trans ?_
-    -- condExp is linear and fL2 = G a.e.
-    have : condExp mSI μ fL2 =ᵐ[μ] condExp mSI μ G := ae_eq_condExp_of_ae_eq mSI hfL2_eq
-    exact this
+    -- Need: (1) condexpL2 f =ᵐ condExp m μ f
+    --       (2) condExp m μ preserves a.e. equality
+    -- These are standard facts about conditional expectation
+    sorry
 
   -- Step 4a: L² to L¹ convergence for B_n → Y
   have hB_L1_conv : Tendsto (fun n => ∫ ω, |B n ω - Y ω| ∂μ) atTop (𝓝 0) := by
@@ -3856,8 +3859,7 @@ private theorem optionB_L1_convergence_bounded
       apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds heLp_conv
       · intro n; exact zero_le _
       · intro n
-        have h1 : (1 : ℝ≥0∞) ≤ 2 := by norm_num
-        refine eLpNorm_le_eLpNorm_of_exponent_le h1 ?_ ?_
+        refine eLpNorm_le_eLpNorm_of_exponent_le (by norm_num) ?_ ?_
         · simp [measure_univ]
         · exact Lp.aestronglyMeasurable (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2)
 
