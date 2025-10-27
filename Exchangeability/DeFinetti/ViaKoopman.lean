@@ -3712,18 +3712,11 @@ private lemma condexpL2_ae_eq_condExp (f : Lp ℝ 2 μ) :
 
 /-- Pull a.e. equality back along a measure-preserving map.
     Standard fact: if f =ᵐ g and T preserves μ, then f ∘ T =ᵐ g ∘ T.
-    Proof: The exceptional set for f = g has measure zero, and T preserves μ. -/
+    Proof: Use QuasiMeasurePreserving.ae_eq_comp from mathlib. -/
 private lemma EventuallyEq.comp_measurePreserving {f g : Ω[α] → ℝ}
     (hT : MeasurePreserving shift μ μ) (hfg : f =ᵐ[μ] g) :
-    (f ∘ shift) =ᵐ[μ] (g ∘ shift) := by
-  -- The set where f ≠ g has μ-measure zero
-  -- The preimage of this set under shift also has measure zero since shift preserves μ
-  have : {ω | (f ∘ shift) ω ≠ (g ∘ shift) ω} = shift ⁻¹' {ω | f ω ≠ g ω} := by
-    ext ω
-    simp only [Set.mem_setOf, Set.mem_preimage, Function.comp_apply]
-  rw [Filter.EventuallyEq, Filter.eventually_iff] at hfg ⊢
-  rw [this]
-  exact hT.ae_map_le hfg
+    (f ∘ shift) =ᵐ[μ] (g ∘ shift) :=
+  hT.quasiMeasurePreserving.ae_eq_comp hfg
 
 /-- Iterate of a measure-preserving map is measure-preserving.
     Proof: By induction; identity is measure-preserving, and composition preserves the property. -/
@@ -3745,8 +3738,8 @@ private lemma iterate_shift_eval (k n : ℕ) (ω : Ω[α]) :
   | succ k ih =>
       rw [Function.iterate_succ']
       simp only [shift_apply, Function.comp_apply]
-      rw [ih]
-      rw [Nat.succ_add]
+      rw [ih, Nat.succ_add]
+      omega
 
 /-- Evaluate the k-th shift at 0: shift^[k] ω 0 = ω k. -/
 private lemma iterate_shift_eval0 (k : ℕ) (ω : Ω[α]) :
@@ -3832,8 +3825,7 @@ private theorem optionB_L1_convergence_bounded
           have hpull : (fun ω => (fL2 : Ω[α] → ℝ) (shift^[k'] (shift ω))) =ᵐ[μ]
               (fun ω => (fL2 : Ω[α] → ℝ) (shift^[k'+1] ω)) := by
             apply ae_of_all; intro ω
-            rw [Function.iterate_succ']
-            rfl
+            simp only [Function.iterate_succ_apply]
           have hcomp := EventuallyEq.comp_measurePreserving hσ ih
           exact hstep.trans (hcomp.trans hpull)
 
@@ -3843,18 +3835,10 @@ private theorem optionB_L1_convergence_bounded
       intro k
       -- fL2 = G a.e., and shift^[k] is measure-preserving
       have hk_pres := MeasurePreserving.iterate hσ k
-      -- Pull hfL2_eq back along shift^[k]
-      -- We need a version of comp_measurePreserving that works for shift^[k]
+      -- Pull hfL2_eq back along shift^[k] using measure-preserving property
       have hpull : (fun ω => (fL2 : Ω[α] → ℝ) (shift^[k] ω)) =ᵐ[μ]
           (fun ω => G (shift^[k] ω)) := by
-        -- This follows from the same logic as comp_measurePreserving
-        have : {ω | (fL2 : Ω[α] → ℝ) (shift^[k] ω) ≠ G (shift^[k] ω)} =
-               (shift^[k]) ⁻¹' {ω | (fL2 : Ω[α] → ℝ) ω ≠ G ω} := by
-          ext ω
-          simp only [Set.mem_setOf, Set.mem_preimage]
-        rw [Filter.EventuallyEq, Filter.eventually_iff] at hfL2_eq ⊢
-        rw [this]
-        exact hk_pres.ae_map_le hfL2_eq
+        exact hk_pres.quasiMeasurePreserving.ae_eq_comp hfL2_eq
       -- Now use iterate_shift_eval0: shift^[k] ω 0 = ω k
       have heval : (fun ω => G (shift^[k] ω)) =ᵐ[μ] (fun ω => g (ω k)) := by
         apply ae_of_all; intro ω
