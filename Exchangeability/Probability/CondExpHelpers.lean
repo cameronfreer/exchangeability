@@ -452,36 +452,22 @@ theorem condExp_project_of_condIndepFun
       exact h_rect_all R hR_in_𝓡
 
     case compl =>
-      -- C(S) → C(Sᶜ): use integral_diff
+      -- C(S) → C(Sᶜ): use integral_add_compl
       intro S' hS'_meas hS'_C hμSc
-      -- Apply IH to S' and to Ω
+      -- Apply IH to S'
       have hS'_eq : ∫ x in S', g x ∂μ = ∫ x in S', (f ∘ Y) x ∂μ := by
         apply hS'_C
         exact measure_lt_top μ S'
-      have hΩ_eq : ∫ x, g x ∂μ = ∫ x, (f ∘ Y) x ∂μ := by
-        have : ∫ x, g x ∂μ = ∫ x in Set.univ, g x ∂μ := setIntegral_univ.symm
-        rw [this]
-        have : ∫ x, (f ∘ Y) x ∂μ = ∫ x in Set.univ, (f ∘ Y) x ∂μ := setIntegral_univ.symm
-        rw [this]
-        apply hS'_C
-        exact measure_lt_top μ Set.univ
-      -- Use integral difference: ∫_Sᶜ f = ∫_Ω f - ∫_S f
-      calc ∫ x in S'ᶜ, g x ∂μ
-          = ∫ x, g x ∂μ - ∫ x in S', g x ∂μ := by
-            sorry
-            /-
-            Should follow from integral additivity: ∫_Ω = ∫_S + ∫_Sᶜ
-            Rearrange to get: ∫_Sᶜ = ∫_Ω - ∫_S
-            Mathlib has integral_add_compl or measure_theory results
-            Needs: Integrable g μ (which we have from integrable_condExp)
-            -/
-        _ = ∫ x, (f ∘ Y) x ∂μ - ∫ x in S', (f ∘ Y) x ∂μ := by rw [hΩ_eq, hS'_eq]
-        _ = ∫ x in S'ᶜ, (f ∘ Y) x ∂μ := by
-            sorry
-            /-
-            Same as above but for f ∘ Y
-            Needs: Integrable (f ∘ Y) μ (which we have from hf_int)
-            -/
+      -- Use integral_add_compl: ∫_S f + ∫_Sᶜ f = ∫ f
+      -- Need: ∫_Sᶜ g = ∫_Sᶜ f(Y)
+      -- Strategy: From ∫_S g = ∫_S f(Y) and ∫_S g + ∫_Sᶜ g = ∫ g, deduce ∫_Sᶜ g = ∫ g - ∫_S g
+      have hg_add : ∫ x in S', g x ∂μ + ∫ x in S'ᶜ, g x ∂μ = ∫ x, g x ∂μ := by
+        exact integral_add_compl hS'_meas integrable_condExp
+      have hf_add : ∫ x in S', (f ∘ Y) x ∂μ + ∫ x in S'ᶜ, (f ∘ Y) x ∂μ = ∫ x, (f ∘ Y) x ∂μ := by
+        -- Need to convert hS'_meas from mZW to mΩ
+        have hS'_meas_mΩ : MeasurableSet[mΩ] S' := hmZW_le _ hS'_meas
+        exact integral_add_compl hS'_meas_mΩ hf_int
+      linarith
 
     case iUnion =>
       -- C(Sₙ) for all n → C(⋃ Sₙ) for pairwise disjoint sequence
@@ -498,26 +484,24 @@ theorem condExp_project_of_condIndepFun
         intro n
         exact hSeq_C n (hSeq_finite n)
 
+      -- Convert measurability from mZW to mΩ
+      have hSeq_meas_mΩ : ∀ n, MeasurableSet[mΩ] (Sseq n) := by
+        intro n
+        exact hmZW_le _ (hSeq_meas n)
+
       -- Use integral additivity for disjoint unions
       calc ∫ x in ⋃ n, Sseq n, g x ∂μ
           = ∑' n, ∫ x in Sseq n, g x ∂μ := by
-            sorry
-            /-
-            Need: integral_iUnion or tsum_integral for pairwise disjoint sets
-            Mathlib has: integral_iUnion (∀ i, MeasurableSet (f i)) →
-                         Pairwise (Disjoint on f) → ...
-            Needs: Integrable g μ (which we have from integrable_condExp)
-            -/
+            apply integral_iUnion hSeq_meas_mΩ hSeq_disj
+            exact integrable_condExp.integrableOn
         _ = ∑' n, ∫ x in Sseq n, (f ∘ Y) x ∂μ := by
             congr 1
             ext n
             exact hSeq_eq n
         _ = ∫ x in ⋃ n, Sseq n, (f ∘ Y) x ∂μ := by
-            sorry
-            /-
-            Same as first step but for f ∘ Y
-            Needs: Integrable (f ∘ Y) μ (which we have from hf_int)
-            -/
+            symm
+            apply integral_iUnion hSeq_meas_mΩ hSeq_disj
+            exact hf_int.integrableOn
     /-
     Now apply: MeasurableSpace.induction_on_inter (h_eq : mZW = generateFrom 𝓡) h𝓡_pi
     with the predicate C(S) := (μ S < ∞ → ∫_S g = ∫_S f(Y))
