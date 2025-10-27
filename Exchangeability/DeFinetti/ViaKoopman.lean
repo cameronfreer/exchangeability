@@ -3773,7 +3773,7 @@ private lemma optionB_Step4a_L2_to_L1
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ)
     (fL2 : Lp ℝ 2 μ)
-    (hfL2_tendsto : Tendsto (birkhoffAverage ℝ (koopman shift hσ) _root_.id · fL2) atTop (𝓝[Lp ℝ 2 μ] condexpL2 (μ := μ) fL2))
+    (hfL2_tendsto : Tendsto (birkhoffAverage ℝ (koopman shift hσ) _root_.id · fL2) atTop (𝓝 (condexpL2 (μ := μ) fL2)))
     (B : ℕ → Ω[α] → ℝ)
     (Y : Ω[α] → ℝ)
     (hB_eq_birkhoff : ∀ n > 0, (fun ω => birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω) =ᵐ[μ] B n)
@@ -3858,17 +3858,19 @@ For bounded g, shows |A_n ω - B_n ω| ≤ 2·Cg/(n+1) → 0 via dominated conve
 private lemma optionB_Step4b_AB_close
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (g : α → ℝ) (Cg : ℝ) (hCg_bd : ∀ x, |g x| ≤ Cg)
-    (A B : ℕ → Ω[α] → ℝ) :
+    (A B : ℕ → Ω[α] → ℝ)
+    (hA_def : A = fun n ω => 1 / (↑n + 1) * (Finset.range (n + 1)).sum (fun j => g (ω j)))
+    (hB_def : B = fun n ω => if n = 0 then 0 else 1 / ↑n * (Finset.range n).sum (fun j => g (ω j))) :
     Tendsto (fun n => ∫ ω, |A n ω - B n ω| ∂μ) atTop (𝓝 0) := by
   -- For each ω, bound |A n ω - B n ω|
   have h_bd : ∀ n > 0, ∀ ω, |A n ω - B n ω| ≤ 2 * Cg / (n + 1) := by
     intro n hn ω
-    simp only [A, B, hn.ne', ↓reduceIte]
+    rw [hA_def, hB_def]; simp only [hn.ne', ↓reduceIte]
     -- A n ω = (1/(n+1)) * ∑_{k=0}^n g(ω k)
     -- B n ω = (1/n) * ∑_{k=0}^{n-1} g(ω k)
     -- Write ∑_{k=0}^n = ∑_{k=0}^{n-1} + g(ω n)
     rw [show Finset.range (n + 1) = Finset.range n ∪ {n} by
-          ext k; simp [Finset.mem_range, lt_succ_iff],
+          ext k; simp [Finset.mem_range, Nat.lt_succ],
         Finset.sum_union (by simp : Disjoint (Finset.range n) {n}),
         Finset.sum_singleton]
     -- Now A n ω = (1/(n+1)) * (∑_{k<n} g(ω k) + g(ω n))
@@ -3879,7 +3881,7 @@ private lemma optionB_Step4b_AB_close
     calc |1 / (↑n + 1) * (S + g (ω n)) - 1 / ↑n * S|
         = |S / (↑n + 1) + g (ω n) / (↑n + 1) - S / ↑n| := by ring
       _ = |-S / (↑n * (↑n + 1)) + g (ω n) / (↑n + 1)| := by ring
-      _ ≤ |S / (↑n * (↑n + 1))| + |g (ω n) / (↑n + 1)| := abs_add _ _
+      _ ≤ |S / (↑n * (↑n + 1))| + |g (ω n) / (↑n + 1)| := abs_sub_abs_le_abs_sub _ _
       _ ≤ |S| / (↑n * (↑n + 1)) + Cg / (↑n + 1) := by
           gcongr
           · exact abs_div _ _
@@ -3889,7 +3891,7 @@ private lemma optionB_Step4b_AB_close
           -- |S| ≤ n * Cg since |g(ω k)| ≤ Cg for all k
           calc |S|
               ≤ (Finset.range n).sum (fun j => |g (ω j)|) := by
-                exact abs_sum_le_sum_abs _ _
+                exact Finset.abs_sum_le_sum_abs _ _
             _ ≤ (Finset.range n).sum (fun j => Cg) := by
                 apply Finset.sum_le_sum
                 intro j _
@@ -3924,7 +3926,8 @@ private lemma optionB_Step4c_triangle
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (g : α → ℝ) (hg_bd : ∃ Cg, ∀ x, |g x| ≤ Cg)
     (A B : ℕ → Ω[α] → ℝ) (Y : Ω[α] → ℝ) (G : Ω[α] → ℝ)
-    (mSI : MeasurableSpace (Ω[α]))
+    (hA_def : A = fun n ω => 1 / (↑n + 1) * (Finset.range (n + 1)).sum (fun j => g (ω j)))
+    (hB_def : B = fun n ω => if n = 0 then 0 else 1 / ↑n * (Finset.range n).sum (fun j => g (ω j)))
     (hB_L1_conv : Tendsto (fun n => ∫ ω, |B n ω - Y ω| ∂μ) atTop (𝓝 0))
     (hA_B_close : Tendsto (fun n => ∫ ω, |A n ω - B n ω| ∂μ) atTop (𝓝 0)) :
     Tendsto (fun n => ∫ ω, |A n ω - Y ω| ∂μ) atTop (𝓝 0) := by
@@ -3941,7 +3944,7 @@ private lemma optionB_Step4c_triangle
         apply Integrable.of_bounded
         swap; · exact ⟨Cg, ?_⟩
         · apply ae_of_all; intro ω
-          simp only [A]
+          rw [hA_def]; simp only []
           calc |1 / (↑n + 1) * (Finset.range (n + 1)).sum (fun j => g (ω j))|
               ≤ (1 / (↑n + 1)) * |(Finset.range (n + 1)).sum (fun j => g (ω j))| := by
                   rw [abs_mul]; gcongr; exact abs_of_pos (by positivity)
