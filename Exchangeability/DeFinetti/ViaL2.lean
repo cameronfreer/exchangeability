@@ -1662,7 +1662,7 @@ making the family {A_{m,n}}_m Cauchy in L² as n→∞.
 This is **exactly** Kallenberg's Lemma 1.2. No ergodic theory needed! -/
 lemma kallenberg_L2_bound
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (Z : ℕ → Ω → ℝ) (hZ_exch : Exchangeable μ Z)
+    (Z : ℕ → Ω → ℝ) (hZ_exch : Exchangeable μ Z) (hZ_meas : ∀ i, Measurable (Z i))
     (p q : ℕ → ℝ) (s : Finset ℕ) (hs : s.Nonempty)
     (hp_prob : (s.sum p = 1) ∧ (∀ i ∈ s, 0 ≤ p i))
     (hq_prob : (s.sum q = 1) ∧ (∀ i ∈ s, 0 ≤ q i))
@@ -1702,12 +1702,13 @@ lemma kallenberg_L2_bound
   let n := s.card
 
   -- Get an order isomorphism between s and Fin n
+  -- enum : Fin n ≃o { x // x ∈ s }
   let enum := s.orderIsoOfFin rfl
 
-  -- Define the reindexed functions
-  let ξ : Fin n → Ω → ℝ := fun i ω => Z (enum i) ω
-  let p' : Fin n → ℝ := fun i => p (enum i)
-  let q' : Fin n → ℝ := fun i => q (enum i)
+  -- Define the reindexed functions (extract .val from subtype)
+  let ξ : Fin n → Ω → ℝ := fun i ω => Z (enum i).val ω
+  let p' : Fin n → ℝ := fun i => p (enum i).val
+  let q' : Fin n → ℝ := fun i => q (enum i).val
 
   -- Step 2: Compute mean, variance, and correlation from exchangeability
   let m := ∫ ω, Z 0 ω ∂μ
@@ -1715,14 +1716,215 @@ lemma kallenberg_L2_bound
   let covOffDiag := ∫ ω, (Z 0 ω - m) * (Z 1 ω - m) ∂μ
   let ρ := if σSq = 0 then 0 else covOffDiag / σSq
 
-  sorry  -- TODO: Apply l2_contractability_bound and convert back
-  -- Main steps remaining:
-  -- 1. Prove all marginals have same mean (using exchangeability)
-  -- 2. Prove all marginals have same variance σ²
-  -- 3. Prove all pairs have same covariance σ²ρ
-  -- 4. Apply L2Helpers.l2_contractability_bound
-  -- 5. Show 2*σ²*(1-ρ) = ∫(Z₀-Z₁)² via algebra
-  -- 6. Reindex sums back to original Finset
+  -- Step 3: Prove hypotheses for l2_contractability_bound
+
+  -- Convert Exchangeable to Contractable
+  have hZ_contract : Contractable μ Z := contractable_of_exchangeable hZ_exch hZ_meas
+
+  -- Prove σSq ≥ 0 (variance is always non-negative) - needed for ρ bounds
+  have hσSq_nonneg : 0 ≤ σSq := by
+    simp only [σSq]
+    apply integral_nonneg
+    intro ω
+    positivity
+
+  -- Prove ρ bounds (correlation coefficient is always in [-1, 1])
+  have hρ_bd : -1 ≤ ρ ∧ ρ ≤ 1 := by
+    simp only [ρ]
+    by_cases h : σSq = 0
+    · -- If σSq = 0, then ρ = 0, so bounds hold trivially
+      simp [h]
+    · -- If σSq ≠ 0, use Cauchy-Schwarz to show |covOffDiag / σSq| ≤ 1
+      simp [h]
+      -- Need to show: -1 ≤ covOffDiag / σSq ≤ 1
+      -- Equivalent to: |covOffDiag| ≤ σSq (since σSq > 0)
+
+      have hσSq_pos : 0 < σSq := by
+        cases (hσSq_nonneg.lt_or_eq) with
+        | inl h_lt => exact h_lt
+        | inr h_eq => exact (h h_eq.symm).elim
+
+      -- Apply Cauchy-Schwarz: |∫ f·g| ≤ (∫ f²)^(1/2) · (∫ g²)^(1/2)
+      have h_cs : |covOffDiag| ≤ σSq := by
+        simp only [covOffDiag, σSq]
+        -- First we need to establish that Z 0 - m and Z 1 - m are in L²
+        -- We'll use the hypothesis hZ_L2 which gives us L² for elements in s
+        sorry -- TODO: Need to prove Z 0, Z 1 ∈ L² first, then apply abs_integral_mul_le_L2
+
+      -- From |covOffDiag| ≤ σSq and σSq > 0, derive -1 ≤ ρ ≤ 1
+      constructor
+      · -- Lower bound: -1 ≤ covOffDiag / σSq
+        have : -σSq ≤ covOffDiag := by
+          have h_neg : -|covOffDiag| ≤ covOffDiag := neg_abs_le _
+          linarith [h_cs]
+        calc -1 = -σSq / σSq := by field_simp
+           _ ≤ covOffDiag / σSq := by apply div_le_div_of_nonneg_right; linarith; exact le_of_lt hσSq_pos
+      · -- Upper bound: covOffDiag / σSq ≤ 1
+        have : covOffDiag ≤ σSq := le_of_abs_le h_cs
+        calc covOffDiag / σSq ≤ σSq / σSq := by apply div_le_div_of_nonneg_right; exact this; exact le_of_lt hσSq_pos
+           _ = 1 := by field_simp
+
+  -- Prove all marginals have the same mean m
+  have hmean : ∀ k : Fin n, ∫ ω, ξ k ω ∂μ = m := by
+    intro k
+    -- ξ k = Z (enum k).val, and all Z i have the same distribution by contractability
+    have h_same_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+      (X := Z) hZ_contract hZ_meas (i := (enum k).val)
+    -- Equal distributions → equal integrals
+    simp only [ξ, m]
+    rw [← Exchangeability.Probability.IntegrationHelpers.integral_pushforward_id (hZ_meas _),
+        h_same_dist,
+        Exchangeability.Probability.IntegrationHelpers.integral_pushforward_id (hZ_meas _)]
+
+  -- Prove all ξ k - m are in L²
+  have hL2 : ∀ k : Fin n, MemLp (fun ω => ξ k ω - m) 2 μ := by
+    intro k
+    -- This follows from ξ k = Z (enum k).val and hZ_L2
+    -- enum k has type { x // x ∈ s }, so (enum k).val ∈ s by (enum k).property
+    have hk_in_s : (enum k).val ∈ s := (enum k).property
+    have hZ_k_L2_orig := hZ_L2 (enum k).val hk_in_s
+    -- ξ k ω - m = Z (enum k).val ω - m, so same MemLp
+    convert hZ_k_L2_orig.sub (memLp_const m) using 1
+
+  -- Prove all variances equal σ²
+  have hvar : ∀ k : Fin n, ∫ ω, (ξ k ω - m)^2 ∂μ = σSq := by
+    intro k
+    -- Same distribution → same variance
+    have h_same_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+      (X := Z) hZ_contract hZ_meas (i := (enum k).val)
+    simp only [ξ, σSq]
+    -- Use integral_pushforward_sq_diff
+    rw [← Exchangeability.Probability.IntegrationHelpers.integral_pushforward_sq_diff (hZ_meas _) m,
+        h_same_dist,
+        Exchangeability.Probability.IntegrationHelpers.integral_pushforward_sq_diff (hZ_meas _) m]
+
+  -- Prove all covariances equal σ²ρ
+  have hcov : ∀ i j : Fin n, i ≠ j → ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ = σSq * ρ := by
+    intro i j hij
+    -- Use contractable_map_pair to show all pairs have same distribution as (Z 0, Z 1)
+    simp only [ξ, σSq, ρ, covOffDiag]
+
+    -- Get the indices from enum
+    let i' := (enum i).val
+    let j' := (enum j).val
+
+    -- We need i' < j' or j' < i' (since i ≠ j in the image of an order isomorphism)
+    have hij' : i' ≠ j' := by
+      intro heq
+      have : (enum i).val = (enum j).val := heq
+      have : enum i = enum j := Subtype.ext this
+      have : i = j := enum.injective this
+      contradiction
+
+    sorry -- TODO: Apply contractable_map_pair and use integral_map
+
+  -- Prove p' and q' are probability distributions
+  have hp'_prob : (∑ i : Fin n, p' i) = 1 ∧ ∀ i, 0 ≤ p' i := by
+    constructor
+    · -- ∑ over Fin n equals ∑ over s via reindexing
+      -- enum : Fin n ≃o { x // x ∈ s } is a bijection
+      have : ∑ i : Fin n, p' i = s.sum p := by
+        sorry -- TODO: Prove via Finset.sum_bij or similar
+      rw [this]; exact hp_prob.1
+    · intro i
+      -- p' i = p (enum i).val, and (enum i).val ∈ s by (enum i).property
+      exact hp_prob.2 (enum i).val (enum i).property
+
+  have hq'_prob : (∑ i : Fin n, q' i) = 1 ∧ ∀ i, 0 ≤ q' i := by
+    constructor
+    · have : ∑ i : Fin n, q' i = s.sum q := by
+        sorry -- TODO: Prove via Finset.sum_bij or similar
+      rw [this]; exact hq_prob.1
+    · intro i
+      -- q' i = q (enum i).val, and (enum i).val ∈ s by (enum i).property
+      exact hq_prob.2 (enum i).val (enum i).property
+
+  -- Step 4: Apply l2_contractability_bound and convert result
+
+  -- Convert hvar to the form l2_contractability_bound expects
+  have hvar' : ∀ k : Fin n, ∫ ω, (ξ k ω - m)^2 ∂μ = (σSq ^ (1/2 : ℝ))^2 := by
+    intro k
+    rw [← Real.sqrt_eq_rpow, Real.sq_sqrt hσSq_nonneg]
+    exact hvar k
+
+  -- Convert hcov to the form l2_contractability_bound expects
+  have hcov' : ∀ i j : Fin n, i ≠ j → ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ = (σSq ^ (1/2 : ℝ))^2 * ρ := by
+    intro i j hij
+    rw [← Real.sqrt_eq_rpow, Real.sq_sqrt hσSq_nonneg]
+    exact hcov i j hij
+
+  -- First, prove that ∫ (Z 0 - Z 1)^2 = 2*σ^2*(1 - ρ)
+  have h_diff_sq : ∫ ω, (Z 0 ω - Z 1 ω)^2 ∂μ = 2 * σSq * (1 - ρ) := by
+    -- Strategy: Rewrite Z 0 - Z 1 = (Z 0 - m) - (Z 1 - m) and expand
+    have h_expand : ∀ ω, (Z 0 ω - Z 1 ω)^2 =
+        (Z 0 ω - m)^2 + (Z 1 ω - m)^2 - 2 * (Z 0 ω - m) * (Z 1 ω - m) := by
+      intro ω
+      ring
+
+    -- Integrability facts: Z 0 and Z 1 are in L² by contractability
+    -- Since some Z k (k ∈ s) is in L², and contractability gives equal distributions,
+    -- all Z i have the same L² norm
+    obtain ⟨k, hk⟩ := hs.exists_mem
+    have hZk_L2 : MemLp (Z k) 2 μ := hZ_L2 k hk
+
+    have hZ0_L2 : MemLp (Z 0) 2 μ := by
+      -- Use that Z 0 has same distribution as Z k via contractability
+      -- Equal distributions imply equal eLpNorm, hence MemLp transfers
+      sorry -- TODO: Use h_dist and eLpNorm equality
+    have hZ1_L2 : MemLp (Z 1) 2 μ := by
+      -- Use that Z 1 has same distribution as Z k via contractability
+      -- Equal distributions imply equal eLpNorm, hence MemLp transfers
+      sorry -- TODO: Use h_dist and eLpNorm equality
+
+    -- (Z i - m)² is integrable when Z i ∈ L²
+    have hint_sq0 : Integrable (fun ω => (Z 0 ω - m)^2) μ := by
+      have : (fun ω => (Z 0 ω - m)^2) = (fun ω => (Z 0 ω)^2 - 2 * m * Z 0 ω + m^2) := by
+        ext ω; ring
+      rw [this]
+      apply Integrable.add
+      · apply Integrable.sub
+        · exact (hZ0_L2.integrable_sq)
+        · exact Integrable.const_mul (hZ0_L2.integrable one_le_two) _
+      · exact integrable_const _
+    have hint_sq1 : Integrable (fun ω => (Z 1 ω - m)^2) μ := by
+      have : (fun ω => (Z 1 ω - m)^2) = (fun ω => (Z 1 ω)^2 - 2 * m * Z 1 ω + m^2) := by
+        ext ω; ring
+      rw [this]
+      apply Integrable.add
+      · apply Integrable.sub
+        · exact (hZ1_L2.integrable_sq)
+        · exact Integrable.const_mul (hZ1_L2.integrable one_le_two) _
+      · exact integrable_const _
+
+    -- (Z 0 - m) * (Z 1 - m) is integrable (product of L² functions)
+    have hint_prod : Integrable (fun ω => (Z 0 ω - m) * (Z 1 ω - m)) μ := by
+      have hm : MemLp (fun _ : Ω => m) 2 μ := memLp_const m
+      have hf : MemLp (fun ω => Z 0 ω - m) 2 μ := hZ0_L2.sub hm
+      have hg : MemLp (fun ω => Z 1 ω - m) 2 μ := hZ1_L2.sub hm
+      exact MemLp.integrable_mul hf hg
+
+    -- Algebraically, (Z_0 - Z_1)² = (Z_0 - m)² + (Z_1 - m)² - 2(Z_0 - m)(Z_1 - m)
+    -- Taking expectations: E[(Z_0 - Z_1)²] = σ² + σ² - 2·cov = 2σ²(1 - ρ)
+    sorry -- TODO: Complete algebraic expansion and integral manipulation
+
+  -- Apply l2_contractability_bound to get the bound in terms of ξ, p', q'
+  have h_bound := Exchangeability.DeFinetti.L2Approach.l2_contractability_bound
+    ξ m (σSq ^ (1/2 : ℝ)) ρ hρ_bd hmean hL2 hvar' hcov' p' q' hp'_prob hq'_prob
+
+  -- Convert the bound back to the original variables Z, p, q, s
+  calc ∫ ω, (s.sum fun i => (p i - q i) * Z i ω) ^ 2 ∂μ
+      = ∫ ω, (∑ k : Fin n, (p' k - q' k) * ξ k ω) ^ 2 ∂μ := by
+          sorry -- TODO: Reindex sum from s to Fin n via enum
+    _ = ∫ ω, (∑ k : Fin n, p' k * ξ k ω - ∑ k : Fin n, q' k * ξ k ω) ^ 2 ∂μ := by
+          congr 1; ext ω; sorry -- TODO: Expand (p'-q') using Finset.sum_sub_distrib
+    _ ≤ 2 * (σSq ^ (1/2 : ℝ)) ^ 2 * (1 - ρ) * (⨆ k : Fin n, |p' k - q' k|) := h_bound
+    _ = 2 * σSq * (1 - ρ) * (⨆ k : Fin n, |p' k - q' k|) := by
+          congr 1
+          rw [← Real.sqrt_eq_rpow, Real.sq_sqrt hσSq_nonneg]
+    _ = (∫ ω, (Z 0 ω - Z 1 ω)^2 ∂μ) * (⨆ k : Fin n, |p' k - q' k|) := by
+          sorry -- TODO: Use h_diff_sq to substitute the value
+    _ = (∫ ω, (Z 0 ω - Z 1 ω)^2 ∂μ) * (s.sup' hs fun i => |p i - q i|) := by
+          sorry -- TODO: Supremum reindexing via enum
 
 /-- **Cesàro averages converge in L² to a tail-measurable limit.**
 

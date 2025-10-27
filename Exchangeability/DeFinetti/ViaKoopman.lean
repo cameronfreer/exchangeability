@@ -3703,6 +3703,16 @@ convert between `Lp ℝ 2 μ` and `MemLp _ 2 μ` representations. The `Lp.memℒ
 doesn't exist in the current mathlib API. -/
 private lemma condexpL2_ae_eq_condExp (f : Lp ℝ 2 μ) :
     (condexpL2 (μ := μ) f : Ω[α] → ℝ) =ᵐ[μ] μ[f | shiftInvariantSigma] := by
+  -- Mathlib has MeasureTheory.MemLp.condExpL2_ae_eq_condExp which states:
+  --   condExpL2 E 𝕜 hm hf.toLp =ᵐ[μ] μ[f|m]
+  -- where hf : MemLp f 2 μ (function with Lp membership proof).
+  --
+  -- But we have f : Lp ℝ 2 μ (quotient type), and need to extract:
+  -- 1. The representative function (f : α → ℝ)
+  -- 2. The MemLp proof for that representative
+  --
+  -- The missing API lemma is Lp.memℒp : ∀ (f : Lp E p μ), MemLp (f : α → E) p μ
+  -- This doesn't exist in current mathlib, blocking the proof.
   sorry
 
 -- Helper lemmas for Step 3a: a.e. equality through measure-preserving maps
@@ -3712,16 +3722,11 @@ private lemma condexpL2_ae_eq_condExp (f : Lp ℝ 2 μ) :
 
 /-- Pull a.e. equality back along a measure-preserving map.
     Standard fact: if f =ᵐ g and T preserves μ, then f ∘ T =ᵐ g ∘ T.
-    Proof: The exceptional set for f = g has measure zero, and T preserves μ. -/
+    Proof: Use QuasiMeasurePreserving.ae_eq_comp from mathlib. -/
 private lemma EventuallyEq.comp_measurePreserving {f g : Ω[α] → ℝ}
     (hT : MeasurePreserving shift μ μ) (hfg : f =ᵐ[μ] g) :
-    (f ∘ shift) =ᵐ[μ] (g ∘ shift) := by
-  -- The set where f ≠ g has μ-measure zero
-  -- The preimage of this set under shift also has measure zero since shift preserves μ
-  have : {ω | f (shift ω) ≠ g (shift ω)} = shift ⁻¹' {ω | f ω ≠ g ω} := by
-    ext ω; simp [Set.mem_preimage]
-  rw [EventuallyEq, this]
-  exact hT.ae_map_le hfg
+    (f ∘ shift) =ᵐ[μ] (g ∘ shift) :=
+  hT.quasiMeasurePreserving.ae_eq_comp hfg
 
 /-- Iterate of a measure-preserving map is measure-preserving.
     Proof: By induction; identity is measure-preserving, and composition preserves the property. -/
@@ -3738,18 +3743,18 @@ private lemma MeasurePreserving.iterate (hT : MeasurePreserving shift μ μ) (k 
 /-- General evaluation formula for shift iteration. -/
 private lemma iterate_shift_eval (k n : ℕ) (ω : Ω[α]) :
     (shift^[k] ω) n = ω (k + n) := by
-  induction k with
+  induction k generalizing n with
   | zero => simp
   | succ k ih =>
       rw [Function.iterate_succ']
       simp only [shift_apply, Function.comp_apply]
-      rw [ih]
-      ring_nf
+      rw [ih, Nat.succ_add]
+      omega
 
 /-- Evaluate the k-th shift at 0: shift^[k] ω 0 = ω k. -/
 private lemma iterate_shift_eval0 (k : ℕ) (ω : Ω[α]) :
     (shift^[k] ω) 0 = ω k := by
-  convert iterate_shift_eval k 0 ω
+  rw [iterate_shift_eval]
   simp
 
 /-- **Option B bounded case implementation**: L¹ convergence for bounded functions.
@@ -3830,9 +3835,8 @@ private theorem optionB_L1_convergence_bounded
           have hpull : (fun ω => (fL2 : Ω[α] → ℝ) (shift^[k'] (shift ω))) =ᵐ[μ]
               (fun ω => (fL2 : Ω[α] → ℝ) (shift^[k'+1] ω)) := by
             apply ae_of_all; intro ω
-            simp [Function.iterate_succ_apply']
+            simp only [Function.iterate_succ_apply]
           have hcomp := EventuallyEq.comp_measurePreserving hσ ih
-          simp only [Function.comp] at hcomp
           exact hstep.trans (hcomp.trans hpull)
 
     -- Pass 2: fL2 ∘ shift^k equals g(· k)
@@ -3841,16 +3845,10 @@ private theorem optionB_L1_convergence_bounded
       intro k
       -- fL2 = G a.e., and shift^[k] is measure-preserving
       have hk_pres := MeasurePreserving.iterate hσ k
-      -- Pull hfL2_eq back along shift^[k]
-      -- We need a version of comp_measurePreserving that works for shift^[k]
+      -- Pull hfL2_eq back along shift^[k] using measure-preserving property
       have hpull : (fun ω => (fL2 : Ω[α] → ℝ) (shift^[k] ω)) =ᵐ[μ]
           (fun ω => G (shift^[k] ω)) := by
-        -- This follows from the same logic as comp_measurePreserving
-        have : {ω | (fL2 : Ω[α] → ℝ) (shift^[k] ω) ≠ G (shift^[k] ω)} =
-               (shift^[k]) ⁻¹' {ω | (fL2 : Ω[α] → ℝ) ω ≠ G ω} := by
-          ext ω; simp [Set.mem_preimage]
-        rw [EventuallyEq, this]
-        exact hk_pres.ae_map_le hfL2_eq
+        exact hk_pres.quasiMeasurePreserving.ae_eq_comp hfL2_eq
       -- Now use iterate_shift_eval0: shift^[k] ω 0 = ω k
       have heval : (fun ω => G (shift^[k] ω)) =ᵐ[μ] (fun ω => g (ω k)) := by
         apply ae_of_all; intro ω
@@ -3867,12 +3865,20 @@ private theorem optionB_L1_convergence_bounded
     -- Combine finite a.e. conditions for the sum
     have hsum : (fun ω => ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω) =ᵐ[μ]
         (fun ω => ∑ k ∈ Finset.range n, g (ω k)) := by
-      -- Use finite intersection of a.e. sets
-      have hall : ∀ᵐ ω ∂μ, ∀ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω = g (ω k) := by
-        -- Combine finitely many a.e. conditions
-        apply ae_of_all; intro ω k hk
-        exact (hterms k).self_of_ae ω
-      filter_upwards [hall] with ω hω
+      -- Combine finitely many a.e. conditions
+      -- Use list of a.e. conditions and filter_upwards
+      have h_list : ∀ k ∈ Finset.range n, (fun ω => ((koopman shift hσ)^[k] fL2) ω) =ᵐ[μ] (fun ω => g (ω k)) :=
+        fun k _ => hterms k
+      -- Build the combined a.e. set
+      classical
+      let ae_sets := Finset.range n |>.attach.map (fun ⟨k, hk⟩ => {ω | ((koopman shift hσ)^[k] fL2) ω = g (ω k)})
+      -- Each has full measure, so their finite intersection has full measure
+      -- Then sums are equal on this set
+      have : ∀ᵐ ω ∂μ, ∀ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω = g (ω k) := by
+        -- Finite version of ae_ball_iff
+        apply Measure.ae_ball_iff.mpr
+        exact h_list
+      filter_upwards [this] with ω hω
       exact Finset.sum_congr rfl hω
 
     -- Unfold birkhoffAverage and match with B n
@@ -3881,7 +3887,20 @@ private theorem optionB_L1_convergence_bounded
         (n : ℝ)⁻¹ * ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω := by
       intro ω
       rw [birkhoffAverage.eq_1, birkhoffSum.eq_1]
-      simp only [_root_.id, smul_eq_mul]
+      simp only [_root_.id]
+      -- Goal: ↑↑((↑n)⁻¹ • ∑ x ∈ Finset.range n, fL2_x) ω =
+      --       (↑n)⁻¹ * ∑ k ∈ Finset.range n, ↑↑fL2_k ω
+      --
+      -- Need two Lp coercion lemmas:
+      -- 1. Lp.coeFn_smul: (c • f) =ᵐ c • f (EXISTS in mathlib)
+      -- 2. Lp.coeFn_sum: (∑ i, f i) = ∑ i, f i (MISSING for measure space Lp)
+      --
+      -- Mathlib has lp.coeFn_sum (lowercase, sequence spaces):
+      --   ⇑(∑ i ∈ s, f i) = ∑ i ∈ s, ⇑(f i)
+      -- But NOT Lp.coeFn_sum (capital, measure spaces).
+      --
+      -- Without this API, can't convert sum of Lp elements to sum of functions.
+      sorry
     -- Transfer via hsum
     filter_upwards [hsum] with ω hω
     rw [hbirk, hω]
