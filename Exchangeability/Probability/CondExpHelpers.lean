@@ -423,19 +423,34 @@ theorem condExp_project_of_condIndepFun
       -- Integrability of each product term a i * indicator_Ai * indicator_B
       have h_int_products : ∀ i ∈ s, Integrable (fun ω => a i * (A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω) μ := by
         intro i hi
-        -- Indicators are bounded by 1, product of bounded functions on probability space is integrable
-        -- Strategy: const * indicator * indicator is integrable
-        -- 1. Show 1 is integrable (trivial on probability space)
-        -- 2. Apply Integrable.indicator twice
-        -- 3. Multiply by constant a i
-        sorry -- TODO: Use integrable_const + Integrable.indicator + const_mul
+        -- Strategy: product of indicators = indicator of intersection
+        -- Then: 1 is integrable → indicator is integrable → a i * indicator is integrable
+        have h_one : Integrable (fun ω : Ω => (1 : ℝ)) μ := integrable_const 1
+        -- Product of indicators equals indicator of intersection
+        have h_prod_eq : (fun ω => (A i).indicator (1 : Ω → ℝ) ω * (Z ⁻¹' B).indicator (1 : Ω → ℝ) ω) =
+                         (A i ∩ Z ⁻¹' B).indicator (1 : Ω → ℝ) := by
+          ext ω
+          simp [Set.indicator_apply, Set.mem_inter_iff]
+          split_ifs <;> norm_num
+        -- Intersection is measurable (need to convert to mΩ)
+        have hA_meas_mΩ : MeasurableSet[mΩ] (A i) := hmZW_le _ (hA_meas i hi)
+        have hB_meas_mΩ : MeasurableSet[mΩ] (Z ⁻¹' B) := hmZ_le _ (hZ.comap_le hB)
+        have h_inter_meas : MeasurableSet[mΩ] (A i ∩ Z ⁻¹' B) := hA_meas_mΩ.inter hB_meas_mΩ
+        -- Indicator of measurable set is integrable
+        have h_ind : Integrable ((A i ∩ Z ⁻¹' B).indicator (1 : Ω → ℝ)) μ := h_one.indicator h_inter_meas
+        -- Rewrite and multiply by constant
+        rw [h_prod_eq]
+        exact h_ind.const_mul (a i)
 
       -- Integrability of each term a i * indicator_Ai on Y side
       have h_int_Y_terms : ∀ i ∈ s, Integrable (fun ω => a i * (A i).indicator 1 ω) μ := by
         intro i hi
-        -- Simpler: constant times indicator
-        -- Strategy: const * indicator is integrable on probability space
-        sorry -- TODO: Use integrable_const + Integrable.indicator + const_mul
+        -- Strategy: 1 is integrable → indicator is integrable → a i * indicator is integrable
+        have h_one : Integrable (fun ω : Ω => (1 : ℝ)) μ := integrable_const 1
+        -- Convert measurability from mZW to mΩ
+        have hA_meas_mΩ : MeasurableSet[mΩ] (A i) := hmZW_le _ (hA_meas i hi)
+        have h_ind : Integrable ((A i).indicator (1 : Ω → ℝ)) μ := h_one.indicator hA_meas_mΩ
+        exact h_ind.const_mul (a i)
 
       -- LHS: Apply condExp_finset_sum to distribute condExp over the sum
       have step1 : μ[ fun ω => ∑ i ∈ s, (a i * (A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω) | mW ]
@@ -466,7 +481,7 @@ theorem condExp_project_of_condIndepFun
       -- Algebraic: factor out μ[(Z⁻¹B).indicator|W] from the sum
       have step3 : (fun ω => ∑ i ∈ s, (a i * (μ[ (A i).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)))
                  =ᵐ[μ] fun ω => (∑ i ∈ s, a i * μ[ (A i).indicator 1 | mW ] ω) * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
-        -- Use Finset.sum_mul to factor out the common term
+        -- Pure algebra: factor out μ[(Z⁻¹B).indicator|W] from each term
         filter_upwards with ω
         rw [← Finset.sum_mul]
         congr 1
