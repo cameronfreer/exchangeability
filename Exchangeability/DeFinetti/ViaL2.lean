@@ -2030,10 +2030,17 @@ lemma kallenberg_L2_bound
             filter_upwards with ω
             exact h_expand ω
       _ = 2 * σSq * (1 - ρ) := by
-            -- Distribute integrals: ∫(f+g-h) = ∫f + ∫g - ∫h
-            -- Then substitute: ∫(Z 0 - m)² = σ², ∫(Z 1 - m)² = σ² (by hvar1), ∫(Z 0 - m)(Z 1 - m) = covOffDiag
-            -- Finally: σ² + σ² - 2·covOffDiag = σ² + σ² - 2·σ²·ρ = 2σ²(1-ρ)
-            sorry -- TODO: Complete integral linearity and algebraic simplification
+            -- TODO: Complete integral linearity and algebraic simplification
+            -- Strategy:
+            -- 1. Use integral_sub, integral_add, integral_const_mul to distribute
+            --    ∫((Z 0 - m)² + (Z 1 - m)² - 2(Z 0 - m)(Z 1 - m)) =
+            --    ∫(Z 0 - m)² + ∫(Z 1 - m)² - 2∫(Z 0 - m)(Z 1 - m)
+            -- 2. Substitute: ∫(Z 0 - m)² = σ², ∫(Z 1 - m)² = σ² (by hvar1),
+            --               ∫(Z 0 - m)(Z 1 - m) = covOffDiag
+            -- 3. Simplify: σ² + σ² - 2·covOffDiag = σ² + σ² - 2·σ²·ρ = 2σ²(1-ρ)
+            --    Using: covOffDiag = σ² * ρ (by definition of ρ)
+            -- 4. Edge case: When σ² = 0, need covOffDiag = 0 (Cauchy-Schwarz)
+            sorry
 
   -- Apply l2_contractability_bound to get the bound in terms of ξ, p', q'
   have h_bound := Exchangeability.DeFinetti.L2Approach.l2_contractability_bound
