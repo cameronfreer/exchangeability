@@ -350,6 +350,11 @@ theorem condExp_project_of_condIndepFun
     -- The key factorization from conditional independence
     have h_factor := condIndep_factor B hB
 
+    -- Measurability facts we'll need
+    have hS_meas : MeasurableSet[mΩ] S := hmW_le _ hS
+    have hZB_meas : MeasurableSet[mΩ] (Z ⁻¹' B) := hZ hB
+    have hg_meas : StronglyMeasurable[mW] g := stronglyMeasurable_condExp
+
     sorry
     /-
     **Detailed Implementation Guide (~30-50 lines):**
