@@ -2345,15 +2345,24 @@ lemma cesaro_to_condexp_L2
       eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ < ε := by
     intro ε hε
 
-    sorry  -- TODO: Complete Cauchy property proof using kallenberg_L2_bound
+    -- Strategy: Use kallenberg/contractability L² bound
+    -- Define centered variables Z_i = f(X_i) - E[f(X_0)]
+    -- Show Z is contractable, derive uniform covariance
+    -- Apply l2_contractability_bound: ∫ (weighted sum)² ≤ C_f · sup|weights|
+    -- Choose N s.t. C_f/N < ε²
+
+    sorry  -- TODO: Complete Cauchy property proof
     /-
-    Strategy:
-    1. Define C_f := E[(Z_0 - Z_1)²] (constant from Kallenberg bound)
-    2. Choose N via Archimedean: N large s.t. C_f / N < ε²
-    3. For n, n' ≥ N, express blockAvg difference as weighted sum
-    4. Apply kallenberg_L2_bound to get ‖diff‖²_L² ≤ C_f · sup|coeffs|
-    5. Bound sup|coeffs| ≤ 1/N to get ‖diff‖²_L² < ε²
-    6. Take square root to get eLpNorm < ε
+    Detailed steps:
+    1. Define: m := E[f(X_0)], Z i := f(X_i) - m, C_f := E[(Z_0 - Z_1)²]
+    2. Show Z is contractable (using contractable_comp + constant shift)
+    3. Show Z has uniform covariance structure via contractability
+    4. Express: blockAvg n - blockAvg n' = ∑ c_i Z_i where c_i = 1/n (i<n) - 1/n' (i<n')
+    5. Apply l2_contractability_bound: ∫ (∑ c_i Z_i)² ≤ C_f · sup|c_i|
+    6. Bound: sup|c_i| ≤ max(1/n, 1/n') ≤ 1/N
+    7. Choose N via Archimedean s.t. C_f/N < (ε.toReal)²
+    8. Get: ∫ (blockAvg n - blockAvg n')² ≤ C_f/N < ε²
+    9. Convert: eLpNorm_lt_of_integral_sq_lt gives eLpNorm < ε
     -/
 
   -- Step 2: Extract L² limit using completeness of Hilbert space
