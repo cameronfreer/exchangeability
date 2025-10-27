@@ -2307,14 +2307,277 @@ lemma cesaro_to_condexp_L2
   have hCauchy : ∀ ε > 0, ∃ N, ∀ {n n'}, n ≥ N → n' ≥ N →
       eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ < ε := by
     intro ε hε
-    -- TODO: Apply kallenberg_L2_bound to show Cauchy property
-    -- Key steps:
-    -- 1. Express blockAvg difference as weighted sum: blockAvg f X 0 n - blockAvg f X 0 n' = ∑ c_i Z_i
-    --    where c_i are probability weights (1/n for i<n, -1/n' for i<n', etc.)
-    -- 2. Apply kallenberg_L2_bound to get: ‖blockAvg n - blockAvg n'‖²_L² ≤ C_f · sup|c_i|
-    -- 3. Bound sup|c_i| ≤ max(1/n, 1/n') ≤ 1/min(n,n') ≤ 1/N for n,n' ≥ N
-    -- 4. Choose N large enough so C_f/N < ε²
-    -- 5. Take square root to get eLpNorm (with p=2) bound
+
+    -- Define C_f := E[(Z_0 - Z_1)²] (the constant from Kallenberg's bound)
+    let C_f := ∫ ω, (Z 0 ω - Z 1 ω)^2 ∂μ
+
+    -- C_f is nonnegative (integral of square)
+    have hC_f_nonneg : 0 ≤ C_f := integral_nonneg (fun ω => sq_nonneg _)
+
+    -- Choose N via Archimedean property: N large enough that C_f / N < ε²
+    -- Equivalently: N * ε² > C_f
+    have ⟨N, hN⟩ : ∃ N : ℕ, (N : ℝ) * ε^2 > C_f := by
+      obtain ⟨n, hn⟩ := exists_nat_gt (C_f / ε^2)
+      use n
+      calc (n : ℝ) * ε^2 > C_f / ε^2 * ε^2 := by
+            apply (mul_lt_mul_right (sq_pos_of_pos hε)).mpr hn
+        _ = C_f := by field_simp
+
+    use N
+    intro n n' hn hn'
+
+    -- We'll apply kallenberg_L2_bound with appropriate weights
+    -- Define common support: all indices used by either average
+    let s := Finset.range (max n n')
+
+    -- Define probability weights:
+    -- p i = 1/n for i < n, else 0
+    -- q i = 1/n' for i < n', else 0
+    let p : ℕ → ℝ := fun i => if i < n then (n : ℝ)⁻¹ else 0
+    let q : ℕ → ℝ := fun i => if i < n' then (n' : ℝ)⁻¹ else 0
+
+    -- Need n, n' ≥ 1 for denominators to be nonzero
+    have hn_pos : 0 < n := Nat.lt_of_succ_le (Nat.succ_le_of_lt hn)
+    have hn'_pos : 0 < n' := Nat.lt_of_succ_le (Nat.succ_le_of_lt hn')
+
+    -- s is nonempty
+    have hs : s.Nonempty := by
+      use 0
+      simp [s]
+      exact Nat.pos_of_ne_zero (fun h => by
+        cases max_eq_iff.mp h with
+        | inl ⟨_, hz⟩ => exact Nat.lt_irrefl 0 (hz ▸ hn_pos)
+        | inr ⟨_, hz⟩ => exact Nat.lt_irrefl 0 (hz ▸ hn'_pos))
+
+    -- Verify p sums to 1
+    have hp_sum : s.sum p = 1 := by
+      simp only [p, s]
+      rw [Finset.sum_ite]
+      simp only [Finset.filter_congr_decidable, Finset.sum_const, nsmul_eq_mul]
+      -- Count how many i ∈ range (max n n') satisfy i < n
+      have : (Finset.filter (fun i => i < n) (Finset.range (max n n'))).card = n := by
+        ext i
+        simp only [Finset.mem_filter, Finset.mem_range]
+        constructor
+        · intro ⟨h1, h2⟩; exact h2
+        · intro h; constructor
+          · exact Nat.lt_of_lt_of_le h (Nat.le_max_left n n')
+          · exact h
+      rw [this]
+      field_simp
+      ring
+
+    -- Verify p is nonnegative
+    have hp_nn : ∀ i ∈ s, 0 ≤ p i := by
+      intro i _
+      simp only [p]
+      split_ifs
+      · exact inv_nonneg.mpr (Nat.cast_nonneg n)
+      · exact le_refl 0
+
+    -- Similarly for q
+    have hq_sum : s.sum q = 1 := by
+      simp only [q, s]
+      rw [Finset.sum_ite]
+      simp only [Finset.filter_congr_decidable, Finset.sum_const, nsmul_eq_mul]
+      have : (Finset.filter (fun i => i < n') (Finset.range (max n n'))).card = n' := by
+        ext i
+        simp only [Finset.mem_filter, Finset.mem_range]
+        constructor
+        · intro ⟨h1, h2⟩; exact h2
+        · intro h; constructor
+          · exact Nat.lt_of_lt_of_le h (Nat.le_max_right n n')
+          · exact h
+      rw [this]
+      field_simp
+      ring
+
+    have hq_nn : ∀ i ∈ s, 0 ≤ q i := by
+      intro i _
+      simp only [q]
+      split_ifs
+      · exact inv_nonneg.mpr (Nat.cast_nonneg n')
+      · exact le_refl 0
+
+    -- Z is measurable (composition of measurables)
+    have hZ_meas : ∀ i, Measurable (Z i) := by
+      intro i
+      exact (hf_meas.comp (hX_meas i)).sub measurable_const
+
+    -- Z is contractable (use contractable_comp from L2Helpers)
+    have hZ_contract : Exchangeability.Contractable μ Z := by
+      -- First show f ∘ X is contractable
+      have h_fX_contract := Exchangeability.DeFinetti.L2Helpers.contractable_comp
+        hX_contract hX_meas f hf_meas
+      -- Then show (f ∘ X) - c is contractable (subtracting constant preserves contractability)
+      intro n k hk
+      have := h_fX_contract n k hk
+      -- Subtracting a constant from each variable doesn't change the joint distribution
+      simp only [Z, Measure.map_sub_const_eq this]
+
+    -- Z is exchangeable (contractable implies exchangeable)
+    have hZ_exch : Exchangeable μ Z := Exchangeability.exchangeable_of_contractable hZ_contract
+
+    -- Z elements are in L² (bounded by 2, so integrable and square-integrable)
+    have hZ_L2 : ∀ i ∈ s, MemLp (Z i) 2 μ := by
+      intro i _
+      -- |Z i| ≤ |f(X i)| + |E[f(X 0)]| ≤ 1 + 1 = 2
+      apply MemLp.of_bound (hZ_meas i).aestronglyMeasurable 2
+      apply Filter.eventually_of_forall
+      intro ω
+      calc ‖Z i ω‖
+          = |f (X i ω) - ∫ ω', f (X 0 ω') ∂μ| := by rw [Real.norm_eq_abs]
+        _ ≤ |f (X i ω)| + |∫ ω', f (X 0 ω') ∂μ| := abs_sub _ _
+        _ ≤ 1 + |∫ ω', f (X 0 ω') ∂μ| := by
+            apply add_le_add_right (hf_bdd (X i ω))
+        _ ≤ 1 + ∫ ω', |f (X 0 ω')| ∂μ := by
+            apply add_le_add_left
+            exact abs_integral_le_integral_abs _ _
+        _ ≤ 1 + ∫ ω', (1 : ℝ) ∂μ := by
+            apply add_le_add_left
+            apply integral_mono_of_nonneg
+            · apply Filter.eventually_of_forall; intro; exact abs_nonneg _
+            · exact integrable_const 1
+            · apply Filter.eventually_of_forall; intro ω'; exact hf_bdd (X 0 ω')
+        _ = 1 + 1 := by simp [measure_univ]
+        _ = 2 := by ring
+
+    -- Key identity: blockAvg difference = weighted sum
+    have h_diff_eq : ∀ ω, blockAvg f X 0 n ω - blockAvg f X 0 n' ω
+        = s.sum (fun i => (p i - q i) * Z i ω) := by
+      intro ω
+      -- Strategy: Express both blockAvg terms using weights p and q over common range s
+      -- Then blockAvg difference = (∑ p_i * f(X_i)) - (∑ q_i * f(X_i)) = ∑ (p_i - q_i) * (Z_i + const)
+      -- The constant cancels since ∑ p_i = ∑ q_i = 1
+
+      simp only [blockAvg]
+      -- Extend range n sum to range (max n n') = s
+      have h1 : (Finset.range n).sum (fun k => f (X (0 + k) ω)) =
+                s.sum (fun i => (if i < n then 1 else 0) * f (X i ω)) := by
+        rw [← Finset.sum_filter]
+        congr 1
+        ext i
+        simp [s, Finset.mem_filter]
+      -- Similarly for range n'
+      have h2 : (Finset.range n').sum (fun k => f (X (0 + k) ω)) =
+                s.sum (fun i => (if i < n' then 1 else 0) * f (X i ω)) := by
+        rw [← Finset.sum_filter]
+        congr 1
+        ext i
+        simp [s, Finset.mem_filter]
+
+      rw [h1, h2]
+      simp only [← Finset.sum_mul]
+      -- Now we have (1/n) * ∑ (χ_{i<n} * f(X_i)) - (1/n') * ∑ (χ_{i<n'} * f(X_i))
+      rw [Finset.mul_sum, Finset.mul_sum]
+      rw [← Finset.sum_sub_distrib]
+      congr 1 with i
+      simp only [p, q, Z, zero_add]
+      -- f(X_i) = Z_i + E[f(X_0)], substitute
+      have : f (X i ω) = Z i ω + ∫ ω', f (X 0 ω') ∂μ := by simp [Z]
+      rw [this]
+      ring_nf
+      -- (p_i - q_i) * Z_i + (p_i - q_i) * E[f(X_0)]
+      -- The E[f(X_0)] term will cancel when summed (since ∑ p_i = ∑ q_i = 1)
+      sorry
+
+    -- Apply kallenberg_L2_bound
+    have h_bound := kallenberg_L2_bound Z hZ_exch hZ_meas p q s hs
+      ⟨hp_sum, hp_nn⟩ ⟨hq_sum, hq_nn⟩ hZ_L2
+
+    -- The bound gives us: ∫ (∑ (p i - q i) * Z i)² ≤ C_f * sup |p i - q i|
+    have h_integral_bound : ∫ ω, (blockAvg f X 0 n ω - blockAvg f X 0 n' ω)^2 ∂μ
+        ≤ C_f * (s.sup' hs (fun i => |(p i - q i)|)) := by
+      convert h_bound using 1
+      · congr 1 with ω
+        rw [← h_diff_eq ω]
+      · rfl
+
+    -- Bound the supremum: sup |p i - q i| ≤ max(1/n, 1/n') = 1/min(n,n')
+    have h_sup_bound : s.sup' hs (fun i => |(p i - q i)|) ≤ max ((n : ℝ)⁻¹) ((n' : ℝ)⁻¹) := by
+      apply Finset.sup'_le
+      intro i hi
+      simp only [p, q]
+      split_ifs with h1 h2
+      · -- i < n and i < n'
+        have : |(n : ℝ)⁻¹ - (n' : ℝ)⁻¹| ≤ max ((n : ℝ)⁻¹) ((n' : ℝ)⁻¹) := by
+          cases' le_or_lt n n' with hnle hnlt
+          · -- n ≤ n'
+            have : (n : ℝ)⁻¹ ≥ (n' : ℝ)⁻¹ := inv_le_inv_of_le (Nat.cast_pos.mpr hn'_pos) (Nat.cast_le.mpr hnle)
+            rw [abs_of_nonneg (sub_nonneg_of_le this)]
+            exact le_max_left _ _
+          · -- n > n'
+            have : (n : ℝ)⁻¹ < (n' : ℝ)⁻¹ := inv_lt_inv_of_lt (Nat.cast_pos.mpr hn_pos) (Nat.cast_lt.mpr hnlt)
+            rw [abs_of_nonpos (sub_nonpos_of_le this.le)]
+            simp only [neg_sub]
+            exact le_max_right _ _
+        exact this
+      · -- i < n and not (i < n')
+        simp only [sub_zero, abs_inv, abs_natCast]
+        exact le_max_left _ _
+      · -- not (i < n) and i < n'
+        simp only [zero_sub, abs_neg, abs_inv, abs_natCast]
+        exact le_max_right _ _
+      · -- not (i < n) and not (i < n')
+        simp only [sub_self, abs_zero]
+        exact le_max_of_le_left (inv_nonneg.mpr (Nat.cast_nonneg n))
+
+    -- Combine bounds: ∫ (blockAvg n - blockAvg n')² ≤ C_f * max(1/n, 1/n')
+    have h_combined : ∫ ω, (blockAvg f X 0 n ω - blockAvg f X 0 n' ω)^2 ∂μ
+        ≤ C_f * max ((n : ℝ)⁻¹) ((n' : ℝ)⁻¹) := by
+      calc ∫ ω, (blockAvg f X 0 n ω - blockAvg f X 0 n' ω)^2 ∂μ
+          ≤ C_f * (s.sup' hs (fun i => |(p i - q i)|)) := h_integral_bound
+        _ ≤ C_f * max ((n : ℝ)⁻¹) ((n' : ℝ)⁻¹) := by
+            apply mul_le_mul_of_nonneg_left h_sup_bound hC_f_nonneg
+
+    -- max(1/n, 1/n') = 1/min(n,n') ≤ 1/N
+    have h_max_bound : max ((n : ℝ)⁻¹) ((n' : ℝ)⁻¹) ≤ (N : ℝ)⁻¹ := by
+      rw [max_le_iff]
+      constructor
+      · apply inv_le_inv_of_le (Nat.cast_pos.mpr (Nat.pos_of_ne_zero (fun h => by
+          cases Nat.eq_zero_of_le_zero (Nat.le_of_not_lt (Nat.not_lt.mpr (h ▸ hn))) with
+          | refl => exact Nat.lt_irrefl 0 hn)))
+        exact Nat.cast_le.mpr hn
+      · apply inv_le_inv_of_le (Nat.cast_pos.mpr (Nat.pos_of_ne_zero (fun h => by
+          cases Nat.eq_zero_of_le_zero (Nat.le_of_not_lt (Nat.not_lt.mpr (h ▸ hn'))) with
+          | refl => exact Nat.lt_irrefl 0 hn')))
+        exact Nat.cast_le.mpr hn'
+
+    -- Therefore ∫ (blockAvg n - blockAvg n')² ≤ C_f / N < ε²
+    have h_integral_lt : ∫ ω, (blockAvg f X 0 n ω - blockAvg f X 0 n' ω)^2 ∂μ < ε^2 := by
+      calc ∫ ω, (blockAvg f X 0 n ω - blockAvg f X 0 n' ω)^2 ∂μ
+          ≤ C_f * max ((n : ℝ)⁻¹) ((n' : ℝ)⁻¹) := h_combined
+        _ ≤ C_f * (N : ℝ)⁻¹ := by
+            apply mul_le_mul_of_nonneg_left h_max_bound hC_f_nonneg
+        _ < ε^2 := by
+            rw [mul_comm, ← div_eq_mul_inv]
+            exact div_lt_iff (Nat.cast_pos.mpr (Nat.pos_of_ne_zero (fun h => by
+              cases Nat.eq_zero_of_le_zero (Nat.le_of_not_lt (Nat.not_lt.mpr (h ▸ hn))) with
+              | refl => exact Nat.lt_irrefl 0 hn))) |>.mpr hN
+
+    -- Convert to eLpNorm: eLpNorm (blockAvg n - blockAvg n') 2 μ < ε
+    -- Strategy: Use eLpNorm² = ∫ |·|² and take square roots
+    -- For p = 2: eLpNorm g 2 μ = (∫ g² dμ)^(1/2) since g² = |g|² for real functions
+
+    -- First show the difference is in L²
+    have h_memLp_diff : MemLp (fun ω => blockAvg f X 0 n ω - blockAvg f X 0 n' ω) 2 μ := by
+      -- Both blockAvg terms are bounded, hence in L²
+      apply MemLp.sub
+      · -- blockAvg f X 0 n is bounded by 1, hence in L²
+        sorry
+      · -- blockAvg f X 0 n' is bounded by 1, hence in L²
+        sorry
+
+    -- Now convert ∫ (blockAvg - blockAvg')² < ε² to eLpNorm (blockAvg - blockAvg') 2 < ε
+    -- The key insight: if ∫ g² < ε², then (∫ g²)^(1/2) < ε
+    -- And eLpNorm g 2 is essentially (∫ |g|²)^(1/2) = (∫ g²)^(1/2) for real g
+
+    have h_eLpNorm_sq : (eLpNorm (fun ω => blockAvg f X 0 n ω - blockAvg f X 0 n' ω) 2 μ).toReal ^ 2
+        = ∫ ω, (blockAvg f X 0 n ω - blockAvg f X 0 n' ω)^2 ∂μ := by
+      -- This uses the relationship between eLpNorm and integrals for p = 2
+      -- eLpNorm f 2 μ ^ 2 = ∫ |f|² dμ = ∫ f² dμ (for real f)
+      sorry
+
     sorry
 
   -- Step 2: Extract L² limit using completeness of Hilbert space
