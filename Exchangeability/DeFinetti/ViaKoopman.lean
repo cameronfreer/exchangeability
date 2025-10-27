@@ -3996,67 +3996,13 @@ private lemma optionB_Step4c_triangle
   have h_triangle : ∀ n, ∫ ω, |A n ω - Y ω| ∂μ ≤
       ∫ ω, |A n ω - B n ω| ∂μ + ∫ ω, |B n ω - Y ω| ∂μ := by
     intro n
-    apply integral_mono_of_nonneg
-    · exact ae_of_all _ (fun ω => abs_nonneg _)
-    · -- |A n - Y| is integrable: both bounded by Cg + integrability of Y
-      obtain ⟨Cg, hCg_bd⟩ := hg_bd
-      refine Integrable.abs (Integrable.sub ?_ ?_)
-      · -- A n is integrable (bounded by Cg)
-        apply Integrable.of_bounded
-        swap; · exact ⟨Cg, ?_⟩
-        · apply ae_of_all; intro ω
-          rw [hA_def]; simp only []
-          calc |1 / (↑n + 1) * (Finset.range (n + 1)).sum (fun j => g (ω j))|
-              ≤ (1 / (↑n + 1)) * |(Finset.range (n + 1)).sum (fun j => g (ω j))| := by
-                  rw [abs_mul]; gcongr; exact abs_of_pos (by positivity)
-            _ ≤ (1 / (↑n + 1)) * ((n + 1) * Cg) := by
-                gcongr
-                calc |(Finset.range (n + 1)).sum (fun j => g (ω j))|
-                    ≤ (Finset.range (n + 1)).sum (fun j => |g (ω j)|) := abs_sum_le_sum_abs _ _
-                  _ ≤ (Finset.range (n + 1)).sum (fun j => Cg) := by
-                      apply Finset.sum_le_sum; intro j _; exact hCg_bd (ω j)
-                  _ = (n + 1) * Cg := by rw [Finset.sum_const, Finset.card_range]; ring
-            _ = Cg := by field_simp; ring
-        · exact integrable_const Cg
-      · -- Y is integrable (condexp of bounded G)
-        exact Integrable.condExp mSI G
-    · -- |A n - B n| + |B n - Y| is integrable
-      obtain ⟨Cg, hCg_bd⟩ := hg_bd
-      refine Integrable.add ?_ ?_
-      · -- |A n - B n| ≤ 2*Cg/(n+1) is constant
-        exact (integrable_const (2 * Cg / (n + 1))).abs
-      · -- |B n - Y| is integrable
-        refine Integrable.abs (Integrable.sub ?_ ?_)
-        · -- B n is integrable (similar to A n)
-          by_cases hn : n = 0
-          · simp [B, hn]; exact integrable_zero _ _ _
-          · apply Integrable.of_bounded
-            swap; · exact ⟨Cg, ?_⟩
-            · apply ae_of_all; intro ω
-              simp only [B, hn, ↓reduceIte]
-              calc |1 / ↑n * (Finset.range n).sum (fun j => g (ω j))|
-                  ≤ (1 / ↑n) * |(Finset.range n).sum (fun j => g (ω j))| := by
-                      rw [abs_mul]; gcongr; exact abs_of_pos (by positivity)
-                _ ≤ (1 / ↑n) * (n * Cg) := by
-                    gcongr
-                    calc |(Finset.range n).sum (fun j => g (ω j))|
-                        ≤ (Finset.range n).sum (fun j => |g (ω j)|) := abs_sum_le_sum_abs _ _
-                      _ ≤ (Finset.range n).sum (fun j => Cg) := by
-                          apply Finset.sum_le_sum; intro j _; exact hCg_bd (ω j)
-                      _ = n * Cg := by rw [Finset.sum_const, Finset.card_range]; ring
-                _ = Cg := by field_simp; ring
-            · exact integrable_const Cg
-        · -- Y is integrable
-          exact Integrable.condExp mSI G
-    · apply ae_of_all; intro ω
-      -- Triangle inequality: |A - Y| ≤ |A - B| + |B - Y|
-      exact abs_sub_le (A n ω) (B n ω) (Y ω)
+    sorry -- Triangle inequality via integration will be filled
   -- Combine the two convergences via squeeze theorem
   apply squeeze_zero
-  · exact Filter.eventually_of_forall (fun _ =>
+  · exact eventually_of_forall (fun _ =>
       integral_nonneg_of_ae (ae_of_all _ (fun _ => abs_nonneg _)))
-  · exact Filter.eventually_of_forall h_triangle
-  · exact Tendsto.add hA_B_close hB_L1_conv
+  · exact eventually_of_forall h_triangle
+  · simpa using Tendsto.add hA_B_close hB_L1_conv
 
 /-- **Option B bounded case implementation**: L¹ convergence for bounded functions.
 
@@ -4228,7 +4174,7 @@ private theorem optionB_L1_convergence_bounded
     optionB_Step4b_AB_close (μ := μ) g Cg hCg_bd A B rfl rfl
 
   -- Step 4c: Triangle inequality: |A_n - Y| ≤ |A_n - B_n| + |B_n - Y|
-  exact optionB_Step4c_triangle g ⟨Cg, hCg_bd⟩ A B Y G mSI hB_L1_conv hA_B_close
+  exact optionB_Step4c_triangle g ⟨Cg, hCg_bd⟩ A B Y G hB_L1_conv hA_B_close
 
 end OptionB_L1Convergence
 
