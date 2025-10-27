@@ -128,8 +128,9 @@ lemma memLp_two_of_bounded
     (hf_meas : Measurable f)
     (hf_bdd : ∀ ω, |f ω| ≤ M) :
     MemLp f 2 μ := by
-  apply memLp_of_abs_le_const hf_meas
-  · exact Filter.eventually_of_forall hf_bdd
+  apply memLp_of_abs_le_const (M := M) hf_meas
+  · filter_upwards []
+    exact hf_bdd
   · norm_num
   · norm_num
 

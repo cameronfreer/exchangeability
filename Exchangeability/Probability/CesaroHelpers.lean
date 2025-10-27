@@ -54,7 +54,7 @@ lemma cesaroCoeff_of_in_block {N n i : ℕ} (h1 : N ≤ i) (h2 : i < N + n) :
     cesaroCoeff N n i = (1 : ℝ) / n := by
   simp only [cesaroCoeff]
   split_ifs with h3 h4
-  · exact absurd h1 (not_le_of_lt h3)
+  · exact absurd h1 (not_le_of_gt h3)
   · rfl
   · exact absurd h2 h4
 
@@ -63,7 +63,7 @@ lemma cesaroCoeff_of_ge_end {N n i : ℕ} (h : N + n ≤ i) :
   simp only [cesaroCoeff]
   split_ifs with h1 h2
   · rfl
-  · exact absurd h (not_le_of_lt h2)
+  · exact absurd h (not_le_of_gt h2)
   · rfl
 
 /-- **Supremum bound on Cesàro coefficient differences.**
@@ -81,8 +81,8 @@ lemma cesaroCoeff_sup_le (n n' : ℕ) (hn : n ≠ 0) (hn' : n' ≠ 0) :
   -- Case split on position of i
   by_cases h1 : i < min n n'
   · -- i in both blocks: coeff n i = 1/n, coeff n' i = 1/n'
-    rw [cesaroCoeff_of_in_block (Nat.zero_le i) (Nat.lt_of_lt_of_le h1 (min_le_left n n')),
-        cesaroCoeff_of_in_block (Nat.zero_le i) (Nat.lt_of_lt_of_le h1 (min_le_right n n'))]
+    rw [cesaroCoeff_of_in_block (Nat.zero_le i) (by simp; exact Nat.lt_of_lt_of_le h1 (min_le_left n n')),
+        cesaroCoeff_of_in_block (Nat.zero_le i) (by simp; exact Nat.lt_of_lt_of_le h1 (min_le_right n n'))]
     -- |1/n - 1/n'| ≤ max(1/n, 1/n')
     cases' le_total n n' with hle hle
     · -- n ≤ n', so 1/n ≥ 1/n'
@@ -169,14 +169,16 @@ lemma setIntegral_le_eLpNorm
       ≤ (eLpNorm g 2 μ).toReal * (μ A).toReal ^ (1/2 : ℝ) :=
         setIntegral_le_eLpNorm_mul_measure A hA hg
     _ ≤ (eLpNorm g 2 μ).toReal * 1 := by
-        apply mul_le_mul_of_nonneg_left
-        · have : (μ A).toReal ^ (1/2 : ℝ) ≤ 1 ^ (1/2 : ℝ) := by
-            apply Real.rpow_le_rpow
-            · exact ENNReal.toReal_nonneg
-            · exact (ENNReal.toReal_le_one_iff.mpr (Or.inl (measure_le_one μ A)))
-            · norm_num
-          simpa using this
-        · exact ENNReal.toReal_nonneg
+        apply mul_le_mul_of_nonneg_left _ ENNReal.toReal_nonneg
+        have h_measure_le : (μ A).toReal ≤ 1 := by
+          have : μ A ≤ 1 := measure_le_one μ A
+          cases' (μ A).eq_top_or_lt_top with h h
+          · simp [h]
+          · rw [ENNReal.toReal_le_toReal h ENNReal.one_ne_top]
+            simpa using this
+        calc (μ A).toReal ^ (1/2 : ℝ)
+            ≤ 1 ^ (1/2 : ℝ) := Real.rpow_le_rpow ENNReal.toReal_nonneg h_measure_le (by norm_num : 0 ≤ (1 / 2 : ℝ))
+          _ = 1 := by norm_num
     _ = (eLpNorm g 2 μ).toReal := mul_one _
 
 end Exchangeability.Probability.CesaroHelpers
