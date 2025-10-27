@@ -1738,13 +1738,31 @@ lemma kallenberg_L2_bound
       simp [h]
       -- Need to show: -1 ≤ covOffDiag / σSq ≤ 1
       -- Equivalent to: |covOffDiag| ≤ σSq (since σSq > 0)
-      have h_cs : |covOffDiag| ≤ σSq := by
-        sorry -- TODO: Apply Cauchy-Schwarz to (Z 0 - m, Z 1 - m)
+
       have hσSq_pos : 0 < σSq := by
         cases (hσSq_nonneg.lt_or_eq) with
         | inl h_lt => exact h_lt
         | inr h_eq => exact (h h_eq.symm).elim
-      sorry -- TODO: Derive bounds from |covOffDiag| ≤ σSq and σSq > 0
+
+      -- Apply Cauchy-Schwarz: |∫ f·g| ≤ (∫ f²)^(1/2) · (∫ g²)^(1/2)
+      have h_cs : |covOffDiag| ≤ σSq := by
+        simp only [covOffDiag, σSq]
+        -- First we need to establish that Z 0 - m and Z 1 - m are in L²
+        -- We'll use the hypothesis hZ_L2 which gives us L² for elements in s
+        sorry -- TODO: Need to prove Z 0, Z 1 ∈ L² first, then apply abs_integral_mul_le_L2
+
+      -- From |covOffDiag| ≤ σSq and σSq > 0, derive -1 ≤ ρ ≤ 1
+      constructor
+      · -- Lower bound: -1 ≤ covOffDiag / σSq
+        have : -σSq ≤ covOffDiag := by
+          have h_neg : -|covOffDiag| ≤ covOffDiag := neg_abs_le _
+          linarith [h_cs]
+        calc -1 = -σSq / σSq := by field_simp
+           _ ≤ covOffDiag / σSq := by apply div_le_div_of_nonneg_right; linarith; exact le_of_lt hσSq_pos
+      · -- Upper bound: covOffDiag / σSq ≤ 1
+        have : covOffDiag ≤ σSq := le_of_abs_le h_cs
+        calc covOffDiag / σSq ≤ σSq / σSq := by apply div_le_div_of_nonneg_right; exact this; exact le_of_lt hσSq_pos
+           _ = 1 := by field_simp
 
   -- Prove all marginals have the same mean m
   have hmean : ∀ k : Fin n, ∫ ω, ξ k ω ∂μ = m := by
@@ -1784,9 +1802,21 @@ lemma kallenberg_L2_bound
   have hcov : ∀ i j : Fin n, i ≠ j → ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ = σSq * ρ := by
     intro i j hij
     -- Use contractable_map_pair to show all pairs have same distribution as (Z 0, Z 1)
-    -- Then extract covariance equality
     simp only [ξ, σSq, ρ, covOffDiag]
-    sorry -- TODO: Use contractable_map_pair and integral_map for product measures
+
+    -- Get the indices from enum
+    let i' := (enum i).val
+    let j' := (enum j).val
+
+    -- We need i' < j' or j' < i' (since i ≠ j in the image of an order isomorphism)
+    have hij' : i' ≠ j' := by
+      intro heq
+      have : (enum i).val = (enum j).val := heq
+      have : enum i = enum j := Subtype.ext this
+      have : i = j := enum.injective this
+      contradiction
+
+    sorry -- TODO: Apply contractable_map_pair and use integral_map
 
   -- Prove p' and q' are probability distributions
   have hp'_prob : (∑ i : Fin n, p' i) = 1 ∧ ∀ i, 0 ≤ p' i := by
