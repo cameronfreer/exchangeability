@@ -2077,14 +2077,9 @@ lemma kallenberg_L2_bound
           congr 1
           simp only [p', q']
           -- TODO: Prove supremum reindexing using enum bijection
-          -- Strategy:
-          -- 1. Convert iSup to Finset.sup' using: iSup (fun k => f k) = Finset.univ.sup' _ f
-          -- 2. Show: Finset.univ.sup' _ (fun k => |p (enum k).val - q (enum k).val|) =
-          --          s.sup' hs (fun i => |p i - q i|)
-          -- 3. Use le_antisymm:
-          --    - Forward: For each k ∈ Finset.univ, have (enum k).val ∈ s, so can apply Finset.le_sup'
-          --    - Backward: For each i ∈ s, use surjectivity of enum to get k with (enum k).val = i
-          -- 4. Similar structure to sum reindexing proofs above
+          -- Strategy: Use Finset.sup'_bij or le_antisymm with:
+          -- - Forward: ⨆ k ≤ s.sup' (for each k, (enum k).val ∈ s)
+          -- - Backward: s.sup' ≤ ⨆ k (for each i ∈ s, exists k via enum.symm)
           sorry
 
 /-- **Cesàro averages converge in L² to a tail-measurable limit.**
