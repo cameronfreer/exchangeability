@@ -9,6 +9,7 @@ import Exchangeability.ConditionallyIID
 import Exchangeability.Probability.CondExp
 import Exchangeability.Probability.IntegrationHelpers
 import Exchangeability.Probability.LpNormHelpers
+import Exchangeability.Probability.CesaroHelpers
 import Exchangeability.Tail.TailSigma
 import Exchangeability.Tail.ShiftInvariance
 import Mathlib.MeasureTheory.Function.L2Space
@@ -2477,10 +2478,8 @@ lemma cesaro_to_condexp_L2
       -- f(X_i) = Z_i + E[f(X_0)], substitute
       have : f (X i ω) = Z i ω + ∫ ω', f (X 0 ω') ∂μ := by simp [Z]
       rw [this]
-      ring_nf
-      -- (p_i - q_i) * Z_i + (p_i - q_i) * E[f(X_0)]
-      -- The E[f(X_0)] term will cancel when summed (since ∑ p_i = ∑ q_i = 1)
-      sorry
+      -- Expand: (p_i - q_i) * (Z_i + c) = (p_i - q_i) * Z_i + (p_i - q_i) * c
+      ring
 
     -- Apply kallenberg_L2_bound
     have h_bound := kallenberg_L2_bound Z hZ_exch hZ_meas p q s hs
@@ -2611,11 +2610,30 @@ lemma cesaro_to_condexp_L2
 
     have h_eLpNorm_sq : (eLpNorm (fun ω => blockAvg f X 0 n ω - blockAvg f X 0 n' ω) 2 μ).toReal ^ 2
         = ∫ ω, (blockAvg f X 0 n ω - blockAvg f X 0 n' ω)^2 ∂μ := by
-      -- This uses the relationship between eLpNorm and integrals for p = 2
-      -- eLpNorm f 2 μ ^ 2 = ∫ |f|² dμ = ∫ f² dμ (for real f)
+      -- For p = 2: eLpNorm g 2 μ = (∫⁻ ‖g‖²)^(1/2), so (eLpNorm g 2 μ)² = ∫⁻ ‖g‖² = ∫ g²
+      -- Use the standard relationship for real functions
+      rw [eLpNorm_eq_lintegral_rpow_enorm (by norm_num : (2 : ℝ≥0∞) ≠ 0)
+          (by norm_num : (2 : ℝ≥0∞) ≠ ∞)]
+      simp only [ENNReal.toReal_rpow, ENNReal.one_toReal]
+      -- (∫⁻ ‖g‖²)^(1/2) squared = ∫⁻ ‖g‖²
+      rw [← Real.rpow_natCast, show (2 : ℕ) = (1 / (2 : ℝ))⁻¹ by norm_num,
+          Real.rpow_inv_natCast_pow _ 2 (by norm_num)]
+      -- Convert lintegral to integral for real-valued functions
       sorry
 
-    sorry
+    -- From ∫ g² < ε², conclude eLpNorm g 2 < ε by taking square roots
+    have h_eLpNorm_lt : eLpNorm (fun ω => blockAvg f X 0 n ω - blockAvg f X 0 n' ω) 2 μ < ENNReal.ofReal ε := by
+      -- Strategy: eLpNorm² < ε² implies eLpNorm < ε
+      -- Use h_integral_lt : ∫ g² < ε² and h_eLpNorm_sq : eLpNorm²  = ∫ g²
+      sorry
+
+    -- Convert from ENNReal to Real
+    have : (eLpNorm (fun ω => blockAvg f X 0 n ω - blockAvg f X 0 n' ω) 2 μ).toReal < ε := by
+      have := ENNReal.toReal_lt_toReal (eLpNorm_ne_top h_memLp_diff) ENNReal.ofReal_ne_top
+      simpa [ENNReal.toReal_ofReal (le_of_lt hε)] using this.mpr h_eLpNorm_lt
+
+    -- Final step: eLpNorm of difference = eLpNorm applied to lambda
+    simpa using this
 
   -- Step 2: Extract L² limit using completeness of Hilbert space
   -- Lp(2, μ) is complete (Hilbert space), so Cauchy sequence converges
