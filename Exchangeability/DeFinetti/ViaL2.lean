@@ -2409,11 +2409,30 @@ lemma cesaro_to_condexp_L2
     -- Apply l2_contractability_bound: ∫ (weighted sum)² ≤ C_f · sup|weights|
     -- Choose N s.t. C_f/N < ε²
 
-    sorry  -- TODO: Complete Cauchy property proof
+    -- Step 1: Define centered variables
+    let m := ∫ ω, f (X 0 ω) ∂μ
+    let Z := fun i ω => f (X i ω) - m
+
+    -- Z is measurable
+    have hZ_meas : ∀ i, Measurable (Z i) := fun i =>
+      (hf_meas.comp (hX_meas i)).sub measurable_const
+
+    -- Step 2: Show Z is contractable
+    -- Z = f ∘ X - m, and contractability is preserved under composition + constant shift
+    have hZ_contract : Contractable μ Z := by
+      -- First show f ∘ X is contractable using contractable_comp
+      have hfX_contract : Contractable μ (fun i ω => f (X i ω)) :=
+        L2Helpers.contractable_comp (X := X) hX_contract hX_meas f hf_meas
+      -- Subtracting a constant preserves contractability
+      sorry  -- TODO: Prove constant shift preserves contractability
+
+    -- Step 3: Show uniform covariance structure via contractability
+    -- For simplicity in this proof, we'll directly use the fact that
+    -- blockAvg differences have bounded L² norm by taking large N
+
+    sorry  -- TODO: Complete the rest of the proof
     /-
-    Detailed steps:
-    1. Define: m := E[f(X_0)], Z i := f(X_i) - m, C_f := E[(Z_0 - Z_1)²]
-    2. Show Z is contractable (using contractable_comp + constant shift)
+    Remaining steps:
     3. Show Z has uniform covariance structure via contractability:
        - For variance: E[Z_i²] = E[Z_0²] via contractable_map_single
        - For covariance: E[Z_i Z_j] = E[Z_0 Z_1] for i<j via contractable_map_pair
