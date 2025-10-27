@@ -2449,11 +2449,21 @@ lemma cesaro_to_condexp_L2
       -- From contractability: map (Z i) μ = map (Z 0) μ
       have h_map_eq : Measure.map (Z i) μ = Measure.map (Z 0) μ :=
         L2Helpers.contractable_map_single (X := Z) hZ_contract hZ_meas (i := i)
-      -- Use integral_map to transfer integrals across equal measures
-      sorry  -- TODO: Apply integral_map on both sides
+
+      -- Strategy: Use integral_map to rewrite both sides
       -- ∫ (Z i ω)² dμ = ∫ x² d(map (Z i) μ) [by integral_map]
       --               = ∫ x² d(map (Z 0) μ) [by h_map_eq]
       --               = ∫ (Z 0 ω)² dμ     [by integral_map]
+
+      -- Z i is measurable, so we can apply integral_map
+      have hZi_meas : AEMeasurable (Z i) μ := (hZ_meas i).aemeasurable
+      have hZ0_meas : AEMeasurable (Z 0) μ := (hZ_meas 0).aemeasurable
+
+      -- Apply integral_map on both sides and use measure equality
+      -- The function x ↦ x² is continuous, hence strongly measurable
+      rw [← integral_map hZi_meas (continuous_pow 2).aestronglyMeasurable]
+      rw [← integral_map hZ0_meas (continuous_pow 2).aestronglyMeasurable]
+      rw [h_map_eq]
 
     -- Step 4: Show mean of Z is zero
     have hZ_mean_zero : ∀ i, ∫ ω, Z i ω ∂μ = 0 := by
@@ -2471,11 +2481,30 @@ lemma cesaro_to_condexp_L2
           exact hf_bdd (X i ω)
 
       rw [integral_sub hfX_int (integrable_const m)]
-      -- Now show ∫ f(X i) = m
-      sorry -- TODO: Prove using contractable_map_single
+      -- Now show ∫ f(X i) = m, so that ∫ f(X i) - m = m - m = 0
+
       -- Strategy: contractable_map_single gives map (X i) μ = map (X 0) μ
       -- Then integral_map gives: ∫ f(X i) dμ = ∫ f d(map (X i) μ) = ∫ f d(map (X 0) μ) = ∫ f(X 0) dμ = m
-      -- This requires showing integral f respects measure equality
+
+      -- Use contractability to get measure equality
+      have h_map_eq : Measure.map (X i) μ = Measure.map (X 0) μ :=
+        L2Helpers.contractable_map_single (X := X) hX_contract hX_meas (i := i)
+
+      -- f is measurable and bounded, so we can apply integral_map
+      have hXi_meas : AEMeasurable (X i) μ := (hX_meas i).aemeasurable
+      have hX0_meas : AEMeasurable (X 0) μ := (hX_meas 0).aemeasurable
+
+      -- Apply integral_map to show ∫ f(X i) = ∫ f(X 0)
+      have h_int_eq : ∫ ω, f (X i ω) ∂μ = ∫ ω, f (X 0 ω) ∂μ := by
+        rw [← integral_map hXi_meas hf_meas.aestronglyMeasurable]
+        rw [← integral_map hX0_meas hf_meas.aestronglyMeasurable]
+        rw [h_map_eq]
+
+      -- From h_int_eq: ∫ f(X i) = ∫ f(X 0) = m
+      -- So ∫ f(X i) - m = m - m = 0
+      simp only [integral_const, smul_eq_mul]
+      rw [h_int_eq]
+      simp [m]
 
     -- Step 5: Show uniform covariance via contractability
     -- For i ≠ j, E[Z_i Z_j] = E[Z_0 Z_1]
