@@ -277,6 +277,24 @@ theorem condExp_project_of_condIndepFun
   -- This is a standard result, typically proven via approximation:
   -- indicators → simple functions (linearity) → bounded measurables (DCT)
   --
+  -- **Helper: Indicator factorization from conditional independence**
+  -- This is the base case that follows directly from the CondIndepFun characterization
+  have condIndep_indicator : ∀ (A : Set βY) (B : Set βZ) (hA : MeasurableSet A) (hB : MeasurableSet B),
+      μ[ (Y ⁻¹' A).indicator (1 : Ω → ℝ) * (Z ⁻¹' B).indicator (1 : Ω → ℝ) | mW ] =ᵐ[μ]
+      μ[ (Y ⁻¹' A).indicator (1 : Ω → ℝ) | mW ] * μ[ (Z ⁻¹' B).indicator (1 : Ω → ℝ) | mW ] := by
+    intro A B hA hB
+    -- Use the CondIndepFun characterization
+    have h_ci := condIndepFun_iff_condExp_inter_preimage_eq_mul hY hZ
+    rw [h_ci] at hCI
+    specialize hCI A B hA hB
+    -- Key: (Y ⁻¹' A).indicator 1 * (Z ⁻¹' B).indicator 1 = (Y ⁻¹' A ∩ Z ⁻¹' B).indicator 1
+    conv_lhs => arg 1; ext x; rw [← Set.inter_indicator_one (s := Y ⁻¹' A) (t := Z ⁻¹' B)]
+    -- Now apply the CondIndepFun characterization
+    -- Note: The notation μ⟦s | m⟧ is defined as μ[s.indicator (fun _ => (1 : ℝ)) | m]
+    convert hCI using 1
+    -- The goals should now match by definition of the notation
+    sorry
+
   have condIndep_factor : ∀ (B : Set βZ) (hB : MeasurableSet B),
       μ[ (f ∘ Y) * (Z ⁻¹' B).indicator (1 : Ω → ℝ) | mW ] =ᵐ[μ]
       μ[ f ∘ Y | mW ] * μ[ (Z ⁻¹' B).indicator (1 : Ω → ℝ) | mW ] := by
