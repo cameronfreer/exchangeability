@@ -693,15 +693,16 @@ theorem condExp_project_of_condIndepFun
         μ[ (f_n n ∘ Y) * (Z ⁻¹' B).indicator 1 | mW ] =ᵐ[μ]
         μ[ f_n n ∘ Y | mW ] * μ[ (Z ⁻¹' B).indicator 1 | mW ] := by
       intro n
-      -- f_n n is a simple function on βY: f_n n = ∑ i ∈ range, i * indicator (fiber i)
-      -- Composing with Y: f_n n ∘ Y = ∑ i ∈ range, i * indicator (Y⁻¹(fiber i))
-      -- This matches simple_func_case with:
-      --   s = (f_n n).range
-      --   a i = i
-      --   A i = Y ⁻¹' (f_n n ⁻¹' {i})
+      -- The simple function f_n n ∘ Y can be written as a sum:
+      -- f_n n ∘ Y = ∑ r ∈ (f_n n).range, r * indicator (Y⁻¹((f_n n)⁻¹{r}))
+      --
+      -- This is exactly the form required by simple_func_case.
+      -- However, we need to verify the conditions and show the representation.
 
-      -- Apply simple_func_case
-      sorry  -- TODO: Extract range, construct preimage sets, verify conditions, apply lemma
+      -- For now, we note that this is a standard application of simple_func_case
+      -- to the composition of a simple function with a measurable function.
+      -- The mathematical content is that simple functions extend from indicators.
+      sorry  -- TODO: Express f_n n ∘ Y explicitly as required sum and apply simple_func_case
 
     -- Pointwise convergence: f_n ∘ Y → f ∘ Y pointwise a.e. on Ω
     have h_fY_ptwise : ∀ᵐ ω ∂μ, Filter.Tendsto (fun n => f_n n (Y ω)) Filter.atTop (nhds (f (Y ω))) := by
@@ -762,18 +763,24 @@ theorem condExp_project_of_condIndepFun
 
     -- Apply tendsto_condExp_unique to pass factorization to the limit
     --
-    -- We have for each n:
-    --   μ[(f_n n ∘ Y) * indicator B | mW] =ᵐ μ[f_n n ∘ Y | mW] * μ[indicator B | mW]  (by h_factorization)
+    -- We have all the ingredients:
+    -- 1. For each n: μ[(f_n n ∘ Y) * indicator B | mW] =ᵐ μ[f_n n ∘ Y | mW] * μ[indicator B | mW]
+    -- 2. Pointwise convergence: (f_n n ∘ Y) → (f ∘ Y) a.e.
+    -- 3. Integrability: All functions integrable
+    -- 4. Dominating bound: ‖(f_n n ∘ Y) * indicator B‖ ≤ 2‖f ∘ Y‖ which is integrable
     --
-    -- The RHS is mW-measurable, so it equals its own conditional expectation.
-    -- Thus μ[RHS | mW] =ᵐ RHS.
+    -- By tendsto_condExp_unique:
+    --   μ[(f_n n ∘ Y) * indicator B | mW] → μ[(f ∘ Y) * indicator B | mW] in L¹
+    --   μ[f_n n ∘ Y | mW] * μ[indicator B | mW] → μ[f ∘ Y | mW] * μ[indicator B | mW] in L¹
     --
-    -- By dominated convergence (tendsto_condExp_unique):
-    --   - LHS converges to μ[(f ∘ Y) * indicator B | mW] in L¹
-    --   - RHS converges to μ[f ∘ Y | mW] * μ[indicator B | mW] in L¹
-    --   - Therefore they are equal a.e.
+    -- Since these sequences are equal a.e. for each n, their limits are equal a.e.
+    --
+    -- The application requires:
+    -- - Setting up the two sequences (LHS and RHS of factorization)
+    -- - Verifying they satisfy the hypotheses of tendsto_condExp_unique
+    -- - Concluding the limits are equal
 
-    sorry  -- TODO: Apply tendsto_condExp_unique with these sequences and bounds
+    sorry  -- TODO: Apply tendsto_condExp_unique with fs = LHS sequence, gs = RHS sequence
     /-
     **Next steps with measurable f:**
 
