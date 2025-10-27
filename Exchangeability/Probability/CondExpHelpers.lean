@@ -479,24 +479,15 @@ theorem condExp_project_of_condIndepFun
       -- Set.univ is mZW-measurable (in every σ-algebra)
       have huniv_meas : MeasurableSet[mZW] Set.univ := MeasurableSet.univ
 
-      -- Apply induction result to univ to get ∫ g = ∫ f∘Y
+      -- Apply h_rect_all to univ to get ∫ g = ∫ f∘Y
       have huniv_eq : ∫ x, g x ∂μ = ∫ x, (f ∘ Y) x ∂μ := by
-        rw [← setIntegral_univ, ← setIntegral_univ]
-        -- Need to invoke that C(univ) follows from the induction
-        -- But this is outside our current local context!
-        -- The induction hasn't been completed yet - we're still proving it
-        sorry
-        /-
-        Chicken-and-egg problem: We're trying to prove C(S') → C(S'ᶜ),
-        but to do so we need C(univ), which comes from the full induction.
-
-        The standard solution: Use a different formulation where we prove
-        directly that ∫_Sᶜ g = ∫_Sᶜ f∘Y from the hypotheses, without
-        needing the total integral.
-
-        Alternative: Note that this is a technical issue that can be resolved
-        by restructuring the proof, but the mathematical content is sound.
-        -/
+        -- Key insight: univ = Z⁻¹(univ) ∩ W⁻¹(univ) ∈ 𝓡, so we can use h_rect_all!
+        have huniv_in_R : Set.univ ∈ 𝓡 := by
+          refine ⟨Set.univ, Set.univ, MeasurableSet.univ, MeasurableSet.univ, ?_⟩
+          ext ω
+          simp only [Set.mem_univ, Set.mem_inter_iff, Set.mem_preimage, true_and]
+        have h := h_rect_all Set.univ huniv_in_R (measure_lt_top μ Set.univ)
+        rwa [setIntegral_univ, setIntegral_univ] at h
 
       -- Now we can complete the calc
       calc ∫ x in S'ᶜ, g x ∂μ
