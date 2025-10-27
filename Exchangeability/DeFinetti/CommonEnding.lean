@@ -183,19 +183,12 @@ lemma prod_eq_one_iff_of_zero_one {ι : Type*} [Fintype ι] {f : ι → ENNReal}
   constructor
   · intro h i
     have mem := hf i
-    simp at mem
-    cases mem with
-    | inl h0 =>
-      -- If any f i = 0, then product = 0, contradicting h
-      exfalso
-      have : ∏ j, f j = 0 := by
-        apply Finset.prod_eq_zero (Finset.mem_univ i)
-        exact h0
-      rw [this] at h
-      norm_num at h
-    | inr h1 => exact h1
-  · intro h
-    simp [h]
+    simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at mem
+    rcases mem with h0 | h1
+    · exfalso
+      simp [Finset.prod_eq_zero (Finset.mem_univ i) h0] at h
+    · exact h1
+  · intro h; simp [h]
 
 /-- The product of finitely many terms, each bounded by 1, is bounded by 1.
 This is useful for products of indicator functions. -/
@@ -231,9 +224,8 @@ lemma product_bounded {ι : Type*} [Fintype ι] {α : Type*}
   let M' : ι → ℝ := fun i => max (M i) 1
   have hM' : ∀ i x, |f i x| ≤ M' i := by
     intro i x; exact (hM i x).trans (le_max_left _ _)
-  have hM'_nonneg : ∀ i, 0 ≤ M' i := by
-    intro i
-    exact (zero_le_one.trans (le_max_right _ _))
+  have hM'_nonneg : ∀ i, 0 ≤ M' i :=
+    fun i => zero_le_one.trans (le_max_right _ _)
   -- Key inductive claim
   have key : ∀ (s : Finset ι) (x : α), |s.prod (fun i => f i x)| ≤ s.prod M' := by
     intro s x

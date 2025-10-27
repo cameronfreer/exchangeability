@@ -266,14 +266,14 @@ theorem exchangeable_of_conditionallyIID {μ : Measure Ω} {X : ℕ → Ω → �
     intro i j hij
     exact hij
   -- Measurability of the vector map
-  have hXvec_meas : Measurable (fun ω => fun i : Fin n => X i.val ω) := by
-    exact measurable_pi_lambda _ (fun i => hX_meas i.val)
+  have hXvec_meas : Measurable (fun ω => fun i : Fin n => X i.val ω) :=
+    measurable_pi_lambda _ (fun i => hX_meas i.val)
   -- Measurability of permutation on finite functions
-  have hperm_meas : Measurable (fun f : Fin n → α => f ∘ σ) := by
-    exact measurable_pi_lambda _ (fun i => measurable_pi_apply (σ i))
+  have hperm_meas : Measurable (fun f : Fin n → α => f ∘ σ) :=
+    measurable_pi_lambda _ (fun i => measurable_pi_apply (σ i))
   -- Measurability of the product measure kernel
-  have hν_meas : Measurable fun ω => Measure.pi fun _ : Fin n => ν ω := by
-    exact measurable_measure_pi ν hν_prob hν_meas_coe
+  have hν_meas : Measurable fun ω => Measure.pi fun _ : Fin n => ν ω :=
+    measurable_measure_pi ν hν_prob hν_meas_coe
   -- Show permuted version equals the same mixture
   calc Measure.map (fun ω i => X (σ i).val ω) μ
       -- Factor as permutation composed with identity

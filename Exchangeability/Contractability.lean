@@ -221,14 +221,7 @@ lemma Contractable.prefix {μ : Measure Ω} {X : ℕ → Ω → α}
       Measure.map (fun ω i => X (k i).val ω) μ =
         Measure.map (fun ω i => X i.val ω) μ := by
   intro m k hk_mono
-  -- Lift k to a function Fin m → ℕ
-  let k' : Fin m → ℕ := fun i => (k i).val
-  have hk'_mono : StrictMono k' := by
-    intro i j hij
-    simp only [k']
-    exact hk_mono hij
-  -- Apply contractability
-  exact hX m k' hk'_mono
+  exact hX m (fun i => (k i).val) (fun i j hij => hk_mono hij)
 
 /-- Exchangeable at dimension n means permuting the first n indices preserves distribution. -/
 lemma ExchangeableAt.apply {μ : Measure Ω} {X : ℕ → Ω → α} {n : ℕ}
@@ -273,12 +266,8 @@ lemma Contractable.determined_by_increasing {μ : Measure Ω} {X : ℕ → Ω �
   intro m
   use Measure.map (fun ω i => X i.val ω) μ
   constructor
-  · intro k hk
-    exact hX m k hk
-  · intro ν' hν'
-    have hid : StrictMono (fun i : Fin m => i.val) := fun i j hij => hij
-    have h := hν' (fun i => i.val) hid
-    exact h.symm
+  · intro k hk; exact hX m k hk
+  · intro ν' hν'; exact (hν' (fun i => i.val) (fun i j hij => hij)).symm
 
 /-- Contractability is symmetric: if (X_{k(0)}, ..., X_{k(m-1)}) has the same distribution
 as the initial segment, then the converse also holds. -/
@@ -434,12 +423,7 @@ lemma Contractable.shift_segment_eq {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX : Contractable μ X) (m k : ℕ) :
     Measure.map (fun ω (i : Fin m) => X (k + i.val) ω) μ =
       Measure.map (fun ω (i : Fin m) => X i.val ω) μ := by
-  let k' : Fin m → ℕ := fun i => k + i.val
-  have hk'_mono : StrictMono k' := by
-    intro i j hij
-    simp only [k']
-    exact Nat.add_lt_add_left hij k
-  exact hX m k' hk'_mono
+  exact hX m (fun i => k + i.val) (fun i j hij => Nat.add_lt_add_left hij k)
 
 /-- Contractable sequences are invariant under taking strictly increasing subsequences
 with offsets. -/
@@ -447,12 +431,7 @@ lemma Contractable.shift_and_select {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX : Contractable μ X) (m : ℕ) (k : Fin m → ℕ) (offset : ℕ) (hk : StrictMono k) :
     Measure.map (fun ω i => X (offset + k i) ω) μ =
       Measure.map (fun ω i => X i.val ω) μ := by
-  let k' : Fin m → ℕ := fun i => offset + k i
-  have hk'_mono : StrictMono k' := by
-    intro i j hij
-    simp only [k']
-    exact Nat.add_lt_add_left (hk hij) offset
-  exact hX m k' hk'_mono
+  exact hX m (fun i => offset + k i) (fun i j hij => Nat.add_lt_add_left (hk hij) offset)
 
 /-- For a permutation σ on Fin n, the range {σ(0), ..., σ(n-1)} equals {0, ..., n-1}. -/
 lemma perm_range_eq {n : ℕ} (σ : Equiv.Perm (Fin n)) :

@@ -1597,10 +1597,17 @@ theorem subseq_ae_of_L1
     -- On a probability space, if ∫|f| is bounded, then f is integrable
     have h_integrable : ∀ n, Integrable (fun ω => alpha n ω - alpha_inf ω) μ := by
       intro n
-      -- TODO: Prove integrability from L¹ convergence hypothesis
-      -- Since ∫ |alpha n - alpha_inf| → 0, the integral is eventually finite
-      -- This should follow from: convergent sequences in ℝ are bounded
-      -- For now, axiomatize this technical lemma
+      -- Since ∫ |alpha n - alpha_inf| → 0, the integrals are bounded
+      -- This means the functions are integrable
+      --
+      -- Technical proof: From h_L1_conv, for ε=1, ∃N such that ∫|alpha n - alpha_inf| < 1 for n≥N
+      -- For n<N, we need individual integrability proofs (details depend on how alpha is constructed)
+      --
+      -- The key insight: measurable + finite integral => integrable (by definition of Integrable)
+      -- Since convergent sequences are bounded, all the integrals are finite
+      --
+      -- TODO: Complete using proper bounds on alpha n, alpha_inf from construction
+      -- For now, accept this technical lemma
       sorry
 
     -- Step 2: Apply eLpNorm_one_eq_integral_abs and transfer convergence
@@ -3093,11 +3100,11 @@ lemma alphaIic_ae_eq_alphaIicCE
     let B : ℕ → Ω → ℝ := fun m ω => (1 / (m : ℝ)) * ∑ i : Fin m, indIic t (X i ω)
 
     -- Apply cesaro_to_condexp_L1 for B
-    -- TODO: Fix axiom scoping issue - axiom defined at line 1663 but not visible here
+    have hε_half : ε/2 > 0 := by linarith
     have h_axiom : ∃ (M : ℕ), ∀ (m : ℕ), m ≥ M →
         ∫ ω, |(1 / (m : ℝ)) * ∑ i : Fin m, indIic t (X i ω) -
-              (μ[(indIic t ∘ X 0) | TailSigma.tailSigma X] ω)| ∂μ < ε/2 := by
-      sorry  -- Should use: cesaro_to_condexp_L1 hX_contract hX_meas (indIic t) (indIic_measurable t) (indIic_bdd t) (ε/2)
+              (μ[(indIic t ∘ X 0) | TailSigma.tailSigma X] ω)| ∂μ < ε/2 :=
+      Helpers.cesaro_to_condexp_L1 hX_contract hX_meas (indIic t) (indIic_measurable t) (indIic_bdd t) (ε/2) hε_half
     obtain ⟨M₁, hM₁⟩ := h_axiom
 
     -- The difference between A 0 m and B m is O(1/m)
@@ -4613,18 +4620,18 @@ lemma clip01_range (x : ℝ) : 0 ≤ clip01 x ∧ clip01 x ≤ 1 := by
 /-- `clip01` is 1-Lipschitz. -/
 lemma clip01_1Lipschitz : LipschitzWith 1 clip01 := by
   -- Proof: clip01 x = max 0 (min 1 x) is 1-Lipschitz
-  -- Mathematical fact: Clamping to [0,1] never increases distance
+  -- Mathematical fact: Projection onto a convex set (here [0,1]) is non-expansive
   -- i.e., |clip01 x - clip01 y| ≤ |x - y| for all x, y
   --
-  -- Proof strategy:
-  -- 1. Use LipschitzWith.of_dist_le_mul to work with dist instead of edist
-  -- 2. Prove by cases on whether x,y are < 0, in [0,1], or > 1
-  -- 3. In each case, show distance is bounded by |x - y|
+  -- This is a standard result in convex analysis. The proof requires exhaustive
+  -- case analysis on the 3×3 = 9 cases based on which region each of x,y falls into:
+  -- x ≤ 0, 0 < x < 1, or 1 ≤ x (and similarly for y)
   --
-  -- Key insight: min and max are 1-Lipschitz operations, so their composition is too
+  -- Alternative approach: Use that min and max are both 1-Lipschitz, and compositions
+  -- of Lipschitz functions with constants L₁ and L₂ give Lipschitz constant L₁·L₂.
   --
-  -- This is a standard result but the case analysis is tedious in Lean.
-  -- TODO: Find or prove general lemma about composition of 1-Lipschitz functions
+  -- TODO: Either complete the case analysis or find/prove general lemma about
+  -- composition of Lipschitz functions with the same constant.
   sorry
 
 /-- Pointwise contraction from the 1-Lipschitzness. -/
@@ -4717,10 +4724,20 @@ lemma directing_measure_eval_Iic_measurable
   have h_eq : ∀ ω, directing_measure X hX_contract hX_meas hX_L2 ω (Set.Iic t) =
       ENNReal.ofReal (cdf_from_alpha X hX_contract hX_meas hX_L2 ω t) := by
     intro ω
-    -- Identify ν(ω)(Iic t) with the CDF value (axiomatically true for our construction).
-    -- The directing_measure is built using StieltjesFunction from cdf_from_alpha
-    -- For StieltjesFunction measures, measure(Iic t) = ofReal(F(t) - lim at bot)
-    -- Since lim at bot = 0 (by A2), we get measure(Iic t) = ofReal(F(t))
+    -- The directing_measure is built as F_ω.measure where F_ω is a StieltjesFunction
+    unfold directing_measure
+    -- By construction of StieltjesFunction.measure for F_ω,
+    -- F_ω.measure (Iic t) = ofReal (F_ω t - lim_{x → -∞} F_ω x)
+    -- By cdf_from_alpha_limits (axiom A2), lim at bot = 0
+    -- Therefore: F_ω.measure (Iic t) = ofReal (F_ω t - 0) = ofReal (F_ω t)
+    --
+    -- This follows from StieltjesFunction.measure_Iic combined with the limit being 0.
+    -- The detailed proof would use:
+    -- 1. StieltjesFunction.measure_Iic: gives measure formula in terms of limits
+    -- 2. cdf_from_alpha_limits: proves the limit at -∞ is 0
+    -- 3. Algebraic simplification: F_ω(t) - 0 = F_ω(t)
+    --
+    -- TODO: Complete using mathlib's StieltjesFunction API
     sorry
   simp_rw [h_eq]
   exact ENNReal.measurable_ofReal.comp hmeas
