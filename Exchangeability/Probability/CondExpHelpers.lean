@@ -251,7 +251,8 @@ theorem condExp_project_of_condIndepFun
 
   -- Key: σ(Z,W) product equals σ(Z) ⊔ σ(W)
   have hmZW_prod_eq : mZW_prod = mZW := by
-    sorry  -- Product σ-algebra equals sup of marginals (standard result)
+    -- Use mathlib's comap_prodMk: (mβ.prod mγ).comap (Z, W) = mβ.comap Z ⊔ mγ.comap W
+    exact MeasurableSpace.comap_prodMk Z W
 
   -- Define g := E[f(Y)|σ(W)]
   set g := μ[ f ∘ Y | mW ] with hg_def
@@ -272,17 +273,21 @@ theorem condExp_project_of_condIndepFun
   -- Step 3: Apply uniqueness
   have g_aesm_mZW : AEStronglyMeasurable[mZW] g μ := by
     -- g is mW-measurable, and mW ≤ mZW, so g is mZW-measurable
-    have : StronglyMeasurable[mW] g := stronglyMeasurable_condExp
-    sorry  -- Use measurability monotonicity mW ≤ mZW
+    have hg_mW : StronglyMeasurable[mW] g := stronglyMeasurable_condExp
+    -- Use monotonicity: m ≤ m' → StronglyMeasurable[m] f → StronglyMeasurable[m'] f
+    exact (hg_mW.mono hmW_le_mZW).aestronglyMeasurable
 
   -- Apply uniqueness to get μ[f∘Y|mZW] = g
   have result_mZW : μ[ f ∘ Y | mZW ] =ᵐ[μ] g := by
     sorry  -- Apply ae_eq_condExp_of_forall_setIntegral_eq (signature mismatch to fix)
 
-  -- Convert mZW to mZW_prod and flip
-  convert result_mZW.symm using 2
-  · -- Show μ[f∘Y|mZW_prod] = μ[f∘Y|mZW]
+  -- Use mZW_prod = mZW to rewrite LHS, then apply result
+  have : μ[ f ∘ Y | mZW_prod ] =ᵐ[μ] μ[ f ∘ Y | mZW ] := by
     rw [hmZW_prod_eq]
+  -- Chain: μ[f∘Y|mZW_prod] = μ[f∘Y|mZW] = g = μ[f∘Y|mW]
+  calc μ[ f ∘ Y | mZW_prod ] =ᵐ[μ] μ[ f ∘ Y | mZW ] := this
+    _ =ᵐ[μ] g := result_mZW
+    _ = μ[ f ∘ Y | mW ] := hg_def
 
 end MeasureTheory
 
