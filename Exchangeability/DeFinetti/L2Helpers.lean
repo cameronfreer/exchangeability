@@ -337,8 +337,8 @@ lemma sqrt_div_lt_third_eps_of_nat
   have hsqrt : Real.sqrt (Cf / m) < Real.sqrt (ε^2 / 9) :=
     Real.sqrt_lt_sqrt hnonneg hlt
   have h_sqrt_simpl : Real.sqrt (ε^2 / 9) = ε / 3 := by
-    rw [Real.sqrt_div (sq_nonneg ε), Real.sqrt_sq (le_of_lt hε)]
-    rw [show (9 : ℝ) = 3^2 by norm_num, Real.sqrt_sq (by norm_num : (0 : ℝ) ≤ 3)]
+    rw [Real.sqrt_div (sq_nonneg ε), Real.sqrt_sq (le_of_lt hε),
+        show (9 : ℝ) = 3^2 by norm_num, Real.sqrt_sq (by norm_num : (0 : ℝ) ≤ 3)]
   calc 3 * Real.sqrt (Cf / m)
       < 3 * Real.sqrt (ε^2 / 9) := by linarith [hsqrt]
     _ = 3 * (ε / 3) := by rw [h_sqrt_simpl]

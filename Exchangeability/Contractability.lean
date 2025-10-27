@@ -341,9 +341,7 @@ lemma exists_perm_extending_strictMono {m n : ℕ} (k : Fin m → ℕ)
           exact i.isLt⟩
       , left_inv := by
           rintro ⟨x, hx⟩
-          apply Subtype.ext
-          apply Fin.ext
-          simp [ι]
+          ext; simp [ι]
       , right_inv := by
           intro i
           cases i with
@@ -489,9 +487,8 @@ theorem contractable_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
     -- We need m ≤ n to apply exists_perm_extending_strictMono
     have hmn : m' + 1 ≤ n := by
       simp only [n]
-      have : m' ≤ k ⟨m', Nat.lt_succ_self m'⟩ := by
-        have h := strictMono_Fin_ge_id hk_mono ⟨m', Nat.lt_succ_self m'⟩
-        simpa using h
+      have : m' ≤ k ⟨m', Nat.lt_succ_self m'⟩ :=
+        strictMono_Fin_ge_id hk_mono ⟨m', Nat.lt_succ_self m'⟩
       omega
     
     -- Get the permutation extending k

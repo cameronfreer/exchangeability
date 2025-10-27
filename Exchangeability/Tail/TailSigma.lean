@@ -79,8 +79,8 @@ lemma tailFamily_antitone (X : ℕ → Ω → α) :
 
 omit [MeasurableSpace Ω] in
 lemma tailProcess_le_tailFamily (X : ℕ → Ω → α) (n : ℕ) :
-    tailProcess X ≤ tailFamily X n := by
-  exact iInf_le (tailFamily X) n
+    tailProcess X ≤ tailFamily X n :=
+  iInf_le (tailFamily X) n
 
 /-! ### Path-Space Tail -/
 
