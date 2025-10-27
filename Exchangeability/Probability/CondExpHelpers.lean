@@ -201,11 +201,16 @@ lemma condExp_project_of_le {α : Type*} (m m' m₀ : MeasurableSpace α) {μ : 
 ## Conditional expectation projection under conditional independence
 -/
 
-/-- **Helper: set integral equals integral of indicator product.** -/
+/-- **Helper: set integral equals integral of indicator product.**
+
+This helper is currently not used in the main proof but documents a standard identity.
+-/
 private lemma setIntegral_eq_integral_indicator {α : Type*} [MeasurableSpace α] {μ : Measure α}
     {s : Set α} (hs : MeasurableSet s) {f : α → ℝ} :
     ∫ x in s, f x ∂μ = ∫ x, f x * (s.indicator (1 : α → ℝ)) x ∂μ := by
-  sorry  -- TODO: Standard rewriting with indicator - mechanical
+  sorry
+  -- Standard identity that can be derived from integral_indicator and properties of set integrals
+  -- Not currently used in the main proof below
 
 /-- **Projection under conditional independence (rectangle + π-λ approach).**
 
@@ -251,38 +256,566 @@ theorem condExp_project_of_condIndepFun
 
   -- Key: σ(Z,W) product equals σ(Z) ⊔ σ(W)
   have hmZW_prod_eq : mZW_prod = mZW := by
-    sorry  -- Product σ-algebra equals sup of marginals (standard result)
+    -- Use mathlib's comap_prodMk: (mβ.prod mγ).comap (Z, W) = mβ.comap Z ⊔ mγ.comap W
+    exact MeasurableSpace.comap_prodMk Z W
 
   -- Define g := E[f(Y)|σ(W)]
   set g := μ[ f ∘ Y | mW ] with hg_def
 
-  -- Step 1: Rectangle identity
+  -- Step 1: Rectangle identity (key conditional independence application)
+
+  -- First, we need a key lemma: conditional independence factorization for bounded measurables
+  -- **Key Extension Lemma: CondIndepFun factorization for bounded measurables × indicators**
+  --
+  -- This extends the conditional independence factorization from indicator pairs
+  -- (provided by CondIndepFun) to bounded measurable functions composed with one
+  -- of the random variables, multiplied by indicators of the other.
+  --
+  -- Mathematical content: Y ⊥⊥_W Z implies
+  --   E[f(Y)·1_{Z∈B}|W] = E[f(Y)|W]·E[1_{Z∈B}|W]
+  --
+  -- This is a standard result, typically proven via approximation:
+  -- indicators → simple functions (linearity) → bounded measurables (DCT)
+  --
+  -- **Helper: Indicator factorization from conditional independence**
+  -- This is the base case that follows directly from the CondIndepFun characterization
+  have condIndep_indicator : ∀ (A : Set βY) (B : Set βZ) (hA : MeasurableSet A) (hB : MeasurableSet B),
+      μ[ (Y ⁻¹' A).indicator (1 : Ω → ℝ) * (Z ⁻¹' B).indicator (1 : Ω → ℝ) | mW ] =ᵐ[μ]
+      μ[ (Y ⁻¹' A).indicator (1 : Ω → ℝ) | mW ] * μ[ (Z ⁻¹' B).indicator (1 : Ω → ℝ) | mW ] := by
+    intro A B hA hB
+    -- Use the CondIndepFun characterization
+    have h_ci := condIndepFun_iff_condExp_inter_preimage_eq_mul hY hZ
+    rw [h_ci] at hCI
+    specialize hCI A B hA hB
+    -- Key: (Y ⁻¹' A).indicator 1 * (Z ⁻¹' B).indicator 1 = (Y ⁻¹' A ∩ Z ⁻¹' B).indicator 1
+    conv_lhs => arg 1; ext x; rw [← Set.inter_indicator_one (s := Y ⁻¹' A) (t := Z ⁻¹' B)]
+    -- Now apply the CondIndepFun characterization
+    -- Note: The notation μ⟦s | m⟧ is defined as μ[s.indicator (fun _ => (1 : ℝ)) | m]
+    convert hCI using 1
+    -- The goals should now match by definition of the notation
+    sorry
+
+  have condIndep_factor : ∀ (B : Set βZ) (hB : MeasurableSet B),
+      μ[ (f ∘ Y) * (Z ⁻¹' B).indicator (1 : Ω → ℝ) | mW ] =ᵐ[μ]
+      μ[ f ∘ Y | mW ] * μ[ (Z ⁻¹' B).indicator (1 : Ω → ℝ) | mW ] := by
+    intro B hB
+
+    -- **Detailed Implementation Roadmap:**
+    --
+    -- **Step 1: Indicator Case (~20 lines)**
+    -- For f = 1_A (indicator of A : Set βY):
+    --   • f ∘ Y = (Y ⁻¹' A).indicator 1
+    --   • (f ∘ Y) * (Z ⁻¹' B).indicator 1 = (Y ⁻¹' A ∩ Z ⁻¹' B).indicator 1
+    --   • Apply condIndepFun_iff_condExp_inter_preimage_eq_mul:
+    --       μ⟦Y ⁻¹' A ∩ Z ⁻¹' B | mW⟧ =ᵐ[μ] fun ω ↦ μ⟦Y ⁻¹' A | mW⟧ ω * μ⟦Z ⁻¹' B | mW⟧ ω
+    --   • Use notation: μ⟦S | m⟧ = μ[S.indicator 1 | m]
+    --   • Result: Direct factorization for indicator functions
+    --
+    -- **Step 2: Simple Functions (~40-60 lines)**
+    -- For f = Σᵢ aᵢ 1_{Aᵢ} (simple function):
+    --   • Express: f ∘ Y = Σᵢ aᵢ (Y ⁻¹' Aᵢ).indicator 1
+    --   • Expand product: (Σᵢ aᵢ 1_{Aᵢ}) * 1_B = Σᵢ aᵢ (1_{Aᵢ} * 1_B)
+    --   • Use condExp_add: μ[h₁ + h₂ | m] = μ[h₁ | m] + μ[h₂ | m]
+    --   • Use condExp_const_mul: μ[c * h | m] = c * μ[h | m]
+    --   • Apply Step 1 to each indicator term
+    --   • Factor back: (Σᵢ aᵢ μ[1_{Aᵢ} | m]) * μ[1_B | m]
+    --
+    -- **Step 3: Bounded Measurables (~60-100 lines)**
+    -- For general bounded measurable f (with bound C):
+    --   • Use StronglyMeasurable.approxBounded to get simple functions fₙ
+    --   • Properties: fₙ → f pointwise, ‖fₙ‖ ≤ C uniformly
+    --   • Apply Step 2 to each fₙ:
+    --       μ[fₙ(Y) * 1_B | mW] =ᵐ[μ] μ[fₙ(Y) | mW] * μ[1_B | mW]
+    --   • Use dominated convergence (via condExp_stronglyMeasurable_mul_of_bound proof pattern):
+    --     - Show integrability: |fₙ(Y) * 1_B| ≤ C * 1 = C
+    --     - Show pointwise convergence: fₙ(Y) → f(Y)
+    --     - Pass to limit on both sides
+    --   • Result: μ[f(Y) * 1_B | mW] =ᵐ[μ] μ[f(Y) | mW] * μ[1_B | mW]
+    --
+    -- **Key mathlib lemmas:**
+    --   - condIndepFun_iff_condExp_inter_preimage_eq_mul (indicator factorization)
+    --   - Set.indicator_inter_mul (indicator arithmetic)
+    --   - condExp_add, condExp_const_mul (linearity)
+    --   - StronglyMeasurable.approxBounded (approximation with bound)
+    --   - tendsto_condExp_unique (dominated convergence pattern, from condExp_stronglyMeasurable_mul_of_bound)
+    --
+    -- **Total estimate:** ~100-200 lines of technical but standard measure theory
+    --
+    sorry
+
   have h_rect : ∀ (S : Set Ω) (hS : MeasurableSet[mW] S) (hμS : μ S < ∞)
                   (B : Set βZ) (hB : MeasurableSet B),
       ∫ x in S ∩ Z ⁻¹' B, g x ∂μ = ∫ x in S ∩ Z ⁻¹' B, (f ∘ Y) x ∂μ := by
     intro S hS hμS B hB
-    sorry  -- Rectangle identity implementation (uses condIndepFun_iff_condExp_inter_preimage_eq_mul)
+
+    -- The key factorization from conditional independence
+    have h_factor := condIndep_factor B hB
+
+    sorry
+    /-
+    **Detailed Implementation Guide (~30-50 lines):**
+
+    **Goal:** ∫_{S∩Z⁻¹(B)} g dμ = ∫_{S∩Z⁻¹(B)} f(Y) dμ
+    where S ∈ σ(W), B ∈ B_Z, g = E[f(Y)|W]
+
+    **Mathematical Strategy:**
+    Both sides integrate over S ∩ Z⁻¹(B). We'll show they equal the same expression:
+      E[g · 1_S · E[1_{Z⁻¹(B)} | W]]
+
+    **Implementation Steps:**
+
+    **Step 1: Convert LHS to conditional expectation form**
+    ```lean
+    calc ∫ x in S ∩ Z ⁻¹' B, g x ∂μ
+        = ∫ x, (S ∩ Z ⁻¹' B).indicator g x ∂μ           [use setIntegral_eq_integral_indicator]
+      _ = ∫ x, g x * (S ∩ Z ⁻¹' B).indicator 1 x ∂μ     [indicator_mul_left]
+      _ = ∫ x, g x * S.indicator 1 x * (Z ⁻¹' B).indicator 1 x ∂μ  [indicator_inter_mul]
+    ```
+
+    **Step 2: Apply tower property to LHS**
+    Since g = E[f∘Y | mW] and integrating against 1 gives expectation:
+    ```lean
+      _ = ∫ x, μ[g * S.indicator 1 * (Z ⁻¹' B).indicator 1 | mW] x ∂μ  [integral_condExp]
+    ```
+
+    **Step 3: Pull out mW-measurable factors from LHS**
+    Since g and S.indicator 1 are both mW-measurable:
+    ```lean
+      _ = ∫ x, (g x * S.indicator 1 x) * μ[(Z ⁻¹' B).indicator 1 | mW] x ∂μ
+            [use condExp_mul_of_stronglyMeasurable_left]
+    ```
+
+    **Step 4: Convert RHS similarly**
+    ```lean
+    ∫ x in S ∩ Z ⁻¹' B, (f ∘ Y) x ∂μ
+      = ∫ x, (f ∘ Y) x * S.indicator 1 x * (Z ⁻¹' B).indicator 1 x ∂μ
+      = ∫ x, S.indicator 1 x * ((f ∘ Y) x * (Z ⁻¹' B).indicator 1 x) ∂μ
+    ```
+
+    **Step 5: Apply conditional factorization to RHS**
+    ```lean
+      _ = ∫ x, S.indicator 1 x * μ[(f ∘ Y) * (Z ⁻¹' B).indicator 1 | mW] x ∂μ
+            [integral_condExp and pull-out]
+      _ = ∫ x, S.indicator 1 x * (g x * μ[(Z ⁻¹' B).indicator 1 | mW] x) ∂μ
+            [apply h_factor: E[f(Y)·1_B|W] = g·E[1_B|W]]
+      _ = ∫ x, (g x * S.indicator 1 x) * μ[(Z ⁻¹' B).indicator 1 | mW] x ∂μ
+            [commutativity and reassociation]
+    ```
+
+    **Step 6: Conclude**
+    Both sides equal the same expression, so LHS = RHS. ∎
+
+    **Key Lemmas:**
+    - `setIntegral_eq_integral_indicator` (convert set integral to indicator)
+    - `Set.indicator_inter_mul` (split intersection indicator)
+    - `integral_condExp` (tower property: ∫ f = ∫ E[f|m])
+    - `condExp_mul_of_stronglyMeasurable_left` (pull out measurable factors)
+    - `h_factor` (conditional independence factorization)
+    - `mul_comm`, `mul_assoc` (arithmetic rearrangement)
+    -/
+    /-
+    **Mathematical Argument (conditional independence factorization):**
+
+    **Goal:** ∫_{S∩Z⁻¹(B)} g = ∫_{S∩Z⁻¹(B)} f(Y)
+
+    **LHS computation:**
+    1. g = E[f(Y)|W] is σ(W)-measurable (by stronglyMeasurable_condExp)
+    2. S ∈ σ(W) (hypothesis), so g·1_S is σ(W)-measurable
+    3. ∫_{S∩Z⁻¹(B)} g = ∫ g·1_S·1_{Z⁻¹(B)} = E[g·1_S·1_{Z⁻¹(B)}]
+    4. By tower property: = E[E[g·1_S·1_{Z⁻¹(B)}|W]]
+    5. Pull out σ(W)-measurable function g·1_S:
+       = E[g·1_S·E[1_{Z⁻¹(B)}|W]]
+
+    **RHS computation:**
+    1. ∫_{S∩Z⁻¹(B)} f(Y) = E[f(Y)·1_S·1_{Z⁻¹(B)}]
+    2. Tower property: = E[E[f(Y)·1_S·1_{Z⁻¹(B)}|W]]
+    3. Pull out σ(W)-measurable indicator 1_S:
+       = E[1_S·E[f(Y)·1_{Z⁻¹(B)}|W]]
+
+    **Conditional independence step (KEY):**
+    4. By CondIndepFun, need to show:
+       E[f(Y)·1_{Z⁻¹(B)}|W] = E[f(Y)|W]·E[1_{Z⁻¹(B)}|W]
+
+    5. This requires extending CondIndepFun from indicators to bounded measurable functions.
+       The definition CondIndepFun uses indicator functions, but we need it for f(Y).
+
+    6. Once we have factorization:
+       E[1_S·E[f(Y)·1_{Z⁻¹(B)}|W]] = E[1_S·g·E[1_{Z⁻¹(B)}|W]]
+                                      = E[g·1_S·E[1_{Z⁻¹(B)}|W]]
+       which matches the LHS!
+
+    **Implementation challenges:**
+
+    A. **Extension to bounded measurables:**
+       - CondIndepFun is defined via indicator factorization
+       - Need lemma: CondIndepFun + f integrable → factorization for f
+       - This is the "monotone class" extension from the definition comments
+       - Could use: approximate f by simple functions, pass to limit
+
+    B. **Pulling out measurable functions from CE:**
+       - Need: E[h·g|m] = h·E[g|m] when h is m-measurable
+       - Mathlib has: condExp_smul or similar
+       - For indicators: use condExp_set_eq or setIntegral_condExp
+
+    C. **Tower property application:**
+       - Need: E[E[g|W]|W] = E[g|W]
+       - This is just condExp_condExp_of_le
+
+    **Proposed implementation path:**
+
+    Option 1: Prove extension lemma separately
+      lemma condIndepFun_integral_eq : CondIndepFun m hm Y Z μ →
+        Integrable (f ∘ Y) μ → Integrable (1_{Z⁻¹(B)}) μ →
+        E[f(Y)·1_{Z⁻¹(B)}|W] = E[f(Y)|W]·E[1_{Z⁻¹(B)}|W]
+      Then use this in h_rect.
+
+    Option 2: Use approximation directly in this proof
+      - Approximate f by simple functions fₙ
+      - Apply CondIndepFun to each simple function piece
+      - Pass to limit using dominated convergence
+
+    Option 3: Acknowledge complexity and defer
+      - This is mathematically sound but technically demanding
+      - Could be factored into a separate lemma file
+      - For now, keep as sorry with complete documentation
+
+    **Recommendation:** Option 1 - Prove extension lemma separately.
+
+    **Detailed Implementation Plan for Extension Lemma:**
+
+    The key lemma needed:
+    ```
+    lemma condIndepFun_condExp_mul (hCI : CondIndepFun mW hw Y Z μ)
+        (hf : Integrable (f ∘ Y) μ) (hB : MeasurableSet B) :
+        μ[ (f ∘ Y) * (Z ⁻¹' B).indicator 1 | mW ] =ᵐ[μ]
+        μ[ f ∘ Y | mW ] * μ[ (Z ⁻¹' B).indicator 1 | mW ]
+    ```
+
+    **Proof Strategy (Monotone Class):**
+
+    1. **For simple functions:** If f = Σᵢ aᵢ·1_{Aᵢ}, use linearity:
+       - E[(Σᵢ aᵢ·1_{Aᵢ}∘Y)·1_B|W] = Σᵢ aᵢ·E[1_{Y∈Aᵢ}·1_{Z∈B}|W]
+       - Apply CondIndepFun to each indicator pair
+       - = Σᵢ aᵢ·E[1_{Y∈Aᵢ}|W]·E[1_{Z∈B}|W]
+       - = (Σᵢ aᵢ·E[1_{Aᵢ}∘Y|W])·E[1_B|W]
+       - = E[f∘Y|W]·E[1_B|W]
+
+    2. **For bounded measurables:** Approximate f by simple functions fₙ:
+       - Use SimpleFunc.approxOn or similar from mathlib
+       - Show fₙ → f pointwise and in L¹
+       - Apply dominated convergence to conditional expectations
+       - Pass factorization to limit
+
+    3. **Apply to h_rect:** Once we have this lemma:
+       - LHS: ∫_{S∩Z⁻¹(B)} g = E[g·1_S·1_{Z∈B}]
+              = E[E[f∘Y|W]·1_S·1_{Z∈B}]  (by definition of g)
+              = E[E[f∘Y·1_S·1_{Z∈B}|W]]  (pull in 1_S which is mW-measurable)
+       - RHS: ∫_{S∩Z⁻¹(B)} f∘Y = E[f∘Y·1_S·1_{Z∈B}]
+              = E[E[f∘Y·1_S·1_{Z∈B}|W]]  (tower)
+       - By extension lemma with h=1_S:
+              E[(f∘Y·1_S)·1_{Z∈B}|W] = E[f∘Y·1_S|W]·E[1_{Z∈B}|W]
+                                      = E[f∘Y|W]·1_S·E[1_{Z∈B}|W]
+                                      = g·1_S·E[1_{Z∈B}|W]
+       - Take expectation: E[g·1_S·E[1_{Z∈B}|W]]
+       - This completes the proof
+
+    **Technical Lemmas Needed:**
+    - condExp_indicator_mul: E[h·1_A·g|m] = h·E[1_A·g|m] when h is m-measurable
+    - Or condExp_smul: E[c·f|m] = c·E[f|m] when c is m-measurable
+    - These should be in mathlib or easy to derive
+
+    **Status:** This is the only remaining substantive gap. The mathematical
+    argument is sound and all the pieces are standard techniques. Implementation
+    would likely be 100-200 lines for the extension lemma + application.
+    -/
 
   -- Step 2: π-λ extension to all σ(Z,W)-sets
   have h_all : ∀ (T : Set Ω), MeasurableSet[mZW] T → μ T < ∞ →
       ∫ x in T, g x ∂μ = ∫ x in T, (f ∘ Y) x ∂μ := by
     intro T hT hμT
-    sorry  -- Dynkin system argument: show D = {T : integrals match} contains rectangles and is Dynkin
+
+    -- Define the class of sets where integral equality holds
+    -- C(T) := (MeasurableSet[mZW] T ∧ μ T < ∞ → ∫_T g = ∫_T f(Y))
+    -- We'll use induction_on_inter to show this holds for all mZW-measurable sets
+
+    -- First, we need mZW represented as generateFrom of a π-system
+    -- Key fact: mZW = mZ ⊔ mW is generated by rectangles Z⁻¹(A) ∩ W⁻¹(B)
+
+    -- Define the π-system of rectangles
+    let 𝓡 : Set (Set Ω) := {T | ∃ (A : Set βZ) (B : Set βW),
+                                 MeasurableSet A ∧ MeasurableSet B ∧
+                                 T = Z ⁻¹' A ∩ W ⁻¹' B}
+
+    -- Rectangles form a π-system (closed under finite intersections)
+    have h𝓡_pi : IsPiSystem 𝓡 := by
+      -- Definition of IsPiSystem: ∀ S T ∈ 𝓡, S ∩ T ≠ ∅ → S ∩ T ∈ 𝓡
+      intro S hS T hT _
+      -- Unpack S and T as rectangles
+      obtain ⟨A₁, B₁, hA₁, hB₁, rfl⟩ := hS
+      obtain ⟨A₂, B₂, hA₂, hB₂, rfl⟩ := hT
+      -- Show S ∩ T = Z⁻¹(A₁ ∩ A₂) ∩ W⁻¹(B₁ ∩ B₂) is in 𝓡
+      refine ⟨A₁ ∩ A₂, B₁ ∩ B₂, hA₁.inter hA₂, hB₁.inter hB₂, ?_⟩
+      -- Need to show: (Z⁻¹A₁ ∩ W⁻¹B₁) ∩ (Z⁻¹A₂ ∩ W⁻¹B₂) = Z⁻¹(A₁∩A₂) ∩ W⁻¹(B₁∩B₂)
+      ext ω
+      simp only [Set.mem_inter_iff, Set.mem_preimage]
+      tauto
+
+    -- Rectangles generate mZW = mZ ⊔ mW
+    have h𝓡_gen : MeasurableSpace.generateFrom 𝓡 = mZW := by
+      apply le_antisymm
+
+      -- First direction: generateFrom 𝓡 ≤ mZW
+      · apply MeasurableSpace.generateFrom_le
+        intro R hR
+        obtain ⟨A, B, hA, hB, rfl⟩ := hR
+        -- R = Z⁻¹(A) ∩ W⁻¹(B) is mZW-measurable
+        -- Z⁻¹(A) is mZ-measurable, W⁻¹(B) is mW-measurable
+        have hZ_meas : MeasurableSet[mZ] (Z ⁻¹' A) := ⟨A, hA, rfl⟩
+        have hW_meas : MeasurableSet[mW] (W ⁻¹' B) := ⟨B, hB, rfl⟩
+        -- Both are mZW-measurable since mZ, mW ≤ mZW
+        have hZ_mZW : MeasurableSet[mZW] (Z ⁻¹' A) := @le_sup_left _ _ mZ mW _ hZ_meas
+        have hW_mZW : MeasurableSet[mZW] (W ⁻¹' B) := @le_sup_right _ _ mZ mW _ hW_meas
+        -- Intersection is mZW-measurable
+        exact MeasurableSet.inter hZ_mZW hW_mZW
+
+      -- Second direction: mZW ≤ generateFrom 𝓡
+      · -- mZW = mZ ⊔ mW, so we need to show mZ ≤ generateFrom 𝓡 and mW ≤ generateFrom 𝓡
+        apply sup_le
+
+        -- Show mZ ≤ generateFrom 𝓡
+        · intro S hS
+          obtain ⟨A, hA, rfl⟩ := hS
+          -- Z⁻¹(A) = Z⁻¹(A) ∩ W⁻¹(univ) ∈ 𝓡
+          have : Z ⁻¹' A = Z ⁻¹' A ∩ W ⁻¹' Set.univ := by simp
+          rw [this]
+          apply MeasurableSpace.measurableSet_generateFrom
+          exact ⟨A, Set.univ, hA, MeasurableSet.univ, rfl⟩
+
+        -- Show mW ≤ generateFrom 𝓡
+        · intro S hS
+          obtain ⟨B, hB, rfl⟩ := hS
+          -- W⁻¹(B) = Z⁻¹(univ) ∩ W⁻¹(B) ∈ 𝓡
+          have : W ⁻¹' B = Z ⁻¹' Set.univ ∩ W ⁻¹' B := by simp
+          rw [this]
+          apply MeasurableSpace.measurableSet_generateFrom
+          exact ⟨Set.univ, B, MeasurableSet.univ, hB, rfl⟩
+
+    -- Integral equality holds on rectangles
+    have h_rect_all : ∀ (R : Set Ω), R ∈ 𝓡 → μ R < ∞ →
+        ∫ x in R, g x ∂μ = ∫ x in R, (f ∘ Y) x ∂μ := by
+      intro R hR_mem hμR
+      -- Unpack R ∈ 𝓡
+      obtain ⟨A, B, hA, hB, rfl⟩ := hR_mem
+      -- Now R = Z⁻¹(A) ∩ W⁻¹(B)
+      -- W⁻¹(B) is mW-measurable, so this is a valid rectangle for h_rect
+      have hmW_preimage : MeasurableSet[mW] (W ⁻¹' B) := ⟨B, hB, rfl⟩
+      -- On a probability space, all sets have finite measure
+      have hμW : μ (W ⁻¹' B) < ∞ := measure_lt_top μ (W ⁻¹' B)
+      -- h_rect gives us: ∫_{W⁻¹(B) ∩ Z⁻¹(A)} g = ∫_{W⁻¹(B) ∩ Z⁻¹(A)} f(Y)
+      -- We need: ∫_{Z⁻¹(A) ∩ W⁻¹(B)} g = ∫_{Z⁻¹(A) ∩ W⁻¹(B)} f(Y)
+      -- These are equal since intersection is commutative
+      have : Z ⁻¹' A ∩ W ⁻¹' B = W ⁻¹' B ∩ Z ⁻¹' A := Set.inter_comm _ _
+      rw [this]
+      exact h_rect (W ⁻¹' B) hmW_preimage hμW A hA
+
+    -- Apply π-λ induction using induction_on_inter
+    -- We need to show: ∀ S, MeasurableSet[mZW] S → (μ S < ∞ → ∫_S g = ∫_S f(Y))
+    suffices ∀ S (hS : MeasurableSet[mZW] S), μ S < ∞ → ∫ x in S, g x ∂μ = ∫ x in S, (f ∘ Y) x ∂μ by
+      exact this T hT hμT
+
+    intro S hS
+
+    -- Define the Dynkin property: integral equality given finite measure
+    let C : ∀ (S : Set Ω), MeasurableSet[mZW] S → Prop :=
+      fun S _ => μ S < ∞ → ∫ x in S, g x ∂μ = ∫ x in S, (f ∘ Y) x ∂μ
+
+    -- Apply induction_on_inter with π-system 𝓡
+    refine MeasurableSpace.induction_on_inter h𝓡_gen.symm h𝓡_pi ?empty ?basic ?compl ?iUnion S hS
+
+    case empty =>
+      -- C(∅): integral over empty set is always 0
+      intro _
+      simp only [setIntegral_empty]
+
+    case basic =>
+      -- C(R) for basic rectangles R ∈ 𝓡: use h_rect_all
+      intro R hR_in_𝓡
+      exact h_rect_all R hR_in_𝓡
+
+    case compl =>
+      -- C(S) → C(Sᶜ): use integral_add_compl
+      intro S' hS'_meas hS'_C hμSc
+      -- Apply IH to S'
+      have hS'_eq : ∫ x in S', g x ∂μ = ∫ x in S', (f ∘ Y) x ∂μ := by
+        apply hS'_C
+        exact measure_lt_top μ S'
+      -- Use integral_add_compl: ∫_S f + ∫_Sᶜ f = ∫ f
+      -- Need: ∫_Sᶜ g = ∫_Sᶜ f(Y)
+      -- Strategy: From ∫_S g = ∫_S f(Y) and ∫_S g + ∫_Sᶜ g = ∫ g, deduce ∫_Sᶜ g = ∫ g - ∫_S g
+
+      -- Convert measurability from mZW to mΩ
+      have hS'_meas_mΩ : MeasurableSet[mΩ] S' := hmZW_le _ hS'_meas
+
+      have hg_add : ∫ x in S', g x ∂μ + ∫ x in S'ᶜ, g x ∂μ = ∫ x, g x ∂μ := by
+        exact integral_add_compl hS'_meas_mΩ integrable_condExp
+      have hf_add : ∫ x in S', (f ∘ Y) x ∂μ + ∫ x in S'ᶜ, (f ∘ Y) x ∂μ = ∫ x, (f ∘ Y) x ∂μ := by
+        exact integral_add_compl hS'_meas_mΩ hf_int
+
+      -- From hg_add, hf_add, and hS'_eq, conclude ∫_Sᶜ g = ∫_Sᶜ f(Y)
+      -- We have: ∫_S' g + ∫_S'ᶜ g = ∫ g   (hg_add)
+      --          ∫_S' f∘Y + ∫_S'ᶜ f∘Y = ∫ f∘Y   (hf_add)
+      --          ∫_S' g = ∫_S' f∘Y   (hS'_eq)
+      -- Can we derive ∫ g = ∫ f∘Y? This requires showing C(univ) via induction result
+
+      -- Set.univ is mZW-measurable (in every σ-algebra)
+      have huniv_meas : MeasurableSet[mZW] Set.univ := MeasurableSet.univ
+
+      -- Apply h_rect_all to univ to get ∫ g = ∫ f∘Y
+      have huniv_eq : ∫ x, g x ∂μ = ∫ x, (f ∘ Y) x ∂μ := by
+        -- Key insight: univ = Z⁻¹(univ) ∩ W⁻¹(univ) ∈ 𝓡, so we can use h_rect_all!
+        have huniv_in_R : Set.univ ∈ 𝓡 := by
+          refine ⟨Set.univ, Set.univ, MeasurableSet.univ, MeasurableSet.univ, ?_⟩
+          ext ω
+          simp only [Set.mem_univ, Set.mem_inter_iff, Set.mem_preimage, true_and]
+        have h := h_rect_all Set.univ huniv_in_R (measure_lt_top μ Set.univ)
+        rwa [setIntegral_univ, setIntegral_univ] at h
+
+      -- Now we can complete the calc
+      calc ∫ x in S'ᶜ, g x ∂μ
+          = ∫ x, g x ∂μ - ∫ x in S', g x ∂μ := by linarith [hg_add]
+        _ = ∫ x, (f ∘ Y) x ∂μ - ∫ x in S', (f ∘ Y) x ∂μ := by rw [huniv_eq, hS'_eq]
+        _ = ∫ x in S'ᶜ, (f ∘ Y) x ∂μ := by linarith [hf_add]
+
+    case iUnion =>
+      -- C(Sₙ) for all n → C(⋃ Sₙ) for pairwise disjoint sequence
+      intro Sseq hSeq_disj hSeq_meas hSeq_C hμUnion
+
+      -- Each Sₙ has finite measure (since sum is finite)
+      have hSeq_finite : ∀ n, μ (Sseq n) < ∞ := by
+        intro n
+        calc μ (Sseq n) ≤ μ (⋃ i, Sseq i) := measure_mono (Set.subset_iUnion Sseq n)
+          _ < ∞ := hμUnion
+
+      -- Apply IH to each Sₙ
+      have hSeq_eq : ∀ n, ∫ x in Sseq n, g x ∂μ = ∫ x in Sseq n, (f ∘ Y) x ∂μ := by
+        intro n
+        exact hSeq_C n (hSeq_finite n)
+
+      -- Convert measurability from mZW to mΩ
+      have hSeq_meas_mΩ : ∀ n, MeasurableSet[mΩ] (Sseq n) := by
+        intro n
+        exact hmZW_le _ (hSeq_meas n)
+
+      -- Use integral additivity for disjoint unions
+      calc ∫ x in ⋃ n, Sseq n, g x ∂μ
+          = ∑' n, ∫ x in Sseq n, g x ∂μ := by
+            apply integral_iUnion hSeq_meas_mΩ hSeq_disj
+            exact integrable_condExp.integrableOn
+        _ = ∑' n, ∫ x in Sseq n, (f ∘ Y) x ∂μ := by
+            congr 1
+            ext n
+            exact hSeq_eq n
+        _ = ∫ x in ⋃ n, Sseq n, (f ∘ Y) x ∂μ := by
+            symm
+            apply integral_iUnion hSeq_meas_mΩ hSeq_disj
+            exact hf_int.integrableOn
+    /-
+    Now apply: MeasurableSpace.induction_on_inter (h_eq : mZW = generateFrom 𝓡) h𝓡_pi
+    with the predicate C(S) := (μ S < ∞ → ∫_S g = ∫_S f(Y))
+
+    Need to provide four cases:
+
+    1. **Empty:** C(∅)
+       Need: μ ∅ < ∞ → ∫_∅ g = ∫_∅ f(Y)
+       Proof: ∫_∅ f = 0 for any f (integral over empty set)
+
+    2. **Basic:** ∀ R ∈ 𝓡, C(R)
+       This is exactly h_rect_all
+
+    3. **Complement:** ∀ S, MeasurableSet S → C(S) → C(Sᶜ)
+       Assume: μ S < ∞ → ∫_S g = ∫_S f(Y)
+       Show: μ Sᶜ < ∞ → ∫_Sᶜ g = ∫_Sᶜ f(Y)
+       Proof:
+         ∫_Sᶜ g = ∫_Ω g - ∫_S g         (by measure_diff)
+                = ∫_Ω f(Y) - ∫_S f(Y)    (by IH and μ Ω = 1)
+                = ∫_Sᶜ f(Y)
+
+    4. **Disjoint union:** ∀ (Sₙ : ℕ → Set Ω), Pairwise (Disjoint on Sₙ) →
+         (∀ n, MeasurableSet (Sₙ n)) → (∀ n, C(Sₙ n)) → C(⋃ n, Sₙ n)
+       Assume: ∀ n, μ (Sₙ n) < ∞ → ∫_(Sₙ n) g = ∫_(Sₙ n) f(Y)
+       Show: μ (⋃ n, Sₙ n) < ∞ → ∫_(⋃ n, Sₙ n) g = ∫_(⋃ n, Sₙ n) f(Y)
+       Proof:
+         ∫_(⋃ n, Sₙ n) g = ∑ ∫_(Sₙ n) g         (by integral_iUnion_of_disjoint)
+                         = ∑ ∫_(Sₙ n) f(Y)       (by IH on each n)
+                         = ∫_(⋃ n, Sₙ n) f(Y)
+
+    Technical challenge: induction_on_inter expects a specific signature.
+    May need to massage the goal to match.
+    -/
+    /-
+    **Dynkin System (π-λ) Argument using mathlib's induction_on_inter:**
+
+    **Key mathlib lemma:** MeasurableSpace.induction_on_inter
+    This provides induction over σ-algebras generated by π-systems with Dynkin properties.
+
+    **Step 1: Define rectangles generating σ(Z,W)**
+    Let R := {S ∩ Z⁻¹(B) : S ∈ σ(W), B ∈ B_Z}
+
+    We need to show:
+    a) R is a π-system (closed under intersections)
+    b) generateFrom R = mZW
+    c) For all T ∈ R with μ T < ∞: ∫_T g = ∫_T f(Y) (by h_rect)
+
+    **Step 2: Apply induction_on_inter**
+    Use: MeasurableSpace.induction_on_inter (h_eq : mZW = generateFrom R) (h_inter : IsPiSystem R)
+
+    Verify the Dynkin properties for C(T) := (μ T < ∞ → ∫_T g = ∫_T f(Y)):
+
+    1. **Empty set:** ∫_∅ g = 0 = ∫_∅ f(Y) ✓
+
+    2. **Basic (rectangles):** For T ∈ R, this holds by h_rect ✓
+
+    3. **Complement:** If C(T) holds and μ Tᶜ < ∞, then:
+       ∫_Tᶜ g = ∫_Ω g - ∫_T g = ∫_Ω f(Y) - ∫_T f(Y) = ∫_Tᶜ f(Y)
+       (Uses: IsProbabilityMeasure so μ Ω = 1 < ∞)
+
+    4. **Disjoint union:** If C(Tₙ) for pairwise disjoint {Tₙ} and μ(⋃ Tₙ) < ∞, then:
+       ∫_{⋃ Tₙ} g = ∑ ∫_{Tₙ} g = ∑ ∫_{Tₙ} f(Y) = ∫_{⋃ Tₙ} f(Y)
+       (Uses: lintegral_iUnion or tsum_integral)
+
+    **Implementation:**
+    - Use `refine induction_on_inter hmZW_eq_R h_piSystem ?empty ?basic ?compl ?union`
+    - Each case is a standard integral manipulation
+    - Main technical work: defining R and proving it generates mZW
+
+    **Alternative:** If defining R is complex, could use direct Dynkin system construction
+    with DynkinSystem.generate and generateFrom_eq.
+    -/
 
   -- Step 3: Apply uniqueness
   have g_aesm_mZW : AEStronglyMeasurable[mZW] g μ := by
     -- g is mW-measurable, and mW ≤ mZW, so g is mZW-measurable
-    have : StronglyMeasurable[mW] g := stronglyMeasurable_condExp
-    sorry  -- Use measurability monotonicity mW ≤ mZW
+    have hg_mW : StronglyMeasurable[mW] g := stronglyMeasurable_condExp
+    -- Use monotonicity: m ≤ m' → StronglyMeasurable[m] f → StronglyMeasurable[m'] f
+    exact (hg_mW.mono hmW_le_mZW).aestronglyMeasurable
 
   -- Apply uniqueness to get μ[f∘Y|mZW] = g
   have result_mZW : μ[ f ∘ Y | mZW ] =ᵐ[μ] g := by
-    sorry  -- Apply ae_eq_condExp_of_forall_setIntegral_eq (signature mismatch to fix)
+    -- Use ae_eq_condExp_of_forall_setIntegral_eq from mathlib
+    -- Parameters: (hm : m ≤ m₀) (hf_int : Integrable f μ) (integrableOn) (h_matching) (aesm)
+    -- Returns: g =ᵐ[μ] μ[f|m], so we need .symm for μ[f|m] =ᵐ[μ] g
+    refine (ae_eq_condExp_of_forall_setIntegral_eq hmZW_le hf_int ?integrableOn h_all g_aesm_mZW).symm
+    · -- Integrability of g on finite-measure mZW-sets
+      intro T hT hμT
+      exact integrable_condExp.integrableOn
 
-  -- Convert mZW to mZW_prod and flip
-  convert result_mZW.symm using 2
-  · -- Show μ[f∘Y|mZW_prod] = μ[f∘Y|mZW]
+  -- Use mZW_prod = mZW to rewrite LHS, then apply result
+  have : μ[ f ∘ Y | mZW_prod ] =ᵐ[μ] μ[ f ∘ Y | mZW ] := by
     rw [hmZW_prod_eq]
+  -- Chain: μ[f∘Y|mZW_prod] = μ[f∘Y|mZW] = g = μ[f∘Y|mW]
+  calc μ[ f ∘ Y | mZW_prod ] =ᵐ[μ] μ[ f ∘ Y | mZW ] := this
+    _ =ᵐ[μ] g := result_mZW
+    _ = μ[ f ∘ Y | mW ] := hg_def
 
 end MeasureTheory
 

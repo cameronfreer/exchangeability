@@ -278,12 +278,11 @@ lemma sqrt_div_lt_half_eps_of_nat
   ∀ ⦃m : ℕ⦄, m ≥ Nat.ceil (4 * Cf / (ε^2)) + 1 →
     Real.sqrt (Cf / m) < ε / 2 := by
   intro m hm
-  have hm_real : ((Nat.ceil (4*Cf/ε^2) : ℝ) + 1) ≤ m := by exact_mod_cast hm
   have hA_lt_m : 4*Cf/ε^2 < (m : ℝ) := by
     calc 4*Cf/ε^2
         ≤ Nat.ceil (4*Cf/ε^2) := Nat.le_ceil _
       _ < (Nat.ceil (4*Cf/ε^2) : ℝ) + 1 := by linarith
-      _ ≤ m := hm_real
+      _ ≤ m := by exact_mod_cast hm
   by_cases hCf0 : Cf = 0
   · simp [hCf0, div_pos hε (by norm_num : (0:ℝ) < 2)]
   have hCfpos : 0 < Cf := lt_of_le_of_ne hCf (Ne.symm hCf0)
@@ -296,10 +295,8 @@ lemma sqrt_div_lt_half_eps_of_nat
   have hlt : Cf / (m : ℝ) < ε^2 / 4 := by
     rw [← heq]; exact hdiv
   have hnonneg : 0 ≤ Cf / (m : ℝ) := div_nonneg hCf (Nat.cast_nonneg m)
-  have hsqrt : Real.sqrt (Cf / m) < Real.sqrt (ε^2 / 4) :=
-    Real.sqrt_lt_sqrt hnonneg hlt
   calc Real.sqrt (Cf / m)
-      < Real.sqrt (ε^2 / 4) := hsqrt
+      < Real.sqrt (ε^2 / 4) := Real.sqrt_lt_sqrt hnonneg hlt
     _ = Real.sqrt ((ε/2)^2) := by
         congr 1
         rw [sq]
@@ -316,12 +313,11 @@ lemma sqrt_div_lt_third_eps_of_nat
   ∀ ⦃m : ℕ⦄, m ≥ Nat.ceil (9 * Cf / (ε^2)) + 1 →
     3 * Real.sqrt (Cf / m) < ε := by
   intro m hm
-  have hm_real : ((Nat.ceil (9*Cf/ε^2) : ℝ) + 1) ≤ m := by exact_mod_cast hm
   have hA_lt_m : 9*Cf/ε^2 < (m : ℝ) := by
     calc 9*Cf/ε^2
         ≤ Nat.ceil (9*Cf/ε^2) := Nat.le_ceil _
       _ < (Nat.ceil (9*Cf/ε^2) : ℝ) + 1 := by linarith
-      _ ≤ m := hm_real
+      _ ≤ m := by exact_mod_cast hm
   by_cases hCf0 : Cf = 0
   · simp [hCf0, hε]
   have hCfpos : 0 < Cf := lt_of_le_of_ne hCf (Ne.symm hCf0)
@@ -334,13 +330,11 @@ lemma sqrt_div_lt_third_eps_of_nat
   have hlt : Cf / (m : ℝ) < ε^2 / 9 := by
     rw [← heq]; exact hdiv
   have hnonneg : 0 ≤ Cf / (m : ℝ) := div_nonneg hCf (Nat.cast_nonneg m)
-  have hsqrt : Real.sqrt (Cf / m) < Real.sqrt (ε^2 / 9) :=
-    Real.sqrt_lt_sqrt hnonneg hlt
   have h_sqrt_simpl : Real.sqrt (ε^2 / 9) = ε / 3 := by
-    rw [Real.sqrt_div (sq_nonneg ε), Real.sqrt_sq (le_of_lt hε)]
-    rw [show (9 : ℝ) = 3^2 by norm_num, Real.sqrt_sq (by norm_num : (0 : ℝ) ≤ 3)]
+    rw [Real.sqrt_div (sq_nonneg ε), Real.sqrt_sq (le_of_lt hε),
+        show (9 : ℝ) = 3^2 by norm_num, Real.sqrt_sq (by norm_num : (0 : ℝ) ≤ 3)]
   calc 3 * Real.sqrt (Cf / m)
-      < 3 * Real.sqrt (ε^2 / 9) := by linarith [hsqrt]
+      < 3 * Real.sqrt (ε^2 / 9) := by linarith [Real.sqrt_lt_sqrt hnonneg hlt]
     _ = 3 * (ε / 3) := by rw [h_sqrt_simpl]
     _ = ε := by ring
 
@@ -855,9 +849,6 @@ theorem l2_contractability_bound
         _ = ∑ j ∈ Pos, c j + ∑ j ∈ Pos, c j := by simp [hbalance]
         _ = 2 * ∑ j ∈ Pos, c j := by ring
 
-    have hle_p : ∑ j ∈ Pos, c j ≤ ∑ j ∈ Pos, p j :=
-      Finset.sum_le_sum fun j _ => sub_le_self _ (_hq_prob.2 j)
-
     have hle_one : ∑ j ∈ Pos, p j ≤ 1 :=
       calc ∑ j ∈ Pos, p j ≤ ∑ j, p j :=
             Finset.sum_le_sum_of_subset_of_nonneg (fun j _ => Finset.mem_univ j)
@@ -866,7 +857,8 @@ theorem l2_contractability_bound
 
     calc ∑ j, |c j|
         = 2 * ∑ j ∈ Pos, c j := hdouble
-      _ ≤ 2 * ∑ j ∈ Pos, p j := mul_le_mul_of_nonneg_left hle_p (by norm_num)
+      _ ≤ 2 * ∑ j ∈ Pos, p j := mul_le_mul_of_nonneg_left
+          (Finset.sum_le_sum fun j _ => sub_le_self _ (_hq_prob.2 j)) (by norm_num)
       _ ≤ 2 * 1 := mul_le_mul_of_nonneg_left hle_one (by norm_num)
       _ = 2 := by norm_num
 

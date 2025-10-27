@@ -1577,11 +1577,16 @@ theorem subseq_ae_of_L1
       · exact hN n hn
       · exact integral_nonneg (fun ω => abs_nonneg _)
 
-    -- Establish integrability: measurable + bounded integral on finite measure => integrable
-    -- This follows from the fact that alpha n and alpha_inf come from L² functions
+    -- Establish integrability: measurable + finite integral => integrable
+    -- The L¹ convergence hypothesis tells us integrals are finite
     have h_integrable : ∀ n, Integrable (fun ω => alpha n ω - alpha_inf ω) μ := by
       intro n
-      sorry  -- TODO: Need to track back to where alpha comes from (it's from L² functions)
+      -- L¹ convergence means ∫|alpha n - alpha_inf| < ε for large n
+      -- This integral being finite (and convergent to 0) implies integrability
+      -- Key API: hasFiniteIntegral_norm_iff for real functions
+      sorry  -- TODO: Complete integrability proof
+      -- Need: Integrable.of_integral_norm_lt or similar
+      -- The hypothesis h_L1_conv gives us that the integral is finite
 
     -- Now transfer convergence via eLpNorm_one_eq_integral_abs and continuity of ofReal
     have : Tendsto (fun n => ENNReal.ofReal (∫ ω, |alpha n ω - alpha_inf ω| ∂μ)) atTop (𝓝 0) := by
@@ -1688,23 +1693,36 @@ lemma kallenberg_L2_bound
   -- Step 5: Combine to get final bound
   -- E[(∑ c_i Z_i)²] ≤ C_f · sup|c_i| where C_f = E[(Z_0 - Z_1)²]
 
-  -- TODO: Complete the detailed algebraic calculation
-  -- This is a sophisticated proof requiring:
-  -- 1. Expand ∫(∑ c_i Z_i)² using integral_finset_sum and related lemmas
-  -- 2. Apply Finset.sum_mul_sum to get: (∑ c_i Z_i)² = ∑_i ∑_j c_i c_j Z_i Z_j
-  -- 3. Use exchangeability to identify second moments:
-  --    - ∫ Z_i² = ∫ Z_0² for all i (exchangeability)
-  --    - ∫ Z_i Z_j = ∫ Z_0 Z_1 for all i≠j (exchangeability)
-  -- 4. Separate diagonal (i=j) and off-diagonal (i≠j) terms:
-  --    ∫(∑ c_i Z_i)² = (∑ c_i²)(∫ Z_0²) + (∑_{i≠j} c_i c_j)(∫ Z_0 Z_1)
-  -- 5. Use ∑ c_i = 0 to show: ∑_{i≠j} c_i c_j = (∑ c_i)² - ∑ c_i² = -∑ c_i²
-  -- 6. Combine: ∫(∑ c_i Z_i)² = (∑ c_i²)(∫ Z_0² - ∫ Z_0 Z_1)
-  --                           = (∑ c_i²) · ∫(Z_0 - Z_1)²/2  (after expanding)
-  -- 7. Bound ∑ c_i² ≤ sup|c_i| · ∑|c_i| ≤ sup|c_i| · 2  (triangle inequality on probabilities)
-  --
-  -- This matches Kallenberg's Lemma 1.2 exactly.
-  -- The proof is elementary but requires careful bookkeeping with Finset sums.
-  sorry
+  -- Use the complete proof from L2Helpers.l2_contractability_bound
+  -- Strategy: Reindex to Fin s.card, apply the theorem, then reindex back
+
+  classical
+
+  -- Step 1: Reindex from Finset ℕ to Fin s.card
+  let n := s.card
+
+  -- Get an order isomorphism between s and Fin n
+  let enum := s.orderIsoOfFin rfl
+
+  -- Define the reindexed functions
+  let ξ : Fin n → Ω → ℝ := fun i ω => Z (enum i) ω
+  let p' : Fin n → ℝ := fun i => p (enum i)
+  let q' : Fin n → ℝ := fun i => q (enum i)
+
+  -- Step 2: Compute mean, variance, and correlation from exchangeability
+  let m := ∫ ω, Z 0 ω ∂μ
+  let σSq := ∫ ω, (Z 0 ω - m)^2 ∂μ
+  let covOffDiag := ∫ ω, (Z 0 ω - m) * (Z 1 ω - m) ∂μ
+  let ρ := if σSq = 0 then 0 else covOffDiag / σSq
+
+  sorry  -- TODO: Apply l2_contractability_bound and convert back
+  -- Main steps remaining:
+  -- 1. Prove all marginals have same mean (using exchangeability)
+  -- 2. Prove all marginals have same variance σ²
+  -- 3. Prove all pairs have same covariance σ²ρ
+  -- 4. Apply L2Helpers.l2_contractability_bound
+  -- 5. Show 2*σ²*(1-ρ) = ∫(Z₀-Z₁)² via algebra
+  -- 6. Reindex sums back to original Finset
 
 /-- **Cesàro averages converge in L² to a tail-measurable limit.**
 

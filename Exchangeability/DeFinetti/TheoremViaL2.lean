@@ -101,7 +101,7 @@ theorem deFinetti_RyllNardzewski_equivalence
 
     constructor
     · -- (i) → (ii): Contractable → Exchangeable (via ConditionallyIID)
-      exact exchangeable_of_conditionallyIID hCIID
+      exact exchangeable_of_conditionallyIID hX_meas hCIID
     · -- (i) → (iii): ConditionallyIID (proved above)
       exact hCIID
 
