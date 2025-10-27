@@ -21,6 +21,52 @@ import Exchangeability.PathSpace.Shift
 import Mathlib.Tactic
 import Mathlib.Tactic.FieldSimp
 
+open Filter MeasureTheory
+
+/-! ### Reusable micro-lemmas for Steps 4b–4c -/
+
+/-- `ae_ball_iff` in the direction we need on a finite index set (`Finset.range n`). -/
+private lemma ae_ball_range_mpr
+  {Ω : Type _} [MeasurableSpace Ω] (μ : Measure Ω) {n : ℕ}
+  {P : ℕ → Ω → Prop}
+  (h : ∀ k ∈ Finset.range n, ∀ᵐ ω ∂ μ, P k ω) :
+  ∀ᵐ ω ∂ μ, ∀ k ∈ Finset.range n, P k ω := by
+  have hcount : (Finset.range n : Set ℕ).Countable := Finset.countable_toSet _
+  simpa using
+    (MeasureTheory.ae_ball_iff (μ := μ) (s := (Finset.range n : Set ℕ)) hcount).mpr h
+
+/-- A clean way to go from a uniform `O(1/(n+1))` AE-bound on `|A n - B n|`
+    to `∫ |A n - B n| → 0` (works on any finite measure; if `μ` is prob., it simplifies). -/
+private lemma tendsto_integral_abs_diff_of_o1
+  {Ω : Type _} [MeasurableSpace Ω] (μ : Measure Ω)
+  (A B : ℕ → Ω → ℝ) (C : ℝ)
+  (h_bd : ∀ n, ∀ᵐ ω ∂ μ, |A n ω - B n ω| ≤ C / (n + 1)) :
+  Tendsto (fun n => ∫ ω, |A n ω - B n ω| ∂ μ) atTop (𝓝 0) := by
+  have h_int_const : ∀ n, Integrable (fun _ : Ω => C / (n + 1)) μ := fun _ => integrable_const _
+  have h_int_left : ∀ n, Integrable (fun ω => |A n ω - B n ω|) μ := by
+    intro n
+    have h0 : ∀ ω, 0 ≤ |A n ω - B n ω| := by intro _; exact abs_nonneg _
+    exact (h_int_const n).mono' (measurable_const.aestronglyMeasurable) (by simpa using h_bd n)
+  have h_mono : ∀ n, ∫ ω, |A n ω - B n ω| ∂ μ ≤ ∫ _ , C / (n + 1) ∂ μ := by
+    intro n; exact integral_mono_ae (h_int_left n) (h_int_const n) (h_bd n)
+  have h_right : Tendsto (fun n => ∫ _ , C / (n + 1) ∂ μ) atTop (𝓝 0) := by
+    -- ∫ const = const * μ univ, and C/(n+1) → 0
+    simpa [integral_const] using
+      ((tendsto_const_div_atTop_nhds_zero_nat C).const_mul (μ Set.univ).toReal)
+  -- 0 ≤ left ≤ right → 0
+  have h_nonneg : ∀ᵐ n ∂ atTop, 0 ≤ ∫ ω, |A n ω - B n ω| ∂ μ :=
+    Filter.eventually_of_forall (fun _ =>
+      integral_nonneg_of_ae (ae_of_all _ (fun _ => abs_nonneg _)))
+  exact squeeze_zero h_nonneg (Filter.eventually_of_forall h_mono) h_right
+
+/-- Handy arithmetic fact repeatedly needed: split `k ≤ n` into cases. -/
+private lemma le_eq_or_lt {k n : ℕ} (hk : k ≤ n) : k = n ∨ k < n :=
+  eq_or_lt_of_le hk
+
+/-- Pull absolute value through division when denominator is nonnegative. -/
+private lemma abs_div_of_nonneg {x y : ℝ} (hy : 0 ≤ y) :
+  |x / y| = |x| / y := by simpa [abs_div, abs_of_nonneg hy]
+
 /-!
 # de Finetti's Theorem via Koopman Operator
 
@@ -4004,7 +4050,8 @@ private lemma optionB_Step4c_triangle
         · -- Y is integrable
           exact Integrable.condExp mSI G
     · apply ae_of_all; intro ω
-      exact abs_sub_abs_le_abs_sub (A n ω) (B n ω) (Y ω)
+      -- Triangle inequality: |A - Y| ≤ |A - B| + |B - Y|
+      exact abs_sub_le (A n ω) (B n ω) (Y ω)
   -- Combine the two convergences via squeeze theorem
   apply squeeze_zero
   · exact Filter.eventually_of_forall (fun _ =>
