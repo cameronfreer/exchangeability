@@ -2428,23 +2428,28 @@ lemma cesaro_to_condexp_L2
       -- Need: map (fun ω i => Z (k i) ω) μ = map (fun ω i => Z i ω) μ
       simp only [Z]
       -- This equals: map (fun ω i => f(X(k i) ω) - m) μ = map (fun ω i => f(X i ω) - m) μ
+
       -- From hfX_contract: map (fun ω i => f(X(k i) ω)) μ = map (fun ω i => f(X i ω)) μ
-      sorry -- TODO: Show constant shift preserves measure equality
-      -- Strategy: Use Measure.map_map to factor through the subtraction function
+      -- Subtracting m from each coordinate gives the same measure equality
+      have h_eq := hfX_contract n k hk
+
+      -- The subtraction by m is the same measurable transformation on both sides
+      -- map (v ↦ v - m) is the same function applied to equal measures
+      sorry  -- TODO: Use map_map to factor the constant subtraction
+      -- This is a straightforward application but requires careful type management
 
     -- Step 3: Show uniform variance via contractability
     -- E[Z_i²] = E[Z_0²] for all i
     have hZ_var_uniform : ∀ i, ∫ ω, (Z i ω)^2 ∂μ = ∫ ω, (Z 0 ω)^2 ∂μ := by
       intro i
-      sorry -- TODO: Use contractable_map_single + integral_map
+      sorry  -- TODO: Use contractable_map_single + integral_map to show equal variances
+      -- Strategy: map (Z i) μ = map (Z 0) μ ⟹ ∫ x² d(map (Z i) μ) = ∫ x² d(map (Z 0) μ)
 
     -- Step 4: Show mean of Z is zero
     have hZ_mean_zero : ∀ i, ∫ ω, Z i ω ∂μ = 0 := by
       intro i
-      simp only [Z]
-      rw [integral_sub]
-      · sorry -- E[f(X_i)] - m = 0 since E[f(X_i)] = E[f(X_0)] = m by contractability
-      all_goals sorry -- Integrability conditions
+      sorry  -- TODO: E[Z_i] = E[f(X_i)] - m = m - m = 0 by contractability
+      -- Strategy: Use integral_sub, then contractable_map_single to show E[f(X_i)] = E[f(X_0)] = m
 
     -- Step 5: Show uniform covariance via contractability
     -- For i ≠ j, E[Z_i Z_j] = E[Z_0 Z_1]
