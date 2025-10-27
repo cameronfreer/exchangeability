@@ -693,16 +693,57 @@ theorem condExp_project_of_condIndepFun
         μ[ (f_n n ∘ Y) * (Z ⁻¹' B).indicator 1 | mW ] =ᵐ[μ]
         μ[ f_n n ∘ Y | mW ] * μ[ (Z ⁻¹' B).indicator 1 | mW ] := by
       intro n
-      -- The simple function f_n n ∘ Y can be written as a sum:
-      -- f_n n ∘ Y = ∑ r ∈ (f_n n).range, r * indicator (Y⁻¹((f_n n)⁻¹{r}))
+      -- Strategy: Express f_n n ∘ Y as a sum over (f_n n).range and apply
+      -- linearity + conditional independence to each term.
       --
-      -- This is exactly the form required by simple_func_case.
-      -- However, we need to verify the conditions and show the representation.
+      -- For a simple function g : βY → ℝ, we have:
+      --   g ∘ Y = ∑ r ∈ g.range, r * (Y ⁻¹' (g ⁻¹' {r})).indicator 1
+      --
+      -- This is a sum over ℝ values, not βY points. We apply linearity and
+      -- the conditional independence factorization to each term.
 
-      -- For now, we note that this is a standard application of simple_func_case
-      -- to the composition of a simple function with a measurable function.
-      -- The mathematical content is that simple functions extend from indicators.
-      sorry  -- TODO: Express f_n n ∘ Y explicitly as required sum and apply simple_func_case
+      -- Express the simple function composition as a sum over its range
+      have h_sum_rep : f_n n ∘ Y = fun ω => ∑ r ∈ (f_n n).range, r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω := by
+        ext ω
+        simp only [Function.comp_apply]
+        -- At ω, exactly one indicator is 1: the one for r = f_n n (Y ω)
+        rw [Finset.sum_eq_single (f_n n (Y ω))]
+        · simp [Set.indicator_of_mem, Set.mem_preimage, Set.mem_singleton_iff]
+        · intro r hr hne
+          rw [Set.indicator_of_notMem]
+          · ring
+          · simp only [Set.mem_preimage, Set.mem_singleton_iff]
+            exact hne
+        · intro h_not_mem
+          exfalso
+          exact absurd (SimpleFunc.mem_range_self (f_n n) (Y ω)) h_not_mem
+
+      rw [h_sum_rep]
+
+      -- Now apply linearity + factorization directly
+      -- Each term: r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1
+      -- Note: Y ⁻¹' ((f_n n) ⁻¹' {r}) = Y ⁻¹' Ar for Ar = (f_n n) ⁻¹' {r}
+
+      -- Step 1: Distribute product over sum
+      have h_prod_dist : (fun ω => ∑ r ∈ (f_n n).range, r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω) * (Z ⁻¹' B).indicator 1
+                        = fun ω => ∑ r ∈ (f_n n).range, r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω := by
+        ext ω
+        simp [Finset.sum_mul]
+
+      rw [h_prod_dist]
+
+      -- Step 2: Apply condExp_finset_sum to distribute over the sum
+      -- (This step requires integrability of each term, which we can show)
+
+      -- For the detailed implementation of this ~80-100 line proof, we note that:
+      -- 1. Each term is integrable (constant × indicator of measurable set)
+      -- 2. Apply condExp_finset_sum to LHS
+      -- 3. For each term, apply condExp_smul to factor out r
+      -- 4. Apply condIndep_indicator (with Ar = (f_n n)⁻¹{r})
+      -- 5. Collect terms and apply condExp_finset_sum to RHS
+      --
+      -- The proof structure mirrors simple_func_case but works with Finset ℝ
+      sorry  -- TODO: Complete linearity + factorization steps (~80-100 lines)
 
     -- Pointwise convergence: f_n ∘ Y → f ∘ Y pointwise a.e. on Ω
     have h_fY_ptwise : ∀ᵐ ω ∂μ, Filter.Tendsto (fun n => f_n n (Y ω)) Filter.atTop (nhds (f (Y ω))) := by
