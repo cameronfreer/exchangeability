@@ -2639,16 +2639,42 @@ lemma cesaro_to_condexp_L2
   -- Lp(2, μ) is complete (Hilbert space), so Cauchy sequence converges
   have ⟨α_f, hα_memLp, hα_limit⟩ : ∃ α_f, MemLp α_f 2 μ ∧
       Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0) := by
-    -- TODO: Use completeness of L²(μ) to extract limit from Cauchy sequence
-    -- Key steps:
-    -- 1. L²(μ) is a Hilbert space (see MeasureTheory.Lp.instInnerProductSpace)
-    -- 2. Hilbert spaces are complete (all Cauchy sequences converge)
-    -- 3. From hCauchy, {blockAvg f X 0 n}_n is Cauchy in eLpNorm sense
-    -- 4. Apply completeness to get α_f : Lp 2 μ with ‖blockAvg n - α_f‖_L² → 0
-    -- 5. Extract the underlying function from the Lp equivalence class
-    --
-    -- Mathlib API: Look for MeasureTheory.Lp.completeSpace or similar
-    sorry
+    -- Map blockAvg sequence into Lp ℝ 2 μ
+    -- Each blockAvg f X 0 n is in L² (bounded by 1)
+    let U : ℕ → Lp ℝ 2 μ := fun n =>
+      ⟨AEEqFun.mk (blockAvg f X 0 n) (h_blockAvg_meas n).aestronglyMeasurable,
+       MeasureTheory.memLp_two_of_bounded (h_blockAvg_meas n) (h_blockAvg_bdd n)⟩
+
+    -- Show U is Cauchy in Lp using hCauchy
+    have hCauchyLp : CauchySeq U := by
+      -- Convert eLpNorm Cauchy to metric Cauchy in Lp
+      rw [Metric.cauchySeq_iff]
+      intro ε hε
+      -- Get N from hCauchy for ε
+      obtain ⟨N, hN⟩ := hCauchy ε hε
+      use N
+      intro m hm n' hn'
+      -- Lp.dist is related to eLpNorm of difference
+      have h_diff := hN hm hn'
+      sorry -- Need to relate Lp.dist to eLpNorm
+
+    -- Lp ℝ 2 μ is complete (Hilbert space)
+    -- So Cauchy sequence converges
+    haveI : CompleteSpace (Lp ℝ 2 μ) := by infer_instance
+    obtain ⟨α, hα⟩ := cauchySeq_tendsto_of_complete hCauchyLp
+
+    -- Extract representative function from α : Lp ℝ 2 μ
+    use α
+    constructor
+    · -- α is in L²
+      exact Lp.memLp α
+    · -- Show eLpNorm (blockAvg n - α) → 0
+      -- Convert Lp convergence to eLpNorm convergence
+      have h_conv : Tendsto (fun n => dist (U n) α) atTop (𝓝 0) := by
+        exact Metric.tendsto_atTop.mpr fun ε hε => by
+          obtain ⟨N, hN⟩ := Metric.tendsto_atTop.mp hα ε hε
+          exact ⟨N, hN⟩
+      sorry -- Convert dist in Lp to eLpNorm
 
   use α_f
   refine ⟨hα_memLp, ?_, hα_limit, ?_⟩
