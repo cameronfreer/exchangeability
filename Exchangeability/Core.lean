@@ -510,10 +510,7 @@ def approxEquiv :
       { toFun := ?_, invFun := ?_, left_inv := ?_, right_inv := ?_ }
     · intro x
       have hx := x.property
-      let i : Fin n := ⟨x.1, hx⟩
-      have hi : (π i : ℕ) < permBound π n := lt_permBound_fin (π:=π) (n:=n) (i:=i)
-      refine ⟨⟨π i, hi⟩, ?_⟩
-      exact ⟨i, rfl⟩
+      let i : Fin n := ⟨x.1, hx⟩; refine ⟨⟨π i, lt_permBound_fin (π:=π) (n:=n) (i:=i)⟩, ?_⟩; exact ⟨i, rfl⟩
     · intro y
       let j := Classical.choose y.property
       have hj := Classical.choose_spec y.property
