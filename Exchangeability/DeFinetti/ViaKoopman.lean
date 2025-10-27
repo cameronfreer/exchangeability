@@ -3889,11 +3889,11 @@ private theorem optionB_L1_convergence_bounded
         (n : ℝ)⁻¹ * ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω := by
       intro ω
       rw [birkhoffAverage.eq_1, birkhoffSum.eq_1]
-      -- birkhoffAverage = (↑n)⁻¹ • ∑ k, id ((koopman)^[k] fL2) ω
-      -- Need to show: smul = mul for real-valued Lp functions
       simp only [_root_.id]
-      -- Convert smul to mul: for real functions, r • f = r * f pointwise
-      rw [smul_eq_mul]
+      -- Unfold the Lp coercion manually
+      -- The sum of Lp elements coerces to the sum of their coercions
+      -- The scalar multiplication distributes
+      sorry
     -- Transfer via hsum
     filter_upwards [hsum] with ω hω
     rw [hbirk, hω]
