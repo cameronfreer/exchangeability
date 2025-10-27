@@ -262,7 +262,20 @@ theorem condExp_project_of_condIndepFun
                   (B : Set βZ) (hB : MeasurableSet B),
       ∫ x in S ∩ Z ⁻¹' B, g x ∂μ = ∫ x in S ∩ Z ⁻¹' B, (f ∘ Y) x ∂μ := by
     intro S hS hμS B hB
-    sorry  -- Rectangle identity implementation (uses condIndepFun_iff_condExp_inter_preimage_eq_mul)
+    -- Key: Use conditional independence to factor integrals
+    -- LHS: ∫_{S∩Z⁻¹(B)} g = E[g·1_S·E[1_{Z∈B}|W]] (g·1_S is σ(W)-measurable)
+    -- RHS: ∫_{S∩Z⁻¹(B)} f(Y) = E[E[f(Y)|W]·E[1_{Z∈B}|W]·1_S] (by CondIndep)
+    -- Since g = E[f(Y)|W], both sides equal
+
+    sorry -- TODO: Implement using condIndepFun_iff_condExp_inter_preimage_eq_mul
+    /-
+    Detailed steps:
+    1. Rewrite set integrals as expectations with indicators
+    2. Apply conditional expectation property for σ(W)-measurable functions
+    3. Use condIndepFun_iff_condExp_inter_preimage_eq_mul to factor:
+       μ⟦Y⁻¹A ∩ Z⁻¹B | W⟧ = μ⟦Y⁻¹A | W⟧ * μ⟦Z⁻¹B | W⟧
+    4. Both sides reduce to E[g·1_S·μ⟦Z⁻¹B | W⟧]
+    -/
 
   -- Step 2: π-λ extension to all σ(Z,W)-sets
   have h_all : ∀ (T : Set Ω), MeasurableSet[mZW] T → μ T < ∞ →
@@ -279,7 +292,13 @@ theorem condExp_project_of_condIndepFun
 
   -- Apply uniqueness to get μ[f∘Y|mZW] = g
   have result_mZW : μ[ f ∘ Y | mZW ] =ᵐ[μ] g := by
-    sorry  -- Apply ae_eq_condExp_of_forall_setIntegral_eq (signature mismatch to fix)
+    -- Use ae_eq_condExp_of_forall_setIntegral_eq from mathlib
+    -- Parameters: (hm : m ≤ m₀) (hf_int : Integrable f μ) (integrableOn) (h_matching) (aesm)
+    -- Returns: g =ᵐ[μ] μ[f|m], so we need .symm for μ[f|m] =ᵐ[μ] g
+    refine (ae_eq_condExp_of_forall_setIntegral_eq hmZW_le hf_int ?integrableOn h_all g_aesm_mZW).symm
+    · -- Integrability of g on finite-measure mZW-sets
+      intro T hT hμT
+      exact integrable_condExp.integrableOn
 
   -- Use mZW_prod = mZW to rewrite LHS, then apply result
   have : μ[ f ∘ Y | mZW_prod ] =ᵐ[μ] μ[ f ∘ Y | mZW ] := by
