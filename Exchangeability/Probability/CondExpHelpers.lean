@@ -263,11 +263,91 @@ theorem condExp_project_of_condIndepFun
   set g := μ[ f ∘ Y | mW ] with hg_def
 
   -- Step 1: Rectangle identity (key conditional independence application)
+
+  -- First, we need a key lemma: conditional independence factorization for bounded measurables
+  -- **Key Extension Lemma: CondIndepFun factorization for bounded measurables × indicators**
+  --
+  -- This extends the conditional independence factorization from indicator pairs
+  -- (provided by CondIndepFun) to bounded measurable functions composed with one
+  -- of the random variables, multiplied by indicators of the other.
+  --
+  -- Mathematical content: Y ⊥⊥_W Z implies
+  --   E[f(Y)·1_{Z∈B}|W] = E[f(Y)|W]·E[1_{Z∈B}|W]
+  --
+  -- This is a standard result, typically proven via approximation:
+  -- indicators → simple functions (linearity) → bounded measurables (DCT)
+  --
+  have condIndep_factor : ∀ (B : Set βZ) (hB : MeasurableSet B),
+      μ[ (f ∘ Y) * (Z ⁻¹' B).indicator (1 : Ω → ℝ) | mW ] =ᵐ[μ]
+      μ[ f ∘ Y | mW ] * μ[ (Z ⁻¹' B).indicator (1 : Ω → ℝ) | mW ] := by
+    intro B hB
+
+    -- For now, we defer this substantial proof (~100-200 lines) and show
+    -- how it completes the theorem. The proof structure would be:
+    --
+    -- Step 1: For f = 1_A (indicator), apply condIndepFun_iff_condExp_inter_preimage_eq_mul
+    --         to get the factorization for indicator pairs
+    --
+    -- Step 2: For f = Σᵢ aᵢ 1_{Aᵢ} (simple function), use:
+    --         - Linearity of conditional expectation
+    --         - Distributivity of multiplication
+    --         - Apply Step 1 to each indicator
+    --
+    -- Step 3: For general bounded measurable f:
+    --         - Approximate f by simple functions fₙ using SimpleFunc.approxOn
+    --         - Show fₙ → f pointwise and |fₙ| ≤ C for some bound
+    --         - Apply Step 2 to each fₙ
+    --         - Pass to limit using dominated convergence for conditional expectations
+    --
+    -- Key mathlib lemmas needed:
+    --   - condIndepFun_iff_condExp_inter_preimage_eq_mul (from Conditional.lean)
+    --   - condExp_add, condExp_smul (linearity)
+    --   - SimpleFunc.approxOn (approximation)
+    --   - Dominated convergence for condExp (would need to locate or prove)
+    --
+    sorry
+
   have h_rect : ∀ (S : Set Ω) (hS : MeasurableSet[mW] S) (hμS : μ S < ∞)
                   (B : Set βZ) (hB : MeasurableSet B),
       ∫ x in S ∩ Z ⁻¹' B, g x ∂μ = ∫ x in S ∩ Z ⁻¹' B, (f ∘ Y) x ∂μ := by
     intro S hS hμS B hB
+
+    -- The key factorization from conditional independence
+    have h_factor := condIndep_factor B hB
+
     sorry
+    /-
+    **Proof outline (using condIndep_factor):**
+
+    Goal: ∫_{S∩Z⁻¹(B)} g dμ = ∫_{S∩Z⁻¹(B)} f(Y) dμ
+
+    where S ∈ σ(W), B ∈ B_Z, g = E[f(Y)|W]
+
+    **LHS computation:**
+    ∫_{S∩Z⁻¹(B)} g dμ
+      = ∫ g·1_S·1_{Z⁻¹(B)} dμ                      [convert to indicators]
+      = E[g·1_S·1_{Z⁻¹(B)}]                         [integral is expectation]
+      = E[E[g·1_S·1_{Z⁻¹(B)}|W]]                    [tower property: E[·] = E[E[·|W]]]
+      = E[g·1_S·E[1_{Z⁻¹(B)}|W]]                    [pull out mW-measurable g·1_S]
+
+    **RHS computation:**
+    ∫_{S∩Z⁻¹(B)} f(Y) dμ
+      = ∫ f(Y)·1_S·1_{Z⁻¹(B)} dμ
+      = E[f(Y)·1_S·1_{Z⁻¹(B)}]
+      = E[E[f(Y)·1_S·1_{Z⁻¹(B)}|W]]                 [tower property]
+      = E[1_S·E[f(Y)·1_{Z⁻¹(B)}|W]]                 [pull out mW-measurable 1_S]
+      = E[1_S·g·E[1_{Z⁻¹(B)}|W]]                    [by condIndep_factor: E[f(Y)·1_B|W] = g·E[1_B|W]]
+      = E[g·1_S·E[1_{Z⁻¹(B)}|W]]                    [commutativity]
+
+    Therefore LHS = RHS. ∎
+
+    **Implementation steps:**
+    1. Rewrite both integrals using set indicators
+    2. Apply setIntegral_condExp to relate integrals to conditional expectations
+    3. Use condExp_stronglyMeasurable_mul to pull out S-measurable factors
+    4. Apply h_factor for the key factorization
+    5. Conclude by symmetry
+    -/
     /-
     **Mathematical Argument (conditional independence factorization):**
 
