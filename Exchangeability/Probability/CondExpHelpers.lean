@@ -713,7 +713,7 @@ theorem condExp_project_of_condIndepFun
           rw [Set.indicator_of_notMem]
           · ring
           · simp only [Set.mem_preimage, Set.mem_singleton_iff]
-            exact hne
+            exact hne.symm
         · intro h_not_mem
           exfalso
           exact absurd (SimpleFunc.mem_range_self (f_n n) (Y ω)) h_not_mem
@@ -732,18 +732,151 @@ theorem condExp_project_of_condIndepFun
 
       rw [h_prod_dist]
 
-      -- Step 2: Apply condExp_finset_sum to distribute over the sum
-      -- (This step requires integrability of each term, which we can show)
+      -- This proof mirrors simple_func_case but works with Finset ℝ instead of Finset βY
+      -- The key insight: Each term Y⁻¹((f_n n)⁻¹{r}) is measurable w.r.t. mZ (via Y)
 
-      -- For the detailed implementation of this ~80-100 line proof, we note that:
-      -- 1. Each term is integrable (constant × indicator of measurable set)
-      -- 2. Apply condExp_finset_sum to LHS
-      -- 3. For each term, apply condExp_smul to factor out r
-      -- 4. Apply condIndep_indicator (with Ar = (f_n n)⁻¹{r})
-      -- 5. Collect terms and apply condExp_finset_sum to RHS
-      --
-      -- The proof structure mirrors simple_func_case but works with Finset ℝ
-      sorry  -- TODO: Complete linearity + factorization steps (~80-100 lines)
+      -- Step 2: Prove integrability of each product term
+      have h_int_terms : ∀ r ∈ (f_n n).range,
+          Integrable (fun ω => r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω) μ := by
+        intro r hr
+        -- Convert to single indicator form
+        have h_eq : (fun ω => r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω)
+                  = fun ω => (Y ⁻¹' ((f_n n) ⁻¹' {r}) ∩ Z ⁻¹' B).indicator (fun _ => r) ω := by
+          ext ω
+          by_cases hY : ω ∈ Y ⁻¹' ((f_n n) ⁻¹' {r}) <;> by_cases hZ : ω ∈ Z ⁻¹' B
+          · simp [Set.indicator_of_mem hY, Set.indicator_of_mem hZ, Set.mem_inter hY hZ]
+          · rw [Set.indicator_of_mem hY, Set.indicator_of_notMem hZ, mul_zero]
+            symm
+            rw [Set.indicator_of_notMem]
+            exact fun ⟨_, h⟩ => hZ h
+          · rw [Set.indicator_of_notMem hY]
+            simp
+            rw [Set.indicator_of_notMem]
+            exact fun ⟨h, _⟩ => hY h
+          · rw [Set.indicator_of_notMem hY, Set.indicator_of_notMem hZ]
+            simp
+            rw [Set.indicator_of_notMem]
+            exact fun ⟨h, _⟩ => hY h
+        rw [h_eq]
+        -- Measurability: Y is measurable, so Y⁻¹ of measurable sets are measurable
+        have hYr_meas : MeasurableSet (Y ⁻¹' ((f_n n) ⁻¹' {r})) :=
+          hY ((f_n n).measurableSet_fiber r)
+        have hZB_meas : MeasurableSet (Z ⁻¹' B) := hZ hB
+        exact (integrable_const r).indicator (hYr_meas.inter hZB_meas)
+
+      -- Step 3: Distribute condExp over sum (LHS)
+      have step1 : μ[ fun ω => ∑ r ∈ (f_n n).range, r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω | mW ]
+                 =ᵐ[μ] fun ω => ∑ r ∈ (f_n n).range, μ[ fun ω' => r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω := by
+        have h_sum_form : (fun ω => ∑ r ∈ (f_n n).range, r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω)
+                        = ∑ r ∈ (f_n n).range, fun ω => r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω := by
+          ext ω
+          simp only [Finset.sum_apply]
+        rw [h_sum_form]
+        convert condExp_finset_sum h_int_terms mW using 1
+        ext ω
+        simp only [Finset.sum_apply]
+
+      -- Step 4: Factor each term using condExp_smul + condIndep_indicator
+      have step2 : (fun ω => ∑ r ∈ (f_n n).range, μ[ fun ω' => r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω)
+                 =ᵐ[μ] fun ω => ∑ r ∈ (f_n n).range, r * (μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) := by
+        have h_all : ∀ r ∈ (f_n n).range,
+            (fun ω => μ[ fun ω' => r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω) =ᵐ[μ]
+            (fun ω => r * (μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)) := by
+          intro r hr
+          -- Factor out scalar
+          have h_smul : μ[ fun ω' => r * ((Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω') | mW ] =ᵐ[μ]
+                        r • μ[ fun ω' => (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] := by
+            have h_int_prod : Integrable (fun ω' => (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω') μ := by
+              have h_eq : (fun ω' => (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω')
+                        = fun ω' => (Y ⁻¹' ((f_n n) ⁻¹' {r}) ∩ Z ⁻¹' B).indicator (fun _ => 1) ω' := by
+                ext ω'
+                by_cases hY : ω' ∈ Y ⁻¹' ((f_n n) ⁻¹' {r}) <;> by_cases hZ : ω' ∈ Z ⁻¹' B
+                · simp [Set.indicator_of_mem hY, Set.indicator_of_mem hZ, Set.mem_inter hY hZ]
+                · simp [Set.indicator_of_mem hY, Set.indicator_of_notMem hZ, Set.indicator_of_notMem (fun ⟨_, h⟩ => hZ h)]
+                · simp [Set.indicator_of_notMem hY, Set.indicator_of_notMem (fun ⟨h, _⟩ => hY h)]
+                · simp [Set.indicator_of_notMem hY, Set.indicator_of_notMem hZ, Set.indicator_of_notMem (fun ⟨h, _⟩ => hY h)]
+              rw [h_eq]
+              have hYr_meas : MeasurableSet (Y ⁻¹' ((f_n n) ⁻¹' {r})) :=
+                hY ((f_n n).measurableSet_fiber r)
+              have hZB_meas : MeasurableSet (Z ⁻¹' B) := hZ hB
+              exact (integrable_const 1).indicator (hYr_meas.inter hZB_meas)
+            exact condExp_smul r h_int_prod mW
+          -- Apply conditional independence
+          have h_factor : μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 * (Z ⁻¹' B).indicator 1 | mW ] =ᵐ[μ]
+                          μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 | mW ] * μ[ (Z ⁻¹' B).indicator 1 | mW ] :=
+            condIndep_indicator ((f_n n) ⁻¹' {r}) B ((f_n n).measurableSet_fiber r) hB
+          -- Combine
+          filter_upwards [h_smul, h_factor] with ω h_smul_ω h_factor_ω
+          have : (fun ω' => r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω') =
+                 (fun ω' => r * ((Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω')) := by ext; ring
+          rw [this, h_smul_ω]
+          show r * μ[ fun ω' => (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω =
+               r * (μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
+          change r * μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 * (Z ⁻¹' B).indicator 1 | mW ] ω =
+                 r * (μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
+          rw [h_factor_ω]
+          rfl
+        exact @finset_sum_ae_eq Ω ℝ ℝ mΩ μ _ (f_n n).range _ _ h_all
+
+      -- Step 5: Algebraic factorization
+      have step3 : (fun ω => ∑ r ∈ (f_n n).range, r * (μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω))
+                 =ᵐ[μ] fun ω => (∑ r ∈ (f_n n).range, r * μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 | mW ] ω) * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
+        filter_upwards with ω
+        have h_term_eq : ∀ r ∈ (f_n n).range, r * (μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) =
+                                               (r * μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 | mW ] ω) * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
+          intro r _
+          ring
+        rw [Finset.sum_congr rfl h_term_eq, Finset.sum_mul]
+
+      -- Step 6: Apply condExp_finset_sum.symm on RHS
+      have h_int_Y_terms : ∀ r ∈ (f_n n).range, Integrable (fun ω => r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω) μ := by
+        intro r hr
+        have h_eq : (fun ω => r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω)
+                  = fun ω => (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator (fun _ => r) ω := by
+          ext ω
+          by_cases h : ω ∈ Y ⁻¹' ((f_n n) ⁻¹' {r})
+          · simp [Set.indicator_of_mem h]
+          · simp [Set.indicator_of_notMem h]
+        rw [h_eq]
+        have hYr_meas : MeasurableSet (Y ⁻¹' ((f_n n) ⁻¹' {r})) :=
+          hY ((f_n n).measurableSet_fiber r)
+        exact (integrable_const r).indicator hYr_meas
+
+      have step4 : (fun ω => ∑ r ∈ (f_n n).range, μ[ fun ω' => r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' | mW ] ω)
+                 =ᵐ[μ] μ[ fun ω => ∑ r ∈ (f_n n).range, r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω | mW ] := by
+        have h_sum_eq : (fun ω => ∑ r ∈ (f_n n).range, r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω) =
+                        ∑ r ∈ (f_n n).range, fun ω => r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω := by
+          ext ω
+          rw [Finset.sum_apply]
+        rw [h_sum_eq]
+        have h_lhs_eq : (fun ω => ∑ r ∈ (f_n n).range, μ[ fun ω' => r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' | mW ] ω) =
+                        ∑ r ∈ (f_n n).range, μ[ fun ω => r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω | mW ] := by
+          ext ω
+          rw [Finset.sum_apply]
+        rw [h_lhs_eq]
+        exact (condExp_finset_sum h_int_Y_terms mW).symm
+
+      have step5 : (fun ω => (∑ r ∈ (f_n n).range, r * μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 | mW ] ω) * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
+                 =ᵐ[μ] fun ω => μ[ fun ω' => ∑ r ∈ (f_n n).range, r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
+        have h_factor : ∀ r ∈ (f_n n).range, (fun ω => r * μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 | mW ] ω) =ᵐ[μ]
+                                              μ[ fun ω' => r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' | mW ] := by
+          intro r hr
+          exact (condExp_smul r ((Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator (1 : Ω → ℝ)) mW).symm
+        have h_sum_eq : (fun ω => ∑ r ∈ (f_n n).range, r * μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 | mW ] ω) =ᵐ[μ]
+                        (fun ω => ∑ r ∈ (f_n n).range, μ[ fun ω' => r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' | mW ] ω) :=
+          @finset_sum_ae_eq Ω ℝ ℝ mΩ μ _ (f_n n).range _ _ h_factor
+        filter_upwards [h_sum_eq, step4] with ω h_sum_ω h_step4_ω
+        rw [h_sum_ω, h_step4_ω]
+
+      -- Chain all steps
+      calc μ[ (f_n n ∘ Y) * (Z ⁻¹' B).indicator 1 | mW ]
+          = μ[ (fun ω => ∑ r ∈ (f_n n).range, r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω) * (Z ⁻¹' B).indicator 1 | mW ] := by rw [← h_sum_rep]
+        _ = μ[ fun ω => ∑ r ∈ (f_n n).range, r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω | mW ] := by rw [h_prod_dist]
+        _ =ᵐ[μ] fun ω => ∑ r ∈ (f_n n).range, μ[ fun ω' => r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω := step1
+        _ =ᵐ[μ] fun ω => ∑ r ∈ (f_n n).range, r * (μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) := step2
+        _ =ᵐ[μ] fun ω => (∑ r ∈ (f_n n).range, r * μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 | mW ] ω) * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := step3
+        _ =ᵐ[μ] fun ω => μ[ fun ω' => ∑ r ∈ (f_n n).range, r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := step5
+        _ =ᵐ[μ] μ[ f_n n ∘ Y | mW ] * μ[ (Z ⁻¹' B).indicator 1 | mW ] := by rw [← h_sum_rep]; rfl
 
     -- Pointwise convergence: f_n ∘ Y → f ∘ Y pointwise a.e. on Ω
     have h_fY_ptwise : ∀ᵐ ω ∂μ, Filter.Tendsto (fun n => f_n n (Y ω)) Filter.atTop (nhds (f (Y ω))) := by
