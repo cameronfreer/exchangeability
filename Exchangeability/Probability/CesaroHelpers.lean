@@ -56,7 +56,6 @@ lemma cesaroCoeff_of_in_block {N n i : ℕ} (h1 : N ≤ i) (h2 : i < N + n) :
   split_ifs with h3 h4
   · exact absurd h1 (not_le_of_gt h3)
   · rfl
-  · exact absurd h2 h4
 
 lemma cesaroCoeff_of_ge_end {N n i : ℕ} (h : N + n ≤ i) :
     cesaroCoeff N n i = 0 := by
@@ -84,35 +83,49 @@ lemma cesaroCoeff_sup_le (n n' : ℕ) (hn : n ≠ 0) (hn' : n' ≠ 0) :
     rw [cesaroCoeff_of_in_block (Nat.zero_le i) (by simp; exact Nat.lt_of_lt_of_le h1 (min_le_left n n')),
         cesaroCoeff_of_in_block (Nat.zero_le i) (by simp; exact Nat.lt_of_lt_of_le h1 (min_le_right n n'))]
     -- |1/n - 1/n'| ≤ max(1/n, 1/n')
-    cases' le_total n n' with hle hle
+    rcases le_total n n' with hle | hle
     · -- n ≤ n', so 1/n ≥ 1/n'
+      have hn_pos : (0 : ℝ) < n := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hn)
+      have hn'_pos : (0 : ℝ) < n' := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hn')
       have : (1 : ℝ) / n - 1 / n' ≥ 0 := by
-        apply sub_nonneg_of_le
-        exact one_div_le_one_div_of_le (Nat.cast_pos.mpr (Nat.pos_of_ne_zero hn')) (Nat.cast_le.mpr hle)
-      rw [abs_of_nonneg this]
-      exact le_max_left _ _
-    · -- n' < n, so 1/n' > 1/n
+        have : (1 : ℝ) / n' ≤ 1 / n := by
+          apply div_le_div_of_nonneg_left <;> [exact zero_le_one; exact hn_pos; exact Nat.cast_le.mpr hle]
+        linarith
+      calc |1 / ↑n - 1 / ↑n'|
+          = 1 / ↑n - 1 / ↑n' := abs_of_nonneg this
+        _ ≤ 1 / ↑n := by linarith [show (0 : ℝ) ≤ 1 / ↑n' by positivity]
+        _ ≤ max (1 / ↑n) (1 / ↑n') := le_max_left _ _
+    · -- n' ≤ n, so 1/n' ≥ 1/n
+      have hn_pos : (0 : ℝ) < n := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hn)
+      have hn'_pos : (0 : ℝ) < n' := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hn')
       have : (1 : ℝ) / n - 1 / n' ≤ 0 := by
-        apply sub_nonpos_of_le
-        exact one_div_le_one_div_of_le (Nat.cast_pos.mpr (Nat.pos_of_ne_zero hn))
-          (Nat.cast_le.mpr (Nat.le_of_lt hle))
-      rw [abs_of_nonpos this, neg_sub]
-      exact le_max_right _ _
+        have : (1 : ℝ) / n ≤ 1 / n' := by
+          apply div_le_div_of_nonneg_left <;> [exact zero_le_one; exact hn'_pos; exact Nat.cast_le.mpr hle]
+        linarith
+      calc |1 / ↑n - 1 / ↑n'|
+          = -(1 / ↑n - 1 / ↑n') := abs_of_nonpos this
+        _ = 1 / ↑n' - 1 / ↑n := by ring
+        _ ≤ 1 / ↑n' := by linarith [show (0 : ℝ) ≤ 1 / ↑n by positivity]
+        _ ≤ max (1 / ↑n) (1 / ↑n') := le_max_right _ _
   · -- i outside common block
     by_cases h2 : i < max n n'
     · -- i in exactly one block
-      cases' Nat.lt_or_ge i n with hin hin
+      rcases Nat.lt_or_ge i n with hin | hin
       · -- i < n but i ≥ n' (since i ≥ min n n')
-        have : n' ≤ i := Nat.le_of_not_lt (fun h => h1 (Nat.lt_min hin h))
-        rw [cesaroCoeff_of_in_block (Nat.zero_le i) (Nat.lt_add_of_pos_left i (Nat.pos_of_ne_zero hn) |> fun h => by simpa using hin),
-            cesaroCoeff_of_ge_end (by simpa using this)]
-        simp only [sub_zero, abs_div, abs_one, abs_ofNat]
+        have hn'_le_i : n' ≤ i := Nat.le_of_not_lt (fun h => h1 (Nat.lt_min hin h))
+        have h_in_n : i < 0 + n := by simpa using hin
+        rw [cesaroCoeff_of_in_block (Nat.zero_le i) h_in_n,
+            cesaroCoeff_of_ge_end (by simpa using hn'_le_i)]
+        simp only [sub_zero, abs_div, abs_one]
+        norm_num
         exact le_max_left _ _
       · -- i ≥ n but i < n' (since i < max n n')
-        have : i < n' := Nat.lt_of_lt_of_le h2 (Nat.le_max_right n n') |> fun h => Nat.lt_of_le_of_lt hin h |> absurd h2 |> fun _ => Nat.lt_of_lt_of_le h2 (Nat.le_max_right n n')
-        rw [cesaroCoeff_of_ge_end (by simpa using hin),
-            cesaroCoeff_of_in_block (Nat.zero_le i) (by simpa using this)]
-        simp only [zero_sub, abs_neg, abs_div, abs_one, abs_ofNat]
+        have h_i_lt_n' : i < n' := Nat.lt_of_lt_of_le h2 (Nat.le_max_right n n')
+        have h_ge_n : 0 + n ≤ i := by simpa using hin
+        rw [cesaroCoeff_of_ge_end h_ge_n,
+            cesaroCoeff_of_in_block (Nat.zero_le i) (by simpa using h_i_lt_n')]
+        simp only [zero_sub, abs_neg, abs_div, abs_one]
+        norm_num
         exact le_max_right _ _
     · -- i ≥ max n n', so both coefficients are 0
       have hn_le : n ≤ i := Nat.le_of_not_lt (fun h => h2 (Nat.lt_of_lt_of_le h (Nat.le_max_left n n')))
@@ -171,11 +184,11 @@ lemma setIntegral_le_eLpNorm
     _ ≤ (eLpNorm g 2 μ).toReal * 1 := by
         apply mul_le_mul_of_nonneg_left _ ENNReal.toReal_nonneg
         have h_measure_le : (μ A).toReal ≤ 1 := by
-          have : μ A ≤ 1 := measure_le_one μ A
+          have : μ A ≤ 1 := prob_le_one
           cases' (μ A).eq_top_or_lt_top with h h
           · simp [h]
           · rw [ENNReal.toReal_le_toReal h ENNReal.one_ne_top]
-            simpa using this
+            exact this
         calc (μ A).toReal ^ (1/2 : ℝ)
             ≤ 1 ^ (1/2 : ℝ) := Real.rpow_le_rpow ENNReal.toReal_nonneg h_measure_le (by norm_num : 0 ≤ (1 / 2 : ℝ))
           _ = 1 := by norm_num
