@@ -3685,39 +3685,25 @@ variable {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace �
 
 -- Helper lemmas for Step 3b: connecting condexpL2 to condExp
 
-/-- Our condexpL2 operator agrees a.e. with classical conditional expectation. -/
+/-- Our condexpL2 operator agrees a.e. with classical conditional expectation.
+
+**Mathematical content:** This is a standard fact in measure theory. Our `condexpL2` is defined as:
+```lean
+condexpL2 := (lpMeas ℝ ℝ shiftInvariantSigma 2 μ).subtypeL.comp
+             (MeasureTheory.condExpL2 ℝ ℝ shiftInvariantSigma_le)
+```
+
+The composition of mathlib's `condExpL2` with the subspace inclusion `subtypeL` should equal
+the classical `condExp` a.e., since:
+1. Mathlib's `condExpL2` equals `condExp` a.e. (by `MemLp.condExpL2_ae_eq_condExp`)
+2. The subspace inclusion preserves a.e. classes
+
+**Lean challenge:** Requires navigating Lp quotient types and finding the correct API to
+convert between `Lp ℝ 2 μ` and `MemLp _ 2 μ` representations. The `Lp.memℒp` constant
+doesn't exist in the current mathlib API. -/
 private lemma condexpL2_ae_eq_condExp (f : Lp ℝ 2 μ) :
     (condexpL2 (μ := μ) f : Ω[α] → ℝ) =ᵐ[μ] μ[f | shiftInvariantSigma] := by
-  -- condexpL2 is defined as composition of MeasureTheory.condExpL2 with subtype inclusion
-  -- The key is that subtypeL ∘ condExpL2 has the same a.e. class as condExpL2
-
-  -- Use that mathlib's condExpL2 equals condExp a.e.
-  -- For f : Lp ℝ 2 μ, we have f.memℒp : MemLp (f : Ω[α] → ℝ) 2 μ
-  have h_mathlib := (Lp.memℒp f).condExpL2_ae_eq_condExp shiftInvariantSigma_le
-
-  -- h_mathlib says: condExpL2 applied to (Lp.memℒp f).toLp equals condExp a.e.
-  -- But (Lp.memℒp f).toLp and f represent the same Lp element
-
-  -- The composition with subtypeL preserves the a.e. class
-  simp only [condexpL2]
-
-  -- The key observation: (Lp.memℒp f).toLp = f as Lp elements
-  -- because toLp ∘ memℒp is the identity on Lp
-  have hf_eq : (Lp.memℒp f).toLp = f := by
-    -- This is the round-trip property: going from Lp to MemLp and back is identity
-    rfl
-
-  -- Now rewrite using this equality
-  rw [← hf_eq]
-
-  -- subtypeL ∘ condExpL2 applied to f equals condExpL2 applied to f (as coercions)
-  have : ((lpMeas ℝ ℝ shiftInvariantSigma 2 μ).subtypeL.comp
-          (MeasureTheory.condExpL2 ℝ ℝ shiftInvariantSigma_le) f : Ω[α] → ℝ) =ᵐ[μ]
-         (MeasureTheory.condExpL2 ℝ ℝ shiftInvariantSigma_le f : Ω[α] → ℝ) := by
-    -- subtypeL is the inclusion, so this is definitional
-    rfl
-
-  exact this.trans h_mathlib
+  sorry
 
 -- Helper lemmas for Step 3a: a.e. equality through measure-preserving maps
 --
