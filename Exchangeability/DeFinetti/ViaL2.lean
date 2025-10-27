@@ -1601,8 +1601,7 @@ theorem subseq_ae_of_L1
 
   -- Step 2: eLpNorm convergence implies convergence in measure
   have h_tendstoInMeasure : TendstoInMeasure μ alpha atTop alpha_inf := by
-    refine @tendstoInMeasure_of_tendsto_eLpNorm Ω ℕ ℝ _ μ _ 1 alpha alpha_inf atTop
-      one_ne_zero ?_ ?_ ?_
+    refine tendstoInMeasure_of_tendsto_eLpNorm one_ne_zero ?_ ?_ ?_
     · intro n
       exact (h_alpha_meas n).aestronglyMeasurable
     · exact h_alpha_inf_meas.aestronglyMeasurable
@@ -2448,8 +2447,24 @@ lemma cesaro_to_condexp_L2
     -- Step 4: Show mean of Z is zero
     have hZ_mean_zero : ∀ i, ∫ ω, Z i ω ∂μ = 0 := by
       intro i
-      sorry  -- TODO: E[Z_i] = E[f(X_i)] - m = m - m = 0 by contractability
-      -- Strategy: Use integral_sub, then contractable_map_single to show E[f(X_i)] = E[f(X_0)] = m
+      simp only [Z]
+      -- E[Z_i] = E[f(X_i) - m] = E[f(X_i)] - m
+      -- By contractability: E[f(X_i)] = E[f(X_0)] = m
+      -- Therefore: E[Z_i] = m - m = 0
+
+      -- f is bounded, so f ∘ X i is integrable
+      have hfX_int : Integrable (fun ω => f (X i ω)) μ := by
+        apply Integrable.of_bound
+        · exact (hf_meas.comp (hX_meas i)).aestronglyMeasurable
+        · filter_upwards [] with ω
+          exact hf_bdd (X i ω)
+
+      rw [integral_sub hfX_int (integrable_const m)]
+      -- Now show ∫ f(X i) = m
+      sorry -- TODO: Prove using contractable_map_single
+      -- Strategy: contractable_map_single gives map (X i) μ = map (X 0) μ
+      -- Then integral_map gives: ∫ f(X i) dμ = ∫ f d(map (X i) μ) = ∫ f d(map (X 0) μ) = ∫ f(X 0) dμ = m
+      -- This requires showing integral f respects measure equality
 
     -- Step 5: Show uniform covariance via contractability
     -- For i ≠ j, E[Z_i Z_j] = E[Z_0 Z_1]
@@ -2490,15 +2505,19 @@ lemma cesaro_to_condexp_L2
 
       -- Cf is positive (since 1 - ρ ≥ 0 when ρ ≤ 1)
       have hCf_pos : Cf > 0 := by
-        sorry  -- TODO: Show from σ² > 0 and ρ ≤ 1
+        sorry  -- TODO: 2 * σ² * (1 - ρ) > 0 from σ² > 0 and ρ ≤ 1
+        -- Strategy: Use mul_pos twice (2 > 0, σ² > 0 by hσ_pos, 1 - ρ > 0 by hρ_bd.2)
 
       -- Step 7c: Choose N via Archimedean property
       -- We want Cf / N < (ε.toReal)²
       -- Equivalently: N > Cf / (ε.toReal)²
       obtain ⟨N, hN⟩ : ∃ N : ℕ, N > 0 ∧ Cf / N < (ε.toReal) ^ 2 := by
-        sorry  -- TODO: Use Archimedean property of ℝ
-        -- Strategy: Since ε > 0, we have (ε.toReal)² > 0
-        --           Choose N > Cf / (ε.toReal)² via Archimedean property
+        sorry  -- TODO: Use exists_nat_gt and Archimedean property
+        -- Strategy:
+        -- 1. Show (ε.toReal)² > 0 using ENNReal.toReal_pos
+        -- 2. Use exists_nat_gt to find N' > Cf / (ε.toReal)²
+        -- 3. Take N = max N' 1 to ensure N > 0
+        -- 4. Show Cf/N ≤ Cf/N' < (ε.toReal)² by monotonicity of division
 
       use N
       intros n n' hn_ge hn'_ge
