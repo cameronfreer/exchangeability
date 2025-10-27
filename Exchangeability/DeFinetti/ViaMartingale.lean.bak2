@@ -254,17 +254,18 @@ lemma condDistrib_factor_indicator_agree
           h_le _ ⟨t, ht, rfl⟩
         have : SigmaFinite (μ.trim hζ_le) := inferInstance
         simpa using setIntegral_condExp hζ_le hf_int hSζ
-  -- Use uniqueness via CondExpHelpers lemma
-  have hYeta : μ[f | MeasurableSpace.comap η inferInstance] =ᵐ[μ] Yeta := by
-    refine condExp_eq_of_setIntegral_eq _ _ hη_le ?Yeta_meas ?f_int ?Yeta_int ?matching
-    · exact stronglyMeasurable_condExp.measurable
-    · exact hf_int
-    · exact integrable_condExp
+
+  -- Use uniqueness
+  have hYeta : Yeta =ᵐ[μ] μ[f | MeasurableSpace.comap η inferInstance] := by
+    refine ae_eq_condExp_of_forall_setIntegral_eq hη_le hf_int ?integrableOn ?matching ?sm
     · intro S hS hμS
-      exact (hYeta_integrals S hS (by simpa using hμS)).symm
+      exact integrable_condExp.integrableOn
+    · intro S hS hμS
+      have : ∃ t : Set β, MeasurableSet t ∧ S = η ⁻¹' t := hS
+      exact hYeta_integrals S this (by simpa using hμS)
+    · exact stronglyMeasurable_condExp.aestronglyMeasurable
 
   -- This is exactly what Route 1 gives: μ[ μ[f|σ(ζ)] | σ(η) ] = μ[f|σ(η)]  (a.e.)
-  exact hYeta.symm
   exact hYeta
 
   -- ══════════════════════════════════════════════════════════════════════════════
