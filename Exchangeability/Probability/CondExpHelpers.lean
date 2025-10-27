@@ -420,35 +420,94 @@ theorem condExp_project_of_condIndepFun
         ext ω
         simp only [Pi.mul_apply, Finset.sum_mul]
 
-      -- ** STAGE 2 IMPLEMENTATION **
-      -- The full proof requires ~40-60 lines of technical measure theory.
-      --
-      -- **STRATEGY:**
-      -- 1. Distribute: (∑ᵢ aᵢ·1_{Aᵢ}) * 1_B = ∑ᵢ (aᵢ·1_{Aᵢ}·1_B) ✅ (h_distrib above)
-      -- 2. Apply condExp_finset_sum to pull sum outside condExp on LHS
-      -- 3. For each term i:
-      --    a) Use condExp_smul to pull out scalar aᵢ
-      --    b) Apply condIndep_indicator to factorize:
-      --       μ[(Aᵢ).indicator·(Z⁻¹B).indicator|W] = μ[(Aᵢ).indicator|W] · μ[(Z⁻¹B).indicator|W]
-      -- 4. Algebraic: Factor μ[(Z⁻¹B).indicator|W] out of sum via Finset.sum_mul
-      -- 5. Apply condExp_finset_sum.symm on RHS to get μ[∑ᵢ aᵢ·1_{Aᵢ}|W]
-      -- 6. Conclude: LHS =ᵐ μ[∑ᵢ aᵢ·1_{Aᵢ}|W] · μ[1_B|W] = RHS
-      --
-      -- **KEY MATHLIB LEMMAS:**
-      -- - condExp_finset_sum: ∀ hf, μ[∑ i, f i | m] =ᵐ ∑ i, μ[f i | m]
-      -- - condExp_smul c: μ[c • f | m] =ᵐ c • μ[f | m]
-      -- - condIndep_indicator (✅ proven): factorization for indicators
-      -- - Finset.sum_mul: (∑ᵢ aᵢ·bᵢ) = (∑ᵢ aᵢ) · b when b doesn't depend on i
-      --
-      -- **MATHEMATICAL CONTENT:** Zero!
-      -- This is purely mechanical:
-      -- - Linearity of conditional expectation (condExp_add, condExp_smul)
-      -- - Application of proven indicator case
-      -- - Algebraic rearrangement
-      --
-      -- The conditional independence insight is entirely in condIndep_indicator above ✅
-      --
-      sorry
+      -- Integrability of each product term a i * indicator_Ai * indicator_B
+      have h_int_products : ∀ i ∈ s, Integrable (fun ω => a i * (A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω) μ := by
+        intro i hi
+        -- Rearrange to (indicator * indicator) * c form
+        have h_eq : (fun ω => a i * (A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω)
+                  = fun ω => ((A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω) * a i := by
+          ext ω; ring
+        rw [h_eq]
+        -- Now apply Integrable.mul_const
+        apply Integrable.mul_const
+        apply Integrable.mul
+        · apply Integrable.indicator; exact hA_meas i hi; exact integrable_const 1
+        · apply Integrable.indicator; exact hZ hB; exact integrable_const 1
+
+      -- Integrability of each term a i * indicator_Ai on Y side
+      have h_int_Y_terms : ∀ i ∈ s, Integrable (fun ω => a i * (A i).indicator 1 ω) μ := by
+        intro i hi
+        have h_eq : (fun ω => a i * (A i).indicator 1 ω) = fun ω => (A i).indicator 1 ω * a i := by
+          ext ω; ring
+        rw [h_eq]
+        apply Integrable.mul_const
+        apply Integrable.indicator
+        · exact hA_meas i hi
+        · exact integrable_const 1
+
+      -- LHS: Apply condExp_finset_sum to distribute condExp over the sum
+      have step1 : μ[ fun ω => ∑ i ∈ s, (a i * (A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω) | mW ]
+                 =ᵐ[μ] fun ω => ∑ i ∈ s, μ[ fun ω' => a i * (A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω := by
+        convert condExp_finset_sum h_int_products mW using 2
+        ext ω
+        rfl
+
+      -- For each term: apply condIndep_indicator and condExp_smul to factor
+      have step2 : (fun ω => ∑ i ∈ s, μ[ fun ω' => a i * (A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω)
+                 =ᵐ[μ] fun ω => ∑ i ∈ s, (a i * (μ[ (A i).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)) := by
+        filter_upwards with ω
+        congr 1 with i hi
+        -- For this specific i, we need to show:
+        -- μ[a i * indicator_Ai * indicator_B | W](ω) = a i * μ[indicator_Ai|W](ω) * μ[indicator_B|W](ω)
+
+        -- Step 2a: Rearrange to pull out constant a i
+        calc μ[ fun ω' => a i * (A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω
+            = μ[ fun ω' => a i * ((A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω') | mW ] ω := by
+                congr 1; ext ω'; ring
+          _ = (a i : ℝ) • μ[ fun ω' => (A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω := by
+                -- Apply condExp_smul to pull out the scalar
+                rw [condExp_smul (a i)]
+                rfl
+          _ = a i * μ[ fun ω' => (A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω := by
+                simp [smul_eq_mul]
+          _ = a i * (μ[ (A i).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) := by
+                -- Apply condIndep_indicator for this specific A i
+                congr 1
+                -- Get the preimage Ai for this A i
+                obtain ⟨Ai, hAi_meas, hAi_eq⟩ := hA_preimage i hi
+                rw [hAi_eq]
+                -- Now apply condIndep_indicator
+                have h_factor := condIndep_indicator Ai B hAi_meas hB
+                rw [← h_factor]
+                rfl
+
+      -- Algebraic: factor out μ[(Z⁻¹B).indicator|W] from the sum
+      have step3 : (fun ω => ∑ i ∈ s, (a i * (μ[ (A i).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)))
+                 =ᵐ[μ] fun ω => (∑ i ∈ s, a i * μ[ (A i).indicator 1 | mW ] ω) * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
+        filter_upwards with ω
+        rw [← Finset.sum_mul]
+        congr 1 with i
+        ring
+
+      -- RHS: Apply condExp_finset_sum.symm on the Y side
+      have step4 : (fun ω => ∑ i ∈ s, μ[ fun ω' => a i * (A i).indicator 1 ω' | mW ] ω)
+                 =ᵐ[μ] μ[ fun ω => ∑ i ∈ s, a i * (A i).indicator 1 ω | mW ] := by
+        convert (condExp_finset_sum h_int_Y_terms mW).symm using 2
+        ext ω
+        rfl
+
+      have step5 : (fun ω => (∑ i ∈ s, a i * μ[ (A i).indicator 1 | mW ] ω) * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
+                 =ᵐ[μ] fun ω => μ[ fun ω' => ∑ i ∈ s, a i * (A i).indicator 1 ω' | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
+        refine Filter.EventuallyEq.mul step4 (Filter.EventuallyEq.refl _ _)
+
+      -- Chain all steps together
+      calc μ[ (fun ω => ∑ i ∈ s, a i * (A i).indicator 1 ω) * (Z ⁻¹' B).indicator 1 | mW ]
+          = μ[ fun ω => ∑ i ∈ s, (a i * (A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω) | mW ] := congr_arg _ h_distrib
+        _ =ᵐ[μ] fun ω => ∑ i ∈ s, μ[ fun ω' => a i * (A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω := step1
+        _ =ᵐ[μ] fun ω => ∑ i ∈ s, (a i * (μ[ (A i).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)) := step2
+        _ =ᵐ[μ] fun ω => (∑ i ∈ s, a i * μ[ (A i).indicator 1 | mW ] ω) * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := step3
+        _ =ᵐ[μ] fun ω => μ[ fun ω' => ∑ i ∈ s, a i * (A i).indicator 1 ω' | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := step5
+        _ =ᵐ[μ] μ[ fun ω => ∑ i ∈ s, a i * (A i).indicator 1 ω | mW ] * μ[ (Z ⁻¹' B).indicator 1 | mW ] := by rfl
 
     -- ** STAGE 3: General Integrable Functions **
     -- For general integrable f : βY → ℝ:
