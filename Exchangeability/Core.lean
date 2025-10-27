@@ -104,7 +104,7 @@ omit [MeasurableSpace α] in
 @[simp]
 lemma prefixCylinder_univ {n : ℕ} :
     prefixCylinder (α:=α) (Set.univ : Set (Fin n → α)) = (Set.univ) := by
-  ext x; simp [prefixCylinder]
+  simp [prefixCylinder]
 
 omit [MeasurableSpace α] in
 @[simp]
