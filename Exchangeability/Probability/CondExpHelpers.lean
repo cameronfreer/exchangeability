@@ -566,10 +566,18 @@ theorem condExp_project_of_condIndepFun
 
       have step5 : (fun ω => (∑ i ∈ s, a i * μ[ (A i).indicator 1 | mW ] ω) * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
                  =ᵐ[μ] fun ω => μ[ fun ω' => ∑ i ∈ s, a i * (A i).indicator 1 ω' | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
-        -- The key observation: by step4, we can go from ∑ μ[...] to μ[∑ ...]
-        -- But we need to connect a i * μ[...] with μ[a i * ...]
-        -- This was already done in step2! We can reuse that pattern.
-        sorry
+        -- Approach 1 WORKED! Use condExp_smul with explicit cast
+        have h_factor : ∀ i ∈ s, (fun ω => a i * μ[ (A i).indicator 1 | mW ] ω) =ᵐ[μ]
+                                  μ[ fun ω' => a i * (A i).indicator 1 ω' | mW ] := by
+          intro i hi
+          exact (condExp_smul (a i) ((A i).indicator (1 : Ω → ℝ)) mW).symm
+        -- Combine using finset_sum_ae_eq
+        have h_sum_eq : (fun ω => ∑ i ∈ s, a i * μ[ (A i).indicator 1 | mW ] ω) =ᵐ[μ]
+                        (fun ω => ∑ i ∈ s, μ[ fun ω' => a i * (A i).indicator 1 ω' | mW ] ω) :=
+          @finset_sum_ae_eq Ω βY ℝ mΩ μ _ s _ _ h_factor
+        -- Apply step4 to get final form
+        filter_upwards [h_sum_eq, step4] with ω h_sum_ω h_step4_ω
+        rw [h_sum_ω, h_step4_ω]
 
       -- Chain all steps together
       calc μ[ (fun ω => ∑ i ∈ s, a i * (A i).indicator 1 ω) * (Z ⁻¹' B).indicator 1 | mW ]
