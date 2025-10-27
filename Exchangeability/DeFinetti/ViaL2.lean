@@ -2260,11 +2260,22 @@ lemma kallenberg_L2_bound
           -- Supremum reindexing via enum: ⨆ k : Fin n, |p' k - q' k| = s.sup' hs fun i => |p i - q i|
           congr 1
           simp only [p', q']
-          -- TODO: Prove supremum reindexing using enum bijection
-          -- Strategy: Use Finset.sup'_bij or le_antisymm with:
-          -- - Forward: ⨆ k ≤ s.sup' (for each k, (enum k).val ∈ s)
-          -- - Backward: s.sup' ≤ ⨆ k (for each i ∈ s, exists k via enum.symm)
-          sorry
+          -- Prove equality using le_antisymm
+          apply le_antisymm
+          · -- Forward: ⨆ k ≤ s.sup'
+            -- For each k, (enum k).val ∈ s, so |p (enum k).val - q (enum k).val| ≤ s.sup'
+            apply ciSup_le
+            intro k
+            apply Finset.le_sup'
+            exact (enum k).property
+          · -- Backward: s.sup' ≤ ⨆ k
+            -- For each i ∈ s, enum.symm ⟨i, hi⟩ gives k : Fin n with (enum k).val = i
+            apply Finset.sup'_le
+            intro i hi
+            have : i = (enum (enum.symm ⟨i, hi⟩)).val := by simp
+            rw [this]
+            exact le_ciSup (f := fun k => |(p ∘ Subtype.val ∘ enum) k - (q ∘ Subtype.val ∘ enum) k|)
+              (bddAbove_range _) (enum.symm ⟨i, hi⟩)
 
 /-- **Cesàro averages converge in L² to a tail-measurable limit.**
 
