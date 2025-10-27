@@ -32,8 +32,7 @@ private lemma ae_ball_range_mpr
   (h : ∀ k ∈ Finset.range n, ∀ᵐ ω ∂ μ, P k ω) :
   ∀ᵐ ω ∂ μ, ∀ k ∈ Finset.range n, P k ω := by
   have hcount : (Finset.range n : Set ℕ).Countable := Finset.countable_toSet _
-  simpa using
-    (MeasureTheory.ae_ball_iff (μ := μ) (s := (Finset.range n : Set ℕ)) hcount).mpr h
+  simpa using (MeasureTheory.ae_ball_iff hcount).mpr h
 
 /-- A clean way to go from a uniform `O(1/(n+1))` AE-bound on `|A n - B n|`
     to `∫ |A n - B n| → 0` (works on any finite measure; if `μ` is prob., it simplifies). -/
@@ -55,9 +54,9 @@ private lemma tendsto_integral_abs_diff_of_o1
       ((tendsto_const_div_atTop_nhds_zero_nat C).const_mul (μ Set.univ).toReal)
   -- 0 ≤ left ≤ right → 0
   have h_nonneg : ∀ᵐ n ∂ atTop, 0 ≤ ∫ ω, |A n ω - B n ω| ∂ μ :=
-    Filter.eventually_of_forall (fun _ =>
+    eventually_of_forall (fun _ =>
       integral_nonneg_of_ae (ae_of_all _ (fun _ => abs_nonneg _)))
-  exact squeeze_zero h_nonneg (Filter.eventually_of_forall h_mono) h_right
+  exact squeeze_zero h_nonneg (eventually_of_forall h_mono) h_right
 
 /-- Handy arithmetic fact repeatedly needed: split `k ≤ n` into cases. -/
 private lemma le_eq_or_lt {k n : ℕ} (hk : k ≤ n) : k = n ∨ k < n :=
