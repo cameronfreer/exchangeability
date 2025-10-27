@@ -586,8 +586,8 @@ lemma condExp_L1_lipschitz [IsFiniteMeasure μ]
     ∫ ω, |μ[f|m] ω - μ[g|m] ω| ∂μ ≤ ∫ ω, |f ω - g ω| ∂μ := by
   -- Use the mathlib lemma integral_abs_condExp_le which gives ∫|E[f|m]| ≤ ∫|f|
   -- Apply to f - g to get the result
-  have h_linear : ∀ᵐ ω ∂μ, μ[f|m] ω - μ[g|m] ω = μ[(f - g)|m] ω := by
-    exact EventuallyEq.symm (condExp_sub hf hg m)
+  have h_linear : ∀ᵐ ω ∂μ, μ[f|m] ω - μ[g|m] ω = μ[(f - g)|m] ω :=
+    EventuallyEq.symm (condExp_sub hf hg m)
 
   calc ∫ ω, |μ[f|m] ω - μ[g|m] ω| ∂μ
       = ∫ ω, |μ[(f - g)|m] ω| ∂μ := by
