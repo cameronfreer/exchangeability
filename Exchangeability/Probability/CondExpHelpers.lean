@@ -449,13 +449,14 @@ theorem condExp_project_of_condIndepFun
       -- For each term: apply condIndep_indicator and condExp_smul to factor
       have step2 : (fun ω => ∑ i ∈ s, μ[ fun ω' => a i * (A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω)
                  =ᵐ[μ] fun ω => ∑ i ∈ s, (a i * (μ[ (A i).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)) := by
-        -- For each i in the sum: use condExp_smul to pull out scalar, then condIndep_indicator
-        -- Work pointwise using filter_upwards
-        filter_upwards with ω
-        congr 1
-        ext i : 1
-        -- For this specific i: show μ[a i * ind * ind|W] ω = a i * (μ[ind|W] ω * μ[ind|W] ω)
-        sorry -- TODO: Apply condExp_smul + condIndep_indicator for term i
+        -- For each term: apply condIndep_indicator + condExp_smul
+        -- TODO: This requires showing that for each i:
+        --   μ[a i * ind1 * ind2|W] ω = a i * (μ[ind1|W] ω * μ[ind2|W] ω)
+        -- Strategy:
+        --   1. Use condIndep_indicator to factor ind1 * ind2
+        --   2. Use condExp_smul to handle the scalar a i
+        --   3. Combine all terms using filter_upwards
+        sorry
 
       -- Algebraic: factor out μ[(Z⁻¹B).indicator|W] from the sum
       have step3 : (fun ω => ∑ i ∈ s, (a i * (μ[ (A i).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)))
@@ -484,9 +485,10 @@ theorem condExp_project_of_condIndepFun
 
       have step5 : (fun ω => (∑ i ∈ s, a i * μ[ (A i).indicator 1 | mW ] ω) * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
                  =ᵐ[μ] fun ω => μ[ fun ω' => ∑ i ∈ s, a i * (A i).indicator 1 ω' | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
-        -- Need to first apply condExp_smul to each term, then use step4
-        -- TODO: Complete this by showing a i * μ[(A i).indicator 1|mW] ω = μ[a i * (A i).indicator 1|mW] ω
-        --       for each i (using condExp_smul), then apply step4
+        -- Apply condExp_smul to each term, then combine with step4
+        -- TODO: Show for each i: a i * μ[ind|W] ω = μ[a i * ind|W] ω (using condExp_smul.symm)
+        --       Then sum these ae equalities and multiply by indicator term
+        --       Finally apply step4 to convert sum of condExps to condExp of sum
         sorry
 
       -- Chain all steps together
