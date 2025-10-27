@@ -419,9 +419,6 @@ theorem condExp_project_of_condIndepFun
                       = fun ω => ∑ i ∈ s, (a i * (A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω) := by
         ext ω
         simp only [Pi.mul_apply, Finset.sum_mul]
-        congr 1
-        ext i
-        ring
 
       -- Step 2: Apply linearity - pull sum outside conditional expectation on LHS
       calc μ[ (fun ω => ∑ i ∈ s, a i * (A i).indicator 1 ω) * (Z ⁻¹' B).indicator 1 | mW ]
@@ -429,24 +426,51 @@ theorem condExp_project_of_condIndepFun
               rw [h_distrib]
         _ =ᵐ[μ] fun ω => ∑ i ∈ s, μ[ fun ω' => a i * (A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω := by
               -- Use condExp_finset_sum to pull sum outside
-              sorry -- Need to verify integrability of each term
+              -- Indicators are bounded, hence integrable (on probability space)
+              have h_int_terms : ∀ i ∈ s, Integrable (fun ω => a i * (A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω) μ := by
+                intro i hi
+                -- Product of constants and indicators on probability space is integrable
+                simp only [mul_comm (a i), mul_assoc]
+                apply Integrable.const_mul
+                apply Integrable.indicator
+                · exact integrable_const 1
+                · exact hA_meas i hi
+              exact condExp_finset_sum (fun i => fun ω => a i * (A i).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω) h_int_terms
         _ =ᵐ[μ] fun ω => ∑ i ∈ s, (a i * (μ[ (A i).indicator 1 * (Z ⁻¹' B).indicator 1 | mW ] ω)) := by
               -- Pull out scalar aᵢ using condExp_smul
-              sorry -- ~10 lines
+              filter_upwards with ω
+              congr 1 with i
+              rw [show (fun ω' => a i * (A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω')
+                    = (a i : ℝ) • (fun ω' => (A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω') by
+                  ext ω'; simp [smul_eq_mul]; ring]
+              rw [condExp_smul (a i)]
+              simp [smul_eq_mul]
         _ =ᵐ[μ] fun ω => ∑ i ∈ s, (a i * (μ[ (A i).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)) := by
               -- Apply condIndep_indicator to each term
-              sorry -- Need to apply to each i ∈ s
+              filter_upwards with ω
+              congr 1 with i
+              congr 1
+              -- Get the preimage Ai for this A i
+              obtain ⟨Ai, hAi_meas, hAi_eq⟩ := hA_preimage i hi
+              rw [hAi_eq]
+              -- Now apply condIndep_indicator
+              have := condIndep_indicator Ai B hAi_meas hB
+              exact this.symm ω
         _ =ᵐ[μ] fun ω => (∑ i ∈ s, a i * μ[ (A i).indicator 1 | mW ] ω) * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
               -- Factor out μ[(Z⁻¹B).indicator 1|W] from the sum
-              ext ω
+              filter_upwards with ω
               rw [Finset.sum_mul]
-              congr 1
-              ext i
-              ring
         _ =ᵐ[μ] μ[ fun ω => ∑ i ∈ s, a i * (A i).indicator 1 ω | mW ] * μ[ (Z ⁻¹' B).indicator 1 | mW ] := by
-              -- RHS: apply linearity
+              -- RHS: apply linearity (condExp_finset_sum in reverse)
               congr 1
-              sorry -- Apply condExp_finset_sum to RHS
+              have h_int_indicators : ∀ i ∈ s, Integrable (fun ω => a i * (A i).indicator 1 ω) μ := by
+                intro i hi
+                simp only [mul_comm (a i)]
+                apply Integrable.const_mul
+                apply Integrable.indicator
+                · exact integrable_const 1
+                · exact hA_meas i hi
+              exact (condExp_finset_sum (fun i ω => a i * (A i).indicator 1 ω) h_int_indicators).symm
 
     -- ** STAGE 3: General Integrable Functions **
     -- For general integrable f : βY → ℝ:
