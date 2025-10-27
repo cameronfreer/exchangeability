@@ -1577,11 +1577,16 @@ theorem subseq_ae_of_L1
       · exact hN n hn
       · exact integral_nonneg (fun ω => abs_nonneg _)
 
-    -- Establish integrability: measurable + bounded integral on finite measure => integrable
-    -- This follows from the fact that alpha n and alpha_inf come from L² functions
+    -- Establish integrability: measurable + finite integral => integrable
+    -- The L¹ convergence hypothesis tells us integrals are finite
     have h_integrable : ∀ n, Integrable (fun ω => alpha n ω - alpha_inf ω) μ := by
       intro n
-      sorry  -- TODO: Need to track back to where alpha comes from (it's from L² functions)
+      -- L¹ convergence means ∫|alpha n - alpha_inf| < ε for large n
+      -- This integral being finite (and convergent to 0) implies integrability
+      -- Key API: hasFiniteIntegral_norm_iff for real functions
+      sorry  -- TODO: Complete integrability proof
+      -- Need: Integrable.of_integral_norm_lt or similar
+      -- The hypothesis h_L1_conv gives us that the integral is finite
 
     -- Now transfer convergence via eLpNorm_one_eq_integral_abs and continuity of ofReal
     have : Tendsto (fun n => ENNReal.ofReal (∫ ω, |alpha n ω - alpha_inf ω| ∂μ)) atTop (𝓝 0) := by
