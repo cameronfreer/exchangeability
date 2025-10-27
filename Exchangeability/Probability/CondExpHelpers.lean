@@ -284,16 +284,15 @@ theorem condExp_project_of_condIndepFun
       μ[ (Y ⁻¹' A).indicator (1 : Ω → ℝ) | mW ] * μ[ (Z ⁻¹' B).indicator (1 : Ω → ℝ) | mW ] := by
     intro A B hA hB
     -- Use the CondIndepFun characterization
-    have h_ci := condIndepFun_iff_condExp_inter_preimage_eq_mul hY hZ
+    have h_ci := @condIndepFun_iff_condExp_inter_preimage_eq_mul Ω βY βZ mW mΩ _ hmW_le μ
+      (IsProbabilityMeasure.toIsFiniteMeasure) Y Z _ _ hY hZ
     rw [h_ci] at hCI
     specialize hCI A B hA hB
     -- Key: (Y ⁻¹' A).indicator 1 * (Z ⁻¹' B).indicator 1 = (Y ⁻¹' A ∩ Z ⁻¹' B).indicator 1
     conv_lhs => arg 1; ext x; rw [← Set.inter_indicator_one (s := Y ⁻¹' A) (t := Z ⁻¹' B)]
-    -- Now apply the CondIndepFun characterization
-    -- Note: The notation μ⟦s | m⟧ is defined as μ[s.indicator (fun _ => (1 : ℝ)) | m]
+    -- Now apply the CondIndepFun characterization. The convert automatically handles
+    -- the notation matching between `1` and `fun ω => 1`
     convert hCI using 1
-    -- The goals should now match by definition of the notation
-    sorry
 
   have condIndep_factor : ∀ (B : Set βZ) (hB : MeasurableSet B),
       μ[ (f ∘ Y) * (Z ⁻¹' B).indicator (1 : Ω → ℝ) | mW ] =ᵐ[μ]
