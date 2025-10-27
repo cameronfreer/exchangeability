@@ -3703,6 +3703,16 @@ convert between `Lp ℝ 2 μ` and `MemLp _ 2 μ` representations. The `Lp.memℒ
 doesn't exist in the current mathlib API. -/
 private lemma condexpL2_ae_eq_condExp (f : Lp ℝ 2 μ) :
     (condexpL2 (μ := μ) f : Ω[α] → ℝ) =ᵐ[μ] μ[f | shiftInvariantSigma] := by
+  -- Mathlib has MeasureTheory.MemLp.condExpL2_ae_eq_condExp which states:
+  --   condExpL2 E 𝕜 hm hf.toLp =ᵐ[μ] μ[f|m]
+  -- where hf : MemLp f 2 μ (function with Lp membership proof).
+  --
+  -- But we have f : Lp ℝ 2 μ (quotient type), and need to extract:
+  -- 1. The representative function (f : α → ℝ)
+  -- 2. The MemLp proof for that representative
+  --
+  -- The missing API lemma is Lp.memℒp : ∀ (f : Lp E p μ), MemLp (f : α → E) p μ
+  -- This doesn't exist in current mathlib, blocking the proof.
   sorry
 
 -- Helper lemmas for Step 3a: a.e. equality through measure-preserving maps
