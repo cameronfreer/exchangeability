@@ -430,16 +430,16 @@ theorem condExp_project_of_condIndepFun
         have h_prod_eq : (fun ω => (A i).indicator (1 : Ω → ℝ) ω * (Z ⁻¹' B).indicator (1 : Ω → ℝ) ω) =
                          (A i ∩ Z ⁻¹' B).indicator (1 : Ω → ℝ) := by
           ext ω
-          simp [Set.indicator_apply, Set.mem_inter_iff]
-          split_ifs <;> norm_num
+          rw [Set.indicator_apply, Set.indicator_apply, Set.indicator_apply]
+          split_ifs with h1 h2 h3 <;> simp [Set.mem_inter_iff] at * <;> norm_num <;> tauto
         -- Intersection is measurable (need to convert to mΩ)
         have hA_meas_mΩ : MeasurableSet[mΩ] (A i) := hmZW_le _ (hA_meas i hi)
-        have hB_meas_mΩ : MeasurableSet[mΩ] (Z ⁻¹' B) := hmZ_le _ (hZ.comap_le hB)
-        have h_inter_meas : MeasurableSet[mΩ] (A i ∩ Z ⁻¹' B) := hA_meas_mΩ.inter hB_meas_mΩ
+        have hB_preimage_meas : MeasurableSet[mΩ] (Z ⁻¹' B) := hmZ_le _ (hZ hB)
+        have h_inter_meas : MeasurableSet[mΩ] (A i ∩ Z ⁻¹' B) := hA_meas_mΩ.inter hB_preimage_meas
         -- Indicator of measurable set is integrable
         have h_ind : Integrable ((A i ∩ Z ⁻¹' B).indicator (1 : Ω → ℝ)) μ := h_one.indicator h_inter_meas
-        -- Rewrite and multiply by constant
-        rw [h_prod_eq]
+        -- First rewrite the product, then multiply by constant
+        conv_lhs => arg 1; ext ω; rw [mul_assoc, ← h_prod_eq]
         exact h_ind.const_mul (a i)
 
       -- Integrability of each term a i * indicator_Ai on Y side
@@ -506,11 +506,11 @@ theorem condExp_project_of_condIndepFun
 
       have step5 : (fun ω => (∑ i ∈ s, a i * μ[ (A i).indicator 1 | mW ] ω) * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
                  =ᵐ[μ] fun ω => μ[ fun ω' => ∑ i ∈ s, a i * (A i).indicator 1 ω' | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
-        -- Apply condExp_smul to each term, then combine with step4
-        -- TODO: Show for each i: a i * μ[ind|W] ω = μ[a i * ind|W] ω (using condExp_smul.symm)
-        --       Then sum these ae equalities and multiply by indicator term
-        --       Finally apply step4 to convert sum of condExps to condExp of sum
-        sorry
+        -- For ℝ, condExp_smul says: μ[c • f|m] = c • μ[f|m], where c • x = c * x for reals
+        -- So: μ[a i * ind|W] = a i * μ[ind|W]
+        -- Therefore: ∑ (a i * μ[ind|W]) matches ∑ μ[a i * ind|W], which step4 converts to μ[∑...|W]
+        -- Multiply both sides by indicator term to complete
+        exact step4.mul (Filter.EventuallyEq.refl _ _)
 
       -- Chain all steps together
       calc μ[ (fun ω => ∑ i ∈ s, a i * (A i).indicator 1 ω) * (Z ⁻¹' B).indicator 1 | mW ]
