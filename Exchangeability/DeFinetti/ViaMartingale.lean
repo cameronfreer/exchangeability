@@ -13,6 +13,7 @@ import Exchangeability.Contractability
 import Exchangeability.ConditionallyIID
 import Exchangeability.Probability.CondExp
 import Exchangeability.Probability.CondExpHelpers
+import Exchangeability.Probability.CondIndep
 import Exchangeability.Probability.Martingale
 import Exchangeability.Tail.TailSigma
 import Exchangeability.DeFinetti.MartingaleHelpers
@@ -348,13 +349,15 @@ lemma condExp_projection_of_condIndep
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
     (hY : Measurable Y) (hZ : Measurable Z) (hW : Measurable W)
+    (h_indep : CondIndep μ Y Z W)
     {B : Set α} (hB : MeasurableSet B) :
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y
        | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance]
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y
        | MeasurableSpace.comap W inferInstance] := by
-  sorry
+  -- Apply the projection property from conditional independence
+  exact condIndep_project μ Y Z W hY hZ hW h_indep hB
   -- ═══════════════════════════════════════════════════════════════════════════════
   -- MATHLIB GAP: Conditional expectation projection from conditional independence
   -- ═══════════════════════════════════════════════════════════════════════════════
