@@ -7,6 +7,7 @@ import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Unique
 import Mathlib.MeasureTheory.Function.AEEqOfIntegral
 import Mathlib.Probability.ConditionalExpectation
+import Mathlib.Probability.Independence.Conditional
 
 /-!
 # Helper lemmas for conditional expectation
@@ -195,6 +196,62 @@ lemma condExp_project_of_le {α : Type*} (m m' m₀ : MeasurableSpace α) {μ : 
     · exact stronglyMeasurable_condExp.aestronglyMeasurable
 
   exact hYproj
+
+/-!
+## Conditional expectation projection under conditional independence
+-/
+
+/-- **Helper: set integral equals integral of indicator product.** -/
+private lemma setIntegral_eq_integral_indicator {α : Type*} [MeasurableSpace α] {μ : Measure α}
+    {s : Set α} (hs : MeasurableSet s) {f : α → ℝ} :
+    ∫ x in s, f x ∂μ = ∫ x, f x * (s.indicator (1 : α → ℝ)) x ∂μ := by
+  sorry  -- TODO: Standard rewriting with indicator - mechanical
+
+/-- **Projection under conditional independence (rectangle + π-λ approach).**
+
+If Y ⊥⊥_W Z (conditional independence), then for any integrable f:
+  E[f(Y) | σ(Z,W)] = E[f(Y) | σ(W)] a.e.
+
+**Key insight:** We prove equality by showing both sides have matching integrals on all
+σ(Z,W)-measurable sets, using:
+1. Rectangle identity on S ∩ Z^{-1}(B) for S ∈ σ(W), B ∈ B_Z
+2. π-λ theorem to extend to all of σ(Z,W)
+3. Uniqueness of conditional expectation
+
+**This bypasses the disintegration bottleneck:** We never prove E[f(Y)|σ(Z,W)] is σ(W)-measurable
+directly. Instead, we show it equals E[f(Y)|σ(W)] (which is already σ(W)-measurable), so
+measurability comes for free from uniqueness.
+-/
+theorem condExp_project_of_condIndepFun
+    {Ω βY βZ βW : Type*}
+    {mΩ : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ]
+    [MeasurableSpace βY] [MeasurableSpace βZ] [MeasurableSpace βW]
+    [StandardBorelSpace Ω] [StandardBorelSpace βY] [StandardBorelSpace βZ] [StandardBorelSpace βW]
+    [Nonempty βY] [Nonempty βZ] [Nonempty βW]
+    {Y : Ω → βY} {Z : Ω → βZ} {W : Ω → βW}
+    (hY : Measurable Y) (hZ : Measurable Z) (hW : Measurable W)
+    (hCI : ProbabilityTheory.CondIndepFun (MeasurableSpace.comap W inferInstance)
+                                           (by intro s hs; obtain ⟨t, ht, rfl⟩ := hs; exact hW ht)
+                                           Y Z μ)
+    {f : βY → ℝ} (hf_int : Integrable (f ∘ Y) μ) :
+    μ[ f ∘ Y | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance ]
+      =ᵐ[μ]
+    μ[ f ∘ Y | MeasurableSpace.comap W inferInstance ] := by
+  -- Shorthand
+  set mW  := MeasurableSpace.comap W inferInstance
+  set mZ  := MeasurableSpace.comap Z inferInstance
+  set mZW := mZ ⊔ mW with hmZW_def
+
+  have hmW_le : mW ≤ mΩ := by intro s hs; obtain ⟨t, ht, rfl⟩ := hs; exact hW ht
+  have hmZ_le : mZ ≤ mΩ := by intro s hs; obtain ⟨t, ht, rfl⟩ := hs; exact hZ ht
+  have hmZW_le : mZW ≤ mΩ := sup_le hmZ_le hmW_le
+  have hmW_le_mZW : mW ≤ mZW := le_sup_right
+  have hmZ_le_mZW : mZ ≤ mZW := le_sup_left
+
+  -- Define g := E[f(Y)|σ(W)]
+  set g := μ[ f ∘ Y | mW ] with hg_def
+
+  sorry  -- Full implementation to follow
 
 end MeasureTheory
 
