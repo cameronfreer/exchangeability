@@ -495,27 +495,46 @@ theorem condExp_project_of_condIndepFun
       -- For each term: apply condIndep_indicator and condExp_smul to factor
       have step2 : (fun ω => ∑ i ∈ s, μ[ fun ω' => a i * (A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω)
                  =ᵐ[μ] fun ω => ∑ i ∈ s, (a i * (μ[ (A i).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)) := by
-        -- **TODO: Technical blocker - typeclass inference issues**
-        --
-        -- Strategy (from user):
-        -- 1. For each i ∈ s, prove:
-        --    μ[fun ω' => a i * (A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω'|mW] =ᵐ[μ]
-        --    fun ω => a i * (μ[(A i).indicator 1|mW] ω * μ[(Z ⁻¹' B).indicator 1|mW] ω)
-        --    using: condExp_smul (for scalar a i) + condIndep_indicator (for factorization)
-        --
-        -- 2. Apply finset_sum_ae_eq to combine all term equalities
-        --
-        -- **Current obstacle:** Typeclass instance synthesis fails when trying to apply
-        -- finset_sum_ae_eq or condExp_smul. Lean cannot unify the MeasurableSpace and
-        -- NormedSpace instances correctly, possibly due to the sub-σ-algebra mW vs mΩ.
-        --
-        -- **Possible solutions:**
-        -- - Use more explicit type annotations
-        -- - Find alternative lemmas that avoid these typeclass issues
-        -- - Prove finset_sum_ae_eq application manually without relying on typeclass inference
-        --
-        -- This is the ONLY remaining sorry in step2 logic. Once resolved, step2 is complete.
-        sorry
+        -- Build the per-term ae equalities
+        have h_all : ∀ i ∈ s,
+            (fun ω => μ[ fun ω' => a i * (A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω) =ᵐ[μ]
+            (fun ω => a i * (μ[ (A i).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)) := by
+          intro i hi
+          -- Extract that A i is a Y-preimage
+          obtain ⟨Ai, hAi_meas, hAi_eq⟩ := hA_preimage i hi
+          rw [hAi_eq]
+          -- Factor using condIndep_indicator
+          have h_factor : μ[ (Y ⁻¹' Ai).indicator 1 * (Z ⁻¹' B).indicator 1 | mW ] =ᵐ[μ]
+                          μ[ (Y ⁻¹' Ai).indicator 1 | mW ] * μ[ (Z ⁻¹' B).indicator 1 | mW ] :=
+            condIndep_indicator Ai B hAi_meas hB
+          -- Factor out scalar using condExp_smul
+          have h_smul : μ[ fun ω' => a i * ((Y ⁻¹' Ai).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω') | mW ] =ᵐ[μ]
+                        a i • μ[ fun ω' => (Y ⁻¹' Ai).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] :=
+            condExp_smul (a i) (fun ω' => (Y ⁻¹' Ai).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω') mW
+          -- Combine: on the ae set where both hold, compute the result
+          filter_upwards [h_smul, h_factor] with ω h_smul_ω h_factor_ω
+          -- Massage the LHS to match h_smul_ω's LHS
+          show μ[ fun ω' => a i * (Y ⁻¹' Ai).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω =
+               a i * (μ[ (Y ⁻¹' Ai).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
+          -- Rewrite to match h_smul_ω
+          have : (fun ω' => a i * (Y ⁻¹' Ai).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω') =
+                 (fun ω' => a i * ((Y ⁻¹' Ai).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω')) := by ext; ring
+          rw [this, h_smul_ω]
+          -- After h_smul_ω, we have: (a i • μ[...])(ω) = desired RHS
+          -- Convert smul to multiplication
+          show a i * μ[ fun ω' => (Y ⁻¹' Ai).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω =
+               a i * (μ[ (Y ⁻¹' Ai).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
+          -- The function form is the same as point-free form
+          change a i * μ[ (Y ⁻¹' Ai).indicator 1 * (Z ⁻¹' B).indicator 1 | mW ] ω =
+                 a i * (μ[ (Y ⁻¹' Ai).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
+          -- Apply h_factor_ω
+          rw [h_factor_ω]
+          rfl
+        -- Apply finset_sum_ae_eq to combine all term equalities
+        exact @finset_sum_ae_eq Ω βY ℝ mΩ μ _ s
+          (fun i ω => μ[ fun ω' => a i * (A i).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω)
+          (fun i ω => a i * (μ[ (A i).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω))
+          h_all
 
       -- Algebraic: factor out μ[(Z⁻¹B).indicator|W] from the sum
       have step3 : (fun ω => ∑ i ∈ s, (a i * (μ[ (A i).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)))
