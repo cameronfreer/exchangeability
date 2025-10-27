@@ -3689,24 +3689,35 @@ variable {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace �
 private lemma condexpL2_ae_eq_condExp (f : Lp ℝ 2 μ) :
     (condexpL2 (μ := μ) f : Ω[α] → ℝ) =ᵐ[μ] μ[f | shiftInvariantSigma] := by
   -- condexpL2 is defined as composition of MeasureTheory.condExpL2 with subtype inclusion
-  -- Use mathlib's MemLp.condExpL2_ae_eq_condExp which connects condExpL2 to condExp
+  -- The key is that subtypeL ∘ condExpL2 has the same a.e. class as condExpL2
 
-  -- First, get that the coercion of f is in MemLp
-  have hf_memLp : MemLp (f : Ω[α] → ℝ) 2 μ := Lp.memℒp f
+  -- Use that mathlib's condExpL2 equals condExp a.e.
+  -- For f : Lp ℝ 2 μ, we have f.memℒp : MemLp (f : Ω[α] → ℝ) 2 μ
+  have h_mathlib := (Lp.memℒp f).condExpL2_ae_eq_condExp shiftInvariantSigma_le
 
-  -- Apply mathlib's lemma
-  have h := hf_memLp.condExpL2_ae_eq_condExp shiftInvariantSigma_le
+  -- h_mathlib says: condExpL2 applied to (Lp.memℒp f).toLp equals condExp a.e.
+  -- But (Lp.memℒp f).toLp and f represent the same Lp element
 
-  -- h says: condExpL2 ℝ ℝ shiftInvariantSigma_le hf_memLp.toLp =ᵐ μ[↑f|shiftInvariantSigma]
-  -- We need to show: condexpL2 f =ᵐ μ[↑f|shiftInvariantSigma]
-
-  -- Key: hf_memLp.toLp should be the same as f (same Lp equivalence class)
-  have : hf_memLp.toLp = f := by
-    sorry  -- This requires showing Lp extensionality
-
-  -- Now use this to transfer
+  -- The composition with subtypeL preserves the a.e. class
   simp only [condexpL2]
-  sorry  -- Need to connect our wrapped version to mathlib's
+
+  -- The key observation: (Lp.memℒp f).toLp = f as Lp elements
+  -- because toLp ∘ memℒp is the identity on Lp
+  have hf_eq : (Lp.memℒp f).toLp = f := by
+    -- This is the round-trip property: going from Lp to MemLp and back is identity
+    rfl
+
+  -- Now rewrite using this equality
+  rw [← hf_eq]
+
+  -- subtypeL ∘ condExpL2 applied to f equals condExpL2 applied to f (as coercions)
+  have : ((lpMeas ℝ ℝ shiftInvariantSigma 2 μ).subtypeL.comp
+          (MeasureTheory.condExpL2 ℝ ℝ shiftInvariantSigma_le) f : Ω[α] → ℝ) =ᵐ[μ]
+         (MeasureTheory.condExpL2 ℝ ℝ shiftInvariantSigma_le f : Ω[α] → ℝ) := by
+    -- subtypeL is the inclusion, so this is definitional
+    rfl
+
+  exact this.trans h_mathlib
 
 -- Helper lemmas for Step 3a: a.e. equality through measure-preserving maps
 --
