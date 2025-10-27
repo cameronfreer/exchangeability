@@ -2042,17 +2042,36 @@ lemma kallenberg_L2_bound
   -- Convert the bound back to the original variables Z, p, q, s
   calc ∫ ω, (s.sum fun i => (p i - q i) * Z i ω) ^ 2 ∂μ
       = ∫ ω, (∑ k : Fin n, (p' k - q' k) * ξ k ω) ^ 2 ∂μ := by
-          sorry -- TODO: Reindex sum from s to Fin n via enum
+          -- Reindex sum from s to Fin n via enum bijection
+          congr 1; ext ω
+          -- Show: s.sum (fun i => (p i - q i) * Z i ω) = ∑ k : Fin n, (p' k - q' k) * ξ k ω
+          simp only [p', q', ξ]
+          -- Now: s.sum (fun i => (p i - q i) * Z i ω) = ∑ k : Fin n, (p (enum k).val - q (enum k).val) * Z (enum k).val ω
+          symm
+          rw [Finset.sum_bij'
+            (fun (k : Fin n) (_ : k ∈ Finset.univ) => (enum k).val)
+            (fun (i : ℕ) (hi : i ∈ s) => enum.symm ⟨i, hi⟩)]
+          · intro k _; exact (enum k).property
+          · intro i hi; simp
+          · intro i hi; simp
+          · intro k hk; simp [OrderIso.symm_apply_apply]
+          · intro i hi; simp
     _ = ∫ ω, (∑ k : Fin n, p' k * ξ k ω - ∑ k : Fin n, q' k * ξ k ω) ^ 2 ∂μ := by
-          congr 1; ext ω; sorry -- TODO: Expand (p'-q') using Finset.sum_sub_distrib
+          congr 1; ext ω
+          simp only [Finset.sum_sub_distrib, sub_mul]
     _ ≤ 2 * (σSq ^ (1/2 : ℝ)) ^ 2 * (1 - ρ) * (⨆ k : Fin n, |p' k - q' k|) := h_bound
     _ = 2 * σSq * (1 - ρ) * (⨆ k : Fin n, |p' k - q' k|) := by
           congr 1
           rw [← Real.sqrt_eq_rpow, Real.sq_sqrt hσSq_nonneg]
     _ = (∫ ω, (Z 0 ω - Z 1 ω)^2 ∂μ) * (⨆ k : Fin n, |p' k - q' k|) := by
-          sorry -- TODO: Use h_diff_sq to substitute the value
+          rw [← h_diff_sq]
     _ = (∫ ω, (Z 0 ω - Z 1 ω)^2 ∂μ) * (s.sup' hs fun i => |p i - q i|) := by
-          sorry -- TODO: Supremum reindexing via enum
+          -- Supremum reindexing via enum: ⨆ k : Fin n, |p' k - q' k| = s.sup' hs fun i => |p i - q i|
+          congr 1
+          simp only [p', q']
+          sorry -- TODO: Prove supremum reindexing using enum bijection
+          -- Strategy: Show that sup over Fin n via (enum k).val equals sup over s
+          -- Can use Finset.sup'_image and the fact that enum is a bijection
 
 /-- **Cesàro averages converge in L² to a tail-measurable limit.**
 
