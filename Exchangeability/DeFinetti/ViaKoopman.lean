@@ -3773,7 +3773,7 @@ private lemma optionB_Step4a_L2_to_L1
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ)
     (fL2 : Lp ℝ 2 μ)
-    (hfL2_tendsto : Tendsto (birkhoffAverage ℝ (koopman shift hσ) _root_.id · fL2) atTop (𝓝[Lp ℝ 2 μ] condexpL2 (μ := μ) fL2))
+    (hfL2_tendsto : Tendsto (birkhoffAverage ℝ (koopman shift hσ) _root_.id · fL2) atTop (𝓝 (condexpL2 (μ := μ) fL2)))
     (B : ℕ → Ω[α] → ℝ)
     (Y : Ω[α] → ℝ)
     (hB_eq_birkhoff : ∀ n > 0, (fun ω => birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω) =ᵐ[μ] B n)
