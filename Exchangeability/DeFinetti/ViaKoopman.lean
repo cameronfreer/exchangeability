@@ -3879,11 +3879,13 @@ private lemma optionB_Step4b_AB_close
     have h_int_left  : Integrable (fun ω => |A n ω - B n ω|) μ := by
       sorry  -- TODO: bounded measurable functions are integrable on finite measure spaces
     -- Monotonicity of the integral under AE ≤
-    exact integral_mono_ae h_int_left h_int_right h_bd_ae
+    calc ∫ ω, |A n ω - B n ω| ∂μ
+        ≤ ∫ ω, 2 * Cg / (↑n + 1) ∂μ := integral_mono_ae h_int_left h_int_right h_bd_ae
+      _ = 2 * Cg / (n + 1) := by simp
 
   -- Done: squeeze to 0
   refine squeeze_zero
-    (ae_of_all _ (fun _ => integral_nonneg_of_ae (ae_of_all _ (fun _ => abs_nonneg _))))
+    (Eventually.of_forall (fun _ => integral_nonneg_of_ae (ae_of_all _ (fun _ => abs_nonneg _))))
     (eventually_atTop.2 ⟨1, by intro n hn; exact h_upper n hn⟩)
     (tendsto_const_div_atTop_nhds_zero_nat (2 * Cg))
 
@@ -3906,9 +3908,9 @@ private lemma optionB_Step4c_triangle
     sorry -- Triangle inequality via integration will be filled
   -- Combine the two convergences via squeeze theorem
   apply squeeze_zero
-  · exact ae_of_all _ (fun _ =>
+  · exact Eventually.of_forall (fun _ =>
       integral_nonneg_of_ae (ae_of_all _ (fun _ => abs_nonneg _)))
-  · exact ae_of_all _ h_triangle
+  · exact Eventually.of_forall h_triangle
   · simpa using Tendsto.add hA_B_close hB_L1_conv
 
 /-- **Option B bounded case implementation**: L¹ convergence for bounded functions.
