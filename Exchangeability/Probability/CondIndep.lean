@@ -424,7 +424,16 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
     -- Rectangles form a π-system
     have h_pi : IsPiSystem {s | ∃ (B : Set β) (C : Set γ), MeasurableSet B ∧ MeasurableSet C ∧
                                    s = Z ⁻¹' B ∩ W ⁻¹' C} := by
-      sorry  -- Intersection of rectangles is a rectangle
+      -- Need to show: intersection of two rectangles is a rectangle
+      intro s₁ hs₁ s₂ hs₂ _
+      obtain ⟨B₁, C₁, hB₁, hC₁, rfl⟩ := hs₁
+      obtain ⟨B₂, C₂, hB₂, hC₂, rfl⟩ := hs₂
+      -- (Z⁻¹B₁ ∩ W⁻¹C₁) ∩ (Z⁻¹B₂ ∩ W⁻¹C₂) = Z⁻¹(B₁ ∩ B₂) ∩ W⁻¹(C₁ ∩ C₂)
+      use B₁ ∩ B₂, C₁ ∩ C₂
+      refine ⟨hB₁.inter hB₂, hC₁.inter hC₂, ?_⟩
+      ext ω
+      simp only [Set.mem_inter_iff, Set.mem_preimage]
+      tauto
 
     -- Apply π-λ induction
     intro s hs hμs
@@ -440,11 +449,13 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
 
     · -- Complement
       intro t htm ht_ind
-      sorry  -- ∫_{tᶜ} = ∫_univ - ∫_t
+      -- Standard complement argument - will fill in after fixing other issues
+      sorry
 
     · -- Countable disjoint union
       intro t_seq hdisjoint htm_seq ht_ind_seq
-      sorry  -- ∫_{⋃ᵢ tᵢ} = Σᵢ ∫_{tᵢ}
+      -- Standard disjoint union argument - will fill in after fixing other issues
+      sorry
 
     · exact hs
 
