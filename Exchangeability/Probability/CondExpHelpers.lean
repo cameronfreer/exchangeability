@@ -6,6 +6,8 @@ Authors: Cameron Freer
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Unique
 import Mathlib.MeasureTheory.Function.AEEqOfIntegral
+import Mathlib.MeasureTheory.Integral.DominatedConvergence
+import Mathlib.MeasureTheory.Function.ConvergenceInMeasure
 import Mathlib.Probability.ConditionalExpectation
 import Mathlib.Probability.Independence.Conditional
 
@@ -80,6 +82,57 @@ lemma finset_sum_ae_eq
       simpa [h1, h2]
     -- Reassemble the sums over `insert a s`.
     simpa [Finset.sum_insert, ha] using h_add
+
+/-- **DCT for conditional expectation in L¹**. -/
+lemma tendsto_condExpL1_domconv
+    {α E : Type*} {m m₀ : MeasurableSpace α} (μ : Measure α)
+    [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
+    (hm : m ≤ m₀) [SigmaFinite (μ.trim hm)]
+    {fs : ℕ → α → E} {f : α → E}
+    (bound : α → ℝ)
+    (hfs_meas : ∀ n, AEStronglyMeasurable (fs n) μ)
+    (h_int : Integrable bound μ)
+    (hbound : ∀ n, ∀ᵐ x ∂μ, ‖fs n x‖ ≤ bound x)
+    (hpt : ∀ᵐ x ∂μ, Filter.Tendsto (fun n => fs n x) Filter.atTop (nhds (f x))) :
+    Filter.Tendsto (fun n => condExpL1 hm μ (fs n)) Filter.atTop (nhds (condExpL1 hm μ f)) := by
+  classical
+  -- This is exactly mathlib's lemma; we just instantiate the parameters.
+  simpa using
+    (MeasureTheory.tendsto_condExpL1_of_dominated_convergence
+      (μ := μ) (hm := hm) (fs := fs) (f := f)
+      (bound_fs := bound) (hfs_meas := hfs_meas) (h_int_bound_fs := h_int)
+      (hfs_bound := hbound) (hfs := hpt))
+
+/-- From L¹ convergence of `condExpL1` to a.e. convergence of a subsequence of its representatives. -/
+lemma exists_subseq_ae_tendsto_of_condExpL1_tendsto
+    {α E : Type*} {m m₀ : MeasurableSpace α} (μ : Measure α)
+    [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
+    (hm : m ≤ m₀) [SigmaFinite (μ.trim hm)]
+    {fs : ℕ → α → E} {f : α → E}
+    (hL1 :
+      Filter.Tendsto (fun n => condExpL1 hm μ (fs n)) Filter.atTop (nhds (condExpL1 hm μ f))) :
+    ∃ ns : ℕ → ℕ, StrictMono ns ∧
+      (∀ᵐ x ∂μ,
+        Filter.Tendsto (fun n =>
+          ((↑(condExpL1 hm μ (fs (ns n))) : α → E) x))
+          Filter.atTop
+          (nhds ((↑(condExpL1 hm μ f) : α → E) x))) := by
+  classical
+  -- Step 1: L¹ ⇒ convergence in measure for the (coerced) functions.
+  have h_in_measure :
+      TendstoInMeasure μ
+        (fun n => (↑(condExpL1 hm μ (fs n)) : α → E))
+        Filter.atTop
+        ((↑(condExpL1 hm μ f) : α → E)) :=
+    (MeasureTheory.tendstoInMeasure_of_tendsto_Lp
+      (μ := μ) (p := (1 : ENNReal)) (l := Filter.atTop)
+      (f := fun n => condExpL1 hm μ (fs n))
+      (g := condExpL1 hm μ f)
+      hL1)
+  -- Step 2: convergence in measure ⇒ a.e. convergence along a subsequence.
+  rcases (MeasureTheory.TendstoInMeasure.exists_seq_tendsto_ae h_in_measure)
+    with ⟨ns, hmono, hAE⟩
+  exact ⟨ns, hmono, hAE⟩
 
 /-!
 ## σ-algebra factorization
@@ -974,16 +1027,75 @@ theorem condExp_project_of_condIndepFun
           Filter.atTop
           (nhds (μ[ f ∘ Y | mW ] ω)) := by
         -- Strategy: Use L¹ convergence from dominated convergence, then extract a.e. convergence
-        -- Step 1: Get L¹ convergence of conditional expectations
-        have h_L1_conv : Filter.Tendsto (fun n => μ[ f_n n ∘ Y | mW ]) Filter.atTop
-            (nhds μ[ f ∘ Y | mW ]) := by
-          -- Use tendsto_condExpL1_of_dominated_convergence
-          -- TODO: This entire h_condExp_ptwise proof needs fixing - multiple API issues
-          -- SimpleFunc.norm_approxOn_le doesn't exist
-          -- tendsto_condExpL1_of_dominated_convergence signature is wrong
-          sorry
-        -- TODO: Extract a.e. convergence from L¹ convergence
-        -- This needs tendstoInMeasure_of_tendsto_eLpNorm and ae_tendsto_of_tendstoInMeasure_subseq
+
+        -- First, get domination bound for f_n ∘ Y (without indicator)
+        have h_bound_fn : ∀ n, ∀ᵐ ω ∂μ, ‖f_n n (Y ω)‖ ≤ 2 * ‖f (Y ω)‖ := by
+          intro n
+          apply Filter.Eventually.of_forall
+          intro ω
+          calc ‖f_n n (Y ω)‖
+              ≤ ‖f (Y ω)‖ + ‖f (Y ω)‖ := SimpleFunc.norm_approxOn_zero_le hf (by simp) (Y ω) n
+            _ = 2 * ‖f (Y ω)‖ := by ring
+
+        -- Integrability of the bound
+        have h_bound_int : Integrable (fun ω => 2 * ‖f (Y ω)‖) μ := by
+          have h_norm_int : Integrable (fun ω => ‖f (Y ω)‖) μ := hf_int.norm
+          simpa using h_norm_int.const_mul 2
+
+        -- Measurability of f_n ∘ Y
+        have h_fn_meas : ∀ n, AEStronglyMeasurable (f_n n ∘ Y) μ := by
+          intro n
+          exact ((f_n n).aestronglyMeasurable.comp_measurable hY)
+
+        -- Step 1: Get L¹ convergence of conditional expectations using DCT
+        have h_L1_conv : Filter.Tendsto
+            (fun n => condExpL1 hmW_le μ (f_n n ∘ Y))
+            Filter.atTop
+            (nhds (condExpL1 hmW_le μ (f ∘ Y))) := by
+          apply tendsto_condExpL1_domconv μ hmW_le (fun ω => 2 * ‖f (Y ω)‖)
+          · exact h_fn_meas
+          · exact h_bound_int
+          · exact h_bound_fn
+          · exact h_fY_ptwise
+
+        -- Step 2: Extract a.e. convergence from L¹ convergence
+        -- The standard approach: From L¹ convergence of condExpL1, we can extract a subsequence
+        -- whose coercions converge a.e. Since condExp is the a.e. representative of condExpL1,
+        -- we get a subsequence of condExp values that converges a.e.
+        --
+        -- To upgrade to full sequence convergence, we use:
+        -- 1. Any two convergent subsequences must have the same a.e. limit (by L¹ uniqueness)
+        -- 2. Since we have L¹ convergence of the full sequence, every subsequence has a
+        --    further subsequence that converges a.e.
+        -- 3. Therefore, all converging subsequences converge to the same limit a.e.
+        -- 4. This implies the full sequence converges a.e.
+        --
+        -- This is implemented via the following lemma applications:
+        rcases (exists_subseq_ae_tendsto_of_condExpL1_tendsto μ hmW_le h_L1_conv) with
+          ⟨ns, _h_mono, h_subseq_ae⟩
+
+        -- Now use the fact that condExp is the a.e. representative of condExpL1
+        have h_condExp_eq : ∀ n, μ[ f_n n ∘ Y | mW ] =ᵐ[μ] ↑(condExpL1 hmW_le μ (f_n n ∘ Y)) :=
+          fun n => condExp_ae_eq_condExpL1 hmW_le (f_n n ∘ Y)
+        have h_condExp_eq_lim : μ[ f ∘ Y | mW ] =ᵐ[μ] ↑(condExpL1 hmW_le μ (f ∘ Y)) :=
+          condExp_ae_eq_condExpL1 hmW_le (f ∘ Y)
+
+        -- Combine: subsequence of coercions converges + coercions equal condExp a.e.
+        -- => subsequence of condExp converges a.e.
+        have h_subseq_condExp : ∀ᵐ ω ∂μ, Filter.Tendsto
+            (fun n => μ[ f_n (ns n) ∘ Y | mW ] ω)
+            Filter.atTop
+            (nhds (μ[ f ∘ Y | mW ] ω)) := by
+          filter_upwards [h_subseq_ae, ae_all_iff.mpr h_condExp_eq, h_condExp_eq_lim] with ω h_seq h_eq h_eq_lim
+          convert h_seq using 1
+          · ext n; exact (h_eq (ns n) ω).symm
+          · exact h_eq_lim ω
+
+        -- TODO: Upgrade from subsequence to full sequence convergence
+        -- This requires using the fact that we have L¹ convergence + pointwise convergence
+        -- of underlying functions, which implies full sequence a.e. convergence.
+        -- Standard argument: any two convergent subsequences have the same limit (by L¹ uniqueness),
+        -- so the full sequence must converge.
         sorry
 
       filter_upwards [h_condExp_ptwise] with ω h_ω
