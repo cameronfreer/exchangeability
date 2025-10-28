@@ -162,7 +162,7 @@ lemma measurableSpace_pi_nat_le_iSup_fin {α : Type*} [MeasurableSpace α] :
   · -- Prove: (fun f i => f ↑i) ⁻¹' (g ⁻¹' S) = t.restrict ⁻¹' S
     rw [← Set.preimage_comp]
     funext f
-    ext i
+    ext
     rfl
 
 end PiFiniteProjections
@@ -197,7 +197,7 @@ lemma condDistrib_factor_indicator_agree
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (ξ : Ω → α) (η ζ : Ω → β)
     (hξ : Measurable ξ) (hη : Measurable η) (hζ : Measurable ζ)
-    (h_law : Measure.map (fun ω => (ξ ω, η ω)) μ =
+    (_h_law : Measure.map (fun ω => (ξ ω, η ω)) μ =
              Measure.map (fun ω => (ξ ω, ζ ω)) μ)
     (h_le : MeasurableSpace.comap η inferInstance ≤
             MeasurableSpace.comap ζ inferInstance)
@@ -307,47 +307,62 @@ What we CAN prove: if σ(W) = σ(W') as σ-algebras, then the conditional
 expectations are equal a.e. This is often exactly what is needed.
 -/
 lemma condExp_ae_eq_of_sigma_eq
-  {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
-  {mΩ : MeasurableSpace Ω}
-  {m₁ m₂ : MeasurableSpace Ω} (hm₁ : m₁ ≤ mΩ) (hm₂ : m₂ ≤ mΩ)
+  {Ω : Type*} {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+  {m₁ m₂ : MeasurableSpace Ω} (hm₁ : m₁ ≤ m₀) (hm₂ : m₂ ≤ m₀)
+  [SigmaFinite (μ.trim hm₁)] [SigmaFinite (μ.trim hm₂)]
   (h₁₂ : m₁ ≤ m₂) (h₂₁ : m₂ ≤ m₁)
-  {f : Ω → ℝ} (hf : Integrable f μ) :
-  @condExp Ω ℝ _ _ _ _ m₁ μ f =ᵐ[μ] @condExp Ω ℝ _ _ _ _ m₂ μ f := by
+  {f : Ω → ℝ} (_hf : Integrable f μ) :
+  @condExp Ω ℝ m₁ m₀ _ _ _ μ f =ᵐ[μ] @condExp Ω ℝ m₂ m₀ _ _ _ μ f := by
   classical
   -- Tower in both directions
-  have ht₁ : @condExp Ω ℝ _ _ _ _ m₁ μ (@condExp Ω ℝ _ _ _ _ m₂ μ f) =ᵐ[μ] @condExp Ω ℝ _ _ _ _ m₁ μ f :=
-    condExp_condExp_of_le (hm₁₂ := h₁₂)
-  have ht₂ : @condExp Ω ℝ _ _ _ _ m₂ μ (@condExp Ω ℝ _ _ _ _ m₁ μ f) =ᵐ[μ] @condExp Ω ℝ _ _ _ _ m₂ μ f :=
-    condExp_condExp_of_le (hm₁₂ := h₂₁)
+  have ht₁ : @condExp Ω ℝ m₁ m₀ _ _ _ μ (@condExp Ω ℝ m₂ m₀ _ _ _ μ f) =ᵐ[μ] @condExp Ω ℝ m₁ m₀ _ _ _ μ f :=
+    @condExp_condExp_of_le Ω ℝ f _ _ _ m₁ m₂ m₀ μ h₁₂ hm₂ _
+  have ht₂ : @condExp Ω ℝ m₂ m₀ _ _ _ μ (@condExp Ω ℝ m₁ m₀ _ _ _ μ f) =ᵐ[μ] @condExp Ω ℝ m₂ m₀ _ _ _ μ f :=
+    @condExp_condExp_of_le Ω ℝ f _ _ _ m₂ m₁ m₀ μ h₂₁ hm₁ _
   -- condExp μ m₁ f is m₁-measurable; since m₁ ≤ m₂ it is also m₂-measurable,
   -- hence its conditional expectation w.r.t. m₂ is itself a.e.
   have hid₁ :
-      @condExp Ω ℝ _ _ _ _ m₂ μ (@condExp Ω ℝ _ _ _ _ m₁ μ f) =ᵐ[μ] @condExp Ω ℝ _ _ _ _ m₁ μ f := by
-    exact condExp_of_aestronglyMeasurable (hm := hm₂)
-      (@StronglyMeasurable.mono Ω ℝ _ _ m₁ m₂ _ stronglyMeasurable_condExp h₁₂)
-      integrable_condExp
+      @condExp Ω ℝ m₂ m₀ _ _ _ μ (@condExp Ω ℝ m₁ m₀ _ _ _ μ f) =ᵐ[μ] @condExp Ω ℝ m₁ m₀ _ _ _ μ f := by
+    refine @condExp_of_aestronglyMeasurable' Ω ℝ m₂ m₀ μ _ _ _ hm₂ _ _ ?_ integrable_condExp
+    exact (stronglyMeasurable_condExp.mono h₁₂).aestronglyMeasurable
   -- similarly
   have hid₂ :
-      @condExp Ω ℝ _ _ _ _ m₁ μ (@condExp Ω ℝ _ _ _ _ m₂ μ f) =ᵐ[μ] @condExp Ω ℝ _ _ _ _ m₂ μ f := by
-    exact condExp_of_aestronglyMeasurable (hm := hm₁)
-      (@StronglyMeasurable.mono Ω ℝ _ _ m₂ m₁ _ stronglyMeasurable_condExp h₂₁)
-      integrable_condExp
+      @condExp Ω ℝ m₁ m₀ _ _ _ μ (@condExp Ω ℝ m₂ m₀ _ _ _ μ f) =ᵐ[μ] @condExp Ω ℝ m₂ m₀ _ _ _ μ f := by
+    refine @condExp_of_aestronglyMeasurable' Ω ℝ m₁ m₀ μ _ _ _ hm₁ _ _ ?_ integrable_condExp
+    exact (stronglyMeasurable_condExp.mono h₂₁).aestronglyMeasurable
   -- combine: both sides are a.e. equal to each other
-  exact (ht₁.trans hid₂).trans (ht₂.symm.trans hid₁.symm)
+  -- μ[f|m₁] =ᵐ μ[μ[f|m₂]|m₁] (by ht₁.symm) =ᵐ μ[f|m₂] (by hid₂)
+  exact ht₁.symm.trans hid₂
 
 /-- **Doob-Dynkin for real-valued random variables**: if σ(η) ≤ σ(ζ), then η = φ ∘ ζ a.e.
 for some Borel φ.
 
-This is a thin wrapper around mathlib's Doob-Dynkin lemma for ℝ-valued functions.
+This is the factorization lemma for standard Borel spaces. Since ℝ is a standard Borel
+space, any function η measurable w.r.t. σ(ζ) factors through ζ.
+
+**Proof strategy:** Use `Measurable.factorsThrough` (requires `MeasurableSingletonClass`)
+or a variant for standard Borel spaces. For the a.e. version, note that if η is measurable
+w.r.t. the comap, it factors through ζ on sets where both are well-defined.
 -/
 lemma exists_borel_factor_of_sigma_le
   {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
   {η ζ : Ω → ℝ}
+  (_hη : Measurable η) (_hζ : Measurable ζ)
   (hle : MeasurableSpace.comap η inferInstance ≤ MeasurableSpace.comap ζ inferInstance) :
   ∃ φ : ℝ → ℝ, Measurable φ ∧ η =ᵐ[μ] φ ∘ ζ := by
-  -- This uses mathlib's Doob-Dynkin for standard Borel spaces
-  -- The exact lemma name may vary; adjust if needed
-  sorry  -- TODO: Find the exact mathlib lemma name
+  -- Apply Doob-Dynkin lemma: if σ(η) ≤ σ(ζ), then η factors through ζ
+  -- ℝ is a standard Borel space (Polish space), so we can use exists_eq_measurable_comp
+
+  -- First show η is measurable w.r.t. comap ζ
+  have hη_comap : Measurable[MeasurableSpace.comap ζ inferInstance] η := by
+    rw [measurable_iff_comap_le]
+    exact hle
+
+  -- Apply the factorization lemma for standard Borel spaces
+  obtain ⟨φ, hφ, hfactor⟩ := hη_comap.exists_eq_measurable_comp
+
+  -- η = φ ∘ ζ everywhere, so certainly a.e.
+  exact ⟨φ, hφ, Filter.EventuallyEq.of_eq hfactor⟩
 
 /-- **Uniqueness of disintegration along a factor map (indicator version).**
 
@@ -358,7 +373,7 @@ laws agree along ζ after composing by φ. We state and prove it only on indicat
 This is the key monotone-class / π-λ argument for kernel uniqueness.
 -/
 lemma ProbabilityTheory.equal_kernels_on_factor
-  {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
+  {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
   {ξ η ζ : Ω → ℝ} {φ : ℝ → ℝ}
   (hφ : Measurable φ) (hη : η =ᵐ[μ] φ ∘ ζ)
   (hpairs :
@@ -369,6 +384,7 @@ lemma ProbabilityTheory.equal_kernels_on_factor
   =ᵐ[μ]
   (fun ω => (ProbabilityTheory.condDistrib ξ η μ (φ (ζ ω))) B) := by
   classical
+
   -- We show the two sides have the same integrals over the π-system {ζ⁻¹(C)}.
   -- Define the class of sets C for which the equality of integrals holds.
   let 𝒞 : Set (Set ℝ) := {C |
@@ -379,15 +395,34 @@ lemma ProbabilityTheory.equal_kernels_on_factor
     ∫ ω, (Set.indicator (ζ ⁻¹' C) (fun _ => (1 : ℝ)) ω)
           * ((ProbabilityTheory.condDistrib ξ η μ (φ (ζ ω))) B).toReal ∂μ}
 
-  -- The π-λ / monotone-class argument would go here:
-  -- 1. Show 𝒞 contains basic sets (using condDistrib definition + pair-law)
-  -- 2. Show 𝒞 is closed under finite intersections (π-system)
-  -- 3. Apply Dynkin's theorem to get all Borel sets
-  -- 4. Use uniqueness of a.e. equal σ(ζ)-measurable functions
+  -- **Step 1:** Show 𝒞 is a π-system (closed under finite intersections)
+  have hπ : IsPiSystem 𝒞 := by
+    intro C₁ hC₁ C₂ hC₂ _
+    constructor
+    · exact hC₁.1.inter hC₂.1
+    · -- Intersections of preimages distribute: ζ⁻¹(C₁ ∩ C₂) = ζ⁻¹(C₁) ∩ ζ⁻¹(C₂)
+      -- Indicators multiply: 1_{A∩B} = 1_A · 1_B
+      -- Both integrals equal by distributivity
+      sorry  -- ~5 lines: indicator algebra + integral linearity
 
-  -- For now, we admit this standard but tedious π-λ argument
-  sorry
-  -- The admits can be filled with ~20-30 lines of standard monotone-class machinery
+  -- **Step 2:** Show 𝒞 is a λ-system (Dynkin system)
+  -- The complete proof would verify that 𝒞 is closed under:
+  -- - Contains univ: ζ⁻¹(univ) = univ, indicator = 1
+  -- - Complements: 1 = 1_C + 1_{Cᶜ}, integral additivity
+  -- - Countable disjoint unions: monotone convergence
+
+  -- **Step 3:** Apply Dynkin's π-λ theorem
+  -- π-system generates σ-algebra, λ-system containing π-system contains σ-algebra
+
+  -- **Step 4:** Conclude a.e. equality via uniqueness
+  -- For all measurable C, the integrals over ζ⁻¹(C) agree
+  -- This means the two functions are σ(ζ)-measurable and have equal conditional expectations
+  -- By uniqueness of conditional expectations, they're equal a.e.
+
+  sorry  -- TODO: Complete Steps 2-4 (~25 lines total)
+  -- Step 2: IsDynkinSystem structure for 𝒞
+  -- Step 3: generateFrom_le + dynkin_system_theorem
+  -- Step 4: condExp uniqueness via ae_eq_of_forall_setIntegral_eq
 
 /-- **Drop-information under pair-law + σ(η) ≤ σ(ζ)**: for indicator functions,
 conditioning on ζ equals conditioning on η.
@@ -410,20 +445,19 @@ theorem condexp_indicator_drop_info_of_pair_law_proven
     Measure.map (fun ω => (ξ ω, ζ ω)) μ)
   (hle : MeasurableSpace.comap η inferInstance ≤ MeasurableSpace.comap ζ inferInstance)
   (B : Set ℝ) (hB : MeasurableSet B) :
-  @condExp Ω ℝ _ _ _ _ (MeasurableSpace.comap ζ inferInstance) μ
-    (fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (ξ ω)))
+  μ[(fun ω => Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))|MeasurableSpace.comap ζ inferInstance]
   =ᵐ[μ]
-  @condExp Ω ℝ _ _ _ _ (MeasurableSpace.comap η inferInstance) μ
-    (fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))) := by
+  μ[(fun ω => Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))|MeasurableSpace.comap η inferInstance] := by
   classical
   -- Step 1: Doob-Dynkin gives η = φ ∘ ζ a.e.
-  obtain ⟨φ, hφ, hη_factor⟩ := exists_borel_factor_of_sigma_le (η := η) (ζ := ζ) hle
+  obtain ⟨φ, hφ, hη_factor⟩ := exists_borel_factor_of_sigma_le hη hζ hle
 
   -- Step 2: Use condDistrib representation on both sides
-  -- Note: condDistrib returns ENNReal, need to convert to ℝ for indicator
+  -- Add IsFiniteMeasure instance needed for condDistrib
+  haveI : IsFiniteMeasure μ := inferInstance
+
   have hζ_repr :
-    @condExp Ω ℝ _ _ _ _ (MeasurableSpace.comap ζ inferInstance) μ
-      (fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (ξ ω)))
+    μ[(fun ω => Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))|MeasurableSpace.comap ζ inferInstance]
     =ᵐ[μ]
     (fun ω => ((ProbabilityTheory.condDistrib ξ ζ μ (ζ ω)) B).toReal) := by
     -- This uses mathlib's condExp_ae_eq_integral_condDistrib for indicators
@@ -431,8 +465,7 @@ theorem condexp_indicator_drop_info_of_pair_law_proven
     sorry  -- TODO: Apply correct mathlib lemma with proper type handling
 
   have hη_repr :
-    @condExp Ω ℝ _ _ _ _ (MeasurableSpace.comap η inferInstance) μ
-      (fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (ξ ω)))
+    μ[(fun ω => Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))|MeasurableSpace.comap η inferInstance]
     =ᵐ[μ]
     (fun ω => ((ProbabilityTheory.condDistrib ξ η μ (η ω)) B).toReal) := by
     sorry  -- TODO: Same as above
@@ -463,41 +496,6 @@ end AxiomReplacements
 /-! ### Conditional Independence from Distributional Equality -/
 
 section ConditionalIndependence
-
-/-- **[TODO: Mathlib.Probability.Independence.Conditional]**
-
-**Kallenberg Lemma 1.3 (Contraction-Independence):** If the triple distribution
-(ξ, η, ζ) equals (ξ, η, ζ') and σ(ζ) ≤ σ(ζ'), then ξ and ζ' are conditionally
-independent given ζ.
-
-This is a fundamental result connecting distributional equality to conditional independence.
-
-**Mathematical statement:**
-If `(ξ, η, ζ) =ᵈ (ξ, η, ζ')` and `σ(ζ) ≤ σ(ζ')`, then `ξ ⊥⊥_ζ ζ'`.
-
-**Application:** In contractable sequences, this shows that past coordinates are
-conditionally independent of far future given near future.
-
-**Proof strategy:**
-1. Use disintegration: `μ = ∫ condDistrib (ξ, ζ') ζ μ (ζ ω) dμ(ω)`
-2. From triple law, show `condDistrib (ξ, ζ') ζ μ = condDistrib (ξ, ζ) ζ μ`
-3. But ζ is determined by ζ (identity), so ζ' is independent of ξ given ζ
--/
--- Note: This version omits StandardBorelSpace to match application site constraints
--- The full mathlib version would require StandardBorelSpace Ω for CondIndep
-lemma condIndep_of_triple_law
-    {Ω α β γ : Type*}
-    [MeasurableSpace Ω]
-    [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (ξ : Ω → α) (η : Ω → β) (ζ ζ' : Ω → γ)
-    (hξ : Measurable ξ) (hη : Measurable η) (hζ : Measurable ζ) (hζ' : Measurable ζ')
-    (h_triple : Measure.map (fun ω => (ξ ω, η ω, ζ ω)) μ =
-                Measure.map (fun ω => (ξ ω, η ω, ζ' ω)) μ)
-    (h_le : MeasurableSpace.comap ζ inferInstance ≤
-            MeasurableSpace.comap ζ' inferInstance) :
-    True := by  -- Placeholder - actual CondIndep would require StandardBorelSpace
-  trivial  -- True is trivially true
 
 /-- **[TODO: Mathlib.Probability.Independence.Conditional]**
 
@@ -609,11 +607,16 @@ lemma condExp_eq_of_triple_law
     -- Rewrite using map composition
     calc Measure.map (fun ω => (Y ω, W ω)) μ
         = Measure.map (fun p => (p.2.1, p.2.2)) (Measure.map (fun ω => (Z ω, Y ω, W ω)) μ) := by
-          rw [← Measure.map_map h_proj (hZ.prodMk (hY.prodMk hW))]
+          -- Show (Y, W) = proj ∘ (Z, Y, W)
+          have : (fun ω => (Y ω, W ω)) = (fun p : β × α × γ => (p.2.1, p.2.2)) ∘ (fun ω => (Z ω, Y ω, W ω)) := by
+            funext ω; rfl
+          rw [this, Measure.map_map h_proj (hZ.prodMk (hY.prodMk hW))]
       _ = Measure.map (fun p => (p.2.1, p.2.2)) (Measure.map (fun ω => (Z ω, Y ω, W' ω)) μ) := by
           rw [h_triple]
       _ = Measure.map (fun ω => (Y ω, W' ω)) μ := by
-          rw [Measure.map_map h_proj (hZ.prodMk (hY.prodMk hW'))]
+          have : (fun ω => (Y ω, W' ω)) = (fun p : β × α × γ => (p.2.1, p.2.2)) ∘ (fun ω => (Z ω, Y ω, W' ω)) := by
+            funext ω; rfl
+          rw [Measure.map_map h_proj (hZ.prodMk (hY.prodMk hW')), ← this]
 
   -- Now apply the pair-law version (the missing mathlib piece).
   -- We want μ[f∘Y | σ(Z,W)] = μ[f∘Y | σ(W)]
@@ -625,18 +628,23 @@ lemma condExp_eq_of_triple_law
       Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ := by
     -- Project (Z, Y, W) to (Y, Z, W) using permutation
     have h_perm : Measurable (fun (p : β × α × γ) => (p.2.1, p.1, p.2.2)) := by
+      -- Function (Z, Y, W) ↦ (Y, Z, W), which in right-associative form is
+      -- (Z, (Y, W)) ↦ (Y, (Z, W))
       apply Measurable.prod
-      · apply Measurable.prod
-        · exact measurable_snd.fst
-        · exact measurable_fst
-      · exact measurable_snd.snd
+      · exact measurable_snd.fst
+      · exact measurable_fst.prodMk measurable_snd.snd
     calc Measure.map (fun ω => (Y ω, Z ω, W ω)) μ
         = Measure.map (fun p => (p.2.1, p.1, p.2.2)) (Measure.map (fun ω => (Z ω, Y ω, W ω)) μ) := by
-          rw [← Measure.map_map h_perm (hZ.prodMk (hY.prodMk hW))]
+          -- Show (Y, Z, W) = perm ∘ (Z, Y, W)
+          have : (fun ω => (Y ω, Z ω, W ω)) = (fun p : β × α × γ => (p.2.1, p.1, p.2.2)) ∘ (fun ω => (Z ω, Y ω, W ω)) := by
+            funext ω; rfl
+          rw [this, Measure.map_map h_perm (hZ.prodMk (hY.prodMk hW))]
       _ = Measure.map (fun p => (p.2.1, p.1, p.2.2)) (Measure.map (fun ω => (Z ω, Y ω, W' ω)) μ) := by
           rw [h_triple]
       _ = Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ := by
-          rw [Measure.map_map h_perm (hZ.prodMk (hY.prodMk hW'))]
+          have : (fun ω => (Y ω, Z ω, W' ω)) = (fun p : β × α × γ => (p.2.1, p.1, p.2.2)) ∘ (fun ω => (Z ω, Y ω, W' ω)) := by
+            funext ω; rfl
+          rw [Measure.map_map h_perm (hZ.prodMk (hY.prodMk hW')), ← this]
 
   -- Step 2: Derive conditional independence from the triple law (Kallenberg Lemma 1.3)
   have h_condIndep : CondIndep μ Y Z W :=
@@ -1275,7 +1283,7 @@ lemma preimage_rect_future
     · simpa [ψ]
     · intro i
       have : (shiftRV X (m + 1) ω) ∈ cylinder (α:=α) r C := hC
-      simp only [shiftRV] at this
+      simp only at this
       exact this i
   · rcases h with ⟨hB, hC⟩
     refine ⟨?_, ?_⟩
@@ -1318,7 +1326,7 @@ lemma contractable_dist_eq_on_rectangles_future
     μ {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
     have := contractable_dist_eq_on_first_r_tail
         (μ:=μ) (X:=X) hX hX_meas k m r hk B hB C hC
-    convert this using 2 <;> { ext ω; simp only [Set.mem_setOf]; tauto }
+    convert this using 2
   -- Show the sets are equal modulo arithmetic
   have hset_eq₁ : {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + 1 + i.1) ω ∈ C i}
                 = {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
@@ -2432,40 +2440,44 @@ lemma condexp_indicator_drop_info_of_pair_law
   classical
   -- Use the cond-distribution representation of conditional expectations of indicators.
   -- `condExp_ae_eq_integral_condDistrib` exists in mathlib.
-  have hζ :
+  have hζ_repr :
       μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ | MeasurableSpace.comap ζ inferInstance]
       =ᵐ[μ]
-      (fun ω => (ProbabilityTheory.condDistrib ξ ζ μ) (ζ ω) B) := by
+      (fun ω => ((ProbabilityTheory.condDistrib ξ ζ μ) (ζ ω) B).toReal) := by
     -- Apply condExp_ae_eq_integral_condDistrib to get integral representation
     have h1 := ProbabilityTheory.condExp_ae_eq_integral_condDistrib hζ hξ.aemeasurable
       (stronglyMeasurable_const.indicator hB)
-      (by apply Integrable.comp_measurable _ hξ
-          exact integrable_const (1 : ℝ) |>.indicator hB)
+      (by -- Show indicator of constant function composed with ξ is integrable
+          have : Integrable (B.indicator fun _ => (1 : ℝ)) (μ.map ξ) :=
+            (integrable_const (1 : ℝ)).indicator hB
+          exact this.comp_measurable hξ)
     -- Simplify: ∫ y, 1_B(y) d[condDistrib] = condDistrib(B)
     refine h1.trans ?_
-    apply Filter.EventuallyEq.of_forall
+    apply Filter.Eventually.of_forall
     intro ω
-    -- For indicator functions, the integral equals the measure
-    simp only [Function.comp_apply, Set.indicator_apply]
+    -- For indicator functions, the integral equals the measure (ENNReal.toReal)
+    simp only []
     rw [integral_indicator_const _ hB]
-    simp
-  have hη :
+    simp [Measure.real]
+  have hη_repr :
       μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ | MeasurableSpace.comap η inferInstance]
       =ᵐ[μ]
-      (fun ω => (ProbabilityTheory.condDistrib ξ η μ) (η ω) B) := by
+      (fun ω => ((ProbabilityTheory.condDistrib ξ η μ) (η ω) B).toReal) := by
     -- Apply condExp_ae_eq_integral_condDistrib to get integral representation
     have h1 := ProbabilityTheory.condExp_ae_eq_integral_condDistrib hη hξ.aemeasurable
       (stronglyMeasurable_const.indicator hB)
-      (by apply Integrable.comp_measurable _ hξ
-          exact integrable_const (1 : ℝ) |>.indicator hB)
+      (by -- Show indicator of constant function composed with ξ is integrable
+          have : Integrable (B.indicator fun _ => (1 : ℝ)) (μ.map ξ) :=
+            (integrable_const (1 : ℝ)).indicator hB
+          exact this.comp_measurable hξ)
     -- Simplify: ∫ y, 1_B(y) d[condDistrib] = condDistrib(B)
     refine h1.trans ?_
-    apply Filter.EventuallyEq.of_forall
+    apply Filter.Eventually.of_forall
     intro ω
     -- For indicator functions, the integral equals the measure
-    simp only [Function.comp_apply, Set.indicator_apply]
+    simp only []
     rw [integral_indicator_const _ hB]
-    simp
+    simp [Measure.real]
   -- Replace the kernels using the uniqueness axiom, then bridge back.
   have hker :
       (fun ω => (ProbabilityTheory.condDistrib ξ ζ μ) (ζ ω) B)
@@ -2483,11 +2495,11 @@ lemma condexp_indicator_drop_info_of_pair_law
                  μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ
                     | MeasurableSpace.comap η inferInstance] := by
     -- Establish σ-algebra inequalities
-    have hη_le : MeasurableSpace.comap η inferInstance ≤ inferInstance := by
+    have hη_le : MeasurableSpace.comap η inferInstance ≤ (inferInstance : MeasurableSpace Ω) := by
       intro s hs
       obtain ⟨t, ht, rfl⟩ := hs
       exact hη ht
-    have hζ_le : MeasurableSpace.comap ζ inferInstance ≤ inferInstance := by
+    have hζ_le : MeasurableSpace.comap ζ inferInstance ≤ (inferInstance : MeasurableSpace Ω) := by
       intro s hs
       obtain ⟨t, ht, rfl⟩ := hs
       exact hζ ht
@@ -3402,7 +3414,7 @@ noncomputable def directingMeasure_of_contractable
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
     (X : ℕ → Ω → α)
-    (hX_meas : ∀ n, Measurable (X n)) :
+    (_hX_meas : ∀ n, Measurable (X n)) :
     Ω → Measure α := by
   classical
   -- Regular conditional probability kernel on Ω given the tail σ-algebra.
