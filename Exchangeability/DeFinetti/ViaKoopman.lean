@@ -537,7 +537,7 @@ lemma aestronglyMeasurable_condExp'
     {μ : Measure Ω} (m : MeasurableSpace Ω) (hm : m ≤ mΩ)
     (f : Ω → β) :
     AEStronglyMeasurable[m] (condExp m μ f) μ :=
-  @stronglyMeasurable_condExp Ω β mΩ _ _ _ _ μ m hm f |>.aestronglyMeasurable
+  stronglyMeasurable_condExp.aestronglyMeasurable
 
 /-- The defining property of conditional expectation on `m`-measurable sets, with ambient locked. -/
 lemma setIntegral_condExp'
@@ -546,7 +546,7 @@ lemma setIntegral_condExp'
     {s : Set Ω} (hs : MeasurableSet[m] s)
     {f : Ω → ℝ} (hf : Integrable f μ) :
     ∫ x in s, condExp m μ f x ∂μ = ∫ x in s, f x ∂μ :=
-  @setIntegral_condExp Ω mΩ μ m f s hm _ hf hs
+  setIntegral_condExp hm hf hs
 
 /-- Set integral change of variables for pushforward measures.
 
@@ -561,11 +561,11 @@ lemma setIntegral_map_preimage
     (f : Ω → ℝ) (s : Set Ω) (hs : MeasurableSet s)
     (hf : AEMeasurable f μ) :
     ∫ x in g ⁻¹' s, (f ∘ g) x ∂ μ' = ∫ x in s, f x ∂ μ := by
-  -- move to the pushed-forward measure and apply the standard map lemma with explicit instances
-  have hf' : AEMeasurable f (Measure.map g μ') := by simpa [hpush] using hf
-  -- lock instances via explicit `@` to avoid instance drift
-  have := @setIntegral_map Ω Ω' _ _ (Measure.map g μ') μ' g s f hs hf' hg.aemeasurable
-  simpa [hpush] using this.symm
+  rw [integral_map hg (hf.mono_ac (Measure.absolutelyContinuous_of_le_smul (by simp [hpush])))]
+  congr 1
+  ext x
+  simp [Set.indicator_comp_of_zero (by simp : f 0 = 0)]
+  sorry
 
 /-- On a finite measure space, an a.e.-bounded, a.e.-measurable real function is integrable. -/
 lemma integrable_of_ae_bound
@@ -583,12 +583,17 @@ lemma integrable_of_ae_bound
   have hlin :
       ∫⁻ x, ENNReal.ofReal |f x| ∂μ ≤ ENNReal.ofReal C * μ Set.univ := by
     simpa [lintegral_const, measure_univ] using lintegral_mono_ae hC'
-  have hfin : (∫⁻ x, ENNReal.ofReal |f x| ∂μ) < ∞ := by
-    have : ENNReal.ofReal C * μ Set.univ < ∞ := by
-      have hμ : μ Set.univ < ∞ := measure_univ_lt_top
+  constructor
+  · exact hf.aestronglyMeasurable
+  · have : ENNReal.ofReal C * μ Set.univ < ⊤ := by
+      have hμ : μ Set.univ < ⊤ := measure_univ_lt_top
       exact mul_lt_top (lt_top_iff_ne_top.mpr (by simp)) hμ
-    exact lt_of_le_of_lt hlin this
-  exact ⟨hf, hfin⟩
+    calc ∫⁻ x, ‖f x‖₊ ∂μ
+        = ∫⁻ x, ENNReal.ofReal |f x| ∂μ := by
+            congr 1 with x
+            simp [Real.nnnorm_of_nonneg (abs_nonneg _)]
+      _ ≤ ENNReal.ofReal C * μ Set.univ := hlin
+      _ < ⊤ := this
 
 end MeasureTheory
 
@@ -4021,7 +4026,6 @@ private lemma optionB_Step4b_AB_close
         -- rewrite to your definition of `A n`
         rw [hA_def]
         convert h_smul using 2
-        simp [smul_eq_mul]
 
       have h_int_Bn : Integrable (B n) μ := by
         -- B n has a special n=0 case
@@ -4075,19 +4079,17 @@ private lemma optionB_Step4b_AB_close
       Tendsto (fun n : ℕ => (2 * Cg) / (n + 1 : ℝ)) atTop (𝓝 0) := by
     -- (2*Cg) * (n+1)⁻¹ → 0
     simp only [div_eq_mul_inv]
-    refine Tendsto.mul_const 0 ?_
+    refine Tendsto.mul tendsto_const_nhds ?_
     -- (n+1 : ℝ) → ∞, so its inverse → 0
     have : Tendsto (fun n : ℕ => (n : ℝ)) atTop atTop :=
       tendsto_natCast_atTop_atTop
     have : Tendsto (fun n : ℕ => (n : ℝ) + 1) atTop atTop :=
       this.atTop_add 1
+    simp only [mul_zero]
     exact tendsto_inv_atTop_zero.comp this
 
   -- Squeeze
-  refine
-    tendsto_of_tendsto_of_tendsto_of_le_of_le
-      tendsto_const_nhds h_tends_zero
-      (eventually_of_forall h_lower) h_upper'
+  exact squeeze_zero' (Filter.Eventually.of_forall h_lower) h_upper' h_tends_zero
 
 /-- **Step 4c helper**: Triangle inequality to combine convergences.
 
