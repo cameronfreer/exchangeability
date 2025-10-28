@@ -3504,12 +3504,73 @@ lemma cesaro_to_condexp_L2
   -- Step 3: Show α_f is tail-measurable
   -- Use condexpL2 projection approach: α_L2 is fixed by projection ⟹ tail-measurable
   · -- Tail measurability via continuous projection
-    -- Implementation approach (from user):
-    -- 1. Define m_ge N = σ(X_{≥N}) for each N
-    -- 2. Prove u n is m_ge N-measurable for n ≥ N
-    -- 3. Use condexpL2 as continuous projection onto m_ge N-measurable subspace
-    -- 4. Show P α_L2 = α_L2 for all N, hence tail-measurable
-    -- 5. Transfer to α_f via ae-equality
+    -- IMPLEMENTATION APPROACH (from documentation):
+    --
+    -- GOAL: Measurable[TailSigma.tailSigma X] α_f
+    --
+    -- STRATEGY: Closedness of measurable subspaces in L²
+    --
+    -- Step 1: σ-algebra measurability of block averages
+    --   For each N, define m_ge N := σ(X_N, X_{N+1}, ...)
+    --   Claim: blockAvg f X N n is Measurable[m_ge N]
+    --   Proof: blockAvg f X N n = (1/n) * ∑_{j<n} f(X_{N+j})
+    --          Each f(X_{N+j}) is Measurable[σ(X_{N+j})] ≤ Measurable[m_ge N]
+    --          So sum and scalar mult preserve this
+    --
+    -- Step 2: Decreasing sequence property
+    --   Note: σ(X_{≥k}) ⊆ σ(X_{≥N}) for all k ≥ N
+    --   So if g is Measurable[σ(X_{≥k})], then g is also Measurable[σ(X_{≥N})]
+    --
+    -- Step 3: Closed subspace property
+    --   KEY LEMMA NEEDED: The set S_N := {h ∈ L² | Measurable[m_ge N] h}
+    --   is a closed subspace of L²
+    --
+    --   This is because:
+    --   - condexpL2 : L² → S_N is a continuous linear projection
+    --   - Range of continuous projection is closed
+    --   - See: Range of condExpL2 is closed (implicit in definition)
+    --
+    -- Step 4: Limit argument
+    --   Fix N. For all n ≥ N:
+    --     blockAvg f X 0 n uses X_0, ..., X_{n-1}
+    --     Since n ≥ N, this includes X_N, ..., X_{n-1}
+    --     But wait - blockAvg f X 0 n uses X_0, ..., X_{N-1} too!
+    --
+    --   CORRECTION: Use diagonal sequence
+    --   Define g_k := blockAvg f X k n_k for suitable n_k
+    --   Then g_k is Measurable[σ(X_{≥k})] and g_k → α_L2 in L²
+    --
+    --   For fixed N and all k ≥ N:
+    --     g_k is Measurable[σ(X_{≥k})] ⊆ Measurable[σ(X_{≥N})]
+    --     So (g_k)_{k≥N} ⊆ S_N
+    --
+    --   Since S_N is closed and g_k → α_L2, we have α_L2 ∈ S_N
+    --   Therefore α_L2 is Measurable[σ(X_{≥N})] for all N
+    --
+    -- Step 5: Tail σ-algebra is intersection
+    --   TailSigma.tailSigma X = ⋂_N σ(X_{≥N})
+    --   Since α_L2 is Measurable[σ(X_{≥N})] for all N,
+    --   we have α_L2 is Measurable[TailSigma.tailSigma X]
+    --
+    -- Step 6: Transfer to representative
+    --   Have: α_f =ᵐ α_L2 and Measurable[TailSigma.tailSigma X] α_L2
+    --   Need: Measurable[TailSigma.tailSigma X] α_f
+    --
+    --   This follows from: Measurability is preserved under ae-modification
+    --   when we have a specific representative
+    --
+    -- INFRASTRUCTURE NEEDED:
+    --   1. Lemma: blockAvg f X m n is Measurable[σ(X_m, ..., X_{m+n-1})]
+    --   2. Lemma: Closed subspace property of {h : Measurable[m] h}
+    --   3. Lemma: Intersection of σ-algebras and measurability
+    --   4. Lemma: Transfer measurability via ae-equality
+    --
+    -- STATUS: This is a substantial proof requiring careful handling of
+    --         sub-σ-algebras and closedness in L². The infrastructure
+    --         may not be readily available in current mathlib.
+    --
+    -- ALTERNATIVE: Use existing results about conditional expectation
+    --              and measurability of limits in Lp spaces if available
     sorry
 
   -- Step 4: Identify α_f = E[f(X_1)|tail] using tail-event integrals
