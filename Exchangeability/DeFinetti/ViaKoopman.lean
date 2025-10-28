@@ -3809,6 +3809,59 @@ private lemma iterate_shift_eval0 (k : ℕ) (ω : Ω[α]) :
 These lemmas extract Steps 4a-4c from the main theorem to reduce elaboration complexity.
 Each lemma is self-contained with ~50-80 lines, well below timeout thresholds. -/
 
+/-- **Step 4a.1**: L² birkhoffAverage convergence in eLpNorm.
+
+Converts Lp convergence to eLpNorm convergence for p=2. -/
+private lemma optionB_Step4a_eLpNorm2_conv
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ)
+    (fL2 : Lp ℝ 2 μ)
+    (hfL2_tendsto : Tendsto (birkhoffAverage ℝ (koopman shift hσ) _root_.id · fL2) atTop (𝓝 (condexpL2 (μ := μ) fL2))) :
+    Tendsto (fun n => eLpNorm (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2) 2 μ)
+      atTop (𝓝 0) := by
+  rw [← Lp.tendsto_Lp_iff_tendsto_eLpNorm']
+  exact hfL2_tendsto
+
+/-- **Step 4a.2**: L² to L¹ eLpNorm inequality on probability spaces.
+
+For probability spaces, ‖f‖₁ ≤ ‖f‖₂ via eLpNorm_le_eLpNorm_of_exponent_le. -/
+private lemma optionB_Step4a_eLpNorm_L2_to_L1
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ)
+    (fL2 : Lp ℝ 2 μ)
+    (heLp2_conv : Tendsto (fun n => eLpNorm (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2) 2 μ) atTop (𝓝 0)) :
+    Tendsto (fun n => eLpNorm (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2) 1 μ)
+      atTop (𝓝 0) := by
+  apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds heLp2_conv
+  · intro n; exact zero_le _
+  · intro n
+    apply eLpNorm_le_eLpNorm_of_exponent_le (by norm_num : (1 : ℝ≥0∞) ≤ 2)
+    exact Lp.aestronglyMeasurable (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2)
+
+/-- **Step 4a.3**: eLpNorm 1 to integral convergence.
+
+Converts eLpNorm 1 convergence to integral convergence using Lp.norm_toLp. -/
+private lemma optionB_Step4a_eLpNorm1_to_integral
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ)
+    (fL2 : Lp ℝ 2 μ)
+    (heLp1_conv : Tendsto (fun n => eLpNorm (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2) 1 μ) atTop (𝓝 0)) :
+    Tendsto (fun n => ∫ ω, |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω| ∂μ)
+      atTop (𝓝 0) := by
+  -- Convert eLpNorm to Lp norm using Lp.norm_def
+  have h_eq : ∀ n, (eLpNorm (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2) 1 μ).toReal =
+      ‖birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2‖ := by
+    intro n
+    rw [Lp.norm_def]
+  -- Now use that ‖f‖_{L¹} = ∫ |f| for L¹ functions
+  have h_int_eq : ∀ n, ‖birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2‖ =
+      ∫ ω, |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω| ∂μ := by
+    intro n
+    rw [← integral_norm_eq_enorm_abs]
+    rfl
+  simp_rw [← h_int_eq, ← h_eq]
+  exact ENNReal.tendsto_toReal_zero_of_tendsto heLp1_conv
+
 /-- **Step 4a helper**: L² to L¹ convergence for birkhoffAverage.
 
 Given L² convergence of birkhoffAverage to condexpL2, proves L¹ convergence
@@ -3816,7 +3869,6 @@ of the corresponding functions B_n → Y using:
 1. Lp convergence ⟺ eLpNorm convergence
 2. L² → L¹ inequality (‖f‖₁ ≤ ‖f‖₂ on probability spaces)
 3. Transfer via a.e. equalities -/
-set_option maxHeartbeats 16000000 in
 private lemma optionB_Step4a_L2_to_L1
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ)
@@ -3827,69 +3879,23 @@ private lemma optionB_Step4a_L2_to_L1
     (hB_eq_birkhoff : ∀ n > 0, (fun ω => birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω) =ᵐ[μ] B n)
     (hY_eq : condexpL2 (μ := μ) fL2 =ᵐ[μ] Y) :
     Tendsto (fun n => ∫ ω, |B n ω - Y ω| ∂μ) atTop (𝓝 0) := by
-  -- We have L² convergence: birkhoffAverage n fL2 → condexpL2 fL2 in Lp ℝ 2 μ
-  -- And a.e. equalities: birkhoffAverage n fL2 =ᵐ B n, condexpL2 fL2 =ᵐ Y
-
-  -- Convert Lp convergence to eLpNorm convergence
-  have heLp_conv : Tendsto (fun n =>
-      eLpNorm (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2) 2 μ)
-      atTop (𝓝 0) := by
-    rw [← Lp.tendsto_Lp_iff_tendsto_eLpNorm']
-    exact hfL2_tendsto
-
-  -- Use L² → L¹ inequality on probability spaces: ‖f‖₁ ≤ ‖f‖₂
-  -- Key: eLpNorm_le_eLpNorm_of_exponent_le with 1 ≤ 2 and μ univ = 1
-  have heLp1_conv : Tendsto (fun n =>
-      eLpNorm (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2) 1 μ)
-      atTop (𝓝 0) := by
-    apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds heLp_conv
-    · intro n; exact zero_le _
-    · intro n
-      refine eLpNorm_le_eLpNorm_of_exponent_le (by norm_num) ?_ ?_
-      · simp [measure_univ]
-      · exact Lp.aestronglyMeasurable (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2)
-
-  -- Convert eLpNorm 1 to integral
-  -- Key: ∫ |f| dμ = (∫⁻ ‖f‖ₑ dμ).toReal = (eLpNorm f 1 μ).toReal
-  have h_integral_conv : Tendsto (fun n =>
-      ∫ ω, |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω| ∂μ)
-      atTop (𝓝 0) := by
-    -- Show the integral equals (eLpNorm _ 1 μ).toReal
-    have h_eq : ∀ n, ∫ ω, |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω| ∂μ =
-        (eLpNorm (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2) 1 μ).toReal := by
-      intro n
-      rw [← eLpNorm_one_eq_lintegral_enorm]
-      rw [integral_norm_eq_lintegral_enorm]
-      · congr 1
-        -- For real functions: ‖|f|‖ = |f|
-        ext ω
-        simp only [Pi.sub_apply]
-        -- |r| for r : ℝ is the norm
-        exact norm_abs (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω)
-      · -- Measurability: difference of Lp functions is aestronglyMeasurable
-        exact (Lp.aestronglyMeasurable (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2)).abs
-    -- Apply tendsto with the equality
-    simp_rw [h_eq]
-    exact ENNReal.tendsto_toReal heLp1_conv
+  -- Compose the 3 conversion steps
+  have heLp2_conv := optionB_Step4a_eLpNorm2_conv hσ fL2 hfL2_tendsto
+  have heLp1_conv := optionB_Step4a_eLpNorm_L2_to_L1 hσ fL2 heLp2_conv
+  have h_integral_conv := optionB_Step4a_eLpNorm1_to_integral hσ fL2 heLp1_conv
 
   -- Transfer to B_n and Y using a.e. equalities
-  -- We have: ∫ |birkhoffAverage n fL2 - condexpL2 fL2| ∂μ → 0
-  -- Need: ∫ |B n - Y| ∂μ → 0
-  -- Use: birkhoffAverage n fL2 =ᵐ B n and condexpL2 fL2 =ᵐ Y
   have h_ae_transfer : ∀ n > 0,
       (fun ω => |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω|)
       =ᵐ[μ] (fun ω => |B n ω - Y ω|) := by
     intro n hn
-    -- Use a.e. equality of the functions
-    have hB := hB_eq_birkhoff n hn
-    have hY := hY_eq
-    filter_upwards [hB, hY] with ω hBω hYω
+    filter_upwards [hB_eq_birkhoff n hn, hY_eq] with ω hBω hYω
     simp only [hBω, hYω]
+
   -- Apply integral_congr_ae to show integrals are equal
   have h_int_eq : ∀ n > 0, ∫ ω, |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω| ∂μ
-      = ∫ ω, |B n ω - Y ω| ∂μ := by
-    intro n hn
-    exact integral_congr_ae (h_ae_transfer n hn)
+      = ∫ ω, |B n ω - Y ω| ∂μ := fun n hn => integral_congr_ae (h_ae_transfer n hn)
+
   -- Transfer convergence using the equality for large n
   have : ∀ᶠ n in atTop, ∫ ω, |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω| ∂μ
       = ∫ ω, |B n ω - Y ω| ∂μ := by
