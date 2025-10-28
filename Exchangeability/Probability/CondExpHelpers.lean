@@ -868,18 +868,11 @@ theorem condExp_project_of_condIndepFun
         filter_upwards [h_sum_eq, step4] with ω h_sum_ω h_step4_ω
         rw [h_sum_ω, h_step4_ω]
 
-      -- Chain all steps
-      calc μ[ (f_n n ∘ Y) * (Z ⁻¹' B).indicator 1 | mW ]
-          = μ[ (fun ω => ∑ r ∈ (f_n n).range, r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω) * (Z ⁻¹' B).indicator 1 | mW ] := by
-              simp only [← h_sum_rep]
-        _ = μ[ fun ω => ∑ r ∈ (f_n n).range, r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω | mW ] := by
-              simp only [h_prod_dist]
-        _ =ᵐ[μ] fun ω => ∑ r ∈ (f_n n).range, μ[ fun ω' => r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω := step1
-        _ =ᵐ[μ] fun ω => ∑ r ∈ (f_n n).range, r * (μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) := step2
-        _ =ᵐ[μ] fun ω => (∑ r ∈ (f_n n).range, r * μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 | mW ] ω) * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := step3
-        _ =ᵐ[μ] fun ω => μ[ fun ω' => ∑ r ∈ (f_n n).range, r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := step5
-        _ =ᵐ[μ] μ[ f_n n ∘ Y | mW ] * μ[ (Z ⁻¹' B).indicator 1 | mW ] := by
-              simp only [← h_sum_rep]; rfl
+      -- Chain all steps: The steps prove the factorization in sum form
+      -- We just need to note that f_n n ∘ Y equals the sum form
+      show μ[ fun ω => ∑ r ∈ (f_n n).range, r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω * (Z ⁻¹' B).indicator 1 ω | mW ] =ᵐ[μ]
+           μ[ fun ω => ∑ r ∈ (f_n n).range, r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω | mW ] * μ[ (Z ⁻¹' B).indicator 1 | mW ]
+      exact step1.trans (step2.trans (step3.trans step5))
 
     -- Pointwise convergence: f_n ∘ Y → f ∘ Y pointwise a.e. on Ω
     have h_fY_ptwise : ∀ᵐ ω ∂μ, Filter.Tendsto (fun n => f_n n (Y ω)) Filter.atTop (nhds (f (Y ω))) := by
