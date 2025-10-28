@@ -3193,31 +3193,124 @@ lemma cesaro_to_condexp_L2
 
       -- Show the difference is 0 a.e., hence eLpNorm = 0
       have h_diff_zero_ae : ∀ᵐ ω ∂μ, blockAvg f X 0 n ω - blockAvg f X 0 n' ω = 0 := by
-        -- PROOF STRATEGY (verified correct, needs mathlib API refinement):
-        --
         -- Step 1: Show Z i = 0 a.e. for all i
-        --   ✓ Have: ∫ (Z i)² = σSq = 0 (from hZ_var_uniform and hσSq_zero)
-        --   - Use: integral_eq_zero_iff_of_nonneg_ae (correct signature needed)
-        --   - Get: (Z i)² = 0 a.e., hence Z i = 0 a.e. (by sq_eq_zero_iff)
-        --
+        -- Have: ∫ (Z i)² = σSq = 0 (from hZ_var_uniform and hσSq_zero)
+        have hZ_zero_ae : ∀ i, ∀ᵐ ω ∂μ, Z i ω = 0 := by
+          intro i
+          -- From uniform variance: ∫ (Z i)² = ∫ (Z 0)² = σSq = 0
+          have h_integral_sq_zero : ∫ ω, (Z i ω) ^ 2 ∂μ = 0 := by
+            calc ∫ ω, (Z i ω) ^ 2 ∂μ
+                = ∫ ω, (Z 0 ω) ^ 2 ∂μ := hZ_var_uniform i
+              _ = σSq := rfl
+              _ = 0 := hσSq_zero
+
+          -- Use integral_eq_zero_iff_of_nonneg_ae: integral = 0 ⟹ f = 0 a.e.
+          have h_sq_zero_ae : ∀ᵐ ω ∂μ, (Z i ω) ^ 2 = 0 := by
+            -- Need to show: (1) (Z i)² ≥ 0 a.e., (2) (Z i)² integrable
+            have h_nonneg : 0 ≤ᶠ[ae μ] fun ω => (Z i ω) ^ 2 := by
+              filter_upwards with ω
+              exact sq_nonneg _
+            have h_integrable : Integrable (fun ω => (Z i ω) ^ 2) μ := by
+              -- Z i is bounded (|Z i| ≤ 2 since |f| ≤ 1 and |m| ≤ 1), so Z i² ≤ 4
+              -- Use durable pattern: (integrable_const 4).mono' hZsq_le
+              have hZsq_le : ∀ᵐ ω ∂μ, ‖(Z i ω)^2‖ ≤ (4 : ℝ) := by
+                filter_upwards [] with ω
+                -- |f(X i ω)| ≤ 1 and |m| ≤ 1, so |Z i ω| = |f(X i ω) - m| ≤ 2
+                have hZ_le : ‖Z i ω‖ ≤ (2 : ℝ) := by
+                  calc ‖Z i ω‖ = ‖f (X i ω) - m‖ := rfl
+                    _ ≤ ‖f (X i ω)‖ + ‖m‖ := norm_sub_le _ _
+                    _ ≤ 1 + 1 := by
+                        apply add_le_add
+                        · rw [Real.norm_eq_abs]; exact hf_bdd (X i ω)
+                        · rw [Real.norm_eq_abs]
+                          -- |m| ≤ 1 since m = ∫ f∘X₀ and |f| ≤ 1 on probability space
+                          sorry
+                    _ = (2 : ℝ) := by norm_num
+                -- From |Z i ω| ≤ 2, get |Z i ω|² ≤ 4
+                calc ‖(Z i ω)^2‖ = |Z i ω|^2 := by simp [pow_two]
+                  _ = ‖Z i ω‖^2 := by rw [Real.norm_eq_abs]
+                  _ ≤ 2^2 := by
+                      have := sq_le_sq' (by linarith : -(2 : ℝ) ≤ ‖Z i ω‖) hZ_le
+                      simpa [pow_two] using this
+                  _ = 4 := by norm_num
+              exact (integrable_const (4 : ℝ)).mono' ((hZ_meas i).pow (2 : ℕ)).aestronglyMeasurable hZsq_le
+            exact (integral_eq_zero_iff_of_nonneg_ae h_nonneg h_integrable).mp h_integral_sq_zero
+
+          -- From (Z i)² = 0 a.e., get Z i = 0 a.e.
+          filter_upwards [h_sq_zero_ae] with ω hω
+          exact sq_eq_zero_iff.mp hω
+
         -- Step 2: From Z i = 0 a.e., get f(X i) = m a.e.
-        --   - Definition: Z i = f(X i) - m
-        --   - Therefore: Z i = 0 a.e. ⟹ f(X i) = m a.e.
-        --
+        have hfX_eq_m_ae : ∀ i, ∀ᵐ ω ∂μ, f (X i ω) = m := by
+          intro i
+          filter_upwards [hZ_zero_ae i] with ω hω
+          -- Z i = f(X i) - m, so Z i = 0 ⟹ f(X i) = m
+          simp only [Z] at hω
+          linarith
+
         -- Step 3: Finite intersection of a.e. sets
-        --   - For M = max(n,n'), need lemma for finite intersection
-        --   - Get: ∀ᵐ ω, (∀ i < M, f(X i ω) = m)
-        --   - Mathlib has: ae_ball_lt or similar
-        --
+        -- Get: ∀ᵐ ω, ∀ i < max(n,n'), f(X i ω) = m
+        let M := max n n'
+        have h_all_eq_m : ∀ᵐ ω ∂μ, ∀ i : ℕ, i < M → f (X i ω) = m := by
+          -- Use ae_all_iff for countable (in fact, finite) intersection
+          rw [ae_all_iff]
+          intro i
+          filter_upwards [hfX_eq_m_ae i] with ω hω _
+          exact hω
+
         -- Step 4: On this a.e. set, blockAvg = m
-        --   - blockAvg n = (1/n) ∑_{i<n} f(X i) = (1/n) ∑_{i<n} m = m
-        --   - Need: Finset.sum_const_nat or similar
-        --   - Similarly blockAvg n' = m
-        --
+        filter_upwards [h_all_eq_m] with ω hω
+
+        -- Since n ≥ 1 and n' ≥ 1, both are > 0
+        have hn_pos : 0 < n := hn_ge
+        have hn'_pos : 0 < n' := hn'_ge
+
+        -- blockAvg f X 0 n ω = (1/n) ∑_{k<n} f(X k ω) = (1/n) ∑_{k<n} m = m
+        have hblockAvg_n_eq_m : blockAvg f X 0 n ω = m := by
+          have hn0 : (n : ℝ) ≠ 0 := by exact_mod_cast (ne_of_gt hn_pos)
+          -- Use clean algebraic pattern: sum_const + nsmul_eq_mul + inv_mul_cancel
+          have hterm : ∀ k ∈ Finset.range n, f (X k ω) = m := by
+            intro k hk
+            exact hω k (lt_of_lt_of_le (Finset.mem_range.mp hk) (le_max_left _ _))
+          have hsum : (∑ k ∈ Finset.range n, f (X k ω)) = (n : ℝ) * m := by
+            calc (∑ k ∈ Finset.range n, f (X k ω))
+                = (∑ k ∈ Finset.range n, m) := by
+                  refine Finset.sum_congr rfl ?_
+                  intro k hk; simpa [hterm k hk]
+              _ = (Finset.card (Finset.range n)) • m := by
+                  simpa [Finset.sum_const]
+              _ = (n : ℝ) * m := by
+                  simpa [Finset.card_range, nsmul_eq_mul]
+          unfold blockAvg
+          simp only [zero_add]
+          calc (n : ℝ)⁻¹ * (∑ k ∈ Finset.range n, f (X k ω))
+              = (n : ℝ)⁻¹ * ((n : ℝ) * m) := by simp [hsum]
+            _ = m := by field_simp [hn0]; ring
+
+        -- Similarly for n'
+        have hblockAvg_n'_eq_m : blockAvg f X 0 n' ω = m := by
+          have hn'0 : (n' : ℝ) ≠ 0 := by exact_mod_cast (ne_of_gt hn'_pos)
+          have hterm : ∀ k ∈ Finset.range n', f (X k ω) = m := by
+            intro k hk
+            exact hω k (lt_of_lt_of_le (Finset.mem_range.mp hk) (le_max_right _ _))
+          have hsum : (∑ k ∈ Finset.range n', f (X k ω)) = (n' : ℝ) * m := by
+            calc (∑ k ∈ Finset.range n', f (X k ω))
+                = (∑ k ∈ Finset.range n', m) := by
+                  refine Finset.sum_congr rfl ?_
+                  intro k hk; simpa [hterm k hk]
+              _ = (Finset.card (Finset.range n')) • m := by
+                  simpa [Finset.sum_const]
+              _ = (n' : ℝ) * m := by
+                  simpa [Finset.card_range, nsmul_eq_mul]
+          unfold blockAvg
+          simp only [zero_add]
+          calc (n' : ℝ)⁻¹ * (∑ k ∈ Finset.range n', f (X k ω))
+              = (n' : ℝ)⁻¹ * ((n' : ℝ) * m) := by simp [hsum]
+            _ = m := by field_simp [hn'0]; ring
+
         -- Step 5: Conclude difference = m - m = 0
-        --
-        -- TODO: Find correct mathlib lemma names and signatures
-        sorry
+        rw [hblockAvg_n_eq_m, hblockAvg_n'_eq_m]
+        ring
 
       -- Apply eLpNorm_congr_ae to rewrite as eLpNorm of zero function
       have h_eq_zero : eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ = 0 := by
@@ -3284,59 +3377,204 @@ lemma cesaro_to_condexp_L2
         intro ω
         norm_num
 
-    -- Step 2-5: Apply cauchy_complete_eLpNorm
-
-    -- DETAILED IMPLEMENTATION PLAN:
+    -- Step 2-5: Extract L² limit from Cauchy sequence
     --
-    -- The challenge: hCauchy is in classical ε-N form (∀ ε > 0, ∃ N, ...),
-    -- but cauchy_complete_eLpNorm needs a bound sequence B : ℕ → ℝ≥0∞
+    -- IMPLEMENTATION PLAN:
+    --
+    -- CHALLENGE: hCauchy is in classical ε-N form (∀ ε > 0, ∃ N, ...),
+    -- but cauchy_complete_eLpNorm needs a bound sequence B : ℕ → ℝ≥0∞ with
+    -- the condition ∀ N n m, N ≤ n → N ≤ m → eLpNorm (f n - f m) < B N
+    --
+    -- SOLUTION APPROACH (Subsequence method):
     --
     -- Step 2: Define geometric bound sequence
-    --   let B : ℕ → ℝ≥0∞ := fun k => ENNReal.ofNNReal ⟨2⁻¹^(k+1), by positivity⟩
-    --   This avoids syntax issues with ofReal and negative exponents
+    --   let B : ℕ → ℝ≥0∞ := fun k => (1/2)^(k+1)
     --
     -- Step 3: Prove summability
-    --   have hB_sum : ∑' i, B i ≠ ∞ := by
-    --     Use ENNReal.tsum_geometric or similar
-    --     ∑_{k=0}^∞ (1/2)^(k+1) = (1/2) · ∑_{k=0}^∞ (1/2)^k = (1/2) · 2 = 1
+    --   have hB_sum : (∑' i, B i) ≠ ∞ := by
+    --     Use ENNReal.tsum_geometric_two
+    --     ∑_{k=0}^∞ (1/2)^(k+1) = (1/2) · 2 = 1
     --
-    -- Step 4: Extract thresholds using classical choice
+    -- Step 4: Extract thresholds using Classical.choose
     --   For each k, use hCauchy with ε = B k to get M_k
-    --   have hM : ∀ k, ∃ M, ∀ n n', n ≥ M → n' ≥ M → eLpNorm < B k
-    --   let M_seq := fun k => Classical.choose (hM k)  -- Extract thresholds
-    --   Build monotone version: M'_k = max(M_k, M'_{k-1})
+    --   have hM : ∀ k, ∃ M, ∀ n n', n ≥ M → n' ≥ M → eLpNorm (blockAvg n - blockAvg n') < B k
+    --   let M_seq := fun k => Classical.choose (hM k)
     --
-    -- Step 5: Verify Cauchy condition for cauchy_complete_eLpNorm
-    --   have h_cau : ∀ N n m, N ≤ n → N ≤ m → eLpNorm (blockAvg n - blockAvg m) < B N
-    --   This follows from M'_N being the threshold for B N
+    -- Step 5: Build strictly increasing subsequence
+    --   let n_k : ℕ → ℕ := Nat.rec (max 1 (M_seq 0)) (fun k' n_prev => max (n_prev + 1) (M_seq (k'+1)))
+    --   This ensures: n_k < n_{k+1}, n_k ≥ M_seq k, n_k ≥ k (monotone + growth + threshold)
     --
-    -- Step 6: Apply theorem
-    --   obtain ⟨α_f, hα_memLp, hα_limit⟩ := cauchy_complete_eLpNorm (hp := ...)
-    --     hblockAvg_memLp_all hB_sum h_cau
+    -- Step 6: Verify subsequence Cauchy condition
+    --   have h_subseq_cau : ∀ N n m, N ≤ n → N ≤ m →
+    --     eLpNorm (blockAvg (n_k n) - blockAvg (n_k m)) < B N
+    --   Proof: n_k n ≥ n_k N ≥ M_seq N and n_k m ≥ M_seq N (by monotonicity)
+    --   So apply hM_spec N (n_k n) (n_k m)
     --
-    -- Alternative simpler approach: Use ae_seq_limit or similar to extract limit directly
-    -- from the Cauchy property, without building explicit bound sequence
+    -- Step 7: Apply cauchy_complete_eLpNorm to subsequence
+    --   obtain ⟨α_f_subseq, h_memLp, h_subseq_lim⟩ :=
+    --     cauchy_complete_eLpNorm (hp := ...) (fun k => hblockAvg_memLp_all (n_k k)) hB_sum h_subseq_cau
     --
-    -- TODO: Complete implementation with one of these approaches
-    sorry
+    -- Step 8: Show full sequence converges to same limit
+    --   For any ε > 0:
+    --   (a) Find N₁ s.t. for n ≥ N₁: eLpNorm (blockAvg n - blockAvg n') < ε/2 for all n' ≥ N₁
+    --   (b) Find N₂ s.t. eLpNorm (blockAvg (n_k N₂) - α_f_subseq) < ε/2
+    --   (c) Let N = max N₁ N₂, pick n ≥ N. Then n_k N ≥ n_k N₂ ≥ N₁ (growth), so:
+    --       eLpNorm (blockAvg n - α_f_subseq)
+    --         ≤ eLpNorm (blockAvg n - blockAvg (n_k N)) + eLpNorm (blockAvg (n_k N) - α_f_subseq)
+    --         < ε/2 + ε/2 = ε
+    --
+    -- KEY MATHLIB LEMMAS:
+    --   - ENNReal.tsum_geometric_two : ∑_{k=0}^∞ (1/2)^k = 2
+    --   - Classical.choose and Classical.choose_spec : Extract witnesses from existentials
+    --   - cauchy_complete_eLpNorm : Completeness of Lp spaces with bound sequence
+    --   - Nat induction patterns for building recursive sequences
+    --
+    -- ALTERNATIVE SIMPLER APPROACH (if available):
+    --   Search mathlib for a direct "Cauchy in L² metric implies convergence" result
+    --   that doesn't require the specific bound sequence format.
+    --
+    -- TODO: Implement one of these approaches
+
+    -- IMPLEMENTATION: Option A (CompleteSpace approach)
+    -- Work in Lp ℝ 2 μ throughout, use completeness directly
+
+    -- Step 1: Define sequence in L² space
+    let u : ℕ → Lp ℝ 2 μ := fun n =>
+      if hn : n > 0 then
+        Lp.toLp (blockAvg f X 0 n) (hblockAvg_memLp n hn)
+      else
+        0  -- n = 0 case
+
+    -- Step 2: Prove sequence is Cauchy
+    have hCauchySeq : CauchySeq u := by
+      rw [Metric.cauchySeq_iff]
+      intro ε hε
+      obtain ⟨N, hN⟩ := hCauchy ε hε
+      use N
+      intro n hn m hm
+      -- For n, m ≥ N, both are > 0, so we can unfold u
+      have hn_pos : n > 0 := Nat.lt_of_lt_of_le (Nat.zero_lt_succ N) hn
+      have hm_pos : m > 0 := Nat.lt_of_lt_of_le (Nat.zero_lt_succ N) hm
+      simp only [u, dif_pos hn_pos, dif_pos hm_pos]
+      -- dist in Lp equals eLpNorm of difference
+      rw [Lp.dist_def]
+      -- Need: eLpNorm (toLp (blockAvg n) - toLp (blockAvg m)) 2 μ < ε
+      -- This equals eLpNorm (blockAvg n - blockAvg m) 2 μ by linearity
+      convert hN hn hm using 2
+      -- toLp is linear, so toLp f - toLp g = toLp (f - g)
+      -- Use MemLp.toLp_sub and edist = eLpNorm
+      rw [← (hblockAvg_memLp n hn_pos).toLp_sub (hblockAvg_memLp m hm_pos)]
+      rfl
+
+    -- Step 3: Extract limit from completeness
+    haveI : CompleteSpace (Lp ℝ 2 μ) := by infer_instance
+    obtain ⟨α_L2, h_tendsto⟩ := cauchySeq_tendsto_of_complete hCauchySeq
+
+    -- Step 4: Extract representative function
+    -- α_L2 : Lp ℝ 2 μ is an ae-equivalence class
+    -- We need a measurable representative α_f : Ω → ℝ
+    choose α_f hα_meas hα_ae_eq using α_L2.exists_stronglyMeasurable_representative
+
+    -- Properties of α_f
+    have hα_memLp : MemLp α_f 2 μ := by
+      -- α_f =ᵐ α_L2, and α_L2 ∈ L², so α_f ∈ L²
+      -- Use MemLp.ae_eq to transfer MemLp via ae-equality
+      exact α_L2.memLp.ae_eq hα_ae_eq.symm
+
+    have hα_limit : Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0) := by
+      -- u n → α_L2 in L², and α_f =ᵐ α_L2
+      -- So blockAvg n → α_f in L²
+      -- Strategy: h_tendsto gives dist (u n) α_L2 → 0
+      -- dist in Lp = eLpNorm, and we use ae-equality
+      rw [tendsto_iff_dist_tendsto_zero] at h_tendsto
+      rw [tendsto_iff_dist_tendsto_zero]
+      simp only [dist_zero_right] at h_tendsto ⊢
+      refine h_tendsto.congr' ?_
+      -- Need to show: eventually, eLpNorm (blockAvg n - α_f) = dist (u n) α_L2
+      filter_upwards [Filter.eventually_cofinite.2 (finite_le_nat 1)] with n hn
+      have hn_pos : n > 0 := hn
+      simp only [u, dif_pos hn_pos]
+      rw [Lp.dist_def]
+      -- Now we have: eLpNorm (toLp (blockAvg n) - α_L2) 2 μ
+      -- And want: eLpNorm (blockAvg n - α_f) 2 μ
+      -- These are equal because α_L2 =ᵐ α_f
+      refine eLpNorm_congr_ae ?_
+      filter_upwards [(hblockAvg_memLp n hn_pos).coeFn_toLp, hα_ae_eq] with ω h1 h2
+      simp only [Pi.sub_apply, h1, h2]
 
   use α_f
   refine ⟨hα_memLp, ?_, hα_limit, ?_⟩
 
   -- Step 3: Show α_f is tail-measurable
-  -- For each N, A_{N,n} is σ(X_{>N})-measurable
-  -- α_f = limit of A_{N,n} as n→∞, so α_f ∈ ⋂_N σ(X_{>N}) = tail σ-algebra
-  · -- Tail measurability
-    -- TODO: Prove tail measurability via measurability of block averages
-    -- Key steps:
-    -- 1. For each N, blockAvg f X N n only depends on X_N, X_{N+1}, ..., X_{N+n-1}
-    -- 2. Therefore blockAvg f X N n is σ(X_{≥N})-measurable
-    -- 3. As N→∞, σ(X_{≥N}) ↓ tail σ-algebra
-    -- 4. Show α_f = lim_{n→∞} blockAvg f X 0 n is also = lim_{N→∞} lim_{n→∞} blockAvg f X N n
-    -- 5. Each blockAvg f X N n is σ(X_{≥N})-measurable
-    -- 6. Limit of σ(X_{≥N})-measurable functions is measurable w.r.t. ⋂_N σ(X_{≥N}) = tail
+  -- Use condexpL2 projection approach: α_L2 is fixed by projection ⟹ tail-measurable
+  · -- Tail measurability via continuous projection
+    -- IMPLEMENTATION APPROACH (from documentation):
     --
-    -- This requires diagonal argument and measure theory for limits of measurable functions
+    -- GOAL: Measurable[TailSigma.tailSigma X] α_f
+    --
+    -- STRATEGY: Closedness of measurable subspaces in L²
+    --
+    -- Step 1: σ-algebra measurability of block averages
+    --   For each N, define m_ge N := σ(X_N, X_{N+1}, ...)
+    --   Claim: blockAvg f X N n is Measurable[m_ge N]
+    --   Proof: blockAvg f X N n = (1/n) * ∑_{j<n} f(X_{N+j})
+    --          Each f(X_{N+j}) is Measurable[σ(X_{N+j})] ≤ Measurable[m_ge N]
+    --          So sum and scalar mult preserve this
+    --
+    -- Step 2: Decreasing sequence property
+    --   Note: σ(X_{≥k}) ⊆ σ(X_{≥N}) for all k ≥ N
+    --   So if g is Measurable[σ(X_{≥k})], then g is also Measurable[σ(X_{≥N})]
+    --
+    -- Step 3: Closed subspace property
+    --   KEY LEMMA NEEDED: The set S_N := {h ∈ L² | Measurable[m_ge N] h}
+    --   is a closed subspace of L²
+    --
+    --   This is because:
+    --   - condexpL2 : L² → S_N is a continuous linear projection
+    --   - Range of continuous projection is closed
+    --   - See: Range of condExpL2 is closed (implicit in definition)
+    --
+    -- Step 4: Limit argument
+    --   Fix N. For all n ≥ N:
+    --     blockAvg f X 0 n uses X_0, ..., X_{n-1}
+    --     Since n ≥ N, this includes X_N, ..., X_{n-1}
+    --     But wait - blockAvg f X 0 n uses X_0, ..., X_{N-1} too!
+    --
+    --   CORRECTION: Use diagonal sequence
+    --   Define g_k := blockAvg f X k n_k for suitable n_k
+    --   Then g_k is Measurable[σ(X_{≥k})] and g_k → α_L2 in L²
+    --
+    --   For fixed N and all k ≥ N:
+    --     g_k is Measurable[σ(X_{≥k})] ⊆ Measurable[σ(X_{≥N})]
+    --     So (g_k)_{k≥N} ⊆ S_N
+    --
+    --   Since S_N is closed and g_k → α_L2, we have α_L2 ∈ S_N
+    --   Therefore α_L2 is Measurable[σ(X_{≥N})] for all N
+    --
+    -- Step 5: Tail σ-algebra is intersection
+    --   TailSigma.tailSigma X = ⋂_N σ(X_{≥N})
+    --   Since α_L2 is Measurable[σ(X_{≥N})] for all N,
+    --   we have α_L2 is Measurable[TailSigma.tailSigma X]
+    --
+    -- Step 6: Transfer to representative
+    --   Have: α_f =ᵐ α_L2 and Measurable[TailSigma.tailSigma X] α_L2
+    --   Need: Measurable[TailSigma.tailSigma X] α_f
+    --
+    --   This follows from: Measurability is preserved under ae-modification
+    --   when we have a specific representative
+    --
+    -- INFRASTRUCTURE NEEDED:
+    --   1. Lemma: blockAvg f X m n is Measurable[σ(X_m, ..., X_{m+n-1})]
+    --   2. Lemma: Closed subspace property of {h : Measurable[m] h}
+    --   3. Lemma: Intersection of σ-algebras and measurability
+    --   4. Lemma: Transfer measurability via ae-equality
+    --
+    -- STATUS: This is a substantial proof requiring careful handling of
+    --         sub-σ-algebras and closedness in L². The infrastructure
+    --         may not be readily available in current mathlib.
+    --
+    -- ALTERNATIVE: Use existing results about conditional expectation
+    --              and measurability of limits in Lp spaces if available
     sorry
 
   -- Step 4: Identify α_f = E[f(X_1)|tail] using tail-event integrals
@@ -3347,17 +3585,114 @@ lemma cesaro_to_condexp_L2
   --                 = E[α_f 1_A] (by L² convergence)
   -- Therefore α_f is the conditional expectation
   · -- Identification as conditional expectation
-    -- TODO: Use characterization of conditional expectation
-    -- Key steps:
-    -- 1. Need to show: ∀ A ∈ tail σ-algebra, ∫_A f∘X_0 = ∫_A α_f
-    -- 2. For tail event A, use exchangeability: ∫_A f∘X_j = ∫_A f∘X_0 for all j
-    -- 3. Average over first n indices: ∫_A (1/n ∑ f∘X_j) = ∫_A f∘X_0
-    -- 4. Take limit n→∞: LHS → ∫_A α_f (by L² convergence + dominated convergence)
-    -- 5. RHS stays ∫_A f∘X_0 (constant)
-    -- 6. Therefore ∫_A α_f = ∫_A f∘X_0 for all tail events A
-    -- 7. By uniqueness of conditional expectation, α_f =ᵐ E[f∘X_0 | tail]
+    -- IMPLEMENTATION PLAN (from user guidance):
     --
-    -- This requires: setIntegral convergence lemmas, L²→L¹ on sets, condExp uniqueness
+    -- GOAL: α_f =ᵐ[μ] μ[(f ∘ X 0) | TailSigma.tailSigma X]
+    --
+    -- STRATEGY: Show equal set integrals on tail events, then invoke uniqueness
+    --
+    -- KEY UNIQUENESS LEMMA TO USE:
+    --   MeasureTheory.ae_eq_of_forall_setIntegral_eq_of_sigmaFinite'
+    --   from MeasureTheory.Function.ConditionalExpectation.Unique
+    --
+    -- Signature (roughly):
+    --   If f, g are AEStronglyMeasurable' m and have equal integrals on all
+    --   m-measurable sets (with [SigmaFinite (μ.trim hm)]), then f =ᵐ[μ] g
+    --
+    -- So we must prove: ∀ A ∈ TailSigma.tailSigma X,
+    --                     ∫ x in A, (f ∘ X 0) x ∂μ = ∫ x in A, α_f x ∂μ
+    --
+    -- PROOF STRUCTURE:
+    --
+    -- Part (i): Exchangeability moves indices under tail events
+    --   - For a tail set A and any j:
+    --       ∫ x in A, (f ∘ X j) x ∂μ = ∫ x in A, (f ∘ X 0) x ∂μ
+    --   - Reason: finite permutation σ with σ(0)=j preserves law of whole sequence
+    --   - Tail sets invariant under finite permutations
+    --   - So joint law of (1_A, X_j) equals that of (1_A, X_0)
+    --   - Therefore set integrals are equal
+    --
+    --   Implementation approach:
+    --   - Use measure-preserving equivalence (see Constructions.Pi for pattern)
+    --   - Or: directly from exchangeability definition (invariance under finite perms)
+    --   - Key: "set integral under measure preserving equivalence" + A invariant
+    --
+    -- Part (ii): Pass to block averages and take L² limit
+    --   - From (i): ∫_A ( (1/n) ∑_{j<n} f∘X j ) dμ = ∫_A f∘X 0 dμ
+    --   - LHS = ∫_A blockAvg f X 0 n dμ
+    --   - Need to show: ∫_A blockAvg f X 0 n dμ → ∫_A α_f dμ as n→∞
+    --
+    --   How to get set-integral convergence from L² convergence:
+    --
+    --   METHOD 1 (Hölder on sets - RECOMMENDED):
+    --     For any measurable A with μ A < ∞:
+    --       |∫_A (g_n - α_f) dμ| ≤ (μ A)^{1/2} * ‖g_n - α_f‖₂ → 0
+    --     by Cauchy-Schwarz / Hölder with p=q=2
+    --
+    --     Mathlib location: MeasureTheory.Integral.MeanInequalities
+    --     (Look for Hölder inequality for set integrals)
+    --
+    --     One-line proof once you have the setup:
+    --       apply norm_setIntegral_le_of_norm_le_const_ae
+    --       or similar Hölder variant
+    --
+    --   METHOD 2 (Dominated convergence on the set):
+    --     With uniform bound + IsFiniteMeasure, can use dominated convergence
+    --     But Hölder is more direct here
+    --
+    --   Either way: ∫_A blockAvg f X 0 n ∂μ → ∫_A α_f ∂μ
+    --
+    -- Part (iii): Invoke uniqueness lemma
+    --   Now we have:
+    --     - ∫_A α_f ∂μ = ∫_A f∘X 0 ∂μ for all tail A
+    --     - AEStronglyMeasurable'[TailSigma.tailSigma X] α_f μ (from Sorry #3)
+    --     - AEStronglyMeasurable'[TailSigma.tailSigma X] (f ∘ X 0) (easy)
+    --
+    --   Set up for uniqueness lemma:
+    --     have hm : TailSigma.tailSigma X ≤ m0 := ... -- ambient σ-algebra
+    --     haveI : SigmaFinite (μ.trim hm) := inferInstance
+    --       -- from IsFiniteMeasure μ (trimming preserves finiteness)
+    --
+    --     apply MeasureTheory.ae_eq_of_forall_setIntegral_eq_of_sigmaFinite'
+    --       hm
+    --       (integrability of f ∘ X 0 on sets)
+    --       (integrability of α_f on sets)
+    --       (set integral equality proven above)
+    --       (tail_aesm from Sorry #3)
+    --       (stronglyMeasurable_condExp for conditional expectation)
+    --
+    -- MATHLIB HOOKS NEEDED:
+    --   - MeasureTheory.ae_eq_of_forall_setIntegral_eq_of_sigmaFinite'
+    --     (uniqueness lemma)
+    --   - MeasureTheory.Integral.MeanInequalities
+    --     (Hölder for L² → set integral convergence)
+    --   - Measure.Trim
+    --     (to get SigmaFinite on trimmed measure from IsFiniteMeasure)
+    --   - Measure-preserving equivalences in Constructions.Pi
+    --     (for exchangeability → set integral equality)
+    --
+    -- MINIMAL SKELETON:
+    --
+    -- -- Part (i): tail invariance
+    -- have h_tail_inv : ∀ A, MeasurableSet[TailSigma.tailSigma X] A →
+    --     ∀ j, ∫ x in A, f (X j x) ∂μ = ∫ x in A, f (X 0 x) ∂μ := by
+    --   intro A hA j
+    --   -- use exchangeability + finite permutation + measure preserving
+    --   sorry
+    --
+    -- -- Part (ii): L² convergence → set integral convergence
+    -- have h_setInt_conv : ∀ A, MeasurableSet[TailSigma.tailSigma X] A →
+    --     Tendsto (fun n => ∫ x in A, blockAvg f X 0 n x ∂μ)
+    --             atTop (𝓝 (∫ x in A, α_f x ∂μ)) := by
+    --   intro A hA
+    --   -- use Hölder: |∫_A (g_n - α_f)| ≤ √(μ A) * ‖g_n - α_f‖₂
+    --   sorry
+    --
+    -- -- Part (iii): uniqueness
+    -- have hm : TailSigma.tailSigma X ≤ m0 := ...
+    -- haveI : SigmaFinite (μ.trim hm) := inferInstance
+    -- apply MeasureTheory.ae_eq_of_forall_setIntegral_eq_of_sigmaFinite' hm
+    --   ...
     sorry
 
 /-- **L¹ version via L² → L¹ conversion.**
