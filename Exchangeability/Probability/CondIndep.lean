@@ -189,10 +189,104 @@ survives conditioning on W.
 -/
 theorem condIndep_of_indep_pair (μ : Measure Ω) [IsProbabilityMeasure μ]
     (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
+    (hY : Measurable Y) (hZ : Measurable Z) (hW : Measurable W)
     (hYZ_indep : IndepFun Y Z μ)
     (hPairW_indep : IndepFun (fun ω => (Y ω, Z ω)) W μ) :
     CondIndep μ Y Z W := by
-  sorry
+  intro A B hA hB
+  -- Define the indicator functions
+  let f := Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
+  let g := Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ))
+
+  -- f and g are measurable and integrable
+  have hf_meas : Measurable f := measurable_const.indicator (hY hA)
+  have hg_meas : Measurable g := measurable_const.indicator (hZ hB)
+  have hf_int : Integrable f μ := (integrable_const (1 : ℝ)).indicator (hY hA)
+  have hg_int : Integrable g μ := (integrable_const (1 : ℝ)).indicator (hZ hB)
+
+  -- Y and Z are independent of W (from pair independence)
+  have hY_W_indep : IndepFun Y W μ := IndepFun.of_comp_left_fst hPairW_indep
+  have hZ_W_indep : IndepFun Z W μ := IndepFun.of_comp_left_snd hPairW_indep
+
+  -- f and g are independent of W (since they are σ(Y)- and σ(Z)-measurable)
+  have hf_W_indep : IndepFun f W μ := by
+    -- f is measurable with respect to σ(Y)
+    have : f = (fun a => Set.indicator A (fun _ => (1 : ℝ)) a) ∘ Y := by
+      ext ω
+      simp only [f, Function.comp_apply, Set.indicator]
+      split_ifs with h <;> simp [h]
+    rw [this]
+    exact hY_W_indep.comp (measurable_const.indicator hA) measurable_id
+  have hg_W_indep : IndepFun g W μ := by
+    -- g is measurable with respect to σ(Z)
+    have : g = (fun b => Set.indicator B (fun _ => (1 : ℝ)) b) ∘ Z := by
+      ext ω
+      simp only [g, Function.comp_apply, Set.indicator]
+      split_ifs with h <;> simp [h]
+    rw [this]
+    exact hZ_W_indep.comp (measurable_const.indicator hB) measurable_id
+
+  -- By independence from W, conditional expectations are constants
+  have hf_const : μ[f | MeasurableSpace.comap W inferInstance] =ᵐ[μ] fun _ => μ[f] :=
+    condExp_const_of_indepFun μ hf_meas hW hf_W_indep hf_int
+  have hg_const : μ[g | MeasurableSpace.comap W inferInstance] =ᵐ[μ] fun _ => μ[g] :=
+    condExp_const_of_indepFun μ hg_meas hW hg_W_indep hg_int
+
+  -- Product is also independent of W (since (Y,Z) ⊥ W)
+  have hfg_meas : Measurable (f * g) := hf_meas.mul hg_meas
+  have hfg_int : Integrable (f * g) μ := by
+    refine ⟨hfg_meas.aestronglyMeasurable, ?_⟩
+    simp only [hasFiniteIntegral_iff_norm]
+    apply lt_of_le_of_lt
+    · apply lintegral_mono
+      intro ω
+      simp [f, g, Set.indicator]
+      split_ifs <;> norm_num
+    · simp
+      exact measure_lt_top μ Set.univ
+
+  -- The product function is a function of (Y, Z), hence independent of W
+  have h_pair_indep : IndepFun (f * g) W μ := by
+    -- f * g = φ ∘ (Y, Z) where φ(a, b) = 1_A(a) * 1_B(b)
+    have hfg_eq : f * g = (fun p : α × β =>
+        Set.indicator A (fun _ => (1 : ℝ)) (p.1) *
+        Set.indicator B (fun _ => (1 : ℝ)) (p.2)) ∘ (fun ω => (Y ω, Z ω)) := by
+      ext ω
+      simp only [Pi.mul_apply, f, g, Function.comp_apply]
+      rw [Set.indicator_comp_of_zero fun _ => (0 : ℝ),
+          Set.indicator_comp_of_zero fun _ => (0 : ℝ)]
+    rw [hfg_eq]
+    conv_rhs => rw [← Function.comp.left_id W]
+    exact hPairW_indep.comp ((measurable_const.indicator hA).fst'.mul (measurable_const.indicator hB).snd') measurable_id
+
+  have hfg_const : μ[f * g | MeasurableSpace.comap W inferInstance] =ᵐ[μ] fun _ => μ[f * g] :=
+    condExp_const_of_indepFun μ hfg_meas hW h_pair_indep hfg_int
+
+  -- Unconditional factorization from Y ⊥ Z: f and g are independent
+  have hfg_indep : IndepFun f g μ := by
+    -- f = φ₁ ∘ Y, g = φ₂ ∘ Z where φ₁, φ₂ are indicator functions
+    have hf_eq : f = (fun a => Set.indicator A (fun _ => (1 : ℝ)) a) ∘ Y := by
+      ext ω
+      simp only [f, Function.comp_apply]
+      rw [Set.indicator_comp_of_zero fun _ => (0 : ℝ)]
+    have hg_eq : g = (fun b => Set.indicator B (fun _ => (1 : ℝ)) b) ∘ Z := by
+      ext ω
+      simp only [g, Function.comp_apply]
+      rw [Set.indicator_comp_of_zero fun _ => (0 : ℝ)]
+    rw [hf_eq, hg_eq]
+    exact hYZ_indep.comp (measurable_const.indicator hA) (measurable_const.indicator hB)
+  have hYZ_factor : μ[f * g] = μ[f] * μ[g] :=
+    hfg_indep.integral_mul_of_integrable hf_int hg_int
+
+  -- Combine everything
+  calc μ[f * g | MeasurableSpace.comap W inferInstance]
+      =ᵐ[μ] fun _ => μ[f * g] := hfg_const
+    _ = fun _ => μ[f] * μ[g] := by rw [hYZ_factor]
+    _ =ᵐ[μ] (fun _ => μ[f]) * (fun _ => μ[g]) := by rfl
+    _ =ᵐ[μ] μ[f | MeasurableSpace.comap W inferInstance] *
+             μ[g | MeasurableSpace.comap W inferInstance] := by
+      filter_upwards [hf_const.symm, hg_const.symm] with ω hf hg
+      rw [hf, hg]
 
 /-!
 ## Extension to simple functions and bounded measurables (§C2)
