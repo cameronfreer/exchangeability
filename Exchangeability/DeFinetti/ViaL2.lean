@@ -3230,10 +3230,13 @@ lemma cesaro_to_condexp_L2
                 calc ‖(Z i ω)^2‖ = |Z i ω|^2 := by simp [pow_two]
                   _ = ‖Z i ω‖^2 := by rw [Real.norm_eq_abs]
                   _ ≤ 2^2 := by
-                      have := sq_le_sq' (by linarith : -(2 : ℝ) ≤ ‖Z i ω‖) hZ_le
+                      have := sq_le_sq' (by linarith [norm_nonneg (Z i ω)] : -(2 : ℝ) ≤ ‖Z i ω‖) hZ_le
                       simpa [pow_two] using this
                   _ = 4 := by norm_num
-              exact (integrable_const (4 : ℝ)).mono' ((hZ_meas i).pow (2 : ℕ)).aestronglyMeasurable hZsq_le
+              have h_aesm : AEStronglyMeasurable (fun ω => (Z i ω) ^ 2) μ := by
+                convert ((hZ_meas i).mul (hZ_meas i)).aestronglyMeasurable using 1
+                simp only [pow_two]
+              exact (integrable_const (4 : ℝ)).mono' h_aesm hZsq_le
             exact (integral_eq_zero_iff_of_nonneg_ae h_nonneg h_integrable).mp h_integral_sq_zero
 
           -- From (Z i)² = 0 a.e., get Z i = 0 a.e.
@@ -3446,6 +3449,7 @@ lemma cesaro_to_condexp_L2
         0  -- n = 0 case
 
     -- Step 2: Prove sequence is Cauchy
+    -- Use the simpler approach: dist = norm = eLpNorm.toReal
     have hCauchySeq : CauchySeq u := by
       rw [Metric.cauchySeq_iff]
       intro ε hε
@@ -3455,29 +3459,20 @@ lemma cesaro_to_condexp_L2
       -- For n, m ≥ max N 1, both are > 0, so we can unfold u
       have hn_pos : n > 0 := Nat.lt_of_lt_of_le (Nat.zero_lt_one) (Nat.le_trans (Nat.le_max_right N 1) hn)
       have hm_pos : m > 0 := Nat.lt_of_lt_of_le (Nat.zero_lt_one) (Nat.le_trans (Nat.le_max_right N 1) hm)
-      simp only [u, dif_pos hn_pos, dif_pos hm_pos]
-      -- dist in Lp equals eLpNorm of difference (with toReal)
-      rw [Lp.dist_def]
-      -- toLp coercions are ae-equal to the original functions
-      -- So eLpNorm of coerced difference equals eLpNorm of original difference
       have hn' : n ≥ N := Nat.le_trans (Nat.le_max_left N 1) hn
       have hm' : m ≥ N := Nat.le_trans (Nat.le_max_left N 1) hm
-      -- Key: use eLpNorm_congr_ae with coeFn_toLp to relate coercions to originals
-      have h_ae_eq : eLpNorm (↑((hblockAvg_memLp n hn_pos).toLp (blockAvg f X 0 n) -
-                               (hblockAvg_memLp m hm_pos).toLp (blockAvg f X 0 m))) 2 μ =
-                     eLpNorm (blockAvg f X 0 n - blockAvg f X 0 m) 2 μ := by
-        -- Use MemLp.toLp_sub: (hf.sub hg).toLp (f - g) = hf.toLp f - hg.toLp g
-        have h_toLp_sub := (hblockAvg_memLp n hn_pos).toLp_sub (hblockAvg_memLp m hm_pos)
-        -- This gives: toLp (blockAvg n - blockAvg m) = toLp (blockAvg n) - toLp (blockAvg m)
-        -- So the coercion of LHS equals coercion of RHS
-        conv_lhs => rw [← h_toLp_sub]
-        -- Now both sides have the same Lp element, just need to show eLpNorms are equal via ae-equality
-        exact eLpNorm_congr_ae (((hblockAvg_memLp n hn_pos).sub (hblockAvg_memLp m hm_pos)).coeFn_toLp).symm
-      rw [h_ae_eq]
-      -- Now relate (x).toReal < ε with x < ENNReal.ofReal ε
-      rw [ENNReal.toReal_lt_toReal (eLpNorm_ne_top _) ENNReal.ofReal_ne_top]
-      · exact hN hn' hm'
-      · exact (hblockAvg_memLp n hn_pos).sub (hblockAvg_memLp m hm_pos)
+      simp only [u, dif_pos hn_pos, dif_pos hm_pos]
+      -- Use dist = (eLpNorm ...).toReal and the fact that toLp preserves eLpNorm
+      rw [dist_comm, dist_eq_norm, Lp.norm_def]
+      -- Now goal is: eLpNorm (toLp m - toLp n) 2 μ).toReal < ε
+      -- Use MemLp.toLp_sub to rewrite the difference
+      rw [← (hblockAvg_memLp m hm_pos).toLp_sub (hblockAvg_memLp n hn_pos)]
+      -- Now: (eLpNorm (coeFn (toLp (blockAvg m - blockAvg n))) 2 μ).toReal < ε
+      -- coeFn of toLp is ae-equal to original, so eLpNorms are equal
+      rw [eLpNorm_congr_ae (((hblockAvg_memLp m hm_pos).sub (hblockAvg_memLp n hn_pos)).coeFn_toLp)]
+      -- Now: (eLpNorm (blockAvg m - blockAvg n) 2 μ).toReal < ε
+      -- Use toReal_lt_of_lt_ofReal: if a < ofReal b then a.toReal < b
+      exact ENNReal.toReal_lt_of_lt_ofReal (hN hm' hn')
 
     -- Step 3: Extract limit from completeness
     haveI : CompleteSpace (Lp ℝ 2 μ) := by infer_instance
@@ -3493,26 +3488,25 @@ lemma cesaro_to_condexp_L2
     have hα_memLp : MemLp α_f 2 μ := Lp.memLp α_L2
 
     have hα_limit : Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0) := by
-      -- u n → α_L2 in L², and α_f is the coercion of α_L2
-      -- So blockAvg n → α_f in L²
-      -- Strategy: h_tendsto gives dist (u n) α_L2 → 0
-      -- dist in Lp = eLpNorm
-      rw [tendsto_iff_dist_tendsto_zero] at h_tendsto
-      rw [tendsto_iff_dist_tendsto_zero]
-      simp only [dist_zero_right] at h_tendsto ⊢
+      -- Use Lp.tendsto_Lp_iff_tendsto_eLpNorm': Tendsto f (𝓝 f_lim) ↔ Tendsto (eLpNorm (f - f_lim)) (𝓝 0)
+      -- h_tendsto : Tendsto u atTop (𝓝 α_L2)
+      rw [Lp.tendsto_Lp_iff_tendsto_eLpNorm'] at h_tendsto
+      -- h_tendsto : Tendsto (fun n => eLpNorm (↑(u n) - ↑α_L2) 2 μ) atTop (𝓝 0)
+      -- Need to show this equals eLpNorm (blockAvg n - α_f) eventually
       refine h_tendsto.congr' ?_
-      -- Need to show: eventually, eLpNorm (blockAvg n - α_f) = dist (u n) α_L2
-      filter_upwards [Filter.eventually_cofinite.2 (finite_le_nat 1)] with n hn
-      have hn_pos : n > 0 := hn
+      filter_upwards [eventually_ge_atTop 1] with n hn
+      have hn_pos : n > 0 := Nat.zero_lt_of_lt hn
       simp only [u, dif_pos hn_pos, α_f]
-      rw [Lp.dist_def]
-      -- Now we have: eLpNorm (toLp (blockAvg n) - α_L2) 2 μ
-      -- And want: eLpNorm (blockAvg n - α_L2) 2 μ
-      -- These are equal by coeFn_toLp
+      -- Show: eLpNorm (↑(toLp (blockAvg n)) - ↑α_L2) 2 μ = eLpNorm (blockAvg n - ↑↑α_L2) 2 μ
       refine eLpNorm_congr_ae ?_
-      filter_upwards [(hblockAvg_memLp n hn_pos).coeFn_toLp] with ω h1
-      simp only [Pi.sub_apply, h1]
+      filter_upwards [(hblockAvg_memLp n hn_pos).coeFn_toLp] with ω hω
+      simp only [Pi.sub_apply, hω]
 
+    -- Close the existential proof
+    use α_f, hα_memLp, hα_limit
+
+  -- Now α_f, hα_memLp, and hα_limit are in scope from the pattern match
+  -- Provide the witness and the 4-tuple of proofs
   use α_f
   refine ⟨hα_memLp, ?_, hα_limit, ?_⟩
 
