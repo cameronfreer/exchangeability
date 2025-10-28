@@ -406,10 +406,9 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
   -- σ-algebra orderings
   have hmZW_le : mZW ≤ _ := (hZ.prodMk hW).comap_le  -- σ(Z,W) ≤ 𝓜(Ω)
 
-  -- μ[f|mW] is σ(W)-measurable, hence also σ(Z,W)-measurable
-  have hgm : AEStronglyMeasurable[mZW] (μ[f | mW]) μ := by
-    refine AEStronglyMeasurable.mono ?_ hle
-    exact stronglyMeasurable_condExp.aestronglyMeasurable
+  -- μ[f|mW] is σ(W)-measurable, hence also σ(Z,W)-measurable (since mW ≤ mZW)
+  have hgm : AEStronglyMeasurable[mZW] (μ[f | mW]) μ :=
+    stronglyMeasurable_condExp.aestronglyMeasurable.mono hle
 
   -- For any S ∈ σ(Z,W): ∫_S μ[f|mW] = ∫_S f
   -- Use Dynkin π-λ theorem: define C(s) := "integrals match on s"
@@ -489,9 +488,9 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
       have h1 : ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, (μ[f | mZW]) x ∂μ = ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, f x ∂μ := by
         exact setIntegral_condExp hmZW_le hf_int hrect
 
-      -- By tower property: E[E[f|mZW]|mW] = E[f|mW]
+      -- By tower property: E[E[f|mZW]|mW] = E[f|mW] (since mW ≤ mZW)
       have h2 : μ[μ[f | mZW] | mW] =ᵐ[μ] μ[f | mW] := by
-        exact (condExp_condExp_of_le hle hmZW_le).symm
+        exact condExp_condExp_of_le hle hmZW_le
 
       -- So ∫_{rectangle} E[f|mW] = ∫_{rectangle} E[E[f|mZW]|mW]
       have h3 : ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, (μ[f | mW]) x ∂μ =
@@ -500,21 +499,27 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
         filter_upwards [h2] with x hx _
         exact hx.symm
 
-      rw [h3, h1]
-
-      -- Key step: Show ∫_{rect} E[E[f|mZW]|mW] = ∫_{rect} E[f|mZW]
-      -- Strategy: Use conditional independence via h_indep
-      -- For f = 1_A(Y), and rectangle Z⁻¹B ∩ W⁻¹C:
-      --   ∫_{W⁻¹C} E[1_A(Y) · 1_B(Z)|mW] = ∫_{W⁻¹C} 1_A(Y) · 1_B(Z)  (by setIntegral_condExp)
-      --   ∫_{W⁻¹C} E[1_A(Y)|mW] · E[1_B(Z)|mW] = ∫_{Z⁻¹B ∩ W⁻¹C} 1_A(Y)  (by CondIndep)
-      --
-      -- This step requires showing that integrating E[1_A(Y)|mW] · E[1_B(Z)|mW] over W⁻¹C
-      -- gives the same as integrating E[1_A(Y)|mW] over Z⁻¹B ∩ W⁻¹C
-      --
-      -- This is the heart of the conditional independence property and requires
-      -- a more detailed argument about how conditional expectations interact
-      -- with product structures. For now, leaving as sorry to complete the framework.
-      sorry
+      -- Now combine: ∫ μ[f|mW] = ∫ μ[μ[f|mZW]|mW] (by h3), and we want ∫ μ[f|mW] = ∫ f
+      calc ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, (μ[f | mW]) x ∂μ
+          = ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, (μ[μ[f | mZW] | mW]) x ∂μ := h3
+        _ = ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, f x ∂μ := by
+          -- Key step: Show ∫_{rect} E[f|mW] = ∫_{rect} f for rectangle Z⁻¹B ∩ W⁻¹C
+          -- Strategy: Use conditional independence via h_indep
+          -- For f = 1_A(Y), and rectangle Z⁻¹B ∩ W⁻¹C:
+          --   By CondIndep definition: E[1_A(Y) · 1_B(Z)|mW] =ᵐ E[1_A(Y)|mW] · E[1_B(Z)|mW]
+          --   Integrate over W⁻¹C ∈ σ(W):
+          --     ∫_{W⁻¹C} E[1_A(Y)·1_B(Z)|mW] = ∫_{W⁻¹C} E[1_A(Y)|mW] · E[1_B(Z)|mW]
+          --   LHS = ∫_{W⁻¹C} 1_A(Y)·1_B(Z) by setIntegral_condExp
+          --       = ∫_{Z⁻¹B ∩ W⁻¹C} 1_A(Y)
+          --   RHS requires showing E[1_B(Z)|mW] is constant (by Z ⊥ W) and equals P(Z ∈ B)
+          --   Then: ∫_{W⁻¹C} E[1_A(Y)|mW] · P(Z ∈ B) = P(Z ∈ B) · ∫_{W⁻¹C} E[1_A(Y)|mW]
+          --                                           = P(Z ∈ B) · ∫_{W⁻¹C} 1_A(Y)  (by setIntegral_condExp)
+          --   Match these to conclude.
+          --
+          -- This is the heart of the conditional independence property and requires
+          -- extracting independence from CondIndep definition and computing with it.
+          -- Leaving as sorry to complete the framework.
+          sorry
 
     · -- Complement
       intro t htm ht_ind
@@ -523,25 +528,30 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
         exact integral_add_compl₀ (hmZW_le _ htm).nullMeasurableSet integrable_condExp
       have h_add' : ∫ x in t, f x ∂μ + ∫ x in tᶜ, f x ∂μ = ∫ x, f x ∂μ := by
         exact integral_add_compl₀ (hmZW_le _ htm).nullMeasurableSet hf_int
-      rw [ht_ind (measure_lt_top μ t)] at h_add
-      linarith [integral_condExp hle, integral_condExp hle]
+      -- ht_ind is the equality for t, use it to substitute in h_add
+      rw [ht_ind] at h_add
+      -- Now we have: ∫_t f + ∫_{tᶜ} E[f|mW] = ∫ E[f|mW]
+      -- And we know: ∫_t f + ∫_{tᶜ} f = ∫ f
+      -- Also: ∫ E[f|mW] = ∫ f (by conditional expectation property)
+      have h_total : ∫ x, (μ[f | mW]) x ∂μ = ∫ x, f x ∂μ := by
+        -- mW ≤ ambient, need SigmaFinite on trim
+        sorry  -- This requires showing SigmaFinite (μ.trim hle), defer for now
+      linarith
 
     · -- Countable disjoint union
       intro t_seq hdisjoint htm_seq ht_ind_seq
       -- For disjoint union: ∫_{⋃ᵢ tᵢ} g = Σᵢ ∫_{tᵢ} g
-      have h_union : HasSum (fun n => ∫ x in t_seq n, (μ[f | mW]) x ∂μ) (∫ x in ⋃ n, t_seq n, (μ[f | mW]) x ∂μ) := by
-        apply hasSum_integral_iUnion (fun i => (hmZW_le _ (htm_seq i)).nullMeasurableSet)
-        · exact fun i j hij => (hdisjoint hij).aedisjoint
-        · exact integrable_condExp.integrableOn
-      have h_union' : HasSum (fun n => ∫ x in t_seq n, f x ∂μ) (∫ x in ⋃ n, t_seq n, f x ∂μ) := by
-        apply hasSum_integral_iUnion (fun i => (hmZW_le _ (htm_seq i)).nullMeasurableSet)
-        · exact fun i j hij => (hdisjoint hij).aedisjoint
-        · exact hf_int.integrableOn
-      apply h_union.unique
-      rw [← h_union'.tsum_eq]
-      congr 1
-      ext i
-      exact ht_ind_seq i (measure_lt_top μ (t_seq i))
+      -- Use HasSum for both sides and show they're equal term by term
+      -- Convert Disjoint to proper form for hasSum_integral_iUnion
+      have hd : Pairwise (Function.onFun Disjoint t_seq) := hdisjoint
+      -- Each t_seq i is measurable in ambient space since mZW ≤ ambient
+      have h1 := hasSum_integral_iUnion (fun i => hmZW_le _ (htm_seq i)) hd
+        (integrable_condExp : Integrable (μ[f | mW]) μ).integrableOn
+      have h2 := hasSum_integral_iUnion (fun i => hmZW_le _ (htm_seq i)) hd hf_int.integrableOn
+      -- Show the terms are equal using ht_ind_seq, so the sums are equal by uniqueness
+      have h_eq : (fun i => ∫ x in t_seq i, (μ[f | mW]) x ∂μ) = (fun i => ∫ x in t_seq i, f x ∂μ) :=
+        funext ht_ind_seq
+      exact h1.unique (h_eq ▸ h2)
 
     · exact hs
 
