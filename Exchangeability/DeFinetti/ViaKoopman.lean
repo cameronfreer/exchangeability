@@ -581,9 +581,12 @@ lemma setIntegral_map_preimage
     (f : Ω → ℝ) (s : Set Ω) (hs : MeasurableSet s)
     (hf : AEMeasurable f μ) :
     ∫ x in g ⁻¹' s, (f ∘ g) x ∂ μ' = ∫ x in s, f x ∂ μ := by
-  have hf_comp : AEMeasurable (f ∘ g) μ' := hf.comp_measurable hg
-  rw [← hpush]
-  rw [integral_map hg hf_comp]
+  -- Transport hf from μ to (Measure.map g μ')
+  have hf' : AEMeasurable f (Measure.map g μ') := hpush ▸ hf
+  have hf_comp : AEMeasurable (f ∘ g) μ' := hf'.comp_measurable hg
+  have hg_ae : AEMeasurable g μ' := hg.aemeasurable
+  rw [integral_map hg_ae hf_comp]
+  rw [hpush]
   congr 1
   ext x
   simp [Set.indicator_comp_of_zero (by simp : f 0 = 0)]
@@ -622,17 +625,27 @@ lemma integrable_of_ae_bound
 /-- Norm/abs bound for indicators (ℝ and general normed targets). -/
 lemma abs_indicator_le_abs_self {Ω} (s : Set Ω) (f : Ω → ℝ) :
     ∀ x, |s.indicator f x| ≤ |f x| := by
-  intro x; by_cases hx : x ∈ s <;> simp [Set.indicator_of_mem, Set.indicator_of_not_mem, hx]
+  intro x
+  by_cases hx : x ∈ s
+  · simp [Set.indicator_of_mem hx]
+  · simp [Set.indicator_of_notMem hx, abs_nonneg]
 
 lemma norm_indicator_le_norm_self
     {Ω E} [Zero E] [Norm E] (s : Set Ω) (f : Ω → E) :
     ∀ x, ‖s.indicator f x‖ ≤ ‖f x‖ := by
-  intro x; by_cases hx : x ∈ s <;> simp [Set.indicator_of_mem, Set.indicator_of_not_mem, hx]
+  intro x
+  by_cases hx : x ∈ s
+  · simp [Set.indicator_of_mem hx]
+  · simp [Set.indicator_of_notMem hx]
+    exact norm_nonneg _
 
 /-- Indicator ↔ product with a 0/1 mask (for ℝ). -/
 lemma indicator_as_mul_one {Ω} (s : Set Ω) (f : Ω → ℝ) :
     s.indicator f = fun x => f x * s.indicator (fun _ => (1 : ℝ)) x := by
-  funext x; by_cases hx : x ∈ s <;> simp [Set.indicator_of_mem, Set.indicator_of_not_mem, hx]
+  funext x
+  by_cases hx : x ∈ s
+  · simp [Set.indicator_of_mem hx]
+  · simp [Set.indicator_of_notMem hx]
 
 lemma integral_indicator_as_mul {Ω} [MeasurableSpace Ω] {μ : Measure Ω}
     (s : Set Ω) (f : Ω → ℝ) :
@@ -642,8 +655,8 @@ lemma integral_indicator_as_mul {Ω} [MeasurableSpace Ω] {μ : Measure Ω}
 /-- "Lift" a measurable-in-sub-σ-algebra set to ambient measurability. -/
 lemma measurableSet_of_sub {Ω} [mΩ : MeasurableSpace Ω]
     (m : MeasurableSpace Ω) (hm : m ≤ mΩ) {s : Set Ω}
-    (hs : MeasurableSet[m] s) : MeasurableSet s :=
-  hm _ hs
+    (hs : MeasurableSet[m] s) : @MeasurableSet Ω mΩ s :=
+  hm s hs
 
 /-- AEMeasurable indicator under ambient from sub-σ-algebra measurability. -/
 lemma aemeasurable_indicator_of_sub {Ω} [mΩ : MeasurableSpace Ω] {μ : Measure Ω}
@@ -653,7 +666,14 @@ lemma aemeasurable_indicator_of_sub {Ω} [mΩ : MeasurableSpace Ω] {μ : Measur
     AEMeasurable (s.indicator f) μ :=
   hf.indicator (measurableSet_of_sub m hm hs)
 
-/-- Idempotence of conditional expectation for m-measurable integrable functions. -/
+/-- Idempotence of conditional expectation for m-measurable integrable functions.
+
+**TODO**: Find the correct mathlib API for this standard result. Candidates:
+- `condExp_of_stronglyMeasurable` (needs StronglyMeasurable, not AEStronglyMeasurable)
+- Some version of `condexp_of_aestronglyMeasurable` (not found in current snapshot)
+- Direct proof via uniqueness characterization
+
+The statement is correct and will be used in rectangle-case proofs. -/
 lemma condExp_idempotent'
     {Ω} [mΩ : MeasurableSpace Ω] {μ : Measure Ω}
     (m : MeasurableSpace Ω) (hm : m ≤ mΩ)
@@ -662,13 +682,8 @@ lemma condExp_idempotent'
     (hf_m : AEStronglyMeasurable[m] f μ)
     (hf_int : Integrable f μ) :
     μ[f | m] =ᵐ[μ] f := by
-  refine
-    (MeasureTheory.condexp_unique_ae
-      (μ := μ) (m := m)
-      (g := f)
-      hf_m ?setId).symm
-  intro s hs
-  rfl
+  -- Idempotence: CE[f|m] = f a.e. when f is m-measurable
+  sorry
 
 end MeasureTheory
 
