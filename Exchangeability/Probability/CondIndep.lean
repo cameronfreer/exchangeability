@@ -114,28 +114,179 @@ theorem condIndep_symm (μ : Measure Ω) [IsProbabilityMeasure μ]
     simp only [mul_comm] at this ⊢
     exact this
 
-/-- **Constant conditioning: unconditional independence implies conditional independence.**
-
-If Y and Z are unconditionally independent, then they are conditionally independent
-given any W. This is because conditioning on W only adds information, and independent
-events remain independent when we add a common conditioning event.
-
-TODO: Requires defining unconditional independence first, or proving directly from
-the product measure property.
+/-!
+## Helper lemmas for independence and conditional expectation
 -/
-theorem condIndep_of_indep (μ : Measure Ω) [IsProbabilityMeasure μ]
+
+/-- **Conditional expectation against an independent σ-algebra is constant.**
+
+If X is integrable and measurable with respect to a σ-algebra independent of σ(W),
+then E[X | σ(W)] = E[X] almost everywhere.
+
+This is the key property that makes independence "pass through" conditioning:
+knowing W provides no information about X when X ⊥ W.
+-/
+lemma condExp_const_of_indepFun (μ : Measure Ω) [IsProbabilityMeasure μ]
+    {X : Ω → ℝ} {W : Ω → γ}
+    (hX : Measurable X) (hW : Measurable W)
+    (h_indep : IndepFun X W μ)
+    (hX_int : Integrable X μ) :
+    μ[X | MeasurableSpace.comap W inferInstance] =ᵐ[μ] (fun _ => μ[X]) := by
+  -- Convert IndepFun to Indep of σ-algebras
+  rw [IndepFun_iff_Indep] at h_indep
+  -- Apply condExp_indep_eq: E[X|σ(W)] = E[X] when σ(X) ⊥ σ(W)
+  refine condExp_indep_eq hX.comap_le hW.comap_le ?_ h_indep
+  -- X is σ(X)-strongly measurable (X is measurable from (Ω, σ(X)) to ℝ by definition of comap)
+  have : @Measurable Ω ℝ (MeasurableSpace.comap X inferInstance) inferInstance X :=
+    Measurable.of_comap_le le_rfl
+  exact this.stronglyMeasurable
+
+/-- Extract independence of first component from pair independence. -/
+lemma IndepFun.of_comp_left_fst {Y : Ω → α} {Z : Ω → β} {W : Ω → γ}
+    (h : IndepFun (fun ω => (Y ω, Z ω)) W μ) :
+    IndepFun Y W μ := by
+  -- Y = Prod.fst ∘ (fun ω => (Y ω, Z ω))
+  -- So Y ⊥ W follows from (Y,Z) ⊥ W by composition
+  have : Y = Prod.fst ∘ (fun ω => (Y ω, Z ω)) := by rfl
+  rw [this]
+  exact h.comp measurable_fst measurable_id
+
+/-- Extract independence of second component from pair independence. -/
+lemma IndepFun.of_comp_left_snd {Y : Ω → α} {Z : Ω → β} {W : Ω → γ}
+    (h : IndepFun (fun ω => (Y ω, Z ω)) W μ) :
+    IndepFun Z W μ := by
+  -- Z = Prod.snd ∘ (fun ω => (Y ω, Z ω))
+  -- So Z ⊥ W follows from (Y,Z) ⊥ W by composition
+  have : Z = Prod.snd ∘ (fun ω => (Y ω, Z ω)) := by rfl
+  rw [this]
+  exact h.comp measurable_snd measurable_id
+
+/-!
+## Conditional independence from unconditional independence
+-/
+
+/-- **Independence plus independence of pair from W implies conditional independence.**
+
+If Y and Z are (unconditionally) independent, and the pair (Y,Z) is independent of W,
+then Y ⊥⊥_W Z.
+
+**Key insight:** Independence of (Y,Z) from W means the conditional law of (Y,Z) given W
+equals the unconditional law, so the factorization E[1_A(Y)·1_B(Z)] = E[1_A(Y)]·E[1_B(Z)]
+survives conditioning on W.
+
+**Counterexample showing Y ⊥ Z alone is NOT enough:**
+- Y, Z: independent fair coin flips
+- W := Y + Z
+- Then Y ⊥ Z unconditionally, but P(Y=1|Z=1,W=1) = 1 ≠ 1/2 = P(Y=1|W=1),
+  so Y and Z are NOT conditionally independent given W.
+
+**Proof strategy:**
+1. Since (Y,Z) ⊥ W, conditional expectation of any function of (Y,Z) given σ(W)
+   is the constant E[that function].
+2. Apply to 1_A(Y), 1_B(Z), and their product.
+3. The unconditional factorization E[1_A(Y)·1_B(Z)] = E[1_A(Y)]·E[1_B(Z)] (from Y ⊥ Z)
+   transfers to the conditional expectations.
+-/
+theorem condIndep_of_indep_pair (μ : Measure Ω) [IsProbabilityMeasure μ]
     (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
-    (hY : Measurable Y) (hZ : Measurable Z) (hW : Measurable W) :
-    -- TODO: Add hypothesis that Y and Z are independent
-    -- For now, placeholder
-    True → CondIndep μ Y Z W := by
-  intro _
-  sorry
-  -- Proof sketch:
-  -- 1. From unconditional independence: E[1_A(Y) · 1_B(Z)] = E[1_A(Y)] · E[1_B(Z)]
-  -- 2. Take conditional expectation given W on both sides
-  -- 3. Use linearity and that E[E[·|W]|W] = E[·|W]
-  -- 4. Get E[1_A(Y) · 1_B(Z)|W] = E[1_A(Y)|W] · E[1_B(Z)|W]
+    (hY : Measurable Y) (hZ : Measurable Z) (hW : Measurable W)
+    (hYZ_indep : IndepFun Y Z μ)
+    (hPairW_indep : IndepFun (fun ω => (Y ω, Z ω)) W μ) :
+    CondIndep μ Y Z W := by
+  intro A B hA hB
+  -- Define the indicator functions
+  let f := Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
+  let g := Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ))
+
+  -- f and g are measurable and integrable
+  have hf_meas : Measurable f := measurable_const.indicator (hY hA)
+  have hg_meas : Measurable g := measurable_const.indicator (hZ hB)
+  have hf_int : Integrable f μ := (integrable_const (1 : ℝ)).indicator (hY hA)
+  have hg_int : Integrable g μ := (integrable_const (1 : ℝ)).indicator (hZ hB)
+
+  -- Extract Y ⊥ W and Z ⊥ W from pair independence
+  have hY_W_indep : IndepFun Y W μ := IndepFun.of_comp_left_fst hPairW_indep
+  have hZ_W_indep : IndepFun Z W μ := IndepFun.of_comp_left_snd hPairW_indep
+
+  -- Key insight: f, g, and f*g are all independent of W
+  -- Therefore their conditional expectations given σ(W) are constants
+
+  -- Step 1: f is a function of Y, so f ⊥ W
+  -- f = (Set.indicator A (fun _ => 1)) ∘ Y
+  have hf_indep : IndepFun f W μ := by
+    have : f = (Set.indicator A (fun _ => (1 : ℝ))) ∘ Y := by
+      ext ω
+      simp only [Function.comp_apply, Set.indicator_apply]
+      rfl
+    rw [this]
+    exact hY_W_indep.comp (measurable_const.indicator hA) measurable_id
+
+  -- Step 2: g is a function of Z, so g ⊥ W
+  have hg_indep : IndepFun g W μ := by
+    have : g = (Set.indicator B (fun _ => (1 : ℝ))) ∘ Z := by
+      ext ω
+      simp only [Function.comp_apply, Set.indicator_apply]
+      rfl
+    rw [this]
+    exact hZ_W_indep.comp (measurable_const.indicator hB) measurable_id
+
+  -- Step 3: f * g is a function of (Y,Z), so f * g ⊥ W
+  have hfg_indep : IndepFun (f * g) W μ := by
+    classical
+    have : f * g = (fun p => Set.indicator (A ×ˢ B) (fun _ => (1 : ℝ)) p) ∘ (fun ω => (Y ω, Z ω)) := by
+      ext ω
+      show f ω * g ω = Set.indicator (A ×ˢ B) (fun _ => (1 : ℝ)) (Y ω, Z ω)
+      rw [Set.indicator_apply (A ×ˢ B), Set.indicator_apply (Y ⁻¹' A), Set.indicator_apply (Z ⁻¹' B)]
+      simp only [Pi.mul_apply, Set.mem_prod, Set.mem_preimage]
+      split_ifs <;> norm_num
+    rw [this]
+    exact hPairW_indep.comp (measurable_const.indicator (hA.prod hB)) measurable_id
+
+  -- Step 4: Apply condExp_const_of_indepFun to get conditional expectations are constants
+  have hf_ce : μ[f | MeasurableSpace.comap W inferInstance] =ᵐ[μ] (fun _ => μ[f]) :=
+    condExp_const_of_indepFun μ hf_meas hW hf_indep hf_int
+
+  have hg_ce : μ[g | MeasurableSpace.comap W inferInstance] =ᵐ[μ] (fun _ => μ[g]) :=
+    condExp_const_of_indepFun μ hg_meas hW hg_indep hg_int
+
+  have hfg_meas : Measurable (f * g) := hf_meas.mul hg_meas
+  have hfg_int : Integrable (f * g) μ := by
+    -- f * g = 1_{Y⁻¹A ∩ Z⁻¹B}
+    have : f * g = Set.indicator (Y ⁻¹' A ∩ Z ⁻¹' B) (fun _ => (1 : ℝ)) := by
+      classical
+      ext ω
+      rw [Set.indicator_apply (Y ⁻¹' A), Set.indicator_apply (Z ⁻¹' B), Set.indicator_apply]
+      simp only [Pi.mul_apply, Set.mem_inter_iff, Set.mem_preimage]
+      split_ifs <;> norm_num
+    rw [this]
+    exact (integrable_const (1 : ℝ)).indicator ((hY hA).inter (hZ hB))
+  have hfg_ce : μ[f * g | MeasurableSpace.comap W inferInstance] =ᵐ[μ] (fun _ => μ[f * g]) :=
+    condExp_const_of_indepFun μ hfg_meas hW hfg_indep hfg_int
+
+  -- Step 5: Use Y ⊥ Z to get unconditional factorization E[f*g] = E[f] * E[g]
+  -- Since f is a function of Y and g is a function of Z, f ⊥ g follows from Y ⊥ Z
+  have hfg_indep' : IndepFun f g μ := by
+    have hf_comp : f = (Set.indicator A (fun _ => (1 : ℝ))) ∘ Y := by
+      ext ω
+      show f ω = Set.indicator A (fun _ => 1) (Y ω)
+      rfl
+    have hg_comp : g = (Set.indicator B (fun _ => (1 : ℝ))) ∘ Z := by
+      ext ω
+      show g ω = Set.indicator B (fun _ => 1) (Z ω)
+      rfl
+    rw [hf_comp, hg_comp]
+    exact hYZ_indep.comp (measurable_const.indicator hA) (measurable_const.indicator hB)
+
+  have h_factor : μ[f * g] = μ[f] * μ[g] := by
+    sorry  -- Need to find correct integral lemma
+
+  -- Step 6: Combine everything
+  calc μ[f * g | MeasurableSpace.comap W inferInstance]
+      =ᵐ[μ] (fun _ => μ[f * g]) := hfg_ce
+    _ = (fun _ => μ[f] * μ[g]) := by rw [h_factor]
+    _ =ᵐ[μ] (fun _ => μ[f]) * (fun _ => μ[g]) := by rfl
+    _ =ᵐ[μ] μ[f | MeasurableSpace.comap W inferInstance] * μ[g | MeasurableSpace.comap W inferInstance] :=
+        Filter.EventuallyEq.mul hf_ce.symm hg_ce.symm
 
 /-!
 ## Extension to simple functions and bounded measurables (§C2)
@@ -211,44 +362,73 @@ lemma condIndep_boundedMeasurable (μ : Measure Ω) [IsProbabilityMeasure μ]
 ## Extension to product σ-algebras
 -/
 
-/-- **Conditional expectations given (Z,W) are σ(W)-measurable when Y ⊥⊥_W Z.**
+/-- **Conditional expectation projection from conditional independence (helper).**
 
-This is the key measurability property from conditional independence: if Y and Z are
-conditionally independent given W, then conditioning on (Z,W) doesn't use the information
-in Z for predicting Y-measurable functions. Therefore, E[f(Y)|σ(Z,W)] is actually
-σ(W)-measurable (factors through W alone).
+When Y ⊥⊥_W Z, conditioning on (Z,W) gives the same result as conditioning on W alone
+for indicator functions of Y.
 
-**Mathematical content:** Y ⊥⊥_W Z implies E[1_A(Y)|σ(Z,W)] ∈ L^0(σ(W)).
-
-**Proof strategy (via integral characterization):**
-1. Need to show: E[1_A(Y)|σ(Z,W)] is σ(W)-measurable
-2. Equivalently: For S ∈ σ(W), both E[1_A(Y)|σ(Z,W)] and E[1_A(Y)|σ(W)]
-   have the same integral over S
-3. This holds because S ∈ σ(W) ⊆ σ(Z,W), so:
-   ∫_S E[1_A(Y)|σ(Z,W)] = ∫_S 1_A(Y) = ∫_S E[1_A(Y)|σ(W)]
-4. But this only shows they're a.e. equal, not that one is measurable w.r.t. the other!
-
-**Alternative via product structure (requires deeper theory):**
-The conditional independence factorization E[1_A(Y)·1_B(Z)|W] = E[1_A(Y)|W]·E[1_B(Z)|W]
-means the conditional distribution of (Y,Z) given W is a product measure. This implies
-E[f(Y)|σ(Z,W)] = E[f(Y)|σ(W)] by the product measure projection property.
-
-**Status:** This is a fundamental result that requires either:
-- Developing conditional distribution/disintegration theory, OR
-- Using mathlib's kernel-based conditional independence, OR
-- Proving the projection property directly without this lemma
-
-For now, we defer this deep result and work on the direct projection approach.
+This is a key technical lemma used to prove the main projection theorem.
 -/
-lemma condExp_measurable_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
+lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
     (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
     (hY : Measurable Y) (hZ : Measurable Z) (hW : Measurable W)
     (h_indep : CondIndep μ Y Z W)
     {A : Set α} (hA : MeasurableSet A) :
-    Measurable[MeasurableSpace.comap W inferInstance]
-      (μ[ Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
-         | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance ]) := by
-  sorry
+    μ[ Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
+       | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance ]
+      =ᵐ[μ]
+    μ[ Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
+       | MeasurableSpace.comap W inferInstance ] := by
+  -- Strategy: Use uniqueness characterization of conditional expectation
+  -- Show that both CEs have the same integrals on all σ(W)-measurable sets
+  let mW := MeasurableSpace.comap W inferInstance
+  let mZW := MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance
+  let f := Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
+
+  -- σ-algebra ordering: σ(W) ⊆ σ(Z,W)
+  have hle : mW ≤ mZW := by
+    intro s hs
+    obtain ⟨T, hT_meas, rfl⟩ := hs
+    use Set.univ ×ˢ T
+    constructor
+    · exact MeasurableSet.univ.prod hT_meas
+    · ext ω; simp [Set.mem_preimage, Set.mem_prod]
+
+  -- Integrability
+  have hf_int : Integrable f μ := by
+    apply Integrable.indicator
+    · exact integrable_const (1 : ℝ)
+    · exact hY hA
+
+  -- Key insight: Use tower property and apply uniqueness on σ(Z,W)
+  -- We show μ[f|mW] has the same set integrals as f on all σ(Z,W)-sets
+
+  -- σ-algebra orderings
+  have hmZW_le : mZW ≤ _ := (hZ.prodMk hW).comap_le  -- σ(Z,W) ≤ 𝓜(Ω)
+
+  -- μ[f|mW] is σ(W)-measurable, hence also σ(Z,W)-measurable
+  have hgm : AEStronglyMeasurable[mZW] (μ[f | mW]) μ := by
+    refine AEStronglyMeasurable.mono ?_ hle
+    exact stronglyMeasurable_condExp.aestronglyMeasurable
+
+  -- For any S ∈ σ(Z,W): ∫_S μ[f|mW] = ∫_S f
+  have hg_eq : ∀ s : Set Ω, MeasurableSet[mZW] s → μ s < ∞ →
+      ∫ x in s, (μ[f | mW]) x ∂μ = ∫ x in s, f x ∂μ := by
+    intro s hs hμs
+    -- Use tower property: μ[μ[f|mZW]|mW] = μ[f|mW]
+    have tower : μ[μ[f | mZW] | mW] =ᵐ[μ] μ[f | mW] :=
+      condExp_condExp_of_le hle hmZW_le
+    -- Therefore ∫_S μ[f|mW] = ∫_S μ[μ[f|mZW]|mW]
+    have eq1 : ∫ x in s, μ[f | mW] x ∂μ = ∫ x in s, μ[μ[f | mZW] | mW] x ∂μ :=
+      setIntegral_congr_ae (hmZW_le s hs) tower.symm
+    -- And ∫_S μ[μ[f|mZW]|mW] = ∫_S μ[f|mZW] when S ∈ σ(W)...
+    -- But S ∈ σ(Z,W), not necessarily σ(W)!
+    -- So we need to use conditional independence here
+    sorry
+
+  -- Apply uniqueness: μ[f|mW] =ᵐ μ[f|mZW]
+  exact (ae_eq_condExp_of_forall_setIntegral_eq hmZW_le hf_int
+    (fun _ _ _ => integrable_condExp.integrableOn) hg_eq hgm).symm
 
 /-- **Conditional expectation projection from conditional independence.**
 
@@ -281,29 +461,7 @@ theorem condIndep_project (μ : Measure Ω) [IsProbabilityMeasure μ]
       =ᵐ[μ]
     μ[ Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
        | MeasurableSpace.comap W inferInstance ] := by
-  sorry
-  /-
-  **Direct proof via integral matching (bypasses measurability lemma):**
-
-  Strategy: Show both sides have equal integrals on all σ(W)-measurable sets.
-
-  1. Let S ∈ σ(W) be arbitrary (so S = W⁻¹(T) for some measurable T ⊆ γ)
-
-  2. Compute ∫_S E[1_A(Y)|σ(Z,W)] dμ:
-     - Since S ∈ σ(W) ⊆ σ(Z,W), by CE property:
-       ∫_S E[1_A(Y)|σ(Z,W)] dμ = ∫_S 1_A(Y) dμ
-
-  3. Compute ∫_S E[1_A(Y)|σ(W)] dμ:
-     - Since S ∈ σ(W), by CE property:
-       ∫_S E[1_A(Y)|σ(W)] dμ = ∫_S 1_A(Y) dμ
-
-  4. Therefore integrals match on all σ(W)-sets
-
-  5. By uniqueness (condExp_eq_of_setIntegral_eq):
-     E[1_A(Y)|σ(Z,W)] =ᵐ[μ] E[1_A(Y)|σ(W)]
-
-  **Implementation challenge:** Need to verify all technical hypotheses for uniqueness
-  lemma (σ-finiteness, integrability, etc.)
-  -/
+  -- This follows directly from the helper lemma
+  exact condExp_project_of_condIndep μ Y Z W hY hZ hW h_indep hA
 
 end  -- noncomputable section
