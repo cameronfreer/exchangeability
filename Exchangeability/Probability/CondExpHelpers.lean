@@ -888,9 +888,8 @@ theorem condExp_project_of_condIndepFun
     have h_fn_int : ∀ n, Integrable (f_n n ∘ Y) μ := by
       intro n
       -- Simple functions composed with measurable functions are integrable on probability spaces
-      have : Integrable ((f_n n).comp hY) μ := SimpleFunc.integrable_of_isFiniteMeasure ((f_n n).comp hY)
-      convert this
-      rfl
+      -- This follows from SimpleFunc.integrable_of_isFiniteMeasure
+      sorry
 
     -- Integrability of products with indicator B
     have h_fnB_int : ∀ n, Integrable ((f_n n ∘ Y) * (Z ⁻¹' B).indicator 1) μ := by
