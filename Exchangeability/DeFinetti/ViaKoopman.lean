@@ -4126,12 +4126,7 @@ private lemma optionB_Step4c_triangle
               _ ≤ Finset.sum (Finset.range n) (fun j => Cg) := by
                   gcongr with j _; exact hCg _
               _ = (n : ℝ) * Cg := by simp
-          show |(n : ℝ)⁻¹ * Finset.sum (Finset.range n) (fun j => g (ω j))| ≤ Cg
-          calc |(n : ℝ)⁻¹ * Finset.sum (Finset.range n) (fun j => g (ω j))|
-              = |(n : ℝ)⁻¹| * |Finset.sum (Finset.range n) (fun j => g (ω j))| := by
-                  exact abs_mul _ _
-            _ = (n : ℝ)⁻¹ * |Finset.sum (Finset.range n) (fun j => g (ω j))| := by
-                  rw [abs_of_nonneg]; positivity
+          calc (n : ℝ)⁻¹ * |Finset.sum (Finset.range n) (fun j => g (ω j))|
             _ ≤ (n : ℝ)⁻¹ * ((n : ℝ) * Cg) := by gcongr
             _ = Cg := by field_simp; ring
         -- Bounded + Measurable → Integrable on finite measure space
@@ -4183,12 +4178,10 @@ private lemma optionB_Step4c_triangle
                 _ ≤ Finset.sum (Finset.range (n + 1)) (fun j => Cg) := by
                     gcongr with j _; exact hCg _
                 _ = ((n : ℝ) + 1) * Cg := by simp
-            show |((n : ℝ) + 1)⁻¹ * Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))| ≤ Cg
-            calc |((n : ℝ) + 1)⁻¹ * Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))|
-                = |((n : ℝ) + 1)⁻¹| * |Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))| := by
-                    exact abs_mul _ _
-              _ = ((n : ℝ) + 1)⁻¹ * |Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))| := by
-                    rw [abs_of_nonneg]; positivity
+            have h_abs_inv : |↑n + 1|⁻¹ = ((n : ℝ) + 1)⁻¹ := by
+              rw [abs_of_nonneg]; positivity
+            calc |↑n + 1|⁻¹ * |Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))|
+              _ = ((n : ℝ) + 1)⁻¹ * |Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))| := by rw [h_abs_inv]
               _ ≤ ((n : ℝ) + 1)⁻¹ * (((n : ℝ) + 1) * Cg) := by gcongr
               _ = Cg := by field_simp; ring
           have hB_bd : |B n ω| ≤ Cg := by
@@ -4200,12 +4193,7 @@ private lemma optionB_Step4c_triangle
                 _ ≤ Finset.sum (Finset.range n) (fun j => Cg) := by
                     gcongr with j _; exact hCg _
                 _ = (n : ℝ) * Cg := by simp
-            show |(n : ℝ)⁻¹ * Finset.sum (Finset.range n) (fun j => g (ω j))| ≤ Cg
-            calc |(n : ℝ)⁻¹ * Finset.sum (Finset.range n) (fun j => g (ω j))|
-                = |(n : ℝ)⁻¹| * |Finset.sum (Finset.range n) (fun j => g (ω j))| := by
-                    exact abs_mul _ _
-              _ = (n : ℝ)⁻¹ * |Finset.sum (Finset.range n) (fun j => g (ω j))| := by
-                    rw [abs_of_nonneg]; positivity
+            calc (n : ℝ)⁻¹ * |Finset.sum (Finset.range n) (fun j => g (ω j))|
               _ ≤ (n : ℝ)⁻¹ * ((n : ℝ) * Cg) := by gcongr
               _ = Cg := by field_simp; ring
           calc |A n ω - B n ω|
@@ -4263,8 +4251,16 @@ private lemma optionB_Step4c_triangle
     _ ≤  ∫ ω, |A n ω - B n ω| ∂μ + ∫ ω, |B n ω - Y ω| ∂μ := h_triangle n
     _ <  ε/2 + ε/2 := by
           apply add_lt_add
-          · exact hN₁ n hn₁
-          · exact hN₂ n hn₂
+          · have := hN₁ n hn₁
+            simp only [dist_zero_right] at this
+            have h_nonneg : 0 ≤ ∫ ω, |A n ω - B n ω| ∂μ :=
+              integral_nonneg (by intro ω; positivity)
+            simpa [abs_of_nonneg h_nonneg] using this
+          · have := hN₂ n hn₂
+            simp only [dist_zero_right] at this
+            have h_nonneg : 0 ≤ ∫ ω, |B n ω - Y ω| ∂μ :=
+              integral_nonneg (by intro ω; positivity)
+            simpa [abs_of_nonneg h_nonneg] using this
     _ =  ε := by ring
 
 /-- **Option B bounded case implementation**: L¹ convergence for bounded functions.
