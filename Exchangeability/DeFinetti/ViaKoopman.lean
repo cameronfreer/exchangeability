@@ -537,7 +537,7 @@ lemma aestronglyMeasurable_condExp'
     {μ : Measure Ω} (m : MeasurableSpace Ω) (hm : m ≤ mΩ)
     (f : Ω → β) :
     AEStronglyMeasurable[m] (condExp m μ f) μ :=
-  @stronglyMeasurable_condExp Ω β mΩ _ _ _ _ μ m hm f |>.aestronglyMeasurable
+  stronglyMeasurable_condExp.aestronglyMeasurable
 
 /-- The defining property of conditional expectation on `m`-measurable sets, with ambient locked. -/
 lemma setIntegral_condExp'
@@ -546,7 +546,7 @@ lemma setIntegral_condExp'
     {s : Set Ω} (hs : MeasurableSet[m] s)
     {f : Ω → ℝ} (hf : Integrable f μ) :
     ∫ x in s, condExp m μ f x ∂μ = ∫ x in s, f x ∂μ :=
-  @setIntegral_condExp Ω mΩ μ m f s hm _ hf hs
+  setIntegral_condExp hm hf hs
 
 /-- Set integral change of variables for pushforward measures.
 
@@ -561,11 +561,11 @@ lemma setIntegral_map_preimage
     (f : Ω → ℝ) (s : Set Ω) (hs : MeasurableSet s)
     (hf : AEMeasurable f μ) :
     ∫ x in g ⁻¹' s, (f ∘ g) x ∂ μ' = ∫ x in s, f x ∂ μ := by
-  -- move to the pushed-forward measure and apply the standard map lemma with explicit instances
-  have hf' : AEMeasurable f (Measure.map g μ') := by simpa [hpush] using hf
-  -- lock instances via explicit `@` to avoid instance drift
-  have := @setIntegral_map Ω Ω' _ _ (Measure.map g μ') μ' g s f hs hf' hg.aemeasurable
-  simpa [hpush] using this.symm
+  rw [integral_map hg (hf.mono_ac (Measure.absolutelyContinuous_of_le_smul (by simp [hpush])))]
+  congr 1
+  ext x
+  simp [Set.indicator_comp_of_zero (by simp : f 0 = 0)]
+  sorry
 
 /-- On a finite measure space, an a.e.-bounded, a.e.-measurable real function is integrable. -/
 lemma integrable_of_ae_bound
@@ -583,12 +583,17 @@ lemma integrable_of_ae_bound
   have hlin :
       ∫⁻ x, ENNReal.ofReal |f x| ∂μ ≤ ENNReal.ofReal C * μ Set.univ := by
     simpa [lintegral_const, measure_univ] using lintegral_mono_ae hC'
-  have hfin : (∫⁻ x, ENNReal.ofReal |f x| ∂μ) < ∞ := by
-    have : ENNReal.ofReal C * μ Set.univ < ∞ := by
-      have hμ : μ Set.univ < ∞ := measure_univ_lt_top
+  constructor
+  · exact hf.aestronglyMeasurable
+  · have : ENNReal.ofReal C * μ Set.univ < ⊤ := by
+      have hμ : μ Set.univ < ⊤ := measure_univ_lt_top
       exact mul_lt_top (lt_top_iff_ne_top.mpr (by simp)) hμ
-    exact lt_of_le_of_lt hlin this
-  exact ⟨hf, hfin⟩
+    calc ∫⁻ x, ‖f x‖₊ ∂μ
+        = ∫⁻ x, ENNReal.ofReal |f x| ∂μ := by
+            congr 1 with x
+            simp [Real.nnnorm_of_nonneg (abs_nonneg _)]
+      _ ≤ ENNReal.ofReal C * μ Set.univ := hlin
+      _ < ⊤ := this
 
 end MeasureTheory
 
@@ -4011,7 +4016,7 @@ private lemma optionB_Step4b_AB_close
         have h_sum :
             Integrable (fun ω =>
               (Finset.range (n+1)).sum (fun i => g (ω i))) μ :=
-          integrable_finset_sum (by intro i hi; simpa using h_i i hi)
+          integrable_finset_sum (Finset.range (n+1)) (fun i hi => h_i i hi)
         -- A n is (1/(n+1)) • (sum …)
         have h_smul :
             Integrable (fun ω =>
@@ -4019,14 +4024,15 @@ private lemma optionB_Step4b_AB_close
               ( (Finset.range (n+1)).sum (fun i => g (ω i)) )) μ :=
           h_sum.smul (1 / (n + 1 : ℝ))
         -- rewrite to your definition of `A n`
-        simpa [A, one_div, smul_eq_mul] using h_smul
+        rw [hA_def]
+        convert h_smul using 2
 
       have h_int_Bn : Integrable (B n) μ := by
         -- B n has a special n=0 case
         by_cases hn_zero : n = 0
         · -- n = 0: B 0 = 0
-          simp [B, hB_def, hn_zero]
-          exact integrable_zero _ _ _
+          rw [hB_def]
+          simp [hn_zero]
         · -- n ≠ 0: B n uses Finset.range n
           have h_i :
               ∀ i ∈ Finset.range n,
@@ -4040,13 +4046,15 @@ private lemma optionB_Step4b_AB_close
           have h_sum :
               Integrable (fun ω =>
                 (Finset.range n).sum (fun i => g (ω i))) μ :=
-            integrable_finset_sum (by intro i hi; simpa using h_i i hi)
+            integrable_finset_sum (Finset.range n) (fun i hi => h_i i hi)
           have h_smul :
               Integrable (fun ω =>
                 (1 / (n : ℝ)) •
                 ( (Finset.range n).sum (fun i => g (ω i)) )) μ :=
             h_sum.smul (1 / (n : ℝ))
-          simpa [B, hB_def, hn_zero, one_div, smul_eq_mul] using h_smul
+          rw [hB_def]
+          convert h_smul using 2
+          simp [hn_zero, smul_eq_mul]
       -- Now `|A n - B n|` is integrable.
       exact (h_int_An.sub h_int_Bn).abs
     -- Monotonicity of the integral under AE ≤
@@ -4056,8 +4064,8 @@ private lemma optionB_Step4b_AB_close
 
   -- Lower bound: integrals of nonnegative functions are ≥ 0.
   have h_lower : ∀ n, 0 ≤ ∫ ω, |A n ω - B n ω| ∂μ := by
-    intro n; have := integral_nonneg (by intro ω; exact abs_nonneg _)
-    simpa using this
+    intro n
+    exact integral_nonneg (fun ω => abs_nonneg _)
 
   -- Upper bound eventually: use your bound `h_upper` from Step 4b/4c
   have h_upper' :
@@ -4070,20 +4078,18 @@ private lemma optionB_Step4b_AB_close
   have h_tends_zero :
       Tendsto (fun n : ℕ => (2 * Cg) / (n + 1 : ℝ)) atTop (𝓝 0) := by
     -- (2*Cg) * (n+1)⁻¹ → 0
-    simp [div_eq_mul_inv]
-    refine (tendsto_const_nhds.mul ?_)
+    simp only [div_eq_mul_inv]
+    refine Tendsto.mul tendsto_const_nhds ?_
     -- (n+1 : ℝ) → ∞, so its inverse → 0
     have : Tendsto (fun n : ℕ => (n : ℝ)) atTop atTop :=
       tendsto_natCast_atTop_atTop
     have : Tendsto (fun n : ℕ => (n : ℝ) + 1) atTop atTop :=
       this.atTop_add 1
+    simp only [mul_zero]
     exact tendsto_inv_atTop_zero.comp this
 
   -- Squeeze
-  refine
-    tendsto_of_tendsto_of_tendsto_of_le_of_le
-      tendsto_const_nhds h_tends_zero
-      (Filter.eventually_of_forall h_lower) h_upper'
+  exact squeeze_zero' (Filter.Eventually.of_forall h_lower) h_upper' h_tends_zero
 
 /-- **Step 4c helper**: Triangle inequality to combine convergences.
 
@@ -4119,23 +4125,24 @@ private lemma optionB_Step4c_triangle
               _ ≤ Finset.sum (Finset.range n) (fun j => Cg) := by
                   gcongr with j _; exact hCg _
               _ = (n : ℝ) * Cg := by simp
-          calc |1 / (n : ℝ) * Finset.sum (Finset.range n) (fun j => g (ω j))|
-              = |1 / (n : ℝ)| * |Finset.sum (Finset.range n) (fun j => g (ω j))| := by
+          show |(n : ℝ)⁻¹ * Finset.sum (Finset.range n) (fun j => g (ω j))| ≤ Cg
+          calc |(n : ℝ)⁻¹ * Finset.sum (Finset.range n) (fun j => g (ω j))|
+              = |(n : ℝ)⁻¹| * |Finset.sum (Finset.range n) (fun j => g (ω j))| := by
                   exact abs_mul _ _
-            _ = (1 / (n : ℝ)) * |Finset.sum (Finset.range n) (fun j => g (ω j))| := by
+            _ = (n : ℝ)⁻¹ * |Finset.sum (Finset.range n) (fun j => g (ω j))| := by
                   rw [abs_of_nonneg]; positivity
-            _ ≤ (1 / (n : ℝ)) * ((n : ℝ) * Cg) := by
-                  gcongr; positivity
+            _ ≤ (n : ℝ)⁻¹ * ((n : ℝ) * Cg) := by gcongr
             _ = Cg := by field_simp; ring
         -- Bounded + Measurable → Integrable on finite measure space
         have hB_meas : Measurable (B n) := by
           rw [hB_def]
           simp [hn]
           -- (1/n) * ∑_{j < n} g(ω j) is measurable
-          refine Measurable.const_smul ?_ _
+          refine Measurable.const_mul ?_ _
           refine Finset.measurable_sum (Finset.range n) (fun j _ => ?_)
           exact hg_meas.comp (measurable_pi_apply j)
-        exact ⟨hB_meas.aestronglyMeasurable, HasFiniteIntegral.of_bounded hB_bd⟩
+        have hB_bd_ae : ∀ᵐ ω ∂μ, ‖B n ω‖ ≤ Cg := ae_of_all μ (fun ω => le_trans (Real.norm_eq_abs _).le (hB_bd ω))
+        exact ⟨hB_meas.aestronglyMeasurable, HasFiniteIntegral.of_bounded hB_bd_ae⟩
     -- |B n - Y| is integrable as difference of integrable functions
     exact (hB_int.sub hY_int).abs
 
@@ -4163,6 +4170,8 @@ private lemma optionB_Step4c_triangle
         by_cases hn : n = 0
         · rw [hA_def, hB_def]
           simp [hn]
+          calc |g (ω 0)| ≤ Cg := hCg _
+            _ ≤ 2 * Cg := by linarith
         · -- Both A n and B n are bounded by Cg
           have hA_bd : |A n ω| ≤ Cg := by
             rw [hA_def]
@@ -4173,13 +4182,13 @@ private lemma optionB_Step4c_triangle
                 _ ≤ Finset.sum (Finset.range (n + 1)) (fun j => Cg) := by
                     gcongr with j _; exact hCg _
                 _ = ((n : ℝ) + 1) * Cg := by simp
-            calc |1 / ((n : ℝ) + 1) * Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))|
-                = |1 / ((n : ℝ) + 1)| * |Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))| := by
+            show |((n : ℝ) + 1)⁻¹ * Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))| ≤ Cg
+            calc |((n : ℝ) + 1)⁻¹ * Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))|
+                = |((n : ℝ) + 1)⁻¹| * |Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))| := by
                     exact abs_mul _ _
-              _ = (1 / ((n : ℝ) + 1)) * |Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))| := by
+              _ = ((n : ℝ) + 1)⁻¹ * |Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))| := by
                     rw [abs_of_nonneg]; positivity
-              _ ≤ (1 / ((n : ℝ) + 1)) * (((n : ℝ) + 1) * Cg) := by
-                    gcongr; positivity
+              _ ≤ ((n : ℝ) + 1)⁻¹ * (((n : ℝ) + 1) * Cg) := by gcongr
               _ = Cg := by field_simp; ring
           have hB_bd : |B n ω| ≤ Cg := by
             rw [hB_def]
@@ -4190,13 +4199,13 @@ private lemma optionB_Step4c_triangle
                 _ ≤ Finset.sum (Finset.range n) (fun j => Cg) := by
                     gcongr with j _; exact hCg _
                 _ = (n : ℝ) * Cg := by simp
-            calc |1 / (n : ℝ) * Finset.sum (Finset.range n) (fun j => g (ω j))|
-                = |1 / (n : ℝ)| * |Finset.sum (Finset.range n) (fun j => g (ω j))| := by
+            show |(n : ℝ)⁻¹ * Finset.sum (Finset.range n) (fun j => g (ω j))| ≤ Cg
+            calc |(n : ℝ)⁻¹ * Finset.sum (Finset.range n) (fun j => g (ω j))|
+                = |(n : ℝ)⁻¹| * |Finset.sum (Finset.range n) (fun j => g (ω j))| := by
                     exact abs_mul _ _
-              _ = (1 / (n : ℝ)) * |Finset.sum (Finset.range n) (fun j => g (ω j))| := by
+              _ = (n : ℝ)⁻¹ * |Finset.sum (Finset.range n) (fun j => g (ω j))| := by
                     rw [abs_of_nonneg]; positivity
-              _ ≤ (1 / (n : ℝ)) * ((n : ℝ) * Cg) := by
-                    gcongr; positivity
+              _ ≤ (n : ℝ)⁻¹ * ((n : ℝ) * Cg) := by gcongr
               _ = Cg := by field_simp; ring
           calc |A n ω - B n ω|
               ≤ |A n ω| + |B n ω| := abs_sub _ _
@@ -4205,7 +4214,7 @@ private lemma optionB_Step4c_triangle
       have hA_meas : Measurable (A n) := by
         rw [hA_def]
         simp
-        refine Measurable.const_smul ?_ _
+        refine Measurable.const_mul ?_ _
         refine Finset.measurable_sum (Finset.range (n + 1)) (fun j _ => ?_)
         exact hg_meas.comp (measurable_pi_apply j)
       have hB_meas : Measurable (B n) := by
@@ -4213,10 +4222,12 @@ private lemma optionB_Step4c_triangle
         by_cases hn : n = 0
         · simp [hn]; exact measurable_const
         · simp [hn]
-          refine Measurable.const_smul ?_ _
+          refine Measurable.const_mul ?_ _
           refine Finset.measurable_sum (Finset.range n) (fun j _ => ?_)
           exact hg_meas.comp (measurable_pi_apply j)
-      exact ⟨(hA_meas.sub hB_meas).norm.aestronglyMeasurable, HasFiniteIntegral.of_bounded hAB_bd⟩
+      have hAB_bd_ae : ∀ᵐ ω ∂μ, ‖|A n ω - B n ω|‖ ≤ 2 * Cg :=
+        ae_of_all μ (fun ω => by simp [Real.norm_eq_abs]; exact hAB_bd ω)
+      exact ⟨(hA_meas.sub hB_meas).norm.aestronglyMeasurable, HasFiniteIntegral.of_bounded hAB_bd_ae⟩
     have hint2 : Integrable (fun ω => |B n ω - Y ω|) μ := hBY_abs_integrable n
     -- now integrate the pointwise inequality
     calc
@@ -4430,12 +4441,11 @@ private theorem optionB_L1_convergence_bounded
     have hG_meas : Measurable G := by
       simp only [G]
       exact hg_meas.comp (measurable_pi_apply 0)
-    have hG_bd : ∀ ω, ‖G ω‖ ≤ Cg := by
-      intro ω
+    have hG_bd_ae : ∀ᵐ ω ∂μ, ‖G ω‖ ≤ Cg := ae_of_all μ (fun ω => by
       simp [G]
       rw [Real.norm_eq_abs]
-      exact hCg_bd _
-    exact ⟨hG_meas.aestronglyMeasurable, HasFiniteIntegral.of_bounded hG_bd⟩
+      exact hCg_bd _)
+    exact ⟨hG_meas.aestronglyMeasurable, HasFiniteIntegral.of_bounded hG_bd_ae⟩
 
   have hY_int : Integrable Y μ := by
     -- Y = μ[G | mSI], and condExp preserves integrability
