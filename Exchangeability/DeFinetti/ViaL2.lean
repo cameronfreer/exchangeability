@@ -3285,7 +3285,7 @@ lemma cesaro_to_condexp_L2
           simp only [zero_add]
           calc (n : ℝ)⁻¹ * (∑ k ∈ Finset.range n, f (X k ω))
               = (n : ℝ)⁻¹ * ((n : ℝ) * m) := by simp [hsum]
-            _ = m := by field_simp [hn0]; ring
+            _ = m := by field_simp [hn0]
 
         -- Similarly for n'
         have hblockAvg_n'_eq_m : blockAvg f X 0 n' ω = m := by
@@ -3306,7 +3306,7 @@ lemma cesaro_to_condexp_L2
           simp only [zero_add]
           calc (n' : ℝ)⁻¹ * (∑ k ∈ Finset.range n', f (X k ω))
               = (n' : ℝ)⁻¹ * ((n' : ℝ) * m) := by simp [hsum]
-            _ = m := by field_simp [hn'0]; ring
+            _ = m := by field_simp [hn'0]
 
         -- Step 5: Conclude difference = m - m = 0
         rw [hblockAvg_n_eq_m, hblockAvg_n'_eq_m]
@@ -3441,7 +3441,7 @@ lemma cesaro_to_condexp_L2
     -- Step 1: Define sequence in L² space
     let u : ℕ → Lp ℝ 2 μ := fun n =>
       if hn : n > 0 then
-        Lp.toLp (blockAvg f X 0 n) (hblockAvg_memLp n hn)
+        (hblockAvg_memLp n hn).toLp (blockAvg f X 0 n)
       else
         0  -- n = 0 case
 
@@ -3449,22 +3449,35 @@ lemma cesaro_to_condexp_L2
     have hCauchySeq : CauchySeq u := by
       rw [Metric.cauchySeq_iff]
       intro ε hε
-      obtain ⟨N, hN⟩ := hCauchy ε hε
-      use N
+      obtain ⟨N, hN⟩ := hCauchy (ENNReal.ofReal ε) (by simp [hε])
+      use max N 1  -- Ensure N is at least 1
       intro n hn m hm
-      -- For n, m ≥ N, both are > 0, so we can unfold u
-      have hn_pos : n > 0 := Nat.lt_of_lt_of_le (Nat.zero_lt_succ N) hn
-      have hm_pos : m > 0 := Nat.lt_of_lt_of_le (Nat.zero_lt_succ N) hm
+      -- For n, m ≥ max N 1, both are > 0, so we can unfold u
+      have hn_pos : n > 0 := Nat.lt_of_lt_of_le (Nat.zero_lt_one) (Nat.le_trans (Nat.le_max_right N 1) hn)
+      have hm_pos : m > 0 := Nat.lt_of_lt_of_le (Nat.zero_lt_one) (Nat.le_trans (Nat.le_max_right N 1) hm)
       simp only [u, dif_pos hn_pos, dif_pos hm_pos]
-      -- dist in Lp equals eLpNorm of difference
+      -- dist in Lp equals eLpNorm of difference (with toReal)
       rw [Lp.dist_def]
-      -- Need: eLpNorm (toLp (blockAvg n) - toLp (blockAvg m)) 2 μ < ε
-      -- This equals eLpNorm (blockAvg n - blockAvg m) 2 μ by linearity
-      convert hN hn hm using 2
-      -- toLp is linear, so toLp f - toLp g = toLp (f - g)
-      -- Use MemLp.toLp_sub and edist = eLpNorm
-      rw [← (hblockAvg_memLp n hn_pos).toLp_sub (hblockAvg_memLp m hm_pos)]
-      rfl
+      -- toLp coercions are ae-equal to the original functions
+      -- So eLpNorm of coerced difference equals eLpNorm of original difference
+      have hn' : n ≥ N := Nat.le_trans (Nat.le_max_left N 1) hn
+      have hm' : m ≥ N := Nat.le_trans (Nat.le_max_left N 1) hm
+      -- Key: use eLpNorm_congr_ae with coeFn_toLp to relate coercions to originals
+      have h_ae_eq : eLpNorm (↑((hblockAvg_memLp n hn_pos).toLp (blockAvg f X 0 n) -
+                               (hblockAvg_memLp m hm_pos).toLp (blockAvg f X 0 m))) 2 μ =
+                     eLpNorm (blockAvg f X 0 n - blockAvg f X 0 m) 2 μ := by
+        -- Use MemLp.toLp_sub: (hf.sub hg).toLp (f - g) = hf.toLp f - hg.toLp g
+        have h_toLp_sub := (hblockAvg_memLp n hn_pos).toLp_sub (hblockAvg_memLp m hm_pos)
+        -- This gives: toLp (blockAvg n - blockAvg m) = toLp (blockAvg n) - toLp (blockAvg m)
+        -- So the coercion of LHS equals coercion of RHS
+        conv_lhs => rw [← h_toLp_sub]
+        -- Now both sides have the same Lp element, just need to show eLpNorms are equal via ae-equality
+        exact eLpNorm_congr_ae (((hblockAvg_memLp n hn_pos).sub (hblockAvg_memLp m hm_pos)).coeFn_toLp).symm
+      rw [h_ae_eq]
+      -- Now relate (x).toReal < ε with x < ENNReal.ofReal ε
+      rw [ENNReal.toReal_lt_toReal (eLpNorm_ne_top _) ENNReal.ofReal_ne_top]
+      · exact hN hn' hm'
+      · exact (hblockAvg_memLp n hn_pos).sub (hblockAvg_memLp m hm_pos)
 
     -- Step 3: Extract limit from completeness
     haveI : CompleteSpace (Lp ℝ 2 μ) := by infer_instance
@@ -3472,20 +3485,18 @@ lemma cesaro_to_condexp_L2
 
     -- Step 4: Extract representative function
     -- α_L2 : Lp ℝ 2 μ is an ae-equivalence class
-    -- We need a measurable representative α_f : Ω → ℝ
-    choose α_f hα_meas hα_ae_eq using α_L2.exists_stronglyMeasurable_representative
+    -- In Lean 4, Lp coerces to a function type automatically
+    let α_f : Ω → ℝ := α_L2
 
-    -- Properties of α_f
-    have hα_memLp : MemLp α_f 2 μ := by
-      -- α_f =ᵐ α_L2, and α_L2 ∈ L², so α_f ∈ L²
-      -- Use MemLp.ae_eq to transfer MemLp via ae-equality
-      exact α_L2.memLp.ae_eq hα_ae_eq.symm
+    -- Properties of α_f (using theorems, not fields)
+    have hα_meas : StronglyMeasurable α_f := Lp.stronglyMeasurable α_L2
+    have hα_memLp : MemLp α_f 2 μ := Lp.memLp α_L2
 
     have hα_limit : Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0) := by
-      -- u n → α_L2 in L², and α_f =ᵐ α_L2
+      -- u n → α_L2 in L², and α_f is the coercion of α_L2
       -- So blockAvg n → α_f in L²
       -- Strategy: h_tendsto gives dist (u n) α_L2 → 0
-      -- dist in Lp = eLpNorm, and we use ae-equality
+      -- dist in Lp = eLpNorm
       rw [tendsto_iff_dist_tendsto_zero] at h_tendsto
       rw [tendsto_iff_dist_tendsto_zero]
       simp only [dist_zero_right] at h_tendsto ⊢
@@ -3493,14 +3504,14 @@ lemma cesaro_to_condexp_L2
       -- Need to show: eventually, eLpNorm (blockAvg n - α_f) = dist (u n) α_L2
       filter_upwards [Filter.eventually_cofinite.2 (finite_le_nat 1)] with n hn
       have hn_pos : n > 0 := hn
-      simp only [u, dif_pos hn_pos]
+      simp only [u, dif_pos hn_pos, α_f]
       rw [Lp.dist_def]
       -- Now we have: eLpNorm (toLp (blockAvg n) - α_L2) 2 μ
-      -- And want: eLpNorm (blockAvg n - α_f) 2 μ
-      -- These are equal because α_L2 =ᵐ α_f
+      -- And want: eLpNorm (blockAvg n - α_L2) 2 μ
+      -- These are equal by coeFn_toLp
       refine eLpNorm_congr_ae ?_
-      filter_upwards [(hblockAvg_memLp n hn_pos).coeFn_toLp, hα_ae_eq] with ω h1 h2
-      simp only [Pi.sub_apply, h1, h2]
+      filter_upwards [(hblockAvg_memLp n hn_pos).coeFn_toLp] with ω h1
+      simp only [Pi.sub_apply, h1]
 
   use α_f
   refine ⟨hα_memLp, ?_, hα_limit, ?_⟩
