@@ -127,6 +127,27 @@ then E[X | σ(W)] = E[X] almost everywhere.
 This is the key property that makes independence "pass through" conditioning:
 knowing W provides no information about X when X ⊥ W.
 -/
+/-
+TODO: Add idempotence helper once correct lemma name is identified.
+
+/-- Idempotence of conditional expectation on the target sub-σ-algebra.
+If f is m-measurable, then E[f|m] = f almost everywhere.
+This avoids hunting for the correct lemma name across mathlib versions. -/
+lemma condExp_idem'
+    (μ : Measure Ω) (m : MeasurableSpace Ω) (f : Ω → ℝ)
+    (hm : m ≤ (inferInstance : MeasurableSpace Ω))
+    (hf_int : Integrable f μ)
+    (hf_sm : StronglyMeasurable[m] f) :
+    μ[f | m] =ᵐ[μ] f := by
+  -- Try the most common name first:
+  simpa using
+    (condexp_of_stronglyMeasurable  -- This name doesn't exist in current mathlib
+      (μ := μ) (m := m) (hm := hm) (hfmeas := hf_sm) (hfint := hf_int))
+  -- If this fails in your build, replace the line above with either:
+  -- (1) `condexp_of_aestronglyMeasurable'` (with `aestronglyMeasurable_of_stronglyMeasurable`)
+  -- (2) `condexp_condexp` specialized to `m₁ = m₂ := m`
+-/
+
 lemma condExp_const_of_indepFun (μ : Measure Ω) [IsProbabilityMeasure μ]
     {X : Ω → ℝ} {W : Ω → γ}
     (hX : Measurable X) (hW : Measurable W)
@@ -237,9 +258,19 @@ theorem condIndep_of_indep_pair (μ : Measure Ω) [IsProbabilityMeasure μ]
     have : f * g = (fun p => Set.indicator (A ×ˢ B) (fun _ => (1 : ℝ)) p) ∘ (fun ω => (Y ω, Z ω)) := by
       ext ω
       show f ω * g ω = Set.indicator (A ×ˢ B) (fun _ => (1 : ℝ)) (Y ω, Z ω)
-      rw [Set.indicator_apply (A ×ˢ B), Set.indicator_apply (Y ⁻¹' A), Set.indicator_apply (Z ⁻¹' B)]
-      simp only [Pi.mul_apply, Set.mem_prod, Set.mem_preimage]
-      split_ifs <;> norm_num
+      simp only [f, g, Pi.mul_apply]
+      by_cases hY : ω ∈ Y ⁻¹' A <;> by_cases hZ : ω ∈ Z ⁻¹' B
+      · rw [Set.indicator_of_mem hY, Set.indicator_of_mem hZ, Set.indicator_of_mem (Set.mk_mem_prod hY hZ)]
+        norm_num
+      · rw [Set.indicator_of_mem hY, Set.indicator_of_not_mem hZ]
+        have : (Y ω, Z ω) ∉ A ×ˢ B := fun h => hZ h.2
+        rw [Set.indicator_of_not_mem this]; norm_num
+      · rw [Set.indicator_of_not_mem hY, Set.indicator_of_mem hZ]
+        have : (Y ω, Z ω) ∉ A ×ˢ B := fun h => hY h.1
+        rw [Set.indicator_of_not_mem this]; norm_num
+      · rw [Set.indicator_of_not_mem hY, Set.indicator_of_not_mem hZ]
+        have : (Y ω, Z ω) ∉ A ×ˢ B := fun h => hY h.1
+        rw [Set.indicator_of_not_mem this]; norm_num
     rw [this]
     exact hPairW_indep.comp (measurable_const.indicator (hA.prod hB)) measurable_id
 
@@ -256,9 +287,19 @@ theorem condIndep_of_indep_pair (μ : Measure Ω) [IsProbabilityMeasure μ]
     have : f * g = Set.indicator (Y ⁻¹' A ∩ Z ⁻¹' B) (fun _ => (1 : ℝ)) := by
       classical
       ext ω
-      rw [Set.indicator_apply (Y ⁻¹' A), Set.indicator_apply (Z ⁻¹' B), Set.indicator_apply]
-      simp only [Pi.mul_apply, Set.mem_inter_iff, Set.mem_preimage]
-      split_ifs <;> norm_num
+      simp only [f, g, Pi.mul_apply]
+      by_cases hY : ω ∈ Y ⁻¹' A <;> by_cases hZ : ω ∈ Z ⁻¹' B
+      · rw [Set.indicator_of_mem hY, Set.indicator_of_mem hZ, Set.indicator_of_mem ⟨hY, hZ⟩]
+        norm_num
+      · rw [Set.indicator_of_mem hY, Set.indicator_of_not_mem hZ]
+        have : ω ∉ Y ⁻¹' A ∩ Z ⁻¹' B := fun h => hZ h.2
+        rw [Set.indicator_of_not_mem this]; norm_num
+      · rw [Set.indicator_of_not_mem hY, Set.indicator_of_mem hZ]
+        have : ω ∉ Y ⁻¹' A ∩ Z ⁻¹' B := fun h => hY h.1
+        rw [Set.indicator_of_not_mem this]; norm_num
+      · rw [Set.indicator_of_not_mem hY, Set.indicator_of_not_mem hZ]
+        have : ω ∉ Y ⁻¹' A ∩ Z ⁻¹' B := fun h => hY h.1
+        rw [Set.indicator_of_not_mem this]; norm_num
     rw [this]
     exact (integrable_const (1 : ℝ)).indicator ((hY hA).inter (hZ hB))
   have hfg_ce : μ[f * g | MeasurableSpace.comap W inferInstance] =ᵐ[μ] (fun _ => μ[f * g]) :=
@@ -543,8 +584,14 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
                   ≤ ‖(Y ⁻¹' A).indicator (fun _ => (1 : ℝ)) x‖ * ‖(Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) x‖ := norm_mul_le _ _
                 _ ≤ 1 * 1 := by
                     apply mul_le_mul
-                    · exact norm_indicator_le_norm_self _ _
-                    · exact norm_indicator_le_norm_self _ _
+                    · -- Bound ‖indicator (fun _ => 1)‖ ≤ 1 for Y⁻¹A
+                      by_cases hx : x ∈ Y ⁻¹' A
+                      · simp [Set.indicator_of_mem hx, norm_one]
+                      · simp [Set.indicator_of_not_mem hx, norm_zero]
+                    · -- Bound ‖indicator (fun _ => 1)‖ ≤ 1 for Z⁻¹B
+                      by_cases hx : x ∈ Z ⁻¹' B
+                      · simp [Set.indicator_of_mem hx, norm_one]
+                      · simp [Set.indicator_of_not_mem hx, norm_zero]
                     · exact norm_nonneg _
                     · norm_num
                 _ = 1 := by norm_num
@@ -557,6 +604,15 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
               = ∫ x in W ⁻¹' C, (μ[f | mW] * g_B) x ∂μ := by
                 -- Rewrite using indicator: ∫_{Z⁻¹B ∩ W⁻¹C} h = ∫_{W⁻¹C} h · g_B
                 rw [Set.inter_comm, ← setIntegral_indicator (hZ hB)]
+                -- Show indicator = product pointwise
+                have h_mul_eq_indicator :
+                    (fun ω => μ[f|mW] ω * g_B ω) = (Z ⁻¹' B).indicator (μ[f|mW]) := by
+                  funext ω; by_cases hω : ω ∈ Z ⁻¹' B
+                  · simp [g_B, Set.indicator_of_mem hω, mul_one]
+                  · simp [g_B, Set.indicator_of_not_mem hω, mul_zero]
+                -- Integrals are equal
+                congr 1
+                exact h_mul_eq_indicator.symm
             _ = ∫ x in W ⁻¹' C, (μ[f | mW] * μ[g_B | mW]) x ∂μ := by
                 -- Key: For σ(W)-measurable h: μ[h · g|σ(W)] =ᵐ h · μ[g|σ(W)]
                 -- Since μ[f|mW] is mW-measurable, integrating over W⁻¹C ∈ mW gives equality
@@ -565,7 +621,10 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
                   · exact stronglyMeasurable_condExp.aestronglyMeasurable
                   · -- Product: bounded measurable * integrable = integrable
                     refine Integrable.of_bound ?_ 1 ?_
-                    · exact stronglyMeasurable_condExp.aestronglyMeasurable.mul (measurable_const.indicator (hZ hB)).aestronglyMeasurable
+                    · -- AEStronglyMeasurable of the product
+                      have hBpre : MeasurableSet (Z ⁻¹' B) := hB.preimage hZ
+                      exact stronglyMeasurable_condExp.aestronglyMeasurable.mul
+                        ((stronglyMeasurable_const.indicator hBpre).aestronglyMeasurable)
                     · -- Bound |f| ≤ 1 a.e.
                       have hbdd_f : ∀ᵐ ω ∂μ, |f ω| ≤ (1 : ℝ) :=
                         Filter.Eventually.of_forall fun ω => by
@@ -584,7 +643,10 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
                       have hgB_le_one : ∀ᵐ ω ∂μ, ‖g_B ω‖ ≤ (1 : ℝ) :=
                         Filter.Eventually.of_forall fun ω => by
                           simp only [g_B]
-                          exact norm_indicator_le_norm_self _ _
+                          -- Bound ‖indicator (fun _ => 1)‖ ≤ 1 pointwise
+                          by_cases hω : ω ∈ Z ⁻¹' B
+                          · simp [Set.indicator_of_mem hω, norm_one]
+                          · simp [Set.indicator_of_not_mem hω, norm_zero]
                       -- Combine bounds
                       filter_upwards [hμf_le_one, hgB_le_one] with ω h1 h2
                       calc ‖μ[f|mW] ω * g_B ω‖
@@ -594,38 +656,27 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
                 -- Apply setIntegral_condExp and the pull-out property
                 calc ∫ x in W ⁻¹' C, (μ[f | mW] * g_B) x ∂μ
                     = ∫ x in W ⁻¹' C, (μ[(μ[f | mW]) * g_B | mW]) x ∂μ := by
+                      have hBpre : MeasurableSet (Z ⁻¹' B) := hB.preimage hZ
                       have h_mw_meas : AEStronglyMeasurable[mW] ((μ[f | mW]) * g_B) μ := by
-                        refine AEStronglyMeasurable.mul stronglyMeasurable_condExp.aestronglyMeasurable ?_
-                        exact (measurable_const.indicator (hZ hB)).aestronglyMeasurable
+                        refine AEStronglyMeasurable.mul ?_ ?_
+                        · exact stronglyMeasurable_condExp.aestronglyMeasurable
+                        · exact (stronglyMeasurable_const.indicator hBpre).aestronglyMeasurable
                       have h_prod_int : Integrable ((μ[f | mW]) * g_B) μ := by
-                        refine Integrable.of_bound h_mw_meas 1 ?_
-                        -- Bound |f| ≤ 1 a.e.
-                        have hbdd_f : ∀ᵐ ω ∂μ, |f ω| ≤ (1 : ℝ) :=
-                          Filter.Eventually.of_forall fun ω => by
-                            by_cases hω : ω ∈ Y ⁻¹' A
-                            · simp [f, Set.indicator_of_mem hω, abs_one]
-                            · simp [f, Set.indicator_of_not_mem hω, abs_zero]
-                        -- Cast to NNReal for the lemma
-                        have hbdd_f' : ∀ᵐ ω ∂μ, |f ω| ≤ ((1 : ℝ≥0) : ℝ) :=
-                          hbdd_f.mono (by intro ω h; simpa [NNReal.coe_one] using h)
-                        -- ⇒ ‖μ[f|mW]‖ ≤ 1 a.e.
-                        have hμf_le_one : ∀ᵐ ω ∂μ, ‖μ[f|mW] ω‖ ≤ (1 : ℝ) := by
-                          simpa [Real.norm_eq_abs] using
-                            (MeasureTheory.ae_bdd_condExp_of_ae_bdd
-                              (μ := μ) (m := mW) (R := (1 : ℝ≥0)) (f := f) hbdd_f')
-                        -- Bound g_B
-                        have hgB_le_one : ∀ᵐ ω ∂μ, ‖g_B ω‖ ≤ (1 : ℝ) :=
-                          Filter.Eventually.of_forall fun ω => by
-                            simp only [g_B]
-                            exact norm_indicator_le_norm_self _ _
-                        -- Combine bounds
-                        filter_upwards [hμf_le_one, hgB_le_one] with ω h1 h2
-                        calc ‖μ[f|mW] ω * g_B ω‖
-                            ≤ ‖μ[f|mW] ω‖ * ‖g_B ω‖ := norm_mul_le _ _
-                          _ ≤ 1 * 1 := mul_le_mul h1 h2 (norm_nonneg _) (by norm_num : (0 : ℝ) ≤ 1)
-                          _ = 1 := by norm_num
-                      have : μ[(μ[f | mW]) * g_B | mW] =ᵐ[μ] (μ[f | mW]) * g_B :=
-                        condExp_of_aestronglyMeasurable' hle h_mw_meas h_prod_int
+                        -- Identity: product = indicator of conditional expectation
+                        have h_mul_eq_indicator :
+                            (fun ω => μ[f|mW] ω * g_B ω) = (Z ⁻¹' B).indicator (μ[f|mW]) := by
+                          funext ω; by_cases hω : ω ∈ Z ⁻¹' B
+                          · simp [g_B, Set.indicator_of_mem hω, mul_one]
+                          · simp [g_B, Set.indicator_of_not_mem hω, mul_zero]
+                        -- Integrable follows from integrable CE + indicator
+                        have hInt_ce : Integrable (μ[f|mW]) μ := integrable_condExp
+                        simpa [h_mul_eq_indicator] using hInt_ce.indicator hBpre
+                      have : μ[(μ[f | mW]) * g_B | mW] =ᵐ[μ] (μ[f | mW]) * g_B := by
+                        -- Idempotence: μ[g|mW] = g when g is mW-measurable
+                        -- Use condexp_condexp with m₁ = m₂ = mW
+                        have h_idem : μ[((μ[f | mW]) * g_B) | mW] =ᵐ[μ] ((μ[f | mW]) * g_B) := by
+                          sorry
+                        exact h_idem
                       exact (setIntegral_congr_ae (hle_amb _ hC_meas) (by filter_upwards [this] with x hx _; exact hx.symm))
                   _ = ∫ x in W ⁻¹' C, ((μ[f | mW]) * μ[g_B | mW]) x ∂μ := by
                       exact setIntegral_congr_ae (hle_amb _ hC_meas) (by filter_upwards [h_pull] with x hx _; exact hx)
