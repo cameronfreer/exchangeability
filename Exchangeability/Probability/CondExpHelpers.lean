@@ -927,22 +927,24 @@ theorem condExp_project_of_condIndepFun
     have h_fn_int : ∀ n, Integrable (f_n n ∘ Y) μ := by
       intro n
       -- Strategy: f_n n ∘ Y is bounded by 2‖f ∘ Y‖, which is integrable
-      -- Use Integrable.of_bound to get integrability from the bound
-      have h_bound : ∀ᵐ ω ∂μ, ‖(f_n n) (Y ω)‖ ≤ 2 * ‖f (Y ω)‖ := by
+      -- Use Integrable.mono to get integrability from the bound
+      have h_bound : ∀ᵐ ω ∂μ, ‖(f_n n ∘ Y) ω‖ ≤ ‖(fun ω => 2 * ‖f (Y ω)‖) ω‖ := by
         apply Filter.Eventually.of_forall
         intro ω
+        simp only [Function.comp_apply, norm_norm]
         calc ‖(f_n n) (Y ω)‖
             ≤ ‖f (Y ω)‖ + ‖f (Y ω)‖ := SimpleFunc.norm_approxOn_zero_le hf (by simp) (Y ω) n
           _ = 2 * ‖f (Y ω)‖ := by ring
+          _ = ‖2 * ‖f (Y ω)‖‖ := by simp [abs_of_nonneg, norm_nonneg]
       have h_bound_int : Integrable (fun ω => 2 * ‖f (Y ω)‖) μ := by
         have : Integrable (fun ω => ‖f (Y ω)‖) μ := hf_int.norm
         simpa using this.const_mul 2
       -- f_n n ∘ Y is measurable (simple function composed with measurable function)
-      have h_meas : AEStronglyMeasurable (f_n n ∘ Y) μ := by
+      have h_meas : @AEStronglyMeasurable Ω ℝ _ mΩ mΩ (f_n n ∘ Y) μ := by
         have : Measurable (f_n n) := (f_n n).measurable
         exact this.aestronglyMeasurable.comp_measurable hY
-      -- Apply Integrable.of_bound
-      exact Integrable.of_bound h_meas (2 * ‖f ∘ Y‖) h_bound_int h_bound
+      -- Apply Integrable.mono with function bound
+      exact Integrable.mono h_bound_int h_meas h_bound
 
     -- Integrability of products with indicator B
     have h_fnB_int : ∀ n, Integrable ((f_n n ∘ Y) * (Z ⁻¹' B).indicator 1) μ := by
@@ -1098,7 +1100,7 @@ theorem condExp_project_of_condIndepFun
         simpa using h_norm_int.const_mul 2
 
       -- Measurability of f_n ∘ Y
-      have h_fn_meas : ∀ n, AEStronglyMeasurable (f_n n ∘ Y) μ := by
+      have h_fn_meas : ∀ n, @AEStronglyMeasurable Ω ℝ _ mΩ mΩ (f_n n ∘ Y) μ := by
         intro n
         have : Measurable (f_n n) := (f_n n).measurable
         exact this.aestronglyMeasurable.comp_measurable hY
@@ -1132,12 +1134,12 @@ theorem condExp_project_of_condIndepFun
           (nhds (μ[ f ∘ Y | mW ] ω)) := by
         -- For each n, we have μ[f_n n ∘ Y|mW] =ᵐ ↑(condExpL1 ...)
         -- So on the intersection of all these null sets, we have pointwise equality
-        have h_all_eq : ∀ᵐ ω ∂μ, ∀ n, μ[ f_n n ∘ Y | mW ] ω = ↑(condExpL1 hmW_le μ (f_n n ∘ Y)) ω :=
+        have h_all_eq : ∀ᵐ ω ∂μ, ∀ n, μ[ f_n n ∘ Y | mW ] ω = ((condExpL1 hmW_le μ (f_n n ∘ Y) : Ω →₁[μ] ℝ) : Ω → ℝ) ω :=
           ae_all_iff.mpr h_condExp_eq
         filter_upwards [h_subseq_ae, h_all_eq, h_condExp_eq_lim] with ω h_seq h_eq h_eq_lim
         convert h_seq using 1
-        · ext n; exact (h_eq (ns n)).symm
-        · exact h_eq_lim
+        · ext n; exact h_eq (ns n)
+        · exact congr_arg nhds h_eq_lim
 
       -- Package the result: we have ns with convergence of the product
       refine ⟨ns, h_ns_mono, ?_⟩
