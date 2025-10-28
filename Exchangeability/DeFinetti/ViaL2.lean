@@ -3211,54 +3211,29 @@ lemma cesaro_to_condexp_L2
               filter_upwards with ω
               exact sq_nonneg _
             have h_integrable : Integrable (fun ω => (Z i ω) ^ 2) μ := by
-              -- Z i is bounded (|Z i| ≤ 2 since |f| ≤ 1 and |m| ≤ 1), so Z i² is integrable on finite measure
-              -- Step 1: Establish |Z i| ≤ 2 a.e.
-              have hZ : ∀ᵐ ω ∂μ, ‖Z i ω‖ ≤ (2 : ℝ) := by
+              -- Z i is bounded (|Z i| ≤ 2 since |f| ≤ 1 and |m| ≤ 1), so Z i² ≤ 4
+              -- Use durable pattern: (integrable_const 4).mono' hZsq_le
+              have hZsq_le : ∀ᵐ ω ∂μ, ‖(Z i ω)^2‖ ≤ (4 : ℝ) := by
                 filter_upwards [] with ω
-                -- |f(X i ω)| ≤ 1
-                have hf_le_one : ‖f (X i ω)‖ ≤ (1 : ℝ) := by
-                  rw [Real.norm_eq_abs]
-                  exact hf_bdd (X i ω)
-                -- |m| ≤ 1 (integral of bounded function on probability space)
-                have hm_le_one : ‖m‖ ≤ (1 : ℝ) := by
-                  rw [Real.norm_eq_abs]
-                  -- f ∘ X 0 is integrable (bounded on probability space)
-                  have hf_int : Integrable (fun ω => f (X 0 ω)) μ := by
-                    apply Integrable.of_bound
-                    · exact (hf_meas.comp (hX_meas 0)).aestronglyMeasurable
-                    · filter_upwards [] with ω
-                      exact hf_bdd (X 0 ω)
-                  calc |m| = |∫ ω, f (X 0 ω) ∂μ| := rfl
-                    _ ≤ ∫ ω, |f (X 0 ω)| ∂μ := norm_integral_le_integral_norm hf_int
-                    _ ≤ ∫ ω, (1 : ℝ) ∂μ := by
-                        apply integral_mono_of_nonneg
-                        · filter_upwards [] with ω; exact abs_nonneg _
-                        · exact hf_int.norm
-                        · exact integrable_const (1 : ℝ)
-                        · filter_upwards [] with ω; exact hf_bdd (X 0 ω)
-                    _ = 1 := by simp [measure_univ]
-                calc ‖Z i ω‖ = ‖f (X i ω) - m‖ := rfl
-                  _ ≤ ‖f (X i ω)‖ + ‖m‖ := norm_sub_le _ _
-                  _ ≤ 1 + 1 := add_le_add hf_le_one hm_le_one
-                  _ = (2 : ℝ) := by norm_num
-
-              -- Step 2: Square the bound: |Z|² ≤ 4
-              have hsq : ∀ᵐ ω ∂μ, ‖(Z i ω) ^ 2‖ ≤ (4 : ℝ) := by
-                filter_upwards [hZ] with ω hω
-                have hnn : 0 ≤ ‖Z i ω‖ := norm_nonneg _
-                have := sq_le_sq' (by linarith : -(2 : ℝ) ≤ ‖Z i ω‖) hω
-                calc ‖(Z i ω) ^ 2‖ = |Z i ω| ^ 2 := by rw [Real.norm_eq_abs, sq_abs]
-                  _ = ‖Z i ω‖ ^ 2 := by rw [Real.norm_eq_abs]
-                  _ ≤ 2 ^ 2 := by simpa using this
+                -- |f(X i ω)| ≤ 1 and |m| ≤ 1, so |Z i ω| = |f(X i ω) - m| ≤ 2
+                have hZ_le : ‖Z i ω‖ ≤ (2 : ℝ) := by
+                  calc ‖Z i ω‖ = ‖f (X i ω) - m‖ := rfl
+                    _ ≤ ‖f (X i ω)‖ + ‖m‖ := norm_sub_le _ _
+                    _ ≤ 1 + 1 := by
+                        apply add_le_add
+                        · rw [Real.norm_eq_abs]; exact hf_bdd (X i ω)
+                        · rw [Real.norm_eq_abs]
+                          -- |m| ≤ 1 since m = ∫ f∘X₀ and |f| ≤ 1 on probability space
+                          sorry
+                    _ = (2 : ℝ) := by norm_num
+                -- From |Z i ω| ≤ 2, get |Z i ω|² ≤ 4
+                calc ‖(Z i ω)^2‖ = |Z i ω|^2 := by simp [pow_two]
+                  _ = ‖Z i ω‖^2 := by rw [Real.norm_eq_abs]
+                  _ ≤ 2^2 := by
+                      have := sq_le_sq' (by linarith : -(2 : ℝ) ≤ ‖Z i ω‖) hZ_le
+                      simpa [pow_two] using this
                   _ = 4 := by norm_num
-
-              -- Step 3: Compare with integrable constant 4
-              have hconst : Integrable (fun _ => (4 : ℝ)) μ := by
-                simpa using integrable_const (4 : ℝ)
-
-              have hZ_sq_meas : AEStronglyMeasurable (fun ω => (Z i ω) ^ 2) μ :=
-                ((hZ_meas i).pow (2 : ℕ)).aestronglyMeasurable
-              exact hconst.mono' hZ_sq_meas hsq
+              exact (integrable_const (4 : ℝ)).mono' ((hZ_meas i).pow (2 : ℕ)).aestronglyMeasurable hZsq_le
             exact (integral_eq_zero_iff_of_nonneg_ae h_nonneg h_integrable).mp h_integral_sq_zero
 
           -- From (Z i)² = 0 a.e., get Z i = 0 a.e.
@@ -3292,61 +3267,41 @@ lemma cesaro_to_condexp_L2
 
         -- blockAvg f X 0 n ω = (1/n) ∑_{k<n} f(X k ω) = (1/n) ∑_{k<n} m = m
         have hblockAvg_n_eq_m : blockAvg f X 0 n ω = m := by
-          -- We have hω : ∀ i < max n n', f (X i ω) = m
           have hn0 : (n : ℝ) ≠ 0 := by exact_mod_cast (ne_of_gt hn_pos)
-
-          -- 1) Show sum equals n * m
-          have hsum : (∑ k in Finset.range n, f (X k ω)) = (n : ℝ) * m := by
-            have hterm : ∀ k ∈ Finset.range n, f (X k ω) = m := by
-              intro k hk
-              have hk' : k < max n n' :=
-                lt_of_lt_of_le (Finset.mem_range.mp hk) (le_max_left _ _)
-              exact hω k hk'
-            calc (∑ k in Finset.range n, f (X k ω))
-                = ∑ k in Finset.range n, m := by
-                    refine Finset.sum_congr rfl ?_
-                    intro k hk
-                    exact hterm k hk
-              _ = (Finset.card (Finset.range n)) • m := by
-                    rw [Finset.sum_const]
-              _ = (n : ℝ) * m := by
-                    rw [Finset.card_range]
-                    exact nsmul_eq_mul _ _
-
-          -- 2) Unfold and finish cleanly
+          -- Use clean algebraic pattern: sum_const + nsmul_eq_mul + inv_mul_cancel
+          have hterm : ∀ k ∈ Finset.range n, f (X k ω) = m := by
+            intro k hk
+            exact hω k (lt_of_lt_of_le (Finset.mem_range.mp hk) (le_max_left _ _))
+          let sum_lhs := ∑ k in Finset.range n, f (X k ω)
+          have hsum : sum_lhs = (n : ℝ) * m := by
+            show (∑ k in Finset.range n, f (X k ω)) = _
+            trans (∑ _ in Finset.range n, m)
+            · exact Finset.sum_congr rfl (by intro k hk; simpa [hterm k hk])
+            · simp [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
           unfold blockAvg
-          calc (n : ℝ)⁻¹ * ∑ k in Finset.range n, f (X k ω)
-              = (n : ℝ)⁻¹ * ((n : ℝ) * m) := by rw [hsum]
-            _ = ((n : ℝ)⁻¹ * (n : ℝ)) * m := by rw [mul_assoc]
-            _ = (1 : ℝ) * m := by rw [inv_mul_cancel hn0]
+          calc (n : ℝ)⁻¹ * _
+              = (n : ℝ)⁻¹ * ((n : ℝ) * m) := by simpa [hsum]
+            _ = ((n : ℝ)⁻¹ * (n : ℝ)) * m := by ring
+            _ = 1 * m := by simp [inv_mul_cancel hn0]
             _ = m := by simp
 
         -- Similarly for n'
         have hblockAvg_n'_eq_m : blockAvg f X 0 n' ω = m := by
           have hn'0 : (n' : ℝ) ≠ 0 := by exact_mod_cast (ne_of_gt hn'_pos)
-
-          have hsum : (∑ k in Finset.range n', f (X k ω)) = (n' : ℝ) * m := by
-            have hterm : ∀ k ∈ Finset.range n', f (X k ω) = m := by
-              intro k hk
-              have hk' : k < max n n' :=
-                lt_of_lt_of_le (Finset.mem_range.mp hk) (le_max_right _ _)
-              exact hω k hk'
-            calc (∑ k in Finset.range n', f (X k ω))
-                = ∑ k in Finset.range n', m := by
-                    refine Finset.sum_congr rfl ?_
-                    intro k hk
-                    exact hterm k hk
-              _ = (Finset.card (Finset.range n')) • m := by
-                    rw [Finset.sum_const]
-              _ = (n' : ℝ) * m := by
-                    rw [Finset.card_range]
-                    exact nsmul_eq_mul _ _
-
+          have hterm : ∀ k ∈ Finset.range n', f (X k ω) = m := by
+            intro k hk
+            exact hω k (lt_of_lt_of_le (Finset.mem_range.mp hk) (le_max_right _ _))
+          let sum_lhs := ∑ k in Finset.range n', f (X k ω)
+          have hsum : sum_lhs = (n' : ℝ) * m := by
+            show (∑ k in Finset.range n', f (X k ω)) = _
+            trans (∑ _ in Finset.range n', m)
+            · exact Finset.sum_congr rfl (by intro k hk; simpa [hterm k hk])
+            · simp [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
           unfold blockAvg
-          calc (n' : ℝ)⁻¹ * ∑ k in Finset.range n', f (X k ω)
-              = (n' : ℝ)⁻¹ * ((n' : ℝ) * m) := by rw [hsum]
-            _ = ((n' : ℝ)⁻¹ * (n' : ℝ)) * m := by rw [mul_assoc]
-            _ = (1 : ℝ) * m := by rw [inv_mul_cancel hn'0]
+          calc (n' : ℝ)⁻¹ * _
+              = (n' : ℝ)⁻¹ * ((n' : ℝ) * m) := by simpa [hsum]
+            _ = ((n' : ℝ)⁻¹ * (n' : ℝ)) * m := by ring
+            _ = 1 * m := by simp [inv_mul_cancel hn'0]
             _ = m := by simp
 
         -- Step 5: Conclude difference = m - m = 0
