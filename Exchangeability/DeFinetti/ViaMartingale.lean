@@ -881,8 +881,8 @@ lemma preimage_measurable_in_futureFiltration {Ω α : Type*} [MeasurableSpace �
 lemma measurableSet_of_futureFiltration {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) {m n : ℕ} (hmn : m ≤ n) {A : Set Ω}
     (hA : MeasurableSet[futureFiltration X n] A) :
-    MeasurableSet[futureFiltration X m] A := by
-  exact futureFiltration_antitone X hmn A hA
+    MeasurableSet[futureFiltration X m] A :=
+  futureFiltration_antitone X hmn A hA
 
 end FutureFiltration
 
@@ -1383,8 +1383,8 @@ lemma measure_ext_of_future_rectangles
           = MeasurableSpace.comap Prod.fst inferInstance
             ⊔ MeasurableSpace.comap Prod.snd inferInstance := by
               rfl  -- This is the definition of product σ-algebra
-        _ ≤ MeasurableSpace.generateFrom S := by
-              exact sup_le h_fst_comap h_snd_comap
+        _ ≤ MeasurableSpace.generateFrom S :=
+              sup_le h_fst_comap h_snd_comap
     · -- (⊇) generateFrom S ≤ Product σ-algebra
       -- Every set in S is measurable in the product σ-algebra
       apply MeasurableSpace.generateFrom_le
@@ -1909,8 +1909,8 @@ lemma contractable_triple_pushforward
           rw [Measure.map_apply h_meas_future h_meas_rect]
       _ = μ {ω | (∀ i : Fin r, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j : Fin k, X (m + 1 + j.val) ω ∈ C j)} := by
           rw [h_pre_future]
-      _ = μ {ω | (∀ i : Fin r, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j : Fin k, X (r + 1 + j.val) ω ∈ C j)} := by
-          exact h_cyl
+      _ = μ {ω | (∀ i : Fin r, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j : Fin k, X (r + 1 + j.val) ω ∈ C j)} :=
+          h_cyl
       _ = μ ((fun ω => (Z_r ω, X r ω, Y_tail ω)) ⁻¹' ((Set.univ.pi A) ×ˢ B ×ˢ (Set.univ.pi C))) := by
           rw [h_pre_tail]
       _ = Measure.map (fun ω => (Z_r ω, X r ω, Y_tail ω)) μ ((Set.univ.pi A) ×ˢ B ×ˢ (Set.univ.pi C)) := by
@@ -2055,8 +2055,8 @@ lemma contractable_triple_pushforward
           _ = MeasurableSpace.comap (Prod.fst ∘ Prod.snd) inferInstance
               ⊔ MeasurableSpace.comap (Prod.snd ∘ Prod.snd) inferInstance := by
                 rw [MeasurableSpace.comap_comp, MeasurableSpace.comap_comp]
-          _ ≤ MeasurableSpace.generateFrom Rectangles := by
-                exact sup_le h_fst_snd_comap h_snd_snd_comap
+          _ ≤ MeasurableSpace.generateFrom Rectangles :=
+                sup_le h_fst_snd_comap h_snd_snd_comap
       exact sup_le h_fst_comap h_snd_le
 
     · -- (⊇) generateFrom Rectangles ≤ Product σ-algebra
@@ -2920,8 +2920,8 @@ lemma finite_level_factorization
         (firstRSigma X r)
         (MeasurableSpace.comap (X r) inferInstance)
         (futureFiltration_le X m hX_meas)
-        μ := by
-      exact block_coord_condIndep X hX hX_meas hrm
+        μ :=
+      block_coord_condIndep X hX hX_meas hrm
 
     -- Apply indicator factorization using the CI
     have hfactor :
@@ -2938,11 +2938,11 @@ lemma finite_level_factorization
         simpa using this
       -- Apply standard CI product formula
       calc μ[(A.indicator (fun _ => (1:ℝ))) * (B.indicator (fun _ => (1:ℝ))) | futureFiltration X m]
-          _ =ᵐ[μ] μ[(A ∩ B).indicator (fun _ => (1:ℝ)) | futureFiltration X m] := by
-            exact condExp_congr_ae (EventuallyEq.of_eq h_inter)
+          _ =ᵐ[μ] μ[(A ∩ B).indicator (fun _ => (1:ℝ)) | futureFiltration X m] :=
+            condExp_congr_ae (EventuallyEq.of_eq h_inter)
           _ =ᵐ[μ] (μ[A.indicator (fun _ => (1:ℝ)) | futureFiltration X m] *
-                   μ[B.indicator (fun _ => (1:ℝ)) | futureFiltration X m]) := by
-            exact condexp_indicator_inter_of_condIndep
+                   μ[B.indicator (fun _ => (1:ℝ)) | futureFiltration X m]) :=
+            condexp_indicator_inter_of_condIndep
               (futureFiltration_le X m hX_meas)
               (firstRSigma_le_ambient X r hX_meas)
               (fun s hs => by obtain ⟨t, ht, rfl⟩ := hs; exact (hX_meas r) ht)
@@ -2953,8 +2953,8 @@ lemma finite_level_factorization
     -- Apply IH to the first r factors
     have hIH : μ[indProd X r Cinit | futureFiltration X m] =ᵐ[μ]
         (fun ω => ∏ i : Fin r,
-          μ[Set.indicator (Cinit i) (fun _ => (1:ℝ)) ∘ (X 0) | futureFiltration X m] ω) := by
-      exact ih Cinit hCinit (Nat.le_of_succ_le hm)
+          μ[Set.indicator (Cinit i) (fun _ => (1:ℝ)) ∘ (X 0) | futureFiltration X m] ω) :=
+      ih Cinit hCinit (Nat.le_of_succ_le hm)
 
     -- Replace Xᵣ with X₀ using contractability
     have hswap : μ[(Set.indicator Clast (fun _ => (1:ℝ)) ∘ X r) | futureFiltration X m]
@@ -3268,8 +3268,8 @@ lemma bind_apply_univ_pi
     exact h_meas.aemeasurable
 
   calc (μ.bind (fun ω => Measure.pi (fun _ : Fin m => ν ω))) (Set.univ.pi C)
-      = ∫⁻ ω, (Measure.pi (fun _ : Fin m => ν ω)) (Set.univ.pi C) ∂μ := by
-          exact Measure.bind_apply h_rect_meas h_aemeas
+      = ∫⁻ ω, (Measure.pi (fun _ : Fin m => ν ω)) (Set.univ.pi C) ∂μ :=
+          Measure.bind_apply h_rect_meas h_aemeas
     _ = ∫⁻ ω, (∏ i : Fin m, ν ω (C i)) ∂μ := by
           -- Step 2: Use measure_pi_univ_pi to convert the product measure on a rectangle
           congr 1
@@ -3505,8 +3505,8 @@ lemma finite_product_formula_id
                 (fun i _ => ENNReal.toReal_nonneg) (fun i _ => h_bound i)
             _ = 1 := by simp
         -- Since f ω ≥ 0, we have ‖f ω‖ = f ω ≤ 1
-        calc ‖f ω‖ = f ω := by
-              exact Real.norm_of_nonneg (Finset.prod_nonneg (fun i _ => ENNReal.toReal_nonneg))
+        calc ‖f ω‖ = f ω :=
+              Real.norm_of_nonneg (Finset.prod_nonneg (fun i _ => ENNReal.toReal_nonneg))
           _ ≤ 1 := h_prod_le
 
       -- Step 3: Apply ofReal_integral_eq_lintegral_ofReal
@@ -3661,10 +3661,9 @@ lemma finite_product_formula_strictMono
       = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) := by
   classical
   -- Contractability gives equality with the identity map
-  have hmap := hX m k hk
   calc
     Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
-        = Measure.map (fun ω => fun i : Fin m => X i ω) μ := by simpa using hmap
+        = Measure.map (fun ω => fun i : Fin m => X i ω) μ := by simpa using hX m k hk
     _   = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) :=
           finite_product_formula_id X hX hX_meas ν hν_prob hν_meas hν_law m
 
