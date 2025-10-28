@@ -1045,10 +1045,11 @@ theorem condExp_project_of_condIndepFun
                 (h_bound_fn n)
     -/
 
-    -- TODO: Fix integrable_condExp call syntax
+    -- Conditional expectation always produces an integrable function
     have h_bound_gs_int :
         Integrable (fun ω => μ[ (fun ω => 2 * ‖f (Y ω)‖) | mW ] ω) μ := by
-      sorry
+      -- integrable_condExp : Integrable (μ[f|m]) μ
+      exact integrable_condExp
 
     -- TODO: Fix tendsto_condExp_unique application - type mismatch in h_factorization
     -- The expected type wants condExp of the product function, but we have product of condExps
