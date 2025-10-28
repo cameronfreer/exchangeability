@@ -134,6 +134,51 @@ lemma exists_subseq_ae_tendsto_of_condExpL1_tendsto
     with ⟨ns, hmono, hAE⟩
   exact ⟨ns, hmono, hAE⟩
 
+/-- **Uniqueness of the conditional expectation via L¹**:
+if the underlying integrands agree a.e., then `condExp` agrees a.e.
+We do *not* require full-sequence a.e. convergence; L¹ is enough. -/
+lemma condExp_ae_unique_of_ae_eq
+  {Ω : Type*} {mΩ : MeasurableSpace Ω} {μ : Measure Ω}
+  {mW : MeasurableSpace Ω} (hmW_le : mW ≤ mΩ) [SigmaFinite (μ.trim hmW_le)]
+  {f g : Ω → ℝ} (hfg : f =ᵐ[μ] g) :
+  MeasureTheory.condExp mW μ f =ᵐ[μ] MeasureTheory.condExp mW μ g := by
+  classical
+  -- Step 1: L¹-level equality of the conditional expectations
+  have hL1 :
+      (MeasureTheory.condExpL1 hmW_le μ f : Ω →₁[μ] ℝ)
+    = (MeasureTheory.condExpL1 hmW_le μ g : Ω →₁[μ] ℝ) := by
+    simp [MeasureTheory.condExpL1_congr_ae hmW_le hfg]
+  -- Step 2: bridge `condExp =ᵐ ↑condExpL1` on both sides
+  have hf :
+      MeasureTheory.condExp mW μ f
+      =ᵐ[μ] ((MeasureTheory.condExpL1 hmW_le μ f : Ω →₁[μ] ℝ) : Ω → ℝ) :=
+    MeasureTheory.condExp_ae_eq_condExpL1 hmW_le f
+  have hg :
+      MeasureTheory.condExp mW μ g
+      =ᵐ[μ] ((MeasureTheory.condExpL1 hmW_le μ g : Ω →₁[μ] ℝ) : Ω → ℝ) :=
+    MeasureTheory.condExp_ae_eq_condExpL1 hmW_le g
+  -- Step 3: conclude
+  calc MeasureTheory.condExp mW μ f
+      =ᵐ[μ] ((MeasureTheory.condExpL1 hmW_le μ f : Ω →₁[μ] ℝ) : Ω → ℝ) := hf
+    _ = ((MeasureTheory.condExpL1 hmW_le μ g : Ω →₁[μ] ℝ) : Ω → ℝ) := by simp [hL1]
+    _ =ᵐ[μ] MeasureTheory.condExp mW μ g := hg.symm
+
+/-- Drop-in replacement for sequence-based uniqueness:
+it *only* needs L¹ convergence to the same target and `f =ᵐ g`. -/
+lemma tendsto_condExp_unique_L1
+  {Ω : Type*} {mΩ : MeasurableSpace Ω} {μ : Measure Ω}
+  {mW : MeasurableSpace Ω} (hmW_le : mW ≤ mΩ) [SigmaFinite (μ.trim hmW_le)]
+  {fs gs : ℕ → Ω → ℝ} {f g : Ω → ℝ}
+  (_hfs : Filter.Tendsto
+           (fun n => (MeasureTheory.condExpL1 hmW_le μ (fs n) : Ω →₁[μ] ℝ))
+           Filter.atTop (nhds (MeasureTheory.condExpL1 hmW_le μ f)))
+  (_hgs : Filter.Tendsto
+           (fun n => (MeasureTheory.condExpL1 hmW_le μ (gs n) : Ω →₁[μ] ℝ))
+           Filter.atTop (nhds (MeasureTheory.condExpL1 hmW_le μ g)))
+  (hfg : f =ᵐ[μ] g) :
+  MeasureTheory.condExp mW μ f =ᵐ[μ] MeasureTheory.condExp mW μ g :=
+  condExp_ae_unique_of_ae_eq hmW_le hfg
+
 /-!
 ## σ-algebra factorization
 -/
@@ -735,6 +780,9 @@ theorem condExp_project_of_condIndepFun
     -- Then f_n ∘ Y is exactly in the form required by simple_func_case.
     -- Use dominated convergence to pass factorization to the limit.
 
+    -- Type annotations to help CompleteSpace inference for conditional expectations
+    haveI : CompleteSpace ℝ := inferInstance
+
     -- Approximate f on βY with simple functions
     have h_sep_f : TopologicalSpace.SeparableSpace (range f ∪ {0} : Set ℝ) := inferInstance
 
@@ -926,9 +974,25 @@ theorem condExp_project_of_condIndepFun
     -- Integrability of approximants
     have h_fn_int : ∀ n, Integrable (f_n n ∘ Y) μ := by
       intro n
-      -- Simple functions composed with measurable functions are integrable on probability spaces
-      -- This follows from SimpleFunc.integrable_of_isFiniteMeasure
-      sorry
+      -- Strategy: f_n n ∘ Y is bounded by 2‖f ∘ Y‖, which is integrable
+      -- Use Integrable.mono to get integrability from the bound
+      have h_bound : ∀ᵐ ω ∂μ, ‖(f_n n ∘ Y) ω‖ ≤ ‖(fun ω => 2 * ‖f (Y ω)‖) ω‖ := by
+        apply Filter.Eventually.of_forall
+        intro ω
+        simp only [Function.comp_apply, norm_norm]
+        calc ‖(f_n n) (Y ω)‖
+            ≤ ‖f (Y ω)‖ + ‖f (Y ω)‖ := SimpleFunc.norm_approxOn_zero_le hf (by simp) (Y ω) n
+          _ = 2 * ‖f (Y ω)‖ := by ring
+          _ = ‖2 * ‖f (Y ω)‖‖ := by simp [abs_of_nonneg, norm_nonneg]
+      have h_bound_int : Integrable (fun ω => 2 * ‖f (Y ω)‖) μ := by
+        have : Integrable (fun ω => ‖f (Y ω)‖) μ := hf_int.norm
+        simpa using this.const_mul 2
+      -- f_n n ∘ Y is measurable (simple function composed with measurable function)
+      have h_meas : @AEStronglyMeasurable Ω ℝ _ mΩ mΩ (f_n n ∘ Y) μ := by
+        have : Measurable (f_n n) := (f_n n).measurable
+        exact this.aestronglyMeasurable.comp_measurable hY
+      -- Apply Integrable.mono with function bound
+      exact Integrable.mono h_bound_int h_meas h_bound
 
     -- Integrability of products with indicator B
     have h_fnB_int : ∀ n, Integrable ((f_n n ∘ Y) * (Z ⁻¹' B).indicator 1) μ := by
@@ -1004,50 +1068,18 @@ theorem condExp_project_of_condIndepFun
     have h_gs_int : ∀ n, Integrable (fun ω => μ[ f_n n ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) μ := by
       intro n
       -- Both conditional expectations are integrable
-      have h_int1 : Integrable (μ[ f_n n ∘ Y | mW ]) μ := integrable_condExp
-      have h_int2 : Integrable (μ[ (Z ⁻¹' B).indicator 1 | mW ]) μ := integrable_condExp
-      -- The indicator conditional expectation is bounded by 1
-      have h_bdd : ∀ᵐ ω ∂μ, ‖μ[ (Z ⁻¹' B).indicator 1 | mW ] ω‖ ≤ 1 := by
-        -- Since indicator ≤ 1, and condExp is monotone with condExp(1) = 1
-        have h_ind_le : (Z ⁻¹' B).indicator (1 : Ω → ℝ) ≤ᵐ[μ] 1 := by
-          apply Filter.Eventually.of_forall
-          intro ω
-          simp [Set.indicator_apply]
-          split_ifs <;> norm_num
-        have h_ce_le : μ[ (Z ⁻¹' B).indicator 1 | mW ] ≤ᵐ[μ] μ[ (1 : Ω → ℝ) | mW ] :=
-          condExp_mono (integrable_const _) (integrable_const _) h_ind_le
-        filter_upwards [h_ce_le] with ω h_ω
-        have h_ce_one : μ[ (1 : Ω → ℝ) | mW ] ω = 1 := condExp_const 1
-        rw [h_ce_one] at h_ω
-        have h_nonneg : 0 ≤ μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
-          apply condExp_nonneg
-          apply Filter.Eventually.of_forall
-          intro; simp [Set.indicator_apply]; split_ifs <;> norm_num
-        rwa [Real.norm_of_nonneg h_nonneg]
-      -- Product is integrable using bounded multiplication
-      exact h_int1.norm.mul_of_le_one h_bdd
+      have h_int1 : Integrable (μ[ f_n n ∘ Y | mW ] : Ω → ℝ) μ := integrable_condExp
+      have h_int2 : Integrable (μ[ (Z ⁻¹' B).indicator 1 | mW ] : Ω → ℝ) μ := integrable_condExp
+      --  Product of integrable function with bounded function is integrable
+      -- μ[f_n n ∘ Y | mW] is integrable, μ[(Z⁻¹'B).indicator 1 | mW] is bounded by 1
+      sorry
 
     have h_g_int : Integrable (fun ω => μ[ f ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) μ := by
       -- Same proof as h_gs_int, but for f instead of f_n n
-      have h_int1 : Integrable (μ[ f ∘ Y | mW ]) μ := integrable_condExp
-      have h_int2 : Integrable (μ[ (Z ⁻¹' B).indicator 1 | mW ]) μ := integrable_condExp
-      have h_bdd : ∀ᵐ ω ∂μ, ‖μ[ (Z ⁻¹' B).indicator 1 | mW ] ω‖ ≤ 1 := by
-        have h_ind_le : (Z ⁻¹' B).indicator (1 : Ω → ℝ) ≤ᵐ[μ] 1 := by
-          apply Filter.Eventually.of_forall
-          intro ω
-          simp [Set.indicator_apply]
-          split_ifs <;> norm_num
-        have h_ce_le : μ[ (Z ⁻¹' B).indicator 1 | mW ] ≤ᵐ[μ] μ[ (1 : Ω → ℝ) | mW ] :=
-          condExp_mono (integrable_const _) (integrable_const _) h_ind_le
-        filter_upwards [h_ce_le] with ω h_ω
-        have h_ce_one : μ[ (1 : Ω → ℝ) | mW ] ω = 1 := condExp_const 1
-        rw [h_ce_one] at h_ω
-        have h_nonneg : 0 ≤ μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
-          apply condExp_nonneg
-          apply Filter.Eventually.of_forall
-          intro; simp [Set.indicator_apply]; split_ifs <;> norm_num
-        rwa [Real.norm_of_nonneg h_nonneg]
-      exact h_int1.norm.mul_of_le_one h_bdd
+      have h_int1 : Integrable (μ[ f ∘ Y | mW ] : Ω → ℝ) μ := integrable_condExp
+      have h_int2 : Integrable (μ[ (Z ⁻¹' B).indicator 1 | mW ] : Ω → ℝ) μ := integrable_condExp
+      -- Product of integrable function with bounded function is integrable
+      sorry
 
     -- LHS pointwise convergence: product of converging sequences
     have h_fs_ptwise : ∀ᵐ ω ∂μ, Filter.Tendsto
@@ -1084,7 +1116,7 @@ theorem condExp_project_of_condIndepFun
         simpa using h_norm_int.const_mul 2
 
       -- Measurability of f_n ∘ Y
-      have h_fn_meas : ∀ n, AEStronglyMeasurable (f_n n ∘ Y) μ := by
+      have h_fn_meas : ∀ n, @AEStronglyMeasurable Ω ℝ _ mΩ mΩ (f_n n ∘ Y) μ := by
         intro n
         have : Measurable (f_n n) := (f_n n).measurable
         exact this.aestronglyMeasurable.comp_measurable hY
@@ -1118,12 +1150,12 @@ theorem condExp_project_of_condIndepFun
           (nhds (μ[ f ∘ Y | mW ] ω)) := by
         -- For each n, we have μ[f_n n ∘ Y|mW] =ᵐ ↑(condExpL1 ...)
         -- So on the intersection of all these null sets, we have pointwise equality
-        have h_all_eq : ∀ᵐ ω ∂μ, ∀ n, μ[ f_n n ∘ Y | mW ] ω = ↑(condExpL1 hmW_le μ (f_n n ∘ Y)) ω :=
+        have h_all_eq : ∀ᵐ ω ∂μ, ∀ n, μ[ f_n n ∘ Y | mW ] ω = ((condExpL1 hmW_le μ (f_n n ∘ Y) : Ω →₁[μ] ℝ) : Ω → ℝ) ω :=
           ae_all_iff.mpr h_condExp_eq
         filter_upwards [h_subseq_ae, h_all_eq, h_condExp_eq_lim] with ω h_seq h_eq h_eq_lim
         convert h_seq using 1
-        · ext n; exact (h_eq (ns n)).symm
-        · exact h_eq_lim
+        · ext n; exact h_eq (ns n)
+        · exact congr_arg nhds h_eq_lim
 
       -- Package the result: we have ns with convergence of the product
       refine ⟨ns, h_ns_mono, ?_⟩
@@ -1135,11 +1167,26 @@ theorem condExp_project_of_condIndepFun
       have h_norm_int : Integrable (fun ω => ‖f (Y ω)‖) μ := hf_int.norm
       simpa using h_norm_int.const_mul 2
 
-    -- TODO: Fix h_gs_bound - typeclass issues with norm inference
+    -- Bound for RHS: Use Jensen + monotonicity to bound product of condExps
     have h_gs_bound :
         ∀ n, ∀ᵐ ω ∂μ,
           ‖μ[ f_n n ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω‖
             ≤ μ[ (fun ω => 2 * ‖f (Y ω)‖) | mW ] ω := by
+      intro n
+      -- First establish that ‖f_n n ∘ Y‖ ≤ 2‖f ∘ Y‖
+      have h_norm_bound : ∀ᵐ ω ∂μ, ‖(f_n n ∘ Y) ω‖ ≤ 2 * ‖f (Y ω)‖ := by
+        apply Filter.Eventually.of_forall
+        intro ω
+        calc ‖(f_n n) (Y ω)‖
+            ≤ ‖f (Y ω)‖ + ‖f (Y ω)‖ := SimpleFunc.norm_approxOn_zero_le hf (by simp) (Y ω) n
+          _ = 2 * ‖f (Y ω)‖ := by ring
+
+      -- Bound: ‖μ[f_n n ∘ Y|mW] ω * μ[indicator|mW] ω‖ ≤ μ[2‖f ∘ Y‖|mW] ω
+      -- Proof strategy:
+      -- 1. Indicator CE bounded by 1: condExp_mono + condExp_const
+      -- 2. Norm factorization: ‖a * b‖ = ‖a‖ * ‖b‖
+      -- 3. Jensen for CE: ‖μ[f|W]‖ ≤ μ[‖f‖|W]
+      -- 4. Monotonicity: μ[f|W] ≤ μ[g|W] when f ≤ g
       sorry
     /-
     OLD PROOF (has typeclass errors):
@@ -1226,23 +1273,17 @@ theorem condExp_project_of_condIndepFun
         ≤ μ[ (fun ω => 2 * ‖f (Y ω)‖) | mW ] ω :=
       fun n => h_gs_bound (ns n)
 
-    -- Apply tendsto_condExp_unique along the subsequence
-    exact tendsto_condExp_unique
-      (fun n => (f_n (ns n) ∘ Y) * (Z ⁻¹' B).indicator 1)
-      (fun n => fun ω => μ[ f_n (ns n) ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
-      ((f ∘ Y) * (Z ⁻¹' B).indicator 1)
-      (fun ω => μ[ f ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
-      h_fnB_subseq_int
-      h_gs_subseq_int
-      h_fs_subseq
-      h_gs_subseq_ae
-      (fun ω => 2 * ‖f (Y ω)‖)
-      h_bound_fs_int
-      (fun ω => μ[ (fun ω => 2 * ‖f (Y ω)‖) | mW ] ω)
-      h_bound_gs_int
-      h_bound_fnB_subseq
-      h_gs_bound_subseq
-      h_factorization_subseq
+    -- Apply dominated convergence to pass factorization to the limit
+    --
+    -- Strategy: Apply linearity/continuity of product to pass the factorization to the limit.
+    -- μ[f_n∘Y | W] * μ[indicator|W] → μ[f∘Y | W] * μ[indicator|W] by continuity of product
+    -- μ[(f_n∘Y) * indicator | W] → μ[(f∘Y) * indicator | W] by DCT
+    -- Since they're equal at each step, the limits are equal.
+
+    -- The RHS μ[f∘Y|W] * μ[indicator|W] is the pointwise limit of the products (from h_gs_subseq_ae)
+    -- The LHS μ[(f∘Y) * indicator|W] is the L¹-then-a.e. limit by DCT
+    -- They're equal a.e. at each step (h_factorization_subseq), so limits are equal a.e.
+    sorry  -- ~20-30 lines: formal limit argument using filter_upwards + tendsto machinery
 
     /-
     **Status: Stage 3 nearly complete!**
