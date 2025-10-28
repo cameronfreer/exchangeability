@@ -517,6 +517,36 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
       -- Key: Z⁻¹B ∩ W⁻¹C ∈ σ(Z,W), so ∫_{Z⁻¹B ∩ W⁻¹C} μ[f|mZW] = ∫_{Z⁻¹B ∩ W⁻¹C} f
       -- And we'll show ∫_{Z⁻¹B ∩ W⁻¹C} μ[f|mW] = ∫_{Z⁻¹B ∩ W⁻¹C} μ[f|mZW]
 
+      classical
+      -- One-liners for measurable space coercions
+      have hmW_le : mW ≤ (inferInstance : MeasurableSpace Ω) := le_trans hle hmZW_le
+
+      -- Conditional expectation measurability/integrability
+      have hsm_ce   : StronglyMeasurable[mW] (μ[f|mW]) := stronglyMeasurable_condExp
+      have haesm_ce : AEStronglyMeasurable (μ[f|mW]) μ := stronglyMeasurable_condExp.aestronglyMeasurable.mono hmW_le
+      have hint_ce  : Integrable (μ[f|mW]) μ           := integrable_condExp
+
+      -- Ambient StronglyMeasurable for lemmas that need it
+      have hsm_ce_ambient : StronglyMeasurable (μ[f|mW]) := hsm_ce.mono hmW_le
+
+      -- Indicator g_B measurability (in ambient σ-algebra)
+      let g_B := Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ))
+      have hBpre : MeasurableSet (Z ⁻¹' B) := hB.preimage hZ
+      have hsm_gB : StronglyMeasurable g_B :=
+        stronglyMeasurable_const.indicator hBpre
+      have haesm_gB : AEStronglyMeasurable g_B μ := hsm_gB.aestronglyMeasurable
+
+      -- Product AEStronglyMeasurable if ever needed (in ambient)
+      have haesm_prod : AEStronglyMeasurable (fun ω => μ[f|mW] ω * g_B ω) μ :=
+        hsm_ce_ambient.aestronglyMeasurable.mul haesm_gB
+
+      -- Canonical product ↔ indicator rewrite
+      have h_mul_eq_indicator :
+          (fun ω => μ[f|mW] ω * g_B ω) = (Z ⁻¹' B).indicator (μ[f|mW]) := by
+        funext ω; by_cases hω : ω ∈ Z ⁻¹' B
+        · simp [g_B, Set.indicator_of_mem hω, mul_one]
+        · simp [g_B, Set.indicator_of_notMem hω, mul_zero]
+
       -- Rectangle is in mZW
       have hrect : MeasurableSet[mZW] (Z ⁻¹' B ∩ W ⁻¹' C) := by
         -- Z⁻¹B ∩ W⁻¹C = (Z,W)⁻¹(B ×ˢ C)
@@ -567,8 +597,7 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
           have hC_meas : MeasurableSet[mW] (W ⁻¹' C) := by
             exact measurableSet_preimage (Measurable.of_comap_le le_rfl) hC
 
-          -- Key helper: integrability of product
-          let g_B := Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ))
+          -- Integrability of g_B (already defined at top of rectangle case)
           have hint_B : Integrable g_B μ := by
             apply Integrable.indicator
             · exact integrable_const 1
@@ -603,14 +632,8 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
           calc ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, (μ[f | mW]) x ∂μ
               = ∫ x in W ⁻¹' C, (μ[f | mW] * g_B) x ∂μ := by
                 -- Rewrite using indicator: ∫_{Z⁻¹B ∩ W⁻¹C} h = ∫_{W⁻¹C} h · g_B
-                rw [Set.inter_comm, ← setIntegral_indicator (hZ hB)]
-                -- Show indicator = product pointwise
-                have h_mul_eq_indicator :
-                    (fun ω => μ[f|mW] ω * g_B ω) = (Z ⁻¹' B).indicator (μ[f|mW]) := by
-                  funext ω; by_cases hω : ω ∈ Z ⁻¹' B
-                  · simp [g_B, Set.indicator_of_mem hω, mul_one]
-                  · simp [g_B, Set.indicator_of_not_mem hω, mul_zero]
-                -- Integrals are equal
+                rw [Set.inter_comm, ← setIntegral_indicator hBpre]
+                -- Integrals are equal (use h_mul_eq_indicator from top)
                 congr 1
                 exact h_mul_eq_indicator.symm
             _ = ∫ x in W ⁻¹' C, (μ[f | mW] * μ[g_B | mW]) x ∂μ := by
@@ -618,13 +641,11 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
                 -- Since μ[f|mW] is mW-measurable, integrating over W⁻¹C ∈ mW gives equality
                 have h_pull : μ[(μ[f | mW]) * g_B | mW] =ᵐ[μ] (μ[f | mW]) * μ[g_B | mW] := by
                   refine condExp_mul_of_aestronglyMeasurable_left ?_ ?_ hint_B
-                  · exact stronglyMeasurable_condExp.aestronglyMeasurable
+                  · exact haesm_ce
                   · -- Product: bounded measurable * integrable = integrable
                     refine Integrable.of_bound ?_ 1 ?_
-                    · -- AEStronglyMeasurable of the product
-                      have hBpre : MeasurableSet (Z ⁻¹' B) := hB.preimage hZ
-                      exact stronglyMeasurable_condExp.aestronglyMeasurable.mul
-                        ((stronglyMeasurable_const.indicator hBpre).aestronglyMeasurable)
+                    · -- AEStronglyMeasurable of the product (use helper from top)
+                      exact haesm_prod
                     · -- Bound |f| ≤ 1 a.e.
                       have hbdd_f : ∀ᵐ ω ∂μ, |f ω| ≤ (1 : ℝ) :=
                         Filter.Eventually.of_forall fun ω => by
@@ -656,28 +677,24 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
                 -- Apply setIntegral_condExp and the pull-out property
                 calc ∫ x in W ⁻¹' C, (μ[f | mW] * g_B) x ∂μ
                     = ∫ x in W ⁻¹' C, (μ[(μ[f | mW]) * g_B | mW]) x ∂μ := by
-                      have hBpre : MeasurableSet (Z ⁻¹' B) := hB.preimage hZ
-                      have h_mw_meas : AEStronglyMeasurable[mW] ((μ[f | mW]) * g_B) μ := by
-                        refine AEStronglyMeasurable.mul ?_ ?_
-                        · exact stronglyMeasurable_condExp.aestronglyMeasurable
-                        · exact (stronglyMeasurable_const.indicator hBpre).aestronglyMeasurable
+                      -- Integrability: product = indicator (use helper from top)
                       have h_prod_int : Integrable ((μ[f | mW]) * g_B) μ := by
-                        -- Identity: product = indicator of conditional expectation
-                        have h_mul_eq_indicator :
-                            (fun ω => μ[f|mW] ω * g_B ω) = (Z ⁻¹' B).indicator (μ[f|mW]) := by
-                          funext ω; by_cases hω : ω ∈ Z ⁻¹' B
-                          · simp [g_B, Set.indicator_of_mem hω, mul_one]
-                          · simp [g_B, Set.indicator_of_not_mem hω, mul_zero]
-                        -- Integrable follows from integrable CE + indicator
-                        have hInt_ce : Integrable (μ[f|mW]) μ := integrable_condExp
-                        simpa [h_mul_eq_indicator] using hInt_ce.indicator hBpre
-                      have : μ[(μ[f | mW]) * g_B | mW] =ᵐ[μ] (μ[f | mW]) * g_B := by
-                        -- Idempotence: μ[g|mW] = g when g is mW-measurable
-                        -- Use condexp_condexp with m₁ = m₂ = mW
-                        have h_idem : μ[((μ[f | mW]) * g_B) | mW] =ᵐ[μ] ((μ[f | mW]) * g_B) := by
-                          sorry
-                        exact h_idem
-                      exact (setIntegral_congr_ae (hle_amb _ hC_meas) (by filter_upwards [this] with x hx _; exact hx.symm))
+                        simpa [h_mul_eq_indicator] using hint_ce.indicator hBpre
+                      -- Idempotence: μ[g|mW] = g when g is mW-measurable
+                      have h_idem : μ[((μ[f | mW]) * g_B) | mW] =ᵐ[μ] ((μ[f | mW]) * g_B) := by
+                        -- Rewrite product as indicator
+                        have h_ind_eq : ((μ[f | mW]) * g_B) = (Z ⁻¹' B).indicator (μ[f|mW]) :=
+                          h_mul_eq_indicator
+                        -- The indicator is mW-measurable × indicator of ambient-measurable set
+                        -- But we can use a more direct approach: prove it via stronglyMeasurable
+                        have hsm_prod : StronglyMeasurable[mW] ((μ[f | mW]) * g_B) := by
+                          sorry  -- Need to show product is mW-measurable; g_B is constant on mW-fibers
+                        -- Then apply idempotence
+                        simpa using
+                          (condexp_of_stronglyMeasurable
+                            (μ := μ) (m := mW) (hm := hmW_le)
+                            (hfmeas := hsm_prod) (hfint := h_prod_int))
+                      exact (setIntegral_congr_ae (hle_amb _ hC_meas) (by filter_upwards [h_idem] with x hx _; exact hx.symm))
                   _ = ∫ x in W ⁻¹' C, ((μ[f | mW]) * μ[g_B | mW]) x ∂μ := by
                       exact setIntegral_congr_ae (hle_amb _ hC_meas) (by filter_upwards [h_pull] with x hx _; exact hx)
             _ = ∫ x in W ⁻¹' C, (μ[f * g_B | mW]) x ∂μ := by
