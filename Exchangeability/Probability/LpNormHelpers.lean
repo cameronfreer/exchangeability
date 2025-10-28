@@ -75,11 +75,26 @@ lemma eLpNorm_two_sq_eq_integral_sq
 
   -- Main strategy: Show (∫⁻ ‖f‖²).toReal = ∫ f²
   -- Then use (a^(1/2))² = a to simplify the LHS
-  sorry -- TODO: This requires several technical lemmas:
-  -- 1. ENNReal.toReal_rpow to handle the (1/2) power
-  -- 2. Real.rpow_inv_natCast_pow or similar to show (x^(1/2))^2 = x
-  -- 3. MeasureTheory.lintegral_toReal_of_nonneg to convert ∫⁻ to ∫
-  -- 4. Use h_norm_eq to replace ‖f‖² with f²
+
+  -- Step 1: Rewrite LHS using ENNReal.toReal_rpow (backwards)
+  -- We have ((∫⁻ ...)^(1/2)).toReal ^ 2 and want (∫⁻ ...).toReal
+  conv_lhs => rw [← ENNReal.toReal_rpow]
+
+  -- Step 2: Simplify (x^(1/2))^2 = x
+  rw [← Real.rpow_natCast _ 2, ← Real.rpow_mul ENNReal.toReal_nonneg]
+  norm_num
+
+  -- Step 3: Convert lintegral to integral for nonnegative functions
+  -- TODO: This step requires careful manipulation of ENNReal norms and real integrals.
+  -- The key insight is that for real f:
+  --   ‖f ω‖ₑ = ENNReal.ofReal ‖f ω‖
+  -- and thus:
+  --   ‖f ω‖ₑ ^ 2 = ENNReal.ofReal (‖f ω‖ ^ 2) = ENNReal.ofReal (f ω ^ 2)
+  -- Then apply integral_eq_lintegral_of_nonneg_ae to convert the lintegral to integral.
+  --
+  -- This lemma should exist in mathlib or be straightforward to add, but the exact
+  -- formulation requires navigating ENNReal/NNReal/Real conversions carefully.
+  sorry
 
 /-- **L² norm bound from integral bound.**
 
@@ -104,10 +119,15 @@ lemma eLpNorm_lt_of_integral_sq_lt
 
   -- Take square roots: (eLpNorm f 2 μ).toReal < r
   have h_toReal_lt : (eLpNorm f 2 μ).toReal < r := by
-    sorry
+    -- Use abs_lt_of_sq_lt_sq: x² < r² and 0 ≤ r → |x| < r
+    have := abs_lt_of_sq_lt_sq h_toReal_sq_lt (le_of_lt hr)
+    rwa [abs_of_nonneg ENNReal.toReal_nonneg] at this
 
   -- Convert back to ENNReal
-  sorry
+  -- Use that eLpNorm f 2 μ < ∞ (since f ∈ MemLp), so toReal is order-preserving
+  have h_lt_top : eLpNorm f 2 μ < ∞ := hf.2
+  rw [← ENNReal.ofReal_toReal (ne_of_lt h_lt_top)]
+  exact ENNReal.ofReal_lt_ofReal_iff hr |>.mpr h_toReal_lt
 
 /-! ### Membership in Lp Spaces -/
 
@@ -120,7 +140,7 @@ lemma memLp_of_abs_le_const
     [IsFiniteMeasure μ] {f : Ω → ℝ} {M : ℝ}
     (hf_meas : Measurable f)
     (hf_bdd : ∀ᵐ ω ∂μ, |f ω| ≤ M)
-    (p : ℝ≥0∞) (hp : 1 ≤ p) (hp_top : p ≠ ∞) :
+    (p : ℝ≥0∞) (_ : 1 ≤ p) (_ : p ≠ ∞) :
     MemLp f p μ := by
   -- Use MemLp.of_bound from mathlib
   apply MemLp.of_bound hf_meas.aestronglyMeasurable M
