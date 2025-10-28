@@ -1151,9 +1151,57 @@ theorem condExp_project_of_condIndepFun
       -- integrable_condExp : Integrable (μ[f|m]) μ
       exact integrable_condExp
 
-    -- TODO: Fix tendsto_condExp_unique application - type mismatch in h_factorization
-    -- The expected type wants condExp of the product function, but we have product of condExps
-    sorry
+    -- Apply tendsto_condExp_unique along the subsequence
+    -- Strategy: Extract the subsequence ns from h_gs_subseq, show both sequences converge
+    -- along ns, then apply uniqueness to get the limit equality
+
+    -- Extract the subsequence from h_gs_subseq
+    obtain ⟨ns, h_ns_mono, h_gs_subseq_ae⟩ := h_gs_subseq
+
+    -- Compose h_fs_ptwise with the subsequence: full sequence convergence implies subsequence convergence
+    have h_fs_subseq : ∀ᵐ ω ∂μ, Filter.Tendsto
+        (fun n => (f_n (ns n) ∘ Y) ω * (Z ⁻¹' B).indicator 1 ω)
+        Filter.atTop
+        (nhds ((f ∘ Y) ω * (Z ⁻¹' B).indicator 1 ω)) := by
+      filter_upwards [h_fs_ptwise] with ω h_ω
+      exact h_ω.comp h_ns_mono.tendsto_atTop
+
+    -- Factorization holds for each element of the subsequence
+    have h_factorization_subseq : ∀ n,
+        μ[ (f_n (ns n) ∘ Y) * (Z ⁻¹' B).indicator 1 | mW ] =ᵐ[μ]
+        μ[ f_n (ns n) ∘ Y | mW ] * μ[ (Z ⁻¹' B).indicator 1 | mW ] :=
+      fun n => h_factorization (ns n)
+
+    -- Integrability along the subsequence
+    have h_fnB_subseq_int : ∀ n, Integrable ((f_n (ns n) ∘ Y) * (Z ⁻¹' B).indicator 1) μ :=
+      fun n => h_fnB_int (ns n)
+    have h_gs_subseq_int : ∀ n, Integrable (fun ω => μ[ f_n (ns n) ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) μ :=
+      fun n => h_gs_int (ns n)
+
+    -- Dominating bounds along the subsequence
+    have h_bound_fnB_subseq : ∀ n, ∀ᵐ ω ∂μ, ‖(f_n (ns n) (Y ω)) * (Z ⁻¹' B).indicator 1 ω‖ ≤ 2 * ‖f (Y ω)‖ :=
+      fun n => h_bound_fnB (ns n)
+    have h_gs_bound_subseq : ∀ n, ∀ᵐ ω ∂μ, ‖μ[ f_n (ns n) ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω‖
+        ≤ μ[ (fun ω => 2 * ‖f (Y ω)‖) | mW ] ω :=
+      fun n => h_gs_bound (ns n)
+
+    -- Apply tendsto_condExp_unique along the subsequence
+    exact tendsto_condExp_unique
+      (fun n => (f_n (ns n) ∘ Y) * (Z ⁻¹' B).indicator 1)
+      (fun n => fun ω => μ[ f_n (ns n) ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
+      ((f ∘ Y) * (Z ⁻¹' B).indicator 1)
+      (fun ω => μ[ f ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
+      h_fnB_subseq_int
+      h_gs_subseq_int
+      h_fs_subseq
+      h_gs_subseq_ae
+      (fun ω => 2 * ‖f (Y ω)‖)
+      h_bound_fs_int
+      (fun ω => μ[ (fun ω => 2 * ‖f (Y ω)‖) | mW ] ω)
+      h_bound_gs_int
+      h_bound_fnB_subseq
+      h_gs_bound_subseq
+      h_factorization_subseq
 
     /-
     **Status: Stage 3 nearly complete!**
