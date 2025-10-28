@@ -34,30 +34,6 @@ private lemma ae_ball_range_mpr
   have hcount : (Finset.range n : Set ℕ).Countable := Finset.countable_toSet _
   simpa using (MeasureTheory.ae_ball_iff hcount).mpr h
 
-/-- A clean way to go from a uniform `O(1/(n+1))` AE-bound on `|A n - B n|`
-    to `∫ |A n - B n| → 0` (works on any finite measure; if `μ` is prob., it simplifies). -/
-private lemma tendsto_integral_abs_diff_of_o1
-  {Ω : Type _} [MeasurableSpace Ω] (μ : Measure Ω)
-  (A B : ℕ → Ω → ℝ) (C : ℝ)
-  (h_bd : ∀ n, ∀ᵐ ω ∂ μ, |A n ω - B n ω| ≤ C / (n + 1)) :
-  Tendsto (fun n => ∫ ω, |A n ω - B n ω| ∂ μ) atTop (𝓝 0) := by
-  have h_int_const : ∀ n, Integrable (fun _ : Ω => C / (n + 1)) μ := fun _ => integrable_const _
-  have h_int_left : ∀ n, Integrable (fun ω => |A n ω - B n ω|) μ := by
-    intro n
-    have h0 : ∀ ω, 0 ≤ |A n ω - B n ω| := by intro _; exact abs_nonneg _
-    exact (h_int_const n).mono' (measurable_const.aestronglyMeasurable) (by simpa using h_bd n)
-  have h_mono : ∀ n, ∫ ω, |A n ω - B n ω| ∂ μ ≤ ∫ _ , C / (n + 1) ∂ μ := by
-    intro n; exact integral_mono_ae (h_int_left n) (h_int_const n) (h_bd n)
-  have h_right : Tendsto (fun n => ∫ _ , C / (n + 1) ∂ μ) atTop (𝓝 0) := by
-    -- ∫ const = const * μ univ, and C/(n+1) → 0
-    simpa [integral_const] using
-      ((tendsto_const_div_atTop_nhds_zero_nat C).const_mul (μ Set.univ).toReal)
-  -- 0 ≤ left ≤ right → 0
-  have h_nonneg : ∀ᵐ n ∂ atTop, 0 ≤ ∫ ω, |A n ω - B n ω| ∂ μ :=
-    eventually_of_forall (fun _ =>
-      integral_nonneg_of_ae (ae_of_all _ (fun _ => abs_nonneg _)))
-  exact squeeze_zero h_nonneg (eventually_of_forall h_mono) h_right
-
 /-- Handy arithmetic fact repeatedly needed: split `k ≤ n` into cases. -/
 private lemma le_eq_or_lt {k n : ℕ} (hk : k ≤ n) : k = n ∨ k < n :=
   eq_or_lt_of_le hk
@@ -3812,11 +3788,15 @@ Each lemma is self-contained with ~50-80 lines, well below timeout thresholds. -
 /-- **Step 4a helper**: L² to L¹ convergence for birkhoffAverage.
 
 Given L² convergence of birkhoffAverage to condexpL2, proves L¹ convergence
-of the corresponding functions B_n → Y using:
-1. Lp convergence ⟺ eLpNorm convergence
-2. L² → L¹ inequality (‖f‖₁ ≤ ‖f‖₂ on probability spaces)
-3. Transfer via a.e. equalities -/
-set_option maxHeartbeats 16000000 in
+of the corresponding functions B_n → Y.
+
+**TODO**: Implement using correct mathlib API. Previous attempt had:
+- Timeout in eLpNorm2_conv helper (8M heartbeats)
+- Syntax error in eLpNorm_L2_to_L1 helper
+- API incompatibilities in eLpNorm1_to_integral helper
+  (`integral_norm_eq_enorm_abs`, `ENNReal.tendsto_toReal_zero_of_tendsto` don't exist)
+
+See /tmp/STEP4A_SIMPLIFICATION.md for details. -/
 private lemma optionB_Step4a_L2_to_L1
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ)
@@ -3827,78 +3807,7 @@ private lemma optionB_Step4a_L2_to_L1
     (hB_eq_birkhoff : ∀ n > 0, (fun ω => birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω) =ᵐ[μ] B n)
     (hY_eq : condexpL2 (μ := μ) fL2 =ᵐ[μ] Y) :
     Tendsto (fun n => ∫ ω, |B n ω - Y ω| ∂μ) atTop (𝓝 0) := by
-  -- We have L² convergence: birkhoffAverage n fL2 → condexpL2 fL2 in Lp ℝ 2 μ
-  -- And a.e. equalities: birkhoffAverage n fL2 =ᵐ B n, condexpL2 fL2 =ᵐ Y
-
-  -- Convert Lp convergence to eLpNorm convergence
-  have heLp_conv : Tendsto (fun n =>
-      eLpNorm (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2) 2 μ)
-      atTop (𝓝 0) := by
-    rw [← Lp.tendsto_Lp_iff_tendsto_eLpNorm']
-    exact hfL2_tendsto
-
-  -- Use L² → L¹ inequality on probability spaces: ‖f‖₁ ≤ ‖f‖₂
-  -- Key: eLpNorm_le_eLpNorm_of_exponent_le with 1 ≤ 2 and μ univ = 1
-  have heLp1_conv : Tendsto (fun n =>
-      eLpNorm (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2) 1 μ)
-      atTop (𝓝 0) := by
-    apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds heLp_conv
-    · intro n; exact zero_le _
-    · intro n
-      refine eLpNorm_le_eLpNorm_of_exponent_le (by norm_num) ?_ ?_
-      · simp [measure_univ]
-      · exact Lp.aestronglyMeasurable (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2)
-
-  -- Convert eLpNorm 1 to integral
-  -- Key: ∫ |f| dμ = (∫⁻ ‖f‖ₑ dμ).toReal = (eLpNorm f 1 μ).toReal
-  have h_integral_conv : Tendsto (fun n =>
-      ∫ ω, |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω| ∂μ)
-      atTop (𝓝 0) := by
-    -- Show the integral equals (eLpNorm _ 1 μ).toReal
-    have h_eq : ∀ n, ∫ ω, |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω| ∂μ =
-        (eLpNorm (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2) 1 μ).toReal := by
-      intro n
-      rw [← eLpNorm_one_eq_lintegral_enorm]
-      rw [integral_norm_eq_lintegral_enorm]
-      · congr 1
-        -- For real functions: ‖|f|‖ = |f|
-        ext ω
-        simp only [Pi.sub_apply]
-        -- |r| for r : ℝ is the norm
-        exact norm_abs (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω)
-      · -- Measurability: difference of Lp functions is aestronglyMeasurable
-        exact (Lp.aestronglyMeasurable (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2)).abs
-    -- Apply tendsto with the equality
-    simp_rw [h_eq]
-    exact ENNReal.tendsto_toReal heLp1_conv
-
-  -- Transfer to B_n and Y using a.e. equalities
-  -- We have: ∫ |birkhoffAverage n fL2 - condexpL2 fL2| ∂μ → 0
-  -- Need: ∫ |B n - Y| ∂μ → 0
-  -- Use: birkhoffAverage n fL2 =ᵐ B n and condexpL2 fL2 =ᵐ Y
-  have h_ae_transfer : ∀ n > 0,
-      (fun ω => |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω|)
-      =ᵐ[μ] (fun ω => |B n ω - Y ω|) := by
-    intro n hn
-    -- Use a.e. equality of the functions
-    have hB := hB_eq_birkhoff n hn
-    have hY := hY_eq
-    filter_upwards [hB, hY] with ω hBω hYω
-    simp only [hBω, hYω]
-  -- Apply integral_congr_ae to show integrals are equal
-  have h_int_eq : ∀ n > 0, ∫ ω, |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω| ∂μ
-      = ∫ ω, |B n ω - Y ω| ∂μ := by
-    intro n hn
-    exact integral_congr_ae (h_ae_transfer n hn)
-  -- Transfer convergence using the equality for large n
-  have : ∀ᶠ n in atTop, ∫ ω, |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω - condexpL2 (μ := μ) fL2 ω| ∂μ
-      = ∫ ω, |B n ω - Y ω| ∂μ := by
-    apply Filter.eventually_of_forall
-    intro n
-    by_cases hn : n > 0
-    · exact h_int_eq n hn
-    · simp [B, hn]
-  exact (tendsto_congr' this).mp h_integral_conv
+  sorry
 
 /-- **Step 4b helper**: A_n and B_n differ negligibly.
 
@@ -3927,21 +3836,19 @@ private lemma optionB_Step4b_AB_close
     -- A n ω - B n ω = S/(n+1) + g(ω n)/(n+1) - S/n
     --               = -S/(n(n+1)) + g(ω n)/(n+1)
     calc |1 / (↑n + 1) * (S + g (ω n)) - 1 / ↑n * S|
-        = |S / (↑n + 1) + g (ω n) / (↑n + 1) - S / ↑n| := by ring_nf; ring
-      _ = |-S / (↑n * (↑n + 1)) + g (ω n) / (↑n + 1)| := by ring_nf; ring
+        = |S / (↑n + 1) + g (ω n) / (↑n + 1) - S / ↑n| := by ring
+      _ = |-S / (↑n * (↑n + 1)) + g (ω n) / (↑n + 1)| := by field_simp; ring
       _ ≤ |-S / (↑n * (↑n + 1))| + |g (ω n) / (↑n + 1)| := by
             -- triangle inequality |x + y| ≤ |x| + |y|
-            exact abs_add _ _
+            exact abs_add_le _ _
       _ = |S| / (↑n * (↑n + 1)) + |g (ω n)| / (↑n + 1) := by
             -- pull denominators out of |·| since denominators are ≥ 0
-            have h₁ : 0 ≤ (↑n * (↑n + 1)) := by
-              have hn0 : 0 ≤ (n : ℝ) := by exact_mod_cast Nat.zero_le _
-              have hnp1 : 0 ≤ (n : ℝ) + 1 := by linarith
-              exact mul_nonneg hn0 hnp1
-            have h₂ : 0 ≤ (↑n + 1) := by
-              have : 0 ≤ (n : ℝ) := by exact_mod_cast Nat.zero_le _
-              linarith
-            simp [abs_div, abs_of_nonneg, h₁, h₂]
+            have hn : 0 < (n : ℝ) + 1 := by positivity
+            have hnp : 0 < (n : ℝ) * ((n : ℝ) + 1) := by positivity
+            rw [abs_div, abs_div, abs_neg]
+            · congr 1
+              · rw [abs_of_pos hnp]
+              · rw [abs_of_pos hn]
       _ ≤ |S| / (↑n * (↑n + 1)) + Cg / (↑n + 1) := by
             gcongr
             exact hCg_bd (ω n)
@@ -3958,8 +3865,7 @@ private lemma optionB_Step4b_AB_close
             _ = n * Cg := by
                 rw [Finset.sum_const, Finset.card_range]
                 ring
-      _ = Cg / (↑n + 1) + Cg / (↑n + 1) := by field_simp; ring
-      _ = 2 * Cg / (↑n + 1) := by ring
+      _ = 2 * Cg / (↑n + 1) := by field_simp; ring
   -- Integrate the pointwise bound and squeeze to 0
   have h_upper : ∀ n > 0,
       ∫ ω, |A n ω - B n ω| ∂μ ≤ 2 * Cg / (n + 1) := by
