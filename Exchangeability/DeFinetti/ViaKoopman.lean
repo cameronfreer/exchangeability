@@ -3816,7 +3816,7 @@ of the corresponding functions B_n → Y using:
 1. Lp convergence ⟺ eLpNorm convergence
 2. L² → L¹ inequality (‖f‖₁ ≤ ‖f‖₂ on probability spaces)
 3. Transfer via a.e. equalities -/
-set_option maxHeartbeats 8000000 in
+set_option maxHeartbeats 16000000 in
 private lemma optionB_Step4a_L2_to_L1
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ)
