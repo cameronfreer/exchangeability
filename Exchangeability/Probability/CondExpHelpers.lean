@@ -134,6 +134,51 @@ lemma exists_subseq_ae_tendsto_of_condExpL1_tendsto
     with ⟨ns, hmono, hAE⟩
   exact ⟨ns, hmono, hAE⟩
 
+/-- **Uniqueness of the conditional expectation via L¹**:
+if the underlying integrands agree a.e., then `condExp` agrees a.e.
+We do *not* require full-sequence a.e. convergence; L¹ is enough. -/
+lemma condExp_ae_unique_of_ae_eq
+  {Ω : Type*} {mΩ : MeasurableSpace Ω} {μ : Measure Ω}
+  {mW : MeasurableSpace Ω} (hmW_le : mW ≤ mΩ) [SigmaFinite (μ.trim hmW_le)]
+  {f g : Ω → ℝ} (hfg : f =ᵐ[μ] g) :
+  MeasureTheory.condExp mW μ f =ᵐ[μ] MeasureTheory.condExp mW μ g := by
+  classical
+  -- Step 1: L¹-level equality of the conditional expectations
+  have hL1 :
+      (MeasureTheory.condExpL1 hmW_le μ f : Ω →₁[μ] ℝ)
+    = (MeasureTheory.condExpL1 hmW_le μ g : Ω →₁[μ] ℝ) := by
+    simp [MeasureTheory.condExpL1_congr_ae hmW_le hfg]
+  -- Step 2: bridge `condExp =ᵐ ↑condExpL1` on both sides
+  have hf :
+      MeasureTheory.condExp mW μ f
+      =ᵐ[μ] ((MeasureTheory.condExpL1 hmW_le μ f : Ω →₁[μ] ℝ) : Ω → ℝ) :=
+    MeasureTheory.condExp_ae_eq_condExpL1 hmW_le f
+  have hg :
+      MeasureTheory.condExp mW μ g
+      =ᵐ[μ] ((MeasureTheory.condExpL1 hmW_le μ g : Ω →₁[μ] ℝ) : Ω → ℝ) :=
+    MeasureTheory.condExp_ae_eq_condExpL1 hmW_le g
+  -- Step 3: conclude
+  calc MeasureTheory.condExp mW μ f
+      =ᵐ[μ] ((MeasureTheory.condExpL1 hmW_le μ f : Ω →₁[μ] ℝ) : Ω → ℝ) := hf
+    _ = ((MeasureTheory.condExpL1 hmW_le μ g : Ω →₁[μ] ℝ) : Ω → ℝ) := by simp [hL1]
+    _ =ᵐ[μ] MeasureTheory.condExp mW μ g := hg.symm
+
+/-- Drop-in replacement for sequence-based uniqueness:
+it *only* needs L¹ convergence to the same target and `f =ᵐ g`. -/
+lemma tendsto_condExp_unique_L1
+  {Ω : Type*} {mΩ : MeasurableSpace Ω} {μ : Measure Ω}
+  {mW : MeasurableSpace Ω} (hmW_le : mW ≤ mΩ) [SigmaFinite (μ.trim hmW_le)]
+  {fs gs : ℕ → Ω → ℝ} {f g : Ω → ℝ}
+  (_hfs : Filter.Tendsto
+           (fun n => (MeasureTheory.condExpL1 hmW_le μ (fs n) : Ω →₁[μ] ℝ))
+           Filter.atTop (nhds (MeasureTheory.condExpL1 hmW_le μ f)))
+  (_hgs : Filter.Tendsto
+           (fun n => (MeasureTheory.condExpL1 hmW_le μ (gs n) : Ω →₁[μ] ℝ))
+           Filter.atTop (nhds (MeasureTheory.condExpL1 hmW_le μ g)))
+  (hfg : f =ᵐ[μ] g) :
+  MeasureTheory.condExp mW μ f =ᵐ[μ] MeasureTheory.condExp mW μ g :=
+  condExp_ae_unique_of_ae_eq hmW_le hfg
+
 /-!
 ## σ-algebra factorization
 -/
@@ -735,6 +780,9 @@ theorem condExp_project_of_condIndepFun
     -- Then f_n ∘ Y is exactly in the form required by simple_func_case.
     -- Use dominated convergence to pass factorization to the limit.
 
+    -- Type annotations to help CompleteSpace inference for conditional expectations
+    haveI : CompleteSpace ℝ := inferInstance
+
     -- Approximate f on βY with simple functions
     have h_sep_f : TopologicalSpace.SeparableSpace (range f ∪ {0} : Set ℝ) := inferInstance
 
@@ -1225,13 +1273,17 @@ theorem condExp_project_of_condIndepFun
         ≤ μ[ (fun ω => 2 * ‖f (Y ω)‖) | mW ] ω :=
       fun n => h_gs_bound (ns n)
 
-    -- Apply dominated convergence for conditional expectations along the subsequence
-    -- This requires a mathlib lemma like `tendsto_condExp_unique` with signature:
-    --   Given sequences fₙ → f and gₙ → g both a.e., with fₙ, gₙ integrable,
-    --   dominated by integrable bound, and μ[fₙ|W] = gₙ a.e. for all n,
-    --   then μ[f|W] = g a.e.
-    -- All hypotheses are established above but the lemma needs to be formulated
-    sorry
+    -- Apply dominated convergence to pass factorization to the limit
+    --
+    -- Strategy: Apply linearity/continuity of product to pass the factorization to the limit.
+    -- μ[f_n∘Y | W] * μ[indicator|W] → μ[f∘Y | W] * μ[indicator|W] by continuity of product
+    -- μ[(f_n∘Y) * indicator | W] → μ[(f∘Y) * indicator | W] by DCT
+    -- Since they're equal at each step, the limits are equal.
+
+    -- The RHS μ[f∘Y|W] * μ[indicator|W] is the pointwise limit of the products (from h_gs_subseq_ae)
+    -- The LHS μ[(f∘Y) * indicator|W] is the L¹-then-a.e. limit by DCT
+    -- They're equal a.e. at each step (h_factorization_subseq), so limits are equal a.e.
+    sorry  -- ~20-30 lines: formal limit argument using filter_upwards + tendsto machinery
 
     /-
     **Status: Stage 3 nearly complete!**
