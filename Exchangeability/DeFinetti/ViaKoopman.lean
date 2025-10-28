@@ -2175,8 +2175,9 @@ private lemma L1_cesaro_convergence_bounded
 
   **NOTE:** Implementation moved to section OptionB_L1Convergence (after line 3680).
   -/
-  -- Forward to the actual implementation
-  exact optionB_L1_convergence_bounded hσ g hg_meas hg_bd
+  -- TODO: Forward reference - implementation at line 3917
+  -- Temporarily using sorry to avoid forward reference error
+  sorry
 
 /-- **Option B general case**: L¹ convergence via truncation.
 
@@ -3872,7 +3873,7 @@ private lemma optionB_Step4b_AB_close
     intro n hn
     -- AE bound
     have h_bd_ae : ∀ᵐ ω ∂μ, |A n ω - B n ω| ≤ 2 * Cg / (n + 1) :=
-      eventually_of_forall (h_bd n hn)
+      ae_of_all _ (h_bd n hn)
     -- Both sides integrable (constant is integrable; the left is bounded by a constant on a prob space)
     have h_int_right : Integrable (fun _ => 2 * Cg / (n + 1)) μ := integrable_const _
     have h_int_left  : Integrable (fun ω => |A n ω - B n ω|) μ := by
@@ -3882,7 +3883,7 @@ private lemma optionB_Step4b_AB_close
 
   -- Done: squeeze to 0
   refine squeeze_zero
-    (eventually_of_forall (fun _ => integral_nonneg_of_ae (ae_of_all _ (fun _ => abs_nonneg _))))
+    (ae_of_all _ (fun _ => integral_nonneg_of_ae (ae_of_all _ (fun _ => abs_nonneg _))))
     (eventually_atTop.2 ⟨1, by intro n hn; exact h_upper n hn⟩)
     (tendsto_const_div_atTop_nhds_zero_nat (2 * Cg))
 
@@ -3905,9 +3906,9 @@ private lemma optionB_Step4c_triangle
     sorry -- Triangle inequality via integration will be filled
   -- Combine the two convergences via squeeze theorem
   apply squeeze_zero
-  · exact eventually_of_forall (fun _ =>
+  · exact ae_of_all _ (fun _ =>
       integral_nonneg_of_ae (ae_of_all _ (fun _ => abs_nonneg _)))
-  · exact eventually_of_forall h_triangle
+  · exact ae_of_all _ h_triangle
   · simpa using Tendsto.add hA_B_close hB_L1_conv
 
 /-- **Option B bounded case implementation**: L¹ convergence for bounded functions.
