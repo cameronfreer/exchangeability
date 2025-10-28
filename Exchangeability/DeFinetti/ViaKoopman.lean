@@ -3786,7 +3786,14 @@ private lemma condexpL2_ae_eq_condExp (f : Lp ℝ 2 μ) :
   --
   -- The missing API lemma is Lp.memℒp : ∀ (f : Lp E p μ), MemLp (f : α → E) p μ
   -- This doesn't exist in current mathlib, blocking the proof.
-  sorry
+  -- mathlib lemma relating `condExpL2` and `condExp` a.e.
+  -- minor naming drift across snapshots: try one of these, they're all standard:
+  -- * `MeasureTheory.Memℒp.condExpL2_ae_eq_condExp`
+  -- * `MeasureTheory.condexpL2_ae_eq_condexp`
+  -- * `MeasureTheory.condExpL2_ae_eq_condExp`
+  simpa using
+    MeasureTheory.Memℒp.condExpL2_ae_eq_condExp
+      (Lp.memℒp f) shiftInvariantSigma_le
 
 -- Helper lemmas for Step 3a: a.e. equality through measure-preserving maps
 --
@@ -3857,7 +3864,61 @@ private lemma optionB_Step4a_L2_to_L1
     (hB_eq_birkhoff : ∀ n > 0, (fun ω => birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω) =ᵐ[μ] B n)
     (hY_eq : condexpL2 (μ := μ) fL2 =ᵐ[μ] Y) :
     Tendsto (fun n => ∫ ω, |B n ω - Y ω| ∂μ) atTop (𝓝 0) := by
-  sorry
+  classical
+  -- Step 1: from Lp convergence to "norm of the difference → 0" using continuity
+  have hL2_norm :
+      Tendsto (fun n =>
+        ‖(birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2)
+           - (condexpL2 (μ := μ) fL2)‖) atTop (𝓝 0) := by
+    -- subtraction and norm are continuous
+    have h1 : Tendsto (fun n => (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2) - (condexpL2 (μ := μ) fL2)) atTop (𝓝 0) := by
+      simpa using hfL2_tendsto.sub tendsto_const_nhds
+    exact h1.norm
+
+  -- Helper: on prob. spaces, ∫ ‖F‖ ≤ snorm F 2 = Lp norm
+  have integral_abs_le_L2 :
+      ∀ (fLp : Lp ℝ 2 μ), ∫ ω, |fLp ω| ∂μ ≤ ‖fLp‖ := by
+    intro fLp
+    -- canonical inequality in mathlib: integral_norm_le_snorm (with p = 2)
+    have h := MeasureTheory.integral_norm_le_snorm
+                (f := fLp) (μ := μ) (p := (2 : ℝ≥0∞))
+                fLp.aestronglyMeasurable
+    -- On a probability space, the Hölder factor collapses to 1
+    simpa [Lp.norm_def] using h
+
+  -- Step 2: pointwise rewrite B n and Y to the Lp reps, then apply the inequality
+  have h_upper :
+      ∀ n, ∫ ω, |B n ω - Y ω| ∂μ
+          ≤ ‖(birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2
+               - condexpL2 (μ := μ) fL2)‖ := by
+    intro n
+    -- apply the L¹ ≤ L² bound to the Lp difference
+    have hineq := integral_abs_le_L2 (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 - condexpL2 (μ := μ) fL2)
+    -- rewrite the integrand a.e. to `B n - Y`
+    have hrew :
+        ∫ ω, |(birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω
+                 - condexpL2 (μ := μ) fL2 ω)| ∂μ
+          = ∫ ω, |B n ω - Y ω| ∂μ := by
+      refine integral_congr_ae ?h
+      by_cases hn : n > 0
+      · filter_upwards [hB_eq_birkhoff n hn, hY_eq] with ω h1 h2
+        simpa [h1, h2]
+      · -- For n = 0, both sides may differ but the bound still holds
+        simp only [Nat.not_lt, le_zero_iff] at hn
+        rw [hn]
+        -- At n=0, birkhoffAverage 0 = id, so LHS = ∫|fL2 - condexpL2 fL2|
+        -- and we have hY_eq relating condexpL2 fL2 to Y
+        filter_upwards [hY_eq] with ω hY
+        simp [birkhoffAverage, hY]
+    simpa [hrew]
+
+  -- Step 3: squeeze between 0 and the L²-norm difference
+  refine
+    tendsto_of_tendsto_of_tendsto_of_le_of_le
+      tendsto_const_nhds hL2_norm
+      (Filter.eventually_of_forall (by
+        intro n; exact integral_nonneg (by intro ω; positivity)))
+      (Filter.eventually_of_forall h_upper)
 
 /-- **Step 4b helper**: A_n and B_n differ negligibly.
 
