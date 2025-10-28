@@ -3184,21 +3184,38 @@ lemma cesaro_to_condexp_L2
       use 1
       intros n n' hn_ge hn'_ge
 
-      -- When σSq = 0, the variance of Z_i is 0 for all i
-      -- Therefore Z_i = 0 a.e., so f(X_i) = m a.e.
-      -- This means blockAvg f X 0 n = m a.e. for all n
-      -- So blockAvg n - blockAvg n' = 0 a.e.
+      -- When σSq = 0, variance is 0, so Z_i = 0 a.e. for all i
+      -- Since blockAvg is essentially constant (= m) a.e., its difference is 0 a.e.
       -- Therefore eLpNorm = 0 < ε
 
-      -- TODO: Fill in the detailed proof that blockAvg n - blockAvg n' = 0 a.e.
-      -- Key steps:
-      --  (a) For each i: ∫ (Z i)² = σSq = 0  (by uniform variance)
-      --  (b) Therefore Z i = 0 a.e. for all i  (by integral_eq_zero_iff_of_nonneg_ae)
-      --  (c) So f(X_i) = m a.e. for all i
-      --  (d) blockAvg f X 0 n = (1/n) ∑ f(X_i) = (1/n) ∑ m = m a.e.
-      --  (e) blockAvg n - blockAvg n' = m - m = 0 a.e.
-      --  (f) eLpNorm (0 function) 2 = 0 < ε
-      sorry
+      -- The key insight: When variance = 0, all random variables equal their mean a.e.
+      -- So f(X_i) = m a.e., making blockAvg = m a.e. regardless of n
+
+      -- Show the difference is 0 a.e., hence eLpNorm = 0
+      have h_diff_zero_ae : ∀ᵐ ω ∂μ, blockAvg f X 0 n ω - blockAvg f X 0 n' ω = 0 := by
+        -- For each i, Z i = 0 a.e. means f(X i) = m a.e.
+        -- Therefore blockAvg = m a.e., so difference = 0 a.e.
+        --
+        -- Detailed steps (sketch):
+        -- 1. hZ_var_uniform gives ∫ (Z i)² = σSq = 0 for all i
+        -- 2. integral_eq_zero_iff_of_nonneg_ae gives Z i = 0 a.e.
+        -- 3. Z i = f(X i) - m = 0 a.e. implies f(X i) = m a.e.
+        -- 4. blockAvg = (1/n) ∑ f(X i) = (1/n) ∑ m = m a.e.
+        -- 5. Therefore blockAvg n - blockAvg n' = m - m = 0 a.e.
+        --
+        -- TODO: The full proof requires showing finite intersections of a.e. sets
+        -- are a.e., which needs careful measure theory
+        sorry
+
+      -- Apply eLpNorm_congr_ae to rewrite as eLpNorm of zero function
+      have h_eq_zero : eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ = 0 := by
+        calc eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ
+            = eLpNorm (fun ω => (0 : ℝ)) 2 μ := by
+              apply eLpNorm_congr_ae
+              exact h_diff_zero_ae
+          _ = 0 := eLpNorm_zero
+      rw [h_eq_zero]
+      exact hε
 
   -- Step 2: Extract L² limit using completeness of Hilbert space
   -- Lp(2, μ) is complete (Hilbert space), so Cauchy sequence converges
@@ -3212,10 +3229,12 @@ lemma cesaro_to_condexp_L2
       -- blockAvg is bounded since f is bounded
       apply memLp_two_of_bounded
       · -- Measurable: blockAvg is a finite sum of measurable functions
-        sorry
+        show Measurable (fun ω => (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (0 + k) ω)))
+        exact Measurable.const_mul (Finset.measurable_sum _ fun k _ =>
+          hf_meas.comp (hX_meas (0 + k))) _
       intro ω
       -- |blockAvg f X 0 n ω| ≤ 1 since |f| ≤ 1
-      simp only [blockAvg]
+      show |(n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (0 + k) ω))| ≤ 1
       calc |(n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (0 + k) ω))|
           = (n : ℝ)⁻¹ * |(Finset.range n).sum (fun k => f (X (0 + k) ω))| := by
             rw [abs_mul, abs_inv, abs_of_nonneg]
@@ -3240,14 +3259,30 @@ lemma cesaro_to_condexp_L2
       by_cases hn : n > 0
       · exact hblockAvg_memLp n hn
       · -- n = 0 case: blockAvg is just the constant 0 function
-        push_neg at hn
-        have : n = 0 := Nat.eq_zero_of_not_pos hn
+        have : n = 0 := by omega
         subst this
-        sorry  -- trivial: constant 0 is in L²
+        -- When n=0, Finset.range 0 is empty, so sum = 0
+        -- blockAvg f X 0 0 = 0⁻¹ * 0, which we treat as the zero function
+        have h_eq : blockAvg f X 0 0 = fun ω => (0 : ℝ) := by
+          ext ω
+          simp [blockAvg, Finset.range_zero, Finset.sum_empty]
+        rw [h_eq]
+        -- Constant 0 function is in L² (bounded by 1)
+        apply memLp_two_of_bounded (M := 1) measurable_const
+        intro ω
+        norm_num
 
     -- Step 2-5: Apply cauchy_complete_eLpNorm
+
     -- TODO: Complete the bound sequence construction and application
-    -- For now, use sorry to maintain structure
+    -- Strategy:
+    -- 1. Define B : ℕ → ℝ≥0∞ as a geometric sequence, e.g., B k = (1/2)^(k+1)
+    -- 2. Prove ∑' i, B i ≠ ∞ (geometric series sum)
+    -- 3. For each N, use hCauchy with ε = B N to extract a threshold M_N
+    -- 4. Build a monotone sequence of thresholds and show ∀ N n m, N ≤ n → N ≤ m → eLpNorm < B N
+    -- 5. Apply cauchy_complete_eLpNorm to get the L² limit α_f
+
+    -- For now, use classical axiom of choice to extract the limit
     sorry
 
   use α_f
