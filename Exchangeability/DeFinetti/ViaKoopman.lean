@@ -23,6 +23,26 @@ import Mathlib.Tactic.FieldSimp
 
 open Filter MeasureTheory
 
+/-! ### API compatibility aliases -/
+
+namespace ProbabilityTheory
+/-- Alias for conditional independence from unconditional independence.
+If your snapshot has `condIndep_of_indepFun` instead of `condIndep_of_indep_pair`,
+or vice versa, this alias keeps the code stable across mathlib versions.
+Replace the sorry with the actual canonical lemma from your snapshot. -/
+lemma condIndep_of_indep_pair
+    {Ω} [MeasurableSpace Ω] {μ : Measure Ω}
+    {α β} [MeasurableSpace α] [MeasurableSpace β]
+    {X : Ω → α} {Y : Ω → β} {m : MeasurableSpace Ω}
+    (hm : m ≤ (inferInstance : MeasurableSpace Ω))
+    (h : IndepFun X Y μ)
+    (hXm : Measurable[m] X) (hYm : Measurable[m] Y) :
+    CondIndep (MeasurableSpace.comap X inferInstance) (MeasurableSpace.comap Y inferInstance) m μ := by
+  -- Adapt to the canonical lemma name available in your snapshot
+  -- Many snapshots have `condIndep_of_indepFun` with the same signature
+  sorry -- Replace with: exact condIndep_of_indepFun hm h hXm hYm (or similar)
+end ProbabilityTheory
+
 /-! ### Reusable micro-lemmas for Steps 4b–4c -/
 
 /-- `ae_ball_iff` in the direction we need on a finite index set (`Finset.range n`). -/
@@ -561,11 +581,12 @@ lemma setIntegral_map_preimage
     (f : Ω → ℝ) (s : Set Ω) (hs : MeasurableSet s)
     (hf : AEMeasurable f μ) :
     ∫ x in g ⁻¹' s, (f ∘ g) x ∂ μ' = ∫ x in s, f x ∂ μ := by
-  rw [integral_map hg (hf.mono_ac (Measure.absolutelyContinuous_of_le_smul (by simp [hpush])))]
+  have hf_comp : AEMeasurable (f ∘ g) μ' := hf.comp_measurable hg
+  rw [← hpush]
+  rw [integral_map hg hf_comp]
   congr 1
   ext x
   simp [Set.indicator_comp_of_zero (by simp : f 0 = 0)]
-  sorry
 
 /-- On a finite measure space, an a.e.-bounded, a.e.-measurable real function is integrable. -/
 lemma integrable_of_ae_bound
@@ -596,6 +617,59 @@ lemma integrable_of_ae_bound
       _ ≤ ENNReal.ofReal C * μ Set.univ := hlin
       _ < ⊤ := this
 
+-- Helper lemmas for rectangle-case conditional expectation proofs
+
+/-- Norm/abs bound for indicators (ℝ and general normed targets). -/
+lemma abs_indicator_le_abs_self {Ω} (s : Set Ω) (f : Ω → ℝ) :
+    ∀ x, |s.indicator f x| ≤ |f x| := by
+  intro x; by_cases hx : x ∈ s <;> simp [Set.indicator_of_mem, Set.indicator_of_not_mem, hx]
+
+lemma norm_indicator_le_norm_self
+    {Ω E} [Zero E] [Norm E] (s : Set Ω) (f : Ω → E) :
+    ∀ x, ‖s.indicator f x‖ ≤ ‖f x‖ := by
+  intro x; by_cases hx : x ∈ s <;> simp [Set.indicator_of_mem, Set.indicator_of_not_mem, hx]
+
+/-- Indicator ↔ product with a 0/1 mask (for ℝ). -/
+lemma indicator_as_mul_one {Ω} (s : Set Ω) (f : Ω → ℝ) :
+    s.indicator f = fun x => f x * s.indicator (fun _ => (1 : ℝ)) x := by
+  funext x; by_cases hx : x ∈ s <;> simp [Set.indicator_of_mem, Set.indicator_of_not_mem, hx]
+
+lemma integral_indicator_as_mul {Ω} [MeasurableSpace Ω] {μ : Measure Ω}
+    (s : Set Ω) (f : Ω → ℝ) :
+    ∫ x, s.indicator f x ∂μ = ∫ x, f x * s.indicator (fun _ => (1 : ℝ)) x ∂μ := by
+  simpa [indicator_as_mul_one s f]
+
+/-- "Lift" a measurable-in-sub-σ-algebra set to ambient measurability. -/
+lemma measurableSet_of_sub {Ω} [mΩ : MeasurableSpace Ω]
+    (m : MeasurableSpace Ω) (hm : m ≤ mΩ) {s : Set Ω}
+    (hs : MeasurableSet[m] s) : MeasurableSet s :=
+  hm _ hs
+
+/-- AEMeasurable indicator under ambient from sub-σ-algebra measurability. -/
+lemma aemeasurable_indicator_of_sub {Ω} [mΩ : MeasurableSpace Ω] {μ : Measure Ω}
+    (m : MeasurableSpace Ω) (hm : m ≤ mΩ)
+    {s : Set Ω} (hs : MeasurableSet[m] s)
+    {f : Ω → ℝ} (hf : AEMeasurable f μ) :
+    AEMeasurable (s.indicator f) μ :=
+  hf.indicator (measurableSet_of_sub m hm hs)
+
+/-- Idempotence of conditional expectation for m-measurable integrable functions. -/
+lemma condExp_idempotent'
+    {Ω} [mΩ : MeasurableSpace Ω] {μ : Measure Ω}
+    (m : MeasurableSpace Ω) (hm : m ≤ mΩ)
+    [SigmaFinite (μ.trim hm)]
+    {f : Ω → ℝ}
+    (hf_m : AEStronglyMeasurable[m] f μ)
+    (hf_int : Integrable f μ) :
+    μ[f | m] =ᵐ[μ] f := by
+  refine
+    (MeasureTheory.condexp_unique_ae
+      (μ := μ) (m := m)
+      (g := f)
+      hf_m ?setId).symm
+  intro s hs
+  rfl
+
 end MeasureTheory
 
 /-- **Factor-map pullback for conditional expectation**.
@@ -625,7 +699,7 @@ lemma condexp_pullback_factor
     -- a.e.-measurability for the integrands (under μ)
     have hCE_ae : AEMeasurable (condExp m μ H) μ :=
       (MeasureTheory.aestronglyMeasurable_condExp' m hm H).aemeasurable
-    have hH_ae : AEMeasurable H μ := hH.ae_measurable
+    have hH_ae : AEMeasurable H μ := hH.aestronglyMeasurable.aemeasurable
     -- Three-step calc: change variables, apply CE property, change back
     calc
       ∫ x in g ⁻¹' B, (condExp m μ H ∘ g) x ∂ μ'
