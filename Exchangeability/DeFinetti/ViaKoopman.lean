@@ -4128,7 +4128,7 @@ private lemma optionB_Step4c_triangle
               _ = (n : ℝ) * Cg := by simp
           calc (n : ℝ)⁻¹ * |Finset.sum (Finset.range n) (fun j => g (ω j))|
             _ ≤ (n : ℝ)⁻¹ * ((n : ℝ) * Cg) := by gcongr
-            _ = Cg := by field_simp; ring
+            _ = Cg := by field_simp
         -- Bounded + Measurable → Integrable on finite measure space
         have hB_meas : Measurable (B n) := by
           rw [hB_def]
@@ -4178,12 +4178,11 @@ private lemma optionB_Step4c_triangle
                 _ ≤ Finset.sum (Finset.range (n + 1)) (fun j => Cg) := by
                     gcongr with j _; exact hCg _
                 _ = ((n : ℝ) + 1) * Cg := by simp
-            have h_abs_inv : |↑n + 1|⁻¹ = ((n : ℝ) + 1)⁻¹ := by
-              rw [abs_of_nonneg]; positivity
-            calc |↑n + 1|⁻¹ * |Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))|
-              _ = ((n : ℝ) + 1)⁻¹ * |Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))| := by rw [h_abs_inv]
+            have : |((n : ℝ) + 1)|⁻¹ = ((n : ℝ) + 1)⁻¹ := by rw [abs_of_nonneg]; positivity
+            calc |((n : ℝ) + 1)|⁻¹ * |Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))|
+              _ = ((n : ℝ) + 1)⁻¹ * |Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))| := by rw [this]
               _ ≤ ((n : ℝ) + 1)⁻¹ * (((n : ℝ) + 1) * Cg) := by gcongr
-              _ = Cg := by field_simp; ring
+              _ = Cg := by field_simp
           have hB_bd : |B n ω| ≤ Cg := by
             rw [hB_def]
             simp [hn]
@@ -4195,7 +4194,7 @@ private lemma optionB_Step4c_triangle
                 _ = (n : ℝ) * Cg := by simp
             calc (n : ℝ)⁻¹ * |Finset.sum (Finset.range n) (fun j => g (ω j))|
               _ ≤ (n : ℝ)⁻¹ * ((n : ℝ) * Cg) := by gcongr
-              _ = Cg := by field_simp; ring
+              _ = Cg := by field_simp
           calc |A n ω - B n ω|
               ≤ |A n ω| + |B n ω| := abs_sub _ _
             _ ≤ Cg + Cg := by gcongr
@@ -4209,7 +4208,7 @@ private lemma optionB_Step4c_triangle
       have hB_meas : Measurable (B n) := by
         rw [hB_def]
         by_cases hn : n = 0
-        · simp [hn]; exact measurable_const
+        · simp [hn]
         · simp [hn]
           refine Measurable.const_mul ?_ _
           refine Finset.measurable_sum (Finset.range n) (fun j _ => ?_)
