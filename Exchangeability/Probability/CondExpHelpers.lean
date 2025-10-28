@@ -947,11 +947,11 @@ theorem condExp_project_of_condIndepFun
     -- Conclusion: μ[f | mW] =ᵐ μ[g | mW], which is exactly what we want to prove
 
     -- RHS integrability: Products of conditional expectations
-    -- TODO: Complete this proof - product of integrable (condExp) with bounded (indicator condExp ≤ 1) is integrable
+    -- TODO: These proofs have persistent typeclass inference issues with Integrable.bdd_mul'
+    -- The mathematical content is correct but needs different proof technique
     have h_gs_int : ∀ n, Integrable (fun ω => μ[ f_n n ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) μ := by
       sorry
 
-    -- TODO: Same as h_gs_int but for f instead of f_n n
     have h_g_int : Integrable (fun ω => μ[ f ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) μ := by
       sorry
 
