@@ -503,23 +503,59 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
       calc ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, (μ[f | mW]) x ∂μ
           = ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, (μ[μ[f | mZW] | mW]) x ∂μ := h3
         _ = ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, f x ∂μ := by
-          -- Key step: Show ∫_{rect} E[f|mW] = ∫_{rect} f for rectangle Z⁻¹B ∩ W⁻¹C
-          -- Strategy: Use conditional independence via h_indep
-          -- For f = 1_A(Y), and rectangle Z⁻¹B ∩ W⁻¹C:
-          --   By CondIndep definition: E[1_A(Y) · 1_B(Z)|mW] =ᵐ E[1_A(Y)|mW] · E[1_B(Z)|mW]
-          --   Integrate over W⁻¹C ∈ σ(W):
-          --     ∫_{W⁻¹C} E[1_A(Y)·1_B(Z)|mW] = ∫_{W⁻¹C} E[1_A(Y)|mW] · E[1_B(Z)|mW]
-          --   LHS = ∫_{W⁻¹C} 1_A(Y)·1_B(Z) by setIntegral_condExp
-          --       = ∫_{Z⁻¹B ∩ W⁻¹C} 1_A(Y)
-          --   RHS requires showing E[1_B(Z)|mW] is constant (by Z ⊥ W) and equals P(Z ∈ B)
-          --   Then: ∫_{W⁻¹C} E[1_A(Y)|mW] · P(Z ∈ B) = P(Z ∈ B) · ∫_{W⁻¹C} E[1_A(Y)|mW]
-          --                                           = P(Z ∈ B) · ∫_{W⁻¹C} 1_A(Y)  (by setIntegral_condExp)
-          --   Match these to conclude.
-          --
-          -- This is the heart of the conditional independence property and requires
-          -- extracting independence from CondIndep definition and computing with it.
-          -- Leaving as sorry to complete the framework.
-          sorry
+          -- Key: Use CondIndep to show ∫_{Z⁻¹B ∩ W⁻¹C} μ[μ[f|mZW]|mW] = ∫_{Z⁻¹B ∩ W⁻¹C} f
+          -- By tower property h2, μ[μ[f|mZW]|mW] =ᵐ μ[f|mW], so enough to show ∫_{rect} μ[f|mW] = ∫_{rect} f
+
+          -- Rewrite LHS using h2
+          have : ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, (μ[μ[f | mZW] | mW]) x ∂μ =
+                 ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, (μ[f | mW]) x ∂μ := by
+            apply setIntegral_congr_ae (hmZW_le _ hrect)
+            filter_upwards [h2] with x hx _
+            exact hx
+          rw [this]
+
+          -- Now show: ∫_{Z⁻¹B ∩ W⁻¹C} μ[f|mW] = ∫_{Z⁻¹B ∩ W⁻¹C} f
+          -- Strategy: Use CondIndep to factor through W⁻¹C
+
+          -- Apply CondIndep to sets A and B
+          have hCI := h_indep A B hA hB
+          -- Gives: E[1_A(Y) · 1_B(Z) | σ(W)] =ᵐ E[1_A(Y) | σ(W)] · E[1_B(Z) | σ(W)]
+
+          -- W⁻¹C is σ(W)-measurable
+          have hC_meas : MeasurableSet[mW] (W ⁻¹' C) := by
+            exact measurableSet_preimage (Measurable.of_comap_le le_rfl) hC
+
+          -- Key helper: integrability of product
+          let g_B := Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ))
+          have hint_B : Integrable g_B μ := by
+            apply Integrable.indicator
+            · exact integrable_const 1
+            · exact hZ hB
+          have hprod_int : Integrable (f * g_B) μ := by
+            -- Product of bounded integrable functions is integrable
+            sorry
+
+          -- mW ≤ ambient for setIntegral_condExp
+          have hle_amb : mW ≤ _ := le_trans hle hmZW_le
+
+          -- Chain of equalities: ∫_{Z⁻¹B ∩ W⁻¹C} μ[f|mW] = ∫_{Z⁻¹B ∩ W⁻¹C} f
+          calc ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, (μ[f | mW]) x ∂μ
+              = ∫ x in W ⁻¹' C, (μ[f | mW] * g_B) x ∂μ := by
+                -- Rewrite using indicator: ∫_{Z⁻¹B ∩ W⁻¹C} h = ∫_{W⁻¹C} h · 1_{Z⁻¹B}
+                sorry
+            _ = ∫ x in W ⁻¹' C, (μ[f | mW] * μ[g_B | mW]) x ∂μ := by
+                -- Key: For σ(W)-measurable h and integrable g: ∫_{W⁻¹C} h · g = ∫_{W⁻¹C} h · E[g|σ(W)]
+                -- This follows from setIntegral_condExp since h is σ(W)-measurable
+                sorry
+            _ = ∫ x in W ⁻¹' C, (μ[f * g_B | mW]) x ∂μ := by
+                -- Reverse CondIndep factorization: E[f|mW] · E[g_B|mW] =ᵐ E[f · g_B|mW]
+                sorry
+            _ = ∫ x in W ⁻¹' C, (f * g_B) x ∂μ := by
+                -- Apply setIntegral_condExp
+                exact setIntegral_condExp hle_amb hprod_int hC_meas
+            _ = ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, f x ∂μ := by
+                -- Reverse the indicator rewrite
+                sorry
 
     · -- Complement
       intro t htm ht_ind
