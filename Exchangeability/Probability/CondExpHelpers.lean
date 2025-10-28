@@ -1133,43 +1133,13 @@ theorem condExp_project_of_condIndepFun
             ≤ ‖f (Y ω)‖ + ‖f (Y ω)‖ := SimpleFunc.norm_approxOn_zero_le hf (by simp) (Y ω) n
           _ = 2 * ‖f (Y ω)‖ := by ring
 
-      -- Indicator CE is bounded by 1 (reuse proof from h_gs_int)
-      have h_ind_bound : ∀ᵐ ω ∂μ, ‖(μ[ (Z ⁻¹' B).indicator 1 | mW ] : Ω → ℝ) ω‖ ≤ 1 := by
-        have h_ind_le : (Z ⁻¹' B).indicator (1 : Ω → ℝ) ≤ᵐ[μ] 1 := by
-          apply Filter.Eventually.of_forall
-          intro ω
-          simp [Set.indicator_apply]
-          split_ifs <;> norm_num
-        have h_ce_le : μ[ (Z ⁻¹' B).indicator 1 | mW ] ≤ᵐ[μ] μ[ (1 : Ω → ℝ) | mW ] :=
-          condExp_mono (integrable_const _) (integrable_const _) h_ind_le
-        filter_upwards [h_ce_le] with ω h_ω
-        have h_ce_one : μ[ (1 : Ω → ℝ) | mW ] ω = 1 := condExp_const 1
-        rw [h_ce_one] at h_ω
-        have h_nonneg : 0 ≤ μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
-          apply condExp_nonneg
-          apply Filter.Eventually.of_forall
-          intro; simp [Set.indicator_apply]; split_ifs <;> norm_num
-        rwa [Real.norm_of_nonneg h_nonneg]
-
-      -- Main calculation
-      filter_upwards [h_ind_bound] with ω h_ind
-      calc ‖μ[ f_n n ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω‖
-          = ‖μ[ f_n n ∘ Y | mW ] ω‖ * ‖μ[ (Z ⁻¹' B).indicator 1 | mW ] ω‖ := norm_mul _ _
-        _ ≤ ‖μ[ f_n n ∘ Y | mW ] ω‖ * 1 := by
-            apply mul_le_mul_of_nonneg_left h_ind (norm_nonneg _)
-        _ = ‖μ[ f_n n ∘ Y | mW ] ω‖ := mul_one _
-        _ ≤ μ[ (fun ω => ‖(f_n n ∘ Y) ω‖) | mW ] ω := by
-            -- Jensen's inequality for conditional expectation
-            exact norm_condExp_le (f := f_n n ∘ Y) ω
-        _ ≤ μ[ (fun ω => 2 * ‖f (Y ω)‖) | mW ] ω := by
-            -- Monotonicity of conditional expectation
-            apply condExp_mono
-            · -- Integrability of ‖f_n n ∘ Y‖
-              exact (h_fn_int n).norm
-            · -- Integrability of 2‖f ∘ Y‖
-              exact h_bound_fs_int
-            · -- Pointwise bound
-              exact h_norm_bound
+      -- Bound: ‖μ[f_n n ∘ Y|mW] ω * μ[indicator|mW] ω‖ ≤ μ[2‖f ∘ Y‖|mW] ω
+      -- Proof strategy:
+      -- 1. Indicator CE bounded by 1: condExp_mono + condExp_const
+      -- 2. Norm factorization: ‖a * b‖ = ‖a‖ * ‖b‖
+      -- 3. Jensen for CE: ‖μ[f|W]‖ ≤ μ[‖f‖|W]
+      -- 4. Monotonicity: μ[f|W] ≤ μ[g|W] when f ≤ g
+      sorry
     /-
     OLD PROOF (has typeclass errors):
     by
@@ -1255,23 +1225,13 @@ theorem condExp_project_of_condIndepFun
         ≤ μ[ (fun ω => 2 * ‖f (Y ω)‖) | mW ] ω :=
       fun n => h_gs_bound (ns n)
 
-    -- Apply tendsto_condExp_unique along the subsequence
-    exact tendsto_condExp_unique
-      (fun n => (f_n (ns n) ∘ Y) * (Z ⁻¹' B).indicator 1)
-      (fun n => fun ω => μ[ f_n (ns n) ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
-      ((f ∘ Y) * (Z ⁻¹' B).indicator 1)
-      (fun ω => μ[ f ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
-      h_fnB_subseq_int
-      h_gs_subseq_int
-      h_fs_subseq
-      h_gs_subseq_ae
-      (fun ω => 2 * ‖f (Y ω)‖)
-      h_bound_fs_int
-      (fun ω => μ[ (fun ω => 2 * ‖f (Y ω)‖) | mW ] ω)
-      h_bound_gs_int
-      h_bound_fnB_subseq
-      h_gs_bound_subseq
-      h_factorization_subseq
+    -- Apply dominated convergence for conditional expectations along the subsequence
+    -- This requires a mathlib lemma like `tendsto_condExp_unique` with signature:
+    --   Given sequences fₙ → f and gₙ → g both a.e., with fₙ, gₙ integrable,
+    --   dominated by integrable bound, and μ[fₙ|W] = gₙ a.e. for all n,
+    --   then μ[f|W] = g a.e.
+    -- All hypotheses are established above but the lemma needs to be formulated
+    sorry
 
     /-
     **Status: Stage 3 nearly complete!**
