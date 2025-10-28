@@ -926,9 +926,23 @@ theorem condExp_project_of_condIndepFun
     -- Integrability of approximants
     have h_fn_int : ∀ n, Integrable (f_n n ∘ Y) μ := by
       intro n
-      -- Simple functions composed with measurable functions are integrable on probability spaces
-      -- This follows from SimpleFunc.integrable_of_isFiniteMeasure
-      sorry
+      -- Strategy: f_n n ∘ Y is bounded by 2‖f ∘ Y‖, which is integrable
+      -- Use Integrable.of_bound to get integrability from the bound
+      have h_bound : ∀ᵐ ω ∂μ, ‖(f_n n) (Y ω)‖ ≤ 2 * ‖f (Y ω)‖ := by
+        apply Filter.Eventually.of_forall
+        intro ω
+        calc ‖(f_n n) (Y ω)‖
+            ≤ ‖f (Y ω)‖ + ‖f (Y ω)‖ := SimpleFunc.norm_approxOn_zero_le hf (by simp) (Y ω) n
+          _ = 2 * ‖f (Y ω)‖ := by ring
+      have h_bound_int : Integrable (fun ω => 2 * ‖f (Y ω)‖) μ := by
+        have : Integrable (fun ω => ‖f (Y ω)‖) μ := hf_int.norm
+        simpa using this.const_mul 2
+      -- f_n n ∘ Y is measurable (simple function composed with measurable function)
+      have h_meas : AEStronglyMeasurable (f_n n ∘ Y) μ := by
+        have : Measurable (f_n n) := (f_n n).measurable
+        exact this.aestronglyMeasurable.comp_measurable hY
+      -- Apply Integrable.of_bound
+      exact Integrable.of_bound h_meas (2 * ‖f ∘ Y‖) h_bound_int h_bound
 
     -- Integrability of products with indicator B
     have h_fnB_int : ∀ n, Integrable ((f_n n ∘ Y) * (Z ⁻¹' B).indicator 1) μ := by
