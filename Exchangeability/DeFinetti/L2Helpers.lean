@@ -439,9 +439,8 @@ open Finset
 
 /-- Auxiliary lemma: the two filtered sets partition Fin(2k). -/
 private lemma card_filter_partition (k : ℕ) :
-  let s_lt := (univ : Finset (Fin (2*k))).filter (fun i => i.val < k)
-  let s_ge := (univ : Finset (Fin (2*k))).filter (fun i => ¬(i.val < k))
-  s_lt.card + s_ge.card = 2*k := by
+  ((univ : Finset (Fin (2*k))).filter (fun i => i.val < k)).card +
+  ((univ : Finset (Fin (2*k))).filter (fun i => ¬(i.val < k))).card = 2*k := by
   have h_partition : (univ : Finset (Fin (2*k)))
                    = (univ : Finset (Fin (2*k))).filter (fun i => i.val < k)
                    ∪ (univ : Finset (Fin (2*k))).filter (fun i => ¬(i.val < k)) := by
