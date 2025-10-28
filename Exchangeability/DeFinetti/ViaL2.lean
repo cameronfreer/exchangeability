@@ -3169,25 +3169,85 @@ lemma cesaro_to_condexp_L2
       -- Eta-reduce: (fun ω => blockAvg f X 0 n ω - blockAvg f X 0 n' ω) = blockAvg f X 0 n - blockAvg f X 0 n'
       exact h_bound
     · -- Degenerate case: σ² = 0, so Z is constant a.e.
-      -- In this case, blockAvg converges trivially to the constant
-      sorry  -- TODO: Handle degenerate case
+      -- When variance is 0, all Z_i = 0 a.e., so blockAvg is constant = m a.e.
+      -- Therefore the Cauchy property holds trivially
+
+      -- Step 1: Show σSq = 0
+      push_neg at hσ_pos
+      have hσSq_nonneg : 0 ≤ σSq := by
+        simp only [σSq]
+        exact integral_nonneg fun ω => sq_nonneg _
+      have hσSq_zero : σSq = 0 := le_antisymm hσ_pos hσSq_nonneg
+
+      -- Step 2: Conclude that blockAvg difference has eLpNorm = 0
+      -- For any n, n', we have eLpNorm (blockAvg n - blockAvg n') 2 = 0 < ε
+      use 1
+      intros n n' hn_ge hn'_ge
+
+      -- When σSq = 0, the variance of Z_i is 0 for all i
+      -- Therefore Z_i = 0 a.e., so f(X_i) = m a.e.
+      -- This means blockAvg f X 0 n = m a.e. for all n
+      -- So blockAvg n - blockAvg n' = 0 a.e.
+      -- Therefore eLpNorm = 0 < ε
+
+      -- TODO: Fill in the detailed proof that blockAvg n - blockAvg n' = 0 a.e.
+      -- Key steps:
+      --  (a) For each i: ∫ (Z i)² = σSq = 0  (by uniform variance)
+      --  (b) Therefore Z i = 0 a.e. for all i  (by integral_eq_zero_iff_of_nonneg_ae)
+      --  (c) So f(X_i) = m a.e. for all i
+      --  (d) blockAvg f X 0 n = (1/n) ∑ f(X_i) = (1/n) ∑ m = m a.e.
+      --  (e) blockAvg n - blockAvg n' = m - m = 0 a.e.
+      --  (f) eLpNorm (0 function) 2 = 0 < ε
+      sorry
 
   -- Step 2: Extract L² limit using completeness of Hilbert space
   -- Lp(2, μ) is complete (Hilbert space), so Cauchy sequence converges
   have ⟨α_f, hα_memLp, hα_limit⟩ : ∃ α_f, MemLp α_f 2 μ ∧
       Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0) := by
-    -- TODO: Apply MeasureTheory.Lp.cauchy_complete_eLpNorm
-    -- We have hCauchy : ∀ ε > 0, ∃ N, ∀ {n n'}, n ≥ N → n' ≥ N → eLpNorm (blockAvg ...) < ε
-    -- Need to convert to: ∃ B : ℕ → ℝ≥0∞, (∑' i, B i < ∞) ∧ (∀ N n m, N ≤ n → N ≤ m → eLpNorm ... < B N)
-    --
-    -- Strategy:
-    -- 1. Define B N := ENNReal.ofReal (2⁻¹ ^ N)  -- geometric sequence
-    -- 2. Show ∑' N, B N = 2 < ∞ (geometric series)
-    -- 3. For each N, use hCauchy with ε = (B N).toReal to get threshold M_N
-    -- 4. Construct increasing sequence of thresholds
-    -- 5. Apply cauchy_complete_eLpNorm with appropriate bound sequence
-    --
-    -- Alternative: Use Lp.completeSpace instance and Metric.cauchySeq approach
+    -- Apply cauchy_complete_eLpNorm to get L² limit
+
+    -- Step 1: Show each blockAvg is in L²
+    have hblockAvg_memLp : ∀ n, n > 0 → MemLp (blockAvg f X 0 n) 2 μ := by
+      intro n hn_pos
+      -- blockAvg is bounded since f is bounded
+      apply memLp_two_of_bounded
+      · -- Measurable: blockAvg is a finite sum of measurable functions
+        sorry
+      intro ω
+      -- |blockAvg f X 0 n ω| ≤ 1 since |f| ≤ 1
+      simp only [blockAvg]
+      calc |(n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (0 + k) ω))|
+          = (n : ℝ)⁻¹ * |(Finset.range n).sum (fun k => f (X (0 + k) ω))| := by
+            rw [abs_mul, abs_inv, abs_of_nonneg]
+            exact Nat.cast_nonneg n
+        _ ≤ (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => |f (X (0 + k) ω)|) := by
+            apply mul_le_mul_of_nonneg_left
+            · exact Finset.abs_sum_le_sum_abs _ _
+            · exact inv_nonneg.mpr (Nat.cast_nonneg n)
+        _ ≤ (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => 1) := by
+            apply mul_le_mul_of_nonneg_left
+            · apply Finset.sum_le_sum
+              intro k _
+              exact hf_bdd (X (0 + k) ω)
+            · exact inv_nonneg.mpr (Nat.cast_nonneg n)
+        _ = (n : ℝ)⁻¹ * n := by simp
+        _ = 1 := by
+            field_simp [Nat.pos_iff_ne_zero.mp hn_pos]
+
+    -- For n = 0, handle separately
+    have hblockAvg_memLp_all : ∀ n, MemLp (blockAvg f X 0 n) 2 μ := by
+      intro n
+      by_cases hn : n > 0
+      · exact hblockAvg_memLp n hn
+      · -- n = 0 case: blockAvg is just the constant 0 function
+        push_neg at hn
+        have : n = 0 := Nat.eq_zero_of_not_pos hn
+        subst this
+        sorry  -- trivial: constant 0 is in L²
+
+    -- Step 2-5: Apply cauchy_complete_eLpNorm
+    -- TODO: Complete the bound sequence construction and application
+    -- For now, use sorry to maintain structure
     sorry
 
   use α_f
