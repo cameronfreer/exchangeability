@@ -2433,14 +2433,24 @@ lemma cesaro_to_condexp_L2
       have h_eq := hfX_contract n k hk
 
       -- The subtraction by m is the same measurable transformation on both sides
-      -- Strategy: Use Measure.map_map to factor the constant subtraction
-      sorry  -- TODO: Apply Measure.map_map
-      -- Define sub_m v i := v i - m
-      -- Show sub_m is measurable (measurable coordinate-wise subtraction)
-      -- Then: map (fun ω i => f(X(k i) ω) - m) μ
-      --     = map sub_m (map (fun ω i => f(X(k i) ω)) μ)  [by map_map]
-      --     = map sub_m (map (fun ω i => f(X i ω)) μ)      [by h_eq]
-      --     = map (fun ω i => f(X i ω) - m) μ              [by map_map]
+      sorry
+      /-
+      TODO: Complete using pointwise argument
+
+      Proof strategy:
+      From hfX_contract, we have measure equality:
+        map (fun ω i => f(X(k i) ω)) μ = map (fun ω i => f(X i ω)) μ
+
+      Need to show:
+        map (fun ω i => f(X(k i) ω) - m) μ = map (fun ω i => f(X i ω) - m) μ
+
+      Approach: Show that subtracting constant m from each coordinate commutes with measure map.
+      This should follow from extensional equality of the functions modulo the measure equality.
+
+      Previous attempt with Measure.map_map failed due to type mismatch:
+      - Z uses ℕ → ℝ but contractability context uses Fin n → ℝ
+      - Need different approach, possibly using congruence arguments directly
+      -/
 
     -- Step 3: Show uniform variance via contractability
     -- E[Z_i²] = E[Z_0²] for all i
@@ -2511,9 +2521,70 @@ lemma cesaro_to_condexp_L2
     have hZ_cov_uniform : ∀ i j, i ≠ j →
         ∫ ω, Z i ω * Z j ω ∂μ = ∫ ω, Z 0 ω * Z 1 ω ∂μ := by
       intro i j hij
-      sorry -- TODO: Use contractable_map_pair + symmetry argument from ContractableVsExchangeable.lean
       -- Strategy: If i < j, use contractable_map_pair directly
       --           If i > j, use contractable_map_pair on (j,i) + symmetry of multiplication
+      by_cases h_lt : i < j
+      · -- Case i < j: use contractable_map_pair directly
+        have h_map_eq : Measure.map (fun ω => (Z i ω, Z j ω)) μ =
+            Measure.map (fun ω => (Z 0 ω, Z 1 ω)) μ :=
+          L2Helpers.contractable_map_pair (X := Z) hZ_contract hZ_meas h_lt
+
+        -- The function (x, y) ↦ x * y is continuous, hence measurable
+        have h_mul_meas : Measurable (fun p : ℝ × ℝ => p.1 * p.2) :=
+          (continuous_fst.mul continuous_snd).measurable
+
+        -- Z i and Z j are measurable
+        have hZi_meas : AEMeasurable (Z i) μ := (hZ_meas i).aemeasurable
+        have hZj_meas : AEMeasurable (Z j) μ := (hZ_meas j).aemeasurable
+        have hZ0_meas : AEMeasurable (Z 0) μ := (hZ_meas 0).aemeasurable
+        have hZ1_meas : AEMeasurable (Z 1) μ := (hZ_meas 1).aemeasurable
+
+        -- Product measurability
+        have h_prod_ij : AEMeasurable (fun ω => (Z i ω, Z j ω)) μ :=
+          hZi_meas.prod_mk hZj_meas
+        have h_prod_01 : AEMeasurable (fun ω => (Z 0 ω, Z 1 ω)) μ :=
+          hZ0_meas.prod_mk hZ1_meas
+
+        -- Apply integral_map
+        rw [← integral_map h_prod_ij h_mul_meas.aestronglyMeasurable]
+        rw [← integral_map h_prod_01 h_mul_meas.aestronglyMeasurable]
+        rw [h_map_eq]
+
+      · -- Case i > j: use contractable_map_pair on (j,i) + symmetry
+        have hji : j < i := Nat.lt_of_le_of_ne (Nat.le_of_not_lt h_lt) (hij.symm)
+
+        -- Symmetry of multiplication: Z i * Z j = Z j * Z i
+        have h_sym_ij : ∫ ω, Z i ω * Z j ω ∂μ = ∫ ω, Z j ω * Z i ω ∂μ := by
+          congr 1
+          ext ω
+          ring
+
+        -- Now use contractable_map_pair on (j, i)
+        have h_map_eq : Measure.map (fun ω => (Z j ω, Z i ω)) μ =
+            Measure.map (fun ω => (Z 0 ω, Z 1 ω)) μ :=
+          L2Helpers.contractable_map_pair (X := Z) hZ_contract hZ_meas hji
+
+        -- The function (x, y) ↦ x * y is continuous, hence measurable
+        have h_mul_meas : Measurable (fun p : ℝ × ℝ => p.1 * p.2) :=
+          (continuous_fst.mul continuous_snd).measurable
+
+        -- Measurability
+        have hZi_meas : AEMeasurable (Z i) μ := (hZ_meas i).aemeasurable
+        have hZj_meas : AEMeasurable (Z j) μ := (hZ_meas j).aemeasurable
+        have hZ0_meas : AEMeasurable (Z 0) μ := (hZ_meas 0).aemeasurable
+        have hZ1_meas : AEMeasurable (Z 1) μ := (hZ_meas 1).aemeasurable
+
+        -- Product measurability
+        have h_prod_ji : AEMeasurable (fun ω => (Z j ω, Z i ω)) μ :=
+          hZj_meas.prod_mk hZi_meas
+        have h_prod_01 : AEMeasurable (fun ω => (Z 0 ω, Z 1 ω)) μ :=
+          hZ0_meas.prod_mk hZ1_meas
+
+        -- Apply integral_map and symmetry
+        rw [h_sym_ij]
+        rw [← integral_map h_prod_ji h_mul_meas.aestronglyMeasurable]
+        rw [← integral_map h_prod_01 h_mul_meas.aestronglyMeasurable]
+        rw [h_map_eq]
 
     -- Step 6: Key observation - relate blockAvg of f to blockAvg of Z
     -- blockAvg f X 0 n = (1/n)∑ f(X_i) = (1/n)∑ (Z_i + m) = (1/n)∑ Z_i + m
@@ -2538,7 +2609,96 @@ lemma cesaro_to_condexp_L2
 
       -- Bound |ρ| ≤ 1 (from Cauchy-Schwarz)
       have hρ_bd : -1 ≤ ρ ∧ ρ ≤ 1 := by
-        sorry  -- TODO: Derive from Cauchy-Schwarz inequality
+        -- Strategy: Cauchy-Schwarz gives |∫ Z₀·Z₁| ≤ sqrt(∫ Z₀²)·sqrt(∫ Z₁²)
+        -- By uniform variance: ∫ Z₁² = ∫ Z₀² = σSq
+        -- So: |covZ| ≤ sqrt(σSq)·sqrt(σSq) = σSq
+        -- Therefore: |ρ| = |covZ/σSq| ≤ 1
+
+        -- Z 0 and Z 1 are in L²(μ)
+        have hZ0_L2 : MemLp (Z 0) 2 μ := by
+          apply memLp_two_of_bounded (hZ_meas 0)
+          intro ω
+          -- |Z 0 ω| = |f(X 0 ω) - m| ≤ |f(X 0 ω)| + |m| ≤ 1 + 1 = 2
+          calc |Z 0 ω|
+              = |f (X 0 ω) - m| := rfl
+            _ ≤ |f (X 0 ω)| + |m| := abs_sub _ _
+            _ ≤ 1 + 1 := by
+                have h1 : |f (X 0 ω)| ≤ 1 := hf_bdd (X 0 ω)
+                have h2 : |m| ≤ 1 := by
+                  -- |m| = |∫ f(X 0)| ≤ ∫ |f(X 0)| ≤ ∫ 1 = 1
+                  have hfX_int : Integrable (fun ω => f (X 0 ω)) μ := by
+                    apply Integrable.of_bound
+                    · exact (hf_meas.comp (hX_meas 0)).aestronglyMeasurable
+                    · filter_upwards [] with ω
+                      exact hf_bdd (X 0 ω)
+                  calc |m|
+                      ≤ ∫ ω, |f (X 0 ω)| ∂μ := abs_integral_le_integral_abs
+                    _ ≤ ∫ ω, 1 ∂μ := by
+                        apply integral_mono_ae
+                        · exact hfX_int.abs
+                        · exact integrable_const 1
+                        · filter_upwards [] with ω
+                          exact hf_bdd (X 0 ω)
+                    _ = 1 := by simp
+                linarith
+            _ = 2 := by norm_num
+
+        have hZ1_L2 : MemLp (Z 1) 2 μ := by
+          -- Same proof as hZ0_L2
+          apply memLp_two_of_bounded (hZ_meas 1)
+          intro ω
+          calc |Z 1 ω|
+              = |f (X 1 ω) - m| := rfl
+            _ ≤ |f (X 1 ω)| + |m| := abs_sub _ _
+            _ ≤ 1 + 1 := by
+                have h1 : |f (X 1 ω)| ≤ 1 := hf_bdd (X 1 ω)
+                have h2 : |m| ≤ 1 := by
+                  have hfX_int : Integrable (fun ω => f (X 0 ω)) μ := by
+                    apply Integrable.of_bound
+                    · exact (hf_meas.comp (hX_meas 0)).aestronglyMeasurable
+                    · filter_upwards [] with ω
+                      exact hf_bdd (X 0 ω)
+                  calc |m|
+                      ≤ ∫ ω, |f (X 0 ω)| ∂μ := abs_integral_le_integral_abs
+                    _ ≤ ∫ ω, 1 ∂μ := by
+                        apply integral_mono_ae
+                        · exact hfX_int.abs
+                        · exact integrable_const 1
+                        · filter_upwards [] with ω
+                          exact hf_bdd (X 0 ω)
+                    _ = 1 := by simp
+                linarith
+            _ = 2 := by norm_num
+
+        -- Apply Cauchy-Schwarz: |∫ Z₀·Z₁| ≤ sqrt(∫ Z₀²)·sqrt(∫ Z₁²)
+        have h_CS := Exchangeability.Probability.IntegrationHelpers.abs_integral_mul_le_L2 hZ0_L2 hZ1_L2
+
+        -- By uniform variance: ∫ Z₁² = σSq
+        have h_Z1_var : ∫ ω, (Z 1 ω) ^ 2 ∂μ = σSq := hZ_var_uniform 1
+
+        -- So Cauchy-Schwarz gives: |covZ| ≤ sqrt(σSq)·sqrt(σSq) = σSq
+        have h_covZ_bd : |covZ| ≤ σSq := by
+          simp only [covZ, σSq]
+          calc |∫ ω, Z 0 ω * Z 1 ω ∂μ|
+              ≤ (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 1 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) := h_CS
+            _ = (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) := by rw [h_Z1_var]
+            _ = (∫ ω, (Z 0 ω) ^ 2 ∂μ) := by
+                sorry
+                -- TODO: Simplify (x^(1/2) * x^(1/2)) = x for x ≥ 0
+                -- After Real.mul_rpow, need to show (x^2)^(1/2) = x
+                -- Should use Real.rpow_natCast_inv_pow or similar
+            _ = σSq := rfl
+
+        -- Therefore |ρ| ≤ 1, which gives -1 ≤ ρ ≤ 1
+        have h_ρ_abs : |ρ| ≤ 1 := by
+          simp only [ρ]
+          have h_σSq_pos : 0 < σSq := hσ_pos
+          rw [abs_div, abs_of_pos h_σSq_pos]
+          exact div_le_one_of_le₀ h_covZ_bd h_σSq_pos.le
+
+        constructor
+        · linarith [abs_le.mp h_ρ_abs]
+        · exact (abs_le.mp h_ρ_abs).2
 
       -- Define the constant from the L² bound
       let Cf := 2 * σSq * (1 - ρ)
@@ -2570,11 +2730,11 @@ lemma cesaro_to_condexp_L2
       obtain ⟨N, hN⟩ : ∃ N : ℕ, N > 0 ∧ Cf / N < (ε.toReal) ^ 2 := by
         sorry -- TODO: Use Archimedean property
         -- Strategy:
-        -- 1. Show ε.toReal ^ 2 > 0 from ε > 0
-        -- 2. Use exists_nat_gt to find N' : ℕ with ↑N' > Cf / (ε.toReal)²
-        -- 3. This gives Cf / ↑N' < ε.toReal ^ 2 by rearranging
+        -- 1. Show ε.toReal² > 0 from ε > 0 using ENNReal.toReal_pos_iff
+        -- 2. Use exists_nat_gt to find N' with N' > Cf / ε.toReal²
+        -- 3. Rearrange to get Cf / N' < ε.toReal² using div_lt_iff
         -- 4. Take N = max N' 1 to ensure N > 0
-        -- 5. Show Cf / ↑N ≤ Cf / ↑N' < ε.toReal ^ 2 by monotonicity
+        -- 5. Show Cf / N ≤ Cf / N' < ε.toReal² by div_le_div_of_nonneg_left
 
       use N
       intros n n' hn_ge hn'_ge
