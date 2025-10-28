@@ -375,6 +375,7 @@ This is the key monotone-class / π-λ argument for kernel uniqueness.
 lemma ProbabilityTheory.equal_kernels_on_factor
   {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
   {ξ η ζ : Ω → ℝ} {φ : ℝ → ℝ}
+  (hξ : Measurable ξ) (hη_meas : Measurable η) (hζ : Measurable ζ)
   (hφ : Measurable φ) (hη : η =ᵐ[μ] φ ∘ ζ)
   (hpairs :
     Measure.map (fun ω => (ξ ω, η ω)) μ =
@@ -384,25 +385,50 @@ lemma ProbabilityTheory.equal_kernels_on_factor
   =ᵐ[μ]
   (fun ω => (ProbabilityTheory.condDistrib ξ η μ (φ (ζ ω))) B) := by
   classical
+  -- Swap to get (η,ξ) = (ζ,ξ) in law
+  have hpairs' : Measure.map (fun ω => (η ω, ξ ω)) μ =
+                 Measure.map (fun ω => (ζ ω, ξ ω)) μ := by
+    simpa [Measure.map_map measurable_swap (hξ.prodMk hη_meas),
+           Measure.map_map measurable_swap (hξ.prodMk hζ)]
+      using congrArg (·.map Prod.swap) hpairs
 
-  -- **Strategy:** Show the two ENNReal-valued functions have equal `.toReal` values a.e.
-  -- by showing they have equal integrals over all measurable sets.
+  -- Use disintegration: (ζ,ξ) = (map ζ μ) ⊗ (condDistrib ξ ζ μ)
+  have hζ_dis : (Measure.map ζ μ).compProd (condDistrib ξ ζ μ) =
+                Measure.map (fun ω => (ζ ω, ξ ω)) μ :=
+    (Measure.compProd_map_condDistrib hξ.aemeasurable).symm
 
-  -- Both functions are σ(ζ)-measurable, so equal integrals over σ(ζ)-measurable sets suffice.
-  -- σ(ζ)-measurable sets are exactly preimages ζ⁻¹(C) for measurable C ⊆ ℝ.
+  -- Similarly for η
+  have hη_dis : (Measure.map η μ).compProd (condDistrib ξ η μ) =
+                Measure.map (fun ω => (η ω, ξ ω)) μ :=
+    (Measure.compProd_map_condDistrib hξ.aemeasurable).symm
 
-  sorry  -- TODO: Complete proof (~40 lines)
-  -- Main steps:
-  -- 1. Show both `.toReal` functions are integrable
-  -- 2. For any σ(ζ)-measurable set S = ζ⁻¹(C), show integrals over S agree
-  --    - Use the pair law + kernel properties
-  --    - This requires showing that the marginal + conditional structure is preserved
-  -- 3. Apply ae_eq_of_forall_setIntegral_eq to conclude a.e. equality of `.toReal`
-  -- 4. Convert back to ENNReal equality
-  --
-  -- Alternative simpler approach (if available in mathlib):
-  -- - Use disintegration uniqueness for kernels directly
-  -- - condDistrib is uniquely determined by the pair law
+  -- Combine with pair law
+  have hcomp : (Measure.map η μ).compProd (condDistrib ξ η μ) =
+               (Measure.map ζ μ).compProd (condDistrib ξ ζ μ) := by
+    rw [hη_dis, hζ_dis, hpairs']
+
+  -- Use η = φ ∘ ζ a.e. to get: map η μ = (map ζ μ).map φ
+  have hpush : Measure.map η μ = (Measure.map ζ μ).map φ := by
+    ext S hS
+    simp [Measure.map_apply hη_meas hS, Measure.map_apply hφ, Measure.map_apply hζ (hφ hS)]
+    exact measure_congr (hη.fun_comp (· ∈ S) |>.set_eq)
+
+  -- Change of base for compProd (this is the key missing piece)
+  have hR : Measure.map (fun ω => (η ω, ξ ω)) μ =
+            ((Measure.map ζ μ).map φ).compProd (fun y => condDistrib ξ ζ μ y) := by
+    admit  -- compProd change-of-base lemma
+
+  -- Apply uniqueness: condDistrib_ae_eq_of_measure_eq_compProd
+  have hunique : condDistrib ξ η μ =ᵐ[Measure.map η μ]
+                 (fun y => condDistrib ξ ζ μ y) := by
+    rw [hpush] at hR hη_dis
+    exact condDistrib_ae_eq_of_measure_eq_compProd hη_meas hξ
+      (fun y => condDistrib ξ ζ μ y) (by rw [hη_dis]; exact hR.symm)
+
+  -- Pull back along η, then use η = φ ∘ ζ
+  apply (ae_map_iff hη_meas hB).mp hunique |>.mono
+  intro ω hω
+  simpa [Function.comp] using congrArg (fun t => (condDistrib ξ ζ μ t) B) (hη.self_of_ae_mem)
 
 /-- **Drop-information under pair-law + σ(η) ≤ σ(ζ)**: for indicator functions,
 conditioning on ζ equals conditioning on η.
@@ -482,7 +508,7 @@ theorem condexp_indicator_drop_info_of_pair_law_proven
     =ᵐ[μ]
     (fun ω => ((ProbabilityTheory.condDistrib ξ η μ (φ (ζ ω))) B).toReal) := by
     -- Apply the kernel equality lemma
-    have h := ProbabilityTheory.equal_kernels_on_factor hφ hη_factor hpairs hB
+    have h := ProbabilityTheory.equal_kernels_on_factor hξ hη hζ hφ hη_factor hpairs hB
     -- Convert from ENNReal equality to ℝ equality via toReal
     refine Filter.EventuallyEq.fun_comp h ENNReal.toReal
 
