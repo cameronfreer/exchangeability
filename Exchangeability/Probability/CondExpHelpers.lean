@@ -6,6 +6,8 @@ Authors: Cameron Freer
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Unique
 import Mathlib.MeasureTheory.Function.AEEqOfIntegral
+import Mathlib.MeasureTheory.Integral.DominatedConvergence
+import Mathlib.MeasureTheory.Function.ConvergenceInMeasure
 import Mathlib.Probability.ConditionalExpectation
 import Mathlib.Probability.Independence.Conditional
 
@@ -80,6 +82,57 @@ lemma finset_sum_ae_eq
       simpa [h1, h2]
     -- Reassemble the sums over `insert a s`.
     simpa [Finset.sum_insert, ha] using h_add
+
+/-- **DCT for conditional expectation in L¹**. -/
+lemma tendsto_condExpL1_domconv
+    {α E : Type*} {m m₀ : MeasurableSpace α} (μ : Measure α)
+    [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
+    (hm : m ≤ m₀) [SigmaFinite (μ.trim hm)]
+    {fs : ℕ → α → E} {f : α → E}
+    (bound : α → ℝ)
+    (hfs_meas : ∀ n, AEStronglyMeasurable (fs n) μ)
+    (h_int : Integrable bound μ)
+    (hbound : ∀ n, ∀ᵐ x ∂μ, ‖fs n x‖ ≤ bound x)
+    (hpt : ∀ᵐ x ∂μ, Filter.Tendsto (fun n => fs n x) Filter.atTop (nhds (f x))) :
+    Filter.Tendsto (fun n => condExpL1 hm μ (fs n)) Filter.atTop (nhds (condExpL1 hm μ f)) := by
+  classical
+  -- This is exactly mathlib's lemma; we just instantiate the parameters.
+  simpa using
+    (MeasureTheory.tendsto_condExpL1_of_dominated_convergence
+      (μ := μ) (hm := hm) (fs := fs) (f := f)
+      (bound_fs := bound) (hfs_meas := hfs_meas) (h_int_bound_fs := h_int)
+      (hfs_bound := hbound) (hfs := hpt))
+
+/-- From L¹ convergence of `condExpL1` to a.e. convergence of a subsequence of its representatives. -/
+lemma exists_subseq_ae_tendsto_of_condExpL1_tendsto
+    {α E : Type*} {m m₀ : MeasurableSpace α} (μ : Measure α)
+    [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
+    (hm : m ≤ m₀) [SigmaFinite (μ.trim hm)]
+    {fs : ℕ → α → E} {f : α → E}
+    (hL1 :
+      Filter.Tendsto (fun n => condExpL1 hm μ (fs n)) Filter.atTop (nhds (condExpL1 hm μ f))) :
+    ∃ ns : ℕ → ℕ, StrictMono ns ∧
+      (∀ᵐ x ∂μ,
+        Filter.Tendsto (fun n =>
+          ((↑(condExpL1 hm μ (fs (ns n))) : α → E) x))
+          Filter.atTop
+          (nhds ((↑(condExpL1 hm μ f) : α → E) x))) := by
+  classical
+  -- Step 1: L¹ ⇒ convergence in measure for the (coerced) functions.
+  have h_in_measure :
+      TendstoInMeasure μ
+        (fun n => (↑(condExpL1 hm μ (fs n)) : α → E))
+        Filter.atTop
+        ((↑(condExpL1 hm μ f) : α → E)) :=
+    (MeasureTheory.tendstoInMeasure_of_tendsto_Lp
+      (μ := μ) (p := (1 : ENNReal)) (l := Filter.atTop)
+      (f := fun n => condExpL1 hm μ (fs n))
+      (g := condExpL1 hm μ f)
+      hL1)
+  -- Step 2: convergence in measure ⇒ a.e. convergence along a subsequence.
+  rcases (MeasureTheory.TendstoInMeasure.exists_seq_tendsto_ae h_in_measure)
+    with ⟨ns, hmono, hAE⟩
+  exact ⟨ns, hmono, hAE⟩
 
 /-!
 ## σ-algebra factorization
@@ -947,13 +1000,54 @@ theorem condExp_project_of_condIndepFun
     -- Conclusion: μ[f | mW] =ᵐ μ[g | mW], which is exactly what we want to prove
 
     -- RHS integrability: Products of conditional expectations
-    -- TODO: Complete this proof - product of integrable (condExp) with bounded (indicator condExp ≤ 1) is integrable
+    -- Strategy: Both factors are conditional expectations (hence integrable), and the second is bounded by 1
     have h_gs_int : ∀ n, Integrable (fun ω => μ[ f_n n ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) μ := by
-      sorry
+      intro n
+      -- Both conditional expectations are integrable
+      have h_int1 : Integrable (μ[ f_n n ∘ Y | mW ]) μ := integrable_condExp
+      have h_int2 : Integrable (μ[ (Z ⁻¹' B).indicator 1 | mW ]) μ := integrable_condExp
+      -- The indicator conditional expectation is bounded by 1
+      have h_bdd : ∀ᵐ ω ∂μ, ‖μ[ (Z ⁻¹' B).indicator 1 | mW ] ω‖ ≤ 1 := by
+        -- Since indicator ≤ 1, and condExp is monotone with condExp(1) = 1
+        have h_ind_le : (Z ⁻¹' B).indicator (1 : Ω → ℝ) ≤ᵐ[μ] 1 := by
+          apply Filter.Eventually.of_forall
+          intro ω
+          simp [Set.indicator_apply]
+          split_ifs <;> norm_num
+        have h_ce_le : μ[ (Z ⁻¹' B).indicator 1 | mW ] ≤ᵐ[μ] μ[ (1 : Ω → ℝ) | mW ] :=
+          condExp_mono (integrable_const _) (integrable_const _) h_ind_le
+        filter_upwards [h_ce_le] with ω h_ω
+        have h_ce_one : μ[ (1 : Ω → ℝ) | mW ] ω = 1 := condExp_const 1
+        rw [h_ce_one] at h_ω
+        have h_nonneg : 0 ≤ μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
+          apply condExp_nonneg
+          apply Filter.Eventually.of_forall
+          intro; simp [Set.indicator_apply]; split_ifs <;> norm_num
+        rwa [Real.norm_of_nonneg h_nonneg]
+      -- Product is integrable using bounded multiplication
+      exact h_int1.norm.mul_of_le_one h_bdd
 
-    -- TODO: Same as h_gs_int but for f instead of f_n n
     have h_g_int : Integrable (fun ω => μ[ f ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) μ := by
-      sorry
+      -- Same proof as h_gs_int, but for f instead of f_n n
+      have h_int1 : Integrable (μ[ f ∘ Y | mW ]) μ := integrable_condExp
+      have h_int2 : Integrable (μ[ (Z ⁻¹' B).indicator 1 | mW ]) μ := integrable_condExp
+      have h_bdd : ∀ᵐ ω ∂μ, ‖μ[ (Z ⁻¹' B).indicator 1 | mW ] ω‖ ≤ 1 := by
+        have h_ind_le : (Z ⁻¹' B).indicator (1 : Ω → ℝ) ≤ᵐ[μ] 1 := by
+          apply Filter.Eventually.of_forall
+          intro ω
+          simp [Set.indicator_apply]
+          split_ifs <;> norm_num
+        have h_ce_le : μ[ (Z ⁻¹' B).indicator 1 | mW ] ≤ᵐ[μ] μ[ (1 : Ω → ℝ) | mW ] :=
+          condExp_mono (integrable_const _) (integrable_const _) h_ind_le
+        filter_upwards [h_ce_le] with ω h_ω
+        have h_ce_one : μ[ (1 : Ω → ℝ) | mW ] ω = 1 := condExp_const 1
+        rw [h_ce_one] at h_ω
+        have h_nonneg : 0 ≤ μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
+          apply condExp_nonneg
+          apply Filter.Eventually.of_forall
+          intro; simp [Set.indicator_apply]; split_ifs <;> norm_num
+        rwa [Real.norm_of_nonneg h_nonneg]
+      exact h_int1.norm.mul_of_le_one h_bdd
 
     -- LHS pointwise convergence: product of converging sequences
     have h_fs_ptwise : ∀ᵐ ω ∂μ, Filter.Tendsto
@@ -963,30 +1057,77 @@ theorem condExp_project_of_condIndepFun
       filter_upwards [h_fY_ptwise] with ω h_ω
       exact h_ω.mul tendsto_const_nhds
 
-    -- RHS pointwise convergence: first factor converges a.e., second is constant
-    have h_gs_ptwise : ∀ᵐ ω ∂μ, Filter.Tendsto
-        (fun n => μ[ f_n n ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
-        Filter.atTop
-        (nhds (μ[ f ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)) := by
-      -- Key: μ[f_n n ∘ Y | mW] ω → μ[f ∘ Y | mW ] ω pointwise a.e.
-      have h_condExp_ptwise : ∀ᵐ ω ∂μ, Filter.Tendsto
-          (fun n => μ[ f_n n ∘ Y | mW ] ω)
+    -- RHS convergence along a subsequence: first factor converges a.e. along ns, second is constant
+    -- We extract a subsequence ns for which conditional expectations converge a.e.
+    -- This is sufficient for the uniqueness argument.
+    have h_gs_subseq : ∃ ns : ℕ → ℕ, StrictMono ns ∧
+        (∀ᵐ ω ∂μ, Filter.Tendsto
+          (fun n => μ[ f_n (ns n) ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
+          Filter.atTop
+          (nhds (μ[ f ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω))) := by
+      -- Key: μ[f_n n ∘ Y | mW] ω → μ[f ∘ Y | mW ] ω along a subsequence a.e.
+      -- Note: We work with subsequences since L¹ convergence only guarantees subsequence a.e. convergence.
+      -- This is sufficient for our application since any two subsequences converge to the same limit a.e.
+
+      -- First, get domination bound for f_n ∘ Y (without indicator)
+      have h_bound_fn : ∀ n, ∀ᵐ ω ∂μ, ‖f_n n (Y ω)‖ ≤ 2 * ‖f (Y ω)‖ := by
+        intro n
+        apply Filter.Eventually.of_forall
+        intro ω
+        calc ‖f_n n (Y ω)‖
+            ≤ ‖f (Y ω)‖ + ‖f (Y ω)‖ := SimpleFunc.norm_approxOn_zero_le hf (by simp) (Y ω) n
+          _ = 2 * ‖f (Y ω)‖ := by ring
+
+      -- Integrability of the bound
+      have h_bound_int : Integrable (fun ω => 2 * ‖f (Y ω)‖) μ := by
+        have h_norm_int : Integrable (fun ω => ‖f (Y ω)‖) μ := hf_int.norm
+        simpa using h_norm_int.const_mul 2
+
+      -- Measurability of f_n ∘ Y
+      have h_fn_meas : ∀ n, AEStronglyMeasurable (f_n n ∘ Y) μ := by
+        intro n
+        have : Measurable (f_n n) := (f_n n).measurable
+        exact this.aestronglyMeasurable.comp_measurable hY
+
+      -- Step 1: Get L¹ convergence of conditional expectations using DCT
+      have h_L1_conv : Filter.Tendsto
+          (fun n => condExpL1 hmW_le μ (f_n n ∘ Y))
+          Filter.atTop
+          (nhds (condExpL1 hmW_le μ (f ∘ Y))) := by
+        apply tendsto_condExpL1_domconv μ hmW_le (fun ω => 2 * ‖f (Y ω)‖)
+        · exact h_fn_meas
+        · exact h_bound_int
+        · exact h_bound_fn
+        · exact h_fY_ptwise
+
+      -- Step 2: Extract a.e. convergent subsequence from L¹ convergence
+      rcases (exists_subseq_ae_tendsto_of_condExpL1_tendsto μ hmW_le h_L1_conv) with
+        ⟨ns, h_ns_mono, h_subseq_ae⟩
+
+      -- Connect condExp to condExpL1 via a.e. equality
+      have h_condExp_eq : ∀ n, μ[ f_n n ∘ Y | mW ] =ᵐ[μ] ↑(condExpL1 hmW_le μ (f_n n ∘ Y)) :=
+        fun n => condExp_ae_eq_condExpL1 hmW_le (f_n n ∘ Y)
+      have h_condExp_eq_lim : μ[ f ∘ Y | mW ] =ᵐ[μ] ↑(condExpL1 hmW_le μ (f ∘ Y)) :=
+        condExp_ae_eq_condExpL1 hmW_le (f ∘ Y)
+
+      -- Combine: subsequence of condExpL1 converges + condExp =ᵐ condExpL1
+      -- => subsequence of condExp converges a.e.
+      have h_condExp_subseq : ∀ᵐ ω ∂μ, Filter.Tendsto
+          (fun n => μ[ f_n (ns n) ∘ Y | mW ] ω)
           Filter.atTop
           (nhds (μ[ f ∘ Y | mW ] ω)) := by
-        -- Strategy: Use L¹ convergence from dominated convergence, then extract a.e. convergence
-        -- Step 1: Get L¹ convergence of conditional expectations
-        have h_L1_conv : Filter.Tendsto (fun n => μ[ f_n n ∘ Y | mW ]) Filter.atTop
-            (nhds μ[ f ∘ Y | mW ]) := by
-          -- Use tendsto_condExpL1_of_dominated_convergence
-          -- TODO: This entire h_condExp_ptwise proof needs fixing - multiple API issues
-          -- SimpleFunc.norm_approxOn_le doesn't exist
-          -- tendsto_condExpL1_of_dominated_convergence signature is wrong
-          sorry
-        -- TODO: Extract a.e. convergence from L¹ convergence
-        -- This needs tendstoInMeasure_of_tendsto_eLpNorm and ae_tendsto_of_tendstoInMeasure_subseq
-        sorry
+        -- For each n, we have μ[f_n n ∘ Y|mW] =ᵐ ↑(condExpL1 ...)
+        -- So on the intersection of all these null sets, we have pointwise equality
+        have h_all_eq : ∀ᵐ ω ∂μ, ∀ n, μ[ f_n n ∘ Y | mW ] ω = ↑(condExpL1 hmW_le μ (f_n n ∘ Y)) ω :=
+          ae_all_iff.mpr h_condExp_eq
+        filter_upwards [h_subseq_ae, h_all_eq, h_condExp_eq_lim] with ω h_seq h_eq h_eq_lim
+        convert h_seq using 1
+        · ext n; exact (h_eq (ns n)).symm
+        · exact h_eq_lim
 
-      filter_upwards [h_condExp_ptwise] with ω h_ω
+      -- Package the result: we have ns with convergence of the product
+      refine ⟨ns, h_ns_mono, ?_⟩
+      filter_upwards [h_condExp_subseq] with ω h_ω
       exact h_ω.mul tendsto_const_nhds
 
     -- Dominating function for LHS
@@ -1045,14 +1186,63 @@ theorem condExp_project_of_condIndepFun
                 (h_bound_fn n)
     -/
 
-    -- TODO: Fix integrable_condExp call syntax
+    -- Conditional expectation always produces an integrable function
     have h_bound_gs_int :
         Integrable (fun ω => μ[ (fun ω => 2 * ‖f (Y ω)‖) | mW ] ω) μ := by
-      sorry
+      -- integrable_condExp : Integrable (μ[f|m]) μ
+      exact integrable_condExp
 
-    -- TODO: Fix tendsto_condExp_unique application - type mismatch in h_factorization
-    -- The expected type wants condExp of the product function, but we have product of condExps
-    sorry
+    -- Apply tendsto_condExp_unique along the subsequence
+    -- Strategy: Extract the subsequence ns from h_gs_subseq, show both sequences converge
+    -- along ns, then apply uniqueness to get the limit equality
+
+    -- Extract the subsequence from h_gs_subseq
+    obtain ⟨ns, h_ns_mono, h_gs_subseq_ae⟩ := h_gs_subseq
+
+    -- Compose h_fs_ptwise with the subsequence: full sequence convergence implies subsequence convergence
+    have h_fs_subseq : ∀ᵐ ω ∂μ, Filter.Tendsto
+        (fun n => (f_n (ns n) ∘ Y) ω * (Z ⁻¹' B).indicator 1 ω)
+        Filter.atTop
+        (nhds ((f ∘ Y) ω * (Z ⁻¹' B).indicator 1 ω)) := by
+      filter_upwards [h_fs_ptwise] with ω h_ω
+      exact h_ω.comp h_ns_mono.tendsto_atTop
+
+    -- Factorization holds for each element of the subsequence
+    have h_factorization_subseq : ∀ n,
+        μ[ (f_n (ns n) ∘ Y) * (Z ⁻¹' B).indicator 1 | mW ] =ᵐ[μ]
+        μ[ f_n (ns n) ∘ Y | mW ] * μ[ (Z ⁻¹' B).indicator 1 | mW ] :=
+      fun n => h_factorization (ns n)
+
+    -- Integrability along the subsequence
+    have h_fnB_subseq_int : ∀ n, Integrable ((f_n (ns n) ∘ Y) * (Z ⁻¹' B).indicator 1) μ :=
+      fun n => h_fnB_int (ns n)
+    have h_gs_subseq_int : ∀ n, Integrable (fun ω => μ[ f_n (ns n) ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) μ :=
+      fun n => h_gs_int (ns n)
+
+    -- Dominating bounds along the subsequence
+    have h_bound_fnB_subseq : ∀ n, ∀ᵐ ω ∂μ, ‖(f_n (ns n) (Y ω)) * (Z ⁻¹' B).indicator 1 ω‖ ≤ 2 * ‖f (Y ω)‖ :=
+      fun n => h_bound_fnB (ns n)
+    have h_gs_bound_subseq : ∀ n, ∀ᵐ ω ∂μ, ‖μ[ f_n (ns n) ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω‖
+        ≤ μ[ (fun ω => 2 * ‖f (Y ω)‖) | mW ] ω :=
+      fun n => h_gs_bound (ns n)
+
+    -- Apply tendsto_condExp_unique along the subsequence
+    exact tendsto_condExp_unique
+      (fun n => (f_n (ns n) ∘ Y) * (Z ⁻¹' B).indicator 1)
+      (fun n => fun ω => μ[ f_n (ns n) ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
+      ((f ∘ Y) * (Z ⁻¹' B).indicator 1)
+      (fun ω => μ[ f ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
+      h_fnB_subseq_int
+      h_gs_subseq_int
+      h_fs_subseq
+      h_gs_subseq_ae
+      (fun ω => 2 * ‖f (Y ω)‖)
+      h_bound_fs_int
+      (fun ω => μ[ (fun ω => 2 * ‖f (Y ω)‖) | mW ] ω)
+      h_bound_gs_int
+      h_bound_fnB_subseq
+      h_gs_bound_subseq
+      h_factorization_subseq
 
     /-
     **Status: Stage 3 nearly complete!**
