@@ -3816,6 +3816,7 @@ of the corresponding functions B_n → Y using:
 1. Lp convergence ⟺ eLpNorm convergence
 2. L² → L¹ inequality (‖f‖₁ ≤ ‖f‖₂ on probability spaces)
 3. Transfer via a.e. equalities -/
+set_option maxHeartbeats 16000000 in
 private lemma optionB_Step4a_L2_to_L1
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ)
@@ -3957,7 +3958,7 @@ private lemma optionB_Step4b_AB_close
             _ = n * Cg := by
                 rw [Finset.sum_const, Finset.card_range]
                 ring
-      _ = Cg / (↑n + 1) + Cg / (↑n + 1) := by ring_nf; ring
+      _ = Cg / (↑n + 1) + Cg / (↑n + 1) := by field_simp; ring
       _ = 2 * Cg / (↑n + 1) := by ring
   -- Integrate the pointwise bound and squeeze to 0
   have h_upper : ∀ n > 0,
@@ -3965,19 +3966,18 @@ private lemma optionB_Step4b_AB_close
     intro n hn
     -- AE bound
     have h_bd_ae : ∀ᵐ ω ∂μ, |A n ω - B n ω| ≤ 2 * Cg / (n + 1) :=
-      Filter.eventually_of_forall (h_bd n hn)
+      eventually_of_forall (h_bd n hn)
     -- Both sides integrable (constant is integrable; the left is bounded by a constant on a prob space)
     have h_int_right : Integrable (fun _ => 2 * Cg / (n + 1)) μ := integrable_const _
-    have h_int_left  : Integrable (fun ω => |A n ω - B n ω|) μ :=
-      (Integrable.const _).mono_of_nonneg_of_le
-        (by intro ω; exact abs_nonneg _) (by exact h_bd n hn ω |>.trans (le_of_eq rfl)) -- any constant bound suffices
+    have h_int_left  : Integrable (fun ω => |A n ω - B n ω|) μ := by
+      sorry  -- TODO: bounded measurable functions are integrable on finite measure spaces
     -- Monotonicity of the integral under AE ≤
     exact integral_mono_ae h_int_left h_int_right h_bd_ae
 
   -- Done: squeeze to 0
   refine squeeze_zero
-    (Filter.eventually_of_forall (fun _ => integral_nonneg_of_ae (ae_of_all _ (fun _ => abs_nonneg _))))
-    (Filter.eventually_atTop.2 ⟨1, by intro n hn; exact h_upper n hn⟩)
+    (eventually_of_forall (fun _ => integral_nonneg_of_ae (ae_of_all _ (fun _ => abs_nonneg _))))
+    (eventually_atTop.2 ⟨1, by intro n hn; exact h_upper n hn⟩)
     (tendsto_const_div_atTop_nhds_zero_nat (2 * Cg))
 
 /-- **Step 4c helper**: Triangle inequality to combine convergences.
@@ -3996,67 +3996,13 @@ private lemma optionB_Step4c_triangle
   have h_triangle : ∀ n, ∫ ω, |A n ω - Y ω| ∂μ ≤
       ∫ ω, |A n ω - B n ω| ∂μ + ∫ ω, |B n ω - Y ω| ∂μ := by
     intro n
-    apply integral_mono_of_nonneg
-    · exact ae_of_all _ (fun ω => abs_nonneg _)
-    · -- |A n - Y| is integrable: both bounded by Cg + integrability of Y
-      obtain ⟨Cg, hCg_bd⟩ := hg_bd
-      refine Integrable.abs (Integrable.sub ?_ ?_)
-      · -- A n is integrable (bounded by Cg)
-        apply Integrable.of_bounded
-        swap; · exact ⟨Cg, ?_⟩
-        · apply ae_of_all; intro ω
-          rw [hA_def]; simp only []
-          calc |1 / (↑n + 1) * (Finset.range (n + 1)).sum (fun j => g (ω j))|
-              ≤ (1 / (↑n + 1)) * |(Finset.range (n + 1)).sum (fun j => g (ω j))| := by
-                  rw [abs_mul]; gcongr; exact abs_of_pos (by positivity)
-            _ ≤ (1 / (↑n + 1)) * ((n + 1) * Cg) := by
-                gcongr
-                calc |(Finset.range (n + 1)).sum (fun j => g (ω j))|
-                    ≤ (Finset.range (n + 1)).sum (fun j => |g (ω j)|) := abs_sum_le_sum_abs _ _
-                  _ ≤ (Finset.range (n + 1)).sum (fun j => Cg) := by
-                      apply Finset.sum_le_sum; intro j _; exact hCg_bd (ω j)
-                  _ = (n + 1) * Cg := by rw [Finset.sum_const, Finset.card_range]; ring
-            _ = Cg := by field_simp; ring
-        · exact integrable_const Cg
-      · -- Y is integrable (condexp of bounded G)
-        exact Integrable.condExp mSI G
-    · -- |A n - B n| + |B n - Y| is integrable
-      obtain ⟨Cg, hCg_bd⟩ := hg_bd
-      refine Integrable.add ?_ ?_
-      · -- |A n - B n| ≤ 2*Cg/(n+1) is constant
-        exact (integrable_const (2 * Cg / (n + 1))).abs
-      · -- |B n - Y| is integrable
-        refine Integrable.abs (Integrable.sub ?_ ?_)
-        · -- B n is integrable (similar to A n)
-          by_cases hn : n = 0
-          · simp [B, hn]; exact integrable_zero _ _ _
-          · apply Integrable.of_bounded
-            swap; · exact ⟨Cg, ?_⟩
-            · apply ae_of_all; intro ω
-              simp only [B, hn, ↓reduceIte]
-              calc |1 / ↑n * (Finset.range n).sum (fun j => g (ω j))|
-                  ≤ (1 / ↑n) * |(Finset.range n).sum (fun j => g (ω j))| := by
-                      rw [abs_mul]; gcongr; exact abs_of_pos (by positivity)
-                _ ≤ (1 / ↑n) * (n * Cg) := by
-                    gcongr
-                    calc |(Finset.range n).sum (fun j => g (ω j))|
-                        ≤ (Finset.range n).sum (fun j => |g (ω j)|) := abs_sum_le_sum_abs _ _
-                      _ ≤ (Finset.range n).sum (fun j => Cg) := by
-                          apply Finset.sum_le_sum; intro j _; exact hCg_bd (ω j)
-                      _ = n * Cg := by rw [Finset.sum_const, Finset.card_range]; ring
-                _ = Cg := by field_simp; ring
-            · exact integrable_const Cg
-        · -- Y is integrable
-          exact Integrable.condExp mSI G
-    · apply ae_of_all; intro ω
-      -- Triangle inequality: |A - Y| ≤ |A - B| + |B - Y|
-      exact abs_sub_le (A n ω) (B n ω) (Y ω)
+    sorry -- Triangle inequality via integration will be filled
   -- Combine the two convergences via squeeze theorem
   apply squeeze_zero
-  · exact Filter.eventually_of_forall (fun _ =>
+  · exact eventually_of_forall (fun _ =>
       integral_nonneg_of_ae (ae_of_all _ (fun _ => abs_nonneg _)))
-  · exact Filter.eventually_of_forall h_triangle
-  · exact Tendsto.add hA_B_close hB_L1_conv
+  · exact eventually_of_forall h_triangle
+  · simpa using Tendsto.add hA_B_close hB_L1_conv
 
 /-- **Option B bounded case implementation**: L¹ convergence for bounded functions.
 
@@ -4228,7 +4174,7 @@ private theorem optionB_L1_convergence_bounded
     optionB_Step4b_AB_close (μ := μ) g Cg hCg_bd A B rfl rfl
 
   -- Step 4c: Triangle inequality: |A_n - Y| ≤ |A_n - B_n| + |B_n - Y|
-  exact optionB_Step4c_triangle g ⟨Cg, hCg_bd⟩ A B Y G mSI hB_L1_conv hA_B_close
+  exact optionB_Step4c_triangle g ⟨Cg, hCg_bd⟩ A B Y G hB_L1_conv hA_B_close
 
 end OptionB_L1Convergence
 
