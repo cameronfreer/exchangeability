@@ -551,16 +551,21 @@ lemma setIntegral_condExp'
 /-- Set integral change of variables for pushforward measures.
 
 If `g : Ω' → Ω` pushes forward `μ'` to `μ`, then integrating `f ∘ g` over `g ⁻¹' s`
-equals integrating `f` over `s`. -/
+equals integrating `f` over `s`.
+
+**Note:** we require `AEMeasurable f μ` and derive `AEMeasurable f (Measure.map g μ')` by rewriting with `hpush`. -/
 lemma setIntegral_map_preimage
     {Ω Ω' : Type*} [MeasurableSpace Ω] [MeasurableSpace Ω']
     {μ : Measure Ω} {μ' : Measure Ω'}
     (g : Ω' → Ω) (hg : Measurable g) (hpush : Measure.map g μ' = μ)
     (f : Ω → ℝ) (s : Set Ω) (hs : MeasurableSet s)
-    (hf : AEStronglyMeasurable f μ) :
-    ∫ x in g ⁻¹' s, (f ∘ g) x ∂μ' = ∫ x in s, f x ∂μ := by
-  rw [← hpush]
-  exact (setIntegral_map hs (hf.mono_measure (le_refl _)) hg.aemeasurable).symm
+    (hf : AEMeasurable f μ) :
+    ∫ x in g ⁻¹' s, (f ∘ g) x ∂ μ' = ∫ x in s, f x ∂ μ := by
+  -- move to the pushed-forward measure and apply the standard map lemma with explicit instances
+  have hf' : AEMeasurable f (Measure.map g μ') := by simpa [hpush] using hf
+  -- lock instances via explicit `@` to avoid instance drift
+  have := @setIntegral_map Ω Ω' _ _ (Measure.map g μ') μ' g s f hs hf' hg.aemeasurable
+  simpa [hpush] using this.symm
 
 end MeasureTheory
 
@@ -586,21 +591,32 @@ lemma condexp_pullback_factor
         ∫ x in s, (μ[H | m] ∘ g) x ∂ μ' = ∫ x in s, (H ∘ g) x ∂ μ' := by
     intro s hs
     rcases hs with ⟨B, hBm, rfl⟩
-    -- Lift measurability from m to ambient inst
+    -- lift measurability from m to ambient inst
     have hBm' : @MeasurableSet Ω inst B := hm B hBm
-    -- AE strong measurability for the functions
-    have hCE_aesm : AEStronglyMeasurable (condExp m μ H) μ :=
-      (MeasureTheory.aestronglyMeasurable_condExp' m hm H).mono_ac (le_refl _)
-    have hH_aesm : AEStronglyMeasurable H μ := hH.aestronglyMeasurable
+    -- a.e.-measurability for the integrands (under μ)
+    have hCE_ae : AEMeasurable (condExp m μ H) μ :=
+      (MeasureTheory.aestronglyMeasurable_condExp' m hm H).aemeasurable
+    have hH_ae : AEMeasurable H μ := hH.ae_measurable
     -- Three-step calc: change variables, apply CE property, change back
     calc
-      ∫ x in g ⁻¹' B, (condExp m μ H ∘ g) x ∂μ'
-          = ∫ x in B, condExp m μ H x ∂μ := by
-              exact MeasureTheory.setIntegral_map_preimage g hg hpush (condExp m μ H) B hBm' hCE_aesm
-        _ = ∫ x in B, H x ∂μ := by
-              exact MeasureTheory.setIntegral_condExp' m hm hBm hH
-        _ = ∫ x in g ⁻¹' B, (H ∘ g) x ∂μ' := by
-              exact (MeasureTheory.setIntegral_map_preimage g hg hpush H B hBm' hH_aesm).symm
+      ∫ x in g ⁻¹' B, (condExp m μ H ∘ g) x ∂ μ'
+          = ∫ x in B, condExp m μ H x ∂ μ := by
+            -- ★ explicit instance-locked change of variables
+            exact
+              @MeasureTheory.setIntegral_map_preimage Ω Ω' inst _ μ μ' g hg hpush
+                (condExp m μ H) B hBm' hCE_ae
+      _ = ∫ x in B, H x ∂ μ := by
+            -- ★ explicit instance-locked CE property on m
+            -- Provide `SigmaFinite (μ.trim hm)` if your build doesn't infer it automatically from finiteness.
+            -- You can move this `haveI` up if you prefer a global instance.
+            haveI : SigmaFinite (μ.trim hm) := inferInstance
+            exact
+              @MeasureTheory.setIntegral_condExp' Ω inst μ m hm _ B (by simpa using hBm) H hH
+      _ = ∫ x in g ⁻¹' B, (H ∘ g) x ∂ μ' := by
+            -- ★ explicit instance-locked change of variables (back)
+            exact
+              (@MeasureTheory.setIntegral_map_preimage Ω Ω' inst _ μ μ' g hg hpush
+                H B hBm' hH_ae).symm
     /-
     PROOF STRATEGY (blocked by type class synthesis for sub-σ-algebras):
 
