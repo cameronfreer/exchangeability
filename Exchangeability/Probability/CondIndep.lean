@@ -570,8 +570,11 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
       -- And we know: ∫_t f + ∫_{tᶜ} f = ∫ f
       -- Also: ∫ E[f|mW] = ∫ f (by conditional expectation property)
       have h_total : ∫ x, (μ[f | mW]) x ∂μ = ∫ x, f x ∂μ := by
-        -- mW ≤ ambient, need SigmaFinite on trim
-        sorry  -- This requires showing SigmaFinite (μ.trim hle), defer for now
+        -- Use integral_condExp: ∫ μ[f|m] = ∫ f
+        -- Requires SigmaFinite (μ.trim hle_amb), which follows from IsProbabilityMeasure
+        -- Chain: IsProbabilityMeasure → IsFiniteMeasure → IsFiniteMeasure.trim → SigmaFinite.trim
+        have hle_amb : mW ≤ _ := le_trans hle hmZW_le
+        exact integral_condExp hle_amb
       linarith
 
     · -- Countable disjoint union
