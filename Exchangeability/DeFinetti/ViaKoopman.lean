@@ -592,8 +592,7 @@ lemma integrable_of_ae_bound
     calc ∫⁻ x, ‖f x‖₊ ∂μ
         = ∫⁻ x, ENNReal.ofReal |f x| ∂μ := by
             congr 1 with x
-            rw [Real.nnnorm_of_nonneg (abs_nonneg _)]
-            rfl
+            simp [Real.norm_eq_abs]
       _ ≤ ENNReal.ofReal C * μ Set.univ := hlin
       _ < ⊤ := this
 
@@ -3880,7 +3879,7 @@ private lemma optionB_Step4a_L2_to_L1
     intro fLp
     -- On probability spaces, snorm with p=1 ≤ snorm with p=2
     have h_snorm_le : eLpNorm (fLp : Ω[α] → ℝ) 1 μ ≤ eLpNorm (fLp : Ω[α] → ℝ) 2 μ := by
-      exact eLpNorm_le_eLpNorm_of_exponent_le (by norm_num : (1 : ℝ≥0∞) ≤ 2) μ
+      exact eLpNorm_le_eLpNorm_of_exponent_le (by norm_num : (1 : ℝ≥0∞) ≤ 2)
         (Lp.aestronglyMeasurable fLp)
     -- Convert to real inequality: since ‖fLp‖ = (eLpNorm fLp 2 μ).toReal by Lp.norm_def,
     -- and ∫|fLp| ≤ (eLpNorm fLp 1 μ).toReal since fLp ∈ L² ⊂ L¹ on probability spaces,
@@ -4098,7 +4097,7 @@ private lemma optionB_Step4b_AB_close
 Given ∫|B_n - Y| → 0 and ∫|A_n - B_n| → 0, proves ∫|A_n - Y| → 0 via squeeze theorem. -/
 private lemma optionB_Step4c_triangle
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    (g : α → ℝ) (hg_bd : ∃ Cg, ∀ x, |g x| ≤ Cg)
+    (g : α → ℝ) (hg_meas : Measurable g) (hg_bd : ∃ Cg, ∀ x, |g x| ≤ Cg)
     (A B : ℕ → Ω[α] → ℝ) (Y : Ω[α] → ℝ) (G : Ω[α] → ℝ)
     (hA_def : A = fun n ω => 1 / (↑n + 1) * (Finset.range (n + 1)).sum (fun j => g (ω j)))
     (hB_def : B = fun n ω => if n = 0 then 0 else 1 / ↑n * (Finset.range n).sum (fun j => g (ω j)))
@@ -4142,7 +4141,7 @@ private lemma optionB_Step4c_triangle
           -- (1/n) * ∑_{j < n} g(ω j) is measurable
           refine Measurable.const_mul ?_ _
           refine Finset.measurable_sum (Finset.range n) (fun j _ => ?_)
-          exact hg_meas.comp (measurable_pi_apply j)
+          exact Measurable.comp hg_meas (measurable_pi_apply j)
         have hB_bd_ae : ∀ᵐ ω ∂μ, ‖B n ω‖ ≤ Cg := ae_of_all μ (fun ω => le_trans (Real.norm_eq_abs _).le (hB_bd ω))
         exact ⟨hB_meas.aestronglyMeasurable, HasFiniteIntegral.of_bounded hB_bd_ae⟩
     -- |B n - Y| is integrable as difference of integrable functions
@@ -4218,7 +4217,7 @@ private lemma optionB_Step4c_triangle
         simp
         refine Measurable.const_mul ?_ _
         refine Finset.measurable_sum (Finset.range (n + 1)) (fun j _ => ?_)
-        exact hg_meas.comp (measurable_pi_apply j)
+        exact Measurable.comp hg_meas (measurable_pi_apply j)
       have hB_meas : Measurable (B n) := by
         rw [hB_def]
         by_cases hn : n = 0
@@ -4226,7 +4225,7 @@ private lemma optionB_Step4c_triangle
         · simp [hn]
           refine Measurable.const_mul ?_ _
           refine Finset.measurable_sum (Finset.range n) (fun j _ => ?_)
-          exact hg_meas.comp (measurable_pi_apply j)
+          exact Measurable.comp hg_meas (measurable_pi_apply j)
       have hAB_bd_ae : ∀ᵐ ω ∂μ, ‖|A n ω - B n ω|‖ ≤ 2 * Cg :=
         ae_of_all μ (fun ω => by simp [Real.norm_eq_abs]; exact hAB_bd ω)
       exact ⟨(hA_meas.sub hB_meas).norm.aestronglyMeasurable, HasFiniteIntegral.of_bounded hAB_bd_ae⟩
@@ -4455,7 +4454,7 @@ private theorem optionB_L1_convergence_bounded
     exact MeasureTheory.integrable_condExp
 
   -- Step 4c: Triangle inequality: |A_n - Y| ≤ |A_n - B_n| + |B_n - Y|
-  exact optionB_Step4c_triangle g ⟨Cg, hCg_bd⟩ A B Y G rfl rfl hG_int hY_int hB_L1_conv hA_B_close
+  exact optionB_Step4c_triangle g hg_meas ⟨Cg, hCg_bd⟩ A B Y G rfl rfl hG_int hY_int hB_L1_conv hA_B_close
 
 /-- Proof that the forward axiom is satisfied by the actual implementation. -/
 theorem optionB_L1_convergence_bounded_proves_axiom :
