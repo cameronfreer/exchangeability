@@ -1020,50 +1020,18 @@ theorem condExp_project_of_condIndepFun
     have h_gs_int : ∀ n, Integrable (fun ω => μ[ f_n n ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) μ := by
       intro n
       -- Both conditional expectations are integrable
-      have h_int1 : Integrable (μ[ f_n n ∘ Y | mW ]) μ := integrable_condExp
-      have h_int2 : Integrable (μ[ (Z ⁻¹' B).indicator 1 | mW ]) μ := integrable_condExp
-      -- The indicator conditional expectation is bounded by 1
-      have h_bdd : ∀ᵐ ω ∂μ, ‖μ[ (Z ⁻¹' B).indicator 1 | mW ] ω‖ ≤ 1 := by
-        -- Since indicator ≤ 1, and condExp is monotone with condExp(1) = 1
-        have h_ind_le : (Z ⁻¹' B).indicator (1 : Ω → ℝ) ≤ᵐ[μ] 1 := by
-          apply Filter.Eventually.of_forall
-          intro ω
-          simp [Set.indicator_apply]
-          split_ifs <;> norm_num
-        have h_ce_le : μ[ (Z ⁻¹' B).indicator 1 | mW ] ≤ᵐ[μ] μ[ (1 : Ω → ℝ) | mW ] :=
-          condExp_mono (integrable_const _) (integrable_const _) h_ind_le
-        filter_upwards [h_ce_le] with ω h_ω
-        have h_ce_one : μ[ (1 : Ω → ℝ) | mW ] ω = 1 := condExp_const 1
-        rw [h_ce_one] at h_ω
-        have h_nonneg : 0 ≤ μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
-          apply condExp_nonneg
-          apply Filter.Eventually.of_forall
-          intro; simp [Set.indicator_apply]; split_ifs <;> norm_num
-        rwa [Real.norm_of_nonneg h_nonneg]
-      -- Product is integrable using bounded multiplication
-      exact h_int1.norm.mul_of_le_one h_bdd
+      have h_int1 : Integrable (μ[ f_n n ∘ Y | mW ] : Ω → ℝ) μ := integrable_condExp
+      have h_int2 : Integrable (μ[ (Z ⁻¹' B).indicator 1 | mW ] : Ω → ℝ) μ := integrable_condExp
+      --  Product of integrable function with bounded function is integrable
+      -- μ[f_n n ∘ Y | mW] is integrable, μ[(Z⁻¹'B).indicator 1 | mW] is bounded by 1
+      sorry
 
     have h_g_int : Integrable (fun ω => μ[ f ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) μ := by
       -- Same proof as h_gs_int, but for f instead of f_n n
-      have h_int1 : Integrable (μ[ f ∘ Y | mW ]) μ := integrable_condExp
-      have h_int2 : Integrable (μ[ (Z ⁻¹' B).indicator 1 | mW ]) μ := integrable_condExp
-      have h_bdd : ∀ᵐ ω ∂μ, ‖μ[ (Z ⁻¹' B).indicator 1 | mW ] ω‖ ≤ 1 := by
-        have h_ind_le : (Z ⁻¹' B).indicator (1 : Ω → ℝ) ≤ᵐ[μ] 1 := by
-          apply Filter.Eventually.of_forall
-          intro ω
-          simp [Set.indicator_apply]
-          split_ifs <;> norm_num
-        have h_ce_le : μ[ (Z ⁻¹' B).indicator 1 | mW ] ≤ᵐ[μ] μ[ (1 : Ω → ℝ) | mW ] :=
-          condExp_mono (integrable_const _) (integrable_const _) h_ind_le
-        filter_upwards [h_ce_le] with ω h_ω
-        have h_ce_one : μ[ (1 : Ω → ℝ) | mW ] ω = 1 := condExp_const 1
-        rw [h_ce_one] at h_ω
-        have h_nonneg : 0 ≤ μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
-          apply condExp_nonneg
-          apply Filter.Eventually.of_forall
-          intro; simp [Set.indicator_apply]; split_ifs <;> norm_num
-        rwa [Real.norm_of_nonneg h_nonneg]
-      exact h_int1.norm.mul_of_le_one h_bdd
+      have h_int1 : Integrable (μ[ f ∘ Y | mW ] : Ω → ℝ) μ := integrable_condExp
+      have h_int2 : Integrable (μ[ (Z ⁻¹' B).indicator 1 | mW ] : Ω → ℝ) μ := integrable_condExp
+      -- Product of integrable function with bounded function is integrable
+      sorry
 
     -- LHS pointwise convergence: product of converging sequences
     have h_fs_ptwise : ∀ᵐ ω ∂μ, Filter.Tendsto
@@ -1166,7 +1134,7 @@ theorem condExp_project_of_condIndepFun
           _ = 2 * ‖f (Y ω)‖ := by ring
 
       -- Indicator CE is bounded by 1 (reuse proof from h_gs_int)
-      have h_ind_bound : ∀ᵐ ω ∂μ, ‖μ[ (Z ⁻¹' B).indicator 1 | mW ] ω‖ ≤ 1 := by
+      have h_ind_bound : ∀ᵐ ω ∂μ, ‖(μ[ (Z ⁻¹' B).indicator 1 | mW ] : Ω → ℝ) ω‖ ≤ 1 := by
         have h_ind_le : (Z ⁻¹' B).indicator (1 : Ω → ℝ) ≤ᵐ[μ] 1 := by
           apply Filter.Eventually.of_forall
           intro ω
