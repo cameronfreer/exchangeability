@@ -3776,24 +3776,11 @@ convert between `Lp ℝ 2 μ` and `MemLp _ 2 μ` representations. The `Lp.memℒ
 doesn't exist in the current mathlib API. -/
 private lemma condexpL2_ae_eq_condExp (f : Lp ℝ 2 μ) :
     (condexpL2 (μ := μ) f : Ω[α] → ℝ) =ᵐ[μ] μ[f | shiftInvariantSigma] := by
-  -- Mathlib has MeasureTheory.MemLp.condExpL2_ae_eq_condExp which states:
-  --   condExpL2 E 𝕜 hm hf.toLp =ᵐ[μ] μ[f|m]
-  -- where hf : MemLp f 2 μ (function with Lp membership proof).
-  --
-  -- But we have f : Lp ℝ 2 μ (quotient type), and need to extract:
-  -- 1. The representative function (f : α → ℝ)
-  -- 2. The MemLp proof for that representative
-  --
-  -- The missing API lemma is Lp.memℒp : ∀ (f : Lp E p μ), MemLp (f : α → E) p μ
-  -- This doesn't exist in current mathlib, blocking the proof.
-  -- mathlib lemma relating `condExpL2` and `condExp` a.e.
-  -- minor naming drift across snapshots: try one of these, they're all standard:
-  -- * `MeasureTheory.Memℒp.condExpL2_ae_eq_condExp`
-  -- * `MeasureTheory.condexpL2_ae_eq_condexp`
-  -- * `MeasureTheory.condExpL2_ae_eq_condExp`
-  simpa using
-    MeasureTheory.Memℒp.condExpL2_ae_eq_condExp
-      (Lp.memℒp f) shiftInvariantSigma_le
+  -- Use Lp.memLp to extract MemLp proof from Lp element
+  have hf : MemLp (f : Ω[α] → ℝ) 2 μ := Lp.memLp f
+  -- Apply the mathlib lemma: condExpL2 E 𝕜 hm hf.toLp =ᵐ[μ] μ[f|m]
+  exact (MeasureTheory.MemLp.condExpL2_ae_eq_condExp (E := ℝ) (𝕜 := ℝ)
+    shiftInvariantSigma_le hf).symm
 
 -- Helper lemmas for Step 3a: a.e. equality through measure-preserving maps
 --
@@ -3870,21 +3857,23 @@ private lemma optionB_Step4a_L2_to_L1
       Tendsto (fun n =>
         ‖(birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2)
            - (condexpL2 (μ := μ) fL2)‖) atTop (𝓝 0) := by
-    -- subtraction and norm are continuous
-    have h1 : Tendsto (fun n => (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2) - (condexpL2 (μ := μ) fL2)) atTop (𝓝 0) := by
-      simpa using hfL2_tendsto.sub tendsto_const_nhds
-    exact h1.norm
+    -- Use Tendsto.sub_const to handle subtraction in limits
+    have h1 : Tendsto (fun n => (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2) - (condexpL2 (μ := μ) fL2)) atTop (𝓝 (condexpL2 (μ := μ) fL2 - condexpL2 (μ := μ) fL2)) := by
+      exact Tendsto.sub_const hfL2_tendsto (condexpL2 (μ := μ) fL2)
+    -- Simplify: condexpL2 fL2 - condexpL2 fL2 = 0
+    have : condexpL2 (μ := μ) fL2 - condexpL2 (μ := μ) fL2 = 0 := sub_self _
+    rw [this] at h1
+    -- Apply continuous norm
+    have h2 := Continuous.tendsto continuous_norm _ |>.comp h1
+    simpa [norm_zero] using h2
 
-  -- Helper: on prob. spaces, ∫ ‖F‖ ≤ snorm F 2 = Lp norm
+  -- Helper: on prob. spaces, ∫ ‖F‖ ≤ ‖F‖₂ via Hölder
   have integral_abs_le_L2 :
       ∀ (fLp : Lp ℝ 2 μ), ∫ ω, |fLp ω| ∂μ ≤ ‖fLp‖ := by
     intro fLp
-    -- canonical inequality in mathlib: integral_norm_le_snorm (with p = 2)
-    have h := MeasureTheory.integral_norm_le_snorm
-                (f := fLp) (μ := μ) (p := (2 : ℝ≥0∞))
-                fLp.aestronglyMeasurable
-    -- On a probability space, the Hölder factor collapses to 1
-    simpa [Lp.norm_def] using h
+    -- Use norm_integral_le_integral_norm then Hölder
+    have h1 := norm_integral_le_integral_norm (fLp : Ω[α] → ℝ) μ
+    sorry -- Need to bound ∫ |f| by ‖f‖₂ using Hölder on prob space
 
   -- Step 2: pointwise rewrite B n and Y to the Lp reps, then apply the inequality
   have h_upper :
