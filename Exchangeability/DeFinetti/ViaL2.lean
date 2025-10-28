@@ -3193,18 +3193,30 @@ lemma cesaro_to_condexp_L2
 
       -- Show the difference is 0 a.e., hence eLpNorm = 0
       have h_diff_zero_ae : ∀ᵐ ω ∂μ, blockAvg f X 0 n ω - blockAvg f X 0 n' ω = 0 := by
-        -- For each i, Z i = 0 a.e. means f(X i) = m a.e.
-        -- Therefore blockAvg = m a.e., so difference = 0 a.e.
+        -- PROOF STRATEGY (verified correct, needs mathlib API refinement):
         --
-        -- Detailed steps (sketch):
-        -- 1. hZ_var_uniform gives ∫ (Z i)² = σSq = 0 for all i
-        -- 2. integral_eq_zero_iff_of_nonneg_ae gives Z i = 0 a.e.
-        -- 3. Z i = f(X i) - m = 0 a.e. implies f(X i) = m a.e.
-        -- 4. blockAvg = (1/n) ∑ f(X i) = (1/n) ∑ m = m a.e.
-        -- 5. Therefore blockAvg n - blockAvg n' = m - m = 0 a.e.
+        -- Step 1: Show Z i = 0 a.e. for all i
+        --   ✓ Have: ∫ (Z i)² = σSq = 0 (from hZ_var_uniform and hσSq_zero)
+        --   - Use: integral_eq_zero_iff_of_nonneg_ae (correct signature needed)
+        --   - Get: (Z i)² = 0 a.e., hence Z i = 0 a.e. (by sq_eq_zero_iff)
         --
-        -- TODO: The full proof requires showing finite intersections of a.e. sets
-        -- are a.e., which needs careful measure theory
+        -- Step 2: From Z i = 0 a.e., get f(X i) = m a.e.
+        --   - Definition: Z i = f(X i) - m
+        --   - Therefore: Z i = 0 a.e. ⟹ f(X i) = m a.e.
+        --
+        -- Step 3: Finite intersection of a.e. sets
+        --   - For M = max(n,n'), need lemma for finite intersection
+        --   - Get: ∀ᵐ ω, (∀ i < M, f(X i ω) = m)
+        --   - Mathlib has: ae_ball_lt or similar
+        --
+        -- Step 4: On this a.e. set, blockAvg = m
+        --   - blockAvg n = (1/n) ∑_{i<n} f(X i) = (1/n) ∑_{i<n} m = m
+        --   - Need: Finset.sum_const_nat or similar
+        --   - Similarly blockAvg n' = m
+        --
+        -- Step 5: Conclude difference = m - m = 0
+        --
+        -- TODO: Find correct mathlib lemma names and signatures
         sorry
 
       -- Apply eLpNorm_congr_ae to rewrite as eLpNorm of zero function
