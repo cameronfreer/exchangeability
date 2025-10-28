@@ -567,6 +567,29 @@ lemma setIntegral_map_preimage
   have := @setIntegral_map Ω Ω' _ _ (Measure.map g μ') μ' g s f hs hf' hg.aemeasurable
   simpa [hpush] using this.symm
 
+/-- On a finite measure space, an a.e.-bounded, a.e.-measurable real function is integrable. -/
+lemma integrable_of_ae_bound
+    {Ω} [MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
+    {f : Ω → ℝ}
+    (hf : AEMeasurable f μ)
+    (hbd : ∃ C : ℝ, ∀ᵐ x ∂μ, |f x| ≤ C) :
+    Integrable f μ := by
+  classical
+  rcases hbd with ⟨C, hC⟩
+  -- bound the `lintegral` of `|f|`
+  have hC' : (fun x => ENNReal.ofReal |f x|) ≤ᵐ[μ] (fun _ => ENNReal.ofReal C) := by
+    filter_upwards [hC] with x hx
+    exact ENNReal.ofReal_le_ofReal hx
+  have hlin :
+      ∫⁻ x, ENNReal.ofReal |f x| ∂μ ≤ ENNReal.ofReal C * μ Set.univ := by
+    simpa [lintegral_const, measure_univ] using lintegral_mono_ae hC'
+  have hfin : (∫⁻ x, ENNReal.ofReal |f x| ∂μ) < ∞ := by
+    have : ENNReal.ofReal C * μ Set.univ < ∞ := by
+      have hμ : μ Set.univ < ∞ := measure_univ_lt_top
+      exact mul_lt_top (lt_top_iff_ne_top.mpr (by simp)) hμ
+    exact lt_of_le_of_lt hlin this
+  exact ⟨hf, hfin⟩
+
 end MeasureTheory
 
 /-- **Factor-map pullback for conditional expectation**.
@@ -3841,7 +3864,7 @@ private lemma optionB_Step4a_L2_to_L1
 For bounded g, shows |A_n ω - B_n ω| ≤ 2·Cg/(n+1) → 0 via dominated convergence. -/
 private lemma optionB_Step4b_AB_close
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    (g : α → ℝ) (Cg : ℝ) (hCg_bd : ∀ x, |g x| ≤ Cg)
+    (g : α → ℝ) (hg_meas : Measurable g) (Cg : ℝ) (hCg_bd : ∀ x, |g x| ≤ Cg)
     (A B : ℕ → Ω[α] → ℝ)
     (hA_def : A = fun n ω => 1 / (↑n + 1) * (Finset.range (n + 1)).sum (fun j => g (ω j)))
     (hB_def : B = fun n ω => if n = 0 then 0 else 1 / ↑n * (Finset.range n).sum (fun j => g (ω j))) :
@@ -3903,15 +3926,98 @@ private lemma optionB_Step4b_AB_close
     -- Both sides integrable (constant is integrable; the left is bounded by a constant on a prob space)
     have h_int_right : Integrable (fun _ => 2 * Cg / (n + 1)) μ := integrable_const _
     have h_int_left  : Integrable (fun ω => |A n ω - B n ω|) μ := by
-      sorry  -- TODO: bounded measurable functions are integrable on finite measure spaces
+      classical
+      -- Show `Integrable (A n)` and `Integrable (B n)` first.
+      have h_int_An : Integrable (A n) μ := by
+        -- Each summand ω ↦ g (ω i) is integrable by boundedness + measurability.
+        have h_i :
+            ∀ i ∈ Finset.range (n+1),
+              Integrable (fun ω => g (ω i)) μ := by
+          intro i hi
+          -- measurability of ω ↦ g (ω i)
+          have hmeas : AEMeasurable (fun ω => g (ω i)) μ :=
+            (hg_meas.comp (measurable_pi_apply i)).aemeasurable
+          -- uniform bound by Cg (pointwise → a.e.)
+          have hbd : ∃ C : ℝ, ∀ᵐ ω ∂μ, |g (ω i)| ≤ C :=
+            ⟨Cg, ae_of_all _ (fun ω => hCg_bd (ω i))⟩
+          exact MeasureTheory.integrable_of_ae_bound hmeas hbd
+        -- sum is integrable, and scaling by a real keeps integrability
+        have h_sum :
+            Integrable (fun ω =>
+              (Finset.range (n+1)).sum (fun i => g (ω i))) μ :=
+          integrable_finset_sum (by intro i hi; simpa using h_i i hi)
+        -- A n is (1/(n+1)) • (sum …)
+        have h_smul :
+            Integrable (fun ω =>
+              (1 / (n + 1 : ℝ)) •
+              ( (Finset.range (n+1)).sum (fun i => g (ω i)) )) μ :=
+          h_sum.smul (1 / (n + 1 : ℝ))
+        -- rewrite to your definition of `A n`
+        simpa [A, one_div, smul_eq_mul] using h_smul
+
+      have h_int_Bn : Integrable (B n) μ := by
+        -- B n has a special n=0 case
+        by_cases hn_zero : n = 0
+        · -- n = 0: B 0 = 0
+          simp [B, hB_def, hn_zero]
+          exact integrable_zero _ _ _
+        · -- n ≠ 0: B n uses Finset.range n
+          have h_i :
+              ∀ i ∈ Finset.range n,
+                Integrable (fun ω => g (ω i)) μ := by
+            intro i hi
+            have hmeas : AEMeasurable (fun ω => g (ω i)) μ :=
+              (hg_meas.comp (measurable_pi_apply i)).aemeasurable
+            have hbd : ∃ C : ℝ, ∀ᵐ ω ∂μ, |g (ω i)| ≤ C :=
+              ⟨Cg, ae_of_all _ (fun ω => hCg_bd (ω i))⟩
+            exact MeasureTheory.integrable_of_ae_bound hmeas hbd
+          have h_sum :
+              Integrable (fun ω =>
+                (Finset.range n).sum (fun i => g (ω i))) μ :=
+            integrable_finset_sum (by intro i hi; simpa using h_i i hi)
+          have h_smul :
+              Integrable (fun ω =>
+                (1 / (n : ℝ)) •
+                ( (Finset.range n).sum (fun i => g (ω i)) )) μ :=
+            h_sum.smul (1 / (n : ℝ))
+          simpa [B, hB_def, hn_zero, one_div, smul_eq_mul] using h_smul
+      -- Now `|A n - B n|` is integrable.
+      exact (h_int_An.sub h_int_Bn).abs
     -- Monotonicity of the integral under AE ≤
     calc ∫ ω, |A n ω - B n ω| ∂μ
         ≤ ∫ ω, 2 * Cg / (↑n + 1) ∂μ := integral_mono_ae h_int_left h_int_right h_bd_ae
       _ = 2 * Cg / (n + 1) := by simp
 
-  -- TODO: squeeze_zero approach has type issues - needs alternative approach
-  -- User mentioned having "ideas for A" - awaiting better fix
-  sorry
+  -- Lower bound: integrals of nonnegative functions are ≥ 0.
+  have h_lower : ∀ n, 0 ≤ ∫ ω, |A n ω - B n ω| ∂μ := by
+    intro n; have := integral_nonneg (by intro ω; exact abs_nonneg _)
+    simpa using this
+
+  -- Upper bound eventually: use your bound `h_upper` from Step 4b/4c
+  have h_upper' :
+      ∀ᶠ n in Filter.atTop,
+        ∫ ω, |A n ω - B n ω| ∂μ ≤ (2 * Cg) / (n + 1 : ℝ) := by
+    filter_upwards [eventually_gt_atTop (0 : ℕ)] with n hn
+    exact h_upper n hn
+
+  -- The RHS tends to 0.
+  have h_tends_zero :
+      Tendsto (fun n : ℕ => (2 * Cg) / (n + 1 : ℝ)) atTop (𝓝 0) := by
+    -- (2*Cg) * (n+1)⁻¹ → 0
+    simp [div_eq_mul_inv]
+    refine (tendsto_const_nhds.mul ?_)
+    -- (n+1 : ℝ) → ∞, so its inverse → 0
+    have : Tendsto (fun n : ℕ => (n : ℝ)) atTop atTop :=
+      tendsto_natCast_atTop_atTop
+    have : Tendsto (fun n : ℕ => (n : ℝ) + 1) atTop atTop :=
+      this.atTop_add 1
+    exact tendsto_inv_atTop_zero.comp this
+
+  -- Squeeze
+  refine
+    tendsto_of_tendsto_of_tendsto_of_le_of_le
+      tendsto_const_nhds h_tends_zero
+      (Filter.eventually_of_forall h_lower) h_upper'
 
 /-- **Step 4c helper**: Triangle inequality to combine convergences.
 
@@ -3925,18 +4031,74 @@ private lemma optionB_Step4c_triangle
     (hB_L1_conv : Tendsto (fun n => ∫ ω, |B n ω - Y ω| ∂μ) atTop (𝓝 0))
     (hA_B_close : Tendsto (fun n => ∫ ω, |A n ω - B n ω| ∂μ) atTop (𝓝 0)) :
     Tendsto (fun n => ∫ ω, |A n ω - Y ω| ∂μ) atTop (𝓝 0) := by
-  -- Triangle inequality: |A_n - Y| ≤ |A_n - B_n| + |B_n - Y|
-  have h_triangle : ∀ n, ∫ ω, |A n ω - Y ω| ∂μ ≤
-      ∫ ω, |A n ω - B n ω| ∂μ + ∫ ω, |B n ω - Y ω| ∂μ := by
+  -- First prove integrability of |B n - Y| from L¹ convergence hypothesis
+  have hBY_abs_integrable : ∀ n, Integrable (fun ω => |B n ω - Y ω|) μ := by
     intro n
-    -- Goal: ∫|A n - Y| ≤ ∫|A n - B n| + ∫|B n - Y|
-    -- TODO: needs integrability lemmas from convergence hypotheses
-    -- Structure: |A_n - Y| = |(A_n - B_n) + (B_n - Y)| ≤ |A_n - B_n| + |B_n - Y|
-    -- Then integrate both sides and use integral_add
-    sorry
-  -- TODO: squeeze_zero approach has type issues - needs alternative approach
-  -- User mentioned having "ideas for A" - awaiting better fix
-  sorry
+    -- Y is a conditional expectation of G, so it's integrable
+    have hY_int : Integrable Y μ := by
+      sorry  -- TODO: condExp preserves integrability
+    -- B n is bounded and measurable, so integrable
+    have hB_int : Integrable (B n) μ := by
+      sorry  -- TODO: similar to proof in Sorry #1
+    -- |B n - Y| is integrable as difference of integrable functions
+    exact (hB_int.sub hY_int).abs
+
+  -- Triangle inequality under the integral
+  have h_triangle :
+      ∀ n,
+        ∫ ω, |A n ω - Y ω| ∂μ
+          ≤ ∫ ω, |A n ω - B n ω| ∂μ + ∫ ω, |B n ω - Y ω| ∂μ := by
+    intro n
+    -- pointwise triangle: |(A-B)+(B-Y)| ≤ |A-B| + |B-Y|
+    have hpt :
+        ∀ ω, |(A n ω - B n ω) + (B n ω - Y ω)| ≤
+              |A n ω - B n ω| + |B n ω - Y ω| := by
+      intro ω; simpa using abs_add (A n ω - B n ω) (B n ω - Y ω)
+    -- rewrite the LHS inside the absolute value
+    have hre : (fun ω => |A n ω - Y ω|) =
+               (fun ω => |(A n ω - B n ω) + (B n ω - Y ω)|) := by
+      funext ω; ring_nf
+    -- both RHS summands are integrable
+    have hint1 : Integrable (fun ω => |A n ω - B n ω|) μ := by
+      sorry  -- TODO: from Sorry #1 integrability proof
+    have hint2 : Integrable (fun ω => |B n ω - Y ω|) μ := hBY_abs_integrable n
+    -- now integrate the pointwise inequality
+    calc
+      ∫ ω, |A n ω - Y ω| ∂μ
+          = ∫ ω, |(A n ω - B n ω) + (B n ω - Y ω)| ∂μ := by simpa [hre]
+      _ ≤ ∫ ω, (|A n ω - B n ω| + |B n ω - Y ω|) ∂μ := by
+            refine integral_mono_of_nonneg ?_ ?_ ?_ ?_
+            · intro ω; positivity
+            · intro ω; positivity
+            · apply hint1.add hint2
+            · intro ω; exact hpt ω
+      _ = ∫ ω, |A n ω - B n ω| ∂μ + ∫ ω, |B n ω - Y ω| ∂μ := by
+            simpa using integral_add hint1 hint2
+
+  -- Finally, squeeze using `h_triangle`, your Step 4b result, and `hB_L1_conv`.
+  refine Metric.tendsto_atTop.2 ?_   -- ε-criterion
+  intro ε hε
+  -- get N₁ from Step 4b: ∫|A n - B n| → 0
+  obtain ⟨N₁, hN₁⟩ := (Metric.tendsto_atTop.mp hA_B_close) (ε/2) (by linarith)
+  -- get N₂ from Step 4c: ∫|B n - Y| → 0
+  obtain ⟨N₂, hN₂⟩ := (Metric.tendsto_atTop.mp hB_L1_conv) (ε/2) (by linarith)
+  refine ⟨max N₁ N₂, ?_⟩
+  intro n hn
+  have hn₁ : N₁ ≤ n := le_of_max_le_left hn
+  have hn₂ : N₂ ≤ n := le_of_max_le_right hn
+  calc
+    dist (∫ ω, |A n ω - Y ω| ∂μ) 0
+        = |∫ ω, |A n ω - Y ω| ∂μ| := by simp [dist_zero_right]
+    _ =  ∫ ω, |A n ω - Y ω| ∂μ := by
+          have : 0 ≤ ∫ ω, |A n ω - Y ω| ∂μ :=
+            integral_nonneg (by intro ω; positivity)
+          simpa [abs_of_nonneg this]
+    _ ≤  ∫ ω, |A n ω - B n ω| ∂μ + ∫ ω, |B n ω - Y ω| ∂μ := h_triangle n
+    _ <  ε/2 + ε/2 := by
+          apply add_lt_add
+          · exact hN₁ n hn₁
+          · exact hN₂ n hn₂
+    _ =  ε := by ring
 
 /-- **Option B bounded case implementation**: L¹ convergence for bounded functions.
 
@@ -4105,7 +4267,7 @@ private theorem optionB_L1_convergence_bounded
   obtain ⟨Cg, hCg_bd⟩ := hg_bd
   have hA_B_close :
       Tendsto (fun n => ∫ ω, |A n ω - B n ω| ∂μ) atTop (𝓝 0) :=
-    optionB_Step4b_AB_close (μ := μ) g Cg hCg_bd A B rfl rfl
+    optionB_Step4b_AB_close (μ := μ) g hg_meas Cg hCg_bd A B rfl rfl
 
   -- Step 4c: Triangle inequality: |A_n - Y| ≤ |A_n - B_n| + |B_n - Y|
   exact optionB_Step4c_triangle g ⟨Cg, hCg_bd⟩ A B Y G rfl rfl hB_L1_conv hA_B_close
