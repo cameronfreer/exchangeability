@@ -114,28 +114,80 @@ theorem condIndep_symm (μ : Measure Ω) [IsProbabilityMeasure μ]
     simp only [mul_comm] at this ⊢
     exact this
 
-/-- **Constant conditioning: unconditional independence implies conditional independence.**
-
-If Y and Z are unconditionally independent, then they are conditionally independent
-given any W. This is because conditioning on W only adds information, and independent
-events remain independent when we add a common conditioning event.
-
-TODO: Requires defining unconditional independence first, or proving directly from
-the product measure property.
+/-!
+## Helper lemmas for independence and conditional expectation
 -/
-theorem condIndep_of_indep (μ : Measure Ω) [IsProbabilityMeasure μ]
-    (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
-    (hY : Measurable Y) (hZ : Measurable Z) (hW : Measurable W) :
-    -- TODO: Add hypothesis that Y and Z are independent
-    -- For now, placeholder
-    True → CondIndep μ Y Z W := by
-  intro _
+
+/-- **Conditional expectation against an independent σ-algebra is constant.**
+
+If X is integrable and measurable with respect to a σ-algebra independent of σ(W),
+then E[X | σ(W)] = E[X] almost everywhere.
+
+This is the key property that makes independence "pass through" conditioning:
+knowing W provides no information about X when X ⊥ W.
+-/
+lemma condExp_const_of_indepFun (μ : Measure Ω) [IsProbabilityMeasure μ]
+    {X : Ω → ℝ} {W : Ω → γ}
+    (h_indep : IndepFun X W μ)
+    (hX_int : Integrable X μ) :
+    μ[X | MeasurableSpace.comap W inferInstance] =ᵐ[μ] (fun _ => μ[X]) := by
+  -- For s ∈ σ(W), independence gives ∫_s X dμ = μ[X] · μ[s]
+  -- This characterizes CE as the constant μ[X]
+  -- Full proof uses IndepFun.integral_mul applied to X and 1_s
   sorry
-  -- Proof sketch:
-  -- 1. From unconditional independence: E[1_A(Y) · 1_B(Z)] = E[1_A(Y)] · E[1_B(Z)]
-  -- 2. Take conditional expectation given W on both sides
-  -- 3. Use linearity and that E[E[·|W]|W] = E[·|W]
-  -- 4. Get E[1_A(Y) · 1_B(Z)|W] = E[1_A(Y)|W] · E[1_B(Z)|W]
+
+/-- Extract independence of first component from pair independence. -/
+lemma IndepFun.of_comp_left_fst {Y : Ω → α} {Z : Ω → β} {W : Ω → γ}
+    (h : IndepFun (fun ω => (Y ω, Z ω)) W μ) :
+    IndepFun Y W μ := by
+  -- Y = Prod.fst ∘ (fun ω => (Y ω, Z ω))
+  -- So Y ⊥ W follows from (Y,Z) ⊥ W by composition
+  have : Y = Prod.fst ∘ (fun ω => (Y ω, Z ω)) := by rfl
+  rw [this]
+  exact h.comp measurable_fst measurable_id
+
+/-- Extract independence of second component from pair independence. -/
+lemma IndepFun.of_comp_left_snd {Y : Ω → α} {Z : Ω → β} {W : Ω → γ}
+    (h : IndepFun (fun ω => (Y ω, Z ω)) W μ) :
+    IndepFun Z W μ := by
+  -- Z = Prod.snd ∘ (fun ω => (Y ω, Z ω))
+  -- So Z ⊥ W follows from (Y,Z) ⊥ W by composition
+  have : Z = Prod.snd ∘ (fun ω => (Y ω, Z ω)) := by rfl
+  rw [this]
+  exact h.comp measurable_snd measurable_id
+
+/-!
+## Conditional independence from unconditional independence
+-/
+
+/-- **Independence plus independence of pair from W implies conditional independence.**
+
+If Y and Z are (unconditionally) independent, and the pair (Y,Z) is independent of W,
+then Y ⊥⊥_W Z.
+
+**Key insight:** Independence of (Y,Z) from W means the conditional law of (Y,Z) given W
+equals the unconditional law, so the factorization E[1_A(Y)·1_B(Z)] = E[1_A(Y)]·E[1_B(Z)]
+survives conditioning on W.
+
+**Counterexample showing Y ⊥ Z alone is NOT enough:**
+- Y, Z: independent fair coin flips
+- W := Y + Z
+- Then Y ⊥ Z unconditionally, but P(Y=1|Z=1,W=1) = 1 ≠ 1/2 = P(Y=1|W=1),
+  so Y and Z are NOT conditionally independent given W.
+
+**Proof strategy:**
+1. Since (Y,Z) ⊥ W, conditional expectation of any function of (Y,Z) given σ(W)
+   is the constant E[that function].
+2. Apply to 1_A(Y), 1_B(Z), and their product.
+3. The unconditional factorization E[1_A(Y)·1_B(Z)] = E[1_A(Y)]·E[1_B(Z)] (from Y ⊥ Z)
+   transfers to the conditional expectations.
+-/
+theorem condIndep_of_indep_pair (μ : Measure Ω) [IsProbabilityMeasure μ]
+    (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
+    (hYZ_indep : IndepFun Y Z μ)
+    (hPairW_indep : IndepFun (fun ω => (Y ω, Z ω)) W μ) :
+    CondIndep μ Y Z W := by
+  sorry
 
 /-!
 ## Extension to simple functions and bounded measurables (§C2)
@@ -211,43 +263,54 @@ lemma condIndep_boundedMeasurable (μ : Measure Ω) [IsProbabilityMeasure μ]
 ## Extension to product σ-algebras
 -/
 
-/-- **Conditional expectations given (Z,W) are σ(W)-measurable when Y ⊥⊥_W Z.**
+/-- **Conditional expectation projection from conditional independence (helper).**
 
-This is the key measurability property from conditional independence: if Y and Z are
-conditionally independent given W, then conditioning on (Z,W) doesn't use the information
-in Z for predicting Y-measurable functions. Therefore, E[f(Y)|σ(Z,W)] is actually
-σ(W)-measurable (factors through W alone).
+When Y ⊥⊥_W Z, conditioning on (Z,W) gives the same result as conditioning on W alone
+for indicator functions of Y.
 
-**Mathematical content:** Y ⊥⊥_W Z implies E[1_A(Y)|σ(Z,W)] ∈ L^0(σ(W)).
-
-**Proof strategy (via integral characterization):**
-1. Need to show: E[1_A(Y)|σ(Z,W)] is σ(W)-measurable
-2. Equivalently: For S ∈ σ(W), both E[1_A(Y)|σ(Z,W)] and E[1_A(Y)|σ(W)]
-   have the same integral over S
-3. This holds because S ∈ σ(W) ⊆ σ(Z,W), so:
-   ∫_S E[1_A(Y)|σ(Z,W)] = ∫_S 1_A(Y) = ∫_S E[1_A(Y)|σ(W)]
-4. But this only shows they're a.e. equal, not that one is measurable w.r.t. the other!
-
-**Alternative via product structure (requires deeper theory):**
-The conditional independence factorization E[1_A(Y)·1_B(Z)|W] = E[1_A(Y)|W]·E[1_B(Z)|W]
-means the conditional distribution of (Y,Z) given W is a product measure. This implies
-E[f(Y)|σ(Z,W)] = E[f(Y)|σ(W)] by the product measure projection property.
-
-**Status:** This is a fundamental result that requires either:
-- Developing conditional distribution/disintegration theory, OR
-- Using mathlib's kernel-based conditional independence, OR
-- Proving the projection property directly without this lemma
-
-For now, we defer this deep result and work on the direct projection approach.
+This is a key technical lemma used to prove the main projection theorem.
 -/
-lemma condExp_measurable_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
+lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
     (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
     (hY : Measurable Y) (hZ : Measurable Z) (hW : Measurable W)
     (h_indep : CondIndep μ Y Z W)
     {A : Set α} (hA : MeasurableSet A) :
-    Measurable[MeasurableSpace.comap W inferInstance]
-      (μ[ Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
-         | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance ]) := by
+    μ[ Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
+       | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance ]
+      =ᵐ[μ]
+    μ[ Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
+       | MeasurableSpace.comap W inferInstance ] := by
+  -- Strategy: Use uniqueness characterization of conditional expectation
+  -- Show that both CEs have the same integrals on all σ(W)-measurable sets
+  let mW := MeasurableSpace.comap W inferInstance
+  let mZW := MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance
+  let f := Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
+
+  -- σ-algebra ordering: σ(W) ⊆ σ(Z,W)
+  have hle : mW ≤ mZW := by
+    intro s hs
+    obtain ⟨T, hT_meas, rfl⟩ := hs
+    use Set.univ ×ˢ T
+    constructor
+    · exact MeasurableSet.univ.prod hT_meas
+    · ext ω; simp [Set.mem_preimage, Set.mem_prod]
+
+  -- Integrability
+  have hf_int : Integrable f μ := by
+    apply Integrable.indicator
+    · exact integrable_const (1 : ℝ)
+    · exact hY hA
+
+  -- Use tower property: E[E[f|mZW]|mW] = E[f|mW]
+  -- But we want to show E[f|mZW] = E[f|mW], which requires showing E[f|mZW] is mW-measurable
+  -- Actually, use condExp_condExp_of_le: E[E[f|m']|m] = E[f|m] when m ≤ m'
+  have tower : μ[μ[f | mZW] | mW] =ᵐ[μ] μ[f | mW] := by
+    apply condExp_condExp_of_le hle hf_int
+
+  -- Also have: μ[μ[f|mZW]|mW] =ᵐ μ[f|mZW] if μ[f|mZW] is mW-measurable
+  -- But μ[f|mZW] is mZW-measurable, not necessarily mW-measurable!
+
+  -- Alternative: show directly that both CEs have same integrals on mW-sets
   sorry
 
 /-- **Conditional expectation projection from conditional independence.**
@@ -281,29 +344,7 @@ theorem condIndep_project (μ : Measure Ω) [IsProbabilityMeasure μ]
       =ᵐ[μ]
     μ[ Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
        | MeasurableSpace.comap W inferInstance ] := by
-  sorry
-  /-
-  **Direct proof via integral matching (bypasses measurability lemma):**
-
-  Strategy: Show both sides have equal integrals on all σ(W)-measurable sets.
-
-  1. Let S ∈ σ(W) be arbitrary (so S = W⁻¹(T) for some measurable T ⊆ γ)
-
-  2. Compute ∫_S E[1_A(Y)|σ(Z,W)] dμ:
-     - Since S ∈ σ(W) ⊆ σ(Z,W), by CE property:
-       ∫_S E[1_A(Y)|σ(Z,W)] dμ = ∫_S 1_A(Y) dμ
-
-  3. Compute ∫_S E[1_A(Y)|σ(W)] dμ:
-     - Since S ∈ σ(W), by CE property:
-       ∫_S E[1_A(Y)|σ(W)] dμ = ∫_S 1_A(Y) dμ
-
-  4. Therefore integrals match on all σ(W)-sets
-
-  5. By uniqueness (condExp_eq_of_setIntegral_eq):
-     E[1_A(Y)|σ(Z,W)] =ᵐ[μ] E[1_A(Y)|σ(W)]
-
-  **Implementation challenge:** Need to verify all technical hypotheses for uniqueness
-  lemma (σ-finiteness, integrability, etc.)
-  -/
+  -- This follows directly from the helper lemma
+  exact condExp_project_of_condIndep μ Y Z W hY hZ hW h_indep hA
 
 end  -- noncomputable section
