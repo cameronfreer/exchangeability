@@ -3272,18 +3272,20 @@ lemma cesaro_to_condexp_L2
           have hterm : ∀ k ∈ Finset.range n, f (X k ω) = m := by
             intro k hk
             exact hω k (lt_of_lt_of_le (Finset.mem_range.mp hk) (le_max_left _ _))
-          let sum_lhs := ∑ k in Finset.range n, f (X k ω)
-          have hsum : sum_lhs = (n : ℝ) * m := by
-            show (∑ k in Finset.range n, f (X k ω)) = _
-            trans (∑ _ in Finset.range n, m)
-            · exact Finset.sum_congr rfl (by intro k hk; simpa [hterm k hk])
-            · simp [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+          have hsum : (∑ k ∈ Finset.range n, f (X k ω)) = (n : ℝ) * m := by
+            calc (∑ k ∈ Finset.range n, f (X k ω))
+                = (∑ k ∈ Finset.range n, m) := by
+                  refine Finset.sum_congr rfl ?_
+                  intro k hk; simpa [hterm k hk]
+              _ = (Finset.card (Finset.range n)) • m := by
+                  simpa [Finset.sum_const]
+              _ = (n : ℝ) * m := by
+                  simpa [Finset.card_range, nsmul_eq_mul]
           unfold blockAvg
-          calc (n : ℝ)⁻¹ * _
-              = (n : ℝ)⁻¹ * ((n : ℝ) * m) := by simpa [hsum]
-            _ = ((n : ℝ)⁻¹ * (n : ℝ)) * m := by ring
-            _ = 1 * m := by simp [inv_mul_cancel hn0]
-            _ = m := by simp
+          simp only [zero_add]
+          calc (n : ℝ)⁻¹ * (∑ k ∈ Finset.range n, f (X k ω))
+              = (n : ℝ)⁻¹ * ((n : ℝ) * m) := by simp [hsum]
+            _ = m := by field_simp [hn0]; ring
 
         -- Similarly for n'
         have hblockAvg_n'_eq_m : blockAvg f X 0 n' ω = m := by
@@ -3291,18 +3293,20 @@ lemma cesaro_to_condexp_L2
           have hterm : ∀ k ∈ Finset.range n', f (X k ω) = m := by
             intro k hk
             exact hω k (lt_of_lt_of_le (Finset.mem_range.mp hk) (le_max_right _ _))
-          let sum_lhs := ∑ k in Finset.range n', f (X k ω)
-          have hsum : sum_lhs = (n' : ℝ) * m := by
-            show (∑ k in Finset.range n', f (X k ω)) = _
-            trans (∑ _ in Finset.range n', m)
-            · exact Finset.sum_congr rfl (by intro k hk; simpa [hterm k hk])
-            · simp [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+          have hsum : (∑ k ∈ Finset.range n', f (X k ω)) = (n' : ℝ) * m := by
+            calc (∑ k ∈ Finset.range n', f (X k ω))
+                = (∑ k ∈ Finset.range n', m) := by
+                  refine Finset.sum_congr rfl ?_
+                  intro k hk; simpa [hterm k hk]
+              _ = (Finset.card (Finset.range n')) • m := by
+                  simpa [Finset.sum_const]
+              _ = (n' : ℝ) * m := by
+                  simpa [Finset.card_range, nsmul_eq_mul]
           unfold blockAvg
-          calc (n' : ℝ)⁻¹ * _
-              = (n' : ℝ)⁻¹ * ((n' : ℝ) * m) := by simpa [hsum]
-            _ = ((n' : ℝ)⁻¹ * (n' : ℝ)) * m := by ring
-            _ = 1 * m := by simp [inv_mul_cancel hn'0]
-            _ = m := by simp
+          simp only [zero_add]
+          calc (n' : ℝ)⁻¹ * (∑ k ∈ Finset.range n', f (X k ω))
+              = (n' : ℝ)⁻¹ * ((n' : ℝ) * m) := by simp [hsum]
+            _ = m := by field_simp [hn'0]; ring
 
         -- Step 5: Conclude difference = m - m = 0
         rw [hblockAvg_n_eq_m, hblockAvg_n'_eq_m]
