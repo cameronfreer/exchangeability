@@ -4078,7 +4078,7 @@ private theorem optionB_L1_convergence_bounded
     optionB_Step4b_AB_close (μ := μ) g Cg hCg_bd A B rfl rfl
 
   -- Step 4c: Triangle inequality: |A_n - Y| ≤ |A_n - B_n| + |B_n - Y|
-  exact optionB_Step4c_triangle g ⟨Cg, hCg_bd⟩ A B Y G hB_L1_conv hA_B_close
+  exact optionB_Step4c_triangle g ⟨Cg, hCg_bd⟩ A B Y G rfl rfl hB_L1_conv hA_B_close
 
 end OptionB_L1Convergence
 
