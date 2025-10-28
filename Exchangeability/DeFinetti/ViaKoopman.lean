@@ -3860,21 +3860,19 @@ private lemma optionB_Step4b_AB_close
     -- A n ω - B n ω = S/(n+1) + g(ω n)/(n+1) - S/n
     --               = -S/(n(n+1)) + g(ω n)/(n+1)
     calc |1 / (↑n + 1) * (S + g (ω n)) - 1 / ↑n * S|
-        = |S / (↑n + 1) + g (ω n) / (↑n + 1) - S / ↑n| := by ring_nf; ring
-      _ = |-S / (↑n * (↑n + 1)) + g (ω n) / (↑n + 1)| := by ring_nf; ring
+        = |S / (↑n + 1) + g (ω n) / (↑n + 1) - S / ↑n| := by ring
+      _ = |-S / (↑n * (↑n + 1)) + g (ω n) / (↑n + 1)| := by field_simp; ring
       _ ≤ |-S / (↑n * (↑n + 1))| + |g (ω n) / (↑n + 1)| := by
             -- triangle inequality |x + y| ≤ |x| + |y|
-            exact abs_add _ _
+            exact abs_add_le _ _
       _ = |S| / (↑n * (↑n + 1)) + |g (ω n)| / (↑n + 1) := by
             -- pull denominators out of |·| since denominators are ≥ 0
-            have h₁ : 0 ≤ (↑n * (↑n + 1)) := by
-              have hn0 : 0 ≤ (n : ℝ) := by exact_mod_cast Nat.zero_le _
-              have hnp1 : 0 ≤ (n : ℝ) + 1 := by linarith
-              exact mul_nonneg hn0 hnp1
-            have h₂ : 0 ≤ (↑n + 1) := by
-              have : 0 ≤ (n : ℝ) := by exact_mod_cast Nat.zero_le _
-              linarith
-            simp [abs_div, abs_of_nonneg, h₁, h₂]
+            have hn : 0 < (n : ℝ) + 1 := by positivity
+            have hnp : 0 < (n : ℝ) * ((n : ℝ) + 1) := by positivity
+            rw [abs_div, abs_div, abs_neg]
+            · congr 1
+              · rw [abs_of_pos hnp]
+              · rw [abs_of_pos hn]
       _ ≤ |S| / (↑n * (↑n + 1)) + Cg / (↑n + 1) := by
             gcongr
             exact hCg_bd (ω n)
@@ -3891,8 +3889,7 @@ private lemma optionB_Step4b_AB_close
             _ = n * Cg := by
                 rw [Finset.sum_const, Finset.card_range]
                 ring
-      _ = Cg / (↑n + 1) + Cg / (↑n + 1) := by field_simp; ring
-      _ = 2 * Cg / (↑n + 1) := by ring
+      _ = 2 * Cg / (↑n + 1) := by field_simp; ring
   -- Integrate the pointwise bound and squeeze to 0
   have h_upper : ∀ n > 0,
       ∫ ω, |A n ω - B n ω| ∂μ ≤ 2 * Cg / (n + 1) := by
