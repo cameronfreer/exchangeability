@@ -3867,13 +3867,29 @@ private lemma optionB_Step4a_L2_to_L1
     have h2 := Continuous.tendsto continuous_norm _ |>.comp h1
     simpa [norm_zero] using h2
 
-  -- Helper: on prob. spaces, ∫ ‖F‖ ≤ ‖F‖₂ via Hölder
+  -- Helper: on prob. spaces, ∫ |F| ≤ ‖F‖₂ via L¹ ≤ L² monotonicity
   have integral_abs_le_L2 :
       ∀ (fLp : Lp ℝ 2 μ), ∫ ω, |fLp ω| ∂μ ≤ ‖fLp‖ := by
     intro fLp
-    -- Use norm_integral_le_integral_norm then Hölder
-    have h1 := norm_integral_le_integral_norm (fLp : Ω[α] → ℝ) μ
-    sorry -- Need to bound ∫ |f| by ‖f‖₂ using Hölder on prob space
+    -- On probability spaces, snorm with p=1 ≤ snorm with p=2
+    have h_snorm_le : eLpNorm (fLp : Ω[α] → ℝ) 1 μ ≤ eLpNorm (fLp : Ω[α] → ℝ) 2 μ := by
+      exact eLpNorm_le_eLpNorm_of_exponent_le (by norm_num : (1 : ℝ≥0∞) ≤ 2) μ
+        (Lp.aestronglyMeasurable fLp)
+    -- Convert to real inequality: since ‖fLp‖ = (eLpNorm fLp 2 μ).toReal by Lp.norm_def,
+    -- and ∫|fLp| ≤ (eLpNorm fLp 1 μ).toReal since fLp ∈ L² ⊂ L¹ on probability spaces,
+    -- we get the result from toReal monotonicity
+    calc ∫ ω, |fLp ω| ∂μ
+        ≤ (eLpNorm (fLp : Ω[α] → ℝ) 1 μ).toReal := by
+          -- L² functions are L¹ integrable on probability spaces
+          have hint : Integrable (fLp : Ω[α] → ℝ) μ := by
+            rw [← memLp_one_iff_integrable]
+            exact Lp.memLp_of_memLp_of_exponent_le fLp (by norm_num : (1 : ℝ≥0∞) ≤ 2)
+          -- For integrable f, ∫|f| ≤ snorm 1 (with equality)
+          rw [← eLpNorm_one_eq_integral_norm hint (Lp.aestronglyMeasurable fLp)]
+          simp [abs_of_nonneg (norm_nonneg _)]
+      _ ≤ (eLpNorm (fLp : Ω[α] → ℝ) 2 μ).toReal :=
+          ENNReal.toReal_mono (Lp.eLpNorm_ne_top fLp) h_snorm_le
+      _ = ‖fLp‖ := (Lp.norm_def fLp).symm
 
   -- Step 2: pointwise rewrite B n and Y to the Lp reps, then apply the inequality
   have h_upper :
