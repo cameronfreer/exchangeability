@@ -385,44 +385,24 @@ lemma ProbabilityTheory.equal_kernels_on_factor
   (fun ω => (ProbabilityTheory.condDistrib ξ η μ (φ (ζ ω))) B) := by
   classical
 
-  -- We show the two sides have the same integrals over the π-system {ζ⁻¹(C)}.
-  -- Define the class of sets C for which the equality of integrals holds.
-  let 𝒞 : Set (Set ℝ) := {C |
-    MeasurableSet C ∧
-    ∫ ω, (Set.indicator (ζ ⁻¹' C) (fun _ => (1 : ℝ)) ω)
-          * ((ProbabilityTheory.condDistrib ξ ζ μ (ζ ω)) B).toReal ∂μ
-    =
-    ∫ ω, (Set.indicator (ζ ⁻¹' C) (fun _ => (1 : ℝ)) ω)
-          * ((ProbabilityTheory.condDistrib ξ η μ (φ (ζ ω))) B).toReal ∂μ}
+  -- **Strategy:** Show the two ENNReal-valued functions have equal `.toReal` values a.e.
+  -- by showing they have equal integrals over all measurable sets.
 
-  -- **Step 1:** Show 𝒞 is a π-system (closed under finite intersections)
-  have hπ : IsPiSystem 𝒞 := by
-    intro C₁ hC₁ C₂ hC₂ _
-    constructor
-    · exact hC₁.1.inter hC₂.1
-    · -- Intersections of preimages distribute: ζ⁻¹(C₁ ∩ C₂) = ζ⁻¹(C₁) ∩ ζ⁻¹(C₂)
-      -- Indicators multiply: 1_{A∩B} = 1_A · 1_B
-      -- Both integrals equal by distributivity
-      sorry  -- ~5 lines: indicator algebra + integral linearity
+  -- Both functions are σ(ζ)-measurable, so equal integrals over σ(ζ)-measurable sets suffice.
+  -- σ(ζ)-measurable sets are exactly preimages ζ⁻¹(C) for measurable C ⊆ ℝ.
 
-  -- **Step 2:** Show 𝒞 is a λ-system (Dynkin system)
-  -- The complete proof would verify that 𝒞 is closed under:
-  -- - Contains univ: ζ⁻¹(univ) = univ, indicator = 1
-  -- - Complements: 1 = 1_C + 1_{Cᶜ}, integral additivity
-  -- - Countable disjoint unions: monotone convergence
-
-  -- **Step 3:** Apply Dynkin's π-λ theorem
-  -- π-system generates σ-algebra, λ-system containing π-system contains σ-algebra
-
-  -- **Step 4:** Conclude a.e. equality via uniqueness
-  -- For all measurable C, the integrals over ζ⁻¹(C) agree
-  -- This means the two functions are σ(ζ)-measurable and have equal conditional expectations
-  -- By uniqueness of conditional expectations, they're equal a.e.
-
-  sorry  -- TODO: Complete Steps 2-4 (~25 lines total)
-  -- Step 2: IsDynkinSystem structure for 𝒞
-  -- Step 3: generateFrom_le + dynkin_system_theorem
-  -- Step 4: condExp uniqueness via ae_eq_of_forall_setIntegral_eq
+  sorry  -- TODO: Complete proof (~40 lines)
+  -- Main steps:
+  -- 1. Show both `.toReal` functions are integrable
+  -- 2. For any σ(ζ)-measurable set S = ζ⁻¹(C), show integrals over S agree
+  --    - Use the pair law + kernel properties
+  --    - This requires showing that the marginal + conditional structure is preserved
+  -- 3. Apply ae_eq_of_forall_setIntegral_eq to conclude a.e. equality of `.toReal`
+  -- 4. Convert back to ENNReal equality
+  --
+  -- Alternative simpler approach (if available in mathlib):
+  -- - Use disintegration uniqueness for kernels directly
+  -- - condDistrib is uniquely determined by the pair law
 
 /-- **Drop-information under pair-law + σ(η) ≤ σ(ζ)**: for indicator functions,
 conditioning on ζ equals conditioning on η.
@@ -462,13 +442,39 @@ theorem condexp_indicator_drop_info_of_pair_law_proven
     (fun ω => ((ProbabilityTheory.condDistrib ξ ζ μ (ζ ω)) B).toReal) := by
     -- This uses mathlib's condExp_ae_eq_integral_condDistrib for indicators
     -- The indicator specialization handles the ENNReal → ℝ conversion
-    sorry  -- TODO: Apply correct mathlib lemma with proper type handling
+    have h1 := ProbabilityTheory.condExp_ae_eq_integral_condDistrib hζ hξ.aemeasurable
+      (stronglyMeasurable_const.indicator hB)
+      (by -- Show indicator of constant function composed with ξ is integrable
+          have : Integrable (B.indicator fun _ => (1 : ℝ)) (μ.map ξ) :=
+            (integrable_const (1 : ℝ)).indicator hB
+          exact this.comp_measurable hξ)
+    -- Simplify: ∫ y, 1_B(y) d[condDistrib] = condDistrib(B)
+    refine h1.trans ?_
+    apply Filter.Eventually.of_forall
+    intro ω
+    -- For indicator functions, the integral equals the measure (ENNReal.toReal)
+    simp only []
+    rw [integral_indicator_const _ hB]
+    simp [Measure.real]
 
   have hη_repr :
     μ[(fun ω => Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))|MeasurableSpace.comap η inferInstance]
     =ᵐ[μ]
     (fun ω => ((ProbabilityTheory.condDistrib ξ η μ (η ω)) B).toReal) := by
-    sorry  -- TODO: Same as above
+    have h1 := ProbabilityTheory.condExp_ae_eq_integral_condDistrib hη hξ.aemeasurable
+      (stronglyMeasurable_const.indicator hB)
+      (by -- Show indicator of constant function composed with ξ is integrable
+          have : Integrable (B.indicator fun _ => (1 : ℝ)) (μ.map ξ) :=
+            (integrable_const (1 : ℝ)).indicator hB
+          exact this.comp_measurable hξ)
+    -- Simplify: ∫ y, 1_B(y) d[condDistrib] = condDistrib(B)
+    refine h1.trans ?_
+    apply Filter.Eventually.of_forall
+    intro ω
+    -- For indicator functions, the integral equals the measure
+    simp only []
+    rw [integral_indicator_const _ hB]
+    simp [Measure.real]
 
   -- Step 3: Kernel identity along the factor map
   have hkernel :
@@ -486,7 +492,8 @@ theorem condexp_indicator_drop_info_of_pair_law_proven
     =ᵐ[μ]
     (fun ω => ((ProbabilityTheory.condDistrib ξ η μ (η ω)) B).toReal) := by
     -- Use hη_factor: η =ᵐ[μ] φ ∘ ζ
-    sorry  -- TODO: Apply measurable function equality
+    -- Apply the kernel function to both sides of the a.e. equality
+    refine Filter.EventuallyEq.fun_comp hη_factor.symm (fun y => ((ProbabilityTheory.condDistrib ξ η μ y) B).toReal)
 
   -- Conclude by transitivity
   exact hζ_repr.trans (hkernel.trans (hη_eval.trans hη_repr.symm))
