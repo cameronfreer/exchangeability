@@ -926,9 +926,23 @@ theorem condExp_project_of_condIndepFun
     -- Integrability of approximants
     have h_fn_int : ∀ n, Integrable (f_n n ∘ Y) μ := by
       intro n
-      -- Simple functions composed with measurable functions are integrable on probability spaces
-      -- This follows from SimpleFunc.integrable_of_isFiniteMeasure
-      sorry
+      -- Strategy: f_n n ∘ Y is bounded by 2‖f ∘ Y‖, which is integrable
+      -- Use Integrable.of_bound to get integrability from the bound
+      have h_bound : ∀ᵐ ω ∂μ, ‖(f_n n) (Y ω)‖ ≤ 2 * ‖f (Y ω)‖ := by
+        apply Filter.Eventually.of_forall
+        intro ω
+        calc ‖(f_n n) (Y ω)‖
+            ≤ ‖f (Y ω)‖ + ‖f (Y ω)‖ := SimpleFunc.norm_approxOn_zero_le hf (by simp) (Y ω) n
+          _ = 2 * ‖f (Y ω)‖ := by ring
+      have h_bound_int : Integrable (fun ω => 2 * ‖f (Y ω)‖) μ := by
+        have : Integrable (fun ω => ‖f (Y ω)‖) μ := hf_int.norm
+        simpa using this.const_mul 2
+      -- f_n n ∘ Y is measurable (simple function composed with measurable function)
+      have h_meas : AEStronglyMeasurable (f_n n ∘ Y) μ := by
+        have : Measurable (f_n n) := (f_n n).measurable
+        exact this.aestronglyMeasurable.comp_measurable hY
+      -- Apply Integrable.of_bound
+      exact Integrable.of_bound h_meas (2 * ‖f ∘ Y‖) h_bound_int h_bound
 
     -- Integrability of products with indicator B
     have h_fnB_int : ∀ n, Integrable ((f_n n ∘ Y) * (Z ⁻¹' B).indicator 1) μ := by
@@ -1135,12 +1149,57 @@ theorem condExp_project_of_condIndepFun
       have h_norm_int : Integrable (fun ω => ‖f (Y ω)‖) μ := hf_int.norm
       simpa using h_norm_int.const_mul 2
 
-    -- TODO: Fix h_gs_bound - typeclass issues with norm inference
+    -- Bound for RHS: Use Jensen + monotonicity to bound product of condExps
     have h_gs_bound :
         ∀ n, ∀ᵐ ω ∂μ,
           ‖μ[ f_n n ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω‖
             ≤ μ[ (fun ω => 2 * ‖f (Y ω)‖) | mW ] ω := by
-      sorry
+      intro n
+      -- First establish that ‖f_n n ∘ Y‖ ≤ 2‖f ∘ Y‖
+      have h_norm_bound : ∀ᵐ ω ∂μ, ‖(f_n n ∘ Y) ω‖ ≤ 2 * ‖f (Y ω)‖ := by
+        apply Filter.Eventually.of_forall
+        intro ω
+        calc ‖(f_n n) (Y ω)‖
+            ≤ ‖f (Y ω)‖ + ‖f (Y ω)‖ := SimpleFunc.norm_approxOn_zero_le hf (by simp) (Y ω) n
+          _ = 2 * ‖f (Y ω)‖ := by ring
+
+      -- Indicator CE is bounded by 1 (reuse proof from h_gs_int)
+      have h_ind_bound : ∀ᵐ ω ∂μ, ‖μ[ (Z ⁻¹' B).indicator 1 | mW ] ω‖ ≤ 1 := by
+        have h_ind_le : (Z ⁻¹' B).indicator (1 : Ω → ℝ) ≤ᵐ[μ] 1 := by
+          apply Filter.Eventually.of_forall
+          intro ω
+          simp [Set.indicator_apply]
+          split_ifs <;> norm_num
+        have h_ce_le : μ[ (Z ⁻¹' B).indicator 1 | mW ] ≤ᵐ[μ] μ[ (1 : Ω → ℝ) | mW ] :=
+          condExp_mono (integrable_const _) (integrable_const _) h_ind_le
+        filter_upwards [h_ce_le] with ω h_ω
+        have h_ce_one : μ[ (1 : Ω → ℝ) | mW ] ω = 1 := condExp_const 1
+        rw [h_ce_one] at h_ω
+        have h_nonneg : 0 ≤ μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
+          apply condExp_nonneg
+          apply Filter.Eventually.of_forall
+          intro; simp [Set.indicator_apply]; split_ifs <;> norm_num
+        rwa [Real.norm_of_nonneg h_nonneg]
+
+      -- Main calculation
+      filter_upwards [h_ind_bound] with ω h_ind
+      calc ‖μ[ f_n n ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω‖
+          = ‖μ[ f_n n ∘ Y | mW ] ω‖ * ‖μ[ (Z ⁻¹' B).indicator 1 | mW ] ω‖ := norm_mul _ _
+        _ ≤ ‖μ[ f_n n ∘ Y | mW ] ω‖ * 1 := by
+            apply mul_le_mul_of_nonneg_left h_ind (norm_nonneg _)
+        _ = ‖μ[ f_n n ∘ Y | mW ] ω‖ := mul_one _
+        _ ≤ μ[ (fun ω => ‖(f_n n ∘ Y) ω‖) | mW ] ω := by
+            -- Jensen's inequality for conditional expectation
+            exact norm_condExp_le (f := f_n n ∘ Y) ω
+        _ ≤ μ[ (fun ω => 2 * ‖f (Y ω)‖) | mW ] ω := by
+            -- Monotonicity of conditional expectation
+            apply condExp_mono
+            · -- Integrability of ‖f_n n ∘ Y‖
+              exact (h_fn_int n).norm
+            · -- Integrability of 2‖f ∘ Y‖
+              exact h_bound_fs_int
+            · -- Pointwise bound
+              exact h_norm_bound
     /-
     OLD PROOF (has typeclass errors):
     by
