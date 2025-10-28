@@ -3458,7 +3458,9 @@ lemma cesaro_to_condexp_L2
       -- This equals eLpNorm (blockAvg n - blockAvg m) 2 μ by linearity
       convert hN hn hm using 2
       -- toLp is linear, so toLp f - toLp g = toLp (f - g)
-      sorry -- Need lemma: toLp f - toLp g =ᵃᵉ f - g, hence same eLpNorm
+      -- Use MemLp.toLp_sub and edist = eLpNorm
+      rw [← (hblockAvg_memLp n hn_pos).toLp_sub (hblockAvg_memLp m hm_pos)]
+      rfl
 
     -- Step 3: Extract limit from completeness
     haveI : CompleteSpace (Lp ℝ 2 μ) := by infer_instance
@@ -3472,12 +3474,29 @@ lemma cesaro_to_condexp_L2
     -- Properties of α_f
     have hα_memLp : MemLp α_f 2 μ := by
       -- α_f =ᵐ α_L2, and α_L2 ∈ L², so α_f ∈ L²
-      sorry
+      -- Use MemLp.ae_eq to transfer MemLp via ae-equality
+      exact α_L2.memLp.ae_eq hα_ae_eq.symm
 
     have hα_limit : Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0) := by
       -- u n → α_L2 in L², and α_f =ᵐ α_L2
       -- So blockAvg n → α_f in L²
-      sorry
+      -- Strategy: h_tendsto gives dist (u n) α_L2 → 0
+      -- dist in Lp = eLpNorm, and we use ae-equality
+      rw [tendsto_iff_dist_tendsto_zero] at h_tendsto
+      rw [tendsto_iff_dist_tendsto_zero]
+      simp only [dist_zero_right] at h_tendsto ⊢
+      refine h_tendsto.congr' ?_
+      -- Need to show: eventually, eLpNorm (blockAvg n - α_f) = dist (u n) α_L2
+      filter_upwards [Filter.eventually_cofinite.2 (finite_le_nat 1)] with n hn
+      have hn_pos : n > 0 := hn
+      simp only [u, dif_pos hn_pos]
+      rw [Lp.dist_def]
+      -- Now we have: eLpNorm (toLp (blockAvg n) - α_L2) 2 μ
+      -- And want: eLpNorm (blockAvg n - α_f) 2 μ
+      -- These are equal because α_L2 =ᵐ α_f
+      refine eLpNorm_congr_ae ?_
+      filter_upwards [(hblockAvg_memLp n hn_pos).coeFn_toLp, hα_ae_eq] with ω h1 h2
+      simp only [Pi.sub_apply, h1, h2]
 
   use α_f
   refine ⟨hα_memLp, ?_, hα_limit, ?_⟩
