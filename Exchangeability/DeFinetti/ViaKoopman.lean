@@ -4105,38 +4105,37 @@ private lemma optionB_Step4c_triangle
     -- B n is bounded and measurable, so integrable
     obtain ⟨Cg, hCg⟩ := hg_bd
     have hB_int : Integrable (B n) μ := by
-      rw [hB_def]
       by_cases hn : n = 0
-      · simp [hn]; exact integrable_zero _ _ _
+      · rw [hB_def]; simp [hn]
       · -- B n is bounded by Cg
         have hB_bd : ∀ ω, |B n ω| ≤ Cg := by
           intro ω
-          simp [B, hn]
+          rw [hB_def]
+          simp [hn]
           -- |(1/n) * ∑ g(ω j)| ≤ (1/n) * ∑ |g(ω j)| ≤ (1/n) * n*Cg = Cg
           have hsum : |Finset.sum (Finset.range n) (fun j => g (ω j))| ≤ (n : ℝ) * Cg := by
             calc |Finset.sum (Finset.range n) (fun j => g (ω j))|
-                ≤ Finset.sum (Finset.range n) (fun j => |g (ω j)|) := abs_sum_le_sum_abs _ _
+                ≤ Finset.sum (Finset.range n) (fun j => |g (ω j)|) := Finset.abs_sum_le_sum_abs _ _
               _ ≤ Finset.sum (Finset.range n) (fun j => Cg) := by
                   gcongr with j _; exact hCg _
               _ = (n : ℝ) * Cg := by simp
           calc |1 / (n : ℝ) * Finset.sum (Finset.range n) (fun j => g (ω j))|
-              = |1 / (n : ℝ)| * |Finset.sum (Finset.range n) (fun j => g (ω j))| := abs_mul _ _
+              = |1 / (n : ℝ)| * |Finset.sum (Finset.range n) (fun j => g (ω j))| := by
+                  exact abs_mul _ _
+            _ = (1 / (n : ℝ)) * |Finset.sum (Finset.range n) (fun j => g (ω j))| := by
+                  rw [abs_of_nonneg]; positivity
             _ ≤ (1 / (n : ℝ)) * ((n : ℝ) * Cg) := by
-                gcongr
-                · positivity
-                · exact hsum
+                  gcongr; positivity
             _ = Cg := by field_simp; ring
-        -- Bounded + AEMeasurable → Integrable on finite measure space
-        refine Integrable.of_bounded ?_ Cg
-        · -- B n is measurable: finite sum of measurable functions g ∘ (proj j)
-          have hB_meas : Measurable (B n) := by
-            simp [B, hn]
-            -- (1/n) * ∑_{j < n} g(ω j) is measurable
-            refine Measurable.const_smul ?_ _
-            refine Finset.measurable_sum (Finset.range n) (fun j _ => ?_)
-            exact hg_meas.comp (measurable_pi_apply j)
-          exact hB_meas.aemeasurable
-        · exact Filter.eventually_of_forall hB_bd
+        -- Bounded + Measurable → Integrable on finite measure space
+        have hB_meas : Measurable (B n) := by
+          rw [hB_def]
+          simp [hn]
+          -- (1/n) * ∑_{j < n} g(ω j) is measurable
+          refine Measurable.const_smul ?_ _
+          refine Finset.measurable_sum (Finset.range n) (fun j _ => ?_)
+          exact hg_meas.comp (measurable_pi_apply j)
+        exact ⟨hB_meas.aestronglyMeasurable, HasFiniteIntegral.of_bounded hB_bd⟩
     -- |B n - Y| is integrable as difference of integrable functions
     exact (hB_int.sub hY_int).abs
 
@@ -4150,7 +4149,7 @@ private lemma optionB_Step4c_triangle
     have hpt :
         ∀ ω, |(A n ω - B n ω) + (B n ω - Y ω)| ≤
               |A n ω - B n ω| + |B n ω - Y ω| := by
-      intro ω; simpa using abs_add (A n ω - B n ω) (B n ω - Y ω)
+      intro ω; exact abs_add_le (A n ω - B n ω) (B n ω - Y ω)
     -- rewrite the LHS inside the absolute value
     have hre : (fun ω => |A n ω - Y ω|) =
                (fun ω => |(A n ω - B n ω) + (B n ω - Y ω)|) := by
@@ -4161,70 +4160,73 @@ private lemma optionB_Step4c_triangle
       -- A n is bounded by Cg, so |A n - B n| is bounded by 2*Cg
       have hAB_bd : ∀ ω, |A n ω - B n ω| ≤ 2 * Cg := by
         intro ω
-        rw [hA_def, hB_def]
         by_cases hn : n = 0
-        · simp [hn]; positivity
+        · rw [hA_def, hB_def]
+          simp [hn]
         · -- Both A n and B n are bounded by Cg
           have hA_bd : |A n ω| ≤ Cg := by
             rw [hA_def]
             simp
             have hsum : |Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))| ≤ ((n : ℝ) + 1) * Cg := by
               calc |Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))|
-                  ≤ Finset.sum (Finset.range (n + 1)) (fun j => |g (ω j)|) := abs_sum_le_sum_abs _ _
+                  ≤ Finset.sum (Finset.range (n + 1)) (fun j => |g (ω j)|) := Finset.abs_sum_le_sum_abs _ _
                 _ ≤ Finset.sum (Finset.range (n + 1)) (fun j => Cg) := by
                     gcongr with j _; exact hCg _
                 _ = ((n : ℝ) + 1) * Cg := by simp
             calc |1 / ((n : ℝ) + 1) * Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))|
-                = (1 / ((n : ℝ) + 1)) * |Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))| := by
-                    rw [abs_mul]; congr; positivity
-              _ ≤ (1 / ((n : ℝ) + 1)) * (((n : ℝ) + 1) * Cg) := by gcongr; positivity
+                = |1 / ((n : ℝ) + 1)| * |Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))| := by
+                    exact abs_mul _ _
+              _ = (1 / ((n : ℝ) + 1)) * |Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))| := by
+                    rw [abs_of_nonneg]; positivity
+              _ ≤ (1 / ((n : ℝ) + 1)) * (((n : ℝ) + 1) * Cg) := by
+                    gcongr; positivity
               _ = Cg := by field_simp; ring
           have hB_bd : |B n ω| ≤ Cg := by
-            simp [B, hn]
+            rw [hB_def]
+            simp [hn]
             have hsum : |Finset.sum (Finset.range n) (fun j => g (ω j))| ≤ (n : ℝ) * Cg := by
               calc |Finset.sum (Finset.range n) (fun j => g (ω j))|
-                  ≤ Finset.sum (Finset.range n) (fun j => |g (ω j)|) := abs_sum_le_sum_abs _ _
+                  ≤ Finset.sum (Finset.range n) (fun j => |g (ω j)|) := Finset.abs_sum_le_sum_abs _ _
                 _ ≤ Finset.sum (Finset.range n) (fun j => Cg) := by
                     gcongr with j _; exact hCg _
                 _ = (n : ℝ) * Cg := by simp
             calc |1 / (n : ℝ) * Finset.sum (Finset.range n) (fun j => g (ω j))|
-                = (1 / (n : ℝ)) * |Finset.sum (Finset.range n) (fun j => g (ω j))| := by
-                    rw [abs_mul]; congr; positivity
-              _ ≤ (1 / (n : ℝ)) * ((n : ℝ) * Cg) := by gcongr; positivity
+                = |1 / (n : ℝ)| * |Finset.sum (Finset.range n) (fun j => g (ω j))| := by
+                    exact abs_mul _ _
+              _ = (1 / (n : ℝ)) * |Finset.sum (Finset.range n) (fun j => g (ω j))| := by
+                    rw [abs_of_nonneg]; positivity
+              _ ≤ (1 / (n : ℝ)) * ((n : ℝ) * Cg) := by
+                    gcongr; positivity
               _ = Cg := by field_simp; ring
           calc |A n ω - B n ω|
               ≤ |A n ω| + |B n ω| := abs_sub _ _
             _ ≤ Cg + Cg := by gcongr
             _ = 2 * Cg := by ring
-      refine Integrable.of_bounded ?_ (2 * Cg)
-      · -- |A n - B n| is measurable: A n and B n are measurable, so is their difference and absolute value
-        have hA_meas : Measurable (A n) := by
-          rw [hA_def]
-          simp
+      have hA_meas : Measurable (A n) := by
+        rw [hA_def]
+        simp
+        refine Measurable.const_smul ?_ _
+        refine Finset.measurable_sum (Finset.range (n + 1)) (fun j _ => ?_)
+        exact hg_meas.comp (measurable_pi_apply j)
+      have hB_meas : Measurable (B n) := by
+        rw [hB_def]
+        by_cases hn : n = 0
+        · simp [hn]; exact measurable_const
+        · simp [hn]
           refine Measurable.const_smul ?_ _
-          refine Finset.measurable_sum (Finset.range (n + 1)) (fun j _ => ?_)
+          refine Finset.measurable_sum (Finset.range n) (fun j _ => ?_)
           exact hg_meas.comp (measurable_pi_apply j)
-        have hB_meas : Measurable (B n) := by
-          rw [hB_def]
-          by_cases hn : n = 0
-          · simp [hn]; exact measurable_const
-          · simp [hn]
-            refine Measurable.const_smul ?_ _
-            refine Finset.measurable_sum (Finset.range n) (fun j _ => ?_)
-            exact hg_meas.comp (measurable_pi_apply j)
-        exact (hA_meas.sub hB_meas).norm.aemeasurable
-      · exact Filter.eventually_of_forall hAB_bd
+      exact ⟨(hA_meas.sub hB_meas).norm.aestronglyMeasurable, HasFiniteIntegral.of_bounded hAB_bd⟩
     have hint2 : Integrable (fun ω => |B n ω - Y ω|) μ := hBY_abs_integrable n
     -- now integrate the pointwise inequality
     calc
       ∫ ω, |A n ω - Y ω| ∂μ
           = ∫ ω, |(A n ω - B n ω) + (B n ω - Y ω)| ∂μ := by simpa [hre]
       _ ≤ ∫ ω, (|A n ω - B n ω| + |B n ω - Y ω|) ∂μ := by
-            refine integral_mono_of_nonneg ?_ ?_ ?_ ?_
-            · intro ω; positivity
-            · intro ω; positivity
-            · apply hint1.add hint2
-            · intro ω; exact hpt ω
+            refine integral_mono_of_nonneg ?_ ?_ ?_
+            · exact ae_of_all μ (fun ω => by positivity)
+            · exact hint1.add hint2
+            · exact ae_of_all μ hpt
       _ = ∫ ω, |A n ω - B n ω| ∂μ + ∫ ω, |B n ω - Y ω| ∂μ := by
             simpa using integral_add hint1 hint2
 
@@ -4425,13 +4427,15 @@ private theorem optionB_L1_convergence_bounded
   -- Integrability of G and Y for Step 4c
   have hG_int : Integrable G μ := by
     -- G ω = g (ω 0) is bounded by Cg, so integrable on probability space
-    refine Integrable.of_bounded ?_ Cg
-    · -- G is measurable: composition of g (measurable) with projection to coordinate 0
-      have hG_meas : Measurable G := by
-        simp only [G]
-        exact hg_meas.comp (measurable_pi_apply 0)
-      exact hG_meas.aemeasurable
-    · exact Filter.eventually_of_forall (fun ω => by simp [G]; exact hCg_bd _)
+    have hG_meas : Measurable G := by
+      simp only [G]
+      exact hg_meas.comp (measurable_pi_apply 0)
+    have hG_bd : ∀ ω, ‖G ω‖ ≤ Cg := by
+      intro ω
+      simp [G]
+      rw [Real.norm_eq_abs]
+      exact hCg_bd _
+    exact ⟨hG_meas.aestronglyMeasurable, HasFiniteIntegral.of_bounded hG_bd⟩
 
   have hY_int : Integrable Y μ := by
     -- Y = μ[G | mSI], and condExp preserves integrability
