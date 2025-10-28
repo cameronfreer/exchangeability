@@ -85,16 +85,31 @@ lemma eLpNorm_two_sq_eq_integral_sq
   norm_num
 
   -- Step 3: Convert lintegral to integral for nonnegative functions
-  -- TODO: This step requires careful manipulation of ENNReal norms and real integrals.
-  -- The key insight is that for real f:
-  --   ‖f ω‖ₑ = ENNReal.ofReal ‖f ω‖
-  -- and thus:
-  --   ‖f ω‖ₑ ^ 2 = ENNReal.ofReal (‖f ω‖ ^ 2) = ENNReal.ofReal (f ω ^ 2)
-  -- Then apply integral_eq_lintegral_of_nonneg_ae to convert the lintegral to integral.
-  --
-  -- This lemma should exist in mathlib or be straightforward to add, but the exact
-  -- formulation requires navigating ENNReal/NNReal/Real conversions carefully.
-  sorry
+  -- Key: ‖f ω‖ₑ = ↑‖f ω‖₊ where ‖·‖₊ is the nnnorm
+  -- First rewrite the lintegral in terms of ofReal
+  have h_enorm_conv : ∫⁻ (x : Ω), ‖f x‖ₑ ^ 2 ∂μ = ∫⁻ (x : Ω), ENNReal.ofReal (‖f x‖ ^ 2) ∂μ := by
+    congr 1
+    ext ω
+    -- Show ‖f ω‖ₑ ^ 2 = ENNReal.ofReal (‖f ω‖ ^ 2)
+    calc ‖f ω‖ₑ ^ 2
+        = (↑‖f ω‖₊ : ℝ≥0∞) ^ 2 := by rw [enorm_eq_nnnorm]
+      _ = ↑(‖f ω‖₊ ^ 2) := by rw [← ENNReal.coe_pow]
+      _ = ENNReal.ofReal (↑(‖f ω‖₊ ^ 2) : ℝ) := by rw [ENNReal.ofReal_coe_nnreal]
+      _ = ENNReal.ofReal ((↑‖f ω‖₊ : ℝ) ^ 2) := by rw [NNReal.coe_pow]
+      _ = ENNReal.ofReal (‖f ω‖ ^ 2) := by rw [coe_nnnorm]
+  rw [h_enorm_conv]
+  -- Now use the fundamental relationship: (∫⁻ ofReal g).toReal = ∫ g for nonnegative g
+  rw [← integral_eq_lintegral_of_nonneg_ae]
+  · congr 1
+    ext ω
+    exact h_norm_eq ω
+  · -- Nonnegativity: ‖f ω‖ ^ 2 ≥ 0
+    apply ae_of_all
+    intro ω
+    exact sq_nonneg _
+  · -- AE measurability
+    apply AEStronglyMeasurable.pow
+    exact hf.1.norm
 
 /-- **L² norm bound from integral bound.**
 
