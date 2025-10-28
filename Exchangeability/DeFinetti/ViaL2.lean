@@ -2948,24 +2948,24 @@ lemma cesaro_to_condexp_L2
         -- Case analysis on whether i.val < n and i.val < n'
         by_cases hi_n : i.val < n <;> by_cases hi_n' : i.val < n'
         · -- Case 1: i.val < n ∧ i.val < n'
-          simp only [hi_n, hi_n', ite_true]
-          -- |1/n - 1/n'| ≤ max(1/n, 1/n')
-          sorry  -- TODO: Prove |1/n - 1/n'| ≤ max(1/n, 1/n') for positive n, n'
-          /-
-          Strategy: For positive a, b, we have |a - b| ≤ max(a, b)
-          This follows from case analysis:
-          - If a ≥ b: |a - b| = a - b ≤ a = max(a,b)
-          - If b > a: |a - b| = b - a ≤ b = max(a,b)
-          Need to find correct Lean 4 lemmas for: inv_le_inv and inv_lt_inv
-          -/
+          simp only [hi_n, hi_n', ite_true, one_div]
+          -- Now have: |(n:ℝ)⁻¹ - (n':ℝ)⁻¹| ≤ max (n:ℝ)⁻¹ (n':ℝ)⁻¹
+          by_cases h : (n : ℝ)⁻¹ ≤ (n' : ℝ)⁻¹
+          · -- Case: n⁻¹ ≤ n'⁻¹, so max = n'⁻¹
+            rw [abs_sub_comm, abs_of_nonneg (sub_nonneg_of_le h), max_eq_right h]
+            exact sub_le_self _ (inv_nonneg.mpr (Nat.cast_nonneg n))
+          · -- Case: n⁻¹ > n'⁻¹, so max = n⁻¹
+            push_neg at h
+            rw [abs_of_nonneg (sub_nonneg_of_le (le_of_lt h)), max_eq_left (le_of_lt h)]
+            exact sub_le_self _ (inv_nonneg.mpr (Nat.cast_nonneg n'))
         · -- Case 2: i.val < n ∧ i.val ≥ n'
-          simp only [hi_n, hi_n', ite_true, ite_false, sub_zero]
+          simp only [hi_n, hi_n', ite_true, ite_false, sub_zero, one_div]
           rw [abs_of_nonneg (inv_nonneg.mpr (Nat.cast_nonneg n))]
-          sorry  -- TODO: Show (n : ℝ)⁻¹ ≤ max ((n : ℝ)⁻¹) ((n' : ℝ)⁻¹)
+          exact le_max_left _ _
         · -- Case 3: i.val ≥ n ∧ i.val < n'
-          simp only [hi_n, hi_n', ite_false, ite_true, zero_sub]
+          simp only [hi_n, hi_n', ite_false, ite_true, zero_sub, one_div]
           rw [abs_neg, abs_of_nonneg (inv_nonneg.mpr (Nat.cast_nonneg n'))]
-          sorry  -- TODO: Show (n' : ℝ)⁻¹ ≤ max ((n : ℝ)⁻¹) ((n' : ℝ)⁻¹)
+          exact le_max_right _ _
         · -- Case 4: i.val ≥ n ∧ i.val ≥ n'
           simp only [hi_n, hi_n', ite_false, sub_self, abs_zero]
           positivity
