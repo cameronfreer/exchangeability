@@ -2948,24 +2948,24 @@ lemma cesaro_to_condexp_L2
         -- Case analysis on whether i.val < n and i.val < n'
         by_cases hi_n : i.val < n <;> by_cases hi_n' : i.val < n'
         · -- Case 1: i.val < n ∧ i.val < n'
-          simp only [hi_n, hi_n', ite_true]
-          -- |1/n - 1/n'| ≤ max(1/n, 1/n')
-          sorry  -- TODO: Prove |1/n - 1/n'| ≤ max(1/n, 1/n') for positive n, n'
-          /-
-          Strategy: For positive a, b, we have |a - b| ≤ max(a, b)
-          This follows from case analysis:
-          - If a ≥ b: |a - b| = a - b ≤ a = max(a,b)
-          - If b > a: |a - b| = b - a ≤ b = max(a,b)
-          Need to find correct Lean 4 lemmas for: inv_le_inv and inv_lt_inv
-          -/
+          simp only [hi_n, hi_n', ite_true, one_div]
+          -- Now have: |(n:ℝ)⁻¹ - (n':ℝ)⁻¹| ≤ max (n:ℝ)⁻¹ (n':ℝ)⁻¹
+          by_cases h : (n : ℝ)⁻¹ ≤ (n' : ℝ)⁻¹
+          · -- Case: n⁻¹ ≤ n'⁻¹, so max = n'⁻¹
+            rw [abs_sub_comm, abs_of_nonneg (sub_nonneg_of_le h), max_eq_right h]
+            exact sub_le_self _ (inv_nonneg.mpr (Nat.cast_nonneg n))
+          · -- Case: n⁻¹ > n'⁻¹, so max = n⁻¹
+            push_neg at h
+            rw [abs_of_nonneg (sub_nonneg_of_le (le_of_lt h)), max_eq_left (le_of_lt h)]
+            exact sub_le_self _ (inv_nonneg.mpr (Nat.cast_nonneg n'))
         · -- Case 2: i.val < n ∧ i.val ≥ n'
-          simp only [hi_n, hi_n', ite_true, ite_false, sub_zero]
+          simp only [hi_n, hi_n', ite_true, ite_false, sub_zero, one_div]
           rw [abs_of_nonneg (inv_nonneg.mpr (Nat.cast_nonneg n))]
-          sorry  -- TODO: Show (n : ℝ)⁻¹ ≤ max ((n : ℝ)⁻¹) ((n' : ℝ)⁻¹)
+          exact le_max_left _ _
         · -- Case 3: i.val ≥ n ∧ i.val < n'
-          simp only [hi_n, hi_n', ite_false, ite_true, zero_sub]
+          simp only [hi_n, hi_n', ite_false, ite_true, zero_sub, one_div]
           rw [abs_neg, abs_of_nonneg (inv_nonneg.mpr (Nat.cast_nonneg n'))]
-          sorry  -- TODO: Show (n' : ℝ)⁻¹ ≤ max ((n : ℝ)⁻¹) ((n' : ℝ)⁻¹)
+          exact le_max_right _ _
         · -- Case 4: i.val ≥ n ∧ i.val ≥ n'
           simp only [hi_n, hi_n', ite_false, sub_self, abs_zero]
           positivity
@@ -3169,25 +3169,155 @@ lemma cesaro_to_condexp_L2
       -- Eta-reduce: (fun ω => blockAvg f X 0 n ω - blockAvg f X 0 n' ω) = blockAvg f X 0 n - blockAvg f X 0 n'
       exact h_bound
     · -- Degenerate case: σ² = 0, so Z is constant a.e.
-      -- In this case, blockAvg converges trivially to the constant
-      sorry  -- TODO: Handle degenerate case
+      -- When variance is 0, all Z_i = 0 a.e., so blockAvg is constant = m a.e.
+      -- Therefore the Cauchy property holds trivially
+
+      -- Step 1: Show σSq = 0
+      push_neg at hσ_pos
+      have hσSq_nonneg : 0 ≤ σSq := by
+        simp only [σSq]
+        exact integral_nonneg fun ω => sq_nonneg _
+      have hσSq_zero : σSq = 0 := le_antisymm hσ_pos hσSq_nonneg
+
+      -- Step 2: Conclude that blockAvg difference has eLpNorm = 0
+      -- For any n, n', we have eLpNorm (blockAvg n - blockAvg n') 2 = 0 < ε
+      use 1
+      intros n n' hn_ge hn'_ge
+
+      -- When σSq = 0, variance is 0, so Z_i = 0 a.e. for all i
+      -- Since blockAvg is essentially constant (= m) a.e., its difference is 0 a.e.
+      -- Therefore eLpNorm = 0 < ε
+
+      -- The key insight: When variance = 0, all random variables equal their mean a.e.
+      -- So f(X_i) = m a.e., making blockAvg = m a.e. regardless of n
+
+      -- Show the difference is 0 a.e., hence eLpNorm = 0
+      have h_diff_zero_ae : ∀ᵐ ω ∂μ, blockAvg f X 0 n ω - blockAvg f X 0 n' ω = 0 := by
+        -- PROOF STRATEGY (verified correct, needs mathlib API refinement):
+        --
+        -- Step 1: Show Z i = 0 a.e. for all i
+        --   ✓ Have: ∫ (Z i)² = σSq = 0 (from hZ_var_uniform and hσSq_zero)
+        --   - Use: integral_eq_zero_iff_of_nonneg_ae (correct signature needed)
+        --   - Get: (Z i)² = 0 a.e., hence Z i = 0 a.e. (by sq_eq_zero_iff)
+        --
+        -- Step 2: From Z i = 0 a.e., get f(X i) = m a.e.
+        --   - Definition: Z i = f(X i) - m
+        --   - Therefore: Z i = 0 a.e. ⟹ f(X i) = m a.e.
+        --
+        -- Step 3: Finite intersection of a.e. sets
+        --   - For M = max(n,n'), need lemma for finite intersection
+        --   - Get: ∀ᵐ ω, (∀ i < M, f(X i ω) = m)
+        --   - Mathlib has: ae_ball_lt or similar
+        --
+        -- Step 4: On this a.e. set, blockAvg = m
+        --   - blockAvg n = (1/n) ∑_{i<n} f(X i) = (1/n) ∑_{i<n} m = m
+        --   - Need: Finset.sum_const_nat or similar
+        --   - Similarly blockAvg n' = m
+        --
+        -- Step 5: Conclude difference = m - m = 0
+        --
+        -- TODO: Find correct mathlib lemma names and signatures
+        sorry
+
+      -- Apply eLpNorm_congr_ae to rewrite as eLpNorm of zero function
+      have h_eq_zero : eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ = 0 := by
+        calc eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ
+            = eLpNorm (fun ω => (0 : ℝ)) 2 μ := by
+              apply eLpNorm_congr_ae
+              exact h_diff_zero_ae
+          _ = 0 := eLpNorm_zero
+      rw [h_eq_zero]
+      exact hε
 
   -- Step 2: Extract L² limit using completeness of Hilbert space
   -- Lp(2, μ) is complete (Hilbert space), so Cauchy sequence converges
   have ⟨α_f, hα_memLp, hα_limit⟩ : ∃ α_f, MemLp α_f 2 μ ∧
       Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0) := by
-    -- TODO: Apply MeasureTheory.Lp.cauchy_complete_eLpNorm
-    -- We have hCauchy : ∀ ε > 0, ∃ N, ∀ {n n'}, n ≥ N → n' ≥ N → eLpNorm (blockAvg ...) < ε
-    -- Need to convert to: ∃ B : ℕ → ℝ≥0∞, (∑' i, B i < ∞) ∧ (∀ N n m, N ≤ n → N ≤ m → eLpNorm ... < B N)
+    -- Apply cauchy_complete_eLpNorm to get L² limit
+
+    -- Step 1: Show each blockAvg is in L²
+    have hblockAvg_memLp : ∀ n, n > 0 → MemLp (blockAvg f X 0 n) 2 μ := by
+      intro n hn_pos
+      -- blockAvg is bounded since f is bounded
+      apply memLp_two_of_bounded
+      · -- Measurable: blockAvg is a finite sum of measurable functions
+        show Measurable (fun ω => (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (0 + k) ω)))
+        exact Measurable.const_mul (Finset.measurable_sum _ fun k _ =>
+          hf_meas.comp (hX_meas (0 + k))) _
+      intro ω
+      -- |blockAvg f X 0 n ω| ≤ 1 since |f| ≤ 1
+      show |(n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (0 + k) ω))| ≤ 1
+      calc |(n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (0 + k) ω))|
+          = (n : ℝ)⁻¹ * |(Finset.range n).sum (fun k => f (X (0 + k) ω))| := by
+            rw [abs_mul, abs_inv, abs_of_nonneg]
+            exact Nat.cast_nonneg n
+        _ ≤ (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => |f (X (0 + k) ω)|) := by
+            apply mul_le_mul_of_nonneg_left
+            · exact Finset.abs_sum_le_sum_abs _ _
+            · exact inv_nonneg.mpr (Nat.cast_nonneg n)
+        _ ≤ (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => 1) := by
+            apply mul_le_mul_of_nonneg_left
+            · apply Finset.sum_le_sum
+              intro k _
+              exact hf_bdd (X (0 + k) ω)
+            · exact inv_nonneg.mpr (Nat.cast_nonneg n)
+        _ = (n : ℝ)⁻¹ * n := by simp
+        _ = 1 := by
+            field_simp [Nat.pos_iff_ne_zero.mp hn_pos]
+
+    -- For n = 0, handle separately
+    have hblockAvg_memLp_all : ∀ n, MemLp (blockAvg f X 0 n) 2 μ := by
+      intro n
+      by_cases hn : n > 0
+      · exact hblockAvg_memLp n hn
+      · -- n = 0 case: blockAvg is just the constant 0 function
+        have : n = 0 := by omega
+        subst this
+        -- When n=0, Finset.range 0 is empty, so sum = 0
+        -- blockAvg f X 0 0 = 0⁻¹ * 0, which we treat as the zero function
+        have h_eq : blockAvg f X 0 0 = fun ω => (0 : ℝ) := by
+          ext ω
+          simp [blockAvg, Finset.range_zero, Finset.sum_empty]
+        rw [h_eq]
+        -- Constant 0 function is in L² (bounded by 1)
+        apply memLp_two_of_bounded (M := 1) measurable_const
+        intro ω
+        norm_num
+
+    -- Step 2-5: Apply cauchy_complete_eLpNorm
+
+    -- DETAILED IMPLEMENTATION PLAN:
     --
-    -- Strategy:
-    -- 1. Define B N := ENNReal.ofReal (2⁻¹ ^ N)  -- geometric sequence
-    -- 2. Show ∑' N, B N = 2 < ∞ (geometric series)
-    -- 3. For each N, use hCauchy with ε = (B N).toReal to get threshold M_N
-    -- 4. Construct increasing sequence of thresholds
-    -- 5. Apply cauchy_complete_eLpNorm with appropriate bound sequence
+    -- The challenge: hCauchy is in classical ε-N form (∀ ε > 0, ∃ N, ...),
+    -- but cauchy_complete_eLpNorm needs a bound sequence B : ℕ → ℝ≥0∞
     --
-    -- Alternative: Use Lp.completeSpace instance and Metric.cauchySeq approach
+    -- Step 2: Define geometric bound sequence
+    --   let B : ℕ → ℝ≥0∞ := fun k => ENNReal.ofNNReal ⟨2⁻¹^(k+1), by positivity⟩
+    --   This avoids syntax issues with ofReal and negative exponents
+    --
+    -- Step 3: Prove summability
+    --   have hB_sum : ∑' i, B i ≠ ∞ := by
+    --     Use ENNReal.tsum_geometric or similar
+    --     ∑_{k=0}^∞ (1/2)^(k+1) = (1/2) · ∑_{k=0}^∞ (1/2)^k = (1/2) · 2 = 1
+    --
+    -- Step 4: Extract thresholds using classical choice
+    --   For each k, use hCauchy with ε = B k to get M_k
+    --   have hM : ∀ k, ∃ M, ∀ n n', n ≥ M → n' ≥ M → eLpNorm < B k
+    --   let M_seq := fun k => Classical.choose (hM k)  -- Extract thresholds
+    --   Build monotone version: M'_k = max(M_k, M'_{k-1})
+    --
+    -- Step 5: Verify Cauchy condition for cauchy_complete_eLpNorm
+    --   have h_cau : ∀ N n m, N ≤ n → N ≤ m → eLpNorm (blockAvg n - blockAvg m) < B N
+    --   This follows from M'_N being the threshold for B N
+    --
+    -- Step 6: Apply theorem
+    --   obtain ⟨α_f, hα_memLp, hα_limit⟩ := cauchy_complete_eLpNorm (hp := ...)
+    --     hblockAvg_memLp_all hB_sum h_cau
+    --
+    -- Alternative simpler approach: Use ae_seq_limit or similar to extract limit directly
+    -- from the Cauchy property, without building explicit bound sequence
+    --
+    -- TODO: Complete implementation with one of these approaches
     sorry
 
   use α_f
