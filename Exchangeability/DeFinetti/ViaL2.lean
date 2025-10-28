@@ -3286,15 +3286,38 @@ lemma cesaro_to_condexp_L2
 
     -- Step 2-5: Apply cauchy_complete_eLpNorm
 
-    -- TODO: Complete the bound sequence construction and application
-    -- Strategy:
-    -- 1. Define B : ℕ → ℝ≥0∞ as a geometric sequence, e.g., B k = (1/2)^(k+1)
-    -- 2. Prove ∑' i, B i ≠ ∞ (geometric series sum)
-    -- 3. For each N, use hCauchy with ε = B N to extract a threshold M_N
-    -- 4. Build a monotone sequence of thresholds and show ∀ N n m, N ≤ n → N ≤ m → eLpNorm < B N
-    -- 5. Apply cauchy_complete_eLpNorm to get the L² limit α_f
-
-    -- For now, use classical axiom of choice to extract the limit
+    -- DETAILED IMPLEMENTATION PLAN:
+    --
+    -- The challenge: hCauchy is in classical ε-N form (∀ ε > 0, ∃ N, ...),
+    -- but cauchy_complete_eLpNorm needs a bound sequence B : ℕ → ℝ≥0∞
+    --
+    -- Step 2: Define geometric bound sequence
+    --   let B : ℕ → ℝ≥0∞ := fun k => ENNReal.ofNNReal ⟨2⁻¹^(k+1), by positivity⟩
+    --   This avoids syntax issues with ofReal and negative exponents
+    --
+    -- Step 3: Prove summability
+    --   have hB_sum : ∑' i, B i ≠ ∞ := by
+    --     Use ENNReal.tsum_geometric or similar
+    --     ∑_{k=0}^∞ (1/2)^(k+1) = (1/2) · ∑_{k=0}^∞ (1/2)^k = (1/2) · 2 = 1
+    --
+    -- Step 4: Extract thresholds using classical choice
+    --   For each k, use hCauchy with ε = B k to get M_k
+    --   have hM : ∀ k, ∃ M, ∀ n n', n ≥ M → n' ≥ M → eLpNorm < B k
+    --   let M_seq := fun k => Classical.choose (hM k)  -- Extract thresholds
+    --   Build monotone version: M'_k = max(M_k, M'_{k-1})
+    --
+    -- Step 5: Verify Cauchy condition for cauchy_complete_eLpNorm
+    --   have h_cau : ∀ N n m, N ≤ n → N ≤ m → eLpNorm (blockAvg n - blockAvg m) < B N
+    --   This follows from M'_N being the threshold for B N
+    --
+    -- Step 6: Apply theorem
+    --   obtain ⟨α_f, hα_memLp, hα_limit⟩ := cauchy_complete_eLpNorm (hp := ...)
+    --     hblockAvg_memLp_all hB_sum h_cau
+    --
+    -- Alternative simpler approach: Use ae_seq_limit or similar to extract limit directly
+    -- from the Cauchy property, without building explicit bound sequence
+    --
+    -- TODO: Complete implementation with one of these approaches
     sorry
 
   use α_f
