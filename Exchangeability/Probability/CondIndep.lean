@@ -647,19 +647,20 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
                     · -- AEStronglyMeasurable of the product (use helper from top)
                       exact haesm_prod
                     · -- Bound |f| ≤ 1 a.e.
-                      have hbdd_f : ∀ᵐ ω ∂μ, |f ω| ≤ (1 : ℝ) :=
-                        Filter.Eventually.of_forall fun ω => by
-                          by_cases hω : ω ∈ Y ⁻¹' A
-                          · simp [f, Set.indicator_of_mem hω, abs_one]
-                          · simp [f, Set.indicator_of_not_mem hω, abs_zero]
-                      -- Cast to NNReal for the lemma
-                      have hbdd_f' : ∀ᵐ ω ∂μ, |f ω| ≤ ((1 : ℝ≥0) : ℝ) :=
-                        hbdd_f.mono (by intro ω h; simpa [NNReal.coe_one] using h)
+                      have hbdd_f : ∀ᵐ ω ∂μ, |f ω| ≤ (1 : ℝ) := by
+                        refine Filter.Eventually.of_forall ?_
+                        intro ω; by_cases hω : ω ∈ Y ⁻¹' A
+                        · simp [f, Set.indicator_of_mem hω, abs_one]
+                        · simp [f, Set.indicator_of_notMem hω, abs_zero]
+                      -- Name the bound as ℝ≥0 to avoid elaboration issues
+                      set Rnn : ℝ≥0 := 1 with hRnn
+                      have hbdd_f' : ∀ᵐ ω ∂μ, |f ω| ≤ ((Rnn : ℝ≥0) : ℝ) :=
+                        hbdd_f.mono (by intro ω h; convert h; simp [Rnn])
                       -- ⇒ ‖μ[f|mW]‖ ≤ 1 a.e.
                       have hμf_le_one : ∀ᵐ ω ∂μ, ‖μ[f|mW] ω‖ ≤ (1 : ℝ) := by
-                        simpa [Real.norm_eq_abs] using
-                          (MeasureTheory.ae_bdd_condExp_of_ae_bdd
-                            (μ := μ) (m := mW) (R := (1 : ℝ≥0)) (f := f) hbdd_f')
+                        have := MeasureTheory.ae_bdd_condExp_of_ae_bdd
+                                  (μ := μ) (m := mW) (R := Rnn) (f := f) hbdd_f'
+                        simpa [Real.norm_eq_abs, Rnn] using this
                       -- Bound g_B
                       have hgB_le_one : ∀ᵐ ω ∂μ, ‖g_B ω‖ ≤ (1 : ℝ) :=
                         Filter.Eventually.of_forall fun ω => by
