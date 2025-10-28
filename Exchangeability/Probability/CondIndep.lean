@@ -128,13 +128,18 @@ knowing W provides no information about X when X ⊥ W.
 -/
 lemma condExp_const_of_indepFun (μ : Measure Ω) [IsProbabilityMeasure μ]
     {X : Ω → ℝ} {W : Ω → γ}
+    (hX : Measurable X) (hW : Measurable W)
     (h_indep : IndepFun X W μ)
     (hX_int : Integrable X μ) :
     μ[X | MeasurableSpace.comap W inferInstance] =ᵐ[μ] (fun _ => μ[X]) := by
-  -- For s ∈ σ(W), independence gives ∫_s X dμ = μ[X] · μ[s]
-  -- This characterizes CE as the constant μ[X]
-  -- Full proof uses IndepFun.integral_mul applied to X and 1_s
-  sorry
+  -- Convert IndepFun to Indep of σ-algebras
+  rw [IndepFun_iff_Indep] at h_indep
+  -- Apply condExp_indep_eq: E[X|σ(W)] = E[X] when σ(X) ⊥ σ(W)
+  refine condExp_indep_eq hX.comap_le hW.comap_le ?_ h_indep
+  -- X is σ(X)-strongly measurable (X is measurable from (Ω, σ(X)) to ℝ by definition of comap)
+  have : @Measurable Ω ℝ (MeasurableSpace.comap X inferInstance) inferInstance X :=
+    Measurable.of_comap_le le_rfl
+  exact this.stronglyMeasurable
 
 /-- Extract independence of first component from pair independence. -/
 lemma IndepFun.of_comp_left_fst {Y : Ω → α} {Z : Ω → β} {W : Ω → γ}
@@ -301,17 +306,35 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
     · exact integrable_const (1 : ℝ)
     · exact hY hA
 
-  -- Use tower property: E[E[f|mZW]|mW] = E[f|mW]
-  -- But we want to show E[f|mZW] = E[f|mW], which requires showing E[f|mZW] is mW-measurable
-  -- Actually, use condExp_condExp_of_le: E[E[f|m']|m] = E[f|m] when m ≤ m'
-  have tower : μ[μ[f | mZW] | mW] =ᵐ[μ] μ[f | mW] := by
-    apply condExp_condExp_of_le hle hf_int
+  -- Key insight: Use tower property and apply uniqueness on σ(Z,W)
+  -- We show μ[f|mW] has the same set integrals as f on all σ(Z,W)-sets
 
-  -- Also have: μ[μ[f|mZW]|mW] =ᵐ μ[f|mZW] if μ[f|mZW] is mW-measurable
-  -- But μ[f|mZW] is mZW-measurable, not necessarily mW-measurable!
+  -- σ-algebra orderings
+  have hmZW_le : mZW ≤ _ := (hZ.prodMk hW).comap_le  -- σ(Z,W) ≤ 𝓜(Ω)
 
-  -- Alternative: show directly that both CEs have same integrals on mW-sets
-  sorry
+  -- μ[f|mW] is σ(W)-measurable, hence also σ(Z,W)-measurable
+  have hgm : AEStronglyMeasurable[mZW] (μ[f | mW]) μ := by
+    refine AEStronglyMeasurable.mono ?_ hle
+    exact stronglyMeasurable_condExp.aestronglyMeasurable
+
+  -- For any S ∈ σ(Z,W): ∫_S μ[f|mW] = ∫_S f
+  have hg_eq : ∀ s : Set Ω, MeasurableSet[mZW] s → μ s < ∞ →
+      ∫ x in s, (μ[f | mW]) x ∂μ = ∫ x in s, f x ∂μ := by
+    intro s hs hμs
+    -- Use tower property: μ[μ[f|mZW]|mW] = μ[f|mW]
+    have tower : μ[μ[f | mZW] | mW] =ᵐ[μ] μ[f | mW] :=
+      condExp_condExp_of_le hle hmZW_le
+    -- Therefore ∫_S μ[f|mW] = ∫_S μ[μ[f|mZW]|mW]
+    have eq1 : ∫ x in s, μ[f | mW] x ∂μ = ∫ x in s, μ[μ[f | mZW] | mW] x ∂μ :=
+      setIntegral_congr_ae (hmZW_le s hs) tower.symm
+    -- And ∫_S μ[μ[f|mZW]|mW] = ∫_S μ[f|mZW] when S ∈ σ(W)...
+    -- But S ∈ σ(Z,W), not necessarily σ(W)!
+    -- So we need to use conditional independence here
+    sorry
+
+  -- Apply uniqueness: μ[f|mW] =ᵐ μ[f|mZW]
+  exact (ae_eq_condExp_of_forall_setIntegral_eq hmZW_le hf_int
+    (fun _ _ _ => integrable_condExp.integrableOn) hg_eq hgm).symm
 
 /-- **Conditional expectation projection from conditional independence.**
 
