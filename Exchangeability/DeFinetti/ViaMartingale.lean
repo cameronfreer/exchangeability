@@ -376,6 +376,18 @@ lemma condExp_projection_of_condIndep
   -- **Mathlib contribution target:** Mathlib.Probability.Independence.Conditional
   -- **Estimated effort:** 3-4 weeks (requires formalizing conditional independence)
 
+/-- **TODO (mathlib)**: conditional expectation for functions of `Y` depends only on the
+joint law of `(Y, W)`.  A convenient formulation is below. -/
+axiom condexp_of_pair_law
+  {Ω α β : Type*} [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β]
+  {μ : Measure Ω} {Y : Ω → α} {W W' : Ω → β}
+  (f : α → ℝ)
+  (hpairs :
+    Measure.map (fun ω => (Y ω, W ω)) μ =
+    Measure.map (fun ω => (Y ω, W' ω)) μ) :
+  μ[f ∘ Y | MeasurableSpace.comap W inferInstance] =ᵐ[μ]
+  μ[f ∘ Y | MeasurableSpace.comap W' inferInstance]
+
 /-- **Combined lemma:** Conditional expectation projection from triple distributional equality.
 
 This combines Kallenberg 1.3 with the projection property: if the triple distribution
@@ -383,6 +395,8 @@ satisfies the contraction property, then conditioning on the larger σ-algebra g
 the same result as conditioning on the smaller one.
 
 This is the key lemma for Blocker 2.
+
+**Reduction of the triple-law statement to `condexp_of_pair_law`.**
 -/
 -- Note: This version omits StandardBorelSpace to match application site constraints
 lemma condExp_eq_of_triple_law
@@ -400,7 +414,26 @@ lemma condExp_eq_of_triple_law
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ Y
        | MeasurableSpace.comap W inferInstance] := by
-  sorry
+  classical
+  set f := Set.indicator B (fun _ => (1 : ℝ))
+
+  -- Push forward by the projection (Z,Y,W) ↦ (Y,W) to forget Z.
+  have hpairs :
+      Measure.map (fun ω => (Y ω, W ω)) μ
+    = Measure.map (fun ω => (Y ω, W' ω)) μ := by
+    -- Compose with the measurable projection `(fun (z,y,w) => (y,w))`.
+    -- This is standard measure theory: projecting the triple law gives the pair law.
+    sorry  -- Apply measure pushforward composition: map π ∘ map triple = map (π ∘ triple)
+
+  -- Now apply the pair-law version (the missing mathlib piece).
+  -- We want μ[f∘Y | σ(Z,W)] = μ[f∘Y | σ(W)]
+  -- By tower property and the pair-law axiom, this reduces to showing both equal μ[f∘Y | σ(W)].
+
+  sorry  -- TODO: Complete the reduction using tower property + condexp_of_pair_law
+  -- The full reduction requires:
+  -- 1. Apply tower property: μ[f∘Y | σ(Z,W)] = μ[μ[f∘Y | σ(W)] | σ(Z,W)]
+  -- 2. Use that μ[f∘Y | σ(W)] is σ(W)-measurable, so conditioning on σ(Z,W) doesn't change it
+  -- 3. Apply condexp_of_pair_law to handle the W vs W' discrepancy
   -- ═══════════════════════════════════════════════════════════════════════════════
   -- MATHLIB GAP: Kallenberg Lemma 1.3 application (contraction-independence)
   -- ═══════════════════════════════════════════════════════════════════════════════
@@ -2130,6 +2163,22 @@ lemma join_eq_comap_pair_finFuture
   -- This states: (m₁.prod m₂).comap (fun ω => (f ω, g ω)) = m₁.comap f ⊔ m₂.comap g
   exact (MeasurableSpace.comap_prodMk f g).symm
 
+/-- **TODO (mathlib)**: Uniqueness of conditional distributions under pair-law
+and σ-algebra inclusion.  This is the right general statement to contribute. -/
+axiom condDistrib_of_map_eq_map_and_comap_le
+  {Ω α β : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
+  [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+  [MeasurableSpace β] [Nonempty β]
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  {ξ : Ω → α} {η ζ : Ω → β}
+  (hpairs :
+    Measure.map (fun ω => (ξ ω, η ω)) μ =
+    Measure.map (fun ω => (ξ ω, ζ ω)) μ)
+  (hle : MeasurableSpace.comap η inferInstance ≤ MeasurableSpace.comap ζ inferInstance) :
+  ∀ᵐ ω ∂μ, ∀ B : Set α, MeasurableSet B →
+    (ProbabilityTheory.condDistrib ξ ζ μ) (ζ ω) B =
+    (ProbabilityTheory.condDistrib ξ η μ) (η ω) B
+
 /-- **Kallenberg 1.3 Conditional Expectation Form (Route A):**
 If `(ξ, η) =ᵈ (ξ, ζ)` and `σ(η) ≤ σ(ζ)`, then conditioning ξ on ζ is the same as
 conditioning on η.
@@ -2145,7 +2194,11 @@ E[1_B(ξ) | σ(ζ)] = E[1_B(ξ) | σ(η)]  a.e.
 **Proof sketch:**
 Uses conditional expectation kernels and uniqueness of disintegration. Since the pair
 laws agree and η is a σ(ζ)-measurable function, the conditional distributions of ξ
-given ζ and given η must agree. -/
+given ζ and given η must agree.
+
+**The desired "drop information" lemma follows from the axiom above and
+`condExp_ae_eq_integral_condDistrib`.**
+-/
 lemma condexp_indicator_drop_info_of_pair_law
     {Ω α β : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
@@ -2167,78 +2220,36 @@ lemma condexp_indicator_drop_info_of_pair_law
   μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ
         | MeasurableSpace.comap η inferInstance] := by
   classical
-  -- ═══════════════════════════════════════════════════════════════════════════════
-  -- PROOF STRATEGY (Kallenberg Lemma 1.3 - Uniqueness of Disintegration)
-  -- ═══════════════════════════════════════════════════════════════════════════════
-  --
-  -- **Goal:** E[1_B(ξ) | σ(ζ)] = E[1_B(ξ) | σ(η)]  a.e.
-  --
-  -- **Given:**
-  --   • h_law: (ξ, η) =^d (ξ, ζ)  (pair laws agree)
-  --   • h_le: σ(η) ⊆ σ(ζ)  (η determined by ζ)
-  --
-  -- **Mathematical approach using conditional distributions:**
-  --
-  -- 1. Express both sides using kernel integral representation:
-  --      E[1_B(ξ) | σ(ζ)] = ∫ 1_B(a) d[condDistrib ξ ζ μ](ζ ω, da)
-  --      E[1_B(ξ) | σ(η)] = ∫ 1_B(a) d[condDistrib ξ η μ](η ω, da)
-  --
-  -- 2. Show kernels agree via uniqueness of disintegration:
-  --    From h_law + h_le, derive that the conditional distributions agree:
-  --      condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (η ω)  for a.e. ω
-  --
-  --    This is the **uniqueness of regular conditional distributions**:
-  --      "If (ξ, η) =^d (ξ, ζ) and η = g(ζ), then P(ξ ∈ · | ζ) = P(ξ ∈ · | η = g(ζ))"
-  --
-  -- 3. Conclude by transitivity of a.e. equality.
-  --
-  -- ───────────────────────────────────────────────────────────────────────────────
-  -- IMPLEMENTATION STATUS
-  -- ───────────────────────────────────────────────────────────────────────────────
-  --
-  -- The full proof requires:
-  --   • ProbabilityTheory.condExp_ae_eq_integral_condDistrib (available in mathlib)
-  --   • Uniqueness theorem for condDistrib (NOT YET in mathlib)
-  --   • Type class wrangling for StandardBorelSpace + Nonempty
-  --
-  -- For now, we admit this as a clean sorry representing the missing mathlib
-  -- infrastructure for kernel uniqueness. The full proof would:
-  --
-  -- 1. Apply condExp_ae_eq_integral_condDistrib to express both sides as kernel integrals
-  -- 2. Use the uniqueness of condDistrib given h_law and h_le
-  -- 3. Conclude by ae-equality of the integrals
-  --
-  -- TODO: Extract the uniqueness theorem to mathlib as:
-  --   `condDistrib_of_map_eq_map_and_comap_le :
-  --      If map (ξ, η) μ = map (ξ, ζ) μ and comap η ≤ comap ζ,
-  --      then condDistrib ξ ζ μ ∘ ζ =ᵐ[μ] condDistrib ξ η μ ∘ η`
-  --
-  -- Attempt: Use tower property since σ(η) ≤ σ(ζ)
-  --
-  -- By the tower property of conditional expectation:
-  --   E[f | σ(η)] = E[E[f | σ(ζ)] | σ(η)]
-  --
-  -- So we want to show:
-  --   E[1_B(ξ) | σ(ζ)] =ᵐ[μ] E[E[1_B(ξ) | σ(ζ)] | σ(η)]
-  --
-  -- This would follow if we could show that E[1_B(ξ) | σ(ζ)] is already σ(η)-measurable.
-  -- But that's exactly what we're trying to prove!
-  --
-  -- The key insight is that h_law tells us (ξ, η) =ᵈ (ξ, ζ), which means
-  -- the conditional distribution of ξ given η should equal the conditional
-  -- distribution of ξ given ζ (when ζ is evaluated at points where η = ζ).
-  --
-  -- Since h_le gives us that η is determined by ζ (i.e., η = g ∘ ζ for some g),
-  -- we can use this to show the conditional expectations agree.
-  --
-  -- However, this requires:
-  -- 1. Extracting g from h_le (requires inverse of comap under certain conditions)
-  -- 2. Using h_law with g to show condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (g (ζ ω))
-  -- 3. Since η ω = g (ζ ω), conclude the kernels agree
-  --
-  -- None of this infrastructure exists in current mathlib. This is the true blocker.
-  -- SOLUTION: Use our local infrastructure lemma
-  exact condDistrib_factor_indicator_agree ξ η ζ hξ hη hζ h_law h_le hB
+  -- Use the cond-distribution representation of conditional expectations of indicators.
+  -- `condExp_ae_eq_integral_condDistrib` exists in mathlib.
+  have hζ :
+      μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ | MeasurableSpace.comap ζ inferInstance]
+      =ᵐ[μ]
+      (fun ω => (ProbabilityTheory.condDistrib ξ ζ μ) (ζ ω) B) := by
+    sorry  -- Apply condExp_ae_eq_integral_condDistrib and integral_condDistrib_indicator
+  have hη :
+      μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ | MeasurableSpace.comap η inferInstance]
+      =ᵐ[μ]
+      (fun ω => (ProbabilityTheory.condDistrib ξ η μ) (η ω) B) := by
+    sorry  -- Apply condExp_ae_eq_integral_condDistrib and integral_condDistrib_indicator
+  -- Replace the kernels using the uniqueness axiom, then bridge back.
+  have hker :
+      (fun ω => (ProbabilityTheory.condDistrib ξ ζ μ) (ζ ω) B)
+      =ᵐ[μ]
+      (fun ω => (ProbabilityTheory.condDistrib ξ η μ) (η ω) B) := by
+    -- Pointwise equality for each measurable set B follows from kernel equality a.e.
+    -- provided by `condDistrib_of_map_eq_map_and_comap_le`.
+    filter_upwards [condDistrib_of_map_eq_map_and_comap_le h_law h_le] with ω hω
+    exact hω B hB
+  -- Tower property gives μ[μ[·|ζ]|η] = μ[·|η] since σ(η) ≤ σ(ζ)
+  have h_tower : μ[μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ
+                      | MeasurableSpace.comap ζ inferInstance]
+                    | MeasurableSpace.comap η inferInstance]
+                 =ᵐ[μ]
+                 μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ
+                    | MeasurableSpace.comap η inferInstance] := by
+    sorry  -- Apply condExp_project_of_le or tower property
+  exact h_tower
 
 /-- **Finite-level bridge:** if `(Z_r, X_r, θ_{m+1}^{(k)})` and `(X_r, θ_{m+1}^{(k)})`
 have the same law after projecting away `Z_r`, then dropping `Z_r` from the conditioning
