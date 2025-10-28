@@ -777,43 +777,29 @@ theorem condExp_project_of_condIndepFun
         simp only [Finset.sum_apply]
 
       -- Step 4: Factor each term using condExp_smul + condIndep_indicator
-      have step2 : (fun ω => ∑ r ∈ (f_n n).range, μ[ fun ω' => r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω)
-                 =ᵐ[μ] fun ω => ∑ r ∈ (f_n n).range, r * (μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) := by
+      have step2 : (fun ω => ∑ r ∈ (f_n n).range, μ[ fun ω' => r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator (1 : Ω → ℝ) ω' * (Z ⁻¹' B).indicator (1 : Ω → ℝ) ω' | mW ] ω)
+                 =ᵐ[μ] fun ω => ∑ r ∈ (f_n n).range, r * (μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator (1 : Ω → ℝ) | mW ] ω * μ[ (Z ⁻¹' B).indicator (1 : Ω → ℝ) | mW ] ω) := by
         have h_all : ∀ r ∈ (f_n n).range,
-            (fun ω => μ[ fun ω' => r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω) =ᵐ[μ]
-            (fun ω => r * (μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)) := by
+            (fun ω => μ[ fun ω' => r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator (1 : Ω → ℝ) ω' * (Z ⁻¹' B).indicator (1 : Ω → ℝ) ω' | mW ] ω) =ᵐ[μ]
+            (fun ω => r * (μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator (1 : Ω → ℝ) | mW ] ω * μ[ (Z ⁻¹' B).indicator (1 : Ω → ℝ) | mW ] ω)) := by
           intro r hr
           -- Factor out scalar
-          have h_smul : μ[ fun ω' => r * ((Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω') | mW ] =ᵐ[μ]
-                        r • μ[ fun ω' => (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] := by
-            have h_int_prod : Integrable (fun ω' => (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω') μ := by
-              have h_eq : (fun ω' => (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω')
-                        = fun ω' => (Y ⁻¹' ((f_n n) ⁻¹' {r}) ∩ Z ⁻¹' B).indicator (fun _ => 1) ω' := by
-                ext ω'
-                by_cases hY : ω' ∈ Y ⁻¹' ((f_n n) ⁻¹' {r}) <;> by_cases hZ : ω' ∈ Z ⁻¹' B
-                · simp [Set.indicator_of_mem hY, Set.indicator_of_mem hZ, Set.mem_inter hY hZ]
-                · simp [Set.indicator_of_mem hY, Set.indicator_of_notMem hZ, Set.indicator_of_notMem (fun ⟨_, h⟩ => hZ h)]
-                · simp [Set.indicator_of_notMem hY, Set.indicator_of_notMem (fun ⟨h, _⟩ => hY h)]
-                · simp [Set.indicator_of_notMem hY, Set.indicator_of_notMem hZ, Set.indicator_of_notMem (fun ⟨h, _⟩ => hY h)]
-              rw [h_eq]
-              have hYr_meas : MeasurableSet (Y ⁻¹' ((f_n n) ⁻¹' {r})) :=
-                hY ((f_n n).measurableSet_fiber r)
-              have hZB_meas : MeasurableSet (Z ⁻¹' B) := hZ hB
-              exact (integrable_const 1).indicator (hYr_meas.inter hZB_meas)
-            exact condExp_smul r h_int_prod mW
+          have h_smul : μ[ fun ω' => r * ((Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator (1 : Ω → ℝ) ω' * (Z ⁻¹' B).indicator (1 : Ω → ℝ) ω') | mW ] =ᵐ[μ]
+                        r • μ[ fun ω' => (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator (1 : Ω → ℝ) ω' * (Z ⁻¹' B).indicator (1 : Ω → ℝ) ω' | mW ] :=
+            condExp_smul r (fun ω' => (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator (1 : Ω → ℝ) ω' * (Z ⁻¹' B).indicator (1 : Ω → ℝ) ω') mW
           -- Apply conditional independence
-          have h_factor : μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 * (Z ⁻¹' B).indicator 1 | mW ] =ᵐ[μ]
-                          μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 | mW ] * μ[ (Z ⁻¹' B).indicator 1 | mW ] :=
+          have h_factor : μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator (1 : Ω → ℝ) * (Z ⁻¹' B).indicator (1 : Ω → ℝ) | mW ] =ᵐ[μ]
+                          μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator (1 : Ω → ℝ) | mW ] * μ[ (Z ⁻¹' B).indicator (1 : Ω → ℝ) | mW ] :=
             condIndep_indicator ((f_n n) ⁻¹' {r}) B ((f_n n).measurableSet_fiber r) hB
           -- Combine
           filter_upwards [h_smul, h_factor] with ω h_smul_ω h_factor_ω
-          have : (fun ω' => r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω') =
-                 (fun ω' => r * ((Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω')) := by ext; ring
+          have : (fun ω' => r * (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator (1 : Ω → ℝ) ω' * (Z ⁻¹' B).indicator (1 : Ω → ℝ) ω') =
+                 (fun ω' => r * ((Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator (1 : Ω → ℝ) ω' * (Z ⁻¹' B).indicator (1 : Ω → ℝ) ω')) := by ext; ring
           rw [this, h_smul_ω]
-          show r * μ[ fun ω' => (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 ω' * (Z ⁻¹' B).indicator 1 ω' | mW ] ω =
-               r * (μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
-          change r * μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 * (Z ⁻¹' B).indicator 1 | mW ] ω =
-                 r * (μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)
+          show r * μ[ fun ω' => (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator (1 : Ω → ℝ) ω' * (Z ⁻¹' B).indicator (1 : Ω → ℝ) ω' | mW ] ω =
+               r * (μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator (1 : Ω → ℝ) | mW ] ω * μ[ (Z ⁻¹' B).indicator (1 : Ω → ℝ) | mW ] ω)
+          change r * μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator (1 : Ω → ℝ) * (Z ⁻¹' B).indicator (1 : Ω → ℝ) | mW ] ω =
+                 r * (μ[ (Y ⁻¹' ((f_n n) ⁻¹' {r})).indicator (1 : Ω → ℝ) | mW ] ω * μ[ (Z ⁻¹' B).indicator (1 : Ω → ℝ) | mW ] ω)
           rw [h_factor_ω]
           rfl
         exact @finset_sum_ae_eq Ω ℝ ℝ mΩ μ _ (f_n n).range _ _ h_all
@@ -961,57 +947,20 @@ theorem condExp_project_of_condIndepFun
     -- Conclusion: μ[f | mW] =ᵐ μ[g | mW], which is exactly what we want to prove
 
     -- RHS integrability: Products of conditional expectations
+    -- TODO: Complete this proof - product of integrable (condExp) with bounded (indicator condExp ≤ 1) is integrable
     have h_gs_int : ∀ n, Integrable (fun ω => μ[ f_n n ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) μ := by
-      intro n
-      -- Use Integrable.bdd_mul': product of integrable with bounded is integrable
-      refine Integrable.bdd_mul' integrable_condExp ?_ ?_
-      · exact (stronglyMeasurable_condExp : StronglyMeasurable μ[ (Z ⁻¹' B).indicator 1 | mW ]).aestronglyMeasurable
-      · -- Bound: ‖μ[indicator | mW] ω‖ ≤ 1 a.e.
-        -- Since 0 ≤ indicator 1 ≤ 1, monotonicity gives: μ[0|mW] ≤ μ[indicator|mW] ≤ μ[1|mW]
-        -- And μ[c|mW] = c for constants in probability spaces
-        have h_ind_bdd : (Z ⁻¹' B).indicator (1 : Ω → ℝ) ≤ᵐ[μ] 1 := by
-          apply Filter.Eventually.of_forall
-          intro ω
-          simp [Set.indicator_le_self']
-        have h_bound : μ[ (Z ⁻¹' B).indicator 1 | mW ] ≤ᵐ[μ] μ[ (1 : Ω → ℝ) | mW ] :=
-          condExp_mono (integrable_const _) (integrable_const _) h_ind_bdd
-        filter_upwards [h_bound] with ω h_ω
-        have : (μ[ (1 : Ω → ℝ) | mW ] ω : ℝ) = 1 := by
-          exact condExp_const (1 : ℝ)
-        rw [this] at h_ω
-        have h_nonneg : 0 ≤ μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
-          have := condExp_nonneg (show 0 ≤ᵐ[μ] (Z ⁻¹' B).indicator (1 : Ω → ℝ) by
-            apply Filter.Eventually.of_forall; intro; simp [Set.indicator_nonneg'])
-          exact Filter.Eventually.exists.mp (Filter.Eventually.and (Filter.eventually_of_forall (fun _ => le_refl _)) this) ω
-        exact abs_le.mpr ⟨neg_le.mpr (by linarith), h_ω⟩
+      sorry
 
+    -- TODO: Same as h_gs_int but for f instead of f_n n
     have h_g_int : Integrable (fun ω => μ[ f ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) μ := by
-      -- Same proof as h_gs_int
-      refine Integrable.bdd_mul' integrable_condExp ?_ ?_
-      · exact (stronglyMeasurable_condExp : StronglyMeasurable μ[ (Z ⁻¹' B).indicator 1 | mW ]).aestronglyMeasurable
-      · have h_ind_bdd : (Z ⁻¹' B).indicator (1 : Ω → ℝ) ≤ᵐ[μ] 1 := by
-          apply Filter.Eventually.of_forall
-          intro ω
-          simp [Set.indicator_le_self']
-        have h_bound : μ[ (Z ⁻¹' B).indicator 1 | mW ] ≤ᵐ[μ] μ[ (1 : Ω → ℝ) | mW ] :=
-          condExp_mono (integrable_const _) (integrable_const _) h_ind_bdd
-        filter_upwards [h_bound] with ω h_ω
-        have : (μ[ (1 : Ω → ℝ) | mW ] ω : ℝ) = 1 := by
-          exact condExp_const (1 : ℝ)
-        rw [this] at h_ω
-        have h_nonneg : 0 ≤ μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := by
-          have := condExp_nonneg (show 0 ≤ᵐ[μ] (Z ⁻¹' B).indicator (1 : Ω → ℝ) by
-            apply Filter.Eventually.of_forall; intro; simp [Set.indicator_nonneg'])
-          exact Filter.Eventually.exists.mp (Filter.Eventually.and (Filter.eventually_of_forall (fun _ => le_refl _)) this) ω
-        exact abs_le.mpr ⟨neg_le.mpr (by linarith), h_ω⟩
+      sorry
 
     -- LHS pointwise convergence: product of converging sequences
     have h_fs_ptwise : ∀ᵐ ω ∂μ, Filter.Tendsto
-        (fun n => ((f_n n ∘ Y) * (Z ⁻¹' B).indicator 1) ω)
+        (fun n => (f_n n ∘ Y) ω * (Z ⁻¹' B).indicator 1 ω)
         Filter.atTop
-        (nhds (((f ∘ Y) * (Z ⁻¹' B).indicator 1) ω)) := by
+        (nhds ((f ∘ Y) ω * (Z ⁻¹' B).indicator 1 ω)) := by
       filter_upwards [h_fY_ptwise] with ω h_ω
-      simp only [Pi.mul_apply]
       exact h_ω.mul tendsto_const_nhds
 
     -- RHS pointwise convergence: first factor converges a.e., second is constant
@@ -1029,46 +978,31 @@ theorem condExp_project_of_condIndepFun
         have h_L1_conv : Filter.Tendsto (fun n => μ[ f_n n ∘ Y | mW ]) Filter.atTop
             (nhds μ[ f ∘ Y | mW ]) := by
           -- Use tendsto_condExpL1_of_dominated_convergence
-          have h_bound_fn : ∀ n, ∀ᵐ ω ∂μ, ‖(f_n n ∘ Y) ω‖ ≤ 2 * ‖f (Y ω)‖ := by
-            intro n
-            apply Filter.Eventually.of_forall
-            intro ω
-            have := SimpleFunc.norm_approxOn_le hf (by simp) (subset_closure (Set.mem_union_left _ (Set.mem_range_self (Y ω)))) n
-            linarith
-          exact tendsto_condExpL1_of_dominated_convergence h_fn_int
-            (fun ω => 2 * ‖f (Y ω)‖)
-            (by { have : Integrable (fun ω => ‖f (Y ω)‖) μ := h_int.norm.comp_measurable hY
-                  convert this.const_mul 2 using 1; ext; ring })
-            h_fY_ptwise h_bound_fn
-        -- Step 2: Extract a.e. convergence from L¹ convergence
-        -- Step 1: L¹ → convergence in measure
-        have h_in_measure :
-            TendstoInMeasure μ
-              (fun n => μ[ f_n n ∘ Y | mW ])
-              (μ[ f ∘ Y | mW ]) := by
-          -- we already have L¹ convergence in `h_L1_conv`
-          -- and `p = 1` turns L¹-conv into conv. in measure
-          simpa using
-            (tendstoInMeasure_of_tendsto_eLpNorm
-              (μ := μ) (p := (1 : ℝ≥0∞)) h_L1_conv)
-        -- Step 2: conv. in measure ⇒ a.e. pointwise convergence (subsequence principle)
-        exact ae_tendsto_of_tendstoInMeasure_subseq h_in_measure
+          -- TODO: This entire h_condExp_ptwise proof needs fixing - multiple API issues
+          -- SimpleFunc.norm_approxOn_le doesn't exist
+          -- tendsto_condExpL1_of_dominated_convergence signature is wrong
+          sorry
+        -- TODO: Extract a.e. convergence from L¹ convergence
+        -- This needs tendstoInMeasure_of_tendsto_eLpNorm and ae_tendsto_of_tendstoInMeasure_subseq
+        sorry
 
       filter_upwards [h_condExp_ptwise] with ω h_ω
       exact h_ω.mul tendsto_const_nhds
 
     -- Dominating function for LHS
     have h_bound_fs_int : Integrable (fun ω => 2 * ‖f (Y ω)‖) μ := by
-      have : Integrable (fun ω => ‖f (Y ω)‖) μ := h_int.norm.comp_measurable hY
-      convert this.const_mul 2 using 1
-      ext ω
-      ring
+      have h_norm_int : Integrable (fun ω => ‖f (Y ω)‖) μ := hf_int.norm
+      simpa using h_norm_int.const_mul 2
 
-    -- Dominating function for RHS
+    -- TODO: Fix h_gs_bound - typeclass issues with norm inference
     have h_gs_bound :
         ∀ n, ∀ᵐ ω ∂μ,
           ‖μ[ f_n n ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω‖
             ≤ μ[ (fun ω => 2 * ‖f (Y ω)‖) | mW ] ω := by
+      sorry
+    /-
+    OLD PROOF (has typeclass errors):
+    by
       intro n
       -- Bound for the indicator factor: ‖ μ[1_{Z⁻¹(B)}|W] ‖ ≤ 1
       have h_ind_bound : ∀ᵐ ω ∂μ, ‖μ[ (Z ⁻¹' B).indicator 1 | mW ] ω‖ ≤ 1 := by
@@ -1104,36 +1038,21 @@ theorem condExp_project_of_condIndepFun
         _ ≤ μ[ (fun ω => 2 * ‖f (Y ω)‖) | mW ] ω := by
               -- Monotonicity pushes the a.e. bound ‖f_n∘Y‖ ≤ 2‖f∘Y‖ through cond. exp.
               refine condExp_mono
+                (by simpa using (h_fn_int n).norm)
                 (by
-                  have : Integrable (fun ω => ‖(f_n n ∘ Y) ω‖) μ :=
-                    (h_fn_int n).norm.comp_measurable hY
-                  simpa using this)
-                (by
-                  have : Integrable (fun ω => ‖f (Y ω)‖) μ := h_int.norm.comp_measurable hY
-                  simpa using this.const_mul 2)
+                  have h_norm_int : Integrable (fun ω => ‖f (Y ω)‖) μ := hf_int.norm
+                  simpa using h_norm_int.const_mul 2)
                 (h_bound_fn n)
+    -/
 
-    -- Integrability of the (new) RHS dominating function
+    -- TODO: Fix integrable_condExp call syntax
     have h_bound_gs_int :
         Integrable (fun ω => μ[ (fun ω => 2 * ‖f (Y ω)‖) | mW ] ω) μ := by
-      -- conditional expectation maps L¹ to L¹
-      simpa using
-        (integrable_condExp (μ := μ) (m := mW)
-          (f := fun ω => 2 * ‖f (Y ω)‖)
-          (by
-            have : Integrable (fun ω => ‖f (Y ω)‖) μ := h_int.norm.comp_measurable hY
-            simpa using this.const_mul 2))
+      sorry
 
-    -- Apply tendsto_condExp_unique
-    refine tendsto_condExp_unique
-      (fun n => (f_n n ∘ Y) * (Z ⁻¹' B).indicator 1)  -- fs
-      (fun n ω => μ[ f_n n ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)  -- gs
-      ((f ∘ Y) * (Z ⁻¹' B).indicator 1)  -- f
-      (fun ω => μ[ f ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)  -- g
-      h_fnB_int h_gs_int h_fs_ptwise h_gs_ptwise
-      (fun ω => 2 * ‖f (Y ω)‖) h_bound_fs_int
-      (fun ω => μ[ (fun ω => 2 * ‖f (Y ω)‖) | mW ] ω) h_bound_gs_int
-      h_bound_fnB h_gs_bound h_factorization
+    -- TODO: Fix tendsto_condExp_unique application - type mismatch in h_factorization
+    -- The expected type wants condExp of the product function, but we have product of condExps
+    sorry
 
     /-
     **Status: Stage 3 nearly complete!**
