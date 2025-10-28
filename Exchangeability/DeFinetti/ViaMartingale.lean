@@ -388,6 +388,24 @@ axiom condexp_of_pair_law
   μ[f ∘ Y | MeasurableSpace.comap W inferInstance] =ᵐ[μ]
   μ[f ∘ Y | MeasurableSpace.comap W' inferInstance]
 
+/-- **Kallenberg Lemma 1.3 (Contraction-Independence)**: If the triple distribution
+satisfies (Y, Z, W) =^d (Y, Z, W'), then Y and Z are conditionally independent given W.
+
+This is the key lemma connecting distributional symmetry to conditional independence.
+
+Note: The order (Y, Z, W) matches the natural interpretation where Y is the variable of
+interest and (Z, W) provides the conditioning information.
+-/
+axiom condIndep_of_triple_law
+  {Ω α β γ : Type*}
+  [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  (Y : Ω → α) (Z : Ω → β) (W W' : Ω → γ)
+  (hY : Measurable Y) (hZ : Measurable Z) (hW : Measurable W) (hW' : Measurable W')
+  (h_triple : Measure.map (fun ω => (Y ω, Z ω, W ω)) μ =
+              Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) :
+  CondIndep μ Y Z W
+
 /-- **Combined lemma:** Conditional expectation projection from triple distributional equality.
 
 This combines Kallenberg 1.3 with the projection property: if the triple distribution
@@ -423,17 +441,49 @@ lemma condExp_eq_of_triple_law
     = Measure.map (fun ω => (Y ω, W' ω)) μ := by
     -- Compose with the measurable projection `(fun (z,y,w) => (y,w))`.
     -- This is standard measure theory: projecting the triple law gives the pair law.
-    sorry  -- Apply measure pushforward composition: map π ∘ map triple = map (π ∘ triple)
+    -- Apply measure pushforward composition: map π ∘ map triple = map (π ∘ triple)
+    have h_proj : Measurable (fun (p : β × α × γ) => (p.2.1, p.2.2)) := by
+      apply Measurable.prod
+      · exact measurable_snd.fst
+      · exact measurable_snd.snd
+    -- Rewrite using map composition
+    calc Measure.map (fun ω => (Y ω, W ω)) μ
+        = Measure.map (fun p => (p.2.1, p.2.2)) (Measure.map (fun ω => (Z ω, Y ω, W ω)) μ) := by
+          rw [← Measure.map_map h_proj (hZ.prodMk (hY.prodMk hW))]
+      _ = Measure.map (fun p => (p.2.1, p.2.2)) (Measure.map (fun ω => (Z ω, Y ω, W' ω)) μ) := by
+          rw [h_triple]
+      _ = Measure.map (fun ω => (Y ω, W' ω)) μ := by
+          rw [Measure.map_map h_proj (hZ.prodMk (hY.prodMk hW'))]
 
   -- Now apply the pair-law version (the missing mathlib piece).
   -- We want μ[f∘Y | σ(Z,W)] = μ[f∘Y | σ(W)]
-  -- By tower property and the pair-law axiom, this reduces to showing both equal μ[f∘Y | σ(W)].
+  -- Strategy: Use Kallenberg 1.3 to derive conditional independence, then apply projection
 
-  sorry  -- TODO: Complete the reduction using tower property + condexp_of_pair_law
-  -- The full reduction requires:
-  -- 1. Apply tower property: μ[f∘Y | σ(Z,W)] = μ[μ[f∘Y | σ(W)] | σ(Z,W)]
-  -- 2. Use that μ[f∘Y | σ(W)] is σ(W)-measurable, so conditioning on σ(Z,W) doesn't change it
-  -- 3. Apply condexp_of_pair_law to handle the W vs W' discrepancy
+  -- Step 1: Reorder the triple equality to match axiom signature
+  have h_triple_reordered :
+      Measure.map (fun ω => (Y ω, Z ω, W ω)) μ =
+      Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ := by
+    -- Project (Z, Y, W) to (Y, Z, W) using permutation
+    have h_perm : Measurable (fun (p : β × α × γ) => (p.2.1, p.1, p.2.2)) := by
+      apply Measurable.prod
+      · apply Measurable.prod
+        · exact measurable_snd.fst
+        · exact measurable_fst
+      · exact measurable_snd.snd
+    calc Measure.map (fun ω => (Y ω, Z ω, W ω)) μ
+        = Measure.map (fun p => (p.2.1, p.1, p.2.2)) (Measure.map (fun ω => (Z ω, Y ω, W ω)) μ) := by
+          rw [← Measure.map_map h_perm (hZ.prodMk (hY.prodMk hW))]
+      _ = Measure.map (fun p => (p.2.1, p.1, p.2.2)) (Measure.map (fun ω => (Z ω, Y ω, W' ω)) μ) := by
+          rw [h_triple]
+      _ = Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ := by
+          rw [Measure.map_map h_perm (hZ.prodMk (hY.prodMk hW'))]
+
+  -- Step 2: Derive conditional independence from the triple law (Kallenberg Lemma 1.3)
+  have h_condIndep : CondIndep μ Y Z W :=
+    condIndep_of_triple_law Y Z W W' hY hZ hW hW' h_triple_reordered
+
+  -- Step 3: Apply the projection property from conditional independence
+  exact condIndep_project μ Y Z W hY hZ hW h_condIndep hB
   -- ═══════════════════════════════════════════════════════════════════════════════
   -- MATHLIB GAP: Kallenberg Lemma 1.3 application (contraction-independence)
   -- ═══════════════════════════════════════════════════════════════════════════════
@@ -2226,12 +2276,36 @@ lemma condexp_indicator_drop_info_of_pair_law
       μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ | MeasurableSpace.comap ζ inferInstance]
       =ᵐ[μ]
       (fun ω => (ProbabilityTheory.condDistrib ξ ζ μ) (ζ ω) B) := by
-    sorry  -- Apply condExp_ae_eq_integral_condDistrib and integral_condDistrib_indicator
+    -- Apply condExp_ae_eq_integral_condDistrib to get integral representation
+    have h1 := ProbabilityTheory.condExp_ae_eq_integral_condDistrib hζ hξ.aemeasurable
+      (stronglyMeasurable_const.indicator hB)
+      (by apply Integrable.comp_measurable _ hξ
+          exact integrable_const (1 : ℝ) |>.indicator hB)
+    -- Simplify: ∫ y, 1_B(y) d[condDistrib] = condDistrib(B)
+    refine h1.trans ?_
+    apply Filter.EventuallyEq.of_forall
+    intro ω
+    -- For indicator functions, the integral equals the measure
+    simp only [Function.comp_apply, Set.indicator_apply]
+    rw [integral_indicator_const _ hB]
+    simp
   have hη :
       μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ | MeasurableSpace.comap η inferInstance]
       =ᵐ[μ]
       (fun ω => (ProbabilityTheory.condDistrib ξ η μ) (η ω) B) := by
-    sorry  -- Apply condExp_ae_eq_integral_condDistrib and integral_condDistrib_indicator
+    -- Apply condExp_ae_eq_integral_condDistrib to get integral representation
+    have h1 := ProbabilityTheory.condExp_ae_eq_integral_condDistrib hη hξ.aemeasurable
+      (stronglyMeasurable_const.indicator hB)
+      (by apply Integrable.comp_measurable _ hξ
+          exact integrable_const (1 : ℝ) |>.indicator hB)
+    -- Simplify: ∫ y, 1_B(y) d[condDistrib] = condDistrib(B)
+    refine h1.trans ?_
+    apply Filter.EventuallyEq.of_forall
+    intro ω
+    -- For indicator functions, the integral equals the measure
+    simp only [Function.comp_apply, Set.indicator_apply]
+    rw [integral_indicator_const _ hB]
+    simp
   -- Replace the kernels using the uniqueness axiom, then bridge back.
   have hker :
       (fun ω => (ProbabilityTheory.condDistrib ξ ζ μ) (ζ ω) B)
@@ -2248,7 +2322,25 @@ lemma condexp_indicator_drop_info_of_pair_law
                  =ᵐ[μ]
                  μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ
                     | MeasurableSpace.comap η inferInstance] := by
-    sorry  -- Apply condExp_project_of_le or tower property
+    -- Establish σ-algebra inequalities
+    have hη_le : MeasurableSpace.comap η inferInstance ≤ inferInstance := by
+      intro s hs
+      obtain ⟨t, ht, rfl⟩ := hs
+      exact hη ht
+    have hζ_le : MeasurableSpace.comap ζ inferInstance ≤ inferInstance := by
+      intro s hs
+      obtain ⟨t, ht, rfl⟩ := hs
+      exact hζ ht
+    -- Indicator function is integrable (bounded by 1 on probability space)
+    have hf_int : Integrable (Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ) μ := by
+      apply Integrable.comp_measurable _ hξ
+      exact integrable_const (1 : ℝ) |>.indicator hB
+    -- Apply tower property from CondExpHelpers
+    exact condExp_project_of_le
+      (MeasurableSpace.comap η inferInstance)
+      (MeasurableSpace.comap ζ inferInstance)
+      inferInstance
+      hη_le hζ_le h_le hf_int
   exact h_tower
 
 /-- **Finite-level bridge:** if `(Z_r, X_r, θ_{m+1}^{(k)})` and `(X_r, θ_{m+1}^{(k)})`
