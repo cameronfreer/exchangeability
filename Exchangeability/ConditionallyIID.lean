@@ -144,14 +144,12 @@ theorem bind_map_comm {Ω α β : Type*} [MeasurableSpace Ω] [MeasurableSpace �
     (hf : Measurable f) :
     (μ.bind κ).map f = μ.bind (fun ω => (κ ω).map f) := by
   classical
-  have hcomp : Measure.map (fun η : Measure α => η.map f) (Measure.map κ μ) =
-      Measure.map (fun ω => (κ ω).map f) μ := by
-    rw [Measure.map_map (MeasureTheory.Measure.measurable_map f hf) hκ]
-    rfl
   calc (μ.bind κ).map f
       = Measure.join (Measure.map (fun η => η.map f) (Measure.map κ μ)) := by
         simp only [Measure.bind, Measure.join_map_map hf]
-    _ = Measure.join (Measure.map (fun ω => (κ ω).map f) μ) := by rw [hcomp]
+    _ = Measure.join (Measure.map (fun ω => (κ ω).map f) μ) := by
+        rw [Measure.map_map (MeasureTheory.Measure.measurable_map f hf) hκ]
+        rfl
     _ = μ.bind (fun ω => (κ ω).map f) := rfl
 
 end MeasureTheory.Measure
@@ -258,15 +256,14 @@ theorem exchangeable_of_conditionallyIID {μ : Measure Ω} {X : ℕ → Ω → �
     measurable_pi_lambda _ (fun i => hX_meas i.val)
   have hperm_meas : Measurable (fun f : Fin n → α => f ∘ σ) :=
     measurable_pi_lambda _ (fun i => measurable_pi_apply (σ i))
-  have hν_meas : Measurable fun ω => Measure.pi fun _ : Fin n => ν ω :=
-    measurable_measure_pi ν hν_prob hν_meas_coe
   calc Measure.map (fun ω i => X (σ i).val ω) μ
       = Measure.map (fun f => f ∘ σ) (Measure.map (fun ω i => X i.val ω) μ) :=
           (Measure.map_map hperm_meas hXvec_meas).symm
     _ = Measure.map (fun f => f ∘ σ) (μ.bind (fun ω => Measure.pi fun _ : Fin n => ν ω)) := by
           rw [h_id]
     _ = μ.bind (fun ω => Measure.map (fun f => f ∘ σ) (Measure.pi fun _ : Fin n => ν ω)) :=
-          MeasureTheory.Measure.bind_map_comm hν_meas hperm_meas
+          MeasureTheory.Measure.bind_map_comm
+            (measurable_measure_pi ν hν_prob hν_meas_coe) hperm_meas
     _ = μ.bind (fun ω => Measure.pi fun _ : Fin n => ν ω) := by
           simp_rw [MeasureTheory.Measure.pi_comp_perm σ]
     _ = Measure.map (fun ω i => X i.val ω) μ := h_id.symm

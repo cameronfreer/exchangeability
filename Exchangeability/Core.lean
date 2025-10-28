@@ -423,8 +423,6 @@ lemma pathLaw_map_prefix_perm (μ : Measure Ω) (X : ℕ → Ω → α)
   classical
   have hreindex :
       Measurable fun x : ℕ → α => reindex (α:=α) π x := measurable_reindex (α:=α) (π:=π)
-  have hmeas : Measurable fun ω => fun i : ℕ => X i ω := by
-    fun_prop
   calc
     Measure.map (prefixProj (α:=α) n)
         (Measure.map (reindex (α:=α) π) (pathLaw (α:=α) μ X))
@@ -432,8 +430,8 @@ lemma pathLaw_map_prefix_perm (μ : Measure Ω) (X : ℕ → Ω → α)
         rw [Measure.map_map (measurable_prefixProj (α:=α) (n:=n)) hreindex]
     _ = Measure.map (prefixProj (α:=α) n ∘ reindex (α:=α) π)
         (Measure.map (fun ω => fun i : ℕ => X i ω) μ) := by rw [pathLaw]
-    _ = Measure.map ((prefixProj (α:=α) n ∘ reindex (α:=α) π) ∘ fun ω => fun i : ℕ => X i ω) μ :=
-        Measure.map_map ((measurable_prefixProj (α:=α) (n:=n)).comp hreindex) hmeas
+    _ = Measure.map ((prefixProj (α:=α) n ∘ reindex (α:=α) π) ∘ fun ω => fun i : ℕ => X i ω) μ := by
+        exact Measure.map_map ((measurable_prefixProj (α:=α) (n:=n)).comp hreindex) (by fun_prop)
     _ = Measure.map (fun ω => fun i : Fin n => X (π i) ω) μ := rfl
 
 /--

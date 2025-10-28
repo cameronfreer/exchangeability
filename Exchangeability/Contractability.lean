@@ -157,16 +157,13 @@ lemma FullyExchangeable.exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
         = fun ω => fun i : Fin n => X (σ i) ω := by
     funext ω i
     simp [Function.comp, proj, π, extendFinPerm, Fin.is_lt]
-  have hprojid :
-      proj ∘ (fun ω => fun i : ℕ => X i ω)
-        = fun ω => fun i : Fin n => X i.val ω := rfl
   -- Project both laws to the first n coordinates and compare
   calc Measure.map (fun ω i => X (σ i).val ω) μ
       = Measure.map (proj ∘ fun ω i => X (π i) ω) μ := by rw [hprojσ]
     _ = Measure.map proj (Measure.map (fun ω i => X (π i) ω) μ) := hmap₁.symm
     _ = Measure.map proj (Measure.map (fun ω i => X i ω) μ) := by rw [hπ]
     _ = Measure.map (proj ∘ fun ω i => X i ω) μ := hmap₂
-    _ = Measure.map (fun ω i => X i.val ω) μ := by rw [hprojid]
+    _ = Measure.map (fun ω i => X i.val ω) μ := rfl
 
 /-- Exchangeability is preserved under composition of permutations. -/
 lemma Exchangeable.comp {μ : Measure Ω} {X : ℕ → Ω → α} {n : ℕ}
