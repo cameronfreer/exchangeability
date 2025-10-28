@@ -419,7 +419,33 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
     have mZW_gen : mZW = MeasurableSpace.generateFrom
         {s | ∃ (B : Set β) (C : Set γ), MeasurableSet B ∧ MeasurableSet C ∧
              s = Z ⁻¹' B ∩ W ⁻¹' C} := by
-      sorry  -- Need to show comap of product equals generated rectangles
+      -- σ(Z,W) = comap (Z,W) (σ(β×γ))
+      -- σ(β×γ) = generateFrom {B ×ˢ C | ...} by generateFrom_prod
+      -- comap commutes with generateFrom
+      unfold mZW
+      conv_lhs => arg 2; rw [← generateFrom_prod (α := β) (β := γ)]
+      rw [MeasurableSpace.comap_generateFrom]
+      congr 1
+      ext s
+      constructor
+      · intro ⟨t, ht_mem, ht_eq⟩
+        -- t ∈ image2 (· ×ˢ ·) ... means ∃ B C, t = B ×ˢ C
+        -- ht_mem : t ∈ image2 (·×ˢ·) {B | MeasurableSet B} {C | MeasurableSet C}
+        simp only [Set.mem_image2, Set.mem_setOf_eq] at ht_mem
+        obtain ⟨B, hB, C, hC, rfl⟩ := ht_mem
+        use B, C, hB, hC
+        -- Need: (Z,W)⁻¹(B ×ˢ C) = Z⁻¹B ∩ W⁻¹C
+        rw [← ht_eq]
+        ext ω
+        simp only [Set.mem_inter_iff, Set.mem_preimage, Set.mem_prod]
+      · intro ⟨B, C, hB, hC, hs_eq⟩
+        -- s = Z⁻¹B ∩ W⁻¹C, need to show it's in the preimage image
+        simp only [Set.mem_image, Set.mem_image2, Set.mem_setOf_eq]
+        use B ×ˢ C
+        refine ⟨⟨B, hB, C, hC, rfl⟩, ?_⟩
+        rw [hs_eq]
+        ext ω
+        simp only [Set.mem_inter_iff, Set.mem_preimage, Set.mem_prod]
 
     -- Rectangles form a π-system
     have h_pi : IsPiSystem {s | ∃ (B : Set β) (C : Set γ), MeasurableSet B ∧ MeasurableSet C ∧
@@ -444,8 +470,46 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
       simp
 
     · -- Basic case: rectangles Z⁻¹(B) ∩ W⁻¹(C)
-      intro t ⟨B, C, hB, hC, rfl⟩
-      sorry  -- Use conditional independence
+      intro t ht
+      obtain ⟨B, C, hB, hC, rfl⟩ := ht
+      -- Strategy: W⁻¹C ∈ σ(W), so we can use conditional expectation property
+      -- ∫_{Z⁻¹B ∩ W⁻¹C} E[f|σ(W)] = ∫_{W⁻¹C} E[f|σ(W)] · 1_{Z⁻¹B}
+      --                             = ∫_{W⁻¹C} f · 1_{Z⁻¹B}    (by CE property on σ(W)-set)
+      --                             = ∫_{Z⁻¹B ∩ W⁻¹C} f
+
+      -- First show W⁻¹C is in mW
+      have hC_mW : MeasurableSet[mW] (W ⁻¹' C) := by
+        exact measurableSet_preimage hW hC
+
+      -- Rewrite integrals using indicator of Z⁻¹B
+      have : ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, (μ[f | mW]) x ∂μ =
+             ∫ x in W ⁻¹' C, (μ[f | mW]) x * (Z ⁻¹' B).indicator 1 x ∂μ := by
+        rw [← setIntegral_indicator hC_mW]
+        congr 1
+        ext x
+        simp only [Set.indicator_apply, Set.mem_inter_iff, Pi.mul_apply, Pi.one_apply]
+        split_ifs with h
+        · simp [h.2]
+        · simp
+
+      rw [this]
+
+      have : ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, f x ∂μ =
+             ∫ x in W ⁻¹' C, f x * (Z ⁻¹' B).indicator 1 x ∂μ := by
+        rw [← setIntegral_indicator hC_mW]
+        congr 1
+        ext x
+        simp only [Set.indicator_apply, Set.mem_inter_iff, Pi.mul_apply, Pi.one_apply]
+        split_ifs with h
+        · simp [h.2]
+        · simp
+
+      rw [this]
+
+      -- Now use that indicator(Z⁻¹B) is measurable w.r.t. mW
+      -- Actually, this won't work directly since Z⁻¹B might not be in mW
+      -- Let me use setIntegral_condExp instead
+      sorry
 
     · -- Complement
       intro t htm ht_ind
