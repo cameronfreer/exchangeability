@@ -349,24 +349,191 @@ E[f(Y)·g(Z)|σ(W)] = E[f(Y)|σ(W)]·E[g(Z)|σ(W)]
 **Proof strategy:** Express simple functions as linear combinations of indicators,
 then use linearity of conditional expectation and the indicator factorization.
 -/
+/-- **Factorization for simple functions under conditional independence.** -/
 lemma condIndep_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
     (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
-    (h_indep : CondIndep μ Y Z W)
-    (f : α → ℝ) (g : β → ℝ)
-    -- TODO: Need simple function hypotheses and proper statement
-    :
-    True := by
-  trivial
-  /-
-  Proof outline:
-  1. Express f = Σᵢ aᵢ · 1_{Aᵢ} as finite linear combination
-  2. Express g = Σⱼ bⱼ · 1_{Bⱼ} as finite linear combination
-  3. Use bilinearity: E[(Σᵢ aᵢ 1_{Aᵢ})·(Σⱼ bⱼ 1_{Bⱼ})|W]
-      = Σᵢⱼ aᵢ bⱼ E[1_{Aᵢ}·1_{Bⱼ}|W]
-  4. Apply h_indep to each term: = Σᵢⱼ aᵢ bⱼ E[1_{Aᵢ}|W]·E[1_{Bⱼ}|W]
-  5. Factor back: = (Σᵢ aᵢ E[1_{Aᵢ}|W])·(Σⱼ bⱼ E[1_{Bⱼ}|W])
-      = E[f|W]·E[g|W]
-  -/
+    (hCI : CondIndep μ Y Z W)
+    (φ : SimpleFunc α ℝ) (ψ : SimpleFunc β ℝ)
+    (hY : Measurable Y) (hZ : Measurable Z) :
+    μ[ (φ ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W inferInstance ]
+      =ᵐ[μ]
+    μ[ φ ∘ Y | MeasurableSpace.comap W inferInstance ]
+      * μ[ ψ ∘ Z | MeasurableSpace.comap W inferInstance ] := by
+  classical
+  -- We use SimpleFunc.induction on both arguments:
+  -- 1) Prove the claim for indicators
+  -- 2) Close under scalar multiples and sums (linear/affine closure)
+  -- 3) Use binary induction to combine φ, ψ
+
+  -- Notation shorthands
+  set mW := MeasurableSpace.comap W inferInstance with hmW_def
+  let indY (A : Set α) : Ω → ℝ := (Y ⁻¹' A).indicator (fun _ => (1 : ℝ))
+  let indZ (B : Set β) : Ω → ℝ := (Z ⁻¹' B).indicator (fun _ => (1 : ℝ))
+
+  -- Base: indicators
+  have h_ind :
+    ∀ (A : Set α) (hA : MeasurableSet A) (B : Set β) (hB : MeasurableSet B),
+      μ[ indY A * indZ B | mW ] =ᵐ[μ] μ[ indY A | mW ] * μ[ indZ B | mW ] := by
+    intro A hA B hB
+    -- This is exactly the rectangle case (definition of CondIndep)
+    exact hCI A B hA hB
+
+  -- Extend along φ keeping ψ fixed
+  -- Use SimpleFunc.induction to build from constants and indicators
+  revert ψ
+  refine SimpleFunc.induction (p := fun φ =>
+      ∀ ψ, μ[ (φ ∘ Y) * (ψ ∘ Z) | mW ]
+              =ᵐ[μ]
+            μ[ φ ∘ Y | mW ] * μ[ ψ ∘ Z | mW ])
+    ?zero ?add ?const ?indicator φ
+  · -- zero case
+    intro ψ
+    -- LHS and RHS both zero a.e.
+    simp only [SimpleFunc.coe_zero, Pi.zero_apply, zero_mul, condExp_zero]
+    rfl
+  · -- add case
+    intro φ₁ φ₂ hφ₁ hφ₂ ψ
+    -- Use additivity: μ[((φ₁+φ₂)∘Y)*(ψ∘Z) | mW] = μ[(φ₁∘Y)*(ψ∘Z) | mW] + μ[(φ₂∘Y)*(ψ∘Z) | mW]
+    -- RHS: (μ[φ₁∘Y|mW] + μ[φ₂∘Y|mW]) * μ[ψ∘Z|mW]
+    have eq1 := hφ₁ ψ
+    have eq2 := hφ₂ ψ
+    sorry  -- Expand with condExp_add, ae_eq_mul_right, and algebraic rewrites
+  · -- const case
+    intro c ψ
+    -- (const c ∘ Y) = λ _, c; use condExp_const and linearity
+    sorry  -- Expand with condExp_const, condExp_smul
+  · -- indicator case
+    intro A hA c ψ
+    -- φ = c • 1_A. Reduce to rectangle case with scalar c
+    -- Now induct on ψ to apply h_ind and use linearity
+    revert c
+    refine SimpleFunc.induction (p := fun ψ =>
+        ∀ c, μ[ ((c • SimpleFunc.piecewise A hA 1 0) ∘ Y) * (ψ ∘ Z) | mW ]
+                =ᵐ[μ]
+              μ[ (c • SimpleFunc.piecewise A hA 1 0) ∘ Y | mW ] * μ[ ψ ∘ Z | mW ])
+      ?zero' ?add' ?const' ?indicator' ψ
+    · -- ψ = 0
+      intro c
+      simp only [SimpleFunc.coe_zero, mul_zero, condExp_zero]
+      rfl
+    · -- ψ = ψ₁ + ψ₂
+      intro ψ₁ ψ₂ hψ₁ hψ₂ c
+      sorry  -- Similar to add case above
+    · -- ψ = const d
+      intro d c
+      sorry  -- Use linearity
+    · -- ψ = d • 1_B (both are indicators)
+      intro B hB d c
+      -- This reduces to h_ind with scalars c and d
+      sorry  -- Apply h_ind and condExp_smul
+
+/-!
+## Helper lemmas for bounded measurable extension
+-/
+
+/-- **CE is continuous from L¹ to L¹ (wrapper around mathlib's lemma).** -/
+lemma tendsto_condexp_L1 (μ : Measure Ω) [IsProbabilityMeasure μ]
+    (m : MeasurableSpace Ω) (hm : m ≤ inferInstance)
+    {fn : ℕ → Ω → ℝ} {f : Ω → ℝ}
+    (h_int : ∀ n, Integrable (fn n) μ) (hf : Integrable f μ)
+    (hL1 : Tendsto (fun n => ∫⁻ ω, ‖fn n ω - f ω‖₊ ∂μ) atTop (𝓝 0)) :
+    Tendsto (fun n => μ[fn n | m]) atTop (𝓝 (μ[f | m])) := by
+  -- Replace with the proper lemma in your mathlib build
+  -- e.g., condexp_tendsto_L1 or use condexpL1 continuity
+  sorry
+
+/-- **Helper: approximate bounded measurable function by simple functions.** -/
+lemma approx_bounded_measurable (μ : Measure Ω) [IsProbabilityMeasure μ]
+    {f : α → ℝ} (M : ℝ) (hf_meas : Measurable f)
+    (hf_bdd : ∀ᵐ ω ∂μ.map (fun x => x), |f ω| ≤ M) :
+    ∃ (fn : ℕ → SimpleFunc α ℝ),
+      (∀ n, ∀ᵐ x ∂μ.map (fun x => x), |fn n x| ≤ M) ∧
+      (∀ᵐ x ∂μ.map (fun x => x), Tendsto (fun n => fn n x) atTop (𝓝 (f x))) ∧
+      (Tendsto (fun n => ∫⁻ ω, ‖fn n ω - f ω‖₊ ∂(μ.map (fun x => x))) atTop (𝓝 0)) := by
+  -- Use SimpleFunc.eapprox or similar from mathlib
+  sorry
+
+/-- **One-sided simple function factorization (for use in approximation).** -/
+lemma condIndep_simpleFunc_left (μ : Measure Ω) [IsProbabilityMeasure μ]
+    (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
+    (hCI : CondIndep μ Y Z W)
+    (φ : SimpleFunc α ℝ) {ψ : β → ℝ}
+    (hY : Measurable Y) (hZ : Measurable Z) (hψ_meas : Measurable ψ) :
+    μ[ (φ ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W inferInstance ]
+      =ᵐ[μ]
+    μ[ φ ∘ Y | MeasurableSpace.comap W inferInstance ]
+      * μ[ ψ ∘ Z | MeasurableSpace.comap W inferInstance ] := by
+  -- This can be derived by approximating ψ by simple functions and using condIndep_simpleFunc,
+  -- or by running the simple function induction only on φ with ψ as a bounded factor.
+  sorry
+
+/-- **Extend factorization from simple φ to bounded measurable φ, keeping ψ fixed.** -/
+lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
+    (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
+    (hCI : CondIndep μ Y Z W)
+    (hY : Measurable Y) (hZ : Measurable Z) (hW : Measurable W)
+    {φ : α → ℝ} {ψ : β → ℝ}
+    (hφ_meas : Measurable φ) (hψ_meas : Measurable ψ)
+    (Mφ Mψ : ℝ)
+    (hφ_bdd : ∀ᵐ ω ∂μ, |φ (Y ω)| ≤ Mφ)
+    (hψ_bdd : ∀ᵐ ω ∂μ, |ψ (Z ω)| ≤ Mψ) :
+    μ[ (φ ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W inferInstance ]
+      =ᵐ[μ]
+    μ[ (φ ∘ Y) | MeasurableSpace.comap W inferInstance ]
+      * μ[ (ψ ∘ Z) | MeasurableSpace.comap W inferInstance ] := by
+  classical
+  set mW := MeasurableSpace.comap W inferInstance with hmW_def
+
+  -- Pick a sequence of simple functions approximating φ
+  have hφY_bdd : ∀ᵐ ω ∂μ, |φ (Y ω)| ≤ Mφ := hφ_bdd
+  -- For approximation, we need to work on the pushforward measure or directly on Ω
+  -- This is a technical detail - the key is obtaining φn with the right properties
+  obtain ⟨φn, hφn_bdd, hφn_tendsto, hφn_L1⟩ :=
+    approx_bounded_measurable μ Mφ hφ_meas sorry  -- need to massage hφ_bdd into right form
+
+  -- For each n, apply the simple function lemma
+  have h_n : ∀ n,
+      μ[ ((φn n) ∘ Y) * (ψ ∘ Z) | mW ]
+        =ᵐ[μ]
+      μ[ ((φn n) ∘ Y) | mW ] * μ[ (ψ ∘ Z) | mW ] := by
+    intro n
+    exact condIndep_simpleFunc_left μ Y Z W hCI (φn n) hY hZ hψ_meas
+
+  -- Prove equality by showing set integrals match on all σ(W)-measurable sets
+  have hC : ∀ C, MeasurableSet[mW] C →
+      ∫ ω in C, ((φ ∘ Y) * (ψ ∘ Z)) ω ∂μ
+        = ∫ ω in C, (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ := by
+    intro C hC
+    -- For each n, the set integrals match
+    have hC_n : ∀ n,
+        ∫ ω in C, ((φn n ∘ Y) * (ψ ∘ Z)) ω ∂μ
+          = ∫ ω in C, (μ[(φn n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ := by
+      intro n
+      -- Use h_n and setIntegral_condExp
+      have := h_n n
+      sorry  -- Combine using setIntegral_condExp as in rectangle proof
+
+    -- Take limits n→∞ on both sides
+    have hLHS : Tendsto (fun n => ∫ ω in C, ((φn n ∘ Y) * (ψ ∘ Z)) ω ∂μ)
+                        atTop (𝓝 (∫ ω in C, ((φ ∘ Y) * (ψ ∘ Z)) ω ∂μ)) := by
+      -- DCT with bound Mφ * Mψ
+      sorry
+
+    have hRHS : Tendsto (fun n => ∫ ω in C, (μ[(φn n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)
+                        atTop
+                        (𝓝 (∫ ω in C, (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)) := by
+      -- Use L¹ continuity of condExp for left factor, boundedness of right factor
+      sorry
+
+    -- Conclude by uniqueness of limits
+    have h_seq_eq : ∀ n, ∫ ω in C, ((φn n ∘ Y) * (ψ ∘ Z)) ω ∂μ
+                        = ∫ ω in C, (μ[(φn n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ :=
+      hC_n
+    sorry  -- Apply tendsto_nhds_unique or similar
+
+  -- Apply uniqueness lemma from set integrals on σ(W)-sets
+  have hmW_le : mW ≤ inferInstance := hW.comap_le
+  sorry  -- Use ae_eq_condExp_of_forall_setIntegral_eq or similar
 
 /-- **Conditional independence extends to bounded measurable functions (monotone class).**
 
@@ -386,62 +553,23 @@ This is the key extension that enables proving measurability properties.
 -/
 lemma condIndep_boundedMeasurable (μ : Measure Ω) [IsProbabilityMeasure μ]
     (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
-    (h_indep : CondIndep μ Y Z W)
-    (f : α → ℝ) (g : β → ℝ)
-    (hf_meas : Measurable f) (hg_meas : Measurable g)
-    (hf_bdd : ∃ C, ∀ x, |f x| ≤ C) (hg_bdd : ∃ C, ∀ x, |g x| ≤ C) :
-    μ[ (f ∘ Y) * (g ∘ Z) | MeasurableSpace.comap W inferInstance ] =ᵐ[μ]
-    μ[ f ∘ Y | MeasurableSpace.comap W inferInstance ] *
-    μ[ g ∘ Z | MeasurableSpace.comap W inferInstance ] := by
+    (hCI : CondIndep μ Y Z W)
+    (hY : Measurable Y) (hZ : Measurable Z) (hW : Measurable W)
+    {φ : α → ℝ} {ψ : β → ℝ}
+    (hφ_meas : Measurable φ) (hψ_meas : Measurable ψ)
+    (Mφ Mψ : ℝ)
+    (hφ_bdd : ∀ᵐ ω ∂μ, |φ (Y ω)| ≤ Mφ)
+    (hψ_bdd : ∀ᵐ ω ∂μ, |ψ (Z ω)| ≤ Mψ) :
+    μ[ (φ ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W inferInstance ] =ᵐ[μ]
+    μ[ φ ∘ Y | MeasurableSpace.comap W inferInstance ] *
+    μ[ ψ ∘ Z | MeasurableSpace.comap W inferInstance ] := by
+  -- Strategy: Apply the left-extension lemma twice
+  -- Step 1: Extend in φ (keeping ψ fixed) - this is condIndep_bddMeas_extend_left
+  -- Step 2: The result already has φ bounded measurable, so we're done
+  -- (Alternatively: could extend in ψ by symmetric argument)
 
-  classical
-
-  -- Extract bounds
-  obtain ⟨Cf, hCf⟩ := hf_bdd
-  obtain ⟨Cg, hCg⟩ := hg_bdd
-
-  -- Notation for the sub-σ-algebra
-  set mW := MeasurableSpace.comap W inferInstance with hmW_def
-
-  -- The proof strategy has three main steps:
-
-  -- STEP 1: Prove for simple functions
-  -- For a simple function s = ∑ᵢ cᵢ · 1_{Aᵢ}, we have s ∘ Y = ∑ᵢ cᵢ · 1_{Y⁻¹(Aᵢ)}
-  -- Similarly for t = ∑ⱼ dⱼ · 1_{Bⱼ}
-  -- Then (s ∘ Y) * (t ∘ Z) = ∑ᵢⱼ cᵢdⱼ · 1_{Y⁻¹(Aᵢ) ∩ Z⁻¹(Bⱼ)}
-  --
-  -- By linearity of conditional expectation:
-  --   μ[(s ∘ Y) * (t ∘ Z) | mW] = ∑ᵢⱼ cᵢdⱼ · μ[1_{Y⁻¹(Aᵢ) ∩ Z⁻¹(Bⱼ)} | mW]
-  --
-  -- Each indicator can be factored using condIndep_of_indep_pair on Aᵢ × Bⱼ:
-  --   μ[1_{Y⁻¹(Aᵢ) ∩ Z⁻¹(Bⱼ)} | mW] =ᵐ μ[1_{Y⁻¹(Aᵢ)} | mW] * μ[1_{Z⁻¹(Bⱼ)} | mW]
-  --
-  -- Therefore:
-  --   μ[(s ∘ Y) * (t ∘ Z) | mW] =ᵐ (∑ᵢ cᵢ · μ[1_{Y⁻¹(Aᵢ)} | mW]) * (∑ⱼ dⱼ · μ[1_{Z⁻¹(Bⱼ)} | mW])
-  --                              = μ[s ∘ Y | mW] * μ[t ∘ Z | mW]
-
-  -- STEP 2: Construct approximating sequences
-  -- For bounded measurable f, g, construct sequences of simple functions fₙ, gₙ such that:
-  --   - fₙ → f pointwise (and similarly for gₙ)
-  --   - |fₙ| ≤ Cf + 1 and |gₙ| ≤ Cg + 1 (uniform bounds)
-  --   - Each fₙ, gₙ is measurable
-  --
-  -- This can be done using dyadic approximation (see ViaKoopman lines 5344-5869)
-  -- or using mathlib's SimpleFunc.eapprox
-
-  -- STEP 3: Apply dominated convergence
-  -- From Step 1, we have for all n, m:
-  --   μ[(fₙ ∘ Y) * (gₘ ∘ Z) | mW] =ᵐ μ[fₙ ∘ Y | mW] * μ[gₘ ∘ Z | mW]
-  --
-  -- As n, m → ∞:
-  --   - (fₙ ∘ Y) * (gₘ ∘ Z) → (f ∘ Y) * (g ∘ Z) pointwise
-  --   - fₙ ∘ Y → f ∘ Y and gₘ ∘ Z → g ∘ Z pointwise
-  --   - All are uniformly bounded
-  --
-  -- By dominated convergence for conditional expectation (tendsto_condExp_unique):
-  --   μ[(f ∘ Y) * (g ∘ Z) | mW] =ᵐ μ[f ∘ Y | mW] * μ[g ∘ Z | mW]
-
-  sorry
+  -- Apply the left extension directly
+  exact condIndep_bddMeas_extend_left μ Y Z W hCI hY hZ hW hφ_meas hψ_meas Mφ Mψ hφ_bdd hψ_bdd
 
 /-!
 ## Extension to product σ-algebras
