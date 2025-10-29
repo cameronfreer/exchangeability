@@ -1070,16 +1070,15 @@ theorem condExp_project_of_condIndepFun
       -- Both conditional expectations are integrable
       have h_int1 : Integrable (μ[ f_n n ∘ Y | mW ] : Ω → ℝ) μ := integrable_condExp
       have h_int2 : Integrable (μ[ (Z ⁻¹' B).indicator 1 | mW ] : Ω → ℝ) μ := integrable_condExp
-      --  Product of integrable function with bounded function is integrable
-      -- μ[f_n n ∘ Y | mW] is integrable, μ[(Z⁻¹'B).indicator 1 | mW] is bounded by 1
-      sorry
+      -- Product of integrable functions is integrable
+      exact h_int1.mul h_int2
 
     have h_g_int : Integrable (fun ω => μ[ f ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) μ := by
       -- Same proof as h_gs_int, but for f instead of f_n n
       have h_int1 : Integrable (μ[ f ∘ Y | mW ] : Ω → ℝ) μ := integrable_condExp
       have h_int2 : Integrable (μ[ (Z ⁻¹' B).indicator 1 | mW ] : Ω → ℝ) μ := integrable_condExp
-      -- Product of integrable function with bounded function is integrable
-      sorry
+      -- Product of integrable functions is integrable
+      exact h_int1.mul h_int2
 
     -- LHS pointwise convergence: product of converging sequences
     have h_fs_ptwise : ∀ᵐ ω ∂μ, Filter.Tendsto
