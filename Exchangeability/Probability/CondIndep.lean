@@ -670,21 +670,15 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
                 -- Apply setIntegral_condExp and the pull-out property
                 calc ∫ x in W ⁻¹' C, (μ[f | mW] * gB) x ∂μ
                     = ∫ x in W ⁻¹' C, (μ[(μ[f | mW]) * gB | mW]) x ∂μ := by
-                      -- Idempotence: μ[g|mW] = g when g is mW-measurable
-                      have h_idem : μ[((μ[f | mW]) * gB) | mW] =ᵐ[μ] ((μ[f | mW]) * gB) := by
-                        -- Rewrite product as indicator
-                        have h_ind_eq : ((μ[f | mW]) * gB) = (Z ⁻¹' B).indicator (μ[f|mW]) :=
-                          h_mul_eq_indicator
-                        -- The indicator is mW-measurable × indicator of ambient-measurable set
-                        -- But we can use a more direct approach: prove it via stronglyMeasurable
-                        have hsm_prod : StronglyMeasurable[mW] ((μ[f | mW]) * gB) := by
-                          sorry  -- Need to show product is mW-measurable; gB is constant on mW-fibers
-                        -- Then apply idempotence
+                      -- Use setIntegral_condExp: ∫_{W⁻¹C} μ[h|mW] = ∫_{W⁻¹C} h for W⁻¹C ∈ mW
+                      -- Avoids needing to prove (μ[f|mW]) * gB is mW-measurable
+                      have h_set_eq :
+                          ∫ x in W ⁻¹' C, μ[(μ[f | mW]) * gB | mW] x ∂μ
+                        = ∫ x in W ⁻¹' C, ((μ[f | mW]) * gB) x ∂μ := by
                         simpa using
-                          (condexp_of_stronglyMeasurable
-                            (μ := μ) (m := mW) (hm := hmW_le)
-                            (hfmeas := hsm_prod) (hfint := hint_prod))
-                      exact (setIntegral_congr_ae (hmW_le _ hC_meas) (by filter_upwards [h_idem] with x hx _; exact hx.symm))
+                          (setIntegral_condExp (μ := μ) (m := mW)
+                            (hm := hmW_le) (hs := hCpre_amb) (hf := hint_prod))
+                      exact h_set_eq.symm
                   _ = ∫ x in W ⁻¹' C, ((μ[f | mW]) * μ[gB | mW]) x ∂μ := by
                       exact setIntegral_congr_ae (hmW_le _ hC_meas) (by filter_upwards [h_pull] with x hx _; exact hx)
             _ = ∫ x in W ⁻¹' C, (μ[f * gB | mW]) x ∂μ := by
