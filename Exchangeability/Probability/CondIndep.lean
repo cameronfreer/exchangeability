@@ -401,6 +401,26 @@ lemma condIndep_indicator (μ : Measure Ω) [IsProbabilityMeasure μ]
 
 If Y ⊥⊥_W Z for indicators, extend to simple functions via linearity.
 Uses single induction avoiding nested complexity. -/
+-- Helper lemma: φ = c • 1_A with arbitrary ψ
+lemma condIndep_indicator_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
+    (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
+    (hCI : CondIndep μ Y Z W)
+    (c : ℝ) (A : Set α) (hA : MeasurableSet A)
+    (ψ : SimpleFunc β ℝ)
+    (hY : Measurable Y) (hZ : Measurable Z) :
+    μ[ ((A.indicator (fun _ => c)) ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W inferInstance ]
+      =ᵐ[μ]
+    μ[ (A.indicator (fun _ => c)) ∘ Y | MeasurableSpace.comap W inferInstance ]
+      * μ[ ψ ∘ Z | MeasurableSpace.comap W inferInstance ] := by
+  -- Induct on ψ
+  refine SimpleFunc.induction ?const ?add ψ
+  case const =>
+    intro d B hB
+    exact condIndep_indicator μ Y Z W hCI c A hA d B hB
+  case add =>
+    intro ψ1 ψ2 hψ_disj hψ1_ih hψ2_ih
+    sorry  -- Use linearity of condExp
+
 lemma condIndep_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
     (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
     (hCI : CondIndep μ Y Z W)
@@ -410,32 +430,14 @@ lemma condIndep_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
       =ᵐ[μ]
     μ[ φ ∘ Y | MeasurableSpace.comap W inferInstance ]
       * μ[ ψ ∘ Z | MeasurableSpace.comap W inferInstance ] := by
-  classical
-  set mW := MeasurableSpace.comap W inferInstance
-
-  -- Induct on φ first
+  -- Induct on φ
   refine SimpleFunc.induction ?const ?add φ
-
   case const =>
-    -- Case: φ = c • 1_A (indicator on measurable set A)
     intro c A hA
-    -- Now induct on ψ
-    refine SimpleFunc.induction ?const_const ?const_add ψ
-
-    case const_const =>
-      -- Base base case: both are indicators
-      intro d B hB
-      exact condIndep_indicator μ Y Z W hCI c A hA d B hB
-
-    case const_add =>
-      -- φ is indicator, ψ = ψ1 + ψ2 with disjoint support
-      intro ψ1 ψ2 hψ_disj hψ1_ih hψ2_ih
-      sorry  -- Use linearity of condExp on the ψ side
-
+    exact condIndep_indicator_simpleFunc μ Y Z W hCI c A hA ψ hY hZ
   case add =>
-    -- Case: φ = φ1 + φ2 with disjoint support
     intro φ1 φ2 hφ_disj hφ1_ih hφ2_ih
-    sorry  -- Use linearity of condExp on the φ side
+    sorry  -- Use linearity of condExp
 
 /-!
 ## Helper lemmas for bounded measurable extension
