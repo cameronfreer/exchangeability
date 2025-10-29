@@ -289,13 +289,14 @@ lemma condDistrib_factor_indicator_agree
 
 end CondDistribUniqueness
 
-/-! ### Axiom Replacements - Provable Theorems
+/-! ### Conditional Distribution Technical Lemmas
 
-This section contains proven theorems that replace axioms which were initially used
-as placeholders for mathlib gaps. These are ready for contribution to mathlib.
+This section contains technical lemmas about conditional distributions and kernel composition,
+including proofs that were initially placeholders. These results are fundamental to the
+martingale approach proof.
 -/
 
-section AxiomReplacements
+section ConditionalDistribLemmas
 
 open ProbabilityTheory
 
@@ -390,14 +391,17 @@ lemma map_pair_eq_compProd_change_base
     Measure.map (fun ω => (η ω, ξ ω)) μ =
     ((Measure.map ζ μ).map φ) ⊗ₘ ((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) := by
   classical
-  -- We prove equality on rectangles and conclude by `Measure.ext`.
+  -- We prove equality on rectangles and conclude by π-λ theorem.
+  -- TODO: This should use Measure.ext_of_generate_finite with the π-system of rectangles
+  sorry  -- Needs proper π-λ argument: MeasurableSet.isPiSystem_prod doesn't exist
+  /-
   refine Measure.ext (by
     intro R hR
     classical
     -- Reduce to rectangles; if `R` is not of the form `A ×ˢ B`, both sides are additive and
     -- a standard monotone-class step applies. Mathlib's `Measure.ext` is enough if we
     -- compute on rectangles and use Carathéodory's extension internally in the library.
-    rcases MeasurableSet.isPiSystem_prod hR with ⟨A, hA, B, hB, rfl⟩
+    sorry  -- rcases MeasurableSet.isPiSystem_prod hR with ⟨A, hA, B, hB, rfl⟩
     -- LHS on rectangles
     have LHS :
         Measure.map (fun ω => (η ω, ξ ω)) μ (A ×ˢ B)
@@ -505,7 +509,7 @@ lemma map_pair_eq_compProd_change_base
       sorry  -- ~5-10 lines: use hη : η =ᵐ[μ] φ ∘ ζ with measure_congr to show LHS' = RHS''
     -- Conclude on rectangles and tie together
     simpa [LHS, RHS, RHS'] using LHS'.trans RHS''
-  )
+  )-/
 
 /-- **Uniqueness of disintegration along a factor map (indicator version).**
 
@@ -646,102 +650,15 @@ theorem condexp_indicator_drop_info_of_pair_law_proven
   =ᵐ[μ]
   μ[(fun ω => Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))|MeasurableSpace.comap η inferInstance] := by
   classical
-  -- Step 1: Doob-Dynkin gives η = φ ∘ ζ a.e.
-  obtain ⟨φ, hφ, hη_factor⟩ := exists_borel_factor_of_sigma_le hη hζ hle
+  -- TODO: condExp API has changed. The old signature was:
+  --   condExp μ (sub-sigma-algebra) f
+  -- But new signature (see ViaKoopman.lean:863) is:
+  --   @condExp Ω ℝ _ _ inst m _ μ _ f
+  -- where inst is the ambient MeasurableSpace and m is the sub-sigma-algebra
+  -- All the condExp calls below need to be updated to the new API
+  sorry  -- ~100 lines: entire proof needs condExp API update
 
-  -- Add IsFiniteMeasure instance needed for condDistrib
-  haveI : IsFiniteMeasure μ := inferInstance
-
-  -- Bridge both sides via condDistrib:
-  have hζ_bridge :
-    condExp μ (MeasurableSpace.comap ζ inferInstance)
-      (fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (ξ ω)))
-    =ᵐ[μ]
-    (fun ω => ((condDistrib ξ ζ μ (ζ ω)) B).toReal) := by
-    simpa using
-      (condExp_ae_eq_integral_condDistrib (μ := μ) (ξ := ξ) (η := ζ) (s := B) hB)
-
-  have hη_bridge :
-    condExp μ (MeasurableSpace.comap η inferInstance)
-      (fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (ξ ω)))
-    =ᵐ[μ]
-    (fun ω => ((condDistrib ξ η μ (η ω)) B).toReal) := by
-    simpa using
-      (condExp_ae_eq_integral_condDistrib (μ := μ) (ξ := ξ) (η := η) (s := B) hB)
-
-  -- Kernel identity with composition (ENNReal-valued), pulled to ℝ with `.toReal`
-  have h_comp_toReal :
-    (fun ω => (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (η ω) B).toReal)
-      =ᵐ[μ]
-    (fun ω => ((condDistrib ξ η μ (φ (ζ ω))) B).toReal) := by
-    -- this is exactly the discussion you had at 586–593
-    have hENN :
-      (fun ω =>
-        (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (η ω)) B)
-      =ᵐ[μ]
-      (fun ω => (condDistrib ξ η μ (φ (ζ ω))) B) :=
-      equal_kernels_on_factor (μ := μ) (ξ := ξ) (η := η) (ζ := ζ)
-        (φ := φ) hξ hη hζ hφ hη_factor hpairs hB
-    exact hENN.mono (by intro ω h; simpa using congrArg ENNReal.toReal h)
-
-  -- Tower: project the ζ-conditional onto σ[η] (or conversely, lift η to ζ):
-  have h_tower :
-    condExp μ (MeasurableSpace.comap ζ inferInstance)
-      (condExp μ (MeasurableSpace.comap η inferInstance)
-        (fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))))
-    =ᵐ[μ]
-    condExp μ (MeasurableSpace.comap η inferInstance)
-      (fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))) :=
-    condExp_condExp_of_le (μ := μ) (hm := hle)
-      (f := fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (ξ ω)))
-
-  -- We want `E[·|σ ζ] = E[·|σ η]`. It is enough to show
-  -- `E[·|σ ζ] = E[E[·|σ η] | σ ζ]` (projection identity). Mathlib has:
-  have h_proj :
-    condExp μ (MeasurableSpace.comap ζ inferInstance)
-      (fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (ξ ω)))
-    =ᵐ[μ]
-    condExp μ (MeasurableSpace.comap ζ inferInstance)
-      (condExp μ (MeasurableSpace.comap η inferInstance)
-        (fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (ξ ω)))) :=
-    condExp_condExp_ae_eq_of_le (μ := μ) (hm := hle)
-      (f := fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (ξ ω)))
-
-  -- Identify the RHS of `h_proj` through condDistrib and the composition kernel:
-  -- First rewrite the inner condExp via `hη_bridge`, then apply the "g ∘ η" bridge to σ[ζ].
-  -- Many mathlib trees already provide:
-  --   condExp_ae_eq_integral_condDistrib_of_comp (for compositions);
-  -- if not, the following 2 lines are usually a single `simp` chain on rectangles.
-  have h_proj_id :
-    condExp μ (MeasurableSpace.comap ζ inferInstance)
-      (condExp μ (MeasurableSpace.comap η inferInstance)
-        (fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))))
-    =ᵐ[μ]
-    (fun ω => (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (η ω) B).toReal) := by
-    -- Replace inner by `hη_bridge`, then use the composition (change-of-base) rule:
-    -- This is the g∘η → integral against `condDistrib η|ζ` bridge. In many checkouts:
-    --   `condExp_ae_eq_integral_condDistrib_comp_left` or similar.
-    -- Otherwise, you can prove it in ~20 lines with the same rectangle argument
-    -- you used in part (A); it's the σ[η]→σ[ζ] projection of a function of η.
-    sorry  -- ~20 lines: condExp of function of η wrt σ[ζ] equals integral against condDistrib
-
-  -- Glue the pieces:
-  calc
-    condExp μ (MeasurableSpace.comap ζ inferInstance)
-      (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))
-        =ᵐ[μ]
-      condExp μ (MeasurableSpace.comap ζ inferInstance)
-        (condExp μ (MeasurableSpace.comap η inferInstance)
-          (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))) := h_proj
-    _ =ᵐ[μ]
-      (fun ω => (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (η ω) B).toReal) := h_proj_id
-    _ =ᵐ[μ]
-      (fun ω => ((condDistrib ξ η μ (φ (ζ ω))) B).toReal) := h_comp_toReal
-    _ =ᵐ[μ]
-      condExp μ (MeasurableSpace.comap η inferInstance)
-        (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (ξ ω)) := (hη_bridge).symm
-
-end AxiomReplacements
+end ConditionalDistribLemmas
 
 /-! ### Conditional Independence from Distributional Equality -/
 
