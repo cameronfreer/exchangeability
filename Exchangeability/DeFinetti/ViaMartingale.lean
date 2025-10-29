@@ -409,12 +409,15 @@ lemma map_pair_eq_compProd_change_base
     intro R hR
     -- R is a rectangle, so obtain its components
     obtain ⟨A, hA, B, hB, rfl⟩ := hR
+    -- Extract measurability from set membership
+    have hA_meas : MeasurableSet A := hA
+    have hB_meas : MeasurableSet B := hB
     classical
     -- LHS on rectangles
     have LHS :
         Measure.map (fun ω => (η ω, ξ ω)) μ (A ×ˢ B)
           = μ {ω | η ω ∈ A ∧ ξ ω ∈ B} := by
-      simpa [Measure.map_apply, hA.prod hB, Set.preimage, Set.mem_prod]
+      simpa [Measure.map_apply, hA_meas.prod hB_meas, Set.preimage, Set.mem_prod]
     -- `compProd` on rectangles:  ∫ 1_A(y) * κ y B d(base)
     have RHS :
         (((Measure.map ζ μ).map φ)
@@ -431,7 +434,7 @@ lemma map_pair_eq_compProd_change_base
         (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)))
         (A ×ˢ B)
       -- On rectangles, this collapses to the expected integral
-      simpa [Measure.compProd_prod, hA, hB] using this
+      simpa [Measure.compProd_prod, hA_meas, hB_meas] using this
     -- Change variables `((map ζ μ).map φ)` → `map (φ ∘ ζ) μ`
     have RHS' :
         (((Measure.map ζ μ).map φ)
@@ -449,8 +452,8 @@ lemma map_pair_eq_compProd_change_base
           -- measurability in the base for a kernel evaluation at a fixed measurable set
           -- is provided by the kernel API; adjust name if needed:
           exact (Kernel.measurable_comp_right (condDistrib ζ η μ) (condDistrib ξ ζ μ))
-            |>.measurable_set hB
-        exact this.indicator hA
+            |>.measurable_set hB_meas
+        exact this.indicator hA_meas
       -- change of variables under two successive `map`s
       simpa [Measure.map_apply, Function.comp, gmeas, hφ.comp hζ]
         using
