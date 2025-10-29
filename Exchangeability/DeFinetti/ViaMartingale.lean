@@ -486,9 +486,9 @@ lemma map_pair_eq_compProd_change_base
       -- short proof path:
       -- integrate over `map ζ μ` then kernel on rectangles
       -- collecting terms gives exactly the RHS displayed.
-      -- We keep it compact to avoid brittle step-by-step rewrites.
-      -- (Replace by `simp` chain in your tree if desired.)
-      admit
+      rw [comp_eval]
+      -- Change variables: ∫ f(ζ ω) dμ = ∫ f(z) d(map ζ μ)
+      sorry  -- ~10-15 lines: lintegral_map + compProd on rectangles
     -- Now convert LHS via `η = φ ∘ ζ` a.e. to the same RHS''
     have LHS' :
         μ {ω | η ω ∈ A ∧ ξ ω ∈ B}
@@ -502,7 +502,7 @@ lemma map_pair_eq_compProd_change_base
       -- This is literally the right-hand side.
       -- In many versions `simp [Measure.map_apply, Set.preimage, Set.mem_prod]` from the
       -- curve `map_pair` + `fact_zξ` lands exactly here; otherwise inline a 3‑line calc.
-      admit
+      sorry  -- ~5-10 lines: use hη : η =ᵐ[μ] φ ∘ ζ with measure_congr to show LHS' = RHS''
     -- Conclude on rectangles and tie together
     simpa [LHS, RHS, RHS'] using LHS'.trans RHS''
   )
@@ -723,7 +723,7 @@ theorem condexp_indicator_drop_info_of_pair_law_proven
     --   `condExp_ae_eq_integral_condDistrib_comp_left` or similar.
     -- Otherwise, you can prove it in ~20 lines with the same rectangle argument
     -- you used in part (A); it's the σ[η]→σ[ζ] projection of a function of η.
-    admit
+    sorry  -- ~20 lines: condExp of function of η wrt σ[ζ] equals integral against condDistrib
 
   -- Glue the pieces:
   calc
