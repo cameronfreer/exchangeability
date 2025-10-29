@@ -324,7 +324,7 @@ theorem condIndep_of_indep_pair (μ : Measure Ω) [IsProbabilityMeasure μ]
     exact hYZ_indep.comp (measurable_const.indicator hA) (measurable_const.indicator hB)
 
   have h_factor : μ[f * g] = μ[f] * μ[g] :=
-    hfg_indep'.integral_mul_eq_mul_integral hf_int hg_int
+    IndepFun.integral_mul_eq_mul_integral hfg_indep' hf_int.aestronglyMeasurable hg_int.aestronglyMeasurable
 
   -- Step 6: Combine everything
   calc μ[f * g | MeasurableSpace.comap W inferInstance]
@@ -353,12 +353,37 @@ lemma condIndep_indicator (μ : Measure Ω) [IsProbabilityMeasure μ]
     μ[ (A.indicator (fun _ => c)) ∘ Y | MeasurableSpace.comap W inferInstance ]
       * μ[ (B.indicator (fun _ => d)) ∘ Z | MeasurableSpace.comap W inferInstance ] := by
   set mW := MeasurableSpace.comap W inferInstance
-  -- Simplify indicators composed with Y, Z
-  let indY := (Y ⁻¹' A).indicator (fun _ => (1 : ℝ))
-  let indZ := (Z ⁻¹' B).indicator (fun _ => (1 : ℝ))
 
-  -- The product is (c*d) times the product of unit indicators
-  sorry
+  -- Rewrite indicators in terms of preimages
+  have hY_eq : (A.indicator (fun _ => c)) ∘ Y = fun ω => A.indicator (fun _ => c) (Y ω) := rfl
+  have hZ_eq : (B.indicator (fun _ => d)) ∘ Z = fun ω => B.indicator (fun _ => d) (Z ω) := rfl
+
+  -- Rewrite product as scaled product of unit indicators
+  have h_prod : ((A.indicator (fun _ => c)) ∘ Y) * ((B.indicator (fun _ => d)) ∘ Z)
+      = (c * d) • (((Y ⁻¹' A).indicator (fun _ => 1)) * ((Z ⁻¹' B).indicator (fun _ => 1))) := by
+    ext ω
+    simp [Set.indicator, Function.comp_apply]
+    by_cases hA : Y ω ∈ A <;> by_cases hB : Z ω ∈ B <;> simp [hA, hB] <;> ring
+
+  -- Apply CondIndep to unit indicators
+  have h_unit : μ[ ((Y ⁻¹' A).indicator (fun _ => (1 : ℝ))) * ((Z ⁻¹' B).indicator (fun _ => (1 : ℝ))) | mW ]
+      =ᵐ[μ] μ[ (Y ⁻¹' A).indicator (fun _ => (1 : ℝ)) | mW ] * μ[ (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) | mW ] :=
+    hCI A B hA hB
+
+  -- Factor out scalars using condExp_smul and combine with h_unit
+  calc μ[ ((A.indicator (fun _ => c)) ∘ Y) * ((B.indicator (fun _ => d)) ∘ Z) | mW ]
+      = μ[ (c * d) • (((Y ⁻¹' A).indicator (fun _ => 1)) * ((Z ⁻¹' B).indicator (fun _ => 1))) | mW ] := by
+        rw [h_prod]
+    _ =ᵐ[μ] (c * d) • μ[ ((Y ⁻¹' A).indicator (fun _ => 1)) * ((Z ⁻¹' B).indicator (fun _ => 1)) | mW ] := by
+        sorry  -- Need condExp_smul lemma
+    _ =ᵐ[μ] (c * d) • (μ[ (Y ⁻¹' A).indicator (fun _ => 1) | mW ] * μ[ (Z ⁻¹' B).indicator (fun _ => 1) | mW ]) := by
+        sorry  -- Apply h_unit under scalar multiplication
+    _ =ᵐ[μ] (c • μ[ (Y ⁻¹' A).indicator (fun _ => 1) | mW ]) * (d • μ[ (Z ⁻¹' B).indicator (fun _ => 1) | mW ]) := by
+        sorry  -- Algebraic rearrangement of scalars
+    _ =ᵐ[μ] μ[ c • (Y ⁻¹' A).indicator (fun _ => 1) | mW ] * μ[ d • (Z ⁻¹' B).indicator (fun _ => 1) | mW ] := by
+        sorry  -- Apply condExp_smul in reverse
+    _ =ᵐ[μ] μ[ (A.indicator (fun _ => c)) ∘ Y | mW ] * μ[ (B.indicator (fun _ => d)) ∘ Z | mW ] := by
+        sorry  -- Rewrite indicators back
 
 /-- **Factorization for simple functions (both arguments).**
 
