@@ -375,15 +375,19 @@ lemma condIndep_indicator (μ : Measure Ω) [IsProbabilityMeasure μ]
       = μ[ (c * d) • (((Y ⁻¹' A).indicator (fun _ => 1)) * ((Z ⁻¹' B).indicator (fun _ => 1))) | mW ] := by
         rw [h_prod]
     _ =ᵐ[μ] (c * d) • μ[ ((Y ⁻¹' A).indicator (fun _ => 1)) * ((Z ⁻¹' B).indicator (fun _ => 1)) | mW ] := by
-        sorry  -- Need condExp_smul lemma
+        apply condExp_smul
     _ =ᵐ[μ] (c * d) • (μ[ (Y ⁻¹' A).indicator (fun _ => 1) | mW ] * μ[ (Z ⁻¹' B).indicator (fun _ => 1) | mW ]) := by
-        sorry  -- Apply h_unit under scalar multiplication
+        refine Filter.EventuallyEq.fun_comp h_unit (fun x => (c * d) • x)
     _ =ᵐ[μ] (c • μ[ (Y ⁻¹' A).indicator (fun _ => 1) | mW ]) * (d • μ[ (Z ⁻¹' B).indicator (fun _ => 1) | mW ]) := by
-        sorry  -- Algebraic rearrangement of scalars
+        apply Filter.EventuallyEq.of_eq
+        ext ω
+        simp [Pi.smul_apply, Pi.mul_apply]
+        ring
     _ =ᵐ[μ] μ[ c • (Y ⁻¹' A).indicator (fun _ => 1) | mW ] * μ[ d • (Z ⁻¹' B).indicator (fun _ => 1) | mW ] := by
-        sorry  -- Apply condExp_smul in reverse
+        exact Filter.EventuallyEq.mul (condExp_smul c _ mW).symm (condExp_smul d _ mW).symm
     _ =ᵐ[μ] μ[ (A.indicator (fun _ => c)) ∘ Y | mW ] * μ[ (B.indicator (fun _ => d)) ∘ Z | mW ] := by
-        sorry  -- Rewrite indicators back
+        -- Rewrite c • indicator(1) = indicator(c), same for d
+        sorry  -- Technical: indicator equality details
 
 /-- **Factorization for simple functions (both arguments).**
 
@@ -401,9 +405,29 @@ lemma condIndep_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
   classical
   set mW := MeasurableSpace.comap W inferInstance
 
-  -- Strategy: Single induction on φ, treating ψ as a "coefficient function"
-  -- For now, leave as sorry to unblock other work
-  sorry
+  -- Induct on φ first
+  refine SimpleFunc.induction ?const ?add φ
+
+  case const =>
+    -- Case: φ = c • 1_A (indicator on measurable set A)
+    intro c A hA
+    -- Now induct on ψ
+    refine SimpleFunc.induction ?const_const ?const_add ψ
+
+    case const_const =>
+      -- Base base case: both are indicators
+      intro d B hB
+      exact condIndep_indicator μ Y Z W hCI c A hA d B hB
+
+    case const_add =>
+      -- φ is indicator, ψ = ψ1 + ψ2 with disjoint support
+      intro ψ1 ψ2 hψ_disj hψ1_ih hψ2_ih
+      sorry  -- Use linearity of condExp on the ψ side
+
+  case add =>
+    -- Case: φ = φ1 + φ2 with disjoint support
+    intro φ1 φ2 hφ_disj hφ1_ih hφ2_ih
+    sorry  -- Use linearity of condExp on the φ side
 
 /-!
 ## Helper lemmas for bounded measurable extension
