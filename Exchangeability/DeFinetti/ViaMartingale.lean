@@ -533,20 +533,62 @@ lemma map_pair_eq_compProd_change_base
       -- Conclude
       simpa [RHS1] using RHS0
     -- === end fill: RHS'' ===
-    -- Now convert LHS via `η = φ ∘ ζ` a.e. to the same RHS''
+    -- === begin fill: LHS' at line 505 ===
     have LHS' :
+      μ {ω | η ω ∈ A ∧ ξ ω ∈ B}
+        =
+      ∫⁻ z, (Set.indicator (φ ⁻¹' A) (fun _ => (1 : ℝ≥0∞)) z)
+            * (condDistrib ξ ζ μ z) B
+        ∂ (Measure.map ζ μ) := by
+      classical
+      -- Replace η by φ ∘ ζ a.e. inside the set
+      have hset :
+          {ω | η ω ∈ A ∧ ξ ω ∈ B}
+        =ᵐ[μ]
+          {ω | φ (ζ ω) ∈ A ∧ ξ ω ∈ B} := by
+        refine hηφζ.mono ?_
+        intro ω hω; simp [Function.comp, hω]
+
+      -- Equal measures of a.e.-equal measurable sets
+      have hμ_eq :
         μ {ω | η ω ∈ A ∧ ξ ω ∈ B}
+          = μ {ω | φ (ζ ω) ∈ A ∧ ξ ω ∈ B} := by
+        exact measure_congr (hset.mono (fun _ _ => Iff.rfl))
+
+      -- Compute via the pushforward by (ζ, ξ) on the rectangle (φ⁻¹ A) × B
+      have hmap :
+        μ {ω | φ (ζ ω) ∈ A ∧ ξ ω ∈ B}
+          = Measure.map (fun ω => (ζ ω, ξ ω)) μ ((φ ⁻¹' A) ×ˢ B) := by
+        -- If you have `map_pair_rect`:
+        -- simpa [Set.preimage, Set.mem_prod] using
+        --   (map_pair_rect μ ζ ξ (hφ.preimage hA) hB).symm
+        simpa [Measure.map_apply, Set.preimage, Set.mem_prod, hφ.measurableSet_preimage hA, hB]
+          using (map_pair_rect μ ζ ξ (hφ.preimage hA) hB).symm
+
+      -- Disintegrate (ζ, ξ) via condDistrib ξ|ζ and use rectangles for compProd
+      have fact_zξ :
+        Measure.map (fun ω => (ζ ω, ξ ω)) μ
+          = (Measure.map ζ μ) ⊗ₘ (condDistrib ξ ζ μ) := by
+        -- Many trees: `ProbabilityTheory.measure_map_pair_eq_compProd_condDistrib`
+        simpa using
+          ProbabilityTheory.measure_map_pair_eq_compProd_condDistrib
+            (μ := μ) (X := ζ) (Y := ξ)
+
+      have comp :
+        ((Measure.map ζ μ) ⊗ₘ (condDistrib ξ ζ μ)) ((φ ⁻¹' A) ×ˢ B)
           =
         ∫⁻ z, (Set.indicator (φ ⁻¹' A) (fun _ => (1 : ℝ≥0∞)) z)
-              * ((condDistrib ξ ζ μ z) B)
-        ∂(Measure.map ζ μ) := by
-      -- start from the joint law of `(ξ, η)` equals `(ξ, φ ∘ ζ)` a.e.
-      -- and then factor `(ζ, ξ)` as above. Concretely, equalities on rectangles give:
-      --   μ(η∈A, ξ∈B) = μ(φ(ζ)∈A, ξ∈B) = ∫ 1_{φ⁻¹ A}(z) (condDistrib ξ|ζ z) B d Law(ζ).
-      -- This is literally the right-hand side.
-      -- In many versions `simp [Measure.map_apply, Set.preimage, Set.mem_prod]` from the
-      -- curve `map_pair` + `fact_zξ` lands exactly here; otherwise inline a 3‑line calc.
-      sorry  -- ~5-10 lines: use hη : η =ᵐ[μ] φ ∘ ζ with measure_congr to show LHS' = RHS''
+              * (condDistrib ξ ζ μ z) B
+          ∂ (Measure.map ζ μ) := by
+        -- If you have `Measure.compProd_prod`:
+        -- simpa [Measure.compProd_prod, hφ.preimage hA, hB]
+        simpa using
+          (Measure.compProd_prod (Measure.map ζ μ) (condDistrib ξ ζ μ)
+            (hφ.preimage hA) hB)
+
+      -- Tie together
+      simpa [hμ_eq, hmap, fact_zξ, comp]
+    -- === end fill: LHS' ===
     -- Conclude on rectangles and tie together
     simpa [LHS, RHS, RHS'] using LHS'.trans RHS''
   )
