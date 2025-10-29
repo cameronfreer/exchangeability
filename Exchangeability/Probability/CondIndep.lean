@@ -408,6 +408,7 @@ lemma condIndep_boundedMeasurable (μ : Measure Ω) [IsProbabilityMeasure μ]
 ## Extension to product σ-algebras
 -/
 
+set_option maxHeartbeats 500000 in
 /-- **Conditional expectation projection from conditional independence (helper).**
 
 When Y ⊥⊥_W Z, conditioning on (Z,W) gives the same result as conditioning on W alone
@@ -538,6 +539,11 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
       -- Sub-σ-algebra ordering
       have hmW_le : mW ≤ m0 := hW_m0.comap_le
 
+      -- Ambient versions (for use with lemmas expecting ambient instance)
+      -- Convert from m0 to ambient (they're equal but need explicit witness)
+      have hBpre : MeasurableSet (Z ⁻¹' B) := by simpa [m0] using hBpre_m0
+      have hCpre : MeasurableSet (W ⁻¹' C) := by simpa [m0] using hCpre_m0
+
       -- Convenience name for indicator on Z⁻¹B (f is already defined in outer scope)
       set gB : Ω → ℝ := (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) with hgB_def
 
@@ -651,7 +657,7 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
                 have h1 : ∫ ω in W ⁻¹' C ∩ Z ⁻¹' B, μ[f|mW] ω ∂μ
                         = ∫ ω in W ⁻¹' C, (Z ⁻¹' B).indicator (μ[f|mW]) ω ∂μ := by
                   rw [Set.inter_comm]
-                  exact (integral_indicator (hCpre_m0.inter hBpre_m0)).symm
+                  exact (integral_indicator (hCpre.inter hBpre)).symm
                 -- Second: RHS uses h_mul_eq_indicator
                 have h2 : ∫ ω in W ⁻¹' C, (Z ⁻¹' B).indicator (μ[f|mW]) ω ∂μ
                         = ∫ ω in W ⁻¹' C, (μ[f|mW] ω * gB ω) ∂μ := by
@@ -679,7 +685,7 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
                         = ∫ x in W ⁻¹' C, ((μ[f | mW]) * gB) x ∂μ := by
                         simpa using
                           (setIntegral_condExp (μ := μ) (m := mW)
-                            (hm := hmW_le) (hs := hCpre_m0) (hf := hint_prod))
+                            (hm := hmW_le) (hs := hCpre) (hf := hint_prod))
                       exact h_set_eq.symm
                   _ = ∫ x in W ⁻¹' C, ((μ[f | mW]) * μ[gB | mW]) x ∂μ := by
                       exact setIntegral_congr_ae (hmW_le _ hC_meas) (by filter_upwards [h_pull] with x hx _; exact hx)
@@ -702,7 +708,7 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
                     = ∫ ω in W ⁻¹' C, (Z ⁻¹' B).indicator f ω ∂μ := by
                       congr 1; exact h_fg_indicator
                   _ = ∫ ω in W ⁻¹' C ∩ Z ⁻¹' B, f ω ∂μ := by
-                      exact integral_indicator (hCpre_m0.inter hBpre_m0)
+                      exact integral_indicator (hCpre.inter hBpre)
                   _ = ∫ ω in Z ⁻¹' B ∩ W ⁻¹' C, f ω ∂μ := by
                       rw [Set.inter_comm]
 
