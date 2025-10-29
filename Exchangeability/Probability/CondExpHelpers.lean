@@ -1935,6 +1935,48 @@ theorem condExp_project_of_condIndepFun
     _ =ᵐ[μ] g := result_mZW
     _ = μ[ f ∘ Y | mW ] := hg_def
 
+/-!
+## Convergence lemmas for bounded measurable extension
+-/
+
+/-- **DCT for set integrals of products with a fixed bounded factor.**
+
+When `hn → h` in L¹ and `g` is bounded, then `hn * g → h * g` in set integrals.
+This is used in the approximation argument for extending conditional independence. -/
+lemma tendsto_set_integral_mul_of_L1 {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
+    [IsProbabilityMeasure μ]
+    {h : Ω → ℝ} {hn : ℕ → Ω → ℝ} {g : Ω → ℝ}
+    {s : Set Ω} (Cg : ℝ)
+    (hg_bound : ∀ᵐ ω ∂μ, ‖g ω‖ ≤ Cg)
+    (hs : MeasurableSet s)
+    (h_int : Integrable h μ)
+    (hn_int : ∀ n, Integrable (hn n) μ)
+    (hg_int : Integrable g μ)
+    (hL1 : Filter.Tendsto (fun n => ∫⁻ ω, ‖hn n ω - h ω‖₊ ∂μ) Filter.atTop (𝓝 0)) :
+    Filter.Tendsto (fun n => ∫ ω in s, (hn n ω * g ω) ∂μ)
+            Filter.atTop (𝓝 (∫ ω in s, (h ω * g ω) ∂μ)) := by
+  -- Strategy: ‖(hn - h) * g‖ ≤ Cg * ‖hn - h‖
+  -- So if ‖hn - h‖ → 0 in L¹, then ‖(hn * g) - (h * g)‖ → 0 in L¹
+  -- Then set integrals converge by continuity of integration
+  sorry
+
+/-- **Wrapper for conditional expectation L¹ continuity.**
+
+This wraps mathlib's lemma for L¹ continuity of conditional expectation,
+protecting against lemma name changes across mathlib versions. -/
+lemma tendsto_condexp_L1 {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
+    [IsProbabilityMeasure μ]
+    (m : MeasurableSpace Ω) (hm : m ≤ inferInstance)
+    {fn : ℕ → Ω → ℝ} {f : Ω → ℝ}
+    (h_int : ∀ n, Integrable (fn n) μ) (hf : Integrable f μ)
+    (hL1 : Filter.Tendsto (fun n => ∫⁻ ω, ‖fn n ω - f ω‖₊ ∂μ) Filter.atTop (𝓝 0)) :
+    Filter.Tendsto (fun n => μ[fn n | m]) Filter.atTop (𝓝 (μ[f | m])) := by
+  -- Replace with the proper mathlib lemma:
+  -- Option 1: Use condexpL1 as a continuous linear map
+  -- Option 2: Use direct L¹ convergence + tower property
+  -- For now, we admit this as a wrapper
+  sorry
+
 end MeasureTheory
 
 end
