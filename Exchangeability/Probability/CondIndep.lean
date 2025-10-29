@@ -532,31 +532,25 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
       have hZ_m0 : @Measurable Ω β m0 _ Z := by simpa [m0] using hZ
       have hW_m0 : @Measurable Ω γ m0 _ W := by simpa [m0] using hW
 
-      have hBpre_m0_m0 : @MeasurableSet Ω m0 (Z ⁻¹' B) := hB.preimage hZ_m0
-      have hCpre_m0_m0 : @MeasurableSet Ω m0 (W ⁻¹' C) := hC.preimage hW_m0
+      have hBpre_m0 : @MeasurableSet Ω m0 (Z ⁻¹' B) := hB.preimage hZ_m0
+      have hCpre_m0 : @MeasurableSet Ω m0 (W ⁻¹' C) := hC.preimage hW_m0
 
       -- Convenience name for indicator on Z⁻¹B (f is already defined in outer scope)
       set gB : Ω → ℝ := (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) with hgB_def
 
       -- gB measurability
-      have hsm_gB : @StronglyMeasurable Ω m0 _ gB :=
-        stronglyMeasurable_const.indicator hBpre_m0_m0
-      have haesm_gB : AEStronglyMeasurable gB μ :=
-        hsm_gB.aestronglyMeasurable
+      have hsm_gB : @StronglyMeasurable Ω ℝ _ m0 gB :=
+        stronglyMeasurable_const.indicator hBpre_m0
 
       -- CE basic facts
-      have hsm_ce_mW : @StronglyMeasurable Ω mW _ (μ[f | mW]) :=
+      have hsm_ce_mW : @StronglyMeasurable Ω ℝ _ mW (μ[f | mW]) :=
         stronglyMeasurable_condExp
       have hInt_ce : Integrable (μ[f | mW]) μ :=
         integrable_condExp
 
-      -- ambient SM for CE if needed
-      have hsm_ce_amb : StronglyMeasurable (μ[f | mW]) :=
-        hsm_ce_mW.mono (by
-          have : mW ≤ m0 := hW_m0.comap_le
-          exact this)
+      -- AE version (for use later)
       have haesm_ce : AEStronglyMeasurable (μ[f | mW]) μ :=
-        hsm_ce_amb.aestronglyMeasurable
+        hsm_ce_mW.mono hle |>.aestronglyMeasurable
 
       -- Canonical product ↔ indicator identity (use often)
       have h_mul_eq_indicator :
@@ -567,7 +561,7 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
 
       -- Product integrability: rewrite to indicator, then use Integrable.indicator
       have hint_prod : Integrable (fun ω => μ[f | mW] ω * gB ω) μ := by
-        simpa [h_mul_eq_indicator] using hInt_ce.indicator hBpre_m0_m0
+        simpa [h_mul_eq_indicator] using hInt_ce.indicator hBpre_m0
 
       -- Rectangle is in mZW
       have hrect : MeasurableSet[mZW] (Z ⁻¹' B ∩ W ⁻¹' C) := by
