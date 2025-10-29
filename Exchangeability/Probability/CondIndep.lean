@@ -397,11 +397,48 @@ lemma condIndep_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
     -- RHS: (μ[φ₁∘Y|mW] + μ[φ₂∘Y|mW]) * μ[ψ∘Z|mW]
     have eq1 := hφ₁ ψ
     have eq2 := hφ₂ ψ
-    sorry  -- Expand with condExp_add, ae_eq_mul_right, and algebraic rewrites
+    -- Rewrite LHS using distribution
+    have lhs : (fun ω => ((φ₁ + φ₂) ∘ Y) ω * (ψ ∘ Z) ω)
+              = (fun ω => (φ₁ ∘ Y) ω * (ψ ∘ Z) ω + (φ₂ ∘ Y) ω * (ψ ∘ Z) ω) := by
+      ext ω; simp [Function.comp, Pi.add_apply, add_mul]
+    rw [lhs]
+    -- Apply condExp_add
+    have ce_add := condExp_add (m := mW) integrable_condExp integrable_condExp
+    -- Combine with inductive hypotheses
+    calc μ[ (fun ω => (φ₁ ∘ Y) ω * (ψ ∘ Z) ω + (φ₂ ∘ Y) ω * (ψ ∘ Z) ω) | mW ]
+        =ᵐ[μ] μ[ (φ₁ ∘ Y) * (ψ ∘ Z) | mW ] + μ[ (φ₂ ∘ Y) * (ψ ∘ Z) | mW ] := ce_add
+      _ =ᵐ[μ] (μ[ φ₁ ∘ Y | mW ] * μ[ ψ ∘ Z | mW ]) + (μ[ φ₂ ∘ Y | mW ] * μ[ ψ ∘ Z | mW ]) :=
+          Filter.EventuallyEq.add eq1 eq2
+      _ = (fun ω => (μ[ φ₁ ∘ Y | mW ] ω + μ[ φ₂ ∘ Y | mW ] ω) * μ[ ψ ∘ Z | mW ] ω) := by
+          ext ω; ring
+      _ =ᵐ[μ] (μ[ φ₁ ∘ Y | mW ] + μ[ φ₂ ∘ Y | mW ]) * μ[ ψ ∘ Z | mW ] := Filter.EventuallyEq.rfl
+      _ =ᵐ[μ] μ[ (φ₁ + φ₂) ∘ Y | mW ] * μ[ ψ ∘ Z | mW ] := by
+          apply Filter.EventuallyEq.mul _ Filter.EventuallyEq.rfl
+          have : (fun ω => (φ₁ + φ₂) ∘ Y ω) = (fun ω => φ₁ ∘ Y ω + φ₂ ∘ Y ω) := by
+            ext ω; simp [Function.comp, Pi.add_apply]
+          rw [this]
+          exact (condExp_add (m := mW) integrable_condExp integrable_condExp).symm
   · -- const case
     intro c ψ
     -- (const c ∘ Y) = λ _, c; use condExp_const and linearity
-    sorry  -- Expand with condExp_const, condExp_smul
+    -- LHS: μ[c * (ψ∘Z) | mW] = c * μ[ψ∘Z | mW] by condExp_smul
+    -- RHS: μ[c | mW] * μ[ψ∘Z | mW] = c * μ[ψ∘Z | mW] by condExp_const
+    have lhs_eq : (fun ω => (SimpleFunc.const α c : α → ℝ) (Y ω) * (ψ ∘ Z) ω)
+                = (fun ω => c * (ψ ∘ Z) ω) := by
+      ext ω; simp [Function.comp, SimpleFunc.const_apply]
+    rw [lhs_eq]
+    have rhs_const : (fun ω => (SimpleFunc.const α c : α → ℝ) (Y ω)) = (fun _ => c) := by
+      ext ω; simp [Function.comp, SimpleFunc.const_apply]
+    rw [rhs_const]
+    -- Apply condExp_smul on LHS and condExp_const on RHS
+    calc μ[ (fun ω => c * (ψ ∘ Z) ω) | mW ]
+        =ᵐ[μ] (fun ω => c * μ[ ψ ∘ Z | mW ] ω) :=
+          condExp_smul (m := mW) c integrable_condExp
+      _ = (fun ω => μ[ (fun _ : Ω => c) | mW ] ω * μ[ ψ ∘ Z | mW ] ω) := by
+          ext ω
+          rw [condExp_const (m := mW) (hm := (hY.comp measurable_const).comap_le)]
+          simp
+      _ =ᵐ[μ] μ[ (fun _ : Ω => c) | mW ] * μ[ ψ ∘ Z | mW ] := Filter.EventuallyEq.rfl
   · -- indicator case
     intro A hA c ψ
     -- φ = c • 1_A. Reduce to rectangle case with scalar c
@@ -418,14 +455,95 @@ lemma condIndep_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
       rfl
     · -- ψ = ψ₁ + ψ₂
       intro ψ₁ ψ₂ hψ₁ hψ₂ c
-      sorry  -- Similar to add case above
+      -- Similar to add case: distribute and use inductive hypotheses
+      have lhs : (fun ω => ((c • SimpleFunc.piecewise A hA 1 0) ∘ Y) ω * ((ψ₁ + ψ₂) ∘ Z) ω)
+                = (fun ω => ((c • SimpleFunc.piecewise A hA 1 0) ∘ Y) ω * (ψ₁ ∘ Z) ω
+                          + ((c • SimpleFunc.piecewise A hA 1 0) ∘ Y) ω * (ψ₂ ∘ Z) ω) := by
+        ext ω; simp [Function.comp, Pi.add_apply, mul_add]
+      rw [lhs]
+      calc μ[ (fun ω => ((c • SimpleFunc.piecewise A hA 1 0) ∘ Y) ω * (ψ₁ ∘ Z) ω
+                       + ((c • SimpleFunc.piecewise A hA 1 0) ∘ Y) ω * (ψ₂ ∘ Z) ω) | mW ]
+          =ᵐ[μ] μ[ ((c • SimpleFunc.piecewise A hA 1 0) ∘ Y) * (ψ₁ ∘ Z) | mW ]
+               + μ[ ((c • SimpleFunc.piecewise A hA 1 0) ∘ Y) * (ψ₂ ∘ Z) | mW ] :=
+            condExp_add (m := mW) integrable_condExp integrable_condExp
+        _ =ᵐ[μ] (μ[ (c • SimpleFunc.piecewise A hA 1 0) ∘ Y | mW ] * μ[ ψ₁ ∘ Z | mW ])
+               + (μ[ (c • SimpleFunc.piecewise A hA 1 0) ∘ Y | mW ] * μ[ ψ₂ ∘ Z | mW ]) :=
+            Filter.EventuallyEq.add (hψ₁ c) (hψ₂ c)
+        _ = (fun ω => μ[ (c • SimpleFunc.piecewise A hA 1 0) ∘ Y | mW ] ω
+                    * (μ[ ψ₁ ∘ Z | mW ] ω + μ[ ψ₂ ∘ Z | mW ] ω)) := by
+            ext ω; ring
+        _ =ᵐ[μ] μ[ (c • SimpleFunc.piecewise A hA 1 0) ∘ Y | mW ] * (μ[ ψ₁ ∘ Z | mW ] + μ[ ψ₂ ∘ Z | mW ]) :=
+            Filter.EventuallyEq.rfl
+        _ =ᵐ[μ] μ[ (c • SimpleFunc.piecewise A hA 1 0) ∘ Y | mW ] * μ[ (ψ₁ + ψ₂) ∘ Z | mW ] := by
+            apply Filter.EventuallyEq.mul Filter.EventuallyEq.rfl _
+            have : (fun ω => (ψ₁ + ψ₂) ∘ Z ω) = (fun ω => ψ₁ ∘ Z ω + ψ₂ ∘ Z ω) := by
+              ext ω; simp [Function.comp, Pi.add_apply]
+            rw [this]
+            exact (condExp_add (m := mW) integrable_condExp integrable_condExp).symm
     · -- ψ = const d
       intro d c
-      sorry  -- Use linearity
+      -- Both sides are constant: c * d
+      have lhs : (fun ω => ((c • SimpleFunc.piecewise A hA 1 0) ∘ Y) ω * (SimpleFunc.const β d : β → ℝ) (Z ω))
+                = (fun ω => ((c • SimpleFunc.piecewise A hA 1 0) ∘ Y) ω * d) := by
+        ext ω; simp [Function.comp, SimpleFunc.const_apply]
+      rw [lhs]
+      have rhs_const : (fun ω => (SimpleFunc.const β d : β → ℝ) (Z ω)) = (fun _ => d) := by
+        ext ω; simp [Function.comp, SimpleFunc.const_apply]
+      rw [rhs_const]
+      -- Apply linearity
+      calc μ[ (fun ω => ((c • SimpleFunc.piecewise A hA 1 0) ∘ Y) ω * d) | mW ]
+          =ᵐ[μ] (fun ω => d * μ[ (c • SimpleFunc.piecewise A hA 1 0) ∘ Y | mW ] ω) :=
+            condExp_smul (m := mW) d integrable_condExp
+        _ = (fun ω => μ[ (c • SimpleFunc.piecewise A hA 1 0) ∘ Y | mW ] ω * d) := by
+            ext ω; ring
+        _ = (fun ω => μ[ (c • SimpleFunc.piecewise A hA 1 0) ∘ Y | mW ] ω * μ[ (fun _ : Ω => d) | mW ] ω) := by
+            ext ω
+            rw [condExp_const (m := mW) (hm := (hZ.comp measurable_const).comap_le)]
+            simp
+        _ =ᵐ[μ] μ[ (c • SimpleFunc.piecewise A hA 1 0) ∘ Y | mW ] * μ[ (fun _ : Ω => d) | mW ] :=
+            Filter.EventuallyEq.rfl
     · -- ψ = d • 1_B (both are indicators)
       intro B hB d c
       -- This reduces to h_ind with scalars c and d
-      sorry  -- Apply h_ind and condExp_smul
+      -- φ = c • 1_A, ψ = d • 1_B
+      -- Need to show: μ[(c·1_A∘Y)*(d·1_B∘Z) | mW] = μ[c·1_A∘Y | mW] * μ[d·1_B∘Z | mW]
+
+      -- Simplify the product
+      have prod_eq : (fun ω => ((c • SimpleFunc.piecewise A hA 1 0) ∘ Y) ω
+                              * ((d • SimpleFunc.piecewise B hB 1 0) ∘ Z) ω)
+                    = (fun ω => (c * d) * (indY A ω * indZ B ω)) := by
+        ext ω
+        simp [Function.comp, SimpleFunc.coe_smul, SimpleFunc.piecewise, indY, indZ]
+        by_cases hA' : Y ω ∈ A <;> by_cases hB' : Z ω ∈ B <;> simp [hA', hB'] <;> ring
+
+      rw [prod_eq]
+
+      -- Apply condExp_smul to factor out (c * d)
+      calc μ[ (fun ω => (c * d) * (indY A ω * indZ B ω)) | mW ]
+          =ᵐ[μ] (fun ω => (c * d) * μ[ indY A * indZ B | mW ] ω) :=
+            condExp_smul (m := mW) (c * d) integrable_condExp
+        _ =ᵐ[μ] (fun ω => (c * d) * (μ[ indY A | mW ] ω * μ[ indZ B | mW ] ω)) := by
+            apply Filter.EventuallyEq.fun_comp (f := fun x => (c * d) * x) _
+            exact h_ind A hA B hB
+        _ = (fun ω => (c * μ[ indY A | mW ] ω) * (d * μ[ indZ B | mW ] ω)) := by
+            ext ω; ring
+        _ =ᵐ[μ] (fun ω => μ[ (fun ω' => c * indY A ω') | mW ] ω
+                        * μ[ (fun ω' => d * indZ B ω') | mW ] ω) := by
+            apply Filter.EventuallyEq.mul _ _
+            · exact (condExp_smul (m := mW) c integrable_condExp).symm
+            · exact (condExp_smul (m := mW) d integrable_condExp).symm
+        _ = (fun ω => μ[ ((c • SimpleFunc.piecewise A hA 1 0) ∘ Y) | mW ] ω
+                    * μ[ ((d • SimpleFunc.piecewise B hB 1 0) ∘ Z) | mW ] ω) := by
+            congr 1
+            · ext ω'
+              simp [Function.comp, SimpleFunc.coe_smul, SimpleFunc.piecewise, indY]
+              by_cases h : Y ω' ∈ A <;> simp [h] <;> ring
+            · ext ω'
+              simp [Function.comp, SimpleFunc.coe_smul, SimpleFunc.piecewise, indZ]
+              by_cases h : Z ω' ∈ B <;> simp [h] <;> ring
+        _ =ᵐ[μ] μ[ ((c • SimpleFunc.piecewise A hA 1 0) ∘ Y) | mW ]
+               * μ[ ((d • SimpleFunc.piecewise B hB 1 0) ∘ Z) | mW ] :=
+            Filter.EventuallyEq.rfl
 
 /-!
 ## Helper lemmas for bounded measurable extension
