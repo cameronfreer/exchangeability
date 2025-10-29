@@ -161,17 +161,16 @@ lemma integrable_mul_of_bound_one
   have hle_int :
       ∫⁻ ω, ‖g ω * f ω‖₊ ∂μ ≤ ∫⁻ ω, ‖f ω‖₊ ∂μ := by
     refine lintegral_mono_ae ?_
-    filter_upwards [hle] with ω hω
+    filter_upwards [hle, hbound] with ω hω_prod hω_bound
     simp only [nnnorm_mul]
     calc (‖g ω‖₊ : ℝ≥0∞) * ‖f ω‖₊
         ≤ (1 : ℝ≥0∞) * ‖f ω‖₊ := by
           gcongr
-          -- ‖g ω‖₊ ≤ 1 from hω : ‖g ω‖ ≤ 1
-          show (‖g ω‖₊ : ℝ≥0∞) ≤ 1
-          rw [ENNReal.coe_le_one_iff]
-          change ‖g ω‖₊ ≤ 1
-          rw [← Real.toNNReal_one]
-          exact Real.toNNReal_mono hω
+          -- ‖g ω‖₊ ≤ 1 from hω_bound : ‖g ω‖ ≤ 1
+          have : (‖g ω‖₊ : ℝ) ≤ 1 := by
+            simp only [coe_nnnorm]
+            exact hω_bound
+          norm_cast
       _ = ‖f ω‖₊ := by simp
   have hf_fin : (∫⁻ ω, ‖f ω‖₊ ∂μ) < ∞ := hf.hasFiniteIntegral
   exact lt_of_le_of_lt hle_int hf_fin
@@ -205,19 +204,20 @@ lemma condExp_indicator_ae_bound_one
     condExp_mono (integrable_const _) h_ind_int h0
   have hCE1 : μ[Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) | mW] ≤ᵐ[μ] μ[fun _ => (1 : ℝ) | mW] :=
     condExp_mono h_ind_int (integrable_const _) h1
+  -- Conditional expectation of constants
+  have hCE_const0 : μ[fun _ => (0 : ℝ) | mW] = fun _ => (0 : ℝ) := condExp_const hm (0 : ℝ)
+  have hCE_const1 : μ[fun _ => (1 : ℝ) | mW] = fun _ => (1 : ℝ) := condExp_const hm (1 : ℝ)
   -- Pack the two inequalities into `[0,1]`
   filter_upwards [hCE0, hCE1] with ω h0' h1'
   constructor
   · -- 0 ≤ CE(1_B)
-    have := condExp_const hm (0 : ℝ)
     calc (0 : ℝ)
-        = μ[fun _ => (0 : ℝ) | mW] ω := by simp [this]
+        = μ[fun _ => (0 : ℝ) | mW] ω := by simp [hCE_const0]
       _ ≤ μ[Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) | mW] ω := h0'
   · -- CE(1_B) ≤ 1
-    have := condExp_const hm (1 : ℝ)
     calc μ[Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) | mW] ω
         ≤ μ[fun _ => (1 : ℝ) | mW] ω := h1'
-      _ = (1 : ℝ) := by simp [this]
+      _ = (1 : ℝ) := by simp [hCE_const1]
 
 /-- **Uniqueness of the conditional expectation via L¹**:
 if the underlying integrands agree a.e., then `condExp` agrees a.e.
@@ -1152,70 +1152,67 @@ theorem condExp_project_of_condIndepFun
     -- Strategy: Both factors are conditional expectations (hence integrable), and the second is bounded by 1
     have h_gs_int : ∀ n, Integrable (fun ω => μ[ f_n n ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) μ := by
       intro n
-      -- Abbreviations for clarity
-      set CEfₙ : Ω → ℝ := fun ω => μ[ f_n n ∘ Y | mW ] ω
-      set CEι : Ω → ℝ := fun ω => μ[ (Z ⁻¹' B).indicator 1 | mW ] ω
-
       -- CE of an indicator is a.e. bounded by 1
-      have hCEι_bound : ∀ᵐ ω ∂μ, ‖CEι ω‖ ≤ (1 : ℝ) := by
-        have h := condExp_indicator_ae_bound_one hmW_le hZ hB
+      have hCEι_bound : ∀ᵐ ω ∂μ, ‖(μ[(Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) | mW] ω : ℝ)‖ ≤ (1 : ℝ) := by
+        -- Explicitly pass the IsFiniteMeasure instance (IsProbabilityMeasure extends IsFiniteMeasure)
+        have h := @condExp_indicator_ae_bound_one Ω βZ mΩ μ inferInstance mW hmW_le Z _ B hZ hB
         filter_upwards [h] with ω hω
         rcases hω with ⟨h0, h1⟩
-        have : ‖CEι ω‖ = CEι ω := by
-          have : 0 ≤ CEι ω := h0
-          simpa [abs_of_nonneg this, Real.norm_eq_abs]
+        have : ‖(μ[fun ω => (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) ω | mW] ω : ℝ)‖ = μ[fun ω => (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) ω | mW] ω := by
+          simpa [abs_of_nonneg h0, Real.norm_eq_abs]
         simpa [this] using h1
 
       -- Both factors are a.e. strongly measurable / integrable
-      have hCEfₙ_int : Integrable CEfₙ μ := by
-        simpa [CEfₙ] using integrable_condExp
+      have hCEfₙ_int : Integrable (μ[f_n n ∘ Y | mW]) μ := integrable_condExp
 
-      have hCEι_meas : AEStronglyMeasurable CEι μ := by
-        have : Integrable (μ[(Z ⁻¹' B).indicator 1 | mW]) μ := integrable_condExp
+      have hCEι_meas : @AEStronglyMeasurable Ω ℝ _ mΩ mΩ (μ[(Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) | mW]) μ := by
+        have : Integrable (μ[(Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) | mW]) μ := integrable_condExp
         exact this.aestronglyMeasurable
 
       -- Apply the generic lemma with the bound by 1
-      have : Integrable (fun ω => CEι ω * CEfₙ ω) μ :=
-        integrable_mul_of_bound_one (μ := μ) (f := CEfₙ) (g := CEι)
+      have : Integrable (fun ω => μ[(Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) | mW] ω * μ[f_n n ∘ Y | mW] ω) μ :=
+        integrable_mul_of_bound_one (μ := μ)
+          (f := μ[f_n n ∘ Y | mW])
+          (g := μ[(Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) | mW])
           hCEfₙ_int hCEι_meas hCEι_bound
 
       -- Rewrite to match goal (swap order of multiplication)
-      convert this using 1
-      ext ω; ring
+      -- The lambda form and shorthand are definitionally equal after simplification
+      convert this using 2 with ω
+      · simp [Set.indicator]
+      · ring
 
     have h_g_int : Integrable (fun ω => μ[ f ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) μ := by
       -- Same proof as h_gs_int, but for f instead of f_n n
-      -- Abbreviations
-      set CEf : Ω → ℝ := fun ω => μ[ f ∘ Y | mW ] ω
-      set CEι : Ω → ℝ := fun ω => μ[ (Z ⁻¹' B).indicator 1 | mW ] ω
-
       -- CE of indicator bounded by 1 (as above)
-      have hCEι_bound : ∀ᵐ ω ∂μ, ‖CEι ω‖ ≤ (1 : ℝ) := by
-        have h := condExp_indicator_ae_bound_one hmW_le hZ hB
+      have hCEι_bound : ∀ᵐ ω ∂μ, ‖(μ[(Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) | mW] ω : ℝ)‖ ≤ (1 : ℝ) := by
+        have h := @condExp_indicator_ae_bound_one Ω βZ mΩ μ inferInstance mW hmW_le Z _ B hZ hB
         filter_upwards [h] with ω hω
         rcases hω with ⟨h0, h1⟩
-        have : ‖CEι ω‖ = CEι ω := by
-          have : 0 ≤ CEι ω := h0
-          simpa [abs_of_nonneg this, Real.norm_eq_abs]
+        have : ‖(μ[fun ω => (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) ω | mW] ω : ℝ)‖ = μ[fun ω => (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) ω | mW] ω := by
+          simpa [abs_of_nonneg h0, Real.norm_eq_abs]
         simpa [this] using h1
 
       -- Integrable CE of f∘Y
-      have hCEf_int : Integrable CEf μ := by
-        simpa [CEf] using integrable_condExp
+      have hCEf_int : Integrable (μ[f ∘ Y | mW]) μ := integrable_condExp
 
       -- measurability of CEι (from integrability)
-      have hCEι_meas : AEStronglyMeasurable CEι μ := by
-        have : Integrable (μ[(Z ⁻¹' B).indicator 1 | mW]) μ := integrable_condExp
+      have hCEι_meas : @AEStronglyMeasurable Ω ℝ _ mΩ mΩ (μ[(Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) | mW]) μ := by
+        have : Integrable (μ[(Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) | mW]) μ := integrable_condExp
         exact this.aestronglyMeasurable
 
       -- Conclude with the same generic lemma
-      have : Integrable (fun ω => CEι ω * CEf ω) μ :=
-        integrable_mul_of_bound_one (μ := μ) (f := CEf) (g := CEι)
+      have : Integrable (fun ω => μ[(Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) | mW] ω * μ[f ∘ Y | mW] ω) μ :=
+        integrable_mul_of_bound_one (μ := μ)
+          (f := μ[f ∘ Y | mW])
+          (g := μ[(Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) | mW])
           hCEf_int hCEι_meas hCEι_bound
 
       -- Rewrite to match goal (swap order of multiplication)
-      convert this using 1
-      ext ω; ring
+      -- The lambda form and shorthand are definitionally equal after simplification
+      convert this using 2 with ω
+      · simp [Set.indicator]
+      · ring
 
     -- LHS pointwise convergence: product of converging sequences
     have h_fs_ptwise : ∀ᵐ ω ∂μ, Filter.Tendsto
