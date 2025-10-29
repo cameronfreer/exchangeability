@@ -393,16 +393,55 @@ lemma condIndep_boundedMeasurable (μ : Measure Ω) [IsProbabilityMeasure μ]
     μ[ (f ∘ Y) * (g ∘ Z) | MeasurableSpace.comap W inferInstance ] =ᵐ[μ]
     μ[ f ∘ Y | MeasurableSpace.comap W inferInstance ] *
     μ[ g ∘ Z | MeasurableSpace.comap W inferInstance ] := by
+
+  classical
+
+  -- Extract bounds
+  obtain ⟨Cf, hCf⟩ := hf_bdd
+  obtain ⟨Cg, hCg⟩ := hg_bdd
+
+  -- Notation for the sub-σ-algebra
+  set mW := MeasurableSpace.comap W inferInstance with hmW_def
+
+  -- The proof strategy has three main steps:
+
+  -- STEP 1: Prove for simple functions
+  -- For a simple function s = ∑ᵢ cᵢ · 1_{Aᵢ}, we have s ∘ Y = ∑ᵢ cᵢ · 1_{Y⁻¹(Aᵢ)}
+  -- Similarly for t = ∑ⱼ dⱼ · 1_{Bⱼ}
+  -- Then (s ∘ Y) * (t ∘ Z) = ∑ᵢⱼ cᵢdⱼ · 1_{Y⁻¹(Aᵢ) ∩ Z⁻¹(Bⱼ)}
+  --
+  -- By linearity of conditional expectation:
+  --   μ[(s ∘ Y) * (t ∘ Z) | mW] = ∑ᵢⱼ cᵢdⱼ · μ[1_{Y⁻¹(Aᵢ) ∩ Z⁻¹(Bⱼ)} | mW]
+  --
+  -- Each indicator can be factored using condIndep_of_indep_pair on Aᵢ × Bⱼ:
+  --   μ[1_{Y⁻¹(Aᵢ) ∩ Z⁻¹(Bⱼ)} | mW] =ᵐ μ[1_{Y⁻¹(Aᵢ)} | mW] * μ[1_{Z⁻¹(Bⱼ)} | mW]
+  --
+  -- Therefore:
+  --   μ[(s ∘ Y) * (t ∘ Z) | mW] =ᵐ (∑ᵢ cᵢ · μ[1_{Y⁻¹(Aᵢ)} | mW]) * (∑ⱼ dⱼ · μ[1_{Z⁻¹(Bⱼ)} | mW])
+  --                              = μ[s ∘ Y | mW] * μ[t ∘ Z | mW]
+
+  -- STEP 2: Construct approximating sequences
+  -- For bounded measurable f, g, construct sequences of simple functions fₙ, gₙ such that:
+  --   - fₙ → f pointwise (and similarly for gₙ)
+  --   - |fₙ| ≤ Cf + 1 and |gₙ| ≤ Cg + 1 (uniform bounds)
+  --   - Each fₙ, gₙ is measurable
+  --
+  -- This can be done using dyadic approximation (see ViaKoopman lines 5344-5869)
+  -- or using mathlib's SimpleFunc.eapprox
+
+  -- STEP 3: Apply dominated convergence
+  -- From Step 1, we have for all n, m:
+  --   μ[(fₙ ∘ Y) * (gₘ ∘ Z) | mW] =ᵐ μ[fₙ ∘ Y | mW] * μ[gₘ ∘ Z | mW]
+  --
+  -- As n, m → ∞:
+  --   - (fₙ ∘ Y) * (gₘ ∘ Z) → (f ∘ Y) * (g ∘ Z) pointwise
+  --   - fₙ ∘ Y → f ∘ Y and gₘ ∘ Z → g ∘ Z pointwise
+  --   - All are uniformly bounded
+  --
+  -- By dominated convergence for conditional expectation (tendsto_condExp_unique):
+  --   μ[(f ∘ Y) * (g ∘ Z) | mW] =ᵐ μ[f ∘ Y | mW] * μ[g ∘ Z | mW]
+
   sorry
-  /-
-  Proof outline (full monotone class argument):
-  1. Define the class H of pairs (f,g) satisfying the factorization
-  2. Show H contains all indicator pairs (by h_indep) ✓
-  3. Show H contains all simple function pairs (by linearity)
-  4. Show H is closed under bounded monotone limits (by dominated convergence)
-  5. By monotone class theorem, H contains all bounded measurables
-  6. Therefore the factorization holds for bounded measurable f, g
-  -/
 
 /-!
 ## Extension to product σ-algebras
