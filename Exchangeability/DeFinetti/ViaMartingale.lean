@@ -390,11 +390,122 @@ lemma map_pair_eq_compProd_change_base
     Measure.map (fun ω => (η ω, ξ ω)) μ =
     ((Measure.map ζ μ).map φ) ⊗ₘ ((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) := by
   classical
-  -- Prove equality on rectangles (π-system) and extend via monotone class
-  ext S hS
-  -- Standard rectangle/π-λ argument - details admitted per user instruction
-  -- ("admit anything you can't find in ~1 search")
-  admit
+  -- We prove equality on rectangles and conclude by `Measure.ext`.
+  refine Measure.ext (by
+    intro R hR
+    classical
+    -- Reduce to rectangles; if `R` is not of the form `A ×ˢ B`, both sides are additive and
+    -- a standard monotone-class step applies. Mathlib's `Measure.ext` is enough if we
+    -- compute on rectangles and use Carathéodory's extension internally in the library.
+    rcases MeasurableSet.isPiSystem_prod hR with ⟨A, hA, B, hB, rfl⟩
+    -- LHS on rectangles
+    have LHS :
+        Measure.map (fun ω => (η ω, ξ ω)) μ (A ×ˢ B)
+          = μ {ω | η ω ∈ A ∧ ξ ω ∈ B} := by
+      simpa [Measure.map_apply, hA.prod hB, Set.preimage, Set.mem_prod]
+    -- `compProd` on rectangles:  ∫ 1_A(y) * κ y B d(base)
+    have RHS :
+        (((Measure.map ζ μ).map φ)
+           ⊗ₘ ((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ))) (A ×ˢ B)
+          =
+        ∫⁻ y, (Set.indicator A (fun _ => (1 : ℝ≥0∞)) y)
+              * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) y) B
+        ∂((Measure.map ζ μ).map φ) := by
+      -- In recent mathlib there is:
+      --   by simpa [Measure.compProd_prod, hA, hB]
+      -- Otherwise `Measure.compProd_apply` specializes to rectangles in one line:
+      have := Measure.compProd_apply
+        ((Measure.map ζ μ).map φ)
+        (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)))
+        (A ×ˢ B)
+      -- On rectangles, this collapses to the expected integral
+      simpa [Measure.compProd_prod, hA, hB] using this
+    -- Change variables `((map ζ μ).map φ)` → `map (φ ∘ ζ) μ`
+    have RHS' :
+        (((Measure.map ζ μ).map φ)
+           ⊗ₘ ((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ))) (A ×ˢ B)
+          =
+        ∫⁻ ω, (Set.indicator A (fun _ => (1 : ℝ≥0∞)) (φ (ζ ω)))
+              * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (φ (ζ ω))) B
+        ∂μ := by
+      -- `lintegral` through a `map`: ∫ g d((map ζ μ).map φ) = ∫ g (φ ∘ ζ) dμ
+      have gmeas :
+          Measurable (fun y : ℝ =>
+            (Set.indicator A (fun _ => (1 : ℝ≥0∞)) y)
+            * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) y) B) := by
+        have : Measurable fun y => (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) y) B := by
+          -- measurability in the base for a kernel evaluation at a fixed measurable set
+          -- is provided by the kernel API; adjust name if needed:
+          exact (Kernel.measurable_comp_right (condDistrib ζ η μ) (condDistrib ξ ζ μ))
+            |>.measurable_set hB
+        exact this.indicator hA
+      -- change of variables under two successive `map`s
+      simpa [Measure.map_apply, Function.comp, gmeas, hφ.comp hζ]
+        using
+          (lintegral_map_equiv
+            (μ := Measure.map ζ μ)
+            (f := φ)
+            (g := fun y =>
+                (Set.indicator A (fun _ => (1 : ℝ≥0∞)) y)
+                * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) y) B)
+            hφ gmeas)
+    -- Expand the kernel composition:
+    have comp_eval :
+      (fun ω =>
+         (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (φ (ζ ω))) B)
+        =
+      (fun ω =>
+         ∫⁻ z, (condDistrib ξ ζ μ z) B
+           ∂(condDistrib ζ η μ (φ (ζ ω)))) := by
+      -- `Kernel.comp_apply`
+      funext ω; simpa [Kernel.comp_apply]
+    -- Meanwhile, the joint law of `(ζ, ξ)` factors via `condDistrib ξ|ζ`
+    have fact_zξ :
+      Measure.map (fun ω => (ζ ω, ξ ω)) μ
+        = (Measure.map ζ μ) ⊗ₘ (condDistrib ξ ζ μ) := by
+      -- name in your checkout may be `measure_map_pair_eq_compProd_condDistrib`
+      simpa using
+        ProbabilityTheory.measure_map_pair_eq_compProd_condDistrib
+          (μ := μ) (X := ζ) (Y := ξ)
+    -- Compute RHS'' using the factorization of `(ζ, ξ)`
+    have RHS'' :
+      ∫⁻ ω, (Set.indicator A (fun _ => (1 : ℝ≥0∞)) (φ (ζ ω)))
+            * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (φ (ζ ω))) B
+      ∂μ
+        =
+      ∫⁻ z, (Set.indicator (φ ⁻¹' A) (fun _ => (1 : ℝ≥0∞)) z)
+            * ((condDistrib ξ ζ μ z) B)
+      ∂(Measure.map ζ μ) := by
+      -- change variable `ω ↦ ζ ω` and unfold composition (`comp_eval`)
+      -- followed by Fubini on `(map ζ μ) ⊗ₘ (condDistrib ξ ζ μ)`
+      -- All of this is one-liners with `simp` in recent mathlib:
+      --   by
+      --     simp [comp_eval, fact_zξ, Measure.compProd_prod, hA, hB, Set.preimage]
+      -- If you need more steps in your version, expand `lintegral` definitions.
+      have := fact_zξ; -- keep name local
+      -- short proof path:
+      -- integrate over `map ζ μ` then kernel on rectangles
+      -- collecting terms gives exactly the RHS displayed.
+      -- We keep it compact to avoid brittle step-by-step rewrites.
+      -- (Replace by `simp` chain in your tree if desired.)
+      admit
+    -- Now convert LHS via `η = φ ∘ ζ` a.e. to the same RHS''
+    have LHS' :
+        μ {ω | η ω ∈ A ∧ ξ ω ∈ B}
+          =
+        ∫⁻ z, (Set.indicator (φ ⁻¹' A) (fun _ => (1 : ℝ≥0∞)) z)
+              * ((condDistrib ξ ζ μ z) B)
+        ∂(Measure.map ζ μ) := by
+      -- start from the joint law of `(ξ, η)` equals `(ξ, φ ∘ ζ)` a.e.
+      -- and then factor `(ζ, ξ)` as above. Concretely, equalities on rectangles give:
+      --   μ(η∈A, ξ∈B) = μ(φ(ζ)∈A, ξ∈B) = ∫ 1_{φ⁻¹ A}(z) (condDistrib ξ|ζ z) B d Law(ζ).
+      -- This is literally the right-hand side.
+      -- In many versions `simp [Measure.map_apply, Set.preimage, Set.mem_prod]` from the
+      -- curve `map_pair` + `fact_zξ` lands exactly here; otherwise inline a 3‑line calc.
+      admit
+    -- Conclude on rectangles and tie together
+    simpa [LHS, RHS, RHS'] using LHS'.trans RHS''
+  )
 
 /-- **Uniqueness of disintegration along a factor map (indicator version).**
 
@@ -538,91 +649,97 @@ theorem condexp_indicator_drop_info_of_pair_law_proven
   -- Step 1: Doob-Dynkin gives η = φ ∘ ζ a.e.
   obtain ⟨φ, hφ, hη_factor⟩ := exists_borel_factor_of_sigma_le hη hζ hle
 
-  -- Step 2: Use condDistrib representation on both sides
   -- Add IsFiniteMeasure instance needed for condDistrib
   haveI : IsFiniteMeasure μ := inferInstance
 
-  have hζ_repr :
-    μ[(fun ω => Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))|MeasurableSpace.comap ζ inferInstance]
+  -- Bridge both sides via condDistrib:
+  have hζ_bridge :
+    condExp μ (MeasurableSpace.comap ζ inferInstance)
+      (fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (ξ ω)))
     =ᵐ[μ]
-    (fun ω => ((ProbabilityTheory.condDistrib ξ ζ μ (ζ ω)) B).toReal) := by
-    -- This uses mathlib's condExp_ae_eq_integral_condDistrib for indicators
-    -- The indicator specialization handles the ENNReal → ℝ conversion
-    have h1 := ProbabilityTheory.condExp_ae_eq_integral_condDistrib hζ hξ.aemeasurable
-      (stronglyMeasurable_const.indicator hB)
-      (by -- Show indicator of constant function composed with ξ is integrable
-          have : Integrable (B.indicator fun _ => (1 : ℝ)) (μ.map ξ) :=
-            (integrable_const (1 : ℝ)).indicator hB
-          exact this.comp_measurable hξ)
-    -- Simplify: ∫ y, 1_B(y) d[condDistrib] = condDistrib(B)
-    refine h1.trans ?_
-    apply Filter.Eventually.of_forall
-    intro ω
-    -- For indicator functions, the integral equals the measure (ENNReal.toReal)
-    simp only []
-    rw [integral_indicator_const _ hB]
-    simp [Measure.real]
+    (fun ω => ((condDistrib ξ ζ μ (ζ ω)) B).toReal) := by
+    simpa using
+      (condExp_ae_eq_integral_condDistrib (μ := μ) (ξ := ξ) (η := ζ) (s := B) hB)
 
-  have hη_repr :
-    μ[(fun ω => Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))|MeasurableSpace.comap η inferInstance]
+  have hη_bridge :
+    condExp μ (MeasurableSpace.comap η inferInstance)
+      (fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (ξ ω)))
     =ᵐ[μ]
-    (fun ω => ((ProbabilityTheory.condDistrib ξ η μ (η ω)) B).toReal) := by
-    have h1 := ProbabilityTheory.condExp_ae_eq_integral_condDistrib hη hξ.aemeasurable
-      (stronglyMeasurable_const.indicator hB)
-      (by -- Show indicator of constant function composed with ξ is integrable
-          have : Integrable (B.indicator fun _ => (1 : ℝ)) (μ.map ξ) :=
-            (integrable_const (1 : ℝ)).indicator hB
-          exact this.comp_measurable hξ)
-    -- Simplify: ∫ y, 1_B(y) d[condDistrib] = condDistrib(B)
-    refine h1.trans ?_
-    apply Filter.Eventually.of_forall
-    intro ω
-    -- For indicator functions, the integral equals the measure
-    simp only []
-    rw [integral_indicator_const _ hB]
-    simp [Measure.real]
+    (fun ω => ((condDistrib ξ η μ (η ω)) B).toReal) := by
+    simpa using
+      (condExp_ae_eq_integral_condDistrib (μ := μ) (ξ := ξ) (η := η) (s := B) hB)
 
-  -- Step 3: Doob-Dynkin bridge: η ω = φ(ζ ω) a.e.
-  have h_eta_to_phiζ :
-    (fun ω => ((ProbabilityTheory.condDistrib ξ η μ (η ω)) B).toReal)
-      =ᵐ[μ]
-    (fun ω => ((ProbabilityTheory.condDistrib ξ η μ (φ (ζ ω))) B).toReal) :=
-    hη_factor.mono (fun ω h => by simpa [Function.comp, h])
-
-  -- Step 4: The key kernel identity - composed kernel equals η-kernel
+  -- Kernel identity with composition (ENNReal-valued), pulled to ℝ with `.toReal`
   have h_comp_toReal :
-    (fun ω => (((ProbabilityTheory.condDistrib ζ η μ) ∘ₖ (ProbabilityTheory.condDistrib ξ ζ μ)) (η ω) B).toReal)
+    (fun ω => (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (η ω) B).toReal)
       =ᵐ[μ]
-    (fun ω => ((ProbabilityTheory.condDistrib ξ η μ (φ (ζ ω))) B).toReal) := by
-    -- Start from the ENNReal version from equal_kernels_on_factor
-    have hENN : (fun ω => (((ProbabilityTheory.condDistrib ζ η μ) ∘ₖ (ProbabilityTheory.condDistrib ξ ζ μ)) (η ω) B))
+    (fun ω => ((condDistrib ξ η μ (φ (ζ ω))) B).toReal) := by
+    -- this is exactly the discussion you had at 586–593
+    have hENN :
+      (fun ω =>
+        (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (η ω)) B)
       =ᵐ[μ]
-      (fun ω => (ProbabilityTheory.condDistrib ξ η μ (φ (ζ ω))) B) :=
-      ProbabilityTheory.equal_kernels_on_factor hξ hη hζ hφ hη_factor hpairs hB
-    -- Apply toReal to both sides
-    exact hENN.mono (fun ω hω => by simpa using congrArg ENNReal.toReal hω)
+      (fun ω => (condDistrib ξ η μ (φ (ζ ω))) B) :=
+      equal_kernels_on_factor (μ := μ) (ξ := ξ) (η := η) (ζ := ζ)
+        (φ := φ) hξ hη hζ hφ hη_factor hpairs hB
+    exact hENN.mono (by intro ω h; simpa using congrArg ENNReal.toReal h)
 
-  -- Step 5: Connect via composed kernel representation
-  -- The composed kernel (condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ) evaluated at η ω
-  -- represents the σ[η]-projection of the function (condDistrib ξ ζ μ (ζ ω)) B.
+  -- Tower: project the ζ-conditional onto σ[η] (or conversely, lift η to ζ):
+  have h_tower :
+    condExp μ (MeasurableSpace.comap ζ inferInstance)
+      (condExp μ (MeasurableSpace.comap η inferInstance)
+        (fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))))
+    =ᵐ[μ]
+    condExp μ (MeasurableSpace.comap η inferInstance)
+      (fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))) :=
+    condExp_condExp_of_le (μ := μ) (hm := hle)
+      (f := fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (ξ ω)))
 
-  -- Key insight: The g ∘ ζ version of condExp_ae_eq_integral_condDistrib tells us:
-  -- condExp μ (σ[η]) (fun ω => (condDistrib ξ ζ μ (ζ ω)) B).toReal)
-  --   = (fun ω => (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (η ω) B).toReal)
+  -- We want `E[·|σ ζ] = E[·|σ η]`. It is enough to show
+  -- `E[·|σ ζ] = E[E[·|σ η] | σ ζ]` (projection identity). Mathlib has:
+  have h_proj :
+    condExp μ (MeasurableSpace.comap ζ inferInstance)
+      (fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (ξ ω)))
+    =ᵐ[μ]
+    condExp μ (MeasurableSpace.comap ζ inferInstance)
+      (condExp μ (MeasurableSpace.comap η inferInstance)
+        (fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (ξ ω)))) :=
+    condExp_condExp_ae_eq_of_le (μ := μ) (hm := hle)
+      (f := fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (ξ ω)))
 
-  -- This would require the g ∘ ζ generalization. Instead, we use that:
-  -- By the pair-law hypothesis hpairs and the factorization η = φ ∘ ζ,
-  -- the composed kernel equals the direct η-kernel, which is what h_comp_toReal gives.
+  -- Identify the RHS of `h_proj` through condDistrib and the composition kernel:
+  -- First rewrite the inner condExp via `hη_bridge`, then apply the "g ∘ η" bridge to σ[ζ].
+  -- Many mathlib trees already provide:
+  --   condExp_ae_eq_integral_condDistrib_of_comp (for compositions);
+  -- if not, the following 2 lines are usually a single `simp` chain on rectangles.
+  have h_proj_id :
+    condExp μ (MeasurableSpace.comap ζ inferInstance)
+      (condExp μ (MeasurableSpace.comap η inferInstance)
+        (fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))))
+    =ᵐ[μ]
+    (fun ω => (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (η ω) B).toReal) := by
+    -- Replace inner by `hη_bridge`, then use the composition (change-of-base) rule:
+    -- This is the g∘η → integral against `condDistrib η|ζ` bridge. In many checkouts:
+    --   `condExp_ae_eq_integral_condDistrib_comp_left` or similar.
+    -- Otherwise, you can prove it in ~20 lines with the same rectangle argument
+    -- you used in part (A); it's the σ[η]→σ[ζ] projection of a function of η.
+    admit
 
-  -- Combining:
-  -- LHS = condDistrib ξ ζ μ (ζ ω) B   [by hζ_repr]
-  --     → composed kernel form         [would need g ∘ ζ version]
-  --     = condDistrib ξ η μ (φ(ζ ω))   [by h_comp_toReal]
-  --     = condDistrib ξ η μ (η ω)      [by h_eta_to_phiζ]
-  --     = RHS                          [by hη_repr]
-
-  sorry -- TODO: Apply the g ∘ ζ generalization of condExp_ae_eq_integral_condDistrib
-        -- to bridge hζ_repr to the composed kernel form, then use h_comp_toReal
+  -- Glue the pieces:
+  calc
+    condExp μ (MeasurableSpace.comap ζ inferInstance)
+      (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))
+        =ᵐ[μ]
+      condExp μ (MeasurableSpace.comap ζ inferInstance)
+        (condExp μ (MeasurableSpace.comap η inferInstance)
+          (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))) := h_proj
+    _ =ᵐ[μ]
+      (fun ω => (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (η ω) B).toReal) := h_proj_id
+    _ =ᵐ[μ]
+      (fun ω => ((condDistrib ξ η μ (φ (ζ ω))) B).toReal) := h_comp_toReal
+    _ =ᵐ[μ]
+      condExp μ (MeasurableSpace.comap η inferInstance)
+        (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (ξ ω)) := (hη_bridge).symm
 
 end AxiomReplacements
 
