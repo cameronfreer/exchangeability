@@ -517,32 +517,47 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
       -- Key: Z⁻¹B ∩ W⁻¹C ∈ σ(Z,W), so ∫_{Z⁻¹B ∩ W⁻¹C} μ[f|mZW] = ∫_{Z⁻¹B ∩ W⁻¹C} f
       -- And we'll show ∫_{Z⁻¹B ∩ W⁻¹C} μ[f|mW] = ∫_{Z⁻¹B ∩ W⁻¹C} μ[f|mZW]
 
-      -- Basic measurable sets in ambient σ-algebra (BEFORE classical to avoid interference)
-      have hBpre_amb : MeasurableSet (Z ⁻¹' B) := by
-        haveI : MeasurableSpace Ω := inferInstance
-        exact hB.preimage hZ
-      have hCpre_amb : MeasurableSet (W ⁻¹' C) := by
-        haveI : MeasurableSpace Ω := inferInstance
-        exact hC.preimage hW
-
       classical
 
-      -- Ambient ≤ proofs (use outer mW, mZW from lines 426-427)
-      have hmW_le  : mW  ≤ _ := hW.comap_le
-      have hmZW_le : mZW ≤ _ := (hZ.prod_mk hW).comap_le
+      -- 1) Freeze the ambient measurable space to avoid instance drift
+      let m0 : MeasurableSpace Ω := ‹MeasurableSpace Ω›
+
+      -- 2) Use outer mW/mZW (from lines 426-427) and outer hle (from line 431)
+      -- No need to redefine - they're already in scope!
+
+      -- 3) Ambient measurability with m0 made explicit (define FIRST before using in proofs)
+      have hZ_amb : Measurable Z := by
+        haveI : MeasurableSpace Ω := m0
+        convert hZ
+      have hW_amb : Measurable W := by
+        haveI : MeasurableSpace Ω := m0
+        convert hW
+
+      -- 4) Prove inclusions to m0 (now using hZ_amb, hW_amb)
+      have hmW_le  : mW  ≤ m0 := by
+        intro s hs
+        obtain ⟨t, ht, rfl⟩ := hs
+        exact ht.preimage hW_amb
+      have hmZW_le : mZW ≤ m0 := by
+        intro s hs
+        obtain ⟨t, ht, rfl⟩ := hs
+        exact ht.preimage (hZ_amb.prodMk hW_amb)
+      have hBpre_amb : @MeasurableSet Ω m0 (Z ⁻¹' B) := hB.preimage hZ_amb
+      have hCpre_amb : @MeasurableSet Ω m0 (W ⁻¹' C) := hC.preimage hW_amb
 
       -- Convenience name for indicator on Z⁻¹B (f is already defined in outer scope)
       set gB : Ω → ℝ := (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) with hgB_def
 
-      -- Conditional expectation facts
+      -- Conditional expectation facts (ambient integrability via m0)
+      have hint_ce : @Integrable Ω m0 _ _ _ (μ[f|mW]) μ := integrable_condExp
       have hsm_ce     : StronglyMeasurable[mW] (μ[f|mW]) := stronglyMeasurable_condExp
-      have hsm_ce_amb : StronglyMeasurable (μ[f|mW])     := hsm_ce.mono hmW_le
-      have haesm_ce   : AEStronglyMeasurable (μ[f|mW]) μ := hsm_ce_amb.aestronglyMeasurable
-      have hint_ce    : Integrable (μ[f|mW]) μ           := integrable_condExp
+      have hsm_ce_amb : @StronglyMeasurable Ω m0 _ (μ[f|mW]) := hsm_ce.mono hmW_le
+      have haesm_ce   : @AEStronglyMeasurable Ω m0 _ _ (μ[f|mW]) μ := hsm_ce_amb.aestronglyMeasurable
 
-      -- gB measurability in the ambient σ-algebra
-      have hsm_gB   : StronglyMeasurable gB := stronglyMeasurable_const.indicator hBpre_amb
-      have haesm_gB : AEStronglyMeasurable gB μ := hsm_gB.aestronglyMeasurable
+      -- gB measurability in the ambient σ-algebra m0
+      have hsm_gB   : @StronglyMeasurable Ω m0 _ gB :=
+        @StronglyMeasurable.indicator Ω m0 _ _ (Z ⁻¹' B) (fun _ => (1 : ℝ)) hBpre_amb stronglyMeasurable_const
+      have haesm_gB : @AEStronglyMeasurable Ω m0 _ _ gB μ := hsm_gB.aestronglyMeasurable
 
       -- Canonical product ↔ indicator identity (use often)
       have h_mul_eq_indicator :
@@ -552,8 +567,9 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
         · simp [hgB_def, hω, Set.indicator_of_notMem hω, mul_zero]
 
       -- Integrable product via indicator (avoids of_bound and σ-algebra juggling)
-      have hint_prod : Integrable (fun ω => μ[f|mW] ω * gB ω) μ := by
-        simpa [h_mul_eq_indicator] using hint_ce.indicator hBpre_amb
+      have hint_prod : @Integrable Ω m0 _ _ _ (fun ω => μ[f|mW] ω * gB ω) μ := by
+        have := @Integrable.indicator Ω m0 _ _ _ (μ[f|mW]) μ hint_ce (Z ⁻¹' B) hBpre_amb
+        simpa [h_mul_eq_indicator] using this
 
       -- Rectangle is in mZW
       have hrect : MeasurableSet[mZW] (Z ⁻¹' B ∩ W ⁻¹' C) := by
