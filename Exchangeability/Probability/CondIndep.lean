@@ -535,6 +535,9 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
       have hBpre_m0 : @MeasurableSet Ω m0 (Z ⁻¹' B) := hB.preimage hZ_m0
       have hCpre_m0 : @MeasurableSet Ω m0 (W ⁻¹' C) := hC.preimage hW_m0
 
+      -- Sub-σ-algebra ordering
+      have hmW_le : mW ≤ m0 := hW_m0.comap_le
+
       -- Convenience name for indicator on Z⁻¹B (f is already defined in outer scope)
       set gB : Ω → ℝ := (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) with hgB_def
 
@@ -618,6 +621,23 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
             apply Integrable.indicator
             · exact integrable_const 1
             · exact hBpre_m0
+
+          -- Integrability of f * gB: f · gB = f · 1_{Z⁻¹B} = f restricted to Z⁻¹B
+          have hprod_int : Integrable (f * gB) μ := by
+            -- f * gB = (Y⁻¹A).indicator(1) * (Z⁻¹B).indicator(1)
+            -- This is bounded by 1, so integrable
+            have : (f * gB) = (Y ⁻¹' A ∩ Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) := by
+              funext ω
+              simp only [Pi.mul_apply, f, gB, Set.indicator_apply]
+              by_cases hY : ω ∈ Y ⁻¹' A <;> by_cases hZ : ω ∈ Z ⁻¹' B
+              · simp [hY, hZ, Set.mem_inter_iff]
+              · simp [hY, hZ, Set.mem_inter_iff]
+              · simp [hY, hZ, Set.mem_inter_iff]
+              · simp [hY, hZ, Set.mem_inter_iff]
+            rw [this]
+            apply Integrable.indicator
+            · exact integrable_const 1
+            · exact (hY hA).inter (hZ hB)
 
           -- Chain of equalities: ∫_{Z⁻¹B ∩ W⁻¹C} μ[f|mW] = ∫_{Z⁻¹B ∩ W⁻¹C} f
 
