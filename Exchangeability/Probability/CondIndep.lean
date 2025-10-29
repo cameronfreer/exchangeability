@@ -517,6 +517,14 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
       -- Key: Z⁻¹B ∩ W⁻¹C ∈ σ(Z,W), so ∫_{Z⁻¹B ∩ W⁻¹C} μ[f|mZW] = ∫_{Z⁻¹B ∩ W⁻¹C} f
       -- And we'll show ∫_{Z⁻¹B ∩ W⁻¹C} μ[f|mW] = ∫_{Z⁻¹B ∩ W⁻¹C} μ[f|mZW]
 
+      -- Basic measurable sets in ambient σ-algebra (BEFORE classical to avoid interference)
+      have hBpre_amb : MeasurableSet (Z ⁻¹' B) := by
+        haveI : MeasurableSpace Ω := inferInstance
+        exact hB.preimage hZ
+      have hCpre_amb : MeasurableSet (W ⁻¹' C) := by
+        haveI : MeasurableSpace Ω := inferInstance
+        exact hC.preimage hW
+
       classical
 
       -- Ambient ≤ proofs (use outer mW, mZW from lines 426-427)
@@ -525,10 +533,6 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
 
       -- Convenience name for indicator on Z⁻¹B (f is already defined in outer scope)
       set gB : Ω → ℝ := (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) with hgB_def
-
-      -- Basic measurable sets in ambient σ-algebra
-      have hBpre_amb : MeasurableSet (Z ⁻¹' B) :=
-        @MeasurableSet.preimage Ω β (inferInstance : MeasurableSpace Ω) (inferInstance : MeasurableSpace β) Z B hB hZ
 
       -- Conditional expectation facts
       have hsm_ce     : StronglyMeasurable[mW] (μ[f|mW]) := stronglyMeasurable_condExp
