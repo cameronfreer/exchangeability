@@ -523,12 +523,12 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
       have hmW_le  : mW  ≤ _ := hW.comap_le
       have hmZW_le : mZW ≤ _ := (hZ.prod_mk hW).comap_le
 
-      -- Basic measurable sets in ambient σ-algebra
-      have hBpre_amb : MeasurableSet (Z ⁻¹' B) := hB.preimage hZ
-
-      -- Convenience names for the functions
-      set f  : Ω → ℝ := (Y ⁻¹' A).indicator (fun _ => (1 : ℝ)) with hf_def
+      -- Convenience name for indicator on Z⁻¹B (f is already defined in outer scope)
       set gB : Ω → ℝ := (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) with hgB_def
+
+      -- Basic measurable sets in ambient σ-algebra
+      have hBpre_amb : MeasurableSet (Z ⁻¹' B) :=
+        @MeasurableSet.preimage Ω β (inferInstance : MeasurableSpace Ω) (inferInstance : MeasurableSpace β) Z B hB hZ
 
       -- Conditional expectation facts
       have hsm_ce     : StronglyMeasurable[mW] (μ[f|mW]) := stronglyMeasurable_condExp
@@ -606,28 +606,6 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
             apply Integrable.indicator
             · exact integrable_const 1
             · exact hBpre_amb
-          have hprod_int : Integrable (f * gB) μ := by
-            -- Product of bounded integrable functions is integrable on a probability measure
-            -- Both f and gB are indicators bounded by 1
-            refine Integrable.of_bound ?_ 1 ?_
-            · exact (hf_int.aestronglyMeasurable).mul (measurable_const.indicator hBpre_amb).aestronglyMeasurable
-            · filter_upwards with x
-              simp only [hf_def, hgB_def]
-              calc ‖(Y ⁻¹' A).indicator (fun _ => (1 : ℝ)) x * (Z ⁻¹' B).indicator (fun _ => 1) x‖
-                  ≤ ‖(Y ⁻¹' A).indicator (fun _ => (1 : ℝ)) x‖ * ‖(Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) x‖ := norm_mul_le _ _
-                _ ≤ 1 * 1 := by
-                    apply mul_le_mul
-                    · -- Bound ‖indicator (fun _ => 1)‖ ≤ 1 for Y⁻¹A
-                      by_cases hx : x ∈ Y ⁻¹' A
-                      · simp [Set.indicator_of_mem hx, norm_one]
-                      · simp [Set.indicator_of_not_mem hx, norm_zero]
-                    · -- Bound ‖indicator (fun _ => 1)‖ ≤ 1 for Z⁻¹B
-                      by_cases hx : x ∈ Z ⁻¹' B
-                      · simp [Set.indicator_of_mem hx, norm_one]
-                      · simp [Set.indicator_of_not_mem hx, norm_zero]
-                    · exact norm_nonneg _
-                    · norm_num
-                _ = 1 := by norm_num
 
           -- Chain of equalities: ∫_{Z⁻¹B ∩ W⁻¹C} μ[f|mW] = ∫_{Z⁻¹B ∩ W⁻¹C} f
 
