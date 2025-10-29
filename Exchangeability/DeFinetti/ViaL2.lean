@@ -3580,6 +3580,14 @@ lemma cesaro_to_condexp_L2
     --
     -- ALTERNATIVE: Use existing results about conditional expectation
     --              and measurability of limits in Lp spaces if available
+
+    -- NOTE: This is a substantial proof requiring:
+    -- 1. Proving blockAvg f X m n is measurable w.r.t. tailFamily X m
+    -- 2. Constructing diagonal subsequence converging in L²
+    -- 3. Using projection fixed-point property of condExpL2
+    -- Infrastructure for this may not be readily available in current mathlib.
+    -- See `docs/implementation_guides/sorry3_detailed_guide_v2.md` for detailed plan.
+    -- See `docs/implementation_guides/sorry3_concrete_example_v2.lean` for exact code.
     sorry
 
   -- Step 4: Identify α_f = E[f(X_1)|tail] using tail-event integrals
