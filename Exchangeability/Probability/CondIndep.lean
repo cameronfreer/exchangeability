@@ -386,8 +386,16 @@ lemma condIndep_indicator (μ : Measure Ω) [IsProbabilityMeasure μ]
     _ =ᵐ[μ] μ[ c • (Y ⁻¹' A).indicator (fun _ => 1) | mW ] * μ[ d • (Z ⁻¹' B).indicator (fun _ => 1) | mW ] := by
         exact Filter.EventuallyEq.mul (condExp_smul c _ mW).symm (condExp_smul d _ mW).symm
     _ =ᵐ[μ] μ[ (A.indicator (fun _ => c)) ∘ Y | mW ] * μ[ (B.indicator (fun _ => d)) ∘ Z | mW ] := by
-        -- Rewrite c • indicator(1) = indicator(c), same for d
-        sorry  -- Technical: indicator equality details
+        -- Prove c • (Y ⁻¹' A).indicator (fun _ => 1) = (A.indicator (fun _ => c)) ∘ Y
+        have hY_ind : c • (Y ⁻¹' A).indicator (fun _ => 1) = (A.indicator (fun _ => c)) ∘ Y := by
+          ext ω
+          simp only [Pi.smul_apply, Set.indicator, Function.comp_apply, Set.mem_preimage]
+          by_cases h : Y ω ∈ A <;> simp [h]
+        have hZ_ind : d • (Z ⁻¹' B).indicator (fun _ => 1) = (B.indicator (fun _ => d)) ∘ Z := by
+          ext ω
+          simp only [Pi.smul_apply, Set.indicator, Function.comp_apply, Set.mem_preimage]
+          by_cases h : Z ω ∈ B <;> simp [h]
+        rw [hY_ind, hZ_ind]
 
 /-- **Factorization for simple functions (both arguments).**
 
