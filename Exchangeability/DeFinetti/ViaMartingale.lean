@@ -948,13 +948,43 @@ theorem condexp_indicator_drop_info_of_pair_law_proven
                          ∂ (Measure.map ζ μ) := by
             -- Use lintegral_congr_ae: integrands are equal a.e. under (map ζ μ)
             refine lintegral_congr_ae ?_
-            -- Show: (condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ) =ᵐ[map ζ μ] (condDistrib ξ ζ μ)
-            -- When η =ᵐ[μ] φ ∘ ζ with φ = id, we have η =ᵐ[μ] ζ
-            -- From condDistrib_comp_self and hηφζ, we can derive:
-            --   condDistrib ζ η μ =ᵐ[map ζ μ] Kernel.id
-            -- Then Kernel.id_comp gives: Kernel.id ∘ₖ κ = κ
-            -- Combining these should give the result
-            sorry -- TODO: Combine condDistrib_comp_self, hηφζ, and Kernel.id_comp
+            -- Key: When η =ᵐ[μ] ζ, we have (condDistrib ζ η μ) ∘ₖ κ =ᵐ κ for any kernel κ
+            -- This follows from: condDistrib ζ η μ =ᵐ Kernel.id when η =ᵐ ζ
+            have h_kernel_comp_eq :
+              ∀ᵐ z ∂(Measure.map ζ μ),
+                (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) z) B
+                = (condDistrib ξ ζ μ z) B := by
+              -- Since hηφζ : η =ᵐ[μ] φ ∘ ζ with φ = id, we have η =ᵐ[μ] ζ
+              -- From condDistrib_comp_self: condDistrib (id ∘ ζ) ζ μ =ᵐ[map ζ μ] Kernel.id
+              have h_η_eq_ζ : η =ᵐ[μ] ζ := by
+                simpa [Function.comp] using hηφζ
+
+              -- Use the fact that condDistrib ζ ζ μ =ᵐ Kernel.id
+              have h_self : condDistrib ζ ζ μ =ᵐ[Measure.map ζ μ] Kernel.id := by
+                exact ProbabilityTheory.condDistrib_self ζ
+
+              -- Since η =ᵐ ζ, we have map η μ = map ζ μ
+              have h_map_eq : Measure.map η μ = Measure.map ζ μ := by
+                exact Measure.map_congr h_η_eq_ζ
+
+              -- condDistrib ζ η μ =ᵐ[map η μ] Kernel.id (by similar reasoning to condDistrib_self)
+              -- Since map η μ = map ζ μ, this gives condDistrib ζ η μ =ᵐ[map ζ μ] Kernel.id
+              have h_η_id : condDistrib ζ η μ =ᵐ[Measure.map ζ μ] Kernel.id := by
+                -- condDistrib ζ η μ where η =ᵐ id ∘ ζ should equal Kernel.id a.e.
+                -- This is essentially condDistrib_comp_self applied to our situation
+                rw [← h_map_eq]
+                have := ProbabilityTheory.condDistrib_comp_self ζ (f := id) measurable_id
+                simp [Kernel.deterministic_id] at this
+                simpa [Function.comp] using this
+
+              -- Now use Kernel.id_comp: Kernel.id ∘ₖ κ = κ
+              filter_upwards [h_η_id] with z hz
+              rw [hz, Kernel.id_comp]
+
+            filter_upwards [h_kernel_comp_eq] with z hz
+            simp only [Pi.mul_apply]
+            congr 1
+            exact hz
 
           exact step1.trans (step2.trans step3)
         have h2 :
