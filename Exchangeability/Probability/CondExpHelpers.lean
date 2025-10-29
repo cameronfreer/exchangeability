@@ -166,8 +166,12 @@ lemma integrable_mul_of_bound_one
     calc (‖g ω‖₊ : ℝ≥0∞) * ‖f ω‖₊
         ≤ (1 : ℝ≥0∞) * ‖f ω‖₊ := by
           gcongr
-          have : (‖g ω‖₊ : ℝ) ≤ 1 := by simpa using hω
-          exact nnnorm_le_one.mpr this
+          -- ‖g ω‖₊ ≤ 1 from hω : ‖g ω‖ ≤ 1
+          show (‖g ω‖₊ : ℝ≥0∞) ≤ 1
+          rw [ENNReal.coe_le_one_iff]
+          change ‖g ω‖₊ ≤ 1
+          rw [← Real.toNNReal_one]
+          exact Real.toNNReal_mono hω
       _ = ‖f ω‖₊ := by simp
   have hf_fin : (∫⁻ ω, ‖f ω‖₊ ∂μ) < ∞ := hf.hasFiniteIntegral
   exact lt_of_le_of_lt hle_int hf_fin
@@ -1154,8 +1158,7 @@ theorem condExp_project_of_condIndepFun
 
       -- CE of an indicator is a.e. bounded by 1
       have hCEι_bound : ∀ᵐ ω ∂μ, ‖CEι ω‖ ≤ (1 : ℝ) := by
-        have h := condExp_indicator_ae_bound_one
-                    (μ := μ) (mW := mW) (Z := Z) (B := B) hZ hB
+        have h := condExp_indicator_ae_bound_one hmW_le hZ hB
         filter_upwards [h] with ω hω
         rcases hω with ⟨h0, h1⟩
         have : ‖CEι ω‖ = CEι ω := by
@@ -1168,7 +1171,8 @@ theorem condExp_project_of_condIndepFun
         simpa [CEfₙ] using integrable_condExp
 
       have hCEι_meas : AEStronglyMeasurable CEι μ := by
-        simpa [CEι] using stronglyMeasurable_condExp.aestronglyMeasurable
+        have : Integrable (μ[(Z ⁻¹' B).indicator 1 | mW]) μ := integrable_condExp
+        exact this.aestronglyMeasurable
 
       -- Apply the generic lemma with the bound by 1
       have : Integrable (fun ω => CEι ω * CEfₙ ω) μ :=
@@ -1187,8 +1191,7 @@ theorem condExp_project_of_condIndepFun
 
       -- CE of indicator bounded by 1 (as above)
       have hCEι_bound : ∀ᵐ ω ∂μ, ‖CEι ω‖ ≤ (1 : ℝ) := by
-        have h := condExp_indicator_ae_bound_one
-                    (μ := μ) (mW := mW) (Z := Z) (B := B) hZ hB
+        have h := condExp_indicator_ae_bound_one hmW_le hZ hB
         filter_upwards [h] with ω hω
         rcases hω with ⟨h0, h1⟩
         have : ‖CEι ω‖ = CEι ω := by
@@ -1200,9 +1203,10 @@ theorem condExp_project_of_condIndepFun
       have hCEf_int : Integrable CEf μ := by
         simpa [CEf] using integrable_condExp
 
-      -- measurability of CEι
+      -- measurability of CEι (from integrability)
       have hCEι_meas : AEStronglyMeasurable CEι μ := by
-        simpa [CEι] using stronglyMeasurable_condExp.aestronglyMeasurable
+        have : Integrable (μ[(Z ⁻¹' B).indicator 1 | mW]) μ := integrable_condExp
+        exact this.aestronglyMeasurable
 
       -- Conclude with the same generic lemma
       have : Integrable (fun ω => CEι ω * CEf ω) μ :=
