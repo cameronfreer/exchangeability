@@ -23,7 +23,6 @@ the three key lemmas about conditional independence and factorization.
 ## Main results
 
 * `sigma_factor_le`: Pullback σ-algebra inequality for factorizations
-* `condExp_eq_of_setIntegral_eq`: Conditional expectation uniqueness via set integrals
 * `condExp_project_of_le`: Tower/projection property μ[μ[f|m']|m] = μ[f|m] for m ≤ m'
 
 ## Implementation notes
@@ -293,82 +292,7 @@ lemma sigma_factor_le {Ω α β : Type*}
   -- Goal: ζ⁻¹(g⁻¹(t)) ∈ σ(ζ)
   exact ⟨g ⁻¹' t, hg ht, rfl⟩
 
-/-!
-## Convenience lemmas for set integrals
--/
-
 namespace MeasureTheory
-
-/-- **Conditional expectation uniqueness for functions with matching integrals on sub-σ-algebra.**
-
-If g is m-measurable and has the same integral as f on all m-measurable sets,
-then g equals the conditional expectation μ[f|m] almost everywhere.
-
-This is the fundamental uniqueness property of conditional expectation: it is
-uniquely determined (up to a.e. equality) by being m-measurable and having the
-correct set-integral property on m-measurable sets.
-
-The proof uses the uniqueness lemma from mathlib, requiring us to verify the
-integral property holds on all ambient measurable sets (not just m-measurable ones).
-For this, we use the fact that both g and μ[f|m] are m-measurable, so their
-integrals on ambient sets are determined by their values on m-measurable components.
--/
-lemma condExp_eq_of_setIntegral_eq {α : Type*} (m m₀ : MeasurableSpace α) {μ : Measure α}
-    (hm : m ≤ m₀) [SigmaFinite (Measure.trim μ hm)]
-    {f g : α → ℝ}
-    (hg_meas : Measurable[m] g)
-    (hf_int : Integrable f μ)
-    (hg_int : Integrable g μ)
-    (h : ∀ s, MeasurableSet[m] s → μ s < ∞ → ∫ x in s, g x ∂μ = ∫ x in s, f x ∂μ) :
-    μ[f | m] =ᵐ[μ] g := by
-  -- Strategy: Show condExp and g have equal integrals on all m-measurable sets,
-  -- then use uniqueness
-
-  -- Step 1: Show condExp m μ f and g have matching integrals on m-measurable sets
-  have hint_eq : ∀ s, MeasurableSet[m] s → μ s < ∞ →
-      ∫ x in s, (μ[f | m]) x ∂μ = ∫ x in s, g x ∂μ := by
-    intro s hs hμs
-    rw [setIntegral_condExp hm hf_int hs]
-    exact (h s hs hμs).symm
-
-  -- Step 2: Both functions are integrable
-  have hcond_int : Integrable (μ[f | m]) μ := integrable_condExp
-
-  -- Step 3: Key insight - work on the trimmed measure μ.trim hm
-  -- On the trimmed measure, ALL measurable sets are exactly the m-measurable sets
-
-  -- Both functions are m-measurable
-  have hcond_meas : StronglyMeasurable[m] (μ[f | m]) := stronglyMeasurable_condExp
-  have hg_smeas : StronglyMeasurable[m] g := hg_meas.stronglyMeasurable
-
-  -- Convert integrability to trimmed measure
-  have hcond_int_trim : Integrable (μ[f | m]) (μ.trim hm) :=
-    hcond_int.trim hm hcond_meas
-  have hg_int_trim : Integrable g (μ.trim hm) :=
-    hg_int.trim hm hg_smeas
-
-  -- On the trimmed measure, show integrals agree on all measurable sets
-  -- Key: set integrals on trim equal set integrals on original when functions are m-measurable
-  have hint_eq_trim : ∀ s, MeasurableSet[m] s → (μ.trim hm) s < ∞ →
-      ∫ x in s, (μ[f | m]) x ∂(μ.trim hm) = ∫ x in s, g x ∂(μ.trim hm) := by
-    intro s hs hμs
-    -- Convert set integrals from trim to original measure
-    rw [← setIntegral_trim hm hcond_meas hs, ← setIntegral_trim hm hg_smeas hs]
-    -- Measure values agree on m-measurable sets
-    rw [trim_measurableSet_eq hm hs] at hμs
-    exact hint_eq s hs hμs
-
-  -- Apply uniqueness on the trimmed measure
-  -- Note: on μ.trim hm, MeasurableSet s means MeasurableSet[m] s
-  have heq_trim : (μ[f | m]) =ᵐ[μ.trim hm] g := by
-    refine Integrable.ae_eq_of_forall_setIntegral_eq (μ[f | m]) g hcond_int_trim hg_int_trim ?_
-    intro s hs hμs
-    -- hs : MeasurableSet s in the context of μ.trim hm, which uses measurable space m
-    -- So this is automatically MeasurableSet[m] s
-    exact hint_eq_trim s hs hμs
-
-  -- Lift equality from trimmed measure to original measure
-  exact ae_eq_of_ae_eq_trim heq_trim
 
 /-- **Conditional expectation projection property.**
 
@@ -385,12 +309,12 @@ information in m' brings you back to what you'd get by conditioning on m directl
 **Application:** This is the key lemma for de Finetti's theorem Route 1, where we have
 σ(η) ≤ σ(ζ) and need to show that μ[μ[f|σ(ζ)]|σ(η)] = μ[f|σ(η)].
 
-**Proof strategy:** Use the uniqueness characterization (`condExp_eq_of_setIntegral_eq`):
+**Proof strategy:** Use the uniqueness characterization from mathlib:
 1. Define Yproj := μ[μ[f|m']|m], which is automatically m-measurable
 2. Show that for every m-measurable set S, ∫_S Yproj = ∫_S f via two-step projection:
    - First: ∫_S Yproj = ∫_S μ[f|m'] (by CE property on m-sets)
    - Second: ∫_S μ[f|m'] = ∫_S f (by CE property, using m ≤ m' so S is also m'-measurable)
-3. By uniqueness, Yproj = μ[f|m] a.e.
+3. By uniqueness (`ae_eq_condExp_of_forall_setIntegral_eq`), Yproj = μ[f|m] a.e.
 -/
 lemma condExp_project_of_le {α : Type*} (m m' m₀ : MeasurableSpace α) {μ : Measure α}
     (hm : m ≤ m₀) (hm' : m' ≤ m₀) (h_le : m ≤ m')
