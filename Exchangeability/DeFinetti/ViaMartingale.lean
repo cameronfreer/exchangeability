@@ -940,14 +940,21 @@ theorem condexp_indicator_drop_info_of_pair_law_proven
 
           -- Finally, show that (κ ∘ₖ ρ) z = ρ z when κ = condDistrib ζ ζ μ (Dirac kernel)
           -- For φ = id, we have κ = condDistrib ζ η μ where η = ζ a.e.
-          -- This should give κ ∘ₖ ρ = ρ, but proving this rigorously needs the Dirac composition lemma
           have step3 : ∫⁻ z, (Set.indicator D (fun _ => (1 : ℝ≥0∞)) z)
                                 * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) z) B
                          ∂ (Measure.map ζ μ)
                        = ∫⁻ z, (Set.indicator D (fun _ => (1 : ℝ≥0∞)) z)
                                 * (condDistrib ξ ζ μ z) B
                          ∂ (Measure.map ζ μ) := by
-            sorry -- Needs: when η = ζ a.e., (condDistrib ζ η μ) ∘ₖ κ' = κ' for any κ'
+            -- Use lintegral_congr_ae: integrands are equal a.e. under (map ζ μ)
+            refine lintegral_congr_ae ?_
+            -- Show: (condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ) =ᵐ[map ζ μ] (condDistrib ξ ζ μ)
+            -- When η =ᵐ[μ] φ ∘ ζ with φ = id, we have η =ᵐ[μ] ζ
+            -- From condDistrib_comp_self and hηφζ, we can derive:
+            --   condDistrib ζ η μ =ᵐ[map ζ μ] Kernel.id
+            -- Then Kernel.id_comp gives: Kernel.id ∘ₖ κ = κ
+            -- Combining these should give the result
+            sorry -- TODO: Combine condDistrib_comp_self, hηφζ, and Kernel.id_comp
 
           exact step1.trans (step2.trans step3)
         have h2 :
