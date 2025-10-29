@@ -11,6 +11,8 @@ import Mathlib.Probability.Independence.Conditional
 import Mathlib.Probability.Martingale.Basic
 import Mathlib.Probability.CondVar
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.CondexpL2
+import Mathlib.MeasureTheory.Function.ConditionalExpectation.Unique
+import Mathlib.MeasureTheory.Function.AEEqOfIntegral
 import Mathlib.MeasureTheory.PiSystem
 import Mathlib.MeasureTheory.OuterMeasure.BorelCantelli
 
@@ -324,3 +326,12 @@ lemma condExp_indicator_mul_indicator_of_condIndep_pullout
   exact h_prod
 
 end Exchangeability.Probability
+
+/-!
+### Note on condExp_eq_of_setIntegral_eq
+
+The lemma `condExp_eq_of_setIntegral_eq` that was previously in CondExpHelpers.lean
+has been removed as it was unused. If needed in the future, it can be found in git history.
+
+The main development uses mathlib's `ae_eq_condExp_of_forall_setIntegral_eq` directly instead.
+-/
