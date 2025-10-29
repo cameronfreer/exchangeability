@@ -323,8 +323,8 @@ theorem condIndep_of_indep_pair (μ : Measure Ω) [IsProbabilityMeasure μ]
     rw [hf_comp, hg_comp]
     exact hYZ_indep.comp (measurable_const.indicator hA) (measurable_const.indicator hB)
 
-  have h_factor : μ[f * g] = μ[f] * μ[g] := by
-    sorry  -- Need to find correct integral lemma
+  have h_factor : μ[f * g] = μ[f] * μ[g] :=
+    hfg_indep'.integral_mul_eq_mul_integral hf_int hg_int
 
   -- Step 6: Combine everything
   calc μ[f * g | MeasurableSpace.comap W inferInstance]
