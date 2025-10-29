@@ -522,26 +522,18 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
       -- 1) Freeze the ambient measurable space to avoid instance drift
       let m0 : MeasurableSpace Ω := ‹MeasurableSpace Ω›
 
-      -- 2) Use outer mW/mZW (from lines 426-427) and outer hle (from line 431)
-      -- No need to redefine - they're already in scope!
+      -- 2) Build sub-σ-algebras explicitly from outer instances (no letI)
+      -- IMPORTANT: Shadow outer mW/mZW to get fresh definitions we can control
+      let mW_inner  : MeasurableSpace Ω := MeasurableSpace.comap W (inferInstance : MeasurableSpace γ)
+      let mZW_inner : MeasurableSpace Ω := MeasurableSpace.comap (fun ω => (Z ω, W ω)) (inferInstance : MeasurableSpace (β × γ))
 
-      -- 3) Ambient measurability with m0 made explicit (define FIRST before using in proofs)
-      have hZ_amb : Measurable Z := by
-        haveI : MeasurableSpace Ω := m0
-        convert hZ
-      have hW_amb : Measurable W := by
-        haveI : MeasurableSpace Ω := m0
-        convert hW
+      -- Handy inclusions
+      have hmW_le  : mW_inner  ≤ m0 := hW.comap_le
+      have hmZW_le : mZW_inner ≤ m0 := (hZ.prodMk hW).comap_le
 
-      -- 4) Prove inclusions to m0 (now using hZ_amb, hW_amb)
-      have hmW_le  : mW  ≤ m0 := by
-        intro s hs
-        obtain ⟨t, ht, rfl⟩ := hs
-        exact ht.preimage hW_amb
-      have hmZW_le : mZW ≤ m0 := by
-        intro s hs
-        obtain ⟨t, ht, rfl⟩ := hs
-        exact ht.preimage (hZ_amb.prodMk hW_amb)
+      -- 3) Ambient measurability with m0 made explicit
+      have hZ_amb : @Measurable Ω β m0 _ Z := by simpa using hZ
+      have hW_amb : @Measurable Ω γ m0 _ W := by simpa using hW
       have hBpre_amb : @MeasurableSet Ω m0 (Z ⁻¹' B) := hB.preimage hZ_amb
       have hCpre_amb : @MeasurableSet Ω m0 (W ⁻¹' C) := hC.preimage hW_amb
 
