@@ -902,43 +902,54 @@ theorem condexp_indicator_drop_info_of_pair_law_proven
                   * (condDistrib ξ ζ μ z) B
               ∂ (Measure.map ζ μ) := by
           -- Adapted from RHS'' with φ := id, A := D
+          -- Key insight: when φ = id, we have η =ᵐ ζ, so we can replace η with ζ a.e.
           classical
-          -- Rewrite LHS using ζ⁻¹' D
-          have := calc
-            ∫⁻ ω, (Set.indicator D (fun _ => (1 : ℝ≥0∞)) (ζ ω))
-                  * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (η ω)) B ∂μ
-              = ∫⁻ ω, (Set.indicator (ζ ⁻¹' D) (fun _ => (1 : ℝ≥0∞)) ω)
-                      * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (η ω)) B ∂μ := by
-              congr; funext ω
-              simp [Set.indicator, Set.mem_preimage]
-            _ = ∫⁻ z, (Set.indicator D (fun _ => (1 : ℝ≥0∞)) z)
-                      * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (η z)) B
-                  ∂ (Measure.map ζ μ) := by
-              -- Change of variables: integrate over map ζ μ instead of μ
-              have gmeas : Measurable (fun z : ℝ =>
-                  (Set.indicator D (fun _ => (1 : ℝ≥0∞)) z)
-                  * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (η z)) B) := by
-                have hK : Measurable (fun z : ℝ =>
-                    (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (η z)) B) := by
-                  have := (Kernel.measurable_comp_right (condDistrib ζ η μ) (condDistrib ξ ζ μ))
-                    |>.measurable_set hB
-                  exact this.comp hη
-                exact hK.indicator hD
-              exact (lintegral_map_equiv (μ := μ) (f := ζ)
-                (g := fun z => (Set.indicator D (fun _ => (1 : ℝ≥0∞)) z)
-                              * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (η z)) B)
-                hζ gmeas).symm
-            _ = ∫⁻ z, (Set.indicator D (fun _ => (1 : ℝ≥0∞)) z)
-                      * (condDistrib ξ ζ μ z) B
-                  ∂ (Measure.map ζ μ) := by
-              -- When η = ζ a.e. (φ = id), the composed kernel simplifies
-              -- This uses that condDistrib ζ η μ becomes Dirac when η = ζ a.e.
-              congr; funext z
-              -- The composition (condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ) at η z
-              -- should equal condDistrib ξ ζ μ at ζ z when η = ζ a.e.
-              -- This is a standard kernel composition identity
-              sorry -- This needs the kernel composition lemma for φ = id
-          exact this
+          -- First, use hηφζ : η =ᵐ[μ] φ ∘ ζ = id ∘ ζ = ζ to replace η with ζ
+          have h_ae_eq : (fun ω => (Set.indicator D (fun _ => (1 : ℝ≥0∞)) (ζ ω))
+                                    * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (η ω)) B)
+                         =ᵐ[μ]
+                         (fun ω => (Set.indicator D (fun _ => (1 : ℝ≥0∞)) (ζ ω))
+                                   * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (ζ ω)) B) := by
+            refine hηφζ.mono ?_
+            intro ω hω
+            simp [Function.comp] at hω
+            rw [hω]
+
+          have step1 : ∫⁻ ω, (Set.indicator D (fun _ => (1 : ℝ≥0∞)) (ζ ω))
+                                * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (η ω)) B ∂μ
+                       = ∫⁻ ω, (Set.indicator D (fun _ => (1 : ℝ≥0∞)) (ζ ω))
+                                * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (ζ ω)) B ∂μ := by
+            exact lintegral_congr_ae h_ae_eq
+
+          -- Now push forward via ζ
+          have gmeas : Measurable (fun z : ℝ =>
+              (Set.indicator D (fun _ => (1 : ℝ≥0∞)) z)
+              * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) z) B) := by
+            have hK : Measurable (fun z : ℝ =>
+                (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) z) B) := by
+              exact (Kernel.measurable_comp_right (condDistrib ζ η μ) (condDistrib ξ ζ μ))
+                |>.measurable_set hB
+            exact hK.indicator hD
+
+          have step2 : ∫⁻ ω, (Set.indicator D (fun _ => (1 : ℝ≥0∞)) (ζ ω))
+                                * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (ζ ω)) B ∂μ
+                       = ∫⁻ z, (Set.indicator D (fun _ => (1 : ℝ≥0∞)) z)
+                                * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) z) B
+                         ∂ (Measure.map ζ μ) := by
+            exact lintegral_map_equiv hζ gmeas
+
+          -- Finally, show that (κ ∘ₖ ρ) z = ρ z when κ = condDistrib ζ ζ μ (Dirac kernel)
+          -- For φ = id, we have κ = condDistrib ζ η μ where η = ζ a.e.
+          -- This should give κ ∘ₖ ρ = ρ, but proving this rigorously needs the Dirac composition lemma
+          have step3 : ∫⁻ z, (Set.indicator D (fun _ => (1 : ℝ≥0∞)) z)
+                                * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) z) B
+                         ∂ (Measure.map ζ μ)
+                       = ∫⁻ z, (Set.indicator D (fun _ => (1 : ℝ≥0∞)) z)
+                                * (condDistrib ξ ζ μ z) B
+                         ∂ (Measure.map ζ μ) := by
+            sorry -- Needs: when η = ζ a.e., (condDistrib ζ η μ) ∘ₖ κ' = κ' for any κ'
+
+          exact step1.trans (step2.trans step3)
         have h2 :
             ∫⁻ ω, (Set.indicator (ζ ⁻¹' D) (fun _ => ENNReal.ofReal (g ω))) ω ∂μ
           =
