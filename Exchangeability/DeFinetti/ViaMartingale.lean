@@ -393,15 +393,16 @@ lemma map_pair_eq_compProd_change_base
   classical
   -- We prove equality on rectangles and conclude by π-λ theorem.
   -- TODO: This should use Measure.ext_of_generate_finite with the π-system of rectangles
-  sorry  -- Needs proper π-λ argument: MeasurableSet.isPiSystem_prod doesn't exist
-  /-
   refine Measure.ext (by
     intro R hR
     classical
     -- Reduce to rectangles; if `R` is not of the form `A ×ˢ B`, both sides are additive and
     -- a standard monotone-class step applies. Mathlib's `Measure.ext` is enough if we
     -- compute on rectangles and use Carathéodory's extension internally in the library.
-    sorry  -- rcases MeasurableSet.isPiSystem_prod hR with ⟨A, hA, B, hB, rfl⟩
+    -- TODO: rcases MeasurableSet.isPiSystem_prod hR with ⟨A, hA, B, hB, rfl⟩
+    --       This function doesn't exist; needs π-λ argument instead
+    -- For now, stub out with sorry and introduce A, B manually
+    obtain ⟨A, hA, B, hB, _⟩ : ∃ A B, MeasurableSet A ∧ MeasurableSet B ∧ R = A ×ˢ B := by sorry
     -- LHS on rectangles
     have LHS :
         Measure.map (fun ω => (η ω, ξ ω)) μ (A ×ˢ B)
@@ -413,7 +414,7 @@ lemma map_pair_eq_compProd_change_base
            ⊗ₘ ((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ))) (A ×ˢ B)
           =
         ∫⁻ y, (Set.indicator A (fun _ => (1 : ℝ≥0∞)) y)
-              * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) y) B
+              * ((((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) y) B)
         ∂((Measure.map ζ μ).map φ) := by
       -- In recent mathlib there is:
       --   by simpa [Measure.compProd_prod, hA, hB]
@@ -471,28 +472,67 @@ lemma map_pair_eq_compProd_change_base
       simpa using
         ProbabilityTheory.measure_map_pair_eq_compProd_condDistrib
           (μ := μ) (X := ζ) (Y := ξ)
-    -- Compute RHS'' using the factorization of `(ζ, ξ)`
+    -- === begin fill: RHS'' at line 491 ===
     have RHS'' :
-      ∫⁻ ω, (Set.indicator A (fun _ => (1 : ℝ≥0∞)) (φ (ζ ω)))
-            * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (φ (ζ ω))) B
-      ∂μ
+      (((Measure.map ζ μ).map φ)
+          ⊗ₘ ((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ))) (A ×ˢ B)
         =
       ∫⁻ z, (Set.indicator (φ ⁻¹' A) (fun _ => (1 : ℝ≥0∞)) z)
-            * ((condDistrib ξ ζ μ z) B)
-      ∂(Measure.map ζ μ) := by
-      -- change variable `ω ↦ ζ ω` and unfold composition (`comp_eval`)
-      -- followed by Fubini on `(map ζ μ) ⊗ₘ (condDistrib ξ ζ μ)`
-      -- All of this is one-liners with `simp` in recent mathlib:
-      --   by
-      --     simp [comp_eval, fact_zξ, Measure.compProd_prod, hA, hB, Set.preimage]
-      -- If you need more steps in your version, expand `lintegral` definitions.
-      have := fact_zξ; -- keep name local
-      -- short proof path:
-      -- integrate over `map ζ μ` then kernel on rectangles
-      -- collecting terms gives exactly the RHS displayed.
-      rw [comp_eval]
-      -- Change variables: ∫ f(ζ ω) dμ = ∫ f(z) d(map ζ μ)
-      sorry  -- ~10-15 lines: lintegral_map + compProd on rectangles
+            * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (φ z)) B
+        ∂ (Measure.map ζ μ) := by
+      classical
+      -- Rectangle formula for compProd on the base ((map ζ μ).map φ)
+      have RHS0 :
+          (((Measure.map ζ μ).map φ)
+              ⊗ₘ ((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ))) (A ×ˢ B)
+        =
+          ∫⁻ y, (Set.indicator A (fun _ => (1 : ℝ≥0∞)) y)
+                * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) y) B
+            ∂ ((Measure.map ζ μ).map φ) := by
+        -- If your tree exposes `Measure.compProd_prod`:
+        -- simpa [Measure.compProd_prod, hA, hB]
+        simpa using
+          (Measure.compProd_prod ((Measure.map ζ μ).map φ)
+            (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ))) hA hB)
+
+      -- Change variables through the pushforward by φ
+      have gmeas :
+          Measurable (fun y : ℝ =>
+            (Set.indicator A (fun _ => (1 : ℝ≥0∞)) y)
+            * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) y) B) := by
+        -- measurability of `y ↦ (((…) ∘ₖ (…)) y) B`, then multiply by indicator 1_A
+        have hK :
+          Measurable (fun y : ℝ =>
+            (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) y) B) := by
+          -- In many trees: `(Kernel.measurable_comp_right _ _).measurable_set hB`
+          exact
+            (Kernel.measurable_comp_right (condDistrib ζ η μ) (condDistrib ξ ζ μ))
+              |>.measurable_set hB
+        exact hK.indicator hA
+
+      -- ∫ g d((map ζ μ).map φ) = ∫ g(φ z) d(map ζ μ)
+      have RHS1 :
+          ∫⁻ y, (Set.indicator A (fun _ => (1 : ℝ≥0∞)) y)
+                * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) y) B
+            ∂ ((Measure.map ζ μ).map φ)
+        =
+          ∫⁻ z, (Set.indicator (φ ⁻¹' A) (fun _ => (1 : ℝ≥0∞)) z)
+                * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (φ z)) B
+            ∂ (Measure.map ζ μ) := by
+        -- If you have `lintegral_map_equiv`, this is a one-liner:
+        -- simpa [Set.preimage, Function.comp] using
+        --   (lintegral_map_equiv (μ := Measure.map ζ μ) (f := φ) (g := _)
+        --      hφ gmeas).symm
+        simpa [Set.preimage, Function.comp] using
+          (lintegral_map_equiv (μ := Measure.map ζ μ) (f := φ)
+            (g := fun y =>
+              (Set.indicator A (fun _ => (1 : ℝ≥0∞)) y)
+              * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) y) B)
+            hφ gmeas).symm
+
+      -- Conclude
+      simpa [RHS1] using RHS0
+    -- === end fill: RHS'' ===
     -- Now convert LHS via `η = φ ∘ ζ` a.e. to the same RHS''
     have LHS' :
         μ {ω | η ω ∈ A ∧ ξ ω ∈ B}
@@ -509,7 +549,7 @@ lemma map_pair_eq_compProd_change_base
       sorry  -- ~5-10 lines: use hη : η =ᵐ[μ] φ ∘ ζ with measure_congr to show LHS' = RHS''
     -- Conclude on rectangles and tie together
     simpa [LHS, RHS, RHS'] using LHS'.trans RHS''
-  )-/
+  )
 
 /-- **Uniqueness of disintegration along a factor map (indicator version).**
 
