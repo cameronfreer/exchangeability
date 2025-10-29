@@ -519,17 +519,9 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
 
       classical
 
-      -- Notation & relations among σ-algebras
-      let mW  : MeasurableSpace Ω := MeasurableSpace.comap W ‹_›
-      let mZW : MeasurableSpace Ω := MeasurableSpace.comap (fun ω => (Z ω, W ω)) ‹_›
-
-      -- Ambient ≤ proofs (robust)
-      have hmW_le  : mW  ≤ (inferInstance : MeasurableSpace Ω) := hW.comap_le
-      have hmZW_le : mZW ≤ (inferInstance : MeasurableSpace Ω) := (hZ.prod_mk hW).comap_le
-
-      -- σ(W) ≤ σ(Z,W)
-      have hmW_le_mZW : mW ≤ mZW :=
-        (Measurable.snd.comp (hZ.prod_mk hW)).comap_le
+      -- Ambient ≤ proofs (use outer mW, mZW from lines 426-427)
+      have hmW_le  : mW  ≤ _ := hW.comap_le
+      have hmZW_le : mZW ≤ _ := (hZ.prod_mk hW).comap_le
 
       -- Basic measurable sets in ambient σ-algebra
       have hBpre_amb : MeasurableSet (Z ⁻¹' B) := hB.preimage hZ
