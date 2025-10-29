@@ -901,19 +901,83 @@ theorem condexp_indicator_drop_info_of_pair_law_proven
             ∫⁻ z, (Set.indicator D (fun _ => (1 : ℝ≥0∞)) z)
                   * (condDistrib ξ ζ μ z) B
               ∂ (Measure.map ζ μ) := by
-          -- copy of RHS'' with φ := id, A := D
-          -- (use the block from line 491 with φ := id and hφ := measurable_id)
-          -- … fill identically …
-          admit
+          -- Adapted from RHS'' with φ := id, A := D
+          classical
+          -- Rewrite LHS using ζ⁻¹' D
+          have := calc
+            ∫⁻ ω, (Set.indicator D (fun _ => (1 : ℝ≥0∞)) (ζ ω))
+                  * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (η ω)) B ∂μ
+              = ∫⁻ ω, (Set.indicator (ζ ⁻¹' D) (fun _ => (1 : ℝ≥0∞)) ω)
+                      * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (η ω)) B ∂μ := by
+              congr; funext ω
+              simp [Set.indicator, Set.mem_preimage]
+            _ = ∫⁻ z, (Set.indicator D (fun _ => (1 : ℝ≥0∞)) z)
+                      * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (η z)) B
+                  ∂ (Measure.map ζ μ) := by
+              -- Change of variables: integrate over map ζ μ instead of μ
+              have gmeas : Measurable (fun z : ℝ =>
+                  (Set.indicator D (fun _ => (1 : ℝ≥0∞)) z)
+                  * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (η z)) B) := by
+                have hK : Measurable (fun z : ℝ =>
+                    (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (η z)) B) := by
+                  have := (Kernel.measurable_comp_right (condDistrib ζ η μ) (condDistrib ξ ζ μ))
+                    |>.measurable_set hB
+                  exact this.comp hη
+                exact hK.indicator hD
+              exact (lintegral_map_equiv (μ := μ) (f := ζ)
+                (g := fun z => (Set.indicator D (fun _ => (1 : ℝ≥0∞)) z)
+                              * (((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (η z)) B)
+                hζ gmeas).symm
+            _ = ∫⁻ z, (Set.indicator D (fun _ => (1 : ℝ≥0∞)) z)
+                      * (condDistrib ξ ζ μ z) B
+                  ∂ (Measure.map ζ μ) := by
+              -- When η = ζ a.e. (φ = id), the composed kernel simplifies
+              -- This uses that condDistrib ζ η μ becomes Dirac when η = ζ a.e.
+              congr; funext z
+              -- The composition (condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ) at η z
+              -- should equal condDistrib ξ ζ μ at ζ z when η = ζ a.e.
+              -- This is a standard kernel composition identity
+              sorry -- This needs the kernel composition lemma for φ = id
+          exact this
         have h2 :
             ∫⁻ ω, (Set.indicator (ζ ⁻¹' D) (fun _ => ENNReal.ofReal (g ω))) ω ∂μ
           =
             ∫⁻ z, (Set.indicator D (fun _ => (1 : ℝ≥0∞)) z)
                   * (condDistrib ξ ζ μ z) B
               ∂ (Measure.map ζ μ) := by
-          -- copy of LHS' with φ := id, A := D, and `g` instead of indicator explicitly
-          -- … fill identically …
-          admit
+          -- Adapted from LHS' with φ := id, A := D
+          classical
+          -- Convert ENNReal.ofReal(g ω) where g is the indicator
+          have hg_eq : ∀ ω, ENNReal.ofReal (g ω) = Set.indicator B (fun _ => (1 : ℝ≥0∞)) (ξ ω) := by
+            intro ω
+            simp [hgdef, Set.indicator]
+            by_cases h : ξ ω ∈ B
+            · simp [h, ENNReal.ofReal_one]
+            · simp [h, ENNReal.ofReal_zero]
+
+          calc
+            ∫⁻ ω, (Set.indicator (ζ ⁻¹' D) (fun _ => ENNReal.ofReal (g ω))) ω ∂μ
+              = ∫⁻ ω, (Set.indicator (ζ ⁻¹' D) (fun _ => (1 : ℝ≥0∞)) ω)
+                      * Set.indicator B (fun _ => (1 : ℝ≥0∞)) (ξ ω) ∂μ := by
+              congr; funext ω
+              simp [Set.indicator]
+              by_cases h : ω ∈ ζ ⁻¹' D
+              · simp [h, hg_eq ω]
+              · simp [h]
+            _ = ∫⁻ ω, Set.indicator (D ×ˢ B) (fun _ => (1 : ℝ≥0∞)) (ζ ω, ξ ω) ∂μ := by
+              congr; funext ω
+              simp [Set.indicator, Set.mem_prod, Set.mem_preimage]
+            _ = Measure.map (fun ω => (ζ ω, ξ ω)) μ (D ×ˢ B) := by
+              rw [Measure.map_apply (measurable_prod_mk_left.comp (measurable_prod_mk_right hζ hξ))]
+              · congr; funext ω; simp [Set.indicator, Set.mem_prod]
+              · exact hD.prod hB
+            _ = ((Measure.map ζ μ) ⊗ₘ (condDistrib ξ ζ μ)) (D ×ˢ B) := by
+              rw [← ProbabilityTheory.measure_map_pair_eq_compProd_condDistrib
+                    (μ := μ) (X := ζ) (Y := ξ)]
+            _ = ∫⁻ z, (Set.indicator D (fun _ => (1 : ℝ≥0∞)) z)
+                      * (condDistrib ξ ζ μ z) B
+                  ∂ (Measure.map ζ μ) := by
+              exact Measure.compProd_prod (Measure.map ζ μ) (condDistrib ξ ζ μ) hD hB
         -- bridge `F` and the composed kernel; also `H` and `g`
         -- `F.toENNReal = ((κ∘ₖρ)(η ω) B)` and `H.toENNReal = (g ω)` since both are in [0,1]
         -- Then `h1 = h2` implies the desired equality.
