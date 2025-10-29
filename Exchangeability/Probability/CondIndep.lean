@@ -638,13 +638,26 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
                 _ = 1 := by norm_num
 
           -- Chain of equalities: ∫_{Z⁻¹B ∩ W⁻¹C} μ[f|mW] = ∫_{Z⁻¹B ∩ W⁻¹C} f
+
+          -- Helper: W⁻¹C is measurable in ambient
+          have hCpre_amb : MeasurableSet (W ⁻¹' C) := hC.preimage hW
+
           calc ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, (μ[f | mW]) x ∂μ
               = ∫ x in W ⁻¹' C, (μ[f | mW] * gB) x ∂μ := by
-                -- Rewrite using indicator: ∫_{Z⁻¹B ∩ W⁻¹C} h = ∫_{W⁻¹C} h · gB
-                rw [Set.inter_comm, ← setIntegral_indicator hBpre_amb]
-                -- Integrals are equal (use h_mul_eq_indicator from top)
-                congr 1
-                exact h_mul_eq_indicator.symm
+                -- Rewrite using indicator: ∫_{W⁻¹C ∩ Z⁻¹B} μ[f|mW] = ∫_{W⁻¹C} (μ[f|mW] * gB)
+                -- First: LHS = ∫_{W⁻¹C} (Z⁻¹B).indicator(μ[f|mW])
+                have h1 : ∫ ω in W ⁻¹' C ∩ Z ⁻¹' B, μ[f|mW] ω ∂μ
+                        = ∫ ω in W ⁻¹' C, (Z ⁻¹' B).indicator (μ[f|mW]) ω ∂μ := by
+                  rw [Set.inter_comm]
+                  exact (integral_indicator (hCpre_amb.inter hBpre_amb)).symm
+                -- Second: RHS uses h_mul_eq_indicator
+                have h2 : ∫ ω in W ⁻¹' C, (Z ⁻¹' B).indicator (μ[f|mW]) ω ∂μ
+                        = ∫ ω in W ⁻¹' C, (μ[f|mW] ω * gB ω) ∂μ := by
+                  congr 1
+                  exact h_mul_eq_indicator.symm
+                -- Combine
+                rw [Set.inter_comm]
+                exact h1.trans h2
             _ = ∫ x in W ⁻¹' C, (μ[f | mW] * μ[gB | mW]) x ∂μ := by
                 -- Key: For σ(W)-measurable h: μ[h · g|σ(W)] =ᵐ h · μ[g|σ(W)]
                 -- Since μ[f|mW] is mW-measurable, integrating over W⁻¹C ∈ mW gives equality
@@ -682,9 +695,20 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
                 -- Apply setIntegral_condExp
                 exact setIntegral_condExp hmW_le hprod_int hC_meas
             _ = ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, f x ∂μ := by
-                -- Reverse the indicator rewrite: ∫_{W⁻¹C} f·gB = ∫_{Z⁻¹B ∩ W⁻¹C} f
-                rw [setIntegral_indicator hBpre_amb]
-                simp only [hgB_def, Set.inter_comm]
+                -- Reverse the indicator rewrite: ∫_{W⁻¹C} f·gB = ∫_{W⁻¹C ∩ Z⁻¹B} f
+                -- First: prove pointwise equality f * gB = (Z⁻¹B).indicator f
+                have h_fg_indicator : (fun ω => f ω * gB ω) = (Z ⁻¹' B).indicator f := by
+                  funext ω; by_cases hω : ω ∈ Z ⁻¹' B
+                  · simp [hgB_def, hω, Set.indicator_of_mem hω, mul_one]
+                  · simp [hgB_def, hω, Set.indicator_of_notMem hω, mul_zero]
+                -- Second: rewrite integral
+                calc ∫ ω in W ⁻¹' C, (f ω * gB ω) ∂μ
+                    = ∫ ω in W ⁻¹' C, (Z ⁻¹' B).indicator f ω ∂μ := by
+                      congr 1; exact h_fg_indicator
+                  _ = ∫ ω in W ⁻¹' C ∩ Z ⁻¹' B, f ω ∂μ := by
+                      exact integral_indicator (hCpre_amb.inter hBpre_amb)
+                  _ = ∫ ω in Z ⁻¹' B ∩ W ⁻¹' C, f ω ∂μ := by
+                      rw [Set.inter_comm]
 
     · -- Complement
       intro t htm ht_ind
