@@ -338,14 +338,32 @@ theorem condIndep_of_indep_pair (μ : Measure Ω) [IsProbabilityMeasure μ]
 ## Extension to simple functions and bounded measurables (§C2)
 -/
 
-/-- **Factorization for simple functions under conditional independence.**
+/-- **Base case: Factorization for scaled indicators.**
 
-If Y ⊥⊥_W Z for indicators, then the factorization property extends to simple functions
-via linearity of conditional expectation.
+For φ = c • 1_A and ψ = d • 1_B, the factorization follows by extracting scalars
+and applying the CondIndep definition. -/
+lemma condIndep_indicator (μ : Measure Ω) [IsProbabilityMeasure μ]
+    (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
+    (hCI : CondIndep μ Y Z W)
+    (c : ℝ) (A : Set α) (hA : MeasurableSet A)
+    (d : ℝ) (B : Set β) (hB : MeasurableSet B) :
+    μ[ ((A.indicator (fun _ => c)) ∘ Y) * ((B.indicator (fun _ => d)) ∘ Z)
+       | MeasurableSpace.comap W inferInstance ]
+      =ᵐ[μ]
+    μ[ (A.indicator (fun _ => c)) ∘ Y | MeasurableSpace.comap W inferInstance ]
+      * μ[ (B.indicator (fun _ => d)) ∘ Z | MeasurableSpace.comap W inferInstance ] := by
+  set mW := MeasurableSpace.comap W inferInstance
+  -- Simplify indicators composed with Y, Z
+  let indY := (Y ⁻¹' A).indicator (fun _ => (1 : ℝ))
+  let indZ := (Z ⁻¹' B).indicator (fun _ => (1 : ℝ))
 
-**Proof strategy:** Use double induction with SimpleFunc.induction (const and add cases).
-For φ = c • 1_A and ψ = d • 1_B, factor out scalars and apply the CondIndep definition.
-Then extend using linearity of conditional expectation (condExp_add). -/
+  -- The product is (c*d) times the product of unit indicators
+  sorry
+
+/-- **Factorization for simple functions (both arguments).**
+
+If Y ⊥⊥_W Z for indicators, extend to simple functions via linearity.
+Uses single induction avoiding nested complexity. -/
 lemma condIndep_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
     (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
     (hCI : CondIndep μ Y Z W)
@@ -358,84 +376,9 @@ lemma condIndep_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
   classical
   set mW := MeasurableSpace.comap W inferInstance
 
-  -- Strategy: Use double induction with SimpleFunc.induction (which has 2 cases: const and add)
-  -- For φ: induction on φ keeping ψ arbitrary
-  -- Within the const case for φ: induction on ψ
-
-  -- Base case for indicators
-  have h_ind : ∀ (c : ℝ) (A : Set α) (hA : MeasurableSet A) (d : ℝ) (B : Set β) (hB : MeasurableSet B),
-      μ[ ((c • (A.indicator (fun _ => (1 : ℝ)))) ∘ Y) * ((d • (B.indicator (fun _ => (1 : ℝ)))) ∘ Z) | mW ]
-        =ᵐ[μ]
-      μ[ (c • (A.indicator (fun _ => (1 : ℝ)))) ∘ Y | mW ]
-        * μ[ (d • (B.indicator (fun _ => (1 : ℝ)))) ∘ Z | mW ] := by
-    intro c A hA d B hB
-    -- For now, defer this detailed proof to keep compiling
-    sorry
-
-  -- Induction on φ
-  revert ψ
-  refine SimpleFunc.induction (motive := fun φ =>
-      ∀ ψ : SimpleFunc β ℝ,
-        μ[ (φ ∘ Y) * (ψ ∘ Z) | mW ] =ᵐ[μ] μ[ φ ∘ Y | mW ] * μ[ ψ ∘ Z | mW ])
-    ?const ?add φ
-  · -- φ = c • 1_A (const case)
-    intro c A hA ψ
-    -- Now induct on ψ
-    refine SimpleFunc.induction (motive := fun ψ =>
-        μ[ ((SimpleFunc.piecewise A hA (SimpleFunc.const α c) 0) ∘ Y) * (ψ ∘ Z) | mW ]
-          =ᵐ[μ]
-        μ[ (SimpleFunc.piecewise A hA (SimpleFunc.const α c) 0) ∘ Y | mW ] * μ[ ψ ∘ Z | mW ])
-      ?const' ?add' ψ
-    · -- ψ = d • 1_B (indicator × indicator)
-      intro d B hB
-      exact h_ind c A hA d B hB
-    · -- ψ = ψ₁ + ψ₂ (add case for ψ)
-      intro ψ₁ ψ₂ _ hψ₁ hψ₂
-      -- LHS: φ ∘ Y * (ψ₁ + ψ₂) ∘ Z = φ ∘ Y * ψ₁ ∘ Z + φ ∘ Y * ψ₂ ∘ Z
-      have lhs_dist : ((SimpleFunc.piecewise A hA (SimpleFunc.const α c) 0) ∘ Y) * ((ψ₁ + ψ₂) ∘ Z)
-                     = ((SimpleFunc.piecewise A hA (SimpleFunc.const α c) 0) ∘ Y) * (ψ₁ ∘ Z)
-                     + ((SimpleFunc.piecewise A hA (SimpleFunc.const α c) 0) ∘ Y) * (ψ₂ ∘ Z) := by
-        ext ω; simp [Function.comp, Pi.add_apply, mul_add]
-
-      rw [lhs_dist]
-
-      calc μ[ ((SimpleFunc.piecewise A hA (SimpleFunc.const α c) 0) ∘ Y) * (ψ₁ ∘ Z)
-            + ((SimpleFunc.piecewise A hA (SimpleFunc.const α c) 0) ∘ Y) * (ψ₂ ∘ Z) | mW ]
-          =ᵐ[μ] μ[ ((SimpleFunc.piecewise A hA (SimpleFunc.const α c) 0) ∘ Y) * (ψ₁ ∘ Z) | mW ]
-              + μ[ ((SimpleFunc.piecewise A hA (SimpleFunc.const α c) 0) ∘ Y) * (ψ₂ ∘ Z) | mW ] :=
-            condExp_add (m := mW) integrable_condExp integrable_condExp
-        _ =ᵐ[μ] (μ[ (SimpleFunc.piecewise A hA (SimpleFunc.const α c) 0) ∘ Y | mW ] * μ[ ψ₁ ∘ Z | mW ])
-              + (μ[ (SimpleFunc.piecewise A hA (SimpleFunc.const α c) 0) ∘ Y | mW ] * μ[ ψ₂ ∘ Z | mW ]) :=
-            Filter.EventuallyEq.add hψ₁ hψ₂
-        _ = μ[ (SimpleFunc.piecewise A hA (SimpleFunc.const α c) 0) ∘ Y | mW ]
-          * (μ[ ψ₁ ∘ Z | mW ] + μ[ ψ₂ ∘ Z | mW ]) := by ext ω; ring
-        _ =ᵐ[μ] μ[ (SimpleFunc.piecewise A hA (SimpleFunc.const α c) 0) ∘ Y | mW ]
-              * μ[ (ψ₁ + ψ₂) ∘ Z | mW ] := by
-            apply Filter.EventuallyEq.mul Filter.EventuallyEq.rfl
-            have : (ψ₁ + ψ₂) ∘ Z = (ψ₁ ∘ Z) + (ψ₂ ∘ Z) := by ext ω; simp [Function.comp, Pi.add_apply]
-            rw [this]
-            exact (condExp_add (m := mW) integrable_condExp integrable_condExp).symm
-
-  · -- φ = φ₁ + φ₂ (add case for φ)
-    intro φ₁ φ₂ _ hφ₁ hφ₂ ψ
-    -- LHS: (φ₁ + φ₂) ∘ Y * ψ ∘ Z = φ₁ ∘ Y * ψ ∘ Z + φ₂ ∘ Y * ψ ∘ Z
-    have lhs_dist : ((φ₁ + φ₂) ∘ Y) * (ψ ∘ Z)
-                   = (φ₁ ∘ Y) * (ψ ∘ Z) + (φ₂ ∘ Y) * (ψ ∘ Z) := by
-      ext ω; simp [Function.comp, Pi.add_apply, add_mul]
-
-    rw [lhs_dist]
-
-    calc μ[ (φ₁ ∘ Y) * (ψ ∘ Z) + (φ₂ ∘ Y) * (ψ ∘ Z) | mW ]
-        =ᵐ[μ] μ[ (φ₁ ∘ Y) * (ψ ∘ Z) | mW ] + μ[ (φ₂ ∘ Y) * (ψ ∘ Z) | mW ] :=
-          condExp_add (m := mW) integrable_condExp integrable_condExp
-      _ =ᵐ[μ] (μ[ φ₁ ∘ Y | mW ] * μ[ ψ ∘ Z | mW ]) + (μ[ φ₂ ∘ Y | mW ] * μ[ ψ ∘ Z | mW ]) :=
-          Filter.EventuallyEq.add (hφ₁ ψ) (hφ₂ ψ)
-      _ = (μ[ φ₁ ∘ Y | mW ] + μ[ φ₂ ∘ Y | mW ]) * μ[ ψ ∘ Z | mW ] := by ext ω; ring
-      _ =ᵐ[μ] μ[ (φ₁ + φ₂) ∘ Y | mW ] * μ[ ψ ∘ Z | mW ] := by
-          apply Filter.EventuallyEq.mul _ Filter.EventuallyEq.rfl
-          have : (φ₁ + φ₂) ∘ Y = (φ₁ ∘ Y) + (φ₂ ∘ Y) := by ext ω; simp [Function.comp, Pi.add_apply]
-          rw [this]
-          exact (condExp_add (m := mW) integrable_condExp integrable_condExp).symm
+  -- Strategy: Single induction on φ, treating ψ as a "coefficient function"
+  -- For now, leave as sorry to unblock other work
+  sorry
 
 /-!
 ## Helper lemmas for bounded measurable extension
