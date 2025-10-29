@@ -417,13 +417,14 @@ lemma map_pair_eq_compProd_change_base
     have LHS :
         Measure.map (fun ω => (η ω, ξ ω)) μ (A ×ˢ B)
           = μ {ω | η ω ∈ A ∧ ξ ω ∈ B} := by
-      simpa [Measure.map_apply, hA_meas.prod hB_meas, Set.preimage, Set.mem_prod]
+      rw [Measure.map_apply (hη.prodMk hξ) (hA_meas.prod hB_meas)]
+      rfl
     -- `compProd` on rectangles:  ∫ 1_A(y) * κ y B d(base)
     have RHS :
         (((Measure.map ζ μ).map φ)
            ⊗ₘ ((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ))) (A ×ˢ B)
           =
-        ∫⁻ y, (Set.indicator A (fun _ => (1 : ℝ≥0∞)) y)
+        ∫⁻ y, Set.indicator A (fun _ => 1) y
               * ((((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) y) B)
         ∂((Measure.map ζ μ).map φ) := by
       -- In recent mathlib there is:
@@ -601,8 +602,12 @@ lemma map_pair_eq_compProd_change_base
     -- === end fill: LHS' ===
     -- Conclude on rectangles and tie together
     simpa [LHS, RHS, RHS'] using LHS'.trans RHS''
-  · -- Both measures agree on univ (both are probability measures)
-    simp only [Measure.measure_univ]
+  · -- Both measures agree on univ
+    -- LHS: pushforward of finite measure
+    simp only [Measure.map_apply (hη.prodMk hξ) MeasurableSet.univ, Set.preimage_univ]
+    -- RHS: compProd measure on univ
+    rw [Measure.compProd_apply _ _ MeasurableSet.univ]
+    simp
 
 /-- **Uniqueness of disintegration along a factor map (indicator version).**
 
