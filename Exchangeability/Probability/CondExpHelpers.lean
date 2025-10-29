@@ -1170,17 +1170,22 @@ theorem condExp_project_of_condIndepFun
         exact this.aestronglyMeasurable
 
       -- Apply the generic lemma with the bound by 1
+      -- Use letI to force the correct measurable space instance
+      letI : MeasurableSpace Ω := mΩ
       have : Integrable (fun ω => μ[(Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) | mW] ω * μ[f_n n ∘ Y | mW] ω) μ :=
-        integrable_mul_of_bound_one (μ := μ)
-          (f := μ[f_n n ∘ Y | mW])
-          (g := μ[(Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) | mW])
+        @integrable_mul_of_bound_one Ω mΩ μ
+          (μ[f_n n ∘ Y | mW])
+          (μ[(Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) | mW])
           hCEfₙ_int hCEι_meas hCEι_bound
 
       -- Rewrite to match goal (swap order of multiplication)
       -- The lambda form and shorthand are definitionally equal after simplification
-      convert this using 2 with ω
-      · simp [Set.indicator]
-      · ring
+      convert this using 1
+      ext ω
+      -- Show: μ[f_n n ∘ Y|mW] ω * μ[(Z ⁻¹' B).indicator 1|mW] ω = μ[(Z ⁻¹' B).indicator fun x => 1|mW] ω * μ[f_n n ∘ Y|mW] ω
+      -- The indicator forms are definitionally equal; just reorder multiplication
+      show μ[f_n n ∘ Y|mW] ω * μ[(Z ⁻¹' B).indicator (fun x => 1)|mW] ω = μ[(Z ⁻¹' B).indicator (fun x => 1)|mW] ω * μ[f_n n ∘ Y|mW] ω
+      ring
 
     have h_g_int : Integrable (fun ω => μ[ f ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) μ := by
       -- Same proof as h_gs_int, but for f instead of f_n n
@@ -1202,17 +1207,22 @@ theorem condExp_project_of_condIndepFun
         exact this.aestronglyMeasurable
 
       -- Conclude with the same generic lemma
+      -- Use letI to force the correct measurable space instance
+      letI : MeasurableSpace Ω := mΩ
       have : Integrable (fun ω => μ[(Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) | mW] ω * μ[f ∘ Y | mW] ω) μ :=
-        integrable_mul_of_bound_one (μ := μ)
-          (f := μ[f ∘ Y | mW])
-          (g := μ[(Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) | mW])
+        @integrable_mul_of_bound_one Ω mΩ μ
+          (μ[f ∘ Y | mW])
+          (μ[(Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) | mW])
           hCEf_int hCEι_meas hCEι_bound
 
       -- Rewrite to match goal (swap order of multiplication)
       -- The lambda form and shorthand are definitionally equal after simplification
-      convert this using 2 with ω
-      · simp [Set.indicator]
-      · ring
+      convert this using 1
+      ext ω
+      -- Show: μ[f ∘ Y|mW] ω * μ[(Z ⁻¹' B).indicator 1|mW] ω = μ[(Z ⁻¹' B).indicator fun x => 1|mW] ω * μ[f ∘ Y|mW] ω
+      -- The indicator forms are definitionally equal; just reorder multiplication
+      show μ[f ∘ Y|mW] ω * μ[(Z ⁻¹' B).indicator (fun x => 1)|mW] ω = μ[(Z ⁻¹' B).indicator (fun x => 1)|mW] ω * μ[f ∘ Y|mW] ω
+      ring
 
     -- LHS pointwise convergence: product of converging sequences
     have h_fs_ptwise : ∀ᵐ ω ∂μ, Filter.Tendsto
