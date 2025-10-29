@@ -3924,8 +3924,11 @@ private lemma iterate_shift_eval0 (k : ℕ) (ω : Ω[α]) :
 These lemmas extract Steps 4a-4c from the main theorem to reduce elaboration complexity.
 Each lemma is self-contained with ~50-80 lines, well below timeout thresholds. -/
 
-/-- L² convergence ⇒ L¹ convergence for the chosen representatives on a probability space. -/
-private lemma optionB_Step4a_L2_to_L1
+/-- On a probability space, L² convergence of Koopman–Birkhoff averages to `condexpL2`
+    implies L¹ convergence of chosen representatives.  This version is robust to
+    older mathlib snapshots (no `Subtype.aestronglyMeasurable`, no `tendsto_iff_*`,
+    and `snorm` is fully qualified). -/
+private lemma optionB_Step3b_L2_to_L1
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ)
     (fL2 : Lp ℝ 2 μ)
@@ -3934,92 +3937,98 @@ private lemma optionB_Step4a_L2_to_L1
               atTop (𝓝 (condexpL2 (μ := μ) fL2)))
     (B : ℕ → Ω[α] → ℝ)
     (Y : Ω[α] → ℝ)
-    -- a.e. equations choosing the reps used on the function side:
-    (hB_eq : ∀ n > 0, (fun ω => birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω) =ᵐ[μ] B n)
-    (hY_eq : (fun ω => condexpL2 (μ := μ) fL2 ω) =ᵐ[μ] Y) :
+    -- a.e. equalities available for n > 0
+    (hB_eq_pos :
+      ∀ n, 0 < n →
+        (fun ω => birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω) =ᵐ[μ] B n)
+    (hY_eq :
+      (fun ω => condexpL2 (μ := μ) fL2 ω) =ᵐ[μ] Y) :
     Tendsto (fun n => ∫ ω, |B n ω - Y ω| ∂μ) atTop (𝓝 0) := by
   classical
-  -- Step 1: L² convergence ⇒ L²-norm of the difference tends to 0.
-  have h_sub : Tendsto
-      (fun n => (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2
-                - condexpL2 (μ := μ) fL2)) atTop (𝓝 (0 : Lp ℝ 2 μ)) := by
-    -- subtraction by a constant is continuous
-    simpa using
-      (continuous_sub_right (condexpL2 (μ := μ) fL2)).tendsto hfL2_tendsto
+  -- Step 1: ‖(birkhoffAverage n fL2) - (condexpL2 fL2)‖ → 0  (via continuity)
+  have hΦ : Continuous (fun x : Lp ℝ 2 μ => ‖x - condexpL2 (μ := μ) fL2‖) :=
+    (continuous_norm.comp (continuous_sub_right _))
   have hL2_norm :
       Tendsto (fun n =>
         ‖birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2
-          - condexpL2 (μ := μ) fL2‖) atTop (𝓝 0) := by
-    -- compose with the norm (continuous)
-    have := (continuous_norm.tendsto _).comp h_sub
-    simpa using this
+           - condexpL2 (μ := μ) fL2‖) atTop (𝓝 0) := by
+    -- `hΦ.tendsto hfL2_tendsto : Tendsto (‖⋯ - condexpL2‖ ∘ ·) _ (𝓝 ‖0‖)`
+    simpa [sub_self] using hΦ.tendsto hfL2_tendsto
 
-  -- Step 2: For each `n`, compare L¹ and L² via `integral_norm_le_snorm` + a.e. rewrites.
-  have h_upper :
-      ∀ n, ∫ ω, |B n ω - Y ω| ∂μ
+  -- Step 2: build the *upper* inequality eventually (for n > 0 only).
+  have h_upper_ev :
+      ∀ᶠ n in atTop,
+        ∫ ω, |B n ω - Y ω| ∂μ
           ≤ ‖birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2
                - condexpL2 (μ := μ) fL2‖ := by
-    intro n
-    -- a.e. identify `B n` and `Y` with the corresponding reps
+    filter_upwards [eventually_gt_atTop (0 : ℕ)] with n hn
+    -- a.e. identify `B n` and `Y` with the Lp representatives
     have h_ae :
         (fun ω => |B n ω - Y ω|) =ᵐ[μ]
           (fun ω =>
             |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω
              - condexpL2 (μ := μ) fL2 ω|) := by
-      by_cases hn : n > 0
-      · filter_upwards [hB_eq n hn, hY_eq] with ω h1 h2
-        simpa [h1, h2]
-      · -- For n = 0, use the fact that the bound still holds
-        simp only [Nat.not_lt, le_zero_iff] at hn
-        rw [hn]
-        filter_upwards [hY_eq] with ω hY
-        simp [birkhoffAverage, hY]
-    -- measurability of the L² difference rep
+      filter_upwards [hB_eq_pos n hn, hY_eq] with ω h1 h2
+      simpa [h1, h2]
+
+    -- measurability: use `Lp.aestronglyMeasurable_coe`, not a (nonexistent) `Subtype.*`
     have h_meas :
         AEMeasurable
           (fun ω =>
-            birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω
-            - condexpL2 (μ := μ) fL2 ω) μ :=
-      ((birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2).aestronglyMeasurable.aemeasurable.sub
-        (condexpL2 (μ := μ) fL2).aestronglyMeasurable.aemeasurable)
-    -- L¹ ≤ snorm with p=2; turn ‖·‖ into |·| for ℝ
+            (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 : Ω[α] → ℝ) ω
+            - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω) μ :=
+      ((Lp.aestronglyMeasurable_coe
+          (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2)).aemeasurable.sub
+       (Lp.aestronglyMeasurable_coe
+          (condexpL2 (μ := μ) fL2)).aemeasurable)
+
+    -- L¹ ≤ L² (expressed via `integral_norm_le_snorm` with p=2)
     have h_le :
         ∫ ω, |(birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω
                 - condexpL2 (μ := μ) fL2 ω)| ∂μ
-          ≤ (snorm
+          ≤ (MeasureTheory.snorm
                (fun ω =>
-                  birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω
-                  - condexpL2 (μ := μ) fL2 ω)
+                  (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 : Ω[α] → ℝ) ω
+                  - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω)
                (2 : ℝ≥0∞) μ).toReal := by
       simpa [Real.norm_eq_abs] using
         (MeasureTheory.integral_norm_le_snorm
           (f := fun ω =>
-            birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω
-            - condexpL2 (μ := μ) fL2 ω)
+            (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 : Ω[α] → ℝ) ω
+            - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω)
           (μ := μ) (p := (2 : ℝ≥0∞)) h_meas)
-    -- by definition of the Lp-norm (p=2)
+
+    -- identify `(snorm …).toReal` with the L² norm of the Lp difference
     have h_toNorm :
-        (snorm
+        (MeasureTheory.snorm
           (fun ω =>
-            birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω
-            - condexpL2 (μ := μ) fL2 ω)
+            (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 : Ω[α] → ℝ) ω
+            - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω)
           (2 : ℝ≥0∞) μ).toReal
         = ‖birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2
              - condexpL2 (μ := μ) fL2‖ := by
+      -- `Lp.norm_def` bridges Lp norm and snorm of its representative.
       simpa [Lp.norm_def]
-    -- conclude using `integral_congr_ae` and the bound
-    have := (integral_congr_ae h_ae)
-    -- `this : ∫ |B n - Y| = ∫ |rep difference|`
-    -- combine with inequalities above
-    exact (le_of_eq this).trans (by simpa [h_toNorm] using h_le)
 
-  -- Step 3: Squeeze to 0 between `0` and the L²-norm difference.
+    -- conclude the inequality at this `n > 0`
+    have h_eq_int :
+        ∫ ω, |B n ω - Y ω| ∂μ
+          = ∫ ω, |(birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω
+                    - condexpL2 (μ := μ) fL2 ω)| ∂μ :=
+      integral_congr_ae h_ae
+    exact (le_of_eq h_eq_int).trans (by simpa [h_toNorm] using h_le)
+
+  -- Step 3: lower bound is always `0 ≤ ∫ |B n - Y|`
+  have h_lower_ev :
+      ∀ᶠ n in atTop, 0 ≤ ∫ ω, |B n ω - Y ω| ∂μ :=
+    Filter.eventually_of_forall (by
+      intro n; exact integral_nonneg (by intro ω; exact abs_nonneg _))
+
+  -- Step 4: squeeze between 0 and the L²-norm difference (which → 0)
   refine
     tendsto_of_tendsto_of_tendsto_of_le_of_le
       tendsto_const_nhds hL2_norm
-      (Filter.eventually_of_forall (by
-        intro n; exact integral_nonneg (by intro ω; exact abs_nonneg _)))
-      (Filter.eventually_of_forall h_upper)
+      h_lower_ev h_upper_ev
 
 /-- **Step 4b helper**: A_n and B_n differ negligibly.
 
@@ -4515,7 +4524,7 @@ private theorem optionB_L1_convergence_bounded
 
   -- Step 4a: L² to L¹ convergence for B_n → Y
   have hB_L1_conv : Tendsto (fun n => ∫ ω, |B n ω - Y ω| ∂μ) atTop (𝓝 0) :=
-    optionB_Step4a_L2_to_L1 hσ fL2 hfL2_tendsto B Y hB_eq_birkhoff hY_eq
+    optionB_Step3b_L2_to_L1 hσ fL2 hfL2_tendsto B Y hB_eq_birkhoff hY_eq
 
   -- Step 4b: A_n and B_n differ negligibly due to indexing
   -- |A_n ω - B_n ω| ≤ 2*Cg/(n+1) since g is bounded
