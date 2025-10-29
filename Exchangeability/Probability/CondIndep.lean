@@ -427,6 +427,11 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
        | MeasurableSpace.comap W inferInstance ] := by
   -- Strategy: Use uniqueness characterization of conditional expectation
   -- Show that both CEs have the same integrals on all σ(W)-measurable sets
+
+  -- 0) Name the ambient instance (no abbrev in tactic mode - use let but pin explicitly everywhere)
+  let m0 : MeasurableSpace Ω := ‹MeasurableSpace Ω›
+
+  -- Sub-σ-algebras as plain values (never instances)
   let mW := MeasurableSpace.comap W inferInstance
   let mZW := MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance
   let f := Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
@@ -523,17 +528,35 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
 
       classical
 
-      -- Preimage measurability in the ambient σ-algebra
-      have hBpre : MeasurableSet (Z ⁻¹' B) := hB.preimage hZ
-      have hCpre : MeasurableSet (W ⁻¹' C) := hC.preimage hW
+      -- 1) Ambient measurability, explicitly pinned to m0
+      have hZ_m0 : @Measurable Ω β m0 _ Z := by simpa [m0] using hZ
+      have hW_m0 : @Measurable Ω γ m0 _ W := by simpa [m0] using hW
+
+      have hBpre_m0_m0 : @MeasurableSet Ω m0 (Z ⁻¹' B) := hB.preimage hZ_m0
+      have hCpre_m0_m0 : @MeasurableSet Ω m0 (W ⁻¹' C) := hC.preimage hW_m0
 
       -- Convenience name for indicator on Z⁻¹B (f is already defined in outer scope)
       set gB : Ω → ℝ := (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) with hgB_def
 
-      -- gB measurability and integrability
-      have hsm_gB : StronglyMeasurable gB :=
-        stronglyMeasurable_const.indicator hBpre
-      have haesm_gB : AEStronglyMeasurable gB μ := hsm_gB.aestronglyMeasurable
+      -- gB measurability
+      have hsm_gB : @StronglyMeasurable Ω m0 _ gB :=
+        stronglyMeasurable_const.indicator hBpre_m0_m0
+      have haesm_gB : AEStronglyMeasurable gB μ :=
+        hsm_gB.aestronglyMeasurable
+
+      -- CE basic facts
+      have hsm_ce_mW : @StronglyMeasurable Ω mW _ (μ[f | mW]) :=
+        stronglyMeasurable_condExp
+      have hInt_ce : Integrable (μ[f | mW]) μ :=
+        integrable_condExp
+
+      -- ambient SM for CE if needed
+      have hsm_ce_amb : StronglyMeasurable (μ[f | mW]) :=
+        hsm_ce_mW.mono (by
+          have : mW ≤ m0 := hW_m0.comap_le
+          exact this)
+      have haesm_ce : AEStronglyMeasurable (μ[f | mW]) μ :=
+        hsm_ce_amb.aestronglyMeasurable
 
       -- Canonical product ↔ indicator identity (use often)
       have h_mul_eq_indicator :
@@ -542,10 +565,9 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
         · simp [hgB_def, hω, Set.indicator_of_mem hω, mul_one]
         · simp [hgB_def, hω, Set.indicator_of_notMem hω, mul_zero]
 
-      -- Integrable product via indicator (avoids of_bound)
-      have hint_prod : Integrable (fun ω => μ[f|mW] ω * gB ω) μ := by
-        have hInt_ce : Integrable (μ[f|mW]) μ := integrable_condExp
-        simpa [h_mul_eq_indicator] using hInt_ce.indicator hBpre
+      -- Product integrability: rewrite to indicator, then use Integrable.indicator
+      have hint_prod : Integrable (fun ω => μ[f | mW] ω * gB ω) μ := by
+        simpa [h_mul_eq_indicator] using hInt_ce.indicator hBpre_m0_m0
 
       -- Rectangle is in mZW
       have hrect : MeasurableSet[mZW] (Z ⁻¹' B ∩ W ⁻¹' C) := by
@@ -601,12 +623,12 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
           have hint_B : Integrable gB μ := by
             apply Integrable.indicator
             · exact integrable_const 1
-            · exact hBpre
+            · exact hBpre_m0
 
           -- Chain of equalities: ∫_{Z⁻¹B ∩ W⁻¹C} μ[f|mW] = ∫_{Z⁻¹B ∩ W⁻¹C} f
 
-          -- Helper: W⁻¹C is measurable in ambient
-          have hCpre : MeasurableSet (W ⁻¹' C) := hC.preimage hW
+          -- Helper: W⁻¹C is measurable in m0 (already defined above, but re-proving for clarity)
+          -- (Actually, use the one from the prelude - this line is redundant)
 
           calc ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, (μ[f | mW]) x ∂μ
               = ∫ x in W ⁻¹' C, (μ[f | mW] * gB) x ∂μ := by
@@ -615,7 +637,7 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
                 have h1 : ∫ ω in W ⁻¹' C ∩ Z ⁻¹' B, μ[f|mW] ω ∂μ
                         = ∫ ω in W ⁻¹' C, (Z ⁻¹' B).indicator (μ[f|mW]) ω ∂μ := by
                   rw [Set.inter_comm]
-                  exact (integral_indicator (hCpre.inter hBpre)).symm
+                  exact (integral_indicator (hCpre_m0.inter hBpre_m0)).symm
                 -- Second: RHS uses h_mul_eq_indicator
                 have h2 : ∫ ω in W ⁻¹' C, (Z ⁻¹' B).indicator (μ[f|mW]) ω ∂μ
                         = ∫ ω in W ⁻¹' C, (μ[f|mW] ω * gB ω) ∂μ := by
@@ -643,7 +665,7 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
                         = ∫ x in W ⁻¹' C, ((μ[f | mW]) * gB) x ∂μ := by
                         simpa using
                           (setIntegral_condExp (μ := μ) (m := mW)
-                            (hm := hmW_le) (hs := hCpre) (hf := hint_prod))
+                            (hm := hmW_le) (hs := hCpre_m0) (hf := hint_prod))
                       exact h_set_eq.symm
                   _ = ∫ x in W ⁻¹' C, ((μ[f | mW]) * μ[gB | mW]) x ∂μ := by
                       exact setIntegral_congr_ae (hmW_le _ hC_meas) (by filter_upwards [h_pull] with x hx _; exact hx)
@@ -666,7 +688,7 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
                     = ∫ ω in W ⁻¹' C, (Z ⁻¹' B).indicator f ω ∂μ := by
                       congr 1; exact h_fg_indicator
                   _ = ∫ ω in W ⁻¹' C ∩ Z ⁻¹' B, f ω ∂μ := by
-                      exact integral_indicator (hCpre.inter hBpre)
+                      exact integral_indicator (hCpre_m0.inter hBpre_m0)
                   _ = ∫ ω in Z ⁻¹' B ∩ W ⁻¹' C, f ω ∂μ := by
                       rw [Set.inter_comm]
 
