@@ -864,22 +864,41 @@ lemma condIndep_bddMeas_extend_left
       -- Hypothesis 2: Dominated by bound a.e.
       · refine Filter.Eventually.of_forall (fun n => ?_)
         refine ae_restrict_of_ae ?_
-        filter_upwards [hφ_bdd] with ω hω_φ
+        -- Use ae_bdd_condExp_of_ae_bdd: if |f| ≤ R a.e., then |μ[f|m]| ≤ R a.e.
+        -- We have |sφ n ∘ Y| ≤ |φ ∘ Y| ≤ Mφ a.e., so |μ[(sφ n ∘ Y)|mW]| ≤ Mφ a.e.
+        -- First, show Mφ ≥ 0 from the fact that it bounds an absolute value
+        have hMφ_nn : 0 ≤ Mφ := by
+          rcases hφ_bdd.exists with ⟨ω, hω⟩
+          exact (abs_nonneg _).trans hω
+        have h_sφnY_bdd : ∀ᵐ ω ∂μ, |(sφ n ∘ Y) ω| ≤ (⟨Mφ, hMφ_nn⟩ : NNReal) := by
+          filter_upwards [hφ_bdd] with ω hω
+          calc |(sφ n ∘ Y) ω|
+              = |(sφ n) (Y ω)| := by rfl
+            _ ≤ |φ (Y ω)| := h_sφ_bdd n (Y ω)
+            _ ≤ Mφ := hω
+        have h_ce_bdd := ae_bdd_condExp_of_ae_bdd (m := mW) (R := ⟨Mφ, hMφ_nn⟩) h_sφnY_bdd
+        filter_upwards [h_ce_bdd] with ω hω
         simp only [Function.comp_apply, Pi.mul_apply]
-        -- Need: ‖μ[(sφ n ∘ Y)|mW] ω‖ ≤ Mφ
-        -- Since |sφ n (Y ω)| ≤ |φ (Y ω)| ≤ Mφ, and conditional expectation preserves bounds,
-        -- we have |μ[(sφ n ∘ Y)|mW] ω| ≤ Mφ
         rw [norm_mul]
         apply mul_le_mul_of_nonneg_right _ (norm_nonneg _)
         rw [Real.norm_eq_abs]
-        sorry  -- Need: |μ[(sφ n ∘ Y)|mW] ω| ≤ Mφ from |sφ n ∘ Y| ≤ |φ ∘ Y| ≤ Mφ a.e.
+        exact hω
 
       -- Hypothesis 3: Bound is integrable on C
       · exact (hψZ_ce_int.norm.const_mul Mφ).integrableOn
 
       -- Hypothesis 4: Pointwise convergence a.e.
       · refine ae_restrict_of_ae ?_
-        sorry  -- Need: μ[(sφ n ∘ Y)|mW] → μ[(φ ∘ Y)|mW] a.e. from L¹ convergence
+        -- Use Tendsto.mul: product converges if both factors converge
+        -- μ[(ψ ∘ Z)|mW] is constant in n (trivial convergence)
+        -- For μ[(sφ n ∘ Y)|mW], use L¹→measure→subsequence→a.e. pathway
+        --
+        -- Strategy: Use the fact that pointwise convergence sφ n → φ gives us
+        -- dominated convergence for the conditional expectations
+        sorry  -- TODO: Extract pointwise a.e. from L¹ via TendstoInMeasure.exists_seq_tendsto_ae
+               -- This requires showing L¹ convergence implies convergence in measure (true on finite measure spaces)
+               -- Then extracting a.e. convergent subsequence
+               -- The final step needs careful handling since we want full sequence, not just subsequence
 
     -- Conclude by uniqueness of limits
     -- Since h_int_n shows the sequences are equal for all n, and both converge, their limits are equal
