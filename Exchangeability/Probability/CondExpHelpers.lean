@@ -1483,51 +1483,63 @@ theorem condExp_project_of_condIndepFun
     obtain ⟨ns', h_ns'_mono, h_condExp_subseq⟩ :=
       exists_subseq_ae_tendsto_of_condExpL1_tendsto μ hmW_le h_condExp_L1
 
-    -- Step 3: Full sequence a.e. convergence - BLOCKED
+    -- Step 3: Apply tendsto_condExp_unique to the subsequence
     --
-    -- TODO: Prove full sequence a.e. convergence from L¹ + one subsequence
+    -- Key: The RHS product μ[f_n ∘ Y|mW] * μ[indicator|mW] is already mW-measurable,
+    -- so μ[RHS|mW] =ᵐ RHS by condExp_of_aestronglyMeasurable'
     --
-    -- What we have:
-    -- - h_condExp_L1: L¹ convergence condExpL1(f_n ∘ Y) → condExpL1(f ∘ Y)
-    -- - h_condExp_subseq: ONE subsequence ns' converges a.e. to μ[f ∘ Y|mW]
-    --
-    -- What we need:
-    -- - Full sequence a.e. convergence: μ[f_n n ∘ Y|mW] → μ[f ∘ Y|mW] a.e.
-    --
-    -- Strategy:
-    -- 1. Convert L¹ convergence → convergence in measure (tendstoInMeasure_of_tendsto_Lp)
-    -- 2. Use exists_seq_tendstoInMeasure_atTop_iff characterization
-    -- 3. Apply metrizability/separability argument for full sequence convergence
-    --
-    -- This requires proving or finding in mathlib:
-    -- lemma tendstoInMeasure_plus_one_subseq_imp_full_seq [MetricSpace E] [SeparableSpace E]
-    --   (h_measure : TendstoInMeasure μ f atTop g)
-    --   (h_subseq : ∃ ns, ∀ᵐ ω ∂μ, Tendsto (fun n => f (ns n) ω) atTop (𝓝 (g ω))) :
-    --   ∀ᵐ ω ∂μ, Tendsto (fun n => f n ω) atTop (𝓝 (g ω))
-    --
-    -- Alternative: Work entirely with subsequences (avoid need for full sequence convergence)
-    have h_condExp_full : ∀ᵐ ω ∂μ, Filter.Tendsto
-        (fun n => μ[ f_n n ∘ Y | mW ] ω)
-        Filter.atTop
-        (nhds (μ[ f ∘ Y | mW ] ω)) := by
-      sorry
+    -- This allows us to use h_factorization_subseq with tendsto_condExp_unique
 
-    --  TODO (BLOCKED on h_condExp_full): Complete the uniqueness argument
-    --
-    -- Mathematical idea:
-    -- - LHS: (f_n ∘ Y) * indicator → (f ∘ Y) * indicator a.e. (we have h_fs_ptwise)
-    -- - RHS: μ[f_n ∘ Y|mW] * μ[indicator|mW] → μ[f ∘ Y|mW] * μ[indicator|mW] a.e. (via DCT)
-    -- - Factorization: μ[(f_n ∘ Y) * indicator|mW] = μ[f_n ∘ Y|mW] * μ[indicator|mW] a.e. for each n
-    -- - By passing to limits, μ[(f ∘ Y) * indicator|mW] = μ[f ∘ Y|mW] * μ[indicator|mW] a.e.
-    --
-    -- Approaches:
-    -- 1. Use mathlib's tendsto_condExp_unique (requires full sequence convergence for RHS)
-    -- 2. Work with subsequences and show limit is independent of subsequence choice
-    -- 3. Direct application of dominated convergence to pass factorization through limits
-    --
-    -- Current blocker: Converting L¹ convergence (h_condExp_L1) to full sequence a.e. convergence
-    -- (we have subsequence convergence h_condExp_subseq, need full sequence)
-    sorry
+    -- First, we need to show μ[gs (ns n)|mW] =ᵐ gs (ns n) where gs n = μ[f_n n ∘ Y|mW] * μ[indicator|mW]
+    have h_gs_is_mW_measurable : ∀ n,
+        μ[ (fun ω => μ[ f_n (ns n) ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) | mW ]
+          =ᵐ[μ]
+        (fun ω => μ[ f_n (ns n) ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) := by
+      intro n
+      -- The product of two condExps is mW-measurable
+      apply condExp_of_aestronglyMeasurable' hmW_le
+      · -- Product of two mW-strongly measurable functions is mW-strongly measurable
+        exact (stronglyMeasurable_condExp.mul stronglyMeasurable_condExp).aestronglyMeasurable
+      · -- Integrability of the product
+        exact h_gs_subseq_int n
+
+    -- Now convert h_factorization_subseq using h_gs_is_mW_measurable
+    have h_factorization_as_condExps : ∀ n,
+        μ[ (f_n (ns n) ∘ Y) * (Z ⁻¹' B).indicator 1 | mW ]
+          =ᵐ[μ]
+        μ[ (fun ω => μ[ f_n (ns n) ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) | mW ] := by
+      intro n
+      exact (h_factorization_subseq n).trans (h_gs_is_mW_measurable n).symm
+
+    -- Apply tendsto_condExp_unique to get: μ[LHS|mW] =ᵐ μ[RHS|mW]
+    have h_condExps_equal := tendsto_condExp_unique
+      (fun n => (f_n (ns n) ∘ Y) * (Z ⁻¹' B).indicator 1)  -- fs
+      (fun n => fun ω => μ[ f_n (ns n) ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)  -- gs
+      ((f ∘ Y) * (Z ⁻¹' B).indicator 1)  -- f
+      (fun ω => μ[ f ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)  -- g
+      h_fnB_subseq_int
+      h_gs_subseq_int
+      h_fs_subseq
+      h_gs_subseq_ae
+      (fun ω => 2 * ‖f (Y ω)‖)
+      h_bound_fs_int
+      (fun ω => μ[ (fun ω => 2 * ‖f (Y ω)‖) | mW ] ω)
+      h_bound_gs_int
+      h_bound_fnB_subseq
+      h_gs_bound_subseq
+      h_factorization_as_condExps
+
+    -- Apply mW-measurability at the limit
+    have h_g_is_mW_measurable :
+        μ[ (fun ω => μ[ f ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) | mW ]
+          =ᵐ[μ]
+        (fun ω => μ[ f ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) := by
+      apply condExp_of_aestronglyMeasurable' hmW_le
+      · exact (stronglyMeasurable_condExp.mul stronglyMeasurable_condExp).aestronglyMeasurable
+      · exact h_g_int
+
+    -- Combine to get the desired result
+    exact h_condExps_equal.trans h_g_is_mW_measurable
 
     /-
     **Status: Stage 3 nearly complete!**
