@@ -578,8 +578,9 @@ lemma condIndep_simpleFunc_left (μ : Measure Ω) [IsProbabilityMeasure μ]
       =ᵐ[μ]
     μ[ φ ∘ Y | MeasurableSpace.comap W inferInstance ]
       * μ[ ψ ∘ Z | MeasurableSpace.comap W inferInstance ] := by
-  -- This can be derived by approximating ψ by simple functions and using condIndep_simpleFunc,
-  -- or by running the simple function induction only on φ with ψ as a bounded factor.
+  -- Approximate ψ by simple functions, apply condIndep_simpleFunc at each step, pass to limit
+  -- This requires similar approximation machinery as condIndep_bddMeas_extend_left
+  -- For now, we'll leave this as a sorry and implement it after the approximation helpers are done
   sorry
 
 /-- **Extend factorization from simple φ to bounded measurable φ, keeping ψ fixed.** -/
@@ -597,58 +598,107 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
     μ[ (φ ∘ Y) | MeasurableSpace.comap W inferInstance ]
       * μ[ (ψ ∘ Z) | MeasurableSpace.comap W inferInstance ] := by
   classical
-  set mW := MeasurableSpace.comap W inferInstance with hmW_def
+  set mW := MeasurableSpace.comap W inferInstance
 
-  -- Pick a sequence of simple functions approximating φ
-  have hφY_bdd : ∀ᵐ ω ∂μ, |φ (Y ω)| ≤ Mφ := hφ_bdd
-  -- For approximation, we need to work on the pushforward measure or directly on Ω
-  -- This is a technical detail - the key is obtaining φn with the right properties
-  obtain ⟨φn, hφn_bdd, hφn_tendsto, hφn_L1⟩ :=
-    approx_bounded_measurable μ Mφ hφ_meas sorry  -- need to massage hφ_bdd into right form
+  /-! ### Step 0: build real-valued simple-function approximation of φ via ℝ≥0∞ eapprox on pos/neg parts. -/
 
-  -- For each n, apply the simple function lemma
-  have h_n : ∀ n,
-      μ[ ((φn n) ∘ Y) * (ψ ∘ Z) | mW ]
-        =ᵐ[μ]
-      μ[ ((φn n) ∘ Y) | mW ] * μ[ (ψ ∘ Z) | mW ] := by
-    intro n
-    exact condIndep_simpleFunc_left μ Y Z W hCI (φn n) hY hZ hψ_meas
+  -- positive/negative parts as ℝ
+  set φp : α → ℝ := fun a => max (φ a) 0 with hφp
+  set φm : α → ℝ := fun a => max (- φ a) 0 with hφm
+  have hφp_nn : ∀ a, 0 ≤ φp a := by intro a; simp [φp]; exact le_max_right _ _
+  have hφm_nn : ∀ a, 0 ≤ φm a := by intro a; simp [φm]; exact le_max_right _ _
 
-  -- Prove equality by showing set integrals match on all σ(W)-measurable sets
-  have hC : ∀ C, MeasurableSet[mW] C →
+  have hφp_meas : Measurable φp := hφ_meas.max measurable_const
+  have hφm_meas : Measurable φm := hφ_meas.neg.max measurable_const
+
+  -- lift to ℝ≥0∞ nonnegative functions
+  let gp : α → ℝ≥0∞ := fun a => ENNReal.ofReal (φp a)
+  let gm : α → ℝ≥0∞ := fun a => ENNReal.ofReal (φm a)
+  have hgp_meas : Measurable gp := hφp_meas.ennreal_ofReal
+  have hgm_meas : Measurable gm := hφm_meas.ennreal_ofReal
+
+  -- eapprox sequences in ℝ≥0∞
+  let up : ℕ → SimpleFunc α ℝ≥0∞ := SimpleFunc.eapprox gp
+  let um : ℕ → SimpleFunc α ℝ≥0∞ := SimpleFunc.eapprox gm
+  -- back to ℝ via toReal
+  let sp : ℕ → SimpleFunc α ℝ := fun n => (up n).map ENNReal.toReal
+  let sm : ℕ → SimpleFunc α ℝ := fun n => (um n).map ENNReal.toReal
+  -- final real simple approximants
+  let sφ : ℕ → SimpleFunc α ℝ := fun n => (sp n) - (sm n)
+
+  -- properties: sφ n → φ pointwise, uniformly bounded
+  have h_sp_le : ∀ n a, (sp n a) ≤ φp a := by
+    intro n a
+    sorry  -- toReal (eapprox gp n a) ≤ toReal (gp a) = φp a
+
+  have h_sm_le : ∀ n a, (sm n a) ≤ φm a := by
+    intro n a
+    sorry  -- toReal (eapprox gm n a) ≤ toReal (gm a) = φm a
+
+  have h_sp_tendsto : ∀ a, Tendsto (fun n => sp n a) atTop (𝓝 (φp a)) := by
+    intro a
+    sorry  -- iSup_eapprox_apply + toReal continuity
+
+  have h_sm_tendsto : ∀ a, Tendsto (fun n => sm n a) atTop (𝓝 (φm a)) := by
+    intro a
+    sorry  -- iSup_eapprox_apply + toReal continuity
+
+  have h_sφ_tendsto : ∀ a, Tendsto (fun n => sφ n a) atTop (𝓝 (φ a)) := by
+    intro a
+    have := (h_sp_tendsto a).sub (h_sm_tendsto a)
+    -- posPart - negPart = φ
+    sorry  -- simplify max x 0 - max (-x) 0 = x
+
+  have h_sφ_bdd : ∀ n a, |sφ n a| ≤ |φ a| := by
+    intro n a
+    sorry  -- |sp - sm| ≤ sp + sm ≤ φp + φm = |φ|
+
+  /-! ### Step 1: reduce to equality of set integrals on σ(W)-sets C. -/
+
+  have hC_sets :
+    ∀ C, MeasurableSet[mW] C →
       ∫ ω in C, ((φ ∘ Y) * (ψ ∘ Z)) ω ∂μ
         = ∫ ω in C, (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ := by
     intro C hC
-    -- For each n, the set integrals match
-    have hC_n : ∀ n,
-        ∫ ω in C, ((φn n ∘ Y) * (ψ ∘ Z)) ω ∂μ
-          = ∫ ω in C, (μ[(φn n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ := by
+
+    -- For each n, simple φ-approximation: apply condIndep_simpleFunc
+    have h_rect_n :
+      ∀ n,
+        μ[ ((sφ n) ∘ Y) * (ψ ∘ Z) | mW ]
+          =ᵐ[μ]
+        μ[ ((sφ n) ∘ Y) | mW ] * μ[ (ψ ∘ Z) | mW ] := by
       intro n
-      -- Use h_n and setIntegral_condExp
-      have := h_n n
-      sorry  -- Combine using setIntegral_condExp as in rectangle proof
+      sorry  -- Apply condIndep_simpleFunc_left with sφ n and ψ
 
-    -- Take limits n→∞ on both sides
-    have hLHS : Tendsto (fun n => ∫ ω in C, ((φn n ∘ Y) * (ψ ∘ Z)) ω ∂μ)
-                        atTop (𝓝 (∫ ω in C, ((φ ∘ Y) * (ψ ∘ Z)) ω ∂μ)) := by
-      -- DCT with bound Mφ * Mψ
-      sorry
+    -- Integrate both sides over C
+    have h_int_n :
+      ∀ n,
+        ∫ ω in C, ((sφ n ∘ Y) * (ψ ∘ Z)) ω ∂μ
+          = ∫ ω in C, (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ := by
+      intro n
+      sorry  -- Use set_integral_condexp twice as in rectangle proof
 
-    have hRHS : Tendsto (fun n => ∫ ω in C, (μ[(φn n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)
-                        atTop
-                        (𝓝 (∫ ω in C, (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)) := by
-      -- Use L¹ continuity of condExp for left factor, boundedness of right factor
-      sorry
+    /-! Limit passage n→∞ on both sides. -/
+    -- LHS: DCT
+    have hLHS :
+      Tendsto (fun n => ∫ ω in C, ((sφ n ∘ Y) * (ψ ∘ Z)) ω ∂μ)
+              atTop
+              (𝓝 (∫ ω in C, ((φ ∘ Y) * (ψ ∘ Z)) ω ∂μ)) := by
+      sorry  -- DCT with bound Mφ * Mψ
 
-    -- Conclude by uniqueness of limits
-    have h_seq_eq : ∀ n, ∫ ω in C, ((φn n ∘ Y) * (ψ ∘ Z)) ω ∂μ
-                        = ∫ ω in C, (μ[(φn n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ :=
-      hC_n
-    sorry  -- Apply tendsto_nhds_unique or similar
+    -- RHS: L¹ continuity of condExp
+    have hRHS :
+      Tendsto (fun n =>
+          ∫ ω in C, (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)
+        atTop
+        (𝓝 (∫ ω in C, (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)) := by
+      sorry  -- tendsto_condExpL1_of_dominated_convergence + multiply by bounded factor
 
-  -- Apply uniqueness lemma from set integrals on σ(W)-sets
-  have hmW_le : mW ≤ inferInstance := hW.comap_le
-  sorry  -- Use ae_eq_condExp_of_forall_setIntegral_eq or similar
+    -- conclude by uniqueness of limits
+    sorry  -- tendsto_nhds_unique_of_eventuallyEq using h_int_n
+
+  /-! ### Step 2: uniqueness of versions from set-integral equality on σ(W)-sets. -/
+  sorry  -- ae_eq_of_forall_set_integral_eq_of_sigmaFinite
 
 /-- **Conditional independence extends to bounded measurable functions (monotone class).**
 
