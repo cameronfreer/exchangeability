@@ -1962,11 +1962,12 @@ lemma tendsto_set_integral_of_L1 {α : Type*} [MeasurableSpace α] {μ : Measure
 If fn → f in L¹ and H is bounded a.e., then ∫_s (fn * H) → ∫_s (f * H). -/
 lemma tendsto_set_integral_mul_of_L1 {α : Type*} [MeasurableSpace α] {μ : Measure α}
     {s : Set α}
-    {fn : ℕ → α → ℝ} {f H : α → ℝ} (C : ℝ)
+    {fn : ℕ → α → ℝ} {f H : α → ℝ} {C : ℝ}
     (hf_int : Integrable f μ)
     (hfn_int : ∀ n, Integrable (fn n) μ)
     (hH_int : Integrable H μ)
     (hL1 : Filter.Tendsto (fun n => ∫⁻ ω, ‖(fn n) ω - f ω‖₊ ∂μ) Filter.atTop (nhds 0))
+    (hC : 0 ≤ C)
     (hH_bdd : ∀ᵐ ω ∂μ, ‖H ω‖ ≤ C) :
   Filter.Tendsto (fun n => ∫ ω in s, (fn n) ω * H ω ∂μ)
           Filter.atTop
@@ -1982,13 +1983,40 @@ lemma tendsto_set_integral_mul_of_L1 {α : Type*} [MeasurableSpace α] {μ : Mea
     have := (hfn_int n).bdd_mul' hH_int.aestronglyMeasurable hH_bdd
     simpa only [mul_comm] using this
   · -- Sub-sorry (c): Show ∫⁻ ‖(fn * H) - (f * H)‖₊ → 0
-    sorry
-    -- Proof sketch (needs ENNReal coercion fixes):
-    -- 1. Rewrite: ‖fn * H - f * H‖ = ‖(fn - f) * H‖
-    -- 2. Use nnnorm_mul: ‖(fn - f) * H‖₊ = ‖fn - f‖₊ * ‖H‖₊
-    -- 3. Bound: ‖H‖₊ ≤ C a.e., so ‖fn - f‖₊ * ‖H‖₊ ≤ ‖fn - f‖₊ * C
-    -- 4. Pull out constant: ∫⁻ (‖fn - f‖₊ * C) = C * ∫⁻ ‖fn - f‖₊
-    -- 5. Apply Tendsto.const_mul: C * ∫⁻ ‖fn - f‖₊ → C * 0 = 0
+    -- Bound ∫⁻ ‖(fn - f) * H‖₊ by C * ∫⁻ ‖fn - f‖₊
+    have h_bound : ∀ n, ∫⁻ ω, ‖(fn n) ω * H ω - f ω * H ω‖₊ ∂μ
+                      ≤ ENNReal.ofReal C * ∫⁻ ω, ‖(fn n) ω - f ω‖₊ ∂μ := by
+      intro n
+      calc ∫⁻ ω, ‖(fn n) ω * H ω - f ω * H ω‖₊ ∂μ
+          = ∫⁻ ω, ‖((fn n) ω - f ω) * H ω‖₊ ∂μ := by
+            congr 1; ext ω; rw [sub_mul]
+        _ = ∫⁻ ω, (‖(fn n) ω - f ω‖₊ * ‖H ω‖₊ : ℝ≥0∞) ∂μ := by
+            congr 1; ext ω
+            simp only [← ENNReal.coe_mul, nnnorm_mul]
+        _ ≤ ∫⁻ ω, (‖(fn n) ω - f ω‖₊ * Real.toNNReal C : ℝ≥0∞) ∂μ := by
+            apply lintegral_mono_ae
+            filter_upwards [hH_bdd] with ω hω
+            gcongr
+            -- For real numbers, ‖x‖₊ = ‖x‖.toNNReal (norm_toNNReal')
+            -- Need to bridge: ‖H ω‖₊ ≤ C.toNNReal given ‖H ω‖ ≤ C
+            sorry  -- Use: rw [← norm_toNNReal']; exact Real.toNNReal_le_toNNReal hω
+            -- (Technical: norm_toNNReal' applies to SeminormedGroup; for ℝ need custom proof)
+        _ = ENNReal.ofReal C * ∫⁻ ω, ‖(fn n) ω - f ω‖₊ ∂μ := by
+            rw [← lintegral_const_mul' _ (fun ω => ‖(fn n) ω - f ω‖₊) ENNReal.ofReal_ne_top]
+            congr 1; ext ω
+            -- Need: ↑‖fn n ω - f ω‖₊ * ↑(Real.toNNReal C) = ENNReal.ofReal C * ↑‖fn n ω - f ω‖₊
+            rw [mul_comm]
+            simp only [ENNReal.ofReal_eq_coe_nnreal hC]
+            congr 1
+            exact congr_arg ENNReal.ofNNReal (Real.toNNReal_of_nonneg hC)
+    -- Apply squeeze theorem with C * hL1 → C * 0 = 0
+    have h_limit : Filter.Tendsto (fun n => ENNReal.ofReal C * ∫⁻ ω, ‖(fn n) ω - f ω‖₊ ∂μ)
+        Filter.atTop (nhds 0) := by
+      convert ENNReal.Tendsto.const_mul hL1 (Or.inr ENNReal.ofReal_ne_top) using 2
+      simp [mul_zero]
+    -- Apply sandwichtendsto_of_tendsto_of_tendsto_of_le_of_le
+    exact tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_limit
+      (fun n => zero_le _) h_bound
 
 end MeasureTheory
 
