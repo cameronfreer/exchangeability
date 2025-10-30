@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
 import Mathlib.Probability.ConditionalExpectation
+import Mathlib.Probability.Independence.Integration
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Real
 import Mathlib.MeasureTheory.Measure.Typeclasses.Probability
@@ -514,15 +515,17 @@ lemma condIndep_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
             refine Integrable.comp_measurable ?_ hZ
             exact SimpleFunc.integrable_of_isFiniteMeasure ψ
           have h1_int : Integrable ((φ1 ∘ Y) * (ψ ∘ Z)) μ := by
-            apply Integrable.bdd_mul' hψ_int
+            apply Integrable.bdd_mul hψ_int
             · exact (φ1.measurable.comp hY).aestronglyMeasurable
-            · filter_upwards with ω
-              exact SimpleFunc.norm_le_sup_norm φ1 (Y ω)
+            · use (φ1.range.sup (fun x => ‖x‖₊)).toReal
+              intro x
+              sorry  -- Simple function value bounded by supremum of range
           have h2_int : Integrable ((φ2 ∘ Y) * (ψ ∘ Z)) μ := by
-            apply Integrable.bdd_mul' hψ_int
+            apply Integrable.bdd_mul hψ_int
             · exact (φ2.measurable.comp hY).aestronglyMeasurable
-            · filter_upwards with ω
-              exact SimpleFunc.norm_le_sup_norm φ2 (Y ω)
+            · use (φ2.range.sup (fun x => ‖x‖₊)).toReal
+              intro x
+              sorry  -- Simple function value bounded by supremum of range
           exact condExp_add h1_int h2_int _
       _ =ᵐ[μ] (μ[φ1 ∘ Y | MeasurableSpace.comap W inferInstance] * μ[ψ ∘ Z | MeasurableSpace.comap W inferInstance])
               + (μ[φ2 ∘ Y | MeasurableSpace.comap W inferInstance] * μ[ψ ∘ Z | MeasurableSpace.comap W inferInstance]) :=
@@ -551,8 +554,8 @@ lemma tendsto_condexp_L1 (μ : Measure Ω) [IsProbabilityMeasure μ]
     (m : MeasurableSpace Ω) (hm : m ≤ inferInstance)
     {fn : ℕ → Ω → ℝ} {f : Ω → ℝ}
     (h_int : ∀ n, Integrable (fn n) μ) (hf : Integrable f μ)
-    (hL1 : Tendsto (fun n => ∫⁻ ω, ‖fn n ω - f ω‖₊ ∂μ) atTop (𝓝 0)) :
-    Tendsto (fun n => μ[fn n | m]) atTop (𝓝 (μ[f | m])) := by
+    (hL1 : Filter.Tendsto (fun n => ∫⁻ ω, ‖(fn n) ω - f ω‖₊ ∂μ) Filter.atTop (nhds 0)) :
+    Filter.Tendsto (fun n => μ[fn n | m]) Filter.atTop (nhds (μ[f | m])) := by
   -- Replace with the proper lemma in your mathlib build
   -- e.g., condexp_tendsto_L1 or use condexpL1 continuity
   sorry
@@ -563,8 +566,8 @@ lemma approx_bounded_measurable (μ : Measure Ω) [IsProbabilityMeasure μ]
     (hf_bdd : ∀ᵐ ω ∂μ.map (fun x => x), |f ω| ≤ M) :
     ∃ (fn : ℕ → SimpleFunc α ℝ),
       (∀ n, ∀ᵐ x ∂μ.map (fun x => x), |fn n x| ≤ M) ∧
-      (∀ᵐ x ∂μ.map (fun x => x), Tendsto (fun n => fn n x) atTop (𝓝 (f x))) ∧
-      (Tendsto (fun n => ∫⁻ ω, ‖fn n ω - f ω‖₊ ∂(μ.map (fun x => x))) atTop (𝓝 0)) := by
+      (∀ᵐ x ∂μ.map (fun x => x), Filter.Tendsto (fun n => (fn n) x) Filter.atTop (nhds (f x))) ∧
+      (Filter.Tendsto (fun n => ∫⁻ ω, ‖(fn n) ω - f ω‖₊ ∂(μ.map (fun x => x))) Filter.atTop (nhds 0)) := by
   -- Use SimpleFunc.eapprox or similar from mathlib
   sorry
 
