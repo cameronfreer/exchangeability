@@ -637,7 +637,7 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
     -- eapprox is monotonically increasing to its limit
     have h_le : SimpleFunc.eapprox (fun (x : α) => ENNReal.ofReal (max (φ x) 0)) n a
                 ≤ ENNReal.ofReal (max (φ a) 0) := by
-      have := SimpleFunc.iSup_eapprox_apply (fun (x : α) => ENNReal.ofReal (max (φ x) 0))
+      have := @SimpleFunc.iSup_eapprox_apply α _ (fun x => ENNReal.ofReal (max (φ x) 0))
                 (hφ_meas.max measurable_const).ennreal_ofReal a
       rw [← this]
       exact le_iSup (fun k => SimpleFunc.eapprox _ k a) n
@@ -654,8 +654,8 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
     simp only [sm, um, gm, φm]
     have h_le : SimpleFunc.eapprox (fun (x : α) => ENNReal.ofReal (max (- φ x) 0)) n a
                 ≤ ENNReal.ofReal (max (- φ a) 0) := by
-      have := SimpleFunc.iSup_eapprox_apply (fun (x : α) => ENNReal.ofReal (max (- φ x) 0))
-                ((measurable_const.sub hφ_meas).max measurable_const).ennreal_ofReal a
+      have := @SimpleFunc.iSup_eapprox_apply α _ (fun x => ENNReal.ofReal (max (- φ x) 0))
+                (hφ_meas.neg.max measurable_const).ennreal_ofReal a
       rw [← this]
       exact le_iSup (fun k => SimpleFunc.eapprox _ k a) n
     have h_fin : ENNReal.ofReal (max (- φ a) 0) ≠ ∞ := ENNReal.ofReal_ne_top
@@ -688,7 +688,7 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
                               Filter.atTop
                               (nhds (ENNReal.ofReal (max (- φ a) 0))) := by
       apply SimpleFunc.tendsto_eapprox
-      exact ((measurable_const.sub hφ_meas).max measurable_const).ennreal_ofReal
+      exact (hφ_meas.neg.max measurable_const).ennreal_ofReal
     have h_fin : ENNReal.ofReal (max (- φ a) 0) ≠ ∞ := ENNReal.ofReal_ne_top
     have h_cont := ENNReal.tendsto_toReal h_fin
     have := h_cont.comp h_tend_enn
@@ -701,7 +701,7 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
     simp only [sφ, sp, sm, φp, φm, SimpleFunc.coe_sub] at this ⊢
     convert this using 2
     -- Show: max (φ a) 0 - max (-φ a) 0 = φ a
-    exact max_zero_sub_eq_self (φ a)
+    exact (max_zero_sub_eq_self (φ a)).symm
 
   have h_sφ_bdd : ∀ n a, |sφ n a| ≤ |φ a| := by
     intro n a
@@ -726,14 +726,14 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
     -- φp + φm = |φ| (positive part + negative part = absolute value)
     have h_parts : φp a + φm a = |φ a| := by
       simp only [φp, φm]
-      exact (max_zero_add_max_neg_zero_eq_abs (φ a)).symm
+      exact max_zero_add_max_neg_zero_eq_abs_self (φ a)
     -- Combine
     calc |sp n a - sm n a|
         ≤ sp n a + sm n a := h_abs_le
       _ ≤ φp a + φm a := h_sum_le
       _ = |φ a| := h_parts
 
-  /-! ### Step 1: reduce to equality of set integrals on σ(W)-sets C. -/
+  -- Step 1: reduce to equality of set integrals on σ(W)-sets C.
 
   have hC_sets :
     ∀ C, MeasurableSet[mW] C →
@@ -748,7 +748,7 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
           =ᵐ[μ]
         μ[ ((sφ n) ∘ Y) | mW ] * μ[ (ψ ∘ Z) | mW ] := by
       intro n
-      exact condIndep_simpleFunc μ Y Z W hCI (sφ n) ψ hY hZ
+      exact condIndep_simpleFunc_left μ Y Z W hCI (sφ n) hY hZ hψ_meas
 
     -- Integrate both sides over C
     have h_int_n :
@@ -761,10 +761,19 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
         refine Integrable.comp_measurable ?_ hY
         exact SimpleFunc.integrable_of_isFiniteMeasure (sφ n)
       have hψ_int : Integrable (ψ ∘ Z) μ := by
-        refine Integrable.comp_measurable ?_ hZ
-        exact SimpleFunc.integrable_of_isFiniteMeasure ψ
+        refine Integrable.of_mem_Icc (-Mψ) Mψ (hψ_meas.comp hZ).aemeasurable ?_
+        filter_upwards [hψ_bdd] with ω hω
+        simp only [Function.comp_apply, Set.mem_Icc, abs_le]
+        exact hω
       have hprod_int : Integrable (((sφ n) ∘ Y) * (ψ ∘ Z)) μ := by
-        refine Integrable.mul hsφn_int hψ_int
+        -- sφ n is bounded (simple function), ψ ∘ Z is integrable
+        refine Integrable.bdd_mul' hψ_int ((sφ n).measurable.comp hY).aestronglyMeasurable ?_
+        -- Need bound on sφ n ∘ Y: use that |sφ n| ≤ |φ| from h_sφ_bdd
+        filter_upwards [hφ_bdd] with ω hω
+        calc ‖((sφ n) ∘ Y) ω‖
+            = |sφ n (Y ω)| := by simp [Real.norm_eq_abs]
+          _ ≤ |φ (Y ω)| := h_sφ_bdd n (Y ω)
+          _ ≤ Mφ := hω
       -- Use setIntegral_condExp followed by setIntegral_congr_ae
       calc ∫ ω in C, ((sφ n ∘ Y) * (ψ ∘ Z)) ω ∂μ
           = ∫ ω in C, μ[((sφ n ∘ Y) * (ψ ∘ Z)) | mW] ω ∂μ := by
@@ -772,12 +781,12 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
         _ = ∫ ω in C, (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ := by
               exact setIntegral_congr_ae (hmW_le _ hC) (by filter_upwards [h_rect_n n] with x hx _; exact hx)
 
-    /-! Limit passage n→∞ on both sides. -/
+    -- Limit passage n→∞ on both sides.
     -- LHS: DCT
     have hLHS :
-      Tendsto (fun n => ∫ ω in C, ((sφ n ∘ Y) * (ψ ∘ Z)) ω ∂μ)
-              atTop
-              (𝓝 (∫ ω in C, ((φ ∘ Y) * (ψ ∘ Z)) ω ∂μ)) := by
+      Filter.Tendsto (fun n => ∫ ω in C, ((sφ n ∘ Y) * (ψ ∘ Z)) ω ∂μ)
+              Filter.atTop
+              (nhds (∫ ω in C, ((φ ∘ Y) * (ψ ∘ Z)) ω ∂μ)) := by
       -- Apply DCT on the restricted measure μ.restrict C
       rw [show ∀ n, ∫ ω in C, ((sφ n ∘ Y) * (ψ ∘ Z)) ω ∂μ
                     = ∫ ω, ((sφ n ∘ Y) * (ψ ∘ Z)) ω ∂(μ.restrict C)
@@ -816,10 +825,10 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
 
     -- RHS: L¹ continuity of condExp
     have hRHS :
-      Tendsto (fun n =>
+      Filter.Tendsto (fun n =>
           ∫ ω in C, (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)
-        atTop
-        (𝓝 (∫ ω in C, (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)) := by
+        Filter.atTop
+        (nhds (∫ ω in C, (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)) := by
       -- Apply DCT directly to the product μ[sφ n Y | mW] * μ[ψ Z | mW]
       rw [show ∀ n, ∫ ω in C, (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ
                     = ∫ ω, (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂(μ.restrict C)
@@ -847,9 +856,9 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
       -- in the proof. The key missing lemma would be:
       --   "CE preserves dominated pointwise convergence a.e."
       have h_prod_ptwise : ∀ᵐ ω ∂μ,
-          Tendsto (fun n => (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω)
-                  atTop
-                  (𝓝 ((μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω)) := by
+          Filter.Tendsto (fun n => (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω)
+                  Filter.atTop
+                  (nhds ((μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω)) := by
         sorry  -- See proof sketch above. This is a standard result but requires establishing
                -- pointwise convergence of CE from dominated convergence, which is nontrivial.
 
@@ -916,7 +925,7 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
     -- conclude by uniqueness of limits
     exact tendsto_nhds_unique_of_eventuallyEq h_int_n hLHS hRHS
 
-  /-! ### Step 2: uniqueness of versions from set-integral equality on σ(W)-sets. -/
+  -- Step 2: uniqueness of versions from set-integral equality on σ(W)-sets.
   -- Now we have: ∀ C ∈ σ(W), ∫_C (φY * ψZ) = ∫_C (μ[φY|W] * μ[ψZ|W])
   -- By uniqueness, this means (φY * ψZ) =ᵐ (μ[φY|W] * μ[ψZ|W])
   refine ae_eq_of_forall_setIntegral_eq_of_sigmaFinite ?_ ?_ hC_sets
