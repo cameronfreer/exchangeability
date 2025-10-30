@@ -844,8 +844,53 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
       have h_prod_bdd : ∀ n, ∀ᵐ ω ∂μ,
           ‖(μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω‖ ≤ Mφ * Mψ := by
         intro n
-        sorry  -- Standard CE bound preservation: ‖CE[f]‖ ≤ CE[‖f‖] ≤ M a.e. when ‖f‖ ≤ M a.e.
-               -- Apply to both factors: ‖CE[sφ n Y]‖ ≤ Mφ and ‖CE[ψ Z]‖ ≤ Mψ
+        -- First, get bounds on each factor using CE monotonicity
+        have hCE_sφn_bdd : ∀ᵐ ω ∂μ, |μ[(sφ n ∘ Y) | mW] ω| ≤ Mφ := by
+          -- ‖sφ n Y‖ ≤ Mφ implies -Mφ ≤ sφ n Y ≤ Mφ
+          have h_lo : (fun ω => -(Mφ : ℝ)) ≤ᵐ[μ] (sφ n ∘ Y) := by
+            filter_upwards with ω
+            calc -(Mφ : ℝ) ≤ -(|sφ n (Y ω)|) := by
+                apply neg_le_neg
+                exact h_sφ_bdd n (Y ω)
+              _ ≤ sφ n (Y ω) := neg_abs_le _
+          have h_hi : (sφ n ∘ Y) ≤ᵐ[μ] (fun ω => (Mφ : ℝ)) := by
+            filter_upwards with ω
+            calc sφ n (Y ω) ≤ |sφ n (Y ω)| := le_abs_self _
+              _ ≤ |φ (Y ω)| := h_sφ_bdd n (Y ω)
+              _ ≤ Mφ := hφ_bdd (Y ω)
+          -- Apply CE monotonicity
+          have hsφn_int : Integrable (sφ n ∘ Y) μ := by
+            refine Integrable.comp_measurable ?_ hY
+            exact SimpleFunc.integrable_of_isFiniteMeasure (sφ n)
+          filter_upwards [condExp_mono (integrable_const (-(Mφ : ℝ))) hsφn_int h_lo,
+                          condExp_mono hsφn_int (integrable_const (Mφ : ℝ)) h_hi] with ω hlo hhi
+          simp only [condExp_const] at hlo hhi
+          exact abs_le.mpr ⟨hlo, hhi⟩
+
+        have hCE_ψ_bdd : ∀ᵐ ω ∂μ, |μ[(ψ ∘ Z) | mW] ω| ≤ Mψ := by
+          have h_lo : (fun ω => -(Mψ : ℝ)) ≤ᵐ[μ] (ψ ∘ Z) := by
+            filter_upwards with ω
+            calc -(Mψ : ℝ) ≤ -(|ψ (Z ω)|) := by
+                apply neg_le_neg; exact hψ_bdd (Z ω)
+              _ ≤ ψ (Z ω) := neg_abs_le _
+          have h_hi : (ψ ∘ Z) ≤ᵐ[μ] (fun ω => (Mψ : ℝ)) := by
+            filter_upwards with ω
+            calc ψ (Z ω) ≤ |ψ (Z ω)| := le_abs_self _
+              _ ≤ Mψ := hψ_bdd (Z ω)
+          have hψ_int : Integrable (ψ ∘ Z) μ := by
+            refine Integrable.comp_measurable ?_ hZ
+            exact SimpleFunc.integrable_of_isFiniteMeasure ψ
+          filter_upwards [condExp_mono (integrable_const (-(Mψ : ℝ))) hψ_int h_lo,
+                          condExp_mono hψ_int (integrable_const (Mψ : ℝ)) h_hi] with ω hlo hhi
+          simp only [condExp_const] at hlo hhi
+          exact abs_le.mpr ⟨hlo, hhi⟩
+
+        -- Combine the bounds
+        filter_upwards [hCE_sφn_bdd, hCE_ψ_bdd] with ω h1 h2
+        calc ‖(μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω‖
+            = |μ[(sφ n ∘ Y) | mW] ω| * |μ[(ψ ∘ Z) | mW] ω| := by
+                rw [Real.norm_eq_abs, abs_mul]
+          _ ≤ Mφ * Mψ := mul_le_mul h1 h2 (abs_nonneg _) (le_of_lt Mφ_pos)
 
       -- Apply DCT
       refine tendsto_integral_of_dominated_convergence (fun ω => Mφ * Mψ) ?_ ?_ h_prod_bdd h_prod_ptwise
