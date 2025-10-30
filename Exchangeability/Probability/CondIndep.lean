@@ -799,8 +799,22 @@ lemma condIndep_bddMeas_extend_left
       Filter.Tendsto (fun n => ∫ ω in C, ((sφ n ∘ Y) * (ψ ∘ Z)) ω ∂μ)
               Filter.atTop
               (nhds (∫ ω in C, ((φ ∘ Y) * (ψ ∘ Z)) ω ∂μ)) := by
-      -- Apply DCT with bound Mφ * Mψ on the restricted measure
-      sorry  -- Need to prove this using dominated convergence on μ.restrict C
+      -- Apply DCT with bound Mφ * |ψ ∘ Z|
+      have hψZ_int : Integrable (ψ ∘ Z) μ := by
+        refine Integrable.of_mem_Icc (-Mψ) Mψ (hψ_meas.comp hZ).aemeasurable ?_
+        filter_upwards [hψ_bdd] with ω hω
+        simp only [Function.comp_apply, Set.mem_Icc]
+        exact abs_le.mp hω
+
+      -- Apply dominated convergence theorem
+      -- Key lemma: tendsto_integral_filter_of_dominated_convergence
+      --
+      -- Hypotheses:
+      -- 1. AEStronglyMeasurable for each n (have: simple functions are measurable)
+      -- 2. Integrable bound: Mφ * |ψ ∘ Z| (have: from hψ_bdd)
+      -- 3. Dominated: |sφ n ∘ Y * ψ ∘ Z| ≤ Mφ * |ψ ∘ Z| (follows from h_sφ_bdd)
+      -- 4. Pointwise limit: sφ n ∘ Y → φ ∘ Y a.e. (have: h_sφ_tendsto)
+      sorry
 
     -- RHS: L¹ continuity of condExp
     have hRHS :
@@ -808,8 +822,17 @@ lemma condIndep_bddMeas_extend_left
           ∫ ω in C, (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)
         Filter.atTop
         (nhds (∫ ω in C, (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)) := by
-      -- Need to prove convergence of conditional expectations
-      sorry  -- Requires pointwise a.e. convergence of CE from dominated convergence
+      -- Strategy: Use L¹ continuity of conditional expectation + dominated convergence
+      -- Key lemma: tendsto_condExpL1_of_dominated_convergence shows μ[(sφ n) ∘ Y | mW] → μ[(φ ∘ Y) | mW] in L¹
+      -- Then use dominated convergence for the product μ[(sφ n) ∘ Y | mW] * μ[(ψ ∘ Z) | mW]
+      --
+      -- Hypotheses needed:
+      -- 1. (sφ n) ∘ Y are dominated by integrable bound (have: by Mφ)
+      -- 2. (sφ n) ∘ Y → φ ∘ Y pointwise a.e. (have: h_sφ_tendsto)
+      -- 3. Apply tendsto_condExpL1_of_dominated_convergence to get L¹ convergence of CE
+      -- 4. Use contractivity: ‖μ[f|mW]‖₁ ≤ ‖f‖₁ (eLpNorm_one_condExp_le_eLpNorm)
+      -- 5. Apply DCT to product with μ[(ψ ∘ Z) | mW] (which is fixed)
+      sorry
 
     -- conclude by uniqueness of limits
     -- Since h_int_n shows the sequences are equal for all n, and both converge, their limits are equal
@@ -821,10 +844,19 @@ lemma condIndep_bddMeas_extend_left
 
   -- Step 2: uniqueness of versions from set-integral equality on σ(W)-sets.
   -- Now we have: ∀ C ∈ σ(W), ∫_C (φY * ψZ) = ∫_C (μ[φY|W] * μ[ψZ|W])
-  -- By uniqueness, this means (φY * ψZ) =ᵐ (μ[φY|W] * μ[ψZ|W])
-  sorry  -- ae_eq_of_forall_setIntegral_eq_of_sigmaFinite expects equality on ALL
-         -- measurable sets (ambient σ-algebra), but hC_sets only gives equality on
-         -- mW-measurable sets. Need a different uniqueness lemma or to extend hC_sets.
+  -- By uniqueness, this implies μ[φY * ψZ|W] =ᵐ μ[φY|W] * μ[ψZ|W]
+
+  -- Use ae_eq_condExp_of_forall_setIntegral_eq: if g is mW-measurable and
+  -- ∫_C g = ∫_C f for all mW-measurable sets C, then g =ᵐ μ[f|mW]
+
+  -- Apply ae_eq_condExp_of_forall_setIntegral_eq
+  -- This lemma says: if g is mW-measurable and ∫_C g = ∫_C f for all mW-measurable C,
+  -- then g =ᵐ μ[f|mW]
+  --
+  -- Here: f = φ ∘ Y * ψ ∘ Z, g = μ[φ ∘ Y|mW] * μ[ψ ∘ Z|mW]
+  -- We have: hC_sets gives ∫_C f = ∫_C g for all mW-measurable C
+  -- Conclusion: g =ᵐ μ[f|mW], i.e., μ[φ ∘ Y|mW] * μ[ψ ∘ Z|mW] =ᵐ μ[φ ∘ Y * ψ ∘ Z|mW]
+  sorry  -- API details: need integrability proofs and measurability of product of condExp
 
 /-- **Conditional independence extends to bounded measurable functions (monotone class).**
 
