@@ -9,6 +9,7 @@ import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Real
 import Mathlib.MeasureTheory.Measure.Typeclasses.Probability
 import Exchangeability.Probability.CondExpHelpers
+import Exchangeability.Probability.CondExp
 
 /-!
 # Conditional Independence
@@ -52,7 +53,7 @@ This is equivalent to the standard σ-algebra definition but more elementary to 
 
 noncomputable section
 open scoped MeasureTheory ENNReal
-open MeasureTheory ProbabilityTheory Set
+open MeasureTheory ProbabilityTheory Set Exchangeability.Probability
 
 variable {Ω α β γ : Type*}
 variable [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
@@ -806,35 +807,62 @@ lemma condIndep_bddMeas_extend_left
         simp only [Function.comp_apply, Set.mem_Icc]
         exact abs_le.mp hω
 
-      -- Apply dominated convergence theorem
-      -- Key lemma: tendsto_integral_filter_of_dominated_convergence
-      --
-      -- Hypotheses:
-      -- 1. AEStronglyMeasurable for each n (have: simple functions are measurable)
-      -- 2. Integrable bound: Mφ * |ψ ∘ Z| (have: from hψ_bdd)
-      -- 3. Dominated: |sφ n ∘ Y * ψ ∘ Z| ≤ Mφ * |ψ ∘ Z| (follows from h_sφ_bdd)
-      -- 4. Pointwise limit: sφ n ∘ Y → φ ∘ Y a.e. (have: h_sφ_tendsto)
-      sorry
+      -- Apply dominated convergence theorem with bound Mφ * ‖ψ ∘ Z‖
+      refine tendsto_integral_filter_of_dominated_convergence
+        (bound := fun ω => Mφ * ‖(ψ ∘ Z) ω‖) ?_ ?_ ?_ ?_
 
-    -- RHS: L¹ continuity of condExp
+      -- Hypothesis 1: AEStronglyMeasurable for each n w.r.t. μ.restrict C
+      · refine Filter.Eventually.of_forall (fun n => ?_)
+        exact ((sφ n).measurable.comp hY).aestronglyMeasurable.mul (hψ_meas.comp hZ).aestronglyMeasurable
+
+      -- Hypothesis 2: Dominated by bound a.e. w.r.t. μ.restrict C
+      · refine Filter.Eventually.of_forall (fun n => ?_)
+        refine ae_restrict_of_ae ?_
+        filter_upwards [hφ_bdd] with ω hω_φ
+        simp only [Function.comp_apply, Pi.mul_apply]
+        calc ‖((sφ n ∘ Y) * (ψ ∘ Z)) ω‖
+            = ‖(sφ n) (Y ω)‖ * ‖(ψ ∘ Z) ω‖ := norm_mul _ _
+          _ = |(sφ n) (Y ω)| * ‖(ψ ∘ Z) ω‖ := by rw [Real.norm_eq_abs]
+          _ ≤ |φ (Y ω)| * ‖(ψ ∘ Z) ω‖ := by apply mul_le_mul_of_nonneg_right (h_sφ_bdd n (Y ω)) (norm_nonneg _)
+          _ ≤ Mφ * ‖(ψ ∘ Z) ω‖ := by apply mul_le_mul_of_nonneg_right hω_φ (norm_nonneg _)
+
+      -- Hypothesis 3: Bound Mφ * ‖ψ ∘ Z‖ is integrable on C
+      · exact (hψZ_int.norm.const_mul Mφ).integrableOn
+
+      -- Hypothesis 4: Pointwise convergence a.e.
+      · refine ae_restrict_of_ae ?_
+        filter_upwards [] with ω
+        apply Filter.Tendsto.mul
+        · exact h_sφ_tendsto (Y ω)
+        · exact tendsto_const_nhds
+
+    -- RHS: convergence by dominated convergence theorem
+    -- The conditional expectations μ[(sφ n ∘ Y) | mW] are uniformly bounded by Mφ,
+    -- and μ[(ψ ∘ Z) | mW] is integrable, so DCT applies.
     have hRHS :
       Filter.Tendsto (fun n =>
           ∫ ω in C, (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)
         Filter.atTop
         (nhds (∫ ω in C, (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)) := by
-      -- Strategy: Use L¹ continuity of conditional expectation + dominated convergence
-      -- Key lemma: tendsto_condExpL1_of_dominated_convergence shows μ[(sφ n) ∘ Y | mW] → μ[(φ ∘ Y) | mW] in L¹
-      -- Then use dominated convergence for the product μ[(sφ n) ∘ Y | mW] * μ[(ψ ∘ Z) | mW]
+      -- Integrability of μ[(ψ ∘ Z) | mW]
+      have hψZ_ce_int : Integrable (μ[(ψ ∘ Z) | mW]) μ := integrable_condExp
+
+      -- Note: The full proof of RHS convergence requires showing that the product
+      -- μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW] converges pointwise a.e.
       --
-      -- Hypotheses needed:
-      -- 1. (sφ n) ∘ Y are dominated by integrable bound (have: by Mφ)
-      -- 2. (sφ n) ∘ Y → φ ∘ Y pointwise a.e. (have: h_sφ_tendsto)
-      -- 3. Apply tendsto_condExpL1_of_dominated_convergence to get L¹ convergence of CE
-      -- 4. Use contractivity: ‖μ[f|mW]‖₁ ≤ ‖f‖₁ (eLpNorm_one_condExp_le_eLpNorm)
-      -- 5. Apply DCT to product with μ[(ψ ∘ Z) | mW] (which is fixed)
+      -- This would follow from two facts:
+      -- 1. μ[(sφ n ∘ Y) | mW] is uniformly bounded by Mφ (via conditional Jensen)
+      -- 2. μ[(sφ n ∘ Y) | mW] → μ[(φ ∘ Y) | mW] pointwise a.e.
+      --
+      -- Fact (2) is a standard result but requires extracting a.e. convergent subsequence
+      -- from L¹ convergence (tendsto_condExpL1_of_dominated_convergence).
+      --
+      -- For the purposes of this proof, we note that the integral equality h_int_n
+      -- already establishes the key factorization property for each n, and the limits
+      -- can be verified via the dominated convergence machinery (just tedious).
       sorry
 
-    -- conclude by uniqueness of limits
+    -- Conclude by uniqueness of limits
     -- Since h_int_n shows the sequences are equal for all n, and both converge, their limits are equal
     have h_eq : (fun n => ∫ ω in C, ((sφ n ∘ Y) * (ψ ∘ Z)) ω ∂μ) =
                 (fun n => ∫ ω in C, (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ) := by
@@ -856,7 +884,55 @@ lemma condIndep_bddMeas_extend_left
   -- Here: f = φ ∘ Y * ψ ∘ Z, g = μ[φ ∘ Y|mW] * μ[ψ ∘ Z|mW]
   -- We have: hC_sets gives ∫_C f = ∫_C g for all mW-measurable C
   -- Conclusion: g =ᵐ μ[f|mW], i.e., μ[φ ∘ Y|mW] * μ[ψ ∘ Z|mW] =ᵐ μ[φ ∘ Y * ψ ∘ Z|mW]
-  sorry  -- API details: need integrability proofs and measurability of product of condExp
+
+  -- First, establish integrability of f = φ ∘ Y * ψ ∘ Z
+  have hφY_int : Integrable (φ ∘ Y) μ := by
+    refine Integrable.of_mem_Icc (-Mφ) Mφ (hφ_meas.comp hY).aemeasurable ?_
+    filter_upwards [hφ_bdd] with ω hω
+    simp only [Function.comp_apply, Set.mem_Icc]
+    exact abs_le.mp hω
+
+  have hψZ_int : Integrable (ψ ∘ Z) μ := by
+    refine Integrable.of_mem_Icc (-Mψ) Mψ (hψ_meas.comp hZ).aemeasurable ?_
+    filter_upwards [hψ_bdd] with ω hω
+    simp only [Function.comp_apply, Set.mem_Icc]
+    exact abs_le.mp hω
+
+  have hf_int : Integrable ((φ ∘ Y) * (ψ ∘ Z)) μ := by
+    -- Product of bounded integrable functions: φ ∘ Y bounded a.e., ψ ∘ Z integrable
+    -- Use Integrable.bdd_mul': requires hg integrable, hf ae strongly measurable, hf bounded a.e.
+    refine Integrable.bdd_mul' (c := Mφ) hψZ_int (hφ_meas.comp hY).aestronglyMeasurable ?_
+    -- Need: ∀ᵐ ω ∂μ, ‖(φ ∘ Y) ω‖ ≤ Mφ
+    filter_upwards [hφ_bdd] with ω hω
+    simp only [Function.comp_apply]
+    rw [Real.norm_eq_abs]
+    exact hω
+
+  -- Apply the uniqueness characterization lemma (gives g =ᵐ μ[f|m], need symm)
+  refine (ae_eq_condExp_of_forall_setIntegral_eq hmW_le hf_int ?_ ?_ ?_).symm
+
+  -- Hypothesis 1: IntegrableOn for g on finite mW-measurable sets
+  · intro s hs hμs
+    haveI : Fact (μ s < ∞) := ⟨hμs⟩
+    -- Conditional expectations are integrable
+    have h1 : Integrable (μ[(φ ∘ Y) | mW]) μ := integrable_condExp
+    have h2 : Integrable (μ[(ψ ∘ Z) | mW]) μ := integrable_condExp
+    -- Product of integrable functions is integrable on whole space (finite measure)
+    have hprod : Integrable (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) μ := by
+      -- Use Hölder: on finite measure, L¹ × L¹ ⊆ L¹
+      sorry  -- TODO: Need Memℒp.mul or similar for finite measure spaces
+    -- Product integrable on whole space implies integrable on subset
+    exact hprod.integrableOn
+
+  -- Hypothesis 2: Set integral equality (from hC_sets)
+  · intro s hs hμs
+    exact (hC_sets s hs).symm
+
+  -- Hypothesis 3: g is mW-measurable
+  · -- Product of conditional expectations is mW-measurable
+    refine AEStronglyMeasurable.mul ?_ ?_
+    · exact stronglyMeasurable_condExp.aestronglyMeasurable
+    · exact stronglyMeasurable_condExp.aestronglyMeasurable
 
 /-- **Conditional independence extends to bounded measurable functions (monotone class).**
 
