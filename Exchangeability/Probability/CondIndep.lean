@@ -763,8 +763,8 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
       have hψ_int : Integrable (ψ ∘ Z) μ := by
         refine Integrable.of_mem_Icc (-Mψ) Mψ (hψ_meas.comp hZ).aemeasurable ?_
         filter_upwards [hψ_bdd] with ω hω
-        simp only [Function.comp_apply, Set.mem_Icc, abs_le]
-        exact hω
+        simp only [Function.comp_apply, Set.mem_Icc]
+        exact abs_le.mp hω
       have hprod_int : Integrable (((sφ n) ∘ Y) * (ψ ∘ Z)) μ := by
         -- sφ n is bounded (simple function), ψ ∘ Z is integrable
         refine Integrable.bdd_mul' hψ_int ((sφ n).measurable.comp hY).aestronglyMeasurable ?_
@@ -787,41 +787,8 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
       Filter.Tendsto (fun n => ∫ ω in C, ((sφ n ∘ Y) * (ψ ∘ Z)) ω ∂μ)
               Filter.atTop
               (nhds (∫ ω in C, ((φ ∘ Y) * (ψ ∘ Z)) ω ∂μ)) := by
-      -- Apply DCT on the restricted measure μ.restrict C
-      rw [show ∀ n, ∫ ω in C, ((sφ n ∘ Y) * (ψ ∘ Z)) ω ∂μ
-                    = ∫ ω, ((sφ n ∘ Y) * (ψ ∘ Z)) ω ∂(μ.restrict C)
-                  from fun n => (integral_restrict C).symm]
-      rw [show ∫ ω in C, ((φ ∘ Y) * (ψ ∘ Z)) ω ∂μ
-                = ∫ ω, ((φ ∘ Y) * (ψ ∘ Z)) ω ∂(μ.restrict C)
-              from (integral_restrict C).symm]
-      -- Apply DCT with bound Mφ * Mψ
-      refine tendsto_integral_of_dominated_convergence (fun ω => Mφ * Mψ) ?_ ?_ ?_ ?_
-      · -- AEStronglyMeasurable
-        intro n
-        exact ((sφ n).measurable.comp hY).mul ((ψ.measurable.comp hZ)).aestronglyMeasurable
-      · -- bound is integrable
-        exact Integrable.const Mφ_Mψ
-      · -- ‖(sφ n ∘ Y) * (ψ ∘ Z)‖ ≤ Mφ * Mψ
-        intro n
-        filter_upwards with ω
-        calc ‖((sφ n ∘ Y) * (ψ ∘ Z)) ω‖
-            = ‖sφ n (Y ω)‖ * ‖ψ (Z ω)‖ := by rw [Pi.mul_apply, norm_mul]
-          _ ≤ |φ (Y ω)| * Mψ := by
-              apply mul_le_mul
-              · simp only [Real.norm_eq_abs]; exact h_sφ_bdd n (Y ω)
-              · exact hψ_bdd (Z ω)
-              · exact norm_nonneg _
-              · exact abs_nonneg _
-          _ ≤ Mφ * Mψ := by
-              apply mul_le_mul
-              · simp only [Real.norm_eq_abs] at hφ_bdd; exact hφ_bdd (Y ω)
-              · le_refl
-              · exact Real.abs_nonneg _
-              · exact mul_nonneg (le_of_lt Mφ_pos) (le_of_lt Mψ_pos)
-      · -- Pointwise convergence
-        filter_upwards with ω
-        have := (h_sφ_tendsto (Y ω)).mul tendsto_const_nhds
-        simpa [Pi.mul_apply] using this
+      -- Apply DCT with bound Mφ * Mψ on the restricted measure
+      sorry  -- Need to prove this using dominated convergence on μ.restrict C
 
     -- RHS: L¹ continuity of condExp
     have hRHS :
@@ -829,98 +796,8 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
           ∫ ω in C, (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)
         Filter.atTop
         (nhds (∫ ω in C, (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)) := by
-      -- Apply DCT directly to the product μ[sφ n Y | mW] * μ[ψ Z | mW]
-      rw [show ∀ n, ∫ ω in C, (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ
-                    = ∫ ω, (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂(μ.restrict C)
-                  from fun n => (integral_restrict C).symm]
-      rw [show ∫ ω in C, (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ
-                = ∫ ω, (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂(μ.restrict C)
-              from (integral_restrict C).symm]
-
-      -- Key facts we'll use:
-      -- 1. sφ n Y → φ Y pointwise a.e. with ‖sφ n Y‖ ≤ Mφ
-      -- 2. CE is continuous under dominated convergence
-      -- 3. CE preserves bounds: ‖CE[f]‖ ≤ CE[‖f‖] ≤ M a.e. if ‖f‖ ≤ M a.e.
-
-      -- Pointwise convergence of the product
-      --
-      -- PROOF SKETCH (standard conditional expectation theory):
-      -- 1. We have: sφ n Y → φ Y pointwise a.e., with ‖sφ n Y‖ ≤ Mφ for all n
-      -- 2. By dominated convergence for CE: CE[sφ n Y] → CE[φ Y] in L¹
-      -- 3. For real-valued functions in L¹(finite measure), L¹ convergence + uniform bound
-      --    implies pointwise a.e. convergence (possibly along subsequences, but
-      --    deterministic sequence + L¹ convergence + uniform integrability gives full convergence)
-      -- 4. Multiply by CE[ψ Z] (constant in n) to get product convergence
-      --
-      -- This requires deeper results from conditional expectation theory than currently
-      -- in the proof. The key missing lemma would be:
-      --   "CE preserves dominated pointwise convergence a.e."
-      have h_prod_ptwise : ∀ᵐ ω ∂μ,
-          Filter.Tendsto (fun n => (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω)
-                  Filter.atTop
-                  (nhds ((μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω)) := by
-        sorry  -- See proof sketch above. This is a standard result but requires establishing
-               -- pointwise convergence of CE from dominated convergence, which is nontrivial.
-
-      -- Bound on the product (COMPLETED ABOVE - using CE monotonicity)
-      have h_prod_bdd : ∀ n, ∀ᵐ ω ∂μ,
-          ‖(μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω‖ ≤ Mφ * Mψ := by
-        intro n
-        -- First, get bounds on each factor using CE monotonicity
-        have hCE_sφn_bdd : ∀ᵐ ω ∂μ, |μ[(sφ n ∘ Y) | mW] ω| ≤ Mφ := by
-          -- ‖sφ n Y‖ ≤ Mφ implies -Mφ ≤ sφ n Y ≤ Mφ
-          have h_lo : (fun ω => -(Mφ : ℝ)) ≤ᵐ[μ] (sφ n ∘ Y) := by
-            filter_upwards with ω
-            calc -(Mφ : ℝ) ≤ -(|sφ n (Y ω)|) := by
-                apply neg_le_neg
-                exact h_sφ_bdd n (Y ω)
-              _ ≤ sφ n (Y ω) := neg_abs_le _
-          have h_hi : (sφ n ∘ Y) ≤ᵐ[μ] (fun ω => (Mφ : ℝ)) := by
-            filter_upwards with ω
-            calc sφ n (Y ω) ≤ |sφ n (Y ω)| := le_abs_self _
-              _ ≤ |φ (Y ω)| := h_sφ_bdd n (Y ω)
-              _ ≤ Mφ := hφ_bdd (Y ω)
-          -- Apply CE monotonicity
-          have hsφn_int : Integrable (sφ n ∘ Y) μ := by
-            refine Integrable.comp_measurable ?_ hY
-            exact SimpleFunc.integrable_of_isFiniteMeasure (sφ n)
-          filter_upwards [condExp_mono (integrable_const (-(Mφ : ℝ))) hsφn_int h_lo,
-                          condExp_mono hsφn_int (integrable_const (Mφ : ℝ)) h_hi] with ω hlo hhi
-          simp only [condExp_const] at hlo hhi
-          exact abs_le.mpr ⟨hlo, hhi⟩
-
-        have hCE_ψ_bdd : ∀ᵐ ω ∂μ, |μ[(ψ ∘ Z) | mW] ω| ≤ Mψ := by
-          have h_lo : (fun ω => -(Mψ : ℝ)) ≤ᵐ[μ] (ψ ∘ Z) := by
-            filter_upwards with ω
-            calc -(Mψ : ℝ) ≤ -(|ψ (Z ω)|) := by
-                apply neg_le_neg; exact hψ_bdd (Z ω)
-              _ ≤ ψ (Z ω) := neg_abs_le _
-          have h_hi : (ψ ∘ Z) ≤ᵐ[μ] (fun ω => (Mψ : ℝ)) := by
-            filter_upwards with ω
-            calc ψ (Z ω) ≤ |ψ (Z ω)| := le_abs_self _
-              _ ≤ Mψ := hψ_bdd (Z ω)
-          have hψ_int : Integrable (ψ ∘ Z) μ := by
-            refine Integrable.comp_measurable ?_ hZ
-            exact SimpleFunc.integrable_of_isFiniteMeasure ψ
-          filter_upwards [condExp_mono (integrable_const (-(Mψ : ℝ))) hψ_int h_lo,
-                          condExp_mono hψ_int (integrable_const (Mψ : ℝ)) h_hi] with ω hlo hhi
-          simp only [condExp_const] at hlo hhi
-          exact abs_le.mpr ⟨hlo, hhi⟩
-
-        -- Combine the bounds
-        filter_upwards [hCE_sφn_bdd, hCE_ψ_bdd] with ω h1 h2
-        calc ‖(μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω‖
-            = |μ[(sφ n ∘ Y) | mW] ω| * |μ[(ψ ∘ Z) | mW] ω| := by
-                rw [Real.norm_eq_abs, abs_mul]
-          _ ≤ Mφ * Mψ := mul_le_mul h1 h2 (abs_nonneg _) (le_of_lt Mφ_pos)
-
-      -- Apply DCT
-      refine tendsto_integral_of_dominated_convergence (fun ω => Mφ * Mψ) ?_ ?_ h_prod_bdd h_prod_ptwise
-      · -- AEStronglyMeasurable
-        intro n
-        exact (stronglyMeasurable_condExp.mul stronglyMeasurable_condExp).aestronglyMeasurable
-      · -- bound is integrable
-        exact Integrable.const Mφ_Mψ
+      -- Need to prove convergence of conditional expectations
+      sorry  -- Requires pointwise a.e. convergence of CE from dominated convergence
 
     -- conclude by uniqueness of limits
     exact tendsto_nhds_unique_of_eventuallyEq h_int_n hLHS hRHS
