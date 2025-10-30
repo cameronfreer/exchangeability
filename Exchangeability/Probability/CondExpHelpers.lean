@@ -1239,6 +1239,21 @@ theorem condExp_project_of_condIndepFun
       -- 2. Norm factorization: ‖a * b‖ = ‖a‖ * ‖b‖
       -- 3. Jensen for CE: ‖μ[f|W]‖ ≤ μ[‖f‖|W]
       -- 4. Monotonicity: μ[f|W] ≤ μ[g|W] when f ≤ g
+
+      -- Complex bound requiring Jensen's inequality for conditional expectation
+      --
+      -- Proof strategy:
+      -- 1. Show indicator CE ≤ 1 using condExp_mono and condExp_const
+      -- 2. Apply triangle inequality for CE: |E[f|m]| ≤ E[|f||m] via condExp_mono (twice)
+      -- 3. Use condExp_mono to show E[|f_n||m] ≤ E[2‖f‖|m]
+      -- 4. Combine with norm_mul_le
+      --
+      -- Technical challenges:
+      -- - condExp_const requires careful type handling for constant functions
+      -- - condExp_neg needs proper function application
+      -- - Filter.Eventually.trans might not exist in this context
+      --
+      -- This is left as sorry due to technical lemma application issues
       sorry
     /-
     OLD PROOF (has typeclass errors):
