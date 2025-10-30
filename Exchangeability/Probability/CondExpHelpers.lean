@@ -1342,15 +1342,57 @@ theorem condExp_project_of_condIndepFun
 
     -- Apply dominated convergence to pass factorization to the limit
     --
-    -- Strategy: Apply linearity/continuity of product to pass the factorization to the limit.
-    -- μ[f_n∘Y | W] * μ[indicator|W] → μ[f∘Y | W] * μ[indicator|W] by continuity of product
-    -- μ[(f_n∘Y) * indicator | W] → μ[(f∘Y) * indicator | W] by DCT
-    -- Since they're equal at each step, the limits are equal.
+    -- Strategy: Since the factorization holds at each step of the subsequence,
+    -- and both sides converge, their limits must be equal a.e.
 
-    -- The RHS μ[f∘Y|W] * μ[indicator|W] is the pointwise limit of the products (from h_gs_subseq_ae)
-    -- The LHS μ[(f∘Y) * indicator|W] is the L¹-then-a.e. limit by DCT
-    -- They're equal a.e. at each step (h_factorization_subseq), so limits are equal a.e.
-    sorry  -- ~20-30 lines: formal limit argument using filter_upwards + tendsto machinery
+    -- The key insight: If f_n → f a.e. and g_n → g a.e., and f_n = g_n a.e. for all n,
+    -- then f = g a.e.
+
+    -- We'll use filter_upwards to combine the convergences and factorizations
+    -- Note: Can't use Filter.eventually_all for infinite ℕ, need different approach
+
+    -- The key observation: At each ω where both sequences converge,
+    -- and the factorization holds for all n, the limits must be equal.
+
+    -- MATHLIB API NEEDED for completing this proof:
+
+    -- 1. **Continuity of conditional expectation under dominated convergence**
+    --    If f_n → f pointwise a.e. and |f_n| ≤ F with F integrable,
+    --    then μ[f_n|m] → μ[f|m] in L¹ (and hence some subsequence converges a.e.)
+    --
+    --    Likely lemma: tendsto_condExp_of_dominated_convergence or similar
+    --    Type: (hf_n : ∀ n, Integrable (f_n n) μ) →
+    --          (hF : Integrable F μ) →
+    --          (h_bound : ∀ n, |f_n n| ≤ᵐ[μ] F) →
+    --          (h_conv : f_n → f a.e.) →
+    --          Tendsto (fun n => μ[f_n n|m]) atTop (nhds μ[f|m]) (in L¹ sense)
+
+    -- 2. **Extract a.e. convergence from L¹ convergence**
+    --    If g_n → g in L¹, then some subsequence converges a.e.
+    --
+    --    Likely lemma: exists_seq_tendsto_ae_of_tendsto_Lp or similar
+    --    Type: Tendsto g_n atTop (nhds g) (in Lp) →
+    --          ∃ ns, StrictMono ns ∧ g_n ∘ ns → g a.e.
+
+    -- 3. **Apply to our setting**
+    --    - We have h_fs_subseq: (f_n (ns n) ∘ Y) * indicator → (f ∘ Y) * indicator a.e.
+    --    - Apply (1) to get: μ[(f_n (ns n) ∘ Y) * indicator|mW] → μ[(f∘Y) * indicator|mW] in L¹
+    --    - Apply (2) to extract subsequence: μ[(f_n (ns ns' n)) * indicator|mW] → μ[(f∘Y) * indicator|mW] a.e.
+    --
+    --    - We also have h_gs_subseq_ae: μ[f_n (ns n) ∘ Y|mW] * μ[indicator|mW] → μ[f∘Y|mW] * μ[indicator|mW] a.e.
+    --
+    --    - For each n, h_factorization_subseq n gives:
+    --      μ[(f_n (ns n) ∘ Y) * indicator|mW] = μ[f_n (ns n) ∘ Y|mW] * μ[indicator|mW] a.e.
+    --
+    --    - By uniqueness of a.e. limits along any subsequence, the two limits must be equal a.e.
+
+    -- 4. **Uniqueness of a.e. pointwise limits**
+    --    If f_n → f a.e. and f_n → g a.e., then f = g a.e.
+    --
+    --    This is: tendsto_nhds_unique at ae, or similar
+    --    Can be proven directly: filter_upwards [h1, h2] with x, apply tendsto_nhds_unique
+
+    sorry
 
     /-
     **Status: Stage 3 nearly complete!**
@@ -1469,6 +1511,42 @@ theorem condExp_project_of_condIndepFun
     have hZB_meas : MeasurableSet[mΩ] (Z ⁻¹' B) := hZ hB
     have hg_meas : StronglyMeasurable[mW] g := stronglyMeasurable_condExp
 
+    -- Strategy: Show both sides equal ∫ (g·1_S) · E[1_{Z⁻¹(B)}|W] via tower property
+
+    -- MATHLIB API NEEDED:
+    -- 1. Convert set integral to indicator integral:
+    --    setIntegral_eq_integral_indicator or similar
+    --    ∫ x in S, f x ∂μ = ∫ x, S.indicator f x ∂μ
+
+    -- 2. Split intersection indicator:
+    --    Set.indicator_inter_mul or Set.inter_indicator_mul
+    --    (S ∩ T).indicator f = S.indicator 1 * T.indicator f (or similar)
+
+    -- 3. Tower property:
+    --    integral_condExp: ∫ f ∂μ = ∫ μ[f|m] ∂μ (when f integrable)
+
+    -- 4. Pull out measurable factors:
+    --    condExp_mul_of_stronglyMeasurable or condExp_stronglyMeasurable_mul
+    --    If g is m-measurable, then μ[g * f|m] = g * μ[f|m] a.e.
+
+    -- 5. Apply h_factor to substitute factorization
+
+    -- Attempted implementation:
+    -- calc ∫ x in S ∩ Z ⁻¹' B, g x ∂μ
+    --     = ∫ x, (S ∩ Z ⁻¹' B).indicator (fun x => g x) x ∂μ := by
+    --       -- Need: setIntegral conversion lemma
+    --       sorry
+    --   _ = ∫ x, g x * (S.indicator 1 x * (Z ⁻¹' B).indicator 1 x) ∂μ := by
+    --       -- Need: indicator factorization lemma
+    --       sorry
+    --   _ = ∫ x, (g x * S.indicator 1 x) * (Z ⁻¹' B).indicator 1 x ∂μ := by
+    --       congr 1; ext x; ring
+    --   _ = ∫ x, (g x * S.indicator 1 x) * μ[(Z ⁻¹' B).indicator 1|mW] x ∂μ := by
+    --       -- Need: integral_condExp + pull-out lemma
+    --       sorry
+
+    -- The implementation requires lemmas that may not be directly available
+    -- or may need careful type handling. Documenting the strategy:
     sorry
     /-
     **Detailed Implementation Guide (~30-50 lines):**
