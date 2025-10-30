@@ -818,13 +818,39 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
           ∫ ω in C, (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)
         atTop
         (𝓝 (∫ ω in C, (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)) := by
-      sorry  -- tendsto_condExpL1_of_dominated_convergence + multiply by bounded factor
+      -- Apply DCT again for the product with CE
+      -- CE[sφ n Y] → CE[φ Y] pointwise a.e. (by CE continuity under pointwise convergence)
+      -- CE[sφ n Y] * CE[ψ Z] → CE[φ Y] * CE[ψ Z] pointwise a.e.
+      -- Dominated by Mφ * Mψ (CE preserves bounds)
+      sorry  -- Full proof: use L¹-continuity of CE + bounded multiplication + tendsto_set_integral_mul_of_L1
 
     -- conclude by uniqueness of limits
-    sorry  -- tendsto_nhds_unique_of_eventuallyEq using h_int_n
+    exact tendsto_nhds_unique_of_eventuallyEq h_int_n hLHS hRHS
 
   /-! ### Step 2: uniqueness of versions from set-integral equality on σ(W)-sets. -/
-  sorry  -- ae_eq_of_forall_set_integral_eq_of_sigmaFinite
+  -- Now we have: ∀ C ∈ σ(W), ∫_C (φY * ψZ) = ∫_C (μ[φY|W] * μ[ψZ|W])
+  -- By uniqueness, this means (φY * ψZ) =ᵐ (μ[φY|W] * μ[ψZ|W])
+  refine ae_eq_of_forall_setIntegral_eq_of_sigmaFinite ?_ ?_ hC_sets
+  · -- Integrability on finite-measure sets
+    intro s hs _
+    have hφY_int : Integrable (φ ∘ Y) μ := by
+      refine Integrable.comp_measurable ?_ hY
+      exact ⟨hφ_meas.aestronglyMeasurable, by
+        have : (∫⁻ a, ‖φ a‖₊ ∂Measure.map Y μ) ≤ ∫⁻ a, Mφ ∂Measure.map Y μ := by
+          refine lintegral_mono ?_
+          intro a
+          rw [ENNReal.coe_le_coe]
+          simp only [Real.norm_eq_abs, Real.nnnorm_of_nonneg (abs_nonneg _)]
+          exact Real.toNNReal_le_toNNReal (hφ_bdd a)
+        simp only [lintegral_const, Measure.restrict_apply MeasurableSet.univ, Set.univ_inter] at this
+        exact (lt_of_le_of_lt this (ENNReal.mul_lt_top ENNReal.coe_ne_top (measure_ne_top _ _))).ne⟩
+    have hψZ_int : Integrable (ψ ∘ Z) μ := by
+      refine Integrable.comp_measurable ?_ hZ
+      exact SimpleFunc.integrable_of_isFiniteMeasure ψ
+    exact (hφY_int.mul hψZ_int).integrableOn
+  · -- Integrability of CEs
+    intro s hs _
+    exact (integrable_condExp.mul integrable_condExp).integrableOn
 
 /-- **Conditional independence extends to bounded measurable functions (monotone class).**
 
