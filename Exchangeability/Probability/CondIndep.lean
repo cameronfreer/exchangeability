@@ -521,13 +521,17 @@ lemma condIndep_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
             · exact (φ1.measurable.comp hY).aestronglyMeasurable
             · use (φ1.range.sup (fun x => ‖x‖₊)).toReal
               intro x
-              sorry  -- Simple function value bounded by supremum of range
+              simp only [Function.comp_apply]
+              rw [← coe_nnnorm, NNReal.coe_le_coe]
+              exact Finset.le_sup (SimpleFunc.mem_range_self φ1 (Y x))
           have h2_int : Integrable ((φ2 ∘ Y) * (ψ ∘ Z)) μ := by
             apply Integrable.bdd_mul hψ_int
             · exact (φ2.measurable.comp hY).aestronglyMeasurable
             · use (φ2.range.sup (fun x => ‖x‖₊)).toReal
               intro x
-              sorry  -- Simple function value bounded by supremum of range
+              simp only [Function.comp_apply]
+              rw [← coe_nnnorm, NNReal.coe_le_coe]
+              exact Finset.le_sup (SimpleFunc.mem_range_self φ2 (Y x))
           exact condExp_add h1_int h2_int _
       _ =ᵐ[μ] (μ[φ1 ∘ Y | MeasurableSpace.comap W (by infer_instance)] * μ[ψ ∘ Z | MeasurableSpace.comap W (by infer_instance)])
               + (μ[φ2 ∘ Y | MeasurableSpace.comap W (by infer_instance)] * μ[ψ ∘ Z | MeasurableSpace.comap W (by infer_instance)]) :=
