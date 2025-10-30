@@ -2370,15 +2370,15 @@ lemma tendsto_set_integral_mul_of_L1 {α : Type*} [MeasurableSpace α] {μ : Mea
           (nhds (∫ ω in s, f ω * H ω ∂μ)) := by
   -- Strategy: Show fn * H → f * H in L¹, then apply tendsto_setIntegral_of_L1
   apply MeasureTheory.tendsto_setIntegral_of_L1 (fun ω => f ω * H ω) _ _ _ s
-  · -- Sub-sorry (a): Show f * H is integrable
+  · -- Goal (a): Show f * H is integrable
     -- Apply bdd_mul': bounded function H times integrable function f
     have := hf_int.bdd_mul' hH_int.aestronglyMeasurable hH_bdd
     simpa only [mul_comm] using this
-  · -- Sub-sorry (b): Show fn * H is eventually integrable
+  · -- Goal (b): Show fn * H is eventually integrable
     filter_upwards with n
     have := (hfn_int n).bdd_mul' hH_int.aestronglyMeasurable hH_bdd
     simpa only [mul_comm] using this
-  · -- Sub-sorry (c): Show ∫⁻ ‖(fn * H) - (f * H)‖₊ → 0
+  · -- Goal (c): Show ∫⁻ ‖(fn * H) - (f * H)‖₊ → 0
     -- Bound ∫⁻ ‖(fn - f) * H‖₊ by C * ∫⁻ ‖fn - f‖₊
     have h_bound : ∀ n, ∫⁻ ω, ‖(fn n) ω * H ω - f ω * H ω‖₊ ∂μ
                       ≤ ENNReal.ofReal C * ∫⁻ ω, ‖(fn n) ω - f ω‖₊ ∂μ := by
