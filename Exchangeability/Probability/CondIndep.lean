@@ -571,38 +571,48 @@ lemma approx_bounded_measurable (μ : Measure α) [IsProbabilityMeasure μ]
   -- Use SimpleFunc.eapprox or similar from mathlib
   sorry
 
-/-- **One-sided simple function factorization (for use in approximation).** -/
-lemma condIndep_simpleFunc_left (μ : Measure Ω) [IsProbabilityMeasure μ]
-    (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
-    (hCI : CondIndep μ Y Z W)
+/-- **Conditional independence for simple functions (left argument).**
+Refactored to avoid instance pollution: works with σ(W) directly. -/
+lemma condIndep_simpleFunc_left
+    {Ω α β γ : Type*}
+    {m₀ : MeasurableSpace Ω}  -- Explicit ambient space
+    [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
+    (μ : Measure Ω) [IsProbabilityMeasure μ]  -- μ explicit, instances after
+    (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)  -- Then plain parameters
+    (hCI : @CondIndep Ω α β γ m₀ _ _ _ μ Y Z W)
     (φ : SimpleFunc α ℝ) {ψ : β → ℝ}
-    (hY : Measurable Y) (hZ : Measurable Z) (hψ_meas : Measurable ψ) :
-    μ[ (φ ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W (by infer_instance) ]
-      =ᵐ[μ]
-    μ[ φ ∘ Y | MeasurableSpace.comap W (by infer_instance) ]
-      * μ[ ψ ∘ Z | MeasurableSpace.comap W (by infer_instance) ] := by
+    (hY : @Measurable Ω α m₀ _ Y) (hZ : @Measurable Ω β m₀ _ Z)
+    (hψ_meas : Measurable ψ) :
+    μ[ (φ ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W inferInstance ] =ᵐ[μ]
+    μ[ φ ∘ Y | MeasurableSpace.comap W inferInstance ] *
+    μ[ ψ ∘ Z | MeasurableSpace.comap W inferInstance ] := by
   -- Approximate ψ by simple functions, apply condIndep_simpleFunc at each step, pass to limit
   -- This requires similar approximation machinery as condIndep_bddMeas_extend_left
   -- For now, we'll leave this as a sorry and implement it after the approximation helpers are done
   sorry
 
-/-- **Extend factorization from simple φ to bounded measurable φ, keeping ψ fixed.** -/
-lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
-    (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
-    (hCI : CondIndep μ Y Z W)
-    (hY : Measurable Y) (hZ : Measurable Z) (hW : Measurable W)
+/-- **Extend factorization from simple φ to bounded measurable φ, keeping ψ fixed.**
+Refactored to avoid instance pollution: works with σ(W) directly. -/
+lemma condIndep_bddMeas_extend_left
+    {Ω α β γ : Type*}
+    {m₀ : MeasurableSpace Ω}  -- Explicit ambient space
+    [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
+    (μ : Measure Ω) [IsProbabilityMeasure μ]  -- μ explicit, instances after
+    (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)  -- Then plain parameters
+    (hCI : @CondIndep Ω α β γ m₀ _ _ _ μ Y Z W)
+    (hY : @Measurable Ω α m₀ _ Y) (hZ : @Measurable Ω β m₀ _ Z) (hW : @Measurable Ω γ m₀ _ W)
     {φ : α → ℝ} {ψ : β → ℝ}
     (hφ_meas : Measurable φ) (hψ_meas : Measurable ψ)
     (Mφ Mψ : ℝ)
     (hφ_bdd : ∀ᵐ ω ∂μ, |φ (Y ω)| ≤ Mφ)
     (hψ_bdd : ∀ᵐ ω ∂μ, |ψ (Z ω)| ≤ Mψ) :
-    μ[ (φ ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W (by infer_instance) ]
-      =ᵐ[μ]
-    μ[ (φ ∘ Y) | MeasurableSpace.comap W (by infer_instance) ]
-      * μ[ (ψ ∘ Z) | MeasurableSpace.comap W (by infer_instance) ] := by
+    μ[ (φ ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W inferInstance ] =ᵐ[μ]
+    μ[ (φ ∘ Y) | MeasurableSpace.comap W inferInstance ] *
+    μ[ (ψ ∘ Z) | MeasurableSpace.comap W inferInstance ] := by
   classical
-  set mW := MeasurableSpace.comap W (by infer_instance : MeasurableSpace γ) with hmW
-  have hmW_le : mW ≤ _  := hW.comap_le
+  -- Define mW := σ(W) for cleaner notation
+  set mW := MeasurableSpace.comap W (inferInstance : MeasurableSpace γ) with hmW_def
+  have hmW_le : mW ≤ m₀ := hW.comap_le
   -- Step 0: build real-valued simple-function approximation of φ via ℝ≥0∞ eapprox on pos/neg parts.
   -- positive/negative parts as ℝ
   set φp : α → ℝ := fun a => max (φ a) 0 with hφp
@@ -748,6 +758,8 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
           =ᵐ[μ]
         μ[ ((sφ n) ∘ Y) | mW ] * μ[ (ψ ∘ Z) | mW ] := by
       intro n
+      -- Use the refactored lemma (now works directly with σ(W))
+      -- mW is definitionally equal to MeasurableSpace.comap W inferInstance
       exact condIndep_simpleFunc_left μ Y Z W hCI (sφ n) hY hZ hψ_meas
 
     -- Integrate both sides over C
@@ -767,7 +779,7 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
         exact abs_le.mp hω
       have hprod_int : Integrable (((sφ n) ∘ Y) * (ψ ∘ Z)) μ := by
         -- sφ n is bounded (simple function), ψ ∘ Z is integrable
-        refine Integrable.bdd_mul' hψ_int ((sφ n).measurable.comp hY).aestronglyMeasurable ?_
+        refine Integrable.bdd_mul' (c := Mφ) hψ_int ((sφ n).measurable.comp hY).aestronglyMeasurable ?_
         -- Need bound on sφ n ∘ Y: use that |sφ n| ≤ |φ| from h_sφ_bdd
         filter_upwards [hφ_bdd] with ω hω
         calc ‖((sφ n) ∘ Y) ω‖
@@ -800,32 +812,19 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
       sorry  -- Requires pointwise a.e. convergence of CE from dominated convergence
 
     -- conclude by uniqueness of limits
-    exact tendsto_nhds_unique_of_eventuallyEq h_int_n hLHS hRHS
+    -- Since h_int_n shows the sequences are equal for all n, and both converge, their limits are equal
+    have h_eq : (fun n => ∫ ω in C, ((sφ n ∘ Y) * (ψ ∘ Z)) ω ∂μ) =
+                (fun n => ∫ ω in C, (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ) := by
+      ext n; exact h_int_n n
+    rw [← h_eq] at hRHS
+    exact tendsto_nhds_unique hLHS hRHS
 
   -- Step 2: uniqueness of versions from set-integral equality on σ(W)-sets.
   -- Now we have: ∀ C ∈ σ(W), ∫_C (φY * ψZ) = ∫_C (μ[φY|W] * μ[ψZ|W])
   -- By uniqueness, this means (φY * ψZ) =ᵐ (μ[φY|W] * μ[ψZ|W])
-  refine ae_eq_of_forall_setIntegral_eq_of_sigmaFinite ?_ ?_ hC_sets
-  · -- Integrability on finite-measure sets
-    intro s hs _
-    have hφY_int : Integrable (φ ∘ Y) μ := by
-      refine Integrable.comp_measurable ?_ hY
-      exact ⟨hφ_meas.aestronglyMeasurable, by
-        have : (∫⁻ a, ‖φ a‖₊ ∂Measure.map Y μ) ≤ ∫⁻ a, Mφ ∂Measure.map Y μ := by
-          refine lintegral_mono ?_
-          intro a
-          rw [ENNReal.coe_le_coe]
-          simp only [Real.norm_eq_abs, Real.nnnorm_of_nonneg (abs_nonneg _)]
-          exact Real.toNNReal_le_toNNReal (hφ_bdd a)
-        simp only [lintegral_const, Measure.restrict_apply MeasurableSet.univ, Set.univ_inter] at this
-        exact (lt_of_le_of_lt this (ENNReal.mul_lt_top ENNReal.coe_ne_top (measure_ne_top _ _))).ne⟩
-    have hψZ_int : Integrable (ψ ∘ Z) μ := by
-      refine Integrable.comp_measurable ?_ hZ
-      exact SimpleFunc.integrable_of_isFiniteMeasure ψ
-    exact (hφY_int.mul hψZ_int).integrableOn
-  · -- Integrability of CEs
-    intro s hs _
-    exact (integrable_condExp.mul integrable_condExp).integrableOn
+  sorry  -- ae_eq_of_forall_setIntegral_eq_of_sigmaFinite expects equality on ALL
+         -- measurable sets (ambient σ-algebra), but hC_sets only gives equality on
+         -- mW-measurable sets. Need a different uniqueness lemma or to extend hC_sets.
 
 /-- **Conditional independence extends to bounded measurable functions (monotone class).**
 
@@ -1018,10 +1017,16 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
       -- Sub-σ-algebra ordering
       have hmW_le : mW ≤ m0 := hW_m0.comap_le
 
-      -- Ambient versions (for use with lemmas expecting ambient instance)
-      -- Since m0 is definitionally equal to ambient instance, these are immediate
-      have hBpre : MeasurableSet (Z ⁻¹' B) := hBpre_m0
-      have hCpre : MeasurableSet (W ⁻¹' C) := hCpre_m0
+      -- mZW-measurable versions of Z and W (by construction of comap)
+      have hZ_mZW : @Measurable Ω β mZW _ Z := measurable_fst.comp (Measurable.of_comap_le le_rfl)
+      have hW_mZW : @Measurable Ω γ mZW _ W := measurable_snd.comp (Measurable.of_comap_le le_rfl)
+
+      -- mW-measurable version of W (by construction of mW := comap W)
+      have hW_mW : @Measurable Ω γ mW _ W := Measurable.of_comap_le le_rfl
+
+      have hBpre : @MeasurableSet Ω mZW (Z ⁻¹' B) := hB.preimage hZ_mZW
+      have hCpre_mZW : @MeasurableSet Ω mZW (W ⁻¹' C) := hC.preimage hW_mZW
+      have hCpre : @MeasurableSet Ω mW (W ⁻¹' C) := hC.preimage hW_mW
 
       -- Convenience name for indicator on Z⁻¹B (f is already defined in outer scope)
       set gB : Ω → ℝ := (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) with hgB_def
@@ -1036,9 +1041,9 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
       have hInt_ce : Integrable (μ[f | mW]) μ :=
         integrable_condExp
 
-      -- AE version (for use later)
-      have haesm_ce : AEStronglyMeasurable (μ[f | mW]) μ :=
-        hsm_ce_mW.mono hmW_le |>.aestronglyMeasurable
+      -- AE version (for use later, keep mW-measurable)
+      have haesm_ce : @AEStronglyMeasurable Ω ℝ _ mW _ (μ[f | mW]) μ :=
+        hsm_ce_mW.aestronglyMeasurable
 
       -- Canonical product ↔ indicator identity (use often)
       have h_mul_eq_indicator :
@@ -1135,8 +1140,7 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
                 -- First: LHS = ∫_{W⁻¹C} (Z⁻¹B).indicator(μ[f|mW])
                 have h1 : ∫ ω in W ⁻¹' C ∩ Z ⁻¹' B, μ[f|mW] ω ∂μ
                         = ∫ ω in W ⁻¹' C, (Z ⁻¹' B).indicator (μ[f|mW]) ω ∂μ := by
-                  rw [setIntegral_indicator hBpre]
-                  rfl
+                  rw [setIntegral_indicator hBpre_m0]
                 -- Second: RHS uses h_mul_eq_indicator
                 have h2 : ∫ ω in W ⁻¹' C, (Z ⁻¹' B).indicator (μ[f|mW]) ω ∂μ
                         = ∫ ω in W ⁻¹' C, (μ[f|mW] ω * gB ω) ∂μ := by
@@ -1185,9 +1189,9 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
                 -- Second: rewrite integral
                 calc ∫ ω in W ⁻¹' C, (f ω * gB ω) ∂μ
                     = ∫ ω in W ⁻¹' C, (Z ⁻¹' B).indicator f ω ∂μ := by
-                      congr 1; exact h_fg_indicator
+                      congr 1
                   _ = ∫ ω in W ⁻¹' C ∩ Z ⁻¹' B, f ω ∂μ := by
-                      exact integral_indicator (hCpre.inter hBpre)
+                      rw [setIntegral_indicator hBpre_m0]
                   _ = ∫ ω in Z ⁻¹' B ∩ W ⁻¹' C, f ω ∂μ := by
                       rw [Set.inter_comm]
 
