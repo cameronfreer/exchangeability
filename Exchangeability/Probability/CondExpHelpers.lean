@@ -1961,21 +1961,28 @@ lemma tendsto_set_integral_of_L1 {α : Type*} [MeasurableSpace α] {μ : Measure
 
 If fn → f in L¹ and H is bounded a.e., then ∫_s (fn * H) → ∫_s (f * H). -/
 lemma tendsto_set_integral_mul_of_L1 {α : Type*} [MeasurableSpace α] {μ : Measure α}
-    {s : Set α} (hs : MeasurableSet s)
+    {s : Set α}
     {fn : ℕ → α → ℝ} {f H : α → ℝ} (C : ℝ)
+    (hf_int : Integrable f μ)
+    (hfn_int : ∀ n, Integrable (fn n) μ)
+    (hH_int : Integrable H μ)
     (hL1 : Filter.Tendsto (fun n => ∫⁻ ω, ‖(fn n) ω - f ω‖₊ ∂μ) Filter.atTop (nhds 0))
     (hH_bdd : ∀ᵐ ω ∂μ, ‖H ω‖ ≤ C) :
   Filter.Tendsto (fun n => ∫ ω in s, (fn n) ω * H ω ∂μ)
           Filter.atTop
           (nhds (∫ ω in s, f ω * H ω ∂μ)) := by
-  sorry
-  -- Proof sketch:
-  -- 1. ∫ fn * H in s - ∫ f * H in s = ∫ (fn - f) * H in s
-  -- 2. |∫ (fn - f) * H in s| ≤ ∫ |(fn - f) * H| in s = ∫ |fn - f| * |H| in s
-  -- 3. ∫ |fn - f| * |H| in s ≤ C * ∫ |fn - f| in s    (since |H| ≤ C a.e.)
-  -- 4. C * ∫ |fn - f| in s ≤ C * ∫ |fn - f|          (monotonicity)
-  -- 5. C * ∫ |fn - f| → C * 0 = 0                    (by hypothesis hL1)
-  -- Therefore by squeeze theorem, the LHS converges to 0
+  -- Strategy: Show fn * H → f * H in L¹, then apply tendsto_setIntegral_of_L1
+  apply MeasureTheory.tendsto_setIntegral_of_L1 (fun ω => f ω * H ω) _ _ _ s
+  · -- Show f * H is integrable
+    sorry  -- Use Integrable.bdd_mul': f integrable, H bounded → f * H integrable
+  · -- Show fn * H is eventually integrable
+    filter_upwards with n
+    sorry  -- Use Integrable.bdd_mul': fn n integrable, H bounded → fn n * H integrable
+  · -- Show ∫⁻ ‖(fn * H) - (f * H)‖₊ → 0
+    -- Key insight: ‖(fn - f) * H‖ = |fn - f| * |H| ≤ |fn - f| * C a.e.
+    -- So ∫⁻ ‖(fn - f) * H‖₊ ≤ C * ∫⁻ ‖fn - f‖₊ → 0
+    sorry
+    -- Requires: ENNReal manipulation, ae_of_all for bound, squeeze theorem
 
 end MeasureTheory
 
