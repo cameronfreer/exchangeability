@@ -889,16 +889,24 @@ lemma condIndep_bddMeas_extend_left
 
       -- Hypothesis 4: Pointwise convergence a.e.
       · refine ae_restrict_of_ae ?_
-        -- Use Tendsto.mul: product converges if both factors converge
-        -- μ[(ψ ∘ Z)|mW] is constant in n (trivial convergence)
-        -- For μ[(sφ n ∘ Y)|mW], use L¹→measure→subsequence→a.e. pathway
-        --
-        -- Strategy: Use the fact that pointwise convergence sφ n → φ gives us
-        -- dominated convergence for the conditional expectations
-        sorry  -- TODO: Extract pointwise a.e. from L¹ via TendstoInMeasure.exists_seq_tendsto_ae
-               -- This requires showing L¹ convergence implies convergence in measure (true on finite measure spaces)
-               -- Then extracting a.e. convergent subsequence
-               -- The final step needs careful handling since we want full sequence, not just subsequence
+        -- Use Tendsto.mul: μ[(ψ ∘ Z)|mW] is fixed, so we need μ[(sφ n ∘ Y)|mW] → μ[(φ ∘ Y)|mW] a.e.
+        -- Get L¹ convergence from tendsto_condExpL1_of_dominated_convergence
+        have h_L1_conv : Filter.Tendsto (fun n => condExpL1 hmW_le μ ((sφ n) ∘ Y)) Filter.atTop
+                                  (nhds (condExpL1 hmW_le μ (φ ∘ Y))) := by
+          apply tendsto_condExpL1_of_dominated_convergence hmW_le (fun ω => Mφ)
+          · intro n
+            exact ((sφ n).measurable.comp hY).aestronglyMeasurable
+          · -- Bound function Mφ is integrable on probability space
+            exact integrable_const Mφ
+          · intro n
+            filter_upwards [hφ_bdd] with ω hω
+            calc ‖((sφ n) ∘ Y) ω‖
+                = |(sφ n) (Y ω)| := by rw [Real.norm_eq_abs]; rfl
+              _ ≤ |φ (Y ω)| := h_sφ_bdd n (Y ω)
+              _ ≤ Mφ := hω
+          · filter_upwards [] with ω
+            exact h_sφ_tendsto (Y ω)
+        sorry  -- TODO: Convert L¹ to a.e. via eLpNorm, then TendstoInMeasure, then extract subsequence
 
     -- Conclude by uniqueness of limits
     -- Since h_int_n shows the sequences are equal for all n, and both converge, their limits are equal
