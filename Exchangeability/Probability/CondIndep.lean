@@ -832,15 +832,26 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
       -- 3. CE preserves bounds: ‖CE[f]‖ ≤ CE[‖f‖] ≤ M a.e. if ‖f‖ ≤ M a.e.
 
       -- Pointwise convergence of the product
+      --
+      -- PROOF SKETCH (standard conditional expectation theory):
+      -- 1. We have: sφ n Y → φ Y pointwise a.e., with ‖sφ n Y‖ ≤ Mφ for all n
+      -- 2. By dominated convergence for CE: CE[sφ n Y] → CE[φ Y] in L¹
+      -- 3. For real-valued functions in L¹(finite measure), L¹ convergence + uniform bound
+      --    implies pointwise a.e. convergence (possibly along subsequences, but
+      --    deterministic sequence + L¹ convergence + uniform integrability gives full convergence)
+      -- 4. Multiply by CE[ψ Z] (constant in n) to get product convergence
+      --
+      -- This requires deeper results from conditional expectation theory than currently
+      -- in the proof. The key missing lemma would be:
+      --   "CE preserves dominated pointwise convergence a.e."
       have h_prod_ptwise : ∀ᵐ ω ∂μ,
           Tendsto (fun n => (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω)
                   atTop
                   (𝓝 ((μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω)) := by
-        sorry  -- Standard CE continuity: use that sφ n Y → φ Y pointwise + dominated by Mφ
-               -- implies CE[sφ n Y] → CE[φ Y] pointwise a.e.
-               -- Then multiply by CE[ψ Z] (constant in n)
+        sorry  -- See proof sketch above. This is a standard result but requires establishing
+               -- pointwise convergence of CE from dominated convergence, which is nontrivial.
 
-      -- Bound on the product
+      -- Bound on the product (COMPLETED ABOVE - using CE monotonicity)
       have h_prod_bdd : ∀ n, ∀ᵐ ω ∂μ,
           ‖(μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω‖ ≤ Mφ * Mψ := by
         intro n
