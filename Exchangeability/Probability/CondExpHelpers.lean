@@ -1945,25 +1945,21 @@ If fn → f in L¹(μ), then ∫_s fn → ∫_s f for any measurable set s. -/
 lemma tendsto_set_integral_of_L1 {α : Type*} [MeasurableSpace α] {μ : Measure α}
     {s : Set α} (hs : MeasurableSet s)
     {fn : ℕ → α → ℝ} {f : α → ℝ}
-    (hL1 : Tendsto (fun n => ∫⁻ ω, ‖fn n ω - f ω‖₊ ∂μ) atTop (𝓝 0)) :
-  Tendsto (fun n => ∫ ω in s, fn n ω ∂μ) atTop (𝓝 (∫ ω in s, f ω ∂μ)) := by
-  -- Use measure restriction and tendsto_integral_of_L1
-  have : Tendsto (fun n => ∫ ω, fn n ω ∂(μ.restrict s)) atTop (𝓝 (∫ ω, f ω ∂(μ.restrict s))) := by
-    sorry  -- Apply tendsto_integral_of_L1 with μ.restrict s
-  simpa only [integral_restrict hs] using this
+    (hL1 : Filter.Tendsto (fun n => ∫⁻ ω, ‖(fn n) ω - f ω‖₊ ∂μ) Filter.atTop (nhds 0)) :
+  Filter.Tendsto (fun n => ∫ ω in s, (fn n) ω ∂μ) Filter.atTop (nhds (∫ ω in s, f ω ∂μ)) := by
+  sorry  -- Apply tendsto_integral_of_L1 with μ.restrict s and use integral_restrict
 
 /-- **L¹ convergence of product with bounded factor.**
 
 If fn → f in L¹ and H is bounded a.e., then ∫_s (fn * H) → ∫_s (f * H). -/
 lemma tendsto_set_integral_mul_of_L1 {α : Type*} [MeasurableSpace α] {μ : Measure α}
     {s : Set α} (hs : MeasurableSet s)
-    {fn f H : α → ℝ} (C : ℝ)
-    (hL1 : Tendsto (fun n => ∫⁻ ω, ‖fn n ω - f ω‖₊ ∂μ) atTop (𝓝 0))
+    {fn : ℕ → α → ℝ} {f H : α → ℝ} (C : ℝ)
+    (hL1 : Filter.Tendsto (fun n => ∫⁻ ω, ‖(fn n) ω - f ω‖₊ ∂μ) Filter.atTop (nhds 0))
     (hH_bdd : ∀ᵐ ω ∂μ, ‖H ω‖ ≤ C) :
-  Tendsto (fun n => ∫ ω in s, fn n ω * H ω ∂μ)
-          atTop
-          (𝓝 (∫ ω in s, f ω * H ω ∂μ)) := by
-  -- Key: |∫_s (fn - f) * H| ≤ C * ∫_s |fn - f|, and the RHS → 0
+  Filter.Tendsto (fun n => ∫ ω in s, (fn n) ω * H ω ∂μ)
+          Filter.atTop
+          (nhds (∫ ω in s, f ω * H ω ∂μ)) := by
   sorry  -- Apply dominated convergence with bound C * |fn - f|
 
 end MeasureTheory

@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
 import Mathlib.Probability.ConditionalExpectation
+import Mathlib.Probability.Independence.Integration
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Real
 import Mathlib.MeasureTheory.Measure.Typeclasses.Probability
@@ -514,15 +515,17 @@ lemma condIndep_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
             refine Integrable.comp_measurable ?_ hZ
             exact SimpleFunc.integrable_of_isFiniteMeasure ψ
           have h1_int : Integrable ((φ1 ∘ Y) * (ψ ∘ Z)) μ := by
-            apply Integrable.bdd_mul' hψ_int
+            apply Integrable.bdd_mul hψ_int
             · exact (φ1.measurable.comp hY).aestronglyMeasurable
-            · filter_upwards with ω
-              exact SimpleFunc.norm_le_sup_norm φ1 (Y ω)
+            · use (φ1.range.sup (fun x => ‖x‖₊)).toReal
+              intro x
+              sorry  -- Simple function value bounded by supremum of range
           have h2_int : Integrable ((φ2 ∘ Y) * (ψ ∘ Z)) μ := by
-            apply Integrable.bdd_mul' hψ_int
+            apply Integrable.bdd_mul hψ_int
             · exact (φ2.measurable.comp hY).aestronglyMeasurable
-            · filter_upwards with ω
-              exact SimpleFunc.norm_le_sup_norm φ2 (Y ω)
+            · use (φ2.range.sup (fun x => ‖x‖₊)).toReal
+              intro x
+              sorry  -- Simple function value bounded by supremum of range
           exact condExp_add h1_int h2_int _
       _ =ᵐ[μ] (μ[φ1 ∘ Y | MeasurableSpace.comap W inferInstance] * μ[ψ ∘ Z | MeasurableSpace.comap W inferInstance])
               + (μ[φ2 ∘ Y | MeasurableSpace.comap W inferInstance] * μ[ψ ∘ Z | MeasurableSpace.comap W inferInstance]) :=
@@ -551,8 +554,8 @@ lemma tendsto_condexp_L1 (μ : Measure Ω) [IsProbabilityMeasure μ]
     (m : MeasurableSpace Ω) (hm : m ≤ inferInstance)
     {fn : ℕ → Ω → ℝ} {f : Ω → ℝ}
     (h_int : ∀ n, Integrable (fn n) μ) (hf : Integrable f μ)
-    (hL1 : Tendsto (fun n => ∫⁻ ω, ‖fn n ω - f ω‖₊ ∂μ) atTop (𝓝 0)) :
-    Tendsto (fun n => μ[fn n | m]) atTop (𝓝 (μ[f | m])) := by
+    (hL1 : Filter.Tendsto (fun n => ∫⁻ ω, ‖(fn n) ω - f ω‖₊ ∂μ) Filter.atTop (nhds 0)) :
+    Filter.Tendsto (fun n => μ[fn n | m]) Filter.atTop (nhds (μ[f | m])) := by
   -- Replace with the proper lemma in your mathlib build
   -- e.g., condexp_tendsto_L1 or use condexpL1 continuity
   sorry
@@ -563,8 +566,8 @@ lemma approx_bounded_measurable (μ : Measure Ω) [IsProbabilityMeasure μ]
     (hf_bdd : ∀ᵐ ω ∂μ.map (fun x => x), |f ω| ≤ M) :
     ∃ (fn : ℕ → SimpleFunc α ℝ),
       (∀ n, ∀ᵐ x ∂μ.map (fun x => x), |fn n x| ≤ M) ∧
-      (∀ᵐ x ∂μ.map (fun x => x), Tendsto (fun n => fn n x) atTop (𝓝 (f x))) ∧
-      (Tendsto (fun n => ∫⁻ ω, ‖fn n ω - f ω‖₊ ∂(μ.map (fun x => x))) atTop (𝓝 0)) := by
+      (∀ᵐ x ∂μ.map (fun x => x), Filter.Tendsto (fun n => (fn n) x) Filter.atTop (nhds (f x))) ∧
+      (Filter.Tendsto (fun n => ∫⁻ ω, ‖(fn n) ω - f ω‖₊ ∂(μ.map (fun x => x))) Filter.atTop (nhds 0)) := by
   -- Use SimpleFunc.eapprox or similar from mathlib
   sorry
 
@@ -818,13 +821,126 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
           ∫ ω in C, (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)
         atTop
         (𝓝 (∫ ω in C, (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)) := by
-      sorry  -- tendsto_condExpL1_of_dominated_convergence + multiply by bounded factor
+      -- Apply DCT directly to the product μ[sφ n Y | mW] * μ[ψ Z | mW]
+      rw [show ∀ n, ∫ ω in C, (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ
+                    = ∫ ω, (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂(μ.restrict C)
+                  from fun n => (integral_restrict C).symm]
+      rw [show ∫ ω in C, (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ
+                = ∫ ω, (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂(μ.restrict C)
+              from (integral_restrict C).symm]
+
+      -- Key facts we'll use:
+      -- 1. sφ n Y → φ Y pointwise a.e. with ‖sφ n Y‖ ≤ Mφ
+      -- 2. CE is continuous under dominated convergence
+      -- 3. CE preserves bounds: ‖CE[f]‖ ≤ CE[‖f‖] ≤ M a.e. if ‖f‖ ≤ M a.e.
+
+      -- Pointwise convergence of the product
+      --
+      -- PROOF SKETCH (standard conditional expectation theory):
+      -- 1. We have: sφ n Y → φ Y pointwise a.e., with ‖sφ n Y‖ ≤ Mφ for all n
+      -- 2. By dominated convergence for CE: CE[sφ n Y] → CE[φ Y] in L¹
+      -- 3. For real-valued functions in L¹(finite measure), L¹ convergence + uniform bound
+      --    implies pointwise a.e. convergence (possibly along subsequences, but
+      --    deterministic sequence + L¹ convergence + uniform integrability gives full convergence)
+      -- 4. Multiply by CE[ψ Z] (constant in n) to get product convergence
+      --
+      -- This requires deeper results from conditional expectation theory than currently
+      -- in the proof. The key missing lemma would be:
+      --   "CE preserves dominated pointwise convergence a.e."
+      have h_prod_ptwise : ∀ᵐ ω ∂μ,
+          Tendsto (fun n => (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω)
+                  atTop
+                  (𝓝 ((μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω)) := by
+        sorry  -- See proof sketch above. This is a standard result but requires establishing
+               -- pointwise convergence of CE from dominated convergence, which is nontrivial.
+
+      -- Bound on the product (COMPLETED ABOVE - using CE monotonicity)
+      have h_prod_bdd : ∀ n, ∀ᵐ ω ∂μ,
+          ‖(μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω‖ ≤ Mφ * Mψ := by
+        intro n
+        -- First, get bounds on each factor using CE monotonicity
+        have hCE_sφn_bdd : ∀ᵐ ω ∂μ, |μ[(sφ n ∘ Y) | mW] ω| ≤ Mφ := by
+          -- ‖sφ n Y‖ ≤ Mφ implies -Mφ ≤ sφ n Y ≤ Mφ
+          have h_lo : (fun ω => -(Mφ : ℝ)) ≤ᵐ[μ] (sφ n ∘ Y) := by
+            filter_upwards with ω
+            calc -(Mφ : ℝ) ≤ -(|sφ n (Y ω)|) := by
+                apply neg_le_neg
+                exact h_sφ_bdd n (Y ω)
+              _ ≤ sφ n (Y ω) := neg_abs_le _
+          have h_hi : (sφ n ∘ Y) ≤ᵐ[μ] (fun ω => (Mφ : ℝ)) := by
+            filter_upwards with ω
+            calc sφ n (Y ω) ≤ |sφ n (Y ω)| := le_abs_self _
+              _ ≤ |φ (Y ω)| := h_sφ_bdd n (Y ω)
+              _ ≤ Mφ := hφ_bdd (Y ω)
+          -- Apply CE monotonicity
+          have hsφn_int : Integrable (sφ n ∘ Y) μ := by
+            refine Integrable.comp_measurable ?_ hY
+            exact SimpleFunc.integrable_of_isFiniteMeasure (sφ n)
+          filter_upwards [condExp_mono (integrable_const (-(Mφ : ℝ))) hsφn_int h_lo,
+                          condExp_mono hsφn_int (integrable_const (Mφ : ℝ)) h_hi] with ω hlo hhi
+          simp only [condExp_const] at hlo hhi
+          exact abs_le.mpr ⟨hlo, hhi⟩
+
+        have hCE_ψ_bdd : ∀ᵐ ω ∂μ, |μ[(ψ ∘ Z) | mW] ω| ≤ Mψ := by
+          have h_lo : (fun ω => -(Mψ : ℝ)) ≤ᵐ[μ] (ψ ∘ Z) := by
+            filter_upwards with ω
+            calc -(Mψ : ℝ) ≤ -(|ψ (Z ω)|) := by
+                apply neg_le_neg; exact hψ_bdd (Z ω)
+              _ ≤ ψ (Z ω) := neg_abs_le _
+          have h_hi : (ψ ∘ Z) ≤ᵐ[μ] (fun ω => (Mψ : ℝ)) := by
+            filter_upwards with ω
+            calc ψ (Z ω) ≤ |ψ (Z ω)| := le_abs_self _
+              _ ≤ Mψ := hψ_bdd (Z ω)
+          have hψ_int : Integrable (ψ ∘ Z) μ := by
+            refine Integrable.comp_measurable ?_ hZ
+            exact SimpleFunc.integrable_of_isFiniteMeasure ψ
+          filter_upwards [condExp_mono (integrable_const (-(Mψ : ℝ))) hψ_int h_lo,
+                          condExp_mono hψ_int (integrable_const (Mψ : ℝ)) h_hi] with ω hlo hhi
+          simp only [condExp_const] at hlo hhi
+          exact abs_le.mpr ⟨hlo, hhi⟩
+
+        -- Combine the bounds
+        filter_upwards [hCE_sφn_bdd, hCE_ψ_bdd] with ω h1 h2
+        calc ‖(μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω‖
+            = |μ[(sφ n ∘ Y) | mW] ω| * |μ[(ψ ∘ Z) | mW] ω| := by
+                rw [Real.norm_eq_abs, abs_mul]
+          _ ≤ Mφ * Mψ := mul_le_mul h1 h2 (abs_nonneg _) (le_of_lt Mφ_pos)
+
+      -- Apply DCT
+      refine tendsto_integral_of_dominated_convergence (fun ω => Mφ * Mψ) ?_ ?_ h_prod_bdd h_prod_ptwise
+      · -- AEStronglyMeasurable
+        intro n
+        exact (stronglyMeasurable_condExp.mul stronglyMeasurable_condExp).aestronglyMeasurable
+      · -- bound is integrable
+        exact Integrable.const Mφ_Mψ
 
     -- conclude by uniqueness of limits
-    sorry  -- tendsto_nhds_unique_of_eventuallyEq using h_int_n
+    exact tendsto_nhds_unique_of_eventuallyEq h_int_n hLHS hRHS
 
   /-! ### Step 2: uniqueness of versions from set-integral equality on σ(W)-sets. -/
-  sorry  -- ae_eq_of_forall_set_integral_eq_of_sigmaFinite
+  -- Now we have: ∀ C ∈ σ(W), ∫_C (φY * ψZ) = ∫_C (μ[φY|W] * μ[ψZ|W])
+  -- By uniqueness, this means (φY * ψZ) =ᵐ (μ[φY|W] * μ[ψZ|W])
+  refine ae_eq_of_forall_setIntegral_eq_of_sigmaFinite ?_ ?_ hC_sets
+  · -- Integrability on finite-measure sets
+    intro s hs _
+    have hφY_int : Integrable (φ ∘ Y) μ := by
+      refine Integrable.comp_measurable ?_ hY
+      exact ⟨hφ_meas.aestronglyMeasurable, by
+        have : (∫⁻ a, ‖φ a‖₊ ∂Measure.map Y μ) ≤ ∫⁻ a, Mφ ∂Measure.map Y μ := by
+          refine lintegral_mono ?_
+          intro a
+          rw [ENNReal.coe_le_coe]
+          simp only [Real.norm_eq_abs, Real.nnnorm_of_nonneg (abs_nonneg _)]
+          exact Real.toNNReal_le_toNNReal (hφ_bdd a)
+        simp only [lintegral_const, Measure.restrict_apply MeasurableSet.univ, Set.univ_inter] at this
+        exact (lt_of_le_of_lt this (ENNReal.mul_lt_top ENNReal.coe_ne_top (measure_ne_top _ _))).ne⟩
+    have hψZ_int : Integrable (ψ ∘ Z) μ := by
+      refine Integrable.comp_measurable ?_ hZ
+      exact SimpleFunc.integrable_of_isFiniteMeasure ψ
+    exact (hφY_int.mul hψZ_int).integrableOn
+  · -- Integrability of CEs
+    intro s hs _
+    exact (integrable_condExp.mul integrable_condExp).integrableOn
 
 /-- **Conditional independence extends to bounded measurable functions (monotone class).**
 
