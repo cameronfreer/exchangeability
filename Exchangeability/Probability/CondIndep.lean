@@ -86,13 +86,13 @@ def CondIndep {Ω α β γ : Type*}
   ∀ (A : Set α) (B : Set β), MeasurableSet A → MeasurableSet B →
     μ[ (Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))) *
        (Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)))
-       | MeasurableSpace.comap W inferInstance ]
+       | MeasurableSpace.comap W (by infer_instance) ]
       =ᵐ[μ]
     μ[ Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
-       | MeasurableSpace.comap W inferInstance ]
+       | MeasurableSpace.comap W (by infer_instance) ]
     *
     μ[ Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ))
-       | MeasurableSpace.comap W inferInstance ]
+       | MeasurableSpace.comap W (by infer_instance) ]
 
 /-!
 ## Basic properties
@@ -136,7 +136,7 @@ If f is m-measurable, then E[f|m] = f almost everywhere.
 This avoids hunting for the correct lemma name across mathlib versions. -/
 lemma condExp_idem'
     (μ : Measure Ω) (m : MeasurableSpace Ω) (f : Ω → ℝ)
-    (hm : m ≤ (inferInstance : MeasurableSpace Ω))
+    (hm : m ≤ _)
     (hf_int : Integrable f μ)
     (hf_sm : StronglyMeasurable[m] f) :
     μ[f | m] =ᵐ[μ] f := by
@@ -154,13 +154,13 @@ lemma condExp_const_of_indepFun (μ : Measure Ω) [IsProbabilityMeasure μ]
     (hX : Measurable X) (hW : Measurable W)
     (h_indep : IndepFun X W μ)
     (hX_int : Integrable X μ) :
-    μ[X | MeasurableSpace.comap W inferInstance] =ᵐ[μ] (fun _ => μ[X]) := by
+    μ[X | MeasurableSpace.comap W (by infer_instance)] =ᵐ[μ] (fun _ => μ[X]) := by
   -- Convert IndepFun to Indep of σ-algebras
   rw [IndepFun_iff_Indep] at h_indep
   -- Apply condExp_indep_eq: E[X|σ(W)] = E[X] when σ(X) ⊥ σ(W)
   refine condExp_indep_eq hX.comap_le hW.comap_le ?_ h_indep
   -- X is σ(X)-strongly measurable (X is measurable from (Ω, σ(X)) to ℝ by definition of comap)
-  have : @Measurable Ω ℝ (MeasurableSpace.comap X inferInstance) inferInstance X :=
+  have : @Measurable Ω ℝ (MeasurableSpace.comap X (by infer_instance)) _ X :=
     Measurable.of_comap_le le_rfl
   exact this.stronglyMeasurable
 
@@ -278,10 +278,10 @@ theorem condIndep_of_indep_pair (μ : Measure Ω) [IsProbabilityMeasure μ]
     exact hPairW_indep.comp (measurable_const.indicator (hA.prod hB)) measurable_id
 
   -- Step 4: Apply condExp_const_of_indepFun to get conditional expectations are constants
-  have hf_ce : μ[f | MeasurableSpace.comap W inferInstance] =ᵐ[μ] (fun _ => μ[f]) :=
+  have hf_ce : μ[f | MeasurableSpace.comap W (by infer_instance)] =ᵐ[μ] (fun _ => μ[f]) :=
     condExp_const_of_indepFun μ hf_meas hW hf_indep hf_int
 
-  have hg_ce : μ[g | MeasurableSpace.comap W inferInstance] =ᵐ[μ] (fun _ => μ[g]) :=
+  have hg_ce : μ[g | MeasurableSpace.comap W (by infer_instance)] =ᵐ[μ] (fun _ => μ[g]) :=
     condExp_const_of_indepFun μ hg_meas hW hg_indep hg_int
 
   have hfg_meas : Measurable (f * g) := hf_meas.mul hg_meas
@@ -307,7 +307,7 @@ theorem condIndep_of_indep_pair (μ : Measure Ω) [IsProbabilityMeasure μ]
         rw [Set.indicator_of_not_mem this]; norm_num
     rw [this]
     exact (integrable_const (1 : ℝ)).indicator ((hY hA).inter (hZ hB))
-  have hfg_ce : μ[f * g | MeasurableSpace.comap W inferInstance] =ᵐ[μ] (fun _ => μ[f * g]) :=
+  have hfg_ce : μ[f * g | MeasurableSpace.comap W (by infer_instance)] =ᵐ[μ] (fun _ => μ[f * g]) :=
     condExp_const_of_indepFun μ hfg_meas hW hfg_indep hfg_int
 
   -- Step 5: Use Y ⊥ Z to get unconditional factorization E[f*g] = E[f] * E[g]
@@ -328,11 +328,11 @@ theorem condIndep_of_indep_pair (μ : Measure Ω) [IsProbabilityMeasure μ]
     IndepFun.integral_mul_eq_mul_integral hfg_indep' hf_int.aestronglyMeasurable hg_int.aestronglyMeasurable
 
   -- Step 6: Combine everything
-  calc μ[f * g | MeasurableSpace.comap W inferInstance]
+  calc μ[f * g | MeasurableSpace.comap W (by infer_instance)]
       =ᵐ[μ] (fun _ => μ[f * g]) := hfg_ce
     _ = (fun _ => μ[f] * μ[g]) := by rw [h_factor]
     _ =ᵐ[μ] (fun _ => μ[f]) * (fun _ => μ[g]) := by rfl
-    _ =ᵐ[μ] μ[f | MeasurableSpace.comap W inferInstance] * μ[g | MeasurableSpace.comap W inferInstance] :=
+    _ =ᵐ[μ] μ[f | MeasurableSpace.comap W (by infer_instance)] * μ[g | MeasurableSpace.comap W (by infer_instance)] :=
         Filter.EventuallyEq.mul hf_ce.symm hg_ce.symm
 
 /-!
@@ -349,11 +349,11 @@ lemma condIndep_indicator (μ : Measure Ω) [IsProbabilityMeasure μ]
     (c : ℝ) (A : Set α) (hA : MeasurableSet A)
     (d : ℝ) (B : Set β) (hB : MeasurableSet B) :
     μ[ ((A.indicator (fun _ => c)) ∘ Y) * ((B.indicator (fun _ => d)) ∘ Z)
-       | MeasurableSpace.comap W inferInstance ]
+       | MeasurableSpace.comap W (by infer_instance) ]
       =ᵐ[μ]
-    μ[ (A.indicator (fun _ => c)) ∘ Y | MeasurableSpace.comap W inferInstance ]
-      * μ[ (B.indicator (fun _ => d)) ∘ Z | MeasurableSpace.comap W inferInstance ] := by
-  set mW := MeasurableSpace.comap W inferInstance
+    μ[ (A.indicator (fun _ => c)) ∘ Y | MeasurableSpace.comap W (by infer_instance) ]
+      * μ[ (B.indicator (fun _ => d)) ∘ Z | MeasurableSpace.comap W (by infer_instance) ] := by
+  set mW := MeasurableSpace.comap W (by infer_instance)
 
   -- Rewrite indicators in terms of preimages
   have hY_eq : (A.indicator (fun _ => c)) ∘ Y = fun ω => A.indicator (fun _ => c) (Y ω) := rfl
@@ -409,10 +409,10 @@ lemma condIndep_indicator_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
     (c : ℝ) (A : Set α) (hA : MeasurableSet A)
     (ψ : SimpleFunc β ℝ)
     (hY : Measurable Y) (hZ : Measurable Z) :
-    μ[ ((A.indicator (fun _ => c)) ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W inferInstance ]
+    μ[ ((A.indicator (fun _ => c)) ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W (by infer_instance) ]
       =ᵐ[μ]
-    μ[ (A.indicator (fun _ => c)) ∘ Y | MeasurableSpace.comap W inferInstance ]
-      * μ[ ψ ∘ Z | MeasurableSpace.comap W inferInstance ] := by
+    μ[ (A.indicator (fun _ => c)) ∘ Y | MeasurableSpace.comap W (by infer_instance) ]
+      * μ[ ψ ∘ Z | MeasurableSpace.comap W (by infer_instance) ] := by
   -- Induct on ψ
   refine SimpleFunc.induction ?const ?add ψ
   case const =>
@@ -432,11 +432,11 @@ lemma condIndep_indicator_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
     -- hψ1_ih : μ[φY * ψ1Z | mW] =ᵐ μ[φY | mW] * μ[ψ1Z | mW]
     -- hψ2_ih : μ[φY * ψ2Z | mW] =ᵐ μ[φY | mW] * μ[ψ2Z | mW]
 
-    calc μ[((A.indicator (fun _ => c)) ∘ Y) * ((ψ1 + ψ2) ∘ Z) | MeasurableSpace.comap W inferInstance]
+    calc μ[((A.indicator (fun _ => c)) ∘ Y) * ((ψ1 + ψ2) ∘ Z) | MeasurableSpace.comap W (by infer_instance)]
         = μ[((A.indicator (fun _ => c)) ∘ Y) * (ψ1 ∘ Z) + ((A.indicator (fun _ => c)) ∘ Y) * (ψ2 ∘ Z)
-            | MeasurableSpace.comap W inferInstance] := by rw [h_dist]
-      _ =ᵐ[μ] μ[((A.indicator (fun _ => c)) ∘ Y) * (ψ1 ∘ Z) | MeasurableSpace.comap W inferInstance]
-              + μ[((A.indicator (fun _ => c)) ∘ Y) * (ψ2 ∘ Z) | MeasurableSpace.comap W inferInstance] := by
+            | MeasurableSpace.comap W (by infer_instance)] := by rw [h_dist]
+      _ =ᵐ[μ] μ[((A.indicator (fun _ => c)) ∘ Y) * (ψ1 ∘ Z) | MeasurableSpace.comap W (by infer_instance)]
+              + μ[((A.indicator (fun _ => c)) ∘ Y) * (ψ2 ∘ Z) | MeasurableSpace.comap W (by infer_instance)] := by
           -- Need integrability to apply condExp_add
           have hψ1_int : Integrable (ψ1 ∘ Z) μ := by
             refine Integrable.comp_measurable ?_ hZ
@@ -459,15 +459,15 @@ lemma condIndep_indicator_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
               simp only [Function.comp_apply, Set.indicator, norm_indicator_eq_indicator_norm]
               by_cases h : Y ω ∈ A <;> simp [h, le_abs_self, abs_nonneg]
           exact condExp_add h1_int h2_int _
-      _ =ᵐ[μ] (μ[(A.indicator (fun _ => c)) ∘ Y | MeasurableSpace.comap W inferInstance] * μ[ψ1 ∘ Z | MeasurableSpace.comap W inferInstance])
-              + (μ[(A.indicator (fun _ => c)) ∘ Y | MeasurableSpace.comap W inferInstance] * μ[ψ2 ∘ Z | MeasurableSpace.comap W inferInstance]) :=
+      _ =ᵐ[μ] (μ[(A.indicator (fun _ => c)) ∘ Y | MeasurableSpace.comap W (by infer_instance)] * μ[ψ1 ∘ Z | MeasurableSpace.comap W (by infer_instance)])
+              + (μ[(A.indicator (fun _ => c)) ∘ Y | MeasurableSpace.comap W (by infer_instance)] * μ[ψ2 ∘ Z | MeasurableSpace.comap W (by infer_instance)]) :=
           Filter.EventuallyEq.add hψ1_ih hψ2_ih
-      _ =ᵐ[μ] μ[(A.indicator (fun _ => c)) ∘ Y | MeasurableSpace.comap W inferInstance]
-              * (μ[ψ1 ∘ Z | MeasurableSpace.comap W inferInstance] + μ[ψ2 ∘ Z | MeasurableSpace.comap W inferInstance]) := by
+      _ =ᵐ[μ] μ[(A.indicator (fun _ => c)) ∘ Y | MeasurableSpace.comap W (by infer_instance)]
+              * (μ[ψ1 ∘ Z | MeasurableSpace.comap W (by infer_instance)] + μ[ψ2 ∘ Z | MeasurableSpace.comap W (by infer_instance)]) := by
           apply Filter.EventuallyEq.of_eq
           simp only [Pi.add_apply, Pi.mul_apply, mul_add]
-      _ =ᵐ[μ] μ[(A.indicator (fun _ => c)) ∘ Y | MeasurableSpace.comap W inferInstance]
-              * μ[(ψ1 + ψ2) ∘ Z | MeasurableSpace.comap W inferInstance] := by
+      _ =ᵐ[μ] μ[(A.indicator (fun _ => c)) ∘ Y | MeasurableSpace.comap W (by infer_instance)]
+              * μ[(ψ1 + ψ2) ∘ Z | MeasurableSpace.comap W (by infer_instance)] := by
           -- Apply condExp_add in reverse on RHS to combine ψ1 and ψ2
           have hψ1_int : Integrable (ψ1 ∘ Z) μ := by
             refine Integrable.comp_measurable ?_ hZ
@@ -482,10 +482,10 @@ lemma condIndep_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
     (hCI : CondIndep μ Y Z W)
     (φ : SimpleFunc α ℝ) (ψ : SimpleFunc β ℝ)
     (hY : Measurable Y) (hZ : Measurable Z) :
-    μ[ (φ ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W inferInstance ]
+    μ[ (φ ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W (by infer_instance) ]
       =ᵐ[μ]
-    μ[ φ ∘ Y | MeasurableSpace.comap W inferInstance ]
-      * μ[ ψ ∘ Z | MeasurableSpace.comap W inferInstance ] := by
+    μ[ φ ∘ Y | MeasurableSpace.comap W (by infer_instance) ]
+      * μ[ ψ ∘ Z | MeasurableSpace.comap W (by infer_instance) ] := by
   -- Induct on φ
   refine SimpleFunc.induction ?const ?add φ
   case const =>
@@ -500,10 +500,10 @@ lemma condIndep_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
         = ((φ1 ∘ Y) * (ψ ∘ Z)) + ((φ2 ∘ Y) * (ψ ∘ Z)) := by
       ext ω; simp [Pi.add_apply, add_mul]
 
-    calc μ[((φ1 + φ2) ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W inferInstance]
-        = μ[((φ1 ∘ Y) * (ψ ∘ Z)) + ((φ2 ∘ Y) * (ψ ∘ Z)) | MeasurableSpace.comap W inferInstance] := by rw [h_dist]
-      _ =ᵐ[μ] μ[(φ1 ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W inferInstance]
-              + μ[(φ2 ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W inferInstance] := by
+    calc μ[((φ1 + φ2) ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W (by infer_instance)]
+        = μ[((φ1 ∘ Y) * (ψ ∘ Z)) + ((φ2 ∘ Y) * (ψ ∘ Z)) | MeasurableSpace.comap W (by infer_instance)] := by rw [h_dist]
+      _ =ᵐ[μ] μ[(φ1 ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W (by infer_instance)]
+              + μ[(φ2 ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W (by infer_instance)] := by
           -- Need integrability
           have hφ1_int : Integrable (φ1 ∘ Y) μ := by
             refine Integrable.comp_measurable ?_ hY
@@ -527,15 +527,15 @@ lemma condIndep_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
               intro x
               sorry  -- Simple function value bounded by supremum of range
           exact condExp_add h1_int h2_int _
-      _ =ᵐ[μ] (μ[φ1 ∘ Y | MeasurableSpace.comap W inferInstance] * μ[ψ ∘ Z | MeasurableSpace.comap W inferInstance])
-              + (μ[φ2 ∘ Y | MeasurableSpace.comap W inferInstance] * μ[ψ ∘ Z | MeasurableSpace.comap W inferInstance]) :=
+      _ =ᵐ[μ] (μ[φ1 ∘ Y | MeasurableSpace.comap W (by infer_instance)] * μ[ψ ∘ Z | MeasurableSpace.comap W (by infer_instance)])
+              + (μ[φ2 ∘ Y | MeasurableSpace.comap W (by infer_instance)] * μ[ψ ∘ Z | MeasurableSpace.comap W (by infer_instance)]) :=
           Filter.EventuallyEq.add hφ1_ih hφ2_ih
-      _ =ᵐ[μ] (μ[φ1 ∘ Y | MeasurableSpace.comap W inferInstance] + μ[φ2 ∘ Y | MeasurableSpace.comap W inferInstance])
-              * μ[ψ ∘ Z | MeasurableSpace.comap W inferInstance] := by
+      _ =ᵐ[μ] (μ[φ1 ∘ Y | MeasurableSpace.comap W (by infer_instance)] + μ[φ2 ∘ Y | MeasurableSpace.comap W (by infer_instance)])
+              * μ[ψ ∘ Z | MeasurableSpace.comap W (by infer_instance)] := by
           apply Filter.EventuallyEq.of_eq
           simp only [Pi.add_apply, Pi.mul_apply, add_mul]
-      _ =ᵐ[μ] μ[(φ1 + φ2) ∘ Y | MeasurableSpace.comap W inferInstance]
-              * μ[ψ ∘ Z | MeasurableSpace.comap W inferInstance] := by
+      _ =ᵐ[μ] μ[(φ1 + φ2) ∘ Y | MeasurableSpace.comap W (by infer_instance)]
+              * μ[ψ ∘ Z | MeasurableSpace.comap W (by infer_instance)] := by
           -- Apply condExp_add in reverse on LHS
           have hφ1_int : Integrable (φ1 ∘ Y) μ := by
             refine Integrable.comp_measurable ?_ hY
@@ -550,8 +550,8 @@ lemma condIndep_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
 -/
 
 /-- **CE is continuous from L¹ to L¹ (wrapper around mathlib's lemma).** -/
-lemma tendsto_condexp_L1 (μ : Measure Ω) [IsProbabilityMeasure μ]
-    (m : MeasurableSpace Ω) (hm : m ≤ inferInstance)
+lemma tendsto_condexp_L1 {mΩ : MeasurableSpace Ω} (μ : Measure Ω) [IsProbabilityMeasure μ]
+    (m : MeasurableSpace Ω) (hm : m ≤ mΩ)
     {fn : ℕ → Ω → ℝ} {f : Ω → ℝ}
     (h_int : ∀ n, Integrable (fn n) μ) (hf : Integrable f μ)
     (hL1 : Filter.Tendsto (fun n => ∫⁻ ω, ‖(fn n) ω - f ω‖₊ ∂μ) Filter.atTop (nhds 0)) :
@@ -561,13 +561,13 @@ lemma tendsto_condexp_L1 (μ : Measure Ω) [IsProbabilityMeasure μ]
   sorry
 
 /-- **Helper: approximate bounded measurable function by simple functions.** -/
-lemma approx_bounded_measurable (μ : Measure Ω) [IsProbabilityMeasure μ]
+lemma approx_bounded_measurable (μ : Measure α) [IsProbabilityMeasure μ]
     {f : α → ℝ} (M : ℝ) (hf_meas : Measurable f)
-    (hf_bdd : ∀ᵐ ω ∂μ.map (fun x => x), |f ω| ≤ M) :
+    (hf_bdd : ∀ᵐ x ∂μ, |f x| ≤ M) :
     ∃ (fn : ℕ → SimpleFunc α ℝ),
-      (∀ n, ∀ᵐ x ∂μ.map (fun x => x), |fn n x| ≤ M) ∧
-      (∀ᵐ x ∂μ.map (fun x => x), Filter.Tendsto (fun n => (fn n) x) Filter.atTop (nhds (f x))) ∧
-      (Filter.Tendsto (fun n => ∫⁻ ω, ‖(fn n) ω - f ω‖₊ ∂(μ.map (fun x => x))) Filter.atTop (nhds 0)) := by
+      (∀ n, ∀ᵐ x ∂μ, |fn n x| ≤ M) ∧
+      (∀ᵐ x ∂μ, Filter.Tendsto (fun n => (fn n) x) Filter.atTop (nhds (f x))) ∧
+      (Filter.Tendsto (fun n => ∫⁻ x, ‖(fn n) x - f x‖₊ ∂μ) Filter.atTop (nhds 0)) := by
   -- Use SimpleFunc.eapprox or similar from mathlib
   sorry
 
@@ -577,10 +577,10 @@ lemma condIndep_simpleFunc_left (μ : Measure Ω) [IsProbabilityMeasure μ]
     (hCI : CondIndep μ Y Z W)
     (φ : SimpleFunc α ℝ) {ψ : β → ℝ}
     (hY : Measurable Y) (hZ : Measurable Z) (hψ_meas : Measurable ψ) :
-    μ[ (φ ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W inferInstance ]
+    μ[ (φ ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W (by infer_instance) ]
       =ᵐ[μ]
-    μ[ φ ∘ Y | MeasurableSpace.comap W inferInstance ]
-      * μ[ ψ ∘ Z | MeasurableSpace.comap W inferInstance ] := by
+    μ[ φ ∘ Y | MeasurableSpace.comap W (by infer_instance) ]
+      * μ[ ψ ∘ Z | MeasurableSpace.comap W (by infer_instance) ] := by
   -- Approximate ψ by simple functions, apply condIndep_simpleFunc at each step, pass to limit
   -- This requires similar approximation machinery as condIndep_bddMeas_extend_left
   -- For now, we'll leave this as a sorry and implement it after the approximation helpers are done
@@ -596,12 +596,13 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
     (Mφ Mψ : ℝ)
     (hφ_bdd : ∀ᵐ ω ∂μ, |φ (Y ω)| ≤ Mφ)
     (hψ_bdd : ∀ᵐ ω ∂μ, |ψ (Z ω)| ≤ Mψ) :
-    μ[ (φ ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W inferInstance ]
+    μ[ (φ ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W (by infer_instance) ]
       =ᵐ[μ]
-    μ[ (φ ∘ Y) | MeasurableSpace.comap W inferInstance ]
-      * μ[ (ψ ∘ Z) | MeasurableSpace.comap W inferInstance ] := by
+    μ[ (φ ∘ Y) | MeasurableSpace.comap W (by infer_instance) ]
+      * μ[ (ψ ∘ Z) | MeasurableSpace.comap W (by infer_instance) ] := by
   classical
-  set mW := MeasurableSpace.comap W inferInstance
+  set mW := MeasurableSpace.comap W (by infer_instance : MeasurableSpace γ) with hmW
+  show μ[ (φ ∘ Y) * (ψ ∘ Z) | mW ] =ᵐ[μ] μ[ (φ ∘ Y) | mW ] * μ[ (ψ ∘ Z) | mW ]
 
   /-! ### Step 0: build real-valued simple-function approximation of φ via ℝ≥0∞ eapprox on pos/neg parts. -/
 
@@ -967,9 +968,9 @@ lemma condIndep_boundedMeasurable (μ : Measure Ω) [IsProbabilityMeasure μ]
     (Mφ Mψ : ℝ)
     (hφ_bdd : ∀ᵐ ω ∂μ, |φ (Y ω)| ≤ Mφ)
     (hψ_bdd : ∀ᵐ ω ∂μ, |ψ (Z ω)| ≤ Mψ) :
-    μ[ (φ ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W inferInstance ] =ᵐ[μ]
-    μ[ φ ∘ Y | MeasurableSpace.comap W inferInstance ] *
-    μ[ ψ ∘ Z | MeasurableSpace.comap W inferInstance ] := by
+    μ[ (φ ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W (by infer_instance) ] =ᵐ[μ]
+    μ[ φ ∘ Y | MeasurableSpace.comap W (by infer_instance) ] *
+    μ[ ψ ∘ Z | MeasurableSpace.comap W (by infer_instance) ] := by
   -- Strategy: Apply the left-extension lemma twice
   -- Step 1: Extend in φ (keeping ψ fixed) - this is condIndep_bddMeas_extend_left
   -- Step 2: The result already has φ bounded measurable, so we're done
@@ -991,10 +992,10 @@ lemma condIndep_of_rect_factorization (μ : Measure Ω) [IsProbabilityMeasure μ
     (hRect :
       ∀ ⦃A B⦄, MeasurableSet A → MeasurableSet B →
         μ[ (Y ⁻¹' A).indicator (fun _ => (1:ℝ)) *
-           (Z ⁻¹' B).indicator (fun _ => (1:ℝ)) | MeasurableSpace.comap W inferInstance ]
+           (Z ⁻¹' B).indicator (fun _ => (1:ℝ)) | MeasurableSpace.comap W (by infer_instance) ]
           =ᵐ[μ]
-        μ[(Y ⁻¹' A).indicator (fun _ => (1:ℝ)) | MeasurableSpace.comap W inferInstance] *
-        μ[(Z ⁻¹' B).indicator (fun _ => (1:ℝ)) | MeasurableSpace.comap W inferInstance]) :
+        μ[(Y ⁻¹' A).indicator (fun _ => (1:ℝ)) | MeasurableSpace.comap W (by infer_instance)] *
+        μ[(Z ⁻¹' B).indicator (fun _ => (1:ℝ)) | MeasurableSpace.comap W (by infer_instance)]) :
   CondIndep μ Y Z W :=
   hRect  -- CondIndep is defined as exactly this property
 
@@ -1016,10 +1017,10 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
     (h_indep : CondIndep μ Y Z W)
     {A : Set α} (hA : MeasurableSet A) :
     μ[ Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
-       | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance ]
+       | MeasurableSpace.comap (fun ω => (Z ω, W ω)) (by infer_instance) ]
       =ᵐ[μ]
     μ[ Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
-       | MeasurableSpace.comap W inferInstance ] := by
+       | MeasurableSpace.comap W (by infer_instance) ] := by
   -- Strategy: Use uniqueness characterization of conditional expectation
   -- Show that both CEs have the same integrals on all σ(W)-measurable sets
 
@@ -1027,8 +1028,8 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
   let m0 : MeasurableSpace Ω := ‹MeasurableSpace Ω›
 
   -- Sub-σ-algebras as plain values (never instances)
-  let mW := MeasurableSpace.comap W inferInstance
-  let mZW := MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance
+  let mW := MeasurableSpace.comap W (by infer_instance)
+  let mZW := MeasurableSpace.comap (fun ω => (Z ω, W ω)) (by infer_instance)
   let f := Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
 
   -- σ-algebra ordering: σ(W) ⊆ σ(Z,W)
@@ -1374,10 +1375,10 @@ theorem condIndep_project (μ : Measure Ω) [IsProbabilityMeasure μ]
     (h_indep : CondIndep μ Y Z W)
     {A : Set α} (hA : MeasurableSet A) :
     μ[ Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
-       | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance ]
+       | MeasurableSpace.comap (fun ω => (Z ω, W ω)) (by infer_instance) ]
       =ᵐ[μ]
     μ[ Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
-       | MeasurableSpace.comap W inferInstance ] := by
+       | MeasurableSpace.comap W (by infer_instance) ] := by
   -- This follows directly from the helper lemma
   exact condExp_project_of_condIndep μ Y Z W hY hZ hW h_indep hA
 
