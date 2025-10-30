@@ -1434,12 +1434,91 @@ theorem condExp_project_of_condIndepFun
     --
     --    - By uniqueness of a.e. limits along any subsequence, the two limits must be equal a.e.
 
-    -- 4. **Uniqueness of a.e. pointwise limits**
-    --    If f_n → f a.e. and f_n → g a.e., then f = g a.e.
+    -- 4. **Apply tendsto_condExp_unique**
+    --    This mathlib lemma says: if two sequences converge a.e. with dominated bounds,
+    --    and their conditional expectations are equal at each step, then the conditional
+    --    expectations of the limits are equal.
     --
-    --    This is: tendsto_nhds_unique at ae, or similar
-    --    Can be proven directly: filter_upwards [h1, h2] with x, apply tendsto_nhds_unique
+    --    We apply it with:
+    --    - fs = (f_n n ∘ Y) * (Z ⁻¹' B).indicator 1  (full sequence)
+    --    - gs = μ[f_n n ∘ Y|mW] * μ[indicator|mW]      (full sequence)
+    --    - h_factorization: ∀ n, μ[fs n|mW] =ᵐ gs n
+    --    - h_fs_ptwise, h_gs_subseq: both converge a.e.
+    --    - Dominated bounds: h_bound_fnB, h_gs_bound
+    --
+    --    Note: we have a subsequence convergence for gs (h_gs_subseq_ae),
+    --    but tendsto_condExp_unique needs full sequence convergence.
+    --    However, since we extracted the subsequence from dominated convergence,
+    --    the full sequence also converges (by uniqueness of limits).
+    --
+    --    Actually, we need to use the full sequence convergence, which we can get
+    --    by applying DCT directly to the product of conditional expectations.
 
+    -- First, establish full sequence convergence for RHS using dominated convergence
+    --
+    -- Strategy: The RHS is μ[f_n n ∘ Y|mW] ω * μ[indicator|mW] ω
+    -- The second factor doesn't depend on n, so we just need to show μ[f_n n ∘ Y|mW] ω converges.
+    -- This follows from DCT for conditional expectations.
+
+    -- Step 1: Get L¹ convergence of μ[f_n n ∘ Y|mW] → μ[f ∘ Y|mW]
+    have h_condExp_L1 : Filter.Tendsto
+        (fun n => condExpL1 hmW_le μ (f_n n ∘ Y))
+        Filter.atTop
+        (nhds (condExpL1 hmW_le μ (f ∘ Y))) := by
+      apply tendsto_condExpL1_domconv μ hmW_le (fun ω => 2 * ‖f (Y ω)‖)
+      · intro n
+        have : Measurable (f_n n) := (f_n n).measurable
+        exact this.aestronglyMeasurable.comp_measurable hY
+      · have h_norm_int : Integrable (fun ω => ‖f (Y ω)‖) μ := hf_int.norm
+        simpa using h_norm_int.const_mul 2
+      · intro n
+        apply Filter.Eventually.of_forall
+        intro ω
+        calc ‖(f_n n) (Y ω)‖
+            ≤ ‖f (Y ω)‖ + ‖f (Y ω)‖ := SimpleFunc.norm_approxOn_zero_le hf (by simp) (Y ω) n
+          _ = 2 * ‖f (Y ω)‖ := by ring
+      · exact h_fY_ptwise
+
+    -- Step 2: Extract a.e. convergent subsequence
+    obtain ⟨ns', h_ns'_mono, h_condExp_subseq⟩ :=
+      exists_subseq_ae_tendsto_of_condExpL1_tendsto μ hmW_le h_condExp_L1
+
+    -- Step 3: Full sequence convergence from subsequence + uniqueness
+    have h_condExp_full : ∀ᵐ ω ∂μ, Filter.Tendsto
+        (fun n => μ[ f_n n ∘ Y | mW ] ω)
+        Filter.atTop
+        (nhds (μ[ f ∘ Y | mW ] ω)) := by
+      -- TODO: Convert subsequence convergence to full sequence convergence
+      --
+      -- We have: h_condExp_subseq shows μ[f_n (ns' n) ∘ Y|mW] → μ[f ∘ Y|mW] a.e.
+      -- We need: full sequence μ[f_n n ∘ Y|mW] → μ[f ∘ Y|mW] a.e.
+      --
+      -- Possible approach 1: Show the sequence is Cauchy in L¹ (using DCT),
+      -- then every subsequence converges to the same limit, hence full sequence converges.
+      --
+      -- Possible approach 2: Use monotone convergence if SimpleFunc.approxOn is monotone
+      -- (need to verify this property).
+      --
+      -- Possible approach 3: Find a mathlib lemma that states L¹ convergence implies
+      -- a.e. convergence of the full sequence (not just a subsequence) under additional
+      -- conditions.
+      sorry
+
+    --  TODO: Complete the uniqueness argument
+    --
+    -- Mathematical idea:
+    -- - LHS: (f_n ∘ Y) * indicator → (f ∘ Y) * indicator a.e. (we have h_fs_ptwise)
+    -- - RHS: μ[f_n ∘ Y|mW] * μ[indicator|mW] → μ[f ∘ Y|mW] * μ[indicator|mW] a.e. (via DCT)
+    -- - Factorization: μ[(f_n ∘ Y) * indicator|mW] = μ[f_n ∘ Y|mW] * μ[indicator|mW] a.e. for each n
+    -- - By passing to limits, μ[(f ∘ Y) * indicator|mW] = μ[f ∘ Y|mW] * μ[indicator|mW] a.e.
+    --
+    -- Approaches:
+    -- 1. Use mathlib's tendsto_condExp_unique (requires full sequence convergence for RHS)
+    -- 2. Work with subsequences and show limit is independent of subsequence choice
+    -- 3. Direct application of dominated convergence to pass factorization through limits
+    --
+    -- Current blocker: Converting L¹ convergence (h_condExp_L1) to full sequence a.e. convergence
+    -- (we have subsequence convergence h_condExp_subseq, need full sequence)
     sorry
 
     /-
@@ -1593,20 +1672,25 @@ theorem condExp_project_of_condIndepFun
     --       -- Need: integral_condExp + pull-out lemma
     --       sorry
 
-    -- Implementation following the documented strategy:
-
-    -- Step 1: Convert set integrals to indicator integrals
-    rw [← integral_indicator (hS_meas.inter hZB_meas), ← integral_indicator (hS_meas.inter hZB_meas)]
-
-    -- Step 2: Rewrite (S ∩ Z⁻¹B).indicator as product of indicators
-    -- This completes the proof: both sides have the same indicator structure
-    congr 1
-    ext x
-    by_cases hS : x ∈ S <;> by_cases hZ : x ∈ Z ⁻¹' B
-    · simp [Set.indicator_of_mem, hS, hZ, Set.mem_inter_iff, mul_comm]
-    · simp [Set.indicator_of_not_mem, hS, hZ, Set.mem_inter_iff]
-    · simp [Set.indicator_of_not_mem, hS, hZ, Set.mem_inter_iff]
-    · simp [Set.indicator_of_not_mem, hS, hZ, Set.mem_inter_iff]
+    -- TODO: Rectangle case proof (~50-80 lines)
+    --
+    -- Goal: ∫ x in S ∩ Z ⁻¹' B, g x ∂μ = ∫ x in S ∩ Z ⁻¹' B, (f ∘ Y) x ∂μ
+    -- where g = μ[f ∘ Y|mW], S ∈ σ(W), B ∈ B_Z
+    --
+    -- Strategy (see detailed comments above):
+    -- 1. Convert set integrals to indicator integrals
+    -- 2. Factor intersection indicator: (S ∩ Z⁻¹B).indicator = S.indicator * (Z⁻¹B).indicator
+    -- 3. Use tower property and h_factor factorization
+    -- 4. Pull out mW-measurable factors
+    -- 5. Apply integral_condExp to simplify
+    --
+    -- Key lemmas needed:
+    -- - setIntegral_eq_integral_indicator / integral_indicator
+    -- - Set.indicator_inter_mul or similar
+    -- - integral_condExp
+    -- - condExp_mul_of_stronglyMeasurable (pull out measurable factors)
+    -- - h_factor (from condIndep_factor above)
+    sorry
     /-
     **Detailed Implementation Guide (~30-50 lines):**
 
