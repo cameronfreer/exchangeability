@@ -737,6 +737,26 @@ lemma condIndep_boundedMeasurable (μ : Measure Ω) [IsProbabilityMeasure μ]
   exact condIndep_bddMeas_extend_left μ Y Z W hCI hY hZ hW hφ_meas hψ_meas Mφ Mψ hφ_bdd hψ_bdd
 
 /-!
+## Wrapper: Rectangle factorization implies conditional independence
+-/
+
+/-- **Rectangle factorization implies conditional independence.**
+
+This is essentially the identity, since `CondIndep` is defined as rectangle factorization.
+This wrapper allows replacing axioms in ViaMartingale.lean with concrete proofs. -/
+lemma condIndep_of_rect_factorization (μ : Measure Ω) [IsProbabilityMeasure μ]
+    (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
+    (hRect :
+      ∀ ⦃A B⦄, MeasurableSet A → MeasurableSet B →
+        μ[ (Y ⁻¹' A).indicator (fun _ => (1:ℝ)) *
+           (Z ⁻¹' B).indicator (fun _ => (1:ℝ)) | MeasurableSpace.comap W inferInstance ]
+          =ᵐ[μ]
+        μ[(Y ⁻¹' A).indicator (fun _ => (1:ℝ)) | MeasurableSpace.comap W inferInstance] *
+        μ[(Z ⁻¹' B).indicator (fun _ => (1:ℝ)) | MeasurableSpace.comap W inferInstance]) :
+  CondIndep μ Y Z W :=
+  hRect  -- CondIndep is defined as exactly this property
+
+/-!
 ## Extension to product σ-algebras
 -/
 
