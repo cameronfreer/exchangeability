@@ -78,7 +78,7 @@ lemma finset_sum_ae_eq
         (fun ω => g a ω + ∑ i ∈ s, g i ω) := by
       -- On the a.e. set where both `h_a` and `IH'` hold, the sums match.
       filter_upwards [h_a, IH'] with ω h1 h2
-      simpa [h1, h2]
+      simp [h1, h2]
     -- Reassemble the sums over `insert a s`.
     simpa [Finset.sum_insert, ha] using h_add
 
@@ -988,11 +988,11 @@ theorem condExp_project_of_condIndepFun
       have h_bound : ∀ᵐ ω ∂μ, ‖(f_n n ∘ Y) ω‖ ≤ ‖(fun ω => 2 * ‖f (Y ω)‖) ω‖ := by
         apply Filter.Eventually.of_forall
         intro ω
-        simp only [Function.comp_apply, norm_norm]
+        simp only [Function.comp_apply]
         calc ‖(f_n n) (Y ω)‖
             ≤ ‖f (Y ω)‖ + ‖f (Y ω)‖ := SimpleFunc.norm_approxOn_zero_le hf (by simp) (Y ω) n
           _ = 2 * ‖f (Y ω)‖ := by ring
-          _ = ‖2 * ‖f (Y ω)‖‖ := by simp [abs_of_nonneg, norm_nonneg]
+          _ = ‖2 * ‖f (Y ω)‖‖ := by simp [abs_of_nonneg]
       have h_bound_int : Integrable (fun ω => 2 * ‖f (Y ω)‖) μ := by
         have : Integrable (fun ω => ‖f (Y ω)‖) μ := hf_int.norm
         simpa using this.const_mul 2
@@ -1010,7 +1010,7 @@ theorem condExp_project_of_condIndepFun
       have h_eq : (f_n n ∘ Y) * (Z ⁻¹' B).indicator 1 = (Z ⁻¹' B).indicator (f_n n ∘ Y) := by
         ext ω
         simp only [Pi.mul_apply, Set.indicator]
-        split_ifs <;> simp [mul_comm]
+        split_ifs <;> simp
       rw [h_eq]
       -- Now use Integrable.indicator (need mΩ measurability)
       have h_meas : @MeasurableSet Ω mΩ (Z ⁻¹' B) := hmZW_le _ (hmZ_le_mZW _ ⟨B, hB, rfl⟩)
@@ -1021,7 +1021,7 @@ theorem condExp_project_of_condIndepFun
       have h_eq : (f ∘ Y) * (Z ⁻¹' B).indicator 1 = (Z ⁻¹' B).indicator (f ∘ Y) := by
         ext ω
         simp only [Pi.mul_apply, Set.indicator]
-        split_ifs <;> simp [mul_comm]
+        split_ifs <;> simp
       rw [h_eq]
       have h_meas : @MeasurableSet Ω mΩ (Z ⁻¹' B) := hmZW_le _ (hmZ_le_mZW _ ⟨B, hB, rfl⟩)
       exact hf_int.indicator h_meas
@@ -1083,7 +1083,7 @@ theorem condExp_project_of_condIndepFun
         filter_upwards [h] with ω hω
         rcases hω with ⟨h0, h1⟩
         have : ‖(μ[fun ω => (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) ω | mW] ω : ℝ)‖ = μ[fun ω => (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) ω | mW] ω := by
-          simpa [abs_of_nonneg h0, Real.norm_eq_abs]
+          simp [abs_of_nonneg h0, Real.norm_eq_abs]
         simpa [this] using h1
 
       -- Both factors are a.e. strongly measurable / integrable
@@ -1119,7 +1119,7 @@ theorem condExp_project_of_condIndepFun
         filter_upwards [h] with ω hω
         rcases hω with ⟨h0, h1⟩
         have : ‖(μ[fun ω => (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) ω | mW] ω : ℝ)‖ = μ[fun ω => (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) ω | mW] ω := by
-          simpa [abs_of_nonneg h0, Real.norm_eq_abs]
+          simp [abs_of_nonneg h0, Real.norm_eq_abs]
         simpa [this] using h1
 
       -- Integrable CE of f∘Y
@@ -1941,26 +1941,48 @@ theorem condExp_project_of_condIndepFun
 
 /-- **Restricted dominated convergence: L¹ convergence implies set integral convergence.**
 
-If fn → f in L¹(μ), then ∫_s fn → ∫_s f for any measurable set s. -/
+If fn → f in L¹(μ), then ∫_s fn → ∫_s f for any measurable set s.
+
+This requires integrability hypotheses to ensure the integrals are well-defined. -/
 lemma tendsto_set_integral_of_L1 {α : Type*} [MeasurableSpace α] {μ : Measure α}
-    {s : Set α} (hs : MeasurableSet s)
+    {s : Set α}
     {fn : ℕ → α → ℝ} {f : α → ℝ}
+    (hf_int : Integrable f μ)
+    (hfn_int : ∀ n, Integrable (fn n) μ)
     (hL1 : Filter.Tendsto (fun n => ∫⁻ ω, ‖(fn n) ω - f ω‖₊ ∂μ) Filter.atTop (nhds 0)) :
   Filter.Tendsto (fun n => ∫ ω in s, (fn n) ω ∂μ) Filter.atTop (nhds (∫ ω in s, f ω ∂μ)) := by
-  sorry  -- Apply tendsto_integral_of_L1 with μ.restrict s and use integral_restrict
+  -- Direct application of mathlib's tendsto_setIntegral_of_L1
+  apply MeasureTheory.tendsto_setIntegral_of_L1 f hf_int _ hL1 s
+  -- Show that fn is eventually integrable
+  filter_upwards with n
+  exact hfn_int n
 
 /-- **L¹ convergence of product with bounded factor.**
 
 If fn → f in L¹ and H is bounded a.e., then ∫_s (fn * H) → ∫_s (f * H). -/
 lemma tendsto_set_integral_mul_of_L1 {α : Type*} [MeasurableSpace α] {μ : Measure α}
-    {s : Set α} (hs : MeasurableSet s)
+    {s : Set α}
     {fn : ℕ → α → ℝ} {f H : α → ℝ} (C : ℝ)
+    (hf_int : Integrable f μ)
+    (hfn_int : ∀ n, Integrable (fn n) μ)
+    (hH_int : Integrable H μ)
     (hL1 : Filter.Tendsto (fun n => ∫⁻ ω, ‖(fn n) ω - f ω‖₊ ∂μ) Filter.atTop (nhds 0))
     (hH_bdd : ∀ᵐ ω ∂μ, ‖H ω‖ ≤ C) :
   Filter.Tendsto (fun n => ∫ ω in s, (fn n) ω * H ω ∂μ)
           Filter.atTop
           (nhds (∫ ω in s, f ω * H ω ∂μ)) := by
-  sorry  -- Apply dominated convergence with bound C * |fn - f|
+  -- Strategy: Show fn * H → f * H in L¹, then apply tendsto_setIntegral_of_L1
+  apply MeasureTheory.tendsto_setIntegral_of_L1 (fun ω => f ω * H ω) _ _ _ s
+  · -- Show f * H is integrable
+    sorry  -- Use Integrable.bdd_mul': f integrable, H bounded → f * H integrable
+  · -- Show fn * H is eventually integrable
+    filter_upwards with n
+    sorry  -- Use Integrable.bdd_mul': fn n integrable, H bounded → fn n * H integrable
+  · -- Show ∫⁻ ‖(fn * H) - (f * H)‖₊ → 0
+    -- Key insight: ‖(fn - f) * H‖ = |fn - f| * |H| ≤ |fn - f| * C a.e.
+    -- So ∫⁻ ‖(fn - f) * H‖₊ ≤ C * ∫⁻ ‖fn - f‖₊ → 0
+    sorry
+    -- Requires: ENNReal manipulation, ae_of_all for bound, squeeze theorem
 
 end MeasureTheory
 
