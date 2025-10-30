@@ -1135,9 +1135,9 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
       have hmW_le : mW ≤ m0 := hW_m0.comap_le
 
       -- Ambient versions (for use with lemmas expecting ambient instance)
-      -- Convert from m0 to ambient (they're equal but need explicit witness)
-      have hBpre : MeasurableSet (Z ⁻¹' B) := by simpa [m0] using hBpre_m0
-      have hCpre : MeasurableSet (W ⁻¹' C) := by simpa [m0] using hCpre_m0
+      -- Since m0 is definitionally equal to ambient instance, these are immediate
+      have hBpre : MeasurableSet (Z ⁻¹' B) := hBpre_m0
+      have hCpre : MeasurableSet (W ⁻¹' C) := hCpre_m0
 
       -- Convenience name for indicator on Z⁻¹B (f is already defined in outer scope)
       set gB : Ω → ℝ := (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) with hgB_def
@@ -1154,7 +1154,7 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
 
       -- AE version (for use later)
       have haesm_ce : AEStronglyMeasurable (μ[f | mW]) μ :=
-        hsm_ce_mW.mono hle |>.aestronglyMeasurable
+        hsm_ce_mW.mono hmW_le |>.aestronglyMeasurable
 
       -- Canonical product ↔ indicator identity (use often)
       have h_mul_eq_indicator :
@@ -1251,8 +1251,8 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
                 -- First: LHS = ∫_{W⁻¹C} (Z⁻¹B).indicator(μ[f|mW])
                 have h1 : ∫ ω in W ⁻¹' C ∩ Z ⁻¹' B, μ[f|mW] ω ∂μ
                         = ∫ ω in W ⁻¹' C, (Z ⁻¹' B).indicator (μ[f|mW]) ω ∂μ := by
-                  rw [Set.inter_comm]
-                  exact (integral_indicator (hCpre.inter hBpre)).symm
+                  rw [setIntegral_indicator hBpre]
+                  rfl
                 -- Second: RHS uses h_mul_eq_indicator
                 have h2 : ∫ ω in W ⁻¹' C, (Z ⁻¹' B).indicator (μ[f|mW]) ω ∂μ
                         = ∫ ω in W ⁻¹' C, (μ[f|mW] ω * gB ω) ∂μ := by
