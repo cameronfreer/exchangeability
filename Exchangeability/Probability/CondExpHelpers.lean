@@ -1941,13 +1941,23 @@ theorem condExp_project_of_condIndepFun
 
 /-- **Restricted dominated convergence: L¹ convergence implies set integral convergence.**
 
-If fn → f in L¹(μ), then ∫_s fn → ∫_s f for any measurable set s. -/
+If fn → f in L¹(μ), then ∫_s fn → ∫_s f for any measurable set s.
+
+This requires integrability hypotheses to ensure the integrals are well-defined. -/
 lemma tendsto_set_integral_of_L1 {α : Type*} [MeasurableSpace α] {μ : Measure α}
     {s : Set α} (hs : MeasurableSet s)
     {fn : ℕ → α → ℝ} {f : α → ℝ}
+    (hf_int : Integrable f μ)
+    (hfn_int : ∀ n, Integrable (fn n) μ)
     (hL1 : Filter.Tendsto (fun n => ∫⁻ ω, ‖(fn n) ω - f ω‖₊ ∂μ) Filter.atTop (nhds 0)) :
   Filter.Tendsto (fun n => ∫ ω in s, (fn n) ω ∂μ) Filter.atTop (nhds (∫ ω in s, f ω ∂μ)) := by
-  sorry  -- Apply tendsto_integral_of_L1 with μ.restrict s and use integral_restrict
+  sorry
+  -- Proof sketch:
+  -- 1. |∫ fn in s - ∫ f in s| = |∫ (fn - f) in s|
+  -- 2. |∫ (fn - f) in s| ≤ ∫ |fn - f| in s   (triangle inequality for integrals)
+  -- 3. ∫ |fn - f| in s ≤ ∫ |fn - f|          (monotonicity of set integrals)
+  -- 4. ∫ |fn - f| → 0                        (by hypothesis hL1)
+  -- Therefore by squeeze theorem, |∫ fn in s - ∫ f in s| → 0
 
 /-- **L¹ convergence of product with bounded factor.**
 
@@ -1960,7 +1970,14 @@ lemma tendsto_set_integral_mul_of_L1 {α : Type*} [MeasurableSpace α] {μ : Mea
   Filter.Tendsto (fun n => ∫ ω in s, (fn n) ω * H ω ∂μ)
           Filter.atTop
           (nhds (∫ ω in s, f ω * H ω ∂μ)) := by
-  sorry  -- Apply dominated convergence with bound C * |fn - f|
+  sorry
+  -- Proof sketch:
+  -- 1. ∫ fn * H in s - ∫ f * H in s = ∫ (fn - f) * H in s
+  -- 2. |∫ (fn - f) * H in s| ≤ ∫ |(fn - f) * H| in s = ∫ |fn - f| * |H| in s
+  -- 3. ∫ |fn - f| * |H| in s ≤ C * ∫ |fn - f| in s    (since |H| ≤ C a.e.)
+  -- 4. C * ∫ |fn - f| in s ≤ C * ∫ |fn - f|          (monotonicity)
+  -- 5. C * ∫ |fn - f| → C * 0 = 0                    (by hypothesis hL1)
+  -- Therefore by squeeze theorem, the LHS converges to 0
 
 end MeasureTheory
 
