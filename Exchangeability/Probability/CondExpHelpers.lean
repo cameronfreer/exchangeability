@@ -1973,16 +1973,22 @@ lemma tendsto_set_integral_mul_of_L1 {α : Type*} [MeasurableSpace α] {μ : Mea
           (nhds (∫ ω in s, f ω * H ω ∂μ)) := by
   -- Strategy: Show fn * H → f * H in L¹, then apply tendsto_setIntegral_of_L1
   apply MeasureTheory.tendsto_setIntegral_of_L1 (fun ω => f ω * H ω) _ _ _ s
-  · -- Show f * H is integrable
-    sorry  -- Use Integrable.bdd_mul': f integrable, H bounded → f * H integrable
-  · -- Show fn * H is eventually integrable
+  · -- Sub-sorry (a): Show f * H is integrable
+    -- Apply bdd_mul': bounded function H times integrable function f
+    have := hf_int.bdd_mul' hH_int.aestronglyMeasurable hH_bdd
+    simpa only [mul_comm] using this
+  · -- Sub-sorry (b): Show fn * H is eventually integrable
     filter_upwards with n
-    sorry  -- Use Integrable.bdd_mul': fn n integrable, H bounded → fn n * H integrable
-  · -- Show ∫⁻ ‖(fn * H) - (f * H)‖₊ → 0
-    -- Key insight: ‖(fn - f) * H‖ = |fn - f| * |H| ≤ |fn - f| * C a.e.
-    -- So ∫⁻ ‖(fn - f) * H‖₊ ≤ C * ∫⁻ ‖fn - f‖₊ → 0
+    have := (hfn_int n).bdd_mul' hH_int.aestronglyMeasurable hH_bdd
+    simpa only [mul_comm] using this
+  · -- Sub-sorry (c): Show ∫⁻ ‖(fn * H) - (f * H)‖₊ → 0
     sorry
-    -- Requires: ENNReal manipulation, ae_of_all for bound, squeeze theorem
+    -- Proof sketch (needs ENNReal coercion fixes):
+    -- 1. Rewrite: ‖fn * H - f * H‖ = ‖(fn - f) * H‖
+    -- 2. Use nnnorm_mul: ‖(fn - f) * H‖₊ = ‖fn - f‖₊ * ‖H‖₊
+    -- 3. Bound: ‖H‖₊ ≤ C a.e., so ‖fn - f‖₊ * ‖H‖₊ ≤ ‖fn - f‖₊ * C
+    -- 4. Pull out constant: ∫⁻ (‖fn - f‖₊ * C) = C * ∫⁻ ‖fn - f‖₊
+    -- 5. Apply Tendsto.const_mul: C * ∫⁻ ‖fn - f‖₊ → C * 0 = 0
 
 end MeasureTheory
 
