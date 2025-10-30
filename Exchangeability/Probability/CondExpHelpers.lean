@@ -1740,7 +1740,8 @@ theorem condExp_project_of_condIndepFun
                       ∫ x in S, g x * μ[(Z ⁻¹' B).indicator 1|mW] x ∂μ := by
       apply setIntegral_congr_ae (hmW_le _ hS)
       filter_upwards [h_factor] with ω hω _
-      rw [← hg_def]
+      simp only [Pi.mul_apply] at hω
+      rw [hg_def]
       exact hω
 
     -- Finally, connect via condExp_mul_of_stronglyMeasurable_left with g
@@ -1754,7 +1755,10 @@ theorem condExp_project_of_condIndepFun
           ext ω; by_cases hω : ω ∈ Z ⁻¹' B <;> simp [Set.indicator, hω]
         rw [this]
         exact integrable_condExp.indicator hZB_meas
-      · exact integrable_const _
+      · -- Integrability of (Z⁻¹'B).indicator 1
+        have : (Z ⁻¹' B).indicator (1 : Ω → ℝ) = (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) := rfl
+        rw [this]
+        exact (integrable_const (1 : ℝ)).indicator hZB_meas
 
     -- Now apply condExp_mul_of_stronglyMeasurable_left with S.indicator 1
     have hS_ind_sm : StronglyMeasurable[mW] (S.indicator (fun _ : Ω => (1 : ℝ))) := by
@@ -1763,17 +1767,22 @@ theorem condExp_project_of_condIndepFun
     have h_tower_lhs : μ[S.indicator 1 * (g * (Z ⁻¹' B).indicator 1)|mW] =ᵐ[μ]
                        S.indicator 1 * μ[g * (Z ⁻¹' B).indicator 1|mW] := by
       apply condExp_mul_of_stronglyMeasurable_left hS_ind_sm
-      · -- Integrability
-        have : S.indicator 1 * (g * (Z ⁻¹' B).indicator 1) =
-               fun ω => S.indicator (fun _ : Ω => g ω * (Z ⁻¹' B).indicator 1 ω) ω := by
-          ext ω; by_cases hω : ω ∈ S <;> simp [Set.indicator, hω]
-        rw [this]
-        have : S.indicator (fun ω => g ω * (Z ⁻¹' B).indicator 1 ω) =
-               S.indicator ((Z ⁻¹' B).indicator g) := by
-          ext ω; by_cases hB : ω ∈ Z ⁻¹' B <;> simp [Set.indicator, hB]
-        rw [this]
+      · -- Integrability of S.indicator 1 * (g * indicator)
+        have h_ind_eq : (S.indicator (fun _ : Ω => (1 : ℝ))) * (g * (Z ⁻¹' B).indicator 1) =
+                        S.indicator ((Z ⁻¹' B).indicator g) := by
+          ext ω
+          simp only [Pi.mul_apply]
+          by_cases hS : ω ∈ S
+          · simp [Set.indicator_of_mem hS]
+            by_cases hB : ω ∈ Z ⁻¹' B <;> simp [Set.indicator, hB]
+          · simp [Set.indicator_of_notMem hS]
+        rw [h_ind_eq]
         exact (integrable_condExp.indicator hZB_meas).indicator hS_meas
-      · exact integrable_const _
+      · -- Integrability of g * (Z⁻¹'B).indicator 1
+        have : g * (Z ⁻¹' B).indicator 1 = (Z ⁻¹' B).indicator g := by
+          ext ω; by_cases hω : ω ∈ Z ⁻¹' B <;> simp [Set.indicator, hω]
+        rw [this]
+        exact integrable_condExp.indicator hZB_meas
 
     -- Combine h_g_mult and h_tower_lhs
     have h_combine : S.indicator 1 * μ[g * (Z ⁻¹' B).indicator 1|mW] =ᵐ[μ]
@@ -1792,16 +1801,8 @@ theorem condExp_project_of_condIndepFun
               apply integral_congr_ae
               exact h_tower_lhs.symm
         _ = ∫ x, S.indicator 1 x * (g x * (Z ⁻¹' B).indicator 1 x) ∂μ := by
-              -- Tower property: ∫ μ[f|m] = ∫ f
-              have : Integrable (S.indicator 1 * (g * (Z ⁻¹' B).indicator 1)) μ := by
-                have : S.indicator 1 * (g * (Z ⁻¹' B).indicator 1) =
-                       S.indicator ((Z ⁻¹' B).indicator g) := by
-                  ext ω
-                  by_cases hS : ω ∈ S <;> by_cases hB : ω ∈ Z ⁻¹' B <;>
-                    simp [Set.indicator, hS, hB]
-                rw [this]
-                exact (integrable_condExp.indicator hZB_meas).indicator hS_meas
-              rw [← integral_condExp hmW_le this]
+              -- Tower property: ∫ μ[f|m] x = ∫ f x
+              exact integral_condExp hmW_le
 
     -- Convert to set integral form
     have h_as_setInt_lhs : ∫ x, S.indicator 1 x * (g x * (Z ⁻¹' B).indicator 1 x) ∂μ =
