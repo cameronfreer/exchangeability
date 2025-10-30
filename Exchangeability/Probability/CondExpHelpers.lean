@@ -78,7 +78,7 @@ lemma finset_sum_ae_eq
         (fun ω => g a ω + ∑ i ∈ s, g i ω) := by
       -- On the a.e. set where both `h_a` and `IH'` hold, the sums match.
       filter_upwards [h_a, IH'] with ω h1 h2
-      simpa [h1, h2]
+      simp [h1, h2]
     -- Reassemble the sums over `insert a s`.
     simpa [Finset.sum_insert, ha] using h_add
 
@@ -988,11 +988,11 @@ theorem condExp_project_of_condIndepFun
       have h_bound : ∀ᵐ ω ∂μ, ‖(f_n n ∘ Y) ω‖ ≤ ‖(fun ω => 2 * ‖f (Y ω)‖) ω‖ := by
         apply Filter.Eventually.of_forall
         intro ω
-        simp only [Function.comp_apply, norm_norm]
+        simp only [Function.comp_apply]
         calc ‖(f_n n) (Y ω)‖
             ≤ ‖f (Y ω)‖ + ‖f (Y ω)‖ := SimpleFunc.norm_approxOn_zero_le hf (by simp) (Y ω) n
           _ = 2 * ‖f (Y ω)‖ := by ring
-          _ = ‖2 * ‖f (Y ω)‖‖ := by simp [abs_of_nonneg, norm_nonneg]
+          _ = ‖2 * ‖f (Y ω)‖‖ := by simp [abs_of_nonneg]
       have h_bound_int : Integrable (fun ω => 2 * ‖f (Y ω)‖) μ := by
         have : Integrable (fun ω => ‖f (Y ω)‖) μ := hf_int.norm
         simpa using this.const_mul 2
@@ -1010,7 +1010,7 @@ theorem condExp_project_of_condIndepFun
       have h_eq : (f_n n ∘ Y) * (Z ⁻¹' B).indicator 1 = (Z ⁻¹' B).indicator (f_n n ∘ Y) := by
         ext ω
         simp only [Pi.mul_apply, Set.indicator]
-        split_ifs <;> simp [mul_comm]
+        split_ifs <;> simp
       rw [h_eq]
       -- Now use Integrable.indicator (need mΩ measurability)
       have h_meas : @MeasurableSet Ω mΩ (Z ⁻¹' B) := hmZW_le _ (hmZ_le_mZW _ ⟨B, hB, rfl⟩)
@@ -1021,7 +1021,7 @@ theorem condExp_project_of_condIndepFun
       have h_eq : (f ∘ Y) * (Z ⁻¹' B).indicator 1 = (Z ⁻¹' B).indicator (f ∘ Y) := by
         ext ω
         simp only [Pi.mul_apply, Set.indicator]
-        split_ifs <;> simp [mul_comm]
+        split_ifs <;> simp
       rw [h_eq]
       have h_meas : @MeasurableSet Ω mΩ (Z ⁻¹' B) := hmZW_le _ (hmZ_le_mZW _ ⟨B, hB, rfl⟩)
       exact hf_int.indicator h_meas
@@ -1083,7 +1083,7 @@ theorem condExp_project_of_condIndepFun
         filter_upwards [h] with ω hω
         rcases hω with ⟨h0, h1⟩
         have : ‖(μ[fun ω => (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) ω | mW] ω : ℝ)‖ = μ[fun ω => (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) ω | mW] ω := by
-          simpa [abs_of_nonneg h0, Real.norm_eq_abs]
+          simp [abs_of_nonneg h0, Real.norm_eq_abs]
         simpa [this] using h1
 
       -- Both factors are a.e. strongly measurable / integrable
@@ -1119,7 +1119,7 @@ theorem condExp_project_of_condIndepFun
         filter_upwards [h] with ω hω
         rcases hω with ⟨h0, h1⟩
         have : ‖(μ[fun ω => (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) ω | mW] ω : ℝ)‖ = μ[fun ω => (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) ω | mW] ω := by
-          simpa [abs_of_nonneg h0, Real.norm_eq_abs]
+          simp [abs_of_nonneg h0, Real.norm_eq_abs]
         simpa [this] using h1
 
       -- Integrable CE of f∘Y
