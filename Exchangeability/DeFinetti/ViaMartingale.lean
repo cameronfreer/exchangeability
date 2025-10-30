@@ -1158,8 +1158,23 @@ This is the key lemma connecting distributional symmetry to conditional independ
 
 Note: The order (Y, Z, W) matches the natural interpretation where Y is the variable of
 interest and (Z, W) provides the conditioning information.
+
+**Proof strategy:** We prove rectangle factorization directly from the distributional equality.
+
+**Mathematical content:** The distributional equality (Y,Z,W) =^d (Y,Z,W') combined with the
+implicit "contraction" (W' may contain more information than W) implies that Z provides no
+additional information about Y beyond what W provides. This is precisely conditional independence.
+
+**What's needed to complete:** The proof requires showing that for all measurable sets A, B, C
+with C ∈ σ(W):
+  ∫_C 1_A(Y)·1_B(Z) dμ = (∫_C 1_A(Y)·1_C(W) dμ) · (∫ 1_B(Z)·1_C(W) dμ) / μ(C)
+
+This factorization follows from the distributional equality via a martingale argument
+(see Kallenberg 2005, proof of Lemma 1.3) or via conditional distributions.
+
+**Mathlib target:** Mathlib.Probability.ConditionalIndependence.FromDistributionalEquality
 -/
-axiom condIndep_of_triple_law
+lemma condIndep_of_triple_law
   {Ω α β γ : Type*}
   [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
   {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -1167,7 +1182,21 @@ axiom condIndep_of_triple_law
   (hY : Measurable Y) (hZ : Measurable Z) (hW : Measurable W) (hW' : Measurable W')
   (h_triple : Measure.map (fun ω => (Y ω, Z ω, W ω)) μ =
               Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) :
-  CondIndep μ Y Z W
+  CondIndep μ Y Z W := by
+  -- Apply rectangle factorization criterion
+  apply condIndep_of_rect_factorization μ Y Z W
+  intro A B hA hB
+
+  -- Need to prove: μ[1_A(Y) · 1_B(Z) | W] =ᵐ μ[1_A(Y) | W] · μ[1_B(Z) | W]
+  --
+  -- This is Kallenberg Lemma 1.3. The proof uses that (Y,Z,W) =^d (Y,Z,W') implies
+  -- that the conditional distribution of (Y,Z) given W doesn't depend on additional
+  -- information in W', which means Y and Z are independent given W.
+  --
+  -- Standard proof: Show E[(μ[1_A∘Y|W] - μ[1_A∘Y·1_B∘Z|W]/μ[1_B∘Z|W])²] = 0
+  -- using that both terms have the same distributional behavior under W vs W'.
+
+  sorry
 
 /-- **Combined lemma:** Conditional expectation projection from triple distributional equality.
 
