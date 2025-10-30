@@ -419,7 +419,62 @@ lemma condIndep_indicator_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
     exact condIndep_indicator μ Y Z W hCI c A hA d B hB
   case add =>
     intro ψ1 ψ2 hψ_disj hψ1_ih hψ2_ih
-    sorry  -- Use linearity of condExp
+    -- Goal: μ[φY * (ψ1+ψ2)Z | mW] =ᵐ μ[φY | mW] * μ[(ψ1+ψ2)Z | mW]
+    -- where φY = (A.indicator c) ∘ Y
+
+    -- Distribute: φY * (ψ1+ψ2)Z = φY * ψ1Z + φY * ψ2Z
+    have h_dist : ((A.indicator (fun _ => c)) ∘ Y) * ((ψ1 + ψ2) ∘ Z)
+        = ((A.indicator (fun _ => c)) ∘ Y) * (ψ1 ∘ Z) + ((A.indicator (fun _ => c)) ∘ Y) * (ψ2 ∘ Z) := by
+      ext ω; simp [Pi.add_apply, mul_add]
+
+    -- Apply IH to get factorization for ψ1 and ψ2
+    -- hψ1_ih : μ[φY * ψ1Z | mW] =ᵐ μ[φY | mW] * μ[ψ1Z | mW]
+    -- hψ2_ih : μ[φY * ψ2Z | mW] =ᵐ μ[φY | mW] * μ[ψ2Z | mW]
+
+    calc μ[((A.indicator (fun _ => c)) ∘ Y) * ((ψ1 + ψ2) ∘ Z) | MeasurableSpace.comap W inferInstance]
+        = μ[((A.indicator (fun _ => c)) ∘ Y) * (ψ1 ∘ Z) + ((A.indicator (fun _ => c)) ∘ Y) * (ψ2 ∘ Z)
+            | MeasurableSpace.comap W inferInstance] := by rw [h_dist]
+      _ =ᵐ[μ] μ[((A.indicator (fun _ => c)) ∘ Y) * (ψ1 ∘ Z) | MeasurableSpace.comap W inferInstance]
+              + μ[((A.indicator (fun _ => c)) ∘ Y) * (ψ2 ∘ Z) | MeasurableSpace.comap W inferInstance] := by
+          -- Need integrability to apply condExp_add
+          have hψ1_int : Integrable (ψ1 ∘ Z) μ := by
+            refine Integrable.comp_measurable ?_ hZ
+            exact SimpleFunc.integrable_of_isFiniteMeasure ψ1
+          have hψ2_int : Integrable (ψ2 ∘ Z) μ := by
+            refine Integrable.comp_measurable ?_ hZ
+            exact SimpleFunc.integrable_of_isFiniteMeasure ψ2
+          have h1_int : Integrable (((A.indicator (fun _ => c)) ∘ Y) * (ψ1 ∘ Z)) μ := by
+            refine Integrable.bdd_mul' (c := |c|) ?_ ?_ ?_
+            · exact hψ1_int
+            · exact ((measurable_const.indicator hA).comp hY).aestronglyMeasurable
+            · filter_upwards with ω
+              simp only [Function.comp_apply, Set.indicator, norm_indicator_eq_indicator_norm]
+              by_cases h : Y ω ∈ A <;> simp [h, le_abs_self, abs_nonneg]
+          have h2_int : Integrable (((A.indicator (fun _ => c)) ∘ Y) * (ψ2 ∘ Z)) μ := by
+            refine Integrable.bdd_mul' (c := |c|) ?_ ?_ ?_
+            · exact hψ2_int
+            · exact ((measurable_const.indicator hA).comp hY).aestronglyMeasurable
+            · filter_upwards with ω
+              simp only [Function.comp_apply, Set.indicator, norm_indicator_eq_indicator_norm]
+              by_cases h : Y ω ∈ A <;> simp [h, le_abs_self, abs_nonneg]
+          exact condExp_add h1_int h2_int _
+      _ =ᵐ[μ] (μ[(A.indicator (fun _ => c)) ∘ Y | MeasurableSpace.comap W inferInstance] * μ[ψ1 ∘ Z | MeasurableSpace.comap W inferInstance])
+              + (μ[(A.indicator (fun _ => c)) ∘ Y | MeasurableSpace.comap W inferInstance] * μ[ψ2 ∘ Z | MeasurableSpace.comap W inferInstance]) :=
+          Filter.EventuallyEq.add hψ1_ih hψ2_ih
+      _ =ᵐ[μ] μ[(A.indicator (fun _ => c)) ∘ Y | MeasurableSpace.comap W inferInstance]
+              * (μ[ψ1 ∘ Z | MeasurableSpace.comap W inferInstance] + μ[ψ2 ∘ Z | MeasurableSpace.comap W inferInstance]) := by
+          apply Filter.EventuallyEq.of_eq
+          simp only [Pi.add_apply, Pi.mul_apply, mul_add]
+      _ =ᵐ[μ] μ[(A.indicator (fun _ => c)) ∘ Y | MeasurableSpace.comap W inferInstance]
+              * μ[(ψ1 + ψ2) ∘ Z | MeasurableSpace.comap W inferInstance] := by
+          -- Apply condExp_add in reverse on RHS to combine ψ1 and ψ2
+          have hψ1_int : Integrable (ψ1 ∘ Z) μ := by
+            refine Integrable.comp_measurable ?_ hZ
+            exact SimpleFunc.integrable_of_isFiniteMeasure ψ1
+          have hψ2_int : Integrable (ψ2 ∘ Z) μ := by
+            refine Integrable.comp_measurable ?_ hZ
+            exact SimpleFunc.integrable_of_isFiniteMeasure ψ2
+          exact Filter.EventuallyEq.mul Filter.EventuallyEq.rfl (condExp_add hψ1_int hψ2_int _).symm
 
 lemma condIndep_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
     (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
@@ -437,7 +492,55 @@ lemma condIndep_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
     exact condIndep_indicator_simpleFunc μ Y Z W hCI c A hA ψ hY hZ
   case add =>
     intro φ1 φ2 hφ_disj hφ1_ih hφ2_ih
-    sorry  -- Use linearity of condExp
+    -- Goal: μ[(φ1+φ2)Y * ψZ | mW] =ᵐ μ[(φ1+φ2)Y | mW] * μ[ψZ | mW]
+
+    -- Distribute: (φ1+φ2)Y * ψZ = φ1Y * ψZ + φ2Y * ψZ
+    have h_dist : ((φ1 + φ2) ∘ Y) * (ψ ∘ Z)
+        = ((φ1 ∘ Y) * (ψ ∘ Z)) + ((φ2 ∘ Y) * (ψ ∘ Z)) := by
+      ext ω; simp [Pi.add_apply, add_mul]
+
+    calc μ[((φ1 + φ2) ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W inferInstance]
+        = μ[((φ1 ∘ Y) * (ψ ∘ Z)) + ((φ2 ∘ Y) * (ψ ∘ Z)) | MeasurableSpace.comap W inferInstance] := by rw [h_dist]
+      _ =ᵐ[μ] μ[(φ1 ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W inferInstance]
+              + μ[(φ2 ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W inferInstance] := by
+          -- Need integrability
+          have hφ1_int : Integrable (φ1 ∘ Y) μ := by
+            refine Integrable.comp_measurable ?_ hY
+            exact SimpleFunc.integrable_of_isFiniteMeasure φ1
+          have hφ2_int : Integrable (φ2 ∘ Y) μ := by
+            refine Integrable.comp_measurable ?_ hY
+            exact SimpleFunc.integrable_of_isFiniteMeasure φ2
+          have hψ_int : Integrable (ψ ∘ Z) μ := by
+            refine Integrable.comp_measurable ?_ hZ
+            exact SimpleFunc.integrable_of_isFiniteMeasure ψ
+          have h1_int : Integrable ((φ1 ∘ Y) * (ψ ∘ Z)) μ := by
+            apply Integrable.bdd_mul' hψ_int
+            · exact (φ1.measurable.comp hY).aestronglyMeasurable
+            · filter_upwards with ω
+              exact SimpleFunc.norm_le_sup_norm φ1 (Y ω)
+          have h2_int : Integrable ((φ2 ∘ Y) * (ψ ∘ Z)) μ := by
+            apply Integrable.bdd_mul' hψ_int
+            · exact (φ2.measurable.comp hY).aestronglyMeasurable
+            · filter_upwards with ω
+              exact SimpleFunc.norm_le_sup_norm φ2 (Y ω)
+          exact condExp_add h1_int h2_int _
+      _ =ᵐ[μ] (μ[φ1 ∘ Y | MeasurableSpace.comap W inferInstance] * μ[ψ ∘ Z | MeasurableSpace.comap W inferInstance])
+              + (μ[φ2 ∘ Y | MeasurableSpace.comap W inferInstance] * μ[ψ ∘ Z | MeasurableSpace.comap W inferInstance]) :=
+          Filter.EventuallyEq.add hφ1_ih hφ2_ih
+      _ =ᵐ[μ] (μ[φ1 ∘ Y | MeasurableSpace.comap W inferInstance] + μ[φ2 ∘ Y | MeasurableSpace.comap W inferInstance])
+              * μ[ψ ∘ Z | MeasurableSpace.comap W inferInstance] := by
+          apply Filter.EventuallyEq.of_eq
+          simp only [Pi.add_apply, Pi.mul_apply, add_mul]
+      _ =ᵐ[μ] μ[(φ1 + φ2) ∘ Y | MeasurableSpace.comap W inferInstance]
+              * μ[ψ ∘ Z | MeasurableSpace.comap W inferInstance] := by
+          -- Apply condExp_add in reverse on LHS
+          have hφ1_int : Integrable (φ1 ∘ Y) μ := by
+            refine Integrable.comp_measurable ?_ hY
+            exact SimpleFunc.integrable_of_isFiniteMeasure φ1
+          have hφ2_int : Integrable (φ2 ∘ Y) μ := by
+            refine Integrable.comp_measurable ?_ hY
+            exact SimpleFunc.integrable_of_isFiniteMeasure φ2
+          exact Filter.EventuallyEq.mul (condExp_add hφ1_int hφ2_int _).symm Filter.EventuallyEq.rfl
 
 /-!
 ## Helper lemmas for bounded measurable extension
