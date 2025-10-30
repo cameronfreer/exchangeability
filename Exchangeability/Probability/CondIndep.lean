@@ -807,13 +807,20 @@ lemma condIndep_bddMeas_extend_left
         exact abs_le.mp hω
 
       -- Apply dominated convergence theorem
-      -- Key lemma: tendsto_integral_filter_of_dominated_convergence
+      -- Key lemma: tendsto_integral_filter_of_dominated_convergence with μ.restrict C
       --
-      -- Hypotheses:
-      -- 1. AEStronglyMeasurable for each n (have: simple functions are measurable)
-      -- 2. Integrable bound: Mφ * |ψ ∘ Z| (have: from hψ_bdd)
-      -- 3. Dominated: |sφ n ∘ Y * ψ ∘ Z| ≤ Mφ * |ψ ∘ Z| (follows from h_sφ_bdd)
-      -- 4. Pointwise limit: sφ n ∘ Y → φ ∘ Y a.e. (have: h_sφ_tendsto)
+      -- All hypotheses need to be about μ.restrict C:
+      -- 1. ∀ᶠ n in atTop, AEStronglyMeasurable ((sφ n ∘ Y) * (ψ ∘ Z)) (μ.restrict C)
+      --    ✓ Simple functions are measurable
+      -- 2. ∀ᶠ n in atTop, ∀ᵐ ω ∂(μ.restrict C), ‖((sφ n ∘ Y) * (ψ ∘ Z)) ω‖ ≤ bound ω
+      --    where bound ω = Mφ * ‖(ψ ∘ Z) ω‖
+      --    ✓ Follows from h_sφ_bdd and hφ_bdd
+      -- 3. Integrable bound (μ.restrict C)
+      --    ✓ hψZ_int gives integrability on μ, restrict to C
+      -- 4. ∀ᵐ ω ∂(μ.restrict C), Tendsto (fun n => ((sφ n ∘ Y) * (ψ ∘ Z)) ω) atTop (nhds ((φ ∘ Y) * (ψ ∘ Z)) ω)
+      --    ✓ From h_sφ_tendsto and continuity of multiplication
+      --
+      -- Implementation requires careful handling of ae_restrict and Filter.Eventually.of_forall
       sorry
 
     -- RHS: L¹ continuity of condExp
