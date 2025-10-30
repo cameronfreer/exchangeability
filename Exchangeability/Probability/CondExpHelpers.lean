@@ -174,6 +174,39 @@ lemma integrable_mul_of_bound_one
   have hf_fin : (∫⁻ ω, ‖f ω‖₊ ∂μ) < ∞ := hf.hasFiniteIntegral
   exact lt_of_le_of_lt hle_int hf_fin
 
+/-- **Jensen's inequality for conditional expectation**: the absolute value of a conditional
+expectation is a.e. bounded by the conditional expectation of the absolute value.
+
+For integrable `f`: `|μ[f|m]| ≤ μ[|f||m]` almost everywhere.
+-/
+lemma abs_condExp_le_condExp_abs
+    {Ω : Type*} {m m₀ : MeasurableSpace Ω} {μ : Measure Ω}
+    (hm : m ≤ m₀) [SigmaFinite (μ.trim hm)]
+    {f : Ω → ℝ}
+    (hf : Integrable f μ) :
+    ∀ᵐ ω ∂μ, |(μ[f|m]) ω| ≤ (μ[(fun ω => |f ω|)|m]) ω := by
+  -- Upper bound: μ[f|m] ≤ μ[|f||m]
+  have h_up : μ[f|m] ≤ᵐ[μ] μ[(fun ω => |f ω|)|m] := by
+    refine condExp_mono hf ?_ ?_
+    · exact hf.abs
+    · apply Filter.Eventually.of_forall
+      intro ω; exact le_abs_self _
+  -- Lower bound: -μ[|f||m] ≤ μ[f|m]
+  -- Proof: f ≥ -|f| pointwise, so μ[f|m] ≥ μ[-|f||m] = -μ[|f||m]
+  have h_low : (fun ω => -(μ[(fun ω => |f ω|)|m]) ω) ≤ᵐ[μ] μ[f|m] := by
+    have neg_abs_bound : (fun ω => -(|f ω|)) ≤ᵐ[μ] f := by
+      apply Filter.Eventually.of_forall
+      intro ω; exact neg_abs_le _
+    have ce_ineq : μ[(fun ω => -(|f ω|))|m] ≤ᵐ[μ] μ[f|m] :=
+      condExp_mono hf.abs.neg hf neg_abs_bound
+    have neg_eq : (fun ω => -(μ[(fun ω => |f ω|)|m]) ω) =ᵐ[μ] μ[(fun ω => -(|f ω|))|m] :=
+      (condExp_neg (fun ω => |f ω|) m).symm
+    exact neg_eq.le.trans ce_ineq
+  -- Combine: |x| ≤ y iff -y ≤ x ≤ y
+  filter_upwards [h_up, h_low] with ω hup hlow
+  rw [abs_le]
+  exact ⟨hlow, hup⟩
+
 /-- The conditional expectation of an indicator (ℝ-valued) is a.e. in `[0,1]`. -/
 lemma condExp_indicator_ae_bound_one
   {Ω β : Type*} {m0 : MeasurableSpace Ω} {μ : Measure Ω} [IsFiniteMeasure μ]
@@ -1235,26 +1268,41 @@ theorem condExp_project_of_condIndepFun
 
       -- Bound: ‖μ[f_n n ∘ Y|mW] ω * μ[indicator|mW] ω‖ ≤ μ[2‖f ∘ Y‖|mW] ω
       -- Proof strategy:
-      -- 1. Indicator CE bounded by 1: condExp_mono + condExp_const
-      -- 2. Norm factorization: ‖a * b‖ = ‖a‖ * ‖b‖
-      -- 3. Jensen for CE: ‖μ[f|W]‖ ≤ μ[‖f‖|W]
-      -- 4. Monotonicity: μ[f|W] ≤ μ[g|W] when f ≤ g
+      -- 1. Show indicator CE in [0,1] using condExp_mono + condExp_const
+      -- 2. Apply Jensen's inequality via abs_condExp_le_condExp_abs
+      -- 3. Monotonicity: μ[|f_n||W] ≤ μ[2‖f‖|W]
+      -- 4. Combine using norm factorization
 
-      -- Complex bound requiring Jensen's inequality for conditional expectation
-      --
-      -- Proof strategy:
-      -- 1. Show indicator CE ≤ 1 using condExp_mono and condExp_const
-      -- 2. Apply triangle inequality for CE: |E[f|m]| ≤ E[|f||m] via condExp_mono (twice)
-      -- 3. Use condExp_mono to show E[|f_n||m] ≤ E[2‖f‖|m]
-      -- 4. Combine with norm_mul_le
-      --
-      -- Technical challenges:
-      -- - condExp_const requires careful type handling for constant functions
-      -- - condExp_neg needs proper function application
-      -- - Filter.Eventually.trans might not exist in this context
-      --
-      -- This is left as sorry due to technical lemma application issues
-      sorry
+      -- Step 1: Indicator CE is nonneg and bounded by 1
+      -- Use the fact that indicator takes values in [0,1]
+      have h_ind_bounds : ∀ᵐ ω ∂μ, (0 : ℝ) ≤ μ[ (Z ⁻¹' B).indicator 1 | mW ] ω ∧ μ[ (Z ⁻¹' B).indicator 1 | mW ] ω ≤ (1 : ℝ) := by
+        have h := @condExp_indicator_ae_bound_one Ω βZ mΩ μ inferInstance mW hmW_le Z _ B hZ hB
+        filter_upwards [h] with ω ⟨h0, h1⟩
+        constructor <;> simpa only [Set.indicator, Pi.one_apply]
+
+      -- Step 2: Apply Jensen's inequality
+      have h_jensen : ∀ᵐ ω ∂μ, |(μ[ f_n n ∘ Y | mW ]) ω| ≤ (μ[(fun ω => |(f_n n ∘ Y) ω|)|mW]) ω :=
+        abs_condExp_le_condExp_abs hmW_le (h_fn_int n)
+
+      -- Step 3: Monotonicity
+      have h_mono : ∀ᵐ ω ∂μ, (μ[(fun ω => |(f_n n ∘ Y) ω|)|mW]) ω ≤ (μ[ fun ω => 2 * ‖f (Y ω)‖ | mW ]) ω := by
+        refine condExp_mono ?_ h_bound_fs_int ?_
+        · exact (h_fn_int n).abs
+        · filter_upwards [h_norm_bound] with ω hω
+          simpa [abs_of_nonneg (norm_nonneg _)] using hω
+
+      -- Step 4: Combine all bounds
+      filter_upwards [h_ind_bounds, h_jensen, h_mono] with ω ⟨h0, h1⟩ hjen hmono
+      calc ‖(μ[ f_n n ∘ Y | mW ]) ω * (μ[ (Z ⁻¹' B).indicator 1 | mW ]) ω‖
+          = |(μ[ f_n n ∘ Y | mW ]) ω| * |(μ[ (Z ⁻¹' B).indicator 1 | mW ]) ω| := by
+            rw [Real.norm_eq_abs, abs_mul]
+        _ = |(μ[ f_n n ∘ Y | mW ]) ω| * (μ[ (Z ⁻¹' B).indicator 1 | mW ]) ω := by
+            rw [abs_of_nonneg h0]
+        _ ≤ |(μ[ f_n n ∘ Y | mW ]) ω| * 1 := by
+            apply mul_le_mul_of_nonneg_left h1 (abs_nonneg _)
+        _ = |(μ[ f_n n ∘ Y | mW ]) ω| := mul_one _
+        _ ≤ (μ[(fun ω => |(f_n n ∘ Y) ω|)|mW]) ω := hjen
+        _ ≤ (μ[ fun ω => 2 * ‖f (Y ω)‖ | mW ]) ω := hmono
     /-
     OLD PROOF (has typeclass errors):
     by
