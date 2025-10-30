@@ -19,10 +19,11 @@ unblock the build of ViaMartingale.lean.
 
 ## Contents
 
+* `setIntegral_eq_integral_indicator`: Set integral identity (standard, unused)
 * `tendsto_set_integral_mul_of_L1`: DCT for set integrals with bounded factor
 * `tendsto_condexp_L1`: Wrapper for conditional expectation L¹ continuity
 
-Both lemmas have sorry placeholders and syntax errors in the Filter.Tendsto notation.
+All lemmas have sorry placeholders.
 -/
 
 noncomputable section
@@ -30,6 +31,20 @@ open scoped MeasureTheory ENNReal
 open MeasureTheory ProbabilityTheory Set Filter
 
 namespace MeasureTheory
+
+/-!
+## Standard identities
+-/
+
+/-- **Helper: set integral equals integral of indicator product.**
+
+This helper is currently not used in the main proof but documents a standard identity.
+It can be derived from integral_indicator and properties of set integrals.
+-/
+private lemma setIntegral_eq_integral_indicator {α : Type*} [MeasurableSpace α] {μ : Measure α}
+    {s : Set α} (hs : MeasurableSet s) {f : α → ℝ} :
+    ∫ x in s, f x ∂μ = ∫ x, f x * (s.indicator (1 : α → ℝ)) x ∂μ := by
+  sorry
 
 /-!
 ## Convergence lemmas for bounded measurable extension

@@ -354,21 +354,6 @@ lemma condExp_project_of_le {α : Type*} (m m' m₀ : MeasurableSpace α) {μ : 
 ## Conditional expectation projection under conditional independence
 -/
 
-/-
-**Note:** The following helper was not used in the main proof and has been commented out.
-
-/-- **Helper: set integral equals integral of indicator product.**
-
-This helper is currently not used in the main proof but documents a standard identity.
--/
-private lemma setIntegral_eq_integral_indicator {α : Type*} [MeasurableSpace α] {μ : Measure α}
-    {s : Set α} (hs : MeasurableSet s) {f : α → ℝ} :
-    ∫ x in s, f x ∂μ = ∫ x, f x * (s.indicator (1 : α → ℝ)) x ∂μ := by
-  sorry
-  -- Standard identity that can be derived from integral_indicator and properties of set integrals
-  -- Not currently used in the main proof below
--/
-
 /-- **Projection under conditional independence (rectangle + π-λ approach).**
 
 If Y ⊥⊥_W Z (conditional independence), then for any integrable f:
