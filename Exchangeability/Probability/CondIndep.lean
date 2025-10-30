@@ -856,7 +856,55 @@ lemma condIndep_bddMeas_extend_left
   -- Here: f = φ ∘ Y * ψ ∘ Z, g = μ[φ ∘ Y|mW] * μ[ψ ∘ Z|mW]
   -- We have: hC_sets gives ∫_C f = ∫_C g for all mW-measurable C
   -- Conclusion: g =ᵐ μ[f|mW], i.e., μ[φ ∘ Y|mW] * μ[ψ ∘ Z|mW] =ᵐ μ[φ ∘ Y * ψ ∘ Z|mW]
-  sorry  -- API details: need integrability proofs and measurability of product of condExp
+
+  -- First, establish integrability of f = φ ∘ Y * ψ ∘ Z
+  have hφY_int : Integrable (φ ∘ Y) μ := by
+    refine Integrable.of_mem_Icc (-Mφ) Mφ (hφ_meas.comp hY).aemeasurable ?_
+    filter_upwards [hφ_bdd] with ω hω
+    simp only [Function.comp_apply, Set.mem_Icc]
+    exact abs_le.mp hω
+
+  have hψZ_int : Integrable (ψ ∘ Z) μ := by
+    refine Integrable.of_mem_Icc (-Mψ) Mψ (hψ_meas.comp hZ).aemeasurable ?_
+    filter_upwards [hψ_bdd] with ω hω
+    simp only [Function.comp_apply, Set.mem_Icc]
+    exact abs_le.mp hω
+
+  have hf_int : Integrable ((φ ∘ Y) * (ψ ∘ Z)) μ := by
+    -- Product of bounded integrable functions: φ ∘ Y bounded a.e., ψ ∘ Z integrable
+    -- Use Integrable.bdd_mul': requires hg integrable, hf ae strongly measurable, hf bounded a.e.
+    refine Integrable.bdd_mul' (c := Mφ) hψZ_int (hφ_meas.comp hY).aestronglyMeasurable ?_
+    -- Need: ∀ᵐ ω ∂μ, ‖(φ ∘ Y) ω‖ ≤ Mφ
+    filter_upwards [hφ_bdd] with ω hω
+    simp only [Function.comp_apply]
+    rw [Real.norm_eq_abs]
+    exact hω
+
+  -- Apply the uniqueness characterization lemma (gives g =ᵐ μ[f|m], need symm)
+  refine (ae_eq_condExp_of_forall_setIntegral_eq hmW_le hf_int ?_ ?_ ?_).symm
+
+  -- Hypothesis 1: IntegrableOn for g on finite mW-measurable sets
+  · intro s hs hμs
+    haveI : Fact (μ s < ∞) := ⟨hμs⟩
+    -- Conditional expectations are integrable
+    have h1 : Integrable (μ[(φ ∘ Y) | mW]) μ := integrable_condExp
+    have h2 : Integrable (μ[(ψ ∘ Z) | mW]) μ := integrable_condExp
+    -- Product of integrable functions is integrable on whole space (finite measure)
+    have hprod : Integrable (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) μ := by
+      -- Use Hölder: on finite measure, L¹ × L¹ ⊆ L¹
+      sorry  -- TODO: Need Memℒp.mul or similar for finite measure spaces
+    -- Product integrable on whole space implies integrable on subset
+    exact hprod.integrableOn
+
+  -- Hypothesis 2: Set integral equality (from hC_sets)
+  · intro s hs hμs
+    exact (hC_sets s hs).symm
+
+  -- Hypothesis 3: g is mW-measurable
+  · -- Product of conditional expectations is mW-measurable
+    refine AEStronglyMeasurable.mul ?_ ?_
+    · exact stronglyMeasurable_condExp.aestronglyMeasurable
+    · exact stronglyMeasurable_condExp.aestronglyMeasurable
 
 /-- **Conditional independence extends to bounded measurable functions (monotone class).**
 
