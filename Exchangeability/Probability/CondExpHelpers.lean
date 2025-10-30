@@ -1483,28 +1483,36 @@ theorem condExp_project_of_condIndepFun
     obtain ⟨ns', h_ns'_mono, h_condExp_subseq⟩ :=
       exists_subseq_ae_tendsto_of_condExpL1_tendsto μ hmW_le h_condExp_L1
 
-    -- Step 3: Full sequence convergence from subsequence + uniqueness
+    -- Step 3: Full sequence a.e. convergence - BLOCKED
+    --
+    -- TODO: Prove full sequence a.e. convergence from L¹ + one subsequence
+    --
+    -- What we have:
+    -- - h_condExp_L1: L¹ convergence condExpL1(f_n ∘ Y) → condExpL1(f ∘ Y)
+    -- - h_condExp_subseq: ONE subsequence ns' converges a.e. to μ[f ∘ Y|mW]
+    --
+    -- What we need:
+    -- - Full sequence a.e. convergence: μ[f_n n ∘ Y|mW] → μ[f ∘ Y|mW] a.e.
+    --
+    -- Strategy:
+    -- 1. Convert L¹ convergence → convergence in measure (tendstoInMeasure_of_tendsto_Lp)
+    -- 2. Use exists_seq_tendstoInMeasure_atTop_iff characterization
+    -- 3. Apply metrizability/separability argument for full sequence convergence
+    --
+    -- This requires proving or finding in mathlib:
+    -- lemma tendstoInMeasure_plus_one_subseq_imp_full_seq [MetricSpace E] [SeparableSpace E]
+    --   (h_measure : TendstoInMeasure μ f atTop g)
+    --   (h_subseq : ∃ ns, ∀ᵐ ω ∂μ, Tendsto (fun n => f (ns n) ω) atTop (𝓝 (g ω))) :
+    --   ∀ᵐ ω ∂μ, Tendsto (fun n => f n ω) atTop (𝓝 (g ω))
+    --
+    -- Alternative: Work entirely with subsequences (avoid need for full sequence convergence)
     have h_condExp_full : ∀ᵐ ω ∂μ, Filter.Tendsto
         (fun n => μ[ f_n n ∘ Y | mW ] ω)
         Filter.atTop
         (nhds (μ[ f ∘ Y | mW ] ω)) := by
-      -- TODO: Convert subsequence convergence to full sequence convergence
-      --
-      -- We have: h_condExp_subseq shows μ[f_n (ns' n) ∘ Y|mW] → μ[f ∘ Y|mW] a.e.
-      -- We need: full sequence μ[f_n n ∘ Y|mW] → μ[f ∘ Y|mW] a.e.
-      --
-      -- Possible approach 1: Show the sequence is Cauchy in L¹ (using DCT),
-      -- then every subsequence converges to the same limit, hence full sequence converges.
-      --
-      -- Possible approach 2: Use monotone convergence if SimpleFunc.approxOn is monotone
-      -- (need to verify this property).
-      --
-      -- Possible approach 3: Find a mathlib lemma that states L¹ convergence implies
-      -- a.e. convergence of the full sequence (not just a subsequence) under additional
-      -- conditions.
       sorry
 
-    --  TODO: Complete the uniqueness argument
+    --  TODO (BLOCKED on h_condExp_full): Complete the uniqueness argument
     --
     -- Mathematical idea:
     -- - LHS: (f_n ∘ Y) * indicator → (f ∘ Y) * indicator a.e. (we have h_fs_ptwise)
