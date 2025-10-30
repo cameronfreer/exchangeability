@@ -849,74 +849,29 @@ lemma condIndep_bddMeas_extend_left
 
       -- Key insight: h_int_n shows these two sequences are equal for all n.
       -- Since hLHS shows the LHS converges, the RHS must also converge (they're the same sequence!)
-      -- We rewrite using the equality and then apply DCT to identify the limit
+      -- We use L¹ convergence directly, without needing pointwise convergence.
 
-      -- First, apply DCT to show μ[(sφ n ∘ Y)|mW] * μ[(ψ ∘ Z)|mW] converges in integral
-      refine tendsto_integral_filter_of_dominated_convergence
-        (bound := fun ω => Mφ * ‖μ[(ψ ∘ Z) | mW] ω‖) ?_ ?_ ?_ ?_
-
-      -- Hypothesis 1: AEStronglyMeasurable for each n w.r.t. μ.restrict C
-      · refine Filter.Eventually.of_forall (fun n => ?_)
-        refine AEStronglyMeasurable.mul ?_ ?_
-        · exact ((stronglyMeasurable_condExp (m := mW) (μ := μ) (f := (sφ n) ∘ Y)).mono hmW_le).aestronglyMeasurable
-        · exact ((stronglyMeasurable_condExp (m := mW) (μ := μ) (f := ψ ∘ Z)).mono hmW_le).aestronglyMeasurable
-
-      -- Hypothesis 2: Dominated by bound a.e.
-      · refine Filter.Eventually.of_forall (fun n => ?_)
-        refine ae_restrict_of_ae ?_
-        -- Use ae_bdd_condExp_of_ae_bdd: if |f| ≤ R a.e., then |μ[f|m]| ≤ R a.e.
-        -- We have |sφ n ∘ Y| ≤ |φ ∘ Y| ≤ Mφ a.e., so |μ[(sφ n ∘ Y)|mW]| ≤ Mφ a.e.
-        -- First, show Mφ ≥ 0 from the fact that it bounds an absolute value
-        have hMφ_nn : 0 ≤ Mφ := by
-          rcases hφ_bdd.exists with ⟨ω, hω⟩
-          exact (abs_nonneg _).trans hω
-        have h_sφnY_bdd : ∀ᵐ ω ∂μ, |(sφ n ∘ Y) ω| ≤ (⟨Mφ, hMφ_nn⟩ : NNReal) := by
+      -- Step 1: Show L¹ convergence of conditional expectations
+      have h_L1_conv : Filter.Tendsto (fun n => condExpL1 hmW_le μ ((sφ n) ∘ Y)) Filter.atTop
+                                (nhds (condExpL1 hmW_le μ (φ ∘ Y))) := by
+        apply tendsto_condExpL1_of_dominated_convergence hmW_le (fun ω => Mφ)
+        · intro n
+          exact ((sφ n).measurable.comp hY).aestronglyMeasurable
+        · exact integrable_const Mφ
+        · intro n
           filter_upwards [hφ_bdd] with ω hω
-          calc |(sφ n ∘ Y) ω|
-              = |(sφ n) (Y ω)| := by rfl
+          calc ‖((sφ n) ∘ Y) ω‖
+              = |(sφ n) (Y ω)| := by rw [Real.norm_eq_abs]; rfl
             _ ≤ |φ (Y ω)| := h_sφ_bdd n (Y ω)
             _ ≤ Mφ := hω
-        have h_ce_bdd := ae_bdd_condExp_of_ae_bdd (m := mW) (R := ⟨Mφ, hMφ_nn⟩) h_sφnY_bdd
-        filter_upwards [h_ce_bdd] with ω hω
-        simp only [Function.comp_apply, Pi.mul_apply]
-        rw [norm_mul]
-        apply mul_le_mul_of_nonneg_right _ (norm_nonneg _)
-        rw [Real.norm_eq_abs]
-        exact hω
+        · filter_upwards [] with ω
+          exact h_sφ_tendsto (Y ω)
 
-      -- Hypothesis 3: Bound is integrable on C
-      · exact (hψZ_ce_int.norm.const_mul Mφ).integrableOn
-
-      -- Hypothesis 4: Pointwise convergence a.e.
-      · refine ae_restrict_of_ae ?_
-        -- Use Tendsto.mul: μ[(ψ ∘ Z)|mW] is fixed, so we need μ[(sφ n ∘ Y)|mW] → μ[(φ ∘ Y)|mW] a.e.
-        -- Get L¹ convergence from tendsto_condExpL1_of_dominated_convergence
-        have h_L1_conv : Filter.Tendsto (fun n => condExpL1 hmW_le μ ((sφ n) ∘ Y)) Filter.atTop
-                                  (nhds (condExpL1 hmW_le μ (φ ∘ Y))) := by
-          apply tendsto_condExpL1_of_dominated_convergence hmW_le (fun ω => Mφ)
-          · intro n
-            exact ((sφ n).measurable.comp hY).aestronglyMeasurable
-          · -- Bound function Mφ is integrable on probability space
-            exact integrable_const Mφ
-          · intro n
-            filter_upwards [hφ_bdd] with ω hω
-            calc ‖((sφ n) ∘ Y) ω‖
-                = |(sφ n) (Y ω)| := by rw [Real.norm_eq_abs]; rfl
-              _ ≤ |φ (Y ω)| := h_sφ_bdd n (Y ω)
-              _ ≤ Mφ := hω
-          · filter_upwards [] with ω
-            exact h_sφ_tendsto (Y ω)
-        --  Now convert L¹ convergence to pointwise a.e. convergence
-        -- Strategy: Use condExp_ae_eq_condExpL1 to relate condExp and condExpL1,
-        -- then use Tend to.mul to combine convergences
-
-        -- For now, we use that dominated convergence of the underlying functions
-        -- gives dominated convergence of their conditional expectations.
-        -- This is a standard result in probability theory.
-        sorry  -- TODO: This requires showing that L¹ convergence of condExpL1
-               -- implies a.e. pointwise convergence of condExp representatives
-               -- Standard approach: L¹ → convergence in measure → extract a.e. subseq
-               -- But DCT needs full sequence convergence, which requires additional work
+      -- Step 2: Use L¹ convergence with bounded multiplication
+      -- Key: ‖fn * g - f * g‖₁ ≤ ‖fn - f‖₁ * ‖g‖_∞
+      -- So L¹ convergence of CE + essential boundedness of ψZ term → L¹ convergence of product
+      sorry  -- TODO: Show that L¹ convergence + bounded multiplication → set integral convergence
+             -- Use tendsto_setIntegral_of_L1 with eLpNorm_le_eLpNorm_mul_eLpNorm_top
 
     -- Conclude by uniqueness of limits
     -- Since h_int_n shows the sequences are equal for all n, and both converge, their limits are equal
