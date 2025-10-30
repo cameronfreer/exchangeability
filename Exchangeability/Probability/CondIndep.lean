@@ -7,6 +7,7 @@ import Mathlib.Probability.ConditionalExpectation
 import Mathlib.Probability.Independence.Integration
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Real
+import Mathlib.MeasureTheory.Function.LpSpace.Complete
 import Mathlib.MeasureTheory.Measure.Typeclasses.Probability
 import Exchangeability.Probability.CondExpHelpers
 import Exchangeability.Probability.CondExp
@@ -867,11 +868,29 @@ lemma condIndep_bddMeas_extend_left
         · filter_upwards [] with ω
           exact h_sφ_tendsto (Y ω)
 
-      -- Step 2: Use L¹ convergence with bounded multiplication
-      -- Key: ‖fn * g - f * g‖₁ ≤ ‖fn - f‖₁ * ‖g‖_∞
-      -- So L¹ convergence of CE + essential boundedness of ψZ term → L¹ convergence of product
-      sorry  -- TODO: Show that L¹ convergence + bounded multiplication → set integral convergence
-             -- Use tendsto_setIntegral_of_L1 with eLpNorm_le_eLpNorm_mul_eLpNorm_top
+      -- Step 2: Show ψZ term is essentially bounded
+      have hMψ_nn : 0 ≤ Mψ := by
+        rcases hψ_bdd.exists with ⟨ω, hω⟩
+        exact (abs_nonneg _).trans hω
+      have hψZ_bdd : ∀ᵐ ω ∂μ, |μ[(ψ ∘ Z) | mW] ω| ≤ Mψ := by
+        have h_bdd : ∀ᵐ ω ∂μ, |(ψ ∘ Z) ω| ≤ (⟨Mψ, hMψ_nn⟩ : NNReal) := by
+          filter_upwards [hψ_bdd] with ω hω
+          simpa using hω
+        simpa [Real.norm_eq_abs] using
+          ae_bdd_condExp_of_ae_bdd (m := mW) (R := ⟨Mψ, hMψ_nn⟩) h_bdd
+
+      -- Step 3: Use bounded multiplication to show product converges in L¹, then get set integral convergence
+      --
+      -- Strategy: h_L1_conv gives Lp convergence of condExpL1, which is equivalent to eLpNorm convergence:
+      --   ‖condExpL1 ((sφ n) ∘ Y) - condExpL1 (φ ∘ Y)‖₁ → 0
+      --
+      -- Combined with hψZ_bdd (ψZ term is essentially bounded by Mψ), we get:
+      --   ‖(condExpL1 ((sφ n) ∘ Y) - condExpL1 (φ ∘ Y)) * condExpL1 (ψ ∘ Z)‖₁ → 0
+      -- by Hölder's inequality with L¹ and L^∞ (since ‖f*g‖₁ ≤ ‖f‖₁ * ‖g‖_∞).
+      --
+      -- Then use tendsto_setIntegral_of_L1 to get the desired set integral convergence.
+      sorry  -- TODO: Use tendsto_Lp_iff_tendsto_eLpNorm', eLpNorm_le_eLpNorm_mul_eLpNorm_top,
+             -- and tendsto_setIntegral_of_L1' to complete
 
     -- Conclude by uniqueness of limits
     -- Since h_int_n shows the sequences are equal for all n, and both converge, their limits are equal
