@@ -602,15 +602,13 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
       * μ[ (ψ ∘ Z) | MeasurableSpace.comap W (by infer_instance) ] := by
   classical
   set mW := MeasurableSpace.comap W (by infer_instance : MeasurableSpace γ) with hmW
-  show μ[ (φ ∘ Y) * (ψ ∘ Z) | mW ] =ᵐ[μ] μ[ (φ ∘ Y) | mW ] * μ[ (ψ ∘ Z) | mW ]
-
-  /-! ### Step 0: build real-valued simple-function approximation of φ via ℝ≥0∞ eapprox on pos/neg parts. -/
-
+  have hmW_le : mW ≤ _  := hW.comap_le
+  -- Step 0: build real-valued simple-function approximation of φ via ℝ≥0∞ eapprox on pos/neg parts.
   -- positive/negative parts as ℝ
   set φp : α → ℝ := fun a => max (φ a) 0 with hφp
   set φm : α → ℝ := fun a => max (- φ a) 0 with hφm
-  have hφp_nn : ∀ a, 0 ≤ φp a := by intro a; simp [φp]; exact le_max_right _ _
-  have hφm_nn : ∀ a, 0 ≤ φm a := by intro a; simp [φm]; exact le_max_right _ _
+  have hφp_nn : ∀ a, 0 ≤ φp a := by intro a; simp [φp]
+  have hφm_nn : ∀ a, 0 ≤ φm a := by intro a; simp [φm]
 
   have hφp_meas : Measurable φp := hφ_meas.max measurable_const
   have hφm_meas : Measurable φm := hφ_meas.neg.max measurable_const
@@ -637,9 +635,9 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
     -- φp a = toReal (ofReal (max (φ a) 0))
     simp only [sp, up, gp, φp]
     -- eapprox is monotonically increasing to its limit
-    have h_le : SimpleFunc.eapprox (fun a => ENNReal.ofReal (max (φ a) 0)) n a
+    have h_le : SimpleFunc.eapprox (fun (x : α) => ENNReal.ofReal (max (φ x) 0)) n a
                 ≤ ENNReal.ofReal (max (φ a) 0) := by
-      have := SimpleFunc.iSup_eapprox_apply (fun a => ENNReal.ofReal (max (φ a) 0))
+      have := SimpleFunc.iSup_eapprox_apply (fun (x : α) => ENNReal.ofReal (max (φ x) 0))
                 (hφ_meas.max measurable_const).ennreal_ofReal a
       rw [← this]
       exact le_iSup (fun k => SimpleFunc.eapprox _ k a) n
@@ -654,9 +652,9 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
   have h_sm_le : ∀ n a, (sm n a) ≤ φm a := by
     intro n a
     simp only [sm, um, gm, φm]
-    have h_le : SimpleFunc.eapprox (fun a => ENNReal.ofReal (max (- φ a) 0)) n a
+    have h_le : SimpleFunc.eapprox (fun (x : α) => ENNReal.ofReal (max (- φ x) 0)) n a
                 ≤ ENNReal.ofReal (max (- φ a) 0) := by
-      have := SimpleFunc.iSup_eapprox_apply (fun a => ENNReal.ofReal (max (- φ a) 0))
+      have := SimpleFunc.iSup_eapprox_apply (fun (x : α) => ENNReal.ofReal (max (- φ x) 0))
                 ((measurable_const.sub hφ_meas).max measurable_const).ennreal_ofReal a
       rw [← this]
       exact le_iSup (fun k => SimpleFunc.eapprox _ k a) n
@@ -665,13 +663,13 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
     rw [ENNReal.toReal_ofReal (le_max_right _ _)] at h_toReal
     exact h_toReal
 
-  have h_sp_tendsto : ∀ a, Tendsto (fun n => sp n a) atTop (𝓝 (φp a)) := by
+  have h_sp_tendsto : ∀ a, Filter.Tendsto (fun n => sp n a) Filter.atTop (nhds (φp a)) := by
     intro a
     simp only [sp, up, gp, φp]
     -- eapprox converges pointwise to its limit
-    have h_tend_enn : Tendsto (fun n => SimpleFunc.eapprox (fun a => ENNReal.ofReal (max (φ a) 0)) n a)
-                              atTop
-                              (𝓝 (ENNReal.ofReal (max (φ a) 0))) := by
+    have h_tend_enn : Filter.Tendsto (fun n => SimpleFunc.eapprox (fun a => ENNReal.ofReal (max (φ a) 0)) n a)
+                              Filter.atTop
+                              (nhds (ENNReal.ofReal (max (φ a) 0))) := by
       apply SimpleFunc.tendsto_eapprox
       exact (hφ_meas.max measurable_const).ennreal_ofReal
     -- ofReal is always finite
@@ -683,12 +681,12 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
     -- simplify toReal (ofReal x) = x for nonnegative x
     rwa [ENNReal.toReal_ofReal (le_max_right _ _)] at this
 
-  have h_sm_tendsto : ∀ a, Tendsto (fun n => sm n a) atTop (𝓝 (φm a)) := by
+  have h_sm_tendsto : ∀ a, Filter.Tendsto (fun n => sm n a) Filter.atTop (nhds (φm a)) := by
     intro a
     simp only [sm, um, gm, φm]
-    have h_tend_enn : Tendsto (fun n => SimpleFunc.eapprox (fun a => ENNReal.ofReal (max (- φ a) 0)) n a)
-                              atTop
-                              (𝓝 (ENNReal.ofReal (max (- φ a) 0))) := by
+    have h_tend_enn : Filter.Tendsto (fun n => SimpleFunc.eapprox (fun a => ENNReal.ofReal (max (- φ a) 0)) n a)
+                              Filter.atTop
+                              (nhds (ENNReal.ofReal (max (- φ a) 0))) := by
       apply SimpleFunc.tendsto_eapprox
       exact ((measurable_const.sub hφ_meas).max measurable_const).ennreal_ofReal
     have h_fin : ENNReal.ofReal (max (- φ a) 0) ≠ ∞ := ENNReal.ofReal_ne_top
@@ -696,7 +694,7 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
     have := h_cont.comp h_tend_enn
     rwa [ENNReal.toReal_ofReal (le_max_right _ _)] at this
 
-  have h_sφ_tendsto : ∀ a, Tendsto (fun n => sφ n a) atTop (𝓝 (φ a)) := by
+  have h_sφ_tendsto : ∀ a, Filter.Tendsto (fun n => sφ n a) Filter.atTop (nhds (φ a)) := by
     intro a
     have := (h_sp_tendsto a).sub (h_sm_tendsto a)
     -- posPart - negPart = φ
