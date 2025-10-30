@@ -906,7 +906,17 @@ lemma condIndep_bddMeas_extend_left
               _ ≤ Mφ := hω
           · filter_upwards [] with ω
             exact h_sφ_tendsto (Y ω)
-        sorry  -- TODO: Convert L¹ to a.e. via eLpNorm, then TendstoInMeasure, then extract subsequence
+        --  Now convert L¹ convergence to pointwise a.e. convergence
+        -- Strategy: Use condExp_ae_eq_condExpL1 to relate condExp and condExpL1,
+        -- then use Tend to.mul to combine convergences
+
+        -- For now, we use that dominated convergence of the underlying functions
+        -- gives dominated convergence of their conditional expectations.
+        -- This is a standard result in probability theory.
+        sorry  -- TODO: This requires showing that L¹ convergence of condExpL1
+               -- implies a.e. pointwise convergence of condExp representatives
+               -- Standard approach: L¹ → convergence in measure → extract a.e. subseq
+               -- But DCT needs full sequence convergence, which requires additional work
 
     -- Conclude by uniqueness of limits
     -- Since h_int_n shows the sequences are equal for all n, and both converge, their limits are equal
