@@ -7,6 +7,7 @@ import Mathlib.Probability.ConditionalExpectation
 import Mathlib.Probability.Independence.Integration
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Real
+import Mathlib.MeasureTheory.Function.LpSpace.Complete
 import Mathlib.MeasureTheory.Measure.Typeclasses.Probability
 import Exchangeability.Probability.CondExpHelpers
 import Exchangeability.Probability.CondExp
@@ -847,20 +848,49 @@ lemma condIndep_bddMeas_extend_left
       -- Integrability of μ[(ψ ∘ Z) | mW]
       have hψZ_ce_int : Integrable (μ[(ψ ∘ Z) | mW]) μ := integrable_condExp
 
-      -- Note: The full proof of RHS convergence requires showing that the product
-      -- μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW] converges pointwise a.e.
+      -- Key insight: h_int_n shows these two sequences are equal for all n.
+      -- Since hLHS shows the LHS converges, the RHS must also converge (they're the same sequence!)
+      -- We use L¹ convergence directly, without needing pointwise convergence.
+
+      -- Step 1: Show L¹ convergence of conditional expectations
+      have h_L1_conv : Filter.Tendsto (fun n => condExpL1 hmW_le μ ((sφ n) ∘ Y)) Filter.atTop
+                                (nhds (condExpL1 hmW_le μ (φ ∘ Y))) := by
+        apply tendsto_condExpL1_of_dominated_convergence hmW_le (fun ω => Mφ)
+        · intro n
+          exact ((sφ n).measurable.comp hY).aestronglyMeasurable
+        · exact integrable_const Mφ
+        · intro n
+          filter_upwards [hφ_bdd] with ω hω
+          calc ‖((sφ n) ∘ Y) ω‖
+              = |(sφ n) (Y ω)| := by rw [Real.norm_eq_abs]; rfl
+            _ ≤ |φ (Y ω)| := h_sφ_bdd n (Y ω)
+            _ ≤ Mφ := hω
+        · filter_upwards [] with ω
+          exact h_sφ_tendsto (Y ω)
+
+      -- Step 2: Show ψZ term is essentially bounded
+      have hMψ_nn : 0 ≤ Mψ := by
+        rcases hψ_bdd.exists with ⟨ω, hω⟩
+        exact (abs_nonneg _).trans hω
+      have hψZ_bdd : ∀ᵐ ω ∂μ, |μ[(ψ ∘ Z) | mW] ω| ≤ Mψ := by
+        have h_bdd : ∀ᵐ ω ∂μ, |(ψ ∘ Z) ω| ≤ (⟨Mψ, hMψ_nn⟩ : NNReal) := by
+          filter_upwards [hψ_bdd] with ω hω
+          simpa using hω
+        simpa [Real.norm_eq_abs] using
+          ae_bdd_condExp_of_ae_bdd (m := mW) (R := ⟨Mψ, hMψ_nn⟩) h_bdd
+
+      -- Step 3: Use bounded multiplication to show product converges in L¹, then get set integral convergence
       --
-      -- This would follow from two facts:
-      -- 1. μ[(sφ n ∘ Y) | mW] is uniformly bounded by Mφ (via conditional Jensen)
-      -- 2. μ[(sφ n ∘ Y) | mW] → μ[(φ ∘ Y) | mW] pointwise a.e.
+      -- Strategy: h_L1_conv gives Lp convergence of condExpL1, which is equivalent to eLpNorm convergence:
+      --   ‖condExpL1 ((sφ n) ∘ Y) - condExpL1 (φ ∘ Y)‖₁ → 0
       --
-      -- Fact (2) is a standard result but requires extracting a.e. convergent subsequence
-      -- from L¹ convergence (tendsto_condExpL1_of_dominated_convergence).
+      -- Combined with hψZ_bdd (ψZ term is essentially bounded by Mψ), we get:
+      --   ‖(condExpL1 ((sφ n) ∘ Y) - condExpL1 (φ ∘ Y)) * condExpL1 (ψ ∘ Z)‖₁ → 0
+      -- by Hölder's inequality with L¹ and L^∞ (since ‖f*g‖₁ ≤ ‖f‖₁ * ‖g‖_∞).
       --
-      -- For the purposes of this proof, we note that the integral equality h_int_n
-      -- already establishes the key factorization property for each n, and the limits
-      -- can be verified via the dominated convergence machinery (just tedious).
-      sorry
+      -- Then use tendsto_setIntegral_of_L1 to get the desired set integral convergence.
+      sorry  -- TODO: Use tendsto_Lp_iff_tendsto_eLpNorm', eLpNorm_le_eLpNorm_mul_eLpNorm_top,
+             -- and tendsto_setIntegral_of_L1' to complete
 
     -- Conclude by uniqueness of limits
     -- Since h_int_n shows the sequences are equal for all n, and both converge, their limits are equal
