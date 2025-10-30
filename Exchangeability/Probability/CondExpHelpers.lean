@@ -1997,10 +1997,11 @@ lemma tendsto_set_integral_mul_of_L1 {α : Type*} [MeasurableSpace α] {μ : Mea
             apply lintegral_mono_ae
             filter_upwards [hH_bdd] with ω hω
             gcongr
-            -- For real numbers, ‖x‖₊ = ‖x‖.toNNReal (norm_toNNReal')
-            -- Need to bridge: ‖H ω‖₊ ≤ C.toNNReal given ‖H ω‖ ≤ C
-            sorry  -- Use: rw [← norm_toNNReal']; exact Real.toNNReal_le_toNNReal hω
-            -- (Technical: norm_toNNReal' applies to SeminormedGroup; for ℝ need custom proof)
+            -- For real numbers: ‖x‖₊ ≤ C.toNNReal follows from ‖x‖ ≤ C
+            show ‖H ω‖₊ ≤ Real.toNNReal C
+            calc ‖H ω‖₊
+                = Real.toNNReal ‖H ω‖ := norm_toNNReal.symm
+              _ ≤ Real.toNNReal C := Real.toNNReal_le_toNNReal hω
         _ = ENNReal.ofReal C * ∫⁻ ω, ‖(fn n) ω - f ω‖₊ ∂μ := by
             rw [← lintegral_const_mul' _ (fun ω => ‖(fn n) ω - f ω‖₊) ENNReal.ofReal_ne_top]
             congr 1; ext ω
