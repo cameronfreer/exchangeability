@@ -3952,8 +3952,9 @@ private lemma optionB_Step3b_L2_to_L1
       Tendsto (fun n =>
         ‖birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2
            - condexpL2 (μ := μ) fL2‖) atTop (𝓝 0) := by
-    -- `hΦ.tendsto hfL2_tendsto : Tendsto (‖⋯ - condexpL2‖ ∘ ·) _ (𝓝 ‖0‖)`
-    simpa [sub_self] using hΦ.tendsto hfL2_tendsto
+    -- Compose the continuous map hΦ with the convergence hfL2_tendsto
+    have := (hΦ.tendsto (condexpL2 (μ := μ) fL2)).comp hfL2_tendsto
+    simpa [sub_self, norm_zero]
 
   -- Step 2: build the *upper* inequality eventually (for n > 0 only).
   have h_upper_ev :
@@ -3971,15 +3972,15 @@ private lemma optionB_Step3b_L2_to_L1
       filter_upwards [hB_eq_pos n hn, hY_eq] with ω h1 h2
       simpa [h1, h2]
 
-    -- measurability: use `Lp.aestronglyMeasurable_coe`, not a (nonexistent) `Subtype.*`
+    -- measurability: use `Lp.aestronglyMeasurable` to get AEStronglyMeasurable from Lp elements
     have h_meas :
         AEMeasurable
           (fun ω =>
             (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 : Ω[α] → ℝ) ω
             - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω) μ :=
-      ((Lp.aestronglyMeasurable_coe
+      ((Lp.aestronglyMeasurable
           (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2)).aemeasurable.sub
-       (Lp.aestronglyMeasurable_coe
+       (Lp.aestronglyMeasurable
           (condexpL2 (μ := μ) fL2)).aemeasurable)
 
     -- L¹ ≤ L² (expressed via `integral_norm_le_snorm` with p=2)
@@ -4025,10 +4026,11 @@ private lemma optionB_Step3b_L2_to_L1
       intro n; exact integral_nonneg (by intro ω; exact abs_nonneg _))
 
   -- Step 4: squeeze between 0 and the L²-norm difference (which → 0)
-  refine
-    tendsto_of_tendsto_of_tendsto_of_le_of_le
-      tendsto_const_nhds hL2_norm
-      h_lower_ev h_upper_ev
+  apply tendsto_of_tendsto_of_tendsto_of_le_of_le
+  · exact tendsto_const_nhds
+  · exact hL2_norm
+  · exact h_lower_ev
+  · exact h_upper_ev
 
 /-- **Step 4b helper**: A_n and B_n differ negligibly.
 
