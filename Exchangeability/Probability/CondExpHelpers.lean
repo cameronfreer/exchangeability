@@ -1945,19 +1945,17 @@ If fn → f in L¹(μ), then ∫_s fn → ∫_s f for any measurable set s.
 
 This requires integrability hypotheses to ensure the integrals are well-defined. -/
 lemma tendsto_set_integral_of_L1 {α : Type*} [MeasurableSpace α] {μ : Measure α}
-    {s : Set α} (hs : MeasurableSet s)
+    {s : Set α}
     {fn : ℕ → α → ℝ} {f : α → ℝ}
     (hf_int : Integrable f μ)
     (hfn_int : ∀ n, Integrable (fn n) μ)
     (hL1 : Filter.Tendsto (fun n => ∫⁻ ω, ‖(fn n) ω - f ω‖₊ ∂μ) Filter.atTop (nhds 0)) :
   Filter.Tendsto (fun n => ∫ ω in s, (fn n) ω ∂μ) Filter.atTop (nhds (∫ ω in s, f ω ∂μ)) := by
-  sorry
-  -- Proof sketch:
-  -- 1. |∫ fn in s - ∫ f in s| = |∫ (fn - f) in s|
-  -- 2. |∫ (fn - f) in s| ≤ ∫ |fn - f| in s   (triangle inequality for integrals)
-  -- 3. ∫ |fn - f| in s ≤ ∫ |fn - f|          (monotonicity of set integrals)
-  -- 4. ∫ |fn - f| → 0                        (by hypothesis hL1)
-  -- Therefore by squeeze theorem, |∫ fn in s - ∫ f in s| → 0
+  -- Direct application of mathlib's tendsto_setIntegral_of_L1
+  apply MeasureTheory.tendsto_setIntegral_of_L1 f hf_int _ hL1 s
+  -- Show that fn is eventually integrable
+  filter_upwards with n
+  exact hfn_int n
 
 /-- **L¹ convergence of product with bounded factor.**
 
