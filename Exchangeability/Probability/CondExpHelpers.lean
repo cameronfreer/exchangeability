@@ -1658,7 +1658,25 @@ theorem condExp_project_of_condIndepFun
     have hZB_meas : MeasurableSet[mΩ] (Z ⁻¹' B) := hZ hB
     have hg_meas : StronglyMeasurable[mW] g := stronglyMeasurable_condExp
 
-    -- Strategy: Show both sides equal ∫ (g·1_S) · E[1_{Z⁻¹(B)}|W] via tower property
+    -- Strategy: Proof by rewriting indicators as products and using h_factor
+    --
+    -- Goal: ∫ x in S ∩ Z⁻¹' B, μ[f ∘ Y|mW] x ∂μ = ∫ x in S ∩ Z⁻¹' B, (f ∘ Y) x ∂μ
+    -- where S ∈ σ(W), B ∈ B_Z
+    --
+    -- Key insight: Rewrite (Z⁻¹' B).indicator as multiplication by (Z⁻¹' B).indicator 1
+    -- Then use:
+    --   - h_factor: μ[(f ∘ Y) * indicator|mW] =ᵐ μ[f ∘ Y|mW] * μ[indicator|mW]
+    --   - condExp_mul_of_stronglyMeasurable_left: pull out mW-measurable factors
+    --
+    -- Implementation requires careful handling of:
+    --   1. Converting set integrals ↔ indicator integrals (setIntegral_indicator)
+    --   2. Rewriting indicator f = f * indicator 1
+    --   3. Applying h_factor to connect the two conditional expectations
+    --   4. Using setIntegral_congr_ae to show integrands are a.e. equal on S
+    --
+    -- Estimated ~40-60 additional lines with proper integrability side conditions
+
+    sorry
 
     -- MATHLIB API NEEDED:
     -- 1. Convert set integral to indicator integral:
@@ -1710,7 +1728,6 @@ theorem condExp_project_of_condIndepFun
     -- - integral_condExp
     -- - condExp_mul_of_stronglyMeasurable (pull out measurable factors)
     -- - h_factor (from condIndep_factor above)
-    sorry
     /-
     **Detailed Implementation Guide (~30-50 lines):**
 
