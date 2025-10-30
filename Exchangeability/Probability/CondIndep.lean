@@ -847,20 +847,39 @@ lemma condIndep_bddMeas_extend_left
       -- Integrability of μ[(ψ ∘ Z) | mW]
       have hψZ_ce_int : Integrable (μ[(ψ ∘ Z) | mW]) μ := integrable_condExp
 
-      -- Note: The full proof of RHS convergence requires showing that the product
-      -- μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW] converges pointwise a.e.
-      --
-      -- This would follow from two facts:
-      -- 1. μ[(sφ n ∘ Y) | mW] is uniformly bounded by Mφ (via conditional Jensen)
-      -- 2. μ[(sφ n ∘ Y) | mW] → μ[(φ ∘ Y) | mW] pointwise a.e.
-      --
-      -- Fact (2) is a standard result but requires extracting a.e. convergent subsequence
-      -- from L¹ convergence (tendsto_condExpL1_of_dominated_convergence).
-      --
-      -- For the purposes of this proof, we note that the integral equality h_int_n
-      -- already establishes the key factorization property for each n, and the limits
-      -- can be verified via the dominated convergence machinery (just tedious).
-      sorry
+      -- Key insight: h_int_n shows these two sequences are equal for all n.
+      -- Since hLHS shows the LHS converges, the RHS must also converge (they're the same sequence!)
+      -- We rewrite using the equality and then apply DCT to identify the limit
+
+      -- First, apply DCT to show μ[(sφ n ∘ Y)|mW] * μ[(ψ ∘ Z)|mW] converges in integral
+      refine tendsto_integral_filter_of_dominated_convergence
+        (bound := fun ω => Mφ * ‖μ[(ψ ∘ Z) | mW] ω‖) ?_ ?_ ?_ ?_
+
+      -- Hypothesis 1: AEStronglyMeasurable for each n w.r.t. μ.restrict C
+      · refine Filter.Eventually.of_forall (fun n => ?_)
+        refine AEStronglyMeasurable.mul ?_ ?_
+        · exact ((stronglyMeasurable_condExp (m := mW) (μ := μ) (f := (sφ n) ∘ Y)).mono hmW_le).aestronglyMeasurable
+        · exact ((stronglyMeasurable_condExp (m := mW) (μ := μ) (f := ψ ∘ Z)).mono hmW_le).aestronglyMeasurable
+
+      -- Hypothesis 2: Dominated by bound a.e.
+      · refine Filter.Eventually.of_forall (fun n => ?_)
+        refine ae_restrict_of_ae ?_
+        filter_upwards [hφ_bdd] with ω hω_φ
+        simp only [Function.comp_apply, Pi.mul_apply]
+        -- Need: ‖μ[(sφ n ∘ Y)|mW] ω‖ ≤ Mφ
+        -- Since |sφ n (Y ω)| ≤ |φ (Y ω)| ≤ Mφ, and conditional expectation preserves bounds,
+        -- we have |μ[(sφ n ∘ Y)|mW] ω| ≤ Mφ
+        rw [norm_mul]
+        apply mul_le_mul_of_nonneg_right _ (norm_nonneg _)
+        rw [Real.norm_eq_abs]
+        sorry  -- Need: |μ[(sφ n ∘ Y)|mW] ω| ≤ Mφ from |sφ n ∘ Y| ≤ |φ ∘ Y| ≤ Mφ a.e.
+
+      -- Hypothesis 3: Bound is integrable on C
+      · exact (hψZ_ce_int.norm.const_mul Mφ).integrableOn
+
+      -- Hypothesis 4: Pointwise convergence a.e.
+      · refine ae_restrict_of_ae ?_
+        sorry  -- Need: μ[(sφ n ∘ Y)|mW] → μ[(φ ∘ Y)|mW] a.e. from L¹ convergence
 
     -- Conclude by uniqueness of limits
     -- Since h_int_n shows the sequences are equal for all n, and both converge, their limits are equal
