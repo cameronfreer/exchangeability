@@ -629,29 +629,107 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
   -- properties: sφ n → φ pointwise, uniformly bounded
   have h_sp_le : ∀ n a, (sp n a) ≤ φp a := by
     intro n a
-    sorry  -- toReal (eapprox gp n a) ≤ toReal (gp a) = φp a
+    -- sp n a = toReal (eapprox gp n a)
+    -- φp a = toReal (ofReal (max (φ a) 0))
+    simp only [sp, up, gp, φp]
+    -- eapprox is monotonically increasing to its limit
+    have h_le : SimpleFunc.eapprox (fun a => ENNReal.ofReal (max (φ a) 0)) n a
+                ≤ ENNReal.ofReal (max (φ a) 0) := by
+      have := SimpleFunc.iSup_eapprox_apply (fun a => ENNReal.ofReal (max (φ a) 0))
+                (hφ_meas.max measurable_const).ennreal_ofReal a
+      rw [← this]
+      exact le_iSup (fun k => SimpleFunc.eapprox _ k a) n
+    -- ofReal of bounded value is finite
+    have h_fin : ENNReal.ofReal (max (φ a) 0) ≠ ∞ := ENNReal.ofReal_ne_top
+    -- toReal is monotone
+    have h_toReal := ENNReal.toReal_mono h_fin h_le
+    -- toReal ∘ ofReal = id for nonnegative
+    rw [ENNReal.toReal_ofReal (le_max_right _ _)] at h_toReal
+    exact h_toReal
 
   have h_sm_le : ∀ n a, (sm n a) ≤ φm a := by
     intro n a
-    sorry  -- toReal (eapprox gm n a) ≤ toReal (gm a) = φm a
+    simp only [sm, um, gm, φm]
+    have h_le : SimpleFunc.eapprox (fun a => ENNReal.ofReal (max (- φ a) 0)) n a
+                ≤ ENNReal.ofReal (max (- φ a) 0) := by
+      have := SimpleFunc.iSup_eapprox_apply (fun a => ENNReal.ofReal (max (- φ a) 0))
+                ((measurable_const.sub hφ_meas).max measurable_const).ennreal_ofReal a
+      rw [← this]
+      exact le_iSup (fun k => SimpleFunc.eapprox _ k a) n
+    have h_fin : ENNReal.ofReal (max (- φ a) 0) ≠ ∞ := ENNReal.ofReal_ne_top
+    have h_toReal := ENNReal.toReal_mono h_fin h_le
+    rw [ENNReal.toReal_ofReal (le_max_right _ _)] at h_toReal
+    exact h_toReal
 
   have h_sp_tendsto : ∀ a, Tendsto (fun n => sp n a) atTop (𝓝 (φp a)) := by
     intro a
-    sorry  -- iSup_eapprox_apply + toReal continuity
+    simp only [sp, up, gp, φp]
+    -- eapprox converges pointwise to its limit
+    have h_tend_enn : Tendsto (fun n => SimpleFunc.eapprox (fun a => ENNReal.ofReal (max (φ a) 0)) n a)
+                              atTop
+                              (𝓝 (ENNReal.ofReal (max (φ a) 0))) := by
+      apply SimpleFunc.tendsto_eapprox
+      exact (hφ_meas.max measurable_const).ennreal_ofReal
+    -- ofReal is always finite
+    have h_fin : ENNReal.ofReal (max (φ a) 0) ≠ ∞ := ENNReal.ofReal_ne_top
+    -- toReal is continuous at finite points
+    have h_cont := ENNReal.tendsto_toReal h_fin
+    -- compose the two tendsto's
+    have := h_cont.comp h_tend_enn
+    -- simplify toReal (ofReal x) = x for nonnegative x
+    rwa [ENNReal.toReal_ofReal (le_max_right _ _)] at this
 
   have h_sm_tendsto : ∀ a, Tendsto (fun n => sm n a) atTop (𝓝 (φm a)) := by
     intro a
-    sorry  -- iSup_eapprox_apply + toReal continuity
+    simp only [sm, um, gm, φm]
+    have h_tend_enn : Tendsto (fun n => SimpleFunc.eapprox (fun a => ENNReal.ofReal (max (- φ a) 0)) n a)
+                              atTop
+                              (𝓝 (ENNReal.ofReal (max (- φ a) 0))) := by
+      apply SimpleFunc.tendsto_eapprox
+      exact ((measurable_const.sub hφ_meas).max measurable_const).ennreal_ofReal
+    have h_fin : ENNReal.ofReal (max (- φ a) 0) ≠ ∞ := ENNReal.ofReal_ne_top
+    have h_cont := ENNReal.tendsto_toReal h_fin
+    have := h_cont.comp h_tend_enn
+    rwa [ENNReal.toReal_ofReal (le_max_right _ _)] at this
 
   have h_sφ_tendsto : ∀ a, Tendsto (fun n => sφ n a) atTop (𝓝 (φ a)) := by
     intro a
     have := (h_sp_tendsto a).sub (h_sm_tendsto a)
     -- posPart - negPart = φ
-    sorry  -- simplify max x 0 - max (-x) 0 = x
+    simp only [sφ, sp, sm, φp, φm, SimpleFunc.coe_sub] at this ⊢
+    convert this using 2
+    -- Show: max (φ a) 0 - max (-φ a) 0 = φ a
+    exact max_zero_sub_eq_self (φ a)
 
   have h_sφ_bdd : ∀ n a, |sφ n a| ≤ |φ a| := by
     intro n a
-    sorry  -- |sp - sm| ≤ sp + sm ≤ φp + φm = |φ|
+    simp only [sφ, sp, sm, φp, φm, SimpleFunc.coe_sub]
+    -- We have: sp n a ≤ φp a and sm n a ≤ φm a from h_sp_le and h_sm_le
+    -- Both sp and sm are nonnegative (as toReal of eapprox applied to ofReal of max with 0)
+    have h_sp_nn : 0 ≤ sp n a := by
+      simp only [sp, up, gp]
+      exact ENNReal.toReal_nonneg
+    have h_sm_nn : 0 ≤ sm n a := by
+      simp only [sm, um, gm]
+      exact ENNReal.toReal_nonneg
+    -- |sp - sm| ≤ sp + sm when both nonnegative
+    have h_abs_le : |sp n a - sm n a| ≤ sp n a + sm n a := by
+      rw [abs_sub_le_iff]
+      constructor
+      · linarith [h_sp_nn, h_sm_nn]
+      · linarith [h_sp_nn, h_sm_nn]
+    -- sp + sm ≤ φp + φm
+    have h_sum_le : sp n a + sm n a ≤ φp a + φm a := by
+      exact add_le_add (h_sp_le n a) (h_sm_le n a)
+    -- φp + φm = |φ| (positive part + negative part = absolute value)
+    have h_parts : φp a + φm a = |φ a| := by
+      simp only [φp, φm]
+      exact (max_zero_add_max_neg_zero_eq_abs (φ a)).symm
+    -- Combine
+    calc |sp n a - sm n a|
+        ≤ sp n a + sm n a := h_abs_le
+      _ ≤ φp a + φm a := h_sum_le
+      _ = |φ a| := h_parts
 
   /-! ### Step 1: reduce to equality of set integrals on σ(W)-sets C. -/
 
@@ -668,7 +746,7 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
           =ᵐ[μ]
         μ[ ((sφ n) ∘ Y) | mW ] * μ[ (ψ ∘ Z) | mW ] := by
       intro n
-      sorry  -- Apply condIndep_simpleFunc_left with sφ n and ψ
+      exact condIndep_simpleFunc μ Y Z W hCI (sφ n) ψ hY hZ
 
     -- Integrate both sides over C
     have h_int_n :
@@ -676,7 +754,21 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
         ∫ ω in C, ((sφ n ∘ Y) * (ψ ∘ Z)) ω ∂μ
           = ∫ ω in C, (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ := by
       intro n
-      sorry  -- Use set_integral_condexp twice as in rectangle proof
+      -- First, need integrability
+      have hsφn_int : Integrable ((sφ n) ∘ Y) μ := by
+        refine Integrable.comp_measurable ?_ hY
+        exact SimpleFunc.integrable_of_isFiniteMeasure (sφ n)
+      have hψ_int : Integrable (ψ ∘ Z) μ := by
+        refine Integrable.comp_measurable ?_ hZ
+        exact SimpleFunc.integrable_of_isFiniteMeasure ψ
+      have hprod_int : Integrable (((sφ n) ∘ Y) * (ψ ∘ Z)) μ := by
+        refine Integrable.mul hsφn_int hψ_int
+      -- Use setIntegral_condExp followed by setIntegral_congr_ae
+      calc ∫ ω in C, ((sφ n ∘ Y) * (ψ ∘ Z)) ω ∂μ
+          = ∫ ω in C, μ[((sφ n ∘ Y) * (ψ ∘ Z)) | mW] ω ∂μ := by
+              exact (setIntegral_condExp hmW_le hprod_int hC).symm
+        _ = ∫ ω in C, (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ := by
+              exact setIntegral_congr_ae (hmW_le _ hC) (by filter_upwards [h_rect_n n] with x hx _; exact hx)
 
     /-! Limit passage n→∞ on both sides. -/
     -- LHS: DCT
@@ -684,7 +776,41 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
       Tendsto (fun n => ∫ ω in C, ((sφ n ∘ Y) * (ψ ∘ Z)) ω ∂μ)
               atTop
               (𝓝 (∫ ω in C, ((φ ∘ Y) * (ψ ∘ Z)) ω ∂μ)) := by
-      sorry  -- DCT with bound Mφ * Mψ
+      -- Apply DCT on the restricted measure μ.restrict C
+      rw [show ∀ n, ∫ ω in C, ((sφ n ∘ Y) * (ψ ∘ Z)) ω ∂μ
+                    = ∫ ω, ((sφ n ∘ Y) * (ψ ∘ Z)) ω ∂(μ.restrict C)
+                  from fun n => (integral_restrict C).symm]
+      rw [show ∫ ω in C, ((φ ∘ Y) * (ψ ∘ Z)) ω ∂μ
+                = ∫ ω, ((φ ∘ Y) * (ψ ∘ Z)) ω ∂(μ.restrict C)
+              from (integral_restrict C).symm]
+      -- Apply DCT with bound Mφ * Mψ
+      refine tendsto_integral_of_dominated_convergence (fun ω => Mφ * Mψ) ?_ ?_ ?_ ?_
+      · -- AEStronglyMeasurable
+        intro n
+        exact ((sφ n).measurable.comp hY).mul ((ψ.measurable.comp hZ)).aestronglyMeasurable
+      · -- bound is integrable
+        exact Integrable.const Mφ_Mψ
+      · -- ‖(sφ n ∘ Y) * (ψ ∘ Z)‖ ≤ Mφ * Mψ
+        intro n
+        filter_upwards with ω
+        calc ‖((sφ n ∘ Y) * (ψ ∘ Z)) ω‖
+            = ‖sφ n (Y ω)‖ * ‖ψ (Z ω)‖ := by rw [Pi.mul_apply, norm_mul]
+          _ ≤ |φ (Y ω)| * Mψ := by
+              apply mul_le_mul
+              · simp only [Real.norm_eq_abs]; exact h_sφ_bdd n (Y ω)
+              · exact hψ_bdd (Z ω)
+              · exact norm_nonneg _
+              · exact abs_nonneg _
+          _ ≤ Mφ * Mψ := by
+              apply mul_le_mul
+              · simp only [Real.norm_eq_abs] at hφ_bdd; exact hφ_bdd (Y ω)
+              · le_refl
+              · exact Real.abs_nonneg _
+              · exact mul_nonneg (le_of_lt Mφ_pos) (le_of_lt Mψ_pos)
+      · -- Pointwise convergence
+        filter_upwards with ω
+        have := (h_sφ_tendsto (Y ω)).mul tendsto_const_nhds
+        simpa [Pi.mul_apply] using this
 
     -- RHS: L¹ continuity of condExp
     have hRHS :
