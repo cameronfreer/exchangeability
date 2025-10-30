@@ -806,22 +806,34 @@ lemma condIndep_bddMeas_extend_left
         simp only [Function.comp_apply, Set.mem_Icc]
         exact abs_le.mp hω
 
-      -- Apply dominated convergence theorem
-      -- Key lemma: tendsto_integral_filter_of_dominated_convergence with μ.restrict C
-      --
-      -- All hypotheses need to be about μ.restrict C:
-      -- 1. ∀ᶠ n in atTop, AEStronglyMeasurable ((sφ n ∘ Y) * (ψ ∘ Z)) (μ.restrict C)
-      --    ✓ Simple functions are measurable
-      -- 2. ∀ᶠ n in atTop, ∀ᵐ ω ∂(μ.restrict C), ‖((sφ n ∘ Y) * (ψ ∘ Z)) ω‖ ≤ bound ω
-      --    where bound ω = Mφ * ‖(ψ ∘ Z) ω‖
-      --    ✓ Follows from h_sφ_bdd and hφ_bdd
-      -- 3. Integrable bound (μ.restrict C)
-      --    ✓ hψZ_int gives integrability on μ, restrict to C
-      -- 4. ∀ᵐ ω ∂(μ.restrict C), Tendsto (fun n => ((sφ n ∘ Y) * (ψ ∘ Z)) ω) atTop (nhds ((φ ∘ Y) * (ψ ∘ Z)) ω)
-      --    ✓ From h_sφ_tendsto and continuity of multiplication
-      --
-      -- Implementation requires careful handling of ae_restrict and Filter.Eventually.of_forall
-      sorry
+      -- Apply dominated convergence theorem with bound Mφ * ‖ψ ∘ Z‖
+      refine tendsto_integral_filter_of_dominated_convergence
+        (bound := fun ω => Mφ * ‖(ψ ∘ Z) ω‖) ?_ ?_ ?_ ?_
+
+      -- Hypothesis 1: AEStronglyMeasurable for each n w.r.t. μ.restrict C
+      · refine Filter.Eventually.of_forall (fun n => ?_)
+        exact ((sφ n).measurable.comp hY).aestronglyMeasurable.mul (hψ_meas.comp hZ).aestronglyMeasurable
+
+      -- Hypothesis 2: Dominated by bound a.e. w.r.t. μ.restrict C
+      · refine Filter.Eventually.of_forall (fun n => ?_)
+        refine ae_restrict_of_ae ?_
+        filter_upwards [hφ_bdd] with ω hω_φ
+        simp only [Function.comp_apply, Pi.mul_apply]
+        calc ‖((sφ n ∘ Y) * (ψ ∘ Z)) ω‖
+            = ‖(sφ n) (Y ω)‖ * ‖(ψ ∘ Z) ω‖ := norm_mul _ _
+          _ = |(sφ n) (Y ω)| * ‖(ψ ∘ Z) ω‖ := by rw [Real.norm_eq_abs]
+          _ ≤ |φ (Y ω)| * ‖(ψ ∘ Z) ω‖ := by apply mul_le_mul_of_nonneg_right (h_sφ_bdd n (Y ω)) (norm_nonneg _)
+          _ ≤ Mφ * ‖(ψ ∘ Z) ω‖ := by apply mul_le_mul_of_nonneg_right hω_φ (norm_nonneg _)
+
+      -- Hypothesis 3: Bound Mφ * ‖ψ ∘ Z‖ is integrable on C
+      · exact (hψZ_int.norm.const_mul Mφ).integrableOn
+
+      -- Hypothesis 4: Pointwise convergence a.e.
+      · refine ae_restrict_of_ae ?_
+        filter_upwards [] with ω
+        apply Filter.Tendsto.mul
+        · exact h_sφ_tendsto (Y ω)
+        · exact tendsto_const_nhds
 
     -- RHS: L¹ continuity of condExp
     have hRHS :
@@ -829,17 +841,47 @@ lemma condIndep_bddMeas_extend_left
           ∫ ω in C, (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)
         Filter.atTop
         (nhds (∫ ω in C, (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)) := by
-      -- Strategy: Use L¹ continuity of conditional expectation + dominated convergence
-      -- Key lemma: tendsto_condExpL1_of_dominated_convergence shows μ[(sφ n) ∘ Y | mW] → μ[(φ ∘ Y) | mW] in L¹
-      -- Then use dominated convergence for the product μ[(sφ n) ∘ Y | mW] * μ[(ψ ∘ Z) | mW]
-      --
-      -- Hypotheses needed:
-      -- 1. (sφ n) ∘ Y are dominated by integrable bound (have: by Mφ)
-      -- 2. (sφ n) ∘ Y → φ ∘ Y pointwise a.e. (have: h_sφ_tendsto)
-      -- 3. Apply tendsto_condExpL1_of_dominated_convergence to get L¹ convergence of CE
-      -- 4. Use contractivity: ‖μ[f|mW]‖₁ ≤ ‖f‖₁ (eLpNorm_one_condExp_le_eLpNorm)
-      -- 5. Apply DCT to product with μ[(ψ ∘ Z) | mW] (which is fixed)
-      sorry
+      -- Key: conditional expectations μ[(sφ n ∘ Y) | mW] are uniformly bounded by Mφ
+      -- and μ[(ψ ∘ Z) | mW] is integrable. Apply DCT to the product.
+
+      -- First establish integrability of μ[(ψ ∘ Z) | mW]
+      have hψZ_ce_int : Integrable (μ[(ψ ∘ Z) | mW]) μ := integrable_condExp
+
+      -- Conditional expectations are bounded by the original function's bound
+      have h_ce_bdd : ∀ n, ∀ᵐ ω ∂μ, ‖μ[(sφ n ∘ Y) | mW] ω‖ ≤ Mφ := by
+        intro n
+        filter_upwards [hφ_bdd] with ω hω_φ
+        calc ‖μ[(sφ n ∘ Y) | mW] ω‖
+            ≤ ‖(sφ n ∘ Y) ω‖ := sorry -- TODO: norm of condExp ≤ norm of function a.e.
+          _ = |(sφ n) (Y ω)| := by simp [Real.norm_eq_abs]
+          _ ≤ |φ (Y ω)| := h_sφ_bdd n (Y ω)
+          _ ≤ Mφ := hω_φ
+
+      -- Apply DCT with bound Mφ * ‖μ[(ψ ∘ Z) | mW]‖
+      refine tendsto_integral_filter_of_dominated_convergence
+        (bound := fun ω => Mφ * ‖μ[(ψ ∘ Z) | mW] ω‖) ?_ ?_ ?_ ?_
+
+      -- Hypothesis 1: AEStronglyMeasurable
+      · refine Filter.Eventually.of_forall (fun n => ?_)
+        have h1 : AEStronglyMeasurable (μ[(sφ n ∘ Y) | mW]) (μ.restrict C) :=
+          stronglyMeasurable_condExp.aestronglyMeasurable
+        have h2 : AEStronglyMeasurable (μ[(ψ ∘ Z) | mW]) (μ.restrict C) :=
+          stronglyMeasurable_condExp.aestronglyMeasurable
+        exact @AEStronglyMeasurable.mul _ _ _ _ _ _ _ _ h1 h2
+
+      -- Hypothesis 2: Dominated by bound
+      · refine Filter.Eventually.of_forall (fun n => ?_)
+        refine ae_restrict_of_ae ?_
+        filter_upwards [h_ce_bdd n] with ω hω
+        simp only [Pi.mul_apply, norm_mul]
+        exact mul_le_mul_of_nonneg_right hω (norm_nonneg _)
+
+      -- Hypothesis 3: Bound integrable
+      · exact (hψZ_ce_int.norm.const_mul Mφ).integrableOn
+
+      -- Hypothesis 4: Pointwise convergence
+      · refine ae_restrict_of_ae ?_
+        sorry -- TODO: Show μ[(sφ n ∘ Y) | mW] → μ[(φ ∘ Y) | mW] pointwise a.e.
 
     -- conclude by uniqueness of limits
     -- Since h_int_n shows the sequences are equal for all n, and both converge, their limits are equal
