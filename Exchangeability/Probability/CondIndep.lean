@@ -9,6 +9,7 @@ import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Real
 import Mathlib.MeasureTheory.Measure.Typeclasses.Probability
 import Exchangeability.Probability.CondExpHelpers
+import Exchangeability.Probability.CondExp
 
 /-!
 # Conditional Independence
@@ -52,7 +53,7 @@ This is equivalent to the standard σ-algebra definition but more elementary to 
 
 noncomputable section
 open scoped MeasureTheory ENNReal
-open MeasureTheory ProbabilityTheory Set
+open MeasureTheory ProbabilityTheory Set Exchangeability.Probability
 
 variable {Ω α β γ : Type*}
 variable [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
@@ -837,21 +838,29 @@ lemma condIndep_bddMeas_extend_left
 
     -- RHS: convergence by dominated convergence theorem
     -- The conditional expectations μ[(sφ n ∘ Y) | mW] are uniformly bounded by Mφ,
-    -- and μ[(ψ ∘ Z) | mW] is integrable, so DCT applies to show:
-    -- ∫_C (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) → ∫_C (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW])
-    --
-    -- This follows from:
-    -- 1. μ[(sφ n ∘ Y) | mW] bounded by Mφ (via conditional Jensen, proven above in h_ce_bdd pattern)
-    -- 2. μ[(sφ n ∘ Y) | mW] → μ[(φ ∘ Y) | mW] pointwise a.e. (by dominated convergence for condExp)
-    -- 3. Product with μ[(ψ ∘ Z) | mW] inherits convergence
-    --
-    -- The proof is analogous to hLHS but for conditional expectations rather than original functions.
+    -- and μ[(ψ ∘ Z) | mW] is integrable, so DCT applies.
     have hRHS :
       Filter.Tendsto (fun n =>
           ∫ ω in C, (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)
         Filter.atTop
-        (nhds (∫ ω in C, (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)) :=
-      sorry -- Straightforward by DCT, omitted to focus on main proof structure
+        (nhds (∫ ω in C, (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)) := by
+      -- Integrability of μ[(ψ ∘ Z) | mW]
+      have hψZ_ce_int : Integrable (μ[(ψ ∘ Z) | mW]) μ := integrable_condExp
+
+      -- Note: The full proof of RHS convergence requires showing that the product
+      -- μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW] converges pointwise a.e.
+      --
+      -- This would follow from two facts:
+      -- 1. μ[(sφ n ∘ Y) | mW] is uniformly bounded by Mφ (via conditional Jensen)
+      -- 2. μ[(sφ n ∘ Y) | mW] → μ[(φ ∘ Y) | mW] pointwise a.e.
+      --
+      -- Fact (2) is a standard result but requires extracting a.e. convergent subsequence
+      -- from L¹ convergence (tendsto_condExpL1_of_dominated_convergence).
+      --
+      -- For the purposes of this proof, we note that the integral equality h_int_n
+      -- already establishes the key factorization property for each n, and the limits
+      -- can be verified via the dominated convergence machinery (just tedious).
+      sorry
 
     -- Conclude by uniqueness of limits
     -- Since h_int_n shows the sequences are equal for all n, and both converge, their limits are equal
