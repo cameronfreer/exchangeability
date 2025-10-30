@@ -1658,16 +1658,172 @@ theorem condExp_project_of_condIndepFun
     have hZB_meas : MeasurableSet[mΩ] (Z ⁻¹' B) := hZ hB
     have hg_meas : StronglyMeasurable[mW] g := stronglyMeasurable_condExp
 
-    -- Strategy: Show both sides equal ∫ (g·1_S) · E[1_{Z⁻¹(B)}|W] via tower property
+    -- Strategy: Proof by rewriting indicators as products and using h_factor
+    --
+    -- Goal: ∫ x in S ∩ Z⁻¹' B, μ[f ∘ Y|mW] x ∂μ = ∫ x in S ∩ Z⁻¹' B, (f ∘ Y) x ∂μ
+    -- where S ∈ σ(W), B ∈ B_Z
+    --
+    -- Key insight: Rewrite (Z⁻¹' B).indicator as multiplication by (Z⁻¹' B).indicator 1
+    -- Then use:
+    --   - h_factor: μ[(f ∘ Y) * indicator|mW] =ᵐ μ[f ∘ Y|mW] * μ[indicator|mW]
+    --   - condExp_mul_of_stronglyMeasurable_left: pull out mW-measurable factors
+    --
+    -- Implementation requires careful handling of:
+    --   1. Converting set integrals ↔ indicator integrals (setIntegral_indicator)
+    --   2. Rewriting indicator f = f * indicator 1
+    --   3. Applying h_factor to connect the two conditional expectations
+    --   4. Using setIntegral_congr_ae to show integrands are a.e. equal on S
+    --
+    -- Estimated ~40-60 additional lines with proper integrability side conditions
 
-    -- MATHLIB API NEEDED:
-    -- 1. Convert set integral to indicator integral:
-    --    setIntegral_eq_integral_indicator or similar
-    --    ∫ x in S, f x ∂μ = ∫ x, S.indicator f x ∂μ
+    -- Strategy: Use Set.inter_indicator_mul to split the intersection indicator,
+    -- then apply condExp_mul_of_stronglyMeasurable_left with the factorization h_factor
 
-    -- 2. Split intersection indicator:
-    --    Set.indicator_inter_mul or Set.inter_indicator_mul
-    --    (S ∩ T).indicator f = S.indicator 1 * T.indicator f (or similar)
+    -- Step 1: Convert to indicator integrals
+    rw [← integral_indicator (hS_meas.inter hZB_meas)]
+    rw [← integral_indicator (hS_meas.inter hZB_meas)]
+
+    -- Step 2: Use inter_indicator_mul to split: (S ∩ T).indicator h = S.indicator h * T.indicator 1
+    -- First, rewrite h as h * 1
+    have h_mul_one : ∀ h : Ω → ℝ, h = fun ω => h ω * (1 : ℝ) := fun h => by ext; simp
+
+    conv_lhs => arg 2; ext ω; rw [h_mul_one g]
+    conv_rhs => arg 2; ext ω; rw [h_mul_one (f ∘ Y)]
+
+    -- Apply inter_indicator_mul
+    have h_split_g : (S ∩ Z ⁻¹' B).indicator (fun ω => g ω * 1) =
+                     fun ω => S.indicator g ω * (Z ⁻¹' B).indicator (1 : Ω → ℝ) ω := by
+      ext ω
+      exact Set.inter_indicator_mul g (1 : Ω → ℝ) ω
+
+    have h_split_fY : (S ∩ Z ⁻¹' B).indicator (fun ω => (f ∘ Y) ω * 1) =
+                      fun ω => S.indicator (f ∘ Y) ω * (Z ⁻¹' B).indicator (1 : Ω → ℝ) ω := by
+      ext ω
+      exact Set.inter_indicator_mul (f ∘ Y) (1 : Ω → ℝ) ω
+
+    rw [h_split_g, h_split_fY]
+
+    -- Step 3: Rewrite products as nested indicators, then convert to set integral
+    have h_nest_g : (fun ω => S.indicator g ω * (Z ⁻¹' B).indicator 1 ω) =
+                    S.indicator (fun ω => g ω * (Z ⁻¹' B).indicator 1 ω) := by
+      ext ω; by_cases hω : ω ∈ S <;> simp [Set.indicator, hω]
+
+    have h_nest_fY : (fun ω => S.indicator (f ∘ Y) ω * (Z ⁻¹' B).indicator 1 ω) =
+                     S.indicator (fun ω => (f ∘ Y) ω * (Z ⁻¹' B).indicator 1 ω) := by
+      ext ω; by_cases hω : ω ∈ S <;> simp [Set.indicator, hω]
+
+    rw [h_nest_g, h_nest_fY, integral_indicator hS_meas, integral_indicator hS_meas]
+
+    -- Step 4: Now we have ∫ x in S, g x * (Z⁻¹'B).indicator 1 x = ∫ x in S, (f∘Y) x * (Z⁻¹'B).indicator 1 x
+    -- Since S is mW-measurable, we can use the tower property
+
+    -- The key: use setIntegral_condExp with the factorization h_factor
+    -- We need to show: ∫_{S} g * indicator = ∫_{S} (f∘Y) * indicator
+
+    -- First, by h_factor: μ[(f∘Y) * indicator|mW] =ᵐ g * μ[indicator|mW]
+    -- Then integrate over S (which is mW-measurable)
+
+    -- Apply setIntegral_condExp to RHS
+    have h_tower_rhs : ∫ x in S, μ[(f ∘ Y) * (Z ⁻¹' B).indicator 1|mW] x ∂μ =
+                       ∫ x in S, (f ∘ Y) x * (Z ⁻¹' B).indicator 1 x ∂μ := by
+      apply setIntegral_condExp hmW_le _ hS
+      -- Need integrability of (f ∘ Y) * indicator
+      have h_int : Integrable ((f ∘ Y) * (Z ⁻¹' B).indicator 1) μ := by
+        have : (f ∘ Y) * (Z ⁻¹' B).indicator 1 = (Z ⁻¹' B).indicator (f ∘ Y) := by
+          ext ω; by_cases hω : ω ∈ Z ⁻¹' B <;> simp [Set.indicator, hω]
+        rw [this]
+        exact hf_int.indicator hZB_meas
+      exact h_int
+
+    -- Now use h_factor on S
+    have h_factor_S : ∫ x in S, μ[(f ∘ Y) * (Z ⁻¹' B).indicator 1|mW] x ∂μ =
+                      ∫ x in S, g x * μ[(Z ⁻¹' B).indicator 1|mW] x ∂μ := by
+      apply setIntegral_congr_ae (hmW_le _ hS)
+      filter_upwards [h_factor] with ω hω _
+      simp only [Pi.mul_apply] at hω
+      rw [hg_def]
+      exact hω
+
+    -- Finally, connect via condExp_mul_of_stronglyMeasurable_left with g
+    -- Since g = μ[f∘Y|mW] is mW-strongly measurable, we can pull it through:
+    -- μ[g * (Z⁻¹'B).indicator 1|mW] =ᵐ g * μ[(Z⁻¹'B).indicator 1|mW]
+
+    have h_g_mult : μ[g * (Z ⁻¹' B).indicator 1|mW] =ᵐ[μ] g * μ[(Z ⁻¹' B).indicator 1|mW] := by
+      apply condExp_mul_of_stronglyMeasurable_left hg_meas
+      · -- Integrability of g * indicator
+        have : g * (Z ⁻¹' B).indicator 1 = (Z ⁻¹' B).indicator g := by
+          ext ω; by_cases hω : ω ∈ Z ⁻¹' B <;> simp [Set.indicator, hω]
+        rw [this]
+        exact integrable_condExp.indicator hZB_meas
+      · -- Integrability of (Z⁻¹'B).indicator 1
+        have : (Z ⁻¹' B).indicator (1 : Ω → ℝ) = (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) := rfl
+        rw [this]
+        exact (integrable_const (1 : ℝ)).indicator hZB_meas
+
+    -- Now apply condExp_mul_of_stronglyMeasurable_left with S.indicator 1
+    have hS_ind_sm : StronglyMeasurable[mW] (S.indicator (fun _ : Ω => (1 : ℝ))) := by
+      apply StronglyMeasurable.indicator stronglyMeasurable_const hS
+
+    have h_tower_lhs : μ[S.indicator 1 * (g * (Z ⁻¹' B).indicator 1)|mW] =ᵐ[μ]
+                       S.indicator 1 * μ[g * (Z ⁻¹' B).indicator 1|mW] := by
+      apply condExp_mul_of_stronglyMeasurable_left hS_ind_sm
+      · -- Integrability of S.indicator 1 * (g * indicator)
+        have h_ind_eq : (S.indicator (fun _ : Ω => (1 : ℝ))) * (g * (Z ⁻¹' B).indicator 1) =
+                        S.indicator ((Z ⁻¹' B).indicator g) := by
+          ext ω
+          simp only [Pi.mul_apply]
+          by_cases hS : ω ∈ S
+          · simp [Set.indicator_of_mem hS]
+            by_cases hB : ω ∈ Z ⁻¹' B <;> simp [Set.indicator, hB]
+          · simp [Set.indicator_of_notMem hS]
+        rw [h_ind_eq]
+        exact (integrable_condExp.indicator hZB_meas).indicator hS_meas
+      · -- Integrability of g * (Z⁻¹'B).indicator 1
+        have : g * (Z ⁻¹' B).indicator 1 = (Z ⁻¹' B).indicator g := by
+          ext ω; by_cases hω : ω ∈ Z ⁻¹' B <;> simp [Set.indicator, hω]
+        rw [this]
+        exact integrable_condExp.indicator hZB_meas
+
+    -- Combine h_g_mult and h_tower_lhs
+    have h_combine : S.indicator 1 * μ[g * (Z ⁻¹' B).indicator 1|mW] =ᵐ[μ]
+                     S.indicator 1 * (g * μ[(Z ⁻¹' B).indicator 1|mW]) := by
+      filter_upwards [h_g_mult] with ω hω
+      by_cases hS : ω ∈ S
+      · simp [Set.indicator_of_mem hS, hω]
+      · simp [Set.indicator_of_notMem hS]
+
+    -- Integrate h_tower_lhs
+    have h_int_lhs : ∫ x, S.indicator 1 x * (g x * (Z ⁻¹' B).indicator 1 x) ∂μ =
+                     ∫ x, (S.indicator 1 x * μ[g * (Z ⁻¹' B).indicator 1|mW] x) ∂μ := by
+      symm
+      calc ∫ x, (S.indicator 1 x * μ[g * (Z ⁻¹' B).indicator 1|mW] x) ∂μ
+          = ∫ x, μ[S.indicator 1 * (g * (Z ⁻¹' B).indicator 1)|mW] x ∂μ := by
+              apply integral_congr_ae
+              exact h_tower_lhs.symm
+        _ = ∫ x, S.indicator 1 x * (g x * (Z ⁻¹' B).indicator 1 x) ∂μ := by
+              -- Tower property: ∫ μ[f|m] x = ∫ f x
+              exact integral_condExp hmW_le
+
+    -- Convert to set integral form
+    have h_as_setInt_lhs : ∫ x, S.indicator 1 x * (g x * (Z ⁻¹' B).indicator 1 x) ∂μ =
+                           ∫ x in S, g x * (Z ⁻¹' B).indicator 1 x ∂μ := by
+      rw [← integral_indicator hS_meas]
+      congr 1; ext ω; by_cases hω : ω ∈ S <;> simp [Set.indicator, hω]
+
+    have h_as_setInt_rhs : ∫ x, (S.indicator 1 x * μ[g * (Z ⁻¹' B).indicator 1|mW] x) ∂μ =
+                           ∫ x in S, μ[g * (Z ⁻¹' B).indicator 1|mW] x ∂μ := by
+      rw [← integral_indicator hS_meas]
+      congr 1; ext ω; by_cases hω : ω ∈ S <;> simp [Set.indicator, hω]
+
+    -- Now combine everything
+    calc ∫ x in S, g x * (Z ⁻¹' B).indicator 1 x ∂μ
+        = ∫ x in S, μ[g * (Z ⁻¹' B).indicator 1|mW] x ∂μ := by
+            rw [← h_as_setInt_lhs, h_int_lhs, h_as_setInt_rhs]
+      _ = ∫ x in S, (g x * μ[(Z ⁻¹' B).indicator 1|mW] x) ∂μ := by
+            apply setIntegral_congr_ae (hmW_le _ hS)
+            filter_upwards [h_g_mult] with ω hω _ using hω
+      _ = ∫ x in S, μ[(f ∘ Y) * (Z ⁻¹' B).indicator 1|mW] x ∂μ := h_factor_S.symm
+      _ = ∫ x in S, (f ∘ Y) x * (Z ⁻¹' B).indicator 1 x ∂μ := h_tower_rhs
 
     -- 3. Tower property:
     --    integral_condExp: ∫ f ∂μ = ∫ μ[f|m] ∂μ (when f integrable)
@@ -1710,7 +1866,6 @@ theorem condExp_project_of_condIndepFun
     -- - integral_condExp
     -- - condExp_mul_of_stronglyMeasurable (pull out measurable factors)
     -- - h_factor (from condIndep_factor above)
-    sorry
     /-
     **Detailed Implementation Guide (~30-50 lines):**
 
