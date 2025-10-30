@@ -818,11 +818,42 @@ lemma condIndep_bddMeas_extend_left (μ : Measure Ω) [IsProbabilityMeasure μ]
           ∫ ω in C, (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)
         atTop
         (𝓝 (∫ ω in C, (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ)) := by
-      -- Apply DCT again for the product with CE
-      -- CE[sφ n Y] → CE[φ Y] pointwise a.e. (by CE continuity under pointwise convergence)
-      -- CE[sφ n Y] * CE[ψ Z] → CE[φ Y] * CE[ψ Z] pointwise a.e.
-      -- Dominated by Mφ * Mψ (CE preserves bounds)
-      sorry  -- Full proof: use L¹-continuity of CE + bounded multiplication + tendsto_set_integral_mul_of_L1
+      -- Apply DCT directly to the product μ[sφ n Y | mW] * μ[ψ Z | mW]
+      rw [show ∀ n, ∫ ω in C, (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ
+                    = ∫ ω, (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂(μ.restrict C)
+                  from fun n => (integral_restrict C).symm]
+      rw [show ∫ ω in C, (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂μ
+                = ∫ ω, (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω ∂(μ.restrict C)
+              from (integral_restrict C).symm]
+
+      -- Key facts we'll use:
+      -- 1. sφ n Y → φ Y pointwise a.e. with ‖sφ n Y‖ ≤ Mφ
+      -- 2. CE is continuous under dominated convergence
+      -- 3. CE preserves bounds: ‖CE[f]‖ ≤ CE[‖f‖] ≤ M a.e. if ‖f‖ ≤ M a.e.
+
+      -- Pointwise convergence of the product
+      have h_prod_ptwise : ∀ᵐ ω ∂μ,
+          Tendsto (fun n => (μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω)
+                  atTop
+                  (𝓝 ((μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω)) := by
+        sorry  -- Standard CE continuity: use that sφ n Y → φ Y pointwise + dominated by Mφ
+               -- implies CE[sφ n Y] → CE[φ Y] pointwise a.e.
+               -- Then multiply by CE[ψ Z] (constant in n)
+
+      -- Bound on the product
+      have h_prod_bdd : ∀ n, ∀ᵐ ω ∂μ,
+          ‖(μ[(sφ n ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) ω‖ ≤ Mφ * Mψ := by
+        intro n
+        sorry  -- Standard CE bound preservation: ‖CE[f]‖ ≤ CE[‖f‖] ≤ M a.e. when ‖f‖ ≤ M a.e.
+               -- Apply to both factors: ‖CE[sφ n Y]‖ ≤ Mφ and ‖CE[ψ Z]‖ ≤ Mψ
+
+      -- Apply DCT
+      refine tendsto_integral_of_dominated_convergence (fun ω => Mφ * Mψ) ?_ ?_ h_prod_bdd h_prod_ptwise
+      · -- AEStronglyMeasurable
+        intro n
+        exact (stronglyMeasurable_condExp.mul stronglyMeasurable_condExp).aestronglyMeasurable
+      · -- bound is integrable
+        exact Integrable.const Mφ_Mψ
 
     -- conclude by uniqueness of limits
     exact tendsto_nhds_unique_of_eventuallyEq h_int_n hLHS hRHS
