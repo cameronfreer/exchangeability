@@ -380,8 +380,7 @@ lemma map_pair_eq_compProd_condDistrib
     Measure.map (fun ω => (X ω, Y ω)) μ =
     (Measure.map X μ) ⊗ₘ (condDistrib Y X μ) := by
   classical
-  simpa using
-    ProbabilityTheory.compProd_map_condDistrib (μ := μ) (Y := Y) hY.aemeasurable
+  exact (ProbabilityTheory.compProd_map_condDistrib (μ := μ) (Y := Y) hY.aemeasurable).symm
 
 /-- **Swap** the components of a joint law. -/
 lemma map_swap_pair_eq {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
@@ -389,12 +388,11 @@ lemma map_swap_pair_eq {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
     Measure.map (fun ω => (U ω, V ω)) μ =
     (Measure.map (fun ω => (V ω, U ω)) μ).map Prod.swap := by
   classical
-  ext S hS
-  simp only [Measure.map_apply (hU.prodMk hV) hS,
-             Measure.map_apply measurable_swap ((hV.prodMk hU).comp measurable_id |>.measurableSet_preimage hS)]
-  congr 1
-  ext ω
-  simp [Prod.swap, Set.mem_preimage]
+  -- Use functoriality: map (g ∘ f) = map g ∘ map f
+  -- Here: (U,V) = swap ∘ (V,U)
+  have h_comp : (fun ω => (U ω, V ω)) = Prod.swap ∘ (fun ω => (V ω, U ω)) := by
+    funext ω; rfl
+  rw [h_comp, Measure.map_map measurable_swap (hV.prodMk hU)]
 
 /-- **Change of base for compProd (correct form).**
 
@@ -574,33 +572,59 @@ theorem condexp_indicator_drop_info_of_pair_law_proven
       (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))
     =ᵐ[μ]
     (fun ω => ((condDistrib ξ ζ μ (ζ ω)) B).toReal) := by
-    simpa using
-      condExp_ae_eq_integral_condDistrib (μ := μ) (ξ := ξ) (η := ζ) (s := B) hB
+    have h_int : Integrable (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (ξ ω)) μ := by
+      apply Integrable.indicator
+      · exact integrable_const 1
+      · exact hξ hB
+    have h1 := ProbabilityTheory.condExp_ae_eq_integral_condDistrib hζ hξ.aemeasurable
+      (stronglyMeasurable_const.indicator hB) h_int
+    -- Convert integral form to measure form: ∫ 1_B = μ.real B = (μ B).toReal
+    have h2 : ∀ᵐ ω ∂μ, ∫ y, Set.indicator B (fun _ => (1 : ℝ)) y ∂(condDistrib ξ ζ μ (ζ ω))
+                         = ((condDistrib ξ ζ μ (ζ ω)) B).toReal := by
+      refine ae_of_all μ (fun ω => ?_)
+      have : B.indicator (fun _ : ℝ => (1 : ℝ)) = B.indicator (1 : ℝ → ℝ) := rfl
+      rw [this, integral_indicator_one hB]
+      rfl
+    exact h1.trans h2
 
   have hη_bridge :
     condExp (MeasurableSpace.comap η inferInstance) μ
       (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))
     =ᵐ[μ]
     (fun ω => ((condDistrib ξ η μ (η ω)) B).toReal) := by
-    simpa using
-      condExp_ae_eq_integral_condDistrib (μ := μ) (ξ := ξ) (η := η) (s := B) hB
+    have h_int : Integrable (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (ξ ω)) μ := by
+      apply Integrable.indicator
+      · exact integrable_const 1
+      · exact hξ hB
+    have h1 := ProbabilityTheory.condExp_ae_eq_integral_condDistrib hη hξ.aemeasurable
+      (stronglyMeasurable_const.indicator hB) h_int
+    -- Convert integral form to measure form: ∫ 1_B = μ.real B = (μ B).toReal
+    have h2 : ∀ᵐ ω ∂μ, ∫ y, Set.indicator B (fun _ => (1 : ℝ)) y ∂(condDistrib ξ η μ (η ω))
+                         = ((condDistrib ξ η μ (η ω)) B).toReal := by
+      refine ae_of_all μ (fun ω => ?_)
+      have : B.indicator (fun _ : ℝ => (1 : ℝ)) = B.indicator (1 : ℝ → ℝ) := rfl
+      rw [this, integral_indicator_one hB]
+      rfl
+    exact h1.trans h2
 
   -- Apply equal_kernels_on_factor to get kernel equality
+  -- The lemma gives: composition kernel at η ω equals direct kernel at φ (ζ ω)
+  -- Since η = φ ∘ ζ a.e., we get what we need
+  have h_comp := ProbabilityTheory.equal_kernels_on_factor
+    hξ hη hζ hφ hη_factor hpairs hB
+
+  -- The composition kernel ∘ₖ is not what we want; we want the direct kernel at ζ ω
+  -- Key insight: By the disintegration uniqueness (which is what equal_kernels_on_factor proves),
+  -- the RHS kernel at φ(ζ ω) is the same as the LHS kernel at ζ ω
+  -- This is exactly what the lemma establishes via the measure equality
   have hkernel_eq :
     (fun ω => (condDistrib ξ ζ μ (ζ ω)) B)
       =ᵐ[μ]
     (fun ω => (condDistrib ξ η μ (φ (ζ ω))) B) := by
-    -- Use the kernel uniqueness lemma, which shows the composition kernel
-    -- equals the direct kernel at φ(ζ(ω))
-    have h_comp := ProbabilityTheory.equal_kernels_on_factor
-      hξ hη hζ hφ hη_factor hpairs hB
-    -- The lemma gives us equality at η ω = φ (ζ ω), which is what we need
-    exact h_comp.mono (fun ω hω => by
-      -- Need to show: condDistrib ξ ζ μ (ζ ω) B = condDistrib ξ η μ (φ (ζ ω)) B
-      -- The lemma gives: composition kernel at η ω = direct kernel at φ (ζ ω)
-      -- Since η ω = φ (ζ ω) a.e., this gives us what we need
-      sorry  -- Need to extract the right form from h_comp
-    )
+    -- From the pair law equality and disintegration, we have that
+    -- condDistrib ξ ζ μ and condDistrib ξ η μ ∘ φ are equal a.e.
+    -- This is established by equal_kernels_on_factor through the composition
+    sorry  -- This requires unwinding the composition kernel definition
 
   -- Convert to toReal and combine
   have hkernel_toReal :
@@ -614,7 +638,10 @@ theorem condexp_indicator_drop_info_of_pair_law_proven
     (fun ω => ((condDistrib ξ η μ (φ (ζ ω))) B).toReal)
       =ᵐ[μ]
     (fun ω => ((condDistrib ξ η μ (η ω)) B).toReal) :=
-    hη_factor.mono (fun ω hω => by simp [← hω])
+    hη_factor.mono (fun ω hω => by
+      -- hω : η ω = (φ ∘ ζ) ω, which is η ω = φ (ζ ω)
+      simp only [Function.comp_apply] at hω
+      simp only [hω])
 
   -- Combine all the equalities
   calc condExp (MeasurableSpace.comap ζ inferInstance) μ
