@@ -236,19 +236,26 @@ theorem condExp_tendsto_iInf
   -- ✅ Has Lévy UPWARD: `tendsto_ae_condExp` for increasing filtrations → ⨆ n, ℱ n
   -- ❌ NO Lévy DOWNWARD: for decreasing filtrations → ⨅ n, ℱ n
   --
-  -- The upward theorem uses submartingale convergence (lines 356-362 in Convergence.lean).
-  -- For decreasing filtrations, we would need supermartingale convergence, which is not
-  -- available in mathlib. The transformation G k = ⨆_{n ≤ k} 𝔽 n attempted above yields
-  -- a constant sequence (G k = 𝔽 0 for all k) due to antitonicity, which doesn't help.
+  -- Mathematical approach (see /tmp/levy_downward_sketch.lean for detailed implementation plan):
+  -- 1. Show (μ[f | 𝔽 k])_k forms a supermartingale:
+  --    For m ≤ n, have 𝔽 n ≤ 𝔽 m, so by tower property:
+  --    μ[μ[f | 𝔽 n] | 𝔽 m] = μ[f | 𝔽 m]
+  -- 2. L¹ boundedness: All conditional expectations have same L¹ norm as f
+  -- 3. Apply supermartingale convergence:
+  --    - Use `MeasureTheory.Supermartingale.neg` to convert to submartingale
+  --    - Apply `MeasureTheory.Submartingale.exists_ae_tendsto_of_bdd`
+  --    - Negate back to get supermartingale convergence
+  -- 4. Identify limit as μ[f | ⨅ k, 𝔽 k] using dominated convergence
   --
-  -- Standard proof approach (not yet in mathlib):
-  -- 1. Show (μ[f | 𝔽 k])_k is a reverse martingale (using tower property)
-  -- 2. Apply reverse martingale convergence via upcrossing estimates
-  -- 3. Identify limit as μ[f | ⨅ k, 𝔽 k]
+  -- Key challenge: Lean's `Filtration` structure requires monotonicity (increasing),
+  -- but we have antitonicity (decreasing). Would need either:
+  --   - Work directly with supermartingale definition (bypassing Filtration)
+  --   - Reverse the time index to make it increasing
+  --   - Build specialized infrastructure for reverse filtrations
   --
-  -- Estimated implementation: 500-1000 lines (upcrossings, stopping times, uniform integrability)
+  -- Estimated implementation: 200-400 lines with sketch as guide
   --
-  -- For now, this remains as a well-documented axiom, used only in ViaMartingale.lean.
+  -- For now, this remains as a well-documented sorry, used only in ViaMartingale.lean.
   -- The other two proofs of de Finetti (ViaL2, ViaKoopman) are unaffected.
   sorry
 
