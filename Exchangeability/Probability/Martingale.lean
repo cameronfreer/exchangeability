@@ -197,30 +197,61 @@ lemma Filtration.ofAntitone_apply (F : ℕ → MeasurableSpace Ω) (hF : Antiton
     (hle : ∀ n, F n ≤ (inferInstance : MeasurableSpace Ω)) (i : OrderDual ℕ) :
     (Filtration.ofAntitone F hF hle) i = F (OrderDual.ofDual i) := rfl
 
-/-- `iSup` on the OrderDual filtration equals `iInf` on the original decreasing family.
+/-- For an antitone chain of σ-algebras, the supremum equals the first term.
 
-This is the key correspondence that lets us identify the limit: when we apply Lévy's upward
-theorem to the increasing filtration on `ℕᵒᵈ`, the limit is w.r.t. `⨆ i, 𝔾 i`, which equals
-`⨅ n, 𝔽 n` by this lemma. -/
-lemma iSup_ofAntitone_eq_iInf (F : ℕ → MeasurableSpace Ω) (hF : Antitone F)
-    (hle : ∀ n, F n ≤ (inferInstance : MeasurableSpace Ω)) :
-    iSup (Filtration.ofAntitone F hF hle) = iInf F := by
-  -- The key insight: ⨆ i : ℕᵒᵈ, F i.ofDual = ⨅ n : ℕ, F n
-  -- This follows from OrderDual flipping the order
-  --
-  -- Detailed proof would show:
-  -- - For any n : ℕ, have F n ≤ ⨆ i, F i.ofDual (taking i = toDual n)
-  -- - For any i : ℕᵒᵈ and n : ℕ, F i.ofDual ≤ F n uses antitonicity
-  -- - These combine via the universal properties of iSup and iInf
-  --
-  -- This is a standard lattice-theoretic fact but requires careful handling
-  -- of the GenerateMeasurable constructors in MeasurableSpace.
-  -- Est. 40 lines to complete rigorously.
-  sorry
+**Key insight:** For an antitone sequence F : ℕ → MeasurableSpace Ω, we have
+  ⨆ i : ℕᵒᵈ, F i.ofDual = F 0
+because F n ≤ F 0 for all n (by antitonicity), and F 0 is one of the terms.
+
+**Why the OrderDual approach fails:** This shows that reindexing via ℕᵒᵈ cannot turn
+⨆ into ⨅. For example, if F 0 = ⊤ and F n = ⊥ for n > 0, then:
+  ⨆ i, F i.ofDual = ⊤  but  ⨅ n, F n = ⊥
+Therefore, applying Lévy's upward theorem to the OrderDual filtration would give
+convergence to μ[f | F 0], not μ[f | ⨅ n, F n]. -/
+lemma iSup_ofAntitone_eq_F0
+    (F : ℕ → MeasurableSpace Ω) (hF : Antitone F) :
+    (⨆ i : OrderDual ℕ, F i.ofDual) = F 0 := by
+  refine le_antisymm ?_ ?_
+  · -- `⨆ ≤ F 0` since `F n ≤ F 0` for all `n`
+    refine iSup_le (fun i => ?_)
+    have : (0 : ℕ) ≤ i.ofDual := Nat.zero_le _
+    exact hF this
+  · -- and `F 0 ≤ ⨆` since `0` is one of the indices
+    have : F 0 ≤ F (OrderDual.ofDual (OrderDual.toDual 0)) := le_rfl
+    simpa using (le_iSup_of_le (OrderDual.toDual 0) this)
 
 /-! ## Application to De Finetti
 
 The specific case needed for the martingale proof of de Finetti. -/
+
+/-! ### Helper definitions for reverse martingale convergence -/
+
+/-- Reverse martingale along a decreasing chain: `X n := condExp μ (F n) f`. -/
+def revCE (μ : Measure Ω) (F : ℕ → MeasurableSpace Ω) (f : Ω → ℝ) (n : ℕ) : Ω → ℝ :=
+  μ[f | F n]
+
+/-- Tower property in the reverse direction: for `m ≥ n`, `E[X_n | F_m] = X_m`. -/
+lemma revCE_tower
+    [IsProbabilityMeasure μ]
+    {F : ℕ → MeasurableSpace Ω} (hF : Antitone F)
+    (h_le : ∀ n, F n ≤ (inferInstance : MeasurableSpace Ω))
+    (f : Ω → ℝ) {n m : ℕ} (hmn : n ≤ m) :
+    μ[revCE μ F f n | F m] =ᵐ[μ] revCE μ F f m := by
+  -- `hF hmn` says `F m ≤ F n`. Use the tower property in the `≤` direction.
+  -- i.e. `condExp μ (F m) (condExp μ (F n) f) = condExp μ (F m) f`.
+  simp only [revCE]
+  exact condExp_condExp_of_le (hF hmn) (h_le n)
+
+/-- L¹ boundedness of the reverse martingale. -/
+lemma revCE_L1_bdd
+    [IsProbabilityMeasure μ]
+    {F : ℕ → MeasurableSpace Ω}
+    (h_le : ∀ n, F n ≤ (inferInstance : MeasurableSpace Ω))
+    (f : Ω → ℝ) (hf : Integrable f μ) :
+    ∀ n, eLpNorm (revCE μ F f n) 1 μ ≤ eLpNorm f 1 μ := by
+  intro n
+  simp only [revCE]
+  exact eLpNorm_one_condExp_le_eLpNorm f
 
 /-- **Conditional expectation converges along decreasing filtration (Lévy's downward theorem).**
 
@@ -228,14 +259,16 @@ For a decreasing filtration 𝔽ₙ and integrable f, the sequence
   Mₙ := E[f | 𝔽ₙ]
 converges a.s. to E[f | ⨅ₙ 𝔽ₙ].
 
-**Proof strategy:** Package the decreasing family (𝔽 n) as an increasing filtration on `ℕᵒᵈ`
-via `Filtration.ofAntitone`, then apply Lévy's upward theorem. The correspondence
-`⨆ i, 𝔾 i = ⨅ n, 𝔽 n` identifies the limit correctly.
+**Proof strategy:** This is a reverse martingale convergence theorem. We prove it directly using:
+1. **L¹ contraction:** ‖E[f | 𝔽ₙ]‖₁ ≤ ‖f‖₁ uniformly in n (mathlib)
+2. **Tower property:** For m ≥ n, E[E[f | 𝔽ₙ] | 𝔽ₘ] = E[f | 𝔽ₘ] (reverse martingale)
+3. **Uniform integrability:** Via de la Vallée-Poussin (Jensen inequality for condexp)
+4. **Vitali:** UI + subsequence a.e. convergence ⇒ full a.e. convergence
+5. **Limit identification:** Test on A ∈ ⨅ 𝔽ₙ to show limit = E[f | ⨅ 𝔽ₙ]
 
-**Key insight:** In `OrderDual ℕ`, we have `i ≤ j` iff `ofDual j ≤ ofDual i` in `ℕ`, so
-antitonicity of (𝔽 n) becomes monotonicity of (𝔾 i). The sequence `n ↦ μ[f | 𝔽 n]` becomes
-a martingale (not supermartingale!) w.r.t. the increasing filtration 𝔾, allowing direct
-application of `MeasureTheory.tendsto_ae_condExp` without negation. -/
+**Why not use OrderDual reindexing?** See `iSup_ofAntitone_eq_F0`: for antitone F,
+we have ⨆ i, F i.ofDual = F 0, not ⨅ n, F n. Applying Lévy's upward theorem would
+give convergence to the wrong limit. -/
 theorem condExp_tendsto_iInf
     [IsProbabilityMeasure μ]
     {𝔽 : ℕ → MeasurableSpace Ω}
@@ -246,18 +279,6 @@ theorem condExp_tendsto_iInf
       (fun n => μ[f | 𝔽 n] ω)
       atTop
       (𝓝 (μ[f | ⨅ n, 𝔽 n] ω)) := by
-  -- Technical limitation: mathlib's `tendsto_ae_condExp` expects `Filtration ℕ`, not `Filtration ℕᵒᵈ`.
-  -- The OrderDual approach is sound but requires manual transport of the convergence statement.
-  --
-  -- The infrastructure (Filtration.ofAntitone, iSup_ofAntitone_eq_iInf) is in place above,
-  -- proving the key correspondence ⨆ i : ℕᵒᵈ, 𝔾 i = ⨅ n : ℕ, 𝔽 n.
-  --
-  -- Completing this requires ~80 lines to:
-  -- 1. Apply `tendsto_ae_condExp` to a filtration on `ℕ` with reversed indexing
-  -- 2. Show the reversed indexing preserves the aTOP filter behavior
-  -- 3. Transport back to the original statement
-  --
-  -- This gap only affects ViaMartingale.lean; ViaL2 and ViaKoopman are unaffected.
   sorry
 
 /-- **Conditional expectation converges along increasing filtration (Doob/Levy upward).**
