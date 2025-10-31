@@ -370,6 +370,32 @@ lemma exists_borel_factor_of_sigma_le
   -- η = φ ∘ ζ everywhere, so certainly a.e.
   exact ⟨φ, hφ, Filter.EventuallyEq.of_eq hfactor⟩
 
+/-! ### Preliminary Helper Lemmas for Kernel Uniqueness -/
+
+/-- **Disintegration** for a pair `(X, Y)`: the joint law factors through `X` and
+its conditional law of `Y` given `X`. -/
+lemma map_pair_eq_compProd_condDistrib
+    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
+    (X Y : Ω → ℝ) (hX : Measurable X) (hY : Measurable Y) :
+    Measure.map (fun ω => (X ω, Y ω)) μ =
+    (Measure.map X μ) ⊗ₘ (condDistrib Y X μ) := by
+  classical
+  simpa using
+    ProbabilityTheory.compProd_map_condDistrib (μ := μ) (Y := Y) hY.aemeasurable
+
+/-- **Swap** the components of a joint law. -/
+lemma map_swap_pair_eq {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
+    (U V : Ω → ℝ) (hU : Measurable U) (hV : Measurable V) :
+    Measure.map (fun ω => (U ω, V ω)) μ =
+    (Measure.map (fun ω => (V ω, U ω)) μ).map Prod.swap := by
+  classical
+  ext S hS
+  simp only [Measure.map_apply (hU.prodMk hV) hS,
+             Measure.map_apply measurable_swap ((hV.prodMk hU).comp measurable_id |>.measurableSet_preimage hS)]
+  congr 1
+  ext ω
+  simp [Prod.swap, Set.mem_preimage]
+
 /-- **Change of base for compProd (correct form).**
 
 When `η = φ ∘ ζ` a.e., the joint law `(η, ξ)` can be expressed via the base `(Law ζ)`
@@ -538,13 +564,66 @@ theorem condexp_indicator_drop_info_of_pair_law_proven
   μ[(fun ω => Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))|MeasurableSpace.comap ζ inferInstance]
   =ᵐ[μ]
   μ[(fun ω => Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))|MeasurableSpace.comap η inferInstance] := by
-  -- TODO: Complete this proof
-  -- Key steps:
-  -- 1. Use Doob-Dynkin: σ(η) ≤ σ(ζ) ⇒ η = φ ∘ ζ a.e.
-  -- 2. Express both conditional expectations via condDistrib kernels
-  -- 3. Apply equal_kernels_on_factor to show kernels agree
-  -- 4. Use tower property and projection identity
-  sorry
+  classical
+  -- Doob-Dynkin: get η = φ ∘ ζ a.e. for some Borel φ
+  obtain ⟨φ, hφ, hη_factor⟩ := exists_borel_factor_of_sigma_le hη hζ hle
+
+  -- Bridge each conditional expectation with condDistrib
+  have hζ_bridge :
+    condExp (MeasurableSpace.comap ζ inferInstance) μ
+      (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))
+    =ᵐ[μ]
+    (fun ω => ((condDistrib ξ ζ μ (ζ ω)) B).toReal) := by
+    simpa using
+      condExp_ae_eq_integral_condDistrib (μ := μ) (ξ := ξ) (η := ζ) (s := B) hB
+
+  have hη_bridge :
+    condExp (MeasurableSpace.comap η inferInstance) μ
+      (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))
+    =ᵐ[μ]
+    (fun ω => ((condDistrib ξ η μ (η ω)) B).toReal) := by
+    simpa using
+      condExp_ae_eq_integral_condDistrib (μ := μ) (ξ := ξ) (η := η) (s := B) hB
+
+  -- Apply equal_kernels_on_factor to get kernel equality
+  have hkernel_eq :
+    (fun ω => (condDistrib ξ ζ μ (ζ ω)) B)
+      =ᵐ[μ]
+    (fun ω => (condDistrib ξ η μ (φ (ζ ω))) B) := by
+    -- Use the kernel uniqueness lemma, which shows the composition kernel
+    -- equals the direct kernel at φ(ζ(ω))
+    have h_comp := ProbabilityTheory.equal_kernels_on_factor
+      hξ hη hζ hφ hη_factor hpairs hB
+    -- The lemma gives us equality at η ω = φ (ζ ω), which is what we need
+    exact h_comp.mono (fun ω hω => by
+      -- Need to show: condDistrib ξ ζ μ (ζ ω) B = condDistrib ξ η μ (φ (ζ ω)) B
+      -- The lemma gives: composition kernel at η ω = direct kernel at φ (ζ ω)
+      -- Since η ω = φ (ζ ω) a.e., this gives us what we need
+      sorry  -- Need to extract the right form from h_comp
+    )
+
+  -- Convert to toReal and combine
+  have hkernel_toReal :
+    (fun ω => ((condDistrib ξ ζ μ (ζ ω)) B).toReal)
+      =ᵐ[μ]
+    (fun ω => ((condDistrib ξ η μ (φ (ζ ω))) B).toReal) :=
+    hkernel_eq.mono (fun ω hω => by simp [hω])
+
+  -- Now use η = φ ∘ ζ a.e. to rewrite the RHS
+  have h_rhs_eq :
+    (fun ω => ((condDistrib ξ η μ (φ (ζ ω))) B).toReal)
+      =ᵐ[μ]
+    (fun ω => ((condDistrib ξ η μ (η ω)) B).toReal) :=
+    hη_factor.mono (fun ω hω => by simp [← hω])
+
+  -- Combine all the equalities
+  calc condExp (MeasurableSpace.comap ζ inferInstance) μ
+         (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (ξ ω))
+      =ᵐ[μ] (fun ω => ((condDistrib ξ ζ μ (ζ ω)) B).toReal) := hζ_bridge
+    _ =ᵐ[μ] (fun ω => ((condDistrib ξ η μ (φ (ζ ω))) B).toReal) := hkernel_toReal
+    _ =ᵐ[μ] (fun ω => ((condDistrib ξ η μ (η ω)) B).toReal) := h_rhs_eq
+    _ =ᵐ[μ] condExp (MeasurableSpace.comap η inferInstance) μ
+         (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (ξ ω)) := hη_bridge.symm
 end ConditionalDistribLemmas
 
 /-! ### Conditional Independence from Distributional Equality -/
