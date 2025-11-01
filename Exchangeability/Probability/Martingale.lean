@@ -394,6 +394,55 @@ lemma integrable_limit_of_ae_tendsto_condExp
   -- Convert ∫ ‖g‖ < ∞ to Integrable g using monotonicity
   exact Integrable.mono' h_norm_integrable hg_meas (ae_of_all μ (fun _ => le_refl _))
 
+/-- **Vitali L¹ convergence from a.e. convergence + UI.**
+
+For the reverse martingale E[f | F n] with decreasing filtration F n,
+if E[f | F n] → g a.e., then E[f | F n] → g in L¹.
+
+**Proof strategy:**
+1. UI from `uniformIntegrable_condExp` (already have)
+2. Integrable limit g from `integrable_limit_of_ae_tendsto_condExp`
+3. Apply Vitali: `tendsto_Lp_finite_of_tendsto_ae` with p = 1
+
+This is the key to Lévy's downward theorem: a.e. convergence + UI ⇒ L¹ convergence. -/
+lemma tendsto_L1_condExp_of_ae
+    [IsProbabilityMeasure μ]
+    (F : ℕ → MeasurableSpace Ω) (f : Ω → ℝ)
+    (h_le : ∀ n, F n ≤ (inferInstance : MeasurableSpace Ω))
+    (hf : Integrable f μ)
+    {g : Ω → ℝ}
+    (hg_meas : AEStronglyMeasurable g μ)
+    (hae : ∀ᵐ x ∂μ, Tendsto (fun n => (μ[f | F n]) x) atTop (𝓝 (g x))) :
+    Tendsto (fun n => eLpNorm (μ[f | F n] - g) 1 μ) atTop (𝓝 0) := by
+  classical
+  -- Step 1: UI from uniformIntegrable_condExp
+  have hUI : UniformIntegrable (fun n => revCE μ F f n) 1 μ :=
+    uniformIntegrable_condExp F h_le f hf
+
+  -- Step 2: Integrable limit g from Part 1
+  have hg : Integrable g μ :=
+    integrable_limit_of_ae_tendsto_condExp F f hf h_le hg_meas hae
+
+  -- Step 3: Apply Vitali (p = 1)
+  have hgmem : MemLp g 1 μ := by
+    rw [memLp_one_iff_integrable]
+    exact hg
+
+  -- Extract UnifIntegrable (measure theory version) from UniformIntegrable (probability version)
+  have hUnifInt : UnifIntegrable (fun n => μ[f | F n]) 1 μ := by
+    -- UniformIntegrable = ae measurable + UnifIntegrable + bounded
+    exact hUI.unifIntegrable
+
+  -- Extract ae strong measurability (condExp is always ae strongly measurable)
+  have hae_meas : ∀ n, AEStronglyMeasurable (μ[f | F n]) μ := by
+    intro n
+    sorry -- Should follow from integrability of condExp
+
+  -- Apply Vitali with p = 1
+  have hp : (1 : ENNReal) ≤ 1 := le_refl _
+  have hp' : (1 : ENNReal) ≠ ⊤ := ENNReal.one_ne_top
+  exact tendsto_Lp_finite_of_tendsto_ae hp hp' hae_meas hgmem hUnifInt hae
+
 /-- **Axiom 1.** From uniform integrability and integrability, extract a subsequence
 that converges a.e. (and hence, by Vitali, in L¹) to some integrable limit `g`.
 
