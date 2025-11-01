@@ -355,8 +355,10 @@ lemma integral_norm_condExp_le
   [MeasurableSpace β] [NormedAddCommGroup β] [NormedSpace ℝ β] [BorelSpace β] [CompleteSpace β]
   (m : MeasurableSpace α) {f : α → β} (hf : Integrable f μ) :
   ∫ x, ‖condExp m μ f x‖ ∂μ ≤ ∫ x, ‖f x‖ ∂μ := by
-  -- Route 1 FAILED: snorm and snorm_condexp_le not available in this mathlib version
-  -- Need Route 2 or Route 3
+  -- Route 1 FAILED: snorm/snorm_condexp_le not available
+  -- Route 2 FAILED: condexpL1CLM_opNorm_le_one not available (can prove from norm_setToL1_le
+  --                 but conversion between f and L1 representative is complex)
+  -- Need Route 3
   sorry
 
 /-- Fatou on `ENNReal.ofReal ∘ ‖·‖` along an a.e. pointwise limit. -/
