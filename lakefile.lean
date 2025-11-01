@@ -16,3 +16,10 @@ lean_lib «Exchangeability» where
 @[default_target]
 lean_exe «exchangeability» where
   root := `Main
+
+lean_lib «DepViz» where
+  -- auxiliary tooling for dependency visualization
+
+lean_exe depviz where
+  root := `DepViz.Main
+  supportInterpreter := true
