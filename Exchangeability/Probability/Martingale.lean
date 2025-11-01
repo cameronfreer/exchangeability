@@ -6,6 +6,7 @@ Authors: Cameron Freer
 import Mathlib.Probability.Martingale.Basic
 import Mathlib.Probability.Martingale.Convergence
 import Mathlib.Probability.Process.Filtration
+import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
 
 /-!
 # Martingale Convergence for De Finetti
@@ -348,14 +349,17 @@ axiom exists_deLaValleePoussin_function
       Integrable (fun x => Φ (‖f x‖)) μ
 
 /-- Banach-valued L¹ contraction for conditional expectation:
-`∫ ‖condExp μ m f‖ ≤ ∫ ‖f‖`. -/
+`∫ ‖condExp m μ f‖ ≤ ∫ ‖f‖`. -/
 lemma integral_norm_condExp_le
   {α β : Type*} [MeasurableSpace α] {μ : Measure α}
-  [MeasurableSpace β] [NormedAddCommGroup β] [BorelSpace β] [CompleteSpace β]
+  [MeasurableSpace β] [NormedAddCommGroup β] [NormedSpace ℝ β] [BorelSpace β] [CompleteSpace β]
   (m : MeasurableSpace α) {f : α → β} (hf : Integrable f μ) :
-  ∫ x, ‖condExp μ m f x‖ ∂μ ≤ ∫ x, ‖f x‖ ∂μ := by
-  -- TODO: Need Jensen inequality for Banach-valued condExp
-  -- Strategy: Use Jensen with Φ = id, then integrate and apply tower property
+  ∫ x, ‖condExp m μ f x‖ ∂μ ≤ ∫ x, ‖f x‖ ∂μ := by
+  -- TODO: Mathlib v4.24.0 has `eLpNorm_one_condExp_le_eLpNorm` but only for ℝ-valued functions.
+  -- For Banach-valued functions, need to either:
+  -- (A) Adapt the real-valued proof from ConditionalExpectation.Real, or
+  -- (B) Use pointwise `‖condExp μ m f‖ ≤ᵐ[μ] condExp μ m ‖f‖` if available
+  -- See: Mathlib.MeasureTheory.Function.ConditionalExpectation.Real
   sorry
 
 /-- Fatou on `ENNReal.ofReal ∘ ‖·‖` along an a.e. pointwise limit. -/
