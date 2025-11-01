@@ -368,29 +368,41 @@ lemma integrable_limit_of_ae_tendsto_condExp
     -- Apply Fatou's lemma for lintegral
     have h_meas : ∀ k, AEMeasurable (fun x => ENNReal.ofReal ‖μ[f | F (φ k)] x‖) μ := by
       intro k
-      sorry -- Use measurability of condExp
-    sorry -- Derive this from continuity of ofReal ∘ norm + Fatou
+      -- condExp is integrable → ae strongly measurable, compose with continuous functions
+      exact integrable_condExp.aestronglyMeasurable.aemeasurable.norm.ennreal_ofReal
+    sorry -- Fatou: continuity of ofReal ∘ norm + liminf_eq + lintegral_liminf_le'
 
   -- Bound each term by L¹ contraction.
   have hbound :
       ∀ k, ∫⁻ x, ENNReal.ofReal ‖μ[f | F (φ k)] x‖ ∂μ
             ≤ ∫⁻ x, ENNReal.ofReal ‖f x‖ ∂μ := by
     intro k
-    sorry -- Use L¹ contraction: ∫ ‖condExp f‖ ≤ ∫ ‖f‖ via integrable_condExp
+    -- TODO: L¹ contraction for general normed spaces not readily available in mathlib
+    -- Need: ∫⁻ ‖condExp f‖ ≤ ∫⁻ ‖f‖ for f : α → β (NormedAddCommGroup)
+    sorry
 
   -- Chain: Fatou + uniform bound ⇒ finiteness of `∫⁻ ofReal ‖g‖`.
   have : ∫⁻ x, ENNReal.ofReal ‖g x‖ ∂μ ≤ ∫⁻ x, ENNReal.ofReal ‖f x‖ ∂μ := by
     refine le_trans hfatou ?_
     -- liminf of a sequence bounded above by a constant ≤ that constant
-    have h_ev : ∀ᶠ k in atTop, (∫⁻ x, ENNReal.ofReal ‖μ[f | F (φ k)] x‖ ∂μ) ≤ ∫⁻ x, ENNReal.ofReal ‖f x‖ ∂μ := by
-      exact Eventually.of_forall hbound
-    sorry -- Use liminf_le_of_frequently_le or similar
+    -- Use liminf of constant = constant, then liminf_le_liminf
+    have : liminf (fun k => ∫⁻ x, ENNReal.ofReal ‖μ[f | F (φ k)] x‖ ∂μ) atTop
+           ≤ liminf (fun _ : ℕ => ∫⁻ x, ENNReal.ofReal ‖f x‖ ∂μ) atTop :=
+      liminf_le_liminf (Eventually.of_forall hbound)
+    rw [liminf_const] at this
+    exact this
   -- Turn finite `lintegral (ofReal ‖g‖)` into `Integrable g`.
   have hfin : (∫⁻ x, ENNReal.ofReal ‖g x‖ ∂μ) < ⊤ := by
     refine lt_of_le_of_lt this ?_
     have := hasFiniteIntegral_iff_norm f |>.1 hf.hasFiniteIntegral
     simpa using this
-  sorry -- Convert finite lintegral to Integrable using hasFiniteIntegral
+  -- Convert: HasFiniteIntegral g + AEStronglyMeasurable g → Integrable g
+  have hg_aemeas : AEStronglyMeasurable g μ := by
+    -- g is ae strongly measurable as pointwise limit of ae strongly measurable sequence
+    refine aestronglyMeasurable_of_tendsto_ae atTop (fun k => ?_) hae
+    exact integrable_condExp.aestronglyMeasurable
+  have : HasFiniteIntegral g μ := hasFiniteIntegral_iff_norm g |>.2 hfin
+  exact ⟨hg_aemeas, this⟩
 
 /-- **Vitali L¹ convergence from a.e. convergence + UI.**
 
@@ -434,7 +446,7 @@ lemma tendsto_L1_condExp_of_ae
   -- Extract ae strong measurability (condExp is always ae strongly measurable)
   have hae_meas : ∀ n, AEStronglyMeasurable (μ[f | F n]) μ := by
     intro n
-    sorry -- Should follow from integrability of condExp
+    exact integrable_condExp.aestronglyMeasurable
 
   -- Apply Vitali with p = 1
   have hp : (1 : ENNReal) ≤ 1 := le_refl _
