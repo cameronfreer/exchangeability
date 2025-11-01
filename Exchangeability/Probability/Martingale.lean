@@ -253,6 +253,50 @@ lemma revCE_L1_bdd
   simp only [revCE]
   exact eLpNorm_one_condExp_le_eLpNorm f
 
+/-! ### Uniform integrability via Jensen and de la Vallée-Poussin
+
+The following lemmas establish uniform integrability of the reverse martingale family.
+These are standard results but not yet in mathlib. -/
+
+/-- **Jensen inequality for conditional expectation (norm version).**
+
+For a convex function Φ : ℝ → ℝ on [0,∞) with Φ(0) = 0, we have
+  Φ(‖E[f | m]‖) ≤ E[Φ(‖f‖) | m]  a.e.
+
+**Proof strategy:**
+1. Reduce to scalar case by applying to ‖f‖
+2. Use convexity and the defining property of conditional expectation
+3. Test against m-measurable bounded functions
+4. Standard approximation argument (~20-30 lines)
+
+**Mathlib status:** Not available as of v4.24.0. Needs implementation. -/
+axiom condExp_jensen_norm
+    {m : MeasurableSpace Ω} {μ : Measure Ω}
+    (Φ : ℝ → ℝ) (hΦ_conv : ConvexOn ℝ (Set.Ici (0:ℝ)) Φ) (hΦ0 : Φ 0 = 0)
+    (f : Ω → ℝ) (hf : Integrable f μ) :
+    (fun x => Φ ‖μ[f | m] x‖) ≤ᵐ[μ] μ[(fun x => Φ ‖f x‖) | m]
+
+/-- **Uniform integrability of conditional expectation family.**
+
+The family {E[f | F n]} is uniformly integrable when f ∈ L¹.
+
+**Proof strategy:**
+1. Choose a de la Vallée-Poussin function Φ for ‖f‖:
+   - Φ superlinear: Φ(t)/t → ∞ as t → ∞
+   - Φ convex on [0,∞), Φ(0) = 0
+   - ∫ Φ(‖f‖) dμ < ∞ (exists by integrability of f)
+2. Apply Jensen inequality: ∫ Φ(‖E[f | F n]‖) ≤ ∫ E[Φ(‖f‖) | F n] = ∫ Φ(‖f‖)
+3. Use de la Vallée-Poussin criterion: sup_n ∫ Φ(‖X_n‖) < ∞ ⇒ UI
+
+**Mathlib status:** de la Vallée-Poussin criterion not in mathlib v4.24.0.
+Alternative: prove UI directly by splitting on ‖E[f | F n]‖ ≤ R / > R. -/
+axiom uniformIntegrable_condExp
+    [IsProbabilityMeasure μ]
+    (F : ℕ → MeasurableSpace Ω)
+    (h_le : ∀ n, F n ≤ (inferInstance : MeasurableSpace Ω))
+    (f : Ω → ℝ) (hf : Integrable f μ) :
+    UniformIntegrable (fun n => revCE μ F f n) 1 μ
+
 /-- **Conditional expectation converges along decreasing filtration (Lévy's downward theorem).**
 
 For a decreasing filtration 𝔽ₙ and integrable f, the sequence
@@ -279,7 +323,39 @@ theorem condExp_tendsto_iInf
       (fun n => μ[f | 𝔽 n] ω)
       atTop
       (𝓝 (μ[f | ⨅ n, 𝔽 n] ω)) := by
-  sorry
+  classical
+  -- Step 1: Uniform integrability
+  have hUI : UniformIntegrable (fun n => revCE μ 𝔽 f n) 1 μ :=
+    uniformIntegrable_condExp 𝔽 h_le f h_f_int
+
+  -- Step 2: Integrability facts
+  have hint : ∀ n, Integrable (revCE μ 𝔽 f n) μ := by
+    intro n
+    simp only [revCE]
+    exact integrable_condExp
+  have hg : Integrable (μ[f | ⨅ n, 𝔽 n]) μ := integrable_condExp
+
+  -- Step 3: Get a.e. convergence via reverse martingale convergence
+  -- (This would normally come from upcrossings inequality + bounded reverse upcrossings)
+  -- For now, we use the fact that UI + L¹-boundedness gives a convergent subsequence,
+  -- and the reverse martingale property forces all subsequences to converge to the same limit.
+  have hae_subseq : ∃ (φ : ℕ → ℕ), StrictMono φ ∧
+      ∀ᵐ ω ∂μ, Tendsto (fun k => revCE μ 𝔽 f (φ k) ω) atTop (𝓝 (μ[f | ⨅ n, 𝔽 n] ω)) := by
+    -- This follows from UI compactness (Vitali)
+    -- mathlib has: from UI + integrability, can extract convergent subsequence
+    sorry
+
+  obtain ⟨φ, hφ_mono, hae_φ⟩ := hae_subseq
+
+  -- Step 4: Upgrade subsequence convergence to full sequence convergence
+  -- Standard argument: reverse martingale + UI implies every subsequence
+  -- has a further subsequence converging to the same limit, hence full sequence converges.
+  have hae_full : ∀ᵐ ω ∂μ, Tendsto (fun n => revCE μ 𝔽 f n ω) atTop (𝓝 (μ[f | ⨅ n, 𝔽 n] ω)) := by
+    -- Use reverse martingale tower property + UI subsequence principle
+    sorry
+
+  -- Step 5: Unwrap revCE definition
+  simpa only [revCE] using hae_full
 
 /-- **Conditional expectation converges along increasing filtration (Doob/Levy upward).**
 
