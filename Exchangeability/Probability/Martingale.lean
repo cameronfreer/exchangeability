@@ -324,6 +324,76 @@ axiom uniformIntegrable_condExp
 From UI + integrability, we can extract a convergent subsequence. This is the
 compactness property of uniformly integrable families. -/
 
+/-- **Existence of de la Vallée-Poussin function.**
+
+For any integrable function f, there exists a convex function Φ : [0,∞) → ℝ satisfying:
+- Φ(0) = 0
+- Φ is nondecreasing
+- Φ is convex on [0,∞)
+- Φ(t)/t → ∞ as t → ∞ (superlinearity)
+- ∫ Φ(‖f‖) dμ < ∞
+
+This is the de la Vallée-Poussin criterion for uniform integrability.
+
+**Mathlib status:** Not available as of v4.24.0. The existence is standard (construct
+via ∑ 2^n · min(1, ‖f‖ / 2^n) or similar). -/
+axiom exists_deLaValleePoussin_function
+    {α : Type*} [MeasurableSpace α] {μ : Measure α} [IsFiniteMeasure μ]
+    {f : α → ℝ} (hf : Integrable f μ) :
+    ∃ (Φ : ℝ → ℝ),
+      Monotone Φ ∧
+      ConvexOn ℝ (Set.Ici 0) Φ ∧
+      Φ 0 = 0 ∧
+      Tendsto (fun t => Φ t / t) atTop atTop ∧
+      Integrable (fun x => Φ (‖f x‖)) μ
+
+/-- **Integrable limit from a.e. convergence + Jensen + de la Vallée-Poussin + Fatou.**
+
+If conditional expectations E[f | F n] converge a.e. to g, then g ∈ L¹.
+
+**Proof strategy:**
+1. Choose a dvP function Φ for ‖f‖
+2. Jensen ⇒ ∫ Φ(‖E[f | F n]‖) ≤ ∫ Φ(‖f‖) < ∞
+3. Fatou ⇒ ∫ Φ(‖g‖) ≤ liminf ∫ Φ(‖E[f | F n]‖) < ∞
+4. Extract R with t ≤ Φ(t) for t ≥ R (from dvP tail condition)
+5. Split ∫ ‖g‖ = ∫_{‖g‖≤R} ‖g‖ + ∫_{‖g‖>R} ‖g‖
+   - First term ≤ R · μ(Ω) < ∞
+   - Second term ≤ ∫ Φ(‖g‖) < ∞
+
+This breaks the circular dependency: we don't need g ∈ L¹ to apply Vitali,
+we derive it from Jensen + Fatou. -/
+lemma integrable_limit_of_ae_tendsto_condExp
+    [IsProbabilityMeasure μ]
+    (F : ℕ → MeasurableSpace Ω) (f : Ω → ℝ) (hf : Integrable f μ)
+    (h_le : ∀ n, F n ≤ (inferInstance : MeasurableSpace Ω))
+    {g : Ω → ℝ}
+    (hg_meas : AEStronglyMeasurable g μ)
+    (hae : ∀ᵐ x ∂μ, Tendsto (fun n => (μ[f | F n]) x) atTop (𝓝 (g x))) :
+    Integrable g μ := by
+  classical
+  -- Step 1: Pick a dvP function Φ for ‖f‖
+  have hf_norm : Integrable (fun x => ‖f x‖) μ := hf.norm
+  obtain ⟨Φ, hΦ_mono, hΦ_conv, hΦ0, hΦ_tail, hΦf⟩ := exists_deLaValleePoussin_function hf_norm
+
+  -- Step 2: Jensen bounds each ∫ Φ(‖condExp‖) by ∫ Φ(‖f‖)
+  have hJensen : ∀ n, ∫ x, Φ ‖μ[f | F n] x‖ ∂μ ≤ ∫ x, Φ ‖f x‖ ∂μ := by
+    intro n
+    sorry -- Apply condExp_jensen_norm + integral_mono_ae
+
+  -- Step 3: Fatou gives ∫ Φ(‖g‖) ≤ liminf ∫ Φ(‖condExp‖) ≤ ∫ Φ(‖f‖)
+  have hΦg_bdd : (∫⁻ x, ENNReal.ofReal (Φ ‖g x‖) ∂μ) < ⊤ := by
+    sorry -- Apply Fatou + hJensen + continuity of Φ ∘ norm
+
+  -- Step 4: Extract R with t ≤ Φ(t) for all t ≥ R
+  obtain ⟨R, Rpos, hR⟩ := deLaValleePoussin_eventually_ge_id Φ hΦ_tail
+
+  -- Step 5: Bound ∫ ‖g‖ by splitting on {‖g‖ ≤ R} and {‖g‖ > R}
+  have h_norm_integrable : Integrable (fun x => ‖g x‖) μ := by
+    sorry -- Split integral: small values ≤ R·μ(Ω), large values ≤ ∫ Φ(‖g‖)
+
+  -- Convert ∫ ‖g‖ < ∞ to Integrable g using monotonicity
+  exact Integrable.mono' h_norm_integrable hg_meas (ae_of_all μ (fun _ => le_refl _))
+
 /-- **Axiom 1.** From uniform integrability and integrability, extract a subsequence
 that converges a.e. (and hence, by Vitali, in L¹) to some integrable limit `g`.
 
