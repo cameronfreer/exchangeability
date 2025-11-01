@@ -258,13 +258,35 @@ lemma revCE_L1_bdd
 The following lemmas establish uniform integrability of the reverse martingale family.
 These are standard results but not yet in mathlib. -/
 
-/-- **Jensen inequality for conditional expectation (norm version).**
+/-- From the de la Vallée-Poussin tail condition `Φ(t)/t → ∞`, extract a threshold `R > 0`
+such that `t ≤ Φ t` for all `t ≥ R`. This is used to control the small-values region
+when applying the dvP criterion for uniform integrability. -/
+lemma deLaValleePoussin_eventually_ge_id
+    (Φ : ℝ → ℝ)
+    (hΦ_tail : Tendsto (fun t : ℝ => Φ t / t) atTop atTop) :
+    ∃ R > 0, ∀ ⦃t⦄, t ≥ R → t ≤ Φ t := by
+  -- Take `M = 1`; eventually `Φ t / t ≥ 1`, hence `Φ t ≥ t` for large `t`.
+  have h := (tendsto_atTop_atTop.1 hΦ_tail) 1
+  rcases h with ⟨R, hR⟩
+  refine ⟨max R 1, by positivity, ?_⟩
+  intro t ht
+  have ht' : t ≥ R := le_trans (le_max_left _ _) ht
+  have hΦ_ge : Φ t / t ≥ 1 := hR t ht'
+  -- `t > 0` for `t ≥ max R 1`
+  have hpos : 0 < t := by linarith [le_max_right R 1]
+  -- From `Φ t / t ≥ 1` and `t > 0`, deduce `Φ t ≥ t`
+  have : 1 ≤ Φ t / t := hΦ_ge
+  calc t = t * 1 := by ring
+       _ ≤ t * (Φ t / t) := by exact mul_le_mul_of_nonneg_left this (le_of_lt hpos)
+       _ = Φ t := by field_simp
 
-For a convex function Φ : ℝ → ℝ on [0,∞) with Φ(0) = 0, we have
-  Φ(‖E[f | m]‖) ≤ E[Φ(‖f‖) | m]  a.e.
+/-- **Jensen inequality for conditional expectation with convex functions of the norm.**
+
+For a convex function Φ on [0,∞) with Φ(0) = 0 and an integrable function f,
+the composition Φ(‖E[f | m]‖) is a.e. bounded by E[Φ(‖f‖) | m].
 
 **Proof strategy:**
-1. Reduce to scalar case by applying to ‖f‖
+1. Apply Jensen's inequality to the convex function Φ
 2. Use convexity and the defining property of conditional expectation
 3. Test against m-measurable bounded functions
 4. Standard approximation argument (~20-30 lines)
@@ -350,12 +372,8 @@ theorem UniformIntegrable.exists_ae_tendsto_subseq_of_integrable
     exact (hint' k).1
 
   -- Step 5: Extract g ∈ L¹ from the facts that u (φ (ψ k)) → g a.e. and uniformly bounded in L¹
-  have hg_memℒp : Memℒp g 1 μ := by
-    sorry -- Will use UI + a.e. convergence → compactness → some subsequence has L¹ limit
-
   have hg : Integrable g μ := by
-    rw [← memℒp_one_iff_integrable] at hg_memℒp ⊢
-    exact hg_memℒp
+    sorry -- Will use UI + a.e. convergence → Fatou → g ∈ L¹
 
   -- Vitali: a.e. + UI + g ∈ L¹ ⇒ L¹ convergence
   have hL1 : Tendsto (fun k => eLpNorm (u (φ (ψ k)) - g) 1 μ) atTop (𝓝 0) := by
