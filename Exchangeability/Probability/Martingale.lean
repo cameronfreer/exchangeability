@@ -363,18 +363,24 @@ lemma lintegral_fatou_ofReal_norm
   {α β : Type*} [MeasurableSpace α] {μ : Measure α}
   [MeasurableSpace β] [NormedAddCommGroup β] [BorelSpace β]
   {u : ℕ → α → β} {g : α → β}
-  (hae : ∀ᵐ x ∂μ, Tendsto (fun n => u n x) atTop (nhds (g x))) :
+  (hae : ∀ᵐ x ∂μ, Tendsto (fun n => u n x) atTop (nhds (g x)))
+  (hu_meas : ∀ n, AEMeasurable (fun x => ENNReal.ofReal ‖u n x‖) μ)
+  (hg_meas : AEMeasurable (fun x => ENNReal.ofReal ‖g x‖) μ) :
   ∫⁻ x, ENNReal.ofReal ‖g x‖ ∂μ
     ≤ liminf (fun n => ∫⁻ x, ENNReal.ofReal ‖u n x‖ ∂μ) atTop := by
-  -- Compose the a.e. convergence with continuity of `β → ℝ≥0∞, y ↦ ofReal ‖y‖`.
-  have h_comp :
+  -- Compose the a.e. convergence with continuity of `ofReal ∘ ‖·‖`.
+  have hae_ofReal :
       ∀ᵐ x ∂μ,
         Tendsto (fun n => ENNReal.ofReal ‖u n x‖) atTop
-          (nhds (ENNReal.ofReal ‖g x‖)) :=
+                (nhds (ENNReal.ofReal ‖g x‖)) :=
     hae.mono (fun x hx =>
       ((ENNReal.continuous_ofReal.comp continuous_norm).tendsto _).comp hx)
-  -- TODO: Apply lintegral_liminf_le with proper measurability setup
-  sorry
+  -- Apply Fatou in two steps: liminf equality + lintegral_liminf_le'
+  calc ∫⁻ x, ENNReal.ofReal ‖g x‖ ∂μ
+      = ∫⁻ x, liminf (fun n => ENNReal.ofReal ‖u n x‖) atTop ∂μ :=
+          lintegral_congr_ae (hae_ofReal.mono fun x hx => hx.liminf_eq.symm)
+    _ ≤ liminf (fun n => ∫⁻ x, ENNReal.ofReal ‖u n x‖ ∂μ) atTop :=
+          lintegral_liminf_le' hu_meas
 
 /-- **Integrable limit from a.e. convergence via Fatou + L¹ contraction.**
 
@@ -393,8 +399,20 @@ lemma integrable_limit_of_ae_tendsto_condExp
   -- Fatou on `ofReal ∘ ‖·‖`
   have hfatou :
       ∫⁻ x, ENNReal.ofReal ‖g x‖ ∂μ
-        ≤ liminf (fun k => ∫⁻ x, ENNReal.ofReal ‖μ[f | F (φ k)] x‖ ∂μ) atTop :=
-    lintegral_fatou_ofReal_norm (hae := hae)
+        ≤ liminf (fun k => ∫⁻ x, ENNReal.ofReal ‖μ[f | F (φ k)] x‖ ∂μ) atTop := by
+    have hmeas_u : ∀ k,
+        AEMeasurable (fun x => ENNReal.ofReal ‖μ[f | F (φ k)] x‖) μ := by
+      intro k
+      exact integrable_condExp.aestronglyMeasurable.aemeasurable.norm.ennreal_ofReal
+    have hmeas_g :
+        AEMeasurable (fun x => ENNReal.ofReal ‖g x‖) μ := by
+      have : AEStronglyMeasurable g μ :=
+        aestronglyMeasurable_of_tendsto_ae atTop
+          (fun k => integrable_condExp.aestronglyMeasurable) hae
+      exact this.aemeasurable.norm.ennreal_ofReal
+    exact lintegral_fatou_ofReal_norm (μ := μ)
+      (u := fun k x => μ[f | F (φ k)] x) (g := g)
+      hae hmeas_u hmeas_g
 
   -- Bound each term by L¹ contraction.
   have hbound :
