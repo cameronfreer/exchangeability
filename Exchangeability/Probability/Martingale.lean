@@ -297,6 +297,66 @@ axiom uniformIntegrable_condExp
     (f : Ω → ℝ) (hf : Integrable f μ) :
     UniformIntegrable (fun n => revCE μ F f n) 1 μ
 
+/-! ### Compactness from uniform integrability
+
+From UI + integrability, we can extract a convergent subsequence. This is the
+compactness property of uniformly integrable families. -/
+
+/-- **Axiom 1.** From uniform integrability and integrability, extract a subsequence
+that converges a.e. (and hence, by Vitali, in L¹) to some integrable limit `g`.
+
+**Proof strategy:**
+1. UI ⇒ compactness in measure (mathlib: `UniformIntegrable.compactInMeasure`)
+2. Compactness ⇒ subsequence converging in measure to some g
+3. Convergence in measure ⇒ further subsequence converging a.e.
+4. UI + a.e. convergence ⇒ L¹ convergence (Vitali)
+5. L¹ convergence ⇒ limit is integrable -/
+theorem UniformIntegrable.exists_ae_tendsto_subseq_of_integrable
+    [IsProbabilityMeasure μ]
+    {u : ℕ → Ω → ℝ}
+    (hUI : UniformIntegrable (fun n x => ‖u n x‖) 1 μ)
+    (hint : ∀ n, Integrable (u n) μ) :
+    ∃ φ : ℕ → ℕ, StrictMono φ ∧
+      ∃ g : Ω → ℝ, Integrable g μ ∧
+        (∀ᵐ x ∂μ, Tendsto (fun k => u (φ k) x) atTop (𝓝 (g x)))
+        ∧ Tendsto (fun k => eLpNorm (u (φ k) - g) 1 μ) atTop (𝓝 0) := by
+  classical
+  -- Step 1: Compactness in measure ⇒ a subsequence converges **in measure**
+  -- mathlib: `UniformIntegrable.compactInMeasure` or similar
+  obtain ⟨φ, hφ_mono, g, h_in_measure⟩ : ∃ φ : ℕ → ℕ, StrictMono φ ∧
+      ∃ g : Ω → ℝ, TendstoInMeasure μ (fun k => u (φ k)) atTop g := by
+    sorry
+
+  -- Step 2: From convergence in measure, extract a further subsequence with a.e. convergence
+  -- mathlib: `TendstoInMeasure.exists_seq_tendsto_ae` or similar
+  obtain ⟨ψ, hψ_mono, hae⟩ : ∃ ψ : ℕ → ℕ, StrictMono ψ ∧
+      ∀ᵐ x ∂μ, Tendsto (fun k => u (φ (ψ k)) x) atTop (𝓝 (g x)) := by
+    sorry
+
+  -- Step 3: Vitali upgrades a.e. → L¹ using uniform integrability
+  -- UI is stable under subsequences
+  have hUI' : UniformIntegrable (fun k x => ‖u (φ (ψ k)) x‖) 1 μ := by
+    sorry
+
+  have hint' : ∀ k, Integrable (u (φ (ψ k))) μ := by
+    intro k
+    exact hint _
+
+  -- Vitali: a.e. + UI ⇒ L¹ convergence
+  have hL1 : Tendsto (fun k => eLpNorm (u (φ (ψ k)) - g) 1 μ) atTop (𝓝 0) := by
+    sorry
+
+  -- Step 4: Extract integrability of g from L¹ convergence
+  have hg : Integrable g μ := by
+    sorry
+
+  -- Package the chosen subsequence
+  refine ⟨(fun k => φ (ψ k)), (hφ_mono.comp hψ_mono), g, hg, ?_, ?_⟩
+  · -- a.e. convergence along the composed subsequence
+    sorry
+  · -- L¹ convergence along the composed subsequence
+    sorry
+
 /-- **Conditional expectation converges along decreasing filtration (Lévy's downward theorem).**
 
 For a decreasing filtration 𝔽ₙ and integrable f, the sequence
