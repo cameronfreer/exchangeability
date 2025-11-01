@@ -172,10 +172,12 @@ private def graphToDot (g : Graph) : String :=
   String.intercalate "\n" lines.toList
 
 structure Options where
-  roots   : Array Name
-  dotOut  : String := "depgraph.dot"
-  svgOut? : Option String := none
-  pngOut? : Option String := none
+  roots         : Array Name
+  dotOut        : String := "depgraph.dot"
+  svgOut?       : Option String := none
+  pngOut?       : Option String := none
+  includePrefixes : Array String := #[]
+  keepAll       : Bool := false
   deriving Inhabited
 
 private partial def parseArgsAux : Options → List String → IO Options
@@ -207,13 +209,38 @@ private partial def parseArgsAux : Options → List String → IO Options
           match rest with
           | path :: rest' => parseArgsAux { opts with pngOut? := some path } rest'
           | [] => throw <| IO.userError "--png-out expects a path"
+      | "--include-prefix" =>
+          match rest with
+          | pref :: rest' =>
+              let prefixes := pref.splitOn "," |>.map String.trim |>.filter (· ≠ "")
+              parseArgsAux { opts with includePrefixes := opts.includePrefixes ++ prefixes.toArray } rest'
+          | [] => throw <| IO.userError "--include-prefix expects a comma separated list"
+      | "--keep-all" =>
+          parseArgsAux { opts with keepAll := true } rest
       | "--help" =>
-          throw <| IO.userError "usage: lake exe depviz --roots Foo.Bar [--dot-out depgraph.dot] [--svg-out out.svg] [--png-out out.png]"
+          throw <| IO.userError "usage: lake exe depviz --roots Foo.Bar [--dot-out depgraph.dot] [--svg-out out.svg] [--png-out out.png]\n  [--include-prefix Mod1,Mod2] [--keep-all]"
       | other =>
           throw <| IO.userError s!"unknown option: {other}"
 
 private def parseArgs (args : List String) : IO Options :=
   parseArgsAux default args
+
+private def rootsToPrefixes (roots : Array Name) : Array String :=
+  roots.map fun n =>
+    let root := n.getRoot
+    root.toString
+
+private def filterGraph (g : Graph) (opts : Options) : Graph :=
+  if opts.keepAll then
+    g
+  else
+    let prefixes := rootsToPrefixes opts.roots ++ opts.includePrefixes
+    let allow (module : String) : Bool :=
+      prefixes.any fun pref => module.startsWith pref
+    let nodes := g.nodes.filter fun n => allow n.moduleName
+    let keepNames := nodes.foldl (init := Std.HashSet.emptyWithCapacity) fun acc n => acc.insert n.name
+    let edges := g.edges.filter fun e => keepNames.contains e.source && keepNames.contains e.target
+    { nodes, edges }
 
 private def renderWithGraphviz (dotPath : String) (format : String) (outPath : String) : IO Unit := do
   let args := #["-T" ++ format, dotPath, "-o", outPath]
@@ -238,7 +265,7 @@ def run (opts : Options) : IO Unit := do
   Lean.initSearchPath (← Lean.findSysroot)
   let imports := opts.roots.map fun n => { module := n }
   let env ← Lean.importModules imports {} 0
-  let graph := buildGraph env
+  let graph := filterGraph (buildGraph env) opts
   let dot := graphToDot graph
   IO.FS.writeFile opts.dotOut dot
   IO.println s!"wrote DOT: {opts.dotOut}"
