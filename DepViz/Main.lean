@@ -235,9 +235,10 @@ private def renderOutputs (dotPath : String) (opts : Options) : IO Unit := do
       IO.eprintln s!"warning: failed to render PNG via Graphviz: {e.toString}"
 
 def run (opts : Options) : IO Unit := do
+  Lean.initSearchPath (← Lean.findSysroot)
   let imports := opts.roots.map fun n => { module := n }
-  let graph ← unsafe Lean.withImportModules imports {} (trustLevel := 1024) fun env => do
-    pure (buildGraph env)
+  let env ← Lean.importModules imports {} 0
+  let graph := buildGraph env
   let dot := graphToDot graph
   IO.FS.writeFile opts.dotOut dot
   IO.println s!"wrote DOT: {opts.dotOut}"
