@@ -323,39 +323,20 @@ theorem condExp_tendsto_iInf
       (fun n => μ[f | 𝔽 n] ω)
       atTop
       (𝓝 (μ[f | ⨅ n, 𝔽 n] ω)) := by
-  classical
-  -- Step 1: Uniform integrability
-  have hUI : UniformIntegrable (fun n => revCE μ 𝔽 f n) 1 μ :=
-    uniformIntegrable_condExp 𝔽 h_le f h_f_int
-
-  -- Step 2: Integrability facts
-  have hint : ∀ n, Integrable (revCE μ 𝔽 f n) μ := by
-    intro n
-    simp only [revCE]
-    exact integrable_condExp
-  have hg : Integrable (μ[f | ⨅ n, 𝔽 n]) μ := integrable_condExp
-
-  -- Step 3: Get a.e. convergence via reverse martingale convergence
-  -- (This would normally come from upcrossings inequality + bounded reverse upcrossings)
-  -- For now, we use the fact that UI + L¹-boundedness gives a convergent subsequence,
-  -- and the reverse martingale property forces all subsequences to converge to the same limit.
-  have hae_subseq : ∃ (φ : ℕ → ℕ), StrictMono φ ∧
-      ∀ᵐ ω ∂μ, Tendsto (fun k => revCE μ 𝔽 f (φ k) ω) atTop (𝓝 (μ[f | ⨅ n, 𝔽 n] ω)) := by
-    -- This follows from UI compactness (Vitali)
-    -- mathlib has: from UI + integrability, can extract convergent subsequence
-    sorry
-
-  obtain ⟨φ, hφ_mono, hae_φ⟩ := hae_subseq
-
-  -- Step 4: Upgrade subsequence convergence to full sequence convergence
-  -- Standard argument: reverse martingale + UI implies every subsequence
-  -- has a further subsequence converging to the same limit, hence full sequence converges.
-  have hae_full : ∀ᵐ ω ∂μ, Tendsto (fun n => revCE μ 𝔽 f n ω) atTop (𝓝 (μ[f | ⨅ n, 𝔽 n] ω)) := by
-    -- Use reverse martingale tower property + UI subsequence principle
-    sorry
-
-  -- Step 5: Unwrap revCE definition
-  simpa only [revCE] using hae_full
+  -- **The missing piece:** Reverse martingale a.e. convergence to the tail σ-algebra
+  -- This is the core of Lévy's downward theorem, requiring the upcrossing inequality.
+  --
+  -- **Standard proof (~100-150 lines):**
+  -- 1. Define reverse upcrossings: for interval [a,b], count how many times
+  --    the sequence crosses from below a to above b as n increases
+  -- 2. Prove reverse upcrossing inequality: E[# upcrossings] ≤ E[|X₀ - a|] / (b - a)
+  -- 3. Show: finitely many upcrossings a.e. for all rational [a,b]
+  -- 4. Deduce: the sequence {E[f | 𝔽 n]} converges a.e.
+  -- 5. Identify the limit as E[f | ⨅ 𝔽 n] using tower property
+  --
+  -- **Why this is hard:** Requires careful analysis of stopped sequences and
+  -- optional stopping theorem for reverse martingales.
+  sorry
 
 /-- **Conditional expectation converges along increasing filtration (Doob/Levy upward).**
 
