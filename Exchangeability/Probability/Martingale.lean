@@ -347,52 +347,50 @@ axiom exists_deLaValleePoussin_function
       Tendsto (fun t => Φ t / t) atTop atTop ∧
       Integrable (fun x => Φ (‖f x‖)) μ
 
-/-- **Integrable limit from a.e. convergence + Jensen + de la Vallée-Poussin + Fatou.**
+/-- **Integrable limit from a.e. convergence via Fatou + L¹ contraction.**
 
-If conditional expectations E[f | F n] converge a.e. to g, then g ∈ L¹.
+If `condExp μ (F (φ k)) f → g` a.e. along a subsequence, then `g ∈ L¹`.
 
-**Proof strategy:**
-1. Choose a dvP function Φ for ‖f‖
-2. Jensen ⇒ ∫ Φ(‖E[f | F n]‖) ≤ ∫ Φ(‖f‖) < ∞
-3. Fatou ⇒ ∫ Φ(‖g‖) ≤ liminf ∫ Φ(‖E[f | F n]‖) < ∞
-4. Extract R with t ≤ Φ(t) for t ≥ R (from dvP tail condition)
-5. Split ∫ ‖g‖ = ∫_{‖g‖≤R} ‖g‖ + ∫_{‖g‖>R} ‖g‖
-   - First term ≤ R · μ(Ω) < ∞
-   - Second term ≤ ∫ Φ(‖g‖) < ∞
-
-This breaks the circular dependency: we don't need g ∈ L¹ to apply Vitali,
-we derive it from Jensen + Fatou. -/
+Uses Fatou's lemma on `‖·‖` combined with the L¹ contraction property
+`‖condExp μ m f‖₁ ≤ ‖f‖₁` to avoid circular dependency with Vitali. -/
 lemma integrable_limit_of_ae_tendsto_condExp
-    [IsProbabilityMeasure μ]
-    (F : ℕ → MeasurableSpace Ω) (f : Ω → ℝ) (hf : Integrable f μ)
-    (h_le : ∀ n, F n ≤ (inferInstance : MeasurableSpace Ω))
-    {g : Ω → ℝ}
-    (hg_meas : AEStronglyMeasurable g μ)
-    (hae : ∀ᵐ x ∂μ, Tendsto (fun n => (μ[f | F n]) x) atTop (𝓝 (g x))) :
+    {α β : Type*} [MeasurableSpace α] {μ : Measure α}
+    [MeasurableSpace β] [NormedAddCommGroup β] [NormedSpace ℝ β] [CompleteSpace β] [BorelSpace β]
+    (F : ℕ → MeasurableSpace α) (f : α → β) (hf : Integrable f μ)
+    (φ : ℕ → ℕ) {g : α → β}
+    (hae : ∀ᵐ x ∂μ, Tendsto (fun k => (μ[f | F (φ k)]) x) atTop (nhds (g x))) :
     Integrable g μ := by
   classical
-  -- Step 1: Pick a dvP function Φ for ‖f‖
-  have hf_norm : Integrable (fun x => ‖f x‖) μ := hf.norm
-  obtain ⟨Φ, hΦ_mono, hΦ_conv, hΦ0, hΦ_tail, hΦf⟩ := exists_deLaValleePoussin_function hf_norm
+  -- Fatou on `ofReal ∘ ‖·‖`
+  have hfatou :
+      ∫⁻ x, ENNReal.ofReal ‖g x‖ ∂μ
+        ≤ liminf (fun k => ∫⁻ x, ENNReal.ofReal ‖μ[f | F (φ k)] x‖ ∂μ) atTop := by
+    -- Apply Fatou's lemma for lintegral
+    have h_meas : ∀ k, AEMeasurable (fun x => ENNReal.ofReal ‖μ[f | F (φ k)] x‖) μ := by
+      intro k
+      sorry -- Use measurability of condExp
+    sorry -- Derive this from continuity of ofReal ∘ norm + Fatou
 
-  -- Step 2: Jensen bounds each ∫ Φ(‖condExp‖) by ∫ Φ(‖f‖)
-  have hJensen : ∀ n, ∫ x, Φ ‖μ[f | F n] x‖ ∂μ ≤ ∫ x, Φ ‖f x‖ ∂μ := by
-    intro n
-    sorry -- Apply condExp_jensen_norm + integral_mono_ae
+  -- Bound each term by L¹ contraction.
+  have hbound :
+      ∀ k, ∫⁻ x, ENNReal.ofReal ‖μ[f | F (φ k)] x‖ ∂μ
+            ≤ ∫⁻ x, ENNReal.ofReal ‖f x‖ ∂μ := by
+    intro k
+    sorry -- Use L¹ contraction: ∫ ‖condExp f‖ ≤ ∫ ‖f‖ via integrable_condExp
 
-  -- Step 3: Fatou gives ∫ Φ(‖g‖) ≤ liminf ∫ Φ(‖condExp‖) ≤ ∫ Φ(‖f‖)
-  have hΦg_bdd : (∫⁻ x, ENNReal.ofReal (Φ ‖g x‖) ∂μ) < ⊤ := by
-    sorry -- Apply Fatou + hJensen + continuity of Φ ∘ norm
-
-  -- Step 4: Extract R with t ≤ Φ(t) for all t ≥ R
-  obtain ⟨R, Rpos, hR⟩ := deLaValleePoussin_eventually_ge_id Φ hΦ_tail
-
-  -- Step 5: Bound ∫ ‖g‖ by splitting on {‖g‖ ≤ R} and {‖g‖ > R}
-  have h_norm_integrable : Integrable (fun x => ‖g x‖) μ := by
-    sorry -- Split integral: small values ≤ R·μ(Ω), large values ≤ ∫ Φ(‖g‖)
-
-  -- Convert ∫ ‖g‖ < ∞ to Integrable g using monotonicity
-  exact Integrable.mono' h_norm_integrable hg_meas (ae_of_all μ (fun _ => le_refl _))
+  -- Chain: Fatou + uniform bound ⇒ finiteness of `∫⁻ ofReal ‖g‖`.
+  have : ∫⁻ x, ENNReal.ofReal ‖g x‖ ∂μ ≤ ∫⁻ x, ENNReal.ofReal ‖f x‖ ∂μ := by
+    refine le_trans hfatou ?_
+    -- liminf of a sequence bounded above by a constant ≤ that constant
+    have h_ev : ∀ᶠ k in atTop, (∫⁻ x, ENNReal.ofReal ‖μ[f | F (φ k)] x‖ ∂μ) ≤ ∫⁻ x, ENNReal.ofReal ‖f x‖ ∂μ := by
+      exact Eventually.of_forall hbound
+    sorry -- Use liminf_le_of_frequently_le or similar
+  -- Turn finite `lintegral (ofReal ‖g‖)` into `Integrable g`.
+  have hfin : (∫⁻ x, ENNReal.ofReal ‖g x‖ ∂μ) < ⊤ := by
+    refine lt_of_le_of_lt this ?_
+    have := hasFiniteIntegral_iff_norm f |>.1 hf.hasFiniteIntegral
+    simpa using this
+  sorry -- Convert finite lintegral to Integrable using hasFiniteIntegral
 
 /-- **Vitali L¹ convergence from a.e. convergence + UI.**
 
@@ -419,9 +417,9 @@ lemma tendsto_L1_condExp_of_ae
   have hUI : UniformIntegrable (fun n => revCE μ F f n) 1 μ :=
     uniformIntegrable_condExp F h_le f hf
 
-  -- Step 2: Integrable limit g from Part 1
+  -- Step 2: Integrable limit g from Part 1 (using full sequence, φ = id)
   have hg : Integrable g μ :=
-    integrable_limit_of_ae_tendsto_condExp F f hf h_le hg_meas hae
+    integrable_limit_of_ae_tendsto_condExp (μ := μ) F f hf id hae
 
   -- Step 3: Apply Vitali (p = 1)
   have hgmem : MemLp g 1 μ := by
