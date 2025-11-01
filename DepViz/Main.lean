@@ -3,9 +3,11 @@
 
   Usage:
     lake exe depviz --roots My.Project.Root --dot-out deps.dot --svg-out deps.svg
+    lake exe depviz --roots My.Project.Root --json-out deps.json
 -/
 import Lean
 import Std.Data.HashSet
+import Lean.Data.Json
 
 open Lean
 
@@ -21,16 +23,38 @@ structure Node where
   axioms        : Array Name
   deriving Inhabited
 
+-- For JSON export
+structure NodeJson where
+  name          : String  -- short name (last component)
+  fullName      : String  -- full qualified name
+  module        : String  -- module name
+  kind          : String  -- thm, def, axiom, etc.
+  isUnsafe      : Bool
+  hasSorry      : Bool
+  axioms        : Array String
+  deriving ToJson, FromJson
+
 structure Edge where
   source : Name
   target : Name
   kind   : String -- "type" or "value"
   deriving Inhabited
 
+structure EdgeJson where
+  source : String
+  target : String
+  kind   : String
+  deriving ToJson, FromJson
+
 structure Graph where
   nodes : Array Node
   edges : Array Edge
   deriving Inhabited
+
+structure GraphJson where
+  nodes : Array NodeJson
+  edges : Array EdgeJson
+  deriving ToJson, FromJson
 
 private def ppName (n : Name) : String :=
   n.toString
@@ -117,11 +141,13 @@ private def buildGraph (env : Environment) : Graph :=
 private def escape (s : String) : String :=
   s.replace "\"" "\\\""
 
+private def nodeShortName (n : Name) : String :=
+  match n.components.reverse with
+  | [] => ppName n
+  | hd :: _ => hd.toString
+
 private def nodeLabel (n : Node) : String :=
-  let base :=
-    match n.name.components.reverse with
-    | [] => ppName n.name
-    | hd :: _ => hd.toString
+  let base := nodeShortName n.name
   let tags :=
     let tags := (#[] : Array String)
     let tags := if n.hasSorry then tags.push "SORRY" else tags
@@ -171,9 +197,26 @@ private def graphToDot (g : Graph) : String :=
   let lines := (header ++ nodeLines ++ edgeLines).push "}"
   String.intercalate "\n" lines.toList
 
+private def graphToJson (g : Graph) : String :=
+  let nodes := g.nodes.map fun n =>
+    { name := nodeShortName n.name
+      fullName := ppName n.name
+      module := n.moduleName
+      kind := n.kind
+      isUnsafe := n.isUnsafe
+      hasSorry := n.hasSorry
+      axioms := n.axioms.map ppName : NodeJson }
+  let edges := g.edges.map fun e =>
+    { source := ppName e.source
+      target := ppName e.target
+      kind := e.kind : EdgeJson }
+  let graphJson : GraphJson := { nodes, edges }
+  toString (toJson graphJson)
+
 structure Options where
   roots         : Array Name
-  dotOut        : String := "depgraph.dot"
+  dotOut?       : Option String := none
+  jsonOut?      : Option String := none
   svgOut?       : Option String := none
   pngOut?       : Option String := none
   includePrefixes : Array String := #[]
@@ -184,6 +227,8 @@ private partial def parseArgsAux : Options → List String → IO Options
   | opts, [] =>
       if opts.roots.isEmpty then
         throw <| IO.userError "missing --roots argument"
+      else if opts.dotOut?.isNone && opts.jsonOut?.isNone && opts.svgOut?.isNone && opts.pngOut?.isNone then
+        throw <| IO.userError "must specify at least one output format (--dot-out, --json-out, --svg-out, or --png-out)"
       else
         pure opts
   | opts, arg :: rest =>
@@ -199,8 +244,12 @@ private partial def parseArgsAux : Options → List String → IO Options
           | [] => throw <| IO.userError "--roots expects a comma separated list"
       | "--dot-out" =>
           match rest with
-          | path :: rest' => parseArgsAux { opts with dotOut := path } rest'
+          | path :: rest' => parseArgsAux { opts with dotOut? := some path } rest'
           | [] => throw <| IO.userError "--dot-out expects a path"
+      | "--json-out" =>
+          match rest with
+          | path :: rest' => parseArgsAux { opts with jsonOut? := some path } rest'
+          | [] => throw <| IO.userError "--json-out expects a path"
       | "--svg-out" =>
           match rest with
           | path :: rest' => parseArgsAux { opts with svgOut? := some path } rest'
@@ -218,7 +267,7 @@ private partial def parseArgsAux : Options → List String → IO Options
       | "--keep-all" =>
           parseArgsAux { opts with keepAll := true } rest
       | "--help" =>
-          throw <| IO.userError "usage: lake exe depviz --roots Foo.Bar [--dot-out depgraph.dot] [--svg-out out.svg] [--png-out out.png]\n  [--include-prefix Mod1,Mod2] [--keep-all]"
+          throw <| IO.userError "usage: lake exe depviz --roots Foo.Bar [--dot-out depgraph.dot] [--json-out depgraph.json]\n  [--svg-out out.svg] [--png-out out.png] [--include-prefix Mod1,Mod2] [--keep-all]"
       | other =>
           throw <| IO.userError s!"unknown option: {other}"
 
@@ -266,10 +315,19 @@ def run (opts : Options) : IO Unit := do
   let imports := opts.roots.map fun n => { module := n }
   let env ← Lean.importModules imports {} 0
   let graph := filterGraph (buildGraph env) opts
-  let dot := graphToDot graph
-  IO.FS.writeFile opts.dotOut dot
-  IO.println s!"wrote DOT: {opts.dotOut}"
-  renderOutputs opts.dotOut opts
+  
+  -- Write DOT output if requested
+  if let some dotPath := opts.dotOut? then
+    let dot := graphToDot graph
+    IO.FS.writeFile dotPath dot
+    IO.println s!"wrote DOT: {dotPath}"
+    renderOutputs dotPath opts
+  
+  -- Write JSON output if requested
+  if let some jsonPath := opts.jsonOut? then
+    let json := graphToJson graph
+    IO.FS.writeFile jsonPath json
+    IO.println s!"wrote JSON: {jsonPath}"
 
 def cliMain (args : List String) : IO UInt32 := do
   try

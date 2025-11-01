@@ -10,6 +10,9 @@ require mathlib from git
 require Canonical from git
   "https://github.com/chasenorman/CanonicalLean.git"
 
+require paranoia from git
+  "https://github.com/oOo0oOo/LeanParanoia.git" @ "main"
+
 lean_lib «Exchangeability» where
   -- add library configuration options here
 

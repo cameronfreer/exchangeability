@@ -1,0 +1,123 @@
+# LeanParanoia Policy Configuration for Exchangeability Project
+#
+# This file defines verification zones with different strictness levels.
+# Each zone specifies which modules to check and what to forbid.
+
+zones:
+  # Core probability theory - strictest standards
+  - name: "Probability Core"
+    include:
+      - "Exchangeability.Probability.**"
+    exclude: []
+    # Allow standard constructive + classical axioms
+    allowed_axioms:
+      - "propext"
+      - "Classical.choice"
+      - "Quot.sound"
+    # Forbid incomplete proofs and unsafe constructs
+    forbid:
+      - "sorry"
+      - "metavariables"
+      - "unsafe"
+    # Trust Mathlib and Std - don't re-verify their internals
+    trust_modules:
+      - "Std"
+      - "Mathlib"
+      - "Init"
+
+  # De Finetti theorem - main results
+  - name: "De Finetti Theorem"
+    include:
+      - "Exchangeability.DeFinetti.**"
+    exclude: []
+    allowed_axioms:
+      - "propext"
+      - "Classical.choice"
+      - "Quot.sound"
+    forbid:
+      - "sorry"
+      - "metavariables"
+      - "unsafe"
+    trust_modules:
+      - "Std"
+      - "Mathlib"
+      - "Init"
+
+  # Ergodic theory components
+  - name: "Ergodic Theory"
+    include:
+      - "Exchangeability.Ergodic.**"
+    exclude: []
+    allowed_axioms:
+      - "propext"
+      - "Classical.choice"
+      - "Quot.sound"
+    forbid:
+      - "sorry"
+      - "metavariables"
+      - "unsafe"
+    trust_modules:
+      - "Std"
+      - "Mathlib"
+      - "Init"
+
+  # Tail sigma-algebra utilities
+  - name: "Tail Sigma-Algebra"
+    include:
+      - "Exchangeability.Tail.**"
+    exclude: []
+    allowed_axioms:
+      - "propext"
+      - "Classical.choice"
+      - "Quot.sound"
+    forbid:
+      - "sorry"
+      - "metavariables"
+      - "unsafe"
+    trust_modules:
+      - "Std"
+      - "Mathlib"
+      - "Init"
+
+  # Utility functions - can be more lenient during development
+  - name: "Utilities - Development"
+    include:
+      - "Exchangeability.Util.**"
+      - "Exchangeability.Bridge.**"
+    exclude: []
+    allowed_axioms:
+      - "propext"
+      - "Classical.choice"
+      - "Quot.sound"
+    # Allow work-in-progress but still forbid sorry
+    forbid:
+      - "sorry"
+    trust_modules:
+      - "Std"
+      - "Mathlib"
+      - "Init"
+
+  # Root module - core definitions
+  - name: "Root Definitions"
+    include:
+      - "Exchangeability"
+      - "Exchangeability.*"
+    exclude:
+      - "Exchangeability.Probability.**"
+      - "Exchangeability.DeFinetti.**"
+      - "Exchangeability.Ergodic.**"
+      - "Exchangeability.Tail.**"
+      - "Exchangeability.Util.**"
+      - "Exchangeability.Bridge.**"
+    allowed_axioms:
+      - "propext"
+      - "Classical.choice"
+      - "Quot.sound"
+    forbid:
+      - "sorry"
+      - "metavariables"
+      - "unsafe"
+    trust_modules:
+      - "Std"
+      - "Mathlib"
+      - "Init"

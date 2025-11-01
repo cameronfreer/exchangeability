@@ -1,0 +1,23 @@
+# LeanParanoia Policy - STRICT MODE
+#
+# Ultra-strict verification: constructive proofs only, no classical axioms except propext.
+# Use this to identify which results depend on Classical.choice.
+
+zones:
+  # Constructive-only zone - see what can be proven without classical logic
+  - name: "Constructive Only"
+    include:
+      - "Exchangeability.**"
+    exclude: []
+    # Only allow propext - no Classical.choice!
+    allowed_axioms:
+      - "propext"
+    forbid:
+      - "sorry"
+      - "metavariables"
+      - "unsafe"
+      - "extern"
+    trust_modules:
+      - "Std"
+      - "Mathlib"
+      - "Init"

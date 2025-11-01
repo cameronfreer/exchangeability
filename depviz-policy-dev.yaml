@@ -1,0 +1,23 @@
+# LeanParanoia Policy - DEVELOPMENT MODE
+#
+# Lenient policy for active development - focuses only on finding sorries.
+# Use during iteration; tighten before merging to main.
+
+zones:
+  # Development - just track incomplete proofs
+  - name: "Development - Sorry Tracking Only"
+    include:
+      - "Exchangeability.**"
+    exclude: []
+    # Allow all standard axioms
+    allowed_axioms:
+      - "propext"
+      - "Classical.choice"
+      - "Quot.sound"
+    # Only forbid sorry - allow unsafe, extern, etc. during development
+    forbid:
+      - "sorry"
+    trust_modules:
+      - "Std"
+      - "Mathlib"
+      - "Init"
