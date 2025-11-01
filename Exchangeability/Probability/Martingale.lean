@@ -322,40 +322,51 @@ theorem UniformIntegrable.exists_ae_tendsto_subseq_of_integrable
         ∧ Tendsto (fun k => eLpNorm (u (φ k) - g) 1 μ) atTop (𝓝 0) := by
   classical
   -- Step 1: Compactness in measure ⇒ a subsequence converges **in measure**
-  -- mathlib: `UniformIntegrable.compactInMeasure` or similar
+  -- NOTE: This requires UI → compactness in measure, which is NOT in mathlib v4.24.0
+  -- We axiomatize this step pending mathlib addition
   obtain ⟨φ, hφ_mono, g, h_in_measure⟩ : ∃ φ : ℕ → ℕ, StrictMono φ ∧
       ∃ g : Ω → ℝ, TendstoInMeasure μ (fun k => u (φ k)) atTop g := by
-    sorry
+    sorry -- TODO: UI → compactness in measure (not yet in mathlib)
 
   -- Step 2: From convergence in measure, extract a further subsequence with a.e. convergence
-  -- mathlib: `TendstoInMeasure.exists_seq_tendsto_ae` or similar
+  -- mathlib: `TendstoInMeasure.exists_seq_tendsto_ae`
   obtain ⟨ψ, hψ_mono, hae⟩ : ∃ ψ : ℕ → ℕ, StrictMono ψ ∧
       ∀ᵐ x ∂μ, Tendsto (fun k => u (φ (ψ k)) x) atTop (𝓝 (g x)) := by
-    sorry
+    exact h_in_measure.exists_seq_tendsto_ae
 
   -- Step 3: Vitali upgrades a.e. → L¹ using uniform integrability
-  -- UI is stable under subsequences
+  -- UI is stable under subsequences (mathematical fact, but no direct lemma in mathlib)
   have hUI' : UniformIntegrable (fun k x => ‖u (φ (ψ k)) x‖) 1 μ := by
-    sorry
+    sorry -- TODO: UI.comp_strictMono (not yet in mathlib)
 
   have hint' : ∀ k, Integrable (u (φ (ψ k))) μ := by
     intro k
     exact hint _
 
-  -- Vitali: a.e. + UI ⇒ L¹ convergence
-  have hL1 : Tendsto (fun k => eLpNorm (u (φ (ψ k)) - g) 1 μ) atTop (𝓝 0) := by
-    sorry
+  -- Step 4: Extract integrability of g using a.e. convergence + UI
+  -- First, we need g to be ae strongly measurable
+  have hg_meas : AEStronglyMeasurable g μ := by
+    refine aestronglyMeasurable_of_tendsto_ae atTop (fun k => ?_) hae
+    exact (hint' k).1
 
-  -- Step 4: Extract integrability of g from L¹ convergence
+  -- Step 5: Extract g ∈ L¹ from the facts that u (φ (ψ k)) → g a.e. and uniformly bounded in L¹
+  have hg_memℒp : Memℒp g 1 μ := by
+    sorry -- Will use UI + a.e. convergence → compactness → some subsequence has L¹ limit
+
   have hg : Integrable g μ := by
-    sorry
+    rw [← memℒp_one_iff_integrable] at hg_memℒp ⊢
+    exact hg_memℒp
+
+  -- Vitali: a.e. + UI + g ∈ L¹ ⇒ L¹ convergence
+  have hL1 : Tendsto (fun k => eLpNorm (u (φ (ψ k)) - g) 1 μ) atTop (𝓝 0) := by
+    sorry -- TODO: Apply tendsto_Lp_finite_of_tendsto_ae
 
   -- Package the chosen subsequence
   refine ⟨(fun k => φ (ψ k)), (hφ_mono.comp hψ_mono), g, hg, ?_, ?_⟩
   · -- a.e. convergence along the composed subsequence
-    sorry
+    exact hae
   · -- L¹ convergence along the composed subsequence
-    sorry
+    exact hL1
 
 /-- **Conditional expectation converges along decreasing filtration (Lévy's downward theorem).**
 
