@@ -347,6 +347,35 @@ axiom exists_deLaValleePoussin_function
       Tendsto (fun t => Φ t / t) atTop atTop ∧
       Integrable (fun x => Φ (‖f x‖)) μ
 
+/-- Banach-valued L¹ contraction for conditional expectation:
+`∫ ‖condExp μ m f‖ ≤ ∫ ‖f‖`. -/
+lemma integral_norm_condExp_le
+  {α β : Type*} [MeasurableSpace α] {μ : Measure α}
+  [MeasurableSpace β] [NormedAddCommGroup β] [BorelSpace β] [CompleteSpace β]
+  (m : MeasurableSpace α) {f : α → β} (hf : Integrable f μ) :
+  ∫ x, ‖condExp μ m f x‖ ∂μ ≤ ∫ x, ‖f x‖ ∂μ := by
+  -- TODO: Need Jensen inequality for Banach-valued condExp
+  -- Strategy: Use Jensen with Φ = id, then integrate and apply tower property
+  sorry
+
+/-- Fatou on `ENNReal.ofReal ∘ ‖·‖` along an a.e. pointwise limit. -/
+lemma lintegral_fatou_ofReal_norm
+  {α β : Type*} [MeasurableSpace α] {μ : Measure α}
+  [MeasurableSpace β] [NormedAddCommGroup β] [BorelSpace β]
+  {u : ℕ → α → β} {g : α → β}
+  (hae : ∀ᵐ x ∂μ, Tendsto (fun n => u n x) atTop (nhds (g x))) :
+  ∫⁻ x, ENNReal.ofReal ‖g x‖ ∂μ
+    ≤ liminf (fun n => ∫⁻ x, ENNReal.ofReal ‖u n x‖ ∂μ) atTop := by
+  -- Compose the a.e. convergence with continuity of `β → ℝ≥0∞, y ↦ ofReal ‖y‖`.
+  have h_comp :
+      ∀ᵐ x ∂μ,
+        Tendsto (fun n => ENNReal.ofReal ‖u n x‖) atTop
+          (nhds (ENNReal.ofReal ‖g x‖)) :=
+    hae.mono (fun x hx =>
+      ((ENNReal.continuous_ofReal.comp continuous_norm).tendsto _).comp hx)
+  -- TODO: Apply lintegral_liminf_le with proper measurability setup
+  sorry
+
 /-- **Integrable limit from a.e. convergence via Fatou + L¹ contraction.**
 
 If `condExp μ (F (φ k)) f → g` a.e. along a subsequence, then `g ∈ L¹`.
@@ -364,22 +393,26 @@ lemma integrable_limit_of_ae_tendsto_condExp
   -- Fatou on `ofReal ∘ ‖·‖`
   have hfatou :
       ∫⁻ x, ENNReal.ofReal ‖g x‖ ∂μ
-        ≤ liminf (fun k => ∫⁻ x, ENNReal.ofReal ‖μ[f | F (φ k)] x‖ ∂μ) atTop := by
-    -- Apply Fatou's lemma for lintegral
-    have h_meas : ∀ k, AEMeasurable (fun x => ENNReal.ofReal ‖μ[f | F (φ k)] x‖) μ := by
-      intro k
-      -- condExp is integrable → ae strongly measurable, compose with continuous functions
-      exact integrable_condExp.aestronglyMeasurable.aemeasurable.norm.ennreal_ofReal
-    sorry -- Fatou: continuity of ofReal ∘ norm + liminf_eq + lintegral_liminf_le'
+        ≤ liminf (fun k => ∫⁻ x, ENNReal.ofReal ‖μ[f | F (φ k)] x‖ ∂μ) atTop :=
+    lintegral_fatou_ofReal_norm (hae := hae)
 
   -- Bound each term by L¹ contraction.
   have hbound :
       ∀ k, ∫⁻ x, ENNReal.ofReal ‖μ[f | F (φ k)] x‖ ∂μ
             ≤ ∫⁻ x, ENNReal.ofReal ‖f x‖ ∂μ := by
     intro k
-    -- TODO: L¹ contraction for general normed spaces not readily available in mathlib
-    -- Need: ∫⁻ ‖condExp f‖ ≤ ∫⁻ ‖f‖ for f : α → β (NormedAddCommGroup)
-    sorry
+    -- Use integral form of L¹ contraction, then convert to lintegral
+    have hL1 : ∫ x, ‖μ[f | F (φ k)] x‖ ∂μ ≤ ∫ x, ‖f x‖ ∂μ :=
+      integral_norm_condExp_le (μ := μ) (m := F (φ k)) (hf := hf)
+    -- Convert to lintegral form using ofReal_integral_eq_lintegral_ofReal
+    have lhs : ∫⁻ x, ENNReal.ofReal ‖μ[f | F (φ k)] x‖ ∂μ
+               = ENNReal.ofReal (∫ x, ‖μ[f | F (φ k)] x‖ ∂μ) :=
+      (ofReal_integral_eq_lintegral_ofReal integrable_condExp.norm (ae_of_all _ (fun _ => norm_nonneg _))).symm
+    have rhs : ∫⁻ x, ENNReal.ofReal ‖f x‖ ∂μ
+               = ENNReal.ofReal (∫ x, ‖f x‖ ∂μ) :=
+      (ofReal_integral_eq_lintegral_ofReal hf.norm (ae_of_all _ (fun _ => norm_nonneg _))).symm
+    rw [lhs, rhs]
+    exact ENNReal.ofReal_le_ofReal hL1
 
   -- Chain: Fatou + uniform bound ⇒ finiteness of `∫⁻ ofReal ‖g‖`.
   have : ∫⁻ x, ENNReal.ofReal ‖g x‖ ∂μ ≤ ∫⁻ x, ENNReal.ofReal ‖f x‖ ∂μ := by
