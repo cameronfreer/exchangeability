@@ -355,11 +355,8 @@ lemma integral_norm_condExp_le
   [MeasurableSpace β] [NormedAddCommGroup β] [NormedSpace ℝ β] [BorelSpace β] [CompleteSpace β]
   (m : MeasurableSpace α) {f : α → β} (hf : Integrable f μ) :
   ∫ x, ‖condExp m μ f x‖ ∂μ ≤ ∫ x, ‖f x‖ ∂μ := by
-  -- TODO: Mathlib v4.24.0 has `eLpNorm_one_condExp_le_eLpNorm` but only for ℝ-valued functions.
-  -- For Banach-valued functions, need to either:
-  -- (A) Adapt the real-valued proof from ConditionalExpectation.Real, or
-  -- (B) Use pointwise `‖condExp μ m f‖ ≤ᵐ[μ] condExp μ m ‖f‖` if available
-  -- See: Mathlib.MeasureTheory.Function.ConditionalExpectation.Real
+  -- Route 1 FAILED: snorm and snorm_condexp_le not available in this mathlib version
+  -- Need Route 2 or Route 3
   sorry
 
 /-- Fatou on `ENNReal.ofReal ∘ ‖·‖` along an a.e. pointwise limit. -/
@@ -372,7 +369,7 @@ lemma lintegral_fatou_ofReal_norm
   (hg_meas : AEMeasurable (fun x => ENNReal.ofReal ‖g x‖) μ) :
   ∫⁻ x, ENNReal.ofReal ‖g x‖ ∂μ
     ≤ liminf (fun n => ∫⁻ x, ENNReal.ofReal ‖u n x‖ ∂μ) atTop := by
-  -- Compose the a.e. convergence with continuity of `ofReal ∘ ‖·‖`.
+  -- Compose a.e. convergence with continuity of `ofReal ∘ ‖·‖`
   have hae_ofReal :
       ∀ᵐ x ∂μ,
         Tendsto (fun n => ENNReal.ofReal ‖u n x‖) atTop
