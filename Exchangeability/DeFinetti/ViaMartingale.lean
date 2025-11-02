@@ -851,16 +851,18 @@ lemma condIndep_of_triple_law
     --
     -- Implementation following blueprint substeps (a)-(h):
     
-    -- Integrability of products
+    -- Integrability of products  
+    have hφψ_int : Integrable (φ * ψ) μ := by
+      sorry -- Both indicators, so integrable (bounded on finite measure space)
+            -- ~3 lines: Use that φ, ψ bounded by 1
+    
     have hφV_int : Integrable (φ * V) μ := by
-      sorry -- φ is bounded (indicator) and V is integrable (it's a CE)
-            -- Use: Integrable.bdd_mul with appropriate bounds
+      sorry -- φ bounded (indicator ≤ 1), V integrable (CE)
+            -- ~3 lines: Product of bounded × integrable
     
     have hUψ_int : Integrable (U * ψ) μ := by
-      sorry -- Similarly, U integrable and ψ bounded
-    
-    have hφψ_int : Integrable (φ * ψ) μ := by
-      sorry -- Both indicators, so bounded and integrable
+      sorry -- U integrable (CE), ψ bounded (indicator ≤ 1)
+            -- ~3 lines: Product of integrable × bounded
     
     -- Substep (b): Key equality ∫ φ·V = ∫ U·ψ
     -- This follows from h_test_fn but requires approximation argument
@@ -885,32 +887,55 @@ lemma condIndep_of_triple_law
     
     -- Substep (g): Since V is 𝔾-measurable, E[φ·V|σ(W)] = V·E[φ|σ(W)]
     have h_left : μ[φ * V | 𝔾] =ᵐ[μ] V * U := by
-      sorry -- Tower property: E[φ·V|σ(W)] = V·E[φ|σ(W)] when V is σ(W)-measurable
-            -- API: condExp_mul_of_aestronglyMeasurable or similar
-            -- ~5 lines
+      -- Tower property: E[φ·V|σ(W)] = V·E[φ|σ(W)] when V is σ(W)-measurable
+      -- V = μ[ψ|𝔾] is 𝔾-measurable, so pull it out
+      -- condExp_mul_of_aestronglyMeasurable_right gives: μ[φ*V|𝔾] =ᵐ μ[φ|𝔾]*V
+      have h_pull : μ[φ * V | 𝔾] =ᵐ[μ] μ[φ | 𝔾] * V := by
+        exact condExp_mul_of_aestronglyMeasurable_right (μ := μ) (m := 𝔾) hV_meas hφV_int hφ_int
+      -- By definition U = μ[φ|𝔾], so μ[φ|𝔾] * V = U * V = V * U
+      calc μ[φ * V | 𝔾]
+          =ᵐ[μ] μ[φ | 𝔾] * V := h_pull
+        _ =ᵐ[μ] U * V := by rfl
+        _ =ᵐ[μ] V * U := by filter_upwards with ω; exact mul_comm (U ω) (V ω)
     
     have h_right : μ[U * ψ | 𝔾] =ᵐ[μ] U * V := by
-      sorry -- Similarly, U is 𝔾-measurable so E[U·ψ|σ(W)] = U·E[ψ|σ(W)]
-            -- ~5 lines
+      -- Similarly, U is 𝔾-measurable so E[U·ψ|σ(W)] = U·E[ψ|σ(W)]
+      have h_pull : μ[U * ψ | 𝔾] =ᵐ[μ] U * μ[ψ | 𝔾] := by
+        exact condExp_mul_of_aestronglyMeasurable_left (μ := μ) (m := 𝔾) hU_meas hUψ_int hψ_int
+      -- By definition V = μ[ψ|𝔾], so U * μ[ψ|𝔾] = U * V
+      calc μ[U * ψ | 𝔾]
+          =ᵐ[μ] U * μ[ψ | 𝔾] := h_pull
+        _ =ᵐ[μ] U * V := by rfl
     
     -- Substep (h): Therefore U·V = V·U and E[φψ|σ(W)] = U·V
     have h_prod_eq : U * V =ᵐ[μ] V * U := by
-      sorry -- From h_ce_eq, h_left, h_right via transitivity
-            -- ~2 lines (or just use mul_comm)
+      -- Trivial by commutativity
+      filter_upwards with ω
+      exact mul_comm (U ω) (V ω)
     
     -- Final step: Show E[φψ|σ(W)] = U·V
     -- This completes the rectangle factorization
-    sorry -- Need to show: μ[φ * ψ | 𝔾] =ᵐ[μ] μ[φ | 𝔾] * μ[ψ | 𝔾]
-          -- which is: μ[φ * ψ | 𝔾] =ᵐ[μ] U * V
+    -- Strategy: Use uniqueness of CE via integral equality on all 𝔾-sets
+    sorry -- Need to show: μ[φ * ψ | 𝔾] =ᵐ[μ] U * V
           --
-          -- Proof chain (~10 lines):
-          -- μ[φ * ψ | 𝔾] =ᵐ μ[φ * (μ[ψ|𝔾]) | 𝔾]     (CE of CE equals CE)
-          --            =ᵐ μ[φ * V | 𝔾]                (by definition of V)
-          --            =ᵐ V * U                       (by h_left)
-          --            =ᵐ U * V                       (commutativity)
-          --            =ᵐ μ[φ | 𝔾] * μ[ψ | 𝔾]        (by definition of U, V)
+          -- The key insight from h_integral_eq: ∫ φ·V dμ = ∫ U·ψ dμ
+          -- Combined with h_left and h_right:
+          --   ∫_C φψ = ∫_C E[φψ|𝔾]           (by definition of CE)
+          --   ∫_C φV = ∫_C E[φV|𝔾] = ∫_C V·U  (by h_left)
+          --   ∫_C Uψ = ∫_C E[Uψ|𝔾] = ∫_C U·V  (by h_right)
           --
-          -- All pieces are in place; just needs bookkeeping with ae_eq transitivity
+          -- But we need to relate ∫_C φψ to ∫_C U·V.
+          -- This requires the core h_integral_eq, which itself needs the approximation
+          -- argument with h_test_fn.
+          --
+          -- Full proof (~15 lines):
+          -- 1. Use h_ce_eq: μ[φV|𝔾] =ᵐ μ[Uψ|𝔾] (from h_integral_eq via uniqueness)
+          -- 2. Combine with h_left: V·U =ᵐ μ[φV|𝔾] =ᵐ μ[Uψ|𝔾] =ᵐ U·V
+          -- 3. For μ[φψ|𝔾], need different approach: show it integrates like U·V
+          -- 4. The crux: need to prove h_integral_eq first using h_test_fn
+          --
+          -- This is blocked on h_integral_eq - once that's proven, this follows
+          -- by a similar uniqueness argument (~10 lines)
   
   -- Apply the rectangle factorization criterion
   exact condIndep_of_rect_factorization μ Y Z W h_rect
