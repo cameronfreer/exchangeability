@@ -6713,6 +6713,91 @@ lemma l1_convergence_under_clip01
   -- For now, this is a technical lemma about transferring between integral and Lp formulations
   sorry
 
+/-! ### L¹ Convergence Helpers -/
+
+/-- **L¹ uniqueness of limit:** If fₙ → f and fₙ → g in L¹, then f =ᵐ g. -/
+private lemma L1_unique_of_two_limits
+  {μ : Measure Ω} {f g : Ω → ℝ}
+  (hf : Integrable f μ) (hg : Integrable g μ)
+  {fn : ℕ → Ω → ℝ}
+  (h1 : Tendsto (fun n => snorm (fn n - f) 1 μ) atTop (𝓝 0))
+  (h2 : Tendsto (fun n => snorm (fn n - g) 1 μ) atTop (𝓝 0)) :
+  f =ᵐ[μ] g := by
+  -- Minkowski in L¹: ‖f - g‖₁ ≤ ‖f - fₙ‖₁ + ‖fₙ - g‖₁
+  have htri : ∀ n, snorm (f - g) 1 μ
+      ≤ snorm (f - fn n) 1 μ + snorm (fn n - g) 1 μ := by
+    intro n
+    simpa [sub_eq_add_neg, add_comm, add_left_comm, add_assoc]
+      using (snorm_add_le (f - fn n) (fn n - g) (p := (1 : ℝ≥0∞)) μ)
+  -- send n → ∞: ‖f - g‖₁ ≤ 0
+  have : snorm (f - g) 1 μ ≤ 0 := by
+    refine le_of_tendsto_of_tendsto' ?mono (h1.add h2)
+    intro n
+    exact htri n
+  -- snorm = 0 ⇒ a.e. equality
+  have hzero : snorm (f - g) 1 μ = 0 := le_antisymm this bot_le
+  have : (f - g) =ᵐ[μ] 0 := by
+    simpa [snorm_eq_zero_iff, one_ne_zero] using hzero
+  simpa [sub_eq_zero] using this
+
+/-- **L¹ convergence under clipping:** If fₙ → f in L¹, then clip01∘fₙ → clip01∘f in L¹. -/
+private lemma L1_tendsto_clip01
+  {μ : Measure Ω} {fn : ℕ → Ω → ℝ} {f : Ω → ℝ}
+  (h : Tendsto (fun n => snorm (fn n - f) 1 μ) atTop (𝓝 0)) :
+  Tendsto (fun n => snorm ((fun ω => clip01 (fn n ω))
+                          - (fun ω => clip01 (f ω))) 1 μ)
+          atTop (𝓝 0) := by
+  -- Pointwise: |clip01 x - clip01 y| ≤ |x - y| (1-Lipschitz)
+  have hmono (n : ℕ) :
+      snorm ((fun ω => clip01 (fn n ω)) - (fun ω => clip01 (f ω))) 1 μ
+      ≤ snorm (fn n - f) 1 μ := by
+    refine snorm_mono_ae ?_
+    filter_upwards with ω
+    simpa [Pi.sub_apply] using abs_clip01_sub_le (fn n ω) (f ω)
+  -- pass to limit
+  refine tendsto_of_tendsto_of_tendsto_of_le_of_le' tendsto_const_nhds h ?_ ?_
+  · intro n; exact zero_le _
+  · intro n; exact hmono n
+
+/-! ### Boundedness Helpers -/
+
+/-- If ∀ n, aₙ(ω) ≤ 1, then ⨅ₙ aₙ(ω) ≤ 1. -/
+private lemma iInf_le_one_of_le_one {ι : Type*} [Nonempty ι]
+  (a : ι → ℝ) (h : ∀ i, a i ≤ 1) : iInf a ≤ 1 := by
+  have : Nonempty ι := inferInstance
+  exact (iInf_le a (Classical.arbitrary ι)).trans (h _)
+
+/-- If ∀ n, aₙ(ω) ≤ 1, then ⨆ₙ aₙ(ω) ≤ 1. -/
+private lemma iSup_le_one_of_le_one {ι : Type*}
+  (a : ι → ℝ) (h : ∀ i, a i ≤ 1) : iSup a ≤ 1 := by
+  exact iSup_le h
+
+/-! ### AE Strong Measurability for iInf/iSup -/
+
+/-- iInf of countably many AE-strongly-measurable real functions is AE-strongly-measurable. -/
+private lemma aestrong_iInf_real
+  {μ : Measure Ω} {ι : Type*} [Countable ι]
+  (f : ι → Ω → ℝ)
+  (h : ∀ i, AEStronglyMeasurable (f i) μ) :
+  AEStronglyMeasurable (fun ω => ⨅ i, f i ω) μ := by
+  -- AE-measurable version exists via countable iInf
+  have h_ae : AEMeasurable (fun ω => ⨅ i, f i ω) μ := by
+    refine (aeMeasurable_iInf fun i => ?_)
+    exact (h i).aeMeasurable
+  -- Real is second-countable, so AE-measurable implies AE-strongly-measurable
+  exact aestronglyMeasurable_of_aemeasurable_real h_ae
+
+/-- iSup of countably many AE-strongly-measurable real functions is AE-strongly-measurable. -/
+private lemma aestrong_iSup_real
+  {μ : Measure Ω} {ι : Type*} [Countable ι]
+  (f : ι → Ω → ℝ)
+  (h : ∀ i, AEStronglyMeasurable (f i) μ) :
+  AEStronglyMeasurable (fun ω => ⨆ i, f i ω) μ := by
+  have h_ae : AEMeasurable (fun ω => ⨆ i, f i ω) μ := by
+    refine (aeMeasurable_iSup fun i => ?_)
+    exact (h i).aeMeasurable
+  exact aestronglyMeasurable_of_aemeasurable_real h_ae
+
 /-! ### Axioms for the deep steps
 
 These are the genuinely hard parts (reverse martingale, kernel measurability,
