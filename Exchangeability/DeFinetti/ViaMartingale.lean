@@ -830,21 +830,47 @@ lemma condIndep_of_triple_law
             -- The math is: equal pushforwards integrate test functions equally
             -- See contractable_dist_eq_on_first_r_tail for working pattern
     
-    -- Step 5: The key equality ∫ φ · V = ∫ U · ψ
-    -- This will follow from choosing h = V and h = U in h_test_fn,
-    -- but we need approximation by bounded simple functions.
-    -- For now, we note this is the core of the L² argument:
-    sorry -- Requires:
-          -- (a) Approximate V by bounded 𝔾-simple functions {Vₙ}
-          -- (b) Apply h_test_fn with h = Vₙ ∘ W to get ∫ φ ψ Vₙ = ∫ φ ψ Vₙ (trivial)
-          -- (c) Pass to limit using DCT/L¹ convergence
-          -- (d) Similarly for U
-          -- (e) Conclude ∫ φ V = ∫ U ψ
-          -- (f) Take CE of both sides: E[φ V|σ(W)] = E[U ψ|σ(W)]
-          -- (g) Since V,U are 𝔾-measurable: V·E[φ|σ(W)] = U·E[ψ|σ(W)]
-          -- (h) Therefore V·U = U·V and E[φ ψ|σ(W)] = U·V
-          --
-          -- This is ~30-40 lines of standard L² CE manipulation
+    -- Step 5: The core L² argument: prove E[φ ψ|σ(W)] = U·V
+    --
+    -- Key insight from blueprint: Since both W and W' give the same triple law,
+    -- the conditional expectations U and V satisfy a factorization property.
+    --
+    -- Detailed strategy:
+    -- 
+    -- (a) Observe: h_test_fn gives ∫ φ ψ (h∘W) = ∫ φ ψ (h∘W') for all bounded h
+    --     In particular, with W' = W, this is ∫ φ ψ h = ∫ φ ψ h (trivial but important)
+    --
+    -- (b) Goal: Show ∫ φ·V dμ = ∫ U·ψ dμ
+    --     Why? Because V = E[ψ|σ(W)] and U = E[φ|σ(W)]
+    --
+    -- (c) Approximate V by bounded 𝔾-simple functions {Vₙ} with Vₙ → V in L¹
+    --     (Standard: every L¹ function is L¹-limit of simple functions)
+    --
+    -- (d) For each n: ∫ φ·Vₙ = ∫ φ ψ (Vₙ∘W⁻¹∘W) 
+    --     But Vₙ is 𝔾-measurable, so Vₙ = fₙ∘W for some fₙ
+    --     Then: ∫ φ ψ (fₙ∘W) = ∫ φ ψ (fₙ∘W') (by h_test_fn)
+    --     
+    -- (e) Pass to limit: ∫ φ·V = lim ∫ φ·Vₙ = lim ∫ ψ·Uₙ = ∫ U·ψ
+    --     (Using DCT or L¹ convergence)
+    --
+    -- (f) Take CE w.r.t. σ(W) on the equality ∫ φ·V = ∫ U·ψ:
+    --     E[φ·V|σ(W)] = E[U·ψ|σ(W)]
+    --
+    -- (g) Since V is σ(W)-measurable:
+    --     E[φ·V|σ(W)] = V·E[φ|σ(W)] = V·U  (tower property)
+    --     Similarly: E[U·ψ|σ(W)] = U·E[ψ|σ(W)] = U·V
+    --
+    -- (h) Therefore: V·U = U·V (which is obvious, but confirms consistency)
+    --     More importantly: E[φ·ψ|σ(W)] = E[E[φ|σ(W)]·E[ψ|σ(W)]|σ(W)] = U·V
+    --
+    -- This is the rectangle factorization! QED.
+    --
+    -- API needs (~30-40 lines total):
+    -- - Simple function approximation in L¹ (standard)
+    -- - condExp_mul_of_aestronglyMeasurable (tower for σ(W)-measurable functions)
+    -- - Dominated convergence or L¹ limit interchange
+    -- - Basic CE properties from CondExpHelpers
+    sorry
   
   -- Apply the rectangle factorization criterion
   exact condIndep_of_rect_factorization μ Y Z W h_rect
