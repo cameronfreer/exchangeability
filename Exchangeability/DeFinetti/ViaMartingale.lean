@@ -4243,7 +4243,14 @@ section MainTheorem
 open ProbabilityTheory
 
 /-- **Mixture representation on every finite block** (strict‑mono version)
-using the canonical directing measure. -/
+using the canonical directing measure.
+
+This is the key infrastructure lemma that assembles all the pieces:
+- `directingMeasure` with its probability and measurability properties
+- `conditional_law_eq_directingMeasure` extending X₀-marginal to all coordinates
+- `finite_product_formula` for the strict-mono product identity
+
+The public-facing theorem `deFinetti_viaMartingale` is in `TheoremViaMartingale.lean`. -/
 lemma finite_product_formula_with_directing
     {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -4271,31 +4278,6 @@ lemma finite_product_formula_with_directing
   -- Now invoke finite_product_formula wrapper.
   exact finite_product_formula X hX hX_meas
     (directingMeasure (μ := μ) X) hν_prob hν_meas hν_law m k hk
-
-/-- **de Finetti via reverse martingales (Aldous/Kallenberg).**
-
-If `X` is contractable, then the sequence `Xₙ` is conditionally i.i.d. given
-the tail σ‑algebra `𝒯_X = ⋂ₙ σ(θₙ X)`. The directing measure is the r.c.d.
-of `X₀` given `𝒯_X`.
-
-**TODO**: This requires a `ConditionallyIID` definition and a `conditionallyIID_of_finite_products`
-bridge lemma (the "Common Ending"). For now we state the theorem structure. -/
-theorem deFinetti_viaMartingale
-    {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
-    (X : ℕ → Ω → α) (hX : Contractable μ X) (hX_meas : ∀ n, Measurable (X n)) :
-    True := by  -- Placeholder until ConditionallyIID is defined
-  trivial
-  -- The full statement would be:
-  -- Exchangeability.ConditionallyIID μ X (tailSigma X) (directingMeasure X)
-  -- 
-  -- Proof sketch:
-  -- Use conditionallyIID_of_finite_products with:
-  -- - mixture on blocks: finite_product_formula_with_directing
-  -- - probability: directingMeasure_isProb
-  -- - measurability: directingMeasure_measurable_eval  
-  -- - σ-algebra inclusion: tailSigma_le
 
 end MainTheorem
 

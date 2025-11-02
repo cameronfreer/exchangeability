@@ -77,76 +77,24 @@ theorem conditionallyIID_of_contractable
   -- IsProbabilityMeasure → IsFiniteMeasure (needed for condExpKernel)
   haveI : IsFiniteMeasure μ := inferInstance
 
-  -- Step 1: Construct the directing measure ν using condExpKernel
-  set ν : Ω → Measure α := directingMeasure_of_contractable (μ := μ) X hX_meas with hν_def
+  -- Step 1: Use the axiomatized directing measure
+  set ν : Ω → Measure α := directingMeasure (μ := μ) X with hν_def
 
-  -- Step 2: Prove ν is a probability measure for each ω
-  have hν_prob : ∀ ω, IsProbabilityMeasure (ν ω) := by
-    intro ω
-    -- ν ω is defined as Measure.map (X 0) (condExpKernel μ (tailSigma X) ω)
-    -- by the definition of directingMeasure_of_contractable
-    show IsProbabilityMeasure (Measure.map (X 0) (condExpKernel μ (tailSigma X) ω))
-    -- condExpKernel is a Markov kernel, so it produces probability measures
-    haveI : IsMarkovKernel (condExpKernel μ (tailSigma X)) :=
-      ProbabilityTheory.instIsMarkovKernelCondExpKernel
-    haveI : IsProbabilityMeasure (condExpKernel μ (tailSigma X) ω) :=
-      IsMarkovKernel.is_probability_measure' ω
-    -- Measure.map (X 0) preserves probability measures when applied to a probability measure
-    constructor
-    simp [Measure.map_apply (hX_meas 0) MeasurableSet.univ]
+  -- Step 2: Prove ν is a probability measure for each ω (axiom)
+  have hν_prob : ∀ ω, IsProbabilityMeasure (ν ω) :=
+    directingMeasure_isProb (μ := μ) X
 
-  -- Step 3: Prove measurability of ν
-  have hν_meas : ∀ B : Set α, MeasurableSet B → Measurable (fun ω => ν ω B) := fun B hB => by
-    -- ν ω = Measure.map (X 0) (condExpKernel μ (tailSigma X) ω) by definition
-    -- So ν ω B = (condExpKernel μ (tailSigma X) ω) ((X 0)⁻¹' B) by Measure.map_apply
-    simp only [hν_def]
-    simp only [show ∀ ω, directingMeasure_of_contractable X hX_meas ω =
-                          Measure.map (X 0) (condExpKernel μ (tailSigma X) ω) from fun _ => rfl]
-    simp_rw [Measure.map_apply (hX_meas 0) hB]
-    -- Now goal is: Measurable (fun ω => (condExpKernel μ (tailSigma X) ω) ((X 0)⁻¹' B))
-    -- Kernel.measurable_coe gives measurability w.r.t. tailSigma X
-    -- We lift to ambient σ-algebra using Measurable.le since tailSigma X ≤ inferInstance
-    exact Measurable.le (tailSigma_le X hX_meas)
-      (ProbabilityTheory.Kernel.measurable_coe (condExpKernel μ (tailSigma X)) (hX_meas 0 hB))
+  -- Step 3: Prove measurability of ν (axiom)
+  have hν_meas : ∀ B : Set α, MeasurableSet B → Measurable (fun ω => ν ω B) :=
+    directingMeasure_measurable_eval (μ := μ) X hX_meas
 
   -- Step 4: Prove the conditional law property
+  -- Uses directingMeasure_X0_marginal + conditional_law_eq_directingMeasure
   have hν_law : ∀ n B, MeasurableSet B →
       (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X] := by
     intro n B hB
-    -- Strategy: First prove for n=0, then use extreme_members_equal_on_tail
-
-    -- Step 4a: Prove for n=0
-    have h0 : (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] := by
-      -- Use condExp_ae_eq_integral_condExpKernel to express conditional expectation as integral
-      -- Need to show: tailSigma X ≤ the ambient σ-algebra and integrability
-      have hle : tailSigma X ≤ _ := tailSigma_le X hX_meas
-      have hint : Integrable (Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0)) μ := by
-        apply Integrable.indicator
-        · exact integrable_const 1
-        · exact hX_meas 0 hB
-      have key := ProbabilityTheory.condExp_ae_eq_integral_condExpKernel hle hint
-      -- We need to show the LHS equals this integral
-      refine ae_eq_trans ?_ key.symm
-      -- Show: (fun ω => (ν ω B).toReal) =ᵐ[μ] (fun ω => ∫ y, (indicator B (1 : ℝ) ∘ X 0) y ∂(condExpKernel μ (tailSigma X) ω))
-      apply Filter.EventuallyEq.of_eq
-      funext ω
-      -- Unfold ν using hν_def and show pointwise equality
-      simp only [hν_def]
-      calc (directingMeasure_of_contractable X hX_meas ω B).toReal
-        = ((Measure.map (X 0) (condExpKernel μ (tailSigma X) ω)) B).toReal := by rfl
-      _ = ((condExpKernel μ (tailSigma X) ω) ((X 0)⁻¹' B)).toReal := by rw [Measure.map_apply (hX_meas 0) hB]
-      _ = (condExpKernel μ (tailSigma X) ω).real ((X 0)⁻¹' B) := by rfl  -- measureReal_def
-      _ = ∫ y, ((X 0)⁻¹' B).indicator (fun _ => (1 : ℝ)) y ∂(condExpKernel μ (tailSigma X) ω) :=
-          (MeasureTheory.integral_indicator_one (hX_meas 0 hB)).symm
-      _ = ∫ y, (Set.indicator B (fun _ => (1 : ℝ)) ∘ X 0) y ∂(condExpKernel μ (tailSigma X) ω) := rfl
-
-    -- Step 4b: Use extreme_members_equal_on_tail for general n
-    have hn : μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X]
-            =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] :=
-      extreme_members_equal_on_tail hContract hX_meas n B hB
-
-    -- Combine: (ν ω B).toReal =ᵐ E[1_B ∘ X₀] =ᵐ E[1_B ∘ Xₙ]
-    exact ae_eq_trans h0 hn.symm
+    -- This is exactly what conditional_law_eq_directingMeasure provides
+    exact conditional_law_eq_directingMeasure (μ := μ) X hContract hX_meas n B hB
 
   -- Step 5: Apply finite_product_formula (only needed for StrictMono k per refined definition)
   have hProduct : ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
