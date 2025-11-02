@@ -2562,7 +2562,7 @@ lemma contractable_triple_pushforward
   exact Measure.ext_of_generateFrom_of_iUnion
     Rectangles Bseq h_gen h_pi h1B h2B hμB h_agree_explicit
 
-/-- Join with a finite future equals the comap of the paired map `(Z_r, θ_future_k)`. -/
+/-- Join with a finite future equals the comap of the paired map `(Z_r, θ_future^k)`. -/
 lemma join_eq_comap_pair_finFuture
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) (r m k : ℕ) :
@@ -2572,27 +2572,15 @@ lemma join_eq_comap_pair_finFuture
     (fun ω => (fun i : Fin r => X i.1 ω,
                fun j : Fin k => X (m + 1 + j.1) ω))
     inferInstance := by
-  -- LHS is join of two comaps, RHS is comap of product
-  -- Key: Product σ-algebra = comap Prod.fst ⊔ comap Prod.snd
-  -- So: comap f ⊔ comap g = comap (f, g) using the product structure
-  
-  -- Define the two component maps
+  classical
+  -- Notation
   let f : Ω → (Fin r → α) := fun ω i => X i.1 ω
   let g : Ω → (Fin k → α) := fun ω j => X (m + 1 + j.1) ω
-  
-  -- LHS: comap f ⊔ comap g
-  have h_lhs : firstRSigma X r ⊔ finFutureSigma X m k
-      = MeasurableSpace.comap f inferInstance ⊔ MeasurableSpace.comap g inferInstance := by
-    rfl
-  
-  -- RHS: comap of the pair (f, g)
-  have h_rhs : (fun ω => (fun i : Fin r => X i.1 ω, fun j : Fin k => X (m + 1 + j.1) ω))
-      = fun ω => (f ω, g ω) := rfl
-  
-  rw [h_lhs, h_rhs]
-  -- Apply MeasurableSpace.comap_prodMk from Mathlib
-  -- This states: (m₁.prod m₂).comap (fun ω => (f ω, g ω)) = m₁.comap f ⊔ m₂.comap g
-  exact (MeasurableSpace.comap_prodMk f g).symm
+  -- LHS is the join of comaps; RHS is comap of the product.
+  have : firstRSigma X r = MeasurableSpace.comap f inferInstance := rfl
+  have : finFutureSigma X m k = MeasurableSpace.comap g inferInstance := rfl
+  -- `comap_prodMk` is exactly the identity we need.
+  simpa [firstRSigma, finFutureSigma] using (MeasurableSpace.comap_prodMk f g).symm
 
 /-- **TODO (mathlib)**: Uniqueness of conditional distributions under pair-law
 and σ-algebra inclusion.  This is the right general statement to contribute. -/
@@ -4155,10 +4143,11 @@ lemma finite_product_formula_strictMono
     _   = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) :=
           finite_product_formula_id X hX hX_meas ν hν_prob hν_meas hν_law m
 
-/-- **Finite product formula** (wrapper with StrictMono requirement).
+/-- **Finite product formula** for strictly monotone subsequences.
 
-This is the main statement: for strictly monotone index sequences, the joint law
-is the independent product. This is what we need for de Finetti's theorem. -/
+For any strictly increasing subsequence `k`, the joint law of
+`(X_{k(0)}, ..., X_{k(m-1)})` equals the independent product under the
+directing measure `ν`. This wraps `finite_product_formula_strictMono`. -/
 lemma finite_product_formula
     [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -4172,9 +4161,29 @@ lemma finite_product_formula
     (hν_law : ∀ n B, MeasurableSet B →
         (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X])
     (m : ℕ) (k : Fin m → ℕ) (hk : StrictMono k) :
-    Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
-      = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) :=
+  Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
+    = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) :=
   finite_product_formula_strictMono X hX hX_meas ν hν_prob hν_meas hν_law m k hk
+
+/-- **Convenience identity case** (useful for tests and bridging). -/
+lemma finite_product_formula_id'
+    [StandardBorelSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+    (X : ℕ → Ω → α)
+    (hX : Contractable μ X)
+    (hX_meas : ∀ n, Measurable (X n))
+    (ν : Ω → Measure α)
+    (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
+    (hν_meas : ∀ B : Set α, MeasurableSet B → Measurable (fun ω => ν ω B))
+    (hν_law : ∀ n B, MeasurableSet B →
+        (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X])
+    (m : ℕ) :
+  Measure.map (fun ω => fun i : Fin m => X i ω) μ
+    = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) := by
+  refine finite_product_formula X hX hX_meas ν hν_prob hν_meas hν_law m (fun i => (i : ℕ)) ?_
+  -- `i ↦ i` is strictly monotone on `Fin m`.
+  intro i j hij; exact hij
 
 /-!
 ## Notes
