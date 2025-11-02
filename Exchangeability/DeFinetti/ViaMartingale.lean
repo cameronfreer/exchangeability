@@ -853,16 +853,26 @@ lemma condIndep_of_triple_law
     
     -- Integrability of products  
     have hφψ_int : Integrable (φ * ψ) μ := by
-      sorry -- Both indicators, so integrable (bounded on finite measure space)
-            -- ~3 lines: Use that φ, ψ bounded by 1
+      -- Product of indicators: (Y⁻¹A ∩ Z⁻¹B).indicator 1
+      have : φ * ψ = ((Y ⁻¹' A) ∩ (Z ⁻¹' B)).indicator (fun _ => (1 : ℝ)) := by
+        ext ω
+        simp only [Pi.mul_apply, φ, ψ, Set.indicator]
+        by_cases hYA : ω ∈ Y ⁻¹' A <;> by_cases hZB : ω ∈ Z ⁻¹' B
+        · simp [hYA, hZB, Set.mem_inter_iff]
+        · simp [hYA, hZB, Set.mem_inter_iff]
+        · simp [hYA, hZB, Set.mem_inter_iff]
+        · simp [hYA, hZB, Set.mem_inter_iff]
+      rw [this]
+      exact (integrable_const (1 : ℝ)).indicator ((hY hA).inter (hZ hB))
     
     have hφV_int : Integrable (φ * V) μ := by
-      sorry -- φ bounded (indicator ≤ 1), V integrable (CE)
-            -- ~3 lines: Product of bounded × integrable
+      sorry -- Product: φ (bounded indicator) * V (integrable CE)
+            -- API question: What's the best lemma for bounded × integrable?
+            -- Options: Integrable.bdd_mul, Integrable.of_bounded, custom proof?
     
     have hUψ_int : Integrable (U * ψ) μ := by
-      sorry -- U integrable (CE), ψ bounded (indicator ≤ 1)
-            -- ~3 lines: Product of integrable × bounded
+      sorry -- Product: U (integrable CE) * ψ (bounded indicator)
+            -- Same API question as hφV_int
     
     -- Substep (b): Key equality ∫ φ·V = ∫ U·ψ
     -- This follows from h_test_fn but requires approximation argument
