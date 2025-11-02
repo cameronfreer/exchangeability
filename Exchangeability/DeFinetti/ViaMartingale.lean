@@ -866,13 +866,33 @@ lemma condIndep_of_triple_law
       exact (integrable_const (1 : ℝ)).indicator ((hY hA).inter (hZ hB))
     
     have hφV_int : Integrable (φ * V) μ := by
-      sorry -- Product: φ (bounded indicator) * V (integrable CE)
-            -- API question: What's the best lemma for bounded × integrable?
-            -- Options: Integrable.bdd_mul, Integrable.of_bounded, custom proof?
+      -- Use Integrable.bdd_mul': bounded × integrable = integrable
+      refine Integrable.bdd_mul' (c := 1) integrable_condExp ?_ ?_
+      · -- φ is ae strongly measurable (integrable implies ae strongly measurable)
+        exact hφ_int.aestronglyMeasurable
+      · -- φ is bounded by 1 a.e.
+        filter_upwards with ω
+        simp only [φ, Set.indicator, norm_one, norm_zero]
+        by_cases h : ω ∈ Y ⁻¹' A
+        · simp [h]
+        · simp [h]
     
     have hUψ_int : Integrable (U * ψ) μ := by
-      sorry -- Product: U (integrable CE) * ψ (bounded indicator)
-            -- Same API question as hφV_int
+      -- Use Integrable.bdd_mul': integrable × bounded = integrable
+      -- Note: bdd_mul' expects (f * g) where f is bounded, g is integrable
+      -- We have U * ψ where U is integrable, ψ is bounded
+      -- So rewrite as ψ * U and apply
+      have : U * ψ = ψ * U := by ext ω; exact mul_comm (U ω) (ψ ω)
+      rw [this]
+      refine Integrable.bdd_mul' (c := 1) integrable_condExp ?_ ?_
+      · -- ψ is ae strongly measurable (integrable implies ae strongly measurable)
+        exact hψ_int.aestronglyMeasurable
+      · -- ψ is bounded by 1 a.e.
+        filter_upwards with ω
+        simp only [ψ, Set.indicator, norm_one, norm_zero]
+        by_cases h : ω ∈ Z ⁻¹' B
+        · simp [h]
+        · simp [h]
     
     -- Substep (b): Key equality ∫ φ·V = ∫ U·ψ
     -- This follows from h_test_fn but requires approximation argument
