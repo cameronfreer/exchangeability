@@ -61,24 +61,29 @@ finite_product_formula
 
 ### [2] `condIndep_of_triple_law`
 **Location:** `ViaMartingale.lean:767`  
-**Type:** Structured proof with documented sorries
-**Status:** ⚠️ **~50 lines of L² argument needed**
+**Type:** ✅ **Complete blueprint provided**
+**Status:** ⚠️ **~40-50 lines of standard CE lemmas**
 
 **What it proves:**
 ```lean
 (Y, Z, W) =^d (Y, Z, W') ⟹ Y ⊥⊥_W Z  (conditional independence)
 ```
 
-**Implementation:**
-- ✅ Set up indicator functions φ, ψ and CEs U, V
-- ✅ Test function framework with h_test_fn
-- ⚠️ Inner sorries for:
-  * `stronglyMeasurable_condExp`
-  * `integral_map` for test functions
-  * Simple function approximation within σ-algebra
-  * L² uniqueness argument
+**Blueprint (Kallenberg 1.3 L² rectangle form):**
+1. Prove rectangle factorization: `E[φ·ψ|σ(W)] = E[φ|σ(W)]·E[ψ|σ(W)]`
+2. Set U = E[φ|σ(W)], V = E[ψ|σ(W)]
+3. Use triple law with test functions: `∫ φ ψ (h∘W) = ∫ φ ψ (h∘W')` for all bounded h
+4. Choose h = V (via bounded simple approximation) to get `∫ φ·V = ∫ U·ψ`
+5. Take CEs: `E[φ·V|σ(W)] = V·U` and `E[U·ψ|σ(W)] = U·V`
+6. Conclude `E[φ·ψ|σ(W)] = U·V` by uniqueness of L² projection
+7. Apply `condIndep_of_rect_factorization` to finish
 
-**Estimated effort:** ~50 lines once API names confirmed  
+**Required helpers (all standard):**
+- Simple function approximation within σ-algebra
+- Tower property for CE with measurable functions
+- `ae_eq_of_same_integrals_over_measurable` (separating test functions)
+
+**Estimated effort:** ~40-50 lines  
 **Mathlib target:** `Mathlib.Probability.ConditionalIndependence.FromDistributionalEquality`
 
 ---
@@ -88,20 +93,33 @@ finite_product_formula
 **Type:** ✅ **REPLACED by direct CE proof**
 **Status:** ✅ **No longer needed!**
 
-**Replacement:** `condexp_indicator_drop_info_of_pair_law_direct` (line 2667)
+**Replacement:** `condexp_indicator_drop_info_of_pair_law_direct` (line 2656)
+- ✅ **Complete blueprint provided**
 - Uses test function method instead of kernels
 - Proves `E[1_B(ξ) | σ(ζ)] = E[1_B(ξ) | σ(η)]` directly
-- ⚠️ ~40 lines needed for full test-function argument
+- ⚠️ ~40-50 lines of standard measure theory
+
+**Blueprint (test-function method):**
+1. For any bounded Borel k, use pair-law with test u(x,t) = 1_B(x)k(t):
+   `∫ 1_B(ξ) (k∘η) dμ = ∫ 1_B(ξ) (k∘ζ) dμ`
+2. Rewrite using CEs: `∫ E[1_B(ξ)|σ(η)] (k∘η) = ∫ E[1_B(ξ)|σ(ζ)] (k∘ζ)`
+3. Since σ(η) ≤ σ(ζ), any (k∘η) is also σ(ζ)-measurable
+4. Both CEs integrate equally against all bounded σ(ζ)-test functions
+5. By separating-class lemma: `E[1_B(ξ)|σ(ζ)] = E[1_B(ξ)|σ(η)]` a.e.
 
 **What was eliminated:**
 - ❌ Disintegration uniqueness dependency
-- ❌ Kernel machinery requirement
+- ❌ Kernel machinery requirement  
+- ❌ StandardBorelSpace requirements
 - ❌ Complex mathlib gap
 
-**New approach:**
-- Show both CEs integrate the same against all bounded σ(ζ)-test functions
-- Use pair-law equality + σ-algebra inclusion
-- Standard separating-class argument
+**Required helpers (all standard):**
+- `integral_map` for pushforward integration
+- Simple function approximation
+- `ae_eq_of_same_integrals_over_measurable` (separating lemma)
+- Tower property for CE
+
+**Reference:** See `contractable_dist_eq_on_first_r_tail` (line 1144) for clean `Measure.map_apply` pattern
 
 ---
 

@@ -774,38 +774,41 @@ lemma condIndep_of_triple_law
               Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) :
   CondIndep μ Y Z W := by
   classical
-  -- Abbrev the conditioning σ-algebra
-  let 𝔾 : MeasurableSpace Ω := MeasurableSpace.comap W inferInstance
-
-  -- Apply rectangle factorization criterion
-  sorry -- Need to work out type class issues with condIndep_of_rect_factorization
-        -- The goal is: ∀ A B, MeasurableSet A → MeasurableSet B →
-        --   μ[1_A(Y) · 1_B(Z) | σ(W)] =ᵐ μ[1_A(Y) | σ(W)] · μ[1_B(Z) | σ(W)]
-        --
-        -- **Kallenberg Lemma 1.3 (L² rectangle form):**
-        -- The triple-law equality implies Y ⟂⟂ Z | σ(W) via an L² projection argument.
-        --
-        -- Step 1: Set up indicator functions φ = 1_A∘Y, ψ = 1_B∘Z
-        -- Step 2: Set U = E[φ|σ(W)], V = E[ψ|σ(W)]
-        -- Step 3: From h_triple, derive: ∫ φ ψ (h∘W) = ∫ φ ψ (h∘W') for all bounded h
-        -- Step 4: Choose h = V (or approximations) to show ∫ φ · V = ∫ U · ψ
-        -- Step 5: Take CE w.r.t. σ(W) on both sides:
-        --    E[φ · V | σ(W)] = V · E[φ | σ(W)] = V · U  (V is σ(W)-measurable)
-        --    E[U · ψ | σ(W)] = U · E[ψ | σ(W)] = U · V  (U is σ(W)-measurable)
-        -- Step 6: Since both equal U · V, we have E[φ · ψ | σ(W)] = U · V = E[φ|σ(W)] · E[ψ|σ(W)]
-        --
-        -- This requires:
-        -- - integral_map for test functions (done above in similar context)
-        -- - Simple function approximation within σ(W)
-        -- - Tower property and L² projection uniqueness
-        -- - Measurability of conditional expectations (straightforward)
-        --
-        -- Total: ~60-80 lines once type class issues with 𝔾 are resolved
-        -- Either use @condIndep_of_rect_factorization with explicit args
-        -- or restructure to avoid the `let 𝔾` pattern
-        --
-        -- See h_test_fn implementation in similar context below (condexp_indicator_drop_info_of_pair_law_direct)
-        -- for how to do the integral_map test function argument
+  -- Following the blueprint: prove rectangle factorization, then apply condIndep_of_rect_factorization
+  
+  have h_rect : ∀ ⦃A B⦄,
+      MeasurableSet A → MeasurableSet B →
+      μ[ (Y ⁻¹' A).indicator (fun _ => (1:ℝ)) *
+         (Z ⁻¹' B).indicator (fun _ => (1:ℝ)) | MeasurableSpace.comap W inferInstance ]
+        =ᵐ[μ]
+      μ[(Y ⁻¹' A).indicator (fun _ => (1:ℝ)) | MeasurableSpace.comap W inferInstance] *
+      μ[(Z ⁻¹' B).indicator (fun _ => (1:ℝ)) | MeasurableSpace.comap W inferInstance] := by
+    intro A B hA hB
+    -- **Kallenberg Lemma 1.3 (L² rectangle form):**
+    -- The triple-law equality implies the rectangle factorization via an L² projection argument.
+    --
+    -- Key steps (following the blueprint):
+    -- 1. Set φ = 1_A∘Y, ψ = 1_B∘Z, U = E[φ|σ(W)], V = E[ψ|σ(W)]
+    -- 2. From h_triple with test functions (y,z,w) ↦ 1_A(y) 1_B(z) h(w):
+    --    ∫ φ ψ (h∘W) dμ = ∫ φ ψ (h∘W') dμ for all bounded Borel h
+    -- 3. Choose h = V (via approximation by bounded simple functions) to get:
+    --    ∫ φ · V dμ = ∫ U · ψ dμ
+    -- 4. Take CE w.r.t. σ(W) on both sides:
+    --    E[φ · V | σ(W)] = V · E[φ | σ(W)] = V · U  (V is σ(W)-measurable)
+    --    E[U · ψ | σ(W)] = U · E[ψ | σ(W)] = U · V  (U is σ(W)-measurable)
+    -- 5. Therefore E[φ · ψ | σ(W)] = U · V = E[φ|σ(W)] · E[ψ|σ(W)] a.e.
+    --
+    -- This requires:
+    -- - Test function integration with h_triple (integral_map)
+    -- - Simple function approximation within σ(W)
+    -- - Tower property for CE with σ(W)-measurable functions
+    -- - Uniqueness of CE as L² projection
+    --
+    -- All these are standard CE lemmas; implement once condExpHelpers is complete.
+    sorry
+  
+  -- Apply the rectangle factorization criterion
+  exact condIndep_of_rect_factorization μ Y Z W h_rect
 
 /-- **Combined lemma:** Conditional expectation projection from triple distributional equality.
 
@@ -2647,7 +2650,10 @@ against all bounded σ(ζ)-measurable test functions. From pair-law equality:
 Since σ(η) ≤ σ(ζ), any (k ∘ η) is also σ(ζ)-measurable. By testing against
 this class of functions and using the separating property, we get the result.
 
-This avoids all kernel machinery! -/
+**This completely avoids kernel machinery and disintegration uniqueness!**
+
+This lemma directly replaces the axiom `condDistrib_of_map_eq_map_and_comap_le`
+at its only point of use. -/
 lemma condexp_indicator_drop_info_of_pair_law_direct
     {Ω α β : Type*} [MeasurableSpace Ω]
     [MeasurableSpace α] [MeasurableSpace β]
@@ -2665,41 +2671,32 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
     =ᵐ[μ]
   μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ | MeasurableSpace.comap η inferInstance] := by
   classical
-  -- Abbrev the σ-algebras
-  let 𝔾η := MeasurableSpace.comap η inferInstance
-  let 𝔾ζ := MeasurableSpace.comap ζ inferInstance
-  have hSub : 𝔾η ≤ 𝔾ζ := h_le
-  set f := Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ with hf_def
-
-  -- Two 𝔾ζ-measurable L¹ functions are a.e. equal iff they have the same
-  -- integral against all bounded 𝔾ζ-measurable test functions.
-  
-  -- Key insight: For any bounded Borel k : β → ℝ, from pair-law equality:
-  --   ∫ f (k ∘ η) dμ = ∫ f (k ∘ ζ) dμ
-  
-  have h_test_fn : ∀ (k : β → ℝ), Measurable k → (∀ b, |k b| ≤ 1) →
-      ∫ ω, f ω * k (η ω) ∂μ = ∫ ω, f ω * k (ζ ω) ∂μ := by
-    intro k hk_meas hk_bdd
-    -- Use h_law: (ξ, η) =ᵈ (ξ, ζ) with test function (a,b) ↦ 1_B(a) k(b)
-    -- This is standard measure theory: equal pushforwards integrate test functions equally
-    sorry -- API: needs integral_map + proper type class handling
-          -- The proof is: ∫ 1_B(ξ) k(η) dμ = ∫ 1_B(a) k(b) d[(ξ,η)_*μ]
-          --                                 = ∫ 1_B(a) k(b) d[(ξ,ζ)_*μ]  (by h_law)
-          --                                 = ∫ 1_B(ξ) k(ζ) dμ
-          -- Each step uses integral_map, but type class synthesis is tricky
-
-  -- Since 𝔾η ≤ 𝔾ζ, any (k ∘ η) is also 𝔾ζ-measurable
-  -- Therefore both CEs have the same integral against all 𝔾ζ-test functions
-  
-  -- Use the characterization: μ[f|𝔾ζ] is the unique 𝔾ζ-measurable function
-  -- satisfying ∫_S μ[f|𝔾ζ] = ∫_S f for all S ∈ 𝔾ζ
-  
-  -- We show μ[f|𝔾η] also satisfies this property, hence μ[f|𝔾ζ] =ᵐ μ[f|𝔾η]
-  sorry -- Full argument: ~40 lines using:
-        -- - ae_eq_of_forall_setIntegral_eq (separating test functions)
-        -- - h_test_fn applied to appropriate simple functions
-        -- - Tower property to relate integrals over 𝔾ζ-sets
-        -- See user's blueprint for detailed proof
+  -- Following the user's blueprint for the test-function method:
+  --
+  -- Strategy:
+  -- 1. For any bounded Borel k : β → ℝ, use h_law with test function
+  --    u(x,t) = 1_B(x) k(t) to get: ∫ 1_B(ξ) (k∘η) dμ = ∫ 1_B(ξ) (k∘ζ) dμ
+  --
+  -- 2. Rewrite both sides using conditional expectation:
+  --    ∫ E[1_B(ξ) | σ(η)] (k∘η) dμ = ∫ E[1_B(ξ) | σ(ζ)] (k∘ζ) dμ
+  --
+  -- 3. Since σ(η) ≤ σ(ζ), any (k∘η) is also σ(ζ)-measurable, so we can
+  --    compare both CEs against the same class of σ(ζ) test functions.
+  --
+  -- 4. By the "separating class" lemma for CEs (two σ(ζ)-measurable L¹ functions
+  --    are a.e. equal if they integrate equally against all bounded σ(ζ)-measurable
+  --    test functions), we conclude the desired a.e. equality.
+  --
+  -- Implementation requires:
+  -- - integral_map to relate ∫ g∘(ξ,η) dμ = ∫ g d[(ξ,η)_*μ]
+  -- - Simple function approximation for test functions
+  -- - ae_eq_of_same_integrals_over_measurable (or similar separating lemma)
+  -- - Tower property for conditional expectation
+  --
+  -- All of these are standard measure theory; the proof is ~40-50 lines once
+  -- the API pieces are in place. See contractable_dist_eq_on_first_r_tail
+  -- for the pattern of using Measure.map_apply cleanly.
+  sorry
 
 /-- **Kallenberg 1.3 Conditional Expectation Form (Route A):**
 If `(ξ, η) =ᵈ (ξ, ζ)` and `σ(η) ≤ σ(ζ)`, then conditioning ξ on ζ is the same as
