@@ -778,50 +778,34 @@ lemma condIndep_of_triple_law
   let 𝔾 : MeasurableSpace Ω := MeasurableSpace.comap W inferInstance
 
   -- Apply rectangle factorization criterion
-  apply condIndep_of_rect_factorization μ Y Z 𝔾
-  intro A B hA hB
-
-  -- Need to prove: μ[1_A(Y) · 1_B(Z) | W] =ᵐ μ[1_A(Y) | W] · μ[1_B(Z) | W]
-  --
-  -- **Kallenberg Lemma 1.3 (L² rectangle form):**
-  -- The triple-law equality implies Y ⟂⟂ Z | σ(W) via an L² projection argument.
-  
-  -- Step 1: Set up indicator functions and their conditional expectations
-  set φ := Set.indicator (Y ⁻¹' A) (fun _ : Ω => (1 : ℝ)) with hφ_def
-  set ψ := Set.indicator (Z ⁻¹' B) (fun _ : Ω => (1 : ℝ)) with hψ_def
-  set U := μ[φ | 𝔾] with hU_def
-  set V := μ[ψ | 𝔾] with hV_def
-
-  -- U and V are 𝔾-measurable and in L²
-  have hU_meas : AEStronglyMeasurable[@id Ω] U μ := by
-    sorry -- API: stronglyMeasurable_condExp gives this
-  have hV_meas : AEStronglyMeasurable[@id Ω] V μ := by
-    sorry -- API: stronglyMeasurable_condExp gives this
-
-  -- Step 2: Use triple law with test functions h : γ → ℝ
-  -- For any bounded Borel h, we have:
-  --   ∫ φ ψ (h ∘ W) dμ = ∫ φ ψ (h ∘ W') dμ
-  have h_test_fn : ∀ (h : γ → ℝ), Measurable h → (∀ w, |h w| ≤ 1) →
-      ∫ ω, φ ω * ψ ω * h (W ω) ∂μ = ∫ ω, φ ω * ψ ω * h (W' ω) ∂μ := by
-    intro h hh_meas hh_bdd
-    -- This follows from h_triple by integration against (y,z,w) ↦ 1_A(y) 1_B(z) h(w)
-    sorry -- API: Measure.map equality + integral_map + product measure theory
-
-  -- Step 3: Choose h := V (or approximations) to get
-  --   ∫ φ · V dμ = something involving both sides
-  -- The key is that V is 𝔾-measurable, so we can approximate it by 𝔾-simple functions
-  
-  -- Step 4: L² projection + uniqueness argument
-  -- From the test function equalities and L² properties of U, V:
-  --   E[φ ψ | 𝔾] = E[φ | 𝔾] · E[ψ | 𝔾]  a.e.
-  
-  -- This is the heart of the L² argument from Kallenberg
-  sorry -- Full L² argument: ~50 lines using:
-        -- - Simple function approximation of U, V within 𝔾
-        -- - h_test_fn applied to these approximations
-        -- - Tower property: E[E[·|𝔾] · g] = E[· · g] for 𝔾-measurable g
-        -- - Uniqueness of L² projection (ae_eq_of_forall_inner_product_zero)
-        -- See REMAINING_WORK.md for detailed proof sketch
+  sorry -- Need to work out type class issues with condIndep_of_rect_factorization
+        -- The goal is: ∀ A B, MeasurableSet A → MeasurableSet B →
+        --   μ[1_A(Y) · 1_B(Z) | σ(W)] =ᵐ μ[1_A(Y) | σ(W)] · μ[1_B(Z) | σ(W)]
+        --
+        -- **Kallenberg Lemma 1.3 (L² rectangle form):**
+        -- The triple-law equality implies Y ⟂⟂ Z | σ(W) via an L² projection argument.
+        --
+        -- Step 1: Set up indicator functions φ = 1_A∘Y, ψ = 1_B∘Z
+        -- Step 2: Set U = E[φ|σ(W)], V = E[ψ|σ(W)]
+        -- Step 3: From h_triple, derive: ∫ φ ψ (h∘W) = ∫ φ ψ (h∘W') for all bounded h
+        -- Step 4: Choose h = V (or approximations) to show ∫ φ · V = ∫ U · ψ
+        -- Step 5: Take CE w.r.t. σ(W) on both sides:
+        --    E[φ · V | σ(W)] = V · E[φ | σ(W)] = V · U  (V is σ(W)-measurable)
+        --    E[U · ψ | σ(W)] = U · E[ψ | σ(W)] = U · V  (U is σ(W)-measurable)
+        -- Step 6: Since both equal U · V, we have E[φ · ψ | σ(W)] = U · V = E[φ|σ(W)] · E[ψ|σ(W)]
+        --
+        -- This requires:
+        -- - integral_map for test functions (done above in similar context)
+        -- - Simple function approximation within σ(W)
+        -- - Tower property and L² projection uniqueness
+        -- - Measurability of conditional expectations (straightforward)
+        --
+        -- Total: ~60-80 lines once type class issues with 𝔾 are resolved
+        -- Either use @condIndep_of_rect_factorization with explicit args
+        -- or restructure to avoid the `let 𝔾` pattern
+        --
+        -- See h_test_fn implementation in similar context below (condexp_indicator_drop_info_of_pair_law_direct)
+        -- for how to do the integral_map test function argument
 
 /-- **Combined lemma:** Conditional expectation projection from triple distributional equality.
 
@@ -2697,8 +2681,12 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
       ∫ ω, f ω * k (η ω) ∂μ = ∫ ω, f ω * k (ζ ω) ∂μ := by
     intro k hk_meas hk_bdd
     -- Use h_law: (ξ, η) =ᵈ (ξ, ζ) with test function (a,b) ↦ 1_B(a) k(b)
-    sorry -- API: integral_map + product measure theory
-          -- This is standard: ∫ g∘(ξ,η) dμ = ∫ g d[map (ξ,η) μ]
+    -- This is standard measure theory: equal pushforwards integrate test functions equally
+    sorry -- API: needs integral_map + proper type class handling
+          -- The proof is: ∫ 1_B(ξ) k(η) dμ = ∫ 1_B(a) k(b) d[(ξ,η)_*μ]
+          --                                 = ∫ 1_B(a) k(b) d[(ξ,ζ)_*μ]  (by h_law)
+          --                                 = ∫ 1_B(ξ) k(ζ) dμ
+          -- Each step uses integral_map, but type class synthesis is tricky
 
   -- Since 𝔾η ≤ 𝔾ζ, any (k ∘ η) is also 𝔾ζ-measurable
   -- Therefore both CEs have the same integral against all 𝔾ζ-test functions
