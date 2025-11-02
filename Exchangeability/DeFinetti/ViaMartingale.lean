@@ -1013,12 +1013,33 @@ lemma condIndep_of_triple_law
             stronglyMeasurable_condExp.aestronglyMeasurable
           · -- Integrability of μ[φ·μ[ψ|𝔾]|𝔾] on finite measure sets
             exact integrable_condExp.integrableOn
-          · -- Integral equality: ∫_C φ·ψ = ∫_C φ·μ[ψ|𝔾] for 𝔾-measurable C
-            -- By definition of V = μ[ψ|𝔾]: ∫_C ψ = ∫_C V
-            -- For 𝔾-measurable C, we have 1_C is 𝔾-measurable, so:
-            -- ∫ φ·ψ·1_C = ∫ μ[φ·ψ·1_C|𝔾]... this needs ∫_C φ·V = ∫_C φ·ψ
-            -- which requires showing ∫ φ·1_C·ψ = ∫ φ·1_C·V for 𝔾-measurable C
-            sorry -- ~10 lines: use setIntegral_condExp and 𝔾-measurability of C
+          · -- Integral equality: ∫_s φ·ψ = ∫_s φ·μ[ψ|𝔾] for 𝔾-measurable s
+            -- Use tower property: μ[φ·ψ|𝔾] = μ[φ·μ[ψ|𝔾]|𝔾] to get integral equality
+            -- Since s is 𝔾-measurable, 1_s is 𝔾-measurable
+
+            -- First show μ[φ·ψ|𝔾] integrates the same as μ[φ·V|𝔾] over s
+            have h_ce_ψV : μ[φ * ψ | 𝔾] =ᵐ[μ] μ[φ * V | 𝔾] := by
+              -- Tower property: μ[φ·ψ|𝔾] = μ[φ·μ[ψ|𝔾]|𝔾]
+              refine ae_eq_condExp_of_forall_setIntegral_eq (MeasurableSpace.comap_le_iff_le_map.mp le_rfl)
+                hφψ_int (fun t ht ht_fin => integrable_condExp.integrableOn)
+                (fun t ht ht_fin => ?_) stronglyMeasurable_condExp.aestronglyMeasurable
+              -- For 𝔾-measurable t: ∫_t φ·ψ = ∫_t φ·V via setIntegral_condExp
+              calc ∫ x in t, φ x * V x ∂μ
+                  = ∫ x in t, φ x * μ[ψ | 𝔾] x ∂μ := by rfl
+                _ = ∫ x in t, φ x * ψ x ∂μ := by
+                    -- Use setIntegral_condExp with the product φ·ψ
+                    -- For 𝔾-measurable t, we have ∫_t ψ = ∫_t μ[ψ|𝔾]
+                    -- Need to show ∫_t φ·ψ = ∫_t φ·μ[ψ|𝔾]
+                    sorry -- This requires a more detailed argument using
+                          -- the pull-out property for 𝔾-measurable sets
+
+            -- Now use this to get the set integral equality
+            calc ∫ x in s, (φ * μ[ψ | 𝔾]) x ∂μ
+                = ∫ x in s, (φ * V) x ∂μ := by rfl
+              _ = ∫ x in s, φ x * ψ x ∂μ := by
+                    rw [setIntegral_congr_ae (MeasurableSpace.comap_le_iff_le_map.mp le_rfl s hs)
+                                              (h_ce_ψV.mono fun x hx _ => by simp [hx])]
+                    rfl
       _ =ᵐ[μ] μ[φ * V | 𝔾] := by rfl  -- V = μ[ψ|𝔾] by definition
       _ =ᵐ[μ] V * U := by
           -- Pull-out property (already proved above)
