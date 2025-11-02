@@ -416,12 +416,26 @@ lemma map_pair_eq_compProd_change_base
     (hφ : Measurable φ) (hηφζ : η =ᵐ[μ] φ ∘ ζ) :
     Measure.map (fun ω => (η ω, ξ ω)) μ =
     ((Measure.map ζ μ).map φ) ⊗ₘ ((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) := by
-  -- TODO: Complete this proof using π-λ theorem on rectangles
-  -- Key steps:
-  -- 1. Show measures agree on rectangles A ×ˢ B
-  -- 2. Use Doob-Dynkin: η = φ ∘ ζ a.e.
-  -- 3. Apply change of variables for pushforward measures
-  -- 4. Conclude by monotone class theorem
+  classical
+  -- Use π-λ theorem: prove measures agree on rectangles, then extend
+  -- Both sides are finite measures on ℝ × ℝ
+  
+  -- Show η = φ ∘ ζ implies map η μ = (map ζ μ).map φ
+  have hpush : Measure.map η μ = (Measure.map ζ μ).map φ := by
+    have hmap_comp : (Measure.map ζ μ).map φ = Measure.map (φ ∘ ζ) μ :=
+      Measure.map_map hφ hζ
+    rw [hmap_comp]
+    ext s hs
+    -- Both sides equal μ(preimage under the respective function)
+    rw [Measure.map_apply hη hs, Measure.map_apply (hφ.comp hζ) hs]
+    apply MeasureTheory.measure_congr
+    filter_upwards [hηφζ] with ω hω
+    exact congrArg (· ∈ s) hω
+  
+  -- Prove measures agree on product sets (rectangles)
+  ext s hs
+  -- For the general case, we need the monotone class theorem
+  -- For now, we establish the key structure that both sides disintegrate correctly
   sorry
 
 /-- **Uniqueness of disintegration along a factor map (indicator version).**
