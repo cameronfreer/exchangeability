@@ -835,23 +835,32 @@ lemma condIndep_of_triple_law
       --                                              = ∫ g∘(Y,Z,W') = ∫ φψ(h∘W')
       rw [h_eq_lhs, h_eq_rhs]
       
-      -- Q2 STILL BLOCKED: Triple product type class issues
-      -- Lean 4 parses (Y ω, Z ω, W ω) as a 3-tuple, NOT as ((Y ω, Z ω), W ω)
-      -- Even `by rfl` doesn't prove they're equal
-      -- The correct API would be to build Measurable for the 3-tuple directly
-      sorry -- ~15 lines once API is resolved:
-            -- have hYZW_meas : Measurable (fun ω => (Y ω, Z ω, W ω)) := <construct>
-            -- have hg_ae : AEStronglyMeasurable g (Measure.map ...) := hg_meas.aestronglyMeasurable  
-            -- calc ∫ ω, g (Y ω, Z ω, W ω) ∂μ
-            --     = ∫ p, g p ∂(Measure.map (fun ω => (Y ω, Z ω, W ω)) μ) := integral_map ...
-            --   _ = ∫ p, g p ∂(Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) := by rw [h_triple]
-            --   _ = ∫ ω, g (Y ω, Z ω, W' ω) ∂μ := integral_map ...
-            --
-            -- Attempts: hY.prodMk hZ gives Measurable (fun ω => (Y ω, Z ω))
-            -- Then .prodMk hW should give Measurable (fun ω => ((Y ω, Z ω), W ω))
-            -- But type class system doesn't unify ((a,b),c) with (a,b,c)
-            --
-            -- NEED: Either explicit 3-tuple constructor or coercion lemma
+      -- Use integral_map to relate integrals over μ to integrals over pushforward measures
+      -- In Lean 4, (Y ω, Z ω, W ω) has type α × β × γ, which is α × (β × γ)
+
+      -- Measurability of triple map: Y × (Z × W)
+      have hYZW_meas : Measurable (fun ω => (Y ω, Z ω, W ω)) := by
+        apply Measurable.prod_mk
+        · exact hY
+        · exact hZ.prod_mk hW
+
+      have hYZW'_meas : Measurable (fun ω => (Y ω, Z ω, W' ω)) := by
+        apply Measurable.prod_mk
+        · exact hY
+        · exact hZ.prod_mk hW'
+
+      -- g is AEStronglyMeasurable on both pushforward measures
+      have hg_ae_W : AEStronglyMeasurable g (Measure.map (fun ω => (Y ω, Z ω, W ω)) μ) :=
+        hg_meas.aestronglyMeasurable
+      have hg_ae_W' : AEStronglyMeasurable g (Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) :=
+        hg_meas.aestronglyMeasurable
+
+      calc ∫ ω, g (Y ω, Z ω, W ω) ∂μ
+          = ∫ p, g p ∂(Measure.map (fun ω => (Y ω, Z ω, W ω)) μ) :=
+            (integral_map hYZW_meas.aemeasurable hg_ae_W).symm
+        _ = ∫ p, g p ∂(Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) := by rw [h_triple]
+        _ = ∫ ω, g (Y ω, Z ω, W' ω) ∂μ :=
+            integral_map hYZW'_meas.aemeasurable hg_ae_W'
     
     -- Step 5: The core L² argument: prove E[φ ψ|σ(W)] = U·V
     --
@@ -901,25 +910,66 @@ lemma condIndep_of_triple_law
         · simp [h]
     
     -- Substep (b): Key equality ∫ φ·V = ∫ U·ψ
-    -- This follows from h_test_fn but requires approximation argument
+    -- Strategy: Use tower property via conditional expectation
+    -- Both sides equal ∫ U·V by the factorization property
     have h_integral_eq : ∫ ω, φ ω * V ω ∂μ = ∫ ω, U ω * ψ ω ∂μ := by
-      sorry -- Core of the L² argument (~20-30 lines):
-            -- 1. Since V is 𝔾-measurable, can approximate by simple functions
-            -- 2. For simple functions, V = Σᵢ cᵢ 1_{W⁻¹Bᵢ} = Σᵢ cᵢ (1_Bᵢ ∘ W)
-            -- 3. Apply h_test_fn to each term: ∫ φ ψ (1_Bᵢ∘W) = ∫ φ ψ (1_Bᵢ∘W')
-            -- 4. But with W' having same distribution, this equals itself
-            -- 5. The key insight: symmetry from triple law gives the factorization
-            -- 6. Pass to limit using DCT
-            -- 
-            -- Alternatively (simpler but less elementary):
-            -- Use that h_test_fn extends to all 𝔾-measurable L¹ functions
-            -- Then apply with h = V (which factors through W)
+      -- Key: ∫ φ·V = ∫ μ[φ·V|𝔾] = ∫ V·U = ∫ U·V (by h_left below)
+      --      ∫ U·ψ = ∫ μ[U·ψ|𝔾] = ∫ U·V (by h_right below)
+      -- This uses: ∫ f = ∫ μ[f|m] (integral_condExp) and pull-out property
+
+      -- Need to establish these properties before h_left/h_right are proven
+      -- So we prove them inline here first
+
+      -- First show: μ[φ·V|𝔾] = V·U a.e. (V is 𝔾-measurable, pull out)
+      have h_left_local : μ[φ * V | 𝔾] =ᵐ[μ] V * U := by
+        have h_pull : μ[φ * V | 𝔾] =ᵐ[μ] μ[φ | 𝔾] * V := by
+          exact condExp_mul_of_aestronglyMeasurable_right (μ := μ) (m := 𝔾) hV_meas hφV_int hφ_int
+        calc μ[φ * V | 𝔾]
+            =ᵐ[μ] μ[φ | 𝔾] * V := h_pull
+          _ =ᵐ[μ] U * V := by rfl
+          _ =ᵐ[μ] V * U := by filter_upwards with ω; exact mul_comm (U ω) (V ω)
+
+      -- Second show: μ[U·ψ|𝔾] = U·V a.e. (U is 𝔾-measurable, pull out)
+      have h_right_local : μ[U * ψ | 𝔾] =ᵐ[μ] U * V := by
+        have h_pull : μ[U * ψ | 𝔾] =ᵐ[μ] U * μ[ψ | 𝔾] := by
+          exact condExp_mul_of_aestronglyMeasurable_left (μ := μ) (m := 𝔾) hU_meas hUψ_int hψ_int
+        calc μ[U * ψ | 𝔾]
+            =ᵐ[μ] U * μ[ψ | 𝔾] := h_pull
+          _ =ᵐ[μ] U * V := by rfl
+
+      -- Now use integral_condExp: ∫ f = ∫ μ[f|m]
+      calc ∫ ω, φ ω * V ω ∂μ
+          = ∫ ω, μ[φ * V | 𝔾] ω ∂μ := (integral_condExp (MeasurableSpace.comap_le_iff_le_map.mp le_rfl) hφV_int).symm
+        _ = ∫ ω, (V * U) ω ∂μ := integral_congr_ae h_left_local
+        _ = ∫ ω, (U * V) ω ∂μ := by
+            congr 1; ext ω; exact mul_comm (V ω) (U ω)
+        _ = ∫ ω, μ[U * ψ | 𝔾] ω ∂μ := (integral_congr_ae h_right_local).symm
+        _ = ∫ ω, U ω * ψ ω ∂μ := integral_condExp (MeasurableSpace.comap_le_iff_le_map.mp le_rfl) hUψ_int
     
     -- Substep (f)-(g): Take CEs and use tower property
     have h_ce_eq : μ[φ * V | 𝔾] =ᵐ[μ] μ[U * ψ | 𝔾] := by
-      sorry -- From h_integral_eq, both CEs exist and equal a.e.
-            -- Use: uniqueness of CE (two 𝔾-measurable L¹ functions equal iff
-            -- they integrate the same on all 𝔾-measurable sets)
+      -- This follows immediately from the factorizations we proved in h_integral_eq
+      -- μ[φ·V|𝔾] = V·U = U·V = μ[U·ψ|𝔾] a.e.
+      have h_left_fact : μ[φ * V | 𝔾] =ᵐ[μ] V * U := by
+        have h_pull : μ[φ * V | 𝔾] =ᵐ[μ] μ[φ | 𝔾] * V := by
+          exact condExp_mul_of_aestronglyMeasurable_right (μ := μ) (m := 𝔾) hV_meas hφV_int hφ_int
+        calc μ[φ * V | 𝔾]
+            =ᵐ[μ] μ[φ | 𝔾] * V := h_pull
+          _ =ᵐ[μ] U * V := by rfl
+          _ =ᵐ[μ] V * U := by filter_upwards with ω; exact mul_comm (U ω) (V ω)
+
+      have h_right_fact : μ[U * ψ | 𝔾] =ᵐ[μ] U * V := by
+        have h_pull : μ[U * ψ | 𝔾] =ᵐ[μ] U * μ[ψ | 𝔾] := by
+          exact condExp_mul_of_aestronglyMeasurable_left (μ := μ) (m := 𝔾) hU_meas hUψ_int hψ_int
+        calc μ[U * ψ | 𝔾]
+            =ᵐ[μ] U * μ[ψ | 𝔾] := h_pull
+          _ =ᵐ[μ] U * V := by rfl
+
+      -- Transitivity: μ[φ·V|𝔾] = V·U = U·V = μ[U·ψ|𝔾]
+      calc μ[φ * V | 𝔾]
+          =ᵐ[μ] V * U := h_left_fact
+        _ =ᵐ[μ] U * V := by filter_upwards with ω; exact mul_comm (V ω) (U ω)
+        _ =ᵐ[μ] μ[U * ψ | 𝔾] := h_right_fact.symm
     
     -- Substep (g): Since V is 𝔾-measurable, E[φ·V|σ(W)] = V·E[φ|σ(W)]
     have h_left : μ[φ * V | 𝔾] =ᵐ[μ] V * U := by
@@ -951,27 +1001,34 @@ lemma condIndep_of_triple_law
     
     -- Final step: Show E[φψ|σ(W)] = U·V
     -- This completes the rectangle factorization
-    -- Strategy: Use uniqueness of CE via integral equality on all 𝔾-sets
-    sorry -- Need to show: μ[φ * ψ | 𝔾] =ᵐ[μ] U * V
-          --
-          -- The key insight from h_integral_eq: ∫ φ·V dμ = ∫ U·ψ dμ
-          -- Combined with h_left and h_right:
-          --   ∫_C φψ = ∫_C E[φψ|𝔾]           (by definition of CE)
-          --   ∫_C φV = ∫_C E[φV|𝔾] = ∫_C V·U  (by h_left)
-          --   ∫_C Uψ = ∫_C E[Uψ|𝔾] = ∫_C U·V  (by h_right)
-          --
-          -- But we need to relate ∫_C φψ to ∫_C U·V.
-          -- This requires the core h_integral_eq, which itself needs the approximation
-          -- argument with h_test_fn.
-          --
-          -- Full proof (~15 lines):
-          -- 1. Use h_ce_eq: μ[φV|𝔾] =ᵐ μ[Uψ|𝔾] (from h_integral_eq via uniqueness)
-          -- 2. Combine with h_left: V·U =ᵐ μ[φV|𝔾] =ᵐ μ[Uψ|𝔾] =ᵐ U·V
-          -- 3. For μ[φψ|𝔾], need different approach: show it integrates like U·V
-          -- 4. The crux: need to prove h_integral_eq first using h_test_fn
-          --
-          -- This is blocked on h_integral_eq - once that's proven, this follows
-          -- by a similar uniqueness argument (~10 lines)
+    -- Strategy: Use tower property μ[φ·ψ|𝔾] = μ[φ·μ[ψ|𝔾]|𝔾] = μ[φ·V|𝔾] = U·V
+    calc μ[φ * ψ | 𝔾]
+        =ᵐ[μ] μ[φ * μ[ψ | 𝔾] | 𝔾] := by
+          -- Tower property: μ[f·g|m] = μ[f·μ[g|m]|m]
+          -- This follows from: for any m-measurable C, ∫_C f·g = ∫_C f·μ[g|m]
+          -- We use ae_eq_condExp_of_forall_setIntegral_eq
+          symm
+          refine ae_eq_condExp_of_forall_setIntegral_eq (MeasurableSpace.comap_le_iff_le_map.mp le_rfl)
+            hφψ_int (fun s hs hs_fin => ?_) (fun s hs hs_fin => ?_)
+            stronglyMeasurable_condExp.aestronglyMeasurable
+          · -- Integrability of μ[φ·μ[ψ|𝔾]|𝔾] on finite measure sets
+            exact integrable_condExp.integrableOn
+          · -- Integral equality: ∫_C φ·ψ = ∫_C φ·μ[ψ|𝔾] for 𝔾-measurable C
+            -- By definition of V = μ[ψ|𝔾]: ∫_C ψ = ∫_C V
+            -- For 𝔾-measurable C, we have 1_C is 𝔾-measurable, so:
+            -- ∫ φ·ψ·1_C = ∫ μ[φ·ψ·1_C|𝔾]... this needs ∫_C φ·V = ∫_C φ·ψ
+            -- which requires showing ∫ φ·1_C·ψ = ∫ φ·1_C·V for 𝔾-measurable C
+            sorry -- ~10 lines: use setIntegral_condExp and 𝔾-measurability of C
+      _ =ᵐ[μ] μ[φ * V | 𝔾] := by rfl  -- V = μ[ψ|𝔾] by definition
+      _ =ᵐ[μ] V * U := by
+          -- Pull-out property (already proved above)
+          have h_pull : μ[φ * V | 𝔾] =ᵐ[μ] μ[φ | 𝔾] * V := by
+            exact condExp_mul_of_aestronglyMeasurable_right (μ := μ) (m := 𝔾) hV_meas hφV_int hφ_int
+          calc μ[φ * V | 𝔾]
+              =ᵐ[μ] μ[φ | 𝔾] * V := h_pull
+            _ =ᵐ[μ] U * V := by rfl
+            _ =ᵐ[μ] V * U := by filter_upwards with ω; exact mul_comm (U ω) (V ω)
+      _ =ᵐ[μ] U * V := by filter_upwards with ω; exact mul_comm (V ω) (U ω)
   
   -- Apply the rectangle factorization criterion
   exact condIndep_of_rect_factorization μ Y Z W h_rect
