@@ -834,18 +834,21 @@ lemma condIndep_of_triple_law
       --                                              = ∫ g d[(Y,Z,W')_*μ]  (by h_triple)
       --                                              = ∫ g∘(Y,Z,W') = ∫ φψ(h∘W')
       --
-      -- This uses: integral_map for pushforward integration
-      -- Pattern: ∫ f∘F dμ = ∫ f d[F_*μ] when F is measurable and f is ae-measurable
-      --
-      -- The calc proof structure is:
-      -- calc ∫ ω, g (Y ω, Z ω, W ω) ∂μ
-      --     = ∫ p, g p ∂(Measure.map (fun ω => (Y ω, Z ω, W ω)) μ) := integral_map ...
-      --   _ = ∫ p, g p ∂(Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) := by rw [h_triple]
-      --   _ = ∫ ω, g (Y ω, Z ω, W' ω) ∂μ := (integral_map ...).symm
-      --
-      -- Type class issues prevent clean application; needs careful instance management
-      -- See contractable_dist_eq_on_first_r_tail (line 1144-1227) for working pattern with Measure.map_apply
-      sorry
+      -- Attempted implementation:
+      sorry -- Type class issues with Measurable.prodMk for triple products (α × β × γ)
+            -- The proof structure is clear (~5 lines):
+            -- rw [h_eq_lhs, h_eq_rhs]
+            -- have hYZW_meas : Measurable (fun ω => (Y ω, Z ω, W ω)) := <construct>
+            -- have hg_ae : AEStronglyMeasurable g (Measure.map ...) := hg_meas.aestronglyMeasurable
+            -- calc ∫ ω, g (Y ω, Z ω, W ω) ∂μ
+            --     = ∫ p, g p ∂(Measure.map (fun ω => (Y ω, Z ω, W ω)) μ) := integral_map ...
+            --   _ = ∫ p, g p ∂(Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) := by rw [h_triple]
+            --   _ = ∫ ω, g (Y ω, Z ω, W' ω) ∂μ := integral_map ...
+            --
+            -- Q2 API ISSUE: How to construct Measurable for (Y, Z, W) triple?
+            -- Tried: Measurable.prodMk hY (Measurable.prodMk hZ hW)
+            -- Problem: Type mismatch between (α × β) × γ and α × β × γ
+            -- Need: Correct way to build Measurable (fun ω => (Y ω, Z ω, W ω))
     
     -- Step 5: The core L² argument: prove E[φ ψ|σ(W)] = U·V
     --
