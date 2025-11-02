@@ -30,8 +30,7 @@ The martingale approach follows this structure:
 ## Main results
 
 * `conditionallyIID_of_contractable`: Contractable ⇒ ConditionallyIID
-* `deFinetti_viaMartingale`: Exchangeable ⇒ ConditionallyIID (uses contractability)
-* `deFinetti_equivalence`: Contractable ⇔ (Exchangeable ∧ ConditionallyIID)
+* `deFinetti_viaMartingale`: Exchangeable ⇔ ConditionallyIID
 
 ## References
 
@@ -46,7 +45,7 @@ open scoped BigOperators MeasureTheory Topology Classical
 
 namespace Exchangeability.DeFinetti
 
-open MeasureTheory ProbabilityTheory
+open MeasureTheory ProbabilityTheory ViaMartingale
 
 variable {Ω : Type*} [MeasurableSpace Ω]
 
@@ -54,18 +53,19 @@ variable {Ω : Type*} [MeasurableSpace Ω]
 ## Main theorems (Martingale proof)
 -/
 
-open ViaMartingale
-
-/-- **Contractable implies conditionally i.i.d.** (via Martingale).
+/-- **Contractable ⇒ Conditionally i.i.d.** (via martingale).
 
 This is the core result proved using reverse martingale convergence.
-The proof constructs the directing measure ν via conditional expectation kernels
+The proof constructs the directing measure ν from the tail σ-algebra
 and verifies the finite-dimensional product formula.
 
-**Reference**: Kallenberg (2005), page 27-28, "Third proof".
+**Proof strategy:**
+1. Define ν := directingMeasure X (constructed from tail σ-algebra)
+2. Collect three key facts: ν is probability, measurable, satisfies conditional law
+3. Apply finite_product_formula for strictly monotone selections
+4. Package as ConditionallyIID
 
-**Current status:** ⚠️ BLOCKED - Waiting for 3 sorries in ViaMartingale.lean to be resolved
-(see ViaMartingale.lean header "Remaining Work" section for details)
+**Reference**: Kallenberg (2005), page 27-28, "Third proof".
 -/
 theorem conditionallyIID_of_contractable
     [StandardBorelSpace Ω]
@@ -74,91 +74,62 @@ theorem conditionallyIID_of_contractable
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
     (hContract : Contractable μ X) :
     ConditionallyIID μ X := by
-  -- IsProbabilityMeasure → IsFiniteMeasure (needed for condExpKernel)
+  -- Conditional expectation kernels live under a finite-measure assumption
   haveI : IsFiniteMeasure μ := inferInstance
 
-  -- Step 1: Use the axiomatized directing measure
+  -- 1) Directing measure from the tail σ-algebra
   set ν : Ω → Measure α := directingMeasure (μ := μ) X with hν_def
 
-  -- Step 2: Prove ν is a probability measure for each ω (axiom)
+  -- 2) νω is a probability measure
   have hν_prob : ∀ ω, IsProbabilityMeasure (ν ω) :=
     directingMeasure_isProb (μ := μ) X
 
-  -- Step 3: Prove measurability of ν (axiom)
+  -- 3) measurability of evaluations ω ↦ νω(B)
   have hν_meas : ∀ B : Set α, MeasurableSet B → Measurable (fun ω => ν ω B) :=
     directingMeasure_measurable_eval (μ := μ) X hX_meas
 
-  -- Step 4: Prove the conditional law property
-  -- Uses directingMeasure_X0_marginal + conditional_law_eq_directingMeasure
-  have hν_law : ∀ n B, MeasurableSet B →
-      (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X] := by
+  -- 4) conditional laws of all coordinates agree with ν
+  have hν_law :
+      ∀ n (B : Set α), MeasurableSet B →
+        (fun ω => (ν ω B).toReal)
+          =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X] := by
     intro n B hB
-    -- This is exactly what conditional_law_eq_directingMeasure provides
     exact conditional_law_eq_directingMeasure (μ := μ) X hContract hX_meas n B hB
 
-  -- Step 5: Apply finite_product_formula (only needed for StrictMono k per refined definition)
-  have hProduct : ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
-      Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
-        = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) := by
+  -- 5) finite-dimensional product formula for strictly-monotone selections
+  have hProduct :
+      ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
+        Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
+          = μ.bind (fun ω => Measure.pi (fun _ : Fin m => ν ω)) := by
     intro m k hk
-    -- Strictly monotone case: directly apply finite_product_formula
     exact finite_product_formula X hContract hX_meas ν hν_prob hν_meas hν_law m k hk
 
-  -- Step 6: Package as ConditionallyIID
-  -- Note: With the refined definition of ConditionallyIID (requiring StrictMono k),
-  -- we only need to verify the product formula for strictly monotone index functions.
-  -- For non-strictly-monotone functions (with repeated indices), the correct law
-  -- involves a duplication map from the distinct-indices product, which follows
-  -- trivially from the StrictMono case. See ConditionallyIID.lean for details.
+  -- 6) package as ConditionallyIID (only needs the StrictMono case)
   exact ⟨ν, hν_prob, hν_meas, hProduct⟩
 
-/-- **De Finetti's Theorem (Martingale proof)**: Exchangeable ⇒ ConditionallyIID.
+/-- **de Finetti via martingale:** Exchangeable ⇔ Conditionally i.i.d.
 
-Uses the fact that exchangeable sequences are contractable.
+This establishes the full equivalence between exchangeability and conditional i.i.d.
+for sequences on standard Borel spaces.
 
-**Reference**: Kallenberg (2005), Theorem 1.1 (page 27), "Third proof".
-
-**Current status:** ⚠️ BLOCKED - Depends on `conditionallyIID_of_contractable`
--/
-theorem deFinetti_viaMartingale
-    [StandardBorelSpace Ω]
-    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
-    (hX_exch : Exchangeable μ X) :
-    ConditionallyIID μ X := by
-  -- Exchangeable implies contractable
-  have hContract : Contractable μ X := contractable_of_exchangeable hX_exch hX_meas
-  -- Apply the main theorem
-  exact conditionallyIID_of_contractable X hX_meas hContract
-
-/-- **Three-way equivalence (Kallenberg Theorem 1.1 via Martingale)**:
-Exchangeable ⇔ Contractable ⇔ ConditionallyIID.
-
-This establishes that all three properties are equivalent for sequences on Borel spaces.
-
-**Proof structure**:
-- Exchangeable ⇔ Contractable: `contractable_of_exchangeable` and converse (Contractability.lean)
-- Contractable → ConditionallyIID: `conditionallyIID_of_contractable` (this file)
-- ConditionallyIID → Exchangeable: `exchangeable_of_conditionallyIID` (ConditionallyIID.lean)
+**Proof structure:**
+- (⇒) Exchangeable → Contractable → ConditionallyIID
+- (⇐) ConditionallyIID → Exchangeable (from ConditionallyIID.lean)
 
 **Reference**: Kallenberg (2005), Theorem 1.1 (page 27).
-
-**Current status:** ⚠️ BLOCKED - Depends on `conditionallyIID_of_contractable`
 -/
-theorem deFinetti_equivalence_exch_condIID
+theorem deFinetti_viaMartingale
     [StandardBorelSpace Ω]
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i)) :
     Exchangeable μ X ↔ ConditionallyIID μ X := by
   constructor
-  · -- Exchangeable → ConditionallyIID
+  · -- exch ⟹ contractable ⟹ conditionally i.i.d.
     intro hExch
-    -- Exchangeable → Contractable → ConditionallyIID
-    have hContract := contractable_of_exchangeable hExch hX_meas
-    exact conditionallyIID_of_contractable X hX_meas hContract
-  · -- ConditionallyIID → Exchangeable
+    have hContr := contractable_of_exchangeable hExch hX_meas
+    exact conditionallyIID_of_contractable X hX_meas hContr
+  · -- conditionally i.i.d. ⟹ exch
     exact exchangeable_of_conditionallyIID hX_meas
 
 end Exchangeability.DeFinetti
