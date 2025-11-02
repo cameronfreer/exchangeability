@@ -3656,9 +3656,10 @@ end Directing
 
 /-! ### Conditional law equality -/
 
-/-- All `X_n` have the same conditional law `ν`.
+/-- General form: All `X_n` have the same conditional law `ν`.
 This follows from `extreme_members_equal_on_tail`. -/
-lemma conditional_law_eq_directingMeasure
+lemma conditional_law_eq_of_X0_marginal
+    {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
     (X : ℕ → Ω → α)
@@ -3672,6 +3673,25 @@ lemma conditional_law_eq_directingMeasure
   have h0 := hν B hB
   have hn := extreme_members_equal_on_tail hX hX_meas n B hB
   exact ae_eq_trans h0 hn.symm
+
+/-- **All coordinates share the directing measure as their conditional law.**
+
+This is the key "common ending" result: the directing measure `ν` constructed from
+the tail σ-algebra satisfies the marginal identity for all coordinates, not just X₀. -/
+lemma conditional_law_eq_directingMeasure
+    {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+    (X : ℕ → Ω → α)
+    (hX : Contractable μ X)
+    (hX_meas : ∀ n, Measurable (X n))
+    (n : ℕ) (B : Set α) (hB : MeasurableSet B) :
+    (fun ω => (directingMeasure (μ := μ) X ω B).toReal)
+      =ᵐ[μ]
+    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X] := by
+  -- Apply the general lemma with ν := directingMeasure X
+  exact conditional_law_eq_of_X0_marginal X hX hX_meas (directingMeasure X)
+    (fun B hB => directingMeasure_X0_marginal X hX_meas B hB) n B hB
 
 /-! ### Finite-dimensional product formula -/
 
