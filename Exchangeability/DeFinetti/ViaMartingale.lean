@@ -786,26 +786,65 @@ lemma condIndep_of_triple_law
     intro A B hA hB
     -- **Kallenberg Lemma 1.3 (L² rectangle form):**
     -- The triple-law equality implies the rectangle factorization via an L² projection argument.
-    --
-    -- Key steps (following the blueprint):
-    -- 1. Set φ = 1_A∘Y, ψ = 1_B∘Z, U = E[φ|σ(W)], V = E[ψ|σ(W)]
-    -- 2. From h_triple with test functions (y,z,w) ↦ 1_A(y) 1_B(z) h(w):
-    --    ∫ φ ψ (h∘W) dμ = ∫ φ ψ (h∘W') dμ for all bounded Borel h
-    -- 3. Choose h = V (via approximation by bounded simple functions) to get:
-    --    ∫ φ · V dμ = ∫ U · ψ dμ
-    -- 4. Take CE w.r.t. σ(W) on both sides:
-    --    E[φ · V | σ(W)] = V · E[φ | σ(W)] = V · U  (V is σ(W)-measurable)
-    --    E[U · ψ | σ(W)] = U · E[ψ | σ(W)] = U · V  (U is σ(W)-measurable)
-    -- 5. Therefore E[φ · ψ | σ(W)] = U · V = E[φ|σ(W)] · E[ψ|σ(W)] a.e.
-    --
-    -- This requires:
-    -- - Test function integration with h_triple (integral_map)
-    -- - Simple function approximation within σ(W)
-    -- - Tower property for CE with σ(W)-measurable functions
-    -- - Uniqueness of CE as L² projection
-    --
-    -- All these are standard CE lemmas; implement once condExpHelpers is complete.
-    sorry
+    
+    -- Step 1: Set up indicator functions and their conditional expectations
+    set φ := (Y ⁻¹' A).indicator (fun _ => (1 : ℝ)) with hφ_def
+    set ψ := (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) with hψ_def
+    let 𝔾 := MeasurableSpace.comap W inferInstance
+    set U := μ[φ | 𝔾] with hU_def
+    set V := μ[ψ | 𝔾] with hV_def
+    
+    -- Step 2: Integrability of indicators
+    have hφ_int : Integrable φ μ := by
+      apply Integrable.indicator
+      · exact integrable_const (1 : ℝ)
+      · exact hY hA
+    have hψ_int : Integrable ψ μ := by
+      apply Integrable.indicator
+      · exact integrable_const (1 : ℝ)
+      · exact hZ hB
+    
+    -- Step 3: Measurability of conditional expectations
+    have hU_meas : AEStronglyMeasurable[𝔾] U μ := stronglyMeasurable_condExp.aestronglyMeasurable
+    have hV_meas : AEStronglyMeasurable[𝔾] V μ := stronglyMeasurable_condExp.aestronglyMeasurable
+    
+    -- Step 4: Test function property from triple law
+    -- For any bounded Borel h : γ → ℝ, we have ∫ φ ψ (h∘W) = ∫ φ ψ (h∘W')
+    have h_test_fn : ∀ (h : γ → ℝ), Measurable h → (∀ w, ‖h w‖ ≤ 1) →
+        ∫ ω, φ ω * ψ ω * h (W ω) ∂μ = ∫ ω, φ ω * ψ ω * h (W' ω) ∂μ := by
+      intro h hh_meas hh_bdd
+      -- Use h_triple with test function g(y,z,w) = 1_A(y) 1_B(z) h(w)
+      let g : α × β × γ → ℝ := fun ⟨y, z, w⟩ => 
+        (A.indicator (fun _ => (1 : ℝ)) y) * (B.indicator (fun _ => (1 : ℝ)) z) * h w
+      
+      have hg_meas : Measurable g := by
+        apply Measurable.mul
+        · apply Measurable.mul
+          · exact (measurable_const.indicator hA).comp measurable_fst
+          · exact ((measurable_const.indicator hB).comp measurable_fst).comp measurable_snd
+        · exact hh_meas.comp (measurable_snd.comp measurable_snd)
+      
+      -- The proof is: ∫ φψ(h∘W) = ∫ g∘(Y,Z,W) = ∫ g d[(Y,Z,W)_*μ] = ∫ g d[(Y,Z,W')_*μ] = ∫ φψ(h∘W')
+      -- This is the exact pattern from contractable_dist_eq_on_first_r_tail (line 1144-1227)
+      sorry -- Type class issues with integral_map; needs careful application
+            -- The math is: equal pushforwards integrate test functions equally
+            -- See contractable_dist_eq_on_first_r_tail for working pattern
+    
+    -- Step 5: The key equality ∫ φ · V = ∫ U · ψ
+    -- This will follow from choosing h = V and h = U in h_test_fn,
+    -- but we need approximation by bounded simple functions.
+    -- For now, we note this is the core of the L² argument:
+    sorry -- Requires:
+          -- (a) Approximate V by bounded 𝔾-simple functions {Vₙ}
+          -- (b) Apply h_test_fn with h = Vₙ ∘ W to get ∫ φ ψ Vₙ = ∫ φ ψ Vₙ (trivial)
+          -- (c) Pass to limit using DCT/L¹ convergence
+          -- (d) Similarly for U
+          -- (e) Conclude ∫ φ V = ∫ U ψ
+          -- (f) Take CE of both sides: E[φ V|σ(W)] = E[U ψ|σ(W)]
+          -- (g) Since V,U are 𝔾-measurable: V·E[φ|σ(W)] = U·E[ψ|σ(W)]
+          -- (h) Therefore V·U = U·V and E[φ ψ|σ(W)] = U·V
+          --
+          -- This is ~30-40 lines of standard L² CE manipulation
   
   -- Apply the rectangle factorization criterion
   exact condIndep_of_rect_factorization μ Y Z W h_rect
