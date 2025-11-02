@@ -773,20 +773,55 @@ lemma condIndep_of_triple_law
   (h_triple : Measure.map (fun ω => (Y ω, Z ω, W ω)) μ =
               Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) :
   CondIndep μ Y Z W := by
+  classical
+  -- Abbrev the conditioning σ-algebra
+  let 𝔾 : MeasurableSpace Ω := MeasurableSpace.comap W inferInstance
+
   -- Apply rectangle factorization criterion
-  apply condIndep_of_rect_factorization μ Y Z W
+  apply condIndep_of_rect_factorization μ Y Z 𝔾
   intro A B hA hB
 
   -- Need to prove: μ[1_A(Y) · 1_B(Z) | W] =ᵐ μ[1_A(Y) | W] · μ[1_B(Z) | W]
   --
-  -- This is Kallenberg Lemma 1.3. The proof uses that (Y,Z,W) =^d (Y,Z,W') implies
-  -- that the conditional distribution of (Y,Z) given W doesn't depend on additional
-  -- information in W', which means Y and Z are independent given W.
-  --
-  -- Standard proof: Show E[(μ[1_A∘Y|W] - μ[1_A∘Y·1_B∘Z|W]/μ[1_B∘Z|W])²] = 0
-  -- using that both terms have the same distributional behavior under W vs W'.
+  -- **Kallenberg Lemma 1.3 (L² rectangle form):**
+  -- The triple-law equality implies Y ⟂⟂ Z | σ(W) via an L² projection argument.
+  
+  -- Step 1: Set up indicator functions and their conditional expectations
+  set φ := Set.indicator (Y ⁻¹' A) (fun _ : Ω => (1 : ℝ)) with hφ_def
+  set ψ := Set.indicator (Z ⁻¹' B) (fun _ : Ω => (1 : ℝ)) with hψ_def
+  set U := μ[φ | 𝔾] with hU_def
+  set V := μ[ψ | 𝔾] with hV_def
 
-  sorry
+  -- U and V are 𝔾-measurable and in L²
+  have hU_meas : AEStronglyMeasurable[@id Ω] U μ := by
+    sorry -- API: stronglyMeasurable_condExp gives this
+  have hV_meas : AEStronglyMeasurable[@id Ω] V μ := by
+    sorry -- API: stronglyMeasurable_condExp gives this
+
+  -- Step 2: Use triple law with test functions h : γ → ℝ
+  -- For any bounded Borel h, we have:
+  --   ∫ φ ψ (h ∘ W) dμ = ∫ φ ψ (h ∘ W') dμ
+  have h_test_fn : ∀ (h : γ → ℝ), Measurable h → (∀ w, |h w| ≤ 1) →
+      ∫ ω, φ ω * ψ ω * h (W ω) ∂μ = ∫ ω, φ ω * ψ ω * h (W' ω) ∂μ := by
+    intro h hh_meas hh_bdd
+    -- This follows from h_triple by integration against (y,z,w) ↦ 1_A(y) 1_B(z) h(w)
+    sorry -- API: Measure.map equality + integral_map + product measure theory
+
+  -- Step 3: Choose h := V (or approximations) to get
+  --   ∫ φ · V dμ = something involving both sides
+  -- The key is that V is 𝔾-measurable, so we can approximate it by 𝔾-simple functions
+  
+  -- Step 4: L² projection + uniqueness argument
+  -- From the test function equalities and L² properties of U, V:
+  --   E[φ ψ | 𝔾] = E[φ | 𝔾] · E[ψ | 𝔾]  a.e.
+  
+  -- This is the heart of the L² argument from Kallenberg
+  sorry -- Full L² argument: ~50 lines using:
+        -- - Simple function approximation of U, V within 𝔾
+        -- - h_test_fn applied to these approximations
+        -- - Tower property: E[E[·|𝔾] · g] = E[· · g] for 𝔾-measurable g
+        -- - Uniqueness of L² projection (ae_eq_of_forall_inner_product_zero)
+        -- See REMAINING_WORK.md for detailed proof sketch
 
 /-- **Combined lemma:** Conditional expectation projection from triple distributional equality.
 
