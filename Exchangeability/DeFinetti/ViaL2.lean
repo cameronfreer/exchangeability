@@ -2685,8 +2685,7 @@ lemma cesaro_to_condexp_L2
             _ = (∫ ω, (Z 0 ω) ^ 2 ∂μ) := by
                 sorry
                 -- TODO: Simplify (x^(1/2) * x^(1/2)) = x for x ≥ 0
-                -- After Real.mul_rpow, need to show (x^2)^(1/2) = x
-                -- Should use Real.rpow_natCast_inv_pow or similar
+                -- Standard algebraic identity, but needs correct mathlib lemmas
             _ = σSq := rfl
 
         -- Therefore |ρ| ≤ 1, which gives -1 ≤ ρ ≤ 1
