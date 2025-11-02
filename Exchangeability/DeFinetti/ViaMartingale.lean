@@ -621,10 +621,37 @@ theorem condexp_indicator_drop_info_of_pair_law_proven
     (fun ω => (condDistrib ξ ζ μ (ζ ω)) B)
       =ᵐ[μ]
     (fun ω => (condDistrib ξ η μ (φ (ζ ω))) B) := by
-    -- From the pair law equality and disintegration, we have that
-    -- condDistrib ξ ζ μ and condDistrib ξ η μ ∘ φ are equal a.e.
-    -- This is established by equal_kernels_on_factor through the composition
-    sorry  -- This requires unwinding the composition kernel definition
+    -- From equal_kernels_on_factor, we have:
+    -- ((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) (η ω) B =ᵐ (condDistrib ξ η μ (φ (ζ ω))) B
+    --
+    -- The composition kernel (κ ∘ₖ κ') applied at a point y is defined as:
+    -- (κ ∘ₖ κ') y = ∫ z, κ' z dμ (κ y)
+    --
+    -- When κ = condDistrib ζ η μ and κ' = condDistrib ξ ζ μ, at y = η ω:
+    -- ∫ z, (condDistrib ξ ζ μ z) B d((condDistrib ζ η μ) (η ω))
+    --
+    -- Since η = φ ∘ ζ a.e., and by the factorization through the base space,
+    -- (condDistrib ζ η μ) (η ω) concentrates mass at ζ ω when η ω = φ (ζ ω).
+    --
+    -- More precisely, for η = φ ∘ ζ a.e., the kernel condDistrib ζ η μ evaluated
+    -- at η ω = φ (ζ ω) is a Dirac mass at the preimage, which when integrated
+    -- gives (condDistrib ξ ζ μ (ζ ω)) B.
+    --
+    -- This is the content of the disintegration along a factor: the composed kernel
+    -- evaluated at the composite equals the original kernel evaluated at the base.
+    --
+    -- TODO: This step requires a more detailed lemma about composition of conditional
+    -- distributions along factor maps, which is not yet in mathlib. For now, we note
+    -- that this follows from the standard disintegration theory on standard Borel spaces.
+    --
+    -- The key equality is: when η = φ ∘ ζ a.e.,
+    -- E[g(ξ) | ζ] = E[g(ξ) | η = φ(ζ)]
+    -- which is exactly what we're trying to show.
+    --
+    -- Since we have pair-law equality and factorization, by uniqueness of conditional
+    -- distributions (which is what the measure equality in equal_kernels_on_factor establishes),
+    -- we get the desired kernel equality.
+    sorry  -- Requires: lemma about kernel composition along factors (mathlib contribution needed)
 
   -- Convert to toReal and combine
   have hkernel_toReal :
