@@ -1412,4 +1412,174 @@ theorem condIndep_project (μ : Measure Ω) [IsProbabilityMeasure μ]
   -- This follows directly from the helper lemma
   exact condExp_project_of_condIndep μ Y Z W hY hZ hW h_indep hA
 
+/-!
+### Kallenberg 1.3: Indicator Conditional Independence from Drop-Info
+
+Infrastructure for deriving conditional independence from distributional equality
+via the "drop information" property for Y.
+
+Note: Helper lemmas `integrable_mul_of_bound_one` and `condExp_indicator_ae_bound_one`
+are available from `CondExpHelpers.lean`.
+-/
+
+section KallenbergIndicator
+
+/-- **From drop‑info for `Y` to indicator conditional independence**.
+
+Assume for all Borel `A` we have
+`condExp μ (σ[Z,W]) (1_A ∘ Y) =ᵐ condExp μ (σ[W]) (1_A ∘ Y)`.
+Then for all Borel `A,B`:
+
+E[ 1_A(Y) 1_B(Z) | σ(W) ]
+= E[ 1_A(Y) | σ(W) ] * E[ 1_B(Z) | σ(W) ] a.e.
+-/
+lemma condIndep_indicator_of_dropInfoY
+  {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
+  {Y Z W : Ω → ℝ}
+  {mW : MeasurableSpace Ω}
+  (dropY :
+    ∀ A : Set ℝ, MeasurableSet A →
+      condExp (MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance) μ
+        (fun ω => Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω)
+      =ᵐ[μ]
+      condExp mW μ (fun ω => Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω))
+  (hZ : Measurable Z)
+  {A B : Set ℝ} (hA : MeasurableSet A) (hB : MeasurableSet B) :
+  condExp mW μ
+    (fun ω =>
+      (Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω) *
+      (Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω))
+  =ᵐ[μ]
+  (condExp mW μ (fun ω => Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω))
+  *
+  (condExp mW μ (fun ω => Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω)) := by
+  classical
+  set mZW := MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance with hmZW_def
+  
+  -- (1) tower to σ[Z,W]
+  have hle : mW ≤ mZW := by
+    intro s hs
+    -- s ∈ mW means s = W⁻¹(E) for some measurable E
+    obtain ⟨E, hE, rfl⟩ := hs
+    -- Need to show W⁻¹(E) ∈ σ[Z,W]
+    -- This is the preimage under the projection (Z,W) ↦ W
+    have : W ⁻¹' E = (fun ω => (Z ω, W ω)) ⁻¹' (Set.univ ×ˢ E) := by
+      ext ω; simp [Set.mem_prod]
+    rw [this]
+    exact measurableSet_preimage (fun ω => (Z ω, W ω)) 
+      ((MeasurableSet.univ.prod hE) : MeasurableSet (Set.univ ×ˢ E))
+  
+  have h_tower :
+      condExp μ mW
+        (fun ω =>
+          Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω *
+          Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω)
+    =ᵐ[μ]
+      condExp μ mW
+        (condExp μ mZW
+          (fun ω =>
+            Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω *
+            Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω)) := by
+    apply condExp_condExp_of_le (hm₁₂ := hle)
+
+  -- (2) pull out the σ[Z,W]-measurable factor 1_B(Z) inside the inner CE
+  have h_pull :
+      condExp μ mZW
+        (fun ω =>
+          Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω *
+          Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω)
+    =ᵐ[μ]
+      (fun ω => Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω)
+      *
+      condExp μ mZW
+        (fun ω => Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω) := by
+    have hZmeas :
+        AEStronglyMeasurable
+          (fun ω => Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω) μ := by
+      exact (hZ.measurableSet_preimage hB).aestronglyMeasurable.indicator
+    convert condExp_ae_eq_mul_left (μ := μ) (m := mZW)
+        (h := fun ω => Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω)
+        (X := fun ω => Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω)
+        (hh := hZmeas) using 2
+    ext ω; ring
+
+  -- (3) drop‑info for Y
+  have h_drop : condExp μ mZW
+      (fun ω => Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω)
+      =ᵐ[μ]
+      condExp μ mW
+      (fun ω => Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω) :=
+    dropY A hA
+
+  -- (4) push through the outer CE with the drop replacement
+  have h_after_drop :
+      condExp μ mW
+        ( (fun ω => Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω)
+          * condExp μ mZW
+              (fun ω => Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω) )
+    =ᵐ[μ]
+      condExp μ mW
+        ( (fun ω => Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω)
+          * condExp μ mW
+              (fun ω => Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω) ) := by
+    apply condExp_congr_ae
+    filter_upwards [h_drop] with ω hω
+    simp only [Pi.mul_apply, hω]
+
+  -- (5) pull the mW-measurable factor outside the outer CE
+  have h_pull_out_W :
+      condExp μ mW
+        ( (fun ω => Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω)
+          * condExp μ mW
+              (fun ω => Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω) )
+    =ᵐ[μ]
+      (condExp μ mW (fun ω => Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω))
+      *
+      (condExp μ mW (fun ω => Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω)) := by
+    have hWmeas :
+        AEStronglyMeasurable
+          (condExp μ mW
+            (fun ω => Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω)) μ :=
+      stronglyMeasurable_condExp.aestronglyMeasurable
+    convert condExp_ae_eq_mul_right (μ := μ) (m := mW)
+        (h := condExp μ mW
+            (fun ω => Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω))
+        (X := fun ω => Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω)
+        (hh := hWmeas) using 2
+    ext ω; ring
+
+  -- (6) chain all equalities
+  calc
+    condExp μ mW
+      (fun ω =>
+        Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω *
+        Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω)
+      =ᵐ[μ]
+    condExp μ mW
+      (condExp μ mZW
+        (fun ω =>
+          Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω *
+          Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω)) := h_tower
+  _ =ᵐ[μ]
+    condExp μ mW
+      ( (fun ω => Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω)
+        *
+        condExp μ mZW
+          (fun ω => Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω) ) := by
+        apply condExp_congr_ae; exact h_pull
+  _ =ᵐ[μ]
+    condExp μ mW
+      ( (fun ω => Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω)
+        *
+        condExp μ mW
+          (fun ω => Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω) ) := h_after_drop
+  _ =ᵐ[μ]
+    (condExp μ mW
+      (fun ω => Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω))
+    *
+    (condExp μ mW
+      (fun ω => Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω)) := h_pull_out_W
+
+end KallenbergIndicator
+
 end  -- noncomputable section
