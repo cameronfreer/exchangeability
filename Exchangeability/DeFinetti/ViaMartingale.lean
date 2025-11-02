@@ -833,22 +833,25 @@ lemma condIndep_of_triple_law
       -- Mathematical content: ∫ φψ(h∘W) = ∫ g∘(Y,Z,W) = ∫ g d[(Y,Z,W)_*μ]
       --                                              = ∫ g d[(Y,Z,W')_*μ]  (by h_triple)
       --                                              = ∫ g∘(Y,Z,W') = ∫ φψ(h∘W')
-      --
-      -- Attempted implementation:
-      sorry -- Type class issues with Measurable.prodMk for triple products (α × β × γ)
-            -- The proof structure is clear (~5 lines):
-            -- rw [h_eq_lhs, h_eq_rhs]
+      rw [h_eq_lhs, h_eq_rhs]
+      
+      -- Q2 STILL BLOCKED: Triple product type class issues
+      -- Lean 4 parses (Y ω, Z ω, W ω) as a 3-tuple, NOT as ((Y ω, Z ω), W ω)
+      -- Even `by rfl` doesn't prove they're equal
+      -- The correct API would be to build Measurable for the 3-tuple directly
+      sorry -- ~15 lines once API is resolved:
             -- have hYZW_meas : Measurable (fun ω => (Y ω, Z ω, W ω)) := <construct>
-            -- have hg_ae : AEStronglyMeasurable g (Measure.map ...) := hg_meas.aestronglyMeasurable
+            -- have hg_ae : AEStronglyMeasurable g (Measure.map ...) := hg_meas.aestronglyMeasurable  
             -- calc ∫ ω, g (Y ω, Z ω, W ω) ∂μ
             --     = ∫ p, g p ∂(Measure.map (fun ω => (Y ω, Z ω, W ω)) μ) := integral_map ...
             --   _ = ∫ p, g p ∂(Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) := by rw [h_triple]
             --   _ = ∫ ω, g (Y ω, Z ω, W' ω) ∂μ := integral_map ...
             --
-            -- Q2 API ISSUE: How to construct Measurable for (Y, Z, W) triple?
-            -- Tried: Measurable.prodMk hY (Measurable.prodMk hZ hW)
-            -- Problem: Type mismatch between (α × β) × γ and α × β × γ
-            -- Need: Correct way to build Measurable (fun ω => (Y ω, Z ω, W ω))
+            -- Attempts: hY.prodMk hZ gives Measurable (fun ω => (Y ω, Z ω))
+            -- Then .prodMk hW should give Measurable (fun ω => ((Y ω, Z ω), W ω))
+            -- But type class system doesn't unify ((a,b),c) with (a,b,c)
+            --
+            -- NEED: Either explicit 3-tuple constructor or coercion lemma
     
     -- Step 5: The core L² argument: prove E[φ ψ|σ(W)] = U·V
     --
