@@ -4236,6 +4236,69 @@ lemma finite_product_formula_id'
   -- `i ↦ i` is strictly monotone on `Fin m`.
   intro i j hij; exact hij
 
+/-! ### Main Theorem: de Finetti via Reverse Martingales -/
+
+section MainTheorem
+
+open ProbabilityTheory
+
+/-- **Mixture representation on every finite block** (strict‑mono version)
+using the canonical directing measure. -/
+lemma finite_product_formula_with_directing
+    {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+    (X : ℕ → Ω → α) (hX : Contractable μ X) (hX_meas : ∀ n, Measurable (X n))
+    (m : ℕ) (k : Fin m → ℕ) (hk : StrictMono k) :
+  Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
+    = μ.bind (fun ω => Measure.pi fun _ : Fin m => directingMeasure (μ := μ) X ω) := by
+  classical
+  -- Assemble the hypotheses required by `finite_product_formula`.
+  have hν_prob : ∀ ω, IsProbabilityMeasure (directingMeasure (μ := μ) X ω) :=
+    directingMeasure_isProb (μ := μ) X
+  have hν_meas :
+      ∀ B : Set α, MeasurableSet B →
+        Measurable (fun ω => directingMeasure (μ := μ) X ω B) :=
+    directingMeasure_measurable_eval (μ := μ) X hX_meas
+  -- X₀ marginal identity → all coordinates via conditional_law_eq_directingMeasure
+  have hν_law :
+      ∀ n B, MeasurableSet B →
+        (fun ω => (directingMeasure (μ := μ) X ω B).toReal)
+          =ᵐ[μ]
+        μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X] := by
+    intro n B hB
+    exact conditional_law_eq_directingMeasure (μ := μ) X hX hX_meas n B hB
+  -- Now invoke finite_product_formula wrapper.
+  exact finite_product_formula X hX hX_meas
+    (directingMeasure (μ := μ) X) hν_prob hν_meas hν_law m k hk
+
+/-- **de Finetti via reverse martingales (Aldous/Kallenberg).**
+
+If `X` is contractable, then the sequence `Xₙ` is conditionally i.i.d. given
+the tail σ‑algebra `𝒯_X = ⋂ₙ σ(θₙ X)`. The directing measure is the r.c.d.
+of `X₀` given `𝒯_X`.
+
+**TODO**: This requires a `ConditionallyIID` definition and a `conditionallyIID_of_finite_products`
+bridge lemma (the "Common Ending"). For now we state the theorem structure. -/
+theorem deFinetti_viaMartingale
+    {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+    (X : ℕ → Ω → α) (hX : Contractable μ X) (hX_meas : ∀ n, Measurable (X n)) :
+    True := by  -- Placeholder until ConditionallyIID is defined
+  trivial
+  -- The full statement would be:
+  -- Exchangeability.ConditionallyIID μ X (tailSigma X) (directingMeasure X)
+  -- 
+  -- Proof sketch:
+  -- Use conditionallyIID_of_finite_products with:
+  -- - mixture on blocks: finite_product_formula_with_directing
+  -- - probability: directingMeasure_isProb
+  -- - measurability: directingMeasure_measurable_eval  
+  -- - σ-algebra inclusion: tailSigma_le
+
+end MainTheorem
+
 /-!
 ## Notes
 
