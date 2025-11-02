@@ -824,11 +824,28 @@ lemma condIndep_of_triple_law
           · exact ((measurable_const.indicator hB).comp measurable_fst).comp measurable_snd
         · exact hh_meas.comp (measurable_snd.comp measurable_snd)
       
-      -- The proof is: ∫ φψ(h∘W) = ∫ g∘(Y,Z,W) = ∫ g d[(Y,Z,W)_*μ] = ∫ g d[(Y,Z,W')_*μ] = ∫ φψ(h∘W')
-      -- This is the exact pattern from contractable_dist_eq_on_first_r_tail (line 1144-1227)
-      sorry -- Type class issues with integral_map; needs careful application
-            -- The math is: equal pushforwards integrate test functions equally
-            -- See contractable_dist_eq_on_first_r_tail for working pattern
+      -- Show: (φ ψ h) equals g composed with the triple map
+      have h_eq_lhs : (fun ω => φ ω * ψ ω * h (W ω)) = g ∘ (fun ω => (Y ω, Z ω, W ω)) := by
+        funext ω; rfl
+      have h_eq_rhs : (fun ω => φ ω * ψ ω * h (W' ω)) = g ∘ (fun ω => (Y ω, Z ω, W' ω)) := by
+        funext ω; rfl
+      
+      -- Mathematical content: ∫ φψ(h∘W) = ∫ g∘(Y,Z,W) = ∫ g d[(Y,Z,W)_*μ]
+      --                                              = ∫ g d[(Y,Z,W')_*μ]  (by h_triple)
+      --                                              = ∫ g∘(Y,Z,W') = ∫ φψ(h∘W')
+      --
+      -- This uses: integral_map for pushforward integration
+      -- Pattern: ∫ f∘F dμ = ∫ f d[F_*μ] when F is measurable and f is ae-measurable
+      --
+      -- The calc proof structure is:
+      -- calc ∫ ω, g (Y ω, Z ω, W ω) ∂μ
+      --     = ∫ p, g p ∂(Measure.map (fun ω => (Y ω, Z ω, W ω)) μ) := integral_map ...
+      --   _ = ∫ p, g p ∂(Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) := by rw [h_triple]
+      --   _ = ∫ ω, g (Y ω, Z ω, W' ω) ∂μ := (integral_map ...).symm
+      --
+      -- Type class issues prevent clean application; needs careful instance management
+      -- See contractable_dist_eq_on_first_r_tail (line 1144-1227) for working pattern with Measure.map_apply
+      sorry
     
     -- Step 5: The core L² argument: prove E[φ ψ|σ(W)] = U·V
     --
