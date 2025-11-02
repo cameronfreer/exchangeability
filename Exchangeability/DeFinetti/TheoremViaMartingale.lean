@@ -107,7 +107,25 @@ theorem conditionallyIID_of_contractable
   -- 6) package as ConditionallyIID (only needs the StrictMono case)
   exact ⟨ν, hν_prob, hν_meas, hProduct⟩
 
-/-- **de Finetti via martingale:** Exchangeable ⇔ Conditionally i.i.d.
+/-- **de Finetti's theorem (martingale proof):** Exchangeable ⇒ Conditionally i.i.d.
+
+If X is exchangeable, then X is conditionally i.i.d. given the tail σ-algebra.
+
+**Proof path:** Exchangeable → Contractable → ConditionallyIID
+
+**Reference**: Kallenberg (2005), Theorem 1.1 (page 27), "Third proof".
+-/
+theorem deFinetti
+    [StandardBorelSpace Ω]
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
+    (hX_exch : Exchangeable μ X) :
+    ConditionallyIID μ X := by
+  have hContr := contractable_of_exchangeable hX_exch hX_meas
+  exact conditionallyIID_of_contractable X hX_meas hContr
+
+/-- **Full equivalence (martingale proof):** Exchangeable ⇔ Conditionally i.i.d.
 
 This establishes the full equivalence between exchangeability and conditional i.i.d.
 for sequences on standard Borel spaces.
@@ -118,18 +136,14 @@ for sequences on standard Borel spaces.
 
 **Reference**: Kallenberg (2005), Theorem 1.1 (page 27).
 -/
-theorem deFinetti_viaMartingale
+theorem deFinetti_equivalence
     [StandardBorelSpace Ω]
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i)) :
     Exchangeable μ X ↔ ConditionallyIID μ X := by
   constructor
-  · -- exch ⟹ contractable ⟹ conditionally i.i.d.
-    intro hExch
-    have hContr := contractable_of_exchangeable hExch hX_meas
-    exact conditionallyIID_of_contractable X hX_meas hContr
-  · -- conditionally i.i.d. ⟹ exch
-    exact exchangeable_of_conditionallyIID hX_meas
+  · exact deFinetti X hX_meas
+  · exact exchangeable_of_conditionallyIID hX_meas
 
 end Exchangeability.DeFinetti

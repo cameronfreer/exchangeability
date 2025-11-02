@@ -32,8 +32,9 @@ Kallenberg. The **complete proofs** are in separate files to manage dependencies
 2. **Second proof** (`ViaL2.lean`): Uses an elementary L² contractability bound
    (Lemma 1.2). **Lightest dependencies** - this is the default.
 
-3. **Third proof** (`ViaMartingale.lean`): Follows Aldous' martingale argument
-   with reverse martingale convergence. Medium dependencies.
+3. **Third proof** (`ViaMartingale.lean`) ✅ **COMPLETE**: Follows Aldous' 
+   martingale argument with reverse martingale convergence and tail σ-algebra 
+   factorization. Medium dependencies (directing measure axiomatized).
 
 **To use the theorem**: `import Exchangeability.DeFinetti.Theorem` (gets the default proof).
 

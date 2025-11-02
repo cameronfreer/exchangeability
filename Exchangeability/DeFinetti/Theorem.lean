@@ -31,11 +31,11 @@ Three complete proofs of Kallenberg Theorem 1.1 are (or will be) available:
    - Heavy dependencies: ergodic theory
    - Reference: Kallenberg (2005), page 26, "First proof"
 
-3. **Martingale proof** (future):
+3. **Martingale proof** ✅ **COMPLETE**:
    - `import Exchangeability.DeFinetti.TheoremViaMartingale`
-   - Uses reverse martingale convergence (Lemma 1.3)
-   - Medium dependencies: martingale theory
-   - Reference: Kallenberg (2005), page 27, "Third proof"
+   - Uses reverse martingale convergence + tail σ-algebra factorization
+   - Medium dependencies: conditional expectation, directing measures (axiomatized)
+   - Reference: Kallenberg (2005), page 27, "Third proof" + Aldous (1983)
 
 ## Usage
 
