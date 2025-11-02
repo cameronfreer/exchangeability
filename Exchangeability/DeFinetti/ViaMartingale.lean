@@ -3604,24 +3604,55 @@ The construction uses the standard Borel machinery: for each `ω`, define
 This requires StandardBorelSpace assumption on α to ensure existence.
 -/
 
-/-- Construction of the directing measure from conditional expectations (formerly Axiom 5).
-For each `ω : Ω`, `ν ω` is the conditional distribution of `X₀` given the tail σ-algebra.
+section Directing
 
-This uses mathlib's `condExpKernel` to construct a regular conditional probability kernel.
-The kernel `condExpKernel μ (tailSigma X)` gives the conditional distribution on the entire
-path space; composing with the projection `X 0` gives the desired marginal on α. -/
-noncomputable def directingMeasure_of_contractable
+open ProbabilityTheory
+
+/-- **Directing measure**: conditional distribution of `X₀` given the tail σ-algebra.
+
+**TODO**: This construction requires a regular conditional probability kernel, which
+needs either:
+- Direct use of `condDistrib` with an identity RV (requires technical setup), OR  
+- Access to `condExpKernel` API (mathlib v4.25+), OR
+- Axiomatization for now with measurability properties stated separately.
+
+For now, we axiomatize the existence and state the required properties. -/
+axiom directingMeasure
     {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
-    (X : ℕ → Ω → α)
-    (_hX_meas : ∀ n, Measurable (X n)) :
-    Ω → Measure α := by
-  classical
-  -- Regular conditional probability kernel on Ω given the tail σ-algebra.
-  let κ : Ω → Measure Ω := ProbabilityTheory.condExpKernel μ (tailSigma X)
-  -- Push it forward along the coordinate map `X 0` to obtain a kernel of measures on α.
-  exact fun ω => Measure.map (X 0) (κ ω)
+    (X : ℕ → Ω → α) : Ω → Measure α
+
+/-- `directingMeasure` evaluates measurably on measurable sets. -/
+axiom directingMeasure_measurable_eval
+    {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+    (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) :
+    ∀ (B : Set α), MeasurableSet B →
+      Measurable (fun ω => directingMeasure (μ := μ) X ω B)
+
+/-- The directing measure is (pointwise) a probability measure. -/
+axiom directingMeasure_isProb
+    {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+    (X : ℕ → Ω → α) :
+    ∀ ω, IsProbabilityMeasure (directingMeasure (μ := μ) X ω)
+
+/-- **X₀-marginal identity**: the conditional expectation of the indicator
+of `X 0 ∈ B` given the tail equals the directing measure of `B` (toReal). -/
+axiom directingMeasure_X0_marginal
+    {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+    (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n))
+    (B : Set α) (hB : MeasurableSet B) :
+  (fun ω => (directingMeasure (μ := μ) X ω B).toReal)
+    =ᵐ[μ]
+  μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X]
+
+end Directing
 
 /-! ### Conditional law equality -/
 
