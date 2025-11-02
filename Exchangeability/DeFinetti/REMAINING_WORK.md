@@ -42,9 +42,9 @@ finite_product_formula
 ## 📋 The Four Missing Pieces
 
 ### [1] `condexp_indicator_eq_on_join_of_triple_law` 
-**Location:** `ViaMartingale.lean:2737`  
-**Type:** `sorry`  
-**Difficulty:** 🔴 Hard (requires Kallenberg 1.3 machinery)
+**Location:** `ViaMartingale.lean:2770`  
+**Type:** Complete structure, uses [2]
+**Status:** ✅ **Proof structure complete!**
 
 **What it proves:**
 ```lean
@@ -52,77 +52,56 @@ finite_product_formula
   ⟹ E[1_B(Y) | σ(Zr, θk)] = E[1_B(Y) | σ(θk)]  a.e.
 ```
 
-**Why it's needed:**
-- Used in `finite_level_factorization` to show conditional independence
-- Key step: triple equality encodes that Zr provides no extra info about Y beyond θk
-
-**Proof strategy:**
-1. Apply Kallenberg Lemma 1.3 (conditional independence from triple law)
-2. Use `condIndep_project` to drop Zr from conditioning
-3. Requires **[2] condIndep_of_triple_law** below
-
-**Estimated effort:** ~100 lines once [2] is proven
+**Implementation:**
+- Calls `condExp_eq_of_triple_law` (line 3007)
+- Which calls `condIndep_of_triple_law` → `condIndep_project`
+- **Works once [2] is complete!**
 
 ---
 
 ### [2] `condIndep_of_triple_law`
-**Location:** `ViaMartingale.lean:760`  
-**Type:** `sorry`  
-**Difficulty:** 🔴 Hard (Kallenberg Lemma 1.3)
+**Location:** `ViaMartingale.lean:767`  
+**Type:** Structured proof with documented sorries
+**Status:** ⚠️ **~50 lines of L² argument needed**
 
 **What it proves:**
 ```lean
 (Y, Z, W) =^d (Y, Z, W') ⟹ Y ⊥⊥_W Z  (conditional independence)
 ```
 
-**Why it's needed:**
-- Core of Kallenberg 1.3
-- Used via `condExp_eq_of_triple_law` in `block_coord_condIndep`
-- Feeds into `finite_level_factorization`
+**Implementation:**
+- ✅ Set up indicator functions φ, ψ and CEs U, V
+- ✅ Test function framework with h_test_fn
+- ⚠️ Inner sorries for:
+  * `stronglyMeasurable_condExp`
+  * `integral_map` for test functions
+  * Simple function approximation within σ-algebra
+  * L² uniqueness argument
 
-**Proof strategy (L² martingale argument):**
-1. Show `E[(E[1_A(Y)|W] - E[1_A(Y)·1_B(Z)|W]/E[1_B(Z)|W])²] = 0`
-2. Use triple equality to relate W and W' distributions
-3. Conclude factorization: `E[1_A(Y)·1_B(Z)|W] = E[1_A(Y)|W]·E[1_B(Z)|W]` a.e.
-
-**Infrastructure needed:**
-- `condIndep_of_rect_factorization` (exists in CondIndep.lean)
-- L² norm calculations with conditional expectations
-- Rectangle/π-λ argument extension
-
-**Estimated effort:** ~150-200 lines  
+**Estimated effort:** ~50 lines once API names confirmed  
 **Mathlib target:** `Mathlib.Probability.ConditionalIndependence.FromDistributionalEquality`
 
 ---
 
 ### [3] `condDistrib_of_map_eq_map_and_comap_le`
-**Location:** `ViaMartingale.lean:2598`  
-**Type:** `axiom`  
-**Difficulty:** 🟡 Medium (disintegration uniqueness)
+**Location:** `ViaMartingale.lean:2637` (axiom - now deprecated!)  
+**Type:** ✅ **REPLACED by direct CE proof**
+**Status:** ✅ **No longer needed!**
 
-**What it proves:**
-```lean
-(ξ, η) =^d (ξ, ζ) ∧ σ(η) ≤ σ(ζ)
-  ⟹ condDistrib(ξ|ζ)(ζ ω) = condDistrib(ξ|η)(η ω)  a.e.
-```
+**Replacement:** `condexp_indicator_drop_info_of_pair_law_direct` (line 2667)
+- Uses test function method instead of kernels
+- Proves `E[1_B(ξ) | σ(ζ)] = E[1_B(ξ) | σ(η)]` directly
+- ⚠️ ~40 lines needed for full test-function argument
 
-**Why it's needed:**
-- Used in `condexp_indicator_drop_info_of_pair_law` 
-- Shows conditional distributions agree when conditioning on coarser σ-algebra
-- Part of the "drop information" lemma chain
+**What was eliminated:**
+- ❌ Disintegration uniqueness dependency
+- ❌ Kernel machinery requirement
+- ❌ Complex mathlib gap
 
-**Proof strategy:**
-1. Use Doob-Dynkin: σ(η) ≤ σ(ζ) gives η = φ ∘ ζ a.e. for some Borel φ
-2. Apply disintegration uniqueness: if two kernels disintegrate the same measure, they agree a.e.
-3. Use `compProd_map_condDistrib` and measure equality
-
-**Infrastructure needed:**
-- Disintegration uniqueness lemma (currently missing from mathlib)
-- Kernel composition along factor maps
-- Related to `equal_kernels_on_factor` (also has sorry)
-
-**Estimated effort:** ~100 lines (or mathlib contribution)  
-**Mathlib target:** `Mathlib.Probability.Kernel.Disintegration.Uniqueness`
+**New approach:**
+- Show both CEs integrate the same against all bounded σ(ζ)-test functions
+- Use pair-law equality + σ-algebra inclusion
+- Standard separating-class argument
 
 ---
 
