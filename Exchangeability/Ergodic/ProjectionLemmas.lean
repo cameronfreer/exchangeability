@@ -88,6 +88,28 @@ the conditional expectation onto the tail σ-algebra.
 2. Both `P` and `Q` equal `orthogonalProjection(range)`
 3. Since `range(P) = range(Q) = S`, we get `P = Q = orthogonalProjection(S)`
 -/
+-- Convert Set.range equality to LinearMap.range equality
+private lemma set_range_eq_linearMap_range (P : E →L[𝕜] E) (S : Submodule 𝕜 E)
+    (hP_range : Set.range P = (S : Set E)) :
+    LinearMap.range P.toLinearMap = S := by
+  ext x
+  constructor
+  · intro hx
+    rcases hx with ⟨y, rfl⟩
+    have : P y ∈ Set.range P := ⟨y, rfl⟩
+    simpa [hP_range] using this
+  · intro hx
+    have : x ∈ Set.range P := by
+      simpa [hP_range] using (show x ∈ (S : Set E) from hx)
+    rcases this with ⟨y, hy⟩
+    exact ⟨y, by simpa using hy⟩
+
+-- Convert composition idempotence to IsIdempotentElem
+private lemma comp_idem_to_elem (P : E →L[𝕜] E) (hP_idem : P.comp P = P) :
+    IsIdempotentElem P := by
+  change P * P = P
+  simpa [ContinuousLinearMap.mul_def] using hP_idem
+
 theorem orthogonalProjections_same_range_eq
     [CompleteSpace E]
     (P Q : E →L[𝕜] E)
@@ -102,44 +124,17 @@ theorem orthogonalProjections_same_range_eq
     (hQ_sym : Q.IsSymmetric) :
     P = Q := by
   classical
-  -- Convert idempotence on continuous linear maps to the linear level
-  have hP_idem_elem : IsIdempotentElem P := by
-    change P * P = P
-    simpa [ContinuousLinearMap.mul_def] using hP_idem
-  have hQ_idem_elem : IsIdempotentElem Q := by
-    change Q * Q = Q
-    simpa [ContinuousLinearMap.mul_def] using hQ_idem
+  -- Convert idempotence on continuous linear maps to the linear level (via helper)
+  have hP_idem_elem := comp_idem_to_elem P hP_idem
+  have hQ_idem_elem := comp_idem_to_elem Q hQ_idem
   have hP_symproj : P.toLinearMap.IsSymmetricProjection :=
     ⟨ContinuousLinearMap.IsIdempotentElem.toLinearMap hP_idem_elem, hP_sym⟩
   have hQ_symproj : Q.toLinearMap.IsSymmetricProjection :=
     ⟨ContinuousLinearMap.IsIdempotentElem.toLinearMap hQ_idem_elem, hQ_sym⟩
 
-  -- Identify the ranges with the target subspace `S`
-  have hP_range_submodule : LinearMap.range P.toLinearMap = S := by
-    ext x
-    constructor
-    · intro hx
-      rcases hx with ⟨y, rfl⟩
-      have : P y ∈ Set.range P := ⟨y, rfl⟩
-      simpa [hP_range] using this
-    · intro hx
-      have : x ∈ Set.range P := by
-        simpa [hP_range] using (show x ∈ (S : Set E) from hx)
-      rcases this with ⟨y, hy⟩
-      exact ⟨y, by simpa using hy⟩
-
-  have hQ_range_submodule : LinearMap.range Q.toLinearMap = S := by
-    ext x
-    constructor
-    · intro hx
-      rcases hx with ⟨y, rfl⟩
-      have : Q y ∈ Set.range Q := ⟨y, rfl⟩
-      simpa [hQ_range] using this
-    · intro hx
-      have : x ∈ Set.range Q := by
-        simpa [hQ_range] using (show x ∈ (S : Set E) from hx)
-      rcases this with ⟨y, hy⟩
-      exact ⟨y, by simpa using hy⟩
+  -- Identify the ranges with the target subspace `S` (via helper)
+  have hP_range_submodule := set_range_eq_linearMap_range P S hP_range
+  have hQ_range_submodule := set_range_eq_linearMap_range Q S hQ_range
 
   -- Symmetric projections with the same range agree
   have h_toLinear_eq : P.toLinearMap = Q.toLinearMap :=
