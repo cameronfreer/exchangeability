@@ -309,13 +309,68 @@ lemma condExp_exists_ae_limit_antitone
     have hab' : (↑a : ℝ) < (↑b : ℝ) := Rat.cast_lt.2 hab
     obtain ⟨C, hC⟩ := upcrossings_bdd_uniform h_antitone h_le f hf (↑a) (↑b) hab'
 
-    -- TODO: Establish relationship between original and reversed sequence upcrossings
-    -- Need to show: upcrossingsBefore (original, N) ≤ upcrossings (reversed_at_N)
-    -- This follows because revCEFinite f 𝔽 N n = μ[f | 𝔽 (N-n)], so the reversed
-    -- sequence contains the same values as positions 0..N of the original, just reversed.
-    -- Then use monotone convergence and ae_lt_top.
-    -- See UPCROSSING_PROOF_NOTES.md lines 80-108 for the detailed strategy.
-    sorry
+    -- Establish relationship between original and reversed sequence upcrossings
+    -- Key: upcrossingsBefore (original, N) ≤ upcrossings (reversed_at_N)
+    -- This follows because upcrossings = ⨆ M, upcrossingsBefore M
+    have h_le_key (N : ℕ) (ω : Ω) :
+        ↑(upcrossingsBefore (↑a) (↑b) (fun n => μ[f | 𝔽 n]) N ω)
+        ≤ upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω := by
+      simp only [MeasureTheory.upcrossings]
+      exact le_iSup (fun M => ↑(upcrossingsBefore (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) M ω)) N
+
+    -- Therefore: upcrossings (original) = ⨆ N, upcrossingsBefore N ≤ ⨆ N, upcrossings (reversed_N)
+    have h_bound : ∀ ω, upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω
+                         ≤ ⨆ N, upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω := by
+      intro ω
+      simp only [MeasureTheory.upcrossings]
+      apply iSup_le
+      intro N
+      exact h_le_key N ω
+
+    -- The expected value of the supremum is bounded by C
+    have h_exp_bound : ∫⁻ ω, (⨆ N, upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω) ∂μ ≤ C := by
+      calc ∫⁻ ω, (⨆ N, upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω) ∂μ
+          ≤ ⨆ N, ∫⁻ ω, upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω ∂μ := by
+              apply lintegral_iSup_le
+        _ ≤ C := by
+              apply iSup_le
+              exact hC
+
+    -- Show C is finite: C = (‖f‖₁ + |a|) / (b - a), all terms finite
+    have h_C_finite : C < ⊤ := by
+      -- From upcrossings_bdd_uniform, C is defined as a division of finite terms
+      -- by a positive real, hence finite
+      have h_pos : 0 < (↑b : ℝ) - (↑a : ℝ) := by
+        rw [sub_pos]
+        exact hab'
+      refine ENNReal.div_lt_top ?_ ?_
+      · refine ENNReal.add_lt_top.2 ⟨?_, ENNReal.ofReal_lt_top⟩
+        rw [ENNReal.ofReal_toReal]
+        · exact (memLp_one_iff_integrable.mpr hf).eLpNorm_lt_top
+        · exact (memLp_one_iff_integrable.mpr hf).eLpNorm_ne_top
+      · exact (ENNReal.ofReal_pos.2 h_pos).ne'
+
+    -- Combine bounds: ∫⁻ upcrossings (original) ≤ ∫⁻ ⨆ N, upcrossings (reversed_N) ≤ C
+    have h_exp_orig : ∫⁻ ω, upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω ∂μ ≤ C := by
+      calc ∫⁻ ω, upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω ∂μ
+          ≤ ∫⁻ ω, (⨆ N, upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω) ∂μ := by
+              apply lintegral_mono
+              exact h_bound
+        _ ≤ C := h_exp_bound
+
+    -- Apply ae_lt_top: measurable function with finite expectation is a.e. finite
+    refine ae_lt_top ?_ (lt_of_le_of_lt h_exp_orig h_C_finite).ne
+    -- Measurability: upcrossings of an adapted process
+    -- The sequence μ[f | 𝔽 n] is adapted to the trivial filtration (constant ambient σ-algebra)
+    let ℱ : Filtration ℕ (inferInstance : MeasurableSpace Ω) := {
+      seq := fun _ => (inferInstance : MeasurableSpace Ω)
+      mono' := fun _ _ _ => le_refl _
+      le' := fun _ => le_refl _
+    }
+    have h_adapted : Adapted ℱ (fun n => μ[f | 𝔽 n]) := by
+      intro n
+      exact stronglyMeasurable_condExp.mono (h_le n)
+    exact h_adapted.measurable_upcrossings hab'
 
   -- Step 3: Apply convergence theorem to get pointwise limits
   have h_ae_conv : ∀ᵐ ω ∂μ, ∃ c, Tendsto (fun n => μ[f | 𝔽 n] ω) atTop (𝓝 c) := by
