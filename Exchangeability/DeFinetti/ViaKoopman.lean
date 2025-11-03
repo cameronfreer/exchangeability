@@ -4007,11 +4007,11 @@ private lemma optionB_Step3b_L2_to_L1
   -- Step 3: lower bound is always `0 ≤ ∫ |B n - Y|`
   have h_lower_ev :
       ∀ᶠ n in atTop, 0 ≤ ∫ ω, |B n ω - Y ω| ∂μ :=
-    Filter.eventually_of_forall (by
+    Eventually.of_forall (by
       intro n; exact integral_nonneg (by intro ω; exact abs_nonneg _))
 
   -- Step 4: squeeze between 0 and the L²-norm difference (which → 0)
-  apply tendsto_of_tendsto_of_tendsto_of_le_of_le
+  apply tendsto_of_tendsto_of_tendsto_of_le_of_le'
   · exact tendsto_const_nhds
   · exact hL2_norm
   · exact h_lower_ev
