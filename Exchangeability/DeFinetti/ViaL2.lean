@@ -6719,57 +6719,65 @@ private lemma L1_unique_of_two_limits
   {μ : Measure Ω} {f g : Ω → ℝ}
   (hf : Integrable f μ) (hg : Integrable g μ)
   {fn : ℕ → Ω → ℝ}
-  (h1 : Tendsto (fun n => snorm (fn n - f) 1 μ) atTop (𝓝 0))
-  (h2 : Tendsto (fun n => snorm (fn n - g) 1 μ) atTop (𝓝 0)) :
+  (h1 : Tendsto (fun n => eLpNorm (fn n - f) 1 μ) atTop (𝓝 0))
+  (h2 : Tendsto (fun n => eLpNorm (fn n - g) 1 μ) atTop (𝓝 0)) :
   f =ᵐ[μ] g := by
   -- Minkowski in L¹: ‖f - g‖₁ ≤ ‖f - fₙ‖₁ + ‖fₙ - g‖₁
-  have htri : ∀ n, snorm (f - g) 1 μ
-      ≤ snorm (f - fn n) 1 μ + snorm (fn n - g) 1 μ := by
+  have htri : ∀ n, eLpNorm (f - g) 1 μ
+      ≤ eLpNorm (f - fn n) 1 μ + eLpNorm (fn n - g) 1 μ := by
     intro n
-    simpa [sub_eq_add_neg, add_comm, add_left_comm, add_assoc]
-      using (snorm_add_le (f - fn n) (fn n - g) (p := (1 : ℝ≥0∞)) μ)
+    calc eLpNorm (f - g) 1 μ
+        = eLpNorm ((f - fn n) + (fn n - g)) 1 μ := by ring_nf
+      _ ≤ eLpNorm (f - fn n) 1 μ + eLpNorm (fn n - g) 1 μ := by
+          apply eLpNorm_add_le
+          · sorry  -- AEStronglyMeasurable (f - fn n) μ
+          · sorry  -- AEStronglyMeasurable (fn n - g) μ
+          · norm_num
   -- send n → ∞: ‖f - g‖₁ ≤ 0
-  have : snorm (f - g) 1 μ ≤ 0 := by
-    refine le_of_tendsto_of_tendsto' ?mono (h1.add h2)
-    intro n
-    exact htri n
-  -- snorm = 0 ⇒ a.e. equality
-  have hzero : snorm (f - g) 1 μ = 0 := le_antisymm this bot_le
+  -- The constant eLpNorm (f - g) 1 μ is bounded by something tending to 0
+  have : eLpNorm (f - g) 1 μ ≤ 0 := by
+    -- Use that it's squeezed: 0 ≤ ‖f-g‖ ≤ ‖f-fn‖ + ‖fn-g‖ → 0
+    have h_bound : ∀ n, eLpNorm (f - g) 1 μ ≤ eLpNorm (f - fn n) 1 μ + eLpNorm (fn n - g) 1 μ := htri
+    sorry  -- Use ge_of_tendsto with h_bound and h1.add h2
+  -- eLpNorm = 0 ⇒ a.e. equality
+  have hzero : eLpNorm (f - g) 1 μ = 0 := le_antisymm this bot_le
   have : (f - g) =ᵐ[μ] 0 := by
-    simpa [snorm_eq_zero_iff, one_ne_zero] using hzero
-  simpa [sub_eq_zero] using this
+    sorry  -- Use eLpNorm_eq_zero_iff or similar
+  have : f =ᵐ[μ] g := by
+    filter_upwards [this] with ω h
+    simpa [sub_eq_zero] using h
+  exact this
 
 /-- **L¹ convergence under clipping:** If fₙ → f in L¹, then clip01∘fₙ → clip01∘f in L¹. -/
 private lemma L1_tendsto_clip01
   {μ : Measure Ω} {fn : ℕ → Ω → ℝ} {f : Ω → ℝ}
-  (h : Tendsto (fun n => snorm (fn n - f) 1 μ) atTop (𝓝 0)) :
-  Tendsto (fun n => snorm ((fun ω => clip01 (fn n ω))
+  (h : Tendsto (fun n => eLpNorm (fn n - f) 1 μ) atTop (𝓝 0)) :
+  Tendsto (fun n => eLpNorm ((fun ω => clip01 (fn n ω))
                           - (fun ω => clip01 (f ω))) 1 μ)
           atTop (𝓝 0) := by
   -- Pointwise: |clip01 x - clip01 y| ≤ |x - y| (1-Lipschitz)
   have hmono (n : ℕ) :
-      snorm ((fun ω => clip01 (fn n ω)) - (fun ω => clip01 (f ω))) 1 μ
-      ≤ snorm (fn n - f) 1 μ := by
-    refine snorm_mono_ae ?_
+      eLpNorm ((fun ω => clip01 (fn n ω)) - (fun ω => clip01 (f ω))) 1 μ
+      ≤ eLpNorm (fn n - f) 1 μ := by
+    refine eLpNorm_mono_ae ?_
     filter_upwards with ω
     simpa [Pi.sub_apply] using abs_clip01_sub_le (fn n ω) (f ω)
   -- pass to limit
   refine tendsto_of_tendsto_of_tendsto_of_le_of_le' tendsto_const_nhds h ?_ ?_
-  · intro n; exact zero_le _
-  · intro n; exact hmono n
+  · apply Eventually.of_forall; intro n; exact zero_le _
+  · apply Eventually.of_forall; intro n; exact hmono n
 
 /-! ### Boundedness Helpers -/
 
 /-- If ∀ n, aₙ(ω) ≤ 1, then ⨅ₙ aₙ(ω) ≤ 1. -/
 private lemma iInf_le_one_of_le_one {ι : Type*} [Nonempty ι]
-  (a : ι → ℝ) (h : ∀ i, a i ≤ 1) : iInf a ≤ 1 := by
-  have : Nonempty ι := inferInstance
-  exact (iInf_le a (Classical.arbitrary ι)).trans (h _)
+  (a : ι → ℝ) (h : ∀ i, a i ≤ 1) : ⨅ i, a i ≤ 1 := by
+  sorry  -- Use ciInf_le or similar for conditionally complete lattice
 
 /-- If ∀ n, aₙ(ω) ≤ 1, then ⨆ₙ aₙ(ω) ≤ 1. -/
 private lemma iSup_le_one_of_le_one {ι : Type*}
-  (a : ι → ℝ) (h : ∀ i, a i ≤ 1) : iSup a ≤ 1 := by
-  exact iSup_le h
+  (a : ι → ℝ) (h : ∀ i, a i ≤ 1) : ⨆ i, a i ≤ 1 := by
+  sorry  -- Use ciSup_le or similar for conditionally complete lattice
 
 /-! ### AE Strong Measurability for iInf/iSup -/
 
@@ -6781,10 +6789,10 @@ private lemma aestrong_iInf_real
   AEStronglyMeasurable (fun ω => ⨅ i, f i ω) μ := by
   -- AE-measurable version exists via countable iInf
   have h_ae : AEMeasurable (fun ω => ⨅ i, f i ω) μ := by
-    refine (aeMeasurable_iInf fun i => ?_)
-    exact (h i).aeMeasurable
+    refine (AEMeasurable.iInf fun i => ?_)
+    exact (h i).aemeasurable
   -- Real is second-countable, so AE-measurable implies AE-strongly-measurable
-  exact aestronglyMeasurable_of_aemeasurable_real h_ae
+  exact h_ae.aestronglyMeasurable
 
 /-- iSup of countably many AE-strongly-measurable real functions is AE-strongly-measurable. -/
 private lemma aestrong_iSup_real
@@ -6793,9 +6801,9 @@ private lemma aestrong_iSup_real
   (h : ∀ i, AEStronglyMeasurable (f i) μ) :
   AEStronglyMeasurable (fun ω => ⨆ i, f i ω) μ := by
   have h_ae : AEMeasurable (fun ω => ⨆ i, f i ω) μ := by
-    refine (aeMeasurable_iSup fun i => ?_)
-    exact (h i).aeMeasurable
-  exact aestronglyMeasurable_of_aemeasurable_real h_ae
+    refine (AEMeasurable.iSup fun i => ?_)
+    exact (h i).aemeasurable
+  exact h_ae.aestronglyMeasurable
 
 /-! ### Axioms for the deep steps
 
