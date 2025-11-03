@@ -212,6 +212,50 @@ survives conditioning on W.
 3. The unconditional factorization E[1_A(Y)·1_B(Z)] = E[1_A(Y)]·E[1_B(Z)] (from Y ⊥ Z)
    transfers to the conditional expectations.
 -/
+
+-- Product of two unit indicator functions equals the indicator of the intersection.
+private lemma mul_indicator_one_eq_indicator_inter {Ω : Type*} (S T : Set Ω) :
+    (S.indicator (fun _ => (1 : ℝ))) * (T.indicator (fun _ => (1 : ℝ)))
+      = (S ∩ T).indicator (fun _ => (1 : ℝ)) := by
+  classical
+  ext ω
+  simp only [Pi.mul_apply]
+  by_cases hS : ω ∈ S <;> by_cases hT : ω ∈ T
+  · rw [Set.indicator_of_mem hS, Set.indicator_of_mem hT]
+    have : ω ∈ S ∩ T := ⟨hS, hT⟩
+    rw [Set.indicator_of_mem this]; norm_num
+  · rw [Set.indicator_of_mem hS, Set.indicator_of_notMem hT]
+    have : ω ∉ S ∩ T := fun h => hT h.2
+    rw [Set.indicator_of_notMem this]; norm_num
+  · rw [Set.indicator_of_notMem hS, Set.indicator_of_mem hT]
+    have : ω ∉ S ∩ T := fun h => hS h.1
+    rw [Set.indicator_of_notMem this]; norm_num
+  · rw [Set.indicator_of_notMem hS, Set.indicator_of_notMem hT]
+    have : ω ∉ S ∩ T := fun h => hS h.1
+    rw [Set.indicator_of_notMem this]; norm_num
+
+-- Product of indicators composed with functions equals indicator of product set composed with pair.
+private lemma mul_indicator_comp_pair_eq_indicator_prod {Ω α β : Type*}
+    (Y : Ω → α) (Z : Ω → β) (A : Set α) (B : Set β) :
+    ((Y ⁻¹' A).indicator (fun _ => (1 : ℝ))) * ((Z ⁻¹' B).indicator (fun _ => (1 : ℝ)))
+      = (fun p => (A ×ˢ B).indicator (fun _ => (1 : ℝ)) p) ∘ (fun ω => (Y ω, Z ω)) := by
+  classical
+  ext ω
+  simp only [Pi.mul_apply, Function.comp_apply]
+  by_cases hY : ω ∈ Y ⁻¹' A <;> by_cases hZ : ω ∈ Z ⁻¹' B
+  · rw [Set.indicator_of_mem hY, Set.indicator_of_mem hZ]
+    have : (Y ω, Z ω) ∈ A ×ˢ B := Set.mk_mem_prod hY hZ
+    rw [Set.indicator_of_mem this]; norm_num
+  · rw [Set.indicator_of_mem hY, Set.indicator_of_notMem hZ]
+    have : (Y ω, Z ω) ∉ A ×ˢ B := fun h => hZ h.2
+    rw [Set.indicator_of_notMem this]; norm_num
+  · rw [Set.indicator_of_notMem hY, Set.indicator_of_mem hZ]
+    have : (Y ω, Z ω) ∉ A ×ˢ B := fun h => hY h.1
+    rw [Set.indicator_of_notMem this]; norm_num
+  · rw [Set.indicator_of_notMem hY, Set.indicator_of_notMem hZ]
+    have : (Y ω, Z ω) ∉ A ×ˢ B := fun h => hY h.1
+    rw [Set.indicator_of_notMem this]; norm_num
+
 theorem condIndep_of_indep_pair (μ : Measure Ω) [IsProbabilityMeasure μ]
     (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
     (hY : Measurable Y) (hZ : Measurable Z) (hW : Measurable W)
@@ -257,26 +301,8 @@ theorem condIndep_of_indep_pair (μ : Measure Ω) [IsProbabilityMeasure μ]
 
   -- Step 3: f * g is a function of (Y,Z), so f * g ⊥ W
   have hfg_indep : IndepFun (f * g) W μ := by
-    classical
-    have : f * g = (fun p => Set.indicator (A ×ˢ B) (fun _ => (1 : ℝ)) p) ∘ (fun ω => (Y ω, Z ω)) := by
-      ext ω
-      show f ω * g ω = Set.indicator (A ×ˢ B) (fun _ => (1 : ℝ)) (Y ω, Z ω)
-      simp only [f, g, Pi.mul_apply]
-      by_cases hY : ω ∈ Y ⁻¹' A <;> by_cases hZ : ω ∈ Z ⁻¹' B
-      · rw [Set.indicator_of_mem hY, Set.indicator_of_mem hZ]
-        have : (Y ω, Z ω) ∈ A ×ˢ B := Set.mk_mem_prod hY hZ
-        rw [Set.indicator_of_mem this]
-        norm_num
-      · rw [Set.indicator_of_mem hY, Set.indicator_of_not_mem hZ]
-        have : (Y ω, Z ω) ∉ A ×ˢ B := fun h => hZ h.2
-        rw [Set.indicator_of_not_mem this]; norm_num
-      · rw [Set.indicator_of_not_mem hY, Set.indicator_of_mem hZ]
-        have : (Y ω, Z ω) ∉ A ×ˢ B := fun h => hY h.1
-        rw [Set.indicator_of_not_mem this]; norm_num
-      · rw [Set.indicator_of_not_mem hY, Set.indicator_of_not_mem hZ]
-        have : (Y ω, Z ω) ∉ A ×ˢ B := fun h => hY h.1
-        rw [Set.indicator_of_not_mem this]; norm_num
-    rw [this]
+    rw [show f * g = (fun p => (A ×ˢ B).indicator (fun _ => (1 : ℝ)) p) ∘ (fun ω => (Y ω, Z ω))
+          from mul_indicator_comp_pair_eq_indicator_prod Y Z A B]
     exact hPairW_indep.comp (measurable_const.indicator (hA.prod hB)) measurable_id
 
   -- Step 4: Apply condExp_const_of_indepFun to get conditional expectations are constants
@@ -288,26 +314,8 @@ theorem condIndep_of_indep_pair (μ : Measure Ω) [IsProbabilityMeasure μ]
 
   have hfg_meas : Measurable (f * g) := hf_meas.mul hg_meas
   have hfg_int : Integrable (f * g) μ := by
-    -- f * g = 1_{Y⁻¹A ∩ Z⁻¹B}
-    have : f * g = Set.indicator (Y ⁻¹' A ∩ Z ⁻¹' B) (fun _ => (1 : ℝ)) := by
-      classical
-      ext ω
-      simp only [f, g, Pi.mul_apply]
-      by_cases hY : ω ∈ Y ⁻¹' A <;> by_cases hZ : ω ∈ Z ⁻¹' B
-      · rw [Set.indicator_of_mem hY, Set.indicator_of_mem hZ]
-        have : ω ∈ Y ⁻¹' A ∩ Z ⁻¹' B := ⟨hY, hZ⟩
-        rw [Set.indicator_of_mem this]
-        norm_num
-      · rw [Set.indicator_of_mem hY, Set.indicator_of_not_mem hZ]
-        have : ω ∉ Y ⁻¹' A ∩ Z ⁻¹' B := fun h => hZ h.2
-        rw [Set.indicator_of_not_mem this]; norm_num
-      · rw [Set.indicator_of_not_mem hY, Set.indicator_of_mem hZ]
-        have : ω ∉ Y ⁻¹' A ∩ Z ⁻¹' B := fun h => hY h.1
-        rw [Set.indicator_of_not_mem this]; norm_num
-      · rw [Set.indicator_of_not_mem hY, Set.indicator_of_not_mem hZ]
-        have : ω ∉ Y ⁻¹' A ∩ Z ⁻¹' B := fun h => hY h.1
-        rw [Set.indicator_of_not_mem this]; norm_num
-    rw [this]
+    rw [show f * g = (Y ⁻¹' A ∩ Z ⁻¹' B).indicator (fun _ => (1 : ℝ))
+          from mul_indicator_one_eq_indicator_inter (Y ⁻¹' A) (Z ⁻¹' B)]
     exact (integrable_const (1 : ℝ)).indicator ((hY hA).inter (hZ hB))
   have hfg_ce : μ[f * g | MeasurableSpace.comap W (by infer_instance)] =ᵐ[μ] (fun _ => μ[f * g]) :=
     condExp_const_of_indepFun μ hfg_meas hW hfg_indep hfg_int
