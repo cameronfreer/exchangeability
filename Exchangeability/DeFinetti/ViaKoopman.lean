@@ -3994,16 +3994,19 @@ private lemma optionB_Step3b_L2_to_L1
       -- h is in L² since it's the difference of two L² functions
       have h_mem : MemLp h (ENNReal.ofReal 2) μ := by
         -- The Lp element has memLp
-        have : MemLp (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
+        have lp_mem : MemLp (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
                        - condexpL2 (μ := μ) fL2 : Lp ℝ 2 μ) (ENNReal.ofReal 2) μ :=
-          (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
-             - condexpL2 (μ := μ) fL2).memLp
+          Lp.memLp (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
+             - condexpL2 (μ := μ) fL2)
         -- h is defined as the coercion, which is ae equal
         have h_ae : (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
                       - condexpL2 (μ := μ) fL2 : Lp ℝ 2 μ) =ᵐ[μ] h := by
-          rw [h_def]
-          exact (Lp.coeFn_sub _ _).symm
-        exact this.ae_eq h_ae
+          have : h =ᵐ[μ] (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
+                           - condexpL2 (μ := μ) fL2 : Lp ℝ 2 μ) := by
+            rw [h_def]
+            exact Lp.coeFn_sub _ _
+          exact this.symm
+        exact lp_mem.ae_eq h_ae
 
       -- constant 1 is in L² on a probability space
       have one_mem : MemLp (fun _ : Ω[α] => (1 : ℝ)) (ENNReal.ofReal 2) μ :=
