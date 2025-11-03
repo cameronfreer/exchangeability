@@ -974,58 +974,70 @@ equals the conditional expectation onto the shift-invariant σ-algebra.
 - Key step in the ergodic/Koopman operator proof of de Finetti's theorem
 - Connects shift-invariance (algebraic) to conditional independence (probabilistic)
 -/
+-- condexpL2 properties matching METProjection structure
+private lemma condexpL2_projection_properties {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ) :
+    (condexpL2 (μ := μ) * condexpL2 (μ := μ) = condexpL2 (μ := μ)) ∧
+    (condexpL2 (μ := μ)).IsSymmetric ∧
+    (Set.range (condexpL2 (μ := μ)) = (fixedSubspace hσ : Set (Lp ℝ 2 μ))) ∧
+    (∀ g ∈ fixedSubspace hσ, condexpL2 (μ := μ) g = g) := by
+  constructor
+  · exact condexpL2_idem (μ := μ)
+  constructor
+  · intro f g
+    unfold condexpL2
+    exact MeasureTheory.inner_condExpL2_left_eq_right shiftInvariantSigma_le
+  constructor
+  · exact range_condexp_eq_fixedSubspace hσ
+  · intro g hg
+    have h_range : Set.range (condexpL2 (μ := μ)) = (fixedSubspace hσ : Set (Lp ℝ 2 μ)) :=
+      range_condexp_eq_fixedSubspace hσ
+    have : g ∈ Set.range (condexpL2 (μ := μ)) := by rw [h_range]; exact hg
+    rcases this with ⟨f, rfl⟩
+    have h_idem : condexpL2 (μ := μ) * condexpL2 (μ := μ) = condexpL2 (μ := μ) :=
+      condexpL2_idem (μ := μ)
+    change (condexpL2 (μ := μ) * condexpL2 (μ := μ)) f = condexpL2 (μ := μ) f
+    rw [h_idem]
+
+-- Convert operator multiplication to composition form
+private lemma mul_to_comp {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
+    (T : E →L[ℝ] E) (h_mul : T * T = T) : T.comp T = T := by
+  simp only [ContinuousLinearMap.mul_def] at h_mul
+  exact h_mul
+
+-- Fixed subspace has orthogonal projection structure
+private lemma fixedSubspace_hasOrthogonalProjection {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ) : (fixedSubspace hσ).HasOrthogonalProjection := by
+  have hclosed := fixedSubspace_closed hσ
+  have : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
+  exact Submodule.HasOrthogonalProjection.ofCompleteSpace (fixedSubspace hσ)
+
 theorem proj_eq_condexp {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) :
     METProjection hσ = condexpL2 (μ := μ) := by
   classical
-  -- Both are symmetric idempotent operators with the same range
+  -- Establish METProjection properties
   have h_idem_MET : METProjection hσ * METProjection hσ = METProjection hσ :=
     METProjection_idem hσ
   have h_symm_MET : (METProjection hσ).IsSymmetric :=
     METProjection_isSymmetric hσ
   have h_range_MET : Set.range (METProjection hσ) = (fixedSubspace hσ : Set (Lp ℝ 2 μ)) :=
     METProjection_range_fixedSubspace hσ
-
-  have h_idem_cond : condexpL2 (μ := μ) * condexpL2 (μ := μ) = condexpL2 (μ := μ) :=
-    condexpL2_idem (μ := μ)
-  have h_symm_cond : (condexpL2 (μ := μ)).IsSymmetric := by
-    intro f g
-    unfold condexpL2
-    exact MeasureTheory.inner_condExpL2_left_eq_right shiftInvariantSigma_le
-  have h_range_cond : Set.range (condexpL2 (μ := μ)) = (fixedSubspace hσ : Set (Lp ℝ 2 μ)) :=
-    range_condexp_eq_fixedSubspace hσ
-
-  -- Both projections fix elements of the fixed subspace
   have h_fixes_MET : ∀ g ∈ fixedSubspace hσ, METProjection hσ g = g :=
     fun g hg => METProjection_fixes_fixedSubspace hσ hg
-  have h_fixes_cond : ∀ g ∈ fixedSubspace hσ, condexpL2 (μ := μ) g = g := by
-    intro g hg
-    -- g is in the range of condexpL2, so applying condexpL2 again gives g
-    have : g ∈ Set.range (condexpL2 (μ := μ)) := by
-      rw [h_range_cond]
-      exact hg
-    -- Since condexpL2 is idempotent and g is in its range, condexpL2 g = g
-    rcases this with ⟨f, rfl⟩
-    -- Apply idempotence
-    change (condexpL2 (μ := μ) * condexpL2 (μ := μ)) f = condexpL2 (μ := μ) f
-    rw [h_idem_cond]
 
-  -- Convert idempotence to composition form
-  have h_idem_MET_comp : (METProjection hσ).comp (METProjection hσ) = METProjection hσ := by
-    simp only [ContinuousLinearMap.mul_def] at h_idem_MET
-    exact h_idem_MET
-  have h_idem_cond_comp :
-      (condexpL2 (μ := μ)).comp (condexpL2 (μ := μ)) = condexpL2 (μ := μ) := by
-    simp only [ContinuousLinearMap.mul_def] at h_idem_cond
-    exact h_idem_cond
+  -- Establish condexpL2 properties (via helper)
+  obtain ⟨h_idem_cond, h_symm_cond, h_range_cond, h_fixes_cond⟩ :=
+    condexpL2_projection_properties hσ
 
-  -- Ensure we have the orthogonal projection structure
-  haveI : (fixedSubspace hσ).HasOrthogonalProjection := by
-    have hclosed := fixedSubspace_closed hσ
-    have : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
-    exact Submodule.HasOrthogonalProjection.ofCompleteSpace (fixedSubspace hσ)
+  -- Convert to composition form
+  have h_idem_MET_comp := mul_to_comp (METProjection hσ) h_idem_MET
+  have h_idem_cond_comp := mul_to_comp (condexpL2 (μ := μ)) h_idem_cond
 
-  -- Apply uniqueness theorem
+  -- Ensure orthogonal projection structure
+  haveI := fixedSubspace_hasOrthogonalProjection hσ
+
+  -- Apply uniqueness: two projections with same range are equal
   exact orthogonalProjections_same_range_eq
     (METProjection hσ) (condexpL2 (μ := μ)) (fixedSubspace hσ)
     h_range_MET h_range_cond
