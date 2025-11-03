@@ -4227,8 +4227,10 @@ private lemma optionB_Step4b_AB_close
     -- (n+1 : ℝ) → ∞, so its inverse → 0
     have h1 : Tendsto (fun n : ℕ => (n : ℝ)) atTop atTop :=
       tendsto_natCast_atTop_atTop
+    -- Constant function 1 tends to 1
+    have h_const : Tendsto (fun _ : ℕ => (1 : ℝ)) atTop (𝓝 1) := tendsto_const_nhds
     have h2 : Tendsto (fun n : ℕ => (n : ℝ) + 1) atTop atTop :=
-      h1.atTop_add 1
+      h1.atTop_add h_const
     have h3 : Tendsto (fun n : ℕ => ((n : ℝ) + 1)⁻¹) atTop (𝓝 0) :=
       tendsto_inv_atTop_zero.comp h2
     -- Now (2*Cg) * (n+1)⁻¹ → (2*Cg) * 0 = 0
