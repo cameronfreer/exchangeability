@@ -772,6 +772,48 @@ lemma pair_law_YW_of_triple_law
   -- TODO: Use Measure.map_map composition to show this follows from h_triple
   sorry
 
+/-- **Common Version Lemma:** When (Z,W) and (Z,W') have the same distribution,
+conditional expectations V = μ[ψ(Z) | σ(W)] and V' = μ[ψ(Z) | σ(W')] admit a common
+Borel representative v : γ → ℝ such that V = v∘W and V' = v∘W' a.e.
+
+This is a key lemma for the swap-condition-swap back technique: it allows us to transfer
+conditional expectations between the two probability spaces via the shared regression function v.
+
+**Proof strategy:**
+1. By Doob-Dynkin, V = v₁∘W and V' = v₂∘W' for some measurable v₁, v₂
+2. For any bounded measurable h : γ → ℝ:
+   ∫ (v₁*h)∘W dμ = ∫ ψ(Z)*(h∘W) dμ   (defining property of V)
+   ∫ ψ(Z)*(h∘W) dμ = ∫ ψ(Z)*(h∘W') dμ  (from pair law equality)
+   ∫ ψ(Z)*(h∘W') dμ = ∫ (v₂*h)∘W' dμ  (defining property of V')
+3. Since Law(W) = Law(W') (marginal of pair law), this implies
+   ∫ v₁*h d[Law(W)] = ∫ v₂*h d[Law(W)]
+4. Therefore v₁ = v₂ a.e. w.r.t. Law(W), giving the common representative v
+
+**Not in mathlib:** This requires custom proof from first principles.
+-/
+lemma common_version_condExp
+  {Ω β γ : Type*}
+  [MeasurableSpace Ω] [MeasurableSpace β] [MeasurableSpace γ]
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  (Z : Ω → β) (W W' : Ω → γ) (ψ : β → ℝ)
+  (hZ : Measurable Z) (hW : Measurable W) (hW' : Measurable W')
+  (hψ : Measurable ψ) (hψ_bdd : ∀ z, ‖ψ z‖ ≤ 1)
+  (hψ_int : Integrable (ψ ∘ Z) μ)
+  (h_pair : Measure.map (fun ω => (Z ω, W ω)) μ =
+            Measure.map (fun ω => (Z ω, W' ω)) μ) :
+  ∃ v : γ → ℝ,
+    (∀ᵐ ω ∂μ, μ[(ψ ∘ Z) | MeasurableSpace.comap W inferInstance] ω = v (W ω)) ∧
+    (∀ᵐ ω ∂μ, μ[(ψ ∘ Z) | MeasurableSpace.comap W' inferInstance] ω = v (W' ω)) := by
+  -- By Doob-Dynkin, conditional expectations factor through W and W'
+  -- The key is showing the factoring functions v₁ and v₂ coincide a.e.
+  --
+  -- Full proof requires:
+  -- 1. Extract v₁, v₂ from Doob-Dynkin applied to the conditional expectations
+  -- 2. For any bounded measurable h, show ∫ v₁*h = ∫ v₂*h w.r.t. Law(W)
+  -- 3. This uses: h∘W and h∘W' are test functions, and the pair law equality
+  -- 4. Conclude v₁ = v₂ a.e. by uniqueness in L¹
+  sorry
+
 /-- **Kallenberg Lemma 1.3 (Contraction-Independence)**: If the triple distribution
 satisfies (Y, Z, W) =^d (Y, Z, W'), then Y and Z are conditionally independent given W.
 
