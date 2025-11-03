@@ -753,9 +753,17 @@ lemma pair_law_ZW_of_triple_law
               Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) :
   Measure.map (fun ω => (Z ω, W ω)) μ = Measure.map (fun ω => (Z ω, W' ω)) μ := by
   -- The pair law is a marginal of the triple law
-  -- Project (Y,Z,W) ↦ (Z,W) and use that equal measures have equal pushforwards
-  -- TODO: Use Measure.map_map composition to show this follows from h_triple
-  sorry
+  -- Project (Y,Z,W) ↦ (Z,W) via π(y,z,w) = (z,w)
+  let π : α × β × γ → β × γ := fun ⟨_, z, w⟩ => (z, w)
+  have hπ : Measurable π := measurable_snd.fst.prodMk measurable_snd.snd
+  -- Equal measures have equal pushforwards
+  have h : Measure.map π (Measure.map (fun ω => (Y ω, Z ω, W ω)) μ) =
+           Measure.map π (Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) := by
+    rw [h_triple]
+  -- Show both sides equal map π of their respective triple measures
+  convert h using 1
+  · rfl
+  · rfl
 
 /-- **Helper:** Pair law (Y,W) equality from triple law.
 The marginal distribution (Y,W) coincides with (Y,W') when (Y,Z,W) =^d (Y,Z,W'). -/
@@ -768,9 +776,17 @@ lemma pair_law_YW_of_triple_law
   (h_triple : Measure.map (fun ω => (Y ω, Z ω, W ω)) μ =
               Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) :
   Measure.map (fun ω => (Y ω, W ω)) μ = Measure.map (fun ω => (Y ω, W' ω)) μ := by
-  -- Project (Y,Z,W) ↦ (Y,W)
-  -- TODO: Use Measure.map_map composition to show this follows from h_triple
-  sorry
+  -- Project (Y,Z,W) ↦ (Y,W) via π(y,z,w) = (y,w)
+  let π : α × β × γ → α × γ := fun ⟨y, _, w⟩ => (y, w)
+  have hπ : Measurable π := measurable_fst.fst.prodMk measurable_snd.snd
+  -- Equal measures have equal pushforwards
+  have h : Measure.map π (Measure.map (fun ω => (Y ω, Z ω, W ω)) μ) =
+           Measure.map π (Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) := by
+    rw [h_triple]
+  -- Show both sides equal map π of their respective triple measures
+  convert h using 1
+  · rfl
+  · rfl
 
 /-- **Common Version Lemma:** When (Z,W) and (Z,W') have the same distribution,
 conditional expectations V = μ[ψ(Z) | σ(W)] and V' = μ[ψ(Z) | σ(W')] admit a common
@@ -841,15 +857,22 @@ lemma common_version_condExp_with_props
     (∀ w, ‖v w‖ ≤ 1) ∧
     (∀ᵐ ω ∂μ, μ[(ψ ∘ Z) | MeasurableSpace.comap W inferInstance] ω = v (W ω)) ∧
     (∀ᵐ ω ∂μ, μ[(ψ ∘ Z) | MeasurableSpace.comap W' inferInstance] ω = v (W' ω)) := by
-  -- **Proof strategy:**
-  -- 1. Doob-Dynkin: get Borel versions v₁, v₂ for each conditional expectation
-  -- 2. Show v₁ = v₂ a.e. w.r.t. Law(W) = Law(W') by comparing integrals against test functions
-  -- 3. Choose a representative v and clamp to [-1, 1] to ensure global bound
-  -- 4. Verify v is Borel-measurable and satisfies both a.e. identities
+  -- Define the conditional expectations
+  let V  := μ[(ψ ∘ Z) | MeasurableSpace.comap W  inferInstance]
+  let V' := μ[(ψ ∘ Z) | MeasurableSpace.comap W' inferInstance]
 
-  -- TODO: Implement using Doob-Dynkin + pair law testing + clamping
-  -- The key insight: conditional expectations of bounded functions are bounded,
-  -- so v₁ and v₂ are essentially bounded (a.e.), and clamping doesn't change them a.e.
+  -- V is σ(W)-measurable, so by Doob-Dynkin, V = v₁ ∘ W for some measurable v₁
+  -- Similarly V' = v₂ ∘ W' for some measurable v₂
+  -- Key claim: v₁ = v₂ a.e. w.r.t. pushforward measures
+
+  -- For now, use classical choice to extract measurable versions
+  -- The full proof requires:
+  -- 1. stronglyMeasurable.exists_measurable_coe for V and V'
+  -- 2. Showing v₁ = v₂ via integral comparison using h_pair
+  -- 3. Clamping to ensure global bounds
+
+  -- This is a deep lemma requiring substantial measure theory infrastructure
+  -- Placeholder: use sorry with clear documentation of what's needed
   sorry
 
 /-- **Helper:** Generalized test function lemma without ψ factor.
@@ -876,14 +899,10 @@ lemma test_fn_pair_law
   ∫ ω, φ ω * g (W ω) ∂μ = ∫ ω, φ ω * g (W' ω) ∂μ := by
   -- Extract the factorization f with φ = f ∘ Y
   obtain ⟨f, rfl⟩ := hφ_factor
-
-  -- Define the test function on the product space
-  let F : α × γ → ℝ := fun ⟨y, w⟩ => f y * g w
-
-  -- The integrals are just F applied to the pairs (Y,W) and (Y,W')
-  -- Use integral_map and the pair law equality h_pair
-  -- TODO: Complete using measurability of F and integral_map
-  sorry
+  -- Since (Y,W) and (Y,W') have the same distribution, integrals of any
+  -- function F(Y,W) = f(Y)*g(W) are equal
+  -- This follows from h_pair by integral invariance under measure equality
+  sorry  -- Requires: integral_congr_measure or similar API for measure equality
 
 /-- **Kallenberg Lemma 1.3 (Contraction-Independence)**: If the triple distribution
 satisfies (Y, Z, W) =^d (Y, Z, W'), then Y and Z are conditionally independent given W.
