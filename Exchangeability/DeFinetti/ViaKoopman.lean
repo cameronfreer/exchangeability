@@ -3974,66 +3974,18 @@ private lemma optionB_Step3b_L2_to_L1
                   (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
                   - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω)
                2 μ).toReal := by
-      -- Set h := pointwise difference we integrate
-      set h : Ω[α] → ℝ :=
-        fun ω =>
-          (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
-          - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω
-        with h_def
+      -- TODO: Fix Lp coercion issues in this proof
+      -- Problems:
+      -- 1. integral_mul_norm_le_Lp_mul_Lq expects MemLp f (ENNReal.ofReal p) where p : ℝ
+      --    but we have MemLp h 2 where 2 : ℝ≥0∞
+      -- 2. Lp coercion mismatches: birkhoffAverage ... fL2 ω vs ↑↑(birkhoffAverage ... fL2) ω
+      -- 3. Lp.coeFn_sub type signature doesn't match usage pattern
+      -- Need to either:
+      -- - Convert MemLp witnesses using show (2 : ℝ≥0∞) = ENNReal.ofReal 2
+      -- - Restructure proof to work directly with mathlib's Lp API
+      sorry
 
-      -- Hölder (Bochner) with p=q=2: conjugate exponent
-      have hpq : Real.HolderConjugate (2 : ℝ) (2 : ℝ) :=
-        Real.HolderConjugate.two_two
-
-      -- h is in L² since it's the difference of two L² functions
-      have h_mem : MemLp h 2 μ := by
-        -- The Lp element has memLp
-        have lp_mem : MemLp (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
-                       - condexpL2 (μ := μ) fL2 : Lp ℝ 2 μ) 2 μ :=
-          Lp.memLp (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
-             - condexpL2 (μ := μ) fL2)
-        -- h is defined as the coercion, which is ae equal
-        have h_ae : (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
-                      - condexpL2 (μ := μ) fL2 : Lp ℝ 2 μ) =ᵐ[μ] h := by
-          have : h =ᵐ[μ] (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
-                           - condexpL2 (μ := μ) fL2 : Lp ℝ 2 μ) := by
-            rw [h_def]
-            exact Lp.coeFn_sub _ _
-          exact this.symm
-        exact lp_mem.ae_eq h_ae
-
-      -- constant 1 is in L² on a probability space
-      have one_mem : MemLp (fun _ : Ω[α] => (1 : ℝ)) 2 μ :=
-        memLp_const (1 : ℝ)
-
-      -- Apply Hölder inequality
-      have holder :=
-        integral_mul_norm_le_Lp_mul_Lq
-          (μ := μ) (f := h) (g := fun _ => (1 : ℝ)) (p := 2) (q := 2)
-          hpq h_mem one_mem
-
-      -- Rewrite (∫ ‖h‖²)^(1/2) as (eLpNorm h 2 μ).toReal
-      have h_snorm :
-          ((∫ ω, ‖h ω‖ ^ 2 ∂ μ) ^ (1 / 2 : ℝ))
-            = (eLpNorm h 2 μ).toReal := by
-        have hp1 : (2 : ℝ≥0∞) ≠ 0 := by norm_num
-        have hp2 : (2 : ℝ≥0∞) ≠ ∞ := by norm_num
-        rw [MemLp.eLpNorm_eq_integral_rpow_norm hp1 hp2 h_mem]
-        simp only [ENNReal.toReal_ofReal, inv_ofNat]
-        norm_num
-
-      -- On a probability space, ∫ ‖1‖² = μ univ = 1
-      have h_one : ((∫ ω, ‖(1 : ℝ)‖ ^ 2 ∂ μ) ^ (1/2 : ℝ)) = 1 := by
-        simp [Real.norm_eq_abs, abs_one, one_pow, IsProbabilityMeasure.measure_univ]
-
-      -- Simplify ‖h‖ * ‖1‖ = ‖h‖
-      have h_mul_one : (fun ω => ‖h ω‖ * ‖(1 : ℝ)‖) = fun ω => ‖h ω‖ := by
-        funext ω; simp
-
-      -- Put everything together
-      simpa [h_def, Real.norm_eq_abs, h_snorm, h_one, mul_one, h_mul_one] using holder
-
-    -- identify `(eLpNorm …).toReal` with the L² norm of the Lp difference
+    -- TODO: Also need to prove h_toNorm which relates eLpNorm to Lp norm
     have h_toNorm :
         (eLpNorm
           (fun ω =>
@@ -4042,17 +3994,7 @@ private lemma optionB_Step3b_L2_to_L1
           2 μ).toReal
         = ‖birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
              - condexpL2 (μ := μ) fL2‖ := by
-      -- The coercion of the Lp element is ae equal to itself
-      have ae_eq : (fun ω => (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
-                               - condexpL2 (μ := μ) fL2 : Lp ℝ 2 μ) ω)
-                    =ᵐ[μ] (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
-                           - condexpL2 (μ := μ) fL2 : Lp ℝ 2 μ) :=
-        ae_eq_refl _
-      -- So eLpNorm of the function equals eLpNorm of the Lp element
-      rw [eLpNorm_congr_ae ae_eq]
-      -- And eLpNorm of an Lp element is its norm
-      rw [← Lp.norm_def]
-      rfl
+      sorry
 
     -- conclude the inequality at this `n > 0`
     have h_eq_int :
