@@ -182,19 +182,49 @@ lemma condExp_exists_ae_limit_antitone
           ≤ eLpNorm f 1 μ := hL1_bdd n
         _ = R := hR
 
-  -- Step 2: Show finite upcrossings using reversed martingales
-  -- Strategy: The sequence (μ[f | 𝔽 n]) is a backward martingale.
-  -- We prove it has finite upcrossings by using L¹-boundedness and the upcrossing inequality.
+  -- Step 2: Show finite upcrossings using L¹-boundedness
+  -- Strategy: Use the fact that L¹-bounded sequences with reverse martingale structure
+  -- have finite upcrossings. This follows from the upcrossing inequality.
   have hupcross : ∀ᵐ ω ∂μ, ∀ a b : ℚ, a < b →
       upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω < ⊤ := by
-    -- For a backward martingale with L¹ bound, we can prove finite upcrossings
-    -- by noting that it's also a submartingale when viewed appropriately
+    -- The sequence is L¹-bounded, so we can extract a uniform bound
+    obtain ⟨R, hR_pos, hR_bound⟩ : ∃ R : ENNReal, 0 < R ∧ ∀ n, eLpNorm (μ[f | 𝔽 n]) 1 μ ≤ R := by
+      use max (eLpNorm f 1 μ) 1
+      refine ⟨?_, ?_⟩
+      · exact lt_max_of_lt_right zero_lt_one
+      · intro n
+        exact le_trans (hL1_bdd n) (le_max_left _ _)
+
+    -- For reverse martingales, we use a key observation:
+    -- The sequence μ[f | 𝔽 n] is L¹-bounded and satisfies the tower property
+    -- in the reverse direction, which is sufficient to guarantee a.e. convergence
+    -- by the reverse martingale convergence theorem.
+
+    -- Key insight: For a reverse martingale with L¹ bound R, the expected number
+    -- of upcrossings is bounded by R/(b-a), which is finite. By Markov's inequality,
+    -- this implies a.e. finiteness.
+
+    simp only [ae_all_iff, eventually_imp_distrib_left]
+    intro a b hab
+
+    -- Use Doob's upcrossing inequality for reverse martingales
+    -- The sequence satisfies: for m ≥ n, E[X_m | F_n] = X_m (reverse martingale property)
+    -- This is equivalent to a forward martingale when we reverse the time index
+
     sorry
-    -- TODO: Full proof requires showing:
-    -- 1. For each N, the reversed sequence is a martingale
-    -- 2. Upcrossings of the reversed sequence bound upcrossings of the original
-    -- 3. The bound is uniform in N
-    -- This is a substantial technical lemma that would benefit from a helper lemma
+    -- TODO: This requires either:
+    -- (1) A mathlib theorem about reverse martingale convergence, OR
+    -- (2) Explicit construction of time-reversed martingale and application of
+    --     Submartingale.upcrossings_ae_lt_top
+    --
+    -- Approach (2) outline:
+    -- • For each N, define Y^N : ℕ → Ω → ℝ by Y^N_k = μ[f | 𝔽_{max (N-k) 0}]
+    -- • Define filtration G^N : ℕ → MeasurableSpace Ω by G^N_k = 𝔽_{max (N-k) 0}
+    -- • Show G^N is increasing: k ≤ k' implies G^N_k ≤ G^N_{k'}
+    -- • Show Y^N is a martingale w.r.t. G^N using tower property
+    -- • Apply Submartingale.upcrossings_ae_lt_top to Y^N with bound R
+    -- • Observe that upcrossings of original sequence ≤ sup_N upcrossings of Y^N
+    -- • Since bound is uniform in N, get a.e. finiteness
 
   -- Step 3: Apply convergence theorem to get pointwise limits
   have h_ae_conv : ∀ᵐ ω ∂μ, ∃ c, Tendsto (fun n => μ[f | 𝔽 n] ω) atTop (𝓝 c) := by
