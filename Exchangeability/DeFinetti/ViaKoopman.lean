@@ -650,7 +650,7 @@ lemma aemeasurable_indicator_of_sub {Ω} [mΩ : MeasurableSpace Ω] {μ : Measur
     {s : Set Ω} (hs : MeasurableSet[m] s)
     {f : Ω → ℝ} (hf : AEMeasurable f μ) :
     AEMeasurable (s.indicator f) μ :=
-  hf.indicator (measurableSet_of_sub m hm hs)
+  hf.indicator (measurableSet_of_sub m hm hs : @MeasurableSet Ω mΩ s)
 
 /-- Idempotence of conditional expectation for m-measurable integrable functions.
 
