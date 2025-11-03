@@ -3959,10 +3959,11 @@ private lemma optionB_Step3b_L2_to_L1
           (fun ω =>
             (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
             - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω) μ :=
-      ((Lp.aestronglyMeasurable
-          (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2)).aemeasurable.sub
-       (Lp.aestronglyMeasurable
-          (condexpL2 (μ := μ) fL2)).aemeasurable)
+      AEMeasurable.sub
+          (Lp.aestronglyMeasurable
+            (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2)).aemeasurable
+          (Lp.aestronglyMeasurable
+            (condexpL2 (μ := μ) fL2)).aemeasurable
 
     -- L¹ ≤ L² via Hölder/Cauchy-Schwarz on a probability space
     have h_le :
