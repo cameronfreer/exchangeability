@@ -1014,18 +1014,39 @@ lemma condIndep_of_triple_law
             exact integrable_condExp.integrableOn
           · -- Integral equality: ∫_s φ·ψ = ∫_s φ·μ[ψ|𝔾] for 𝔾-measurable s
             --
-            -- BLOCKER: Prove ∫_s (φ * μ[ψ | 𝔾]) = ∫_s (φ * ψ) for 𝔾-measurable s
+            -- NON-CIRCULAR PROOF via "swap-condition-swap back" using h_test_fn
             --
-            -- Strategy: For 𝔾-measurable s, the indicator 1_s is 𝔾-measurable.
-            -- Key insight: μ[1_s * ψ | 𝔾] = 1_s * μ[ψ | 𝔾] (pull-out property)
-            -- Then: ∫ μ[1_s * ψ | 𝔾] = ∫ (1_s * ψ) (by integral_condExp)
-            -- This gives: ∫_s μ[ψ | 𝔾] = ∫_s ψ
+            -- Strategy (does NOT use rectangle factorization):
+            -- 1. s is 𝔾-measurable ⟹ s = W⁻¹(B) for some measurable B ⊆ γ
+            -- 2. Swap: ∫ φψ(1_B∘W) = ∫ φψ(1_B∘W') by h_test_fn
+            -- 3. Condition ψ on σ(W'): ∫ φψ(1_B∘W') = ∫ φV'(1_B∘W')
+            --    where V' := μ[ψ|σ(W')]
+            -- 4. Common version: V = v∘W and V' = v∘W' for some v : γ → ℝ
+            --    (follows from equality of pair laws (Z,W) and (Z,W'))
+            -- 5. Swap back: ∫ φ(v·1_B)∘W' = ∫ φ(v·1_B)∘W by h_test_fn
+            -- 6. Conclude: ∫_s φ·V = ∫_s φ·ψ
+
             --
-            -- TODO: Extend this to ∫_s (φ * μ[ψ | 𝔾]) = ∫_s (φ * ψ)
-            -- Possible approaches:
-            -- 1. Show that φ factors through in some way
-            -- 2. Use h_test_fn and properties of the triple distribution
-            -- 3. Find a mathlib lemma about conditional expectations with products
+            -- BLOCKER: This proof requires non-circular techniques beyond h_test_fn
+            --
+            -- The "swap-condition-swap back" strategy outlined in user feedback requires:
+            --
+            -- 1. s is 𝔾-measurable ⟹ s = W⁻¹(B) for some measurable B ⊆ γ
+            --
+            -- 2. Common version lemma: From equality of pair laws (Z,W) and (Z,W'),
+            --    prove ∃v with V=v∘W and V'=v∘W' where V'=μ[ψ|σ(W')]
+            --    This uses Doob-Dynkin + uniqueness of CE tested against functions of W/W'
+            --
+            -- 3. Generalized triple law: Current h_test_fn only handles φ*ψ*h.
+            --    Need version for φ*(g∘W) where g doesn't factor through ψ
+            --    Could derive from: pair laws (Y,W) and (Y,W') coincide (marginal of triple)
+            --
+            -- 4. Conditioning step: ∫ φψ(h∘W') = ∫ φ·μ[ψ|σ(W')]·(h∘W')
+            --    Standard CE tower property with σ(W')-measurable test functions
+            --
+            -- Recommended approach: Extract this as a separate lemma with clear dependencies
+            -- on the triple law, then prove independently. Current nesting makes it hard
+            -- to access needed generality.
             --
             sorry
       _ =ᵐ[μ] μ[φ * V | 𝔾] := by rfl  -- V = μ[ψ|𝔾] by definition
