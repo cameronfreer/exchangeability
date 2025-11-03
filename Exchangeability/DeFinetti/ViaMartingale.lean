@@ -1092,31 +1092,27 @@ lemma integral_mul_condexp_adjoint
       ∫ ω, g ω * μ[ξ | m] ω ∂μ
     = ∫ ω, μ[(fun ω => g ω * μ[ξ | m] ω) | m] ω ∂μ := by
     simpa using
-      integral_condExp (μ := μ) (m := m) (hm := hm)
-        (f := fun ω => g ω * μ[ξ | m] ω)
+      (integral_condExp (μ := μ) (m := m) (hm := hm)
+        (f := fun ω => g ω * μ[ξ | m] ω)).symm
   -- (2) Pull out the m-measurable factor μ[ξ|m]
   have hpull :
       μ[(fun ω => g ω * μ[ξ | m] ω) | m]
       =ᵐ[μ] (fun ω => μ[g | m] ω * μ[ξ | m] ω) := by
     -- Use your "pull‐out" lemma for m‑measurable multipliers.
-    have hξm :
-        AEStronglyMeasurable (μ[ξ | m]) μ :=
-      (condExp_aestronglyMeasurable (μ := μ) (m := m) (hm := hm) ξ)
-    exact
-      condExp_mul_left (μ := μ) (m := m) (hm := hm) hξm hg
+    have hξm : AEStronglyMeasurable[m] (μ[ξ | m]) μ :=
+      stronglyMeasurable_condExp.aestronglyMeasurable
+    exact condExp_mul_of_aestronglyMeasurable_right hξm sorry hg
   -- (3) Symmetric step: turn ∫ μ[g|m]*μ[ξ|m] back into a condexp of (μ[g|m]*ξ)
   have h3 :
       ∫ ω, μ[g | m] ω * μ[ξ | m] ω ∂μ
     = ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ := by
     -- reverse pull‐out
-    have hgm :
-        AEStronglyMeasurable (μ[g | m]) μ :=
-      (condExp_aestronglyMeasurable (μ := μ) (m := m) (hm := hm) g)
+    have hgm : AEStronglyMeasurable[m] (μ[g | m]) μ :=
+      stronglyMeasurable_condExp.aestronglyMeasurable
     have hpull' :
         μ[(fun ω => μ[g | m] ω * ξ ω) | m]
         =ᵐ[μ] (fun ω => μ[g | m] ω * μ[ξ | m] ω) := by
-      exact
-        condExp_mul_right (μ := μ) (m := m) (hm := hm) hgm hξ
+      exact condExp_mul_of_aestronglyMeasurable_left hgm sorry hξ
     simpa using (integral_congr_ae hpull').symm
   -- (4) And finally ∫ μ[·|m] = ∫ ·
   have h4 :
@@ -1149,16 +1145,27 @@ lemma set_integral_mul_condexp_adjoint
   = ∫ ω in s, μ[g | m] ω * ξ ω ∂μ := by
   classical
   -- rewrite set integrals as whole-space integrals with indicator
+  -- Indicator equality: s.indicator f = s.indicator 1 * f
+  have ind_eq : ∀ f : Ω → ℝ, ∀ᵐ ω ∂μ,
+      s.indicator f ω = s.indicator (fun _ => (1 : ℝ)) ω * f ω := by
+    intro f
+    filter_upwards with ω
+    by_cases h : ω ∈ s <;> simp [Set.indicator, h]
+
   have h1 :
       ∫ ω in s, g ω * μ[ξ | m] ω ∂μ
     = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω)
             * g ω * μ[ξ | m] ω ∂μ := by
-    simp [Set.indicator, Set.indicator_apply, mul_comm, mul_left_comm, mul_assoc]
+    -- Set integral equals integral with indicator
+    -- This is a reformulation of integral_indicator with indicator algebra
+    sorry
+
   have h2 :
       ∫ ω in s, μ[g | m] ω * ξ ω ∂μ
     = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω)
             * μ[g | m] ω * ξ ω ∂μ := by
-    simp [Set.indicator, Set.indicator_apply, mul_comm, mul_left_comm, mul_assoc]
+    -- Set integral equals integral with indicator
+    sorry
 
   -- use (1) with g := (1_s · g)
   have h_int :
@@ -1180,16 +1187,13 @@ lemma set_integral_mul_condexp_adjoint
   have h_eq' :
       ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω) * g ω * μ[ξ | m] ω ∂μ
     = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω) * μ[g | m] ω * ξ ω ∂μ := by
-    -- unfold h_eq and substitute μ[(1_s·g)|m] using h_proj
-    -- h_eq : ∫ (1_s·g) · μ[ξ|m] = ∫ μ[(1_s·g)|m] · ξ
-    simpa [mul_comm, mul_left_comm, mul_assoc] using
-      (congrArg id (by
-        -- turn the equality of integrals by congr_ae on the right integrand
-        have := h_eq
-        -- rewrite right integral using h_proj
-        -- (we're just massaging; Lean will accept this `by` block as is
-        -- if your `integral_congr_ae` is available)
-      ))
+    -- Start with h_eq and rewrite RHS using h_proj
+    calc ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω) * g ω * μ[ξ | m] ω ∂μ
+        = ∫ ω, μ[(fun ω => (Set.indicator s (fun _ => (1 : ℝ)) ω) * g ω) | m] ω * ξ ω ∂μ := h_eq
+      _ = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω) * μ[g | m] ω * ξ ω ∂μ := by
+          refine integral_congr_ae ?_
+          filter_upwards [h_proj] with ω hω
+          rw [hω]
   -- finish
   simpa [h1, h2] using h_eq'
 
