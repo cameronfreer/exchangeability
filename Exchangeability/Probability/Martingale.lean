@@ -182,13 +182,19 @@ lemma condExp_exists_ae_limit_antitone
           ≤ eLpNorm f 1 μ := hL1_bdd n
         _ = R := hR
 
-  -- Step 2: Show finite upcrossings using reversed martingales (helper lemma with sorry)
+  -- Step 2: Show finite upcrossings using reversed martingales
+  -- Strategy: The sequence (μ[f | 𝔽 n]) is a backward martingale.
+  -- We prove it has finite upcrossings by using L¹-boundedness and the upcrossing inequality.
   have hupcross : ∀ᵐ ω ∂μ, ∀ a b : ℚ, a < b →
       upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω < ⊤ := by
-    sorry  -- TODO: Use reversed martingale structure to bound upcrossings
-    -- Idea: For each N, revCE f 𝔽 N is a martingale, hence submartingale.
-    -- By Submartingale.upcrossings_ae_lt_top, it has finite upcrossings.
-    -- These bounds transfer to the original sequence as N → ∞.
+    -- For a backward martingale with L¹ bound, we can prove finite upcrossings
+    -- by noting that it's also a submartingale when viewed appropriately
+    sorry
+    -- TODO: Full proof requires showing:
+    -- 1. For each N, the reversed sequence is a martingale
+    -- 2. Upcrossings of the reversed sequence bound upcrossings of the original
+    -- 3. The bound is uniform in N
+    -- This is a substantial technical lemma that would benefit from a helper lemma
 
   -- Step 3: Apply convergence theorem to get pointwise limits
   have h_ae_conv : ∀ᵐ ω ∂μ, ∃ c, Tendsto (fun n => μ[f | 𝔽 n] ω) atTop (𝓝 c) := by
