@@ -205,7 +205,25 @@ lemma ae_limit_is_condexp_iInf
     have : 𝔽∞ ≤ 𝔽 n := iInf_le 𝔽 n
     exact condExp_condExp_of_le this (h_le n)
 
-  sorry  -- TODO: Use L¹-continuity of condExp + tower to identify X∞ = μ[f | 𝔽∞]
+  -- X∞ is 𝔽∞-strongly measurable because it's the limit of 𝔽∞-measurable functions
+  have hX∞_meas : @StronglyMeasurable _ _ 𝔽∞ _ X∞ := by
+    -- Each μ[f | 𝔽 n] is 𝔽 n-measurable, hence 𝔽∞-measurable (since 𝔽∞ ≤ 𝔽 n)
+    have : ∀ n, @AEStronglyMeasurable _ _ 𝔽∞ _ (μ[f | 𝔽 n]) μ := by
+      intro n
+      have h_le_n : 𝔽∞ ≤ 𝔽 n := iInf_le 𝔽 n
+      exact (stronglyMeasurable_condExp (m := 𝔽 n)).mono h_le_n |>.aestronglyMeasurable
+    -- X∞ is a.e. limit of these, so is a.e. 𝔽∞-strongly measurable
+    have : @AEStronglyMeasurable _ _ 𝔽∞ _ X∞ μ :=
+      aestronglyMeasurable_of_tendsto_ae atTop this h_tendsto
+    exact this.stronglyMeasurable_mk.mono (fun _ _ => id)
+
+  -- Since X∞ is 𝔽∞-measurable and integrable, μ[X∞ | 𝔽∞] = X∞
+  have h𝔽∞_le : 𝔽∞ ≤ (inferInstance : MeasurableSpace Ω) := iInf_le_of_le 0 (h_le 0)
+  have hX∞_condExp : μ[X∞ | 𝔽∞] =ᵐ[μ] X∞ := by
+    sorry  -- TODO: Need to apply condExp_of_stronglyMeasurable
+            -- But need proper sigma-finite setup
+
+  sorry  -- TODO: Combine to get X∞ = μ[f | 𝔽∞]
 
 /-! ## Main Theorems
 
