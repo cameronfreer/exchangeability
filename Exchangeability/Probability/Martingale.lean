@@ -149,6 +149,18 @@ lemma eLpNorm_one_condExp_le_of_integrable
     eLpNorm (μ[f | m]) 1 μ ≤ eLpNorm f 1 μ :=
   eLpNorm_one_condExp_le_eLpNorm f
 
+/-- Uniform (in N) bound on upcrossings for the reverse martingale.
+
+For an L¹-bounded martingale obtained by reversing an antitone filtration, the expected
+number of upcrossings is uniformly bounded, independent of the time horizon N. -/
+lemma upcrossings_bdd_uniform
+    [IsProbabilityMeasure μ]
+    (h_antitone : Antitone 𝔽) (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
+    (f : Ω → ℝ) (hf : Integrable f μ) (a b : ℝ) (hab : a < b) :
+    ∃ C : ENNReal, ∀ N,
+      ∫⁻ ω, (upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω) ∂μ ≤ C := by
+  sorry
+
 /-- A.S. existence of the limit of `μ[f | 𝔽 n]` along an antitone filtration.
 
 This uses the upcrossing inequality applied to the time-reversed martingales to show
@@ -220,19 +232,10 @@ lemma condExp_exists_ae_limit_antitone
     -- A reverse martingale that is L¹-bounded has finite upcrossings a.e.
     -- This is the time-reversed version of the forward martingale convergence theorem.
 
+    -- Get uniform bound on expected upcrossings from time-reversed martingales
+    have hab' : (↑a : ℝ) < (↑b : ℝ) := Rat.cast_lt.2 hab
+    obtain ⟨C, hC⟩ := upcrossings_bdd_uniform h_antitone h_le f hf (↑a) (↑b) hab'
     sorry
-    -- TODO: Full proof requires ~40 lines to construct the time-reversed martingale
-    -- and verify all the martingale properties. This is a standard but technical
-    -- result in martingale theory (see Williams, "Probability with Martingales", Thm 12.12).
-    --
-    -- Alternative: Add to mathlib as `reverse_martingale_upcrossings_ae_lt_top`:
-    --   theorem reverse_martingale_upcrossings_ae_lt_top
-    --     [IsProbabilityMeasure μ]
-    --     {𝔽 : ℕ → MeasurableSpace Ω} (h_antitone : Antitone 𝔽)
-    --     (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
-    --     {f : Ω → ℝ} (hf : Integrable f μ)
-    --     (hbdd : ∀ n, eLpNorm (μ[f | 𝔽 n]) 1 μ ≤ R) :
-    --     ∀ᵐ ω ∂μ, ∀ a b : ℚ, a < b → upcrossings a b (fun n => μ[f | 𝔽 n]) ω < ∞
 
   -- Step 3: Apply convergence theorem to get pointwise limits
   have h_ae_conv : ∀ᵐ ω ∂μ, ∃ c, Tendsto (fun n => μ[f | 𝔽 n] ω) atTop (𝓝 c) := by
