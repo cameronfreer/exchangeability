@@ -824,7 +824,7 @@ lemma exists_clipped_version
     simp only [v, Real.norm_eq_abs, abs_le]
     constructor
     · exact le_max_left _ _
-    · exact le_trans (max_le (by linarith) le_rfl) (min_le_right _ _)
+    · exact max_le (neg_le_self (by linarith [hC])) (min_le_right _ _)
   · -- A.e. equality: v = v₀ wherever |v₀| ≤ C
     filter_upwards [hBound] with y hy
     simp only [v]
@@ -1046,11 +1046,9 @@ lemma test_fn_pair_law
   have h := integral_eq_of_map_eq hT hT' hg_test_int h_pair
 
   -- Simplify: g_test ∘ (Y,W) = f∘Y * g∘W
-  convert h using 1
-  · simp [g_test]
-  · simp [g_test]
+  convert h using 1 <;> simp [g_test]
 
-/-- **Kallenberg Lemma 1.3 (Contraction-Independence)**: If the triple distribution
+/-! **Kallenberg Lemma 1.3 (Contraction-Independence)**: If the triple distribution
 satisfies (Y, Z, W) =^d (Y, Z, W'), then Y and Z are conditionally independent given W.
 
 This is the key lemma connecting distributional symmetry to conditional independence.
@@ -1074,16 +1072,16 @@ This factorization follows from the distributional equality via a martingale arg
 **Mathlib target:** Mathlib.Probability.ConditionalIndependence.FromDistributionalEquality
 -/
 
-/-- ===== Adjointness helpers (for μ[·|m] with (hm : m ≤ m0)) ===== -/
+/-! ===== Adjointness helpers (for μ[·|m] with (hm : m ≤ m0)) ===== -/
 
 /-- Adjointness of conditional expectation, in μ[·|m] notation.
 
 `∫ g · μ[ξ|m] = ∫ μ[g|m] · ξ`, assuming `m ≤ m0`, `SigmaFinite (μ.trim m)`,
 and `g, ξ ∈ L¹(μ)`. -/
 lemma integral_mul_condexp_adjoint
-    {Ω : Type*} [MeasurableSpace Ω] (μ : Measure Ω)
-    {m m0 : MeasurableSpace Ω} (hm : m ≤ m0)
-    [SigmaFinite (μ.trim m)]
+    {Ω : Type*} [m0 : MeasurableSpace Ω] (μ : Measure Ω)
+    {m : MeasurableSpace Ω} (hm : m ≤ m0)
+    [SigmaFinite (μ.trim hm)]
     {g ξ : Ω → ℝ}
     (hg : Integrable g μ) (hξ : Integrable ξ μ) :
   ∫ ω, g ω * μ[ξ | m] ω ∂μ
@@ -1141,9 +1139,9 @@ lemma integral_mul_condexp_adjoint
 
     ∫_s g·μ[ξ|m] = ∫_s μ[g|m]·ξ. -/
 lemma set_integral_mul_condexp_adjoint
-    {Ω : Type*} [MeasurableSpace Ω] (μ : Measure Ω)
-    {m m0 : MeasurableSpace Ω} (hm : m ≤ m0)
-    [SigmaFinite (μ.trim m)]
+    {Ω : Type*} [m0 : MeasurableSpace Ω] (μ : Measure Ω)
+    {m : MeasurableSpace Ω} (hm : m ≤ m0)
+    [SigmaFinite (μ.trim hm)]
     {s : Set Ω} (hs : MeasurableSet[m] s)
     {g ξ : Ω → ℝ}
     (hg : Integrable g μ) (hξ : Integrable ξ μ) :
