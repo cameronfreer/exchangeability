@@ -308,6 +308,13 @@ lemma condExp_exists_ae_limit_antitone
     -- Get uniform bound on expected upcrossings from time-reversed martingales
     have hab' : (↑a : ℝ) < (↑b : ℝ) := Rat.cast_lt.2 hab
     obtain ⟨C, hC⟩ := upcrossings_bdd_uniform h_antitone h_le f hf (↑a) (↑b) hab'
+
+    -- TODO: Establish relationship between original and reversed sequence upcrossings
+    -- Need to show: upcrossingsBefore (original, N) ≤ upcrossings (reversed_at_N)
+    -- This follows because revCEFinite f 𝔽 N n = μ[f | 𝔽 (N-n)], so the reversed
+    -- sequence contains the same values as positions 0..N of the original, just reversed.
+    -- Then use monotone convergence and ae_lt_top.
+    -- See UPCROSSING_PROOF_NOTES.md lines 80-108 for the detailed strategy.
     sorry
 
   -- Step 3: Apply convergence theorem to get pointwise limits
