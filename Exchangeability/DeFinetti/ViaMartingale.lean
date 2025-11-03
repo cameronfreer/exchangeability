@@ -814,6 +814,44 @@ lemma common_version_condExp
   -- 4. Conclude v₁ = v₂ a.e. by uniqueness in L¹
   sorry
 
+/-- **Enhanced Common Version Lemma with Measurability and Boundedness:**
+A common Borel version for the two conditional expectations E[ψ|σ(W)] and E[ψ|σ(W')].
+If |ψ| ≤ 1, we can choose v with |v| ≤ 1 pointwise and v Borel-measurable.
+
+This uses only the pair law equality (Z,W) =^d (Z,W') (a marginal of the triple law),
+Doob-Dynkin factorization, and the defining property of conditional expectation.
+
+**Key improvements over basic common_version_condExp:**
+- Asserts Measurable v (from Doob-Dynkin)
+- Asserts ∀ w, |v w| ≤ 1 when |ψ| ≤ 1 (from conditional expectation bounds)
+- Required for test_fn_pair_law and swap-based proofs
+-/
+lemma common_version_condExp_with_props
+  {Ω β γ : Type*}
+  [MeasurableSpace Ω] [MeasurableSpace β] [MeasurableSpace γ]
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  (Z : Ω → β) (W W' : Ω → γ) (ψ : β → ℝ)
+  (hZ : Measurable Z) (hW : Measurable W) (hW' : Measurable W')
+  (hψ : Measurable ψ) (hψ_bdd : ∀ z, ‖ψ z‖ ≤ 1)
+  (hψ_int : Integrable (ψ ∘ Z) μ)
+  (h_pair : Measure.map (fun ω => (Z ω, W ω)) μ =
+            Measure.map (fun ω => (Z ω, W' ω)) μ) :
+  ∃ v : γ → ℝ,
+    Measurable v ∧
+    (∀ w, ‖v w‖ ≤ 1) ∧
+    (∀ᵐ ω ∂μ, μ[(ψ ∘ Z) | MeasurableSpace.comap W inferInstance] ω = v (W ω)) ∧
+    (∀ᵐ ω ∂μ, μ[(ψ ∘ Z) | MeasurableSpace.comap W' inferInstance] ω = v (W' ω)) := by
+  -- **Proof strategy:**
+  -- 1. Doob-Dynkin: get Borel versions v₁, v₂ for each conditional expectation
+  -- 2. Show v₁ = v₂ a.e. w.r.t. Law(W) = Law(W') by comparing integrals against test functions
+  -- 3. Choose a representative v and clamp to [-1, 1] to ensure global bound
+  -- 4. Verify v is Borel-measurable and satisfies both a.e. identities
+
+  -- TODO: Implement using Doob-Dynkin + pair law testing + clamping
+  -- The key insight: conditional expectations of bounded functions are bounded,
+  -- so v₁ and v₂ are essentially bounded (a.e.), and clamping doesn't change them a.e.
+  sorry
+
 /-- **Helper:** Generalized test function lemma without ψ factor.
 
 From the pair law (Y,W) =^d (Y,W'), we can swap W and W' for test functions
@@ -1139,12 +1177,16 @@ lemma condIndep_of_triple_law
                               Measure.map (fun ω => (Y ω, W' ω)) μ := by
               exact pair_law_YW_of_triple_law Y Z W W' hY hW hW' h_triple
 
-            -- Step 3: Apply common_version_condExp to get v with V = v∘W, V' = v∘W'
-            -- where V' = μ[ψ | σ(W')]
+            -- Step 3: Apply enhanced common_version_condExp to get v with:
+            -- - v is Borel-measurable
+            -- - ‖v w‖ ≤ 1 for all w
+            -- - V = v∘W and V' = v∘W' a.e.
             --
             -- Key insight: ψ = (Z⁻¹'B).indicator 1 = (B.indicator 1) ∘ Z = ψ_β ∘ Z
             -- where ψ_β : β → ℝ is the indicator function on the codomain
             have h_common : ∃ v : γ → ℝ,
+                Measurable v ∧
+                (∀ w, ‖v w‖ ≤ 1) ∧
                 (∀ᵐ ω ∂μ, V ω = v (W ω)) ∧
                 (∀ᵐ ω ∂μ, μ[ψ | MeasurableSpace.comap W' inferInstance] ω = v (W' ω)) := by
               -- Define ψ_β : β → ℝ as the indicator on B
@@ -1156,14 +1198,15 @@ lemma condIndep_of_triple_law
                 simp only [Function.comp_apply, ψ, ψ_β, Set.indicator_apply]
                 rfl
 
-              -- Apply common_version_condExp with ψ_β
-              obtain ⟨v, hv_W, hv_W'⟩ := common_version_condExp Z W W' ψ_β hZ hW hW'
-                (measurable_const.indicator hB)
-                (by intro z; simp [ψ_β, Set.indicator]; norm_num)
-                (by rw [← hψ_factor]; exact hψ_int)
-                h_pair_ZW
+              -- Apply enhanced common_version_condExp with ψ_β
+              obtain ⟨v, hv_meas, hv_bdd, hv_W, hv_W'⟩ :=
+                common_version_condExp_with_props Z W W' ψ_β hZ hW hW'
+                  (measurable_const.indicator hB)
+                  (by intro z; simp [ψ_β, Set.indicator]; norm_num)
+                  (by rw [← hψ_factor]; exact hψ_int)
+                  h_pair_ZW
 
-              use v
+              use v, hv_meas, hv_bdd
               constructor
               · -- V = μ[ψ|𝔾] = μ[ψ_β∘Z|σ(W)] = v∘W
                 -- This follows from hv_W and ψ = ψ_β ∘ Z
@@ -1183,8 +1226,8 @@ lemma condIndep_of_triple_law
                 filter_upwards [this, hv_W'] with ω h1 h2
                 exact h1.trans h2
 
-            -- Step 4: Extract v and the a.e. equalities
-            obtain ⟨v, hV_eq_v, hV'_eq_v⟩ := h_common
+            -- Step 4: Extract v, measurability, boundedness, and a.e. equalities
+            obtain ⟨v, hv_meas, hv_bdd, hV_eq_v, hV'_eq_v⟩ := h_common
 
             -- Step 5: Express s as W⁻¹(B_set) since s is 𝔾-measurable
             -- 𝔾 = σ(W), so 𝔾-measurable sets are exactly preimages under W
@@ -1215,64 +1258,70 @@ lemma condIndep_of_triple_law
                   · intro w; simp [Set.indicator]; norm_num
               _ = ∫ x, φ x * μ[ψ | MeasurableSpace.comap W' inferInstance] x *
                        (B_set.indicator (fun _ => (1 : ℝ))) (W' x) ∂μ := by
-                  -- Step 3 (Condition on σ(W')): Apply tower property
-                  -- The set W'⁻¹(B_set) is σ(W')-measurable, so we can use setIntegral_condExp
+                  -- **SWAP-BASED PROOF (avoiding invalid tower for products)**
+                  --
+                  -- We DON'T prove ∫ φ·ψ·(h∘W') = ∫ φ·E[ψ|σ(W')]·(h∘W') directly
+                  -- (that would require the false "tower with non-measurable multiplier").
+                  --
+                  -- Instead: swap W' → W → W' using distributional equalities.
 
-                  -- First convert to indicator form for the set W'⁻¹(B_set)
-                  conv_lhs => arg 2; ext x; rw [mul_assoc]
-
-                  -- The key: φ * ψ * (indicator∘W') = (W'⁻¹B).indicator (φ * ψ)
-                  -- and W'⁻¹B is σ(W')-measurable
-                  have h_eq_as_set_int :
+                  -- Step 1: Swap W' → W using h_test_fn (triple law)
+                  have h_swap_to_W :
                     ∫ x, φ x * ψ x * (B_set.indicator (fun _ => (1 : ℝ))) (W' x) ∂μ =
-                    ∫ x in W' ⁻¹' B_set, φ x * ψ x ∂μ := by
-                    rw [← integral_indicator (hW' hB_set_meas)]
-                    congr 1; ext x
-                    simp only [Set.indicator_apply, Set.mem_preimage, mul_comm (ψ x)]
-                    by_cases h : W' x ∈ B_set <;> simp [h]; ring
+                    ∫ x, φ x * ψ x * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ := by
+                    symm
+                    apply h_test_fn
+                    · exact measurable_const.indicator hB_set_meas
+                    · intro w; simp [Set.indicator]; norm_num
 
-                  rw [h_eq_as_set_int]
+                  rw [h_swap_to_W]
 
-                  -- Apply setIntegral_condExp: ∫_{W'⁻¹B} φ*ψ = ∫_{W'⁻¹B} φ*μ[ψ|σ(W')]
-                  -- This requires showing φ*ψ and φ*μ[ψ|σ(W')] have same set integral
-                  congr 1; ext x
-                  sorry -- TODO: This needs the tower property for products
-              _ = ∫ x, φ x * v (W' x) * (B_set.indicator (fun _ => (1 : ℝ))) (W' x) ∂μ := by
-                  -- Step 4 (Apply common version): V' = v∘W' a.e.
-                  -- Use hV'_eq_v to replace μ[ψ|σ(W')] with v∘W'
+                  -- Step 2: Use the W-side equality
+                  -- On the W-side, we have V = μ[ψ|σ(W)] = v∘W (from hV_eq_v)
+                  -- and the set W⁻¹(B_set) is σ(W)-measurable
+                  --
+                  -- TODO: We need a helper that says for σ(W)-measurable sets s:
+                  --   ∫_s φ·ψ = ∫_s φ·μ[ψ|σ(W)]
+                  -- This follows from the integral equality we're trying to prove (line 1239-1327)
+                  -- but we need it UPGRADED from sets to bounded test functions.
+                  --
+                  -- For now, use the identity V = v∘W to rewrite
+                  have h_W_side :
+                    ∫ x, φ x * ψ x * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ =
+                    ∫ x, φ x * V x * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ := by
+                    -- This should follow from the set integral equality, but we're in a circular position
+                    -- The workaround: we'll prove this directly using the common version
+                    sorry
+
+                  rw [h_W_side]
+
+                  -- Step 3: Apply common version: V = v∘W
+                  have h_V_eq :
+                    ∫ x, φ x * V x * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ =
+                    ∫ x, φ x * v (W x) * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ := by
+                    apply integral_congr_ae
+                    filter_upwards [hV_eq_v] with x hx
+                    rw [hx]
+
+                  rw [h_V_eq]
+
+                  -- Step 4: Swap back W → W' using test_fn_pair_law (pair law (Y,W) = (Y,W'))
+                  have h_swap_back :
+                    ∫ x, φ x * v (W x) * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ =
+                    ∫ x, φ x * v (W' x) * (B_set.indicator (fun _ => (1 : ℝ))) (W' x) ∂μ := by
+                    apply test_fn_pair_law Y W W' hY hW hW' h_pair_YW φ
+                    · use A.indicator (fun _ => (1 : ℝ)); ext ω; rfl
+                    · exact hv_meas.mul (measurable_const.indicator hB_set_meas)
+                    · intro w; simp [Pi.mul_apply]
+                      by_cases h : w ∈ B_set
+                      · simp [h, Set.indicator_of_mem]; exact hv_bdd w
+                      · simp [h, Set.indicator_of_not_mem]; norm_num
+
+                  rw [h_swap_back]
+
+                  -- Step 5: Apply common version: V' = v∘W'
                   apply integral_congr_ae
                   filter_upwards [hV'_eq_v] with x hx
-                  rw [hx]
-              _ = ∫ x, φ x * (v * B_set.indicator (fun _ => (1 : ℝ))) (W' x) ∂μ := by
-                  -- Algebra: factor out the composition
-                  congr 1; ext x; ring
-              _ = ∫ x, φ x * (v * B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ := by
-                  -- Step 5 (Swap back W' → W): Apply test_fn_pair_law for (Y,W) =^d (Y,W')
-                  apply test_fn_pair_law Y W W' hY hW hW' h_pair_YW φ
-                  · -- φ = f ∘ Y for some f : α → ℝ
-                    use A.indicator (fun _ => (1 : ℝ))
-                    ext ω; rfl
-                  · -- measurability of v * B_set.indicator 1
-                    -- TODO: common_version_condExp should also assert Measurable v
-                    -- This follows from Doob-Dynkin: conditional expectations factor measurably
-                    sorry
-                  · -- boundedness of v * B_set.indicator 1
-                    intro w
-                    simp [Pi.mul_apply]
-                    by_cases h : w ∈ B_set
-                    · simp [h, Set.indicator_of_mem]
-                      -- TODO: Need bound on v from common_version_condExp
-                      -- Since V and V' are conditional expectations of bounded ψ, v should be bounded
-                      sorry
-                    · simp [h, Set.indicator_of_not_mem]; norm_num
-              _ = ∫ x, φ x * v (W x) * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ := by
-                  -- Algebra: expand the composition
-                  congr 1; ext x; ring
-              _ = ∫ x, φ x * V x * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ := by
-                  -- Step 4 reversed (Apply common version): V = v∘W a.e.
-                  -- Use hV_eq_v to replace v∘W with V
-                  apply integral_congr_ae
-                  filter_upwards [hV_eq_v] with x hx
                   rw [← hx]
               _ = ∫ x, (W ⁻¹' B_set).indicator (fun x => φ x * V x) x ∂μ := by
                   -- Reverse the indicator identity
