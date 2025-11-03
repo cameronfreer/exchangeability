@@ -741,6 +741,37 @@ lemma condExp_projection_of_condIndep
   -- **Mathlib contribution target:** Mathlib.Probability.Independence.Conditional
   -- **Estimated effort:** 3-4 weeks (requires formalizing conditional independence)
 
+/-- **Helper:** Pair law (Z,W) equality from triple law.
+The marginal distribution (Z,W) coincides with (Z,W') when (Y,Z,W) =^d (Y,Z,W'). -/
+lemma pair_law_ZW_of_triple_law
+  {Ω α β γ : Type*}
+  [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
+  {μ : Measure Ω}
+  (Y : Ω → α) (Z : Ω → β) (W W' : Ω → γ)
+  (hZ : Measurable Z) (hW : Measurable W) (hW' : Measurable W')
+  (h_triple : Measure.map (fun ω => (Y ω, Z ω, W ω)) μ =
+              Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) :
+  Measure.map (fun ω => (Z ω, W ω)) μ = Measure.map (fun ω => (Z ω, W' ω)) μ := by
+  -- The pair law is a marginal of the triple law
+  -- Project (Y,Z,W) ↦ (Z,W) and use that equal measures have equal pushforwards
+  -- TODO: Use Measure.map_map composition to show this follows from h_triple
+  sorry
+
+/-- **Helper:** Pair law (Y,W) equality from triple law.
+The marginal distribution (Y,W) coincides with (Y,W') when (Y,Z,W) =^d (Y,Z,W'). -/
+lemma pair_law_YW_of_triple_law
+  {Ω α β γ : Type*}
+  [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
+  {μ : Measure Ω}
+  (Y : Ω → α) (Z : Ω → β) (W W' : Ω → γ)
+  (hY : Measurable Y) (hW : Measurable W) (hW' : Measurable W')
+  (h_triple : Measure.map (fun ω => (Y ω, Z ω, W ω)) μ =
+              Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) :
+  Measure.map (fun ω => (Y ω, W ω)) μ = Measure.map (fun ω => (Y ω, W' ω)) μ := by
+  -- Project (Y,Z,W) ↦ (Y,W)
+  -- TODO: Use Measure.map_map composition to show this follows from h_triple
+  sorry
+
 /-- **Kallenberg Lemma 1.3 (Contraction-Independence)**: If the triple distribution
 satisfies (Y, Z, W) =^d (Y, Z, W'), then Y and Z are conditionally independent given W.
 
