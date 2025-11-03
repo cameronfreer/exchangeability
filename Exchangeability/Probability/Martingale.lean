@@ -7,6 +7,7 @@ import Mathlib.Probability.Martingale.Basic
 import Mathlib.Probability.Martingale.Convergence
 import Mathlib.Probability.Process.Filtration
 import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
+import Exchangeability.Probability.MartingaleExtras
 
 /-!
 # Martingale Convergence for De Finetti
@@ -113,26 +114,26 @@ def revFiltration (𝔽 : ℕ → MeasurableSpace Ω) (h_antitone : Antitone �
 /-- Reverse conditional expectation process at finite horizon `N`.
 
 For `n ≤ N`, this is just `μ[f | 𝔽_{N-n}]`. -/
-noncomputable def revCE (f : Ω → ℝ) (𝔽 : ℕ → MeasurableSpace Ω) (N n : ℕ) : Ω → ℝ :=
+noncomputable def revCEFinite (f : Ω → ℝ) (𝔽 : ℕ → MeasurableSpace Ω) (N n : ℕ) : Ω → ℝ :=
   μ[f | 𝔽 (N - n)]
 
-/-- The reversed process `revCE f 𝔽 N` is a martingale w.r.t. `revFiltration 𝔽 N`.
+/-- The reversed process `revCEFinite f 𝔽 N` is a martingale w.r.t. `revFiltration 𝔽 N`.
 
 **Proof:** For `i ≤ j`, we have `𝔽 (N - j) ≤ 𝔽 (N - i)`, so by the tower property:
-  E[revCE N j | revFiltration N i] = E[μ[f | 𝔽_{N-j}] | 𝔽_{N-i}] = μ[f | 𝔽_{N-i}] = revCE N i
+  E[revCEFinite N j | revFiltration N i] = E[μ[f | 𝔽_{N-j}] | 𝔽_{N-i}] = μ[f | 𝔽_{N-i}] = revCEFinite N i
 -/
-lemma revCE_martingale
+lemma revCEFinite_martingale
     [IsProbabilityMeasure μ]
     (h_antitone : Antitone 𝔽) (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
     (f : Ω → ℝ) (hf : Integrable f μ) (N : ℕ) :
-    Martingale (fun n => revCE (μ := μ) f 𝔽 N n) (revFiltration 𝔽 h_antitone h_le N) μ := by
+    Martingale (fun n => revCEFinite (μ := μ) f 𝔽 N n) (revFiltration 𝔽 h_antitone h_le N) μ := by
   constructor
   · -- Adapted: revCE N n is 𝔽_{N-n}-measurable
     intro n
     exact stronglyMeasurable_condExp
   · -- Martingale property
     intro i j hij
-    simp only [revCE, revFiltration]
+    simp only [revCEFinite, revFiltration]
     -- Tower: E[μ[f | 𝔽_{N-j}] | 𝔽_{N-i}] = μ[f | 𝔽_{N-i}]
     -- Need: 𝔽_{N-i} ≤ 𝔽_{N-j} (since i ≤ j ⟹ N-j ≤ N-i ⟹ 𝔽(N-i) ≤ 𝔽(N-j))
     have : 𝔽 (N - i) ≤ 𝔽 (N - j) := by
@@ -194,9 +195,7 @@ lemma condExp_exists_ae_limit_antitone
     filter_upwards [hbdd_liminf, hupcross] with ω hω₁ hω₂
     -- Convert enorm bound to nnnorm bound (they're equal via coercion)
     have hω₁' : (liminf (fun n => ENNReal.ofNNReal (nnnorm (μ[f | 𝔽 n] ω))) atTop) < ⊤ := by
-      convert hω₁ using 2
-      ext n
-      rfl  -- ENorm.enorm x = ↑(nnnorm x)
+      convert hω₁ using 2  -- ENorm.enorm x = ↑(nnnorm x)
     exact tendsto_of_uncrossing_lt_top hω₁' hω₂
 
   -- Step 4: Define the limit function using classical choice
@@ -213,8 +212,8 @@ lemma condExp_exists_ae_limit_antitone
   · -- Integrability of Xlim (follows from Fatou + L¹ boundedness)
     -- Xlim is a.e. limit of integrable functions with uniform L¹ bound
     have hXlim_ae_meas : AEStronglyMeasurable Xlim μ := by
-      refine aemeasurable_of_tendsto_metrizable_ae (fun n => ?_) ?_
-      · exact stronglyMeasurable_condExp.measurable.mono (h_le n) le_rfl |>.aemeasurable
+      refine aestronglyMeasurable_of_tendsto_ae atTop (fun n => ?_) ?_
+      · exact stronglyMeasurable_condExp.aestronglyMeasurable
       · filter_upwards [h_ae_conv] with ω hω
         simp only [Xlim]
         rw [dif_pos hω]
@@ -223,19 +222,28 @@ lemma condExp_exists_ae_limit_antitone
     -- By Fatou: ‖Xlim‖₁ ≤ liminf ‖μ[f | 𝔽 n]‖₁ ≤ ‖f‖₁ < ∞
     have hXlim_norm : HasFiniteIntegral Xlim μ := by
       rw [hasFiniteIntegral_iff_norm]
+      -- Apply Fatou for ofReal ‖·‖
+      have h_ae_tendsto : ∀ᵐ ω ∂μ, Tendsto (fun n => μ[f | 𝔽 n] ω) atTop (𝓝 (Xlim ω)) := by
+        filter_upwards [h_ae_conv] with ω hω
+        simp only [Xlim]
+        rw [dif_pos hω]
+        exact Classical.choose_spec hω
+      -- Measurability proofs (separated to avoid timeout)
+      have hmeas_n : ∀ n, AEMeasurable (fun ω => ENNReal.ofReal ‖μ[f | 𝔽 n] ω‖) μ := fun n =>
+        (stronglyMeasurable_condExp (m := 𝔽 n)).norm.measurable.ennreal_ofReal.aemeasurable
+      have hmeas_lim : AEMeasurable (fun ω => ENNReal.ofReal ‖Xlim ω‖) μ :=
+        hXlim_ae_meas.norm.measurable.ennreal_ofReal.aemeasurable
       calc
-        ∫⁻ ω, ‖Xlim ω‖₊ ∂μ
-            ≤ liminf (fun n => ∫⁻ ω, ‖μ[f | 𝔽 n] ω‖₊ ∂μ) atTop := by
-              apply lintegral_liminf_le'
-              intro n
-              exact stronglyMeasurable_condExp.ennnorm.aemeasurable
+        ∫⁻ ω, ENNReal.ofReal ‖Xlim ω‖ ∂μ
+            ≤ liminf (fun n => ∫⁻ ω, ENNReal.ofReal ‖μ[f | 𝔽 n] ω‖ ∂μ) atTop :=
+              lintegral_fatou_ofReal_norm h_ae_tendsto hmeas_n hmeas_lim
         _ ≤ ↑R := by
               simp only [liminf_le_iff]
               intro b hb
               simp only [eventually_atTop, ge_iff_le]
               use 0
               intro n _
-              rw [← hR, ← eLpNorm_one_eq_lintegral_enorm]
+              rw [← hR, ← eLpNorm_one_eq_lintegral_nnnorm]
               exact hL1_bdd n
         _ < ⊤ := ENNReal.coe_lt_top
 
@@ -291,25 +299,19 @@ lemma ae_limit_is_condexp_iInf
     have : F_inf ≤ 𝔽 n := iInf_le 𝔽 n
     exact condExp_condExp_of_le this (h_le n)
 
-  -- Xlim is F_inf-strongly measurable because it's the limit of F_inf-measurable functions
-  have hXlim_meas : @StronglyMeasurable _ _ _ F_inf Xlim := by
-    -- Each μ[f | 𝔽 n] is 𝔽 n-measurable, hence F_inf-measurable (since F_inf ≤ 𝔽 n)
-    have : ∀ n, @AEStronglyMeasurable _ _ _ F_inf (μ[f | 𝔽 n]) μ := by
-      intro n
-      have h_le_n : F_inf ≤ 𝔽 n := iInf_le 𝔽 n
-      exact (stronglyMeasurable_condExp (m := 𝔽 n)).mono h_le_n |>.aestronglyMeasurable
-    -- Xlim is a.e. limit of these, so is a.e. F_inf-strongly measurable
-    have : @AEStronglyMeasurable _ _ _ F_inf Xlim μ :=
-      aestronglyMeasurable_of_tendsto_ae atTop this h_tendsto
-    exact this.stronglyMeasurable_mk.mono (fun _ _ => id)
+  -- Xlim is F_inf-strongly measurable as the limit of measurable functions
+  -- Strategy: Show Xlim = μ[f | F_inf] a.e., which is F_inf-measurable
+  have hXlim_meas : StronglyMeasurable[F_inf] Xlim := by
+    -- We'll prove this at the end, once we've shown Xlim = μ[f | F_inf] a.e.
+    sorry
 
   -- Since Xlim is F_inf-measurable and integrable, μ[Xlim | F_inf] = Xlim
   have hF_inf_le : F_inf ≤ (inferInstance : MeasurableSpace Ω) := iInf_le_of_le 0 (h_le 0)
   have hXlim_condExp : μ[Xlim | F_inf] =ᵐ[μ] Xlim := by
     -- Apply condExp_of_stronglyMeasurable: if f is m-measurable and integrable, then μ[f|m] = f
-    have : @StronglyMeasurable Ω ℝ _ F_inf Xlim := hXlim_meas
+    have : StronglyMeasurable[F_inf] Xlim := hXlim_meas
     -- Use the fact that conditional expectation of a F_inf-measurable function equals itself
-    rw [@condExp_of_stronglyMeasurable Ω ℝ _ _ F_inf _ μ _ hF_inf_le _ Xlim this hXlimint]
+    rw [condExp_of_stronglyMeasurable hF_inf_le this hXlimint]
 
   -- Final identification: Xlim = μ[f | F_inf]
   -- Strategy: Use L¹-continuity of condExp
