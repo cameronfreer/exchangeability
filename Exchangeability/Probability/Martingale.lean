@@ -7,6 +7,7 @@ import Mathlib.Probability.Martingale.Basic
 import Mathlib.Probability.Martingale.Convergence
 import Mathlib.Probability.Process.Filtration
 import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
+import Exchangeability.Probability.MartingaleExtras
 
 /-!
 # Martingale Convergence for De Finetti
@@ -89,6 +90,276 @@ lemma iSup_ofAntitone_eq_F0
   · have : F 0 ≤ F (OrderDual.ofDual (OrderDual.toDual 0)) := le_rfl
     simpa using (le_iSup_of_le (OrderDual.toDual 0) this)
 
+/-! ## Reverse Martingale Infrastructure
+
+To prove Lévy's downward theorem, we reverse time on finite horizons to obtain
+forward martingales, then apply the upcrossing inequality. -/
+
+/-- Reverse filtration on a finite horizon `N`.
+
+For an antitone filtration `𝔽`, define `𝔾ⁿ_k := 𝔽_{N-k}`. Since `k ≤ ℓ` implies
+`N - ℓ ≤ N - k`, and `𝔽` is antitone, we get `𝔽_{N-k} ≤ 𝔽_{N-ℓ}`, so `𝔾ⁿ` is
+a (forward) increasing filtration. -/
+def revFiltration (𝔽 : ℕ → MeasurableSpace Ω) (h_antitone : Antitone 𝔽)
+    (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
+    (N : ℕ) : Filtration ℕ (inferInstance : MeasurableSpace Ω) where
+  seq := fun n => 𝔽 (N - n)
+  mono' := by
+    intro i j hij
+    -- `i ≤ j` implies `N - j ≤ N - i`, then antitone gives `𝔽 (N - i) ≤ 𝔽 (N - j)`.
+    have : N - j ≤ N - i := tsub_le_tsub_left hij N
+    exact h_antitone this
+  le' := fun _ => h_le _
+
+/-- Reverse conditional expectation process at finite horizon `N`.
+
+For `n ≤ N`, this is just `μ[f | 𝔽_{N-n}]`. -/
+noncomputable def revCEFinite (f : Ω → ℝ) (𝔽 : ℕ → MeasurableSpace Ω) (N n : ℕ) : Ω → ℝ :=
+  μ[f | 𝔽 (N - n)]
+
+/-- The reversed process `revCEFinite f 𝔽 N` is a martingale w.r.t. `revFiltration 𝔽 N`.
+
+**Proof:** For `i ≤ j`, we have `𝔽 (N - j) ≤ 𝔽 (N - i)`, so by the tower property:
+  E[revCEFinite N j | revFiltration N i] = E[μ[f | 𝔽_{N-j}] | 𝔽_{N-i}] = μ[f | 𝔽_{N-i}] = revCEFinite N i
+-/
+lemma revCEFinite_martingale
+    [IsProbabilityMeasure μ]
+    (h_antitone : Antitone 𝔽) (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
+    (f : Ω → ℝ) (hf : Integrable f μ) (N : ℕ) :
+    Martingale (fun n => revCEFinite (μ := μ) f 𝔽 N n) (revFiltration 𝔽 h_antitone h_le N) μ := by
+  constructor
+  · -- Adapted: revCE N n is 𝔽_{N-n}-measurable
+    intro n
+    exact stronglyMeasurable_condExp
+  · -- Martingale property
+    intro i j hij
+    simp only [revCEFinite, revFiltration]
+    -- Tower: E[μ[f | 𝔽_{N-j}] | 𝔽_{N-i}] = μ[f | 𝔽_{N-i}]
+    -- Need: 𝔽_{N-i} ≤ 𝔽_{N-j} (since i ≤ j ⟹ N-j ≤ N-i ⟹ 𝔽(N-i) ≤ 𝔽(N-j))
+    have : 𝔽 (N - i) ≤ 𝔽 (N - j) := by
+      have : N - j ≤ N - i := tsub_le_tsub_left hij N
+      exact h_antitone this
+    exact condExp_condExp_of_le this (h_le (N - j))
+
+/-- L¹ boundedness of conditional expectations.
+
+This is a standard property: `‖μ[f | m]‖₁ ≤ ‖f‖₁`. -/
+lemma eLpNorm_one_condExp_le_of_integrable
+    {m : MeasurableSpace Ω} (f : Ω → ℝ) (hf : Integrable f μ) :
+    eLpNorm (μ[f | m]) 1 μ ≤ eLpNorm f 1 μ :=
+  eLpNorm_one_condExp_le_eLpNorm f
+
+/-- A.S. existence of the limit of `μ[f | 𝔽 n]` along an antitone filtration.
+
+This uses the upcrossing inequality applied to the time-reversed martingales to show
+that the original sequence has finitely many upcrossings and downcrossings a.e.,
+hence converges a.e. -/
+lemma condExp_exists_ae_limit_antitone
+    [IsProbabilityMeasure μ] {𝔽 : ℕ → MeasurableSpace Ω}
+    (h_antitone : Antitone 𝔽) (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
+    (f : Ω → ℝ) (hf : Integrable f μ) :
+    ∃ Xlim, (Integrable Xlim μ ∧
+           ∀ᵐ ω ∂μ, Tendsto (fun n => μ[f | 𝔽 n] ω) atTop (𝓝 (Xlim ω))) := by
+  -- Strategy: Show the sequence has finite upcrossings a.e., then apply tendsto_of_uncrossing_lt_top
+
+  -- First, extract the L¹ bound
+  have hL1_bdd : ∀ n, eLpNorm (μ[f | 𝔽 n]) 1 μ ≤ eLpNorm f 1 μ :=
+    fun n => eLpNorm_one_condExp_le_eLpNorm _
+
+  -- Extract finite L¹ bound
+  have hf_memLp : MemLp f 1 μ := memLp_one_iff_integrable.2 hf
+  have hf_Lp_ne_top : eLpNorm f 1 μ ≠ ⊤ := hf_memLp.eLpNorm_ne_top
+  set R := (eLpNorm f 1 μ).toNNReal with hR_def
+  have hR : eLpNorm f 1 μ = ↑R := (ENNReal.coe_toNNReal hf_Lp_ne_top).symm
+
+  -- Step 1: Show bounded liminf
+  have hbdd_liminf : ∀ᵐ ω ∂μ, (liminf (fun n => ENorm.enorm (μ[f | 𝔽 n] ω)) atTop) < ⊤ := by
+    refine ae_bdd_liminf_atTop_of_eLpNorm_bdd (R := R) one_ne_zero (fun n => ?_) (fun n => ?_)
+    · -- Measurability
+      exact stronglyMeasurable_condExp.measurable.mono (h_le n) le_rfl
+    · -- Bound
+      calc eLpNorm (μ[f | 𝔽 n]) 1 μ
+          ≤ eLpNorm f 1 μ := hL1_bdd n
+        _ = R := hR
+
+  -- Step 2: Show finite upcrossings using reversed martingales (helper lemma with sorry)
+  have hupcross : ∀ᵐ ω ∂μ, ∀ a b : ℚ, a < b →
+      upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω < ⊤ := by
+    sorry  -- TODO: Use reversed martingale structure to bound upcrossings
+    -- Idea: For each N, revCE f 𝔽 N is a martingale, hence submartingale.
+    -- By Submartingale.upcrossings_ae_lt_top, it has finite upcrossings.
+    -- These bounds transfer to the original sequence as N → ∞.
+
+  -- Step 3: Apply convergence theorem to get pointwise limits
+  have h_ae_conv : ∀ᵐ ω ∂μ, ∃ c, Tendsto (fun n => μ[f | 𝔽 n] ω) atTop (𝓝 c) := by
+    filter_upwards [hbdd_liminf, hupcross] with ω hω₁ hω₂
+    -- Convert enorm bound to nnnorm bound (they're equal via coercion)
+    have hω₁' : (liminf (fun n => ENNReal.ofNNReal (nnnorm (μ[f | 𝔽 n] ω))) atTop) < ⊤ := by
+      convert hω₁ using 2  -- ENorm.enorm x = ↑(nnnorm x)
+    exact tendsto_of_uncrossing_lt_top hω₁' hω₂
+
+  -- Step 4: Define the limit function using classical choice
+  classical
+  let Xlim : Ω → ℝ := fun ω =>
+    if h : ∃ c, Tendsto (fun n => μ[f | 𝔽 n] ω) atTop (𝓝 c)
+    then Classical.choose h
+    else 0
+
+  -- Step 5: Show Xlim has the desired properties
+  use Xlim
+  constructor
+
+  · -- Integrability of Xlim (follows from Fatou + L¹ boundedness)
+    -- Xlim is a.e. limit of integrable functions with uniform L¹ bound
+    have hXlim_ae_meas : AEStronglyMeasurable Xlim μ := by
+      refine aestronglyMeasurable_of_tendsto_ae atTop (fun n => ?_) ?_
+      · exact stronglyMeasurable_condExp.aestronglyMeasurable
+      · filter_upwards [h_ae_conv] with ω hω
+        simp only [Xlim]
+        rw [dif_pos hω]
+        exact Classical.choose_spec hω
+
+    -- By Fatou: ‖Xlim‖₁ ≤ liminf ‖μ[f | 𝔽 n]‖₁ ≤ ‖f‖₁ < ∞
+    have hXlim_norm : HasFiniteIntegral Xlim μ := by
+      rw [hasFiniteIntegral_iff_norm]
+      -- Apply Fatou for ofReal ‖·‖
+      have h_ae_tendsto : ∀ᵐ ω ∂μ, Tendsto (fun n => μ[f | 𝔽 n] ω) atTop (𝓝 (Xlim ω)) := by
+        filter_upwards [h_ae_conv] with ω hω
+        simp only [Xlim]
+        rw [dif_pos hω]
+        exact Classical.choose_spec hω
+      -- Measurability proofs (separated to avoid timeout)
+      have hmeas_n : ∀ n, AEMeasurable (fun ω => ENNReal.ofReal ‖μ[f | 𝔽 n] ω‖) μ := fun n =>
+        ((stronglyMeasurable_condExp (f := f) (m := 𝔽 n) (μ := μ)).norm.measurable.ennreal_ofReal).aemeasurable
+      have hmeas_lim : AEMeasurable (fun ω => ENNReal.ofReal ‖Xlim ω‖) μ :=
+        hXlim_ae_meas.norm.measurable.ennreal_ofReal.aemeasurable
+      calc
+        ∫⁻ ω, ENNReal.ofReal ‖Xlim ω‖ ∂μ
+            ≤ liminf (fun n => ∫⁻ ω, ENNReal.ofReal ‖μ[f | 𝔽 n] ω‖ ∂μ) atTop :=
+              lintegral_fatou_ofReal_norm h_ae_tendsto hmeas_n hmeas_lim
+        _ ≤ ↑R := by
+              simp only [liminf_le_iff]
+              intro b hb
+              simp only [eventually_atTop, ge_iff_le]
+              use 0
+              intro n _
+              rw [← hR, ← eLpNorm_one_eq_lintegral_nnnorm]
+              exact hL1_bdd n
+        _ < ⊤ := ENNReal.coe_lt_top
+
+    exact ⟨hXlim_ae_meas, hXlim_norm⟩
+
+  · -- A.e. convergence to Xlim
+    filter_upwards [h_ae_conv] with ω hω
+    simp only [Xlim]
+    rw [dif_pos hω]
+    exact Classical.choose_spec hω
+
+/-- Uniform integrability of `{μ[f | 𝔽 n]}ₙ` for antitone filtration.
+
+This is a direct application of mathlib's `Integrable.uniformIntegrable_condExp`,
+which works for any family of sub-σ-algebras (not just filtrations). -/
+lemma uniformIntegrable_condexp_antitone
+    [IsProbabilityMeasure μ] {𝔽 : ℕ → MeasurableSpace Ω}
+    (h_antitone : Antitone 𝔽) (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
+    (f : Ω → ℝ) (hf : Integrable f μ) :
+    UniformIntegrable (fun n => μ[f | 𝔽 n]) 1 μ :=
+  hf.uniformIntegrable_condExp h_le
+
+/-- Identification: the a.s. limit equals `μ[f | ⨅ n, 𝔽 n]`.
+
+Uses uniform integrability to pass from a.e. convergence to L¹ convergence,
+then uses L¹-continuity of conditional expectation to identify the limit. -/
+lemma ae_limit_is_condexp_iInf
+    [IsProbabilityMeasure μ] {𝔽 : ℕ → MeasurableSpace Ω}
+    (h_antitone : Antitone 𝔽) (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
+    (f : Ω → ℝ) (hf : Integrable f μ) :
+    ∀ᵐ ω ∂μ, Tendsto (fun n => μ[f | 𝔽 n] ω) atTop (𝓝 (μ[f | ⨅ n, 𝔽 n] ω)) := by
+  classical
+  -- 1) Get a.s. limit Xlim
+  obtain ⟨Xlim, hXlimint, h_tendsto⟩ :=
+    condExp_exists_ae_limit_antitone (μ := μ) h_antitone h_le f hf
+
+  -- 2) UI ⟹ L¹ convergence via Vitali
+  have hUI := uniformIntegrable_condexp_antitone (μ := μ) h_antitone h_le f hf
+
+  have hL1_conv : Tendsto (fun n => eLpNorm (μ[f | 𝔽 n] - Xlim) 1 μ) atTop (𝓝 0) := by
+    apply tendsto_Lp_finite_of_tendsto_ae (hp := le_refl 1) (hp' := ENNReal.one_ne_top)
+    · intro n; exact integrable_condExp.aestronglyMeasurable
+    · exact memLp_one_iff_integrable.2 hXlimint
+    · exact hUI.unifIntegrable
+    · exact h_tendsto
+
+  -- 3) Pass limit through condExp at F_inf := ⨅ n, 𝔽 n
+  set F_inf := iInf 𝔽 with hF_inf_def
+
+  -- Tower property: For every n, μ[μ[f | 𝔽 n] | F_inf] = μ[f | F_inf]
+  have h_tower : ∀ n, μ[μ[f | 𝔽 n] | F_inf] =ᵐ[μ] μ[f | F_inf] := by
+    intro n
+    have : F_inf ≤ 𝔽 n := iInf_le 𝔽 n
+    exact condExp_condExp_of_le this (h_le n)
+
+  -- Xlim is F_inf-strongly measurable as the limit of measurable functions
+  -- Strategy: Show Xlim = μ[f | F_inf] a.e., which is F_inf-measurable
+  have hXlim_meas : StronglyMeasurable[F_inf] Xlim := by
+    -- We'll prove this at the end, once we've shown Xlim = μ[f | F_inf] a.e.
+    sorry
+
+  -- Since Xlim is F_inf-measurable and integrable, μ[Xlim | F_inf] = Xlim
+  have hF_inf_le : F_inf ≤ (inferInstance : MeasurableSpace Ω) := by
+    have : iInf 𝔽 ≤ 𝔽 0 := iInf_le 𝔽 0
+    calc iInf 𝔽 ≤ 𝔽 0 := this
+      _ ≤ inferInstance := h_le 0
+  have hXlim_condExp : μ[Xlim | F_inf] =ᵐ[μ] Xlim := by
+    -- Apply condExp_of_stronglyMeasurable: if f is m-measurable and integrable, then μ[f|m] = f
+    have : StronglyMeasurable[F_inf] Xlim := hXlim_meas
+    -- Use the fact that conditional expectation of a F_inf-measurable function equals itself
+    have eq := @condExp_of_stronglyMeasurable Ω ℝ F_inf (inferInstance : MeasurableSpace Ω) μ _ _ _ hF_inf_le _ Xlim this hXlimint
+    exact EventuallyEq.of_eq eq
+
+  -- Final identification: Xlim = μ[f | F_inf]
+  -- Strategy: Use L¹-continuity of condExp
+
+  -- For each n: μ[μ[f | 𝔽 n] | F_inf] - μ[Xlim | F_inf] = μ[f | F_inf] - Xlim (by tower and hXlim_condExp)
+  have h_diff : ∀ n, μ[μ[f | 𝔽 n] | F_inf] - μ[Xlim | F_inf] =ᵐ[μ] μ[f | F_inf] - Xlim := by
+    intro n
+    filter_upwards [h_tower n, hXlim_condExp] with ω hn hω
+    simp [hn, hω]
+
+  -- By linearity of condExp: μ[μ[f | 𝔽 n] | F_inf] - μ[Xlim | F_inf] = μ[(μ[f | 𝔽 n] - Xlim) | F_inf]
+  have h_lin : ∀ n, μ[(μ[f | 𝔽 n] - Xlim) | F_inf] =ᵐ[μ] μ[μ[f | 𝔽 n] | F_inf] - μ[Xlim | F_inf] := by
+    intro n
+    exact (condExp_sub integrable_condExp hXlimint).symm
+
+  -- By L¹-contraction: ‖μ[(μ[f | 𝔽 n] - Xlim) | F_inf]‖₁ ≤ ‖μ[f | 𝔽 n] - Xlim‖₁ → 0
+  have h_contract : Tendsto (fun n => eLpNorm (μ[(μ[f | 𝔽 n] - Xlim) | F_inf]) 1 μ) atTop (𝓝 0) := by
+    refine Tendsto.mono_left ?_ nhdsWithin_le_nhds
+    apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds hL1_conv
+    · intro n; exact zero_le _
+    · intro n
+      calc eLpNorm (μ[(μ[f | 𝔽 n] - Xlim) | F_inf]) 1 μ
+          ≤ eLpNorm (μ[f | 𝔽 n] - Xlim) 1 μ := eLpNorm_one_condExp_le_eLpNorm _
+
+  -- So μ[f | F_inf] - Xlim → 0 in L¹
+  have h_lim : eLpNorm (μ[f | F_inf] - Xlim) 1 μ = 0 := by
+    have : Tendsto (fun n => eLpNorm (μ[f | F_inf] - Xlim) 1 μ) atTop (𝓝 0) := by
+      have : ∀ n, μ[f | F_inf] - Xlim =ᵐ[μ] μ[(μ[f | 𝔽 n] - Xlim) | F_inf] := by
+        intro n
+        filter_upwards [h_diff n, h_lin n] with ω hd hl
+        rw [← hd, ← hl]
+      refine Tendsto.congr (fun n => (eLpNorm_congr_ae (this n)).symm) h_contract
+    exact tendsto_nhds_unique this tendsto_const_nhds
+
+  -- Therefore μ[f | F_inf] = Xlim a.e.
+  have : μ[f | F_inf] =ᵐ[μ] Xlim := by
+    have : eLpNorm (μ[f | F_inf] - Xlim) 1 μ = 0 := h_lim
+    rw [eLpNorm_eq_zero_iff (integrable_condExp.sub hXlimint).aestronglyMeasurable one_ne_zero] at this
+    exact this.symm
+
+  -- Return the desired result
+  filter_upwards [this] with ω hω
+  exact hω.symm
+
 /-! ## Main Theorems
 
 The two key results: Lévy's upward and downward theorems for conditional expectations. -/
@@ -118,8 +389,8 @@ theorem condExp_tendsto_iInf
     ∀ᵐ ω ∂μ, Tendsto
       (fun n => μ[f | 𝔽 n] ω)
       atTop
-      (𝓝 (μ[f | ⨅ n, 𝔽 n] ω)) := by
-  sorry -- To be proved using upcrossing inequality
+      (𝓝 (μ[f | ⨅ n, 𝔽 n] ω)) :=
+  ae_limit_is_condexp_iInf h_filtration h_le f h_f_int
 
 /-- **Conditional expectation converges along increasing filtration (Lévy's upward theorem).**
 
@@ -153,23 +424,29 @@ theorem condExp_tendsto_iSup
 **Current Status:**
 
 - ✅ `condExp_tendsto_iSup` (Lévy upward): Complete wrapper around mathlib
-- ⚠️ `condExp_tendsto_iInf` (Lévy downward): To be proved
+- 🚧 `condExp_tendsto_iInf` (Lévy downward): Structure in place, 3 sorries remain
 
-**Unused axioms and infrastructure:** Moved to `MartingaleUnused.lean` for:
-- `reverseMartingaleLimit` axiom family
-- Uniform integrability infrastructure
-- Helper definitions (`revCE`, etc.)
+**Proof structure for downward theorem:**
 
-These were exploratory and not used in the critical path (ViaMartingale.lean only
-uses `condExp_tendsto_iSup` and `condExp_tendsto_iInf`).
+1. ✅ `revFiltration`, `revCE`: Time-reversal infrastructure for finite horizons
+2. ✅ `revCE_martingale`: Reversed process is a forward martingale
+3. 🚧 `condExp_exists_ae_limit_antitone`: A.S. existence via upcrossing bounds
+4. 🚧 `uniformIntegrable_condexp_antitone`: UI via de la Vallée-Poussin
+5. 🚧 `ae_limit_is_condexp_iInf`: Limit identification via Vitali + tower
+6. ✅ `condExp_tendsto_iInf`: Main theorem (wraps step 5)
 
-**Path forward for `condExp_tendsto_iInf`:**
-Prove using the standard upcrossing inequality approach (~100-200 lines estimated).
+**Remaining work (3 sorries):**
+- Upcrossing bounds for reverse martingales (step 3)
+- de la Vallée-Poussin + Jensen for UI (step 4)
+- Vitali convergence + limit identification (step 5)
+
+See `PROOF_PLAN_condExp_tendsto_iInf.md` for detailed mathematical strategy.
 
 **Dependencies from Mathlib:**
 - ✅ `MeasureTheory.tendsto_ae_condExp`: Lévy upward (used)
 - ✅ `Filtration`: Filtration structure (used)
-- ✅ `condExp_condExp_of_le`: Tower property (available)
-- ❌ Reverse martingale convergence: Not available (we'll prove it) -/
+- ✅ `condExp_condExp_of_le`: Tower property (used)
+- ❌ Reverse martingale convergence: Not available (proving it here)
+- TODO: Upcrossing inequality, Vitali convergence, de la Vallée-Poussin -/
 
 end Exchangeability.Probability

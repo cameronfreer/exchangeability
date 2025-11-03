@@ -787,6 +787,63 @@ convergence result via abstract functional analysis (orthogonal projections in
 Hilbert space). This lemma gives an explicit bound and a direct proof, at the
 cost of requiring finite variance.
 -/
+-- For probability distributions p and q, the L¹ distance is at most 2
+private lemma prob_dist_diff_abs_sum_le_two {n : ℕ}
+    (p q : Fin n → ℝ)
+    (hp_prob : (∑ i, p i) = 1 ∧ ∀ i, 0 ≤ p i)
+    (hq_prob : (∑ i, q i) = 1 ∧ ∀ i, 0 ≤ q i) :
+    ∑ j, |p j - q j| ≤ 2 := by
+  classical
+  let c : Fin n → ℝ := fun i => p i - q i
+  have hc_sum : ∑ j, c j = 0 := by
+    simp only [c, Finset.sum_sub_distrib, hp_prob.1, hq_prob.1]; ring
+
+  let Pos := Finset.univ.filter fun j : Fin n => 0 ≤ c j
+  let Neg := Finset.univ.filter fun j : Fin n => c j < 0
+
+  have hsplit_c : ∑ j ∈ Pos, c j + ∑ j ∈ Neg, c j = 0 := by
+    have h := Finset.sum_filter_add_sum_filter_not (s := Finset.univ)
+      (p := fun j : Fin n => 0 ≤ c j) (f := fun j => c j)
+    have hsum_univ : ∑ j ∈ (Finset.univ : Finset (Fin n)), c j = 0 := by simpa using hc_sum
+    simpa [Pos, Neg, hsum_univ] using h
+
+  have hbalance : ∑ j ∈ Pos, c j = -∑ j ∈ Neg, c j :=
+    eq_neg_of_add_eq_zero_left hsplit_c
+
+  have hsplit_abs : ∑ j, |c j| = ∑ j ∈ Pos, |c j| + ∑ j ∈ Neg, |c j| := by
+    have h := Finset.sum_filter_add_sum_filter_not (s := Finset.univ)
+      (p := fun j : Fin n => 0 ≤ c j) (f := fun j => |c j|)
+    simpa [Pos, Neg] using h.symm
+
+  have habs_pos : ∑ j ∈ Pos, |c j| = ∑ j ∈ Pos, c j :=
+    Finset.sum_congr rfl (fun j hj => abs_of_nonneg (Finset.mem_filter.mp hj).2)
+
+  have habs_neg : ∑ j ∈ Neg, |c j| = -∑ j ∈ Neg, c j :=
+    calc ∑ j ∈ Neg, |c j|
+        = ∑ j ∈ Neg, (-c j) := Finset.sum_congr rfl
+            (fun j hj => abs_of_neg (Finset.mem_filter.mp hj).2)
+      _ = -∑ j ∈ Neg, c j := by simp [Finset.sum_neg_distrib]
+
+  have hdouble : ∑ j, |c j| = 2 * ∑ j ∈ Pos, c j :=
+    calc ∑ j, |c j|
+        = ∑ j ∈ Pos, |c j| + ∑ j ∈ Neg, |c j| := hsplit_abs
+      _ = ∑ j ∈ Pos, c j + (-∑ j ∈ Neg, c j) := by simp [habs_pos, habs_neg]
+      _ = ∑ j ∈ Pos, c j + ∑ j ∈ Pos, c j := by simp [hbalance]
+      _ = 2 * ∑ j ∈ Pos, c j := by ring
+
+  have hle_one : ∑ j ∈ Pos, p j ≤ 1 :=
+    calc ∑ j ∈ Pos, p j ≤ ∑ j, p j :=
+          Finset.sum_le_sum_of_subset_of_nonneg (fun j _ => Finset.mem_univ j)
+            (fun j _ _ => hp_prob.2 j)
+      _ = 1 := hp_prob.1
+
+  calc ∑ j, |c j|
+      = 2 * ∑ j ∈ Pos, c j := hdouble
+    _ ≤ 2 * ∑ j ∈ Pos, p j := mul_le_mul_of_nonneg_left
+        (Finset.sum_le_sum fun j _ => sub_le_self _ (hq_prob.2 j)) (by norm_num)
+    _ ≤ 2 * 1 := mul_le_mul_of_nonneg_left hle_one (by norm_num)
+    _ = 2 := by norm_num
+
 theorem l2_contractability_bound
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {n : ℕ} (ξ : Fin n → Ω → ℝ)
@@ -802,64 +859,15 @@ theorem l2_contractability_bound
     ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ ≤
       2 * σ ^ 2 * (1 - ρ) * (⨆ i, |p i - q i|) := by
   -- Proof following Kallenberg page 26, Lemma 1.2 exactly
-
   classical
   let c : Fin n → ℝ := fun i => p i - q i
   set σSq : ℝ := σ ^ 2
 
+  -- Preliminary facts about c = p - q
   have hc_sum : ∑ j, c j = 0 := by
     simp only [c, Finset.sum_sub_distrib, _hp_prob.1, _hq_prob.1]; ring
-  have hc_abs_sum : ∑ j, |c j| ≤ 2 := by
-    classical
-    let Pos := Finset.univ.filter fun j : Fin n => 0 ≤ c j
-    let Neg := Finset.univ.filter fun j : Fin n => c j < 0
-
-    have hsplit_c : ∑ j ∈ Pos, c j + ∑ j ∈ Neg, c j = 0 := by
-      have h := Finset.sum_filter_add_sum_filter_not (s := Finset.univ)
-        (p := fun j : Fin n => 0 ≤ c j) (f := fun j => c j)
-      have hsum_univ : ∑ j ∈ (Finset.univ : Finset (Fin n)), c j = 0 := by
-        simpa using hc_sum
-      simpa [Pos, Neg, hsum_univ]
-        using h
-
-    have hbalance : ∑ j ∈ Pos, c j = -∑ j ∈ Neg, c j :=
-      eq_neg_of_add_eq_zero_left hsplit_c
-
-    have hsplit_abs : ∑ j, |c j| = ∑ j ∈ Pos, |c j| + ∑ j ∈ Neg, |c j| := by
-      have h := Finset.sum_filter_add_sum_filter_not (s := Finset.univ)
-        (p := fun j : Fin n => 0 ≤ c j) (f := fun j => |c j|)
-      simpa [Pos, Neg] using h.symm
-
-    have habs_pos : ∑ j ∈ Pos, |c j| = ∑ j ∈ Pos, c j :=
-      Finset.sum_congr rfl
-        (fun j hj => abs_of_nonneg (Finset.mem_filter.mp hj).2)
-
-    have habs_neg : ∑ j ∈ Neg, |c j| = -∑ j ∈ Neg, c j :=
-      calc ∑ j ∈ Neg, |c j|
-          = ∑ j ∈ Neg, (-c j) :=
-              Finset.sum_congr rfl
-                (fun j hj => abs_of_neg (Finset.mem_filter.mp hj).2)
-        _ = -∑ j ∈ Neg, c j := by simp [Finset.sum_neg_distrib]
-
-    have hdouble : ∑ j, |c j| = 2 * ∑ j ∈ Pos, c j :=
-      calc ∑ j, |c j|
-          = ∑ j ∈ Pos, |c j| + ∑ j ∈ Neg, |c j| := hsplit_abs
-        _ = ∑ j ∈ Pos, c j + (-∑ j ∈ Neg, c j) := by simp [habs_pos, habs_neg]
-        _ = ∑ j ∈ Pos, c j + ∑ j ∈ Pos, c j := by simp [hbalance]
-        _ = 2 * ∑ j ∈ Pos, c j := by ring
-
-    have hle_one : ∑ j ∈ Pos, p j ≤ 1 :=
-      calc ∑ j ∈ Pos, p j ≤ ∑ j, p j :=
-            Finset.sum_le_sum_of_subset_of_nonneg (fun j _ => Finset.mem_univ j)
-              (fun j _ _ => _hp_prob.2 j)
-        _ = 1 := _hp_prob.1
-
-    calc ∑ j, |c j|
-        = 2 * ∑ j ∈ Pos, c j := hdouble
-      _ ≤ 2 * ∑ j ∈ Pos, p j := mul_le_mul_of_nonneg_left
-          (Finset.sum_le_sum fun j _ => sub_le_self _ (_hq_prob.2 j)) (by norm_num)
-      _ ≤ 2 * 1 := mul_le_mul_of_nonneg_left hle_one (by norm_num)
-      _ = 2 := by norm_num
+  have hc_abs_sum : ∑ j, |c j| ≤ 2 :=
+    prob_dist_diff_abs_sum_le_two p q _hp_prob _hq_prob
 
   -- Step 1: E(∑cᵢξᵢ)² = E(∑cᵢ(ξᵢ-m))² using ∑cⱼ = 0
   have step1 : ∫ ω, (∑ i, c i * ξ i ω)^2 ∂μ =
