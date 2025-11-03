@@ -3972,6 +3972,8 @@ private lemma optionB_Step3b_L2_to_L1
           (condexpL2 (μ := μ) fL2)).aemeasurable)
 
     -- L¹ ≤ L² (expressed via `integral_norm_le_snorm` with p=2)
+    -- TODO: Find correct mathlib lemma for L¹ ≤ L² inequality
+    -- Expected: ∫ |f| ≤ (snorm f 2 μ).toReal for probability measures
     have h_le :
         ∫ ω, |(birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 ω
                 - condexpL2 (μ := μ) fL2 ω)| ∂μ
@@ -3979,16 +3981,10 @@ private lemma optionB_Step3b_L2_to_L1
                (fun ω =>
                   (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
                   - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω)
-               (2 : ℝ≥0∞) μ).toReal := by
-      have := MeasureTheory.integral_norm_le_snorm
-        (f := fun ω =>
-          (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
-          - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω)
-        (μ := μ) (p := (2 : ℝ≥0∞)) h_meas
-      simp only [Real.norm_eq_abs] at this
-      exact this
+               (2 : ℝ≥0∞) μ).toReal := sorry -- TODO: Need L¹ ≤ L² lemma
 
     -- identify `(snorm …).toReal` with the L² norm of the Lp difference
+    -- TODO: This should follow from Lp.norm_def, but may need additional steps
     have h_toNorm :
         (MeasureTheory.snorm
           (fun ω =>
@@ -3996,9 +3992,7 @@ private lemma optionB_Step3b_L2_to_L1
             - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω)
           (2 : ℝ≥0∞) μ).toReal
         = ‖birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
-             - condexpL2 (μ := μ) fL2‖ := by
-      -- `Lp.norm_def` bridges Lp norm and snorm of its representative.
-      simp only [Lp.norm_def]
+             - condexpL2 (μ := μ) fL2‖ := sorry -- TODO: Lp.norm_def
 
     -- conclude the inequality at this `n > 0`
     have h_eq_int :
@@ -4170,14 +4164,16 @@ private lemma optionB_Step4b_AB_close
       Tendsto (fun n : ℕ => (2 * Cg) / (n + 1 : ℝ)) atTop (𝓝 0) := by
     -- (2*Cg) * (n+1)⁻¹ → 0
     simp only [div_eq_mul_inv]
-    refine Tendsto.mul tendsto_const_nhds ?_
     -- (n+1 : ℝ) → ∞, so its inverse → 0
-    have : Tendsto (fun n : ℕ => (n : ℝ)) atTop atTop :=
+    have h1 : Tendsto (fun n : ℕ => (n : ℝ)) atTop atTop :=
       tendsto_natCast_atTop_atTop
-    have : Tendsto (fun n : ℕ => (n : ℝ) + 1) atTop atTop :=
-      this.atTop_add 1
+    have h2 : Tendsto (fun n : ℕ => (n : ℝ) + 1) atTop atTop :=
+      h1.atTop_add 1
+    have h3 : Tendsto (fun n : ℕ => ((n : ℝ) + 1)⁻¹) atTop (𝓝 0) :=
+      tendsto_inv_atTop_zero.comp h2
+    -- Now (2*Cg) * (n+1)⁻¹ → (2*Cg) * 0 = 0
     simp only [mul_zero]
-    exact tendsto_inv_atTop_zero.comp this
+    exact h3.const_mul (2 * Cg)
 
   -- Squeeze
   exact squeeze_zero' (Filter.Eventually.of_forall h_lower) h_upper' h_tends_zero
@@ -4484,19 +4480,16 @@ private theorem optionB_L1_convergence_bounded
         (n : ℝ)⁻¹ * ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω := by
       intro ω
       rw [birkhoffAverage.eq_1, birkhoffSum.eq_1]
-      simp only [_root_.id]
-      -- Goal: ↑↑((↑n)⁻¹ • ∑ x ∈ Finset.range n, fL2_x) ω =
-      --       (↑n)⁻¹ * ∑ k ∈ Finset.range n, ↑↑fL2_k ω
-      --
-      -- Need two Lp coercion lemmas:
+      -- TODO: Need Lp coercion lemmas to complete this proof:
       -- 1. Lp.coeFn_smul: (c • f) =ᵐ c • f (EXISTS in mathlib)
       -- 2. Lp.coeFn_sum: (∑ i, f i) = ∑ i, f i (MISSING for measure space Lp)
+      --
+      -- Goal: ↑↑((↑n)⁻¹ • ∑ x ∈ Finset.range n, fL2_x) ω =
+      --       (↑n)⁻¹ * ∑ k ∈ Finset.range n, ↑↑fL2_k ω
       --
       -- Mathlib has lp.coeFn_sum (lowercase, sequence spaces):
       --   ⇑(∑ i ∈ s, f i) = ∑ i ∈ s, ⇑(f i)
       -- But NOT Lp.coeFn_sum (capital, measure spaces).
-      --
-      -- Without this API, can't convert sum of Lp elements to sum of functions.
       sorry
     -- Transfer via hsum
     filter_upwards [hsum] with ω hω
@@ -4545,7 +4538,10 @@ private theorem optionB_L1_convergence_bounded
 
 /-- Proof that the forward axiom is satisfied by the actual implementation. -/
 theorem optionB_L1_convergence_bounded_proves_axiom :
-    optionB_L1_convergence_bounded = optionB_L1_convergence_bounded_fwd := rfl
+    optionB_L1_convergence_bounded = optionB_L1_convergence_bounded_fwd := by
+  -- TODO: This rfl proof fails with "typeclass instance stuck: StandardBorelSpace ?m.5"
+  -- The issue is likely that the two sides use different implicit StandardBorelSpace instances
+  sorry
 
 end OptionB_L1Convergence
 
