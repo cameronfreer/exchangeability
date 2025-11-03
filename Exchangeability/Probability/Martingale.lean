@@ -230,7 +230,7 @@ lemma condExp_exists_ae_limit_antitone
         exact Classical.choose_spec hω
       -- Measurability proofs (separated to avoid timeout)
       have hmeas_n : ∀ n, AEMeasurable (fun ω => ENNReal.ofReal ‖μ[f | 𝔽 n] ω‖) μ := fun n =>
-        (stronglyMeasurable_condExp (m := 𝔽 n)).norm.measurable.ennreal_ofReal.aemeasurable
+        ((stronglyMeasurable_condExp (f := f) (m := 𝔽 n) (μ := μ)).norm.measurable.ennreal_ofReal).aemeasurable
       have hmeas_lim : AEMeasurable (fun ω => ENNReal.ofReal ‖Xlim ω‖) μ :=
         hXlim_ae_meas.norm.measurable.ennreal_ofReal.aemeasurable
       calc
@@ -306,12 +306,16 @@ lemma ae_limit_is_condexp_iInf
     sorry
 
   -- Since Xlim is F_inf-measurable and integrable, μ[Xlim | F_inf] = Xlim
-  have hF_inf_le : F_inf ≤ (inferInstance : MeasurableSpace Ω) := iInf_le_of_le 0 (h_le 0)
+  have hF_inf_le : F_inf ≤ (inferInstance : MeasurableSpace Ω) := by
+    have : iInf 𝔽 ≤ 𝔽 0 := iInf_le 𝔽 0
+    calc iInf 𝔽 ≤ 𝔽 0 := this
+      _ ≤ inferInstance := h_le 0
   have hXlim_condExp : μ[Xlim | F_inf] =ᵐ[μ] Xlim := by
     -- Apply condExp_of_stronglyMeasurable: if f is m-measurable and integrable, then μ[f|m] = f
     have : StronglyMeasurable[F_inf] Xlim := hXlim_meas
     -- Use the fact that conditional expectation of a F_inf-measurable function equals itself
-    rw [condExp_of_stronglyMeasurable hF_inf_le this hXlimint]
+    have eq := @condExp_of_stronglyMeasurable Ω ℝ F_inf (inferInstance : MeasurableSpace Ω) μ _ _ _ hF_inf_le _ Xlim this hXlimint
+    exact EventuallyEq.of_eq eq
 
   -- Final identification: Xlim = μ[f | F_inf]
   -- Strategy: Use L¹-continuity of condExp
