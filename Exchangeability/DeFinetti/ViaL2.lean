@@ -2683,7 +2683,11 @@ lemma cesaro_to_condexp_L2
           calc |∫ ω, Z 0 ω * Z 1 ω ∂μ|
               ≤ (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 1 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) := h_CS
             _ = (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) := by rw [h_Z1_var]
-            _ = (∫ ω, (Z 0 ω) ^ 2 ∂μ) := by sorry
+            _ = (∫ ω, (Z 0 ω) ^ 2 ∂μ) := by
+                rw [← Real.rpow_add_of_nonneg (integral_nonneg (fun ω => sq_nonneg _))]
+                · norm_num
+                · norm_num
+                · norm_num
             _ = σSq := rfl
 
         -- Therefore |ρ| ≤ 1, which gives -1 ≤ ρ ≤ 1
@@ -3221,7 +3225,17 @@ lemma cesaro_to_condexp_L2
                         · rw [Real.norm_eq_abs]; exact hf_bdd (X i ω)
                         · rw [Real.norm_eq_abs]
                           -- |m| ≤ 1 since m = ∫ f∘X₀ and |f| ≤ 1 on probability space
-                          sorry
+                          calc |m| = |∫ ω, f (X 0 ω) ∂μ| := rfl
+                            _ ≤ ∫ ω, |f (X 0 ω)| ∂μ := abs_integral_le_integral_abs
+                            _ ≤ ∫ ω, 1 ∂μ := by
+                                apply integral_mono_of_nonneg
+                                · filter_upwards with ω; exact abs_nonneg _
+                                · exact integrable_const 1
+                                · filter_upwards with ω; exact hf_bdd (X 0 ω)
+                            _ = μ.real Set.univ • (1 : ℝ) := integral_const 1
+                            _ = μ.real Set.univ := by simp
+                            _ = (μ Set.univ).toReal := rfl
+                            _ = 1 := by simp [measure_univ]
                     _ = (2 : ℝ) := by norm_num
                 -- From |Z i ω| ≤ 2, get |Z i ω|² ≤ 4
                 calc ‖(Z i ω)^2‖ = |Z i ω|^2 := by simp [pow_two]
