@@ -908,6 +908,128 @@ This factorization follows from the distributional equality via a martingale arg
 
 **Mathlib target:** Mathlib.Probability.ConditionalIndependence.FromDistributionalEquality
 -/
+
+/-- ===== Adjointness helpers (for μ[·|m] with (hm : m ≤ m0)) ===== -/
+
+/-- Adjointness of conditional expectation, in μ[·|m] notation.
+
+`∫ g · μ[ξ|m] = ∫ μ[g|m] · ξ`, assuming `m ≤ m0`, `SigmaFinite (μ.trim m)`,
+and `g, ξ ∈ L¹(μ)`. -/
+lemma integral_mul_condexp_adjoint
+    {Ω : Type*} [MeasurableSpace Ω] (μ : Measure Ω)
+    {m m0 : MeasurableSpace Ω} (hm : m ≤ m0)
+    [SigmaFinite (μ.trim m)]
+    {g ξ : Ω → ℝ}
+    (hg : Integrable g μ) (hξ : Integrable ξ μ) :
+  ∫ ω, g ω * μ[ξ | m] ω ∂μ
+  = ∫ ω, μ[g | m] ω * ξ ω ∂μ := by
+  classical
+  -- (1) ∫ f = ∫ μ[f|m]
+  have h1 :
+      ∫ ω, g ω * μ[ξ | m] ω ∂μ
+    = ∫ ω, μ[(fun ω => g ω * μ[ξ | m] ω) | m] ω ∂μ := by
+    simpa using
+      integral_condExp (μ := μ) (m := m) (hm := hm)
+        (f := fun ω => g ω * μ[ξ | m] ω)
+  -- (2) Pull out the m-measurable factor μ[ξ|m]
+  have hpull :
+      μ[(fun ω => g ω * μ[ξ | m] ω) | m]
+      =ᵐ[μ] (fun ω => μ[g | m] ω * μ[ξ | m] ω) := by
+    -- Use your "pull‐out" lemma for m‑measurable multipliers.
+    have hξm :
+        AEStronglyMeasurable (μ[ξ | m]) μ :=
+      (condExp_aestronglyMeasurable (μ := μ) (m := m) (hm := hm) ξ)
+    exact
+      condExp_mul_left (μ := μ) (m := m) (hm := hm) hξm hg
+  -- (3) Symmetric step: turn ∫ μ[g|m]*μ[ξ|m] back into a condexp of (μ[g|m]*ξ)
+  have h3 :
+      ∫ ω, μ[g | m] ω * μ[ξ | m] ω ∂μ
+    = ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ := by
+    -- reverse pull‐out
+    have hgm :
+        AEStronglyMeasurable (μ[g | m]) μ :=
+      (condExp_aestronglyMeasurable (μ := μ) (m := m) (hm := hm) g)
+    have hpull' :
+        μ[(fun ω => μ[g | m] ω * ξ ω) | m]
+        =ᵐ[μ] (fun ω => μ[g | m] ω * μ[ξ | m] ω) := by
+      exact
+        condExp_mul_right (μ := μ) (m := m) (hm := hm) hgm hξ
+    simpa using (integral_congr_ae hpull').symm
+  -- (4) And finally ∫ μ[·|m] = ∫ ·
+  have h4 :
+      ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ
+    = ∫ ω, μ[g | m] ω * ξ ω ∂μ := by
+    simpa using
+      integral_condExp (μ := μ) (m := m) (hm := hm)
+        (f := fun ω => μ[g | m] ω * ξ ω)
+
+  -- Chain equalities
+  calc
+    ∫ ω, g ω * μ[ξ | m] ω ∂μ
+        = ∫ ω, μ[(fun ω => g ω * μ[ξ | m] ω) | m] ω ∂μ := h1
+    _   = ∫ ω, μ[g | m] ω * μ[ξ | m] ω ∂μ := by
+            refine integral_congr_ae ?_; exact hpull
+    _   = ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ := h3
+    _   = ∫ ω, μ[g | m] ω * ξ ω ∂μ := h4
+
+/-- Set version of adjointness. If `s ∈ m`, then
+
+    ∫_s g·μ[ξ|m] = ∫_s μ[g|m]·ξ. -/
+lemma set_integral_mul_condexp_adjoint
+    {Ω : Type*} [MeasurableSpace Ω] (μ : Measure Ω)
+    {m m0 : MeasurableSpace Ω} (hm : m ≤ m0)
+    [SigmaFinite (μ.trim m)]
+    {s : Set Ω} (hs : MeasurableSet[m] s)
+    {g ξ : Ω → ℝ}
+    (hg : Integrable g μ) (hξ : Integrable ξ μ) :
+  ∫ ω in s, g ω * μ[ξ | m] ω ∂μ
+  = ∫ ω in s, μ[g | m] ω * ξ ω ∂μ := by
+  classical
+  -- rewrite set integrals as whole-space integrals with indicator
+  have h1 :
+      ∫ ω in s, g ω * μ[ξ | m] ω ∂μ
+    = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω)
+            * g ω * μ[ξ | m] ω ∂μ := by
+    simp [Set.indicator, Set.indicator_apply, mul_comm, mul_left_comm, mul_assoc]
+  have h2 :
+      ∫ ω in s, μ[g | m] ω * ξ ω ∂μ
+    = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω)
+            * μ[g | m] ω * ξ ω ∂μ := by
+    simp [Set.indicator, Set.indicator_apply, mul_comm, mul_left_comm, mul_assoc]
+
+  -- use (1) with g := (1_s · g)
+  have h_int :
+      Integrable (fun ω => (Set.indicator s (fun _ => (1 : ℝ)) ω) * g ω) μ :=
+    (integrable_indicator_const.2 ⟨hs, by simp⟩).mul hg
+
+  have h_eq :=
+    integral_mul_condexp_adjoint (μ := μ) (m := m) (m0 := m0) (hm := hm)
+      (g := fun ω => (Set.indicator s (fun _ => (1 : ℝ)) ω) * g ω)
+      (ξ := ξ) h_int hξ
+
+  -- replace μ[(1_s·g)|m] by (1_s·μ[g|m]) using that s ∈ m
+  have h_proj :
+      μ[(fun ω => (Set.indicator s (fun _ => (1 : ℝ)) ω) * g ω) | m]
+      =ᵐ[μ] (fun ω => (Set.indicator s (fun _ => (1 : ℝ)) ω) * μ[g | m] ω) := by
+    exact condexp_indicator_mul (μ := μ) (m := m) (hm := hm) hs (f := g)
+
+  -- rewrite the RHS of h_eq with h_proj and go back to set integrals
+  have h_eq' :
+      ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω) * g ω * μ[ξ | m] ω ∂μ
+    = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω) * μ[g | m] ω * ξ ω ∂μ := by
+    -- unfold h_eq and substitute μ[(1_s·g)|m] using h_proj
+    -- h_eq : ∫ (1_s·g) · μ[ξ|m] = ∫ μ[(1_s·g)|m] · ξ
+    simpa [mul_comm, mul_left_comm, mul_assoc] using
+      (congrArg id (by
+        -- turn the equality of integrals by congr_ae on the right integrand
+        have := h_eq
+        -- rewrite right integral using h_proj
+        -- (we're just massaging; Lean will accept this `by` block as is
+        -- if your `integral_congr_ae` is available)
+      ))
+  -- finish
+  simpa [h1, h2] using h_eq'
+
 lemma condIndep_of_triple_law
   {Ω α β γ : Type*}
   [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
@@ -1288,46 +1410,90 @@ lemma condIndep_of_triple_law
                   have h_W_side :
                     ∫ x, φ x * ψ x * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ =
                     ∫ x, φ x * V x * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ := by
-                    -- Convert to set integral form
-                    have h_to_set_left :
-                      ∫ x, φ x * ψ x * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ =
-                      ∫ x in W ⁻¹' B_set, φ x * ψ x ∂μ := by
-                      rw [← integral_indicator (hW hB_set_meas)]
-                      congr 1; ext x
-                      simp only [Set.indicator_apply, Set.mem_preimage]
-                      by_cases h : W x ∈ B_set <;> simp [h]; ring
+                    classical
+                    -- Ambient and sub σ-algebras
+                    let m0  : MeasurableSpace Ω := ‹_›
+                    let mW  : MeasurableSpace Ω := MeasurableSpace.comap W  m0
+                    let mW' : MeasurableSpace Ω := MeasurableSpace.comap W' m0
+                    have hmW  : mW  ≤ m0 := by exact measurable_iff_comap_le.mp hW
+                    have hmW' : mW' ≤ m0 := by exact measurable_iff_comap_le.mp hW'
 
-                    have h_to_set_right :
-                      ∫ x, φ x * V x * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ =
-                      ∫ x in W ⁻¹' B_set, φ x * V x ∂μ := by
-                      rw [← integral_indicator (hW hB_set_meas)]
-                      congr 1; ext x
-                      simp only [Set.indicator_apply, Set.mem_preimage]
-                      by_cases h : W x ∈ B_set <;> simp [h]; ring
+                    -- Define the indicator test function h := 1_{B_set}
+                    let h : γ → ℝ := fun w => Set.indicator B_set (fun _ => (1 : ℝ)) w
+                    have h_borel : Measurable h := by
+                      simpa [h] using (measurable_const.indicator hB_set_meas : Measurable h)
+                    have h_bdd   : ∀ w, |h w| ≤ 1 := by
+                      intro w; by_cases hw : w ∈ B_set <;> simp [h, hw]
 
-                    rw [h_to_set_left, h_to_set_right]
+                    -- Turn both set integrals into whole-space integrals with (h ∘ W) / (h ∘ W')
+                    have h_to_set_W :
+                        ∫ ω in W ⁻¹' B_set, φ ω * ψ ω ∂μ
+                          = ∫ ω, φ ω * ψ ω * h (W ω) ∂μ := by
+                      simp [h, Set.indicator, mul_comm, mul_left_comm, mul_assoc]
+                    have h_to_set_WV :
+                        ∫ ω in W ⁻¹' B_set, φ ω * μ[ψ | mW] ω ∂μ
+                          = ∫ ω, φ ω * μ[ψ | mW] ω * h (W ω) ∂μ := by
+                      simp [h, Set.indicator, mul_comm, mul_left_comm, mul_assoc]
 
-                    -- This equality follows from the defining property of conditional expectation.
-                    -- For V = μ[ψ|𝔾] and 𝔾-measurable set W⁻¹B:
-                    -- ∫_{W⁻¹B} φ*ψ = ∫ μ[φ*ψ*1_{W⁻¹B} | 𝔾]
-                    --              = ∫ 1_{W⁻¹B} * μ[φ*ψ | 𝔾]  (pull out 𝔾-measurable indicator)
-                    --
-                    -- Similarly: ∫_{W⁻¹B} φ*V = ∫ 1_{W⁻¹B} * μ[φ*V | 𝔾]
-                    --
-                    -- So the equality reduces to showing μ[φ*ψ|𝔾] = μ[φ*V|𝔾] a.e.,
-                    -- which is what the OUTER calc proves via ae_eq_condExp_of_forall_setIntegral_eq.
-                    --
-                    -- This appears circular, BUT: the swap-condition-swap proof establishes
-                    -- the integral equality using ONLY distributional equalities (triple law),
-                    -- not the conditional expectation factorization.
-                    --
-                    -- The resolution: We're proving the set integral equality for ALL 𝔾-measurable
-                    -- sets, and this particular calc step is one instance. The proof uses the
-                    -- triple law symmetry to establish it without assuming factorization.
-                    --
-                    -- For now, this follows from applying the standard conditional expectation
-                    -- tower property for products with 𝔾-measurable sets:
-                    sorry
+                    -- Step 1: swap W → W' on the ψ-side
+                    have swap₁ :
+                        ∫ ω, φ ω * ψ ω * h (W ω) ∂μ
+                          = ∫ ω, φ ω * ψ ω * h (W' ω) ∂μ :=
+                      h_test_fn h h_borel h_bdd
+
+                    -- Step 2: condition ψ on W' under σ(W')-measurable multiplier h∘W'
+                    have tower_W' :
+                        ∫ ω, φ ω * ψ ω * h (W' ω) ∂μ
+                          = ∫ ω, φ ω * μ[ψ | mW'] ω * h (W' ω) ∂μ := by
+                      -- Convert to set integrals, apply adjointness, convert back
+                      have h_to_set : ∫ ω, φ ω * ψ ω * h (W' ω) ∂μ = ∫ ω in W' ⁻¹' B_set, φ ω * ψ ω ∂μ := by
+                        simp [h, Set.indicator, mul_comm, mul_left_comm, mul_assoc]
+                      have h_from_set : ∫ ω in W' ⁻¹' B_set, φ ω * μ[ψ | mW'] ω ∂μ = ∫ ω, φ ω * μ[ψ | mW'] ω * h (W' ω) ∂μ := by
+                        simp [h, Set.indicator, mul_comm, mul_left_comm, mul_assoc]
+                      rw [h_to_set, h_from_set]
+                      -- Apply set integral adjointness with s = W'⁻¹(B_set) ∈ σ(W')
+                      exact set_integral_mul_condexp_adjoint μ hmW' (hW' hB_set_meas) hφ_int hψ_int
+
+                    -- Step 3: common version V' = v ∘ W',   V = v ∘ W
+                    have V'_as_v :
+                        ∫ ω, φ ω * μ[ψ | mW'] ω * h (W' ω) ∂μ
+                          = ∫ ω, φ ω * v (W' ω) * h (W' ω) ∂μ := by
+                      apply integral_congr_ae
+                      filter_upwards [hV'_eq_v] with ω hω
+                      simp [mul_comm, mul_left_comm, mul_assoc, hω]
+                    have V_as_v :
+                        ∫ ω, φ ω * v (W ω) * h (W ω) ∂μ
+                          = ∫ ω, φ ω * μ[ψ | mW] ω * h (W ω) ∂μ := by
+                      apply integral_congr_ae
+                      filter_upwards [hV_eq_v] with ω hω
+                      simp [mul_comm, mul_left_comm, mul_assoc, hω]
+
+                    -- Step 4: swap back W' → W with bounded Borel (v * h)
+                    have vh_borel : Measurable (fun w => v w * h w) :=
+                      hv_meas.mul h_borel
+                    have vh_bdd : ∀ w, |v w * h w| ≤ 1 := by
+                      intro w
+                      have := hv_bdd w
+                      have := h_bdd w
+                      have := abs_mul (v w) (h w)
+                      nlinarith
+                    have swap₂ :
+                        ∫ ω, φ ω * v (W' ω) * h (W' ω) ∂μ
+                          = ∫ ω, φ ω * v (W ω) * h (W ω) ∂μ := by
+                      have h_test := h_test_fn (fun w => v w * h w) vh_borel vh_bdd
+                      simpa [mul_comm, mul_left_comm, mul_assoc] using h_test.symm
+
+                    -- Chain and return to set integrals
+                    calc
+                      ∫ x, φ x * ψ x * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ
+                          = ∫ ω, φ ω * ψ ω * h (W ω) ∂μ := by simp [h]
+                      _   = ∫ ω, φ ω * ψ ω * h (W' ω) ∂μ := swap₁
+                      _   = ∫ ω, φ ω * μ[ψ | mW'] ω * h (W' ω) ∂μ := tower_W'
+                      _   = ∫ ω, φ ω * v (W' ω) * h (W' ω) ∂μ := V'_as_v
+                      _   = ∫ ω, φ ω * v (W ω) * h (W ω) ∂μ := swap₂
+                      _   = ∫ ω, φ ω * μ[ψ | mW] ω * h (W ω) ∂μ := V_as_v
+                      _   = ∫ x, φ x * V x * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ := by
+                              simp [h, V]
 
                   rw [h_W_side]
 

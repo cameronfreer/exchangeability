@@ -308,17 +308,14 @@ lemma ae_limit_is_condexp_iInf
   -- Xlim is F_inf-strongly measurable as the limit of F_inf-measurable functions
   -- Each μ[f | 𝔽 n] is 𝔽 n-measurable, hence F_inf-measurable (since F_inf ≤ 𝔽 n)
   have hXlim_meas : @StronglyMeasurable Ω ℝ _ F_inf Xlim := by
-    -- TODO: This proof needs careful handling of measurable space instances
-    -- The approach is correct but has type inference issues with @ notation
-    -- Each μ[f | 𝔽 n] is F_inf-measurable since F_inf ≤ 𝔽 n
-    -- Xlim is the a.e. limit, so is a.e. F_inf-measurable
+    -- TODO: Proof strategy is correct but has complex type inference issues
+    -- Each μ[f | 𝔽 n] is 𝔽 n-measurable. Since F_inf = ⨅ n, 𝔽 n ≤ 𝔽 n,
+    -- each μ[f | 𝔽 n] is also F_inf-measurable.
+    -- Xlim is the a.e. limit, so is a.e. F_inf-measurable, hence has a F_inf-measurable version.
     sorry
 
   -- Since Xlim is F_inf-measurable and integrable, μ[Xlim | F_inf] = Xlim
-  have hF_inf_le : F_inf ≤ (inferInstance : MeasurableSpace Ω) := by
-    -- This follows from iInf 𝔽 ≤ 𝔽 0 ≤ inferInstance
-    -- TODO: Resolve type unification issue with inferInstance
-    sorry
+  have hF_inf_le : F_inf ≤ _ := le_trans (iInf_le 𝔽 0) (h_le 0)
   have hXlim_condExp : μ[Xlim | F_inf] =ᵐ[μ] Xlim := by
     -- Apply condExp_of_stronglyMeasurable: if f is m-measurable and integrable, then μ[f|m] = f
     have : μ[Xlim | F_inf] = Xlim := condExp_of_stronglyMeasurable hF_inf_le hXlim_meas hXlimint
