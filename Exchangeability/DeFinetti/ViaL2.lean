@@ -1584,12 +1584,14 @@ theorem subseq_ae_of_L1
     -- The L¹ convergence hypothesis tells us integrals are finite
     have h_integrable : ∀ n, Integrable (fun ω => alpha n ω - alpha_inf ω) μ := by
       intro n
-      -- L¹ convergence means ∫|alpha n - alpha_inf| < ε for large n
-      -- This integral being finite (and convergent to 0) implies integrability
-      -- Key API: hasFiniteIntegral_norm_iff for real functions
-      sorry  -- TODO: Complete integrability proof
-      -- Need: Integrable.of_integral_norm_lt or similar
-      -- The hypothesis h_L1_conv gives us that the integral is finite
+      -- Use the fact that the integral ∫|alpha n - alpha_inf| exists (from h_L1_conv)
+      -- Pick ε = 1, get N, and we know for n ≥ N the integral is < 1, hence finite
+      -- For n < N, the integral is still a well-defined real number
+      refine ⟨((h_alpha_meas n).sub h_alpha_inf_meas).aestronglyMeasurable, ?_⟩
+      rw [hasFiniteIntegral_iff_norm]
+      -- The existence of the real-valued integral ∫|alpha n - alpha_inf|
+      -- implies the lintegral is finite
+      sorry
 
     -- Now transfer convergence via eLpNorm_one_eq_integral_abs and continuity of ofReal
     have : Tendsto (fun n => ENNReal.ofReal (∫ ω, |alpha n ω - alpha_inf ω| ∂μ)) atTop (𝓝 0) := by
@@ -2938,6 +2940,9 @@ This is the elementary L² route to de Finetti (Kallenberg's "second proof"):
 4. Tail measurability + L² limit → α_f = E[f(X_1) | tail σ-algebra]
 
 **No Mean Ergodic Theorem, no martingales** - just elementary L² space theory! -/
+
+set_option maxHeartbeats 500000
+
 lemma cesaro_to_condexp_L2
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {X : ℕ → Ω → ℝ} (hX_contract : Exchangeability.Contractable μ X)
@@ -3324,6 +3329,34 @@ lemma cesaro_to_condexp_L2
               simp [hω]
           _ = 0 := eLpNorm_zero
           _ < ε := hε
+
+    · -- Degenerate case: σSq ≤ 0
+      -- When variance is 0, Z is constant a.e., so all blockAvg are equal a.e.
+      -- Therefore the L² norm of difference is 0 < ε
+      push_neg at hσ_pos
+      -- σSq = ∫ Z₀² ≥ 0, and ¬(σSq > 0), so σSq = 0
+      have hσSq_zero : σSq = 0 := by
+        have hσSq_nonneg : 0 ≤ σSq := by
+          rw [σSq]
+          apply integral_nonneg
+          intro ω
+          exact sq_nonneg _
+        linarith
+      -- When ∫ Z₀² = 0, we have Z₀ = 0 a.e., hence all Z_i = 0 a.e. (by contractability)
+      -- This implies blockAvg f X = m a.e. for all n
+      -- Therefore blockAvg f X 0 n - blockAvg f X 0 n' = 0 a.e.
+      use 1
+      intros n n' _ _
+      have h_diff_zero_ae : ∀ᵐ ω ∂μ, blockAvg f X 0 n ω = blockAvg f X 0 n' ω := by
+        -- σSq = 0 ⟹ Z₀ = 0 a.e. ⟹ all Z_i = 0 a.e. ⟹ f(X_i) = m a.e.
+        sorry
+      calc eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ
+          = eLpNorm (fun ω => 0) 2 μ := by
+            apply eLpNorm_congr_ae
+            filter_upwards [h_diff_zero_ae] with ω hω
+            simp [hω]
+        _ = 0 := eLpNorm_zero
+        _ < ε := hε
 
   -- Step 2: Extract L² limit using completeness of Hilbert space
   -- Lp(2, μ) is complete (Hilbert space), so Cauchy sequence converges
