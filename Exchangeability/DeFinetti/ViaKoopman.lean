@@ -3973,7 +3973,7 @@ private lemma optionB_Step3b_L2_to_L1
                (fun ω =>
                   (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
                   - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω)
-               (ENNReal.ofReal 2) μ).toReal := by
+               2 μ).toReal := by
       -- Set h := pointwise difference we integrate
       set h : Ω[α] → ℝ :=
         fun ω =>
@@ -3986,10 +3986,10 @@ private lemma optionB_Step3b_L2_to_L1
         Real.HolderConjugate.two_two
 
       -- h is in L² since it's the difference of two L² functions
-      have h_mem : MemLp h (ENNReal.ofReal 2) μ := by
+      have h_mem : MemLp h 2 μ := by
         -- The Lp element has memLp
         have lp_mem : MemLp (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
-                       - condexpL2 (μ := μ) fL2 : Lp ℝ 2 μ) (ENNReal.ofReal 2) μ :=
+                       - condexpL2 (μ := μ) fL2 : Lp ℝ 2 μ) 2 μ :=
           Lp.memLp (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
              - condexpL2 (μ := μ) fL2)
         -- h is defined as the coercion, which is ae equal
@@ -4003,7 +4003,7 @@ private lemma optionB_Step3b_L2_to_L1
         exact lp_mem.ae_eq h_ae
 
       -- constant 1 is in L² on a probability space
-      have one_mem : MemLp (fun _ : Ω[α] => (1 : ℝ)) (ENNReal.ofReal 2) μ :=
+      have one_mem : MemLp (fun _ : Ω[α] => (1 : ℝ)) 2 μ :=
         memLp_const (1 : ℝ)
 
       -- Apply Hölder inequality
@@ -4015,10 +4015,9 @@ private lemma optionB_Step3b_L2_to_L1
       -- Rewrite (∫ ‖h‖²)^(1/2) as (eLpNorm h 2 μ).toReal
       have h_snorm :
           ((∫ ω, ‖h ω‖ ^ 2 ∂ μ) ^ (1 / 2 : ℝ))
-            = (eLpNorm h (ENNReal.ofReal 2) μ).toReal := by
-        have hp1 : ENNReal.ofReal 2 ≠ 0 := by
-          simp only [ENNReal.ofReal_eq_zero]; norm_num
-        have hp2 : ENNReal.ofReal 2 ≠ ∞ := ENNReal.ofReal_ne_top
+            = (eLpNorm h 2 μ).toReal := by
+        have hp1 : (2 : ℝ≥0∞) ≠ 0 := by norm_num
+        have hp2 : (2 : ℝ≥0∞) ≠ ∞ := by norm_num
         rw [MemLp.eLpNorm_eq_integral_rpow_norm hp1 hp2 h_mem]
         simp only [ENNReal.toReal_ofReal, inv_ofNat]
         norm_num
@@ -4040,7 +4039,7 @@ private lemma optionB_Step3b_L2_to_L1
           (fun ω =>
             (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
             - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω)
-          (ENNReal.ofReal 2) μ).toReal
+          2 μ).toReal
         = ‖birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
              - condexpL2 (μ := μ) fL2‖ := by
       -- The coercion of the Lp element is ae equal to itself
