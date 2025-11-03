@@ -3971,28 +3971,78 @@ private lemma optionB_Step3b_L2_to_L1
        (Lp.aestronglyMeasurable
           (condexpL2 (μ := μ) fL2)).aemeasurable)
 
-    -- L¹ ≤ L² (expressed via `integral_norm_le_snorm` with p=2)
-    -- TODO: Find correct mathlib lemma for L¹ ≤ L² inequality
-    -- Expected: ∫ |f| ≤ (snorm f 2 μ).toReal for probability measures
+    -- L¹ ≤ L² via Hölder/Cauchy-Schwarz on a probability space
     have h_le :
         ∫ ω, |(birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 ω
                 - condexpL2 (μ := μ) fL2 ω)| ∂μ
-          ≤ (MeasureTheory.snorm
+          ≤ (eLpNorm
                (fun ω =>
                   (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
                   - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω)
-               (2 : ℝ≥0∞) μ).toReal := sorry -- TODO: Need L¹ ≤ L² lemma
+               2 μ).toReal := by
+      -- Set h := pointwise difference we integrate
+      set h : Ω[α] → ℝ :=
+        fun ω =>
+          (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
+          - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω
+        with h_def
 
-    -- identify `(snorm …).toReal` with the L² norm of the Lp difference
-    -- TODO: This should follow from Lp.norm_def, but may need additional steps
+      -- Hölder (Bochner) with p=q=2: conjugate exponent
+      have hpq : Real.IsConjugateExponent (2 : ℝ) (2 : ℝ) := by
+        simpa using (Real.isConjugateExponent_iff.mpr (by norm_num : (0:ℝ)<2 ∧ 0<2 ∧ 1/2+1/2=1))
+
+      -- h is in L² since it's the difference of two L² functions
+      have h_mem : Memℒp h 2 μ := by
+        simpa [h_def] using
+          ((birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
+             - condexpL2 (μ := μ) fL2).memℒp :
+              Memℒp
+                (fun ω =>
+                  ((birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
+                    - condexpL2 (μ := μ) fL2) : Lp ℝ 2 μ) ω)
+                2 μ)
+
+      -- constant 1 is in L² on a probability space
+      have one_mem : Memℒp (fun _ : Ω[α] => (1 : ℝ)) 2 μ := by
+        simpa using (memℒp_const (μ := μ) (p := 2) (c := (1 : ℝ)))
+
+      -- Apply Hölder inequality
+      have holder :=
+        integral_mul_norm_le_Lp_mul_Lq
+          (μ := μ) (f := h) (g := fun _ => (1 : ℝ)) (p := 2) (q := 2)
+          hpq h_mem one_mem
+
+      -- Rewrite (∫ ‖h‖²)^(1/2) as (eLpNorm h 2 μ).toReal
+      have h_snorm :
+          ((∫ ω, ‖h ω‖ ^ 2 ∂ μ) ^ (1 / 2 : ℝ))
+            = (eLpNorm h 2 μ).toReal := by
+        simpa using
+          (Memℒp.eLpNorm_eq_integral_rpow_norm
+             (p := 2) (hp1 := by decide) (hp2 := by decide) h_mem)
+
+      -- On a probability space, ∫ ‖1‖² = μ univ = 1
+      have h_one : ((∫ ω, ‖(1 : ℝ)‖ ^ 2 ∂ μ) ^ (1/2 : ℝ)) = 1 := by
+        simp [Real.norm_eq_abs, abs_one, one_pow, IsProbabilityMeasure.measure_univ]
+
+      -- Simplify ‖h‖ * ‖1‖ = ‖h‖
+      have h_mul_one : (fun ω => ‖h ω‖ * ‖(1 : ℝ)‖) = fun ω => ‖h ω‖ := by
+        funext ω; simp
+
+      -- Put everything together
+      simpa [h_def, Real.norm_eq_abs, h_snorm, h_one, mul_one, h_mul_one] using holder
+
+    -- identify `(eLpNorm …).toReal` with the L² norm of the Lp difference
     have h_toNorm :
-        (MeasureTheory.snorm
+        (eLpNorm
           (fun ω =>
             (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
             - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω)
-          (2 : ℝ≥0∞) μ).toReal
+          2 μ).toReal
         = ‖birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
-             - condexpL2 (μ := μ) fL2‖ := sorry -- TODO: Lp.norm_def
+             - condexpL2 (μ := μ) fL2‖ := by
+      -- This follows from Lp.norm_def: the norm of an Lp element equals its eLpNorm
+      rw [← Lp.norm_def]
+      rfl
 
     -- conclude the inequality at this `n > 0`
     have h_eq_int :
