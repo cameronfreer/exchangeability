@@ -649,8 +649,9 @@ lemma aemeasurable_indicator_of_sub {Ω} [mΩ : MeasurableSpace Ω] {μ : Measur
     (m : MeasurableSpace Ω) (hm : m ≤ mΩ)
     {s : Set Ω} (hs : MeasurableSet[m] s)
     {f : Ω → ℝ} (hf : AEMeasurable f μ) :
-    AEMeasurable (s.indicator f) μ :=
-  hf.indicator (measurableSet_of_sub m hm hs : @MeasurableSet Ω mΩ s)
+    AEMeasurable (s.indicator f) μ := by
+  letI : MeasurableSpace Ω := mΩ  -- Fix ambient space instance
+  exact hf.indicator (measurableSet_of_sub m hm hs)
 
 /-- Idempotence of conditional expectation for m-measurable integrable functions.
 
@@ -698,8 +699,9 @@ lemma condexp_pullback_factor
     -- lift measurability from m to ambient inst
     have hBm' : @MeasurableSet Ω inst B := hm B hBm
     -- a.e.-measurability for the integrands (under μ)
-    have hCE_ae : AEMeasurable (condExp m μ H) μ :=
-      (MeasureTheory.aestronglyMeasurable_condExp' m hm H).aemeasurable
+    have hCE_ae : AEMeasurable (condExp m μ H) μ := by
+      letI : MeasurableSpace Ω := inst  -- Fix ambient space instance
+      exact (MeasureTheory.aestronglyMeasurable_condExp' m hm H).aemeasurable
     have hH_ae : AEMeasurable H μ := hH.aestronglyMeasurable.aemeasurable
     -- Three-step calc: change variables, apply CE property, change back
     calc
