@@ -315,7 +315,23 @@ lemma condExp_exists_ae_limit_antitone
     have h_le_key (N : ℕ) (ω : Ω) :
         ↑(upcrossingsBefore (↑a) (↑b) (fun n => μ[f | 𝔽 n]) N ω)
         ≤ upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω := by
-      sorry
+      -- First establish the bridge: original and reversed have same upcrossings up to N
+      have h_orig_to_rev : (upcrossingsBefore (↑a) (↑b) (fun n => μ[f | 𝔽 n]) N ω : ℝ≥0∞) ≤ ↑(upcrossingsBefore (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) N ω) := by
+        sorry  -- Will establish this separately
+
+      -- Now pick index N from the supremum definition of upcrossings
+      have hN :
+          (upcrossingsBefore (↑a) (↑b)
+              (fun n => revCEFinite (μ := μ) f 𝔽 N n) N ω : ℝ≥0∞)
+            ≤ upcrossings (↑a) (↑b)
+                (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω := by
+        simp only [MeasureTheory.upcrossings]
+        exact le_iSup
+          (fun M => (upcrossingsBefore (↑a) (↑b)
+              (fun n => revCEFinite (μ := μ) f 𝔽 N n) M ω : ℝ≥0∞)) N
+
+      -- Combine the two inequalities
+      exact h_orig_to_rev.trans hN
 
     -- Therefore: upcrossings (original) = ⨆ N, upcrossingsBefore N ≤ ⨆ N, upcrossings (reversed_N)
     have h_bound : ∀ ω, upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω
