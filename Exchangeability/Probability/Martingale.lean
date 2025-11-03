@@ -218,8 +218,8 @@ lemma condExp_exists_ae_limit_antitone
   · -- Integrability of Xlim (follows from Fatou + L¹ boundedness)
     -- Xlim is a.e. limit of integrable functions with uniform L¹ bound
     have hXlim_ae_meas : AEStronglyMeasurable Xlim μ := by
-      refine aestronglyMeasurable_of_tendsto_ae atTop (fun n => ?_) ?_
-      · exact stronglyMeasurable_condExp.aestronglyMeasurable
+      apply aestronglyMeasurable_of_tendsto_ae atTop (f := fun n => μ[f | 𝔽 n])
+      · intro n; exact stronglyMeasurable_condExp.aestronglyMeasurable
       · filter_upwards [h_ae_conv] with ω hω
         simp only [Xlim]
         rw [dif_pos hω]
