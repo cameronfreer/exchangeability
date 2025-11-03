@@ -146,4 +146,33 @@ theorem deFinetti_equivalence
   · exact deFinetti X hX_meas
   · exact exchangeable_of_conditionallyIID hX_meas
 
+/-- **Kallenberg Theorem 1.1 (via martingale):** Three-way equivalence.
+
+This is the full de Finetti-Ryll-Nardzewski equivalence for sequences on standard Borel spaces:
+Contractable ↔ Exchangeable ↔ Conditionally i.i.d.
+
+**Proof structure:**
+- Contractable → ConditionallyIID: Via reverse martingale convergence (this file)
+- ConditionallyIID → Exchangeable: From ConditionallyIID.lean
+- Exchangeable → Contractable: From Contractability.lean
+
+**Reference**: Kallenberg (2005), Theorem 1.1 (pages 26-28).
+-/
+theorem deFinetti_RyllNardzewski_equivalence
+    [StandardBorelSpace Ω]
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i)) :
+    Contractable μ X ↔ Exchangeable μ X ∧ ConditionallyIID μ X := by
+  constructor
+  · intro hContract
+    -- Contractable → ConditionallyIID (our main theorem)
+    have hCIID := conditionallyIID_of_contractable X hX_meas hContract
+    -- ConditionallyIID → Exchangeable
+    have hExch := exchangeable_of_conditionallyIID hX_meas hCIID
+    exact ⟨hExch, hCIID⟩
+  · intro ⟨hExch, _⟩
+    -- Exchangeable → Contractable
+    exact contractable_of_exchangeable hExch hX_meas
+
 end Exchangeability.DeFinetti
