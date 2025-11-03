@@ -6719,6 +6719,7 @@ private lemma L1_unique_of_two_limits
   {μ : Measure Ω} {f g : Ω → ℝ}
   (hf : Integrable f μ) (hg : Integrable g μ)
   {fn : ℕ → Ω → ℝ}
+  (hfn : ∀ n, AEStronglyMeasurable (fn n) μ)
   (h1 : Tendsto (fun n => eLpNorm (fn n - f) 1 μ) atTop (𝓝 0))
   (h2 : Tendsto (fun n => eLpNorm (fn n - g) 1 μ) atTop (𝓝 0)) :
   f =ᵐ[μ] g := by
@@ -6730,19 +6731,25 @@ private lemma L1_unique_of_two_limits
         = eLpNorm ((f - fn n) + (fn n - g)) 1 μ := by ring_nf
       _ ≤ eLpNorm (f - fn n) 1 μ + eLpNorm (fn n - g) 1 μ := by
           apply eLpNorm_add_le
-          · sorry  -- AEStronglyMeasurable (f - fn n) μ
-          · sorry  -- AEStronglyMeasurable (fn n - g) μ
+          · exact hf.aestronglyMeasurable.sub (hfn n)
+          · exact (hfn n).sub hg.aestronglyMeasurable
           · norm_num
   -- send n → ∞: ‖f - g‖₁ ≤ 0
   -- The constant eLpNorm (f - g) 1 μ is bounded by something tending to 0
   have : eLpNorm (f - g) 1 μ ≤ 0 := by
     -- Use that it's squeezed: 0 ≤ ‖f-g‖ ≤ ‖f-fn‖ + ‖fn-g‖ → 0
     have h_bound : ∀ n, eLpNorm (f - g) 1 μ ≤ eLpNorm (f - fn n) 1 μ + eLpNorm (fn n - g) 1 μ := htri
-    sorry  -- Use ge_of_tendsto with h_bound and h1.add h2
+    have h_sum : Tendsto (fun n => eLpNorm (f - fn n) 1 μ + eLpNorm (fn n - g) 1 μ) atTop (𝓝 0) := by
+      convert h1.add h2 using 1
+      simp
+    exact ge_of_tendsto h_sum (Eventually.of_forall h_bound)
   -- eLpNorm = 0 ⇒ a.e. equality
   have hzero : eLpNorm (f - g) 1 μ = 0 := le_antisymm this bot_le
   have : (f - g) =ᵐ[μ] 0 := by
-    sorry  -- Use eLpNorm_eq_zero_iff or similar
+    rw [← hzero]
+    rw [eLpNorm_eq_zero_iff]
+    · exact hf.aestronglyMeasurable.sub hg.aestronglyMeasurable
+    · norm_num
   have : f =ᵐ[μ] g := by
     filter_upwards [this] with ω h
     simpa [sub_eq_zero] using h
@@ -6772,12 +6779,15 @@ private lemma L1_tendsto_clip01
 /-- If ∀ n, aₙ(ω) ≤ 1, then ⨅ₙ aₙ(ω) ≤ 1. -/
 private lemma iInf_le_one_of_le_one {ι : Type*} [Nonempty ι]
   (a : ι → ℝ) (h : ∀ i, a i ≤ 1) : ⨅ i, a i ≤ 1 := by
-  sorry  -- Use ciInf_le or similar for conditionally complete lattice
+  obtain ⟨i₀⟩ := ‹Nonempty ι›
+  have hbdd : BddBelow (Set.range a) := ⟨a i₀ - 1, by intro x ⟨i, hi⟩; simp [hi]; linarith [h i]⟩
+  exact ciInf_le_of_le hbdd i₀ (h i₀)
 
 /-- If ∀ n, aₙ(ω) ≤ 1, then ⨆ₙ aₙ(ω) ≤ 1. -/
-private lemma iSup_le_one_of_le_one {ι : Type*}
+private lemma iSup_le_one_of_le_one {ι : Type*} [Nonempty ι]
   (a : ι → ℝ) (h : ∀ i, a i ≤ 1) : ⨆ i, a i ≤ 1 := by
-  sorry  -- Use ciSup_le or similar for conditionally complete lattice
+  have hbdd : BddAbove (Set.range a) := ⟨1, by intro x ⟨i, hi⟩; simp [hi]; exact h i⟩
+  exact ciSup_le hbdd h
 
 /-! ### AE Strong Measurability for iInf/iSup -/
 
