@@ -644,6 +644,48 @@ measures are determined by their finite-dimensional marginals.
   arbitrary permutations, then apply `measure_eq_of_fin_marginals_eq`.
 - (⇐) Full exchangeability trivially implies exchangeability by restriction.
 -/
+
+-- For an exchangeable sequence, the finite marginals of the path law are equal
+-- to the finite marginals after reindexing by any permutation.
+private lemma exchangeable_finite_marginals_eq_reindexed {μ : Measure Ω}
+    [IsProbabilityMeasure μ] {X : ℕ → Ω → α}
+    (hX : ∀ i, Measurable (X i)) (hEx : Exchangeable μ X)
+    (μX : Measure (ℕ → α)) (hμX : μX = pathLaw μ X) (π : Equiv.Perm ℕ) :
+    ∀ n (S : Set (Fin n → α)) (_hS : MeasurableSet S),
+        Measure.map (prefixProj (α:=α) n) μX S =
+          Measure.map (prefixProj (α:=α) n)
+            (Measure.map (reindex (α:=α) π) μX) S := by
+  intro n S hS
+  -- Use known path law projection lemmas
+  have h1 := pathLaw_map_prefix (α:=α) μ X hX n
+  have h2 := pathLaw_map_prefix_perm (α:=α) μ X hX π n
+  have hperm := marginals_perm_eq (μ:=μ) (X:=X) hX hEx π n
+  -- LHS equals the unpermed marginal
+  have hlhs :
+      Measure.map (prefixProj (α:=α) n) μX =
+        Measure.map (fun ω => fun i : Fin n => X i ω) μ := by
+    rw [hμX]; exact h1
+  -- RHS equals the permuted marginal
+  have hrhs :
+      Measure.map (prefixProj (α:=α) n)
+          (Measure.map (reindex (α:=α) π) μX) =
+        Measure.map (fun ω => fun i : Fin n => X (π i) ω) μ := by
+    rw [hμX]; exact h2
+  rw [hlhs, hrhs]
+  exact (congrArg (fun ν => ν S) hperm).symm
+
+-- The path law of a reindexed sequence equals reindexing the path law.
+private lemma pathLaw_map_reindex_comm {μ : Measure Ω} {X : ℕ → Ω → α}
+    (hX : ∀ i, Measurable (X i)) (μX : Measure (ℕ → α))
+    (hμX : μX = pathLaw μ X) (π : Equiv.Perm ℕ) :
+    Measure.map (fun ω => fun i : ℕ => X (π i) ω) μ =
+      Measure.map (reindex (α:=α) π) μX := by
+  rw [hμX]
+  simp only [pathLaw]
+  rw [Measure.map_map (measurable_reindex (α:=α) (π:=π))
+    (measurable_pi_lambda _ (fun i => hX i))]
+  rfl
+
 theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω}
     [IsProbabilityMeasure μ] {X : ℕ → Ω → α}
     (hX : ∀ i, Measurable (X i)) :
@@ -651,6 +693,7 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω}
   classical
   constructor
   · intro hEx π
+    -- Define path law and establish probability measure properties
     let μX := pathLaw (α:=α) μ X
     have hμ_univ : μ Set.univ = 1 := measure_univ
     have hμX_univ : μX Set.univ = 1 := by
@@ -663,33 +706,17 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω}
         (measurable_reindex (α:=α) (π:=π)).aemeasurable, hμX_univ]
     haveI : IsProbabilityMeasure (Measure.map (reindex (α:=α) π) μX) :=
       ⟨by simpa using hμXπ_univ⟩
-    have hMarg : ∀ n (S : Set (Fin n → α)) (hS : MeasurableSet S),
-        Measure.map (prefixProj (α:=α) n) μX S =
-          Measure.map (prefixProj (α:=α) n)
-            (Measure.map (reindex (α:=α) π) μX) S := by
-      intro n S hS
-      have h1 := pathLaw_map_prefix (α:=α) μ X hX n
-      have h2 := pathLaw_map_prefix_perm (α:=α) μ X hX π n
-      have hperm := marginals_perm_eq (μ:=μ) (X:=X) hX hEx π n
-      have hlhs :
-          Measure.map (prefixProj (α:=α) n) μX =
-            Measure.map (fun ω => fun i : Fin n => X i ω) μ := h1
-      have hrhs :
-          Measure.map (prefixProj (α:=α) n)
-              (Measure.map (reindex (α:=α) π) μX) =
-            Measure.map (fun ω => fun i : Fin n => X (π i) ω) μ := h2
-      rw [hlhs, hrhs]
-      exact (congrArg (fun ν => ν S) hperm).symm
+
+    -- Apply helper: finite marginals are equal
+    have hMarg := exchangeable_finite_marginals_eq_reindexed hX hEx μX rfl π
+
+    -- Apply measure uniqueness from finite marginals
     have hEq :=
       measure_eq_of_fin_marginals_eq_prob (α:=α)
         (μ:=μX) (ν:=Measure.map (reindex (α:=α) π) μX) hMarg
-    have hmap₁ :
-        Measure.map (fun ω => fun i : ℕ => X (π i) ω) μ =
-          Measure.map (reindex (α:=α) π) μX := by
-      simp only [μX, pathLaw]
-      rw [Measure.map_map (measurable_reindex (α:=α) (π:=π))
-        (measurable_pi_lambda _ (fun i => hX i))]
-      rfl
+
+    -- Relate back to original form using path law commutation
+    have hmap₁ := pathLaw_map_reindex_comm hX μX rfl π
     have hmap₂ : Measure.map (fun ω => fun i : ℕ => X i ω) μ = μX := by
       simp [μX, pathLaw]
     simpa [hmap₁, hmap₂] using hEq.symm
