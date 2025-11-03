@@ -497,6 +497,47 @@ Outline (to be implemented):
 The implementation will mirror Kallenberg's argument but reframed so this common
 lemma serves both the Koopman and L² approaches.
 -/
+-- Pushforward of probability measure via coordinate map is probability
+private lemma map_coords_isProbabilityMeasure {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i)) (m : ℕ) (k : Fin m → ℕ) :
+    IsProbabilityMeasure (Measure.map (fun ω i => X (k i) ω) μ) := by
+  have h_meas : Measurable (fun ω i => X (k i) ω) := by
+    rw [measurable_pi_iff]
+    intro i
+    exact hX_meas (k i)
+  exact Measure.isProbabilityMeasure_map h_meas.aemeasurable
+
+-- Product of probability measures is a probability measure
+private lemma pi_of_prob_is_prob {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω)) (m : ℕ) :
+    ∀ ω, IsProbabilityMeasure (Measure.pi fun _ : Fin m => ν ω) := by
+  intro ω
+  constructor
+  have h : (Set.univ : Set (Fin m → α)) = Set.univ.pi (fun (_ : Fin m) => Set.univ) := by
+    ext x; simp
+  rw [h, Measure.pi_pi]
+  simp [measure_univ]
+
+-- Bind of probability measure with probability kernels is probability
+private lemma bind_pi_isProbabilityMeasure {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
+    (hν_meas : ∀ s, Measurable (fun ω => ν ω s)) (m : ℕ) :
+    IsProbabilityMeasure (μ.bind fun ω => Measure.pi fun _ : Fin m => ν ω) := by
+  constructor
+  have h_ae_meas : AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ :=
+    aemeasurable_measure_pi ν hν_prob hν_meas
+  rw [Measure.bind_apply .univ h_ae_meas]
+  simp [measure_univ]
+
+-- Convert rectangle notation and prove measurability
+private lemma rectangle_as_pi_measurable (m : ℕ) (B : Fin m → Set α)
+    (hB_meas : ∀ i, MeasurableSet (B i)) :
+    MeasurableSet {x : Fin m → α | ∀ i, x i ∈ B i} := by
+  have : {x : Fin m → α | ∀ i, x i ∈ B i} = Set.univ.pi fun i => B i := by
+    ext x; simp [Set.pi]
+  rw [this]
+  exact MeasurableSet.univ_pi hB_meas
+
 theorem conditional_iid_from_directing_measure
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α)
@@ -531,33 +572,12 @@ theorem conditional_iid_from_directing_measure
       let μ_map := Measure.map (fun ω i => X (k i) ω) μ
       let μ_bind := μ.bind fun ω => Measure.pi fun _ : Fin m => ν ω
 
-      -- Both are probability measures
-      have h_map_prob : IsProbabilityMeasure μ_map := by
-        -- The pushforward of a probability measure is a probability measure
-        have h_meas : Measurable (fun ω i => X (k i) ω) := by
-          rw [measurable_pi_iff]
-          intro i
-          exact hX_meas (k i)
-        exact Measure.isProbabilityMeasure_map h_meas.aemeasurable
+      -- Both are probability measures (via helpers)
+      have h_map_prob : IsProbabilityMeasure μ_map :=
+        map_coords_isProbabilityMeasure X hX_meas m k
 
-      have h_bind_prob : IsProbabilityMeasure μ_bind := by
-        -- The bind of a probability measure with probability kernels is a probability measure
-        -- For each ω, Measure.pi (fun _ => ν ω) is a probability measure
-        have h_pi_prob : ∀ ω, IsProbabilityMeasure (Measure.pi fun _ : Fin m => ν ω) := by
-          intro ω
-          -- Product of probability measures is a probability measure
-          -- Following the pattern from ConditionallyIID.lean (pi_isProbabilityMeasure)
-          constructor
-          have h : (Set.univ : Set (Fin m → α)) = Set.univ.pi (fun (_ : Fin m) => Set.univ) := by
-            ext x; simp
-          rw [h, Measure.pi_pi]
-          simp [measure_univ]
-        -- Prove measure_univ = 1 directly using bind_apply
-        constructor
-        have h_ae_meas : AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ :=
-          aemeasurable_measure_pi ν hν_prob hν_meas
-        rw [Measure.bind_apply .univ h_ae_meas]
-        simp [measure_univ]
+      have h_bind_prob : IsProbabilityMeasure μ_bind :=
+        bind_pi_isProbabilityMeasure ν hν_prob hν_meas m
 
       -- Define the π-system of measurable rectangles
       let C : Set (Set (Fin m → α)) := {S | ∃ (B : Fin m → Set α),
@@ -580,23 +600,13 @@ theorem conditional_iid_from_directing_measure
 
       -- LHS: μ_map {x | ∀ i, x i ∈ B i}
       have lhs_eq : μ_map {x | ∀ i, x i ∈ B i} = μ {ω | ∀ i, X (k i) ω ∈ B i} := by
-        -- This follows from map_coords_apply
-        have hB : MeasurableSet {x : Fin m → α | ∀ i, x i ∈ B i} := by
-          have : {x : Fin m → α | ∀ i, x i ∈ B i} = Set.univ.pi fun i => B i := by
-            ext x; simp [Set.pi]
-          rw [this]
-          exact MeasurableSet.univ_pi hB_meas
+        have hB := rectangle_as_pi_measurable m B hB_meas
         exact map_coords_apply X hX_meas m k _ hB
 
       -- RHS: μ_bind {x | ∀ i, x i ∈ B i}
       have rhs_eq : μ_bind {x | ∀ i, x i ∈ B i} =
           ∫⁻ ω, (Measure.pi fun i : Fin m => ν ω) {x | ∀ i, x i ∈ B i} ∂μ := by
-        -- This follows from bind_pi_apply
-        have hB : MeasurableSet {x : Fin m → α | ∀ i, x i ∈ B i} := by
-          have : {x : Fin m → α | ∀ i, x i ∈ B i} = Set.univ.pi fun i => B i := by
-            ext x; simp [Set.pi]
-          rw [this]
-          exact MeasurableSet.univ_pi hB_meas
+        have hB := rectangle_as_pi_measurable m B hB_meas
         exact bind_pi_apply ν hν_prob hν_meas m _ hB
 
       -- Both equal by fidi_eq_avg_product
