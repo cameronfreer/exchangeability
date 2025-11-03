@@ -1156,7 +1156,7 @@ lemma set_integral_mul_condexp_adjoint
       split_ifs <;> simp
     calc ∫ ω in s, g ω * μ[ξ | m] ω ∂μ
         = ∫ ω, s.indicator (fun ω => g ω * μ[ξ | m] ω) ω ∂μ := (integral_indicator hs).symm
-      _ = ∫ ω, s.indicator (fun _ => 1) ω * g ω * μ[ξ | m] ω ∂μ := by rw [← aux]
+      _ = ∫ ω, s.indicator (fun _ => 1) ω * g ω * μ[ξ | m] ω ∂μ := congrArg (fun f => ∫ ω, f ω ∂μ) aux.symm
   have h2 :
       ∫ ω in s, μ[g | m] ω * ξ ω ∂μ
     = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω)
@@ -1168,7 +1168,7 @@ lemma set_integral_mul_condexp_adjoint
       split_ifs <;> simp
     calc ∫ ω in s, μ[g | m] ω * ξ ω ∂μ
         = ∫ ω, s.indicator (fun ω => μ[g | m] ω * ξ ω) ω ∂μ := (integral_indicator hs).symm
-      _ = ∫ ω, s.indicator (fun _ => 1) ω * μ[g | m] ω * ξ ω ∂μ := by rw [← aux]
+      _ = ∫ ω, s.indicator (fun _ => 1) ω * μ[g | m] ω * ξ ω ∂μ := congrArg (fun f => ∫ ω, f ω ∂μ) aux.symm
 
   -- use (1) with g := (1_s · g)
   have h_int :
