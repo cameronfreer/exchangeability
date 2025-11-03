@@ -1640,6 +1640,60 @@ This is the building block for Kallenberg's L² convergence proof. -/
 def blockAvg (f : α → ℝ) (X : ℕ → Ω → α) (m n : ℕ) (ω : Ω) : ℝ :=
   (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (m + k) ω))
 
+lemma blockAvg_measurable
+    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (f : α → ℝ) (X : ℕ → Ω → α)
+    (hf : Measurable f) (hX : ∀ i, Measurable (X i))
+    (m n : ℕ) :
+    Measurable (fun ω => blockAvg f X m n ω) := by
+  classical
+  unfold blockAvg
+  -- sum of measurable terms
+  have hsum :
+      Measurable (fun ω =>
+        (Finset.range n).sum (fun k => f (X (m + k) ω))) :=
+    Finset.measurable_sum _ (by
+      intro k _
+      exact hf.comp (hX (m + k)))
+  -- multiply by a constant
+  simpa using (measurable_const.mul hsum : Measurable _)
+
+lemma blockAvg_abs_le_one
+    {Ω α : Type*} [MeasurableSpace Ω]
+    (f : α → ℝ) (X : ℕ → Ω → α)
+    (hf_bdd : ∀ x, |f x| ≤ 1)
+    (m n : ℕ) :
+    ∀ ω, |blockAvg f X m n ω| ≤ 1 := by
+  classical
+  intro ω
+  unfold blockAvg
+  have hsum_bound :
+      |(Finset.range n).sum (fun k => f (X (m + k) ω))| ≤ (n : ℝ) := by
+    -- |∑ a_k| ≤ ∑ |a_k| ≤ ∑ 1 = n
+    calc |(Finset.range n).sum (fun k => f (X (m + k) ω))|
+        ≤ (Finset.range n).sum (fun k => |f (X (m + k) ω)|) := by
+          exact Finset.abs_sum_le_sum_abs (fun k => f (X (m + k) ω)) (Finset.range n)
+      _ ≤ (Finset.range n).sum (fun _ => (1 : ℝ)) := by
+          apply Finset.sum_le_sum
+          intro k _
+          exact hf_bdd (X (m + k) ω)
+      _ = n := by
+          have : (Finset.range n).card = n := Finset.card_range n
+          simpa [this]
+  -- Now scale by n⁻¹
+  have hnonneg : 0 ≤ (n : ℝ)⁻¹ := by exact inv_nonneg.mpr (by exact_mod_cast Nat.zero_le n)
+  calc
+    |(n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (m + k) ω))|
+        = (n : ℝ)⁻¹ * |(Finset.range n).sum (fun k => f (X (m + k) ω))|
+          := by simpa [abs_mul, abs_of_nonneg hnonneg]
+    _ ≤ (n : ℝ)⁻¹ * (n : ℝ)
+          := mul_le_mul_of_nonneg_left hsum_bound hnonneg
+    _ ≤ 1 := by
+          by_cases hn : n = 0
+          · simpa [hn]
+          · have : (n : ℝ) ≠ 0 := by simp [hn]
+            simp [this]
+
 /-- **Kallenberg's L² bound (Lemma 1.2)** - Core of the elementary proof.
 
 For an exchangeable sequence and centered variables Z_i := f(X_i) - E[f(X_1)],
@@ -2436,9 +2490,9 @@ lemma cesaro_to_condexp_L2
       -- The subtraction by m is the same measurable transformation on both sides
       sorry
       /-
-      TODO: This should follow from h_eq by applying the transformation (fun v i => v i - m)
-      to both sides, but there are subtle type issues with ℕ vs Fin n indexing that need
-      to be resolved carefully. The proof strategy is sound but needs more careful type handling.
+      TODO (Section 1 from user): Apply Measure.map_map to show subtraction commutes with measure map
+      The provided solution has some universe level issues that need debugging.
+      Will revisit after applying Section 2.
       -/
 
     -- Step 3: Show uniform variance via contractability
@@ -2718,25 +2772,45 @@ lemma cesaro_to_condexp_L2
       -- Equivalently: N > Cf / (ε.toReal)²
       -- If ε = ⊤, the property is trivial (take any N); otherwise use Archimedean property
       by_cases hε_top : ε = ⊤
-      · -- Case ε = ⊤: property holds trivially since eLpNorm is always < ⊤ for bounded functions
-        use 1
-        intros n n' hn_ge hn'_ge
+      · -- Case ε = ⊤
+        -- Any N works; take N := 0
+        refine ⟨0, ?_⟩
+        intro n n' _ _
+        -- measurability of the two block averages and their difference
+        have h_meas_n  :
+            Measurable (fun ω => blockAvg f X 0 n  ω) :=
+          blockAvg_measurable f X hf_meas hX_meas 0 n
+        have h_meas_n' :
+            Measurable (fun ω => blockAvg f X 0 n' ω) :=
+          blockAvg_measurable f X hf_meas hX_meas 0 n'
+        have h_meas_diff :
+            Measurable (fun ω => blockAvg f X 0 n ω - blockAvg f X 0 n' ω) :=
+          h_meas_n.sub h_meas_n'
+
+        -- |A_n| ≤ 1 and |A_{n'}| ≤ 1 ⇒ |A_n − A_{n'}| ≤ 2
+        have h_bdd :
+            ∀ᵐ ω ∂μ, |blockAvg f X 0 n ω - blockAvg f X 0 n' ω| ≤ 2 := by
+          apply ae_of_all
+          intro ω
+          have hn  : |blockAvg f X 0 n  ω| ≤ 1 := blockAvg_abs_le_one f X hf_bdd 0 n  ω
+          have hn' : |blockAvg f X 0 n' ω| ≤ 1 := blockAvg_abs_le_one f X hf_bdd 0 n' ω
+          calc
+            |blockAvg f X 0 n ω - blockAvg f X 0 n' ω|
+                ≤ |blockAvg f X 0 n ω| + |blockAvg f X 0 n' ω|
+                  := by
+                       have := abs_add_le (blockAvg f X 0 n ω) (-(blockAvg f X 0 n' ω))
+                       simpa [sub_eq_add_neg, abs_neg] using this
+            _ ≤ 1 + 1 := add_le_add hn hn'
+            _ = 2 := by norm_num
+
+        -- bounded ⇒ MemLp ⇒ eLpNorm < ⊤
+        have h_mem :
+            MemLp (fun ω => blockAvg f X 0 n ω - blockAvg f X 0 n' ω) 2 μ :=
+          memLp_of_abs_le_const h_meas_diff h_bdd 2 (by norm_num) (by norm_num)
+
+        -- The goal for this branch is just finiteness (ε = ⊤)
         rw [hε_top]
-        -- blockAvg is bounded, so the difference has finite L² norm
-        sorry
-        /-
-        TODO: Prove eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ < ⊤
-
-        Strategy:
-        1. Show |blockAvg f X 0 n ω| ≤ 1 for all ω (average of values bounded by 1)
-        2. Show |blockAvg f X 0 n' ω| ≤ 1 for all ω
-        3. Therefore |diff| ≤ 2
-        4. Use memLp_of_bounded to show MemLp (diff) 2 μ
-        5. Apply MemLp.eLpNorm_lt_top
-
-        The proof exists at lines 3113-3160 but needs blockAvg_measurable lemma
-        which may not be in scope here. This is a straightforward but tedious proof.
-        -/
+        exact MemLp.eLpNorm_lt_top h_mem
 
       -- Case ε < ⊤: use Archimedean property to find N
       have hε_lt_top : ε < ⊤ := lt_top_iff_ne_top.mpr hε_top
