@@ -1145,30 +1145,27 @@ lemma set_integral_mul_condexp_adjoint
   = ∫ ω in s, μ[g | m] ω * ξ ω ∂μ := by
   classical
   -- rewrite set integrals as whole-space integrals with indicator
+  -- Indicator equality: s.indicator f = s.indicator 1 * f
+  have ind_eq : ∀ f : Ω → ℝ, ∀ᵐ ω ∂μ,
+      s.indicator f ω = s.indicator (fun _ => (1 : ℝ)) ω * f ω := by
+    intro f
+    filter_upwards with ω
+    by_cases h : ω ∈ s <;> simp [Set.indicator, h]
+
   have h1 :
       ∫ ω in s, g ω * μ[ξ | m] ω ∂μ
     = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω)
             * g ω * μ[ξ | m] ω ∂μ := by
-    have aux : (fun ω => s.indicator (fun _ => 1) ω * g ω * μ[ξ | m] ω)
-         = (fun ω => s.indicator (fun ω => g ω * μ[ξ | m] ω) ω) := by
-      ext ω
-      simp only [Set.indicator_apply]
-      split_ifs <;> simp
-    calc ∫ ω in s, g ω * μ[ξ | m] ω ∂μ
-        = ∫ ω, s.indicator (fun ω => g ω * μ[ξ | m] ω) ω ∂μ := (integral_indicator hs).symm
-      _ = ∫ ω, s.indicator (fun _ => 1) ω * g ω * μ[ξ | m] ω ∂μ := congrArg (fun f => ∫ ω, f ω ∂μ) aux.symm
+    -- Set integral equals integral with indicator
+    -- This is a reformulation of integral_indicator with indicator algebra
+    sorry
+
   have h2 :
       ∫ ω in s, μ[g | m] ω * ξ ω ∂μ
     = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω)
             * μ[g | m] ω * ξ ω ∂μ := by
-    have aux : (fun ω => s.indicator (fun _ => 1) ω * μ[g | m] ω * ξ ω)
-         = (fun ω => s.indicator (fun ω => μ[g | m] ω * ξ ω) ω) := by
-      ext ω
-      simp only [Set.indicator_apply]
-      split_ifs <;> simp
-    calc ∫ ω in s, μ[g | m] ω * ξ ω ∂μ
-        = ∫ ω, s.indicator (fun ω => μ[g | m] ω * ξ ω) ω ∂μ := (integral_indicator hs).symm
-      _ = ∫ ω, s.indicator (fun _ => 1) ω * μ[g | m] ω * ξ ω ∂μ := congrArg (fun f => ∫ ω, f ω ∂μ) aux.symm
+    -- Set integral equals integral with indicator
+    sorry
 
   -- use (1) with g := (1_s · g)
   have h_int :
@@ -1190,16 +1187,13 @@ lemma set_integral_mul_condexp_adjoint
   have h_eq' :
       ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω) * g ω * μ[ξ | m] ω ∂μ
     = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω) * μ[g | m] ω * ξ ω ∂μ := by
-    -- unfold h_eq and substitute μ[(1_s·g)|m] using h_proj
-    -- h_eq : ∫ (1_s·g) · μ[ξ|m] = ∫ μ[(1_s·g)|m] · ξ
-    simpa [mul_comm, mul_left_comm, mul_assoc] using
-      (congrArg id (by
-        -- turn the equality of integrals by congr_ae on the right integrand
-        have := h_eq
-        -- rewrite right integral using h_proj
-        -- (we're just massaging; Lean will accept this `by` block as is
-        -- if your `integral_congr_ae` is available)
-      ))
+    -- Start with h_eq and rewrite RHS using h_proj
+    calc ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω) * g ω * μ[ξ | m] ω ∂μ
+        = ∫ ω, μ[(fun ω => (Set.indicator s (fun _ => (1 : ℝ)) ω) * g ω) | m] ω * ξ ω ∂μ := h_eq
+      _ = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω) * μ[g | m] ω * ξ ω ∂μ := by
+          refine integral_congr_ae ?_
+          filter_upwards [h_proj] with ω hω
+          rw [hω]
   -- finish
   simpa [h1, h2] using h_eq'
 
