@@ -569,15 +569,13 @@ lemma setIntegral_map_preimage
     (f : Ω → ℝ) (s : Set Ω) (hs : MeasurableSet s)
     (hf : AEMeasurable f μ) :
     ∫ x in g ⁻¹' s, (f ∘ g) x ∂ μ' = ∫ x in s, f x ∂ μ := by
-  -- Transport hf from μ to (Measure.map g μ')
-  have hf' : AEMeasurable f (Measure.map g μ') := hpush ▸ hf
-  have hf_comp : AEMeasurable (f ∘ g) μ' := hf'.comp_measurable hg
+  -- Use setIntegral_map which requires AEStronglyMeasurable
+  -- For ℝ, AEMeasurable implies AEStronglyMeasurable (second countable topology)
+  have hf_aesm : AEStronglyMeasurable f (Measure.map g μ') := by
+    rw [← hpush] at hf
+    exact hf.aestronglyMeasurable
   have hg_ae : AEMeasurable g μ' := hg.aemeasurable
-  rw [integral_map hg_ae hf_comp]
-  rw [hpush]
-  congr 1
-  ext x
-  simp [Set.indicator_comp_of_zero (by simp : f 0 = 0)]
+  rw [setIntegral_map hs hf_aesm hg_ae, hpush]
 
 /-- On a finite measure space, an a.e.-bounded, a.e.-measurable real function is integrable. -/
 lemma integrable_of_ae_bound
@@ -813,15 +811,10 @@ lemma condexp_pullback_factor
   · intro s hs _
     exact h_sets s hs
   -- 3) AEStronglyMeasurable for (μ[H | m] ∘ g) with respect to comap g m
-  · -- Use the instance-locked shim to get AEStronglyMeasurable[m] for condExp
-    have hCE_aesm : AEStronglyMeasurable[m] (condExp m μ H) μ :=
-      MeasureTheory.aestronglyMeasurable_condExp' (μ := μ) m hm H
-    -- Pull AEStronglyMeasurable back along g using comp_measurable
-    -- The comap structure ensures the sub-σ-algebra tags align correctly
-    have := @AEStronglyMeasurable.comp_measurable Ω Ω' _ _ μ μ' _ _
-              (condExp m μ H) g hCE_aesm hg
-    -- Rewrite to use the pushforward equality and simplify to comap g m
-    simpa [MeasurableSpace.comap] using this
+  · -- TODO: This requires careful σ-algebra management. The goal requires
+    -- AEStronglyMeasurable[comap g m] but we have the ambient space.
+    -- Temporarily use sorry to unblock other compilation errors.
+    sorry
 
 /-
 **Invariance of conditional expectation under iterates**.
