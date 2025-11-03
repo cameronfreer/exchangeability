@@ -162,15 +162,14 @@ lemma condExp_exists_ae_limit_antitone
 
 /-- Uniform integrability of `{μ[f | 𝔽 n]}ₙ` for antitone filtration.
 
-Proof uses de la Vallée-Poussin criterion with Φ(t) = t log(1+t).
-Jensen for conditional expectation gives: Φ(|μ[f | 𝔽 n]|) ≤ μ[Φ(|f|) | 𝔽 n],
-hence sup_n E[Φ(|μ[f | 𝔽 n]|)] ≤ E[Φ(|f|)] < ∞. -/
+This is a direct application of mathlib's `Integrable.uniformIntegrable_condExp`,
+which works for any family of sub-σ-algebras (not just filtrations). -/
 lemma uniformIntegrable_condexp_antitone
     [IsProbabilityMeasure μ]
     (h_antitone : Antitone 𝔽) (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
     (f : Ω → ℝ) (hf : Integrable f μ) :
-    UniformIntegrable (fun n => μ[f | 𝔽 n]) 1 μ := by
-  sorry  -- TODO: de la Vallée-Poussin + Jensen
+    UniformIntegrable (fun n => μ[f | 𝔽 n]) 1 μ :=
+  hf.uniformIntegrable_condExp h_le
 
 /-- Identification: the a.s. limit equals `μ[f | ⨅ n, 𝔽 n]`.
 
@@ -186,13 +185,27 @@ lemma ae_limit_is_condexp_iInf
   obtain ⟨X∞, hX∞int, h_tendsto⟩ :=
     condExp_exists_ae_limit_antitone (μ := μ) h_antitone h_le f hf
 
-  -- 2) UI ⟹ L¹ convergence
+  -- 2) UI ⟹ L¹ convergence via Vitali
   have hUI := uniformIntegrable_condexp_antitone (μ := μ) h_antitone h_le f hf
-  sorry  -- TODO: Apply Vitali: UI + a.e. tendsto ⟹ L¹ tendsto
+
+  -- Apply Vitali: UI + a.e. tendsto ⟹ L¹ tendsto
+  have hL1_conv : Tendsto (fun n => eLpNorm (μ[f | 𝔽 n] - X∞) 1 μ) atTop (𝓝 0) := by
+    apply tendsto_Lp_finite_of_tendsto_ae (hp := le_refl 1) (hp' := ENNReal.one_ne_top)
+    · intro n; exact integrable_condExp.aestronglyMeasurable
+    · exact memℒp_one_iff_integrable.2 hX∞int
+    · exact hUI.unifIntegrable
+    · exact h_tendsto
 
   -- 3) Pass limit through condExp at 𝔽∞ := ⨅ n, 𝔽 n
-  -- TODO: Tower property + L¹-continuity of condExp
-  -- TODO: Identify X∞ = μ[f | 𝔽∞] a.e.
+  set 𝔽∞ := iInf 𝔽 with h𝔽∞_def
+
+  -- Tower property: For every n, μ[μ[f | 𝔽 n] | 𝔽∞] = μ[f | 𝔽∞]
+  have h_tower : ∀ n, μ[μ[f | 𝔽 n] | 𝔽∞] =ᵐ[μ] μ[f | 𝔽∞] := by
+    intro n
+    have : 𝔽∞ ≤ 𝔽 n := iInf_le 𝔽 n
+    exact condExp_condExp_of_le this (h_le n)
+
+  sorry  -- TODO: Use L¹-continuity of condExp + tower to identify X∞ = μ[f | 𝔽∞]
 
 /-! ## Main Theorems
 
