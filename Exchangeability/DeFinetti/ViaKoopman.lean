@@ -3988,11 +3988,11 @@ private lemma optionB_Step3b_L2_to_L1
         with h_def
 
       -- Hölder (Bochner) with p=q=2: conjugate exponent
-      have hpq : Real.IsConjugateExponent (2 : ℝ) (2 : ℝ) := by
-        simpa using (Real.isConjugateExponent_iff.mpr (by norm_num : (0:ℝ)<2 ∧ 0<2 ∧ 1/2+1/2=1))
+      have hpq : Real.HolderConjugate (2 : ℝ) (2 : ℝ) :=
+        Real.HolderConjugate.two_two
 
       -- h is in L² since it's the difference of two L² functions
-      have h_mem : Memℒp h 2 μ := by
+      have h_mem : Memℒp h (ENNReal.ofReal 2) μ := by
         simpa [h_def] using
           ((birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
              - condexpL2 (μ := μ) fL2).memℒp :
@@ -4000,11 +4000,11 @@ private lemma optionB_Step3b_L2_to_L1
                 (fun ω =>
                   ((birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
                     - condexpL2 (μ := μ) fL2) : Lp ℝ 2 μ) ω)
-                2 μ)
+                (ENNReal.ofReal 2) μ)
 
       -- constant 1 is in L² on a probability space
-      have one_mem : Memℒp (fun _ : Ω[α] => (1 : ℝ)) 2 μ := by
-        simpa using (memℒp_const (μ := μ) (p := 2) (c := (1 : ℝ)))
+      have one_mem : Memℒp (fun _ : Ω[α] => (1 : ℝ)) (ENNReal.ofReal 2) μ := by
+        simpa using (memℒp_const (μ := μ) (p := ENNReal.ofReal 2) (c := (1 : ℝ)))
 
       -- Apply Hölder inequality
       have holder :=
@@ -4012,13 +4012,15 @@ private lemma optionB_Step3b_L2_to_L1
           (μ := μ) (f := h) (g := fun _ => (1 : ℝ)) (p := 2) (q := 2)
           hpq h_mem one_mem
 
-      -- Rewrite (∫ ‖h‖²)^(1/2) as (eLpNorm h 2 μ).toReal
+      -- Rewrite (∫ ‖h‖²)^(1/2) as (eLpNorm h (ENNReal.ofReal 2) μ).toReal
       have h_snorm :
           ((∫ ω, ‖h ω‖ ^ 2 ∂ μ) ^ (1 / 2 : ℝ))
-            = (eLpNorm h 2 μ).toReal := by
-        simpa using
-          (Memℒp.eLpNorm_eq_integral_rpow_norm
-             (p := 2) (hp1 := by decide) (hp2 := by decide) h_mem)
+            = (eLpNorm h (ENNReal.ofReal 2) μ).toReal := by
+        have hp1 : (ENNReal.ofReal 2) ≠ 0 := by norm_num
+        have hp2 : (ENNReal.ofReal 2) ≠ ∞ := ENNReal.ofReal_ne_top
+        rw [Memℒp.eLpNorm_eq_integral_rpow_norm hp1 hp2 h_mem]
+        simp only [ENNReal.toReal_ofReal (by norm_num : 0 ≤ 2), inv_ofNat, ENNReal.toReal_ofReal]
+        norm_num
 
       -- On a probability space, ∫ ‖1‖² = μ univ = 1
       have h_one : ((∫ ω, ‖(1 : ℝ)‖ ^ 2 ∂ μ) ^ (1/2 : ℝ)) = 1 := by
@@ -4037,7 +4039,7 @@ private lemma optionB_Step3b_L2_to_L1
           (fun ω =>
             (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
             - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω)
-          2 μ).toReal
+          (ENNReal.ofReal 2) μ).toReal
         = ‖birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
              - condexpL2 (μ := μ) fL2‖ := by
       -- This follows from Lp.norm_def: the norm of an Lp element equals its eLpNorm
