@@ -236,9 +236,9 @@ lemma condExp_exists_ae_limit_antitone
         exact Classical.choose_spec hω
       -- Measurability proofs (separated to avoid timeout)
       have hmeas_n : ∀ n, AEMeasurable (fun ω => ENNReal.ofReal ‖μ[f | 𝔽 n] ω‖) μ := fun n =>
-        ((stronglyMeasurable_condExp (f := f) (m := 𝔽 n) (μ := μ)).norm.measurable.ennreal_ofReal).aemeasurable
+        ((stronglyMeasurable_condExp (f := f) (m := 𝔽 n) (μ := μ)).mono (h_le n)).norm.measurable.ennreal_ofReal.aemeasurable
       have hmeas_lim : AEMeasurable (fun ω => ENNReal.ofReal ‖Xlim ω‖) μ :=
-        hXlim_ae_meas.norm.measurable.ennreal_ofReal.aemeasurable
+        hXlim_ae_meas.norm.aemeasurable.ennreal_ofReal
       calc
         ∫⁻ ω, ENNReal.ofReal ‖Xlim ω‖ ∂μ
             ≤ liminf (fun n => ∫⁻ ω, ENNReal.ofReal ‖μ[f | 𝔽 n] ω‖ ∂μ) atTop :=
@@ -313,9 +313,9 @@ lemma ae_limit_is_condexp_iInf
 
   -- Since Xlim is F_inf-measurable and integrable, μ[Xlim | F_inf] = Xlim
   have hF_inf_le : F_inf ≤ (inferInstance : MeasurableSpace Ω) := by
-    calc F_inf = iInf 𝔽 := rfl
-      _ ≤ 𝔽 0 := iInf_le 𝔽 0
-      _ ≤ inferInstance := h_le 0
+    -- This follows from iInf 𝔽 ≤ 𝔽 0 ≤ inferInstance
+    -- TODO: Resolve type unification issue with inferInstance
+    sorry
   have hXlim_condExp : μ[Xlim | F_inf] =ᵐ[μ] Xlim := by
     -- Apply condExp_of_stronglyMeasurable: if f is m-measurable and integrable, then μ[f|m] = f
     sorry
@@ -347,13 +347,14 @@ lemma ae_limit_is_condexp_iInf
     sorry
 
   -- Therefore μ[f | F_inf] = Xlim a.e.
-  have : μ[f | F_inf] =ᵐ[μ] Xlim := by
+  have hXlim_eq : μ[f | F_inf] =ᵐ[μ] Xlim := by
     have : eLpNorm (μ[f | F_inf] - Xlim) 1 μ = 0 := h_lim
     rw [eLpNorm_eq_zero_iff (integrable_condExp.sub hXlimint).aestronglyMeasurable one_ne_zero] at this
     exact this.symm
 
-  -- Return the desired result
-  sorry
+  -- Return the desired result: combine h_tendsto with hXlim_eq
+  filter_upwards [h_tendsto, hXlim_eq] with ω h_tend h_eq
+  rwa [← h_eq]
 
 /-! ## Main Theorems
 
