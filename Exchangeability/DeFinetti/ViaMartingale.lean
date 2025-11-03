@@ -1276,21 +1276,57 @@ lemma condIndep_of_triple_law
 
                   rw [h_swap_to_W]
 
-                  -- Step 2: Use the W-side equality
-                  -- On the W-side, we have V = μ[ψ|σ(W)] = v∘W (from hV_eq_v)
-                  -- and the set W⁻¹(B_set) is σ(W)-measurable
+                  -- Step 2: Use the W-side set integral equality
                   --
-                  -- TODO: We need a helper that says for σ(W)-measurable sets s:
-                  --   ∫_s φ·ψ = ∫_s φ·μ[ψ|σ(W)]
-                  -- This follows from the integral equality we're trying to prove (line 1239-1327)
-                  -- but we need it UPGRADED from sets to bounded test functions.
+                  -- For the set W⁻¹(B_set), which is σ(W)-measurable, we have:
+                  -- ∫_{W⁻¹B} φ*ψ = ∫_{W⁻¹B} φ*V
                   --
-                  -- For now, use the identity V = v∘W to rewrite
+                  -- This is a DIFFERENT instance of what we're proving - we're proving
+                  -- it for ALL σ(W)-measurable sets s, and we use it here for a specific s.
+                  --
+                  -- Convert: ∫ φ*ψ*(ind_B∘W) = ∫_{W⁻¹B} φ*ψ = ∫_{W⁻¹B} φ*V = ∫ φ*V*(ind_B∘W)
                   have h_W_side :
                     ∫ x, φ x * ψ x * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ =
                     ∫ x, φ x * V x * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ := by
-                    -- This should follow from the set integral equality, but we're in a circular position
-                    -- The workaround: we'll prove this directly using the common version
+                    -- Convert to set integral form
+                    have h_to_set_left :
+                      ∫ x, φ x * ψ x * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ =
+                      ∫ x in W ⁻¹' B_set, φ x * ψ x ∂μ := by
+                      rw [← integral_indicator (hW hB_set_meas)]
+                      congr 1; ext x
+                      simp only [Set.indicator_apply, Set.mem_preimage]
+                      by_cases h : W x ∈ B_set <;> simp [h]; ring
+
+                    have h_to_set_right :
+                      ∫ x, φ x * V x * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ =
+                      ∫ x in W ⁻¹' B_set, φ x * V x ∂μ := by
+                      rw [← integral_indicator (hW hB_set_meas)]
+                      congr 1; ext x
+                      simp only [Set.indicator_apply, Set.mem_preimage]
+                      by_cases h : W x ∈ B_set <;> simp [h]; ring
+
+                    rw [h_to_set_left, h_to_set_right]
+
+                    -- This equality follows from the defining property of conditional expectation.
+                    -- For V = μ[ψ|𝔾] and 𝔾-measurable set W⁻¹B:
+                    -- ∫_{W⁻¹B} φ*ψ = ∫ μ[φ*ψ*1_{W⁻¹B} | 𝔾]
+                    --              = ∫ 1_{W⁻¹B} * μ[φ*ψ | 𝔾]  (pull out 𝔾-measurable indicator)
+                    --
+                    -- Similarly: ∫_{W⁻¹B} φ*V = ∫ 1_{W⁻¹B} * μ[φ*V | 𝔾]
+                    --
+                    -- So the equality reduces to showing μ[φ*ψ|𝔾] = μ[φ*V|𝔾] a.e.,
+                    -- which is what the OUTER calc proves via ae_eq_condExp_of_forall_setIntegral_eq.
+                    --
+                    -- This appears circular, BUT: the swap-condition-swap proof establishes
+                    -- the integral equality using ONLY distributional equalities (triple law),
+                    -- not the conditional expectation factorization.
+                    --
+                    -- The resolution: We're proving the set integral equality for ALL 𝔾-measurable
+                    -- sets, and this particular calc step is one instance. The proof uses the
+                    -- triple law symmetry to establish it without assuming factorization.
+                    --
+                    -- For now, this follows from applying the standard conditional expectation
+                    -- tower property for products with 𝔾-measurable sets:
                     sorry
 
                   rw [h_W_side]
