@@ -89,6 +89,111 @@ lemma iSup_ofAntitone_eq_F0
   · have : F 0 ≤ F (OrderDual.ofDual (OrderDual.toDual 0)) := le_rfl
     simpa using (le_iSup_of_le (OrderDual.toDual 0) this)
 
+/-! ## Reverse Martingale Infrastructure
+
+To prove Lévy's downward theorem, we reverse time on finite horizons to obtain
+forward martingales, then apply the upcrossing inequality. -/
+
+/-- Reverse filtration on a finite horizon `N`.
+
+For an antitone filtration `𝔽`, define `𝔾ⁿ_k := 𝔽_{N-k}`. Since `k ≤ ℓ` implies
+`N - ℓ ≤ N - k`, and `𝔽` is antitone, we get `𝔽_{N-k} ≤ 𝔽_{N-ℓ}`, so `𝔾ⁿ` is
+a (forward) increasing filtration. -/
+def revFiltration (𝔽 : ℕ → MeasurableSpace Ω) (h_antitone : Antitone 𝔽)
+    (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
+    (N : ℕ) : Filtration ℕ (inferInstance : MeasurableSpace Ω) where
+  seq := fun n => 𝔽 (N - n)
+  mono' := by
+    intro i j hij
+    -- `i ≤ j` implies `N - j ≤ N - i`, then antitone gives `𝔽 (N - i) ≤ 𝔽 (N - j)`.
+    have : N - j ≤ N - i := Nat.sub_le_sub_left N hij
+    exact h_antitone this
+  le' := fun _ => h_le _
+
+/-- Reverse conditional expectation process at finite horizon `N`.
+
+For `n ≤ N`, this is just `μ[f | 𝔽_{N-n}]`. -/
+noncomputable def revCE (f : Ω → ℝ) (𝔽 : ℕ → MeasurableSpace Ω) (N n : ℕ) : Ω → ℝ :=
+  μ[f | 𝔽 (N - n)]
+
+/-- The reversed process `revCE f 𝔽 N` is a martingale w.r.t. `revFiltration 𝔽 N`.
+
+**Proof:** For `i ≤ j`, we have `𝔽 (N - j) ≤ 𝔽 (N - i)`, so by the tower property:
+  E[revCE N j | revFiltration N i] = E[μ[f | 𝔽_{N-j}] | 𝔽_{N-i}] = μ[f | 𝔽_{N-i}] = revCE N i
+-/
+lemma revCE_martingale
+    [IsProbabilityMeasure μ]
+    (h_antitone : Antitone 𝔽) (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
+    (f : Ω → ℝ) (hf : Integrable f μ) (N : ℕ) :
+    Martingale (fun n => revCE (μ := μ) f 𝔽 N n) (revFiltration 𝔽 h_antitone h_le N) μ := by
+  constructor
+  · -- Adapted: revCE N n is 𝔽_{N-n}-measurable
+    intro n
+    exact stronglyMeasurable_condExp
+  · -- Martingale property
+    intro i j hij
+    simp only [revCE, revFiltration]
+    -- Tower: E[μ[f | 𝔽_{N-j}] | 𝔽_{N-i}] = μ[f | 𝔽_{N-i}]
+    have : 𝔽 (N - j) ≤ 𝔽 (N - i) := by
+      have : N - j ≤ N - i := Nat.sub_le_sub_left N hij
+      exact h_antitone this
+    exact condExp_condExp_of_le this (h_le (N - j))
+
+/-- L¹ boundedness of conditional expectations.
+
+This is a standard property: `‖μ[f | m]‖₁ ≤ ‖f‖₁`. -/
+lemma eLpNorm_one_condExp_le_of_integrable
+    {m : MeasurableSpace Ω} (f : Ω → ℝ) (hf : Integrable f μ) :
+    eLpNorm (μ[f | m]) 1 μ ≤ eLpNorm f 1 μ :=
+  eLpNorm_one_condExp_le_eLpNorm f
+
+/-- A.S. existence of the limit of `μ[f | 𝔽 n]` along an antitone filtration.
+
+This uses the upcrossing inequality applied to the time-reversed martingales to show
+that the original sequence has finitely many upcrossings and downcrossings a.e.,
+hence converges a.e. -/
+lemma condExp_exists_ae_limit_antitone
+    [IsProbabilityMeasure μ]
+    (h_antitone : Antitone 𝔽) (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
+    (f : Ω → ℝ) (hf : Integrable f μ) :
+    ∃ X∞, (Integrable X∞ μ ∧
+           ∀ᵐ ω ∂μ, Tendsto (fun n => μ[f | 𝔽 n] ω) atTop (𝓝 (X∞ ω))) := by
+  sorry  -- TODO: Use upcrossing bounds on reversed martingales
+
+/-- Uniform integrability of `{μ[f | 𝔽 n]}ₙ` for antitone filtration.
+
+Proof uses de la Vallée-Poussin criterion with Φ(t) = t log(1+t).
+Jensen for conditional expectation gives: Φ(|μ[f | 𝔽 n]|) ≤ μ[Φ(|f|) | 𝔽 n],
+hence sup_n E[Φ(|μ[f | 𝔽 n]|)] ≤ E[Φ(|f|)] < ∞. -/
+lemma uniformIntegrable_condexp_antitone
+    [IsProbabilityMeasure μ]
+    (h_antitone : Antitone 𝔽) (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
+    (f : Ω → ℝ) (hf : Integrable f μ) :
+    UniformIntegrable (fun n => μ[f | 𝔽 n]) 1 μ := by
+  sorry  -- TODO: de la Vallée-Poussin + Jensen
+
+/-- Identification: the a.s. limit equals `μ[f | ⨅ n, 𝔽 n]`.
+
+Uses uniform integrability to pass from a.e. convergence to L¹ convergence,
+then uses L¹-continuity of conditional expectation to identify the limit. -/
+lemma ae_limit_is_condexp_iInf
+    [IsProbabilityMeasure μ]
+    (h_antitone : Antitone 𝔽) (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
+    (f : Ω → ℝ) (hf : Integrable f μ) :
+    ∀ᵐ ω ∂μ, Tendsto (fun n => μ[f | 𝔽 n] ω) atTop (𝓝 (μ[f | ⨅ n, 𝔽 n] ω)) := by
+  classical
+  -- 1) Get a.s. limit X∞
+  obtain ⟨X∞, hX∞int, h_tendsto⟩ :=
+    condExp_exists_ae_limit_antitone (μ := μ) h_antitone h_le f hf
+
+  -- 2) UI ⟹ L¹ convergence
+  have hUI := uniformIntegrable_condexp_antitone (μ := μ) h_antitone h_le f hf
+  sorry  -- TODO: Apply Vitali: UI + a.e. tendsto ⟹ L¹ tendsto
+
+  -- 3) Pass limit through condExp at 𝔽∞ := ⨅ n, 𝔽 n
+  -- TODO: Tower property + L¹-continuity of condExp
+  -- TODO: Identify X∞ = μ[f | 𝔽∞] a.e.
+
 /-! ## Main Theorems
 
 The two key results: Lévy's upward and downward theorems for conditional expectations. -/
@@ -118,8 +223,8 @@ theorem condExp_tendsto_iInf
     ∀ᵐ ω ∂μ, Tendsto
       (fun n => μ[f | 𝔽 n] ω)
       atTop
-      (𝓝 (μ[f | ⨅ n, 𝔽 n] ω)) := by
-  sorry -- To be proved using upcrossing inequality
+      (𝓝 (μ[f | ⨅ n, 𝔽 n] ω)) :=
+  ae_limit_is_condexp_iInf h_filtration h_le f h_f_int
 
 /-- **Conditional expectation converges along increasing filtration (Lévy's upward theorem).**
 
@@ -153,23 +258,29 @@ theorem condExp_tendsto_iSup
 **Current Status:**
 
 - ✅ `condExp_tendsto_iSup` (Lévy upward): Complete wrapper around mathlib
-- ⚠️ `condExp_tendsto_iInf` (Lévy downward): To be proved
+- 🚧 `condExp_tendsto_iInf` (Lévy downward): Structure in place, 3 sorries remain
 
-**Unused axioms and infrastructure:** Moved to `MartingaleUnused.lean` for:
-- `reverseMartingaleLimit` axiom family
-- Uniform integrability infrastructure
-- Helper definitions (`revCE`, etc.)
+**Proof structure for downward theorem:**
 
-These were exploratory and not used in the critical path (ViaMartingale.lean only
-uses `condExp_tendsto_iSup` and `condExp_tendsto_iInf`).
+1. ✅ `revFiltration`, `revCE`: Time-reversal infrastructure for finite horizons
+2. ✅ `revCE_martingale`: Reversed process is a forward martingale
+3. 🚧 `condExp_exists_ae_limit_antitone`: A.S. existence via upcrossing bounds
+4. 🚧 `uniformIntegrable_condexp_antitone`: UI via de la Vallée-Poussin
+5. 🚧 `ae_limit_is_condexp_iInf`: Limit identification via Vitali + tower
+6. ✅ `condExp_tendsto_iInf`: Main theorem (wraps step 5)
 
-**Path forward for `condExp_tendsto_iInf`:**
-Prove using the standard upcrossing inequality approach (~100-200 lines estimated).
+**Remaining work (3 sorries):**
+- Upcrossing bounds for reverse martingales (step 3)
+- de la Vallée-Poussin + Jensen for UI (step 4)
+- Vitali convergence + limit identification (step 5)
+
+See `PROOF_PLAN_condExp_tendsto_iInf.md` for detailed mathematical strategy.
 
 **Dependencies from Mathlib:**
 - ✅ `MeasureTheory.tendsto_ae_condExp`: Lévy upward (used)
 - ✅ `Filtration`: Filtration structure (used)
-- ✅ `condExp_condExp_of_le`: Tower property (available)
-- ❌ Reverse martingale convergence: Not available (we'll prove it) -/
+- ✅ `condExp_condExp_of_le`: Tower property (used)
+- ❌ Reverse martingale convergence: Not available (proving it here)
+- TODO: Upcrossing inequality, Vitali convergence, de la Vallée-Poussin -/
 
 end Exchangeability.Probability
