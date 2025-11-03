@@ -1640,6 +1640,60 @@ This is the building block for Kallenberg's L² convergence proof. -/
 def blockAvg (f : α → ℝ) (X : ℕ → Ω → α) (m n : ℕ) (ω : Ω) : ℝ :=
   (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (m + k) ω))
 
+lemma blockAvg_measurable
+    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    (f : α → ℝ) (X : ℕ → Ω → α)
+    (hf : Measurable f) (hX : ∀ i, Measurable (X i))
+    (m n : ℕ) :
+    Measurable (fun ω => blockAvg f X m n ω) := by
+  classical
+  unfold blockAvg
+  -- sum of measurable terms
+  have hsum :
+      Measurable (fun ω =>
+        (Finset.range n).sum (fun k => f (X (m + k) ω))) :=
+    Finset.measurable_sum _ (by
+      intro k _
+      exact hf.comp (hX (m + k)))
+  -- multiply by a constant
+  simpa using (measurable_const.mul hsum : Measurable _)
+
+lemma blockAvg_abs_le_one
+    {Ω α : Type*} [MeasurableSpace Ω]
+    (f : α → ℝ) (X : ℕ → Ω → α)
+    (hf_bdd : ∀ x, |f x| ≤ 1)
+    (m n : ℕ) :
+    ∀ ω, |blockAvg f X m n ω| ≤ 1 := by
+  classical
+  intro ω
+  unfold blockAvg
+  have hsum_bound :
+      |(Finset.range n).sum (fun k => f (X (m + k) ω))| ≤ (n : ℝ) := by
+    -- |∑ a_k| ≤ ∑ |a_k| ≤ ∑ 1 = n
+    calc |(Finset.range n).sum (fun k => f (X (m + k) ω))|
+        ≤ (Finset.range n).sum (fun k => |f (X (m + k) ω)|) := by
+          exact Finset.abs_sum_le_sum_abs (fun k => f (X (m + k) ω)) (Finset.range n)
+      _ ≤ (Finset.range n).sum (fun _ => (1 : ℝ)) := by
+          apply Finset.sum_le_sum
+          intro k _
+          exact hf_bdd (X (m + k) ω)
+      _ = n := by
+          have : (Finset.range n).card = n := Finset.card_range n
+          simpa [this]
+  -- Now scale by n⁻¹
+  have hnonneg : 0 ≤ (n : ℝ)⁻¹ := by exact inv_nonneg.mpr (by exact_mod_cast Nat.zero_le n)
+  calc
+    |(n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (m + k) ω))|
+        = (n : ℝ)⁻¹ * |(Finset.range n).sum (fun k => f (X (m + k) ω))|
+          := by simpa [abs_mul, abs_of_nonneg hnonneg]
+    _ ≤ (n : ℝ)⁻¹ * (n : ℝ)
+          := mul_le_mul_of_nonneg_left hsum_bound hnonneg
+    _ ≤ 1 := by
+          by_cases hn : n = 0
+          · simpa [hn]
+          · have : (n : ℝ) ≠ 0 := by simp [hn]
+            simp [this]
+
 /-- **Kallenberg's L² bound (Lemma 1.2)** - Core of the elementary proof.
 
 For an exchangeable sequence and centered variables Z_i := f(X_i) - E[f(X_1)],
@@ -2352,7 +2406,8 @@ lemma kallenberg_L2_bound
               exact Fin.pos_iff_nonempty.mp h_card_pos
             apply ciSup_le
             intro k
-            sorry  -- TODO: apply Finset.le_sup' with correct unification
+            have hk_in_s : (enum k).val ∈ s := (enum k).property
+            exact Finset.le_sup' (fun i => |p i - q i|) hk_in_s
           · -- Backward: s.sup' ≤ ⨆ k
             -- For each i ∈ s, enum.symm ⟨i, hi⟩ gives k : Fin n with (enum k).val = i
             apply Finset.sup'_le
@@ -2435,21 +2490,9 @@ lemma cesaro_to_condexp_L2
       -- The subtraction by m is the same measurable transformation on both sides
       sorry
       /-
-      TODO: Complete using pointwise argument
-
-      Proof strategy:
-      From hfX_contract, we have measure equality:
-        map (fun ω i => f(X(k i) ω)) μ = map (fun ω i => f(X i ω)) μ
-
-      Need to show:
-        map (fun ω i => f(X(k i) ω) - m) μ = map (fun ω i => f(X i ω) - m) μ
-
-      Approach: Show that subtracting constant m from each coordinate commutes with measure map.
-      This should follow from extensional equality of the functions modulo the measure equality.
-
-      Previous attempt with Measure.map_map failed due to type mismatch:
-      - Z uses ℕ → ℝ but contractability context uses Fin n → ℝ
-      - Need different approach, possibly using congruence arguments directly
+      TODO (Section 1 from user): Apply Measure.map_map to show subtraction commutes with measure map
+      The provided solution has some universe level issues that need debugging.
+      Will revisit after applying Section 2.
       -/
 
     -- Step 3: Show uniform variance via contractability
@@ -2683,9 +2726,10 @@ lemma cesaro_to_condexp_L2
               ≤ (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 1 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) := h_CS
             _ = (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) := by rw [h_Z1_var]
             _ = (∫ ω, (Z 0 ω) ^ 2 ∂μ) := by
-                sorry
-                -- TODO: Simplify (x^(1/2) * x^(1/2)) = x for x ≥ 0
-                -- Standard algebraic identity, but needs correct mathlib lemmas
+                rw [← Real.rpow_add_of_nonneg (integral_nonneg (fun ω => sq_nonneg _))]
+                · norm_num
+                · norm_num
+                · norm_num
             _ = σSq := rfl
 
         -- Therefore |ρ| ≤ 1, which gives -1 ≤ ρ ≤ 1
@@ -2728,12 +2772,45 @@ lemma cesaro_to_condexp_L2
       -- Equivalently: N > Cf / (ε.toReal)²
       -- If ε = ⊤, the property is trivial (take any N); otherwise use Archimedean property
       by_cases hε_top : ε = ⊤
-      · -- Case ε = ⊤: property holds trivially since eLpNorm is always < ⊤ for bounded functions
-        use 1
-        intros n n' hn_ge hn'_ge
+      · -- Case ε = ⊤
+        -- Any N works; take N := 0
+        refine ⟨0, ?_⟩
+        intro n n' _ _
+        -- measurability of the two block averages and their difference
+        have h_meas_n  :
+            Measurable (fun ω => blockAvg f X 0 n  ω) :=
+          blockAvg_measurable f X hf_meas hX_meas 0 n
+        have h_meas_n' :
+            Measurable (fun ω => blockAvg f X 0 n' ω) :=
+          blockAvg_measurable f X hf_meas hX_meas 0 n'
+        have h_meas_diff :
+            Measurable (fun ω => blockAvg f X 0 n ω - blockAvg f X 0 n' ω) :=
+          h_meas_n.sub h_meas_n'
+
+        -- |A_n| ≤ 1 and |A_{n'}| ≤ 1 ⇒ |A_n − A_{n'}| ≤ 2
+        have h_bdd :
+            ∀ᵐ ω ∂μ, |blockAvg f X 0 n ω - blockAvg f X 0 n' ω| ≤ 2 := by
+          apply ae_of_all
+          intro ω
+          have hn  : |blockAvg f X 0 n  ω| ≤ 1 := blockAvg_abs_le_one f X hf_bdd 0 n  ω
+          have hn' : |blockAvg f X 0 n' ω| ≤ 1 := blockAvg_abs_le_one f X hf_bdd 0 n' ω
+          calc
+            |blockAvg f X 0 n ω - blockAvg f X 0 n' ω|
+                ≤ |blockAvg f X 0 n ω| + |blockAvg f X 0 n' ω|
+                  := by
+                       have := abs_add_le (blockAvg f X 0 n ω) (-(blockAvg f X 0 n' ω))
+                       simpa [sub_eq_add_neg, abs_neg] using this
+            _ ≤ 1 + 1 := add_le_add hn hn'
+            _ = 2 := by norm_num
+
+        -- bounded ⇒ MemLp ⇒ eLpNorm < ⊤
+        have h_mem :
+            MemLp (fun ω => blockAvg f X 0 n ω - blockAvg f X 0 n' ω) 2 μ :=
+          memLp_of_abs_le_const h_meas_diff h_bdd 2 (by norm_num) (by norm_num)
+
+        -- The goal for this branch is just finiteness (ε = ⊤)
         rw [hε_top]
-        sorry  -- TODO: Show eLpNorm (blockAvg - blockAvg) 2 μ < ⊤
-        -- blockAvg is bounded (since f is), so difference is in L² and has finite norm
+        exact MemLp.eLpNorm_lt_top h_mem
 
       -- Case ε < ⊤: use Archimedean property to find N
       have hε_lt_top : ε < ⊤ := lt_top_iff_ne_top.mpr hε_top
@@ -3223,7 +3300,17 @@ lemma cesaro_to_condexp_L2
                         · rw [Real.norm_eq_abs]; exact hf_bdd (X i ω)
                         · rw [Real.norm_eq_abs]
                           -- |m| ≤ 1 since m = ∫ f∘X₀ and |f| ≤ 1 on probability space
-                          sorry
+                          calc |m| = |∫ ω, f (X 0 ω) ∂μ| := rfl
+                            _ ≤ ∫ ω, |f (X 0 ω)| ∂μ := abs_integral_le_integral_abs
+                            _ ≤ ∫ ω, 1 ∂μ := by
+                                apply integral_mono_of_nonneg
+                                · filter_upwards with ω; exact abs_nonneg _
+                                · exact integrable_const 1
+                                · filter_upwards with ω; exact hf_bdd (X 0 ω)
+                            _ = μ.real Set.univ • (1 : ℝ) := integral_const 1
+                            _ = μ.real Set.univ := by simp
+                            _ = (μ Set.univ).toReal := rfl
+                            _ = 1 := by simp [measure_univ]
                     _ = (2 : ℝ) := by norm_num
                 -- From |Z i ω| ≤ 2, get |Z i ω|² ≤ 4
                 calc ‖(Z i ω)^2‖ = |Z i ω|^2 := by simp [pow_two]
@@ -6719,6 +6806,7 @@ private lemma L1_unique_of_two_limits
   {μ : Measure Ω} {f g : Ω → ℝ}
   (hf : Integrable f μ) (hg : Integrable g μ)
   {fn : ℕ → Ω → ℝ}
+  (hfn : ∀ n, AEStronglyMeasurable (fn n) μ)
   (h1 : Tendsto (fun n => eLpNorm (fn n - f) 1 μ) atTop (𝓝 0))
   (h2 : Tendsto (fun n => eLpNorm (fn n - g) 1 μ) atTop (𝓝 0)) :
   f =ᵐ[μ] g := by
@@ -6730,19 +6818,19 @@ private lemma L1_unique_of_two_limits
         = eLpNorm ((f - fn n) + (fn n - g)) 1 μ := by ring_nf
       _ ≤ eLpNorm (f - fn n) 1 μ + eLpNorm (fn n - g) 1 μ := by
           apply eLpNorm_add_le
-          · sorry  -- AEStronglyMeasurable (f - fn n) μ
-          · sorry  -- AEStronglyMeasurable (fn n - g) μ
+          · exact hf.aestronglyMeasurable.sub (hfn n)
+          · exact (hfn n).sub hg.aestronglyMeasurable
           · norm_num
   -- send n → ∞: ‖f - g‖₁ ≤ 0
   -- The constant eLpNorm (f - g) 1 μ is bounded by something tending to 0
   have : eLpNorm (f - g) 1 μ ≤ 0 := by
     -- Use that it's squeezed: 0 ≤ ‖f-g‖ ≤ ‖f-fn‖ + ‖fn-g‖ → 0
     have h_bound : ∀ n, eLpNorm (f - g) 1 μ ≤ eLpNorm (f - fn n) 1 μ + eLpNorm (fn n - g) 1 μ := htri
-    sorry  -- Use ge_of_tendsto with h_bound and h1.add h2
+    sorry
   -- eLpNorm = 0 ⇒ a.e. equality
   have hzero : eLpNorm (f - g) 1 μ = 0 := le_antisymm this bot_le
   have : (f - g) =ᵐ[μ] 0 := by
-    sorry  -- Use eLpNorm_eq_zero_iff or similar
+    sorry
   have : f =ᵐ[μ] g := by
     filter_upwards [this] with ω h
     simpa [sub_eq_zero] using h
@@ -6772,12 +6860,12 @@ private lemma L1_tendsto_clip01
 /-- If ∀ n, aₙ(ω) ≤ 1, then ⨅ₙ aₙ(ω) ≤ 1. -/
 private lemma iInf_le_one_of_le_one {ι : Type*} [Nonempty ι]
   (a : ι → ℝ) (h : ∀ i, a i ≤ 1) : ⨅ i, a i ≤ 1 := by
-  sorry  -- Use ciInf_le or similar for conditionally complete lattice
+  sorry
 
 /-- If ∀ n, aₙ(ω) ≤ 1, then ⨆ₙ aₙ(ω) ≤ 1. -/
-private lemma iSup_le_one_of_le_one {ι : Type*}
+private lemma iSup_le_one_of_le_one {ι : Type*} [Nonempty ι]
   (a : ι → ℝ) (h : ∀ i, a i ≤ 1) : ⨆ i, a i ≤ 1 := by
-  sorry  -- Use ciSup_le or similar for conditionally complete lattice
+  sorry
 
 /-! ### AE Strong Measurability for iInf/iSup -/
 

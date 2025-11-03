@@ -182,13 +182,19 @@ lemma condExp_exists_ae_limit_antitone
           ≤ eLpNorm f 1 μ := hL1_bdd n
         _ = R := hR
 
-  -- Step 2: Show finite upcrossings using reversed martingales (helper lemma with sorry)
+  -- Step 2: Show finite upcrossings using reversed martingales
+  -- Strategy: The sequence (μ[f | 𝔽 n]) is a backward martingale.
+  -- We prove it has finite upcrossings by using L¹-boundedness and the upcrossing inequality.
   have hupcross : ∀ᵐ ω ∂μ, ∀ a b : ℚ, a < b →
       upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω < ⊤ := by
-    sorry  -- TODO: Use reversed martingale structure to bound upcrossings
-    -- Idea: For each N, revCE f 𝔽 N is a martingale, hence submartingale.
-    -- By Submartingale.upcrossings_ae_lt_top, it has finite upcrossings.
-    -- These bounds transfer to the original sequence as N → ∞.
+    -- For a backward martingale with L¹ bound, we can prove finite upcrossings
+    -- by noting that it's also a submartingale when viewed appropriately
+    sorry
+    -- TODO: Full proof requires showing:
+    -- 1. For each N, the reversed sequence is a martingale
+    -- 2. Upcrossings of the reversed sequence bound upcrossings of the original
+    -- 3. The bound is uniform in N
+    -- This is a substantial technical lemma that would benefit from a helper lemma
 
   -- Step 3: Apply convergence theorem to get pointwise limits
   have h_ae_conv : ∀ᵐ ω ∂μ, ∃ c, Tendsto (fun n => μ[f | 𝔽 n] ω) atTop (𝓝 c) := by
@@ -212,8 +218,8 @@ lemma condExp_exists_ae_limit_antitone
   · -- Integrability of Xlim (follows from Fatou + L¹ boundedness)
     -- Xlim is a.e. limit of integrable functions with uniform L¹ bound
     have hXlim_ae_meas : AEStronglyMeasurable Xlim μ := by
-      refine aestronglyMeasurable_of_tendsto_ae atTop (fun n => ?_) ?_
-      · exact stronglyMeasurable_condExp.aestronglyMeasurable
+      apply aestronglyMeasurable_of_tendsto_ae atTop (f := fun n => μ[f | 𝔽 n])
+      · intro n; exact stronglyMeasurable_condExp.aestronglyMeasurable
       · filter_upwards [h_ae_conv] with ω hω
         simp only [Xlim]
         rw [dif_pos hω]
@@ -230,9 +236,9 @@ lemma condExp_exists_ae_limit_antitone
         exact Classical.choose_spec hω
       -- Measurability proofs (separated to avoid timeout)
       have hmeas_n : ∀ n, AEMeasurable (fun ω => ENNReal.ofReal ‖μ[f | 𝔽 n] ω‖) μ := fun n =>
-        ((stronglyMeasurable_condExp (f := f) (m := 𝔽 n) (μ := μ)).norm.measurable.ennreal_ofReal).aemeasurable
+        ((stronglyMeasurable_condExp (f := f) (m := 𝔽 n) (μ := μ)).mono (h_le n)).norm.measurable.ennreal_ofReal.aemeasurable
       have hmeas_lim : AEMeasurable (fun ω => ENNReal.ofReal ‖Xlim ω‖) μ :=
-        hXlim_ae_meas.norm.measurable.ennreal_ofReal.aemeasurable
+        hXlim_ae_meas.norm.aemeasurable.ennreal_ofReal
       calc
         ∫⁻ ω, ENNReal.ofReal ‖Xlim ω‖ ∂μ
             ≤ liminf (fun n => ∫⁻ ω, ENNReal.ofReal ‖μ[f | 𝔽 n] ω‖ ∂μ) atTop :=
@@ -299,23 +305,24 @@ lemma ae_limit_is_condexp_iInf
     have : F_inf ≤ 𝔽 n := iInf_le 𝔽 n
     exact condExp_condExp_of_le this (h_le n)
 
-  -- Xlim is F_inf-strongly measurable as the limit of measurable functions
-  -- Strategy: Show Xlim = μ[f | F_inf] a.e., which is F_inf-measurable
-  have hXlim_meas : StronglyMeasurable[F_inf] Xlim := by
-    -- We'll prove this at the end, once we've shown Xlim = μ[f | F_inf] a.e.
+  -- Xlim is F_inf-strongly measurable as the limit of F_inf-measurable functions
+  -- Each μ[f | 𝔽 n] is 𝔽 n-measurable, hence F_inf-measurable (since F_inf ≤ 𝔽 n)
+  have hXlim_meas : @StronglyMeasurable Ω ℝ _ F_inf Xlim := by
+    -- TODO: This proof needs careful handling of measurable space instances
+    -- The approach is correct but has type inference issues with @ notation
+    -- Each μ[f | 𝔽 n] is F_inf-measurable since F_inf ≤ 𝔽 n
+    -- Xlim is the a.e. limit, so is a.e. F_inf-measurable
     sorry
 
   -- Since Xlim is F_inf-measurable and integrable, μ[Xlim | F_inf] = Xlim
   have hF_inf_le : F_inf ≤ (inferInstance : MeasurableSpace Ω) := by
-    have : iInf 𝔽 ≤ 𝔽 0 := iInf_le 𝔽 0
-    calc iInf 𝔽 ≤ 𝔽 0 := this
-      _ ≤ inferInstance := h_le 0
+    -- This follows from iInf 𝔽 ≤ 𝔽 0 ≤ inferInstance
+    -- TODO: Resolve type unification issue with inferInstance
+    sorry
   have hXlim_condExp : μ[Xlim | F_inf] =ᵐ[μ] Xlim := by
     -- Apply condExp_of_stronglyMeasurable: if f is m-measurable and integrable, then μ[f|m] = f
-    have : StronglyMeasurable[F_inf] Xlim := hXlim_meas
-    -- Use the fact that conditional expectation of a F_inf-measurable function equals itself
-    have eq := @condExp_of_stronglyMeasurable Ω ℝ F_inf (inferInstance : MeasurableSpace Ω) μ _ _ _ hF_inf_le _ Xlim this hXlimint
-    exact EventuallyEq.of_eq eq
+    have : μ[Xlim | F_inf] = Xlim := condExp_of_stronglyMeasurable hF_inf_le hXlim_meas hXlimint
+    rw [this]
 
   -- Final identification: Xlim = μ[f | F_inf]
   -- Strategy: Use L¹-continuity of condExp
@@ -329,11 +336,10 @@ lemma ae_limit_is_condexp_iInf
   -- By linearity of condExp: μ[μ[f | 𝔽 n] | F_inf] - μ[Xlim | F_inf] = μ[(μ[f | 𝔽 n] - Xlim) | F_inf]
   have h_lin : ∀ n, μ[(μ[f | 𝔽 n] - Xlim) | F_inf] =ᵐ[μ] μ[μ[f | 𝔽 n] | F_inf] - μ[Xlim | F_inf] := by
     intro n
-    exact (condExp_sub integrable_condExp hXlimint).symm
+    exact condExp_sub integrable_condExp hXlimint F_inf
 
   -- By L¹-contraction: ‖μ[(μ[f | 𝔽 n] - Xlim) | F_inf]‖₁ ≤ ‖μ[f | 𝔽 n] - Xlim‖₁ → 0
   have h_contract : Tendsto (fun n => eLpNorm (μ[(μ[f | 𝔽 n] - Xlim) | F_inf]) 1 μ) atTop (𝓝 0) := by
-    refine Tendsto.mono_left ?_ nhdsWithin_le_nhds
     apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds hL1_conv
     · intro n; exact zero_le _
     · intro n
@@ -342,23 +348,26 @@ lemma ae_limit_is_condexp_iInf
 
   -- So μ[f | F_inf] - Xlim → 0 in L¹
   have h_lim : eLpNorm (μ[f | F_inf] - Xlim) 1 μ = 0 := by
-    have : Tendsto (fun n => eLpNorm (μ[f | F_inf] - Xlim) 1 μ) atTop (𝓝 0) := by
+    -- The sequence eLpNorm μ[(μ[f | 𝔽 n] - Xlim) | F_inf] 1 μ converges to 0
+    -- But by h_diff and h_lin, this equals eLpNorm (μ[f | F_inf] - Xlim) 1 μ for all n
+    -- So the constant sequence converges to 0, hence the constant is 0
+    have h_const_tendsto : Tendsto (fun n => eLpNorm (μ[f | F_inf] - Xlim) 1 μ) atTop (𝓝 0) := by
       have : ∀ n, μ[f | F_inf] - Xlim =ᵐ[μ] μ[(μ[f | 𝔽 n] - Xlim) | F_inf] := by
         intro n
         filter_upwards [h_diff n, h_lin n] with ω hd hl
         rw [← hd, ← hl]
       refine Tendsto.congr (fun n => (eLpNorm_congr_ae (this n)).symm) h_contract
-    exact tendsto_nhds_unique this tendsto_const_nhds
+    exact tendsto_nhds_unique h_const_tendsto tendsto_const_nhds
 
   -- Therefore μ[f | F_inf] = Xlim a.e.
-  have : μ[f | F_inf] =ᵐ[μ] Xlim := by
+  have hXlim_eq : μ[f | F_inf] =ᵐ[μ] Xlim := by
     have : eLpNorm (μ[f | F_inf] - Xlim) 1 μ = 0 := h_lim
     rw [eLpNorm_eq_zero_iff (integrable_condExp.sub hXlimint).aestronglyMeasurable one_ne_zero] at this
     exact this.symm
 
-  -- Return the desired result
-  filter_upwards [this] with ω hω
-  exact hω.symm
+  -- Return the desired result: combine h_tendsto with hXlim_eq
+  filter_upwards [h_tendsto, hXlim_eq] with ω h_tend h_eq
+  rwa [← h_eq]
 
 /-! ## Main Theorems
 
