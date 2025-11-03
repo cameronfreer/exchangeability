@@ -315,8 +315,7 @@ lemma condExp_exists_ae_limit_antitone
     have h_le_key (N : ℕ) (ω : Ω) :
         ↑(upcrossingsBefore (↑a) (↑b) (fun n => μ[f | 𝔽 n]) N ω)
         ≤ upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω := by
-      simp only [MeasureTheory.upcrossings]
-      exact le_iSup (fun M => ↑(upcrossingsBefore (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) M ω)) N
+      sorry
 
     -- Therefore: upcrossings (original) = ⨆ N, upcrossingsBefore N ≤ ⨆ N, upcrossings (reversed_N)
     have h_bound : ∀ ω, upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω
@@ -325,16 +324,18 @@ lemma condExp_exists_ae_limit_antitone
       simp only [MeasureTheory.upcrossings]
       apply iSup_le
       intro N
-      exact h_le_key N ω
+      calc ↑(upcrossingsBefore (↑a) (↑b) (fun n => μ[f | 𝔽 n]) N ω)
+          ≤ upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω := h_le_key N ω
+        _ ≤ ⨆ M, upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 M n) ω :=
+            le_iSup (fun M => upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 M n) ω) N
 
     -- The expected value of the supremum is bounded by C
     have h_exp_bound : ∫⁻ ω, (⨆ N, upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω) ∂μ ≤ C := by
-      calc ∫⁻ ω, (⨆ N, upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω) ∂μ
-          ≤ ⨆ N, ∫⁻ ω, upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω ∂μ := by
-              apply lintegral_iSup_le
-        _ ≤ C := by
-              apply iSup_le
-              exact hC
+      -- We have: ∫⁻ ω, ⨆ N, f N ω ∂μ ≥ ⨆ N, ∫⁻ ω, f N ω ∂μ  (by iSup_lintegral_le)
+      -- And:     ⨆ N, ∫⁻ ω, f N ω ∂μ ≤ C  (by hC and iSup_le)
+      -- But we need the reverse: integral of sup ≤ C
+      -- For this we need monotone convergence or use a different bound
+      sorry
 
     -- Show C is finite: C = (‖f‖₁ + |a|) / (b - a), all terms finite
     have h_C_finite : C < ⊤ := by
