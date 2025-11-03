@@ -162,15 +162,14 @@ lemma condExp_exists_ae_limit_antitone
 
 /-- Uniform integrability of `{μ[f | 𝔽 n]}ₙ` for antitone filtration.
 
-Proof uses de la Vallée-Poussin criterion with Φ(t) = t log(1+t).
-Jensen for conditional expectation gives: Φ(|μ[f | 𝔽 n]|) ≤ μ[Φ(|f|) | 𝔽 n],
-hence sup_n E[Φ(|μ[f | 𝔽 n]|)] ≤ E[Φ(|f|)] < ∞. -/
+This is a direct application of mathlib's `Integrable.uniformIntegrable_condExp`,
+which works for any family of sub-σ-algebras (not just filtrations). -/
 lemma uniformIntegrable_condexp_antitone
     [IsProbabilityMeasure μ]
     (h_antitone : Antitone 𝔽) (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
     (f : Ω → ℝ) (hf : Integrable f μ) :
-    UniformIntegrable (fun n => μ[f | 𝔽 n]) 1 μ := by
-  sorry  -- TODO: de la Vallée-Poussin + Jensen
+    UniformIntegrable (fun n => μ[f | 𝔽 n]) 1 μ :=
+  hf.uniformIntegrable_condExp h_le
 
 /-- Identification: the a.s. limit equals `μ[f | ⨅ n, 𝔽 n]`.
 
@@ -186,13 +185,88 @@ lemma ae_limit_is_condexp_iInf
   obtain ⟨X∞, hX∞int, h_tendsto⟩ :=
     condExp_exists_ae_limit_antitone (μ := μ) h_antitone h_le f hf
 
-  -- 2) UI ⟹ L¹ convergence
+  -- 2) UI ⟹ L¹ convergence via Vitali
   have hUI := uniformIntegrable_condexp_antitone (μ := μ) h_antitone h_le f hf
-  sorry  -- TODO: Apply Vitali: UI + a.e. tendsto ⟹ L¹ tendsto
+
+  -- Apply Vitali: UI + a.e. tendsto ⟹ L¹ tendsto
+  have hL1_conv : Tendsto (fun n => eLpNorm (μ[f | 𝔽 n] - X∞) 1 μ) atTop (𝓝 0) := by
+    apply tendsto_Lp_finite_of_tendsto_ae (hp := le_refl 1) (hp' := ENNReal.one_ne_top)
+    · intro n; exact integrable_condExp.aestronglyMeasurable
+    · exact memℒp_one_iff_integrable.2 hX∞int
+    · exact hUI.unifIntegrable
+    · exact h_tendsto
 
   -- 3) Pass limit through condExp at 𝔽∞ := ⨅ n, 𝔽 n
-  -- TODO: Tower property + L¹-continuity of condExp
-  -- TODO: Identify X∞ = μ[f | 𝔽∞] a.e.
+  set 𝔽∞ := iInf 𝔽 with h𝔽∞_def
+
+  -- Tower property: For every n, μ[μ[f | 𝔽 n] | 𝔽∞] = μ[f | 𝔽∞]
+  have h_tower : ∀ n, μ[μ[f | 𝔽 n] | 𝔽∞] =ᵐ[μ] μ[f | 𝔽∞] := by
+    intro n
+    have : 𝔽∞ ≤ 𝔽 n := iInf_le 𝔽 n
+    exact condExp_condExp_of_le this (h_le n)
+
+  -- X∞ is 𝔽∞-strongly measurable because it's the limit of 𝔽∞-measurable functions
+  have hX∞_meas : @StronglyMeasurable _ _ 𝔽∞ _ X∞ := by
+    -- Each μ[f | 𝔽 n] is 𝔽 n-measurable, hence 𝔽∞-measurable (since 𝔽∞ ≤ 𝔽 n)
+    have : ∀ n, @AEStronglyMeasurable _ _ 𝔽∞ _ (μ[f | 𝔽 n]) μ := by
+      intro n
+      have h_le_n : 𝔽∞ ≤ 𝔽 n := iInf_le 𝔽 n
+      exact (stronglyMeasurable_condExp (m := 𝔽 n)).mono h_le_n |>.aestronglyMeasurable
+    -- X∞ is a.e. limit of these, so is a.e. 𝔽∞-strongly measurable
+    have : @AEStronglyMeasurable _ _ 𝔽∞ _ X∞ μ :=
+      aestronglyMeasurable_of_tendsto_ae atTop this h_tendsto
+    exact this.stronglyMeasurable_mk.mono (fun _ _ => id)
+
+  -- Since X∞ is 𝔽∞-measurable and integrable, μ[X∞ | 𝔽∞] = X∞
+  have h𝔽∞_le : 𝔽∞ ≤ (inferInstance : MeasurableSpace Ω) := iInf_le_of_le 0 (h_le 0)
+  have hX∞_condExp : μ[X∞ | 𝔽∞] =ᵐ[μ] X∞ := by
+    -- Apply condExp_of_stronglyMeasurable: if f is m-measurable and integrable, then μ[f|m] = f
+    have : @StronglyMeasurable Ω ℝ 𝔽∞ _ X∞ := hX∞_meas
+    -- Use the fact that conditional expectation of a 𝔽∞-measurable function equals itself
+    rw [@condExp_of_stronglyMeasurable Ω ℝ _ _ 𝔽∞ _ μ _ h𝔽∞_le _ X∞ this hX∞int]
+
+  -- Final identification: X∞ = μ[f | 𝔽∞]
+  -- Strategy: Use L¹-continuity of condExp
+
+  -- For each n: μ[μ[f | 𝔽 n] | 𝔽∞] - μ[X∞ | 𝔽∞] = μ[f | 𝔽∞] - X∞ (by tower and hX∞_condExp)
+  have h_diff : ∀ n, μ[μ[f | 𝔽 n] | 𝔽∞] - μ[X∞ | 𝔽∞] =ᵐ[μ] μ[f | 𝔽∞] - X∞ := by
+    intro n
+    filter_upwards [h_tower n, hX∞_condExp] with ω hn hω
+    simp [hn, hω]
+
+  -- By linearity of condExp: μ[μ[f | 𝔽 n] | 𝔽∞] - μ[X∞ | 𝔽∞] = μ[(μ[f | 𝔽 n] - X∞) | 𝔽∞]
+  have h_lin : ∀ n, μ[(μ[f | 𝔽 n] - X∞) | 𝔽∞] =ᵐ[μ] μ[μ[f | 𝔽 n] | 𝔽∞] - μ[X∞ | 𝔽∞] := by
+    intro n
+    exact (condExp_sub integrable_condExp hX∞int).symm
+
+  -- By L¹-contraction: ‖μ[(μ[f | 𝔽 n] - X∞) | 𝔽∞]‖₁ ≤ ‖μ[f | 𝔽 n] - X∞‖₁ → 0
+  have h_contract : Tendsto (fun n => eLpNorm (μ[(μ[f | 𝔽 n] - X∞) | 𝔽∞]) 1 μ) atTop (𝓝 0) := by
+    refine Tendsto.mono_left ?_ nhdsWithin_le_nhds
+    apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds hL1_conv
+    · intro n; exact zero_le _
+    · intro n
+      calc eLpNorm (μ[(μ[f | 𝔽 n] - X∞) | 𝔽∞]) 1 μ
+          ≤ eLpNorm (μ[f | 𝔽 n] - X∞) 1 μ := eLpNorm_one_condExp_le_eLpNorm _
+
+  -- So μ[f | 𝔽∞] - X∞ → 0 in L¹
+  have h_lim : eLpNorm (μ[f | 𝔽∞] - X∞) 1 μ = 0 := by
+    have : Tendsto (fun n => eLpNorm (μ[f | 𝔽∞] - X∞) 1 μ) atTop (𝓝 0) := by
+      have : ∀ n, μ[f | 𝔽∞] - X∞ =ᵐ[μ] μ[(μ[f | 𝔽 n] - X∞) | 𝔽∞] := by
+        intro n
+        filter_upwards [h_diff n, h_lin n] with ω hd hl
+        rw [← hd, ← hl]
+      refine Tendsto.congr (fun n => (eLpNorm_congr_ae (this n)).symm) h_contract
+    exact tendsto_nhds_unique this tendsto_const_nhds
+
+  -- Therefore μ[f | 𝔽∞] = X∞ a.e.
+  have : μ[f | 𝔽∞] =ᵐ[μ] X∞ := by
+    have : eLpNorm (μ[f | 𝔽∞] - X∞) 1 μ = 0 := h_lim
+    rw [eLpNorm_eq_zero_iff (integrable_condExp.sub hX∞int).aestronglyMeasurable one_ne_zero] at this
+    exact this.symm
+
+  -- Return the desired result
+  filter_upwards [this] with ω hω
+  exact hω.symm
 
 /-! ## Main Theorems
 
