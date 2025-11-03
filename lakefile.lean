@@ -5,7 +5,7 @@ package «exchangeability» where
   -- add package configuration options here
 
 require mathlib from git
-  "https://github.com/leanprover-community/mathlib4.git"
+  "https://github.com/leanprover-community/mathlib4.git" @ "v4.24.0"
 
 require Canonical from git
   "https://github.com/chasenorman/CanonicalLean.git"

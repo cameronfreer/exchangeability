@@ -790,7 +790,7 @@ lemma condIndep_of_triple_law
     -- Step 1: Set up indicator functions and their conditional expectations
     set φ := (Y ⁻¹' A).indicator (fun _ => (1 : ℝ)) with hφ_def
     set ψ := (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) with hψ_def
-    let 𝔾 := MeasurableSpace.comap W inferInstance
+    let 𝔾 : MeasurableSpace Ω := MeasurableSpace.comap W inferInstance
     set U := μ[φ | 𝔾] with hU_def
     set V := μ[ψ | 𝔾] with hV_def
     
@@ -840,14 +840,14 @@ lemma condIndep_of_triple_law
 
       -- Measurability of triple map: Y × (Z × W)
       have hYZW_meas : Measurable (fun ω => (Y ω, Z ω, W ω)) := by
-        apply Measurable.prod_mk
+        apply Measurable.prodMk
         · exact hY
-        · exact hZ.prod_mk hW
+        · exact hZ.prodMk hW
 
       have hYZW'_meas : Measurable (fun ω => (Y ω, Z ω, W' ω)) := by
-        apply Measurable.prod_mk
+        apply Measurable.prodMk
         · exact hY
-        · exact hZ.prod_mk hW'
+        · exact hZ.prodMk hW'
 
       -- g is AEStronglyMeasurable on both pushforward measures
       have hg_ae_W : AEStronglyMeasurable g (Measure.map (fun ω => (Y ω, Z ω, W ω)) μ) :=
@@ -939,12 +939,18 @@ lemma condIndep_of_triple_law
 
       -- Now use integral_condExp: ∫ f = ∫ μ[f|m]
       calc ∫ ω, φ ω * V ω ∂μ
-          = ∫ ω, μ[φ * V | 𝔾] ω ∂μ := (integral_condExp (MeasurableSpace.comap_le_iff_le_map.mp le_rfl) hφV_int).symm
+          = ∫ ω, μ[φ * V | 𝔾] ω ∂μ := by
+            haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp hW)) := by
+              sorry -- Need to show trimmed measure is σ-finite
+            exact (integral_condExp (measurable_iff_comap_le.mp hW)).symm
         _ = ∫ ω, (V * U) ω ∂μ := integral_congr_ae h_left_local
         _ = ∫ ω, (U * V) ω ∂μ := by
             congr 1; ext ω; exact mul_comm (V ω) (U ω)
         _ = ∫ ω, μ[U * ψ | 𝔾] ω ∂μ := (integral_congr_ae h_right_local).symm
-        _ = ∫ ω, U ω * ψ ω ∂μ := integral_condExp (MeasurableSpace.comap_le_iff_le_map.mp le_rfl) hUψ_int
+        _ = ∫ ω, U ω * ψ ω ∂μ := by
+            haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp hW)) := by
+              sorry -- Need to show trimmed measure is σ-finite
+            exact integral_condExp (measurable_iff_comap_le.mp hW)
     
     -- Substep (f)-(g): Take CEs and use tower property
     have h_ce_eq : μ[φ * V | 𝔾] =ᵐ[μ] μ[U * ψ | 𝔾] := by
@@ -1008,38 +1014,20 @@ lemma condIndep_of_triple_law
           -- This follows from: for any m-measurable C, ∫_C f·g = ∫_C f·μ[g|m]
           -- We use ae_eq_condExp_of_forall_setIntegral_eq
           symm
-          refine ae_eq_condExp_of_forall_setIntegral_eq (MeasurableSpace.comap_le_iff_le_map.mp le_rfl)
+          haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp hW)) := by
+            sorry -- Need σ-finite instance
+          refine ae_eq_condExp_of_forall_setIntegral_eq (measurable_iff_comap_le.mp hW)
             hφψ_int (fun s hs hs_fin => ?_) (fun s hs hs_fin => ?_)
             stronglyMeasurable_condExp.aestronglyMeasurable
-          · -- Integrability of μ[φ·μ[ψ|𝔾]|𝔾] on finite measure sets
+          · -- Integrability of φ·μ[ψ|𝔾] on finite measure sets
             exact integrable_condExp.integrableOn
           · -- Integral equality: ∫_s φ·ψ = ∫_s φ·μ[ψ|𝔾] for 𝔾-measurable s
-            -- Use tower property: μ[φ·ψ|𝔾] = μ[φ·μ[ψ|𝔾]|𝔾] to get integral equality
-            -- Since s is 𝔾-measurable, 1_s is 𝔾-measurable
-
-            -- First show μ[φ·ψ|𝔾] integrates the same as μ[φ·V|𝔾] over s
-            have h_ce_ψV : μ[φ * ψ | 𝔾] =ᵐ[μ] μ[φ * V | 𝔾] := by
-              -- Tower property: μ[φ·ψ|𝔾] = μ[φ·μ[ψ|𝔾]|𝔾]
-              refine ae_eq_condExp_of_forall_setIntegral_eq (MeasurableSpace.comap_le_iff_le_map.mp le_rfl)
-                hφψ_int (fun t ht ht_fin => integrable_condExp.integrableOn)
-                (fun t ht ht_fin => ?_) stronglyMeasurable_condExp.aestronglyMeasurable
-              -- For 𝔾-measurable t: ∫_t φ·ψ = ∫_t φ·V via setIntegral_condExp
-              calc ∫ x in t, φ x * V x ∂μ
-                  = ∫ x in t, φ x * μ[ψ | 𝔾] x ∂μ := by rfl
-                _ = ∫ x in t, φ x * ψ x ∂μ := by
-                    -- Use setIntegral_condExp with the product φ·ψ
-                    -- For 𝔾-measurable t, we have ∫_t ψ = ∫_t μ[ψ|𝔾]
-                    -- Need to show ∫_t φ·ψ = ∫_t φ·μ[ψ|𝔾]
-                    sorry -- This requires a more detailed argument using
-                          -- the pull-out property for 𝔾-measurable sets
-
-            -- Now use this to get the set integral equality
-            calc ∫ x in s, (φ * μ[ψ | 𝔾]) x ∂μ
-                = ∫ x in s, (φ * V) x ∂μ := by rfl
-              _ = ∫ x in s, φ x * ψ x ∂μ := by
-                    rw [setIntegral_congr_ae (MeasurableSpace.comap_le_iff_le_map.mp le_rfl s hs)
-                                              (h_ce_ψV.mono fun x hx _ => by simp [hx])]
-                    rfl
+            -- For 𝔾-measurable s, by setIntegral_condExp:
+            -- ∫_s ψ dμ = ∫_s μ[ψ|𝔾] dμ
+            -- We need to show ∫_s (φ·μ[ψ|𝔾]) dμ = ∫_s (φ·ψ) dμ
+            -- This follows from multiplying the integrands by φ
+            sorry -- TODO: Use setIntegral_condExp with multiplication by φ
+                  -- Estimated ~15-20 lines
       _ =ᵐ[μ] μ[φ * V | 𝔾] := by rfl  -- V = μ[ψ|𝔾] by definition
       _ =ᵐ[μ] V * U := by
           -- Pull-out property (already proved above)
