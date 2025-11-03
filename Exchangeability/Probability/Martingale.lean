@@ -182,19 +182,57 @@ lemma condExp_exists_ae_limit_antitone
           ≤ eLpNorm f 1 μ := hL1_bdd n
         _ = R := hR
 
-  -- Step 2: Show finite upcrossings using reversed martingales
-  -- Strategy: The sequence (μ[f | 𝔽 n]) is a backward martingale.
-  -- We prove it has finite upcrossings by using L¹-boundedness and the upcrossing inequality.
+  -- Step 2: Show finite upcrossings using L¹-boundedness
+  -- Strategy: Use the fact that L¹-bounded sequences with reverse martingale structure
+  -- have finite upcrossings. This follows from the upcrossing inequality.
   have hupcross : ∀ᵐ ω ∂μ, ∀ a b : ℚ, a < b →
       upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω < ⊤ := by
-    -- For a backward martingale with L¹ bound, we can prove finite upcrossings
-    -- by noting that it's also a submartingale when viewed appropriately
+    -- The sequence is L¹-bounded, so we can extract a uniform bound
+    obtain ⟨R, hR_pos, hR_bound⟩ : ∃ R : ENNReal, 0 < R ∧ ∀ n, eLpNorm (μ[f | 𝔽 n]) 1 μ ≤ R := by
+      use max (eLpNorm f 1 μ) 1
+      refine ⟨?_, ?_⟩
+      · exact lt_max_of_lt_right zero_lt_one
+      · intro n
+        exact le_trans (hL1_bdd n) (le_max_left _ _)
+
+    -- For reverse martingales, we use a key observation:
+    -- The sequence μ[f | 𝔽 n] is L¹-bounded and satisfies the tower property
+    -- in the reverse direction, which is sufficient to guarantee a.e. convergence
+    -- by the reverse martingale convergence theorem.
+
+    -- Key insight: For a reverse martingale with L¹ bound R, the expected number
+    -- of upcrossings is bounded by R/(b-a), which is finite. By Markov's inequality,
+    -- this implies a.e. finiteness.
+
+    simp only [ae_all_iff, eventually_imp_distrib_left]
+    intro a b hab
+
+    -- Core argument: L¹-bounded sequences with reverse martingale property have finite upcrossings
+    -- This follows from the reverse martingale convergence theorem
+
+    -- The proof would construct, for each N, a time-reversed martingale:
+    -- Y^N_k := μ[f | 𝔽_{N ⊓ (N - k)}] with increasing filtration G^N_k := 𝔽_{N ⊓ (N - k)}
+    -- Then Y^N is a forward martingale, so by Submartingale.upcrossings_ae_lt_top,
+    -- upcrossings of Y^N are a.e. finite with bound independent of N.
+    -- Taking N → ∞, the upcrossings of the original sequence are also a.e. finite.
+
+    -- For now, we use a classical result:
+    -- A reverse martingale that is L¹-bounded has finite upcrossings a.e.
+    -- This is the time-reversed version of the forward martingale convergence theorem.
+
     sorry
-    -- TODO: Full proof requires showing:
-    -- 1. For each N, the reversed sequence is a martingale
-    -- 2. Upcrossings of the reversed sequence bound upcrossings of the original
-    -- 3. The bound is uniform in N
-    -- This is a substantial technical lemma that would benefit from a helper lemma
+    -- TODO: Full proof requires ~40 lines to construct the time-reversed martingale
+    -- and verify all the martingale properties. This is a standard but technical
+    -- result in martingale theory (see Williams, "Probability with Martingales", Thm 12.12).
+    --
+    -- Alternative: Add to mathlib as `reverse_martingale_upcrossings_ae_lt_top`:
+    --   theorem reverse_martingale_upcrossings_ae_lt_top
+    --     [IsProbabilityMeasure μ]
+    --     {𝔽 : ℕ → MeasurableSpace Ω} (h_antitone : Antitone 𝔽)
+    --     (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
+    --     {f : Ω → ℝ} (hf : Integrable f μ)
+    --     (hbdd : ∀ n, eLpNorm (μ[f | 𝔽 n]) 1 μ ≤ R) :
+    --     ∀ᵐ ω ∂μ, ∀ a b : ℚ, a < b → upcrossings a b (fun n => μ[f | 𝔽 n]) ω < ∞
 
   -- Step 3: Apply convergence theorem to get pointwise limits
   have h_ae_conv : ∀ᵐ ω ∂μ, ∃ c, Tendsto (fun n => μ[f | 𝔽 n] ω) atTop (𝓝 c) := by
@@ -308,17 +346,21 @@ lemma ae_limit_is_condexp_iInf
   -- Xlim is F_inf-strongly measurable as the limit of F_inf-measurable functions
   -- Each μ[f | 𝔽 n] is 𝔽 n-measurable, hence F_inf-measurable (since F_inf ≤ 𝔽 n)
   have hXlim_meas : @StronglyMeasurable Ω ℝ _ F_inf Xlim := by
-    -- TODO: This proof needs careful handling of measurable space instances
-    -- The approach is correct but has type inference issues with @ notation
-    -- Each μ[f | 𝔽 n] is F_inf-measurable since F_inf ≤ 𝔽 n
-    -- Xlim is the a.e. limit, so is a.e. F_inf-measurable
     sorry
+    -- TODO: Deep type system challenge with sub-σ-algebras
+    -- Mathematical strategy (CORRECT):
+    -- 1. Each μ[f | 𝔽 n] is 𝔽 n-strongly measurable (by stronglyMeasurable_condExp)
+    -- 2. Since F_inf = ⨅ n, 𝔽 n ≤ 𝔽 n, lift via .mono to get F_inf-measurability
+    -- 3. Xlim is a.e. limit, so a.e. F_inf-measurable (by aestronglyMeasurable_of_tendsto_ae)
+    -- 4. Extract strongly measurable version via .stronglyMeasurable_mk
+    --
+    -- Issue: aestronglyMeasurable_of_tendsto_ae requires all functions measurable w.r.t.
+    -- the *same* σ-algebra, but @ notation with sub-σ-algebras has complex type inference.
+    -- The reference implementation in /tmp/fixed_section.txt (lines 17-27) works, but
+    -- requires exact matching of implicit parameter patterns.
 
   -- Since Xlim is F_inf-measurable and integrable, μ[Xlim | F_inf] = Xlim
-  have hF_inf_le : F_inf ≤ (inferInstance : MeasurableSpace Ω) := by
-    -- This follows from iInf 𝔽 ≤ 𝔽 0 ≤ inferInstance
-    -- TODO: Resolve type unification issue with inferInstance
-    sorry
+  have hF_inf_le : F_inf ≤ _ := le_trans (iInf_le 𝔽 0) (h_le 0)
   have hXlim_condExp : μ[Xlim | F_inf] =ᵐ[μ] Xlim := by
     -- Apply condExp_of_stronglyMeasurable: if f is m-measurable and integrable, then μ[f|m] = f
     have : μ[Xlim | F_inf] = Xlim := condExp_of_stronglyMeasurable hF_inf_le hXlim_meas hXlimint
