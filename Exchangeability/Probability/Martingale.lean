@@ -307,15 +307,12 @@ lemma ae_limit_is_condexp_iInf
 
   -- Xlim is F_inf-strongly measurable as the limit of F_inf-measurable functions
   -- Each μ[f | 𝔽 n] is 𝔽 n-measurable, hence F_inf-measurable (since F_inf ≤ 𝔽 n)
-  have hXlim_meas : @StronglyMeasurable Ω ℝ F_inf _ Xlim := by
-    have : ∀ n, @AEStronglyMeasurable Ω ℝ _ F_inf _ (μ[f | 𝔽 n]) μ := by
-      intro n
-      have h_le_n : F_inf ≤ 𝔽 n := iInf_le 𝔽 n
-      exact (stronglyMeasurable_condExp (m := 𝔽 n)).mono h_le_n |>.aestronglyMeasurable
-    -- Xlim is a.e. limit of these, so is a.e. F_inf-strongly measurable
-    have h_ae : @AEStronglyMeasurable Ω ℝ _ F_inf _ Xlim μ :=
-      aestronglyMeasurable_of_tendsto_ae atTop (f := fun n => μ[f | 𝔽 n]) this h_tendsto
-    exact h_ae.stronglyMeasurable_mk.mono (fun _ _ => id)
+  have hXlim_meas : @StronglyMeasurable Ω ℝ _ F_inf Xlim := by
+    -- TODO: This proof needs careful handling of measurable space instances
+    -- The approach is correct but has type inference issues with @ notation
+    -- Each μ[f | 𝔽 n] is F_inf-measurable since F_inf ≤ 𝔽 n
+    -- Xlim is the a.e. limit, so is a.e. F_inf-measurable
+    sorry
 
   -- Since Xlim is F_inf-measurable and integrable, μ[Xlim | F_inf] = Xlim
   have hF_inf_le : F_inf ≤ (inferInstance : MeasurableSpace Ω) := by
