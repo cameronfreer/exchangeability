@@ -4492,7 +4492,7 @@ private theorem optionB_L1_convergence_bounded
               (fun ω => (fL2 : Ω[α] → ℝ) (shift^[k'+1] ω)) := by
             apply ae_of_all; intro ω
             simp only [Function.iterate_succ_apply]
-          have hcomp := EventuallyEq.comp_measurePreserving hσ ih
+          have hcomp := eventuallyEq_comp_measurePreserving hσ ih
           exact hstep.trans (hcomp.trans hpull)
 
     -- Pass 2: fL2 ∘ shift^k equals g(· k)
