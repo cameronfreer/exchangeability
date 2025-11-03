@@ -3851,7 +3851,7 @@ the classical `condExp` a.e., since:
 convert between `Lp ℝ 2 μ` and `MemLp _ 2 μ` representations. The `Lp.memℒp` constant
 doesn't exist in the current mathlib API. -/
 private lemma condexpL2_ae_eq_condExp (f : Lp ℝ 2 μ) :
-    (condexpL2 (μ := μ) f : Ω[α] → ℝ) =ᶠ[μ] μ[f | shiftInvariantSigma] := by
+    (condexpL2 (μ := μ) f : Ω[α] → ℝ) =ᵐ[μ] μ[f | shiftInvariantSigma] := by
   -- Use Lp.memLp to extract MemLp proof from Lp element
   have hf : MemLp (f : Ω[α] → ℝ) 2 μ := Lp.memLp f
   -- Apply the mathlib lemma: condExpL2 E 𝕜 hm hf.toLp =ᵐ[μ] μ[f|m]
@@ -3957,11 +3957,11 @@ private lemma optionB_Step3b_L2_to_L1
     have h_meas :
         AEMeasurable
           (fun ω =>
-            (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
+            (birkhoffAverage ℝ (koopman shift hσ) (fun f => ↑↑f) n fL2 : Ω[α] → ℝ) ω
             - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω) μ :=
       AEMeasurable.sub
           (Lp.aestronglyMeasurable
-            (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2)).aemeasurable
+            (birkhoffAverage ℝ (koopman shift hσ) (fun f => ↑↑f) n fL2)).aemeasurable
           (Lp.aestronglyMeasurable
             (condexpL2 (μ := μ) fL2)).aemeasurable
 
