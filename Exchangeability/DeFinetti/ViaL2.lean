@@ -2352,7 +2352,8 @@ lemma kallenberg_L2_bound
               exact Fin.pos_iff_nonempty.mp h_card_pos
             apply ciSup_le
             intro k
-            sorry  -- TODO: apply Finset.le_sup' with correct unification
+            have hk_in_s : (enum k).val ∈ s := (enum k).property
+            exact Finset.le_sup' (fun i => |p i - q i|) hk_in_s
           · -- Backward: s.sup' ≤ ⨆ k
             -- For each i ∈ s, enum.symm ⟨i, hi⟩ gives k : Fin n with (enum k).val = i
             apply Finset.sup'_le
@@ -2683,9 +2684,8 @@ lemma cesaro_to_condexp_L2
               ≤ (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 1 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) := h_CS
             _ = (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) := by rw [h_Z1_var]
             _ = (∫ ω, (Z 0 ω) ^ 2 ∂μ) := by
-                sorry
-                -- TODO: Simplify (x^(1/2) * x^(1/2)) = x for x ≥ 0
-                -- Standard algebraic identity, but needs correct mathlib lemmas
+                rw [← Real.sqrt_eq_rpow, ← Real.sqrt_eq_rpow]
+                exact Real.mul_self_sqrt (integral_nonneg (fun ω => sq_nonneg _))
             _ = σSq := rfl
 
         -- Therefore |ρ| ≤ 1, which gives -1 ≤ ρ ≤ 1
@@ -3223,7 +3223,15 @@ lemma cesaro_to_condexp_L2
                         · rw [Real.norm_eq_abs]; exact hf_bdd (X i ω)
                         · rw [Real.norm_eq_abs]
                           -- |m| ≤ 1 since m = ∫ f∘X₀ and |f| ≤ 1 on probability space
-                          sorry
+                          calc |m| = |∫ ω, f (X 0 ω) ∂μ| := rfl
+                            _ ≤ ∫ ω, |f (X 0 ω)| ∂μ := abs_integral_le_integral_abs _
+                            _ ≤ ∫ ω, 1 ∂μ := by
+                                apply integral_mono_of_nonneg
+                                · intro ω; exact abs_nonneg _
+                                · intro ω; exact le_of_lt (by norm_num : (0:ℝ) < 1)
+                                · exact (hf_meas.comp (hX_meas 0)).abs.aestronglyMeasurable
+                                · intro ω; exact hf_bdd (X 0 ω)
+                            _ = 1 := by simp [measure_univ]
                     _ = (2 : ℝ) := by norm_num
                 -- From |Z i ω| ≤ 2, get |Z i ω|² ≤ 4
                 calc ‖(Z i ω)^2‖ = |Z i ω|^2 := by simp [pow_two]
