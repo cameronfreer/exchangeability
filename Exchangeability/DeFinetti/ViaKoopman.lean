@@ -575,7 +575,8 @@ lemma setIntegral_map_preimage
     rw [← hpush] at hf
     exact hf.aestronglyMeasurable
   have hg_ae : AEMeasurable g μ' := hg.aemeasurable
-  rw [setIntegral_map hs hf_aesm hg_ae, hpush]
+  simp only [Function.comp]
+  rw [← setIntegral_map hs hf_aesm hg_ae, hpush]
 
 /-- On a finite measure space, an a.e.-bounded, a.e.-measurable real function is integrable. -/
 lemma integrable_of_ae_bound
