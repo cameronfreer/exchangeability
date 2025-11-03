@@ -3866,7 +3866,7 @@ private lemma condexpL2_ae_eq_condExp (f : Lp ℝ 2 μ) :
 /-- Pull a.e. equality back along a measure-preserving map.
     Standard fact: if f =ᵐ g and T preserves μ, then f ∘ T =ᵐ g ∘ T.
     Proof: Use QuasiMeasurePreserving.ae_eq_comp from mathlib. -/
-private lemma EventuallyEq.comp_measurePreserving {f g : Ω[α] → ℝ}
+private lemma eventuallyEq_comp_measurePreserving {f g : Ω[α] → ℝ}
     (hT : MeasurePreserving shift μ μ) (hfg : f =ᵐ[μ] g) :
     (f ∘ shift) =ᵐ[μ] (g ∘ shift) :=
   hT.quasiMeasurePreserving.ae_eq_comp hfg
