@@ -307,15 +307,15 @@ lemma ae_limit_is_condexp_iInf
 
   -- Since Xlim is F_inf-measurable and integrable, μ[Xlim | F_inf] = Xlim
   have hF_inf_le : F_inf ≤ (inferInstance : MeasurableSpace Ω) := by
-    have : iInf 𝔽 ≤ 𝔽 0 := iInf_le 𝔽 0
-    calc iInf 𝔽 ≤ 𝔽 0 := this
+    calc F_inf = iInf 𝔽 := rfl
+      _ ≤ 𝔽 0 := iInf_le 𝔽 0
       _ ≤ inferInstance := h_le 0
   have hXlim_condExp : μ[Xlim | F_inf] =ᵐ[μ] Xlim := by
     -- Apply condExp_of_stronglyMeasurable: if f is m-measurable and integrable, then μ[f|m] = f
-    have : StronglyMeasurable[F_inf] Xlim := hXlim_meas
+    have hSM : StronglyMeasurable[F_inf] Xlim := hXlim_meas
     -- Use the fact that conditional expectation of a F_inf-measurable function equals itself
-    have eq := @condExp_of_stronglyMeasurable Ω ℝ F_inf (inferInstance : MeasurableSpace Ω) μ _ _ _ hF_inf_le _ Xlim this hXlimint
-    exact EventuallyEq.of_eq eq
+    convert EventuallyEq.rfl using 1
+    exact (condExp_of_stronglyMeasurable hF_inf_le hSM hXlimint).symm
 
   -- Final identification: Xlim = μ[f | F_inf]
   -- Strategy: Use L¹-continuity of condExp
@@ -329,11 +329,10 @@ lemma ae_limit_is_condexp_iInf
   -- By linearity of condExp: μ[μ[f | 𝔽 n] | F_inf] - μ[Xlim | F_inf] = μ[(μ[f | 𝔽 n] - Xlim) | F_inf]
   have h_lin : ∀ n, μ[(μ[f | 𝔽 n] - Xlim) | F_inf] =ᵐ[μ] μ[μ[f | 𝔽 n] | F_inf] - μ[Xlim | F_inf] := by
     intro n
-    exact (condExp_sub integrable_condExp hXlimint).symm
+    exact (condExp_sub (m := F_inf) integrable_condExp hXlimint).symm
 
   -- By L¹-contraction: ‖μ[(μ[f | 𝔽 n] - Xlim) | F_inf]‖₁ ≤ ‖μ[f | 𝔽 n] - Xlim‖₁ → 0
   have h_contract : Tendsto (fun n => eLpNorm (μ[(μ[f | 𝔽 n] - Xlim) | F_inf]) 1 μ) atTop (𝓝 0) := by
-    refine Tendsto.mono_left ?_ nhdsWithin_le_nhds
     apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds hL1_conv
     · intro n; exact zero_le _
     · intro n
@@ -342,13 +341,13 @@ lemma ae_limit_is_condexp_iInf
 
   -- So μ[f | F_inf] - Xlim → 0 in L¹
   have h_lim : eLpNorm (μ[f | F_inf] - Xlim) 1 μ = 0 := by
-    have : Tendsto (fun n => eLpNorm (μ[f | F_inf] - Xlim) 1 μ) atTop (𝓝 0) := by
-      have : ∀ n, μ[f | F_inf] - Xlim =ᵐ[μ] μ[(μ[f | 𝔽 n] - Xlim) | F_inf] := by
+    have hconv : Tendsto (fun n => eLpNorm (μ[f | F_inf] - Xlim) 1 μ) atTop (𝓝 0) := by
+      have heq : ∀ n, μ[f | F_inf] - Xlim =ᵐ[μ] μ[(μ[f | 𝔽 n] - Xlim) | F_inf] := by
         intro n
         filter_upwards [h_diff n, h_lin n] with ω hd hl
         rw [← hd, ← hl]
-      refine Tendsto.congr (fun n => (eLpNorm_congr_ae (this n)).symm) h_contract
-    exact tendsto_nhds_unique this tendsto_const_nhds
+      refine Tendsto.congr (fun n => (eLpNorm_congr_ae (heq n)).symm) h_contract
+    exact (tendsto_nhds_unique hconv tendsto_const_nhds).symm
 
   -- Therefore μ[f | F_inf] = Xlim a.e.
   have : μ[f | F_inf] =ᵐ[μ] Xlim := by
