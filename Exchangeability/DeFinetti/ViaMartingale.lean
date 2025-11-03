@@ -1170,33 +1170,44 @@ lemma condIndep_of_triple_law
                 have : μ[ψ_β ∘ Z | 𝔾] =ᵐ[μ] V := by
                   rw [← hψ_factor]
                   rfl
-                -- TODO: Use this along with hv_W to conclude V = v∘W a.e.
-                sorry
+                -- hv_W says: μ[ψ_β∘Z|𝔾] = v∘W a.e.
+                -- So by transitivity: V = v∘W a.e.
+                filter_upwards [this, hv_W] with ω h1 h2
+                exact h1.symm.trans h2
               · -- Similarly for W'
-                -- TODO: Rewrite μ[ψ|σ(W')] as μ[ψ_β∘Z|σ(W')] and apply hv_W'
-                sorry
+                -- Rewrite μ[ψ|σ(W')] as μ[ψ_β∘Z|σ(W')] using ψ = ψ_β ∘ Z
+                have : μ[ψ | MeasurableSpace.comap W' inferInstance] =ᵐ[μ]
+                       μ[ψ_β ∘ Z | MeasurableSpace.comap W' inferInstance] := by
+                  rw [hψ_factor]
+                -- hv_W' says: μ[ψ_β∘Z|σ(W')] = v∘W' a.e.
+                filter_upwards [this, hv_W'] with ω h1 h2
+                exact h1.trans h2
 
             -- Step 4: Extract v and the a.e. equalities
             obtain ⟨v, hV_eq_v, hV'_eq_v⟩ := h_common
 
             -- Step 5: Express s as W⁻¹(B_set) since s is 𝔾-measurable
             -- 𝔾 = σ(W), so 𝔾-measurable sets are exactly preimages under W
-            -- TODO: Apply comap measurability characterization
             have h_s_preimage : ∃ B_set : Set γ, MeasurableSet B_set ∧ s = W ⁻¹' B_set := by
-              -- This should follow from the fact that hs : MeasurableSet[𝔾] s
-              -- and 𝔾 = MeasurableSpace.comap W inferInstance
-              -- Need: characterization of comap-measurable sets as preimages
-              sorry
+              -- Apply MeasurableSpace.measurableSet_comap characterization
+              rw [MeasurableSpace.measurableSet_comap] at hs
+              exact hs
 
             obtain ⟨B_set, hB_set_meas, hs_eq⟩ := h_s_preimage
 
             -- Step 6: Rewrite the set integral using the preimage characterization
             calc ∫ x in s, φ x * ψ x ∂μ
                 = ∫ x in W ⁻¹' B_set, φ x * ψ x ∂μ := by rw [hs_eq]
-              _ = ∫ x, φ x * ψ x * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ := by
+              _ = ∫ x, (W ⁻¹' B_set).indicator (fun x => φ x * ψ x) x ∂μ := by
                   -- Set integral equals full integral with indicator
-                  -- TODO: Use setIntegral_indicator or similar
-                  sorry
+                  symm
+                  apply integral_indicator
+                  exact hW hB_set_meas
+              _ = ∫ x, φ x * ψ x * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ := by
+                  -- Indicator identity: (W⁻¹'B).indicator f = f * (indicator B)∘W
+                  congr 1; ext x
+                  simp only [Set.indicator_apply, Set.mem_preimage]
+                  by_cases h : W x ∈ B_set <;> simp [h]
               _ = ∫ x, φ x * ψ x * (B_set.indicator (fun _ => (1 : ℝ))) (W' x) ∂μ := by
                   -- Step 2 (Swap W → W'): Apply h_test_fn with h = B_set.indicator 1
                   apply h_test_fn
@@ -1206,12 +1217,32 @@ lemma condIndep_of_triple_law
                        (B_set.indicator (fun _ => (1 : ℝ))) (W' x) ∂μ := by
                   -- Step 3 (Condition on σ(W')): Apply tower property
                   -- The set W'⁻¹(B_set) is σ(W')-measurable, so we can use setIntegral_condExp
-                  -- TODO: Use setIntegral_condExp for the W' world
-                  sorry
+
+                  -- First convert to indicator form for the set W'⁻¹(B_set)
+                  conv_lhs => arg 2; ext x; rw [mul_assoc]
+
+                  -- The key: φ * ψ * (indicator∘W') = (W'⁻¹B).indicator (φ * ψ)
+                  -- and W'⁻¹B is σ(W')-measurable
+                  have h_eq_as_set_int :
+                    ∫ x, φ x * ψ x * (B_set.indicator (fun _ => (1 : ℝ))) (W' x) ∂μ =
+                    ∫ x in W' ⁻¹' B_set, φ x * ψ x ∂μ := by
+                    rw [← integral_indicator (hW' hB_set_meas)]
+                    congr 1; ext x
+                    simp only [Set.indicator_apply, Set.mem_preimage, mul_comm (ψ x)]
+                    by_cases h : W' x ∈ B_set <;> simp [h]; ring
+
+                  rw [h_eq_as_set_int]
+
+                  -- Apply setIntegral_condExp: ∫_{W'⁻¹B} φ*ψ = ∫_{W'⁻¹B} φ*μ[ψ|σ(W')]
+                  -- This requires showing φ*ψ and φ*μ[ψ|σ(W')] have same set integral
+                  congr 1; ext x
+                  sorry -- TODO: This needs the tower property for products
               _ = ∫ x, φ x * v (W' x) * (B_set.indicator (fun _ => (1 : ℝ))) (W' x) ∂μ := by
                   -- Step 4 (Apply common version): V' = v∘W' a.e.
-                  -- TODO: Use hV'_eq_v to replace μ[ψ|σ(W')] with v∘W'
-                  sorry
+                  -- Use hV'_eq_v to replace μ[ψ|σ(W')] with v∘W'
+                  apply integral_congr_ae
+                  filter_upwards [hV'_eq_v] with x hx
+                  rw [hx]
               _ = ∫ x, φ x * (v * B_set.indicator (fun _ => (1 : ℝ))) (W' x) ∂μ := by
                   -- Algebra: factor out the composition
                   congr 1; ext x; ring
@@ -1222,20 +1253,36 @@ lemma condIndep_of_triple_law
                     use A.indicator (fun _ => (1 : ℝ))
                     ext ω; rfl
                   · -- measurability of v * B_set.indicator 1
+                    -- TODO: common_version_condExp should also assert Measurable v
+                    -- This follows from Doob-Dynkin: conditional expectations factor measurably
                     sorry
                   · -- boundedness of v * B_set.indicator 1
-                    sorry
+                    intro w
+                    simp [Pi.mul_apply]
+                    by_cases h : w ∈ B_set
+                    · simp [h, Set.indicator_of_mem]
+                      -- TODO: Need bound on v from common_version_condExp
+                      -- Since V and V' are conditional expectations of bounded ψ, v should be bounded
+                      sorry
+                    · simp [h, Set.indicator_of_not_mem]; norm_num
               _ = ∫ x, φ x * v (W x) * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ := by
                   -- Algebra: expand the composition
                   congr 1; ext x; ring
               _ = ∫ x, φ x * V x * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ := by
                   -- Step 4 reversed (Apply common version): V = v∘W a.e.
-                  -- TODO: Use hV_eq_v to replace v∘W with V
-                  sorry
+                  -- Use hV_eq_v to replace v∘W with V
+                  apply integral_congr_ae
+                  filter_upwards [hV_eq_v] with x hx
+                  rw [← hx]
+              _ = ∫ x, (W ⁻¹' B_set).indicator (fun x => φ x * V x) x ∂μ := by
+                  -- Reverse the indicator identity
+                  congr 1; ext x
+                  simp only [Set.indicator_apply, Set.mem_preimage]
+                  by_cases h : W x ∈ B_set <;> simp [h]
               _ = ∫ x in W ⁻¹' B_set, φ x * V x ∂μ := by
                   -- Set integral from indicator
-                  -- TODO: Reverse setIntegral_indicator
-                  sorry
+                  apply integral_indicator
+                  exact hW hB_set_meas
               _ = ∫ x in s, φ x * V x ∂μ := by rw [hs_eq]
       _ =ᵐ[μ] μ[φ * V | 𝔾] := by rfl  -- V = μ[ψ|𝔾] by definition
       _ =ᵐ[μ] V * U := by
