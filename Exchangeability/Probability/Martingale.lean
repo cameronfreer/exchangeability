@@ -170,7 +170,69 @@ lemma upcrossings_bdd_uniform
                                        (revFiltration 𝔽 h_antitone h_le N) μ :=
     fun N => (revCEFinite_martingale (μ := μ) h_antitone h_le f hf N).submartingale
 
-  sorry
+  -- For each fixed N and M, we can bound E[(f_M - a)⁺] by ‖f‖₁ + |a|
+  have h_bound : ∀ N M, ∫⁻ ω, ENNReal.ofReal ((revCEFinite (μ := μ) f 𝔽 N M ω - a)⁺) ∂μ
+                         ≤ ENNReal.ofReal (eLpNorm f 1 μ).toReal + ENNReal.ofReal |a| := by
+    intro N M
+    -- Use (x - a)⁺ ≤ |x - a| ≤ |x| + |a|, then integrate
+    calc ∫⁻ ω, ENNReal.ofReal ((revCEFinite (μ := μ) f 𝔽 N M ω - a)⁺) ∂μ
+        ≤ ∫⁻ ω, ENNReal.ofReal (|revCEFinite (μ := μ) f 𝔽 N M ω| + |a|) ∂μ := by
+            apply lintegral_mono
+            intro ω
+            apply ENNReal.ofReal_le_ofReal
+            calc (revCEFinite (μ := μ) f 𝔽 N M ω - a)⁺
+                = max (revCEFinite (μ := μ) f 𝔽 N M ω - a) 0 := rfl
+              _ ≤ |revCEFinite (μ := μ) f 𝔽 N M ω - a| := by
+                    simp only [le_abs_self, max_le_iff, abs_nonneg, and_self]
+              _ ≤ |revCEFinite (μ := μ) f 𝔽 N M ω| + |a| := abs_sub _ _
+      _ = ∫⁻ ω, (ENNReal.ofReal |revCEFinite (μ := μ) f 𝔽 N M ω| + ENNReal.ofReal |a|) ∂μ := by
+            congr 1; ext ω
+            exact ENNReal.ofReal_add (abs_nonneg _) (abs_nonneg _)
+      _ = ∫⁻ ω, ENNReal.ofReal |revCEFinite (μ := μ) f 𝔽 N M ω| ∂μ + ENNReal.ofReal |a| := by
+            rw [lintegral_add_right _ measurable_const, lintegral_const]
+            simp [IsProbabilityMeasure.measure_univ]
+      _ ≤ ENNReal.ofReal (eLpNorm f 1 μ).toReal + ENNReal.ofReal |a| := by
+            gcongr
+            -- Convert lintegral to eLpNorm and use hL1_bdd
+            have : ∫⁻ ω, ENNReal.ofReal |revCEFinite (μ := μ) f 𝔽 N M ω| ∂μ =
+                   eLpNorm (revCEFinite (μ := μ) f 𝔽 N M) 1 μ := by
+              rw [eLpNorm_one_eq_lintegral_enorm]
+              congr 1; ext ω
+              exact (Real.enorm_eq_ofReal_abs _).symm
+            rw [this]
+            calc eLpNorm (revCEFinite (μ := μ) f 𝔽 N M) 1 μ
+                ≤ eLpNorm f 1 μ := hL1_bdd N M
+              _ = ENNReal.ofReal (eLpNorm f 1 μ).toReal := by
+                    rw [ENNReal.ofReal_toReal]
+                    exact (memLp_one_iff_integrable.mpr hf).eLpNorm_ne_top
+
+  -- Define C as the bound divided by (b - a)
+  set C := (ENNReal.ofReal (eLpNorm f 1 μ).toReal + ENNReal.ofReal |a|) / ENNReal.ofReal (b - a)
+  refine ⟨C, fun N => ?_⟩
+
+  -- Apply the submartingale upcrossing inequality
+  have key := (h_submart N).mul_lintegral_upcrossings_le_lintegral_pos_part a b
+
+  -- Bound the supremum using h_bound
+  have sup_bdd : ⨆ M, ∫⁻ ω, ENNReal.ofReal ((revCEFinite (μ := μ) f 𝔽 N M ω - a)⁺) ∂μ
+                  ≤ ENNReal.ofReal (eLpNorm f 1 μ).toReal + ENNReal.ofReal |a| := by
+    apply iSup_le
+    intro M
+    exact h_bound N M
+
+  -- Combine: (b - a) * E[upcrossings] ≤ sup ≤ bound, so E[upcrossings] ≤ C
+  have step1 : (∫⁻ ω, upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω ∂μ) * ENNReal.ofReal (b - a)
+                ≤ ⨆ M, ∫⁻ ω, ENNReal.ofReal ((revCEFinite (μ := μ) f 𝔽 N M ω - a)⁺) ∂μ := by
+    rw [mul_comm]; exact key
+
+  calc ∫⁻ ω, upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω ∂μ
+      ≤ (⨆ M, ∫⁻ ω, ENNReal.ofReal ((revCEFinite (μ := μ) f 𝔽 N M ω - a)⁺) ∂μ) / ENNReal.ofReal (b - a) := by
+          refine (ENNReal.le_div_iff_mul_le ?_ ?_).2 step1
+          · left; exact (ENNReal.ofReal_pos.2 (sub_pos.2 hab)).ne'
+          · left; exact ENNReal.ofReal_ne_top
+    _ ≤ (ENNReal.ofReal (eLpNorm f 1 μ).toReal + ENNReal.ofReal |a|) / ENNReal.ofReal (b - a) := by
+          gcongr
+    _ = C := rfl
 
 /-- A.S. existence of the limit of `μ[f | 𝔽 n]` along an antitone filtration.
 
