@@ -814,6 +814,39 @@ lemma common_version_condExp
   -- 4. Conclude v₁ = v₂ a.e. by uniqueness in L¹
   sorry
 
+/-- **Helper:** Generalized test function lemma without ψ factor.
+
+From the pair law (Y,W) =^d (Y,W'), we can swap W and W' for test functions
+of the form φ(Y) * g(W), where g : γ → ℝ is a bounded measurable function.
+
+This is the key tool for the "swap back" step in the swap-condition-swap technique,
+where we need to handle functions like φ * (v * 1_B)∘W without the ψ factor.
+
+**Proof strategy:** Apply the pair law equality directly to the test function F(y,w) = φ(y)*g(w),
+using integral_map to convert between ∫ F∘(Y,W) and ∫ F d[Law(Y,W)].
+-/
+lemma test_fn_pair_law
+  {Ω α γ : Type*}
+  [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace γ]
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  (Y : Ω → α) (W W' : Ω → γ)
+  (hY : Measurable Y) (hW : Measurable W) (hW' : Measurable W')
+  (h_pair : Measure.map (fun ω => (Y ω, W ω)) μ =
+            Measure.map (fun ω => (Y ω, W' ω)) μ)
+  (φ : Ω → ℝ) (hφ_factor : ∃ f : α → ℝ, φ = f ∘ Y)
+  (g : γ → ℝ) (hg : Measurable g) (hg_bdd : ∀ w, ‖g w‖ ≤ 1) :
+  ∫ ω, φ ω * g (W ω) ∂μ = ∫ ω, φ ω * g (W' ω) ∂μ := by
+  -- Extract the factorization f with φ = f ∘ Y
+  obtain ⟨f, rfl⟩ := hφ_factor
+
+  -- Define the test function on the product space
+  let F : α × γ → ℝ := fun ⟨y, w⟩ => f y * g w
+
+  -- The integrals are just F applied to the pairs (Y,W) and (Y,W')
+  -- Use integral_map and the pair law equality h_pair
+  -- TODO: Complete using measurability of F and integral_map
+  sorry
+
 /-- **Kallenberg Lemma 1.3 (Contraction-Independence)**: If the triple distribution
 satisfies (Y, Z, W) =^d (Y, Z, W'), then Y and Z are conditionally independent given W.
 
@@ -1087,41 +1120,123 @@ lemma condIndep_of_triple_law
             exact integrable_condExp.integrableOn
           · -- Integral equality: ∫_s φ·ψ = ∫_s φ·μ[ψ|𝔾] for 𝔾-measurable s
             --
-            -- NON-CIRCULAR PROOF via "swap-condition-swap back" using h_test_fn
+            -- NON-CIRCULAR PROOF via "swap-condition-swap back" technique
             --
-            -- Strategy (does NOT use rectangle factorization):
-            -- 1. s is 𝔾-measurable ⟹ s = W⁻¹(B) for some measurable B ⊆ γ
-            -- 2. Swap: ∫ φψ(1_B∘W) = ∫ φψ(1_B∘W') by h_test_fn
-            -- 3. Condition ψ on σ(W'): ∫ φψ(1_B∘W') = ∫ φV'(1_B∘W')
-            --    where V' := μ[ψ|σ(W')]
-            -- 4. Common version: V = v∘W and V' = v∘W' for some v : γ → ℝ
-            --    (follows from equality of pair laws (Z,W) and (Z,W'))
-            -- 5. Swap back: ∫ φ(v·1_B)∘W' = ∫ φ(v·1_B)∘W by h_test_fn
-            -- 6. Conclude: ∫_s φ·V = ∫_s φ·ψ
+            -- This proof uses the triple law equality to establish the integral equality
+            -- WITHOUT assuming the rectangle factorization (which would be circular).
+            --
+            -- The key insight: use distributional equalities to "swap" between W and W',
+            -- transfer the conditional expectation via a common version v, then swap back.
+            --
 
+            -- Step 1: Get the pair law (Z,W) =^d (Z,W') from the triple law
+            have h_pair_ZW : Measure.map (fun ω => (Z ω, W ω)) μ =
+                              Measure.map (fun ω => (Z ω, W' ω)) μ := by
+              exact pair_law_ZW_of_triple_law Y Z W W' hZ hW hW' h_triple
+
+            -- Step 2: Get the pair law (Y,W) =^d (Y,W') from the triple law
+            have h_pair_YW : Measure.map (fun ω => (Y ω, W ω)) μ =
+                              Measure.map (fun ω => (Y ω, W' ω)) μ := by
+              exact pair_law_YW_of_triple_law Y Z W W' hY hW hW' h_triple
+
+            -- Step 3: Apply common_version_condExp to get v with V = v∘W, V' = v∘W'
+            -- where V' = μ[ψ | σ(W')]
             --
-            -- BLOCKER: This proof requires non-circular techniques beyond h_test_fn
-            --
-            -- The "swap-condition-swap back" strategy outlined in user feedback requires:
-            --
-            -- 1. s is 𝔾-measurable ⟹ s = W⁻¹(B) for some measurable B ⊆ γ
-            --
-            -- 2. Common version lemma: From equality of pair laws (Z,W) and (Z,W'),
-            --    prove ∃v with V=v∘W and V'=v∘W' where V'=μ[ψ|σ(W')]
-            --    This uses Doob-Dynkin + uniqueness of CE tested against functions of W/W'
-            --
-            -- 3. Generalized triple law: Current h_test_fn only handles φ*ψ*h.
-            --    Need version for φ*(g∘W) where g doesn't factor through ψ
-            --    Could derive from: pair laws (Y,W) and (Y,W') coincide (marginal of triple)
-            --
-            -- 4. Conditioning step: ∫ φψ(h∘W') = ∫ φ·μ[ψ|σ(W')]·(h∘W')
-            --    Standard CE tower property with σ(W')-measurable test functions
-            --
-            -- Recommended approach: Extract this as a separate lemma with clear dependencies
-            -- on the triple law, then prove independently. Current nesting makes it hard
-            -- to access needed generality.
-            --
-            sorry
+            -- Key insight: ψ = (Z⁻¹'B).indicator 1 = (B.indicator 1) ∘ Z = ψ_β ∘ Z
+            -- where ψ_β : β → ℝ is the indicator function on the codomain
+            have h_common : ∃ v : γ → ℝ,
+                (∀ᵐ ω ∂μ, V ω = v (W ω)) ∧
+                (∀ᵐ ω ∂μ, μ[ψ | MeasurableSpace.comap W' inferInstance] ω = v (W' ω)) := by
+              -- Define ψ_β : β → ℝ as the indicator on B
+              let ψ_β : β → ℝ := B.indicator (fun _ => (1 : ℝ))
+
+              -- Verify that ψ = ψ_β ∘ Z
+              have hψ_factor : ψ = ψ_β ∘ Z := by
+                ext ω
+                simp only [Function.comp_apply, ψ, ψ_β, Set.indicator_apply]
+                rfl
+
+              -- Apply common_version_condExp with ψ_β
+              obtain ⟨v, hv_W, hv_W'⟩ := common_version_condExp Z W W' ψ_β hZ hW hW'
+                (measurable_const.indicator hB)
+                (by intro z; simp [ψ_β, Set.indicator]; norm_num)
+                (by rw [← hψ_factor]; exact hψ_int)
+                h_pair_ZW
+
+              use v
+              constructor
+              · -- V = μ[ψ|𝔾] = μ[ψ_β∘Z|σ(W)] = v∘W
+                -- This follows from hv_W and ψ = ψ_β ∘ Z
+                have : μ[ψ_β ∘ Z | 𝔾] =ᵐ[μ] V := by
+                  rw [← hψ_factor]
+                  rfl
+                -- TODO: Use this along with hv_W to conclude V = v∘W a.e.
+                sorry
+              · -- Similarly for W'
+                -- TODO: Rewrite μ[ψ|σ(W')] as μ[ψ_β∘Z|σ(W')] and apply hv_W'
+                sorry
+
+            -- Step 4: Extract v and the a.e. equalities
+            obtain ⟨v, hV_eq_v, hV'_eq_v⟩ := h_common
+
+            -- Step 5: Express s as W⁻¹(B_set) since s is 𝔾-measurable
+            -- 𝔾 = σ(W), so 𝔾-measurable sets are exactly preimages under W
+            -- TODO: Apply comap measurability characterization
+            have h_s_preimage : ∃ B_set : Set γ, MeasurableSet B_set ∧ s = W ⁻¹' B_set := by
+              -- This should follow from the fact that hs : MeasurableSet[𝔾] s
+              -- and 𝔾 = MeasurableSpace.comap W inferInstance
+              -- Need: characterization of comap-measurable sets as preimages
+              sorry
+
+            obtain ⟨B_set, hB_set_meas, hs_eq⟩ := h_s_preimage
+
+            -- Step 6: Rewrite the set integral using the preimage characterization
+            calc ∫ x in s, φ x * ψ x ∂μ
+                = ∫ x in W ⁻¹' B_set, φ x * ψ x ∂μ := by rw [hs_eq]
+              _ = ∫ x, φ x * ψ x * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ := by
+                  -- Set integral equals full integral with indicator
+                  -- TODO: Use setIntegral_indicator or similar
+                  sorry
+              _ = ∫ x, φ x * ψ x * (B_set.indicator (fun _ => (1 : ℝ))) (W' x) ∂μ := by
+                  -- Step 2 (Swap W → W'): Apply h_test_fn with h = B_set.indicator 1
+                  apply h_test_fn
+                  · exact measurable_const.indicator hB_set_meas
+                  · intro w; simp [Set.indicator]; norm_num
+              _ = ∫ x, φ x * μ[ψ | MeasurableSpace.comap W' inferInstance] x *
+                       (B_set.indicator (fun _ => (1 : ℝ))) (W' x) ∂μ := by
+                  -- Step 3 (Condition on σ(W')): Apply tower property
+                  -- The set W'⁻¹(B_set) is σ(W')-measurable, so we can use setIntegral_condExp
+                  -- TODO: Use setIntegral_condExp for the W' world
+                  sorry
+              _ = ∫ x, φ x * v (W' x) * (B_set.indicator (fun _ => (1 : ℝ))) (W' x) ∂μ := by
+                  -- Step 4 (Apply common version): V' = v∘W' a.e.
+                  -- TODO: Use hV'_eq_v to replace μ[ψ|σ(W')] with v∘W'
+                  sorry
+              _ = ∫ x, φ x * (v * B_set.indicator (fun _ => (1 : ℝ))) (W' x) ∂μ := by
+                  -- Algebra: factor out the composition
+                  congr 1; ext x; ring
+              _ = ∫ x, φ x * (v * B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ := by
+                  -- Step 5 (Swap back W' → W): Apply test_fn_pair_law for (Y,W) =^d (Y,W')
+                  apply test_fn_pair_law Y W W' hY hW hW' h_pair_YW φ
+                  · -- φ = f ∘ Y for some f : α → ℝ
+                    use A.indicator (fun _ => (1 : ℝ))
+                    ext ω; rfl
+                  · -- measurability of v * B_set.indicator 1
+                    sorry
+                  · -- boundedness of v * B_set.indicator 1
+                    sorry
+              _ = ∫ x, φ x * v (W x) * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ := by
+                  -- Algebra: expand the composition
+                  congr 1; ext x; ring
+              _ = ∫ x, φ x * V x * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ := by
+                  -- Step 4 reversed (Apply common version): V = v∘W a.e.
+                  -- TODO: Use hV_eq_v to replace v∘W with V
+                  sorry
+              _ = ∫ x in W ⁻¹' B_set, φ x * V x ∂μ := by
+                  -- Set integral from indicator
+                  -- TODO: Reverse setIntegral_indicator
+                  sorry
+              _ = ∫ x in s, φ x * V x ∂μ := by rw [hs_eq]
       _ =ᵐ[μ] μ[φ * V | 𝔾] := by rfl  -- V = μ[ψ|𝔾] by definition
       _ =ᵐ[μ] V * U := by
           -- Pull-out property (already proved above)
