@@ -428,19 +428,16 @@ lemma ae_limit_is_condexp_iInf
 
   -- Xlim is F_inf-strongly measurable as the limit of F_inf-measurable functions
   -- Each μ[f | 𝔽 n] is 𝔽 n-measurable, hence F_inf-measurable (since F_inf ≤ 𝔽 n)
-  have hXlim_meas : @StronglyMeasurable Ω ℝ _ F_inf Xlim := by
-    sorry
-    -- TODO: Deep type system challenge with sub-σ-algebras
-    -- Mathematical strategy (CORRECT):
-    -- 1. Each μ[f | 𝔽 n] is 𝔽 n-strongly measurable (by stronglyMeasurable_condExp)
-    -- 2. Since F_inf = ⨅ n, 𝔽 n ≤ 𝔽 n, lift via .mono to get F_inf-measurability
-    -- 3. Xlim is a.e. limit, so a.e. F_inf-measurable (by aestronglyMeasurable_of_tendsto_ae)
-    -- 4. Extract strongly measurable version via .stronglyMeasurable_mk
-    --
-    -- Issue: aestronglyMeasurable_of_tendsto_ae requires all functions measurable w.r.t.
-    -- the *same* σ-algebra, but @ notation with sub-σ-algebras has complex type inference.
-    -- The reference implementation in /tmp/fixed_section.txt (lines 17-27) works, but
-    -- requires exact matching of implicit parameter patterns.
+  have hXlim_meas : StronglyMeasurable[F_inf] Xlim := by
+    -- Each μ[f | 𝔽 n] is 𝔽 n-measurable, hence F_inf-measurable (since F_inf ≤ 𝔽 n)
+    have : ∀ n, @AEStronglyMeasurable _ _ _ F_inf (μ[f | 𝔽 n]) μ := by
+      intro n
+      have h_le_n : F_inf ≤ 𝔽 n := iInf_le 𝔽 n
+      exact (stronglyMeasurable_condExp (m := 𝔽 n)).mono h_le_n |>.aestronglyMeasurable
+    -- Xlim is a.e. limit of these, so is a.e. F_inf-strongly measurable
+    have : @AEStronglyMeasurable _ _ _ F_inf Xlim μ :=
+      @aestronglyMeasurable_of_tendsto_ae _ _ _ F_inf _ atTop (fun n => μ[f | 𝔽 n]) Xlim this h_tendsto
+    exact this.stronglyMeasurable_mk.mono (fun _ _ => id)
 
   -- Since Xlim is F_inf-measurable and integrable, μ[Xlim | F_inf] = Xlim
   have hF_inf_le : F_inf ≤ _ := le_trans (iInf_le 𝔽 0) (h_le 0)
