@@ -305,11 +305,17 @@ lemma ae_limit_is_condexp_iInf
     have : F_inf ≤ 𝔽 n := iInf_le 𝔽 n
     exact condExp_condExp_of_le this (h_le n)
 
-  -- Xlim is F_inf-strongly measurable as the limit of measurable functions
-  -- Strategy: Show Xlim = μ[f | F_inf] a.e., which is F_inf-measurable
-  have hXlim_meas : StronglyMeasurable[F_inf] Xlim := by
-    -- We'll prove this at the end, once we've shown Xlim = μ[f | F_inf] a.e.
-    sorry
+  -- Xlim is F_inf-strongly measurable as the limit of F_inf-measurable functions
+  -- Each μ[f | 𝔽 n] is 𝔽 n-measurable, hence F_inf-measurable (since F_inf ≤ 𝔽 n)
+  have hXlim_meas : @StronglyMeasurable Ω ℝ F_inf _ Xlim := by
+    have : ∀ n, @AEStronglyMeasurable Ω ℝ _ F_inf _ (μ[f | 𝔽 n]) μ := by
+      intro n
+      have h_le_n : F_inf ≤ 𝔽 n := iInf_le 𝔽 n
+      exact (stronglyMeasurable_condExp (m := 𝔽 n)).mono h_le_n |>.aestronglyMeasurable
+    -- Xlim is a.e. limit of these, so is a.e. F_inf-strongly measurable
+    have h_ae : @AEStronglyMeasurable Ω ℝ _ F_inf _ Xlim μ :=
+      aestronglyMeasurable_of_tendsto_ae atTop (f := fun n => μ[f | 𝔽 n]) this h_tendsto
+    exact h_ae.stronglyMeasurable_mk.mono (fun _ _ => id)
 
   -- Since Xlim is F_inf-measurable and integrable, μ[Xlim | F_inf] = Xlim
   have hF_inf_le : F_inf ≤ (inferInstance : MeasurableSpace Ω) := by
@@ -318,7 +324,8 @@ lemma ae_limit_is_condexp_iInf
     sorry
   have hXlim_condExp : μ[Xlim | F_inf] =ᵐ[μ] Xlim := by
     -- Apply condExp_of_stronglyMeasurable: if f is m-measurable and integrable, then μ[f|m] = f
-    sorry
+    have : μ[Xlim | F_inf] = Xlim := condExp_of_stronglyMeasurable hF_inf_le hXlim_meas hXlimint
+    rw [this]
 
   -- Final identification: Xlim = μ[f | F_inf]
   -- Strategy: Use L¹-continuity of condExp
@@ -332,7 +339,7 @@ lemma ae_limit_is_condexp_iInf
   -- By linearity of condExp: μ[μ[f | 𝔽 n] | F_inf] - μ[Xlim | F_inf] = μ[(μ[f | 𝔽 n] - Xlim) | F_inf]
   have h_lin : ∀ n, μ[(μ[f | 𝔽 n] - Xlim) | F_inf] =ᵐ[μ] μ[μ[f | 𝔽 n] | F_inf] - μ[Xlim | F_inf] := by
     intro n
-    sorry
+    exact condExp_sub integrable_condExp hXlimint F_inf
 
   -- By L¹-contraction: ‖μ[(μ[f | 𝔽 n] - Xlim) | F_inf]‖₁ ≤ ‖μ[f | 𝔽 n] - Xlim‖₁ → 0
   have h_contract : Tendsto (fun n => eLpNorm (μ[(μ[f | 𝔽 n] - Xlim) | F_inf]) 1 μ) atTop (𝓝 0) := by
@@ -344,7 +351,16 @@ lemma ae_limit_is_condexp_iInf
 
   -- So μ[f | F_inf] - Xlim → 0 in L¹
   have h_lim : eLpNorm (μ[f | F_inf] - Xlim) 1 μ = 0 := by
-    sorry
+    -- The sequence eLpNorm μ[(μ[f | 𝔽 n] - Xlim) | F_inf] 1 μ converges to 0
+    -- But by h_diff and h_lin, this equals eLpNorm (μ[f | F_inf] - Xlim) 1 μ for all n
+    -- So the constant sequence converges to 0, hence the constant is 0
+    have h_const_tendsto : Tendsto (fun n => eLpNorm (μ[f | F_inf] - Xlim) 1 μ) atTop (𝓝 0) := by
+      have : ∀ n, μ[f | F_inf] - Xlim =ᵐ[μ] μ[(μ[f | 𝔽 n] - Xlim) | F_inf] := by
+        intro n
+        filter_upwards [h_diff n, h_lin n] with ω hd hl
+        rw [← hd, ← hl]
+      refine Tendsto.congr (fun n => (eLpNorm_congr_ae (this n)).symm) h_contract
+    exact tendsto_nhds_unique h_const_tendsto tendsto_const_nhds
 
   -- Therefore μ[f | F_inf] = Xlim a.e.
   have hXlim_eq : μ[f | F_inf] =ᵐ[μ] Xlim := by
