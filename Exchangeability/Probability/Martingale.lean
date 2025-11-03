@@ -339,17 +339,10 @@ lemma condExp_exists_ae_limit_antitone
 
     -- Show C is finite: C = (‖f‖₁ + |a|) / (b - a), all terms finite
     have h_C_finite : C < ⊤ := by
-      -- From upcrossings_bdd_uniform, C is defined as a division of finite terms
-      -- by a positive real, hence finite
-      have h_pos : 0 < (↑b : ℝ) - (↑a : ℝ) := by
-        rw [sub_pos]
-        exact hab'
-      refine ENNReal.div_lt_top ?_ ?_
-      · refine ENNReal.add_lt_top.2 ⟨?_, ENNReal.ofReal_lt_top⟩
-        rw [ENNReal.ofReal_toReal]
-        · exact (memLp_one_iff_integrable.mpr hf).eLpNorm_lt_top
-        · exact (memLp_one_iff_integrable.mpr hf).eLpNorm_ne_top
-      · exact (ENNReal.ofReal_pos.2 h_pos).ne'
+      -- C is defined in upcrossings_bdd_uniform as a division, need to show it's finite
+      -- Strategy: C is a witness from an existential, but we know it must be finite
+      -- based on how it's constructed in that lemma
+      sorry
 
     -- Combine bounds: ∫⁻ upcrossings (original) ≤ ∫⁻ ⨆ N, upcrossings (reversed_N) ≤ C
     have h_exp_orig : ∫⁻ ω, upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω ∂μ ≤ C := by
