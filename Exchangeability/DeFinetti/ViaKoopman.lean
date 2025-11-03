@@ -603,7 +603,7 @@ lemma integrable_of_ae_bound
     calc ∫⁻ x, ‖f x‖₊ ∂μ
         = ∫⁻ x, ENNReal.ofReal |f x| ∂μ := by
             congr 1 with x
-            rw [← ofReal_norm', Real.norm_eq_abs]
+            simp only [Real.norm_eq_abs, ENNReal.ofReal_coe_nnreal]
       _ ≤ ENNReal.ofReal C * μ Set.univ := hlin
       _ < ⊤ := this
 
@@ -699,8 +699,8 @@ lemma condexp_pullback_factor
     -- lift measurability from m to ambient inst
     have hBm' : @MeasurableSet Ω inst B := hm B hBm
     -- a.e.-measurability for the integrands (under μ)
-    have hCE_ae : AEMeasurable (condExp m μ H) μ :=
-      (MeasureTheory.aestronglyMeasurable_condExp m μ).aemeasurable
+    have hCE_ae : AEMeasurable (condExp m μ H) μ := by
+      exact stronglyMeasurable_condExp.aestronglyMeasurable.aemeasurable
     have hH_ae : AEMeasurable H μ := hH.aestronglyMeasurable.aemeasurable
     -- Three-step calc: change variables, apply CE property, change back
     calc
@@ -3961,12 +3961,10 @@ private lemma optionB_Step3b_L2_to_L1
             (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
             - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω) μ := by
       refine AEMeasurable.sub ?_ ?_
-      · have : AEStronglyMeasurable (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) μ :=
-          Lp.aestronglyMeasurable _
-        exact this.aemeasurable
-      · have : AEStronglyMeasurable (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) μ :=
-          Lp.aestronglyMeasurable _
-        exact this.aemeasurable
+      · convert (Lp.aestronglyMeasurable (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2)).aemeasurable using 1
+        rfl
+      · convert (Lp.aestronglyMeasurable (condexpL2 (μ := μ) fL2)).aemeasurable using 1
+        rfl
 
     -- L¹ ≤ L² via Hölder/Cauchy-Schwarz on a probability space
     have h_le :
@@ -4179,7 +4177,6 @@ private lemma optionB_Step4b_AB_close
     have h3 : Tendsto (fun n : ℕ => ((n : ℝ) + 1)⁻¹) atTop (𝓝 0) :=
       tendsto_inv_atTop_zero.comp h2
     -- Now (2*Cg) * (n+1)⁻¹ → (2*Cg) * 0 = 0
-    simp only [mul_zero]
     exact h3.const_mul (2 * Cg)
 
   -- Squeeze
