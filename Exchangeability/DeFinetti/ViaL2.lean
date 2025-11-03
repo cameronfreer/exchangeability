@@ -2488,12 +2488,33 @@ lemma cesaro_to_condexp_L2
       have h_eq := hfX_contract n k hk
 
       -- The subtraction by m is the same measurable transformation on both sides
-      sorry
-      /-
-      TODO (Section 1 from user): Apply Measure.map_map to show subtraction commutes with measure map
-      The provided solution has some universe level issues that need debugging.
-      Will revisit after applying Section 2.
-      -/
+      -- Strategy: Transform h_eq using coordinatewise subtraction
+
+      -- Define coordinatewise subtraction
+      let h : (Fin n → ℝ) → (Fin n → ℝ) := fun g i => g i - m
+
+      -- h is measurable
+      have h_meas : Measurable h := by
+        apply measurable_pi_iff.mpr
+        intro i
+        exact (measurable_pi_apply i).sub measurable_const
+
+      -- Input functions are measurable
+      have hL_meas : Measurable (fun ω (i : Fin n) => f (X (k i) ω)) :=
+        measurable_pi_iff.mpr (fun i => hf_meas.comp (hX_meas (k i)))
+      have hR_meas : Measurable (fun ω (i : Fin n) => f (X (↑i) ω)) :=
+        measurable_pi_iff.mpr (fun i => hf_meas.comp (hX_meas i))
+
+      -- Apply map_map: map (h ∘ g) μ = map h (map g μ)
+      calc Measure.map (fun ω i => f (X (k i) ω) - m) μ
+          = Measure.map (h ∘ (fun ω i => f (X (k i) ω))) μ := by congr
+        _ = Measure.map h (Measure.map (fun ω i => f (X (k i) ω)) μ) := by
+              exact (Measure.map_map h_meas hL_meas).symm
+        _ = Measure.map h (Measure.map (fun ω i => f (X (↑i) ω)) μ) := by
+              rw [h_eq]
+        _ = Measure.map (h ∘ (fun ω i => f (X (↑i) ω))) μ := by
+              exact Measure.map_map h_meas hR_meas
+        _ = Measure.map (fun ω (i : Fin n) => f (X (↑i) ω) - m) μ := by congr
 
     -- Step 3: Show uniform variance via contractability
     -- E[Z_i²] = E[Z_0²] for all i
