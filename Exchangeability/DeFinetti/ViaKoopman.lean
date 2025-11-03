@@ -3980,12 +3980,13 @@ private lemma optionB_Step3b_L2_to_L1
                   (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
                   - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω)
                (2 : ℝ≥0∞) μ).toReal := by
-      simpa [Real.norm_eq_abs] using
-        (MeasureTheory.integral_norm_le_snorm
-          (f := fun ω =>
-            (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
-            - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω)
-          (μ := μ) (p := (2 : ℝ≥0∞)) h_meas)
+      have := MeasureTheory.integral_norm_le_snorm
+        (f := fun ω =>
+          (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
+          - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω)
+        (μ := μ) (p := (2 : ℝ≥0∞)) h_meas
+      simp only [Real.norm_eq_abs] at this
+      exact this
 
     -- identify `(snorm …).toReal` with the L² norm of the Lp difference
     have h_toNorm :
@@ -3997,7 +3998,7 @@ private lemma optionB_Step3b_L2_to_L1
         = ‖birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
              - condexpL2 (μ := μ) fL2‖ := by
       -- `Lp.norm_def` bridges Lp norm and snorm of its representative.
-      simpa [Lp.norm_def]
+      simp only [Lp.norm_def]
 
     -- conclude the inequality at this `n > 0`
     have h_eq_int :
