@@ -2290,11 +2290,11 @@ private lemma L1_cesaro_convergence_bounded
     - This requires `productCylinder` which is defined later at line 3208
 
   Step 2: Apply birkhoffCylinder_tendsto_condexp (line 3607) to get L² convergence
-    - birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 → condexpL2 fL2 in L²
+    - birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 → condexpL2 fL2 in L²
     - where fL2 = G a.e.
 
   Step 3: Connect birkhoffAverage to Cesàro average A_n
-    - birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
+    - birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2
       = (1/(n+1)) ∑_{j=0}^n (koopman shift)^j fL2
       = (1/(n+1)) ∑_{j=0}^n fL2 ∘ shift^[j]
       = (1/(n+1)) ∑_{j=0}^n g((shift^[j] ω) 0)  [using fL2 = g(ω 0) a.e.]
@@ -3506,7 +3506,7 @@ This combines:
 2. The identification proj = condexp via range_condexp_eq_fixedSubspace
 -/
 theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
-    Tendsto (fun n => birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n f)
+    Tendsto (fun n => birkhoffAverage ℝ (koopman shift hσ) _root_.id n f)
       atTop (𝓝 (condexpL2 (μ := μ) f)) := by
   -- Step 1: Get convergence to projection P onto fixedSpace from MET
   classical
@@ -3785,7 +3785,7 @@ theorem birkhoffCylinder_tendsto_condexp
     let F := productCylinder fs
     ∃ (fL2 : Lp ℝ 2 μ),
       (∀ᵐ ω ∂μ, fL2 ω = F ω) ∧
-      Tendsto (fun n => birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2)
+      Tendsto (fun n => birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2)
         atTop
         (𝓝 (condexpL2 (μ := μ) fL2)) := by
   classical
@@ -3921,14 +3921,14 @@ private lemma optionB_Step3b_L2_to_L1
     (hσ : MeasurePreserving shift μ μ)
     (fL2 : Lp ℝ 2 μ)
     (hfL2_tendsto :
-      Tendsto (fun n => birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2)
+      Tendsto (fun n => birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2)
               atTop (𝓝 (condexpL2 (μ := μ) fL2)))
     (B : ℕ → Ω[α] → ℝ)
     (Y : Ω[α] → ℝ)
     -- a.e. equalities available for n > 0
     (hB_eq_pos :
       ∀ n, 0 < n →
-        (fun ω => birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 ω) =ᵐ[μ] B n)
+        (fun ω => birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω) =ᵐ[μ] B n)
     (hY_eq :
       (fun ω => condexpL2 (μ := μ) fL2 ω) =ᵐ[μ] Y) :
     Tendsto (fun n => ∫ ω, |B n ω - Y ω| ∂μ) atTop (𝓝 0) := by
@@ -3938,7 +3938,7 @@ private lemma optionB_Step3b_L2_to_L1
     (continuous_norm.comp (continuous_sub_right _))
   have hL2_norm :
       Tendsto (fun n =>
-        ‖birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
+        ‖birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2
            - condexpL2 (μ := μ) fL2‖) atTop (𝓝 0) := by
     -- Compose the continuous map hΦ with the convergence hfL2_tendsto
     have := (hΦ.tendsto (condexpL2 (μ := μ) fL2)).comp hfL2_tendsto
@@ -3948,14 +3948,14 @@ private lemma optionB_Step3b_L2_to_L1
   have h_upper_ev :
       ∀ᶠ n in atTop,
         ∫ ω, |B n ω - Y ω| ∂μ
-          ≤ ‖birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
+          ≤ ‖birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2
                - condexpL2 (μ := μ) fL2‖ := by
     filter_upwards [eventually_gt_atTop (0 : ℕ)] with n hn
     -- a.e. identify `B n` and `Y` with the Lp representatives
     have h_ae :
         (fun ω => |B n ω - Y ω|) =ᵐ[μ]
           (fun ω =>
-            |birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 ω
+            |birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω
              - condexpL2 (μ := μ) fL2 ω|) := by
       filter_upwards [hB_eq_pos n hn, hY_eq] with ω h1 h2
       simpa [h1, h2]
@@ -3964,26 +3964,26 @@ private lemma optionB_Step3b_L2_to_L1
     have h_meas :
         AEMeasurable
           (fun ω =>
-            (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
+            (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 : Ω[α] → ℝ) ω
             - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω) μ :=
       ((Lp.aestronglyMeasurable
-          (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2)).aemeasurable.sub
+          (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2)).aemeasurable.sub
        (Lp.aestronglyMeasurable
           (condexpL2 (μ := μ) fL2)).aemeasurable)
 
     -- L¹ ≤ L² (expressed via `integral_norm_le_snorm` with p=2)
     have h_le :
-        ∫ ω, |(birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 ω
+        ∫ ω, |(birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω
                 - condexpL2 (μ := μ) fL2 ω)| ∂μ
           ≤ (MeasureTheory.snorm
                (fun ω =>
-                  (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
+                  (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 : Ω[α] → ℝ) ω
                   - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω)
                (2 : ℝ≥0∞) μ).toReal := by
       simpa [Real.norm_eq_abs] using
         (MeasureTheory.integral_norm_le_snorm
           (f := fun ω =>
-            (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
+            (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 : Ω[α] → ℝ) ω
             - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω)
           (μ := μ) (p := (2 : ℝ≥0∞)) h_meas)
 
@@ -3991,10 +3991,10 @@ private lemma optionB_Step3b_L2_to_L1
     have h_toNorm :
         (MeasureTheory.snorm
           (fun ω =>
-            (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
+            (birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 : Ω[α] → ℝ) ω
             - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω)
           (2 : ℝ≥0∞) μ).toReal
-        = ‖birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
+        = ‖birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2
              - condexpL2 (μ := μ) fL2‖ := by
       -- `Lp.norm_def` bridges Lp norm and snorm of its representative.
       simpa [Lp.norm_def]
@@ -4002,7 +4002,7 @@ private lemma optionB_Step3b_L2_to_L1
     -- conclude the inequality at this `n > 0`
     have h_eq_int :
         ∫ ω, |B n ω - Y ω| ∂μ
-          = ∫ ω, |(birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 ω
+          = ∫ ω, |(birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω
                     - condexpL2 (μ := μ) fL2 ω)| ∂μ :=
       integral_congr_ae h_ae
     exact (le_of_eq h_eq_int).trans (by simpa [h_toNorm] using h_le)
@@ -4412,7 +4412,7 @@ private theorem optionB_L1_convergence_bounded
   -- Pass 3: Combine into birkhoffAverage = B_n
   --
   have hB_eq_birkhoff : ∀ n > 0,
-      (fun ω => birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 ω) =ᵐ[μ] B n := by
+      (fun ω => birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω) =ᵐ[μ] B n := by
     intro n hn
 
     -- Pass 1: Each koopman iterate equals fL2 after shift^k
@@ -4479,7 +4479,7 @@ private theorem optionB_L1_convergence_bounded
 
     -- Unfold birkhoffAverage and match with B n
     simp only [B, hn.ne', ↓reduceIte]
-    have hbirk : ∀ ω, birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 ω =
+    have hbirk : ∀ ω, birkhoffAverage ℝ (koopman shift hσ) _root_.id n fL2 ω =
         (n : ℝ)⁻¹ * ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω := by
       intro ω
       rw [birkhoffAverage.eq_1, birkhoffSum.eq_1]
