@@ -2436,21 +2436,9 @@ lemma cesaro_to_condexp_L2
       -- The subtraction by m is the same measurable transformation on both sides
       sorry
       /-
-      TODO: Complete using pointwise argument
-
-      Proof strategy:
-      From hfX_contract, we have measure equality:
-        map (fun ω i => f(X(k i) ω)) μ = map (fun ω i => f(X i ω)) μ
-
-      Need to show:
-        map (fun ω i => f(X(k i) ω) - m) μ = map (fun ω i => f(X i ω) - m) μ
-
-      Approach: Show that subtracting constant m from each coordinate commutes with measure map.
-      This should follow from extensional equality of the functions modulo the measure equality.
-
-      Previous attempt with Measure.map_map failed due to type mismatch:
-      - Z uses ℕ → ℝ but contractability context uses Fin n → ℝ
-      - Need different approach, possibly using congruence arguments directly
+      TODO: This should follow from h_eq by applying the transformation (fun v i => v i - m)
+      to both sides, but there are subtle type issues with ℕ vs Fin n indexing that need
+      to be resolved carefully. The proof strategy is sound but needs more careful type handling.
       -/
 
     -- Step 3: Show uniform variance via contractability
@@ -2734,8 +2722,21 @@ lemma cesaro_to_condexp_L2
         use 1
         intros n n' hn_ge hn'_ge
         rw [hε_top]
-        sorry  -- TODO: Show eLpNorm (blockAvg - blockAvg) 2 μ < ⊤
-        -- blockAvg is bounded (since f is), so difference is in L² and has finite norm
+        -- blockAvg is bounded, so the difference has finite L² norm
+        sorry
+        /-
+        TODO: Prove eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ < ⊤
+
+        Strategy:
+        1. Show |blockAvg f X 0 n ω| ≤ 1 for all ω (average of values bounded by 1)
+        2. Show |blockAvg f X 0 n' ω| ≤ 1 for all ω
+        3. Therefore |diff| ≤ 2
+        4. Use memLp_of_bounded to show MemLp (diff) 2 μ
+        5. Apply MemLp.eLpNorm_lt_top
+
+        The proof exists at lines 3113-3160 but needs blockAvg_measurable lemma
+        which may not be in scope here. This is a straightforward but tedious proof.
+        -/
 
       -- Case ε < ⊤: use Archimedean property to find N
       have hε_lt_top : ε < ⊤ := lt_top_iff_ne_top.mpr hε_top
