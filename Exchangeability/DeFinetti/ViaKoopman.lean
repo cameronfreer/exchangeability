@@ -603,7 +603,7 @@ lemma integrable_of_ae_bound
     calc ∫⁻ x, ‖f x‖₊ ∂μ
         = ∫⁻ x, ENNReal.ofReal |f x| ∂μ := by
             congr 1 with x
-            simp [Real.norm_eq_abs]
+            rw [← ofReal_norm', Real.norm_eq_abs]
       _ ≤ ENNReal.ofReal C * μ Set.univ := hlin
       _ < ⊤ := this
 
@@ -699,9 +699,8 @@ lemma condexp_pullback_factor
     -- lift measurability from m to ambient inst
     have hBm' : @MeasurableSet Ω inst B := hm B hBm
     -- a.e.-measurability for the integrands (under μ)
-    have hCE_ae : AEMeasurable (condExp m μ H) μ := by
-      letI : MeasurableSpace Ω := inst  -- Fix ambient space instance
-      exact (MeasureTheory.aestronglyMeasurable_condExp' m hm H).aemeasurable
+    have hCE_ae : AEMeasurable (condExp m μ H) μ :=
+      (MeasureTheory.aestronglyMeasurable_condExp m μ).aemeasurable
     have hH_ae : AEMeasurable H μ := hH.aestronglyMeasurable.aemeasurable
     -- Three-step calc: change variables, apply CE property, change back
     calc
