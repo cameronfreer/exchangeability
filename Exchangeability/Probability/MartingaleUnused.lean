@@ -7,6 +7,7 @@ import Mathlib.Probability.Martingale.Basic
 import Mathlib.Probability.Martingale.Convergence
 import Mathlib.Probability.Process.Filtration
 import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
+import Exchangeability.Probability.MartingaleExtras
 
 /-!
 # Martingale Infrastructure (Unused in Critical Path)
@@ -23,17 +24,15 @@ NOT imported by the main proof pipeline.
    - Not used in ViaMartingale.lean
    - Potential future use for more general martingale theory
 
-2. **Helper definitions**: revCE, revCE_tower, revCE_L1_bdd
-   - Support the unused reverseMartingaleLimit axioms
-   - Specific to reverse martingale sequences
-
-3. **Uniform integrability infrastructure**:
+2. **Uniform integrability infrastructure**:
    - Axioms: condExp_jensen_norm, uniformIntegrable_condExp, exists_deLaValleePoussin_function,
      condExp_compCLM, abs_condExp_le_condExp_abs, integral_norm_condExp_le
-   - Complete lemmas: lintegral_fatou_ofReal_norm, integrable_limit_of_ae_tendsto_condExp,
+   - Incomplete lemmas: integrable_limit_of_ae_tendsto_condExp,
      tendsto_L1_condExp_of_ae, UniformIntegrable.exists_ae_tendsto_subseq_of_integrable
    - These represent an alternative proof strategy for Lévy's downward theorem via Vitali
    - Not used in current implementation
+
+**Note:** Fully-proved helper lemmas have been extracted to `MartingaleExtras.lean`.
 
 ## Why not on the critical path:
 
@@ -47,7 +46,6 @@ All the axioms and infrastructure below are exploratory.
 
 - The UI infrastructure could provide an alternate proof path for condExp_tendsto_iInf
 - The reverseMartingaleLimit axioms could be useful for general martingale theory
-- Some complete lemmas (like integrable_limit_of_ae_tendsto_condExp) are reusable
 
 ## References
 
@@ -170,58 +168,11 @@ axiom reverseMartingaleNat_convergence
     (f₀ : Ω → ℝ) (h_f₀_int : Integrable f₀ μ) :
     ∀ᵐ ω ∂μ, Tendsto (fun n => M n ω) atTop (𝓝 ((reverseMartingaleLimitNat h_filtration h_le h_adapted h_integrable h_martingale f₀ h_f₀_int) ω))
 
-/-! ## Helper Definitions (Unused)
-
-These support the unused reverseMartingaleLimit axioms above. -/
-
-/-- Reverse martingale along a decreasing chain: `X n := condExp μ (F n) f`. -/
-def revCE (μ : Measure Ω) (F : ℕ → MeasurableSpace Ω) (f : Ω → ℝ) (n : ℕ) : Ω → ℝ :=
-  μ[f | F n]
-
-/-- Tower property in the reverse direction: for `m ≥ n`, `E[X_n | F_m] = X_m`. -/
-lemma revCE_tower
-    [IsProbabilityMeasure μ]
-    {F : ℕ → MeasurableSpace Ω} (hF : Antitone F)
-    (h_le : ∀ n, F n ≤ (inferInstance : MeasurableSpace Ω))
-    (f : Ω → ℝ) {n m : ℕ} (hmn : n ≤ m) :
-    μ[revCE μ F f n | F m] =ᵐ[μ] revCE μ F f m := by
-  simp only [revCE]
-  exact condExp_condExp_of_le (hF hmn) (h_le n)
-
-/-- L¹ boundedness of the reverse martingale. -/
-lemma revCE_L1_bdd
-    [IsProbabilityMeasure μ]
-    {F : ℕ → MeasurableSpace Ω}
-    (h_le : ∀ n, F n ≤ (inferInstance : MeasurableSpace Ω))
-    (f : Ω → ℝ) (hf : Integrable f μ) :
-    ∀ n, eLpNorm (revCE μ F f n) 1 μ ≤ eLpNorm f 1 μ := by
-  intro n
-  simp only [revCE]
-  exact eLpNorm_one_condExp_le_eLpNorm f
-
 /-! ## Uniform Integrability Infrastructure (Unused)
 
 This represents an alternative proof strategy for Lévy's downward theorem using
 uniform integrability + Vitali convergence. Not used in current implementation,
 but kept for potential future use. -/
-
-/-- From the de la Vallée-Poussin tail condition `Φ(t)/t → ∞`, extract a threshold `R > 0`
-such that `t ≤ Φ t` for all `t ≥ R`. -/
-lemma deLaValleePoussin_eventually_ge_id
-    (Φ : ℝ → ℝ)
-    (hΦ_tail : Tendsto (fun t : ℝ => Φ t / t) atTop atTop) :
-    ∃ R > 0, ∀ ⦃t⦄, t ≥ R → t ≤ Φ t := by
-  have h := (tendsto_atTop_atTop.1 hΦ_tail) 1
-  rcases h with ⟨R, hR⟩
-  refine ⟨max R 1, by positivity, ?_⟩
-  intro t ht
-  have ht' : t ≥ R := le_trans (le_max_left _ _) ht
-  have hΦ_ge : Φ t / t ≥ 1 := hR t ht'
-  have hpos : 0 < t := by linarith [le_max_right R 1]
-  have : 1 ≤ Φ t / t := hΦ_ge
-  calc t = t * 1 := by ring
-       _ ≤ t * (Φ t / t) := by exact mul_le_mul_of_nonneg_left this (le_of_lt hpos)
-       _ = Φ t := by field_simp
 
 /-- **Jensen inequality for conditional expectation with convex functions of the norm.**
 
@@ -282,32 +233,10 @@ axiom integral_norm_condExp_le
   (m : MeasurableSpace α) {f : α → β} (hf : Integrable f μ) :
   ∫ x, ‖condExp m μ f x‖ ∂μ ≤ ∫ x, ‖f x‖ ∂μ
 
-/-! ## Complete Lemmas (Unused but Reusable)
+/-! ## Incomplete Lemmas (Dependent on Axioms)
 
-These lemmas are fully proved and could be useful for implementing condExp_tendsto_iInf
-via the Vitali approach. -/
-
-/-- Fatou on `ENNReal.ofReal ∘ ‖·‖` along an a.e. pointwise limit. -/
-lemma lintegral_fatou_ofReal_norm
-  {α β : Type*} [MeasurableSpace α] {μ : Measure α}
-  [MeasurableSpace β] [NormedAddCommGroup β] [BorelSpace β]
-  {u : ℕ → α → β} {g : α → β}
-  (hae : ∀ᵐ x ∂μ, Tendsto (fun n => u n x) atTop (nhds (g x)))
-  (hu_meas : ∀ n, AEMeasurable (fun x => ENNReal.ofReal ‖u n x‖) μ)
-  (hg_meas : AEMeasurable (fun x => ENNReal.ofReal ‖g x‖) μ) :
-  ∫⁻ x, ENNReal.ofReal ‖g x‖ ∂μ
-    ≤ liminf (fun n => ∫⁻ x, ENNReal.ofReal ‖u n x‖ ∂μ) atTop := by
-  have hae_ofReal :
-      ∀ᵐ x ∂μ,
-        Tendsto (fun n => ENNReal.ofReal ‖u n x‖) atTop
-                (nhds (ENNReal.ofReal ‖g x‖)) :=
-    hae.mono (fun x hx =>
-      ((ENNReal.continuous_ofReal.comp continuous_norm).tendsto _).comp hx)
-  calc ∫⁻ x, ENNReal.ofReal ‖g x‖ ∂μ
-      = ∫⁻ x, liminf (fun n => ENNReal.ofReal ‖u n x‖) atTop ∂μ :=
-          lintegral_congr_ae (hae_ofReal.mono fun x hx => hx.liminf_eq.symm)
-    _ ≤ liminf (fun n => ∫⁻ x, ENNReal.ofReal ‖u n x‖ ∂μ) atTop :=
-          lintegral_liminf_le' hu_meas
+These lemmas represent work towards implementing condExp_tendsto_iInf via the Vitali approach,
+but depend on axioms or have sorries. They are kept for potential future completion. -/
 
 /-- **Integrable limit from a.e. convergence via Fatou + L¹ contraction.**
 
