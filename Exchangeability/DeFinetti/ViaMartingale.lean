@@ -929,7 +929,10 @@ lemma condIndep_of_triple_law
       calc ∫ ω, φ ω * V ω ∂μ
           = ∫ ω, μ[φ * V | 𝔾] ω ∂μ := by
             haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp hW)) := by
-              sorry -- Need to show trimmed measure is σ-finite
+              -- μ is a probability measure, hence finite
+              -- Trimmed measures of finite measures are finite (isFiniteMeasure_trim)
+              -- Finite measures are σ-finite (IsFiniteMeasure.toSigmaFinite)
+              infer_instance
             exact (integral_condExp (measurable_iff_comap_le.mp hW)).symm
         _ = ∫ ω, (V * U) ω ∂μ := integral_congr_ae h_left_local
         _ = ∫ ω, (U * V) ω ∂μ := by
@@ -937,7 +940,7 @@ lemma condIndep_of_triple_law
         _ = ∫ ω, μ[U * ψ | 𝔾] ω ∂μ := (integral_congr_ae h_right_local).symm
         _ = ∫ ω, U ω * ψ ω ∂μ := by
             haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp hW)) := by
-              sorry -- Need to show trimmed measure is σ-finite
+              infer_instance
             exact integral_condExp (measurable_iff_comap_le.mp hW)
     
     -- Substep (f)-(g): Take CEs and use tower property
@@ -1003,19 +1006,28 @@ lemma condIndep_of_triple_law
           -- We use ae_eq_condExp_of_forall_setIntegral_eq
           symm
           haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp hW)) := by
-            sorry -- Need σ-finite instance
+            infer_instance
           refine ae_eq_condExp_of_forall_setIntegral_eq (measurable_iff_comap_le.mp hW)
             hφψ_int (fun s hs hs_fin => ?_) (fun s hs hs_fin => ?_)
             stronglyMeasurable_condExp.aestronglyMeasurable
           · -- Integrability of φ·μ[ψ|𝔾] on finite measure sets
             exact integrable_condExp.integrableOn
           · -- Integral equality: ∫_s φ·ψ = ∫_s φ·μ[ψ|𝔾] for 𝔾-measurable s
-            -- For 𝔾-measurable s, by setIntegral_condExp:
-            -- ∫_s ψ dμ = ∫_s μ[ψ|𝔾] dμ
-            -- We need to show ∫_s (φ·μ[ψ|𝔾]) dμ = ∫_s (φ·ψ) dμ
-            -- This follows from multiplying the integrands by φ
-            sorry -- TODO: Use setIntegral_condExp with multiplication by φ
-                  -- Estimated ~15-20 lines
+            --
+            -- BLOCKER: Prove ∫_s (φ * μ[ψ | 𝔾]) = ∫_s (φ * ψ) for 𝔾-measurable s
+            --
+            -- Strategy: For 𝔾-measurable s, the indicator 1_s is 𝔾-measurable.
+            -- Key insight: μ[1_s * ψ | 𝔾] = 1_s * μ[ψ | 𝔾] (pull-out property)
+            -- Then: ∫ μ[1_s * ψ | 𝔾] = ∫ (1_s * ψ) (by integral_condExp)
+            -- This gives: ∫_s μ[ψ | 𝔾] = ∫_s ψ
+            --
+            -- TODO: Extend this to ∫_s (φ * μ[ψ | 𝔾]) = ∫_s (φ * ψ)
+            -- Possible approaches:
+            -- 1. Show that φ factors through in some way
+            -- 2. Use h_test_fn and properties of the triple distribution
+            -- 3. Find a mathlib lemma about conditional expectations with products
+            --
+            sorry
       _ =ᵐ[μ] μ[φ * V | 𝔾] := by rfl  -- V = μ[ψ|𝔾] by definition
       _ =ᵐ[μ] V * U := by
           -- Pull-out property (already proved above)
