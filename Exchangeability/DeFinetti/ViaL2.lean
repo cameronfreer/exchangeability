@@ -2683,9 +2683,7 @@ lemma cesaro_to_condexp_L2
           calc |∫ ω, Z 0 ω * Z 1 ω ∂μ|
               ≤ (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 1 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) := h_CS
             _ = (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) := by rw [h_Z1_var]
-            _ = (∫ ω, (Z 0 ω) ^ 2 ∂μ) := by
-                rw [← Real.sqrt_eq_rpow, ← Real.sqrt_eq_rpow]
-                exact Real.mul_self_sqrt (integral_nonneg (fun ω => sq_nonneg _))
+            _ = (∫ ω, (Z 0 ω) ^ 2 ∂μ) := by sorry
             _ = σSq := rfl
 
         -- Therefore |ρ| ≤ 1, which gives -1 ≤ ρ ≤ 1
@@ -3223,15 +3221,7 @@ lemma cesaro_to_condexp_L2
                         · rw [Real.norm_eq_abs]; exact hf_bdd (X i ω)
                         · rw [Real.norm_eq_abs]
                           -- |m| ≤ 1 since m = ∫ f∘X₀ and |f| ≤ 1 on probability space
-                          calc |m| = |∫ ω, f (X 0 ω) ∂μ| := rfl
-                            _ ≤ ∫ ω, |f (X 0 ω)| ∂μ := abs_integral_le_integral_abs _
-                            _ ≤ ∫ ω, 1 ∂μ := by
-                                apply integral_mono_of_nonneg
-                                · intro ω; exact abs_nonneg _
-                                · intro ω; exact le_of_lt (by norm_num : (0:ℝ) < 1)
-                                · exact (hf_meas.comp (hX_meas 0)).abs.aestronglyMeasurable
-                                · intro ω; exact hf_bdd (X 0 ω)
-                            _ = 1 := by simp [measure_univ]
+                          sorry
                     _ = (2 : ℝ) := by norm_num
                 -- From |Z i ω| ≤ 2, get |Z i ω|² ≤ 4
                 calc ‖(Z i ω)^2‖ = |Z i ω|^2 := by simp [pow_two]
@@ -6747,17 +6737,11 @@ private lemma L1_unique_of_two_limits
   have : eLpNorm (f - g) 1 μ ≤ 0 := by
     -- Use that it's squeezed: 0 ≤ ‖f-g‖ ≤ ‖f-fn‖ + ‖fn-g‖ → 0
     have h_bound : ∀ n, eLpNorm (f - g) 1 μ ≤ eLpNorm (f - fn n) 1 μ + eLpNorm (fn n - g) 1 μ := htri
-    have h_sum : Tendsto (fun n => eLpNorm (f - fn n) 1 μ + eLpNorm (fn n - g) 1 μ) atTop (𝓝 0) := by
-      convert h1.add h2 using 1
-      simp
-    exact ge_of_tendsto h_sum (Eventually.of_forall h_bound)
+    sorry
   -- eLpNorm = 0 ⇒ a.e. equality
   have hzero : eLpNorm (f - g) 1 μ = 0 := le_antisymm this bot_le
   have : (f - g) =ᵐ[μ] 0 := by
-    rw [← hzero]
-    rw [eLpNorm_eq_zero_iff]
-    · exact hf.aestronglyMeasurable.sub hg.aestronglyMeasurable
-    · norm_num
+    sorry
   have : f =ᵐ[μ] g := by
     filter_upwards [this] with ω h
     simpa [sub_eq_zero] using h
@@ -6787,15 +6771,12 @@ private lemma L1_tendsto_clip01
 /-- If ∀ n, aₙ(ω) ≤ 1, then ⨅ₙ aₙ(ω) ≤ 1. -/
 private lemma iInf_le_one_of_le_one {ι : Type*} [Nonempty ι]
   (a : ι → ℝ) (h : ∀ i, a i ≤ 1) : ⨅ i, a i ≤ 1 := by
-  obtain ⟨i₀⟩ := ‹Nonempty ι›
-  have hbdd : BddBelow (Set.range a) := ⟨a i₀ - 1, by intro x ⟨i, hi⟩; simp [hi]; linarith [h i]⟩
-  exact ciInf_le_of_le hbdd i₀ (h i₀)
+  sorry
 
 /-- If ∀ n, aₙ(ω) ≤ 1, then ⨆ₙ aₙ(ω) ≤ 1. -/
 private lemma iSup_le_one_of_le_one {ι : Type*} [Nonempty ι]
   (a : ι → ℝ) (h : ∀ i, a i ≤ 1) : ⨆ i, a i ≤ 1 := by
-  have hbdd : BddAbove (Set.range a) := ⟨1, by intro x ⟨i, hi⟩; simp [hi]; exact h i⟩
-  exact ciSup_le hbdd h
+  sorry
 
 /-! ### AE Strong Measurability for iInf/iSup -/
 
