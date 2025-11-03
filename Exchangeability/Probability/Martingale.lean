@@ -220,10 +220,53 @@ lemma ae_limit_is_condexp_iInf
   -- Since X∞ is 𝔽∞-measurable and integrable, μ[X∞ | 𝔽∞] = X∞
   have h𝔽∞_le : 𝔽∞ ≤ (inferInstance : MeasurableSpace Ω) := iInf_le_of_le 0 (h_le 0)
   have hX∞_condExp : μ[X∞ | 𝔽∞] =ᵐ[μ] X∞ := by
-    sorry  -- TODO: Need to apply condExp_of_stronglyMeasurable
-            -- But need proper sigma-finite setup
+    -- Apply condExp_of_stronglyMeasurable: if f is m-measurable and integrable, then μ[f|m] = f
+    have : @StronglyMeasurable Ω ℝ 𝔽∞ _ X∞ := hX∞_meas
+    -- Use the fact that conditional expectation of a 𝔽∞-measurable function equals itself
+    rw [@condExp_of_stronglyMeasurable Ω ℝ _ _ 𝔽∞ _ μ _ h𝔽∞_le _ X∞ this hX∞int]
 
-  sorry  -- TODO: Combine to get X∞ = μ[f | 𝔽∞]
+  -- Final identification: X∞ = μ[f | 𝔽∞]
+  -- Strategy: Use L¹-continuity of condExp
+
+  -- For each n: μ[μ[f | 𝔽 n] | 𝔽∞] - μ[X∞ | 𝔽∞] = μ[f | 𝔽∞] - X∞ (by tower and hX∞_condExp)
+  have h_diff : ∀ n, μ[μ[f | 𝔽 n] | 𝔽∞] - μ[X∞ | 𝔽∞] =ᵐ[μ] μ[f | 𝔽∞] - X∞ := by
+    intro n
+    filter_upwards [h_tower n, hX∞_condExp] with ω hn hω
+    simp [hn, hω]
+
+  -- By linearity of condExp: μ[μ[f | 𝔽 n] | 𝔽∞] - μ[X∞ | 𝔽∞] = μ[(μ[f | 𝔽 n] - X∞) | 𝔽∞]
+  have h_lin : ∀ n, μ[(μ[f | 𝔽 n] - X∞) | 𝔽∞] =ᵐ[μ] μ[μ[f | 𝔽 n] | 𝔽∞] - μ[X∞ | 𝔽∞] := by
+    intro n
+    exact (condExp_sub integrable_condExp hX∞int).symm
+
+  -- By L¹-contraction: ‖μ[(μ[f | 𝔽 n] - X∞) | 𝔽∞]‖₁ ≤ ‖μ[f | 𝔽 n] - X∞‖₁ → 0
+  have h_contract : Tendsto (fun n => eLpNorm (μ[(μ[f | 𝔽 n] - X∞) | 𝔽∞]) 1 μ) atTop (𝓝 0) := by
+    refine Tendsto.mono_left ?_ nhdsWithin_le_nhds
+    apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds hL1_conv
+    · intro n; exact zero_le _
+    · intro n
+      calc eLpNorm (μ[(μ[f | 𝔽 n] - X∞) | 𝔽∞]) 1 μ
+          ≤ eLpNorm (μ[f | 𝔽 n] - X∞) 1 μ := eLpNorm_one_condExp_le_eLpNorm _
+
+  -- So μ[f | 𝔽∞] - X∞ → 0 in L¹
+  have h_lim : eLpNorm (μ[f | 𝔽∞] - X∞) 1 μ = 0 := by
+    have : Tendsto (fun n => eLpNorm (μ[f | 𝔽∞] - X∞) 1 μ) atTop (𝓝 0) := by
+      have : ∀ n, μ[f | 𝔽∞] - X∞ =ᵐ[μ] μ[(μ[f | 𝔽 n] - X∞) | 𝔽∞] := by
+        intro n
+        filter_upwards [h_diff n, h_lin n] with ω hd hl
+        rw [← hd, ← hl]
+      refine Tendsto.congr (fun n => (eLpNorm_congr_ae (this n)).symm) h_contract
+    exact tendsto_nhds_unique this tendsto_const_nhds
+
+  -- Therefore μ[f | 𝔽∞] = X∞ a.e.
+  have : μ[f | 𝔽∞] =ᵐ[μ] X∞ := by
+    have : eLpNorm (μ[f | 𝔽∞] - X∞) 1 μ = 0 := h_lim
+    rw [eLpNorm_eq_zero_iff (integrable_condExp.sub hX∞int).aestronglyMeasurable one_ne_zero] at this
+    exact this.symm
+
+  -- Return the desired result
+  filter_upwards [this] with ω hω
+  exact hω.symm
 
 /-! ## Main Theorems
 
