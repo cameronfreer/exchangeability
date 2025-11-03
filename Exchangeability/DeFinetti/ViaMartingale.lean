@@ -790,6 +790,46 @@ lemma condIndep_of_triple_law
     -- Step 1: Set up indicator functions and their conditional expectations
     set φ := (Y ⁻¹' A).indicator (fun _ => (1 : ℝ)) with hφ_def
     set ψ := (Z ⁻¹' B).indicator (fun _ => (1 : ℝ)) with hψ_def
+
+    -- Prove triple map measurability BEFORE introducing 𝔾 to avoid instance pollution
+    have hYZW_meas : Measurable (fun (ω : Ω) => (Y ω, Z ω, W ω)) :=
+      hY.prodMk (hZ.prodMk hW)
+    have hYZW'_meas : Measurable (fun (ω : Ω) => (Y ω, Z ω, W' ω)) :=
+      hY.prodMk (hZ.prodMk hW')
+
+    -- Prove h_test_fn BEFORE introducing 𝔾 to avoid instance pollution
+    have h_test_fn : ∀ (h : γ → ℝ), Measurable h → (∀ w, ‖h w‖ ≤ 1) →
+        ∫ ω, φ ω * ψ ω * h (W ω) ∂μ = ∫ ω, φ ω * ψ ω * h (W' ω) ∂μ := by
+      intro h hh_meas hh_bdd
+      let g : α × β × γ → ℝ := fun ⟨y, z, w⟩ =>
+        (A.indicator (fun _ => (1 : ℝ)) y) * (B.indicator (fun _ => (1 : ℝ)) z) * h w
+
+      have hg_meas : Measurable g := by
+        apply Measurable.mul
+        · apply Measurable.mul
+          · exact (measurable_const.indicator hA).comp measurable_fst
+          · exact ((measurable_const.indicator hB).comp measurable_fst).comp measurable_snd
+        · exact hh_meas.comp (measurable_snd.comp measurable_snd)
+
+      have h_eq_lhs : (fun ω => φ ω * ψ ω * h (W ω)) = g ∘ (fun ω => (Y ω, Z ω, W ω)) := by
+        funext ω; rfl
+      have h_eq_rhs : (fun ω => φ ω * ψ ω * h (W' ω)) = g ∘ (fun ω => (Y ω, Z ω, W' ω)) := by
+        funext ω; rfl
+
+      rw [h_eq_lhs, h_eq_rhs]
+
+      have hg_ae_W : AEStronglyMeasurable g (Measure.map (fun ω => (Y ω, Z ω, W ω)) μ) :=
+        hg_meas.aestronglyMeasurable
+      have hg_ae_W' : AEStronglyMeasurable g (Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) :=
+        hg_meas.aestronglyMeasurable
+
+      calc ∫ ω, g (Y ω, Z ω, W ω) ∂μ
+          = ∫ p, g p ∂(Measure.map (fun ω => (Y ω, Z ω, W ω)) μ) :=
+            (integral_map hYZW_meas.aemeasurable hg_ae_W).symm
+        _ = ∫ p, g p ∂(Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) := by rw [h_triple]
+        _ = ∫ ω, g (Y ω, Z ω, W' ω) ∂μ :=
+            integral_map hYZW'_meas.aemeasurable hg_ae_W'
+
     let 𝔾 : MeasurableSpace Ω := MeasurableSpace.comap W inferInstance
     set U := μ[φ | 𝔾] with hU_def
     set V := μ[ψ | 𝔾] with hV_def
@@ -807,61 +847,9 @@ lemma condIndep_of_triple_law
     -- Step 3: Measurability of conditional expectations
     have hU_meas : AEStronglyMeasurable[𝔾] U μ := stronglyMeasurable_condExp.aestronglyMeasurable
     have hV_meas : AEStronglyMeasurable[𝔾] V μ := stronglyMeasurable_condExp.aestronglyMeasurable
-    
-    -- Step 4: Test function property from triple law
-    -- For any bounded Borel h : γ → ℝ, we have ∫ φ ψ (h∘W) = ∫ φ ψ (h∘W')
-    have h_test_fn : ∀ (h : γ → ℝ), Measurable h → (∀ w, ‖h w‖ ≤ 1) →
-        ∫ ω, φ ω * ψ ω * h (W ω) ∂μ = ∫ ω, φ ω * ψ ω * h (W' ω) ∂μ := by
-      intro h hh_meas hh_bdd
-      -- Use h_triple with test function g(y,z,w) = 1_A(y) 1_B(z) h(w)
-      let g : α × β × γ → ℝ := fun ⟨y, z, w⟩ => 
-        (A.indicator (fun _ => (1 : ℝ)) y) * (B.indicator (fun _ => (1 : ℝ)) z) * h w
-      
-      have hg_meas : Measurable g := by
-        apply Measurable.mul
-        · apply Measurable.mul
-          · exact (measurable_const.indicator hA).comp measurable_fst
-          · exact ((measurable_const.indicator hB).comp measurable_fst).comp measurable_snd
-        · exact hh_meas.comp (measurable_snd.comp measurable_snd)
-      
-      -- Show: (φ ψ h) equals g composed with the triple map
-      have h_eq_lhs : (fun ω => φ ω * ψ ω * h (W ω)) = g ∘ (fun ω => (Y ω, Z ω, W ω)) := by
-        funext ω; rfl
-      have h_eq_rhs : (fun ω => φ ω * ψ ω * h (W' ω)) = g ∘ (fun ω => (Y ω, Z ω, W' ω)) := by
-        funext ω; rfl
-      
-      -- Mathematical content: ∫ φψ(h∘W) = ∫ g∘(Y,Z,W) = ∫ g d[(Y,Z,W)_*μ]
-      --                                              = ∫ g d[(Y,Z,W')_*μ]  (by h_triple)
-      --                                              = ∫ g∘(Y,Z,W') = ∫ φψ(h∘W')
-      rw [h_eq_lhs, h_eq_rhs]
-      
-      -- Use integral_map to relate integrals over μ to integrals over pushforward measures
-      -- In Lean 4, (Y ω, Z ω, W ω) has type α × β × γ, which is α × (β × γ)
 
-      -- Measurability of triple map: Y × (Z × W)
-      have hYZW_meas : Measurable (fun ω => (Y ω, Z ω, W ω)) := by
-        apply Measurable.prodMk
-        · exact hY
-        · exact hZ.prodMk hW
+    -- Step 4: h_test_fn already proved earlier (before 𝔾 binding) to avoid instance pollution
 
-      have hYZW'_meas : Measurable (fun ω => (Y ω, Z ω, W' ω)) := by
-        apply Measurable.prodMk
-        · exact hY
-        · exact hZ.prodMk hW'
-
-      -- g is AEStronglyMeasurable on both pushforward measures
-      have hg_ae_W : AEStronglyMeasurable g (Measure.map (fun ω => (Y ω, Z ω, W ω)) μ) :=
-        hg_meas.aestronglyMeasurable
-      have hg_ae_W' : AEStronglyMeasurable g (Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) :=
-        hg_meas.aestronglyMeasurable
-
-      calc ∫ ω, g (Y ω, Z ω, W ω) ∂μ
-          = ∫ p, g p ∂(Measure.map (fun ω => (Y ω, Z ω, W ω)) μ) :=
-            (integral_map hYZW_meas.aemeasurable hg_ae_W).symm
-        _ = ∫ p, g p ∂(Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) := by rw [h_triple]
-        _ = ∫ ω, g (Y ω, Z ω, W' ω) ∂μ :=
-            integral_map hYZW'_meas.aemeasurable hg_ae_W'
-    
     -- Step 5: The core L² argument: prove E[φ ψ|σ(W)] = U·V
     --
     -- Implementation following blueprint substeps (a)-(h):
