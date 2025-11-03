@@ -159,6 +159,17 @@ lemma upcrossings_bdd_uniform
     (f : Ω → ℝ) (hf : Integrable f μ) (a b : ℝ) (hab : a < b) :
     ∃ C : ENNReal, ∀ N,
       ∫⁻ ω, (upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω) ∂μ ≤ C := by
+  -- The L¹ norm of revCEFinite is uniformly bounded by ‖f‖₁
+  have hL1_bdd : ∀ N n, eLpNorm (revCEFinite (μ := μ) f 𝔽 N n) 1 μ ≤ eLpNorm f 1 μ := by
+    intro N n
+    simp only [revCEFinite]
+    exact eLpNorm_one_condExp_le_eLpNorm f
+
+  -- For each N, revCEFinite is a martingale, hence a submartingale
+  have h_submart : ∀ N, Submartingale (fun n => revCEFinite (μ := μ) f 𝔽 N n)
+                                       (revFiltration 𝔽 h_antitone h_le N) μ :=
+    fun N => (revCEFinite_martingale (μ := μ) h_antitone h_le f hf N).submartingale
+
   sorry
 
 /-- A.S. existence of the limit of `μ[f | 𝔽 n]` along an antitone filtration.
