@@ -420,6 +420,53 @@ lemma perm_range_eq {n : ℕ} (σ : Equiv.Perm (Fin n)) :
   simp
 
 /--
+Helper lemma: All values of a strictly monotone function are bounded by its last value plus one.
+
+Given `k : Fin m → ℕ` strictly monotone, all `k(i)` are less than `k(last) + 1`.
+This follows from monotonicity and the fact that any `i` is at most `last`.
+-/
+private lemma strictMono_all_lt_succ_last {m : ℕ} (k : Fin m → ℕ) (hk : StrictMono k)
+    (i : Fin m) (last : Fin m) (h_last : ∀ j, j ≤ last) :
+    k i ≤ k last := by
+  apply StrictMono.monotone hk
+  exact h_last i
+
+/--
+Helper lemma: The length of the domain is bounded by the maximum value plus one.
+
+For a strictly monotone function `k : Fin m → ℕ`, we have `m ≤ k(m-1) + 1`.
+This uses the fact that strictly monotone functions satisfy `i ≤ k(i)` for all `i`.
+-/
+private lemma strictMono_length_le_max_succ {m : ℕ} (k : Fin m → ℕ) (hk : StrictMono k)
+    (last : Fin m) (h_last_is_max : last.val + 1 = m) :
+    m ≤ k last + 1 := by
+  have h_mono : last.val ≤ k last := strictMono_Fin_ge_id hk last
+  calc m = last.val + 1 := h_last_is_max.symm
+       _ ≤ k last + 1 := Nat.add_le_add_right h_mono 1
+
+/--
+Helper lemma: Exchangeability is preserved when projecting to initial segments.
+
+If two measures on `Fin n → α` are equal by exchangeability, and we project both
+to `Fin m → α` (where `m ≤ n`), the projected measures remain equal.
+-/
+private lemma exchangeable_preserves_projection {μ : Measure Ω} {X : ℕ → Ω → α}
+    (hX_meas : ∀ i, Measurable (X i)) {m n : ℕ} (hmn : m ≤ n)
+    (σ : Equiv.Perm (Fin n))
+    (hexch : Measure.map (fun ω (i : Fin n) => X (σ i).val ω) μ =
+             Measure.map (fun ω (i : Fin n) => X i.val ω) μ) :
+    let ι : Fin m → Fin n := fun i => ⟨i.val, Nat.lt_of_lt_of_le i.isLt hmn⟩
+    let proj : (Fin n → α) → (Fin m → α) := fun f i => f (ι i)
+    Measure.map (proj ∘ fun ω j => X (σ j).val ω) μ =
+    Measure.map (proj ∘ fun ω j => X j.val ω) μ := by
+  intro ι proj
+  have hproj_meas : Measurable proj :=
+    measurable_pi_lambda _ (fun i => measurable_pi_apply (ι i))
+  rw [← Measure.map_map hproj_meas (measurable_pi_lambda _ (fun j => hX_meas (σ j).val)),
+      ← Measure.map_map hproj_meas (measurable_pi_lambda _ (fun j => hX_meas j.val))]
+  exact congrArg (Measure.map proj) hexch
+
+/--
 **Main theorem:** Every exchangeable sequence is contractable.
 
 **Statement:** If `X` is exchangeable, then any strictly increasing subsequence
@@ -449,59 +496,45 @@ theorem contractable_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
     -- Both sides map to (Fin 0 → α), which has a unique element
     congr; ext ω i; exact Fin.elim0 i
   | succ m' =>
-    -- Choose n large enough to contain all k(i)
-    -- We need n > k(m'-1) since k is strictly monotone
-    let n := k ⟨m', Nat.lt_succ_self m'⟩ + 1
-    
-    -- Verify that all k(i) < n
+    -- Choose n large enough to contain all k(i): n = k(last) + 1
+    let last : Fin (m' + 1) := ⟨m', Nat.lt_succ_self m'⟩
+    let n := k last + 1
+
+    -- All k(i) < n since k is monotone and bounded by k(last)
     have hk_bound : ∀ i : Fin (m' + 1), k i < n := by
       intro i
-      simp only [n]
-      have : k i ≤ k ⟨m', Nat.lt_succ_self m'⟩ := by
-        apply StrictMono.monotone hk_mono
-        exact Fin.le_last i
+      have : k i ≤ k last := strictMono_all_lt_succ_last k hk_mono i last Fin.le_last
       omega
-    
-    -- We need m ≤ n to apply exists_perm_extending_strictMono
-    have hmn : m' + 1 ≤ n := by
-      simp only [n]
-      have : m' ≤ k ⟨m', Nat.lt_succ_self m'⟩ :=
-        strictMono_Fin_ge_id hk_mono ⟨m', Nat.lt_succ_self m'⟩
-      omega
-    
-    -- Get the permutation extending k
+
+    -- The domain size is bounded: m ≤ n
+    have hmn : m' + 1 ≤ n := strictMono_length_le_max_succ k hk_mono last rfl
+
+    -- Construct permutation σ extending k to Fin n
     obtain ⟨σ, hσ⟩ := exists_perm_extending_strictMono k hk_mono hk_bound hmn
-    
-    -- Define the embedding Fin (m'+1) → Fin n
-    let ι : Fin (m' + 1) → Fin n := fun i => ⟨i.val, Nat.lt_of_lt_of_le i.isLt hmn⟩
-    
-    -- Apply exchangeability to get equality of distributions on Fin n → α
+
+    -- Apply exchangeability at dimension n
     have hexch := hX n σ
-    
-    -- Define projection from Fin n → α to Fin (m'+1) → α
+
+    -- Define embedding and projection
+    let ι : Fin (m' + 1) → Fin n := fun i => ⟨i.val, Nat.lt_of_lt_of_le i.isLt hmn⟩
     let proj : (Fin n → α) → (Fin (m' + 1) → α) := fun f i => f (ι i)
-    
-    -- Push forward both sides of hexch by proj
+
     have hproj_meas : Measurable proj :=
       measurable_pi_lambda _ (fun i => measurable_pi_apply (ι i))
 
-    -- The map X on Ω → Fin n → α
-    let f_id : Ω → (Fin n → α) := fun ω j => X j.val ω
-    let f_perm : Ω → (Fin n → α) := fun ω j => X (σ j).val ω
-
-    -- Combine: push forward hexch by proj and simplify using map_map
-    have hproj_eq : Measure.map (proj ∘ f_perm) μ = Measure.map (proj ∘ f_id) μ := by
+    -- Project both sides to the first m' + 1 coordinates
+    have hproj_eq : Measure.map (proj ∘ fun ω j => X (σ j).val ω) μ =
+                     Measure.map (proj ∘ fun ω j => X j.val ω) μ := by
       rw [← Measure.map_map hproj_meas (measurable_pi_lambda _ (fun j => hX_meas (σ j).val)),
           ← Measure.map_map hproj_meas (measurable_pi_lambda _ (fun j => hX_meas j.val))]
       exact congrArg (Measure.map proj) hexch
 
-    -- Now show that proj ∘ f_perm = (fun ω i => X (k i) ω)
-    -- and proj ∘ f_id = (fun ω i => X i.val ω)
-    have hlhs_eq : (proj ∘ f_perm) = (fun ω i => X (k i) ω) := by
-      ext ω i; simp only [proj, f_perm, Function.comp_apply, ι]; rw [hσ i]
+    -- The projected functions match our desired subsequences
+    have hlhs_eq : (proj ∘ fun ω j => X (σ j).val ω) = (fun ω i => X (k i) ω) := by
+      ext ω i; simp only [proj, Function.comp_apply, ι]; rw [hσ i]
 
-    have hrhs_eq : (proj ∘ f_id) = (fun ω i => X i.val ω) := by
-      ext ω i; simp only [proj, f_id, Function.comp_apply, ι]
+    have hrhs_eq : (proj ∘ fun ω j => X j.val ω) = (fun ω i => X i.val ω) := by
+      ext ω i; simp only [proj, Function.comp_apply, ι]
 
     rwa [hlhs_eq, hrhs_eq] at hproj_eq
 
