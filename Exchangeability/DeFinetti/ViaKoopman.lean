@@ -618,13 +618,12 @@ lemma abs_indicator_le_abs_self {Ω} (s : Set Ω) (f : Ω → ℝ) :
   · simp [Set.indicator_of_notMem hx, abs_nonneg]
 
 lemma norm_indicator_le_norm_self
-    {Ω E} [Zero E] [Norm E] (s : Set Ω) (f : Ω → E) :
+    {Ω E} [SeminormedAddCommGroup E] (s : Set Ω) (f : Ω → E) :
     ∀ x, ‖s.indicator f x‖ ≤ ‖f x‖ := by
   intro x
   by_cases hx : x ∈ s
   · simp [Set.indicator_of_mem hx]
   · simp [Set.indicator_of_notMem hx]
-    exact norm_nonneg _
 
 /-- Indicator ↔ product with a 0/1 mask (for ℝ). -/
 lemma indicator_as_mul_one {Ω} (s : Set Ω) (f : Ω → ℝ) :
