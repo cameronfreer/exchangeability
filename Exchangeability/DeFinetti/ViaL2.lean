@@ -3220,6 +3220,7 @@ private lemma correlation_coefficient_bounded
   · linarith [abs_le.mp h_ρ_abs]
   · exact (abs_le.mp h_ρ_abs).2
 
+set_option maxHeartbeats 500000 in
 /-- Helper lemma: Block averages form a Cauchy sequence in L² (Step 1 of main proof).
 
 Given contractable X and bounded f, the block averages form a Cauchy sequence in L².
@@ -3272,13 +3273,16 @@ private lemma blockAvg_cauchy_in_L2
       -- Trivial Cauchy: if values are ae-equal, eLpNorm of difference is 0 < ε
       use 1
       intros n n' _ _
-      calc eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ
-          = eLpNorm (fun ω => 0) 2 μ := by
-            apply eLpNorm_congr_ae
-            filter_upwards [h_ae_eq n n'] with ω hω
-            simp [hω]
-        _ = 0 := eLpNorm_zero
-        _ < ε := hε
+      -- Show eLpNorm (blockAvg n - blockAvg n') = 0
+      have h_ae : ∀ᵐ ω ∂μ, (blockAvg f X 0 n - blockAvg f X 0 n') ω = 0 := by
+        filter_upwards [h_ae_eq n n'] with ω hω
+        simp only [Pi.sub_apply, hω, sub_self]
+      have h_norm_zero : eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ = 0 := by
+        trans eLpNorm (fun ω => 0) 2 μ
+        · exact eLpNorm_congr_ae h_ae
+        · exact eLpNorm_zero
+      rw [h_norm_zero]
+      exact hε
 
   · -- Degenerate case: σSq = 0 → Z is constant a.e. → blockAvg constant a.e.
     push_neg at hσ_pos
@@ -3295,13 +3299,16 @@ private lemma blockAvg_cauchy_in_L2
     -- Trivial Cauchy: if values are ae-equal, eLpNorm of difference is 0 < ε
     use 1
     intros n n' _ _
-    calc eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ
-        = eLpNorm (fun ω => 0) 2 μ := by
-          apply eLpNorm_congr_ae
-          filter_upwards [h_ae_eq n n'] with ω hω
-          simp [hω]
-      _ = 0 := eLpNorm_zero
-      _ < ε := hε
+    -- Show eLpNorm (blockAvg n - blockAvg n') = 0
+    have h_ae : ∀ᵐ ω ∂μ, (blockAvg f X 0 n - blockAvg f X 0 n') ω = 0 := by
+      filter_upwards [h_ae_eq n n'] with ω hω
+      simp only [Pi.sub_apply, hω, sub_self]
+    have h_norm_zero : eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ = 0 := by
+      trans eLpNorm (fun ω => 0) 2 μ
+      · exact eLpNorm_congr_ae h_ae
+      · exact eLpNorm_zero
+    rw [h_norm_zero]
+    exact hε
 
 /-- Helper lemma: L² limit exists via completeness (Step 2 of main proof).
 
