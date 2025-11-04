@@ -13,6 +13,7 @@ import Mathlib.Probability.Independence.Kernel
 import Exchangeability.Ergodic.KoopmanMeanErgodic
 import Exchangeability.Ergodic.InvariantSigma
 import Exchangeability.Ergodic.ProjectionLemmas
+import Exchangeability.Ergodic.BirkhoffAvgCLM
 import Exchangeability.DeFinetti.CommonEnding
 import Exchangeability.DeFinetti.MartingaleHelpers
 import Exchangeability.ConditionallyIID
@@ -3959,17 +3960,18 @@ private lemma optionB_Step3b_L2_to_L1
       filter_upwards [hB_eq_pos n hn, hY_eq] with ω h1 h2
       simpa [h1, h2]
 
-    -- measurability: use `Lp.aestronglyMeasurable` theorem to get AEStronglyMeasurable from Lp elements
+    -- measurability: both birkhoffAverage and condexpL2 are Lp elements, so AEMeasurable when coerced
     have h_meas :
         AEMeasurable
           (fun ω =>
             (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
             - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω) μ := by
-      -- TODO: The coercion mismatch between (fun f => f) and (fun f => ↑↑f)
-      -- Need to prove: ↑↑(birkhoffAverage ℝ U (fun f => f) n g) =ᵐ[μ] birkhoffAverage ℝ U (fun f => ↑↑f) n g
-      -- This should follow from linearity of birkhoffAverage and commutativity of coercion with sums
-      -- Once we have this, we can use Lp.aestronglyMeasurable on both sides
-      sorry
+      -- The coercion of an Lp element is AEStronglyMeasurable
+      have h1 : AEStronglyMeasurable (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) μ :=
+        Lp.aestronglyMeasurable _
+      have h2 : AEStronglyMeasurable (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) μ :=
+        Lp.aestronglyMeasurable _
+      exact (h1.sub h2).aemeasurable
 
     -- L¹ ≤ L² via Hölder/Cauchy-Schwarz on a probability space
     have h_le :

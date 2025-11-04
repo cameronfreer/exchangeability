@@ -117,39 +117,4 @@ lemma powCLM_koopman_coe_ae {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
           ext ω
           rw [← Function.iterate_succ_apply]
 
-/-- The CLM Birkhoff average, when coerced to a function, equals the
-    function-level Birkhoff average (almost everywhere). -/
-lemma birkhoffAvgCLM_coe_ae_eq_function_avg
-    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (T : Ω → Ω) (hT_meas : Measurable T) (hT_mp : MeasurePreserving T μ μ)
-    (n : ℕ) (fL2 : Lp ℝ 2 μ) :
-  ((birkhoffAvgCLM (koopman T hT_mp) n) fL2 : Ω → ℝ) =ᵐ[μ]
-  (if n = 0 then (fun _ => 0)
-   else (fun ω => (n : ℝ)⁻¹ * ∑ k : Fin n, (fL2 : Ω → ℝ) (T^[k] ω))) := by
-  by_cases hn : n = 0
-  · simp only [hn, if_true, birkhoffAvgCLM_zero, ContinuousLinearMap.zero_apply]
-    -- The coercion of 0 : Lp is the zero function
-    exact @Lp.coeFn_zero _ _ _ 2 _ _
-  · simp only [hn, if_false, birkhoffAvgCLM_apply]
-    -- Use powCLM_koopman_coe_ae for each k to get a.e. equality for the sum
-    have h_each : ∀ k : Fin n, ((powCLM (koopman T hT_mp) k) fL2 : Ω → ℝ) =ᵐ[μ]
-                                 (fun ω => (fL2 : Ω → ℝ) (T^[k] ω)) :=
-      fun k => powCLM_koopman_coe_ae T hT_meas hT_mp k fL2
-    -- Collect all the a.e. equalities using filter_upwards
-    have h_sum : (fun ω => ∑ k : Fin n, ((powCLM (koopman T hT_mp) k) fL2 : Ω → ℝ) ω) =ᵐ[μ]
-                  (fun ω => ∑ k : Fin n, (fL2 : Ω → ℝ) (T^[k] ω)) := by
-      -- Use Filter.eventually_all to get all at once
-      have : ∀ᵐ ω ∂μ, ∀ k : Fin n, ((powCLM (koopman T hT_mp) k) fL2 : Ω → ℝ) ω = (fL2 : Ω → ℝ) (T^[k] ω) :=
-        Filter.eventually_all.2 h_each
-      filter_upwards [this] with ω hω
-      congr 1
-      ext k
-      exact hω k
-    -- Now combine with scalar multiplication using a single filter_upwards
-    filter_upwards [h_sum] with ω hω
-    -- Coercion distributes over Lp smul and sum (use congr to match structure)
-    congr 1
-    congr 1
-    exact hω
-
 end Exchangeability.Ergodic
