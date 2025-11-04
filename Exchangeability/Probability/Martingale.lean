@@ -161,7 +161,7 @@ lemma upcrossings_bdd_uniform
     [IsProbabilityMeasure μ]
     (h_antitone : Antitone 𝔽) (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
     (f : Ω → ℝ) (hf : Integrable f μ) (a b : ℝ) (hab : a < b) :
-    ∃ C : ENNReal, ∀ N,
+    ∃ C : ENNReal, C < ⊤ ∧ ∀ N,
       ∫⁻ ω, (upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω) ∂μ ≤ C := by
   -- The L¹ norm of revCEFinite is uniformly bounded by ‖f‖₁
   have hL1_bdd : ∀ N n, eLpNorm (revCEFinite (μ := μ) f 𝔽 N n) 1 μ ≤ eLpNorm f 1 μ := by
@@ -212,7 +212,19 @@ lemma upcrossings_bdd_uniform
 
   -- Define C as the bound divided by (b - a)
   set C := (ENNReal.ofReal (eLpNorm f 1 μ).toReal + ENNReal.ofReal |a|) / ENNReal.ofReal (b - a)
-  refine ⟨C, fun N => ?_⟩
+
+  -- Prove C < ⊤
+  have hC_finite : C < ⊤ := by
+    refine ENNReal.div_lt_top ?h1 ?h2
+    · -- Numerator ≠ ⊤
+      refine ENNReal.add_lt_top.2 ⟨?_, ENNReal.ofReal_lt_top⟩ |>.ne
+      rw [ENNReal.ofReal_toReal]
+      · exact (memLp_one_iff_integrable.mpr hf).eLpNorm_lt_top
+      · exact (memLp_one_iff_integrable.mpr hf).eLpNorm_ne_top
+    · -- Denominator ≠ 0
+      exact (ENNReal.ofReal_pos.2 (sub_pos.2 hab)).ne'
+
+  refine ⟨C, hC_finite, fun N => ?_⟩
 
   -- Apply the submartingale upcrossing inequality
   have key := (h_submart N).mul_lintegral_upcrossings_le_lintegral_pos_part a b
@@ -311,7 +323,7 @@ lemma condExp_exists_ae_limit_antitone
 
     -- Get uniform bound on expected upcrossings from time-reversed martingales
     have hab' : (↑a : ℝ) < (↑b : ℝ) := Rat.cast_lt.2 hab
-    obtain ⟨C, hC⟩ := upcrossings_bdd_uniform h_antitone h_le f hf (↑a) (↑b) hab'
+    obtain ⟨C, h_C_finite, hC⟩ := upcrossings_bdd_uniform h_antitone h_le f hf (↑a) (↑b) hab'
 
     -- Establish relationship between original and reversed sequence upcrossings
     -- Key: upcrossingsBefore (original, N) ≤ upcrossings (reversed_at_N)
@@ -363,25 +375,8 @@ lemma condExp_exists_ae_limit_antitone
       -- We need a different bound. Perhaps bound the supremum directly?
       sorry
 
-    -- Show C is finite: C = (‖f‖₁ + |a|) / (b - a)
-    -- Numerator: eLpNorm f 1 μ < ⊤ (from integrability), |a| finite
-    -- Denominator: b - a > 0 (from hab)
-    have h_C_finite : C < ⊤ := by
-      -- From the definition in upcrossings_bdd_uniform:
-      -- C = (ENNReal.ofReal (eLpNorm f 1 μ).toReal + ENNReal.ofReal |a|) / ENNReal.ofReal (b - a)
-      have h_pos : 0 < (b : ℝ) - (a : ℝ) := by
-        rw [sub_pos]
-        exact Rat.cast_lt.2 hab
-      refine ENNReal.div_lt_top ?_ ?_
-      · -- Numerator < ⊤
-        refine ENNReal.add_lt_top.2 ⟨?_, ENNReal.ofReal_lt_top⟩
-        rw [ENNReal.ofReal_toReal]
-        · exact (memLp_one_iff_integrable.mpr hf).eLpNorm_lt_top
-        · exact (memLp_one_iff_integrable.mpr hf).eLpNorm_ne_top
-      · -- Denominator > 0
-        exact (ENNReal.ofReal_pos.2 h_pos).ne'
-
     -- Combine bounds: ∫⁻ upcrossings (original) ≤ ∫⁻ ⨆ N, upcrossings (reversed_N) ≤ C
+    -- Note: h_C_finite : C < ⊤ is obtained from upcrossings_bdd_uniform
     have h_exp_orig : ∫⁻ ω, upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω ∂μ ≤ C := by
       calc ∫⁻ ω, upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω ∂μ
           ≤ ∫⁻ ω, (⨆ N, upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω) ∂μ := by
@@ -426,7 +421,9 @@ lemma condExp_exists_ae_limit_antitone
     -- Xlim is a.e. limit of integrable functions with uniform L¹ bound
     have hXlim_ae_meas : AEStronglyMeasurable Xlim μ := by
       apply aestronglyMeasurable_of_tendsto_ae atTop (f := fun n => μ[f | 𝔽 n])
-      · intro n; exact (stronglyMeasurable_condExp (m := 𝔽 n)).aestronglyMeasurable
+      · intro n
+        have : StronglyMeasurable[𝔽 n] (μ[f | 𝔽 n]) := stronglyMeasurable_condExp
+        exact this.mono (h_le n) |>.aestronglyMeasurable
       · filter_upwards [h_ae_conv] with ω hω
         simp only [Xlim]
         rw [dif_pos hω]
@@ -451,13 +448,21 @@ lemma condExp_exists_ae_limit_antitone
             ≤ liminf (fun n => ∫⁻ ω, ENNReal.ofReal ‖μ[f | 𝔽 n] ω‖ ∂μ) atTop :=
               lintegral_fatou_ofReal_norm h_ae_tendsto hmeas_n hmeas_lim
         _ ≤ ↑R := by
-              simp only [liminf_le_iff]
+              rw [liminf_le_iff]
               intro b hb
-              simp only [eventually_atTop, ge_iff_le]
+              apply Eventually.frequently
+              rw [eventually_atTop]
               use 0
               intro n _
-              rw [← hR, ← eLpNorm_one_eq_lintegral_nnnorm]
-              exact hL1_bdd n
+              calc ∫⁻ ω, ENNReal.ofReal ‖μ[f | 𝔽 n] ω‖ ∂μ
+                  = ∫⁻ ω, ‖μ[f | 𝔽 n] ω‖ₑ ∂μ := by
+                    congr 1; ext ω
+                    rw [Real.enorm_eq_ofReal_abs]
+                    simp only [Real.norm_eq_abs]
+                _ = eLpNorm (μ[f | 𝔽 n]) 1 μ := MeasureTheory.eLpNorm_one_eq_lintegral_enorm.symm
+                _ ≤ eLpNorm f 1 μ := hL1_bdd n
+                _ = ↑R := hR
+                _ < b := hb
         _ < ⊤ := ENNReal.coe_lt_top
 
     exact ⟨hXlim_ae_meas, hXlim_norm⟩
@@ -503,6 +508,15 @@ lemma ae_limit_is_condexp_iInf
     · exact hUI.unifIntegrable
     · exact h_tendsto
 
+  -- IMPORTANT: Define hXlim_aesm BEFORE introducing F_inf to avoid instance pollution
+  -- Xlim is a.e. limit of 𝔽 n-measurable functions, so it's a.e. strongly measurable
+  have hXlim_aesm : AEStronglyMeasurable Xlim μ := by
+    refine aestronglyMeasurable_of_tendsto_ae atTop ?h_meas h_tendsto
+    intro n
+    -- Each μ[f | 𝔽 n] is 𝔽 n-strongly measurable, hence ambient-space a.e. strongly measurable
+    have : StronglyMeasurable[𝔽 n] (μ[f | 𝔽 n]) := stronglyMeasurable_condExp
+    exact this.mono (h_le n) |>.aestronglyMeasurable
+
   -- 3) Pass limit through condExp at F_inf := ⨅ n, 𝔽 n
   set F_inf := iInf 𝔽 with hF_inf_def
 
@@ -511,18 +525,6 @@ lemma ae_limit_is_condexp_iInf
     intro n
     have : F_inf ≤ 𝔽 n := iInf_le 𝔽 n
     exact condExp_condExp_of_le this (h_le n)
-
-  -- Step 1: get AE-strong measurability at ambient space (no sub-σ-algebra tricks here)
-  have hXlim_aesm : @AEStronglyMeasurable Ω ℝ _ (inferInstance : MeasurableSpace Ω) _ Xlim μ := by
-    -- standard "limit of a.e.-strongly-measurable" lemma at the ambient measurable space
-    refine @aestronglyMeasurable_of_tendsto_ae Ω ℝ _ (inferInstance) _ μ _ atTop ?h_meas h_tendsto
-    intro n
-    -- each step is a.e.-strongly-measurable at the ambient space
-    exact (aestronglyMeasurable_condexp (μ := μ) (m := 𝔽 n) f)
-
-  -- Step 2: switch to the measurable representative when needed
-  have hXlim_ae_eq_mk : Xlim =ᵐ[μ] hXlim_aesm.mk := hXlim_aesm.ae_eq_mk
-  have hXlim_meas_mk  : StronglyMeasurable hXlim_aesm.mk := hXlim_aesm.stronglyMeasurable_mk
 
   -- Final identification: Xlim = μ[f | F_inf]
   -- Strategy: Use L¹-continuity of condExp (non-circular approach)
@@ -538,7 +540,12 @@ lemma ae_limit_is_condexp_iInf
 
   -- First, relate hL1_conv to Xn notation
   have hL1_conv_Xn : Tendsto (fun n => eLpNorm (Xlim - Xn n) 1 μ) atTop (𝓝 0) := by
-    simpa [Xn, hXn_def, sub_eq_add_neg, add_comm] using hL1_conv
+    have : ∀ n, eLpNorm (Xlim - Xn n) 1 μ = eLpNorm (μ[f | 𝔽 n] - Xlim) 1 μ := by
+      intro n
+      simp only [Xn, hXn_def]
+      rw [eLpNorm_sub_comm]
+    simp only [this]
+    exact hL1_conv
 
   -- Key inequality: ‖μ[Xlim | F_inf] - Y‖₁ ≤ ‖Xlim - Xn n‖₁ for all n
   have h_bound (n : ℕ) : eLpNorm (μ[Xlim | F_inf] - Y) 1 μ ≤ eLpNorm (Xlim - Xn n) 1 μ := by
@@ -549,9 +556,10 @@ lemma ae_limit_is_condexp_iInf
       have : μ[Xlim | F_inf] - Y
               = (μ[Xlim | F_inf] - μ[Xn n | F_inf]) + (μ[Xn n | F_inf] - Y) := by ring
       rw [this]
-      exact eLpNorm_add_le (integrable_condExp.sub integrable_condExp).aestronglyMeasurable
-                           (integrable_condExp.sub integrable_condExp).aestronglyMeasurable
-                           (by norm_num : (1 : ℝ≥0∞) ≠ 0)
+      refine eLpNorm_add_le ?_ ?_ ?_
+      · exact (integrable_condExp.sub integrable_condExp).aestronglyMeasurable
+      · exact (integrable_condExp.sub integrable_condExp).aestronglyMeasurable
+      · norm_num
 
     -- Second term is 0 by tower property
     have hzero : eLpNorm (μ[Xn n | F_inf] - Y) 1 μ = 0 := by
@@ -583,9 +591,12 @@ lemma ae_limit_is_condexp_iInf
       refine le_antisymm ?_ bot_le
       -- Constant ≤ sequence → 0 means constant = 0
       have : ∀ n, eLpNorm (μ[Xlim | F_inf] - Y) 1 μ ≤ eLpNorm (Xlim - Xn n) 1 μ := h_bound
-      exact le_of_tendsto_of_tendsto tendsto_const_nhds hL1_conv_Xn (eventually_of_forall this)
+      exact le_of_tendsto_of_tendsto tendsto_const_nhds hL1_conv_Xn (Eventually.of_forall this)
     rw [eLpNorm_eq_zero_iff (integrable_condExp.sub integrable_condExp).aestronglyMeasurable one_ne_zero] at h_norm_zero
-    exact h_norm_zero.symm
+    -- h_norm_zero : μ[Xlim | F_inf] - Y =ᵐ 0
+    filter_upwards [h_norm_zero] with ω hω
+    simp only [Pi.zero_apply] at hω
+    exact sub_eq_zero.mp hω
 
   -- TODO: Prove Xlim =ᵐ Y separately (not shown in user's guidance yet)
   -- For now, we derive it using the same L¹ limit argument but tracking through tower
@@ -600,9 +611,15 @@ lemma ae_limit_is_condexp_iInf
     exact h1.trans h2
 
   -- Return the desired result: combine h_tendsto with hXlim_eq
-  rw [hY_def] at hXlim_eq
-  filter_upwards [h_tendsto, hXlim_eq.symm] with ω h_tend h_eq
-  rwa [← h_eq]
+  -- We have: h_tendsto : μ[f|𝔽 n] → Xlim
+  --          hXlim_eq  : Y =ᵐ Xlim (where Y = μ[f|F_inf])
+  -- Goal: μ[f|𝔽 n] → Y
+  filter_upwards [h_tendsto, hXlim_eq] with ω h_tend h_eq
+  -- h_tend : μ[f|𝔽 n] ω → Xlim ω
+  -- h_eq : Y ω = Xlim ω
+  -- Want: μ[f|𝔽 n] ω → Y ω
+  rw [h_eq]
+  exact h_tend
 
 /-! ## Main Theorems
 
