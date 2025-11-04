@@ -1219,25 +1219,19 @@ lemma set_integral_mul_condexp_adjoint
 
 /-- If `|g| ≤ C` a.e., then `|μ[g|m]| ≤ C` a.e. (uses monotonicity of conditional expectation). -/
 lemma ae_bound_condexp_of_ae_bound
-    {Ω : Type*} [MeasurableSpace Ω] (μ : Measure Ω)
-    {m m0 : MeasurableSpace Ω} (hm : m ≤ m0)
+    {Ω : Type*} [m0 : MeasurableSpace Ω] (μ : Measure Ω)
+    {m : MeasurableSpace Ω} (hm : m ≤ m0)
     [SigmaFinite (μ.trim hm)]
     {g : Ω → ℝ} {C : ℝ}
     (hgC : ∀ᵐ ω ∂μ, |g ω| ≤ C) :
   ∀ᵐ ω ∂μ, |μ[g | m] ω| ≤ C := by
-  classical
-  -- `|μ[g|m]| ≤ μ[|g||m]` a.e. and `μ[|g||m] ≤ μ[(fun _ => C)|m] = C` a.e.
-  have h1 : μ[fun ω => |g ω| | m] ≤ᵐ[μ] fun _ => C := by
-    -- use monotonicity of conditional expectation applied to `|g| ≤ C`
-    refine condexp_mono (μ := μ) (m := m) (hm := hm) ?h_le
-    -- measurability and inequality are pointwise a.e.
-    · exact (measurable_const : Measurable fun (_:Ω) => C)
-    · exact hgC
-  have h2 : ∀ᵐ ω ∂μ, |μ[g | m] ω| ≤ μ[fun ω => |g ω| | m] ω := by
-    -- Jensen/triangle inequality for conditional expectation
-    exact ae_abs_condexp_le_condexp_abs (μ := μ) (m := m) (hm := hm) g
-  filter_upwards [h2, h1] with ω hω1 hω2
-  exact le_trans hω1 hω2
+  -- Just use mathlib's ae_bdd_condExp_of_ae_bdd with ℝ≥0 conversion
+  have hC_nonneg : 0 ≤ C := by
+    by_contra h
+    push_neg at h
+    have : ∀ᵐ ω ∂μ, False := hgC.mono (fun ω hω => absurd ((abs_nonneg _).trans hω) (not_le.mpr h))
+    exact absurd (ae_iff.mp this) (measure_univ_ne_zero (μ := μ))
+  exact MeasureTheory.ae_bdd_condExp_of_ae_bdd (R := ⟨C, hC_nonneg⟩) hgC
 
 /-- **Adjointness for bounded `g` (L∞–L¹)**:
 If `g` is essentially bounded and `ξ ∈ L¹(μ)`, then
@@ -1246,8 +1240,8 @@ If `g` is essentially bounded and `ξ ∈ L¹(μ)`, then
 This avoids the `L¹×L¹` product pitfall by using `L∞` control on `g`,
 and the corresponding `L∞` control on `μ[g|m]`. -/
 lemma integral_mul_condexp_adjoint_L∞
-    {Ω : Type*} [MeasurableSpace Ω] (μ : Measure Ω)
-    {m m0 : MeasurableSpace Ω} (hm : m ≤ m0)
+    {Ω : Type*} [m0 : MeasurableSpace Ω] (μ : Measure Ω)
+    {m : MeasurableSpace Ω} (hm : m ≤ m0)
     [SigmaFinite (μ.trim hm)]
     {g ξ : Ω → ℝ} {C : ℝ}
     (hgC : ∀ᵐ ω ∂μ, |g ω| ≤ C)
