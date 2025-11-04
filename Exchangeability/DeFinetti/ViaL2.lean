@@ -3140,6 +3140,37 @@ private lemma centered_uniform_covariance
   -- Combine all results
   exact ⟨hZ_meas, hZ_contract, hZ_var_uniform, hZ_mean_zero, hZ_cov_uniform⟩
 
+/-- Helper lemma: Centered variables Z = f(X) - m are bounded by 2.
+
+When |f| ≤ 1 and m = E[f(X_0)], then |Z i ω| = |f(X i ω) - m| ≤ 2. -/
+private lemma centered_variable_bounded
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {X : ℕ → Ω → ℝ} (hX_meas : ∀ i, Measurable (X i))
+    (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1)
+    (m : ℝ) (hm_def : m = ∫ ω, f (X 0 ω) ∂μ)
+    (Z : ℕ → Ω → ℝ) (hZ_def : ∀ i ω, Z i ω = f (X i ω) - m) :
+    ∀ i ω, |Z i ω| ≤ 2 := by
+  intro i ω
+  simp only [hZ_def]
+  calc |f (X i ω) - m|
+      ≤ |f (X i ω)| + |m| := abs_sub _ _
+    _ ≤ 1 + 1 := by
+        have h1 : |f (X i ω)| ≤ 1 := hf_bdd (X i ω)
+        have h2 : |m| ≤ 1 := by
+          have hfX_int : Integrable (fun ω => f (X 0 ω)) μ := by
+            apply Integrable.of_bound
+            · exact (hf_meas.comp (hX_meas 0)).aestronglyMeasurable
+            · filter_upwards [] with ω; exact hf_bdd (X 0 ω)
+          calc |m|
+              = |∫ ω, f (X 0 ω) ∂μ| := by rw [hm_def]
+            _ ≤ ∫ ω, |f (X 0 ω)| ∂μ := abs_integral_le_integral_abs
+            _ ≤ ∫ ω, 1 ∂μ := by
+                apply integral_mono_ae hfX_int.abs (integrable_const 1)
+                filter_upwards [] with ω; exact hf_bdd (X 0 ω)
+            _ = 1 := by simp
+        linarith
+    _ = 2 := by norm_num
+
 /-- Helper lemma: Correlation coefficient is bounded by 1 via Cauchy-Schwarz.
 
 Given variables Z with uniform variance σSq > 0 and bound |Z i ω| ≤ M,
@@ -3220,29 +3251,8 @@ private lemma blockAvg_cauchy_in_L2
   · -- Non-degenerate case
     let ρ := covZ / σSq
 
-    -- Bound |ρ| ≤ 1 using correlation_coefficient_bounded helper
-    -- First show |Z i ω| ≤ 2 (since Z i ω = f(X i ω) - m, |f| ≤ 1, |m| ≤ 1)
-    have hZ_bdd : ∀ i ω, |Z i ω| ≤ 2 := by
-      intro i ω
-      simp only [hZ_def]
-      calc |f (X i ω) - m|
-          ≤ |f (X i ω)| + |m| := abs_sub _ _
-        _ ≤ 1 + 1 := by
-            have h1 : |f (X i ω)| ≤ 1 := hf_bdd (X i ω)
-            have h2 : |m| ≤ 1 := by
-              have hfX_int : Integrable (fun ω => f (X 0 ω)) μ := by
-                apply Integrable.of_bound
-                · exact (hf_meas.comp (hX_meas 0)).aestronglyMeasurable
-                · filter_upwards [] with ω; exact hf_bdd (X 0 ω)
-              calc |m|
-                  ≤ ∫ ω, |f (X 0 ω)| ∂μ := abs_integral_le_integral_abs
-                _ ≤ ∫ ω, 1 ∂μ := by
-                    apply integral_mono_ae hfX_int.abs (integrable_const 1)
-                    filter_upwards [] with ω; exact hf_bdd (X 0 ω)
-                _ = 1 := by simp
-            linarith
-        _ = 2 := by norm_num
-
+    -- Bound |ρ| ≤ 1 using helpers
+    have hZ_bdd := centered_variable_bounded hX_meas f hf_meas hf_bdd m rfl Z hZ_def
     have hρ_bd := correlation_coefficient_bounded Z hZ_meas 2 hZ_bdd
         σSq hσ_pos rfl covZ rfl ρ rfl hZ_var_uniform
 
