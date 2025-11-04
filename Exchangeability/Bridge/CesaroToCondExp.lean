@@ -194,14 +194,18 @@ lemma metProjection_eq_condexp_tail_on_path
 
 /-! ## D. Bridge 3: L² → L¹ on Probability Spaces -/
 
-/-- **Bridge 3.** On a probability space, `‖Y‖₁ ≤ ‖Y‖₂` (`p ≤ q` monotonicity). -/
+/-- **Bridge 3.** On a probability space, `‖Y‖₁ ≤ ‖Y‖₂` (`p ≤ q` monotonicity).
+Uses mathlib's `snorm_le_snorm_of_exponent_le` which states that on probability spaces,
+snorm is monotone in the exponent. The same pattern is used in ViaKoopman.lean:3984-4025
+for the `eLpNorm` version. -/
 lemma snorm_one_le_snorm_two {α} {m : Measure α} [IsProbabilityMeasure m]
     {E} [NormedAddCommGroup E] [NormedSpace ℝ E] [MeasurableSpace E]
     (f : α → E) :
     snorm f 1 m ≤ snorm f 2 m := by
-  -- this is mathlib: `snorm_mono_exponent` (p ≤ q) and `μ univ = 1`
-  have h_le : (1 : ℝ≥0∞) ≤ 2 := by norm_num
-  sorry
+  -- Use mathlib's snorm_le_snorm_of_exponent_le for probability measures
+  by_cases hf : AEStronglyMeasurable f m
+  · exact snorm_le_snorm_of_exponent_le (by norm_num : (1 : ℝ≥0∞) ≤ 2) hf
+  · simp [snorm_of_not_aestronglyMeasurable hf]
 
 /-- **Bridge 3'.** If `‖Yₙ - Y‖₂ → 0` in L² on a probability space, then
 `∫ ‖Yₙ - Y‖ → 0` (i.e. L¹ convergence). -/
