@@ -3140,6 +3140,55 @@ private lemma centered_uniform_covariance
   -- Combine all results
   exact ⟨hZ_meas, hZ_contract, hZ_var_uniform, hZ_mean_zero, hZ_cov_uniform⟩
 
+/-- Helper lemma: Correlation coefficient is bounded by 1 via Cauchy-Schwarz.
+
+Given variables Z with uniform variance σSq > 0 and bound |Z i ω| ≤ M,
+proves |ρ| ≤ 1 where ρ = cov(Z_0,Z_1)/σSq. -/
+private lemma correlation_coefficient_bounded
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (Z : ℕ → Ω → ℝ) (hZ_meas : ∀ i, Measurable (Z i))
+    (M : ℝ) (hZ_bdd : ∀ i ω, |Z i ω| ≤ M)
+    (σSq : ℝ) (hσ_pos : σSq > 0) (h_σSq_def : σSq = ∫ ω, (Z 0 ω)^2 ∂μ)
+    (covZ : ℝ) (h_covZ_def : covZ = ∫ ω, Z 0 ω * Z 1 ω ∂μ)
+    (ρ : ℝ) (h_ρ_def : ρ = covZ / σSq)
+    (hZ_var_uniform : ∀ i, ∫ ω, (Z i ω)^2 ∂μ = ∫ ω, (Z 0 ω)^2 ∂μ) :
+    -1 ≤ ρ ∧ ρ ≤ 1 := by
+  -- Z 0 and Z 1 are in L²(μ) since they are bounded by M
+  have hZ0_L2 : MemLp (Z 0) 2 μ := by
+    apply memLp_two_of_bounded (hZ_meas 0)
+    exact hZ_bdd 0
+
+  have hZ1_L2 : MemLp (Z 1) 2 μ := by
+    apply memLp_two_of_bounded (hZ_meas 1)
+    exact hZ_bdd 1
+
+  -- Apply Cauchy-Schwarz: |∫ Z₀·Z₁| ≤ sqrt(∫ Z₀²)·sqrt(∫ Z₁²)
+  have h_CS := Exchangeability.Probability.IntegrationHelpers.abs_integral_mul_le_L2 hZ0_L2 hZ1_L2
+
+  -- By uniform variance: ∫ Z₁² = ∫ Z₀² = σSq
+  have h_Z1_var : ∫ ω, (Z 1 ω) ^ 2 ∂μ = σSq := by
+    rw [hZ_var_uniform 1, h_σSq_def]
+
+  -- So Cauchy-Schwarz gives: |covZ| ≤ sqrt(σSq)·sqrt(σSq) = σSq
+  have h_covZ_bd : |covZ| ≤ σSq := by
+    simp only [h_covZ_def, h_σSq_def]
+    calc |∫ ω, Z 0 ω * Z 1 ω ∂μ|
+        ≤ (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 1 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) := h_CS
+      _ = (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) := by rw [h_Z1_var, h_σSq_def]
+      _ = (∫ ω, (Z 0 ω) ^ 2 ∂μ) := by
+          rw [← Real.rpow_add_of_nonneg (integral_nonneg (fun ω => sq_nonneg _))]
+          <;> norm_num
+
+  -- Therefore |ρ| ≤ 1, which gives -1 ≤ ρ ≤ 1
+  have h_ρ_abs : |ρ| ≤ 1 := by
+    simp only [h_ρ_def]
+    rw [abs_div, abs_of_pos hσ_pos]
+    exact div_le_one_of_le₀ h_covZ_bd hσ_pos.le
+
+  constructor
+  · linarith [abs_le.mp h_ρ_abs]
+  · exact (abs_le.mp h_ρ_abs).2
+
 /-- Helper lemma: Block averages form a Cauchy sequence in L² (Step 1 of main proof).
 
 Given contractable X and bounded f, the block averages form a Cauchy sequence in L².
@@ -3171,67 +3220,31 @@ private lemma blockAvg_cauchy_in_L2
   · -- Non-degenerate case
     let ρ := covZ / σSq
 
-    -- Bound |ρ| ≤ 1 (Cauchy-Schwarz)
-    have hρ_bd : -1 ≤ ρ ∧ ρ ≤ 1 := by
-      have hZ0_L2 : MemLp (Z 0) 2 μ := by
-        apply memLp_two_of_bounded (hZ_meas 0)
-        intro ω
-        calc |Z 0 ω| = |f (X 0 ω) - m| := rfl
-          _ ≤ |f (X 0 ω)| + |m| := abs_sub _ _
-          _ ≤ 1 + 1 := by
-              have h1 : |f (X 0 ω)| ≤ 1 := hf_bdd (X 0 ω)
-              have h2 : |m| ≤ 1 := by
-                have hfX_int : Integrable (fun ω => f (X 0 ω)) μ := by
-                  apply Integrable.of_bound
-                  · exact (hf_meas.comp (hX_meas 0)).aestronglyMeasurable
-                  · filter_upwards [] with ω; exact hf_bdd (X 0 ω)
-                calc |m| ≤ ∫ ω, |f (X 0 ω)| ∂μ := abs_integral_le_integral_abs
-                  _ ≤ ∫ ω, 1 ∂μ := by
-                      apply integral_mono_ae hfX_int.abs (integrable_const 1)
-                      filter_upwards [] with ω; exact hf_bdd (X 0 ω)
-                  _ = 1 := by simp
-              linarith
-          _ = 2 := by norm_num
+    -- Bound |ρ| ≤ 1 using correlation_coefficient_bounded helper
+    -- First show |Z i ω| ≤ 2 (since Z i ω = f(X i ω) - m, |f| ≤ 1, |m| ≤ 1)
+    have hZ_bdd : ∀ i ω, |Z i ω| ≤ 2 := by
+      intro i ω
+      simp only [hZ_def]
+      calc |f (X i ω) - m|
+          ≤ |f (X i ω)| + |m| := abs_sub _ _
+        _ ≤ 1 + 1 := by
+            have h1 : |f (X i ω)| ≤ 1 := hf_bdd (X i ω)
+            have h2 : |m| ≤ 1 := by
+              have hfX_int : Integrable (fun ω => f (X 0 ω)) μ := by
+                apply Integrable.of_bound
+                · exact (hf_meas.comp (hX_meas 0)).aestronglyMeasurable
+                · filter_upwards [] with ω; exact hf_bdd (X 0 ω)
+              calc |m|
+                  ≤ ∫ ω, |f (X 0 ω)| ∂μ := abs_integral_le_integral_abs
+                _ ≤ ∫ ω, 1 ∂μ := by
+                    apply integral_mono_ae hfX_int.abs (integrable_const 1)
+                    filter_upwards [] with ω; exact hf_bdd (X 0 ω)
+                _ = 1 := by simp
+            linarith
+        _ = 2 := by norm_num
 
-      have hZ1_L2 : MemLp (Z 1) 2 μ := by
-        apply memLp_two_of_bounded (hZ_meas 1)
-        intro ω
-        calc |Z 1 ω| = |f (X 1 ω) - m| := rfl
-          _ ≤ |f (X 1 ω)| + |m| := abs_sub _ _
-          _ ≤ 1 + 1 := by
-              have h1 : |f (X 1 ω)| ≤ 1 := hf_bdd (X 1 ω)
-              have h2 : |m| ≤ 1 := by
-                have hfX_int : Integrable (fun ω => f (X 0 ω)) μ := by
-                  apply Integrable.of_bound
-                  · exact (hf_meas.comp (hX_meas 0)).aestronglyMeasurable
-                  · filter_upwards [] with ω; exact hf_bdd (X 0 ω)
-                calc |m| ≤ ∫ ω, |f (X 0 ω)| ∂μ := abs_integral_le_integral_abs
-                  _ ≤ ∫ ω, 1 ∂μ := by
-                      apply integral_mono_ae hfX_int.abs (integrable_const 1)
-                      filter_upwards [] with ω; exact hf_bdd (X 0 ω)
-                  _ = 1 := by simp
-              linarith
-          _ = 2 := by norm_num
-
-      have h_CS := Exchangeability.Probability.IntegrationHelpers.abs_integral_mul_le_L2 hZ0_L2 hZ1_L2
-      have h_Z1_var : ∫ ω, (Z 1 ω) ^ 2 ∂μ = σSq := hZ_var_uniform 1
-      have h_covZ_bd : |covZ| ≤ σSq := by
-        simp only [covZ, σSq]
-        calc |∫ ω, Z 0 ω * Z 1 ω ∂μ|
-            ≤ (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 1 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) := h_CS
-          _ = (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) := by rw [h_Z1_var]
-          _ = (∫ ω, (Z 0 ω) ^ 2 ∂μ) := by
-              rw [← Real.rpow_add_of_nonneg (integral_nonneg (fun ω => sq_nonneg _))]
-              <;> norm_num
-          _ = σSq := rfl
-
-      have h_ρ_abs : |ρ| ≤ 1 := by
-        simp only [ρ]
-        rw [abs_div, abs_of_pos hσ_pos]
-        exact div_le_one_of_le₀ h_covZ_bd hσ_pos.le
-      constructor
-      · linarith [abs_le.mp h_ρ_abs]
-      · exact (abs_le.mp h_ρ_abs).2
+    have hρ_bd := correlation_coefficient_bounded Z hZ_meas 2 hZ_bdd
+        σSq hσ_pos rfl covZ rfl ρ rfl hZ_var_uniform
 
     let Cf := 2 * σSq * (1 - ρ)
 
