@@ -1251,18 +1251,16 @@ lemma integral_mul_condexp_adjoint_Linfty
     [SigmaFinite (μ.trim hm)]
     {g ξ : Ω → ℝ} {C : ℝ}
     (hgC : ∀ᵐ ω ∂μ, |g ω| ≤ C)
+    (hg : Integrable g μ)
     (hξ : Integrable ξ μ) :
   ∫ ω, g ω * μ[ξ | m] ω ∂μ
   = ∫ ω, μ[g | m] ω * ξ ω ∂μ := by
   classical
-  -- Both products are integrable: use L∞ bounds on `g` and `μ[g|m]`.
-  have h_int1 : Integrable (fun ω => g ω * μ[ξ | m] ω) μ := by
-    sorry  -- TODO: use Integrable.bdd_mul' with hgC
-  have h_int2 : Integrable (fun ω => μ[g | m] ω * ξ ω) μ := by
-    -- `μ[g|m]` is also bounded by `C` a.e.
-    have hμgC : ∀ᵐ ω ∂μ, |μ[g | m] ω| ≤ C :=
-      ae_bound_condexp_of_ae_bound (μ := μ) (m := m) (m0 := m0) (hm := hm) hgC
-    sorry  -- TODO: use Integrable.bdd_mul' with hμgC converted to norm bound
+  -- Both products are integrable
+  have h_int1 : Integrable (fun ω => g ω * μ[ξ | m] ω) μ :=
+    Integrable.mul hg (MeasureTheory.integrable_condExp (m := m) (f := ξ))
+  have h_int2 : Integrable (fun ω => μ[g | m] ω * ξ ω) μ :=
+    Integrable.mul (MeasureTheory.integrable_condExp (m := m) (f := g)) hξ
 
   -- Now copy the "adjointness by CE" argument, which is safe since both products are L¹.
   have h1 :
@@ -1277,11 +1275,13 @@ lemma integral_mul_condexp_adjoint_Linfty
     have hξm :
         AEStronglyMeasurable[m] (μ[ξ | m]) μ :=
       MeasureTheory.stronglyMeasurable_condExp.aestronglyMeasurable
-    -- TODO: This step requires integrability of g, but we only have boundedness.
-    -- Options: (1) Assume μ is finite (use condExp_stronglyMeasurable_mul_of_bound₀)
-    --          (2) Prove g integrable from boundedness + σ-finite structure
-    --          (3) Use different proof strategy entirely
-    sorry
+    -- Rewrite to match pull-out lemma signature (measurable factor on right)
+    have h_comm : (fun ω => g ω * μ[ξ | m] ω) = (fun ω => μ[ξ | m] ω * g ω) := by
+      ext ω; ring
+    rw [h_comm]
+    have h_int_comm : Integrable (fun ω => μ[ξ | m] ω * g ω) μ := by
+      convert h_int1 using 1; ext ω; ring
+    exact MeasureTheory.condExp_mul_of_aestronglyMeasurable_left hξm h_int_comm hg
   have h3 :
       ∫ ω, μ[g | m] ω * μ[ξ | m] ω ∂μ
     = ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ := by
@@ -1297,9 +1297,8 @@ lemma integral_mul_condexp_adjoint_Linfty
   have h4 :
       ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ
     = ∫ ω, μ[g | m] ω * ξ ω ∂μ := by
-    show ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ = ∫ ω, μ[g | m] ω * ξ ω ∂μ
-    exact (MeasureTheory.integral_condExp (μ := μ) (m := m) (hm := hm)
-      (f := fun _ => μ[g | m] _ * ξ _)).symm
+    simpa using (MeasureTheory.integral_condExp (μ := μ) (m := m) (hm := hm)
+      (f := fun x => μ[g | m] x * ξ x)).symm
 
   calc
     ∫ ω, g ω * μ[ξ | m] ω ∂μ
