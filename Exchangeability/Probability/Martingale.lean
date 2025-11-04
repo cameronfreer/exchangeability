@@ -319,12 +319,8 @@ lemma condExp_exists_ae_limit_antitone
     have h_le_key (N : ℕ) (ω : Ω) :
         ↑(upcrossingsBefore (↑a) (↑b) (fun n => μ[f | 𝔽 n]) N ω)
         ≤ upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω := by
-      -- First establish the bridge: original and reversed have same upcrossings up to N
-      have h_orig_to_rev : (upcrossingsBefore (↑a) (↑b) (fun n => μ[f | 𝔽 n]) N ω : ℝ≥0∞) ≤ ↑(upcrossingsBefore (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) N ω) := by
-        sorry  -- Will establish this separately
-
-      -- Now pick index N from the supremum definition of upcrossings
-      have hN :
+      -- Pick index N from the supremum definition of upcrossings
+      have h_to_iSup :
           (upcrossingsBefore (↑a) (↑b)
               (fun n => revCEFinite (μ := μ) f 𝔽 N n) N ω : ℝ≥0∞)
             ≤ upcrossings (↑a) (↑b)
@@ -334,8 +330,14 @@ lemma condExp_exists_ae_limit_antitone
           (fun M => (upcrossingsBefore (↑a) (↑b)
               (fun n => revCEFinite (μ := μ) f 𝔽 N n) M ω : ℝ≥0∞)) N
 
-      -- Combine the two inequalities
-      exact h_orig_to_rev.trans hN
+      -- Establish bridge: original upcrossings ≤ reversed upcrossings
+      -- The sequences contain the same values (μ[f | 𝔽 k] for k ∈ {0,...,N}), just in reverse order
+      have h_orig_to_rev_before :
+          (upcrossingsBefore (↑a) (↑b) (fun n => μ[f | 𝔽 n]) N ω : ℝ≥0∞)
+          ≤ ↑(upcrossingsBefore (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) N ω) := by
+        sorry  -- TODO: Relate upcrossings of sequence and its reversal
+
+      exact h_orig_to_rev_before.trans h_to_iSup
 
     -- Therefore: upcrossings (original) = ⨆ N, upcrossingsBefore N ≤ ⨆ N, upcrossings (reversed_N)
     have h_bound : ∀ ω, upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω
@@ -350,19 +352,39 @@ lemma condExp_exists_ae_limit_antitone
             le_iSup (fun M => upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 M n) ω) N
 
     -- The expected value of the supremum is bounded by C
+    -- Use monotone convergence: ∫⁻ (⨆ N, f N) = ⨆ N, ∫⁻ f N when f is monotone
     have h_exp_bound : ∫⁻ ω, (⨆ N, upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω) ∂μ ≤ C := by
-      -- We have: ∫⁻ ω, ⨆ N, f N ω ∂μ ≥ ⨆ N, ∫⁻ ω, f N ω ∂μ  (by iSup_lintegral_le)
-      -- And:     ⨆ N, ∫⁻ ω, f N ω ∂μ ≤ C  (by hC and iSup_le)
-      -- But we need the reverse: integral of sup ≤ C
-      -- For this we need monotone convergence or use a different bound
-      sorry
+      -- Monotonicity: upcrossings is monotone in the horizon since upcrossings = ⨆ M, upcrossingsBefore M
+      have h_mono : ∀ ω, Monotone (fun N => upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω) := by
+        intro ω N M hNM
+        -- upcrossings doesn't actually depend on N in a monotone way...
+        -- Actually, different N give different sequences, so this isn't right
+        sorry
 
-    -- Show C is finite: C = (‖f‖₁ + |a|) / (b - a), all terms finite
+      -- Alternative: bound the supremum pointwise, then integrate
+      calc ∫⁻ ω, (⨆ N, upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω) ∂μ
+          ≤ ⨆ N, ∫⁻ ω, upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω ∂μ := by
+              -- This is lintegral_iSup_le or similar
+              sorry
+        _ ≤ C := by
+              apply iSup_le
+              exact hC
+
+    -- Show C is finite: C = (‖f‖₁ + |a|) / (b - a)
+    -- Numerator: eLpNorm f 1 μ < ⊤ (from integrability), |a| finite
+    -- Denominator: b - a > 0 (from hab)
     have h_C_finite : C < ⊤ := by
-      -- C is defined in upcrossings_bdd_uniform as a division, need to show it's finite
-      -- Strategy: C is a witness from an existential, but we know it must be finite
-      -- based on how it's constructed in that lemma
-      sorry
+      -- From the definition in upcrossings_bdd_uniform:
+      -- C = (ENNReal.ofReal (eLpNorm f 1 μ).toReal + ENNReal.ofReal |a|) / ENNReal.ofReal (b - a)
+      have h_pos : 0 < b - a := by linarith [Rat.cast_lt.2 hab]
+      refine ENNReal.div_lt_top ?_ ?_
+      · -- Numerator < ⊤
+        refine ENNReal.add_lt_top.2 ⟨?_, ENNReal.ofReal_lt_top⟩
+        rw [ENNReal.ofReal_toReal]
+        · exact (memLp_one_iff_integrable.mpr hf).eLpNorm_lt_top
+        · exact (memLp_one_iff_integrable.mpr hf).eLpNorm_ne_top
+      · -- Denominator > 0
+        exact (ENNReal.ofReal_pos.2 h_pos).ne'
 
     -- Combine bounds: ∫⁻ upcrossings (original) ≤ ∫⁻ ⨆ N, upcrossings (reversed_N) ≤ C
     have h_exp_orig : ∫⁻ ω, upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω ∂μ ≤ C := by
@@ -598,21 +620,16 @@ lemma ae_limit_is_condexp_iInf
   -- Finally: derive μ[Xlim | F_inf] =ᵐ[μ] Xlim from hXlim_eq
   -- This avoids needing to prove F_inf-ae-strong-measurability of Xlim directly
   have hXlim_condExp : μ[Xlim | F_inf] =ᵐ[μ] Xlim := by
-    -- Move conditional expectation across the a.e. equality Xlim =ᵐ Y
     have h1 : μ[Xlim | F_inf] =ᵐ[μ] μ[Y | F_inf] :=
-      condExp_congr_ae (μ := μ) (m := F_inf) hXlim_eq.symm
-    -- Y is F_inf-measurable by construction, so μ[Y | F_inf] = Y a.e.
+      condExp_congr_ae (μ := μ) (m := F_inf) hXlim_eq
     have h2 : μ[Y | F_inf] =ᵐ[μ] Y := by
       rw [hY_def]
       have : μ[μ[f | F_inf] | F_inf] = μ[f | F_inf] :=
         condExp_of_stronglyMeasurable hF_inf_le stronglyMeasurable_condExp integrable_condExp
       exact EventuallyEq.of_eq this
-    -- Chain the equalities: μ[Xlim | F_inf] =ᵐ μ[Y | F_inf] =ᵐ Y =ᵐ Xlim
-    exact h1.trans (h2.trans hXlim_eq)
+    exact h1.trans (h2.trans hXlim_eq.symm)
 
   -- Return the desired result: combine h_tendsto with hXlim_eq
-  -- Need to convert from Y back to μ[f | F_inf]
-  have : hXlim_eq.symm = (show Xlim =ᵐ[μ] Y from hXlim_eq.symm) := rfl
   rw [hY_def] at hXlim_eq
   exact h_tendsto.and hXlim_eq.symm |>.mono fun ω ⟨h_tend, h_eq⟩ => h_eq ▸ h_tend
 
