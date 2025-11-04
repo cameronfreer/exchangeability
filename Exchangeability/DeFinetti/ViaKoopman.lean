@@ -3852,25 +3852,18 @@ the classical `condExp` a.e., since:
 2. The subspace inclusion preserves a.e. classes
 
 **Lean challenge:** Requires navigating Lp quotient types and finding the correct API to
-convert between `Lp ℝ 2 μ` and `Memℒp _ 2 μ` representations. -/
+convert between `Lp ℝ 2 μ` and `MemLp _ 2 μ` representations. The `Lp.memℒp` constant
+doesn't exist in the current mathlib API. -/
 private lemma condexpL2_ae_eq_condExp (f : Lp ℝ 2 μ) :
     (condexpL2 (μ := μ) f : Ω[α] → ℝ) =ᵐ[μ] μ[f | shiftInvariantSigma] := by
-  -- Use Lp.memℒp to extract Memℒp proof from Lp element
-  have hf : Memℒp (f : Ω[α] → ℝ) 2 μ := Lp.memℒp f
-  -- condexpL2 is defined as subtypeL.comp (condExpL2 ℝ ℝ shiftInvariantSigma_le)
-  unfold condexpL2
-  simp only [ContinuousLinearMap.coe_comp']
-  -- The composed function equals condExpL2 applied then casted
-  have h_eq : ((lpMeas ℝ ℝ shiftInvariantSigma 2 μ).subtypeL
-                  (MeasureTheory.condExpL2 ℝ ℝ shiftInvariantSigma_le f) : Ω[α] → ℝ)
-              =ᵐ[μ]
-              (MeasureTheory.condExpL2 ℝ ℝ shiftInvariantSigma_le f : Ω[α] → ℝ) := by
-    -- subtypeL is the inclusion map, so coercing gives the same function a.e.
-    rfl
-  -- Now use mathlib's lemma
-  have h_condexp := hf.condExpL2_ae_eq_condExp shiftInvariantSigma_le
-  -- Chain the equalities
-  exact h_eq.trans h_condexp
+  -- Use Lp.memLp to extract MemLp proof from Lp element
+  have hf : MemLp (f : Ω[α] → ℝ) 2 μ := Lp.memLp f
+  -- TODO: Need to relate custom condexpL2 with mathlib condExpL2
+  -- The custom condexpL2 is subtypeL.comp (condExpL2 ℝ ℝ shiftInvariantSigma_le)
+  -- Mathlib's MemLp.condExpL2_ae_eq_condExp states: condExpL2 E 𝕜 hm hf.toLp =ᵐ[μ] μ[f | m]
+  -- However, the composition with subtypeL changes the coercion behavior
+  -- This requires deeper understanding of Lp quotient types and coercion APIs
+  sorry
 
 -- Helper lemmas for Step 3a: a.e. equality through measure-preserving maps
 --
@@ -3974,10 +3967,10 @@ private lemma optionB_Step3b_L2_to_L1
             (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
             - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω) μ := by
       -- The coercion of an Lp element is AEStronglyMeasurable
-      have h1 : AEStronglyMeasurable ((birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Lp ℝ 2 μ) : Ω[α] → ℝ) μ :=
-        Lp.aestronglyMeasurable (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2)
-      have h2 : AEStronglyMeasurable ((condexpL2 (μ := μ) fL2 : Lp ℝ 2 μ) : Ω[α] → ℝ) μ :=
-        Lp.aestronglyMeasurable (condexpL2 (μ := μ) fL2)
+      have h1 : AEStronglyMeasurable (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) μ :=
+        Lp.aestronglyMeasurable _
+      have h2 : AEStronglyMeasurable (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) μ :=
+        Lp.aestronglyMeasurable _
       exact (h1.sub h2).aemeasurable
 
     -- L¹ ≤ L² via Hölder/Cauchy-Schwarz on a probability space
@@ -3989,39 +3982,18 @@ private lemma optionB_Step3b_L2_to_L1
                   (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
                   - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω)
                2 μ).toReal := by
-      -- Directly use that the integral equals the L¹ norm, and L¹ ≤ L² on a probability space
-      let g := fun ω => (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
-                       - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω
-      -- Step 1: Convert integral to eLpNorm 1
-      have h_int_eq : ∫ ω, |g ω| ∂μ = (eLpNorm (fun ω => |g ω|) 1 μ).toReal := by
-        have hg_ae : AEStronglyMeasurable g μ := by
-          have h1 : AEStronglyMeasurable ((birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Lp ℝ 2 μ) : Ω[α] → ℝ) μ :=
-            Lp.aestronglyMeasurable (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2)
-          have h2 : AEStronglyMeasurable ((condexpL2 (μ := μ) fL2 : Lp ℝ 2 μ) : Ω[α] → ℝ) μ :=
-            Lp.aestronglyMeasurable (condexpL2 (μ := μ) fL2)
-          exact h1.sub h2
-        rw [integral_norm_eq_lintegral_enorm hg_ae]
-        rw [eLpNorm_one_eq_lintegral_enorm]
-        simp only [Real.enorm_eq_ofReal_abs]
-      -- Step 2: Apply eLpNorm monotonicity (1 ≤ 2 on probability space)
-      rw [h_int_eq]
-      have h_mono : eLpNorm (fun ω => |g ω|) 1 μ ≤ eLpNorm (fun ω => |g ω|) 2 μ := by
-        have hg_ae : AEStronglyMeasurable (fun ω => |g ω|) μ := by
-          have h1 : AEStronglyMeasurable ((birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Lp ℝ 2 μ) : Ω[α] → ℝ) μ :=
-            Lp.aestronglyMeasurable (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2)
-          have h2 : AEStronglyMeasurable ((condexpL2 (μ := μ) fL2 : Lp ℝ 2 μ) : Ω[α] → ℝ) μ :=
-            Lp.aestronglyMeasurable (condexpL2 (μ := μ) fL2)
-          exact (h1.sub h2).norm
-        exact eLpNorm_le_eLpNorm_of_exponent_le (by norm_num : (1 : ℝ≥0∞) ≤ 2) hg_ae
-      gcongr
-      -- Step 3: Use eLpNorm norm equality
-      have h_norm_eq : eLpNorm (fun ω => |g ω|) 2 μ = eLpNorm g 2 μ := by
-        apply eLpNorm_congr_ae
-        filter_upwards with ω
-        simp [Real.norm_eq_abs]
-      rw [h_norm_eq]
+      -- TODO: Fix Lp coercion issues in this proof
+      -- Problems:
+      -- 1. integral_mul_norm_le_Lp_mul_Lq expects MemLp f (ENNReal.ofReal p) where p : ℝ
+      --    but we have MemLp h 2 where 2 : ℝ≥0∞
+      -- 2. Lp coercion mismatches: birkhoffAverage ... fL2 ω vs ↑↑(birkhoffAverage ... fL2) ω
+      -- 3. Lp.coeFn_sub type signature doesn't match usage pattern
+      -- Need to either:
+      -- - Convert MemLp witnesses using show (2 : ℝ≥0∞) = ENNReal.ofReal 2
+      -- - Restructure proof to work directly with mathlib's Lp API
+      sorry
 
-    -- Relate eLpNorm to Lp norm
+    -- TODO: Also need to prove h_toNorm which relates eLpNorm to Lp norm
     have h_toNorm :
         (eLpNorm
           (fun ω =>
@@ -4030,10 +4002,7 @@ private lemma optionB_Step3b_L2_to_L1
           2 μ).toReal
         = ‖birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
              - condexpL2 (μ := μ) fL2‖ := by
-      -- The eLpNorm of the coerced function equals the Lp norm of the element
-      -- Use Lp.norm_def: ‖f‖ = (eLpNorm f p μ).toReal
-      symm
-      apply Lp.norm_def
+      sorry
 
     -- conclude the inequality at this `n > 0`
     have h_eq_int :
