@@ -1301,8 +1301,9 @@ lemma integral_mul_condexp_adjoint_Linfty
   have h4 :
       ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ
     = ∫ ω, μ[g | m] ω * ξ ω ∂μ := by
-    simpa using (MeasureTheory.integral_condExp (μ := μ) (m := m) (hm := hm)
-      (f := fun x => μ[g | m] x * ξ x)).symm
+    have h := MeasureTheory.integral_condExp (μ := μ) (m := m) (hm := hm)
+      (f := fun ω => μ[g | m] ω * ξ ω)
+    exact h.symm
 
   calc
     ∫ ω, g ω * μ[ξ | m] ω ∂μ
