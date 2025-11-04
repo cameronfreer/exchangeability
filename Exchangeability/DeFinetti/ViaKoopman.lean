@@ -3959,13 +3959,18 @@ private lemma optionB_Step3b_L2_to_L1
       filter_upwards [hB_eq_pos n hn, hY_eq] with ω h1 h2
       simpa [h1, h2]
 
-    -- measurability: use `Lp.aestronglyMeasurable` to get AEStronglyMeasurable from Lp elements
+    -- measurability: use `Lp.aestronglyMeasurable` theorem to get AEStronglyMeasurable from Lp elements
     have h_meas :
         AEMeasurable
           (fun ω =>
             (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
             - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω) μ := by
-      -- TODO: This coercion equality needs Lp API lemmas
+      -- TODO: Fix Lp coercion issues
+      -- Problem: birkhoffAverage ℝ (⇑(koopman shift hσ)) (fun f => ↑↑f) n fL2 ω
+      --          vs ↑↑(birkhoffAverage ℝ (⇑(koopman shift hσ)) (fun f => f) n fL2) ω
+      -- The lambda `(fun f => ↑↑f)` vs `(fun f => f)` causes coercion placement mismatch
+      -- Both birkhoffAverage and condexpL2 are in Lp, so have AEStronglyMeasurable coercions
+      -- Need lemma relating birkhoff average of coerced functions to coercion of birkhoff average
       sorry
 
     -- L¹ ≤ L² via Hölder/Cauchy-Schwarz on a probability space
