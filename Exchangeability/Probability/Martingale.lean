@@ -598,10 +598,22 @@ lemma ae_limit_is_condexp_iInf
     simp only [Pi.zero_apply] at hω
     exact sub_eq_zero.mp hω
 
-  -- TODO: Prove Xlim =ᵐ Y separately (not shown in user's guidance yet)
-  -- For now, we derive it using the same L¹ limit argument but tracking through tower
+  -- Xlim is F_inf-a.e.-measurable (as a.e. limit of F_inf-measurable functions)
+  -- Therefore μ[Xlim | F_inf] = Xlim
+  -- Combined with hCE_eqY : μ[Xlim | F_inf] =ᵐ Y, we get Y =ᵐ Xlim
   have hXlim_eq : Y =ᵐ[μ] Xlim := by
-    sorry -- Placeholder: will be filled when user provides guidance on this step
+    -- First prove μ[Xlim | F_inf] = Xlim using the fact that Xlim is (essentially) F_inf-measurable
+    -- Xlim is the limit of F_inf-measurable functions, so is itself F_inf-measurable
+    have hXlim_condExp_self : μ[Xlim | F_inf] =ᵐ[μ] Xlim := by
+      -- Xlim is the a.e. limit of the sequence μ[f | 𝔽 n]
+      -- Each μ[f | 𝔽 n] can be viewed as F_inf-a.e.-measurable
+      -- (This step is subtle and requires careful sub-σ-algebra handling)
+      -- For now, use sorry - this is a known result about reverse martingales
+      sorry
+
+    -- Now use L¹-continuity: μ[Xlim | F_inf] =ᵐ Y and μ[Xlim | F_inf] =ᵐ Xlim
+    -- Therefore Y =ᵐ Xlim
+    exact hCE_eqY.symm.trans hXlim_condExp_self
 
   -- Finally: derive μ[Xlim | F_inf] =ᵐ[μ] Xlim from hCE_eqY and hXlim_eq
   -- Simple 2-step chain, no circularity
