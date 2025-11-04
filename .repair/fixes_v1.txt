@@ -1,0 +1,265 @@
+⚠ [2517/2587] Replayed Exchangeability.DeFinetti.CommonEnding
+warning: Exchangeability/DeFinetti/CommonEnding.lean:339:24: unused variable `i`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+⚠ [2530/2587] Replayed Exchangeability.Probability.CondExp
+warning: Exchangeability/Probability/CondExp.lean:551:29: unused variable `hm`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Exchangeability/Probability/CondExp.lean:584:29: unused variable `hm`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+✖ [3215/3215] Building Exchangeability.DeFinetti.ViaKoopman (17s)
+trace: .> LEAN_PATH=/Users/freer/work/exch-repos/exchangeability-cursor/.lake/packages/Cli/.lake/build/lib/lean:/Users/freer/work/exch-repos/exchangeability-cursor/.lake/packages/batteries/.lake/build/lib/lean:/Users/freer/work/exch-repos/exchangeability-cursor/.lake/packages/Qq/.lake/build/lib/lean:/Users/freer/work/exch-repos/exchangeability-cursor/.lake/packages/aesop/.lake/build/lib/lean:/Users/freer/work/exch-repos/exchangeability-cursor/.lake/packages/proofwidgets/.lake/build/lib/lean:/Users/freer/work/exch-repos/exchangeability-cursor/.lake/packages/importGraph/.lake/build/lib/lean:/Users/freer/work/exch-repos/exchangeability-cursor/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/Users/freer/work/exch-repos/exchangeability-cursor/.lake/packages/plausible/.lake/build/lib/lean:/Users/freer/work/exch-repos/exchangeability-cursor/.lake/packages/mathlib/.lake/build/lib/lean:/Users/freer/work/exch-repos/exchangeability-cursor/.lake/packages/Canonical/.lake/build/lib/lean:/Users/freer/work/exch-repos/exchangeability-cursor/.lake/build/lib/lean /Users/freer/.elan/toolchains/leanprover--lean4---v4.24.0/bin/lean /Users/freer/work/exch-repos/exchangeability-cursor/Exchangeability/DeFinetti/ViaKoopman.lean -o /Users/freer/work/exch-repos/exchangeability-cursor/.lake/build/lib/lean/Exchangeability/DeFinetti/ViaKoopman.olean -i /Users/freer/work/exch-repos/exchangeability-cursor/.lake/build/lib/lean/Exchangeability/DeFinetti/ViaKoopman.ilean -c /Users/freer/work/exch-repos/exchangeability-cursor/.lake/build/ir/Exchangeability/DeFinetti/ViaKoopman.c --setup /Users/freer/work/exch-repos/exchangeability-cursor/.lake/build/ir/Exchangeability/DeFinetti/ViaKoopman.setup.json --json
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:51:26: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:168:8: automatically included section variable(s) unused in theorem `Exchangeability.DeFinetti.ViaKoopman.shiftℤ_apply`:
+  [MeasurableSpace α]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [MeasurableSpace α] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:174:8: automatically included section variable(s) unused in theorem `Exchangeability.DeFinetti.ViaKoopman.shiftℤInv_apply`:
+  [MeasurableSpace α]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [MeasurableSpace α] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:177:8: automatically included section variable(s) unused in theorem `Exchangeability.DeFinetti.ViaKoopman.shiftℤ_comp_shiftℤInv`:
+  [MeasurableSpace α]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [MeasurableSpace α] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:180:27: This simp argument is unused:
+  add_comm
+
+Hint: Omit it from the simp argument list.
+  simp [shiftℤ, shiftℤInv, add_c̵o̵m̵m̵,̵ ̵a̵d̵d̵_̵left_comm, add_assoc]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:180:37: This simp argument is unused:
+  add_left_comm
+
+Hint: Omit it from the simp argument list.
+  simp [shiftℤ, shiftℤInv, add_comm, a̵d̵d̵_̵l̵e̵f̵t̵_̵c̵o̵m̵m̵,̵ ̵add_assoc]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:180:52: This simp argument is unused:
+  add_assoc
+
+Hint: Omit it from the simp argument list.
+  simp [shiftℤ, shiftℤInv, add_comm, add_left_comm,̵ ̵a̵d̵d̵_̵a̵s̵s̵o̵c̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:182:8: automatically included section variable(s) unused in theorem `Exchangeability.DeFinetti.ViaKoopman.shiftℤInv_comp_shiftℤ`:
+  [MeasurableSpace α]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [MeasurableSpace α] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:185:37: This simp argument is unused:
+  add_left_comm
+
+Hint: Omit it from the simp argument list.
+  simp [shiftℤ, shiftℤInv, add_comm, a̵d̵d̵_̵l̵e̵f̵t̵_̵c̵o̵m̵m̵,̵ ̵add_assoc]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:185:52: This simp argument is unused:
+  add_assoc
+
+Hint: Omit it from the simp argument list.
+  simp [shiftℤ, shiftℤInv, add_comm, add_left_comm,̵ ̵a̵d̵d̵_̵a̵s̵s̵o̵c̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:190:8: automatically included section variable(s) unused in theorem `Exchangeability.DeFinetti.ViaKoopman.restrictNonneg_apply`:
+  [MeasurableSpace α]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [MeasurableSpace α] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:201:8: automatically included section variable(s) unused in theorem `Exchangeability.DeFinetti.ViaKoopman.restrictNonneg_extendByZero`:
+  [MeasurableSpace α]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [MeasurableSpace α] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:206:8: automatically included section variable(s) unused in theorem `Exchangeability.DeFinetti.ViaKoopman.extendByZero_apply_nat`:
+  [MeasurableSpace α]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [MeasurableSpace α] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:210:0: automatically included section variable(s) unused in theorem `Exchangeability.DeFinetti.ViaKoopman.restrictNonneg_shiftℤ`:
+  [MeasurableSpace α]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [MeasurableSpace α] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:216:0: automatically included section variable(s) unused in theorem `Exchangeability.DeFinetti.ViaKoopman.restrictNonneg_shiftℤInv`:
+  [MeasurableSpace α]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [MeasurableSpace α] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:338:0: automatically included section variable(s) unused in theorem `Exchangeability.DeFinetti.ViaKoopman.indicator_preimage_comp`:
+  [MeasurableSpace Ω]
+  [MeasurableSpace Ω']
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [MeasurableSpace Ω] [MeasurableSpace Ω'] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:545:45: unused variable `hm`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:640:2: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:665:6: declaration uses 'sorry'
+error: Exchangeability/DeFinetti/ViaKoopman.lean:706:12: typeclass instance problem is stuck, it is often due to metavariables
+  BorelSpace ?m.146
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:1886:16: declaration uses 'sorry'
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:1924:8: automatically included section variable(s) unused in theorem `_private.Exchangeability.DeFinetti.ViaKoopman.0.Exchangeability.DeFinetti.ViaKoopman.shift_iterate_apply`:
+  [MeasurableSpace α]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [MeasurableSpace α] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:2315:14: declaration uses 'sorry'
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:2381:19: This simp argument is unused:
+  A
+
+Hint: Omit it from the simp argument list.
+  simp only [A̵,̵ ̵Pi.smul_apply, smul_eq_mul] at this
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:2381:22: This simp argument is unused:
+  Pi.smul_apply
+
+Hint: Omit it from the simp argument list.
+  simp only [A, P̵i̵.̵s̵m̵u̵l̵_̵a̵p̵p̵l̵y̵,̵ ̵smul_eq_mul] at this
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:2381:37: This simp argument is unused:
+  smul_eq_mul
+
+Hint: Omit it from the simp argument list.
+  simp only [A, Pi.smul_apply,̵ ̵s̵m̵u̵l̵_̵e̵q̵_̵m̵u̵l̵] at this
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:2396:13: This simp argument is unused:
+  abs_mul
+
+Hint: Omit it from the simp argument list.
+  simp [Y, a̵b̵s̵_̵m̵u̵l̵,̵ ̵mul_sub]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:2421:21: This simp argument is unused:
+  A
+
+Hint: Omit it from the simp argument list.
+  simp only [A̵,̵ ̵Pi.smul_apply, smul_eq_mul] at this
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:2421:24: This simp argument is unused:
+  Pi.smul_apply
+
+Hint: Omit it from the simp argument list.
+  simp only [A, P̵i̵.̵s̵m̵u̵l̵_̵a̵p̵p̵l̵y̵,̵ ̵smul_eq_mul] at this
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:2421:39: This simp argument is unused:
+  smul_eq_mul
+
+Hint: Omit it from the simp argument list.
+  simp only [A, Pi.smul_apply,̵ ̵s̵m̵u̵l̵_̵e̵q̵_̵m̵u̵l̵] at this
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:2441:21: This simp argument is unused:
+  A
+
+Hint: Omit it from the simp argument list.
+  simp only [A̵,̵ ̵Pi.smul_apply, smul_eq_mul] at this
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:2441:24: This simp argument is unused:
+  Pi.smul_apply
+
+Hint: Omit it from the simp argument list.
+  simp only [A, P̵i̵.̵s̵m̵u̵l̵_̵a̵p̵p̵l̵y̵,̵ ̵smul_eq_mul] at this
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:2441:39: This simp argument is unused:
+  smul_eq_mul
+
+Hint: Omit it from the simp argument list.
+  simp only [A, Pi.smul_apply,̵ ̵s̵m̵u̵l̵_̵e̵q̵_̵m̵u̵l̵] at this
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:3857:14: declaration uses 'sorry'
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:3873:8: automatically included section variable(s) unused in theorem `_private.Exchangeability.DeFinetti.ViaKoopman.0.Exchangeability.DeFinetti.ViaKoopman.eventuallyEq_comp_measurePreserving`:
+  [IsProbabilityMeasure μ]
+  [StandardBorelSpace α]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [IsProbabilityMeasure μ] [StandardBorelSpace α] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:3880:8: automatically included section variable(s) unused in theorem `_private.Exchangeability.DeFinetti.ViaKoopman.0.Exchangeability.DeFinetti.ViaKoopman.MeasurePreserving.iterate`:
+  [IsProbabilityMeasure μ]
+  [StandardBorelSpace α]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [IsProbabilityMeasure μ] [StandardBorelSpace α] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:3891:8: automatically included section variable(s) unused in theorem `_private.Exchangeability.DeFinetti.ViaKoopman.0.Exchangeability.DeFinetti.ViaKoopman.iterate_shift_eval`:
+  [MeasurableSpace α]
+  [StandardBorelSpace α]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [MeasurableSpace α] [StandardBorelSpace α] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:3958:6: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+error: Exchangeability/DeFinetti/ViaKoopman.lean:3968:8: `simp` made no progress
+info: Exchangeability/DeFinetti/ViaKoopman.lean:4050:61: Try this:
+  ring_nf
+  
+  The `ring` tactic failed to close the goal. Use `ring_nf` to obtain a normal form.
+    
+  Note that `ring` works primarily in *commutative* rings. If you have a noncommutative ring, abelian group or module, consider using `noncomm_ring`, `abel` or `module` instead.
+info: Exchangeability/DeFinetti/ViaKoopman.lean:4051:72: Try this:
+  ring_nf
+  
+  The `ring` tactic failed to close the goal. Use `ring_nf` to obtain a normal form.
+    
+  Note that `ring` works primarily in *commutative* rings. If you have a noncommutative ring, abelian group or module, consider using `noncomm_ring`, `abel` or `module` instead.
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:4026:8: automatically included section variable(s) unused in theorem `_private.Exchangeability.DeFinetti.ViaKoopman.0.Exchangeability.DeFinetti.ViaKoopman.optionB_Step4b_AB_close`:
+  [StandardBorelSpace α]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [StandardBorelSpace α] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:4320:60: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:4346:10: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:4192:8: automatically included section variable(s) unused in theorem `_private.Exchangeability.DeFinetti.ViaKoopman.0.Exchangeability.DeFinetti.ViaKoopman.optionB_Step4c_triangle`:
+  [StandardBorelSpace α]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [StandardBorelSpace α] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:4198:5: unused variable `hG_int`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Exchangeability/DeFinetti/ViaKoopman.lean:4366:16: declaration uses 'sorry'
+error: Exchangeability/DeFinetti/ViaKoopman.lean:4549:37: typeclass instance problem is stuck, it is often due to metavariables
+  StandardBorelSpace ?m.5
+error: Lean exited with code 1
+Some required targets logged failures:
+- Exchangeability.DeFinetti.ViaKoopman
+error: build failed

@@ -1092,31 +1092,27 @@ lemma integral_mul_condexp_adjoint
       ∫ ω, g ω * μ[ξ | m] ω ∂μ
     = ∫ ω, μ[(fun ω => g ω * μ[ξ | m] ω) | m] ω ∂μ := by
     simpa using
-      integral_condExp (μ := μ) (m := m) (hm := hm)
-        (f := fun ω => g ω * μ[ξ | m] ω)
+      (integral_condExp (μ := μ) (m := m) (hm := hm)
+        (f := fun ω => g ω * μ[ξ | m] ω)).symm
   -- (2) Pull out the m-measurable factor μ[ξ|m]
   have hpull :
       μ[(fun ω => g ω * μ[ξ | m] ω) | m]
       =ᵐ[μ] (fun ω => μ[g | m] ω * μ[ξ | m] ω) := by
     -- Use your "pull‐out" lemma for m‑measurable multipliers.
-    have hξm :
-        AEStronglyMeasurable (μ[ξ | m]) μ :=
-      (condExp_aestronglyMeasurable (μ := μ) (m := m) (hm := hm) ξ)
-    exact
-      condExp_mul_left (μ := μ) (m := m) (hm := hm) hξm hg
+    have hξm : AEStronglyMeasurable[m] (μ[ξ | m]) μ :=
+      stronglyMeasurable_condExp.aestronglyMeasurable
+    exact condExp_mul_of_aestronglyMeasurable_right hξm sorry hg
   -- (3) Symmetric step: turn ∫ μ[g|m]*μ[ξ|m] back into a condexp of (μ[g|m]*ξ)
   have h3 :
       ∫ ω, μ[g | m] ω * μ[ξ | m] ω ∂μ
     = ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ := by
     -- reverse pull‐out
-    have hgm :
-        AEStronglyMeasurable (μ[g | m]) μ :=
-      (condExp_aestronglyMeasurable (μ := μ) (m := m) (hm := hm) g)
+    have hgm : AEStronglyMeasurable[m] (μ[g | m]) μ :=
+      stronglyMeasurable_condExp.aestronglyMeasurable
     have hpull' :
         μ[(fun ω => μ[g | m] ω * ξ ω) | m]
         =ᵐ[μ] (fun ω => μ[g | m] ω * μ[ξ | m] ω) := by
-      exact
-        condExp_mul_right (μ := μ) (m := m) (hm := hm) hgm hξ
+      exact condExp_mul_of_aestronglyMeasurable_left hgm sorry hξ
     simpa using (integral_congr_ae hpull').symm
   -- (4) And finally ∫ μ[·|m] = ∫ ·
   have h4 :
@@ -1135,6 +1131,23 @@ lemma integral_mul_condexp_adjoint
     _   = ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ := h3
     _   = ∫ ω, μ[g | m] ω * ξ ω ∂μ := h4
 
+/-- Set integral as `1_s · f` (explicit unit indicator), tuned to avoid elaboration blowups. -/
+lemma setIntegral_eq_integral_indicator_one_mul
+    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
+    {s : Set Ω} (hs : MeasurableSet s) {f : Ω → ℝ} :
+  ∫ ω in s, f ω ∂μ
+  = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω) * f ω ∂μ := by
+  classical
+  -- by definition: `∫_s f = ∫ indicator s f`; then identify with `1_s * f`
+  have : ∫ ω in s, f ω ∂μ = ∫ ω, Set.indicator s f ω ∂μ :=
+    (integral_indicator hs).symm
+  refine this.trans ?_
+  refine integral_congr_ae ?ae
+  filter_upwards with ω
+  by_cases hω : ω ∈ s
+  · simp [Set.indicator, hω, mul_comm, mul_left_comm, mul_assoc]
+  · simp [Set.indicator, hω]
+
 /-- Set version of adjointness. If `s ∈ m`, then
 
     ∫_s g·μ[ξ|m] = ∫_s μ[g|m]·ξ. -/
@@ -1149,16 +1162,28 @@ lemma set_integral_mul_condexp_adjoint
   = ∫ ω in s, μ[g | m] ω * ξ ω ∂μ := by
   classical
   -- rewrite set integrals as whole-space integrals with indicator
+  -- Indicator equality: s.indicator f = s.indicator 1 * f
+  have ind_eq : ∀ f : Ω → ℝ, ∀ᵐ ω ∂μ,
+      s.indicator f ω = s.indicator (fun _ => (1 : ℝ)) ω * f ω := by
+    intro f
+    filter_upwards with ω
+    by_cases h : ω ∈ s <;> simp [Set.indicator, h]
+
   have h1 :
       ∫ ω in s, g ω * μ[ξ | m] ω ∂μ
     = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω)
             * g ω * μ[ξ | m] ω ∂μ := by
-    simp [Set.indicator, Set.indicator_apply, mul_comm, mul_left_comm, mul_assoc]
+    rw [@setIntegral_eq_integral_indicator_one_mul Ω m0 μ s (hm s hs)]
+    congr with ω
+    ring
+
   have h2 :
       ∫ ω in s, μ[g | m] ω * ξ ω ∂μ
     = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω)
             * μ[g | m] ω * ξ ω ∂μ := by
-    simp [Set.indicator, Set.indicator_apply, mul_comm, mul_left_comm, mul_assoc]
+    rw [@setIntegral_eq_integral_indicator_one_mul Ω m0 μ s (hm s hs)]
+    congr with ω
+    ring
 
   -- use (1) with g := (1_s · g)
   have h_int :
@@ -1180,18 +1205,105 @@ lemma set_integral_mul_condexp_adjoint
   have h_eq' :
       ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω) * g ω * μ[ξ | m] ω ∂μ
     = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω) * μ[g | m] ω * ξ ω ∂μ := by
-    -- unfold h_eq and substitute μ[(1_s·g)|m] using h_proj
-    -- h_eq : ∫ (1_s·g) · μ[ξ|m] = ∫ μ[(1_s·g)|m] · ξ
-    simpa [mul_comm, mul_left_comm, mul_assoc] using
-      (congrArg id (by
-        -- turn the equality of integrals by congr_ae on the right integrand
-        have := h_eq
-        -- rewrite right integral using h_proj
-        -- (we're just massaging; Lean will accept this `by` block as is
-        -- if your `integral_congr_ae` is available)
-      ))
+    -- Start with h_eq and rewrite RHS using h_proj
+    calc ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω) * g ω * μ[ξ | m] ω ∂μ
+        = ∫ ω, μ[(fun ω => (Set.indicator s (fun _ => (1 : ℝ)) ω) * g ω) | m] ω * ξ ω ∂μ := h_eq
+      _ = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω) * μ[g | m] ω * ξ ω ∂μ := by
+          refine integral_congr_ae ?_
+          filter_upwards [h_proj] with ω hω
+          rw [hω]
   -- finish
   simpa [h1, h2] using h_eq'
+
+/- ===== Helpers: adjointness & indicator algebra (μ[·|m], (hm : m ≤ m0)) ===== -/
+
+/-- If `|g| ≤ C` a.e., then `|μ[g|m]| ≤ C` a.e. (uses monotonicity of conditional expectation). -/
+lemma ae_bound_condexp_of_ae_bound
+    {Ω : Type*} [MeasurableSpace Ω] (μ : Measure Ω)
+    {m m0 : MeasurableSpace Ω} (hm : m ≤ m0)
+    [SigmaFinite (μ.trim hm)]
+    {g : Ω → ℝ} {C : ℝ}
+    (hgC : ∀ᵐ ω ∂μ, |g ω| ≤ C) :
+  ∀ᵐ ω ∂μ, |μ[g | m] ω| ≤ C := by
+  classical
+  -- `|μ[g|m]| ≤ μ[|g||m]` a.e. and `μ[|g||m] ≤ μ[(fun _ => C)|m] = C` a.e.
+  have h1 : μ[fun ω => |g ω| | m] ≤ᵐ[μ] fun _ => C := by
+    -- use monotonicity of conditional expectation applied to `|g| ≤ C`
+    refine condexp_mono (μ := μ) (m := m) (hm := hm) ?h_le
+    -- measurability and inequality are pointwise a.e.
+    · exact (measurable_const : Measurable fun (_:Ω) => C)
+    · exact hgC
+  have h2 : ∀ᵐ ω ∂μ, |μ[g | m] ω| ≤ μ[fun ω => |g ω| | m] ω := by
+    -- Jensen/triangle inequality for conditional expectation
+    exact ae_abs_condexp_le_condexp_abs (μ := μ) (m := m) (hm := hm) g
+  filter_upwards [h2, h1] with ω hω1 hω2
+  exact le_trans hω1 hω2
+
+/-- **Adjointness for bounded `g` (L∞–L¹)**:
+If `g` is essentially bounded and `ξ ∈ L¹(μ)`, then
+`∫ g · μ[ξ|m] = ∫ μ[g|m] · ξ`.
+
+This avoids the `L¹×L¹` product pitfall by using `L∞` control on `g`,
+and the corresponding `L∞` control on `μ[g|m]`. -/
+lemma integral_mul_condexp_adjoint_L∞
+    {Ω : Type*} [MeasurableSpace Ω] (μ : Measure Ω)
+    {m m0 : MeasurableSpace Ω} (hm : m ≤ m0)
+    [SigmaFinite (μ.trim hm)]
+    {g ξ : Ω → ℝ} {C : ℝ}
+    (hgC : ∀ᵐ ω ∂μ, |g ω| ≤ C)
+    (hξ : Integrable ξ μ) :
+  ∫ ω, g ω * μ[ξ | m] ω ∂μ
+  = ∫ ω, μ[g | m] ω * ξ ω ∂μ := by
+  classical
+  -- Both products are integrable: use L∞ bounds on `g` and `μ[g|m]`.
+  have h_int1 : Integrable (fun ω => g ω * μ[ξ | m] ω) μ := by
+    -- `μ[ξ|m] ∈ L¹`, multiply by bounded `g`
+    have h1 : Integrable (μ[ξ | m]) μ := integrable_condexp (μ := μ) (m := m) (hm := hm) ξ
+    exact h1.bdd_mul_of_ae_bound_left hgC
+  have h_int2 : Integrable (fun ω => μ[g | m] ω * ξ ω) μ := by
+    -- `μ[g|m]` is also bounded by `C` a.e.
+    have hμgC : ∀ᵐ ω ∂μ, |μ[g | m] ω| ≤ C :=
+      ae_bound_condexp_of_ae_bound (μ := μ) (m := m) (m0 := m0) (hm := hm) hgC
+    exact hξ.bdd_mul_of_ae_bound_left hμgC
+
+  -- Now copy the "adjointness by CE" argument, which is safe since both products are L¹.
+  have h1 :
+      ∫ ω, g ω * μ[ξ | m] ω ∂μ
+    = ∫ ω, μ[(fun ω => g ω * μ[ξ | m] ω) | m] ω ∂μ := by
+      simpa using integral_condexp (μ := μ) (m := m) (hm := hm)
+        (f := fun ω => g ω * μ[ξ | m] ω)  -- needs `h_int1` to be used downstream
+  have hpull :
+      μ[(fun ω => g ω * μ[ξ | m] ω) | m]
+      =ᵐ[μ] (fun ω => μ[g | m] ω * μ[ξ | m] ω) := by
+    -- pull out the `m`-measurable factor `μ[ξ|m]`
+    have hξm :
+        AeStronglyMeasurable (μ[ξ | m]) μ :=
+      (condexp_ae_stronglyMeasurable (μ := μ) (m := m) (hm := hm) ξ)
+    exact condexp_mul_left (μ := μ) (m := m) (hm := hm) hξm h_int1
+  have h3 :
+      ∫ ω, μ[g | m] ω * μ[ξ | m] ω ∂μ
+    = ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ := by
+    -- reverse pull-out (now pull out `μ[g|m]`)
+    have hgm :
+        AeStronglyMeasurable (μ[g | m]) μ :=
+      (condexp_ae_stronglyMeasurable (μ := μ) (m := m) (hm := hm) g)
+    have hpull' :
+        μ[(fun ω => μ[g | m] ω * ξ ω) | m]
+        =ᵐ[μ] (fun ω => μ[g | m] ω * μ[ξ | m] ω) := by
+      exact condexp_mul_right (μ := μ) (m := m) (hm := hm) hgm h_int2
+    simpa using (integral_congr_ae hpull').symm
+  have h4 :
+      ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ
+    = ∫ ω, μ[g | m] ω * ξ ω ∂μ := by
+    simpa using integral_condexp (μ := μ) (m := m) (hm := hm)
+      (f := fun ω => μ[g | m] ω * ξ ω)
+
+  calc
+    ∫ ω, g ω * μ[ξ | m] ω ∂μ
+        = ∫ ω, μ[(fun ω => g ω * μ[ξ | m] ω) | m] ω ∂μ := h1
+    _   = ∫ ω, μ[g | m] ω * μ[ξ | m] ω ∂μ := (integral_congr_ae hpull)
+    _   = ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ := h3
+    _   = ∫ ω, μ[g | m] ω * ξ ω ∂μ := h4
 
 lemma condIndep_of_triple_law
   {Ω α β γ : Type*}
@@ -1453,14 +1565,15 @@ lemma condIndep_of_triple_law
             --
 
             -- Step 1: Get the pair law (Z,W) =^d (Z,W') from the triple law
-            have h_pair_ZW : Measure.map (fun ω => (Z ω, W ω)) μ =
-                              Measure.map (fun ω => (Z ω, W' ω)) μ := by
-              exact pair_law_ZW_of_triple_law Y Z W W' hZ hW hW' h_triple
+            -- Note: Use @ notation to avoid instance confusion with 𝔾 binding
+            have h_pair_ZW : @Measure.map Ω (β × γ) _ _ (fun ω => (Z ω, W ω)) μ =
+                              @Measure.map Ω (β × γ) _ _ (fun ω => (Z ω, W' ω)) μ := by
+              exact pair_law_ZW_of_triple_law Y Z W W' hY hZ hW hW' h_triple
 
             -- Step 2: Get the pair law (Y,W) =^d (Y,W') from the triple law
-            have h_pair_YW : Measure.map (fun ω => (Y ω, W ω)) μ =
-                              Measure.map (fun ω => (Y ω, W' ω)) μ := by
-              exact pair_law_YW_of_triple_law Y Z W W' hY hW hW' h_triple
+            have h_pair_YW : @Measure.map Ω (α × γ) _ _ (fun ω => (Y ω, W ω)) μ =
+                              @Measure.map Ω (α × γ) _ _ (fun ω => (Y ω, W' ω)) μ := by
+              exact pair_law_YW_of_triple_law Y Z W W' hY hZ hW hW' h_triple
 
             -- Step 3: Apply enhanced common_version_condExp to get v with:
             -- - v is Borel-measurable
