@@ -3220,26 +3220,6 @@ private lemma correlation_coefficient_bounded
   · linarith [abs_le.mp h_ρ_abs]
   · exact (abs_le.mp h_ρ_abs).2
 
-/-- Helper lemma: When block averages are ae-equal, the Cauchy property holds trivially.
-
-If blockAvg values are equal a.e., then eLpNorm of their difference is 0 < ε. -/
-private lemma blockAvg_cauchy_from_ae_eq
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {X : ℕ → Ω → ℝ} (f : ℝ → ℝ)
-    (h_ae_eq : ∀ n n', ∀ᵐ ω ∂μ, blockAvg f X 0 n ω = blockAvg f X 0 n' ω) :
-    ∀ ε > 0, ∃ N, ∀ {n n'}, n ≥ N → n' ≥ N →
-      eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ < ε := by
-  intro ε hε
-  use 1
-  intros n n' _ _
-  calc eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ
-      = eLpNorm (fun ω => 0) 2 μ := by
-        apply eLpNorm_congr_ae
-        filter_upwards [h_ae_eq n n'] with ω hω
-        simp [hω]
-    _ = 0 := eLpNorm_zero
-    _ < ε := hε
-
 /-- Helper lemma: Block averages form a Cauchy sequence in L² (Step 1 of main proof).
 
 Given contractable X and bounded f, the block averages form a Cauchy sequence in L².
@@ -3286,8 +3266,19 @@ private lemma blockAvg_cauchy_in_L2
 
     · -- Edge case: ρ = 1 (perfect correlation) → blockAvg values are ae-equal
       have hρ_eq : ρ = 1 := le_antisymm hρ_bd.2 (le_of_not_lt hρ_lt)
-      refine blockAvg_cauchy_from_ae_eq (fun n n' => ?_)
-      sorry  -- TODO: ρ = 1 ⟹ Z_i = Z_0 a.e. ⟹ blockAvg constant a.e.
+      -- When ρ = 1, Z_i = Z_0 a.e., so blockAvg values are equal a.e.
+      have h_ae_eq : ∀ n n', ∀ᵐ ω ∂μ, blockAvg f X 0 n ω = blockAvg f X 0 n' ω := by
+        sorry  -- TODO: ρ = 1 ⟹ Z_i = Z_0 a.e. ⟹ blockAvg constant a.e.
+      -- Trivial Cauchy: if values are ae-equal, eLpNorm of difference is 0 < ε
+      use 1
+      intros n n' _ _
+      calc eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ
+          = eLpNorm (fun ω => 0) 2 μ := by
+            apply eLpNorm_congr_ae
+            filter_upwards [h_ae_eq n n'] with ω hω
+            simp [hω]
+        _ = 0 := eLpNorm_zero
+        _ < ε := hε
 
   · -- Degenerate case: σSq = 0 → Z is constant a.e. → blockAvg constant a.e.
     push_neg at hσ_pos
@@ -3298,8 +3289,19 @@ private lemma blockAvg_cauchy_in_L2
         intro ω
         exact sq_nonneg _
       linarith
-    refine blockAvg_cauchy_from_ae_eq (fun n n' => ?_)
-    sorry  -- TODO: σSq = 0 ⟹ Z_0 = 0 a.e. ⟹ blockAvg constant a.e.
+    -- When σSq = 0, Z_0 = 0 a.e., so blockAvg values are equal a.e.
+    have h_ae_eq : ∀ n n', ∀ᵐ ω ∂μ, blockAvg f X 0 n ω = blockAvg f X 0 n' ω := by
+      sorry  -- TODO: σSq = 0 ⟹ Z_0 = 0 a.e. ⟹ blockAvg constant a.e.
+    -- Trivial Cauchy: if values are ae-equal, eLpNorm of difference is 0 < ε
+    use 1
+    intros n n' _ _
+    calc eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ
+        = eLpNorm (fun ω => 0) 2 μ := by
+          apply eLpNorm_congr_ae
+          filter_upwards [h_ae_eq n n'] with ω hω
+          simp [hω]
+      _ = 0 := eLpNorm_zero
+      _ < ε := hε
 
 /-- Helper lemma: L² limit exists via completeness (Step 2 of main proof).
 
