@@ -13,6 +13,7 @@ import Mathlib.Probability.Independence.Kernel
 import Exchangeability.Ergodic.KoopmanMeanErgodic
 import Exchangeability.Ergodic.InvariantSigma
 import Exchangeability.Ergodic.ProjectionLemmas
+import Exchangeability.Ergodic.BirkhoffAvgCLM
 import Exchangeability.DeFinetti.CommonEnding
 import Exchangeability.DeFinetti.MartingaleHelpers
 import Exchangeability.ConditionallyIID
@@ -700,8 +701,9 @@ lemma condexp_pullback_factor
     -- lift measurability from m to ambient inst
     have hBm' : @MeasurableSet Ω inst B := hm B hBm
     -- a.e.-measurability for the integrands (under μ)
+    -- Lift stronglyMeasurable from m to inst using hm : m ≤ inst
     have hCE_ae : AEMeasurable (condExp m μ H) μ :=
-      stronglyMeasurable_condExp.aestronglyMeasurable.aemeasurable
+      (stronglyMeasurable_condExp.mono hm).aestronglyMeasurable.aemeasurable
     have hH_ae : AEMeasurable H μ := hH.aestronglyMeasurable.aemeasurable
     -- Three-step calc: change variables, apply CE property, change back
     calc
@@ -3856,8 +3858,11 @@ private lemma condexpL2_ae_eq_condExp (f : Lp ℝ 2 μ) :
     (condexpL2 (μ := μ) f : Ω[α] → ℝ) =ᵐ[μ] μ[f | shiftInvariantSigma] := by
   -- Use Lp.memLp to extract MemLp proof from Lp element
   have hf : MemLp (f : Ω[α] → ℝ) 2 μ := Lp.memLp f
-  -- Apply the mathlib lemma: condExpL2 E 𝕜 hm hf.toLp =ᵐ[μ] μ[f|m]
   -- TODO: Need to relate custom condexpL2 with mathlib condExpL2
+  -- The custom condexpL2 is subtypeL.comp (condExpL2 ℝ ℝ shiftInvariantSigma_le)
+  -- Mathlib's MemLp.condExpL2_ae_eq_condExp states: condExpL2 E 𝕜 hm hf.toLp =ᵐ[μ] μ[f | m]
+  -- However, the composition with subtypeL changes the coercion behavior
+  -- This requires deeper understanding of Lp quotient types and coercion APIs
   sorry
 
 -- Helper lemmas for Step 3a: a.e. equality through measure-preserving maps
@@ -3955,14 +3960,18 @@ private lemma optionB_Step3b_L2_to_L1
       filter_upwards [hB_eq_pos n hn, hY_eq] with ω h1 h2
       simpa [h1, h2]
 
-    -- measurability: use `Lp.aestronglyMeasurable` to get AEStronglyMeasurable from Lp elements
+    -- measurability: both birkhoffAverage and condexpL2 are Lp elements, so AEMeasurable when coerced
     have h_meas :
         AEMeasurable
           (fun ω =>
             (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
             - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω) μ := by
-      -- TODO: This coercion equality needs Lp API lemmas
-      sorry
+      -- The coercion of an Lp element is AEStronglyMeasurable
+      have h1 : AEStronglyMeasurable (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) μ :=
+        Lp.aestronglyMeasurable _
+      have h2 : AEStronglyMeasurable (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) μ :=
+        Lp.aestronglyMeasurable _
+      exact (h1.sub h2).aemeasurable
 
     -- L¹ ≤ L² via Hölder/Cauchy-Schwarz on a probability space
     have h_le :
