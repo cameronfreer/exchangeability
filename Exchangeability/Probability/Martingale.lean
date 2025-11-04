@@ -495,18 +495,27 @@ lemma ae_limit_is_condexp_iInf
     have : F_inf ≤ 𝔽 n := iInf_le 𝔽 n
     exact condExp_condExp_of_le this (h_le n)
 
-  -- Xlim is strongly measurable as the limit of strongly measurable functions
-  have hXlim_meas : StronglyMeasurable Xlim := by
-    refine (aestronglyMeasurable_of_tendsto_ae atTop ?_ h_tendsto).stronglyMeasurable_mk
+  -- Step 1: get AE-strong measurability (no sub-σ-algebra tricks here)
+  have hXlim_aesm : AEStronglyMeasurable Xlim μ := by
+    -- standard "limit of a.e.-strongly-measurable" lemma at the ambient measurable space
+    refine aestronglyMeasurable_of_tendsto_ae atTop ?h_meas h_tendsto
     intro n
-    exact (stronglyMeasurable_condExp (m := 𝔽 n)).mono (h_le n) |>.aestronglyMeasurable
+    -- each step is a.e.-strongly-measurable
+    exact (aestronglyMeasurable_condexp (μ := μ) (m := 𝔽 n) f)
 
-  -- Since Xlim is F_inf-measurable and integrable, μ[Xlim | F_inf] = Xlim
+  -- Step 2: switch to the measurable representative when needed
+  have hXlim_ae_eq_mk : Xlim =ᵐ[μ] hXlim_aesm.mk := hXlim_aesm.ae_eq_mk
+  have hXlim_meas_mk  : StronglyMeasurable hXlim_aesm.mk := hXlim_aesm.stronglyMeasurable_mk
+
+  -- Since Xlim is F_inf-ae-strongly-measurable and integrable, μ[Xlim | F_inf] = Xlim
   have hF_inf_le : F_inf ≤ _ := le_trans (iInf_le 𝔽 0) (h_le 0)
+
+  -- TODO(BLOCKER): Need to prove Xlim is F_inf-ae-strongly-measurable
+  -- Challenge: Xlim is limit of μ[f | 𝔽 n], each 𝔽 n-measurable
+  -- Need lemma: limit of decreasing sequence of measurable functions is measurable w.r.t. infimum σ-algebra
+  -- Or alternative approach to show μ[Xlim | F_inf] =ᵐ[μ] Xlim
   have hXlim_condExp : μ[Xlim | F_inf] =ᵐ[μ] Xlim := by
-    -- Apply condExp_of_stronglyMeasurable: if f is m-measurable and integrable, then μ[f|m] = f
-    have : μ[Xlim | F_inf] = Xlim := condExp_of_stronglyMeasurable hF_inf_le hXlim_meas hXlimint
-    rw [this]
+    sorry
 
   -- Final identification: Xlim = μ[f | F_inf]
   -- Strategy: Use L¹-continuity of condExp
@@ -549,7 +558,7 @@ lemma ae_limit_is_condexp_iInf
     exact this.symm
 
   -- Return the desired result: combine h_tendsto with hXlim_eq
-  sorry  -- TODO: Combine h_tendsto and hXlim_eq using .and.mono pattern
+  exact h_tendsto.and hXlim_eq.symm |>.mono fun ω ⟨h_tend, h_eq⟩ => h_eq ▸ h_tend
 
 /-! ## Main Theorems
 
