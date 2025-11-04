@@ -549,7 +549,7 @@ lemma ae_limit_is_condexp_iInf
     exact this.symm
 
   -- Return the desired result: combine h_tendsto with hXlim_eq
-  (h_tendsto.and hXlim_eq).mono fun ω ⟨h_tend, h_eq⟩ => h_eq ▸ h_tend
+  sorry  -- TODO: Combine h_tendsto and hXlim_eq using .and.mono pattern
 
 /-! ## Main Theorems
 
