@@ -1281,7 +1281,11 @@ lemma integral_mul_condexp_adjoint_Linfty
     rw [h_comm]
     have h_int_comm : Integrable (fun ω => μ[ξ | m] ω * g ω) μ := by
       convert h_int1 using 1; ext ω; ring
-    exact MeasureTheory.condExp_mul_of_aestronglyMeasurable_left hξm h_int_comm hg
+    have h_pull := MeasureTheory.condExp_mul_of_aestronglyMeasurable_left hξm h_int_comm hg
+    -- The lemma gives μ[ξ|m] * μ[g|m], but we need μ[g|m] * μ[ξ|m]
+    filter_upwards [h_pull] with ω hω
+    simp only [Pi.mul_apply] at hω ⊢
+    exact mul_comm _ _ ▸ hω
   have h3 :
       ∫ ω, μ[g | m] ω * μ[ξ | m] ω ∂μ
     = ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ := by
