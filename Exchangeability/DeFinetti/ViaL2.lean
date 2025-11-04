@@ -3202,8 +3202,8 @@ private lemma centered_uniform_covariance
 
     -- From h_int_eq: ∫ f(X i) = ∫ f(X 0) = m
     -- So ∫ f(X i) - m = m - m = 0
-    rw [h_int_eq, hm_def]
-    simp [integral_const, measure_univ]
+    rw [h_int_eq, hm_def, integral_const]
+    simp [measure_univ]
 
   -- Step 5: Show uniform covariance via contractability
   -- For i ≠ j, E[Z_i Z_j] = E[Z_0 Z_1]
