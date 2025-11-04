@@ -1143,7 +1143,7 @@ lemma setIntegral_eq_integral_indicator_one_mul
     (integral_indicator hs).symm
   refine this.trans ?_
   refine integral_congr_ae ?ae
-  filter_upwards [ae_all_iff.mpr (fun ω => Iff.rfl)] with ω _
+  filter_upwards with ω
   by_cases hω : ω ∈ s
   · simp [Set.indicator, hω, mul_comm, mul_left_comm, mul_assoc]
   · simp [Set.indicator, hω]
@@ -1215,13 +1215,13 @@ lemma set_integral_mul_condexp_adjoint
   -- finish
   simpa [h1, h2] using h_eq'
 
-/-- ===== Helpers: adjointness & indicator algebra (μ[·|m], (hm : m ≤ m0)) ===== -/
+/- ===== Helpers: adjointness & indicator algebra (μ[·|m], (hm : m ≤ m0)) ===== -/
 
 /-- If `|g| ≤ C` a.e., then `|μ[g|m]| ≤ C` a.e. (uses monotonicity of conditional expectation). -/
 lemma ae_bound_condexp_of_ae_bound
     {Ω : Type*} [MeasurableSpace Ω] (μ : Measure Ω)
     {m m0 : MeasurableSpace Ω} (hm : m ≤ m0)
-    [SigmaFinite (μ.trim m)]
+    [SigmaFinite (μ.trim hm)]
     {g : Ω → ℝ} {C : ℝ}
     (hgC : ∀ᵐ ω ∂μ, |g ω| ≤ C) :
   ∀ᵐ ω ∂μ, |μ[g | m] ω| ≤ C := by
