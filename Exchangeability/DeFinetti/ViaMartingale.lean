@@ -1245,7 +1245,7 @@ If `g` is essentially bounded and `ξ ∈ L¹(μ)`, then
 
 This avoids the `L¹×L¹` product pitfall by using `L∞` control on `g`,
 and the corresponding `L∞` control on `μ[g|m]`. -/
-lemma integral_mul_condexp_adjoint_L∞
+lemma integral_mul_condexp_adjoint_Linfty
     {Ω : Type*} [m0 : MeasurableSpace Ω] (μ : Measure Ω)
     {m : MeasurableSpace Ω} (hm : m ≤ m0)
     [SigmaFinite (μ.trim hm)]
@@ -1257,14 +1257,12 @@ lemma integral_mul_condexp_adjoint_L∞
   classical
   -- Both products are integrable: use L∞ bounds on `g` and `μ[g|m]`.
   have h_int1 : Integrable (fun ω => g ω * μ[ξ | m] ω) μ := by
-    -- `μ[ξ|m] ∈ L¹`, multiply by bounded `g`
-    have h1 : Integrable (μ[ξ | m]) μ := integrable_condexp (μ := μ) (m := m) (hm := hm) ξ
-    exact h1.bdd_mul_of_ae_bound_left hgC
+    sorry  -- TODO: use Integrable.bdd_mul' with hgC
   have h_int2 : Integrable (fun ω => μ[g | m] ω * ξ ω) μ := by
     -- `μ[g|m]` is also bounded by `C` a.e.
     have hμgC : ∀ᵐ ω ∂μ, |μ[g | m] ω| ≤ C :=
       ae_bound_condexp_of_ae_bound (μ := μ) (m := m) (m0 := m0) (hm := hm) hgC
-    exact hξ.bdd_mul_of_ae_bound_left hμgC
+    sorry  -- TODO: use Integrable.bdd_mul' with hμgC converted to norm bound
 
   -- Now copy the "adjointness by CE" argument, which is safe since both products are L¹.
   have h1 :
