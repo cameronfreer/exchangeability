@@ -352,23 +352,16 @@ lemma condExp_exists_ae_limit_antitone
             le_iSup (fun M => upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 M n) ω) N
 
     -- The expected value of the supremum is bounded by C
-    -- Use monotone convergence: ∫⁻ (⨆ N, f N) = ⨆ N, ∫⁻ f N when f is monotone
+    -- Strategy: bound each integral by C, then use monotone convergence or Fatou
     have h_exp_bound : ∫⁻ ω, (⨆ N, upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω) ∂μ ≤ C := by
-      -- Monotonicity: upcrossings is monotone in the horizon since upcrossings = ⨆ M, upcrossingsBefore M
-      have h_mono : ∀ ω, Monotone (fun N => upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω) := by
-        intro ω N M hNM
-        -- upcrossings doesn't actually depend on N in a monotone way...
-        -- Actually, different N give different sequences, so this isn't right
-        sorry
-
-      -- Alternative: bound the supremum pointwise, then integrate
-      calc ∫⁻ ω, (⨆ N, upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω) ∂μ
-          ≤ ⨆ N, ∫⁻ ω, upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω ∂μ := by
-              -- This is lintegral_iSup_le or similar
-              sorry
-        _ ≤ C := by
-              apply iSup_le
-              exact hC
+      -- We have: ⨆ N, ∫⁻ ... ≤ ∫⁻ (⨆ N, ...) by iSup_lintegral_le
+      -- And: ∀ N, ∫⁻ ... ≤ C, so ⨆ N, ∫⁻ ... ≤ C
+      -- But this gives the wrong direction for what we need!
+      -- We need: ∫⁻ (⨆ N, ...) ≤ something
+      --
+      -- The issue: different N give different sequences, so we can't use standard monotone convergence
+      -- We need a different bound. Perhaps bound the supremum directly?
+      sorry
 
     -- Show C is finite: C = (‖f‖₁ + |a|) / (b - a)
     -- Numerator: eLpNorm f 1 μ < ⊤ (from integrability), |a| finite
