@@ -2931,6 +2931,144 @@ private lemma cesaro_cauchy_rho_lt
   -- Eta-reduce: (fun ω => blockAvg f X 0 n ω - blockAvg f X 0 n' ω) = blockAvg f X 0 n - blockAvg f X 0 n'
   exact h_bound
 
+/-- Helper lemma: L² limit exists via completeness (Step 2 of main proof).
+
+Given a Cauchy sequence of block averages in L², completeness of L²(μ) guarantees
+existence of a limit α_f with:
+- α_f ∈ L²(μ)
+- blockAvg f X 0 n → α_f in L² as n → ∞
+
+This is the core application of Hilbert space completeness in the proof. -/
+private lemma l2_limit_from_cauchy
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {X : ℕ → Ω → ℝ} (hX_meas : ∀ i, Measurable (X i))
+    (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1)
+    (hCauchy : ∀ ε > 0, ∃ N, ∀ {n n'}, n ≥ N → n' ≥ N →
+      eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ < ε) :
+    ∃ α_f, MemLp α_f 2 μ ∧
+      Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0) := by
+  -- Step 1: Show each blockAvg is in L²
+  have hblockAvg_memLp : ∀ n, n > 0 → MemLp (blockAvg f X 0 n) 2 μ := by
+    intro n hn_pos
+    -- blockAvg is bounded since f is bounded
+    apply memLp_two_of_bounded
+    · -- Measurable: blockAvg is a finite sum of measurable functions
+      show Measurable (fun ω => (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (0 + k) ω)))
+      exact Measurable.const_mul (Finset.measurable_sum _ fun k _ =>
+        hf_meas.comp (hX_meas (0 + k))) _
+    intro ω
+    -- |blockAvg f X 0 n ω| ≤ 1 since |f| ≤ 1
+    show |(n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (0 + k) ω))| ≤ 1
+    calc |(n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (0 + k) ω))|
+        = (n : ℝ)⁻¹ * |(Finset.range n).sum (fun k => f (X (0 + k) ω))| := by
+          rw [abs_mul, abs_inv, abs_of_nonneg]
+          exact Nat.cast_nonneg n
+      _ ≤ (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => |f (X (0 + k) ω)|) := by
+          apply mul_le_mul_of_nonneg_left
+          · exact Finset.abs_sum_le_sum_abs _ _
+          · exact inv_nonneg.mpr (Nat.cast_nonneg n)
+      _ ≤ (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => 1) := by
+          apply mul_le_mul_of_nonneg_left
+          · apply Finset.sum_le_sum
+            intro k _
+            exact hf_bdd (X (0 + k) ω)
+          · exact inv_nonneg.mpr (Nat.cast_nonneg n)
+      _ = (n : ℝ)⁻¹ * n := by simp
+      _ = 1 := by
+          field_simp [Nat.pos_iff_ne_zero.mp hn_pos]
+
+  -- For n = 0, handle separately
+  have hblockAvg_memLp_all : ∀ n, MemLp (blockAvg f X 0 n) 2 μ := by
+    intro n
+    by_cases hn : n > 0
+    · exact hblockAvg_memLp n hn
+    · -- n = 0 case: blockAvg is just the constant 0 function
+      have : n = 0 := by omega
+      subst this
+      -- When n=0, Finset.range 0 is empty, so sum = 0
+      -- blockAvg f X 0 0 = 0⁻¹ * 0, which we treat as the zero function
+      have h_eq : blockAvg f X 0 0 = fun ω => (0 : ℝ) := by
+        ext ω
+        simp [blockAvg, Finset.range_zero, Finset.sum_empty]
+      rw [h_eq]
+      -- Constant 0 function is in L² (bounded by 1)
+      apply memLp_two_of_bounded (M := 1) measurable_const
+      intro ω
+      norm_num
+
+  -- Step 2: Define sequence in L² space
+  let u : ℕ → Lp ℝ 2 μ := fun n =>
+    if hn : n > 0 then
+      (hblockAvg_memLp n hn).toLp (blockAvg f X 0 n)
+    else
+      0  -- n = 0 case
+
+  -- Step 3: Prove sequence is Cauchy
+  have hCauchySeq : CauchySeq u := by
+    rw [Metric.cauchySeq_iff]
+    intro ε hε
+    obtain ⟨N, hN⟩ := hCauchy (ENNReal.ofReal ε) (by simp [hε])
+    use max N 1  -- Ensure N is at least 1
+    intro n hn m hm
+    -- For n, m ≥ max N 1, both are > 0, so we can unfold u
+    have hn_pos : n > 0 := Nat.lt_of_lt_of_le (Nat.zero_lt_one) (Nat.le_trans (Nat.le_max_right N 1) hn)
+    have hm_pos : m > 0 := Nat.lt_of_lt_of_le (Nat.zero_lt_one) (Nat.le_trans (Nat.le_max_right N 1) hm)
+    have hn' : n ≥ N := Nat.le_trans (Nat.le_max_left N 1) hn
+    have hm' : m ≥ N := Nat.le_trans (Nat.le_max_left N 1) hm
+    simp only [u, dif_pos hn_pos, dif_pos hm_pos]
+    -- Use dist = (eLpNorm ...).toReal and the fact that toLp preserves eLpNorm
+    rw [dist_comm, dist_eq_norm, Lp.norm_def]
+    -- Now goal is: eLpNorm (toLp m - toLp n) 2 μ).toReal < ε
+    -- Use MemLp.toLp_sub to rewrite the difference
+    rw [← (hblockAvg_memLp m hm_pos).toLp_sub (hblockAvg_memLp n hn_pos)]
+    -- Now: (eLpNorm (coeFn (toLp (blockAvg m - blockAvg n))) 2 μ).toReal < ε
+    -- coeFn of toLp is ae-equal to original, so eLpNorms are equal
+    rw [eLpNorm_congr_ae (((hblockAvg_memLp m hm_pos).sub (hblockAvg_memLp n hn_pos)).coeFn_toLp)]
+    -- Now: (eLpNorm (blockAvg m - blockAvg n) 2 μ).toReal < ε
+    -- Use toReal_lt_of_lt_ofReal: if a < ofReal b then a.toReal < b
+    exact ENNReal.toReal_lt_of_lt_ofReal (hN hm' hn')
+
+  -- Step 4: Extract limit from completeness
+  haveI : CompleteSpace (Lp ℝ 2 μ) := by infer_instance
+  obtain ⟨α_L2, h_tendsto⟩ := cauchySeq_tendsto_of_complete hCauchySeq
+
+  -- Step 5: Extract representative function
+  -- α_L2 : Lp ℝ 2 μ is an ae-equivalence class
+  -- In Lean 4, Lp coerces to a function type automatically
+  let α_f : Ω → ℝ := α_L2
+
+  -- Properties of α_f
+  have hα_memLp : MemLp α_f 2 μ := Lp.memLp α_L2
+
+  have hα_limit : Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0) := by
+    -- Use Lp.tendsto_Lp_iff_tendsto_eLpNorm': Tendsto f (𝓝 f_lim) ↔ Tendsto (eLpNorm (f - f_lim)) (𝓝 0)
+    rw [Lp.tendsto_Lp_iff_tendsto_eLpNorm'] at h_tendsto
+    refine h_tendsto.congr' ?_
+    filter_upwards [eventually_ge_atTop 1] with n hn
+    have hn_pos : n > 0 := Nat.zero_lt_of_lt hn
+    simp only [u, dif_pos hn_pos, α_f]
+    -- Show: eLpNorm (↑(toLp (blockAvg n)) - ↑α_L2) 2 μ = eLpNorm (blockAvg n - ↑↑α_L2) 2 μ
+    refine eLpNorm_congr_ae ?_
+    filter_upwards [(hblockAvg_memLp n hn_pos).coeFn_toLp] with ω hω
+    simp only [Pi.sub_apply, hω]
+
+  -- Close the existential proof
+  exact ⟨α_f, hα_memLp, hα_limit⟩
+
+/-- Helper lemma: tail-measurability of L² limit of block averages.
+
+Given an L² limit α_f of block averages, if the block averages are measurable
+with respect to the tail σ-algebra for large N, then α_f is tail-measurable. -/
+private lemma tail_measurability_of_blockAvg
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {X : ℕ → Ω → ℝ}
+    (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1)
+    (hX_meas : ∀ i, Measurable (X i))
+    (α_f : Ω → ℝ) (hα_memLp : MemLp α_f 2 μ)
+    (hα_limit : Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0)) :
+    Measurable[TailSigma.tailSigma X] α_f := by
+  sorry -- TODO: Extract from lines 3545-3625
+
 /-- Helper lemma: Uniform covariance structure of centered variables (Steps 2-5 from hCauchy).
 
 Given contractable sequence X and function f, the centered variables Z_i = f(X_i) - m
