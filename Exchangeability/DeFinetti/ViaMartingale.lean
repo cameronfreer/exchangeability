@@ -1173,7 +1173,7 @@ lemma set_integral_mul_condexp_adjoint
       ∫ ω in s, g ω * μ[ξ | m] ω ∂μ
     = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω)
             * g ω * μ[ξ | m] ω ∂μ := by
-    rw [setIntegral_eq_integral_indicator_one_mul (hm _ hs)]
+    rw [@setIntegral_eq_integral_indicator_one_mul Ω m0 μ s (hm s hs)]
     congr with ω
     ring
 
@@ -1181,7 +1181,7 @@ lemma set_integral_mul_condexp_adjoint
       ∫ ω in s, μ[g | m] ω * ξ ω ∂μ
     = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω)
             * μ[g | m] ω * ξ ω ∂μ := by
-    rw [setIntegral_eq_integral_indicator_one_mul (hm _ hs)]
+    rw [@setIntegral_eq_integral_indicator_one_mul Ω m0 μ s (hm s hs)]
     congr with ω
     ring
 
