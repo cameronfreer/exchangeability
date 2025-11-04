@@ -6,6 +6,7 @@ Authors: Cameron Freer
 import Mathlib.Analysis.Normed.Operator.Basic
 import Mathlib.Topology.MetricSpace.Basic
 import Mathlib.MeasureTheory.Function.L2Space
+import Mathlib.Order.Filter.Finite
 import Exchangeability.Ergodic.KoopmanMeanErgodic
 
 /-!
@@ -130,11 +131,25 @@ lemma birkhoffAvgCLM_coe_ae_eq_function_avg
     -- The coercion of 0 : Lp is the zero function
     exact @Lp.coeFn_zero _ _ _ 2 _ _
   · simp only [hn, if_false, birkhoffAvgCLM_apply]
-    -- TODO: Expand the sum and use powCLM_koopman_coe_ae for each term
-    -- Strategy: Use ae_all_iff over the finite Fin n, then lift to sum
-    --  1. Show ∀ k : Fin n, powCLM_koopman_coe_ae gives a.e. equality for each term
-    --  2. Use Finset induction or ae_all_iff to get a.e. equality for the sum
-    --  3. Apply scalar multiplication a.e. equality
-    sorry
+    -- Use powCLM_koopman_coe_ae for each k to get a.e. equality for the sum
+    have h_each : ∀ k : Fin n, ((powCLM (koopman T hT_mp) k) fL2 : Ω → ℝ) =ᵐ[μ]
+                                 (fun ω => (fL2 : Ω → ℝ) (T^[k] ω)) :=
+      fun k => powCLM_koopman_coe_ae T hT_meas hT_mp k fL2
+    -- Collect all the a.e. equalities using filter_upwards
+    have h_sum : (fun ω => ∑ k : Fin n, ((powCLM (koopman T hT_mp) k) fL2 : Ω → ℝ) ω) =ᵐ[μ]
+                  (fun ω => ∑ k : Fin n, (fL2 : Ω → ℝ) (T^[k] ω)) := by
+      -- Use Filter.eventually_all to get all at once
+      have : ∀ᵐ ω ∂μ, ∀ k : Fin n, ((powCLM (koopman T hT_mp) k) fL2 : Ω → ℝ) ω = (fL2 : Ω → ℝ) (T^[k] ω) :=
+        Filter.eventually_all.2 h_each
+      filter_upwards [this] with ω hω
+      congr 1
+      ext k
+      exact hω k
+    -- Now combine with scalar multiplication using a single filter_upwards
+    filter_upwards [h_sum] with ω hω
+    -- Coercion distributes over Lp smul and sum (use congr to match structure)
+    congr 1
+    congr 1
+    exact hω
 
 end Exchangeability.Ergodic
