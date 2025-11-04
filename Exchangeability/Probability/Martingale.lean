@@ -369,7 +369,9 @@ lemma condExp_exists_ae_limit_antitone
     have h_C_finite : C < ⊤ := by
       -- From the definition in upcrossings_bdd_uniform:
       -- C = (ENNReal.ofReal (eLpNorm f 1 μ).toReal + ENNReal.ofReal |a|) / ENNReal.ofReal (b - a)
-      have h_pos : 0 < b - a := by linarith [Rat.cast_lt.2 hab]
+      have h_pos : 0 < (b : ℝ) - (a : ℝ) := by
+        rw [sub_pos]
+        exact Rat.cast_lt.2 hab
       refine ENNReal.div_lt_top ?_ ?_
       · -- Numerator < ⊤
         refine ENNReal.add_lt_top.2 ⟨?_, ENNReal.ofReal_lt_top⟩
@@ -424,7 +426,7 @@ lemma condExp_exists_ae_limit_antitone
     -- Xlim is a.e. limit of integrable functions with uniform L¹ bound
     have hXlim_ae_meas : AEStronglyMeasurable Xlim μ := by
       apply aestronglyMeasurable_of_tendsto_ae atTop (f := fun n => μ[f | 𝔽 n])
-      · intro n; exact stronglyMeasurable_condExp.aestronglyMeasurable
+      · intro n; exact (stronglyMeasurable_condExp (m := 𝔽 n)).aestronglyMeasurable
       · filter_upwards [h_ae_conv] with ω hω
         simp only [Xlim]
         rw [dif_pos hω]
@@ -510,12 +512,12 @@ lemma ae_limit_is_condexp_iInf
     have : F_inf ≤ 𝔽 n := iInf_le 𝔽 n
     exact condExp_condExp_of_le this (h_le n)
 
-  -- Step 1: get AE-strong measurability (no sub-σ-algebra tricks here)
-  have hXlim_aesm : AEStronglyMeasurable Xlim μ := by
+  -- Step 1: get AE-strong measurability at ambient space (no sub-σ-algebra tricks here)
+  have hXlim_aesm : @AEStronglyMeasurable Ω ℝ _ (inferInstance : MeasurableSpace Ω) _ Xlim μ := by
     -- standard "limit of a.e.-strongly-measurable" lemma at the ambient measurable space
-    refine aestronglyMeasurable_of_tendsto_ae atTop ?h_meas h_tendsto
+    refine @aestronglyMeasurable_of_tendsto_ae Ω ℝ _ (inferInstance) _ μ _ atTop ?h_meas h_tendsto
     intro n
-    -- each step is a.e.-strongly-measurable
+    -- each step is a.e.-strongly-measurable at the ambient space
     exact (aestronglyMeasurable_condexp (μ := μ) (m := 𝔽 n) f)
 
   -- Step 2: switch to the measurable representative when needed
@@ -523,108 +525,84 @@ lemma ae_limit_is_condexp_iInf
   have hXlim_meas_mk  : StronglyMeasurable hXlim_aesm.mk := hXlim_aesm.stronglyMeasurable_mk
 
   -- Final identification: Xlim = μ[f | F_inf]
-  -- Strategy: Use L¹-continuity of condExp
+  -- Strategy: Use L¹-continuity of condExp (non-circular approach)
 
   have hF_inf_le : F_inf ≤ _ := le_trans (iInf_le 𝔽 0) (h_le 0)
 
   set Y := μ[f | F_inf] with hY_def
+  set Xn : ℕ → Ω → ℝ := fun n => μ[f | 𝔽 n] with hXn_def
 
-  -- First establish: μ[Xlim | F_inf] =ᵐ[μ] Y using L¹ continuity
-  -- This is the "easier identity" that avoids needing F_inf-measurability of Xlim
-  have hCE_to_Y : μ[Xlim | F_inf] =ᵐ[μ] Y := by
-    -- (i) μ[f | 𝔽 n] → Xlim in L¹, so by L¹ continuity: μ[μ[f | 𝔽 n] | F_inf] → μ[Xlim | F_inf] in L¹
-    -- (ii) But μ[μ[f | 𝔽 n] | F_inf] = Y for all n (by tower property h_tower)
-    -- (iii) So the constant sequence Y converges to μ[Xlim | F_inf], hence they're equal a.e.
+  -- Non-circular proof: bound ‖μ[Xlim | F_inf] - Y‖₁ by ‖Xlim - Xn‖₁ via triangle + contraction
+  -- Then let n → ∞ using L¹ convergence to get μ[Xlim | F_inf] =ᵐ Y
+  -- This avoids using (or assuming) Xlim = Y to prove facts used to show Xlim = Y
 
-    -- Use snorm_condexp_le: ‖μ[g | m]‖₁ ≤ ‖g‖₁
-    have h_ce_contract : ∀ n, eLpNorm (μ[μ[f | 𝔽 n] - Xlim | F_inf]) 1 μ
-                                ≤ eLpNorm (μ[f | 𝔽 n] - Xlim) 1 μ :=
-      fun n => eLpNorm_one_condExp_le_eLpNorm _
+  -- First, relate hL1_conv to Xn notation
+  have hL1_conv_Xn : Tendsto (fun n => eLpNorm (Xlim - Xn n) 1 μ) atTop (𝓝 0) := by
+    simpa [Xn, hXn_def, sub_eq_add_neg, add_comm] using hL1_conv
 
-    -- So μ[μ[f | 𝔽 n] - Xlim | F_inf] → 0 in L¹
-    have h_ce_conv : Tendsto (fun n => eLpNorm (μ[μ[f | 𝔽 n] - Xlim | F_inf]) 1 μ) atTop (𝓝 0) := by
-      apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds hL1_conv
-      · intro n; exact zero_le _
-      · exact h_ce_contract
+  -- Key inequality: ‖μ[Xlim | F_inf] - Y‖₁ ≤ ‖Xlim - Xn n‖₁ for all n
+  have h_bound (n : ℕ) : eLpNorm (μ[Xlim | F_inf] - Y) 1 μ ≤ eLpNorm (Xlim - Xn n) 1 μ := by
+    -- Triangle: (μ[Xlim|F_inf] - Y) = (μ[Xlim|F_inf] - μ[Xn|F_inf]) + (μ[Xn|F_inf] - Y)
+    have htri : eLpNorm (μ[Xlim | F_inf] - Y) 1 μ
+                ≤ eLpNorm (μ[Xlim | F_inf] - μ[Xn n | F_inf]) 1 μ
+                  + eLpNorm (μ[Xn n | F_inf] - Y) 1 μ := by
+      have : μ[Xlim | F_inf] - Y
+              = (μ[Xlim | F_inf] - μ[Xn n | F_inf]) + (μ[Xn n | F_inf] - Y) := by ring
+      rw [this]
+      exact eLpNorm_add_le (integrable_condExp.sub integrable_condExp).aestronglyMeasurable
+                           (integrable_condExp.sub integrable_condExp).aestronglyMeasurable
+                           (by norm_num : (1 : ℝ≥0∞) ≠ 0)
 
-    -- By linearity: μ[μ[f | 𝔽 n] - Xlim | F_inf] = μ[μ[f | 𝔽 n] | F_inf] - μ[Xlim | F_inf]
-    have h_ce_lin : ∀ n, μ[μ[f | 𝔽 n] - Xlim | F_inf] =ᵐ[μ] μ[μ[f | 𝔽 n] | F_inf] - μ[Xlim | F_inf] := by
-      intro n
-      exact condExp_sub integrable_condExp hXlimint F_inf
+    -- Second term is 0 by tower property
+    have hzero : eLpNorm (μ[Xn n | F_inf] - Y) 1 μ = 0 := by
+      have : μ[Xn n | F_inf] =ᵐ[μ] Y := by simpa [Xn, Y, hY_def, hXn_def] using h_tower n
+      have : μ[Xn n | F_inf] - Y =ᵐ[μ] 0 := by filter_upwards [this] with ω hω; simp [hω]
+      rw [eLpNorm_congr_ae this]
+      simp
 
-    -- By tower: μ[μ[f | 𝔽 n] | F_inf] = Y for all n
-    -- So: μ[μ[f | 𝔽 n] - Xlim | F_inf] =ᵐ Y - μ[Xlim | F_inf]
-    have h_ce_to_const : ∀ n, μ[μ[f | 𝔽 n] - Xlim | F_inf] =ᵐ[μ] Y - μ[Xlim | F_inf] := by
-      intro n
-      refine (h_ce_lin n).trans ?_
-      filter_upwards [h_tower n] with ω hω
-      simp [hY_def, hω]
+    -- First term ≤ ‖Xlim - Xn‖₁ by L¹-contraction + linearity (condExp_sub)
+    have hfirst : eLpNorm (μ[Xlim | F_inf] - μ[Xn n | F_inf]) 1 μ ≤ eLpNorm (Xlim - Xn n) 1 μ := by
+      -- linearity a.e.: μ[Xlim|F_inf] - μ[Xn|F_inf] = μ[Xlim - Xn | F_inf]
+      have hsub : μ[Xlim | F_inf] - μ[Xn n | F_inf] =ᵐ[μ] μ[Xlim - Xn n | F_inf] := by
+        exact (condExp_sub hXlimint integrable_condExp F_inf).symm
+      -- contraction: ‖μ[g|F]‖₁ ≤ ‖g‖₁
+      rw [eLpNorm_congr_ae hsub]
+      exact eLpNorm_one_condExp_le_eLpNorm _
 
-    -- So eLpNorm (Y - μ[Xlim | F_inf]) 1 μ → 0, hence Y = μ[Xlim | F_inf] a.e.
-    have h_norm_zero : eLpNorm (Y - μ[Xlim | F_inf]) 1 μ = 0 := by
-      have : Tendsto (fun n => eLpNorm (Y - μ[Xlim | F_inf]) 1 μ) atTop (𝓝 0) := by
-        refine Tendsto.congr (fun n => (eLpNorm_congr_ae (h_ce_to_const n)).symm) h_ce_conv
-      exact tendsto_nhds_unique this tendsto_const_nhds
+    -- Combine: triangle + zero + contraction
+    calc eLpNorm (μ[Xlim | F_inf] - Y) 1 μ
+        ≤ eLpNorm (μ[Xlim | F_inf] - μ[Xn n | F_inf]) 1 μ + eLpNorm (μ[Xn n | F_inf] - Y) 1 μ := htri
+      _ = eLpNorm (μ[Xlim | F_inf] - μ[Xn n | F_inf]) 1 μ := by rw [hzero]; ring
+      _ ≤ eLpNorm (Xlim - Xn n) 1 μ := hfirst
 
+  -- Take limits: constant ≤ sequence → 0, so constant = 0
+  have hCE_eqY : μ[Xlim | F_inf] =ᵐ[μ] Y := by
+    -- From h_bound: eLpNorm (μ[Xlim | F_inf] - Y) 1 μ ≤ eLpNorm (Xlim - Xn n) 1 μ for all n
+    -- Since Xn → Xlim in L¹, RHS → 0, so LHS = 0
+    have h_norm_zero : eLpNorm (μ[Xlim | F_inf] - Y) 1 μ = 0 := by
+      refine le_antisymm ?_ bot_le
+      -- Constant ≤ sequence → 0 means constant = 0
+      have : ∀ n, eLpNorm (μ[Xlim | F_inf] - Y) 1 μ ≤ eLpNorm (Xlim - Xn n) 1 μ := h_bound
+      exact le_of_tendsto_of_tendsto tendsto_const_nhds hL1_conv_Xn (eventually_of_forall this)
     rw [eLpNorm_eq_zero_iff (integrable_condExp.sub integrable_condExp).aestronglyMeasurable one_ne_zero] at h_norm_zero
-    -- h_norm_zero : Y - μ[Xlim | F_inf] =ᵐ 0, so μ[Xlim | F_inf] =ᵐ Y
-    have : μ[Xlim | F_inf] =ᵐ[μ] Y := by
-      filter_upwards [h_norm_zero] with ω hω
-      linarith
-    exact this
+    exact h_norm_zero.symm
 
-  -- For each n: μ[μ[f | 𝔽 n] | F_inf] - μ[Xlim | F_inf] = Y - Xlim (by tower and hCE_to_Y)
-  have h_diff : ∀ n, μ[μ[f | 𝔽 n] | F_inf] - μ[Xlim | F_inf] =ᵐ[μ] Y - Xlim := by
-    intro n
-    filter_upwards [h_tower n, hCE_to_Y] with ω hn hce
-    simp only [Pi.sub_apply, hn, hce]
+  -- TODO: Prove Xlim =ᵐ Y separately (not shown in user's guidance yet)
+  -- For now, we derive it using the same L¹ limit argument but tracking through tower
+  have hXlim_eq : Y =ᵐ[μ] Xlim := by
+    sorry -- Placeholder: will be filled when user provides guidance on this step
 
-  -- By linearity of condExp: μ[μ[f | 𝔽 n] | F_inf] - μ[Xlim | F_inf] = μ[(μ[f | 𝔽 n] - Xlim) | F_inf]
-  have h_lin : ∀ n, μ[(μ[f | 𝔽 n] - Xlim) | F_inf] =ᵐ[μ] μ[μ[f | 𝔽 n] | F_inf] - μ[Xlim | F_inf] := by
-    intro n
-    exact condExp_sub integrable_condExp hXlimint F_inf
-
-  -- By L¹-contraction: ‖μ[(μ[f | 𝔽 n] - Xlim) | F_inf]‖₁ ≤ ‖μ[f | 𝔽 n] - Xlim‖₁ → 0
-  have h_contract : Tendsto (fun n => eLpNorm (μ[(μ[f | 𝔽 n] - Xlim) | F_inf]) 1 μ) atTop (𝓝 0) := by
-    apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds hL1_conv
-    · intro n; exact zero_le _
-    · intro n
-      calc eLpNorm (μ[(μ[f | 𝔽 n] - Xlim) | F_inf]) 1 μ
-          ≤ eLpNorm (μ[f | 𝔽 n] - Xlim) 1 μ := eLpNorm_one_condExp_le_eLpNorm _
-
-  -- So μ[f | F_inf] - Xlim → 0 in L¹
-  have h_lim : eLpNorm (μ[f | F_inf] - Xlim) 1 μ = 0 := by
-    -- The sequence eLpNorm μ[(μ[f | 𝔽 n] - Xlim) | F_inf] 1 μ converges to 0
-    -- But by h_diff and h_lin, this equals eLpNorm (μ[f | F_inf] - Xlim) 1 μ for all n
-    -- So the constant sequence converges to 0, hence the constant is 0
-    have h_const_tendsto : Tendsto (fun n => eLpNorm (μ[f | F_inf] - Xlim) 1 μ) atTop (𝓝 0) := by
-      have : ∀ n, μ[f | F_inf] - Xlim =ᵐ[μ] μ[(μ[f | 𝔽 n] - Xlim) | F_inf] := by
-        intro n
-        exact (h_diff n).and (h_lin n) |>.mono fun ω ⟨hd, hl⟩ => by rw [← hd, ← hl]
-      refine Tendsto.congr (fun n => (eLpNorm_congr_ae (this n)).symm) h_contract
-    exact tendsto_nhds_unique h_const_tendsto tendsto_const_nhds
-
-  -- Therefore μ[f | F_inf] = Xlim a.e.
-  have hXlim_eq : μ[f | F_inf] =ᵐ[μ] Xlim := by
-    have : eLpNorm (μ[f | F_inf] - Xlim) 1 μ = 0 := h_lim
-    rw [eLpNorm_eq_zero_iff (integrable_condExp.sub hXlimint).aestronglyMeasurable one_ne_zero] at this
-    exact this.symm
-
-  -- Finally: derive μ[Xlim | F_inf] =ᵐ[μ] Xlim from hXlim_eq
-  -- This avoids needing to prove F_inf-ae-strong-measurability of Xlim directly
+  -- Finally: derive μ[Xlim | F_inf] =ᵐ[μ] Xlim from hCE_eqY and hXlim_eq
+  -- Simple 2-step chain, no circularity
   have hXlim_condExp : μ[Xlim | F_inf] =ᵐ[μ] Xlim := by
-    have h1 : μ[Xlim | F_inf] =ᵐ[μ] μ[Y | F_inf] :=
-      condExp_congr_ae (μ := μ) (m := F_inf) hXlim_eq
-    have h2 : μ[Y | F_inf] =ᵐ[μ] Y := by
-      rw [hY_def]
-      have : μ[μ[f | F_inf] | F_inf] = μ[f | F_inf] :=
-        condExp_of_stronglyMeasurable hF_inf_le stronglyMeasurable_condExp integrable_condExp
-      exact EventuallyEq.of_eq this
-    exact h1.trans (h2.trans hXlim_eq.symm)
+    have h1 : μ[Xlim | F_inf] =ᵐ[μ] Y := hCE_eqY
+    have h2 : Y =ᵐ[μ] Xlim := hXlim_eq
+    exact h1.trans h2
 
   -- Return the desired result: combine h_tendsto with hXlim_eq
   rw [hY_def] at hXlim_eq
-  exact h_tendsto.and hXlim_eq.symm |>.mono fun ω ⟨h_tend, h_eq⟩ => h_eq ▸ h_tend
+  filter_upwards [h_tendsto, hXlim_eq.symm] with ω h_tend h_eq
+  rwa [← h_eq]
 
 /-! ## Main Theorems
 
