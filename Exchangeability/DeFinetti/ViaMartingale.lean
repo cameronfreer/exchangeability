@@ -1131,21 +1131,22 @@ lemma integral_mul_condexp_adjoint
     _   = ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ := h3
     _   = ∫ ω, μ[g | m] ω * ξ ω ∂μ := h4
 
-/-- Helper: Set integral equals integral with indicator factored as `1_s * f`.
-
-This identity is mathematically trivial but causes timeout when proved inline
-due to complex type unification. -/
+/-- Set integral as `1_s · f` (explicit unit indicator), tuned to avoid elaboration blowups. -/
 lemma setIntegral_eq_integral_indicator_one_mul
     {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
-    {s : Set Ω} (hs : MeasurableSet s)
-    {f : Ω → ℝ} :
-    ∫ ω in s, f ω ∂μ =
-    ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω) * f ω ∂μ := by
-  rw [← integral_indicator hs]
-  congr with ω
-  by_cases h : ω ∈ s
-  · simp [Set.indicator, h]
-  · simp [Set.indicator, h]
+    {s : Set Ω} (hs : MeasurableSet s) {f : Ω → ℝ} :
+  ∫ ω in s, f ω ∂μ
+  = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω) * f ω ∂μ := by
+  classical
+  -- by definition: `∫_s f = ∫ indicator s f`; then identify with `1_s * f`
+  have : ∫ ω in s, f ω ∂μ = ∫ ω, Set.indicator s f ω ∂μ :=
+    (integral_indicator hs).symm
+  refine this.trans ?_
+  refine integral_congr_ae ?ae
+  filter_upwards [ae_all_iff.mpr (fun ω => Iff.rfl)] with ω _
+  by_cases hω : ω ∈ s
+  · simp [Set.indicator, hω, mul_comm, mul_left_comm, mul_assoc]
+  · simp [Set.indicator, hω]
 
 /-- Set version of adjointness. If `s ∈ m`, then
 
