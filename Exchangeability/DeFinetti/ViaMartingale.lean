@@ -1187,8 +1187,12 @@ lemma set_integral_mul_condexp_adjoint
 
   -- use (1) with g := (1_s · g)
   have h_int :
-      Integrable (fun ω => (Set.indicator s (fun _ => (1 : ℝ)) ω) * g ω) μ :=
-    (integrable_indicator_const.2 ⟨hs, by simp⟩).mul hg
+      Integrable (fun ω => (Set.indicator s (fun _ => (1 : ℝ)) ω) * g ω) μ := by
+    -- indicator s (fun _ => 1) * g = indicator s g, which is integrable
+    have : (fun ω => Set.indicator s (fun _ => (1 : ℝ)) ω * g ω) = Set.indicator s g := by
+      ext ω; by_cases h : ω ∈ s <;> simp [Set.indicator, h]
+    rw [this]
+    exact hg.indicator (hm s hs)
 
   have h_eq :=
     integral_mul_condexp_adjoint (μ := μ) (m := m) (m0 := m0) (hm := hm)
@@ -1199,7 +1203,13 @@ lemma set_integral_mul_condexp_adjoint
   have h_proj :
       μ[(fun ω => (Set.indicator s (fun _ => (1 : ℝ)) ω) * g ω) | m]
       =ᵐ[μ] (fun ω => (Set.indicator s (fun _ => (1 : ℝ)) ω) * μ[g | m] ω) := by
-    exact condexp_indicator_mul (μ := μ) (m := m) (hm := hm) hs (f := g)
+    -- indicator s (fun _ => 1) * g = indicator s g
+    have h1 : (fun ω => Set.indicator s (fun _ => (1 : ℝ)) ω * g ω) = Set.indicator s g := by
+      ext ω; by_cases h : ω ∈ s <;> simp [Set.indicator, h]
+    have h2 : (fun ω => Set.indicator s (fun _ => (1 : ℝ)) ω * μ[g | m] ω) = Set.indicator s (μ[g | m]) := by
+      ext ω; by_cases h : ω ∈ s <;> simp [Set.indicator, h]
+    rw [h1, h2]
+    exact MeasureTheory.condExp_indicator hg hs
 
   -- rewrite the RHS of h_eq with h_proj and go back to set integrals
   have h_eq' :
@@ -1219,25 +1229,15 @@ lemma set_integral_mul_condexp_adjoint
 
 /-- If `|g| ≤ C` a.e., then `|μ[g|m]| ≤ C` a.e. (uses monotonicity of conditional expectation). -/
 lemma ae_bound_condexp_of_ae_bound
-    {Ω : Type*} [MeasurableSpace Ω] (μ : Measure Ω)
-    {m m0 : MeasurableSpace Ω} (hm : m ≤ m0)
+    {Ω : Type*} [m0 : MeasurableSpace Ω] (μ : Measure Ω)
+    {m : MeasurableSpace Ω} (hm : m ≤ m0)
     [SigmaFinite (μ.trim hm)]
     {g : Ω → ℝ} {C : ℝ}
     (hgC : ∀ᵐ ω ∂μ, |g ω| ≤ C) :
   ∀ᵐ ω ∂μ, |μ[g | m] ω| ≤ C := by
-  classical
-  -- `|μ[g|m]| ≤ μ[|g||m]` a.e. and `μ[|g||m] ≤ μ[(fun _ => C)|m] = C` a.e.
-  have h1 : μ[fun ω => |g ω| | m] ≤ᵐ[μ] fun _ => C := by
-    -- use monotonicity of conditional expectation applied to `|g| ≤ C`
-    refine condexp_mono (μ := μ) (m := m) (hm := hm) ?h_le
-    -- measurability and inequality are pointwise a.e.
-    · exact (measurable_const : Measurable fun (_:Ω) => C)
-    · exact hgC
-  have h2 : ∀ᵐ ω ∂μ, |μ[g | m] ω| ≤ μ[fun ω => |g ω| | m] ω := by
-    -- Jensen/triangle inequality for conditional expectation
-    exact ae_abs_condexp_le_condexp_abs (μ := μ) (m := m) (hm := hm) g
-  filter_upwards [h2, h1] with ω hω1 hω2
-  exact le_trans hω1 hω2
+  -- If |g| ≤ C a.e., then C ≥ 0 (since |g| ≥ 0)
+  have hC_nonneg : 0 ≤ C := by sorry  -- TODO: prove from (∀ᵐ ω, |g ω| ≤ C) and (∀ ω, 0 ≤ |g ω|)
+  exact MeasureTheory.ae_bdd_condExp_of_ae_bdd (R := ⟨C, hC_nonneg⟩) hgC
 
 /-- **Adjointness for bounded `g` (L∞–L¹)**:
 If `g` is essentially bounded and `ξ ∈ L¹(μ)`, then
@@ -1245,9 +1245,9 @@ If `g` is essentially bounded and `ξ ∈ L¹(μ)`, then
 
 This avoids the `L¹×L¹` product pitfall by using `L∞` control on `g`,
 and the corresponding `L∞` control on `μ[g|m]`. -/
-lemma integral_mul_condexp_adjoint_L∞
-    {Ω : Type*} [MeasurableSpace Ω] (μ : Measure Ω)
-    {m m0 : MeasurableSpace Ω} (hm : m ≤ m0)
+lemma integral_mul_condexp_adjoint_Linfty
+    {Ω : Type*} [m0 : MeasurableSpace Ω] (μ : Measure Ω)
+    {m : MeasurableSpace Ω} (hm : m ≤ m0)
     [SigmaFinite (μ.trim hm)]
     {g ξ : Ω → ℝ} {C : ℝ}
     (hgC : ∀ᵐ ω ∂μ, |g ω| ≤ C)
@@ -1257,14 +1257,12 @@ lemma integral_mul_condexp_adjoint_L∞
   classical
   -- Both products are integrable: use L∞ bounds on `g` and `μ[g|m]`.
   have h_int1 : Integrable (fun ω => g ω * μ[ξ | m] ω) μ := by
-    -- `μ[ξ|m] ∈ L¹`, multiply by bounded `g`
-    have h1 : Integrable (μ[ξ | m]) μ := integrable_condexp (μ := μ) (m := m) (hm := hm) ξ
-    exact h1.bdd_mul_of_ae_bound_left hgC
+    sorry  -- TODO: use Integrable.bdd_mul' with hgC
   have h_int2 : Integrable (fun ω => μ[g | m] ω * ξ ω) μ := by
     -- `μ[g|m]` is also bounded by `C` a.e.
     have hμgC : ∀ᵐ ω ∂μ, |μ[g | m] ω| ≤ C :=
       ae_bound_condexp_of_ae_bound (μ := μ) (m := m) (m0 := m0) (hm := hm) hgC
-    exact hξ.bdd_mul_of_ae_bound_left hμgC
+    sorry  -- TODO: use Integrable.bdd_mul' with hμgC converted to norm bound
 
   -- Now copy the "adjointness by CE" argument, which is safe since both products are L¹.
   have h1 :
