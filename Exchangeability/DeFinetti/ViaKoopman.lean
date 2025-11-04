@@ -3965,12 +3965,10 @@ private lemma optionB_Step3b_L2_to_L1
           (fun ω =>
             (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
             - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω) μ := by
-      -- TODO: Fix Lp coercion issues
-      -- Problem: birkhoffAverage ℝ (⇑(koopman shift hσ)) (fun f => ↑↑f) n fL2 ω
-      --          vs ↑↑(birkhoffAverage ℝ (⇑(koopman shift hσ)) (fun f => f) n fL2) ω
-      -- The lambda `(fun f => ↑↑f)` vs `(fun f => f)` causes coercion placement mismatch
-      -- Both birkhoffAverage and condexpL2 are in Lp, so have AEStronglyMeasurable coercions
-      -- Need lemma relating birkhoff average of coerced functions to coercion of birkhoff average
+      -- TODO: The coercion mismatch between (fun f => f) and (fun f => ↑↑f)
+      -- Need to prove: ↑↑(birkhoffAverage ℝ U (fun f => f) n g) =ᵐ[μ] birkhoffAverage ℝ U (fun f => ↑↑f) n g
+      -- This should follow from linearity of birkhoffAverage and commutativity of coercion with sums
+      -- Once we have this, we can use Lp.aestronglyMeasurable on both sides
       sorry
 
     -- L¹ ≤ L² via Hölder/Cauchy-Schwarz on a probability space
