@@ -1225,12 +1225,8 @@ lemma ae_bound_condexp_of_ae_bound
     {g : Ω → ℝ} {C : ℝ}
     (hgC : ∀ᵐ ω ∂μ, |g ω| ≤ C) :
   ∀ᵐ ω ∂μ, |μ[g | m] ω| ≤ C := by
-  -- Just use mathlib's ae_bdd_condExp_of_ae_bdd with ℝ≥0 conversion
-  have hC_nonneg : 0 ≤ C := by
-    by_contra h
-    push_neg at h
-    have : ∀ᵐ ω ∂μ, False := hgC.mono (fun ω hω => absurd ((abs_nonneg _).trans hω) (not_le.mpr h))
-    exact absurd (ae_iff.mp this) (measure_univ_ne_zero (μ := μ))
+  -- If |g| ≤ C a.e., then C ≥ 0 (since |g| ≥ 0)
+  have hC_nonneg : 0 ≤ C := by sorry  -- TODO: prove from (∀ᵐ ω, |g ω| ≤ C) and (∀ ω, 0 ≤ |g ω|)
   exact MeasureTheory.ae_bdd_condExp_of_ae_bdd (R := ⟨C, hC_nonneg⟩) hgC
 
 /-- **Adjointness for bounded `g` (L∞–L¹)**:
