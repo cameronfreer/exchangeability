@@ -2931,6 +2931,8 @@ private lemma cesaro_cauchy_rho_lt
   -- Eta-reduce: (fun ω => blockAvg f X 0 n ω - blockAvg f X 0 n' ω) = blockAvg f X 0 n - blockAvg f X 0 n'
   exact h_bound
 
+set_option maxHeartbeats 2000000
+
 /-- **Cesàro averages converge in L² to a tail-measurable limit.**
 
 This is the elementary L² route to de Finetti (Kallenberg's "second proof"):
@@ -2940,9 +2942,6 @@ This is the elementary L² route to de Finetti (Kallenberg's "second proof"):
 4. Tail measurability + L² limit → α_f = E[f(X_1) | tail σ-algebra]
 
 **No Mean Ergodic Theorem, no martingales** - just elementary L² space theory! -/
-
-set_option maxHeartbeats 500000
-
 lemma cesaro_to_condexp_L2
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {X : ℕ → Ω → ℝ} (hX_contract : Exchangeability.Contractable μ X)
