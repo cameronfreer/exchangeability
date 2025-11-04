@@ -1248,7 +1248,7 @@ and the corresponding `L∞` control on `μ[g|m]`. -/
 lemma integral_mul_condexp_adjoint_L∞
     {Ω : Type*} [MeasurableSpace Ω] (μ : Measure Ω)
     {m m0 : MeasurableSpace Ω} (hm : m ≤ m0)
-    [SigmaFinite (μ.trim m)]
+    [SigmaFinite (μ.trim hm)]
     {g ξ : Ω → ℝ} {C : ℝ}
     (hgC : ∀ᵐ ω ∂μ, |g ω| ≤ C)
     (hξ : Integrable ξ μ) :
