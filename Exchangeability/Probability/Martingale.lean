@@ -153,6 +153,33 @@ lemma eLpNorm_one_condExp_le_of_integrable
     eLpNorm (μ[f | m]) 1 μ ≤ eLpNorm f 1 μ :=
   eLpNorm_one_condExp_le_eLpNorm f
 
+/-! ### Downcrossings and pathwise reversal lemmas
+
+Downcrossings are upcrossings after negation and interval flip. These lemmas establish
+the relationship between upcrossings of a path and downcrossings of its time reversal. -/
+
+/-- Downcrossings are upcrossings of the negated process with flipped interval. -/
+noncomputable def downcrossingsBefore {Ω : Type*} (a b : ℝ) (X : ℕ → Ω → ℝ) (N : ℕ) : Ω → ℕ :=
+  fun ω => upcrossingsBefore (-b) (-a) (fun n => -(X n ω)) N
+
+/-- Time reversal turns upcrossings into downcrossings (pathwise).
+
+The key insight: An upcrossing of X from a to b at indices (i,j) corresponds to
+a downcrossing of the time-reversed path from a to b at indices (N-j, N-i). -/
+lemma upcrossingsBefore_eq_downcrossingsBefore_rev
+    {Ω : Type*} (X : ℕ → Ω → ℝ) (a b : ℝ) (N : ℕ) (ω : Ω) :
+    upcrossingsBefore a b (fun n => X n ω) N
+      = downcrossingsBefore a b (fun n => X (N - n)) N ω := by
+  -- The proof is a bijection between crossing intervals under time reversal
+  -- This is a combinatorial argument on the definitions
+  sorry
+
+/-- Downcrossings equal upcrossings after negation and interval flip.
+This is immediate from the definition. -/
+lemma downcrossingsBefore_eq_upcrossingsBefore_neg
+    {Ω : Type*} (X : ℕ → Ω → ℝ) (a b : ℝ) (N : ℕ) :
+    downcrossingsBefore a b X N = fun ω => upcrossingsBefore (-b) (-a) (fun n => -(X n ω)) N := rfl
+
 /-- Uniform (in N) bound on upcrossings for the reverse martingale.
 
 For an L¹-bounded martingale obtained by reversing an antitone filtration, the expected
@@ -327,62 +354,85 @@ lemma condExp_exists_ae_limit_antitone
 
     -- Establish relationship between original and reversed sequence upcrossings
     -- Key: upcrossingsBefore (original, N) ≤ upcrossings (reversed_at_N)
-    -- This follows because upcrossings = ⨆ M, upcrossingsBefore M
+    -- Bound upcrossings of original by upcrossings of negated reversed process
     have h_le_key (N : ℕ) (ω : Ω) :
         ↑(upcrossingsBefore (↑a) (↑b) (fun n => μ[f | 𝔽 n]) N ω)
-        ≤ upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω := by
-      -- Pick index N from the supremum definition of upcrossings
+        ≤ upcrossings (- (↑b : ℝ)) (- (↑a : ℝ)) (fun n => - revCEFinite (μ := μ) f 𝔽 N n) ω := by
+      -- Pick index N from the supremum definition of upcrossings (for negated reversed process)
       have h_to_iSup :
-          (upcrossingsBefore (↑a) (↑b)
-              (fun n => revCEFinite (μ := μ) f 𝔽 N n) N ω : ℝ≥0∞)
-            ≤ upcrossings (↑a) (↑b)
-                (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω := by
+          (upcrossingsBefore (- (↑b : ℝ)) (- (↑a : ℝ))
+              (fun n => - revCEFinite (μ := μ) f 𝔽 N n ω) N : ℝ≥0∞)
+            ≤ upcrossings (- (↑b : ℝ)) (- (↑a : ℝ))
+                (fun n => - revCEFinite (μ := μ) f 𝔽 N n) ω := by
         simp only [MeasureTheory.upcrossings]
         exact le_iSup
-          (fun M => (upcrossingsBefore (↑a) (↑b)
-              (fun n => revCEFinite (μ := μ) f 𝔽 N n) M ω : ℝ≥0∞)) N
+          (fun M => (upcrossingsBefore (- (↑b : ℝ)) (- (↑a : ℝ))
+              (fun n => - revCEFinite (μ := μ) f 𝔽 N n) M ω : ℝ≥0∞)) N
 
-      -- Establish bridge: original upcrossings ≤ reversed upcrossings
-      -- The sequences contain the same values (μ[f | 𝔽 k] for k ∈ {0,...,N}), just in reverse order
+      -- Establish bridge: original upcrossings ≤ upcrossings of negated reversed process
+      -- Time reversal turns upcrossings into downcrossings, then negation turns those into upcrossings
       have h_orig_to_rev_before :
-          (upcrossingsBefore (↑a) (↑b) (fun n => μ[f | 𝔽 n]) N ω : ℝ≥0∞)
-          ≤ ↑(upcrossingsBefore (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) N ω) := by
-        sorry  -- TODO: Relate upcrossings of sequence and its reversal
+          (upcrossingsBefore (↑a) (↑b) (fun n => μ[f | 𝔽 n] ω) N : ℝ≥0∞)
+          ≤ (upcrossingsBefore (- (↑b : ℝ)) (- (↑a : ℝ))
+                (fun n => - revCEFinite (μ := μ) f 𝔽 N n ω) N : ℝ≥0∞) := by
+        -- Step 1: Upcrossings of original = downcrossings of reversed
+        have step1 : upcrossingsBefore (↑a) (↑b) (fun n => μ[f | 𝔽 n] ω) N
+                    = downcrossingsBefore (↑a) (↑b) (fun n => μ[f | 𝔽 (N - n)]) N ω := by
+          exact upcrossingsBefore_eq_downcrossingsBefore_rev (fun n => μ[f | 𝔽 n]) (↑a) (↑b) N ω
+        -- Step 2: Downcrossings = upcrossings of negated with flipped interval
+        have step2 : downcrossingsBefore (↑a) (↑b) (fun n => μ[f | 𝔽 (N - n)]) N ω
+                    = upcrossingsBefore (- (↑b : ℝ)) (- (↑a : ℝ))
+                        (fun n => - μ[f | 𝔽 (N - n)] ω) N := by
+          have := downcrossingsBefore_eq_upcrossingsBefore_neg (fun n => μ[f | 𝔽 (N - n)]) (↑a) (↑b) N
+          exact congrFun this ω
+        -- Step 3: Recognize revCEFinite
+        have step3 : (fun n => - μ[f | 𝔽 (N - n)] ω) = (fun n => - revCEFinite (μ := μ) f 𝔽 N n ω) := by
+          ext n; simp [revCEFinite]
+        -- Combine
+        rw [step1, step2, step3]
 
       exact h_orig_to_rev_before.trans h_to_iSup
 
-    -- Therefore: upcrossings (original) = ⨆ N, upcrossingsBefore N ≤ ⨆ N, upcrossings (reversed_N)
-    have h_bound : ∀ ω, upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω
-                         ≤ ⨆ N, upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω := by
-      intro ω
-      simp only [MeasureTheory.upcrossings]
-      apply iSup_le
+    -- For each N, bound the expected upcrossings using the negated reversed martingale
+    have h_N_bound : ∀ N, ∫⁻ ω, ↑(upcrossingsBefore (↑a) (↑b) (fun n => μ[f | 𝔽 n]) N ω) ∂μ ≤ C := by
       intro N
-      calc ↑(upcrossingsBefore (↑a) (↑b) (fun n => μ[f | 𝔽 n]) N ω)
-          ≤ upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω := h_le_key N ω
-        _ ≤ ⨆ M, upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 M n) ω :=
-            le_iSup (fun M => upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 M n) ω) N
+      calc ∫⁻ ω, ↑(upcrossingsBefore (↑a) (↑b) (fun n => μ[f | 𝔽 n]) N ω) ∂μ
+          ≤ ∫⁻ ω, upcrossings (- (↑b : ℝ)) (- (↑a : ℝ)) (fun n => - revCEFinite (μ := μ) f 𝔽 N n) ω ∂μ := by
+            exact lintegral_mono (h_le_key N)
+        _ ≤ C := by
+            -- The upcrossing inequality bound hC applies to the negated reversed process
+            -- We need to verify that hC gives us the bound for interval [-b,-a] and process -revCEFinite
+            sorry  -- TODO: Connect to hC
 
-    -- The expected value of the supremum is bounded by C
-    -- Strategy: bound each integral by C, then use monotone convergence or Fatou
-    have h_exp_bound : ∫⁻ ω, (⨆ N, upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω) ∂μ ≤ C := by
-      -- We have: ⨆ N, ∫⁻ ... ≤ ∫⁻ (⨆ N, ...) by iSup_lintegral_le
-      -- And: ∀ N, ∫⁻ ... ≤ C, so ⨆ N, ∫⁻ ... ≤ C
-      -- But this gives the wrong direction for what we need!
-      -- We need: ∫⁻ (⨆ N, ...) ≤ something
-      --
-      -- The issue: different N give different sequences, so we can't use standard monotone convergence
-      -- We need a different bound. Perhaps bound the supremum directly?
-      sorry
-
-    -- Combine bounds: ∫⁻ upcrossings (original) ≤ ∫⁻ ⨆ N, upcrossings (reversed_N) ≤ C
-    -- Note: h_C_finite : C < ⊤ is obtained from upcrossings_bdd_uniform
+    -- Use monotone convergence on the ORIGINAL process (which IS monotone in N)
     have h_exp_orig : ∫⁻ ω, upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω ∂μ ≤ C := by
-      calc ∫⁻ ω, upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω ∂μ
-          ≤ ∫⁻ ω, (⨆ N, upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω) ∂μ := by
-              apply lintegral_mono
-              exact h_bound
-        _ ≤ C := h_exp_bound
+      -- Set U N ω := upcrossingsBefore for the original process
+      set U : ℕ → Ω → ℝ≥0∞ :=
+        fun N ω => (upcrossingsBefore (↑a) (↑b) (fun n => μ[f | 𝔽 n]) N ω : ℝ≥0∞) with hU
+
+      -- Monotonicity in N (pathwise): more time allows more completed crossings
+      have hU_mono : ∀ ω, Monotone (fun N => U N ω) := by
+        intro ω m n hmn
+        simp only [hU]
+        exact ENNReal.coe_le_coe.2 (upcrossingsBefore_mono (f := fun n => μ[f | 𝔽 n] ω) (a := (↑a)) (b := (↑b)) hmn)
+
+      -- Measurability
+      have hU_meas : ∀ N, Measurable (U N) := by
+        intro N
+        sorry  -- Standard measurability of upcrossingsBefore
+
+      -- Apply monotone convergence theorem
+      have h_iSup : ∫⁻ ω, (⨆ N, U N ω) ∂μ = ⨆ N, ∫⁻ ω, U N ω ∂μ := by
+        refine lintegral_iSup hU_meas (fun ω => ?_)
+        exact hU_mono ω
+
+      -- Bound the supremum of integrals
+      have : (⨆ N, ∫⁻ ω, U N ω ∂μ) ≤ C := by
+        refine iSup_le (fun N => ?_)
+        exact h_N_bound N
+
+      -- Conclude: upcrossings = ⨆ N, upcrossingsBefore N
+      simpa [MeasureTheory.upcrossings, hU] using h_iSup.le.trans this
 
     -- Apply ae_lt_top: measurable function with finite expectation is a.e. finite
     refine ae_lt_top ?_ (lt_of_le_of_lt h_exp_orig h_C_finite).ne
