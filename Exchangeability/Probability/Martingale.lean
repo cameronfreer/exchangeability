@@ -7,7 +7,11 @@ import Mathlib.Probability.Martingale.Basic
 import Mathlib.Probability.Martingale.Convergence
 import Mathlib.Probability.Process.Filtration
 import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
+import Mathlib.Tactic
 import Exchangeability.Probability.MartingaleExtras
+
+open Filter MeasureTheory
+open scoped Topology ENNReal BigOperators
 
 /-!
 # Martingale Convergence for De Finetti
@@ -534,8 +538,7 @@ lemma ae_limit_is_condexp_iInf
     have h_const_tendsto : Tendsto (fun n => eLpNorm (μ[f | F_inf] - Xlim) 1 μ) atTop (𝓝 0) := by
       have : ∀ n, μ[f | F_inf] - Xlim =ᵐ[μ] μ[(μ[f | 𝔽 n] - Xlim) | F_inf] := by
         intro n
-        filter_upwards [h_diff n, h_lin n] with ω hd hl
-        rw [← hd, ← hl]
+        exact (h_diff n).and (h_lin n) |>.mono fun ω ⟨hd, hl⟩ => by rw [← hd, ← hl]
       refine Tendsto.congr (fun n => (eLpNorm_congr_ae (this n)).symm) h_contract
     exact tendsto_nhds_unique h_const_tendsto tendsto_const_nhds
 
@@ -546,8 +549,7 @@ lemma ae_limit_is_condexp_iInf
     exact this.symm
 
   -- Return the desired result: combine h_tendsto with hXlim_eq
-  filter_upwards [h_tendsto, hXlim_eq] with ω h_tend h_eq
-  rwa [← h_eq]
+  (h_tendsto.and hXlim_eq).mono fun ω ⟨h_tend, h_eq⟩ => h_eq ▸ h_tend
 
 /-! ## Main Theorems
 
