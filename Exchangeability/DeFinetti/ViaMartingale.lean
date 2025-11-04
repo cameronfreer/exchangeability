@@ -1268,33 +1268,38 @@ lemma integral_mul_condexp_adjoint_Linfty
   have h1 :
       ∫ ω, g ω * μ[ξ | m] ω ∂μ
     = ∫ ω, μ[(fun ω => g ω * μ[ξ | m] ω) | m] ω ∂μ := by
-      simpa using integral_condexp (μ := μ) (m := m) (hm := hm)
-        (f := fun ω => g ω * μ[ξ | m] ω)  -- needs `h_int1` to be used downstream
+      simpa using (MeasureTheory.integral_condExp (μ := μ) (m := m) (hm := hm)
+        (f := fun ω => g ω * μ[ξ | m] ω)).symm
   have hpull :
       μ[(fun ω => g ω * μ[ξ | m] ω) | m]
       =ᵐ[μ] (fun ω => μ[g | m] ω * μ[ξ | m] ω) := by
     -- pull out the `m`-measurable factor `μ[ξ|m]`
     have hξm :
-        AeStronglyMeasurable (μ[ξ | m]) μ :=
-      (condexp_ae_stronglyMeasurable (μ := μ) (m := m) (hm := hm) ξ)
-    exact condexp_mul_left (μ := μ) (m := m) (hm := hm) hξm h_int1
+        AEStronglyMeasurable[m] (μ[ξ | m]) μ :=
+      MeasureTheory.stronglyMeasurable_condExp.aestronglyMeasurable
+    -- TODO: This step requires integrability of g, but we only have boundedness.
+    -- Options: (1) Assume μ is finite (use condExp_stronglyMeasurable_mul_of_bound₀)
+    --          (2) Prove g integrable from boundedness + σ-finite structure
+    --          (3) Use different proof strategy entirely
+    sorry
   have h3 :
       ∫ ω, μ[g | m] ω * μ[ξ | m] ω ∂μ
     = ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ := by
     -- reverse pull-out (now pull out `μ[g|m]`)
     have hgm :
-        AeStronglyMeasurable (μ[g | m]) μ :=
-      (condexp_ae_stronglyMeasurable (μ := μ) (m := m) (hm := hm) g)
+        AEStronglyMeasurable[m] (μ[g | m]) μ :=
+      MeasureTheory.stronglyMeasurable_condExp.aestronglyMeasurable
     have hpull' :
         μ[(fun ω => μ[g | m] ω * ξ ω) | m]
         =ᵐ[μ] (fun ω => μ[g | m] ω * μ[ξ | m] ω) := by
-      exact condexp_mul_right (μ := μ) (m := m) (hm := hm) hgm h_int2
+      exact MeasureTheory.condExp_mul_of_aestronglyMeasurable_left hgm h_int2 hξ
     simpa using (integral_congr_ae hpull').symm
   have h4 :
       ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ
     = ∫ ω, μ[g | m] ω * ξ ω ∂μ := by
-    simpa using integral_condexp (μ := μ) (m := m) (hm := hm)
-      (f := fun ω => μ[g | m] ω * ξ ω)
+    show ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ = ∫ ω, μ[g | m] ω * ξ ω ∂μ
+    exact (MeasureTheory.integral_condExp (μ := μ) (m := m) (hm := hm)
+      (f := fun _ => μ[g | m] _ * ξ _)).symm
 
   calc
     ∫ ω, g ω * μ[ξ | m] ω ∂μ
