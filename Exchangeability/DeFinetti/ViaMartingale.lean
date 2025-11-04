@@ -1187,8 +1187,12 @@ lemma set_integral_mul_condexp_adjoint
 
   -- use (1) with g := (1_s · g)
   have h_int :
-      Integrable (fun ω => (Set.indicator s (fun _ => (1 : ℝ)) ω) * g ω) μ :=
-    (integrable_indicator_const.2 ⟨hs, by simp⟩).mul hg
+      Integrable (fun ω => (Set.indicator s (fun _ => (1 : ℝ)) ω) * g ω) μ := by
+    -- indicator s (fun _ => 1) * g = indicator s g, which is integrable
+    have : (fun ω => Set.indicator s (fun _ => (1 : ℝ)) ω * g ω) = Set.indicator s g := by
+      ext ω; by_cases h : ω ∈ s <;> simp [Set.indicator, h]
+    rw [this]
+    exact hg.indicator (hm s hs)
 
   have h_eq :=
     integral_mul_condexp_adjoint (μ := μ) (m := m) (m0 := m0) (hm := hm)
@@ -1199,7 +1203,13 @@ lemma set_integral_mul_condexp_adjoint
   have h_proj :
       μ[(fun ω => (Set.indicator s (fun _ => (1 : ℝ)) ω) * g ω) | m]
       =ᵐ[μ] (fun ω => (Set.indicator s (fun _ => (1 : ℝ)) ω) * μ[g | m] ω) := by
-    exact condexp_indicator_mul (μ := μ) (m := m) (hm := hm) hs (f := g)
+    -- indicator s (fun _ => 1) * g = indicator s g
+    have h1 : (fun ω => Set.indicator s (fun _ => (1 : ℝ)) ω * g ω) = Set.indicator s g := by
+      ext ω; by_cases h : ω ∈ s <;> simp [Set.indicator, h]
+    have h2 : (fun ω => Set.indicator s (fun _ => (1 : ℝ)) ω * μ[g | m] ω) = Set.indicator s (μ[g | m]) := by
+      ext ω; by_cases h : ω ∈ s <;> simp [Set.indicator, h]
+    rw [h1, h2]
+    exact MeasureTheory.condExp_indicator hg hs
 
   -- rewrite the RHS of h_eq with h_proj and go back to set integrals
   have h_eq' :
