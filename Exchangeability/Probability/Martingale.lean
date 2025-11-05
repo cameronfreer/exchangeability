@@ -197,54 +197,241 @@ Negation flips crossing direction: down(-b, -a, -X) = up(a, b, X). -/
 lemma down_neg_flip_eq_up {Ω : Type*} (a b : ℝ) (X : ℕ → Ω → ℝ) :
   downcrossings (-b) (-a) (negProcess X) = upcrossings a b X := by
   funext ω
-  simp [upcrossings, downcrossings, downcrossingsBefore, negProcess]
+  simp only [upcrossings, downcrossings, downcrossingsBefore, negProcess, neg_neg]
+  -- The goal is now: ⨆ N, ↑(upcrossingsBefore a b (negProcess (negProcess X)) N ω) = ⨆ N, ↑(upcrossingsBefore a b X N ω)
+  -- Simplify negProcess (negProcess X) n ω = -(-(X n ω)) = X n ω
+  congr with N
+  congr with N'
+  simp only [negProcess, neg_neg]
+
+/-- Double negation is identity. -/
+lemma negProcess_negProcess {Ω : Type*} (X : ℕ → Ω → ℝ) :
+    negProcess (negProcess X) = X := by
+  funext n ω
+  simp only [negProcess]
+  ring
+
+/-- Double reversal is identity when applied within bounds. -/
+lemma revProcess_revProcess {Ω : Type*} (X : ℕ → Ω → ℝ) (N n : ℕ) (hn : n ≤ N) (ω : Ω) :
+    revProcess (revProcess X N) N n ω = X n ω := by
+  simp only [revProcess]
+  -- Goal: X (N - (N - n)) ω = X n ω
+  -- Use Nat.sub_sub_self: N - (N - n) = n when n ≤ N
+  rw [Nat.sub_sub_self hn]
+
+/-- Composition of reversal and negation simplifies: rev(neg(rev X)) = neg X -/
+lemma revProcess_negProcess_revProcess {Ω : Type*} (X : ℕ → Ω → ℝ) (N n : ℕ) (hn : n ≤ N) (ω : Ω) :
+    revProcess (negProcess (revProcess X N)) N n ω = negProcess X n ω := by
+  simp only [revProcess, negProcess]
+  -- Goal: -(X (N - (N - n)) ω) = -(X n ω)
+  rw [Nat.sub_sub_self hn]
+
+/-- Full composition: neg(rev(neg(rev X))) = X -/
+lemma negProcess_revProcess_negProcess_revProcess {Ω : Type*} (X : ℕ → Ω → ℝ) (N n : ℕ) (hn : n ≤ N) (ω : Ω) :
+    negProcess (revProcess (negProcess (revProcess X N)) N) n ω = X n ω := by
+  simp only [negProcess]
+  rw [revProcess_negProcess_revProcess X N n hn ω]
+  simp only [negProcess, neg_neg]
+
+/-- Helper: hitting respects pointwise equality on [n, m] -/
+lemma hitting_congr {Ω β : Type*} {u v : ℕ → Ω → β} {s : Set β} {n m : ℕ} {ω : Ω}
+    (h : ∀ k, n ≤ k → k ≤ m → u k ω = v k ω) :
+    MeasureTheory.hitting u s n m ω = MeasureTheory.hitting v s n m ω := by
+  simp only [MeasureTheory.hitting]
+  by_cases hex : ∃ j ∈ Set.Icc n m, u j ω ∈ s
+  · have hex' : ∃ j ∈ Set.Icc n m, v j ω ∈ s := by
+      obtain ⟨j, hj, hj_mem⟩ := hex
+      refine ⟨j, hj, ?_⟩
+      rw [← h j hj.1 hj.2]
+      exact hj_mem
+    simp only [if_pos hex, if_pos hex']
+    congr 1
+    ext k
+    simp only [Set.mem_inter_iff, Set.mem_setOf_eq]
+    constructor
+    · intro ⟨hk_Icc, hk_mem⟩
+      refine ⟨hk_Icc, ?_⟩
+      rw [← h k hk_Icc.1 hk_Icc.2]
+      exact hk_mem
+    · intro ⟨hk_Icc, hk_mem⟩
+      refine ⟨hk_Icc, ?_⟩
+      rw [h k hk_Icc.1 hk_Icc.2]
+      exact hk_mem
+  · have hex' : ¬∃ j ∈ Set.Icc n m, v j ω ∈ s := by
+      intro ⟨j, hj, hj_mem⟩
+      apply hex
+      refine ⟨j, hj, ?_⟩
+      rw [h j hj.1 hj.2]
+      exact hj_mem
+    simp only [if_neg hex, if_neg hex']
+
+/-- Helper: upperCrossingTime respects pointwise equality on [0, N] -/
+lemma upperCrossingTime_congr {Ω : Type*} {a b : ℝ} {f g : ℕ → Ω → ℝ} {N : ℕ} {ω : Ω}
+    (h : ∀ n ≤ N, f n ω = g n ω) :
+    ∀ k, MeasureTheory.upperCrossingTime a b f N k ω = MeasureTheory.upperCrossingTime a b g N k ω := by
+  intro k
+  induction k with
+  | zero =>
+    simp [MeasureTheory.upperCrossingTime_zero]
+  | succ n ih =>
+    simp only [MeasureTheory.upperCrossingTime_succ_eq]
+    have lct_eq : MeasureTheory.lowerCrossingTime a b f N n ω =
+                  MeasureTheory.lowerCrossingTime a b g N n ω := by
+      simp only [MeasureTheory.lowerCrossingTime]
+      rw [ih]
+      apply hitting_congr
+      intros k hk_lb hk_ub
+      exact h k hk_ub
+    rw [lct_eq]
+    apply hitting_congr
+    intros k hk_lb hk_ub
+    exact h k hk_ub
+
+/-- Helper: upcrossingsBefore is invariant under pointwise equality on [0, N] -/
+lemma upcrossingsBefore_congr {Ω : Type*} {a b : ℝ} {f g : ℕ → Ω → ℝ} {N : ℕ} {ω : Ω}
+    (h : ∀ n ≤ N, f n ω = g n ω) :
+    upcrossingsBefore a b f N ω = upcrossingsBefore a b g N ω := by
+  simp only [upcrossingsBefore]
+  congr 1
+  ext k
+  simp only [Set.mem_setOf_eq]
+  rw [upperCrossingTime_congr h]
+
+/-- Index is bounded by completion time when upperCrossingTime < N.
+If the n-th crossing completes before time N, then n < N. -/
+lemma upperCrossingTime_lt_imp_index_lt {Ω : Type*} {a b : ℝ} {f : ℕ → Ω → ℝ} {N : ℕ} {n : ℕ} {ω : Ω}
+    (hab : a < b) (h : upperCrossingTime a b f N n ω < N) :
+    n < N := by
+  -- Use induction to show n ≤ upperCrossingTime n, then n ≤ upperCrossingTime n < N gives n < N
+  induction n with
+  | zero => omega
+  | succ n ih =>
+    -- We have upperCrossingTime (n+1) < N and need n+1 < N
+    -- By IH: upperCrossingTime n < N → n < N
+    -- We have: upperCrossingTime n ≤ upperCrossingTime (n+1) < N, so upperCrossingTime n < N
+    -- By IH: n < N, so n+1 ≤ N
+    -- Actually we need n+1 < N, not just n+1 ≤ N
+    have h_n : upperCrossingTime a b f N n ω < N :=
+      lt_of_le_of_lt (upperCrossingTime_mono (Nat.le_succ n)) h
+    have ih_n : n < N := ih h_n
+    -- So n < N, which gives n+1 ≤ N
+    -- We want n+1 < N, but we only have n+1 ≤ N
+    -- Actually, we can use: upperCrossingTime (n+1) < N and n+1 ≤ upperCrossingTime (n+1)
+    sorry  -- This approach isn't working
+
+/-- **One-way inequality**: upcrossings ≤ downcrossings of time-reversed process.
+
+Maps each greedy upcrossing pair (τ_k, σ_k) of X to a downcrossing pair
+(N - σ_k, N - τ_k) of the reversed process. This injection proves the inequality. -/
+lemma upBefore_le_downBefore_rev
+    {Ω : Type*} (X : ℕ → Ω → ℝ) (a b : ℝ) (hab : a < b) (N : ℕ) :
+    (fun ω => upcrossingsBefore a b X N ω)
+      ≤ (fun ω => downcrossingsBefore a b (revProcess X N) N ω) := by
+  classical
+  intro ω
+
+  -- Expand downcrossingsBefore using definition
+  simp only [downcrossingsBefore]
+
+  -- Goal: upcrossingsBefore a b X N ω ≤ upcrossingsBefore (-b) (-a) (negProcess (revProcess X N)) N ω
+
+  -- Both sides are sSup of sets of crossing numbers
+  simp only [upcrossingsBefore]
+
+  -- Strategy: Show that if k < sSup {n | upperCrossingTime a b X N n ω < N},
+  -- then k < sSup {n | upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) N n ω < N}
+
+  by_cases hN : N = 0
+  · -- Trivial when N = 0
+    simp [hN, upperCrossingTime_zero]
+
+  -- The combinatorial core: each greedy upcrossing pair (τ, σ) for X
+  -- maps to a downcrossing pair (N-σ, N-τ) for revProcess X N.
+  -- This injection proves the count inequality.
+
+  -- Both sides count crossings, which are bounded by N
+  by_cases hemp : {n | upperCrossingTime a b X N n ω < N}.Nonempty
+  · -- If there are upcrossings, show the count doesn't decrease under reversal
+    -- The key: if n upcrossings complete before N, then n ≤ N (by upperCrossingTime_index_le)
+    have hbdd1 : BddAbove {n | upperCrossingTime a b X N n ω < N} := by
+      use N
+      simp only [mem_upperBounds, Set.mem_setOf_eq]
+      intro n hn
+      -- upperCrossingTime n < N implies n < N
+      exact Nat.le_of_lt (upperCrossingTime_lt_imp_index_lt hab hn)
+
+    have hbdd2 : BddAbove {n | upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) N n ω < N} := by
+      use N
+      simp only [mem_upperBounds, Set.mem_setOf_eq]
+      intro n hn
+      have h_neg : -b < -a := by linarith
+      exact Nat.le_of_lt (upperCrossingTime_lt_imp_index_lt h_neg hn)
+
+    -- The pathwise injection: each upcrossing pair of X gives a downcrossing pair of rev X
+    -- This is implicitly the subset relation we establish
+    have hsub : {n | upperCrossingTime a b X N n ω < N} ⊆
+                {n | upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) N n ω < N} := by
+      intro n hn
+      simp only [Set.mem_setOf_eq] at hn ⊢
+      -- This is where the combinatorial injection happens:
+      -- The greedy algorithm for X on [a,b] yields n complete pairs before N
+      -- The time-reversal map (τ,σ) ↦ (N-σ, N-τ) sends these to downcrossing pairs
+      -- Since the map preserves disjointness, rev X has at least n downcrossings
+      sorry  -- This is the pathwise combinatorial argument
+
+    exact csSup_le_csSup hbdd2 hemp hsub
+  · -- If no upcrossings, sSup = 0
+    rw [Set.not_nonempty_iff_eq_empty] at hemp
+    simp [hemp]
+
+/-- **Reverse inequality** via negation symmetry.
+
+Apply the one-way lemma to the negated process with flipped interval. -/
+lemma downBefore_rev_le_upBefore
+    {Ω : Type*} (X : ℕ → Ω → ℝ) (a b : ℝ) (N : ℕ) :
+    (fun ω => downcrossingsBefore a b (revProcess X N) N ω)
+      ≤ (fun ω => upcrossingsBefore a b X N ω) := by
+  classical
+  intro ω
+
+  -- Expand definition: downBefore(a, b, revX, N) = upBefore(-b, -a, negProcess(revX), N)
+  simp only [downcrossingsBefore]
+
+  -- Apply the one-way lemma to negProcess(revProcess X N) with interval [-b, -a]
+  have h := upBefore_le_downBefore_rev (negProcess (revProcess X N)) (-b) (-a) N ω
+
+  -- Simplify using involutions
+  simp only [downcrossingsBefore, neg_neg] at h
+
+  -- Show that the RHS of h equals upBefore(a, b, X, N) ω
+  -- by showing the processes are equal pointwise for n ≤ N
+  have proc_eq : ∀ n ≤ N, negProcess (revProcess (negProcess (revProcess X N)) N) n ω = X n ω := by
+    intros n hn
+    exact negProcess_revProcess_negProcess_revProcess X N n hn ω
+
+  -- Use congr lemma to replace the complex process with X
+  have rhs_eq : upcrossingsBefore a b (negProcess (revProcess (negProcess (revProcess X N)) N)) N ω
+              = upcrossingsBefore a b X N ω := by
+    apply upcrossingsBefore_congr
+    exact proc_eq
+
+  -- Combine h with rhs_eq to get the result
+  rw [← rhs_eq]
+  exact h
 
 /-- **Time-reversal lemma** (process version):
 Upcrossings of X up to N = downcrossings of the reversed process up to N.
 
-This is the classical "reverse time turns ≤a→≥b into ≥b→≤a" bijection. -/
+Proved as two inequalities using negation symmetry. -/
 lemma upcrossingsBefore_eq_downcrossingsBefore_rev
     {Ω : Type*} (X : ℕ → Ω → ℝ) (a b : ℝ) (N : ℕ) :
     (fun ω => upcrossingsBefore a b X N ω)
     = (fun ω => downcrossingsBefore a b (revProcess X N) N ω) := by
   classical
   funext ω
-  -- Reduce to pathwise statement
-  -- Path-level objects: s is the original trajectory, r is its time reversal up to N
-  set s : ℕ → ℝ := fun n => X n ω with hs
-  set r : ℕ → ℝ := fun n => s (N - n) with hr
-
-  -- Goal: show upBefore a b s N = downBefore a b r N
-  --
-  -- Proof sketch (combinatorial):
-  -- 1. Let (τ_k, σ_k) be the greedy upcrossing pairs for s up to N:
-  --    τ_0 = inf { n ≤ N | s n ≤ a }
-  --    σ_0 = inf { n ∈ [τ_0, N] | s n ≥ b }
-  --    etc. Let K = number of completed pairs with σ_k < N.
-  --
-  -- 2. Define the map Φ: (τ_k, σ_k) ↦ (τ'_k, σ'_k) := (N - σ_k, N - τ_k).
-  --    Then τ'_k ≤ σ'_k and:
-  --      r(τ'_k) = s(N - (N - σ_k)) = s(σ_k) ≥ b
-  --      r(σ'_k) = s(N - (N - τ_k)) = s(τ_k) ≤ a
-  --    So (τ'_k, σ'_k) is a valid downcrossing pair for r on [a,b].
-  --
-  -- 3. Φ is order-reversing but bijective between completed pairs:
-  --    σ_k < τ_{k+1} ⇔ σ'_{k+1} < τ'_k  (time reversal)
-  --    Greediness is preserved in reversed order.
-  --
-  -- 4. Therefore: number of completed upcrossings of s before N
-  --            = number of completed downcrossings of r before N.
-  --
-  -- Detailed proof requires expanding definitions of upcrossingsBefore and
-  -- downcrossingsBefore in terms of their recursive/hitting time structure,
-  -- then showing the bijection preserves each step of the greedy construction.
-  --
-  -- Since downcrossingsBefore is defined as upcrossingsBefore(-b, -a, negProcess(_)),
-  -- this reduces to showing:
-  --   upBefore(a, b, s, N) = upBefore(-b, -a, -r, N)
-  -- which follows from the time-reversal + negation bijection on crossing pairs.
-
-  sorry  -- TODO: 15-20 line combinatorial proof expanding the greedy pair construction
+  apply le_antisymm
+  · exact upBefore_le_downBefore_rev X a b N ω
+  · exact downBefore_rev_le_upBefore X a b N ω
 
 /-- Equivalent "up ↔ up" form via negation + interval flip.
 Directly usable for the upcrossing inequality on negated reversed process. -/
@@ -453,9 +640,8 @@ lemma condExp_exists_ae_limit_antitone
             ≤ upcrossings (- (↑b : ℝ)) (- (↑a : ℝ))
                 (negProcess (fun n => revCEFinite (μ := μ) f 𝔽 N n)) ω := by
         simp only [MeasureTheory.upcrossings]
-        exact le_iSup
-          (fun M => ↑(upcrossingsBefore (- (↑b : ℝ)) (- (↑a : ℝ))
-              (negProcess (fun n => revCEFinite (μ := μ) f 𝔽 N n)) M ω)) N
+        apply le_iSup (fun M => (upcrossingsBefore (- (↑b : ℝ)) (- (↑a : ℝ))
+            (negProcess (fun n => revCEFinite (μ := μ) f 𝔽 N n)) M ω : ℝ≥0∞)) N
 
       calc ↑(upcrossingsBefore (↑a) (↑b) (fun n => μ[f | 𝔽 n]) N ω)
           = ↑(upcrossingsBefore (- (↑b : ℝ)) (- (↑a : ℝ))
@@ -473,25 +659,24 @@ lemma condExp_exists_ae_limit_antitone
             exact lintegral_mono (h_le_key N)
         _ = ∫⁻ ω, downcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω ∂μ := by
             -- Use identity: up(-b, -a, -X) = down(a, b, X)
-            congr 1
-            exact up_neg_flip_eq_down (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n)
+            rw [show (fun ω => upcrossings (- (↑b : ℝ)) (- (↑a : ℝ)) (negProcess (fun n => revCEFinite (μ := μ) f 𝔽 N n)) ω)
+                   = (fun ω => downcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω) from
+                up_neg_flip_eq_down (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n)]
         _ ≤ C := by
-            -- downcrossings(a, b, revCEFinite) = upcrossings(-b, -a, -revCEFinite) by definition
-            -- We need to bound this by C.
-            -- Approach: -revCEFinite is also a martingale with same L¹ norm,
-            -- so upcrossings_bdd_uniform applies to it on interval (-b, -a)
-            -- giving the same bound C (symmetric in the filtration/process).
-            --
-            -- Alternatively: expand downcrossings as supremum and bound each term
-            -- using the submartingale upcrossing inequality on -revCEFinite.
+            -- Downcrossings are bounded by applying Doob's inequality to -revCEFinite.
             --
             -- Key facts:
-            -- 1. revCEFinite_martingale shows revCEFinite is a martingale
-            -- 2. Negation preserves martingale property
-            -- 3. L¹ norm of -revCEFinite equals that of revCEFinite
-            -- 4. Upcrossing bound depends on L¹ norm and interval width
-            -- 5. Interval width: (-a) - (-b) = b - a (same as original)
-            sorry  -- TODO: Invoke upcrossings_bdd_uniform for -revCEFinite on (-b,-a)
+            -- 1. -revCEFinite is a martingale (negation preserves martingale property)
+            -- 2. L¹ norm: ‖-revCEFinite‖₁ = ‖revCEFinite‖₁ ≤ ‖f‖₁ (L¹ contraction of condExp)
+            -- 3. downcrossings(a,b,X) = upcrossings(-b,-a,-X) by definition
+            -- 4. Apply Doob to -revCEFinite on interval [-b,-a]:
+            --      (b-a) * E[upcrossings(-b,-a,-revCE)] ≤ E[(-revCE_N + b)⁺]
+            --                                           ≤ ‖f‖₁ + |b|
+            -- 5. Divide by (b-a) to get bound ≤ (‖f‖₁ + |b|)/(b-a)
+            -- 6. This is ≤ C since |b| ≥ 0, so (‖f‖₁ + |b|) ≥ (‖f‖₁ + |a|) when a,b same sign
+            --
+            -- The proof mirrors the upcrossings bound but with -revCEFinite instead of revCEFinite.
+            sorry  -- TODO: Apply Doob's upcrossing inequality to -revCEFinite
 
     -- Use monotone convergence on the ORIGINAL process (which IS monotone in N)
     have h_exp_orig : ∫⁻ ω, upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω ∂μ ≤ C := by
@@ -500,10 +685,11 @@ lemma condExp_exists_ae_limit_antitone
         fun N ω => (upcrossingsBefore (↑a) (↑b) (fun n => μ[f | 𝔽 n]) N ω : ℝ≥0∞) with hU
 
       -- Monotonicity in N (pathwise): more time allows more completed crossings
-      have hU_mono : ∀ ω, Monotone (fun N => U N ω) := by
-        intro ω m n hmn
+      have hU_mono : Monotone U := by
+        intro m n hmn ω
         simp only [hU]
-        exact ENNReal.coe_le_coe.2 (upcrossingsBefore_mono hab' hmn ω)
+        have := upcrossingsBefore_mono (f := fun n => μ[f | 𝔽 n]) hab' hmn ω
+        exact Nat.cast_le.2 this
 
       -- Measurability
       have hU_meas : ∀ N, Measurable (U N) := by
@@ -525,8 +711,7 @@ lemma condExp_exists_ae_limit_antitone
 
       -- Apply monotone convergence theorem
       have h_iSup : ∫⁻ ω, (⨆ N, U N ω) ∂μ = ⨆ N, ∫⁻ ω, U N ω ∂μ := by
-        refine lintegral_iSup hU_meas (fun ω => ?_)
-        exact hU_mono ω
+        exact lintegral_iSup hU_meas hU_mono
 
       -- Bound the supremum of integrals
       have : (⨆ N, ∫⁻ ω, U N ω ∂μ) ≤ C := by
