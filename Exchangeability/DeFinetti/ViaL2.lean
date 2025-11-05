@@ -3230,7 +3230,6 @@ private lemma correlation_coefficient_bounded
 def blockAvgFrozen {Ω : Type*} (f : ℝ → ℝ) (X : ℕ → Ω → ℝ) (n : ℕ) : Ω → ℝ :=
   fun ω => blockAvg f X 0 n ω
 
-@[simp]
 lemma blockAvgFrozen_def {Ω : Type*} (f : ℝ → ℝ) (X : ℕ → Ω → ℝ) (n : ℕ) (ω : Ω) :
     blockAvgFrozen f X n ω = blockAvg f X 0 n ω :=
   rfl
@@ -3252,19 +3251,19 @@ lemma blockAvgFrozen_diff_memLp_two {Ω : Type*} [MeasurableSpace Ω] {μ : Meas
     (f : ℝ → ℝ) (X : ℕ → Ω → ℝ)
     (hf : Measurable f) (hX : ∀ i, Measurable (X i))
     (hf_bdd : ∀ x, |f x| ≤ 1) (n n' : ℕ) :
-    MemLp (fun ω => blockAvgFrozen f X n ω - blockAvgFrozen f X n' ω) (2 : ℝ≥0∞) μ := by
+    MemLp (fun ω => blockAvgFrozen f X n ω - blockAvgFrozen f X n' ω) 2 μ := by
   apply memLp_two_of_bounded (M := 2)
   · exact (blockAvgFrozen_measurable f X hf hX n).sub (blockAvgFrozen_measurable f X hf hX n')
   intro ω
   have hn  : |blockAvgFrozen f X n  ω| ≤ 1 := blockAvgFrozen_abs_le_one f X hf_bdd n  ω
   have hn' : |blockAvgFrozen f X n' ω| ≤ 1 := blockAvgFrozen_abs_le_one f X hf_bdd n' ω
   calc |blockAvgFrozen f X n ω - blockAvgFrozen f X n' ω|
-      ≤ |blockAvgFrozen f X n ω| + |blockAvgFrozen f X n' ω| := by
-        simpa [sub_eq_add_neg] using abs_add (blockAvgFrozen f X n ω) (- blockAvgFrozen f X n' ω)
+      = |blockAvgFrozen f X n ω + (- blockAvgFrozen f X n' ω)| := by rw [sub_eq_add_neg]
+    _ ≤ |blockAvgFrozen f X n ω| + |- blockAvgFrozen f X n' ω| := abs_add_le _ _
+    _ = |blockAvgFrozen f X n ω| + |blockAvgFrozen f X n' ω| := by rw [abs_neg]
     _ ≤ 1 + 1 := add_le_add hn hn'
     _ = 2 := by norm_num
 
-set_option maxHeartbeats 500000 in
 /-- Helper lemma: Block averages form a Cauchy sequence in L² (Step 1 of main proof).
 
 Given contractable X and bounded f, the block averages form a Cauchy sequence in L².
@@ -3275,7 +3274,7 @@ private lemma blockAvg_cauchy_in_L2
     (hX_meas : ∀ i, Measurable (X i))
     (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1) :
     ∀ ε > 0, ∃ N, ∀ {n n'}, n ≥ N → n' ≥ N →
-      eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ < ε := by
+      eLpNorm (fun ω => blockAvgFrozen f X n ω - blockAvgFrozen f X n' ω) 2 μ < ε := by
   intro ε hε
 
   -- Define centered variables Z_i = f(X_i) - E[f(X_0)]
@@ -3317,14 +3316,16 @@ private lemma blockAvg_cauchy_in_L2
       -- Trivial Cauchy: if values are ae-equal, eLpNorm of difference is 0 < ε
       use 1
       intros n n' _ _
-      -- Show eLpNorm (blockAvg n - blockAvg n') = 0
-      have h_ae : ∀ᵐ ω ∂μ, (blockAvg f X 0 n - blockAvg f X 0 n') ω = 0 := by
+      -- Convert to blockAvgFrozen and show eLpNorm = 0
+      show eLpNorm (fun ω => blockAvgFrozen f X n ω - blockAvgFrozen f X n' ω) 2 μ < ε
+      have h_ae : ∀ᵐ ω ∂μ, blockAvgFrozen f X n ω = blockAvgFrozen f X n' ω := by
         filter_upwards [h_ae_eq n n'] with ω hω
-        simp only [Pi.sub_apply, hω, sub_self]
-      have h_norm_zero : eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ = 0 := by
-        trans eLpNorm (fun ω => 0) 2 μ
-        · exact eLpNorm_congr_ae h_ae
-        · exact eLpNorm_zero
+        simp only [blockAvgFrozen_def, hω]
+      have h_norm_zero : eLpNorm (fun ω => blockAvgFrozen f X n ω - blockAvgFrozen f X n' ω) 2 μ = 0 := by
+        have h_ae_zero : (fun ω => blockAvgFrozen f X n ω - blockAvgFrozen f X n' ω) =ᵐ[μ] 0 := by
+          filter_upwards [h_ae] with ω hω
+          simp [hω]
+        rw [eLpNorm_congr_ae h_ae_zero, eLpNorm_zero]
       rw [h_norm_zero]
       exact hε
 
@@ -3343,14 +3344,16 @@ private lemma blockAvg_cauchy_in_L2
     -- Trivial Cauchy: if values are ae-equal, eLpNorm of difference is 0 < ε
     use 1
     intros n n' _ _
-    -- Show eLpNorm (blockAvg n - blockAvg n') = 0
-    have h_ae : ∀ᵐ ω ∂μ, (blockAvg f X 0 n - blockAvg f X 0 n') ω = 0 := by
+    -- Convert to blockAvgFrozen and show eLpNorm = 0
+    show eLpNorm (fun ω => blockAvgFrozen f X n ω - blockAvgFrozen f X n' ω) 2 μ < ε
+    have h_ae : ∀ᵐ ω ∂μ, blockAvgFrozen f X n ω = blockAvgFrozen f X n' ω := by
       filter_upwards [h_ae_eq n n'] with ω hω
-      simp only [Pi.sub_apply, hω, sub_self]
-    have h_norm_zero : eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ = 0 := by
-      trans eLpNorm (fun ω => 0) 2 μ
-      · exact eLpNorm_congr_ae h_ae
-      · exact eLpNorm_zero
+      simp only [blockAvgFrozen_def, hω]
+    have h_norm_zero : eLpNorm (fun ω => blockAvgFrozen f X n ω - blockAvgFrozen f X n' ω) 2 μ = 0 := by
+      have h_ae_zero : (fun ω => blockAvgFrozen f X n ω - blockAvgFrozen f X n' ω) =ᵐ[μ] 0 := by
+        filter_upwards [h_ae] with ω hω
+        simp [hω]
+      rw [eLpNorm_congr_ae h_ae_zero, eLpNorm_zero]
     rw [h_norm_zero]
     exact hε
 
@@ -3367,9 +3370,9 @@ private lemma l2_limit_from_cauchy
     {X : ℕ → Ω → ℝ} (hX_meas : ∀ i, Measurable (X i))
     (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1)
     (hCauchy : ∀ ε > 0, ∃ N, ∀ {n n'}, n ≥ N → n' ≥ N →
-      eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ < ε) :
+      eLpNorm (fun ω => blockAvgFrozen f X n ω - blockAvgFrozen f X n' ω) 2 μ < ε) :
     ∃ α_f, MemLp α_f 2 μ ∧
-      Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0) := by
+      Tendsto (fun n => eLpNorm (fun ω => blockAvgFrozen f X n ω - α_f ω) 2 μ) atTop (𝓝 0) := by
   -- Step 1: Show each blockAvg is in L² using frozen wrapper to avoid timeouts
   have hblockAvg_memLp : ∀ n, n > 0 → MemLp (blockAvg f X 0 n) 2 μ := by
     intro n hn_pos
