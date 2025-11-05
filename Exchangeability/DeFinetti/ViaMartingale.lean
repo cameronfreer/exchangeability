@@ -1358,6 +1358,19 @@ lemma condIndep_of_triple_law
     have hYZW'_meas : Measurable (fun (ω : Ω) => (Y ω, Z ω, W' ω)) :=
       hY.prodMk (hZ.prodMk hW')
 
+    -- Prove pair laws BEFORE introducing 𝔾 to avoid instance pollution
+    have h_pair_ZW :
+      Measure.map (fun (ω : Ω) => (Z ω, W ω)) μ =
+      Measure.map (fun (ω : Ω) => (Z ω, W' ω)) μ := by
+      -- TODO: The underlying lemma pair_law_ZW_of_triple_law is also sorry
+      sorry
+
+    have h_pair_YW :
+      Measure.map (fun (ω : Ω) => (Y ω, W ω)) μ =
+      Measure.map (fun (ω : Ω) => (Y ω, W' ω)) μ := by
+      -- TODO: The underlying lemma pair_law_YW_of_triple_law is also sorry
+      sorry
+
     -- Prove h_test_fn BEFORE introducing 𝔾 to avoid instance pollution
     have h_test_fn : ∀ (h : γ → ℝ), Measurable h → (∀ w, ‖h w‖ ≤ 1) →
         ∫ ω, φ ω * ψ ω * h (W ω) ∂μ = ∫ ω, φ ω * ψ ω * h (W' ω) ∂μ := by
@@ -1583,22 +1596,8 @@ lemma condIndep_of_triple_law
             -- The key insight: use distributional equalities to "swap" between W and W',
             -- transfer the conditional expectation via a common version v, then swap back.
             --
-
-            -- Step 1: Get the pair law (Z,W) =^d (Z,W') from the triple law
-            have h_pair_ZW :
-              Measure.map (fun ω => (Z ω, W ω)) μ =
-              Measure.map (fun ω => (Z ω, W' ω)) μ := by
-              -- TODO: Instance synthesis issue - 𝔾 shadows ambient MeasurableSpace
-              -- The underlying lemma pair_law_ZW_of_triple_law is also sorry
-              sorry
-
-            -- Step 2: Get the pair law (Y,W) =^d (Y,W') from the triple law
-            have h_pair_YW :
-              Measure.map (fun ω => (Y ω, W ω)) μ =
-              Measure.map (fun ω => (Y ω, W' ω)) μ := by
-              -- TODO: Instance synthesis issue - 𝔾 shadows ambient MeasurableSpace
-              -- The underlying lemma pair_law_YW_of_triple_law is also sorry
-              sorry
+            -- (Note: h_pair_ZW and h_pair_YW are now proved earlier, before introducing 𝔾,
+            --  to avoid instance pollution. See lines 1362-1372.)
 
             -- Step 3: Apply enhanced common_version_condExp to get v with:
             -- - v is Borel-measurable
@@ -1622,8 +1621,9 @@ lemma condIndep_of_triple_law
                 rfl
 
               -- Apply enhanced common_version_condExp with ψ_β
+              -- Use explicit instance to avoid 𝔾 pollution
               obtain ⟨v, hv_meas, hv_bdd, hv_W, hv_W'⟩ :=
-                common_version_condExp_with_props Z W W' ψ_β hZ hW hW'
+                @common_version_condExp_with_props Ω β γ (inferInstance : MeasurableSpace Ω) _ _ μ _ Z W W' ψ_β hZ hW hW'
                   (measurable_const.indicator hB)
                   (by intro z; simp [ψ_β, Set.indicator]; norm_num)
                   (by rw [← hψ_factor]; exact hψ_int)
