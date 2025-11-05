@@ -233,13 +233,69 @@ lemma negProcess_revProcess_negProcess_revProcess {Ω : Type*} (X : ℕ → Ω �
   rw [revProcess_negProcess_revProcess X N n hn ω]
   simp only [negProcess, neg_neg]
 
+/-- Helper: hitting respects pointwise equality on [n, m] -/
+lemma hitting_congr {Ω β : Type*} {u v : ℕ → Ω → β} {s : Set β} {n m : ℕ} {ω : Ω}
+    (h : ∀ k, n ≤ k → k ≤ m → u k ω = v k ω) :
+    MeasureTheory.hitting u s n m ω = MeasureTheory.hitting v s n m ω := by
+  simp only [MeasureTheory.hitting]
+  by_cases hex : ∃ j ∈ Set.Icc n m, u j ω ∈ s
+  · have hex' : ∃ j ∈ Set.Icc n m, v j ω ∈ s := by
+      obtain ⟨j, hj, hj_mem⟩ := hex
+      refine ⟨j, hj, ?_⟩
+      rw [← h j hj.1 hj.2]
+      exact hj_mem
+    simp only [if_pos hex, if_pos hex']
+    congr 1
+    ext k
+    simp only [Set.mem_inter_iff, Set.mem_setOf_eq]
+    constructor
+    · intro ⟨hk_Icc, hk_mem⟩
+      refine ⟨hk_Icc, ?_⟩
+      rw [← h k hk_Icc.1 hk_Icc.2]
+      exact hk_mem
+    · intro ⟨hk_Icc, hk_mem⟩
+      refine ⟨hk_Icc, ?_⟩
+      rw [h k hk_Icc.1 hk_Icc.2]
+      exact hk_mem
+  · have hex' : ¬∃ j ∈ Set.Icc n m, v j ω ∈ s := by
+      intro ⟨j, hj, hj_mem⟩
+      apply hex
+      refine ⟨j, hj, ?_⟩
+      rw [h j hj.1 hj.2]
+      exact hj_mem
+    simp only [if_neg hex, if_neg hex']
+
+/-- Helper: upperCrossingTime respects pointwise equality on [0, N] -/
+lemma upperCrossingTime_congr {Ω : Type*} {a b : ℝ} {f g : ℕ → Ω → ℝ} {N : ℕ} {ω : Ω}
+    (h : ∀ n ≤ N, f n ω = g n ω) :
+    ∀ k, MeasureTheory.upperCrossingTime a b f N k ω = MeasureTheory.upperCrossingTime a b g N k ω := by
+  intro k
+  induction k with
+  | zero =>
+    simp [MeasureTheory.upperCrossingTime_zero]
+  | succ n ih =>
+    simp only [MeasureTheory.upperCrossingTime_succ_eq]
+    have lct_eq : MeasureTheory.lowerCrossingTime a b f N n ω =
+                  MeasureTheory.lowerCrossingTime a b g N n ω := by
+      simp only [MeasureTheory.lowerCrossingTime]
+      rw [ih]
+      apply hitting_congr
+      intros k hk_lb hk_ub
+      exact h k hk_ub
+    rw [lct_eq]
+    apply hitting_congr
+    intros k hk_lb hk_ub
+    exact h k hk_ub
+
 /-- Helper: upcrossingsBefore is invariant under pointwise equality on [0, N] -/
 lemma upcrossingsBefore_congr {Ω : Type*} {a b : ℝ} {f g : ℕ → Ω → ℝ} {N : ℕ} {ω : Ω}
     (h : ∀ n ≤ N, f n ω = g n ω) :
     upcrossingsBefore a b f N ω = upcrossingsBefore a b g N ω := by
-  -- Both are sSup of sets defined by upperCrossingTime
-  -- Need to show the sets are equal, which follows from upperCrossingTime being equal
-  sorry  -- Requires showing upperCrossingTime respects process equality on [0, N]
+  simp only [upcrossingsBefore]
+  congr 1
+  ext k
+  simp only [Set.mem_setOf_eq]
+  rw [upperCrossingTime_congr h]
 
 /-- **One-way inequality**: upcrossings ≤ downcrossings of time-reversed process.
 
