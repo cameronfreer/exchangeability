@@ -207,13 +207,44 @@ lemma upcrossingsBefore_eq_downcrossingsBefore_rev
     {Ω : Type*} (X : ℕ → Ω → ℝ) (a b : ℝ) (N : ℕ) :
     (fun ω => upcrossingsBefore a b X N ω)
     = (fun ω => downcrossingsBefore a b (revProcess X N) N ω) := by
+  classical
   funext ω
-  -- Reduce to pathwise statement: set x n := X n ω, y n := x (N - n)
-  -- Show: upBefore a b x N = downBefore a b y N
-  -- This is a bijection between crossing intervals under time reversal:
-  -- the k-th upcrossing of x pairs with the k-th downcrossing of y in reverse order
-  -- 15-20 lines of combinatorial proof on the definitions
-  sorry
+  -- Reduce to pathwise statement
+  -- Path-level objects: s is the original trajectory, r is its time reversal up to N
+  set s : ℕ → ℝ := fun n => X n ω with hs
+  set r : ℕ → ℝ := fun n => s (N - n) with hr
+
+  -- Goal: show upBefore a b s N = downBefore a b r N
+  --
+  -- Proof sketch (combinatorial):
+  -- 1. Let (τ_k, σ_k) be the greedy upcrossing pairs for s up to N:
+  --    τ_0 = inf { n ≤ N | s n ≤ a }
+  --    σ_0 = inf { n ∈ [τ_0, N] | s n ≥ b }
+  --    etc. Let K = number of completed pairs with σ_k < N.
+  --
+  -- 2. Define the map Φ: (τ_k, σ_k) ↦ (τ'_k, σ'_k) := (N - σ_k, N - τ_k).
+  --    Then τ'_k ≤ σ'_k and:
+  --      r(τ'_k) = s(N - (N - σ_k)) = s(σ_k) ≥ b
+  --      r(σ'_k) = s(N - (N - τ_k)) = s(τ_k) ≤ a
+  --    So (τ'_k, σ'_k) is a valid downcrossing pair for r on [a,b].
+  --
+  -- 3. Φ is order-reversing but bijective between completed pairs:
+  --    σ_k < τ_{k+1} ⇔ σ'_{k+1} < τ'_k  (time reversal)
+  --    Greediness is preserved in reversed order.
+  --
+  -- 4. Therefore: number of completed upcrossings of s before N
+  --            = number of completed downcrossings of r before N.
+  --
+  -- Detailed proof requires expanding definitions of upcrossingsBefore and
+  -- downcrossingsBefore in terms of their recursive/hitting time structure,
+  -- then showing the bijection preserves each step of the greedy construction.
+  --
+  -- Since downcrossingsBefore is defined as upcrossingsBefore(-b, -a, negProcess(_)),
+  -- this reduces to showing:
+  --   upBefore(a, b, s, N) = upBefore(-b, -a, -r, N)
+  -- which follows from the time-reversal + negation bijection on crossing pairs.
+
+  sorry  -- TODO: 15-20 line combinatorial proof expanding the greedy pair construction
 
 /-- Equivalent "up ↔ up" form via negation + interval flip.
 Directly usable for the upcrossing inequality on negated reversed process. -/
@@ -445,12 +476,22 @@ lemma condExp_exists_ae_limit_antitone
             congr 1
             exact up_neg_flip_eq_down (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n)
         _ ≤ C := by
-            -- For a martingale, downcrossings have the same bound as upcrossings
-            -- negProcess revCEFinite is also a martingale with the same L¹ bound
-            -- Apply upcrossings_bdd_uniform to negProcess revCEFinite with interval (a, b)
-            -- which gives the same bound C for downcrossings
-            -- Alternatively: use down = up(-b, -a, -X) and hC on -revCEFinite
-            sorry  -- TODO: Apply upcrossing inequality to -revCEFinite or use martingale symmetry
+            -- downcrossings(a, b, revCEFinite) = upcrossings(-b, -a, -revCEFinite) by definition
+            -- We need to bound this by C.
+            -- Approach: -revCEFinite is also a martingale with same L¹ norm,
+            -- so upcrossings_bdd_uniform applies to it on interval (-b, -a)
+            -- giving the same bound C (symmetric in the filtration/process).
+            --
+            -- Alternatively: expand downcrossings as supremum and bound each term
+            -- using the submartingale upcrossing inequality on -revCEFinite.
+            --
+            -- Key facts:
+            -- 1. revCEFinite_martingale shows revCEFinite is a martingale
+            -- 2. Negation preserves martingale property
+            -- 3. L¹ norm of -revCEFinite equals that of revCEFinite
+            -- 4. Upcrossing bound depends on L¹ norm and interval width
+            -- 5. Interval width: (-a) - (-b) = b - a (same as original)
+            sorry  -- TODO: Invoke upcrossings_bdd_uniform for -revCEFinite on (-b,-a)
 
     -- Use monotone convergence on the ORIGINAL process (which IS monotone in N)
     have h_exp_orig : ∫⁻ ω, upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω ∂μ ≤ C := by
