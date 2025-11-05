@@ -285,7 +285,7 @@ section ConditionalDistribLemmas
 
 open ProbabilityTheory
 
-/-- **Correct replacement for pair-law axiom**: If two sub-σ-algebras are equal (as sets),
+/-- **Pair-law lemma**: If two sub-σ-algebras are equal (as sets),
 their conditional expectations agree a.e.
 
 This is the correct invariant on a fixed probability space. The statement
@@ -421,7 +421,7 @@ lemma map_pair_eq_compProd_change_base
   -- The key steps would be:
   -- 1. Show both sides agree on rectangles A ×ˢ B (computable from disintegrations)
   -- 2. Apply Measure.ext_of_generateFrom_of_iUnion to extend to all measurable sets
-  -- Since this lemma is used in documentary context (not critical path), we axiomatize:
+  -- Since this lemma is used in documentary context (not critical path), we use sorry:
   have : ((Measure.map ζ μ).map φ) ⊗ₘ ((condDistrib ζ η μ) ∘ₖ (condDistrib ξ ζ μ)) =
          (Measure.map η μ) ⊗ₘ (condDistrib ξ η μ) := by
     -- Would prove using hpush and disintegration uniqueness
@@ -2983,9 +2983,9 @@ lemma AgreeOnFutureRectangles_to_measure_eq
 
 /-! ### Conditional expectation convergence from contractability
 
-This proves the forward-declared axiom from line 477. -/
+This proves the forward-declared result from line 477. -/
 
-/-- **Conditional expectation convergence (formerly Axiom 1):** For k ≤ m, all coordinates look
+/-- **Conditional expectation convergence:** For k ≤ m, all coordinates look
 the same when conditioned on the future filtration at level m.
 
 This is the key convergence result: for k ≤ m and measurable set B,
@@ -3655,9 +3655,9 @@ lemma join_eq_comap_pair_finFuture
   -- `comap_prodMk` is exactly the identity we need.
   simpa [firstRSigma, finFutureSigma] using (MeasurableSpace.comap_prodMk f g).symm
 
--- **[REMOVED]**: condDistrib_of_map_eq_map_and_comap_le axiom
+-- **[REMOVED]**: condDistrib_of_map_eq_map_and_comap_le
 --
--- This axiom claimed uniqueness of conditional distributions under pair-law
+-- This previously claimed uniqueness of conditional distributions under pair-law
 -- and σ-algebra inclusion. It has been preempted by the direct conditional
 -- expectation proof in condexp_indicator_drop_info_of_pair_law_direct, which
 -- proves what we need without relying on kernel machinery or disintegration
@@ -3680,7 +3680,7 @@ this class of functions and using the separating property, we get the result.
 
 **This completely avoids kernel machinery and disintegration uniqueness!**
 
-This lemma directly replaces the axiom `condDistrib_of_map_eq_map_and_comap_le`
+This lemma directly replaces `condDistrib_of_map_eq_map_and_comap_le`
 at its only point of use. -/
 lemma condexp_indicator_drop_info_of_pair_law_direct
     {Ω α β : Type*} [MeasurableSpace Ω]
@@ -3991,7 +3991,7 @@ lemma condexp_indicator_eq_on_join_of_triple_law
   -- DIRECT PROOF: Modular approach with clean mathlib extraction path
   -- ═══════════════════════════════════════════════════════════════════════════════
 
-  -- **Placeholder axiom (TODO: extract to mathlib as Kallenberg Lemma 1.3)**
+  -- **Placeholder (TODO: extract to mathlib as Kallenberg Lemma 1.3)**
   --
   -- The missing infrastructure is the conditional independence characterization:
   -- "If (ξ, η, ζ) =ᵈ (ξ, η, ζ') and σ(ζ) ≤ σ(ζ'), then Y ⊥⊥_{ζ} ξ"
@@ -4264,7 +4264,7 @@ lemma block_coord_condIndep
       --    Likely exists: comap f (comap g m) = comap (g ∘ f) m
       --
       -- ─────────────────────────────────────────────────────────────────────────────
-      -- DIRECT PROOF: Placeholder axiom (TODO: extract to mathlib)
+      -- DIRECT PROOF: Placeholder (TODO: extract to mathlib)
       -- ─────────────────────────────────────────────────────────────────────────────
       --
       -- This is the core missing piece: showing that the Pi measurable space on ℕ → α
@@ -4272,7 +4272,7 @@ lemma block_coord_condIndep
       -- in product measure theory that should be contributed to mathlib.
       --
       -- The proof strategy is outlined in the comments above. Once mathlib has the
-      -- general `pi_nat_eq_iSup_fin` lemma, this axiom can be eliminated by applying
+      -- general `pi_nat_eq_iSup_fin` lemma, this sorry can be eliminated by applying
       -- `comap_iSup` and `comap_comp`.
       --
       -- We only need the ≤ direction for this proof
@@ -4359,7 +4359,7 @@ independence given `m`, the conditional expectation of the intersection indicato
 ```
 
 Now proven using `condexp_indicator_inter_bridge` from CondExp.lean, eliminating the
-previous `: True` axiom stub. -/
+previous `: True` stub. -/
 lemma condexp_indicator_inter_of_condIndep
     {Ω : Type*} {m₀ : MeasurableSpace Ω} [StandardBorelSpace Ω]
     {μ : @Measure Ω m₀} [IsProbabilityMeasure μ]
@@ -4690,9 +4690,9 @@ open ProbabilityTheory
 needs either:
 - Direct use of `condDistrib` with an identity RV (requires technical setup), OR  
 - Access to `condExpKernel` API (mathlib v4.25+), OR
-- Axiomatization for now with measurability properties stated separately.
+- TODO: Implement using condExpKernel when available.
 
-For now, we axiomatize the existence and state the required properties. -/
+For now, we use axioms and state the required properties. -/
 axiom directingMeasure
     {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
