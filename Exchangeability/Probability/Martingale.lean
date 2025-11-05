@@ -297,6 +297,28 @@ lemma upcrossingsBefore_congr {Ω : Type*} {a b : ℝ} {f g : ℕ → Ω → ℝ
   simp only [Set.mem_setOf_eq]
   rw [upperCrossingTime_congr h]
 
+/-- Helper: Time reversal maps upcrossings to upcrossings of negated reversed process.
+
+If the n-th upcrossing time of X on [a,b] occurs before N,
+then the n-th upcrossing time of -rev(X) on [-b,-a] also occurs before N.
+
+This is the key combinatorial lemma for proving upBefore_le_downBefore_rev. -/
+lemma upperCrossingTime_of_revProcess_lt {Ω : Type*} (X : ℕ → Ω → ℝ) (a b : ℝ) (N : ℕ) (n : ℕ) (ω : Ω)
+    (h : upperCrossingTime a b X N n ω < N) :
+    upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) N n ω < N := by
+  -- Proof by induction on n
+  induction n with
+  | zero =>
+    -- Base case: n = 0, upperCrossingTime = ⊥ < N
+    simp only [upperCrossingTime_zero, Pi.bot_apply] at h ⊢
+    exact h
+  | succ n ih =>
+    -- Inductive step: Assume the result for n, prove for n+1
+    simp only [upperCrossingTime_succ_eq] at h ⊢
+    -- Both sides use hitting times applied to lowerCrossingTime
+    -- Need to show the hitting structure is preserved under negProcess ∘ revProcess
+    sorry  -- This requires relating hitting times of X to hitting times of negProcess(revProcess X)
+
 /-- **One-way inequality**: upcrossings ≤ downcrossings of time-reversed process.
 
 Maps each greedy upcrossing pair (τ_k, σ_k) of X to a downcrossing pair
@@ -324,29 +346,21 @@ lemma upBefore_le_downBefore_rev
     simp [hN, upperCrossingTime_zero]
 
   by_cases hemp : {n | upperCrossingTime a b X N n ω < N}.Nonempty
-  · -- If there are upcrossings, use sSup_le_sSup_of_forall_exists_le
-    apply sSup_le_sSup_of_forall_exists_le
-    intro n hn
-    -- Given n with upperCrossingTime a b X N n ω < N,
-    -- find m with upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) N m ω < N
-    -- such that n ≤ m
-    use n  -- Try using the same index
-    constructor
-    · -- Show upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) N n ω < N
-      -- This is the deep combinatorial core:
-      -- If the n-th upcrossing time of X on [a,b] is < N, then
-      -- the n-th upcrossing time of negProcess(revProcess X N) on [-b,-a] is also < N
-      --
-      -- Intuition: An upcrossing pair (τ, σ) for X where X goes from ≤a to ≥b
-      -- becomes a pair (N-σ, N-τ) for revProcess where it goes from ≥b to ≤a
-      -- which after negation becomes an upcrossing from ≤-b to ≥-a
-      --
-      -- This requires analyzing the recursive structure of upperCrossingTime
-      -- via hitting times and showing the transformation preserves the property.
-      sorry
-    · -- Show n ≤ n
-      rfl
-  · -- If no upcrossings, the sSup is 0, trivially ≤ anything
+  · -- If there are upcrossings, use subset relation to get sSup inequality
+    have hsub : {n | upperCrossingTime a b X N n ω < N} ⊆
+                {n | upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) N n ω < N} := by
+      intro n hn
+      simp only [Set.mem_setOf_eq] at hn ⊢
+      exact upperCrossingTime_of_revProcess_lt X a b N n ω hn
+    have hbdd : BddAbove {n | upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) N n ω < N} := by
+      use N - 1
+      simp only [mem_upperBounds, Set.mem_setOf_eq]
+      intro a ha
+      -- If upperCrossingTime ... a ω < N, then a < N (since crossing times are increasing with index)
+      -- and elements with crossing time < N are at most N-1
+      omega
+    exact csSup_le_csSup hbdd hemp hsub
+  · -- If no upcrossings, sSup = 0
     rw [Set.not_nonempty_iff_eq_empty] at hemp
     simp [hemp]
 
