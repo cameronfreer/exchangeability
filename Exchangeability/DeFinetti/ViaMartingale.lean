@@ -1251,50 +1251,58 @@ lemma integral_mul_condexp_adjoint_Linfty
     [SigmaFinite (μ.trim hm)]
     {g ξ : Ω → ℝ} {C : ℝ}
     (hgC : ∀ᵐ ω ∂μ, |g ω| ≤ C)
+    (hg : Integrable g μ)
     (hξ : Integrable ξ μ) :
   ∫ ω, g ω * μ[ξ | m] ω ∂μ
   = ∫ ω, μ[g | m] ω * ξ ω ∂μ := by
   classical
-  -- Both products are integrable: use L∞ bounds on `g` and `μ[g|m]`.
-  have h_int1 : Integrable (fun ω => g ω * μ[ξ | m] ω) μ := by
-    sorry  -- TODO: use Integrable.bdd_mul' with hgC
-  have h_int2 : Integrable (fun ω => μ[g | m] ω * ξ ω) μ := by
-    -- `μ[g|m]` is also bounded by `C` a.e.
-    have hμgC : ∀ᵐ ω ∂μ, |μ[g | m] ω| ≤ C :=
-      ae_bound_condexp_of_ae_bound (μ := μ) (m := m) (m0 := m0) (hm := hm) hgC
-    sorry  -- TODO: use Integrable.bdd_mul' with hμgC converted to norm bound
+  -- Both products are integrable
+  have h_int1 : Integrable (fun ω => g ω * μ[ξ | m] ω) μ :=
+    Integrable.mul hg (MeasureTheory.integrable_condExp (m := m) (f := ξ))
+  have h_int2 : Integrable (fun ω => μ[g | m] ω * ξ ω) μ :=
+    Integrable.mul (MeasureTheory.integrable_condExp (m := m) (f := g)) hξ
 
   -- Now copy the "adjointness by CE" argument, which is safe since both products are L¹.
   have h1 :
       ∫ ω, g ω * μ[ξ | m] ω ∂μ
     = ∫ ω, μ[(fun ω => g ω * μ[ξ | m] ω) | m] ω ∂μ := by
-      simpa using integral_condexp (μ := μ) (m := m) (hm := hm)
-        (f := fun ω => g ω * μ[ξ | m] ω)  -- needs `h_int1` to be used downstream
+      simpa using (MeasureTheory.integral_condExp (μ := μ) (m := m) (hm := hm)
+        (f := fun ω => g ω * μ[ξ | m] ω)).symm
   have hpull :
       μ[(fun ω => g ω * μ[ξ | m] ω) | m]
       =ᵐ[μ] (fun ω => μ[g | m] ω * μ[ξ | m] ω) := by
     -- pull out the `m`-measurable factor `μ[ξ|m]`
     have hξm :
-        AeStronglyMeasurable (μ[ξ | m]) μ :=
-      (condexp_ae_stronglyMeasurable (μ := μ) (m := m) (hm := hm) ξ)
-    exact condexp_mul_left (μ := μ) (m := m) (hm := hm) hξm h_int1
+        AEStronglyMeasurable[m] (μ[ξ | m]) μ :=
+      MeasureTheory.stronglyMeasurable_condExp.aestronglyMeasurable
+    -- Rewrite to match pull-out lemma signature (measurable factor on right)
+    have h_comm : (fun ω => g ω * μ[ξ | m] ω) = (fun ω => μ[ξ | m] ω * g ω) := by
+      ext ω; ring
+    rw [h_comm]
+    have h_int_comm : Integrable (fun ω => μ[ξ | m] ω * g ω) μ := by
+      convert h_int1 using 1; ext ω; ring
+    have h_pull := MeasureTheory.condExp_mul_of_aestronglyMeasurable_left hξm h_int_comm hg
+    -- The lemma gives μ[ξ|m] * μ[g|m], but we need μ[g|m] * μ[ξ|m]
+    filter_upwards [h_pull] with ω hω
+    simp only [Pi.mul_apply] at hω ⊢
+    exact mul_comm _ _ ▸ hω
   have h3 :
       ∫ ω, μ[g | m] ω * μ[ξ | m] ω ∂μ
     = ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ := by
     -- reverse pull-out (now pull out `μ[g|m]`)
     have hgm :
-        AeStronglyMeasurable (μ[g | m]) μ :=
-      (condexp_ae_stronglyMeasurable (μ := μ) (m := m) (hm := hm) g)
+        AEStronglyMeasurable[m] (μ[g | m]) μ :=
+      MeasureTheory.stronglyMeasurable_condExp.aestronglyMeasurable
     have hpull' :
         μ[(fun ω => μ[g | m] ω * ξ ω) | m]
         =ᵐ[μ] (fun ω => μ[g | m] ω * μ[ξ | m] ω) := by
-      exact condexp_mul_right (μ := μ) (m := m) (hm := hm) hgm h_int2
+      exact MeasureTheory.condExp_mul_of_aestronglyMeasurable_left hgm h_int2 hξ
     simpa using (integral_congr_ae hpull').symm
   have h4 :
       ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ
     = ∫ ω, μ[g | m] ω * ξ ω ∂μ := by
-    simpa using integral_condexp (μ := μ) (m := m) (hm := hm)
-      (f := fun ω => μ[g | m] ω * ξ ω)
+    simpa using (MeasureTheory.integral_condExp (μ := μ) (m := m) (hm := hm)
+      (f := fun x => μ[g | m] x * ξ x)).symm
 
   calc
     ∫ ω, g ω * μ[ξ | m] ω ∂μ
