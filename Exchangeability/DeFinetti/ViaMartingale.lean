@@ -1258,9 +1258,13 @@ lemma integral_mul_condexp_adjoint_Linfty
   classical
   -- Both products are integrable
   have h_int1 : Integrable (fun ω => g ω * μ[ξ | m] ω) μ :=
-    Integrable.mul hg (MeasureTheory.integrable_condExp (m := m) (f := ξ))
+    Integrable.bdd_mul' (MeasureTheory.integrable_condExp (m := m) (f := ξ))
+      hg.aestronglyMeasurable hgC
+  have hμgC : ∀ᵐ ω ∂μ, |μ[g | m] ω| ≤ C :=
+    @ae_bound_condexp_of_ae_bound Ω m0 μ m hm _ _ _ hgC
   have h_int2 : Integrable (fun ω => μ[g | m] ω * ξ ω) μ :=
-    Integrable.mul (MeasureTheory.integrable_condExp (m := m) (f := g)) hξ
+    Integrable.bdd_mul' hξ
+      (MeasureTheory.integrable_condExp (m := m) (f := g)).aestronglyMeasurable hμgC
 
   -- Now copy the "adjointness by CE" argument, which is safe since both products are L¹.
   have h1 :
@@ -1285,7 +1289,8 @@ lemma integral_mul_condexp_adjoint_Linfty
     -- The lemma gives μ[ξ|m] * μ[g|m], but we need μ[g|m] * μ[ξ|m]
     filter_upwards [h_pull] with ω hω
     simp only [Pi.mul_apply] at hω ⊢
-    exact mul_comm _ _ ▸ hω
+    rw [mul_comm]
+    exact hω
   have h3 :
       ∫ ω, μ[g | m] ω * μ[ξ | m] ω ∂μ
     = ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ := by
@@ -1301,13 +1306,17 @@ lemma integral_mul_condexp_adjoint_Linfty
   have h4 :
       ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ
     = ∫ ω, μ[g | m] ω * ξ ω ∂μ := by
-    have h := MeasureTheory.integral_condExp (μ := μ) (m := m) (hm := hm)
-      (f := fun ω => μ[g | m] ω * ξ ω)
-    -- Freeze both integrands to normalize binders (let-and-simpa pattern)
-    let F : Ω → ℝ := fun ω => μ[g | m] ω * ξ ω
-    let G : Ω → ℝ := fun ω => μ[(fun t => μ[g | m] t * ξ t) | m] ω
-    show ∫ (ω : Ω), G ω ∂μ = ∫ (ω : Ω), F ω ∂μ
-    simpa [F, G] using h.symm
+    -- Kill α/β noise by naming the product once and for all
+    set F : Ω → ℝ := fun ω => μ[g | m] ω * ξ ω with hF
+
+    -- Apply the CE integral identity to F (and orient it the way we need)
+    have h_goal :
+        ∫ (ω : Ω), μ[g | m] ω * ξ ω ∂μ
+      = ∫ (ω : Ω), μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ := by
+      simpa [hF] using
+        (MeasureTheory.integral_condExp (μ := μ) (m := m) (hm := hm) (f := F)).symm
+
+    exact h_goal.symm
 
   calc
     ∫ ω, g ω * μ[ξ | m] ω ∂μ
@@ -1576,14 +1585,15 @@ lemma condIndep_of_triple_law
             --
 
             -- Step 1: Get the pair law (Z,W) =^d (Z,W') from the triple law
-            -- Note: Use @ notation to avoid instance confusion with 𝔾 binding
-            have h_pair_ZW : @Measure.map Ω (β × γ) _ _ (fun ω => (Z ω, W ω)) μ =
-                              @Measure.map Ω (β × γ) _ _ (fun ω => (Z ω, W' ω)) μ := by
+            have h_pair_ZW :
+              Measure.map (fun ω => (Z ω, W ω)) μ =
+              Measure.map (fun ω => (Z ω, W' ω)) μ := by
               exact pair_law_ZW_of_triple_law Y Z W W' hY hZ hW hW' h_triple
 
             -- Step 2: Get the pair law (Y,W) =^d (Y,W') from the triple law
-            have h_pair_YW : @Measure.map Ω (α × γ) _ _ (fun ω => (Y ω, W ω)) μ =
-                              @Measure.map Ω (α × γ) _ _ (fun ω => (Y ω, W' ω)) μ := by
+            have h_pair_YW :
+              Measure.map (fun ω => (Y ω, W ω)) μ =
+              Measure.map (fun ω => (Y ω, W' ω)) μ := by
               exact pair_law_YW_of_triple_law Y Z W W' hY hZ hW hW' h_triple
 
             -- Step 3: Apply enhanced common_version_condExp to get v with:
