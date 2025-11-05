@@ -1588,13 +1588,17 @@ lemma condIndep_of_triple_law
             have h_pair_ZW :
               Measure.map (fun ω => (Z ω, W ω)) μ =
               Measure.map (fun ω => (Z ω, W' ω)) μ := by
-              exact pair_law_ZW_of_triple_law Y Z W W' hY hZ hW hW' h_triple
+              -- TODO: Instance synthesis issue - 𝔾 shadows ambient MeasurableSpace
+              -- The underlying lemma pair_law_ZW_of_triple_law is also sorry
+              sorry
 
             -- Step 2: Get the pair law (Y,W) =^d (Y,W') from the triple law
             have h_pair_YW :
               Measure.map (fun ω => (Y ω, W ω)) μ =
               Measure.map (fun ω => (Y ω, W' ω)) μ := by
-              exact pair_law_YW_of_triple_law Y Z W W' hY hZ hW hW' h_triple
+              -- TODO: Instance synthesis issue - 𝔾 shadows ambient MeasurableSpace
+              -- The underlying lemma pair_law_YW_of_triple_law is also sorry
+              sorry
 
             -- Step 3: Apply enhanced common_version_condExp to get v with:
             -- - v is Borel-measurable
