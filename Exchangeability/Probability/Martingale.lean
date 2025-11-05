@@ -307,27 +307,38 @@ lemma upBefore_le_downBefore_rev
       ≤ (fun ω => downcrossingsBefore a b (revProcess X N) N ω) := by
   classical
   intro ω
-  -- Work on the path s and its reverse r
-  set s : ℕ → ℝ := fun n => X n ω
-  set r : ℕ → ℝ := fun n => s (N - n)
 
-  -- Goal: show upBefore(a, b, s, N) ≤ downBefore(a, b, r, N)
-  -- which is upBefore(a, b, s, N) ≤ upBefore(-b, -a, -r, N)
-  --
-  -- Each greedy upcrossing pair (τ_k, σ_k) for s maps to (N-σ_k, N-τ_k) for r:
-  -- - If s(τ_k) ≤ a and s(σ_k) ≥ b, then
-  --   r(N-σ_k) = s(σ_k) ≥ b and r(N-τ_k) = s(τ_k) ≤ a
-  -- - So -r(N-σ_k) ≤ -b and -r(N-τ_k) ≥ -a: a valid up-pair for -r on [-b,-a]
-  -- - The map is injective, so the count is ≤
-  --
-  -- Requires proving from mathlib's greedy upcrossing construction.
-  -- Key mathlib definitions:
-  --   - upcrossingsBefore a b f N ω := sSup {n | upperCrossingTime a b f N n ω < N}
-  --   - upperCrossingTime is defined recursively via hitting times
-  -- Approach: Show that reversing time provides an injection from upcrossing pairs
-  -- (τ_k, σ_k) of X to downcrossing pairs (N-σ_k, N-τ_k) of revProcess X N.
-  -- This is a combinatorial argument about the greedy pairing structure.
-  sorry
+  -- Expand downcrossingsBefore using definition
+  simp only [downcrossingsBefore]
+
+  -- Goal: upcrossingsBefore a b X N ω ≤ upcrossingsBefore (-b) (-a) (negProcess (revProcess X N)) N ω
+
+  -- Both sides are sSup of sets of crossing numbers
+  simp only [upcrossingsBefore]
+
+  -- Strategy: Show that if k < sSup {n | upperCrossingTime a b X N n ω < N},
+  -- then k < sSup {n | upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) N n ω < N}
+
+  by_cases hN : N = 0
+  · -- Trivial when N = 0
+    simp [hN, upperCrossingTime_zero]
+
+  by_cases hemp : {n | upperCrossingTime a b X N n ω < N}.Nonempty
+  · -- If there are upcrossings, use sSup_le_sSup_of_forall_exists_le
+    apply sSup_le_sSup_of_forall_exists_le
+    intro n hn
+    -- Given n with upperCrossingTime a b X N n ω < N,
+    -- find m with upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) N m ω < N
+    -- such that n ≤ m
+    use n  -- Try using the same index
+    constructor
+    · -- Show upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) N n ω < N
+      sorry  -- Need: Time reversal maps n-th upcrossing to n-th downcrossing
+    · -- Show n ≤ n
+      rfl
+  · -- If no upcrossings, the sSup is 0, trivially ≤ anything
+    rw [Set.not_nonempty_iff_eq_empty] at hemp
+    simp [hemp]
 
 /-- **Reverse inequality** via negation symmetry.
 
