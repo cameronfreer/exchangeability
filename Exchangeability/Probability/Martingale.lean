@@ -333,7 +333,17 @@ lemma upBefore_le_downBefore_rev
     use n  -- Try using the same index
     constructor
     · -- Show upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) N n ω < N
-      sorry  -- Need: Time reversal maps n-th upcrossing to n-th downcrossing
+      -- This is the deep combinatorial core:
+      -- If the n-th upcrossing time of X on [a,b] is < N, then
+      -- the n-th upcrossing time of negProcess(revProcess X N) on [-b,-a] is also < N
+      --
+      -- Intuition: An upcrossing pair (τ, σ) for X where X goes from ≤a to ≥b
+      -- becomes a pair (N-σ, N-τ) for revProcess where it goes from ≥b to ≤a
+      -- which after negation becomes an upcrossing from ≤-b to ≥-a
+      --
+      -- This requires analyzing the recursive structure of upperCrossingTime
+      -- via hitting times and showing the transformation preserves the property.
+      sorry
     · -- Show n ≤ n
       rfl
   · -- If no upcrossings, the sSup is 0, trivially ≤ anything
