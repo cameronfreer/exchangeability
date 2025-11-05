@@ -297,27 +297,30 @@ lemma upcrossingsBefore_congr {Ω : Type*} {a b : ℝ} {f g : ℕ → Ω → ℝ
   simp only [Set.mem_setOf_eq]
   rw [upperCrossingTime_congr h]
 
-/-- Helper: Time reversal maps upcrossings to upcrossings of negated reversed process.
-
-If the n-th upcrossing time of X on [a,b] occurs before N,
-then the n-th upcrossing time of -rev(X) on [-b,-a] also occurs before N.
-
-This is the key combinatorial lemma for proving upBefore_le_downBefore_rev. -/
-lemma upperCrossingTime_of_revProcess_lt {Ω : Type*} (X : ℕ → Ω → ℝ) (a b : ℝ) (N : ℕ) (n : ℕ) (ω : Ω)
-    (h : upperCrossingTime a b X N n ω < N) :
-    upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) N n ω < N := by
-  -- Proof by induction on n
+/-- Index is bounded by completion time: n ≤ upperCrossingTime a b f N n ω.
+The greedy algorithm completes n crossings only after at least n steps. -/
+lemma upperCrossingTime_index_le {Ω : Type*} {a b : ℝ} {f : ℕ → Ω → ℝ} {N : ℕ} {n : ℕ} {ω : Ω} :
+    n ≤ upperCrossingTime a b f N n ω := by
   induction n with
   | zero =>
-    -- Base case: n = 0, upperCrossingTime = ⊥ < N
-    simp only [upperCrossingTime_zero, Pi.bot_apply] at h ⊢
-    exact h
+    simp [upperCrossingTime_zero]
   | succ n ih =>
-    -- Inductive step: Assume the result for n, prove for n+1
-    simp only [upperCrossingTime_succ_eq] at h ⊢
-    -- Both sides use hitting times applied to lowerCrossingTime
-    -- Need to show the hitting structure is preserved under negProcess ∘ revProcess
-    sorry  -- This requires relating hitting times of X to hitting times of negProcess(revProcess X)
+    simp only [upperCrossingTime_succ_eq]
+    -- upperCrossingTime (n+1) = hitting after lowerCrossingTime n
+    -- By IH: n ≤ upperCrossingTime n ≤ lowerCrossingTime n
+    -- By le_hitting: lowerCrossingTime n ≤ hitting from lowerCrossingTime n
+    -- So: n + 1 ≤ hitting
+    have h1 : n ≤ upperCrossingTime a b f N n ω := ih
+    have h2 : upperCrossingTime a b f N n ω ≤ lowerCrossingTime a b f N n ω :=
+      upperCrossingTime_le_lowerCrossingTime
+    have h3 : lowerCrossingTime a b f N n ω ≤ N := lowerCrossingTime_le
+    have h4 : lowerCrossingTime a b f N n ω ≤
+              hitting f (Set.Ici b) (lowerCrossingTime a b f N n ω) N ω :=
+      MeasureTheory.le_hitting h3 ω
+    calc n + 1 ≤ lowerCrossingTime a b f N n ω + 1 := by omega
+      _ ≤ lowerCrossingTime a b f N n ω.succ := Nat.add_one_le_iff.mp le_rfl
+      _ ≤ hitting f (Set.Ici b) (lowerCrossingTime a b f N n ω) N ω := by
+          sorry  -- Need: a + 1 ≤ b when a ≤ b, or use Nat.succ_le
 
 /-- **One-way inequality**: upcrossings ≤ downcrossings of time-reversed process.
 
@@ -345,21 +348,43 @@ lemma upBefore_le_downBefore_rev
   · -- Trivial when N = 0
     simp [hN, upperCrossingTime_zero]
 
+  -- The combinatorial core: each greedy upcrossing pair (τ, σ) for X
+  -- maps to a downcrossing pair (N-σ, N-τ) for revProcess X N.
+  -- This injection proves the count inequality.
+
+  -- Both sides count crossings, which are bounded by N
   by_cases hemp : {n | upperCrossingTime a b X N n ω < N}.Nonempty
-  · -- If there are upcrossings, use subset relation to get sSup inequality
+  · -- If there are upcrossings, show the count doesn't decrease under reversal
+    -- The key: if n upcrossings complete before N, then n ≤ N (by upperCrossingTime_index_le)
+    have hbdd1 : BddAbove {n | upperCrossingTime a b X N n ω < N} := by
+      use N
+      simp only [mem_upperBounds, Set.mem_setOf_eq]
+      intro n hn
+      -- n ≤ upperCrossingTime ... n ω < N implies n < N
+      have : n ≤ upperCrossingTime a b X N n ω := upperCrossingTime_index_le
+      omega
+
+    have hbdd2 : BddAbove {n | upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) N n ω < N} := by
+      use N
+      simp only [mem_upperBounds, Set.mem_setOf_eq]
+      intro n hn
+      have : n ≤ upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) N n ω :=
+        upperCrossingTime_index_le
+      omega
+
+    -- The pathwise injection: each upcrossing pair of X gives a downcrossing pair of rev X
+    -- This is implicitly the subset relation we establish
     have hsub : {n | upperCrossingTime a b X N n ω < N} ⊆
                 {n | upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) N n ω < N} := by
       intro n hn
       simp only [Set.mem_setOf_eq] at hn ⊢
-      exact upperCrossingTime_of_revProcess_lt X a b N n ω hn
-    have hbdd : BddAbove {n | upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) N n ω < N} := by
-      use N - 1
-      simp only [mem_upperBounds, Set.mem_setOf_eq]
-      intro a ha
-      -- If upperCrossingTime ... a ω < N, then a < N (since crossing times are increasing with index)
-      -- and elements with crossing time < N are at most N-1
-      omega
-    exact csSup_le_csSup hbdd hemp hsub
+      -- This is where the combinatorial injection happens:
+      -- The greedy algorithm for X on [a,b] yields n complete pairs before N
+      -- The time-reversal map (τ,σ) ↦ (N-σ, N-τ) sends these to downcrossing pairs
+      -- Since the map preserves disjointness, rev X has at least n downcrossings
+      sorry  -- This is the pathwise combinatorial argument
+
+    exact csSup_le_csSup hbdd2 hemp hsub
   · -- If no upcrossings, sSup = 0
     rw [Set.not_nonempty_iff_eq_empty] at hemp
     simp [hemp]
