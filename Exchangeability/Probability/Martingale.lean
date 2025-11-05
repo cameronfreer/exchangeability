@@ -199,52 +199,83 @@ lemma down_neg_flip_eq_up {Ω : Type*} (a b : ℝ) (X : ℕ → Ω → ℝ) :
   funext ω
   simp [upcrossings, downcrossings, downcrossingsBefore, negProcess]
 
+/-- Double negation is identity. -/
+lemma negProcess_negProcess {Ω : Type*} (X : ℕ → Ω → ℝ) :
+    negProcess (negProcess X) = X := by
+  funext n ω
+  simp [negProcess]
+
+/-- Double reversal is identity (when horizons match). -/
+lemma revProcess_revProcess {Ω : Type*} (X : ℕ → Ω → ℝ) (N : ℕ) :
+    revProcess (revProcess X N) N = X := by
+  funext n ω
+  simp only [revProcess]
+  -- Need to show: X (N - (N - n)) ω = X n ω
+  congr 1
+  omega
+
+/-- **One-way inequality**: upcrossings ≤ downcrossings of time-reversed process.
+
+Maps each greedy upcrossing pair (τ_k, σ_k) of X to a downcrossing pair
+(N - σ_k, N - τ_k) of the reversed process. This injection proves the inequality. -/
+lemma upBefore_le_downBefore_rev
+    {Ω : Type*} (X : ℕ → Ω → ℝ) (a b : ℝ) (N : ℕ) :
+    (fun ω => upcrossingsBefore a b X N ω)
+      ≤ (fun ω => downcrossingsBefore a b (revProcess X N) N ω) := by
+  classical
+  intro ω
+  -- Work on the path s and its reverse r
+  set s : ℕ → ℝ := fun n => X n ω
+  set r : ℕ → ℝ := fun n => s (N - n)
+
+  -- Goal: show upBefore(a, b, s, N) ≤ downBefore(a, b, r, N)
+  -- which is upBefore(a, b, s, N) ≤ upBefore(-b, -a, -r, N)
+  --
+  -- Each greedy upcrossing pair (τ_k, σ_k) for s maps to (N-σ_k, N-τ_k) for r:
+  -- - If s(τ_k) ≤ a and s(σ_k) ≥ b, then
+  --   r(N-σ_k) = s(σ_k) ≥ b and r(N-τ_k) = s(τ_k) ≤ a
+  -- - So -r(N-σ_k) ≤ -b and -r(N-τ_k) ≥ -a: a valid up-pair for -r on [-b,-a]
+  -- - The map is injective, so the count is ≤
+  --
+  -- This requires expanding upcrossingsBefore definitions and showing the
+  -- greedy construction is preserved. For now, leave as sorry - the key
+  -- structural insight is documented above.
+  sorry
+
+/-- **Reverse inequality** via negation symmetry.
+
+Apply the one-way lemma to the negated process with flipped interval. -/
+lemma downBefore_rev_le_upBefore
+    {Ω : Type*} (X : ℕ → Ω → ℝ) (a b : ℝ) (N : ℕ) :
+    (fun ω => downcrossingsBefore a b (revProcess X N) N ω)
+      ≤ (fun ω => upcrossingsBefore a b X N ω) := by
+  classical
+  intro ω
+
+  -- Apply upBefore_le_downBefore_rev to the appropriate negated/reversed composition
+  -- The key is that:
+  -- 1. downBefore(a,b,revProcess X N, N) = upBefore(-b,-a, negProcess(revProcess X N), N)
+  -- 2. Apply the one-way lemma to negProcess(revProcess X N) with interval [-b,-a]
+  -- 3. The RHS simplifies via double negation and double reversal to upBefore(a,b,X,N)
+  --
+  -- Detailed algebra: use negProcess_negProcess and revProcess_revProcess to show
+  -- the composition revProcess(negProcess(revProcess X N)) N simplifies appropriately
+  -- after applying downcrossingsBefore definitions.
+  sorry  -- Algebraic manipulation using involutions
+
 /-- **Time-reversal lemma** (process version):
 Upcrossings of X up to N = downcrossings of the reversed process up to N.
 
-This is the classical "reverse time turns ≤a→≥b into ≥b→≤a" bijection. -/
+Proved as two inequalities using negation symmetry. -/
 lemma upcrossingsBefore_eq_downcrossingsBefore_rev
     {Ω : Type*} (X : ℕ → Ω → ℝ) (a b : ℝ) (N : ℕ) :
     (fun ω => upcrossingsBefore a b X N ω)
     = (fun ω => downcrossingsBefore a b (revProcess X N) N ω) := by
   classical
   funext ω
-  -- Reduce to pathwise statement
-  -- Path-level objects: s is the original trajectory, r is its time reversal up to N
-  set s : ℕ → ℝ := fun n => X n ω with hs
-  set r : ℕ → ℝ := fun n => s (N - n) with hr
-
-  -- Goal: show upBefore a b s N = downBefore a b r N
-  --
-  -- Proof sketch (combinatorial):
-  -- 1. Let (τ_k, σ_k) be the greedy upcrossing pairs for s up to N:
-  --    τ_0 = inf { n ≤ N | s n ≤ a }
-  --    σ_0 = inf { n ∈ [τ_0, N] | s n ≥ b }
-  --    etc. Let K = number of completed pairs with σ_k < N.
-  --
-  -- 2. Define the map Φ: (τ_k, σ_k) ↦ (τ'_k, σ'_k) := (N - σ_k, N - τ_k).
-  --    Then τ'_k ≤ σ'_k and:
-  --      r(τ'_k) = s(N - (N - σ_k)) = s(σ_k) ≥ b
-  --      r(σ'_k) = s(N - (N - τ_k)) = s(τ_k) ≤ a
-  --    So (τ'_k, σ'_k) is a valid downcrossing pair for r on [a,b].
-  --
-  -- 3. Φ is order-reversing but bijective between completed pairs:
-  --    σ_k < τ_{k+1} ⇔ σ'_{k+1} < τ'_k  (time reversal)
-  --    Greediness is preserved in reversed order.
-  --
-  -- 4. Therefore: number of completed upcrossings of s before N
-  --            = number of completed downcrossings of r before N.
-  --
-  -- Detailed proof requires expanding definitions of upcrossingsBefore and
-  -- downcrossingsBefore in terms of their recursive/hitting time structure,
-  -- then showing the bijection preserves each step of the greedy construction.
-  --
-  -- Since downcrossingsBefore is defined as upcrossingsBefore(-b, -a, negProcess(_)),
-  -- this reduces to showing:
-  --   upBefore(a, b, s, N) = upBefore(-b, -a, -r, N)
-  -- which follows from the time-reversal + negation bijection on crossing pairs.
-
-  sorry  -- TODO: 15-20 line combinatorial proof expanding the greedy pair construction
+  apply le_antisymm
+  · exact upBefore_le_downBefore_rev X a b N ω
+  · exact downBefore_rev_le_upBefore X a b N ω
 
 /-- Equivalent "up ↔ up" form via negation + interval flip.
 Directly usable for the upcrossing inequality on negated reversed process. -/
@@ -476,22 +507,77 @@ lemma condExp_exists_ae_limit_antitone
             congr 1
             exact up_neg_flip_eq_down (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n)
         _ ≤ C := by
-            -- downcrossings(a, b, revCEFinite) = upcrossings(-b, -a, -revCEFinite) by definition
-            -- We need to bound this by C.
-            -- Approach: -revCEFinite is also a martingale with same L¹ norm,
-            -- so upcrossings_bdd_uniform applies to it on interval (-b, -a)
-            -- giving the same bound C (symmetric in the filtration/process).
-            --
-            -- Alternatively: expand downcrossings as supremum and bound each term
-            -- using the submartingale upcrossing inequality on -revCEFinite.
-            --
-            -- Key facts:
-            -- 1. revCEFinite_martingale shows revCEFinite is a martingale
-            -- 2. Negation preserves martingale property
-            -- 3. L¹ norm of -revCEFinite equals that of revCEFinite
-            -- 4. Upcrossing bound depends on L¹ norm and interval width
-            -- 5. Interval width: (-a) - (-b) = b - a (same as original)
-            sorry  -- TODO: Invoke upcrossings_bdd_uniform for -revCEFinite on (-b,-a)
+            -- downcrossings are bounded by applying Doob's inequality to -revCEFinite
+            simp only [downcrossings, downcrossingsBefore, negProcess]
+
+            -- The negated process -revCEFinite is also a martingale
+            have h_neg_submart : Submartingale (negProcess (fun n => revCEFinite (μ := μ) f 𝔽 N n))
+                                                (revFiltration 𝔽 h_antitone h_le N) μ :=
+              ((revCEFinite_martingale (μ := μ) h_antitone h_le f hf N).neg).submartingale
+
+            -- Apply Doob's upcrossing inequality to -revCEFinite on interval [-b, -a]
+            have key_neg := h_neg_submart.mul_lintegral_upcrossings_le_lintegral_pos_part (-b) (-a)
+
+            -- Bound E[(-revCEFinite - (-b))⁺] uniformly
+            have h_neg_bound : ∀ M, ∫⁻ ω, ENNReal.ofReal ((negProcess (fun n => revCEFinite (μ := μ) f 𝔽 N n) M ω - (-b))⁺) ∂μ
+                                     ≤ ENNReal.ofReal (eLpNorm f 1 μ).toReal + ENNReal.ofReal |b| := by
+              intro M
+              simp only [negProcess]
+              calc ∫⁻ ω, ENNReal.ofReal ((- revCEFinite (μ := μ) f 𝔽 N M ω - (-b))⁺) ∂μ
+                  ≤ ∫⁻ ω, ENNReal.ofReal (|- revCEFinite (μ := μ) f 𝔽 N M ω| + |b|) ∂μ := by
+                      apply lintegral_mono
+                      intro ω
+                      refine ENNReal.ofReal_le_ofReal ?_
+                      exact posPart_le_abs_add_abs _ _
+                _ = ∫⁻ ω, ENNReal.ofReal (|revCEFinite (μ := μ) f 𝔽 N M ω| + |b|) ∂μ := by simp [abs_neg]
+                _ ≤ ∫⁻ ω, (ENNReal.ofReal |revCEFinite (μ := μ) f 𝔽 N M ω|) ∂μ + ENNReal.ofReal |b| := by
+                      rw [lintegral_add_right _ measurable_const]
+                      gcongr
+                      exact lintegral_mono fun ω => ENNReal.ofReal_le_ofReal (le_add_of_nonneg_right (abs_nonneg _))
+                _ ≤ ENNReal.ofReal (eLpNorm f 1 μ).toReal + ENNReal.ofReal |b| := by
+                      gcongr
+                      -- |revCEFinite| in L¹ is bounded by ‖f‖₁
+                      calc ∫⁻ ω, ENNReal.ofReal |revCEFinite (μ := μ) f 𝔽 N M ω| ∂μ
+                          = ∫⁻ ω, ‖revCEFinite (μ := μ) f 𝔽 N M ω‖₊ ∂μ := by
+                              congr with ω
+                              rw [Real.nnnorm_of_nonneg (abs_nonneg _)]
+                              rfl
+                        _ = eLpNorm (revCEFinite (μ := μ) f 𝔽 N M) 1 μ := by
+                              rw [eLpNorm_one_eq_lintegral_nnnorm]
+                        _ ≤ eLpNorm f 1 μ := by
+                              exact eLpNorm_one_condExp_le_eLpNorm f
+                        _ = ENNReal.ofReal (eLpNorm f 1 μ).toReal := by
+                              rw [ENNReal.ofReal_toReal]
+                              exact (memLp_one_iff_integrable.mpr hf).eLpNorm_ne_top
+
+            -- Bound the supremum
+            have sup_bdd : ⨆ M, ∫⁻ ω, ENNReal.ofReal ((negProcess (fun n => revCEFinite (μ := μ) f 𝔽 N n) M ω - (-b))⁺) ∂μ
+                          ≤ ENNReal.ofReal (eLpNorm f 1 μ).toReal + ENNReal.ofReal |b| := by
+              apply iSup_le
+              intro M
+              exact h_neg_bound M
+
+            -- Combine to get the bound
+            have step1 : (∫⁻ ω, upcrossings (-↑b) (-↑a) (negProcess (fun n => revCEFinite (μ := μ) f 𝔽 N n)) ω ∂μ) * ENNReal.ofReal ((-a) - (-b))
+                          ≤ ⨆ M, ∫⁻ ω, ENNReal.ofReal ((negProcess (fun n => revCEFinite (μ := μ) f 𝔽 N n) M ω - (-b))⁺) ∂μ := by
+              rw [mul_comm]; exact key_neg
+
+            have hab_neg : -b < -a := by linarith
+
+            calc ∫⁻ ω, (⨆ M, ((upcrossingsBefore (-↑b) (-↑a) (negProcess (fun n => revCEFinite (μ := μ) f 𝔽 N n)) M ω : ℕ) : ℝ≥0∞)) ∂μ
+                ≤ (⨆ M, ∫⁻ ω, ENNReal.ofReal ((negProcess (fun n => revCEFinite (μ := μ) f 𝔽 N n) M ω - (-b))⁺) ∂μ) / ENNReal.ofReal ((-a) - (-b)) := by
+                    rw [← upcrossings]
+                    refine (ENNReal.le_div_iff_mul_le ?_ ?_).2 step1
+                    · left; exact (ENNReal.ofReal_pos.2 (sub_pos.2 hab_neg)).ne'
+                    · left; exact ENNReal.ofReal_ne_top
+              _ ≤ (ENNReal.ofReal (eLpNorm f 1 μ).toReal + ENNReal.ofReal |b|) / ENNReal.ofReal (b - a) := by
+                    gcongr
+                    · exact sup_bdd
+                    · ring_nf
+              _ ≤ C := by
+                    unfold C
+                    gcongr
+                    exact le_add_of_nonneg_right (abs_nonneg b)
 
     -- Use monotone convergence on the ORIGINAL process (which IS monotone in N)
     have h_exp_orig : ∫⁻ ω, upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω ∂μ ≤ C := by
