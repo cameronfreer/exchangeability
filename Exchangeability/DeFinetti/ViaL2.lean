@@ -2931,144 +2931,6 @@ private lemma cesaro_cauchy_rho_lt
   -- Eta-reduce: (fun ω => blockAvg f X 0 n ω - blockAvg f X 0 n' ω) = blockAvg f X 0 n - blockAvg f X 0 n'
   exact h_bound
 
-/-- Helper lemma: L² limit exists via completeness (Step 2 of main proof).
-
-Given a Cauchy sequence of block averages in L², completeness of L²(μ) guarantees
-existence of a limit α_f with:
-- α_f ∈ L²(μ)
-- blockAvg f X 0 n → α_f in L² as n → ∞
-
-This is the core application of Hilbert space completeness in the proof. -/
-private lemma l2_limit_from_cauchy
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {X : ℕ → Ω → ℝ} (hX_meas : ∀ i, Measurable (X i))
-    (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1)
-    (hCauchy : ∀ ε > 0, ∃ N, ∀ {n n'}, n ≥ N → n' ≥ N →
-      eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ < ε) :
-    ∃ α_f, MemLp α_f 2 μ ∧
-      Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0) := by
-  -- Step 1: Show each blockAvg is in L²
-  have hblockAvg_memLp : ∀ n, n > 0 → MemLp (blockAvg f X 0 n) 2 μ := by
-    intro n hn_pos
-    -- blockAvg is bounded since f is bounded
-    apply memLp_two_of_bounded
-    · -- Measurable: blockAvg is a finite sum of measurable functions
-      show Measurable (fun ω => (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (0 + k) ω)))
-      exact Measurable.const_mul (Finset.measurable_sum _ fun k _ =>
-        hf_meas.comp (hX_meas (0 + k))) _
-    intro ω
-    -- |blockAvg f X 0 n ω| ≤ 1 since |f| ≤ 1
-    show |(n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (0 + k) ω))| ≤ 1
-    calc |(n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (0 + k) ω))|
-        = (n : ℝ)⁻¹ * |(Finset.range n).sum (fun k => f (X (0 + k) ω))| := by
-          rw [abs_mul, abs_inv, abs_of_nonneg]
-          exact Nat.cast_nonneg n
-      _ ≤ (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => |f (X (0 + k) ω)|) := by
-          apply mul_le_mul_of_nonneg_left
-          · exact Finset.abs_sum_le_sum_abs _ _
-          · exact inv_nonneg.mpr (Nat.cast_nonneg n)
-      _ ≤ (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => 1) := by
-          apply mul_le_mul_of_nonneg_left
-          · apply Finset.sum_le_sum
-            intro k _
-            exact hf_bdd (X (0 + k) ω)
-          · exact inv_nonneg.mpr (Nat.cast_nonneg n)
-      _ = (n : ℝ)⁻¹ * n := by simp
-      _ = 1 := by
-          field_simp [Nat.pos_iff_ne_zero.mp hn_pos]
-
-  -- For n = 0, handle separately
-  have hblockAvg_memLp_all : ∀ n, MemLp (blockAvg f X 0 n) 2 μ := by
-    intro n
-    by_cases hn : n > 0
-    · exact hblockAvg_memLp n hn
-    · -- n = 0 case: blockAvg is just the constant 0 function
-      have : n = 0 := by omega
-      subst this
-      -- When n=0, Finset.range 0 is empty, so sum = 0
-      -- blockAvg f X 0 0 = 0⁻¹ * 0, which we treat as the zero function
-      have h_eq : blockAvg f X 0 0 = fun ω => (0 : ℝ) := by
-        ext ω
-        simp [blockAvg, Finset.range_zero, Finset.sum_empty]
-      rw [h_eq]
-      -- Constant 0 function is in L² (bounded by 1)
-      apply memLp_two_of_bounded (M := 1) measurable_const
-      intro ω
-      norm_num
-
-  -- Step 2: Define sequence in L² space
-  let u : ℕ → Lp ℝ 2 μ := fun n =>
-    if hn : n > 0 then
-      (hblockAvg_memLp n hn).toLp (blockAvg f X 0 n)
-    else
-      0  -- n = 0 case
-
-  -- Step 3: Prove sequence is Cauchy
-  have hCauchySeq : CauchySeq u := by
-    rw [Metric.cauchySeq_iff]
-    intro ε hε
-    obtain ⟨N, hN⟩ := hCauchy (ENNReal.ofReal ε) (by simp [hε])
-    use max N 1  -- Ensure N is at least 1
-    intro n hn m hm
-    -- For n, m ≥ max N 1, both are > 0, so we can unfold u
-    have hn_pos : n > 0 := Nat.lt_of_lt_of_le (Nat.zero_lt_one) (Nat.le_trans (Nat.le_max_right N 1) hn)
-    have hm_pos : m > 0 := Nat.lt_of_lt_of_le (Nat.zero_lt_one) (Nat.le_trans (Nat.le_max_right N 1) hm)
-    have hn' : n ≥ N := Nat.le_trans (Nat.le_max_left N 1) hn
-    have hm' : m ≥ N := Nat.le_trans (Nat.le_max_left N 1) hm
-    simp only [u, dif_pos hn_pos, dif_pos hm_pos]
-    -- Use dist = (eLpNorm ...).toReal and the fact that toLp preserves eLpNorm
-    rw [dist_comm, dist_eq_norm, Lp.norm_def]
-    -- Now goal is: eLpNorm (toLp m - toLp n) 2 μ).toReal < ε
-    -- Use MemLp.toLp_sub to rewrite the difference
-    rw [← (hblockAvg_memLp m hm_pos).toLp_sub (hblockAvg_memLp n hn_pos)]
-    -- Now: (eLpNorm (coeFn (toLp (blockAvg m - blockAvg n))) 2 μ).toReal < ε
-    -- coeFn of toLp is ae-equal to original, so eLpNorms are equal
-    rw [eLpNorm_congr_ae (((hblockAvg_memLp m hm_pos).sub (hblockAvg_memLp n hn_pos)).coeFn_toLp)]
-    -- Now: (eLpNorm (blockAvg m - blockAvg n) 2 μ).toReal < ε
-    -- Use toReal_lt_of_lt_ofReal: if a < ofReal b then a.toReal < b
-    exact ENNReal.toReal_lt_of_lt_ofReal (hN hm' hn')
-
-  -- Step 4: Extract limit from completeness
-  haveI : CompleteSpace (Lp ℝ 2 μ) := by infer_instance
-  obtain ⟨α_L2, h_tendsto⟩ := cauchySeq_tendsto_of_complete hCauchySeq
-
-  -- Step 5: Extract representative function
-  -- α_L2 : Lp ℝ 2 μ is an ae-equivalence class
-  -- In Lean 4, Lp coerces to a function type automatically
-  let α_f : Ω → ℝ := α_L2
-
-  -- Properties of α_f
-  have hα_memLp : MemLp α_f 2 μ := Lp.memLp α_L2
-
-  have hα_limit : Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0) := by
-    -- Use Lp.tendsto_Lp_iff_tendsto_eLpNorm': Tendsto f (𝓝 f_lim) ↔ Tendsto (eLpNorm (f - f_lim)) (𝓝 0)
-    rw [Lp.tendsto_Lp_iff_tendsto_eLpNorm'] at h_tendsto
-    refine h_tendsto.congr' ?_
-    filter_upwards [eventually_ge_atTop 1] with n hn
-    have hn_pos : n > 0 := Nat.zero_lt_of_lt hn
-    simp only [u, dif_pos hn_pos, α_f]
-    -- Show: eLpNorm (↑(toLp (blockAvg n)) - ↑α_L2) 2 μ = eLpNorm (blockAvg n - ↑↑α_L2) 2 μ
-    refine eLpNorm_congr_ae ?_
-    filter_upwards [(hblockAvg_memLp n hn_pos).coeFn_toLp] with ω hω
-    simp only [Pi.sub_apply, hω]
-
-  -- Close the existential proof
-  exact ⟨α_f, hα_memLp, hα_limit⟩
-
-/-- Helper lemma: tail-measurability of L² limit of block averages.
-
-Given an L² limit α_f of block averages, if the block averages are measurable
-with respect to the tail σ-algebra for large N, then α_f is tail-measurable. -/
-private lemma tail_measurability_of_blockAvg
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {X : ℕ → Ω → ℝ}
-    (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1)
-    (hX_meas : ∀ i, Measurable (X i))
-    (α_f : Ω → ℝ) (hα_memLp : MemLp α_f 2 μ)
-    (hα_limit : Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0)) :
-    Measurable[TailSigma.tailSigma X] α_f := by
-  sorry -- TODO: Extract from lines 3545-3625
-
 /-- Helper lemma: Uniform covariance structure of centered variables (Steps 2-5 from hCauchy).
 
 Given contractable sequence X and function f, the centered variables Z_i = f(X_i) - m
@@ -3278,6 +3140,337 @@ private lemma centered_uniform_covariance
   -- Combine all results
   exact ⟨hZ_meas, hZ_contract, hZ_var_uniform, hZ_mean_zero, hZ_cov_uniform⟩
 
+/-- Helper lemma: Centered variables Z = f(X) - m are bounded by 2.
+
+When |f| ≤ 1 and m = E[f(X_0)], then |Z i ω| = |f(X i ω) - m| ≤ 2. -/
+private lemma centered_variable_bounded
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {X : ℕ → Ω → ℝ} (hX_meas : ∀ i, Measurable (X i))
+    (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1)
+    (m : ℝ) (hm_def : m = ∫ ω, f (X 0 ω) ∂μ)
+    (Z : ℕ → Ω → ℝ) (hZ_def : ∀ i ω, Z i ω = f (X i ω) - m) :
+    ∀ i ω, |Z i ω| ≤ 2 := by
+  intro i ω
+  simp only [hZ_def]
+  calc |f (X i ω) - m|
+      ≤ |f (X i ω)| + |m| := abs_sub _ _
+    _ ≤ 1 + 1 := by
+        have h1 : |f (X i ω)| ≤ 1 := hf_bdd (X i ω)
+        have h2 : |m| ≤ 1 := by
+          have hfX_int : Integrable (fun ω => f (X 0 ω)) μ := by
+            apply Integrable.of_bound
+            · exact (hf_meas.comp (hX_meas 0)).aestronglyMeasurable
+            · filter_upwards [] with ω; exact hf_bdd (X 0 ω)
+          calc |m|
+              = |∫ ω, f (X 0 ω) ∂μ| := by rw [hm_def]
+            _ ≤ ∫ ω, |f (X 0 ω)| ∂μ := abs_integral_le_integral_abs
+            _ ≤ ∫ ω, 1 ∂μ := by
+                apply integral_mono_ae hfX_int.abs (integrable_const 1)
+                filter_upwards [] with ω; exact hf_bdd (X 0 ω)
+            _ = 1 := by simp
+        linarith
+    _ = 2 := by norm_num
+
+/-- Helper lemma: Correlation coefficient is bounded by 1 via Cauchy-Schwarz.
+
+Given variables Z with uniform variance σSq > 0 and bound |Z i ω| ≤ M,
+proves |ρ| ≤ 1 where ρ = cov(Z_0,Z_1)/σSq. -/
+private lemma correlation_coefficient_bounded
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (Z : ℕ → Ω → ℝ) (hZ_meas : ∀ i, Measurable (Z i))
+    (M : ℝ) (hZ_bdd : ∀ i ω, |Z i ω| ≤ M)
+    (σSq : ℝ) (hσ_pos : σSq > 0) (h_σSq_def : σSq = ∫ ω, (Z 0 ω)^2 ∂μ)
+    (covZ : ℝ) (h_covZ_def : covZ = ∫ ω, Z 0 ω * Z 1 ω ∂μ)
+    (ρ : ℝ) (h_ρ_def : ρ = covZ / σSq)
+    (hZ_var_uniform : ∀ i, ∫ ω, (Z i ω)^2 ∂μ = ∫ ω, (Z 0 ω)^2 ∂μ) :
+    -1 ≤ ρ ∧ ρ ≤ 1 := by
+  -- Z 0 and Z 1 are in L²(μ) since they are bounded by M
+  have hZ0_L2 : MemLp (Z 0) 2 μ := by
+    apply memLp_two_of_bounded (hZ_meas 0)
+    exact hZ_bdd 0
+
+  have hZ1_L2 : MemLp (Z 1) 2 μ := by
+    apply memLp_two_of_bounded (hZ_meas 1)
+    exact hZ_bdd 1
+
+  -- Apply Cauchy-Schwarz: |∫ Z₀·Z₁| ≤ sqrt(∫ Z₀²)·sqrt(∫ Z₁²)
+  have h_CS := Exchangeability.Probability.IntegrationHelpers.abs_integral_mul_le_L2 hZ0_L2 hZ1_L2
+
+  -- By uniform variance: ∫ Z₁² = ∫ Z₀² = σSq
+  have h_Z1_var : ∫ ω, (Z 1 ω) ^ 2 ∂μ = σSq := by
+    rw [hZ_var_uniform 1, h_σSq_def]
+
+  -- So Cauchy-Schwarz gives: |covZ| ≤ sqrt(σSq)·sqrt(σSq) = σSq
+  have h_covZ_bd : |covZ| ≤ σSq := by
+    simp only [h_covZ_def, h_σSq_def]
+    calc |∫ ω, Z 0 ω * Z 1 ω ∂μ|
+        ≤ (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 1 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) := h_CS
+      _ = (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) := by rw [h_Z1_var, h_σSq_def]
+      _ = (∫ ω, (Z 0 ω) ^ 2 ∂μ) := by
+          rw [← Real.rpow_add_of_nonneg (integral_nonneg (fun ω => sq_nonneg _))]
+          <;> norm_num
+
+  -- Therefore |ρ| ≤ 1, which gives -1 ≤ ρ ≤ 1
+  have h_ρ_abs : |ρ| ≤ 1 := by
+    simp only [h_ρ_def]
+    rw [abs_div, abs_of_pos hσ_pos]
+    exact div_le_one_of_le₀ h_covZ_bd hσ_pos.le
+
+  constructor
+  · linarith [abs_le.mp h_ρ_abs]
+  · exact (abs_le.mp h_ρ_abs).2
+
+/-! ### Performance wrappers to stop unfolding `blockAvg` inside `eLpNorm` -/
+
+/-- Frozen alias for `blockAvg f X 0 n`. Regular def (not `@[irreducible]`)
+    but we provide helper lemmas to avoid unfolding in timeout-prone contexts.
+
+    This wrapper prevents expensive elaboration timeouts when `blockAvg` appears
+    inside `eLpNorm` goals, by using pre-proved lemmas instead of unfolding. -/
+def blockAvgFrozen {Ω : Type*} (f : ℝ → ℝ) (X : ℕ → Ω → ℝ) (n : ℕ) : Ω → ℝ :=
+  fun ω => blockAvg f X 0 n ω
+
+@[simp]
+lemma blockAvgFrozen_def {Ω : Type*} (f : ℝ → ℝ) (X : ℕ → Ω → ℝ) (n : ℕ) (ω : Ω) :
+    blockAvgFrozen f X n ω = blockAvg f X 0 n ω :=
+  rfl
+
+lemma blockAvgFrozen_measurable {Ω : Type*} [MeasurableSpace Ω]
+    (f : ℝ → ℝ) (X : ℕ → Ω → ℝ)
+    (hf : Measurable f) (hX : ∀ i, Measurable (X i)) (n : ℕ) :
+    Measurable (blockAvgFrozen f X n) :=
+  blockAvg_measurable f X hf hX 0 n
+
+lemma blockAvgFrozen_abs_le_one {Ω : Type*} [MeasurableSpace Ω]
+    (f : ℝ → ℝ) (X : ℕ → Ω → ℝ)
+    (hf_bdd : ∀ x, |f x| ≤ 1) (n : ℕ) (ω : Ω) :
+    |blockAvgFrozen f X n ω| ≤ 1 :=
+  blockAvg_abs_le_one f X hf_bdd 0 n ω
+
+lemma blockAvgFrozen_diff_memLp_two {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
+    [IsProbabilityMeasure μ]
+    (f : ℝ → ℝ) (X : ℕ → Ω → ℝ)
+    (hf : Measurable f) (hX : ∀ i, Measurable (X i))
+    (hf_bdd : ∀ x, |f x| ≤ 1) (n n' : ℕ) :
+    MemLp (fun ω => blockAvgFrozen f X n ω - blockAvgFrozen f X n' ω) (2 : ℝ≥0∞) μ := by
+  apply memLp_two_of_bounded (M := 2)
+  · exact (blockAvgFrozen_measurable f X hf hX n).sub (blockAvgFrozen_measurable f X hf hX n')
+  intro ω
+  have hn  : |blockAvgFrozen f X n  ω| ≤ 1 := blockAvgFrozen_abs_le_one f X hf_bdd n  ω
+  have hn' : |blockAvgFrozen f X n' ω| ≤ 1 := blockAvgFrozen_abs_le_one f X hf_bdd n' ω
+  calc |blockAvgFrozen f X n ω - blockAvgFrozen f X n' ω|
+      ≤ |blockAvgFrozen f X n ω| + |blockAvgFrozen f X n' ω| := by
+        simpa [sub_eq_add_neg] using abs_add (blockAvgFrozen f X n ω) (- blockAvgFrozen f X n' ω)
+    _ ≤ 1 + 1 := add_le_add hn hn'
+    _ = 2 := by norm_num
+
+set_option maxHeartbeats 500000 in
+/-- Helper lemma: Block averages form a Cauchy sequence in L² (Step 1 of main proof).
+
+Given contractable X and bounded f, the block averages form a Cauchy sequence in L².
+This uses the L² contractability bound and uniform covariance structure. -/
+private lemma blockAvg_cauchy_in_L2
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {X : ℕ → Ω → ℝ} (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1) :
+    ∀ ε > 0, ∃ N, ∀ {n n'}, n ≥ N → n' ≥ N →
+      eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ < ε := by
+  intro ε hε
+
+  -- Define centered variables Z_i = f(X_i) - E[f(X_0)]
+  let m := ∫ ω, f (X 0 ω) ∂μ
+  let Z := fun i ω => f (X i ω) - m
+
+  -- Establish uniform covariance structure
+  have hZ_def : ∀ i ω, Z i ω = f (X i ω) - m := fun i ω => rfl
+  have ⟨hZ_meas, hZ_contract, hZ_var_uniform, hZ_mean_zero, hZ_cov_uniform⟩ :=
+    centered_uniform_covariance hX_contract hX_meas f hf_meas hf_bdd m rfl Z hZ_def
+
+  -- Define variance and correlation
+  let σSq := ∫ ω, (Z 0 ω)^2 ∂μ
+  let covZ := ∫ ω, Z 0 ω * Z 1 ω ∂μ
+
+  -- Case split on variance
+  by_cases hσ_pos : σSq > 0
+  · -- Non-degenerate case
+    let ρ := covZ / σSq
+
+    -- Bound |ρ| ≤ 1 using helpers
+    have hZ_bdd := centered_variable_bounded hX_meas f hf_meas hf_bdd m rfl Z hZ_def
+    have hρ_bd := correlation_coefficient_bounded Z hZ_meas 2 hZ_bdd
+        σSq hσ_pos rfl covZ rfl ρ rfl hZ_var_uniform
+
+    let Cf := 2 * σSq * (1 - ρ)
+
+    by_cases hρ_lt : ρ < 1
+    · -- Standard case: ρ < 1
+      exact cesaro_cauchy_rho_lt hX_contract hX_meas f hf_meas hf_bdd
+        Z hZ_meas hZ_contract hZ_var_uniform hZ_mean_zero hZ_cov_uniform
+        σSq hσ_pos rfl ρ hρ_bd rfl hρ_lt Cf rfl ε hε
+
+    · -- Edge case: ρ = 1 (perfect correlation) → blockAvg values are ae-equal
+      have hρ_eq : ρ = 1 := le_antisymm hρ_bd.2 (le_of_not_lt hρ_lt)
+      -- When ρ = 1, Z_i = Z_0 a.e., so blockAvg values are equal a.e.
+      have h_ae_eq : ∀ n n', ∀ᵐ ω ∂μ, blockAvg f X 0 n ω = blockAvg f X 0 n' ω := by
+        sorry  -- TODO: ρ = 1 ⟹ Z_i = Z_0 a.e. ⟹ blockAvg constant a.e.
+      -- Trivial Cauchy: if values are ae-equal, eLpNorm of difference is 0 < ε
+      use 1
+      intros n n' _ _
+      -- Show eLpNorm (blockAvg n - blockAvg n') = 0
+      have h_ae : ∀ᵐ ω ∂μ, (blockAvg f X 0 n - blockAvg f X 0 n') ω = 0 := by
+        filter_upwards [h_ae_eq n n'] with ω hω
+        simp only [Pi.sub_apply, hω, sub_self]
+      have h_norm_zero : eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ = 0 := by
+        trans eLpNorm (fun ω => 0) 2 μ
+        · exact eLpNorm_congr_ae h_ae
+        · exact eLpNorm_zero
+      rw [h_norm_zero]
+      exact hε
+
+  · -- Degenerate case: σSq = 0 → Z is constant a.e. → blockAvg constant a.e.
+    push_neg at hσ_pos
+    have hσSq_zero : σSq = 0 := by
+      have hσSq_nonneg : 0 ≤ σSq := by
+        simp only [σSq]
+        apply integral_nonneg
+        intro ω
+        exact sq_nonneg _
+      linarith
+    -- When σSq = 0, Z_0 = 0 a.e., so blockAvg values are equal a.e.
+    have h_ae_eq : ∀ n n', ∀ᵐ ω ∂μ, blockAvg f X 0 n ω = blockAvg f X 0 n' ω := by
+      sorry  -- TODO: σSq = 0 ⟹ Z_0 = 0 a.e. ⟹ blockAvg constant a.e.
+    -- Trivial Cauchy: if values are ae-equal, eLpNorm of difference is 0 < ε
+    use 1
+    intros n n' _ _
+    -- Show eLpNorm (blockAvg n - blockAvg n') = 0
+    have h_ae : ∀ᵐ ω ∂μ, (blockAvg f X 0 n - blockAvg f X 0 n') ω = 0 := by
+      filter_upwards [h_ae_eq n n'] with ω hω
+      simp only [Pi.sub_apply, hω, sub_self]
+    have h_norm_zero : eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ = 0 := by
+      trans eLpNorm (fun ω => 0) 2 μ
+      · exact eLpNorm_congr_ae h_ae
+      · exact eLpNorm_zero
+    rw [h_norm_zero]
+    exact hε
+
+/-- Helper lemma: L² limit exists via completeness (Step 2 of main proof).
+
+Given a Cauchy sequence of block averages in L², completeness of L²(μ) guarantees
+existence of a limit α_f with:
+- α_f ∈ L²(μ)
+- blockAvg f X 0 n → α_f in L² as n → ∞
+
+This is the core application of Hilbert space completeness in the proof. -/
+private lemma l2_limit_from_cauchy
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {X : ℕ → Ω → ℝ} (hX_meas : ∀ i, Measurable (X i))
+    (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1)
+    (hCauchy : ∀ ε > 0, ∃ N, ∀ {n n'}, n ≥ N → n' ≥ N →
+      eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ < ε) :
+    ∃ α_f, MemLp α_f 2 μ ∧
+      Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0) := by
+  -- Step 1: Show each blockAvg is in L² using frozen wrapper to avoid timeouts
+  have hblockAvg_memLp : ∀ n, n > 0 → MemLp (blockAvg f X 0 n) 2 μ := by
+    intro n hn_pos
+    -- Convert to blockAvgFrozen to use precomputed lemmas
+    show MemLp (blockAvgFrozen f X n) 2 μ
+    apply memLp_two_of_bounded (M := 1)
+    · exact blockAvgFrozen_measurable f X hf_meas hX_meas n
+    exact blockAvgFrozen_abs_le_one f X hf_bdd n
+
+  -- For n = 0, handle separately
+  have hblockAvg_memLp_all : ∀ n, MemLp (blockAvg f X 0 n) 2 μ := by
+    intro n
+    by_cases hn : n > 0
+    · exact hblockAvg_memLp n hn
+    · -- n = 0 case: blockAvg is just the constant 0 function
+      have : n = 0 := by omega
+      subst this
+      -- When n=0, Finset.range 0 is empty, so sum = 0
+      -- blockAvg f X 0 0 = 0⁻¹ * 0, which we treat as the zero function
+      have h_eq : blockAvg f X 0 0 = fun ω => (0 : ℝ) := by
+        ext ω
+        simp [blockAvg, Finset.range_zero, Finset.sum_empty]
+      rw [h_eq]
+      -- Constant 0 function is in L² (bounded by 1)
+      apply memLp_two_of_bounded (M := 1) measurable_const
+      intro ω
+      norm_num
+
+  -- Step 2: Define sequence in L² space
+  let u : ℕ → Lp ℝ 2 μ := fun n =>
+    if hn : n > 0 then
+      (hblockAvg_memLp n hn).toLp (blockAvg f X 0 n)
+    else
+      0  -- n = 0 case
+
+  -- Step 3: Prove sequence is Cauchy
+  have hCauchySeq : CauchySeq u := by
+    rw [Metric.cauchySeq_iff]
+    intro ε hε
+    obtain ⟨N, hN⟩ := hCauchy (ENNReal.ofReal ε) (by simp [hε])
+    use max N 1  -- Ensure N is at least 1
+    intro n hn m hm
+    -- For n, m ≥ max N 1, both are > 0, so we can unfold u
+    have hn_pos : n > 0 := Nat.lt_of_lt_of_le (Nat.zero_lt_one) (Nat.le_trans (Nat.le_max_right N 1) hn)
+    have hm_pos : m > 0 := Nat.lt_of_lt_of_le (Nat.zero_lt_one) (Nat.le_trans (Nat.le_max_right N 1) hm)
+    have hn' : n ≥ N := Nat.le_trans (Nat.le_max_left N 1) hn
+    have hm' : m ≥ N := Nat.le_trans (Nat.le_max_left N 1) hm
+    simp only [u, dif_pos hn_pos, dif_pos hm_pos]
+    -- Use dist = (eLpNorm ...).toReal and the fact that toLp preserves eLpNorm
+    rw [dist_comm, dist_eq_norm, Lp.norm_def]
+    -- Now goal is: eLpNorm (toLp m - toLp n) 2 μ).toReal < ε
+    -- Use MemLp.toLp_sub to rewrite the difference
+    rw [← (hblockAvg_memLp m hm_pos).toLp_sub (hblockAvg_memLp n hn_pos)]
+    -- Now: (eLpNorm (coeFn (toLp (blockAvg m - blockAvg n))) 2 μ).toReal < ε
+    -- coeFn of toLp is ae-equal to original, so eLpNorms are equal
+    rw [eLpNorm_congr_ae (((hblockAvg_memLp m hm_pos).sub (hblockAvg_memLp n hn_pos)).coeFn_toLp)]
+    -- Now: (eLpNorm (blockAvg m - blockAvg n) 2 μ).toReal < ε
+    -- Use toReal_lt_of_lt_ofReal: if a < ofReal b then a.toReal < b
+    exact ENNReal.toReal_lt_of_lt_ofReal (hN hm' hn')
+
+  -- Step 4: Extract limit from completeness
+  haveI : CompleteSpace (Lp ℝ 2 μ) := by infer_instance
+  obtain ⟨α_L2, h_tendsto⟩ := cauchySeq_tendsto_of_complete hCauchySeq
+
+  -- Step 5: Extract representative function
+  -- α_L2 : Lp ℝ 2 μ is an ae-equivalence class
+  -- In Lean 4, Lp coerces to a function type automatically
+  let α_f : Ω → ℝ := α_L2
+
+  -- Properties of α_f
+  have hα_memLp : MemLp α_f 2 μ := Lp.memLp α_L2
+
+  have hα_limit : Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0) := by
+    -- Use Lp.tendsto_Lp_iff_tendsto_eLpNorm': Tendsto f (𝓝 f_lim) ↔ Tendsto (eLpNorm (f - f_lim)) (𝓝 0)
+    rw [Lp.tendsto_Lp_iff_tendsto_eLpNorm'] at h_tendsto
+    refine h_tendsto.congr' ?_
+    filter_upwards [eventually_ge_atTop 1] with n hn
+    have hn_pos : n > 0 := Nat.zero_lt_of_lt hn
+    simp only [u, dif_pos hn_pos, α_f]
+    -- Show: eLpNorm (↑(toLp (blockAvg n)) - ↑α_L2) 2 μ = eLpNorm (blockAvg n - ↑↑α_L2) 2 μ
+    refine eLpNorm_congr_ae ?_
+    filter_upwards [(hblockAvg_memLp n hn_pos).coeFn_toLp] with ω hω
+    simp only [Pi.sub_apply, hω]
+
+  -- Close the existential proof
+  exact ⟨α_f, hα_memLp, hα_limit⟩
+
+/-- Helper lemma: tail-measurability of L² limit of block averages.
+
+Given an L² limit α_f of block averages, if the block averages are measurable
+with respect to the tail σ-algebra for large N, then α_f is tail-measurable. -/
+private lemma tail_measurability_of_blockAvg
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {X : ℕ → Ω → ℝ}
+    (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1)
+    (hX_meas : ∀ i, Measurable (X i))
+    (α_f : Ω → ℝ) (hα_memLp : MemLp α_f 2 μ)
+    (hα_limit : Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0)) :
+    Measurable[TailSigma.tailSigma X] α_f := by
+  sorry -- TODO: Extract from lines 3545-3625
+
 set_option maxHeartbeats 2000000
 
 /-- **Cesàro averages converge in L² to a tail-measurable limit.**
@@ -3307,225 +3500,9 @@ lemma cesaro_to_condexp_L2
   -- For any m, m' and large n: ‖A_{m,n} - A_{m',n}‖_L² ≤ C_f/√n
   -- Setting m=m'=0 with different n values: need to relate A_{0,n} and A_{0,n'}
 
-  have hCauchy : ∀ ε > 0, ∃ N, ∀ {n n'}, n ≥ N → n' ≥ N →
-      eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ < ε := by
-    intro ε hε
-
-    -- Strategy: Use l2_contractability_bound (NOT kallenberg_L2_bound)
-    --
-    -- IMPORTANT: We cannot use kallenberg_L2_bound here because it requires
-    -- Exchangeable μ Z, but we're trying to PROVE contractable → exchangeable!
-    -- Using exchangeability here would be circular.
-    --
-    -- Instead, we use l2_contractability_bound from L2Helpers.lean, which only
-    -- requires uniform covariance structure. Contractability is sufficient to
-    -- establish this covariance structure (see detailed explanation above).
-    --
-    -- Define centered variables Z_i = f(X_i) - E[f(X_0)]
-    -- Show Z is contractable, derive uniform covariance
-    -- Apply l2_contractability_bound: ∫ (weighted sum)² ≤ C_f · sup|weights|
-    -- Choose N s.t. C_f/N < ε²
-
-    -- Step 1: Define centered variables
-    let m := ∫ ω, f (X 0 ω) ∂μ
-    let Z := fun i ω => f (X i ω) - m
-
-    -- Steps 2-5: Establish uniform covariance structure of centered variables
-    -- Extracted to helper lemma for clarity and to reduce proof complexity
-    have hZ_def : ∀ i ω, Z i ω = f (X i ω) - m := fun i ω => rfl
-    have ⟨hZ_meas, hZ_contract, hZ_var_uniform, hZ_mean_zero, hZ_cov_uniform⟩ :=
-      centered_uniform_covariance hX_contract hX_meas f hf_meas hf_bdd m rfl Z hZ_def
-
-    -- Step 6: Key observation - relate blockAvg of f to blockAvg of Z
-    -- blockAvg f X 0 n = (1/n)∑ f(X_i) = (1/n)∑ (Z_i + m) = (1/n)∑ Z_i + m
-    -- So: blockAvg f X 0 n - blockAvg f X 0 n' = (1/n)∑_{i<n} Z_i - (1/n')∑_{i<n'} Z_i
-
-    -- Step 7: Apply l2_contractability_bound to get Cauchy property
-    -- The key is that Z has uniform variance and covariance structure
-    -- So we can bound ∫ (blockAvg_n - blockAvg_n')²
-
-    -- For ε > 0, we need to find N such that for all n, n' ≥ N:
-    -- eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ < ε
-
-    -- Step 7a: Define variance and correlation parameters
-    let σSq := ∫ ω, (Z 0 ω)^2 ∂μ  -- Variance of Z_0 (mean is 0)
-    let covZ := ∫ ω, Z 0 ω * Z 1 ω ∂μ  -- Covariance of (Z_0, Z_1)
-
-    -- Step 7b: Assume σ² > 0 (non-degenerate case)
-    -- If σ² = 0, then Z is constant a.e. and convergence is trivial
-    by_cases hσ_pos : σSq > 0
-    · -- Non-degenerate case: σ² > 0
-      let ρ := covZ / σSq  -- Correlation coefficient
-
-      -- Bound |ρ| ≤ 1 (from Cauchy-Schwarz)
-      have hρ_bd : -1 ≤ ρ ∧ ρ ≤ 1 := by
-        -- Strategy: Cauchy-Schwarz gives |∫ Z₀·Z₁| ≤ sqrt(∫ Z₀²)·sqrt(∫ Z₁²)
-        -- By uniform variance: ∫ Z₁² = ∫ Z₀² = σSq
-        -- So: |covZ| ≤ sqrt(σSq)·sqrt(σSq) = σSq
-        -- Therefore: |ρ| = |covZ/σSq| ≤ 1
-
-        -- Z 0 and Z 1 are in L²(μ)
-        have hZ0_L2 : MemLp (Z 0) 2 μ := by
-          apply memLp_two_of_bounded (hZ_meas 0)
-          intro ω
-          -- |Z 0 ω| = |f(X 0 ω) - m| ≤ |f(X 0 ω)| + |m| ≤ 1 + 1 = 2
-          calc |Z 0 ω|
-              = |f (X 0 ω) - m| := rfl
-            _ ≤ |f (X 0 ω)| + |m| := abs_sub _ _
-            _ ≤ 1 + 1 := by
-                have h1 : |f (X 0 ω)| ≤ 1 := hf_bdd (X 0 ω)
-                have h2 : |m| ≤ 1 := by
-                  -- |m| = |∫ f(X 0)| ≤ ∫ |f(X 0)| ≤ ∫ 1 = 1
-                  have hfX_int : Integrable (fun ω => f (X 0 ω)) μ := by
-                    apply Integrable.of_bound
-                    · exact (hf_meas.comp (hX_meas 0)).aestronglyMeasurable
-                    · filter_upwards [] with ω
-                      exact hf_bdd (X 0 ω)
-                  calc |m|
-                      ≤ ∫ ω, |f (X 0 ω)| ∂μ := abs_integral_le_integral_abs
-                    _ ≤ ∫ ω, 1 ∂μ := by
-                        apply integral_mono_ae
-                        · exact hfX_int.abs
-                        · exact integrable_const 1
-                        · filter_upwards [] with ω
-                          exact hf_bdd (X 0 ω)
-                    _ = 1 := by simp
-                linarith
-            _ = 2 := by norm_num
-
-        have hZ1_L2 : MemLp (Z 1) 2 μ := by
-          -- Same proof as hZ0_L2
-          apply memLp_two_of_bounded (hZ_meas 1)
-          intro ω
-          calc |Z 1 ω|
-              = |f (X 1 ω) - m| := rfl
-            _ ≤ |f (X 1 ω)| + |m| := abs_sub _ _
-            _ ≤ 1 + 1 := by
-                have h1 : |f (X 1 ω)| ≤ 1 := hf_bdd (X 1 ω)
-                have h2 : |m| ≤ 1 := by
-                  have hfX_int : Integrable (fun ω => f (X 0 ω)) μ := by
-                    apply Integrable.of_bound
-                    · exact (hf_meas.comp (hX_meas 0)).aestronglyMeasurable
-                    · filter_upwards [] with ω
-                      exact hf_bdd (X 0 ω)
-                  calc |m|
-                      ≤ ∫ ω, |f (X 0 ω)| ∂μ := abs_integral_le_integral_abs
-                    _ ≤ ∫ ω, 1 ∂μ := by
-                        apply integral_mono_ae
-                        · exact hfX_int.abs
-                        · exact integrable_const 1
-                        · filter_upwards [] with ω
-                          exact hf_bdd (X 0 ω)
-                    _ = 1 := by simp
-                linarith
-            _ = 2 := by norm_num
-
-        -- Apply Cauchy-Schwarz: |∫ Z₀·Z₁| ≤ sqrt(∫ Z₀²)·sqrt(∫ Z₁²)
-        have h_CS := Exchangeability.Probability.IntegrationHelpers.abs_integral_mul_le_L2 hZ0_L2 hZ1_L2
-
-        -- By uniform variance: ∫ Z₁² = σSq
-        have h_Z1_var : ∫ ω, (Z 1 ω) ^ 2 ∂μ = σSq := hZ_var_uniform 1
-
-        -- So Cauchy-Schwarz gives: |covZ| ≤ sqrt(σSq)·sqrt(σSq) = σSq
-        have h_covZ_bd : |covZ| ≤ σSq := by
-          simp only [covZ, σSq]
-          calc |∫ ω, Z 0 ω * Z 1 ω ∂μ|
-              ≤ (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 1 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) := h_CS
-            _ = (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 0 ω) ^ 2 ∂μ) ^ (1/2 : ℝ) := by rw [h_Z1_var]
-            _ = (∫ ω, (Z 0 ω) ^ 2 ∂μ) := by
-                rw [← Real.rpow_add_of_nonneg (integral_nonneg (fun ω => sq_nonneg _))]
-                · norm_num
-                · norm_num
-                · norm_num
-            _ = σSq := rfl
-
-        -- Therefore |ρ| ≤ 1, which gives -1 ≤ ρ ≤ 1
-        have h_ρ_abs : |ρ| ≤ 1 := by
-          simp only [ρ]
-          have h_σSq_pos : 0 < σSq := hσ_pos
-          rw [abs_div, abs_of_pos h_σSq_pos]
-          exact div_le_one_of_le₀ h_covZ_bd h_σSq_pos.le
-
-        constructor
-        · linarith [abs_le.mp h_ρ_abs]
-        · exact (abs_le.mp h_ρ_abs).2
-
-      -- Define the constant from the L² bound
-      let Cf := 2 * σSq * (1 - ρ)
-
-      -- Case split: ρ < 1 (standard) vs ρ = 1 (perfect correlation, Cf = 0)
-      by_cases hρ_lt : ρ < 1
-      · -- Case ρ < 1: Use helper lemma with full L² contractability argument
-        exact cesaro_cauchy_rho_lt hX_contract hX_meas f hf_meas hf_bdd
-          Z hZ_meas hZ_contract hZ_var_uniform hZ_mean_zero hZ_cov_uniform
-          σSq hσ_pos rfl ρ hρ_bd rfl hρ_lt Cf rfl ε hε
-
-      · -- Case ρ = 1: Perfect correlation, Cf = 0, trivial bound
-        have hρ_eq : ρ = 1 := le_antisymm hρ_bd.2 (le_of_not_lt hρ_lt)
-        have hCf_zero : Cf = 0 := by simp [Cf, hρ_eq]
-        -- When ρ = 1, covZ = σSq, meaning Z_0 and Z_1 are perfectly correlated
-        -- This implies all Z_i are equal a.e., so blockAvg is constant
-        -- Therefore eLpNorm of difference is 0 < ε
-        use 1
-        intros n n' _ _
-
-        -- Key insight: ρ = 1 ⟹ covZ = σSq ⟹ Z_i = Z_0 a.e. for all i
-        -- From ρ = covZ/σSq = 1, we get covZ = σSq
-        have hcov_eq_var : covZ = σSq := by
-          simp only [ρ] at hρ_eq
-          have hσ_pos_ne : σSq ≠ 0 := hσ_pos.ne'
-          field_simp [hσ_pos_ne] at hρ_eq
-          exact hρ_eq
-
-        -- By Cauchy-Schwarz equality condition: covZ = σSq ⟹ Z_1 = Z_0 a.e.
-        -- More generally, by contractability: all Z_i = Z_0 a.e.
-        -- Therefore blockAvg f X 0 n = blockAvg f X 0 n' a.e.
-        -- So eLpNorm of difference = 0 < ε
-
-        -- Show the difference is 0 a.e.
-        have h_diff_zero_ae : ∀ᵐ ω ∂μ, blockAvg f X 0 n ω = blockAvg f X 0 n' ω := by
-          -- When ρ = 1 and σSq > 0, Cauchy-Schwarz equality holds
-          -- This means Z_1 = (σ_1/σ_0) * Z_0 a.e.
-          -- Since σ_0 = σ_1 (uniform variance), we get Z_1 = Z_0 a.e.
-          -- By contractability, all Z_i = Z_0 a.e.
-          -- Hence all blockAvg values are equal a.e.
-          sorry  -- TODO: Prove using CS equality condition
-
-        calc eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ
-            = eLpNorm (fun ω => 0) 2 μ := by
-              apply eLpNorm_congr_ae
-              filter_upwards [h_diff_zero_ae] with ω hω
-              simp [hω]
-          _ = 0 := eLpNorm_zero
-          _ < ε := hε
-
-    · -- Degenerate case: σSq ≤ 0
-      -- When variance is 0, Z is constant a.e., so all blockAvg are equal a.e.
-      -- Therefore the L² norm of difference is 0 < ε
-      push_neg at hσ_pos
-      -- σSq = ∫ Z₀² ≥ 0, and ¬(σSq > 0), so σSq = 0
-      have hσSq_zero : σSq = 0 := by
-        have hσSq_nonneg : 0 ≤ σSq := by
-          rw [σSq]
-          apply integral_nonneg
-          intro ω
-          exact sq_nonneg _
-        linarith
-      -- When ∫ Z₀² = 0, we have Z₀ = 0 a.e., hence all Z_i = 0 a.e. (by contractability)
-      -- This implies blockAvg f X = m a.e. for all n
-      -- Therefore blockAvg f X 0 n - blockAvg f X 0 n' = 0 a.e.
-      use 1
-      intros n n' _ _
-      have h_diff_zero_ae : ∀ᵐ ω ∂μ, blockAvg f X 0 n ω = blockAvg f X 0 n' ω := by
-        -- σSq = 0 ⟹ Z₀ = 0 a.e. ⟹ all Z_i = 0 a.e. ⟹ f(X_i) = m a.e.
-        sorry
-      calc eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ
-          = eLpNorm (fun ω => 0) 2 μ := by
-            apply eLpNorm_congr_ae
-            filter_upwards [h_diff_zero_ae] with ω hω
-            simp [hω]
-        _ = 0 := eLpNorm_zero
-        _ < ε := hε
+  -- Step 1: Show block averages form a Cauchy sequence in L²
+  -- Extracted to helper lemma to reduce proof complexity and isolate timeout source
+  have hCauchy := blockAvg_cauchy_in_L2 hX_contract hX_meas f hf_meas hf_bdd
 
   -- Step 2: Extract L² limit using completeness of Hilbert space
   -- Lp(2, μ) is complete (Hilbert space), so Cauchy sequence converges
