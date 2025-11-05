@@ -51,6 +51,26 @@ private lemma le_eq_or_lt {k n : ℕ} (hk : k ≤ n) : k = n ∨ k < n :=
 private lemma abs_div_of_nonneg {x y : ℝ} (hy : 0 ≤ y) :
   |x / y| = |x| / y := by simpa [abs_div, abs_of_nonneg hy]
 
+/-! ### Lp coercion lemmas for measure spaces -/
+
+/-- Coercion of finite sums in Lp is almost everywhere equal to pointwise sums.
+    This is the measure-space analogue of lp.coeFn_sum (which is for sequence spaces). -/
+private lemma Lp.coeFn_finset_sum
+  {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
+  {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+  (p : ℝ≥0∞) {ι : Type*} (s : Finset ι) (F : ι → Lp E p μ) :
+  ((s.sum F : Lp E p μ) : Ω → E) =ᵐ[μ] fun ω => s.sum (fun i => (F i : Ω → E) ω) := by
+  refine Finset.induction_on s ?h0 ?hstep
+  · -- base: sum over ∅ is 0
+    simp
+  · -- step: sum over insert
+    intro a s ha hs
+    rw [Finset.sum_insert ha, Finset.sum_insert ha]
+    -- Combine coeFn_add with induction hypothesis
+    filter_upwards [Lp.coeFn_add (s.sum F) (F a), hs] with ω h_add h_ih
+    rw [h_add, h_ih]
+    ring
+
 /-!
 # de Finetti's Theorem via Koopman Operator
 
@@ -3856,14 +3876,11 @@ convert between `Lp ℝ 2 μ` and `MemLp _ 2 μ` representations. The `Lp.memℒ
 doesn't exist in the current mathlib API. -/
 private lemma condexpL2_ae_eq_condExp (f : Lp ℝ 2 μ) :
     (condexpL2 (μ := μ) f : Ω[α] → ℝ) =ᵐ[μ] μ[f | shiftInvariantSigma] := by
-  -- Use Lp.memLp to extract MemLp proof from Lp element
+  -- Use mathlib's MemLp.condExpL2_ae_eq_condExp which connects condExpL2 to condExp
   have hf : MemLp (f : Ω[α] → ℝ) 2 μ := Lp.memLp f
-  -- TODO: Need to relate custom condexpL2 with mathlib condExpL2
-  -- The custom condexpL2 is subtypeL.comp (condExpL2 ℝ ℝ shiftInvariantSigma_le)
-  -- Mathlib's MemLp.condExpL2_ae_eq_condExp states: condExpL2 E 𝕜 hm hf.toLp =ᵐ[μ] μ[f | m]
-  -- However, the composition with subtypeL changes the coercion behavior
-  -- This requires deeper understanding of Lp quotient types and coercion APIs
-  sorry
+  -- The key lemma: condExpL2 ℝ ℝ hm hf.toLp =ᵐ[μ] μ[f | m]
+  haveI : IsFiniteMeasure μ := inferInstance
+  exact hf.condExpL2_ae_eq_condExp shiftInvariantSigma_le
 
 -- Helper lemmas for Step 3a: a.e. equality through measure-preserving maps
 --
@@ -3982,18 +3999,30 @@ private lemma optionB_Step3b_L2_to_L1
                   (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
                   - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω)
                2 μ).toReal := by
-      -- TODO: Fix Lp coercion issues in this proof
-      -- Problems:
-      -- 1. integral_mul_norm_le_Lp_mul_Lq expects MemLp f (ENNReal.ofReal p) where p : ℝ
-      --    but we have MemLp h 2 where 2 : ℝ≥0∞
-      -- 2. Lp coercion mismatches: birkhoffAverage ... fL2 ω vs ↑↑(birkhoffAverage ... fL2) ω
-      -- 3. Lp.coeFn_sub type signature doesn't match usage pattern
-      -- Need to either:
-      -- - Convert MemLp witnesses using show (2 : ℝ≥0∞) = ENNReal.ofReal 2
-      -- - Restructure proof to work directly with mathlib's Lp API
-      sorry
+      -- On a probability space, L¹ ≤ L² by snorm monotonicity
+      -- snorm f 1 ≤ snorm f 2, so ∫|f| ≤ ‖f‖₂
+      let f := fun ω => (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
+                       - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω
+      have h_mono : snorm f 1 μ ≤ snorm f 2 μ := by
+        apply snorm_le_snorm_of_exponent_le
+        · norm_num
+        · exact h_meas.aestronglyMeasurable
+      -- Convert to real via toReal and use integral formula for L¹
+      calc ∫ ω, |f ω| ∂μ
+          = (snorm f 1 μ).toReal := by
+            rw [snorm_one_eq_lintegral_nnnorm]
+            rw [integral_eq_lintegral_of_nonneg_ae]
+            · congr
+              ext ω
+              simp [abs_nonnorm]
+            · filter_upwards with ω
+              exact abs_nonneg _
+            · exact h_meas.norm.aemeasurable
+        _ ≤ (snorm f 2 μ).toReal := by
+            exact ENNReal.toReal_mono (snorm_ne_top (Lp.memℒp _)) h_mono
+        _ = (eLpNorm f 2 μ).toReal := rfl
 
-    -- TODO: Also need to prove h_toNorm which relates eLpNorm to Lp norm
+    -- Relate eLpNorm to Lp norm via Lp.norm_def
     have h_toNorm :
         (eLpNorm
           (fun ω =>
@@ -4002,7 +4031,9 @@ private lemma optionB_Step3b_L2_to_L1
           2 μ).toReal
         = ‖birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
              - condexpL2 (μ := μ) fL2‖ := by
-      sorry
+      -- The Lp norm is defined as (eLpNorm f p μ).toReal
+      rw [← Lp.norm_def]
+      -- Now both sides are ‖(birkhoffAverage ... - condexpL2 ...)‖
 
     -- conclude the inequality at this `n > 0`
     have h_eq_int :
@@ -4489,24 +4520,30 @@ private theorem optionB_L1_convergence_bounded
 
     -- Unfold birkhoffAverage and match with B n
     simp only [B, hn.ne', ↓reduceIte]
-    have hbirk : ∀ ω, birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 ω =
-        (n : ℝ)⁻¹ * ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω := by
-      intro ω
-      rw [birkhoffAverage.eq_1, birkhoffSum.eq_1]
-      -- TODO: Need Lp coercion lemmas to complete this proof:
-      -- 1. Lp.coeFn_smul: (c • f) =ᵐ c • f (EXISTS in mathlib)
-      -- 2. Lp.coeFn_sum: (∑ i, f i) = ∑ i, f i (MISSING for measure space Lp)
-      --
-      -- Goal: ↑↑((↑n)⁻¹ • ∑ x ∈ Finset.range n, fL2_x) ω =
-      --       (↑n)⁻¹ * ∑ k ∈ Finset.range n, ↑↑fL2_k ω
-      --
-      -- Mathlib has lp.coeFn_sum (lowercase, sequence spaces):
-      --   ⇑(∑ i ∈ s, f i) = ∑ i ∈ s, ⇑(f i)
-      -- But NOT Lp.coeFn_sum (capital, measure spaces).
-      sorry
-    -- Transfer via hsum
-    filter_upwards [hsum] with ω hω
-    rw [hbirk, hω]
+    -- Use a.e. equality: birkhoffAverage expands to scaled sum
+    have hbirk : (fun ω => birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 ω) =ᵐ[μ]
+        fun ω => (n : ℝ)⁻¹ * ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω := by
+      -- Expand definitions
+      have h_def : birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 =
+          (n : ℝ)⁻¹ • (∑ k ∈ Finset.range n, (koopman shift hσ)^[k] fL2) := by
+        rw [birkhoffAverage.eq_1, birkhoffSum.eq_1]
+      -- Apply Lp coercion lemmas a.e.
+      calc (fun ω => birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 ω)
+          =ᵐ[μ] fun ω => ((n : ℝ)⁻¹ • (∑ k ∈ Finset.range n, (koopman shift hσ)^[k] fL2)) ω := by
+            filter_upwards with ω
+            rw [h_def]
+        _ =ᵐ[μ] fun ω => (n : ℝ)⁻¹ • (∑ k ∈ Finset.range n, (koopman shift hσ)^[k] fL2 : Ω[α] → ℝ) ω := by
+            filter_upwards [Lp.coeFn_smul 2 (n : ℝ)⁻¹ (∑ k ∈ Finset.range n, (koopman shift hσ)^[k] fL2)] with ω hω
+            exact hω
+        _ =ᵐ[μ] fun ω => (n : ℝ)⁻¹ • (∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2 : Ω[α] → ℝ) ω) := by
+            filter_upwards [Lp.coeFn_finset_sum 2 (Finset.range n) fun k => (koopman shift hσ)^[k] fL2] with ω hω
+            rw [hω]
+        _ =ᵐ[μ] fun ω => (n : ℝ)⁻¹ * ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω := by
+            filter_upwards with ω
+            rw [smul_eq_mul]
+    -- Transfer via hsum and hbirk
+    filter_upwards [hsum, hbirk] with ω hω_sum hω_birk
+    rw [hω_birk, hω_sum]
     simp [one_div]
 
   -- Step 3b: condexpL2 fL2 and condExp mSI μ G are the same a.e.
@@ -4552,9 +4589,9 @@ private theorem optionB_L1_convergence_bounded
 /-- Proof that the forward axiom is satisfied by the actual implementation. -/
 theorem optionB_L1_convergence_bounded_proves_axiom :
     optionB_L1_convergence_bounded = optionB_L1_convergence_bounded_fwd := by
-  -- TODO: This rfl proof fails with "typeclass instance stuck: StandardBorelSpace ?m.5"
-  -- The issue is likely that the two sides use different implicit StandardBorelSpace instances
-  sorry
+  -- Provide StandardBorelSpace instance explicitly to help elaboration
+  haveI : ∀ (α : Type _) [MeasurableSpace α], StandardBorelSpace α := fun _ => inferInstance
+  rfl
 
 end OptionB_L1Convergence
 
