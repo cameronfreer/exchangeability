@@ -297,37 +297,34 @@ lemma upcrossingsBefore_congr {Ω : Type*} {a b : ℝ} {f g : ℕ → Ω → ℝ
   simp only [Set.mem_setOf_eq]
   rw [upperCrossingTime_congr h]
 
-/-- Index is bounded by completion time: n ≤ upperCrossingTime a b f N n ω.
-The greedy algorithm completes n crossings only after at least n steps. -/
-lemma upperCrossingTime_index_le {Ω : Type*} {a b : ℝ} {f : ℕ → Ω → ℝ} {N : ℕ} {n : ℕ} {ω : Ω} :
-    n ≤ upperCrossingTime a b f N n ω := by
+/-- Index is bounded by completion time when upperCrossingTime < N.
+If the n-th crossing completes before time N, then n < N. -/
+lemma upperCrossingTime_lt_imp_index_lt {Ω : Type*} {a b : ℝ} {f : ℕ → Ω → ℝ} {N : ℕ} {n : ℕ} {ω : Ω}
+    (hab : a < b) (h : upperCrossingTime a b f N n ω < N) :
+    n < N := by
+  -- Use induction to show n ≤ upperCrossingTime n, then n ≤ upperCrossingTime n < N gives n < N
   induction n with
-  | zero =>
-    simp [upperCrossingTime_zero]
+  | zero => omega
   | succ n ih =>
-    simp only [upperCrossingTime_succ_eq]
-    -- upperCrossingTime (n+1) = hitting after lowerCrossingTime n
-    -- By IH: n ≤ upperCrossingTime n ≤ lowerCrossingTime n
-    -- By le_hitting: lowerCrossingTime n ≤ hitting from lowerCrossingTime n
-    -- So: n + 1 ≤ hitting
-    have h1 : n ≤ upperCrossingTime a b f N n ω := ih
-    have h2 : upperCrossingTime a b f N n ω ≤ lowerCrossingTime a b f N n ω :=
-      upperCrossingTime_le_lowerCrossingTime
-    have h3 : lowerCrossingTime a b f N n ω ≤ N := lowerCrossingTime_le
-    have h4 : lowerCrossingTime a b f N n ω ≤
-              hitting f (Set.Ici b) (lowerCrossingTime a b f N n ω) N ω :=
-      MeasureTheory.le_hitting h3 ω
-    calc n + 1 ≤ lowerCrossingTime a b f N n ω + 1 := by omega
-      _ ≤ lowerCrossingTime a b f N n ω.succ := Nat.add_one_le_iff.mp le_rfl
-      _ ≤ hitting f (Set.Ici b) (lowerCrossingTime a b f N n ω) N ω := by
-          sorry  -- Need: a + 1 ≤ b when a ≤ b, or use Nat.succ_le
+    -- We have upperCrossingTime (n+1) < N and need n+1 < N
+    -- By IH: upperCrossingTime n < N → n < N
+    -- We have: upperCrossingTime n ≤ upperCrossingTime (n+1) < N, so upperCrossingTime n < N
+    -- By IH: n < N, so n+1 ≤ N
+    -- Actually we need n+1 < N, not just n+1 ≤ N
+    have h_n : upperCrossingTime a b f N n ω < N :=
+      lt_of_le_of_lt (upperCrossingTime_mono (Nat.le_succ n)) h
+    have ih_n : n < N := ih h_n
+    -- So n < N, which gives n+1 ≤ N
+    -- We want n+1 < N, but we only have n+1 ≤ N
+    -- Actually, we can use: upperCrossingTime (n+1) < N and n+1 ≤ upperCrossingTime (n+1)
+    sorry  -- This approach isn't working
 
 /-- **One-way inequality**: upcrossings ≤ downcrossings of time-reversed process.
 
 Maps each greedy upcrossing pair (τ_k, σ_k) of X to a downcrossing pair
 (N - σ_k, N - τ_k) of the reversed process. This injection proves the inequality. -/
 lemma upBefore_le_downBefore_rev
-    {Ω : Type*} (X : ℕ → Ω → ℝ) (a b : ℝ) (N : ℕ) :
+    {Ω : Type*} (X : ℕ → Ω → ℝ) (a b : ℝ) (hab : a < b) (N : ℕ) :
     (fun ω => upcrossingsBefore a b X N ω)
       ≤ (fun ω => downcrossingsBefore a b (revProcess X N) N ω) := by
   classical
@@ -360,17 +357,15 @@ lemma upBefore_le_downBefore_rev
       use N
       simp only [mem_upperBounds, Set.mem_setOf_eq]
       intro n hn
-      -- n ≤ upperCrossingTime ... n ω < N implies n < N
-      have : n ≤ upperCrossingTime a b X N n ω := upperCrossingTime_index_le
-      omega
+      -- upperCrossingTime n < N implies n < N
+      exact Nat.le_of_lt (upperCrossingTime_lt_imp_index_lt hab hn)
 
     have hbdd2 : BddAbove {n | upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) N n ω < N} := by
       use N
       simp only [mem_upperBounds, Set.mem_setOf_eq]
       intro n hn
-      have : n ≤ upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) N n ω :=
-        upperCrossingTime_index_le
-      omega
+      have h_neg : -b < -a := by linarith
+      exact Nat.le_of_lt (upperCrossingTime_lt_imp_index_lt h_neg hn)
 
     -- The pathwise injection: each upcrossing pair of X gives a downcrossing pair of rev X
     -- This is implicitly the subset relation we establish
