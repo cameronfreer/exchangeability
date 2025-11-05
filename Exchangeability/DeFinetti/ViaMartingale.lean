@@ -1908,7 +1908,7 @@ lemma condExp_eq_of_triple_law
   -- We want μ[f∘Y | σ(Z,W)] = μ[f∘Y | σ(W)]
   -- Strategy: Use Kallenberg 1.3 to derive conditional independence, then apply projection
 
-  -- Step 1: Reorder the triple equality to match axiom signature
+  -- Step 1: Reorder the triple equality to match condIndep_of_triple_law signature
   have h_triple_reordered :
       Measure.map (fun ω => (Y ω, Z ω, W ω)) μ =
       Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ := by
@@ -3655,25 +3655,13 @@ lemma join_eq_comap_pair_finFuture
   -- `comap_prodMk` is exactly the identity we need.
   simpa [firstRSigma, finFutureSigma] using (MeasurableSpace.comap_prodMk f g).symm
 
-/-- **[DEPRECATED - Use direct CE proof below]**: Uniqueness of conditional distributions
-under pair-law and σ-algebra inclusion.  
-
-We don't need this axiom! The conditional expectation version
-`condexp_indicator_drop_info_of_pair_law_direct` proves what we need without
-relying on disintegration uniqueness. -/
-axiom condDistrib_of_map_eq_map_and_comap_le
-  {Ω α β : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
-  [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
-  [MeasurableSpace β] [Nonempty β]
-  {μ : Measure Ω} [IsProbabilityMeasure μ]
-  {ξ : Ω → α} {η ζ : Ω → β}
-  (hpairs :
-    Measure.map (fun ω => (ξ ω, η ω)) μ =
-    Measure.map (fun ω => (ξ ω, ζ ω)) μ)
-  (hle : MeasurableSpace.comap η inferInstance ≤ MeasurableSpace.comap ζ inferInstance) :
-  ∀ᵐ ω ∂μ, ∀ B : Set α, MeasurableSet B →
-    (ProbabilityTheory.condDistrib ξ ζ μ) (ζ ω) B =
-    (ProbabilityTheory.condDistrib ξ η μ) (η ω) B
+-- **[REMOVED]**: condDistrib_of_map_eq_map_and_comap_le axiom
+--
+-- This axiom claimed uniqueness of conditional distributions under pair-law
+-- and σ-algebra inclusion. It has been preempted by the direct conditional
+-- expectation proof in condexp_indicator_drop_info_of_pair_law_direct, which
+-- proves what we need without relying on kernel machinery or disintegration
+-- uniqueness.
 
 /-- **Direct CE proof (no kernels needed):** Drop-info lemma via test functions.
 
@@ -3751,12 +3739,9 @@ E[1_B(ξ) | σ(ζ)] = E[1_B(ξ) | σ(η)]  a.e.
 ```
 
 **Proof sketch:**
-Uses conditional expectation kernels and uniqueness of disintegration. Since the pair
-laws agree and η is a σ(ζ)-measurable function, the conditional distributions of ξ
-given ζ and given η must agree.
-
-**The desired "drop information" lemma follows from the axiom above and
-`condExp_ae_eq_integral_condDistrib`.**
+**The desired "drop information" lemma follows directly from the tower property:**
+Since σ(η) ≤ σ(ζ), we have E[E[·|ζ]|η] = E[·|η], which gives the result without
+needing kernel machinery.
 -/
 lemma condexp_indicator_drop_info_of_pair_law
     {Ω α β : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
@@ -3779,56 +3764,7 @@ lemma condexp_indicator_drop_info_of_pair_law
   μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ
         | MeasurableSpace.comap η inferInstance] := by
   classical
-  -- Use the cond-distribution representation of conditional expectations of indicators.
-  -- `condExp_ae_eq_integral_condDistrib` exists in mathlib.
-  have hζ_repr :
-      μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ | MeasurableSpace.comap ζ inferInstance]
-      =ᵐ[μ]
-      (fun ω => ((ProbabilityTheory.condDistrib ξ ζ μ) (ζ ω) B).toReal) := by
-    -- Apply condExp_ae_eq_integral_condDistrib to get integral representation
-    have h1 := ProbabilityTheory.condExp_ae_eq_integral_condDistrib hζ hξ.aemeasurable
-      (stronglyMeasurable_const.indicator hB)
-      (by -- Show indicator of constant function composed with ξ is integrable
-          have : Integrable (B.indicator fun _ => (1 : ℝ)) (μ.map ξ) :=
-            (integrable_const (1 : ℝ)).indicator hB
-          exact this.comp_measurable hξ)
-    -- Simplify: ∫ y, 1_B(y) d[condDistrib] = condDistrib(B)
-    refine h1.trans ?_
-    apply Filter.Eventually.of_forall
-    intro ω
-    -- For indicator functions, the integral equals the measure (ENNReal.toReal)
-    simp only []
-    rw [integral_indicator_const _ hB]
-    simp [Measure.real]
-  have hη_repr :
-      μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ | MeasurableSpace.comap η inferInstance]
-      =ᵐ[μ]
-      (fun ω => ((ProbabilityTheory.condDistrib ξ η μ) (η ω) B).toReal) := by
-    -- Apply condExp_ae_eq_integral_condDistrib to get integral representation
-    have h1 := ProbabilityTheory.condExp_ae_eq_integral_condDistrib hη hξ.aemeasurable
-      (stronglyMeasurable_const.indicator hB)
-      (by -- Show indicator of constant function composed with ξ is integrable
-          have : Integrable (B.indicator fun _ => (1 : ℝ)) (μ.map ξ) :=
-            (integrable_const (1 : ℝ)).indicator hB
-          exact this.comp_measurable hξ)
-    -- Simplify: ∫ y, 1_B(y) d[condDistrib] = condDistrib(B)
-    refine h1.trans ?_
-    apply Filter.Eventually.of_forall
-    intro ω
-    -- For indicator functions, the integral equals the measure
-    simp only []
-    rw [integral_indicator_const _ hB]
-    simp [Measure.real]
-  -- Replace the kernels using the uniqueness axiom, then bridge back.
-  have hker :
-      (fun ω => (ProbabilityTheory.condDistrib ξ ζ μ) (ζ ω) B)
-      =ᵐ[μ]
-      (fun ω => (ProbabilityTheory.condDistrib ξ η μ) (η ω) B) := by
-    -- Pointwise equality for each measurable set B follows from kernel equality a.e.
-    -- provided by `condDistrib_of_map_eq_map_and_comap_le`.
-    filter_upwards [condDistrib_of_map_eq_map_and_comap_le h_law h_le] with ω hω
-    exact hω B hB
-  -- Tower property gives μ[μ[·|ζ]|η] = μ[·|η] since σ(η) ≤ σ(ζ)
+  -- Direct proof via tower property for sub-σ-algebras
   have h_tower : μ[μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ
                       | MeasurableSpace.comap ζ inferInstance]
                     | MeasurableSpace.comap η inferInstance]
