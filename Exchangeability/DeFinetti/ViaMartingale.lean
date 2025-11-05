@@ -4696,8 +4696,8 @@ noncomputable def directingMeasure
     {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
-    (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) : Ω → Measure α :=
-  fun ω => (ProbabilityTheory.condExpKernel μ (tailSigma X) ω).map (X 0)
+    (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) (ω : Ω) : Measure α :=
+  (ProbabilityTheory.condExpKernel μ (tailSigma X) ω).map (X 0)
 
 /-- `directingMeasure` evaluates measurably on measurable sets.
 
@@ -4710,12 +4710,12 @@ lemma directingMeasure_measurable_eval
     ∀ (B : Set α), MeasurableSet B →
       Measurable (fun ω => directingMeasure (μ := μ) X hX ω B) := by
   intro B hB
-  -- directingMeasure ω B = (condExpKernel μ (tailSigma X) ω).map (X 0) B
-  --                      = (condExpKernel μ (tailSigma X) ω) ((X 0) ⁻¹' B)
-  -- TODO: Fix API usage for Kernel.measurable_coe
   -- Strategy: (1) unfold directingMeasure to Measure.map
   --           (2) use Measure.map_apply to convert to preimage
   --           (3) apply Kernel.measurable_coe to the condExpKernel
+  -- directingMeasure ω B = (condExpKernel μ (tailSigma X) ω).map (X 0) B
+  --                      = (condExpKernel μ (tailSigma X) ω) ((X 0) ⁻¹' B)
+  -- Then use: ProbabilityTheory.Kernel.measurable_coe (condExpKernel μ (tailSigma X)) (...)
   sorry
 
 /-- The directing measure is (pointwise) a probability measure.
@@ -4728,10 +4728,11 @@ lemma directingMeasure_isProb
     (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) :
     ∀ ω, IsProbabilityMeasure (directingMeasure (μ := μ) X hX ω) := by
   intro ω
-  -- TODO: Find correct API names in mathlib
-  -- Strategy: (1) prove IsProbabilityMeasure for condExpKernel μ (tailSigma X) ω
-  --           (2) use isProbabilityMeasure_map to show pushforward preserves probability
-  sorry
+  -- Strategy: condExpKernel is an IsMarkovKernel, so each condExpKernel ω is a probability measure
+  --           Pushing forward preserves probability via isProbabilityMeasure_map
+  -- directingMeasure ω = (condExpKernel μ (tailSigma X) ω).map (X 0)
+  unfold directingMeasure
+  apply isProbabilityMeasure_map
 
 /-- **X₀-marginal identity**: the conditional expectation of the indicator
 of `X 0 ∈ B` given the tail equals the directing measure of `B` (toReal).
@@ -4746,13 +4747,18 @@ lemma directingMeasure_X0_marginal
   (fun ω => (directingMeasure (μ := μ) X hX ω B).toReal)
     =ᵐ[μ]
   μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] := by
-  -- TODO: Fix API usage
-  -- Strategy: (1) Use condExp_ae_eq_integral_condExpKernel to connect condExp to kernel integral
-  --           (2) Compute integral of indicator using integral_indicator_one
-  --           (3) Connect to directingMeasure using Measure.map_apply
-  -- The key insight: directingMeasure ω B = (condExpKernel ω).map (X 0) B
-  --                                       = condExpKernel ω ((X 0)⁻¹' B)
-  --   And: ∫ 1_B ∘ X₀ d(condExpKernel ω) = (condExpKernel ω) ((X 0)⁻¹' B)
+  -- TODO: Complete this proof using condExp_ae_eq_integral_condExpKernel
+  -- Strategy:
+  -- 1. Apply condExp_ae_eq_integral_condExpKernel to relate condExp to kernel integral
+  --    - Need to prove: f = Set.indicator B (fun _ => 1) ∘ (X 0) is integrable
+  --    - This follows from: Integrable.comp_measurable (integrable_const 1) (hX 0)
+  -- 2. Show: ∫ y, f y ∂(condExpKernel μ (tailSigma X) ω)
+  --        = (condExpKernel μ (tailSigma X) ω) ((X 0)⁻¹' B)
+  --    - Use integral_indicator and the fact that indicator of constant integrates to measure
+  -- 3. Show: (condExpKernel μ (tailSigma X) ω) ((X 0)⁻¹' B)
+  --        = directingMeasure X hX ω B
+  --    - Unfold directingMeasure and apply Measure.map_apply
+  -- 4. Combine via filter_upwards and ae_of_all
   sorry
 
 end Directing
