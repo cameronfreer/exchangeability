@@ -3220,6 +3220,50 @@ private lemma correlation_coefficient_bounded
   · linarith [abs_le.mp h_ρ_abs]
   · exact (abs_le.mp h_ρ_abs).2
 
+/-! ### Performance wrappers to stop unfolding `blockAvg` inside `eLpNorm` -/
+
+/-- Frozen alias for `blockAvg f X 0 n`. Regular def (not `@[irreducible]`)
+    but we provide helper lemmas to avoid unfolding in timeout-prone contexts.
+
+    This wrapper prevents expensive elaboration timeouts when `blockAvg` appears
+    inside `eLpNorm` goals, by using pre-proved lemmas instead of unfolding. -/
+def blockAvgFrozen {Ω : Type*} (f : ℝ → ℝ) (X : ℕ → Ω → ℝ) (n : ℕ) : Ω → ℝ :=
+  fun ω => blockAvg f X 0 n ω
+
+@[simp]
+lemma blockAvgFrozen_def {Ω : Type*} (f : ℝ → ℝ) (X : ℕ → Ω → ℝ) (n : ℕ) (ω : Ω) :
+    blockAvgFrozen f X n ω = blockAvg f X 0 n ω :=
+  rfl
+
+lemma blockAvgFrozen_measurable {Ω : Type*} [MeasurableSpace Ω]
+    (f : ℝ → ℝ) (X : ℕ → Ω → ℝ)
+    (hf : Measurable f) (hX : ∀ i, Measurable (X i)) (n : ℕ) :
+    Measurable (blockAvgFrozen f X n) :=
+  blockAvg_measurable f X hf hX 0 n
+
+lemma blockAvgFrozen_abs_le_one {Ω : Type*} [MeasurableSpace Ω]
+    (f : ℝ → ℝ) (X : ℕ → Ω → ℝ)
+    (hf_bdd : ∀ x, |f x| ≤ 1) (n : ℕ) (ω : Ω) :
+    |blockAvgFrozen f X n ω| ≤ 1 :=
+  blockAvg_abs_le_one f X hf_bdd 0 n ω
+
+lemma blockAvgFrozen_diff_memLp_two {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
+    [IsProbabilityMeasure μ]
+    (f : ℝ → ℝ) (X : ℕ → Ω → ℝ)
+    (hf : Measurable f) (hX : ∀ i, Measurable (X i))
+    (hf_bdd : ∀ x, |f x| ≤ 1) (n n' : ℕ) :
+    MemLp (fun ω => blockAvgFrozen f X n ω - blockAvgFrozen f X n' ω) (2 : ℝ≥0∞) μ := by
+  apply memLp_two_of_bounded (M := 2)
+  · exact (blockAvgFrozen_measurable f X hf hX n).sub (blockAvgFrozen_measurable f X hf hX n')
+  intro ω
+  have hn  : |blockAvgFrozen f X n  ω| ≤ 1 := blockAvgFrozen_abs_le_one f X hf_bdd n  ω
+  have hn' : |blockAvgFrozen f X n' ω| ≤ 1 := blockAvgFrozen_abs_le_one f X hf_bdd n' ω
+  calc |blockAvgFrozen f X n ω - blockAvgFrozen f X n' ω|
+      ≤ |blockAvgFrozen f X n ω| + |blockAvgFrozen f X n' ω| := by
+        simpa [sub_eq_add_neg] using abs_add (blockAvgFrozen f X n ω) (- blockAvgFrozen f X n' ω)
+    _ ≤ 1 + 1 := add_le_add hn hn'
+    _ = 2 := by norm_num
+
 set_option maxHeartbeats 500000 in
 /-- Helper lemma: Block averages form a Cauchy sequence in L² (Step 1 of main proof).
 
@@ -3326,35 +3370,14 @@ private lemma l2_limit_from_cauchy
       eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ < ε) :
     ∃ α_f, MemLp α_f 2 μ ∧
       Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0) := by
-  -- Step 1: Show each blockAvg is in L²
+  -- Step 1: Show each blockAvg is in L² using frozen wrapper to avoid timeouts
   have hblockAvg_memLp : ∀ n, n > 0 → MemLp (blockAvg f X 0 n) 2 μ := by
     intro n hn_pos
-    -- blockAvg is bounded since f is bounded
-    apply memLp_two_of_bounded
-    · -- Measurable: blockAvg is a finite sum of measurable functions
-      show Measurable (fun ω => (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (0 + k) ω)))
-      exact Measurable.const_mul (Finset.measurable_sum _ fun k _ =>
-        hf_meas.comp (hX_meas (0 + k))) _
-    intro ω
-    -- |blockAvg f X 0 n ω| ≤ 1 since |f| ≤ 1
-    show |(n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (0 + k) ω))| ≤ 1
-    calc |(n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (0 + k) ω))|
-        = (n : ℝ)⁻¹ * |(Finset.range n).sum (fun k => f (X (0 + k) ω))| := by
-          rw [abs_mul, abs_inv, abs_of_nonneg]
-          exact Nat.cast_nonneg n
-      _ ≤ (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => |f (X (0 + k) ω)|) := by
-          apply mul_le_mul_of_nonneg_left
-          · exact Finset.abs_sum_le_sum_abs _ _
-          · exact inv_nonneg.mpr (Nat.cast_nonneg n)
-      _ ≤ (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => 1) := by
-          apply mul_le_mul_of_nonneg_left
-          · apply Finset.sum_le_sum
-            intro k _
-            exact hf_bdd (X (0 + k) ω)
-          · exact inv_nonneg.mpr (Nat.cast_nonneg n)
-      _ = (n : ℝ)⁻¹ * n := by simp
-      _ = 1 := by
-          field_simp [Nat.pos_iff_ne_zero.mp hn_pos]
+    -- Convert to blockAvgFrozen to use precomputed lemmas
+    show MemLp (blockAvgFrozen f X n) 2 μ
+    apply memLp_two_of_bounded (M := 1)
+    · exact blockAvgFrozen_measurable f X hf_meas hX_meas n
+    exact blockAvgFrozen_abs_le_one f X hf_bdd n
 
   -- For n = 0, handle separately
   have hblockAvg_memLp_all : ∀ n, MemLp (blockAvg f X 0 n) 2 μ := by
