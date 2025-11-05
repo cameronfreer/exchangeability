@@ -3999,18 +3999,18 @@ private lemma optionB_Step3b_L2_to_L1
                   (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
                   - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω)
                2 μ).toReal := by
-      -- On a probability space, L¹ ≤ L² by snorm monotonicity
-      -- snorm f 1 ≤ snorm f 2, so ∫|f| ≤ ‖f‖₂
+      -- On a probability space, L¹ ≤ L² by eLpNorm monotonicity
+      -- eLpNorm f 1 ≤ eLpNorm f 2, so ∫|f| ≤ ‖f‖₂
       let f := fun ω => (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
                        - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω
-      have h_mono : snorm f 1 μ ≤ snorm f 2 μ := by
-        apply snorm_le_snorm_of_exponent_le
+      have h_mono : eLpNorm f 1 μ ≤ eLpNorm f 2 μ := by
+        apply eLpNorm_le_eLpNorm_of_exponent_le
         · norm_num
         · exact h_meas.aestronglyMeasurable
       -- Convert to real via toReal and use integral formula for L¹
       calc ∫ ω, |f ω| ∂μ
-          = (snorm f 1 μ).toReal := by
-            rw [snorm_one_eq_lintegral_nnnorm]
+          = (eLpNorm f 1 μ).toReal := by
+            rw [eLpNorm_one_eq_lintegral_nnnorm]
             rw [integral_eq_lintegral_of_nonneg_ae]
             · congr
               ext ω
@@ -4018,8 +4018,9 @@ private lemma optionB_Step3b_L2_to_L1
             · filter_upwards with ω
               exact abs_nonneg _
             · exact h_meas.norm.aemeasurable
-        _ ≤ (snorm f 2 μ).toReal := by
-            exact ENNReal.toReal_mono (snorm_ne_top (Lp.memℒp _)) h_mono
+        _ ≤ (eLpNorm f 2 μ).toReal := by
+            have h_memLp : Memℒp (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 - condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) 2 μ := Lp.memℒp _
+            exact ENNReal.toReal_mono h_memLp.eLpNorm_ne_top h_mono
         _ = (eLpNorm f 2 μ).toReal := rfl
 
     -- Relate eLpNorm to Lp norm via Lp.norm_def
@@ -4031,9 +4032,9 @@ private lemma optionB_Step3b_L2_to_L1
           2 μ).toReal
         = ‖birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
              - condexpL2 (μ := μ) fL2‖ := by
-      -- The Lp norm is defined as (eLpNorm f p μ).toReal
-      rw [← Lp.norm_def]
-      -- Now both sides are ‖(birkhoffAverage ... - condexpL2 ...)‖
+      -- The Lp norm is defined as (eLpNorm ↑f p μ).toReal where ↑f is the coercion to function
+      -- The lambda is just the coercion, so this is Lp.norm_def
+      rfl
 
     -- conclude the inequality at this `n > 0`
     have h_eq_int :
@@ -4533,7 +4534,7 @@ private theorem optionB_L1_convergence_bounded
             filter_upwards with ω
             rw [h_def]
         _ =ᵐ[μ] fun ω => (n : ℝ)⁻¹ • (∑ k ∈ Finset.range n, (koopman shift hσ)^[k] fL2 : Ω[α] → ℝ) ω := by
-            filter_upwards [Lp.coeFn_smul 2 (n : ℝ)⁻¹ (∑ k ∈ Finset.range n, (koopman shift hσ)^[k] fL2)] with ω hω
+            filter_upwards [Lp.coeFn_smul (n : ℝ)⁻¹ (∑ k ∈ Finset.range n, (koopman shift hσ)^[k] fL2)] with ω hω
             exact hω
         _ =ᵐ[μ] fun ω => (n : ℝ)⁻¹ • (∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2 : Ω[α] → ℝ) ω) := by
             filter_upwards [Lp.coeFn_finset_sum 2 (Finset.range n) fun k => (koopman shift hσ)^[k] fL2] with ω hω
@@ -4589,8 +4590,6 @@ private theorem optionB_L1_convergence_bounded
 /-- Proof that the forward axiom is satisfied by the actual implementation. -/
 theorem optionB_L1_convergence_bounded_proves_axiom :
     optionB_L1_convergence_bounded = optionB_L1_convergence_bounded_fwd := by
-  -- Provide StandardBorelSpace instance explicitly to help elaboration
-  haveI : ∀ (α : Type _) [MeasurableSpace α], StandardBorelSpace α := fun _ => inferInstance
   rfl
 
 end OptionB_L1Convergence
