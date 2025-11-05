@@ -4684,31 +4684,23 @@ section Directing
 
 open ProbabilityTheory
 
-/-- **Directing kernel helper**: The Markov kernel obtained by conditioning on the tail
-σ-algebra and then pushing forward along `X 0`.
-
-Uses: `Kernel.map (condExpKernel μ (tailSigma X)) (X 0)` -/
-noncomputable def directingKernel
-    {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
-    (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) : Kernel Ω α :=
-  Kernel.map (condExpKernel μ (tailSigma X)) (X 0) (hX 0)
-
 /-- **Directing measure**: conditional distribution of `X₀` given the tail σ-algebra.
 
-Constructed using `condExpKernel` API: condition on the tail, then push forward along X₀.
+Constructed using `condExpKernel` API: for each ω, evaluate the conditional expectation kernel
+at ω to get a measure on Ω, then push forward along X₀.
+
+Concretely: `directingMeasure ω = (condExpKernel μ (tailSigma X) ω).map (X 0)`
 -/
 noncomputable def directingMeasure
     {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
     (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) : Ω → Measure α :=
-  fun ω => directingKernel X hX ω
+  fun ω => (ProbabilityTheory.condExpKernel μ (tailSigma X) ω).map (X 0)
 
 /-- `directingMeasure` evaluates measurably on measurable sets.
 
-Uses: `Kernel.measurable_coe` and `Kernel.map_apply'`. -/
+Uses: `Kernel.measurable_coe` and `Measure.map_apply`. -/
 lemma directingMeasure_measurable_eval
     {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -4720,11 +4712,12 @@ lemma directingMeasure_measurable_eval
   -- directingMeasure ω B = (condExpKernel μ (tailSigma X) ω).map (X 0) B
   --                      = (condExpKernel μ (tailSigma X) ω) ((X 0) ⁻¹' B)
   have : (fun ω => directingMeasure (μ := μ) X hX ω B) =
-         (fun ω => condExpKernel μ (tailSigma X) ω ((X 0) ⁻¹' B)) := by
+         (fun ω => ProbabilityTheory.condExpKernel μ (tailSigma X) ω ((X 0) ⁻¹' B)) := by
     funext ω
-    simp [directingMeasure, directingKernel, Kernel.map_apply' _ (hX 0) _ hB]
+    simp only [directingMeasure]
+    rw [Measure.map_apply (hX 0) hB]
   rw [this]
-  exact Kernel.measurable_coe _ ((hX 0).measurableSet_preimage hB)
+  exact ProbabilityTheory.Kernel.measurable_coe _ (measurableSet_preimage (hX 0) hB)
 
 /-- The directing measure is (pointwise) a probability measure.
 
@@ -4736,11 +4729,11 @@ lemma directingMeasure_isProb
     (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) :
     ∀ ω, IsProbabilityMeasure (directingMeasure (μ := μ) X hX ω) := by
   intro ω
-  have hκ : IsProbabilityMeasure (condExpKernel μ (tailSigma X) ω) :=
-    isProbability_condExpKernel (μ := μ) (m := tailSigma X) ω
-  -- Map of probability measure is probability: (map f ν) univ = ν (f ⁻¹' univ) = ν univ = 1
-  simp [directingMeasure, directingKernel, Kernel.map_apply' _ (hX 0) _ MeasurableSet.univ,
-        Set.preimage_univ, hκ.measure_univ]
+  have hκ : IsProbabilityMeasure (ProbabilityTheory.condExpKernel μ (tailSigma X) ω) :=
+    ProbabilityTheory.isProbability_condExpKernel (μ := μ) (m := tailSigma X) ω
+  -- Pushforward of probability measure is probability
+  simp only [directingMeasure]
+  apply MeasureTheory.isProbabilityMeasure_map (hX 0).aemeasurable
 
 /-- **X₀-marginal identity**: the conditional expectation of the indicator
 of `X 0 ∈ B` given the tail equals the directing measure of `B` (toReal).
@@ -4757,24 +4750,25 @@ lemma directingMeasure_X0_marginal
   μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] := by
   set f : Ω → ℝ := Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0)
   -- Conditional expectation equals kernel integral
-  have hCE : μ[f | tailSigma X] =ᵐ[μ] fun ω => ∫ y, f y ∂(condExpKernel μ (tailSigma X) ω) :=
-    condExp_ae_eq_integral_condExpKernel (by rfl : tailSigma X ≤ inferInstance)
+  have hCE : μ[f | tailSigma X] =ᵐ[μ] fun ω => ∫ y, f y ∂(ProbabilityTheory.condExpKernel μ (tailSigma X) ω) :=
+    ProbabilityTheory.condExp_ae_eq_integral_condExpKernel (by rfl : tailSigma X ≤ inferInstance)
       (Measure.integrable_of_isProbabilityMeasure _ _)
   -- Compute the integral: ∫ 1_B ∘ X₀ dκ = κ ((X 0) ⁻¹' B)
-  have hInt : (fun ω => ∫ y, f y ∂(condExpKernel μ (tailSigma X) ω)) =
-              (fun ω => (condExpKernel μ (tailSigma X) ω ((X 0) ⁻¹' B)).toReal) := by
+  have hInt : (fun ω => ∫ y, f y ∂(ProbabilityTheory.condExpKernel μ (tailSigma X) ω)) =
+              (fun ω => (ProbabilityTheory.condExpKernel μ (tailSigma X) ω ((X 0) ⁻¹' B)).toReal) := by
     funext ω
     simp only [f, Function.comp, Set.indicator]
-    rw [integral_indicator_one ((hX 0).measurableSet_preimage hB)]
+    rw [MeasureTheory.integral_indicator_one (measurableSet_preimage (hX 0) hB)]
   -- Re-express via the pushforward measure
-  have hMap : (fun ω => (condExpKernel μ (tailSigma X) ω ((X 0) ⁻¹' B)).toReal) =
+  have hMap : (fun ω => (ProbabilityTheory.condExpKernel μ (tailSigma X) ω ((X 0) ⁻¹' B)).toReal) =
               (fun ω => (directingMeasure (μ := μ) X hX ω B).toReal) := by
     funext ω
-    simp [directingMeasure, directingKernel, Kernel.map_apply' _ (hX 0) _ hB]
+    simp only [directingMeasure]
+    rw [Measure.map_apply (hX 0) hB]
   -- Chain the equalities
   calc (fun ω => (directingMeasure (μ := μ) X hX ω B).toReal)
-      = (fun ω => (condExpKernel μ (tailSigma X) ω ((X 0) ⁻¹' B)).toReal) := hMap.symm
-    _ = (fun ω => ∫ y, f y ∂(condExpKernel μ (tailSigma X) ω)) := hInt.symm
+      = (fun ω => (ProbabilityTheory.condExpKernel μ (tailSigma X) ω ((X 0) ⁻¹' B)).toReal) := hMap.symm
+    _ = (fun ω => ∫ y, f y ∂(ProbabilityTheory.condExpKernel μ (tailSigma X) ω)) := hInt.symm
     _ =ᵐ[μ] μ[f | tailSigma X] := hCE.symm
 
 end Directing
