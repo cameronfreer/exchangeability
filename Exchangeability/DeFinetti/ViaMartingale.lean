@@ -1809,10 +1809,11 @@ lemma condIndep_of_triple_law
                   rw [h_V_eq]
 
                   -- Step 4: Swap back W → W' using test_fn_pair_law (pair law (Y,W) = (Y,W'))
+                  -- Use explicit instance to avoid 𝔾 pollution
                   have h_swap_back :
                     ∫ x, φ x * v (W x) * (B_set.indicator (fun _ => (1 : ℝ))) (W x) ∂μ =
                     ∫ x, φ x * v (W' x) * (B_set.indicator (fun _ => (1 : ℝ))) (W' x) ∂μ := by
-                    apply test_fn_pair_law Y W W' hY hW hW' h_pair_YW φ
+                    apply @test_fn_pair_law Ω α γ (inferInstance : MeasurableSpace Ω) _ _ μ _ Y W W' hY hW hW' h_pair_YW φ
                     · use A.indicator (fun _ => (1 : ℝ)); ext ω; rfl
                     · exact hv_meas.mul (measurable_const.indicator hB_set_meas)
                     · intro w; simp [Pi.mul_apply]
