@@ -4684,49 +4684,98 @@ section Directing
 
 open ProbabilityTheory
 
-/-- **Directing measure**: conditional distribution of `X₀` given the tail σ-algebra.
+/-- **Directing kernel helper**: The Markov kernel obtained by conditioning on the tail
+σ-algebra and then pushing forward along `X 0`.
 
-**TODO**: This construction requires a regular conditional probability kernel, which
-needs either:
-- Direct use of `condDistrib` with an identity RV (requires technical setup), OR  
-- Access to `condExpKernel` API (mathlib v4.25+), OR
-- TODO: Implement using condExpKernel when available.
-
-For now, we use axioms and state the required properties. -/
-axiom directingMeasure
+Uses: `Kernel.map (condExpKernel μ (tailSigma X)) (X 0)` -/
+noncomputable def directingKernel
     {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
-    (X : ℕ → Ω → α) : Ω → Measure α
+    (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) : Kernel Ω α :=
+  Kernel.map (condExpKernel μ (tailSigma X)) (X 0) (hX 0)
 
-/-- `directingMeasure` evaluates measurably on measurable sets. -/
-axiom directingMeasure_measurable_eval
+/-- **Directing measure**: conditional distribution of `X₀` given the tail σ-algebra.
+
+Constructed using `condExpKernel` API: condition on the tail, then push forward along X₀.
+-/
+noncomputable def directingMeasure
+    {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+    (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) : Ω → Measure α :=
+  fun ω => directingKernel X hX ω
+
+/-- `directingMeasure` evaluates measurably on measurable sets.
+
+Uses: `Kernel.measurable_coe` and `Kernel.map_apply'`. -/
+lemma directingMeasure_measurable_eval
     {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
     (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) :
     ∀ (B : Set α), MeasurableSet B →
-      Measurable (fun ω => directingMeasure (μ := μ) X ω B)
+      Measurable (fun ω => directingMeasure (μ := μ) X hX ω B) := by
+  intro B hB
+  -- directingMeasure ω B = (condExpKernel μ (tailSigma X) ω).map (X 0) B
+  --                      = (condExpKernel μ (tailSigma X) ω) ((X 0) ⁻¹' B)
+  have : (fun ω => directingMeasure (μ := μ) X hX ω B) =
+         (fun ω => condExpKernel μ (tailSigma X) ω ((X 0) ⁻¹' B)) := by
+    funext ω
+    simp [directingMeasure, directingKernel, Kernel.map_apply' _ (hX 0) _ hB]
+  rw [this]
+  exact Kernel.measurable_coe _ ((hX 0).measurableSet_preimage hB)
 
-/-- The directing measure is (pointwise) a probability measure. -/
-axiom directingMeasure_isProb
+/-- The directing measure is (pointwise) a probability measure.
+
+Uses: `isProbability_condExpKernel` and map preserves probability. -/
+lemma directingMeasure_isProb
     {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
-    (X : ℕ → Ω → α) :
-    ∀ ω, IsProbabilityMeasure (directingMeasure (μ := μ) X ω)
+    (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) :
+    ∀ ω, IsProbabilityMeasure (directingMeasure (μ := μ) X hX ω) := by
+  intro ω
+  have hκ : IsProbabilityMeasure (condExpKernel μ (tailSigma X) ω) :=
+    isProbability_condExpKernel (μ := μ) (m := tailSigma X) ω
+  -- Map of probability measure is probability: (map f ν) univ = ν (f ⁻¹' univ) = ν univ = 1
+  simp [directingMeasure, directingKernel, Kernel.map_apply' _ (hX 0) _ MeasurableSet.univ,
+        Set.preimage_univ, hκ.measure_univ]
 
 /-- **X₀-marginal identity**: the conditional expectation of the indicator
-of `X 0 ∈ B` given the tail equals the directing measure of `B` (toReal). -/
-axiom directingMeasure_X0_marginal
+of `X 0 ∈ B` given the tail equals the directing measure of `B` (toReal).
+
+Uses: `condExp_ae_eq_integral_condExpKernel` and `integral_indicator_one`. -/
+lemma directingMeasure_X0_marginal
     {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
     (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n))
     (B : Set α) (hB : MeasurableSet B) :
-  (fun ω => (directingMeasure (μ := μ) X ω B).toReal)
+  (fun ω => (directingMeasure (μ := μ) X hX ω B).toReal)
     =ᵐ[μ]
-  μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X]
+  μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] := by
+  set f : Ω → ℝ := Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0)
+  -- Conditional expectation equals kernel integral
+  have hCE : μ[f | tailSigma X] =ᵐ[μ] fun ω => ∫ y, f y ∂(condExpKernel μ (tailSigma X) ω) :=
+    condExp_ae_eq_integral_condExpKernel (by rfl : tailSigma X ≤ inferInstance)
+      (Measure.integrable_of_isProbabilityMeasure _ _)
+  -- Compute the integral: ∫ 1_B ∘ X₀ dκ = κ ((X 0) ⁻¹' B)
+  have hInt : (fun ω => ∫ y, f y ∂(condExpKernel μ (tailSigma X) ω)) =
+              (fun ω => (condExpKernel μ (tailSigma X) ω ((X 0) ⁻¹' B)).toReal) := by
+    funext ω
+    simp only [f, Function.comp, Set.indicator]
+    rw [integral_indicator_one ((hX 0).measurableSet_preimage hB)]
+  -- Re-express via the pushforward measure
+  have hMap : (fun ω => (condExpKernel μ (tailSigma X) ω ((X 0) ⁻¹' B)).toReal) =
+              (fun ω => (directingMeasure (μ := μ) X hX ω B).toReal) := by
+    funext ω
+    simp [directingMeasure, directingKernel, Kernel.map_apply' _ (hX 0) _ hB]
+  -- Chain the equalities
+  calc (fun ω => (directingMeasure (μ := μ) X hX ω B).toReal)
+      = (fun ω => (condExpKernel μ (tailSigma X) ω ((X 0) ⁻¹' B)).toReal) := hMap.symm
+    _ = (fun ω => ∫ y, f y ∂(condExpKernel μ (tailSigma X) ω)) := hInt.symm
+    _ =ᵐ[μ] μ[f | tailSigma X] := hCE.symm
 
 end Directing
 
@@ -4762,11 +4811,11 @@ lemma conditional_law_eq_directingMeasure
     (hX : Contractable μ X)
     (hX_meas : ∀ n, Measurable (X n))
     (n : ℕ) (B : Set α) (hB : MeasurableSet B) :
-    (fun ω => (directingMeasure (μ := μ) X ω B).toReal)
+    (fun ω => (directingMeasure (μ := μ) X hX_meas ω B).toReal)
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X] := by
-  -- Apply the general lemma with ν := directingMeasure X
-  exact conditional_law_eq_of_X0_marginal X hX hX_meas (directingMeasure X)
+  -- Apply the general lemma with ν := directingMeasure X hX_meas
+  exact conditional_law_eq_of_X0_marginal X hX hX_meas (directingMeasure X hX_meas)
     (fun B hB => directingMeasure_X0_marginal X hX_meas B hB) n B hB
 
 /-! ### Finite-dimensional product formula -/
@@ -5334,26 +5383,26 @@ lemma finite_product_formula_with_directing
     (X : ℕ → Ω → α) (hX : Contractable μ X) (hX_meas : ∀ n, Measurable (X n))
     (m : ℕ) (k : Fin m → ℕ) (hk : StrictMono k) :
   Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
-    = μ.bind (fun ω => Measure.pi fun _ : Fin m => directingMeasure (μ := μ) X ω) := by
+    = μ.bind (fun ω => Measure.pi fun _ : Fin m => directingMeasure (μ := μ) X hX_meas ω) := by
   classical
   -- Assemble the hypotheses required by `finite_product_formula`.
-  have hν_prob : ∀ ω, IsProbabilityMeasure (directingMeasure (μ := μ) X ω) :=
-    directingMeasure_isProb (μ := μ) X
+  have hν_prob : ∀ ω, IsProbabilityMeasure (directingMeasure (μ := μ) X hX_meas ω) :=
+    directingMeasure_isProb (μ := μ) X hX_meas
   have hν_meas :
       ∀ B : Set α, MeasurableSet B →
-        Measurable (fun ω => directingMeasure (μ := μ) X ω B) :=
+        Measurable (fun ω => directingMeasure (μ := μ) X hX_meas ω B) :=
     directingMeasure_measurable_eval (μ := μ) X hX_meas
   -- X₀ marginal identity → all coordinates via conditional_law_eq_directingMeasure
   have hν_law :
       ∀ n B, MeasurableSet B →
-        (fun ω => (directingMeasure (μ := μ) X ω B).toReal)
+        (fun ω => (directingMeasure (μ := μ) X hX_meas ω B).toReal)
           =ᵐ[μ]
         μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X] := by
     intro n B hB
     exact conditional_law_eq_directingMeasure (μ := μ) X hX hX_meas n B hB
   -- Now invoke finite_product_formula wrapper.
   exact finite_product_formula X hX hX_meas
-    (directingMeasure (μ := μ) X) hν_prob hν_meas hν_law m k hk
+    (directingMeasure (μ := μ) X hX_meas) hν_prob hν_meas hν_law m k hk
 
 end MainTheorem
 
