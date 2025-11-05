@@ -233,6 +233,14 @@ lemma negProcess_revProcess_negProcess_revProcess {Ω : Type*} (X : ℕ → Ω �
   rw [revProcess_negProcess_revProcess X N n hn ω]
   simp only [negProcess, neg_neg]
 
+/-- Helper: upcrossingsBefore is invariant under pointwise equality on [0, N] -/
+lemma upcrossingsBefore_congr {Ω : Type*} {a b : ℝ} {f g : ℕ → Ω → ℝ} {N : ℕ} {ω : Ω}
+    (h : ∀ n ≤ N, f n ω = g n ω) :
+    upcrossingsBefore a b f N ω = upcrossingsBefore a b g N ω := by
+  -- Both are sSup of sets defined by upperCrossingTime
+  -- Need to show the sets are equal, which follows from upperCrossingTime being equal
+  sorry  -- Requires showing upperCrossingTime respects process equality on [0, N]
+
 /-- **One-way inequality**: upcrossings ≤ downcrossings of time-reversed process.
 
 Maps each greedy upcrossing pair (τ_k, σ_k) of X to a downcrossing pair
@@ -290,18 +298,15 @@ lemma downBefore_rev_le_upBefore
     intros n hn
     exact negProcess_revProcess_negProcess_revProcess X N n hn ω
 
-  -- upcrossingsBefore only depends on values up to N
-  -- Strategy: Show upperCrossingTime a b f N n ω = upperCrossingTime a b g N n ω
-  -- when f k ω = g k ω for all k ≤ N.
-  --
-  -- Key mathlib lemmas found:
-  --   - hitting_eq_hitting_of_exists: If hitting occurs in [n, m₁], extending to m₂ doesn't change it
-  --   - upperCrossingTime is defined via hitting: hitting f (Set.Ici b) (lowerCrossingTime...) N ω
-  --   - Need: If f and g agree on [0, N], then hitting f s n N ω = hitting g s n N ω
-  --
-  -- This follows from the fact that hitting only examines process values in [n, N].
-  -- Once crossing times are equal, upcrossingsBefore (defined as sSup of crossing times) is equal.
-  sorry
+  -- Use congr lemma to replace the complex process with X
+  have rhs_eq : upcrossingsBefore a b (negProcess (revProcess (negProcess (revProcess X N)) N)) N ω
+              = upcrossingsBefore a b X N ω := by
+    apply upcrossingsBefore_congr
+    exact proc_eq
+
+  -- Combine h with rhs_eq to get the result
+  rw [← rhs_eq]
+  exact h
 
 /-- **Time-reversal lemma** (process version):
 Upcrossings of X up to N = downcrossings of the reversed process up to N.
