@@ -153,6 +153,41 @@ lemma measurableSpace_pi_nat_le_iSup_fin {α : Type*} [MeasurableSpace α] :
 
 end PiFiniteProjections
 
+section ProbabilityMeasureHelpers
+
+/-- **[TODO: Mathlib.MeasureTheory.Integral.Bochner]**
+
+On a probability space, a bounded measurable function is integrable.
+
+This is a standard fact: if `‖f‖ ≤ C` a.e. on a probability measure, then
+`∫ ‖f‖ ≤ C·μ(univ) = C < ∞`, so `f` is integrable.
+
+**Proof strategy:**
+Use mathlib's `Integrable.of_mem_Icc` for functions bounded in an interval.
+-/
+lemma integrable_of_bounded_on_prob
+    {α : Type*} [MeasurableSpace α] {ν : Measure α} [IsProbabilityMeasure ν]
+    {h : α → ℝ} (hmeas : Measurable h) {C : ℝ}
+    (hB : ∀ᵐ x ∂ν, ‖h x‖ ≤ C) : Integrable h ν := by
+  by_cases hC : 0 ≤ C
+  · -- If C ≥ 0, use that h is bounded in [-C, C]
+    apply MeasureTheory.Integrable.of_mem_Icc (-C) C hmeas.aemeasurable
+    filter_upwards [hB] with x hx
+    rw [Set.mem_Icc]
+    rw [Real.norm_eq_abs] at hx
+    rwa [abs_le] at hx
+  · -- If C < 0, then ‖h‖ ≤ C < 0 a.e. contradicts ‖h‖ ≥ 0
+    push_neg at hC
+    apply MeasureTheory.Integrable.of_mem_Icc 0 0 hmeas.aemeasurable
+    filter_upwards [hB] with x hx
+    rw [Set.mem_Icc]
+    have : ‖h x‖ = 0 := by linarith [norm_nonneg (h x)]
+    rw [Real.norm_eq_abs] at this
+    simp [abs_eq_zero] at this
+    simp [this]
+
+end ProbabilityMeasureHelpers
+
 section CondDistribUniqueness
 
 /-- **[TODO: Mathlib.Probability.Kernel.CondDistrib]**
