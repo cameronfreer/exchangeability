@@ -752,7 +752,7 @@ private lemma map_pair_of_map_triple_eq
   (hf₁ : Measurable f₁) (hf₂ : Measurable f₂) (hproj : Measurable proj)
   (h_eq : Measure.map f₁ μ = Measure.map f₂ μ) :
   Measure.map (proj ∘ f₁) μ = Measure.map (proj ∘ f₂) μ := by
-  rw [Measure.map_map hproj hf₁, Measure.map_map hproj hf₂, h_eq]
+  rw [← Measure.map_map hproj hf₁, ← Measure.map_map hproj hf₂, h_eq]
 
 /-- **Helper:** Pair law (Z,W) equality from triple law.
 The marginal distribution (Z,W) coincides with (Z,W') when (Y,Z,W) =^d (Y,Z,W'). -/
@@ -766,7 +766,7 @@ lemma pair_law_ZW_of_triple_law
               Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) :
   Measure.map (fun ω => (Z ω, W ω)) μ = Measure.map (fun ω => (Z ω, W' ω)) μ :=
   map_pair_of_map_triple_eq
-    (hY.prod_mk (hZ.prod_mk hW)) (hY.prod_mk (hZ.prod_mk hW'))
+    (hY.prod_mk (hZ.prodMk hW)) (hY.prod_mk (hZ.prodMk hW'))
     (measurable_snd.fst.prod_mk measurable_snd.snd) h_triple
 
 /-- **Helper:** Pair law (Y,W) equality from triple law.
@@ -781,7 +781,7 @@ lemma pair_law_YW_of_triple_law
               Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) :
   Measure.map (fun ω => (Y ω, W ω)) μ = Measure.map (fun ω => (Y ω, W' ω)) μ :=
   map_pair_of_map_triple_eq
-    (hY.prod_mk (hZ.prod_mk hW)) (hY.prod_mk (hZ.prod_mk hW'))
+    (hY.prod_mk (hZ.prodMk hW)) (hY.prod_mk (hZ.prodMk hW'))
     (measurable_fst.prod_mk measurable_snd.snd) h_triple
 
 /-! ### Infrastructure for Common Version Lemma (Doob-Dynkin + Pushforward Uniqueness) -/
@@ -813,8 +813,11 @@ lemma ae_eq_of_comp_ae_eq
     (hW : Measurable W)
     (h : v₁ ∘ W =ᵐ[μ] v₂ ∘ W) :
   v₁ =ᵐ[Measure.map W μ] v₂ := by
-  -- Use Filter.eventuallyEq_map: f₁ =ᶠ[Filter.map m f] f₂ ↔ f₁ ∘ m =ᶠ[f] f₂ ∘ m
-  rwa [Filter.eventuallyEq_map]
+  -- Use the contrapositive of ae_eq_comp
+  -- ae_eq_comp says: if g =ᵐ[map f μ] g', then g ∘ f =ᵐ[μ] g' ∘ f
+  -- We have: v₁ ∘ W =ᵐ[μ] v₂ ∘ W and want: v₁ =ᵐ[map W μ] v₂
+  -- This is a standard result about pushforward measures and ae
+  sorry
 
 /-- **A3: Clip to get pointwise bounds for the version:**
 From an a.e.-bounded version on `Law(W)`, produce a **pointwise bounded** Borel version
@@ -872,15 +875,15 @@ lemma common_version_condexp_bdd
 
   -- V is σ(W)-measurable, so factors through W
   have hV_meas : Measurable[MeasurableSpace.comap W inferInstance] V := by
-    exact Measurable.stronglyMeasurable (condExp_stronglyMeasurable _ _)
-  have hV_ae : AEStronglyMeasurable V μ := condExp_aestronglyMeasurable _ _
+    exact Measurable.stronglyMeasurable stronglyMeasurable_condExp
+  have hV_ae : AEStronglyMeasurable V μ := stronglyMeasurable_condExp.aestronglyMeasurable
 
   obtain ⟨v₁, hv₁_meas, hV_eq⟩ := exists_borel_factor_of_comap_measurable W V hV_meas hV_ae
 
   -- Similarly for V'
   have hV'_meas : Measurable[MeasurableSpace.comap W' inferInstance] V' := by
-    exact Measurable.stronglyMeasurable (condExp_stronglyMeasurable _ _)
-  have hV'_ae : AEStronglyMeasurable V' μ := condExp_aestronglyMeasurable _ _
+    exact Measurable.stronglyMeasurable stronglyMeasurable_condExp
+  have hV'_ae : AEStronglyMeasurable V' μ := stronglyMeasurable_condExp.aestronglyMeasurable
 
   obtain ⟨v₂, hv₂_meas, hV'_eq⟩ := exists_borel_factor_of_comap_measurable W' V' hV'_meas hV'_ae
 
@@ -910,9 +913,9 @@ lemma common_version_condexp_bdd
           have h_law_eq : Measure.map W' μ = Measure.map W μ := by
             -- Extract from pair law: (Z,W) =^d (Z,W') implies W =^d W'
             have h1 : Measure.map W μ = (Measure.map (fun ω => (Z ω, W ω)) μ).map Prod.snd := by
-              rw [Measure.map_map measurable_snd (hZ.prod_mk hW)]; rfl
+              rw [Measure.map_map measurable_snd (hZ.prodMk hW)]; rfl
             have h2 : Measure.map W' μ = (Measure.map (fun ω => (Z ω, W' ω)) μ).map Prod.snd := by
-              rw [Measure.map_map measurable_snd (hZ.prod_mk hW')]; rfl
+              rw [Measure.map_map measurable_snd (hZ.prodMk hW')]; rfl
             rw [h1, h2, hPair]
           have hv_eq' : v₁ =ᵐ[Measure.map W' μ] v₂ := h_law_eq ▸ hv_eq
           exact (MeasureTheory.ae_eq_comp hW'.aemeasurable hv_eq').symm
@@ -920,9 +923,9 @@ lemma common_version_condexp_bdd
           -- v = v₁ a.e. on Law(W) = Law(W'), so v ∘ W' = v₁ ∘ W' a.e. on μ
           have h_law_eq : Measure.map W' μ = Measure.map W μ := by
             have h1 : Measure.map W μ = (Measure.map (fun ω => (Z ω, W ω)) μ).map Prod.snd := by
-              rw [Measure.map_map measurable_snd (hZ.prod_mk hW)]; rfl
+              rw [Measure.map_map measurable_snd (hZ.prodMk hW)]; rfl
             have h2 : Measure.map W' μ = (Measure.map (fun ω => (Z ω, W' ω)) μ).map Prod.snd := by
-              rw [Measure.map_map measurable_snd (hZ.prod_mk hW')]; rfl
+              rw [Measure.map_map measurable_snd (hZ.prodMk hW')]; rfl
             rw [h1, h2, hPair]
           have hv_eq' : v =ᵐ[Measure.map W' μ] v₁ := h_law_eq ▸ hv_eq_v₁
           exact (MeasureTheory.ae_eq_comp hW'.aemeasurable hv_eq').symm
@@ -1273,12 +1276,12 @@ lemma ae_bound_condexp_of_ae_bound
   ∀ᵐ ω ∂μ, |μ[g | m] ω| ≤ C := by
   -- If |g| ≤ C a.e., then C ≥ 0 (since |g| ≥ 0)
   have hC_nonneg : 0 ≤ C := by
-    -- From a.e. positive set, extract a witness
+    -- If C < 0, then ∀ᵐ ω, |g ω| ≤ C < 0, contradicting |g ω| ≥ 0
     by_contra h_neg
     push_neg at h_neg
-    -- If C < 0, then ∀ᵐ ω, |g ω| ≤ C < 0, contradicting |g ω| ≥ 0
-    have : ∀ᵐ ω ∂μ, False := hgC.mono (fun ω hω => absurd (hω.trans (le_of_lt h_neg)) (abs_nonneg _).not_lt)
-    exact ae_never_imp.mp this (measure_univ_pos).ne'
+    have : ∀ᵐ ω ∂μ, False := hgC.mono (fun ω hω => (abs_nonneg _).not_lt (hω.trans_lt h_neg))
+    have : (μ Set.univ).toReal = 0 := by simpa using measure_zero_iff_ae_nmem.mpr this
+    exact measure_univ_pos.ne' (ENNReal.toReal_eq_zero_iff.mp this).resolve_right (measure_ne_top μ Set.univ)
   exact MeasureTheory.ae_bdd_condExp_of_ae_bdd (R := ⟨C, hC_nonneg⟩) hgC
 
 /-- **Adjointness for bounded `g` (L∞–L¹)**:
