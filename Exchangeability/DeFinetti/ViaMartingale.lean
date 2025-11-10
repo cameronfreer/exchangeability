@@ -4591,6 +4591,11 @@ lemma directingMeasure_isProb
 /-- **X₀-marginal identity**: the conditional expectation of the indicator
 of `X 0 ∈ B` given the tail equals the directing measure of `B` (toReal).
 
+TODO: This proof needs the correct mathlib API for:
+1. `condExp_ae_eq_integral_condExpKernel` - needs proof that tailSigma X ≤ ambient σ-algebra
+2. `integral_indicator_one` - needs correct pattern matching for indicator integration
+3. Converting propositional equality to EventuallyEq
+
 Uses: `condExp_ae_eq_integral_condExpKernel` and `integral_indicator_one`. -/
 lemma directingMeasure_X0_marginal
     {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
@@ -4601,43 +4606,7 @@ lemma directingMeasure_X0_marginal
   (fun ω => (directingMeasure (μ := μ) X hX ω B).toReal)
     =ᵐ[μ]
   μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] := by
-  classical
-  -- Integrability of the indicator through X 0
-  have hInt : Integrable (fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (X 0 ω))) μ := by
-    apply Integrable.indicator
-    · exact integrable_const (1 : ℝ)
-    · exact (hX 0) hB
-  -- Conditional expectation equals kernel integral a.e.
-  have hAE :
-    μ[ (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X 0 ω)) | tailSigma X]
-      =ᵐ[μ]
-    (fun ω => ∫ x, (Set.indicator B (fun _ => (1 : ℝ)) (X 0 x))
-                   ∂ ProbabilityTheory.condExpKernel μ (tailSigma X) ω) := by
-    exact ProbabilityTheory.condExp_ae_eq_integral_condExpKernel (m := tailSigma X) hInt
-  -- Identify the kernel integral with evaluation of `directingMeasure` on `B`
-  have hId :
-    (fun ω => ∫ x, (Set.indicator B (fun _ => (1 : ℝ)) (X 0 x))
-                   ∂ ProbabilityTheory.condExpKernel μ (tailSigma X) ω)
-    =
-    (fun ω => (directingMeasure (μ := μ) X hX ω B).toReal) := by
-    funext ω
-    -- The integral of an indicator of constant 1 is the measure of the set
-    let κ := ProbabilityTheory.condExpKernel μ (tailSigma X)
-    have : (∫ x, (Set.indicator ((X 0) ⁻¹' B) (fun _ => (1 : ℝ)) x) ∂κ ω)
-          =
-           ((κ ω) ((X 0) ⁻¹' B)).toReal := by
-      -- Use integral_indicator_one from mathlib
-      rw [MeasureTheory.integral_indicator_one]
-      exact (hX 0) hB
-    calc ∫ x, (Set.indicator B (fun _ => (1 : ℝ)) (X 0 x)) ∂κ ω
-        = ∫ x, (Set.indicator ((X 0) ⁻¹' B) (fun _ => (1 : ℝ)) x) ∂κ ω := by
-          congr 1; funext x; simp [Set.indicator]
-      _ = ((κ ω) ((X 0) ⁻¹' B)).toReal := this
-      _ = (directingMeasure (μ := μ) X hX ω B).toReal := by
-          simp [directingMeasure, κ]
-          rw [Measure.map_apply (hX 0) hB]
-  -- Combine
-  exact hAE.symm.trans (Filter.EventuallyEq.fun_comp hId _)
+  sorry
 
 end Directing
 
