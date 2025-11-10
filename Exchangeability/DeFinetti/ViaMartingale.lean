@@ -1020,9 +1020,9 @@ lemma integral_map_eq
     {g : δ → ℝ}
     (hg : Integrable g (Measure.map T μ)) :
   ∫ ω, g (T ω) ∂μ = ∫ y, g y ∂ (Measure.map T μ) := by
-  -- Standard: prove first for simple functions, then extend via dominated convergence
-  -- This is the change-of-variables formula for Bochner integrals
-  sorry
+  -- Use mathlib's change-of-variables formula for Bochner integrals
+  symm
+  exact MeasureTheory.integral_map hT.aemeasurable hg.aestronglyMeasurable
 
 /-- **B2: Test-function transfer under equality of laws.**
 If two pushforward measures coincide, Bochner integrals of any integrable
@@ -4502,13 +4502,23 @@ lemma directingMeasure_measurable_eval
     ∀ (B : Set α), MeasurableSet B →
       Measurable (fun ω => directingMeasure (μ := μ) X hX ω B) := by
   intro B hB
-  -- Strategy: (1) unfold directingMeasure to Measure.map
-  --           (2) use Measure.map_apply to convert to preimage
-  --           (3) apply Kernel.measurable_coe to the condExpKernel
-  -- directingMeasure ω B = (condExpKernel μ (tailSigma X) ω).map (X 0) B
-  --                      = (condExpKernel μ (tailSigma X) ω) ((X 0) ⁻¹' B)
-  -- Then use: ProbabilityTheory.Kernel.measurable_coe (condExpKernel μ (tailSigma X)) (...)
-  sorry
+  classical
+  -- Preimage of a measurable set under `X 0` is measurable in `Ω`.
+  have hS : MeasurableSet ((X 0) ⁻¹' B) := (hX 0) hB
+  -- Abbreviation for the conditional expectation kernel on the tail σ-algebra.
+  let κ := ProbabilityTheory.condExpKernel μ (tailSigma X)
+  -- Evaluate: map-apply reduces evaluation on `B` to evaluation on the preimage.
+  have h_eval :
+      (fun ω => directingMeasure (μ := μ) X hX ω B)
+        = fun ω => κ ω ((X 0) ⁻¹' B) := by
+    funext ω
+    -- `Measure.map_apply` expects `hB`, and uses `(hX 0)` for measurability of `X 0`.
+    simp only [directingMeasure]
+    rw [Measure.map_apply (hX 0) hB]
+  -- Kernel evaluation at a fixed measurable set is measurable in the parameter.
+  -- We lift from tailSigma to the full σ-algebra using tailSigma_le.
+  rw [h_eval]
+  exact (ProbabilityTheory.Kernel.measurable_coe κ hS).mono (tailSigma_le X hX) le_rfl
 
 /-- The directing measure is (pointwise) a probability measure.
 
