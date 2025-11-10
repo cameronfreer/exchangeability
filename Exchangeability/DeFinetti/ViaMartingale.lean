@@ -4769,10 +4769,10 @@ lemma directingMeasure_isProb
     ∀ ω, IsProbabilityMeasure (directingMeasure (μ := μ) X hX ω) := by
   intro ω
   -- Strategy: condExpKernel is an IsMarkovKernel, so each condExpKernel ω is a probability measure
-  --           Pushing forward preserves probability via isProbabilityMeasure_map
+  --           Pushing forward preserves probability via Measure.isProbabilityMeasure_map
   -- directingMeasure ω = (condExpKernel μ (tailSigma X) ω).map (X 0)
   unfold directingMeasure
-  apply isProbabilityMeasure_map
+  exact Measure.isProbabilityMeasure_map (hX 0).aemeasurable
 
 /-- **X₀-marginal identity**: the conditional expectation of the indicator
 of `X 0 ∈ B` given the tail equals the directing measure of `B` (toReal).
