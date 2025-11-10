@@ -741,6 +741,19 @@ lemma condExp_projection_of_condIndep
   -- **Mathlib contribution target:** Mathlib.Probability.Independence.Conditional
   -- **Estimated effort:** 3-4 weeks (requires formalizing conditional independence)
 
+/-- **Helper lemma:** Marginal distribution projection from triple.
+If two triple distributions are equal, then projecting to a pair by dropping one coordinate
+preserves the equality. -/
+private lemma map_pair_of_map_triple_eq
+  {Ω α β γ δ : Type*}
+  [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ] [MeasurableSpace δ]
+  {μ : Measure Ω}
+  {f₁ f₂ : Ω → α × β × γ} {proj : α × β × γ → δ}
+  (hf₁ : Measurable f₁) (hf₂ : Measurable f₂) (hproj : Measurable proj)
+  (h_eq : Measure.map f₁ μ = Measure.map f₂ μ) :
+  Measure.map (proj ∘ f₁) μ = Measure.map (proj ∘ f₂) μ := by
+  rw [Measure.map_map hproj hf₁, Measure.map_map hproj hf₂, h_eq]
+
 /-- **Helper:** Pair law (Z,W) equality from triple law.
 The marginal distribution (Z,W) coincides with (Z,W') when (Y,Z,W) =^d (Y,Z,W'). -/
 lemma pair_law_ZW_of_triple_law
@@ -751,10 +764,10 @@ lemma pair_law_ZW_of_triple_law
   (hY : Measurable Y) (hZ : Measurable Z) (hW : Measurable W) (hW' : Measurable W')
   (h_triple : Measure.map (fun ω => (Y ω, Z ω, W ω)) μ =
               Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) :
-  Measure.map (fun ω => (Z ω, W ω)) μ = Measure.map (fun ω => (Z ω, W' ω)) μ := by
-  -- Marginal: (Y,Z,W) → (Z,W) by dropping Y
-  -- Standard fact: marginal distributions are preserved
-  sorry
+  Measure.map (fun ω => (Z ω, W ω)) μ = Measure.map (fun ω => (Z ω, W' ω)) μ :=
+  map_pair_of_map_triple_eq
+    (hY.prod_mk (hZ.prod_mk hW)) (hY.prod_mk (hZ.prod_mk hW'))
+    (measurable_snd.fst.prod_mk measurable_snd.snd) h_triple
 
 /-- **Helper:** Pair law (Y,W) equality from triple law.
 The marginal distribution (Y,W) coincides with (Y,W') when (Y,Z,W) =^d (Y,Z,W'). -/
@@ -766,10 +779,10 @@ lemma pair_law_YW_of_triple_law
   (hY : Measurable Y) (hZ : Measurable Z) (hW : Measurable W) (hW' : Measurable W')
   (h_triple : Measure.map (fun ω => (Y ω, Z ω, W ω)) μ =
               Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) :
-  Measure.map (fun ω => (Y ω, W ω)) μ = Measure.map (fun ω => (Y ω, W' ω)) μ := by
-  -- Marginal: (Y,Z,W) → (Y,W) by dropping Z
-  -- Standard fact: marginal distributions are preserved
-  sorry
+  Measure.map (fun ω => (Y ω, W ω)) μ = Measure.map (fun ω => (Y ω, W' ω)) μ :=
+  map_pair_of_map_triple_eq
+    (hY.prod_mk (hZ.prod_mk hW)) (hY.prod_mk (hZ.prod_mk hW'))
+    (measurable_fst.prod_mk measurable_snd.snd) h_triple
 
 /-! ### Infrastructure for Common Version Lemma (Doob-Dynkin + Pushforward Uniqueness) -/
 
@@ -800,9 +813,8 @@ lemma ae_eq_of_comp_ae_eq
     (hW : Measurable W)
     (h : v₁ ∘ W =ᵐ[μ] v₂ ∘ W) :
   v₁ =ᵐ[Measure.map W μ] v₂ := by
-  -- The set {y | v₁ y ≠ v₂ y} has pushforward measure zero
-  -- because its preimage {ω | v₁(W ω) ≠ v₂(W ω)} has measure zero
-  sorry
+  -- Use Filter.eventuallyEq_map: f₁ =ᶠ[Filter.map m f] f₂ ↔ f₁ ∘ m =ᶠ[f] f₂ ∘ m
+  rwa [Filter.eventuallyEq_map]
 
 /-- **A3: Clip to get pointwise bounds for the version:**
 From an a.e.-bounded version on `Law(W)`, produce a **pointwise bounded** Borel version
@@ -1236,7 +1248,13 @@ lemma ae_bound_condexp_of_ae_bound
     (hgC : ∀ᵐ ω ∂μ, |g ω| ≤ C) :
   ∀ᵐ ω ∂μ, |μ[g | m] ω| ≤ C := by
   -- If |g| ≤ C a.e., then C ≥ 0 (since |g| ≥ 0)
-  have hC_nonneg : 0 ≤ C := by sorry  -- TODO: prove from (∀ᵐ ω, |g ω| ≤ C) and (∀ ω, 0 ≤ |g ω|)
+  have hC_nonneg : 0 ≤ C := by
+    -- From a.e. positive set, extract a witness
+    by_contra h_neg
+    push_neg at h_neg
+    -- If C < 0, then ∀ᵐ ω, |g ω| ≤ C < 0, contradicting |g ω| ≥ 0
+    have : ∀ᵐ ω ∂μ, False := hgC.mono (fun ω hω => absurd (hω.trans (le_of_lt h_neg)) (abs_nonneg _).not_lt)
+    exact ae_never_imp.mp this (measure_univ_pos).ne'
   exact MeasureTheory.ae_bdd_condExp_of_ae_bdd (R := ⟨C, hC_nonneg⟩) hgC
 
 /-- **Adjointness for bounded `g` (L∞–L¹)**:
