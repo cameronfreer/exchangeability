@@ -78,11 +78,11 @@ theorem conditionallyIID_of_contractable
   haveI : IsFiniteMeasure μ := inferInstance
 
   -- 1) Directing measure from the tail σ-algebra
-  set ν : Ω → Measure α := directingMeasure (μ := μ) X with hν_def
+  set ν : Ω → Measure α := directingMeasure (μ := μ) X hX_meas with hν_def
 
   -- 2) νω is a probability measure
   have hν_prob : ∀ ω, IsProbabilityMeasure (ν ω) :=
-    directingMeasure_isProb (μ := μ) X
+    directingMeasure_isProb (μ := μ) X hX_meas
 
   -- 3) measurability of evaluations ω ↦ νω(B)
   have hν_meas : ∀ B : Set α, MeasurableSet B → Measurable (fun ω => ν ω B) :=
