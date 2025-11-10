@@ -388,7 +388,7 @@ lemma upBefore_le_downBefore_rev
 
 Apply the one-way lemma to the negated process with flipped interval. -/
 lemma downBefore_rev_le_upBefore
-    {Ω : Type*} (X : ℕ → Ω → ℝ) (a b : ℝ) (N : ℕ) :
+    {Ω : Type*} (X : ℕ → Ω → ℝ) (a b : ℝ) (hab : a < b) (N : ℕ) :
     (fun ω => downcrossingsBefore a b (revProcess X N) N ω)
       ≤ (fun ω => upcrossingsBefore a b X N ω) := by
   classical
@@ -398,7 +398,9 @@ lemma downBefore_rev_le_upBefore
   simp only [downcrossingsBefore]
 
   -- Apply the one-way lemma to negProcess(revProcess X N) with interval [-b, -a]
-  have h := upBefore_le_downBefore_rev (negProcess (revProcess X N)) (-b) (-a) N ω
+  -- Need proof that -b < -a, which follows from a < b
+  have h_neg : -b < -a := neg_lt_neg hab
+  have h := upBefore_le_downBefore_rev (negProcess (revProcess X N)) (-b) (-a) h_neg N ω
 
   -- Simplify using involutions
   simp only [downcrossingsBefore, neg_neg] at h
@@ -424,24 +426,24 @@ Upcrossings of X up to N = downcrossings of the reversed process up to N.
 
 Proved as two inequalities using negation symmetry. -/
 lemma upcrossingsBefore_eq_downcrossingsBefore_rev
-    {Ω : Type*} (X : ℕ → Ω → ℝ) (a b : ℝ) (N : ℕ) :
+    {Ω : Type*} (X : ℕ → Ω → ℝ) (a b : ℝ) (hab : a < b) (N : ℕ) :
     (fun ω => upcrossingsBefore a b X N ω)
     = (fun ω => downcrossingsBefore a b (revProcess X N) N ω) := by
   classical
   funext ω
   apply le_antisymm
-  · exact upBefore_le_downBefore_rev X a b N ω
-  · exact downBefore_rev_le_upBefore X a b N ω
+  · exact upBefore_le_downBefore_rev X a b hab N ω
+  · exact downBefore_rev_le_upBefore X a b hab N ω
 
 /-- Equivalent "up ↔ up" form via negation + interval flip.
 Directly usable for the upcrossing inequality on negated reversed process. -/
 lemma upBefore_eq_upBefore_neg_rev
-    {Ω : Type*} (X : ℕ → Ω → ℝ) (a b : ℝ) (N : ℕ) :
+    {Ω : Type*} (X : ℕ → Ω → ℝ) (a b : ℝ) (hab : a < b) (N : ℕ) :
     (fun ω => upcrossingsBefore a b X N ω)
     = (fun ω => upcrossingsBefore (-b) (-a) (negProcess (revProcess X N)) N ω) := by
   funext ω
   have := congrArg (fun g => g ω)
-    (upcrossingsBefore_eq_downcrossingsBefore_rev X a b N)
+    (upcrossingsBefore_eq_downcrossingsBefore_rev X a b hab N)
   simpa [downcrossingsBefore, negProcess, revProcess] using this
 
 /-- Uniform (in N) bound on upcrossings for the reverse martingale.
@@ -623,7 +625,7 @@ lemma condExp_exists_ae_limit_antitone
         ↑(upcrossingsBefore (↑a) (↑b) (fun n => μ[f | 𝔽 n]) N ω)
         ≤ upcrossings (- (↑b : ℝ)) (- (↑a : ℝ)) (negProcess (fun n => revCEFinite (μ := μ) f 𝔽 N n)) ω := by
       -- Use the "up ↔ up" bridge lemma: up(X) = up(-rev(X), flipped interval)
-      have h_bridge := upBefore_eq_upBefore_neg_rev (fun n => μ[f | 𝔽 n]) (↑a) (↑b) N
+      have h_bridge := upBefore_eq_upBefore_neg_rev (fun n => μ[f | 𝔽 n]) (↑a) (↑b) hab' N
       have h_orig_to_neg_rev : upcrossingsBefore (↑a) (↑b) (fun n => μ[f | 𝔽 n]) N ω
           = upcrossingsBefore (- (↑b : ℝ)) (- (↑a : ℝ))
               (negProcess (revProcess (fun n => μ[f | 𝔽 n]) N)) N ω := congrFun h_bridge ω
