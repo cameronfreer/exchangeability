@@ -186,6 +186,23 @@ lemma integrable_of_bounded_on_prob
     simp [abs_eq_zero] at this
     simp [this]
 
+/-- If `|f| ≤ C` a.e., then `|E[f | m]| ≤ C` a.e.
+
+This is essentially `MeasureTheory.ae_bdd_condExp_of_ae_bdd` from mathlib,
+re-exported here for convenience with a slightly different signature.
+
+Mathlib already proves this result for ℝ≥0 bounds. -/
+lemma ae_norm_condExp_le_of_bound
+    {Ω : Type*} {m m₀ : MeasurableSpace Ω}
+    {μ : Measure Ω}
+    {f : Ω → ℝ} {C : ℝ} (hC0 : 0 ≤ C)
+    (hbound : ∀ᵐ ω ∂μ, |f ω| ≤ C) :
+    ∀ᵐ ω ∂μ, |(μ[f | m]) ω| ≤ C := by
+  -- Convert to ℝ≥0 and apply mathlib's existing lemma
+  have hC_nn : (C.toNNReal : ℝ) = C := Real.coe_toNNReal _ hC0
+  rw [← hC_nn] at hbound ⊢
+  exact MeasureTheory.ae_bdd_condExp_of_ae_bdd hbound
+
 end ProbabilityMeasureHelpers
 
 section CondDistribUniqueness
@@ -4584,19 +4601,43 @@ lemma directingMeasure_X0_marginal
   (fun ω => (directingMeasure (μ := μ) X hX ω B).toReal)
     =ᵐ[μ]
   μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] := by
-  -- TODO: Complete this proof using condExp_ae_eq_integral_condExpKernel
-  -- Strategy:
-  -- 1. Apply condExp_ae_eq_integral_condExpKernel to relate condExp to kernel integral
-  --    - Need to prove: f = Set.indicator B (fun _ => 1) ∘ (X 0) is integrable
-  --    - This follows from: Integrable.comp_measurable (integrable_const 1) (hX 0)
-  -- 2. Show: ∫ y, f y ∂(condExpKernel μ (tailSigma X) ω)
-  --        = (condExpKernel μ (tailSigma X) ω) ((X 0)⁻¹' B)
-  --    - Use integral_indicator and the fact that indicator of constant integrates to measure
-  -- 3. Show: (condExpKernel μ (tailSigma X) ω) ((X 0)⁻¹' B)
-  --        = directingMeasure X hX ω B
-  --    - Unfold directingMeasure and apply Measure.map_apply
-  -- 4. Combine via filter_upwards and ae_of_all
-  sorry
+  classical
+  -- Integrability of the indicator through X 0
+  have hInt : Integrable (fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (X 0 ω))) μ := by
+    apply Integrable.indicator
+    · exact integrable_const (1 : ℝ)
+    · exact (hX 0) hB
+  -- Conditional expectation equals kernel integral a.e.
+  have hAE :
+    μ[ (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X 0 ω)) | tailSigma X]
+      =ᵐ[μ]
+    (fun ω => ∫ x, (Set.indicator B (fun _ => (1 : ℝ)) (X 0 x))
+                   ∂ ProbabilityTheory.condExpKernel μ (tailSigma X) ω) := by
+    exact ProbabilityTheory.condExp_ae_eq_integral_condExpKernel (m := tailSigma X) hInt
+  -- Identify the kernel integral with evaluation of `directingMeasure` on `B`
+  have hId :
+    (fun ω => ∫ x, (Set.indicator B (fun _ => (1 : ℝ)) (X 0 x))
+                   ∂ ProbabilityTheory.condExpKernel μ (tailSigma X) ω)
+    =
+    (fun ω => (directingMeasure (μ := μ) X hX ω B).toReal) := by
+    funext ω
+    -- The integral of an indicator of constant 1 is the measure of the set
+    let κ := ProbabilityTheory.condExpKernel μ (tailSigma X)
+    have : (∫ x, (Set.indicator ((X 0) ⁻¹' B) (fun _ => (1 : ℝ)) x) ∂κ ω)
+          =
+           ((κ ω) ((X 0) ⁻¹' B)).toReal := by
+      -- Use integral_indicator_one from mathlib
+      rw [MeasureTheory.integral_indicator_one]
+      exact (hX 0) hB
+    calc ∫ x, (Set.indicator B (fun _ => (1 : ℝ)) (X 0 x)) ∂κ ω
+        = ∫ x, (Set.indicator ((X 0) ⁻¹' B) (fun _ => (1 : ℝ)) x) ∂κ ω := by
+          congr 1; funext x; simp [Set.indicator]
+      _ = ((κ ω) ((X 0) ⁻¹' B)).toReal := this
+      _ = (directingMeasure (μ := μ) X hX ω B).toReal := by
+          simp [directingMeasure, κ]
+          rw [Measure.map_apply (hX 0) hB]
+  -- Combine
+  exact hAE.symm.trans (Filter.EventuallyEq.fun_comp hId _)
 
 end Directing
 
