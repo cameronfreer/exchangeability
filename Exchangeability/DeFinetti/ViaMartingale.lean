@@ -875,14 +875,14 @@ lemma common_version_condexp_bdd
 
   -- V is σ(W)-measurable, so factors through W
   have hV_meas : Measurable[MeasurableSpace.comap W inferInstance] V := by
-    exact Measurable.stronglyMeasurable stronglyMeasurable_condExp
+    sorry -- Need to show condExp is measurable w.r.t. comap, not just strongly measurable
   have hV_ae : AEStronglyMeasurable V μ := stronglyMeasurable_condExp.aestronglyMeasurable
 
   obtain ⟨v₁, hv₁_meas, hV_eq⟩ := exists_borel_factor_of_comap_measurable W V hV_meas hV_ae
 
   -- Similarly for V'
   have hV'_meas : Measurable[MeasurableSpace.comap W' inferInstance] V' := by
-    exact Measurable.stronglyMeasurable stronglyMeasurable_condExp
+    sorry -- Need to show condExp is measurable w.r.t. comap, not just strongly measurable
   have hV'_ae : AEStronglyMeasurable V' μ := stronglyMeasurable_condExp.aestronglyMeasurable
 
   obtain ⟨v₂, hv₂_meas, hV'_eq⟩ := exists_borel_factor_of_comap_measurable W' V' hV'_meas hV'_ae
@@ -1281,12 +1281,12 @@ lemma ae_bound_condexp_of_ae_bound
     -- If C < 0, then ∀ᵐ ω, |g ω| ≤ C < 0, contradicting |g ω| ≥ 0
     by_contra h_neg
     push_neg at h_neg
-    have : ∀ᵐ ω ∂μ, False := hgC.mono (fun ω hω => (abs_nonneg _).not_lt (hω.trans_lt h_neg))
-    -- From ∀ᵐ ω, False we get μ Set.univ = 0, contradicting measure_univ_pos
-    have : μ Set.univ = 0 := by
-      rw [← nonpos_iff_eq_zero]
-      exact ae_le_set.mpr (by simpa using this)
-    exact measure_univ_pos.ne this
+    -- Get contradiction from ae hypothesis
+    have h_false : ∀ᵐ ω ∂μ, False := hgC.mono (fun ω hω => (abs_nonneg (g ω)).not_lt (hω.trans_lt h_neg))
+    -- This implies μ Set.univ = 0
+    have : μ Set.univ = 0 := measure_zero_iff_ae_nmem.mpr (by simpa using h_false)
+    -- But we need μ ≠ 0 for a probability measure
+    sorry -- Need to invoke that μ is a probability measure
   exact MeasureTheory.ae_bdd_condExp_of_ae_bdd (R := ⟨C, hC_nonneg⟩) hgC
 
 /-- **Adjointness for bounded `g` (L∞–L¹)**:
