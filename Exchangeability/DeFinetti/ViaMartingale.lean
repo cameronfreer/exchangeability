@@ -898,12 +898,34 @@ lemma common_version_condexp_bdd
   · -- V = v ∘ W a.e.
     calc V
         =ᵐ[μ] v₁ ∘ W := hV_eq
-      _ =ᵐ[μ] v ∘ W := by sorry  -- Use ae_eq_of_comp_ae_eq with hv_eq_v₁
+      _ =ᵐ[μ] v ∘ W := by
+          -- v₁ = v a.e. on Law(W), so v₁ ∘ W = v ∘ W a.e. on μ
+          exact (MeasureTheory.ae_eq_comp hW.aemeasurable hv_eq_v₁).symm
   · -- V' = v ∘ W' a.e.
     calc V'
         =ᵐ[μ] v₂ ∘ W' := hV'_eq
-      _ =ᵐ[μ] v₁ ∘ W' := by sorry  -- Use hv_eq and pair law
-      _ =ᵐ[μ] v ∘ W' := by sorry   -- Use ae_eq_of_comp_ae_eq with hv_eq_v₁
+      _ =ᵐ[μ] v₁ ∘ W' := by
+          -- v₂ = v₁ a.e. on Law(W), and Law(W) = Law(W') from pair law
+          -- First, get v₁ = v₂ a.e. on Law(W')
+          have h_law_eq : Measure.map W' μ = Measure.map W μ := by
+            -- Extract from pair law: (Z,W) =^d (Z,W') implies W =^d W'
+            have h1 : Measure.map W μ = (Measure.map (fun ω => (Z ω, W ω)) μ).map Prod.snd := by
+              rw [Measure.map_map measurable_snd (hZ.prod_mk hW)]; rfl
+            have h2 : Measure.map W' μ = (Measure.map (fun ω => (Z ω, W' ω)) μ).map Prod.snd := by
+              rw [Measure.map_map measurable_snd (hZ.prod_mk hW')]; rfl
+            rw [h1, h2, hPair]
+          have hv_eq' : v₁ =ᵐ[Measure.map W' μ] v₂ := h_law_eq ▸ hv_eq
+          exact (MeasureTheory.ae_eq_comp hW'.aemeasurable hv_eq').symm
+      _ =ᵐ[μ] v ∘ W' := by
+          -- v = v₁ a.e. on Law(W) = Law(W'), so v ∘ W' = v₁ ∘ W' a.e. on μ
+          have h_law_eq : Measure.map W' μ = Measure.map W μ := by
+            have h1 : Measure.map W μ = (Measure.map (fun ω => (Z ω, W ω)) μ).map Prod.snd := by
+              rw [Measure.map_map measurable_snd (hZ.prod_mk hW)]; rfl
+            have h2 : Measure.map W' μ = (Measure.map (fun ω => (Z ω, W' ω)) μ).map Prod.snd := by
+              rw [Measure.map_map measurable_snd (hZ.prod_mk hW')]; rfl
+            rw [h1, h2, hPair]
+          have hv_eq' : v =ᵐ[Measure.map W' μ] v₁ := h_law_eq ▸ hv_eq_v₁
+          exact (MeasureTheory.ae_eq_comp hW'.aemeasurable hv_eq').symm
 
 /-- **Common Version Lemma:** When (Z,W) and (Z,W') have the same distribution,
 conditional expectations V = μ[ψ(Z) | σ(W)] and V' = μ[ψ(Z) | σ(W')] admit a common
@@ -1113,7 +1135,8 @@ lemma integral_mul_condexp_adjoint
     -- Use your "pull‐out" lemma for m‑measurable multipliers.
     have hξm : AEStronglyMeasurable[m] (μ[ξ | m]) μ :=
       stronglyMeasurable_condExp.aestronglyMeasurable
-    exact condExp_mul_of_aestronglyMeasurable_right hξm sorry hg
+    have hξm_int : Integrable (μ[ξ | m]) μ := integrable_condExp
+    exact condExp_mul_of_aestronglyMeasurable_right hξm hξm_int hg
   -- (3) Symmetric step: turn ∫ μ[g|m]*μ[ξ|m] back into a condexp of (μ[g|m]*ξ)
   have h3 :
       ∫ ω, μ[g | m] ω * μ[ξ | m] ω ∂μ
@@ -1124,7 +1147,8 @@ lemma integral_mul_condexp_adjoint
     have hpull' :
         μ[(fun ω => μ[g | m] ω * ξ ω) | m]
         =ᵐ[μ] (fun ω => μ[g | m] ω * μ[ξ | m] ω) := by
-      exact condExp_mul_of_aestronglyMeasurable_left hgm sorry hξ
+      have hgm_int : Integrable (μ[g | m]) μ := integrable_condExp
+      exact condExp_mul_of_aestronglyMeasurable_left hgm hgm_int hξ
     simpa using (integral_congr_ae hpull').symm
   -- (4) And finally ∫ μ[·|m] = ∫ ·
   have h4 :
@@ -1379,15 +1403,13 @@ lemma condIndep_of_triple_law
     -- Prove pair laws BEFORE introducing 𝔾 to avoid instance pollution
     have h_pair_ZW :
       Measure.map (fun (ω : Ω) => (Z ω, W ω)) μ =
-      Measure.map (fun (ω : Ω) => (Z ω, W' ω)) μ := by
-      -- TODO: The underlying lemma pair_law_ZW_of_triple_law is also sorry
-      sorry
+      Measure.map (fun (ω : Ω) => (Z ω, W' ω)) μ :=
+      pair_law_ZW_of_triple_law Y Z W W' hY hZ hW hW' h_triple
 
     have h_pair_YW :
       Measure.map (fun (ω : Ω) => (Y ω, W ω)) μ =
-      Measure.map (fun (ω : Ω) => (Y ω, W' ω)) μ := by
-      -- TODO: The underlying lemma pair_law_YW_of_triple_law is also sorry
-      sorry
+      Measure.map (fun (ω : Ω) => (Y ω, W' ω)) μ :=
+      pair_law_YW_of_triple_law Y Z W W' hY hZ hW hW' h_triple
 
     -- Prove h_test_fn BEFORE introducing 𝔾 to avoid instance pollution
     have h_test_fn : ∀ (h : γ → ℝ), Measurable h → (∀ w, ‖h w‖ ≤ 1) →
