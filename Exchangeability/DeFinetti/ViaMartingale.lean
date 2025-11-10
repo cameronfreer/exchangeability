@@ -3138,31 +3138,39 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
     =ᵐ[μ]
   μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ | MeasurableSpace.comap η inferInstance] := by
   classical
-  -- Following the user's blueprint for the test-function method:
+  -- **This is Kallenberg's Lemma 1.3 - a deep probability-theoretic result**
   --
-  -- Strategy:
-  -- 1. For any bounded Borel k : β → ℝ, use h_law with test function
-  --    u(x,t) = 1_B(x) k(t) to get: ∫ 1_B(ξ) (k∘η) dμ = ∫ 1_B(ξ) (k∘ζ) dμ
+  -- **Why the tower property alone is insufficient:**
+  -- The tower property gives: E[E[1_B(ξ) | σ(ζ)] | σ(η)] = E[1_B(ξ) | σ(η)]
+  -- But we need: E[1_B(ξ) | σ(ζ)] = E[1_B(ξ) | σ(η)]
+  -- These are NOT equivalent! The first says both have the same CE w.r.t. σ(η),
+  -- but doesn't imply they're equal.
   --
-  -- 2. Rewrite both sides using conditional expectation:
-  --    ∫ E[1_B(ξ) | σ(η)] (k∘η) dμ = ∫ E[1_B(ξ) | σ(ζ)] (k∘ζ) dμ
+  -- **What's actually needed:**
+  -- The pair-law (ξ, η) =ᵈ (ξ, ζ) combined with σ(η) ≤ σ(ζ) encodes a conditional
+  -- independence property. The rigorous proof requires either:
   --
-  -- 3. Since σ(η) ≤ σ(ζ), any (k∘η) is also σ(ζ)-measurable, so we can
-  --    compare both CEs against the same class of σ(ζ) test functions.
+  -- 1. **Conditional Independence Route** (Kallenberg's approach):
+  --    - Extract ξ ⊥⊥_η ζ from the pair-law and σ-algebra inclusion
+  --    - Apply conditional independence projection: E[f(ξ) | σ(ζ, η)] = E[f(ξ) | σ(η)]
   --
-  -- 4. By the "separating class" lemma for CEs (two σ(ζ)-measurable L¹ functions
-  --    are a.e. equal if they integrate equally against all bounded σ(ζ)-measurable
-  --    test functions), we conclude the desired a.e. equality.
+  -- 2. **Test Function Method** (direct approach):
+  --    - Both CEs are σ(ζ)-measurable
+  --    - Show they integrate equally against all σ(ζ)-measurable test functions
+  --    - For h : β → ℝ bounded Borel:
+  --      ∫ E[1_B(ξ) | σ(ζ)] (h∘ζ) dμ = ∫ 1_B(ξ) (h∘ζ) dμ  (tower property)
+  --                                   = ∫ 1_B(ξ) (h∘η) dμ  (pair-law)
+  --                                   = ∫ E[1_B(ξ) | σ(η)] (h∘η) dμ  (tower property)
+  --    - Since η factors through ζ, need to relate (h∘η) back to σ(ζ)-measurable functions
+  --    - Apply separating class lemma: ae_eq_of_forall_setIntegral_eq
   --
-  -- Implementation requires:
-  -- - integral_map to relate ∫ g∘(ξ,η) dμ = ∫ g d[(ξ,η)_*μ]
-  -- - Simple function approximation for test functions
-  -- - ae_eq_of_same_integrals_over_measurable (or similar separating lemma)
-  -- - Tower property for conditional expectation
+  -- **Infrastructure needed (~80-100 lines once helpers available):**
+  -- - Doob-Dynkin factorization for σ(η) ≤ σ(ζ)
+  -- - Integral manipulation via Measure.map_apply
+  -- - Separating class lemma for L¹ functions
+  -- - Potentially: conditional independence characterization
   --
-  -- All of these are standard measure theory; the proof is ~40-50 lines once
-  -- the API pieces are in place. See contractable_dist_eq_on_first_r_tail
-  -- for the pattern of using Measure.map_apply cleanly.
+  -- This is a fundamental result warranting extraction to mathlib as a standalone lemma.
   sorry
 
 /-- **Kallenberg 1.3 Conditional Expectation Form (Route A):**
