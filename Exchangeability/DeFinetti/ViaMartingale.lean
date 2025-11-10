@@ -1138,8 +1138,9 @@ lemma integral_mul_condexp_adjoint
     -- Use your "pull‐out" lemma for m‑measurable multipliers.
     have hξm : AEStronglyMeasurable[m] (μ[ξ | m]) μ :=
       stronglyMeasurable_condExp.aestronglyMeasurable
-    have hξm_int : Integrable (μ[ξ | m]) μ := integrable_condExp
-    exact condExp_mul_of_aestronglyMeasurable_right hξm hξm_int hg
+    have hgξm_int : Integrable (g * μ[ξ | m]) μ := by
+      sorry -- Need to show g * μ[ξ|m] is integrable from hg and integrable_condExp
+    exact condExp_mul_of_aestronglyMeasurable_right hξm hgξm_int hg
   -- (3) Symmetric step: turn ∫ μ[g|m]*μ[ξ|m] back into a condexp of (μ[g|m]*ξ)
   have h3 :
       ∫ ω, μ[g | m] ω * μ[ξ | m] ω ∂μ
@@ -1150,8 +1151,9 @@ lemma integral_mul_condexp_adjoint
     have hpull' :
         μ[(fun ω => μ[g | m] ω * ξ ω) | m]
         =ᵐ[μ] (fun ω => μ[g | m] ω * μ[ξ | m] ω) := by
-      have hgm_int : Integrable (μ[g | m]) μ := integrable_condExp
-      exact condExp_mul_of_aestronglyMeasurable_left hgm hgm_int hξ
+      have hgmξ_int : Integrable (μ[g | m] * ξ) μ := by
+        sorry -- Need to show μ[g|m] * ξ is integrable from integrable_condExp and hξ
+      exact condExp_mul_of_aestronglyMeasurable_left hgm hgmξ_int hξ
     simpa using (integral_congr_ae hpull').symm
   -- (4) And finally ∫ μ[·|m] = ∫ ·
   have h4 :
@@ -1280,8 +1282,11 @@ lemma ae_bound_condexp_of_ae_bound
     by_contra h_neg
     push_neg at h_neg
     have : ∀ᵐ ω ∂μ, False := hgC.mono (fun ω hω => (abs_nonneg _).not_lt (hω.trans_lt h_neg))
-    have : (μ Set.univ).toReal = 0 := by simpa using measure_zero_iff_ae_nmem.mpr this
-    exact measure_univ_pos.ne' (ENNReal.toReal_eq_zero_iff.mp this).resolve_right (measure_ne_top μ Set.univ)
+    -- From ∀ᵐ ω, False we get μ Set.univ = 0, contradicting measure_univ_pos
+    have : μ Set.univ = 0 := by
+      rw [← nonpos_iff_eq_zero]
+      exact ae_le_set.mpr (by simpa using this)
+    exact measure_univ_pos.ne this
   exact MeasureTheory.ae_bdd_condExp_of_ae_bdd (R := ⟨C, hC_nonneg⟩) hgC
 
 /-- **Adjointness for bounded `g` (L∞–L¹)**:
