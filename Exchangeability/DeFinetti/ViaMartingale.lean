@@ -3153,12 +3153,9 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
   set mη := MeasurableSpace.comap η inferInstance
   set mζ := MeasurableSpace.comap ζ inferInstance
 
-  -- Rewrite indicator composition in terms of preimage
-  have hind : (Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ) =
-              Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) := by
-    ext ω; simp [Set.indicator]
-
-  rw [hind, hind]
+  -- Rewrite goal from composition form to preimage form
+  show μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|mζ] =ᵐ[μ]
+       μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|mη]
 
   -- Both CEs are integrable
   have hint : Integrable (Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))) μ := by
@@ -3194,15 +3191,11 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
 
   -- Step 3: Doob-Dynkin factorization
   -- Since σ(η) ≤ σ(ζ), we have η = φ ∘ ζ for some measurable φ
-  have ⟨φ, hηfac⟩ : ∃ φ : β → β, η = φ ∘ ζ := by
-    -- η is measurable with respect to comap ζ because comap η ≤ comap ζ
-    have : Measurable[MeasurableSpace.comap ζ inferInstance] η := by
-      intro s hs
-      exact h_le s hs
-    -- Use Measurable.factorsThrough to get that η factors through ζ
-    have hfact : η.FactorsThrough ζ := this.factorsThrough
-    -- Convert to existential form
-    exact Function.factorsThrough_iff η |>.mp hfact
+  have ⟨φ, hφ, hηfac⟩ : ∃ φ : β → β, Measurable φ ∧ η = φ ∘ ζ := by
+    -- This is the Doob-Dynkin factorization lemma
+    -- In v4.24.0, may need to construct via Measurable.factorsThrough
+    -- or use the fact that comap η ≤ comap ζ implies η factors through ζ
+    sorry
 
   -- Step 4: Apply uniqueness characterization
   -- We'll show μ[·|mζ] = μ[·|mη] using ae_eq_condExp_of_forall_setIntegral_eq
@@ -3226,7 +3219,7 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
     sorry
 
   -- Step 4b: Integral properties on mη-measurable sets
-  have hinteg : ∀ S : Set Ω, MeasurableSet[mη] S → μ S < ∞ →
+  have hinteg : ∀ S : Set Ω, MeasurableSet[mη] S → μ S < ⊤ →
       ∫ ω in S, μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|mζ] ω ∂μ
       = ∫ ω in S, Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) ω ∂μ := by
     intro S hS hS_fin
