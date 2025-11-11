@@ -3150,8 +3150,9 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
   --
   -- Note: StandardBorelSpace assumptions required for condExpKernel API
 
-  set mη := MeasurableSpace.comap η inferInstance
-  set mζ := MeasurableSpace.comap ζ inferInstance
+  -- Use explicit codomain instances to prevent instance drift
+  set mη : MeasurableSpace Ω := MeasurableSpace.comap η (‹MeasurableSpace β›)
+  set mζ : MeasurableSpace Ω := MeasurableSpace.comap ζ (‹MeasurableSpace β›)
 
   -- Rewrite goal from composition form to preimage form
   show μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|mζ] =ᵐ[μ]
@@ -3161,11 +3162,18 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
   have hint : Integrable (Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))) μ := by
     exact Integrable.indicator (integrable_const 1) (hξ hB)
 
-  -- σ-algebra inequalities
-  have hmη_le : mη ≤ (inferInstance : MeasurableSpace Ω) := by
-    intro s hs; obtain ⟨t, ht, rfl⟩ := hs; exact hη ht
-  have hmζ_le : mζ ≤ (inferInstance : MeasurableSpace Ω) := by
-    intro s hs; obtain ⟨t, ht, rfl⟩ := hs; exact hζ ht
+  -- σ-algebra inequalities (use ambient instance to prevent instance drift)
+  have hmη_le : mη ≤ (‹MeasurableSpace Ω›) := by
+    intro s hs
+    rcases hs with ⟨t, ht, rfl⟩
+    -- Explicitly cast hη ht to the ambient instance
+    exact (hη ht : @MeasurableSet Ω (‹MeasurableSpace Ω›) (η ⁻¹' t))
+
+  have hmζ_le : mζ ≤ (‹MeasurableSpace Ω›) := by
+    intro s hs
+    rcases hs with ⟨t, ht, rfl⟩
+    -- Explicitly cast hζ ht to the ambient instance
+    exact (hζ ht : @MeasurableSet Ω (‹MeasurableSpace Ω›) (ζ ⁻¹' t))
 
   -- Step 1: Express CEs via kernel integrals
   have hCEη : μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) | mη] =ᵐ[μ]
