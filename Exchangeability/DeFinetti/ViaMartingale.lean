@@ -3122,8 +3122,9 @@ this class of functions and using the separating property, we get the result.
 This lemma directly replaces `condDistrib_of_map_eq_map_and_comap_le`
 at its only point of use. -/
 lemma condexp_indicator_drop_info_of_pair_law_direct
-    {Ω α β : Type*} [MeasurableSpace Ω]
-    [MeasurableSpace α] [MeasurableSpace β]
+    {Ω α β : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
+    [MeasurableSpace α] [StandardBorelSpace α]
+    [MeasurableSpace β] [StandardBorelSpace β]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (ξ : Ω → α) (η ζ : Ω → β)
     (hξ : Measurable ξ) (hη : Measurable η) (hζ : Measurable ζ)
@@ -3138,39 +3139,23 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
     =ᵐ[μ]
   μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ | MeasurableSpace.comap η inferInstance] := by
   classical
-  -- **This is Kallenberg's Lemma 1.3 - a deep probability-theoretic result**
+  -- **Kallenberg 1.3 via regular conditional kernels (adapted for mathlib v4.24.0)**
   --
-  -- **Why the tower property alone is insufficient:**
-  -- The tower property gives: E[E[1_B(ξ) | σ(ζ)] | σ(η)] = E[1_B(ξ) | σ(η)]
-  -- But we need: E[1_B(ξ) | σ(ζ)] = E[1_B(ξ) | σ(η)]
-  -- These are NOT equivalent! The first says both have the same CE w.r.t. σ(η),
-  -- but doesn't imply they're equal.
+  -- Proof strategy:
+  -- 1. Express both CEs via condExpKernel (integral representation)
+  -- 2. For indicators, this becomes evaluation of a measure
+  -- 3. Use Doob-Dynkin: σ(η) ≤ σ(ζ) gives η = φ ∘ ζ
+  -- 4. Pair-law + factorization implies the kernels evaluate equally on B
   --
-  -- **What's actually needed:**
-  -- The pair-law (ξ, η) =ᵈ (ξ, ζ) combined with σ(η) ≤ σ(ζ) encodes a conditional
-  -- independence property. The rigorous proof requires either:
-  --
-  -- 1. **Conditional Independence Route** (Kallenberg's approach):
-  --    - Extract ξ ⊥⊥_η ζ from the pair-law and σ-algebra inclusion
-  --    - Apply conditional independence projection: E[f(ξ) | σ(ζ, η)] = E[f(ξ) | σ(η)]
-  --
-  -- 2. **Test Function Method** (direct approach):
-  --    - Both CEs are σ(ζ)-measurable
-  --    - Show they integrate equally against all σ(ζ)-measurable test functions
-  --    - For h : β → ℝ bounded Borel:
-  --      ∫ E[1_B(ξ) | σ(ζ)] (h∘ζ) dμ = ∫ 1_B(ξ) (h∘ζ) dμ  (tower property)
-  --                                   = ∫ 1_B(ξ) (h∘η) dμ  (pair-law)
-  --                                   = ∫ E[1_B(ξ) | σ(η)] (h∘η) dμ  (tower property)
-  --    - Since η factors through ζ, need to relate (h∘η) back to σ(ζ)-measurable functions
-  --    - Apply separating class lemma: ae_eq_of_forall_setIntegral_eq
-  --
-  -- **Infrastructure needed (~80-100 lines once helpers available):**
-  -- - Doob-Dynkin factorization for σ(η) ≤ σ(ζ)
-  -- - Integral manipulation via Measure.map_apply
-  -- - Separating class lemma for L¹ functions
-  -- - Potentially: conditional independence characterization
-  --
-  -- This is a fundamental result warranting extraction to mathlib as a standalone lemma.
+  -- Note: Standard Borel assumptions needed for condExpKernel API
+
+  set mη := MeasurableSpace.comap η inferInstance
+  set mζ := MeasurableSpace.comap ζ inferInstance
+
+  -- Both CEs are integrable
+  have hint : Integrable (Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))) μ := by
+    exact Integrable.indicator (integrable_const 1) (hξ hB)
+
   sorry
 
 /-- **Kallenberg 1.3 Conditional Expectation Form (Route A):**
