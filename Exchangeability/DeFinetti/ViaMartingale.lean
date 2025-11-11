@@ -3264,11 +3264,8 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
     ae_eq_condExp_of_forall_setIntegral_eq hmη_le hint
       (fun s hs _ => integrable_condExp.integrableOn) hinteg hmeas
 
-  -- Step 4d: Final calc chain (inline comaps)
-  calc (fun ω => ((ProbabilityTheory.condExpKernel μ (MeasurableSpace.comap ζ mγ) ω) (ξ ⁻¹' B)).toReal)
-      =ᵐ[μ] μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] := hCEζ'.symm
-    _ =ᵐ[μ] μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] := heq
-    _ =ᵐ[μ] (fun ω => ((ProbabilityTheory.condExpKernel μ (MeasurableSpace.comap η mγ) ω) (ξ ⁻¹' B)).toReal) := hCEη'
+  -- Step 4d: Final result (mγ is definitionally equal to inferInstance)
+  exact heq
 
 /-- **Kallenberg 1.3 Conditional Expectation Form (Route A):**
 If `(ξ, η) =ᵈ (ξ, ζ)` and `σ(η) ≤ σ(ζ)`, then conditioning ξ on ζ is the same as
