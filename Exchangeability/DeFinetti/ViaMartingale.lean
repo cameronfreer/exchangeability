@@ -527,7 +527,15 @@ lemma common_version_condexp_bdd
   have hV_meas : Measurable[MeasurableSpace.comap W inferInstance] V := by
     sorry -- Need to show condExp is measurable w.r.t. comap, not just strongly measurable
   have hV_ae : AEStronglyMeasurable V μ := by
-    sorry -- stronglyMeasurable_condExp gives StronglyMeasurable[m], need to lift to ambient σ-algebra
+    -- stronglyMeasurable_condExp gives StronglyMeasurable[comap W]
+    -- Apply aestronglyMeasurable to get AEStronglyMeasurable[comap W]
+    -- Then use mono to lift to ambient σ-algebra
+    let m0 : MeasurableSpace Ω := inferInstance
+    have h_le : MeasurableSpace.comap W inferInstance ≤ m0 := by
+      intro s hs
+      obtain ⟨t, ht, rfl⟩ := hs
+      exact hW ht
+    exact stronglyMeasurable_condExp.aestronglyMeasurable.mono h_le
 
   obtain ⟨v₁, hv₁_meas, hV_eq⟩ := exists_borel_factor_of_comap_measurable W V hV_meas hV_ae
 
@@ -535,7 +543,13 @@ lemma common_version_condexp_bdd
   have hV'_meas : Measurable[MeasurableSpace.comap W' inferInstance] V' := by
     sorry -- Need to show condExp is measurable w.r.t. comap, not just strongly measurable
   have hV'_ae : AEStronglyMeasurable V' μ := by
-    sorry -- stronglyMeasurable_condExp gives StronglyMeasurable[m], need to lift to ambient σ-algebra
+    -- Same approach as for V
+    let m0 : MeasurableSpace Ω := inferInstance
+    have h_le : MeasurableSpace.comap W' inferInstance ≤ m0 := by
+      intro s hs
+      obtain ⟨t, ht, rfl⟩ := hs
+      exact hW' ht
+    exact stronglyMeasurable_condExp.aestronglyMeasurable.mono h_le
 
   obtain ⟨v₂, hv₂_meas, hV'_eq⟩ := exists_borel_factor_of_comap_measurable W' V' hV'_meas hV'_ae
 
