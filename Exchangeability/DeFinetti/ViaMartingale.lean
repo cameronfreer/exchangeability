@@ -3194,11 +3194,15 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
 
   -- Step 3: Doob-Dynkin factorization
   -- Since σ(η) ≤ σ(ζ), we have η = φ ∘ ζ for some measurable φ
-  have ⟨φ, hφ, hηfac⟩ : ∃ φ : β → β, Measurable φ ∧ η = φ ∘ ζ := by
-    -- This is the Doob-Dynkin factorization lemma
-    -- In v4.24.0, may need to construct via Measurable.factorsThrough
-    -- or use the fact that comap η ≤ comap ζ implies η factors through ζ
-    sorry
+  have ⟨φ, hηfac⟩ : ∃ φ : β → β, η = φ ∘ ζ := by
+    -- η is measurable with respect to comap ζ because comap η ≤ comap ζ
+    have : Measurable[MeasurableSpace.comap ζ inferInstance] η := by
+      intro s hs
+      exact h_le s hs
+    -- Use Measurable.factorsThrough to get that η factors through ζ
+    have hfact : η.FactorsThrough ζ := this.factorsThrough
+    -- Convert to existential form
+    exact Function.factorsThrough_iff η |>.mp hfact
 
   -- Step 4: Apply uniqueness characterization
   -- We'll show μ[·|mζ] = μ[·|mη] using ae_eq_condExp_of_forall_setIntegral_eq
