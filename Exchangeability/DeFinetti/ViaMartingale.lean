@@ -3211,24 +3211,30 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
   -- Step 4a: σ(η)-measurability (the deep content - from pair-law, inline comaps)
   have hmeas : AEStronglyMeasurable[MeasurableSpace.comap η mγ]
       (μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ]) μ := by
-    -- Use the tower property: μ[μ[f|comap ζ]|comap η] =ᵐ[μ] μ[f|comap η]
+    -- Strategy: Show μ[f|comap ζ] =ᵐ[μ] μ[f|comap η], then AE measurability follows
+    -- Since μ[f|comap η] is strongly measurable w.r.t. comap η
+
+    -- The tower property gives us:
     have htower : μ[μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ]|
                     MeasurableSpace.comap η mγ] =ᵐ[μ]
                   μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] := by
       exact condExp_condExp_of_le h_le hmζ_le
 
-    -- Now μ[f|comap η] is strongly measurable w.r.t. comap η
+    -- μ[f|comap η] is strongly measurable w.r.t. comap η
     have hSM_η : StronglyMeasurable[MeasurableSpace.comap η mγ]
         (μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ]) := by
       exact stronglyMeasurable_condExp
 
-    -- The pair-law (ξ, η) =ᵈ (ξ, ζ) with η = φ ∘ ζ implies that
-    -- μ[f|comap ζ] actually factors through η, hence is comap η-measurable
+    -- **Deep content:** The pair-law (ξ, η) =ᵈ (ξ, ζ) with η = φ ∘ ζ implies
+    -- the conditional expectation μ[1_B(ξ)|ζ] factors through η
     --
-    -- **This is the deep mathematical content of Kallenberg's Lemma 1.3**
-    -- The tower property tells us μ[μ[f|ζ]|η] = μ[f|η], which is η-measurable.
-    -- The pair-law should imply μ[f|ζ] = μ[f|η] a.e., making μ[f|ζ] also η-measurable.
-    -- To complete this rigorously requires ~30 lines using disintegration theory.
+    -- Mathematical insight: law(ξ, φ ∘ ζ) = law(ξ, ζ) means the conditional
+    -- distribution of ξ given ζ depends only on φ(ζ) = η, so E[1_B(ξ)|ζ] = g(η)
+    -- for some measurable g.
+    --
+    -- To complete rigorously: Use condDistrib_ae_eq_of_measure_eq_compProd to show
+    -- the conditional distributions factor through φ, implying the conditional
+    -- expectations are equal a.e., which would immediately give measurability.
     sorry
 
   -- Step 4b: Integral properties on σ(η)-measurable sets (inline comaps)
