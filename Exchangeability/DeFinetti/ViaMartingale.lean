@@ -3191,31 +3191,9 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
                 ∂(ProbabilityTheory.condExpKernel μ (MeasurableSpace.comap ζ mγ) ω)) := by
     exact ProbabilityTheory.condExp_ae_eq_integral_condExpKernel hmζ_le hint
 
-  -- Step 2: For indicators, integral equals measure evaluation (inline comaps)
-  have hinteg_η : ∀ ω, ∫ y, Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) y
-                      ∂(ProbabilityTheory.condExpKernel μ (MeasurableSpace.comap η mγ) ω)
-                      = ((ProbabilityTheory.condExpKernel μ (MeasurableSpace.comap η mγ) ω) (ξ ⁻¹' B)).toReal := by
-    intro ω
-    rw [integral_indicator_one (hξ hB)]
-
-  have hinteg_ζ : ∀ ω, ∫ y, Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) y
-                      ∂(ProbabilityTheory.condExpKernel μ (MeasurableSpace.comap ζ mγ) ω)
-                      = ((ProbabilityTheory.condExpKernel μ (MeasurableSpace.comap ζ mγ) ω) (ξ ⁻¹' B)).toReal := by
-    intro ω
-    rw [integral_indicator_one (hξ hB)]
-
-  -- Replace the kernel integrals with measure evaluations in the CE equalities
-  have hCEη' : μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) | MeasurableSpace.comap η mγ] =ᵐ[μ]
-                (fun ω => ((ProbabilityTheory.condExpKernel μ (MeasurableSpace.comap η mγ) ω) (ξ ⁻¹' B)).toReal) := by
-    convert hCEη using 1
-    ext ω
-    exact hinteg_η ω
-
-  have hCEζ' : μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) | MeasurableSpace.comap ζ mγ] =ᵐ[μ]
-                (fun ω => ((ProbabilityTheory.condExpKernel μ (MeasurableSpace.comap ζ mγ) ω) (ξ ⁻¹' B)).toReal) := by
-    convert hCEζ using 1
-    ext ω
-    exact hinteg_ζ ω
+  -- Note: We have kernel integral representations from hCEη and hCEζ
+  -- The integrals of indicators equal measure evaluations, but we don't need to prove
+  -- that explicitly - the uniqueness characterization works with the integral form
 
   -- Step 3: Doob-Dynkin factorization (inline comaps)
   -- Since σ(η) ≤ σ(ζ), we have η = φ ∘ ζ for some measurable φ
