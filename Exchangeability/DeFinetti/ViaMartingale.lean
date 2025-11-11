@@ -3143,20 +3143,105 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
   --
   -- Proof strategy:
   -- 1. Express both CEs via condExpKernel (integral representation)
-  -- 2. For indicators, this becomes evaluation of a measure
+  -- 2. For indicators, reduce integrals to measure evaluation
   -- 3. Use Doob-Dynkin: σ(η) ≤ σ(ζ) gives η = φ ∘ ζ
-  -- 4. Pair-law + factorization implies the kernels evaluate equally on B
+  -- 4. Apply uniqueness: show μ[·|mζ] = μ[·|mη] via integral properties
+  -- 5. Key step: prove mη-measurability from pair-law (Kallenberg's deep content)
   --
-  -- Note: Standard Borel assumptions needed for condExpKernel API
+  -- Note: StandardBorelSpace assumptions required for condExpKernel API
 
   set mη := MeasurableSpace.comap η inferInstance
   set mζ := MeasurableSpace.comap ζ inferInstance
+
+  -- Rewrite indicator composition in terms of preimage
+  have hind : (Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ) =
+              Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) := by
+    ext ω; simp [Set.indicator]
+
+  rw [hind, hind]
 
   -- Both CEs are integrable
   have hint : Integrable (Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))) μ := by
     exact Integrable.indicator (integrable_const 1) (hξ hB)
 
-  sorry
+  -- σ-algebra inequalities
+  have hmη_le : mη ≤ (inferInstance : MeasurableSpace Ω) := by
+    intro s hs; obtain ⟨t, ht, rfl⟩ := hs; exact hη ht
+  have hmζ_le : mζ ≤ (inferInstance : MeasurableSpace Ω) := by
+    intro s hs; obtain ⟨t, ht, rfl⟩ := hs; exact hζ ht
+
+  -- Step 1: Express CEs via kernel integrals
+  have hCEη : μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) | mη] =ᵐ[μ]
+              (fun ω => ∫ y, Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) y ∂(condExpKernel μ mη ω)) := by
+    exact condExp_ae_eq_integral_condExpKernel hmη_le hint
+
+  have hCEζ : μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) | mζ] =ᵐ[μ]
+              (fun ω => ∫ y, Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) y ∂(condExpKernel μ mζ ω)) := by
+    exact condExp_ae_eq_integral_condExpKernel hmζ_le hint
+
+  -- Step 2: For indicators, integral equals measure evaluation
+  have hinteg_η : ∀ ω, ∫ y, Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) y ∂(condExpKernel μ mη ω)
+                      = ((condExpKernel μ mη ω) (ξ ⁻¹' B)).toReal := by
+    intro ω
+    rw [integral_indicator_one (hξ hB)]
+
+  have hinteg_ζ : ∀ ω, ∫ y, Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) y ∂(condExpKernel μ mζ ω)
+                      = ((condExpKernel μ mζ ω) (ξ ⁻¹' B)).toReal := by
+    intro ω
+    rw [integral_indicator_one (hξ hB)]
+
+  simp only [hinteg_η, hinteg_ζ] at hCEη hCEζ
+
+  -- Step 3: Doob-Dynkin factorization
+  -- Since σ(η) ≤ σ(ζ), we have η = φ ∘ ζ for some measurable φ
+  have ⟨φ, hφ, hηfac⟩ : ∃ φ : β → β, Measurable φ ∧ η = φ ∘ ζ := by
+    -- This is the Doob-Dynkin factorization lemma
+    -- In v4.24.0, may need to construct via Measurable.factorsThrough
+    -- or use the fact that comap η ≤ comap ζ implies η factors through ζ
+    sorry
+
+  -- Step 4: Apply uniqueness characterization
+  -- We'll show μ[·|mζ] = μ[·|mη] using ae_eq_condExp_of_forall_setIntegral_eq
+
+  -- Step 4a: mη-measurability (the deep content - from pair-law)
+  have hmeas : AEStronglyMeasurable[mη]
+      (μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|mζ]) μ := by
+    -- **This is Kallenberg's Lemma 1.3 - the genuine deep probability theory**
+    --
+    -- Proof strategy: Show E[f|mζ] = h(η) for some measurable h
+    --
+    -- Key insight: The pair-law with η = φ ∘ ζ means:
+    --   law(ξ, φ ∘ ζ) = law(ξ, ζ)
+    -- This implies the conditional distribution of ξ given ζ only depends on φ(ζ) = η
+    -- Therefore: E[1_B(ξ)|ζ] = g(η) for some measurable g
+    --
+    -- For a complete proof, would need ~30 lines using:
+    -- - condDistrib_ae_eq_of_measure_eq_compProd for disintegration uniqueness
+    -- - Careful measure manipulations to cast the pair-law into compProd form
+    -- - Showing the resulting kernel factors through φ
+    sorry
+
+  -- Step 4b: Integral properties on mη-measurable sets
+  have hinteg : ∀ S : Set Ω, MeasurableSet[mη] S → μ S < ∞ →
+      ∫ ω in S, μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|mζ] ω ∂μ
+      = ∫ ω in S, Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) ω ∂μ := by
+    intro S hS hS_fin
+    -- Since mη ≤ mζ, S is also mζ-measurable
+    have : MeasurableSet[mζ] S := h_le S hS
+    -- By definition of conditional expectation with respect to mζ:
+    exact setIntegral_condExp hmζ_le hint this
+
+  -- Step 4c: Apply uniqueness to conclude μ[·|mζ] = μ[·|mη]
+  have heq : μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|mζ] =ᵐ[μ]
+             μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|mη] :=
+    ae_eq_condExp_of_forall_setIntegral_eq hmη_le hint
+      (fun s hs _ => integrable_condExp.integrableOn) hinteg hmeas
+
+  -- Step 4d: Final calc chain
+  calc (fun ω => ((condExpKernel μ mζ ω) (ξ ⁻¹' B)).toReal)
+      =ᵐ[μ] μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|mζ] := hCEζ.symm
+    _ =ᵐ[μ] μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|mη] := heq
+    _ =ᵐ[μ] (fun ω => ((condExpKernel μ mη ω) (ξ ⁻¹' B)).toReal) := hCEη
 
 /-- **Kallenberg 1.3 Conditional Expectation Form (Route A):**
 If `(ξ, η) =ᵈ (ξ, ζ)` and `σ(η) ≤ σ(ζ)`, then conditioning ξ on ζ is the same as
