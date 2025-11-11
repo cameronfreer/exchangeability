@@ -561,7 +561,33 @@ lemma common_version_condexp_bdd
   have hv_eq : v₁ =ᵐ[Measure.map W μ] v₂ := by sorry
 
   -- Step 3: Clip to enforce pointwise bounds
-  have hv₁_bdd : ∀ᵐ y ∂(Measure.map W μ), ‖v₁ y‖ ≤ C := by sorry
+  have hv₁_bdd : ∀ᵐ y ∂(Measure.map W μ), ‖v₁ y‖ ≤ C := by
+    -- V = μ[(ψ ∘ Z)|comap W] is bounded by C
+    -- We have ‖ψ (Z ω)‖ ≤ C a.e., which gives |ψ (Z ω)| ≤ C a.e. since C ≥ 0
+    have hψ_bdd' : ∀ᵐ ω ∂μ, |ψ (Z ω)| ≤ C := by
+      filter_upwards [hψ_bdd] with ω hω
+      exact Real.norm_eq_abs _ ▸ hω
+    -- Apply mathlib's ae_bdd_condExp_of_ae_bdd
+    have hV_bdd : ∀ᵐ ω ∂μ, |V ω| ≤ C :=
+      MeasureTheory.ae_bdd_condExp_of_ae_bdd (R := ⟨C, hC⟩) hψ_bdd'
+    -- V = v₁ ∘ W a.e., so |v₁ (W ω)| ≤ C a.e.
+    have : ∀ᵐ ω ∂μ, |v₁ (W ω)| ≤ C := by
+      filter_upwards [hV_bdd, hV_eq] with ω hω_bdd hω_eq
+      calc |v₁ (W ω)|
+          = |(v₁ ∘ W) ω| := rfl
+        _ = |V ω| := by rw [← hω_eq]
+        _ ≤ C := hω_bdd
+    -- Convert to norm and transfer to Measure.map W μ
+    have : ∀ᵐ ω ∂μ, ‖v₁ (W ω)‖ ≤ C := by
+      filter_upwards [this] with ω hω
+      rwa [Real.norm_eq_abs]
+    -- Transfer to Measure.map W μ using ae_map_iff
+    -- Need to show {y | ‖v₁ y‖ ≤ C} is measurable
+    have hmeas : MeasurableSet {y : γ | ‖v₁ y‖ ≤ C} := by
+      -- ‖v₁ ·‖ is measurable as composition of measurable v₁ and continuous norm
+      have : Measurable fun y => ‖v₁ y‖ := hv₁_meas.norm
+      exact this (measurableSet_Iic : MeasurableSet (Set.Iic C))
+    rwa [ae_map_iff hW.aemeasurable hmeas]
 
   obtain ⟨v, hv_meas, hv_bdd, hv_eq_v₁⟩ := exists_clipped_version v₁ C hC hv₁_meas hv₁_bdd
 
