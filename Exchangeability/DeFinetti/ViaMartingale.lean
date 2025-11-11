@@ -3124,7 +3124,7 @@ at its only point of use. -/
 lemma condexp_indicator_drop_info_of_pair_law_direct
     {Ω α β : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     [MeasurableSpace α] [StandardBorelSpace α]
-    [MeasurableSpace β] [StandardBorelSpace β]
+    [MeasurableSpace β] [StandardBorelSpace β] [Nonempty β]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (ξ : Ω → α) (η ζ : Ω → β)
     (hξ : Measurable ξ) (hη : Measurable η) (hζ : Measurable ζ)
@@ -3150,61 +3150,80 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
   --
   -- Note: StandardBorelSpace assumptions required for condExpKernel API
 
-  -- Use explicit codomain instances to prevent instance drift
-  set mη : MeasurableSpace Ω := MeasurableSpace.comap η (‹MeasurableSpace β›)
-  set mζ : MeasurableSpace Ω := MeasurableSpace.comap ζ (‹MeasurableSpace β›)
+  -- **Pattern A: Freeze ambient instances to prevent drift**
+  -- Freeze ambient instances under stable names
+  let mΩ : MeasurableSpace Ω := (by exact ‹MeasurableSpace Ω›)
+  let mβ : MeasurableSpace β := (by exact ‹MeasurableSpace β›)
 
-  -- Rewrite goal from composition form to preimage form
-  show μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|mζ] =ᵐ[μ]
-       μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|mη]
+  -- Keep the ambient instance exactly as it was (do NOT set it to mη/mζ)
+  haveI : MeasurableSpace Ω := mΩ
+  haveI : MeasurableSpace β := mβ
+
+  -- Define pullbacks using the frozen codomain instance
+  let mη : MeasurableSpace Ω := MeasurableSpace.comap η mβ
+  let mζ : MeasurableSpace Ω := MeasurableSpace.comap ζ mβ
+
+  -- Restate h_le using our frozen instance mβ (it's definitionally equal)
+  have h_le' : mη ≤ mζ := h_le
+
+  -- Convert goal from composition form to preimage form
+  have hind : Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ = (ξ ⁻¹' B).indicator (fun _ => (1 : ℝ)) := by
+    ext ω
+    simp [Set.indicator, Set.mem_preimage]
+
+  rw [hind]
+
+  -- Goal is now: μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|mζ] =ᵐ[μ]
+  --                μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|mη]
 
   -- Both CEs are integrable
   have hint : Integrable (Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))) μ := by
     exact Integrable.indicator (integrable_const 1) (hξ hB)
 
-  -- σ-algebra inequalities (use ambient instance to prevent instance drift)
-  have hmη_le : mη ≤ (‹MeasurableSpace Ω›) := by
+  -- Sub-σ-algebra inclusions against the frozen ambient instance
+  have hmη_le : mη ≤ mΩ := by
     intro s hs
     rcases hs with ⟨t, ht, rfl⟩
-    -- Explicitly cast hη ht to the ambient instance
-    exact (hη ht : @MeasurableSet Ω (‹MeasurableSpace Ω›) (η ⁻¹' t))
+    -- target is @MeasurableSet Ω mΩ (η ⁻¹' t)
+    exact (hη ht : @MeasurableSet Ω mΩ (η ⁻¹' t))
 
-  have hmζ_le : mζ ≤ (‹MeasurableSpace Ω›) := by
+  have hmζ_le : mζ ≤ mΩ := by
     intro s hs
     rcases hs with ⟨t, ht, rfl⟩
-    -- Explicitly cast hζ ht to the ambient instance
-    exact (hζ ht : @MeasurableSet Ω (‹MeasurableSpace Ω›) (ζ ⁻¹' t))
+    -- target is @MeasurableSet Ω mΩ (ζ ⁻¹' t)
+    exact (hζ ht : @MeasurableSet Ω mΩ (ζ ⁻¹' t))
 
   -- Step 1: Express CEs via kernel integrals
+  -- Pass ambient instance mΩ explicitly to prevent instance synthesis drift
   have hCEη : μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) | mη] =ᵐ[μ]
-              (fun ω => ∫ y, Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) y ∂(condExpKernel μ mη ω)) := by
-    exact condExp_ae_eq_integral_condExpKernel hmη_le hint
+              (fun ω => ∫ y, Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) y ∂(@ProbabilityTheory.condExpKernel Ω mΩ _ μ _ mη ω)) := by
+    exact @ProbabilityTheory.condExp_ae_eq_integral_condExpKernel Ω mΩ _ _ μ _ _ mη hmη_le _ hint
 
   have hCEζ : μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) | mζ] =ᵐ[μ]
-              (fun ω => ∫ y, Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) y ∂(condExpKernel μ mζ ω)) := by
-    exact condExp_ae_eq_integral_condExpKernel hmζ_le hint
+              (fun ω => ∫ y, Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) y ∂(@ProbabilityTheory.condExpKernel Ω mΩ _ μ _ mζ ω)) := by
+    exact @ProbabilityTheory.condExp_ae_eq_integral_condExpKernel Ω mΩ _ _ μ _ _ mζ hmζ_le _ hint
 
   -- Step 2: For indicators, integral equals measure evaluation
-  have hinteg_η : ∀ ω, ∫ y, Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) y ∂(condExpKernel μ mη ω)
-                      = ((condExpKernel μ mη ω) (ξ ⁻¹' B)).toReal := by
+  have hinteg_η : ∀ ω, ∫ y, Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) y ∂(@ProbabilityTheory.condExpKernel Ω mΩ _ μ _ mη ω)
+                      = ((@ProbabilityTheory.condExpKernel Ω mΩ _ μ _ mη ω) (ξ ⁻¹' B)).toReal := by
     intro ω
     rw [integral_indicator_one (hξ hB)]
 
-  have hinteg_ζ : ∀ ω, ∫ y, Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) y ∂(condExpKernel μ mζ ω)
-                      = ((condExpKernel μ mζ ω) (ξ ⁻¹' B)).toReal := by
+  have hinteg_ζ : ∀ ω, ∫ y, Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) y ∂(@ProbabilityTheory.condExpKernel Ω mΩ _ μ _ mζ ω)
+                      = ((@ProbabilityTheory.condExpKernel Ω mΩ _ μ _ mζ ω) (ξ ⁻¹' B)).toReal := by
     intro ω
     rw [integral_indicator_one (hξ hB)]
 
-  simp only [hinteg_η, hinteg_ζ] at hCEη hCEζ
+  rw [hinteg_η, hinteg_ζ] at hCEη hCEζ
 
   -- Step 3: Doob-Dynkin factorization
   -- Since σ(η) ≤ σ(ζ), we have η = φ ∘ ζ for some measurable φ
   have ⟨φ, hφ, hηfac⟩ : ∃ φ : β → β, Measurable φ ∧ η = φ ∘ ζ := by
     -- η is measurable with respect to comap ζ because comap η ≤ comap ζ
-    have hη_comap : Measurable[MeasurableSpace.comap ζ inferInstance] η := by
+    have hη_comap : @Measurable β mβ Ω mζ η := by
       rw [measurable_iff_comap_le]
-      exact h_le
-    -- Use Measurable.exists_eq_measurable_comp (requires StandardBorelSpace β)
+      exact h_le'
+    -- Use Measurable.exists_eq_measurable_comp (requires StandardBorelSpace β and Nonempty β)
     exact hη_comap.exists_eq_measurable_comp
 
   -- Step 4: Apply uniqueness characterization
@@ -3245,10 +3264,10 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
       (fun s hs _ => integrable_condExp.integrableOn) hinteg hmeas
 
   -- Step 4d: Final calc chain
-  calc (fun ω => ((condExpKernel μ mζ ω) (ξ ⁻¹' B)).toReal)
+  calc (fun ω => ((@ProbabilityTheory.condExpKernel Ω mΩ _ μ _ mζ ω) (ξ ⁻¹' B)).toReal)
       =ᵐ[μ] μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|mζ] := hCEζ.symm
     _ =ᵐ[μ] μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|mη] := heq
-    _ =ᵐ[μ] (fun ω => ((condExpKernel μ mη ω) (ξ ⁻¹' B)).toReal) := hCEη
+    _ =ᵐ[μ] (fun ω => ((@ProbabilityTheory.condExpKernel Ω mΩ _ μ _ mη ω) (ξ ⁻¹' B)).toReal) := hCEη
 
 /-- **Kallenberg 1.3 Conditional Expectation Form (Route A):**
 If `(ξ, η) =ᵈ (ξ, ζ)` and `σ(η) ≤ σ(ζ)`, then conditioning ξ on ζ is the same as
