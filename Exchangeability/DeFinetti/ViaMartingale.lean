@@ -458,13 +458,16 @@ lemma ae_eq_of_comp_ae_eq
     {Ω γ : Type*} [MeasurableSpace Ω] [MeasurableSpace γ]
     {μ : Measure Ω} {W : Ω → γ} {v₁ v₂ : γ → ℝ}
     (hW : Measurable W)
+    (hv₁ : Measurable v₁) (hv₂ : Measurable v₂)
     (h : v₁ ∘ W =ᵐ[μ] v₂ ∘ W) :
   v₁ =ᵐ[Measure.map W μ] v₂ := by
-  -- Use the contrapositive of ae_eq_comp
-  -- ae_eq_comp says: if g =ᵐ[map f μ] g', then g ∘ f =ᵐ[μ] g' ∘ f
-  -- We have: v₁ ∘ W =ᵐ[μ] v₂ ∘ W and want: v₁ =ᵐ[map W μ] v₂
-  -- This is a standard result about pushforward measures and ae
-  sorry
+  -- v₁ =ᵐ[map W μ] v₂ means ∀ᵐ y ∂(map W μ), v₁ y = v₂ y
+  -- By ae_map_iff, this holds iff ∀ᵐ ω ∂μ, v₁ (W ω) = v₂ (W ω)
+  -- which is exactly h
+  rw [Filter.EventuallyEq]
+  rw [ae_map_iff hW.aemeasurable (measurableSet_eq_fun hv₁ hv₂)]
+  -- Now goal is ∀ᵐ ω ∂μ, v₁ (W ω) = v₂ (W ω), which is h
+  convert h using 1
 
 /-- **A3: Clip to get pointwise bounds for the version:**
 From an a.e.-bounded version on `Law(W)`, produce a **pointwise bounded** Borel version
