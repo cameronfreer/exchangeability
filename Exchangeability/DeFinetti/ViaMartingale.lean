@@ -3151,13 +3151,9 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
   -- Note: StandardBorelSpace assumptions required for condExpKernel API
 
   -- **Pattern B: Inline comaps to avoid any name shadowing**
-  -- Freeze ambient instances under stable names (no ‹_› later)
+  -- Freeze ambient instances under stable names for explicit reference
   let mΩ : MeasurableSpace Ω := (by exact ‹MeasurableSpace Ω›)
   let mγ : MeasurableSpace β := (by exact ‹MeasurableSpace β›)
-
-  -- Use haveI to ensure these are the instances in scope
-  haveI : MeasurableSpace Ω := mΩ
-  haveI : MeasurableSpace β := mγ
 
   -- Convert goal from composition form to preimage form
   have hind : Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ = (ξ ⁻¹' B).indicator (fun _ => (1 : ℝ)) := by
@@ -3225,7 +3221,7 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
   -- Since σ(η) ≤ σ(ζ), we have η = φ ∘ ζ for some measurable φ
   have ⟨φ, hφ, hηfac⟩ : ∃ φ : β → β, Measurable φ ∧ η = φ ∘ ζ := by
     -- η is measurable with respect to comap ζ because comap η ≤ comap ζ
-    have hη_comap : @Measurable β mγ Ω (MeasurableSpace.comap ζ mγ) η := by
+    have hη_comap : Measurable[MeasurableSpace.comap ζ mγ] η := by
       rw [measurable_iff_comap_le]
       exact h_le
     -- Use Measurable.exists_eq_measurable_comp (requires StandardBorelSpace β and Nonempty β)
