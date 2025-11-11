@@ -525,7 +525,9 @@ lemma common_version_condexp_bdd
 
   -- V is σ(W)-measurable, so factors through W
   have hV_meas : Measurable[MeasurableSpace.comap W inferInstance] V := by
-    sorry -- Need to show condExp is measurable w.r.t. comap, not just strongly measurable
+    -- stronglyMeasurable_condExp gives StronglyMeasurable[comap W]
+    -- For ℝ-valued functions, StronglyMeasurable implies Measurable
+    exact stronglyMeasurable_condExp.measurable
   have hV_ae : AEStronglyMeasurable V μ := by
     -- stronglyMeasurable_condExp gives StronglyMeasurable[comap W]
     -- Apply aestronglyMeasurable to get AEStronglyMeasurable[comap W]
@@ -541,7 +543,8 @@ lemma common_version_condexp_bdd
 
   -- Similarly for V'
   have hV'_meas : Measurable[MeasurableSpace.comap W' inferInstance] V' := by
-    sorry -- Need to show condExp is measurable w.r.t. comap, not just strongly measurable
+    -- Same as for V: stronglyMeasurable implies measurable for ℝ
+    exact stronglyMeasurable_condExp.measurable
   have hV'_ae : AEStronglyMeasurable V' μ := by
     -- Same approach as for V
     let m0 : MeasurableSpace Ω := inferInstance
