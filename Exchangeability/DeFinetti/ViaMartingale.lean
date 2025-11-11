@@ -3211,19 +3211,24 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
   -- Step 4a: σ(η)-measurability (the deep content - from pair-law, inline comaps)
   have hmeas : AEStronglyMeasurable[MeasurableSpace.comap η mγ]
       (μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ]) μ := by
-    -- **This is Kallenberg's Lemma 1.3 - the genuine deep probability theory**
+    -- Use the tower property: μ[μ[f|comap ζ]|comap η] =ᵐ[μ] μ[f|comap η]
+    have htower : μ[μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ]|
+                    MeasurableSpace.comap η mγ] =ᵐ[μ]
+                  μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] := by
+      exact condExp_condExp_of_le h_le hmζ_le
+
+    -- Now μ[f|comap η] is strongly measurable w.r.t. comap η
+    have hSM_η : StronglyMeasurable[MeasurableSpace.comap η mγ]
+        (μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ]) := by
+      exact stronglyMeasurable_condExp
+
+    -- The pair-law (ξ, η) =ᵈ (ξ, ζ) with η = φ ∘ ζ implies that
+    -- μ[f|comap ζ] actually factors through η, hence is comap η-measurable
     --
-    -- Proof strategy: Show E[f|comap ζ] = h(η) for some measurable h
-    --
-    -- Key insight: The pair-law with η = φ ∘ ζ means:
-    --   law(ξ, φ ∘ ζ) = law(ξ, ζ)
-    -- This implies the conditional distribution of ξ given ζ only depends on φ(ζ) = η
-    -- Therefore: E[1_B(ξ)|ζ] = g(η) for some measurable g
-    --
-    -- For a complete proof, would need ~30 lines using:
-    -- - condDistrib_ae_eq_of_measure_eq_compProd for disintegration uniqueness
-    -- - Careful measure manipulations to cast the pair-law into compProd form
-    -- - Showing the resulting kernel factors through φ
+    -- **This is the deep mathematical content of Kallenberg's Lemma 1.3**
+    -- The tower property tells us μ[μ[f|ζ]|η] = μ[f|η], which is η-measurable.
+    -- The pair-law should imply μ[f|ζ] = μ[f|η] a.e., making μ[f|ζ] also η-measurable.
+    -- To complete this rigorously requires ~30 lines using disintegration theory.
     sorry
 
   -- Step 4b: Integral properties on σ(η)-measurable sets (inline comaps)
