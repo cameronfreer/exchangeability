@@ -924,18 +924,19 @@ lemma ae_bound_condexp_of_ae_bound
     {g : Ω → ℝ} {C : ℝ}
     (hgC : ∀ᵐ ω ∂μ, |g ω| ≤ C) :
   ∀ᵐ ω ∂μ, |μ[g | m] ω| ≤ C := by
-  -- If |g| ≤ C a.e., then C ≥ 0 (since |g| ≥ 0)
-  have hC_nonneg : 0 ≤ C := by
-    -- If C < 0, then ∀ᵐ ω, |g ω| ≤ C < 0, contradicting |g ω| ≥ 0
-    by_contra h_neg
-    push_neg at h_neg
-    -- Get contradiction from ae hypothesis
-    have h_false : ∀ᵐ ω ∂μ, False := hgC.mono (fun ω hω => (abs_nonneg (g ω)).not_lt (hω.trans_lt h_neg))
-    -- This implies μ Set.univ = 0
-    have : μ Set.univ = 0 := measure_zero_iff_ae_nmem.mpr (by simpa using h_false)
-    -- But we need μ ≠ 0 for a probability measure
-    sorry -- Need to invoke that μ is a probability measure
-  exact MeasureTheory.ae_bdd_condExp_of_ae_bdd (R := ⟨C, hC_nonneg⟩) hgC
+  -- Split on whether C ≥ 0
+  by_cases hC : 0 ≤ C
+  · -- Case C ≥ 0: use the standard lemma
+    exact MeasureTheory.ae_bdd_condExp_of_ae_bdd (R := ⟨C, hC⟩) hgC
+  · -- Case C < 0: hypothesis is contradictory
+    -- If |g ω| ≤ C < 0, this contradicts |g ω| ≥ 0
+    push_neg at hC
+    -- From the contradictory hypothesis, any conclusion follows
+    filter_upwards [hgC] with ω hω
+    -- Derive False: 0 ≤ |g ω| ≤ C < 0
+    have : 0 ≤ |g ω| := abs_nonneg (g ω)
+    have : |g ω| < 0 := hω.trans_lt hC
+    linarith
 
 /-- **Adjointness for bounded `g` (L∞–L¹)**:
 If `g` is essentially bounded and `ξ ∈ L¹(μ)`, then
