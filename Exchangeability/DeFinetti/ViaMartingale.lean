@@ -865,11 +865,12 @@ lemma test_fn_pair_law
   (hY : Measurable Y) (hW : Measurable W) (hW' : Measurable W')
   (h_pair : Measure.map (fun ω => (Y ω, W ω)) μ =
             Measure.map (fun ω => (Y ω, W' ω)) μ)
-  (φ : Ω → ℝ) (hφ_factor : ∃ f : α → ℝ, φ = f ∘ Y)
+  (φ : Ω → ℝ) (hφ_factor : ∃ f : α → ℝ, Measurable f ∧ φ = f ∘ Y)
+  (hφ_int : Integrable φ μ)
   (g : γ → ℝ) (hg : Measurable g) (hg_bdd : ∀ w, ‖g w‖ ≤ 1) :
   ∫ ω, φ ω * g (W ω) ∂μ = ∫ ω, φ ω * g (W' ω) ∂μ := by
   -- Extract the factorization f with φ = f ∘ Y
-  obtain ⟨f, rfl⟩ := hφ_factor
+  obtain ⟨f, hf, rfl⟩ := hφ_factor
 
   -- Define the test function on the product space
   let g_test : α × γ → ℝ := fun ⟨y, w⟩ => f y * g w
@@ -878,9 +879,24 @@ lemma test_fn_pair_law
   have hT : Measurable (fun ω => (Y ω, W ω)) := hY.prodMk hW
   have hT' : Measurable (fun ω => (Y ω, W' ω)) := hY.prodMk hW'
 
-  -- Integrability (bounded function on probability space)
+  -- g_test is measurable
+  have hg_test_meas : Measurable g_test := by
+    exact (hf.comp measurable_fst).mul (hg.comp measurable_snd)
+
+  -- Integrability: g_test is bounded by ‖φ‖ (since |g| ≤ 1)
   have hg_test_int : Integrable g_test (Measure.map (fun ω => (Y ω, W ω)) μ) := by
-    sorry  -- Follows from boundedness of f and g
+    -- |g_test(y,w)| = |f(y)| * |g(w)| ≤ |f(y)| * 1 = |f(y)|
+    -- So ∫ |g_test| d[law(Y,W)] = ∫ |f(Y)| * |g(W)| dμ ≤ ∫ |f(Y)| dμ = ∫ |φ| dμ < ∞
+    have h_comp_int : Integrable (g_test ∘ fun ω => (Y ω, W ω)) μ := by
+      refine Integrable.mono hφ_int ?_ ?_
+      · exact ((hf.comp hY).mul (hg.comp hW)).aestronglyMeasurable
+      · filter_upwards with ω
+        simp [g_test]
+        calc ‖f (Y ω) * g (W ω)‖
+            = ‖f (Y ω)‖ * ‖g (W ω)‖ := norm_mul _ _
+          _ ≤ ‖f (Y ω)‖ * 1 := by gcongr; exact hg_bdd (W ω)
+          _ = ‖f (Y ω)‖ := mul_one _
+    exact (integrable_map_measure hg_test_meas.aestronglyMeasurable hT.aemeasurable).mpr h_comp_int
 
   -- Apply integral transfer under law equality
   have h := integral_eq_of_map_eq hT hT' hg_test_int h_pair
