@@ -55,21 +55,24 @@ private lemma abs_div_of_nonneg {x y : ℝ} (hy : 0 ≤ y) :
 
 /-- Coercion of finite sums in Lp is almost everywhere equal to pointwise sums.
     This is the measure-space analogue of lp.coeFn_sum (which is for sequence spaces). -/
-private lemma Lp.coeFn_finset_sum
+private lemma coeFn_finset_sum
   {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
   {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-  (p : ℝ≥0∞) {ι : Type*} (s : Finset ι) (F : ι → Lp E p μ) :
+  {p : ENNReal} {ι : Type*} (s : Finset ι) (F : ι → Lp E p μ) :
   ((s.sum F : Lp E p μ) : Ω → E) =ᵐ[μ] fun ω => s.sum (fun i => (F i : Ω → E) ω) := by
+  haveI : DecidableEq ι := Classical.decEq _
   refine Finset.induction_on s ?h0 ?hstep
   · -- base: sum over ∅ is 0
-    simp
+    simp only [Finset.sum_empty]
+    convert Lp.coeFn_zero
+    ext ω; rfl
   · -- step: sum over insert
     intro a s ha hs
-    rw [Finset.sum_insert ha, Finset.sum_insert ha]
+    simp only [Finset.sum_insert ha]
     -- Combine coeFn_add with induction hypothesis
-    filter_upwards [Lp.coeFn_add (s.sum F) (F a), hs] with ω h_add h_ih
+    filter_upwards [Lp.coeFn_add (F a) (s.sum F), hs] with ω h_add h_ih
+    simp only [Pi.add_apply] at h_add
     rw [h_add, h_ih]
-    ring
 
 /-!
 # de Finetti's Theorem via Koopman Operator
@@ -692,7 +695,7 @@ lemma condExp_idempotent'
     (hf_int : Integrable f μ) :
     μ[f | m] =ᵐ[μ] f := by
   -- Idempotence: CE[f|m] = f a.e. when f is m-measurable
-  sorry
+  exact MeasureTheory.condExp_of_aestronglyMeasurable' hm hf_m hf_int
 
 end MeasureTheory
 
@@ -835,10 +838,11 @@ lemma condexp_pullback_factor
   · intro s hs _
     exact h_sets s hs
   -- 3) AEStronglyMeasurable for (μ[H | m] ∘ g) with respect to comap g m
-  · -- TODO: This requires careful σ-algebra management. The goal requires
-    -- AEStronglyMeasurable[comap g m] but we have the ambient space.
-    -- Temporarily use sorry to unblock other compilation errors.
-    sorry
+  · -- μ[H|m] is ae-strongly measurable w.r.t. μ = map g μ', so composing with g gives ae-strong measurability w.r.t. μ'
+    have : AEStronglyMeasurable (μ[H | m]) (Measure.map g μ') := by
+      rw [hpush]
+      exact stronglyMeasurable_condExp.aestronglyMeasurable
+    exact AEStronglyMeasurable.comp_measurable this hg
 
 /-
 **Invariance of conditional expectation under iterates**.
