@@ -943,10 +943,14 @@ lemma integral_mul_condexp_indicator
   ∫ ω, f ω * (s.indicator (fun _ => (1 : ℝ)) ω) ∂μ := by
   -- Convert to set integrals using the defining property
   -- For m-measurable s, we have ∫_s μ[f|m] = ∫_s f (setIntegral_condExp)
-  -- Rewrite using indicator functions: ∫ 1_s · g = ∫_s g
-  have hs_ambient : MeasurableSet s := @hm s hs
-  rw [← integral_indicator hs_ambient, ← integral_indicator hs_ambient]
-  exact setIntegral_condExp hm hf_int hs
+  -- First lift measurability to the ambient space m0
+  have hs_ambient : @MeasurableSet Ω m0 s := hm _ hs
+  -- Set integral form of the identity
+  have h_set : ∫ ω in s, μ[f | m] ω ∂μ = ∫ ω in s, f ω ∂μ :=
+    setIntegral_condExp hm hf_int hs
+  -- Convert using indicator functions: ∫_s g = ∫ g · 1_s
+  simp only [← integral_indicator hs_ambient, Set.indicator_mul, mul_one] at h_set
+  exact h_set
 
 /-- **L² projection property of conditional expectation:**
 For m-measurable g, ∫ (condexp m μ f) · g = ∫ f · g.
