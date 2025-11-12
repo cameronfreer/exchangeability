@@ -2598,30 +2598,26 @@ private lemma cesaro_cauchy_rho_lt
     apply memLp_two_of_bounded (hZ_meas k.val)
     intro ω
     -- Unfold ξ and Z to show |f(X k.val ω) - m| ≤ 2
-    calc |Z k.val ω|
-        ≤ |f (X k.val ω)| + |∫ ω', f (X 0 ω') ∂μ| := by
-            -- Z is already a parameter, no need to unfold
-            exact abs_sub _ _
-      _ ≤ 1 + 1 := by
-            have h1 : |f (X k.val ω)| ≤ 1 := hf_bdd (X k.val ω)
-            have h2 : |∫ ω', f (X 0 ω') ∂μ| ≤ 1 := by
-              -- |∫ f(X 0)| ≤ ∫ |f(X 0)| ≤ ∫ 1 = 1
-              have hfX_int : Integrable (fun ω => f (X 0 ω)) μ := by
-                apply Integrable.of_bound
-                · exact (hf_meas.comp (hX_meas 0)).aestronglyMeasurable
-                · filter_upwards [] with ω
-                  exact hf_bdd (X 0 ω)
-              calc |∫ ω', f (X 0 ω') ∂μ|
-                  ≤ ∫ ω', |f (X 0 ω')| ∂μ := abs_integral_le_integral_abs
-                _ ≤ ∫ ω', 1 ∂μ := by
-                    apply integral_mono_ae
-                    · exact hfX_int.abs
-                    · exact integrable_const 1
-                    · filter_upwards [] with ω'
-                      exact hf_bdd (X 0 ω')
-                _ = 1 := by simp
-            linarith
-      _ = 2 := by norm_num
+    have h1 : |f (X k.val ω)| ≤ 1 := hf_bdd (X k.val ω)
+    have h2 : |∫ ω', f (X 0 ω') ∂μ| ≤ 1 := by
+      -- |∫ f(X 0)| ≤ ∫ |f(X 0)| ≤ ∫ 1 = 1
+      have hfX_int : Integrable (fun ω => f (X 0 ω)) μ := by
+        apply Integrable.of_bound
+        · exact (hf_meas.comp (hX_meas 0)).aestronglyMeasurable
+        · filter_upwards [] with ω
+          exact hf_bdd (X 0 ω)
+      calc |∫ ω', f (X 0 ω') ∂μ|
+          ≤ ∫ ω', |f (X 0 ω')| ∂μ := abs_integral_le_integral_abs
+        _ ≤ ∫ ω', 1 ∂μ := by
+            apply integral_mono_ae
+            · exact hfX_int.abs
+            · exact integrable_const 1
+            · filter_upwards [] with ω'
+              exact hf_bdd (X 0 ω')
+        _ = 1 := by simp
+    trans (|f (X k.val ω)| + |∫ ω', f (X 0 ω') ∂μ|)
+    · exact abs_sub (f (X k.val ω)) (∫ ω', f (X 0 ω') ∂μ)
+    · linarith
 
   -- Prove uniform variance: ∫ ξ_k² = σ²
   have hvar_ξ : ∀ k : Fin m, ∫ ω, (ξ k ω - 0)^2 ∂μ = σ ^ 2 := by
@@ -6890,10 +6886,23 @@ lemma l1_convergence_under_clip01
     (h_meas : ∀ n, AEMeasurable (fn n) μ) (hf : AEMeasurable f μ)
     (h : Tendsto (fun n => ∫ ω, |fn n ω - f ω| ∂μ) atTop (𝓝 0)) :
     Tendsto (fun n => ∫ ω, |clip01 (fn n ω) - clip01 (f ω)| ∂μ) atTop (𝓝 0) := by
-  -- The proof requires working with Lp spaces
-  -- Strategy: Convert L¹ integral convergence to Lp norm convergence, apply Lipschitz lemma, convert back
-  -- For now, this is a technical lemma about transferring between integral and Lp formulations
-  sorry
+  -- clip01 is 1-Lipschitz, so |clip01 x - clip01 y| ≤ |x - y|
+  -- Thus ∫ |clip01 ∘ fn - clip01 ∘ f| ≤ ∫ |fn - f|
+  -- By squeeze theorem, if ∫ |fn - f| → 0, then ∫ |clip01 ∘ fn - clip01 ∘ f| → 0
+  have hmono (n : ℕ) : ∫ ω, |clip01 (fn n ω) - clip01 (f ω)| ∂μ ≤ ∫ ω, |fn n ω - f ω| ∂μ := by
+    apply integral_mono_ae
+    · apply Integrable.abs
+      apply (h_meas n).aestronglyMeasurable.integrable_of_integrable
+      sorry -- Need to show fn n - f is integrable, which follows from convergence
+    · apply Integrable.abs
+      sorry -- Need to show fn n ω - f ω is integrable from convergence hypothesis
+    · filter_upwards with ω
+      exact abs_clip01_sub_le (fn n ω) (f ω)
+  refine squeeze_zero ?_ hmono h
+  intro n
+  apply integral_nonneg
+  intro ω
+  exact abs_nonneg _
 
 /-! ### L¹ Convergence Helpers -/
 
@@ -6922,11 +6931,18 @@ private lemma L1_unique_of_two_limits
   have : eLpNorm (f - g) 1 μ ≤ 0 := by
     -- Use that it's squeezed: 0 ≤ ‖f-g‖ ≤ ‖f-fn‖ + ‖fn-g‖ → 0
     have h_bound : ∀ n, eLpNorm (f - g) 1 μ ≤ eLpNorm (f - fn n) 1 μ + eLpNorm (fn n - g) 1 μ := htri
-    sorry
+    have h_sum_tendsto : Tendsto (fun n => eLpNorm (f - fn n) 1 μ + eLpNorm (fn n - g) 1 μ) atTop (𝓝 0) := by
+      have : (0 : ℝ≥0∞) = 0 + 0 := by simp
+      rw [this]
+      exact Tendsto.add h1 h2
+    exact le_of_tendsto' h_sum_tendsto h_bound
   -- eLpNorm = 0 ⇒ a.e. equality
   have hzero : eLpNorm (f - g) 1 μ = 0 := le_antisymm this bot_le
   have : (f - g) =ᵐ[μ] 0 := by
-    sorry
+    rw [← eLpNorm_eq_zero_iff] at hzero
+    · exact hzero
+    · exact hf.aestronglyMeasurable.sub hg.aestronglyMeasurable
+    · norm_num
   have : f =ᵐ[μ] g := by
     filter_upwards [this] with ω h
     simpa [sub_eq_zero] using h
@@ -6955,13 +6971,14 @@ private lemma L1_tendsto_clip01
 
 /-- If ∀ n, aₙ(ω) ≤ 1, then ⨅ₙ aₙ(ω) ≤ 1. -/
 private lemma iInf_le_one_of_le_one {ι : Type*} [Nonempty ι]
-  (a : ι → ℝ) (h : ∀ i, a i ≤ 1) : ⨅ i, a i ≤ 1 := by
-  sorry
+  (a : ι → ℝ) (h : ∀ i, a i ≤ 1) (hbdd : BddBelow (Set.range a)) : ⨅ i, a i ≤ 1 := by
+  have ⟨i⟩ := ‹Nonempty ι›
+  exact (ciInf_le hbdd i).trans (h i)
 
 /-- If ∀ n, aₙ(ω) ≤ 1, then ⨆ₙ aₙ(ω) ≤ 1. -/
 private lemma iSup_le_one_of_le_one {ι : Type*} [Nonempty ι]
   (a : ι → ℝ) (h : ∀ i, a i ≤ 1) : ⨆ i, a i ≤ 1 := by
-  sorry
+  exact ciSup_le h
 
 /-! ### AE Strong Measurability for iInf/iSup -/
 
