@@ -64,8 +64,7 @@ private lemma coeFn_finset_sum
   refine Finset.induction_on s ?h0 ?hstep
   · -- base: sum over ∅ is 0
     simp only [Finset.sum_empty]
-    convert Lp.coeFn_zero
-    ext ω; rfl
+    exact Lp.coeFn_zero
   · -- step: sum over insert
     intro a s ha hs
     simp only [Finset.sum_insert ha]
@@ -4541,7 +4540,7 @@ private theorem optionB_L1_convergence_bounded
             filter_upwards [Lp.coeFn_smul (n : ℝ)⁻¹ (∑ k ∈ Finset.range n, (koopman shift hσ)^[k] fL2)] with ω hω
             exact hω
         _ =ᵐ[μ] fun ω => (n : ℝ)⁻¹ • (∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2 : Ω[α] → ℝ) ω) := by
-            filter_upwards [Lp.coeFn_finset_sum 2 (Finset.range n) fun k => (koopman shift hσ)^[k] fL2] with ω hω
+            filter_upwards [coeFn_finset_sum (Finset.range n) fun k => (koopman shift hσ)^[k] fL2] with ω hω
             rw [hω]
         _ =ᵐ[μ] fun ω => (n : ℝ)⁻¹ * ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω := by
             filter_upwards with ω
