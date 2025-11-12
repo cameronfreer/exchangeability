@@ -986,84 +986,13 @@ lemma integral_mul_condexp_of_measurable
       Integrable s μ →
       ∫ ω, μ[f | m] ω * s ω ∂μ = ∫ ω, f ω * s ω ∂μ := by
     intro s hs_m hs_int
-    -- Strategy: Express both sides as finite sums over s.range and use Step A
-    -- For each c ∈ s.range, the preimage s⁻¹' {c} is m-measurable
-
-    -- LHS: ∫ μ[f|m] · s = ∫ μ[f|m] · (Σ_{c ∈ s.range} c · 1_{s⁻¹'{c}})
-    calc ∫ ω, μ[f | m] ω * s ω ∂μ
-        = ∫ ω, μ[f | m] ω * (∑ c ∈ s.range, c * (s ⁻¹' {c}).indicator (fun _ => (1 : ℝ)) ω) ∂μ := by
-          congr 1 with ω
-          -- s decomposes as sum over range: s ω = ∑_{c ∈ range} c · 1_{s⁻¹'{c}}(ω)
-          -- This follows from Finset.sum_mul_boole since indicator equals ite
-          simp only [Set.indicator_apply, Set.mem_preimage, Set.mem_singleton_iff]
-          rw [Finset.sum_mul_boole]
-          simp [SimpleFunc.mem_range_self]
-      _ = ∫ ω, ∑ c ∈ s.range, μ[f | m] ω * (c * (s ⁻¹' {c}).indicator (fun _ => (1 : ℝ)) ω) ∂μ := by
-          congr 1 with ω
-          rw [Finset.mul_sum]
-      _ = ∑ c ∈ s.range, ∫ ω, μ[f | m] ω * (c * (s ⁻¹' {c}).indicator (fun _ => (1 : ℝ)) ω) ∂μ := by
-          rw [integral_finset_sum]
-          intro c _
-          -- Integrable: μ[f|m] integrable, c·indicator bounded by |c|
-          rw [show (fun ω => μ[f | m] ω * (c * (s ⁻¹' {c}).indicator (fun _ => (1 : ℝ)) ω)) =
-                   (fun ω => (c * (s ⁻¹' {c}).indicator (fun _ => (1 : ℝ)) ω) * μ[f | m] ω) by
-            ext ω; ring]
-          refine Integrable.bdd_mul' integrable_condExp ?_ ?_
-          · exact (Measurable.const_mul (Measurable.indicator measurable_const
-              (measurableSet_preimage hs_m (MeasurableSet.singleton c))) c).aestronglyMeasurable
-          · apply ae_of_all
-            intro ω
-            simp only [norm_mul, Real.norm_eq_abs]
-            exact mul_le_of_le_one_right (abs_nonneg c) (norm_indicator_le_one _ _ _)
-      _ = ∑ c ∈ s.range, ∫ ω, c * (μ[f | m] ω * (s ⁻¹' {c}).indicator (fun _ => (1 : ℝ)) ω) ∂μ := by
-          congr 1 with c
-          congr 1 with ω
-          ring
-      _ = ∑ c ∈ s.range, c * ∫ ω, μ[f | m] ω * (s ⁻¹' {c}).indicator (fun _ => (1 : ℝ)) ω ∂μ := by
-          congr 1 with c
-          rw [integral_const_mul]
-      _ = ∑ c ∈ s.range, c * ∫ ω, f ω * (s ⁻¹' {c}).indicator (fun _ => (1 : ℝ)) ω ∂μ := by
-          congr 1 with c
-          congr 1
-          -- Apply Step A: each preimage is m-measurable
-          apply integral_mul_condexp_indicator
-          · exact hf_int
-          · -- s is m-measurable implies preimages are m-measurable
-            exact measurableSet_preimage hs_m (MeasurableSet.singleton c)
-      _ = ∑ c ∈ s.range, ∫ ω, c * (f ω * (s ⁻¹' {c}).indicator (fun _ => (1 : ℝ)) ω) ∂μ := by
-          congr 1 with c
-          rw [integral_const_mul]
-      _ = ∑ c ∈ s.range, ∫ ω, f ω * (c * (s ⁻¹' {c}).indicator (fun _ => (1 : ℝ)) ω) ∂μ := by
-          congr 1 with c
-          congr 1 with ω
-          ring
-      _ = ∫ ω, ∑ c ∈ s.range, f ω * (c * (s ⁻¹' {c}).indicator (fun _ => (1 : ℝ)) ω) ∂μ := by
-          rw [integral_finset_sum]
-          intro c _
-          -- Integrable: f integrable, c·indicator bounded by |c|
-          rw [show (fun ω => f ω * (c * (s ⁻¹' {c}).indicator (fun _ => (1 : ℝ)) ω)) =
-                   (fun ω => (c * (s ⁻¹' {c}).indicator (fun _ => (1 : ℝ)) ω) * f ω) by
-            ext ω; ring]
-          refine Integrable.bdd_mul' hf_int ?_ ?_
-          · exact (Measurable.const_mul (Measurable.indicator measurable_const
-              (measurableSet_preimage hs_m (MeasurableSet.singleton c))) c).aestronglyMeasurable
-          · apply ae_of_all
-            intro ω
-            simp only [norm_mul, Real.norm_eq_abs]
-            exact mul_le_of_le_one_right (abs_nonneg c) (norm_indicator_le_one _ _ _)
-      _ = ∫ ω, f ω * (∑ c ∈ s.range, c * (s ⁻¹' {c}).indicator (fun _ => (1 : ℝ)) ω) ∂μ := by
-          congr 1 with ω
-          rw [Finset.mul_sum]
-      _ = ∫ ω, f ω * s ω ∂μ := by
-          congr 1 with ω
-          -- s decomposes as sum over range (same proof as above)
-          rw [show s ω = ∑ c ∈ s.range, c * (s ⁻¹' {c}).indicator (fun _ => (1 : ℝ)) ω from by
-            trans (∑ c ∈ s.range, c * if s ω = c then (1 : ℝ) else (0 : ℝ))
-            · rw [Finset.sum_mul_boole]
-              simp [SimpleFunc.mem_range_self]
-            · congr 1 with c
-              rw [Set.indicator_apply]
-              simp only [Set.mem_preimage, Set.mem_singleton_iff, Pi.one_apply]]
+    -- TODO: Complete this proof by expressing s as ∑ c ∈ s.range, c · 1_{s⁻¹'{c}}
+    -- and applying Step A (integral_mul_condexp_indicator) to each term
+    -- Issue: Need correct lemmas for:
+    -- 1. Integrability of indicator-like if-then-else functions
+    -- 2. Factoring c out of integrals: ∫ f·(if p then c else 0) = c·∫ f·(if p then 1 else 0)
+    -- 3. Converting between indicator and if-then-else notation
+    sorry
 
   -- Step C: Bounded case via uniform simple approximation
   have h_bdd : ∀ (M : ℝ), (∀ ω, ‖g ω‖ ≤ M) →
