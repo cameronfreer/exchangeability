@@ -7084,21 +7084,16 @@ lemma directing_measure_eval_Iic_measurable
   have h_eq : ∀ ω, directing_measure X hX_contract hX_meas hX_L2 ω (Set.Iic t) =
       ENNReal.ofReal (cdf_from_alpha X hX_contract hX_meas hX_L2 ω t) := by
     intro ω
-    -- The directing_measure is built as F_ω.measure where F_ω is a StieltjesFunction
     unfold directing_measure
-    -- By construction of StieltjesFunction.measure for F_ω,
-    -- F_ω.measure (Iic t) = ofReal (F_ω t - lim_{x → -∞} F_ω x)
-    -- By cdf_from_alpha_limits (axiom A2), lim at bot = 0
-    -- Therefore: F_ω.measure (Iic t) = ofReal (F_ω t - 0) = ofReal (F_ω t)
-    --
-    -- This follows from StieltjesFunction.measure_Iic combined with the limit being 0.
-    -- The detailed proof would use:
-    -- 1. StieltjesFunction.measure_Iic: gives measure formula in terms of limits
-    -- 2. cdf_from_alpha_limits: proves the limit at -∞ is 0
-    -- 3. Algebraic simplification: F_ω(t) - 0 = F_ω(t)
-    --
-    -- TODO: Complete using mathlib's StieltjesFunction API
-    sorry
+    simp only []  -- Reduce the have expression
+    -- The Stieltjes function F with toFun = cdf_from_alpha ω
+    have h_lim := (cdf_from_alpha_limits X hX_contract hX_meas hX_L2 ω).1
+    -- Apply measure_Iic: need to show F.measure (Iic t) = ofReal (F t - 0)
+    trans (ENNReal.ofReal (cdf_from_alpha X hX_contract hX_meas hX_L2 ω t - 0))
+    · -- F.measure (Iic t) = ofReal (F t - 0)
+      exact StieltjesFunction.measure_Iic _ h_lim t
+    · -- ofReal (F t - 0) = ofReal (F t)
+      simp only [sub_zero]
   simp_rw [h_eq]
   exact ENNReal.measurable_ofReal.comp hmeas
 
