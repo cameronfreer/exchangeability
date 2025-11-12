@@ -629,11 +629,11 @@ lemma common_version_condexp_bdd
           --                             = ∫_{W'^{-1}(S)} ψ(Z) dμ
           have hprod_int : ∫ ω, (ψ ∘ Z) ω * (S.indicator (fun _ => 1) ∘ W) ω ∂μ =
                            ∫ ω, (ψ ∘ Z) ω * (S.indicator (fun _ => 1) ∘ W') ω ∂μ := by
-            -- TODO: Apply pair law to transfer integral via product measure
-            -- Key insight: law(Z,W) = law(Z,W') implies ∫ f(Z,W) dμ = ∫ f(Z,W') dμ
-            -- for measurable f : β × γ → ℝ. Here f(z,w) = ψ(z) · 1_S(w).
-            -- This requires integral_map for product spaces, which needs topology on β × γ.
-            -- Alternative: use measure equality directly without integral_map.
+            -- TODO: This requires transferring an integral via pair law equality
+            -- Standard approach: ∫ f(Z,W) dμ = ∫ f d[law(Z,W)] = ∫ f d[law(Z,W')] = ∫ f(Z,W') dμ
+            -- However, integral_map requires topology on the product space
+            -- Alternative: Use measure transport lemma or work with finite linear combinations
+            -- For now, this is a standard consequence of the pair law in measure theory
             sorry
           -- Convert product form back to set integral form
           have : ∫ ω in T, (ψ ∘ Z) ω ∂μ = ∫ ω, (ψ ∘ Z) ω * (S.indicator (fun _ => 1) ∘ W) ω ∂μ := by
@@ -925,11 +925,28 @@ This factorization follows from the distributional equality via a martingale arg
 
 /-! ===== Adjointness helpers (for μ[·|m] with (hm : m ≤ m0)) ===== -/
 
+/-- **Step A: Indicator case** - For m-measurable sets, the projection property holds for indicators. -/
+lemma integral_mul_condexp_indicator
+    {Ω : Type*} [m0 : MeasurableSpace Ω] (μ : Measure Ω)
+    {m : MeasurableSpace Ω} (hm : m ≤ m0)
+    [SigmaFinite (μ.trim hm)]
+    {f : Ω → ℝ} (hf_int : Integrable f μ)
+    {s : Set Ω} (hs : MeasurableSet[m] s) :
+  ∫ ω, μ[f | m] ω * (s.indicator (fun _ => (1 : ℝ)) ω) ∂μ =
+  ∫ ω, f ω * (s.indicator (fun _ => (1 : ℝ)) ω) ∂μ := by
+  -- Convert to set integrals
+  have hs_ambient : MeasurableSet s := hm _ hs
+  rw [← integral_indicator hs_ambient, ← integral_indicator hs_ambient]
+  -- Use defining property of conditional expectation: ∫_s μ[f|m] = ∫_s f
+  exact setIntegral_condExp hm hf_int hs_ambient
+
 /-- **L² projection property of conditional expectation:**
 For m-measurable g, ∫ (condexp m μ f) · g = ∫ f · g.
 
 This is the key property that makes conditional expectation an orthogonal projection in L².
 Used to prove adjointness without requiring product integrability assumptions.
+
+**Proof strategy**: 3-step approximation via simple functions (Step A above, then B, then C).
 -/
 lemma integral_mul_condexp_of_measurable
     {Ω : Type*} [m0 : MeasurableSpace Ω] (μ : Measure Ω)
