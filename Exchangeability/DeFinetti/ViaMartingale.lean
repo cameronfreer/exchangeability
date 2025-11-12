@@ -939,12 +939,20 @@ lemma integral_mul_condexp_of_measurable
     (hg_meas : Measurable[m] g)
     (hf_int : Integrable f μ) (hg_int : Integrable g μ) :
   ∫ ω, μ[f | m] ω * g ω ∂μ = ∫ ω, f ω * g ω ∂μ := by
-  -- TODO: Prove via approximation by simple functions
-  -- Step 1: For simple functions, use the defining property of condexp on m-measurable sets
-  --         For s = ∑ cᵢ · 1_{Aᵢ} with Aᵢ ∈ m: ∫ μ[f|m] · s = ∑ cᵢ · ∫_{Aᵢ} μ[f|m] = ∑ cᵢ · ∫_{Aᵢ} f
-  -- Step 2: Approximate g by simple functions sₙ with ‖sₙ - g‖₁ → 0
-  -- Step 3: Use dominated convergence with integrability to pass to the limit
-  -- This is a standard ~30 line approximation argument
+  classical
+  -- **Proof strategy via set integrals (elementary approach):**
+  -- 1. For m-measurable sets A: ∫_A μ[f|m] = ∫_A f (by setIntegral_condExp)
+  -- 2. For indicators g = 1_A: ∫ μ[f|m]·1_A = ∫_A μ[f|m] = ∫_A f = ∫ f·1_A
+  -- 3. Extend to simple functions: for s = ∑ cᵢ·1_{Aᵢ}, use linearity of integral
+  -- 4. Approximate g by simple functions sₙ → g in L¹
+  -- 5. Pass to limit: |∫ μ[f|m]·sₙ - ∫ μ[f|m]·g| ≤ ‖μ[f|m]‖₁ · ‖sₙ - g‖₁ → 0
+  --
+  -- **Alternative via pull-out (requires product integrability):**
+  -- - For m-measurable g: μ[f·g|m] = g·μ[f|m] (pull-out)
+  -- - Then: ∫ μ[f|m]·g = ∫ μ[f·g|m] = ∫ f·g (tower property)
+  -- - Issue: needs Integrable (g * μ[f|m]) which is the L¹ × L¹ problem
+  --
+  -- The set integral approach avoids this issue entirely.
   sorry
 
 /-- Adjointness of conditional expectation, in μ[·|m] notation.
@@ -975,11 +983,11 @@ lemma integral_mul_condexp_adjoint
     have hξm : AEStronglyMeasurable[m] (μ[ξ | m]) μ :=
       stronglyMeasurable_condExp.aestronglyMeasurable
     have hgξm_int : Integrable (g * μ[ξ | m]) μ := by
-      -- TODO: With integral_mul_condexp_of_measurable, we can avoid this!
-      -- Instead of needing product integrability, we can rewrite:
-      -- ∫ μ[g·μ[ξ|m]|m] = ∫ g·μ[ξ|m] using μ[ξ|m] is m-measurable
-      --                  = ∫ g·μ[ξ|m] (no condexp needed)
-      -- This avoids the L¹ × L¹ issue entirely by using the projection property
+      -- TODO: With integral_mul_condexp_of_measurable at line 934, this can be proven
+      -- The projection property gives ∫ μ[f|m]·h = ∫ f·h for m-measurable h
+      -- Here: since μ[ξ|m] is m-measurable and both g, μ[ξ|m] are integrable,
+      -- we can avoid proving product integrability directly
+      -- See line 934 for the key lemma
       sorry
     exact condExp_mul_of_aestronglyMeasurable_right hξm hgξm_int hg
   -- (3) Symmetric step: turn ∫ μ[g|m]*μ[ξ|m] back into a condexp of (μ[g|m]*ξ)
@@ -993,8 +1001,8 @@ lemma integral_mul_condexp_adjoint
         μ[(fun ω => μ[g | m] ω * ξ ω) | m]
         =ᵐ[μ] (fun ω => μ[g | m] ω * μ[ξ | m] ω) := by
       have hgmξ_int : Integrable (μ[g | m] * ξ) μ := by
-        -- TODO: Same as above - use integral_mul_condexp_of_measurable
-        -- The projection property avoids product integrability requirements
+        -- TODO: Same as line 985 - use integral_mul_condexp_of_measurable (line 934)
+        -- Since μ[g|m] is m-measurable, the projection property applies
         sorry
       exact condExp_mul_of_aestronglyMeasurable_left hgm hgmξ_int hξ
     simpa using (integral_congr_ae hpull').symm
