@@ -974,7 +974,7 @@ lemma integral_mul_condexp_of_measurable
   -- This uniquely determines them, so they must have equal total integrals
 
   -- First establish measurability of the integrand
-  have hg_meas_ambient : Measurable g := hg_meas.mono hm le_rfl
+  have hg_meas_ambient : Measurable g := Measurable.mono hg_meas hm
   have hcondexp_meas : Measurable (μ[f | m]) := stronglyMeasurable_condExp.measurable
 
   -- **Proof strategy: indicators → simple → bounded → integrable (via truncation)**
