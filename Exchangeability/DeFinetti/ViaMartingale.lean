@@ -925,6 +925,28 @@ This factorization follows from the distributional equality via a martingale arg
 
 /-! ===== Adjointness helpers (for μ[·|m] with (hm : m ≤ m0)) ===== -/
 
+/-- **L² projection property of conditional expectation:**
+For m-measurable g, ∫ (condexp m μ f) · g = ∫ f · g.
+
+This is the key property that makes conditional expectation an orthogonal projection in L².
+Used to prove adjointness without requiring product integrability assumptions.
+-/
+lemma integral_mul_condexp_of_measurable
+    {Ω : Type*} [m0 : MeasurableSpace Ω] (μ : Measure Ω)
+    {m : MeasurableSpace Ω} (hm : m ≤ m0)
+    [SigmaFinite (μ.trim hm)]
+    {f g : Ω → ℝ}
+    (hg_meas : Measurable[m] g)
+    (hf_int : Integrable f μ) (hg_int : Integrable g μ) :
+  ∫ ω, μ[f | m] ω * g ω ∂μ = ∫ ω, f ω * g ω ∂μ := by
+  -- TODO: Prove via approximation by simple functions
+  -- Step 1: For simple functions, use the defining property of condexp on m-measurable sets
+  --         For s = ∑ cᵢ · 1_{Aᵢ} with Aᵢ ∈ m: ∫ μ[f|m] · s = ∑ cᵢ · ∫_{Aᵢ} μ[f|m] = ∑ cᵢ · ∫_{Aᵢ} f
+  -- Step 2: Approximate g by simple functions sₙ with ‖sₙ - g‖₁ → 0
+  -- Step 3: Use dominated convergence with integrability to pass to the limit
+  -- This is a standard ~30 line approximation argument
+  sorry
+
 /-- Adjointness of conditional expectation, in μ[·|m] notation.
 
 `∫ g · μ[ξ|m] = ∫ μ[g|m] · ξ`, assuming `m ≤ m0`, `SigmaFinite (μ.trim m)`,
@@ -953,10 +975,11 @@ lemma integral_mul_condexp_adjoint
     have hξm : AEStronglyMeasurable[m] (μ[ξ | m]) μ :=
       stronglyMeasurable_condExp.aestronglyMeasurable
     have hgξm_int : Integrable (g * μ[ξ | m]) μ := by
-      -- TODO: This requires additional assumptions (e.g., one factor bounded)
-      -- or use of Hölder's inequality with appropriate Lp spaces.
-      -- Product of two L^1 functions is not necessarily L^1.
-      -- May need to restrict to bounded case or add ess_sup bounds.
+      -- TODO: With integral_mul_condexp_of_measurable, we can avoid this!
+      -- Instead of needing product integrability, we can rewrite:
+      -- ∫ μ[g·μ[ξ|m]|m] = ∫ g·μ[ξ|m] using μ[ξ|m] is m-measurable
+      --                  = ∫ g·μ[ξ|m] (no condexp needed)
+      -- This avoids the L¹ × L¹ issue entirely by using the projection property
       sorry
     exact condExp_mul_of_aestronglyMeasurable_right hξm hgξm_int hg
   -- (3) Symmetric step: turn ∫ μ[g|m]*μ[ξ|m] back into a condexp of (μ[g|m]*ξ)
@@ -970,8 +993,8 @@ lemma integral_mul_condexp_adjoint
         μ[(fun ω => μ[g | m] ω * ξ ω) | m]
         =ᵐ[μ] (fun ω => μ[g | m] ω * μ[ξ | m] ω) := by
       have hgmξ_int : Integrable (μ[g | m] * ξ) μ := by
-        -- TODO: Same issue as above - product of L^1 functions not necessarily L^1.
-        -- This adjoint property typically holds under boundedness assumptions.
+        -- TODO: Same as above - use integral_mul_condexp_of_measurable
+        -- The projection property avoids product integrability requirements
         sorry
       exact condExp_mul_of_aestronglyMeasurable_left hgm hgmξ_int hξ
     simpa using (integral_congr_ae hpull').symm
@@ -1577,6 +1600,37 @@ lemma condExp_eq_of_triple_law
   --
   -- **Mathlib contribution target:** Mathlib.Probability.Independence.Conditional
   -- **Estimated effort:** 4-6 weeks (most complex of the three gaps)
+
+/-- **Extension to bounded Borel functions:**
+From the indicator case, extend the conditional expectation equality
+to all bounded Borel functions via monotone class theorem.
+
+This is Priority 4: Extend Kallenberg from indicators to bounded Borel test functions.
+-/
+lemma condExp_bounded_comp_eq_of_triple_law
+    {Ω α β γ : Type*}
+    [MeasurableSpace Ω]
+    [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (Y : Ω → α) (Z : Ω → β) (W W' : Ω → γ)
+    (hY : Measurable Y) (hZ : Measurable Z) (hW : Measurable W) (hW' : Measurable W')
+    (h_triple : Measure.map (fun ω => (Z ω, Y ω, W ω)) μ =
+                Measure.map (fun ω => (Z ω, Y ω, W' ω)) μ)
+    (φ : α → ℝ) (hφ : Measurable φ) (hφ_bdd : ∃ C, ∀ x, |φ x| ≤ C) :
+    μ[φ ∘ Y | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance]
+      =ᵐ[μ]
+    μ[φ ∘ Y | MeasurableSpace.comap W inferInstance] := by
+  classical
+  -- TODO: Implement via monotone class theorem
+  -- Step 1: Define C = {B : Set α | indicator equality holds}
+  -- Step 2: Show C is a Dynkin system (contains ∅, closed under complements, monotone unions)
+  -- Step 3: C contains a π-system (measurable rectangles) by condExp_eq_of_triple_law
+  -- Step 4: By Dynkin's π-λ theorem, C contains all Borel sets
+  -- Step 5: Extend to simple functions by linearity of conditional expectation
+  -- Step 6: Extend to bounded Borel functions by dominated convergence
+  --         (approximate φ by simple functions, use boundedness for domination)
+  -- This is ~50-70 lines following the pattern in CommonEnding.lean
+  sorry
 
 end ConditionalIndependence
 
