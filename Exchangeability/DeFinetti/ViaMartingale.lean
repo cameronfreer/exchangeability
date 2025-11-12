@@ -941,11 +941,12 @@ lemma integral_mul_condexp_indicator
     {s : Set Ω} (hs : MeasurableSet[m] s) :
   ∫ ω, μ[f | m] ω * (s.indicator (fun _ => (1 : ℝ)) ω) ∂μ =
   ∫ ω, f ω * (s.indicator (fun _ => (1 : ℝ)) ω) ∂μ := by
-  -- Convert to set integrals
-  have hs_ambient : MeasurableSet s := hm _ hs
+  -- Convert to set integrals using the defining property
+  -- For m-measurable s, we have ∫_s μ[f|m] = ∫_s f (setIntegral_condExp)
+  -- Rewrite using indicator functions: ∫ 1_s · g = ∫_s g
+  have hs_ambient : MeasurableSet s := @hm s hs
   rw [← integral_indicator hs_ambient, ← integral_indicator hs_ambient]
-  -- Use defining property of conditional expectation: ∫_s μ[f|m] = ∫_s f
-  exact setIntegral_condExp hm hf_int hs_ambient
+  exact setIntegral_condExp hm hf_int hs
 
 /-- **L² projection property of conditional expectation:**
 For m-measurable g, ∫ (condexp m μ f) · g = ∫ f · g.
@@ -972,26 +973,34 @@ lemma integral_mul_condexp_of_measurable
   have hg_meas_ambient : Measurable g := hg_meas.mono hm le_rfl
   have hcondexp_meas : Measurable (μ[f | m]) := stronglyMeasurable_condExp.measurable
 
-  -- **Proof via uniqueness of conditional expectation**
-  -- Key idea: Show that μ[f|m] · g and f · g are both versions of μ[f · g | m]
-  -- when g is m-measurable, so their integrals must be equal.
+  -- **Proof strategy: indicators → simple → bounded → integrable (via truncation)**
+  -- Step A (indicators) is already proven above at line 929: integral_mul_condexp_indicator
 
-  -- For m-measurable g, we have μ[f · g | m] =ᵐ[μ] g · μ[f | m] (pull-out property)
-  -- But we need to avoid assuming Integrable (f * g) to apply the pull-out property directly
+  -- Step B: Extend to m-measurable simple functions by linearity
+  have h_simple : ∀ (s : MeasureTheory.SimpleFunc Ω ℝ),
+      Measurable[m] s →
+      Integrable s μ →
+      ∫ ω, μ[f | m] ω * s ω ∂μ = ∫ ω, f ω * s ω ∂μ := by
+    intro s hs_m hs_int
+    -- Simple function is a finite sum: s = Σᵢ cᵢ · 1_{Aᵢ} where Aᵢ = s⁻¹' {cᵢ}
+    -- Each Aᵢ is m-measurable (since s is m-measurable)
+    -- Use linearity of integral and apply Step A (integral_mul_condexp_indicator) to each term
+    sorry
 
-  -- Instead, we use: for any measurable h, ∫ μ[h|m] = ∫ h (tower property)
-  -- Apply this to h = f · g (when it's integrable)
+  -- Step C: Bounded case via uniform simple approximation
+  have h_bdd : ∀ (M : ℝ), (∀ ω, ‖g ω‖ ≤ M) →
+      ∫ ω, μ[f | m] ω * g ω ∂μ = ∫ ω, f ω * g ω ∂μ := by
+    intro M hM_bound
+    -- Approximate g by m-measurable simple functions sₙ with ‖sₙ - g‖_∞ → 0
+    -- Apply h_simple to each sₙ, then use dominated convergence on both sides
+    -- Domination: |(μ[f|m]) · (sₙ - g)| ≤ |μ[f|m]| · 2M (integrable)
+    --             |f · (sₙ - g)| ≤ |f| · 2M (integrable)
+    sorry
 
-  -- Since both f and g are integrable, and g is m-measurable:
-  -- ∫ μ[f|m] · g can be computed via the defining property of conditional expectation
-
-  -- The key observation: for m-measurable g, the function μ[f|m] · g is the unique
-  -- m-measurable function satisfying: ∫_S μ[f|m] · g = ∫_S f · g for all m-measurable S
-
-  sorry  -- TODO: Complete using either:
-         -- 1. Pull-out property + integrability arguments
-         -- 2. Simple function approximation (Step B + Step C)
-         -- 3. Direct verification via set integrals + uniqueness
+  -- Step D: General integrable case via truncation
+  -- Define truncated gₙ := max (-N) (min g N), each bounded and m-measurable
+  -- Apply h_bdd to each gₙ, then pass to limit using L¹ continuity
+  sorry
 
 /-- Adjointness of conditional expectation, in μ[·|m] notation.
 
@@ -1667,16 +1676,21 @@ lemma condExp_bounded_comp_eq_of_triple_law
       =ᵐ[μ]
     μ[φ ∘ Y | MeasurableSpace.comap W inferInstance] := by
   classical
-  -- TODO: Implement via monotone class theorem
-  -- Step 1: Define C = {B : Set α | indicator equality holds}
-  -- Step 2: Show C is a Dynkin system (contains ∅, closed under complements, monotone unions)
-  -- Step 3: C contains a π-system (measurable rectangles) by condExp_eq_of_triple_law
-  -- Step 4: By Dynkin's π-λ theorem, C contains all Borel sets
-  -- Step 5: Extend to simple functions by linearity of conditional expectation
-  -- Step 6: Extend to bounded Borel functions by dominated convergence
-  --         (approximate φ by simple functions, use boundedness for domination)
-  -- This is ~50-70 lines following the pattern in CommonEnding.lean
-  sorry
+  -- Strategy: Extend from indicators to bounded measurable via monotone class theorem
+  --
+  -- The indicator case condExp_eq_of_triple_law provides the base.
+  -- We extend in two steps:
+  -- 1. Indicators → Simple functions (via linearity)
+  -- 2. Simple functions → Bounded measurable (via dominated convergence)
+
+  -- Step 1: For simple functions, use linearity
+  -- A simple function is a finite linear combination of indicators
+  -- φ = Σᵢ aᵢ · 1_{Bᵢ} where Bᵢ are measurable sets
+
+  sorry  -- TODO: Implement approximation approach:
+         -- Use SimpleFunc.approxOn to approximate φ by simple functions
+         -- Apply linearity of condExp for simple functions
+         -- Use dominated convergence to take limit
 
 end ConditionalIndependence
 
