@@ -940,19 +940,25 @@ lemma integral_mul_condexp_of_measurable
     (hf_int : Integrable f μ) (hg_int : Integrable g μ) :
   ∫ ω, μ[f | m] ω * g ω ∂μ = ∫ ω, f ω * g ω ∂μ := by
   classical
-  -- **Proof strategy via set integrals (elementary approach):**
-  -- 1. For m-measurable sets A: ∫_A μ[f|m] = ∫_A f (by setIntegral_condExp)
-  -- 2. For indicators g = 1_A: ∫ μ[f|m]·1_A = ∫_A μ[f|m] = ∫_A f = ∫ f·1_A
-  -- 3. Extend to simple functions: for s = ∑ cᵢ·1_{Aᵢ}, use linearity of integral
-  -- 4. Approximate g by simple functions sₙ → g in L¹
-  -- 5. Pass to limit: |∫ μ[f|m]·sₙ - ∫ μ[f|m]·g| ≤ ‖μ[f|m]‖₁ · ‖sₙ - g‖₁ → 0
-  --
-  -- **Alternative via pull-out (requires product integrability):**
-  -- - For m-measurable g: μ[f·g|m] = g·μ[f|m] (pull-out)
-  -- - Then: ∫ μ[f|m]·g = ∫ μ[f·g|m] = ∫ f·g (tower property)
-  -- - Issue: needs Integrable (g * μ[f|m]) which is the L¹ × L¹ problem
-  --
-  -- The set integral approach avoids this issue entirely.
+  -- **Elementary proof via the defining property of conditional expectation**
+  -- Key idea: Both μ[f|m]·g and f·g are versions of the same conditional expectation μ[f·g|m]
+  -- when g is m-measurable, because:
+  -- - μ[f·g|m] = g·μ[f|m] (pull-out property)
+  -- - μ[f·g|m] is the unique function satisfying: ∫_A μ[f·g|m] = ∫_A f·g for all A ∈ m
+  -- - Since g is m-measurable, both g·μ[f|m] and f·g satisfy this property
+  -- - Therefore they must be equal a.e., so their integrals are equal
+
+  -- The challenge is that we need Integrable (f * g) for the pull-out property
+  -- But we can work around this using the defining property directly on m-measurable sets
+
+  -- TODO: Complete proof using one of these approaches:
+  -- 1. Prove Integrable (f * g) using that both f, g are integrable (this is the L¹ × L¹ issue)
+  --    Actually for bounded g or using Hölder, this works
+  -- 2. Use approximation by simple functions (avoids integrability issue)
+  -- 3. Use a measure theory argument about equality of conditional expectations
+
+  -- For now, documented as a standard result in measure theory
+  -- This is essentially the statement that CE is an orthogonal projection in L²
   sorry
 
 /-- Adjointness of conditional expectation, in μ[·|m] notation.
