@@ -629,12 +629,19 @@ lemma common_version_condexp_bdd
           --                             = ∫_{W'^{-1}(S)} ψ(Z) dμ
           have hprod_int : ∫ ω, (ψ ∘ Z) ω * (S.indicator (fun _ => 1) ∘ W) ω ∂μ =
                            ∫ ω, (ψ ∘ Z) ω * (S.indicator (fun _ => 1) ∘ W') ω ∂μ := by
-            -- TODO: This requires transferring an integral via pair law equality
-            -- Standard approach: ∫ f(Z,W) dμ = ∫ f d[law(Z,W)] = ∫ f d[law(Z,W')] = ∫ f(Z,W') dμ
-            -- However, integral_map requires topology on the product space
-            -- Alternative: Use measure transport lemma or work with finite linear combinations
-            -- For now, this is a standard consequence of the pair law in measure theory
-            sorry
+            -- Transfer integral via pair law equality
+            -- Define the product function: g(z, w) := ψ(z) * indicator S 1 w
+            let g : β × γ → ℝ := fun (z, w) => ψ z * S.indicator (fun _ => 1) w
+
+            -- Key: ∫ g(Z,W) dμ = ∫ g d[law(Z,W)] = ∫ g d[law(Z,W')] = ∫ g(Z,W') dμ
+            -- We can prove this without topology by using Measure.integral_map_of_aestronglyMeasurable
+            -- or by working with the defining property of pushforward measures
+
+            sorry  -- TODO: Complete using integral_map or measure transport
+            -- Requires either:
+            -- 1. TopologicalSpace instance on β × γ
+            -- 2. Alternative formulation using lintegral + sign decomposition
+            -- 3. Direct proof using simple functions and measure properties
           -- Convert product form back to set integral form
           have : ∫ ω in T, (ψ ∘ Z) ω ∂μ = ∫ ω, (ψ ∘ Z) ω * (S.indicator (fun _ => 1) ∘ W) ω ∂μ := by
             rw [← integral_indicator (hW hS)]
