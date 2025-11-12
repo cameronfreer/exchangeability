@@ -3253,56 +3253,113 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
     -- Use Measurable.exists_eq_measurable_comp (requires StandardBorelSpace β and Nonempty β)
     exact hη_comap.exists_eq_measurable_comp
 
-  -- Step 4: Apply uniqueness characterization
-  -- We'll show μ[·|mζ] = μ[·|mη] using ae_eq_condExp_of_forall_setIntegral_eq
+  -- **Direct proof via tower property uniqueness:**
+  -- Instead of proving measurability then equality, prove equality directly!
+  -- μ[f|ζ] =ᵐ μ[f|η] implies measurability automatically.
 
-  -- Step 4a: σ(η)-measurability (the deep content - from pair-law, inline comaps)
-  have hmeas : AEStronglyMeasurable[MeasurableSpace.comap η mγ]
-      (μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ]) μ := by
-    -- Strategy: Show μ[f|comap ζ] =ᵐ[μ] μ[f|comap η], then AE measurability follows
-    -- Since μ[f|comap η] is strongly measurable w.r.t. comap η
+  -- Key insight: By tower property, μ[μ[f|ζ]|η] = μ[f|η].
+  -- We'll show μ[f|η] also satisfies the characterizing integral property
+  -- for μ[f|ζ], implying equality by uniqueness.
 
-    -- The tower property gives us:
+  have heq_direct : μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] =ᵐ[μ]
+                    μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] := by
+    -- Use tower property to establish the integral characterization
     have htower : μ[μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ]|
-                    MeasurableSpace.comap η mγ] =ᵐ[μ]
-                  μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] := by
+                      MeasurableSpace.comap η mγ] =ᵐ[μ]
+                    μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] := by
       exact condExp_condExp_of_le h_le hmζ_le
 
-    -- μ[f|comap η] is strongly measurable w.r.t. comap η
-    have hSM_η : StronglyMeasurable[MeasurableSpace.comap η mγ]
-        (μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ]) := by
-      exact stronglyMeasurable_condExp
+    -- μ[f|η] is measurable w.r.t. σ(η), hence also w.r.t. σ(ζ) (since σ(η) ≤ σ(ζ))
+    have hCE_η_meas_ζ : AEStronglyMeasurable[MeasurableSpace.comap ζ mγ]
+        (μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ]) μ := by
+      -- μ[f|η] is strongly measurable w.r.t. σ(η)
+      have : StronglyMeasurable[MeasurableSpace.comap η mγ]
+          (μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ]) :=
+        stronglyMeasurable_condExp
+      -- σ(η) ≤ σ(ζ), so σ(η)-measurable functions are σ(ζ)-measurable
+      exact this.mono h_le |>.aestronglyMeasurable
 
-    -- **Deep content:** The pair-law (ξ, η) =ᵈ (ξ, ζ) with η = φ ∘ ζ implies
-    -- the conditional expectation μ[1_B(ξ)|ζ] factors through η
-    --
-    -- Mathematical insight: law(ξ, φ ∘ ζ) = law(ξ, ζ) means the conditional
-    -- distribution of ξ given ζ depends only on φ(ζ) = η, so E[1_B(ξ)|ζ] = g(η)
-    -- for some measurable g.
-    --
-    -- To complete rigorously: Use condDistrib_ae_eq_of_measure_eq_compProd to show
-    -- the conditional distributions factor through φ, implying the conditional
-    -- expectations are equal a.e., which would immediately give measurability.
-    sorry
+    -- Now apply uniqueness: μ[f|η] satisfies the integral characterization for CE w.r.t. σ(ζ)
+    -- The lemma proves g =ᵐ μ[f|m], so we get μ[f|η] =ᵐ μ[f|ζ], then symmetrize
+    refine (ae_eq_condExp_of_forall_setIntegral_eq hmζ_le hint
+      (fun s hs _ => integrable_condExp.integrableOn) ?_ hCE_η_meas_ζ).symm
 
-  -- Step 4b: Integral properties on σ(η)-measurable sets (inline comaps)
-  have hinteg : ∀ S : Set Ω, MeasurableSet[MeasurableSpace.comap η mγ] S → μ S < ⊤ →
-      ∫ ω in S, μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] ω ∂μ
-      = ∫ ω in S, Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) ω ∂μ := by
+    -- **Deep content:** Prove ∫_S μ[f|η] = ∫_S f for S ∈ σ(ζ)
+    -- Key insight: The pair-law implies condDistrib(ξ|ζ) = condDistrib(ξ|η) via uniqueness
     intro S hS hS_fin
-    -- Since σ(η) ≤ σ(ζ), S is also σ(ζ)-measurable
-    have : MeasurableSet[MeasurableSpace.comap ζ mγ] S := h_le S hS
-    -- By definition of conditional expectation with respect to σ(ζ):
-    exact setIntegral_condExp hmζ_le hint this
 
-  -- Step 4c: Apply uniqueness to conclude μ[·|σ(ζ)] = μ[·|σ(η)] (inline comaps)
-  have heq : μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] =ᵐ[μ]
-             μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] :=
-    ae_eq_condExp_of_forall_setIntegral_eq hmη_le hint
-      (fun s hs _ => integrable_condExp.integrableOn) hinteg hmeas
+    -- Step 1: Swap pair-law to get the right direction: law(ζ,ξ) = law(η,ξ)
+    have h_law_swapped : μ.map (fun ω => (ζ ω, ξ ω)) = μ.map (fun ω => (η ω, ξ ω)) := by
+      have h_prod_comm_ζ : μ.map (fun ω => (ζ ω, ξ ω)) = (μ.map (fun ω => (ξ ω, ζ ω))).map Prod.swap := by
+        rw [Measure.map_map (measurable_swap) (hξ.prod_mk hζ)]
+        rfl
+      have h_prod_comm_η : μ.map (fun ω => (η ω, ξ ω)) = (μ.map (fun ω => (ξ ω, η ω))).map Prod.swap := by
+        rw [Measure.map_map (measurable_swap) (hξ.prod_mk hη)]
+        rfl
+      rw [h_prod_comm_ζ, h_prod_comm_η, h_law]
 
-  -- Step 4d: Final result (mγ is definitionally equal to inferInstance)
-  exact heq
+    -- Step 2: Express joint distributions using compProd in the RIGHT direction
+    have hζ_compProd : (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ) = μ.map (fun ω => (ζ ω, ξ ω)) := by
+      exact compProd_map_condDistrib hζ hξ.aemeasurable
+
+    have hη_compProd : (μ.map η) ⊗ₘ (condDistrib ξ η μ) = μ.map (fun ω => (η ω, ξ ω)) := by
+      exact compProd_map_condDistrib hη hξ.aemeasurable
+
+    -- Step 3: Get marginal equality from swapped pair-law
+    have h_marg_eq : μ.map ζ = μ.map η := by
+      have h1 : (μ.map (fun ω => (ζ ω, ξ ω))).fst = μ.map ζ := Measure.fst_map_prodMk₀ hξ.aemeasurable
+      have h2 : (μ.map (fun ω => (η ω, ξ ω))).fst = μ.map η := Measure.fst_map_prodMk₀ hξ.aemeasurable
+      rw [← h1, ← h2, h_law_swapped]
+
+    -- Step 4: Derive kernel equality in the RIGHT direction: condDistrib ξ ζ = condDistrib ξ η
+    have hkernel_eq : ∀ᵐ z ∂(μ.map ζ), condDistrib ξ ζ μ z = condDistrib ξ η μ z := by
+      -- Rewrite with same base measure using marginal equality
+      have h_compProd_eq : (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ) = (μ.map ζ) ⊗ₘ (condDistrib ξ η μ) := by
+        rw [hζ_compProd, h_law_swapped, ← h_marg_eq, ← hη_compProd]
+      -- Apply uniqueness
+      exact Kernel.ae_eq_of_compProd_eq h_compProd_eq
+
+    -- Step 5: Pull back kernel equality along ζ
+    have hkernel_eq_pullback : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (ζ ω) := by
+      exact ae_eq_comp hζ.aemeasurable hkernel_eq
+
+    -- Step 6: Evaluate at B to get equality of measures on B
+    have heval_B : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) B = condDistrib ξ η μ (ζ ω) B := by
+      filter_upwards [hkernel_eq_pullback] with ω h
+      exact congrArg (fun ν => ν B) h
+
+    -- Step 7: Factor η through ζ using Doob-Dynkin
+    obtain ⟨φ, hφ, hηfac⟩ := exists_borel_factor_of_comap_measurable (η := ζ) (hη := hζ) (f := η) (hf := hη) (hsub := hsub)
+    -- hηfac : η = φ ∘ ζ
+
+    -- Step 8: Rewrite η ω as φ (ζ ω) to align both sides
+    have heval_B_aligned : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) B = condDistrib ξ η μ (η ω) B := by
+      filter_upwards [heval_B] with ω h
+      rw [hηfac]; exact h
+
+    -- Step 9: Connect to conditional expectations via condDistrib_ae_eq_condExp
+    have hCE_ζ : (fun ω => (condDistrib ξ ζ μ (ζ ω) B).toReal) =ᵐ[μ]
+        μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] := by
+      exact condDistrib_ae_eq_condExp hζ hξ hB
+
+    have hCE_η : (fun ω => (condDistrib ξ η μ (η ω) B).toReal) =ᵐ[μ]
+        μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] := by
+      exact condDistrib_ae_eq_condExp hη hξ hB
+
+    -- Step 10: Convert measure equality to .toReal equality
+    have htoReal_eq : ∀ᵐ ω ∂μ, (condDistrib ξ ζ μ (ζ ω) B).toReal = (condDistrib ξ η μ (η ω) B).toReal := by
+      filter_upwards [heval_B_aligned] with ω h
+      rw [h]
+
+    -- Step 11: Conclude by transitivity: CE_ζ = condDistrib = condDistrib = CE_η
+    have : μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] =ᵐ[μ]
+           μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] := by
+      exact hCE_ζ.symm.trans (htoReal_eq.trans hCE_η)
+
+    -- Finish with the integral equality using this ae-equality
+    exact setIntegral_congr_ae (hS.mono hmζ_le le_rfl) (ae_restrict_of_ae this)
+
+  exact heq_direct
 
 /-- **Kallenberg 1.3 Conditional Expectation Form (Route A):**
 If `(ξ, η) =ᵈ (ξ, ζ)` and `σ(η) ≤ σ(ζ)`, then conditioning ξ on ζ is the same as
