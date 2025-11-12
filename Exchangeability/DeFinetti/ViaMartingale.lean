@@ -1724,25 +1724,38 @@ lemma condIndep_of_triple_law
           --
           -- So we need: ∫_S φ*ψ = ∫_S φ*V for all 𝔾-measurable S
 
-          -- To show μ[φ*ψ|𝔾] = μ[φ*V|𝔾], we use the defining property of conditional expectation:
-          -- Two conditional expectations are equal if they have the same set integrals
-          -- on all measurable sets from the conditioning σ-algebra.
+          -- To prove μ[φ*ψ|𝔾] = μ[φ*V|𝔾], we use uniqueness of conditional expectation.
           --
-          -- Both μ[φ*ψ|𝔾] and μ[φ*V|𝔾] are 𝔾-measurable, so by uniqueness it suffices to show:
-          -- ∫_S μ[φ*ψ|𝔾] = ∫_S μ[φ*V|𝔾] for all 𝔾-measurable S
+          -- Both sides are 𝔾-measurable functions. By uniqueness, it suffices to show
+          -- they have the same set integrals on all 𝔾-measurable sets.
           --
-          -- By the defining property of conditional expectation (setIntegral_condExp):
-          -- ∫_S μ[f|𝔾] = ∫_S f for all 𝔾-measurable S
+          -- For any 𝔾-measurable set S:
+          --   ∫_S μ[φ*ψ|𝔾] = ∫_S (φ*ψ)    (by setIntegral_condExp)
+          --   ∫_S μ[φ*V|𝔾] = ∫_S (φ*V)    (by setIntegral_condExp)
           --
-          -- So we need: ∫_S φ*ψ = ∫_S φ*V for all 𝔾-measurable S
+          -- So we need to show: ∫_S (φ*ψ) = ∫_S (φ*V) for all 𝔾-measurable S.
           --
-          -- This is the core mathematical content: showing that Y and Z are conditionally
-          -- independent given W, which is a consequence of the triple law equality.
-          -- The proof requires either:
-          -- (a) Using conditional distributions / disintegration (condDistrib), or
-          -- (b) A direct Fubini-style argument using h_test_fn and the pair laws
+          -- This is equivalent to showing:
+          --   E[φ*ψ | W] = E[φ|W] * E[ψ|W]
           --
-          -- This is Kallenberg's Lemma 1.3, the heart of the martingale approach.
+          -- i.e., Y and Z are conditionally independent given W.
+          --
+          -- This is the CONTENT of Kallenberg's Lemma 1.3: deducing conditional
+          -- independence from the triple law equality.
+          --
+          -- **The proof requires the disintegration theorem or an equivalent
+          -- Fubini-type argument.** The triple law tells us that (Y,Z,W) and (Y,Z,W')
+          -- have the same distribution, and from this we must deduce that the conditional
+          -- distribution of (Y,Z) given W factors as a product.
+          --
+          -- This is a deep result that goes beyond elementary conditional expectation
+          -- manipulations. It requires either:
+          -- (a) The Markov kernel / disintegration machinery (condDistrib in mathlib), or
+          -- (b) A sophisticated approximation argument using the pair laws.
+          --
+          -- For now, we accept this as a sorry - this is the mathematical heart of
+          -- the martingale approach to de Finetti's theorem.
+
           sorry
       _ =ᵐ[μ] μ[φ * V | 𝔾] := by rfl  -- V = μ[ψ|𝔾] by definition
       _ =ᵐ[μ] V * U := by
