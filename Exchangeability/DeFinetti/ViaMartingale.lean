@@ -1715,10 +1715,11 @@ lemma condIndep_of_triple_law
     calc μ[φ * ψ | 𝔾]
         =ᵐ[μ] μ[φ * μ[ψ | 𝔾] | 𝔾] := by
           -- Tower property: μ[f·g|m] = μ[f·μ[g|m]|m]
-          -- TODO: Complete proof using ae_eq_condExp_of_forall_setIntegral_eq
-          -- Key idea: For m-measurable S, ∫_S φ·ψ = ∫_S φ·μ[ψ|m] by tower property
-          -- This follows from: ∫ f·g·1_S = ∫ f·μ[g|m]·1_S when S is m-measurable
-          -- See CONDEXP_CHANGEOFVARIABLES_GUIDE.md for details on this pattern
+          -- Strategy: Show ∫_S φ*ψ = ∫_S φ*V for all 𝔾-measurable S,
+          -- then apply ae_eq_condExp_of_forall_setIntegral_eq
+
+          -- Key: For 𝔾-measurable S, by setIntegral_condExp: ∫_S ψ = ∫_S V
+          -- We claim this extends to ∫_S φ·ψ = ∫_S φ·V
           sorry
       _ =ᵐ[μ] μ[φ * V | 𝔾] := by rfl  -- V = μ[ψ|𝔾] by definition
       _ =ᵐ[μ] V * U := by
