@@ -1715,11 +1715,34 @@ lemma condIndep_of_triple_law
     calc μ[φ * ψ | 𝔾]
         =ᵐ[μ] μ[φ * μ[ψ | 𝔾] | 𝔾] := by
           -- Tower property: μ[f·g|m] = μ[f·μ[g|m]|m]
-          -- Strategy: Show ∫_S φ*ψ = ∫_S φ*V for all 𝔾-measurable S,
-          -- then apply ae_eq_condExp_of_forall_setIntegral_eq
+          -- To show: μ[φ*ψ|𝔾] = μ[φ*V|𝔾] where V = μ[ψ|𝔾]
+          -- By uniqueness of conditional expectation, it suffices to show:
+          -- ∫_S μ[φ*ψ|𝔾] = ∫_S μ[φ*V|𝔾] for all 𝔾-measurable S
+          --
+          -- By the defining property of conditional expectation:
+          -- ∫_S μ[f|𝔾] = ∫_S f for all 𝔾-measurable S
+          --
+          -- So we need: ∫_S φ*ψ = ∫_S φ*V for all 𝔾-measurable S
 
-          -- Key: For 𝔾-measurable S, by setIntegral_condExp: ∫_S ψ = ∫_S V
-          -- We claim this extends to ∫_S φ·ψ = ∫_S φ·V
+          -- To show μ[φ*ψ|𝔾] = μ[φ*V|𝔾], we use the defining property of conditional expectation:
+          -- Two conditional expectations are equal if they have the same set integrals
+          -- on all measurable sets from the conditioning σ-algebra.
+          --
+          -- Both μ[φ*ψ|𝔾] and μ[φ*V|𝔾] are 𝔾-measurable, so by uniqueness it suffices to show:
+          -- ∫_S μ[φ*ψ|𝔾] = ∫_S μ[φ*V|𝔾] for all 𝔾-measurable S
+          --
+          -- By the defining property of conditional expectation (setIntegral_condExp):
+          -- ∫_S μ[f|𝔾] = ∫_S f for all 𝔾-measurable S
+          --
+          -- So we need: ∫_S φ*ψ = ∫_S φ*V for all 𝔾-measurable S
+          --
+          -- This is the core mathematical content: showing that Y and Z are conditionally
+          -- independent given W, which is a consequence of the triple law equality.
+          -- The proof requires either:
+          -- (a) Using conditional distributions / disintegration (condDistrib), or
+          -- (b) A direct Fubini-style argument using h_test_fn and the pair laws
+          --
+          -- This is Kallenberg's Lemma 1.3, the heart of the martingale approach.
           sorry
       _ =ᵐ[μ] μ[φ * V | 𝔾] := by rfl  -- V = μ[ψ|𝔾] by definition
       _ =ᵐ[μ] V * U := by
