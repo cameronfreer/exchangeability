@@ -957,26 +957,34 @@ lemma integral_mul_condexp_of_measurable
     (hf_int : Integrable f μ) (hg_int : Integrable g μ) :
   ∫ ω, μ[f | m] ω * g ω ∂μ = ∫ ω, f ω * g ω ∂μ := by
   classical
-  -- **Elementary proof via the defining property of conditional expectation**
-  -- Key idea: Both μ[f|m]·g and f·g are versions of the same conditional expectation μ[f·g|m]
-  -- when g is m-measurable, because:
-  -- - μ[f·g|m] = g·μ[f|m] (pull-out property)
-  -- - μ[f·g|m] is the unique function satisfying: ∫_A μ[f·g|m] = ∫_A f·g for all A ∈ m
-  -- - Since g is m-measurable, both g·μ[f|m] and f·g satisfy this property
-  -- - Therefore they must be equal a.e., so their integrals are equal
+  -- **Proof via set integrals and uniqueness of conditional expectation**
+  -- Key insight: For m-measurable g, both sides have the same set integrals over m-measurable sets
+  -- This uniquely determines them, so they must have equal total integrals
 
-  -- The challenge is that we need Integrable (f * g) for the pull-out property
-  -- But we can work around this using the defining property directly on m-measurable sets
+  -- First establish measurability of the integrand
+  have hg_meas_ambient : Measurable g := hg_meas.mono hm le_rfl
+  have hcondexp_meas : Measurable (μ[f | m]) := stronglyMeasurable_condExp.measurable
 
-  -- TODO: Complete proof using one of these approaches:
-  -- 1. Prove Integrable (f * g) using that both f, g are integrable (this is the L¹ × L¹ issue)
-  --    Actually for bounded g or using Hölder, this works
-  -- 2. Use approximation by simple functions (avoids integrability issue)
-  -- 3. Use a measure theory argument about equality of conditional expectations
+  -- **Proof via uniqueness of conditional expectation**
+  -- Key idea: Show that μ[f|m] · g and f · g are both versions of μ[f · g | m]
+  -- when g is m-measurable, so their integrals must be equal.
 
-  -- For now, documented as a standard result in measure theory
-  -- This is essentially the statement that CE is an orthogonal projection in L²
-  sorry
+  -- For m-measurable g, we have μ[f · g | m] =ᵐ[μ] g · μ[f | m] (pull-out property)
+  -- But we need to avoid assuming Integrable (f * g) to apply the pull-out property directly
+
+  -- Instead, we use: for any measurable h, ∫ μ[h|m] = ∫ h (tower property)
+  -- Apply this to h = f · g (when it's integrable)
+
+  -- Since both f and g are integrable, and g is m-measurable:
+  -- ∫ μ[f|m] · g can be computed via the defining property of conditional expectation
+
+  -- The key observation: for m-measurable g, the function μ[f|m] · g is the unique
+  -- m-measurable function satisfying: ∫_S μ[f|m] · g = ∫_S f · g for all m-measurable S
+
+  sorry  -- TODO: Complete using either:
+         -- 1. Pull-out property + integrability arguments
+         -- 2. Simple function approximation (Step B + Step C)
+         -- 3. Direct verification via set integrals + uniqueness
 
 /-- Adjointness of conditional expectation, in μ[·|m] notation.
 
