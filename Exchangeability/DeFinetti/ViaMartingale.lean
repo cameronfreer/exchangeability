@@ -765,15 +765,10 @@ lemma common_version_condExp
   ∃ v : γ → ℝ,
     (∀ᵐ ω ∂μ, μ[(ψ ∘ Z) | MeasurableSpace.comap W inferInstance] ω = v (W ω)) ∧
     (∀ᵐ ω ∂μ, μ[(ψ ∘ Z) | MeasurableSpace.comap W' inferInstance] ω = v (W' ω)) := by
-  -- By Doob-Dynkin, conditional expectations factor through W and W'
-  -- The key is showing the factoring functions v₁ and v₂ coincide a.e.
-  --
-  -- Full proof requires:
-  -- 1. Extract v₁, v₂ from Doob-Dynkin applied to the conditional expectations
-  -- 2. For any bounded measurable h, show ∫ v₁*h = ∫ v₂*h w.r.t. Law(W)
-  -- 3. This uses: h∘W and h∘W' are test functions, and the pair law equality
-  -- 4. Conclude v₁ = v₂ a.e. by uniqueness in L¹
-  sorry
+  -- Use the bounded version and drop the boundedness constraint
+  obtain ⟨v, _, _, hv_W, hv_W'⟩ := common_version_condexp_bdd Z W W' ψ 1 (by norm_num)
+    hZ hW hW' hψ hψ_int (by simpa using hψ_bdd) h_pair
+  exact ⟨v, hv_W, hv_W'⟩
 
 /-- **Enhanced Common Version Lemma with Measurability and Boundedness:**
 A common Borel version for the two conditional expectations E[ψ|σ(W)] and E[ψ|σ(W')].
