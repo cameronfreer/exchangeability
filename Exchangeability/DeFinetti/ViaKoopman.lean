@@ -55,11 +55,12 @@ private lemma abs_div_of_nonneg {x y : ℝ} (hy : 0 ≤ y) :
 
 /-- Coercion of finite sums in Lp is almost everywhere equal to pointwise sums.
     This is the measure-space analogue of lp.coeFn_sum (which is for sequence spaces). -/
-private lemma Lp.coeFn_finset_sum
+private lemma coeFn_finset_sum
   {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
   {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-  (p : ℝ≥0∞) {ι : Type*} (s : Finset ι) (F : ι → Lp E p μ) :
+  {p : ENNReal} {ι : Type*} (s : Finset ι) (F : ι → Lp E p μ) :
   ((s.sum F : Lp E p μ) : Ω → E) =ᵐ[μ] fun ω => s.sum (fun i => (F i : Ω → E) ω) := by
+  haveI : DecidableEq ι := Classical.decEq _
   refine Finset.induction_on s ?h0 ?hstep
   · -- base: sum over ∅ is 0
     simp
