@@ -612,7 +612,10 @@ lemma common_version_condexp_bdd
       _ = ∫ ω in T, (ψ ∘ Z) ω ∂μ := by
           -- Defining property of CE: ∫_T V = ∫_T (ψ∘Z) for T ∈ σ(W)
           let m := MeasurableSpace.comap W inferInstance
-          have hm_le : m ≤ _ := fun _ ⟨t, ht, rfl⟩ => hW ht
+          have hm_le : m ≤ _ := by
+            intro s hs
+            obtain ⟨t, ht, rfl⟩ := hs
+            exact hW ht
           have : SigmaFinite (μ.trim hm_le) := by
             haveI : IsFiniteMeasure μ := inferInstance  -- IsProbabilityMeasure → IsFiniteMeasure
             exact sigmaFinite_trim μ hm_le
@@ -649,7 +652,10 @@ lemma common_version_condexp_bdd
       _ = ∫ ω in T', V' ω ∂μ := by
           -- Defining property of CE for V'
           let m' := MeasurableSpace.comap W' inferInstance
-          have hm'_le : m' ≤ _ := fun _ ⟨t, ht, rfl⟩ => hW' ht
+          have hm'_le : m' ≤ _ := by
+            intro s hs
+            obtain ⟨t, ht, rfl⟩ := hs
+            exact hW' ht
           have : SigmaFinite (μ.trim hm'_le) := by
             haveI : IsFiniteMeasure μ := inferInstance
             exact sigmaFinite_trim μ hm'_le
