@@ -986,25 +986,48 @@ lemma integral_mul_condexp_of_measurable
       Integrable s μ →
       ∫ ω, μ[f | m] ω * s ω ∂μ = ∫ ω, f ω * s ω ∂μ := by
     intro s hs_m hs_int
-    -- Simple function is a finite sum: s = Σᵢ cᵢ · 1_{Aᵢ} where Aᵢ = s⁻¹' {cᵢ}
-    -- Each Aᵢ is m-measurable (since s is m-measurable)
-    -- Use linearity of integral and apply Step A (integral_mul_condexp_indicator) to each term
-    sorry
+    -- Simple function s is a finite sum: s = Σ_{c ∈ s.range} c · 1_{s⁻¹'{c}}
+    -- Since s is m-measurable, each fiber s⁻¹' {c} is m-measurable
+    -- Strategy: Use linearity to reduce to indicator case (Step A)
+
+    -- For now, accept this as a straightforward application of linearity + Step A
+    -- The full proof expands s into its indicator representation and applies
+    -- integral_mul_condexp_indicator to each term
+    sorry  -- TODO: Expand using SimpleFunc.integral_eq_sum and linearity
 
   -- Step C: Bounded case via uniform simple approximation
   have h_bdd : ∀ (M : ℝ), (∀ ω, ‖g ω‖ ≤ M) →
       ∫ ω, μ[f | m] ω * g ω ∂μ = ∫ ω, f ω * g ω ∂μ := by
     intro M hM_bound
     -- Approximate g by m-measurable simple functions sₙ with ‖sₙ - g‖_∞ → 0
-    -- Apply h_simple to each sₙ, then use dominated convergence on both sides
-    -- Domination: |(μ[f|m]) · (sₙ - g)| ≤ |μ[f|m]| · 2M (integrable)
-    --             |f · (sₙ - g)| ≤ |f| · 2M (integrable)
-    sorry
+    -- Two approaches:
+    -- 1. Use SimpleFunc.approxOn if available in this snapshot
+    -- 2. Use dyadic quantization: sₙ = (1/2ⁿ) · ⌊2ⁿ · clip(g, -M, M)⌋
+    --
+    -- Apply h_simple to each sₙ: ∫ μ[f|m] · sₙ = ∫ f · sₙ
+    -- Then dominated convergence on both sides:
+    --   Domination: |μ[f|m] · (sₙ - g)| ≤ |μ[f|m]| · 2M (integrable since μ[f|m] ∈ L¹)
+    --               |f · (sₙ - g)| ≤ |f| · 2M (integrable since f ∈ L¹)
+    --   Pointwise: sₙ → g uniformly, so (sₙ - g) → 0
+    sorry  -- TODO: Implement using dominated convergence theorem
 
   -- Step D: General integrable case via truncation
-  -- Define truncated gₙ := max (-N) (min g N), each bounded and m-measurable
-  -- Apply h_bdd to each gₙ, then pass to limit using L¹ continuity
-  sorry
+  -- If g is already bounded, use h_bdd directly
+  by_cases hg_bdd : ∃ M, ∀ ω, ‖g ω‖ ≤ M
+  · -- Bounded case: apply h_bdd
+    obtain ⟨M, hM⟩ := hg_bdd
+    exact h_bdd M hM
+  · -- Unbounded case: truncate and pass to limit
+    -- Define gₙ := max (-N) (min g N) for N = n
+    -- Each gₙ is m-measurable (since g is m-measurable)
+    -- Each gₙ is bounded by N
+    -- gₙ → g in L¹ (since g ∈ L¹)
+    --
+    -- Apply h_bdd to each gₙ: ∫ μ[f|m] · gₙ = ∫ f · gₙ
+    -- Pass to limit using L¹ continuity of integration:
+    --   |∫ μ[f|m] · (gₙ - g)| ≤ ∫ |μ[f|m]| · |gₙ - g| → 0
+    --   |∫ f · (gₙ - g)| ≤ ∫ |f| · |gₙ - g| → 0
+    sorry  -- TODO: Implement using truncation + L¹ convergence
 
 /-- Adjointness of conditional expectation, in μ[·|m] notation.
 
