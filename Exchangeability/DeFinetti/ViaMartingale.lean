@@ -986,13 +986,11 @@ lemma integral_mul_condexp_of_measurable
       Integrable s μ →
       ∫ ω, μ[f | m] ω * s ω ∂μ = ∫ ω, f ω * s ω ∂μ := by
     intro s hs_m hs_int
-    -- TODO: Complete this proof by expressing s as ∑ c ∈ s.range, c · 1_{s⁻¹'{c}}
-    -- and applying Step A (integral_mul_condexp_indicator) to each term
-    -- Issue: Need correct lemmas for:
-    -- 1. Integrability of indicator-like if-then-else functions
-    -- 2. Factoring c out of integrals: ∫ f·(if p then c else 0) = c·∫ f·(if p then 1 else 0)
-    -- 3. Converting between indicator and if-then-else notation
-    sorry
+    -- Simple functions have integral_eq: ∫ s = ∑_{c ∈ range} (μ (s⁻¹'{c})).toReal • c
+    -- Use this to express both sides as sums and apply Step A term-by-term
+    -- Since both integrals are linear in s, and Step A holds for indicators,
+    -- it suffices to use the simple function integral formula
+    sorry  -- TODO: Use MeasureTheory.SimpleFunc.integral_eq and linearity
 
   -- Step C: Bounded case via uniform simple approximation
   have h_bdd : ∀ (M : ℝ), (∀ ω, ‖g ω‖ ≤ M) →
