@@ -953,7 +953,11 @@ lemma integral_mul_condexp_adjoint
     have hξm : AEStronglyMeasurable[m] (μ[ξ | m]) μ :=
       stronglyMeasurable_condExp.aestronglyMeasurable
     have hgξm_int : Integrable (g * μ[ξ | m]) μ := by
-      sorry -- Need to show g * μ[ξ|m] is integrable from hg and integrable_condExp
+      -- TODO: This requires additional assumptions (e.g., one factor bounded)
+      -- or use of Hölder's inequality with appropriate Lp spaces.
+      -- Product of two L^1 functions is not necessarily L^1.
+      -- May need to restrict to bounded case or add ess_sup bounds.
+      sorry
     exact condExp_mul_of_aestronglyMeasurable_right hξm hgξm_int hg
   -- (3) Symmetric step: turn ∫ μ[g|m]*μ[ξ|m] back into a condexp of (μ[g|m]*ξ)
   have h3 :
@@ -966,7 +970,9 @@ lemma integral_mul_condexp_adjoint
         μ[(fun ω => μ[g | m] ω * ξ ω) | m]
         =ᵐ[μ] (fun ω => μ[g | m] ω * μ[ξ | m] ω) := by
       have hgmξ_int : Integrable (μ[g | m] * ξ) μ := by
-        sorry -- Need to show μ[g|m] * ξ is integrable from integrable_condExp and hξ
+        -- TODO: Same issue as above - product of L^1 functions not necessarily L^1.
+        -- This adjoint property typically holds under boundedness assumptions.
+        sorry
       exact condExp_mul_of_aestronglyMeasurable_left hgm hgmξ_int hξ
     simpa using (integral_congr_ae hpull').symm
   -- (4) And finally ∫ μ[·|m] = ∫ ·
@@ -1439,9 +1445,11 @@ lemma condIndep_of_triple_law
     calc μ[φ * ψ | 𝔾]
         =ᵐ[μ] μ[φ * μ[ψ | 𝔾] | 𝔾] := by
           -- Tower property: μ[f·g|m] = μ[f·μ[g|m]|m]
-          -- This requires proving ∫_s φ·ψ = ∫_s φ·μ[ψ|𝔾] for 𝔾-measurable s
-          -- The proof below uses swap-condition-swap technique with the calc block
-          sorry -- Complex proof involving ae_eq_condExp_of_forall_setIntegral_eq with nested calc
+          -- TODO: Complete proof using ae_eq_condExp_of_forall_setIntegral_eq
+          -- Key idea: For m-measurable S, ∫_S φ·ψ = ∫_S φ·μ[ψ|m] by tower property
+          -- This follows from: ∫ f·g·1_S = ∫ f·μ[g|m]·1_S when S is m-measurable
+          -- See CONDEXP_CHANGEOFVARIABLES_GUIDE.md for details on this pattern
+          sorry
       _ =ᵐ[μ] μ[φ * V | 𝔾] := by rfl  -- V = μ[ψ|𝔾] by definition
       _ =ᵐ[μ] V * U := by
           -- Pull-out property (already proved above)
