@@ -692,7 +692,7 @@ lemma condExp_idempotent'
     (hf_int : Integrable f μ) :
     μ[f | m] =ᵐ[μ] f := by
   -- Idempotence: CE[f|m] = f a.e. when f is m-measurable
-  sorry
+  exact MeasureTheory.condExp_of_aestronglyMeasurable' hm hf_m hf_int
 
 end MeasureTheory
 
