@@ -63,14 +63,16 @@ private lemma coeFn_finset_sum
   haveI : DecidableEq ι := Classical.decEq _
   refine Finset.induction_on s ?h0 ?hstep
   · -- base: sum over ∅ is 0
-    simp
+    simp only [Finset.sum_empty]
+    convert Lp.coeFn_zero
+    ext ω; rfl
   · -- step: sum over insert
     intro a s ha hs
-    rw [Finset.sum_insert ha, Finset.sum_insert ha]
+    simp only [Finset.sum_insert ha]
     -- Combine coeFn_add with induction hypothesis
-    filter_upwards [Lp.coeFn_add (s.sum F) (F a), hs] with ω h_add h_ih
+    filter_upwards [Lp.coeFn_add (F a) (s.sum F), hs] with ω h_add h_ih
+    simp only [Pi.add_apply] at h_add
     rw [h_add, h_ih]
-    ring
 
 /-!
 # de Finetti's Theorem via Koopman Operator
