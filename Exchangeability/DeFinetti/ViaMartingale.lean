@@ -986,30 +986,94 @@ lemma integral_mul_condexp_of_measurable
       Integrable s μ →
       ∫ ω, μ[f | m] ω * s ω ∂μ = ∫ ω, f ω * s ω ∂μ := by
     intro s hs_m hs_int
-    -- Simple function s is a finite sum: s = Σ_{c ∈ s.range} c · 1_{s⁻¹'{c}}
-    -- Since s is m-measurable, each fiber s⁻¹' {c} is m-measurable
-    -- Strategy: Use linearity to reduce to indicator case (Step A)
+    -- Strategy: Express both sides as finite sums over s.range and use Step A
+    -- For each c ∈ s.range, the preimage s⁻¹' {c} is m-measurable
 
-    -- For now, accept this as a straightforward application of linearity + Step A
-    -- The full proof expands s into its indicator representation and applies
-    -- integral_mul_condexp_indicator to each term
-    sorry  -- TODO: Expand using SimpleFunc.integral_eq_sum and linearity
+    -- LHS: ∫ μ[f|m] · s = ∫ μ[f|m] · (Σ_{c ∈ s.range} c · 1_{s⁻¹'{c}})
+    calc ∫ ω, μ[f | m] ω * s ω ∂μ
+        = ∫ ω, μ[f | m] ω * (∑ c ∈ s.range, c * (s ⁻¹' {c}).indicator 1 ω) ∂μ := by
+          congr 1 with ω
+          -- s decomposes as sum over range
+          conv_lhs => rw [← SimpleFunc.sum_range_indicator_mul_self s ω]
+      _ = ∫ ω, ∑ c ∈ s.range, μ[f | m] ω * (c * (s ⁻¹' {c}).indicator 1 ω) ∂μ := by
+          congr 1 with ω
+          rw [Finset.mul_sum]
+      _ = ∑ c ∈ s.range, ∫ ω, μ[f | m] ω * (c * (s ⁻¹' {c}).indicator 1 ω) ∂μ := by
+          rw [integral_finset_sum]
+          intro c _
+          apply Integrable.mul_const
+          exact integrable_condExp.mul (integrable_indicator_const c _)
+      _ = ∑ c ∈ s.range, ∫ ω, c * (μ[f | m] ω * (s ⁻¹' {c}).indicator 1 ω) ∂μ := by
+          congr 1 with c
+          congr 1 with ω
+          ring
+      _ = ∑ c ∈ s.range, c * ∫ ω, μ[f | m] ω * (s ⁻¹' {c}).indicator 1 ω ∂μ := by
+          congr 1 with c
+          rw [integral_mul_left]
+      _ = ∑ c ∈ s.range, c * ∫ ω, f ω * (s ⁻¹' {c}).indicator 1 ω ∂μ := by
+          congr 1 with c
+          congr 1
+          -- Apply Step A: each preimage is m-measurable
+          apply integral_mul_condexp_indicator
+          · exact hf_int
+          · -- s is m-measurable implies preimages are m-measurable
+            exact measurableSet_preimage hs_m (MeasurableSet.singleton c)
+      _ = ∑ c ∈ s.range, ∫ ω, c * (f ω * (s ⁻¹' {c}).indicator 1 ω) ∂μ := by
+          congr 1 with c
+          rw [integral_mul_left]
+      _ = ∑ c ∈ s.range, ∫ ω, f ω * (c * (s ⁻¹' {c}).indicator 1 ω) ∂μ := by
+          congr 1 with c
+          congr 1 with ω
+          ring
+      _ = ∫ ω, ∑ c ∈ s.range, f ω * (c * (s ⁻¹' {c}).indicator 1 ω) ∂μ := by
+          rw [integral_finset_sum]
+          intro c _
+          apply Integrable.mul_const
+          exact hf_int.mul (integrable_indicator_const c _)
+      _ = ∫ ω, f ω * (∑ c ∈ s.range, c * (s ⁻¹' {c}).indicator 1 ω) ∂μ := by
+          congr 1 with ω
+          rw [Finset.mul_sum]
+      _ = ∫ ω, f ω * s ω ∂μ := by
+          congr 1 with ω
+          -- s decomposes as sum over range
+          conv_rhs => rw [← SimpleFunc.sum_range_indicator_mul_self s ω]
 
   -- Step C: Bounded case via uniform simple approximation
   have h_bdd : ∀ (M : ℝ), (∀ ω, ‖g ω‖ ≤ M) →
       ∫ ω, μ[f | m] ω * g ω ∂μ = ∫ ω, f ω * g ω ∂μ := by
     intro M hM_bound
-    -- Approximate g by m-measurable simple functions sₙ with ‖sₙ - g‖_∞ → 0
-    -- Two approaches:
-    -- 1. Use SimpleFunc.approxOn if available in this snapshot
-    -- 2. Use dyadic quantization: sₙ = (1/2ⁿ) · ⌊2ⁿ · clip(g, -M, M)⌋
+    -- Use approximation by simple functions + dominated convergence
+
+    -- g is m-measurable, hence strongly measurable w.r.t. m
+    have hg_smeas : StronglyMeasurable[m] g := hg_meas.stronglyMeasurable
+
+    -- Construct approximating sequence of bounded simple functions
+    let sₙ := hg_smeas.approxBounded (M + 1)
+
+    -- Each sₙ is m-measurable (as simple functions from StronglyMeasurable)
+    have hsₙ_meas : ∀ n, Measurable[m] (sₙ n) := fun n => (sₙ n).measurable
+
+    -- Pointwise convergence: sₙ → g a.e.
+    have hsₙ_tendsto : ∀ᵐ ω ∂μ, Tendsto (fun n => sₙ n ω) atTop (𝓝 (g ω)) := by
+      apply ae_of_all
+      intro ω
+      apply StronglyMeasurable.tendsto_approxBounded_of_norm_le
+      exact le_trans (hM_bound ω) (by linarith : M ≤ M + 1)
+
+    -- TODO: Complete Step C using dominated convergence
+    -- Strategy:
+    -- 1. Apply Step B to each approximant sₙ to get: ∫ μ[f|m] · sₙ = ∫ f · sₙ for all n
+    -- 2. Show ∫ μ[f|m] · sₙ → ∫ μ[f|m] · g by dominated convergence
+    -- 3. Show ∫ f · sₙ → ∫ f · g by dominated convergence
+    -- 4. Since the sequences are equal pointwise, their limits are equal
     --
-    -- Apply h_simple to each sₙ: ∫ μ[f|m] · sₙ = ∫ f · sₙ
-    -- Then dominated convergence on both sides:
-    --   Domination: |μ[f|m] · (sₙ - g)| ≤ |μ[f|m]| · 2M (integrable since μ[f|m] ∈ L¹)
-    --               |f · (sₙ - g)| ≤ |f| · 2M (integrable since f ∈ L¹)
-    --   Pointwise: sₙ → g uniformly, so (sₙ - g) → 0
-    sorry  -- TODO: Implement using dominated convergence theorem
+    -- Key lemmas:
+    -- - @SimpleFunc.measurable _ m _ for m-measurability of approximants
+    -- - SimpleFunc.integrable (or similar) for integrability
+    -- - tendsto_integral_of_dominated_convergence
+    -- - Integrable.mul_const for dominating function
+    -- - Filter.Tendsto.mul_const for pointwise limits
+    sorry
 
   -- Step D: General integrable case via truncation
   -- If g is already bounded, use h_bdd directly
@@ -1018,16 +1082,28 @@ lemma integral_mul_condexp_of_measurable
     obtain ⟨M, hM⟩ := hg_bdd
     exact h_bdd M hM
   · -- Unbounded case: truncate and pass to limit
-    -- Define gₙ := max (-N) (min g N) for N = n
-    -- Each gₙ is m-measurable (since g is m-measurable)
-    -- Each gₙ is bounded by N
-    -- gₙ → g in L¹ (since g ∈ L¹)
+    -- Define truncation: gₙ(ω) := max(-n, min(g(ω), n))
+    -- Properties:
+    -- 1. Each gₙ is m-measurable (composition of measurable functions)
+    -- 2. Each gₙ is bounded: |gₙ| ≤ n
+    -- 3. Pointwise: gₙ → g as n → ∞
+    -- 4. L¹ convergence: ‖gₙ - g‖₁ → 0 (by dominated convergence, since g ∈ L¹)
     --
-    -- Apply h_bdd to each gₙ: ∫ μ[f|m] · gₙ = ∫ f · gₙ
-    -- Pass to limit using L¹ continuity of integration:
-    --   |∫ μ[f|m] · (gₙ - g)| ≤ ∫ |μ[f|m]| · |gₙ - g| → 0
-    --   |∫ f · (gₙ - g)| ≤ ∫ |f| · |gₙ - g| → 0
-    sorry  -- TODO: Implement using truncation + L¹ convergence
+    -- Proof sketch:
+    -- • Apply h_bdd to gₙ: ∫ μ[f|m] · gₙ = ∫ f · gₙ for each n
+    -- • Take limit as n → ∞:
+    --   - LHS: ∫ μ[f|m] · gₙ → ∫ μ[f|m] · g
+    --     (by |∫ μ[f|m] · (gₙ - g)| ≤ ‖μ[f|m]‖₁ · ‖gₙ - g‖_∞ → 0)
+    --   - RHS: ∫ f · gₙ → ∫ f · g
+    --     (by |∫ f · (gₙ - g)| ≤ ‖f‖₁ · ‖gₙ - g‖_∞ → 0)
+    -- • Therefore: ∫ μ[f|m] · g = ∫ f · g
+    --
+    -- Key lemmas needed:
+    -- - Measurable.max, Measurable.min for truncation measurability
+    -- - Integrable.sub for integrability of differences
+    -- - norm_integral_le_integral_norm for bounding integral differences
+    -- - Dominated convergence for L¹ convergence of truncations
+    sorry  -- TODO: Implement using truncation sequence + L¹ limit
 
 /-- Adjointness of conditional expectation, in μ[·|m] notation.
 
