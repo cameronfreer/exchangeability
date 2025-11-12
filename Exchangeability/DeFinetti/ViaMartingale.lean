@@ -1916,10 +1916,31 @@ lemma condExp_bounded_comp_eq_of_triple_law
   -- A simple function is a finite linear combination of indicators
   -- φ = Σᵢ aᵢ · 1_{Bᵢ} where Bᵢ are measurable sets
 
-  sorry  -- TODO: Implement approximation approach:
-         -- Use SimpleFunc.approxOn to approximate φ by simple functions
-         -- Apply linearity of condExp for simple functions
-         -- Use dominated convergence to take limit
+  -- Extract bound
+  obtain ⟨C, hC⟩ := hφ_bdd
+
+  -- Use StronglyMeasurable.approxBounded to approximate φ by simple functions
+  have hφ_smeas : StronglyMeasurable φ := hφ.stronglyMeasurable
+  let φₙ := hφ_smeas.approxBounded (C + 1)
+
+  -- Norm bound for approximating functions
+  have hφₙ_bdd : ∀ n x, ‖φₙ n x‖ ≤ C + 1 := by
+    intro n x
+    have h_pos : 0 ≤ C + 1 := by
+      calc 0 ≤ |φ x| := abs_nonneg _
+         _ ≤ C := hC x
+         _ ≤ C + 1 := by linarith
+    exact StronglyMeasurable.norm_approxBounded_le hφ_smeas h_pos n x
+
+  -- Pointwise convergence
+  have hφₙ_tendsto : ∀ x, Tendsto (fun n => φₙ n x) atTop (𝓝 (φ x)) := by
+    intro x
+    sorry  -- TODO: Find the correct lemma for pointwise convergence of approxBounded
+
+  sorry  -- TODO: Complete the dominated convergence argument
+         -- 1. Show conditional expectations converge pointwise
+         -- 2. Use dominated convergence on both sides
+         -- 3. Conclude equality in the limit
 
 end ConditionalIndependence
 
