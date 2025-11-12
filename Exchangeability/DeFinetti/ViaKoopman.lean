@@ -835,10 +835,10 @@ lemma condexp_pullback_factor
   · intro s hs _
     exact h_sets s hs
   -- 3) AEStronglyMeasurable for (μ[H | m] ∘ g) with respect to comap g m
-  · -- TODO: This requires careful σ-algebra management. The goal requires
-    -- AEStronglyMeasurable[comap g m] but we have the ambient space.
-    -- Temporarily use sorry to unblock other compilation errors.
-    sorry
+  · -- μ[H|m] is strongly measurable under μ = map g μ', so composing with g gives ae-strong measurability under μ'
+    have : AEStronglyMeasurable (μ[H | m]) (Measure.map g μ') :=
+      hpush ▸ stronglyMeasurable_condExp.aestronglyMeasurable
+    exact AEStronglyMeasurable.comp_measurable this hg
 
 /-
 **Invariance of conditional expectation under iterates**.
