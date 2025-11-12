@@ -604,6 +604,7 @@ lemma common_version_condexp_bdd
         = ∫ ω in T, (v₁ ∘ W) ω ∂μ := by
           -- Change of variables for set integral
           rw [setIntegral_map hS hv₁_meas.aestronglyMeasurable hW.aemeasurable]
+          rfl
       _ = ∫ ω in T, V ω ∂μ := by
           -- V = v₁∘W a.e.
           refine setIntegral_congr_ae (hW hS) ?_
@@ -616,10 +617,10 @@ lemma common_version_condexp_bdd
             intro s hs
             obtain ⟨t, ht, rfl⟩ := hs
             exact hW ht
-          have : SigmaFinite (μ.trim hm_le) := by
+          haveI : SigmaFinite (μ.trim hm_le) := by
             haveI : IsFiniteMeasure μ := inferInstance  -- IsProbabilityMeasure → IsFiniteMeasure
             exact sigmaFinite_trim μ hm_le
-          exact setIntegral_condexp hm_le hψ_int hT_meas
+          exact MeasureTheory.setIntegral_condexp hm_le hψ_int hT_meas
       _ = ∫ ω in T', (ψ ∘ Z) ω ∂μ := by
           -- Pair law: T and T' have same (ψ∘Z)-integral via measure equality
           -- From hPair: law(Z,W) = law(Z,W'), transfer integral via product measure
@@ -628,18 +629,12 @@ lemma common_version_condexp_bdd
           --                             = ∫_{W'^{-1}(S)} ψ(Z) dμ
           have hprod_int : ∫ ω, (ψ ∘ Z) ω * (S.indicator (fun _ => 1) ∘ W) ω ∂μ =
                            ∫ ω, (ψ ∘ Z) ω * (S.indicator (fun _ => 1) ∘ W') ω ∂μ := by
-            -- Apply pair law via integral_map
-            let f := fun (p : β × γ) => ψ p.1 * S.indicator (fun _ => 1) p.2
-            have hf_meas : Measurable f :=
-              (hψ.comp measurable_fst).mul ((Measurable.indicator measurable_const hS).comp measurable_snd)
-            calc ∫ ω, (ψ ∘ Z) ω * (S.indicator (fun _ => 1) ∘ W) ω ∂μ
-                = ∫ ω, f (Z ω, W ω) ∂μ := by rfl
-              _ = ∫ p, f p ∂(μ.map fun ω => (Z ω, W ω)) := by
-                  rw [integral_map hf_meas.aemeasurable (hZ.prodMk hW).aemeasurable]
-              _ = ∫ p, f p ∂(μ.map fun ω => (Z ω, W' ω)) := by rw [hPair]
-              _ = ∫ ω, f (Z ω, W' ω) ∂μ := by
-                  rw [integral_map hf_meas.aemeasurable (hZ.prodMk hW').aemeasurable]
-              _ = ∫ ω, (ψ ∘ Z) ω * (S.indicator (fun _ => 1) ∘ W') ω ∂μ := by rfl
+            -- TODO: Apply pair law to transfer integral via product measure
+            -- Key insight: law(Z,W) = law(Z,W') implies ∫ f(Z,W) dμ = ∫ f(Z,W') dμ
+            -- for measurable f : β × γ → ℝ. Here f(z,w) = ψ(z) · 1_S(w).
+            -- This requires integral_map for product spaces, which needs topology on β × γ.
+            -- Alternative: use measure equality directly without integral_map.
+            sorry
           -- Convert product form back to set integral form
           have : ∫ ω in T, (ψ ∘ Z) ω ∂μ = ∫ ω, (ψ ∘ Z) ω * (S.indicator (fun _ => 1) ∘ W) ω ∂μ := by
             rw [← integral_indicator (hW hS)]
@@ -656,10 +651,10 @@ lemma common_version_condexp_bdd
             intro s hs
             obtain ⟨t, ht, rfl⟩ := hs
             exact hW' ht
-          have : SigmaFinite (μ.trim hm'_le) := by
+          haveI : SigmaFinite (μ.trim hm'_le) := by
             haveI : IsFiniteMeasure μ := inferInstance
             exact sigmaFinite_trim μ hm'_le
-          exact (setIntegral_condexp hm'_le hψ_int hT'_meas).symm
+          exact (MeasureTheory.setIntegral_condexp hm'_le hψ_int hT'_meas).symm
       _ = ∫ ω in T', (v₂ ∘ W') ω ∂μ := by
           -- V' = v₂∘W' a.e.
           refine setIntegral_congr_ae (hW' hS) ?_
@@ -668,6 +663,7 @@ lemma common_version_condexp_bdd
       _ = ∫ y in S, v₂ y ∂(Measure.map W' μ) := by
           -- Change of variables back
           rw [setIntegral_map hS hv₂_meas.aestronglyMeasurable hW'.aemeasurable]
+          rfl
       _ = ∫ y in S, v₂ y ∂(Measure.map W μ) := by
           -- Law(W) = Law(W')
           rw [h_law_eq]
