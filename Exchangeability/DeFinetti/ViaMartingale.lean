@@ -557,8 +557,114 @@ lemma common_version_condexp_bdd
   obtain ⟨v₂, hv₂_meas, hV'_eq⟩ := exists_borel_factor_of_comap_measurable W' V' hV'_meas hV'_ae
 
   -- Step 2: Show v₁ = v₂ a.e. on Law(W) using pair law equality
-  -- (This requires integral comparison - placeholder for now)
-  have hv_eq : v₁ =ᵐ[Measure.map W μ] v₂ := by sorry
+  -- Strategy: prove ∫_S v₁ = ∫_S v₂ for all measurable S, then apply uniqueness
+  have hv_eq : v₁ =ᵐ[Measure.map W μ] v₂ := by
+    -- First establish Law(W) = Law(W') from the pair law
+    have h_law_eq : Measure.map W μ = Measure.map W' μ := by
+      have h1 : Measure.map W μ = (Measure.map (fun ω => (Z ω, W ω)) μ).map Prod.snd := by
+        rw [Measure.map_map measurable_snd (hZ.prodMk hW)]; rfl
+      have h2 : Measure.map W' μ = (Measure.map (fun ω => (Z ω, W' ω)) μ).map Prod.snd := by
+        rw [Measure.map_map measurable_snd (hZ.prodMk hW')]; rfl
+      rw [h1, h2, hPair]
+
+    -- Show v₁ and v₂ are integrable on Law(W)
+    have hv₁_int : Integrable v₁ (Measure.map W μ) := by
+      -- V = v₁∘W a.e. and V is integrable, so v₁ integrable w.r.t. Law(W)
+      have hV_int : Integrable V μ := integrable_condExp
+      -- V =ᵐ v₁∘W, so Integrable V μ → Integrable (v₁∘W) μ
+      have h_comp_int : Integrable (v₁ ∘ W) μ := hV_int.congr hV_eq
+      -- Use integrable_map_measure: Integrable (v₁∘W) μ ↔ Integrable v₁ (map W μ)
+      exact (integrable_map_measure hv₁_meas.aestronglyMeasurable hW.aemeasurable).mpr h_comp_int
+
+    have hv₂_int : Integrable v₂ (Measure.map W μ) := by
+      -- Rewrite using h_law_eq
+      rw [h_law_eq]
+      -- V' = v₂∘W' a.e. and V' is integrable
+      have hV'_int : Integrable V' μ := integrable_condExp
+      -- V' =ᵐ v₂∘W', so Integrable V' μ → Integrable (v₂∘W') μ
+      have h_comp_int : Integrable (v₂ ∘ W') μ := hV'_int.congr hV'_eq
+      -- Use integrable_map_measure: Integrable (v₂∘W') μ ↔ Integrable v₂ (map W' μ)
+      exact (integrable_map_measure hv₂_meas.aestronglyMeasurable hW'.aemeasurable).mpr h_comp_int
+
+    -- Main proof: show ∫_S v₁ = ∫_S v₂ for all measurable S using CE properties + pair law
+    refine Integrable.ae_eq_of_forall_setIntegral_eq v₁ v₂ hv₁_int hv₂_int fun S hS hS_fin => ?_
+
+    -- For measurable S ⊆ γ, prove ∫_S v₁ d[Law(W)] = ∫_S v₂ d[Law(W)]
+    -- Key insight: Use CE set integral property on W^{-1}(S)
+    let T := W ⁻¹' S
+    let T' := W' ⁻¹' S
+
+    have hT_meas : MeasurableSet[MeasurableSpace.comap W inferInstance] T := by
+      exact ⟨S, hS, rfl⟩
+
+    have hT'_meas : MeasurableSet[MeasurableSpace.comap W' inferInstance] T' := by
+      exact ⟨S, hS, rfl⟩
+
+    calc ∫ y in S, v₁ y ∂(Measure.map W μ)
+        = ∫ ω in T, (v₁ ∘ W) ω ∂μ := by
+          -- Change of variables for set integral
+          rw [setIntegral_map hS hv₁_meas.aestronglyMeasurable hW.aemeasurable]
+      _ = ∫ ω in T, V ω ∂μ := by
+          -- V = v₁∘W a.e.
+          refine setIntegral_congr_ae (hW hS) ?_
+          filter_upwards [hV_eq] with ω h_eq h_mem
+          exact h_eq.symm
+      _ = ∫ ω in T, (ψ ∘ Z) ω ∂μ := by
+          -- Defining property of CE: ∫_T V = ∫_T (ψ∘Z) for T ∈ σ(W)
+          let m := MeasurableSpace.comap W inferInstance
+          have hm_le : m ≤ _ := fun _ ⟨t, ht, rfl⟩ => hW ht
+          have : SigmaFinite (μ.trim hm_le) := by
+            haveI : IsFiniteMeasure μ := inferInstance  -- IsProbabilityMeasure → IsFiniteMeasure
+            exact sigmaFinite_trim μ hm_le
+          exact setIntegral_condexp hm_le hψ_int hT_meas
+      _ = ∫ ω in T', (ψ ∘ Z) ω ∂μ := by
+          -- Pair law: T and T' have same (ψ∘Z)-integral via measure equality
+          -- From hPair: law(Z,W) = law(Z,W'), transfer integral via product measure
+          -- Key: ∫_{W^{-1}(S)} ψ(Z) dμ = ∫ ψ(z) · 1_S(w) d[law(Z,W)]
+          --                             = ∫ ψ(z) · 1_S(w) d[law(Z,W')]  (by hPair)
+          --                             = ∫_{W'^{-1}(S)} ψ(Z) dμ
+          have hprod_int : ∫ ω, (ψ ∘ Z) ω * (S.indicator (fun _ => 1) ∘ W) ω ∂μ =
+                           ∫ ω, (ψ ∘ Z) ω * (S.indicator (fun _ => 1) ∘ W') ω ∂μ := by
+            -- Apply pair law via integral_map
+            let f := fun (p : β × γ) => ψ p.1 * S.indicator (fun _ => 1) p.2
+            have hf_meas : Measurable f :=
+              (hψ.comp measurable_fst).mul ((Measurable.indicator measurable_const hS).comp measurable_snd)
+            calc ∫ ω, (ψ ∘ Z) ω * (S.indicator (fun _ => 1) ∘ W) ω ∂μ
+                = ∫ ω, f (Z ω, W ω) ∂μ := by rfl
+              _ = ∫ p, f p ∂(μ.map fun ω => (Z ω, W ω)) := by
+                  rw [integral_map hf_meas.aemeasurable (hZ.prodMk hW).aemeasurable]
+              _ = ∫ p, f p ∂(μ.map fun ω => (Z ω, W' ω)) := by rw [hPair]
+              _ = ∫ ω, f (Z ω, W' ω) ∂μ := by
+                  rw [integral_map hf_meas.aemeasurable (hZ.prodMk hW').aemeasurable]
+              _ = ∫ ω, (ψ ∘ Z) ω * (S.indicator (fun _ => 1) ∘ W') ω ∂μ := by rfl
+          -- Convert product form back to set integral form
+          have : ∫ ω in T, (ψ ∘ Z) ω ∂μ = ∫ ω, (ψ ∘ Z) ω * (S.indicator (fun _ => 1) ∘ W) ω ∂μ := by
+            rw [← integral_indicator (hW hS)]
+            congr 1; ext ω
+            simp [Set.indicator, T]; split_ifs <;> ring
+          rw [this, hprod_int]
+          rw [← integral_indicator (hW' hS)]
+          congr 1; ext ω
+          simp [Set.indicator, T']; split_ifs <;> ring
+      _ = ∫ ω in T', V' ω ∂μ := by
+          -- Defining property of CE for V'
+          let m' := MeasurableSpace.comap W' inferInstance
+          have hm'_le : m' ≤ _ := fun _ ⟨t, ht, rfl⟩ => hW' ht
+          have : SigmaFinite (μ.trim hm'_le) := by
+            haveI : IsFiniteMeasure μ := inferInstance
+            exact sigmaFinite_trim μ hm'_le
+          exact (setIntegral_condexp hm'_le hψ_int hT'_meas).symm
+      _ = ∫ ω in T', (v₂ ∘ W') ω ∂μ := by
+          -- V' = v₂∘W' a.e.
+          refine setIntegral_congr_ae (hW' hS) ?_
+          filter_upwards [hV'_eq] with ω h_eq h_mem
+          exact h_eq
+      _ = ∫ y in S, v₂ y ∂(Measure.map W' μ) := by
+          -- Change of variables back
+          rw [setIntegral_map hS hv₂_meas.aestronglyMeasurable hW'.aemeasurable]
+      _ = ∫ y in S, v₂ y ∂(Measure.map W μ) := by
+          -- Law(W) = Law(W')
+          rw [h_law_eq]
 
   -- Step 3: Clip to enforce pointwise bounds
   have hv₁_bdd : ∀ᵐ y ∂(Measure.map W μ), ‖v₁ y‖ ≤ C := by
