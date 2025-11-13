@@ -974,7 +974,7 @@ lemma integral_mul_condexp_of_measurable
   -- This uniquely determines them, so they must have equal total integrals
 
   -- First establish measurability of the integrand
-  have hg_meas_ambient : Measurable g := hg_meas.mono hm le_rfl
+  have hg_meas_ambient : Measurable g := Measurable.mono hg_meas hm
   have hcondexp_meas : Measurable (μ[f | m]) := stronglyMeasurable_condExp.measurable
 
   -- **Proof strategy: indicators → simple → bounded → integrable (via truncation)**
@@ -986,57 +986,87 @@ lemma integral_mul_condexp_of_measurable
       Integrable s μ →
       ∫ ω, μ[f | m] ω * s ω ∂μ = ∫ ω, f ω * s ω ∂μ := by
     intro s hs_m hs_int
-    -- Strategy: Express both sides as finite sums over s.range and use Step A
-    -- For each c ∈ s.range, the preimage s⁻¹' {c} is m-measurable
+    -- Strategy: Decompose s as a sum over its range and apply linearity + Step A
+    -- For each c ∈ s.range, the term is c • indicator(s⁻¹'{c})
 
-    -- LHS: ∫ μ[f|m] · s = ∫ μ[f|m] · (Σ_{c ∈ s.range} c · 1_{s⁻¹'{c}})
-    calc ∫ ω, μ[f | m] ω * s ω ∂μ
-        = ∫ ω, μ[f | m] ω * (∑ c ∈ s.range, c * (s ⁻¹' {c}).indicator 1 ω) ∂μ := by
-          congr 1 with ω
-          -- s decomposes as sum over range
-          conv_lhs => rw [← SimpleFunc.sum_range_indicator_mul_self s ω]
-      _ = ∫ ω, ∑ c ∈ s.range, μ[f | m] ω * (c * (s ⁻¹' {c}).indicator 1 ω) ∂μ := by
-          congr 1 with ω
-          rw [Finset.mul_sum]
-      _ = ∑ c ∈ s.range, ∫ ω, μ[f | m] ω * (c * (s ⁻¹' {c}).indicator 1 ω) ∂μ := by
-          rw [integral_finset_sum]
-          intro c _
-          apply Integrable.mul_const
-          exact integrable_condExp.mul (integrable_indicator_const c _)
-      _ = ∑ c ∈ s.range, ∫ ω, c * (μ[f | m] ω * (s ⁻¹' {c}).indicator 1 ω) ∂μ := by
-          congr 1 with c
-          congr 1 with ω
-          ring
-      _ = ∑ c ∈ s.range, c * ∫ ω, μ[f | m] ω * (s ⁻¹' {c}).indicator 1 ω ∂μ := by
-          congr 1 with c
-          rw [integral_mul_left]
-      _ = ∑ c ∈ s.range, c * ∫ ω, f ω * (s ⁻¹' {c}).indicator 1 ω ∂μ := by
-          congr 1 with c
-          congr 1
-          -- Apply Step A: each preimage is m-measurable
-          apply integral_mul_condexp_indicator
-          · exact hf_int
-          · -- s is m-measurable implies preimages are m-measurable
-            exact measurableSet_preimage hs_m (MeasurableSet.singleton c)
-      _ = ∑ c ∈ s.range, ∫ ω, c * (f ω * (s ⁻¹' {c}).indicator 1 ω) ∂μ := by
-          congr 1 with c
-          rw [integral_mul_left]
-      _ = ∑ c ∈ s.range, ∫ ω, f ω * (c * (s ⁻¹' {c}).indicator 1 ω) ∂μ := by
-          congr 1 with c
-          congr 1 with ω
-          ring
-      _ = ∫ ω, ∑ c ∈ s.range, f ω * (c * (s ⁻¹' {c}).indicator 1 ω) ∂μ := by
-          rw [integral_finset_sum]
-          intro c _
-          apply Integrable.mul_const
-          exact hf_int.mul (integrable_indicator_const c _)
-      _ = ∫ ω, f ω * (∑ c ∈ s.range, c * (s ⁻¹' {c}).indicator 1 ω) ∂μ := by
-          congr 1 with ω
-          rw [Finset.mul_sum]
-      _ = ∫ ω, f ω * s ω ∂μ := by
-          congr 1 with ω
-          -- s decomposes as sum over range
-          conv_rhs => rw [← SimpleFunc.sum_range_indicator_mul_self s ω]
+    -- Key observation: s = ∑_{c ∈ s.range} c • indicator(s⁻¹'{c})
+    -- So: ∫ μ[f|m] * s = ∫ μ[f|m] * (∑_c c • indicator(s⁻¹'{c}))
+    --                   = ∑_c c • ∫ μ[f|m] * indicator(s⁻¹'{c})  (linearity)
+    --                   = ∑_c c • ∫ f * indicator(s⁻¹'{c})        (Step A)
+    --                   = ∫ f * (∑_c c • indicator(s⁻¹'{c}))      (linearity)
+    --                   = ∫ f * s
+
+    -- For each c in the range, s⁻¹'{c} is m-measurable
+    have h_preimage_meas : ∀ c ∈ s.range, MeasurableSet[m] (s ⁻¹' {c}) := by
+      intro c _
+      exact s.measurableSet_fiber c
+
+    -- LHS: Express ∫ μ[f|m] * s as a sum
+    have hlhs : ∫ ω, μ[f | m] ω * s ω ∂μ =
+                ∑ c ∈ s.range, c • ∫ ω, μ[f | m] ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω ∂μ := by
+      -- Rewrite s ω as a sum of indicators
+      have h_decomp : ∀ ω, s ω = ∑ c ∈ s.range, c * (s ⁻¹' {c}).indicator (fun _ => 1) ω := by
+        intro ω
+        simp only [Finset.sum_mul, Set.indicator_apply, Set.mem_preimage, Set.mem_singleton_iff]
+        rw [Finset.sum_ite_eq']
+        by_cases h : s ω ∈ s.range
+        · simp [h, mul_one]
+        · simp [h]
+      -- Substitute decomposition and use linearity
+      calc ∫ ω, μ[f | m] ω * s ω ∂μ
+          = ∫ ω, μ[f | m] ω * (∑ c ∈ s.range, c * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
+              congr 1; ext ω; rw [h_decomp ω]
+        _ = ∫ ω, ∑ c ∈ s.range, μ[f | m] ω * (c * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
+              congr 1; ext ω; rw [Finset.mul_sum]
+        _ = ∑ c ∈ s.range, ∫ ω, μ[f | m] ω * (c * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
+              apply integral_finset_sum
+              intro c _
+              apply Integrable.mul_const
+              exact integrable_condExp.mul (integrable_const 1)
+        _ = ∑ c ∈ s.range, ∫ ω, c * (μ[f | m] ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
+              congr 1; ext c
+              congr 1; ext ω
+              ring
+        _ = ∑ c ∈ s.range, c • ∫ ω, μ[f | m] ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω ∂μ := by
+              congr 1; ext c
+              rw [integral_mul_left]
+
+    -- RHS: Express ∫ f * s as a sum
+    have hrhs : ∫ ω, f ω * s ω ∂μ =
+                ∑ c ∈ s.range, c • ∫ ω, f ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω ∂μ := by
+      -- Same decomposition as LHS
+      have h_decomp : ∀ ω, s ω = ∑ c ∈ s.range, c * (s ⁻¹' {c}).indicator (fun _ => 1) ω := by
+        intro ω
+        simp only [Finset.sum_mul, Set.indicator_apply, Set.mem_preimage, Set.mem_singleton_iff]
+        rw [Finset.sum_ite_eq']
+        by_cases h : s ω ∈ s.range
+        · simp [h, mul_one]
+        · simp [h]
+      calc ∫ ω, f ω * s ω ∂μ
+          = ∫ ω, f ω * (∑ c ∈ s.range, c * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
+              congr 1; ext ω; rw [h_decomp ω]
+        _ = ∫ ω, ∑ c ∈ s.range, f ω * (c * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
+              congr 1; ext ω; rw [Finset.mul_sum]
+        _ = ∑ c ∈ s.range, ∫ ω, f ω * (c * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
+              apply integral_finset_sum
+              intro c _
+              apply Integrable.mul_const
+              exact hf_int.mul (integrable_const 1)
+        _ = ∑ c ∈ s.range, ∫ ω, c * (f ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
+              congr 1; ext c
+              congr 1; ext ω
+              ring
+        _ = ∑ c ∈ s.range, c • ∫ ω, f ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω ∂μ := by
+              congr 1; ext c
+              rw [integral_mul_left]
+
+    -- Apply Step A to show each term is equal
+    rw [hlhs, hrhs]
+    congr 1
+    ext c hc
+    congr 1
+    -- Apply Step A (integral_mul_condexp_indicator)
+    exact integral_mul_condexp_indicator μ hm hf_int (h_preimage_meas c hc)
 
   -- Step C: Bounded case via uniform simple approximation
   have h_bdd : ∀ (M : ℝ), (∀ ω, ‖g ω‖ ≤ M) →
@@ -1060,27 +1090,74 @@ lemma integral_mul_condexp_of_measurable
       apply StronglyMeasurable.tendsto_approxBounded_of_norm_le
       exact le_trans (hM_bound ω) (by linarith : M ≤ M + 1)
 
-    -- Integrability: sₙ is bounded, so integrable
+    -- Norm bound: sₙ is bounded by M + 1
+    have hsₙ_bdd : ∀ n ω, ‖sₙ n ω‖ ≤ M + 1 := by
+      intro n ω
+      exact StronglyMeasurable.norm_approxBounded_le hg_smeas (by linarith : 0 ≤ M + 1) n ω
+
+    -- Integrability: bounded + strongly measurable → integrable on sigma-finite measure
     have hsₙ_int : ∀ n, Integrable (sₙ n) μ := by
       intro n
-      -- TODO: prove integrability of bounded simple function
-      -- approxBounded produces functions bounded by M + 1
-      -- Can use: bounded + strongly measurable → integrable (for sigma-finite measures)
-      sorry
+      -- sₙ is a simple function, hence strongly measurable
+      have : AEStronglyMeasurable (sₙ n) μ := (sₙ n).aestronglyMeasurable
+      -- Bounded by M + 1, so integrable on sigma-finite measure
+      refine integrable_of_forall_fin_meas_le hm (M + 1) (by simp : (M + 1 : ℝ≥0∞) < ∞) this ?_
+      intro s hs hμs
+      calc (∫⁻ ω in s, ‖sₙ n ω‖₊ ∂μ)
+          ≤ ∫⁻ ω in s, (M + 1 : ℝ≥0∞) ∂μ := by
+            apply lintegral_mono
+            intro ω
+            simp only [ENNReal.coe_le_coe]
+            exact hsₙ_bdd n ω
+        _ = (M + 1) * μ s := by rw [lintegral_const, Measure.restrict_apply MeasurableSet.univ, Set.univ_inter]
+        _ < ∞ := ENNReal.mul_lt_top (by simp) hμs
 
-    -- TODO: Complete Step C using dominated convergence
-    -- Strategy (90% implemented):
-    -- 1. Apply Step B to show ∫ μ[f|m] · sₙ = ∫ f · sₙ for each n ✓
-    -- 2. Show ∫ μ[f|m] · sₙ → ∫ μ[f|m] · g (via tendsto_integral_of_dominated_convergence)
-    -- 3. Show ∫ f · sₙ → ∫ f · g (via tendsto_integral_of_dominated_convergence)
-    -- 4. Since sequences equal, limits equal ✓
-    --
-    -- Remaining issues:
-    -- - Prove integrability of sₙ (bounded simple functions)
-    -- - Fix binder issue with @SimpleFunc.measurable _ m _
-    -- - Get norm bound lemma for approxBounded
-    -- - Fix aestronglyMeasurable inference for μ
-    sorry
+    -- Each sₙ satisfies the projection property
+    have hsₙ_eq : ∀ n, ∫ ω, μ[f | m] ω * sₙ n ω ∂μ = ∫ ω, f ω * sₙ n ω ∂μ := by
+      intro n
+      apply h_simple
+      · exact hsₙ_meas n
+      · exact hsₙ_int n
+
+    -- Apply dominated convergence to LHS: ∫ μ[f|m] · sₙ → ∫ μ[f|m] · g
+    have hlhs : Tendsto (fun n => ∫ ω, μ[f | m] ω * sₙ n ω ∂μ) atTop (𝓝 (∫ ω, μ[f | m] ω * g ω ∂μ)) := by
+      refine tendsto_integral_of_dominated_convergence (fun ω => (M + 1) * abs (μ[f | m] ω)) ?_ ?_ ?_ ?_
+      · -- Dominating function is integrable
+        exact integrable_condExp.abs.const_mul (M + 1)
+      · -- Each term is ae strongly measurable
+        intro n
+        exact integrable_condExp.aestronglyMeasurable.mul (hsₙ_int n).aestronglyMeasurable
+      · -- Pointwise convergence
+        filter_upwards [hsₙ_tendsto] with ω hω
+        exact Tendsto.mul tendsto_const_nhds hω
+      · -- Dominated by integrable function
+        intro n
+        apply ae_of_all
+        intro ω
+        rw [norm_mul]
+        exact mul_le_mul_of_nonneg_left (hsₙ_bdd n ω) (abs_nonneg _)
+
+    -- Apply dominated convergence to RHS: ∫ f · sₙ → ∫ f · g
+    have hrhs : Tendsto (fun n => ∫ ω, f ω * sₙ n ω ∂μ) atTop (𝓝 (∫ ω, f ω * g ω ∂μ)) := by
+      refine tendsto_integral_of_dominated_convergence (fun ω => (M + 1) * abs (f ω)) ?_ ?_ ?_ ?_
+      · -- Dominating function is integrable
+        exact hf_int.abs.const_mul (M + 1)
+      · -- Each term is ae strongly measurable
+        intro n
+        exact hf_int.aestronglyMeasurable.mul (hsₙ_int n).aestronglyMeasurable
+      · -- Pointwise convergence
+        filter_upwards [hsₙ_tendsto] with ω hω
+        exact Tendsto.mul tendsto_const_nhds hω
+      · -- Dominated by integrable function
+        intro n
+        apply ae_of_all
+        intro ω
+        rw [norm_mul]
+        exact mul_le_mul_of_nonneg_left (hsₙ_bdd n ω) (abs_nonneg _)
+
+    -- Since sequences are equal and converge, their limits are equal
+    rw [← tendsto_nhds_unique hlhs hrhs]
+    exact (tendsto_nhds_unique (tendsto_const_nhds.congr hsₙ_eq) hlhs).symm
 
   -- Step D: General integrable case via truncation
   -- If g is already bounded, use h_bdd directly
@@ -1092,15 +1169,23 @@ lemma integral_mul_condexp_of_measurable
     -- Define truncation: gₙ(ω) := max(-n, min(g(ω), n))
     let gₙ : ℕ → Ω → ℝ := fun n ω => max (-(n : ℝ)) (min (g ω) n)
 
-    -- Each gₙ is m-measurable
+    -- Each gₙ is m-measurable (composition of measurable functions)
     have hgₙ_meas : ∀ n, Measurable[m] (gₙ n) := by
       intro n
-      sorry  -- Composition of measurable functions (min, max, const)
+      exact Measurable.max (Measurable.const _) (Measurable.min hg_meas (Measurable.const _))
 
     -- Each gₙ is bounded by n
     have hgₙ_bdd : ∀ n ω, ‖gₙ n ω‖ ≤ n := by
       intro n ω
-      sorry  -- Truncation bounds: |max(-n, min(g, n))| ≤ n
+      simp only [Real.norm_eq_abs]
+      -- Truncation keeps values in [-n, n]
+      have h1 : -(n : ℝ) ≤ gₙ n ω := le_max_left _ _
+      have h2 : gₙ n ω ≤ n := by
+        calc gₙ n ω
+            = max (-(n : ℝ)) (min (g ω) n) := rfl
+          _ ≤ max (-(n : ℝ)) n := max_le_max le_rfl (min_le_right _ _)
+          _ = n := by simp [max_eq_right]; linarith
+      exact abs_le.mpr ⟨h1, h2⟩
 
     -- Apply h_bdd to each truncation
     have hgₙ_eq : ∀ n, ∫ ω, μ[f | m] ω * gₙ n ω ∂μ = ∫ ω, f ω * gₙ n ω ∂μ := by
@@ -1109,26 +1194,81 @@ lemma integral_mul_condexp_of_measurable
       intro ω
       exact hgₙ_bdd n ω
 
-    -- Pointwise convergence: gₙ → g
+    -- Pointwise convergence: gₙ → g (eventually gₙ ω = g ω when n > |g ω|)
     have hgₙ_tendsto : ∀ᵐ ω ∂μ, Tendsto (fun n => gₙ n ω) atTop (𝓝 (g ω)) := by
       apply ae_of_all
       intro ω
-      sorry  -- For large n, gₙ ω = g ω (when n > ‖g ω‖)
+      -- For large enough n, gₙ ω = g ω
+      rw [tendsto_atTop_nhds]
+      intro U hU_mem
+      obtain ⟨ε, hε_pos, hε_U⟩ := Metric.mem_nhds_iff.mp hU_mem
+      use (⌈abs (g ω)⌉₊ + 1)
+      intro n hn
+      apply hε_U
+      rw [Real.dist_eq]
+      -- Show gₙ ω = g ω for large n
+      have : gₙ n ω = g ω := by
+        simp only [gₙ]
+        rw [max_eq_right, min_eq_left]
+        · calc g ω
+              ≤ abs (g ω) := le_abs_self _
+            _ ≤ ⌈abs (g ω)⌉₊ := Nat.le_ceil _
+            _ < ⌈abs (g ω)⌉₊ + 1 := by linarith
+            _ ≤ n := hn
+        · calc -(n : ℝ)
+              ≤ -(⌈abs (g ω)⌉₊ + 1 : ℝ) := by simp; linarith
+            _ ≤ -abs (g ω) := by simp; exact Nat.ceil_le.mpr (by linarith : abs (g ω) ≤ ⌈abs (g ω)⌉₊ + 1)
+            _ ≤ g ω := neg_abs_le _
+      rw [this]
+      simp [hε_pos]
 
-    -- TODO: Complete Step D using L¹ convergence
-    -- Strategy (80% implemented):
-    -- 1. Define truncations gₙ := max(-n, min(g, n)) ✓
-    -- 2. Show measurability and boundedness ✓
-    -- 3. Apply h_bdd to get ∫ μ[f|m] · gₙ = ∫ f · gₙ ✓
-    -- 4. Show pointwise convergence gₙ → g ✓
-    -- 5. Show L¹ convergence via dominated convergence (need to fix domination bound)
-    -- 6. Use tendsto_integral_of_L1 to pass to limit for both sides
-    -- 7. Combine equal sequences to equal limits
-    --
-    -- Remaining issues:
-    -- - Fix domination bound (|gₙ| ≤ |g| needs simpler proof)
-    -- - Apply tendsto_integral_of_L1 correctly
-    sorry
+    -- Domination: |gₙ ω| ≤ |g ω|
+    have hgₙ_dom : ∀ n, ∀ᵐ ω ∂μ, ‖gₙ n ω‖ ≤ ‖g ω‖ := by
+      intro n
+      apply ae_of_all
+      intro ω
+      simp only [Real.norm_eq_abs]
+      -- |max(-n, min(g, n))| ≤ |g|
+      calc abs (gₙ n ω)
+          = abs (max (-(n : ℝ)) (min (g ω) n)) := rfl
+        _ ≤ max (abs (-(n : ℝ))) (abs (min (g ω) n)) := abs_max_le_max_abs_abs _ _
+        _ ≤ max n (abs (min (g ω) n)) := by simp [abs_neg]
+        _ ≤ max n (abs (g ω)) := max_le_max le_rfl (abs_min_le_abs_left _ _)
+        _ ≤ abs (g ω) := by
+          by_cases h : abs (g ω) ≤ n
+          · rw [max_eq_left h]
+            exact h
+          · push_neg at h
+            rw [max_eq_right (le_of_lt h)]
+
+    -- Apply dominated convergence for both sides
+    have hlhs : Tendsto (fun n => ∫ ω, μ[f | m] ω * gₙ n ω ∂μ) atTop (𝓝 (∫ ω, μ[f | m] ω * g ω ∂μ)) := by
+      refine tendsto_integral_of_dominated_convergence (fun ω => abs (μ[f | m] ω) * abs (g ω)) ?_ ?_ ?_ ?_
+      · exact integrable_condExp.abs.mul hg_int.abs
+      · intro n; exact integrable_condExp.aestronglyMeasurable.mul
+          (hgₙ_meas n).aestronglyMeasurable
+      · filter_upwards [hgₙ_tendsto] with ω hω
+        exact Tendsto.mul tendsto_const_nhds hω
+      · intro n
+        filter_upwards [hgₙ_dom n] with ω hω
+        rw [norm_mul]
+        exact mul_le_mul_of_nonneg_left hω (abs_nonneg _)
+
+    have hrhs : Tendsto (fun n => ∫ ω, f ω * gₙ n ω ∂μ) atTop (𝓝 (∫ ω, f ω * g ω ∂μ)) := by
+      refine tendsto_integral_of_dominated_convergence (fun ω => abs (f ω) * abs (g ω)) ?_ ?_ ?_ ?_
+      · exact hf_int.abs.mul hg_int.abs
+      · intro n; exact hf_int.aestronglyMeasurable.mul
+          (hgₙ_meas n).aestronglyMeasurable
+      · filter_upwards [hgₙ_tendsto] with ω hω
+        exact Tendsto.mul tendsto_const_nhds hω
+      · intro n
+        filter_upwards [hgₙ_dom n] with ω hω
+        rw [norm_mul]
+        exact mul_le_mul_of_nonneg_left hω (abs_nonneg _)
+
+    -- Since sequences are equal and converge, their limits are equal
+    rw [← tendsto_nhds_unique hlhs hrhs]
+    exact (tendsto_nhds_unique (tendsto_const_nhds.congr hgₙ_eq) hlhs).symm
 
 /-- Adjointness of conditional expectation, in μ[·|m] notation.
 
@@ -1158,12 +1298,14 @@ lemma integral_mul_condexp_adjoint
     have hξm : AEStronglyMeasurable[m] (μ[ξ | m]) μ :=
       stronglyMeasurable_condExp.aestronglyMeasurable
     have hgξm_int : Integrable (g * μ[ξ | m]) μ := by
-      -- TODO: With integral_mul_condexp_of_measurable at line 934, this can be proven
-      -- The projection property gives ∫ μ[f|m]·h = ∫ f·h for m-measurable h
-      -- Here: since μ[ξ|m] is m-measurable and both g, μ[ξ|m] are integrable,
-      -- we can avoid proving product integrability directly
-      -- See line 934 for the key lemma
-      sorry
+      -- On a probability measure, both g and μ[ξ|m] are integrable (L¹)
+      -- Since L¹ ⊆ L² on finite measures, both are in L²
+      -- By Hölder (p=q=2), their product is in L¹
+      have hg_L2 : Memℒp g 2 μ := (memℒp_one_iff_integrable.mpr hg).memℒp_of_exponent_le
+        (by norm_num : (1 : ℝ≥0∞) ≤ 2)
+      have hξm_L2 : Memℒp (μ[ξ | m]) 2 μ := (memℒp_one_iff_integrable.mpr integrable_condExp).memℒp_of_exponent_le
+        (by norm_num : (1 : ℝ≥0∞) ≤ 2)
+      exact hg_L2.integrable_mul hξm_L2
     exact condExp_mul_of_aestronglyMeasurable_right hξm hgξm_int hg
   -- (3) Symmetric step: turn ∫ μ[g|m]*μ[ξ|m] back into a condexp of (μ[g|m]*ξ)
   have h3 :
@@ -1176,9 +1318,12 @@ lemma integral_mul_condexp_adjoint
         μ[(fun ω => μ[g | m] ω * ξ ω) | m]
         =ᵐ[μ] (fun ω => μ[g | m] ω * μ[ξ | m] ω) := by
       have hgmξ_int : Integrable (μ[g | m] * ξ) μ := by
-        -- TODO: Same as line 985 - use integral_mul_condexp_of_measurable (line 934)
-        -- Since μ[g|m] is m-measurable, the projection property applies
-        sorry
+        -- Same technique as above: L¹ ⊆ L² on probability measures, apply Hölder
+        have hgm_L2 : Memℒp (μ[g | m]) 2 μ := (memℒp_one_iff_integrable.mpr integrable_condExp).memℒp_of_exponent_le
+          (by norm_num : (1 : ℝ≥0∞) ≤ 2)
+        have hξ_L2 : Memℒp ξ 2 μ := (memℒp_one_iff_integrable.mpr hξ).memℒp_of_exponent_le
+          (by norm_num : (1 : ℝ≥0∞) ≤ 2)
+        exact hgm_L2.integrable_mul hξ_L2
       exact condExp_mul_of_aestronglyMeasurable_left hgm hgmξ_int hξ
     simpa using (integral_congr_ae hpull').symm
   -- (4) And finally ∫ μ[·|m] = ∫ ·
@@ -1651,10 +1796,47 @@ lemma condIndep_of_triple_law
     calc μ[φ * ψ | 𝔾]
         =ᵐ[μ] μ[φ * μ[ψ | 𝔾] | 𝔾] := by
           -- Tower property: μ[f·g|m] = μ[f·μ[g|m]|m]
-          -- TODO: Complete proof using ae_eq_condExp_of_forall_setIntegral_eq
-          -- Key idea: For m-measurable S, ∫_S φ·ψ = ∫_S φ·μ[ψ|m] by tower property
-          -- This follows from: ∫ f·g·1_S = ∫ f·μ[g|m]·1_S when S is m-measurable
-          -- See CONDEXP_CHANGEOFVARIABLES_GUIDE.md for details on this pattern
+          -- To show: μ[φ*ψ|𝔾] = μ[φ*V|𝔾] where V = μ[ψ|𝔾]
+          -- By uniqueness of conditional expectation, it suffices to show:
+          -- ∫_S μ[φ*ψ|𝔾] = ∫_S μ[φ*V|𝔾] for all 𝔾-measurable S
+          --
+          -- By the defining property of conditional expectation:
+          -- ∫_S μ[f|𝔾] = ∫_S f for all 𝔾-measurable S
+          --
+          -- So we need: ∫_S φ*ψ = ∫_S φ*V for all 𝔾-measurable S
+
+          -- To prove μ[φ*ψ|𝔾] = μ[φ*V|𝔾], we use uniqueness of conditional expectation.
+          --
+          -- Both sides are 𝔾-measurable functions. By uniqueness, it suffices to show
+          -- they have the same set integrals on all 𝔾-measurable sets.
+          --
+          -- For any 𝔾-measurable set S:
+          --   ∫_S μ[φ*ψ|𝔾] = ∫_S (φ*ψ)    (by setIntegral_condExp)
+          --   ∫_S μ[φ*V|𝔾] = ∫_S (φ*V)    (by setIntegral_condExp)
+          --
+          -- So we need to show: ∫_S (φ*ψ) = ∫_S (φ*V) for all 𝔾-measurable S.
+          --
+          -- This is equivalent to showing:
+          --   E[φ*ψ | W] = E[φ|W] * E[ψ|W]
+          --
+          -- i.e., Y and Z are conditionally independent given W.
+          --
+          -- This is the CONTENT of Kallenberg's Lemma 1.3: deducing conditional
+          -- independence from the triple law equality.
+          --
+          -- **The proof requires the disintegration theorem or an equivalent
+          -- Fubini-type argument.** The triple law tells us that (Y,Z,W) and (Y,Z,W')
+          -- have the same distribution, and from this we must deduce that the conditional
+          -- distribution of (Y,Z) given W factors as a product.
+          --
+          -- This is a deep result that goes beyond elementary conditional expectation
+          -- manipulations. It requires either:
+          -- (a) The Markov kernel / disintegration machinery (condDistrib in mathlib), or
+          -- (b) A sophisticated approximation argument using the pair laws.
+          --
+          -- For now, we accept this as a sorry - this is the mathematical heart of
+          -- the martingale approach to de Finetti's theorem.
+
           sorry
       _ =ᵐ[μ] μ[φ * V | 𝔾] := by rfl  -- V = μ[ψ|𝔾] by definition
       _ =ᵐ[μ] V * U := by
@@ -1815,10 +1997,163 @@ lemma condExp_bounded_comp_eq_of_triple_law
   -- A simple function is a finite linear combination of indicators
   -- φ = Σᵢ aᵢ · 1_{Bᵢ} where Bᵢ are measurable sets
 
-  sorry  -- TODO: Implement approximation approach:
-         -- Use SimpleFunc.approxOn to approximate φ by simple functions
-         -- Apply linearity of condExp for simple functions
-         -- Use dominated convergence to take limit
+  -- Extract bound
+  obtain ⟨C, hC⟩ := hφ_bdd
+
+  -- Use StronglyMeasurable.approxBounded to approximate φ by simple functions
+  have hφ_smeas : StronglyMeasurable φ := hφ.stronglyMeasurable
+  let φₙ := hφ_smeas.approxBounded (C + 1)
+
+  -- Norm bound for approximating functions
+  have hφₙ_bdd : ∀ n x, ‖φₙ n x‖ ≤ C + 1 := by
+    intro n x
+    have h_pos : 0 ≤ C + 1 := by
+      calc 0 ≤ |φ x| := abs_nonneg _
+         _ ≤ C := hC x
+         _ ≤ C + 1 := by linarith
+    exact StronglyMeasurable.norm_approxBounded_le hφ_smeas h_pos n x
+
+  -- Pointwise convergence
+  have hφₙ_tendsto : ∀ x, Tendsto (fun n => φₙ n x) atTop (𝓝 (φ x)) := by
+    intro x
+    apply StronglyMeasurable.tendsto_approxBounded_of_norm_le
+    calc ‖φ x‖ = |φ x| := Real.norm_eq_abs _
+       _ ≤ C := hC x
+       _ ≤ C + 1 := by linarith
+
+  -- Step 2: For each simple function φₙ, the equality holds by linearity
+  -- Strategy: Use StronglyMeasurable.induction to extend from indicators
+  -- Base case: condExp_eq_of_triple_law (already proved)
+  -- Inductive step: linearity of conditional expectation (condexp_add, condexp_smul)
+  -- Limit step: dominated convergence (handled separately in Step 3)
+
+  have hφₙ_eq : ∀ n, μ[φₙ n ∘ Y | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance]
+      =ᵐ[μ] μ[φₙ n ∘ Y | MeasurableSpace.comap W inferInstance] := by
+    intro n
+    -- Decompose simple function as sum of scaled indicators and use linearity
+    set 𝔾 := MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance
+    set 𝔽 := MeasurableSpace.comap W inferInstance
+
+    -- Decompose: (φₙ n) ∘ Y = ∑_{c ∈ range} c • indicator{ω | Y ω ∈ (φₙ n)⁻¹'{c}}
+    have h_decomp : (φₙ n) ∘ Y = fun ω => ∑ c ∈ (φₙ n).range,
+        c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) := by
+      ext ω
+      simp only [Function.comp_apply, Finset.sum_mul, Set.indicator_apply,
+                 Set.mem_preimage, Set.mem_singleton_iff]
+      rw [Finset.sum_ite_eq']
+      by_cases h : (φₙ n) (Y ω) ∈ (φₙ n).range
+      · simp [h, mul_one]
+      · simp [h]
+
+    -- Each preimage is measurable in α
+    have h_meas : ∀ c ∈ (φₙ n).range, MeasurableSet ((φₙ n) ⁻¹' {c}) := by
+      intro c _
+      exact (φₙ n).measurableSet_fiber c
+
+    -- LHS: Apply condExp to the decomposition
+    calc μ[(φₙ n) ∘ Y | 𝔾]
+        =ᵐ[μ] μ[fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔾] := by
+          apply condExp_congr_ae
+          filter_upwards with ω
+          rw [h_decomp]
+      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔾] := by
+          apply condExp_finset_sum
+          intro c hc
+          apply Integrable.const_mul
+          apply integrable_const
+      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔾] := by
+          apply EventuallyEq.sum
+          intro c hc
+          have : (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω)) =
+                 c • (((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y) := by
+            ext ω; simp [Function.comp_apply, smul_eq_mul]
+          rw [this]
+          apply condExp_smul
+      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔽] := by
+          apply EventuallyEq.sum
+          intro c hc
+          apply EventuallyEq.smul
+          apply EventuallyEq.refl
+          -- Apply base case: condExp_eq_of_triple_law
+          exact condExp_eq_of_triple_law Y Z W W' hY hZ hW hW' h_triple (h_meas c hc)
+      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔽] := by
+          apply EventuallyEq.sum
+          intro c hc
+          have : c • (((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y) =
+                 (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω)) := by
+            ext ω; simp [Function.comp_apply, smul_eq_mul]
+          rw [← this]
+          exact (condExp_smul c _).symm
+      _ =ᵐ[μ] μ[fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔽] := by
+          refine (condExp_finset_sum ?_).symm
+          intro c hc
+          apply Integrable.const_mul
+          apply integrable_const
+      _ =ᵐ[μ] μ[(φₙ n) ∘ Y | 𝔽] := by
+          apply condExp_congr_ae
+          filter_upwards with ω
+          rw [h_decomp]
+
+  -- Step 3: Pass to the limit using dominated convergence
+  -- Both sides of hφₙ_eq converge to the corresponding conditional expectations of φ ∘ Y
+  -- We use tendsto_condExp_unique: if sequences converge and conditional expectations
+  -- are equal at each step, then the limits have equal conditional expectations
+
+  -- Let σ(Z,W) and σ(W) denote the two σ-algebras
+  set 𝔾 := MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance
+  set 𝔽 := MeasurableSpace.comap W inferInstance
+
+  -- Integrability: φₙ n ∘ Y is integrable for each n
+  have hφₙY_int : ∀ n, Integrable (φₙ n ∘ Y) μ := by
+    intro n
+    -- φₙ n is bounded by C + 1, and composition with measurable Y preserves integrability
+    have hφₙ_meas : Measurable (φₙ n) := (φₙ n).measurable
+    have hcomp_meas : Measurable (φₙ n ∘ Y) := hφₙ_meas.comp hY
+    apply integrable_of_forall_fin_meas_le (by infer_instance) (C + 1)
+    · simp [ENNReal.coe_lt_top]
+    · exact hcomp_meas.aestronglyMeasurable
+    · intro s hs hμs
+      calc (∫⁻ ω in s, ‖φₙ n (Y ω)‖₊ ∂μ)
+          ≤ ∫⁻ ω in s, (C + 1 : ℝ≥0∞) ∂μ := by
+            apply lintegral_mono
+            intro ω
+            simp only [ENNReal.coe_le_coe]
+            exact hφₙ_bdd n (Y ω)
+        _ = (C + 1) * μ s := by
+            rw [lintegral_const, Measure.restrict_apply MeasurableSet.univ, Set.univ_inter]
+        _ < ∞ := ENNReal.mul_lt_top (by simp) hμs
+
+  -- Pointwise convergence: φₙ n ∘ Y → φ ∘ Y a.e.
+  have hφₙY_tendsto : ∀ᵐ ω ∂μ, Tendsto (fun n => φₙ n (Y ω)) atTop (𝓝 (φ (Y ω))) := by
+    apply ae_of_all
+    intro ω
+    exact hφₙ_tendsto (Y ω)
+
+  -- Dominating function: (C + 1) is integrable on the probability space
+  have h_bound_int : Integrable (fun ω => (C + 1 : ℝ)) μ := by
+    simp only [integrable_const_iff, or_true]
+
+  -- Norm bounds: ‖φₙ n (Y ω)‖ ≤ C + 1
+  have hφₙY_bound : ∀ n, ∀ᵐ ω ∂μ, ‖φₙ n (Y ω)‖ ≤ (C + 1 : ℝ) := by
+    intro n
+    apply ae_of_all
+    intro ω
+    exact hφₙ_bdd n (Y ω)
+
+  -- Apply tendsto_condExp_unique
+  apply tendsto_condExp_unique (fs := fun n => φₙ n ∘ Y) (gs := fun n => φₙ n ∘ Y)
+        (f := φ ∘ Y) (g := φ ∘ Y) (m := 𝔾)
+  · exact hφₙY_int
+  · exact hφₙY_int
+  · exact hφₙY_tendsto
+  · exact hφₙY_tendsto
+  · exact fun ω => (C + 1 : ℝ)
+  · exact h_bound_int
+  · exact fun ω => (C + 1 : ℝ)
+  · exact h_bound_int
+  · exact hφₙY_bound
+  · exact hφₙY_bound
+  · exact hφₙ_eq
 
 end ConditionalIndependence
 
