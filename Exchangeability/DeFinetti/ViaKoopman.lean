@@ -64,8 +64,9 @@ private lemma coeFn_finset_sum
   refine Finset.induction_on s ?h0 ?hstep
   · -- base: sum over ∅ is 0
     simp only [Finset.sum_empty]
-    convert Lp.coeFn_zero
-    ext ω; rfl
+    filter_upwards [Lp.coeFn_zero (E := E) (p := p) (μ := μ)] with ω hω
+    rw [hω]
+    rfl
   · -- step: sum over insert
     intro a s ha hs
     simp only [Finset.sum_insert ha]
@@ -838,11 +839,13 @@ lemma condexp_pullback_factor
   · intro s hs _
     exact h_sets s hs
   -- 3) AEStronglyMeasurable for (μ[H | m] ∘ g) with respect to comap g m
-  · -- μ[H|m] is ae-strongly measurable w.r.t. μ = map g μ', so composing with g gives ae-strong measurability w.r.t. μ'
-    have : AEStronglyMeasurable (μ[H | m]) (Measure.map g μ') := by
-      rw [hpush]
-      exact stronglyMeasurable_condExp.aestronglyMeasurable
-    exact AEStronglyMeasurable.comp_measurable this hg
+  · -- μ[H|m] is ae-strongly measurable w.r.t. m, and g is measurable, so the composition is ae-strongly measurable
+    -- First, μ[H|m] is ae-strongly measurable w.r.t. the full measure μ
+    have hasm : AEStronglyMeasurable (μ[H | m]) μ := stronglyMeasurable_condExp.aestronglyMeasurable
+    -- Since μ = map g μ', we can transfer this to μ'
+    rw [hpush] at hasm
+    -- Now use that g is measurable from Ω' to Ω to compose
+    exact AEStronglyMeasurable.comp_measurable hasm hg
 
 /-
 **Invariance of conditional expectation under iterates**.
@@ -4537,12 +4540,10 @@ private theorem optionB_L1_convergence_bounded
           =ᵐ[μ] fun ω => ((n : ℝ)⁻¹ • (∑ k ∈ Finset.range n, (koopman shift hσ)^[k] fL2)) ω := by
             filter_upwards with ω
             rw [h_def]
-        _ =ᵐ[μ] fun ω => (n : ℝ)⁻¹ • (∑ k ∈ Finset.range n, (koopman shift hσ)^[k] fL2 : Ω[α] → ℝ) ω := by
-            filter_upwards [Lp.coeFn_smul (n : ℝ)⁻¹ (∑ k ∈ Finset.range n, (koopman shift hσ)^[k] fL2)] with ω hω
-            exact hω
         _ =ᵐ[μ] fun ω => (n : ℝ)⁻¹ • (∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2 : Ω[α] → ℝ) ω) := by
-            filter_upwards [Lp.coeFn_finset_sum 2 (Finset.range n) fun k => (koopman shift hσ)^[k] fL2] with ω hω
-            rw [hω]
+            filter_upwards [Lp.coeFn_smul (n : ℝ)⁻¹ (∑ k ∈ Finset.range n, (koopman shift hσ)^[k] fL2),
+              coeFn_finset_sum (Finset.range n) fun k => (koopman shift hσ)^[k] fL2] with ω hω_smul hω_sum
+            rw [hω_smul, Pi.smul_apply, hω_sum]
         _ =ᵐ[μ] fun ω => (n : ℝ)⁻¹ * ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω := by
             filter_upwards with ω
             rw [smul_eq_mul]
