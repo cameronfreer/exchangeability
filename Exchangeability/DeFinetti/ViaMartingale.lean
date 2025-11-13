@@ -1084,12 +1084,12 @@ lemma integral_mul_condexp_of_measurable
               apply integral_finset_sum
               intro c _
               have : (fun ω => μ[f | m] ω * (c * (s ⁻¹' {c}).indicator (fun _ => 1) ω)) =
-                     (fun ω => c * (μ[f | m] ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω)) := by
+                     (fun ω => c * ((s ⁻¹' {c}).indicator (fun _ => 1) ω * μ[f | m] ω)) := by
                 ext ω; ring
               rw [this]
               refine Integrable.const_mul ?_ c
               refine Integrable.bdd_mul' integrable_condExp ?_ ?_
-              · exact (measurable_const.indicator (h_preimage_meas c _)).aestronglyMeasurable
+              · exact (measurable_const.indicator (hm _ (h_preimage_meas c _))).aestronglyMeasurable
               · filter_upwards with ω
                 simp [Set.indicator]
                 split_ifs <;> norm_num
@@ -1120,12 +1120,12 @@ lemma integral_mul_condexp_of_measurable
               apply integral_finset_sum
               intro c _
               have : (fun ω => f ω * (c * (s ⁻¹' {c}).indicator (fun _ => 1) ω)) =
-                     (fun ω => c * (f ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω)) := by
+                     (fun ω => c * ((s ⁻¹' {c}).indicator (fun _ => 1) ω * f ω)) := by
                 ext ω; ring
               rw [this]
               refine Integrable.const_mul ?_ c
               refine Integrable.bdd_mul' hf_int ?_ ?_
-              · exact (measurable_const.indicator (h_preimage_meas c _)).aestronglyMeasurable
+              · exact (measurable_const.indicator (hm _ (h_preimage_meas c _))).aestronglyMeasurable
               · filter_upwards with ω
                 simp [Set.indicator]
                 split_ifs <;> norm_num
