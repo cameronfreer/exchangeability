@@ -2241,7 +2241,7 @@ lemma condExp_bounded_comp_eq_of_triple_law
           rw [← this]
           exact (condExp_smul c _).symm
       _ =ᵐ[μ] μ[fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔽] := by
-          refine (condExp_finset_sum ?_).symm
+          refine (condExp_finset_sum ?_ 𝔽).symm
           intro c hc
           apply Integrable.const_mul
           apply integrable_const
