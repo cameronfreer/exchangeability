@@ -412,8 +412,8 @@ lemma pair_law_ZW_of_triple_law
               Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) :
   Measure.map (fun ω => (Z ω, W ω)) μ = Measure.map (fun ω => (Z ω, W' ω)) μ :=
   map_pair_of_map_triple_eq
-    (hY.prod_mk (hZ.prodMk hW)) (hY.prod_mk (hZ.prodMk hW'))
-    (measurable_snd.fst.prod_mk measurable_snd.snd) h_triple
+    (hY.prodMk (hZ.prodMk hW)) (hY.prodMk (hZ.prodMk hW'))
+    (measurable_snd.fst.prodMk measurable_snd.snd) h_triple
 
 /-- **Helper:** Pair law (Y,W) equality from triple law.
 The marginal distribution (Y,W) coincides with (Y,W') when (Y,Z,W) =^d (Y,Z,W'). -/
@@ -427,8 +427,8 @@ lemma pair_law_YW_of_triple_law
               Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) :
   Measure.map (fun ω => (Y ω, W ω)) μ = Measure.map (fun ω => (Y ω, W' ω)) μ :=
   map_pair_of_map_triple_eq
-    (hY.prod_mk (hZ.prodMk hW)) (hY.prod_mk (hZ.prodMk hW'))
-    (measurable_fst.prod_mk measurable_snd.snd) h_triple
+    (hY.prodMk (hZ.prodMk hW)) (hY.prodMk (hZ.prodMk hW'))
+    (measurable_fst.prodMk measurable_snd.snd) h_triple
 
 /-! ### Infrastructure for Common Version Lemma (Doob-Dynkin + Pushforward Uniqueness) -/
 
@@ -442,8 +442,7 @@ lemma exists_borel_factor_of_comap_measurable
     {Ω γ : Type*} [MeasurableSpace Ω] [MeasurableSpace γ]
     {μ : Measure Ω}
     (W : Ω → γ) (f : Ω → ℝ)
-    (hf_meas : Measurable[MeasurableSpace.comap W inferInstance] f)
-    (hf_ae : AEStronglyMeasurable f μ) :
+    (hf_meas : Measurable[MeasurableSpace.comap W inferInstance] f) :
   ∃ v : γ → ℝ, Measurable v ∧ f =ᵐ[μ] v ∘ W := by
   -- For comap-measurable functions, they factor through W by construction
   -- This is the Doob-Dynkin lemma: use Measurable.exists_eq_measurable_comp
@@ -1016,7 +1015,7 @@ lemma integral_mul_condexp_indicator
   have h_set : ∫ ω in s, μ[f | m] ω ∂μ = ∫ ω in s, f ω ∂μ :=
     setIntegral_condExp hm hf_int hs
   -- Convert using indicator functions: ∫_s g = ∫ g · 1_s
-  simp only [← integral_indicator hs_ambient, Set.indicator_mul, mul_one] at h_set
+  simp only [← integral_indicator hs_ambient] at h_set
   exact h_set
 
 /-- **L² projection property of conditional expectation:**
@@ -1096,7 +1095,7 @@ lemma integral_mul_condexp_of_measurable
               ring
         _ = ∑ c ∈ s.range, c • ∫ ω, μ[f | m] ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω ∂μ := by
               congr 1; ext c
-              rw [integral_mul_left]
+              rw [integral_const_mul]
 
     -- RHS: Express ∫ f * s as a sum
     have hrhs : ∫ ω, f ω * s ω ∂μ =
@@ -1125,13 +1124,14 @@ lemma integral_mul_condexp_of_measurable
               ring
         _ = ∑ c ∈ s.range, c • ∫ ω, f ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω ∂μ := by
               congr 1; ext c
-              rw [integral_mul_left]
+              rw [integral_const_mul]
 
     -- Apply Step A to show each term is equal
     rw [hlhs, hrhs]
     congr 1
-    ext c hc
+    ext c
     congr 1
+    intro hc
     -- Apply Step A (integral_mul_condexp_indicator)
     exact integral_mul_condexp_indicator μ hm hf_int (h_preimage_meas c hc)
 
@@ -1424,7 +1424,7 @@ lemma setIntegral_eq_integral_indicator_one_mul
   refine integral_congr_ae ?ae
   filter_upwards with ω
   by_cases hω : ω ∈ s
-  · simp [Set.indicator, hω, mul_comm, mul_left_comm, mul_assoc]
+  · simp [Set.indicator, hω, mul_comm]
   · simp [Set.indicator, hω]
 
 /-- Set version of adjointness. If `s ∈ m`, then
@@ -1736,7 +1736,7 @@ lemma condIndep_of_triple_law
         exact hφ_int.aestronglyMeasurable
       · -- φ is bounded by 1 a.e.
         filter_upwards with ω
-        simp only [φ, Set.indicator, norm_one, norm_zero]
+        simp only [φ, Set.indicator]
         by_cases h : ω ∈ Y ⁻¹' A
         · simp [h]
         · simp [h]
@@ -1753,7 +1753,7 @@ lemma condIndep_of_triple_law
         exact hψ_int.aestronglyMeasurable
       · -- ψ is bounded by 1 a.e.
         filter_upwards with ω
-        simp only [ψ, Set.indicator, norm_one, norm_zero]
+        simp only [ψ, Set.indicator]
         by_cases h : ω ∈ Z ⁻¹' B
         · simp [h]
         · simp [h]
@@ -4160,10 +4160,10 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
     -- Step 1: Swap pair-law to get the right direction: law(ζ,ξ) = law(η,ξ)
     have h_law_swapped : μ.map (fun ω => (ζ ω, ξ ω)) = μ.map (fun ω => (η ω, ξ ω)) := by
       have h_prod_comm_ζ : μ.map (fun ω => (ζ ω, ξ ω)) = (μ.map (fun ω => (ξ ω, ζ ω))).map Prod.swap := by
-        rw [Measure.map_map (measurable_swap) (hξ.prod_mk hζ)]
+        rw [Measure.map_map (measurable_swap) (hξ.prodMk hζ)]
         rfl
       have h_prod_comm_η : μ.map (fun ω => (η ω, ξ ω)) = (μ.map (fun ω => (ξ ω, η ω))).map Prod.swap := by
-        rw [Measure.map_map (measurable_swap) (hξ.prod_mk hη)]
+        rw [Measure.map_map (measurable_swap) (hξ.prodMk hη)]
         rfl
       rw [h_prod_comm_ζ, h_prod_comm_η, h_law]
 
@@ -4254,7 +4254,7 @@ lemma condexp_indicator_drop_info_of_pair_law
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (ξ : Ω → α) (η ζ : Ω → β)
     (hξ : Measurable ξ) (hη : Measurable η) (hζ : Measurable ζ)
-    (h_law :
+    (_h_law :
       Measure.map (fun ω => (ξ ω, η ω)) μ
         = Measure.map (fun ω => (ξ ω, ζ ω)) μ)
     (h_le :
@@ -5199,7 +5199,7 @@ noncomputable def directingMeasure
     {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
-    (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) (ω : Ω) : Measure α :=
+    (X : ℕ → Ω → α) (_hX : ∀ n, Measurable (X n)) (ω : Ω) : Measure α :=
   (ProbabilityTheory.condExpKernel μ (tailSigma X) ω).map (X 0)
 
 /-- `directingMeasure` evaluates measurably on measurable sets.
