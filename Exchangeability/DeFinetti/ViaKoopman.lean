@@ -4540,10 +4540,11 @@ private theorem optionB_L1_convergence_bounded
             rw [h_def]
         _ =ᵐ[μ] fun ω => (n : ℝ)⁻¹ • (∑ k ∈ Finset.range n, (koopman shift hσ)^[k] fL2 : Ω[α] → ℝ) ω := by
             filter_upwards [Lp.coeFn_smul (n : ℝ)⁻¹ (∑ k ∈ Finset.range n, (koopman shift hσ)^[k] fL2)] with ω hω
-            exact hω
+            rw [hω, Pi.smul_apply]
         _ =ᵐ[μ] fun ω => (n : ℝ)⁻¹ • (∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2 : Ω[α] → ℝ) ω) := by
             filter_upwards [coeFn_finset_sum (Finset.range n) fun k => (koopman shift hσ)^[k] fL2] with ω hω
-            rw [hω]
+            congr 1
+            exact hω
         _ =ᵐ[μ] fun ω => (n : ℝ)⁻¹ * ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω := by
             filter_upwards with ω
             rw [smul_eq_mul]
