@@ -839,11 +839,13 @@ lemma condexp_pullback_factor
   · intro s hs _
     exact h_sets s hs
   -- 3) AEStronglyMeasurable for (μ[H | m] ∘ g) with respect to comap g m
-  · -- μ[H|m] is ae-strongly measurable w.r.t. μ = map g μ', so composing with g gives ae-strong measurability w.r.t. μ'
-    have : AEStronglyMeasurable (μ[H | m]) (Measure.map g μ') := by
-      rw [hpush]
-      exact stronglyMeasurable_condExp.aestronglyMeasurable
-    exact AEStronglyMeasurable.comp_measurable this hg
+  · -- μ[H|m] is ae-strongly measurable w.r.t. m, and g is measurable, so the composition is ae-strongly measurable
+    -- First, μ[H|m] is ae-strongly measurable w.r.t. the full measure μ
+    have hasm : AEStronglyMeasurable (μ[H | m]) μ := stronglyMeasurable_condExp.aestronglyMeasurable
+    -- Since μ = map g μ', we can transfer this to μ'
+    rw [hpush] at hasm
+    -- Now use that g is measurable from Ω' to Ω to compose
+    exact AEStronglyMeasurable.comp_measurable hasm hg
 
 /-
 **Invariance of conditional expectation under iterates**.
