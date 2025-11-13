@@ -2030,23 +2030,69 @@ lemma condExp_bounded_comp_eq_of_triple_law
   have hφₙ_eq : ∀ n, μ[φₙ n ∘ Y | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance]
       =ᵐ[μ] μ[φₙ n ∘ Y | MeasurableSpace.comap W inferInstance] := by
     intro n
-    -- φₙ n is a simple function (strongly measurable with finite range)
-    -- We prove this using the fact that simple functions are built from indicators via linearity
+    -- Decompose simple function as sum of scaled indicators and use linearity
+    set 𝔾 := MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance
+    set 𝔽 := MeasurableSpace.comap W inferInstance
 
-    -- The φₙ n are simple functions from approxBounded
-    -- They satisfy the property by finite linearity + indicator base case
+    -- Decompose: (φₙ n) ∘ Y = ∑_{c ∈ range} c • indicator{ω | Y ω ∈ (φₙ n)⁻¹'{c}}
+    have h_decomp : (φₙ n) ∘ Y = fun ω => ∑ c ∈ (φₙ n).range,
+        c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) := by
+      ext ω
+      simp only [Function.comp_apply, Finset.sum_mul, Set.indicator_apply,
+                 Set.mem_preimage, Set.mem_singleton_iff]
+      rw [Finset.sum_ite_eq']
+      by_cases h : (φₙ n) (Y ω) ∈ (φₙ n).range
+      · simp [h, mul_one]
+      · simp [h]
 
-    -- For simple functions, we can decompose as finite sums of indicators
-    -- and apply linearity of conditional expectation
+    -- Each preimage is measurable in α
+    have h_meas : ∀ c ∈ (φₙ n).range, MeasurableSet ((φₙ n) ⁻¹' {c}) := by
+      intro c _
+      exact (φₙ n).measurableSet_fiber c
 
-    -- The key observation: if f = ∑ᵢ cᵢ · 1_{Bᵢ}, then by linearity:
-    -- μ[f ∘ Y | σ(Z,W)] = ∑ᵢ cᵢ · μ[1_{Bᵢ} ∘ Y | σ(Z,W)]
-    --                    = ∑ᵢ cᵢ · μ[1_{Bᵢ} ∘ Y | σ(W)]     (by condExp_eq_of_triple_law)
-    --                    = μ[f ∘ Y | σ(W)]
-
-    -- This is a standard argument but requires careful setup of the finite sum machinery
-    -- For now, we document this step and defer the technical implementation
-    sorry  -- TODO: Implement via SimpleFunc structure + linearity
+    -- LHS: Apply condExp to the decomposition
+    calc μ[(φₙ n) ∘ Y | 𝔾]
+        =ᵐ[μ] μ[fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔾] := by
+          apply condExp_congr_ae
+          filter_upwards with ω
+          rw [h_decomp]
+      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔾] := by
+          apply condExp_finset_sum
+          intro c hc
+          apply Integrable.const_mul
+          apply integrable_const
+      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔾] := by
+          apply EventuallyEq.sum
+          intro c hc
+          have : (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω)) =
+                 c • (((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y) := by
+            ext ω; simp [Function.comp_apply, smul_eq_mul]
+          rw [this]
+          apply condExp_smul
+      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔽] := by
+          apply EventuallyEq.sum
+          intro c hc
+          apply EventuallyEq.smul
+          apply EventuallyEq.refl
+          -- Apply base case: condExp_eq_of_triple_law
+          exact condExp_eq_of_triple_law Y Z W W' hY hZ hW hW' h_triple (h_meas c hc)
+      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔽] := by
+          apply EventuallyEq.sum
+          intro c hc
+          have : c • (((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y) =
+                 (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω)) := by
+            ext ω; simp [Function.comp_apply, smul_eq_mul]
+          rw [← this]
+          exact (condExp_smul c _).symm
+      _ =ᵐ[μ] μ[fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔽] := by
+          refine (condExp_finset_sum ?_).symm
+          intro c hc
+          apply Integrable.const_mul
+          apply integrable_const
+      _ =ᵐ[μ] μ[(φₙ n) ∘ Y | 𝔽] := by
+          apply condExp_congr_ae
+          filter_upwards with ω
+          rw [h_decomp]
 
   -- Step 3: Pass to the limit using dominated convergence
   -- Both sides of hφₙ_eq converge to the corresponding conditional expectations of φ ∘ Y
