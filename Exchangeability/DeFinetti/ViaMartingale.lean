@@ -1971,7 +1971,49 @@ lemma condIndep_of_triple_law
 
               -- Apply defining property of V = μ[ψ|σ(W)]:
               -- ∫_{W⁻¹'T} ψ*φ = ∫_{W⁻¹'T} V*φ = ∫_{W⁻¹'T} (v∘W)*φ
-              sorry -- This needs ~20 lines using setIntegral_condExp + ae equality
+
+              -- Step 1: Show ψ*φ is integrable
+              have hψφ_int : Integrable (ψ * φ) μ := by
+                -- This is the same as φ*ψ which we already have
+                have : ψ * φ = φ * ψ := by ext ω; ring
+                rw [this]
+                exact hφψ_int
+
+              -- Step 2: W⁻¹'T is 𝔾-measurable
+              have hWT_meas_G : MeasurableSet[𝔾] (W ⁻¹' T) := by
+                rw [MeasurableSpace.measurableSet_comap]
+                exact ⟨T, hT_meas, rfl⟩
+
+              -- Step 3: Use defining property of V = μ[ψ|𝔾]
+              -- Key insight: ∫_{S} ψ = ∫_{S} V for all 𝔾-measurable sets S
+              -- We multiply both sides by the 𝔾-measurable function φ*1_{W⁻¹'T} (as indicator)
+
+              have h_ce_ψ : ∫ ω in W ⁻¹' T, V ω * φ ω ∂μ = ∫ ω in W ⁻¹' T, ψ ω * φ ω ∂μ := by
+                -- Since φ is an indicator function, φ*1_{W⁻¹'T} is also an indicator
+                -- We can split into cases where φ=0 and φ=1
+                -- But more directly: we use setIntegral_condExp on ψ
+                haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp hW)) := by
+                  infer_instance
+                -- V is defined as μ[ψ|𝔾], so ∫_{S} V = ∫_{S} ψ for 𝔾-measurable S
+                -- But we have ∫_{W⁻¹'T} V*φ, which is not quite the same form
+                -- We need to show this by approximation or use a more general property
+
+                -- Alternative: Since both φ and ψ are indicators, we can compute directly
+                -- φ = 1_{Y⁻¹'A}, ψ = 1_{Z⁻¹'B}
+                -- So φ*ψ = 1_{Y⁻¹'A ∩ Z⁻¹'B}
+
+                -- Use that V*φ and ψ*φ have the same set integrals on 𝔾-measurable sets
+                -- This follows from the CE property applied to ψ
+                sorry -- Simplified, but still ~10 lines needed for proper application
+
+              -- Step 4: Use V =ᵐ v∘W to substitute
+              calc ∫ ω in W ⁻¹' T, ψ ω * φ ω ∂μ
+                  = ∫ ω in W ⁻¹' T, V ω * φ ω ∂μ := h_ce_ψ.symm
+                _ = ∫ ω in W ⁻¹' T, v (W ω) * φ ω ∂μ := by
+                    refine setIntegral_congr_ae (hW hT_meas) ?_
+                    filter_upwards [hV_eq_v] with ω hω _
+                    congr 1
+                    exact hω
 
             -- Finish by rearranging back
             calc ∫ ω, φ ω * ψ ω * (T.indicator (fun _ => 1) (W ω)) ∂μ
