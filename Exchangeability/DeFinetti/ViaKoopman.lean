@@ -3991,11 +3991,9 @@ private lemma optionB_Step3b_L2_to_L1
             (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
             - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω) μ := by
       -- The coercion of an Lp element is AEStronglyMeasurable
-      have h1 : AEStronglyMeasurable (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) μ :=
-        Lp.aestronglyMeasurable _
-      have h2 : AEStronglyMeasurable (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) μ :=
-        Lp.aestronglyMeasurable _
-      exact (h1.sub h2).aemeasurable
+      -- TODO: The elaborator interprets (fun f => f) as (fun f => ↑↑f) in this context
+      -- Need to prove measurability of the pointwise birkhoffAverage with coerced iterates
+      sorry
 
     -- L¹ ≤ L² via Hölder/Cauchy-Schwarz on a probability space
     have h_le :
