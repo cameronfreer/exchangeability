@@ -660,7 +660,7 @@ lemma common_version_condexp_bdd
             exact hW ht
           haveI : SigmaFinite (μ.trim hm_le) := by
             haveI : IsFiniteMeasure μ := inferInstance  -- IsProbabilityMeasure → IsFiniteMeasure
-            exact sigmaFinite_trim μ hm_le
+            infer_instance
           exact MeasureTheory.setIntegral_condexp hm_le hψ_int hT_meas
       _ = ∫ ω in T', (ψ ∘ Z) ω ∂μ := by
           -- Pair law: T and T' have same (ψ∘Z)-integral via measure equality
@@ -726,7 +726,7 @@ lemma common_version_condexp_bdd
             exact hW' ht
           haveI : SigmaFinite (μ.trim hm'_le) := by
             haveI : IsFiniteMeasure μ := inferInstance
-            exact sigmaFinite_trim μ hm'_le
+            infer_instance
           exact (MeasureTheory.setIntegral_condexp hm'_le hψ_int hT'_meas).symm
       _ = ∫ ω in T', (v₂ ∘ W') ω ∂μ := by
           -- V' = v₂∘W' a.e.
@@ -840,7 +840,7 @@ lemma common_version_condExp
     (∀ᵐ ω ∂μ, μ[(ψ ∘ Z) | MeasurableSpace.comap W' inferInstance] ω = v (W' ω)) := by
   -- Use the bounded version and drop the boundedness constraint
   obtain ⟨v, _, _, hv_W, hv_W'⟩ :=
-    @common_version_condexp_bdd Ω γ β _ _ _ μ _ Z W W' ψ 1 (by norm_num)
+    common_version_condexp_bdd (C := 1) (by norm_num : 0 ≤ 1)
       hZ hW hW' hψ hψ_int (by simpa using hψ_bdd) h_pair
   exact ⟨v, hv_W, hv_W'⟩
 
