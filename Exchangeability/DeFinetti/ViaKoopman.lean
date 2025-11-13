@@ -3887,7 +3887,8 @@ private lemma condexpL2_ae_eq_condExp (f : Lp ℝ 2 μ) :
   have hf : MemLp (f : Ω[α] → ℝ) 2 μ := Lp.memLp f
   -- The key lemma: condExpL2 ℝ ℝ hm hf.toLp =ᵐ[μ] μ[f | m]
   haveI : IsFiniteMeasure μ := inferInstance
-  exact hf.condExpL2_ae_eq_condExp shiftInvariantSigma_le
+  haveI : InnerProductSpace ℝ ℝ := by infer_instance
+  exact hf.condExpL2_ae_eq_condExp (𝕜 := ℝ) shiftInvariantSigma_le
 
 -- Helper lemmas for Step 3a: a.e. equality through measure-preserving maps
 --
