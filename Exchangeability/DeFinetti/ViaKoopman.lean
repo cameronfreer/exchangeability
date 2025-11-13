@@ -3883,12 +3883,11 @@ convert between `Lp ℝ 2 μ` and `MemLp _ 2 μ` representations. The `Lp.memℒ
 doesn't exist in the current mathlib API. -/
 private lemma condexpL2_ae_eq_condExp (f : Lp ℝ 2 μ) :
     (condexpL2 (μ := μ) f : Ω[α] → ℝ) =ᵐ[μ] μ[f | shiftInvariantSigma] := by
-  -- Use mathlib's MemLp.condExpL2_ae_eq_condExp which connects condExpL2 to condExp
-  have hf : MemLp (f : Ω[α] → ℝ) 2 μ := Lp.memLp f
-  -- The key lemma: condExpL2 ℝ ℝ hm hf.toLp =ᵐ[μ] μ[f | m]
-  haveI : IsFiniteMeasure μ := inferInstance
-  haveI : InnerProductSpace ℝ ℝ := by infer_instance
-  exact hf.condExpL2_ae_eq_condExp (𝕜 := ℝ) shiftInvariantSigma_le
+  -- TODO: This requires navigating the lpMeas subtype structure
+  -- condexpL2 is defined as subtypeL ∘ condExpL2, where condExpL2 returns an lpMeas element
+  -- Need to show that coercion commutes: (subtypeL x : Ω[α] → ℝ) = (x : Ω[α] → ℝ)
+  -- Then apply mathlib's MemLp.condExpL2_ae_eq_condExp
+  sorry
 
 -- Helper lemmas for Step 3a: a.e. equality through measure-preserving maps
 --
