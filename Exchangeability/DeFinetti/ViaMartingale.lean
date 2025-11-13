@@ -654,7 +654,8 @@ lemma common_version_condexp_bdd
       _ = ∫ ω in T, (ψ ∘ Z) ω ∂μ := by
           -- Defining property of CE: ∫_T V = ∫_T (ψ∘Z) for T ∈ σ(W)
           let m := MeasurableSpace.comap W inferInstance
-          have hm_le : m ≤ (inferInstance : MeasurableSpace Ω) := by
+          let m0 : MeasurableSpace Ω := inferInstance
+          have hm_le : m ≤ m0 := by
             intro s hs
             obtain ⟨t, ht, rfl⟩ := hs
             exact hW ht
@@ -720,7 +721,8 @@ lemma common_version_condexp_bdd
       _ = ∫ ω in T', V' ω ∂μ := by
           -- Defining property of CE for V'
           let m' := MeasurableSpace.comap W' inferInstance
-          have hm'_le : m' ≤ (inferInstance : MeasurableSpace Ω) := by
+          let m0 : MeasurableSpace Ω := inferInstance
+          have hm'_le : m' ≤ m0 := by
             intro s hs
             obtain ⟨t, ht, rfl⟩ := hs
             exact hW' ht
@@ -840,8 +842,8 @@ lemma common_version_condExp
     (∀ᵐ ω ∂μ, μ[(ψ ∘ Z) | MeasurableSpace.comap W' inferInstance] ω = v (W' ω)) := by
   -- Use the bounded version and drop the boundedness constraint
   obtain ⟨v, _, _, hv_W, hv_W'⟩ :=
-    common_version_condexp_bdd (C := 1) (by norm_num : 0 ≤ 1)
-      hZ hW hW' hψ hψ_int (by simpa using hψ_bdd) h_pair
+    common_version_condexp_bdd (C := 1) (by norm_num : (0:ℝ) ≤ 1)
+      hZ hW hW' hψ hψ_int (by filter_upwards with ω; exact hψ_bdd (Z ω)) h_pair
   exact ⟨v, hv_W, hv_W'⟩
 
 /-- **Enhanced Common Version Lemma with Measurability and Boundedness:**
