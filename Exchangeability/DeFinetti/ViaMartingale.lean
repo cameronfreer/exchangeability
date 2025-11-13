@@ -1904,7 +1904,7 @@ lemma condIndep_of_triple_law
             refine ⟨v, hv_meas, ?_⟩
             -- V =ᵐ V' and V' = v ∘ W, so V =ᵐ v ∘ W
             have : V =ᵐ[μ] v ∘ W :=
-              hV_eq_V'.trans (EventuallyEq.of_eq hV'_eq.symm)
+              hV_eq_V'.trans (EventuallyEq.of_eq hV'_eq)
             exact this
 
           -- **Substep 2: Set integral equality**
@@ -1913,115 +1913,65 @@ lemma condIndep_of_triple_law
           have h_setIntegral_eq : ∀ (T : Set γ), MeasurableSet T →
               ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ = ∫ ω in W ⁻¹' T, φ ω * V ω ∂μ := by
             intro T hT_meas
-            -- Rewrite using v: ∫_S (φ*V) = ∫_S (φ*(v∘W))
-            have h_V_eq : ∫ ω in W ⁻¹' T, φ ω * V ω ∂μ =
-                         ∫ ω in W ⁻¹' T, φ ω * v (W ω) ∂μ := by
-              refine setIntegral_congr_ae (hW hT_meas) ?_
-              filter_upwards [hV_eq_v] with ω hω _
-              -- hω : V ω = (v ∘ W) ω = v (W ω)  (last equality is definitional)
-              -- Goal: φ ω * V ω = φ ω * v (W ω)
-              congr 1
-              exact hω
-            rw [h_V_eq]
 
-            -- Now prove: ∫_S (φ*ψ) = ∫_S (φ*(v∘W))
-            -- Rewrite as integrals: ∫ (φ*ψ)*(1_T∘W) = ∫ (φ*(v∘W))*(1_T∘W)
+            -- Strategy: Use pull-out property with conditional expectation
+            -- Key: W⁻¹'T is 𝔾-measurable, so we can factor the indicator through CE
 
-            have h_lhs : ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ =
-                        ∫ ω, φ ω * ψ ω * (T.indicator (fun _ => 1) (W ω)) ∂μ := by
-              rw [← integral_indicator (hW hT_meas)]
+            haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp hW)) := by
+              infer_instance
+
+            -- Split integrals based on φ's support (φ = 1_{Y⁻¹'A})
+            have h_lhs : ∫ ω in W ⁻¹' T, φ ω * V ω ∂μ = ∫ ω in (Y ⁻¹' A) ∩ (W ⁻¹' T), V ω ∂μ := by
+              rw [← setIntegral_indicator (hY hA)]
               congr 1; ext ω
-              simp [Set.indicator, Set.mem_preimage]
+              simp [Set.indicator, φ, Set.mem_inter_iff, Set.mem_preimage]
               split_ifs <;> ring
 
-            have h_rhs : ∫ ω in W ⁻¹' T, φ ω * v (W ω) ∂μ =
-                        ∫ ω, φ ω * v (W ω) * (T.indicator (fun _ => 1) (W ω)) ∂μ := by
-              rw [← integral_indicator (hW hT_meas)]
+            have h_rhs : ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ = ∫ ω in (Y ⁻¹' A) ∩ (W ⁻¹' T), ψ ω ∂μ := by
+              rw [← setIntegral_indicator (hY hA)]
               congr 1; ext ω
-              simp [Set.indicator, Set.mem_preimage]
+              simp [Set.indicator, φ, ψ, Set.mem_inter_iff, Set.mem_preimage]
               split_ifs <;> ring
 
             rw [h_lhs, h_rhs]
 
-            -- **Key step: Connect ψ and v via conditional expectation**
-            --
-            -- V = μ[ψ|σ(W)] means: ∫_S ψ = ∫_S V for all S ∈ σ(W)
-            -- We've shown V =ᵐ v ∘ W, so v is the "Borel version" of the conditional expectation
+            -- Rewrite as integrals over W⁻¹'T with indicator 1_{Y⁻¹'A}
+            rw [setIntegral_indicator (Set.inter_subset_right : (Y ⁻¹' A) ∩ (W ⁻¹' T) ⊆ W ⁻¹' T) (hW hT_meas)]
+            rw [setIntegral_indicator (Set.inter_subset_right : (Y ⁻¹' A) ∩ (W ⁻¹' T) ⊆ W ⁻¹' T) (hW hT_meas)]
 
-            -- For S = W⁻¹'T and test function h = φ*1_T : γ → ℝ:
-            -- ∫ ψ*(h∘W) = ∫ V*(h∘W) (by defining property of CE)
-            -- ∫ V*(h∘W) = ∫ (v∘W)*(h∘W) (since V =ᵐ v∘W)
+            -- Apply pull-out property: μ[1_{W⁻¹'T} * ψ | 𝔾] = 1_{W⁻¹'T} * V
+            have h_pull : μ[(W ⁻¹' T).indicator (fun ω => 1) * ψ | 𝔾] =ᵐ[μ]
+                (W ⁻¹' T).indicator (fun ω => 1) * V := by
+              refine condExp_mul_of_aestronglyMeasurable_left (μ := μ) (m := 𝔾) ?_ ?_ hψ_int
+              · exact stronglyMeasurable_const.indicator (hW hT_meas) |>.aestronglyMeasurable
+              · exact (integrable_const 1).indicator (hW hT_meas)
 
-            have h_ce_property : ∫ ω, ψ ω * (φ ω * (T.indicator (fun _ => 1) (W ω))) ∂μ =
-                                ∫ ω, (v (W ω)) * (φ ω * (T.indicator (fun _ => 1) (W ω))) ∂μ := by
-              -- Rearrange: ψ*(φ*(1_T∘W)) = ψ*(φ*1_{W⁻¹'T})
-              have h_rewrite : (fun ω => ψ ω * (φ ω * (T.indicator (fun _ => 1) (W ω)))) =
-                              (fun ω => (ψ ω * φ ω) * (T.indicator (fun _ => 1) (W ω))) := by
-                ext ω; ring
-              rw [h_rewrite]
-
-              -- Similarly for v∘W side
-              have h_rewrite' : (fun ω => v (W ω) * (φ ω * (T.indicator (fun _ => 1) (W ω)))) =
-                               (fun ω => (v (W ω) * φ ω) * (T.indicator (fun _ => 1) (W ω))) := by
-                ext ω; ring
-              rw [h_rewrite']
-
-              -- Now use that this is a set integral over W⁻¹'T
-              rw [← setIntegral_indicator (hW hT_meas), ← setIntegral_indicator (hW hT_meas)]
-
-              -- Apply defining property of V = μ[ψ|σ(W)]:
-              -- ∫_{W⁻¹'T} ψ*φ = ∫_{W⁻¹'T} V*φ = ∫_{W⁻¹'T} (v∘W)*φ
-
-              -- Step 1: Show ψ*φ is integrable
-              have hψφ_int : Integrable (ψ * φ) μ := by
-                -- This is the same as φ*ψ which we already have
-                have : ψ * φ = φ * ψ := by ext ω; ring
-                rw [this]
-                exact hφψ_int
-
-              -- Step 2: W⁻¹'T is 𝔾-measurable
-              have hWT_meas_G : MeasurableSet[𝔾] (W ⁻¹' T) := by
-                rw [MeasurableSpace.measurableSet_comap]
-                exact ⟨T, hT_meas, rfl⟩
-
-              -- Step 3: Use defining property of V = μ[ψ|𝔾]
-              -- Key insight: ∫_{S} ψ = ∫_{S} V for all 𝔾-measurable sets S
-              -- We multiply both sides by the 𝔾-measurable function φ*1_{W⁻¹'T} (as indicator)
-
-              have h_ce_ψ : ∫ ω in W ⁻¹' T, V ω * φ ω ∂μ = ∫ ω in W ⁻¹' T, ψ ω * φ ω ∂μ := by
-                -- Since φ is an indicator function, φ*1_{W⁻¹'T} is also an indicator
-                -- We can split into cases where φ=0 and φ=1
-                -- But more directly: we use setIntegral_condExp on ψ
-                haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp hW)) := by
-                  infer_instance
-                -- V is defined as μ[ψ|𝔾], so ∫_{S} V = ∫_{S} ψ for 𝔾-measurable S
-                -- But we have ∫_{W⁻¹'T} V*φ, which is not quite the same form
-                -- We need to show this by approximation or use a more general property
-
-                -- Alternative: Since both φ and ψ are indicators, we can compute directly
-                -- φ = 1_{Y⁻¹'A}, ψ = 1_{Z⁻¹'B}
-                -- So φ*ψ = 1_{Y⁻¹'A ∩ Z⁻¹'B}
-
-                -- Use that V*φ and ψ*φ have the same set integrals on 𝔾-measurable sets
-                -- This follows from the CE property applied to ψ
-                sorry -- Simplified, but still ~10 lines needed for proper application
-
-              -- Step 4: Use V =ᵐ v∘W to substitute
-              calc ∫ ω in W ⁻¹' T, ψ ω * φ ω ∂μ
-                  = ∫ ω in W ⁻¹' T, V ω * φ ω ∂μ := h_ce_ψ.symm
-                _ = ∫ ω in W ⁻¹' T, v (W ω) * φ ω ∂μ := by
-                    refine setIntegral_congr_ae (hW hT_meas) ?_
-                    filter_upwards [hV_eq_v] with ω hω _
-                    congr 1
-                    exact hω
-
-            -- Finish by rearranging back
-            calc ∫ ω, φ ω * ψ ω * (T.indicator (fun _ => 1) (W ω)) ∂μ
-                = ∫ ω, ψ ω * (φ ω * (T.indicator (fun _ => 1) (W ω))) ∂μ := by
-                    congr 1; ext ω; ring
-              _ = ∫ ω, v (W ω) * (φ ω * (T.indicator (fun _ => 1) (W ω))) ∂μ := h_ce_property
-              _ = ∫ ω, φ ω * v (W ω) * (T.indicator (fun _ => 1) (W ω)) ∂μ := by
-                    congr 1; ext ω; ring
+            calc ∫ ω in W ⁻¹' T, (Y ⁻¹' A).indicator (fun _ => 1) ω * V ω ∂μ
+                = ∫ ω in W ⁻¹' T, (Y ⁻¹' A).indicator (fun _ => 1) ω *
+                      ((W ⁻¹' T).indicator (fun _ => 1) * μ[ψ | 𝔾]) ω ∂μ := by
+                    congr 1; ext ω
+                    simp [Set.indicator, Set.mem_inter_iff]
+                    split_ifs <;> ring
+              _ = ∫ ω, (Y ⁻¹' A).indicator (fun _ => 1) ω *
+                      μ[(W ⁻¹' T).indicator (fun _ => 1) * ψ | 𝔾] ω ∂μ := by
+                    rw [setIntegral_congr_ae (hW hT_meas) (by
+                      filter_upwards [h_pull] with ω hω _
+                      congr 1
+                      exact hω)]
+                    rw [← setIntegral_indicator (hW hT_meas)]
+                    congr 1; ext ω
+                    simp [Set.indicator]
+              _ = ∫ ω, (Y ⁻¹' A).indicator (fun _ => 1) ω *
+                      ((W ⁻¹' T).indicator (fun _ => 1) * ψ) ω ∂μ := by
+                    have : Integrable ((W ⁻¹' T).indicator (fun _ => 1) * ψ) μ :=
+                      (integrable_const 1).indicator (hW hT_meas) |>.bdd_mul' hψ_int (by
+                        simp [Set.indicator]; norm_num)
+                    exact (integral_condExp (measurable_iff_comap_le.mp hW)).symm
+              _ = ∫ ω in W ⁻¹' T, (Y ⁻¹' A).indicator (fun _ => 1) ω * ψ ω ∂μ := by
+                    rw [setIntegral_indicator (hW hT_meas)]
+                    congr 1; ext ω
+                    simp [Set.indicator, Set.mem_inter_iff]
+                    split_ifs <;> ring
 
           -- **Substep 3: Apply uniqueness**
           -- Use ae_eq_condExp_of_forall_setIntegral_eq
