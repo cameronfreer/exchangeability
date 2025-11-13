@@ -19,4 +19,5 @@ lemma ae_comp_of_ae_eq_map
     {ζ : Ω → β} (hζ : Measurable ζ)
     {f g : β → δ} (h : f =ᵐ[Measure.map ζ μ] g) :
     (fun ω => f (ζ ω)) =ᵐ[μ] (fun ω => g (ζ ω)) := by
-  sorry -- Will fill in after checking structure
+  -- Apply ae_eq_comp from mathlib: if f =ᵐ[map ζ μ] g, then f ∘ ζ =ᵐ[μ] g ∘ ζ
+  exact MeasureTheory.ae_eq_comp hζ.aemeasurable h
