@@ -1886,10 +1886,26 @@ lemma condIndep_of_triple_law
           -- V = μ[ψ|𝔾] is 𝔾-measurable, so V = v ∘ W a.e. for some Borel v : γ → ℝ
           have ⟨v, hv_meas, hV_eq_v⟩ :
               ∃ v : γ → ℝ, Measurable v ∧ V =ᵐ[μ] v ∘ W := by
-            -- This follows from the Doob-Dynkin factorization for 𝔾 = σ(W)
-            -- Use: stronglyMeasurable_condExp is 𝔾-measurable
-            -- Then apply measurable_iff_exists_ae_eq for comap σ-algebras
-            admit
+            -- V is AEStronglyMeasurable with respect to 𝔾
+            have hV_ae : AEStronglyMeasurable[𝔾] V μ :=
+              stronglyMeasurable_condExp.aestronglyMeasurable
+            -- This means ∃ V', StronglyMeasurable V' ∧ V =ᵐ V'
+            obtain ⟨V', hV'_sm, hV_eq_V'⟩ := hV_ae
+            -- V' is strongly measurable with respect to 𝔾 = comap W
+            -- By Doob-Dynkin: V' = v ∘ W for some measurable v
+            haveI : Nonempty ℝ := ⟨0⟩
+            haveI : TopologicalSpace.IsCompletelyMetrizableSpace ℝ :=
+              inferInstance
+            obtain ⟨v, hv_sm, hV'_eq⟩ :=
+              hV'_sm.exists_eq_measurable_comp (f := W)
+            -- v is strongly measurable, hence measurable
+            have hv_meas : Measurable v := hv_sm.measurable
+            -- V =ᵐ V' = v ∘ W
+            refine ⟨v, hv_meas, ?_⟩
+            -- V =ᵐ V' and V' = v ∘ W, so V =ᵐ v ∘ W
+            have : V =ᵐ[μ] v ∘ W :=
+              hV_eq_V'.trans (EventuallyEq.of_eq hV'_eq.symm)
+            exact this
 
           -- **Substep 2: Set integral equality**
           -- For any measurable T ⊆ γ and S = W⁻¹'T:
@@ -1900,9 +1916,12 @@ lemma condIndep_of_triple_law
             -- Rewrite using v: ∫_S (φ*V) = ∫_S (φ*(v∘W))
             have h_V_eq : ∫ ω in W ⁻¹' T, φ ω * V ω ∂μ =
                          ∫ ω in W ⁻¹' T, φ ω * v (W ω) ∂μ := by
-              apply setIntegral_congr_ae (hW hT_meas)
+              refine setIntegral_congr_ae (hW hT_meas) ?_
               filter_upwards [hV_eq_v] with ω hω _
-              rw [hω]
+              -- hω : V ω = (v ∘ W) ω = v (W ω)  (last equality is definitional)
+              -- Goal: φ ω * V ω = φ ω * v (W ω)
+              congr 1
+              exact hω
             rw [h_V_eq]
 
             -- Now prove: ∫_S (φ*ψ) = ∫_S (φ*(v∘W))
@@ -1951,10 +1970,10 @@ lemma condIndep_of_triple_law
             -- S is 𝔾-measurable, so S ∈ σ(W), hence S = W⁻¹'T for some T
             have ⟨T, hT_meas, hS_eq⟩ : ∃ T, MeasurableSet T ∧ S = W ⁻¹' T := by
               -- This follows from 𝔾 = comap W, so 𝔾-measurable sets have this form
-              exact ⟨W '' S, hW.isImage_measurable hS, (hW.preimage_image_eq_of_injOn S).symm⟩
-              -- Note: The above might not be exactly right; may need different lemma
-              -- The key is that comap σ-algebra sets have form f⁻¹'T
-              admit
+              -- Use: MeasurableSet[m.comap f] s ↔ ∃ s', MeasurableSet[m] s' ∧ f ⁻¹' s' = s
+              rw [MeasurableSpace.measurableSet_comap] at hS
+              obtain ⟨T, hT_meas, hS_eq⟩ := hS
+              exact ⟨T, hT_meas, hS_eq.symm⟩
             rw [hS_eq]
             -- Apply the set integral equality
             exact h_setIntegral_eq T hT_meas
