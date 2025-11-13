@@ -1088,8 +1088,11 @@ lemma integral_mul_condexp_of_measurable
                 ext ω; ring
               rw [this]
               refine Integrable.const_mul ?_ c
-              refine Integrable.mul integrable_condExp ?_
-              exact integrable_const 1
+              refine Integrable.bdd_mul' integrable_condExp ?_ ?_
+              · exact (measurable_const.indicator (h_preimage_meas c _)).aestronglyMeasurable
+              · filter_upwards with ω
+                simp [Set.indicator]
+                split_ifs <;> norm_num
         _ = ∑ c ∈ s.range, ∫ ω, c * (μ[f | m] ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
               congr 1; ext c
               congr 1; ext ω
@@ -1121,8 +1124,11 @@ lemma integral_mul_condexp_of_measurable
                 ext ω; ring
               rw [this]
               refine Integrable.const_mul ?_ c
-              refine Integrable.mul hf_int ?_
-              exact integrable_const 1
+              refine Integrable.bdd_mul' hf_int ?_ ?_
+              · exact (measurable_const.indicator (h_preimage_meas c _)).aestronglyMeasurable
+              · filter_upwards with ω
+                simp [Set.indicator]
+                split_ifs <;> norm_num
         _ = ∑ c ∈ s.range, ∫ ω, c * (f ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
               congr 1; ext c
               congr 1; ext ω
@@ -1374,7 +1380,7 @@ lemma integral_mul_condexp_adjoint
       -- On a probability measure, both g and μ[ξ|m] are integrable (L¹)
       -- Since L¹ ⊆ L² on finite measures, both are in L²
       -- By Hölder (p=q=2), their product is in L¹
-      have hg_L2 : MeasureTheory.MemLp g 2 μ := (MeasureTheory.memLp_one_iff_integrable.mpr hg_int).memLp_of_exponent_le
+      have hg_L2 : MeasureTheory.MemLp g 2 μ := (MeasureTheory.memLp_one_iff_integrable.mpr hg).memLp_of_exponent_le
         (by norm_num : (1 : ℝ≥0∞) ≤ 2)
       have hξm_L2 : MeasureTheory.MemLp (μ[ξ | m]) 2 μ := (MeasureTheory.memLp_one_iff_integrable.mpr integrable_condExp).memLp_of_exponent_le
         (by norm_num : (1 : ℝ≥0∞) ≤ 2)
