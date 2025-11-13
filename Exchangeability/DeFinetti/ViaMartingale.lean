@@ -986,11 +986,87 @@ lemma integral_mul_condexp_of_measurable
       Integrable s μ →
       ∫ ω, μ[f | m] ω * s ω ∂μ = ∫ ω, f ω * s ω ∂μ := by
     intro s hs_m hs_int
-    -- Simple functions have integral_eq: ∫ s = ∑_{c ∈ range} (μ (s⁻¹'{c})).toReal • c
-    -- Use this to express both sides as sums and apply Step A term-by-term
-    -- Since both integrals are linear in s, and Step A holds for indicators,
-    -- it suffices to use the simple function integral formula
-    sorry  -- TODO: Use MeasureTheory.SimpleFunc.integral_eq and linearity
+    -- Strategy: Decompose s as a sum over its range and apply linearity + Step A
+    -- For each c ∈ s.range, the term is c • indicator(s⁻¹'{c})
+
+    -- Key observation: s = ∑_{c ∈ s.range} c • indicator(s⁻¹'{c})
+    -- So: ∫ μ[f|m] * s = ∫ μ[f|m] * (∑_c c • indicator(s⁻¹'{c}))
+    --                   = ∑_c c • ∫ μ[f|m] * indicator(s⁻¹'{c})  (linearity)
+    --                   = ∑_c c • ∫ f * indicator(s⁻¹'{c})        (Step A)
+    --                   = ∫ f * (∑_c c • indicator(s⁻¹'{c}))      (linearity)
+    --                   = ∫ f * s
+
+    -- For each c in the range, s⁻¹'{c} is m-measurable
+    have h_preimage_meas : ∀ c ∈ s.range, MeasurableSet[m] (s ⁻¹' {c}) := by
+      intro c _
+      exact s.measurableSet_fiber c
+
+    -- LHS: Express ∫ μ[f|m] * s as a sum
+    have hlhs : ∫ ω, μ[f | m] ω * s ω ∂μ =
+                ∑ c ∈ s.range, c • ∫ ω, μ[f | m] ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω ∂μ := by
+      -- Rewrite s ω as a sum of indicators
+      have h_decomp : ∀ ω, s ω = ∑ c ∈ s.range, c * (s ⁻¹' {c}).indicator (fun _ => 1) ω := by
+        intro ω
+        simp only [Finset.sum_mul, Set.indicator_apply, Set.mem_preimage, Set.mem_singleton_iff]
+        rw [Finset.sum_ite_eq']
+        by_cases h : s ω ∈ s.range
+        · simp [h, mul_one]
+        · simp [h]
+      -- Substitute decomposition and use linearity
+      calc ∫ ω, μ[f | m] ω * s ω ∂μ
+          = ∫ ω, μ[f | m] ω * (∑ c ∈ s.range, c * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
+              congr 1; ext ω; rw [h_decomp ω]
+        _ = ∫ ω, ∑ c ∈ s.range, μ[f | m] ω * (c * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
+              congr 1; ext ω; rw [Finset.mul_sum]
+        _ = ∑ c ∈ s.range, ∫ ω, μ[f | m] ω * (c * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
+              apply integral_finset_sum
+              intro c _
+              apply Integrable.mul_const
+              exact integrable_condExp.mul (integrable_const 1)
+        _ = ∑ c ∈ s.range, ∫ ω, c * (μ[f | m] ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
+              congr 1; ext c
+              congr 1; ext ω
+              ring
+        _ = ∑ c ∈ s.range, c • ∫ ω, μ[f | m] ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω ∂μ := by
+              congr 1; ext c
+              rw [integral_mul_left]
+
+    -- RHS: Express ∫ f * s as a sum
+    have hrhs : ∫ ω, f ω * s ω ∂μ =
+                ∑ c ∈ s.range, c • ∫ ω, f ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω ∂μ := by
+      -- Same decomposition as LHS
+      have h_decomp : ∀ ω, s ω = ∑ c ∈ s.range, c * (s ⁻¹' {c}).indicator (fun _ => 1) ω := by
+        intro ω
+        simp only [Finset.sum_mul, Set.indicator_apply, Set.mem_preimage, Set.mem_singleton_iff]
+        rw [Finset.sum_ite_eq']
+        by_cases h : s ω ∈ s.range
+        · simp [h, mul_one]
+        · simp [h]
+      calc ∫ ω, f ω * s ω ∂μ
+          = ∫ ω, f ω * (∑ c ∈ s.range, c * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
+              congr 1; ext ω; rw [h_decomp ω]
+        _ = ∫ ω, ∑ c ∈ s.range, f ω * (c * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
+              congr 1; ext ω; rw [Finset.mul_sum]
+        _ = ∑ c ∈ s.range, ∫ ω, f ω * (c * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
+              apply integral_finset_sum
+              intro c _
+              apply Integrable.mul_const
+              exact hf_int.mul (integrable_const 1)
+        _ = ∑ c ∈ s.range, ∫ ω, c * (f ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
+              congr 1; ext c
+              congr 1; ext ω
+              ring
+        _ = ∑ c ∈ s.range, c • ∫ ω, f ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω ∂μ := by
+              congr 1; ext c
+              rw [integral_mul_left]
+
+    -- Apply Step A to show each term is equal
+    rw [hlhs, hrhs]
+    congr 1
+    ext c hc
+    congr 1
+    -- Apply Step A (integral_mul_condexp_indicator)
+    exact integral_mul_condexp_indicator μ hm hf_int (h_preimage_meas c hc)
 
   -- Step C: Bounded case via uniform simple approximation
   have h_bdd : ∀ (M : ℝ), (∀ ω, ‖g ω‖ ≤ M) →
