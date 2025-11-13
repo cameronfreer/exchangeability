@@ -4534,24 +4534,16 @@ private theorem optionB_L1_convergence_bounded
           (n : ℝ)⁻¹ • (∑ k ∈ Finset.range n, (koopman shift hσ)^[k] fL2) := by
         rw [birkhoffAverage.eq_1, birkhoffSum.eq_1]
       -- Apply Lp coercion lemmas a.e.
-      -- First use coeFn_smul to get scalar outside
-      have hsmul : ((n : ℝ)⁻¹ • (∑ k ∈ Finset.range n, (koopman shift hσ)^[k] fL2) : Ω[α] → ℝ)
-          =ᵐ[μ] (n : ℝ)⁻¹ • (∑ k ∈ Finset.range n, (koopman shift hσ)^[k] fL2 : Ω[α] → ℝ) :=
-        Lp.coeFn_smul (n : ℝ)⁻¹ (∑ k ∈ Finset.range n, (koopman shift hσ)^[k] fL2)
-      -- Then use coeFn_finset_sum to expand the sum
-      have hsum_coe : (∑ k ∈ Finset.range n, (koopman shift hσ)^[k] fL2 : Ω[α] → ℝ)
-          =ᵐ[μ] fun ω => ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2 : Ω[α] → ℝ) ω :=
-        coeFn_finset_sum (Finset.range n) fun k => (koopman shift hσ)^[k] fL2
       calc (fun ω => birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 ω)
-          =ᵐ[μ] fun ω => ((n : ℝ)⁻¹ • (∑ k ∈ Finset.range n, (koopman shift hσ)^[k] fL2) : Ω[α] → ℝ) ω := by
+          =ᵐ[μ] fun ω => ((n : ℝ)⁻¹ • (∑ k ∈ Finset.range n, (koopman shift hσ)^[k] fL2)) ω := by
             filter_upwards with ω
             rw [h_def]
-        _ =ᵐ[μ] fun ω => ((n : ℝ)⁻¹ • (∑ k ∈ Finset.range n, (koopman shift hσ)^[k] fL2 : Ω[α] → ℝ)) ω := by
-            filter_upwards [hsmul] with ω hω
+        _ =ᵐ[μ] fun ω => (n : ℝ)⁻¹ • (∑ k ∈ Finset.range n, (koopman shift hσ)^[k] fL2 : Ω[α] → ℝ) ω := by
+            filter_upwards [Lp.coeFn_smul (n : ℝ)⁻¹ (∑ k ∈ Finset.range n, (koopman shift hσ)^[k] fL2)] with ω hω
             exact hω
         _ =ᵐ[μ] fun ω => (n : ℝ)⁻¹ • (∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2 : Ω[α] → ℝ) ω) := by
-            filter_upwards [hsum_coe] with ω hω
-            simp only [Pi.smul_apply, hω]
+            filter_upwards [coeFn_finset_sum (Finset.range n) fun k => (koopman shift hσ)^[k] fL2] with ω hω
+            rw [hω]
         _ =ᵐ[μ] fun ω => (n : ℝ)⁻¹ * ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω := by
             filter_upwards with ω
             rw [smul_eq_mul]
