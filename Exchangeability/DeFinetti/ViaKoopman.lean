@@ -4015,7 +4015,7 @@ private lemma optionB_Step3b_L2_to_L1
       -- Convert to real via toReal and use integral formula for L¹
       calc ∫ ω, |f ω| ∂μ
           = (eLpNorm f 1 μ).toReal := by
-            rw [eLpNorm_one_eq_lintegral_nnnorm]
+            rw [eLpNorm_one_eq_lintegral_enorm]
             rw [integral_eq_lintegral_of_nonneg_ae]
             · congr
               ext ω
@@ -4024,7 +4024,7 @@ private lemma optionB_Step3b_L2_to_L1
               exact abs_nonneg _
             · exact h_meas.norm.aemeasurable
         _ ≤ (eLpNorm f 2 μ).toReal := by
-            have h_memLp : Memℒp (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 - condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) 2 μ := Lp.memℒp _
+            have h_memLp : MemLp (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 - condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) 2 μ := Lp.memLp _
             exact ENNReal.toReal_mono h_memLp.eLpNorm_ne_top h_mono
         _ = (eLpNorm f 2 μ).toReal := rfl
 
