@@ -1140,12 +1140,10 @@ lemma integral_mul_condexp_of_measurable
 
     -- Apply Step A to show each term is equal
     rw [hlhs, hrhs]
-    congr 1
-    ext c
-    congr 1
-    intro hc
+    refine Finset.sum_congr rfl fun c hc => ?_
     -- Apply Step A (integral_mul_condexp_indicator)
-    exact integral_mul_condexp_indicator μ hm hf_int (h_preimage_meas c hc)
+    simp only [smul_eq_mul]
+    exact @integral_mul_condexp_indicator Ω m0 μ m hm _ f hf_int (s ⁻¹' {c}) (hm _ (h_preimage_meas c hc))
 
   -- Step C: Bounded case via uniform simple approximation
   have h_bdd : ∀ (M : ℝ), (∀ ω, ‖g ω‖ ≤ M) →
