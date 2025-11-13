@@ -580,7 +580,7 @@ lemma common_version_condexp_bdd
       exact hW ht
     exact stronglyMeasurable_condExp.aestronglyMeasurable.mono h_le
 
-  obtain ⟨v₁, hv₁_meas, hV_eq⟩ := exists_borel_factor_of_comap_measurable W V hV_meas hV_ae
+  obtain ⟨v₁, hv₁_meas, hV_eq⟩ := exists_borel_factor_of_comap_measurable W V hV_meas
 
   -- Similarly for V'
   have hV'_meas : Measurable[MeasurableSpace.comap W' inferInstance] V' := by
@@ -595,7 +595,7 @@ lemma common_version_condexp_bdd
       exact hW' ht
     exact stronglyMeasurable_condExp.aestronglyMeasurable.mono h_le
 
-  obtain ⟨v₂, hv₂_meas, hV'_eq⟩ := exists_borel_factor_of_comap_measurable W' V' hV'_meas hV'_ae
+  obtain ⟨v₂, hv₂_meas, hV'_eq⟩ := exists_borel_factor_of_comap_measurable W' V' hV'_meas
 
   -- Step 2: Show v₁ = v₂ a.e. on Law(W) using pair law equality
   -- Strategy: prove ∫_S v₁ = ∫_S v₂ for all measurable S, then apply uniqueness
@@ -4197,11 +4197,7 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
       filter_upwards [hkernel_eq_pullback] with ω h
       exact congrArg (fun ν => ν B) h
 
-    -- Step 7: Factor η through ζ using Doob-Dynkin
-    obtain ⟨φ, hφ, hηfac⟩ := exists_borel_factor_of_comap_measurable (η := ζ) (hη := hζ) (f := η) (hf := hη) (hsub := hsub)
-    -- hηfac : η = φ ∘ ζ
-
-    -- Step 8: Rewrite η ω as φ (ζ ω) to align both sides
+    -- Step 7: Rewrite η ω as φ (ζ ω) to align both sides (using hηfac from line 4117)
     have heval_B_aligned : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) B = condDistrib ξ η μ (η ω) B := by
       filter_upwards [heval_B] with ω h
       rw [hηfac]; exact h
