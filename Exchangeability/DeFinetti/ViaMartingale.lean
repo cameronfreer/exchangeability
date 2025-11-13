@@ -963,10 +963,9 @@ lemma test_fn_pair_law
       · exact ((hf.comp hY).mul (hg.comp hW)).aestronglyMeasurable
       · filter_upwards with ω
         simp [g_test]
-        calc ‖f (Y ω) * g (W ω)‖
-            = ‖f (Y ω)‖ * ‖g (W ω)‖ := norm_mul _ _
-          _ ≤ ‖f (Y ω)‖ * 1 := by gcongr; exact hg_bdd (W ω)
-          _ = ‖f (Y ω)‖ := mul_one _
+        calc |f (Y ω)| * |g (W ω)|
+            ≤ |f (Y ω)| * 1 := by gcongr; exact hg_bdd (W ω)
+          _ = |f (Y ω)| := mul_one _
     exact (integrable_map_measure hg_test_meas.aestronglyMeasurable hT.aemeasurable).mpr h_comp_int
 
   -- Apply integral transfer under law equality
@@ -1018,8 +1017,8 @@ lemma integral_mul_condexp_indicator
   have h_set : ∫ ω in s, μ[f | m] ω ∂μ = ∫ ω in s, f ω ∂μ :=
     setIntegral_condExp hm hf_int hs
   -- Convert using indicator functions: ∫_s g = ∫ g · 1_s
-  simp only [← integral_indicator hs_ambient] at h_set
-  exact h_set
+  rw [← integral_indicator hs_ambient, ← integral_indicator hs_ambient] at h_set
+  convert h_set using 2 <;> (ext ω; simp [Set.indicator])
 
 /-- **L² projection property of conditional expectation:**
 For m-measurable g, ∫ (condexp m μ f) · g = ∫ f · g.
@@ -1043,7 +1042,7 @@ lemma integral_mul_condexp_of_measurable
   -- This uniquely determines them, so they must have equal total integrals
 
   -- First establish measurability of the integrand
-  have hg_meas_ambient : Measurable g := Measurable.mono hg_meas hm
+  have hg_meas_ambient : Measurable g := Measurable.mono hg_meas hm (le_refl _)
   have hcondexp_meas : Measurable (μ[f | m]) := stronglyMeasurable_condExp.measurable
 
   -- **Proof strategy: indicators → simple → bounded → integrable (via truncation)**
