@@ -2194,12 +2194,12 @@ lemma condExp_bounded_comp_eq_of_triple_law
     have h_decomp : (φₙ n) ∘ Y = fun ω => ∑ c ∈ (φₙ n).range,
         c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) := by
       ext ω
-      simp only [Function.comp_apply, Finset.sum_mul, Set.indicator_apply,
+      simp only [Function.comp_apply, Set.indicator_apply,
                  Set.mem_preimage, Set.mem_singleton_iff]
-      rw [Finset.sum_ite_eq']
-      by_cases h : (φₙ n) (Y ω) ∈ (φₙ n).range
-      · simp [h, mul_one]
-      · simp [h]
+      -- RHS simplifies to: ∑ c, c * if (φₙ n) (Y ω) = c then 1 else 0
+      rw [Finset.sum_mul_boole]
+      -- The sum equals (φₙ n) (Y ω) if it's in range, which is always true
+      simp only [SimpleFunc.mem_range, if_true]
 
     -- Each preimage is measurable in α
     have h_meas : ∀ c ∈ (φₙ n).range, MeasurableSet ((φₙ n) ⁻¹' {c}) := by
@@ -2213,28 +2213,37 @@ lemma condExp_bounded_comp_eq_of_triple_law
           filter_upwards with ω
           rw [h_decomp]
       _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔾] := by
-          apply condExp_finset_sum
+          -- Rewrite as: μ[∑ c, (fun ω => ...) | 𝔾] = ∑ c, μ[(fun ω => ...) | 𝔾]
+          have : (fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω)) =
+                 ∑ c ∈ (φₙ n).range, fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) := by
+            ext ω; rfl
+          rw [this]
+          apply condExp_finset_sum _ 𝔾
           intro c hc
           apply Integrable.const_mul
           apply integrable_const
       _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔾] := by
-          apply EventuallyEq.sum
-          intro c hc
+          filter_upwards with ω
+          congr 1
+          ext c : 1
+          congr 1
           have : (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω)) =
                  c • (((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y) := by
             ext ω; simp [Function.comp_apply, smul_eq_mul]
           rw [this]
-          apply condExp_smul
+          exact condExp_smul c _
       _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔽] := by
-          apply EventuallyEq.sum
-          intro c hc
-          apply EventuallyEq.smul
-          apply EventuallyEq.refl
+          filter_upwards with ω
+          congr 1
+          ext c : 1
+          congr 1
           -- Apply base case: condExp_eq_of_triple_law
-          exact condExp_eq_of_triple_law Y Z W W' hY hZ hW hW' h_triple (h_meas c hc)
+          exact condExp_eq_of_triple_law Y Z W W' hY hZ hW hW' h_triple (h_meas c hc) ω
       _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔽] := by
-          apply EventuallyEq.sum
-          intro c hc
+          filter_upwards with ω
+          congr 1
+          ext c : 1
+          congr 1
           have : c • (((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y) =
                  (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω)) := by
             ext ω; simp [Function.comp_apply, smul_eq_mul]
