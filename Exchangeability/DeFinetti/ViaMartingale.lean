@@ -1943,18 +1943,43 @@ lemma condIndep_of_triple_law
 
             rw [h_lhs, h_rhs]
 
-            -- **Key step: Use test function method**
-            -- We need: ∫ φ*ψ*(1_T∘W) = ∫ φ*(v∘W)*(1_T∘W)
+            -- **Key step: Connect ψ and v via conditional expectation**
             --
-            -- The triple law h_test_fn gives us a way to manipulate these integrals.
-            -- But we need to connect ψ with v via the defining property of V = μ[ψ|𝔾].
-            --
-            -- This requires showing v is the "Borel version" in the sense that:
-            --   ∫ ψ*(h∘W) = ∫ v*(h∘W) for all bounded measurable h
-            --
-            -- Then by linearity and density arguments (simple functions → bounded):
-            --   ∫ φ*ψ*(1_T∘W) = ∫ φ*v*(1_T∘W)
-            admit
+            -- V = μ[ψ|σ(W)] means: ∫_S ψ = ∫_S V for all S ∈ σ(W)
+            -- We've shown V =ᵐ v ∘ W, so v is the "Borel version" of the conditional expectation
+
+            -- For S = W⁻¹'T and test function h = φ*1_T : γ → ℝ:
+            -- ∫ ψ*(h∘W) = ∫ V*(h∘W) (by defining property of CE)
+            -- ∫ V*(h∘W) = ∫ (v∘W)*(h∘W) (since V =ᵐ v∘W)
+
+            have h_ce_property : ∫ ω, ψ ω * (φ ω * (T.indicator (fun _ => 1) (W ω))) ∂μ =
+                                ∫ ω, (v (W ω)) * (φ ω * (T.indicator (fun _ => 1) (W ω))) ∂μ := by
+              -- Rearrange: ψ*(φ*(1_T∘W)) = ψ*(φ*1_{W⁻¹'T})
+              have h_rewrite : (fun ω => ψ ω * (φ ω * (T.indicator (fun _ => 1) (W ω)))) =
+                              (fun ω => (ψ ω * φ ω) * (T.indicator (fun _ => 1) (W ω))) := by
+                ext ω; ring
+              rw [h_rewrite]
+
+              -- Similarly for v∘W side
+              have h_rewrite' : (fun ω => v (W ω) * (φ ω * (T.indicator (fun _ => 1) (W ω)))) =
+                               (fun ω => (v (W ω) * φ ω) * (T.indicator (fun _ => 1) (W ω))) := by
+                ext ω; ring
+              rw [h_rewrite']
+
+              -- Now use that this is a set integral over W⁻¹'T
+              rw [← setIntegral_indicator (hW hT_meas), ← setIntegral_indicator (hW hT_meas)]
+
+              -- Apply defining property of V = μ[ψ|σ(W)]:
+              -- ∫_{W⁻¹'T} ψ*φ = ∫_{W⁻¹'T} V*φ = ∫_{W⁻¹'T} (v∘W)*φ
+              sorry -- This needs ~20 lines using setIntegral_condExp + ae equality
+
+            -- Finish by rearranging back
+            calc ∫ ω, φ ω * ψ ω * (T.indicator (fun _ => 1) (W ω)) ∂μ
+                = ∫ ω, ψ ω * (φ ω * (T.indicator (fun _ => 1) (W ω))) ∂μ := by
+                    congr 1; ext ω; ring
+              _ = ∫ ω, v (W ω) * (φ ω * (T.indicator (fun _ => 1) (W ω))) ∂μ := h_ce_property
+              _ = ∫ ω, φ ω * v (W ω) * (T.indicator (fun _ => 1) (W ω)) ∂μ := by
+                    congr 1; ext ω; ring
 
           -- **Substep 3: Apply uniqueness**
           -- Use ae_eq_condExp_of_forall_setIntegral_eq
