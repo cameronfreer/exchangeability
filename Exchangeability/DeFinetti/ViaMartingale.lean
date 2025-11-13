@@ -1143,7 +1143,7 @@ lemma integral_mul_condexp_of_measurable
     refine Finset.sum_congr rfl fun c hc => ?_
     -- Apply Step A (integral_mul_condexp_indicator)
     simp only [smul_eq_mul]
-    exact @integral_mul_condexp_indicator Ω m0 μ m hm _ f hf_int (s ⁻¹' {c}) (hm _ (h_preimage_meas c hc))
+    exact @integral_mul_condexp_indicator Ω m0 μ m hm _ f hf_int (s ⁻¹' {c}) (h_preimage_meas c hc)
 
   -- Step C: Bounded case via uniform simple approximation
   have h_bdd : ∀ (M : ℝ), (∀ ω, ‖g ω‖ ≤ M) →
