@@ -633,15 +633,33 @@ lemma common_version_condexp_bdd
             -- Define the product function: g(z, w) := ψ(z) * indicator S 1 w
             let g : β × γ → ℝ := fun (z, w) => ψ z * S.indicator (fun _ => 1) w
 
-            -- Key: ∫ g(Z,W) dμ = ∫ g d[law(Z,W)] = ∫ g d[law(Z,W')] = ∫ g(Z,W') dμ
-            -- We can prove this without topology by using Measure.integral_map_of_aestronglyMeasurable
-            -- or by working with the defining property of pushforward measures
-
-            sorry  -- TODO: Complete using integral_map or measure transport
-            -- Requires either:
-            -- 1. TopologicalSpace instance on β × γ
-            -- 2. Alternative formulation using lintegral + sign decomposition
-            -- 3. Direct proof using simple functions and measure properties
+            sorry  --[[REMAINING INFRASTRUCTURE GAP]]--
+            -- **Goal**: ∫ (ψ∘Z)·(1_S∘W) dμ = ∫ (ψ∘Z)·(1_S∘W') dμ
+            --
+            -- **What we have**:
+            --   • g : β × γ → ℝ defined as g(z,w) := ψ(z) * indicator_S(w)
+            --   • g is Measurable (proved above, can be proved via Measurable.mul)
+            --   • g is bounded: ‖g(z,w)‖ ≤ C
+            --   • h Pair : Measure.map (Z,W) μ = Measure.map (Z,W') μ (measure equality)
+            --
+            -- **What we need**:
+            --   Standard measure theory: if ν₁ = ν₂ and g is measurable + integrable, then
+            --   ∫ g dν₁ = ∫ g dν₂
+            --
+            -- **The obstacle**: Apply this via:
+            --   ∫ g∘(Z,W) dμ = ∫ g d[law(Z,W)] = ∫ g d[law(Z,W')] = ∫ g∘(Z,W') dμ
+            --
+            --   But integral_map (for the first and last steps) requires:
+            --     AEStronglyMeasurable g (Measure.map ...)
+            --
+            --   For ℝ-valued g on product β × γ, this typically needs:
+            --     [TopologicalSpace β] [TopologicalSpace γ]  [SecondCountableTopology β × γ]
+            --
+            -- **Status**: This is a standard result that should be provable, but requires
+            --   either (a) additional topology assumptions, or
+            --   (b) mathlib infrastructure for AEStronglyMeasurable on general products
+            --
+            -- **Impact**: Blocks line 636 only. All other sorries have been eliminated.
           -- Convert product form back to set integral form
           have : ∫ ω in T, (ψ ∘ Z) ω ∂μ = ∫ ω, (ψ ∘ Z) ω * (S.indicator (fun _ => 1) ∘ W) ω ∂μ := by
             rw [← integral_indicator (hW hS)]
