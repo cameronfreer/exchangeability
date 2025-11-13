@@ -1935,12 +1935,98 @@ lemma condExp_bounded_comp_eq_of_triple_law
   -- Pointwise convergence
   have hφₙ_tendsto : ∀ x, Tendsto (fun n => φₙ n x) atTop (𝓝 (φ x)) := by
     intro x
-    sorry  -- TODO: Find the correct lemma for pointwise convergence of approxBounded
+    apply StronglyMeasurable.tendsto_approxBounded_of_norm_le
+    calc ‖φ x‖ = |φ x| := Real.norm_eq_abs _
+       _ ≤ C := hC x
+       _ ≤ C + 1 := by linarith
 
-  sorry  -- TODO: Complete the dominated convergence argument
-         -- 1. Show conditional expectations converge pointwise
-         -- 2. Use dominated convergence on both sides
-         -- 3. Conclude equality in the limit
+  -- Step 2: For each simple function φₙ, the equality holds by linearity
+  -- Strategy: Use StronglyMeasurable.induction to extend from indicators
+  -- Base case: condExp_eq_of_triple_law (already proved)
+  -- Inductive step: linearity of conditional expectation (condexp_add, condexp_smul)
+  -- Limit step: dominated convergence (handled separately in Step 3)
+
+  have hφₙ_eq : ∀ n, μ[φₙ n ∘ Y | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance]
+      =ᵐ[μ] μ[φₙ n ∘ Y | MeasurableSpace.comap W inferInstance] := by
+    intro n
+    -- φₙ n is a simple function (strongly measurable with finite range)
+    -- We prove this using the fact that simple functions are built from indicators via linearity
+
+    -- The φₙ n are simple functions from approxBounded
+    -- They satisfy the property by finite linearity + indicator base case
+
+    -- For simple functions, we can decompose as finite sums of indicators
+    -- and apply linearity of conditional expectation
+
+    -- The key observation: if f = ∑ᵢ cᵢ · 1_{Bᵢ}, then by linearity:
+    -- μ[f ∘ Y | σ(Z,W)] = ∑ᵢ cᵢ · μ[1_{Bᵢ} ∘ Y | σ(Z,W)]
+    --                    = ∑ᵢ cᵢ · μ[1_{Bᵢ} ∘ Y | σ(W)]     (by condExp_eq_of_triple_law)
+    --                    = μ[f ∘ Y | σ(W)]
+
+    -- This is a standard argument but requires careful setup of the finite sum machinery
+    -- For now, we document this step and defer the technical implementation
+    sorry  -- TODO: Implement via SimpleFunc structure + linearity
+
+  -- Step 3: Pass to the limit using dominated convergence
+  -- Both sides of hφₙ_eq converge to the corresponding conditional expectations of φ ∘ Y
+  -- We use tendsto_condExp_unique: if sequences converge and conditional expectations
+  -- are equal at each step, then the limits have equal conditional expectations
+
+  -- Let σ(Z,W) and σ(W) denote the two σ-algebras
+  set 𝔾 := MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance
+  set 𝔽 := MeasurableSpace.comap W inferInstance
+
+  -- Integrability: φₙ n ∘ Y is integrable for each n
+  have hφₙY_int : ∀ n, Integrable (φₙ n ∘ Y) μ := by
+    intro n
+    -- φₙ n is bounded by C + 1, and composition with measurable Y preserves integrability
+    have hφₙ_meas : Measurable (φₙ n) := (φₙ n).measurable
+    have hcomp_meas : Measurable (φₙ n ∘ Y) := hφₙ_meas.comp hY
+    apply integrable_of_forall_fin_meas_le (by infer_instance) (C + 1)
+    · simp [ENNReal.coe_lt_top]
+    · exact hcomp_meas.aestronglyMeasurable
+    · intro s hs hμs
+      calc (∫⁻ ω in s, ‖φₙ n (Y ω)‖₊ ∂μ)
+          ≤ ∫⁻ ω in s, (C + 1 : ℝ≥0∞) ∂μ := by
+            apply lintegral_mono
+            intro ω
+            simp only [ENNReal.coe_le_coe]
+            exact hφₙ_bdd n (Y ω)
+        _ = (C + 1) * μ s := by
+            rw [lintegral_const, Measure.restrict_apply MeasurableSet.univ, Set.univ_inter]
+        _ < ∞ := ENNReal.mul_lt_top (by simp) hμs
+
+  -- Pointwise convergence: φₙ n ∘ Y → φ ∘ Y a.e.
+  have hφₙY_tendsto : ∀ᵐ ω ∂μ, Tendsto (fun n => φₙ n (Y ω)) atTop (𝓝 (φ (Y ω))) := by
+    apply ae_of_all
+    intro ω
+    exact hφₙ_tendsto (Y ω)
+
+  -- Dominating function: (C + 1) is integrable on the probability space
+  have h_bound_int : Integrable (fun ω => (C + 1 : ℝ)) μ := by
+    simp only [integrable_const_iff, or_true]
+
+  -- Norm bounds: ‖φₙ n (Y ω)‖ ≤ C + 1
+  have hφₙY_bound : ∀ n, ∀ᵐ ω ∂μ, ‖φₙ n (Y ω)‖ ≤ (C + 1 : ℝ) := by
+    intro n
+    apply ae_of_all
+    intro ω
+    exact hφₙ_bdd n (Y ω)
+
+  -- Apply tendsto_condExp_unique
+  apply tendsto_condExp_unique (fs := fun n => φₙ n ∘ Y) (gs := fun n => φₙ n ∘ Y)
+        (f := φ ∘ Y) (g := φ ∘ Y) (m := 𝔾)
+  · exact hφₙY_int
+  · exact hφₙY_int
+  · exact hφₙY_tendsto
+  · exact hφₙY_tendsto
+  · exact fun ω => (C + 1 : ℝ)
+  · exact h_bound_int
+  · exact fun ω => (C + 1 : ℝ)
+  · exact h_bound_int
+  · exact hφₙY_bound
+  · exact hφₙY_bound
+  · exact hφₙ_eq
 
 end ConditionalIndependence
 
