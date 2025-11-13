@@ -653,9 +653,7 @@ lemma common_version_condexp_bdd
           exact h_eq.symm
       _ = ∫ ω in T, (ψ ∘ Z) ω ∂μ := by
           -- Defining property of CE: ∫_T V = ∫_T (ψ∘Z) for T ∈ σ(W)
-          let m := MeasurableSpace.comap W inferInstance
-          let m0 : MeasurableSpace Ω := inferInstance
-          have hm_le : m ≤ m0 := by
+          have hm_le : MeasurableSpace.comap W inferInstance ≤ _ := by
             intro s hs
             obtain ⟨t, ht, rfl⟩ := hs
             exact hW ht
@@ -720,9 +718,7 @@ lemma common_version_condexp_bdd
           simp [Set.indicator]
       _ = ∫ ω in T', V' ω ∂μ := by
           -- Defining property of CE for V'
-          let m' := MeasurableSpace.comap W' inferInstance
-          let m0 : MeasurableSpace Ω := inferInstance
-          have hm'_le : m' ≤ m0 := by
+          have hm'_le : MeasurableSpace.comap W' inferInstance ≤ _ := by
             intro s hs
             obtain ⟨t, ht, rfl⟩ := hs
             exact hW' ht
@@ -1091,7 +1087,9 @@ lemma integral_mul_condexp_of_measurable
                      (fun ω => c * (μ[f | m] ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω)) := by
                 ext ω; ring
               rw [this]
-              exact Integrable.const_mul (integrable_condExp.mul (integrable_const 1)) c
+              refine Integrable.const_mul ?_ c
+              refine Integrable.mul integrable_condExp ?_
+              exact integrable_const 1
         _ = ∑ c ∈ s.range, ∫ ω, c * (μ[f | m] ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
               congr 1; ext c
               congr 1; ext ω
@@ -1122,7 +1120,9 @@ lemma integral_mul_condexp_of_measurable
                      (fun ω => c * (f ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω)) := by
                 ext ω; ring
               rw [this]
-              exact Integrable.const_mul (hf_int.mul (integrable_const 1)) c
+              refine Integrable.const_mul ?_ c
+              refine Integrable.mul hf_int ?_
+              exact integrable_const 1
         _ = ∑ c ∈ s.range, ∫ ω, c * (f ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
               congr 1; ext c
               congr 1; ext ω
