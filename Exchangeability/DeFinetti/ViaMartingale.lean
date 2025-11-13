@@ -1076,10 +1076,8 @@ lemma integral_mul_condexp_of_measurable
       have h_decomp : ∀ ω, s ω = ∑ c ∈ s.range, c * (s ⁻¹' {c}).indicator (fun _ => 1) ω := by
         intro ω
         simp only [Finset.sum_mul, Set.indicator_apply, Set.mem_preimage, Set.mem_singleton_iff]
-        rw [Finset.sum_ite_eq']
-        by_cases h : s ω ∈ s.range
-        · simp [h, mul_one]
-        · simp [h]
+        rw [Finset.sum_mul_boole]
+        simp [SimpleFunc.mem_range]
       -- Substitute decomposition and use linearity
       calc ∫ ω, μ[f | m] ω * s ω ∂μ
           = ∫ ω, μ[f | m] ω * (∑ c ∈ s.range, c * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
@@ -1089,8 +1087,11 @@ lemma integral_mul_condexp_of_measurable
         _ = ∑ c ∈ s.range, ∫ ω, μ[f | m] ω * (c * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
               apply integral_finset_sum
               intro c _
-              apply Integrable.mul_const
-              exact integrable_condExp.mul (integrable_const 1)
+              have : (fun ω => μ[f | m] ω * (c * (s ⁻¹' {c}).indicator (fun _ => 1) ω)) =
+                     (fun ω => c * (μ[f | m] ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω)) := by
+                ext ω; ring
+              rw [this]
+              exact Integrable.const_mul (integrable_condExp.mul (integrable_const 1)) c
         _ = ∑ c ∈ s.range, ∫ ω, c * (μ[f | m] ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
               congr 1; ext c
               congr 1; ext ω
@@ -1098,6 +1099,7 @@ lemma integral_mul_condexp_of_measurable
         _ = ∑ c ∈ s.range, c • ∫ ω, μ[f | m] ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω ∂μ := by
               congr 1; ext c
               rw [integral_const_mul]
+              rfl
 
     -- RHS: Express ∫ f * s as a sum
     have hrhs : ∫ ω, f ω * s ω ∂μ =
@@ -1106,10 +1108,8 @@ lemma integral_mul_condexp_of_measurable
       have h_decomp : ∀ ω, s ω = ∑ c ∈ s.range, c * (s ⁻¹' {c}).indicator (fun _ => 1) ω := by
         intro ω
         simp only [Finset.sum_mul, Set.indicator_apply, Set.mem_preimage, Set.mem_singleton_iff]
-        rw [Finset.sum_ite_eq']
-        by_cases h : s ω ∈ s.range
-        · simp [h, mul_one]
-        · simp [h]
+        rw [Finset.sum_mul_boole]
+        simp [SimpleFunc.mem_range]
       calc ∫ ω, f ω * s ω ∂μ
           = ∫ ω, f ω * (∑ c ∈ s.range, c * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
               congr 1; ext ω; rw [h_decomp ω]
@@ -1118,8 +1118,11 @@ lemma integral_mul_condexp_of_measurable
         _ = ∑ c ∈ s.range, ∫ ω, f ω * (c * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
               apply integral_finset_sum
               intro c _
-              apply Integrable.mul_const
-              exact hf_int.mul (integrable_const 1)
+              have : (fun ω => f ω * (c * (s ⁻¹' {c}).indicator (fun _ => 1) ω)) =
+                     (fun ω => c * (f ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω)) := by
+                ext ω; ring
+              rw [this]
+              exact Integrable.const_mul (hf_int.mul (integrable_const 1)) c
         _ = ∑ c ∈ s.range, ∫ ω, c * (f ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
               congr 1; ext c
               congr 1; ext ω
@@ -1127,6 +1130,7 @@ lemma integral_mul_condexp_of_measurable
         _ = ∑ c ∈ s.range, c • ∫ ω, f ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω ∂μ := by
               congr 1; ext c
               rw [integral_const_mul]
+              rfl
 
     -- Apply Step A to show each term is equal
     rw [hlhs, hrhs]
