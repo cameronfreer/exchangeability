@@ -1374,9 +1374,9 @@ lemma integral_mul_condexp_adjoint
       -- On a probability measure, both g and μ[ξ|m] are integrable (L¹)
       -- Since L¹ ⊆ L² on finite measures, both are in L²
       -- By Hölder (p=q=2), their product is in L¹
-      have hg_L2 : Memℒp g 2 μ := (memℒp_one_iff_integrable.mpr hg).memℒp_of_exponent_le
+      have hg_L2 : MeasureTheory.MemLp g 2 μ := (MeasureTheory.memLp_one_iff_integrable.mpr hg_int).memLp_of_exponent_le
         (by norm_num : (1 : ℝ≥0∞) ≤ 2)
-      have hξm_L2 : Memℒp (μ[ξ | m]) 2 μ := (memℒp_one_iff_integrable.mpr integrable_condExp).memℒp_of_exponent_le
+      have hξm_L2 : MeasureTheory.MemLp (μ[ξ | m]) 2 μ := (MeasureTheory.memLp_one_iff_integrable.mpr integrable_condExp).memLp_of_exponent_le
         (by norm_num : (1 : ℝ≥0∞) ≤ 2)
       exact hg_L2.integrable_mul hξm_L2
     exact condExp_mul_of_aestronglyMeasurable_right hξm hgξm_int hg
