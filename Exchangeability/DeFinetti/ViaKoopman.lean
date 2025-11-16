@@ -4595,9 +4595,7 @@ private theorem optionB_L1_convergence_bounded
 /-- Proof that the forward axiom is satisfied by the actual implementation. -/
 theorem optionB_L1_convergence_bounded_proves_axiom :
     @optionB_L1_convergence_bounded α _ μ _ _ = @optionB_L1_convergence_bounded_fwd α _ μ _ _ := by
-  -- TODO: This rfl fails due to type class unification issues with StandardBorelSpace
-  -- The implementation and axiom have different implicit parameters
-  sorry
+  rfl
 
 end OptionB_L1Convergence
 
