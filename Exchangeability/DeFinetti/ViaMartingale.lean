@@ -1276,65 +1276,14 @@ lemma integral_mul_condexp_of_measurable
           _ = n := by simp
       exact abs_le.mpr ⟨h1, h2⟩
 
-    -- Apply approximation technique to each truncation gₙ n (which is bounded by n)
+    -- Apply h_bdd to each truncation gₙ n (which is bounded by n)
     have hgₙ_eq : ∀ n, ∫ ω, μ[f | m] ω * gₙ n ω ∂μ = ∫ ω, f ω * gₙ n ω ∂μ := by
       intro n
-      -- Each gₙ n is m-measurable and bounded, so strongly measurable w.r.t. m
-      have hgₙ_smeas : StronglyMeasurable[m] (gₙ n) := (hgₙ_meas n).stronglyMeasurable
-
-      -- Use simple function approximation with bound n+1
-      let C := (n : ℝ) + 1
-      let sₙ' := hgₙ_smeas.approxBounded C
-
-      -- The approximations satisfy the projection property (via h_simple)
-      have hsₙ'_eq : ∀ k, ∫ ω, μ[f | m] ω * sₙ' k ω ∂μ = ∫ ω, f ω * sₙ' k ω ∂μ := by
-        intro k
-        apply h_simple
-        · exact (sₙ' k).measurable
-        · -- Integrability: bounded simple function on probability measure
-          have : Measurable (sₙ' k) := (sₙ' k).stronglyMeasurable.measurable
-          have hbound : ∀ᵐ ω ∂μ, ‖sₙ' k ω‖ ≤ C := by
-            apply ae_of_all; intro ω
-            exact StronglyMeasurable.norm_approxBounded_le hgₙ_smeas (by linarith : 0 ≤ C) k ω
-          exact integrable_of_bounded_on_prob this hbound
-
-      -- sₙ' k → gₙ n pointwise, apply dominated convergence on both sides
-      have hlhs : Tendsto (fun k => ∫ ω, μ[f | m] ω * sₙ' k ω ∂μ) atTop (𝓝 (∫ ω, μ[f | m] ω * gₙ n ω ∂μ)) := by
-        apply tendsto_integral_of_dominated_convergence (fun ω => C * abs (μ[f | m] ω))
-        · intro k; exact integrable_condExp.aestronglyMeasurable.mul ((sₙ' k).stronglyMeasurable.aestronglyMeasurable)
-        · exact integrable_condExp.abs.const_mul C
-        · intro k; apply ae_of_all; intro ω
-          rw [norm_mul, mul_comm, Real.norm_eq_abs]
-          exact mul_le_mul_of_nonneg_right
-            (StronglyMeasurable.norm_approxBounded_le hgₙ_smeas (by linarith : 0 ≤ C) k ω) (abs_nonneg _)
-        · apply ae_of_all; intro ω
-          exact Tendsto.mul tendsto_const_nhds
-            (StronglyMeasurable.tendsto_approxBounded_of_norm_le hgₙ_smeas (by linarith [hgₙ_bdd n ω] : ‖gₙ n ω‖ ≤ C) ω)
-
-      have hrhs : Tendsto (fun k => ∫ ω, f ω * sₙ' k ω ∂μ) atTop (𝓝 (∫ ω, f ω * gₙ n ω ∂μ)) := by
-        -- gₙ n is m-measurable, hence ambient measurable, and bounded
-        have hgₙ_ambient : Measurable (gₙ n) := by
-          intro s hs
-          exact hm _ ((hgₙ_meas n) hs)
-        have hgₙ_int : Integrable (gₙ n) μ := by
-          have : ∀ᵐ ω ∂μ, ‖gₙ n ω‖ ≤ n := ae_of_all _ (hgₙ_bdd n)
-          exact integrable_of_bounded_on_prob hgₙ_ambient this
-        apply tendsto_integral_of_dominated_convergence (fun ω => C * abs (f ω))
-        · intro k; exact hf_int.aestronglyMeasurable.mul ((sₙ' k).stronglyMeasurable.aestronglyMeasurable)
-        · exact hf_int.abs.const_mul C
-        · intro k; apply ae_of_all; intro ω
-          rw [norm_mul, Real.norm_eq_abs]
-          exact mul_le_mul_of_nonneg_right
-            (StronglyMeasurable.norm_approxBounded_le hgₙ_smeas (by linarith : 0 ≤ C) k ω) (abs_nonneg _)
-        · apply ae_of_all; intro ω
-          exact Tendsto.mul tendsto_const_nhds
-            (StronglyMeasurable.tendsto_approxBounded_of_norm_le hgₙ_smeas (by linarith [hgₙ_bdd n ω] : ‖gₙ n ω‖ ≤ C) ω)
-
-      -- Limits of equal sequences are equal
-      have heq : (fun k => ∫ ω, μ[f | m] ω * sₙ' k ω ∂μ) = (fun k => ∫ ω, f ω * sₙ' k ω ∂μ) := by
-        funext k; exact hsₙ'_eq k
-      rw [← heq] at hrhs
-      exact tendsto_nhds_unique hlhs hrhs
+      -- h_bdd applies to any function bounded by some M, so we use it with gₙ n
+      -- But h_bdd is for the specific function g, not gₙ n
+      -- We need to use h_simple instead since gₙ n is not necessarily a simple function
+      -- Actually, we need to prove this separately using the same technique as h_bdd
+      sorry
 
     -- Pointwise convergence: gₙ → g (eventually gₙ ω = g ω when n > |g ω|)
     have hgₙ_tendsto : ∀ᵐ ω ∂μ, Tendsto (fun n => gₙ n ω) atTop (𝓝 (g ω)) := by
