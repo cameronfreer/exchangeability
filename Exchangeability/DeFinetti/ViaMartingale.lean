@@ -660,7 +660,7 @@ lemma common_version_condexp_bdd
           haveI : SigmaFinite (μ.trim hm_le) := by
             haveI : IsFiniteMeasure μ := inferInstance  -- IsProbabilityMeasure → IsFiniteMeasure
             infer_instance
-          exact MeasureTheory.setIntegral_condexp hm_le hψ_int hT_meas
+          exact setIntegral_condExp hm_le hψ_int hT_meas
       _ = ∫ ω in T', (ψ ∘ Z) ω ∂μ := by
           -- Pair law: T and T' have same (ψ∘Z)-integral via measure equality
           -- From hPair: law(Z,W) = law(Z,W'), transfer integral via product measure
