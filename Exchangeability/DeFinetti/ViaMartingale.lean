@@ -1293,7 +1293,7 @@ lemma integral_mul_condexp_of_measurable
       -- For large enough n, gₙ ω = g ω
       rw [tendsto_atTop_nhds]
       intro U hU_mem
-      obtain ⟨ε, hε_pos, hε_U⟩ := Metric.mem_nhds_iff.mp hU_mem
+      obtain ⟨ε, hε_pos, hε_U⟩ := Metric.nhds_basis_ball.mem_iff.mp hU_mem
       use (⌈abs (g ω)⌉₊ + 1)
       intro n hn
       apply hε_U
@@ -1345,7 +1345,9 @@ lemma integral_mul_condexp_of_measurable
       refine tendsto_integral_of_dominated_convergence (fun ω => abs (μ[f | m] ω) * abs (g ω)) ?_ ?_ ?_ ?_
       · -- F_measurable: Each term is ae strongly measurable
         intro n
-        exact integrable_condExp.aestronglyMeasurable.mul (hgₙ_meas n).aestronglyMeasurable
+        -- gₙ n is m-measurable, hence m0-measurable (since m ≤ m0)
+        have : Measurable (gₙ n) := (hgₙ_meas n).mono hm le_rfl
+        exact integrable_condExp.aestronglyMeasurable.mul this.aestronglyMeasurable
       · -- bound_integrable: TODO - need to prove |μ[f|m]| * |g| is integrable
         -- Both are integrable, but product of two L¹ functions is not always L¹
         -- May need different bound or approach for unbounded case
