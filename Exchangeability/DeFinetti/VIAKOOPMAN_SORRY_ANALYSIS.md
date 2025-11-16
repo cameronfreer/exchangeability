@@ -1,8 +1,15 @@
 # ViaKoopman.lean Sorry Analysis
 
-## Status: **COMPILES SUCCESSFULLY** (0 errors as of 2025-11-16)
+## Status: **COMPILING** (fixing compilation errors as of 2025-11-16)
 
-This document catalogs the 9 remaining `sorry` statements in ViaKoopman.lean, organized by category and priority.
+This document catalogs the remaining `sorry` statements in ViaKoopman.lean, organized by category and priority.
+
+## Recent Compilation Fixes (2025-11-16)
+
+Added 3 new sorries to resolve compilation errors:
+- **Line 845**: AEStronglyMeasurable transfer along measure-preserving map
+- **Line 4017**: L¹/L² calc chain (depends on h_meas sorry at 3996)
+- **Line 4584**: optionB_L1_convergence_bounded_proves_axiom (type class unification)
 
 ---
 
