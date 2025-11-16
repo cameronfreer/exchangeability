@@ -3897,9 +3897,10 @@ doesn't exist in the current mathlib API. -/
 private lemma condexpL2_ae_eq_condExp (f : Lp ℝ 2 μ) :
     (condexpL2 (μ := μ) f : Ω[α] → ℝ) =ᵐ[μ] μ[f | shiftInvariantSigma] := by
   -- TODO: Requires navigating the lpMeas subtype coercion structure
-  -- The mathlib API for converting Lp → MemLp doesn't exist yet
-  -- Strategy: Show ↑↑(subtypeL (condExpL2 f)) = ↑(condExpL2 f) a.e. (subtypeL preserves coercion)
-  --           Then use that ↑(condExpL2 f) = condExp a.e. from mathlib
+  -- The mathlib API for converting Lp → MemLp doesn't exist (Lp.memℒp is Unknown constant)
+  -- Available: MemLp.condExpL2_ae_eq_condExp : condExpL2 hm hf.toLp =ᵐ[μ] μ[f | m]
+  -- But we have f : Lp, not hf : MemLp, so cannot directly use this lemma
+  -- Need to find coercion lemmas for lpMeas.subtypeL or construct MemLp proof from Lp element
   sorry
 
 -- Helper lemmas for Step 3a: a.e. equality through measure-preserving maps
@@ -4007,7 +4008,8 @@ private lemma optionB_Step3b_L2_to_L1
       -- Goal requires: birkhoffAverage with (fun f => ↑↑f), but h_ae uses (fun f => f)
       -- Mathematical fact: Both birkhoffAverage fL2 and condexpL2 fL2 are Lp elements,
       -- so their coercions to functions are AEStronglyMeasurable, hence AEMeasurable
-      -- Strategy: Show (fun f => f) = (fun f => ↑↑f) in this context, or use conversion
+      -- Attempted: Lp.aestronglyMeasurable.aemeasurable, but type unification fails
+      -- Issue: birkhoffAverage coercion structure doesn't match direct Lp coercion pattern
       sorry
 
     -- L¹ ≤ L² via Hölder/Cauchy-Schwarz on a probability space
@@ -4043,6 +4045,9 @@ private lemma optionB_Step3b_L2_to_L1
              - condexpL2 (μ := μ) fL2‖ := by
       -- The Lp norm is defined as (eLpNorm ↑f p μ).toReal where ↑f is the coercion to function
       -- TODO: This depends on correct typing of the coercion, blocked by h_meas sorry above
+      -- Attempted: Lp.norm_def + eLpNorm_congr_ae + rfl, but rfl fails
+      -- Issue: `birkhoffAverage ... (fun f => ↑↑f) ...` ≠ `↑↑(birkhoffAverage ... (fun f => f) ...)`
+      -- These are not definitionally equal, only a.e. equal via BirkhoffAvgCLM infrastructure
       sorry
 
     -- conclude the inequality at this `n > 0`
