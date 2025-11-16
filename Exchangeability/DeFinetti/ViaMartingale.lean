@@ -1188,19 +1188,16 @@ lemma integral_mul_condexp_of_measurable
       intro n
       -- sₙ is a simple function, hence strongly measurable
       have : AEStronglyMeasurable (sₙ n) μ := (sₙ n).stronglyMeasurable.aestronglyMeasurable
-      -- Bounded by C, so integrable on sigma-finite measure
-      apply integrable_of_forall_fin_meas_le (ENNReal.ofReal C)
-      · simp [ENNReal.ofReal_lt_top]
-      · exact this
-      · intro s hs hμs
-        calc (∫⁻ ω in s, ‖sₙ n ω‖₊ ∂μ)
-            ≤ ∫⁻ ω in s, ENNReal.ofReal C ∂μ := by
-              apply lintegral_mono
-              intro ω
-              simp only [ENNReal.ofReal_le_ofReal]
-              exact hsₙ_bdd n ω
-          _ = ENNReal.ofReal C * μ s := by rw [lintegral_const, Measure.restrict_apply MeasurableSet.univ, Set.univ_inter]
-          _ < ∞ := ENNReal.mul_lt_top ENNReal.ofReal_lt_top (by exact hμs)
+      -- TODO: CRITICAL TYPECLASS ISSUE
+      -- integrable_of_forall_fin_meas_le requires [SigmaFinite μ]
+      -- but we only have [SigmaFinite (μ.trim hm)] in this context.
+      -- Possible solutions:
+      -- 1. Use SimpleFunc.integrable_of_fin_meas_bounded for simple functions specifically
+      -- 2. Add [SigmaFinite μ] assumption to the whole lemma (if appropriate)
+      -- 3. Find a different integrability criterion that works with trimmed measures
+      -- 4. Use the fact that simple functions with finite support are integrable
+      -- For now, using sorry as placeholder until the right approach is determined.
+      sorry
 
     -- Each sₙ satisfies the projection property
     have hsₙ_eq : ∀ n, ∫ ω, μ[f | m] ω * sₙ n ω ∂μ = ∫ ω, f ω * sₙ n ω ∂μ := by
