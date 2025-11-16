@@ -1149,33 +1149,38 @@ lemma integral_mul_condexp_of_measurable
     congr 1
     exact @integral_mul_condexp_indicator Ω m0 μ m hm _ f hf_int (s ⁻¹' {c}) (h_preimage_meas c hc)
 
-  -- Step C: Bounded case via uniform simple approximation
-  have h_bdd : ∀ (M : ℝ), (∀ ω, ‖g ω‖ ≤ M) →
-      ∫ ω, μ[f | m] ω * g ω ∂μ = ∫ ω, f ω * g ω ∂μ := by
-    intro M hM_bound
+  -- Helper: Truncation function for unbounded g
+  let gTrunc (h : Ω → ℝ) (n : ℕ) : Ω → ℝ :=
+    fun ω => max (-(n : ℝ)) (min (h ω) (n : ℝ))
+
+  -- Step C: Bounded case via uniform simple approximation (parametric version)
+  have condexp_test_fun_bdd : ∀ {h : Ω → ℝ}, Measurable[m] h →
+      (∃ M : ℝ, ∀ ω, ‖h ω‖ ≤ M) →
+      ∫ ω, μ[f | m] ω * h ω ∂μ = ∫ ω, f ω * h ω ∂μ := by
+    intro h hh_meas ⟨M, hM_bound⟩
     -- Use approximation by simple functions + dominated convergence
 
-    -- g is m-measurable, hence strongly measurable w.r.t. m
-    have hg_smeas : StronglyMeasurable[m] g := hg_meas.stronglyMeasurable
+    -- h is m-measurable, hence strongly measurable w.r.t. m
+    have hh_smeas : StronglyMeasurable[m] h := hh_meas.stronglyMeasurable
 
     -- Use max M 0 + 1 as bound to ensure positivity
     let C := max M 0 + 1
     have hC_nonneg : 0 ≤ C := by simp [C]; linarith [le_max_right M 0]
-    have hC_bound : ∀ ω, ‖g ω‖ ≤ C := by
+    have hC_bound : ∀ ω, ‖h ω‖ ≤ C := by
       intro ω
-      calc ‖g ω‖ ≤ M := hM_bound ω
+      calc ‖h ω‖ ≤ M := hM_bound ω
         _ ≤ max M 0 := le_max_left M 0
         _ ≤ max M 0 + 1 := by linarith
         _ = C := rfl
 
     -- Construct approximating sequence of bounded simple functions
-    let sₙ := hg_smeas.approxBounded C
+    let sₙ := hh_smeas.approxBounded C
 
     -- Each sₙ is m-measurable (as simple functions from StronglyMeasurable)
     have hsₙ_meas : ∀ n, Measurable[m] (sₙ n) := fun n => (sₙ n).measurable
 
-    -- Pointwise convergence: sₙ → g a.e.
-    have hsₙ_tendsto : ∀ᵐ ω ∂μ, Tendsto (fun n => sₙ n ω) atTop (𝓝 (g ω)) := by
+    -- Pointwise convergence: sₙ → h a.e.
+    have hsₙ_tendsto : ∀ᵐ ω ∂μ, Tendsto (fun n => sₙ n ω) atTop (𝓝 (h ω)) := by
       apply ae_of_all
       intro ω
       apply StronglyMeasurable.tendsto_approxBounded_of_norm_le
@@ -1184,13 +1189,13 @@ lemma integral_mul_condexp_of_measurable
     -- Norm bound: sₙ is bounded by C
     have hsₙ_bdd : ∀ n ω, ‖sₙ n ω‖ ≤ C := by
       intro n ω
-      exact StronglyMeasurable.norm_approxBounded_le hg_smeas hC_nonneg n ω
+      exact StronglyMeasurable.norm_approxBounded_le hh_smeas hC_nonneg n ω
 
     -- Integrability: bounded + strongly measurable → integrable on probability measure
     have hsₙ_int : ∀ n, Integrable (sₙ n) μ := by
       intro n
-      -- sₙ is a simple function, hence strongly measurable (and measurable)
-      have hsₙ_meas_ambient : Measurable (sₙ n) := (sₙ n).stronglyMeasurable.measurable
+      -- sₙ is m-measurable, convert to ambient m0-measurable using hm : m ≤ m0
+      have hsₙ_meas_ambient : Measurable (sₙ n) := (hsₙ_meas n).mono hm
       -- Norm bound holds everywhere
       have hbound : ∀ᵐ ω ∂μ, ‖sₙ n ω‖ ≤ C := by
         apply ae_of_all
@@ -1205,8 +1210,8 @@ lemma integral_mul_condexp_of_measurable
       · exact hsₙ_meas n
       · exact hsₙ_int n
 
-    -- Apply dominated convergence to LHS: ∫ μ[f|m] · sₙ → ∫ μ[f|m] · g
-    have hlhs : Tendsto (fun n => ∫ ω, μ[f | m] ω * sₙ n ω ∂μ) atTop (𝓝 (∫ ω, μ[f | m] ω * g ω ∂μ)) := by
+    -- Apply dominated convergence to LHS: ∫ μ[f|m] · sₙ → ∫ μ[f|m] · h
+    have hlhs : Tendsto (fun n => ∫ ω, μ[f | m] ω * sₙ n ω ∂μ) atTop (𝓝 (∫ ω, μ[f | m] ω * h ω ∂μ)) := by
       refine tendsto_integral_of_dominated_convergence (fun ω => C * abs (μ[f | m] ω)) ?_ ?_ ?_ ?_
       · -- F_measurable: Each term is ae strongly measurable
         intro n
@@ -1223,8 +1228,8 @@ lemma integral_mul_condexp_of_measurable
         filter_upwards [hsₙ_tendsto] with ω hω
         exact Tendsto.mul tendsto_const_nhds hω
 
-    -- Apply dominated convergence to RHS: ∫ f · sₙ → ∫ f · g
-    have hrhs : Tendsto (fun n => ∫ ω, f ω * sₙ n ω ∂μ) atTop (𝓝 (∫ ω, f ω * g ω ∂μ)) := by
+    -- Apply dominated convergence to RHS: ∫ f · sₙ → ∫ f · h
+    have hrhs : Tendsto (fun n => ∫ ω, f ω * sₙ n ω ∂μ) atTop (𝓝 (∫ ω, f ω * h ω ∂μ)) := by
       refine tendsto_integral_of_dominated_convergence (fun ω => C * abs (f ω)) ?_ ?_ ?_ ?_
       · -- F_measurable: Each term is ae strongly measurable
         intro n
@@ -1249,11 +1254,10 @@ lemma integral_mul_condexp_of_measurable
     exact tendsto_nhds_unique hlhs hrhs
 
   -- Step D: General integrable case via truncation
-  -- If g is already bounded, use h_bdd directly
+  -- If g is already bounded, use condexp_test_fun_bdd directly
   by_cases hg_bdd : ∃ M, ∀ ω, ‖g ω‖ ≤ M
-  · -- Bounded case: apply h_bdd
-    obtain ⟨M, hM⟩ := hg_bdd
-    exact h_bdd M hM
+  · -- Bounded case: apply condexp_test_fun_bdd
+    exact condexp_test_fun_bdd hg_meas hg_bdd
   · -- Unbounded case: truncate and pass to limit
     -- Define truncation: gₙ(ω) := max(-n, min(g(ω), n))
     let gₙ : ℕ → Ω → ℝ := fun n ω => max (-(n : ℝ)) (min (g ω) n)
@@ -1273,17 +1277,15 @@ lemma integral_mul_condexp_of_measurable
         calc gₙ n ω
             = max (-(n : ℝ)) (min (g ω) n) := rfl
           _ ≤ max (-(n : ℝ)) n := max_le_max le_rfl (min_le_right _ _)
-          _ = n := by simp
+          _ ≤ n := le_max_right (-(n : ℝ)) n
       exact abs_le.mpr ⟨h1, h2⟩
 
-    -- Apply h_bdd to each truncation gₙ n (which is bounded by n)
+    -- Apply condexp_test_fun_bdd to each truncation gₙ n (which is bounded by n)
     have hgₙ_eq : ∀ n, ∫ ω, μ[f | m] ω * gₙ n ω ∂μ = ∫ ω, f ω * gₙ n ω ∂μ := by
       intro n
-      -- h_bdd applies to any function bounded by some M, so we use it with gₙ n
-      -- But h_bdd is for the specific function g, not gₙ n
-      -- We need to use h_simple instead since gₙ n is not necessarily a simple function
-      -- Actually, we need to prove this separately using the same technique as h_bdd
-      sorry
+      -- gₙ n is m-measurable and bounded by n, so apply the parametric lemma
+      have hgₙ_bdd' : ∃ M : ℝ, ∀ ω, ‖gₙ n ω‖ ≤ M := ⟨n, hgₙ_bdd n⟩
+      exact condexp_test_fun_bdd (hgₙ_meas n) hgₙ_bdd'
 
     -- Pointwise convergence: gₙ → g (eventually gₙ ω = g ω when n > |g ω|)
     have hgₙ_tendsto : ∀ᵐ ω ∂μ, Tendsto (fun n => gₙ n ω) atTop (𝓝 (g ω)) := by
@@ -1298,13 +1300,17 @@ lemma integral_mul_condexp_of_measurable
       · -- g ω ≤ n
         calc g ω
             ≤ abs (g ω) := le_abs_self _
-          _ ≤ ⌈abs (g ω)⌉₊ := Nat.le_ceil _
-          _ < ⌈abs (g ω)⌉₊ + 1 := by linarith
-          _ ≤ n := hn
+          _ ≤ (⌈abs (g ω)⌉₊ : ℝ) := Nat.le_ceil _
+          _ < (⌈abs (g ω)⌉₊ + 1 : ℕ) := by norm_cast; omega
+          _ ≤ (n : ℝ) := by exact_mod_cast hn
       · -- -n ≤ g ω
+        have : -(n : ℝ) ≤ -(⌈abs (g ω)⌉₊ : ℝ) := by
+          apply neg_le_neg
+          calc (⌈abs (g ω)⌉₊ : ℝ) < (⌈abs (g ω)⌉₊ + 1 : ℕ) := by norm_cast; omega
+            _ ≤ (n : ℝ) := by exact_mod_cast hn
         calc -(n : ℝ)
-            ≤ -(⌈abs (g ω)⌉₊ + 1 : ℝ) := by simp; linarith
-          _ ≤ -abs (g ω) := by simp; exact Nat.ceil_le.mpr (by linarith : abs (g ω) ≤ ⌈abs (g ω)⌉₊ + 1)
+            ≤ -(⌈abs (g ω)⌉₊ : ℝ) := this
+          _ ≤ -abs (g ω) := by apply neg_le_neg; exact Nat.le_ceil _
           _ ≤ g ω := neg_abs_le _
 
     -- Domination: |gₙ ω| ≤ |g ω|
@@ -1326,18 +1332,16 @@ lemma integral_mul_condexp_of_measurable
               _ = max (abs (g ω)) (n : ℝ) := by
                   congr 1
                   exact abs_of_nonneg (Nat.cast_nonneg n)
-              _ ≤ abs (g ω) := le_max_left _ _
-        _ ≤ abs (g ω) := le_max_right _ _
+              _ ≤ abs (g ω) := max_le (le_refl _) (by apply le_abs_self)
+        _ = abs (g ω) := max_eq_right (by apply le_abs_self)
 
     -- Apply dominated convergence for both sides
     have hlhs : Tendsto (fun n => ∫ ω, μ[f | m] ω * gₙ n ω ∂μ) atTop (𝓝 (∫ ω, μ[f | m] ω * g ω ∂μ)) := by
       refine tendsto_integral_of_dominated_convergence (fun ω => abs (μ[f | m] ω) * abs (g ω)) ?_ ?_ ?_ ?_
       · -- F_measurable: Each term is ae strongly measurable
         intro n
-        -- gₙ n is built from g (which is m0-measurable) using max/min/constants
-        have : Measurable (gₙ n) := by
-          simp only [gₙ]
-          exact Measurable.max measurable_const (Measurable.min hg_meas_ambient measurable_const)
+        -- gₙ n is m-measurable, convert to ambient m0-measurable
+        have : Measurable (gₙ n) := (hgₙ_meas n).mono hm
         exact integrable_condExp.aestronglyMeasurable.mul this.aestronglyMeasurable
       · -- bound_integrable: TODO - need to prove |μ[f|m]| * |g| is integrable
         -- Both are integrable, but product of two L¹ functions is not always L¹
@@ -1356,10 +1360,8 @@ lemma integral_mul_condexp_of_measurable
       refine tendsto_integral_of_dominated_convergence (fun ω => abs (f ω) * abs (g ω)) ?_ ?_ ?_ ?_
       · -- F_measurable: Each term is ae strongly measurable
         intro n
-        -- Same as above: gₙ n is m0-measurable
-        have : Measurable (gₙ n) := by
-          simp only [gₙ]
-          exact Measurable.max measurable_const (Measurable.min hg_meas_ambient measurable_const)
+        -- gₙ n is m-measurable, convert to ambient m0-measurable
+        have : Measurable (gₙ n) := (hgₙ_meas n).mono hm
         exact hf_int.aestronglyMeasurable.mul this.aestronglyMeasurable
       · -- bound_integrable: TODO - need to prove |f| * |g| is integrable
         sorry
