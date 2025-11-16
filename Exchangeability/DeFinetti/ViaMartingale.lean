@@ -1186,21 +1186,17 @@ lemma integral_mul_condexp_of_measurable
       intro n ω
       exact StronglyMeasurable.norm_approxBounded_le hg_smeas hC_nonneg n ω
 
-    -- Integrability: bounded + strongly measurable → integrable on sigma-finite measure
+    -- Integrability: bounded + strongly measurable → integrable on probability measure
     have hsₙ_int : ∀ n, Integrable (sₙ n) μ := by
       intro n
-      -- sₙ is a simple function, hence strongly measurable
-      have : AEStronglyMeasurable (sₙ n) μ := (sₙ n).stronglyMeasurable.aestronglyMeasurable
-      -- TODO: CRITICAL TYPECLASS ISSUE
-      -- integrable_of_forall_fin_meas_le requires [SigmaFinite μ]
-      -- but we only have [SigmaFinite (μ.trim hm)] in this context.
-      -- Possible solutions:
-      -- 1. Use SimpleFunc.integrable_of_fin_meas_bounded for simple functions specifically
-      -- 2. Add [SigmaFinite μ] assumption to the whole lemma (if appropriate)
-      -- 3. Find a different integrability criterion that works with trimmed measures
-      -- 4. Use the fact that simple functions with finite support are integrable
-      -- For now, using sorry as placeholder until the right approach is determined.
-      sorry
+      -- sₙ is a simple function, hence strongly measurable (and measurable)
+      have hsₙ_meas_ambient : Measurable (sₙ n) := (sₙ n).stronglyMeasurable.measurable
+      -- Norm bound holds everywhere
+      have hbound : ∀ᵐ ω ∂μ, ‖sₙ n ω‖ ≤ C := by
+        apply ae_of_all
+        exact hsₙ_bdd n
+      -- Apply integrability lemma for bounded functions on probability measures
+      exact integrable_of_bounded_on_prob hsₙ_meas_ambient hbound
 
     -- Each sₙ satisfies the projection property
     have hsₙ_eq : ∀ n, ∫ ω, μ[f | m] ω * sₙ n ω ∂μ = ∫ ω, f ω * sₙ n ω ∂μ := by
