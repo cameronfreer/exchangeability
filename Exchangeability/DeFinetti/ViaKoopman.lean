@@ -840,8 +840,10 @@ lemma condexp_pullback_factor
     exact h_sets s hs
   -- 3) AEStronglyMeasurable for (μ[H | m] ∘ g) with respect to comap g m
   · -- TODO: Transfer AE strong measurability along measure-preserving map
-    -- The proof requires showing that μ[H|m] ∘ g is AE strongly measurable w.r.t. μ'
-    -- when μ = map g μ' and μ[H|m] is AE strongly measurable w.r.t. μ
+    -- Strategy: Use stronglyMeasurable_condExp.aestronglyMeasurable.comp_measurable hg
+    -- Issue: Type class instance problem (TopologicalSpace metavariable)
+    -- Mathematical fact: condExp is strongly measurable → AE strongly measurable
+    -- and composition with measurable preserves this
     sorry
 
 /-
