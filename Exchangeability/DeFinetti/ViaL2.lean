@@ -2681,13 +2681,11 @@ private lemma cesaro_cauchy_rho_lt
     conv_lhs =>
       arg 1
       arg 2
-      intro k
-      rw [← hZ_def k ω, add_comm]
+      fun k => rw [← hZ_def k ω, add_comm]
     conv_lhs =>
       arg 2
       arg 2
-      intro k
-      rw [← hZ_def k ω, add_comm]
+      fun k => rw [← hZ_def k ω, add_comm]
     -- Now have: (n : ℝ)⁻¹ * ∑ k ∈ range n, (m_mean + Z k ω) - (n' : ℝ)⁻¹ * ∑ k ∈ range n', (m_mean + Z k ω)
     -- Step 3: Distribute sums: ∑(a + b) = ∑a + ∑b
     simp only [Finset.sum_add_distrib]
