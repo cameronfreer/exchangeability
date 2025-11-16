@@ -1218,8 +1218,8 @@ lemma integral_mul_condexp_of_measurable
         intro n
         apply ae_of_all
         intro ω
-        rw [norm_mul, mul_comm]
-        exact mul_le_mul_of_nonneg_left (hsₙ_bdd n ω) (abs_nonneg _)
+        rw [norm_mul, mul_comm, Real.norm_eq_abs]
+        exact mul_le_mul_of_nonneg_right (hsₙ_bdd n ω) (abs_nonneg _)
       · -- h_lim: Pointwise convergence
         filter_upwards [hsₙ_tendsto] with ω hω
         exact Tendsto.mul tendsto_const_nhds hω
@@ -1236,8 +1236,8 @@ lemma integral_mul_condexp_of_measurable
         intro n
         apply ae_of_all
         intro ω
-        rw [norm_mul, mul_comm]
-        exact mul_le_mul_of_nonneg_left (hsₙ_bdd n ω) (abs_nonneg _)
+        rw [norm_mul, mul_comm, Real.norm_eq_abs]
+        exact mul_le_mul_of_nonneg_right (hsₙ_bdd n ω) (abs_nonneg _)
       · -- h_lim: Pointwise convergence
         filter_upwards [hsₙ_tendsto] with ω hω
         exact Tendsto.mul tendsto_const_nhds hω
