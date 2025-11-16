@@ -4001,9 +4001,11 @@ private lemma optionB_Step3b_L2_to_L1
           (fun ω =>
             (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
             - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω) μ := by
-      -- The coercion of an Lp element is AEStronglyMeasurable
-      -- TODO: The elaborator interprets (fun f => f) as (fun f => ↑↑f) in this context
-      -- Need to prove measurability of the pointwise birkhoffAverage with coerced iterates
+      -- TODO: Elaborator interprets (fun f => f) vs (fun f => ↑↑f) inconsistently
+      -- Goal requires: birkhoffAverage with (fun f => ↑↑f), but h_ae uses (fun f => f)
+      -- Mathematical fact: Both birkhoffAverage fL2 and condexpL2 fL2 are Lp elements,
+      -- so their coercions to functions are AEStronglyMeasurable, hence AEMeasurable
+      -- Strategy: Show (fun f => f) = (fun f => ↑↑f) in this context, or use conversion
       sorry
 
     -- L¹ ≤ L² via Hölder/Cauchy-Schwarz on a probability space
