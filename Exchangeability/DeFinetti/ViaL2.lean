@@ -3560,7 +3560,7 @@ private lemma blockAvg_cauchy_in_L2
         have hZi_sq_integral_zero : ∫ ω, (Z i ω) ^ 2 ∂μ = 0 := by
           calc ∫ ω, (Z i ω) ^ 2 ∂μ
               = ∫ ω, (Z 0 ω) ^ 2 ∂μ := hZ_var_uniform i
-            _ = σSq := hσSq_def.symm
+            _ = σSq := rfl  -- σSq is defined as ∫ (Z 0)² via let
             _ = 0 := hσSq_zero
         have hZi_sq_ae_zero : (fun ω => (Z i ω) ^ 2) =ᵐ[μ] 0 := by
           rw [← integral_eq_zero_iff_of_nonneg_ae]
