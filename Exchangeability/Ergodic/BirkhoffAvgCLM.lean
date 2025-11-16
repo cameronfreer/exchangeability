@@ -117,4 +117,30 @@ lemma powCLM_koopman_coe_ae {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
           ext ω
           rw [← Function.iterate_succ_apply]
 
+/-- CLM Birkhoff average equals function-level average (almost everywhere).
+
+This is the key lemma showing that coercing the Lp Birkhoff average equals
+averaging the coerced functions.
+
+**Strategy:**
+1. Unfold birkhoffAvgCLM and show coercion distributes through scalar mult and sum
+2. For each k, use powCLM_koopman_coe_ae to show:
+   `((powCLM (koopman T hT_mp) k) fL2 : Ω → ℝ) =ᵐ[μ] (fun ω => (fL2 : Ω → ℝ) (T^[k] ω))`
+3. Combine using a.e. equality for sums
+4. Simplify scalar multiplication to regular multiplication
+
+This lemma would resolve the coercion issues at ViaKoopman lines 3999-4051. -/
+lemma birkhoffAvgCLM_coe_ae_eq_function_avg
+    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (T : Ω → Ω) (hT_meas : Measurable T) (hT_mp : MeasurePreserving T μ μ)
+    (n : ℕ) (fL2 : Lp ℝ 2 μ) :
+  ((birkhoffAvgCLM (koopman T hT_mp) n) fL2 : Ω → ℝ) =ᵐ[μ]
+  (fun ω => if n = 0 then 0
+            else (n : ℝ)⁻¹ * ∑ k : Fin n, (fL2 : Ω → ℝ) (T^[k] ω)) := by
+  -- TODO: Complete proof using powCLM_koopman_coe_ae
+  -- Need lemmas about:
+  -- - Coercion distributing through CLM operations (scalar mult, sum)
+  -- - A.e. equality preserved under finite sums
+  sorry
+
 end Exchangeability.Ergodic
