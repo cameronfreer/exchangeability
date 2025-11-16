@@ -1271,15 +1271,17 @@ lemma integral_mul_condexp_of_measurable
         calc gₙ n ω
             = max (-(n : ℝ)) (min (g ω) n) := rfl
           _ ≤ max (-(n : ℝ)) n := max_le_max le_rfl (min_le_right _ _)
-          _ = n := by simp [max_eq_right]; linarith
+          _ = n := by simp; linarith
       exact abs_le.mpr ⟨h1, h2⟩
 
-    -- Apply h_bdd to each truncation
+    -- Apply h_bdd to each truncation gₙ n (which is bounded by n)
     have hgₙ_eq : ∀ n, ∫ ω, μ[f | m] ω * gₙ n ω ∂μ = ∫ ω, f ω * gₙ n ω ∂μ := by
       intro n
-      apply h_bdd n
-      intro ω
-      exact hgₙ_bdd n ω
+      -- h_bdd applies to any function bounded by some M, so we use it with gₙ n
+      -- But h_bdd is for the specific function g, not gₙ n
+      -- We need to use h_simple instead since gₙ n is not necessarily a simple function
+      -- Actually, we need to prove this separately using the same technique as h_bdd
+      sorry
 
     -- Pointwise convergence: gₙ → g (eventually gₙ ω = g ω when n > |g ω|)
     have hgₙ_tendsto : ∀ᵐ ω ∂μ, Tendsto (fun n => gₙ n ω) atTop (𝓝 (g ω)) := by
