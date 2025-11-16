@@ -1189,18 +1189,18 @@ lemma integral_mul_condexp_of_measurable
       -- sₙ is a simple function, hence strongly measurable
       have : AEStronglyMeasurable (sₙ n) μ := (sₙ n).stronglyMeasurable.aestronglyMeasurable
       -- Bounded by C, so integrable on sigma-finite measure
-      apply integrable_of_forall_fin_meas_le (C : ℝ≥0∞)
-      · simp [ENNReal.coe_lt_top]
+      apply integrable_of_forall_fin_meas_le (ENNReal.ofReal C)
+      · simp [ENNReal.ofReal_lt_top]
       · exact this
       · intro s hs hμs
-      calc (∫⁻ ω in s, ‖sₙ n ω‖₊ ∂μ)
-          ≤ ∫⁻ ω in s, (C : ℝ≥0∞) ∂μ := by
-            apply lintegral_mono
-            intro ω
-            simp only [ENNReal.coe_le_coe]
-            exact hsₙ_bdd n ω
-        _ = C * μ s := by rw [lintegral_const, Measure.restrict_apply MeasurableSet.univ, Set.univ_inter]
-        _ < ∞ := ENNReal.mul_lt_top (by simp) hμs
+        calc (∫⁻ ω in s, ‖sₙ n ω‖₊ ∂μ)
+            ≤ ∫⁻ ω in s, ENNReal.ofReal C ∂μ := by
+              apply lintegral_mono
+              intro ω
+              simp only [ENNReal.ofReal_le_ofReal]
+              exact hsₙ_bdd n ω
+          _ = ENNReal.ofReal C * μ s := by rw [lintegral_const, Measure.restrict_apply MeasurableSet.univ, Set.univ_inter]
+          _ < ∞ := ENNReal.mul_lt_top ENNReal.ofReal_lt_top (by exact hμs)
 
     -- Each sₙ satisfies the projection property
     have hsₙ_eq : ∀ n, ∫ ω, μ[f | m] ω * sₙ n ω ∂μ = ∫ ω, f ω * sₙ n ω ∂μ := by
