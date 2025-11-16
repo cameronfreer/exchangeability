@@ -2678,14 +2678,11 @@ private lemma cesaro_cauchy_rho_lt
     simp only [blockAvg]
     -- Now have: (n : ℝ)⁻¹ * ∑ k ∈ range n, f (X k ω) - (n' : ℝ)⁻¹ * ∑ k ∈ range n', f (X k ω)
     -- Step 2: Rewrite f (X k ω) = Z k ω + m_mean using hZ_def
-    conv_lhs =>
-      arg 1
-      arg 2
-      fun k => rw [← hZ_def k ω, add_comm]
-    conv_lhs =>
-      arg 2
-      arg 2
-      fun k => rw [← hZ_def k ω, add_comm]
+    have h1 : ∑ k ∈ Finset.range n, f (X k ω) = ∑ k ∈ Finset.range n, (m_mean + Z k ω) := by
+      congr 1; ext k; rw [← hZ_def k ω, add_comm]
+    have h2 : ∑ k ∈ Finset.range n', f (X k ω) = ∑ k ∈ Finset.range n', (m_mean + Z k ω) := by
+      congr 1; ext k; rw [← hZ_def k ω, add_comm]
+    rw [h1, h2]
     -- Now have: (n : ℝ)⁻¹ * ∑ k ∈ range n, (m_mean + Z k ω) - (n' : ℝ)⁻¹ * ∑ k ∈ range n', (m_mean + Z k ω)
     -- Step 3: Distribute sums: ∑(a + b) = ∑a + ∑b
     simp only [Finset.sum_add_distrib]
