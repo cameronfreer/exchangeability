@@ -86,13 +86,48 @@ lemma Lp.coeFn_sum' {ι : Type*} [Fintype ι] (fs : ι → Lp ℝ 2 μ) :
 lemma EventuallyEq.sum' {ι : Type*} [Fintype ι] {fs gs : ι → Ω → ℝ}
     (h : ∀ i, fs i =ᵐ[μ] gs i) :
     (fun ω => ∑ i, fs i ω) =ᵐ[μ] (fun ω => ∑ i, gs i ω) := by
-  -- Strategy: Use Finset.sum_induction with EventuallyEq.add
-  -- The proof should show that:
-  -- 1. EventuallyEq is preserved under addition (EventuallyEq.add exists)
-  -- 2. Empty sum gives 0 =ᵐ 0 (trivial)
-  -- 3. Inductive step uses h i for each i
-  -- TODO: Find correct API for Finset.sum_induction or use manual induction
-  sorry
+  -- Strategy: Each fs i =ᵐ[μ] gs i means fs i and gs i differ on a null set N_i
+  -- The union of finitely many null sets is null
+  -- Outside this union, the sums are equal pointwise
+
+  -- Convert to the definition: set where functions are equal is in the ae filter
+  simp only [Filter.EventuallyEq, Filter.Eventually]
+  rw [mem_ae_iff]
+
+  -- The set where sums differ is contained in union of sets where individual functions differ
+  have h_subset : {ω | ∑ i, fs i ω ≠ ∑ i, gs i ω} ⊆
+         ⋃ i, {ω | fs i ω ≠ gs i ω} := by
+    intro ω hω
+    simp only [Set.mem_iUnion, Set.mem_setOf_eq] at hω ⊢
+    -- If the sums differ, then some summand must differ
+    by_contra h_contra
+    push_neg at h_contra
+    apply hω
+    -- The sums are equal if all summands are equal
+    congr 1
+    ext i
+    exact h_contra i
+
+  -- Each set in the union has measure zero
+  have h_null : ∀ i, μ {ω | fs i ω ≠ gs i ω} = 0 := by
+    intro i
+    have := h i
+    rw [Filter.EventuallyEq, Filter.Eventually, mem_ae_iff] at this
+    exact this
+
+  -- Measure of finite union of null sets is zero
+  -- Note: {x | ∑ i, fs i x = ∑ i, gs i x}ᶜ = {x | ∑ i, fs i x ≠ ∑ i, gs i x}
+  have h_compl : {x : Ω | ∑ i, fs i x = ∑ i, gs i x}ᶜ = {x | ∑ i, fs i x ≠ ∑ i, gs i x} := by
+    ext x
+    simp [Set.mem_compl_iff]
+
+  rw [h_compl]
+  -- Prove μ {x | ∑ i, fs i x ≠ ∑ i, gs i x} = 0
+  apply le_antisymm _ (zero_le _)
+  calc μ {ω | ∑ i, fs i ω ≠ ∑ i, gs i ω}
+      ≤ μ (⋃ i, {ω | fs i ω ≠ gs i ω}) := measure_mono h_subset
+    _ ≤ ∑ i, μ {ω | fs i ω ≠ gs i ω} := measure_iUnion_fintype_le μ _
+    _ = 0 := by simp [h_null]
 
 end LpCoercionHelpers
 
