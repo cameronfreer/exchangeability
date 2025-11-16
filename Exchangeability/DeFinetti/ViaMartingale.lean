@@ -1290,29 +1290,23 @@ lemma integral_mul_condexp_of_measurable
     have hgₙ_tendsto : ∀ᵐ ω ∂μ, Tendsto (fun n => gₙ n ω) atTop (𝓝 (g ω)) := by
       apply ae_of_all
       intro ω
-      -- For large enough n, gₙ ω = g ω
-      rw [tendsto_atTop_nhds]
-      intro U hU_mem
-      obtain ⟨ε, hε_pos, hε_U⟩ := Metric.nhds_basis_ball.mem_iff.mp hU_mem
-      use (⌈abs (g ω)⌉₊ + 1)
-      intro n hn
-      apply hε_U
-      rw [Real.dist_eq]
-      -- Show gₙ ω = g ω for large n
-      have : gₙ n ω = g ω := by
-        simp only [gₙ]
-        rw [max_eq_right, min_eq_left]
-        · calc g ω
-              ≤ abs (g ω) := le_abs_self _
-            _ ≤ ⌈abs (g ω)⌉₊ := Nat.le_ceil _
-            _ < ⌈abs (g ω)⌉₊ + 1 := by linarith
-            _ ≤ n := hn
-        · calc -(n : ℝ)
-              ≤ -(⌈abs (g ω)⌉₊ + 1 : ℝ) := by simp; linarith
-            _ ≤ -abs (g ω) := by simp; exact Nat.ceil_le.mpr (by linarith : abs (g ω) ≤ ⌈abs (g ω)⌉₊ + 1)
-            _ ≤ g ω := neg_abs_le _
-      rw [this]
-      simp [hε_pos]
+      -- For large enough n, gₙ n ω = g ω, so sequence is eventually constant
+      refine Tendsto.congr' ?_ tendsto_const_nhds
+      filter_upwards [eventually_ge_atTop (⌈abs (g ω)⌉₊ + 1)] with n hn
+      -- Show gₙ n ω = g ω for n ≥ ⌈|g ω|⌉ + 1
+      simp only [gₙ]
+      rw [max_eq_right, min_eq_left]
+      · -- g ω ≤ n
+        calc g ω
+            ≤ abs (g ω) := le_abs_self _
+          _ ≤ ⌈abs (g ω)⌉₊ := Nat.le_ceil _
+          _ < ⌈abs (g ω)⌉₊ + 1 := by linarith
+          _ ≤ n := hn
+      · -- -n ≤ g ω
+        calc -(n : ℝ)
+            ≤ -(⌈abs (g ω)⌉₊ + 1 : ℝ) := by simp; linarith
+          _ ≤ -abs (g ω) := by simp; exact Nat.ceil_le.mpr (by linarith : abs (g ω) ≤ ⌈abs (g ω)⌉₊ + 1)
+          _ ≤ g ω := neg_abs_le _
 
     -- Domination: |gₙ ω| ≤ |g ω|
     have hgₙ_dom : ∀ n, ∀ᵐ ω ∂μ, ‖gₙ n ω‖ ≤ ‖g ω‖ := by
@@ -1380,8 +1374,10 @@ lemma integral_mul_condexp_of_measurable
         exact Tendsto.mul tendsto_const_nhds hω
 
     -- Since sequences are equal and converge, their limits are equal
-    rw [← tendsto_nhds_unique hlhs hrhs]
-    exact (tendsto_nhds_unique (tendsto_const_nhds.congr hgₙ_eq) hlhs).symm
+    have heq : (fun n => ∫ ω, μ[f | m] ω * gₙ n ω ∂μ) = (fun n => ∫ ω, f ω * gₙ n ω ∂μ) := by
+      funext n; exact hgₙ_eq n
+    rw [← heq] at hrhs
+    exact tendsto_nhds_unique hlhs hrhs
 
 /-- Adjointness of conditional expectation, in μ[·|m] notation.
 
