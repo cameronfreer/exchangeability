@@ -1243,8 +1243,11 @@ lemma integral_mul_condexp_of_measurable
         exact Tendsto.mul tendsto_const_nhds hω
 
     -- Since sequences are equal and converge, their limits are equal
-    rw [← tendsto_nhds_unique hlhs hrhs]
-    exact (tendsto_nhds_unique (tendsto_const_nhds.congr hsₙ_eq) hlhs).symm
+    -- Use hsₙ_eq to convert hlhs to the same sequence as hrhs
+    apply tendsto_nhds_unique _ hrhs
+    convert hlhs using 1
+    funext n
+    exact hsₙ_eq n
 
   -- Step D: General integrable case via truncation
   -- If g is already bounded, use h_bdd directly
@@ -1271,7 +1274,7 @@ lemma integral_mul_condexp_of_measurable
         calc gₙ n ω
             = max (-(n : ℝ)) (min (g ω) n) := rfl
           _ ≤ max (-(n : ℝ)) n := max_le_max le_rfl (min_le_right _ _)
-          _ = n := by simp; linarith
+          _ = n := by simp
       exact abs_le.mpr ⟨h1, h2⟩
 
     -- Apply h_bdd to each truncation gₙ n (which is bounded by n)
@@ -1321,8 +1324,8 @@ lemma integral_mul_condexp_of_measurable
       calc abs (gₙ n ω)
           = abs (max (-(n : ℝ)) (min (g ω) n)) := rfl
         _ ≤ max (abs (-(n : ℝ))) (abs (min (g ω) n)) := abs_max_le_max_abs_abs
-        _ ≤ max n (abs (min (g ω) n)) := by simp [abs_neg]
-        _ ≤ max n (abs (g ω)) := by
+        _ ≤ max (n : ℝ) (abs (min (g ω) n)) := by simp [abs_neg]
+        _ ≤ max (n : ℝ) (abs (g ω)) := by
             apply max_le_max le_rfl
             -- |min(g ω, n)| ≤ max(|g ω|, |n|) ≤ max(|g ω|, n) and we want ≤ |g ω|
             -- Actually: min(g ω, n) is between g ω and n (or vice versa)
