@@ -2428,7 +2428,9 @@ private lemma cesaro_cauchy_rho_lt
     {X : ℕ → Ω → ℝ} (hX_contract : Exchangeability.Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
     (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1)
-    (Z : ℕ → Ω → ℝ) (hZ_meas : ∀ i, Measurable (Z i))
+    (m_mean : ℝ) (hm_mean : m_mean = ∫ ω, f (X 0 ω) ∂μ)
+    (Z : ℕ → Ω → ℝ) (hZ_def : ∀ i ω, Z i ω = f (X i ω) - m_mean)
+    (hZ_meas : ∀ i, Measurable (Z i))
     (hZ_contract : Exchangeability.Contractable μ Z)
     (hZ_var_uniform : ∀ i, ∫ ω, (Z i ω)^2 ∂μ = ∫ ω, (Z 0 ω)^2 ∂μ)
     (hZ_mean_zero : ∀ i, ∫ ω, Z i ω ∂μ = 0)
@@ -2677,14 +2679,70 @@ private lemma cesaro_cauchy_rho_lt
   have h_blockAvg_eq : ∀ᵐ ω ∂μ,
       blockAvg f X 0 n ω - blockAvg f X 0 n' ω =
       ∑ i : Fin m, p i * ξ i ω - ∑ i : Fin m, q i * ξ i ω := by
-    sorry  -- TODO: Algebraic rewrite of blockAvg
-    /-
-    Strategy:
-    1. Unfold blockAvg: (1/n) ∑_{i<n} f(X_i) - (1/n') ∑_{i<n'} f(X_i)
-    2. Use f(X_i) = Z_i + m
-    3. Show this equals ∑_{i<m} [if i<n then 1/n else 0] * Z_i - ∑_{i<m} [if i<n' then 1/n' else 0] * Z_i
-    4. This is exactly ∑ i, p i * ξ i - ∑ i, q i * ξ i
-    -/
+    -- This is true for all ω, not just a.e.
+    apply ae_of_all
+    intro ω
+    -- Step 1: Unfold blockAvg definition
+    simp only [blockAvg]
+    -- Now have: (n : ℝ)⁻¹ * ∑ k ∈ range n, f (X k ω) - (n' : ℝ)⁻¹ * ∑ k ∈ range n', f (X k ω)
+    -- Step 2: Rewrite f (X k ω) = Z k ω + m_mean using hZ_def
+    conv_lhs =>
+      arg 1
+      arg 2
+      ext k
+      rw [← hZ_def k ω, add_comm]
+    conv_lhs =>
+      arg 2
+      arg 2
+      ext k
+      rw [← hZ_def k ω, add_comm]
+    -- Now have: (n : ℝ)⁻¹ * ∑ k ∈ range n, (m_mean + Z k ω) - (n' : ℝ)⁻¹ * ∑ k ∈ range n', (m_mean + Z k ω)
+    -- Step 3: Distribute sums: ∑(a + b) = ∑a + ∑b
+    simp only [Finset.sum_add_distrib]
+    -- Now: (n : ℝ)⁻¹ * (∑ k ∈ range n, m_mean + ∑ k ∈ range n, Z k ω)
+    --      - (n' : ℝ)⁻¹ * (∑ k ∈ range n', m_mean + ∑ k ∈ range n', Z k ω)
+    -- Step 4: Simplify ∑ k ∈ range n, m_mean = n * m_mean
+    simp only [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+    -- Now: (n : ℝ)⁻¹ * ((n : ℝ) * m_mean + ∑ k ∈ range n, Z k ω)
+    --      - (n' : ℝ)⁻¹ * ((n' : ℝ) * m_mean + ∑ k ∈ range n', Z k ω)
+    -- Step 5: Distribute multiplication
+    ring_nf
+    -- The m_mean terms cancel: (n : ℝ)⁻¹ * (n : ℝ) * m_mean = m_mean
+    have hn_ne_zero : (n : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp hn_pos)
+    have hn'_ne_zero : (n' : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp hn'_pos)
+    field_simp [hn_ne_zero, hn'_ne_zero]
+    -- Now: (∑ k ∈ range n, Z k ω) / n - (∑ k ∈ range n', Z k ω) / n'
+    -- Step 6: Extend sums to Fin m using indicator weights
+    -- We need to show: ∑ k ∈ range n, Z k ω = ∑ i : Fin m, (if i.val < n then 1 else 0) * Z i.val ω
+    have h_sum_n : ∑ k ∈ Finset.range n, Z k ω =
+        ∑ i : Fin m, (if i.val < n then 1 else 0) * Z i.val ω := by
+      rw [← Finset.sum_filter]
+      congr 1
+      ext i
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_range, Fin.val_fin_lt]
+      constructor
+      · intro h
+        exact Nat.lt_of_lt_of_le h (le_max_left n n')
+      · intro h
+        exact h
+    have h_sum_n' : ∑ k ∈ Finset.range n', Z k ω =
+        ∑ i : Fin m, (if i.val < n' then 1 else 0) * Z i.val ω := by
+      rw [← Finset.sum_filter]
+      congr 1
+      ext i
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_range, Fin.val_fin_lt]
+      constructor
+      · intro h
+        exact Nat.lt_of_lt_of_le h (le_max_right n n')
+      · intro h
+        exact h
+    rw [h_sum_n, h_sum_n']
+    -- Now simplify the indicator sums and relate to p, q, ξ
+    simp only [p, q, ξ, mul_comm (n : ℝ)⁻¹, mul_comm (n' : ℝ)⁻¹]
+    congr 1 <;> {
+      ext i
+      split_ifs <;> ring
+    }
 
   -- Step 4: Apply l2_contractability_bound
   have h_bound : ∫ ω, (∑ i : Fin m, p i * ξ i ω - ∑ i : Fin m, q i * ξ i ω) ^ 2 ∂μ ≤
@@ -3301,7 +3359,7 @@ private lemma blockAvg_cauchy_in_L2
     by_cases hρ_lt : ρ < 1
     · -- Standard case: ρ < 1
       exact cesaro_cauchy_rho_lt hX_contract hX_meas f hf_meas hf_bdd
-        Z hZ_meas hZ_contract hZ_var_uniform hZ_mean_zero hZ_cov_uniform
+        m rfl Z hZ_def hZ_meas hZ_contract hZ_var_uniform hZ_mean_zero hZ_cov_uniform
         σSq hσ_pos rfl ρ hρ_bd rfl hρ_lt Cf rfl ε hε
 
     · -- Edge case: ρ = 1 (perfect correlation) → blockAvg values are ae-equal
