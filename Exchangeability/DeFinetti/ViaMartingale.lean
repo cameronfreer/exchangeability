@@ -1320,9 +1320,16 @@ lemma integral_mul_condexp_of_measurable
       -- |max(-n, min(g, n))| ≤ |g|
       calc abs (gₙ n ω)
           = abs (max (-(n : ℝ)) (min (g ω) n)) := rfl
-        _ ≤ max (abs (-(n : ℝ))) (abs (min (g ω) n)) := abs_max_le_max_abs_abs _ _
+        _ ≤ max (abs (-(n : ℝ))) (abs (min (g ω) n)) := abs_max_le_max_abs_abs
         _ ≤ max n (abs (min (g ω) n)) := by simp [abs_neg]
-        _ ≤ max n (abs (g ω)) := max_le_max le_rfl (abs_min_le_abs_left _ _)
+        _ ≤ max n (abs (g ω)) := by
+            apply max_le_max le_rfl
+            -- |min(g ω, n)| ≤ max(|g ω|, |n|) ≤ max(|g ω|, n) and we want ≤ |g ω|
+            -- Actually: min(g ω, n) is between g ω and n (or vice versa)
+            -- so |min(g ω, n)| ≤ max(|g ω|, |n|)
+            trans (max (abs (g ω)) (abs (n : ℝ)))
+            · exact abs_min_le_max_abs_abs
+            · simp [le_max_left]
         _ ≤ abs (g ω) := by
           by_cases h : abs (g ω) ≤ n
           · rw [max_eq_left h]
