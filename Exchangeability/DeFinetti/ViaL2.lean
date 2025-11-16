@@ -2679,9 +2679,13 @@ private lemma cesaro_cauchy_rho_lt
     -- Now have: (n : ℝ)⁻¹ * ∑ k ∈ range n, f (X k ω) - (n' : ℝ)⁻¹ * ∑ k ∈ range n', f (X k ω)
     -- Step 2: Rewrite f (X k ω) = Z k ω + m_mean using hZ_def
     have h1 : ∑ k ∈ Finset.range n, f (X k ω) = ∑ k ∈ Finset.range n, (m_mean + Z k ω) := by
-      congr 1; ext k; rw [← hZ_def k ω, add_comm]
+      apply Finset.sum_congr rfl
+      intro k _
+      rw [← hZ_def k ω, add_comm]
     have h2 : ∑ k ∈ Finset.range n', f (X k ω) = ∑ k ∈ Finset.range n', (m_mean + Z k ω) := by
-      congr 1; ext k; rw [← hZ_def k ω, add_comm]
+      apply Finset.sum_congr rfl
+      intro k _
+      rw [← hZ_def k ω, add_comm]
     rw [h1, h2]
     -- Now have: (n : ℝ)⁻¹ * ∑ k ∈ range n, (m_mean + Z k ω) - (n' : ℝ)⁻¹ * ∑ k ∈ range n', (m_mean + Z k ω)
     -- Step 3: Distribute sums: ∑(a + b) = ∑a + ∑b
@@ -3385,7 +3389,7 @@ private lemma blockAvg_cauchy_in_L2
                     exact hZ_bdd 0 ω
                 calc ∫ ω, (Z i ω - Z 0 ω) ^ 2 ∂μ
                     = ∫ ω, (Z i ω ^ 2 - 2 * Z i ω * Z 0 ω + Z 0 ω ^ 2) ∂μ := by
-                      congr 1; ext ω; ring
+                      congr 1 with ω; ring
                   _ = ∫ ω, Z i ω ^ 2 ∂μ - ∫ ω, 2 * Z i ω * Z 0 ω ∂μ + ∫ ω, Z 0 ω ^ 2 ∂μ := by
                       rw [integral_sub, integral_add]
                       · exact h_int_i.pow_const 2
