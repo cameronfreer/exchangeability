@@ -1243,11 +1243,11 @@ lemma integral_mul_condexp_of_measurable
         exact Tendsto.mul tendsto_const_nhds hω
 
     -- Since sequences are equal and converge, their limits are equal
-    -- Use hsₙ_eq to convert hlhs to the same sequence as hrhs
-    apply tendsto_nhds_unique _ hrhs
-    convert hlhs using 1
-    funext n
-    exact hsₙ_eq n
+    -- Use hsₙ_eq to show hlhs and hrhs converge to the same limit
+    have : Tendsto (fun n => ∫ ω, f ω * sₙ n ω ∂μ) atTop (𝓝 (∫ ω, μ[f | m] ω * g ω ∂μ)) := by
+      refine hlhs.congr' (Eventually.of_forall fun n => ?_)
+      exact (hsₙ_eq n).symm
+    exact tendsto_nhds_unique this hrhs
 
   -- Step D: General integrable case via truncation
   -- If g is already bounded, use h_bdd directly
