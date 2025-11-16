@@ -137,10 +137,16 @@ lemma birkhoffAvgCLM_coe_ae_eq_function_avg
   ((birkhoffAvgCLM (koopman T hT_mp) n) fL2 : Ω → ℝ) =ᵐ[μ]
   (fun ω => if n = 0 then 0
             else (n : ℝ)⁻¹ * ∑ k : Fin n, (fL2 : Ω → ℝ) (T^[k] ω)) := by
-  -- TODO: Complete proof using powCLM_koopman_coe_ae
-  -- Need lemmas about:
-  -- - Coercion distributing through CLM operations (scalar mult, sum)
-  -- - A.e. equality preserved under finite sums
+  -- Strategy (documented in file header):
+  -- 1. Unfold birkhoffAvgCLM and case split on n = 0
+  -- 2. For n ≠ 0, show coercion distributes through scalar mult and sum:
+  --    - Need: Lp.coeFn_smul for scalar multiplication distribution
+  --    - Need: Lp.coeFn_sum for sum distribution
+  --    - Need: EventuallyEq.sum to combine a.e. equalities under sums
+  -- 3. For each k, use powCLM_koopman_coe_ae to relate powCLM to function iteration
+  -- 4. Combine using a.e. equality transitivity
+
+  -- Missing infrastructure: Lp coercion lemmas for algebraic operations
   sorry
 
 end Exchangeability.Ergodic
