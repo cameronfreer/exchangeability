@@ -1152,27 +1152,21 @@ lemma integral_mul_condexp_of_measurable
     intro M hM_bound
     -- Use approximation by simple functions + dominated convergence
 
-    -- Since μ is a probability measure, ∃ ω allows us to derive M ≥ 0 from norm bounds
-    -- (if M < 0, then ‖g ω‖ ≤ M < 0 for some ω, contradicting ‖g ω‖ ≥ 0)
-    have hM_nonneg : 0 ≤ M := by
-      by_contra h
-      push_neg at h
-      -- Probability measure has univ nonempty (otherwise μ univ = 0 ≠ 1)
-      have : (Set.univ : Set Ω).Nonempty := by
-        by_contra hempty
-        simp only [Set.not_nonempty_iff_eq_empty] at hempty
-        have : μ Set.univ = 0 := by rw [hempty]; exact measure_empty
-        have : μ Set.univ = 1 := measure_univ
-        linarith
-      obtain ⟨ω, -⟩ := this
-      -- If M < 0, then ‖g ω‖ < 0, contradiction
-      exact not_lt.mpr (norm_nonneg _) (lt_of_le_of_lt (hM_bound ω) h)
-
     -- g is m-measurable, hence strongly measurable w.r.t. m
     have hg_smeas : StronglyMeasurable[m] g := hg_meas.stronglyMeasurable
 
+    -- Use max M 0 + 1 as bound to ensure positivity
+    let C := max M 0 + 1
+    have hC_nonneg : 0 ≤ C := by simp [C]; linarith [le_max_right M 0]
+    have hC_bound : ∀ ω, ‖g ω‖ ≤ C := by
+      intro ω
+      calc ‖g ω‖ ≤ M := hM_bound ω
+        _ ≤ max M 0 := le_max_left M 0
+        _ < max M 0 + 1 := by linarith
+        _ = C := rfl
+
     -- Construct approximating sequence of bounded simple functions
-    let sₙ := hg_smeas.approxBounded (M + 1)
+    let sₙ := hg_smeas.approxBounded C
 
     -- Each sₙ is m-measurable (as simple functions from StronglyMeasurable)
     have hsₙ_meas : ∀ n, Measurable[m] (sₙ n) := fun n => (sₙ n).measurable
@@ -1182,30 +1176,30 @@ lemma integral_mul_condexp_of_measurable
       apply ae_of_all
       intro ω
       apply StronglyMeasurable.tendsto_approxBounded_of_norm_le
-      exact le_trans (hM_bound ω) (by linarith : M ≤ M + 1)
+      exact hC_bound ω
 
-    -- Norm bound: sₙ is bounded by M + 1
-    have hsₙ_bdd : ∀ n ω, ‖sₙ n ω‖ ≤ M + 1 := by
+    -- Norm bound: sₙ is bounded by C
+    have hsₙ_bdd : ∀ n ω, ‖sₙ n ω‖ ≤ C := by
       intro n ω
-      exact StronglyMeasurable.norm_approxBounded_le hg_smeas (by linarith : 0 ≤ M + 1) n ω
+      exact StronglyMeasurable.norm_approxBounded_le hg_smeas hC_nonneg n ω
 
     -- Integrability: bounded + strongly measurable → integrable on sigma-finite measure
     have hsₙ_int : ∀ n, Integrable (sₙ n) μ := by
       intro n
       -- sₙ is a simple function, hence strongly measurable
       have : AEStronglyMeasurable (sₙ n) μ := (sₙ n).stronglyMeasurable.aestronglyMeasurable
-      -- Bounded by M + 1, so integrable on sigma-finite measure
-      apply integrable_of_forall_fin_meas_le (M + 1 : ℝ≥0∞)
+      -- Bounded by C, so integrable on sigma-finite measure
+      apply integrable_of_forall_fin_meas_le (C : ℝ≥0∞)
       · simp [ENNReal.coe_lt_top]
       · exact this
       · intro s hs hμs
       calc (∫⁻ ω in s, ‖sₙ n ω‖₊ ∂μ)
-          ≤ ∫⁻ ω in s, (M + 1 : ℝ≥0∞) ∂μ := by
+          ≤ ∫⁻ ω in s, (C : ℝ≥0∞) ∂μ := by
             apply lintegral_mono
             intro ω
             simp only [ENNReal.coe_le_coe]
             exact hsₙ_bdd n ω
-        _ = (M + 1) * μ s := by rw [lintegral_const, Measure.restrict_apply MeasurableSet.univ, Set.univ_inter]
+        _ = C * μ s := by rw [lintegral_const, Measure.restrict_apply MeasurableSet.univ, Set.univ_inter]
         _ < ∞ := ENNReal.mul_lt_top (by simp) hμs
 
     -- Each sₙ satisfies the projection property
@@ -1217,9 +1211,9 @@ lemma integral_mul_condexp_of_measurable
 
     -- Apply dominated convergence to LHS: ∫ μ[f|m] · sₙ → ∫ μ[f|m] · g
     have hlhs : Tendsto (fun n => ∫ ω, μ[f | m] ω * sₙ n ω ∂μ) atTop (𝓝 (∫ ω, μ[f | m] ω * g ω ∂μ)) := by
-      refine tendsto_integral_of_dominated_convergence (fun ω => (M + 1) * abs (μ[f | m] ω)) ?_ ?_ ?_ ?_
+      refine tendsto_integral_of_dominated_convergence (fun ω => C * abs (μ[f | m] ω)) ?_ ?_ ?_ ?_
       · -- Dominating function is integrable
-        exact integrable_condExp.abs.const_mul (M + 1)
+        exact integrable_condExp.abs.const_mul C
       · -- Each term is ae strongly measurable
         intro n
         exact integrable_condExp.aestronglyMeasurable.mul (hsₙ_int n).aestronglyMeasurable
@@ -1235,9 +1229,9 @@ lemma integral_mul_condexp_of_measurable
 
     -- Apply dominated convergence to RHS: ∫ f · sₙ → ∫ f · g
     have hrhs : Tendsto (fun n => ∫ ω, f ω * sₙ n ω ∂μ) atTop (𝓝 (∫ ω, f ω * g ω ∂μ)) := by
-      refine tendsto_integral_of_dominated_convergence (fun ω => (M + 1) * abs (f ω)) ?_ ?_ ?_ ?_
+      refine tendsto_integral_of_dominated_convergence (fun ω => C * abs (f ω)) ?_ ?_ ?_ ?_
       · -- Dominating function is integrable
-        exact hf_int.abs.const_mul (M + 1)
+        exact hf_int.abs.const_mul C
       · -- Each term is ae strongly measurable
         intro n
         exact hf_int.aestronglyMeasurable.mul (hsₙ_int n).aestronglyMeasurable
