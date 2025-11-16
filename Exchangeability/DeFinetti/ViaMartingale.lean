@@ -1259,7 +1259,7 @@ lemma integral_mul_condexp_of_measurable
     -- Each gₙ is m-measurable (composition of measurable functions)
     have hgₙ_meas : ∀ n, Measurable[m] (gₙ n) := by
       intro n
-      exact Measurable.max (Measurable.const _) (Measurable.min hg_meas (Measurable.const _))
+      exact Measurable.max measurable_const (Measurable.min hg_meas measurable_const)
 
     -- Each gₙ is bounded by n
     have hgₙ_bdd : ∀ n ω, ‖gₙ n ω‖ ≤ n := by
