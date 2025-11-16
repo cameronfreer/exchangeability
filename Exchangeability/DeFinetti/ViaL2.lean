@@ -3485,8 +3485,8 @@ private lemma blockAvg_cauchy_in_L2
                   have hk_lt : k < m := Finset.mem_range.mp hk
                   have hZk_eq : Z k ω = Z 0 ω := hω_all k hk_lt
                   calc f (X k ω)
-                      = Z k ω + m_mean := by rw [← hZ_def k ω]; ring
-                    _ = Z 0 ω + m_mean := by rw [hZk_eq]
+                      = Z k ω + m := by rw [← hZ_def k ω]; ring
+                    _ = Z 0 ω + m := by rw [hZk_eq]
                     _ = f (X 0 ω) := by rw [← hZ_def 0 ω]; ring
               _ = (Finset.range m).card • f (X 0 ω) := Finset.sum_const _
               _ = m • f (X 0 ω) := by rw [Finset.card_range]
