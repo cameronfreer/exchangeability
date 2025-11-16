@@ -1123,17 +1123,17 @@ private lemma cesaro_cauchy_rho_lt
     apply ae_of_all
     intro ω
     -- Step 1: Unfold blockAvg definition
-    simp only [blockAvg]
+    simp only [blockAvg, zero_add]
     -- Now have: (n : ℝ)⁻¹ * ∑ k ∈ range n, f (X k ω) - (n' : ℝ)⁻¹ * ∑ k ∈ range n', f (X k ω)
     -- Step 2: Rewrite f (X k ω) = Z k ω + m_mean using hZ_def
     have h1 : ∑ k ∈ Finset.range n, f (X k ω) = ∑ k ∈ Finset.range n, (m_mean + Z k ω) := by
-      apply Finset.sum_congr rfl
-      intro k _
-      simp only [hZ_def k ω, add_comm]
+      congr 1 with k
+      rw [hZ_def]
+      ring
     have h2 : ∑ k ∈ Finset.range n', f (X k ω) = ∑ k ∈ Finset.range n', (m_mean + Z k ω) := by
-      apply Finset.sum_congr rfl
-      intro k _
-      simp only [hZ_def k ω, add_comm]
+      congr 1 with k
+      rw [hZ_def]
+      ring
     rw [h1, h2]
     -- Now have: (n : ℝ)⁻¹ * ∑ k ∈ range n, (m_mean + Z k ω) - (n' : ℝ)⁻¹ * ∑ k ∈ range n', (m_mean + Z k ω)
     -- Step 3: Distribute sums: ∑(a + b) = ∑a + ∑b
