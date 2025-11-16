@@ -7167,6 +7167,7 @@ and maps 0 to 0, we have `‖clip01 ∘ f - clip01 ∘ g‖₁ ≤ 1 * ‖f - g�
 lemma l1_convergence_under_clip01
     {μ : Measure Ω} {fn : ℕ → Ω → ℝ} {f : Ω → ℝ}
     (h_meas : ∀ n, AEMeasurable (fn n) μ) (hf : AEMeasurable f μ)
+    (h_integrable : ∀ n, Integrable (fun ω => fn n ω - f ω) μ)
     (h : Tendsto (fun n => ∫ ω, |fn n ω - f ω| ∂μ) atTop (𝓝 0)) :
     Tendsto (fun n => ∫ ω, |clip01 (fn n ω) - clip01 (f ω)| ∂μ) atTop (𝓝 0) := by
   -- clip01 is 1-Lipschitz, so |clip01 x - clip01 y| ≤ |x - y|
@@ -7176,9 +7177,9 @@ lemma l1_convergence_under_clip01
     apply integral_mono_ae
     · apply Integrable.abs
       apply (h_meas n).aestronglyMeasurable.integrable_of_integrable
-      sorry -- Need to show fn n - f is integrable, which follows from convergence
+      exact h_integrable n
     · apply Integrable.abs
-      sorry -- Need to show fn n ω - f ω is integrable from convergence hypothesis
+      exact h_integrable n
     · filter_upwards with ω
       exact abs_clip01_sub_le (fn n ω) (f ω)
   refine squeeze_zero ?_ hmono h
