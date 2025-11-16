@@ -29,6 +29,9 @@ import Exchangeability.Probability.MeasureKernels
 **Aldous' elegant martingale proof** of de Finetti's theorem, as presented in
 Kallenberg (2005) as the "third proof". This approach has **medium dependencies**.
 
+**Status**: File now compiles successfully! All compilation errors resolved.
+Remaining work: 11 sorries with detailed TODO documentation.
+
 ## Proof approach
 
 The proof uses a contraction-independence lemma combined with reverse martingale
