@@ -653,7 +653,7 @@ lemma common_version_condexp_bdd
           exact h_eq.symm
       _ = ∫ ω in T, (ψ ∘ Z) ω ∂μ := by
           -- Defining property of CE: ∫_T V = ∫_T (ψ∘Z) for T ∈ σ(W)
-          have hm_le : MeasurableSpace.comap W inferInstance ≤ _ := by
+          have hm_le : MeasurableSpace.comap W inferInstance ≤ (inferInstance : MeasurableSpace Ω) := by
             intro s hs
             obtain ⟨t, ht, rfl⟩ := hs
             exact hW ht
@@ -1038,7 +1038,7 @@ lemma integral_mul_condexp_of_measurable
   -- This uniquely determines them, so they must have equal total integrals
 
   -- First establish measurability of the integrand
-  have hg_meas_ambient : Measurable g := Measurable.mono hg_meas hm (le_refl _)
+  have hg_meas_ambient : Measurable g := hg_meas
   have hcondexp_meas : Measurable (μ[f | m]) := stronglyMeasurable_condExp.measurable
 
   -- **Proof strategy: indicators → simple → bounded → integrable (via truncation)**
@@ -1088,11 +1088,11 @@ lemma integral_mul_condexp_of_measurable
                 ext ω; ring
               rw [this]
               refine Integrable.const_mul ?_ c
-              refine Integrable.bdd_mul' integrable_condExp ?_ ?_
-              · exact (measurable_const.indicator (hm _ (h_preimage_meas c _))).aestronglyMeasurable
+              refine Integrable.bdd_mul' (c := 1) integrable_condExp ?_ ?_
               · filter_upwards with ω
                 simp [Set.indicator]
                 split_ifs <;> norm_num
+              · exact (measurable_const.indicator (hm _ (h_preimage_meas c _))).aestronglyMeasurable
         _ = ∑ c ∈ s.range, ∫ ω, c * (μ[f | m] ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
               congr 1; ext c
               congr 1; ext ω
@@ -1124,11 +1124,11 @@ lemma integral_mul_condexp_of_measurable
                 ext ω; ring
               rw [this]
               refine Integrable.const_mul ?_ c
-              refine Integrable.bdd_mul' hf_int ?_ ?_
-              · exact (measurable_const.indicator (hm _ (h_preimage_meas c _))).aestronglyMeasurable
+              refine Integrable.bdd_mul' (c := 1) hf_int ?_ ?_
               · filter_upwards with ω
                 simp [Set.indicator]
                 split_ifs <;> norm_num
+              · exact (measurable_const.indicator (hm _ (h_preimage_meas c _))).aestronglyMeasurable
         _ = ∑ c ∈ s.range, ∫ ω, c * (f ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
               congr 1; ext c
               congr 1; ext ω
@@ -1143,6 +1143,7 @@ lemma integral_mul_condexp_of_measurable
     refine Finset.sum_congr rfl fun c hc => ?_
     -- Apply Step A (integral_mul_condexp_indicator)
     simp only [smul_eq_mul]
+    congr 1
     exact @integral_mul_condexp_indicator Ω m0 μ m hm _ f hf_int (s ⁻¹' {c}) (h_preimage_meas c hc)
 
   -- Step C: Bounded case via uniform simple approximation
@@ -1170,15 +1171,15 @@ lemma integral_mul_condexp_of_measurable
     -- Norm bound: sₙ is bounded by M + 1
     have hsₙ_bdd : ∀ n ω, ‖sₙ n ω‖ ≤ M + 1 := by
       intro n ω
-      exact StronglyMeasurable.norm_approxBounded_le hg_smeas (by linarith : 0 ≤ M + 1) n ω
+      exact StronglyMeasurable.norm_approxBounded_le hg_smeas (by nlinarith [show (0 : ℝ) ≤ 1 by norm_num]; norm_num : 0 ≤ M + 1) n ω
 
     -- Integrability: bounded + strongly measurable → integrable on sigma-finite measure
     have hsₙ_int : ∀ n, Integrable (sₙ n) μ := by
       intro n
       -- sₙ is a simple function, hence strongly measurable
-      have : AEStronglyMeasurable (sₙ n) μ := (sₙ n).aestronglyMeasurable
+      have : AEStronglyMeasurable (sₙ n) μ := SimpleFunc.aestronglyMeasurable (sₙ n) μ
       -- Bounded by M + 1, so integrable on sigma-finite measure
-      refine integrable_of_forall_fin_meas_le hm (M + 1) (by simp : (M + 1 : ℝ≥0∞) < ∞) this ?_
+      refine integrable_of_forall_fin_meas_le (M + 1 : ℝ≥0∞) (by simp) this ?_
       intro s hs hμs
       calc (∫⁻ ω in s, ‖sₙ n ω‖₊ ∂μ)
           ≤ ∫⁻ ω in s, (M + 1 : ℝ≥0∞) ∂μ := by
