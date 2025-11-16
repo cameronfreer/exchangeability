@@ -3417,11 +3417,14 @@ private lemma blockAvg_cauchy_in_L2
                 calc ∫ ω, Z i ω * Z 0 ω ∂μ
                     = ∫ ω, Z 0 ω * Z 1 ω ∂μ := by
                       by_cases hi1 : i = 1
-                      · simp [hi1, mul_comm]
-                      · have hi_ne_0 : i ≠ 0 := hi
-                        have h01_ne : (0 : ℕ) ≠ (1 : ℕ) := by norm_num
-                        rw [mul_comm (Z i ω), mul_comm (Z 0 ω)]
-                        exact hZ_cov_uniform i 0 (Ne.symm hi)
+                      · simp [hi1]
+                        congr 1 with ω
+                        ring
+                      · -- Use hZ_cov_uniform for i ≠ 0, i ≠ 1
+                        have hi_ne_0 : i ≠ 0 := hi
+                        -- First use hZ_cov_uniform: ∫ Z i * Z 0 = ∫ Z 0 * Z 1
+                        calc ∫ ω, Z i ω * Z 0 ω ∂μ
+                            = ∫ ω, Z 0 ω * Z 1 ω ∂μ := hZ_cov_uniform i 0 (Ne.symm hi_ne_0)
                   _ = covZ := rfl
                   _ = σSq * ρ := by
                       rw [hρ_eq]
