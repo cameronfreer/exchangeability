@@ -1209,38 +1209,38 @@ lemma integral_mul_condexp_of_measurable
     -- Apply dominated convergence to LHS: ∫ μ[f|m] · sₙ → ∫ μ[f|m] · g
     have hlhs : Tendsto (fun n => ∫ ω, μ[f | m] ω * sₙ n ω ∂μ) atTop (𝓝 (∫ ω, μ[f | m] ω * g ω ∂μ)) := by
       refine tendsto_integral_of_dominated_convergence (fun ω => C * abs (μ[f | m] ω)) ?_ ?_ ?_ ?_
-      · -- Dominating function is integrable
-        exact integrable_condExp.abs.const_mul C
-      · -- Each term is ae strongly measurable
+      · -- F_measurable: Each term is ae strongly measurable
         intro n
         exact integrable_condExp.aestronglyMeasurable.mul (hsₙ_int n).aestronglyMeasurable
-      · -- Pointwise convergence
-        filter_upwards [hsₙ_tendsto] with ω hω
-        exact Tendsto.mul tendsto_const_nhds hω
-      · -- Dominated by integrable function
+      · -- bound_integrable: Dominating function is integrable
+        exact integrable_condExp.abs.const_mul C
+      · -- h_bound: Dominated by integrable function
         intro n
         apply ae_of_all
         intro ω
         rw [norm_mul]
         exact mul_le_mul_of_nonneg_left (hsₙ_bdd n ω) (abs_nonneg _)
+      · -- h_lim: Pointwise convergence
+        filter_upwards [hsₙ_tendsto] with ω hω
+        exact Tendsto.mul tendsto_const_nhds hω
 
     -- Apply dominated convergence to RHS: ∫ f · sₙ → ∫ f · g
     have hrhs : Tendsto (fun n => ∫ ω, f ω * sₙ n ω ∂μ) atTop (𝓝 (∫ ω, f ω * g ω ∂μ)) := by
       refine tendsto_integral_of_dominated_convergence (fun ω => C * abs (f ω)) ?_ ?_ ?_ ?_
-      · -- Dominating function is integrable
-        exact hf_int.abs.const_mul C
-      · -- Each term is ae strongly measurable
+      · -- F_measurable: Each term is ae strongly measurable
         intro n
         exact hf_int.aestronglyMeasurable.mul (hsₙ_int n).aestronglyMeasurable
-      · -- Pointwise convergence
-        filter_upwards [hsₙ_tendsto] with ω hω
-        exact Tendsto.mul tendsto_const_nhds hω
-      · -- Dominated by integrable function
+      · -- bound_integrable: Dominating function is integrable
+        exact hf_int.abs.const_mul C
+      · -- h_bound: Dominated by integrable function
         intro n
         apply ae_of_all
         intro ω
         rw [norm_mul]
         exact mul_le_mul_of_nonneg_left (hsₙ_bdd n ω) (abs_nonneg _)
+      · -- h_lim: Pointwise convergence
+        filter_upwards [hsₙ_tendsto] with ω hω
+        exact Tendsto.mul tendsto_const_nhds hω
 
     -- Since sequences are equal and converge, their limits are equal
     rw [← tendsto_nhds_unique hlhs hrhs]
