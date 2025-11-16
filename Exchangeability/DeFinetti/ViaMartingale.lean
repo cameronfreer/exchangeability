@@ -1936,22 +1936,28 @@ lemma condIndep_of_triple_law
 
             -- Split integrals based on φ's support (φ = 1_{Y⁻¹'A})
             have h_lhs : ∫ ω in W ⁻¹' T, φ ω * V ω ∂μ = ∫ ω in (Y ⁻¹' A) ∩ (W ⁻¹' T), V ω ∂μ := by
+              conv_lhs => arg 2; ext; rw [hφ_def]
               rw [← setIntegral_indicator (hY hA)]
               congr 1; ext ω
-              simp [Set.indicator, φ, Set.mem_inter_iff, Set.mem_preimage]
+              simp [Set.indicator, Set.mem_inter_iff, Set.mem_preimage]
               split_ifs <;> ring
 
             have h_rhs : ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ = ∫ ω in (Y ⁻¹' A) ∩ (W ⁻¹' T), ψ ω ∂μ := by
+              conv_lhs => arg 2; ext; rw [hφ_def, hψ_def]
               rw [← setIntegral_indicator (hY hA)]
               congr 1; ext ω
-              simp [Set.indicator, φ, ψ, Set.mem_inter_iff, Set.mem_preimage]
+              simp [Set.indicator, Set.mem_inter_iff, Set.mem_preimage]
               split_ifs <;> ring
 
             rw [h_lhs, h_rhs]
 
             -- Rewrite as integrals over W⁻¹'T with indicator 1_{Y⁻¹'A}
-            rw [setIntegral_indicator (Set.inter_subset_right : (Y ⁻¹' A) ∩ (W ⁻¹' T) ⊆ W ⁻¹' T) (hW hT_meas)]
-            rw [setIntegral_indicator (Set.inter_subset_right : (Y ⁻¹' A) ∩ (W ⁻¹' T) ⊆ W ⁻¹' T) (hW hT_meas)]
+            -- setIntegral_indicator: ∫ x in s, t.indicator f x ∂μ = ∫ x in s ∩ t, f x ∂μ
+            -- We have ∫ in (Y⁻¹'A) ∩ (W⁻¹'T), want ∫ in W⁻¹'T with indicator
+            conv_lhs => arg 1; rw [Set.inter_comm]  -- (Y⁻¹'A) ∩ (W⁻¹'T) = (W⁻¹'T) ∩ (Y⁻¹'A)
+            rw [← setIntegral_indicator (hY hA)]    -- ∫ in W⁻¹'T ∩ Y⁻¹'A = ∫ in W⁻¹'T, (Y⁻¹'A).indicator
+            conv_rhs => arg 1; rw [Set.inter_comm]
+            rw [← setIntegral_indicator (hY hA)]
 
             -- Apply pull-out property: μ[1_{W⁻¹'T} * ψ | 𝔾] = 1_{W⁻¹'T} * V
             have h_pull : μ[(W ⁻¹' T).indicator (fun ω => 1) * ψ | 𝔾] =ᵐ[μ]
