@@ -74,7 +74,12 @@ variable {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
 lemma Lp.coeFn_smul' (c : ℝ) (f : Lp ℝ 2 μ) :
     (↑↑(c • f) : Ω → ℝ) =ᵐ[μ] fun ω => c * (f : Ω → ℝ) ω := by
   -- Lp scalar multiplication is pointwise a.e.
-  sorry
+  -- Mathlib has Lp.coeFn_smul: ⇑(c • f) =ᵐ[μ] c • ⇑f
+  -- For real numbers, c • x = c * x
+  have := Lp.coeFn_smul c f
+  filter_upwards [this] with ω h
+  simp only [Pi.smul_apply] at h
+  exact h
 
 /-- Coercion distributes through finite sums in Lp (a.e.). -/
 lemma Lp.coeFn_sum' {ι : Type*} [Fintype ι] (fs : ι → Lp ℝ 2 μ) :
