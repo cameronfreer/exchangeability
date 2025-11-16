@@ -2802,5 +2802,5 @@ theorem tendsto_integral_indicator_Iic
         simp only [Set.indicator, Set.mem_Iic]
         rw [if_neg (not_le.mpr hn), if_neg (not_le.mpr hgt)]
 
-end Helpers
+end Exchangeability.DeFinetti.ViaL2
 
