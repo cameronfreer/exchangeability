@@ -1158,11 +1158,11 @@ lemma integral_mul_condexp_of_measurable
       by_contra h
       push_neg at h
       -- Probability measure has univ nonempty (otherwise μ univ = 0 ≠ 1)
-      have : (univ : Set Ω).Nonempty := by
+      have : (Set.univ : Set Ω).Nonempty := by
         by_contra hempty
         simp only [Set.not_nonempty_iff_eq_empty] at hempty
-        have : μ univ = 0 := by rw [hempty]; exact measure_empty
-        have : μ univ = 1 := measure_univ
+        have : μ Set.univ = 0 := by rw [hempty]; exact measure_empty
+        have : μ Set.univ = 1 := measure_univ
         linarith
       obtain ⟨ω, -⟩ := this
       -- If M < 0, then ‖g ω‖ < 0, contradiction
