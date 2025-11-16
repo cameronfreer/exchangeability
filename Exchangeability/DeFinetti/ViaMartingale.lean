@@ -1152,15 +1152,20 @@ lemma integral_mul_condexp_of_measurable
     intro M hM_bound
     -- Use approximation by simple functions + dominated convergence
 
-    -- Since μ is a probability measure, it's nonempty, so we can derive M ≥ 0 from norm bounds
-    -- (if M < 0, then ‖g ω‖ ≤ M < 0 for all ω, contradicting ‖g ω‖ ≥ 0)
-    -- For safety, work with M' := max M 0
+    -- Since μ is a probability measure, ∃ ω allows us to derive M ≥ 0 from norm bounds
+    -- (if M < 0, then ‖g ω‖ ≤ M < 0 for some ω, contradicting ‖g ω‖ ≥ 0)
     have hM_nonneg : 0 ≤ M := by
       by_contra h
       push_neg at h
-      -- If M < 0, then for inhabited Ω we have ‖g ω‖ < 0, contradiction
-      have : ∃ ω, ‖g ω‖ < 0 := ⟨Classical.arbitrary Ω, lt_of_le_of_lt (hM_bound _) h⟩
-      exact not_lt.mpr (norm_nonneg _) this.choose_spec
+      -- Probability measure on Ω is nonempty (μ univ = 1 > 0 implies ∃ ω)
+      have : (univ : Set Ω).Nonempty := by
+        by_contra hempty
+        simp only [Set.not_nonempty_iff_eq_empty] at hempty
+        rw [hempty] at *
+        simp at hM_bound
+      obtain ⟨ω, -⟩ := this
+      -- If M < 0, then ‖g ω‖ < 0, contradiction
+      exact not_lt.mpr (norm_nonneg _) (lt_of_le_of_lt (hM_bound ω) h)
 
     -- g is m-measurable, hence strongly measurable w.r.t. m
     have hg_smeas : StronglyMeasurable[m] g := hg_meas.stronglyMeasurable
@@ -1187,9 +1192,9 @@ lemma integral_mul_condexp_of_measurable
     have hsₙ_int : ∀ n, Integrable (sₙ n) μ := by
       intro n
       -- sₙ is a simple function, hence strongly measurable
-      have : AEStronglyMeasurable (sₙ n) μ := @SimpleFunc.aestronglyMeasurable _ _ _ μ (sₙ n)
+      have : AEStronglyMeasurable (sₙ n) μ := SimpleFunc.aestronglyMeasurable (sₙ n)
       -- Bounded by M + 1, so integrable on sigma-finite measure
-      refine integrable_of_forall_fin_meas_le (M + 1 : ℝ≥0∞) (by simp) this ?_
+      refine integrable_of_forall_fin_meas_le (M + 1 : ℝ≥0∞) ENNReal.coe_lt_top this ?_
       intro s hs hμs
       calc (∫⁻ ω in s, ‖sₙ n ω‖₊ ∂μ)
           ≤ ∫⁻ ω in s, (M + 1 : ℝ≥0∞) ∂μ := by
