@@ -1082,14 +1082,14 @@ lemma integral_mul_condexp_of_measurable
               congr 1; ext ω; rw [Finset.mul_sum]
         _ = ∑ c ∈ s.range, ∫ ω, μ[f | m] ω * (c * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
               apply integral_finset_sum
-              intro c _
+              intro c hc
               have : (fun ω => μ[f | m] ω * (c * (s ⁻¹' {c}).indicator (fun _ => 1) ω)) =
                      (fun ω => c * ((s ⁻¹' {c}).indicator (fun _ => 1) ω * μ[f | m] ω)) := by
                 ext ω; ring
               rw [this]
               refine Integrable.const_mul ?_ c
               refine Integrable.bdd_mul' (c := 1) integrable_condExp
-                (measurable_const.indicator (hm _ (h_preimage_meas c _))).aestronglyMeasurable ?_
+                (measurable_const.indicator (hm _ (h_preimage_meas c hc))).aestronglyMeasurable ?_
               filter_upwards with ω
               simp [Set.indicator]
               split_ifs <;> norm_num
@@ -1118,14 +1118,14 @@ lemma integral_mul_condexp_of_measurable
               congr 1; ext ω; rw [Finset.mul_sum]
         _ = ∑ c ∈ s.range, ∫ ω, f ω * (c * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
               apply integral_finset_sum
-              intro c _
+              intro c hc
               have : (fun ω => f ω * (c * (s ⁻¹' {c}).indicator (fun _ => 1) ω)) =
                      (fun ω => c * ((s ⁻¹' {c}).indicator (fun _ => 1) ω * f ω)) := by
                 ext ω; ring
               rw [this]
               refine Integrable.const_mul ?_ c
               refine Integrable.bdd_mul' (c := 1) hf_int
-                (measurable_const.indicator (hm _ (h_preimage_meas c _))).aestronglyMeasurable ?_
+                (measurable_const.indicator (hm _ (h_preimage_meas c hc))).aestronglyMeasurable ?_
               filter_upwards with ω
               simp [Set.indicator]
               split_ifs <;> norm_num
@@ -1152,6 +1152,16 @@ lemma integral_mul_condexp_of_measurable
     intro M hM_bound
     -- Use approximation by simple functions + dominated convergence
 
+    -- Since μ is a probability measure, it's nonempty, so we can derive M ≥ 0 from norm bounds
+    -- (if M < 0, then ‖g ω‖ ≤ M < 0 for all ω, contradicting ‖g ω‖ ≥ 0)
+    -- For safety, work with M' := max M 0
+    have hM_nonneg : 0 ≤ M := by
+      by_contra h
+      push_neg at h
+      -- If M < 0, then for inhabited Ω we have ‖g ω‖ < 0, contradiction
+      have : ∃ ω, ‖g ω‖ < 0 := ⟨Classical.arbitrary Ω, lt_of_le_of_lt (hM_bound _) h⟩
+      exact not_lt.mpr (norm_nonneg _) this.choose_spec
+
     -- g is m-measurable, hence strongly measurable w.r.t. m
     have hg_smeas : StronglyMeasurable[m] g := hg_meas.stronglyMeasurable
 
@@ -1171,13 +1181,13 @@ lemma integral_mul_condexp_of_measurable
     -- Norm bound: sₙ is bounded by M + 1
     have hsₙ_bdd : ∀ n ω, ‖sₙ n ω‖ ≤ M + 1 := by
       intro n ω
-      exact StronglyMeasurable.norm_approxBounded_le hg_smeas (by nlinarith [show (0 : ℝ) ≤ 1 by norm_num]; norm_num : 0 ≤ M + 1) n ω
+      exact StronglyMeasurable.norm_approxBounded_le hg_smeas (by linarith : 0 ≤ M + 1) n ω
 
     -- Integrability: bounded + strongly measurable → integrable on sigma-finite measure
     have hsₙ_int : ∀ n, Integrable (sₙ n) μ := by
       intro n
       -- sₙ is a simple function, hence strongly measurable
-      have : AEStronglyMeasurable (sₙ n) μ := (sₙ n).aestronglyMeasurable
+      have : AEStronglyMeasurable (sₙ n) μ := @SimpleFunc.aestronglyMeasurable _ _ _ μ (sₙ n)
       -- Bounded by M + 1, so integrable on sigma-finite measure
       refine integrable_of_forall_fin_meas_le (M + 1 : ℝ≥0∞) (by simp) this ?_
       intro s hs hμs
