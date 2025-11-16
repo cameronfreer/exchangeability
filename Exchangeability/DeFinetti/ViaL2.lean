@@ -3369,7 +3369,6 @@ private lemma blockAvg_cauchy_in_L2
             by_cases hi : i = 0
             · -- Case i = 0: Z_0 - Z_0 = 0
               simp [hi]
-              apply integral_zero
             · -- Case i ≠ 0: Use ρ = 1
               -- E[(Z_i - Z_0)²] = E[Z_i²] + E[Z_0²] - 2*E[Z_i*Z_0]
               --                = σ² + σ² - 2*E[Z_i*Z_0]
@@ -3392,16 +3391,18 @@ private lemma blockAvg_cauchy_in_L2
                 calc ∫ ω, (Z i ω - Z 0 ω) ^ 2 ∂μ
                     = ∫ ω, (Z i ω ^ 2 - 2 * Z i ω * Z 0 ω + Z 0 ω ^ 2) ∂μ := by
                       congr 1; ext ω; ring
-                  _ = ∫ ω, Z i ω ^ 2 ∂μ - 2 * ∫ ω, Z i ω * Z 0 ω ∂μ + ∫ ω, Z 0 ω ^ 2 ∂μ := by
+                  _ = ∫ ω, Z i ω ^ 2 ∂μ - ∫ ω, 2 * Z i ω * Z 0 ω ∂μ + ∫ ω, Z 0 ω ^ 2 ∂μ := by
                       rw [integral_sub, integral_add]
-                      · ring
                       · exact h_int_i.pow_const 2
-                      · exact h_int_0.pow_const 2
-                      · apply Integrable.sub
-                        · exact h_int_i.pow_const 2
+                      · apply Integrable.add
                         · apply Integrable.const_mul
                           exact h_int_i.mul h_int_0
+                        · exact h_int_0.pow_const 2
+                      · apply Integrable.const_mul
+                        exact h_int_i.mul h_int_0
                       · exact h_int_0.pow_const 2
+                  _ = ∫ ω, (Z i ω) ^ 2 ∂μ - 2 * ∫ ω, Z i ω * Z 0 ω ∂μ + ∫ ω, (Z 0 ω) ^ 2 ∂μ := by
+                      rw [integral_mul_left]; ring
                   _ = ∫ ω, (Z i ω) ^ 2 ∂μ + ∫ ω, (Z 0 ω) ^ 2 ∂μ - 2 * ∫ ω, Z i ω * Z 0 ω ∂μ := by
                       ring
 
@@ -3409,9 +3410,9 @@ private lemma blockAvg_cauchy_in_L2
               have h_var_i : ∫ ω, (Z i ω) ^ 2 ∂μ = σSq := by
                 calc ∫ ω, (Z i ω) ^ 2 ∂μ
                     = ∫ ω, (Z 0 ω) ^ 2 ∂μ := hZ_var_uniform i
-                  _ = σSq := hσSq_def.symm
+                  _ = σSq := rfl
 
-              have h_var_0 : ∫ ω, (Z 0 ω) ^ 2 ∂μ = σSq := hσSq_def.symm
+              have h_var_0 : ∫ ω, (Z 0 ω) ^ 2 ∂μ = σSq := rfl
 
               have h_cov : ∫ ω, Z i ω * Z 0 ω ∂μ = σSq * ρ := by
                 calc ∫ ω, Z i ω * Z 0 ω ∂μ
@@ -3425,8 +3426,11 @@ private lemma blockAvg_cauchy_in_L2
                   _ = covZ := rfl
                   _ = σSq * ρ := by
                       rw [hρ_eq]
-                      calc covZ = ρ * σSq := by rw [← hρ_def]; field_simp [hσ_pos.ne']
+                      -- ρ is defined as covZ / σSq, so covZ = ρ * σSq
+                      show covZ = σSq * 1
+                      calc covZ = ρ * σSq := by unfold ρ; field_simp [hσ_pos.ne']
                         _ = σSq * ρ := mul_comm _ _
+                        _ = σSq * 1 := by rw [hρ_eq]
 
               calc ∫ ω, (Z i ω - Z 0 ω) ^ 2 ∂μ
                   = σSq + σSq - 2 * (σSq * ρ) := by rw [h_expand, h_var_i, h_var_0, h_cov]
