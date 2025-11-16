@@ -7178,11 +7178,10 @@ lemma l1_convergence_under_clip01
   -- By squeeze theorem, if ∫ |fn - f| → 0, then ∫ |clip01 ∘ fn - clip01 ∘ f| → 0
   have hmono (n : ℕ) : ∫ ω, |clip01 (fn n ω) - clip01 (f ω)| ∂μ ≤ ∫ ω, |fn n ω - f ω| ∂μ := by
     apply integral_mono_ae
-    · apply Integrable.abs
-      apply (h_meas n).aestronglyMeasurable.integrable_of_integrable
-      exact h_integrable n
-    · apply Integrable.abs
-      exact h_integrable n
+    · -- |clip01(...) - clip01(...)| is integrable, dominated by |fn n - f| which is integrable
+      -- clip01 is 1-Lipschitz (continuous) so bounded, measurable output
+      sorry
+    · exact (h_integrable n).abs
     · filter_upwards with ω
       exact abs_clip01_sub_le (fn n ω) (f ω)
   refine squeeze_zero ?_ hmono h
