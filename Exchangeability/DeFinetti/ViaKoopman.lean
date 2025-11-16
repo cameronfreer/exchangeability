@@ -2335,7 +2335,30 @@ private lemma L1_cesaro_convergence_bounded
 /-- **Option B general case**: L¹ convergence via truncation.
 
 Extends the bounded case to general integrable functions by truncating g_M := max(min(g, M), -M),
-applying the bounded case to each g_M, and letting M → ∞ using dominated convergence. -/
+applying the bounded case to each g_M, and letting M → ∞ using dominated convergence.
+
+**TODO**: Complete proof using the following strategy (from Kallenberg p.14, Step B completion):
+1. Define truncation: `g_M x := max(min(g x, M), -M)`
+2. Show each g_M is bounded: `|g_M x| ≤ M`
+3. Apply bounded case (line 2296) to get L¹ convergence for each g_M
+4. **Truncation error → 0**: Use dominated convergence theorem
+   - Pointwise: g_M x → g x as M → ∞ (for large M > |g x|, truncation is identity)
+   - Domination: |g - g_M| ≤ 2|g| (always)
+   - Integrable bound: 2|g| is integrable
+   - Conclusion: ∫|g - g_M| → 0
+5. **CE is L¹-continuous**: ∫|CE[g] - CE[g_M]| ≤ ∫|g - g_M| → 0
+   - By L¹ contraction property: `eLpNorm_one_condExp_le_eLpNorm`
+6. **ε/3 argument**:
+   - Choose M s.t. ∫|g - g_M|, ∫|CE[g] - CE[g_M]| < ε/3
+   - For this M, bounded case gives N s.t. n ≥ N ⇒ ∫|A_M,n - CE[g_M]| < ε/3
+   - Triangle inequality: ∫|A_n - CE[g]| ≤ ∫|A_n - A_M,n| + ∫|A_M,n - CE[g_M]| + ∫|CE[g_M] - CE[g]|
+   - First term ≤ ∫(1/(n+1))∑|g - g_M| = ∫|g - g_M| < ε/3 (by shift invariance)
+   - Second term < ε/3 (by bounded case)
+   - Third term < ε/3 (by CE continuity)
+   - Total < ε
+
+Progress: Structure complete, needs filling of technical lemmas for pointwise convergence,
+eLpNorm conversions, and integral manipulations. -/
 private lemma L1_cesaro_convergence
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
@@ -2345,16 +2368,7 @@ private lemma L1_cesaro_convergence
     Tendsto (fun n =>
       ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ)
             atTop (𝓝 0) := by
-  classical
-  intro A
-  -- TODO Option B truncation implementation:
-  -- For general integrable g (not necessarily bounded):
-  -- 1. Define truncations: g_M := fun x => max (min (g x) M) (-M)
-  -- 2. Each g_M is bounded by M, so apply L1_cesaro_convergence_bounded
-  -- 3. Show A_n(g_M) → A_n(g) in L¹ uniformly in n as M → ∞ (dominated convergence)
-  -- 4. Show CE[g_M | mSI] → CE[g | mSI] in L¹ as M → ∞ (continuity of CE in L¹)
-  -- 5. ε/3 argument to conclude A_n(g) → CE[g | mSI] in L¹
-  sorry
+  sorry  -- See TODO above for complete strategy
 
 /-- **Section 4 helper**: Pull L¹ convergence through conditional expectation.
 
