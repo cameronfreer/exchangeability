@@ -1327,28 +1327,23 @@ lemma integral_mul_condexp_of_measurable
         _ ≤ max (n : ℝ) (abs (min (g ω) n)) := by simp [abs_neg]
         _ ≤ max (n : ℝ) (abs (g ω)) := by
             apply max_le_max le_rfl
-            -- |min(g ω, n)| ≤ max(|g ω|, |n|)
+            -- |min(g ω, n)| ≤ |g ω|
             calc abs (min (g ω) n)
                 ≤ max (abs (g ω)) (abs (n : ℝ)) := abs_min_le_max_abs_abs
-              _ ≤ max (abs (g ω)) (n : ℝ) := by simp [abs_of_nonneg]
-              _ ≤ abs (g ω) := by
-                  by_cases h : abs (g ω) ≤ (n : ℝ)
-                  · rw [max_eq_left h]; exact h
-                  · push_neg at h
-                    rw [max_eq_right (le_of_lt h)]
-        _ ≤ abs (g ω) := by
-          by_cases h : abs (g ω) ≤ (n : ℝ)
-          · rw [max_eq_left h]
-          · push_neg at h
-            rw [max_eq_right (le_of_lt h)]
+              _ = max (abs (g ω)) (n : ℝ) := by rw [abs_of_nonneg]; exact Nat.cast_nonneg n
+              _ ≤ abs (g ω) := le_max_left _ _
+        _ ≤ abs (g ω) := le_max_right _ _
 
     -- Apply dominated convergence for both sides
     have hlhs : Tendsto (fun n => ∫ ω, μ[f | m] ω * gₙ n ω ∂μ) atTop (𝓝 (∫ ω, μ[f | m] ω * g ω ∂μ)) := by
       refine tendsto_integral_of_dominated_convergence (fun ω => abs (μ[f | m] ω) * abs (g ω)) ?_ ?_ ?_ ?_
       · -- F_measurable: Each term is ae strongly measurable
         intro n
-        -- gₙ n is m-measurable, hence strongly measurable and ae strongly measurable
-        exact integrable_condExp.aestronglyMeasurable.mul (hgₙ_meas n).stronglyMeasurable.aestronglyMeasurable
+        -- gₙ n is built from g (which is m0-measurable) using max/min/constants
+        have : Measurable (gₙ n) := by
+          simp only [gₙ]
+          exact Measurable.max measurable_const (Measurable.min hg_meas_ambient measurable_const)
+        exact integrable_condExp.aestronglyMeasurable.mul this.aestronglyMeasurable
       · -- bound_integrable: TODO - need to prove |μ[f|m]| * |g| is integrable
         -- Both are integrable, but product of two L¹ functions is not always L¹
         -- May need different bound or approach for unbounded case
@@ -1366,7 +1361,11 @@ lemma integral_mul_condexp_of_measurable
       refine tendsto_integral_of_dominated_convergence (fun ω => abs (f ω) * abs (g ω)) ?_ ?_ ?_ ?_
       · -- F_measurable: Each term is ae strongly measurable
         intro n
-        exact hf_int.aestronglyMeasurable.mul (hgₙ_meas n).stronglyMeasurable.aestronglyMeasurable
+        -- Same as above: gₙ n is m0-measurable
+        have : Measurable (gₙ n) := by
+          simp only [gₙ]
+          exact Measurable.max measurable_const (Measurable.min hg_meas_ambient measurable_const)
+        exact hf_int.aestronglyMeasurable.mul this.aestronglyMeasurable
       · -- bound_integrable: TODO - need to prove |f| * |g| is integrable
         sorry
       · -- h_bound: Dominated by |f| * |g|
