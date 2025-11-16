@@ -1962,7 +1962,7 @@ lemma condIndep_of_triple_law
               split_ifs <;> ring
 
             have h_rhs : ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ = ∫ ω in (Y ⁻¹' A) ∩ (W ⁻¹' T), ψ ω ∂μ := by
-              conv_lhs => arg 2; ext; rw [hφ_def, hψ_def]
+              conv_lhs => arg 2; ext; rw [hφ_def]  -- Only unfold φ, not ψ
               rw [← setIntegral_indicator (hY hA)]
               congr 1; ext ω
               simp [Set.indicator, Set.mem_inter_iff, Set.mem_preimage]
@@ -2255,17 +2255,17 @@ lemma condExp_bounded_comp_eq_of_triple_law
           -- Rewrite as: μ[∑ c, (fun ω => ...) | 𝔾] = ∑ c, μ[(fun ω => ...) | 𝔾]
           have : (fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω)) =
                  ∑ c ∈ (φₙ n).range, fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) := by
-            ext ω; rfl
+            ext ω; exact Finset.sum_apply _ _ _
           rw [this]
           apply condExp_finset_sum _ 𝔾
           intro c hc
           apply Integrable.const_mul
-          apply integrable_const
+          -- Indicator of measurable set composed with Y is integrable
+          refine Integrable.indicator (integrable_const 1) ?_
+          exact hY (h_meas c hc)
       _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔾] := by
           filter_upwards with ω
-          congr 1
-          ext c : 1
-          congr 1
+          refine Finset.sum_congr rfl fun c _ => ?_
           have : (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω)) =
                  c • (((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y) := by
             ext ω; simp [Function.comp_apply, smul_eq_mul]
@@ -2273,16 +2273,12 @@ lemma condExp_bounded_comp_eq_of_triple_law
           exact condExp_smul c _
       _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔽] := by
           filter_upwards with ω
-          congr 1
-          ext c : 1
-          congr 1
+          refine Finset.sum_congr rfl fun c hc => ?_
           -- Apply base case: condExp_eq_of_triple_law
           exact condExp_eq_of_triple_law Y Z W W' hY hZ hW hW' h_triple (h_meas c hc) ω
       _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔽] := by
           filter_upwards with ω
-          congr 1
-          ext c : 1
-          congr 1
+          refine Finset.sum_congr rfl fun c _ => ?_
           have : c • (((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y) =
                  (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω)) := by
             ext ω; simp [Function.comp_apply, smul_eq_mul]
@@ -2292,7 +2288,9 @@ lemma condExp_bounded_comp_eq_of_triple_law
           refine (condExp_finset_sum ?_ 𝔽).symm
           intro c hc
           apply Integrable.const_mul
-          apply integrable_const
+          -- Indicator of measurable set composed with Y is integrable
+          refine Integrable.indicator (integrable_const 1) ?_
+          exact hY (h_meas c hc)
       _ =ᵐ[μ] μ[(φₙ n) ∘ Y | 𝔽] := by
           apply condExp_congr_ae
           filter_upwards with ω
@@ -2312,9 +2310,12 @@ lemma condExp_bounded_comp_eq_of_triple_law
     intro n
     -- φₙ n is bounded by C + 1, and composition with measurable Y preserves integrability
     have hφₙ_meas : Measurable (φₙ n) := (φₙ n).measurable
-    have hcomp_meas : Measurable (φₙ n ∘ Y) := hφₙ_meas.comp hY
-    apply integrable_of_forall_fin_meas_le (by infer_instance) (C + 1)
-    · simp [ENNReal.coe_lt_top]
+    have hcomp_meas : Measurable (φₙ n ∘ Y) := by
+      apply Measurable.comp (g := Y) (mβ := inst✝⁴)
+      · exact hφₙ_meas
+      · exact hY
+    apply integrable_of_forall_fin_meas_le (ENNReal.ofReal (C + 1))
+    · simp [ENNReal.ofReal_lt_top]
     · exact hcomp_meas.aestronglyMeasurable
     · intro s hs hμs
       calc (∫⁻ ω in s, ‖φₙ n (Y ω)‖₊ ∂μ)
@@ -2323,9 +2324,9 @@ lemma condExp_bounded_comp_eq_of_triple_law
             intro ω
             simp only [ENNReal.coe_le_coe]
             exact hφₙ_bdd n (Y ω)
-        _ = (C + 1) * μ s := by
+        _ = ENNReal.ofReal (C + 1) * μ s := by
             rw [lintegral_const, Measure.restrict_apply MeasurableSet.univ, Set.univ_inter]
-        _ < ∞ := ENNReal.mul_lt_top (by simp) hμs
+        _ < ∞ := ENNReal.mul_lt_top ENNReal.ofReal_lt_top hμs
 
   -- Pointwise convergence: φₙ n ∘ Y → φ ∘ Y a.e.
   have hφₙY_tendsto : ∀ᵐ ω ∂μ, Tendsto (fun n => φₙ n (Y ω)) atTop (𝓝 (φ (Y ω))) := by
