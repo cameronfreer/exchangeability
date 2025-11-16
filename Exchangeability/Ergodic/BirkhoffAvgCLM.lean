@@ -84,7 +84,18 @@ lemma Lp.coeFn_smul' (c : ℝ) (f : Lp ℝ 2 μ) :
 /-- Coercion distributes through finite sums in Lp (a.e.). -/
 lemma Lp.coeFn_sum' {ι : Type*} [Fintype ι] (fs : ι → Lp ℝ 2 μ) :
     (↑↑(∑ i, fs i) : Ω → ℝ) =ᵐ[μ] fun ω => ∑ i, (fs i : Ω → ℝ) ω := by
-  -- Lp addition is pointwise a.e., and finite sums are iterated additions
+  -- Strategy: Induction on Finset using Lp.coeFn_add
+  -- Base case: ∑ i ∈ ∅, fs i = 0, and 0 coerces to zero function
+  -- Inductive step: Use Lp.coeFn_add to show (fs i + ∑ j ∈ t, fs j) coerces correctly
+  --
+  -- Proof outline:
+  -- 1. Induction on Finset.univ
+  -- 2. Empty case: Show ↑↑0 =ᵐ[μ] fun ω => 0 (need: Lp.coeFn_zero or direct simp)
+  -- 3. Insert case: Use Lp.coeFn_add and EventuallyEq.add with IH
+  -- 4. Final step: ∑ insert distributivity is definitional
+  --
+  -- Issue: Need careful handling of coercion notation and Finset.sum simplification
+  -- TODO: Debug the induction proof - likely needs explicit coercion lemmas
   sorry
 
 /-- A.e. equality is preserved under finite sums. -/
