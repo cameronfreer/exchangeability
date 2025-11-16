@@ -1162,7 +1162,7 @@ lemma integral_mul_condexp_of_measurable
       intro ω
       calc ‖g ω‖ ≤ M := hM_bound ω
         _ ≤ max M 0 := le_max_left M 0
-        _ < max M 0 + 1 := by linarith
+        _ ≤ max M 0 + 1 := by linarith
         _ = C := rfl
 
     -- Construct approximating sequence of bounded simple functions
