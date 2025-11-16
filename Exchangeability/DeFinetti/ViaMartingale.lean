@@ -1157,12 +1157,13 @@ lemma integral_mul_condexp_of_measurable
     have hM_nonneg : 0 ≤ M := by
       by_contra h
       push_neg at h
-      -- Probability measure on Ω is nonempty (μ univ = 1 > 0 implies ∃ ω)
+      -- Probability measure has univ nonempty (otherwise μ univ = 0 ≠ 1)
       have : (univ : Set Ω).Nonempty := by
         by_contra hempty
         simp only [Set.not_nonempty_iff_eq_empty] at hempty
-        rw [hempty] at *
-        simp at hM_bound
+        have : μ univ = 0 := by rw [hempty]; exact measure_empty
+        have : μ univ = 1 := measure_univ
+        linarith
       obtain ⟨ω, -⟩ := this
       -- If M < 0, then ‖g ω‖ < 0, contradiction
       exact not_lt.mpr (norm_nonneg _) (lt_of_le_of_lt (hM_bound ω) h)
@@ -1192,7 +1193,7 @@ lemma integral_mul_condexp_of_measurable
     have hsₙ_int : ∀ n, Integrable (sₙ n) μ := by
       intro n
       -- sₙ is a simple function, hence strongly measurable
-      have : AEStronglyMeasurable (sₙ n) μ := SimpleFunc.aestronglyMeasurable (sₙ n)
+      have : AEStronglyMeasurable (sₙ n) μ := (sₙ n).stronglyMeasurable.aestronglyMeasurable
       -- Bounded by M + 1, so integrable on sigma-finite measure
       refine integrable_of_forall_fin_meas_le (M + 1 : ℝ≥0∞) ENNReal.coe_lt_top this ?_
       intro s hs hμs
