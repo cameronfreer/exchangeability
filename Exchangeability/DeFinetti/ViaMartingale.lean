@@ -4133,7 +4133,7 @@ This lemma directly replaces `condDistrib_of_map_eq_map_and_comap_le`
 at its only point of use. -/
 lemma condexp_indicator_drop_info_of_pair_law_direct
     {Ω α β : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
-    [MeasurableSpace α] [StandardBorelSpace α]
+    [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
     [MeasurableSpace β] [StandardBorelSpace β] [Nonempty β]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (ξ : Ω → α) (η ζ : Ω → β)
@@ -4279,37 +4279,37 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
       have h_compProd_eq : (μ.map ζ) ⊗ₘ (ProbabilityTheory.condDistrib ξ ζ μ) = (μ.map ζ) ⊗ₘ (ProbabilityTheory.condDistrib ξ η μ) := by
         rw [hζ_compProd, h_law_swapped, ← h_marg_eq, ← hη_compProd]
       -- Apply uniqueness
-      exact Kernel.ae_eq_of_compProd_eq h_compProd_eq
+      exact ProbabilityTheory.ae_eq_of_compProd_eq h_compProd_eq
 
     -- Step 5: Pull back kernel equality along ζ
-    have hkernel_eq_pullback : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (ζ ω) := by
+    have hkernel_eq_pullback : ∀ᵐ ω ∂μ, ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) = ProbabilityTheory.condDistrib ξ η μ (ζ ω) := by
       exact ae_eq_comp hζ.aemeasurable hkernel_eq
 
     -- Step 6: Evaluate at B to get equality of measures on B
-    have heval_B : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) B = condDistrib ξ η μ (ζ ω) B := by
+    have heval_B : ∀ᵐ ω ∂μ, ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) B = ProbabilityTheory.condDistrib ξ η μ (ζ ω) B := by
       filter_upwards [hkernel_eq_pullback] with ω h
       exact congrArg (fun ν => ν B) h
 
     -- Step 7: Rewrite η ω as φ (ζ ω) to align both sides (using hηfac from line 4117)
-    have heval_B_aligned : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) B = condDistrib ξ η μ (η ω) B := by
+    have heval_B_aligned : ∀ᵐ ω ∂μ, ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) B = ProbabilityTheory.condDistrib ξ η μ (η ω) B := by
       filter_upwards [heval_B] with ω h
       rw [hηfac]; exact h
 
     -- Step 9: Connect to conditional expectations via condDistrib_ae_eq_condExp
-    have hCE_ζ : (fun ω => (condDistrib ξ ζ μ (ζ ω) B).toReal) =ᵐ[μ]
+    have hCE_ζ : (fun ω => (ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) B).toReal) =ᵐ[μ]
         μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] := by
-      exact condDistrib_ae_eq_condExp hζ hξ hB
+      exact ProbabilityTheory.condDistrib_ae_eq_condExp hζ hξ hB
 
-    have hCE_η : (fun ω => (condDistrib ξ η μ (η ω) B).toReal) =ᵐ[μ]
+    have hCE_η : (fun ω => (ProbabilityTheory.condDistrib ξ η μ (η ω) B).toReal) =ᵐ[μ]
         μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] := by
-      exact condDistrib_ae_eq_condExp hη hξ hB
+      exact ProbabilityTheory.condDistrib_ae_eq_condExp hη hξ hB
 
     -- Step 10: Convert measure equality to .toReal equality
-    have htoReal_eq : ∀ᵐ ω ∂μ, (condDistrib ξ ζ μ (ζ ω) B).toReal = (condDistrib ξ η μ (η ω) B).toReal := by
+    have htoReal_eq : ∀ᵐ ω ∂μ, (ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) B).toReal = (ProbabilityTheory.condDistrib ξ η μ (η ω) B).toReal := by
       filter_upwards [heval_B_aligned] with ω h
       rw [h]
 
-    -- Step 11: Conclude by transitivity: CE_ζ = condDistrib = condDistrib = CE_η
+    -- Step 11: Conclude by transitivity: CE_ζ = ProbabilityTheory.condDistrib = ProbabilityTheory.condDistrib = CE_η
     have : μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] =ᵐ[μ]
            μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] := by
       exact hCE_ζ.symm.trans (htoReal_eq.trans hCE_η)
