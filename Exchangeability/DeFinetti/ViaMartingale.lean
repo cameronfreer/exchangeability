@@ -1340,31 +1340,37 @@ lemma integral_mul_condexp_of_measurable
     -- Apply dominated convergence for both sides
     have hlhs : Tendsto (fun n => ∫ ω, μ[f | m] ω * gₙ n ω ∂μ) atTop (𝓝 (∫ ω, μ[f | m] ω * g ω ∂μ)) := by
       refine tendsto_integral_of_dominated_convergence (fun ω => abs (μ[f | m] ω) * abs (g ω)) ?_ ?_ ?_ ?_
-      · -- TODO: Need to prove |μ[f|m]| * |g| is integrable
+      · -- F_measurable: Each term is ae strongly measurable
+        intro n
+        exact integrable_condExp.aestronglyMeasurable.mul (hgₙ_meas n).aestronglyMeasurable
+      · -- bound_integrable: TODO - need to prove |μ[f|m]| * |g| is integrable
         -- Both are integrable, but product of two L¹ functions is not always L¹
         -- May need different bound or approach for unbounded case
         sorry
-      · intro n; exact integrable_condExp.aestronglyMeasurable.mul
-          (hgₙ_meas n).aestronglyMeasurable
-      · filter_upwards [hgₙ_tendsto] with ω hω
-        exact Tendsto.mul tendsto_const_nhds hω
-      · intro n
+      · -- h_bound: Dominated by |μ[f|m]| * |g|
+        intro n
         filter_upwards [hgₙ_dom n] with ω hω
         rw [norm_mul]
         exact mul_le_mul_of_nonneg_left hω (abs_nonneg _)
+      · -- h_lim: Pointwise convergence
+        filter_upwards [hgₙ_tendsto] with ω hω
+        exact Tendsto.mul tendsto_const_nhds hω
 
     have hrhs : Tendsto (fun n => ∫ ω, f ω * gₙ n ω ∂μ) atTop (𝓝 (∫ ω, f ω * g ω ∂μ)) := by
       refine tendsto_integral_of_dominated_convergence (fun ω => abs (f ω) * abs (g ω)) ?_ ?_ ?_ ?_
-      · -- TODO: Need to prove |f| * |g| is integrable (same issue as hlhs)
+      · -- F_measurable: Each term is ae strongly measurable
+        intro n
+        exact hf_int.aestronglyMeasurable.mul (hgₙ_meas n).aestronglyMeasurable
+      · -- bound_integrable: TODO - need to prove |f| * |g| is integrable
         sorry
-      · intro n; exact hf_int.aestronglyMeasurable.mul
-          (hgₙ_meas n).aestronglyMeasurable
-      · filter_upwards [hgₙ_tendsto] with ω hω
-        exact Tendsto.mul tendsto_const_nhds hω
-      · intro n
+      · -- h_bound: Dominated by |f| * |g|
+        intro n
         filter_upwards [hgₙ_dom n] with ω hω
         rw [norm_mul]
         exact mul_le_mul_of_nonneg_left hω (abs_nonneg _)
+      · -- h_lim: Pointwise convergence
+        filter_upwards [hgₙ_tendsto] with ω hω
+        exact Tendsto.mul tendsto_const_nhds hω
 
     -- Since sequences are equal and converge, their limits are equal
     rw [← tendsto_nhds_unique hlhs hrhs]
