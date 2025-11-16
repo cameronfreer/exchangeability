@@ -1088,11 +1088,11 @@ lemma integral_mul_condexp_of_measurable
                 ext ω; ring
               rw [this]
               refine Integrable.const_mul ?_ c
-              refine Integrable.bdd_mul' (c := 1) integrable_condExp ?_ ?_
-              · filter_upwards with ω
-                simp [Set.indicator]
-                split_ifs <;> norm_num
-              · exact (measurable_const.indicator (hm _ (h_preimage_meas c _))).aestronglyMeasurable
+              refine Integrable.bdd_mul' (c := 1) integrable_condExp
+                (measurable_const.indicator (hm _ (h_preimage_meas c _))).aestronglyMeasurable ?_
+              filter_upwards with ω
+              simp [Set.indicator]
+              split_ifs <;> norm_num
         _ = ∑ c ∈ s.range, ∫ ω, c * (μ[f | m] ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
               congr 1; ext c
               congr 1; ext ω
@@ -1124,11 +1124,11 @@ lemma integral_mul_condexp_of_measurable
                 ext ω; ring
               rw [this]
               refine Integrable.const_mul ?_ c
-              refine Integrable.bdd_mul' (c := 1) hf_int ?_ ?_
-              · filter_upwards with ω
-                simp [Set.indicator]
-                split_ifs <;> norm_num
-              · exact (measurable_const.indicator (hm _ (h_preimage_meas c _))).aestronglyMeasurable
+              refine Integrable.bdd_mul' (c := 1) hf_int
+                (measurable_const.indicator (hm _ (h_preimage_meas c _))).aestronglyMeasurable ?_
+              filter_upwards with ω
+              simp [Set.indicator]
+              split_ifs <;> norm_num
         _ = ∑ c ∈ s.range, ∫ ω, c * (f ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
               congr 1; ext c
               congr 1; ext ω
@@ -1177,7 +1177,7 @@ lemma integral_mul_condexp_of_measurable
     have hsₙ_int : ∀ n, Integrable (sₙ n) μ := by
       intro n
       -- sₙ is a simple function, hence strongly measurable
-      have : AEStronglyMeasurable (sₙ n) μ := SimpleFunc.aestronglyMeasurable (sₙ n) μ
+      have : AEStronglyMeasurable (sₙ n) μ := (sₙ n).aestronglyMeasurable
       -- Bounded by M + 1, so integrable on sigma-finite measure
       refine integrable_of_forall_fin_meas_le (M + 1 : ℝ≥0∞) (by simp) this ?_
       intro s hs hμs
