@@ -1243,11 +1243,13 @@ lemma integral_mul_condexp_of_measurable
         exact Tendsto.mul tendsto_const_nhds hω
 
     -- Since sequences are equal and converge, their limits are equal
-    -- Use hsₙ_eq to show hlhs and hrhs converge to the same limit
-    have : Tendsto (fun n => ∫ ω, f ω * sₙ n ω ∂μ) atTop (𝓝 (∫ ω, μ[f | m] ω * g ω ∂μ)) := by
-      refine hlhs.congr' (Eventually.of_forall fun n => ?_)
-      exact (hsₙ_eq n).symm
-    exact tendsto_nhds_unique this hrhs
+    -- The sequences (fun n => ∫ μ[f|m] * sₙ) and (fun n => ∫ f * sₙ) are equal by hsₙ_eq
+    -- They converge to ∫ μ[f|m] * g and ∫ f * g respectively, so the limits are equal
+    calc ∫ ω, μ[f | m] ω * g ω ∂μ
+        = lim atTop (fun n => ∫ ω, μ[f | m] ω * sₙ n ω ∂μ) := (hlhs.limUnder_eq).symm
+      _ = lim atTop (fun n => ∫ ω, f ω * sₙ n ω ∂μ) := by
+          congr 1; funext n; exact hsₙ_eq n
+      _ = ∫ ω, f ω * g ω ∂μ := hrhs.limUnder_eq
 
   -- Step D: General integrable case via truncation
   -- If g is already bounded, use h_bdd directly
@@ -1327,16 +1329,18 @@ lemma integral_mul_condexp_of_measurable
         _ ≤ max (n : ℝ) (abs (min (g ω) n)) := by simp [abs_neg]
         _ ≤ max (n : ℝ) (abs (g ω)) := by
             apply max_le_max le_rfl
-            -- |min(g ω, n)| ≤ max(|g ω|, |n|) ≤ max(|g ω|, n) and we want ≤ |g ω|
-            -- Actually: min(g ω, n) is between g ω and n (or vice versa)
-            -- so |min(g ω, n)| ≤ max(|g ω|, |n|)
-            trans (max (abs (g ω)) (abs (n : ℝ)))
-            · exact abs_min_le_max_abs_abs
-            · simp [le_max_left]
+            -- |min(g ω, n)| ≤ max(|g ω|, |n|)
+            calc abs (min (g ω) n)
+                ≤ max (abs (g ω)) (abs (n : ℝ)) := abs_min_le_max_abs_abs
+              _ ≤ max (abs (g ω)) (n : ℝ) := by simp [abs_of_nonneg]
+              _ ≤ abs (g ω) := by
+                  by_cases h : abs (g ω) ≤ (n : ℝ)
+                  · rw [max_eq_left h]; exact h
+                  · push_neg at h
+                    rw [max_eq_right (le_of_lt h)]
         _ ≤ abs (g ω) := by
-          by_cases h : abs (g ω) ≤ n
+          by_cases h : abs (g ω) ≤ (n : ℝ)
           · rw [max_eq_left h]
-            exact h
           · push_neg at h
             rw [max_eq_right (le_of_lt h)]
 
@@ -1345,9 +1349,9 @@ lemma integral_mul_condexp_of_measurable
       refine tendsto_integral_of_dominated_convergence (fun ω => abs (μ[f | m] ω) * abs (g ω)) ?_ ?_ ?_ ?_
       · -- F_measurable: Each term is ae strongly measurable
         intro n
-        -- gₙ n is m-measurable, hence m0-measurable (since m ≤ m0)
-        have : Measurable (gₙ n) := (hgₙ_meas n).mono hm le_rfl
-        exact integrable_condExp.aestronglyMeasurable.mul this.aestronglyMeasurable
+        -- gₙ n is m-measurable, so measurable w.r.t. ambient σ-algebra m0 (since m ≤ m0)
+        have hgₙ_ambient : Measurable (gₙ n) := Measurable.of_le_mk (hgₙ_meas n) hm
+        exact integrable_condExp.aestronglyMeasurable.mul hgₙ_ambient.aestronglyMeasurable
       · -- bound_integrable: TODO - need to prove |μ[f|m]| * |g| is integrable
         -- Both are integrable, but product of two L¹ functions is not always L¹
         -- May need different bound or approach for unbounded case
@@ -1365,7 +1369,8 @@ lemma integral_mul_condexp_of_measurable
       refine tendsto_integral_of_dominated_convergence (fun ω => abs (f ω) * abs (g ω)) ?_ ?_ ?_ ?_
       · -- F_measurable: Each term is ae strongly measurable
         intro n
-        exact hf_int.aestronglyMeasurable.mul (hgₙ_meas n).aestronglyMeasurable
+        have hgₙ_ambient : Measurable (gₙ n) := Measurable.of_le_mk (hgₙ_meas n) hm
+        exact hf_int.aestronglyMeasurable.mul hgₙ_ambient.aestronglyMeasurable
       · -- bound_integrable: TODO - need to prove |f| * |g| is integrable
         sorry
       · -- h_bound: Dominated by |f| * |g|
