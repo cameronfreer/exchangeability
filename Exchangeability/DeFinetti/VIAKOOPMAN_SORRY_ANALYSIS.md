@@ -53,15 +53,16 @@ AEMeasurable (fun ω => birkhoffAverage ... - condexpL2 ...) μ
 **Status**: Blocked by A2 (line 3999)
 **Priority**: Medium (will resolve when A2 is fixed)
 
-### A5. Line 4600: `optionB_L1_convergence_bounded_proves_axiom`
+### A5. Line 4600: `optionB_L1_convergence_bounded_proves_axiom` ✅ PROVED
 **Issue**: Type class unification with StandardBorelSpace
 ```lean
 @optionB_L1_convergence_bounded α _ μ _ _ = @optionB_L1_convergence_bounded_fwd α _ μ _ _
 ```
-**Status**: TODO - Type class unification issue
-**Challenge**: Implementation and axiom have different implicit parameters
-**Similar to**: Line 4581 (which was fixed with explicit @ syntax)
-**Priority**: Medium (technical, not mathematical)
+**Status**: ✓ PROVED with `rfl` (2025-11-16)
+**Solution**: Direct reflexivity - type class parameters unified correctly
+**Challenge**: Despite TODO suggesting it would fail, simple `rfl` worked
+**Similar to**: Line 4581 (which was also fixed with explicit @ syntax)
+**Priority**: COMPLETED
 
 ### A6. Line 6124: `Kernel.IndepFun` autoparam
 **Issue**: Autoparam issues with `condExpKernel`
@@ -138,23 +139,36 @@ CE[∏ᵢ₌₀ⁿ fs i (ω i) | mSI] =ᵐ ∏ᵢ₌₀ⁿ ∫ fs i dν
 
 ## Category F: AEStronglyMeasurable Transfer (1 sorry)
 
-### F1. Line 845: Transfer along measure-preserving map
+### F1. Line 847: Transfer along measure-preserving map
 **Issue**: TopologicalSpace metavariable in AEStronglyMeasurable.comp_measurable
-**Status**: TODO - Added during compilation fixes
+**Status**: ✓ Strategy documented with attempted proof (2025-11-16)
+**Challenge**: Type class mismatch in measurability
+**Attempted proof**:
+```lean
+have h_sm : StronglyMeasurable (μ[H | m]) := stronglyMeasurable_condExp
+have h_meas_comp : Measurable (fun ω' => μ[H|m] (g ω')) := h_sm.measurable.comp hg
+exact h_meas_comp.aestronglyMeasurable
+```
+**Failure reason**:
+- hg has type `@Measurable Ω' Ω inst✝² inst g` (measurable w.r.t. ambient σ-algebra)
+- But need type `@Measurable Ω' Ω inst✝² m g` (measurable w.r.t. sub-σ-algebra m)
+- This is the fundamental type class metavariable issue
+**Resolution**: Would need to prove g is m-measurable or use different approach via pushforward
 **Priority**: Medium (infrastructure lemma)
 
 ---
 
 ## Summary Statistics
 
-- **Total sorries in code**: 10 active
+- **Total sorries in code**: 9 active (1 proved ✅)
+- **Proved**: 1 (line 4600 - `rfl`)
 - **Commented out**: 4 (lines 557, 2973, 3021, 4725)
 - **Axiomatized**: 2 (product factorization)
-- **Documented with strategies**: 5 (lines 2371, 3896, 3999, 4031, 4044)
+- **Documented with strategies**: 6 (lines 847, 2371, 3896, 3999, 4031, 4044)
 - **Working workarounds**: 1 (line 6124)
-- **Type class issues**: 6 (A1-A6)
+- **Type class issues**: 6 (A1-A6, F1) - 1 proved, 5 active
 - **High priority**: 1 (L1 convergence)
-- **Medium priority**: 6 (type class + infrastructure)
+- **Medium priority**: 6 (type class + infrastructure) - 1 proved, 5 active
 - **Low priority**: 3 (MET general, axiomatized proofs)
 
 ## Completion Roadmap
