@@ -718,14 +718,14 @@ lemma common_version_condexp_bdd
           simp [Set.indicator]
       _ = ∫ ω in T', V' ω ∂μ := by
           -- Defining property of CE for V'
-          have hm'_le : MeasurableSpace.comap W' inferInstance ≤ _ := by
+          have hm'_le : MeasurableSpace.comap W' inferInstance ≤ (inferInstance : MeasurableSpace Ω) := by
             intro s hs
             obtain ⟨t, ht, rfl⟩ := hs
             exact hW' ht
           haveI : SigmaFinite (μ.trim hm'_le) := by
             haveI : IsFiniteMeasure μ := inferInstance
             infer_instance
-          exact (MeasureTheory.setIntegral_condexp hm'_le hψ_int hT'_meas).symm
+          exact (setIntegral_condExp hm'_le hψ_int hT'_meas).symm
       _ = ∫ ω in T', (v₂ ∘ W') ω ∂μ := by
           -- V' = v₂∘W' a.e.
           refine setIntegral_congr_ae (hW' hS) ?_
@@ -1195,8 +1195,10 @@ lemma integral_mul_condexp_of_measurable
       -- sₙ is a simple function, hence strongly measurable
       have : AEStronglyMeasurable (sₙ n) μ := (sₙ n).stronglyMeasurable.aestronglyMeasurable
       -- Bounded by M + 1, so integrable on sigma-finite measure
-      refine integrable_of_forall_fin_meas_le (M + 1 : ℝ≥0∞) ENNReal.coe_lt_top this ?_
-      intro s hs hμs
+      apply integrable_of_forall_fin_meas_le (M + 1 : ℝ≥0∞)
+      · simp [ENNReal.coe_lt_top]
+      · exact this
+      · intro s hs hμs
       calc (∫⁻ ω in s, ‖sₙ n ω‖₊ ∂μ)
           ≤ ∫⁻ ω in s, (M + 1 : ℝ≥0∞) ∂μ := by
             apply lintegral_mono
