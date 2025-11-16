@@ -1330,7 +1330,9 @@ lemma integral_mul_condexp_of_measurable
             -- |min(g ω, n)| ≤ |g ω|
             calc abs (min (g ω) n)
                 ≤ max (abs (g ω)) (abs (n : ℝ)) := abs_min_le_max_abs_abs
-              _ = max (abs (g ω)) (n : ℝ) := by rw [abs_of_nonneg]; exact Nat.cast_nonneg n
+              _ = max (abs (g ω)) (n : ℝ) := by
+                  congr 1
+                  exact abs_of_nonneg (Nat.cast_nonneg n)
               _ ≤ abs (g ω) := le_max_left _ _
         _ ≤ abs (g ω) := le_max_right _ _
 
