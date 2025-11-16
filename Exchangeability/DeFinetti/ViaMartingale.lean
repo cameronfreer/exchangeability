@@ -4279,7 +4279,7 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
       have h_compProd_eq : (μ.map ζ) ⊗ₘ (ProbabilityTheory.condDistrib ξ ζ μ) = (μ.map ζ) ⊗ₘ (ProbabilityTheory.condDistrib ξ η μ) := by
         rw [hζ_compProd, h_law_swapped, ← h_marg_eq, ← hη_compProd]
       -- Apply uniqueness
-      exact ProbabilityTheory.ae_eq_of_compProd_eq h_compProd_eq
+      exact Kernel.ae_eq_of_compProd_eq h_compProd_eq
 
     -- Step 5: Pull back kernel equality along ζ
     have hkernel_eq_pullback : ∀ᵐ ω ∂μ, ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) = ProbabilityTheory.condDistrib ξ η μ (ζ ω) := by
