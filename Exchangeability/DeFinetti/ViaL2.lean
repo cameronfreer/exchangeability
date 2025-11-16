@@ -2681,11 +2681,11 @@ private lemma cesaro_cauchy_rho_lt
     have h1 : ∑ k ∈ Finset.range n, f (X k ω) = ∑ k ∈ Finset.range n, (m_mean + Z k ω) := by
       apply Finset.sum_congr rfl
       intro k _
-      rw [← hZ_def k ω, add_comm]
+      simp only [hZ_def k ω, add_comm]
     have h2 : ∑ k ∈ Finset.range n', f (X k ω) = ∑ k ∈ Finset.range n', (m_mean + Z k ω) := by
       apply Finset.sum_congr rfl
       intro k _
-      rw [← hZ_def k ω, add_comm]
+      simp only [hZ_def k ω, add_comm]
     rw [h1, h2]
     -- Now have: (n : ℝ)⁻¹ * ∑ k ∈ range n, (m_mean + Z k ω) - (n' : ℝ)⁻¹ * ∑ k ∈ range n', (m_mean + Z k ω)
     -- Step 3: Distribute sums: ∑(a + b) = ∑a + ∑b
