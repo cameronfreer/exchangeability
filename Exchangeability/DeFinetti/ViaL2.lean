@@ -2605,9 +2605,13 @@ private lemma cesaro_cauchy_rho_lt
             · filter_upwards [] with ω'
               exact hf_bdd (X 0 ω')
         _ = 1 := by simp
-    trans (|f (X k.val ω)| + |∫ ω', f (X 0 ω') ∂μ|)
-    · exact abs_sub (f (X k.val ω)) (∫ ω', f (X 0 ω') ∂μ)
-    · linarith
+    -- Show |Z k.val ω| ≤ 2 using hZ_def and triangle inequality
+    rw [hZ_def k.val ω]
+    calc |f (X k.val ω) - m_mean|
+        ≤ |f (X k.val ω)| + |m_mean| := abs_sub _ _
+      _ = |f (X k.val ω)| + |∫ ω', f (X 0 ω') ∂μ| := by rw [hm_mean]
+      _ ≤ 1 + 1 := by linarith
+      _ = 2 := by norm_num
 
   -- Prove uniform variance: ∫ ξ_k² = σ²
   have hvar_ξ : ∀ k : Fin m, ∫ ω, (ξ k ω - 0)^2 ∂μ = σ ^ 2 := by
