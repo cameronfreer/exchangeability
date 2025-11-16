@@ -64,6 +64,38 @@ lemma powCLM_apply (U : E →L[ℝ] E) (k : ℕ) (v : E) :
     simp [powCLM, Function.iterate_succ_apply']
     rw [ih]
 
+/-! ### Lp Coercion Helper Lemmas -/
+
+section LpCoercionHelpers
+
+variable {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
+
+/-- Coercion distributes through Lp scalar multiplication (a.e.). -/
+lemma Lp.coeFn_smul' (c : ℝ) (f : Lp ℝ 2 μ) :
+    (↑↑(c • f) : Ω → ℝ) =ᵐ[μ] fun ω => c * (f : Ω → ℝ) ω := by
+  -- Lp scalar multiplication is pointwise a.e.
+  sorry
+
+/-- Coercion distributes through finite sums in Lp (a.e.). -/
+lemma Lp.coeFn_sum' {ι : Type*} [Fintype ι] (fs : ι → Lp ℝ 2 μ) :
+    (↑↑(∑ i, fs i) : Ω → ℝ) =ᵐ[μ] fun ω => ∑ i, (fs i : Ω → ℝ) ω := by
+  -- Lp addition is pointwise a.e., and finite sums are iterated additions
+  sorry
+
+/-- A.e. equality is preserved under finite sums. -/
+lemma EventuallyEq.sum' {ι : Type*} [Fintype ι] {fs gs : ι → Ω → ℝ}
+    (h : ∀ i, fs i =ᵐ[μ] gs i) :
+    (fun ω => ∑ i, fs i ω) =ᵐ[μ] (fun ω => ∑ i, gs i ω) := by
+  -- Strategy: Use Finset.sum_induction with EventuallyEq.add
+  -- The proof should show that:
+  -- 1. EventuallyEq is preserved under addition (EventuallyEq.add exists)
+  -- 2. Empty sum gives 0 =ᵐ 0 (trivial)
+  -- 3. Inductive step uses h i for each i
+  -- TODO: Find correct API for Finset.sum_induction or use manual induction
+  sorry
+
+end LpCoercionHelpers
+
 /-- Birkhoff average as a continuous linear map. -/
 def birkhoffAvgCLM (U : E →L[ℝ] E) (n : ℕ) : E →L[ℝ] E :=
   if n = 0 then 0 else
