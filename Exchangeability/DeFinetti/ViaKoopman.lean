@@ -2374,7 +2374,33 @@ private lemma L1_cesaro_convergence
     Tendsto (fun n =>
       ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ)
             atTop (𝓝 0) := by
-  sorry  -- See TODO above for complete strategy
+  intro A
+  -- Strategy: Truncate g, apply bounded case, use dominated convergence (Kallenberg p.14)
+
+  -- Step 1: Define truncation g_M x = max(min(g x, M), -M)
+  let g_M := fun (M : ℝ) (x : α) => max (min (g x) M) (-M)
+
+  -- TODO: Complete remaining steps
+  -- Step 2: Prove |g_M M x| ≤ M for all x (requires case analysis: g x > M, |g x| ≤ M, g x < -M)
+  -- Step 3: Prove g_M M is measurable (use hg_meas.max.min, need to compose measurability lemmas)
+  -- Step 4: Apply L1_cesaro_convergence_bounded to each g_M
+  -- Step 5: Dominated convergence:
+  --   (a) Pointwise: g_M M x → g x as M → ∞
+  --   (b) Domination: |g - g_M M| ≤ 2|g|
+  --   (c) Integrable bound: 2|g (ω 0)| is integrable (from hg_int)
+  --   (d) Conclude: ∫|g (ω j) - g_M M (ω j)| → 0 for each j
+  --   (e) By shift-invariance: A_n - A_M,n → 0 in L¹
+  -- Step 6: CE is L¹-continuous:
+  --   Use eLpNorm_one_condExp_le_eLpNorm: ∫|CE[g] - CE[g_M]| ≤ ∫|g - g_M|
+  -- Step 7: ε/3 argument:
+  --   Given ε > 0, choose M large enough so ∫|g - g_M| < ε/3
+  --   Then ∫|CE[g] - CE[g_M]| < ε/3 (by step 6)
+  --   For this M, bounded case gives N s.t. n ≥ N ⇒ ∫|A_M,n - CE[g_M]| < ε/3
+  --   Triangle inequality: ∫|A_n - CE[g]| ≤ ∫|A_n - A_M,n| + ∫|A_M,n - CE[g_M]| + ∫|CE[g_M] - CE[g]|
+  --   Each term < ε/3, so total < ε
+
+  -- Estimated ~40 lines to complete, requires helper lemmas not yet in scope
+  sorry  -- See TODO above for complete implementation strategy
 
 /-- **Section 4 helper**: Pull L¹ convergence through conditional expectation.
 
