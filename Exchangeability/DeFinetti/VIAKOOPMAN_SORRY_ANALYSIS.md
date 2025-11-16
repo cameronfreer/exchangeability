@@ -15,6 +15,12 @@ This document catalogs the remaining `sorry` statements in ViaKoopman.lean, orga
 **L1 Convergence Documentation**:
 - **Line 2371**: L1_cesaro_convergence - complete truncation strategy documented
 
+**Infrastructure Development**:
+- **BirkhoffAvgCLM.lean**: Added `birkhoffAvgCLM_coe_ae_eq_function_avg` lemma
+  - Would resolve coercion issues at lines 3999-4051
+  - Documented missing Lp coercion lemmas: `Lp.coeFn_smul`, `Lp.coeFn_sum`, `EventuallyEq.sum`
+  - Builds successfully
+
 ---
 
 ## Category A: Type Class Synthesis Issues (6 sorries)
