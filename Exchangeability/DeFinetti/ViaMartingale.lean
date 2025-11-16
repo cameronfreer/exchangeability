@@ -4189,11 +4189,11 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
       rw [h_prod_comm_ζ, h_prod_comm_η, h_law]
 
     -- Step 2: Express joint distributions using compProd in the RIGHT direction
-    have hζ_compProd : (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ) = μ.map (fun ω => (ζ ω, ξ ω)) := by
-      exact compProd_map_condDistrib hζ hξ.aemeasurable
+    have hζ_compProd : (μ.map ζ) ⊗ₘ (ProbabilityTheory.condDistrib ξ ζ μ) = μ.map (fun ω => (ζ ω, ξ ω)) := by
+      exact ProbabilityTheory.compProd_map_condDistrib hξ.aemeasurable
 
-    have hη_compProd : (μ.map η) ⊗ₘ (condDistrib ξ η μ) = μ.map (fun ω => (η ω, ξ ω)) := by
-      exact compProd_map_condDistrib hη hξ.aemeasurable
+    have hη_compProd : (μ.map η) ⊗ₘ (ProbabilityTheory.condDistrib ξ η μ) = μ.map (fun ω => (η ω, ξ ω)) := by
+      exact ProbabilityTheory.compProd_map_condDistrib hξ.aemeasurable
 
     -- Step 3: Get marginal equality from swapped pair-law
     have h_marg_eq : μ.map ζ = μ.map η := by
@@ -4202,9 +4202,9 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
       rw [← h1, ← h2, h_law_swapped]
 
     -- Step 4: Derive kernel equality in the RIGHT direction: condDistrib ξ ζ = condDistrib ξ η
-    have hkernel_eq : ∀ᵐ z ∂(μ.map ζ), condDistrib ξ ζ μ z = condDistrib ξ η μ z := by
+    have hkernel_eq : ∀ᵐ z ∂(μ.map ζ), ProbabilityTheory.condDistrib ξ ζ μ z = ProbabilityTheory.condDistrib ξ η μ z := by
       -- Rewrite with same base measure using marginal equality
-      have h_compProd_eq : (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ) = (μ.map ζ) ⊗ₘ (condDistrib ξ η μ) := by
+      have h_compProd_eq : (μ.map ζ) ⊗ₘ (ProbabilityTheory.condDistrib ξ ζ μ) = (μ.map ζ) ⊗ₘ (ProbabilityTheory.condDistrib ξ η μ) := by
         rw [hζ_compProd, h_law_swapped, ← h_marg_eq, ← hη_compProd]
       -- Apply uniqueness
       exact Kernel.ae_eq_of_compProd_eq h_compProd_eq
