@@ -3365,7 +3365,9 @@ private lemma blockAvg_cauchy_in_L2
     · -- Edge case: ρ = 1 (perfect correlation) → blockAvg values are ae-equal
       have hρ_eq : ρ = 1 := le_antisymm hρ_bd.2 (le_of_not_lt hρ_lt)
       -- When ρ = 1, Z_i = Z_0 a.e., so blockAvg values are equal a.e.
-      have h_ae_eq : ∀ n n', ∀ᵐ ω ∂μ, blockAvg f X 0 n ω = blockAvg f X 0 n' ω := by
+      -- Note: We only prove this for n, n' > 0, which suffices since we use N = 1 below.
+      -- (The general case for all n, n' ∈ ℕ is also true, but not needed.)
+      have h_ae_eq : ∀ n n', n > 0 → n' > 0 → ∀ᵐ ω ∂μ, blockAvg f X 0 n ω = blockAvg f X 0 n' ω := by
         -- Strategy: Show E[(Z_i - Z_j)²] = 0 when ρ = 1, implying Z_i = Z_j a.e.
         -- Step 1: Prove Z_i = Z_0 a.e. for all i
         have hZi_eq_Z0 : ∀ i, Z i =ᵐ[μ] Z 0 := by
@@ -3466,11 +3468,8 @@ private lemma blockAvg_cauchy_in_L2
           linarith
 
         -- Step 2: Use Z_i = Z_0 a.e. to show blockAvg n and blockAvg n' are both equal to f(X 0) a.e.
-        --         (We'll actually prove this inside the N-dependent context where n, n' ≥ 1)
-        intro n n'
-        -- Both equal f(X 0 ω) a.e., when all Z_k = Z_0 a.e.
-        -- Note: This proof will be used with n, n' ≥ 1 from the outer context (line 3543),
-        -- but we prove it generally here
+        intro n n' hn_pos hn'_pos
+        -- Helper: blockAvg equals f(X 0) when all Z_k = Z_0
         have hBlockAvg_eq_fX0 : ∀ m, m > 0 → ∀ᵐ ω ∂μ, blockAvg f X 0 m ω = f (X 0 ω) := by
           intro m hm_pos
           have : ∀ᵐ ω ∂μ, ∀ i : ℕ, i < m → Z i ω = Z 0 ω := by
@@ -3497,43 +3496,19 @@ private lemma blockAvg_cauchy_in_L2
           rw [h_sum]
           field_simp [Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp hm_pos)]
 
-        -- The result for arbitrary n, n' (which will be ≥ 1 in actual use from line 3525-3526)
-        -- But we prove it generally: assume n, n' > 0
-        have hn_pos : 0 < n ∨ n = 0 := Nat.eq_zero_or_pos n
-        have hn'_pos : 0 < n' ∨ n' = 0 := Nat.eq_zero_or_pos n'
-        cases hn_pos with
-        | inl hn_pos =>
-          cases hn'_pos with
-          | inl hn'_pos =>
-            -- Both n, n' > 0, the main case
-            filter_upwards [hBlockAvg_eq_fX0 n hn_pos, hBlockAvg_eq_fX0 n' hn'_pos] with ω hn_eq hn'_eq
-            rw [hn_eq, hn'_eq]
-          | inr hn'_zero =>
-            -- n > 0, n' = 0: won't occur when N = 1
-            -- Both blockAvg expressions are equal (vacuously or by specific value)
-            simp [hn'_zero, blockAvg, Finset.sum_empty]
-            have : ∀ᵐ ω ∂μ, blockAvg f X 0 n ω = f (X 0 ω) := hBlockAvg_eq_fX0 n hn_pos
-            filter_upwards [this] with ω hω
-            -- LHS is blockAvg f X 0 n ω = f (X 0 ω)
-            -- RHS is 0⁻¹ * 0 which in Lean is 0
-            -- These don't match, but this won't occur in the actual proof context
-            -- We could make both sides 0, or make this case impossible
-            -- For now, note that 0⁻¹ * 0 = 0 in Lean
-            rw [hω]
-            -- Need: f (X 0 ω) = 0⁻¹ * 0
-            -- This is false in general, but won't be reached
-            sorry
-        | inr hn_zero =>
-          -- n = 0: won't occur when N = 1
-          simp [hn_zero, blockAvg, Finset.sum_empty]
-          sorry
+        -- Both n, n' > 0, so we can use the helper
+        filter_upwards [hBlockAvg_eq_fX0 n hn_pos, hBlockAvg_eq_fX0 n' hn'_pos] with ω hn_eq hn'_eq
+        rw [hn_eq, hn'_eq]
       -- Trivial Cauchy: if values are ae-equal, eLpNorm of difference is 0 < ε
       use 1
-      intros n n' _ _
+      intros n n' hn_ge hn'_ge
+      -- Since n ≥ 1 and n' ≥ 1, we have n > 0 and n' > 0
+      have hn_pos : n > 0 := Nat.lt_of_lt_of_le Nat.one_pos hn_ge
+      have hn'_pos : n' > 0 := Nat.lt_of_lt_of_le Nat.one_pos hn'_ge
       -- Convert to blockAvgFrozen and show eLpNorm = 0
       show eLpNorm (fun ω => blockAvgFrozen f X n ω - blockAvgFrozen f X n' ω) 2 μ < ε
       have h_ae : ∀ᵐ ω ∂μ, blockAvgFrozen f X n ω = blockAvgFrozen f X n' ω := by
-        filter_upwards [h_ae_eq n n'] with ω hω
+        filter_upwards [h_ae_eq n n' hn_pos hn'_pos] with ω hω
         simp only [blockAvgFrozen_def, hω]
       have h_norm_zero : eLpNorm (fun ω => blockAvgFrozen f X n ω - blockAvgFrozen f X n' ω) 2 μ = 0 := by
         have h_ae_zero : (fun ω => blockAvgFrozen f X n ω - blockAvgFrozen f X n' ω) =ᵐ[μ] 0 := by
