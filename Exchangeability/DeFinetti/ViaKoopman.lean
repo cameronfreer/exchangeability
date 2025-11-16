@@ -844,6 +844,10 @@ lemma condexp_pullback_factor
     -- Issue: Type class instance problem (TopologicalSpace metavariable)
     -- Mathematical fact: condExp is strongly measurable → AE strongly measurable
     -- and composition with measurable preserves this
+    -- Attempted: h_sm.measurable.comp hg, but fails with:
+    --   hg has type @Measurable Ω' Ω inst✝² inst g
+    --   but is expected to have type @Measurable Ω' Ω inst✝² m g
+    -- The issue is that g is measurable w.r.t. ambient σ-algebra, not sub-σ-algebra m
     sorry
 
 /-
