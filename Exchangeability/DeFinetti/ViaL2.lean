@@ -1562,6 +1562,7 @@ theorem subseq_ae_of_L1
   (alpha : ℕ → Ω → ℝ) (alpha_inf : Ω → ℝ)
   (h_alpha_meas : ∀ n, Measurable (alpha n))
   (h_alpha_inf_meas : Measurable alpha_inf)
+  (h_integrable : ∀ n, Integrable (fun ω => alpha n ω - alpha_inf ω) μ)
   (h_L1_conv : ∀ ε > 0, ∃ N, ∀ n ≥ N, ∫ ω, |alpha n ω - alpha_inf ω| ∂μ < ε) :
   ∃ (φ : ℕ → ℕ), StrictMono φ ∧
     ∀ᵐ ω ∂μ, Tendsto (fun k => alpha (φ k) ω) atTop (𝓝 (alpha_inf ω)) := by
@@ -1579,19 +1580,6 @@ theorem subseq_ae_of_L1
       rw [Real.dist_eq, sub_zero, abs_of_nonneg]
       · exact hN n hn
       · exact integral_nonneg (fun ω => abs_nonneg _)
-
-    -- Establish integrability: measurable + finite integral => integrable
-    -- The L¹ convergence hypothesis tells us integrals are finite
-    have h_integrable : ∀ n, Integrable (fun ω => alpha n ω - alpha_inf ω) μ := by
-      intro n
-      -- Use the fact that the integral ∫|alpha n - alpha_inf| exists (from h_L1_conv)
-      -- Pick ε = 1, get N, and we know for n ≥ N the integral is < 1, hence finite
-      -- For n < N, the integral is still a well-defined real number
-      refine ⟨((h_alpha_meas n).sub h_alpha_inf_meas).aestronglyMeasurable, ?_⟩
-      rw [hasFiniteIntegral_iff_norm]
-      -- The existence of the real-valued integral ∫|alpha n - alpha_inf|
-      -- implies the lintegral is finite
-      sorry
 
     -- Now transfer convergence via eLpNorm_one_eq_integral_abs and continuity of ofReal
     have : Tendsto (fun n => ENNReal.ofReal (∫ ω, |alpha n ω - alpha_inf ω| ∂μ)) atTop (𝓝 0) := by
@@ -5108,11 +5096,12 @@ theorem reverse_martingale_subsequence_convergence
     (alpha : ℕ → Ω → ℝ) (alpha_inf : Ω → ℝ)
     (h_alpha_meas : ∀ n, Measurable (alpha n))
     (h_alpha_inf_meas : Measurable alpha_inf)
+    (h_integrable : ∀ n, Integrable (fun ω => alpha n ω - alpha_inf ω) μ)
     (h_L1_conv : ∀ ε > 0, ∃ N, ∀ n ≥ N, ∫ ω, |alpha n ω - alpha_inf ω| ∂μ < ε) :
     ∃ (φ : ℕ → ℕ), StrictMono φ ∧
       ∀ᵐ ω ∂μ, Tendsto (fun k => alpha (φ k) ω) atTop (𝓝 (alpha_inf ω)) := by
   classical
-  exact Helpers.subseq_ae_of_L1 alpha alpha_inf h_alpha_meas h_alpha_inf_meas h_L1_conv
+  exact Helpers.subseq_ae_of_L1 alpha alpha_inf h_alpha_meas h_alpha_inf_meas h_integrable h_L1_conv
 
 /-- Placeholder: The α_n sequence is a reverse martingale with respect to the tail filtration.
 
