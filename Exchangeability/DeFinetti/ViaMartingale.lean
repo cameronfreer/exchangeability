@@ -999,6 +999,23 @@ This factorization follows from the distributional equality via a martingale arg
 
 /- ===== Helpers: adjointness & indicator algebra (μ[·|m], (hm : m ≤ m0)) ===== -/
 
+/-- Set integral as `1_s · f` (explicit unit indicator), tuned to avoid elaboration blowups. -/
+lemma setIntegral_eq_integral_indicator_one_mul
+    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
+    {s : Set Ω} (hs : MeasurableSet s) {f : Ω → ℝ} :
+  ∫ ω in s, f ω ∂μ
+  = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω) * f ω ∂μ := by
+  classical
+  -- by definition: `∫_s f = ∫ indicator s f`; then identify with `1_s * f`
+  have : ∫ ω in s, f ω ∂μ = ∫ ω, Set.indicator s f ω ∂μ :=
+    (integral_indicator hs).symm
+  refine this.trans ?_
+  refine integral_congr_ae ?ae
+  filter_upwards with ω
+  by_cases hω : ω ∈ s
+  · simp [Set.indicator, hω, mul_comm]
+  · simp [Set.indicator, hω]
+
 /-- If `|g| ≤ C` a.e., then `|μ[g|m]| ≤ C` a.e. (uses monotonicity of conditional expectation). -/
 lemma ae_bound_condexp_of_ae_bound
     {Ω : Type*} [m0 : MeasurableSpace Ω] (μ : Measure Ω)
@@ -1413,37 +1430,16 @@ lemma condIndep_of_triple_law
             haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp hW)) := by
               infer_instance
 
-            -- Split integrals based on φ's support (φ = 1_{Y⁻¹'A})
-            have h_lhs : ∫ ω in W ⁻¹' T, φ ω * V ω ∂μ = ∫ ω in (Y ⁻¹' A) ∩ (W ⁻¹' T), V ω ∂μ := by
-              conv_lhs => arg 2; ext; rw [hφ_def]
-              rw [← setIntegral_indicator (hY hA)]
-              congr 1; ext ω
-              simp [Set.indicator, Set.mem_inter_iff, Set.mem_preimage]
-              split_ifs <;> ring
-
-            have h_rhs : ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ = ∫ ω in (Y ⁻¹' A) ∩ (W ⁻¹' T), ψ ω ∂μ := by
-              conv_lhs => arg 2; ext; rw [hφ_def]  -- Only unfold φ, not ψ
-              rw [← setIntegral_indicator (hY hA)]
-              congr 1; ext ω
-              simp [Set.indicator, Set.mem_inter_iff, Set.mem_preimage]
-              split_ifs <;> ring
-
-            rw [h_lhs, h_rhs]
-
-            -- Rewrite as integrals over W⁻¹'T with indicator 1_{Y⁻¹'A}
-            -- setIntegral_indicator: ∫ x in s, t.indicator f x ∂μ = ∫ x in s ∩ t, f x ∂μ
-            -- We have ∫ in (Y⁻¹'A) ∩ (W⁻¹'T), want ∫ in W⁻¹'T with indicator
-            conv_lhs => arg 1; rw [Set.inter_comm]  -- (Y⁻¹'A) ∩ (W⁻¹'T) = (W⁻¹'T) ∩ (Y⁻¹'A)
-            rw [← setIntegral_indicator (hY hA)]    -- ∫ in W⁻¹'T ∩ Y⁻¹'A = ∫ in W⁻¹'T, (Y⁻¹'A).indicator
-            conv_rhs => arg 1; rw [Set.inter_comm]
-            rw [← setIntegral_indicator (hY hA)]
-
             -- Apply pull-out property: μ[1_{W⁻¹'T} * ψ | 𝔾] = 1_{W⁻¹'T} * V
             have h_pull : μ[(W ⁻¹' T).indicator (fun ω => 1) * ψ | 𝔾] =ᵐ[μ]
                 (W ⁻¹' T).indicator (fun ω => 1) * V := by
-              refine condExp_mul_of_aestronglyMeasurable_left (μ := μ) (m := 𝔾) ?_ ?_ hψ_int
-              · exact stronglyMeasurable_const.indicator (hW hT_meas) |>.aestronglyMeasurable
-              · exact (integrable_const 1).indicator (hW hT_meas)
+              have h_ind_meas : AEStronglyMeasurable[𝔾] ((W ⁻¹' T).indicator (fun _ => (1:ℝ))) μ := by
+                apply AEStronglyMeasurable.indicator
+                · exact aestronglyMeasurable_const
+                · exact measurable_iff_comap_le.mpr (by exact le_refl 𝔾) _ (hW hT_meas)
+              have h_ind_int : Integrable ((W ⁻¹' T).indicator (fun _ => (1:ℝ))) μ :=
+                (integrable_const (1:ℝ)).indicator (hW hT_meas)
+              exact condExp_mul_of_aestronglyMeasurable_left (μ := μ) (m := 𝔾) h_ind_meas h_ind_int hψ_int
 
             calc ∫ ω in W ⁻¹' T, (Y ⁻¹' A).indicator (fun _ => 1) ω * V ω ∂μ
                 = ∫ ω in W ⁻¹' T, (Y ⁻¹' A).indicator (fun _ => 1) ω *
