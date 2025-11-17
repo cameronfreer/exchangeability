@@ -839,13 +839,16 @@ lemma condexp_pullback_factor
   · intro s hs _
     exact h_sets s hs
   -- 3) AEStronglyMeasurable for (μ[H | m] ∘ g) with respect to comap g m
-  · -- μ[H|m] is ae-strongly measurable w.r.t. m, and g is measurable, so the composition is ae-strongly measurable
-    -- First, μ[H|m] is ae-strongly measurable w.r.t. the full measure μ
-    have hasm : AEStronglyMeasurable (μ[H | m]) μ := stronglyMeasurable_condExp.aestronglyMeasurable
-    -- Since μ = map g μ', we can transfer this to μ'
-    rw [hpush] at hasm
-    -- Now use that g is measurable from Ω' to Ω to compose
-    exact AEStronglyMeasurable.comp_measurable hasm hg
+  · -- TODO: Transfer AE strong measurability along measure-preserving map
+    -- Strategy: Use stronglyMeasurable_condExp.aestronglyMeasurable.comp_measurable hg
+    -- Issue: Type class instance problem (TopologicalSpace metavariable)
+    -- Mathematical fact: condExp is strongly measurable → AE strongly measurable
+    -- and composition with measurable preserves this
+    -- Attempted: h_sm.measurable.comp hg, but fails with:
+    --   hg has type @Measurable Ω' Ω inst✝² inst g
+    --   but is expected to have type @Measurable Ω' Ω inst✝² m g
+    -- The issue is that g is measurable w.r.t. ambient σ-algebra, not sub-σ-algebra m
+    sorry
 
 /-
 **Invariance of conditional expectation under iterates**.
@@ -2338,7 +2341,30 @@ private lemma L1_cesaro_convergence_bounded
 /-- **Option B general case**: L¹ convergence via truncation.
 
 Extends the bounded case to general integrable functions by truncating g_M := max(min(g, M), -M),
-applying the bounded case to each g_M, and letting M → ∞ using dominated convergence. -/
+applying the bounded case to each g_M, and letting M → ∞ using dominated convergence.
+
+**TODO**: Complete proof using the following strategy (from Kallenberg p.14, Step B completion):
+1. Define truncation: `g_M x := max(min(g x, M), -M)`
+2. Show each g_M is bounded: `|g_M x| ≤ M`
+3. Apply bounded case (line 2296) to get L¹ convergence for each g_M
+4. **Truncation error → 0**: Use dominated convergence theorem
+   - Pointwise: g_M x → g x as M → ∞ (for large M > |g x|, truncation is identity)
+   - Domination: |g - g_M| ≤ 2|g| (always)
+   - Integrable bound: 2|g| is integrable
+   - Conclusion: ∫|g - g_M| → 0
+5. **CE is L¹-continuous**: ∫|CE[g] - CE[g_M]| ≤ ∫|g - g_M| → 0
+   - By L¹ contraction property: `eLpNorm_one_condExp_le_eLpNorm`
+6. **ε/3 argument**:
+   - Choose M s.t. ∫|g - g_M|, ∫|CE[g] - CE[g_M]| < ε/3
+   - For this M, bounded case gives N s.t. n ≥ N ⇒ ∫|A_M,n - CE[g_M]| < ε/3
+   - Triangle inequality: ∫|A_n - CE[g]| ≤ ∫|A_n - A_M,n| + ∫|A_M,n - CE[g_M]| + ∫|CE[g_M] - CE[g]|
+   - First term ≤ ∫(1/(n+1))∑|g - g_M| = ∫|g - g_M| < ε/3 (by shift invariance)
+   - Second term < ε/3 (by bounded case)
+   - Third term < ε/3 (by CE continuity)
+   - Total < ε
+
+Progress: Structure complete, needs filling of technical lemmas for pointwise convergence,
+eLpNorm conversions, and integral manipulations. -/
 private lemma L1_cesaro_convergence
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
@@ -2348,16 +2374,33 @@ private lemma L1_cesaro_convergence
     Tendsto (fun n =>
       ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ)
             atTop (𝓝 0) := by
-  classical
   intro A
-  -- TODO Option B truncation implementation:
-  -- For general integrable g (not necessarily bounded):
-  -- 1. Define truncations: g_M := fun x => max (min (g x) M) (-M)
-  -- 2. Each g_M is bounded by M, so apply L1_cesaro_convergence_bounded
-  -- 3. Show A_n(g_M) → A_n(g) in L¹ uniformly in n as M → ∞ (dominated convergence)
-  -- 4. Show CE[g_M | mSI] → CE[g | mSI] in L¹ as M → ∞ (continuity of CE in L¹)
-  -- 5. ε/3 argument to conclude A_n(g) → CE[g | mSI] in L¹
-  sorry
+  -- Strategy: Truncate g, apply bounded case, use dominated convergence (Kallenberg p.14)
+
+  -- Step 1: Define truncation g_M x = max(min(g x, M), -M)
+  let g_M := fun (M : ℝ) (x : α) => max (min (g x) M) (-M)
+
+  -- TODO: Complete remaining steps
+  -- Step 2: Prove |g_M M x| ≤ M for all x (requires case analysis: g x > M, |g x| ≤ M, g x < -M)
+  -- Step 3: Prove g_M M is measurable (use hg_meas.max.min, need to compose measurability lemmas)
+  -- Step 4: Apply L1_cesaro_convergence_bounded to each g_M
+  -- Step 5: Dominated convergence:
+  --   (a) Pointwise: g_M M x → g x as M → ∞
+  --   (b) Domination: |g - g_M M| ≤ 2|g|
+  --   (c) Integrable bound: 2|g (ω 0)| is integrable (from hg_int)
+  --   (d) Conclude: ∫|g (ω j) - g_M M (ω j)| → 0 for each j
+  --   (e) By shift-invariance: A_n - A_M,n → 0 in L¹
+  -- Step 6: CE is L¹-continuous:
+  --   Use eLpNorm_one_condExp_le_eLpNorm: ∫|CE[g] - CE[g_M]| ≤ ∫|g - g_M|
+  -- Step 7: ε/3 argument:
+  --   Given ε > 0, choose M large enough so ∫|g - g_M| < ε/3
+  --   Then ∫|CE[g] - CE[g_M]| < ε/3 (by step 6)
+  --   For this M, bounded case gives N s.t. n ≥ N ⇒ ∫|A_M,n - CE[g_M]| < ε/3
+  --   Triangle inequality: ∫|A_n - CE[g]| ≤ ∫|A_n - A_M,n| + ∫|A_M,n - CE[g_M]| + ∫|CE[g_M] - CE[g]|
+  --   Each term < ε/3, so total < ε
+
+  -- Estimated ~40 lines to complete, requires helper lemmas not yet in scope
+  sorry  -- See TODO above for complete implementation strategy
 
 /-- **Section 4 helper**: Pull L¹ convergence through conditional expectation.
 
@@ -3883,12 +3926,12 @@ convert between `Lp ℝ 2 μ` and `MemLp _ 2 μ` representations. The `Lp.memℒ
 doesn't exist in the current mathlib API. -/
 private lemma condexpL2_ae_eq_condExp (f : Lp ℝ 2 μ) :
     (condexpL2 (μ := μ) f : Ω[α] → ℝ) =ᵐ[μ] μ[f | shiftInvariantSigma] := by
-  -- Use mathlib's MemLp.condExpL2_ae_eq_condExp which connects condExpL2 to condExp
-  have hf : MemLp (f : Ω[α] → ℝ) 2 μ := Lp.memLp f
-  -- The key lemma: condExpL2 ℝ ℝ hm hf.toLp =ᵐ[μ] μ[f | m]
-  haveI : IsFiniteMeasure μ := inferInstance
-  haveI : InnerProductSpace ℝ ℝ := by infer_instance
-  exact hf.condExpL2_ae_eq_condExp (𝕜 := ℝ) shiftInvariantSigma_le
+  -- TODO: Requires navigating the lpMeas subtype coercion structure
+  -- The mathlib API for converting Lp → MemLp doesn't exist (Lp.memℒp is Unknown constant)
+  -- Available: MemLp.condExpL2_ae_eq_condExp : condExpL2 hm hf.toLp =ᵐ[μ] μ[f | m]
+  -- But we have f : Lp, not hf : MemLp, so cannot directly use this lemma
+  -- Need to find coercion lemmas for lpMeas.subtypeL or construct MemLp proof from Lp element
+  sorry
 
 -- Helper lemmas for Step 3a: a.e. equality through measure-preserving maps
 --
@@ -3991,12 +4034,13 @@ private lemma optionB_Step3b_L2_to_L1
           (fun ω =>
             (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
             - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω) μ := by
-      -- The coercion of an Lp element is AEStronglyMeasurable
-      have h1 : AEStronglyMeasurable (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) μ :=
-        Lp.aestronglyMeasurable _
-      have h2 : AEStronglyMeasurable (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) μ :=
-        Lp.aestronglyMeasurable _
-      exact (h1.sub h2).aemeasurable
+      -- TODO: Elaborator interprets (fun f => f) vs (fun f => ↑↑f) inconsistently
+      -- Goal requires: birkhoffAverage with (fun f => ↑↑f), but h_ae uses (fun f => f)
+      -- Mathematical fact: Both birkhoffAverage fL2 and condexpL2 fL2 are Lp elements,
+      -- so their coercions to functions are AEStronglyMeasurable, hence AEMeasurable
+      -- Attempted: Lp.aestronglyMeasurable.aemeasurable, but type unification fails
+      -- Issue: birkhoffAverage coercion structure doesn't match direct Lp coercion pattern
+      sorry
 
     -- L¹ ≤ L² via Hölder/Cauchy-Schwarz on a probability space
     have h_le :
@@ -4016,20 +4060,9 @@ private lemma optionB_Step3b_L2_to_L1
         · norm_num
         · exact h_meas.aestronglyMeasurable
       -- Convert to real via toReal and use integral formula for L¹
-      calc ∫ ω, |f ω| ∂μ
-          = (eLpNorm f 1 μ).toReal := by
-            rw [eLpNorm_one_eq_lintegral_nnnorm]
-            rw [integral_eq_lintegral_of_nonneg_ae]
-            · congr
-              ext ω
-              simp [abs_nonnorm]
-            · filter_upwards with ω
-              exact abs_nonneg _
-            · exact h_meas.norm.aemeasurable
-        _ ≤ (eLpNorm f 2 μ).toReal := by
-            have h_memLp : Memℒp (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 - condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) 2 μ := Lp.memℒp _
-            exact ENNReal.toReal_mono h_memLp.eLpNorm_ne_top h_mono
-        _ = (eLpNorm f 2 μ).toReal := rfl
+      -- TODO: This calc chain has type issues due to the sorry in h_meas above
+      -- Leaving as sorry until h_meas is proven
+      sorry
 
     -- Relate eLpNorm to Lp norm via Lp.norm_def
     have h_toNorm :
@@ -4041,8 +4074,11 @@ private lemma optionB_Step3b_L2_to_L1
         = ‖birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
              - condexpL2 (μ := μ) fL2‖ := by
       -- The Lp norm is defined as (eLpNorm ↑f p μ).toReal where ↑f is the coercion to function
-      -- The lambda is just the coercion, so this is Lp.norm_def
-      rfl
+      -- TODO: This depends on correct typing of the coercion, blocked by h_meas sorry above
+      -- Attempted: Lp.norm_def + eLpNorm_congr_ae + rfl, but rfl fails
+      -- Issue: `birkhoffAverage ... (fun f => ↑↑f) ...` ≠ `↑↑(birkhoffAverage ... (fun f => f) ...)`
+      -- These are not definitionally equal, only a.e. equal via BirkhoffAvgCLM infrastructure
+      sorry
 
     -- conclude the inequality at this `n > 0`
     have h_eq_int :
@@ -4595,14 +4631,14 @@ private theorem optionB_L1_convergence_bounded
 
 /-- Proof that the forward axiom is satisfied by the actual implementation. -/
 theorem optionB_L1_convergence_bounded_proves_axiom :
-    optionB_L1_convergence_bounded = optionB_L1_convergence_bounded_fwd := by
+    @optionB_L1_convergence_bounded α _ μ _ _ = @optionB_L1_convergence_bounded_fwd α _ μ _ _ := by
   rfl
 
 end OptionB_L1Convergence
 
 section ExtremeMembers
 
-variable {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+variable {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
 variable (hσ : MeasurePreserving shift μ μ)
 
 /-
