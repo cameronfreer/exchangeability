@@ -1424,49 +1424,23 @@ lemma condIndep_of_triple_law
               ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ = ∫ ω in W ⁻¹' T, φ ω * V ω ∂μ := by
             intro T hT_meas
 
-            -- Strategy: Use pull-out property with conditional expectation
-            -- Key: W⁻¹'T is 𝔾-measurable, so we can factor the indicator through CE
+            -- Strategy: Use setIntegral_condExp since W ⁻¹' T is 𝔾-measurable
+            -- Key: μ[φ*ψ | 𝔾] =ᵐ φ*V via pull-out property
 
             haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp hW)) := by
               infer_instance
 
-            -- Apply pull-out property: μ[1_{W⁻¹'T} * ψ | 𝔾] = 1_{W⁻¹'T} * V
-            have h_pull : μ[(W ⁻¹' T).indicator (fun ω => 1) * ψ | 𝔾] =ᵐ[μ]
-                (W ⁻¹' T).indicator (fun ω => 1) * V := by
-              have h_ind_meas : AEStronglyMeasurable[𝔾] ((W ⁻¹' T).indicator (fun _ => (1:ℝ))) μ := by
-                apply AEStronglyMeasurable.indicator
-                · exact aestronglyMeasurable_const
-                · exact measurable_iff_comap_le.mpr (by exact le_refl 𝔾) _ (hW hT_meas)
-              have h_ind_int : Integrable ((W ⁻¹' T).indicator (fun _ => (1:ℝ))) μ :=
-                (integrable_const (1:ℝ)).indicator (hW hT_meas)
-              exact condExp_mul_of_aestronglyMeasurable_left (μ := μ) (m := 𝔾) h_ind_meas h_ind_int hψ_int
+            -- W ⁻¹' T is 𝔾-measurable
+            have hWT_meas : MeasurableSet[𝔾] (W ⁻¹' T) :=
+              measurable_iff_comap_le.mpr (by exact le_refl 𝔾) _ (hW hT_meas)
 
-            calc ∫ ω in W ⁻¹' T, (Y ⁻¹' A).indicator (fun _ => 1) ω * V ω ∂μ
-                = ∫ ω in W ⁻¹' T, (Y ⁻¹' A).indicator (fun _ => 1) ω *
-                      ((W ⁻¹' T).indicator (fun _ => 1) * μ[ψ | 𝔾]) ω ∂μ := by
-                    congr 1; ext ω
-                    simp [Set.indicator, Set.mem_inter_iff]
-                    split_ifs <;> ring
-              _ = ∫ ω, (Y ⁻¹' A).indicator (fun _ => 1) ω *
-                      μ[(W ⁻¹' T).indicator (fun _ => 1) * ψ | 𝔾] ω ∂μ := by
-                    rw [setIntegral_congr_ae (hW hT_meas) (by
-                      filter_upwards [h_pull] with ω hω _
-                      congr 1
-                      exact hω)]
-                    rw [← setIntegral_indicator (hW hT_meas)]
-                    congr 1; ext ω
-                    simp [Set.indicator]
-              _ = ∫ ω, (Y ⁻¹' A).indicator (fun _ => 1) ω *
-                      ((W ⁻¹' T).indicator (fun _ => 1) * ψ) ω ∂μ := by
-                    have : Integrable ((W ⁻¹' T).indicator (fun _ => 1) * ψ) μ :=
-                      (integrable_const 1).indicator (hW hT_meas) |>.bdd_mul' hψ_int (by
-                        simp [Set.indicator]; norm_num)
-                    exact (integral_condExp (measurable_iff_comap_le.mp hW)).symm
-              _ = ∫ ω in W ⁻¹' T, (Y ⁻¹' A).indicator (fun _ => 1) ω * ψ ω ∂μ := by
-                    rw [setIntegral_indicator (hW hT_meas)]
-                    congr 1; ext ω
-                    simp [Set.indicator, Set.mem_inter_iff]
-                    split_ifs <;> ring
+            -- Use setIntegral_condExp: ∫ in S, μ[f|m] = ∫ in S, f for m-measurable S
+            calc ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ
+                = ∫ ω in W ⁻¹' T, μ[φ * ψ | 𝔾] ω ∂μ := by
+                    rw [setIntegral_condExp (measurable_iff_comap_le.mp hW) hφψ_int hWT_meas]
+              _ = ∫ ω in W ⁻¹' T, φ ω * V ω ∂μ := by
+                    -- Use pull-out property: μ[φ*ψ|𝔾] =ᵐ φ*μ[ψ|𝔾] = φ*V
+                    sorry  -- Need to show φ is 𝔾-measurable or use a different approach
 
           -- **Substep 3: Apply uniqueness**
           -- Use ae_eq_condExp_of_forall_setIntegral_eq
