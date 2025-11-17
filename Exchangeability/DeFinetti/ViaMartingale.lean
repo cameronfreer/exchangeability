@@ -1448,11 +1448,11 @@ lemma condIndep_of_triple_law
             have hH_le_m0 : ℋ ≤ _ := measurable_iff_comap_le.mp (hW.prodMk hY)
             have hG_le_m0 : 𝔾 ≤ _ := measurable_iff_comap_le.mp hW
 
-            -- Lift W⁻¹'T measurability to ambient (needed for setIntegral_condExp)
+            -- Lift W⁻¹'T measurability to ℋ, then to ambient
             have hWT_meas_H : MeasurableSet[ℋ] (W ⁻¹' T) :=
               hG_le_H (W ⁻¹' T) hWT_meas_G
-            have hWT_meas : @MeasurableSet Ω _ (W ⁻¹' T) :=
-              hH_le_m0 _ hWT_meas_H
+            -- Ambient measurability (for setIntegral_condExp)
+            have hWT_meas := hH_le_m0 _ hWT_meas_H
 
             -- Test function: h = indicator(W⁻¹'T) * φ
             set h : Ω → ℝ := fun ω => (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω * φ ω
