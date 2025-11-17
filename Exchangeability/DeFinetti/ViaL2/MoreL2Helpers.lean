@@ -47,12 +47,57 @@ allowing the main proof to be sorry-free. Each axiom can be replaced later
 with a proper theorem from mathlib or a local proof.
 -/
 
--- Forward declaration for alphaFrom (used in axiom A5 but not implemented)
+-- Forward declarations for definitions from MainConvergence
+-- (These create a circular dependency and should be moved to MainConvergence)
 axiom alphaFrom {Ω : Type*} [MeasurableSpace Ω]
   {μ : Measure Ω} [IsProbabilityMeasure μ]
   (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
   (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ)
   (f : ℝ → ℝ) : Ω → ℝ
+
+axiom directing_measure {Ω : Type*} [MeasurableSpace Ω]
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+  Ω → Measure ℝ
+
+axiom cdf_from_alpha {Ω : Type*} [MeasurableSpace Ω]
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+  Ω → ℝ → ℝ
+
+axiom alphaIic {Ω : Type*} [MeasurableSpace Ω]
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+  ℝ → Ω → ℝ
+
+axiom alphaIic_measurable {Ω : Type*} [MeasurableSpace Ω]
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+  (t : ℝ) :
+  Measurable (alphaIic X hX_contract hX_meas hX_L2 t)
+
+axiom cdf_from_alpha_limits {Ω : Type*} [MeasurableSpace Ω]
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+  (ω : Ω) :
+  Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) atBot (𝓝 0) ∧
+  Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) atTop (𝓝 1)
+
+axiom weighted_sums_converge_L1 {Ω : Type*} [MeasurableSpace Ω]
+  {μ : Measure Ω} [IsProbabilityMeasure μ]
+  (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+  (f : ℝ → ℝ) (hf_meas : Measurable f)
+  (hf_bdd : ∃ M, ∀ x, |f x| ≤ M) :
+  ∃ (alpha : Ω → ℝ),
+    Measurable alpha ∧ MemLp alpha 1 μ ∧
+    (∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m : ℕ, m ≥ M →
+      ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω) - alpha ω| ∂μ < ε)
 
 namespace Helpers
 

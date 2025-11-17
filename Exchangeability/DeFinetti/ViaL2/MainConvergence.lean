@@ -174,7 +174,7 @@ theorem weighted_sums_converge_L1
 
   -- Covariance structure of f ∘ X
   have hfX_contract' : Contractable μ (fun n ω => f (X n ω)) :=
-    contractable_comp X hX_contract hX_meas f hf_meas
+    L2Helpers.contractable_comp X hX_contract hX_meas f hf_meas
 
   have hfX_meas' : ∀ i, Measurable fun ω => f (X i ω) := by
     intro i
@@ -2583,36 +2583,6 @@ lemma cdf_from_alpha_bounds
         = ⨅ (q : {q : ℚ // t < (q : ℝ)}), alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω := rfl
       _ ≤ alphaIic X hX_contract hX_meas hX_L2 (hne.some : ℝ) ω := ciInf_le hbdd hne.some
       _ ≤ 1 := (alphaIic_bound X hX_contract hX_meas hX_L2 (hne.some : ℝ) ω).2
-
-/-- **Dominated convergence for indicator-CDF approximants (STUB).**
-
-This lemma states that for Cesàro averages of indicator functions 1_{(-∞,t]}, 
-if the underlying sequence converges, then the integrals converge by dominated convergence.
-
-**Proof sketch**: 
-1. Indicators are dominated by 1 (integrable)
-2. Pointwise convergence: if Xₙ → X, then 1_{(-∞,t]}(Xₙ) → 1_{(-∞,t]}(X) except at boundary X=t
-3. Apply mathlib's `tendsto_integral_of_dominated_convergence`
-
-**Why this is non-trivial here**: We need to link Cesàro averages (from `weighted_sums_converge_L1`) 
-to pointwise limits. This requires:
-- Extracting the limit function α from the existential in `weighted_sums_converge_L1`
-- Showing α is the pointwise limit of Cesàro averages (not just L¹ limit)
-- This may require a subsequence argument or additional regularity
-
-**TODO**: Complete this using mathlib's DCT once we clarify the pointwise convergence.
--/
-private lemma tendsto_integral_indicator_Iic
-  {μ : Measure Ω} [IsProbabilityMeasure μ]
-  (Xn X : ℕ → Ω → ℝ) (t : ℝ)
-  (hXn_meas : ∀ n, Measurable (Xn n))
-  (hX_meas : Measurable (X 0))
-  (hae : ∀ᵐ ω ∂μ, Tendsto (fun n => Xn n ω) atTop (𝓝 (X 0 ω))) :
-  Tendsto (fun n => ∫ ω, (Set.Iic t).indicator (fun _ => (1 : ℝ)) (Xn n ω) ∂μ)
-          atTop
-          (𝓝 (∫ ω, (Set.Iic t).indicator (fun _ => (1 : ℝ)) (X 0 ω) ∂μ)) := by
-  -- (A6) dominated-convergence-style continuity for fixed threshold
-  exact Helpers.tendsto_integral_indicator_Iic Xn (X 0) t hXn_meas hX_meas hae
 
 /-- Helper lemma: α_{Iic t}(ω) → 0 as t → -∞.
 
