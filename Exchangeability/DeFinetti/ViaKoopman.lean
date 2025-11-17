@@ -4034,13 +4034,13 @@ private lemma optionB_Step3b_L2_to_L1
           (fun ω =>
             (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
             - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω) μ := by
-      -- TODO: Elaborator interprets (fun f => f) vs (fun f => ↑↑f) inconsistently
-      -- Goal requires: birkhoffAverage with (fun f => ↑↑f), but h_ae uses (fun f => f)
-      -- Mathematical fact: Both birkhoffAverage fL2 and condexpL2 fL2 are Lp elements,
-      -- so their coercions to functions are AEStronglyMeasurable, hence AEMeasurable
-      -- Attempted: Lp.aestronglyMeasurable.aemeasurable, but type unification fails
-      -- Issue: birkhoffAverage coercion structure doesn't match direct Lp coercion pattern
-      sorry
+      -- Both terms are Lp elements, so AEStronglyMeasurable when coerced
+      apply AEMeasurable.sub
+      · -- birkhoffAverage ... fL2 is an Lp element
+        -- When coerced to Ω → ℝ, it's AEStronglyMeasurable
+        exact (Lp.aestronglyMeasurable _).aemeasurable
+      · -- condexpL2 fL2 is an Lp element
+        exact (Lp.aestronglyMeasurable _).aemeasurable
 
     -- L¹ ≤ L² via Hölder/Cauchy-Schwarz on a probability space
     have h_le :
