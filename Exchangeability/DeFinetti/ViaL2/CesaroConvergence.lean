@@ -1836,10 +1836,12 @@ private lemma blockAvg_cauchy_in_L2
                         congr 1 with ω
                         ring
                       · -- Use hZ_cov_uniform for i ≠ 0, i ≠ 1
-                        have hi_ne_0 : i ≠ 0 := hi
-                        -- First use hZ_cov_uniform: ∫ Z i * Z 0 = ∫ Z 0 * Z 1
+                        -- Use hZ_cov_uniform: ∫ Z 0 * Z i = ∫ Z 0 * Z 1 (then use commutativity)
+                        have h_swap : ∫ ω, Z i ω * Z 0 ω ∂μ = ∫ ω, Z 0 ω * Z i ω ∂μ := by
+                          congr 1 with ω; ring
                         calc ∫ ω, Z i ω * Z 0 ω ∂μ
-                            = ∫ ω, Z 0 ω * Z 1 ω ∂μ := hZ_cov_uniform i 0 (Ne.symm hi_ne_0)
+                            = ∫ ω, Z 0 ω * Z i ω ∂μ := h_swap
+                          _ = ∫ ω, Z 0 ω * Z 1 ω ∂μ := hZ_cov_uniform 0 i (Ne.symm hi)
                   _ = covZ := rfl
                   _ = σSq * ρ := by
                       rw [hρ_eq]
