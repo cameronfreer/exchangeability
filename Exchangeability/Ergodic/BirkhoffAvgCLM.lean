@@ -233,16 +233,38 @@ lemma birkhoffAvgCLM_coe_ae_eq_function_avg
   ((birkhoffAvgCLM (koopman T hT_mp) n) fL2 : Ω → ℝ) =ᵐ[μ]
   (fun ω => if n = 0 then 0
             else (n : ℝ)⁻¹ * ∑ k : Fin n, (fL2 : Ω → ℝ) (T^[k] ω)) := by
-  -- Strategy (documented in file header):
-  -- 1. Unfold birkhoffAvgCLM and case split on n = 0
-  -- 2. For n ≠ 0, show coercion distributes through scalar mult and sum:
-  --    - Need: Lp.coeFn_smul for scalar multiplication distribution
-  --    - Need: Lp.coeFn_sum for sum distribution
-  --    - Need: EventuallyEq.sum to combine a.e. equalities under sums
-  -- 3. For each k, use powCLM_koopman_coe_ae to relate powCLM to function iteration
-  -- 4. Combine using a.e. equality transitivity
+  -- Case split on n = 0
+  by_cases hn : n = 0
+  · -- Case n = 0: both sides are 0
+    simp only [hn, if_true]
+    rw [birkhoffAvgCLM_zero]
+    exact Lp.coeFn_zero ℝ 2 μ
+  · -- Case n ≠ 0: use coercion distribution
+    -- Unfold birkhoffAvgCLM
+    unfold birkhoffAvgCLM
+    simp only [hn, if_false]
 
-  -- Missing infrastructure: Lp coercion lemmas for algebraic operations
-  sorry
+    -- Step 1: Distribute coercion through scalar multiplication
+    -- LHS: ↑↑((n⁻¹) • (∑ k : Fin n, powCLM (koopman T hT_mp) k) fL2)
+    calc ((((n : ℝ)⁻¹) • (∑ k : Fin n, powCLM (koopman T hT_mp) k)) fL2 : Ω → ℝ)
+        =ᵐ[μ] fun ω => ((n : ℝ)⁻¹) * ((∑ k : Fin n, powCLM (koopman T hT_mp) k) fL2 : Ω → ℝ) ω :=
+          Lp.coeFn_smul' ((n : ℝ)⁻¹) _
+      -- Step 2: Distribute coercion through sum
+      _ =ᵐ[μ] fun ω => ((n : ℝ)⁻¹) * ∑ k : Fin n, ((powCLM (koopman T hT_mp) k) fL2 : Ω → ℝ) ω := by
+          apply Filter.EventuallyEq.mul (by rfl)
+          -- First show that (∑ CLMs) applied to fL2 equals ∑ (CLM applied to fL2)
+          have h_sum_app : (∑ k : Fin n, powCLM (koopman T hT_mp) k) fL2 =
+                           ∑ k : Fin n, (powCLM (koopman T hT_mp) k) fL2 := by
+            rw [← ContinuousLinearMap.sum_apply]
+          rw [h_sum_app]
+          exact Lp.coeFn_sum' _
+      -- Step 3: For each k, replace powCLM with function iteration
+      _ =ᵐ[μ] fun ω => ((n : ℝ)⁻¹) * ∑ k : Fin n, (fL2 : Ω → ℝ) (T^[k] ω) := by
+          apply Filter.EventuallyEq.mul (by rfl)
+          apply EventuallyEq.sum'
+          intro k
+          exact powCLM_koopman_coe_ae T hT_meas hT_mp k fL2
+      -- Step 4: Simplify
+      _ = fun ω => (n : ℝ)⁻¹ * ∑ k : Fin n, (fL2 : Ω → ℝ) (T^[k] ω) := rfl
 
 end Exchangeability.Ergodic
