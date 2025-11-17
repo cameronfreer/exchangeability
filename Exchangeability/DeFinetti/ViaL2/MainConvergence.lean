@@ -1335,7 +1335,7 @@ lemma alphaIic_ae_eq_alphaIicCE
     have h_axiom : ∃ (M : ℕ), ∀ (m : ℕ), m ≥ M →
         ∫ ω, |(1 / (m : ℝ)) * ∑ i : Fin m, indIic t (X i ω) -
               (μ[(indIic t ∘ X 0) | TailSigma.tailSigma X] ω)| ∂μ < ε/2 :=
-      Helpers.cesaro_to_condexp_L1 hX_contract hX_meas (indIic t) (indIic_measurable t) (indIic_bdd t) (ε/2) hε_half
+      cesaro_to_condexp_L1 hX_contract hX_meas (indIic t) (indIic_measurable t) (indIic_bdd t) (ε/2) hε_half
     obtain ⟨M₁, hM₁⟩ := h_axiom
 
     -- The difference between A 0 m and B m is O(1/m)
