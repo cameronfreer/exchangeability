@@ -1445,15 +1445,8 @@ lemma condIndep_of_triple_law
               obtain ⟨t, ht, rfl⟩ := hs
               exact ⟨{p | p.1 ∈ t}, measurable_fst ht, by ext; simp⟩
 
-            have hH_le_m0 : ℋ ≤ _ := by
-              intro s hs
-              obtain ⟨t, ht, rfl⟩ := hs
-              exact (hW.prodMk hY) ht
-
-            have hG_le_m0 : 𝔾 ≤ _ := by
-              intro s hs
-              obtain ⟨t, ht, rfl⟩ := hs
-              exact hW ht
+            have hH_le_m0 : ℋ ≤ _ := measurable_iff_comap_le.mp (hW.prodMk hY)
+            have hG_le_m0 : 𝔾 ≤ _ := measurable_iff_comap_le.mp hW
 
             -- Lift W⁻¹'T measurability to ambient (needed for setIntegral_condExp)
             have hWT_meas_H : MeasurableSet[ℋ] (W ⁻¹' T) :=
