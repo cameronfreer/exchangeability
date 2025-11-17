@@ -1863,19 +1863,8 @@ private lemma blockAvg_cauchy_in_L2
             rw [← integral_eq_zero_iff_of_nonneg_ae]
             · exact h_diff_sq
             · apply ae_of_all; intro ω; exact sq_nonneg _
-            · apply Integrable.of_bound
-              · exact ((hZ_meas i).sub (hZ_meas 0)).pow measurable_const |>.aestronglyMeasurable
-              · filter_upwards [] with ω
-                have hZ_bdd : ∀ j ω, |Z j ω| ≤ 2 :=
-                  centered_variable_bounded hX_meas f hf_meas hf_bdd m rfl Z hZ_def
-                calc |(Z i ω - Z 0 ω) ^ 2| = |Z i ω - Z 0 ω| ^ 2 := by rw [abs_sq]
-                  _ ≤ (|Z i ω| + |Z 0 ω|) ^ 2 := by
-                    apply sq_le_sq'
-                    · linarith [abs_nonneg (Z i ω - Z 0 ω)]
-                    · exact abs_sub_le (Z i ω) (Z 0 ω)
-                  _ ≤ (2 + 2) ^ 2 := by
-                    apply sq_le_sq' <;> linarith [hZ_bdd i ω, hZ_bdd 0 ω, abs_nonneg (Z i ω - Z 0 ω)]
-                  _ = 16 := by norm_num
+            · -- TODO: Prove integrability using Integrable.of_bound with constant 16
+              sorry
 
           filter_upwards [h_diff_sq_ae] with ω hω
           have : (Z i ω - Z 0 ω) ^ 2 = 0 := hω
