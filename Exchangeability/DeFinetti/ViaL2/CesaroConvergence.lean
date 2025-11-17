@@ -1815,23 +1815,25 @@ private lemma blockAvg_cauchy_in_L2
                     have hZ_bdd : ∀ j ω, |Z j ω| ≤ 2 :=
                       centered_variable_bounded hX_meas f hf_meas hf_bdd m rfl Z hZ_def
                     exact hZ_bdd 0 ω
-                calc ∫ ω, (Z i ω - Z 0 ω) ^ 2 ∂μ
-                    = ∫ ω, (Z i ω ^ 2 - 2 * Z i ω * Z 0 ω + Z 0 ω ^ 2) ∂μ := by
-                      congr 1 with ω; ring
-                  _ = ∫ ω, Z i ω ^ 2 ∂μ - ∫ ω, 2 * Z i ω * Z 0 ω ∂μ + ∫ ω, Z 0 ω ^ 2 ∂μ := by
-                      rw [integral_sub, integral_add]
-                      · exact h_int_i.pow_const 2
-                      · apply Integrable.add
+                have h_expand : ∫ ω, (Z i ω - Z 0 ω) ^ 2 ∂μ =
+                    ∫ ω, (Z i ω) ^ 2 ∂μ + ∫ ω, (Z 0 ω) ^ 2 ∂μ - 2 * ∫ ω, Z i ω * Z 0 ω ∂μ := by
+                  calc ∫ ω, (Z i ω - Z 0 ω) ^ 2 ∂μ
+                      = ∫ ω, (Z i ω ^ 2 - 2 * Z i ω * Z 0 ω + Z 0 ω ^ 2) ∂μ := by
+                        congr 1 with ω; ring
+                    _ = ∫ ω, Z i ω ^ 2 ∂μ - ∫ ω, 2 * Z i ω * Z 0 ω ∂μ + ∫ ω, Z 0 ω ^ 2 ∂μ := by
+                        rw [integral_sub, integral_add]
+                        · exact h_int_i.pow_const 2
+                        · apply Integrable.add
+                          · apply Integrable.const_mul
+                            exact h_int_i.mul h_int_0
+                          · exact h_int_0.pow_const 2
                         · apply Integrable.const_mul
                           exact h_int_i.mul h_int_0
                         · exact h_int_0.pow_const 2
-                      · apply Integrable.const_mul
-                        exact h_int_i.mul h_int_0
-                      · exact h_int_0.pow_const 2
-                  _ = ∫ ω, (Z i ω) ^ 2 ∂μ - 2 * ∫ ω, Z i ω * Z 0 ω ∂μ + ∫ ω, (Z 0 ω) ^ 2 ∂μ := by
-                      rw [integral_mul_left]; ring
-                  _ = ∫ ω, (Z i ω) ^ 2 ∂μ + ∫ ω, (Z 0 ω) ^ 2 ∂μ - 2 * ∫ ω, Z i ω * Z 0 ω ∂μ := by
-                      ring
+                    _ = ∫ ω, (Z i ω) ^ 2 ∂μ - 2 * ∫ ω, Z i ω * Z 0 ω ∂μ + ∫ ω, (Z 0 ω) ^ 2 ∂μ := by
+                        rw [integral_mul_left]; ring
+                    _ = ∫ ω, (Z i ω) ^ 2 ∂μ + ∫ ω, (Z 0 ω) ^ 2 ∂μ - 2 * ∫ ω, Z i ω * Z 0 ω ∂μ := by
+                        ring
 
               -- Now substitute known values
               have h_var_i : ∫ ω, (Z i ω) ^ 2 ∂μ = σSq := by
