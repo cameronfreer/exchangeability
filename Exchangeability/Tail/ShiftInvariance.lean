@@ -99,10 +99,17 @@ lemma tailSigma_shift_invariant_for_contractable
 
   have h_shift := Exchangeability.Contractable.shift_segment_eq hX m 1
 
-  -- The shift_segment_eq gives us exactly what we need:
+  -- The shift_segment_eq gives us exactly what we need for SEGMENTS:
   -- (X_1, X_2, ..., X_m) has the same distribution as (X_0, X_1, ..., X_{m-1})
+  -- This is: Measure.map (fun ω (i : Fin m) => X (1 + ↑i) ω) μ = Measure.map (fun ω i => X (↑i) ω) μ
 
-  sorry  -- Need to apply h_shift correctly with proper type coercions
+  -- But the GOAL asks for the FULL SEQUENCE shift invariance:
+  -- Measure.map (fun ω (i : ℕ) => X (1 + i) ω) μ = Measure.map (fun ω i => X i ω) μ
+
+  -- Issue: shift_segment_eq gives us Fin m → α, but goal needs ℕ → α
+  -- The lemma statement may need revision: either remove ∀ m, or make goal about projections to first m coords
+
+  sorry  -- Type mismatch: h_shift is about segments of length m, goal is about full sequence
 
 /-- **AXIOM: Shift invariance of conditional expectation for contractable sequences.**
 
