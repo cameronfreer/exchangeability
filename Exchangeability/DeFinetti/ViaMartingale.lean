@@ -1434,23 +1434,26 @@ lemma condIndep_of_triple_law
             have hWT_meas_G : MeasurableSet[𝔾] (W ⁻¹' T) := by
               exact ⟨T, hT_meas, rfl⟩
 
-            -- Save ambient instance before defining ℋ
-            let m0 := (inferInstance : MeasurableSpace Ω)
-
             -- Work at larger σ-algebra ℋ = σ(W,Y) where φ IS measurable
             -- Then use tower property to connect to 𝔾
-            let ℋ : MeasurableSpace Ω := MeasurableSpace.comap (fun ω => (W ω, Y ω)) m0
+            let ℋ : MeasurableSpace Ω := MeasurableSpace.comap (fun ω => (W ω, Y ω)) inferInstance
 
-            -- Establish σ-algebra hierarchy: 𝔾 ≤ ℋ ≤ m0
+            -- Establish σ-algebra hierarchy: 𝔾 ≤ ℋ ≤ (ambient)
             have hG_le_H : 𝔾 ≤ ℋ := by
               -- 𝔾 = comap W, ℋ = comap (W,Y), so 𝔾 ≤ ℋ
               intro s hs
               obtain ⟨t, ht, rfl⟩ := hs
               exact ⟨{p | p.1 ∈ t}, measurable_fst ht, by ext; simp⟩
 
-            have hH_le_m0 : ℋ ≤ m0 := fun s ⟨t, ht, he⟩ => he ▸ (hW.prodMk hY) ht
+            have hH_le_m0 : ℋ ≤ _ := by
+              intro s hs
+              obtain ⟨t, ht, rfl⟩ := hs
+              exact (hW.prodMk hY) ht
 
-            have hG_le_m0 : 𝔾 ≤ m0 := fun s ⟨t, ht, he⟩ => he ▸ hW ht
+            have hG_le_m0 : 𝔾 ≤ _ := by
+              intro s hs
+              obtain ⟨t, ht, rfl⟩ := hs
+              exact hW ht
 
             -- Lift W⁻¹'T measurability to ambient (needed for setIntegral_condExp)
             have hWT_meas_H : MeasurableSet[ℋ] (W ⁻¹' T) :=
