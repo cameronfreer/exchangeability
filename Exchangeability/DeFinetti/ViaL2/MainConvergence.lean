@@ -431,7 +431,7 @@ theorem weighted_sums_converge_L1
       have hbound := hN m ℓ hm hℓ
       have hlt :
           ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ) < ε :=
-        ENNReal.toReal_lt_of_lt_ofReal hfin (le_of_lt hε) hbound
+        L2Helpers.toReal_lt_of_lt_ofReal hfin (le_of_lt hε) hbound
       simpa [hdist]
     -- Since L¹ is complete, the sequence converges to some `G`.
     rcases CompleteSpace.complete (show Cauchy (atTop.map F) from hCauchy) with ⟨G, hG⟩
@@ -572,7 +572,7 @@ theorem weighted_sums_converge_L1
           _ ≤ ENNReal.ofReal (Real.sqrt (Cf / m)) := h_L2
           _ < ENNReal.ofReal (ε / 2) := by
               apply ENNReal.ofReal_lt_ofReal_iff hε2_pos |>.mpr
-              apply sqrt_div_lt_half_eps_of_nat hCf_nonneg hε
+              apply L2Helpers.sqrt_div_lt_half_eps_of_nat hCf_nonneg hε
               exact hm₂
       · -- m = 0 case is trivial or doesn't occur
         simp at hm
