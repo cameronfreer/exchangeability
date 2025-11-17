@@ -1434,12 +1434,23 @@ lemma condIndep_of_triple_law
             have hWT_meas : MeasurableSet[𝔾] (W ⁻¹' T) :=
               measurable_iff_comap_le.mpr (by exact le_refl 𝔾) _ (hW hT_meas)
 
-            -- Key insight: Both integrals equal ∫ μ[φ*V|𝔾] by tower property
-            -- Since V = μ[ψ|𝔾] is 𝔾-measurable, we have μ[φ*V|𝔾] = V*μ[φ|𝔾]
-            -- And by tower: μ[φ*μ[ψ|𝔾]|𝔾] should relate to μ[φ*ψ|𝔾]
+            -- Pull-out property: μ[φ*V|𝔾] =ᵐ V*μ[φ|𝔾] since V is 𝔾-measurable
+            have h_pull_V : μ[φ * V | 𝔾] =ᵐ[μ] V * μ[φ | 𝔾] := by
+              exact condExp_mul_of_aestronglyMeasurable_right (μ := μ) (m := 𝔾) hV_meas hφV_int hφ_int
 
-            -- Direct approach: show both sides equal using test functions
-            sorry
+            -- Restrict to W⁻¹'T
+            have h_pull_V_restrict : (μ.restrict (W ⁻¹' T)).ae (μ[φ * V | 𝔾] = V * μ[φ | 𝔾]) :=
+              ae_restrict_of_ae h_pull_V
+
+            -- Now use setIntegral_condExp and the pull-out equality
+            calc ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ
+                = ∫ ω in W ⁻¹' T, μ[φ * ψ | 𝔾] ω ∂μ := by
+                    rw [setIntegral_condExp (measurable_iff_comap_le.mp hW) hφψ_int hWT_meas]
+              _ = ∫ ω in W ⁻¹' T, φ ω * V ω ∂μ := by
+                    -- This requires μ[φ*ψ|𝔾] =ᵐ φ*V, which is the tower property result
+                    -- But we can't prove this directly without conditional independence
+                    -- Instead, we need to use h_test_fn
+                    sorry
 
           -- **Substep 3: Apply uniqueness**
           -- Use ae_eq_condExp_of_forall_setIntegral_eq
