@@ -158,6 +158,111 @@ and π-system extension complexity. Cleaner, more direct proofs.
 ✅ **Generalizes** beyond exchangeability to measure-preserving systems
 ✅ **Extensive mathlib integration** - conditional expectation, kernels, independence
 
+## File Structure (6650 lines total)
+
+This file is organized into 8 major logical sections. **Refactoring planned**: Split into
+modular files to improve navigability and enable parallel development.
+
+### Section 1: Infrastructure (Lines 1-701) ✅ COMPLETE
+- Imports and API compatibility aliases
+- Reusable micro-lemmas (ae_ball_range_mpr, le_eq_or_lt, abs_div_of_nonneg)
+- Lp coercion lemmas (coeFn_finset_sum)
+- Two-sided natural extension infrastructure (shiftℤ, shiftℤInv, embedℤ)
+- Helpers section (shift properties, pathspace lemmas)
+- Instance-locking shims for conditional expectation
+- **Status**: No sorries, ready for extraction
+- **Planned file**: `ViaKoopman/Infrastructure.lean`
+
+### Section 2: Lp Norm Helpers (Lines 1625-1728)
+- Lp seminorm using mathlib's `eLpNorm`
+- Conditional expectation linearity helpers
+- **Status**: Complete
+- **Planned file**: Can merge into Infrastructure.lean
+
+### Section 3: Mean Ergodic Theorem (Lines 1904-2275) ⚠️ 1 sorry
+- General (T, m) Mean Ergodic Theorem
+- `birkhoffAverage_tendsto_condexp` for general measure-preserving systems
+- **Status**: Line 1952 has sorry (type class synthesis issues)
+- **Planned file**: `ViaKoopman/MeanErgodicTheorem.lean`
+
+### Section 4: Option B - Density Approach (Lines 2276-3101) ⚠️ 1 sorry
+- L¹ Cesàro convergence (bounded and unbounded versions)
+- `L1_cesaro_convergence_bounded` ✅ complete
+- `L1_cesaro_convergence` ⚠️ has sorry at line 2403 (truncation strategy documented)
+- **Status**: Main lemma needs implementation
+- **Planned file**: `ViaKoopman/OptionB_DensityUI.lean`
+
+### Section 5: Cylinder Functions (Lines 3102-3543) ✅ COMPLETE
+- Helper lemmas for indicator_product_bridge_ax
+- MeasureTheory namespace extensions
+- CylinderFunctions section
+- **Status**: No sorries
+- **Planned file**: `ViaKoopman/CylinderFunctions.lean`
+
+### Section 6: Main Convergence (Lines 3545-3896) ⚠️ 1 sorry
+- `birkhoffAverage_tendsto_condexp` specialized for shift
+- Helper lemmas for condexpL2_koopman_comm
+- **Status**: Line 3934 has sorry (condexpL2_ae_eq_condExp - lpMeas subtype)
+- **Planned file**: `ViaKoopman/MainConvergence.lean`
+
+### Section 7: Option B - L¹ Convergence (Lines 3898-4637) ⚠️ 2 sorries
+- L¹ convergence via cylinder functions
+- **Status**:
+  - Line 4043 h_meas ✅ PROVED (Strategy 2, 2025-11-16)
+  - Line 4065 h_le ⚠️ needs Strategy 1 bridge (coercion mismatch)
+  - Line 4081 h_toNorm ⚠️ needs Strategy 1 bridge (coercion mismatch)
+- **Blockers**: Need `birkhoffAverage_lp_eq_birkhoffAvgCLM` and `birkhoffAverage_coerce_eq_ae`
+- **Planned file**: `ViaKoopman/OptionB_L1Convergence.lean`
+
+### Section 8: Extreme Members (Lines 4639-6554) ⚠️ 1 sorry
+- **LARGEST SECTION** (1916 lines, 29% of file!)
+- Mathlib infrastructure for conditional independence
+- Kernel independence and integral factorization
+- OLD PROOF (kept for reference)
+- Pair factorization for conditional expectation
+- Use axiomatized product factorization
+- **Status**: Line 6165 has sorry (Kernel.IndepFun autoparam issues)
+- **Planned file**: `ViaKoopman/ExtremeMembers.lean`
+
+### Section 9: Main Theorem (Lines 6609-6650) ✅ COMPLETE
+- Bridge Lemma connecting conditional expectation factorization to measure products
+- Main theorem: `exchangeable_implies_conditionallyIID_viaKoopman`
+- **Status**: Complete, uses all above sections
+- **Planned file**: `ViaKoopman/Theorem.lean`
+
+## Refactoring Strategy
+
+**Phase 1 (Current)**: Option 2 - Extract completed infrastructure
+- Extract Infrastructure.lean (lines 1-701 + 1625-1728)
+- Extract CylinderFunctions.lean (lines 3102-3543)
+- **Estimated time**: 2-3 hours
+- **Benefit**: Reduce main file 6650 → ~5200 lines, separate complete from WIP
+
+**Phase 2 (Future)**: Option 1 - Full modular split
+- Create all 8 files listed above
+- Update imports and dependencies
+- **Estimated time**: 8-12 hours total
+- **Benefit**: Enable parallel development, clearer boundaries, easier testing
+
+## Active Sorry Summary
+
+| Line | Section | Description | Priority |
+|------|---------|-------------|----------|
+| 1952 | MeanErgodicTheorem | Type class synthesis | Low |
+| 2403 | OptionB_DensityUI | L1_cesaro_convergence unbounded | High |
+| 3934 | MainConvergence | condexpL2_ae_eq_condExp lpMeas | Medium |
+| 4065 | OptionB_L1Convergence | h_le (needs bridge) | High |
+| 4081 | OptionB_L1Convergence | h_toNorm (needs bridge) | High |
+| 6165 | ExtremeMembers | Kernel.IndepFun autoparam | Medium |
+
+**Next steps for L¹ convergence (lines 4065, 4081)**:
+1. Implement `birkhoffAverage_lp_eq_birkhoffAvgCLM` in BirkhoffAvgCLM.lean
+2. Implement `birkhoffAverage_coerce_eq_ae` using birkhoffAvgCLM_coe_ae_eq_function_avg ✅
+3. Apply bridge lemmas to resolve coercion mismatches
+4. Estimated: 2-3 hours total
+
+See `VIAKOOPMAN_REFACTORING_ANALYSIS.md` for detailed refactoring plan.
+
 ## References
 
 * Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*,
