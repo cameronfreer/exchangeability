@@ -1434,23 +1434,55 @@ lemma condIndep_of_triple_law
             have hWT_meas : MeasurableSet[𝔾] (W ⁻¹' T) :=
               measurable_iff_comap_le.mpr (by exact le_refl 𝔾) _ (hW hT_meas)
 
-            -- Pull-out property: μ[φ*V|𝔾] =ᵐ V*μ[φ|𝔾] since V is 𝔾-measurable
-            have h_pull_V : μ[φ * V | 𝔾] =ᵐ[μ] V * μ[φ | 𝔾] := by
-              exact condExp_mul_of_aestronglyMeasurable_right (μ := μ) (m := 𝔾) hV_meas hφV_int hφ_int
+            -- Work at larger σ-algebra ℋ = σ(W,Y) where φ IS measurable
+            -- Then use tower property to connect to 𝔾
+            let ℋ : MeasurableSpace Ω := MeasurableSpace.comap (fun ω => (W ω, Y ω)) inferInstance
 
-            -- Restrict to W⁻¹'T
-            have h_pull_V_restrict : (μ.restrict (W ⁻¹' T)).ae (μ[φ * V | 𝔾] = V * μ[φ | 𝔾]) :=
-              ae_restrict_of_ae h_pull_V
+            have hG_le_H : 𝔾 ≤ ℋ := by
+              -- 𝔾 = comap W, ℋ = comap (W,Y), so 𝔾 ≤ ℋ
+              intro s hs
+              simp only [MeasurableSpace.comap, MeasurableSpace.le_def] at hs ⊢
+              obtain ⟨t, ht, rfl⟩ := hs
+              exact ⟨{p | p.1 ∈ t}, measurable_fst ht, by ext; simp⟩
 
-            -- Now use setIntegral_condExp and the pull-out equality
+            -- Test function: h = indicator(W⁻¹'T) * φ
+            set h : Ω → ℝ := fun ω => (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω * φ ω
+
+            -- h is ℋ-measurable and bounded
+            have h_meas_H : AEStronglyMeasurable[ℋ] h μ := by
+              sorry  -- TODO: show indicator(W⁻¹'T) and φ are both ℋ-measurable
+
+            have h_bdd : ∀ᵐ ω ∂μ, ‖h ω‖ ≤ 1 := by
+              filter_upwards with ω
+              simp only [h, Pi.mul_apply]
+              calc ‖(W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω * φ ω‖
+                  ≤ ‖(W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω‖ * ‖φ ω‖ := norm_mul_le _ _
+                _ ≤ 1 * 1 := by
+                    apply mul_le_mul <;> try norm_num
+                    · simp [Set.indicator]; split_ifs <;> norm_num
+                    · simp only [φ, Set.indicator]; split_ifs <;> norm_num
+                    · norm_num
+                _ = 1 := by norm_num
+
+            -- Step A: Pull-out at ℋ level
+            have stepA : ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ
+                       = ∫ ω in W ⁻¹' T, φ ω * μ[ψ | ℋ] ω ∂μ := by
+              sorry  -- TODO: use bounded test-function lemma at ℋ level
+
+            -- Step B: Tower property
+            have tower : μ[ψ | ℋ] =ᵐ[μ] μ[μ[ψ | 𝔾] | ℋ] := by
+              exact condExp_condExp_of_le hG_le_H ψ
+
+            -- Step C: Drop outer condexp using test function at ℋ level
+            have stepB : ∫ ω in W ⁻¹' T, φ ω * μ[ψ | ℋ] ω ∂μ
+                       = ∫ ω in W ⁻¹' T, φ ω * μ[ψ | 𝔾] ω ∂μ := by
+              sorry  -- TODO: replace μ[ψ|ℋ] using tower, then apply test-function lemma
+
+            -- Chain the steps
             calc ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ
-                = ∫ ω in W ⁻¹' T, μ[φ * ψ | 𝔾] ω ∂μ := by
-                    rw [setIntegral_condExp (measurable_iff_comap_le.mp hW) hφψ_int hWT_meas]
-              _ = ∫ ω in W ⁻¹' T, φ ω * V ω ∂μ := by
-                    -- This requires μ[φ*ψ|𝔾] =ᵐ φ*V, which is the tower property result
-                    -- But we can't prove this directly without conditional independence
-                    -- Instead, we need to use h_test_fn
-                    sorry
+                = ∫ ω in W ⁻¹' T, φ ω * μ[ψ | ℋ] ω ∂μ := stepA
+              _ = ∫ ω in W ⁻¹' T, φ ω * μ[ψ | 𝔾] ω ∂μ := stepB
+              _ = ∫ ω in W ⁻¹' T, φ ω * V ω ∂μ := by rfl  -- V = μ[ψ|𝔾] by definition
 
           -- **Substep 3: Apply uniqueness**
           -- Use ae_eq_condExp_of_forall_setIntegral_eq
