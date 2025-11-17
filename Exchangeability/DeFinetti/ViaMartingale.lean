@@ -1463,12 +1463,12 @@ lemma condIndep_of_triple_law
               refine AEStronglyMeasurable.mul ?_ ?_
               · -- indicator(W⁻¹'T) is ℋ-measurable
                 have : MeasurableSet[ℋ] (W ⁻¹' T) := hWT_meas_H
-                exact (@aestronglyMeasurable_const ℝ _ Ω ℋ μ).indicator this
+                exact (aestronglyMeasurable_const (m := ℋ)).indicator this
               · -- φ = indicator(Y⁻¹'A) is ℋ-measurable
                 simp only [hφ_def]
                 have hYA_H : MeasurableSet[ℋ] (Y ⁻¹' A) := by
                   exact ⟨{p | p.2 ∈ A}, measurable_snd hA, by ext; simp⟩
-                exact (@aestronglyMeasurable_const ℝ _ Ω ℋ μ).indicator hYA_H
+                exact (aestronglyMeasurable_const (m := ℋ)).indicator hYA_H
 
             have h_bdd : ∀ᵐ ω ∂μ, ‖h ω‖ ≤ 1 := by
               filter_upwards with ω
@@ -1503,7 +1503,7 @@ lemma condIndep_of_triple_law
                       simp only [hφ_def]
                       have hYA_H : MeasurableSet[ℋ] (Y ⁻¹' A) := by
                         exact ⟨{p | p.2 ∈ A}, measurable_snd hA, by ext; simp⟩
-                      exact (@aestronglyMeasurable_const ℝ _ Ω ℋ μ).indicator hYA_H
+                      exact (aestronglyMeasurable_const (m := ℋ)).indicator hYA_H
                     exact @condExp_mul_of_aestronglyMeasurable_left _ _ _ ℋ _ _ μ _ _ hφ_H hψ_int
 
             -- Step B: Tower property connects ℋ and 𝔾
