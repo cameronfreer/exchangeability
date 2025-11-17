@@ -1450,7 +1450,20 @@ lemma condIndep_of_triple_law
 
             -- h is ℋ-measurable and bounded
             have h_meas_H : AEStronglyMeasurable[ℋ] h μ := by
-              sorry  -- TODO: show indicator(W⁻¹'T) and φ are both ℋ-measurable
+              -- h = indicator(W⁻¹'T) * φ where both factors are ℋ-measurable
+              -- ℋ = comap (W,Y), so preimages of W and Y are ℋ-measurable
+              refine AEStronglyMeasurable.mul ?_ ?_
+              · -- indicator(W⁻¹'T) is ℋ-measurable
+                refine AEStronglyMeasurable.indicator ?_ ?_
+                · exact aestronglyMeasurable_const
+                · -- W⁻¹'T is ℋ-measurable since ℋ = comap(W,Y) and W⁻¹'T = (W,Y)⁻¹'(T × univ)
+                  exact ⟨{p | p.1 ∈ T}, measurable_fst hT_meas, by ext; simp⟩
+              · -- φ = indicator(Y⁻¹'A) is ℋ-measurable
+                simp only [hφ_def]
+                refine AEStronglyMeasurable.indicator ?_ ?_
+                · exact aestronglyMeasurable_const
+                · -- Y⁻¹'A is ℋ-measurable since ℋ = comap(W,Y) and Y⁻¹'A = (W,Y)⁻¹'(univ × A)
+                  exact ⟨{p | p.2 ∈ A}, measurable_snd hA, by ext; simp⟩
 
             have h_bdd : ∀ᵐ ω ∂μ, ‖h ω‖ ≤ 1 := by
               filter_upwards with ω
@@ -1467,16 +1480,53 @@ lemma condIndep_of_triple_law
             -- Step A: Pull-out at ℋ level
             have stepA : ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ
                        = ∫ ω in W ⁻¹' T, φ ω * μ[ψ | ℋ] ω ∂μ := by
-              sorry  -- TODO: use bounded test-function lemma at ℋ level
+              -- W⁻¹'T is ℋ-measurable
+              have hWT_meas_H : MeasurableSet[ℋ] (W ⁻¹' T) := by
+                exact ⟨{p | p.1 ∈ T}, measurable_fst hT_meas, by ext; simp⟩
 
-            -- Step B: Tower property
-            have tower : μ[ψ | ℋ] =ᵐ[μ] μ[μ[ψ | 𝔾] | ℋ] := by
-              exact condExp_condExp_of_le hG_le_H ψ
+              -- Need sigma-finite for setIntegral_condExp
+              haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp (hW.prod_mk hY))) := by
+                infer_instance
 
-            -- Step C: Drop outer condexp using test function at ℋ level
+              -- Apply setIntegral_condExp then pull-out property
+              calc ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ
+                  = ∫ ω in W ⁻¹' T, μ[φ * ψ | ℋ] ω ∂μ := by
+                    symm
+                    exact setIntegral_condExp ℋ hWT_meas_H hφψ_int
+                _ = ∫ ω in W ⁻¹' T, φ ω * μ[ψ | ℋ] ω ∂μ := by
+                    refine setIntegral_congr_ae hWT_meas_H ?_
+                    -- φ is ℋ-measurable, so pull-out property applies
+                    have hφ_H : AEStronglyMeasurable[ℋ] φ μ := by
+                      simp only [hφ_def]
+                      refine AEStronglyMeasurable.indicator aestronglyMeasurable_const ?_
+                      exact ⟨{p | p.2 ∈ A}, measurable_snd hA, by ext; simp⟩
+                    exact condExp_mul_of_aestronglyMeasurable_left ℋ hφ_H hψ_int
+
+            -- Step B: Tower property connects ℋ and 𝔾
             have stepB : ∫ ω in W ⁻¹' T, φ ω * μ[ψ | ℋ] ω ∂μ
                        = ∫ ω in W ⁻¹' T, φ ω * μ[ψ | 𝔾] ω ∂μ := by
-              sorry  -- TODO: replace μ[ψ|ℋ] using tower, then apply test-function lemma
+              -- Tower property: μ[μ[ψ|ℋ]|𝔾] = μ[ψ|𝔾]
+              have hH_le : ℋ ≤ (inferInstance : MeasurableSpace Ω) := by
+                intro s hs
+                obtain ⟨t, ht, rfl⟩ := hs
+                exact (hW.prod_mk hY) ht
+              have tower : μ[μ[ψ | ℋ] | 𝔾] =ᵐ[μ] μ[ψ | 𝔾] := by
+                exact condExp_condExp_of_le hG_le_H hH_le
+
+              -- For 𝔾-measurable S, use ∫_S f = ∫_S μ[f|𝔾] and tower property
+              calc ∫ ω in W ⁻¹' T, φ ω * μ[ψ | ℋ] ω ∂μ
+                  = ∫ ω in W ⁻¹' T, φ ω * μ[μ[ψ | ℋ] | 𝔾] ω ∂μ := by
+                    symm
+                    refine setIntegral_condExp 𝔾 hWT_meas ?_
+                    -- φ * μ[ψ|ℋ] is integrable (bounded indicator × integrable)
+                    refine Integrable.bdd_mul ?_ integrable_condExp ?_
+                    · exact hφψ_int.1.aestronglyMeasurable
+                    · filter_upwards with ω
+                      simp only [φ, Set.indicator]; split_ifs <;> norm_num
+                _ = ∫ ω in W ⁻¹' T, φ ω * μ[ψ | 𝔾] ω ∂μ := by
+                    refine setIntegral_congr_ae hWT_meas ?_
+                    filter_upwards [tower] with ω h_tower
+                    simp [h_tower]
 
             -- Chain the steps
             calc ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ
