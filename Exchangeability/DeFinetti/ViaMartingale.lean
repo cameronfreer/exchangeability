@@ -1451,8 +1451,8 @@ lemma condIndep_of_triple_law
             -- Lift W⁻¹'T measurability to ambient (needed for setIntegral_condExp)
             have hWT_meas_H : MeasurableSet[ℋ] (W ⁻¹' T) :=
               hG_le_H (W ⁻¹' T) hWT_meas_G
-            have hWT_meas : MeasurableSet (W ⁻¹' T) :=
-              hW hT_meas
+            have hWT_meas : @MeasurableSet Ω _ (W ⁻¹' T) :=
+              hH_le_m0 _ hWT_meas_H
 
             -- Test function: h = indicator(W⁻¹'T) * φ
             set h : Ω → ℝ := fun ω => (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω * φ ω
@@ -1463,12 +1463,12 @@ lemma condIndep_of_triple_law
               refine AEStronglyMeasurable.mul ?_ ?_
               · -- indicator(W⁻¹'T) is ℋ-measurable
                 have : MeasurableSet[ℋ] (W ⁻¹' T) := hWT_meas_H
-                exact (@aestronglyMeasurable_const ℝ _ _ _ _).indicator this
+                exact (@aestronglyMeasurable_const ℝ _ Ω ℋ μ).indicator this
               · -- φ = indicator(Y⁻¹'A) is ℋ-measurable
                 simp only [hφ_def]
                 have hYA_H : MeasurableSet[ℋ] (Y ⁻¹' A) := by
                   exact ⟨{p | p.2 ∈ A}, measurable_snd hA, by ext; simp⟩
-                exact (@aestronglyMeasurable_const ℝ _ _ _ _).indicator hYA_H
+                exact (@aestronglyMeasurable_const ℝ _ Ω ℋ μ).indicator hYA_H
 
             have h_bdd : ∀ᵐ ω ∂μ, ‖h ω‖ ≤ 1 := by
               filter_upwards with ω
@@ -1494,17 +1494,17 @@ lemma condIndep_of_triple_law
                   = ∫ ω in W ⁻¹' T, μ[φ * ψ | ℋ] ω ∂μ := by
                     symm
                     -- Use ambient measurability for setIntegral_condExp
-                    exact setIntegral_condExp ℋ hWT_meas hφψ_int
+                    exact @setIntegral_condExp _ _ _ ℋ _ μ _ _ _ hWT_meas hφψ_int
                 _ = ∫ ω in W ⁻¹' T, φ ω * μ[ψ | ℋ] ω ∂μ := by
                     -- Use ambient measurability for setIntegral_congr_ae
-                    refine setIntegral_congr_ae hWT_meas ?_
+                    refine @setIntegral_congr_ae _ _ _ _ μ _ hWT_meas ?_
                     -- φ is ℋ-measurable, so pull-out property applies
                     have hφ_H : AEStronglyMeasurable[ℋ] φ μ := by
                       simp only [hφ_def]
                       have hYA_H : MeasurableSet[ℋ] (Y ⁻¹' A) := by
                         exact ⟨{p | p.2 ∈ A}, measurable_snd hA, by ext; simp⟩
-                      exact (@aestronglyMeasurable_const ℝ _ _ _ _).indicator hYA_H
-                    exact condExp_mul_of_aestronglyMeasurable_left ℋ hφ_H hψ_int
+                      exact (@aestronglyMeasurable_const ℝ _ Ω ℋ μ).indicator hYA_H
+                    exact @condExp_mul_of_aestronglyMeasurable_left _ _ _ ℋ _ _ μ _ _ hφ_H hψ_int
 
             -- Step B: Tower property connects ℋ and 𝔾
             have stepB : ∫ ω in W ⁻¹' T, φ ω * μ[ψ | ℋ] ω ∂μ
@@ -1518,7 +1518,7 @@ lemma condIndep_of_triple_law
                   = ∫ ω in W ⁻¹' T, φ ω * μ[μ[ψ | ℋ] | 𝔾] ω ∂μ := by
                     symm
                     -- Use ambient measurability for setIntegral_condExp
-                    refine setIntegral_condExp 𝔾 hWT_meas ?_
+                    refine @setIntegral_condExp _ _ _ 𝔾 _ μ _ _ _ hWT_meas ?_
                     -- φ * μ[ψ|ℋ] is integrable (bounded indicator × integrable)
                     refine Integrable.bdd_mul ?_ integrable_condExp ?_
                     · exact hφψ_int.1.aestronglyMeasurable
@@ -1526,7 +1526,7 @@ lemma condIndep_of_triple_law
                       simp only [φ, Set.indicator]; split_ifs <;> norm_num
                 _ = ∫ ω in W ⁻¹' T, φ ω * μ[ψ | 𝔾] ω ∂μ := by
                     -- Use ambient measurability for setIntegral_congr_ae
-                    refine setIntegral_congr_ae hWT_meas ?_
+                    refine @setIntegral_congr_ae _ _ _ _ μ _ hWT_meas ?_
                     filter_upwards [tower] with ω h_tower
                     simp [h_tower]
 
