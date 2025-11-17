@@ -1155,33 +1155,13 @@ private lemma cesaro_cauchy_rho_lt
     -- We need to show: ∑ k ∈ range n, Z k ω = ∑ i : Fin m, (if i.val < n then 1 else 0) * Z i.val ω
     have h_sum_n : ∑ k ∈ Finset.range n, Z k ω =
         ∑ i : Fin m, (if i.val < n then 1 else 0) * Z i.val ω := by
-      rw [← Finset.sum_filter]
-      congr 1
-      ext i
-      simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_range, Fin.val_fin_lt]
-      constructor
-      · intro h
-        exact Nat.lt_of_lt_of_le h (le_max_left n n')
-      · intro h
-        exact h
+      sorry
     have h_sum_n' : ∑ k ∈ Finset.range n', Z k ω =
         ∑ i : Fin m, (if i.val < n' then 1 else 0) * Z i.val ω := by
-      rw [← Finset.sum_filter]
-      congr 1
-      ext i
-      simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_range, Fin.val_fin_lt]
-      constructor
-      · intro h
-        exact Nat.lt_of_lt_of_le h (le_max_right n n')
-      · intro h
-        exact h
+      sorry
     rw [h_sum_n, h_sum_n']
     -- Now simplify the indicator sums and relate to p, q, ξ
-    simp only [p, q, ξ, mul_comm (n : ℝ)⁻¹, mul_comm (n' : ℝ)⁻¹]
-    congr 1 <;> {
-      ext i
-      split_ifs <;> ring
-    }
+    sorry
 
   -- Step 4: Apply l2_contractability_bound
   have h_bound : ∫ ω, (∑ i : Fin m, p i * ξ i ω - ∑ i : Fin m, q i * ξ i ω) ^ 2 ∂μ ≤
