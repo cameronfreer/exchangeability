@@ -1434,13 +1434,12 @@ lemma condIndep_of_triple_law
             have hWT_meas : MeasurableSet[𝔾] (W ⁻¹' T) :=
               measurable_iff_comap_le.mpr (by exact le_refl 𝔾) _ (hW hT_meas)
 
-            -- Use setIntegral_condExp: ∫ in S, μ[f|m] = ∫ in S, f for m-measurable S
-            calc ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ
-                = ∫ ω in W ⁻¹' T, μ[φ * ψ | 𝔾] ω ∂μ := by
-                    rw [setIntegral_condExp (measurable_iff_comap_le.mp hW) hφψ_int hWT_meas]
-              _ = ∫ ω in W ⁻¹' T, φ ω * V ω ∂μ := by
-                    -- Use pull-out property: μ[φ*ψ|𝔾] =ᵐ φ*μ[ψ|𝔾] = φ*V
-                    sorry  -- Need to show φ is 𝔾-measurable or use a different approach
+            -- Key insight: Both integrals equal ∫ μ[φ*V|𝔾] by tower property
+            -- Since V = μ[ψ|𝔾] is 𝔾-measurable, we have μ[φ*V|𝔾] = V*μ[φ|𝔾]
+            -- And by tower: μ[φ*μ[ψ|𝔾]|𝔾] should relate to μ[φ*ψ|𝔾]
+
+            -- Direct approach: show both sides equal using test functions
+            sorry
 
           -- **Substep 3: Apply uniqueness**
           -- Use ae_eq_condExp_of_forall_setIntegral_eq
