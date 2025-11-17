@@ -269,21 +269,21 @@ theorem weighted_sums_converge_L1
     -- Convert to eLpNorm bounds
     have h1_norm : eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
         ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
-      apply eLpNorm_two_from_integral_sq_le
+      apply L2Helpers.eLpNorm_two_from_integral_sq_le
       · exact (hA_memLp_two 0 m).sub (hA_memLp_two (m - k) k)
       · apply div_nonneg hCf_nonneg; exact Nat.cast_nonneg k
       · exact h1
 
     have h2_norm : eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
         ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
-      apply eLpNorm_two_from_integral_sq_le
+      apply L2Helpers.eLpNorm_two_from_integral_sq_le
       · exact (hA_memLp_two (m - k) k).sub (hA_memLp_two (ℓ - k) k)
       · apply div_nonneg hCf_nonneg; exact Nat.cast_nonneg k
       · exact h2
 
     have h3_norm : eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ
         ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
-      apply eLpNorm_two_from_integral_sq_le
+      apply L2Helpers.eLpNorm_two_from_integral_sq_le
       · exact (hA_memLp_two (ℓ - k) k).sub (hA_memLp_two 0 ℓ)
       · apply div_nonneg hCf_nonneg; exact Nat.cast_nonneg k
       · exact h3
@@ -424,14 +424,14 @@ theorem weighted_sums_converge_L1
           dist (F m) (F ℓ) =
             ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ) := by
         simpa [F] using
-          dist_toLp_eq_eLpNorm_sub (hA_memLp 0 m) (hA_memLp 0 ℓ)
+          L2Helpers.dist_toLp_eq_eLpNorm_sub (hA_memLp 0 m) (hA_memLp 0 ℓ)
       have hfin :
           eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ ≠ ⊤ :=
         (MemLp.sub (hA_memLp 0 m) (hA_memLp 0 ℓ)).eLpNorm_ne_top
       have hbound := hN m ℓ hm hℓ
       have hlt :
           ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ) < ε :=
-        toReal_lt_of_lt_ofReal hfin (le_of_lt hε) hbound
+        ENNReal.toReal_lt_of_lt_ofReal hfin (le_of_lt hε) hbound
       simpa [hdist]
     -- Since L¹ is complete, the sequence converges to some `G`.
     rcases CompleteSpace.complete (show Cauchy (atTop.map F) from hCauchy) with ⟨G, hG⟩
@@ -454,7 +454,7 @@ theorem weighted_sums_converge_L1
         dist (F m) G =
           ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - G ω) 1 μ) := by
       simpa [F] using
-        dist_toLp_eq_eLpNorm_sub (hA_memLp 0 m) (Lp.memLp G)
+        L2Helpers.dist_toLp_eq_eLpNorm_sub (hA_memLp 0 m) (Lp.memLp G)
     have hfin :
         eLpNorm (fun ω => A 0 m ω - G ω) 1 μ ≠ ⊤ :=
       (MemLp.sub (hA_memLp 0 m) (Lp.memLp G)).eLpNorm_ne_top
@@ -559,7 +559,7 @@ theorem weighted_sums_converge_L1
           simpa [A] using h_window_bound n 0 m hm_pos
         have h_L2 : eLpNorm (fun ω => A n m ω - A 0 m ω) 2 μ ≤
             ENNReal.ofReal (Real.sqrt (Cf / m)) := by
-          apply eLpNorm_two_from_integral_sq_le
+          apply L2Helpers.eLpNorm_two_from_integral_sq_le
           · exact (hA_memLp_two n m).sub (hA_memLp_two 0 m)
           · exact div_nonneg hCf_nonneg (Nat.cast_nonneg m)
           · exact h_bound_sq'
