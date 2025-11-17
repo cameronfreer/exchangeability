@@ -85,18 +85,31 @@ lemma Lp.coeFn_smul' (c : ℝ) (f : Lp ℝ 2 μ) :
 lemma Lp.coeFn_sum' {ι : Type*} [Fintype ι] (fs : ι → Lp ℝ 2 μ) :
     (↑↑(∑ i, fs i) : Ω → ℝ) =ᵐ[μ] fun ω => ∑ i, (fs i : Ω → ℝ) ω := by
   -- Strategy: Induction on Finset using Lp.coeFn_add
-  -- Base case: ∑ i ∈ ∅, fs i = 0, and 0 coerces to zero function
-  -- Inductive step: Use Lp.coeFn_add to show (fs i + ∑ j ∈ t, fs j) coerces correctly
-  --
-  -- Proof outline:
-  -- 1. Induction on Finset.univ
-  -- 2. Empty case: Show ↑↑0 =ᵐ[μ] fun ω => 0 (need: Lp.coeFn_zero or direct simp)
-  -- 3. Insert case: Use Lp.coeFn_add and EventuallyEq.add with IH
-  -- 4. Final step: ∑ insert distributivity is definitional
-  --
-  -- Issue: Need careful handling of coercion notation and Finset.sum simplification
-  -- TODO: Debug the induction proof - likely needs explicit coercion lemmas
-  sorry
+  classical
+  -- Prove for arbitrary finset, then apply to Finset.univ
+  have h_finset : ∀ (s : Finset ι),
+      (↑↑(s.sum fs) : Ω → ℝ) =ᵐ[μ] fun ω => s.sum (fun i => (fs i : Ω → ℝ) ω) := by
+    intro s
+    induction s using Finset.induction with
+    | empty =>
+      -- Empty sum is 0, use Lp.coeFn_zero
+      simp only [Finset.sum_empty]
+      calc (↑↑(0 : Lp ℝ 2 μ) : Ω → ℝ)
+          =ᵐ[μ] (0 : Ω → ℝ) := Lp.coeFn_zero ℝ 2 μ
+        _ = fun ω => 0 := rfl
+    | @insert i t hi IH =>
+      -- Insert case: use Lp.coeFn_add
+      simp only [Finset.sum_insert hi]
+      calc (↑↑(fs i + t.sum fs) : Ω → ℝ)
+          =ᵐ[μ] (↑↑(fs i) : Ω → ℝ) + (↑↑(t.sum fs) : Ω → ℝ) := Lp.coeFn_add _ _
+        _ =ᵐ[μ] (↑↑(fs i) : Ω → ℝ) + fun ω => t.sum (fun j => (fs j : Ω → ℝ) ω) :=
+            Filter.EventuallyEq.add (by rfl) IH
+        _ =ᵐ[μ] fun ω => (fs i : Ω → ℝ) ω + t.sum (fun j => (fs j : Ω → ℝ) ω) := by
+            apply Filter.Eventually.of_forall
+            intro ω
+            rfl
+  -- Apply to Finset.univ
+  convert h_finset Finset.univ using 1 <;> simp
 
 /-- A.e. equality is preserved under finite sums. -/
 lemma EventuallyEq.sum' {ι : Type*} [Fintype ι] {fs gs : ι → Ω → ℝ}
