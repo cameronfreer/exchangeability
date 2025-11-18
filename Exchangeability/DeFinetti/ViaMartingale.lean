@@ -1906,16 +1906,12 @@ lemma condExp_bounded_comp_eq_of_triple_law
 
   -- Sub-σ-algebra hypotheses
   -- The pullback σ-algebras are sub-σ-algebras of the ambient one
-  have h𝔾_le : 𝔾 ≤ (‹MeasurableSpace Ω›) := by
-    apply measurable_iff_comap_le.mp
-    exact Measurable.prodMk hZ hW
-  have h𝔽_le : 𝔽 ≤ (‹MeasurableSpace Ω›) := by
-    apply measurable_iff_comap_le.mp
-    exact hW
+  have h𝔾_le : 𝔾 ≤ _ := measurable_iff_comap_le.mp (hZ.prodMk hW)
+  have h𝔽_le : 𝔽 ≤ _ := measurable_iff_comap_le.mp hW
 
   -- σ-finiteness: trimmed measures are finite (hence σ-finite) for probability measures
-  haveI : SigmaFinite (μ.trim h𝔾_le) := inferInstance
-  haveI : SigmaFinite (μ.trim h𝔽_le) := inferInstance
+  haveI : SigmaFinite (μ.trim h𝔾_le) := by infer_instance
+  haveI : SigmaFinite (μ.trim h𝔽_le) := by infer_instance
 
   -- Apply dominated convergence for 𝔾 to get convergence in L¹
   have h𝔾_conv : Tendsto (fun n => condExpL1 h𝔾_le μ (φₙ n ∘ Y)) atTop (𝓝 (condExpL1 h𝔾_le μ (φ ∘ Y))) := by
@@ -1937,20 +1933,23 @@ lemma condExp_bounded_comp_eq_of_triple_law
   have h_eq_L1 : ∀ n, condExpL1 h𝔾_le μ (φₙ n ∘ Y) = condExpL1 h𝔽_le μ (φₙ n ∘ Y) := by
     intro n
     ext1
-    refine (condExp_ae_eq_condExpL1 h𝔾_le (φₙ n ∘ Y)).trans ?_
-    refine (hφₙ_eq n).trans ?_
-    exact (condExp_ae_eq_condExpL1 h𝔽_le (φₙ n ∘ Y)).symm
+    calc (condExpL1 h𝔾_le μ (φₙ n ∘ Y) : Ω → ℝ)
+        =ᵐ[μ] μ[φₙ n ∘ Y|𝔾] := (condExp_ae_eq_condExpL1 h𝔾_le (φₙ n ∘ Y)).symm
+      _ =ᵐ[μ] μ[φₙ n ∘ Y|𝔽] := hφₙ_eq n
+      _ =ᵐ[μ] (condExpL1 h𝔽_le μ (φₙ n ∘ Y) : Ω → ℝ) := condExp_ae_eq_condExpL1 h𝔽_le (φₙ n ∘ Y)
 
   -- Two sequences converge in L¹ and are equal, so limits are equal
   have : condExpL1 h𝔾_le μ (φ ∘ Y) = condExpL1 h𝔽_le μ (φ ∘ Y) :=
     tendsto_nhds_unique_of_eventuallyEq h𝔾_conv h𝔽_conv (Eventually.of_forall h_eq_L1)
 
   -- Convert L¹ equality to a.e. equality
-  have h1 := condExp_ae_eq_condExpL1 h𝔾_le (φ ∘ Y)
-  have h2 := condExp_ae_eq_condExpL1 h𝔽_le (φ ∘ Y)
-  have h3 : (condExpL1 h𝔾_le μ (φ ∘ Y) : Ω → ℝ) =ᵐ[μ] (condExpL1 h𝔽_le μ (φ ∘ Y) : Ω → ℝ) := by
-    rw [this]
-  exact h1.trans (h3.trans h2.symm)
+  -- h1: μ[φ ∘ Y|𝔾] =ᵐ condExpL1 h𝔾_le μ (φ ∘ Y)
+  -- h2: μ[φ ∘ Y|𝔽] =ᵐ condExpL1 h𝔽_le μ (φ ∘ Y)
+  -- this: condExpL1 are equal, so coercions are a.e. equal
+  calc μ[φ ∘ Y|𝔾]
+      =ᵐ[μ] (condExpL1 h𝔾_le μ (φ ∘ Y) : Ω → ℝ) := condExp_ae_eq_condExpL1 h𝔾_le (φ ∘ Y)
+    _ =ᵐ[μ] (condExpL1 h𝔽_le μ (φ ∘ Y) : Ω → ℝ) := by rw [this]
+    _ =ᵐ[μ] μ[φ ∘ Y|𝔽] := (condExp_ae_eq_condExpL1 h𝔽_le (φ ∘ Y)).symm
 
 end ConditionalIndependence
 
