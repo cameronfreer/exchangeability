@@ -240,13 +240,6 @@ local notation "mSI" => shiftInvariantSigma (α := α)
 
 /-! ## Utility lemmas -/
 
-/-- Integrability of a bounded function on a finite measure space. -/
-private lemma integrable_of_bounded {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
-    [IsFiniteMeasure μ] {f : Ω → ℝ} (hf : Measurable f) (hbd : ∃ C, ∀ ω, |f ω| ≤ C) :
-    Integrable f μ := by
-  obtain ⟨C, hC⟩ := hbd
-  exact ⟨hf.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hC)⟩
-
 /-- Integrability of a bounded product on a finite measure space. -/
 private lemma integrable_of_bounded_mul
     {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ] [Nonempty Ω]
@@ -271,7 +264,7 @@ private lemma integrable_of_bounded_mul
       mul_le_mul hφ hψ (abs_nonneg _) hCφ_nonneg
     simpa [abs_mul] using hmul
   have h_meas : Measurable fun ω => φ ω * ψ ω := hφ_meas.mul hψ_meas
-  exact integrable_of_bounded h_meas ⟨Cφ * Cψ, h_bound⟩
+  exact integrable_of_bounded_measurable h_meas (Cφ * Cψ) h_bound
 
 /-- **Robust wrapper for CE ↔ kernel integral conversion**.
 
