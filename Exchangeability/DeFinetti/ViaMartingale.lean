@@ -1902,10 +1902,55 @@ lemma condExp_bounded_comp_eq_of_triple_law
   --   (μ[φₙ n ∘ Y|𝔽]) → (μ[φ ∘ Y|𝔽]) a.e.
 
   -- Since the sequences are pointwise equal a.e., their limits are equal a.e.
-  -- This follows from: if fₙ(ω) = gₙ(ω) for all n and almost every ω,
-  -- and fₙ(ω) → f(ω), gₙ(ω) → g(ω), then f(ω) = g(ω) for almost every ω
+  -- We apply dominated convergence separately for 𝔾 and 𝔽, then use uniqueness of limits
 
-  sorry
+  -- Sub-σ-algebra hypotheses
+  -- The pullback σ-algebras are sub-σ-algebras of the ambient one
+  have h𝔾_le : 𝔾 ≤ (‹MeasurableSpace Ω›) := by
+    apply measurable_iff_comap_le.mp
+    exact Measurable.prodMk hZ hW
+  have h𝔽_le : 𝔽 ≤ (‹MeasurableSpace Ω›) := by
+    apply measurable_iff_comap_le.mp
+    exact hW
+
+  -- σ-finiteness: trimmed measures are finite (hence σ-finite) for probability measures
+  haveI : SigmaFinite (μ.trim h𝔾_le) := inferInstance
+  haveI : SigmaFinite (μ.trim h𝔽_le) := inferInstance
+
+  -- Apply dominated convergence for 𝔾 to get convergence in L¹
+  have h𝔾_conv : Tendsto (fun n => condExpL1 h𝔾_le μ (φₙ n ∘ Y)) atTop (𝓝 (condExpL1 h𝔾_le μ (φ ∘ Y))) := by
+    apply tendsto_condExpL1_of_dominated_convergence h𝔾_le (fun ω => C + 1)
+    · intro n; exact (hφₙY_int n).1
+    · exact h_bound_int
+    · intro n; exact hφₙY_bound n
+    · exact hφₙY_tendsto
+
+  -- Apply dominated convergence for 𝔽 to get convergence in L¹
+  have h𝔽_conv : Tendsto (fun n => condExpL1 h𝔽_le μ (φₙ n ∘ Y)) atTop (𝓝 (condExpL1 h𝔽_le μ (φ ∘ Y))) := by
+    apply tendsto_condExpL1_of_dominated_convergence h𝔽_le (fun ω => C + 1)
+    · intro n; exact (hφₙY_int n).1
+    · exact h_bound_int
+    · intro n; exact hφₙY_bound n
+    · exact hφₙY_tendsto
+
+  -- Convert a.e. equalities to L¹ equalities for each n
+  have h_eq_L1 : ∀ n, condExpL1 h𝔾_le μ (φₙ n ∘ Y) = condExpL1 h𝔽_le μ (φₙ n ∘ Y) := by
+    intro n
+    ext1
+    refine (condExp_ae_eq_condExpL1 h𝔾_le (φₙ n ∘ Y)).trans ?_
+    refine (hφₙ_eq n).trans ?_
+    exact (condExp_ae_eq_condExpL1 h𝔽_le (φₙ n ∘ Y)).symm
+
+  -- Two sequences converge in L¹ and are equal, so limits are equal
+  have : condExpL1 h𝔾_le μ (φ ∘ Y) = condExpL1 h𝔽_le μ (φ ∘ Y) :=
+    tendsto_nhds_unique_of_eventuallyEq h𝔾_conv h𝔽_conv (Eventually.of_forall h_eq_L1)
+
+  -- Convert L¹ equality to a.e. equality
+  have h1 := condExp_ae_eq_condExpL1 h𝔾_le (φ ∘ Y)
+  have h2 := condExp_ae_eq_condExpL1 h𝔽_le (φ ∘ Y)
+  have h3 : (condExpL1 h𝔾_le μ (φ ∘ Y) : Ω → ℝ) =ᵐ[μ] (condExpL1 h𝔽_le μ (φ ∘ Y) : Ω → ℝ) := by
+    rw [this]
+  exact h1.trans (h3.trans h2.symm)
 
 end ConditionalIndependence
 
