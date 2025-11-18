@@ -1801,24 +1801,76 @@ private lemma blockAvg_cauchy_in_L2
               --                = σ² + σ² - 2*E[Z_i*Z_0]
 
               -- Expand (Z_i - Z_0)² = Z_i² + Z_0² - 2*Z_i*Z_0 in expectation
-              have h_int_i : Integrable (Z i) μ := by
-                apply Integrable.of_bound
-                · exact (hZ_meas i).aestronglyMeasurable
-                · filter_upwards [] with ω
-                  have hZ_bdd : ∀ j ω, |Z j ω| ≤ 2 :=
-                    centered_variable_bounded hX_meas f hf_meas hf_bdd m rfl Z hZ_def
-                  exact hZ_bdd i ω
-              have h_int_0 : Integrable (Z 0) μ := by
-                apply Integrable.of_bound
-                · exact (hZ_meas 0).aestronglyMeasurable
-                · filter_upwards [] with ω
-                  have hZ_bdd : ∀ j ω, |Z j ω| ≤ 2 :=
-                    centered_variable_bounded hX_meas f hf_meas hf_bdd m rfl Z hZ_def
-                  exact hZ_bdd 0 ω
               -- Expand (a - b)² = a² + b² - 2ab using algebra and linearity of integral
               have h_expand : ∫ ω, (Z i ω - Z 0 ω) ^ 2 ∂μ =
                   ∫ ω, (Z i ω) ^ 2 ∂μ + ∫ ω, (Z 0 ω) ^ 2 ∂μ - 2 * ∫ ω, Z i ω * Z 0 ω ∂μ := by
-                sorry  -- TODO: Expand integral using sub_sq' and linearity
+                -- (a - b)² = a² - 2ab + b²
+                have h_alg : ∀ a b : ℝ, (a - b) ^ 2 = a ^ 2 - 2 * a * b + b ^ 2 := by
+                  intro a b; ring
+                -- Rewrite the integrand
+                have : (fun ω => (Z i ω - Z 0 ω) ^ 2) = fun ω => (Z i ω) ^ 2 - 2 * Z i ω * Z 0 ω + (Z 0 ω) ^ 2 := by
+                  ext ω; exact h_alg (Z i ω) (Z 0 ω)
+                rw [this]
+                -- Define integrability proofs inline
+                have hZ_bdd : ∀ j ω, |Z j ω| ≤ 2 :=
+                  centered_variable_bounded hX_meas f hf_meas hf_bdd m rfl Z hZ_def
+                have h_int_i : Integrable (Z i) μ := show Integrable (Z i) μ from ⟨
+                  (hZ_meas i).aestronglyMeasurable,
+                  HasFiniteIntegral.of_bounded (by
+                    filter_upwards [] with ω
+                    exact hZ_bdd i ω)⟩
+                have h_int_0 : Integrable (Z 0) μ := show Integrable (Z 0) μ from ⟨
+                  (hZ_meas 0).aestronglyMeasurable,
+                  HasFiniteIntegral.of_bounded (by
+                    filter_upwards [] with ω
+                    exact hZ_bdd 0 ω)⟩
+                -- Need integrability of Z i ^ 2, Z 0 ^ 2, and Z i * Z 0
+                -- These follow from boundedness (bounded functions on finite measure are integrable)
+                have h_int_i_sq : Integrable (fun ω => (Z i ω) ^ 2) μ := ⟨
+                  (hZ_meas i).pow_const 2 |>.aestronglyMeasurable,
+                  HasFiniteIntegral.of_bounded (by
+                    filter_upwards [] with ω
+                    have : |Z i ω| ≤ 2 := hZ_bdd i ω
+                    calc ‖(Z i ω) ^ 2‖
+                        = |(Z i ω) ^ 2| := by simp [Real.norm_eq_abs]
+                      _ = (Z i ω) ^ 2 := abs_sq (Z i ω)
+                      _ = |Z i ω| ^ 2 := by rw [sq_abs]
+                      _ ≤ 2 ^ 2 := by gcongr
+                      _ = 4 := by norm_num)⟩
+                have h_int_0_sq : Integrable (fun ω => (Z 0 ω) ^ 2) μ := ⟨
+                  (hZ_meas 0).pow_const 2 |>.aestronglyMeasurable,
+                  HasFiniteIntegral.of_bounded (by
+                    filter_upwards [] with ω
+                    have : |Z 0 ω| ≤ 2 := hZ_bdd 0 ω
+                    calc ‖(Z 0 ω) ^ 2‖
+                        = |(Z 0 ω) ^ 2| := by simp [Real.norm_eq_abs]
+                      _ = (Z 0 ω) ^ 2 := abs_sq (Z 0 ω)
+                      _ = |Z 0 ω| ^ 2 := by rw [sq_abs]
+                      _ ≤ 2 ^ 2 := by gcongr
+                      _ = 4 := by norm_num)⟩
+                have h_int_prod : Integrable (fun ω => Z i ω * Z 0 ω) μ := ⟨
+                  (hZ_meas i).mul (hZ_meas 0) |>.aestronglyMeasurable,
+                  HasFiniteIntegral.of_bounded (by
+                    filter_upwards [] with ω
+                    have hi : |Z i ω| ≤ 2 := hZ_bdd i ω
+                    have h0 : |Z 0 ω| ≤ 2 := hZ_bdd 0 ω
+                    calc ‖Z i ω * Z 0 ω‖
+                        = |Z i ω * Z 0 ω| := by simp [Real.norm_eq_abs]
+                      _ = |Z i ω| * |Z 0 ω| := abs_mul (Z i ω) (Z 0 ω)
+                      _ ≤ 2 * 2 := mul_le_mul hi h0 (abs_nonneg _) (by norm_num)
+                      _ = 4 := by norm_num)⟩
+                -- ∫ (a² - 2ab + b²) = ∫ a² + ∫ b² - 2 * ∫ ab by linearity
+                have h_rearrange : (fun ω => Z i ω ^ 2 - 2 * Z i ω * Z 0 ω + Z 0 ω ^ 2)
+                                 = (fun ω => Z i ω ^ 2 + Z 0 ω ^ 2 - 2 * (Z i ω * Z 0 ω)) := by
+                  ext ω; ring
+                calc ∫ ω, Z i ω ^ 2 - 2 * Z i ω * Z 0 ω + Z 0 ω ^ 2 ∂μ
+                    = ∫ ω, Z i ω ^ 2 + Z 0 ω ^ 2 - 2 * (Z i ω * Z 0 ω) ∂μ := by rw [h_rearrange]
+                  _ = ∫ ω, (Z i ω ^ 2 + Z 0 ω ^ 2) ∂μ - ∫ ω, 2 * (Z i ω * Z 0 ω) ∂μ :=
+                      integral_sub (h_int_i_sq.add h_int_0_sq) (h_int_prod.const_mul 2)
+                  _ = ∫ ω, Z i ω ^ 2 ∂μ + ∫ ω, Z 0 ω ^ 2 ∂μ - ∫ ω, 2 * (Z i ω * Z 0 ω) ∂μ :=
+                      by rw [integral_add h_int_i_sq h_int_0_sq]
+                  _ = ∫ ω, Z i ω ^ 2 ∂μ + ∫ ω, Z 0 ω ^ 2 ∂μ - 2 * ∫ ω, Z i ω * Z 0 ω ∂μ :=
+                      by simp_rw [integral_const_mul]
 
               -- Now substitute known values
               have h_var_i : ∫ ω, (Z i ω) ^ 2 ∂μ = σSq := by
