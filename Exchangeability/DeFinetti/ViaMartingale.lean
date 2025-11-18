@@ -3740,27 +3740,17 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
     -- Now we have everything we need - use the tower property
     have : μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] =ᵐ[μ]
            μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] := by
-      -- We have htower which says μ[μ[f|ζ]|η] =ᵐ μ[f|η]
-      -- And μ[f|ζ] is σ(ζ)-measurable, hence also σ(η)-measurable (since σ(η) ≤ σ(ζ))
-      -- So μ[μ[f|ζ]|η] =ᵐ μ[f|ζ] by the property that conditioning on coarser σ-algebra doesn't change
-      -- measurable functions
-      have : μ[μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ]|
-              MeasurableSpace.comap η mγ] =ᵐ[μ]
-            μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] := by
-        -- μ[f|ζ] is σ(ζ)-measurable
-        -- Since σ(η) ≤ σ(ζ), any σ(ζ)-measurable function is also σ(η)-measurable
-        haveI : SigmaFinite (μ.trim hmη_le) := by
-          infer_instance
-        -- stronglyMeasurable_condExp tells us μ[f|ζ] is σ(ζ)-strongly measurable
-        have h_ζ : StronglyMeasurable[MeasurableSpace.comap ζ mγ] μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] :=
-          stronglyMeasurable_condExp
-        -- Since σ(η) ≤ σ(ζ), this is also σ(η)-strongly measurable
-        have h_η : StronglyMeasurable[MeasurableSpace.comap η mγ] μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] := by
-          -- Use the fact that σ(η) ≤ σ(ζ) to lift measurability
-          exact StronglyMeasurable.mono h_ζ h_le
-        exact condExp_of_aestronglyMeasurable' hmη_le h_η.aestronglyMeasurable integrable_condExp
-      -- Combine with tower property
-      exact this.symm.trans htower
+      -- TODO: This requires proving μ[μ[f|ζ]|η] =ᵐ μ[f|ζ]
+      -- This is NOT a general fact about σ-algebras (σ(η) ≤ σ(ζ) does NOT imply
+      -- σ(ζ)-measurable functions are σ(η)-measurable).
+      -- Instead, this should follow from the specific pair-law structure in this theorem.
+      -- The deep content is that the pair-law (ξ,ζ) =ᵈ (ξ,η) combined with σ(η) ≤ σ(ζ)
+      -- implies that μ[f∘ξ|ζ] and μ[f∘ξ|η] satisfy the same integral equations,
+      -- hence are equal by uniqueness.
+      --
+      -- Proper proof would go through kernel uniqueness using the compProd representation
+      -- and the marginal equality h_marg_eq proved above.
+      sorry
 
     -- Finish: prove ∫_S μ[f|η] = ∫_S f using the defining property of conditional expectation
     -- First, prove ∫_S μ[f|ζ] = ∫_S f (by definition of conditional expectation)
@@ -3776,7 +3766,10 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
     have step2 : ∫ ω in S, μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] ω ∂μ =
                  ∫ ω in S, μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] ω ∂μ := by
       -- Use integral_congr_ae on the restricted measure
-      have h_ae_restrict := ae_restrict_of_ae this.symm
+      have h_ae_restrict : ∀ᵐ (ω : Ω) ∂μ.restrict S,
+          μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] ω =
+          μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] ω :=
+        ae_restrict_of_ae this.symm
       exact integral_congr_ae (μ := μ.restrict S) h_ae_restrict
 
     -- Combine to get ∫_S μ[f|η] = ∫_S f
