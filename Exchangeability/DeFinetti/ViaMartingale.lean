@@ -3747,15 +3747,18 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
       have : μ[μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ]|
               MeasurableSpace.comap η mγ] =ᵐ[μ]
             μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] := by
-        -- μ[f|ζ] is σ(ζ)-measurable, and σ(η) ≤ σ(ζ), so it's also σ(η)-measurable
-        -- Hence μ[μ[f|ζ]|η] = μ[f|ζ] a.e.
+        -- μ[f|ζ] is σ(ζ)-measurable
+        -- Since σ(η) ≤ σ(ζ), any σ(ζ)-measurable function is also σ(η)-measurable
         haveI : SigmaFinite (μ.trim hmη_le) := by
-          -- The trimmed measure is sigma-finite because μ is a probability measure
-          -- and probability measures are finite, hence sigma-finite
           infer_instance
-        have h_asm := @stronglyMeasurable_condExp Ω ℝ (MeasurableSpace.comap ζ mγ) mΩ
-        exact condExp_of_aestronglyMeasurable' hmη_le h_asm.aestronglyMeasurable
-          integrable_condExp
+        -- stronglyMeasurable_condExp tells us μ[f|ζ] is σ(ζ)-strongly measurable
+        have h_ζ : StronglyMeasurable[MeasurableSpace.comap ζ mγ] μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] :=
+          stronglyMeasurable_condExp
+        -- Since σ(η) ≤ σ(ζ), this is also σ(η)-strongly measurable
+        have h_η : StronglyMeasurable[MeasurableSpace.comap η mγ] μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] := by
+          -- Use the fact that σ(η) ≤ σ(ζ) to lift measurability
+          exact StronglyMeasurable.mono h_ζ h_le
+        exact condExp_of_aestronglyMeasurable' hmη_le h_η.aestronglyMeasurable integrable_condExp
       -- Combine with tower property
       exact this.symm.trans htower
 
