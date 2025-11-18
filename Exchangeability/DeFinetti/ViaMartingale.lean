@@ -1762,7 +1762,7 @@ lemma condExp_bounded_comp_eq_of_triple_law
       -- RHS simplifies to: ∑ c, c * if (φₙ n) (Y ω) = c then 1 else 0
       rw [Finset.sum_mul_boole]
       -- The sum equals (φₙ n) (Y ω) if it's in range, which is always true
-      simp only [SimpleFunc.mem_range, if_true]
+      rw [if_pos (SimpleFunc.mem_range_self (φₙ n) (Y ω))]
 
     -- Each preimage is measurable in α
     have h_meas : ∀ c ∈ (φₙ n).range, MeasurableSet ((φₙ n) ⁻¹' {c}) := by
