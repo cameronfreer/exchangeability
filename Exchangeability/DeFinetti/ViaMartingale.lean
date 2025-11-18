@@ -1430,17 +1430,111 @@ lemma condIndep_of_triple_law
             haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp hW)) := by
               infer_instance
 
-            -- W ⁻¹' T is 𝔾-measurable
-            have hWT_meas : MeasurableSet[𝔾] (W ⁻¹' T) :=
-              measurable_iff_comap_le.mpr (by exact le_refl 𝔾) _ (hW hT_meas)
+            -- W ⁻¹' T is 𝔾-measurable (comap gives this directly)
+            have hWT_meas_G : MeasurableSet[𝔾] (W ⁻¹' T) := by
+              exact ⟨T, hT_meas, rfl⟩
 
-            -- Use setIntegral_condExp: ∫ in S, μ[f|m] = ∫ in S, f for m-measurable S
+            -- Work at larger σ-algebra ℋ = σ(W,Y) where φ IS measurable
+            -- Then use tower property to connect to 𝔾
+            let ℋ : MeasurableSpace Ω := MeasurableSpace.comap (fun ω => (W ω, Y ω)) inferInstance
+
+            -- Establish σ-algebra hierarchy: 𝔾 ≤ ℋ ≤ (ambient)
+            have hG_le_H : 𝔾 ≤ ℋ := by
+              -- 𝔾 = comap W, ℋ = comap (W,Y), so 𝔾 ≤ ℋ
+              intro s hs
+              obtain ⟨t, ht, rfl⟩ := hs
+              exact ⟨{p | p.1 ∈ t}, measurable_fst ht, by ext; simp⟩
+
+            have hH_le_m0 : ℋ ≤ _ := measurable_iff_comap_le.mp (hW.prodMk hY)
+            have hG_le_m0 : 𝔾 ≤ _ := measurable_iff_comap_le.mp hW
+
+            -- Lift W⁻¹'T measurability to ℋ, then to ambient
+            have hWT_meas_H : MeasurableSet[ℋ] (W ⁻¹' T) :=
+              hG_le_H (W ⁻¹' T) hWT_meas_G
+            -- Ambient measurability (for setIntegral_condExp)
+            have hWT_meas := hH_le_m0 _ hWT_meas_H
+
+            -- Test function: h = indicator(W⁻¹'T) * φ
+            set h : Ω → ℝ := fun ω => (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω * φ ω
+
+            -- h is ℋ-measurable and bounded
+            have h_meas_H : AEStronglyMeasurable[ℋ] h μ := by
+              -- h = indicator(W⁻¹'T) * φ where both factors are ℋ-measurable
+              refine AEStronglyMeasurable.mul ?_ ?_
+              · -- indicator(W⁻¹'T) is ℋ-measurable
+                have : MeasurableSet[ℋ] (W ⁻¹' T) := hWT_meas_H
+                exact (aestronglyMeasurable_const (m := ℋ)).indicator this
+              · -- φ = indicator(Y⁻¹'A) is ℋ-measurable
+                simp only [hφ_def]
+                have hYA_H : MeasurableSet[ℋ] (Y ⁻¹' A) := by
+                  exact ⟨{p | p.2 ∈ A}, measurable_snd hA, by ext; simp⟩
+                exact (aestronglyMeasurable_const (m := ℋ)).indicator hYA_H
+
+            have h_bdd : ∀ᵐ ω ∂μ, ‖h ω‖ ≤ 1 := by
+              filter_upwards with ω
+              simp only [h, Pi.mul_apply]
+              calc ‖(W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω * φ ω‖
+                  ≤ ‖(W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω‖ * ‖φ ω‖ := norm_mul_le _ _
+                _ ≤ 1 * 1 := by
+                    apply mul_le_mul <;> try norm_num
+                    · simp [Set.indicator]; split_ifs <;> norm_num
+                    · simp only [φ, Set.indicator]; split_ifs <;> norm_num
+                    · norm_num
+                _ = 1 := by norm_num
+
+            -- Step A: Pull-out at ℋ level
+            have stepA : ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ
+                       = ∫ ω in W ⁻¹' T, φ ω * μ[ψ | ℋ] ω ∂μ := by
+              -- Need sigma-finite for setIntegral_condExp
+              haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp (hW.prodMk hY))) := by
+                infer_instance
+
+              -- Apply setIntegral_condExp then pull-out property
+              calc ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ
+                  = ∫ ω in W ⁻¹' T, μ[φ * ψ | ℋ] ω ∂μ := by
+                    symm
+                    -- Use ambient measurability for setIntegral_condExp
+                    exact @setIntegral_condExp _ _ _ ℋ _ μ _ _ _ hWT_meas hφψ_int
+                _ = ∫ ω in W ⁻¹' T, φ ω * μ[ψ | ℋ] ω ∂μ := by
+                    -- Use ambient measurability for setIntegral_congr_ae
+                    refine @setIntegral_congr_ae _ _ _ _ μ _ hWT_meas ?_
+                    -- φ is ℋ-measurable, so pull-out property applies
+                    have hφ_H : AEStronglyMeasurable[ℋ] φ μ := by
+                      simp only [hφ_def]
+                      have hYA_H : MeasurableSet[ℋ] (Y ⁻¹' A) := by
+                        exact ⟨{p | p.2 ∈ A}, measurable_snd hA, by ext; simp⟩
+                      exact (aestronglyMeasurable_const (m := ℋ)).indicator hYA_H
+                    exact @condExp_mul_of_aestronglyMeasurable_left _ _ _ ℋ _ _ μ _ _ hφ_H hψ_int
+
+            -- Step B: Tower property connects ℋ and 𝔾
+            have stepB : ∫ ω in W ⁻¹' T, φ ω * μ[ψ | ℋ] ω ∂μ
+                       = ∫ ω in W ⁻¹' T, φ ω * μ[ψ | 𝔾] ω ∂μ := by
+              -- Tower property: μ[μ[ψ|ℋ]|𝔾] = μ[ψ|𝔾]
+              have tower : μ[μ[ψ | ℋ] | 𝔾] =ᵐ[μ] μ[ψ | 𝔾] := by
+                exact condExp_condExp_of_le hG_le_H hH_le_m0
+
+              -- For 𝔾-measurable S, use ∫_S f = ∫_S μ[f|𝔾] and tower property
+              calc ∫ ω in W ⁻¹' T, φ ω * μ[ψ | ℋ] ω ∂μ
+                  = ∫ ω in W ⁻¹' T, φ ω * μ[μ[ψ | ℋ] | 𝔾] ω ∂μ := by
+                    symm
+                    -- Use ambient measurability for setIntegral_condExp
+                    refine @setIntegral_condExp _ _ _ 𝔾 _ μ _ _ _ hWT_meas ?_
+                    -- φ * μ[ψ|ℋ] is integrable (bounded indicator × integrable)
+                    refine Integrable.bdd_mul ?_ integrable_condExp ?_
+                    · exact hφψ_int.1.aestronglyMeasurable
+                    · filter_upwards with ω
+                      simp only [φ, Set.indicator]; split_ifs <;> norm_num
+                _ = ∫ ω in W ⁻¹' T, φ ω * μ[ψ | 𝔾] ω ∂μ := by
+                    -- Use ambient measurability for setIntegral_congr_ae
+                    refine @setIntegral_congr_ae _ _ _ _ μ _ hWT_meas ?_
+                    filter_upwards [tower] with ω h_tower
+                    simp [h_tower]
+
+            -- Chain the steps
             calc ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ
-                = ∫ ω in W ⁻¹' T, μ[φ * ψ | 𝔾] ω ∂μ := by
-                    rw [setIntegral_condExp (measurable_iff_comap_le.mp hW) hφψ_int hWT_meas]
-              _ = ∫ ω in W ⁻¹' T, φ ω * V ω ∂μ := by
-                    -- Use pull-out property: μ[φ*ψ|𝔾] =ᵐ φ*μ[ψ|𝔾] = φ*V
-                    sorry  -- Need to show φ is 𝔾-measurable or use a different approach
+                = ∫ ω in W ⁻¹' T, φ ω * μ[ψ | ℋ] ω ∂μ := stepA
+              _ = ∫ ω in W ⁻¹' T, φ ω * μ[ψ | 𝔾] ω ∂μ := stepB
+              _ = ∫ ω in W ⁻¹' T, φ ω * V ω ∂μ := by rfl  -- V = μ[ψ|𝔾] by definition
 
           -- **Substep 3: Apply uniqueness**
           -- Use ae_eq_condExp_of_forall_setIntegral_eq
@@ -1668,7 +1762,7 @@ lemma condExp_bounded_comp_eq_of_triple_law
       -- RHS simplifies to: ∑ c, c * if (φₙ n) (Y ω) = c then 1 else 0
       rw [Finset.sum_mul_boole]
       -- The sum equals (φₙ n) (Y ω) if it's in range, which is always true
-      simp only [SimpleFunc.mem_range, if_true]
+      rw [if_pos (SimpleFunc.mem_range_self (φₙ n) (Y ω))]
 
     -- Each preimage is measurable in α
     have h_meas : ∀ c ∈ (φₙ n).range, MeasurableSet ((φₙ n) ⁻¹' {c}) := by
@@ -1683,10 +1777,6 @@ lemma condExp_bounded_comp_eq_of_triple_law
           rw [h_decomp]
       _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔾] := by
           -- Rewrite as: μ[∑ c, (fun ω => ...) | 𝔾] = ∑ c, μ[(fun ω => ...) | 𝔾]
-          have : (fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω)) =
-                 ∑ c ∈ (φₙ n).range, fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) := by
-            ext ω; exact Finset.sum_apply _ _ _
-          rw [this]
           apply condExp_finset_sum _ 𝔾
           intro c hc
           apply Integrable.const_mul
@@ -3656,7 +3746,7 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
       have h_compProd_eq : (μ.map ζ) ⊗ₘ (ProbabilityTheory.condDistrib ξ ζ μ) = (μ.map ζ) ⊗ₘ (ProbabilityTheory.condDistrib ξ η μ) := by
         rw [hζ_compProd, h_law_swapped, ← h_marg_eq, ← hη_compProd]
       -- Apply uniqueness
-      exact Kernel.ae_eq_of_compProd_eq h_compProd_eq
+      exact ProbabilityTheory.Kernel.ae_eq_of_compProd_eq h_compProd_eq
 
     -- Step 5: Pull back kernel equality along ζ
     have hkernel_eq_pullback : ∀ᵐ ω ∂μ, ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) = ProbabilityTheory.condDistrib ξ η μ (ζ ω) := by
@@ -3670,7 +3760,9 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
     -- Step 7: Rewrite η ω as φ (ζ ω) to align both sides (using hηfac from line 4117)
     have heval_B_aligned : ∀ᵐ ω ∂μ, ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) B = ProbabilityTheory.condDistrib ξ η μ (η ω) B := by
       filter_upwards [heval_B] with ω h
-      rw [hηfac]; exact h
+      convert h using 2
+      rw [hηfac]
+      rfl
 
     -- Step 9: Connect to conditional expectations via condDistrib_ae_eq_condExp
     have hCE_ζ : (fun ω => (ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) B).toReal) =ᵐ[μ]
@@ -3689,10 +3781,17 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
     -- Step 11: Conclude by transitivity: CE_ζ = ProbabilityTheory.condDistrib = ProbabilityTheory.condDistrib = CE_η
     have : μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] =ᵐ[μ]
            μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] := by
-      exact hCE_ζ.symm.trans (htoReal_eq.trans hCE_η)
+      calc μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ]
+          =ᵐ[μ] (fun ω => (ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) B).toReal) := hCE_ζ.symm
+        _ =ᵐ[μ] (fun ω => (ProbabilityTheory.condDistrib ξ η μ (η ω) B).toReal) := htoReal_eq
+        _ =ᵐ[μ] μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] := hCE_η
 
     -- Finish with the integral equality using this ae-equality
-    exact setIntegral_congr_ae (hS.mono hmζ_le le_rfl) (ae_restrict_of_ae this)
+    have hS_meas_comap : MeasurableSet[MeasurableSpace.comap ζ mγ] S := by
+      rw [MeasurableSpace.measurableSet_comap]
+      exact hS
+    have hS_meas : MeasurableSet[mΩ] S := hmζ_le _ hS_meas_comap
+    exact setIntegral_congr_ae hS_meas (ae_restrict_of_ae this)
 
   exact heq_direct
 
