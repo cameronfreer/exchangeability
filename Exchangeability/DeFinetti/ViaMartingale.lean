@@ -1758,24 +1758,57 @@ lemma condExp_bounded_comp_eq_of_triple_law
           exact hY (h_meas c hc)
       _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔾] := by
           -- Apply condExp_smul to each summand
-          have : ∀ c, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔾] =ᵐ[μ]
+          have he : ∀ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔾] =ᵐ[μ]
                      c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔾] := by
-            intro c
+            intro c _
             have eq : (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω)) =
                       c • (((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y) := by
               ext ω; simp [Function.comp_apply, smul_eq_mul]
             rw [eq]
-            exact condExp_smul c _
-          sorry  -- TODO: Apply this to show sums are ae equal
+            exact condExp_smul c _ 𝔾
+          -- Combine ae equalities pointwise
+          filter_upwards [(φₙ n).range.eventually_all.mpr he] with ω h
+          simp only [Finset.sum_apply, Pi.smul_apply]
+          refine Finset.sum_congr rfl fun c hc => ?_
+          exact h c hc
       _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔽] := by
           -- Apply base case condExp_eq_of_triple_law to each summand
-          sorry  -- TODO: Show sums are ae equal using condExp_eq_of_triple_law
+          have he : ∀ c ∈ (φₙ n).range,
+                    μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔾] =ᵐ[μ]
+                    μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔽] := by
+            intro c hc
+            exact condExp_eq_of_triple_law Y Z W W' hY hZ hW hW' h_triple (h_meas c hc)
+          filter_upwards [(φₙ n).range.eventually_all.mpr he] with ω h
+          simp only [Finset.sum_apply, Pi.smul_apply]
+          congr 1
+          ext c
+          by_cases hc : c ∈ (φₙ n).range
+          · simp only [Pi.smul_apply]
+            congr 1
+            exact h c hc
+          · rfl
       _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔽] := by
           -- Apply condExp_smul in reverse
-          sorry  -- TODO: Show sums are ae equal using condExp_smul
+          have he : ∀ c ∈ (φₙ n).range,
+                    c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔽] =ᵐ[μ]
+                    μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔽] := by
+            intro c _
+            have eq : c • (((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y) =
+                      (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω)) := by
+              ext ω; simp [Function.comp_apply, smul_eq_mul]
+            rw [← eq]
+            exact (condExp_smul c _ 𝔽).symm
+          filter_upwards [(φₙ n).range.eventually_all.mpr he] with ω h
+          simp only [Finset.sum_apply]
+          refine Finset.sum_congr rfl fun c hc => ?_
+          exact h c hc
       _ =ᵐ[μ] μ[fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔽] := by
           -- Apply condExp_finset_sum in reverse
-          sorry  -- TODO: Use condExp_finset_sum
+          refine (condExp_finset_sum ?_ 𝔽).symm
+          intro c hc
+          apply Integrable.const_mul
+          refine Integrable.indicator (integrable_const 1) ?_
+          exact hY (h_meas c hc)
       _ =ᵐ[μ] μ[(φₙ n) ∘ Y | 𝔽] := by
           apply condExp_congr_ae
           filter_upwards with ω
