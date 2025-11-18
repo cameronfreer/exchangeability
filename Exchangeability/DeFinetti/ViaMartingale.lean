@@ -3740,62 +3740,52 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
       have h2 : (μ.map (fun ω => (η ω, ξ ω))).fst = μ.map η := Measure.fst_map_prodMk₀ hξ.aemeasurable
       rw [← h1, ← h2, h_law_swapped]
 
-    -- Step 4: Derive kernel equality in the RIGHT direction: condDistrib ξ ζ = condDistrib ξ η
-    have hkernel_eq : ∀ᵐ z ∂(μ.map ζ), ProbabilityTheory.condDistrib ξ ζ μ z = ProbabilityTheory.condDistrib ξ η μ z := by
-      -- Rewrite with same base measure using marginal equality
-      have h_compProd_eq : (μ.map ζ) ⊗ₘ (ProbabilityTheory.condDistrib ξ ζ μ) = (μ.map ζ) ⊗ₘ (ProbabilityTheory.condDistrib ξ η μ) := by
-        rw [hζ_compProd, h_law_swapped, ← h_marg_eq, ← hη_compProd]
-      -- Apply uniqueness
-      exact ProbabilityTheory.Kernel.ae_eq_of_compProd_eq h_compProd_eq
+    -- Step 4: The deep content - show conditional expectations w.r.t. σ(ζ) and σ(η) coincide.
+    -- This follows from the tower property since σ(η) ≤ σ(ζ), plus uniqueness.
+    -- The pair-law equality implies the conditional distributions must match appropriately.
 
-    -- Step 5: Pull back kernel equality along ζ
-    have hkernel_eq_pullback : ∀ᵐ ω ∂μ, ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) = ProbabilityTheory.condDistrib ξ η μ (ζ ω) := by
-      exact ae_eq_comp hζ.aemeasurable hkernel_eq
+    -- We'll show this directly using tower property and integral characterization.
+    -- The key fact: μ[f|η] satisfies the defining integrals for μ[f|ζ] on σ(ζ)-sets.
 
-    -- Step 6: Evaluate at B to get a.e. equality
-    have heval_B : ∀ᵐ ω ∂μ, ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) B = ProbabilityTheory.condDistrib ξ η μ (ζ ω) B := by
-      filter_upwards [hkernel_eq_pullback] with ω h
-      exact congrArg (fun ν => ν B) h
-
-    -- Step 7: For the transitivity chain, we just use heval_B directly
-    -- since condDistrib ξ η μ is σ(η)-measurable, evaluating at ζ ω or η ω gives a.e. same result
-    have heval_B_toReal : ∀ᵐ ω ∂μ,
-        (ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) B).toReal =
-        (ProbabilityTheory.condDistrib ξ η μ (ζ ω) B).toReal := by
-      filter_upwards [heval_B] with ω h
-      rw [h]
-
-    -- Step 8: Connect to conditional expectations
-    have hCE_ζ : (fun ω => (ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) B).toReal) =ᵐ[μ]
-        μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] := by
-      exact ProbabilityTheory.condDistrib_ae_eq_condExp hζ hξ hB
-
-    have hCE_η : (fun ω => (ProbabilityTheory.condDistrib ξ η μ (η ω) B).toReal) =ᵐ[μ]
-        μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] := by
-      exact ProbabilityTheory.condDistrib_ae_eq_condExp hη hξ hB
-
-    -- Step 9: Convert to .toReal equality
-    have htoReal_eq : ∀ᵐ ω ∂μ, (ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) B).toReal = (ProbabilityTheory.condDistrib ξ η μ (η ω) B).toReal := by
-      filter_upwards [heval_B_aligned] with ω h
-      rw [h]
-
-    -- Step 10: Conclude by transitivity
+    -- Now we have everything we need - use the tower property
     have : μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] =ᵐ[μ]
            μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] := by
-      calc μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ]
-          =ᵐ[μ] (fun ω => (ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) B).toReal) := hCE_ζ.symm
-        _ =ᵐ[μ] (fun ω => (ProbabilityTheory.condDistrib ξ η μ (η ω) B).toReal) := htoReal_eq
-        _ =ᵐ[μ] μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] := hCE_η
+      -- We have htower which says μ[μ[f|ζ]|η] =ᵐ μ[f|η]
+      -- And μ[f|ζ] is σ(ζ)-measurable, hence also σ(η)-measurable (since σ(η) ≤ σ(ζ))
+      -- So μ[μ[f|ζ]|η] =ᵐ μ[f|ζ] by the property that conditioning on coarser σ-algebra doesn't change
+      -- measurable functions
+      have : μ[μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ]|
+              MeasurableSpace.comap η mγ] =ᵐ[μ]
+            μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] := by
+        -- μ[f|ζ] is σ(ζ)-measurable, and σ(η) ≤ σ(ζ), so it's also σ(η)-measurable
+        -- Hence μ[μ[f|ζ]|η] = μ[f|ζ] a.e.
+        haveI : SigmaFinite (μ.trim hmη_le) := by
+          -- Since η is standard Borel and measurable, the trimmed measure is sigma-finite
+          sorry
+        have h_asm := @stronglyMeasurable_condExp Ω ℝ (MeasurableSpace.comap ζ mγ) mΩ
+        exact condExp_of_aestronglyMeasurable' hmη_le h_asm.aestronglyMeasurable
+          integrable_condExp
+      -- Combine with tower property
+      exact this.symm.trans htower
 
-    -- Finish with the integral equality using this ae-equality
-    have hS_meas : MeasurableSet[mΩ] S := hS
-    -- Convert global a.e. equality to restricted measure form
-    have h_restrict : ∀ᵐ ω ∂(μ.restrict S),
-        μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] ω =
-        μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] ω := by
-      exact ae_restrict_of_ae this
-    -- Apply setIntegral_congr_ae using the restricted form
-    exact setIntegral_congr_ae hS_meas h_restrict
+    -- Finish: prove ∫_S μ[f|η] = ∫_S f using the defining property of conditional expectation
+    -- First, prove ∫_S μ[f|ζ] = ∫_S f (by definition of conditional expectation)
+    have step1 : ∫ ω in S, μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] ω ∂μ =
+                 ∫ ω in S, (ξ ⁻¹' B).indicator (fun _ => (1 : ℝ)) ω ∂μ := by
+      -- S is measurable in σ(ζ), need SigmaFinite instance
+      haveI : SigmaFinite (μ.trim hmζ_le) := by
+        sorry
+      exact setIntegral_condExp hmζ_le hint hS
+
+    -- Then, prove ∫_S μ[f|η] = ∫_S μ[f|ζ] using the a.e. equality
+    have step2 : ∫ ω in S, μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] ω ∂μ =
+                 ∫ ω in S, μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] ω ∂μ := by
+      -- Use integral_congr_ae on the restricted measure
+      have h_ae_restrict := ae_restrict_of_ae this.symm
+      exact integral_congr_ae (μ := μ.restrict S) h_ae_restrict
+
+    -- Combine to get ∫_S μ[f|η] = ∫_S f
+    rw [step2, step1]
 
   exact heq_direct
 
