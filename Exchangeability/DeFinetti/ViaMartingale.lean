@@ -3752,19 +3752,20 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
     have hkernel_eq_pullback : ∀ᵐ ω ∂μ, ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) = ProbabilityTheory.condDistrib ξ η μ (ζ ω) := by
       exact ae_eq_comp hζ.aemeasurable hkernel_eq
 
-    -- Step 6: Evaluate at B to get equality of measures on B
+    -- Step 6: Evaluate at B to get a.e. equality
     have heval_B : ∀ᵐ ω ∂μ, ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) B = ProbabilityTheory.condDistrib ξ η μ (ζ ω) B := by
       filter_upwards [hkernel_eq_pullback] with ω h
       exact congrArg (fun ν => ν B) h
 
-    -- Step 7: Rewrite η ω as φ (ζ ω) to align both sides (using hηfac from line 4117)
-    have heval_B_aligned : ∀ᵐ ω ∂μ, ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) B = ProbabilityTheory.condDistrib ξ η μ (η ω) B := by
+    -- Step 7: For the transitivity chain, we just use heval_B directly
+    -- since condDistrib ξ η μ is σ(η)-measurable, evaluating at ζ ω or η ω gives a.e. same result
+    have heval_B_toReal : ∀ᵐ ω ∂μ,
+        (ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) B).toReal =
+        (ProbabilityTheory.condDistrib ξ η μ (ζ ω) B).toReal := by
       filter_upwards [heval_B] with ω h
-      convert h using 2
-      rw [hηfac]
-      rfl
+      rw [h]
 
-    -- Step 9: Connect to conditional expectations via condDistrib_ae_eq_condExp
+    -- Step 8: Connect to conditional expectations
     have hCE_ζ : (fun ω => (ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) B).toReal) =ᵐ[μ]
         μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] := by
       exact ProbabilityTheory.condDistrib_ae_eq_condExp hζ hξ hB
@@ -3773,12 +3774,12 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
         μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] := by
       exact ProbabilityTheory.condDistrib_ae_eq_condExp hη hξ hB
 
-    -- Step 10: Convert measure equality to .toReal equality
+    -- Step 9: Convert to .toReal equality
     have htoReal_eq : ∀ᵐ ω ∂μ, (ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) B).toReal = (ProbabilityTheory.condDistrib ξ η μ (η ω) B).toReal := by
       filter_upwards [heval_B_aligned] with ω h
       rw [h]
 
-    -- Step 11: Conclude by transitivity: CE_ζ = ProbabilityTheory.condDistrib = ProbabilityTheory.condDistrib = CE_η
+    -- Step 10: Conclude by transitivity
     have : μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] =ᵐ[μ]
            μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] := by
       calc μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ]
@@ -3787,11 +3788,14 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
         _ =ᵐ[μ] μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] := hCE_η
 
     -- Finish with the integral equality using this ae-equality
-    have hS_meas_comap : MeasurableSet[MeasurableSpace.comap ζ mγ] S := by
-      rw [MeasurableSpace.measurableSet_comap]
-      exact hS
-    have hS_meas : MeasurableSet[mΩ] S := hmζ_le _ hS_meas_comap
-    exact setIntegral_congr_ae hS_meas (ae_restrict_of_ae this)
+    have hS_meas : MeasurableSet[mΩ] S := hS
+    -- Convert global a.e. equality to restricted measure form
+    have h_restrict : ∀ᵐ ω ∂(μ.restrict S),
+        μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] ω =
+        μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] ω := by
+      exact ae_restrict_of_ae this
+    -- Apply setIntegral_congr_ae using the restricted form
+    exact setIntegral_congr_ae hS_meas h_restrict
 
   exact heq_direct
 
