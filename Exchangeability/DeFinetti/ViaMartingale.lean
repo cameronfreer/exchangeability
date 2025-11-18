@@ -1503,9 +1503,9 @@ lemma condIndep_of_triple_law
                       simp only [hφ_def]
                       -- (Y ⁻¹' A).indicator (fun _ => 1) is ℋ-measurable since Y appears in ℋ
                       refine Measurable.aestronglyMeasurable ?_
-                      have hconst : @Measurable Ω ℝ ℋ _ (fun _ => (1:ℝ)) :=
+                      have hconst : @Measurable Ω ℝ ℋ _ (fun _ : Ω => (1:ℝ)) :=
                         @measurable_const Ω ℝ ℋ _ (1:ℝ)
-                      exact @Measurable.indicator Ω ℝ ℋ _ _ hconst (hY hA)
+                      exact @Measurable.indicator Ω ℝ ℋ _ (fun _ => (1:ℝ)) (Y ⁻¹' A) hconst (hY hA)
                     -- Apply condExp pull-out: μ[φ*ψ|ℋ] =ᵐ φ*μ[ψ|ℋ]
                     filter_upwards [@condExp_mul_of_aestronglyMeasurable_left Ω ℋ _ μ φ ψ hφ_asm hφψ_int hψ_int] with ω h
                     exact fun _ => h
