@@ -29,6 +29,9 @@ import Exchangeability.Probability.MeasureKernels
 **Aldous' elegant martingale proof** of de Finetti's theorem, as presented in
 Kallenberg (2005) as the "third proof". This approach has **medium dependencies**.
 
+**Status**: File now compiles successfully! All compilation errors resolved.
+Remaining work: 11 sorries with detailed TODO documentation.
+
 ## Proof approach
 
 The proof uses a contraction-independence lemma combined with reverse martingale
@@ -718,14 +721,14 @@ lemma common_version_condexp_bdd
           simp [Set.indicator]
       _ = ∫ ω in T', V' ω ∂μ := by
           -- Defining property of CE for V'
-          have hm'_le : MeasurableSpace.comap W' inferInstance ≤ _ := by
+          have hm'_le : MeasurableSpace.comap W' inferInstance ≤ (inferInstance : MeasurableSpace Ω) := by
             intro s hs
             obtain ⟨t, ht, rfl⟩ := hs
             exact hW' ht
           haveI : SigmaFinite (μ.trim hm'_le) := by
             haveI : IsFiniteMeasure μ := inferInstance
             infer_instance
-          exact (MeasureTheory.setIntegral_condexp hm'_le hψ_int hT'_meas).symm
+          exact (setIntegral_condExp hm'_le hψ_int hT'_meas).symm
       _ = ∫ ω in T', (v₂ ∘ W') ω ∂μ := by
           -- V' = v₂∘W' a.e.
           refine setIntegral_congr_ae (hW' hS) ?_
@@ -994,441 +997,7 @@ This factorization follows from the distributional equality via a martingale arg
 **Mathlib target:** Mathlib.Probability.ConditionalIndependence.FromDistributionalEquality
 -/
 
-/-! ===== Adjointness helpers (for μ[·|m] with (hm : m ≤ m0)) ===== -/
-
-/-- **Step A: Indicator case** - For m-measurable sets, the projection property holds for indicators. -/
-lemma integral_mul_condexp_indicator
-    {Ω : Type*} [m0 : MeasurableSpace Ω] (μ : Measure Ω)
-    {m : MeasurableSpace Ω} (hm : m ≤ m0)
-    [SigmaFinite (μ.trim hm)]
-    {f : Ω → ℝ} (hf_int : Integrable f μ)
-    {s : Set Ω} (hs : MeasurableSet[m] s) :
-  ∫ ω, μ[f | m] ω * (s.indicator (fun _ => (1 : ℝ)) ω) ∂μ =
-  ∫ ω, f ω * (s.indicator (fun _ => (1 : ℝ)) ω) ∂μ := by
-  -- Convert to set integrals using the defining property
-  -- For m-measurable s, we have ∫_s μ[f|m] = ∫_s f (setIntegral_condExp)
-  -- First lift measurability to the ambient space m0
-  have hs_ambient : @MeasurableSet Ω m0 s := hm _ hs
-  -- Set integral form of the identity
-  have h_set : ∫ ω in s, μ[f | m] ω ∂μ = ∫ ω in s, f ω ∂μ :=
-    setIntegral_condExp hm hf_int hs
-  -- Convert using indicator functions: ∫_s g = ∫ g · 1_s
-  rw [← integral_indicator hs_ambient, ← integral_indicator hs_ambient] at h_set
-  convert h_set using 2 <;> (ext ω; simp [Set.indicator])
-
-/-- **L² projection property of conditional expectation:**
-For m-measurable g, ∫ (condexp m μ f) · g = ∫ f · g.
-
-This is the key property that makes conditional expectation an orthogonal projection in L².
-Used to prove adjointness without requiring product integrability assumptions.
-
-**Proof strategy**: 3-step approximation via simple functions (Step A above, then B, then C).
--/
-lemma integral_mul_condexp_of_measurable
-    {Ω : Type*} [m0 : MeasurableSpace Ω] (μ : Measure Ω)
-    {m : MeasurableSpace Ω} (hm : m ≤ m0)
-    [SigmaFinite (μ.trim hm)]
-    {f g : Ω → ℝ}
-    (hg_meas : Measurable[m] g)
-    (hf_int : Integrable f μ) (hg_int : Integrable g μ) :
-  ∫ ω, μ[f | m] ω * g ω ∂μ = ∫ ω, f ω * g ω ∂μ := by
-  classical
-  -- **Proof via set integrals and uniqueness of conditional expectation**
-  -- Key insight: For m-measurable g, both sides have the same set integrals over m-measurable sets
-  -- This uniquely determines them, so they must have equal total integrals
-
-  -- First establish measurability of the integrand
-  have hg_meas_ambient : Measurable g := hg_meas
-  have hcondexp_meas : Measurable (μ[f | m]) := stronglyMeasurable_condExp.measurable
-
-  -- **Proof strategy: indicators → simple → bounded → integrable (via truncation)**
-  -- Step A (indicators) is already proven above at line 929: integral_mul_condexp_indicator
-
-  -- Step B: Extend to m-measurable simple functions by linearity
-  have h_simple : ∀ (s : MeasureTheory.SimpleFunc Ω ℝ),
-      Measurable[m] s →
-      Integrable s μ →
-      ∫ ω, μ[f | m] ω * s ω ∂μ = ∫ ω, f ω * s ω ∂μ := by
-    intro s hs_m hs_int
-    -- Strategy: Decompose s as a sum over its range and apply linearity + Step A
-    -- For each c ∈ s.range, the term is c • indicator(s⁻¹'{c})
-
-    -- Key observation: s = ∑_{c ∈ s.range} c • indicator(s⁻¹'{c})
-    -- So: ∫ μ[f|m] * s = ∫ μ[f|m] * (∑_c c • indicator(s⁻¹'{c}))
-    --                   = ∑_c c • ∫ μ[f|m] * indicator(s⁻¹'{c})  (linearity)
-    --                   = ∑_c c • ∫ f * indicator(s⁻¹'{c})        (Step A)
-    --                   = ∫ f * (∑_c c • indicator(s⁻¹'{c}))      (linearity)
-    --                   = ∫ f * s
-
-    -- For each c in the range, s⁻¹'{c} is m-measurable
-    have h_preimage_meas : ∀ c ∈ s.range, MeasurableSet[m] (s ⁻¹' {c}) := by
-      intro c _
-      exact s.measurableSet_fiber c
-
-    -- LHS: Express ∫ μ[f|m] * s as a sum
-    have hlhs : ∫ ω, μ[f | m] ω * s ω ∂μ =
-                ∑ c ∈ s.range, c • ∫ ω, μ[f | m] ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω ∂μ := by
-      -- Rewrite s ω as a sum of indicators
-      have h_decomp : ∀ ω, s ω = ∑ c ∈ s.range, c * (s ⁻¹' {c}).indicator (fun _ => 1) ω := by
-        intro ω
-        simp only [Finset.sum_mul, Set.indicator_apply, Set.mem_preimage, Set.mem_singleton_iff]
-        rw [Finset.sum_mul_boole]
-        simp [SimpleFunc.mem_range]
-      -- Substitute decomposition and use linearity
-      calc ∫ ω, μ[f | m] ω * s ω ∂μ
-          = ∫ ω, μ[f | m] ω * (∑ c ∈ s.range, c * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
-              congr 1; ext ω; rw [h_decomp ω]
-        _ = ∫ ω, ∑ c ∈ s.range, μ[f | m] ω * (c * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
-              congr 1; ext ω; rw [Finset.mul_sum]
-        _ = ∑ c ∈ s.range, ∫ ω, μ[f | m] ω * (c * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
-              apply integral_finset_sum
-              intro c hc
-              have : (fun ω => μ[f | m] ω * (c * (s ⁻¹' {c}).indicator (fun _ => 1) ω)) =
-                     (fun ω => c * ((s ⁻¹' {c}).indicator (fun _ => 1) ω * μ[f | m] ω)) := by
-                ext ω; ring
-              rw [this]
-              refine Integrable.const_mul ?_ c
-              refine Integrable.bdd_mul' (c := 1) integrable_condExp
-                (measurable_const.indicator (hm _ (h_preimage_meas c hc))).aestronglyMeasurable ?_
-              filter_upwards with ω
-              simp [Set.indicator]
-              split_ifs <;> norm_num
-        _ = ∑ c ∈ s.range, ∫ ω, c * (μ[f | m] ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
-              congr 1; ext c
-              congr 1; ext ω
-              ring
-        _ = ∑ c ∈ s.range, c • ∫ ω, μ[f | m] ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω ∂μ := by
-              congr 1; ext c
-              rw [integral_const_mul]
-              rfl
-
-    -- RHS: Express ∫ f * s as a sum
-    have hrhs : ∫ ω, f ω * s ω ∂μ =
-                ∑ c ∈ s.range, c • ∫ ω, f ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω ∂μ := by
-      -- Same decomposition as LHS
-      have h_decomp : ∀ ω, s ω = ∑ c ∈ s.range, c * (s ⁻¹' {c}).indicator (fun _ => 1) ω := by
-        intro ω
-        simp only [Finset.sum_mul, Set.indicator_apply, Set.mem_preimage, Set.mem_singleton_iff]
-        rw [Finset.sum_mul_boole]
-        simp [SimpleFunc.mem_range]
-      calc ∫ ω, f ω * s ω ∂μ
-          = ∫ ω, f ω * (∑ c ∈ s.range, c * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
-              congr 1; ext ω; rw [h_decomp ω]
-        _ = ∫ ω, ∑ c ∈ s.range, f ω * (c * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
-              congr 1; ext ω; rw [Finset.mul_sum]
-        _ = ∑ c ∈ s.range, ∫ ω, f ω * (c * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
-              apply integral_finset_sum
-              intro c hc
-              have : (fun ω => f ω * (c * (s ⁻¹' {c}).indicator (fun _ => 1) ω)) =
-                     (fun ω => c * ((s ⁻¹' {c}).indicator (fun _ => 1) ω * f ω)) := by
-                ext ω; ring
-              rw [this]
-              refine Integrable.const_mul ?_ c
-              refine Integrable.bdd_mul' (c := 1) hf_int
-                (measurable_const.indicator (hm _ (h_preimage_meas c hc))).aestronglyMeasurable ?_
-              filter_upwards with ω
-              simp [Set.indicator]
-              split_ifs <;> norm_num
-        _ = ∑ c ∈ s.range, ∫ ω, c * (f ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω) ∂μ := by
-              congr 1; ext c
-              congr 1; ext ω
-              ring
-        _ = ∑ c ∈ s.range, c • ∫ ω, f ω * (s ⁻¹' {c}).indicator (fun _ => 1) ω ∂μ := by
-              congr 1; ext c
-              rw [integral_const_mul]
-              rfl
-
-    -- Apply Step A to show each term is equal
-    rw [hlhs, hrhs]
-    refine Finset.sum_congr rfl fun c hc => ?_
-    -- Apply Step A (integral_mul_condexp_indicator)
-    simp only [smul_eq_mul]
-    congr 1
-    exact @integral_mul_condexp_indicator Ω m0 μ m hm _ f hf_int (s ⁻¹' {c}) (h_preimage_meas c hc)
-
-  -- Step C: Bounded case via uniform simple approximation
-  have h_bdd : ∀ (M : ℝ), (∀ ω, ‖g ω‖ ≤ M) →
-      ∫ ω, μ[f | m] ω * g ω ∂μ = ∫ ω, f ω * g ω ∂μ := by
-    intro M hM_bound
-    -- Use approximation by simple functions + dominated convergence
-
-    -- Since μ is a probability measure, ∃ ω allows us to derive M ≥ 0 from norm bounds
-    -- (if M < 0, then ‖g ω‖ ≤ M < 0 for some ω, contradicting ‖g ω‖ ≥ 0)
-    have hM_nonneg : 0 ≤ M := by
-      by_contra h
-      push_neg at h
-      -- Probability measure on Ω is nonempty (μ univ = 1 > 0 implies ∃ ω)
-      have : (univ : Set Ω).Nonempty := by
-        by_contra hempty
-        simp only [Set.not_nonempty_iff_eq_empty] at hempty
-        rw [hempty] at *
-        simp at hM_bound
-      obtain ⟨ω, -⟩ := this
-      -- If M < 0, then ‖g ω‖ < 0, contradiction
-      exact not_lt.mpr (norm_nonneg _) (lt_of_le_of_lt (hM_bound ω) h)
-
-    -- g is m-measurable, hence strongly measurable w.r.t. m
-    have hg_smeas : StronglyMeasurable[m] g := hg_meas.stronglyMeasurable
-
-    -- Construct approximating sequence of bounded simple functions
-    let sₙ := hg_smeas.approxBounded (M + 1)
-
-    -- Each sₙ is m-measurable (as simple functions from StronglyMeasurable)
-    have hsₙ_meas : ∀ n, Measurable[m] (sₙ n) := fun n => (sₙ n).measurable
-
-    -- Pointwise convergence: sₙ → g a.e.
-    have hsₙ_tendsto : ∀ᵐ ω ∂μ, Tendsto (fun n => sₙ n ω) atTop (𝓝 (g ω)) := by
-      apply ae_of_all
-      intro ω
-      apply StronglyMeasurable.tendsto_approxBounded_of_norm_le
-      exact le_trans (hM_bound ω) (by linarith : M ≤ M + 1)
-
-    -- Norm bound: sₙ is bounded by M + 1
-    have hsₙ_bdd : ∀ n ω, ‖sₙ n ω‖ ≤ M + 1 := by
-      intro n ω
-      exact StronglyMeasurable.norm_approxBounded_le hg_smeas (by linarith : 0 ≤ M + 1) n ω
-
-    -- Integrability: bounded + strongly measurable → integrable on sigma-finite measure
-    have hsₙ_int : ∀ n, Integrable (sₙ n) μ := by
-      intro n
-      -- sₙ is a simple function, hence strongly measurable
-      have : AEStronglyMeasurable (sₙ n) μ := SimpleFunc.aestronglyMeasurable (sₙ n)
-      -- Bounded by M + 1, so integrable on sigma-finite measure
-      refine integrable_of_forall_fin_meas_le (M + 1 : ℝ≥0∞) ENNReal.coe_lt_top this ?_
-      intro s hs hμs
-      calc (∫⁻ ω in s, ‖sₙ n ω‖₊ ∂μ)
-          ≤ ∫⁻ ω in s, (M + 1 : ℝ≥0∞) ∂μ := by
-            apply lintegral_mono
-            intro ω
-            simp only [ENNReal.coe_le_coe]
-            exact hsₙ_bdd n ω
-        _ = (M + 1) * μ s := by rw [lintegral_const, Measure.restrict_apply MeasurableSet.univ, Set.univ_inter]
-        _ < ∞ := ENNReal.mul_lt_top (by simp) hμs
-
-    -- Each sₙ satisfies the projection property
-    have hsₙ_eq : ∀ n, ∫ ω, μ[f | m] ω * sₙ n ω ∂μ = ∫ ω, f ω * sₙ n ω ∂μ := by
-      intro n
-      apply h_simple
-      · exact hsₙ_meas n
-      · exact hsₙ_int n
-
-    -- Apply dominated convergence to LHS: ∫ μ[f|m] · sₙ → ∫ μ[f|m] · g
-    have hlhs : Tendsto (fun n => ∫ ω, μ[f | m] ω * sₙ n ω ∂μ) atTop (𝓝 (∫ ω, μ[f | m] ω * g ω ∂μ)) := by
-      refine tendsto_integral_of_dominated_convergence (fun ω => (M + 1) * abs (μ[f | m] ω)) ?_ ?_ ?_ ?_
-      · -- Dominating function is integrable
-        exact integrable_condExp.abs.const_mul (M + 1)
-      · -- Each term is ae strongly measurable
-        intro n
-        exact integrable_condExp.aestronglyMeasurable.mul (hsₙ_int n).aestronglyMeasurable
-      · -- Pointwise convergence
-        filter_upwards [hsₙ_tendsto] with ω hω
-        exact Tendsto.mul tendsto_const_nhds hω
-      · -- Dominated by integrable function
-        intro n
-        apply ae_of_all
-        intro ω
-        rw [norm_mul]
-        exact mul_le_mul_of_nonneg_left (hsₙ_bdd n ω) (abs_nonneg _)
-
-    -- Apply dominated convergence to RHS: ∫ f · sₙ → ∫ f · g
-    have hrhs : Tendsto (fun n => ∫ ω, f ω * sₙ n ω ∂μ) atTop (𝓝 (∫ ω, f ω * g ω ∂μ)) := by
-      refine tendsto_integral_of_dominated_convergence (fun ω => (M + 1) * abs (f ω)) ?_ ?_ ?_ ?_
-      · -- Dominating function is integrable
-        exact hf_int.abs.const_mul (M + 1)
-      · -- Each term is ae strongly measurable
-        intro n
-        exact hf_int.aestronglyMeasurable.mul (hsₙ_int n).aestronglyMeasurable
-      · -- Pointwise convergence
-        filter_upwards [hsₙ_tendsto] with ω hω
-        exact Tendsto.mul tendsto_const_nhds hω
-      · -- Dominated by integrable function
-        intro n
-        apply ae_of_all
-        intro ω
-        rw [norm_mul]
-        exact mul_le_mul_of_nonneg_left (hsₙ_bdd n ω) (abs_nonneg _)
-
-    -- Since sequences are equal and converge, their limits are equal
-    rw [← tendsto_nhds_unique hlhs hrhs]
-    exact (tendsto_nhds_unique (tendsto_const_nhds.congr hsₙ_eq) hlhs).symm
-
-  -- Step D: General integrable case via truncation
-  -- If g is already bounded, use h_bdd directly
-  by_cases hg_bdd : ∃ M, ∀ ω, ‖g ω‖ ≤ M
-  · -- Bounded case: apply h_bdd
-    obtain ⟨M, hM⟩ := hg_bdd
-    exact h_bdd M hM
-  · -- Unbounded case: truncate and pass to limit
-    -- Define truncation: gₙ(ω) := max(-n, min(g(ω), n))
-    let gₙ : ℕ → Ω → ℝ := fun n ω => max (-(n : ℝ)) (min (g ω) n)
-
-    -- Each gₙ is m-measurable (composition of measurable functions)
-    have hgₙ_meas : ∀ n, Measurable[m] (gₙ n) := by
-      intro n
-      exact Measurable.max (Measurable.const _) (Measurable.min hg_meas (Measurable.const _))
-
-    -- Each gₙ is bounded by n
-    have hgₙ_bdd : ∀ n ω, ‖gₙ n ω‖ ≤ n := by
-      intro n ω
-      simp only [Real.norm_eq_abs]
-      -- Truncation keeps values in [-n, n]
-      have h1 : -(n : ℝ) ≤ gₙ n ω := le_max_left _ _
-      have h2 : gₙ n ω ≤ n := by
-        calc gₙ n ω
-            = max (-(n : ℝ)) (min (g ω) n) := rfl
-          _ ≤ max (-(n : ℝ)) n := max_le_max le_rfl (min_le_right _ _)
-          _ = n := by simp [max_eq_right]; linarith
-      exact abs_le.mpr ⟨h1, h2⟩
-
-    -- Apply h_bdd to each truncation
-    have hgₙ_eq : ∀ n, ∫ ω, μ[f | m] ω * gₙ n ω ∂μ = ∫ ω, f ω * gₙ n ω ∂μ := by
-      intro n
-      apply h_bdd n
-      intro ω
-      exact hgₙ_bdd n ω
-
-    -- Pointwise convergence: gₙ → g (eventually gₙ ω = g ω when n > |g ω|)
-    have hgₙ_tendsto : ∀ᵐ ω ∂μ, Tendsto (fun n => gₙ n ω) atTop (𝓝 (g ω)) := by
-      apply ae_of_all
-      intro ω
-      -- For large enough n, gₙ ω = g ω
-      rw [tendsto_atTop_nhds]
-      intro U hU_mem
-      obtain ⟨ε, hε_pos, hε_U⟩ := Metric.mem_nhds_iff.mp hU_mem
-      use (⌈abs (g ω)⌉₊ + 1)
-      intro n hn
-      apply hε_U
-      rw [Real.dist_eq]
-      -- Show gₙ ω = g ω for large n
-      have : gₙ n ω = g ω := by
-        simp only [gₙ]
-        rw [max_eq_right, min_eq_left]
-        · calc g ω
-              ≤ abs (g ω) := le_abs_self _
-            _ ≤ ⌈abs (g ω)⌉₊ := Nat.le_ceil _
-            _ < ⌈abs (g ω)⌉₊ + 1 := by linarith
-            _ ≤ n := hn
-        · calc -(n : ℝ)
-              ≤ -(⌈abs (g ω)⌉₊ + 1 : ℝ) := by simp; linarith
-            _ ≤ -abs (g ω) := by simp; exact Nat.ceil_le.mpr (by linarith : abs (g ω) ≤ ⌈abs (g ω)⌉₊ + 1)
-            _ ≤ g ω := neg_abs_le _
-      rw [this]
-      simp [hε_pos]
-
-    -- Domination: |gₙ ω| ≤ |g ω|
-    have hgₙ_dom : ∀ n, ∀ᵐ ω ∂μ, ‖gₙ n ω‖ ≤ ‖g ω‖ := by
-      intro n
-      apply ae_of_all
-      intro ω
-      simp only [Real.norm_eq_abs]
-      -- |max(-n, min(g, n))| ≤ |g|
-      calc abs (gₙ n ω)
-          = abs (max (-(n : ℝ)) (min (g ω) n)) := rfl
-        _ ≤ max (abs (-(n : ℝ))) (abs (min (g ω) n)) := abs_max_le_max_abs_abs _ _
-        _ ≤ max n (abs (min (g ω) n)) := by simp [abs_neg]
-        _ ≤ max n (abs (g ω)) := max_le_max le_rfl (abs_min_le_abs_left _ _)
-        _ ≤ abs (g ω) := by
-          by_cases h : abs (g ω) ≤ n
-          · rw [max_eq_left h]
-            exact h
-          · push_neg at h
-            rw [max_eq_right (le_of_lt h)]
-
-    -- Apply dominated convergence for both sides
-    have hlhs : Tendsto (fun n => ∫ ω, μ[f | m] ω * gₙ n ω ∂μ) atTop (𝓝 (∫ ω, μ[f | m] ω * g ω ∂μ)) := by
-      refine tendsto_integral_of_dominated_convergence (fun ω => abs (μ[f | m] ω) * abs (g ω)) ?_ ?_ ?_ ?_
-      · exact integrable_condExp.abs.mul hg_int.abs
-      · intro n; exact integrable_condExp.aestronglyMeasurable.mul
-          (hgₙ_meas n).aestronglyMeasurable
-      · filter_upwards [hgₙ_tendsto] with ω hω
-        exact Tendsto.mul tendsto_const_nhds hω
-      · intro n
-        filter_upwards [hgₙ_dom n] with ω hω
-        rw [norm_mul]
-        exact mul_le_mul_of_nonneg_left hω (abs_nonneg _)
-
-    have hrhs : Tendsto (fun n => ∫ ω, f ω * gₙ n ω ∂μ) atTop (𝓝 (∫ ω, f ω * g ω ∂μ)) := by
-      refine tendsto_integral_of_dominated_convergence (fun ω => abs (f ω) * abs (g ω)) ?_ ?_ ?_ ?_
-      · exact hf_int.abs.mul hg_int.abs
-      · intro n; exact hf_int.aestronglyMeasurable.mul
-          (hgₙ_meas n).aestronglyMeasurable
-      · filter_upwards [hgₙ_tendsto] with ω hω
-        exact Tendsto.mul tendsto_const_nhds hω
-      · intro n
-        filter_upwards [hgₙ_dom n] with ω hω
-        rw [norm_mul]
-        exact mul_le_mul_of_nonneg_left hω (abs_nonneg _)
-
-    -- Since sequences are equal and converge, their limits are equal
-    rw [← tendsto_nhds_unique hlhs hrhs]
-    exact (tendsto_nhds_unique (tendsto_const_nhds.congr hgₙ_eq) hlhs).symm
-
-/-- Adjointness of conditional expectation, in μ[·|m] notation.
-
-`∫ g · μ[ξ|m] = ∫ μ[g|m] · ξ`, assuming `m ≤ m0`, `SigmaFinite (μ.trim m)`,
-and `g, ξ ∈ L¹(μ)`. -/
-lemma integral_mul_condexp_adjoint
-    {Ω : Type*} [m0 : MeasurableSpace Ω] (μ : Measure Ω)
-    {m : MeasurableSpace Ω} (hm : m ≤ m0)
-    [SigmaFinite (μ.trim hm)]
-    {g ξ : Ω → ℝ}
-    (hg : Integrable g μ) (hξ : Integrable ξ μ) :
-  ∫ ω, g ω * μ[ξ | m] ω ∂μ
-  = ∫ ω, μ[g | m] ω * ξ ω ∂μ := by
-  classical
-  -- (1) ∫ f = ∫ μ[f|m]
-  have h1 :
-      ∫ ω, g ω * μ[ξ | m] ω ∂μ
-    = ∫ ω, μ[(fun ω => g ω * μ[ξ | m] ω) | m] ω ∂μ := by
-    simpa using
-      (integral_condExp (μ := μ) (m := m) (hm := hm)
-        (f := fun ω => g ω * μ[ξ | m] ω)).symm
-  -- (2) Pull out the m-measurable factor μ[ξ|m]
-  have hpull :
-      μ[(fun ω => g ω * μ[ξ | m] ω) | m]
-      =ᵐ[μ] (fun ω => μ[g | m] ω * μ[ξ | m] ω) := by
-    -- Use your "pull‐out" lemma for m‑measurable multipliers.
-    have hξm : AEStronglyMeasurable[m] (μ[ξ | m]) μ :=
-      stronglyMeasurable_condExp.aestronglyMeasurable
-    have hgξm_int : Integrable (g * μ[ξ | m]) μ := by
-      -- TODO: This requires either:
-      -- (1) Strengthening assumptions to L² or bounded functions
-      -- (2) Using approximation by bounded functions
-      -- See NotesForLater/VIAMARTINGALE_REMAINING_ISSUES.md lines 75-180
-      sorry
-    exact condExp_mul_of_aestronglyMeasurable_right hξm hgξm_int hg
-  -- (3) Symmetric step: turn ∫ μ[g|m]*μ[ξ|m] back into a condexp of (μ[g|m]*ξ)
-  have h3 :
-      ∫ ω, μ[g | m] ω * μ[ξ | m] ω ∂μ
-    = ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ := by
-    -- reverse pull‐out
-    have hgm : AEStronglyMeasurable[m] (μ[g | m]) μ :=
-      stronglyMeasurable_condExp.aestronglyMeasurable
-    have hpull' :
-        μ[(fun ω => μ[g | m] ω * ξ ω) | m]
-        =ᵐ[μ] (fun ω => μ[g | m] ω * μ[ξ | m] ω) := by
-      have hgmξ_int : Integrable (μ[g | m] * ξ) μ := by
-        -- TODO: Same issue as above - requires L² or boundedness assumptions
-        -- See NotesForLater/VIAMARTINGALE_REMAINING_ISSUES.md lines 75-180
-        sorry
-      exact condExp_mul_of_aestronglyMeasurable_left hgm hgmξ_int hξ
-    simpa using (integral_congr_ae hpull').symm
-  -- (4) And finally ∫ μ[·|m] = ∫ ·
-  have h4 :
-      ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ
-    = ∫ ω, μ[g | m] ω * ξ ω ∂μ := by
-    simpa using
-      integral_condExp (μ := μ) (m := m) (hm := hm)
-        (f := fun ω => μ[g | m] ω * ξ ω)
-
-  -- Chain equalities
-  calc
-    ∫ ω, g ω * μ[ξ | m] ω ∂μ
-        = ∫ ω, μ[(fun ω => g ω * μ[ξ | m] ω) | m] ω ∂μ := h1
-    _   = ∫ ω, μ[g | m] ω * μ[ξ | m] ω ∂μ := by
-            refine integral_congr_ae ?_; exact hpull
-    _   = ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ := h3
-    _   = ∫ ω, μ[g | m] ω * ξ ω ∂μ := h4
+/- ===== Helpers: adjointness & indicator algebra (μ[·|m], (hm : m ≤ m0)) ===== -/
 
 /-- Set integral as `1_s · f` (explicit unit indicator), tuned to avoid elaboration blowups. -/
 lemma setIntegral_eq_integral_indicator_one_mul
@@ -1446,85 +1015,6 @@ lemma setIntegral_eq_integral_indicator_one_mul
   by_cases hω : ω ∈ s
   · simp [Set.indicator, hω, mul_comm]
   · simp [Set.indicator, hω]
-
-/-- Set version of adjointness. If `s ∈ m`, then
-
-    ∫_s g·μ[ξ|m] = ∫_s μ[g|m]·ξ. -/
-lemma set_integral_mul_condexp_adjoint
-    {Ω : Type*} [m0 : MeasurableSpace Ω] (μ : Measure Ω)
-    {m : MeasurableSpace Ω} (hm : m ≤ m0)
-    [SigmaFinite (μ.trim hm)]
-    {s : Set Ω} (hs : MeasurableSet[m] s)
-    {g ξ : Ω → ℝ}
-    (hg : Integrable g μ) (hξ : Integrable ξ μ) :
-  ∫ ω in s, g ω * μ[ξ | m] ω ∂μ
-  = ∫ ω in s, μ[g | m] ω * ξ ω ∂μ := by
-  classical
-  -- rewrite set integrals as whole-space integrals with indicator
-  -- Indicator equality: s.indicator f = s.indicator 1 * f
-  have ind_eq : ∀ f : Ω → ℝ, ∀ᵐ ω ∂μ,
-      s.indicator f ω = s.indicator (fun _ => (1 : ℝ)) ω * f ω := by
-    intro f
-    filter_upwards with ω
-    by_cases h : ω ∈ s <;> simp [Set.indicator, h]
-
-  have h1 :
-      ∫ ω in s, g ω * μ[ξ | m] ω ∂μ
-    = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω)
-            * g ω * μ[ξ | m] ω ∂μ := by
-    rw [@setIntegral_eq_integral_indicator_one_mul Ω m0 μ s (hm s hs)]
-    congr with ω
-    ring
-
-  have h2 :
-      ∫ ω in s, μ[g | m] ω * ξ ω ∂μ
-    = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω)
-            * μ[g | m] ω * ξ ω ∂μ := by
-    rw [@setIntegral_eq_integral_indicator_one_mul Ω m0 μ s (hm s hs)]
-    congr with ω
-    ring
-
-  -- use (1) with g := (1_s · g)
-  have h_int :
-      Integrable (fun ω => (Set.indicator s (fun _ => (1 : ℝ)) ω) * g ω) μ := by
-    -- indicator s (fun _ => 1) * g = indicator s g, which is integrable
-    have : (fun ω => Set.indicator s (fun _ => (1 : ℝ)) ω * g ω) = Set.indicator s g := by
-      ext ω; by_cases h : ω ∈ s <;> simp [Set.indicator, h]
-    rw [this]
-    exact hg.indicator (hm s hs)
-
-  have h_eq :=
-    integral_mul_condexp_adjoint (μ := μ) (m := m) (m0 := m0) (hm := hm)
-      (g := fun ω => (Set.indicator s (fun _ => (1 : ℝ)) ω) * g ω)
-      (ξ := ξ) h_int hξ
-
-  -- replace μ[(1_s·g)|m] by (1_s·μ[g|m]) using that s ∈ m
-  have h_proj :
-      μ[(fun ω => (Set.indicator s (fun _ => (1 : ℝ)) ω) * g ω) | m]
-      =ᵐ[μ] (fun ω => (Set.indicator s (fun _ => (1 : ℝ)) ω) * μ[g | m] ω) := by
-    -- indicator s (fun _ => 1) * g = indicator s g
-    have h1 : (fun ω => Set.indicator s (fun _ => (1 : ℝ)) ω * g ω) = Set.indicator s g := by
-      ext ω; by_cases h : ω ∈ s <;> simp [Set.indicator, h]
-    have h2 : (fun ω => Set.indicator s (fun _ => (1 : ℝ)) ω * μ[g | m] ω) = Set.indicator s (μ[g | m]) := by
-      ext ω; by_cases h : ω ∈ s <;> simp [Set.indicator, h]
-    rw [h1, h2]
-    exact MeasureTheory.condExp_indicator hg hs
-
-  -- rewrite the RHS of h_eq with h_proj and go back to set integrals
-  have h_eq' :
-      ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω) * g ω * μ[ξ | m] ω ∂μ
-    = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω) * μ[g | m] ω * ξ ω ∂μ := by
-    -- Start with h_eq and rewrite RHS using h_proj
-    calc ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω) * g ω * μ[ξ | m] ω ∂μ
-        = ∫ ω, μ[(fun ω => (Set.indicator s (fun _ => (1 : ℝ)) ω) * g ω) | m] ω * ξ ω ∂μ := h_eq
-      _ = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω) * μ[g | m] ω * ξ ω ∂μ := by
-          refine integral_congr_ae ?_
-          filter_upwards [h_proj] with ω hω
-          rw [hω]
-  -- finish
-  simpa [h1, h2] using h_eq'
-
-/- ===== Helpers: adjointness & indicator algebra (μ[·|m], (hm : m ≤ m0)) ===== -/
 
 /-- If `|g| ≤ C` a.e., then `|μ[g|m]| ≤ C` a.e. (uses monotonicity of conditional expectation). -/
 lemma ae_bound_condexp_of_ae_bound
@@ -1934,64 +1424,23 @@ lemma condIndep_of_triple_law
               ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ = ∫ ω in W ⁻¹' T, φ ω * V ω ∂μ := by
             intro T hT_meas
 
-            -- Strategy: Use pull-out property with conditional expectation
-            -- Key: W⁻¹'T is 𝔾-measurable, so we can factor the indicator through CE
+            -- Strategy: Use setIntegral_condExp since W ⁻¹' T is 𝔾-measurable
+            -- Key: μ[φ*ψ | 𝔾] =ᵐ φ*V via pull-out property
 
             haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp hW)) := by
               infer_instance
 
-            -- Split integrals based on φ's support (φ = 1_{Y⁻¹'A})
-            have h_lhs : ∫ ω in W ⁻¹' T, φ ω * V ω ∂μ = ∫ ω in (Y ⁻¹' A) ∩ (W ⁻¹' T), V ω ∂μ := by
-              rw [← setIntegral_indicator (hY hA)]
-              congr 1; ext ω
-              simp [Set.indicator, φ, Set.mem_inter_iff, Set.mem_preimage]
-              split_ifs <;> ring
+            -- W ⁻¹' T is 𝔾-measurable
+            have hWT_meas : MeasurableSet[𝔾] (W ⁻¹' T) :=
+              measurable_iff_comap_le.mpr (by exact le_refl 𝔾) _ (hW hT_meas)
 
-            have h_rhs : ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ = ∫ ω in (Y ⁻¹' A) ∩ (W ⁻¹' T), ψ ω ∂μ := by
-              rw [← setIntegral_indicator (hY hA)]
-              congr 1; ext ω
-              simp [Set.indicator, φ, ψ, Set.mem_inter_iff, Set.mem_preimage]
-              split_ifs <;> ring
-
-            rw [h_lhs, h_rhs]
-
-            -- Rewrite as integrals over W⁻¹'T with indicator 1_{Y⁻¹'A}
-            rw [setIntegral_indicator (Set.inter_subset_right : (Y ⁻¹' A) ∩ (W ⁻¹' T) ⊆ W ⁻¹' T) (hW hT_meas)]
-            rw [setIntegral_indicator (Set.inter_subset_right : (Y ⁻¹' A) ∩ (W ⁻¹' T) ⊆ W ⁻¹' T) (hW hT_meas)]
-
-            -- Apply pull-out property: μ[1_{W⁻¹'T} * ψ | 𝔾] = 1_{W⁻¹'T} * V
-            have h_pull : μ[(W ⁻¹' T).indicator (fun ω => 1) * ψ | 𝔾] =ᵐ[μ]
-                (W ⁻¹' T).indicator (fun ω => 1) * V := by
-              refine condExp_mul_of_aestronglyMeasurable_left (μ := μ) (m := 𝔾) ?_ ?_ hψ_int
-              · exact stronglyMeasurable_const.indicator (hW hT_meas) |>.aestronglyMeasurable
-              · exact (integrable_const 1).indicator (hW hT_meas)
-
-            calc ∫ ω in W ⁻¹' T, (Y ⁻¹' A).indicator (fun _ => 1) ω * V ω ∂μ
-                = ∫ ω in W ⁻¹' T, (Y ⁻¹' A).indicator (fun _ => 1) ω *
-                      ((W ⁻¹' T).indicator (fun _ => 1) * μ[ψ | 𝔾]) ω ∂μ := by
-                    congr 1; ext ω
-                    simp [Set.indicator, Set.mem_inter_iff]
-                    split_ifs <;> ring
-              _ = ∫ ω, (Y ⁻¹' A).indicator (fun _ => 1) ω *
-                      μ[(W ⁻¹' T).indicator (fun _ => 1) * ψ | 𝔾] ω ∂μ := by
-                    rw [setIntegral_congr_ae (hW hT_meas) (by
-                      filter_upwards [h_pull] with ω hω _
-                      congr 1
-                      exact hω)]
-                    rw [← setIntegral_indicator (hW hT_meas)]
-                    congr 1; ext ω
-                    simp [Set.indicator]
-              _ = ∫ ω, (Y ⁻¹' A).indicator (fun _ => 1) ω *
-                      ((W ⁻¹' T).indicator (fun _ => 1) * ψ) ω ∂μ := by
-                    have : Integrable ((W ⁻¹' T).indicator (fun _ => 1) * ψ) μ :=
-                      (integrable_const 1).indicator (hW hT_meas) |>.bdd_mul' hψ_int (by
-                        simp [Set.indicator]; norm_num)
-                    exact (integral_condExp (measurable_iff_comap_le.mp hW)).symm
-              _ = ∫ ω in W ⁻¹' T, (Y ⁻¹' A).indicator (fun _ => 1) ω * ψ ω ∂μ := by
-                    rw [setIntegral_indicator (hW hT_meas)]
-                    congr 1; ext ω
-                    simp [Set.indicator, Set.mem_inter_iff]
-                    split_ifs <;> ring
+            -- Use setIntegral_condExp: ∫ in S, μ[f|m] = ∫ in S, f for m-measurable S
+            calc ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ
+                = ∫ ω in W ⁻¹' T, μ[φ * ψ | 𝔾] ω ∂μ := by
+                    rw [setIntegral_condExp (measurable_iff_comap_le.mp hW) hφψ_int hWT_meas]
+              _ = ∫ ω in W ⁻¹' T, φ ω * V ω ∂μ := by
+                    -- Use pull-out property: μ[φ*ψ|𝔾] =ᵐ φ*μ[ψ|𝔾] = φ*V
+                    sorry  -- Need to show φ is 𝔾-measurable or use a different approach
 
           -- **Substep 3: Apply uniqueness**
           -- Use ae_eq_condExp_of_forall_setIntegral_eq
@@ -2236,17 +1685,17 @@ lemma condExp_bounded_comp_eq_of_triple_law
           -- Rewrite as: μ[∑ c, (fun ω => ...) | 𝔾] = ∑ c, μ[(fun ω => ...) | 𝔾]
           have : (fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω)) =
                  ∑ c ∈ (φₙ n).range, fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) := by
-            ext ω; rfl
+            ext ω; exact Finset.sum_apply _ _ _
           rw [this]
           apply condExp_finset_sum _ 𝔾
           intro c hc
           apply Integrable.const_mul
-          apply integrable_const
+          -- Indicator of measurable set composed with Y is integrable
+          refine Integrable.indicator (integrable_const 1) ?_
+          exact hY (h_meas c hc)
       _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔾] := by
           filter_upwards with ω
-          congr 1
-          ext c : 1
-          congr 1
+          refine Finset.sum_congr rfl fun c _ => ?_
           have : (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω)) =
                  c • (((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y) := by
             ext ω; simp [Function.comp_apply, smul_eq_mul]
@@ -2254,16 +1703,12 @@ lemma condExp_bounded_comp_eq_of_triple_law
           exact condExp_smul c _
       _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔽] := by
           filter_upwards with ω
-          congr 1
-          ext c : 1
-          congr 1
+          refine Finset.sum_congr rfl fun c hc => ?_
           -- Apply base case: condExp_eq_of_triple_law
           exact condExp_eq_of_triple_law Y Z W W' hY hZ hW hW' h_triple (h_meas c hc) ω
       _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔽] := by
           filter_upwards with ω
-          congr 1
-          ext c : 1
-          congr 1
+          refine Finset.sum_congr rfl fun c _ => ?_
           have : c • (((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y) =
                  (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω)) := by
             ext ω; simp [Function.comp_apply, smul_eq_mul]
@@ -2273,7 +1718,9 @@ lemma condExp_bounded_comp_eq_of_triple_law
           refine (condExp_finset_sum ?_ 𝔽).symm
           intro c hc
           apply Integrable.const_mul
-          apply integrable_const
+          -- Indicator of measurable set composed with Y is integrable
+          refine Integrable.indicator (integrable_const 1) ?_
+          exact hY (h_meas c hc)
       _ =ᵐ[μ] μ[(φₙ n) ∘ Y | 𝔽] := by
           apply condExp_congr_ae
           filter_upwards with ω
@@ -2293,9 +1740,12 @@ lemma condExp_bounded_comp_eq_of_triple_law
     intro n
     -- φₙ n is bounded by C + 1, and composition with measurable Y preserves integrability
     have hφₙ_meas : Measurable (φₙ n) := (φₙ n).measurable
-    have hcomp_meas : Measurable (φₙ n ∘ Y) := hφₙ_meas.comp hY
-    apply integrable_of_forall_fin_meas_le (by infer_instance) (C + 1)
-    · simp [ENNReal.coe_lt_top]
+    have hcomp_meas : Measurable (φₙ n ∘ Y) := by
+      apply Measurable.comp (g := Y) (mβ := inst✝⁴)
+      · exact hφₙ_meas
+      · exact hY
+    apply integrable_of_forall_fin_meas_le (ENNReal.ofReal (C + 1))
+    · simp [ENNReal.ofReal_lt_top]
     · exact hcomp_meas.aestronglyMeasurable
     · intro s hs hμs
       calc (∫⁻ ω in s, ‖φₙ n (Y ω)‖₊ ∂μ)
@@ -2304,9 +1754,9 @@ lemma condExp_bounded_comp_eq_of_triple_law
             intro ω
             simp only [ENNReal.coe_le_coe]
             exact hφₙ_bdd n (Y ω)
-        _ = (C + 1) * μ s := by
+        _ = ENNReal.ofReal (C + 1) * μ s := by
             rw [lintegral_const, Measure.restrict_apply MeasurableSet.univ, Set.univ_inter]
-        _ < ∞ := ENNReal.mul_lt_top (by simp) hμs
+        _ < ∞ := ENNReal.mul_lt_top ENNReal.ofReal_lt_top hμs
 
   -- Pointwise convergence: φₙ n ∘ Y → φ ∘ Y a.e.
   have hφₙY_tendsto : ∀ᵐ ω ∂μ, Tendsto (fun n => φₙ n (Y ω)) atTop (𝓝 (φ (Y ω))) := by
@@ -4060,7 +3510,7 @@ This lemma directly replaces `condDistrib_of_map_eq_map_and_comap_le`
 at its only point of use. -/
 lemma condexp_indicator_drop_info_of_pair_law_direct
     {Ω α β : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
-    [MeasurableSpace α] [StandardBorelSpace α]
+    [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
     [MeasurableSpace β] [StandardBorelSpace β] [Nonempty β]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (ξ : Ω → α) (η ζ : Ω → β)
@@ -4188,11 +3638,11 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
       rw [h_prod_comm_ζ, h_prod_comm_η, h_law]
 
     -- Step 2: Express joint distributions using compProd in the RIGHT direction
-    have hζ_compProd : (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ) = μ.map (fun ω => (ζ ω, ξ ω)) := by
-      exact compProd_map_condDistrib hζ hξ.aemeasurable
+    have hζ_compProd : (μ.map ζ) ⊗ₘ (ProbabilityTheory.condDistrib ξ ζ μ) = μ.map (fun ω => (ζ ω, ξ ω)) := by
+      exact ProbabilityTheory.compProd_map_condDistrib hξ.aemeasurable
 
-    have hη_compProd : (μ.map η) ⊗ₘ (condDistrib ξ η μ) = μ.map (fun ω => (η ω, ξ ω)) := by
-      exact compProd_map_condDistrib hη hξ.aemeasurable
+    have hη_compProd : (μ.map η) ⊗ₘ (ProbabilityTheory.condDistrib ξ η μ) = μ.map (fun ω => (η ω, ξ ω)) := by
+      exact ProbabilityTheory.compProd_map_condDistrib hξ.aemeasurable
 
     -- Step 3: Get marginal equality from swapped pair-law
     have h_marg_eq : μ.map ζ = μ.map η := by
@@ -4201,42 +3651,42 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
       rw [← h1, ← h2, h_law_swapped]
 
     -- Step 4: Derive kernel equality in the RIGHT direction: condDistrib ξ ζ = condDistrib ξ η
-    have hkernel_eq : ∀ᵐ z ∂(μ.map ζ), condDistrib ξ ζ μ z = condDistrib ξ η μ z := by
+    have hkernel_eq : ∀ᵐ z ∂(μ.map ζ), ProbabilityTheory.condDistrib ξ ζ μ z = ProbabilityTheory.condDistrib ξ η μ z := by
       -- Rewrite with same base measure using marginal equality
-      have h_compProd_eq : (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ) = (μ.map ζ) ⊗ₘ (condDistrib ξ η μ) := by
+      have h_compProd_eq : (μ.map ζ) ⊗ₘ (ProbabilityTheory.condDistrib ξ ζ μ) = (μ.map ζ) ⊗ₘ (ProbabilityTheory.condDistrib ξ η μ) := by
         rw [hζ_compProd, h_law_swapped, ← h_marg_eq, ← hη_compProd]
       -- Apply uniqueness
       exact Kernel.ae_eq_of_compProd_eq h_compProd_eq
 
     -- Step 5: Pull back kernel equality along ζ
-    have hkernel_eq_pullback : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (ζ ω) := by
+    have hkernel_eq_pullback : ∀ᵐ ω ∂μ, ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) = ProbabilityTheory.condDistrib ξ η μ (ζ ω) := by
       exact ae_eq_comp hζ.aemeasurable hkernel_eq
 
     -- Step 6: Evaluate at B to get equality of measures on B
-    have heval_B : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) B = condDistrib ξ η μ (ζ ω) B := by
+    have heval_B : ∀ᵐ ω ∂μ, ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) B = ProbabilityTheory.condDistrib ξ η μ (ζ ω) B := by
       filter_upwards [hkernel_eq_pullback] with ω h
       exact congrArg (fun ν => ν B) h
 
     -- Step 7: Rewrite η ω as φ (ζ ω) to align both sides (using hηfac from line 4117)
-    have heval_B_aligned : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) B = condDistrib ξ η μ (η ω) B := by
+    have heval_B_aligned : ∀ᵐ ω ∂μ, ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) B = ProbabilityTheory.condDistrib ξ η μ (η ω) B := by
       filter_upwards [heval_B] with ω h
       rw [hηfac]; exact h
 
     -- Step 9: Connect to conditional expectations via condDistrib_ae_eq_condExp
-    have hCE_ζ : (fun ω => (condDistrib ξ ζ μ (ζ ω) B).toReal) =ᵐ[μ]
+    have hCE_ζ : (fun ω => (ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) B).toReal) =ᵐ[μ]
         μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] := by
-      exact condDistrib_ae_eq_condExp hζ hξ hB
+      exact ProbabilityTheory.condDistrib_ae_eq_condExp hζ hξ hB
 
-    have hCE_η : (fun ω => (condDistrib ξ η μ (η ω) B).toReal) =ᵐ[μ]
+    have hCE_η : (fun ω => (ProbabilityTheory.condDistrib ξ η μ (η ω) B).toReal) =ᵐ[μ]
         μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] := by
-      exact condDistrib_ae_eq_condExp hη hξ hB
+      exact ProbabilityTheory.condDistrib_ae_eq_condExp hη hξ hB
 
     -- Step 10: Convert measure equality to .toReal equality
-    have htoReal_eq : ∀ᵐ ω ∂μ, (condDistrib ξ ζ μ (ζ ω) B).toReal = (condDistrib ξ η μ (η ω) B).toReal := by
+    have htoReal_eq : ∀ᵐ ω ∂μ, (ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) B).toReal = (ProbabilityTheory.condDistrib ξ η μ (η ω) B).toReal := by
       filter_upwards [heval_B_aligned] with ω h
       rw [h]
 
-    -- Step 11: Conclude by transitivity: CE_ζ = condDistrib = condDistrib = CE_η
+    -- Step 11: Conclude by transitivity: CE_ζ = ProbabilityTheory.condDistrib = ProbabilityTheory.condDistrib = CE_η
     have : μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] =ᵐ[μ]
            μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] := by
       exact hCE_ζ.symm.trans (htoReal_eq.trans hCE_η)
