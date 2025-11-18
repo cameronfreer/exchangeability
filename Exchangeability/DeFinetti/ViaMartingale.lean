@@ -1728,7 +1728,7 @@ lemma condExp_bounded_comp_eq_of_triple_law
 
     -- Decompose: (φₙ n) ∘ Y = ∑_{c ∈ range} c • indicator{ω | Y ω ∈ (φₙ n)⁻¹'{c}}
     have h_decomp : (φₙ n) ∘ Y = fun ω => ∑ c ∈ (φₙ n).range,
-        c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) := by
+        c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) := by
       ext ω
       simp only [Function.comp_apply, Set.indicator_apply,
                  Set.mem_preimage, Set.mem_singleton_iff]
@@ -1744,25 +1744,25 @@ lemma condExp_bounded_comp_eq_of_triple_law
 
     -- LHS: Apply condExp to the decomposition
     calc μ[(φₙ n) ∘ Y | 𝔾]
-        =ᵐ[μ] μ[fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔾] := by
+        =ᵐ[μ] μ[fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) | 𝔾] := by
           apply condExp_congr_ae
           filter_upwards with ω
           rw [h_decomp]
-      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔾] := by
+      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) | 𝔾] := by
           -- Rewrite as: μ[∑ c, (fun ω => ...) | 𝔾] = ∑ c, μ[(fun ω => ...) | 𝔾]
           refine condExp_finset_sum ?_ 𝔾
           intro c hc
           apply Integrable.const_mul
           -- Indicator of measurable set composed with Y is integrable
-          refine Integrable.indicator (integrable_const 1) ?_
+          refine Integrable.indicator (integrable_const (1:ℝ)) ?_
           exact hY (h_meas c hc)
-      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔾] := by
+      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y | 𝔾] := by
           -- Apply condExp_smul to each summand
-          have he : ∀ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔾] =ᵐ[μ]
-                     c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔾] := by
+          have he : ∀ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) | 𝔾] =ᵐ[μ]
+                     c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y | 𝔾] := by
             intro c _
-            have eq : (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω)) =
-                      c • (((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y) := by
+            have eq : (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω)) =
+                      c • (((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y) := by
               ext ω; simp [Function.comp_apply, smul_eq_mul]
             rw [eq]
             exact condExp_smul c _ 𝔾
@@ -1780,21 +1780,17 @@ lemma condExp_bounded_comp_eq_of_triple_law
             exact condExp_eq_of_triple_law Y Z W W' hY hZ hW hW' h_triple (h_meas c hc)
           filter_upwards [(φₙ n).range.eventually_all.mpr he] with ω h
           simp only [Finset.sum_apply, Pi.smul_apply]
+          refine Finset.sum_congr rfl fun c hc => ?_
           congr 1
-          ext c
-          by_cases hc : c ∈ (φₙ n).range
-          · simp only [Pi.smul_apply]
-            congr 1
-            exact h c hc
-          · rfl
-      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔽] := by
+          exact h c hc
+      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) | 𝔽] := by
           -- Apply condExp_smul in reverse
           have he : ∀ c ∈ (φₙ n).range,
-                    c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔽] =ᵐ[μ]
-                    μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔽] := by
+                    c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y | 𝔽] =ᵐ[μ]
+                    μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) | 𝔽] := by
             intro c _
-            have eq : c • (((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y) =
-                      (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω)) := by
+            have eq : c • (((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y) =
+                      (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω)) := by
               ext ω; simp [Function.comp_apply, smul_eq_mul]
             rw [← eq]
             exact (condExp_smul c _ 𝔽).symm
@@ -1802,12 +1798,12 @@ lemma condExp_bounded_comp_eq_of_triple_law
           simp only [Finset.sum_apply]
           refine Finset.sum_congr rfl fun c hc => ?_
           exact h c hc
-      _ =ᵐ[μ] μ[fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔽] := by
+      _ =ᵐ[μ] μ[fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) | 𝔽] := by
           -- Apply condExp_finset_sum in reverse
           refine (condExp_finset_sum ?_ 𝔽).symm
           intro c hc
           apply Integrable.const_mul
-          refine Integrable.indicator (integrable_const 1) ?_
+          refine Integrable.indicator (integrable_const (1:ℝ)) ?_
           exact hY (h_meas c hc)
       _ =ᵐ[μ] μ[(φₙ n) ∘ Y | 𝔽] := by
           apply condExp_congr_ae
