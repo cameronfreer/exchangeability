@@ -1155,10 +1155,10 @@ private lemma cesaro_cauchy_rho_lt
     -- We need to show: ∑ k ∈ range n, Z k ω = ∑ i : Fin m, (if i.val < n then 1 else 0) * Z i.val ω
     have h_sum_n : ∑ k ∈ Finset.range n, Z k ω =
         ∑ i : Fin m, (if i.val < n then 1 else 0) * Z i.val ω := by
-      sorry
+      sorry  -- TODO: Convert sum over range n to indicator-weighted sum over Fin m
     have h_sum_n' : ∑ k ∈ Finset.range n', Z k ω =
         ∑ i : Fin m, (if i.val < n' then 1 else 0) * Z i.val ω := by
-      sorry
+      sorry  -- TODO: Convert sum over range n' to indicator-weighted sum over Fin m
     rw [h_sum_n, h_sum_n']
     -- Now simplify the indicator sums and relate to p, q, ξ
     sorry
@@ -1815,10 +1815,10 @@ private lemma blockAvg_cauchy_in_L2
                   have hZ_bdd : ∀ j ω, |Z j ω| ≤ 2 :=
                     centered_variable_bounded hX_meas f hf_meas hf_bdd m rfl Z hZ_def
                   exact hZ_bdd 0 ω
-              -- TODO: Factor out as lemma: ∫ (a - b)² = ∫ a² + ∫ b² - 2 * ∫ (a*b)
+              -- Expand (a - b)² = a² + b² - 2ab using algebra and linearity of integral
               have h_expand : ∫ ω, (Z i ω - Z 0 ω) ^ 2 ∂μ =
                   ∫ ω, (Z i ω) ^ 2 ∂μ + ∫ ω, (Z 0 ω) ^ 2 ∂μ - 2 * ∫ ω, Z i ω * Z 0 ω ∂μ := by
-                sorry
+                sorry  -- TODO: Expand integral using sub_sq' and linearity
 
               -- Now substitute known values
               have h_var_i : ∫ ω, (Z i ω) ^ 2 ∂μ = σSq := by
@@ -1863,8 +1863,24 @@ private lemma blockAvg_cauchy_in_L2
             rw [← integral_eq_zero_iff_of_nonneg_ae]
             · exact h_diff_sq
             · apply ae_of_all; intro ω; exact sq_nonneg _
-            · -- TODO: Prove integrability using Integrable.of_bound with constant 16
-              sorry
+            · -- (Z i - Z 0)² is bounded by (2+2)² = 16
+              apply Integrable.of_bound
+              · exact ((hZ_meas i).sub (hZ_meas 0)).pow_const 2 |>.aestronglyMeasurable
+              · filter_upwards [] with ω
+                have hZ_bdd : ∀ j ω, |Z j ω| ≤ 2 :=
+                  centered_variable_bounded hX_meas f hf_meas hf_bdd m rfl Z hZ_def
+                -- |(Z i - Z 0)²| ≤ |Z i - Z 0|² ≤ (|Z i| + |Z 0|)² ≤ 4² = 16
+                calc |(Z i ω - Z 0 ω) ^ 2|
+                    = (Z i ω - Z 0 ω) ^ 2 := abs_sq (Z i ω - Z 0 ω)
+                  _ = |Z i ω - Z 0 ω| ^ 2 := by rw [← sq_abs]
+                  _ ≤ (|Z i ω| + |Z 0 ω|) ^ 2 := by
+                      gcongr
+                      exact abs_sub (Z i ω) (Z 0 ω)
+                  _ ≤ (2 + 2) ^ 2 := by
+                      gcongr
+                      · exact hZ_bdd i ω
+                      · exact hZ_bdd 0 ω
+                  _ = 16 := by norm_num
 
           filter_upwards [h_diff_sq_ae] with ω hω
           have : (Z i ω - Z 0 ω) ^ 2 = 0 := hω
