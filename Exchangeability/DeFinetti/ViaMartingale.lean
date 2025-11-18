@@ -1858,9 +1858,40 @@ lemma condExp_bounded_comp_eq_of_triple_law
     exact hφₙ_bdd n (Y ω)
 
   -- Apply dominated convergence to pass from φₙ to φ
-  -- We'll use the fact that: lim μ[φₙ|𝔾] = lim μ[φₙ|𝔽] (by hφₙ_eq)
-  --                           μ[φ|𝔾] = lim μ[φₙ|𝔾] (by dominated convergence)
-  --                           μ[φ|𝔽] = lim μ[φₙ|𝔽] (by dominated convergence)
+  -- We use tendsto_condExp_unique with:
+  --   fs n = φₙ n ∘ Y,  gs n = φₙ n ∘ Y  (same sequence)
+  --   f = φ ∘ Y (limit for 𝔾), g = φ ∘ Y (limit for 𝔽)
+  --   The key is that the hypothesis μ[fs n|m] =ᵐ μ[gs n|m] becomes
+  --   μ[φₙ n ∘ Y|𝔾] =ᵐ μ[φₙ n ∘ Y|𝔽], which we have from hφₙ_eq
+
+  -- But wait, tendsto_condExp_unique expects both condExps w.r.t. the SAME m
+  -- We need a different approach: apply dominated convergence separately for each σ-algebra
+  -- and use uniqueness of pointwise limits
+
+  -- Use dominated convergence for 𝔾 to get: μ[φₙ n ∘ Y|𝔾] → μ[φ ∘ Y|𝔾] a.e.
+  -- Use dominated convergence for 𝔽 to get: μ[φₙ n ∘ Y|𝔽] → μ[φ ∘ Y|𝔽] a.e.
+  -- Since μ[φₙ n ∘ Y|𝔾] =ᵐ μ[φₙ n ∘ Y|𝔽] for all n, and limits are a.e.-unique,
+  -- we get μ[φ ∘ Y|𝔾] =ᵐ μ[φ ∘ Y|𝔽]
+
+  -- Combine all the pointwise equalities into a single a.e. statement
+  have h_eq_all : ∀ᵐ ω ∂μ, ∀ n, (μ[φₙ n ∘ Y|𝔾]) ω = (μ[φₙ n ∘ Y|𝔽]) ω := by
+    rw [ae_all_iff]
+    exact hφₙ_eq
+
+  -- For almost every ω, the sequences (μ[φₙ n ∘ Y|𝔾]) ω and (μ[φₙ n ∘ Y|𝔽]) ω are equal for all n
+  -- We need to show they converge to the same limit
+
+  -- Unfortunately, we need the dominated convergence theorem for conditional expectations
+  -- to know that the sequences converge. This requires σ-finiteness assumptions.
+  -- For now, we'll use the fact that under reasonable assumptions (which should be added
+  -- to the theorem statement), dominated convergence gives us:
+  --   (μ[φₙ n ∘ Y|𝔾]) → (μ[φ ∘ Y|𝔾]) a.e.
+  --   (μ[φₙ n ∘ Y|𝔽]) → (μ[φ ∘ Y|𝔽]) a.e.
+
+  -- Since the sequences are pointwise equal a.e., their limits are equal a.e.
+  -- This follows from: if fₙ(ω) = gₙ(ω) for all n and almost every ω,
+  -- and fₙ(ω) → f(ω), gₙ(ω) → g(ω), then f(ω) = g(ω) for almost every ω
+
   sorry
 
 end ConditionalIndependence
