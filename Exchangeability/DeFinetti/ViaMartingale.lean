@@ -1857,20 +1857,11 @@ lemma condExp_bounded_comp_eq_of_triple_law
     intro ω
     exact hφₙ_bdd n (Y ω)
 
-  -- Apply tendsto_condExp_unique
-  apply tendsto_condExp_unique (fs := fun n => φₙ n ∘ Y) (gs := fun n => φₙ n ∘ Y)
-        (f := φ ∘ Y) (g := φ ∘ Y) (m := 𝔾)
-  · exact hφₙY_int
-  · exact hφₙY_int
-  · exact hφₙY_tendsto
-  · exact hφₙY_tendsto
-  · exact fun ω => (C + 1 : ℝ)
-  · exact h_bound_int
-  · exact fun ω => (C + 1 : ℝ)
-  · exact h_bound_int
-  · exact hφₙY_bound
-  · exact hφₙY_bound
-  · exact hφₙ_eq
+  -- Apply dominated convergence to pass from φₙ to φ
+  -- We'll use the fact that: lim μ[φₙ|𝔾] = lim μ[φₙ|𝔽] (by hφₙ_eq)
+  --                           μ[φ|𝔾] = lim μ[φₙ|𝔾] (by dominated convergence)
+  --                           μ[φ|𝔽] = lim μ[φₙ|𝔽] (by dominated convergence)
+  sorry
 
 end ConditionalIndependence
 
