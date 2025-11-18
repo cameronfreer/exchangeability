@@ -1797,7 +1797,7 @@ lemma condExp_bounded_comp_eq_of_triple_law
                     μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y | 𝔾] =ᵐ[μ]
                     μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y | 𝔽] := by
             intro c hc
-            convert condExp_eq_of_triple_law Y Z W W' hY hZ hW hW' h_triple (h_meas c hc)
+            simpa using condExp_eq_of_triple_law (μ := μ) Y Z W W' hY hZ hW hW' h_triple (h_meas c hc)
           filter_upwards [(φₙ n).range.eventually_all.mpr he] with ω h
           simp only [Finset.sum_apply, Pi.smul_apply]
           refine Finset.sum_congr rfl fun c hc => ?_
@@ -1840,18 +1840,21 @@ lemma condExp_bounded_comp_eq_of_triple_law
   -- We use tendsto_condExp_unique: if sequences converge and conditional expectations
   -- are equal at each step, then the limits have equal conditional expectations
 
-  -- Integrability: φₙ n ∘ Y is integrable for each n
+  -- Integrability: φₙ n ∘ Y is integrable for each n (using ambient σ-algebra)
+  -- NOTE: Must keep this proof in ambient σ-algebra context - do NOT use sub-σ-algebras here
+  -- The instance mismatch errors come from Lean trying to use 𝔽 when we need the ambient instance
+  -- Solution: Temporarily restore the ambient instance within this proof
   have hφₙY_int : ∀ n, Integrable (φₙ n ∘ Y) μ := by
     intro n
-    -- φₙ n is bounded by C + 1, and SimpleFunc compositions are integrable under probability measure
-    -- Y is measurable w.r.t. ambient space, composition is measurable
+    -- Restore ambient instance (hY uses the original [MeasurableSpace Ω] from theorem signature)
+    letI : MeasurableSpace Ω := inferInstance
+    -- Now composition uses ambient measurability
     have hY_comp : Measurable (φₙ n ∘ Y) := (φₙ n).measurable.comp hY
-    -- AEStronglyMeasurable follows from Measurable
     have hcomp_meas : AEStronglyMeasurable (φₙ n ∘ Y) μ := hY_comp.aestronglyMeasurable
     have hcomp_bdd : HasFiniteIntegral (φₙ n ∘ Y) μ := by
       refine HasFiniteIntegral.of_bounded ?_
       filter_upwards with ω
-      exact hφₙ_bdd n (Y ω)
+      simpa using hφₙ_bdd n (Y ω)
     exact ⟨hcomp_meas, hcomp_bdd⟩
 
   -- Pointwise convergence: φₙ n ∘ Y → φ ∘ Y a.e.
