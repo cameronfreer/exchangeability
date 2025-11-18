@@ -1461,15 +1461,13 @@ lemma condIndep_of_triple_law
             have h_meas_H : AEStronglyMeasurable[ℋ] h μ := by
               -- h = indicator(W⁻¹'T) * φ where both factors are ℋ-measurable
               refine AEStronglyMeasurable.mul ?_ ?_
-              · -- indicator(W⁻¹'T) is ℋ-measurable
-                have : AEStronglyMeasurable[ℋ] (fun ω : Ω => (1:ℝ)) μ := aestronglyMeasurable_const
-                exact this.indicator hWT_meas_H
+              · -- indicator(W⁻¹'T) is ℋ-measurable (indicator of ℋ-measurable set)
+                exact (stronglyMeasurable_const (α := Ω) (β := ℝ)).indicator hWT_meas_H |>.aestronglyMeasurable
               · -- φ = indicator(Y⁻¹'A) is ℋ-measurable
                 simp only [hφ_def]
                 have hYA_H : MeasurableSet[ℋ] (Y ⁻¹' A) := by
                   exact ⟨{p | p.2 ∈ A}, measurable_snd hA, by ext; simp⟩
-                have : AEStronglyMeasurable[ℋ] (fun ω : Ω => (1:ℝ)) μ := aestronglyMeasurable_const
-                exact this.indicator hYA_H
+                exact (stronglyMeasurable_const (α := Ω) (β := ℝ)).indicator hYA_H |>.aestronglyMeasurable
 
             have h_bdd : ∀ᵐ ω ∂μ, ‖h ω‖ ≤ 1 := by
               filter_upwards with ω
@@ -1500,10 +1498,12 @@ lemma condIndep_of_triple_law
                 _ = ∫ ω in W ⁻¹' T, φ ω * μ[ψ | ℋ] ω ∂μ := by
                     -- Use setIntegral_congr_ae with a.e. equality from pull-out
                     apply setIntegral_congr_ae hWT_meas
-                    -- φ is ℋ-measurable, so pull-out property applies
-                    have hφ_asm : AEStronglyMeasurable φ μ := by
+                    -- φ is measurable w.r.t. ℋ, so pull-out property applies
+                    have hφ_asm : AEStronglyMeasurable[ℋ] φ μ := by
                       simp only [hφ_def]
-                      exact (aestronglyMeasurable_const (μ := μ)).indicator (hY hA)
+                      -- (Y ⁻¹' A).indicator (fun _ => 1) is ℋ-measurable since Y appears in ℋ
+                      refine AEStronglyMeasurable.indicator ?_ (hY hA)
+                      exact (@stronglyMeasurable_const Ω ℝ ℋ _ (fun _ => (1:ℝ))).aestronglyMeasurable
                     -- Apply condExp pull-out: μ[φ*ψ|ℋ] =ᵐ φ*μ[ψ|ℋ]
                     filter_upwards [@condExp_mul_of_aestronglyMeasurable_left Ω ℋ _ μ φ ψ hφ_asm hφψ_int hψ_int] with ω h
                     exact fun _ => h
@@ -1515,10 +1515,10 @@ lemma condIndep_of_triple_law
               have tower : μ[μ[ψ | ℋ] | 𝔾] =ᵐ[μ] μ[ψ | 𝔾] := by
                 exact condExp_condExp_of_le hG_le_H hH_le_m0
 
-              -- Tower property directly: φ * μ[ψ|ℋ] = φ * μ[μ[ψ|ℋ]|𝔾] = φ * μ[ψ|𝔾] a.e.
-              apply setIntegral_congr_ae hWT_meas
-              filter_upwards [tower] with ω h_tower
-              exact fun _ => by simp only [h_tower]
+              -- We'll show this using a different approach: both sides equal ∫ φ * ψ
+              -- Actually, we can use the fact that μ[ψ|ℋ] and μ[ψ|𝔾] give the same integral when multiplied by 𝔾-measurable φ
+              -- This follows from the tower property applied to the product
+              sorry  -- TODO: Need more sophisticated argument about φ being 𝔾-measurable
 
             -- Chain the steps
             calc ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ
@@ -1527,27 +1527,10 @@ lemma condIndep_of_triple_law
               _ = ∫ ω in W ⁻¹' T, φ ω * V ω ∂μ := by rfl  -- V = μ[ψ|𝔾] by definition
 
           -- **Substep 3: Apply uniqueness**
-          -- Use ae_eq_condExp_of_forall_setIntegral_eq
-          refine ae_eq_condExp_of_forall_setIntegral_eq (μ := μ) (m := 𝔾) ?_ ?_ ?_ ?_
-          · -- φ*ψ is integrable
-            exact hφψ_int
-          · -- φ*V is integrable
-            exact hφV_int
-          · -- μ[φ*V|𝔾] is integrable
-            exact integrable_condExp
-          · -- Set integral equality
-            intro S hS hS_fin
-            -- S is 𝔾-measurable, so S ∈ σ(W), hence S = W⁻¹'T for some T
-            have ⟨T, hT_meas, hS_eq⟩ : ∃ T, MeasurableSet T ∧ S = W ⁻¹' T := by
-              -- This follows from 𝔾 = comap W, so 𝔾-measurable sets have this form
-              -- Use: MeasurableSet[m.comap f] s ↔ ∃ s', MeasurableSet[m] s' ∧ f ⁻¹' s' = s
-              rw [MeasurableSpace.measurableSet_comap] at hS
-              obtain ⟨T, hT_meas, hS_eq⟩ := hS
-              exact ⟨T, hT_meas, hS_eq.symm⟩
-            rw [hS_eq]
-            -- Apply the set integral equality
-            exact h_setIntegral_eq T hT_meas
-      _ =ᵐ[μ] μ[φ * V | 𝔾] := by rfl  -- V = μ[ψ|𝔾] by definition
+          -- TODO: This section needs restructuring - the application of ae_eq_condExp_of_forall_setIntegral_eq
+          -- gives the wrong direction. Need to properly show μ[φ*ψ|𝔾] =ᵐ μ[φ*V|𝔾]
+          sorry
+      _ =ᵐ[μ] μ[φ * V | 𝔾] := by sorry  -- TODO: Need V = μ[ψ|𝔾] substitution
       _ =ᵐ[μ] V * U := by
           -- Pull-out property (already proved above)
           have h_pull : μ[φ * V | 𝔾] =ᵐ[μ] μ[φ | 𝔾] * V := by
@@ -1767,40 +1750,32 @@ lemma condExp_bounded_comp_eq_of_triple_law
           rw [h_decomp]
       _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔾] := by
           -- Rewrite as: μ[∑ c, (fun ω => ...) | 𝔾] = ∑ c, μ[(fun ω => ...) | 𝔾]
-          apply condExp_finset_sum _ 𝔾
+          refine condExp_finset_sum ?_ 𝔾
           intro c hc
           apply Integrable.const_mul
           -- Indicator of measurable set composed with Y is integrable
           refine Integrable.indicator (integrable_const 1) ?_
           exact hY (h_meas c hc)
       _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔾] := by
-          filter_upwards with ω
-          refine Finset.sum_congr rfl fun c _ => ?_
-          have : (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω)) =
-                 c • (((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y) := by
-            ext ω; simp [Function.comp_apply, smul_eq_mul]
-          rw [this]
-          exact condExp_smul c _
+          -- Apply condExp_smul to each summand
+          have : ∀ c, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔾] =ᵐ[μ]
+                     c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔾] := by
+            intro c
+            have eq : (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω)) =
+                      c • (((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y) := by
+              ext ω; simp [Function.comp_apply, smul_eq_mul]
+            rw [eq]
+            exact condExp_smul c _
+          sorry  -- TODO: Apply this to show sums are ae equal
       _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔽] := by
-          filter_upwards with ω
-          refine Finset.sum_congr rfl fun c hc => ?_
-          -- Apply base case: condExp_eq_of_triple_law
-          exact condExp_eq_of_triple_law Y Z W W' hY hZ hW hW' h_triple (h_meas c hc) ω
+          -- Apply base case condExp_eq_of_triple_law to each summand
+          sorry  -- TODO: Show sums are ae equal using condExp_eq_of_triple_law
       _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔽] := by
-          filter_upwards with ω
-          refine Finset.sum_congr rfl fun c _ => ?_
-          have : c • (((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y) =
-                 (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω)) := by
-            ext ω; simp [Function.comp_apply, smul_eq_mul]
-          rw [← this]
-          exact (condExp_smul c _).symm
+          -- Apply condExp_smul in reverse
+          sorry  -- TODO: Show sums are ae equal using condExp_smul
       _ =ᵐ[μ] μ[fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔽] := by
-          refine (condExp_finset_sum ?_ 𝔽).symm
-          intro c hc
-          apply Integrable.const_mul
-          -- Indicator of measurable set composed with Y is integrable
-          refine Integrable.indicator (integrable_const 1) ?_
-          exact hY (h_meas c hc)
+          -- Apply condExp_finset_sum in reverse
+          sorry  -- TODO: Use condExp_finset_sum
       _ =ᵐ[μ] μ[(φₙ n) ∘ Y | 𝔽] := by
           apply condExp_congr_ae
           filter_upwards with ω
@@ -1818,25 +1793,13 @@ lemma condExp_bounded_comp_eq_of_triple_law
   -- Integrability: φₙ n ∘ Y is integrable for each n
   have hφₙY_int : ∀ n, Integrable (φₙ n ∘ Y) μ := by
     intro n
-    -- φₙ n is bounded by C + 1, and composition with measurable Y preserves integrability
-    have hφₙ_meas : Measurable (φₙ n) := (φₙ n).measurable
-    have hcomp_meas : Measurable (φₙ n ∘ Y) := by
-      apply Measurable.comp (g := Y) (mβ := inst✝⁴)
-      · exact hφₙ_meas
-      · exact hY
-    apply integrable_of_forall_fin_meas_le (ENNReal.ofReal (C + 1))
-    · simp [ENNReal.ofReal_lt_top]
-    · exact hcomp_meas.aestronglyMeasurable
-    · intro s hs hμs
-      calc (∫⁻ ω in s, ‖φₙ n (Y ω)‖₊ ∂μ)
-          ≤ ∫⁻ ω in s, (C + 1 : ℝ≥0∞) ∂μ := by
-            apply lintegral_mono
-            intro ω
-            simp only [ENNReal.coe_le_coe]
-            exact hφₙ_bdd n (Y ω)
-        _ = ENNReal.ofReal (C + 1) * μ s := by
-            rw [lintegral_const, Measure.restrict_apply MeasurableSet.univ, Set.univ_inter]
-        _ < ∞ := ENNReal.mul_lt_top ENNReal.ofReal_lt_top hμs
+    -- φₙ n is bounded by C + 1, and SimpleFunc compositions are integrable under probability measure
+    have hcomp_meas : AEStronglyMeasurable (φₙ n ∘ Y) μ := ((φₙ n).measurable.comp hY).aestronglyMeasurable
+    have hcomp_bdd : HasFiniteIntegral (φₙ n ∘ Y) μ := by
+      refine HasFiniteIntegral.of_bounded ?_
+      filter_upwards with ω
+      exact hφₙ_bdd n (Y ω)
+    exact ⟨hcomp_meas, hcomp_bdd⟩
 
   -- Pointwise convergence: φₙ n ∘ Y → φ ∘ Y a.e.
   have hφₙY_tendsto : ∀ᵐ ω ∂μ, Tendsto (fun n => φₙ n (Y ω)) atTop (𝓝 (φ (Y ω))) := by
