@@ -1948,8 +1948,8 @@ private lemma blockAvg_cauchy_in_L2
         intro ω
         exact sq_nonneg _
       linarith
-    -- When σSq = 0, Z_0 = 0 a.e., so blockAvg values are equal a.e.
-    have h_ae_eq : ∀ n n', ∀ᵐ ω ∂μ, blockAvg f X 0 n ω = blockAvg f X 0 n' ω := by
+    -- When σSq = 0, Z_0 = 0 a.e., so blockAvg values are equal a.e. (for n, n' > 0)
+    have h_ae_eq : ∀ n n', n > 0 → n' > 0 → ∀ᵐ ω ∂μ, blockAvg f X 0 n ω = blockAvg f X 0 n' ω := by
       -- Step 1: Show (Z 0)² =ᵐ 0 using integral_eq_zero_iff_of_nonneg_ae
       have hZ0_sq_ae_zero : (fun ω => (Z 0 ω) ^ 2) =ᵐ[μ] 0 := by
         rw [← integral_eq_zero_iff_of_nonneg_ae]
@@ -1958,8 +1958,19 @@ private lemma blockAvg_cauchy_in_L2
           apply ae_of_all
           intro ω
           exact sq_nonneg _
-        · -- TODO: Show (Z 0)² is integrable
-          sorry
+        · -- Show (Z 0)² is integrable: bounded by 4
+          apply Integrable.of_bound
+          · exact (hZ_meas 0).pow_const 2 |>.aestronglyMeasurable
+          · filter_upwards [] with ω
+            have hZ_bdd : ∀ j ω, |Z j ω| ≤ 2 :=
+              centered_variable_bounded hX_meas f hf_meas hf_bdd m rfl Z hZ_def
+            calc |(Z 0 ω) ^ 2|
+                = (Z 0 ω) ^ 2 := abs_sq (Z 0 ω)
+              _ = |Z 0 ω| ^ 2 := by rw [← sq_abs]
+              _ ≤ 2 ^ 2 := by
+                  gcongr
+                  exact hZ_bdd 0 ω
+              _ = 4 := by norm_num
 
       -- Step 2: From (Z 0)² =ᵐ 0, derive Z 0 =ᵐ 0
       have hZ0_ae_zero : Z 0 =ᵐ[μ] 0 := by
@@ -1980,31 +1991,78 @@ private lemma blockAvg_cauchy_in_L2
           rw [← integral_eq_zero_iff_of_nonneg_ae]
           · exact hZi_sq_integral_zero
           · apply ae_of_all; intro ω; exact sq_nonneg _
-          · -- TODO: Show (Z i)² is integrable
-            sorry
+          · -- Show (Z i)² is integrable: bounded by 4
+            apply Integrable.of_bound
+            · exact (hZ_meas i).pow_const 2 |>.aestronglyMeasurable
+            · filter_upwards [] with ω
+              have hZ_bdd : ∀ j ω, |Z j ω| ≤ 2 :=
+                centered_variable_bounded hX_meas f hf_meas hf_bdd m rfl Z hZ_def
+              calc |(Z i ω) ^ 2|
+                  = (Z i ω) ^ 2 := abs_sq (Z i ω)
+                _ = |Z i ω| ^ 2 := by rw [← sq_abs]
+                _ ≤ 2 ^ 2 := by
+                    gcongr
+                    exact hZ_bdd i ω
+                _ = 4 := by norm_num
         filter_upwards [hZi_sq_ae_zero] with ω hω
         exact sq_eq_zero_iff.mp hω
 
-      -- Step 4: Show blockAvg f X 0 n =ᵐ m for any n
-      intro n n'
+      -- Step 4: Show blockAvg f X 0 n =ᵐ m for n, n' > 0
+      intro n n' hn_pos hn'_pos
       have hBlockAvg_n : blockAvg f X 0 n =ᵐ[μ] (fun _ => m) := by
-        -- TODO: Prove blockAvg equals m ae when all Z_i = 0 ae
-        sorry
+        -- n > 0 case: use the fact that f(X i) = m a.e.
+        have h_ae_all : ∀ᵐ ω ∂μ, ∀ k < n, f (X k ω) = m := by
+          apply MeasureTheory.ae_all_iff.mpr
+          intro k
+          have hZk_zero : Z k =ᵐ[μ] 0 := hZi_ae_zero k
+          filter_upwards [hZk_zero] with ω hω
+          intro _hk
+          -- hω : Z k ω = 0, which means f (X k ω) - m = 0
+          have : f (X k ω) - m = 0 := hω
+          linarith
+        filter_upwards [h_ae_all] with ω hω
+        unfold blockAvg
+        have : (Finset.range n).sum (fun k => f (X (0 + k) ω)) = (Finset.range n).sum (fun _ => m) := by
+          apply Finset.sum_congr rfl
+          intro k hk
+          simp only [zero_add, Finset.mem_range] at hk ⊢
+          exact hω k hk
+        rw [this, Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+        field_simp [Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp hn_pos)]
 
       have hBlockAvg_n' : blockAvg f X 0 n' =ᵐ[μ] (fun _ => m) := by
-        -- TODO: Prove blockAvg equals m ae when all Z_i = 0 ae
-        sorry
+        have h_ae_all : ∀ᵐ ω ∂μ, ∀ k < n', f (X k ω) = m := by
+          apply MeasureTheory.ae_all_iff.mpr
+          intro k
+          have hZk_zero : Z k =ᵐ[μ] 0 := hZi_ae_zero k
+          filter_upwards [hZk_zero] with ω hω
+          intro _hk
+          -- hω : Z k ω = 0, which means f (X k ω) - m = 0
+          have : f (X k ω) - m = 0 := hω
+          linarith
+        filter_upwards [h_ae_all] with ω hω
+        unfold blockAvg
+        have : (Finset.range n').sum (fun k => f (X (0 + k) ω)) = (Finset.range n').sum (fun _ => m) := by
+          apply Finset.sum_congr rfl
+          intro k hk
+          simp only [zero_add, Finset.mem_range] at hk ⊢
+          exact hω k hk
+        rw [this, Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+        field_simp [Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp hn'_pos)]
 
       -- Step 5: Combine to show blockAvg n =ᵐ blockAvg n'
       filter_upwards [hBlockAvg_n, hBlockAvg_n'] with ω hn hn'
       rw [hn, hn']
     -- Trivial Cauchy: if values are ae-equal, eLpNorm of difference is 0 < ε
     use 1
-    intros n n' _ _
+    intros n n' hn_ge hn'_ge
+    -- Since n ≥ 1 and n' ≥ 1, we have n > 0 and n' > 0
+    have hn_pos : n > 0 := Nat.lt_of_lt_of_le Nat.one_pos hn_ge
+    have hn'_pos : n' > 0 := Nat.lt_of_lt_of_le Nat.one_pos hn'_ge
     -- Convert to blockAvgFrozen and show eLpNorm = 0
     show eLpNorm (fun ω => blockAvgFrozen f X n ω - blockAvgFrozen f X n' ω) 2 μ < ε
     have h_ae : ∀ᵐ ω ∂μ, blockAvgFrozen f X n ω = blockAvgFrozen f X n' ω := by
-      filter_upwards [h_ae_eq n n'] with ω hω
+      filter_upwards [h_ae_eq n n' hn_pos hn'_pos] with ω hω
       simp only [blockAvgFrozen_def, hω]
     have h_norm_zero : eLpNorm (fun ω => blockAvgFrozen f X n ω - blockAvgFrozen f X n' ω) 2 μ = 0 := by
       have h_ae_zero : (fun ω => blockAvgFrozen f X n ω - blockAvgFrozen f X n' ω) =ᵐ[μ] 0 := by
