@@ -174,7 +174,7 @@ theorem weighted_sums_converge_L1
 
   -- Covariance structure of f ∘ X
   have hfX_contract' : Contractable μ (fun n ω => f (X n ω)) :=
-    contractable_comp X hX_contract hX_meas f hf_meas
+    L2Helpers.contractable_comp X hX_contract hX_meas f hf_meas
 
   have hfX_meas' : ∀ i, Measurable fun ω => f (X i ω) := by
     intro i
@@ -269,21 +269,21 @@ theorem weighted_sums_converge_L1
     -- Convert to eLpNorm bounds
     have h1_norm : eLpNorm (fun ω => A 0 m ω - A (m - k) k ω) 2 μ
         ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
-      apply eLpNorm_two_from_integral_sq_le
+      apply L2Helpers.eLpNorm_two_from_integral_sq_le
       · exact (hA_memLp_two 0 m).sub (hA_memLp_two (m - k) k)
       · apply div_nonneg hCf_nonneg; exact Nat.cast_nonneg k
       · exact h1
 
     have h2_norm : eLpNorm (fun ω => A (m - k) k ω - A (ℓ - k) k ω) 2 μ
         ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
-      apply eLpNorm_two_from_integral_sq_le
+      apply L2Helpers.eLpNorm_two_from_integral_sq_le
       · exact (hA_memLp_two (m - k) k).sub (hA_memLp_two (ℓ - k) k)
       · apply div_nonneg hCf_nonneg; exact Nat.cast_nonneg k
       · exact h2
 
     have h3_norm : eLpNorm (fun ω => A (ℓ - k) k ω - A 0 ℓ ω) 2 μ
         ≤ ENNReal.ofReal (Real.sqrt (Cf / k)) := by
-      apply eLpNorm_two_from_integral_sq_le
+      apply L2Helpers.eLpNorm_two_from_integral_sq_le
       · exact (hA_memLp_two (ℓ - k) k).sub (hA_memLp_two 0 ℓ)
       · apply div_nonneg hCf_nonneg; exact Nat.cast_nonneg k
       · exact h3
@@ -424,14 +424,14 @@ theorem weighted_sums_converge_L1
           dist (F m) (F ℓ) =
             ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ) := by
         simpa [F] using
-          dist_toLp_eq_eLpNorm_sub (hA_memLp 0 m) (hA_memLp 0 ℓ)
+          L2Helpers.dist_toLp_eq_eLpNorm_sub (hA_memLp 0 m) (hA_memLp 0 ℓ)
       have hfin :
           eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ ≠ ⊤ :=
         (MemLp.sub (hA_memLp 0 m) (hA_memLp 0 ℓ)).eLpNorm_ne_top
       have hbound := hN m ℓ hm hℓ
       have hlt :
           ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - A 0 ℓ ω) 1 μ) < ε :=
-        toReal_lt_of_lt_ofReal hfin (le_of_lt hε) hbound
+        L2Helpers.toReal_lt_of_lt_ofReal hfin (le_of_lt hε) hbound
       simpa [hdist]
     -- Since L¹ is complete, the sequence converges to some `G`.
     rcases CompleteSpace.complete (show Cauchy (atTop.map F) from hCauchy) with ⟨G, hG⟩
@@ -454,7 +454,7 @@ theorem weighted_sums_converge_L1
         dist (F m) G =
           ENNReal.toReal (eLpNorm (fun ω => A 0 m ω - G ω) 1 μ) := by
       simpa [F] using
-        dist_toLp_eq_eLpNorm_sub (hA_memLp 0 m) (Lp.memLp G)
+        L2Helpers.dist_toLp_eq_eLpNorm_sub (hA_memLp 0 m) (Lp.memLp G)
     have hfin :
         eLpNorm (fun ω => A 0 m ω - G ω) 1 μ ≠ ⊤ :=
       (MemLp.sub (hA_memLp 0 m) (Lp.memLp G)).eLpNorm_ne_top
@@ -559,7 +559,7 @@ theorem weighted_sums_converge_L1
           simpa [A] using h_window_bound n 0 m hm_pos
         have h_L2 : eLpNorm (fun ω => A n m ω - A 0 m ω) 2 μ ≤
             ENNReal.ofReal (Real.sqrt (Cf / m)) := by
-          apply eLpNorm_two_from_integral_sq_le
+          apply L2Helpers.eLpNorm_two_from_integral_sq_le
           · exact (hA_memLp_two n m).sub (hA_memLp_two 0 m)
           · exact div_nonneg hCf_nonneg (Nat.cast_nonneg m)
           · exact h_bound_sq'
@@ -572,7 +572,7 @@ theorem weighted_sums_converge_L1
           _ ≤ ENNReal.ofReal (Real.sqrt (Cf / m)) := h_L2
           _ < ENNReal.ofReal (ε / 2) := by
               apply ENNReal.ofReal_lt_ofReal_iff hε2_pos |>.mpr
-              apply sqrt_div_lt_half_eps_of_nat hCf_nonneg hε
+              apply L2Helpers.sqrt_div_lt_half_eps_of_nat hCf_nonneg hε
               exact hm₂
       · -- m = 0 case is trivial or doesn't occur
         simp at hm
@@ -1335,7 +1335,7 @@ lemma alphaIic_ae_eq_alphaIicCE
     have h_axiom : ∃ (M : ℕ), ∀ (m : ℕ), m ≥ M →
         ∫ ω, |(1 / (m : ℝ)) * ∑ i : Fin m, indIic t (X i ω) -
               (μ[(indIic t ∘ X 0) | TailSigma.tailSigma X] ω)| ∂μ < ε/2 :=
-      Helpers.cesaro_to_condexp_L1 hX_contract hX_meas (indIic t) (indIic_measurable t) (indIic_bdd t) (ε/2) hε_half
+      cesaro_to_condexp_L1 hX_contract hX_meas (indIic t) (indIic_measurable t) (indIic_bdd t) (ε/2) hε_half
     obtain ⟨M₁, hM₁⟩ := h_axiom
 
     -- The difference between A 0 m and B m is O(1/m)
@@ -2583,36 +2583,6 @@ lemma cdf_from_alpha_bounds
         = ⨅ (q : {q : ℚ // t < (q : ℝ)}), alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω := rfl
       _ ≤ alphaIic X hX_contract hX_meas hX_L2 (hne.some : ℝ) ω := ciInf_le hbdd hne.some
       _ ≤ 1 := (alphaIic_bound X hX_contract hX_meas hX_L2 (hne.some : ℝ) ω).2
-
-/-- **Dominated convergence for indicator-CDF approximants (STUB).**
-
-This lemma states that for Cesàro averages of indicator functions 1_{(-∞,t]}, 
-if the underlying sequence converges, then the integrals converge by dominated convergence.
-
-**Proof sketch**: 
-1. Indicators are dominated by 1 (integrable)
-2. Pointwise convergence: if Xₙ → X, then 1_{(-∞,t]}(Xₙ) → 1_{(-∞,t]}(X) except at boundary X=t
-3. Apply mathlib's `tendsto_integral_of_dominated_convergence`
-
-**Why this is non-trivial here**: We need to link Cesàro averages (from `weighted_sums_converge_L1`) 
-to pointwise limits. This requires:
-- Extracting the limit function α from the existential in `weighted_sums_converge_L1`
-- Showing α is the pointwise limit of Cesàro averages (not just L¹ limit)
-- This may require a subsequence argument or additional regularity
-
-**TODO**: Complete this using mathlib's DCT once we clarify the pointwise convergence.
--/
-private lemma tendsto_integral_indicator_Iic
-  {μ : Measure Ω} [IsProbabilityMeasure μ]
-  (Xn X : ℕ → Ω → ℝ) (t : ℝ)
-  (hXn_meas : ∀ n, Measurable (Xn n))
-  (hX_meas : Measurable (X 0))
-  (hae : ∀ᵐ ω ∂μ, Tendsto (fun n => Xn n ω) atTop (𝓝 (X 0 ω))) :
-  Tendsto (fun n => ∫ ω, (Set.Iic t).indicator (fun _ => (1 : ℝ)) (Xn n ω) ∂μ)
-          atTop
-          (𝓝 (∫ ω, (Set.Iic t).indicator (fun _ => (1 : ℝ)) (X 0 ω) ∂μ)) := by
-  -- (A6) dominated-convergence-style continuity for fixed threshold
-  exact Helpers.tendsto_integral_indicator_Iic Xn (X 0) t hXn_meas hX_meas hae
 
 /-- Helper lemma: α_{Iic t}(ω) → 0 as t → -∞.
 

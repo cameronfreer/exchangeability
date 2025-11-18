@@ -977,7 +977,7 @@ Returns `Cf = 2σ²(1-ρ)` where `(mf, σ², ρ)` is the covariance structure of
 **Design rationale**: Computing the covariance structure once and passing it to
 both bound lemmas ensures they use the same constant, avoiding the need to prove
 equality of opaque existential witnesses. -/
-private lemma get_covariance_constant
+lemma get_covariance_constant
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
@@ -1089,7 +1089,7 @@ with the average of the last k terms (where k ≤ m) has the same L² contractab
 
 This is the key lemma needed to complete the Cauchy argument in weighted_sums_converge_L1.
 -/
-private lemma l2_bound_long_vs_tail
+lemma l2_bound_long_vs_tail
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (_hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
