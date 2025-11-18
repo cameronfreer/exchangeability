@@ -96,6 +96,10 @@ lemma clip01_1Lipschitz : LipschitzWith 1 clip01 := by
 lemma abs_clip01_sub_le (x y : ℝ) : |clip01 x - clip01 y| ≤ |x - y| := by
   simpa [Real.dist_eq] using (clip01_1Lipschitz.dist_le_mul x y)
 
+/-- `clip01` is continuous. -/
+lemma continuous_clip01 : Continuous clip01 :=
+  clip01_1Lipschitz.continuous
+
 /-- **L¹-stability under 1-Lipschitz post-composition.**
 If `∫ |fₙ - f| → 0`, then `∫ |clip01 ∘ fₙ - clip01 ∘ f| → 0`.
 
@@ -113,7 +117,9 @@ lemma l1_convergence_under_clip01
   have hmono (n : ℕ) : ∫ ω, |clip01 (fn n ω) - clip01 (f ω)| ∂μ ≤ ∫ ω, |fn n ω - f ω| ∂μ := by
     apply integral_mono_ae
     · -- |clip01(...) - clip01(...)| is integrable, dominated by |fn n - f| which is integrable
-      -- clip01 is 1-Lipschitz (continuous) so bounded, measurable output
+      -- clip01 is 1-Lipschitz (continuous) so composition is measurable, and bounded
+      -- Should use Integrable.mono but type class instance issues arise
+      -- Proof strategy: |clip01 x - clip01 y| ≤ |x - y| pointwise, so dominated by integrable function
       sorry
     · exact (h_integrable n).abs
     · filter_upwards with ω
@@ -135,7 +141,9 @@ private lemma L1_unique_of_two_limits
   (h1 : Tendsto (fun n => eLpNorm (fn n - f) 1 μ) atTop (𝓝 0))
   (h2 : Tendsto (fun n => eLpNorm (fn n - g) 1 μ) atTop (𝓝 0)) :
   f =ᵐ[μ] g := by
-  sorry  -- L¹ uniqueness: triangle inequality + squeeze
+  sorry  -- TODO: L¹ uniqueness using triangle inequality
+  -- The proof is standard but requires careful eLpNorm API usage
+  -- Sketch: ‖f - g‖₁ ≤ ‖f - fn‖₁ + ‖fn - g‖₁ → 0 as n → ∞
 
 /-- **L¹ convergence under clipping:** If fₙ → f in L¹, then clip01∘fₙ → clip01∘f in L¹. -/
 private lemma L1_tendsto_clip01
@@ -259,8 +267,9 @@ lemma directing_measure_eval_Iic_measurable
     -- Measurable iInf over countable index
     -- Use Measurable.iInf for countable types
     -- The function ω ↦ iInf_q f(ω, q) is measurable if each ω ↦ f(ω, q) is measurable
-    -- cdf_from_alpha is defined as an iInf, so we use Measurable.iInf
-    sorry  -- Needs proof that cdf_from_alpha is defined as iInf
+    -- cdf_from_alpha is defined as an iInf by definition, so we use Measurable.iInf
+    unfold cdf_from_alpha
+    exact Measurable.iInf hterm
   -- Identify with the CDF evaluation using StieltjesFunction.measure_Iic
   -- directing_measure ω (Iic t) = F_ω.measure (Iic t)
   --                              = ofReal (F_ω t - 0)  [by StieltjesFunction.measure_Iic with limit 0 at bot]
@@ -270,9 +279,15 @@ lemma directing_measure_eval_Iic_measurable
   have h_eq : ∀ ω, directing_measure X hX_contract hX_meas hX_L2 ω (Set.Iic t) =
       ENNReal.ofReal (cdf_from_alpha X hX_contract hX_meas hX_L2 ω t) := by
     intro ω
-    -- directing_measure is defined via Measure.ofCDF from cdf_from_alpha
-    -- This axiom should establish this relationship
-    sorry  -- Needs proof relating directing_measure to cdf_from_alpha
+    -- directing_measure ω is defined as F_ω.measure where F_ω is the StieltjesFunction
+    -- with toFun = cdf_from_alpha X ... ω
+    -- By StieltjesFunction.measure_Iic, F.measure (Iic t) = ofReal (F t - l)
+    -- where l is the limit at -∞, which is 0 by cdf_from_alpha_limits
+    have h_lim := (cdf_from_alpha_limits X hX_contract hX_meas hX_L2 ω).1
+    unfold directing_measure
+    simp only
+    rw [StieltjesFunction.measure_Iic _ h_lim t]
+    simp
   simp_rw [h_eq]
   exact ENNReal.measurable_ofReal.comp hmeas
 
