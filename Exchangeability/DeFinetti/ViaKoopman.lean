@@ -24,7 +24,7 @@ import Mathlib.Tactic.FieldSimp
 import Exchangeability.DeFinetti.ViaKoopman.Infrastructure
 import Exchangeability.DeFinetti.ViaKoopman.Quantization
 import Exchangeability.DeFinetti.ViaKoopman.CylinderFunctions
-import Exchangeability.DeFinetti.ViaKoopman.CondExpHelpers
+import Exchangeability.DeFinetti.ViaKoopman.LpCondExpHelpers
 
 open Filter MeasureTheory
 
