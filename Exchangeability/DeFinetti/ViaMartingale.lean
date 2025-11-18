@@ -1630,10 +1630,29 @@ lemma condIndep_of_triple_law
               _ = ∫ ω in W ⁻¹' T, φ ω * V ω ∂μ := by rfl  -- V = μ[ψ|𝔾] by definition
 
           -- **Substep 3: Apply uniqueness**
-          -- TODO: This section needs restructuring - the application of ae_eq_condExp_of_forall_setIntegral_eq
-          -- gives the wrong direction. Need to properly show μ[φ*ψ|𝔾] =ᵐ μ[φ*V|𝔾]
-          sorry
-      _ =ᵐ[μ] μ[φ * V | 𝔾] := by sorry  -- TODO: Need V = μ[ψ|𝔾] substitution
+          -- Goal: μ[φ*ψ|𝔾] =ᵐ μ[φ*V|𝔾] where V = μ[ψ|𝔾]
+          -- Strategy: Use ae_eq_condExp_of_forall_setIntegral_eq with h_setIntegral_eq
+
+          haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp hW)) := by infer_instance
+
+          -- Apply uniqueness of conditional expectation
+          apply ae_eq_condExp_of_forall_setIntegral_eq (measurable_iff_comap_le.mp hW)
+          · -- φ * ψ is integrable
+            exact hφψ_int
+          · -- φ * V is integrable on finite measure sets
+            intro s hs hμs
+            exact hφV_int.integrableOn
+          · -- Set integrals are equal for all 𝔾-measurable sets
+            intro S hS_meas hS_finite
+            -- S is 𝔾-measurable, so S = W⁻¹'T for some measurable T ⊆ γ
+            obtain ⟨T, hT_meas, rfl⟩ := hS_meas
+            -- Apply h_setIntegral_eq
+            exact h_setIntegral_eq T hT_meas
+          · -- φ * V is AEStronglyMeasurable
+            exact hφV_int.aestronglyMeasurable
+      _ =ᵐ[μ] μ[φ * V | 𝔾] := by
+          -- V = μ[ψ|𝔾] by definition, so μ[φ * μ[ψ|𝔾]|𝔾] = μ[φ * V|𝔾]
+          rfl
       _ =ᵐ[μ] V * U := by
           -- Pull-out property (already proved above)
           have h_pull : μ[φ * V | 𝔾] =ᵐ[μ] μ[φ | 𝔾] * V := by
