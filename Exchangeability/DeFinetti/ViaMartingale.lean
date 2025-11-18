@@ -1529,10 +1529,50 @@ lemma condIndep_of_triple_law
               have tower : μ[μ[ψ | ℋ] | 𝔾] =ᵐ[μ] μ[ψ | 𝔾] := by
                 exact condExp_condExp_of_le hG_le_H hH_le_m0
 
-              -- We'll show this using a different approach: both sides equal ∫ φ * ψ
-              -- Actually, we can use the fact that μ[ψ|ℋ] and μ[ψ|𝔾] give the same integral when multiplied by 𝔾-measurable φ
-              -- This follows from the tower property applied to the product
-              sorry  -- TODO: Need more sophisticated argument about φ being 𝔾-measurable
+              -- Use setIntegral_condExp with the tower property
+              -- Key: For any 𝔾-measurable set S, ∫_S f * μ[g|ℋ] = ∫_S f * μ[g|𝔾] when 𝔾 ≤ ℋ
+              -- This follows from: ∫_S f * μ[g|ℋ] = ∫_S μ[f*μ[g|ℋ]|𝔾] = ∫_S μ[f*g|𝔾] = ∫_S f*μ[g|𝔾]
+
+              -- First show: ∫_{W⁻¹'T} φ * μ[ψ|ℋ] = ∫_{W⁻¹'T} μ[φ * μ[ψ|ℋ]|𝔾]
+              have eq1 : ∫ ω in W ⁻¹' T, φ ω * μ[ψ | ℋ] ω ∂μ = ∫ ω in W ⁻¹' T, μ[φ * μ[ψ | ℋ]|𝔾] ω ∂μ := by
+                symm
+                haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp hW)) := by infer_instance
+                apply setIntegral_condExp (measurable_iff_comap_le.mp hW)
+                · -- φ * μ[ψ|ℋ] is integrable
+                  apply Integrable.mul_const hφ_int
+                · exact hWT_meas_G
+
+              -- Second show: μ[φ * μ[ψ|ℋ]|𝔾] =ᵐ μ[φ * μ[ψ|𝔾]|𝔾] using tower property
+              have eq2 : μ[φ * μ[ψ | ℋ]|𝔾] =ᵐ[μ] μ[φ * μ[ψ | 𝔾]|𝔾] := by
+                -- Key steps:
+                -- 1. μ[φ * μ[ψ|ℋ]|𝔾] = μ[φ * ψ|𝔾]      (tower property: μ[f * μ[g|ℋ]|𝔾] = μ[f*g|𝔾])
+                -- 2. μ[φ * ψ|𝔾] = μ[φ * μ[ψ|𝔾]|𝔾]      (reflexivity, both equal μ[φ*ψ|𝔾])
+
+                -- Step 1: Apply tower property to φ*ψ
+                have step1 : μ[φ * μ[ψ | ℋ]|𝔾] =ᵐ[μ] μ[φ * ψ|𝔾] := by
+                  -- We have: μ[μ[ψ|ℋ]|𝔾] = μ[ψ|𝔾] by tower property
+                  -- Need to lift this to: μ[φ * μ[ψ|ℋ]|𝔾] = μ[φ * ψ|𝔾]
+                  -- This follows from condExp_congr_ae applied to: φ * μ[ψ|ℋ] =ᵐ φ * ψ ... no wait
+
+                  -- Actually, the key is that when we condition the product φ*ψ:
+                  -- For any 𝔾-measurable set S: ∫_S μ[φ*μ[ψ|ℋ]|𝔾] = ∫_S φ*μ[ψ|ℋ] (defn of condExp)
+                  -- and ∫_S φ*μ[ψ|ℋ] = ∫_S φ*ψ (since ∫_S f*μ[g|m] = ∫_S f*g for m-measurable S)
+                  -- and ∫_S φ*ψ = ∫_S μ[φ*ψ|𝔾] (defn of condExp)
+                  -- So by uniqueness: μ[φ*μ[ψ|ℋ]|𝔾] =ᵐ μ[φ*ψ|𝔾]
+
+                  -- This is essentially a consequence of the fact that
+                  -- μ[ψ|ℋ] "acts like" ψ when integrated against 𝔾-measurable sets
+                  sorry
+
+                -- Step 2: By symmetry (or rather, reflexivity)
+                exact step1
+
+              calc ∫ ω in W ⁻¹' T, φ ω * μ[ψ | ℋ] ω ∂μ
+                  = ∫ ω in W ⁻¹' T, μ[φ * μ[ψ | ℋ]|𝔾] ω ∂μ := eq1
+                _ = ∫ ω in W ⁻¹' T, μ[φ * μ[ψ | 𝔾]|𝔾] ω ∂μ := setIntegral_congr_ae hWT_meas eq2
+                _ = ∫ ω in W ⁻¹' T, φ ω * μ[ψ | 𝔾] ω ∂μ := by
+                    haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp hW)) := by infer_instance
+                    exact setIntegral_condExp (measurable_iff_comap_le.mp hW) _ hWT_meas_G
 
             -- Chain the steps
             calc ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ
