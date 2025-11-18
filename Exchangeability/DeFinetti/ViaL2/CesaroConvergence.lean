@@ -1890,9 +1890,32 @@ private lemma blockAvg_cauchy_in_L2
         -- Step 2: Use Z_i = Z_0 a.e. to show blockAvg n and blockAvg n' are both equal to f(X 0) a.e.
         intro n n' hn_pos hn'_pos
         -- Helper: blockAvg equals f(X 0) when all Z_k = Z_0
-        have hBlockAvg_eq_fX0 : ∀ m, m > 0 → ∀ᵐ ω ∂μ, blockAvg f X 0 m ω = f (X 0 ω) := by
-          -- TODO: Prove that when all Z_i = Z_0 ae, blockAvg equals f(X 0) ae
-          sorry
+        have hBlockAvg_eq_fX0 : ∀ m_val, m_val > 0 → ∀ᵐ ω ∂μ, blockAvg f X 0 m_val ω = f (X 0 ω) := by
+          intro m_val hm_pos
+          -- When Z_k = Z_0 ae for all k, we have f(X_k) = f(X_0) ae for all k
+          -- So blockAvg = (1/m) * ∑ f(X_0) = f(X_0)
+
+          -- Collect ae equalities for all indices in range m_val
+          have h_ae_all : ∀ᵐ ω ∂μ, ∀ k ∈ Finset.range m_val, f (X k ω) = f (X 0 ω) := by
+            -- Since Z k = f(X k) - m and Z k = Z 0 = f(X 0) - m, we have f(X k) = f(X 0)
+            apply MeasureTheory.ae_all_iff.mpr
+            intro k
+            filter_upwards [hZi_eq_Z0 k] with ω hω
+            intro _hk
+            -- Z k ω = Z 0 ω means f (X k ω) - m = f (X 0 ω) - m
+            linarith
+
+          filter_upwards [h_ae_all] with ω hω
+          unfold blockAvg
+          -- blockAvg f X 0 m_val ω = (m_val)⁻¹ * ∑ k in range m_val, f (X (0 + k) ω)
+          -- Since f (X k ω) = f (X 0 ω) for all k, this equals f (X 0 ω)
+          have : (Finset.range m_val).sum (fun k => f (X (0 + k) ω)) = (Finset.range m_val).sum (fun _ => f (X 0 ω)) := by
+            apply Finset.sum_congr rfl
+            intro k hk
+            simp only [zero_add]
+            exact hω k hk
+          rw [this, Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+          field_simp [Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp hm_pos)]
 
         -- Both n, n' > 0, so we can use the helper
         filter_upwards [hBlockAvg_eq_fX0 n hn_pos, hBlockAvg_eq_fX0 n' hn'_pos] with ω hn_eq hn'_eq
