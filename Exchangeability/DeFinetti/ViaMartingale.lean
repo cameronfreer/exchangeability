@@ -1502,8 +1502,9 @@ lemma condIndep_of_triple_law
                     have hφ_asm : AEStronglyMeasurable[ℋ] φ μ := by
                       simp only [hφ_def]
                       -- (Y ⁻¹' A).indicator (fun _ => 1) is ℋ-measurable since Y appears in ℋ
-                      refine AEStronglyMeasurable.indicator ?_ (hY hA)
-                      exact (@stronglyMeasurable_const Ω ℝ ℋ _ (fun _ => (1:ℝ))).aestronglyMeasurable
+                      have h_const : AEStronglyMeasurable[ℋ] (fun _ : Ω => (1:ℝ)) μ :=
+                        (@stronglyMeasurable_const Ω ℝ ℋ _ (1:ℝ)).aestronglyMeasurable
+                      exact AEStronglyMeasurable.indicator h_const (hY hA)
                     -- Apply condExp pull-out: μ[φ*ψ|ℋ] =ᵐ φ*μ[ψ|ℋ]
                     filter_upwards [@condExp_mul_of_aestronglyMeasurable_left Ω ℋ _ μ φ ψ hφ_asm hφψ_int hψ_int] with ω h
                     exact fun _ => h
@@ -1750,12 +1751,13 @@ lemma condExp_bounded_comp_eq_of_triple_law
           rw [h_decomp]
       _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) | 𝔾] := by
           -- Rewrite as: μ[∑ c, (fun ω => ...) | 𝔾] = ∑ c, μ[(fun ω => ...) | 𝔾]
-          refine condExp_finset_sum ?_ 𝔾
-          intro c hc
-          apply Integrable.const_mul
-          -- Indicator of measurable set composed with Y is integrable
-          refine Integrable.indicator (integrable_const (1:ℝ)) ?_
-          exact hY (h_meas c hc)
+          have hint : ∀ c ∈ (φₙ n).range, Integrable (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω)) μ := by
+            intro c hc
+            apply Integrable.const_mul
+            -- Indicator of measurable set composed with Y is integrable
+            refine Integrable.indicator (integrable_const (1:ℝ)) ?_
+            exact hY (h_meas c hc)
+          exact condExp_finset_sum hint 𝔾
       _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y | 𝔾] := by
           -- Apply condExp_smul to each summand
           have he : ∀ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) | 𝔾] =ᵐ[μ]
