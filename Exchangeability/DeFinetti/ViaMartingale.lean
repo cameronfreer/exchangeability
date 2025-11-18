@@ -1771,11 +1771,11 @@ lemma condExp_bounded_comp_eq_of_triple_law
           simp only [Finset.sum_apply, Pi.smul_apply]
           refine Finset.sum_congr rfl fun c hc => ?_
           exact h c hc
-      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔽] := by
+      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y | 𝔽] := by
           -- Apply base case condExp_eq_of_triple_law to each summand
           have he : ∀ c ∈ (φₙ n).range,
-                    μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔾] =ᵐ[μ]
-                    μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔽] := by
+                    μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y | 𝔾] =ᵐ[μ]
+                    μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y | 𝔽] := by
             intro c hc
             exact condExp_eq_of_triple_law Y Z W W' hY hZ hW hW' h_triple (h_meas c hc)
           filter_upwards [(φₙ n).range.eventually_all.mpr he] with ω h
