@@ -2987,9 +2987,10 @@ private lemma optionB_Step3b_L2_to_L1
       apply AEMeasurable.sub
       · -- birkhoffAverage ... fL2 is an Lp element
         -- When coerced to Ω → ℝ, it's AEStronglyMeasurable
-        exact (Lp.aestronglyMeasurable _).aemeasurable
+        -- TODO: Fix typeclass inference for Lp coercion (BorelSpace metavariable issue)
+        sorry
       · -- condexpL2 fL2 is an Lp element
-        exact (Lp.aestronglyMeasurable _).aemeasurable
+        sorry
 
     -- L¹ ≤ L² via Hölder/Cauchy-Schwarz on a probability space
     have h_le :
