@@ -1653,18 +1653,18 @@ lemma condIndep_of_triple_law
             exact h_setIntegral_eq T hT_meas
           · -- φ * V is AEStronglyMeasurable
             exact hφV_int.aestronglyMeasurable
-      _ =ᵐ[μ] μ[φ * V | 𝔾] := by
-          -- V = μ[ψ|𝔾] by definition, so μ[φ * μ[ψ|𝔾]|𝔾] = μ[φ * V|𝔾]
-          rfl
-      _ =ᵐ[μ] V * U := by
-          -- Pull-out property (already proved above)
-          have h_pull : μ[φ * V | 𝔾] =ᵐ[μ] μ[φ | 𝔾] * V := by
-            exact condExp_mul_of_aestronglyMeasurable_right (μ := μ) (m := 𝔾) hV_meas hφV_int hφ_int
-          calc μ[φ * V | 𝔾]
-              =ᵐ[μ] μ[φ | 𝔾] * V := h_pull
-            _ =ᵐ[μ] U * V := by rfl
-            _ =ᵐ[μ] V * U := by filter_upwards with ω; exact mul_comm (U ω) (V ω)
-      _ =ᵐ[μ] U * V := by filter_upwards with ω; exact mul_comm (V ω) (U ω)
+    _ =ᵐ[μ] μ[φ * V | 𝔾] := by
+        -- V = μ[ψ|𝔾] by definition, so μ[φ * μ[ψ|𝔾]|𝔾] = μ[φ * V|𝔾]
+        rfl
+    _ =ᵐ[μ] V * U := by
+        -- Pull-out property (already proved above)
+        have h_pull : μ[φ * V | 𝔾] =ᵐ[μ] μ[φ | 𝔾] * V := by
+          exact condExp_mul_of_aestronglyMeasurable_right (μ := μ) (m := 𝔾) hV_meas hφV_int hφ_int
+        calc μ[φ * V | 𝔾]
+            =ᵐ[μ] μ[φ | 𝔾] * V := h_pull
+          _ =ᵐ[μ] U * V := by rfl
+          _ =ᵐ[μ] V * U := by filter_upwards with ω; exact mul_comm (U ω) (V ω)
+    _ =ᵐ[μ] U * V := by filter_upwards with ω; exact mul_comm (V ω) (U ω)
   
   -- Apply the rectangle factorization criterion
   exact condIndep_of_rect_factorization μ Y Z W h_rect
