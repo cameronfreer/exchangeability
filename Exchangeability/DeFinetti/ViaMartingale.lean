@@ -1777,10 +1777,6 @@ lemma condExp_bounded_comp_eq_of_triple_law
           rw [h_decomp]
       _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔾] := by
           -- Rewrite as: μ[∑ c, (fun ω => ...) | 𝔾] = ∑ c, μ[(fun ω => ...) | 𝔾]
-          have : (fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω)) =
-                 ∑ c ∈ (φₙ n).range, fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) := by
-            ext ω; exact Finset.sum_apply _ _ _
-          rw [this]
           apply condExp_finset_sum _ 𝔾
           intro c hc
           apply Integrable.const_mul
