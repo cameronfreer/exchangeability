@@ -21,6 +21,7 @@ import Exchangeability.Probability.CondExp
 import Exchangeability.PathSpace.Shift
 import Mathlib.Tactic
 import Mathlib.Tactic.FieldSimp
+import Exchangeability.DeFinetti.ViaKoopman.Infrastructure
 import Exchangeability.DeFinetti.ViaKoopman.Quantization
 
 open Filter MeasureTheory
