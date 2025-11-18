@@ -1463,12 +1463,12 @@ lemma condIndep_of_triple_law
               refine AEStronglyMeasurable.mul ?_ ?_
               · -- indicator(W⁻¹'T) is ℋ-measurable
                 have : MeasurableSet[ℋ] (W ⁻¹' T) := hWT_meas_H
-                exact (aestronglyMeasurable_const (m := ℋ)).indicator this
+                exact (@aestronglyMeasurable_const Ω ℝ ℋ _ μ 1).indicator this
               · -- φ = indicator(Y⁻¹'A) is ℋ-measurable
                 simp only [hφ_def]
                 have hYA_H : MeasurableSet[ℋ] (Y ⁻¹' A) := by
                   exact ⟨{p | p.2 ∈ A}, measurable_snd hA, by ext; simp⟩
-                exact (aestronglyMeasurable_const (m := ℋ)).indicator hYA_H
+                exact (@aestronglyMeasurable_const Ω ℝ ℋ _ μ 1).indicator hYA_H
 
             have h_bdd : ∀ᵐ ω ∂μ, ‖h ω‖ ≤ 1 := by
               filter_upwards with ω
@@ -1479,7 +1479,6 @@ lemma condIndep_of_triple_law
                     apply mul_le_mul <;> try norm_num
                     · simp [Set.indicator]; split_ifs <;> norm_num
                     · simp only [φ, Set.indicator]; split_ifs <;> norm_num
-                    · norm_num
                 _ = 1 := by norm_num
 
             -- Step A: Pull-out at ℋ level
@@ -1493,18 +1492,22 @@ lemma condIndep_of_triple_law
               calc ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ
                   = ∫ ω in W ⁻¹' T, μ[φ * ψ | ℋ] ω ∂μ := by
                     symm
-                    -- Use ambient measurability for setIntegral_condExp
-                    exact @setIntegral_condExp _ _ _ ℋ _ μ _ _ _ hWT_meas hφψ_int
+                    -- Use setIntegral_condExp with proper SigmaFinite instance
+                    haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp (hW.prodMk hY))) := by
+                      infer_instance
+                    exact setIntegral_condExp (measurable_iff_comap_le.mp (hW.prodMk hY)) hφψ_int hWT_meas
                 _ = ∫ ω in W ⁻¹' T, φ ω * μ[ψ | ℋ] ω ∂μ := by
-                    -- Use ambient measurability for setIntegral_congr_ae
-                    refine @setIntegral_congr_ae _ _ _ _ μ _ hWT_meas ?_
+                    -- Use setIntegral_congr_ae with a.e. equality from pull-out
+                    apply setIntegral_congr_ae hWT_meas
                     -- φ is ℋ-measurable, so pull-out property applies
                     have hφ_H : AEStronglyMeasurable[ℋ] φ μ := by
                       simp only [hφ_def]
                       have hYA_H : MeasurableSet[ℋ] (Y ⁻¹' A) := by
                         exact ⟨{p | p.2 ∈ A}, measurable_snd hA, by ext; simp⟩
-                      exact (aestronglyMeasurable_const (m := ℋ)).indicator hYA_H
-                    exact @condExp_mul_of_aestronglyMeasurable_left _ _ _ ℋ _ _ μ _ _ hφ_H hψ_int
+                      exact (@aestronglyMeasurable_const Ω ℝ ℋ _ μ 1).indicator hYA_H
+                    -- Apply condExp pull-out and convert to the ω ∈ S → form
+                    filter_upwards [@condExp_mul_of_aestronglyMeasurable_left Ω ℝ _ ℋ _ _ μ _ _ hφ_H hψ_int] with ω h
+                    exact fun _ => h
 
             -- Step B: Tower property connects ℋ and 𝔾
             have stepB : ∫ ω in W ⁻¹' T, φ ω * μ[ψ | ℋ] ω ∂μ
@@ -1517,18 +1520,21 @@ lemma condIndep_of_triple_law
               calc ∫ ω in W ⁻¹' T, φ ω * μ[ψ | ℋ] ω ∂μ
                   = ∫ ω in W ⁻¹' T, φ ω * μ[μ[ψ | ℋ] | 𝔾] ω ∂μ := by
                     symm
-                    -- Use ambient measurability for setIntegral_condExp
-                    refine @setIntegral_condExp _ _ _ 𝔾 _ μ _ _ _ hWT_meas ?_
+                    -- Use setIntegral_condExp with SigmaFinite instance
+                    haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp hW)) := by
+                      infer_instance
                     -- φ * μ[ψ|ℋ] is integrable (bounded indicator × integrable)
-                    refine Integrable.bdd_mul ?_ integrable_condExp ?_
-                    · exact hφψ_int.1.aestronglyMeasurable
-                    · filter_upwards with ω
-                      simp only [φ, Set.indicator]; split_ifs <;> norm_num
+                    have hint : Integrable (fun ω => φ ω * μ[ψ | ℋ] ω) μ := by
+                      refine Integrable.bdd_mul ?_ integrable_condExp ?_
+                      · exact hφψ_int.aestronglyMeasurable
+                      · filter_upwards with ω
+                        simp only [φ, Set.indicator]; split_ifs <;> norm_num
+                    exact setIntegral_condExp (measurable_iff_comap_le.mp hW) hint hWT_meas
                 _ = ∫ ω in W ⁻¹' T, φ ω * μ[ψ | 𝔾] ω ∂μ := by
-                    -- Use ambient measurability for setIntegral_congr_ae
-                    refine @setIntegral_congr_ae _ _ _ _ μ _ hWT_meas ?_
+                    -- Use setIntegral_congr_ae with tower property
+                    apply setIntegral_congr_ae hWT_meas
                     filter_upwards [tower] with ω h_tower
-                    simp [h_tower]
+                    exact fun _ => by simp [h_tower]
 
             -- Chain the steps
             calc ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ
@@ -3760,8 +3766,9 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
         -- μ[f|ζ] is σ(ζ)-measurable, and σ(η) ≤ σ(ζ), so it's also σ(η)-measurable
         -- Hence μ[μ[f|ζ]|η] = μ[f|ζ] a.e.
         haveI : SigmaFinite (μ.trim hmη_le) := by
-          -- Since η is standard Borel and measurable, the trimmed measure is sigma-finite
-          sorry
+          -- The trimmed measure is sigma-finite because μ is a probability measure
+          -- and probability measures are finite, hence sigma-finite
+          infer_instance
         have h_asm := @stronglyMeasurable_condExp Ω ℝ (MeasurableSpace.comap ζ mγ) mΩ
         exact condExp_of_aestronglyMeasurable' hmη_le h_asm.aestronglyMeasurable
           integrable_condExp
@@ -3774,7 +3781,8 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
                  ∫ ω in S, (ξ ⁻¹' B).indicator (fun _ => (1 : ℝ)) ω ∂μ := by
       -- S is measurable in σ(ζ), need SigmaFinite instance
       haveI : SigmaFinite (μ.trim hmζ_le) := by
-        sorry
+        -- The trimmed measure is sigma-finite because μ is a probability measure
+        infer_instance
       exact setIntegral_condExp hmζ_le hint hS
 
     -- Then, prove ∫_S μ[f|η] = ∫_S μ[f|ζ] using the a.e. equality
