@@ -1841,21 +1841,16 @@ lemma condExp_bounded_comp_eq_of_triple_law
   -- are equal at each step, then the limits have equal conditional expectations
 
   -- Integrability: φₙ n ∘ Y is integrable for each n (using ambient σ-algebra)
-  -- NOTE: Must keep this proof in ambient σ-algebra context - do NOT use sub-σ-algebras here
-  -- The instance mismatch errors come from Lean trying to use 𝔽 when we need the ambient instance
-  -- Solution: Temporarily restore the ambient instance within this proof
+  -- NOTE: This uses the SimpleFunc API directly, avoiding instance issues
   have hφₙY_int : ∀ n, Integrable (φₙ n ∘ Y) μ := by
     intro n
-    -- Restore ambient instance (hY uses the original [MeasurableSpace Ω] from theorem signature)
-    letI : MeasurableSpace Ω := inferInstance
-    -- Now composition uses ambient measurability
-    have hY_comp : Measurable (φₙ n ∘ Y) := (φₙ n).measurable.comp hY
-    have hcomp_meas : AEStronglyMeasurable (φₙ n ∘ Y) μ := hY_comp.aestronglyMeasurable
-    have hcomp_bdd : HasFiniteIntegral (φₙ n ∘ Y) μ := by
-      refine HasFiniteIntegral.of_bounded ?_
+    -- Bounded measurable functions are integrable on probability spaces
+    refine Integrable.of_bound ?_ (C + 1) ?_
+    · -- AEStronglyMeasurable: composition of measurable functions
+      exact ((φₙ n).measurable.comp hY).aestronglyMeasurable
+    · -- Boundedness: simple function bounded by C + 1
       filter_upwards with ω
-      simpa using hφₙ_bdd n (Y ω)
-    exact ⟨hcomp_meas, hcomp_bdd⟩
+      exact hφₙ_bdd n (Y ω)
 
   -- Pointwise convergence: φₙ n ∘ Y → φ ∘ Y a.e.
   have hφₙY_tendsto : ∀ᵐ ω ∂μ, Tendsto (fun n => φₙ n (Y ω)) atTop (𝓝 (φ (Y ω))) := by
