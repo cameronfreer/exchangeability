@@ -1463,12 +1463,14 @@ lemma condIndep_of_triple_law
               refine AEStronglyMeasurable.mul ?_ ?_
               · -- indicator(W⁻¹'T) is ℋ-measurable
                 have : MeasurableSet[ℋ] (W ⁻¹' T) := hWT_meas_H
-                exact (@aestronglyMeasurable_const Ω ℝ ℋ _ μ 1).indicator this
+                have : AEStronglyMeasurable[ℋ] (fun (_ : Ω) => (1:ℝ)) μ := aestronglyMeasurable_const
+                exact this.indicator hWT_meas_H
               · -- φ = indicator(Y⁻¹'A) is ℋ-measurable
                 simp only [hφ_def]
                 have hYA_H : MeasurableSet[ℋ] (Y ⁻¹' A) := by
                   exact ⟨{p | p.2 ∈ A}, measurable_snd hA, by ext; simp⟩
-                exact (@aestronglyMeasurable_const Ω ℝ ℋ _ μ 1).indicator hYA_H
+                have : AEStronglyMeasurable[ℋ] (fun (_ : Ω) => (1:ℝ)) μ := aestronglyMeasurable_const
+                exact this.indicator hYA_H
 
             have h_bdd : ∀ᵐ ω ∂μ, ‖h ω‖ ≤ 1 := by
               filter_upwards with ω
@@ -1495,7 +1497,7 @@ lemma condIndep_of_triple_law
                     -- Use setIntegral_condExp with proper SigmaFinite instance
                     haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp (hW.prodMk hY))) := by
                       infer_instance
-                    exact setIntegral_condExp (measurable_iff_comap_le.mp (hW.prodMk hY)) hφψ_int hWT_meas
+                    exact setIntegral_condExp (measurable_iff_comap_le.mp (hW.prodMk hY)) hφψ_int hWT_meas_H
                 _ = ∫ ω in W ⁻¹' T, φ ω * μ[ψ | ℋ] ω ∂μ := by
                     -- Use setIntegral_congr_ae with a.e. equality from pull-out
                     apply setIntegral_congr_ae hWT_meas
@@ -1504,7 +1506,8 @@ lemma condIndep_of_triple_law
                       simp only [hφ_def]
                       have hYA_H : MeasurableSet[ℋ] (Y ⁻¹' A) := by
                         exact ⟨{p | p.2 ∈ A}, measurable_snd hA, by ext; simp⟩
-                      exact (@aestronglyMeasurable_const Ω ℝ ℋ _ μ 1).indicator hYA_H
+                      have : AEStronglyMeasurable[ℋ] (fun (_ : Ω) => (1:ℝ)) μ := aestronglyMeasurable_const
+                      exact this.indicator hYA_H
                     -- Apply condExp pull-out and convert to the ω ∈ S → form
                     filter_upwards [@condExp_mul_of_aestronglyMeasurable_left Ω ℝ _ ℋ _ _ μ _ _ hφ_H hψ_int] with ω h
                     exact fun _ => h
@@ -1525,11 +1528,12 @@ lemma condIndep_of_triple_law
                       infer_instance
                     -- φ * μ[ψ|ℋ] is integrable (bounded indicator × integrable)
                     have hint : Integrable (fun ω => φ ω * μ[ψ | ℋ] ω) μ := by
-                      refine Integrable.bdd_mul ?_ integrable_condExp ?_
-                      · exact hφψ_int.aestronglyMeasurable
+                      refine Integrable.bdd_mul' (c := 1) integrable_condExp ?_ ?_
                       · filter_upwards with ω
                         simp only [φ, Set.indicator]; split_ifs <;> norm_num
-                    exact setIntegral_condExp (measurable_iff_comap_le.mp hW) hint hWT_meas
+                      · simp only [φ, Set.indicator]
+                        exact (aestronglyMeasurable_const.indicator ((hY hA).inter (hZ hB))).aemeasurable
+                    exact setIntegral_condExp (measurable_iff_comap_le.mp hW) hint hWT_meas_G
                 _ = ∫ ω in W ⁻¹' T, φ ω * μ[ψ | 𝔾] ω ∂μ := by
                     -- Use setIntegral_congr_ae with tower property
                     apply setIntegral_congr_ae hWT_meas
