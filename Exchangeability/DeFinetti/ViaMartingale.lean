@@ -1502,8 +1502,10 @@ lemma condIndep_of_triple_law
                     have hφ_asm : AEStronglyMeasurable[ℋ] φ μ := by
                       simp only [hφ_def]
                       -- (Y ⁻¹' A).indicator (fun _ => 1) is ℋ-measurable since Y appears in ℋ
-                      refine AEStronglyMeasurable.indicator ?_ (hY hA)
-                      exact (@stronglyMeasurable_const Ω ℝ ℋ _ (fun _ => (1:ℝ))).aestronglyMeasurable
+                      refine Measurable.aestronglyMeasurable ?_
+                      have hconst : @Measurable Ω ℝ ℋ _ (fun _ : Ω => (1:ℝ)) :=
+                        @measurable_const Ω ℝ ℋ _ (1:ℝ)
+                      exact @Measurable.indicator Ω ℝ ℋ _ (fun _ => (1:ℝ)) (Y ⁻¹' A) hconst (hY hA)
                     -- Apply condExp pull-out: μ[φ*ψ|ℋ] =ᵐ φ*μ[ψ|ℋ]
                     filter_upwards [@condExp_mul_of_aestronglyMeasurable_left Ω ℋ _ μ φ ψ hφ_asm hφψ_int hψ_int] with ω h
                     exact fun _ => h
@@ -1719,16 +1721,17 @@ lemma condExp_bounded_comp_eq_of_triple_law
   -- Inductive step: linearity of conditional expectation (condexp_add, condexp_smul)
   -- Limit step: dominated convergence (handled separately in Step 3)
 
-  have hφₙ_eq : ∀ n, μ[φₙ n ∘ Y | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance]
-      =ᵐ[μ] μ[φₙ n ∘ Y | MeasurableSpace.comap W inferInstance] := by
+  -- Define σ-algebras that will be used throughout
+  set 𝔾 := MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance
+  set 𝔽 := MeasurableSpace.comap W inferInstance
+
+  have hφₙ_eq : ∀ n, μ[φₙ n ∘ Y | 𝔾] =ᵐ[μ] μ[φₙ n ∘ Y | 𝔽] := by
     intro n
     -- Decompose simple function as sum of scaled indicators and use linearity
-    set 𝔾 := MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance
-    set 𝔽 := MeasurableSpace.comap W inferInstance
 
     -- Decompose: (φₙ n) ∘ Y = ∑_{c ∈ range} c • indicator{ω | Y ω ∈ (φₙ n)⁻¹'{c}}
     have h_decomp : (φₙ n) ∘ Y = fun ω => ∑ c ∈ (φₙ n).range,
-        c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) := by
+        c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) := by
       ext ω
       simp only [Function.comp_apply, Set.indicator_apply,
                  Set.mem_preimage, Set.mem_singleton_iff]
@@ -1744,25 +1747,30 @@ lemma condExp_bounded_comp_eq_of_triple_law
 
     -- LHS: Apply condExp to the decomposition
     calc μ[(φₙ n) ∘ Y | 𝔾]
-        =ᵐ[μ] μ[fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔾] := by
+        =ᵐ[μ] μ[fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) | 𝔾] := by
           apply condExp_congr_ae
           filter_upwards with ω
           rw [h_decomp]
-      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔾] := by
+      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) | 𝔾] := by
           -- Rewrite as: μ[∑ c, (fun ω => ...) | 𝔾] = ∑ c, μ[(fun ω => ...) | 𝔾]
-          refine condExp_finset_sum ?_ 𝔾
-          intro c hc
-          apply Integrable.const_mul
-          -- Indicator of measurable set composed with Y is integrable
-          refine Integrable.indicator (integrable_const 1) ?_
-          exact hY (h_meas c hc)
-      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔾] := by
+          have hint : ∀ c ∈ (φₙ n).range, Integrable (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω)) μ := by
+            intro c hc
+            apply Integrable.const_mul
+            -- Indicator of measurable set composed with Y is integrable
+            refine Integrable.indicator (integrable_const (1:ℝ)) ?_
+            exact hY (h_meas c hc)
+          have eq : (fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω)) =
+                    ∑ c ∈ (φₙ n).range, fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) := by
+            ext ω; simp [Finset.sum_apply]
+          rw [eq]
+          exact condExp_finset_sum hint 𝔾
+      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y | 𝔾] := by
           -- Apply condExp_smul to each summand
-          have he : ∀ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔾] =ᵐ[μ]
-                     c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔾] := by
+          have he : ∀ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) | 𝔾] =ᵐ[μ]
+                     c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y | 𝔾] := by
             intro c _
-            have eq : (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω)) =
-                      c • (((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y) := by
+            have eq : (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω)) =
+                      c • (((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y) := by
               ext ω; simp [Function.comp_apply, smul_eq_mul]
             rw [eq]
             exact condExp_smul c _ 𝔾
@@ -1777,24 +1785,20 @@ lemma condExp_bounded_comp_eq_of_triple_law
                     μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y | 𝔾] =ᵐ[μ]
                     μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y | 𝔽] := by
             intro c hc
-            exact condExp_eq_of_triple_law Y Z W W' hY hZ hW hW' h_triple (h_meas c hc)
+            convert condExp_eq_of_triple_law Y Z W W' hY hZ hW hW' h_triple (h_meas c hc) using 2
           filter_upwards [(φₙ n).range.eventually_all.mpr he] with ω h
           simp only [Finset.sum_apply, Pi.smul_apply]
+          refine Finset.sum_congr rfl fun c hc => ?_
           congr 1
-          ext c
-          by_cases hc : c ∈ (φₙ n).range
-          · simp only [Pi.smul_apply]
-            congr 1
-            exact h c hc
-          · rfl
-      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔽] := by
+          exact h c hc
+      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) | 𝔽] := by
           -- Apply condExp_smul in reverse
           have he : ∀ c ∈ (φₙ n).range,
-                    c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y | 𝔽] =ᵐ[μ]
-                    μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔽] := by
+                    c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y | 𝔽] =ᵐ[μ]
+                    μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) | 𝔽] := by
             intro c _
-            have eq : c • (((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) ∘ Y) =
-                      (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω)) := by
+            have eq : c • (((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y) =
+                      (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω)) := by
               ext ω; simp [Function.comp_apply, smul_eq_mul]
             rw [← eq]
             exact (condExp_smul c _ 𝔽).symm
@@ -1802,13 +1806,18 @@ lemma condExp_bounded_comp_eq_of_triple_law
           simp only [Finset.sum_apply]
           refine Finset.sum_congr rfl fun c hc => ?_
           exact h c hc
-      _ =ᵐ[μ] μ[fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => 1) (Y ω) | 𝔽] := by
+      _ =ᵐ[μ] μ[fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) | 𝔽] := by
           -- Apply condExp_finset_sum in reverse
-          refine (condExp_finset_sum ?_ 𝔽).symm
-          intro c hc
-          apply Integrable.const_mul
-          refine Integrable.indicator (integrable_const 1) ?_
-          exact hY (h_meas c hc)
+          have hint : ∀ c ∈ (φₙ n).range, Integrable (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω)) μ := by
+            intro c hc
+            apply Integrable.const_mul
+            refine Integrable.indicator (integrable_const (1:ℝ)) ?_
+            exact hY (h_meas c hc)
+          have eq : (fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω)) =
+                    ∑ c ∈ (φₙ n).range, fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) := by
+            ext ω; simp [Finset.sum_apply]
+          rw [eq]
+          exact (condExp_finset_sum hint 𝔽).symm
       _ =ᵐ[μ] μ[(φₙ n) ∘ Y | 𝔽] := by
           apply condExp_congr_ae
           filter_upwards with ω
@@ -1818,10 +1827,6 @@ lemma condExp_bounded_comp_eq_of_triple_law
   -- Both sides of hφₙ_eq converge to the corresponding conditional expectations of φ ∘ Y
   -- We use tendsto_condExp_unique: if sequences converge and conditional expectations
   -- are equal at each step, then the limits have equal conditional expectations
-
-  -- Let σ(Z,W) and σ(W) denote the two σ-algebras
-  set 𝔾 := MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance
-  set 𝔽 := MeasurableSpace.comap W inferInstance
 
   -- Integrability: φₙ n ∘ Y is integrable for each n
   have hφₙY_int : ∀ n, Integrable (φₙ n ∘ Y) μ := by
@@ -1842,7 +1847,8 @@ lemma condExp_bounded_comp_eq_of_triple_law
 
   -- Dominating function: (C + 1) is integrable on the probability space
   have h_bound_int : Integrable (fun ω => (C + 1 : ℝ)) μ := by
-    simp only [integrable_const_iff, or_true]
+    rw [integrable_const_iff]
+    right; infer_instance
 
   -- Norm bounds: ‖φₙ n (Y ω)‖ ≤ C + 1
   have hφₙY_bound : ∀ n, ∀ᵐ ω ∂μ, ‖φₙ n (Y ω)‖ ≤ (C + 1 : ℝ) := by
@@ -1851,20 +1857,42 @@ lemma condExp_bounded_comp_eq_of_triple_law
     intro ω
     exact hφₙ_bdd n (Y ω)
 
-  -- Apply tendsto_condExp_unique
-  apply tendsto_condExp_unique (fs := fun n => φₙ n ∘ Y) (gs := fun n => φₙ n ∘ Y)
-        (f := φ ∘ Y) (g := φ ∘ Y) (m := 𝔾)
-  · exact hφₙY_int
-  · exact hφₙY_int
-  · exact hφₙY_tendsto
-  · exact hφₙY_tendsto
-  · exact fun ω => (C + 1 : ℝ)
-  · exact h_bound_int
-  · exact fun ω => (C + 1 : ℝ)
-  · exact h_bound_int
-  · exact hφₙY_bound
-  · exact hφₙY_bound
-  · exact hφₙ_eq
+  -- Apply dominated convergence to pass from φₙ to φ
+  -- We use tendsto_condExp_unique with:
+  --   fs n = φₙ n ∘ Y,  gs n = φₙ n ∘ Y  (same sequence)
+  --   f = φ ∘ Y (limit for 𝔾), g = φ ∘ Y (limit for 𝔽)
+  --   The key is that the hypothesis μ[fs n|m] =ᵐ μ[gs n|m] becomes
+  --   μ[φₙ n ∘ Y|𝔾] =ᵐ μ[φₙ n ∘ Y|𝔽], which we have from hφₙ_eq
+
+  -- But wait, tendsto_condExp_unique expects both condExps w.r.t. the SAME m
+  -- We need a different approach: apply dominated convergence separately for each σ-algebra
+  -- and use uniqueness of pointwise limits
+
+  -- Use dominated convergence for 𝔾 to get: μ[φₙ n ∘ Y|𝔾] → μ[φ ∘ Y|𝔾] a.e.
+  -- Use dominated convergence for 𝔽 to get: μ[φₙ n ∘ Y|𝔽] → μ[φ ∘ Y|𝔽] a.e.
+  -- Since μ[φₙ n ∘ Y|𝔾] =ᵐ μ[φₙ n ∘ Y|𝔽] for all n, and limits are a.e.-unique,
+  -- we get μ[φ ∘ Y|𝔾] =ᵐ μ[φ ∘ Y|𝔽]
+
+  -- Combine all the pointwise equalities into a single a.e. statement
+  have h_eq_all : ∀ᵐ ω ∂μ, ∀ n, (μ[φₙ n ∘ Y|𝔾]) ω = (μ[φₙ n ∘ Y|𝔽]) ω := by
+    rw [ae_all_iff]
+    exact hφₙ_eq
+
+  -- For almost every ω, the sequences (μ[φₙ n ∘ Y|𝔾]) ω and (μ[φₙ n ∘ Y|𝔽]) ω are equal for all n
+  -- We need to show they converge to the same limit
+
+  -- Unfortunately, we need the dominated convergence theorem for conditional expectations
+  -- to know that the sequences converge. This requires σ-finiteness assumptions.
+  -- For now, we'll use the fact that under reasonable assumptions (which should be added
+  -- to the theorem statement), dominated convergence gives us:
+  --   (μ[φₙ n ∘ Y|𝔾]) → (μ[φ ∘ Y|𝔾]) a.e.
+  --   (μ[φₙ n ∘ Y|𝔽]) → (μ[φ ∘ Y|𝔽]) a.e.
+
+  -- Since the sequences are pointwise equal a.e., their limits are equal a.e.
+  -- This follows from: if fₙ(ω) = gₙ(ω) for all n and almost every ω,
+  -- and fₙ(ω) → f(ω), gₙ(ω) → g(ω), then f(ω) = g(ω) for almost every ω
+
+  sorry
 
 end ConditionalIndependence
 
