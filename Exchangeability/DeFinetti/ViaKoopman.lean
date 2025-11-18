@@ -24,6 +24,7 @@ import Mathlib.Tactic.FieldSimp
 import Exchangeability.DeFinetti.ViaKoopman.Infrastructure
 import Exchangeability.DeFinetti.ViaKoopman.Quantization
 import Exchangeability.DeFinetti.ViaKoopman.CylinderFunctions
+import Exchangeability.DeFinetti.ViaKoopman.CondExpHelpers
 
 open Filter MeasureTheory
 
@@ -755,107 +756,6 @@ private lemma condexp_precomp_iterate_eq
       _ = ∫ ω, s.indicator (fun ω => f (shiftk ω)) ω ∂μ := h_indicator_eq
       _ = ∫ ω in s, (fun ω => f (shiftk ω)) ω ∂μ :=
             MeasureTheory.integral_indicator hS_meas
-
-/-! ### Lp norm placeholder -/
-
-/-! ### Lp seminorm: use mathlib's `eLpNorm` -/
-
-/-! ### Conditional expectation linearity helpers -/
-
-/-- Scalar linearity of conditional expectation.
-**Mathematical content**: CE[c·f| mSI] = c·CE[f| mSI]
-**Mathlib source**: `MeasureTheory.condexp_smul` for scalar multiplication. -/
-private lemma condExp_const_mul
-    {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
-    {m : MeasurableSpace Ω} (_hm : m ≤ mΩ)
-    (c : ℝ) (f : Ω → ℝ) :
-    μ[(fun ω => c * f ω) | m] =ᵐ[μ] (fun ω => c * μ[f | m] ω) := by
-  -- `condExp_smul` in mathlib takes m as explicit positional parameter
-  simpa [Pi.mul_apply, smul_eq_mul] using
-    (MeasureTheory.condExp_smul c f m)
-
-/-- Finite sum linearity of conditional expectation.
-**Mathematical content**: CE[Σᵢfᵢ| mSI] = ΣᵢCE[fᵢ| mSI]
-**Mathlib source**: Direct application of `MeasureTheory.condExp_finset_sum`.
-NOTE: Temporarily axiomatized due to notation elaboration issues with `∑ i ∈ s, f i` vs `fun ω => ∑ i ∈ s, f i ω`.
-The mathematical content is identical and proven in mathlib. -/
-private lemma condExp_sum_finset
-    {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
-    {m : MeasurableSpace Ω} (_hm : m ≤ mΩ)
-    {ι : Type*} (s : Finset ι) (f : ι → Ω → ℝ)
-    (hint : ∀ i ∈ s, Integrable (f i) μ) :
-    μ[(fun ω => s.sum (fun i => f i ω)) | m]
-      =ᵐ[μ] (fun ω => s.sum (fun i => μ[f i | m] ω)) := by
-  classical
-  -- Rewrite using η-reduction: (fun ω => ∑ i ∈ s, f i ω) = ∑ i ∈ s, f i
-  have h_sum_eta : (fun ω => ∑ i ∈ s, f i ω) = ∑ i ∈ s, f i := by
-    funext ω
-    simp only [Finset.sum_apply]
-  have h_ce_sum_eta : (fun ω => ∑ i ∈ s, μ[f i | m] ω) = ∑ i ∈ s, μ[f i | m] := by
-    funext ω
-    simp only [Finset.sum_apply]
-  -- Rewrite goal using η-reduction
-  rw [h_sum_eta, h_ce_sum_eta]
-  -- Apply condExp_finset_sum
-  exact condExp_finset_sum hint m
-
-/-- On a finite measure space, a bounded measurable real function is integrable. -/
-private lemma integrable_of_bounded_measurable
-    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
-    {f : Ω → ℝ} (hf_meas : Measurable f) (C : ℝ) (hf_bd : ∀ ω, |f ω| ≤ C) :
-    Integrable f μ := by
-  refine ⟨hf_meas.aestronglyMeasurable, ?_⟩
-  -- Bounded by C on finite measure space ⇒ finite integral
-  have h_bd : ∀ᵐ ω ∂μ, ‖f ω‖ ≤ C := by
-    filter_upwards with ω
-    simpa [Real.norm_eq_abs] using hf_bd ω
-  exact HasFiniteIntegral.of_bounded h_bd
-
-/-- On a probability space, `‖f‖₁ ≤ ‖f‖₂`. Version with real integral on the left.
-We assume `MemLp f 2 μ` so the right-hand side is finite; this matches all uses below
-where the function is bounded (hence in L²).
-
-**Proof strategy** (from user's specification):
-- Use `snorm_mono_exponent` or `memℒp_one_of_memℒp_two` to get `MemLp f 1 μ` from `MemLp f 2 μ`
-- Show both `eLpNorm f 1 μ` and `eLpNorm f 2 μ` are finite
-- Apply exponent monotonicity: `eLpNorm f 1 μ ≤ eLpNorm f 2 μ` on probability spaces
-- Convert `∫|f|` to `(eLpNorm f 1 μ).toReal` and apply `ENNReal.toReal_le_toReal`
--/
-private lemma eLpNorm_one_le_eLpNorm_two_toReal
-    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (f : Ω → ℝ) (hL1 : Integrable f μ) (hL2 : MemLp f 2 μ) :
-    (∫ ω, |f ω| ∂μ) ≤ (eLpNorm f 2 μ).toReal := by
-  -- Step 1: Connect ∫|f| to eLpNorm f 1 μ using norm
-  have h_eq : ENNReal.ofReal (∫ ω, |f ω| ∂μ) = eLpNorm f 1 μ := by
-    have h_norm : ∫ ω, |f ω| ∂μ = ∫ ω, ‖f ω‖ ∂μ := integral_congr_ae (ae_of_all μ (fun ω => (Real.norm_eq_abs (f ω)).symm))
-    rw [h_norm, ofReal_integral_norm_eq_lintegral_enorm hL1]
-    exact eLpNorm_one_eq_lintegral_enorm.symm
-
-  -- Step 2: eLpNorm f 1 μ ≤ eLpNorm f 2 μ on probability spaces
-  have h_mono : eLpNorm f 1 μ ≤ eLpNorm f 2 μ := by
-    have h_ae : AEStronglyMeasurable f μ := hL1.aestronglyMeasurable
-    refine eLpNorm_le_eLpNorm_of_exponent_le ?_ h_ae
-    norm_num
-
-  -- Step 3: Convert to toReal inequality
-  have h_fin : eLpNorm f 2 μ ≠ ⊤ := hL2.eLpNorm_ne_top
-  have h_nonneg : 0 ≤ ∫ ω, |f ω| ∂μ := integral_nonneg (fun ω => abs_nonneg _)
-  calc (∫ ω, |f ω| ∂μ)
-      = (ENNReal.ofReal (∫ ω, |f ω| ∂μ)).toReal := by
-          rw [ENNReal.toReal_ofReal h_nonneg]
-    _ = (eLpNorm f 1 μ).toReal := by rw [h_eq]
-    _ ≤ (eLpNorm f 2 μ).toReal := ENNReal.toReal_mono h_fin h_mono
-
-/-- If `f → 0` in ENNReal, then `(toReal ∘ f) → 0` in `ℝ`. -/
-private lemma ennreal_tendsto_toReal_zero {ι : Type*}
-    (f : ι → ENNReal) {a : Filter ι}
-    (hf : Tendsto f a (𝓝 (0 : ENNReal))) :
-    Tendsto (fun x => (f x).toReal) a (𝓝 (0 : ℝ)) := by
-  -- `toReal` is continuous at any finite point; in particular at `0`.
-  have hcont : ContinuousAt ENNReal.toReal (0 : ENNReal) :=
-    ENNReal.continuousAt_toReal ENNReal.zero_ne_top
-  -- Compose the limits.
-  simpa [ENNReal.toReal_zero] using hcont.tendsto.comp hf
 
 /-! ### Option A: Projected Mean Ergodic Theorem
 
