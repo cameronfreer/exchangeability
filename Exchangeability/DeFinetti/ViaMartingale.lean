@@ -1550,19 +1550,68 @@ lemma condIndep_of_triple_law
 
                 -- Step 1: Apply tower property to φ*ψ
                 have step1 : μ[φ * μ[ψ | ℋ]|𝔾] =ᵐ[μ] μ[φ * ψ|𝔾] := by
-                  -- We have: μ[μ[ψ|ℋ]|𝔾] = μ[ψ|𝔾] by tower property
-                  -- Need to lift this to: μ[φ * μ[ψ|ℋ]|𝔾] = μ[φ * ψ|𝔾]
-                  -- This follows from condExp_congr_ae applied to: φ * μ[ψ|ℋ] =ᵐ φ * ψ ... no wait
+                  -- Strategy: Show μ[φ*μ[ψ|ℋ]|𝔾] =ᵐ μ[φ*ψ|𝔾] via set integral equality
+                  -- Key: For 𝔾-measurable sets S (hence ℋ-measurable since 𝔾 ≤ ℋ):
+                  --   ∫_S φ*μ[ψ|ℋ] = ∫_S φ*ψ  (by setIntegral_condExp)
 
-                  -- Actually, the key is that when we condition the product φ*ψ:
-                  -- For any 𝔾-measurable set S: ∫_S μ[φ*μ[ψ|ℋ]|𝔾] = ∫_S φ*μ[ψ|ℋ] (defn of condExp)
-                  -- and ∫_S φ*μ[ψ|ℋ] = ∫_S φ*ψ (since ∫_S f*μ[g|m] = ∫_S f*g for m-measurable S)
-                  -- and ∫_S φ*ψ = ∫_S μ[φ*ψ|𝔾] (defn of condExp)
-                  -- So by uniqueness: μ[φ*μ[ψ|ℋ]|𝔾] =ᵐ μ[φ*ψ|𝔾]
+                  -- Use uniqueness via ae_eq_condExp_of_forall_setIntegral_eq
+                  haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp hW)) := by infer_instance
 
-                  -- This is essentially a consequence of the fact that
-                  -- μ[ψ|ℋ] "acts like" ψ when integrated against 𝔾-measurable sets
-                  sorry
+                  symm
+                  apply ae_eq_condExp_of_forall_setIntegral_eq (measurable_iff_comap_le.mp hW)
+                  · -- φ * ψ is integrable
+                    exact hφψ_int
+                  · -- μ[φ*μ[ψ|ℋ]|𝔾] is integrable on finite measure sets
+                    intro s hs hμs
+                    exact integrable_condExp.integrableOn
+                  · -- Set integrals are equal for all 𝔾-measurable sets
+                    intro S hS_meas hS_finite
+                    -- Need to show: ∫_S μ[φ*μ[ψ|ℋ]|𝔾] = ∫_S φ*ψ
+
+                    -- Since S is 𝔾-measurable and 𝔾 ≤ ℋ, S is also ℋ-measurable
+                    have hS_meas_H : @MeasurableSet Ω ℋ S := hG_le_H S hS_meas
+
+                    -- σ-finiteness instance for ℋ
+                    haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp (hW.prodMk hY))) := by
+                      infer_instance
+
+                    calc ∫ ω in S, μ[φ * μ[ψ | ℋ]|𝔾] ω ∂μ
+                        = ∫ ω in S, φ ω * μ[ψ | ℋ] ω ∂μ := by
+                          -- Use setIntegral_condExp to relate to φ*μ[ψ|ℋ]
+                          exact setIntegral_condExp (measurable_iff_comap_le.mp hW)
+                            (Integrable.mul_const hφ_int) hS_meas
+                      _ = ∫ ω in S, φ ω * ψ ω ∂μ := by
+                          -- Key: ∫_S φ*μ[ψ|ℋ] = ∫_S φ*ψ when S is ℋ-measurable
+                          -- This is setIntegral_condExp in reverse (using that φ is ℋ-measurable)
+
+                          -- We need: φ is ℋ-measurable (already proved as hφ_asm in stepA)
+                          have hφ_asm : AEStronglyMeasurable[ℋ] φ μ := by
+                            simp only [hφ_def]
+                            refine Measurable.aestronglyMeasurable ?_
+                            have hY_H : @Measurable Ω α ℋ _ Y := by
+                              have : Y = Prod.snd ∘ (fun x => (W x, Y x)) := by ext x; simp
+                              rw [this]
+                              apply @Measurable.comp Ω (γ × α) α ℋ _ _ (fun x => (W x, Y x)) Prod.snd
+                              · exact measurable_snd
+                              · exact Measurable.of_comap_eq rfl
+                            have hYA_meas : @MeasurableSet Ω ℋ (Y ⁻¹' A) := hY_H hA
+                            have hconst : @Measurable Ω ℝ ℋ _ (fun _ : Ω => (1:ℝ)) :=
+                              @measurable_const ℝ Ω _ ℋ (1:ℝ)
+                            hconst.indicator hYA_meas
+
+                          -- Now apply the pull-out property in reverse
+                          have h_ae : μ[φ * ψ | ℋ] =ᵐ[μ] φ * μ[ψ | ℋ] := by
+                            exact @condExp_mul_of_aestronglyMeasurable_left Ω ℋ _ μ φ ψ
+                              hφ_asm hφψ_int hψ_int
+
+                          calc ∫ ω in S, φ ω * μ[ψ | ℋ] ω ∂μ
+                              = ∫ ω in S, μ[φ * ψ | ℋ] ω ∂μ :=
+                                setIntegral_congr_ae hS_meas_H (h_ae.symm)
+                            _ = ∫ ω in S, φ ω * ψ ω ∂μ :=
+                                setIntegral_condExp (measurable_iff_comap_le.mp (hW.prodMk hY))
+                                  hφψ_int hS_meas_H
+                  · -- μ[φ*μ[ψ|ℋ]|𝔾] is AEStronglyMeasurable
+                    exact StronglyMeasurable.aestronglyMeasurable stronglyMeasurable_condExp
 
                 -- Step 2: By symmetry (or rather, reflexivity)
                 exact step1
