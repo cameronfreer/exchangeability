@@ -2655,62 +2655,15 @@ private lemma alphaIic_tendsto_one_at_top
   -- Same infrastructure requirements as the t → -∞ case. For now:
   sorry
 
-namespace Helpers
-
-/-- **AXIOM A2 (CDF endpoints):**
-For the CDF built from `alphaIic` via the rational envelope, the limits at
-±∞ are 0 and 1 for every ω. -/
-axiom cdf_from_alpha_limits
-  {Ω : Type*} [MeasurableSpace Ω]
-  {μ : Measure Ω} [IsProbabilityMeasure μ]
-  (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
-  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-  ∀ ω, Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) atBot (𝓝 0) ∧
-       Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) atTop (𝓝 1)
-
-end Helpers
-
-/-- F(ω,t) → 0 as t → -∞, and F(ω,t) → 1 as t → +∞.
-
-Given the helper lemmas about alphaIic convergence, this follows from the definition
-of cdf_from_alpha as the infimum of alphaIic values over rationals greater than t.
--/
-lemma cdf_from_alpha_limits
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
-    (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
-    (ω : Ω) :
-    Filter.Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) Filter.atBot (𝓝 0) ∧
-    Filter.Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) Filter.atTop (𝓝 1) := by
-  constructor
-  · -- Limit at -∞: F(ω,t) → 0 as t → -∞
-    -- Strategy: F(ω,t) = inf_{q>t} α_{Iic q}(ω)
-    -- Since alphaIic q ω → 0 as q → -∞ (by helper lemma alphaIic_tendsto_zero_at_bot),
-    -- and F(ω,t) ≤ alphaIic q ω for any q > t,
-    -- we get F(ω,t) → 0 as t → -∞
-    --
-    -- The full proof would:
-    -- 1. Use alphaIic_tendsto_zero_at_bot to get T such that alphaIic t ω < ε for t < T
-    -- 2. For t < T, pick rational q with t < q < T
-    -- 3. Then F(ω,t) ≤ alphaIic q ω < ε
-    -- 4. Express this using mathlib's Filter.Tendsto API for atBot
-    --
-    -- This requires navigating mathlib's Filter/Metric API.
-    -- Use the packaged axiom (A2).
-    exact (Helpers.cdf_from_alpha_limits X hX_contract hX_meas hX_L2 ω).1
-
-  · -- Limit at +∞: F(ω,t) → 1 as t → +∞
-    -- Similar strategy using alphaIic_tendsto_one_at_top
-    --
-    -- For any ε > 0, find T such that for t > T:
-    -- - For all q > t > T: 1 - ε < alphaIic q ω (by helper lemma)
-    -- - So F(ω,t) = inf_{q>t} alphaIic q ω ≥ 1 - ε
-    -- - Thus F(ω,t) → 1
-    --
-    -- Full proof requires mathlib's Filter API.
-    -- Use the packaged axiom (A2).
-    exact (Helpers.cdf_from_alpha_limits X hX_contract hX_meas hX_L2 ω).2
+-- **Note:** The axiom `cdf_from_alpha_limits` establishing that F(ω,t) → 0 as t → -∞
+-- and F(ω,t) → 1 as t → +∞ is defined in MoreL2Helpers.lean.
+--
+-- TODO: The proof sketches from the removed lemma `cdf_from_alpha_limits` should be
+-- implemented when replacing the axiom. The key steps are:
+-- 1. For t → -∞: Use alphaIic_tendsto_zero_at_bot and the definition of cdf_from_alpha
+--    as inf over rationals to show F(ω,t) → 0
+-- 2. For t → +∞: Use alphaIic_tendsto_one_at_top similarly to show F(ω,t) → 1
+-- Both require careful use of mathlib's Filter API for limits at ±∞.
 
 /-- Build the directing measure ν from the CDF.
 
