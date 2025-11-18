@@ -117,10 +117,17 @@ lemma l1_convergence_under_clip01
   have hmono (n : ℕ) : ∫ ω, |clip01 (fn n ω) - clip01 (f ω)| ∂μ ≤ ∫ ω, |fn n ω - f ω| ∂μ := by
     apply integral_mono_ae
     · -- |clip01(...) - clip01(...)| is integrable, dominated by |fn n - f| which is integrable
-      -- clip01 is 1-Lipschitz (continuous) so composition is measurable, and bounded
-      -- Should use Integrable.mono but type class instance issues arise
-      -- Proof strategy: |clip01 x - clip01 y| ≤ |x - y| pointwise, so dominated by integrable function
-      sorry
+      -- Use Integrable.mono: since |clip01 x - clip01 y| ≤ |x - y| pointwise
+      apply Integrable.mono (h_integrable n).abs
+      · -- AE strongly measurable: clip01 is continuous, compositions preserve ae measurability
+        have h1 : AEStronglyMeasurable (fun ω => clip01 (fn n ω)) μ :=
+          continuous_clip01.comp_aestronglyMeasurable (h_meas n).aestronglyMeasurable
+        have h2 : AEStronglyMeasurable (fun ω => clip01 (f ω)) μ :=
+          continuous_clip01.comp_aestronglyMeasurable hf.aestronglyMeasurable
+        exact (h1.sub h2).norm
+      · filter_upwards with ω
+        simp [Real.norm_eq_abs]
+        exact abs_clip01_sub_le (fn n ω) (f ω)
     · exact (h_integrable n).abs
     · filter_upwards with ω
       exact abs_clip01_sub_le (fn n ω) (f ω)
@@ -144,6 +151,17 @@ private lemma L1_unique_of_two_limits
   sorry  -- TODO: L¹ uniqueness using triangle inequality
   -- The proof is standard but requires careful eLpNorm API usage
   -- Sketch: ‖f - g‖₁ ≤ ‖f - fn‖₁ + ‖fn - g‖₁ → 0 as n → ∞
+  -- For any ε > 0:
+  -- 1. Choose N such that eLpNorm (fn N - f) 1 < ε/2 and eLpNorm (fn N - g) 1 < ε/2
+  -- 2. Triangle inequality: eLpNorm (f - g) 1 ≤ eLpNorm (f - fn N) 1 + eLpNorm (fn N - g) 1 < ε
+  -- 3. Since ε was arbitrary, eLpNorm (f - g) 1 = 0
+  -- 4. Apply eLpNorm_eq_zero_iff to get f - g =ᵐ 0, then sub_eq_zero to get f =ᵐ g
+  --
+  -- The detailed implementation requires careful handling of:
+  -- - ENNReal arithmetic and division
+  -- - eLpNorm_add_le with correct AEStronglyMeasurable hypotheses
+  -- - eLpNorm_sub_comm for commutativity
+  -- - Type inference for ENNReal constants
 
 /-- **L¹ convergence under clipping:** If fₙ → f in L¹, then clip01∘fₙ → clip01∘f in L¹. -/
 private lemma L1_tendsto_clip01
