@@ -3746,7 +3746,7 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
       have h_compProd_eq : (μ.map ζ) ⊗ₘ (ProbabilityTheory.condDistrib ξ ζ μ) = (μ.map ζ) ⊗ₘ (ProbabilityTheory.condDistrib ξ η μ) := by
         rw [hζ_compProd, h_law_swapped, ← h_marg_eq, ← hη_compProd]
       -- Apply uniqueness
-      exact Kernel.ae_eq_of_compProd_eq h_compProd_eq
+      exact ProbabilityTheory.Kernel.ae_eq_of_compProd_eq h_compProd_eq
 
     -- Step 5: Pull back kernel equality along ζ
     have hkernel_eq_pullback : ∀ᵐ ω ∂μ, ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) = ProbabilityTheory.condDistrib ξ η μ (ζ ω) := by
@@ -3760,7 +3760,9 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
     -- Step 7: Rewrite η ω as φ (ζ ω) to align both sides (using hηfac from line 4117)
     have heval_B_aligned : ∀ᵐ ω ∂μ, ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) B = ProbabilityTheory.condDistrib ξ η μ (η ω) B := by
       filter_upwards [heval_B] with ω h
-      rw [hηfac]; exact h
+      convert h using 2
+      rw [hηfac]
+      rfl
 
     -- Step 9: Connect to conditional expectations via condDistrib_ae_eq_condExp
     have hCE_ζ : (fun ω => (ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) B).toReal) =ᵐ[μ]
@@ -3779,10 +3781,17 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
     -- Step 11: Conclude by transitivity: CE_ζ = ProbabilityTheory.condDistrib = ProbabilityTheory.condDistrib = CE_η
     have : μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] =ᵐ[μ]
            μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] := by
-      exact hCE_ζ.symm.trans (htoReal_eq.trans hCE_η)
+      calc μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ]
+          =ᵐ[μ] (fun ω => (ProbabilityTheory.condDistrib ξ ζ μ (ζ ω) B).toReal) := hCE_ζ.symm
+        _ =ᵐ[μ] (fun ω => (ProbabilityTheory.condDistrib ξ η μ (η ω) B).toReal) := htoReal_eq
+        _ =ᵐ[μ] μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] := hCE_η
 
     -- Finish with the integral equality using this ae-equality
-    exact setIntegral_congr_ae (hS.mono hmζ_le le_rfl) (ae_restrict_of_ae this)
+    have hS_meas_comap : MeasurableSet[MeasurableSpace.comap ζ mγ] S := by
+      rw [MeasurableSpace.measurableSet_comap]
+      exact hS
+    have hS_meas : MeasurableSet[mΩ] S := hmζ_le _ hS_meas_comap
+    exact setIntegral_congr_ae hS_meas (ae_restrict_of_ae this)
 
   exact heq_direct
 
