@@ -1775,7 +1775,8 @@ lemma condExp_bounded_comp_eq_of_triple_law
                     μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y | 𝔾] =ᵐ[μ]
                     μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y | 𝔽] := by
             intro c hc
-            simpa using condExp_eq_of_triple_law (μ := μ) Y Z W W' hY hZ hW hW' h_triple (h_meas c hc)
+            have : MeasurableSet[(_ : MeasurableSpace α)] ((φₙ n) ⁻¹' {c}) := h_meas c hc
+            simpa using condExp_eq_of_triple_law Y Z W W' hY hZ hW hW' h_triple this
           filter_upwards [(φₙ n).range.eventually_all.mpr he] with ω h
           simp only [Finset.sum_apply, Pi.smul_apply]
           refine Finset.sum_congr rfl fun c hc => ?_
@@ -1841,7 +1842,7 @@ lemma condExp_bounded_comp_eq_of_triple_law
     rw [integrable_const_iff]
     right
     -- IsProbabilityMeasure implies IsFiniteMeasure
-    exact IsFiniteMeasure.mk
+    infer_instance
 
   -- Norm bounds: ‖φₙ n (Y ω)‖ ≤ C + 1
   have hφₙY_bound : ∀ n, ∀ᵐ ω ∂μ, ‖φₙ n (Y ω)‖ ≤ (C + 1 : ℝ) := by
