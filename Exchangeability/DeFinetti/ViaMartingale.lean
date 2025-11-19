@@ -1480,16 +1480,44 @@ lemma condIndep_of_triple_law
                     · simp only [φ, Set.indicator]; split_ifs <;> norm_num
                 _ = 1 := by norm_num
 
-            -- Use h_test_fn with indicator function of T
-            -- h_test_fn gives: ∫ φ*ψ*(T.indicator 1)∘W = ∫ φ*ψ*(T.indicator 1)∘W'
-            -- Since (T.indicator 1)∘W = (W⁻¹'T).indicator 1, this is:
-            -- ∫_{W⁻¹'T} φ*ψ = ∫_{W'⁻¹'T} φ*ψ
+            -- Use h_test_fn with the indicator function of T
+            -- Apply h_test_fn with h = T.indicator (fun _ => 1)
+            have h_test := h_test_fn (T.indicator (fun _ => (1:ℝ)))
+              (measurable_const.indicator hT_meas)
+              (by intro w; simp [Set.indicator]; split_ifs <;> norm_num)
 
-            -- From pair law h_pair_YW: map (Y,W) μ = map (Y,W') μ
-            -- We can transfer this to: ∫_{W⁻¹'T} φ*ψ = ∫_{W⁻¹'T} φ*V
-            -- where V = μ[ψ|σ(W)]
+            -- Simplify: (T.indicator 1) ∘ W = (W⁻¹'T).indicator 1
+            have h_comp : (fun ω => T.indicator (fun _ => (1:ℝ)) (W ω)) = (W ⁻¹' T).indicator (fun _ => (1:ℝ)) := by
+              ext ω; simp [Set.indicator, Set.mem_preimage]
+            have h_comp' : (fun ω => T.indicator (fun _ => (1:ℝ)) (W' ω)) = (W' ⁻¹' T).indicator (fun _ => (1:ℝ)) := by
+              ext ω; simp [Set.indicator, Set.mem_preimage]
 
-            sorry
+            -- Convert h_test to set integral form
+            have h_eq : ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ = ∫ ω in W' ⁻¹' T, φ ω * ψ ω ∂μ := by
+              rw [setIntegral_indicator hWT_meas, setIntegral_indicator (hW'.measurable_preimage hT_meas)]
+              simp only [one_mul]
+              rw [← h_comp, ← h_comp']
+              exact h_test
+
+            -- Now complete the chain: ∫_{W⁻¹'T} φ*ψ = ∫_{W'⁻¹'T} φ*ψ = ∫_{W⁻¹'T} φ*V
+
+            -- Step 1: We have ∫_{W⁻¹'T} φ*ψ = ∫_{W'⁻¹'T} φ*ψ from h_eq
+
+            -- Step 2: Use setIntegral_condExp to relate ∫_{W⁻¹'T} ψ to ∫_{W⁻¹'T} V
+            -- Since V = μ[ψ|𝔾] and W⁻¹'T is 𝔾-measurable, we have ∫_{W⁻¹'T} ψ = ∫_{W⁻¹'T} V
+            have h_ψ_V : ∫ ω in W ⁻¹' T, ψ ω ∂μ = ∫ ω in W ⁻¹' T, V ω ∂μ := by
+              haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp hW)) := by infer_instance
+              exact (setIntegral_condExp (measurable_iff_comap_le.mp hW) hψ_int hWT_meas_G).symm
+
+            -- Step 3: Multiply both sides by φ to get ∫_{W⁻¹'T} φ*ψ = ∫_{W⁻¹'T} φ*V
+            -- We use the fact that φ is bounded (by 1) and the integrals are finite
+            calc ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ
+                = ∫ ω in W' ⁻¹' T, φ ω * ψ ω ∂μ := h_eq
+              _ = ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ := h_eq.symm
+              _ = ∫ ω in W ⁻¹' T, φ ω * V ω ∂μ := by
+                  -- This requires showing the pair law transfers the integral
+                  -- Key insight: both W and W' give same distribution when paired with Y
+                  sorry
 
           -- **Substep 3: Apply uniqueness**
           -- We've shown: ∫_S φ*ψ = ∫_S φ*V for all 𝔾-measurable S (via h_setIntegral_eq)
