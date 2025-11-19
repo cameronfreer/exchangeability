@@ -1402,32 +1402,139 @@ private lemma L1_cesaro_convergence
       ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ)
             atTop (𝓝 0) := by
   intro A
+  classical
   -- Strategy: Truncate g, apply bounded case, use dominated convergence (Kallenberg p.14)
 
-  -- Step 1: Define truncation g_M x = max(min(g x, M), -M)
-  let g_M := fun (M : ℝ) (x : α) => max (min (g x) M) (-M)
+  -- Step 1: Define truncation g_M M x = max (min (g x) M) (-M)
+  let g_M : ℕ → α → ℝ := fun M x => max (min (g x) (M : ℝ)) (-(M : ℝ))
 
-  -- TODO: Complete remaining steps
-  -- Step 2: Prove |g_M M x| ≤ M for all x (requires case analysis: g x > M, |g x| ≤ M, g x < -M)
-  -- Step 3: Prove g_M M is measurable (use hg_meas.max.min, need to compose measurability lemmas)
-  -- Step 4: Apply L1_cesaro_convergence_bounded to each g_M
-  -- Step 5: Dominated convergence:
-  --   (a) Pointwise: g_M M x → g x as M → ∞
-  --   (b) Domination: |g - g_M M| ≤ 2|g|
-  --   (c) Integrable bound: 2|g (ω 0)| is integrable (from hg_int)
-  --   (d) Conclude: ∫|g (ω j) - g_M M (ω j)| → 0 for each j
-  --   (e) By shift-invariance: A_n - A_M,n → 0 in L¹
-  -- Step 6: CE is L¹-continuous:
-  --   Use eLpNorm_one_condExp_le_eLpNorm: ∫|CE[g] - CE[g_M]| ≤ ∫|g - g_M|
-  -- Step 7: ε/3 argument:
-  --   Given ε > 0, choose M large enough so ∫|g - g_M| < ε/3
-  --   Then ∫|CE[g] - CE[g_M]| < ε/3 (by step 6)
-  --   For this M, bounded case gives N s.t. n ≥ N ⇒ ∫|A_M,n - CE[g_M]| < ε/3
-  --   Triangle inequality: ∫|A_n - CE[g]| ≤ ∫|A_n - A_M,n| + ∫|A_M,n - CE[g_M]| + ∫|CE[g_M] - CE[g]|
-  --   Each term < ε/3, so total < ε
+  -- Step 2: Each g_M is bounded by M
+  have hg_M_bd : ∀ M, ∃ C, ∀ x, |g_M M x| ≤ C := by
+    intro M
+    use M
+    intro x
+    have h1 : -(M : ℝ) ≤ g_M M x := by
+      simp only [g_M]
+      exact le_max_right _ _
+    have h2 : g_M M x ≤ (M : ℝ) := by
+      simp only [g_M]
+      exact max_le (min_le_right _ _) (by linarith : -(M : ℝ) ≤ (M : ℝ))
+    exact abs_le.mpr ⟨by linarith, h2⟩
 
-  -- Estimated ~40 lines to complete, requires helper lemmas not yet in scope
-  sorry  -- See TODO above for complete implementation strategy
+  -- Step 3: Each g_M is measurable
+  have hg_M_meas : ∀ M, Measurable (g_M M) := by
+    intro M
+    -- max (min (g x) M) (-M) = max (measurable) (const)
+    exact (hg_meas.min measurable_const).max measurable_const
+
+  -- Step 4: Apply bounded case to each g_M
+  have h_bdd : ∀ M, Tendsto (fun (n : ℕ) =>
+      ∫ ω, |(1 / (↑(n + 1) : ℝ)) * (Finset.range (n + 1)).sum (fun j => g_M M (ω j))
+            - μ[(fun ω => g_M M (ω 0)) | mSI] ω| ∂μ) atTop (𝓝 0) := by
+    intro M
+    -- Technical: just a coercion order difference ↑n + 1 vs ↑(n + 1)
+    sorry -- TODO: Fix coercion mismatch with L1_cesaro_convergence_bounded
+
+  -- Step 5: Truncation error → 0 as M → ∞
+  -- For any x, g_M M x = g x when M > |g x|
+  have h_trunc_conv : ∀ x, ∀ᶠ M in atTop, g_M M x = g x := by
+    intro x
+    refine eventually_atTop.mpr ⟨Nat.ceil |g x| + 1, fun M hM => ?_⟩
+    have hM' : |g x| < (M : ℝ) := by
+      have : (Nat.ceil |g x| : ℝ) < M := by exact_mod_cast hM
+      exact lt_of_le_of_lt (Nat.le_ceil _) this
+    simp [g_M]
+    have h_abs : -(M : ℝ) < g x ∧ g x < (M : ℝ) := abs_lt.mp hM'
+    have h1 : -(M : ℝ) < g x := h_abs.1
+    have h2 : g x < (M : ℝ) := h_abs.2
+    simp [min_eq_left (le_of_lt h2), max_eq_left (le_of_lt h1)]
+
+  -- For each ω, ∫|g(ω j) - g_M M (ω j)| → 0
+  have h_trunc_L1 : Tendsto (fun M => ∫ ω, |g (ω 0) - g_M M (ω 0)| ∂μ) atTop (𝓝 0) := by
+    -- Use dominated convergence: |g - g_M M| ≤ 2|g| and converges pointwise to 0
+    have h_dom : ∀ M, (fun ω => |g (ω 0) - g_M M (ω 0)|) ≤ᵐ[μ] (fun ω => 2 * |g (ω 0)|) := by
+      intro M
+      refine ae_of_all μ (fun ω => ?_)
+      have hg_M_le : |g_M M (ω 0)| ≤ |g (ω 0)| := by
+        simp [g_M]
+        -- Standard clamp inequality: clamping to [-M, M] doesn't increase absolute value
+        have : |max (min (g (ω 0)) (M : ℝ)) (-(M : ℝ))| ≤ |g (ω 0)| := by
+          -- Let v = max (min g M) (-M). Then -M ≤ v ≤ M and v is between g and 0 (or equal to g)
+          set v := max (min (g (ω 0)) (M : ℝ)) (-(M : ℝ))
+          -- Case 1: If |g| ≤ M, then v = g
+          by_cases h : |g (ω 0)| ≤ (M : ℝ)
+          · have hg_le : g (ω 0) ≤ (M : ℝ) := (abs_le.mp h).2
+            have hg_ge : -(M : ℝ) ≤ g (ω 0) := (abs_le.mp h).1
+            have : v = g (ω 0) := by
+              simp [v, min_eq_left hg_le, max_eq_left hg_ge]
+            rw [this]
+          -- Case 2: If |g| > M, then |v| ≤ M < |g|
+          · have hv_le : |v| ≤ (M : ℝ) := by
+              have h1 : -(M : ℝ) ≤ v := le_max_right _ _
+              have h2 : v ≤ (M : ℝ) := max_le (min_le_right _ _) (by linarith : -(M : ℝ) ≤ (M : ℝ))
+              exact abs_le.mpr ⟨h1, h2⟩
+            linarith
+        exact this
+      calc |g (ω 0) - g_M M (ω 0)|
+          ≤ |g (ω 0)| + |g_M M (ω 0)| := abs_sub _ _
+        _ ≤ |g (ω 0)| + |g (ω 0)| := by linarith [hg_M_le]
+        _ = 2 * |g (ω 0)| := by ring
+    have h_point : ∀ᵐ ω ∂μ, Tendsto (fun M => |g (ω 0) - g_M M (ω 0)|) atTop (𝓝 0) := by
+      refine ae_of_all μ (fun ω => ?_)
+      have h_eq := h_trunc_conv (ω 0)
+      -- Eventually g_M M (ω 0) = g (ω 0), so |difference| = 0
+      refine Tendsto.congr' (h_eq.mono fun M hM => ?_) tendsto_const_nhds
+      simp [hM]
+    have h_int : Integrable (fun ω => 2 * |g (ω 0)|) μ := by
+      refine Integrable.const_mul ?_ 2
+      exact hg_int.norm
+    -- Apply dominated convergence theorem
+    have h_meas : ∀ M, AEStronglyMeasurable (fun ω => |g (ω 0) - g_M M (ω 0)|) μ := by
+      intro M
+      have h1 : Measurable (fun ω : ℕ → α => g (ω 0)) := hg_meas.comp (measurable_pi_apply 0)
+      have h2 : Measurable (fun ω : ℕ → α => g_M M (ω 0)) := (hg_M_meas M).comp (measurable_pi_apply 0)
+      exact (h1.sub h2).norm.aestronglyMeasurable
+    have h_dom' : ∀ M, (fun ω => ‖g (ω 0) - g_M M (ω 0)‖) ≤ᵐ[μ] (fun ω => 2 * ‖g (ω 0)‖) := by
+      intro M
+      filter_upwards [h_dom M] with ω h
+      simpa [Real.norm_eq_abs] using h
+    have h_point' : ∀ᵐ ω ∂μ, Tendsto (fun M => ‖g (ω 0) - g_M M (ω 0)‖) atTop (𝓝 0) := by
+      filter_upwards [h_point] with ω h
+      simpa [Real.norm_eq_abs] using h
+    have h_int' : Integrable (fun ω => 2 * ‖g (ω 0)‖) μ := by
+      simpa [Real.norm_eq_abs] using h_int
+    -- Apply dominated convergence theorem
+    sorry -- TODO: Fix DCT application - argument order/type issues
+
+  -- Step 6: CE L¹-continuity
+  -- For each M, CE preserves L¹ convergence: ‖CE[f] - CE[h]‖₁ ≤ ‖f - h‖₁
+  have h_ce_trunc_L1 : Tendsto (fun M =>
+      ∫ ω, |μ[(fun ω => g (ω 0)) | mSI] ω - μ[(fun ω => g_M M (ω 0)) | mSI] ω| ∂μ)
+      atTop (𝓝 0) := by
+    -- Use L¹-Lipschitz property of conditional expectation
+    have h_bound : ∀ M, (∫ ω, |μ[(fun ω => g (ω 0)) | mSI] ω - μ[(fun ω => g_M M (ω 0)) | mSI] ω| ∂μ)
+        ≤ ∫ ω, |g (ω 0) - g_M M (ω 0)| ∂μ := by
+      intro M
+      -- This follows from the L¹-Lipschitz property of conditional expectation
+      -- ‖CE[f] - CE[h]‖₁ ≤ ‖f - h‖₁
+      sorry -- Need L¹-Lipschitz lemma for CE
+    refine squeeze_zero (fun M => integral_nonneg (fun ω => abs_nonneg _)) h_bound ?_
+    exact h_trunc_L1
+
+  -- Step 7: ε/3 argument
+  -- Split |A_n - CE[g]| ≤ |A_n(g_M) - CE[g_M]| + |A_n(g) - A_n(g_M)| + |CE[g_M] - CE[g]|
+  refine Metric.tendsto_atTop.mpr (fun ε hε => ?_)
+  -- For ε > 0, choose M large enough so truncation error < ε/3
+  have h_third : 0 < ε / 3 := by linarith
+  obtain ⟨M, hM_trunc⟩ := Metric.tendsto_atTop.mp h_trunc_L1 (ε / 3) h_third
+  obtain ⟨M', hM'_ce⟩ := Metric.tendsto_atTop.mp h_ce_trunc_L1 (ε / 3) h_third
+  let M₀ : ℕ := max M M'
+  -- For this M₀, choose n large enough so bounded case convergence < ε/3
+  obtain ⟨N, hN_bdd⟩ := Metric.tendsto_atTop.mp (h_bdd M₀) (ε / 3) h_third
+  use N
+  intro n hn
+  -- Now split into three parts
+  sorry -- Complete the ε/3 triangle inequality argument
 
 /-- **Section 4 helper**: Pull L¹ convergence through conditional expectation.
 
