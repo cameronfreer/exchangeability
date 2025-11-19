@@ -1906,8 +1906,8 @@ lemma condExp_bounded_comp_eq_of_triple_law
 
   -- Sub-σ-algebra hypotheses
   -- The pullback σ-algebras are sub-σ-algebras of the ambient one
-  have h𝔾_le : 𝔾 ≤ _ := measurable_iff_comap_le.mp (hZ.prodMk hW)
-  have h𝔽_le : 𝔽 ≤ _ := measurable_iff_comap_le.mp hW
+  have h𝔾_le : 𝔾 ≤ (inferInstance : MeasurableSpace Ω) := measurable_iff_comap_le.mp (hZ.prodMk hW)
+  have h𝔽_le : 𝔽 ≤ (inferInstance : MeasurableSpace Ω) := measurable_iff_comap_le.mp hW
 
   -- σ-finiteness: trimmed measures are finite (hence σ-finite) for probability measures
   haveI : SigmaFinite (μ.trim h𝔾_le) := by infer_instance
