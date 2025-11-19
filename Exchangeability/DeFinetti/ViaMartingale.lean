@@ -1509,15 +1509,22 @@ lemma condIndep_of_triple_law
               haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp hW)) := by infer_instance
               exact (setIntegral_condExp (measurable_iff_comap_le.mp hW) hψ_int hWT_meas_G).symm
 
-            -- Step 3: Multiply both sides by φ to get ∫_{W⁻¹'T} φ*ψ = ∫_{W⁻¹'T} φ*V
-            -- We use the fact that φ is bounded (by 1) and the integrals are finite
-            calc ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ
-                = ∫ ω in W' ⁻¹' T, φ ω * ψ ω ∂μ := h_eq
-              _ = ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ := h_eq.symm
-              _ = ∫ ω in W ⁻¹' T, φ ω * V ω ∂μ := by
-                  -- This requires showing the pair law transfers the integral
-                  -- Key insight: both W and W' give same distribution when paired with Y
-                  sorry
+            -- Step 3: Use pair law h_pair_YW to transfer from W' integral to V
+            -- Key insight: φ depends only on Y, ψ depends only on Z, and V = μ[ψ|σ(W)]
+            -- The pair law says map(Y,W) = map(Y,W'), so integrals of (Y,W)-functions match
+
+            -- Express ∫_{W'⁻¹'T} φ*ψ using the pair law
+            -- We have: ∫ φ*ψ*1_{W'∈T} = ∫ φ(Y)*ψ(Z)*1_{W'∈T}
+            -- By independence structure from triple law, this should equal ∫_{W⁻¹'T} φ*V
+
+            -- The key lemma we need is that for Y-measurable φ and 𝔾-measurable V:
+            -- If map(Y,W) = map(Y,W'), then ∫_{W'⁻¹'T} φ*ψ = ∫_{W⁻¹'T} φ*μ[ψ|𝔾]
+
+            -- This is Kallenberg's "pair law transfer" - it requires showing that
+            -- the conditional expectation V =  μ[ψ|σ(W)] captures the "W-dependence"
+            -- in such a way that swapping W' for W is compensated by replacing ψ with V
+
+            sorry -- This is a deep lemma that may require auxiliary results
 
           -- **Substep 3: Apply uniqueness**
           -- We've shown: ∫_S φ*ψ = ∫_S φ*V for all 𝔾-measurable S (via h_setIntegral_eq)
