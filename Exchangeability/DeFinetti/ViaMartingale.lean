@@ -1124,6 +1124,25 @@ lemma integral_mul_condexp_adjoint_Linfty
     _   = ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ := h3
     _   = ∫ ω, μ[g | m] ω * ξ ω ∂μ := h4
 
+-- Utility lemmas for indicator-set integral conversion
+lemma indicator_comp_preimage_one
+  {Ω S : Type*} [MeasurableSpace S] {W : Ω → S} {T : Set S} :
+  (fun ω => Set.indicator T (fun _ : S => (1 : ℝ)) (W ω))
+  =
+  Set.indicator (W ⁻¹' T) (fun _ : Ω => (1 : ℝ)) := by
+  funext ω
+  by_cases h : W ω ∈ T <;> simp [Set.indicator_of_mem, Set.indicator_of_not_mem, h]
+
+lemma integral_mul_indicator_to_set {Ω : Type*} [MeasurableSpace Ω] (μ : Measure Ω)
+  {S : Set Ω} (hS : MeasurableSet S) (f : Ω → ℝ) :
+  ∫ ω, f ω * Set.indicator S (fun _ : Ω => (1 : ℝ)) ω ∂ μ
+  = ∫ ω in S, f ω ∂ μ := by
+  have : (fun ω => f ω * Set.indicator S (fun _ : Ω => (1 : ℝ)) ω)
+       = Set.indicator S (fun ω => f ω) := by
+    funext ω
+    by_cases h : ω ∈ S <;> simp [h, Set.indicator_of_mem, Set.indicator_of_not_mem]
+  simpa [this, integral_indicator, hS]
+
 lemma condIndep_of_triple_law
   {Ω α β γ : Type*}
   [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
@@ -1480,51 +1499,53 @@ lemma condIndep_of_triple_law
                     · simp only [φ, Set.indicator]; split_ifs <;> norm_num
                 _ = 1 := by norm_num
 
-            -- Use h_test_fn with the indicator function of T
-            -- Apply h_test_fn with h = T.indicator (fun _ => 1)
-            have h_test := h_test_fn (T.indicator (fun _ => (1:ℝ)))
-              (measurable_const.indicator hT_meas)
-              (by intro w; simp [Set.indicator]; split_ifs <;> norm_num)
+            -- **CE replacement: Prove ∫_{W⁻¹'T} φ*ψ = ∫_{W⁻¹'T} φ*V**
+            -- Using ℋ-level pull-out + tower property
+            --
+            -- Strategy:
+            -- 1. Pull out h = 𝟙_{W⁻¹'T} * φ at ℋ = σ(W,Y) level
+            -- 2. Apply tower property: μ[ψ|ℋ] = μ[μ[ψ|𝔾]|ℋ] = μ[V|ℋ]
+            -- 3. Use μ[V|ℋ] = V since V is 𝔾-measurable and 𝔾 ≤ ℋ
 
-            -- Simplify: (T.indicator 1) ∘ W = (W⁻¹'T).indicator 1
-            have h_comp : (fun ω => T.indicator (fun _ => (1:ℝ)) (W ω)) = (W ⁻¹' T).indicator (fun _ => (1:ℝ)) := by
-              ext ω; simp [Set.indicator, Set.mem_preimage]
-            have h_comp' : (fun ω => T.indicator (fun _ => (1:ℝ)) (W' ω)) = (W' ⁻¹' T).indicator (fun _ => (1:ℝ)) := by
-              ext ω; simp [Set.indicator, Set.mem_preimage]
+            haveI : SigmaFinite (μ.trim hG_le_m0) := by infer_instance
+            haveI : SigmaFinite (μ.trim hH_le_m0) := by infer_instance
 
-            -- Convert h_test to set integral form
-            have h_eq : ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ = ∫ ω in W' ⁻¹' T, φ ω * ψ ω ∂μ := by
-              rw [setIntegral_indicator hWT_meas, setIntegral_indicator (hW'.measurable_preimage hT_meas)]
-              simp only [one_mul]
-              rw [← h_comp, ← h_comp']
-              exact h_test
+            -- Step A: ∫_{W⁻¹'T} h*ψ = ∫_{W⁻¹'T} h*μ[ψ|ℋ]
+            -- Strategy: ∫ h*ψ = ∫ μ[h*ψ|ℋ] (setIntegral_condExp) = ∫ h*μ[ψ|ℋ] (pull-out)
+            have h_step_A : ∫ ω in W ⁻¹' T, h ω * ψ ω ∂μ = ∫ ω in W ⁻¹' T, h ω * μ[ψ | ℋ] ω ∂μ := by
+              have hInt : Integrable (h * ψ) μ :=
+                hψ_int.bdd_mul' (c := 1) h_meas_H.aestronglyMeasurable h_bdd
+              rw [← setIntegral_condExp hH_le_m0 hInt hWT_meas_H]
+              have : μ[h * ψ | ℋ] =ᵐ[μ] h * μ[ψ | ℋ] := by
+                exact condExp_mul_of_aestronglyMeasurable_left (μ := μ) (m := ℋ) h_meas_H hInt hψ_int
+              exact setIntegral_congr_ae hWT_meas this
 
-            -- Now complete the chain: ∫_{W⁻¹'T} φ*ψ = ∫_{W'⁻¹'T} φ*ψ = ∫_{W⁻¹'T} φ*V
+            -- Step B: ∫_{W⁻¹'T} h*μ[ψ|ℋ] = ∫_{W⁻¹'T} h*μ[V|ℋ] via tower property
+            have h_step_B : ∫ ω in W ⁻¹' T, h ω * μ[ψ | ℋ] ω ∂μ = ∫ ω in W ⁻¹' T, h ω * μ[V | ℋ] ω ∂μ := by
+              have : μ[ψ | ℋ] =ᵐ[μ] μ[V | ℋ] := by
+                calc μ[ψ | ℋ]
+                    =ᵐ[μ] μ[μ[ψ | 𝔾] | ℋ] := (condExp_condExp_of_le hG_le_H hH_le_m0).symm
+                  _ =ᵐ[μ] μ[V | ℋ] := by rfl
+              exact setIntegral_congr_ae hWT_meas (this.mono fun ω hω => by rw [hω])
 
-            -- Step 1: We have ∫_{W⁻¹'T} φ*ψ = ∫_{W'⁻¹'T} φ*ψ from h_eq
+            -- Step C: ∫_{W⁻¹'T} h*μ[V|ℋ] = ∫_{W⁻¹'T} h*V
+            have h_step_C : ∫ ω in W ⁻¹' T, h ω * μ[V | ℋ] ω ∂μ = ∫ ω in W ⁻¹' T, h ω * V ω ∂μ := by
+              have : μ[V | ℋ] =ᵐ[μ] V := by
+                apply condExp_of_aestronglyMeasurable' hG_le_H hH_le_m0 hV_meas
+                exact integrable_condExp
+              exact setIntegral_congr_ae hWT_meas (this.mono fun ω hω => by rw [hω])
 
-            -- Step 2: Use setIntegral_condExp to relate ∫_{W⁻¹'T} ψ to ∫_{W⁻¹'T} V
-            -- Since V = μ[ψ|𝔾] and W⁻¹'T is 𝔾-measurable, we have ∫_{W⁻¹'T} ψ = ∫_{W⁻¹'T} V
-            have h_ψ_V : ∫ ω in W ⁻¹' T, ψ ω ∂μ = ∫ ω in W ⁻¹' T, V ω ∂μ := by
-              haveI : SigmaFinite (μ.trim (measurable_iff_comap_le.mp hW)) := by infer_instance
-              exact (setIntegral_condExp (measurable_iff_comap_le.mp hW) hψ_int hWT_meas_G).symm
-
-            -- Step 3: Use pair law h_pair_YW to transfer from W' integral to V
-            -- Key insight: φ depends only on Y, ψ depends only on Z, and V = μ[ψ|σ(W)]
-            -- The pair law says map(Y,W) = map(Y,W'), so integrals of (Y,W)-functions match
-
-            -- Express ∫_{W'⁻¹'T} φ*ψ using the pair law
-            -- We have: ∫ φ*ψ*1_{W'∈T} = ∫ φ(Y)*ψ(Z)*1_{W'∈T}
-            -- By independence structure from triple law, this should equal ∫_{W⁻¹'T} φ*V
-
-            -- The key lemma we need is that for Y-measurable φ and 𝔾-measurable V:
-            -- If map(Y,W) = map(Y,W'), then ∫_{W'⁻¹'T} φ*ψ = ∫_{W⁻¹'T} φ*μ[ψ|𝔾]
-
-            -- This is Kallenberg's "pair law transfer" - it requires showing that
-            -- the conditional expectation V =  μ[ψ|σ(W)] captures the "W-dependence"
-            -- in such a way that swapping W' for W is compensated by replacing ψ with V
-
-            sorry -- This is a deep lemma that may require auxiliary results
+            -- Combine: expand h = 𝟙_{W⁻¹'T} * φ on W⁻¹'T
+            calc ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ
+                = ∫ ω in W ⁻¹' T, h ω * ψ ω ∂μ := by
+                  refine setIntegral_congr_fun hWT_meas fun ω hω => ?_
+                  simp only [h, Set.indicator_of_mem hω, one_mul]
+              _ = ∫ ω in W ⁻¹' T, h ω * μ[ψ | ℋ] ω ∂μ := h_step_A
+              _ = ∫ ω in W ⁻¹' T, h ω * μ[V | ℋ] ω ∂μ := h_step_B
+              _ = ∫ ω in W ⁻¹' T, h ω * V ω ∂μ := h_step_C
+              _ = ∫ ω in W ⁻¹' T, φ ω * V ω ∂μ := by
+                  refine setIntegral_congr_fun hWT_meas fun ω hω => ?_
+                  simp only [h, Set.indicator_of_mem hω, one_mul]
 
           -- **Substep 3: Apply uniqueness**
           -- We've shown: ∫_S φ*ψ = ∫_S φ*V for all 𝔾-measurable S (via h_setIntegral_eq)
