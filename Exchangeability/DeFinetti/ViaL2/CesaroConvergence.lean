@@ -1155,10 +1155,10 @@ private lemma cesaro_cauchy_rho_lt
     -- We need to show: ∑ k ∈ range n, Z k ω = ∑ i : Fin m, (if i.val < n then 1 else 0) * Z i.val ω
     have h_sum_n : ∑ k ∈ Finset.range n, Z k ω =
         ∑ i : Fin m, (if i.val < n then 1 else 0) * Z i.val ω := by
-      sorry  -- TODO: Convert sum over range n to indicator-weighted sum over Fin m
+      sorry  -- TODO: Use Finset.sum_bij to show range n ↔ {i : Fin m | i < n} via indicator
     have h_sum_n' : ∑ k ∈ Finset.range n', Z k ω =
         ∑ i : Fin m, (if i.val < n' then 1 else 0) * Z i.val ω := by
-      sorry  -- TODO: Convert sum over range n' to indicator-weighted sum over Fin m
+      sorry  -- TODO: Use Finset.sum_bij to show range n' ↔ {i : Fin m | i < n'} via indicator
     rw [h_sum_n, h_sum_n']
     -- Now simplify the indicator sums and relate to p, q, ξ
     sorry
