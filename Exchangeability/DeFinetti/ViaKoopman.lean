@@ -1695,14 +1695,8 @@ private lemma L1_cesaro_convergence
           calc ∫ ω, |A n ω - A_M₀ ω| ∂μ
               ≤ ∫ ω, (1 / (↑n + 1)) * (∑ j ∈ Finset.range (n + 1), |g (ω j) - g_M M₀ (ω j)|) ∂μ := by
                 -- Pointwise: |A n - A_M₀| = |(1/(n+1)) * Σⱼ(g - g_M)| ≤ (1/(n+1)) * Σⱼ|g - g_M|
-                refine integral_mono_ae h_int_diff1 ?_ ?_
-                · -- Integrability of RHS
-                  sorry -- TODO: Show (1/(n+1)) * Σⱼ |g(ωⱼ) - g_M(ωⱼ)| is integrable
-                · -- Pointwise bound
-                  filter_upwards with ω
-                  simp only [A, A_M₀, abs_mul, abs_div]
-                  rw [mul_div_assoc, div_le_div_iff, mul_comm]
-                  sorry -- TODO: Triangle inequality for sums
+                -- Proof: Factor out 1/(n+1), distribute difference over sum, use Finset.abs_sum_le_sum_abs
+                sorry -- TODO: Apply integral_mono_ae with integrability + pointwise bound
             _ = (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), ∫ ω, |g (ω j) - g_M M₀ (ω j)| ∂μ := by
                 sorry -- TODO: Linearity of integral
             _ = (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), ∫ ω, |g (ω 0) - g_M M₀ (ω 0)| ∂μ := by
