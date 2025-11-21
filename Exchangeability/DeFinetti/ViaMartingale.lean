@@ -1504,16 +1504,72 @@ lemma condIndep_of_triple_law
       -- And μ[φ*ψ|𝔾] will equal μ[φ*V|𝔾] a.e. (to be shown in substep 3)
       -- So the integrals are equal
 
-      -- For now, this is our h_setIntegral_eq - it follows from the fact that
-      -- ψ and V = μ[ψ|𝔾] have the same conditional expectation structure
-      -- The detailed proof would use the ℋ-level technique, but we can also
-      -- observe that this is true by the definition of conditional expectation:
-      -- ∫_S ψ = ∫_S μ[ψ|𝔾] for all 𝔾-measurable S
-      -- Therefore ∫_S φ*ψ = ∫_S φ*μ[ψ|𝔾] = ∫_S φ*V for all 𝔾-measurable S
-      -- (The detailed proof requires showing we can "commute" φ and the CE,
-      --  which is what the ℋ-level technique achieves)
+      -- Key idea: Use the ℋ-level technique
+      -- At ℋ = σ(W,Y), both h = indicator(W⁻¹'T) * φ and ψ/V are related via CE
+      -- We can show the integrals are equal by using the tower property
 
-      -- For now we use sorry to complete this proof
+      -- Strategy: Show ∫ h*ψ = ∫ h*V by working at the ℋ level
+      -- Since h = indicator(W⁻¹'T) * φ is ℋ-measurable and bounded,
+      -- we can use: ∫ h*ψ = ∫ h*μ[ψ|ℋ]  (by setIntegral_condExp at ℋ level)
+      --             ∫ h*V = ∫ h*μ[V|ℋ]  (by setIntegral_condExp at ℋ level)
+      -- And since V = μ[ψ|𝔾] with 𝔾 ≤ ℋ, tower property gives: μ[ψ|ℋ] =ᵐ μ[V|ℋ]
+      -- But we actually need: μ[V|ℋ] = V since V is 𝔾-measurable and 𝔾 ≤ ℋ
+      -- So μ[ψ|ℋ] =ᵐ V, which means ∫ h*ψ = ∫ h*V
+
+      -- Actually, let's use a more direct approach:
+      -- ∫_{W⁻¹'T} φ*ψ = ∫_{W⁻¹'T} φ*V follows from the definition of V as μ[ψ|𝔾]
+      -- and the fact that we can "factor out" φ from the set integral
+
+      -- Use dominated convergence or Fubini-style argument:
+      -- Both integrals can be written as double integrals over (W⁻¹'T ∩ Y⁻¹'A) × (Z⁻¹'B)
+      -- For ψ-integral: we integrate indicator functions
+      -- For V-integral: V is the CE of ψ given W, so it "averages" ψ along W-fibers
+
+      -- Simpler approach: use the property that for 𝔾-measurable test function g,
+      -- ∫ g*ψ = ∫ g*V  (this is the defining property of V = μ[ψ|𝔾])
+      -- But our test function is h = indicator(W⁻¹'T) * φ, which is NOT 𝔾-measurable
+      -- However, we can use Fubini to decompose:
+      -- ∫_{W⁻¹'T} φ*ψ = ∫_T (∫ φ(y)*ψ(z) dμ_{W=w}(y,z)) dλ(w)
+      -- where μ_{W=w} is the conditional measure given W=w
+
+      -- Actually, the cleanest approach: use the test function result h_test_fn
+      -- We have: ∫ φ*ψ*h(W) = ∫ φ*ψ*h(W') for all bounded measurable h
+      -- This implies that the measure (φ*ψ) ⊗ δ_W has certain invariance properties
+      -- which in turn implies ∫_{W⁻¹'T} φ*ψ has the right structure
+
+      -- For now, let's prove this directly using conditional expectation properties
+      -- The key is:setIntegral for V = μ[ψ|𝔾] satisfies ∫_S V = ∫_S ψ for 𝔾-measurable S
+      -- We need to extend this to ∫_S φ*V = ∫_S φ*ψ where φ is not 𝔾-measurable
+
+      -- Use indicator factorization:
+      -- φ*ψ = indicator(Y⁻¹'A) * indicator(Z⁻¹'B)
+      -- φ*V = indicator(Y⁻¹'A) * V
+      -- On W⁻¹'T, we integrate both
+
+      -- The key insight: by h_test_fn, for any bounded measurable h : γ → ℝ,
+      -- ∫ φ*ψ*h(W) = ∫ φ*ψ*h(W')
+      -- This means φ*ψ is "conditionally independent" of W in a sense
+      -- Taking h = indicator(T), we get: ∫_{W⁻¹'T} φ*ψ = ∫_{W'⁻¹'T} φ*ψ
+
+      -- But what we actually need is to relate ∫_{W⁻¹'T} φ*ψ to ∫_{W⁻¹'T} φ*V
+      -- Use the fact that V = μ[ψ|σ(W)] is W-measurable
+      -- So V(ω) depends only on W(ω), hence V ∘ W = V' where V': γ → [0,1]
+
+      -- Direct calculation using integrability and measurability:
+      -- Both sides are well-defined (integrable products on measurable sets)
+      -- They must be equal by the conditional expectation property
+
+      -- Actually, I think the simplest proof is:
+      -- Apply setIntegral_condExp_of_sigmaFinite twice and use tower property
+
+      -- First, observe that φ and indicator(W⁻¹'T) "commute" in a measure-theoretic sense
+      -- ∫_{W⁻¹'T} φ*ψ can be rewritten using conditional expectations
+
+      -- The proof follows from the Radon-Nikodym theorem and properties of CE
+      -- For probability measures, this is standard measure theory
+
+      -- TODO: This requires a detailed measure-theoretic argument
+      -- For now, accept that V = μ[ψ|𝔾] satisfies the required property
       sorry
 
     -- **Substep 3: Apply uniqueness**
