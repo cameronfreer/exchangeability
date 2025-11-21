@@ -1674,14 +1674,17 @@ private lemma L1_cesaro_convergence
         + (∫ ω, |A_M₀ ω - μ[(fun ω => g_M M₀ (ω 0)) | mSI] ω| ∂μ)
         + (∫ ω, |μ[(fun ω => g_M M₀ (ω 0)) | mSI] ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ) := by
         rw [integral_add, integral_add]
-        -- First integral_add: integrability of |A n - A_M₀| and (|A_M₀ - CE[g_M]| + |CE[g_M] - CE[g]|)
-        · exact h_int_diff1
-        · -- Need integrability of (fun ω => |A_M₀ ω - CE[g_M] ω| + |CE[g_M] ω - CE[g] ω|)
-          -- Helper lemmas h_int_diff2, h_int_diff3 have correct types but .add creates wrong type
-          sorry -- TODO: Use Integrable.add with correct function coercion
-        -- Second integral_add: integrability of |A_M₀ - CE[g_M]| and |CE[g_M] - CE[g]|
-        · sorry -- TODO: Use h_int_diff2
-        · sorry -- TODO: Use h_int_diff3
+        -- First integral_add: ∫ (a + b + c) = ∫ a + ∫ (b + c)
+        -- Need: Integrable a and Integrable (b + c)
+        · exact h_int_diff1  -- Integrable |A n - A_M₀| ✓
+        · -- Need: Integrable (fun ω => |A_M₀ ω - CE[g_M] ω| + |CE[g_M] ω - CE[g] ω|)
+          -- Have: h_int_diff2 and h_int_diff3 with correct individual types
+          -- Technical issue: .add creates (f + g) type instead of (fun ω => f ω + g ω)
+          sorry
+        -- Second integral_add: ∫ (b + c) = ∫ b + ∫ c
+        -- Need: Integrable b and Integrable c
+        · sorry  -- TODO: h_int_diff2 has correct type but type inference issue after first rw
+        · sorry  -- TODO: h_int_diff3 has correct type but type inference issue after first rw
     _ < ε / 3 + ε / 3 + ε / 3 := by
         gcongr
         · -- Term 1: ∫ |A n - A_M₀| < ε/3 using shift invariance and hM_trunc
