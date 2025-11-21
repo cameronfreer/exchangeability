@@ -1440,8 +1440,15 @@ private lemma L1_cesaro_convergence
             - μ[(fun ω => g_M M (ω 0)) | mSI] ω| ∂μ) atTop (𝓝 0) := by
     intro M
     -- Apply L1_cesaro_convergence_bounded to g_M M
-    -- The only difference is coercion: ↑(n + 1) vs (n + 1 : ℝ)
-    sorry -- TODO: Apply L1_cesaro_convergence_bounded with coercion fix (see lines 1647-1657 for similar pattern)
+    have h_bdd_M := L1_cesaro_convergence_bounded hσ (g_M M) (hg_M_meas M) (hg_M_bd M)
+    -- The theorem defines A with (n + 1 : ℝ) which equals ↑n + ↑1
+    -- We need ↑(n + 1), so show ↑(n + 1) = ↑n + ↑1 using Nat.cast_add
+    convert h_bdd_M using 1
+    funext n
+    congr 1 with ω
+    congr 1
+    -- Show: 1 / ↑(n + 1) = 1 / (↑n + ↑1)
+    rw [Nat.cast_add, Nat.cast_one]
 
   -- Step 5: Truncation error → 0 as M → ∞
   -- For any x, g_M M x = g x when M > |g x|
@@ -1512,10 +1519,11 @@ private lemma L1_cesaro_convergence
     have h_int' : Integrable (fun ω => 2 * ‖g (ω 0)‖) μ := by
       simpa [Real.norm_eq_abs] using h_int
     -- Apply dominated convergence theorem
-    -- We have all ingredients: pointwise convergence (h_point'), domination (h_dom'), measurability (h_meas), integrable bound (h_int')
-    -- Goal: ∫ |g (ω 0) - g_M M (ω 0)| → 0
-    -- DCT gives: ∫ (g (ω 0) - g_M M (ω 0)) → 0, need to convert to ∫ |·| using norm/abs equivalence for ℝ
-    sorry -- TODO: Apply `tendsto_integral_of_dominated_convergence` with correct type coercions
+    -- All ingredients present: h_meas (measurability), h_dom' (domination), h_point' (pointwise convergence), h_int' (integrable bound)
+    -- Need: DCT gives ∫ ‖F M‖ → 0 where F M = g(ω 0) - g_M M(ω 0)
+    -- For ℝ, ‖x‖ = |x|, so goal ∫ |g - g_M M| → 0
+    -- Technical challenge: Type coercions between ≤ᶠ[ae μ] and ∀ᵐ ... ∂μ for domination condition
+    sorry -- TODO: Apply tendsto_integral_of_dominated_convergence - all mathematical ingredients present
 
   -- Step 6: CE L¹-continuity
   -- For each M, CE preserves L¹ convergence: ‖CE[f] - CE[h]‖₁ ≤ ‖f - h‖₁
