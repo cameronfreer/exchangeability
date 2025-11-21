@@ -1571,22 +1571,36 @@ lemma condIndep_of_triple_law
 
       rw [lhs_eq, rhs_eq] at h_triple_T
 
-      -- But W' and W have the same distribution when restricted to 𝔾
-      -- So ∫_{W⁻¹'T} φ*ψ = ∫_{W'⁻¹'T} φ*ψ
-      -- Now expand φ*ψ = UV + Uψ₀ + Vφ₀ + φ₀ψ₀ on the LHS
-      -- and use the fact that U, V are W-measurable (hence constant on W⁻¹'T relative to W')
+      -- Strategy: Use common version lemma to show both integrals equal the same thing
+      -- Key insight: U and V have common Borel versions u, v that work for both W and W'
 
-      -- Actually, the simplest approach: W and W' are independent of (Y,Z) given the past
-      -- This means h_test_fn tells us the integral is invariant
-      -- But W⁻¹'T and W'⁻¹'T are disjoint (generically), so the integral must be 0
+      -- By the pair laws, we can apply the common version lemma
+      have ⟨u, hu_meas, _, hU_eq_u, _⟩ :
+          ∃ u : γ → ℝ, Measurable u ∧ (∀ w, ‖u w‖ ≤ 1) ∧
+            U =ᵐ[μ] u ∘ W ∧ μ[φ | MeasurableSpace.comap W' inferInstance] =ᵐ[μ] u ∘ W' := by
+        -- Apply common_version_condexp_bdd with the pair law for (Y,W) and (Y,W')
+        have hφ_comp_bdd : ∀ᵐ ω ∂μ, ‖φ ω‖ ≤ 1 := by
+          filter_upwards with ω
+          simp [φ, Set.indicator]; split_ifs <;> norm_num
+        exact common_version_condexp_bdd (C := 1) (by norm_num) hY hW hW'
+          (measurable_const.indicator hA) hφ_int hφ_comp_bdd h_pair_YW
 
-      -- Correct approach: Expand both sides using φ = U + φ₀, ψ = V + ψ₀
-      -- On LHS: ∫_{W⁻¹'T} (U+φ₀)(V+ψ₀) = ∫_{W⁻¹'T} UV + ∫_{W⁻¹'T} Uψ₀ + ∫_{W⁻¹'T} Vφ₀ + ∫_{W⁻¹'T} φ₀ψ₀
-      --       = ∫_{W⁻¹'T} UV + 0 + 0 + ∫_{W⁻¹'T} φ₀ψ₀  (by h_Uψ0_zero, h_Vφ0_zero)
-      -- On RHS: ∫_{W'⁻¹'T} (U+φ₀)(V+ψ₀)
-      --       But U, V depend only on W, not W', so this needs more care...
+      have ⟨v, hv_meas, _, hV_eq_v, _⟩ :
+          ∃ v : γ → ℝ, Measurable v ∧ (∀ w, ‖v w‖ ≤ 1) ∧
+            V =ᵐ[μ] v ∘ W ∧ μ[ψ | MeasurableSpace.comap W' inferInstance] =ᵐ[μ] v ∘ W' := by
+        have hψ_comp_bdd : ∀ᵐ ω ∂μ, ‖ψ ω‖ ≤ 1 := by
+          filter_upwards with ω
+          simp [ψ, Set.indicator]; split_ifs <;> norm_num
+        exact common_version_condexp_bdd (C := 1) (by norm_num) hZ hW hW'
+          (measurable_const.indicator hB) hψ_int hψ_comp_bdd h_pair_ZW
 
-      sorry  -- TODO: Complete triple law argument
+      -- Now both sides of h_triple_T can be expressed using u and v
+      -- LHS: ∫_{W⁻¹'T} φ*ψ = ∫_{W⁻¹'T} (u∘W)*(v∘W) + ∫_{W⁻¹'T} φ₀*ψ₀
+      -- RHS: ∫_{W'⁻¹'T} φ*ψ = ∫_{W'⁻¹'T} (u∘W')*(v∘W') + ∫_{W'⁻¹'T} φ₀'*ψ₀'
+      -- But the indicator functions relate the integration domains to u,v
+      -- This forces φ₀*ψ₀ term to vanish
+
+      sorry  -- Need to work out the details of this equality
 
     -- **Main result**: Implement h_setIntegral_eq using: φψ = UV + Uψ₀ + Vφ₀ + φ₀ψ₀
     have h_setIntegral_eq : ∀ (T : Set γ), MeasurableSet T →
