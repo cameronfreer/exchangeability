@@ -1698,11 +1698,32 @@ private lemma L1_cesaro_convergence
                 -- Proof: Factor out 1/(n+1), distribute difference over sum, use Finset.abs_sum_le_sum_abs
                 sorry -- TODO: Apply integral_mono_ae with integrability + pointwise bound
             _ = (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), ∫ ω, |g (ω j) - g_M M₀ (ω j)| ∂μ := by
-                sorry -- TODO: Linearity of integral
+                -- Pull out constant 1/(n+1), then swap integral and sum
+                rw [integral_mul_left, integral_finset_sum]
+                -- Need integrability of each |g(ωⱼ) - g_M(ωⱼ)|
+                intro j _
+                -- g(ωⱼ) integrable by shift-invariance, g_M bounded hence integrable
+                have h_int_gj : Integrable (fun ω => g (ω j)) μ := by
+                  have h_eq : (fun ω => g (ω j)) = (fun ω => g ((shift^[j] ω) 0)) := by
+                    funext ω; congr 1; exact (shift_iterate_apply_zero j ω).symm
+                  rw [h_eq]
+                  exact (hσ.iterate j).integrable_comp_of_integrable hg_int
+                have h_int_gMj : Integrable (fun ω => g_M M₀ (ω j)) μ := by
+                  obtain ⟨C, hC⟩ := hg_M_bd M₀
+                  refine Exchangeability.Probability.integrable_of_bounded ?_ ⟨C, fun ω => hC (ω j)⟩
+                  exact (hg_M_meas M₀).comp (measurable_pi_apply j)
+                exact (h_int_gj.sub h_int_gMj).abs
             _ = (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), ∫ ω, |g (ω 0) - g_M M₀ (ω 0)| ∂μ := by
-                sorry -- TODO: Shift invariance: all summands equal
+                -- Each integral equals the j=0 case by shift invariance
+                -- Proof: ωⱼ = (shift^[j] ω)₀ by shift_iterate_apply_zero
+                -- So ∫|g(ωⱼ) - g_M(ωⱼ)| = ∫|g((shift^[j] ω)₀) - g_M((shift^[j] ω)₀)|
+                -- By measure-preserving: ∫f(T ω) = ∫f(ω) for f = |g(·₀) - g_M(·₀)|
+                sorry -- TODO: Apply MeasurePreserving.integral_comp or lintegral_comp_rev
             _ = (1 / (↑n + 1)) * ((n + 1) * ∫ ω, |g (ω 0) - g_M M₀ (ω 0)| ∂μ) := by
-                sorry -- TODO: Sum of n+1 identical terms
+                -- Sum of n+1 identical terms: Σⱼ₌₀ⁿ c = (n+1) * c
+                congr 1
+                rw [Finset.sum_const, Finset.card_range]
+                ring
             _ = ∫ ω, |g (ω 0) - g_M M₀ (ω 0)| ∂μ := by field_simp
             _ < ε / 3 := h_bound
         · -- Term 2: ∫ |A_M₀ - CE[g_M M₀]| < ε/3 using hN_bdd directly
