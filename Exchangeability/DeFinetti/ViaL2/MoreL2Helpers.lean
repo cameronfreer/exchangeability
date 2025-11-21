@@ -152,15 +152,17 @@ private lemma L1_unique_of_two_limits
   -- The proof is standard but requires careful eLpNorm API usage
   -- Sketch: ‖f - g‖₁ ≤ ‖f - fn‖₁ + ‖fn - g‖₁ → 0 as n → ∞
   -- For any ε > 0:
-  -- 1. Choose N such that eLpNorm (fn N - f) 1 < ε/2 and eLpNorm (fn N - g) 1 < ε/2
-  -- 2. Triangle inequality: eLpNorm (f - g) 1 ≤ eLpNorm (f - fn N) 1 + eLpNorm (fn N - g) 1 < ε
-  -- 3. Since ε was arbitrary, eLpNorm (f - g) 1 = 0
-  -- 4. Apply eLpNorm_eq_zero_iff to get f - g =ᵐ 0, then sub_eq_zero to get f =ᵐ g
+  -- 1. Use Filter.eventuallyEq_iff_sub to convert goal to f - g =ᵐ 0
+  -- 2. Show eLpNorm (f - g) 1 μ = 0 via eLpNorm_eq_zero_iff
+  -- 3. Use triangle inequality with ENNReal.le_of_forall_pos_le_add
+  -- 4. Choose N where both eLpNorm (fn N - f) 1 μ < ε/2 and eLpNorm (fn N - g) 1 μ < ε/2
+  -- 5. Then eLpNorm (f - g) 1 ≤ eLpNorm (f - fn N) 1 + eLpNorm (fn N - g) 1 < ε
+  -- 6. Since this holds for all ε > 0, conclude eLpNorm (f - g) 1 = 0
   --
   -- The detailed implementation requires careful handling of:
-  -- - ENNReal arithmetic and division
+  -- - ENNReal arithmetic (coercion from NNReal, division)
   -- - eLpNorm_add_le with correct AEStronglyMeasurable hypotheses
-  -- - eLpNorm_sub_comm for commutativity
+  -- - eventually_atTop pattern matching
   -- - Type inference for ENNReal constants
 
 /-- **L¹ convergence under clipping:** If fₙ → f in L¹, then clip01∘fₙ → clip01∘f in L¹. -/
