@@ -1696,10 +1696,32 @@ private lemma L1_cesaro_convergence
               ≤ ∫ ω, (1 / (↑n + 1)) * (∑ j ∈ Finset.range (n + 1), |g (ω j) - g_M M₀ (ω j)|) ∂μ := by
                 -- Pointwise: |A n - A_M₀| = |(1/(n+1)) * Σⱼ(g - g_M)| ≤ (1/(n+1)) * Σⱼ|g - g_M|
                 -- Proof: Factor out 1/(n+1), distribute difference over sum, use Finset.abs_sum_le_sum_abs
-                sorry -- TODO: Apply integral_mono_ae with integrability + pointwise bound
+                refine integral_mono_ae ?_ ?_ ?_
+                · -- LHS integrable
+                  exact (h_int_A.sub h_int_AM).abs
+                · -- RHS integrable: constant times finite sum of integrable functions
+                  have h_sum_int : Integrable (fun ω => ∑ j ∈ Finset.range (n + 1), |g (ω j) - g_M M₀ (ω j)|) μ := by
+                    refine integrable_finset_sum _ (fun j _ => ?_)
+                    -- Each |g(ωⱼ) - g_M(ωⱼ)| is integrable
+                    have h_int_gj : Integrable (fun ω => g (ω j)) μ := by
+                      have h_eq : (fun ω => g (ω j)) = (fun ω => g ((shift^[j] ω) 0)) := by
+                        funext ω; congr 1; exact (shift_iterate_apply_zero j ω).symm
+                      rw [h_eq]
+                      exact (hσ.iterate j).integrable_comp_of_integrable hg_int
+                    have h_int_gMj : Integrable (fun ω => g_M M₀ (ω j)) μ := by
+                      obtain ⟨C, hC⟩ := hg_M_bd M₀
+                      refine Exchangeability.Probability.integrable_of_bounded ?_ ⟨C, fun ω => hC (ω j)⟩
+                      exact (hg_M_meas M₀).comp (measurable_pi_apply j)
+                    exact (h_int_gj.sub h_int_gMj).abs
+                  exact h_sum_int.const_mul (1 / ((n + 1) : ℝ))
+                · -- Pointwise inequality
+                  filter_upwards with ω
+                  simp only [A, A_M₀]
+                  rw [← mul_sub_left_distrib, ← Finset.sum_sub_distrib, abs_mul, abs_of_pos (by positivity : 0 < 1 / (↑n + 1 : ℝ))]
+                  exact mul_le_mul_of_nonneg_left (Finset.abs_sum_le_sum_abs _ _) (by positivity)
             _ = (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), ∫ ω, |g (ω j) - g_M M₀ (ω j)| ∂μ := by
                 -- Pull out constant 1/(n+1), then swap integral and sum
-                rw [integral_mul_left, integral_finset_sum]
+                rw [integral_const_mul, integral_finset_sum]
                 -- Need integrability of each |g(ωⱼ) - g_M(ωⱼ)|
                 intro j _
                 -- g(ωⱼ) integrable by shift-invariance, g_M bounded hence integrable
