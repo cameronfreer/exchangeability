@@ -1687,10 +1687,22 @@ private lemma L1_cesaro_convergence
           -- By shift invariance: ∫|g(ωⱼ) - g_M(ωⱼ)| = ∫|g(ω₀) - g_M(ω₀)| for all j
           -- So: ∫|A n - A_M₀| ≤ (1/(n+1)) * (n+1) * ∫|g(ω₀) - g_M(ω₀)| = ∫|g(ω₀) - g_M(ω₀)| < ε/3
           have h_M₀_ge : M₀ ≥ M := le_max_left M M'
-          have := hM_trunc M₀ h_M₀_ge
-          rw [Real.dist_eq, sub_zero] at this
-          -- The detailed shift-invariance proof is technical, leave as sorry for now
-          sorry -- TODO: Prove ∫|A n - A_M₀| ≤ ∫|g(ω₀) - g_M M₀(ω₀)| using shift invariance
+          have h_bound := hM_trunc M₀ h_M₀_ge
+          rw [Real.dist_eq, sub_zero] at h_bound
+          -- Simplify: |∫ f| = ∫ f when f ≥ 0
+          rw [abs_of_nonneg (integral_nonneg (fun ω => abs_nonneg _))] at h_bound
+          -- Strategy: Show ∫ |A n - A_M₀| ≤ ∫ |g(ω₀) - g_M M₀(ω₀)| using shift invariance
+          calc ∫ ω, |A n ω - A_M₀ ω| ∂μ
+              ≤ ∫ ω, (1 / (↑n + 1)) * (∑ j ∈ Finset.range (n + 1), |g (ω j) - g_M M₀ (ω j)|) ∂μ := by
+                sorry -- TODO: Pointwise bound + monotone integration
+            _ = (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), ∫ ω, |g (ω j) - g_M M₀ (ω j)| ∂μ := by
+                sorry -- TODO: Linearity of integral
+            _ = (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), ∫ ω, |g (ω 0) - g_M M₀ (ω 0)| ∂μ := by
+                sorry -- TODO: Shift invariance: all summands equal
+            _ = (1 / (↑n + 1)) * ((n + 1) * ∫ ω, |g (ω 0) - g_M M₀ (ω 0)| ∂μ) := by
+                sorry -- TODO: Sum of n+1 identical terms
+            _ = ∫ ω, |g (ω 0) - g_M M₀ (ω 0)| ∂μ := by field_simp
+            _ < ε / 3 := h_bound
         · -- Term 2: ∫ |A_M₀ - CE[g_M M₀]| < ε/3 using hN_bdd directly
           have := hN_bdd n hn
           rw [Real.dist_eq, sub_zero] at this
