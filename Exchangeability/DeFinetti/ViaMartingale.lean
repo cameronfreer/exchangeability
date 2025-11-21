@@ -1745,11 +1745,9 @@ lemma condExp_bounded_comp_eq_of_triple_law
   -- Inductive step: linearity of conditional expectation (condexp_add, condexp_smul)
   -- Limit step: dominated convergence (handled separately in Step 3)
 
-  -- Define σ-algebras that will be used throughout
-  set 𝔾 := MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance
-  set 𝔽 := MeasurableSpace.comap W inferInstance
-
-  have hφₙ_eq : ∀ n, μ[φₙ n ∘ Y | 𝔾] =ᵐ[μ] μ[φₙ n ∘ Y | 𝔽] := by
+  have hφₙ_eq : ∀ n,
+      μ[φₙ n ∘ Y | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance] =ᵐ[μ]
+      μ[φₙ n ∘ Y | MeasurableSpace.comap W inferInstance] := by
     intro n
     -- Decompose simple function as sum of scaled indicators and use linearity
 
@@ -1770,13 +1768,16 @@ lemma condExp_bounded_comp_eq_of_triple_law
       exact (φₙ n).measurableSet_fiber c
 
     -- LHS: Apply condExp to the decomposition
-    calc μ[(φₙ n) ∘ Y | 𝔾]
-        =ᵐ[μ] μ[fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) | 𝔾] := by
+    calc μ[(φₙ n) ∘ Y | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance]
+        =ᵐ[μ] μ[fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω)
+                | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance] := by
           apply condExp_congr_ae
           filter_upwards with ω
           rw [h_decomp]
-      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) | 𝔾] := by
-          -- Rewrite as: μ[∑ c, (fun ω => ...) | 𝔾] = ∑ c, μ[(fun ω => ...) | 𝔾]
+      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range,
+          μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω)
+            | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance] := by
+          -- Rewrite as: μ[∑ c, (fun ω => ...) | σ(Z,W)] = ∑ c, μ[(fun ω => ...) | σ(Z,W)]
           have hint : ∀ c ∈ (φₙ n).range, Integrable (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω)) μ := by
             intro c hc
             apply Integrable.const_mul
@@ -1787,55 +1788,75 @@ lemma condExp_bounded_comp_eq_of_triple_law
                     ∑ c ∈ (φₙ n).range, fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) := by
             ext ω; simp [Finset.sum_apply]
           rw [eq]
-          exact condExp_finset_sum hint 𝔾
-      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y | 𝔾] := by
+          exact condExp_finset_sum hint (MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance)
+      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range,
+          c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y
+                | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance] := by
           -- Apply condExp_smul to each summand
-          have he : ∀ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) | 𝔾] =ᵐ[μ]
-                     c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y | 𝔾] := by
+          have he : ∀ c ∈ (φₙ n).range,
+              μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω)
+                | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance] =ᵐ[μ]
+              c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y
+                    | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance] := by
             intro c _
             have eq : (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω)) =
                       c • (((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y) := by
               ext ω; simp [Function.comp_apply, smul_eq_mul]
             rw [eq]
-            exact condExp_smul c _ 𝔾
+            exact condExp_smul c _ (MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance)
           -- Combine ae equalities pointwise
           filter_upwards [(φₙ n).range.eventually_all.mpr he] with ω h
           simp only [Finset.sum_apply, Pi.smul_apply]
           refine Finset.sum_congr rfl fun c hc => ?_
           exact h c hc
-      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y | 𝔽] := by
+      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range,
+          c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y
+                | MeasurableSpace.comap W inferInstance] := by
           -- Apply base case condExp_eq_of_triple_law to each summand
           have he : ∀ c ∈ (φₙ n).range,
-                    μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y | 𝔾] =ᵐ[μ]
-                    μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y | 𝔽] := by
+              μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y
+                | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance] =ᵐ[μ]
+              μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y
+                | MeasurableSpace.comap W inferInstance] := by
             intro c hc
-            -- TODO: This should be `condExp_eq_of_triple_law Y Z W W' hY hZ hW hW' h_triple (h_meas c hc)`
-            -- but Lean 4 has a type class synthesis issue when 𝔾 and 𝔽 are in scope.
-            -- Error: "synthesized 𝔽, inferred inst✝⁴" for MeasurableSpace Ω
-            -- Workaround needed: either refactor to avoid local MeasurableSpace defs,
-            -- or prove this step separately outside this context.
-            sorry
+            -- Align notation with condExp_eq_of_triple_law (which is stated with Set.indicator)
+            change
+              μ[Set.indicator ((φₙ n) ⁻¹' {c}) (fun _ => (1 : ℝ)) ∘ Y
+                  | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance] =ᵐ[μ]
+              μ[Set.indicator ((φₙ n) ⁻¹' {c}) (fun _ => (1 : ℝ)) ∘ Y
+                  | MeasurableSpace.comap W inferInstance]
+            exact
+              condExp_eq_of_triple_law
+                (Y := Y) (Z := Z) (W := W) (W' := W')
+                (μ := μ)
+                hY hZ hW hW' h_triple
+                (h_meas c hc)
           filter_upwards [(φₙ n).range.eventually_all.mpr he] with ω h
           simp only [Finset.sum_apply, Pi.smul_apply]
           refine Finset.sum_congr rfl fun c hc => ?_
           congr 1
           exact h c hc
-      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range, μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) | 𝔽] := by
+      _ =ᵐ[μ] ∑ c ∈ (φₙ n).range,
+          μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω)
+            | MeasurableSpace.comap W inferInstance] := by
           -- Apply condExp_smul in reverse
           have he : ∀ c ∈ (φₙ n).range,
-                    c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y | 𝔽] =ᵐ[μ]
-                    μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) | 𝔽] := by
+              c • μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y
+                    | MeasurableSpace.comap W inferInstance] =ᵐ[μ]
+              μ[fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω)
+                | MeasurableSpace.comap W inferInstance] := by
             intro c _
             have eq : c • (((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y) =
                       (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω)) := by
               ext ω; simp [Function.comp_apply, smul_eq_mul]
             rw [← eq]
-            exact (condExp_smul c _ 𝔽).symm
+            exact (condExp_smul c _ (MeasurableSpace.comap W inferInstance)).symm
           filter_upwards [(φₙ n).range.eventually_all.mpr he] with ω h
           simp only [Finset.sum_apply]
           refine Finset.sum_congr rfl fun c hc => ?_
           exact h c hc
-      _ =ᵐ[μ] μ[fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) | 𝔽] := by
+      _ =ᵐ[μ] μ[fun ω => ∑ c ∈ (φₙ n).range, c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω)
+                | MeasurableSpace.comap W inferInstance] := by
           -- Apply condExp_finset_sum in reverse
           have hint : ∀ c ∈ (φₙ n).range, Integrable (fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω)) μ := by
             intro c hc
@@ -1846,8 +1867,8 @@ lemma condExp_bounded_comp_eq_of_triple_law
                     ∑ c ∈ (φₙ n).range, fun ω => c * ((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (Y ω) := by
             ext ω; simp [Finset.sum_apply]
           rw [eq]
-          exact (condExp_finset_sum hint 𝔽).symm
-      _ =ᵐ[μ] μ[(φₙ n) ∘ Y | 𝔽] := by
+          exact (condExp_finset_sum hint (MeasurableSpace.comap W inferInstance)).symm
+      _ =ᵐ[μ] μ[(φₙ n) ∘ Y | MeasurableSpace.comap W inferInstance] := by
           apply condExp_congr_ae
           filter_upwards with ω
           rw [h_decomp]
@@ -1906,7 +1927,9 @@ lemma condExp_bounded_comp_eq_of_triple_law
   -- we get μ[φ ∘ Y|𝔾] =ᵐ μ[φ ∘ Y|𝔽]
 
   -- Combine all the pointwise equalities into a single a.e. statement
-  have h_eq_all : ∀ᵐ ω ∂μ, ∀ n, (μ[φₙ n ∘ Y|𝔾]) ω = (μ[φₙ n ∘ Y|𝔽]) ω := by
+  have h_eq_all : ∀ᵐ ω ∂μ, ∀ n,
+      (μ[φₙ n ∘ Y | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance]) ω =
+      (μ[φₙ n ∘ Y | MeasurableSpace.comap W inferInstance]) ω := by
     rw [ae_all_iff]
     exact hφₙ_eq
 
@@ -1925,8 +1948,12 @@ lemma condExp_bounded_comp_eq_of_triple_law
 
   -- Sub-σ-algebra hypotheses
   -- The pullback σ-algebras are sub-σ-algebras of the ambient one
-  have h𝔾_le : 𝔾 ≤ (_ : MeasurableSpace Ω) := measurable_iff_comap_le.mp (hZ.prodMk hW)
-  have h𝔽_le : 𝔽 ≤ (_ : MeasurableSpace Ω) := measurable_iff_comap_le.mp hW
+  have h𝔾_le :
+      MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance ≤ (_ : MeasurableSpace Ω) :=
+    measurable_iff_comap_le.mp (hZ.prodMk hW)
+  have h𝔽_le :
+      MeasurableSpace.comap W inferInstance ≤ (_ : MeasurableSpace Ω) :=
+    measurable_iff_comap_le.mp hW
 
   -- σ-finiteness: trimmed measures are finite (hence σ-finite) for probability measures
   haveI : SigmaFinite (μ.trim h𝔾_le) := by infer_instance
@@ -1953,22 +1980,24 @@ lemma condExp_bounded_comp_eq_of_triple_law
     intro n
     ext1
     calc (condExpL1 h𝔾_le μ (φₙ n ∘ Y) : Ω → ℝ)
-        =ᵐ[μ] μ[φₙ n ∘ Y|𝔾] := (condExp_ae_eq_condExpL1 h𝔾_le (φₙ n ∘ Y)).symm
-      _ =ᵐ[μ] μ[φₙ n ∘ Y|𝔽] := hφₙ_eq n
-      _ =ᵐ[μ] (condExpL1 h𝔽_le μ (φₙ n ∘ Y) : Ω → ℝ) := condExp_ae_eq_condExpL1 h𝔽_le (φₙ n ∘ Y)
+        =ᵐ[μ] μ[φₙ n ∘ Y | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance] :=
+          (condExp_ae_eq_condExpL1 h𝔾_le (φₙ n ∘ Y)).symm
+      _ =ᵐ[μ] μ[φₙ n ∘ Y | MeasurableSpace.comap W inferInstance] :=
+          hφₙ_eq n
+      _ =ᵐ[μ] (condExpL1 h𝔽_le μ (φₙ n ∘ Y) : Ω → ℝ) :=
+          condExp_ae_eq_condExpL1 h𝔽_le (φₙ n ∘ Y)
 
   -- Two sequences converge in L¹ and are equal, so limits are equal
   have : condExpL1 h𝔾_le μ (φ ∘ Y) = condExpL1 h𝔽_le μ (φ ∘ Y) :=
     tendsto_nhds_unique_of_eventuallyEq h𝔾_conv h𝔽_conv (Eventually.of_forall h_eq_L1)
 
   -- Convert L¹ equality to a.e. equality
-  -- h1: μ[φ ∘ Y|𝔾] =ᵐ condExpL1 h𝔾_le μ (φ ∘ Y)
-  -- h2: μ[φ ∘ Y|𝔽] =ᵐ condExpL1 h𝔽_le μ (φ ∘ Y)
-  -- this: condExpL1 are equal, so coercions are a.e. equal
-  calc μ[φ ∘ Y|𝔾]
-      =ᵐ[μ] (condExpL1 h𝔾_le μ (φ ∘ Y) : Ω → ℝ) := condExp_ae_eq_condExpL1 h𝔾_le (φ ∘ Y)
+  calc μ[φ ∘ Y | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance]
+      =ᵐ[μ] (condExpL1 h𝔾_le μ (φ ∘ Y) : Ω → ℝ) :=
+        condExp_ae_eq_condExpL1 h𝔾_le (φ ∘ Y)
     _ =ᵐ[μ] (condExpL1 h𝔽_le μ (φ ∘ Y) : Ω → ℝ) := by rw [this]
-    _ =ᵐ[μ] μ[φ ∘ Y|𝔽] := (condExp_ae_eq_condExpL1 h𝔽_le (φ ∘ Y)).symm
+    _ =ᵐ[μ] μ[φ ∘ Y | MeasurableSpace.comap W inferInstance] :=
+        (condExp_ae_eq_condExpL1 h𝔽_le (φ ∘ Y)).symm
 
 end ConditionalIndependence
 
