@@ -1809,7 +1809,8 @@ lemma condExp_bounded_comp_eq_of_triple_law
                     μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y | 𝔾] =ᵐ[μ]
                     μ[((φₙ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) ∘ Y | 𝔽] := by
             intro c hc
-            exact condExp_eq_of_triple_law Y Z W W' hY hZ hW hW' h_triple (h_meas c hc)
+            exact @condExp_eq_of_triple_law Ω α β γ _ _ _ _ μ _ Y Z W W' hY hZ hW hW' h_triple
+              ((φₙ n) ⁻¹' {c}) (h_meas c hc)
           filter_upwards [(φₙ n).range.eventually_all.mpr he] with ω h
           simp only [Finset.sum_apply, Pi.smul_apply]
           refine Finset.sum_congr rfl fun c hc => ?_
