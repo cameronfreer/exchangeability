@@ -1173,6 +1173,31 @@ private lemma cesaro_cauchy_rho_lt
     -- - Finset.sum_bij: establishes bijection for sum conversion
     -- - Field arithmetic to show n * n' * (if i < n then 1/n else 0) = (if i < n then n' else 0)
     simp only [ξ, p, q]
+    -- After simp, the goal is:
+    -- ⊢ (↑n * m_mean + ∑ x ∈ Finset.range n, Z x ω) * ↑n' +
+    --   ↑n * (-(m_mean * ↑n') - ∑ x ∈ Finset.range n', Z x ω) =
+    --   ↑n * ↑n' * (∑ x, (if ↑x < n then (↑n)⁻¹ else 0) * Z (↑x) ω -
+    --               ∑ x, (if ↑x < n' then (↑n')⁻¹ else 0) * Z (↑x) ω)
+    --
+    -- TODO: Prove this algebraic identity. Strategy:
+    -- 1. Expand LHS: distribute multiplications and combine like terms
+    --    Should get: n*n'*m_mean - n*n'*m_mean + n' * ∑ Z_i (i<n) - n * ∑ Z_j (j<n')
+    --    = n' * ∑ Z_i (i<n) - n * ∑ Z_j (j<n')
+    -- 2. Expand RHS: distribute n * n' into the sums
+    --    n * n' * (∑ (if i<n then n⁻¹ else 0) * Z_i - ∑ (if j<n' then n'⁻¹ else 0) * Z_j)
+    --    = ∑ n * n' * (if i<n then n⁻¹ else 0) * Z_i - ∑ n * n' * (if j<n' then n'⁻¹ else 0) * Z_j
+    --    = ∑ (if i<n then n' else 0) * Z_i - ∑ (if j<n' then n else 0) * Z_j
+    --    (using n * n' * n⁻¹ = n' and n * n' * n'⁻¹ = n)
+    -- 3. Show both sides equal using Finset.sum_bij to convert between Fin m and Finset.range
+    --
+    -- Attempted tactics (all failed):
+    -- - ring: doesn't handle conditional sums
+    -- - ring_nf: leaves unsolved goal
+    -- - conv_rhs + split_ifs: syntax errors
+    -- - Finset.sum_ite: pattern matching failures
+    -- - Finset.sum_range rewrite: didn't transform goal as expected
+    --
+    -- Likely needed: custom lemma about sum bijection or manual calc chain
     sorry
 
   -- Step 4: Apply l2_contractability_bound
