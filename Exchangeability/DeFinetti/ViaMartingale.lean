@@ -1469,12 +1469,26 @@ lemma condIndep_of_triple_law
             exact integral_condExp (measurable_iff_comap_le.mp hW)
         _ = ∫ ω, S.indicator (fun _ => (1:ℝ)) ω * U ω * μ[ψ0 | 𝔾] ω ∂μ := by
             apply integral_congr_ae
-            -- Pull out 𝔾-measurable indicator and U
+            -- Pull out 𝔾-measurable indicator and U using the pull-out property
             have h_ind_meas : AEStronglyMeasurable[𝔾] (S.indicator fun _ => (1:ℝ)) μ := by
               exact (stronglyMeasurable_const.indicator hS_G).aestronglyMeasurable
             have hU_meas_G : AEStronglyMeasurable[𝔾] U μ :=
               stronglyMeasurable_condExp.aestronglyMeasurable
-            sorry  -- Need to apply pull-out property twice
+            -- First pull out the indicator
+            have step1 : μ[fun ω' => S.indicator (fun _ => (1:ℝ)) ω' * U ω' * ψ0 ω' | 𝔾]
+                =ᵐ[μ] S.indicator (fun _ => (1:ℝ)) * μ[fun ω' => U ω' * ψ0 ω' | 𝔾] := by
+              have hint : Integrable (fun ω' => U ω' * ψ0 ω') μ := hUψ0_int
+              exact condExp_mul_of_aestronglyMeasurable_left (μ := μ) (m := 𝔾) h_ind_meas hint
+                (hUψ0_int.aestronglyMeasurable)
+            -- Then pull out U
+            have step2 : μ[fun ω' => U ω' * ψ0 ω' | 𝔾] =ᵐ[μ] U * μ[ψ0 | 𝔾] := by
+              have : Integrable ψ0 μ := by rw [hψ0_def]; exact hψ_int.sub integrable_condExp
+              exact condExp_mul_of_aestronglyMeasurable_left (μ := μ) (m := 𝔾) hU_meas_G this
+                this.aestronglyMeasurable
+            -- Combine: μ[1_S * U * ψ₀ | 𝔾] = 1_S * U * μ[ψ₀|𝔾]
+            filter_upwards [step1, step2] with ω h1 h2
+            rw [h1, h2]
+            ring
         _ = 0 := by
             apply integral_eq_zero_of_ae
             filter_upwards [hψ0_ce] with ω hω
@@ -1485,14 +1499,94 @@ lemma condIndep_of_triple_law
     have h_Vφ0_zero : ∀ (S : Set Ω), MeasurableSet[𝔾] S →
         ∫ ω in S, V ω * φ0 ω ∂μ = 0 := by
       intro S hS_G
-      sorry  -- Symmetric to h_Uψ0_zero
+      -- Strategy: ∫_S V*φ₀ = ∫ 1_S * V * φ₀ = ∫ μ[1_S * V * φ₀|𝔾]
+      --                   = ∫ 1_S * V * μ[φ₀|𝔾] = 0 (by hφ0_ce)
+      calc ∫ ω in S, V ω * φ0 ω ∂μ
+          = ∫ ω, S.indicator (fun _ => (1:ℝ)) ω * V ω * φ0 ω ∂μ := by
+            rw [← integral_indicator]
+            · congr 1; ext ω; simp [Set.indicator]; ring
+            · exact (measurable_iff_comap_le.mp hW) _ hS_G
+        _ = ∫ ω, μ[fun ω' => S.indicator (fun _ => (1:ℝ)) ω' * V ω' * φ0 ω' | 𝔾] ω ∂μ := by
+            symm
+            exact integral_condExp (measurable_iff_comap_le.mp hW)
+        _ = ∫ ω, S.indicator (fun _ => (1:ℝ)) ω * V ω * μ[φ0 | 𝔾] ω ∂μ := by
+            apply integral_congr_ae
+            -- Pull out 𝔾-measurable indicator and V
+            have h_ind_meas : AEStronglyMeasurable[𝔾] (S.indicator fun _ => (1:ℝ)) μ := by
+              exact (stronglyMeasurable_const.indicator hS_G).aestronglyMeasurable
+            have hV_meas_G : AEStronglyMeasurable[𝔾] V μ :=
+              stronglyMeasurable_condExp.aestronglyMeasurable
+            -- First pull out the indicator
+            have step1 : μ[fun ω' => S.indicator (fun _ => (1:ℝ)) ω' * V ω' * φ0 ω' | 𝔾]
+                =ᵐ[μ] S.indicator (fun _ => (1:ℝ)) * μ[fun ω' => V ω' * φ0 ω' | 𝔾] := by
+              have hint : Integrable (fun ω' => V ω' * φ0 ω') μ := hφ0V_int
+              exact condExp_mul_of_aestronglyMeasurable_left (μ := μ) (m := 𝔾) h_ind_meas hint
+                hint.aestronglyMeasurable
+            -- Then pull out V
+            have step2 : μ[fun ω' => V ω' * φ0 ω' | 𝔾] =ᵐ[μ] V * μ[φ0 | 𝔾] := by
+              have : Integrable φ0 μ := by rw [hφ0_def]; exact hφ_int.sub integrable_condExp
+              exact condExp_mul_of_aestronglyMeasurable_left (μ := μ) (m := 𝔾) hV_meas_G this
+                this.aestronglyMeasurable
+            -- Combine: μ[1_S * V * φ₀ | 𝔾] = 1_S * V * μ[φ₀|𝔾]
+            filter_upwards [step1, step2] with ω h1 h2
+            rw [h1, h2]
+            ring
+        _ = 0 := by
+            apply integral_eq_zero_of_ae
+            filter_upwards [hφ0_ce] with ω hω
+            simp [hω]
 
     -- **Vanishing integral 3**: ∫_S φ₀*ψ₀ = 0 for all 𝔾-measurable S
     -- This is the hard one - uses triple law via h_test_fn
     have h_φ0ψ0_zero : ∀ (S : Set Ω), MeasurableSet[𝔾] S →
         ∫ ω in S, φ0 ω * ψ0 ω ∂μ = 0 := by
       intro S hS_G
-      sorry  -- TODO: Use triple law expansion
+      -- S is 𝔾-measurable, so S = W⁻¹'T for some measurable T
+      obtain ⟨T, hT_meas, rfl⟩ := hS_G
+      -- We need to show: ∫_{W⁻¹'T} φ₀*ψ₀ = 0
+      -- Strategy: Use h_test_fn with h = 1_T to get:
+      --   ∫ φ*ψ*1_T(W) = ∫ φ*ψ*1_T(W')
+      -- Expand φ = U + φ₀, ψ = V + ψ₀ on both sides.
+      -- Most terms cancel; what remains forces ∫ φ₀*ψ₀*1_T(W) = 0
+
+      -- Apply h_test_fn to the indicator of T
+      have h_triple_T : ∫ ω, φ ω * ψ ω * (T.indicator (fun _ => (1:ℝ)) (W ω)) ∂μ =
+                        ∫ ω, φ ω * ψ ω * (T.indicator (fun _ => (1:ℝ)) (W' ω)) ∂μ := by
+        apply h_test_fn
+        · exact measurable_const.indicator hT_meas
+        · intro w; simp [Set.indicator]; split_ifs <;> norm_num
+
+      -- Simplify: φ*ψ*1_T(W) is nonzero only when W ∈ T, i.e., on W⁻¹'T
+      have lhs_eq : ∫ ω, φ ω * ψ ω * (T.indicator (fun _ => (1:ℝ)) (W ω)) ∂μ =
+                    ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ := by
+        rw [← integral_indicator]
+        · congr 1; ext ω; simp [Set.indicator]; ring
+        · exact hW hT_meas
+
+      have rhs_eq : ∫ ω, φ ω * ψ ω * (T.indicator (fun _ => (1:ℝ)) (W' ω)) ∂μ =
+                    ∫ ω in W' ⁻¹' T, φ ω * ψ ω ∂μ := by
+        rw [← integral_indicator]
+        · congr 1; ext ω; simp [Set.indicator]; ring
+        · exact hW' hT_meas
+
+      rw [lhs_eq, rhs_eq] at h_triple_T
+
+      -- But W' and W have the same distribution when restricted to 𝔾
+      -- So ∫_{W⁻¹'T} φ*ψ = ∫_{W'⁻¹'T} φ*ψ
+      -- Now expand φ*ψ = UV + Uψ₀ + Vφ₀ + φ₀ψ₀ on the LHS
+      -- and use the fact that U, V are W-measurable (hence constant on W⁻¹'T relative to W')
+
+      -- Actually, the simplest approach: W and W' are independent of (Y,Z) given the past
+      -- This means h_test_fn tells us the integral is invariant
+      -- But W⁻¹'T and W'⁻¹'T are disjoint (generically), so the integral must be 0
+
+      -- Correct approach: Expand both sides using φ = U + φ₀, ψ = V + ψ₀
+      -- On LHS: ∫_{W⁻¹'T} (U+φ₀)(V+ψ₀) = ∫_{W⁻¹'T} UV + ∫_{W⁻¹'T} Uψ₀ + ∫_{W⁻¹'T} Vφ₀ + ∫_{W⁻¹'T} φ₀ψ₀
+      --       = ∫_{W⁻¹'T} UV + 0 + 0 + ∫_{W⁻¹'T} φ₀ψ₀  (by h_Uψ0_zero, h_Vφ0_zero)
+      -- On RHS: ∫_{W'⁻¹'T} (U+φ₀)(V+ψ₀)
+      --       But U, V depend only on W, not W', so this needs more care...
+
+      sorry  -- TODO: Complete triple law argument
 
     -- **Main result**: Implement h_setIntegral_eq using: φψ = UV + Uψ₀ + Vφ₀ + φ₀ψ₀
     have h_setIntegral_eq : ∀ (T : Set γ), MeasurableSet T →
@@ -1501,6 +1595,23 @@ lemma condIndep_of_triple_law
       -- W⁻¹'T is 𝔾-measurable
       have hWT_G : MeasurableSet[𝔾] (W ⁻¹' T) := ⟨T, hT_meas, rfl⟩
 
+      -- First prove integrability of centered terms once
+      have hUV_bdd : Integrable (U * V) μ := by
+        exact integrable_condExp.bdd_mul' integrable_condExp.aestronglyMeasurable
+          (ae_of_all _ (fun ω => by simp only [ψ, Set.indicator]; split_ifs <;> norm_num))
+
+      have hφ0V_int : Integrable (φ0 * V) μ := by
+        rw [hφ0_def]; simp only [sub_mul]
+        exact hφV_int.sub hUV_bdd
+
+      have hUψ0_int : Integrable (U * ψ0) μ := by
+        rw [hψ0_def]; simp only [mul_sub]
+        exact hUψ_int.sub hUV_bdd
+
+      have hφ0ψ0_int : Integrable (φ0 * ψ0) μ := by
+        rw [hφ0_def, hψ0_def]; simp only [sub_mul, mul_sub]
+        exact ((hφψ_int.sub hφV_int).sub hUψ_int).sub hUV_bdd
+
       -- Expand LHS using φ = U + φ₀, ψ = V + ψ₀
       have lhs_expand : ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ =
           ∫ ω in W ⁻¹' T, U ω * V ω ∂μ +
@@ -1508,14 +1619,30 @@ lemma condIndep_of_triple_law
           ∫ ω in W ⁻¹' T, φ0 ω * V ω ∂μ +
           ∫ ω in W ⁻¹' T, φ0 ω * ψ0 ω ∂μ := by
         rw [hφ0_def, hψ0_def]
-        sorry  -- Algebraic expansion and integral linearity
+        -- φ * ψ = (U + φ₀) * (V + ψ₀) = UV + Uψ₀ + φ₀V + φ₀ψ₀
+        simp only [sub_mul, mul_sub, sub_sub]
+        -- Expand into sum of integrals
+        rw [setIntegral_add, setIntegral_add, setIntegral_add]
+        · ring
+        -- Integrability goals (all follow from the integrability we just proved)
+        · exact hUV_bdd.integrableOn
+        · exact ((hUψ0_int.add hφ0V_int).add hφ0ψ0_int).integrableOn
+        · exact (hUV_bdd.add hUψ0_int).integrableOn
+        · exact (hφ0V_int.add hφ0ψ0_int).integrableOn
+        · exact ((hUV_bdd.add hUψ0_int).add hφ0V_int).integrableOn
+        · exact hφ0ψ0_int.integrableOn
 
       -- Expand RHS using φ = U + φ₀
       have rhs_expand : ∫ ω in W ⁻¹' T, φ ω * V ω ∂μ =
           ∫ ω in W ⁻¹' T, U ω * V ω ∂μ +
           ∫ ω in W ⁻¹' T, φ0 ω * V ω ∂μ := by
         rw [hφ0_def]
-        sorry  -- Algebraic expansion and integral linearity
+        -- φ * V = (U + φ₀) * V = UV + φ₀V
+        simp only [sub_mul]
+        rw [setIntegral_add]
+        · ring
+        · exact hUV_bdd.integrableOn
+        · exact hφ0V_int.integrableOn
 
       -- Apply vanishing integrals to show LHS = RHS
       rw [lhs_expand, rhs_expand]
