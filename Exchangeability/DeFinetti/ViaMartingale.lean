@@ -1647,18 +1647,17 @@ lemma condIndep_of_triple_law
               simp only [Set.indicator]
               split_ifs <;> ring
         _ = ∫ ω, (φ ω - U ω) * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ := by
-              congr 1; ext ω
-              rw [hφ0_def]
+              congrArg; funext ω; rw [hφ0_def]
         _ = ∫ ω, φ ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ -
             ∫ ω, U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ := by
               have hφF_int : Integrable (fun ω => φ ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω)) μ := by
                 apply hF_int.bdd_mul'
                 · exact hφ_int.aestronglyMeasurable
-                · filter_upwards with ω
-                  simp only [φ, hφ_def, Set.indicator]
-                  split_ifs with h
-                  · simp; exact zero_le_one
-                  · simp; exact zero_le_one
+                · apply ae_of_all
+                  intro ω
+                  -- φ is an indicator function, so ‖φ ω‖ ≤ 1
+                  simp only [φ, hφ_def, Set.indicator, norm_indicator_eq_indicator_norm]
+                  split_ifs <;> norm_num
               have hUF_int : Integrable (fun ω => U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω)) μ := by
                 apply hF_int.bdd_mul'
                 · exact integrable_condExp.aestronglyMeasurable
