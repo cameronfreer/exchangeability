@@ -97,9 +97,13 @@ theorem condExp_eq_of_joint_law_eq
   have h_law_swapped : μ.map (fun ω => (ζ ω, ξ ω)) = μ.map (fun ω => (η ω, ξ ω)) := by
     -- Both sides equal the swap of h_law
     have h1 : μ.map (fun ω => (ζ ω, ξ ω)) = (μ.map (fun ω => (ξ ω, ζ ω))).map Prod.swap := by
-      sorry  -- Standard Prod.swap rewriting
+      have : (fun ω => (ζ ω, ξ ω)) = Prod.swap ∘ (fun ω => (ξ ω, ζ ω)) := by
+        ext ω; simp [Prod.swap]
+      rw [this, Measure.map_map measurable_swap (hξ.prodMk hζ)]
     have h2 : μ.map (fun ω => (η ω, ξ ω)) = (μ.map (fun ω => (ξ ω, η ω))).map Prod.swap := by
-      sorry  -- Standard Prod.swap rewriting
+      have : (fun ω => (η ω, ξ ω)) = Prod.swap ∘ (fun ω => (ξ ω, η ω)) := by
+        ext ω; simp [Prod.swap]
+      rw [this, Measure.map_map measurable_swap (hξ.prodMk hη)]
     rw [h1, h2, h_law]
 
   -- Step 3: Use compProd representations
