@@ -249,19 +249,6 @@ axiom directing_measure_identification
   ∀ᵐ ω ∂μ, alphaFrom X hX_contract hX_meas hX_L2 f ω
              = ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)
 
-
-/-- **AXIOM A10 (Step 5 packaging):** packaged existence of a directing kernel
-with the pointwise identification for a given bounded measurable `f`. -/
-axiom alpha_is_conditional_expectation_packaged
-  {μ : Measure Ω} [IsProbabilityMeasure μ]
-  (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
-  (hX_meas : ∀ i, Measurable (X i))
-  (f : ℝ → ℝ) (hf_meas : Measurable f) (alpha : ℕ → Ω → ℝ) :
-  ∃ (nu : Ω → Measure ℝ),
-    (∀ ω, IsProbabilityMeasure (nu ω)) ∧
-    Measurable (fun ω => nu ω (Set.univ)) ∧
-    (∀ n, ∀ᵐ ω ∂μ, alpha n ω = ∫ x, f x ∂(nu ω))
-
 end Helpers
 
 /-- For each fixed t, ω ↦ ν(ω)((-∞,t]) is measurable.
@@ -367,20 +354,8 @@ lemma directing_measure_measurable
           -- directing_measure ω is a measure (StieltjesFunction.measure), so measure_compl applies
           -- Need IsFiniteMeasure instance - follows from IsProbabilityMeasure (once that's proved)
           haveI : IsFiniteMeasure (directing_measure X hX_contract hX_meas hX_L2 ω) := by
-            -- TODO: Apply IsProbabilityMeasure.toIsFiniteMeasure
-            --
-            -- PROOF: One-liner once directing_measure_isProbabilityMeasure is proved
-            --   exact ProbabilityMeasure.toIsFiniteMeasure
-            --   (or: infer_instance using directing_measure_isProbabilityMeasure ω)
-            --
-            -- DEPENDENCY CHAIN:
-            -- - directing_measure_isProbabilityMeasure (line ~324)
-            --   ↓ depends on
-            -- - cdf_from_alpha_limits (showing F(t) → 0 at -∞, F(t) → 1 at +∞)
-            --   ↓ uses
-            -- - alphaIic_tendsto_zero_at_bot (MainConvergence.lean:2602)
-            -- - alphaIic_tendsto_one_at_top (MainConvergence.lean:2665)
-            sorry
+            haveI := Helpers.directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+            infer_instance
           rw [measure_compl hs_meas (measure_ne_top _ s)]
         simp_rw [h_univ_s]
         -- ω ↦ ν(ω)(univ) is constant 1 (probability measure), so measurable
@@ -388,19 +363,8 @@ lemma directing_measure_measurable
         -- Their difference is measurable
         have h_univ_const : ∀ ω, directing_measure X hX_contract hX_meas hX_L2 ω Set.univ = 1 := by
           intro ω
-          -- TODO: Apply measure_univ for probability measures
-          --
-          -- PROOF: One-liner once directing_measure_isProbabilityMeasure is proved
-          --   haveI := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
-          --   exact measure_univ
-          --
-          -- DEPENDENCY: Same as line 372 above
-          -- - directing_measure_isProbabilityMeasure
-          --   ↓
-          -- - cdf_from_alpha_limits
-          --   ↓
-          -- - alphaIic limit lemmas in MainConvergence.lean
-          sorry
+          have hprob := Helpers.directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+          simpa using hprob.measure_univ
         simp_rw [h_univ_const]
         -- (fun ω => 1 - ν(ω)(s)) is measurable
         -- Constant 1 minus measurable function
