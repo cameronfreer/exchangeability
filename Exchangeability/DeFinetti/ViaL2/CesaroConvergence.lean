@@ -2276,7 +2276,40 @@ private lemma tail_measurability_of_blockAvg
     (α_f : Ω → ℝ) (hα_memLp : MemLp α_f 2 μ)
     (hα_limit : Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0)) :
     Measurable[TailSigma.tailSigma X] α_f := by
-  sorry -- TODO: Extract from lines 3545-3625
+  -- TODO: Prove tail-measurability of L² limit
+  --
+  -- PROOF STRATEGY:
+  -- 1. Show blockAvg f X m n is measurable w.r.t. σ(X_{m+1}, X_{m+2}, ...)
+  --    - This holds because blockAvg only depends on X_{m+1}, ..., X_{m+n}
+  --    - Use measurability propagation through finite sums and scalar multiplication
+  --
+  -- 2. For each fixed m, extract diagonal subsequence n(k) such that:
+  --    - blockAvg f X m (n k) → some limit β_m in L²
+  --    - β_m is measurable w.r.t. σ(X_{m+1}, X_{m+2}, ...)
+  --    - Use: L² convergent subsequence inherits measurability from approximants
+  --
+  -- 3. Show β_m = α_f a.e. for all m
+  --    - Both are L² limits of the same Cauchy sequence
+  --    - Use L² limit uniqueness
+  --
+  -- 4. Conclude α_f is tail-measurable
+  --    - α_f = β_m a.e. for all m
+  --    - Each β_m is σ(X_{>m})-measurable
+  --    - tail σ-algebra = ⋂_m σ(X_{>m})
+  --    - Therefore α_f ∈ ⋂_m σ(X_{>m}) = tail σ-algebra
+  --
+  -- REQUIRED LEMMAS:
+  -- - blockAvg_measurable_wrt_tail: blockAvg f X m n is σ(X_{>m})-measurable
+  -- - L2_limit_inherits_measurability: If f_n → f in L² and each f_n is m-measurable,
+  --   then f is m-measurable (up to a.e. modification)
+  -- - ae_eq_trans_measurability: If f =ᵐ g and g is m-measurable, then f is m-measurable
+  --
+  -- ALTERNATIVE APPROACH:
+  -- Use condExpL2 projection property directly:
+  -- - α_f is the L² projection onto L²(tail σ-algebra)
+  -- - Projections into closed subspaces inherit the subspace's measurability
+  -- - This may be more direct if mathlib has the infrastructure
+  sorry
 
 set_option maxHeartbeats 2000000
 
