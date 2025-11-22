@@ -1665,10 +1665,11 @@ lemma condIndep_of_triple_law
                 split_ifs <;> norm_num
               have hUF_int : Integrable (fun ω => U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω)) μ := by
                 refine hF_int.bdd_mul' integrable_condExp.aestronglyMeasurable ?_
-                filter_upwards with ω
+                filter_upwards [ae_bdd_condExp_of_ae_bdd (R := 1) (m := 𝔾) (show ∀ᵐ x ∂μ, |φ x| ≤ 1 from
+                  eventually_of_forall (by intro ω; simp [φ, hφ_def, Set.indicator]; split_ifs <;> norm_num))] with ω hω
                 -- U is the conditional expectation of φ (an indicator), so it's bounded by 1
-                simp only [hU_def, U]
-                sorry  -- TODO: Need lemma about norm of condExp of indicator
+                simp only [hU_def, U, Real.norm_eq_abs]
+                exact hω
               have : ∫ ω, (φ ω - U ω) * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ =
                      ∫ ω, φ ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) -
                           U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ := by
