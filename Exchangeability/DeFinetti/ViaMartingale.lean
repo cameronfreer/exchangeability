@@ -1647,25 +1647,21 @@ lemma condIndep_of_triple_law
               simp only [Set.indicator]
               split_ifs <;> ring
         _ = ∫ ω, (φ ω - U ω) * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ := by
-              congrArg; funext ω; rw [hφ0_def]
+              simp only [hφ0_def]
         _ = ∫ ω, φ ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ -
             ∫ ω, U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ := by
               have hφF_int : Integrable (fun ω => φ ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω)) μ := by
-                apply hF_int.bdd_mul'
-                · exact hφ_int.aestronglyMeasurable
-                · apply ae_of_all
-                  intro ω
-                  -- φ is an indicator function, so ‖φ ω‖ ≤ 1
-                  simp only [φ, hφ_def, Set.indicator, norm_indicator_eq_indicator_norm]
-                  split_ifs <;> norm_num
+                refine hF_int.bdd_mul' hφ_int.aestronglyMeasurable ?_
+                filter_upwards with ω
+                -- φ is an indicator function, so ‖φ ω‖ ≤ 1
+                simp only [φ, hφ_def, Set.indicator]
+                split_ifs <;> norm_num
               have hUF_int : Integrable (fun ω => U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω)) μ := by
-                apply hF_int.bdd_mul'
-                · exact integrable_condExp.aestronglyMeasurable
-                · apply ae_of_all
-                  intro ω
-                  -- U is the conditional expectation of φ (an indicator), so it's bounded by 1
-                  simp only [hU_def, U]
-                  sorry  -- TODO: Need lemma about norm of condExp of indicator
+                refine hF_int.bdd_mul' integrable_condExp.aestronglyMeasurable ?_
+                filter_upwards with ω
+                -- U is the conditional expectation of φ (an indicator), so it's bounded by 1
+                simp only [hU_def, U]
+                sorry  -- TODO: Need lemma about norm of condExp of indicator
               exact integral_sub hφF_int hUF_int
         _ = ∫ ω, μ[φ | ℋ] ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ -
             ∫ ω, U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ := by
