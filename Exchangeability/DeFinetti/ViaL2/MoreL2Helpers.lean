@@ -152,15 +152,17 @@ private lemma L1_unique_of_two_limits
   -- The proof is standard but requires careful eLpNorm API usage
   -- Sketch: ‖f - g‖₁ ≤ ‖f - fn‖₁ + ‖fn - g‖₁ → 0 as n → ∞
   -- For any ε > 0:
-  -- 1. Choose N such that eLpNorm (fn N - f) 1 < ε/2 and eLpNorm (fn N - g) 1 < ε/2
-  -- 2. Triangle inequality: eLpNorm (f - g) 1 ≤ eLpNorm (f - fn N) 1 + eLpNorm (fn N - g) 1 < ε
-  -- 3. Since ε was arbitrary, eLpNorm (f - g) 1 = 0
-  -- 4. Apply eLpNorm_eq_zero_iff to get f - g =ᵐ 0, then sub_eq_zero to get f =ᵐ g
+  -- 1. Use Filter.eventuallyEq_iff_sub to convert goal to f - g =ᵐ 0
+  -- 2. Show eLpNorm (f - g) 1 μ = 0 via eLpNorm_eq_zero_iff
+  -- 3. Use triangle inequality with ENNReal.le_of_forall_pos_le_add
+  -- 4. Choose N where both eLpNorm (fn N - f) 1 μ < ε/2 and eLpNorm (fn N - g) 1 μ < ε/2
+  -- 5. Then eLpNorm (f - g) 1 ≤ eLpNorm (f - fn N) 1 + eLpNorm (fn N - g) 1 < ε
+  -- 6. Since this holds for all ε > 0, conclude eLpNorm (f - g) 1 = 0
   --
   -- The detailed implementation requires careful handling of:
-  -- - ENNReal arithmetic and division
+  -- - ENNReal arithmetic (coercion from NNReal, division)
   -- - eLpNorm_add_le with correct AEStronglyMeasurable hypotheses
-  -- - eLpNorm_sub_comm for commutativity
+  -- - eventually_atTop pattern matching
   -- - Type inference for ENNReal constants
 
 /-- **L¹ convergence under clipping:** If fₙ → f in L¹, then clip01∘fₙ → clip01∘f in L¹. -/
@@ -498,24 +500,78 @@ lemma directing_measure_integral
         = ∫ x, (Set.Iic t).indicator (fun _ => (1 : ℝ)) x
             ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
     intro t
-    -- The integral of an indicator equals the measure of the set
-    -- ν(ω)(Iic t) = cdf_from_alpha ω t by Measure.ofCDF construction
-    -- alphaIic approximates cdf_from_alpha via the rational envelope
-    -- TODO: formalize a.e. equality:
-    -- 1) ∫ 1_{Iic t} dν(ω) = ν(ω)(Iic t) (integral of indicator)
-    -- 2) ν(ω)(Iic t) = cdf_from_alpha ω t (Measure.ofCDF property)
-    -- 3) alphaIic t ω ≈ cdf_from_alpha ω t (L¹ limit + density of rationals)
+    -- TODO: Prove alphaIic t ω = ∫ 1_{Iic t} dν(ω) a.e.
+    --
+    -- PROOF STRATEGY (3 steps):
+    --
+    -- STEP 1: Integral of indicator equals measure
+    -- For any measure ν and measurable set S:
+    --   ∫ 1_S dν = ν(S)
+    -- This is a fundamental property: MeasureTheory.integral_indicator_one
+    -- Applied here:
+    --   ∫ 1_{Iic t} d(directing_measure ω) = directing_measure ω (Iic t)
+    --
+    -- STEP 2: Directing measure value equals CDF
+    -- By construction of directing_measure via Measure.ofCDF:
+    --   directing_measure ω (Iic t) = cdf_from_alpha ω t
+    -- This follows from the definition of Measure.ofCDF applied to the
+    -- Stieltjes function cdf_from_alpha ω.
+    -- Required lemma: Measure.ofCDF_of_Iic or similar
+    --
+    -- STEP 3: alphaIic approximates cdf_from_alpha
+    -- By definition, alphaIic t ω is constructed as:
+    --   alphaIic t ω = inf { cdf_from_alpha ω q | q ∈ ℚ, q ≥ t }
+    -- For right-continuous CDFs (which cdf_from_alpha is), we have:
+    --   F(t) = inf { F(q) | q ∈ ℚ, q > t } = lim_{q↓t, q∈ℚ} F(q)
+    -- This gives alphaIic t ω = cdf_from_alpha ω t.
+    --
+    -- REQUIRED MATHLIB LEMMAS:
+    -- - MeasureTheory.integral_indicator_one: ∫ 1_S dν = ν(S)
+    -- - StieltjesFunction.measure_Iic: ν(Iic t) = F(t) for Stieltjes measure
+    -- - Filter.tendsto_atTop_ciInf: infimum over rationals equals limit
+    -- - Right-continuity property of CDFs
     sorry
 
-  -- Step 2: Define the good class of functions
-  -- C = {f bounded Borel | ∀ᵐ ω, α_f(ω) = ∫ f dν(ω)}
-  -- Show C contains indicators of half-lines (Step 1),
-  -- closed under linear combinations, and closed under monotone limits
-
-  -- Step 3: Apply monotone class theorem
-  -- TODO: Use mathlib's monotone class API or implement manually
-  -- Since C contains a π-system (indicators of half-lines) and is a monotone class,
-  -- C contains all bounded Borel functions
+  -- TODO: Complete monotone class argument
+  --
+  -- STEP 2: Define the good class C
+  -- C := {f : ℝ → ℝ bounded Borel | ∀ᵐ ω ∂μ, α_f(ω) = ∫ f dν(ω)}
+  -- where α_f is the L¹ limit of blockAvg f X m n.
+  --
+  -- STEP 3: Show C contains indicators of half-lines
+  -- From Step 1 (base case above), we have:
+  --   ∀ t, 1_{Iic t} ∈ C
+  -- These indicators form a π-system (closed under intersection):
+  --   Iic s ∩ Iic t = Iic (min s t)
+  -- This π-system generates the Borel σ-algebra on ℝ.
+  --
+  -- STEP 4: Show C is a vector space
+  -- Need to verify:
+  -- a) If f, g ∈ C, then f + g ∈ C
+  --    Uses linearity: ∫ (f+g) dν = ∫ f dν + ∫ g dν
+  --    And linearity of blockAvg and L¹ limits
+  -- b) If f ∈ C and c ∈ ℝ, then c·f ∈ C
+  --    Uses ∫ (c·f) dν = c · ∫ f dν
+  --
+  -- STEP 5: Show C is closed under bounded monotone convergence
+  -- If f_n ∈ C, |f_n| ≤ M, and f_n ↗ f (or f_n ↘ f), then f ∈ C.
+  -- This uses:
+  -- - Dominated/monotone convergence theorem for integrals: ∫ f_n dν → ∫ f dν
+  -- - Corresponding convergence for blockAvg using uniform bounds
+  -- - L¹ limit interchange: lim lim = lim (via diagonal argument)
+  --
+  -- STEP 6: Apply monotone class theorem
+  -- Mathlib has versions in MeasureTheory.Function.SimpleFunc or similar.
+  -- The theorem states: If C is a vector space containing a π-system P
+  -- and closed under bounded monotone limits, then C contains σ(P).
+  -- Since P = {indicators of half-lines} generates Borel(ℝ),
+  -- we get C = all bounded Borel functions.
+  --
+  -- REQUIRED MATHLIB LEMMAS:
+  -- - MeasureTheory.integral_add, integral_const_mul: integral linearity
+  -- - MeasureTheory.tendsto_integral_of_monotone_convergence
+  -- - IsPiSystem.of_measurableSet_indicators: half-lines form π-system
+  -- - MonotoneClass theorem (may need to prove variant or use existing API)
   sorry
 
 /-- The bridge property: E[∏ᵢ 𝟙_{Bᵢ}(X_{k(i)})] = E[∏ᵢ ν(·)(Bᵢ)].
@@ -541,28 +597,51 @@ lemma directing_measure_bridge
       -- Base case: empty product = 1
       simp [Finset.prod_empty]
   | succ m IH =>
-      -- Inductive step: separate the last factor
-      -- Strategy: Use tail-measurability and conditioning
-
-      -- Step 1: Reorder indices if needed so last k(m) is maximal
-      -- (Use exchangeability/contractability to reindex)
-      -- TODO: Construct permutation putting max at end
-      -- For now, assume WLOG that k is already ordered
-
-      -- Step 2: Separate last factor from product of first m factors
-      -- TODO: Define H = ∏_{i<m} 1_{B_i}(X_{k(i)}) as the "tail factor"
-
-      -- Step 3: Use directing_measure_integral for indicators
-      -- This gives: α_{1_B} = ν(·)(B) a.e. for each indicator
-      -- TODO: Apply to each B_i
-
-      -- Step 4: Use tail-measurability and tower property
-      -- The first m factors are measurable w.r.t. σ(X_j | j ≤ N) for N = max_{i<m} k(i)
-      -- The last factor X_{k(m)} is independent of this σ-field (by contractability)
-      -- Hence E[H · 1_B(X_{k(m)})] = E[H · ν(·)(B)] by conditional expectation
-      -- TODO: formalize tower property / conditional expectation argument
-
-      -- Step 5: Apply induction hypothesis to H
-      -- TODO: Use IH on the product of m factors
+      -- TODO: Complete bridge property inductive step
+      --
+      -- INDUCTIVE STEP STRATEGY (5 steps):
+      --
+      -- STEP 1: Reorder to make k(m) maximal
+      -- Let N = max_{i ≤ m} k(i), and assume k(m) = N (WLOG by contractability).
+      -- If not, use contractability to permute indices: since μ is contractable,
+      -- we can swap k(j) ↔ k(m) for any j without changing the distribution.
+      -- This requires:
+      -- - Identifying the maximum index
+      -- - Constructing an appropriate permutation σ with σ(m) giving max
+      -- - Applying contractability: μ ∘ X_σ⁻¹ = μ ∘ X
+      --
+      -- STEP 2: Factor the product
+      -- Write:
+      --   ∏_{i : Fin (m+1)} 1_{B_i}(X_{k(i)}) = H · 1_{B_m}(X_N)
+      -- where H := ∏_{i : Fin m} 1_{B_i}(X_{k(i)}) is the product of first m terms.
+      -- Similarly factor the directing measure product:
+      --   ∏_{i : Fin (m+1)} ν(·)(B_i) = (∏_{i : Fin m} ν(·)(B_i)) · ν(·)(B_m)
+      --
+      -- STEP 3: Use directing_measure_integral for the last factor
+      -- From directing_measure_integral applied to f = 1_{B_m}:
+      --   ∀ᵐ ω, α_{1_{B_m}}(ω) = ∫ 1_{B_m} d(ν(ω)) = ν(ω)(B_m)
+      -- where α_{1_{B_m}} is the L¹ limit of blockAvg (1_{B_m}) X n k.
+      -- By the L¹ convergence property, we can replace 1_{B_m}(X_N(ω))
+      -- with ν(ω)(B_m) in expectation (up to approximation).
+      --
+      -- STEP 4: Apply tower property (iterated conditioning)
+      -- H is measurable w.r.t. σ(X_j | j ≤ N-1) (the "past").
+      -- X_N is "future" relative to this σ-algebra.
+      -- By contractability/exchangeability:
+      --   E[H · 1_{B_m}(X_N)] = E[H · E[1_{B_m}(X_N) | σ(X_j, j ≤ N-1)]]
+      --                       = E[H · ν(·)(B_m)]
+      -- This uses the tower property of conditional expectation:
+      --   E[Y·Z | ℱ] = Y · E[Z | ℱ] when Y is ℱ-measurable
+      --
+      -- STEP 5: Apply induction hypothesis
+      -- By IH applied to the product of m terms:
+      --   ∫⁻ ω, H ω · ν(ω)(B_m) ∂μ = ∫⁻ ω, (∏_{i : Fin m} ν(ω)(B_i)) · ν(ω)(B_m) ∂μ
+      -- Combining Steps 2-5 gives the result.
+      --
+      -- REQUIRED MATHLIB LEMMAS:
+      -- - Finset.prod_bij: bijection between products (for reindexing)
+      -- - MeasureTheory.condExp_of_stronglyMeasurable: tower property
+      -- - ENNReal.lintegral_const_mul: factor out measurable functions
+      -- - Contractable.reindex: permutation invariance (may need to prove)
       sorry
 
