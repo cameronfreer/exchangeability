@@ -1519,11 +1519,28 @@ private lemma L1_cesaro_convergence
     have h_int' : Integrable (fun ω => 2 * ‖g (ω 0)‖) μ := by
       simpa [Real.norm_eq_abs] using h_int
     -- Apply dominated convergence theorem
-    -- All ingredients present: h_meas (measurability), h_dom' (domination), h_point' (pointwise convergence), h_int' (integrable bound)
-    -- Need: DCT gives ∫ ‖F M‖ → 0 where F M = g(ω 0) - g_M M(ω 0)
-    -- For ℝ, ‖x‖ = |x|, so goal ∫ |g - g_M M| → 0
-    -- Technical challenge: Type coercions between ≤ᶠ[ae μ] and ∀ᵐ ... ∂μ for domination condition
-    sorry -- TODO: Apply tendsto_integral_of_dominated_convergence - all mathematical ingredients present
+    -- Mathematical content: All ingredients for DCT are present:
+    --   1. F M ω := g (ω 0) - g_M M (ω 0) → 0 pointwise a.e. (h_point')
+    --   2. |F M ω| ≤ 2 * |g (ω 0)| a.e. (h_dom')
+    --   3. bound ω := 2 * ‖g (ω 0)‖ is integrable (h_int')
+    --   4. F M is strongly measurable for each M (h_meas)
+    --
+    -- Proof strategy:
+    --   Step 1: Apply MeasureTheory.tendsto_integral_of_dominated_convergence
+    --           to get: Tendsto (∫ ω, g (ω 0) - g_M M (ω 0) ∂μ) atTop (𝓝 0)
+    --   Step 2: Use triangle inequality and continuity of abs to conclude:
+    --           Tendsto (∫ ω, |g (ω 0) - g_M M (ω 0)| ∂μ) atTop (𝓝 0)
+    --
+    -- Technical blockers: Type mismatches when applying DCT:
+    --   - h_dom' has type `∀ M, ... ≤ᵐ[μ] ...` vs DCT expects `∀ M, ∀ᵐ ... ∂μ, ... ≤ ...`
+    --   - Nested norms: DCT gives ‖F M‖ but we have ‖|real value|‖ = |real value|
+    --   - squeeze_zero and continuous_abs composition type issues
+    --
+    -- Alternative approaches to try:
+    --   - Use tendsto_integral_filter_of_dominated_convergence with proper filter setup
+    --   - Extract helper lemma for "DCT + abs" pattern
+    --   - Use integral_abs_sub_le and dominated convergence separately
+    sorry
 
   -- Step 6: CE L¹-continuity
   -- For each M, CE preserves L¹ convergence: ‖CE[f] - CE[h]‖₁ ≤ ‖f - h‖₁
@@ -1737,10 +1754,32 @@ private lemma L1_cesaro_convergence
                 exact (h_int_gj.sub h_int_gMj).abs
             _ = (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), ∫ ω, |g (ω 0) - g_M M₀ (ω 0)| ∂μ := by
                 -- Each integral equals the j=0 case by shift invariance
-                -- Proof: ωⱼ = (shift^[j] ω)₀ by shift_iterate_apply_zero
-                -- So ∫|g(ωⱼ) - g_M(ωⱼ)| = ∫|g((shift^[j] ω)₀) - g_M((shift^[j] ω)₀)|
-                -- By measure-preserving: ∫f(T ω) = ∫f(ω) for f = |g(·₀) - g_M(·₀)|
-                sorry -- TODO: Apply MeasurePreserving.integral_comp or lintegral_comp_rev
+                --
+                -- Mathematical content: For each j, we have ωⱼ = (shift^[j] ω)₀ by shift_iterate_apply_zero.
+                -- So ∫|g(ωⱼ) - g_M(ωⱼ)| dμ = ∫|g((shift^[j] ω)₀) - g_M((shift^[j] ω)₀)| dμ
+                --
+                -- Since shift^[j] is measure-preserving (map (shift^[j]) μ = μ), we can apply integral_map:
+                -- ∫f(shift^[j] ω) dμ = ∫f(ω) d(map (shift^[j]) μ) = ∫f(ω) dμ
+                --
+                -- Thus all summands equal ∫|g(ω₀) - g_M(ω₀)| dμ
+                -- Proof strategy (found via Lean Finder):
+                -- - Use `Finset.sum_congr` to show each term in sum is equal
+                -- - Rewrite ω j as (shift^[j] ω) 0 using `shift_iterate_apply_zero`
+                -- - Apply `MeasureTheory.integral_map` with `(hσ.iterate j).measurable.aemeasurable`
+                -- - Use `(hσ.iterate j).map_eq` to show map (shift^[j]) μ = μ
+                -- - Provide AEStronglyMeasurable via integrability of |g(ω 0) - g_M(ω 0)|
+                --
+                -- Technical blocker: Multiple API issues with goal structure when applying integral_map.
+                -- The mathematical content is correct and the required lemmas exist in mathlib:
+                --   - MeasureTheory.integral_map: ∫ f y ∂(map φ μ) = ∫ f (φ x) ∂μ
+                --   - MeasurePreserving.map_eq: have as (hσ.iterate j).map_eq
+                --   - shift_iterate_apply_zero: (shift^[j] ω) 0 = ω j
+                -- Attempted proof encountered typeclass inference issues with AEStronglyMeasurable
+                -- and goal structure complexity with nested rewrites.
+                --
+                -- This should be provable with correct tactic application or a helper lemma for
+                -- shift-invariant integrals on measure-preserving transformations.
+                sorry
             _ = (1 / (↑n + 1)) * ((n + 1) * ∫ ω, |g (ω 0) - g_M M₀ (ω 0)| ∂μ) := by
                 -- Sum of n+1 identical terms: Σⱼ₌₀ⁿ c = (n+1) * c
                 congr 1
@@ -3111,12 +3150,18 @@ convert between `Lp ℝ 2 μ` and `MemLp _ 2 μ` representations. The `Lp.memℒ
 doesn't exist in the current mathlib API. -/
 private lemma condexpL2_ae_eq_condExp (f : Lp ℝ 2 μ) :
     (condexpL2 (μ := μ) f : Ω[α] → ℝ) =ᵐ[μ] μ[f | shiftInvariantSigma] := by
-  -- TODO: Requires navigating the lpMeas subtype coercion structure
-  -- The mathlib API for converting Lp → MemLp doesn't exist (Lp.memℒp is Unknown constant)
-  -- Available: MemLp.condExpL2_ae_eq_condExp : condExpL2 hm hf.toLp =ᵐ[μ] μ[f | m]
-  -- But we have f : Lp, not hf : MemLp, so cannot directly use this lemma
-  -- Need to find coercion lemmas for lpMeas.subtypeL or construct MemLp proof from Lp element
-  sorry
+  -- Get MemLp from Lp using Lp.memLp
+  have hf : MemLp (f : Ω[α] → ℝ) 2 μ := Lp.memLp f
+  -- Key: hf.toLp (↑↑f) = f in Lp (by Lp.toLp_coeFn)
+  have h_toLp_eq : hf.toLp (f : Ω[α] → ℝ) = f := Lp.toLp_coeFn f hf
+  -- condexpL2 unfolds to subtypeL.comp (condExpL2 ℝ ℝ shiftInvariantSigma_le)
+  unfold condexpL2
+  -- Rewrite f as hf.toLp ↑↑f using h_toLp_eq
+  conv_lhs => arg 1; rw [← h_toLp_eq]
+  -- Unfold the composition and coercion manually
+  show ↑↑((lpMeas ℝ ℝ shiftInvariantSigma 2 μ).subtypeL ((condExpL2 ℝ ℝ shiftInvariantSigma_le) (hf.toLp ↑↑f)))    =ᶠ[ae μ] μ[↑↑f|shiftInvariantSigma]
+  -- Now apply MemLp.condExpL2_ae_eq_condExp with explicit type parameters
+  exact hf.condExpL2_ae_eq_condExp (E := ℝ) (𝕜 := ℝ) shiftInvariantSigma_le
 
 -- Helper lemmas for Step 3a: a.e. equality through measure-preserving maps
 --
@@ -3217,16 +3262,15 @@ private lemma optionB_Step3b_L2_to_L1
     have h_meas :
         AEMeasurable
           (fun ω =>
-            (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
-            - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω) μ := by
+            birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 ω
+            - condexpL2 (μ := μ) fL2 ω) μ := by
       -- Both terms are Lp elements, so AEStronglyMeasurable when coerced
       apply AEMeasurable.sub
       · -- birkhoffAverage ... fL2 is an Lp element
-        -- When coerced to Ω → ℝ, it's AEStronglyMeasurable
-        -- TODO: Fix typeclass inference for Lp coercion (BorelSpace metavariable issue)
-        sorry
+        -- When coerced to Ω → ℝ, it's AEStronglyMeasurable → AEMeasurable
+        exact (Lp.aestronglyMeasurable _).aemeasurable
       · -- condexpL2 fL2 is an Lp element
-        sorry
+        exact (Lp.aestronglyMeasurable _).aemeasurable
 
     -- L¹ ≤ L² via Hölder/Cauchy-Schwarz on a probability space
     have h_le :
@@ -3234,37 +3278,68 @@ private lemma optionB_Step3b_L2_to_L1
                 - condexpL2 (μ := μ) fL2 ω)| ∂μ
           ≤ (eLpNorm
                (fun ω =>
-                  (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
-                  - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω)
+                  birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 ω
+                  - condexpL2 (μ := μ) fL2 ω)
                2 μ).toReal := by
       -- On a probability space, L¹ ≤ L² by eLpNorm monotonicity
       -- eLpNorm f 1 ≤ eLpNorm f 2, so ∫|f| ≤ ‖f‖₂
-      let f := fun ω => (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
-                       - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω
+      let f := fun ω => birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 ω
+                       - condexpL2 (μ := μ) fL2 ω
       have h_mono : eLpNorm f 1 μ ≤ eLpNorm f 2 μ := by
         apply eLpNorm_le_eLpNorm_of_exponent_le
         · norm_num
         · exact h_meas.aestronglyMeasurable
-      -- Convert to real via toReal and use integral formula for L¹
-      -- TODO: This calc chain has type issues due to the sorry in h_meas above
-      -- Leaving as sorry until h_meas is proven
-      sorry
+      -- Need MemLp f 2 μ and Integrable f μ to apply eLpNorm_one_le_eLpNorm_two_toReal
+      -- birkhoffAverage and condexpL2 are both Lp elements, so their difference is MemLp 2
+      have h_memLp2 : MemLp f 2 μ := by
+        -- birkhoffAverage ... fL2 - condexpL2 fL2 is an Lp element
+        -- So its coercion to a function is in MemLp
+        let diff_Lp := birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 - condexpL2 (μ := μ) fL2
+        have h_diff_memLp := Lp.memLp diff_Lp
+        -- f equals the coercion of diff_Lp a.e.
+        have h_f_eq : f =ᵐ[μ] diff_Lp := by
+          have h_coe := Lp.coeFn_sub (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2) (condexpL2 (μ := μ) fL2)
+          -- h_coe : ↑↑(a - b) =ᶠ ↑↑a - ↑↑b
+          -- We need: f =ᶠ ↑↑diff_Lp, where f = ↑↑(birkhoffAverage ...) - ↑↑(condexpL2 ...)
+          exact h_coe.symm
+        exact MemLp.ae_eq h_f_eq.symm h_diff_memLp
+      have h_integrable : Integrable f μ := by
+        -- MemLp f 2 μ → MemLp f 1 μ on probability space → Integrable f μ
+        have h_memLp1 : MemLp f 1 μ := by
+          refine ⟨h_memLp2.aestronglyMeasurable, ?_⟩
+          calc eLpNorm f 1 μ ≤ eLpNorm f 2 μ := by
+                apply eLpNorm_le_eLpNorm_of_exponent_le
+                · norm_num
+                · exact h_memLp2.aestronglyMeasurable
+             _ < ⊤ := h_memLp2.eLpNorm_lt_top
+        exact memLp_one_iff_integrable.mp h_memLp1
+      -- Apply eLpNorm_one_le_eLpNorm_two_toReal
+      exact eLpNorm_one_le_eLpNorm_two_toReal f h_integrable h_memLp2
 
     -- Relate eLpNorm to Lp norm via Lp.norm_def
     have h_toNorm :
         (eLpNorm
           (fun ω =>
-            (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 : Ω[α] → ℝ) ω
-            - (condexpL2 (μ := μ) fL2 : Ω[α] → ℝ) ω)
+            birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 ω
+            - condexpL2 (μ := μ) fL2 ω)
           2 μ).toReal
         = ‖birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2
              - condexpL2 (μ := μ) fL2‖ := by
-      -- The Lp norm is defined as (eLpNorm ↑f p μ).toReal where ↑f is the coercion to function
-      -- TODO: This depends on correct typing of the coercion, blocked by h_meas sorry above
-      -- Attempted: Lp.norm_def + eLpNorm_congr_ae + rfl, but rfl fails
-      -- Issue: `birkhoffAverage ... (fun f => ↑↑f) ...` ≠ `↑↑(birkhoffAverage ... (fun f => f) ...)`
-      -- These are not definitionally equal, only a.e. equal via BirkhoffAvgCLM infrastructure
-      sorry
+      -- The Lp norm of (a - b) equals (eLpNorm ↑↑(a-b) p μ).toReal
+      -- Use Lp.norm_def and Lp.coeFn_sub to connect them
+      let diff_Lp := birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 - condexpL2 (μ := μ) fL2
+      have h_norm : ‖diff_Lp‖ = (eLpNorm diff_Lp 2 μ).toReal := Lp.norm_def diff_Lp
+      have h_coe := Lp.coeFn_sub (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2) (condexpL2 (μ := μ) fL2)
+      -- h_coe : ↑↑(a - b) =ᶠ ↑↑a - ↑↑b
+      -- Rewrite using eLpNorm_congr_ae and then h_norm
+      calc (eLpNorm (fun ω => birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 ω
+                               - condexpL2 (μ := μ) fL2 ω) 2 μ).toReal
+          = (eLpNorm diff_Lp 2 μ).toReal := by
+              congr 1
+              apply eLpNorm_congr_ae
+              exact h_coe.symm
+        _ = ‖diff_Lp‖ := h_norm.symm
+        _ = ‖birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 - condexpL2 (μ := μ) fL2‖ := rfl
 
     -- conclude the inequality at this `n > 0`
     have h_eq_int :
@@ -3272,7 +3347,7 @@ private lemma optionB_Step3b_L2_to_L1
           = ∫ ω, |(birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 ω
                     - condexpL2 (μ := μ) fL2 ω)| ∂μ :=
       integral_congr_ae h_ae
-    exact (le_of_eq h_eq_int).trans (by simpa [h_toNorm] using h_le)
+    exact (le_of_eq h_eq_int).trans (h_le.trans (le_of_eq h_toNorm))
 
   -- Step 3: lower bound is always `0 ≤ ∫ |B n - Y|`
   have h_lower_ev :
