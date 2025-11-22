@@ -22,6 +22,7 @@ import Exchangeability.Tail.TailSigma
 import Exchangeability.DeFinetti.MartingaleHelpers
 import Exchangeability.DeFinetti.CommonEnding
 import Exchangeability.Probability.MeasureKernels
+import Exchangeability.Probability.ConditionalKernel
 
 /-!
 # de Finetti's Theorem via Reverse Martingales
@@ -4145,8 +4146,8 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
       -- the kernels must satisfy: condExpKernel(ζ)(ζ ω) = condExpKernel(η)(η ω) a.e.
 
       -- This is a deep result requiring kernel uniqueness from compProd.
-      -- For now, we note this is the mathematical content and defer the proof.
-      sorry  -- TODO: Requires compProd_eq_iff and kernel pullback lemmas
+      -- Apply the proved theorem from ConditionalKernel.lean
+      exact condExp_eq_of_joint_law_eq ζ η hζ hη ξ hξ B hB h_law.symm h_le ⟨φ, hφ, hηfac⟩
 
     -- Finish: prove ∫_S μ[f|η] = ∫_S f using the defining property of conditional expectation
     -- First, prove ∫_S μ[f|ζ] = ∫_S f (by definition of conditional expectation)

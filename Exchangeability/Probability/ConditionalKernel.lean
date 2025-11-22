@@ -76,7 +76,6 @@ Then conditional expectations w.r.t. σ(ζ) and σ(η) are equal.
 
 This is the key result needed for the ViaMartingale proof. -/
 theorem condExp_eq_of_joint_law_eq
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
     (ζ η : Ω → Γ) (hζ : Measurable ζ) (hη : Measurable η)
     (ξ : Ω → E) (hξ : Measurable ξ)
     (B : Set E) (hB : MeasurableSet B)
@@ -85,31 +84,30 @@ theorem condExp_eq_of_joint_law_eq
     (hηfac : ∃ φ : Γ → Γ, Measurable φ ∧ η = φ ∘ ζ) :
     μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ inferInstance]
       =ᵐ[μ] μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η inferInstance] := by
+  haveI : IsFiniteMeasure μ := inferInstance
   -- Step 1: Express conditional expectations as integrals against condDistrib
   have hCEζ : μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ inferInstance]
       =ᵐ[μ] (fun ω => ∫ e, (B.indicator (fun _ => (1 : ℝ)) e) ∂(condDistrib ξ ζ μ (ζ ω))) := by
-    apply condExp_indicator_eq_integral_condDistrib (μ := μ) ζ hζ ξ hξ B hB
+    apply condExp_indicator_eq_integral_condDistrib ζ hζ ξ hξ B hB
   have hCEη : μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η inferInstance]
       =ᵐ[μ] (fun ω => ∫ e, (B.indicator (fun _ => (1 : ℝ)) e) ∂(condDistrib ξ η μ (η ω))) := by
-    apply condExp_indicator_eq_integral_condDistrib (μ := μ) η hη ξ hξ B hB
+    apply condExp_indicator_eq_integral_condDistrib η hη ξ hξ B hB
 
   -- Step 2: Swap the pair order in h_law to get (ζ, ξ) = (η, ξ)
   have h_law_swapped : μ.map (fun ω => (ζ ω, ξ ω)) = μ.map (fun ω => (η ω, ξ ω)) := by
-    -- Both sides equal the swap of h_law
-    have h1 : μ.map (fun ω => (ζ ω, ξ ω)) = (μ.map (fun ω => (ξ ω, ζ ω))).map Prod.swap := by
-      have : (fun ω => (ζ ω, ξ ω)) = Prod.swap ∘ (fun ω => (ξ ω, ζ ω)) := by
-        ext ω; simp [Prod.swap]
-      rw [this, Measure.map_map measurable_swap (hξ.prodMk hζ)]
-    have h2 : μ.map (fun ω => (η ω, ξ ω)) = (μ.map (fun ω => (ξ ω, η ω))).map Prod.swap := by
-      have : (fun ω => (η ω, ξ ω)) = Prod.swap ∘ (fun ω => (ξ ω, η ω)) := by
-        ext ω; simp [Prod.swap]
-      rw [this, Measure.map_map measurable_swap (hξ.prodMk hη)]
-    rw [h1, h2, h_law]
+    have h_prod_comm_ζ : μ.map (fun ω => (ζ ω, ξ ω)) = (μ.map (fun ω => (ξ ω, ζ ω))).map Prod.swap := by
+      rw [Measure.map_map measurable_swap (hξ.prodMk hζ)]
+      rfl
+    have h_prod_comm_η : μ.map (fun ω => (η ω, ξ ω)) = (μ.map (fun ω => (ξ ω, η ω))).map Prod.swap := by
+      rw [Measure.map_map measurable_swap (hξ.prodMk hη)]
+      rfl
+    rw [h_prod_comm_ζ, h_prod_comm_η, h_law]
 
   -- Step 3: Use compProd representations
-  haveI : IsFiniteMeasure μ := inferInstance
-  have hζ_compProd := compProd_map_condDistrib (μ := μ) hξ.aemeasurable (X := ζ) (Y := ξ)
-  have hη_compProd := compProd_map_condDistrib (μ := μ) hξ.aemeasurable (X := η) (Y := ξ)
+  have hζ_compProd : (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ) = μ.map (fun ω => (ζ ω, ξ ω)) := by
+    exact compProd_map_condDistrib hξ.aemeasurable
+  have hη_compProd : (μ.map η) ⊗ₘ (condDistrib ξ η μ) = μ.map (fun ω => (η ω, ξ ω)) := by
+    exact compProd_map_condDistrib hξ.aemeasurable
 
   -- Step 4: Get marginal equality
   have h_marg_eq : μ.map ζ = μ.map η := by
@@ -134,9 +132,8 @@ theorem condExp_eq_of_joint_law_eq
       =ᵐ[μ] (fun ω => ∫ e, B.indicator (fun _ => (1 : ℝ)) e ∂(condDistrib ξ η μ (ζ ω))) := by
     -- Use the fact that kernel a.e. equality under μ.map ζ implies pointwise a.e. under μ
     have : ∀ᵐ z ∂(μ.map ζ), condDistrib ξ ζ μ z = condDistrib ξ η μ z := h_kernel_eq
-    have : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (ζ ω) := by
-      refine Measure.ae_of_ae_map hζ ?_
-      exact this
+    have : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (ζ ω) :=
+      ae_of_ae_map hζ.aemeasurable this
     filter_upwards [this] with ω hω
     rw [hω]
 
@@ -149,6 +146,7 @@ theorem condExp_eq_of_joint_law_eq
   have h_integral_eq_ηζ : (fun ω => ∫ e, B.indicator (fun _ => (1 : ℝ)) e ∂(condDistrib ξ η μ (ζ ω)))
       =ᵐ[μ] (fun ω => ∫ e, B.indicator (fun _ => (1 : ℝ)) e ∂(condDistrib ξ η μ (η ω))) := by
     have : ∀ ω, η ω = φ (ζ ω) := fun ω => congr_fun hηfac ω
+    filter_upwards with ω
     simp only [this]
 
   -- Step 9: Chain all the equalities together
