@@ -1623,11 +1623,16 @@ lemma condIndep_of_triple_law
         hψ0_ℋ.mul hindic_ℋ
 
       have hF_int : Integrable (fun ω => ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) μ := by
-        apply Integrable.bdd_mul'
-        · exact hψ0_int
+        -- bdd_mul' expects: bounded × integrable, so rewrite as indicator * ψ0
+        have : (fun ω => ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) =
+               (fun ω => (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω * ψ0 ω) := by
+          ext ω; ring
+        rw [this]
+        refine Integrable.bdd_mul' (c := 1) hψ0_int ?_ ?_
         · exact (stronglyMeasurable_const.indicator (hW hT_meas)).aestronglyMeasurable
         · filter_upwards with ω
-          simp [Set.indicator]; split_ifs <;> norm_num
+          simp only [Set.indicator]
+          split_ifs <;> norm_num
 
       -- The key calculation: prove ∫ φ₀ * F = 0 using integral manipulation
       -- Strategy: ∫ φ₀ * F = ∫ (φ - U) * F = ∫ φ * F - ∫ U * F
@@ -1639,34 +1644,60 @@ lemma condIndep_of_triple_law
       calc ∫ ω in W ⁻¹' T, φ0 ω * ψ0 ω ∂μ
           = ∫ ω, φ0 ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ := by
               rw [← integral_indicator (hW hT_meas)]
-              congr 1; ext ω; simp [Set.indicator]; ring
+              congr 1; ext ω
+              simp only [Set.indicator]
+              split_ifs <;> ring
         _ = ∫ ω, (φ ω - U ω) * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ := by
+              congr 1; ext ω
               rw [hφ0_def]
         _ = ∫ ω, φ ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ -
             ∫ ω, U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ := by
-              rw [integral_sub]
-              · congr 1; ext ω; ring
-              · exact hφ_int.bdd_mul' hF_ℋ_meas.aestronglyMeasurable (by
-                  filter_upwards with ω; simp [Set.indicator]; split_ifs <;> norm_num)
-              · exact integrable_condExp.bdd_mul' hF_ℋ_meas.aestronglyMeasurable (by
-                  filter_upwards with ω; simp [Set.indicator]; split_ifs <;> norm_num)
+              have hφF_int : Integrable (fun ω => φ ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω)) μ := by
+                have : (fun ω => φ ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω)) =
+                       (fun ω => φ ω * ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) := by ext ω; ring
+                rw [this]
+                apply hφ_int.bdd_mul'
+                · exact (hψ0_int.aestronglyMeasurable.mul (stronglyMeasurable_const.indicator (hW hT_meas)).aestronglyMeasurable)
+                · filter_upwards with ω
+                  simp only [Set.indicator]
+                  split_ifs <;> norm_num
+              have hUF_int : Integrable (fun ω => U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω)) μ := by
+                have : (fun ω => U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω)) =
+                       (fun ω => U ω * ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) := by ext ω; ring
+                rw [this]
+                apply integrable_condExp.bdd_mul'
+                · exact (hψ0_int.aestronglyMeasurable.mul (stronglyMeasurable_const.indicator (hW hT_meas)).aestronglyMeasurable)
+                · filter_upwards with ω
+                  simp only [Set.indicator]
+                  split_ifs <;> norm_num
+              rw [integral_sub hφF_int hUF_int]
+              congr 1; ext ω; ring
         _ = ∫ ω, μ[φ | ℋ] ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ -
             ∫ ω, U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ := by
               congr 1
               -- Use the defining property: ∫ φ * g = ∫ μ[φ|ℋ] * g when g is ℋ-measurable
               symm
+              have hφF_int : Integrable (fun ω => φ ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω)) μ := by
+                have : (fun ω => φ ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω)) =
+                       (fun ω => φ ω * ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) := by ext ω; ring
+                rw [this]
+                apply hφ_int.bdd_mul'
+                · exact (hψ0_int.aestronglyMeasurable.mul (stronglyMeasurable_const.indicator (hW hT_meas)).aestronglyMeasurable)
+                · filter_upwards with ω
+                  simp only [Set.indicator]
+                  split_ifs <;> norm_num
               calc ∫ ω, μ[φ | ℋ] ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ
                   = ∫ ω, μ[fun ω' => φ ω' * (ψ0 ω' * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω') | ℋ] ω ∂μ := by
                       symm
-                      exact integral_condExp hℋ_le
+                      apply integral_condExp hℋ_le hφF_int
                 _ = ∫ ω, μ[φ | ℋ] ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ := by
                       refine integral_congr_ae ?_
-                      have h_pull := condExp_mul_of_aestronglyMeasurable_right (μ := μ) (m := ℋ) (hm := hℋ_le)
-                        hF_ℋ_meas
-                        (hφ_int.bdd_mul' hF_ℋ_meas.aestronglyMeasurable (by
-                          filter_upwards with ω; simp [Set.indicator]; split_ifs <;> norm_num))
-                        hφ_int
+                      have h_pull := condExp_mul_of_aestronglyMeasurable_right hF_ℋ_meas hφF_int hφ_int
                       filter_upwards [h_pull] with ω hω
+                      have : (fun ω' => φ ω' * (ψ0 ω' * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω')) =
+                             (fun ω' => φ ω' * ((fun ω'' => ψ0 ω'' * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω'') ω')) := by
+                        ext; ring
+                      simp only [this] at hω
                       exact hω
         _ = ∫ ω, U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ -
             ∫ ω, U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ := by
