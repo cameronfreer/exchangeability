@@ -1540,6 +1540,12 @@ private lemma L1_cesaro_convergence
     --   - Use tendsto_integral_filter_of_dominated_convergence with proper filter setup
     --   - Extract helper lemma for "DCT + abs" pattern
     --   - Use integral_abs_sub_le and dominated convergence separately
+    -- Apply dominated convergence theorem with f = 0
+    -- Technical blocker: Type conversion between ‖·‖ and |·| for ℝ
+    -- The hypotheses h_dom' and h_point' use ‖·‖ (norm), but we need them
+    -- with the specific F = fun M ω => |g (ω 0) - g_M M (ω 0)|
+    -- While Real.norm_eq_abs should handle this, the function type inference
+    -- in tendsto_integral_of_dominated_convergence is complex
     sorry
 
   -- Step 6: CE L¹-continuity
@@ -1779,6 +1785,27 @@ private lemma L1_cesaro_convergence
                 --
                 -- This should be provable with correct tactic application or a helper lemma for
                 -- shift-invariant integrals on measure-preserving transformations.
+                congr 1
+                refine Finset.sum_congr rfl fun j _hj => ?_
+                -- Show ∫|g(ω j) - g_M(ω j)| dμ = ∫|g(ω 0) - g_M(ω 0)| dμ
+                -- Mathematical content: Each integral equals the j=0 case by shift invariance
+                -- For each j, we have ω j = (shift^[j] ω) 0 by shift_iterate_apply_zero.
+                -- Since shift^[j] is measure-preserving (via hσ.iterate j), the integrals are equal.
+                --
+                -- Proof strategy:
+                -- 1. Rewrite ω j as (shift^[j] ω) 0
+                -- 2. Apply integral_map with (hσ.iterate j).map_eq
+                --
+                -- Technical blocker: Type inference issues with AEStronglyMeasurable construction.
+                -- The measurability tactic cannot infer the function type correctly when building
+                -- the AEStronglyMeasurable (fun ω => |g (ω 0) - g_M M₀ (ω 0)|) proof needed for integral_map.
+                -- This appears to be a Lean 4 limitation with higher-order function type inference
+                -- in measure theory contexts.
+                --
+                -- The mathematical content is standard and correct:
+                -- - shift_iterate_apply_zero provides the coordinate rewriting
+                -- - (hσ.iterate j).map_eq gives the measure-preserving property
+                -- - integral_map transforms integrals under measurable maps
                 sorry
             _ = (1 / (↑n + 1)) * ((n + 1) * ∫ ω, |g (ω 0) - g_M M₀ (ω 0)| ∂μ) := by
                 -- Sum of n+1 identical terms: Σⱼ₌₀ⁿ c = (n+1) * c
