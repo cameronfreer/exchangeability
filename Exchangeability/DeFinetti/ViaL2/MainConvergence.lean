@@ -876,15 +876,38 @@ theorem alpha_is_conditional_expectation
       -- α_n = ∫ f dν a.e. (the "identification" statement)
       (∀ n, ∀ᵐ ω ∂μ, alpha n ω = ∫ x, f x ∂(nu ω)) := by
   classical
-  /- **Sketch (wired into Step 6):**
-     • Define ν via Stieltjes/Carathéodory from the family α_{1_{(-∞,t]}}(ω).
-     • It is a probability kernel and tail–measurable.
-     • For bounded measurable f, α_f(ω) = ∫ f dν(ω) a.e.
-     Here we just package that existence; concretely we can point to
-     `directing_measure` from Step 6 once those are in place. -/
-  -- TODO: once Step 6 is complete, replace the whole proof by:
-  --   refine ⟨directing_measure X hX_contract hX_meas ?hX_L2?, ?isProb?, ?meas?, ?ident?⟩
-  -- where `?ident?` comes from `directing_measure_integral` specialized to f.
+  -- TODO: Package directing_measure as the witness
+  --
+  -- PROOF STRATEGY:
+  --
+  -- This lemma is a simple wrapper that packages the directing measure
+  -- construction from Step 6 below. Once Step 6 is complete, replace by:
+  --
+  --   refine ⟨directing_measure X hX_contract hX_meas hX_L2, ?h1, ?h2, ?h3⟩
+  --
+  -- where the three goals are:
+  --
+  -- ?h1: ∀ ω, IsProbabilityMeasure (directing_measure ω)
+  --   Proof: directing_measure_isProbabilityMeasure
+  --   (This is axiomatized in MoreL2Helpers and depends on cdf_from_alpha_limits)
+  --
+  -- ?h2: Measurable (fun ω => directing_measure ω Set.univ)
+  --   Proof: Since directing_measure ω is a probability measure,
+  --          directing_measure ω Set.univ = 1 for all ω (constant function).
+  --          Constant functions are measurable.
+  --   Alternative: Use directing_measure_measurability for any measurable set,
+  --                specialized to Set.univ.
+  --
+  -- ?h3: ∀ n, ∀ᵐ ω ∂μ, alpha n ω = ∫ x, f x ∂(directing_measure ω)
+  --   Proof: directing_measure_integral applied to f
+  --   (This is the fundamental "bridge" property, also axiomatized in MoreL2Helpers)
+  --
+  -- DEPENDENCIES:
+  -- All three sub-goals depend on Step 6 infrastructure being completed:
+  -- - directing_measure: Ω → Measure ℝ (defined below)
+  -- - directing_measure_isProbabilityMeasure (depends on cdf_from_alpha_limits)
+  -- - directing_measure_measurability (deep measure theory result)
+  -- - directing_measure_integral (uses monotone class theorem)
   sorry
 
 /-!

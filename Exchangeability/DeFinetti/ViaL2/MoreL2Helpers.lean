@@ -367,8 +367,19 @@ lemma directing_measure_measurable
           -- directing_measure ω is a measure (StieltjesFunction.measure), so measure_compl applies
           -- Need IsFiniteMeasure instance - follows from IsProbabilityMeasure (once that's proved)
           haveI : IsFiniteMeasure (directing_measure X hX_contract hX_meas hX_L2 ω) := by
-            -- This should follow from directing_measure_isProbabilityMeasure
-            -- but that's currently a sorry
+            -- TODO: Apply IsProbabilityMeasure.toIsFiniteMeasure
+            --
+            -- PROOF: One-liner once directing_measure_isProbabilityMeasure is proved
+            --   exact ProbabilityMeasure.toIsFiniteMeasure
+            --   (or: infer_instance using directing_measure_isProbabilityMeasure ω)
+            --
+            -- DEPENDENCY CHAIN:
+            -- - directing_measure_isProbabilityMeasure (line ~324)
+            --   ↓ depends on
+            -- - cdf_from_alpha_limits (showing F(t) → 0 at -∞, F(t) → 1 at +∞)
+            --   ↓ uses
+            -- - alphaIic_tendsto_zero_at_bot (MainConvergence.lean:2602)
+            -- - alphaIic_tendsto_one_at_top (MainConvergence.lean:2665)
             sorry
           rw [measure_compl hs_meas (measure_ne_top _ s)]
         simp_rw [h_univ_s]
@@ -377,8 +388,18 @@ lemma directing_measure_measurable
         -- Their difference is measurable
         have h_univ_const : ∀ ω, directing_measure X hX_contract hX_meas hX_L2 ω Set.univ = 1 := by
           intro ω
-          -- This follows from directing_measure_isProbabilityMeasure
-          -- But that depends on cdf_from_alpha_limits which is a sorry
+          -- TODO: Apply measure_univ for probability measures
+          --
+          -- PROOF: One-liner once directing_measure_isProbabilityMeasure is proved
+          --   haveI := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+          --   exact measure_univ
+          --
+          -- DEPENDENCY: Same as line 372 above
+          -- - directing_measure_isProbabilityMeasure
+          --   ↓
+          -- - cdf_from_alpha_limits
+          --   ↓
+          -- - alphaIic limit lemmas in MainConvergence.lean
           sorry
         simp_rw [h_univ_const]
         -- (fun ω => 1 - ν(ω)(s)) is measurable
