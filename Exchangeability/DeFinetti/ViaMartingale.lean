@@ -1675,27 +1675,22 @@ lemma condIndep_of_triple_law
 
           -- Use h_law_eq to conclude
           rw [← lhs_uv, h_law_eq] at rhs_uv
-          -- Now: ∫_{W⁻¹'T} U*V = ∫_{W'⁻¹'T} U'*V'
+          -- Now: ∫_{W⁻¹'T} U*V = ∫_{W'⁻¹'T} U'*V' (both equal ∫_T u*v d(W_*μ))
 
-          -- To complete the argument, we need to relate ∫_{W'⁻¹'T} φ*ψ to ∫_{W'⁻¹'T} U'*V'
-          -- Key observation: We can use the tower property
-          -- ∫_{W'⁻¹'T} φ*ψ = E[1_{W'⁻¹'T} * φ * ψ]
-          --                 = E[E[1_{W'⁻¹'T} * φ * ψ | σ(W')]]
-          --                 = E[1_{W'⁻¹'T} * E[φ * ψ | σ(W')]]  (pull-out since 1_{W'⁻¹'T} is σ(W')-measurable)
+          -- To show ∫_{W'⁻¹'T} φ*ψ - ∫_{W⁻¹'T} U*V = 0, we use the key observation:
+          -- By the adjointness lemma integral_mul_condexp_adjoint_Linfty,
+          -- we have ∫ φ*V = ∫ U*ψ, which means ∫ φ*ψ and ∫ U*V are related.
+          --
+          -- Actually, the right approach is to use the fact that both integrals
+          -- can be expressed via the common version (u,v):
+          --
+          -- ∫_{W'⁻¹'T} φ*ψ = ∫_{W⁻¹'T} φ*ψ (triple law)
+          -- ∫_{W⁻¹'T} φ*ψ = ... needs to equal ∫_{W⁻¹'T} U*V
+          --
+          -- But we can't directly show this without using h_φ0ψ0_zero!
+          -- So there must be a different approach...
 
-          have h_W'T_meas : MeasurableSet[MeasurableSpace.comap W' inferInstance] (W' ⁻¹' T) := by
-            existsi T
-            exact ⟨hT_meas, rfl⟩
-
-          -- For the integral over W', we can use the fact that W'⁻¹'T is σ(W')-measurable
-          -- and apply the tower property
-          have key_tower : ∫ ω in W' ⁻¹' T, φ ω * ψ ω ∂μ =
-                          ∫ ω in W' ⁻¹' T, μ[φ * ψ | MeasurableSpace.comap W' inferInstance] ω ∂μ := by
-            sorry  -- Tower property for set integrals
-
-          -- Now relate μ[φ*ψ | σ(W')] to U' and V'
-          -- This requires a conditional covariance decomposition
-          sorry  -- TODO: Complete using conditional covariance decomposition
+          sorry
 
     -- **Main result**: Implement h_setIntegral_eq using: φψ = UV + Uψ₀ + Vφ₀ + φ₀ψ₀
     have h_setIntegral_eq : ∀ (T : Set γ), MeasurableSet T →
