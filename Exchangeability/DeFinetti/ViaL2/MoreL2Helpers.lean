@@ -159,6 +159,13 @@ private lemma L1_unique_of_two_limits
   -- 5. Then eLpNorm (f - g) 1 ≤ eLpNorm (f - fn N) 1 + eLpNorm (fn N - g) 1 < ε
   -- 6. Since this holds for all ε > 0, conclude eLpNorm (f - g) 1 = 0
   --
+  -- Key lemmas needed:
+  -- - eLpNorm_sub_le: triangle inequality for eLpNorm
+  -- - eLpNorm_sub_comm: symmetry of eLpNorm with subtraction
+  -- - ge_of_tendsto': if constant ≤ sequence → 0, then constant ≤ 0
+  -- - ENNReal.eq_zero_of_le_zero: x ≤ 0 implies x = 0 for ENNReal
+  -- - eLpNorm_eq_zero_iff: eLpNorm f p μ = 0 ↔ f = 0 a.e.
+  --
   -- The detailed implementation requires careful handling of:
   -- - ENNReal arithmetic (coercion from NNReal, division)
   -- - eLpNorm_add_le with correct AEStronglyMeasurable hypotheses
