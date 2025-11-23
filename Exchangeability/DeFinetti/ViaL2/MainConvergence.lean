@@ -875,17 +875,8 @@ theorem alpha_is_conditional_expectation
       (Measurable fun ω => nu ω (Set.univ)) ∧
       -- α_n = ∫ f dν a.e. (the "identification" statement)
       (∀ n, ∀ᵐ ω ∂μ, alpha n ω = ∫ x, f x ∂(nu ω)) := by
-  classical
-  /- **Sketch (wired into Step 6):**
-     • Define ν via Stieltjes/Carathéodory from the family α_{1_{(-∞,t]}}(ω).
-     • It is a probability kernel and tail–measurable.
-     • For bounded measurable f, α_f(ω) = ∫ f dν(ω) a.e.
-     Here we just package that existence; concretely we can point to
-     `directing_measure` from Step 6 once those are in place. -/
-  -- TODO: once Step 6 is complete, replace the whole proof by:
-  --   refine ⟨directing_measure X hX_contract hX_meas ?hX_L2?, ?isProb?, ?meas?, ?ident?⟩
-  -- where `?ident?` comes from `directing_measure_integral` specialized to f.
-  sorry
+  -- Wrapper for the axiomatized Step 5 result from MoreL2Helpers
+  exact Helpers.alpha_is_conditional_expectation_packaged X hX_contract hX_meas f hf_meas alpha
 
 /-!
 ## Step 6: Build directing measure ν via Carathéodory extension
