@@ -1194,12 +1194,16 @@ private lemma cesaro_cauchy_rho_lt
           rw [Finset.mul_sum]
           -- Pull n⁻¹ out and simplify n * n' * n⁻¹ = n'
           calc ↑n * ↑n' * ∑ x : Fin m, (if ↑x < n then (↑n)⁻¹ else 0) * Z (↑x) ω
-              = ∑ x : Fin m, ↑n * ↑n' * ((if ↑x < n then (↑n)⁻¹ else 0) * Z (↑x) ω) := Finset.mul_sum.symm
+              = ∑ x : Fin m, ↑n * ↑n' * ((if ↑x < n then (↑n)⁻¹ else 0) * Z (↑x) ω) := by
+                rw [← Finset.mul_sum]
             _ = ∑ x : Fin m, (if ↑x < n then ↑n * ↑n' * (↑n)⁻¹ * Z (↑x) ω else 0) := by
-                congr 1 with x; split_ifs with h <;> ring
+                congr 1 with x; split_ifs with h
+                · ring
+                · ring
             _ = ∑ x : Fin m, (if ↑x < n then ↑n' * Z (↑x) ω else 0) := by
                 congr 1 with x; split_ifs with h
-                · rw [mul_assoc (↑n * ↑n'), mul_inv_cancel hn_ne_zero, one_mul]
+                · field_simp [hn_ne_zero]
+                  ring
                 · rfl
             _ = ∑ x in Finset.univ.filter (fun x : Fin m => ↑x < n), ↑n' * Z (↑x) ω := by
                 rw [Finset.sum_ite]
@@ -1232,14 +1236,16 @@ private lemma cesaro_cauchy_rho_lt
                   ↑n * ∑ x ∈ Finset.range n', Z x ω := by
           rw [Finset.mul_sum]
           calc ↑n * ↑n' * ∑ x : Fin m, (if ↑x < n' then (↑n')⁻¹ else 0) * Z (↑x) ω
-              = ∑ x : Fin m, ↑n * ↑n' * ((if ↑x < n' then (↑n')⁻¹ else 0) * Z (↑x) ω) := Finset.mul_sum.symm
+              = ∑ x : Fin m, ↑n * ↑n' * ((if ↑x < n' then (↑n')⁻¹ else 0) * Z (↑x) ω) := by
+                rw [← Finset.mul_sum]
             _ = ∑ x : Fin m, (if ↑x < n' then ↑n * ↑n' * (↑n')⁻¹ * Z (↑x) ω else 0) := by
                 congr 1 with x; split_ifs with h
                 · ring
                 · ring
             _ = ∑ x : Fin m, (if ↑x < n' then ↑n * Z (↑x) ω else 0) := by
                 congr 1 with x; split_ifs with h
-                · rw [mul_comm ↑n ↑n', mul_assoc, mul_inv_cancel hn'_ne_zero, mul_one]
+                · field_simp [hn'_ne_zero]
+                  ring
                 · rfl
             _ = ∑ x in Finset.univ.filter (fun x : Fin m => ↑x < n'), ↑n * Z (↑x) ω := by
                 rw [Finset.sum_ite]
