@@ -149,41 +149,35 @@ theorem condExp_eq_of_joint_law_eq
           rw [← hηfac]
       _ = ((μ.map ζ).map φ) ⊗ₘ (condDistrib ξ η μ) := by rw [← h_map_comp]
 
-  -- Step 9: Key observation - the marginal equality simplifies everything
-  -- Since μ.map ζ = μ.map η and μ.map η = (μ.map ζ).map φ, we have a measure-preserving map
-  have h_map_φ_id : (μ.map ζ).map φ = μ.map ζ := by
-    rw [Measure.map_map hφ_meas hζ, ← hηfac, h_marg_eq]
+  -- Step 9: Derive compProd equality from equal joint laws
+  -- Key: we have (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ) = ((μ.map ζ).map φ) ⊗ₘ (condDistrib ξ η μ)
+  have h_compProd_eq : (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ) = ((μ.map ζ).map φ) ⊗ₘ (condDistrib ξ η μ) := by
+    rw [hζ_compProd, h_law_swapped, hη_via_φζ]
 
-  -- Step 10: Use equal joint laws to get compProd equality
-  -- From hζ_compProd, h_law_swapped, and hη_via_φζ, derive the simplified equality
-  have h_compProd_simplified : (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ) = (μ.map ζ) ⊗ₘ (condDistrib ξ η μ) := by
-    rw [hζ_compProd, h_law_swapped]
-    -- Goal: μ.map (fun ω => (η ω, ξ ω)) = (μ.map ζ) ⊗ₘ (condDistrib ξ η μ)
-    -- Use hη_via_φζ and h_map_φ_id
-    rw [hη_via_φζ, h_map_φ_id]
+  -- Step 10: Apply compProd with map to get kernel equality with φ
+  -- From ν ⊗ₘ κ₁ = (ν.map φ) ⊗ₘ κ₂, we should get κ₁ z = κ₂ (φ z) a.e.
+  have h_kernels_at_z : ∀ᵐ z ∂(μ.map ζ), condDistrib ξ ζ μ z = condDistrib ξ η μ (φ z) := by
+    -- The key insight: (condDistrib ξ η μ).comap φ hφ_meas is the kernel z ↦ condDistrib ξ η μ (φ z)
+    -- We need to show condDistrib ξ ζ μ =ᵐ[μ.map ζ] (condDistrib ξ η μ).comap φ hφ_meas
+    -- This follows from compProd equality by showing:
+    -- (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ) = (μ.map ζ) ⊗ₘ ((condDistrib ξ η μ).comap φ hφ_meas)
+    -- First, note that ((μ.map ζ).map φ) ⊗ₘ (condDistrib ξ η μ) should equal
+    -- (μ.map ζ) ⊗ₘ ((condDistrib ξ η μ).comap φ hφ_meas)
+    -- by the definition of comap and the relationship between ν.map f and kernel comap
+    sorry
 
-  -- Step 12: Apply compProd_eq_iff to get kernel equality
-  have h_kernels_at_z : condDistrib ξ ζ μ =ᵐ[μ.map ζ] condDistrib ξ η μ := by
-    exact (ProbabilityTheory.Kernel.compProd_eq_iff).mp h_compProd_simplified
-
-  -- Step 13: Pull back kernel equality to Ω
+  -- Step 11: Pull back kernel equality to Ω and use factorization
   have h_kernel_on_Ω : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (η ω) := by
-    -- First pull back: κ_ζ(ζ(ω)) = κ_η(ζ(ω)) for μ-a.e. ω
-    have h_at_ζ : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (ζ ω) := by
+    -- Pull back: κ_ζ(ζ(ω)) = κ_η(φ(ζ(ω))) for μ-a.e. ω
+    have h_at_φζ : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (φ (ζ ω)) := by
       exact ae_of_ae_map hζ.aemeasurable h_kernels_at_z
-    -- Since (μ.map ζ).map φ = μ.map ζ and η = φ ∘ ζ, we have μ.map η = μ.map ζ
-    -- Therefore, by h_marg_eq, the measures agree
-    -- This means ζ ω = η ω a.e. (this is a consequence of the measure equality)
-    have h_ζ_eq_η : ∀ᵐ ω ∂μ, ζ ω = η ω := by
-      -- Use the fact that φ is measure-preserving on μ.map ζ
-      -- From h_map_φ_id : (μ.map ζ).map φ = μ.map ζ
-      -- We need to show ∀ᵐ ω, ζ ω = η ω, which follows from η = φ ∘ ζ and φ being identity a.e.
-      sorry
-    -- Combine the two
-    filter_upwards [h_at_ζ, h_ζ_eq_η] with ω hζ hη
-    calc (condDistrib ξ ζ μ) (ζ ω)
-        = (condDistrib ξ η μ) (ζ ω) := hζ
-      _ = (condDistrib ξ η μ) (η ω) := by rw [← hη]
+    -- Use factorization η = φ ∘ ζ to rewrite φ (ζ ω) as η ω
+    filter_upwards [h_at_φζ] with ω hω
+    rw [hω]
+    -- Goal: (condDistrib ξ η μ) (φ (ζ ω)) = (condDistrib ξ η μ) (η ω)
+    -- Use η ω = φ (ζ ω) from η = φ ∘ ζ
+    congr 1
+    exact (congr_fun hηfac ω).symm
 
   -- Step 11: Use η = φ ∘ ζ to get the final equality
   have h_integral_eq : (fun ω => ∫ e, B.indicator (fun _ => (1 : ℝ)) e ∂(condDistrib ξ ζ μ (ζ ω)))
