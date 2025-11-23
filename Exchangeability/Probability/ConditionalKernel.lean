@@ -115,43 +115,59 @@ theorem condExp_eq_of_joint_law_eq
     have h2 : (μ.map (fun ω => (η ω, ξ ω))).fst = μ.map η := Measure.fst_map_prodMk₀ hξ.aemeasurable
     rw [← h1, ← h2, h_law_swapped]
 
-  -- Step 5: Show compProd equality
-  have h_compProd_eq : (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ) = (μ.map ζ) ⊗ₘ (condDistrib ξ η μ) := by
-    calc (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ)
-        = μ.map (fun ω => (ζ ω, ξ ω)) := hζ_compProd
-      _ = μ.map (fun ω => (η ω, ξ ω)) := h_law_swapped
-      _ = (μ.map η) ⊗ₘ (condDistrib ξ η μ) := hη_compProd.symm
-      _ = (μ.map ζ) ⊗ₘ (condDistrib ξ η μ) := by rw [h_marg_eq]
-
-  -- Step 6: Use compProd_eq_iff to get kernel equality
-  have h_kernel_eq : condDistrib ξ ζ μ =ᵐ[μ.map ζ] condDistrib ξ η μ := by
-    exact (ProbabilityTheory.Kernel.compProd_eq_iff).mp h_compProd_eq
-
-  -- Step 7: Pull back kernel equality along ζ to get μ-a.e. equality of integrals
-  have h_integral_eq_ζζ : (fun ω => ∫ e, B.indicator (fun _ => (1 : ℝ)) e ∂(condDistrib ξ ζ μ (ζ ω)))
-      =ᵐ[μ] (fun ω => ∫ e, B.indicator (fun _ => (1 : ℝ)) e ∂(condDistrib ξ η μ (ζ ω))) := by
-    -- Use the fact that kernel a.e. equality under μ.map ζ implies pointwise a.e. under μ
-    have : ∀ᵐ z ∂(μ.map ζ), condDistrib ξ ζ μ z = condDistrib ξ η μ z := h_kernel_eq
-    have : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (ζ ω) :=
-      ae_of_ae_map hζ.aemeasurable this
-    filter_upwards [this] with ω hω
-    rw [hω]
-
-  -- Step 8: Now show that η ω = φ (ζ ω) for some φ, so we need to connect the two sides
+  -- Step 5: Extract φ from factorization
   obtain ⟨φ, hφ_meas, hηfac⟩ := hηfac
 
-  -- The key: we have condDistrib ξ η μ (η ω) in hCEη, but we showed equality at (ζ ω)
-  -- We need: condDistrib ξ η μ (η ω) = condDistrib ξ η μ (φ (ζ ω))
-  -- This is just rewriting η ω = φ (ζ ω)
-  have h_integral_eq_ηζ : (fun ω => ∫ e, B.indicator (fun _ => (1 : ℝ)) e ∂(condDistrib ξ η μ (ζ ω)))
-      =ᵐ[μ] (fun ω => ∫ e, B.indicator (fun _ => (1 : ℝ)) e ∂(condDistrib ξ η μ (η ω))) := by
-    have : ∀ ω, η ω = φ (ζ ω) := fun ω => congr_fun hηfac ω
-    filter_upwards with ω
-    simp only [this]
+  -- Step 6: Key insight - we can express Law(η, ξ) using ζ-measure and φ
+  -- Since η = φ ∘ ζ, we have:
+  -- Law(η, ξ) = μ.map (fun ω => (η ω, ξ ω))
+  --           = μ.map (fun ω => (φ (ζ ω), ξ ω))  [by substitution]
+  --           = (μ.map (φ ∘ ζ)) ⊗ₘ (condDistrib ξ η μ)  [by compProd for η]
+  --           = ((μ.map ζ).map φ) ⊗ₘ (condDistrib ξ η μ)  [by map composition]
 
-  -- Step 9: Chain all the equalities together
+  -- We also have from our hypothesis:
+  -- Law(ζ, ξ) = Law(η, ξ), so:
+  -- (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ) = μ.map (fun ω => (φ (ζ ω), ξ ω))
+
+  -- Let's directly show the kernel equality by working at the measure level
+  -- We want to show: ∀ᵐ z ∂(μ.map ζ), condDistrib ξ ζ μ z = condDistrib ξ η μ (φ z)
+
+  -- Step 7: Show that μ.map (fun ω => (φ (ζ ω), ξ ω)) can be written with ζ-measure
+  have h_eq_φζ : μ.map (fun ω => (φ (ζ ω), ξ ω)) = μ.map (fun ω => (η ω, ξ ω)) := by
+    have : (fun ω => (φ (ζ ω), ξ ω)) = (fun ω => (η ω, ξ ω)) := by
+      funext ω
+      rw [congr_fun hηfac ω, Function.comp_apply]
+    rw [this]
+
+  -- Step 8: Rewrite the compProd for η using φ ∘ ζ
+  have hη_via_φζ : μ.map (fun ω => (η ω, ξ ω)) = ((μ.map ζ).map φ) ⊗ₘ (condDistrib ξ η μ) := by
+    have h_map_comp : μ.map (φ ∘ ζ) = (μ.map ζ).map φ := by
+      rw [Measure.map_map hφ_meas hζ]
+    calc μ.map (fun ω => (η ω, ξ ω))
+        = (μ.map η) ⊗ₘ (condDistrib ξ η μ) := hη_compProd.symm
+      _ = (μ.map (φ ∘ ζ)) ⊗ₘ (condDistrib ξ η μ) := by
+          rw [← hηfac]
+      _ = ((μ.map ζ).map φ) ⊗ₘ (condDistrib ξ η μ) := by rw [← h_map_comp]
+
+  -- Step 9: Direct kernel equality from uniqueness of conditional distributions
+  -- Since both (ζ, ξ) and (η, ξ) have the same law, and η = φ ∘ ζ, we can show
+  -- that the conditional distribution of ξ given ζ equals the conditional distribution
+  -- of ξ given η, evaluated at φ(ζ).
+  have h_kernel_on_Ω : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (η ω) := by
+    -- This follows from the essential uniqueness of conditional distributions
+    -- Given that Law(ζ, ξ) = Law(η, ξ), the conditional distributions must agree
+    sorry  -- TODO: Needs a lemma about uniqueness of condDistrib under equal laws
+
+  -- Step 11: Use η = φ ∘ ζ to get the final equality
+  have h_integral_eq : (fun ω => ∫ e, B.indicator (fun _ => (1 : ℝ)) e ∂(condDistrib ξ ζ μ (ζ ω)))
+      =ᵐ[μ] (fun ω => ∫ e, B.indicator (fun _ => (1 : ℝ)) e ∂(condDistrib ξ η μ (η ω))) := by
+    filter_upwards [h_kernel_on_Ω] with ω hω
+    -- Use η ω = φ (ζ ω) from hηfac
+    have : η ω = φ (ζ ω) := congr_fun hηfac ω
+    rw [hω, this]
+
+  -- Step 12: Chain all the equalities together
   calc μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ inferInstance]
       =ᵐ[μ] (fun ω => ∫ e, B.indicator (fun _ => (1 : ℝ)) e ∂(condDistrib ξ ζ μ (ζ ω))) := hCEζ
-    _ =ᵐ[μ] (fun ω => ∫ e, B.indicator (fun _ => (1 : ℝ)) e ∂(condDistrib ξ η μ (ζ ω))) := h_integral_eq_ζζ
-    _ =ᵐ[μ] (fun ω => ∫ e, B.indicator (fun _ => (1 : ℝ)) e ∂(condDistrib ξ η μ (η ω))) := h_integral_eq_ηζ
+    _ =ᵐ[μ] (fun ω => ∫ e, B.indicator (fun _ => (1 : ℝ)) e ∂(condDistrib ξ η μ (η ω))) := h_integral_eq
     _ =ᵐ[μ] μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η inferInstance] := hCEη.symm
