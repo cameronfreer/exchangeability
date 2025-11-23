@@ -22,6 +22,7 @@ import Exchangeability.Tail.TailSigma
 import Exchangeability.DeFinetti.MartingaleHelpers
 import Exchangeability.DeFinetti.CommonEnding
 import Exchangeability.Probability.MeasureKernels
+import Exchangeability.Probability.ConditionalKernel
 
 /-!
 # de Finetti's Theorem via Reverse Martingales
@@ -1603,8 +1604,15 @@ lemma condIndep_of_triple_law
           constructor
           · exact MeasurableSet.prod hT'_meas MeasurableSet.univ
           · ext ω; simp
-        refine AEStronglyMeasurable.mono ?_ hZ_le_ℋ
-        exact ((measurable_const.indicator hB).comp hZ).aestronglyMeasurable
+        have : AEStronglyMeasurable[MeasurableSpace.comap Z inferInstance] ψ μ := by
+          rw [hψ_def]
+          have : (Z ⁻¹' B).indicator (fun _ : Ω => (1:ℝ)) = (B.indicator (fun _ : β => (1:ℝ))) ∘ Z := by
+            ext ω; simp [Set.indicator, Set.mem_preimage]
+          rw [this]
+          apply (@StronglyMeasurable.comp_measurable Ω β ℝ _ _ _).aestronglyMeasurable
+          · exact (measurable_const.indicator hB).stronglyMeasurable
+          · exact measurable_id
+        exact this.mono hZ_le_ℋ
 
       have hV_ℋ : AEStronglyMeasurable[ℋ] V μ :=
         stronglyMeasurable_condExp.aestronglyMeasurable.mono h𝔾_le_ℋ
@@ -1647,41 +1655,48 @@ lemma condIndep_of_triple_law
               simp only [Set.indicator]
               split_ifs <;> ring
         _ = ∫ ω, (φ ω - U ω) * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ := by
-              congrArg; funext ω; rw [hφ0_def]
+              simp only [hφ0_def, Pi.sub_apply]
         _ = ∫ ω, φ ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ -
             ∫ ω, U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ := by
               have hφF_int : Integrable (fun ω => φ ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω)) μ := by
-                apply hF_int.bdd_mul'
-                · exact hφ_int.aestronglyMeasurable
-                · apply ae_of_all
-                  intro ω
-                  -- φ is an indicator function, so ‖φ ω‖ ≤ 1
-                  simp only [φ, hφ_def, Set.indicator, norm_indicator_eq_indicator_norm]
-                  split_ifs <;> norm_num
+                refine hF_int.bdd_mul' hφ_int.aestronglyMeasurable ?_
+                filter_upwards with ω
+                -- φ is an indicator function, so ‖φ ω‖ ≤ 1
+                simp only [φ, hφ_def, Set.indicator]
+                split_ifs <;> norm_num
               have hUF_int : Integrable (fun ω => U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω)) μ := by
-                apply hF_int.bdd_mul'
-                · exact integrable_condExp.aestronglyMeasurable
-                · apply ae_of_all
-                  intro ω
-                  -- U is the conditional expectation of φ (an indicator), so it's bounded by 1
-                  simp only [hU_def, U]
-                  sorry  -- TODO: Need lemma about norm of condExp of indicator
-              exact integral_sub hφF_int hUF_int
+                refine hF_int.bdd_mul' integrable_condExp.aestronglyMeasurable ?_
+                filter_upwards [ae_bdd_condExp_of_ae_bdd (R := 1) (m := 𝔾) (show ∀ᵐ x ∂μ, |φ x| ≤ 1 from
+                  eventually_of_forall (by intro ω; simp [φ, hφ_def, Set.indicator]; split_ifs <;> norm_num))] with ω hω
+                -- U is the conditional expectation of φ (an indicator), so it's bounded by 1
+                simp only [hU_def, U, Real.norm_eq_abs]
+                exact hω
+              have : ∫ ω, (φ ω - U ω) * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ =
+                     ∫ ω, φ ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) -
+                          U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ := by
+                congr 1; ext ω; ring
+              rw [this, integral_sub hφF_int hUF_int]
         _ = ∫ ω, μ[φ | ℋ] ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ -
             ∫ ω, U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ := by
               congr 1
               -- Use the defining property: ∫ φ * g = ∫ μ[φ|ℋ] * g when g is ℋ-measurable
               symm
               set F := fun ω => ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω with hF_def
-              have hφF_int' : Integrable (fun ω => φ ω * F ω) μ := hφF_int
+              have hφF_int' : Integrable (fun ω => φ ω * F ω) μ := by
+                refine hF_int.bdd_mul' hφ_int.aestronglyMeasurable ?_
+                filter_upwards with ω
+                simp only [φ, hφ_def, Set.indicator]
+                split_ifs <;> norm_num
               calc ∫ ω, μ[φ | ℋ] ω * F ω ∂μ
                   = ∫ ω, μ[fun ω' => φ ω' * F ω' | ℋ] ω ∂μ := by
-                      symm
-                      exact integral_condExp hℋ_le hφF_int'
-                _ = ∫ ω, μ[φ | ℋ] ω * F ω ∂μ := by
+                      -- Pull-out property: μ[φ * F | ℋ] =ᵐ μ[φ | ℋ] * F when F is ℋ-measurable
                       refine integral_congr_ae ?_
-                      filter_upwards [condExp_mul_of_aestronglyMeasurable_right hℋ_le hF_ℋ_meas hφF_int' hφ_int] with ω hω
-                      exact hω
+                      filter_upwards [condExp_mul_of_aestronglyMeasurable_right (μ := μ) (m := ℋ) hF_ℋ_meas hφF_int' hφ_int] with ω hω
+                      exact hω.symm
+                _ = ∫ ω, φ ω * F ω ∂μ := by
+                      -- Tower property: ∫ μ[f | ℋ] = ∫ f
+                      haveI : SigmaFinite (μ.trim hℋ_le) := inferInstance
+                      exact integral_condExp hℋ_le
         _ = ∫ ω, U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ -
             ∫ ω, U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ := by
               -- Use h_proj: μ[φ | ℋ] =ᵐ U to rewrite the first integral
@@ -4131,8 +4146,8 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
       -- the kernels must satisfy: condExpKernel(ζ)(ζ ω) = condExpKernel(η)(η ω) a.e.
 
       -- This is a deep result requiring kernel uniqueness from compProd.
-      -- For now, we note this is the mathematical content and defer the proof.
-      sorry  -- TODO: Requires compProd_eq_iff and kernel pullback lemmas
+      -- Apply the proved theorem from ConditionalKernel.lean
+      exact condExp_eq_of_joint_law_eq ζ η hζ hη ξ hξ B hB h_law.symm h_le ⟨φ, hφ, hηfac⟩
 
     -- Finish: prove ∫_S μ[f|η] = ∫_S f using the defining property of conditional expectation
     -- First, prove ∫_S μ[f|ζ] = ∫_S f (by definition of conditional expectation)
