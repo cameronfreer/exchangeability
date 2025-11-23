@@ -1216,13 +1216,9 @@ private lemma cesaro_cauchy_rho_lt
                   exact Fin.ext hab
                 · -- Surjectivity onto Finset.range n
                   intros b hb
-                  use ⟨b, Nat.lt_of_lt_of_le (Finset.mem_range.mp hb) (le_max_left n n')⟩
-                  simp only [Finset.mem_filter, Finset.mem_univ, true_and, Fin.coe_ofNat_eq_mod]
-                  constructor
-                  · -- Show b < n
-                    exact hb
-                  · -- Show Fin.val of ⟨b, _⟩ = b
-                    rfl
+                  have hb' := Finset.mem_range.mp hb
+                  refine ⟨⟨b, Nat.lt_of_lt_of_le hb' (le_max_left n n')⟩, ?_, rfl⟩
+                  simp [hb']
                 · -- Show functions agree
                   intros a ha
                   rfl
@@ -1253,13 +1249,9 @@ private lemma cesaro_cauchy_rho_lt
                   exact Fin.ext hab
                 · -- Surjectivity onto Finset.range n'
                   intros b hb
-                  use ⟨b, Nat.lt_of_lt_of_le (Finset.mem_range.mp hb) (le_max_right n n')⟩
-                  simp only [Finset.mem_filter, Finset.mem_univ, true_and, Fin.coe_ofNat_eq_mod]
-                  constructor
-                  · -- Show b < n'
-                    exact hb
-                  · -- Show Fin.val of ⟨b, _⟩ = b
-                    rfl
+                  have hb' := Finset.mem_range.mp hb
+                  refine ⟨⟨b, Nat.lt_of_lt_of_le hb' (le_max_right n n')⟩, ?_, rfl⟩
+                  simp [hb']
                 · -- Show functions agree
                   intros a ha
                   rfl
