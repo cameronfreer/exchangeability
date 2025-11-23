@@ -2608,23 +2608,49 @@ private lemma alphaIic_tendsto_zero_at_bot
     ∀ ε > 0, ∃ T : ℝ, ∀ t < T,
       alphaIic X hX_contract hX_meas hX_L2 t ω < ε := by
   intro ε hε_pos
-  -- Strategy: For fixed ω, choose T smaller than all X_i(ω) for i ≤ K
-  -- Then for t < T, the Cesàro averages are bounded by (K/m) → 0 as m → ∞
-  -- Since alphaIic is the L¹ limit (clipped), it must be ≤ ε for large enough offset
-  
-  -- The key is that alphaIic is bounded in [0,1], so we can use compactness
-  -- For any sequence in [0,1] that converges in L¹ to alphaIic, 
-  -- we can extract subsequences that converge pointwise a.e.
-  
-  -- By definition, alphaIic t ω is the L¹ limit (clipped to [0,1])
-  -- For t → -∞, the Cesàro averages converge to 0 uniformly in the starting index
-  -- because eventually all X_i(ω) > t
-  
-  -- Take T to be smaller than the minimum of finitely many X_i(ω)
-  -- This ensures finite support, making Cesàro averages → 0
-  
-  -- TODO: Formalize using L¹ convergence properties and boundedness
-  -- The full proof requires showing that the L¹ limit inherits the pointwise behavior
+  -- TODO: Prove alphaIic t ω → 0 as t → -∞
+  --
+  -- PROOF STRATEGY (5 steps):
+  --
+  -- STEP 1: Pointwise behavior of Cesàro averages
+  -- For fixed ω, choose K large enough that ε > K/m for all m ≥ some M.
+  -- Then choose T < min {X_0(ω), X_1(ω), ..., X_{K-1}(ω)}.
+  -- For any t < T and any m:
+  --   (1/m) Σ_{i=0}^{m-1} 𝟙_{(-∞,t]}(X_i(ω)) ≤ K/m
+  -- because at most K of the first m indicators are 1 (those with i < K).
+  --
+  -- STEP 2: Uniform control for all starting offsets
+  -- The same bound holds for blockAvg (indIic t) X m n ω:
+  --   (1/n) Σ_{i=m}^{m+n-1} 𝟙_{(-∞,t]}(X_i(ω)) ≤ K/n if m ≥ 0 and t < min X_j(ω) for j < K
+  -- This requires T to be chosen based on finitely many X_i(ω).
+  --
+  -- STEP 3: L¹ limit inherits pointwise bound
+  -- By definition, alphaIic t ω is characterized as the L¹ limit:
+  --   For all f bounded measurable and m₀, there exists α_f with
+  --   ‖blockAvg f X m₀ n - α_f‖_{L¹} → 0
+  -- For f = indIic t, the blockAvg are all bounded by K/n for t < T.
+  -- Since L¹ convergence preserves bounds (take limit of integral inequality),
+  -- we have |alphaIic t ω| ≤ lim_{n→∞} K/n = 0 a.e.
+  --
+  -- REQUIRED LEMMA: If f_n → f in L¹ and |f_n| ≤ g_n with g_n → 0, then f = 0 a.e.
+  -- More precisely: If f_n → f in L¹ and ∫ |f_n| ≤ C_n → 0, then ∫ |f| = 0.
+  --
+  -- STEP 4: Handle the clipping to [0,1]
+  -- The actual definition clips alphaIic to [0,1]:
+  --   alphaIic t ω = max 0 (min 1 (the L¹ limit))
+  -- Since we showed the limit is 0, clipping preserves this: max 0 (min 1 0) = 0.
+  --
+  -- STEP 5: Formalize T choice and ε-δ argument
+  -- Given ε > 0:
+  -- - Choose K such that K/M < ε for some M
+  -- - Choose T < min {X_0(ω), ..., X_{K-1}(ω)}
+  -- - Then for all t < T, alphaIic t ω ≤ K/M < ε
+  --
+  -- REQUIRED MATHLIB LEMMAS:
+  -- - Filter.tendsto_atBot: for expressing t → -∞
+  -- - Set.Iic_subset: interval containment properties
+  -- - Measure.integral_le_integral_of_ae_le: preserve inequalities through limits
+  -- - norm_nonneg and related: L¹ norm properties
   sorry
 
 /-- Helper lemma: α_{Iic t}(ω) → 1 as t → +∞.
@@ -2645,14 +2671,44 @@ private lemma alphaIic_tendsto_one_at_top
     ∀ ε > 0, ∃ T : ℝ, ∀ t > T,
       1 - ε < alphaIic X hX_contract hX_meas hX_L2 t ω := by
   intro ε hε_pos
-  -- As t → +∞, indIic t (x) → 1 for all x (since (-∞, t] eventually contains all of ℝ)
-  -- The Cesàro averages (1/m) Σ 1_{(-∞,t]}(X_i(ω)) → 1 for each ω
-  -- and alphaIic t ω → 1 as t → +∞
+  -- TODO: Prove 1 - ε < alphaIic t ω for all t > T (some T)
   --
-  -- This is the monotone convergence case: indicators increase to 1.
-  -- By dominated convergence (bounded by 1), the L¹ limits also converge to 1.
+  -- PROOF STRATEGY (5 steps):
   --
-  -- Same infrastructure requirements as the t → -∞ case. For now:
+  -- STEP 1: Monotone convergence of indicators
+  -- As t → +∞, for any fixed x ∈ ℝ, we have 𝟙_{(-∞,t]}(x) → 1.
+  -- This is because (-∞, t] eventually contains every real number.
+  -- For fixed ω, 𝟙_{(-∞,t]}(X_i(ω)) → 1 as t → +∞ for each i.
+  --
+  -- STEP 2: Pointwise convergence of Cesàro averages
+  -- For fixed ω and any m, n:
+  --   (1/n) Σ_{i=m}^{m+n-1} 𝟙_{(-∞,t]}(X_i(ω)) → 1 as t → +∞
+  -- Choose T > max {X_m(ω), X_{m+1}(ω), ..., X_{m+n-1}(ω)}.
+  -- Then for all t > T, all n indicators equal 1, giving average = 1.
+  --
+  -- STEP 3: L¹ convergence to 1
+  -- The blockAvg (indIic t) X m n are bounded in [0,1].
+  -- For t large enough (depending on ω), blockAvg → 1 pointwise.
+  -- By dominated convergence (dominated by constant function 1):
+  --   ‖blockAvg (indIic t) X m n - 1‖_{L¹} → 0 as t → +∞
+  --
+  -- STEP 4: Transfer to alphaIic
+  -- By definition, alphaIic t ω is the L¹ limit (clipped to [0,1]) of
+  -- blockAvg (indIic t) X m n as n → ∞.
+  -- From Step 3, this limit approaches 1 as t → +∞.
+  -- Therefore alphaIic t ω → 1 as t → +∞.
+  --
+  -- STEP 5: ε-δ formalization
+  -- Given ε > 0, choose T large enough that:
+  --   |alphaIic t ω - 1| < ε for all t > T
+  -- This translates to: 1 - ε < alphaIic t ω < 1 + ε
+  -- Since alphaIic ∈ [0,1], we get: 1 - ε < alphaIic t ω ≤ 1
+  --
+  -- REQUIRED MATHLIB LEMMAS:
+  -- - Filter.tendsto_atTop: for expressing t → +∞
+  -- - MeasureTheory.tendsto_integral_of_dominated_convergence
+  -- - Set.eventually_mem_Iic: eventually all values below threshold
+  -- - indicator_apply, indicator_of_mem: indicator function properties
   sorry
 
 -- **Note:** The axiom `cdf_from_alpha_limits` establishing that F(ω,t) → 0 as t → -∞
