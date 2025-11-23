@@ -1206,7 +1206,7 @@ private lemma cesaro_cauchy_rho_lt
                 simp only [Finset.sum_const_zero, add_zero]
             _ = ∑ x ∈ Finset.range n, ↑n' * Z x ω := by
                 -- Establish bijection between filtered Fin m and Finset.range n
-                refine Finset.sum_nbij (fun (x : Fin m) _ => x.val) ?hi ?i_inj ?i_surj ?h
+                refine Finset.sum_nbij Fin.val ?hi ?i_inj ?i_surj ?h
                 · -- Show x.val ∈ Finset.range n when x ∈ filter
                   intros a ha
                   simp only [Finset.mem_filter, Finset.mem_univ, true_and] at ha
@@ -1216,8 +1216,7 @@ private lemma cesaro_cauchy_rho_lt
                   exact Fin.ext hab
                 · -- Surjectivity onto Finset.range n
                   intros b hb
-                  simp only [Finset.mem_range] at hb
-                  use ⟨b, Nat.lt_of_lt_of_le hb (le_max_left n n')⟩
+                  use ⟨b, Nat.lt_of_lt_of_le (Finset.mem_range.mp hb) (le_max_left n n')⟩
                   simp only [Finset.mem_filter, Finset.mem_univ, true_and, Fin.coe_ofNat_eq_mod]
                   constructor
                   · -- Show b < n
@@ -1244,7 +1243,7 @@ private lemma cesaro_cauchy_rho_lt
                 simp only [Finset.sum_const_zero, add_zero]
             _ = ∑ x ∈ Finset.range n', ↑n * Z x ω := by
                 -- Establish bijection between filtered Fin m and Finset.range n'
-                refine Finset.sum_nbij (fun (x : Fin m) _ => x.val) ?hi ?i_inj ?i_surj ?h
+                refine Finset.sum_nbij Fin.val ?hi2 ?i_inj2 ?i_surj2 ?h2
                 · -- Show x.val ∈ Finset.range n' when x ∈ filter
                   intros a ha
                   simp only [Finset.mem_filter, Finset.mem_univ, true_and] at ha
@@ -1254,8 +1253,7 @@ private lemma cesaro_cauchy_rho_lt
                   exact Fin.ext hab
                 · -- Surjectivity onto Finset.range n'
                   intros b hb
-                  simp only [Finset.mem_range] at hb
-                  use ⟨b, Nat.lt_of_lt_of_le hb (le_max_right n n')⟩
+                  use ⟨b, Nat.lt_of_lt_of_le (Finset.mem_range.mp hb) (le_max_right n n')⟩
                   simp only [Finset.mem_filter, Finset.mem_univ, true_and, Fin.coe_ofNat_eq_mod]
                   constructor
                   · -- Show b < n'
