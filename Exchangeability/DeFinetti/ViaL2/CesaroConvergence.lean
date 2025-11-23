@@ -1219,10 +1219,11 @@ private lemma cesaro_cauchy_rho_lt
                   use ⟨b, Nat.lt_of_lt_of_le (Finset.mem_range.mp hb) (le_max_left n n')⟩
                   simp only [Finset.mem_filter, Finset.mem_univ, true_and, Fin.coe_ofNat_eq_mod]
                   constructor
-                  · -- Show b < n
-                    exact hb
+                  · -- Show ⟨b, _⟩ ∈ {x | ↑x < n}
+                    simp
+                    exact Finset.mem_range.mp hb
                   · -- Show Fin.val of ⟨b, _⟩ = b
-                    rfl
+                    simp
                 · -- Show functions agree
                   intros a ha
                   rfl
@@ -1256,10 +1257,11 @@ private lemma cesaro_cauchy_rho_lt
                   use ⟨b, Nat.lt_of_lt_of_le (Finset.mem_range.mp hb) (le_max_right n n')⟩
                   simp only [Finset.mem_filter, Finset.mem_univ, true_and, Fin.coe_ofNat_eq_mod]
                   constructor
-                  · -- Show b < n'
-                    exact hb
+                  · -- Show ⟨b, _⟩ ∈ {x | ↑x < n'}
+                    simp
+                    exact Finset.mem_range.mp hb
                   · -- Show Fin.val of ⟨b, _⟩ = b
-                    rfl
+                    simp
                 · -- Show functions agree
                   intros a ha
                   rfl
