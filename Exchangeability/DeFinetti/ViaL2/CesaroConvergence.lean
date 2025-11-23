@@ -1202,8 +1202,7 @@ private lemma cesaro_cauchy_rho_lt
                 · ring
             _ = ∑ x : Fin m, (if ↑x < n then ↑n' * Z (↑x) ω else 0) := by
                 congr 1 with x; split_ifs with h
-                · field_simp [hn_ne_zero]
-                  ring
+                · field_simp [hn_ne_zero]; ring
                 · rfl
             _ = ∑ x in Finset.univ.filter (fun x : Fin m => ↑x < n), ↑n' * Z (↑x) ω := by
                 rw [Finset.sum_ite]
@@ -1244,8 +1243,7 @@ private lemma cesaro_cauchy_rho_lt
                 · ring
             _ = ∑ x : Fin m, (if ↑x < n' then ↑n * Z (↑x) ω else 0) := by
                 congr 1 with x; split_ifs with h
-                · field_simp [hn'_ne_zero]
-                  ring
+                · field_simp [hn'_ne_zero]; ring
                 · rfl
             _ = ∑ x in Finset.univ.filter (fun x : Fin m => ↑x < n'), ↑n * Z (↑x) ω := by
                 rw [Finset.sum_ite]
