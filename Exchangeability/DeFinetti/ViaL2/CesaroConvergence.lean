@@ -1191,20 +1191,17 @@ private lemma cesaro_cauchy_rho_lt
         -- Simplify: n * n' * n⁻¹ = n' and n * n' * n'⁻¹ = n
         have h1 : ↑n * ↑n' * (∑ x : Fin m, (if ↑x < n then (↑n)⁻¹ else 0) * Z (↑x) ω) =
                   ↑n' * ∑ x ∈ Finset.range n, Z x ω := by
-          rw [Finset.mul_sum]
           -- Pull n⁻¹ out and simplify n * n' * n⁻¹ = n'
-          calc ↑n * ↑n' * ∑ x : Fin m, (if ↑x < n then (↑n)⁻¹ else 0) * Z (↑x) ω
+          calc ↑n * ↑n' * (∑ x : Fin m, (if ↑x < n then (↑n)⁻¹ else 0) * Z (↑x) ω)
               = ∑ x : Fin m, ↑n * ↑n' * ((if ↑x < n then (↑n)⁻¹ else 0) * Z (↑x) ω) := by
-                rw [← Finset.mul_sum]
+                rw [Finset.mul_sum]
             _ = ∑ x : Fin m, (if ↑x < n then ↑n * ↑n' * (↑n)⁻¹ * Z (↑x) ω else 0) := by
-                congr 1 with x; split_ifs with h
-                · ring
-                · ring
+                congr 1 with x; split_ifs with h <;> ring
             _ = ∑ x : Fin m, (if ↑x < n then ↑n' * Z (↑x) ω else 0) := by
                 congr 1 with x; split_ifs with h
-                · field_simp [hn_ne_zero]; ring
+                · field_simp [hn_ne_zero]
                 · rfl
-            _ = ∑ x in Finset.univ.filter (fun x : Fin m => ↑x < n), ↑n' * Z (↑x) ω := by
+            _ = ∑ x ∈ Finset.univ.filter (fun x : Fin m => ↑x < n), ↑n' * Z (↑x) ω := by
                 rw [Finset.sum_ite]
                 simp only [Finset.sum_const_zero, add_zero]
             _ = ∑ x ∈ Finset.range n, ↑n' * Z x ω := by
@@ -1230,22 +1227,19 @@ private lemma cesaro_cauchy_rho_lt
                 · -- Show functions agree
                   intros a ha
                   rfl
-            _ = ↑n' * ∑ x ∈ Finset.range n, Z x ω := Finset.mul_sum
+            _ = ↑n' * ∑ x ∈ Finset.range n, Z x ω := by rw [← Finset.mul_sum]
         have h2 : ↑n * ↑n' * (∑ x : Fin m, (if ↑x < n' then (↑n')⁻¹ else 0) * Z (↑x) ω) =
                   ↑n * ∑ x ∈ Finset.range n', Z x ω := by
-          rw [Finset.mul_sum]
-          calc ↑n * ↑n' * ∑ x : Fin m, (if ↑x < n' then (↑n')⁻¹ else 0) * Z (↑x) ω
+          calc ↑n * ↑n' * (∑ x : Fin m, (if ↑x < n' then (↑n')⁻¹ else 0) * Z (↑x) ω)
               = ∑ x : Fin m, ↑n * ↑n' * ((if ↑x < n' then (↑n')⁻¹ else 0) * Z (↑x) ω) := by
-                rw [← Finset.mul_sum]
+                rw [Finset.mul_sum]
             _ = ∑ x : Fin m, (if ↑x < n' then ↑n * ↑n' * (↑n')⁻¹ * Z (↑x) ω else 0) := by
-                congr 1 with x; split_ifs with h
-                · ring
-                · ring
+                congr 1 with x; split_ifs with h <;> ring
             _ = ∑ x : Fin m, (if ↑x < n' then ↑n * Z (↑x) ω else 0) := by
                 congr 1 with x; split_ifs with h
-                · field_simp [hn'_ne_zero]; ring
+                · field_simp [hn'_ne_zero]
                 · rfl
-            _ = ∑ x in Finset.univ.filter (fun x : Fin m => ↑x < n'), ↑n * Z (↑x) ω := by
+            _ = ∑ x ∈ Finset.univ.filter (fun x : Fin m => ↑x < n'), ↑n * Z (↑x) ω := by
                 rw [Finset.sum_ite]
                 simp only [Finset.sum_const_zero, add_zero]
             _ = ∑ x ∈ Finset.range n', ↑n * Z x ω := by
@@ -1271,7 +1265,7 @@ private lemma cesaro_cauchy_rho_lt
                 · -- Show functions agree
                   intros a ha
                   rfl
-            _ = ↑n * ∑ x ∈ Finset.range n', Z x ω := Finset.mul_sum
+            _ = ↑n * ∑ x ∈ Finset.range n', Z x ω := by rw [← Finset.mul_sum]
         rw [h1, h2]
 
   -- Step 4: Apply l2_contractability_bound
