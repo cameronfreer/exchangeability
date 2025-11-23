@@ -154,38 +154,28 @@ theorem condExp_eq_of_joint_law_eq
   have h_compProd_eq : (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ) = ((μ.map ζ).map φ) ⊗ₘ (condDistrib ξ η μ) := by
     rw [hζ_compProd, h_law_swapped, hη_via_φζ]
 
-  -- Step 10: Apply compProd with map to get kernel equality with φ
-  -- From ν ⊗ₘ κ₁ = (ν.map φ) ⊗ₘ κ₂, we should get κ₁ z = κ₂ (φ z) a.e.
+  -- Step 10: Directly show both compProds with common base measure ν = μ.map ζ are equal
+  -- K₁ z := condDistrib ξ ζ μ z
+  -- K₂ z := condDistrib ξ η μ (φ z)
+  -- We show ν ⊗ₘ K₁ = ν ⊗ₘ K₂ by proving both equal Law(η, ξ)
+
+  -- Step 10.5: We need one more fact - the kernel equality itself!
+  -- This is the key: we can derive it from the disintegration uniqueness
+  -- The idea: both `condDistrib ξ ζ μ` and `z ↦ condDistrib ξ η μ (φ z)` are valid
+  -- disintegrations of Law(η, ξ) with respect to the base `μ.map ζ`
+
+  have h_compProd_same_base :
+    (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ) =
+    (μ.map ζ) ⊗ₘ (fun z => condDistrib ξ η μ (φ z)) := by
+    -- We use the symmetry: h_compProd_eq tells us both equal something via φ-pushforward
+    -- Transform h_compProd_eq: (μ.map ζ) ⊗ₘ K₁ = ((μ.map ζ).map φ) ⊗ₘ K_η
+    -- where K_η = condDistrib ξ η μ
+    -- The RHS can be rewritten using change of base in compProd
+    sorry
+
+  -- Apply compProd_eq_iff to get kernel equality
   have h_kernels_at_z : ∀ᵐ z ∂(μ.map ζ), condDistrib ξ ζ μ z = condDistrib ξ η μ (φ z) := by
-    -- Strategy: Show (condDistrib ξ ζ μ) =ᵐ[μ.map ζ] (condDistrib ξ η μ).comap φ hφ_meas
-    -- by proving their compProds are equal
-    suffices condDistrib ξ ζ μ =ᵐ[μ.map ζ] (condDistrib ξ η μ).comap φ hφ_meas by
-      filter_upwards [this] with z hz
-      rw [hz, ProbabilityTheory.Kernel.comap_apply]
-    -- Use compProd_eq_iff to show kernel equality
-    rw [← ProbabilityTheory.Kernel.compProd_eq_iff]
-    -- Need to show: (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ) = (μ.map ζ) ⊗ₘ ((condDistrib ξ η μ).comap φ hφ_meas)
-    -- We have h_compProd_eq which gives the LHS = ((μ.map ζ).map φ) ⊗ₘ (condDistrib ξ η μ)
-    -- So we need to show: ((μ.map ζ).map φ) ⊗ₘ (condDistrib ξ η μ) = (μ.map ζ) ⊗ₘ ((condDistrib ξ η μ).comap φ hφ_meas)
-    rw [← h_compProd_eq]
-    -- Goal: ((μ.map ζ).map φ) ⊗ₘ (condDistrib ξ η μ) = (μ.map ζ) ⊗ₘ ((condDistrib ξ η μ).comap φ hφ_meas)
-    -- Prove this using the definition of compProd and measure.map
-    ext s hs
-    rw [ProbabilityTheory.compProd_apply hs, ProbabilityTheory.compProd_apply hs]
-    -- Goal: ∫⁻ a, (condDistrib ξ η μ) a (Prod.mk a ⁻¹' s) ∂((μ.map ζ).map φ) =
-    --       ∫⁻ a, ((condDistrib ξ η μ).comap φ hφ_meas) a (Prod.mk a ⁻¹' s) ∂(μ.map ζ)
-    -- Rewrite LHS using change of variables for measure.map
-    rw [MeasureTheory.lintegral_map]
-    · -- After change of variables: ∫⁻ z, (condDistrib ξ η μ) (φ z) (Prod.mk (φ z) ⁻¹' s) ∂(μ.map ζ)
-      -- Rewrite RHS using comap definition
-      congr 1
-      ext z
-      rw [ProbabilityTheory.Kernel.comap_apply]
-      -- Goal: (condDistrib ξ η μ) (φ z) (Prod.mk (φ z) ⁻¹' s) = (condDistrib ξ η μ) (φ z) (Prod.mk z ⁻¹' s)
-      -- This requires: Prod.mk (φ z) ⁻¹' s = Prod.mk z ⁻¹' s for the relevant kernel application
-      sorry
-    · exact hφ_meas
-    · exact fun _ => (condDistrib ξ η μ).measurable_coe (measurable_prod_mk_left hs)
+    exact (ProbabilityTheory.Kernel.compProd_eq_iff).mp h_compProd_same_base
 
   -- Step 11: Pull back kernel equality to Ω and use factorization
   have h_kernel_on_Ω : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (η ω) := by
