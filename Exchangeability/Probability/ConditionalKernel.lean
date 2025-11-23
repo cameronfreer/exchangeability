@@ -149,14 +149,41 @@ theorem condExp_eq_of_joint_law_eq
           rw [← hηfac]
       _ = ((μ.map ζ).map φ) ⊗ₘ (condDistrib ξ η μ) := by rw [← h_map_comp]
 
-  -- Step 9: Direct kernel equality from uniqueness of conditional distributions
-  -- Since both (ζ, ξ) and (η, ξ) have the same law, and η = φ ∘ ζ, we can show
-  -- that the conditional distribution of ξ given ζ equals the conditional distribution
-  -- of ξ given η, evaluated at φ(ζ).
+  -- Step 9: Key observation - the marginal equality simplifies everything
+  -- Since μ.map ζ = μ.map η and μ.map η = (μ.map ζ).map φ, we have a measure-preserving map
+  have h_map_φ_id : (μ.map ζ).map φ = μ.map ζ := by
+    rw [Measure.map_map hφ_meas hζ, ← hηfac, h_marg_eq]
+
+  -- Step 10: Use equal joint laws to get compProd equality
+  -- From hζ_compProd, h_law_swapped, and hη_via_φζ, derive the simplified equality
+  have h_compProd_simplified : (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ) = (μ.map ζ) ⊗ₘ (condDistrib ξ η μ) := by
+    rw [hζ_compProd, h_law_swapped]
+    -- Goal: μ.map (fun ω => (η ω, ξ ω)) = (μ.map ζ) ⊗ₘ (condDistrib ξ η μ)
+    -- Use hη_via_φζ and h_map_φ_id
+    rw [hη_via_φζ, h_map_φ_id]
+
+  -- Step 12: Apply compProd_eq_iff to get kernel equality
+  have h_kernels_at_z : condDistrib ξ ζ μ =ᵐ[μ.map ζ] condDistrib ξ η μ := by
+    exact (ProbabilityTheory.Kernel.compProd_eq_iff).mp h_compProd_simplified
+
+  -- Step 13: Pull back kernel equality to Ω
   have h_kernel_on_Ω : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (η ω) := by
-    -- This follows from the essential uniqueness of conditional distributions
-    -- Given that Law(ζ, ξ) = Law(η, ξ), the conditional distributions must agree
-    sorry  -- TODO: Needs a lemma about uniqueness of condDistrib under equal laws
+    -- First pull back: κ_ζ(ζ(ω)) = κ_η(ζ(ω)) for μ-a.e. ω
+    have h_at_ζ : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (ζ ω) := by
+      exact ae_of_ae_map hζ.aemeasurable h_kernels_at_z
+    -- Since (μ.map ζ).map φ = μ.map ζ and η = φ ∘ ζ, we have μ.map η = μ.map ζ
+    -- Therefore, by h_marg_eq, the measures agree
+    -- This means ζ ω = η ω a.e. (this is a consequence of the measure equality)
+    have h_ζ_eq_η : ∀ᵐ ω ∂μ, ζ ω = η ω := by
+      -- Use the fact that φ is measure-preserving on μ.map ζ
+      -- From h_map_φ_id : (μ.map ζ).map φ = μ.map ζ
+      -- We need to show ∀ᵐ ω, ζ ω = η ω, which follows from η = φ ∘ ζ and φ being identity a.e.
+      sorry
+    -- Combine the two
+    filter_upwards [h_at_ζ, h_ζ_eq_η] with ω hζ hη
+    calc (condDistrib ξ ζ μ) (ζ ω)
+        = (condDistrib ξ η μ) (ζ ω) := hζ
+      _ = (condDistrib ξ η μ) (η ω) := by rw [← hη]
 
   -- Step 11: Use η = φ ∘ ζ to get the final equality
   have h_integral_eq : (fun ω => ∫ e, B.indicator (fun _ => (1 : ℝ)) e ∂(condDistrib ξ ζ μ (ζ ω)))
