@@ -1216,14 +1216,9 @@ private lemma cesaro_cauchy_rho_lt
                   exact Fin.ext hab
                 · -- Surjectivity onto Finset.range n
                   intros b hb
-                  use ⟨b, Nat.lt_of_lt_of_le (Finset.mem_range.mp hb) (le_max_left n n')⟩
-                  simp only [Finset.mem_filter, Finset.mem_univ, true_and, Fin.coe_ofNat_eq_mod]
-                  constructor
-                  · -- Show ⟨b, _⟩ ∈ {x | ↑x < n}
-                    simp
-                    exact Finset.mem_range.mp hb
-                  · -- Show Fin.val of ⟨b, _⟩ = b
-                    simp
+                  have hb' := Finset.mem_range.mp hb
+                  refine ⟨⟨b, Nat.lt_of_lt_of_le hb' (le_max_left n n')⟩, ?_, rfl⟩
+                  simp [hb']
                 · -- Show functions agree
                   intros a ha
                   rfl
@@ -1254,14 +1249,9 @@ private lemma cesaro_cauchy_rho_lt
                   exact Fin.ext hab
                 · -- Surjectivity onto Finset.range n'
                   intros b hb
-                  use ⟨b, Nat.lt_of_lt_of_le (Finset.mem_range.mp hb) (le_max_right n n')⟩
-                  simp only [Finset.mem_filter, Finset.mem_univ, true_and, Fin.coe_ofNat_eq_mod]
-                  constructor
-                  · -- Show ⟨b, _⟩ ∈ {x | ↑x < n'}
-                    simp
-                    exact Finset.mem_range.mp hb
-                  · -- Show Fin.val of ⟨b, _⟩ = b
-                    simp
+                  have hb' := Finset.mem_range.mp hb
+                  refine ⟨⟨b, Nat.lt_of_lt_of_le hb' (le_max_right n n')⟩, ?_, rfl⟩
+                  simp [hb']
                 · -- Show functions agree
                   intros a ha
                   rfl
@@ -2825,46 +2815,69 @@ lemma cesaro_to_condexp_L1
   -- • hα_conv : Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0)
   -- • hα_eq : α_f =ᵐ[μ] μ[f ∘ X 0 | TailSigma.tailSigma X]
 
-  -- TODO: Complete L² → L¹ conversion proof
-  --
   -- STEP 1: Convert eLpNorm convergence to plain integral form
-  -- Need: Tendsto (fun n => ∫ ω, (blockAvg f X 0 n ω - α_f ω)^2 ∂μ) atTop (𝓝 0)
-  -- From: hα_conv : Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0)
-  -- Use: eLpNorm g 2 μ = (∫ |g|² ∂μ)^(1/2) when g ∈ L²
-  -- Method: Apply eLpNorm_eq_integral_rpow or similar conversion lemma
-  --
-  -- STEP 2: Apply Exchangeability.Probability.IntegrationHelpers.L2_tendsto_implies_L1_tendsto_of_bounded
-  -- Inputs needed:
-  --   • f n := blockAvg f X 0 n
-  --   • g := α_f
-  --   • hf_meas : ∀ n, Measurable (blockAvg f X 0 n) - from blockAvg_measurable
-  --   • hf_bdd : ∃ M, ∀ n ω, |blockAvg f X 0 n ω| ≤ M - use M = 1 from |f| ≤ 1
-  --   • hg_memLp : MemLp α_f 2 μ - we have this as hα_L2
-  --   • hL2 : Tendsto (fun n => ∫ ω, (blockAvg f X 0 n ω - α_f ω)^2 ∂μ) atTop (𝓝 0)
-  --           - from Step 1
-  -- Output: Tendsto (fun n => ∫ ω, |blockAvg f X 0 n ω - α_f ω| ∂μ) atTop (𝓝 0)
-  --
-  -- STEP 3: Convert Tendsto to ∃ M, ∀ m ≥ M form
-  -- Use: Metric.tendsto_atTop for ℝ with distance function
-  -- Given: Tendsto (fun n => ∫ ω, |blockAvg n ω - α_f ω| ∂μ) atTop (𝓝 0)
-  -- Apply with ε to get: ∃ M, ∀ m ≥ M, |∫ ω, |blockAvg m ω - α_f ω| ∂μ - 0| < ε
-  -- Simplify: ∃ M, ∀ m ≥ M, ∫ ω, |blockAvg m ω - α_f ω| ∂μ < ε
-  --
-  -- STEP 4: Replace α_f with μ[f ∘ X 0 | tail]
-  -- Use: hα_eq : α_f =ᵐ[μ] μ[f ∘ X 0 | TailSigma.tailSigma X]
-  -- Apply: integral_congr_ae to show integrals are equal a.e.
-  -- Need: Show ∫ ω, |blockAvg m ω - α_f ω| ∂μ = ∫ ω, |blockAvg m ω - μ[f ∘ X 0 | tail] ω| ∂μ
-  --
-  -- STEP 5: Note blockAvg f X 0 m ω = (1/m) * ∑ i : Fin m, f (X i ω)
-  -- This is definitional, so just unfold blockAvg definition
-  --
-  -- Final result: ∃ M, ∀ m ≥ M, ∫ ω, |(1/m) * ∑ i, f (X i ω) - μ[f∘X 0|tail] ω| ∂μ < ε
-  --
-  -- IMPLEMENTATION NOTES:
-  -- - May need helper lemmas for eLpNorm ↔ integral conversion
-  -- - blockAvg_measurable should exist or be easy to prove
-  -- - blockAvg boundedness follows from f boundedness by linearity
-  sorry
+  -- eLpNorm g 2 μ = (∫ |g|² ∂μ)^(1/2), so squaring both sides and using continuity
+  have hL2_integral : Tendsto (fun n => ∫ ω, (blockAvg f X 0 n ω - α_f ω)^2 ∂μ) atTop (𝓝 0) := by
+    -- Strategy: eLpNorm g 2 μ → 0  implies  (eLpNorm g 2 μ)² → 0  by continuity
+    -- And (eLpNorm g 2 μ)² = ∫ |g|² dμ = ∫ g² dμ  for real g
+    have h_sq : Tendsto (fun n => (eLpNorm (blockAvg f X 0 n - α_f) 2 μ).toReal ^ 2) atTop (𝓝 0) := by
+      have : (0 : ℝ) ^ 2 = 0 := by norm_num
+      rw [← this]
+      apply Tendsto.pow
+      exact ENNReal.tendsto_toReal_iff.mpr ⟨hα_conv, Filter.Eventually.of_forall (fun _ => ENNReal.zero_ne_top)⟩
+    -- Now show (eLpNorm g 2 μ).toReal² = ∫ g² dμ
+    convert h_sq using 1
+    ext n
+    -- Goal: (eLpNorm (blockAvg f X 0 n - α_f) 2 μ).toReal ^ 2 = ∫ ω, (blockAvg f X 0 n ω - α_f ω) ^ 2 ∂μ
+    -- This follows from the definition of eLpNorm for p = 2
+    sorry -- TODO: eLpNorm definition
+
+  -- STEP 2: Apply L2_tendsto_implies_L1_tendsto_of_bounded
+  have hf_meas : ∀ n, Measurable (blockAvg f X 0 n) := by
+    intro n
+    exact blockAvg_measurable f X hf_meas hX_meas 0 n
+
+  have hf_blockAvg_bdd : ∃ M, ∀ n ω, |blockAvg f X 0 n ω| ≤ M := by
+    use 1
+    intro n ω
+    exact blockAvg_abs_le_one f X hf_bdd 0 n ω
+
+  have hL1_conv : Tendsto (fun n => ∫ ω, |blockAvg f X 0 n ω - α_f ω| ∂μ) atTop (𝓝 0) :=
+    Exchangeability.Probability.IntegrationHelpers.L2_tendsto_implies_L1_tendsto_of_bounded
+      (fun n => blockAvg f X 0 n) α_f hf_meas hf_blockAvg_bdd hα_L2 hL2_integral
+
+  -- STEP 3: Convert Tendsto to ∃ M, ∀ m ≥ M form using metric convergence
+  rw [Metric.tendsto_atTop] at hL1_conv
+  obtain ⟨M, hM⟩ := hL1_conv ε hε
+  use M
+  intro m hm
+
+  -- STEP 4-5: Use a.e. equality and apply convergence bound
+  -- hM states: dist (∫|blockAvg m - α_f|) 0 < ε
+  -- Goal: ∫|(1/m)*∑ f(X i) - μ[f∘X 0|tail]| < ε
+  -- These are equal by (a) blockAvg definition and (b) α_f =ᵐ μ[f∘X 0|tail]
+
+  convert hM m hm using 1
+  simp only [Real.dist_eq, sub_zero]
+  -- Remove outer absolute value (integral of |...| is non-negative)
+  rw [abs_of_nonneg]
+  swap
+  · apply integral_nonneg
+    intro ω
+    exact abs_nonneg _
+  -- Show ∫|blockAvg m - α_f| = ∫|(1/m)*∑ - μ[f∘X 0|tail]|
+  apply integral_congr_ae
+  filter_upwards [hα_eq] with ω hω_eq
+  -- blockAvg f X 0 m ω = (m : ℝ)⁻¹ * ∑ k ∈ Finset.range m, f (X k ω)
+  -- which equals 1/m * ∑ i : Fin m, f (X i ω)
+  rw [hω_eq]
+  show _ = |blockAvg f X 0 m ω - _|
+  congr 1
+  -- Unfold blockAvg definition and convert between sum representations
+  simp only [blockAvg, zero_add, one_div, Finset.sum_fin_eq_sum_range]
+  -- Simplify the dite created by sum_fin_eq_sum_range
+  simp only [Finset.mem_range, dite_eq_ite, ite_eq_left_iff]
+  simp only [Fin.coe_mk]
 
 /-- **THEOREM (Indicator integral continuity at fixed threshold):**
 If `Xₙ → X` a.e. and each `Xₙ`, `X` is measurable, then
