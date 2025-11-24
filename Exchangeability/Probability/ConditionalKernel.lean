@@ -159,44 +159,62 @@ theorem condExp_eq_of_joint_law_eq
   -- K₂ z := condDistrib ξ η μ (φ z)
   -- We show ν ⊗ₘ K₁ = ν ⊗ₘ K₂ by proving both equal Law(η, ξ)
 
-  -- Step 10.5: We need one more fact - the kernel equality itself!
-  -- This is the key: we can derive it from the disintegration uniqueness
-  -- The idea: both `condDistrib ξ ζ μ` and `z ↦ condDistrib ξ η μ (φ z)` are valid
-  -- disintegrations of Law(η, ξ) with respect to the base `μ.map ζ`
+  -- Step 10.5: Kernel equality via disintegration under factorization
+  -- Key insight: Both kernels disintegrate Law(ζ,ξ) = Law(η,ξ) with respect to μ.map ζ
+  -- Use Kernel.comap to represent the composition z ↦ condDistrib ξ η μ (φ z)
+  have h_kernel_z : ∀ᵐ z ∂(μ.map ζ), condDistrib ξ ζ μ z = condDistrib ξ η μ (φ z) := by
+    -- Define the "comapped" kernel using Kernel.comap
+    -- This gives us a proper Kernel type representing z ↦ condDistrib ξ η μ (φ z)
+    let κ_φ := (condDistrib ξ η μ).comap φ hφ_meas
 
-  have h_compProd_same_base :
-    (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ) =
-    (μ.map ζ) ⊗ₘ (fun z => condDistrib ξ η μ (φ z)) := by
-    -- We use the symmetry: h_compProd_eq tells us both equal something via φ-pushforward
-    -- Transform h_compProd_eq: (μ.map ζ) ⊗ₘ K₁ = ((μ.map ζ).map φ) ⊗ₘ K_η
-    -- where K_η = condDistrib ξ η μ
-    -- The RHS can be rewritten using change of base in compProd
-    sorry
+    -- Show that both compProds with base μ.map ζ are equal
+    have h_compProd_same_base : (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ) = (μ.map ζ) ⊗ₘ κ_φ := by
+      calc (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ)
+          = μ.map (fun ω => (ζ ω, ξ ω)) := hζ_compProd
+        _ = μ.map (fun ω => (η ω, ξ ω)) := h_law_swapped
+        _ = (μ.map η) ⊗ₘ (condDistrib ξ η μ) := hη_compProd.symm
+        _ = (μ.map (φ ∘ ζ)) ⊗ₘ (condDistrib ξ η μ) := by rw [← hηfac]
+        _ = ((μ.map ζ).map φ) ⊗ₘ (condDistrib ξ η μ) := by rw [← Measure.map_map hφ_meas hζ]
+        _ = (μ.map ζ) ⊗ₘ κ_φ := by
+            -- KEY MISSING LEMMA: Rewrite compProd under factorization
+            -- Need to show: ((ν.map φ) ⊗ₘ κ) = (ν ⊗ₘ (κ.comap φ hφ))
+            -- This is NOT a general compProd identity - it requires a specialized proof
+            -- using properties of conditional distributions and factorizations
+            --
+            -- The correct approach (per discussion): Write a lemma that proves
+            -- Law(η, ξ) = (μ.map ζ) ⊗ₘ (z ↦ condDistrib ξ η μ (φ z))
+            -- directly from the defining properties of condDistrib, not by manipulating compProds
+            --
+            -- This lemma should use:
+            -- - The defining property of condDistrib: it disintegrates the joint law
+            -- - The factorization η = φ ∘ ζ
+            -- - The marginal equality Law(ζ) = Law(η)
+            sorry
 
-  -- Apply compProd_eq_iff to get kernel equality
-  have h_kernels_at_z : ∀ᵐ z ∂(μ.map ζ), condDistrib ξ ζ μ z = condDistrib ξ η μ (φ z) := by
-    exact (ProbabilityTheory.Kernel.compProd_eq_iff).mp h_compProd_same_base
+    -- Apply compProd_eq_iff to extract the kernel equality
+    have h_kernels_eq : condDistrib ξ ζ μ =ᵐ[μ.map ζ] κ_φ := by
+      exact (ProbabilityTheory.Kernel.compProd_eq_iff).mp h_compProd_same_base
 
-  -- Step 11: Pull back kernel equality to Ω and use factorization
+    -- Unfold κ_φ using the definition of comap
+    filter_upwards [h_kernels_eq] with z hz
+    rw [hz]
+    rfl  -- κ_φ z = (condDistrib ξ η μ).comap φ hφ_meas z = condDistrib ξ η μ (φ z) by definition
+
+  -- Pull back along ζ and use factorization η = φ ∘ ζ
   have h_kernel_on_Ω : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (η ω) := by
-    -- Pull back: κ_ζ(ζ(ω)) = κ_η(φ(ζ(ω))) for μ-a.e. ω
-    have h_at_φζ : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (φ (ζ ω)) := by
-      exact ae_of_ae_map hζ.aemeasurable h_kernels_at_z
-    -- Use factorization η = φ ∘ ζ to rewrite φ (ζ ω) as η ω
-    filter_upwards [h_at_φζ] with ω hω
-    rw [hω]
-    -- Goal: (condDistrib ξ η μ) (φ (ζ ω)) = (condDistrib ξ η μ) (η ω)
-    -- Use η ω = φ (ζ ω) from η = φ ∘ ζ
-    congr 1
-    exact (congr_fun hηfac ω).symm
+    -- Pull back the kernel equality from μ.map ζ to μ
+    have h_at_ζ : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (φ (ζ ω)) := by
+      exact ae_of_ae_map hζ.aemeasurable h_kernel_z
+    -- Use η = φ ∘ ζ to rewrite φ (ζ ω) as η ω
+    filter_upwards [h_at_ζ] with ω hω
+    have : η ω = φ (ζ ω) := congr_fun hηfac ω
+    rw [hω, this]
 
   -- Step 11: Use η = φ ∘ ζ to get the final equality
   have h_integral_eq : (fun ω => ∫ e, B.indicator (fun _ => (1 : ℝ)) e ∂(condDistrib ξ ζ μ (ζ ω)))
       =ᵐ[μ] (fun ω => ∫ e, B.indicator (fun _ => (1 : ℝ)) e ∂(condDistrib ξ η μ (η ω))) := by
     filter_upwards [h_kernel_on_Ω] with ω hω
-    -- Use η ω = φ (ζ ω) from hηfac
-    have : η ω = φ (ζ ω) := congr_fun hηfac ω
-    rw [hω, this]
+    rw [hω]
 
   -- Step 12: Chain all the equalities together
   calc μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ inferInstance]
