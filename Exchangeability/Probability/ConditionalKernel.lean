@@ -159,44 +159,20 @@ theorem condExp_eq_of_joint_law_eq
   -- K₂ z := condDistrib ξ η μ (φ z)
   -- We show ν ⊗ₘ K₁ = ν ⊗ₘ K₂ by proving both equal Law(η, ξ)
 
-  -- Step 10.5: We need one more fact - the kernel equality itself!
-  -- This is the key: we can derive it from the disintegration uniqueness
-  -- The idea: both `condDistrib ξ ζ μ` and `z ↦ condDistrib ξ η μ (φ z)` are valid
-  -- disintegrations of Law(η, ξ) with respect to the base `μ.map ζ`
-
-  have h_compProd_same_base :
-    (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ) =
-    (μ.map ζ) ⊗ₘ (fun z => condDistrib ξ η μ (φ z)) := by
-    -- We use the symmetry: h_compProd_eq tells us both equal something via φ-pushforward
-    -- Transform h_compProd_eq: (μ.map ζ) ⊗ₘ K₁ = ((μ.map ζ).map φ) ⊗ₘ K_η
-    -- where K_η = condDistrib ξ η μ
-    -- The RHS can be rewritten using change of base in compProd
-    sorry
-
-  -- Apply compProd_eq_iff to get kernel equality
-  have h_kernels_at_z : ∀ᵐ z ∂(μ.map ζ), condDistrib ξ ζ μ z = condDistrib ξ η μ (φ z) := by
-    exact (ProbabilityTheory.Kernel.compProd_eq_iff).mp h_compProd_same_base
-
-  -- Step 11: Pull back kernel equality to Ω and use factorization
+  -- Step 10.5: Kernel equality via disintegration properties
+  -- This sorry represents a fundamental gap in the proof
+  -- TODO: This requires proving that condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (η ω) for a.e. ω
+  -- Given: η = φ ∘ ζ, Law(ζ,ξ) = Law(η,ξ), Law(ζ) = Law(η), σ(η) ≤ σ(ζ)
+  -- This is a mathematical property about how conditional distributions transform under
+  -- Doob-Dynkin factorizations when joint laws are preserved
   have h_kernel_on_Ω : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (η ω) := by
-    -- Pull back: κ_ζ(ζ(ω)) = κ_η(φ(ζ(ω))) for μ-a.e. ω
-    have h_at_φζ : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (φ (ζ ω)) := by
-      exact ae_of_ae_map hζ.aemeasurable h_kernels_at_z
-    -- Use factorization η = φ ∘ ζ to rewrite φ (ζ ω) as η ω
-    filter_upwards [h_at_φζ] with ω hω
-    rw [hω]
-    -- Goal: (condDistrib ξ η μ) (φ (ζ ω)) = (condDistrib ξ η μ) (η ω)
-    -- Use η ω = φ (ζ ω) from η = φ ∘ ζ
-    congr 1
-    exact (congr_fun hηfac ω).symm
+    sorry
 
   -- Step 11: Use η = φ ∘ ζ to get the final equality
   have h_integral_eq : (fun ω => ∫ e, B.indicator (fun _ => (1 : ℝ)) e ∂(condDistrib ξ ζ μ (ζ ω)))
       =ᵐ[μ] (fun ω => ∫ e, B.indicator (fun _ => (1 : ℝ)) e ∂(condDistrib ξ η μ (η ω))) := by
     filter_upwards [h_kernel_on_Ω] with ω hω
-    -- Use η ω = φ (ζ ω) from hηfac
-    have : η ω = φ (ζ ω) := congr_fun hηfac ω
-    rw [hω, this]
+    rw [hω]
 
   -- Step 12: Chain all the equalities together
   calc μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ inferInstance]
