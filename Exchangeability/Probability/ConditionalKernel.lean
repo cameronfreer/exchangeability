@@ -159,26 +159,33 @@ theorem condExp_eq_of_joint_law_eq
   -- K₂ z := condDistrib ξ η μ (φ z)
   -- We show ν ⊗ₘ K₁ = ν ⊗ₘ K₂ by proving both equal Law(η, ξ)
 
-  -- Step 10.5: Prove the conditional expectations are equal
-  -- Strategy: Use the disintegration property and joint law equality
+  -- Step 10.5: Direct proof using the conditional expectation characterization
+  -- Skip the pointwise kernel equality - prove the integral equality directly
   have h_kernel_on_Ω : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (η ω) := by
-    -- For any measurable set C ⊆ E, define:
-    -- f_ζ(ω) := (condDistrib ξ ζ μ (ζ ω)) C
-    -- f_η(ω) := (condDistrib ξ η μ (η ω)) C
+    -- The key insight: both sides are versions of E[1_B(ξ) | σ(·)]
+    -- By uniqueness of conditional expectation, they must be equal
 
-    -- By the disintegration formula (Fubini for conditional distributions):
-    -- μ {ω | ξ ω ∈ C} = ∫⁻ γ, (condDistrib ξ ζ μ γ) C ∂(μ.map ζ) = ∫⁻ ω, f_ζ(ω) ∂μ
-    -- μ {ω | ξ ω ∈ C} = ∫⁻ γ, (condDistrib ξ η μ γ) C ∂(μ.map η) = ∫⁻ ω, f_η(ω) ∂μ
+    -- For any measurable set C ⊆ E, define f_C(ω) := 1_C(ξ ω)
+    -- Then:
+    -- - E[f_C | σ(ζ)] = ∫ e, 1_C(e) ∂(condDistrib ξ ζ μ (ζ ω))
+    -- - E[f_C | σ(η)] = ∫ e, 1_C(e) ∂(condDistrib ξ η μ (η ω))
 
-    -- Therefore: ∫⁻ ω, f_ζ(ω) ∂μ = ∫⁻ ω, f_η(ω) ∂μ for all measurable C
+    -- By the tower property and coarsening: since σ(η) ⊆ σ(ζ),
+    -- we have E[E[f_C | σ(ζ)] | σ(η)] = E[f_C | σ(η)]
 
-    -- By the conditional expectation characterization:
-    -- This means f_ζ = f_η a.e., i.e., the conditional distributions agree a.e.
+    -- But also: E[E[f_C | σ(ζ)] | σ(η)] should use the kernel for ζ
+    -- evaluated at... hmm, this is getting circular
 
-    -- Use Kernel.ae_eq_condDistrib_of_forall_eq: if two kernels give the same
-    -- integrals for all indicator functions, they are equal a.e.
+    -- Alternative: use the joint law equality directly
+    -- Law(ζ, ξ) = Law(η, ξ) means for any test function g:
+    -- ∫ g(ζ ω, ξ ω) dμ = ∫ g(η ω, ξ ω) dμ
 
-    sorry  -- Need to apply conditional distribution uniqueness from equal disintegrations
+    -- In particular, for g(γ, e) = h(γ) * 1_B(e):
+    -- ∫ h(ζ ω) * 1_B(ξ ω) dμ = ∫ h(η ω) * 1_B(ξ ω) dμ
+
+    -- This is exactly the defining property that relates the conditional distributions!
+
+    sorry  -- Final gap: use joint law equality and coarsening to conclude
 
   -- Step 11: Use η = φ ∘ ζ to get the final equality
   have h_integral_eq : (fun ω => ∫ e, B.indicator (fun _ => (1 : ℝ)) e ∂(condDistrib ξ ζ μ (ζ ω)))
