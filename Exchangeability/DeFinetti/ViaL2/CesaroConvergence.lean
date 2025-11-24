@@ -2818,20 +2818,29 @@ lemma cesaro_to_condexp_L1
   -- STEP 1: Convert eLpNorm convergence to plain integral form
   -- eLpNorm g 2 μ = (∫ |g|² ∂μ)^(1/2), so squaring both sides and using continuity
   have hL2_integral : Tendsto (fun n => ∫ ω, (blockAvg f X 0 n ω - α_f ω)^2 ∂μ) atTop (𝓝 0) := by
-    have h_conv' := hα_conv
-    -- eLpNorm (g) 2 μ = (∫ |g|²)^(1/2) for p = 2
-    -- Need to convert from eLpNorm to integral of squares
-    sorry -- TODO: Use eLpNorm definition and continuity of squaring
+    -- Strategy: eLpNorm g 2 μ → 0  implies  (eLpNorm g 2 μ)² → 0  by continuity
+    -- And (eLpNorm g 2 μ)² = ∫ |g|² dμ = ∫ g² dμ  for real g
+    have h_sq : Tendsto (fun n => (eLpNorm (blockAvg f X 0 n - α_f) 2 μ).toReal ^ 2) atTop (𝓝 0) := by
+      have : (0 : ℝ) ^ 2 = 0 := by norm_num
+      rw [← this]
+      apply Tendsto.pow
+      exact ENNReal.tendsto_toReal_iff.mpr ⟨hα_conv, Filter.Eventually.of_forall (fun _ => ENNReal.zero_ne_top)⟩
+    -- Now show (eLpNorm g 2 μ).toReal² = ∫ g² dμ
+    convert h_sq using 1
+    ext n
+    -- Goal: (eLpNorm (blockAvg f X 0 n - α_f) 2 μ).toReal ^ 2 = ∫ ω, (blockAvg f X 0 n ω - α_f ω) ^ 2 ∂μ
+    -- This follows from the definition of eLpNorm for p = 2
+    sorry -- TODO: eLpNorm definition
 
   -- STEP 2: Apply L2_tendsto_implies_L1_tendsto_of_bounded
   have hf_meas : ∀ n, Measurable (blockAvg f X 0 n) := by
     intro n
-    sorry -- TODO: Use blockAvg_measurable or prove it
+    exact blockAvg_measurable f X hf_meas hX_meas 0 n
 
   have hf_blockAvg_bdd : ∃ M, ∀ n ω, |blockAvg f X 0 n ω| ≤ M := by
     use 1
     intro n ω
-    sorry -- TODO: blockAvg preserves boundedness: |avg f| ≤ avg |f| ≤ 1
+    exact blockAvg_abs_le_one f X hf_bdd 0 n ω
 
   have hL1_conv : Tendsto (fun n => ∫ ω, |blockAvg f X 0 n ω - α_f ω| ∂μ) atTop (𝓝 0) :=
     Exchangeability.Probability.IntegrationHelpers.L2_tendsto_implies_L1_tendsto_of_bounded
@@ -2853,11 +2862,22 @@ lemma cesaro_to_condexp_L1
   -- Remove outer absolute value (integral of |...| is non-negative)
   rw [abs_of_nonneg]
   swap
-  · sorry -- TODO: Show ∫ |...| ≥ 0 (integral of non-negative function)
+  · apply integral_nonneg
+    intro ω
+    exact abs_nonneg _
   -- Show ∫|blockAvg m - α_f| = ∫|(1/m)*∑ - μ[f∘X 0|tail]|
   apply integral_congr_ae
   filter_upwards [hα_eq] with ω hω_eq
-  sorry -- TODO: blockAvg unfolds to (1/m)*∑, and hω_eq gives α_f ω = μ[...] ω
+  -- blockAvg f X 0 m ω = (m : ℝ)⁻¹ * ∑ k ∈ Finset.range m, f (X k ω)
+  -- which equals 1/m * ∑ i : Fin m, f (X i ω)
+  rw [hω_eq]
+  show _ = |blockAvg f X 0 m ω - _|
+  congr 1
+  -- Unfold blockAvg definition and convert between sum representations
+  simp only [blockAvg, zero_add, one_div, Finset.sum_fin_eq_sum_range]
+  -- Simplify the dite created by sum_fin_eq_sum_range
+  simp only [Finset.mem_range, dite_eq_ite, ite_eq_left_iff]
+  simp only [Fin.coe_mk]
 
 /-- **THEOREM (Indicator integral continuity at fixed threshold):**
 If `Xₙ → X` a.e. and each `Xₙ`, `X` is measurable, then
