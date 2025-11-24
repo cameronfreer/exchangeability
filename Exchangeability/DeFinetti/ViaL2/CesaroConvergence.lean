@@ -2817,20 +2817,37 @@ lemma cesaro_to_condexp_L1
 
   -- STEP 1: Convert eLpNorm convergence to plain integral form
   -- eLpNorm g 2 μ = (∫ |g|² ∂μ)^(1/2), so squaring both sides and using continuity
+  -- First, show that each difference is in L²
+  have h_diff_memLp : ∀ n, MemLp (fun ω => blockAvg f X 0 n ω - α_f ω) 2 μ := by
+    intro n
+    have h_blockAvg_memLp : MemLp (blockAvg f X 0 n) 2 μ := by
+      apply MemLp.of_bound (blockAvg_measurable f X hf_meas hX_meas 0 n).aestronglyMeasurable 1
+      exact ae_of_all μ (fun ω => (Real.norm_eq_abs _).le.trans (blockAvg_abs_le_one f X hf_bdd 0 n ω))
+    exact h_blockAvg_memLp.sub hα_L2
+
   have hL2_integral : Tendsto (fun n => ∫ ω, (blockAvg f X 0 n ω - α_f ω)^2 ∂μ) atTop (𝓝 0) := by
     -- Strategy: eLpNorm g 2 μ → 0  implies  (eLpNorm g 2 μ)² → 0  by continuity
     -- And (eLpNorm g 2 μ)² = ∫ |g|² dμ = ∫ g² dμ  for real g
+
+    -- Step 1: Convert ENNReal tendsto to Real tendsto
+    have h_toReal_conv : Tendsto (fun n => (eLpNorm (blockAvg f X 0 n - α_f) 2 μ).toReal) atTop (𝓝 0) := by
+      -- Use ENNReal.tendsto_toReal_iff to convert ENNReal tendsto to Real tendsto
+      -- We need to show: (1) eLpNorm never equals ∞, and (2) 0 ≠ ∞
+      have h_finite : ∀ n, eLpNorm (blockAvg f X 0 n - α_f) 2 μ ≠ ∞ := fun n => (h_diff_memLp n).eLpNorm_ne_top
+      rw [ENNReal.tendsto_toReal_iff h_finite ENNReal.zero_ne_top]
+      simp only [ENNReal.zero_toReal]
+      exact hα_conv
+
+    -- Step 2: Square the convergence
     have h_sq : Tendsto (fun n => (eLpNorm (blockAvg f X 0 n - α_f) 2 μ).toReal ^ 2) atTop (𝓝 0) := by
       have : (0 : ℝ) ^ 2 = 0 := by norm_num
       rw [← this]
-      apply Tendsto.pow
-      exact ENNReal.tendsto_toReal_iff.mpr ⟨hα_conv, Filter.Eventually.of_forall (fun _ => ENNReal.zero_ne_top)⟩
-    -- Now show (eLpNorm g 2 μ).toReal² = ∫ g² dμ
+      exact Tendsto.pow h_toReal_conv 2
+
+    -- Step 3: Use eLpNorm_two_sq_eq_integral_sq to convert to integral
     convert h_sq using 1
-    ext n
-    -- Goal: (eLpNorm (blockAvg f X 0 n - α_f) 2 μ).toReal ^ 2 = ∫ ω, (blockAvg f X 0 n ω - α_f ω) ^ 2 ∂μ
-    -- This follows from the definition of eLpNorm for p = 2
-    sorry -- TODO: eLpNorm definition
+    funext n
+    exact (MeasureTheory.eLpNorm_two_sq_eq_integral_sq (h_diff_memLp n)).symm
 
   -- STEP 2: Apply L2_tendsto_implies_L1_tendsto_of_bounded
   have hf_meas : ∀ n, Measurable (blockAvg f X 0 n) := by
@@ -2874,10 +2891,10 @@ lemma cesaro_to_condexp_L1
   show _ = |blockAvg f X 0 m ω - _|
   congr 1
   -- Unfold blockAvg definition and convert between sum representations
-  simp only [blockAvg, zero_add, one_div, Finset.sum_fin_eq_sum_range]
-  -- Simplify the dite created by sum_fin_eq_sum_range
-  simp only [Finset.mem_range, dite_eq_ite, ite_eq_left_iff]
-  simp only [Fin.coe_mk]
+  simp only [blockAvg, zero_add, one_div]
+  -- Convert sum over Fin m to sum over Finset.range m
+  congr 2
+  exact (Finset.sum_range (fun i => f (X i ω))).symm
 
 /-- **THEOREM (Indicator integral continuity at fixed threshold):**
 If `Xₙ → X` a.e. and each `Xₙ`, `X` is measurable, then
