@@ -150,10 +150,20 @@ lemma tendsto_eLpNorm_sub_of_tendsto_in_Lp
     (h : Tendsto u atTop (𝓝 v)) :
     Tendsto (fun n => eLpNorm (u n - v) p μ) atTop (𝓝 0) := by
   -- Metric convergence in Lp is exactly dist → 0
-  have h_dist : Tendsto (fun n => dist (u n) v) atTop (𝓝 0) :=
-    Metric.tendsto_atTop.mp h 1 zero_lt_one |> fun ⟨N, hN⟩ =>
-      tendsto_atTop_of_eventually_const (N := N) (fun n hn => ?_)
-  sorry -- Use Lp.dist_def to relate dist to eLpNorm
+  have h_dist : Tendsto (fun n => dist (u n) v) atTop (𝓝 0) := Metric.tendsto_iff_dist_tendsto_zero.mp h
+
+  -- Relate dist to eLpNorm via norm
+  -- dist (u n) v = ‖u n - v‖ = (eLpNorm (u n - v) p μ).toReal
+  have h_toReal : Tendsto (fun n => (eLpNorm (u n - v) p μ).toReal) atTop (𝓝 0) := by
+    convert h_dist using 1
+    funext n
+    rw [MeasureTheory.Lp.dist_eq_norm, MeasureTheory.Lp.norm_def]
+
+  -- Convert toReal tendsto back to ENNReal tendsto
+  have h_finite : ∀ n, eLpNorm (u n - v) p μ ≠ ∞ := fun n => (u n - v).eLpNorm_ne_top
+  rw [ENNReal.tendsto_toReal_iff h_finite ENNReal.zero_ne_top] at h_toReal
+  simp only [ENNReal.zero_toReal] at h_toReal
+  exact h_toReal
 
 /-- **Cauchy-Schwarz on set integrals (probability measure).**
 
