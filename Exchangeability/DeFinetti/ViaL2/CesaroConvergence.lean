@@ -1173,32 +1173,100 @@ private lemma cesaro_cauchy_rho_lt
     -- - Finset.sum_bij: establishes bijection for sum conversion
     -- - Field arithmetic to show n * n' * (if i < n then 1/n else 0) = (if i < n then n' else 0)
     simp only [ξ, p, q]
-    -- After simp, the goal is:
-    -- ⊢ (↑n * m_mean + ∑ x ∈ Finset.range n, Z x ω) * ↑n' +
-    --   ↑n * (-(m_mean * ↑n') - ∑ x ∈ Finset.range n', Z x ω) =
-    --   ↑n * ↑n' * (∑ x, (if ↑x < n then (↑n)⁻¹ else 0) * Z (↑x) ω -
-    --               ∑ x, (if ↑x < n' then (↑n')⁻¹ else 0) * Z (↑x) ω)
-    --
-    -- TODO: Prove this algebraic identity. Strategy:
-    -- 1. Expand LHS: distribute multiplications and combine like terms
-    --    Should get: n*n'*m_mean - n*n'*m_mean + n' * ∑ Z_i (i<n) - n * ∑ Z_j (j<n')
-    --    = n' * ∑ Z_i (i<n) - n * ∑ Z_j (j<n')
-    -- 2. Expand RHS: distribute n * n' into the sums
-    --    n * n' * (∑ (if i<n then n⁻¹ else 0) * Z_i - ∑ (if j<n' then n'⁻¹ else 0) * Z_j)
-    --    = ∑ n * n' * (if i<n then n⁻¹ else 0) * Z_i - ∑ n * n' * (if j<n' then n'⁻¹ else 0) * Z_j
-    --    = ∑ (if i<n then n' else 0) * Z_i - ∑ (if j<n' then n else 0) * Z_j
-    --    (using n * n' * n⁻¹ = n' and n * n' * n'⁻¹ = n)
-    -- 3. Show both sides equal using Finset.sum_bij to convert between Fin m and Finset.range
-    --
-    -- Attempted tactics (all failed):
-    -- - ring: doesn't handle conditional sums
-    -- - ring_nf: leaves unsolved goal
-    -- - conv_rhs + split_ifs: syntax errors
-    -- - Finset.sum_ite: pattern matching failures
-    -- - Finset.sum_range rewrite: didn't transform goal as expected
-    --
-    -- Likely needed: custom lemma about sum bijection or manual calc chain
-    sorry
+    -- Expand LHS: (n * m_mean + ∑_{i<n} Z_i) * n' + n * (-(m_mean * n') - ∑_{j<n'} Z_j)
+    -- Should simplify to: n' * ∑_{i<n} Z_i - n * ∑_{j<n'} Z_j
+    -- Expand RHS: n * n' * (∑ (if i<n then n⁻¹ else 0) * Z_i - ∑ (if j<n' then n'⁻¹ else 0) * Z_j)
+    -- Using n * n' * n⁻¹ = n' and indicator sums
+    calc (↑n * m_mean + ∑ x ∈ Finset.range n, Z x ω) * ↑n' +
+          ↑n * (-(m_mean * ↑n') - ∑ x ∈ Finset.range n', Z x ω)
+        = ↑n * m_mean * ↑n' + (∑ x ∈ Finset.range n, Z x ω) * ↑n' +
+          ↑n * (-(m_mean * ↑n')) + ↑n * (- ∑ x ∈ Finset.range n', Z x ω) := by ring
+      _ = ↑n * m_mean * ↑n' + ↑n' * ∑ x ∈ Finset.range n, Z x ω +
+          (-(↑n * m_mean * ↑n')) + (-(↑n * ∑ x ∈ Finset.range n', Z x ω)) := by ring
+      _ = ↑n' * ∑ x ∈ Finset.range n, Z x ω - ↑n * ∑ x ∈ Finset.range n', Z x ω := by ring
+      _ = ↑n * ↑n' * (∑ x : Fin m, (if ↑x < n then (↑n)⁻¹ else 0) * Z (↑x) ω -
+                      ∑ x : Fin m, (if ↑x < n' then (↑n')⁻¹ else 0) * Z (↑x) ω) := by
+        -- RHS: distribute n * n' and simplify conditionals
+        rw [mul_sub]
+        -- Simplify: n * n' * n⁻¹ = n' and n * n' * n'⁻¹ = n
+        have h1 : ↑n * ↑n' * (∑ x : Fin m, (if ↑x < n then (↑n)⁻¹ else 0) * Z (↑x) ω) =
+                  ↑n' * ∑ x ∈ Finset.range n, Z x ω := by
+          -- Pull n⁻¹ out and simplify n * n' * n⁻¹ = n'
+          calc ↑n * ↑n' * (∑ x : Fin m, (if ↑x < n then (↑n)⁻¹ else 0) * Z (↑x) ω)
+              = ∑ x : Fin m, ↑n * ↑n' * ((if ↑x < n then (↑n)⁻¹ else 0) * Z (↑x) ω) := by
+                rw [Finset.mul_sum]
+            _ = ∑ x : Fin m, (if ↑x < n then ↑n * ↑n' * (↑n)⁻¹ * Z (↑x) ω else 0) := by
+                congr 1 with x; split_ifs with h <;> ring
+            _ = ∑ x : Fin m, (if ↑x < n then ↑n' * Z (↑x) ω else 0) := by
+                congr 1 with x; split_ifs with h
+                · field_simp [hn_ne_zero]
+                · rfl
+            _ = ∑ x ∈ Finset.univ.filter (fun x : Fin m => ↑x < n), ↑n' * Z (↑x) ω := by
+                rw [Finset.sum_ite]
+                simp only [Finset.sum_const_zero, add_zero]
+            _ = ∑ x ∈ Finset.range n, ↑n' * Z x ω := by
+                -- Establish bijection between filtered Fin m and Finset.range n
+                refine Finset.sum_nbij Fin.val ?hi ?i_inj ?i_surj ?h
+                · -- Show x.val ∈ Finset.range n when x ∈ filter
+                  intros a ha
+                  simp only [Finset.mem_filter, Finset.mem_univ, true_and] at ha
+                  exact Finset.mem_range.mpr ha
+                · -- Injectivity on filtered set
+                  intros a ha b hb hab
+                  exact Fin.ext hab
+                · -- Surjectivity onto Finset.range n
+                  intros b hb
+                  use ⟨b, Nat.lt_of_lt_of_le (Finset.mem_range.mp hb) (le_max_left n n')⟩
+                  simp only [Finset.mem_filter, Finset.mem_univ, true_and, Fin.coe_ofNat_eq_mod]
+                  constructor
+                  · -- Show ⟨b, _⟩ ∈ {x | ↑x < n}
+                    simp
+                    exact Finset.mem_range.mp hb
+                  · -- Show Fin.val of ⟨b, _⟩ = b
+                    simp
+                · -- Show functions agree
+                  intros a ha
+                  rfl
+            _ = ↑n' * ∑ x ∈ Finset.range n, Z x ω := by rw [← Finset.mul_sum]
+        have h2 : ↑n * ↑n' * (∑ x : Fin m, (if ↑x < n' then (↑n')⁻¹ else 0) * Z (↑x) ω) =
+                  ↑n * ∑ x ∈ Finset.range n', Z x ω := by
+          calc ↑n * ↑n' * (∑ x : Fin m, (if ↑x < n' then (↑n')⁻¹ else 0) * Z (↑x) ω)
+              = ∑ x : Fin m, ↑n * ↑n' * ((if ↑x < n' then (↑n')⁻¹ else 0) * Z (↑x) ω) := by
+                rw [Finset.mul_sum]
+            _ = ∑ x : Fin m, (if ↑x < n' then ↑n * ↑n' * (↑n')⁻¹ * Z (↑x) ω else 0) := by
+                congr 1 with x; split_ifs with h <;> ring
+            _ = ∑ x : Fin m, (if ↑x < n' then ↑n * Z (↑x) ω else 0) := by
+                congr 1 with x; split_ifs with h
+                · field_simp [hn'_ne_zero]
+                · rfl
+            _ = ∑ x ∈ Finset.univ.filter (fun x : Fin m => ↑x < n'), ↑n * Z (↑x) ω := by
+                rw [Finset.sum_ite]
+                simp only [Finset.sum_const_zero, add_zero]
+            _ = ∑ x ∈ Finset.range n', ↑n * Z x ω := by
+                -- Establish bijection between filtered Fin m and Finset.range n'
+                refine Finset.sum_nbij Fin.val ?hi2 ?i_inj2 ?i_surj2 ?h2
+                · -- Show x.val ∈ Finset.range n' when x ∈ filter
+                  intros a ha
+                  simp only [Finset.mem_filter, Finset.mem_univ, true_and] at ha
+                  exact Finset.mem_range.mpr ha
+                · -- Injectivity on filtered set
+                  intros a ha b hb hab
+                  exact Fin.ext hab
+                · -- Surjectivity onto Finset.range n'
+                  intros b hb
+                  use ⟨b, Nat.lt_of_lt_of_le (Finset.mem_range.mp hb) (le_max_right n n')⟩
+                  simp only [Finset.mem_filter, Finset.mem_univ, true_and, Fin.coe_ofNat_eq_mod]
+                  constructor
+                  · -- Show ⟨b, _⟩ ∈ {x | ↑x < n'}
+                    simp
+                    exact Finset.mem_range.mp hb
+                  · -- Show Fin.val of ⟨b, _⟩ = b
+                    simp
+                · -- Show functions agree
+                  intros a ha
+                  rfl
+            _ = ↑n * ∑ x ∈ Finset.range n', Z x ω := by rw [← Finset.mul_sum]
+        rw [h1, h2]
 
   -- Step 4: Apply l2_contractability_bound
   have h_bound : ∫ ω, (∑ i : Fin m, p i * ξ i ω - ∑ i : Fin m, q i * ξ i ω) ^ 2 ∂μ ≤

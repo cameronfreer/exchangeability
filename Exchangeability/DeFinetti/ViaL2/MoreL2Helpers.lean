@@ -148,22 +148,47 @@ private lemma L1_unique_of_two_limits
   (h1 : Tendsto (fun n => eLpNorm (fn n - f) 1 μ) atTop (𝓝 0))
   (h2 : Tendsto (fun n => eLpNorm (fn n - g) 1 μ) atTop (𝓝 0)) :
   f =ᵐ[μ] g := by
-  sorry  -- TODO: L¹ uniqueness using triangle inequality
-  -- The proof is standard but requires careful eLpNorm API usage
-  -- Sketch: ‖f - g‖₁ ≤ ‖f - fn‖₁ + ‖fn - g‖₁ → 0 as n → ∞
-  -- For any ε > 0:
-  -- 1. Use Filter.eventuallyEq_iff_sub to convert goal to f - g =ᵐ 0
-  -- 2. Show eLpNorm (f - g) 1 μ = 0 via eLpNorm_eq_zero_iff
-  -- 3. Use triangle inequality with ENNReal.le_of_forall_pos_le_add
-  -- 4. Choose N where both eLpNorm (fn N - f) 1 μ < ε/2 and eLpNorm (fn N - g) 1 μ < ε/2
-  -- 5. Then eLpNorm (f - g) 1 ≤ eLpNorm (f - fn N) 1 + eLpNorm (fn N - g) 1 < ε
-  -- 6. Since this holds for all ε > 0, conclude eLpNorm (f - g) 1 = 0
-  --
-  -- The detailed implementation requires careful handling of:
-  -- - ENNReal arithmetic (coercion from NNReal, division)
-  -- - eLpNorm_add_le with correct AEStronglyMeasurable hypotheses
-  -- - eventually_atTop pattern matching
-  -- - Type inference for ENNReal constants
+  -- Strategy: Show eLpNorm (f - g) 1 μ = 0 using triangle inequality
+  -- ‖f - g‖₁ ≤ ‖f - fn‖₁ + ‖fn - g‖₁ → 0 as n → ∞
+
+  -- Step 1: Show eLpNorm (f - g) 1 μ = 0
+  have h_norm_zero : eLpNorm (f - g) 1 μ = 0 := by
+    -- Use ENNReal.eq_zero_of_forall_le_zero
+    apply ENNReal.eq_zero_of_forall_le_zero
+    intro ε hε
+
+    -- Convert h1 and h2 to eventually bounds
+    rw [Metric.tendsto_atTop] at h1 h2
+    obtain ⟨N1, hN1⟩ := h1 (ε/2) (by positivity)
+    obtain ⟨N2, hN2⟩ := h2 (ε/2) (by positivity)
+
+    -- Choose N = max N1 N2
+    let N := max N1 N2
+
+    -- Apply triangle inequality: ‖f - g‖ ≤ ‖f - fn N‖ + ‖fn N - g‖
+    calc eLpNorm (f - g) 1 μ
+        ≤ eLpNorm (f - fn N) 1 μ + eLpNorm (fn N - g) 1 μ := by
+          have hf_ae : AEStronglyMeasurable f μ := hf.1
+          have hg_ae : AEStronglyMeasurable g μ := hg.1
+          have hfn_ae : AEStronglyMeasurable (fn N) μ := hfn N
+          convert eLpNorm_sub_le hf_ae hfn_ae hg_ae 1 using 2
+          simp only [sub_sub_sub_cancel_right]
+      _ < ε/2 + ε/2 := by
+          apply ENNReal.add_lt_add
+          · have := hN1 N (le_max_left N1 N2)
+            rw [Real.dist_eq, abs_of_nonneg ENNReal.toReal_nonneg] at this
+            simp only [ENNReal.toReal_zero, tsub_zero] at this
+            exact ENNReal.ofReal_lt_ofReal_iff hε |>.mpr this
+          · have := hN2 N (le_max_right N1 N2)
+            rw [Real.dist_eq, abs_of_nonneg ENNReal.toReal_nonneg] at this
+            simp only [ENNReal.toReal_zero, tsub_zero] at this
+            exact ENNReal.ofReal_lt_ofReal_iff hε |>.mpr this
+      _ = ε := ENNReal.add_halves ε
+
+  -- Step 2: Convert eLpNorm = 0 to f =ᵐ g
+  rw [eLpNorm_eq_zero_iff] at h_norm_zero
+  · exact h_norm_zero
+  · exact hf.1.sub hg.1
 
 /-- **L¹ convergence under clipping:** If fₙ → f in L¹, then clip01∘fₙ → clip01∘f in L¹. -/
 private lemma L1_tendsto_clip01
@@ -248,19 +273,6 @@ axiom directing_measure_identification
   (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1) :
   ∀ᵐ ω ∂μ, alphaFrom X hX_contract hX_meas hX_L2 f ω
              = ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)
-
-
-/-- **AXIOM A10 (Step 5 packaging):** packaged existence of a directing kernel
-with the pointwise identification for a given bounded measurable `f`. -/
-axiom alpha_is_conditional_expectation_packaged
-  {μ : Measure Ω} [IsProbabilityMeasure μ]
-  (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
-  (hX_meas : ∀ i, Measurable (X i))
-  (f : ℝ → ℝ) (hf_meas : Measurable f) (alpha : ℕ → Ω → ℝ) :
-  ∃ (nu : Ω → Measure ℝ),
-    (∀ ω, IsProbabilityMeasure (nu ω)) ∧
-    Measurable (fun ω => nu ω (Set.univ)) ∧
-    (∀ n, ∀ᵐ ω ∂μ, alpha n ω = ∫ x, f x ∂(nu ω))
 
 end Helpers
 
@@ -367,9 +379,8 @@ lemma directing_measure_measurable
           -- directing_measure ω is a measure (StieltjesFunction.measure), so measure_compl applies
           -- Need IsFiniteMeasure instance - follows from IsProbabilityMeasure (once that's proved)
           haveI : IsFiniteMeasure (directing_measure X hX_contract hX_meas hX_L2 ω) := by
-            -- This should follow from directing_measure_isProbabilityMeasure
-            -- but that's currently a sorry
-            sorry
+            haveI := Helpers.directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+            infer_instance
           rw [measure_compl hs_meas (measure_ne_top _ s)]
         simp_rw [h_univ_s]
         -- ω ↦ ν(ω)(univ) is constant 1 (probability measure), so measurable
@@ -377,9 +388,8 @@ lemma directing_measure_measurable
         -- Their difference is measurable
         have h_univ_const : ∀ ω, directing_measure X hX_contract hX_meas hX_L2 ω Set.univ = 1 := by
           intro ω
-          -- This follows from directing_measure_isProbabilityMeasure
-          -- But that depends on cdf_from_alpha_limits which is a sorry
-          sorry
+          have hprob := Helpers.directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+          simpa using hprob.measure_univ
         simp_rw [h_univ_const]
         -- (fun ω => 1 - ν(ω)(s)) is measurable
         -- Constant 1 minus measurable function
