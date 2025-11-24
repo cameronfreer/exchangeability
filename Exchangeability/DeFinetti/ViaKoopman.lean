@@ -1541,12 +1541,12 @@ private lemma L1_cesaro_convergence
     --   - Extract helper lemma for "DCT + abs" pattern
     --   - Use integral_abs_sub_le and dominated convergence separately
     -- Apply dominated convergence theorem with f = 0
-    -- Technical blocker: Type conversion between ‖·‖ and |·| for ℝ
-    -- The hypotheses h_dom' and h_point' use ‖·‖ (norm), but we need them
-    -- with the specific F = fun M ω => |g (ω 0) - g_M M (ω 0)|
-    -- While Real.norm_eq_abs should handle this, the function type inference
-    -- in tendsto_integral_of_dominated_convergence is complex
-    sorry
+    -- The key is using Real.norm_eq_abs and abs_abs to convert between norms and absolute values
+    have h_bound : ∀ n, ∀ᵐ a ∂μ, ‖|g (a 0) - g_M n (a 0)|‖ ≤ 2 * |g (a 0)| := fun n => by
+      filter_upwards [h_dom n] with ω hω
+      simp only [Real.norm_eq_abs, abs_abs]
+      exact hω
+    simpa using tendsto_integral_of_dominated_convergence (fun ω => 2 * |g (ω 0)|) h_meas h_int h_bound h_point
 
   -- Step 6: CE L¹-continuity
   -- For each M, CE preserves L¹ convergence: ‖CE[f] - CE[h]‖₁ ≤ ‖f - h‖₁
@@ -1787,26 +1787,16 @@ private lemma L1_cesaro_convergence
                 -- shift-invariant integrals on measure-preserving transformations.
                 congr 1
                 refine Finset.sum_congr rfl fun j _hj => ?_
-                -- Show ∫|g(ω j) - g_M(ω j)| dμ = ∫|g(ω 0) - g_M(ω 0)| dμ
-                -- Mathematical content: Each integral equals the j=0 case by shift invariance
-                -- For each j, we have ω j = (shift^[j] ω) 0 by shift_iterate_apply_zero.
-                -- Since shift^[j] is measure-preserving (via hσ.iterate j), the integrals are equal.
-                --
-                -- Proof strategy:
-                -- 1. Rewrite ω j as (shift^[j] ω) 0
-                -- 2. Apply integral_map with (hσ.iterate j).map_eq
-                --
-                -- Technical blocker: Type inference issues with AEStronglyMeasurable construction.
-                -- The measurability tactic cannot infer the function type correctly when building
-                -- the AEStronglyMeasurable (fun ω => |g (ω 0) - g_M M₀ (ω 0)|) proof needed for integral_map.
-                -- This appears to be a Lean 4 limitation with higher-order function type inference
-                -- in measure theory contexts.
-                --
-                -- The mathematical content is standard and correct:
-                -- - shift_iterate_apply_zero provides the coordinate rewriting
-                -- - (hσ.iterate j).map_eq gives the measure-preserving property
-                -- - integral_map transforms integrals under measurable maps
-                sorry
+                -- Show ∫|g(ω j) - g_M(ω j)| dμ = ∫|g(ω 0) - g_M(ω 0)| dμ by shift invariance
+                -- Strategy: rewrite ω j as (shift^[j] ω) 0, apply integral_map + MeasurePreserving.map_eq
+                have h_iter : MeasurePreserving (shift^[j]) μ μ := hσ.iterate j
+                have h_smeas : StronglyMeasurable (fun ω : Ω[α] => |g (ω 0) - g_M M₀ (ω 0)|) :=
+                  ((hg_meas.comp (measurable_pi_apply 0)).sub
+                    ((hg_M_meas M₀).comp (measurable_pi_apply 0))).stronglyMeasurable.norm
+                have h_eq : ∫ ω, |g (ω j) - g_M M₀ (ω j)| ∂μ =
+                    ∫ ω, (fun ω' => |g (ω' 0) - g_M M₀ (ω' 0)|) (shift^[j] ω) ∂μ := by
+                  congr 1; ext ω; exact congrArg₂ (fun a b => |g a - g_M M₀ b|) (shift_iterate_apply_zero j ω).symm (shift_iterate_apply_zero j ω).symm
+                rw [h_eq, (integral_map_of_stronglyMeasurable h_iter.measurable h_smeas).symm, h_iter.map_eq]
             _ = (1 / (↑n + 1)) * ((n + 1) * ∫ ω, |g (ω 0) - g_M M₀ (ω 0)| ∂μ) := by
                 -- Sum of n+1 identical terms: Σⱼ₌₀ⁿ c = (n+1) * c
                 congr 1
