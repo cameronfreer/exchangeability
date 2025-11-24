@@ -159,14 +159,56 @@ theorem condExp_eq_of_joint_law_eq
   -- K₂ z := condDistrib ξ η μ (φ z)
   -- We show ν ⊗ₘ K₁ = ν ⊗ₘ K₂ by proving both equal Law(η, ξ)
 
-  -- Step 10.5: Kernel equality via disintegration properties
-  -- This sorry represents a fundamental gap in the proof
-  -- TODO: This requires proving that condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (η ω) for a.e. ω
-  -- Given: η = φ ∘ ζ, Law(ζ,ξ) = Law(η,ξ), Law(ζ) = Law(η), σ(η) ≤ σ(ζ)
-  -- This is a mathematical property about how conditional distributions transform under
-  -- Doob-Dynkin factorizations when joint laws are preserved
+  -- Step 10.5: Kernel equality via disintegration under factorization
+  -- Key insight: Both kernels disintegrate Law(ζ,ξ) = Law(η,ξ) with respect to μ.map ζ
+  -- Use Kernel.comap to represent the composition z ↦ condDistrib ξ η μ (φ z)
+  have h_kernel_z : ∀ᵐ z ∂(μ.map ζ), condDistrib ξ ζ μ z = condDistrib ξ η μ (φ z) := by
+    -- Define the "comapped" kernel using Kernel.comap
+    -- This gives us a proper Kernel type representing z ↦ condDistrib ξ η μ (φ z)
+    let κ_φ := (condDistrib ξ η μ).comap φ hφ_meas
+
+    -- Show that both compProds with base μ.map ζ are equal
+    have h_compProd_same_base : (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ) = (μ.map ζ) ⊗ₘ κ_φ := by
+      calc (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ)
+          = μ.map (fun ω => (ζ ω, ξ ω)) := hζ_compProd
+        _ = μ.map (fun ω => (η ω, ξ ω)) := h_law_swapped
+        _ = (μ.map η) ⊗ₘ (condDistrib ξ η μ) := hη_compProd.symm
+        _ = (μ.map (φ ∘ ζ)) ⊗ₘ (condDistrib ξ η μ) := by rw [← hηfac]
+        _ = ((μ.map ζ).map φ) ⊗ₘ (condDistrib ξ η μ) := by rw [← Measure.map_map hφ_meas hζ]
+        _ = (μ.map ζ) ⊗ₘ κ_φ := by
+            -- KEY MISSING LEMMA: Rewrite compProd under factorization
+            -- Need to show: ((ν.map φ) ⊗ₘ κ) = (ν ⊗ₘ (κ.comap φ hφ))
+            -- This is NOT a general compProd identity - it requires a specialized proof
+            -- using properties of conditional distributions and factorizations
+            --
+            -- The correct approach (per discussion): Write a lemma that proves
+            -- Law(η, ξ) = (μ.map ζ) ⊗ₘ (z ↦ condDistrib ξ η μ (φ z))
+            -- directly from the defining properties of condDistrib, not by manipulating compProds
+            --
+            -- This lemma should use:
+            -- - The defining property of condDistrib: it disintegrates the joint law
+            -- - The factorization η = φ ∘ ζ
+            -- - The marginal equality Law(ζ) = Law(η)
+            sorry
+
+    -- Apply compProd_eq_iff to extract the kernel equality
+    have h_kernels_eq : condDistrib ξ ζ μ =ᵐ[μ.map ζ] κ_φ := by
+      exact (ProbabilityTheory.Kernel.compProd_eq_iff).mp h_compProd_same_base
+
+    -- Unfold κ_φ using the definition of comap
+    filter_upwards [h_kernels_eq] with z hz
+    rw [hz]
+    rfl  -- κ_φ z = (condDistrib ξ η μ).comap φ hφ_meas z = condDistrib ξ η μ (φ z) by definition
+
+  -- Pull back along ζ and use factorization η = φ ∘ ζ
   have h_kernel_on_Ω : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (η ω) := by
-    sorry
+    -- Pull back the kernel equality from μ.map ζ to μ
+    have h_at_ζ : ∀ᵐ ω ∂μ, condDistrib ξ ζ μ (ζ ω) = condDistrib ξ η μ (φ (ζ ω)) := by
+      exact ae_of_ae_map hζ.aemeasurable h_kernel_z
+    -- Use η = φ ∘ ζ to rewrite φ (ζ ω) as η ω
+    filter_upwards [h_at_ζ] with ω hω
+    have : η ω = φ (ζ ω) := congr_fun hηfac ω
+    rw [hω, this]
 
   -- Step 11: Use η = φ ∘ ζ to get the final equality
   have h_integral_eq : (fun ω => ∫ e, B.indicator (fun _ => (1 : ℝ)) e ∂(condDistrib ξ ζ μ (ζ ω)))
