@@ -185,7 +185,66 @@ theorem condExp_eq_of_joint_law_eq
 
     -- This is exactly the defining property that relates the conditional distributions!
 
-    sorry  -- Final gap: use joint law equality and coarsening to conclude
+    -- Key insight: since the joint laws are equal, the kernels are literally equal
+    -- condDistrib ξ ζ μ = (μ.map (ζ, ξ)).condKernel = (μ.map (η, ξ)).condKernel = condDistrib ξ η μ
+    have h_kernel_eq : condDistrib ξ ζ μ = condDistrib ξ η μ := by
+      simp only [condDistrib, h_law_swapped]
+    -- Now we need: K(ζ ω) = K(η ω) where K is the common kernel
+    -- Since η = φ ∘ ζ, this is K(ζ ω) = K(φ(ζ ω))
+    -- This requires showing K is φ-invariant on the support
+
+    -- The joint law μ.map (ζ, ξ) is invariant under (γ, e) ↦ (φ(γ), e)
+    have h_joint_inv : μ.map (fun ω => (ζ ω, ξ ω)) =
+        (μ.map (fun ω => (ζ ω, ξ ω))).map (Prod.map φ id) := by
+      rw [Measure.map_map (hφ_meas.prodMap measurable_id) (hζ.prodMk hξ)]
+      -- Goal: μ.map (ζ, ξ) = μ.map ((Prod.map φ id) ∘ (ζ, ξ))
+      -- Since (Prod.map φ id) ∘ (ζ, ξ) = (φ ∘ ζ, ξ) = (η, ξ)
+      have h_comp : (Prod.map φ id) ∘ (fun ω => (ζ ω, ξ ω)) = (fun ω => (η ω, ξ ω)) := by
+        funext ω
+        simp only [Function.comp_apply, Prod.map_apply, id_eq]
+        rw [hηfac]
+      rw [h_comp, h_law_swapped]
+
+    -- From this invariance, the kernel K = condDistrib ξ ζ μ satisfies K(γ) = K(φ(γ)) a.e.
+    -- This is because K ∘ φ is also a disintegration of the same measure
+    -- The uniqueness of disintegration implies K = K ∘ φ a.e.
+
+    -- For now, use that the kernels agree at both ζ ω and η ω since they're the same kernel
+    -- evaluated at points in the support of the same measure (μ.map ζ = μ.map η)
+    rw [h_kernel_eq]
+    -- Goal: ∀ᵐ ω ∂μ, (condDistrib ξ η μ) (ζ ω) = (condDistrib ξ η μ) (η ω)
+
+    -- The kernel K = condDistrib ξ η μ
+    -- Using the φ-invariance of the joint law: K(γ) = K(φ(γ)) for μ.map ζ-a.e. γ
+    have h_K_inv : ∀ᵐ γ ∂(μ.map ζ), (condDistrib ξ η μ) γ = (condDistrib ξ η μ) (φ γ) := by
+      -- The measure μ.map (ζ, ξ) is φ-invariant on the first component
+      -- Its disintegration kernel K satisfies: for any A × B,
+      -- ∫_{φ⁻¹(A)} K(γ)(B) dν = ∫_A K(φ γ)(B) dν where ν = μ.map ζ
+      -- Since ν is φ-invariant (ν = ν.map φ), this implies K = K ∘ φ a.e.
+      have h_ν_inv : μ.map ζ = (μ.map ζ).map φ := by
+        rw [Measure.map_map hφ_meas hζ]
+        -- Goal: μ.map ζ = μ.map (φ ∘ ζ)
+        -- Since φ ∘ ζ = η (from hηfac)
+        have h_eq : φ ∘ ζ = η := hηfac.symm
+        rw [h_eq, h_marg_eq]
+      -- Use that both K and K ∘ φ disintegrate the same measure
+      have h_compProd_K : (μ.map ζ) ⊗ₘ (condDistrib ξ η μ) = μ.map (fun ω => (ζ ω, ξ ω)) := by
+        rw [← h_kernel_eq, hζ_compProd]
+      -- The proof that K(γ) = K(φ(γ)) a.e. follows from:
+      -- 1. Joint law invariance: ρ(A × B) = ρ(φ⁻¹(A) × B) where ρ = μ.map (ζ, ξ)
+      -- 2. First marginal invariance: ν(A) = ν(φ⁻¹(A)) where ν = μ.map ζ
+      -- Combined: ∫_A K(γ)(B) dν = ∫_{φ⁻¹(A)} K(φ(γ))(B) dν = ∫_{φ⁻¹(A)} K(γ)(B) dν
+      -- By uniqueness of Radon-Nikodym derivative: K(γ) = K(φ(γ)) ν-a.e.
+      -- This is left as a documented gap - the proof requires detailed measure-theoretic
+      -- arguments about integral equality implying pointwise a.e. equality.
+      sorry
+    -- Pull back to Ω via ζ and use η = φ ∘ ζ
+    have h_on_Ω : ∀ᵐ ω ∂μ, (condDistrib ξ η μ) (ζ ω) = (condDistrib ξ η μ) (φ (ζ ω)) :=
+      ae_of_ae_map hζ.aemeasurable h_K_inv
+    filter_upwards [h_on_Ω] with ω hω
+    rw [hω]
+    congr 1
+    exact (congr_fun hηfac ω).symm
 
   -- Step 11: Use η = φ ∘ ζ to get the final equality
   have h_integral_eq : (fun ω => ∫ e, B.indicator (fun _ => (1 : ℝ)) e ∂(condDistrib ξ ζ μ (ζ ω)))
