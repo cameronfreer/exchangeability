@@ -2575,142 +2575,78 @@ lemma cdf_from_alpha_bounds
       _ ≤ alphaIic X hX_contract hX_meas hX_L2 (hne.some : ℝ) ω := ciInf_le hbdd hne.some
       _ ≤ 1 := (alphaIic_bound X hX_contract hX_meas hX_L2 (hne.some : ℝ) ω).2
 
-/-- Helper lemma: α_{Iic t}(ω) → 0 as t → -∞.
+/-- **A.e. convergence of α_{Iic t} → 0 as t → -∞ (along integers).**
 
-This requires showing that the L¹ limit of Cesàro averages of 1_{(-∞,t]} converges to 0
-as t → -∞. The proof strategy:
+This is the a.e. version of the endpoint limit. The statement for all ω cannot be
+proven from the L¹ construction since `alphaIic` is defined via existential L¹ choice.
 
-1. For each fixed ω, as t → -∞, the indicators 1_{(-∞,t]}(X_i(ω)) → 0 pointwise
-2. By dominated convergence, the Cesàro averages converge to 0 in L¹ uniformly in n
-3. Since alphaIic is the L¹ limit (clipped to [0,1]), it must also converge to 0
-
-The challenge is interchanging two limits:
-- The Cesàro limit (m → ∞)
-- The threshold limit (t → -∞)
-
-This requires careful application of dominated convergence and diagonal arguments.
+**Proof strategy:**
+Combine the a.e. equality `alphaIic =ᵐ alphaIicCE` with `alphaIicCE_ae_tendsto_zero_atBot`.
+Since both are a.e. statements and we take countable intersection over integers, we
+get a.e. convergence of `alphaIic` along the integer sequence `-(n:ℝ)`.
 -/
-private lemma alphaIic_tendsto_zero_at_bot
+private lemma alphaIic_ae_tendsto_zero_at_bot
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
-    (ω : Ω) :
-    ∀ ε > 0, ∃ T : ℝ, ∀ t < T,
-      alphaIic X hX_contract hX_meas hX_L2 t ω < ε := by
-  intro ε hε_pos
-  -- TODO: Prove alphaIic t ω → 0 as t → -∞
-  --
-  -- PROOF STRATEGY (5 steps):
-  --
-  -- STEP 1: Pointwise behavior of Cesàro averages
-  -- For fixed ω, choose K large enough that ε > K/m for all m ≥ some M.
-  -- Then choose T < min {X_0(ω), X_1(ω), ..., X_{K-1}(ω)}.
-  -- For any t < T and any m:
-  --   (1/m) Σ_{i=0}^{m-1} 𝟙_{(-∞,t]}(X_i(ω)) ≤ K/m
-  -- because at most K of the first m indicators are 1 (those with i < K).
-  --
-  -- STEP 2: Uniform control for all starting offsets
-  -- The same bound holds for blockAvg (indIic t) X m n ω:
-  --   (1/n) Σ_{i=m}^{m+n-1} 𝟙_{(-∞,t]}(X_i(ω)) ≤ K/n if m ≥ 0 and t < min X_j(ω) for j < K
-  -- This requires T to be chosen based on finitely many X_i(ω).
-  --
-  -- STEP 3: L¹ limit inherits pointwise bound
-  -- By definition, alphaIic t ω is characterized as the L¹ limit:
-  --   For all f bounded measurable and m₀, there exists α_f with
-  --   ‖blockAvg f X m₀ n - α_f‖_{L¹} → 0
-  -- For f = indIic t, the blockAvg are all bounded by K/n for t < T.
-  -- Since L¹ convergence preserves bounds (take limit of integral inequality),
-  -- we have |alphaIic t ω| ≤ lim_{n→∞} K/n = 0 a.e.
-  --
-  -- REQUIRED LEMMA: If f_n → f in L¹ and |f_n| ≤ g_n with g_n → 0, then f = 0 a.e.
-  -- More precisely: If f_n → f in L¹ and ∫ |f_n| ≤ C_n → 0, then ∫ |f| = 0.
-  --
-  -- STEP 4: Handle the clipping to [0,1]
-  -- The actual definition clips alphaIic to [0,1]:
-  --   alphaIic t ω = max 0 (min 1 (the L¹ limit))
-  -- Since we showed the limit is 0, clipping preserves this: max 0 (min 1 0) = 0.
-  --
-  -- STEP 5: Formalize T choice and ε-δ argument
-  -- Given ε > 0:
-  -- - Choose K such that K/M < ε for some M
-  -- - Choose T < min {X_0(ω), ..., X_{K-1}(ω)}
-  -- - Then for all t < T, alphaIic t ω ≤ K/M < ε
-  --
-  -- REQUIRED MATHLIB LEMMAS:
-  -- - Filter.tendsto_atBot: for expressing t → -∞
-  -- - Set.Iic_subset: interval containment properties
-  -- - Measure.integral_le_integral_of_ae_le: preserve inequalities through limits
-  -- - norm_nonneg and related: L¹ norm properties
-  sorry
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+    ∀ᵐ ω ∂μ, Tendsto (fun n : ℕ =>
+      alphaIic X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω) atTop (𝓝 0) := by
+  -- Step 1: For a.e. ω, alphaIic agrees with alphaIicCE at all integers
+  have h_ae_eq : ∀ᵐ ω ∂μ, ∀ n : ℕ,
+      alphaIic X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω =
+      alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω := by
+    rw [ae_all_iff]
+    intro n
+    exact alphaIic_ae_eq_alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ))
 
-/-- Helper lemma: α_{Iic t}(ω) → 1 as t → +∞.
+  -- Step 2: alphaIicCE converges to 0 as t → -∞ for a.e. ω
+  have h_CE_conv := alphaIicCE_ae_tendsto_zero_atBot X hX_contract hX_meas hX_L2
 
-This is the dual of the previous lemma. As t → +∞:
-- Indicators 1_{(-∞,t]}(x) → 1 for all x (monotone convergence)
-- Cesàro averages converge to 1 in L¹
-- alphaIic t ω → 1
+  -- Step 3: Combine to get alphaIic convergence for a.e. ω
+  filter_upwards [h_ae_eq, h_CE_conv] with ω h_eq h_conv
+  -- At this ω, alphaIic = alphaIicCE at all integers, and alphaIicCE → 0
+  exact h_conv.congr (fun n => (h_eq n).symm)
 
-The proof uses monotone convergence since the indicators increase to 1.
+/-- **A.e. convergence of α_{Iic t} → 1 as t → +∞ (along integers).**
+
+This is the dual of `alphaIic_ae_tendsto_zero_at_bot`. The statement for all ω cannot be
+proven from the L¹ construction since `alphaIic` is defined via existential L¹ choice.
+
+**Proof strategy:**
+Combine the a.e. equality `alphaIic =ᵐ alphaIicCE` with `alphaIicCE_ae_tendsto_one_atTop`.
 -/
-private lemma alphaIic_tendsto_one_at_top
+private lemma alphaIic_ae_tendsto_one_at_top
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
-    (ω : Ω) :
-    ∀ ε > 0, ∃ T : ℝ, ∀ t > T,
-      1 - ε < alphaIic X hX_contract hX_meas hX_L2 t ω := by
-  intro ε hε_pos
-  -- TODO: Prove 1 - ε < alphaIic t ω for all t > T (some T)
-  --
-  -- PROOF STRATEGY (5 steps):
-  --
-  -- STEP 1: Monotone convergence of indicators
-  -- As t → +∞, for any fixed x ∈ ℝ, we have 𝟙_{(-∞,t]}(x) → 1.
-  -- This is because (-∞, t] eventually contains every real number.
-  -- For fixed ω, 𝟙_{(-∞,t]}(X_i(ω)) → 1 as t → +∞ for each i.
-  --
-  -- STEP 2: Pointwise convergence of Cesàro averages
-  -- For fixed ω and any m, n:
-  --   (1/n) Σ_{i=m}^{m+n-1} 𝟙_{(-∞,t]}(X_i(ω)) → 1 as t → +∞
-  -- Choose T > max {X_m(ω), X_{m+1}(ω), ..., X_{m+n-1}(ω)}.
-  -- Then for all t > T, all n indicators equal 1, giving average = 1.
-  --
-  -- STEP 3: L¹ convergence to 1
-  -- The blockAvg (indIic t) X m n are bounded in [0,1].
-  -- For t large enough (depending on ω), blockAvg → 1 pointwise.
-  -- By dominated convergence (dominated by constant function 1):
-  --   ‖blockAvg (indIic t) X m n - 1‖_{L¹} → 0 as t → +∞
-  --
-  -- STEP 4: Transfer to alphaIic
-  -- By definition, alphaIic t ω is the L¹ limit (clipped to [0,1]) of
-  -- blockAvg (indIic t) X m n as n → ∞.
-  -- From Step 3, this limit approaches 1 as t → +∞.
-  -- Therefore alphaIic t ω → 1 as t → +∞.
-  --
-  -- STEP 5: ε-δ formalization
-  -- Given ε > 0, choose T large enough that:
-  --   |alphaIic t ω - 1| < ε for all t > T
-  -- This translates to: 1 - ε < alphaIic t ω < 1 + ε
-  -- Since alphaIic ∈ [0,1], we get: 1 - ε < alphaIic t ω ≤ 1
-  --
-  -- REQUIRED MATHLIB LEMMAS:
-  -- - Filter.tendsto_atTop: for expressing t → +∞
-  -- - MeasureTheory.tendsto_integral_of_dominated_convergence
-  -- - Set.eventually_mem_Iic: eventually all values below threshold
-  -- - indicator_apply, indicator_of_mem: indicator function properties
-  sorry
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+    ∀ᵐ ω ∂μ, Tendsto (fun n : ℕ =>
+      alphaIic X hX_contract hX_meas hX_L2 (n : ℝ) ω) atTop (𝓝 1) := by
+  -- Step 1: For a.e. ω, alphaIic agrees with alphaIicCE at all positive integers
+  have h_ae_eq : ∀ᵐ ω ∂μ, ∀ n : ℕ,
+      alphaIic X hX_contract hX_meas hX_L2 (n : ℝ) ω =
+      alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω := by
+    rw [ae_all_iff]
+    intro n
+    exact alphaIic_ae_eq_alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ)
 
--- **Note:** The axiom `cdf_from_alpha_limits` establishing that F(ω,t) → 0 as t → -∞
--- and F(ω,t) → 1 as t → +∞ is defined in MoreL2Helpers.lean.
+  -- Step 2: alphaIicCE converges to 1 as t → +∞ for a.e. ω
+  have h_CE_conv := alphaIicCE_ae_tendsto_one_atTop X hX_contract hX_meas hX_L2
+
+  -- Step 3: Combine to get alphaIic convergence for a.e. ω
+  filter_upwards [h_ae_eq, h_CE_conv] with ω h_eq h_conv
+  exact h_conv.congr (fun n => (h_eq n).symm)
+
+-- **Note on `cdf_from_alpha_limits`:**
+-- The axiom in MoreL2Helpers.lean requires the CDF limits to hold for ALL ω.
+-- However, from the L¹ construction, we can only prove a.e. convergence:
+-- - `alphaIic_ae_tendsto_zero_at_bot`: a.e. convergence to 0 as t → -∞
+-- - `alphaIic_ae_tendsto_one_at_top`: a.e. convergence to 1 as t → +∞
 --
--- TODO: The proof sketches from the removed lemma `cdf_from_alpha_limits` should be
--- implemented when replacing the axiom. The key steps are:
--- 1. For t → -∞: Use alphaIic_tendsto_zero_at_bot and the definition of cdf_from_alpha
---    as inf over rationals to show F(ω,t) → 0
--- 2. For t → +∞: Use alphaIic_tendsto_one_at_top similarly to show F(ω,t) → 1
--- Both require careful use of mathlib's Filter API for limits at ±∞.
+-- The axiom should be weakened to an a.e. statement, and the `directing_measure`
+-- construction should handle the null set by using a default probability measure
+-- for ω outside the "good" set. This is a standard technique in probability theory.
 
 /-- Build the directing measure ν from the CDF.
 

@@ -59,7 +59,21 @@ axiom alphaFrom {Ω : Type*} [MeasurableSpace Ω]
   (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ)
   (f : ℝ → ℝ) : Ω → ℝ
 
--- Axiom for CDF limit behavior (to be proven later)
+-- Axiom for CDF limit behavior.
+--
+-- **MATHEMATICAL NOTE:** This axiom requires the CDF limits to hold for ALL ω.
+-- However, from the L¹ construction of `alphaIic`, we can only prove a.e. convergence:
+-- - `alphaIic_ae_tendsto_zero_at_bot` in MainConvergence.lean
+-- - `alphaIic_ae_tendsto_one_at_top` in MainConvergence.lean
+--
+-- To properly fix this, one should either:
+-- 1. Redefine `cdf_from_alpha` using `alphaIicCE` (conditional expectation version)
+--    which has the endpoint limits a.e. directly from conditional expectation properties.
+-- 2. Modify `directing_measure` to use a default measure (e.g., Dirac at 0) for
+--    the null set where the CDF limits fail, and work with a.e. equality throughout.
+--
+-- For now, this remains an axiom documenting the requirement for the Stieltjes
+-- construction in `directing_measure_eval_Iic_measurable`.
 axiom cdf_from_alpha_limits {Ω : Type*} [MeasurableSpace Ω]
   {μ : Measure Ω} [IsProbabilityMeasure μ]
   (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
