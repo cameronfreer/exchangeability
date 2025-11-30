@@ -2322,6 +2322,46 @@ private lemma l2_limit_from_cauchy
   -- Close the existential proof
   exact ⟨α_f, hα_memLp, hα_limit⟩
 
+/-- **blockAvg is measurable w.r.t. the m-th tail family.**
+
+The block average `blockAvg f X m n` only depends on `X m, X (m+1), ..., X (m+n-1)`,
+which are all measurable w.r.t. `tailFamily X m`. -/
+lemma blockAvg_measurable_tailFamily
+    {Ω : Type*} [MeasurableSpace Ω]
+    {f : ℝ → ℝ} (hf : Measurable f)
+    {X : ℕ → Ω → ℝ} (hX : ∀ i, Measurable (X i))
+    (m n : ℕ) :
+    Measurable[TailSigma.tailFamily X m] (blockAvg f X m n) := by
+  -- blockAvg f X m n = (n⁻¹) * ∑_{k<n} f(X_{m+k})
+  unfold blockAvg
+  -- Each X (m + k) is measurable w.r.t. tailFamily X m by definition
+  -- tailFamily X m = iSup (fun j => comap (X (m + j)) m_ℝ)
+  apply Measurable.const_mul
+  apply Finset.measurable_sum
+  intro k _
+  -- f ∘ X (m + k) is measurable w.r.t. tailFamily X m
+  apply hf.comp
+  -- X (m + k) is measurable w.r.t. tailFamily X m
+  -- tailFamily X m = iSup (fun j => comap (X (m + j)))
+  -- X (m + k) ω = (fun j => X (m + j) ω) k, so it's the k-th coordinate
+  -- of the shifted sequence, which is measurable by comap construction
+  simp only [TailSigma.tailFamily]
+  apply Measurable.of_comap_le
+  exact le_iSup (fun j => MeasurableSpace.comap (fun ω => X (m + j) ω) inferInstance) k
+
+/-- **blockAvg is AEStronglyMeasurable w.r.t. tailFamily X m.**
+
+Direct consequence of being Measurable w.r.t. a sub-σ-algebra. -/
+lemma blockAvg_aestronglyMeasurable_tailFamily
+    {Ω : Type*} [MeasurableSpace Ω]
+    {μ : Measure Ω}
+    {f : ℝ → ℝ} (hf : Measurable f)
+    {X : ℕ → Ω → ℝ} (hX : ∀ i, Measurable (X i))
+    (m n : ℕ)
+    (hm : TailSigma.tailFamily X m ≤ inferInstance) :
+    AEStronglyMeasurable[TailSigma.tailFamily X m] (blockAvg f X m n) μ :=
+  (blockAvg_measurable_tailFamily hf hX m n).aestronglyMeasurable
+
 /-- Helper lemma: tail-measurability of L² limit of block averages.
 
 Given an L² limit α_f of block averages, if the block averages are measurable
@@ -2334,39 +2374,42 @@ private lemma tail_measurability_of_blockAvg
     (α_f : Ω → ℝ) (hα_memLp : MemLp α_f 2 μ)
     (hα_limit : Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0)) :
     Measurable[TailSigma.tailSigma X] α_f := by
-  -- TODO: Prove tail-measurability of L² limit
+  -- PROOF STRATEGY (using closedness of AEStronglyMeasurable subspace):
   --
-  -- PROOF STRATEGY:
-  -- 1. Show blockAvg f X m n is measurable w.r.t. σ(X_{m+1}, X_{m+2}, ...)
-  --    - This holds because blockAvg only depends on X_{m+1}, ..., X_{m+n}
-  --    - Use measurability propagation through finite sums and scalar multiplication
-  --
-  -- 2. For each fixed m, extract diagonal subsequence n(k) such that:
-  --    - blockAvg f X m (n k) → some limit β_m in L²
-  --    - β_m is measurable w.r.t. σ(X_{m+1}, X_{m+2}, ...)
-  --    - Use: L² convergent subsequence inherits measurability from approximants
-  --
-  -- 3. Show β_m = α_f a.e. for all m
-  --    - Both are L² limits of the same Cauchy sequence
-  --    - Use L² limit uniqueness
-  --
-  -- 4. Conclude α_f is tail-measurable
-  --    - α_f = β_m a.e. for all m
-  --    - Each β_m is σ(X_{>m})-measurable
-  --    - tail σ-algebra = ⋂_m σ(X_{>m})
-  --    - Therefore α_f ∈ ⋂_m σ(X_{>m}) = tail σ-algebra
-  --
-  -- REQUIRED LEMMAS:
-  -- - blockAvg_measurable_wrt_tail: blockAvg f X m n is σ(X_{>m})-measurable
-  -- - L2_limit_inherits_measurability: If f_n → f in L² and each f_n is m-measurable,
-  --   then f is m-measurable (up to a.e. modification)
-  -- - ae_eq_trans_measurability: If f =ᵐ g and g is m-measurable, then f is m-measurable
-  --
-  -- ALTERNATIVE APPROACH:
-  -- Use condExpL2 projection property directly:
-  -- - α_f is the L² projection onto L²(tail σ-algebra)
-  -- - Projections into closed subspaces inherit the subspace's measurability
-  -- - This may be more direct if mathlib has the infrastructure
+  -- 1. For each m, show blockAvg f X m n is Measurable[tailFamily X m]
+  -- 2. The set of AEStronglyMeasurable[tailFamily X m] functions in L² is closed
+  --    (by `isClosed_aestronglyMeasurable`)
+  -- 3. Show blockAvg f X m n → α_f in L² (using decomposition and uniqueness)
+  -- 4. By closedness, α_f is AEStronglyMeasurable[tailFamily X m] for all m
+  -- 5. Since tailSigma X = ⨅ m, tailFamily X m, and α_f is AEStronglyMeasurable
+  --    w.r.t. each tailFamily X m, it is AEStronglyMeasurable[tailSigma X]
+  -- 6. Extract measurable representative
+
+  -- Key: For the measurability w.r.t. tailSigma X, we use that blockAvg f X m n
+  -- converges to α_f for ANY starting point m (by Cesàro property), and
+  -- each is measurable w.r.t. tailFamily X m.
+
+  -- For now, we use that α_f equals the conditional expectation a.e., and the
+  -- conditional expectation is tail-measurable by definition.
+  -- The full proof requires showing the closed subspace property.
+
+  -- Auxiliary: tailSigma X ≤ ambient σ-algebra
+  have h_tail_le : TailSigma.tailSigma X ≤ inferInstance := by
+    simp only [TailSigma.tailSigma, TailSigma.tailFamily]
+    apply iInf_le_of_le 0
+    apply iSup_le
+    intro k
+    exact MeasurableSpace.comap_le_iff_le_map.mpr (hX_meas (0 + k))
+
+  -- For the AEStronglyMeasurable approach:
+  -- The key insight is that we need to show α_f is in the closed set
+  -- {g : Lp ℝ 2 μ | AEStronglyMeasurable[tailFamily X m] g μ} for all m.
+
+  -- Since this is a substantial proof requiring multiple technical lemmas
+  -- (decomposition of block averages, uniqueness of L² limits starting from
+  -- different indices), we defer to the detailed implementation.
+  -- See `docs/implementation_guides/sorry3_detailed_guide_v2.md` for the full plan.
+
   sorry
 
 set_option maxHeartbeats 2000000
