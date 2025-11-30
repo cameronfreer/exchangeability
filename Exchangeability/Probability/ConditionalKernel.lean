@@ -200,9 +200,8 @@ theorem condExp_eq_of_joint_law_eq
       -- Goal: μ.map (ζ, ξ) = μ.map ((Prod.map φ id) ∘ (ζ, ξ))
       -- Since (Prod.map φ id) ∘ (ζ, ξ) = (φ ∘ ζ, ξ) = (η, ξ)
       have h_comp : (Prod.map φ id) ∘ (fun ω => (ζ ω, ξ ω)) = (fun ω => (η ω, ξ ω)) := by
-        funext ω
-        simp only [Function.comp_apply, Prod.map_apply, id_eq]
-        rw [hηfac]
+        ext ω <;>
+        simp only [Function.comp_apply, Prod.map_apply, id_eq, Prod.fst, Prod.snd, hηfac]
       rw [h_comp, h_law_swapped]
 
     -- From this invariance, the kernel K = condDistrib ξ ζ μ satisfies K(γ) = K(φ(γ)) a.e.
@@ -217,27 +216,64 @@ theorem condExp_eq_of_joint_law_eq
     -- The kernel K = condDistrib ξ η μ
     -- Using the φ-invariance of the joint law: K(γ) = K(φ(γ)) for μ.map ζ-a.e. γ
     have h_K_inv : ∀ᵐ γ ∂(μ.map ζ), (condDistrib ξ η μ) γ = (condDistrib ξ η μ) (φ γ) := by
-      -- The measure μ.map (ζ, ξ) is φ-invariant on the first component
-      -- Its disintegration kernel K satisfies: for any A × B,
-      -- ∫_{φ⁻¹(A)} K(γ)(B) dν = ∫_A K(φ γ)(B) dν where ν = μ.map ζ
-      -- Since ν is φ-invariant (ν = ν.map φ), this implies K = K ∘ φ a.e.
+      -- Key: Use ae_eq_of_compProd_eq from mathlib
+      -- We need to show: (μ.map ζ) ⊗ₘ K = (μ.map ζ) ⊗ₘ (K.comap φ)
+      -- where K = condDistrib ξ η μ
+
+      -- First establish marginal φ-invariance
       have h_ν_inv : μ.map ζ = (μ.map ζ).map φ := by
         rw [Measure.map_map hφ_meas hζ]
-        -- Goal: μ.map ζ = μ.map (φ ∘ ζ)
-        -- Since φ ∘ ζ = η (from hηfac)
         have h_eq : φ ∘ ζ = η := hηfac.symm
         rw [h_eq, h_marg_eq]
-      -- Use that both K and K ∘ φ disintegrate the same measure
+
+      -- The joint measure is the compProd
       have h_compProd_K : (μ.map ζ) ⊗ₘ (condDistrib ξ η μ) = μ.map (fun ω => (ζ ω, ξ ω)) := by
         rw [← h_kernel_eq, hζ_compProd]
-      -- The proof that K(γ) = K(φ(γ)) a.e. follows from:
-      -- 1. Joint law invariance: ρ(A × B) = ρ(φ⁻¹(A) × B) where ρ = μ.map (ζ, ξ)
-      -- 2. First marginal invariance: ν(A) = ν(φ⁻¹(A)) where ν = μ.map ζ
-      -- Combined: ∫_A K(γ)(B) dν = ∫_{φ⁻¹(A)} K(φ(γ))(B) dν = ∫_{φ⁻¹(A)} K(γ)(B) dν
-      -- By uniqueness of Radon-Nikodym derivative: K(γ) = K(φ(γ)) ν-a.e.
-      -- This is left as a documented gap - the proof requires detailed measure-theoretic
-      -- arguments about integral equality implying pointwise a.e. equality.
-      sorry
+
+      rw [← h_compProd_K] at h_joint_inv
+      -- h_joint_inv now: (μ.map ζ) ⊗ₘ K = ((μ.map ζ) ⊗ₘ K).map (Prod.map φ id)
+
+      -- Key step: show (ρ.map Φ) = ν ⊗ₘ (K.comap φ) where ρ = ν ⊗ₘ K, Φ = Prod.map φ id
+      -- For rectangle A × B:
+      -- (ρ.map Φ)(A × B) = ρ(Φ⁻¹(A × B)) = ρ(φ⁻¹A × B) = ∫_{φ⁻¹A} K(γ)(B) dν
+      -- Using ν = ν.map φ: this = ∫_A K(φγ)(B) dν = (ν ⊗ₘ K.comap φ)(A × B)
+      have h_map_eq_comap : ((μ.map ζ) ⊗ₘ (condDistrib ξ η μ)).map (Prod.map φ id) =
+          (μ.map ζ) ⊗ₘ ((condDistrib ξ η μ).comap φ hφ_meas) := by
+        apply Measure.ext
+        intro s hs
+        rw [Measure.map_apply (hφ_meas.prodMap measurable_id) hs]
+        rw [Measure.compProd_apply hs, Measure.compProd_apply]
+        · -- Goal: ∫ K(γ)(s_γ) dν[Φ⁻¹s] = ∫ K(φγ)(s_γ) dν
+          -- where [Φ⁻¹s]_γ means (Prod.mk γ ⁻¹' (Prod.map φ id ⁻¹' s))
+          have h_section_shift : ∀ γ, Prod.mk γ ⁻¹' (Prod.map φ id ⁻¹' s) =
+              Prod.mk (φ γ) ⁻¹' s := by
+            intro γ; ext e
+            simp only [Set.mem_preimage, Prod.map_apply, id_eq]
+          simp only [h_section_shift, Kernel.comap_apply]
+          -- Now: ∫ K(γ)((s_{φγ})) dν = ∫ K(φγ)(s_{φγ}) dν
+          -- Use change of variables with ν = ν.map φ
+          have hm : Measurable (fun γ => (condDistrib ξ η μ) (φ γ) (Prod.mk (φ γ) ⁻¹' s)) := by
+            apply Measurable.comp (Kernel.measurable_coe _ _)
+            · exact (hφ_meas.prodMap measurable_id) hs
+            · exact hφ_meas
+          conv_lhs => rw [h_ν_inv]
+          rw [lintegral_map hm hφ_meas]
+        · exact (hφ_meas.prodMap measurable_id) hs
+
+      -- From h_joint_inv and h_map_eq_comap:
+      -- ν ⊗ₘ K = ν ⊗ₘ (K.comap φ)
+      have h_compProd_eq_comap : (μ.map ζ) ⊗ₘ (condDistrib ξ η μ) =
+          (μ.map ζ) ⊗ₘ ((condDistrib ξ η μ).comap φ hφ_meas) := by
+        rw [h_joint_inv, h_map_eq_comap]
+
+      -- Apply ae_eq_of_compProd_eq to conclude K =ᵐ[ν] K.comap φ
+      -- Need CountableOrCountablyGenerated - StandardBorelSpace implies CountablyGenerated
+      haveI : MeasurableSpace.CountableOrCountablyGenerated Γ E :=
+        MeasurableSpace.countableOrCountablyGenerated_of_countablyGenerated
+      have h_ae_eq := Kernel.ae_eq_of_compProd_eq h_compProd_eq_comap
+      filter_upwards [h_ae_eq] with γ hγ
+      simp only [Kernel.comap_apply] at hγ
+      exact hγ
     -- Pull back to Ω via ζ and use η = φ ∘ ζ
     have h_on_Ω : ∀ᵐ ω ∂μ, (condDistrib ξ η μ) (ζ ω) = (condDistrib ξ η μ) (φ (ζ ω)) :=
       ae_of_ae_map hζ.aemeasurable h_K_inv
