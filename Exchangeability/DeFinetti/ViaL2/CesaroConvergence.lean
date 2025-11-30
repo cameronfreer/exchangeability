@@ -2833,8 +2833,9 @@ lemma cesaro_to_condexp_L1
     have h_toReal_conv : Tendsto (fun n => (eLpNorm (blockAvg f X 0 n - α_f) 2 μ).toReal) atTop (𝓝 0) := by
       -- Use ENNReal.tendsto_toReal_iff to convert ENNReal tendsto to Real tendsto
       -- We need to show: (1) eLpNorm never equals ∞, and (2) 0 ≠ ∞
-      have h_finite : ∀ n, eLpNorm (blockAvg f X 0 n - α_f) 2 μ ≠ ∞ := fun n => (h_diff_memLp n).eLpNorm_ne_top
-      rw [ENNReal.tendsto_toReal_iff h_finite ENNReal.zero_ne_top]
+      have h_finite : ∀ n, eLpNorm (blockAvg f X 0 n - α_f) 2 μ < ∞ := fun n =>
+        (h_diff_memLp n).eLpNorm_lt_top
+      rw [ENNReal.tendsto_toReal_iff (fun n => (h_finite n).ne) ENNReal.zero_ne_top]
       simp only [ENNReal.zero_toReal]
       exact hα_conv
 
