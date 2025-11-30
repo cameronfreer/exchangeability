@@ -291,35 +291,24 @@ theorem condExp_eq_of_joint_law_eq
             ((hφ_meas.prodMap measurable_id) hs)] at h_s_inv
         -- Now h_s_inv: ∫ K(γ)(s_γ) dν = ∫ K(γ)(s_{φ γ}) dν
         simp only [h_section_shift] at h_s_inv
-        -- Simpler approach: use rectangle sets s = A × B
-        -- For rectangle s = A × B:
-        --   s_γ = B if γ ∈ A, else ∅
-        --   (φ × id)⁻¹(A × B) = φ⁻¹(A) × B
-        -- Joint invariance: (ν ⊗ₘ K)(A × B) = (ν ⊗ₘ K)(φ⁻¹(A) × B)
-        -- This gives: ∫_A K(γ)(B) dν = ∫_{φ⁻¹(A)} K(γ)(B) dν
-        -- Using ν = ν.map φ on LHS: ∫_{φ⁻¹(A)} K(φγ)(B) dν = ∫_{φ⁻¹(A)} K(γ)(B) dν
-        -- For A = Γ: ∫ K(φγ)(B) dν = ∫ K(γ)(B) dν for all B
-        -- Therefore K(φγ) = K(γ) a.e. by extensionality
+        -- Mathematical strategy (proven):
+        -- 1. From joint invariance: ∫ K(γ)(s_γ) dν = ∫ K(γ)(s_{φγ}) dν (h_s_inv)
+        -- 2. From change of vars: ∫ K(γ)(s_{φγ}) dν = ∫ K(φγ)(s_{φ²γ}) dν
+        -- 3. Combining: ∫ K(γ)(s_γ) dν = ∫ K(φγ)(s_{φ²γ}) dν
         --
-        -- But we need to show this for general s, not just rectangles.
-        -- The key is that rectangles generate the σ-algebra.
+        -- What remains: close the loop to get ∫ K(γ)(s_γ) dν = ∫ K(φγ)(s_γ) dν
         --
-        -- Alternative direct approach:
-        -- From h_s_inv: ∫ K(γ)(s_γ) dν = ∫ K(γ)(s_{φγ}) dν
-        -- Apply change of variables using ν = ν.map φ:
-        -- LHS stays the same (it's the original goal)
-        -- On RHS: ∫ K(γ)(s_{φγ}) dν = ∫ K(γ)(s_{φγ}) d(ν.map φ) = ∫ K(φγ)(s_{φ²γ}) dν
-        -- So: ∫ K(γ)(s_γ) dν = ∫ K(φγ)(s_{φ²γ}) dν
+        -- For rectangles s = A × B, we have:
+        --   ∫_{φ⁻¹(A)} K(γ)(B) dν = ∫_{φ⁻¹(A)} K(φγ)(B) dν
+        -- Taking A = Γ: ∫ K(γ)(B) dν = ∫ K(φγ)(B) dν for all B
         --
-        -- We need a symmetry argument. The key insight is that since the
-        -- invariances hold for ALL measurable s, we can substitute appropriately.
+        -- The gap: extending from total integral equality to restricted integral equality
+        -- on all sets A (not just on sets of the form φ⁻¹(A)).
         --
-        -- Actually, let's use Kernel.compProd_eq_iff more directly
-        -- The proof that K =ᵐ[ν] K.comap φ follows from showing the compProds are equal
-        -- which requires showing the integrals match for all s.
-        --
-        -- For general s, we use the monotone class theorem: if the equality holds
-        -- for rectangles, it holds for all measurable sets.
+        -- TODO: Complete using either:
+        -- (a) The fact that K(γ) - K(φγ) integrates to zero on all φ⁻¹(A) sets,
+        --     combined with ν = ν.map φ implying ν is "essentially supported on range(φ)".
+        -- (b) A direct argument using `ext_of_generate_finite` and the π-system of rectangles.
         sorry
       -- Apply compProd_eq_iff to get a.e. equality of kernels
       have h_ae_eq := Kernel.compProd_eq_iff.mp h_compProd_eq_comap
