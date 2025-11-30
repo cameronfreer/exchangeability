@@ -2369,6 +2369,75 @@ private lemma blockAvg_measurable_tailFamily
     measurable_X_shift hX_meas m k
   exact hf_meas.comp hXmk
 
+/-! ### Shifted Block Average Convergence Infrastructure -/
+
+/-- The difference between block averages at different starting indices converges to 0 in L².
+
+For fixed starting index m, as block size n → ∞:
+  ‖blockAvg f X m n - blockAvg f X 0 n‖₂ → 0
+
+**Proof idea:** The two block averages share most indices when n >> m:
+- `blockAvg f X 0 n` uses indices {0, ..., n-1}
+- `blockAvg f X m n` uses indices {m, ..., m+n-1}
+- Overlap is {m, ..., n-1} when m < n
+
+The difference involves only O(m) terms, each bounded by |f| ≤ 1:
+  blockAvg f X m n - blockAvg f X 0 n = (m/n) · (A^(n)_m - A^(0)_m)
+
+Since |A^(n)_m - A^(0)_m| ≤ 2, we have ‖diff‖₂ ≤ 2m/n → 0 as n → ∞. -/
+private lemma blockAvg_shift_diff_tendsto_zero
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {f : ℝ → ℝ} (hf_bdd : ∀ x, |f x| ≤ 1)
+    {X : ℕ → Ω → ℝ}
+    (m : ℕ) :
+    Tendsto (fun n => eLpNorm (blockAvg f X m n - blockAvg f X 0 n) 2 μ) atTop (𝓝 0) := by
+  -- The key is that for fixed m, the difference is O(m/n) in L∞, hence in L²
+  -- For now, document the strategy and use sorry
+  --
+  -- When n > m, we can decompose:
+  -- blockAvg f X m n = (1/n) ∑_{k=0}^{n-1} f(X_{m+k})
+  -- blockAvg f X 0 n = (1/n) ∑_{k=0}^{n-1} f(X_k)
+  --
+  -- The difference involves:
+  -- - Adding terms f(X_n), ..., f(X_{m+n-1}) (m new terms)
+  -- - Subtracting terms f(X_0), ..., f(X_{m-1}) (m old terms)
+  --
+  -- Each term is bounded by 1, so the difference is bounded by 2m/n in L∞
+  -- Since μ is a probability measure, ‖·‖_L² ≤ ‖·‖_L∞, so ‖diff‖₂ ≤ 2m/n
+  --
+  -- This goes to 0 as n → ∞ for fixed m.
+  sorry
+
+/-- Shifted block averages converge to the same L² limit as the original.
+
+For any starting index m, if `blockAvg f X 0 n → α_f` in L², then
+`blockAvg f X m n → α_f` in L² as well.
+
+**Proof:** By triangle inequality:
+  ‖blockAvg f X m n - α_f‖₂ ≤ ‖blockAvg f X m n - blockAvg f X 0 n‖₂ + ‖blockAvg f X 0 n - α_f‖₂
+
+Both terms → 0 as n → ∞:
+- First term: by `blockAvg_shift_diff_tendsto_zero`
+- Second term: by hypothesis -/
+private lemma blockAvg_shift_tendsto_same_limit
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {f : ℝ → ℝ} (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1)
+    {X : ℕ → Ω → ℝ} (hX_meas : ∀ i, Measurable (X i))
+    (α_f : Ω → ℝ)
+    (hα_limit : Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0))
+    (m : ℕ) :
+    Tendsto (fun n => eLpNorm (blockAvg f X m n - α_f) 2 μ) atTop (𝓝 0) := by
+  -- Triangle inequality approach:
+  -- ‖A^(m)_n - α_f‖₂ ≤ ‖A^(m)_n - A^(0)_n‖₂ + ‖A^(0)_n - α_f‖₂
+  --
+  -- Both terms → 0 as n → ∞:
+  -- - First term: by blockAvg_shift_diff_tendsto_zero (O(m/n) bound)
+  -- - Second term: by hypothesis hα_limit
+  --
+  -- Technical details: Need AEStronglyMeasurable proofs for eLpNorm_add_le.
+  -- We defer this to sorry since the main mathematical structure is clear.
+  sorry
+
 /-- Helper lemma: tail-measurability of L² limit of block averages.
 
 Given an L² limit α_f of block averages, if the block averages are measurable
@@ -2408,7 +2477,13 @@ private lemma tail_measurability_of_blockAvg
   have hblockAvg_meas : ∀ m n, Measurable[TailSigma.tailFamily X m] (blockAvg f X m n) :=
     fun m n => blockAvg_measurable_tailFamily hf_meas hX_meas m n
 
-  -- Step 2: For each N, the shifted block averages are eventually N-tail-measurable
+  -- Step 2: For any starting index m, blockAvg f X m n → α_f in L²
+  -- This follows from blockAvg_shift_tendsto_same_limit
+  have h_shifted_limit : ∀ m,
+      Tendsto (fun n => eLpNorm (blockAvg f X m n - α_f) 2 μ) atTop (𝓝 0) :=
+    fun m => blockAvg_shift_tendsto_same_limit hf_meas hf_bdd hX_meas α_f hα_limit m
+
+  -- Step 3: For each N, the shifted block averages are eventually N-tail-measurable
   have h_eventually_meas : ∀ N, ∀ᶠ k in atTop,
       Measurable[TailSigma.tailFamily X N] (blockAvg f X k 1) := by
     intro N
@@ -2418,20 +2493,22 @@ private lemma tail_measurability_of_blockAvg
       TailSigma.antitone_tailFamily X hk
     exact Measurable.le h_mono (hblockAvg_meas k 1)
 
-  -- The key step requires contractability to show all shifted block averages
-  -- converge to α_f in L². This needs a separate infrastructure lemma.
-  -- For now, we document this as an axiom gap.
+  -- Step 4: Use closedness of AEStronglyMeasurable' subspace in L²
   --
-  -- AXIOM GAP: Need to prove that for any m ≥ 0,
-  --   Tendsto (fun n => eLpNorm (blockAvg f X m n - α_f) 2 μ) atTop (𝓝 0)
-  -- This follows from contractability of X: the sequence (X m, X (m+1), ...)
-  -- has the same distribution as (X 0, X 1, ...), so the Cesàro averages
-  -- have the same L² limit.
+  -- For each N:
+  -- - The sequence (blockAvg f X N n)_n converges to α_f in L² (by h_shifted_limit)
+  -- - Each blockAvg f X N n is measurable w.r.t. tailFamily X N (by hblockAvg_meas)
+  -- - The set {g ∈ L² | AEStronglyMeasurable'[tailFamily X N] g} is closed
+  --   (by isClosed_aestronglyMeasurable)
+  -- - Therefore α_f is AEStronglyMeasurable'[tailFamily X N]
   --
-  -- Once this is proven, the rest follows from:
-  -- - isClosed_aestronglyMeasurable (closedness in L²)
-  -- - Antitonicity of tailFamily
-  -- - iInf characterization of tailSigma
+  -- Step 5: Since α_f is AEStronglyMeasurable'[tailFamily X N] for all N,
+  -- and tailSigma X = ⨅ N, tailFamily X N, we get AEStronglyMeasurable'[tailSigma X] α_f
+  --
+  -- Step 6: Extract a measurable representative.
+  --
+  -- The technical details require using isClosed_aestronglyMeasurable and
+  -- the iInf characterization. We leave this as sorry for now.
   sorry
 
 set_option maxHeartbeats 2000000
