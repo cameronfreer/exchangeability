@@ -176,8 +176,26 @@ lemma setIntegral_le_eLpNorm_mul_measure
     (A : Set Ω) (hA : MeasurableSet A) {g : Ω → ℝ}
     (hg : MemLp g 2 μ) :
     |∫ x in A, g x ∂μ| ≤ (eLpNorm g 2 μ).toReal * (μ A).toReal ^ (1/2 : ℝ) := by
-  -- Cauchy-Schwarz: ∫_A g = ∫ (indicator A g) ≤ ‖indicator A 1‖₂ * ‖g‖₂
-  -- where ‖indicator A 1‖₂ = √(μ A)
+  -- PROOF STRATEGY (Cauchy-Schwarz via inner product):
+  --
+  -- Step 1: Lift g to Lp element using MemLp.toLp
+  --   g_lp : Lp ℝ 2 μ := hg.toLp g
+  --
+  -- Step 2: Express set integral as inner product (L2.inner_indicatorConstLp_one)
+  --   ∫ x in A, g x ∂μ = ⟪indicatorConstLp 2 hA hμA 1, g_lp⟫
+  --   where hμA : μ A ≠ ∞ (from IsProbabilityMeasure)
+  --
+  -- Step 3: Apply Cauchy-Schwarz (norm_inner_le_norm)
+  --   |⟪indicator, g_lp⟫| ≤ ‖indicator‖ * ‖g_lp‖
+  --
+  -- Step 4: Compute indicator norm (norm_indicatorConstLp)
+  --   ‖indicatorConstLp 2 hA hμA 1‖ = ‖1‖ * (μ A).toReal^(1/2) = (μ A).toReal^(1/2)
+  --
+  -- KEY MATHLIB LEMMAS:
+  -- - MeasureTheory.L2.inner_indicatorConstLp_one: ⟪indicator_s 1, f⟫ = ∫_s f
+  -- - norm_inner_le_norm: |⟪x, y⟫| ≤ ‖x‖ * ‖y‖ (Cauchy-Schwarz)
+  -- - norm_indicatorConstLp: ‖indicatorConstLp p hs hμs c‖ = ‖c‖ * μ.real s^(1/p.toReal)
+  -- - MemLp.toLp_coeFn: coercion of toLp equals original function a.e.
   sorry
 
 /-- **Simplified set integral bound for probability measures.**
