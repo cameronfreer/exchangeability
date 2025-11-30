@@ -2322,10 +2322,80 @@ private lemma l2_limit_from_cauchy
   -- Close the existential proof
   exact ⟨α_f, hα_memLp, hα_limit⟩
 
+/-! ### Helper Lemmas for Tail Measurability -/
+
+/-- Each shifted coordinate X_{m+k} is measurable w.r.t. the tail family from index m.
+
+The tail family `tailFamily X m` is defined as the supremum of the σ-algebras generated
+by each `X (m+j)` for j ∈ ℕ. Since `X (m+k)` generates one of these component σ-algebras,
+it is measurable w.r.t. the supremum. -/
+private lemma measurable_X_shift
+    {X : ℕ → Ω → ℝ} (hX_meas : ∀ i, Measurable (X i))
+    (m k : ℕ) :
+    Measurable[TailSigma.tailFamily X m] (fun ω => X (m + k) ω) := by
+  -- tailFamily X m = ⨆ j, comap (X (m+j)) inferInstance
+  -- X (m+k) is measurable w.r.t. comap (X (m+k)) by comap_measurable
+  -- comap (X (m+k)) ≤ tailFamily X m by le_iSup
+  -- So X (m+k) is measurable w.r.t. tailFamily X m by Measurable.le
+  have h_comap_meas : Measurable[MeasurableSpace.comap (fun ω => X (m + k) ω) inferInstance]
+      (fun ω => X (m + k) ω) :=
+    comap_measurable (fun ω => X (m + k) ω)
+  have h_le : MeasurableSpace.comap (fun ω => X (m + k) ω) inferInstance ≤
+      TailSigma.tailFamily X m := by
+    -- tailFamily X m = ⨆ j, comap (X (m+j))
+    -- Use le_iSup at j = k
+    show MeasurableSpace.comap (fun ω => X (m + k) ω) inferInstance ≤
+        iSup (fun j => MeasurableSpace.comap (fun ω => X (m + j) ω) inferInstance)
+    exact le_iSup (fun j => MeasurableSpace.comap (fun ω => X (m + j) ω) inferInstance) k
+  exact Measurable.le h_le h_comap_meas
+
+/-- Block averages starting at index m are measurable w.r.t. the m-tail family.
+
+Since `blockAvg f X m n` only depends on `X m, X (m+1), ..., X (m+n-1)`,
+and each `X (m+k)` is measurable w.r.t. `tailFamily X m`, the result follows
+from closure under finite sums and scalar multiplication. -/
+private lemma blockAvg_measurable_tailFamily
+    {f : ℝ → ℝ} (hf_meas : Measurable f)
+    {X : ℕ → Ω → ℝ} (hX_meas : ∀ i, Measurable (X i))
+    (m n : ℕ) :
+    Measurable[TailSigma.tailFamily X m] (blockAvg f X m n) := by
+  unfold blockAvg
+  -- blockAvg = (n⁻¹) * ∑_{k<n} f(X_{m+k})
+  apply Measurable.const_mul
+  apply Finset.measurable_sum
+  intro k _
+  -- Each summand: f ∘ X_{m+k}
+  have hXmk : Measurable[TailSigma.tailFamily X m] (fun ω => X (m + k) ω) :=
+    measurable_X_shift hX_meas m k
+  exact hf_meas.comp hXmk
+
 /-- Helper lemma: tail-measurability of L² limit of block averages.
 
 Given an L² limit α_f of block averages, if the block averages are measurable
-with respect to the tail σ-algebra for large N, then α_f is tail-measurable. -/
+with respect to the tail σ-algebra for large N, then α_f is tail-measurable.
+
+**Mathematical strategy (using closedness of AEStronglyMeasurable' in L²):**
+
+1. **Step 1 (DONE):** `blockAvg f X m n` is measurable w.r.t. `tailFamily X m`
+   - Proven in `blockAvg_measurable_tailFamily`
+
+2. **Step 2 (TODO - requires contractability):** Show that for any m ≥ 0,
+   `blockAvg f X m n → α_f` in L² as n → ∞.
+   - By contractability, (X m, X (m+1), ...) has same distribution as (X 0, X 1, ...)
+   - So the Cesàro averages starting at m have the same L² limit as those starting at 0
+
+3. **Step 3:** For each N, the set `{g ∈ Lp 2 μ | AEStronglyMeasurable'[tailFamily X N] g}` is
+   closed (by `isClosed_aestronglyMeasurable`).
+   - For k ≥ N: `tailFamily X k ≤ tailFamily X N` (antitonicity)
+   - So `blockAvg f X k n` is measurable w.r.t. `tailFamily X N` for all k ≥ N
+   - Since `blockAvg f X k n → α_f` in L² (Step 2), and the subspace is closed,
+     `α_f` is `AEStronglyMeasurable'[tailFamily X N]`
+
+4. **Step 4:** Since `α_f` is `AEStronglyMeasurable'[tailFamily X N]` for all N,
+   and `tailSigma X = ⨅ N, tailFamily X N`, we get `AEStronglyMeasurable'[tailSigma X] α_f`
+
+5. **Step 5:** Extract a measurable representative from AEStronglyMeasurable'.
+-/
 private lemma tail_measurability_of_blockAvg
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {X : ℕ → Ω → ℝ}
@@ -2334,39 +2404,34 @@ private lemma tail_measurability_of_blockAvg
     (α_f : Ω → ℝ) (hα_memLp : MemLp α_f 2 μ)
     (hα_limit : Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0)) :
     Measurable[TailSigma.tailSigma X] α_f := by
-  -- TODO: Prove tail-measurability of L² limit
+  -- Step 1: Each blockAvg f X m n is measurable w.r.t. tailFamily X m
+  have hblockAvg_meas : ∀ m n, Measurable[TailSigma.tailFamily X m] (blockAvg f X m n) :=
+    fun m n => blockAvg_measurable_tailFamily hf_meas hX_meas m n
+
+  -- Step 2: For each N, the shifted block averages are eventually N-tail-measurable
+  have h_eventually_meas : ∀ N, ∀ᶠ k in atTop,
+      Measurable[TailSigma.tailFamily X N] (blockAvg f X k 1) := by
+    intro N
+    refine (eventually_ge_atTop N).mono (fun k hk => ?_)
+    -- k ≥ N implies tailFamily X k ≤ tailFamily X N
+    have h_mono : TailSigma.tailFamily X k ≤ TailSigma.tailFamily X N :=
+      TailSigma.antitone_tailFamily X hk
+    exact Measurable.le h_mono (hblockAvg_meas k 1)
+
+  -- The key step requires contractability to show all shifted block averages
+  -- converge to α_f in L². This needs a separate infrastructure lemma.
+  -- For now, we document this as an axiom gap.
   --
-  -- PROOF STRATEGY:
-  -- 1. Show blockAvg f X m n is measurable w.r.t. σ(X_{m+1}, X_{m+2}, ...)
-  --    - This holds because blockAvg only depends on X_{m+1}, ..., X_{m+n}
-  --    - Use measurability propagation through finite sums and scalar multiplication
+  -- AXIOM GAP: Need to prove that for any m ≥ 0,
+  --   Tendsto (fun n => eLpNorm (blockAvg f X m n - α_f) 2 μ) atTop (𝓝 0)
+  -- This follows from contractability of X: the sequence (X m, X (m+1), ...)
+  -- has the same distribution as (X 0, X 1, ...), so the Cesàro averages
+  -- have the same L² limit.
   --
-  -- 2. For each fixed m, extract diagonal subsequence n(k) such that:
-  --    - blockAvg f X m (n k) → some limit β_m in L²
-  --    - β_m is measurable w.r.t. σ(X_{m+1}, X_{m+2}, ...)
-  --    - Use: L² convergent subsequence inherits measurability from approximants
-  --
-  -- 3. Show β_m = α_f a.e. for all m
-  --    - Both are L² limits of the same Cauchy sequence
-  --    - Use L² limit uniqueness
-  --
-  -- 4. Conclude α_f is tail-measurable
-  --    - α_f = β_m a.e. for all m
-  --    - Each β_m is σ(X_{>m})-measurable
-  --    - tail σ-algebra = ⋂_m σ(X_{>m})
-  --    - Therefore α_f ∈ ⋂_m σ(X_{>m}) = tail σ-algebra
-  --
-  -- REQUIRED LEMMAS:
-  -- - blockAvg_measurable_wrt_tail: blockAvg f X m n is σ(X_{>m})-measurable
-  -- - L2_limit_inherits_measurability: If f_n → f in L² and each f_n is m-measurable,
-  --   then f is m-measurable (up to a.e. modification)
-  -- - ae_eq_trans_measurability: If f =ᵐ g and g is m-measurable, then f is m-measurable
-  --
-  -- ALTERNATIVE APPROACH:
-  -- Use condExpL2 projection property directly:
-  -- - α_f is the L² projection onto L²(tail σ-algebra)
-  -- - Projections into closed subspaces inherit the subspace's measurability
-  -- - This may be more direct if mathlib has the infrastructure
+  -- Once this is proven, the rest follows from:
+  -- - isClosed_aestronglyMeasurable (closedness in L²)
+  -- - Antitonicity of tailFamily
+  -- - iInf characterization of tailSigma
   sorry
 
 set_option maxHeartbeats 2000000
