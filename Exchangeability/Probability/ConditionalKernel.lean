@@ -200,9 +200,8 @@ theorem condExp_eq_of_joint_law_eq
       -- Goal: μ.map (ζ, ξ) = μ.map ((Prod.map φ id) ∘ (ζ, ξ))
       -- Since (Prod.map φ id) ∘ (ζ, ξ) = (φ ∘ ζ, ξ) = (η, ξ)
       have h_comp : (Prod.map φ id) ∘ (fun ω => (ζ ω, ξ ω)) = (fun ω => (η ω, ξ ω)) := by
-        funext ω
-        simp only [Function.comp_apply, Prod.map_apply, id_eq]
-        rw [hηfac]
+        ext ω <;>
+        simp only [Function.comp_apply, Prod.map_apply, id_eq, Prod.fst, Prod.snd, hηfac]
       rw [h_comp, h_law_swapped]
 
     -- From this invariance, the kernel K = condDistrib ξ ζ μ satisfies K(γ) = K(φ(γ)) a.e.
@@ -230,14 +229,104 @@ theorem condExp_eq_of_joint_law_eq
       -- Use that both K and K ∘ φ disintegrate the same measure
       have h_compProd_K : (μ.map ζ) ⊗ₘ (condDistrib ξ η μ) = μ.map (fun ω => (ζ ω, ξ ω)) := by
         rw [← h_kernel_eq, hζ_compProd]
-      -- The proof that K(γ) = K(φ(γ)) a.e. follows from:
-      -- 1. Joint law invariance: ρ(A × B) = ρ(φ⁻¹(A) × B) where ρ = μ.map (ζ, ξ)
-      -- 2. First marginal invariance: ν(A) = ν(φ⁻¹(A)) where ν = μ.map ζ
-      -- Combined: ∫_A K(γ)(B) dν = ∫_{φ⁻¹(A)} K(φ(γ))(B) dν = ∫_{φ⁻¹(A)} K(γ)(B) dν
-      -- By uniqueness of Radon-Nikodym derivative: K(γ) = K(φ(γ)) ν-a.e.
-      -- This is left as a documented gap - the proof requires detailed measure-theoretic
-      -- arguments about integral equality implying pointwise a.e. equality.
-      sorry
+      -- Strategy: Show ν ⊗ₘ K = ν ⊗ₘ (K.comap φ), then use Kernel.compProd_eq_iff
+      -- We have: ν ⊗ₘ K = ρ (from h_compProd_K)
+      -- We need: ν ⊗ₘ (K.comap φ) = ρ
+      -- Key identities:
+      -- 1. ρ = ρ.map (Prod.map φ id) (from h_joint_inv)
+      -- 2. ν = ν.map φ (from h_ν_inv)
+      --
+      -- For rectangles A × B:
+      -- (ν ⊗ₘ (K.comap φ))(A × B) = ∫_A K(φ γ)(B) dν(γ)
+      -- Using ν = ν.map φ: = ∫_{φ⁻¹(A)} K(φ(φ γ))(B) dν(γ)
+      -- And ρ(A × B) = ∫_A K(γ)(B) dν(γ) = ∫_{φ⁻¹(A)} K(γ)(B) dν(γ) (by ρ-invariance)
+      --
+      -- The equality follows from the fact that both K and K.comap φ are
+      -- disintegrations of the same ρ w.r.t. ν, so they must agree a.e. by uniqueness.
+      -- Use compProd_eq_iff: if ν ⊗ₘ K = ν ⊗ₘ (K.comap φ) then K =ᵐ[ν] K.comap φ
+      -- Show ν ⊗ₘ K = ν ⊗ₘ (K.comap φ), then apply compProd_eq_iff
+      have h_compProd_eq_comap : (μ.map ζ) ⊗ₘ (condDistrib ξ η μ) =
+          (μ.map ζ) ⊗ₘ ((condDistrib ξ η μ).comap φ hφ_meas) := by
+        -- Strategy: show both sides equal ρ on all measurable sets
+        -- Key insight: the equality ∫_A K(φ γ)(B) dν = ∫_A K(γ)(B) dν follows from
+        -- combining marginal invariance ν = ν.map φ and joint invariance ρ = ρ.map (Prod.map φ id)
+        ext s hs
+        rw [Measure.compProd_apply hs, Measure.compProd_apply hs]
+        simp only [Kernel.comap_apply]
+        -- Goal: ∫ K(γ)(s_γ) dν = ∫ K(φ γ)(s_γ) dν
+        -- Step 1: From marginal invariance, ∫_A f dν = ∫_{φ⁻¹(A)} (f ∘ φ) dν
+        -- Step 2: From joint invariance on rectangles, ∫_A K(γ)(B) dν = ∫_{φ⁻¹(A)} K(γ)(B) dν
+        -- Step 3: Combining gives ∫_{φ⁻¹(A)} K(φ γ)(B) dν = ∫_{φ⁻¹(A)} K(γ)(B) dν
+        -- Step 4: Therefore ∫_A K(φ γ)(B) dν = ∫_A K(γ)(B) dν
+        --
+        -- Use the change of variables formula: for f measurable,
+        -- ∫ f dν = ∫ f d(ν.map φ) = ∫ (f ∘ φ) dν
+        have h_lintegral_eq : ∀ (f : Γ → ℝ≥0∞), Measurable f →
+            ∫⁻ γ, f γ ∂(μ.map ζ) = ∫⁻ γ, f (φ γ) ∂(μ.map ζ) := by
+          intro f hf
+          conv_lhs => rw [h_ν_inv]
+          rw [lintegral_map hf hφ_meas]
+        -- The key observation: using joint and marginal invariance together
+        -- From h_compProd_K: ∫ K(γ)(s_γ) dν = ρ(s)
+        -- From h_joint_inv: ρ(s) = ρ((Prod.map φ id)⁻¹(s))
+        -- The section of (Prod.map φ id)⁻¹(s) at γ is s_{φ γ}
+        -- So: ∫ K(γ)(s_γ) dν = ∫ K(γ)(s_{φ γ}) dν
+        have h_section_shift : ∀ γ, (Prod.mk γ) ⁻¹' ((Prod.map φ id) ⁻¹' s) =
+            (Prod.mk (φ γ)) ⁻¹' s := by
+          intro γ
+          ext e
+          simp only [Set.mem_preimage, Prod.map_apply, id_eq]
+        -- The integral of K(φ γ)(s_γ) can be computed via change of variables
+        -- ∫ K(φ γ)(s_γ) dν = ∫ K(γ)(s_γ) dν follows from the symmetry of the invariance
+        rw [← h_compProd_K] at h_joint_inv
+        -- h_joint_inv now says: ν ⊗ₘ K = (ν ⊗ₘ K).map (Prod.map φ id)
+        have h_apply_inv : ∀ t, MeasurableSet t → (μ.map ζ ⊗ₘ condDistrib ξ η μ) t =
+            (μ.map ζ ⊗ₘ condDistrib ξ η μ) ((Prod.map φ id) ⁻¹' t) := by
+          intro t ht
+          conv_lhs => rw [h_joint_inv]
+          rw [Measure.map_apply (hφ_meas.prodMap measurable_id) ht]
+        -- Apply to s
+        have h_s_inv := h_apply_inv s hs
+        rw [Measure.compProd_apply hs, Measure.compProd_apply
+            ((hφ_meas.prodMap measurable_id) hs)] at h_s_inv
+        -- Now h_s_inv: ∫ K(γ)(s_γ) dν = ∫ K(γ)(s_{φ γ}) dν
+        simp only [h_section_shift] at h_s_inv
+        -- Simpler approach: use rectangle sets s = A × B
+        -- For rectangle s = A × B:
+        --   s_γ = B if γ ∈ A, else ∅
+        --   (φ × id)⁻¹(A × B) = φ⁻¹(A) × B
+        -- Joint invariance: (ν ⊗ₘ K)(A × B) = (ν ⊗ₘ K)(φ⁻¹(A) × B)
+        -- This gives: ∫_A K(γ)(B) dν = ∫_{φ⁻¹(A)} K(γ)(B) dν
+        -- Using ν = ν.map φ on LHS: ∫_{φ⁻¹(A)} K(φγ)(B) dν = ∫_{φ⁻¹(A)} K(γ)(B) dν
+        -- For A = Γ: ∫ K(φγ)(B) dν = ∫ K(γ)(B) dν for all B
+        -- Therefore K(φγ) = K(γ) a.e. by extensionality
+        --
+        -- But we need to show this for general s, not just rectangles.
+        -- The key is that rectangles generate the σ-algebra.
+        --
+        -- Alternative direct approach:
+        -- From h_s_inv: ∫ K(γ)(s_γ) dν = ∫ K(γ)(s_{φγ}) dν
+        -- Apply change of variables using ν = ν.map φ:
+        -- LHS stays the same (it's the original goal)
+        -- On RHS: ∫ K(γ)(s_{φγ}) dν = ∫ K(γ)(s_{φγ}) d(ν.map φ) = ∫ K(φγ)(s_{φ²γ}) dν
+        -- So: ∫ K(γ)(s_γ) dν = ∫ K(φγ)(s_{φ²γ}) dν
+        --
+        -- We need a symmetry argument. The key insight is that since the
+        -- invariances hold for ALL measurable s, we can substitute appropriately.
+        --
+        -- Actually, let's use Kernel.compProd_eq_iff more directly
+        -- The proof that K =ᵐ[ν] K.comap φ follows from showing the compProds are equal
+        -- which requires showing the integrals match for all s.
+        --
+        -- For general s, we use the monotone class theorem: if the equality holds
+        -- for rectangles, it holds for all measurable sets.
+        sorry
+      -- Apply compProd_eq_iff to get a.e. equality of kernels
+      have h_ae_eq := Kernel.compProd_eq_iff.mp h_compProd_eq_comap
+      filter_upwards [h_ae_eq] with γ hγ
+      simp only [Kernel.comap_apply] at hγ
+      -- hγ : K γ = K (φ γ), which is exactly what we want
+      exact hγ
     -- Pull back to Ω via ζ and use η = φ ∘ ζ
     have h_on_Ω : ∀ᵐ ω ∂μ, (condDistrib ξ η μ) (ζ ω) = (condDistrib ξ η μ) (φ (ζ ω)) :=
       ae_of_ae_map hζ.aemeasurable h_K_inv
