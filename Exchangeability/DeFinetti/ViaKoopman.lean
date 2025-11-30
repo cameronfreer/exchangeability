@@ -639,6 +639,13 @@ which only holds when Cov(X,Y) = 0. This is not true in general.
 
 **Status:** Axiomatized due to Lean 4 type class instance issues with multiple
 measurable space structures. The mathematical content is straightforward.
+
+**Proof sketch** (blocked by type class synthesis):
+1. Use commutativity: X * μ[Y | m] = μ[Y | m] * X
+2. μ[Y | m] is m-strongly-measurable (by stronglyMeasurable_condExp)
+3. X is integrable (bounded on finite measure space)
+4. Product is integrable (Integrable.bdd_mul)
+5. Apply condExp_mul_of_aestronglyMeasurable_left
 -/
 axiom condexp_mul_condexp
     {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
