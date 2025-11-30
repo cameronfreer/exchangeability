@@ -2391,22 +2391,52 @@ private lemma blockAvg_shift_diff_tendsto_zero
     {X : ℕ → Ω → ℝ}
     (m : ℕ) :
     Tendsto (fun n => eLpNorm (blockAvg f X m n - blockAvg f X 0 n) 2 μ) atTop (𝓝 0) := by
-  -- The key is that for fixed m, the difference is O(m/n) in L∞, hence in L²
-  -- For now, document the strategy and use sorry
+  -- Strategy: bound eLpNorm by 2m/n using eLpNorm_le_of_ae_bound, then show 2m/n → 0
   --
-  -- When n > m, we can decompose:
-  -- blockAvg f X m n = (1/n) ∑_{k=0}^{n-1} f(X_{m+k})
-  -- blockAvg f X 0 n = (1/n) ∑_{k=0}^{n-1} f(X_k)
-  --
-  -- The difference involves:
-  -- - Adding terms f(X_n), ..., f(X_{m+n-1}) (m new terms)
-  -- - Subtracting terms f(X_0), ..., f(X_{m-1}) (m old terms)
-  --
-  -- Each term is bounded by 1, so the difference is bounded by 2m/n in L∞
-  -- Since μ is a probability measure, ‖·‖_L² ≤ ‖·‖_L∞, so ‖diff‖₂ ≤ 2m/n
-  --
-  -- This goes to 0 as n → ∞ for fixed m.
-  sorry
+  -- Step 1: Pointwise bound |blockAvg f X m n - blockAvg f X 0 n| ≤ 2m/n
+  have h_pointwise_bound : ∀ n > 0, ∀ ω, |blockAvg f X m n ω - blockAvg f X 0 n ω| ≤ 2 * m / n := by
+    intro n hn ω
+    -- The two block averages share indices {m, ..., n-1} when m < n
+    -- The difference involves at most 2m terms, each bounded by 1
+    -- So the difference of sums is bounded by 2m, and dividing by n gives 2m/n
+    simp only [blockAvg]
+    -- Bound on the difference of sums divided by n
+    -- Technical details: need to decompose the sums carefully
+    -- For now, accept this elementary bound
+    sorry
+
+  -- Step 2: Use eLpNorm_le_of_ae_bound to get eLpNorm bound
+  -- For probability measure: eLpNorm f 2 μ ≤ μ(univ)^(1/2) * C = 1 * C = C
+  have h_eLpNorm_bound : ∀ n > 0,
+      eLpNorm (blockAvg f X m n - blockAvg f X 0 n) 2 μ ≤ ENNReal.ofReal (2 * m / n) := by
+    intro n hn
+    -- Use eLpNorm_le_of_ae_bound with the pointwise bound
+    -- For probability measure μ: μ(univ) = 1, so 1^(1/2) * C = C
+    sorry -- Technical: apply eLpNorm_le_of_ae_bound and simplify
+
+  -- Step 3: Since 2m/n → 0 as n → ∞, the eLpNorm → 0
+  rw [ENNReal.tendsto_atTop_zero]
+  intro ε hε
+  by_cases hm : m = 0
+  · -- If m = 0, the difference is identically 0
+    use 1
+    intro n hn
+    simp only [hm, Nat.cast_zero, mul_zero, zero_div, ENNReal.ofReal_zero]
+    have : blockAvg f X 0 n - blockAvg f X 0 n = 0 := sub_self _
+    simp only [this, eLpNorm_zero]
+    exact le_of_lt hε
+  · -- For m > 0, choose n large enough that 2m/n < ε
+    -- Need n > 2m/ε (approximately)
+    obtain ⟨N, hN⟩ := exists_nat_gt ((2 : ℝ) * m / ε.toReal)
+    use max N 1
+    intro n hn
+    have hn_pos : 0 < n := lt_of_lt_of_le (by norm_num : 0 < max N 1) hn
+    have h_bound := h_eLpNorm_bound n hn_pos
+    -- Show 2m/n < ε.toReal when n > 2m/ε.toReal
+    have h_le : ENNReal.ofReal (2 * m / n) ≤ ε := by
+      -- When n > 2m/ε.toReal, we have 2m/n < ε.toReal, so ofReal (2m/n) ≤ ε
+      sorry -- Technical: use n > 2m/ε.toReal to conclude
+    exact le_trans h_bound h_le
 
 /-- Shifted block averages converge to the same L² limit as the original.
 
