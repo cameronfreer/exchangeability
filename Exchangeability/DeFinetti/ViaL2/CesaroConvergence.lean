@@ -2381,26 +2381,37 @@ private lemma blockAvg_shift_tendsto
   -- Case N = 0: trivial, just use the hypothesis
   rcases eq_or_ne N 0 with rfl | hN
   · exact hα_limit
-
-  -- Case N > 0: The key insight is the algebraic decomposition:
+  -- Case N > 0: Use algebraic decomposition
   --
-  -- blockAvg f X 0 (N + m) = (N/(N+m)) * blockAvg f X 0 N + (m/(N+m)) * blockAvg f X N m
+  -- PROOF STRATEGY (ENNReal squeeze theorem approach):
   --
-  -- Rearranging:
+  -- Step 1: Characterize limit via ENNReal.tendsto_atTop_zero
+  --   Goal: ∀ ε > 0, ∃ M, ∀ m ≥ M, eLpNorm (blockAvg f X N m - α_f) 2 μ ≤ ε
+  --
+  -- Step 2: Algebraic identity (pointwise)
   --   blockAvg f X N m = ((N+m)/m) * blockAvg f X 0 (N+m) - (N/m) * blockAvg f X 0 N
+  --   Therefore:
+  --   blockAvg f X N m - α_f = ((N+m)/m) • (blockAvg f X 0 (N+m) - α_f)
+  --                         - (N/m) • (blockAvg f X 0 N - α_f)
   --
-  -- So the difference from the target is:
-  --   blockAvg f X N m - α_f
-  --     = ((N+m)/m) * (blockAvg f X 0 (N+m) - α_f) + (N/m) * (α_f - blockAvg f X 0 N)
+  -- Step 3: Triangle inequality + eLpNorm_const_smul
+  --   eLpNorm (blockAvg f X N m - α_f) 2 μ
+  --     ≤ ||(N+m)/m|| * eLpNorm (blockAvg f X 0 (N+m) - α_f) 2 μ
+  --       + ||N/m|| * eLpNorm (blockAvg f X 0 N - α_f) 2 μ
   --
-  -- Since blockAvg and α_f are all L∞-bounded by 1, both terms can be bounded:
-  --   eLpNorm (first term) 2 μ ≤ (1 + N/m) * eLpNorm (blockAvg f X 0 (N+m) - α_f) 2 μ
-  --   eLpNorm (second term) 2 μ ≤ (N/m) * 2  (since both functions are bounded by 1)
+  -- Step 4: Bound as m → ∞
+  --   - (N+m)/m = 1 + N/m → 1
+  --   - N/m → 0
+  --   - eLpNorm (blockAvg f X 0 (N+m) - α_f) 2 μ → 0 (by hypothesis + shift)
+  --   - eLpNorm (blockAvg f X 0 N - α_f) 2 μ is finite constant C_N
+  --   So: first term → 1 * 0 = 0, second term → 0 * C_N = 0
   --
-  -- As m → ∞: first term → 1 * 0 = 0, second term → 0 * 2 = 0
-  --
-  -- Full proof requires establishing the algebraic identity pointwise and
-  -- careful handling of eLpNorm scaling. We leave this as sorry for now.
+  -- KEY LEMMAS:
+  -- - ENNReal.tendsto_atTop_zero: characterization of convergence to 0
+  -- - tendsto_add_atTop_iff_nat: f(n+k) → L iff f(n) → L
+  -- - eLpNorm_add_le: triangle inequality
+  -- - eLpNorm_const_smul: eLpNorm (c • f) = ||c|| * eLpNorm f
+  -- - ENNReal.Tendsto.mul: product of convergent sequences
   sorry
 
 /-- Helper lemma: tail-measurability of L² limit of block averages.
@@ -2892,16 +2903,42 @@ lemma cesaro_to_condexp_L1
     exact h_blockAvg_memLp.sub hα_L2
 
   have hL2_integral : Tendsto (fun n => ∫ ω, (blockAvg f X 0 n ω - α_f ω)^2 ∂μ) atTop (𝓝 0) := by
-    -- Strategy: eLpNorm g 2 μ → 0  implies  (eLpNorm g 2 μ)² → 0  by continuity
-    -- And (eLpNorm g 2 μ).toReal² = ∫ |g|² dμ = ∫ g² dμ for real g in L²
+    -- PROOF STRATEGY (L² norm squared equals integral of square):
     --
-    -- Key lemmas needed:
-    -- 1. ENNReal.tendsto_toReal_iff: convert ENNReal → ℝ tendsto
-    -- 2. Tendsto.pow: squaring preserves convergence to 0
-    -- 3. eLpNorm_two_eq_integral_sq (or similar): ‖f‖₂² = ∫ f² dμ for real f
+    -- Step 1: Convert eLpNorm convergence (ENNReal) to toReal convergence (ℝ)
+    --   hα_conv : Tendsto (fun n => eLpNorm (blockAvg n - α_f) 2 μ) atTop (𝓝 0)
+    --   Use: ENNReal.tendsto_toReal_iff (need finiteness: eLpNorm < ∞ from MemLp)
+    --   Get: Tendsto (fun n => (eLpNorm ... 2 μ).toReal) atTop (𝓝 0)
     --
-    -- The relationship is: (eLpNorm f 2 μ).toReal = (∫ |f|² dμ)^(1/2)
-    -- So: (eLpNorm f 2 μ).toReal² = ∫ |f|² dμ = ∫ f² dμ (for real f)
+    -- Step 2: Square using Tendsto.pow (0^2 = 0)
+    --   From: Tendsto (fun n => x_n) atTop (𝓝 0)
+    --   Get:  Tendsto (fun n => x_n^2) atTop (𝓝 0)
+    --   Use: Tendsto.pow 2 (convergence is preserved under squaring)
+    --
+    -- Step 3: Relate (eLpNorm g 2 μ).toReal² to ∫ g² dμ
+    --   Key identity: For g ∈ L²(μ):
+    --     (eLpNorm g 2 μ).toReal² = (∫⁻ ω, ‖g ω‖ₑ² ∂μ).toReal
+    --                             = ∫ ω, |g ω|² ∂μ
+    --                             = ∫ ω, (g ω)² ∂μ (for real g)
+    --
+    --   Mathlib lemmas for Step 3:
+    --   - eLpNorm_eq_lintegral_rpow_enorm: eLpNorm g 2 μ = (∫⁻ ‖g‖ₑ² ∂μ)^(1/2)
+    --   - ENNReal.toReal_rpow: (x^p).toReal = x.toReal^p (for finite x)
+    --   - integral_eq_lintegral_of_nonneg_ae: ∫ g = (∫⁻ g).toReal for g ≥ 0
+    --   - sq_abs: |x|² = x² for real x
+    --
+    -- KEY MATHLIB LEMMAS:
+    --   - ENNReal.tendsto_toReal_iff: ENNReal → ℝ conversion for limits
+    --   - Tendsto.pow: squaring preserves limits
+    --   - eLpNorm_eq_lintegral_rpow_enorm: eLpNorm = (lintegral of norm^p)^(1/p)
+    --   - integral_eq_lintegral_of_nonneg_ae: Bochner = Lebesgue for nonneg
+    --   - MeasureTheory.L2.integral_inner_eq_sq_eLpNorm: ∫ ⟪f,f⟫ = eLpNorm² for L²
+    --   - sq_abs: |x|² = x²
+    --
+    -- IMPLEMENTATION:
+    -- 1. Get toReal convergence via h_diff_memLp (each diff is in L², hence finite eLpNorm)
+    -- 2. Square the convergence
+    -- 3. Show the squared toReal equals the integral via the lintegral relationship
     sorry
 
   -- STEP 2: Apply L2_tendsto_implies_L1_tendsto_of_bounded
