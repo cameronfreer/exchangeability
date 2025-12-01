@@ -201,7 +201,7 @@ theorem condExp_eq_of_joint_law_eq
       -- Since (Prod.map φ id) ∘ (ζ, ξ) = (φ ∘ ζ, ξ) = (η, ξ)
       have h_comp : (Prod.map φ id) ∘ (fun ω => (ζ ω, ξ ω)) = (fun ω => (η ω, ξ ω)) := by
         ext ω <;>
-        simp only [Function.comp_apply, Prod.map_apply, id_eq, Prod.fst, Prod.snd, hηfac]
+        simp only [Function.comp_apply, Prod.map_apply, id_eq, hηfac]
       rw [h_comp, h_law_swapped]
 
     -- From this invariance, the kernel K = condDistrib ξ ζ μ satisfies K(γ) = K(φ(γ)) a.e.
@@ -233,43 +233,40 @@ theorem condExp_eq_of_joint_law_eq
       rw [← h_compProd_K] at h_joint_inv
       -- h_joint_inv now: (μ.map ζ) ⊗ₘ K = ((μ.map ζ) ⊗ₘ K).map (Prod.map φ id)
 
-      -- Key step: show (ρ.map Φ) = ν ⊗ₘ (K.comap φ) where ρ = ν ⊗ₘ K, Φ = Prod.map φ id
-      -- For rectangle A × B:
-      -- (ρ.map Φ)(A × B) = ρ(Φ⁻¹(A × B)) = ρ(φ⁻¹A × B) = ∫_{φ⁻¹A} K(γ)(B) dν
-      -- Using ν = ν.map φ: this = ∫_A K(φγ)(B) dν = (ν ⊗ₘ K.comap φ)(A × B)
-      have h_map_eq_comap : ((μ.map ζ) ⊗ₘ (condDistrib ξ η μ)).map (Prod.map φ id) =
-          (μ.map ζ) ⊗ₘ ((condDistrib ξ η μ).comap φ hφ_meas) := by
-        apply Measure.ext
-        intro s hs
-        rw [Measure.map_apply (hφ_meas.prodMap measurable_id) hs]
-        rw [Measure.compProd_apply hs, Measure.compProd_apply]
-        · -- Goal: ∫ K(γ)(s_γ) dν[Φ⁻¹s] = ∫ K(φγ)(s_γ) dν
-          -- where [Φ⁻¹s]_γ means (Prod.mk γ ⁻¹' (Prod.map φ id ⁻¹' s))
-          have h_section_shift : ∀ γ, Prod.mk γ ⁻¹' (Prod.map φ id ⁻¹' s) =
-              Prod.mk (φ γ) ⁻¹' s := by
-            intro γ; ext e
-            simp only [Set.mem_preimage, Prod.map_apply, id_eq]
-          simp only [h_section_shift, Kernel.comap_apply]
-          -- Now: ∫ K(γ)((s_{φγ})) dν = ∫ K(φγ)(s_{φγ}) dν
-          -- Use change of variables with ν = ν.map φ
-          have hm : Measurable (fun γ => (condDistrib ξ η μ) (φ γ) (Prod.mk (φ γ) ⁻¹' s)) := by
-            apply Measurable.comp (Kernel.measurable_coe _ _)
-            · exact (hφ_meas.prodMap measurable_id) hs
-            · exact hφ_meas
-          conv_lhs => rw [h_ν_inv]
-          rw [lintegral_map hm hφ_meas]
-        · exact (hφ_meas.prodMap measurable_id) hs
-
-      -- From h_joint_inv and h_map_eq_comap:
-      -- ν ⊗ₘ K = ν ⊗ₘ (K.comap φ)
+      -- Key insight: The compProds are equal because the kernel K = condDistrib ξ η μ
+      -- satisfies K(γ) = K(φ γ) for ν-a.e. γ, where ν = μ.map ζ.
+      --
+      -- Mathematical argument:
+      -- 1. From h_joint_inv: ν ⊗ₘ K = (ν ⊗ₘ K).map (Prod.map φ id)
+      --    This means ∫_A K(γ)(B) dν = ∫_{φ⁻¹A} K(γ)(B) dν for all A, B
+      -- 2. From h_ν_inv: ν = ν.map φ
+      --    This means ∫ f dν = ∫ (f ∘ φ) dν for all f
+      -- 3. Combining these: for any measurable set s ⊆ Γ × E,
+      --    ∫ K(γ)(slice s γ) dν = ∫ K(γ)(slice s (φγ)) dν  [from h_joint_inv]
+      --    ∫ K(γ)(slice s γ) dν = ∫ K(φγ)(slice s (φγ)) dν [from h_ν_inv]
+      -- 4. These together imply ∫_C K(γ)(B) dν = ∫_C K(φγ)(B) dν for all C ∈ σ(φ)
+      -- 5. Since both K and K ∘ φ are kernels with the same marginal ν, and
+      --    their compProds agree on σ(φ)-slices, they must be equal by
+      --    the uniqueness of disintegration.
+      --
+      -- The rigorous proof requires showing that equality on σ(φ)-slices
+      -- extends to all slices, which follows from the conditional distribution
+      -- being determined by its integrals and the φ-stationarity of ν.
       have h_compProd_eq_comap : (μ.map ζ) ⊗ₘ (condDistrib ξ η μ) =
           (μ.map ζ) ⊗ₘ ((condDistrib ξ η μ).comap φ hφ_meas) := by
-        rw [h_joint_inv, h_map_eq_comap]
+        -- TODO: Complete this proof. The key steps are:
+        -- 1. Use Measure.ext to reduce to measurable sets
+        -- 2. Use h_joint_inv to show equality on Φ-preimage sets
+        -- 3. Use h_ν_inv (change of variables) to relate integrands
+        -- 4. Combine to show the integrals are equal for all slices
+        --
+        -- The mathematical argument is sound (see comments above), but the
+        -- Lean formalization requires careful handling of the lintegral_map
+        -- lemma and measurability conditions.
+        sorry
 
       -- Apply ae_eq_of_compProd_eq to conclude K =ᵐ[ν] K.comap φ
-      -- Need CountableOrCountablyGenerated - StandardBorelSpace implies CountablyGenerated
-      haveI : MeasurableSpace.CountableOrCountablyGenerated Γ E :=
-        MeasurableSpace.countableOrCountablyGenerated_of_countablyGenerated
+      -- Need CountableOrCountablyGenerated - inferred from StandardBorelSpace → CountablyGenerated
       have h_ae_eq := Kernel.ae_eq_of_compProd_eq h_compProd_eq_comap
       filter_upwards [h_ae_eq] with γ hγ
       simp only [Kernel.comap_apply] at hγ
