@@ -254,16 +254,55 @@ theorem condExp_eq_of_joint_law_eq
       -- being determined by its integrals and the φ-stationarity of ν.
       have h_compProd_eq_comap : (μ.map ζ) ⊗ₘ (condDistrib ξ η μ) =
           (μ.map ζ) ⊗ₘ ((condDistrib ξ η μ).comap φ hφ_meas) := by
-        -- TODO: Complete this proof. The key steps are:
-        -- 1. Use Measure.ext to reduce to measurable sets
-        -- 2. Use h_joint_inv to show equality on Φ-preimage sets
-        -- 3. Use h_ν_inv (change of variables) to relate integrands
-        -- 4. Combine to show the integrals are equal for all slices
-        --
-        -- The mathematical argument is sound (see comments above), but the
-        -- Lean formalization requires careful handling of the lintegral_map
-        -- lemma and measurability conditions.
-        sorry
+        /-
+        PROOF STRATEGY:
+
+        We need to show: ν ⊗ₘ K = ν ⊗ₘ (K.comap φ)
+
+        Given:
+        • h_joint_inv: ν ⊗ₘ K = (ν ⊗ₘ K).map (Prod.map φ id)  (Φ-invariance)
+        • h_ν_inv: ν = ν.map φ  (φ-stationarity)
+        • K = condDistrib ξ η μ where η = φ ∘ ζ
+
+        Key insight: Since K = condDistrib ξ η μ and η = φ ∘ ζ, the kernel K
+        conditions on η, which is a function of φ(ζ). Therefore:
+        • K(γ) = P(ξ ∈ · | η = γ) depends only on γ through the σ-algebra σ(η)
+        • For γ in the support of ν, K(γ) only depends on which fiber of φ
+          contains γ
+        • This means K(·)(B) is σ(φ)-measurable for all B
+
+        Mathematical argument:
+        1. From h_joint_inv on A × B: ∫_A K(γ)(B) dν = ∫_{φ⁻¹A} K(γ)(B) dν
+        2. From h_ν_inv: ∫_A K(γ)(B) dν = ∫_{φ⁻¹A} K(φγ)(B) dν
+        3. Combining: ∫_{φ⁻¹A} K(γ)(B) dν = ∫_{φ⁻¹A} K(φγ)(B) dν for all A, B
+        4. Since K(·)(B) is σ(φ)-measurable and equals K(φ·)(B) on σ(φ)-sets,
+           we have K(γ)(B) = K(φγ)(B) for ν-a.e. γ
+        5. By π-system uniqueness: K =ᵐ[ν] K.comap φ
+        6. By Measure.compProd_congr: ν ⊗ₘ K = ν ⊗ₘ (K.comap φ)
+
+        The formal proof of step 4 requires showing that K(·)(B) is σ(φ)-measurable,
+        which follows from K being the conditional distribution given η = φ ∘ ζ.
+        This is a deep fact about conditional distributions that would require
+        additional lemmas about the structure of condDistrib.
+        -/
+        -- For now, we use the known relationship between the joint laws
+        -- Both sides equal μ.map (ζ, ξ) through their respective disintegrations
+        set K := condDistrib ξ η μ
+        set ν := μ.map ζ
+        -- Direct proof using the equality of joint measures
+        calc ν ⊗ₘ K
+            = μ.map (fun ω => (ζ ω, ξ ω)) := h_compProd_K
+          _ = ν ⊗ₘ (K.comap φ hφ_meas) := by
+              -- The key is showing both compProds equal the same joint law.
+              -- This requires the σ(φ)-measurability of K, which follows from
+              -- K = condDistrib ξ η μ where η = φ ∘ ζ.
+              --
+              -- Proof outline:
+              -- K.comap φ at γ gives K(φ γ). For ν-a.e. γ:
+              -- K(γ) = P(ξ ∈ · | η = γ) = P(ξ ∈ · | η = φ γ) [when φ γ = γ on σ(η)]
+              -- This equality on the support + conditional distribution uniqueness
+              -- gives the compProd equality.
+              sorry
 
       -- Apply ae_eq_of_compProd_eq to conclude K =ᵐ[ν] K.comap φ
       -- Need CountableOrCountablyGenerated - inferred from StandardBorelSpace → CountablyGenerated
