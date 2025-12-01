@@ -2383,21 +2383,24 @@ private lemma blockAvg_shift_tendsto
   · exact hα_limit
 
   -- Case N > 0: The key insight is the algebraic decomposition:
-  --   blockAvg f X 0 (N + m) = (N/(N+m)) * blockAvg f X 0 N + (m/(N+m)) * blockAvg f X N m
+  --
+  -- blockAvg f X 0 (N + m) = (N/(N+m)) * blockAvg f X 0 N + (m/(N+m)) * blockAvg f X N m
+  --
   -- Rearranging:
   --   blockAvg f X N m = ((N+m)/m) * blockAvg f X 0 (N+m) - (N/m) * blockAvg f X 0 N
-  -- Thus:
-  --   blockAvg f X N m - α_f = ((N+m)/m) * (blockAvg f X 0 (N+m) - α_f)
-  --                           - (N/m) * (blockAvg f X 0 N - α_f)
-  -- As m → ∞:
-  --   - First term: (1 + N/m) * ε_{N+m} → 1 * 0 = 0 since ε_{N+m} → 0
-  --   - Second term: (N/m) * C → 0 * C = 0 since N is fixed
   --
-  -- The detailed proof requires:
-  -- 1. Establishing the algebraic identity pointwise
-  -- 2. Using triangle inequality for eLpNorm
-  -- 3. Using that eLpNorm scales with constants
-  -- 4. Showing both terms vanish as m → ∞
+  -- So the difference from the target is:
+  --   blockAvg f X N m - α_f
+  --     = ((N+m)/m) * (blockAvg f X 0 (N+m) - α_f) + (N/m) * (α_f - blockAvg f X 0 N)
+  --
+  -- Since blockAvg and α_f are all L∞-bounded by 1, both terms can be bounded:
+  --   eLpNorm (first term) 2 μ ≤ (1 + N/m) * eLpNorm (blockAvg f X 0 (N+m) - α_f) 2 μ
+  --   eLpNorm (second term) 2 μ ≤ (N/m) * 2  (since both functions are bounded by 1)
+  --
+  -- As m → ∞: first term → 1 * 0 = 0, second term → 0 * 2 = 0
+  --
+  -- Full proof requires establishing the algebraic identity pointwise and
+  -- careful handling of eLpNorm scaling. We leave this as sorry for now.
   sorry
 
 /-- Helper lemma: tail-measurability of L² limit of block averages.
