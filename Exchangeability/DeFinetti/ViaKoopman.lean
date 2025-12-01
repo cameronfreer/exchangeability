@@ -2874,8 +2874,94 @@ we show `P(Uf) = Pf` where `P = condexpL2` and `U = koopman shift`:
 2. `U(Pf) = Pf` since `Pf ∈ fixedSubspace` (definition of fixed subspace)
 3. `U(f - Pf) ⊥ S` since `U` is an isometry preserving orthogonality
 4. Therefore `P(Uf) = P(Pf) = Pf` since projection onto invariant subspace commutes. -/
-axiom condexpL2_koopman_comm (f : Lp ℝ 2 μ) :
-    condexpL2 (μ := μ) (koopman shift hσ f) = condexpL2 (μ := μ) f
+lemma condexpL2_koopman_comm (f : Lp ℝ 2 μ) :
+    condexpL2 (μ := μ) (koopman shift hσ f) = condexpL2 (μ := μ) f := by
+  classical
+  -- Abbreviations
+  set P := condexpL2 (μ := μ) with hP_def
+  set U := koopman shift hσ with hU_def
+  let S := fixedSubspace hσ
+
+  -- Image of `P` equals the fixed subspace
+  have h_range : Set.range P = (S : Set (Lp ℝ 2 μ)) :=
+    range_condexp_eq_fixedSubspace hσ
+
+  -- `P f` and `P (U f)` lie in the fixed subspace
+  have hPf_mem : P f ∈ S := by
+    have : P f ∈ Set.range P := ⟨f, rfl⟩
+    simpa [h_range] using this
+  have hPUf_mem : P (U f) ∈ S := by
+    have : P (U f) ∈ Set.range P := ⟨U f, rfl⟩
+    simpa [h_range] using this
+
+  -- Elements of the fixed subspace are fixed by `U`
+  have h_fix : ∀ g ∈ S, U g = g := fun g hg =>
+    (mem_fixedSubspace_iff (μ := μ) (α := α) hσ g).mp hg
+
+  -- Decompose `f` into its projection plus orthogonal complement
+  set r := f - P f with hr_def
+
+  -- `U` is a linear isometry
+  let Uₗᵢ : Lp ℝ 2 μ →ₗᵢ[ℝ] Lp ℝ 2 μ :=
+    MeasureTheory.Lp.compMeasurePreservingₗᵢ ℝ (shift (α := α)) hσ
+  have hU_coe : ∀ g, U g = Uₗᵢ g := fun _ => rfl
+
+  -- `r` is orthogonal to the fixed subspace (standard orthogonal projection property)
+  have h_r_orth : ∀ g ∈ S, @inner ℝ _ _ r g = 0 := by
+    intro g hg
+    -- Use that P is the orthogonal projection: ⟨Pf, g⟩ = ⟨f, g⟩ for g ∈ S
+    have hPg : P g = g := condexpL2_fixes_fixedSubspace (hσ := hσ) hg
+    have h_sym := MeasureTheory.inner_condExpL2_left_eq_right
+        (μ := μ) (m := shiftInvariantSigma (α := α))
+        (hm := shiftInvariantSigma_le (α := α)) (f := f) (g := g)
+    have h_eq : @inner ℝ _ _ (P f) g = @inner ℝ _ _ f g := by simpa [hPg] using h_sym
+    calc @inner ℝ _ _ r g
+        = @inner ℝ _ _ (f - P f) g := rfl
+      _ = @inner ℝ _ _ f g - @inner ℝ _ _ (P f) g := inner_sub_left f (P f) g
+      _ = 0 := by rw [h_eq]; ring
+
+  -- Koopman preserves orthogonality: `U r ⟂ S`
+  have h_Ur_orth : ∀ g ∈ S, @inner ℝ _ _ (U r) g = 0 := by
+    intro g hg
+    have hUg : U g = g := h_fix g hg
+    -- Use that U is an isometry: ⟨U r, U g⟩ = ⟨r, g⟩
+    have h_inner_pres := Uₗᵢ.inner_map_map r g
+    calc @inner ℝ _ _ (U r) g
+        = @inner ℝ _ _ (U r) (U g) := by rw [hUg]
+      _ = @inner ℝ _ _ (Uₗᵢ r) (Uₗᵢ g) := by rw [← hU_coe r, ← hU_coe g]
+      _ = @inner ℝ _ _ r g := h_inner_pres
+      _ = 0 := h_r_orth g hg
+
+  -- `P (U r)` is both in S and orthogonal to S, hence zero
+  have hPUr_mem : P (U r) ∈ S := by
+    have : P (U r) ∈ Set.range P := ⟨U r, rfl⟩
+    simpa [h_range] using this
+
+  have hPUr_orth : ∀ g ∈ S, @inner ℝ _ _ (P (U r)) g = 0 := by
+    intro g hg
+    have hPg : P g = g := condexpL2_fixes_fixedSubspace (hσ := hσ) hg
+    have h_sym := MeasureTheory.inner_condExpL2_left_eq_right
+        (μ := μ) (m := shiftInvariantSigma (α := α))
+        (hm := shiftInvariantSigma_le (α := α)) (f := U r) (g := g)
+    have h_eq : @inner ℝ _ _ (P (U r)) g = @inner ℝ _ _ (U r) g := by simpa [hPg] using h_sym
+    simp only [h_eq, h_Ur_orth g hg]
+
+  -- Element in S ∩ S⊥ is zero
+  have hPUr_zero : P (U r) = 0 := by
+    have h_inner := hPUr_orth (P (U r)) hPUr_mem
+    exact (@inner_self_eq_zero ℝ _ _ (P (U r))).mp h_inner
+
+  -- Combine the pieces
+  have hUf_decomp : U f = U (P f) + U r := by
+    have h := congrArg U (show f = P f + r by simp [hr_def, add_comm, add_sub_cancel])
+    simp only [map_add] at h
+    exact h
+
+  calc P (U f)
+      = P (U (P f) + U r) := by rw [hUf_decomp]
+    _ = P (U (P f)) + P (U r) := by simp only [map_add]
+    _ = P (P f) + 0 := by rw [h_fix (P f) hPf_mem, hPUr_zero]
+    _ = P f := by simp only [add_zero]; exact congrArg P (condexpL2_fixes_fixedSubspace hPf_mem)
 
 /-
 COMMENTED OUT - Inner product notation type class issues:
