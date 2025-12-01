@@ -73,8 +73,32 @@ coefficient differences is bounded by max(1/n, 1/n').
 This is the key estimate for applying Kallenberg's L² bound to show Cauchy property. -/
 lemma cesaroCoeff_sup_le (n n' : ℕ) (hn : n ≠ 0) (hn' : n' ≠ 0) :
     ⨆ i : ℕ, |cesaroCoeff 0 n i - cesaroCoeff 0 n' i| ≤ max ((1 : ℝ) / n) (1 / n') := by
-  -- TODO: Fix Nat vs Real division issues
-  sorry
+  -- Use ciSup_le for conditionally complete lattice (ℝ is not a complete lattice)
+  apply ciSup_le
+  intro i
+  -- Case split on i vs n and n'
+  by_cases hi_n : i < n <;> by_cases hi_n' : i < n'
+  · -- Case 1: i < n and i < n' (both coefficients are 1/n and 1/n')
+    simp only [cesaroCoeff, Nat.zero_add, not_lt_zero', ↓reduceIte, hi_n, hi_n']
+    exact abs_sub_le_of_nonneg_of_le (by positivity) (le_max_left _ _)
+      (by positivity) (le_max_right _ _)
+  · -- Case 2: i < n and n' ≤ i (first is 1/n, second is 0)
+    simp only [cesaroCoeff, Nat.zero_add, not_lt_zero', ↓reduceIte, hi_n]
+    push_neg at hi_n'
+    simp only [not_lt.mpr hi_n', ↓reduceIte]
+    simp only [sub_zero, abs_of_pos (by positivity : 0 < 1 / (n : ℝ))]
+    exact le_max_left _ _
+  · -- Case 3: n ≤ i and i < n' (first is 0, second is 1/n')
+    simp only [cesaroCoeff, Nat.zero_add, not_lt_zero', ↓reduceIte, hi_n']
+    push_neg at hi_n
+    simp only [not_lt.mpr hi_n, ↓reduceIte]
+    simp only [zero_sub, abs_neg, abs_of_pos (by positivity : 0 < 1 / (n' : ℝ))]
+    exact le_max_right _ _
+  · -- Case 4: n ≤ i and n' ≤ i (both are 0)
+    push_neg at hi_n hi_n'
+    simp only [cesaroCoeff, Nat.zero_add, not_lt_zero', ↓reduceIte,
+               not_lt.mpr hi_n, not_lt.mpr hi_n', sub_self, abs_zero]
+    exact le_max_of_le_left (by positivity)
 
 /-! ### Lp Convergence Utilities -/
 
