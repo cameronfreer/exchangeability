@@ -53,7 +53,7 @@ lemma cesaroCoeff_of_lt_start {N n i : ℕ} (h : i < N) :
 lemma cesaroCoeff_of_in_block {N n i : ℕ} (h1 : N ≤ i) (h2 : i < N + n) :
     cesaroCoeff N n i = (1 : ℝ) / n := by
   simp only [cesaroCoeff]
-  split_ifs with h3 _
+  split_ifs with h3
   · exact absurd h1 (not_le_of_gt h3)
   · rfl
 
@@ -88,11 +88,16 @@ lemma tendsto_eLpNorm_sub_of_tendsto_in_Lp
     {μ : Measure Ω} [IsProbabilityMeasure μ] {p : ENNReal}
     [Fact (1 ≤ p)]
     {u : ℕ → Lp ℝ p μ} {v : Lp ℝ p μ}
-    (hp_top : p ≠ ⊤)
+    (_hp_top : p ≠ ⊤)
     (h : Tendsto u atTop (𝓝 v)) :
     Tendsto (fun n => eLpNorm (u n - v) p μ) atTop (𝓝 0) := by
-  -- TODO: Fill this sorry
-  sorry
+  -- Use the characterization: Lp convergence ↔ eLpNorm convergence
+  rw [Lp.tendsto_Lp_iff_tendsto_eLpNorm'] at h
+  -- h : Tendsto (fun n => eLpNorm (↑(u n) - ↑v) p μ) atTop (𝓝 0)
+  -- Goal: Tendsto (fun n => eLpNorm (u n - v) p μ) atTop (𝓝 0)
+  -- These are the same: u n - v in Lp coerces to ↑(u n) - ↑v
+  convert h using 2 with n
+  exact eLpNorm_congr_ae (Lp.coeFn_sub (u n) v)
 
 /-- **Cauchy-Schwarz on set integrals (probability measure).**
 
