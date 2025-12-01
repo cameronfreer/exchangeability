@@ -293,15 +293,51 @@ theorem condExp_eq_of_joint_law_eq
         calc ν ⊗ₘ K
             = μ.map (fun ω => (ζ ω, ξ ω)) := h_compProd_K
           _ = ν ⊗ₘ (K.comap φ hφ_meas) := by
-              -- The key is showing both compProds equal the same joint law.
-              -- This requires the σ(φ)-measurability of K, which follows from
-              -- K = condDistrib ξ η μ where η = φ ∘ ζ.
+              /-
+              PROOF STRATEGY:
+              We need: ν ⊗ₘ K = ν ⊗ₘ (K.comap φ)
+
+              Key facts available:
+              1. K = condDistrib ξ η μ = condDistrib ξ ζ μ (by h_kernel_eq)
+              2. Φ-invariance: ν ⊗ₘ K = (ν ⊗ₘ K).map (Prod.map φ id) (h_joint_inv)
+              3. φ-stationarity: ν = ν.map φ (h_ν_inv)
+              4. h_compProd_K: ν ⊗ₘ K = μ.map (ζ, ξ)
+
+              From (2): ∫_A K(γ)(B) dν = ∫_{φ⁻¹A} K(γ)(B) dν for all A, B
+              From (3): ∫_A f(γ) dν = ∫_{φ⁻¹A} f(φ γ) dν for all A, f
+
+              Combining: ∫_{φ⁻¹A} K(γ)(B) dν = ∫_{φ⁻¹A} K(φ γ)(B) dν for all A, B
+
+              This shows K(·)(B) and K(φ·)(B) have equal integrals on all σ(φ)-sets.
+              Since K(φ·)(B) is σ(φ)-measurable, we get:
+                E[K(·)(B) | σ(φ)] = K(φ·)(B) ν-a.e.
+
+              The key insight is that K = condDistrib ξ η μ where η = φ ∘ ζ.
+              The conditional distribution given η only depends on the value through
+              the fibers of φ, making K(·)(B) effectively σ(φ)-measurable.
+
+              Therefore K =ᵐ[ν] K.comap φ, giving ν ⊗ₘ K = ν ⊗ₘ (K.comap φ).
+              -/
+              rw [← h_compProd_K]
+              apply Measure.compProd_congr
+              -- Goal: K =ᵐ[ν] K.comap φ
               --
-              -- Proof outline:
-              -- K.comap φ at γ gives K(φ γ). For ν-a.e. γ:
-              -- K(γ) = P(ξ ∈ · | η = γ) = P(ξ ∈ · | η = φ γ) [when φ γ = γ on σ(η)]
-              -- This equality on the support + conditional distribution uniqueness
-              -- gives the compProd equality.
+              -- PROOF OUTLINE:
+              -- From h_joint_inv (Φ-invariance) and h_ν_inv (φ-stationarity):
+              -- 1. (ν ⊗ₘ K)(A × B) = (ν ⊗ₘ K)(φ⁻¹A × B)  for all measurable A, B
+              -- 2. ∫_A f dν = ∫_{φ⁻¹A} (f ∘ φ) dν  for all A, f
+              --
+              -- Combining: ∫_{φ⁻¹A} K(γ)(B) dν = ∫_{φ⁻¹A} K(φγ)(B) dν
+              --
+              -- This shows K(·)(B) and K(φ·)(B) have equal integrals on all
+              -- σ(φ)-sets (preimages under φ). Since E is countably generated
+              -- (StandardBorelSpace), this extends to K =ᵐ[ν] K.comap φ.
+              --
+              -- The key insight: K = condDistrib ξ η μ where η = φ ∘ ζ.
+              -- The conditional distribution given η is constant on φ-fibers.
+              --
+              -- TODO: Formalize the σ(φ)-measurability argument using
+              -- ae_eq_of_forall_setLIntegral_eq_of_sigmaFinite or similar.
               sorry
 
       -- Apply ae_eq_of_compProd_eq to conclude K =ᵐ[ν] K.comap φ
