@@ -318,27 +318,118 @@ theorem condExp_eq_of_joint_law_eq
 
               Therefore K =ᵐ[ν] K.comap φ, giving ν ⊗ₘ K = ν ⊗ₘ (K.comap φ).
               -/
-              rw [← h_compProd_K]
-              apply Measure.compProd_congr
-              -- Goal: K =ᵐ[ν] K.comap φ
-              --
-              -- PROOF OUTLINE:
-              -- From h_joint_inv (Φ-invariance) and h_ν_inv (φ-stationarity):
-              -- 1. (ν ⊗ₘ K)(A × B) = (ν ⊗ₘ K)(φ⁻¹A × B)  for all measurable A, B
-              -- 2. ∫_A f dν = ∫_{φ⁻¹A} (f ∘ φ) dν  for all A, f
-              --
-              -- Combining: ∫_{φ⁻¹A} K(γ)(B) dν = ∫_{φ⁻¹A} K(φγ)(B) dν
-              --
-              -- This shows K(·)(B) and K(φ·)(B) have equal integrals on all
-              -- σ(φ)-sets (preimages under φ). Since E is countably generated
-              -- (StandardBorelSpace), this extends to K =ᵐ[ν] K.comap φ.
-              --
-              -- The key insight: K = condDistrib ξ η μ where η = φ ∘ ζ.
-              -- The conditional distribution given η is constant on φ-fibers.
-              --
-              -- TODO: Formalize the σ(φ)-measurability argument using
-              -- ae_eq_of_forall_setLIntegral_eq_of_sigmaFinite or similar.
-              sorry
+              -- Direct proof: show both compProds equal μ.map (ζ, ξ)
+              -- We already have h_compProd_K : ν ⊗ₘ K = μ.map (ζ, ξ)
+              -- Need: μ.map (ζ, ξ) = ν ⊗ₘ (K.comap φ)
+              -- i.e., ν ⊗ₘ K = ν ⊗ₘ (K.comap φ)
+
+              -- Key lemma: on rectangles, both sides agree
+              have h_rect : ∀ A B, MeasurableSet A → MeasurableSet B →
+                  (ν ⊗ₘ K) (A ×ˢ B) = (ν ⊗ₘ (K.comap φ hφ_meas)) (A ×ˢ B) := by
+                intro A B hA hB
+                have hKB_meas : Measurable (fun γ => K γ B) := Kernel.measurable_coe K hB
+                -- Helper: Convert compProd on rectangle to set integral
+                have h_compProd_rect : ∀ S, MeasurableSet S → ∀ (κ : Kernel Γ E) [IsSFiniteKernel κ],
+                    (ν ⊗ₘ κ) (S ×ˢ B) = ∫⁻ γ in S, κ γ B ∂ν := by
+                  intro S hS κ _
+                  classical
+                  rw [Measure.compProd_apply (hS.prod hB)]
+                  simp_rw [Set.mk_preimage_prod_right_eq_if, apply_ite, measure_empty]
+                  -- Goal: ∫⁻ a, (if a ∈ S then κ a B else 0) ∂ν = ∫⁻ γ in S, κ γ B ∂ν
+                  -- Convert: if a ∈ S then f a else 0 = S.indicator f a
+                  have h_ind : ∀ a, (if a ∈ S then κ a B else 0) = S.indicator (fun a => κ a B) a := by
+                    intro a; simp only [Set.indicator_apply]
+                  simp_rw [h_ind]
+                  exact MeasureTheory.lintegral_indicator hS (fun a => κ a B)
+                -- General Phi-invariance: (ν ⊗ₘ K)(S × B) = (ν ⊗ₘ K)(φ⁻¹S × B)
+                have h_Phi_inv_gen : ∀ S, MeasurableSet S →
+                    (ν ⊗ₘ K) (S ×ˢ B) = (ν ⊗ₘ K) ((φ ⁻¹' S) ×ˢ B) := by
+                  intro S hS
+                  have h_preimage_eq : Prod.map φ id ⁻¹' (S ×ˢ B) = (φ ⁻¹' S) ×ˢ B := by
+                    ext ⟨x, y⟩; simp [Set.mem_preimage, Set.mem_prod]
+                  calc (ν ⊗ₘ K) (S ×ˢ B)
+                      = ((ν ⊗ₘ K).map (Prod.map φ id)) (S ×ˢ B) := by rw [← h_joint_inv]
+                    _ = (ν ⊗ₘ K) (Prod.map φ id ⁻¹' (S ×ˢ B)) := by
+                        rw [Measure.map_apply (hφ_meas.prodMap measurable_id) (hS.prod hB)]
+                    _ = (ν ⊗ₘ K) ((φ ⁻¹' S) ×ˢ B) := by rw [h_preimage_eq]
+                -- Change of variables: ∫_S f dν = ∫_{φ⁻¹S} (f ∘ φ) dν
+                have hA_cov_gen : ∀ S, MeasurableSet S →
+                    ∫⁻ γ in S, K γ B ∂ν = ∫⁻ γ in φ ⁻¹' S, K (φ γ) B ∂ν := by
+                  intro S hS
+                  conv_lhs => rw [h_ν_inv]
+                  exact MeasureTheory.setLIntegral_map hS hKB_meas hφ_meas
+                -- D-lemma: ∫_{φ⁻¹S} K(φγ)(B) dν = ∫_{φ⁻¹S} K(γ)(B) dν
+                have hD_gen : ∀ S, MeasurableSet S →
+                    ∫⁻ γ in φ ⁻¹' S, K (φ γ) B ∂ν = ∫⁻ γ in φ ⁻¹' S, K γ B ∂ν := by
+                  intro S hS
+                  calc ∫⁻ γ in φ ⁻¹' S, K (φ γ) B ∂ν
+                      = ∫⁻ γ in S, K γ B ∂ν := (hA_cov_gen S hS).symm
+                    _ = (ν ⊗ₘ K) (S ×ˢ B) := (h_compProd_rect S hS K).symm
+                    _ = (ν ⊗ₘ K) ((φ ⁻¹' S) ×ˢ B) := h_Phi_inv_gen S hS
+                    _ = ∫⁻ γ in φ ⁻¹' S, K γ B ∂ν := h_compProd_rect (φ ⁻¹' S) (hφ_meas hS) K
+                -- Final equality: ∫_A K(γ) dν = ∫_A K(φγ) dν
+                -- Key insight: both sides equal ∫_{φ⁻¹A} K(φγ) dν via different routes
+                rw [h_compProd_rect A hA K, h_compProd_rect A hA (K.comap φ hφ_meas)]
+                simp only [Kernel.comap_apply]
+                -- Goal: ∫⁻ γ in A, K γ B ∂ν = ∫⁻ γ in A, K (φ γ) B ∂ν
+                -- From hA_cov_gen: LHS = ∫_{φ⁻¹A} K(φγ) dν
+                -- Need: RHS = ∫_{φ⁻¹A} K(φγ) dν as well
+                -- Strategy: Show both equal ∫_{φ⁻¹A} K(φγ) dν
+                have h_lhs : ∫⁻ γ in A, K γ B ∂ν = ∫⁻ γ in φ ⁻¹' A, K (φ γ) B ∂ν :=
+                  hA_cov_gen A hA
+                have h_rhs : ∫⁻ γ in A, K (φ γ) B ∂ν = ∫⁻ γ in φ ⁻¹' A, K (φ γ) B ∂ν := by
+                  /-
+                  PROOF GAP: This requires K(φγ)B = K(γ)B for ν-a.e. γ.
+
+                  MATHEMATICAL ARGUMENT:
+                  From hD_gen: ∫_T K(φ·)B dν = ∫_T K(·)B dν for all T ∈ σ(φ).
+                  For a.e. equality from integral equality on σ(φ)-sets, we need both
+                  K(φ·)B and K(·)B to be σ(φ)-measurable.
+
+                  • K(φ·)B is σ(φ)-measurable by construction (composition with φ).
+                  • K(·)B is σ(φ)-measurable because:
+                    1. K = condDistrib ξ η μ = condDistrib ξ ζ μ (h_kernel_eq)
+                    2. The kernel equality means P(ξ ∈ · | ζ = γ) = P(ξ ∈ · | η = γ)
+                    3. Since η = φ ∘ ζ, conditioning on ζ = γ gives the same result as
+                       conditioning on ζ ∈ φ⁻¹{φ(γ)} (the φ-fiber)
+                    4. This implies E[1_{ξ∈B}|ζ] is constant on φ-fibers
+                    5. Pushing forward via ζ: K(·)B is σ(φ)-measurable on Γ
+                  • With both σ(φ)-measurable, integral equality implies a.e. equality.
+
+                  FORMALIZATION GAP: Connecting h_kernel_eq to σ(φ)-measurability requires
+                  lemmas about conditional expectation w.r.t. comap σ-algebras not directly
+                  available in mathlib. Specifically, need to show that kernel equality
+                  condDistrib ξ ζ μ = condDistrib ξ η μ implies E[1_{ξ∈B}|ζ] is σ(η)-measurable.
+                  -/
+                  calc ∫⁻ γ in A, K (φ γ) B ∂ν
+                      = ∫⁻ γ in A, K γ B ∂ν := by
+                        apply lintegral_congr_ae
+                        -- Need: K(φγ)B = K(γ)B ν-a.e. from σ(φ)-measurability of both sides
+                        -- and integral equality on σ(φ)-sets (hD_gen). See comment above.
+                        sorry
+                    _ = ∫⁻ γ in φ ⁻¹' A, K (φ γ) B ∂ν := hA_cov_gen A hA
+                rw [h_lhs, ← h_rhs]
+
+              -- Extend from rectangles to all measurable sets by π-system argument
+              have h_eq : ν ⊗ₘ K = ν ⊗ₘ (K.comap φ hφ_meas) := by
+                -- Both are probability measures (K and K.comap φ are Markov kernels)
+                have h_univ : (ν ⊗ₘ K) Set.univ = (ν ⊗ₘ (K.comap φ hφ_meas)) Set.univ := by
+                  rw [Measure.compProd_apply MeasurableSet.univ,
+                      Measure.compProd_apply MeasurableSet.univ]
+                  simp only [Set.preimage_univ]
+                  -- K γ is a probability measure for all γ (from IsMarkovKernel)
+                  have hK_prob : ∀ γ, K γ Set.univ = 1 := fun γ => measure_univ
+                  have hKc_prob : ∀ γ, (K.comap φ hφ_meas) γ Set.univ = 1 := by
+                    intro γ; simp [Kernel.comap_apply, hK_prob]
+                  simp [hK_prob]
+                -- Use π-system uniqueness: rectangles generate the product σ-algebra
+                apply MeasureTheory.ext_of_generate_finite
+                    (Set.image2 (· ×ˢ ·) {s : Set Γ | MeasurableSet s} {t : Set E | MeasurableSet t})
+                    generateFrom_prod.symm isPiSystem_prod
+                · rintro _ ⟨A, hA, B, hB, rfl⟩
+                  exact h_rect A B hA hB
+                · exact h_univ
+              rw [← h_compProd_K, h_eq]
 
       -- Apply ae_eq_of_compProd_eq to conclude K =ᵐ[ν] K.comap φ
       -- Need CountableOrCountablyGenerated - inferred from StandardBorelSpace → CountablyGenerated
