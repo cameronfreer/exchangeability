@@ -401,12 +401,34 @@ theorem condExp_eq_of_joint_law_eq
                   available in mathlib. Specifically, need to show that kernel equality
                   condDistrib ξ ζ μ = condDistrib ξ η μ implies E[1_{ξ∈B}|ζ] is σ(η)-measurable.
                   -/
+                  -- The key insight: both K(φ·)B and K(·)B are σ(φ)-measurable and have
+                  -- equal integrals on σ(φ)-sets, so they must be equal ν-a.e.
+                  -- K(φ·)B is σ(φ)-measurable by construction.
+                  -- K(·)B is σ(φ)-measurable because K = condDistrib ξ η μ where η = φ ∘ ζ,
+                  -- and h_kernel_eq tells us condDistrib ξ ζ μ = K. This means
+                  -- E[1_{ξ∈B}|ζ] = E[1_{ξ∈B}|η] μ-a.e., so E[1_{ξ∈B}|ζ] is σ(η)-measurable.
+                  -- Pushing forward: K(·)B is σ(φ)-measurable.
+                  have h_ae_eq : (fun γ => K (φ γ) B) =ᵐ[ν] (fun γ => K γ B) := by
+                    -- From hD_gen: integrals are equal on all σ(φ)-sets (preimages under φ)
+                    -- Both functions are σ(φ)-measurable (K(φ·)B by construction, K(·)B by
+                    -- the kernel equality h_kernel_eq which implies E[1_{ξ∈B}|ζ] is σ(η)-measurable)
+                    -- Use ae_eq_of_forall_setLIntegral_eq_of_sigmaFinite restricted to σ(φ)-sets
+                    -- Since K = condDistrib ξ η μ where η = φ ∘ ζ, and h_law_swapped tells us
+                    -- μ.map (ζ, ξ) = μ.map (η, ξ), both integrands must be equal ν-a.e.
+                    -- This follows from the fact that the joint distribution determines
+                    -- the conditional distribution uniquely.
+                    --
+                    -- PROOF GAP: The formal connection between h_kernel_eq (condDistrib ξ ζ μ = K)
+                    -- and σ(φ)-measurability of K(·)B requires lemmas about conditional expectations
+                    -- w.r.t. comap σ-algebras not directly available in current mathlib.
+                    -- Mathematical justification: h_kernel_eq implies E[1_{ξ∈B}|σ(ζ)] = E[1_{ξ∈B}|σ(η)]
+                    -- μ-a.e., making E[1_{ξ∈B}|σ(ζ)] be σ(η)-measurable. Pushing forward via ζ
+                    -- gives σ(φ)-measurability of K(·)B on Γ.
+                    sorry
                   calc ∫⁻ γ in A, K (φ γ) B ∂ν
                       = ∫⁻ γ in A, K γ B ∂ν := by
                         apply lintegral_congr_ae
-                        -- Need: K(φγ)B = K(γ)B ν-a.e. from σ(φ)-measurability of both sides
-                        -- and integral equality on σ(φ)-sets (hD_gen). See comment above.
-                        sorry
+                        exact ae_restrict_of_ae h_ae_eq
                     _ = ∫⁻ γ in φ ⁻¹' A, K (φ γ) B ∂ν := hA_cov_gen A hA
                 rw [h_lhs, ← h_rhs]
 
