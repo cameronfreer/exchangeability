@@ -647,14 +647,47 @@ measurable space structures. The mathematical content is straightforward.
 4. Product is integrable (Integrable.bdd_mul)
 5. Apply condExp_mul_of_aestronglyMeasurable_left
 -/
-axiom condexp_mul_condexp
+lemma condexp_mul_condexp
     {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
     {m : MeasurableSpace Ω} (hm : m ≤ mΩ)
     {X Y : Ω → ℝ}
     (hX_meas : Measurable X) (hX_bd : ∃ C, ∀ ω, |X ω| ≤ C)
     (hY_int : Integrable Y μ) :
     μ[(fun ω => X ω * μ[Y | m] ω) | m]
-      =ᵐ[μ] (fun ω => μ[Y | m] ω * μ[X | m] ω)
+      =ᵐ[μ] (fun ω => μ[Y | m] ω * μ[X | m] ω) := by
+  -- Step 1: μ[Y | m] is AE strongly measurable w.r.t. m
+  have hCE_sm : AEStronglyMeasurable[m] (μ[Y | m]) μ :=
+    (MeasureTheory.stronglyMeasurable_condExp (m := m) (μ := μ) (f := Y)).aestronglyMeasurable
+  -- Step 2: X is integrable (bounded on finite measure space)
+  obtain ⟨C, hC⟩ := hX_bd
+  -- X is integrable because it's bounded and measurable on a finite measure space
+  -- Note: hX_meas.stronglyMeasurable may infer m instead of mΩ, so use .mono hm
+  have hX_sm : StronglyMeasurable[mΩ] X := hX_meas.stronglyMeasurable.mono hm
+  have hX_int : Integrable X μ := by
+    constructor
+    · -- AEStronglyMeasurable
+      exact ⟨X, hX_sm, ae_eq_refl X⟩
+    · -- HasFiniteIntegral: bounded implies finite integral on finite measure space
+      refine HasFiniteIntegral.of_bounded (C := C) ?_
+      exact ae_of_all μ (fun x => by rw [Real.norm_eq_abs]; exact hC x)
+  -- Step 3: μ[Y | m] is integrable (condExp of integrable is integrable)
+  have hCE_int : Integrable (μ[Y | m]) μ := integrable_condExp
+  -- Step 4: Product X * μ[Y | m] is integrable (bounded times integrable)
+  have hprod_int : Integrable (fun ω => X ω * μ[Y | m] ω) μ := by
+    -- X is in L∞ (bounded function)
+    have hX_memLp : MemLp X ⊤ μ := by
+      refine memLp_top_of_bound hX_sm.aestronglyMeasurable C ?_
+      exact ae_of_all μ (fun x => by rw [Real.norm_eq_abs]; exact hC x)
+    exact hCE_int.mul_of_top_right hX_memLp
+  -- Step 5: Apply pull-out property (right version since μ[Y|m] is on right)
+  have h_pullout := MeasureTheory.condExp_mul_of_aestronglyMeasurable_right
+    (m := m) (μ := μ) hCE_sm hprod_int hX_int
+  -- Step 6: h_pullout gives: μ[X * μ[Y|m] | m] =ᵐ[μ] μ[X | m] * μ[Y|m]
+  -- We need: μ[X * μ[Y|m] | m] =ᵐ[μ] μ[Y|m] * μ[X | m] (commuted)
+  refine h_pullout.trans ?_
+  filter_upwards with ω
+  simp only [Pi.mul_apply]
+  ring
 
 /-- **Shift-invariance of conditional expectation**: For measure-preserving shift,
 `CE[f ∘ shift^k | I] = CE[f | I]` where `I` is the shift-invariant σ-algebra.
