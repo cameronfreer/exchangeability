@@ -516,77 +516,15 @@ private lemma condExp_mul_pullout
   exact MeasureTheory.condExp_mul_of_aestronglyMeasurable_left
     (μ := μ) (m := shiftInvariantSigma (α := α)) hZ_aesm hZY_int hY
 
-/-! ## Axioms for de Finetti theorem -/
+/-! ## Removed axioms (2025-12-04)
 
-/-- **Core axiom**: Conditional independence of the first two coordinates given the tail σ-algebra.
+The following two axioms were removed because they are dead code:
+- `condindep_pair_given_tail` was a placeholder returning `True`, never actually used
+- `kernel_integral_product_factorization` was only used in `condexp_pair_factorization` which is dead code
 
-This is the substantive part of Kallenberg's "first proof": the ergodic/shift argument
-shows the coordinates are conditionally independent given `shiftInvariantSigma`.
-
-**Proof Strategy** (Kallenberg's ergodic argument):
-1. **Mean Ergodic Theorem**: For shift-invariant μ, Birkhoff averages converge to
-   conditional expectation onto shift-invariant σ-algebra
-
-2. **Key observation**: For bounded measurable f, g and any k ≥ 1:
-   CE[f(ω₀)·g(ωₖ) | ℐ] is shift-invariant
-   where ℐ = shiftInvariantSigma
-
-3. **Extremal property**: Show CE[f(ω₀)·g(ωₖ) | ℐ] doesn't depend on k
-   - Use shift equivariance: shift^k ω has same conditional distribution
-   - Extremal measures on shift-invariant functions are ergodic
-   - For ergodic measures, time averages equal space averages
-
-4. **Independence**: Once CE[f(ω₀)·g(ωₖ) | ℐ] = CE[f(ω₀) | ℐ]·CE[g(ωₖ) | ℐ]
-   for all k, and taking k → ∞ with tail σ-algebra argument
-
-5. **Generator extension**: Extend from simple functions to full σ-algebra
-   using π-λ theorem at kernel level
-
-**Mathematical Content**: This is the deep ergodic-theoretic core of de Finetti's theorem.
-It uses the Mean Ergodic Theorem and extremal measure theory.
+Both are bypassed by `condexp_pair_factorization_MET` which proves pair factorization
+directly via the Mean Ergodic Theorem without needing kernel-level independence.
 -/
--- NOTE: This axiom statement is temporarily simplified due to Kernel.IndepFun autoparam issues.
--- TODO: The correct statement should express that (ω 0) and (ω 1) are conditionally independent
--- given the shift-invariant σ-algebra, which would be:
---   Kernel.IndepFun (fun ω : Ω[α] => ω 0) (fun ω : Ω[α] => ω 1)
---     (condExpKernel μ (shiftInvariantSigma (α := α))) μ
--- but this triggers autoparam errors with condExpKernel.
--- For now, we axiomatize a placeholder that downstream lemmas can use.
--- Note: f and g are currently unused because this is a placeholder axiom returning True.
--- The actual statement should use Kernel.IndepFun but that triggers autoparam errors.
-axiom condindep_pair_given_tail
-    (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
-    (hσ : MeasurePreserving shift μ μ) :
-    ∀ (_f _g : α → ℝ), True
-
-/-- **Kernel integral factorization axiom**: For bounded measurable functions f and g,
-the integral of f(ω 0) · g(ω 1) against the conditional expectation kernel factors
-into the product of the individual integrals.
-
-**Proof Strategy**: This follows from `Kernel.IndepFun.integral_mul` applied to the
-conditional independence `condindep_pair_given_tail`, but we cannot state the
-`Kernel.IndepFun` type due to autoparam issues with `condExpKernel`.
-
-The proof would be:
-1. Compose `condindep_pair_given_tail` with the measurable functions f and g
-2. Apply `Kernel.IndepFun.integral_mul` with boundedness assumptions
-3. This gives the factorization almost everywhere
-
-Axiomatized for now due to type system limitations.
--/
-axiom kernel_integral_product_factorization
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
-    (hσ : MeasurePreserving shift μ μ)
-    (f g : α → ℝ)
-    (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
-    (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C) :
-    (fun ω => ∫ y, f (y 0) * g (y 1)
-        ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω))
-      =ᵐ[μ]
-    (fun ω => (∫ y, f (y 0)
-        ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) *
-      (∫ y, g (y 1)
-        ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)))
 
 /-! ## Pair factorization via Mean Ergodic Theorem (bypasses independence axioms!)
 
@@ -4256,8 +4194,7 @@ follows:
 * `ν_ae_shiftInvariant` uses the shift-invariance lemma directly.
 * `identicalConditionalMarginals` becomes a two-line argument invoking the
   shift invariance plus the coordinate/shift identity.
-* `Kernel.IndepFun.integral_mul` feeds into the factorisation lemma
-  `condexp_pair_factorization`.
+* `condexp_pair_factorization_MET` proves factorisation via Mean Ergodic Theorem.
 * The π–system induction in `condexp_product_factorization` reduces to repeated
   applications of the two-point factorisation combined with conditional
   independence already available at the kernel level.
@@ -5545,163 +5482,13 @@ END OF OLD PROOF - this entire section can be moved to AxiomsForDeFinetti.lean
 to eventually prove `Kernel.IndepFun.ae_measure_indepFun`
 -/
 
-/-! ### Pair factorization for the conditional expectation -/
+/-! ### Removed dead code (2025-12-04)
 
--- Note: hciid is a placeholder for conditional independence hypothesis.
--- It's unused because we invoke the axiom kernel_integral_product_factorization instead.
-private lemma condexp_pair_factorization
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    [StandardBorelSpace α] (hσ : MeasurePreserving shift μ μ)
-    (f g : α → ℝ)
-    (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
-    (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C)
-    (_hciid : True) :
-    μ[(fun ω => f (ω 0) * g (ω 1)) | shiftInvariantSigma (α := α)]
-      =ᵐ[μ]
-    fun ω =>
-      (∫ x, f x ∂(ν (μ := μ) ω)) * (∫ x, g x ∂(ν (μ := μ) ω)) := by
-  classical
-  -- condexp as integral against the conditional kernel
-  have h_kernel :
-      μ[(fun ω => f (ω 0) * g (ω 1)) | shiftInvariantSigma (α := α)]
-        =ᵐ[μ]
-      (fun ω => ∫ y, f (y 0) * g (y 1)
-          ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) := by
-    -- Prove integrability from boundedness
-    have h_meas : Measurable (fun (ω : Ω[α]) => f (ω 0) * g (ω 1)) := by
-      fun_prop (disch := measurability)
-    have h_int : Integrable (fun (ω : Ω[α]) => f (ω 0) * g (ω 1)) μ := by
-      obtain ⟨C_f, hC_f⟩ := hf_bd
-      obtain ⟨C_g, hC_g⟩ := hg_bd
-      refine Exchangeability.Probability.integrable_of_bounded h_meas ⟨C_f * C_g, fun ω => ?_⟩
-      calc |f (ω 0) * g (ω 1)|
-          = |f (ω 0)| * |g (ω 1)| := abs_mul _ _
-        _ ≤ C_f * C_g := mul_le_mul (hC_f _) (hC_g _) (abs_nonneg _) (by linarith [abs_nonneg (f (ω 0)), hC_f (ω 0)])
-    exact condExp_eq_kernel_integral (shiftInvariantSigma_le (α := α)) h_int
-  -- kernel-level independence of coord 0 and 1 (axiom)
-  -- NOTE: Can't state Kernel.IndepFun type due to autoparam issues with condExpKernel
-  have h_indep12 : True := by trivial
-  /-
-  have h_indep12 :
-      Kernel.IndepFun (fun y : Ω[α] => f (y 0))
-                      (fun y : Ω[α] => g (y 1))
-                      (condExpKernel μ (shiftInvariantSigma (α := α))) μ := by
-    sorry -- TODO: Kernel.IndepFun has autoparam issues with condExpKernel
-    -- compose `condindep_pair_given_tail` with measurable `f`, `g`
-    -- Apply Kernel.IndepFun.comp to compose with measurable functions
-    have base := condindep_pair_given_tail μ hσ
-    exact base.comp hf_meas hg_meas
-    -/
-  -- factorize the kernel integral a.e.
-  -- This would follow from Kernel.IndepFun.integral_mul if we could state the type
-  -- Axiomatize as a helper lemma instead
-  have h_factor :
-      (fun ω => ∫ y, f (y 0) * g (y 1)
-          ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω))
-        =ᵐ[μ]
-      (fun ω => (∫ y, f (y 0)
-          ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) *
-        (∫ y, g (y 1)
-          ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω))) := by
-    exact kernel_integral_product_factorization (μ := μ) hσ f g hf_meas hf_bd hg_meas hg_bd
-    /-
-    Proof sketch (blocked by Kernel.IndepFun autoparam issues):
-    -- boundedness for `Kernel.IndepFun.integral_mul`
-    have hf_bd' : ∃ C, ∀ ω, |(fun y : Ω[α] => f (y 0)) ω| ≤ C :=
-      let ⟨C, hC⟩ := hf_bd; ⟨C, fun ω => hC (ω 0)⟩
-    have hg_bd' : ∃ C, ∀ ω, |(fun y : Ω[α] => g (y 1)) ω| ≤ C :=
-      let ⟨C, hC⟩ := hg_bd; ⟨C, fun ω => hC (ω 1)⟩
-    -- This would work if we could state h_indep12 : Kernel.IndepFun ...
-    exact Kernel.IndepFun.integral_mul h_indep12
-      (hf_meas.comp (measurable_pi_apply 0))
-      (hg_meas.comp (measurable_pi_apply 1))
-      hf_bd' hg_bd'
-    -/
-  -- replace both marginals by integrals against ν using your proven lemma
-  have h0 := identicalConditionalMarginals_integral (μ := μ) (α := α) hσ 0 hf_meas hf_bd
-  have h1 := identicalConditionalMarginals_integral (μ := μ) (α := α) hσ 1 hg_meas hg_bd
-  -- chain everything
-  refine h_kernel.trans ?_
-  refine h_factor.trans ?_
-  filter_upwards [h0, h1] with ω hω0 hω1
-  simp [hω0, hω1]
-  /-
-  classical
-  -- Step 1: Both coordinates have the same conditional law (from identicalConditionalMarginals_integral)
-  have h_marg0 := identicalConditionalMarginals_integral (μ := μ) (α := α) hσ 0 hf_meas hf_bd
-  have h_marg1 := identicalConditionalMarginals_integral (μ := μ) (α := α) hσ 1 hg_meas hg_bd
-
-  -- Step 2: Integrability of the product
-  rcases hf_bd with ⟨Cf, hCf⟩
-  rcases hg_bd with ⟨Cg, hCg⟩
-  have h_int : Integrable (fun ω : Ω[α] => f (ω 0) * g (ω 1)) μ := by
-    refine Exchangeability.Probability.integrable_of_bounded
-      (hmeas := (hf_meas.comp (measurable_pi_apply 0)).mul
-        (hg_meas.comp (measurable_pi_apply 1)))
-      (μ := μ) ⟨Cf * Cg, ?_⟩
-    intro ω
-    calc |f (ω 0) * g (ω 1)| = |f (ω 0)| * |g (ω 1)| := abs_mul _ _
-      _ ≤ Cf * Cg := mul_le_mul (hCf _) (hCg _) (abs_nonneg _) (by linarith [hCf (ω 0)])
-
-  -- Step 3: Apply conditional expectation via condExpKernel
-  have h_via_kernel :
-      μ[(fun ω => f (ω 0) * g (ω 1)) | shiftInvariantSigma (α := α)]
-        =ᵐ[μ]
-      fun ω => ∫ y, f (y 0) * g (y 1) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω) := by
-    exact ProbabilityTheory.condExp_ae_eq_integral_condExpKernel
-      (μ := μ) (m := shiftInvariantSigma (α := α))
-      (f := fun ω => f (ω 0) * g (ω 1))
-      (hf := (hf_meas.comp (measurable_pi_apply 0)).mul
-        (hg_meas.comp (measurable_pi_apply 1)))
-
-  -- Step 4: Use conditional independence to factor the integral
-  have h_factor :
-      (fun ω => ∫ y, f (y 0) * g (y 1) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω))
-        =ᵐ[μ]
-      fun ω =>
-        (∫ y, f (y 0) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) *
-        (∫ y, g (y 1) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) := by
-    -- From `hciid: ProbabilityTheory.Kernel.iIndepFun (fun k : Fin 2 => fun ω => ω k) κ μ`
-    -- we know the coordinates 0 and 1 are independent under the kernel
-    have h_indep_pair : Kernel.IndepFun (fun ω : Ω[α] => ω 0) (fun ω => ω 1)
-        (condExpKernel μ (shiftInvariantSigma (α := α))) := by
-      exact hciid.indepFun (i := 0) (j := 1) (by norm_num)
-    -- Apply the kernel-level integral multiplication theorem
-    have h_bd0 : ∃ C, ∀ ω : Ω[α], |(fun y => f (y 0)) ω| ≤ C := by
-      rcases hf_bd with ⟨C, hC⟩
-      exact ⟨C, fun ω => hC (ω 0)⟩
-    have h_bd1 : ∃ C, ∀ ω : Ω[α], |(fun y => g (y 1)) ω| ≤ C := by
-      rcases hg_bd with ⟨C, hC⟩
-      exact ⟨C, fun ω => hC (ω 1)⟩
-    exact Kernel.IndepFun.integral_mul h_indep_pair
-      (hf_meas.comp (measurable_pi_apply 0))
-      (hg_meas.comp (measurable_pi_apply 1))
-      h_bd0 h_bd1
-
-  -- Step 5: Replace coordinate projections with ν using identicalConditionalMarginals_integral
-  -- h_marg0 and h_marg1 directly give us the integral equalities we need!
-  have h_coord0 :
-      (fun ω => ∫ y, f (y 0) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω))
-        =ᵐ[μ]
-      fun ω => ∫ x, f x ∂(ν (μ := μ) ω) := h_marg0
-
-  have h_coord1 :
-      (fun ω => ∫ y, g (y 1) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω))
-        =ᵐ[μ]
-      fun ω => ∫ x, g x ∂(ν (μ := μ) ω) := h_marg1
-
-  -- Step 6: Chain all the equalities
-  calc μ[(fun ω => f (ω 0) * g (ω 1)) | shiftInvariantSigma (α := α)]
-      =ᵐ[μ] fun ω => ∫ y, f (y 0) * g (y 1) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω) :=
-        h_via_kernel
-    _ =ᵐ[μ] fun ω =>
-        (∫ y, f (y 0) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) *
-        (∫ y, g (y 1) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) :=
-        h_factor
-    _ =ᵐ[μ] fun ω => (∫ x, f x ∂(ν (μ := μ) ω)) * (∫ x, g x ∂(ν (μ := μ) ω)) := by
-        filter_upwards [h_coord0, h_coord1] with ω h0 h1
-        rw [h0, h1]
-  -/
+The lemma `condexp_pair_factorization` was removed as dead code.
+It required the axiom `kernel_integral_product_factorization` which is bypassed by
+`condexp_pair_factorization_MET` (line ~2210) that proves pair factorization
+directly via the Mean Ergodic Theorem.
+-/
 
 /-! ### Use the axiomatized product factorization to close the theorem -/
 

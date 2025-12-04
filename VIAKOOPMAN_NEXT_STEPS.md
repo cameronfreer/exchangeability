@@ -8,34 +8,32 @@
 
 | File | Axioms | Sorries | Status |
 |------|--------|---------|--------|
-| ViaKoopman.lean | 7 | 5 | Main proof file |
+| ViaKoopman.lean | 5 | 5 | Main proof file |
 | ViaKoopman/Infrastructure.lean | 8 | 2 | Dependencies |
 | TheoremViaKoopman.lean | 1 | 0 | Final theorem wrapper |
-| **Total** | **16** | **7** | |
+| **Total** | **14** | **7** | |
 
 ---
 
-## ViaKoopman.lean - 7 Axioms
+## ViaKoopman.lean - 5 Axioms
 
 | Line | Name | Difficulty | Notes |
 |------|------|------------|-------|
 | 296 | `Kernel.IndepFun.ae_measure_indepFun` | Medium | Conditional independence via kernels |
-| 557 | `condindep_pair_given_tail` | Easy? | **Placeholder returning True** - needs investigation |
-| 577 | `kernel_integral_product_factorization` | Medium | Kernel integral factorization |
-| 1355 | `optionB_L1_convergence_bounded_fwd` | Hard | L¹ Cesàro convergence for bounded functions |
-| 2442 | `condexp_product_factorization_ax` | Medium | CE product factorization |
-| 2483 | `condexp_product_factorization_general` | Medium | General CE product |
-| 2821 | `exchangeable_implies_ciid_modulo_bridge_ax` | Hard | **Main bridge** to CIID |
+| 1293 | `optionB_L1_convergence_bounded_fwd` | Hard | L¹ Cesàro convergence for bounded functions |
+| 2380 | `condexp_product_factorization_ax` | Medium | CE product factorization |
+| 2421 | `condexp_product_factorization_general` | Medium | General CE product |
+| 2759 | `exchangeable_implies_ciid_modulo_bridge_ax` | Hard | **Main bridge** to CIID |
 
 ## ViaKoopman.lean - 5 Sorries
 
 | Line | Context | Issue |
 |------|---------|-------|
-| 1019 | `birkhoffAverage_tendsto_condexp_L2` | Type class synthesis issues |
-| 2471 | inside `condexp_product_factorization_ax` | Part of axiom body |
-| 2519 | inside `condexp_product_factorization_general` | Part of axiom body |
-| 4184 | `extreme_condexp_self` | May not be necessary |
-| 5589 | `condindep_components_given_invSubalgebra` | Kernel.IndepFun autoparam issues |
+| 987 | `birkhoffAverage_tendsto_condexp_L2` | Type class synthesis issues |
+| 2409 | inside `condexp_product_factorization_ax` | Part of axiom body |
+| 2457 | inside `condexp_product_factorization_general` | Part of axiom body |
+| 4122 | `extreme_condexp_self` | May not be necessary |
+| 5527 | `condindep_components_given_invSubalgebra` | Kernel.IndepFun autoparam issues |
 
 ---
 
@@ -64,6 +62,13 @@
 ## Recently Completed Conversions
 
 ### 2025-12-04
+
+- **Removed dead axioms** (reduces axiom count from 7 to 5):
+  - `condindep_pair_given_tail` - was a placeholder returning `True`, never used
+  - `kernel_integral_product_factorization` - only used in dead code
+  - Also removed dead lemma `condexp_pair_factorization`
+  - All bypassed by `condexp_pair_factorization_MET` which uses Mean Ergodic Theorem
+
 - **`condexpL2_koopman_comm`**: Converted from axiom to theorem
   - Used Koopman operator commutation with conditional expectation
   - Key insight: `condExp_comp_mfderiv` pattern
@@ -103,9 +108,8 @@ Lean's instance resolution can pick `m` instead of `mΩ` for methods like `.stro
 ## Recommended Next Steps
 
 ### High Value Targets
-1. **`condindep_pair_given_tail`** (line 557) - Placeholder returning True, may be easy
-2. **`condexp_product_factorization_ax`** (line 2442) - Has clear mathlib path
-3. **`kernel_integral_product_factorization`** (line 577) - Kernel theory
+1. **`condexp_product_factorization_ax`** (line 2380) - Has clear mathlib path via induction
+2. **`Kernel.IndepFun.ae_measure_indepFun`** (line 296) - Standard kernel independence result
 
 ### Lower Priority
 - Infrastructure axioms (may need mathlib contributions)
