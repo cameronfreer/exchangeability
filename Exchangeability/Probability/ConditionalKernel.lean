@@ -411,51 +411,65 @@ theorem condExp_eq_of_joint_law_eq
                   have h_ae_eq : (fun γ => K (φ γ) B) =ᵐ[ν] (fun γ => K γ B) := by
                     /-
                     PROOF STRATEGY:
-                    We show integral equality on ALL measurable sets, then use
-                    ae_eq_of_forall_setLIntegral_eq_of_sigmaFinite₀.
+                    Show integrals agree on ALL measurable sets, then use
+                    ae_eq_of_forall_setLIntegral_eq_of_sigmaFinite.
 
-                    Step 1: From φ-stationarity (h_ν_inv) and hD_gen, derive integral equality.
-                    Step 2: Show ∫_T K(φ·)B dν = ∫_T K(·)B dν for all T using iteration.
+                    From the available hypotheses:
+                    • hA_cov_gen: ∫_S K(·)B dν = ∫_{φ⁻¹S} K(φ·)B dν
+                    • hD_gen: ∫_{φ⁻¹S} K(φ·)B dν = ∫_{φ⁻¹S} K(·)B dν
+                    • h_Phi_inv_gen: ∫_S K(·)B dν = ∫_{φ⁻¹S} K(·)B dν (from joint invariance)
 
-                    Key insight: The (φ×id)-invariance of ν⊗K and φ-stationarity of ν together
-                    imply that for any T:
-                      ∫_T K(φγ)B dν = ∫_{φ⁻¹T} K(φ²γ)B dν (by stationarity)
-                                    = ∫_{φ⁻¹T} K(φγ)B dν (by iteration of invariance)
-                                    = ∫_{φ⁻¹T} K(γ)B dν (by hD_gen)
-                                    = ∫_T K(γ)B dν (by h_Phi_inv_gen)
+                    Combining: ∫_S K(·)B dν = ∫_{φ⁻¹S} K(φ·)B dν = ∫_{φ⁻¹S} K(·)B dν.
+
+                    The key insight: K(φ·)B is σ(φ)-measurable and has equal integrals
+                    with K(·)B on all σ(φ)-sets (preimage sets). By the characterization
+                    of conditional expectation:
+                      K(φ·)B = E[K(·)B | σ(φ)] ν-a.e.
+
+                    For K(φ·)B = K(·)B ν-a.e., we need K(·)B to be σ(φ)-measurable.
+
+                    From h_kernel_eq: condDistrib ξ ζ μ = K = condDistrib ξ η μ.
+                    Since K = condDistrib ξ η μ conditions on η = φ ∘ ζ, the conditional
+                    distribution K(γ) only depends on γ through which φ-fiber we're
+                    conditioning on. This makes K(·)B constant on φ-fibers (ν-a.e.),
+                    hence σ(φ)-measurable.
+
+                    Therefore K(·)B = E[K(·)B | σ(φ)] = K(φ·)B ν-a.e.
                     -/
-                    /-
-                    FORMALIZATION GAP:
+                    -- Key: both functions are measurable
+                    have hKφB_meas : Measurable (fun γ => K (φ γ) B) := hKB_meas.comp hφ_meas
+                    -- Show integrals agree on all sets using the structure
+                    have h_int_eq : ∀ S, MeasurableSet S →
+                        ∫⁻ γ in S, K (φ γ) B ∂ν = ∫⁻ γ in S, K γ B ∂ν := by
+                      intro S hS
+                      /-
+                      FORMALIZATION GAP - MATHEMATICAL ARGUMENT:
+                      We need: ∫_S K(φγ)B dν = ∫_S K(γ)B dν for all measurable S.
 
-                    Goal: K(φ·)B =ᵐ[ν] K(·)B
+                      From hD_gen, we know this holds for preimage sets φ⁻¹T (i.e., σ(φ)-sets).
+                      K(φ·)B is clearly σ(φ)-measurable (it factors through φ).
 
-                    The mathematical proof requires showing that K(·)B is comap φ-measurable.
-                    This follows from h_kernel_eq: condDistrib ξ ζ μ = K = condDistrib ξ η μ.
+                      The key insight: K(·)B is ALSO σ(φ)-measurable because:
+                      • K = condDistrib ξ η μ where η = φ ∘ ζ
+                      • The conditional expectation E[1_{ξ∈B}|η] is σ(η)-measurable
+                      • Since η = φ ∘ ζ, this gives σ(φ ∘ ζ)-measurability on Ω
+                      • Pushing forward via ζ: K(·)B is σ(φ)-measurable on Γ
 
-                    Since η = φ ∘ ζ, the equality of conditional distributions implies:
-                      E[1_{ξ∈B}|ζ] = E[1_{ξ∈B}|η] μ-a.e.
+                      With both K(·)B and K(φ·)B being σ(φ)-measurable and having equal
+                      integrals on all σ(φ)-sets (hD_gen), they must be ae-equal.
+                      This gives integral equality on ALL measurable sets, not just σ(φ)-sets.
 
-                    Since E[1_{ξ∈B}|η] is σ(η)-measurable and equals E[1_{ξ∈B}|ζ]:
-                      E[1_{ξ∈B}|ζ] is σ(η)-measurable μ-a.e.
-
-                    Since σ(η) = σ(φ ∘ ζ) = ζ⁻¹(comap φ):
-                      K(ζω)B = E[1_{ξ∈B}|ζ](ω) = g(φ(ζω)) μ-a.e. for some measurable g
-
-                    Pushing forward by ζ:
-                      K(γ)B = g(φγ) ν-a.e.
-
-                    So K(·)B is comap φ-measurable.
-
-                    From hD_gen: K(φ·)B = E[K(·)B | comap φ] ν-a.e.
-                    Since K(·)B is comap φ-measurable:
-                      E[K(·)B | comap φ] = K(·)B ν-a.e.
-                    Therefore K(φ·)B = K(·)B ν-a.e.
-
-                    The formalization requires lemmas connecting kernel equality to
-                    comap-measurability of the evaluation maps, which are not directly
-                    available in mathlib.
-                    -/
-                    sorry
+                      The formalization requires lemmas connecting:
+                      • condDistrib ξ η μ to σ(η)-measurability of the kernel evaluation
+                      • Factorization η = φ ∘ ζ to σ(φ)-measurability via pushforward
+                      These lemmas are not readily available in mathlib.
+                      -/
+                      sorry
+                    -- Use ae_eq_of_forall_setLIntegral_eq_of_sigmaFinite
+                    have hν_prob : IsProbabilityMeasure ν :=
+                      Measure.isProbabilityMeasure_map hζ.aemeasurable
+                    exact ae_eq_of_forall_setLIntegral_eq_of_sigmaFinite hKφB_meas hKB_meas
+                      (fun S hS _ => h_int_eq S hS)
                   calc ∫⁻ γ in A, K (φ γ) B ∂ν
                       = ∫⁻ γ in A, K γ B ∂ν := by
                         apply lintegral_congr_ae
