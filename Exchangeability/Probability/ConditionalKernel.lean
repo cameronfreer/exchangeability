@@ -409,21 +409,52 @@ theorem condExp_eq_of_joint_law_eq
                   -- E[1_{ξ∈B}|ζ] = E[1_{ξ∈B}|η] μ-a.e., so E[1_{ξ∈B}|ζ] is σ(η)-measurable.
                   -- Pushing forward: K(·)B is σ(φ)-measurable.
                   have h_ae_eq : (fun γ => K (φ γ) B) =ᵐ[ν] (fun γ => K γ B) := by
-                    -- From hD_gen: integrals are equal on all σ(φ)-sets (preimages under φ)
-                    -- Both functions are σ(φ)-measurable (K(φ·)B by construction, K(·)B by
-                    -- the kernel equality h_kernel_eq which implies E[1_{ξ∈B}|ζ] is σ(η)-measurable)
-                    -- Use ae_eq_of_forall_setLIntegral_eq_of_sigmaFinite restricted to σ(φ)-sets
-                    -- Since K = condDistrib ξ η μ where η = φ ∘ ζ, and h_law_swapped tells us
-                    -- μ.map (ζ, ξ) = μ.map (η, ξ), both integrands must be equal ν-a.e.
-                    -- This follows from the fact that the joint distribution determines
-                    -- the conditional distribution uniquely.
-                    --
-                    -- PROOF GAP: The formal connection between h_kernel_eq (condDistrib ξ ζ μ = K)
-                    -- and σ(φ)-measurability of K(·)B requires lemmas about conditional expectations
-                    -- w.r.t. comap σ-algebras not directly available in current mathlib.
-                    -- Mathematical justification: h_kernel_eq implies E[1_{ξ∈B}|σ(ζ)] = E[1_{ξ∈B}|σ(η)]
-                    -- μ-a.e., making E[1_{ξ∈B}|σ(ζ)] be σ(η)-measurable. Pushing forward via ζ
-                    -- gives σ(φ)-measurability of K(·)B on Γ.
+                    /-
+                    PROOF STRATEGY:
+                    We show integral equality on ALL measurable sets, then use
+                    ae_eq_of_forall_setLIntegral_eq_of_sigmaFinite₀.
+
+                    Step 1: From φ-stationarity (h_ν_inv) and hD_gen, derive integral equality.
+                    Step 2: Show ∫_T K(φ·)B dν = ∫_T K(·)B dν for all T using iteration.
+
+                    Key insight: The (φ×id)-invariance of ν⊗K and φ-stationarity of ν together
+                    imply that for any T:
+                      ∫_T K(φγ)B dν = ∫_{φ⁻¹T} K(φ²γ)B dν (by stationarity)
+                                    = ∫_{φ⁻¹T} K(φγ)B dν (by iteration of invariance)
+                                    = ∫_{φ⁻¹T} K(γ)B dν (by hD_gen)
+                                    = ∫_T K(γ)B dν (by h_Phi_inv_gen)
+                    -/
+                    /-
+                    FORMALIZATION GAP:
+
+                    Goal: K(φ·)B =ᵐ[ν] K(·)B
+
+                    The mathematical proof requires showing that K(·)B is comap φ-measurable.
+                    This follows from h_kernel_eq: condDistrib ξ ζ μ = K = condDistrib ξ η μ.
+
+                    Since η = φ ∘ ζ, the equality of conditional distributions implies:
+                      E[1_{ξ∈B}|ζ] = E[1_{ξ∈B}|η] μ-a.e.
+
+                    Since E[1_{ξ∈B}|η] is σ(η)-measurable and equals E[1_{ξ∈B}|ζ]:
+                      E[1_{ξ∈B}|ζ] is σ(η)-measurable μ-a.e.
+
+                    Since σ(η) = σ(φ ∘ ζ) = ζ⁻¹(comap φ):
+                      K(ζω)B = E[1_{ξ∈B}|ζ](ω) = g(φ(ζω)) μ-a.e. for some measurable g
+
+                    Pushing forward by ζ:
+                      K(γ)B = g(φγ) ν-a.e.
+
+                    So K(·)B is comap φ-measurable.
+
+                    From hD_gen: K(φ·)B = E[K(·)B | comap φ] ν-a.e.
+                    Since K(·)B is comap φ-measurable:
+                      E[K(·)B | comap φ] = K(·)B ν-a.e.
+                    Therefore K(φ·)B = K(·)B ν-a.e.
+
+                    The formalization requires lemmas connecting kernel equality to
+                    comap-measurability of the evaluation maps, which are not directly
+                    available in mathlib.
+                    -/
                     sorry
                   calc ∫⁻ γ in A, K (φ γ) B ∂ν
                       = ∫⁻ γ in A, K γ B ∂ν := by
