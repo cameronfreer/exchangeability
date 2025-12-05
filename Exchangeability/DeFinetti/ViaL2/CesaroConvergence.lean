@@ -2381,24 +2381,235 @@ private lemma blockAvg_shift_tendsto
   -- Case N = 0: trivial, just use the hypothesis
   rcases eq_or_ne N 0 with rfl | hN
   · exact hα_limit
-
-  -- Case N > 0: The key insight is the algebraic decomposition:
-  --   blockAvg f X 0 (N + m) = (N/(N+m)) * blockAvg f X 0 N + (m/(N+m)) * blockAvg f X N m
-  -- Rearranging:
-  --   blockAvg f X N m = ((N+m)/m) * blockAvg f X 0 (N+m) - (N/m) * blockAvg f X 0 N
-  -- Thus:
-  --   blockAvg f X N m - α_f = ((N+m)/m) * (blockAvg f X 0 (N+m) - α_f)
-  --                           - (N/m) * (blockAvg f X 0 N - α_f)
-  -- As m → ∞:
-  --   - First term: (1 + N/m) * ε_{N+m} → 1 * 0 = 0 since ε_{N+m} → 0
-  --   - Second term: (N/m) * C → 0 * C = 0 since N is fixed
+  -- Case N > 0: The shifted block averages converge to the same limit.
+  -- Key insight: blockAvg f X N m = ((N+m)/m) * blockAvg f X 0 (N+m) - (N/m) * blockAvg f X 0 N
+  -- As m → ∞: (N+m)/m → 1, N/m → 0, so blockAvg f X N m → α_f in L².
   --
-  -- The detailed proof requires:
-  -- 1. Establishing the algebraic identity pointwise
-  -- 2. Using triangle inequality for eLpNorm
-  -- 3. Using that eLpNorm scales with constants
-  -- 4. Showing both terms vanish as m → ∞
+  -- The detailed proof has ENNReal notation issues that require fixing.
+  -- TODO: Fix the ℝ≥0∞ notation and type coercion issues in the detailed proof.
   sorry
+
+  /-  Original proof strategy (needs notation fixes):
+  -- Case N > 0: Use algebraic decomposition
+  --
+  -- PROOF STRATEGY (ENNReal squeeze theorem approach):
+  --
+  -- Step 1: Characterize limit via ENNReal.tendsto_atTop_zero
+  --   Goal: ∀ ε > 0, ∃ M, ∀ m ≥ M, eLpNorm (blockAvg f X N m - α_f) 2 μ ≤ ε
+  --
+  -- Step 2: Algebraic identity (pointwise)
+  --   blockAvg f X N m = ((N+m)/m) * blockAvg f X 0 (N+m) - (N/m) * blockAvg f X 0 N
+  --   Therefore:
+  --   blockAvg f X N m - α_f = ((N+m)/m) • (blockAvg f X 0 (N+m) - α_f)
+  --                         - (N/m) • (blockAvg f X 0 N - α_f)
+  --
+  -- Step 3: Triangle inequality + eLpNorm_const_smul
+  --   eLpNorm (blockAvg f X N m - α_f) 2 μ
+  --     ≤ ||(N+m)/m|| * eLpNorm (blockAvg f X 0 (N+m) - α_f) 2 μ
+  --       + ||N/m|| * eLpNorm (blockAvg f X 0 N - α_f) 2 μ
+  --
+  -- Step 4: Bound as m → ∞
+  --   - (N+m)/m = 1 + N/m → 1
+  --   - N/m → 0
+  --   - eLpNorm (blockAvg f X 0 (N+m) - α_f) 2 μ → 0 (by hypothesis + shift)
+  --   - eLpNorm (blockAvg f X 0 N - α_f) 2 μ is finite constant C_N
+  --   So: first term → 1 * 0 = 0, second term → 0 * C_N = 0
+  --
+  -- KEY LEMMAS:
+  -- - ENNReal.tendsto_atTop_zero: characterization of convergence to 0
+  -- - tendsto_add_atTop_iff_nat: f(n+k) → L iff f(n) → L
+  -- - eLpNorm_add_le: triangle inequality
+  -- - eLpNorm_const_smul: eLpNorm (c • f) = ||c|| * eLpNorm f
+  -- - ENNReal.Tendsto.mul: product of convergent sequences
+
+  -- Step 1: The shifted hypothesis: eLpNorm (blockAvg f X 0 (N + m) - α_f) 2 μ → 0 as m → ∞
+  have hα_limit_shifted : Tendsto (fun m => eLpNorm (blockAvg f X 0 (N + m) - α_f) 2 μ) atTop (𝓝 0) := by
+    have h := Filter.tendsto_add_atTop_iff_nat (l := 𝓝 0) (f := fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) N
+    simp only [add_comm] at h
+    exact h.mpr hα_limit
+
+  -- Step 2: The constant term C_N = eLpNorm (blockAvg f X 0 N - α_f) 2 μ
+  let C_N := eLpNorm (blockAvg f X 0 N - α_f) 2 μ
+
+  -- Step 3: We need MemLp for blockAvg - α_f to use eLpNorm_add_le
+  have hBlockAvg_memLp : ∀ n, MemLp (blockAvg f X 0 n) 2 μ := by
+    intro n
+    by_cases hn : n > 0
+    · apply memLp_two_of_bounded
+      · exact blockAvg_measurable f X hf_meas hX_meas 0 n
+      · intro ω
+        calc |blockAvg f X 0 n ω|
+            = |(n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (0 + k) ω))| := rfl
+          _ = (n : ℝ)⁻¹ * |(Finset.range n).sum (fun k => f (X (0 + k) ω))| := by
+              rw [abs_mul, abs_inv, abs_of_nonneg (Nat.cast_nonneg n)]
+          _ ≤ (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => |f (X (0 + k) ω)|) := by
+              apply mul_le_mul_of_nonneg_left (Finset.abs_sum_le_sum_abs _ _)
+              exact inv_nonneg.mpr (Nat.cast_nonneg n)
+          _ ≤ (n : ℝ)⁻¹ * (Finset.range n).sum (fun _ => 1) := by
+              apply mul_le_mul_of_nonneg_left _ (inv_nonneg.mpr (Nat.cast_nonneg n))
+              exact Finset.sum_le_sum (fun k _ => hf_bdd (X (0 + k) ω))
+          _ = (n : ℝ)⁻¹ * n := by simp
+          _ = 1 := by field_simp [Nat.pos_iff_ne_zero.mp hn]
+    · push_neg at hn
+      have : n = 0 := Nat.eq_zero_of_le_zero hn
+      subst this
+      have h_eq : blockAvg f X 0 0 = fun _ => 0 := by ext ω; simp [blockAvg]
+      rw [h_eq]
+      exact MemLp.zero'
+
+  have hDiff_memLp : ∀ n, MemLp (blockAvg f X 0 n - α_f) 2 μ :=
+    fun n => (hBlockAvg_memLp n).sub hα_memLp
+
+  -- Step 4: Upper bound using triangle inequality and scalar norm
+  -- We need to show the algebraic identity and apply triangle inequality
+  -- Use squeeze theorem: 0 ≤ f ≤ g and g → 0 implies f → 0
+
+  -- The key bound: for m > 0
+  -- eLpNorm (blockAvg f X N m - α_f) 2 μ
+  --   ≤ ((N+m)/m) * eLpNorm (blockAvg f X 0 (N+m) - α_f) 2 μ
+  --     + (N/m) * C_N
+
+  -- Upper bound sequence
+  let upper : ℕ → ℝ≥0∞ := fun m =>
+    if m = 0 then ⊤
+    else ENNReal.ofReal ((N + m : ℝ) / m) * eLpNorm (blockAvg f X 0 (N + m) - α_f) 2 μ
+         + ENNReal.ofReal (N / m) * C_N
+
+  -- Show upper bound tends to 0
+  have hUpper_tendsto : Tendsto upper atTop (𝓝 0) := by
+    -- Both terms tend to 0
+    -- Term 1: coeff → 1, eLpNorm → 0, so product → 0
+    -- Term 2: coeff → 0, C_N is constant (possibly ⊤ but finite in L²), so product → 0
+    have h_coeff1 : Tendsto (fun m => ENNReal.ofReal ((N + m : ℝ) / m)) atTop (𝓝 1) := by
+      have : Tendsto (fun m : ℕ => (N + m : ℝ) / m) atTop (𝓝 1) := by
+        have : (fun m : ℕ => (N + m : ℝ) / m) = (fun m : ℕ => 1 + N / m) := by
+          ext m
+          by_cases hm : (m : ℝ) = 0
+          · simp [hm]
+          · field_simp [hm]
+        rw [this]
+        have hN_div : Tendsto (fun m : ℕ => (N : ℝ) / m) atTop (𝓝 0) := by
+          exact tendsto_const_div_atTop_nhds_zero_nat N
+        convert hN_div.const_add 1
+        ring
+      convert ENNReal.tendsto_ofReal this
+      simp
+
+    have h_coeff2 : Tendsto (fun m => ENNReal.ofReal ((N : ℝ) / m)) atTop (𝓝 0) := by
+      have : Tendsto (fun m : ℕ => (N : ℝ) / m) atTop (𝓝 0) :=
+        tendsto_const_div_atTop_nhds_zero_nat N
+      convert ENNReal.tendsto_ofReal this
+      simp
+
+    -- Term 1: bounded * 0 → 0
+    have hTerm1 : Tendsto (fun m => ENNReal.ofReal ((N + m : ℝ) / m) *
+        eLpNorm (blockAvg f X 0 (N + m) - α_f) 2 μ) atTop (𝓝 0) := by
+      have h1 : Tendsto (fun m => ENNReal.ofReal ((N + m : ℝ) / m)) atTop (𝓝 1) := h_coeff1
+      have h2 : Tendsto (fun m => eLpNorm (blockAvg f X 0 (N + m) - α_f) 2 μ) atTop (𝓝 0) :=
+        hα_limit_shifted
+      have := ENNReal.Tendsto.mul h1 (Or.inl one_ne_zero) h2 (Or.inl ENNReal.zero_ne_top)
+      simp only [mul_zero] at this
+      exact this
+
+    -- Term 2: 0 * constant → 0
+    have hTerm2 : Tendsto (fun m => ENNReal.ofReal ((N : ℝ) / m) * C_N) atTop (𝓝 0) := by
+      have h1 : Tendsto (fun m => ENNReal.ofReal ((N : ℝ) / m)) atTop (𝓝 0) := h_coeff2
+      -- Need to show 0 ≠ 0 ∨ C_N ≠ ⊤, which is C_N ≠ ⊤
+      -- C_N = eLpNorm (blockAvg f X 0 N - α_f) 2 μ
+      have hC_N_ne_top : C_N ≠ ⊤ := (hDiff_memLp N).eLpNorm_ne_top
+      have := ENNReal.Tendsto.mul h1 (Or.inr hC_N_ne_top) tendsto_const_nhds (Or.inl ENNReal.zero_ne_top)
+      simp only [zero_mul] at this
+      exact this
+
+    -- Combine: eventually filter_upwards to remove the m=0 case
+    rw [ENNReal.tendsto_atTop_zero]
+    intro ε hε
+    -- Get M₁ such that m ≥ M₁ implies term1 < ε/2
+    have hε2 : (0 : ℝ≥0∞) < ε / 2 := ENNReal.div_pos hε.ne' (by norm_num : (2 : ℝ≥0∞) ≠ ⊤)
+    rw [ENNReal.tendsto_atTop_zero] at hTerm1 hTerm2
+    obtain ⟨M₁, hM₁⟩ := hTerm1 (ε / 2) hε2
+    obtain ⟨M₂, hM₂⟩ := hTerm2 (ε / 2) hε2
+    use max (max M₁ M₂) 1
+    intro m hm
+    have hm1 : m ≥ M₁ := le_trans (le_max_left M₁ M₂) (le_trans (le_max_left _ _) hm)
+    have hm2 : m ≥ M₂ := le_trans (le_max_right M₁ M₂) (le_trans (le_max_left _ _) hm)
+    have hm_pos : m ≥ 1 := le_trans (le_max_right _ _) hm
+    have hm_ne : m ≠ 0 := Nat.one_le_iff_ne_zero.mp hm_pos
+    simp only [hm_ne, ↓reduceIte]
+    calc ENNReal.ofReal ((N + m : ℝ) / m) * eLpNorm (blockAvg f X 0 (N + m) - α_f) 2 μ
+           + ENNReal.ofReal (N / m) * C_N
+        ≤ ε / 2 + ε / 2 := add_le_add (hM₁ m hm1) (hM₂ m hm2)
+      _ = ε := ENNReal.add_halves ε
+
+  -- Step 5: Now use squeeze theorem for ENNReal
+  -- Need: 0 ≤ eLpNorm ... ≤ upper, and upper → 0
+  apply tendsto_of_tendsto_of_tendsto_of_le_of_le' tendsto_const_nhds hUpper_tendsto
+  · -- 0 ≤ eLpNorm ... (always true)
+    exact Eventually.of_forall (fun _ => zero_le _)
+  · -- eLpNorm ... ≤ upper eventually
+    -- Need to establish the algebraic identity and triangle inequality
+    rw [Filter.eventually_atTop]
+    use 1
+    intro m hm_pos
+    have hm_ne : m ≠ 0 := Nat.one_le_iff_ne_zero.mp hm_pos
+    simp only [hm_ne, ↓reduceIte]
+
+    -- Step 5a: Algebraic identity (pointwise)
+    -- blockAvg f X N m ω = ((N+m)/m) * blockAvg f X 0 (N+m) ω - (N/m) * blockAvg f X 0 N ω
+    have hAlg : ∀ ω, blockAvg f X N m ω - α_f ω =
+        ((N + m : ℝ) / m) * (blockAvg f X 0 (N + m) ω - α_f ω)
+        - (N / m) * (blockAvg f X 0 N ω - α_f ω) := by
+      intro ω
+      simp only [blockAvg]
+      -- Expand and simplify
+      have hm_real_ne : (m : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hm_ne
+      have hNm_real_ne : (N + m : ℝ) ≠ 0 := by positivity
+      field_simp
+      -- Sum splitting: Σ_{k=0}^{N+m-1} = Σ_{k=0}^{N-1} + Σ_{k=N}^{N+m-1}
+      have hSum : (Finset.range (N + m)).sum (fun k => f (X (0 + k) ω)) =
+          (Finset.range N).sum (fun k => f (X k ω)) +
+          (Finset.range m).sum (fun k => f (X (N + k) ω)) := by
+        rw [Finset.sum_range_add]
+        simp only [zero_add]
+      rw [hSum]
+      ring
+
+    -- Step 5b: Apply eLpNorm bounds
+    -- First, rewrite using the algebraic identity
+    have hFunEq : (fun ω => blockAvg f X N m ω - α_f ω) =
+        (fun ω => ((N + m : ℝ) / m) * (blockAvg f X 0 (N + m) ω - α_f ω)
+                  - (N / m) * (blockAvg f X 0 N ω - α_f ω)) := by
+      ext ω; exact hAlg ω
+
+    calc eLpNorm (blockAvg f X N m - α_f) 2 μ
+        = eLpNorm (fun ω => ((N + m : ℝ) / m) * (blockAvg f X 0 (N + m) ω - α_f ω)
+                           - (N / m) * (blockAvg f X 0 N ω - α_f ω)) 2 μ := by
+            congr 1; ext ω; exact hAlg ω
+      _ ≤ eLpNorm (fun ω => ((N + m : ℝ) / m) * (blockAvg f X 0 (N + m) ω - α_f ω)) 2 μ
+          + eLpNorm (fun ω => (N / m) * (blockAvg f X 0 N ω - α_f ω)) 2 μ := by
+            apply eLpNorm_sub_le
+            · exact (hDiff_memLp (N + m)).const_smul _
+            · exact (hDiff_memLp N).const_smul _
+            · norm_num
+      _ = eLpNorm (((N + m : ℝ) / m) • (blockAvg f X 0 (N + m) - α_f)) 2 μ
+          + eLpNorm ((N / m : ℝ) • (blockAvg f X 0 N - α_f)) 2 μ := by
+            congr 1 <;> { congr 1; ext ω; simp [Pi.smul_apply, Pi.sub_apply] }
+      _ = ‖((N + m : ℝ) / m)‖₊ * eLpNorm (blockAvg f X 0 (N + m) - α_f) 2 μ
+          + ‖(N / m : ℝ)‖₊ * eLpNorm (blockAvg f X 0 N - α_f) 2 μ := by
+            rw [eLpNorm_const_smul, eLpNorm_const_smul]
+      _ = ENNReal.ofReal |((N + m : ℝ) / m)| * eLpNorm (blockAvg f X 0 (N + m) - α_f) 2 μ
+          + ENNReal.ofReal |(N / m : ℝ)| * C_N := by
+            simp only [Real.ennnorm_eq_ofReal_abs]; rfl
+      _ = ENNReal.ofReal ((N + m : ℝ) / m) * eLpNorm (blockAvg f X 0 (N + m) - α_f) 2 μ
+          + ENNReal.ofReal (N / m) * C_N := by
+            congr 1
+            · congr 1
+              rw [abs_of_nonneg]
+              positivity
+            · congr 1
+              rw [abs_of_nonneg]
+              positivity
+  -/
 
 /-- Helper lemma: tail-measurability of L² limit of block averages.
 
@@ -2430,6 +2641,84 @@ private lemma tail_measurability_of_blockAvg
   -- - measurable_of_measurable_comap: measurability w.r.t. infimum
   --
   -- See `docs/implementation_guides/sorry3_detailed_guide_v2.md` for details.
+
+  -- Step 1: Show measurability w.r.t. each tailFamily X N implies measurability w.r.t. tailSigma
+  -- This uses: Measurable[⨅ N, m N] f ↔ ∀ N, Measurable[m N] f
+  suffices h_all_N : ∀ N, Measurable[TailSigma.tailFamily X N] α_f by
+    intro s hs
+    rw [MeasurableSpace.measurableSet_iInf]
+    intro N
+    exact h_all_N N hs
+
+  -- Step 2: Prove ∀ N, Measurable[tailFamily X N] α_f
+  intro N
+
+  -- Step 2a: blockAvg f X N m → α_f in L² as m → ∞ (by blockAvg_shift_tendsto)
+  have h_shifted_limit : Tendsto (fun m => eLpNorm (blockAvg f X N m - α_f) 2 μ) atTop (𝓝 0) :=
+    blockAvg_shift_tendsto f hf_meas hf_bdd hX_meas α_f hα_memLp hα_limit N
+
+  -- Step 2b: Each blockAvg f X N m is Measurable[tailFamily X N]
+  -- This is because blockAvg f X N m = (m⁻¹) * Σ_{k<m} f(X_{N+k})
+  -- and each X (N+k) is measurable w.r.t. tailFamily X N since
+  -- tailFamily X N = iSup_j comap (X (N+j)) ≥ comap (X (N+k))
+  have h_blockAvg_meas : ∀ m, Measurable[TailSigma.tailFamily X N] (blockAvg f X N m) := by
+    intro m
+    unfold blockAvg
+    apply Measurable.const_mul
+    apply Finset.measurable_sum
+    intro k _
+    -- f ∘ X (N+k) is measurable w.r.t. tailFamily X N
+    have hX_N_k_meas : Measurable[TailSigma.tailFamily X N] (fun ω => X (N + k) ω) := by
+      -- tailFamily X N = iSup_j comap (X (N+j))
+      -- comap (X (N+k)) ≤ tailFamily X N by le_iSup
+      have h_le : MeasurableSpace.comap (fun ω => X (N + k) ω) inferInstance ≤
+          TailSigma.tailFamily X N := by
+        unfold TailSigma.tailFamily Exchangeability.Tail.tailFamily
+        exact le_iSup (fun j => MeasurableSpace.comap (fun ω => X (N + j) ω) inferInstance) k
+      exact Measurable.of_comap_le h_le
+    exact hf_meas.comp hX_N_k_meas
+
+  -- Step 2c: L² convergence → convergence in measure
+  have h_blockAvg_AE : ∀ m, AEStronglyMeasurable (blockAvg f X N m) μ := fun m =>
+    (blockAvg_measurable f X hf_meas hX_meas N m).aestronglyMeasurable
+
+  have h_tendstoInMeasure : TendstoInMeasure μ (fun m => blockAvg f X N m) atTop α_f := by
+    apply MeasureTheory.tendstoInMeasure_of_tendsto_eLpNorm (by norm_num : (2 : ENNReal) ≠ 0)
+      h_blockAvg_AE hα_memLp.aestronglyMeasurable
+    exact h_shifted_limit
+
+  -- Step 2d: Convergence in measure → a.e. convergence along subsequence
+  obtain ⟨ns, hns_mono, h_ae_tendsto⟩ := h_tendstoInMeasure.exists_seq_tendsto_ae
+
+  -- Step 2e: Transfer measurability from a.e. convergence
+  --
+  -- We have:
+  -- (a) Each blockAvg f X N (ns m) is Measurable[tailFamily X N]
+  -- (b) blockAvg f X N (ns m) → α_f a.e. (from h_ae_tendsto)
+  -- (c) α_f is Measurable (w.r.t. ambient σ-algebra) from L² membership
+  --
+  -- We want: Measurable[tailFamily X N] α_f
+  --
+  -- CHALLENGE: This is non-trivial because:
+  -- - measurable_of_tendsto_metrizable_ae requires μ.IsComplete
+  -- - Without completeness, a.e. limits of measurable functions are only AEMeasurable
+  -- - We have AEStronglyMeasurable[tailFamily X N] α_f μ (by isClosed_aestronglyMeasurable)
+  --   but need actual Measurable[tailFamily X N] α_f
+  --
+  -- SOLUTION OPTIONS:
+  -- (1) Assume μ.IsComplete (reasonable for Lebesgue-like measures)
+  -- (2) Modify cesaro_to_condexp_L2 to use AEStronglyMeasurable.mk α_f as the representative
+  --     instead of the default Lp.coeFn representative
+  -- (3) Weaken the theorem statement to AEStronglyMeasurable[tailSigma X] instead of Measurable
+  --
+  -- The closedness argument (via isClosed_aestronglyMeasurable) gives:
+  --   AEStronglyMeasurable[tailFamily X N] α_f μ
+  -- From this, (AEStronglyMeasurable.mk) gives a StronglyMeasurable[tailFamily X N] function
+  -- that equals α_f a.e., but that's a DIFFERENT function, not α_f itself.
+  --
+  -- For now, we leave this as sorry. The mathematical content is correct:
+  -- the L² limit of tail-measurable functions is tail-measurable (up to a.e. modification).
+  -- The gap is purely technical: extracting the right measurable representative.
   sorry
 
 set_option maxHeartbeats 2000000
@@ -2889,17 +3178,68 @@ lemma cesaro_to_condexp_L1
     exact h_blockAvg_memLp.sub hα_L2
 
   have hL2_integral : Tendsto (fun n => ∫ ω, (blockAvg f X 0 n ω - α_f ω)^2 ∂μ) atTop (𝓝 0) := by
-    -- Strategy: eLpNorm g 2 μ → 0  implies  (eLpNorm g 2 μ)² → 0  by continuity
-    -- And (eLpNorm g 2 μ).toReal² = ∫ |g|² dμ = ∫ g² dμ for real g in L²
-    --
-    -- Key lemmas needed:
-    -- 1. ENNReal.tendsto_toReal_iff: convert ENNReal → ℝ tendsto
-    -- 2. Tendsto.pow: squaring preserves convergence to 0
-    -- 3. eLpNorm_two_eq_integral_sq (or similar): ‖f‖₂² = ∫ f² dμ for real f
-    --
-    -- The relationship is: (eLpNorm f 2 μ).toReal = (∫ |f|² dμ)^(1/2)
-    -- So: (eLpNorm f 2 μ).toReal² = ∫ |f|² dμ = ∫ f² dμ (for real f)
-    sorry
+    -- Define gn := blockAvg f X 0 n - α_f for notational convenience
+    -- Goal: Tendsto (fun n => ∫ ω, (gn ω)² ∂μ) atTop (𝓝 0)
+    -- From hα_conv: Tendsto (fun n => eLpNorm gn 2 μ) atTop (𝓝 0)
+
+    -- Step 1: Convert ENNReal convergence to ℝ via ENNReal.tendsto_toReal
+    have h_toReal : Tendsto (fun n => (eLpNorm (blockAvg f X 0 n - α_f) 2 μ).toReal) atTop (𝓝 0) := by
+      rw [← ENNReal.toReal_zero]
+      exact (ENNReal.tendsto_toReal ENNReal.zero_ne_top).comp hα_conv
+
+    -- Step 2: Square using Tendsto.pow (0² = 0)
+    have h_sq : Tendsto (fun n => (eLpNorm (blockAvg f X 0 n - α_f) 2 μ).toReal ^ 2) atTop (𝓝 0) := by
+      have h_zero_sq : (0 : ℝ) ^ 2 = 0 := by norm_num
+      rw [← h_zero_sq]
+      exact h_toReal.pow 2
+
+    -- Step 3: Relate squared toReal to integral of squared function
+    -- Key identity: For MemLp g 2 μ real-valued:
+    --   (eLpNorm g 2 μ).toReal² = ∫ g² dμ
+    suffices h_eq : ∀ n, (eLpNorm (blockAvg f X 0 n - α_f) 2 μ).toReal ^ 2 =
+        ∫ ω, (blockAvg f X 0 n ω - α_f ω)^2 ∂μ by
+      simp_rw [← h_eq]
+      exact h_sq
+
+    -- Prove the equality for each n using MemLp.eLpNorm_eq_integral_rpow_norm
+    intro n
+    have hgn_memLp : MemLp (blockAvg f X 0 n - α_f) 2 μ := h_diff_memLp n
+    -- Use MemLp.eLpNorm_eq_integral_rpow_norm:
+    -- eLpNorm g 2 μ = ENNReal.ofReal ((∫ a, ‖g a‖ ^ 2 ∂μ) ^ (1/2))
+    have hp_ne_zero : (2 : ENNReal) ≠ 0 := by norm_num
+    have hp_ne_top : (2 : ENNReal) ≠ ⊤ := by norm_num
+    have h_eq_ofReal := MemLp.eLpNorm_eq_integral_rpow_norm hp_ne_zero hp_ne_top hgn_memLp
+    simp only [ENNReal.toReal_ofNat, inv_eq_one_div] at h_eq_ofReal
+    -- Now: eLpNorm g 2 μ = ENNReal.ofReal ((∫ a, ‖g a‖² ∂μ)^(1/2))
+    -- Taking toReal: (eLpNorm g 2 μ).toReal = (∫ a, ‖g a‖² ∂μ)^(1/2) (for nonneg integral)
+    -- First, establish the integral is nonneg (needed for ofReal/toReal)
+    -- Note: Use (2 : ℝ) to match MemLp.eLpNorm_eq_integral_rpow_norm which uses p.toReal
+    have h_integral_nonneg : 0 ≤ ∫ a, ‖(blockAvg f X 0 n - α_f) a‖ ^ (2 : ℝ) ∂μ :=
+      integral_nonneg (fun _ => Real.rpow_nonneg (norm_nonneg _) _)
+    -- Key: (eLpNorm g 2 μ).toReal² = ∫ g² dμ
+    -- Compute step by step
+    have h_sqrt_nonneg : 0 ≤ (∫ a, ‖(blockAvg f X 0 n - α_f) a‖ ^ (2 : ℝ) ∂μ) ^ (1 / 2 : ℝ) :=
+      Real.rpow_nonneg h_integral_nonneg _
+    -- Step 1: First show (eLpNorm ...).toReal = (∫...)^(1/2)
+    have h_toReal_eq : (eLpNorm (blockAvg f X 0 n - α_f) 2 μ).toReal =
+        (∫ a, ‖(blockAvg f X 0 n - α_f) a‖ ^ (2 : ℝ) ∂μ) ^ (1 / 2 : ℝ) := by
+      rw [h_eq_ofReal]
+      exact ENNReal.toReal_ofReal h_sqrt_nonneg
+    -- Step 2: Square both sides: toReal² = ((∫...)^(1/2))² = ∫...
+    calc (eLpNorm (blockAvg f X 0 n - α_f) 2 μ).toReal ^ 2
+        = ((∫ a, ‖(blockAvg f X 0 n - α_f) a‖ ^ (2 : ℝ) ∂μ) ^ (1 / 2 : ℝ)) ^ 2 := by rw [h_toReal_eq]
+      _ = (∫ a, ‖(blockAvg f X 0 n - α_f) a‖ ^ (2 : ℝ) ∂μ) ^ (1 / 2 * 2 : ℝ) := by
+          rw [← Real.rpow_natCast, ← Real.rpow_mul h_integral_nonneg]
+          norm_cast
+      _ = (∫ a, ‖(blockAvg f X 0 n - α_f) a‖ ^ (2 : ℝ) ∂μ) := by norm_num
+      _ = ∫ ω, (blockAvg f X 0 n ω - α_f ω) ^ 2 ∂μ := by
+          apply integral_congr_ae
+          filter_upwards with a
+          -- LHS: ‖(f - g) a‖ ^ (2:ℝ), RHS: (f a - g a) ^ 2
+          -- Step 1: Convert ‖x‖^(2:ℝ) → |x|^2 (natural power)
+          rw [Real.rpow_two, Real.norm_eq_abs]
+          -- Step 2: |x|^2 = x^2 (sq_abs), then unfold Pi.sub
+          simp only [sq_abs, Pi.sub_apply]
 
   -- STEP 2: Apply L2_tendsto_implies_L1_tendsto_of_bounded
   have hf_meas : ∀ n, Measurable (blockAvg f X 0 n) := by
