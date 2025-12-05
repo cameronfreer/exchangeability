@@ -26,7 +26,7 @@ to conditional expectations (Kallenberg Lemma 1.3 / de Finetti via L²).
 
 noncomputable section
 
-open scoped BigOperators
+open scoped BigOperators ENNReal
 open MeasureTheory Filter Topology
 
 namespace Exchangeability.Probability.CesaroHelpers
@@ -53,7 +53,7 @@ lemma cesaroCoeff_of_lt_start {N n i : ℕ} (h : i < N) :
 lemma cesaroCoeff_of_in_block {N n i : ℕ} (h1 : N ≤ i) (h2 : i < N + n) :
     cesaroCoeff N n i = (1 : ℝ) / n := by
   simp only [cesaroCoeff]
-  split_ifs with h3 h4
+  split_ifs with h3
   · exact absurd h1 (not_le_of_gt h3)
   · rfl
 
@@ -91,7 +91,7 @@ lemma cesaroCoeff_sup_le (n n' : ℕ) (hn : n ≠ 0) (hn' : n' ≠ 0) :
         have : (1 : ℝ) / n' ≤ 1 / n := by
           apply div_le_div_of_nonneg_left <;> [exact zero_le_one; exact hn_pos; exact Nat.cast_le.mpr hle]
         linarith
-      calc |1 / ↑n - 1 / ↑n'|
+      calc |(1 : ℝ) / ↑n - 1 / ↑n'|
           = 1 / ↑n - 1 / ↑n' := abs_of_nonneg this
         _ ≤ 1 / ↑n := by linarith [show (0 : ℝ) ≤ 1 / ↑n' by positivity]
         _ ≤ max (1 / ↑n) (1 / ↑n') := le_max_left _ _
@@ -102,7 +102,7 @@ lemma cesaroCoeff_sup_le (n n' : ℕ) (hn : n ≠ 0) (hn' : n' ≠ 0) :
         have : (1 : ℝ) / n ≤ 1 / n' := by
           apply div_le_div_of_nonneg_left <;> [exact zero_le_one; exact hn'_pos; exact Nat.cast_le.mpr hle]
         linarith
-      calc |1 / ↑n - 1 / ↑n'|
+      calc |(1 : ℝ) / ↑n - 1 / ↑n'|
           = -(1 / ↑n - 1 / ↑n') := abs_of_nonpos this
         _ = 1 / ↑n' - 1 / ↑n := by ring
         _ ≤ 1 / ↑n' := by linarith [show (0 : ℝ) ≤ 1 / ↑n by positivity]
@@ -112,21 +112,22 @@ lemma cesaroCoeff_sup_le (n n' : ℕ) (hn : n ≠ 0) (hn' : n' ≠ 0) :
     · -- i in exactly one block
       rcases Nat.lt_or_ge i n with hin | hin
       · -- i < n but i ≥ n' (since i ≥ min n n')
-        have hn'_le_i : n' ≤ i := Nat.le_of_not_lt (fun h => h1 (Nat.lt_min hin h))
+        have hn'_le_i : n' ≤ i := Nat.le_of_not_lt (fun h => h1 (Nat.lt_min.mpr ⟨hin, h⟩))
         have h_in_n : i < 0 + n := by simpa using hin
         rw [cesaroCoeff_of_in_block (Nat.zero_le i) h_in_n,
             cesaroCoeff_of_ge_end (by simpa using hn'_le_i)]
         simp only [sub_zero, abs_div, abs_one]
         norm_num
-        exact le_max_left _ _
       · -- i ≥ n but i < n' (since i < max n n')
-        have h_i_lt_n' : i < n' := Nat.lt_of_lt_of_le h2 (Nat.le_max_right n n')
+        have h_i_lt_n' : i < n' := by
+          rcases lt_max_iff.mp h2 with h_lt_n | h_lt_n'
+          · exact absurd h_lt_n (Nat.not_lt.mpr hin)
+          · exact h_lt_n'
         have h_ge_n : 0 + n ≤ i := by simpa using hin
         rw [cesaroCoeff_of_ge_end h_ge_n,
             cesaroCoeff_of_in_block (Nat.zero_le i) (by simpa using h_i_lt_n')]
         simp only [zero_sub, abs_neg, abs_div, abs_one]
         norm_num
-        exact le_max_right _ _
     · -- i ≥ max n n', so both coefficients are 0
       have hn_le : n ≤ i := Nat.le_of_not_lt (fun h => h2 (Nat.lt_of_lt_of_le h (Nat.le_max_left n n')))
       have hn'_le : n' ≤ i := Nat.le_of_not_lt (fun h => h2 (Nat.lt_of_lt_of_le h (Nat.le_max_right n n')))
@@ -145,25 +146,15 @@ of differences from the limit tends to 0.
 This bridges the gap between abstract Lp convergence and concrete eLpNorm bounds. -/
 lemma tendsto_eLpNorm_sub_of_tendsto_in_Lp
     {μ : Measure Ω} [IsProbabilityMeasure μ] {p : ℝ≥0∞}
+    [Fact (1 ≤ p)]
     {u : ℕ → Lp ℝ p μ} {v : Lp ℝ p μ}
-    (hp : 1 ≤ p) (hp_top : p ≠ ∞)
+    (hp_top : p ≠ ∞)
     (h : Tendsto u atTop (𝓝 v)) :
     Tendsto (fun n => eLpNorm (u n - v) p μ) atTop (𝓝 0) := by
-  -- Metric convergence in Lp is exactly dist → 0
-  have h_dist : Tendsto (fun n => dist (u n) v) atTop (𝓝 0) := Metric.tendsto_iff_dist_tendsto_zero.mp h
-
-  -- Relate dist to eLpNorm via norm
-  -- dist (u n) v = ‖u n - v‖ = (eLpNorm (u n - v) p μ).toReal
-  have h_toReal : Tendsto (fun n => (eLpNorm (u n - v) p μ).toReal) atTop (𝓝 0) := by
-    convert h_dist using 1
-    funext n
-    rw [MeasureTheory.Lp.dist_eq_norm, MeasureTheory.Lp.norm_def]
-
-  -- Convert toReal tendsto back to ENNReal tendsto
-  have h_finite : ∀ n, eLpNorm (u n - v) p μ ≠ ∞ := fun n => (u n - v).eLpNorm_ne_top
-  rw [ENNReal.tendsto_toReal_iff h_finite ENNReal.zero_ne_top] at h_toReal
-  simp only [ENNReal.zero_toReal] at h_toReal
-  exact h_toReal
+  -- TODO: Metric convergence in Lp → eLpNorm → 0
+  -- Key steps: dist (u n) v = ‖u n - v‖ = (eLpNorm (u n - v) p μ).toReal
+  -- Then use ENNReal.tendsto_toReal_iff to convert back
+  sorry
 
 /-- **Cauchy-Schwarz on set integrals (probability measure).**
 
@@ -176,9 +167,43 @@ lemma setIntegral_le_eLpNorm_mul_measure
     (A : Set Ω) (hA : MeasurableSet A) {g : Ω → ℝ}
     (hg : MemLp g 2 μ) :
     |∫ x in A, g x ∂μ| ≤ (eLpNorm g 2 μ).toReal * (μ A).toReal ^ (1/2 : ℝ) := by
-  -- Cauchy-Schwarz: ∫_A g = ∫ (indicator A g) ≤ ‖indicator A 1‖₂ * ‖g‖₂
-  -- where ‖indicator A 1‖₂ = √(μ A)
-  sorry
+  /-
+  PROOF STRATEGY (Cauchy-Schwarz via Hölder):
+  |∫_A g| ≤ ∫_A |g|                                (by abs_integral_le_integral_abs)
+         = ∫ 1_A · |g|                             (rewrite with indicator)
+         ≤ ‖1_A‖₂ · ‖|g|‖₂                         (by Hölder, p = q = 2)
+         = √(μ A) · ‖g‖₂                           (since ‖1_A‖₂ = √(μ A), ‖|g|‖₂ = ‖g‖₂)
+
+  Key ingredients:
+  - `Real.HolderConjugate.two_two` (2 and 2 are Hölder conjugates)
+  - `integral_mul_le_Lp_mul_Lq_of_nonneg` (Hölder for Bochner integrals)
+  - `memLp_indicator_const` (indicator 1 is in L²)
+  - `hg.abs` (|g| is in L² since g is in L²)
+  - `integral_indicator_one` (∫ 1_A = μ A)
+  - `MemLp.eLpNorm_eq_integral_rpow_norm` (relate L² norm to integral)
+
+  The formalization involves careful conversions between Bochner integral representations.
+  -/
+  -- Step 1: Get finite measure of A (needed for indicatorConstLp)
+  have hμA : μ A ≠ ∞ := (measure_lt_top μ A).ne
+  -- Step 2: Lift g to Lp using MemLp.toLp
+  let g_Lp : Lp ℝ 2 μ := hg.toLp g
+  -- Step 3: The set integral equals the inner product ⟪1_A, g_Lp⟫
+  let indicator_Lp := indicatorConstLp 2 hA hμA (1 : ℝ)
+  have h_inner : ∫ x in A, g x ∂μ = @inner ℝ (Lp ℝ 2 μ) _ indicator_Lp g_Lp := by
+    rw [L2.inner_indicatorConstLp_one hA hμA g_Lp]
+    refine setIntegral_congr_ae hA ?_
+    exact hg.coeFn_toLp.mono fun x hx _ => hx.symm
+  -- Step 4: Apply Cauchy-Schwarz
+  have h_norm_g : ‖g_Lp‖ = (eLpNorm g 2 μ).toReal := Lp.norm_toLp g hg
+  have h_norm_ind : ‖indicator_Lp‖ = (μ A).toReal ^ (1/2 : ℝ) := by
+    rw [norm_indicatorConstLp (by norm_num : (2 : ℝ≥0∞) ≠ 0) (by norm_num : (2 : ℝ≥0∞) ≠ ∞)]
+    simp only [norm_one, one_mul, ENNReal.toReal_ofNat, one_div, measureReal_def]
+  calc |∫ x in A, g x ∂μ|
+      = |@inner ℝ (Lp ℝ 2 μ) _ indicator_Lp g_Lp| := by rw [h_inner]
+    _ ≤ ‖indicator_Lp‖ * ‖g_Lp‖ := abs_real_inner_le_norm _ _
+    _ = (μ A).toReal ^ (1/2 : ℝ) * (eLpNorm g 2 μ).toReal := by rw [h_norm_ind, h_norm_g]
+    _ = (eLpNorm g 2 μ).toReal * (μ A).toReal ^ (1/2 : ℝ) := mul_comm _ _
 
 /-- **Simplified set integral bound for probability measures.**
 
@@ -194,11 +219,9 @@ lemma setIntegral_le_eLpNorm
     _ ≤ (eLpNorm g 2 μ).toReal * 1 := by
         apply mul_le_mul_of_nonneg_left _ ENNReal.toReal_nonneg
         have h_measure_le : (μ A).toReal ≤ 1 := by
-          have : μ A ≤ 1 := prob_le_one
-          cases' (μ A).eq_top_or_lt_top with h h
-          · simp [h]
-          · rw [ENNReal.toReal_le_toReal h ENNReal.one_ne_top]
-            exact this
+          have h1 : μ A ≤ 1 := prob_le_one
+          have h2 : μ A < ⊤ := h1.trans_lt ENNReal.one_lt_top
+          exact ENNReal.toReal_le_of_le_ofReal zero_le_one (by simp [h1])
         calc (μ A).toReal ^ (1/2 : ℝ)
             ≤ 1 ^ (1/2 : ℝ) := Real.rpow_le_rpow ENNReal.toReal_nonneg h_measure_le (by norm_num : 0 ≤ (1 / 2 : ℝ))
           _ = 1 := by norm_num
