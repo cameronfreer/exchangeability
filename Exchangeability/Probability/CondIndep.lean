@@ -563,15 +563,41 @@ lemma condIndep_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
 ## Helper lemmas for bounded measurable extension
 -/
 
-/-- **CE is continuous from L¹ to L¹ (wrapper around mathlib's lemma).** -/
+/-- **CE is continuous from L¹ to L¹ (wrapper around mathlib's lemma).**
+
+Note: This lemma uses pointwise/product topology on `Ω → ℝ` for the output convergence.
+For proper L¹ convergence of conditional expectations, the mathlib approach is to use
+`condExpL1CLM` (conditional expectation as a continuous linear map on L¹ spaces).
+
+The proof strategy is:
+1. **L¹ contraction**: condExp is an L¹ contraction, i.e., `eLpNorm (μ[g|m]) 1 μ ≤ eLpNorm g 1 μ`
+   - In mathlib: `eLpNorm_one_condExp_le_eLpNorm` (in Real.lean)
+2. **Linearity**: `μ[fn n - f | m] =ᵐ[μ] μ[fn n | m] - μ[f | m]` (by `condExp_sub`)
+3. **Apply contraction**: `eLpNorm (μ[fn n | m] - μ[f | m]) 1 μ ≤ eLpNorm (fn n - f) 1 μ → 0`
+4. **Convert norms**: The hypothesis uses lintegral of nnnorm, which equals eLpNorm with exponent 1
+
+The conclusion as stated uses pointwise topology, but the natural convergence mode is L¹.
+For applications, L¹ convergence of condExp is typically what's needed. -/
 lemma tendsto_condexp_L1 {mΩ : MeasurableSpace Ω} (μ : Measure Ω) [IsProbabilityMeasure μ]
     (m : MeasurableSpace Ω) (hm : m ≤ mΩ)
     {fn : ℕ → Ω → ℝ} {f : Ω → ℝ}
     (h_int : ∀ n, Integrable (fn n) μ) (hf : Integrable f μ)
     (hL1 : Filter.Tendsto (fun n => ∫⁻ ω, ‖(fn n) ω - f ω‖₊ ∂μ) Filter.atTop (nhds 0)) :
     Filter.Tendsto (fun n => μ[fn n | m]) Filter.atTop (nhds (μ[f | m])) := by
-  -- Replace with the proper lemma in your mathlib build
-  -- e.g., condexp_tendsto_L1 or use condexpL1 continuity
+  -- PROOF STRATEGY (L¹ contraction argument):
+  -- 1. Use `eLpNorm_one_condExp_le_eLpNorm` to get contraction property
+  -- 2. Use `condExp_sub h_int hf m` to get μ[fn n | m] - μ[f | m] =ᵐ[μ] μ[fn n - f | m]
+  -- 3. Apply contraction: eLpNorm (μ[fn n - f | m]) 1 μ ≤ eLpNorm (fn n - f) 1 μ
+  -- 4. The RHS → 0 by hypothesis (after converting lintegral to eLpNorm)
+  --
+  -- KEY MATHLIB LEMMAS:
+  -- - eLpNorm_one_condExp_le_eLpNorm : eLpNorm (μ[f|m]) 1 μ ≤ eLpNorm f 1 μ
+  -- - condExp_sub : μ[f - g | m] =ᵐ[μ] μ[f | m] - μ[g | m]
+  -- - eLpNorm_one_eq_lintegral_nnnorm : eLpNorm f 1 μ = ∫⁻ a, ‖f a‖₊ ∂μ
+  --
+  -- NOTE: The conclusion's topology (pointwise) may need refinement for full proof.
+  -- The natural result is L¹ convergence of condExp, which can then be lifted
+  -- to ae convergence along a subsequence if needed.
   sorry
 
 /-- **Helper: approximate bounded measurable function by simple functions.** -/
@@ -603,7 +629,25 @@ lemma approx_bounded_measurable (μ : Measure α) [IsProbabilityMeasure μ]
   sorry
 
 /-- **Conditional independence for simple functions (left argument).**
-Refactored to avoid instance pollution: works with σ(W) directly. -/
+Refactored to avoid instance pollution: works with σ(W) directly.
+
+**Note on hypotheses**: This lemma as stated requires ψ to be just measurable, but the
+proof strategy (approximation by simple functions) requires boundedness for domination.
+In all current usage contexts (e.g., `condIndep_bddMeas_extend_left`), ψ is bounded.
+
+**Proof Strategy**:
+1. φ is a simple function, hence bounded: `∃ M, ∀ a, |φ a| ≤ M`
+2. Approximate ψ by simple functions ψₙ (using `approxBounded` or `eapprox`)
+3. For each n: apply `condIndep_simpleFunc μ Y Z W hCI φ ψₙ hY hZ`
+4. Pass to limit using dominated convergence:
+   - The product (φ ∘ Y) * (ψₙ ∘ Z) → (φ ∘ Y) * (ψ ∘ Z) ae
+   - Dominating function: M · |ψ ∘ Z| (needs ψ ∘ Z integrable, implied by boundedness)
+5. Similarly for the RHS products
+
+**Key mathlib lemmas**:
+- `condIndep_simpleFunc` : base case for both simple
+- `tendsto_condExpL1_of_dominated_convergence` : L¹ convergence of condExp
+- `condExp_mul_of_stronglyMeasurable_left` : may help with product structure -/
 lemma condIndep_simpleFunc_left
     {Ω α β γ : Type*}
     {m₀ : MeasurableSpace Ω}  -- Explicit ambient space
@@ -617,9 +661,19 @@ lemma condIndep_simpleFunc_left
     μ[ (φ ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W inferInstance ] =ᵐ[μ]
     μ[ φ ∘ Y | MeasurableSpace.comap W inferInstance ] *
     μ[ ψ ∘ Z | MeasurableSpace.comap W inferInstance ] := by
-  -- Approximate ψ by simple functions, apply condIndep_simpleFunc at each step, pass to limit
-  -- This requires similar approximation machinery as condIndep_bddMeas_extend_left
-  -- For now, we'll leave this as a sorry and implement it after the approximation helpers are done
+  -- PROOF OUTLINE:
+  -- 1. Get bound M for φ: M := (φ.range.sup (fun x => ‖x‖₊)).toReal
+  -- 2. Need to approximate ψ by simple functions and pass to limit
+  -- 3. The approximation requires boundedness of ψ (not in current hypotheses)
+  --
+  -- CURRENT GAP: Lemma statement lacks boundedness hypothesis on ψ.
+  -- In usage context (condIndep_bddMeas_extend_left), ψ is bounded.
+  -- Options:
+  --   (a) Add boundedness hypothesis to lemma statement
+  --   (b) Prove via different technique not requiring approximation
+  --   (c) Defer to stronger `condIndep_bddMeas_extend_left` which has boundedness
+  --
+  -- For now, using sorry as this lemma is used in contexts with boundedness available.
   sorry
 
 /-- **Extend factorization from simple φ to bounded measurable φ, keeping ψ fixed.**
