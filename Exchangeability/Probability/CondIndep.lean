@@ -582,7 +582,24 @@ lemma approx_bounded_measurable (μ : Measure α) [IsProbabilityMeasure μ]
       (∀ n, ∀ᵐ x ∂μ, |fn n x| ≤ M) ∧
       (∀ᵐ x ∂μ, Filter.Tendsto (fun n => (fn n) x) Filter.atTop (nhds (f x))) ∧
       (Filter.Tendsto (fun n => ∫⁻ x, ‖(fn n) x - f x‖₊ ∂μ) Filter.atTop (nhds 0)) := by
-  -- Use SimpleFunc.eapprox or similar from mathlib
+  -- Use StronglyMeasurable.approxBounded which creates bounded simple function approximations
+  --
+  -- PROOF STRATEGY:
+  -- 1. Convert Measurable f to StronglyMeasurable f using hf_meas.stronglyMeasurable
+  -- 2. Use hf_sm.approxBounded M n as the approximating simple functions
+  -- 3. The bound property follows from StronglyMeasurable.norm_approxBounded_le
+  -- 4. Pointwise ae convergence from StronglyMeasurable.tendsto_approxBounded_ae
+  -- 5. L1 convergence via tendsto_lintegral_of_dominated_convergence:
+  --    - Dominating function: constant 2*M (integrable on probability space)
+  --    - Bound: ‖fn n x - f x‖ ≤ ‖fn n x‖ + ‖f x‖ ≤ M + M = 2M
+  --    - ae limit is 0 from pointwise convergence
+  --
+  -- IMPLEMENTATION NOTE: The proof is straightforward but requires careful handling
+  -- of ENNReal/NNReal/Real conversions. The key mathlib lemmas are:
+  -- - StronglyMeasurable.approxBounded
+  -- - StronglyMeasurable.norm_approxBounded_le
+  -- - StronglyMeasurable.tendsto_approxBounded_ae
+  -- - tendsto_lintegral_of_dominated_convergence
   sorry
 
 /-- **Conditional independence for simple functions (left argument).**
