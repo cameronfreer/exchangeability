@@ -1058,7 +1058,8 @@ lemma condIndep_bddMeas_extend_left
         simpa [Real.norm_eq_abs] using
           ae_bdd_condExp_of_ae_bdd (m := mW) (R := ⟨Mφ, hMφ_nn⟩) h_bdd
       -- Apply Integrable.bdd_mul': g integrable, f ae strongly measurable and bounded
-      refine h2.bdd_mul' stronglyMeasurable_condExp.aestronglyMeasurable ?_
+      -- Use h1.aestronglyMeasurable since h1 : Integrable (μ[(φ ∘ Y) | mW]) μ
+      refine h2.bdd_mul' (c := Mφ) h1.aestronglyMeasurable ?_
       filter_upwards [hφY_ce_bdd] with ω hω
       rw [Real.norm_eq_abs]
       exact hω
