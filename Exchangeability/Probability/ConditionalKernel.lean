@@ -460,27 +460,26 @@ theorem condExp_eq_of_joint_law_eq
                     -- E[1_{ξ∈B}|ζ] = E[1_{ξ∈B}|η] ae (conditional independence ξ ⊥ ζ | η)
                     have h_ae_Omega : f =ᵐ[μ] g := by
                       /-
-                      PROOF STRATEGY:
-                      By condDistrib_ae_eq_condExp (for .real versions):
-                        f = K(ζ·)B =ᵐ[μ] E[1_{ξ∈B} | σ(ζ)]  (via K = condDistrib ξ ζ μ)
-                        g = K(η·)B =ᵐ[μ] E[1_{ξ∈B} | σ(η)]  (via K = condDistrib ξ η μ)
+                      PROOF OUTLINE:
+                      1. f =ᵐ E[1_{ξ∈B} | σ(ζ)] via condDistrib_ae_eq_condExp (K = condDistrib ξ ζ μ)
+                      2. g =ᵐ E[1_{ξ∈B} | σ(η)] via condDistrib_ae_eq_condExp (K = condDistrib ξ η μ)
+                      3. From hf_eq_g_on_sigma_eta + hg_sigma_eta_meas: g = E[f | σ(η)] ae
+                         (by ae_eq_condExp_of_forall_setIntegral_eq)
 
-                      The kernel equality h_kernel_eq : condDistrib ξ ζ μ = condDistrib ξ η μ
-                      encodes conditional independence: ξ ⊥ ζ | η. This means:
-                        E[1_{ξ∈B} | σ(ζ)] = E[1_{ξ∈B} | σ(η)] μ-ae.
+                      KEY STEP: h_kernel_eq implies E[1_{ξ∈B} | σ(ζ)] = E[1_{ξ∈B} | σ(η)] ae.
+                      This is because:
+                      - K(γ) = P(ξ|ζ=γ) = P(ξ|η=γ) for ν-ae γ (kernel equality)
+                      - {η=γ} = {ζ ∈ φ⁻¹{γ}}, so P(ξ|η=γ) averages K over the fiber φ⁻¹{γ}
+                      - K(γ) = avg of K over fiber implies K constant on fibers (ae)
+                      - Therefore K(γ)B = K(φγ)B for ν-ae γ
+                      - Pulling back: f = K(ζ·)B = K(φ(ζ·))B = K(η·)B = g ae
 
-                      From hf_eq_g_on_sigma_eta: integrals of f and g agree on all σ(η)-sets.
-                      Combined with g being σ(η)-measurable: g = E[f | σ(η)] ae.
-                      And from above: f = E[1_{ξ∈B} | σ(ζ)] = E[1_{ξ∈B} | σ(η)] = g ae.
-
-                      FORMALIZATION GAP: Formalizing that h_kernel_eq implies conditional
-                      independence requires showing that when condDistrib ξ ζ μ = condDistrib ξ η μ,
-                      the conditional expectations E[· | σ(ζ)] and E[· | σ(η)] coincide ae for
-                      functions of ξ. This is a standard result but not directly available in mathlib.
+                      FORMALIZATION: Formalizing "K(γ) = avg(K) over fiber implies K constant"
+                      requires infrastructure for conditional expectation on Γ (the comap space).
                       -/
-                      -- We use the integral characterization plus measurability.
-                      -- Both f and g have equal integrals on σ(η)-sets, and both are [0,1]-valued.
-                      -- The kernel equality means they must be ae equal.
+                      -- The direct approach: both f and g integrate to μ(T ∩ ξ⁻¹B) on σ(η)-sets,
+                      -- g is σ(η)-measurable, so g = E[f | σ(η)] ae.
+                      -- The kernel equality gives f = E[1_{ξ∈B} | σ(ζ)] = E[1_{ξ∈B} | σ(η)] = g ae.
                       sorry
                     -- Step 3: Push from Ω to Γ via ae_map_iff
                     -- h_ae_Omega: K(ζω)B = K(ηω)B ae[μ], and η = φ ∘ ζ
