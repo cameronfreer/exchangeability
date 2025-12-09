@@ -148,13 +148,16 @@ lemma tendsto_eLpNorm_sub_of_tendsto_in_Lp
     {μ : Measure Ω} [IsProbabilityMeasure μ] {p : ℝ≥0∞}
     [Fact (1 ≤ p)]
     {u : ℕ → Lp ℝ p μ} {v : Lp ℝ p μ}
-    (hp_top : p ≠ ∞)
+    (_hp_top : p ≠ ∞)
     (h : Tendsto u atTop (𝓝 v)) :
     Tendsto (fun n => eLpNorm (u n - v) p μ) atTop (𝓝 0) := by
-  -- TODO: Metric convergence in Lp → eLpNorm → 0
-  -- Key steps: dist (u n) v = ‖u n - v‖ = (eLpNorm (u n - v) p μ).toReal
-  -- Then use ENNReal.tendsto_toReal_iff to convert back
-  sorry
+  -- Use tendsto_Lp_iff_tendsto_eLpNorm' which characterizes Lp convergence
+  have h' := (Lp.tendsto_Lp_iff_tendsto_eLpNorm' u v).mp h
+  -- h' : Tendsto (fun n => eLpNorm (⇑(u n) - ⇑v) p μ) atTop (𝓝 0)
+  -- Goal: Tendsto (fun n => eLpNorm (↑↑(u n - v)) p μ) atTop (𝓝 0)
+  -- These are equal by Lp.coeFn_sub: ↑(u n - v) =ᵐ ↑(u n) - ↑v
+  refine Filter.Tendsto.congr (fun n => ?_) h'
+  exact eLpNorm_congr_ae (Lp.coeFn_sub (u n) v).symm
 
 /-- **Cauchy-Schwarz on set integrals (probability measure).**
 
