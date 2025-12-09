@@ -3972,7 +3972,7 @@ this class of functions and using the separating property, we get the result.
 This lemma directly replaces `condDistrib_of_map_eq_map_and_comap_le`
 at its only point of use. -/
 lemma condexp_indicator_drop_info_of_pair_law_direct
-    {Ω α β : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
+    {Ω α β : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω] [Nonempty Ω]
     [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
     [MeasurableSpace β] [StandardBorelSpace β] [Nonempty β]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
