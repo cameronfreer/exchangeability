@@ -8,22 +8,21 @@
 
 | File | Axioms | Sorries | Status |
 |------|--------|---------|--------|
-| ViaKoopman.lean | 5 | 5 | Main proof file |
+| ViaKoopman.lean | 4 | 5 | Main proof file |
 | ViaKoopman/Infrastructure.lean | 8 | 2 | Dependencies |
 | TheoremViaKoopman.lean | 1 | 0 | Final theorem wrapper |
-| **Total** | **14** | **7** | |
+| **Total** | **13** | **7** | |
 
 ---
 
-## ViaKoopman.lean - 5 Axioms
+## ViaKoopman.lean - 4 Axioms
 
 | Line | Name | Difficulty | Notes |
 |------|------|------------|-------|
 | 296 | `Kernel.IndepFun.ae_measure_indepFun` | Medium | Conditional independence via kernels |
-| 1293 | `optionB_L1_convergence_bounded_fwd` | Hard | L¹ Cesàro convergence for bounded functions |
-| 2380 | `condexp_product_factorization_ax` | Medium | CE product factorization |
-| 2421 | `condexp_product_factorization_general` | Medium | General CE product |
-| 2759 | `exchangeable_implies_ciid_modulo_bridge_ax` | Hard | **Main bridge** to CIID |
+| 1353 | `condexp_product_factorization_ax` | Medium | CE product factorization |
+| 1394 | `condexp_product_factorization_general` | Medium | General CE product |
+| 1732 | `exchangeable_implies_ciid_modulo_bridge_ax` | Hard | **Main bridge** to CIID |
 
 ## ViaKoopman.lean - 5 Sorries
 
@@ -80,6 +79,12 @@
     - `Integrable.mul_of_top_right` for bounded × integrable products
     - `condExp_mul_of_aestronglyMeasurable_right` for pull-out property
 
+- **`optionB_L1_convergence_bounded_fwd`**: Eliminated via file reorganization (5 → 4 axioms)
+  - Forward-declared axiom pattern: axiom at line 1293, proof at line 3809
+  - Moved 1006 lines of code that used the axiom to after the proof
+  - Changed call from axiom to real theorem
+  - No mathematical proof needed - just code reorganization
+
 ---
 
 ## Technical Notes
@@ -108,12 +113,11 @@ Lean's instance resolution can pick `m` instead of `mΩ` for methods like `.stro
 ## Recommended Next Steps
 
 ### High Value Targets
-1. **`condexp_product_factorization_ax`** (line 2380) - Has clear mathlib path via induction
+1. **`condexp_product_factorization_ax`** (line 1353) - Has clear mathlib path via induction
 2. **`Kernel.IndepFun.ae_measure_indepFun`** (line 296) - Standard kernel independence result
 
 ### Lower Priority
 - Infrastructure axioms (may need mathlib contributions)
-- `optionB_L1_convergence_bounded_fwd` (complex convergence argument)
 - `exchangeable_implies_ciid_modulo_bridge_ax` (main theorem bridge)
 
 ---
