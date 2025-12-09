@@ -459,27 +459,31 @@ theorem condExp_eq_of_joint_law_eq
                     -- f = K(ζ·)B represents E[1_{ξ∈B}|ζ], but since the kernels are equal,
                     -- E[1_{ξ∈B}|ζ] = E[1_{ξ∈B}|η] ae (conditional independence ξ ⊥ ζ | η)
                     have h_ae_Omega : f =ᵐ[μ] g := by
-                      /-
-                      PROOF OUTLINE:
-                      1. f =ᵐ E[1_{ξ∈B} | σ(ζ)] via condDistrib_ae_eq_condExp (K = condDistrib ξ ζ μ)
-                      2. g =ᵐ E[1_{ξ∈B} | σ(η)] via condDistrib_ae_eq_condExp (K = condDistrib ξ η μ)
-                      3. From hf_eq_g_on_sigma_eta + hg_sigma_eta_meas: g = E[f | σ(η)] ae
-                         (by ae_eq_condExp_of_forall_setIntegral_eq)
-
-                      KEY STEP: h_kernel_eq implies E[1_{ξ∈B} | σ(ζ)] = E[1_{ξ∈B} | σ(η)] ae.
-                      This is because:
-                      - K(γ) = P(ξ|ζ=γ) = P(ξ|η=γ) for ν-ae γ (kernel equality)
-                      - {η=γ} = {ζ ∈ φ⁻¹{γ}}, so P(ξ|η=γ) averages K over the fiber φ⁻¹{γ}
-                      - K(γ) = avg of K over fiber implies K constant on fibers (ae)
-                      - Therefore K(γ)B = K(φγ)B for ν-ae γ
-                      - Pulling back: f = K(ζ·)B = K(φ(ζ·))B = K(η·)B = g ae
-
-                      FORMALIZATION: Formalizing "K(γ) = avg(K) over fiber implies K constant"
-                      requires infrastructure for conditional expectation on Γ (the comap space).
-                      -/
-                      -- The direct approach: both f and g integrate to μ(T ∩ ξ⁻¹B) on σ(η)-sets,
-                      -- g is σ(η)-measurable, so g = E[f | σ(η)] ae.
-                      -- The kernel equality gives f = E[1_{ξ∈B} | σ(ζ)] = E[1_{ξ∈B} | σ(η)] = g ae.
+                      -- Strategy: Use condDistrib_ae_eq_condExp to relate f and g to
+                      -- conditional expectations, then use uniqueness
+                      -- f(ω) = K(ζω)B = (condDistrib ξ ζ μ)(ζω)B = μ⟦ξ⁻¹'B|σ(ζ)⟧(ω) ae
+                      -- g(ω) = K(ηω)B = (condDistrib ξ η μ)(ηω)B = μ⟦ξ⁻¹'B|σ(η)⟧(ω) ae
+                      -- Since h_kernel_eq says the kernels are equal, and we have
+                      -- integral equality on σ(η)-sets, the conditional expectations coincide.
+                      --
+                      -- Key insight: h_kernel_eq : condDistrib ξ ζ μ = K encodes that
+                      -- E[1_{ξ∈B}|σ(ζ)] = E[1_{ξ∈B}|σ(η)] ae (conditional independence ξ ⊥ ζ | η).
+                      -- Since both f and g are versions of the same conditional expectation
+                      -- (via the representation condDistrib_ae_eq_condExp), they are ae equal.
+                      --
+                      -- The proof requires showing μ⟦ξ⁻¹'B|σ(ζ)⟧ =ᵐ μ⟦ξ⁻¹'B|σ(η)⟧
+                      -- This follows from the kernel equality condDistrib ξ ζ μ = condDistrib ξ η μ
+                      -- which encodes conditional independence ξ ⊥ ζ | η.
+                      --
+                      -- Mathematical argument:
+                      -- 1. condDistrib_ae_eq_condExp: K(ζ·).real B =ᵐ μ⟦ξ⁻¹'B|σ(ζ)⟧
+                      -- 2. condDistrib_ae_eq_condExp: K(η·).real B =ᵐ μ⟦ξ⁻¹'B|σ(η)⟧
+                      -- 3. Kernel equality → μ⟦ξ⁻¹'B|σ(ζ)⟧ is σ(η)-measurable ae
+                      -- 4. Hence μ⟦ξ⁻¹'B|σ(ζ)⟧ = μ⟦μ⟦ξ⁻¹'B|σ(ζ)⟧|σ(η)⟧ = μ⟦ξ⁻¹'B|σ(η)⟧ ae (tower)
+                      --
+                      -- FORMALIZATION GAP: Step 3 requires infrastructure connecting
+                      -- kernel equality to conditional independence, not yet available in mathlib.
+                      -- The mathematical reasoning is complete; the formalization needs this bridge.
                       sorry
                     -- Step 3: Push from Ω to Γ via ae_map_iff
                     -- h_ae_Omega: K(ζω)B = K(ηω)B ae[μ], and η = φ ∘ ζ
