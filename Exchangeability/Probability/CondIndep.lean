@@ -964,16 +964,30 @@ lemma condIndep_bddMeas_extend_left
 
       -- Step 3: Use bounded multiplication to show product converges in L¹, then get set integral convergence
       --
-      -- Strategy: h_L1_conv gives Lp convergence of condExpL1, which is equivalent to eLpNorm convergence:
-      --   ‖condExpL1 ((sφ n) ∘ Y) - condExpL1 (φ ∘ Y)‖₁ → 0
+      -- PROOF STRATEGY (Hölder + L¹ convergence):
       --
-      -- Combined with hψZ_bdd (ψZ term is essentially bounded by Mψ), we get:
-      --   ‖(condExpL1 ((sφ n) ∘ Y) - condExpL1 (φ ∘ Y)) * condExpL1 (ψ ∘ Z)‖₁ → 0
-      -- by Hölder's inequality with L¹ and L^∞ (since ‖f*g‖₁ ≤ ‖f‖₁ * ‖g‖_∞).
+      -- 1. h_L1_conv gives L¹ convergence: condExpL1 ((sφ n) ∘ Y) → condExpL1 (φ ∘ Y) in L¹
+      --    This is equivalent to: ‖condExpL1 ((sφ n) ∘ Y) - condExpL1 (φ ∘ Y)‖₁ → 0
       --
-      -- Then use tendsto_setIntegral_of_L1 to get the desired set integral convergence.
-      sorry  -- TODO: Use tendsto_Lp_iff_tendsto_eLpNorm', eLpNorm_le_eLpNorm_mul_eLpNorm_top,
-             -- and tendsto_setIntegral_of_L1' to complete
+      -- 2. Convert to conditional expectation (function) convergence using condExp_ae_eq_condExpL1:
+      --    μ[(sφ n ∘ Y) | mW] =ᵐ[μ] condExpL1 hmW_le μ ((sφ n) ∘ Y)
+      --
+      -- 3. For products, use Hölder's inequality: ‖f * g‖₁ ≤ ‖f‖₁ * ‖g‖_∞
+      --    Since hψZ_bdd gives: |μ[(ψ ∘ Z) | mW]| ≤ Mψ ae, we have ‖μ[(ψ ∘ Z) | mW]‖_∞ ≤ Mψ
+      --    Thus: ‖(μ[(sφ n ∘ Y) | mW] - μ[(φ ∘ Y) | mW]) * μ[(ψ ∘ Z) | mW]‖₁
+      --        ≤ ‖μ[(sφ n ∘ Y) | mW] - μ[(φ ∘ Y) | mW]‖₁ * Mψ → 0
+      --
+      -- 4. Apply tendsto_setIntegral_of_L1 to get set integral convergence from L¹ convergence
+      --
+      -- KEY MATHLIB LEMMAS:
+      -- - condExp_ae_eq_condExpL1 : μ[f|m] =ᵐ[μ] condExpL1 hm μ f
+      -- - eLpNorm_mul_le : Hölder for products (or Integrable.bdd_mul variants)
+      -- - tendsto_setIntegral_of_L1 : L¹ convergence → set integral convergence
+      -- - tendsto_Lp_iff_tendsto_eLpNorm' : convert Lp convergence to eLpNorm
+      --
+      -- IMPLEMENTATION NOTE: The main complexity is managing the ae equivalences and
+      -- converting between condExpL1 (in L¹ space) and condExp (as functions).
+      sorry
 
     -- Conclude by uniqueness of limits
     -- Since h_int_n shows the sequences are equal for all n, and both converge, their limits are equal
@@ -1032,8 +1046,22 @@ lemma condIndep_bddMeas_extend_left
     have h2 : Integrable (μ[(ψ ∘ Z) | mW]) μ := integrable_condExp
     -- Product of integrable functions is integrable on whole space (finite measure)
     have hprod : Integrable (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) μ := by
-      -- Use Hölder: on finite measure, L¹ × L¹ ⊆ L¹
-      sorry  -- TODO: Need Memℒp.mul or similar for finite measure spaces
+      -- Use Integrable.bdd_mul': product of integrable and bounded ae functions is integrable
+      -- First, establish that μ[φ ∘ Y|mW] is bounded ae by Mφ
+      have hMφ_nn : 0 ≤ Mφ := by
+        rcases hφ_bdd.exists with ⟨ω, hω⟩
+        exact (abs_nonneg _).trans hω
+      have hφY_ce_bdd : ∀ᵐ ω ∂μ, |μ[(φ ∘ Y) | mW] ω| ≤ Mφ := by
+        have h_bdd : ∀ᵐ ω ∂μ, |(φ ∘ Y) ω| ≤ (⟨Mφ, hMφ_nn⟩ : NNReal) := by
+          filter_upwards [hφ_bdd] with ω hω
+          simpa using hω
+        simpa [Real.norm_eq_abs] using
+          ae_bdd_condExp_of_ae_bdd (m := mW) (R := ⟨Mφ, hMφ_nn⟩) h_bdd
+      -- Apply Integrable.bdd_mul': g integrable, f ae strongly measurable and bounded
+      refine h2.bdd_mul' stronglyMeasurable_condExp.aestronglyMeasurable ?_
+      filter_upwards [hφY_ce_bdd] with ω hω
+      rw [Real.norm_eq_abs]
+      exact hω
     -- Product integrable on whole space implies integrable on subset
     exact hprod.integrableOn
 
