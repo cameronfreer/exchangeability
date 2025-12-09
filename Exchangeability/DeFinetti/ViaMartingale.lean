@@ -1239,6 +1239,13 @@ lemma condIndep_of_triple_law
     have hU_meas : AEStronglyMeasurable[𝔾] U μ := stronglyMeasurable_condExp.aestronglyMeasurable
     have hV_meas : AEStronglyMeasurable[𝔾] V μ := stronglyMeasurable_condExp.aestronglyMeasurable
 
+    -- Step 3b: Integrability of conditional expectations (for later use)
+    have hU_int : Integrable U μ := hU_def ▸ integrable_condExp
+    have hV_int : Integrable V μ := hV_def ▸ integrable_condExp
+
+    -- Step 3c: 𝔾 ≤ ambient measurable space (follows from Measurable W)
+    have h𝔾_le : 𝔾 ≤ _ := measurable_iff_comap_le.mp hW
+
     -- Step 4: h_test_fn already proved earlier (before 𝔾 binding) to avoid instance pollution
 
     -- Step 5: The core L² argument: prove E[φ ψ|σ(W)] = U·V
@@ -1443,19 +1450,25 @@ lemma condIndep_of_triple_law
     -- Their conditional expectations given 𝔾 are zero
     have hφ0_ce : μ[φ0 | 𝔾] =ᵐ[μ] 0 := by
       rw [hφ0_def]
-      have : μ[φ - U | 𝔾] =ᵐ[μ] μ[φ | 𝔾] - μ[U | 𝔾] := condExp_sub hφ_int integrable_condExp
-      simp only [this, hU_def]
-      have : μ[U | 𝔾] =ᵐ[μ] U := condExp_of_stronglyMeasurable stronglyMeasurable_condExp integrable_condExp
-      simp only [this]
-      filter_upwards with ω; simp
+      have hsub : μ[φ - U | 𝔾] =ᵐ[μ] μ[φ | 𝔾] - μ[U | 𝔾] := condExp_sub hφ_int hU_int 𝔾
+      -- condExp_of_stronglyMeasurable: μ[U | 𝔾] = U (definitional equality)
+      have hce : μ[U | 𝔾] = U := condExp_of_stronglyMeasurable h𝔾_le stronglyMeasurable_condExp hU_int
+      -- Combine: μ[φ | 𝔾] - μ[U | 𝔾] = μ[φ | 𝔾] - U = U - U = 0
+      calc μ[φ - U | 𝔾]
+          =ᵐ[μ] μ[φ | 𝔾] - μ[U | 𝔾] := hsub
+        _ = μ[φ | 𝔾] - U := by rw [hce]
+        _ = U - U := by rw [← hU_def]
+        _ = 0 := by ring
 
     have hψ0_ce : μ[ψ0 | 𝔾] =ᵐ[μ] 0 := by
       rw [hψ0_def]
-      have : μ[ψ - V | 𝔾] =ᵐ[μ] μ[ψ | 𝔾] - μ[V | 𝔾] := condExp_sub hψ_int integrable_condExp
-      simp only [this, hV_def]
-      have : μ[V | 𝔾] =ᵐ[μ] V := condExp_of_stronglyMeasurable stronglyMeasurable_condExp integrable_condExp
-      simp only [this]
-      filter_upwards with ω; simp
+      have hsub : μ[ψ - V | 𝔾] =ᵐ[μ] μ[ψ | 𝔾] - μ[V | 𝔾] := condExp_sub hψ_int hV_int 𝔾
+      have hce : μ[V | 𝔾] = V := condExp_of_stronglyMeasurable h𝔾_le stronglyMeasurable_condExp hV_int
+      calc μ[ψ - V | 𝔾]
+          =ᵐ[μ] μ[ψ | 𝔾] - μ[V | 𝔾] := hsub
+        _ = μ[ψ | 𝔾] - V := by rw [hce]
+        _ = V - V := by rw [← hV_def]
+        _ = 0 := by ring
 
     -- **Vanishing integral 1**: ∫_S U*ψ₀ = 0 for all 𝔾-measurable S
     -- Since U is 𝔾-measurable and μ[ψ₀|𝔾] = 0
