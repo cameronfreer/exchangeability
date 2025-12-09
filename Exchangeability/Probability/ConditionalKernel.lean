@@ -460,28 +460,27 @@ theorem condExp_eq_of_joint_law_eq
                     -- E[1_{ξ∈B}|ζ] = E[1_{ξ∈B}|η] ae (conditional independence ξ ⊥ ζ | η)
                     have h_ae_Omega : f =ᵐ[μ] g := by
                       /-
-                      PROOF STRATEGY (Option 3 from user):
-                      From hf_eq_g_on_sigma_eta: ∫ f dμ = ∫ g dμ on all σ(η)-measurable sets.
-                      g is σ(η)-measurable.
-                      By uniqueness of conditional expectation:
-                        - g = E[f | σ(η)] ae (since g has the same integrals as f on σ(η)-sets)
-                      But also:
-                        - f = K(ζ·)B and g = K(η·)B with h_kernel_eq : condDistrib ξ ζ μ = K
-                        - This encodes conditional independence: E[f | σ(ζ)] = E[f | σ(η)] ae
-                      Since f is already σ(ζ)-measurable (f = K(ζ·)B) and σ(η) ⊆ σ(ζ):
-                        - If E[f | σ(ζ)] = E[f | σ(η)] ae, then f = E[f | σ(η)] ae
-                        - Therefore f = g ae
+                      PROOF STRATEGY:
+                      By condDistrib_ae_eq_condExp (for .real versions):
+                        f = K(ζ·)B =ᵐ[μ] E[1_{ξ∈B} | σ(ζ)]  (via K = condDistrib ξ ζ μ)
+                        g = K(η·)B =ᵐ[μ] E[1_{ξ∈B} | σ(η)]  (via K = condDistrib ξ η μ)
+
+                      The kernel equality h_kernel_eq : condDistrib ξ ζ μ = condDistrib ξ η μ
+                      encodes conditional independence: ξ ⊥ ζ | η. This means:
+                        E[1_{ξ∈B} | σ(ζ)] = E[1_{ξ∈B} | σ(η)] μ-ae.
+
+                      From hf_eq_g_on_sigma_eta: integrals of f and g agree on all σ(η)-sets.
+                      Combined with g being σ(η)-measurable: g = E[f | σ(η)] ae.
+                      And from above: f = E[1_{ξ∈B} | σ(ζ)] = E[1_{ξ∈B} | σ(η)] = g ae.
+
+                      FORMALIZATION GAP: Formalizing that h_kernel_eq implies conditional
+                      independence requires showing that when condDistrib ξ ζ μ = condDistrib ξ η μ,
+                      the conditional expectations E[· | σ(ζ)] and E[· | σ(η)] coincide ae for
+                      functions of ξ. This is a standard result but not directly available in mathlib.
                       -/
-                      -- Direct proof: ae equality from lintegral equality on σ(η)-sets
-                      -- Both f and g are bounded [0,1] measurable functions with same integrals
-                      -- on a generating π-system of σ(η)
-                      -- By ae_eq_of_forall_setLIntegral_eq_of_sigmaFinite (or similar), f =ᵐ[μ] g
-                      -- Since g is σ(η)-measurable and f has same integrals as g on σ(η)-sets,
-                      -- and f is σ(ζ)-measurable with σ(η) ⊆ σ(ζ), we get f = g ae.
-                      -- This is a consequence of the kernel equality encoding conditional independence.
-                      -- For now, we leave this as a sorry and document the proof strategy.
-                      -- The complete proof requires formalizing that h_kernel_eq implies
-                      -- conditional independence ξ ⊥ ζ | η, which makes f = E[f|σ(η)] = g ae.
+                      -- We use the integral characterization plus measurability.
+                      -- Both f and g have equal integrals on σ(η)-sets, and both are [0,1]-valued.
+                      -- The kernel equality means they must be ae equal.
                       sorry
                     -- Step 3: Push from Ω to Γ via ae_map_iff
                     -- h_ae_Omega: K(ζω)B = K(ηω)B ae[μ], and η = φ ∘ ζ
