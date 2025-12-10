@@ -646,22 +646,14 @@ lemma approx_bounded_measurable (μ : Measure α) [IsProbabilityMeasure μ]
     -- Property 2: Pointwise ae convergence
     · exact hf_sm.tendsto_approxBounded_ae hf_bdd'
     -- Property 3: L¹ convergence via dominated convergence
-    · -- The approximations converge ae and are uniformly bounded, so L¹ convergence follows
-      -- by dominated convergence with dominating function 2*M (constant, integrable on prob space)
-      --
-      -- PROOF STRATEGY (tendsto_lintegral_of_dominated_convergence):
-      -- 1. F n x := ‖approxBounded M n x - f x‖₊ : ℕ → α → ℝ≥0∞
-      -- 2. Bound: F n ≤ᵐ 2*M (triangle inequality + both bounded by M)
-      -- 3. Limit: F n x → 0 ae (from tendsto_approxBounded_ae + continuity of norm)
-      -- 4. Dominator integrable: ∫⁻ 2*M ∂μ < ∞ on probability space
-      --
-      -- The ENNReal/NNReal conversion requires careful handling of:
-      -- - Real.toNNReal for the constant bound
-      -- - nnnorm vs norm for the difference
-      -- - ENNReal.coe for the coercion
-      --
-      -- This is a standard dominated convergence argument. Left as sorry for now
-      -- due to ENNReal arithmetic complexity.
+    · -- PROOF OUTLINE using tendsto_lintegral_of_dominated_convergence:
+      -- F n x := (‖approxBounded M n x - f x‖₊ : ℝ≥0∞), bound = 2*M, limit = 0
+      -- 1. Measurability: F n measurable via .enorm
+      -- 2. ae bound: F n ≤ 2*M via triangle + both bounded by M
+      -- 3. ae limit: F n → 0 from tendsto_approxBounded_ae + norm continuity
+      -- 4. Dominator finite: ∫⁻ 2*M = 2*M*μ(univ) = 2*M < ⊤
+      -- Then ∫⁻ F n → ∫⁻ 0 = 0
+      -- Type coercions between ℝ/ℝ≥0/ℝ≥0∞ require careful handling.
       sorry
   · -- Case M < 0: contradiction since |f x| ≥ 0 > M always
     -- The hypothesis hf_bdd : ∀ᵐ x ∂μ, |f x| ≤ M with M < 0 is impossible
