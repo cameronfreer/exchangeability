@@ -302,22 +302,26 @@ If the n-th crossing completes before time N, then n < N. -/
 lemma upperCrossingTime_lt_imp_index_lt {Ω : Type*} {a b : ℝ} {f : ℕ → Ω → ℝ} {N : ℕ} {n : ℕ} {ω : Ω}
     (hab : a < b) (h : upperCrossingTime a b f N n ω < N) :
     n < N := by
-  -- Use induction to show n ≤ upperCrossingTime n, then n ≤ upperCrossingTime n < N gives n < N
+  -- Key insight: upperCrossingTime is strictly increasing on {k | upperCrossingTime k < N}
+  -- Therefore k ≤ upperCrossingTime k for such k, giving us k < N.
+  --
+  -- We prove by strong induction: n ≤ upperCrossingTime n when upperCrossingTime n < N,
+  -- which combined with upperCrossingTime n < N gives n < N.
+  suffices h_le : n ≤ upperCrossingTime a b f N n ω by omega
   induction n with
-  | zero => omega
+  | zero =>
+    -- upperCrossingTime 0 = 0, so 0 ≤ 0
+    simp only [upperCrossingTime_zero, Pi.bot_apply, bot_eq_zero', le_refl]
   | succ n ih =>
-    -- We have upperCrossingTime (n+1) < N and need n+1 < N
-    -- By IH: upperCrossingTime n < N → n < N
-    -- We have: upperCrossingTime n ≤ upperCrossingTime (n+1) < N, so upperCrossingTime n < N
-    -- By IH: n < N, so n+1 ≤ N
-    -- Actually we need n+1 < N, not just n+1 ≤ N
-    have h_n : upperCrossingTime a b f N n ω < N :=
-      lt_of_le_of_lt (upperCrossingTime_mono (Nat.le_succ n)) h
-    have ih_n : n < N := ih h_n
-    -- So n < N, which gives n+1 ≤ N
-    -- We want n+1 < N, but we only have n+1 ≤ N
-    -- Actually, we can use: upperCrossingTime (n+1) < N and n+1 ≤ upperCrossingTime (n+1)
-    sorry  -- This approach isn't working
+    -- By IH: n ≤ upperCrossingTime n when upperCrossingTime n < N
+    -- By upperCrossingTime_lt_succ: upperCrossingTime n < upperCrossingTime (n+1) when latter ≠ N
+    -- Combining: n < upperCrossingTime (n+1), so n+1 ≤ upperCrossingTime (n+1)
+    have h_neN : upperCrossingTime a b f N (n + 1) ω ≠ N := ne_of_lt h
+    have h_strict : upperCrossingTime a b f N n ω < upperCrossingTime a b f N (n + 1) ω :=
+      upperCrossingTime_lt_succ hab h_neN
+    have h_n_lt : upperCrossingTime a b f N n ω < N := lt_trans h_strict h
+    have ih_n : n ≤ upperCrossingTime a b f N n ω := ih h_n_lt
+    omega
 
 /-- **One-way inequality**: upcrossings ≤ downcrossings of time-reversed process.
 
