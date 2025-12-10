@@ -377,11 +377,33 @@ lemma upBefore_le_downBefore_rev
                 {n | upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) N n ω < N} := by
       intro n hn
       simp only [Set.mem_setOf_eq] at hn ⊢
-      -- This is where the combinatorial injection happens:
-      -- The greedy algorithm for X on [a,b] yields n complete pairs before N
-      -- The time-reversal map (τ,σ) ↦ (N-σ, N-τ) sends these to downcrossing pairs
-      -- Since the map preserves disjointness, rev X has at least n downcrossings
-      sorry  -- This is the pathwise combinatorial argument
+      -- **PROOF GAP**: Pathwise combinatorial argument for time-reversal of crossings
+      --
+      -- What we need to show:
+      --   If X has n complete upcrossings [a→b] before time N,
+      --   then negProcess(revProcess X N) has n complete upcrossings [-b→-a] before N.
+      --
+      -- Mathematical argument:
+      -- 1. Let (τ₁,σ₁), ..., (τₙ,σₙ) be the greedy upcrossing pairs for X on [a,b].
+      --    - Each pair has 0 ≤ τₖ < σₖ ≤ N
+      --    - X(τₖ) ≤ a and X(σₖ) ≥ b
+      --    - Pairs are disjoint and ordered: σₖ ≤ τₖ₊₁
+      --
+      -- 2. Time reversal map: (τ,σ) ↦ (N-σ, N-τ)
+      --    - revProcess X N at time t equals X(N-t)
+      --    - So revProcess at N-σₖ has value X(σₖ) ≥ b
+      --    - And revProcess at N-τₖ has value X(τₖ) ≤ a
+      --    - This gives a DOWNcrossing [b→a] for revProcess
+      --
+      -- 3. Negation: negProcess Y at t equals -Y(t)
+      --    - DOWNcrossing [b→a] of Y becomes UPcrossing [-b→-a] of -Y
+      --
+      -- 4. Combining: The n pairs map to n disjoint upcrossing pairs [-b→-a]
+      --    for negProcess(revProcess X N), proving the subset inclusion.
+      --
+      -- Technical challenge: Proving this requires detailed manipulation of
+      -- hitting times and upperCrossingTime recursive structure.
+      sorry
 
     exact csSup_le_csSup hbdd2 hemp hsub
   · -- If no upcrossings, sSup = 0
