@@ -47,7 +47,7 @@
 
 ## Recently Completed Conversions
 
-### 2025-12-10 (Session 5) - Base Cases and Build Fix
+### 2025-12-10 (Session 5) - Base Cases, Build Fix, and Documentation
 
 **Base cases proven for product factorization:**
 
@@ -58,6 +58,13 @@
 - **`condexp_product_factorization_general`** base case (m=0): Same approach
 
 **Build status**: Build now completes successfully with no errors (6428 jobs).
+
+**Comprehensive implementation notes added** to preserve proof strategies:
+- ViaKoopman.lean: Detailed inductive step structure for product factorization
+- Infrastructure.lean: Analysis of natural extension and lag-constancy challenges
+- TheoremViaKoopman.lean: Options for reusing existing equivalence theorem
+
+See commit `81922aa` for full details.
 
 ### 2025-12-10 (Session 4) - Major Bridge Lemma
 
