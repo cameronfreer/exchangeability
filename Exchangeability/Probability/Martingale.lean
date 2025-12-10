@@ -649,7 +649,17 @@ lemma condExp_exists_ae_limit_antitone
 
     -- Get uniform bound on expected upcrossings from time-reversed martingales
     have hab' : (↑a : ℝ) < (↑b : ℝ) := Rat.cast_lt.2 hab
-    obtain ⟨C, h_C_finite, hC⟩ := upcrossings_bdd_uniform h_antitone h_le f hf (↑a) (↑b) hab'
+    -- Get bound for upcrossings (forward direction)
+    obtain ⟨C_up, h_C_up_finite, hC_up⟩ := upcrossings_bdd_uniform h_antitone h_le f hf (↑a) (↑b) hab'
+    -- Get bound for downcrossings via negated process (backward direction)
+    have hab_neg : -(↑b : ℝ) < -(↑a : ℝ) := by linarith
+    obtain ⟨C_down, h_C_down_finite, hC_down⟩ := upcrossings_bdd_uniform h_antitone h_le
+        (fun ω => -f ω) hf.neg (-↑b) (-↑a) hab_neg
+    -- Use max of both bounds as the uniform constant
+    set C := max C_up C_down with hC_def
+    have h_C_finite : C < ⊤ := max_lt h_C_up_finite h_C_down_finite
+    have hC : ∀ N, ∫⁻ ω, (upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω) ∂μ ≤ C :=
+      fun N => (hC_up N).trans (le_max_left _ _)
 
     -- Establish relationship between original and reversed sequence upcrossings
     -- Key: upcrossingsBefore (original, N) ≤ upcrossings (reversed_at_N)
@@ -724,18 +734,31 @@ lemma condExp_exists_ae_limit_antitone
             --
             -- The constant C' would be similar to C (same L¹ norm, same gap b-a).
             --
-            -- CLEANER APPROACH (avoids downcrossings entirely):
-            -- 1. Call upcrossings_bdd_uniform with (-f) and interval [-b,-a] at the start
-            --    to get bound C' directly for upcrossings(-b,-a, revCEFinite(-f))
-            -- 2. Prove helper lemma: revCEFinite (-f) = negProcess (revCEFinite f)
-            --    using linearity of conditional expectation (condExp_neg)
-            -- 3. Then the integrand here is exactly upcrossings(-b,-a, negProcess(revCEFinite f))
-            --    which equals upcrossings(-b,-a, revCEFinite(-f)) by step 2
-            -- 4. Apply the C' bound from step 1
+            -- Use the C_down bound obtained earlier from upcrossings_bdd_uniform for -f on [-b,-a]
+            -- downcrossings(a,b,X) = upcrossings(-b,-a,-X) by up_neg_flip_eq_down
+            -- negProcess(revCEFinite f) = revCEFinite(-f) by negProcess_revCEFinite_eq
+
+            -- Rewrite downcrossings as upcrossings of negated process
+            -- Key identity: downcrossings(a,b,X) = upcrossings(-b,-a,-X) by up_neg_flip_eq_down
+            -- And: negProcess(revCEFinite f) = revCEFinite(-f) a.e. by condExp_neg
             --
-            -- This avoids the need to reason about downcrossings and Doob's inequality
-            -- for the negated process - all the work is already in upcrossings_bdd_uniform.
-            sorry
+            -- Technical note: condExp_neg gives a.e. equality, so the processes may differ
+            -- on a null set. However, since upcrossings is measurable and the integrals agree
+            -- for a.e.-equal functions, the integral bound still holds.
+            calc ∫⁻ ω, downcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω ∂μ
+                = ∫⁻ ω, upcrossings (-↑b) (-↑a) (negProcess (fun n => revCEFinite (μ := μ) f 𝔽 N n)) ω ∂μ := by
+                    simp only [up_neg_flip_eq_down]
+              _ = ∫⁻ ω, upcrossings (-↑b) (-↑a) (fun n => revCEFinite (μ := μ) (fun x => -f x) 𝔽 N n) ω ∂μ := by
+                    -- negProcess(revCEFinite f) = revCEFinite(-f) a.e. by condExp_neg
+                    -- The processes agree a.e., so their upcrossings agree a.e., hence integrals equal
+                    congr 1
+                    ext ω n
+                    simp only [negProcess, Pi.neg_apply, revCEFinite]
+                    -- Need: -(μ[f | 𝔽 (N - n)]) ω = μ[-f | 𝔽 (N - n)] ω
+                    -- This requires condExp_neg which gives a.e. equality
+                    sorry -- TODO: lift condExp_neg a.e. equality to upcrossings
+              _ ≤ C_down := hC_down N
+              _ ≤ C := le_max_right C_up C_down
 
     -- Use monotone convergence on the ORIGINAL process (which IS monotone in N)
     have h_exp_orig : ∫⁻ ω, upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω ∂μ ≤ C := by
