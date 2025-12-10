@@ -401,8 +401,15 @@ lemma upBefore_le_downBefore_rev
       -- 4. Combining: The n pairs map to n disjoint upcrossing pairs [-b→-a]
       --    for negProcess(revProcess X N), proving the subset inclusion.
       --
-      -- Technical challenge: Proving this requires detailed manipulation of
-      -- hitting times and upperCrossingTime recursive structure.
+      -- RECOMMENDED APPROACH: Factor out a helper lemma:
+      --
+      -- lemma upperCrossingTime_rev_neg_lt (X : ℕ → Ω → ℝ) {a b : ℝ} (hab : a < b) (N : ℕ)
+      --     (ω : Ω) (n : ℕ) (hn : upperCrossingTime a b X N n ω < N) :
+      --     upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) N n ω < N
+      --
+      -- Prove by induction on n using the recursive structure of upperCrossingTime.
+      -- The key insight: time reversal swaps "hit ≤a after hitting ≥b" with
+      -- "hit ≥b before hitting ≤a", and negation flips the thresholds.
       sorry
 
     exact csSup_le_csSup hbdd2 hemp hsub
@@ -716,10 +723,18 @@ lemma condExp_exists_ae_limit_antitone
             -- 4. Apply upcrossings_bdd_uniform to get bound C' for upcrossings(-b,-a,-revCEFinite)
             --
             -- The constant C' would be similar to C (same L¹ norm, same gap b-a).
-            -- Alternatively, use the fact that hC bounds upcrossings(a,b,revCEFinite),
-            -- and show upcrossings(-b,-a,-X) ≤ upcrossings(a,b,X) + 1 (alternation).
             --
-            -- For now, leaving as sorry due to setup complexity.
+            -- CLEANER APPROACH (avoids downcrossings entirely):
+            -- 1. Call upcrossings_bdd_uniform with (-f) and interval [-b,-a] at the start
+            --    to get bound C' directly for upcrossings(-b,-a, revCEFinite(-f))
+            -- 2. Prove helper lemma: revCEFinite (-f) = negProcess (revCEFinite f)
+            --    using linearity of conditional expectation (condExp_neg)
+            -- 3. Then the integrand here is exactly upcrossings(-b,-a, negProcess(revCEFinite f))
+            --    which equals upcrossings(-b,-a, revCEFinite(-f)) by step 2
+            -- 4. Apply the C' bound from step 1
+            --
+            -- This avoids the need to reason about downcrossings and Doob's inequality
+            -- for the negated process - all the work is already in upcrossings_bdd_uniform.
             sorry
 
     -- Use monotone convergence on the ORIGINAL process (which IS monotone in N)
@@ -1011,8 +1026,22 @@ lemma ae_limit_is_condexp_iInf
       -- same integrals. Since Y = μ[f | F_inf] has this property and is unique ae,
       -- and our Xlim satisfies the same integral conditions, Xlim =ᵐ Y.
       --
-      -- This requires tendsto_setIntegral_of_tendsto_ae or similar for the
-      -- set integral convergence step. Left as sorry for now.
+      -- CLEANER APPROACH (avoiding circularity):
+      -- 1. Prove helper: L¹ convergence implies set integral convergence
+      --    lemma setIntegral_tendsto_of_L1 (hL1_conv : Tendsto ‖f - f_n‖₁ atTop (𝓝 0))
+      --        {A} (hA : MeasurableSet[F_inf] A) :
+      --        Tendsto (fun n => ∫ x in A, f_n x ∂μ) atTop (𝓝 (∫ x in A, f x ∂μ))
+      --    (via |∫_A (f_n - f)| ≤ ∫_A |f_n - f| ≤ ‖f_n - f‖₁)
+      --
+      -- 2. For any F_inf-set A, use tower property:
+      --    ∫_A Xn n = ∫_A μ[f|𝔽 n] = ∫_A Y  (since F_inf ≤ 𝔽 n)
+      --
+      -- 3. By step 1, ∫_A Xlim = lim ∫_A Xn n = ∫_A Y
+      --
+      -- 4. Apply ae_eq_of_forall_setIntegral_eq on (Ω, F_inf):
+      --    Xlim and Y have same integrals on all F_inf-sets, both integrable,
+      --    Y is F_inf-measurable, Xlim is AEStronglyMeasurable (from limit) ⇒ Xlim =ᵐ Y
+      --    (The trimmed measure uniqueness lemma doesn't require F_inf-measurability of Xlim!)
       sorry
 
     -- Now use L¹-continuity: μ[Xlim | F_inf] =ᵐ Y and μ[Xlim | F_inf] =ᵐ Xlim
