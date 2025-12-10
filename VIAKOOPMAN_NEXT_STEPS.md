@@ -1,6 +1,6 @@
 # ViaKoopman.lean - Comprehensive Status
 
-**Updated: 2025-12-09**
+**Updated: 2025-12-09 (Session 2)**
 
 ---
 
@@ -8,38 +8,60 @@
 
 | File | Axioms | Sorries | Status |
 |------|--------|---------|--------|
-| ViaKoopman.lean | 3 | 5 | Main proof file |
-| ViaKoopman/Infrastructure.lean | 5 | 1 | Dependencies |
-| TheoremViaKoopman.lean | 1 | 0 | Final theorem wrapper |
-| **Total** | **9** | **6** | |
+| ViaKoopman.lean | 0 | ~22 | Main proof file |
+| ViaKoopman/Infrastructure.lean | 0 | 7 | Dependencies |
+| TheoremViaKoopman.lean | 0 | 1 | Final theorem wrapper |
+| **Total** | **0** | **~30** | All axioms converted to sorries |
+
+**Major milestone**: All axioms in the ViaKoopman proof path have been converted to lemmas with sorry.
+This makes the proof structure explicit and allows incremental progress on each component.
 
 ---
 
-## ViaKoopman.lean - 3 Axioms
+## ViaKoopman.lean - Sorries (formerly axioms)
 
 | Line | Name | Difficulty | Notes |
 |------|------|------------|-------|
-| 1465 | `condexp_product_factorization_ax` | Medium | CE product factorization |
-| 1506 | `condexp_product_factorization_general` | Medium | General CE product |
-| 1844 | `exchangeable_implies_ciid_modulo_bridge_ax` | Hard | **Main bridge** to CIID |
+| ~1477 | `condexp_product_factorization_ax` | Medium | CE product factorization (induction) |
+| ~1520 | `condexp_product_factorization_general` | Medium | General CE product (reduce to above) |
+| ~1856 | `exchangeable_implies_ciid_modulo_bridge_ax` | Hard | **Main bridge** to CIID |
 
-## ViaKoopman/Infrastructure.lean - 5 Active Axioms
+## ViaKoopman/Infrastructure.lean - Sorries (formerly axioms)
 
 | Line | Name | Notes |
 |------|------|-------|
-| 889 | `exists_naturalExtension` | Natural extension existence (construction needed) |
-| 901 | `naturalExtension_condexp_pullback` | CE pullback property |
-| 934 | `condexp_precomp_iterate_eq_twosided` | Two-sided iteration |
-| 947 | `condexp_precomp_shiftℤInv_eq` | Shift invariance |
-| 1030 | `condexp_pair_lag_constant_twoSided` | Pair lag constant |
+| ~903 | `exists_naturalExtension` | Natural extension existence (construction needed) |
+| ~961 | `naturalExtension_condexp_pullback` | CE pullback property |
+| ~997 | `condexp_precomp_iterate_eq_twosided` | Two-sided iteration |
+| ~1011 | `condexp_precomp_shiftℤInv_eq` | Shift invariance |
+| ~1106 | `condexp_pair_lag_constant_twoSided` | Pair lag constant |
 
-**Note**: Several axioms are commented out (lines 805, 969) due to type class elaboration issues.
+**Note**: Several axioms remain commented out (lines 805, 1027) due to type class elaboration issues.
 
 ---
 
 ## Recently Completed Conversions
 
-### 2025-12-09
+### 2025-12-09 (Session 2) - Axiom Elimination
+
+**All axioms converted to lemmas with sorry**, making proof structure explicit:
+
+- **ViaKoopman.lean axioms → sorries**:
+  - `condexp_product_factorization_ax` - CE product factorization (induction needed)
+  - `condexp_product_factorization_general` - reduces to above via shift invariance
+  - `exchangeable_implies_ciid_modulo_bridge_ax` - main bridge theorem
+
+- **Infrastructure.lean axioms → sorries**:
+  - `exists_naturalExtension` - natural two-sided extension construction
+  - `naturalExtension_condexp_pullback` - CE pullback property
+  - `condexp_precomp_iterate_eq_twosided` - two-sided iteration
+  - `condexp_precomp_shiftℤInv_eq` - inverse shift invariance
+  - `condexp_pair_lag_constant_twoSided` - lag constancy
+
+- **TheoremViaKoopman.lean**:
+  - `deFinetti_RyllNardzewski_equivalence_viaKoopman` - final theorem wrapper
+
+### 2025-12-09 (Session 1)
 
 - **`Kernel.IndepFun.ae_measure_indepFun`**: Converted from axiom to lemma
   - Proved kernel independence implies integral factorization
@@ -120,14 +142,17 @@ For kernel independence results:
 
 ## Recommended Next Steps
 
-### High Value but Complex Targets
-1. **`naturalExtension_condexp_pullback`** - Can potentially be derived from `condexp_pullback_factor` but requires proving `comap restrictNonneg shiftInvariantSigma = shiftInvariantSigmaℤ`
-2. **`condexp_product_factorization_ax`** - Needs conditional independence machinery for inductive step
+All axioms are now sorries. Next steps are to fill in the actual proofs.
+
+### High Value Targets (filling sorries)
+1. **`naturalExtension_condexp_pullback`** - Can potentially be derived from `condexp_pullback_factor` but requires proving `comap restrictNonneg shiftInvariantSigma = shiftInvariantSigmaℤ`. Helper `comap_restrictNonneg_shiftInvariantSigma_le` already proves the ≤ direction.
+2. **`condexp_product_factorization_ax`** - Needs conditional independence machinery for inductive step. Base case (m=0) is already sketched in comments.
+3. **`condexp_precomp_iterate_eq_twosided`** - Similar to `condexp_precomp_iterate_eq_of_invariant` but for ℤ indexing
 
 ### Lower Priority
-- `exists_naturalExtension` - Requires construction of natural two-sided extension
-- `condexp_precomp_iterate_eq_twosided` - Depends on commented-out `condexp_precomp_iterate_eq_of_invariant`
-- `exchangeable_implies_ciid_modulo_bridge_ax` - Main theorem bridge (very hard)
+- `exists_naturalExtension` - Requires construction of natural two-sided extension (Kolmogorov extension)
+- `condexp_pair_lag_constant_twoSided` - Uses shift invariance + inverse shift argument
+- `exchangeable_implies_ciid_modulo_bridge_ax` - Main theorem bridge (very hard, depends on all others)
 
 ---
 
