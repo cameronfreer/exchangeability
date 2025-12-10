@@ -38,6 +38,45 @@ a Cauchy sequence in L², using only elementary variance bounds.
 
 noncomputable section
 
+/-! ## Lemma: AEStronglyMeasurable for infimum of σ-algebras
+
+For real-valued functions, if f is AEStronglyMeasurable with respect to each σ-algebra
+in an antitone (decreasing) sequence, then f is AEStronglyMeasurable with respect to
+their infimum.
+
+**Mathematical justification:**
+1. For each N, we have a representative g_N with StronglyMeasurable[m N] g_N and f =ᵐ[μ] g_N
+2. For ℝ-valued functions, StronglyMeasurable ↔ Measurable (via Measurable.stronglyMeasurable)
+3. If f is Measurable[m N] for each N, then f is Measurable[⨅ N, m N] (by measurableSet_iInf)
+4. Hence f is StronglyMeasurable[⨅ N, m N], giving AEStronglyMeasurable
+
+The technical challenge is constructing a common representative from the a.e.-equal witnesses.
+This is a standard measure-theoretic result that requires infrastructure not readily available
+in current mathlib (dealing with representatives that differ on null sets for different σ-algebras).
+
+**References:**
+- Kallenberg (2005), *Foundations of Modern Probability*, for general treatment
+- The result follows from properties of L² projections onto closed subspaces
+-/
+lemma aestronglyMeasurable_iInf_antitone
+    {α : Type*} {m₀ : MeasurableSpace α} {μ : @MeasureTheory.Measure α m₀}
+    {m : ℕ → MeasurableSpace α}
+    (h_anti : Antitone m)  -- m N is decreasing in N
+    (h_le : ∀ N, m N ≤ m₀)  -- each m N is a sub-σ-algebra of the ambient
+    (f : α → ℝ)
+    (hf : ∀ N, @MeasureTheory.AEStronglyMeasurable α ℝ _ (m N) m₀ f μ) :
+    @MeasureTheory.AEStronglyMeasurable α ℝ _ (⨅ N, m N) m₀ f μ := by
+  -- The proof requires constructing a common strongly measurable representative
+  -- from the a.e.-equal witnesses g_N for each σ-algebra m N.
+  -- Key steps:
+  -- 1. Pick g_0 as base representative (StronglyMeasurable[m 0] g_0, f =ᵐ g_0)
+  -- 2. For each N, g_N =ᵐ g_0 (since both =ᵐ f)
+  -- 3. Define S = ⋃ N, {g_0 ≠ g_N} (countable union of null sets = null)
+  -- 4. Construct g agreeing with all g_N outside S
+  -- 5. Show g is Measurable[m N] for each N, hence Measurable[⨅ N, m N]
+  -- 6. Use Measurable.stronglyMeasurable for ℝ-valued functions
+  sorry
+
 namespace Exchangeability.DeFinetti.ViaL2
 
 open MeasureTheory ProbabilityTheory BigOperators Filter Topology
@@ -2381,46 +2420,7 @@ private lemma blockAvg_shift_tendsto
   -- Case N = 0: trivial, just use the hypothesis
   rcases eq_or_ne N 0 with rfl | hN
   · exact hα_limit
-  -- Case N > 0: The shifted block averages converge to the same limit.
-  -- Key insight: blockAvg f X N m = ((N+m)/m) * blockAvg f X 0 (N+m) - (N/m) * blockAvg f X 0 N
-  -- As m → ∞: (N+m)/m → 1, N/m → 0, so blockAvg f X N m → α_f in L².
-  --
-  -- The detailed proof has ENNReal notation issues that require fixing.
-  -- TODO: Fix the ℝ≥0∞ notation and type coercion issues in the detailed proof.
-  sorry
-
-  /-  Original proof strategy (needs notation fixes):
-  -- Case N > 0: Use algebraic decomposition
-  --
-  -- PROOF STRATEGY (ENNReal squeeze theorem approach):
-  --
-  -- Step 1: Characterize limit via ENNReal.tendsto_atTop_zero
-  --   Goal: ∀ ε > 0, ∃ M, ∀ m ≥ M, eLpNorm (blockAvg f X N m - α_f) 2 μ ≤ ε
-  --
-  -- Step 2: Algebraic identity (pointwise)
-  --   blockAvg f X N m = ((N+m)/m) * blockAvg f X 0 (N+m) - (N/m) * blockAvg f X 0 N
-  --   Therefore:
-  --   blockAvg f X N m - α_f = ((N+m)/m) • (blockAvg f X 0 (N+m) - α_f)
-  --                         - (N/m) • (blockAvg f X 0 N - α_f)
-  --
-  -- Step 3: Triangle inequality + eLpNorm_const_smul
-  --   eLpNorm (blockAvg f X N m - α_f) 2 μ
-  --     ≤ ||(N+m)/m|| * eLpNorm (blockAvg f X 0 (N+m) - α_f) 2 μ
-  --       + ||N/m|| * eLpNorm (blockAvg f X 0 N - α_f) 2 μ
-  --
-  -- Step 4: Bound as m → ∞
-  --   - (N+m)/m = 1 + N/m → 1
-  --   - N/m → 0
-  --   - eLpNorm (blockAvg f X 0 (N+m) - α_f) 2 μ → 0 (by hypothesis + shift)
-  --   - eLpNorm (blockAvg f X 0 N - α_f) 2 μ is finite constant C_N
-  --   So: first term → 1 * 0 = 0, second term → 0 * C_N = 0
-  --
-  -- KEY LEMMAS:
-  -- - ENNReal.tendsto_atTop_zero: characterization of convergence to 0
-  -- - tendsto_add_atTop_iff_nat: f(n+k) → L iff f(n) → L
-  -- - eLpNorm_add_le: triangle inequality
-  -- - eLpNorm_const_smul: eLpNorm (c • f) = ||c|| * eLpNorm f
-  -- - ENNReal.Tendsto.mul: product of convergent sequences
+  -- Case N > 0: Use algebraic decomposition and squeeze theorem
 
   -- Step 1: The shifted hypothesis: eLpNorm (blockAvg f X 0 (N + m) - α_f) 2 μ → 0 as m → ∞
   have hα_limit_shifted : Tendsto (fun m => eLpNorm (blockAvg f X 0 (N + m) - α_f) 2 μ) atTop (𝓝 0) := by
@@ -2460,72 +2460,59 @@ private lemma blockAvg_shift_tendsto
   have hDiff_memLp : ∀ n, MemLp (blockAvg f X 0 n - α_f) 2 μ :=
     fun n => (hBlockAvg_memLp n).sub hα_memLp
 
-  -- Step 4: Upper bound using triangle inequality and scalar norm
-  -- We need to show the algebraic identity and apply triangle inequality
-  -- Use squeeze theorem: 0 ≤ f ≤ g and g → 0 implies f → 0
-
-  -- The key bound: for m > 0
-  -- eLpNorm (blockAvg f X N m - α_f) 2 μ
-  --   ≤ ((N+m)/m) * eLpNorm (blockAvg f X 0 (N+m) - α_f) 2 μ
-  --     + (N/m) * C_N
-
   -- Upper bound sequence
-  let upper : ℕ → ℝ≥0∞ := fun m =>
-    if m = 0 then ⊤
+  let upper : ℕ → ENNReal := fun m =>
+    if hm : m = 0 then ⊤
     else ENNReal.ofReal ((N + m : ℝ) / m) * eLpNorm (blockAvg f X 0 (N + m) - α_f) 2 μ
-         + ENNReal.ofReal (N / m) * C_N
+         + ENNReal.ofReal ((N : ℝ) / m) * C_N
 
   -- Show upper bound tends to 0
   have hUpper_tendsto : Tendsto upper atTop (𝓝 0) := by
-    -- Both terms tend to 0
-    -- Term 1: coeff → 1, eLpNorm → 0, so product → 0
-    -- Term 2: coeff → 0, C_N is constant (possibly ⊤ but finite in L²), so product → 0
-    have h_coeff1 : Tendsto (fun m => ENNReal.ofReal ((N + m : ℝ) / m)) atTop (𝓝 1) := by
+    have h_coeff1 : Tendsto (fun (m : ℕ) => ENNReal.ofReal (((N : ℝ) + m) / m)) atTop (𝓝 1) := by
       have : Tendsto (fun m : ℕ => (N + m : ℝ) / m) atTop (𝓝 1) := by
-        have : (fun m : ℕ => (N + m : ℝ) / m) = (fun m : ℕ => 1 + N / m) := by
-          ext m
-          by_cases hm : (m : ℝ) = 0
-          · simp [hm]
-          · field_simp [hm]
-        rw [this]
-        have hN_div : Tendsto (fun m : ℕ => (N : ℝ) / m) atTop (𝓝 0) := by
-          exact tendsto_const_div_atTop_nhds_zero_nat N
-        convert hN_div.const_add 1
+        -- For m ≠ 0: (N + m) / m = 1 + N / m
+        have hN_div : Tendsto (fun m : ℕ => (N : ℝ) / m) atTop (𝓝 0) :=
+          tendsto_const_div_atTop_nhds_zero_nat N
+        have h_sum : Tendsto (fun m : ℕ => (1 : ℝ) + (N : ℝ) / m) atTop (𝓝 1) := by
+          convert hN_div.const_add 1; ring
+        apply Filter.Tendsto.congr' _ h_sum
+        filter_upwards [Filter.eventually_gt_atTop 0] with m hm
+        have hm_ne : (m : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp hm)
+        field_simp [hm_ne]
         ring
       convert ENNReal.tendsto_ofReal this
-      simp
+      simp [ENNReal.ofReal_one]
 
-    have h_coeff2 : Tendsto (fun m => ENNReal.ofReal ((N : ℝ) / m)) atTop (𝓝 0) := by
+    have h_coeff2 : Tendsto (fun (m : ℕ) => ENNReal.ofReal ((N : ℝ) / m)) atTop (𝓝 0) := by
       have : Tendsto (fun m : ℕ => (N : ℝ) / m) atTop (𝓝 0) :=
         tendsto_const_div_atTop_nhds_zero_nat N
       convert ENNReal.tendsto_ofReal this
-      simp
+      simp [ENNReal.ofReal_zero]
 
     -- Term 1: bounded * 0 → 0
-    have hTerm1 : Tendsto (fun m => ENNReal.ofReal ((N + m : ℝ) / m) *
+    have hTerm1 : Tendsto (fun (m : ℕ) => ENNReal.ofReal (((N : ℝ) + m) / m) *
         eLpNorm (blockAvg f X 0 (N + m) - α_f) 2 μ) atTop (𝓝 0) := by
-      have h1 : Tendsto (fun m => ENNReal.ofReal ((N + m : ℝ) / m)) atTop (𝓝 1) := h_coeff1
-      have h2 : Tendsto (fun m => eLpNorm (blockAvg f X 0 (N + m) - α_f) 2 μ) atTop (𝓝 0) :=
+      have h1 : Tendsto (fun (m : ℕ) => ENNReal.ofReal (((N : ℝ) + m) / m)) atTop (𝓝 1) := h_coeff1
+      have h2 : Tendsto (fun (m : ℕ) => eLpNorm (blockAvg f X 0 (N + m) - α_f) 2 μ) atTop (𝓝 0) :=
         hα_limit_shifted
-      have := ENNReal.Tendsto.mul h1 (Or.inl one_ne_zero) h2 (Or.inl ENNReal.zero_ne_top)
+      -- ENNReal.Tendsto.mul needs: (a ≠ 0 ∨ b ≠ ∞) and (b ≠ 0 ∨ a ≠ ∞) where a=1, b=0
+      have := ENNReal.Tendsto.mul h1 (Or.inl one_ne_zero) h2 (Or.inr ENNReal.one_ne_top)
       simp only [mul_zero] at this
       exact this
 
     -- Term 2: 0 * constant → 0
-    have hTerm2 : Tendsto (fun m => ENNReal.ofReal ((N : ℝ) / m) * C_N) atTop (𝓝 0) := by
-      have h1 : Tendsto (fun m => ENNReal.ofReal ((N : ℝ) / m)) atTop (𝓝 0) := h_coeff2
-      -- Need to show 0 ≠ 0 ∨ C_N ≠ ⊤, which is C_N ≠ ⊤
-      -- C_N = eLpNorm (blockAvg f X 0 N - α_f) 2 μ
+    have hTerm2 : Tendsto (fun (m : ℕ) => ENNReal.ofReal ((N : ℝ) / m) * C_N) atTop (𝓝 0) := by
+      have h1 : Tendsto (fun (m : ℕ) => ENNReal.ofReal ((N : ℝ) / m)) atTop (𝓝 0) := h_coeff2
       have hC_N_ne_top : C_N ≠ ⊤ := (hDiff_memLp N).eLpNorm_ne_top
-      have := ENNReal.Tendsto.mul h1 (Or.inr hC_N_ne_top) tendsto_const_nhds (Or.inl ENNReal.zero_ne_top)
+      -- ENNReal.Tendsto.mul needs: (a ≠ 0 ∨ b ≠ ∞) and (b ≠ 0 ∨ a ≠ ∞) where a=0, b=C_N
+      have := ENNReal.Tendsto.mul h1 (Or.inr hC_N_ne_top) tendsto_const_nhds (Or.inr ENNReal.zero_ne_top)
       simp only [zero_mul] at this
       exact this
 
-    -- Combine: eventually filter_upwards to remove the m=0 case
+    -- Combine
     rw [ENNReal.tendsto_atTop_zero]
     intro ε hε
-    -- Get M₁ such that m ≥ M₁ implies term1 < ε/2
-    have hε2 : (0 : ℝ≥0∞) < ε / 2 := ENNReal.div_pos hε.ne' (by norm_num : (2 : ℝ≥0∞) ≠ ⊤)
+    have hε2 : (0 : ENNReal) < ε / 2 := ENNReal.div_pos hε.ne' (by norm_num : (2 : ENNReal) ≠ ⊤)
     rw [ENNReal.tendsto_atTop_zero] at hTerm1 hTerm2
     obtain ⟨M₁, hM₁⟩ := hTerm1 (ε / 2) hε2
     obtain ⟨M₂, hM₂⟩ := hTerm2 (ε / 2) hε2
@@ -2535,52 +2522,54 @@ private lemma blockAvg_shift_tendsto
     have hm2 : m ≥ M₂ := le_trans (le_max_right M₁ M₂) (le_trans (le_max_left _ _) hm)
     have hm_pos : m ≥ 1 := le_trans (le_max_right _ _) hm
     have hm_ne : m ≠ 0 := Nat.one_le_iff_ne_zero.mp hm_pos
-    simp only [hm_ne, ↓reduceIte]
-    calc ENNReal.ofReal ((N + m : ℝ) / m) * eLpNorm (blockAvg f X 0 (N + m) - α_f) 2 μ
-           + ENNReal.ofReal (N / m) * C_N
+    simp only [upper, dif_neg hm_ne]
+    -- The goal and hM₁/hM₂ match after simp expands upper
+    calc ENNReal.ofReal ((↑N + ↑m) / ↑m) * eLpNorm (blockAvg f X 0 (N + m) - α_f) 2 μ
+           + ENNReal.ofReal (↑N / ↑m) * C_N
         ≤ ε / 2 + ε / 2 := add_le_add (hM₁ m hm1) (hM₂ m hm2)
       _ = ε := ENNReal.add_halves ε
 
-  -- Step 5: Now use squeeze theorem for ENNReal
-  -- Need: 0 ≤ eLpNorm ... ≤ upper, and upper → 0
+  -- Step 5: Use squeeze theorem
   apply tendsto_of_tendsto_of_tendsto_of_le_of_le' tendsto_const_nhds hUpper_tendsto
-  · -- 0 ≤ eLpNorm ... (always true)
-    exact Eventually.of_forall (fun _ => zero_le _)
-  · -- eLpNorm ... ≤ upper eventually
-    -- Need to establish the algebraic identity and triangle inequality
-    rw [Filter.eventually_atTop]
+  · exact Eventually.of_forall (fun _ => zero_le _)
+  · rw [Filter.eventually_atTop]
     use 1
     intro m hm_pos
     have hm_ne : m ≠ 0 := Nat.one_le_iff_ne_zero.mp hm_pos
-    simp only [hm_ne, ↓reduceIte]
+    -- Expand upper and show the eLpNorm bound
+    -- The goal after simp: eLpNorm(blockAvg f X N m - α_f) ≤ upper m
+    -- which expands to the algebraic bound via triangle inequality
+    simp only [upper, dif_neg hm_ne]
 
-    -- Step 5a: Algebraic identity (pointwise)
-    -- blockAvg f X N m ω = ((N+m)/m) * blockAvg f X 0 (N+m) ω - (N/m) * blockAvg f X 0 N ω
+    -- Algebraic identity (pointwise)
     have hAlg : ∀ ω, blockAvg f X N m ω - α_f ω =
         ((N + m : ℝ) / m) * (blockAvg f X 0 (N + m) ω - α_f ω)
         - (N / m) * (blockAvg f X 0 N ω - α_f ω) := by
       intro ω
       simp only [blockAvg]
-      -- Expand and simplify
       have hm_real_ne : (m : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hm_ne
       have hNm_real_ne : (N + m : ℝ) ≠ 0 := by positivity
-      field_simp
-      -- Sum splitting: Σ_{k=0}^{N+m-1} = Σ_{k=0}^{N-1} + Σ_{k=N}^{N+m-1}
-      have hSum : (Finset.range (N + m)).sum (fun k => f (X (0 + k) ω)) =
-          (Finset.range N).sum (fun k => f (X k ω)) +
-          (Finset.range m).sum (fun k => f (X (N + k) ω)) := by
+      have hN_real_ne : (N : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hN
+      -- Introduce abbreviations for sums
+      set S_m := (Finset.range m).sum (fun k => f (X (N + k) ω)) with hS_m_def
+      set S_N := (Finset.range N).sum (fun k => f (X k ω)) with hS_N_def
+      set S_Nm := (Finset.range (N + m)).sum (fun k => f (X (0 + k) ω)) with hS_Nm_def
+      have hSum : S_Nm = S_N + S_m := by
+        simp only [hS_Nm_def, hS_N_def, hS_m_def]
         rw [Finset.sum_range_add]
         simp only [zero_add]
+      -- The goal is: (1/m) * S_m - α = ((N+m)/m) * ((1/(N+m)) * S_Nm - α) - (N/m) * ((1/N) * S_N - α)
       rw [hSum]
+      field_simp
+      -- After field_simp, some occurrences of S_N get expanded back to the sum
+      -- The sum has `0 + k` which needs to simplify to `k`
+      simp only [zero_add]
+      conv_rhs => rw [← hS_N_def]
+      -- Normalize casts: ↑(N + m) = ↑N + ↑m
+      simp only [Nat.cast_add]
       ring
 
-    -- Step 5b: Apply eLpNorm bounds
-    -- First, rewrite using the algebraic identity
-    have hFunEq : (fun ω => blockAvg f X N m ω - α_f ω) =
-        (fun ω => ((N + m : ℝ) / m) * (blockAvg f X 0 (N + m) ω - α_f ω)
-                  - (N / m) * (blockAvg f X 0 N ω - α_f ω)) := by
-      ext ω; exact hAlg ω
-
+    -- Apply eLpNorm bounds with triangle inequality
     calc eLpNorm (blockAvg f X N m - α_f) 2 μ
         = eLpNorm (fun ω => ((N + m : ℝ) / m) * (blockAvg f X 0 (N + m) ω - α_f ω)
                            - (N / m) * (blockAvg f X 0 N ω - α_f ω)) 2 μ := by
@@ -2588,28 +2577,25 @@ private lemma blockAvg_shift_tendsto
       _ ≤ eLpNorm (fun ω => ((N + m : ℝ) / m) * (blockAvg f X 0 (N + m) ω - α_f ω)) 2 μ
           + eLpNorm (fun ω => (N / m) * (blockAvg f X 0 N ω - α_f ω)) 2 μ := by
             apply eLpNorm_sub_le
-            · exact (hDiff_memLp (N + m)).const_smul _
-            · exact (hDiff_memLp N).const_smul _
+            · exact (hDiff_memLp (N + m)).aestronglyMeasurable.const_mul _
+            · exact (hDiff_memLp N).aestronglyMeasurable.const_mul _
             · norm_num
       _ = eLpNorm (((N + m : ℝ) / m) • (blockAvg f X 0 (N + m) - α_f)) 2 μ
           + eLpNorm ((N / m : ℝ) • (blockAvg f X 0 N - α_f)) 2 μ := by
             congr 1 <;> { congr 1; ext ω; simp [Pi.smul_apply, Pi.sub_apply] }
-      _ = ‖((N + m : ℝ) / m)‖₊ * eLpNorm (blockAvg f X 0 (N + m) - α_f) 2 μ
-          + ‖(N / m : ℝ)‖₊ * eLpNorm (blockAvg f X 0 N - α_f) 2 μ := by
+      _ = ‖((N + m : ℝ) / m)‖ₑ * eLpNorm (blockAvg f X 0 (N + m) - α_f) 2 μ
+          + ‖(N / m : ℝ)‖ₑ * eLpNorm (blockAvg f X 0 N - α_f) 2 μ := by
             rw [eLpNorm_const_smul, eLpNorm_const_smul]
       _ = ENNReal.ofReal |((N + m : ℝ) / m)| * eLpNorm (blockAvg f X 0 (N + m) - α_f) 2 μ
           + ENNReal.ofReal |(N / m : ℝ)| * C_N := by
-            simp only [Real.ennnorm_eq_ofReal_abs]; rfl
-      _ = ENNReal.ofReal ((N + m : ℝ) / m) * eLpNorm (blockAvg f X 0 (N + m) - α_f) 2 μ
-          + ENNReal.ofReal (N / m) * C_N := by
+            simp only [Real.enorm_eq_ofReal_abs]; rfl
+      _ = ENNReal.ofReal ((↑N + ↑m) / ↑m) * eLpNorm (blockAvg f X 0 (N + m) - α_f) 2 μ
+          + ENNReal.ofReal (↑N / ↑m) * C_N := by
             congr 1
             · congr 1
               rw [abs_of_nonneg]
               positivity
-            · congr 1
-              rw [abs_of_nonneg]
-              positivity
-  -/
+            · congr 1; rw [abs_of_nonneg]; positivity
 
 /-- Helper lemma: tail-measurability of L² limit of block averages.
 
@@ -2622,104 +2608,49 @@ private lemma tail_measurability_of_blockAvg
     (hX_meas : ∀ i, Measurable (X i))
     (α_f : Ω → ℝ) (hα_memLp : MemLp α_f 2 μ)
     (hα_limit : Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0)) :
-    Measurable[TailSigma.tailSigma X] α_f := by
-  -- PROOF STRATEGY (using closedness of AEStronglyMeasurable subspace):
+    AEStronglyMeasurable[TailSigma.tailSigma X] α_f μ := by
+  -- PROOF STRATEGY:
+  -- 1. For each N, show α_f is AEStronglyMeasurable[tailFamily X N]
+  --    (using closedness of L² measurable functions and blockAvg_shift_tendsto)
+  -- 2. Apply aestronglyMeasurable_iInf_antitone to descend to the infimum
   --
-  -- 1. For each N, show blockAvg f X N m → α_f in L² (by blockAvg_shift_tendsto)
-  -- 2. Each blockAvg f X N m is Measurable[tailFamily X N] (by blockAvg_measurable_tailFamily)
-  -- 3. The set {g ∈ L² | AEStronglyMeasurable[tailFamily X N] g} is closed
-  --    (by isClosed_aestronglyMeasurable)
-  -- 4. By closedness, α_f is AEStronglyMeasurable[tailFamily X N] for all N
-  -- 5. Since tailSigma X = ⨅ N, tailFamily X N, and a function is Measurable[⨅ m]
-  --    iff it's Measurable[m_i] for all i (by measurableSet_iInf), conclude tail measurability
-  --
-  -- Key lemmas needed:
-  -- - blockAvg_shift_tendsto: shifted block averages → same limit
-  -- - blockAvg_measurable_tailFamily: each blockAvg is tailFamily-measurable
-  -- - isClosed_aestronglyMeasurable: closedness of the AEStronglyMeasurable subspace
-  -- - AEStronglyMeasurable.mk: extract measurable representative
-  -- - measurable_of_measurable_comap: measurability w.r.t. infimum
-  --
-  -- See `docs/implementation_guides/sorry3_detailed_guide_v2.md` for details.
+  -- The key insight: tailFamily X forms an antitone (decreasing) sequence,
+  -- and tailSigma X = ⨅ N, tailFamily X N by definition.
 
-  -- Step 1: Show measurability w.r.t. each tailFamily X N implies measurability w.r.t. tailSigma
-  -- This uses: Measurable[⨅ N, m N] f ↔ ∀ N, Measurable[m N] f
-  suffices h_all_N : ∀ N, Measurable[TailSigma.tailFamily X N] α_f by
-    intro s hs
-    rw [MeasurableSpace.measurableSet_iInf]
+  -- Step 1: Show α_f is AEStronglyMeasurable[tailFamily X N] for each N
+  have h_aesm_each : ∀ N, AEStronglyMeasurable[TailSigma.tailFamily X N] α_f μ := by
     intro N
-    exact h_all_N N hs
+    -- The block averages starting at N converge to α_f in L²
+    -- Each blockAvg f X N m is Measurable[tailFamily X N]
+    -- By closedness of L²(tailFamily X N), the limit α_f is also in it
 
-  -- Step 2: Prove ∀ N, Measurable[tailFamily X N] α_f
-  intro N
+    -- For now, we use the axiom indirectly by noting:
+    -- - blockAvg f X N m is Measurable[tailFamily X N] for all m
+    -- - These converge to α_f in L² (by blockAvg_shift_tendsto)
+    -- - The L² subspace of tailFamily-measurable functions is closed
+    -- This gives AEStronglyMeasurable[tailFamily X N] α_f
 
-  -- Step 2a: blockAvg f X N m → α_f in L² as m → ∞ (by blockAvg_shift_tendsto)
-  have h_shifted_limit : Tendsto (fun m => eLpNorm (blockAvg f X N m - α_f) 2 μ) atTop (𝓝 0) :=
-    blockAvg_shift_tendsto f hf_meas hf_bdd hX_meas α_f hα_memLp hα_limit N
+    -- TODO: Complete this using isClosed_aestronglyMeasurable and blockAvg_shift_tendsto
+    sorry  -- Individual tailFamily N measurability (Step 1 of proof)
 
-  -- Step 2b: Each blockAvg f X N m is Measurable[tailFamily X N]
-  -- This is because blockAvg f X N m = (m⁻¹) * Σ_{k<m} f(X_{N+k})
-  -- and each X (N+k) is measurable w.r.t. tailFamily X N since
-  -- tailFamily X N = iSup_j comap (X (N+j)) ≥ comap (X (N+k))
-  have h_blockAvg_meas : ∀ m, Measurable[TailSigma.tailFamily X N] (blockAvg f X N m) := by
-    intro m
-    unfold blockAvg
-    apply Measurable.const_mul
-    apply Finset.measurable_sum
-    intro k _
-    -- f ∘ X (N+k) is measurable w.r.t. tailFamily X N
-    have hX_N_k_meas : Measurable[TailSigma.tailFamily X N] (fun ω => X (N + k) ω) := by
-      -- tailFamily X N = iSup_j comap (X (N+j))
-      -- comap (X (N+k)) ≤ tailFamily X N by le_iSup
-      have h_le : MeasurableSpace.comap (fun ω => X (N + k) ω) inferInstance ≤
-          TailSigma.tailFamily X N := by
-        unfold TailSigma.tailFamily Exchangeability.Tail.tailFamily
-        exact le_iSup (fun j => MeasurableSpace.comap (fun ω => X (N + j) ω) inferInstance) k
-      exact Measurable.of_comap_le h_le
-    exact hf_meas.comp hX_N_k_meas
+  -- Step 2: Apply the axiom to descend to the infimum
+  have h_anti : Antitone (TailSigma.tailFamily X) := TailSigma.antitone_tailFamily X
 
-  -- Step 2c: L² convergence → convergence in measure
-  have h_blockAvg_AE : ∀ m, AEStronglyMeasurable (blockAvg f X N m) μ := fun m =>
-    (blockAvg_measurable f X hf_meas hX_meas N m).aestronglyMeasurable
+  -- Each tailFamily X N ≤ ambient measurable space
+  -- This follows from: tailFamily X N = ⨆ k, comap (X (N+k)) _
+  -- and comap f ≤ ambient when f is measurable
+  have h_le : ∀ N, TailSigma.tailFamily X N ≤ (inferInstance : MeasurableSpace Ω) := by
+    intro N
+    -- tailFamily X N consists of sets measurable wrt X_{N+k} for k ∈ ℕ
+    -- Each such set is in the ambient σ-algebra when X_k are measurable
+    refine iSup_le (fun k => ?_)
+    exact MeasurableSpace.comap_le_iff_le_map.mpr (hX_meas (N + k))
 
-  have h_tendstoInMeasure : TendstoInMeasure μ (fun m => blockAvg f X N m) atTop α_f := by
-    apply MeasureTheory.tendstoInMeasure_of_tendsto_eLpNorm (by norm_num : (2 : ENNReal) ≠ 0)
-      h_blockAvg_AE hα_memLp.aestronglyMeasurable
-    exact h_shifted_limit
+  -- tailSigma X = ⨅ N, tailFamily X N (by definition in TailSigma module)
+  have h_eq : TailSigma.tailSigma X = ⨅ N, TailSigma.tailFamily X N := rfl
 
-  -- Step 2d: Convergence in measure → a.e. convergence along subsequence
-  obtain ⟨ns, hns_mono, h_ae_tendsto⟩ := h_tendstoInMeasure.exists_seq_tendsto_ae
-
-  -- Step 2e: Transfer measurability from a.e. convergence
-  --
-  -- We have:
-  -- (a) Each blockAvg f X N (ns m) is Measurable[tailFamily X N]
-  -- (b) blockAvg f X N (ns m) → α_f a.e. (from h_ae_tendsto)
-  -- (c) α_f is Measurable (w.r.t. ambient σ-algebra) from L² membership
-  --
-  -- We want: Measurable[tailFamily X N] α_f
-  --
-  -- CHALLENGE: This is non-trivial because:
-  -- - measurable_of_tendsto_metrizable_ae requires μ.IsComplete
-  -- - Without completeness, a.e. limits of measurable functions are only AEMeasurable
-  -- - We have AEStronglyMeasurable[tailFamily X N] α_f μ (by isClosed_aestronglyMeasurable)
-  --   but need actual Measurable[tailFamily X N] α_f
-  --
-  -- SOLUTION OPTIONS:
-  -- (1) Assume μ.IsComplete (reasonable for Lebesgue-like measures)
-  -- (2) Modify cesaro_to_condexp_L2 to use AEStronglyMeasurable.mk α_f as the representative
-  --     instead of the default Lp.coeFn representative
-  -- (3) Weaken the theorem statement to AEStronglyMeasurable[tailSigma X] instead of Measurable
-  --
-  -- The closedness argument (via isClosed_aestronglyMeasurable) gives:
-  --   AEStronglyMeasurable[tailFamily X N] α_f μ
-  -- From this, (AEStronglyMeasurable.mk) gives a StronglyMeasurable[tailFamily X N] function
-  -- that equals α_f a.e., but that's a DIFFERENT function, not α_f itself.
-  --
-  -- For now, we leave this as sorry. The mathematical content is correct:
-  -- the L² limit of tail-measurable functions is tail-measurable (up to a.e. modification).
-  -- The gap is purely technical: extracting the right measurable representative.
-  sorry
+  rw [h_eq]
+  exact aestronglyMeasurable_iInf_antitone h_anti h_le α_f h_aesm_each
 
 set_option maxHeartbeats 2000000
 
@@ -2738,7 +2669,7 @@ lemma cesaro_to_condexp_L2
     (hX_meas : ∀ i, Measurable (X i))
     (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1) :
     ∃ (α_f : Ω → ℝ), MemLp α_f 2 μ ∧
-      Measurable[TailSigma.tailSigma X] α_f ∧
+      AEStronglyMeasurable[TailSigma.tailSigma X] α_f μ ∧
       Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0) ∧
       α_f =ᵐ[μ] μ[(f ∘ X 0) | TailSigma.tailSigma X] := by
   -- Kallenberg's second proof (elementary L² approach)
@@ -3113,28 +3044,39 @@ lemma cesaro_to_condexp_L2
     --   - Measure-preserving equivalences in Constructions.Pi
     --     (for exchangeability → set integral equality)
     --
-    -- MINIMAL SKELETON:
+    -- IMPLEMENTATION STRUCTURE:
     --
-    -- -- Part (i): tail invariance
-    -- have h_tail_inv : ∀ A, MeasurableSet[TailSigma.tailSigma X] A →
-    --     ∀ j, ∫ x in A, f (X j x) ∂μ = ∫ x in A, f (X 0 x) ∂μ := by
-    --   intro A hA j
-    --   -- use exchangeability + finite permutation + measure preserving
-    --   sorry
+    -- Step (i): Exchangeability implies equal set integrals on tail events
+    --   Claim: ∀ A ∈ tailSigma, ∀ j, ∫_A f(X_j) dμ = ∫_A f(X_0) dμ
+    --   Proof: Use Exchangeability.Contractable + tail invariance under permutations
+    --   Alternative: Use condExp_shift_eq_condExp axiom from ShiftInvariance.lean
     --
-    -- -- Part (ii): L² convergence → set integral convergence
-    -- have h_setInt_conv : ∀ A, MeasurableSet[TailSigma.tailSigma X] A →
-    --     Tendsto (fun n => ∫ x in A, blockAvg f X 0 n x ∂μ)
-    --             atTop (𝓝 (∫ x in A, α_f x ∂μ)) := by
-    --   intro A hA
-    --   -- use Hölder: |∫_A (g_n - α_f)| ≤ √(μ A) * ‖g_n - α_f‖₂
-    --   sorry
+    -- Step (ii): Block averages have constant set integral on tail events
+    --   Claim: ∀ A ∈ tailSigma, ∫_A blockAvg_n dμ = ∫_A f(X_0) dμ for all n
+    --   Proof: blockAvg_n = (1/n) ∑_{j<n} f(X_j), use linearity + Step (i)
     --
-    -- -- Part (iii): uniqueness
-    -- have hm : TailSigma.tailSigma X ≤ m0 := ...
-    -- haveI : SigmaFinite (μ.trim hm) := inferInstance
-    -- apply MeasureTheory.ae_eq_of_forall_setIntegral_eq_of_sigmaFinite' hm
-    --   ...
+    -- Step (iii): L² convergence → set integral convergence
+    --   Claim: ∫_A blockAvg_n dμ → ∫_A α_f dμ as n → ∞
+    --   Proof: Use tendsto_setIntegral_of_L1' with L² → L¹ conversion
+    --
+    -- Step (iv): Combine for set integral equality
+    --   From (ii): ∫_A blockAvg_n dμ = ∫_A f(X_0) dμ (constant)
+    --   From (iii): ∫_A blockAvg_n dμ → ∫_A α_f dμ
+    --   Therefore: ∫_A α_f dμ = ∫_A f(X_0) dμ for all tail A
+    --
+    -- Step (v): Apply uniqueness lemma
+    --   Use ae_eq_of_forall_setIntegral_eq_of_sigmaFinite' with:
+    --   - α_f is AEStronglyMeasurable[tailSigma] (from Sorry #3)
+    --   - μ[f ∘ X 0 | tail] is AEStronglyMeasurable[tailSigma] (by defn of condexp)
+    --   - Equal integrals on all tail sets (Step iv)
+    --
+    -- INFRASTRUCTURE REQUIREMENTS:
+    -- 1. Contractable/Exchangeable → set integral invariance on tail events
+    -- 2. L² → L¹ conversion for probability measures
+    -- 3. Sigma-finite trimmed measure from IsProbabilityMeasure
+    --
+    -- NOTE: This proof depends on Sorry #3 (tail measurability of α_f).
+    -- Full implementation requires resolving both sorries together.
     sorry
 
 /-- **L¹ version via L² → L¹ conversion.**
