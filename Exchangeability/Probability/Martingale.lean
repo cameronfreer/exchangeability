@@ -302,22 +302,26 @@ If the n-th crossing completes before time N, then n < N. -/
 lemma upperCrossingTime_lt_imp_index_lt {Ω : Type*} {a b : ℝ} {f : ℕ → Ω → ℝ} {N : ℕ} {n : ℕ} {ω : Ω}
     (hab : a < b) (h : upperCrossingTime a b f N n ω < N) :
     n < N := by
-  -- Use induction to show n ≤ upperCrossingTime n, then n ≤ upperCrossingTime n < N gives n < N
+  -- Key insight: upperCrossingTime is strictly increasing on {k | upperCrossingTime k < N}
+  -- Therefore k ≤ upperCrossingTime k for such k, giving us k < N.
+  --
+  -- We prove by strong induction: n ≤ upperCrossingTime n when upperCrossingTime n < N,
+  -- which combined with upperCrossingTime n < N gives n < N.
+  suffices h_le : n ≤ upperCrossingTime a b f N n ω by omega
   induction n with
-  | zero => omega
+  | zero =>
+    -- upperCrossingTime 0 = 0, so 0 ≤ 0
+    simp only [upperCrossingTime_zero, Pi.bot_apply, bot_eq_zero', le_refl]
   | succ n ih =>
-    -- We have upperCrossingTime (n+1) < N and need n+1 < N
-    -- By IH: upperCrossingTime n < N → n < N
-    -- We have: upperCrossingTime n ≤ upperCrossingTime (n+1) < N, so upperCrossingTime n < N
-    -- By IH: n < N, so n+1 ≤ N
-    -- Actually we need n+1 < N, not just n+1 ≤ N
-    have h_n : upperCrossingTime a b f N n ω < N :=
-      lt_of_le_of_lt (upperCrossingTime_mono (Nat.le_succ n)) h
-    have ih_n : n < N := ih h_n
-    -- So n < N, which gives n+1 ≤ N
-    -- We want n+1 < N, but we only have n+1 ≤ N
-    -- Actually, we can use: upperCrossingTime (n+1) < N and n+1 ≤ upperCrossingTime (n+1)
-    sorry  -- This approach isn't working
+    -- By IH: n ≤ upperCrossingTime n when upperCrossingTime n < N
+    -- By upperCrossingTime_lt_succ: upperCrossingTime n < upperCrossingTime (n+1) when latter ≠ N
+    -- Combining: n < upperCrossingTime (n+1), so n+1 ≤ upperCrossingTime (n+1)
+    have h_neN : upperCrossingTime a b f N (n + 1) ω ≠ N := ne_of_lt h
+    have h_strict : upperCrossingTime a b f N n ω < upperCrossingTime a b f N (n + 1) ω :=
+      upperCrossingTime_lt_succ hab h_neN
+    have h_n_lt : upperCrossingTime a b f N n ω < N := lt_trans h_strict h
+    have ih_n : n ≤ upperCrossingTime a b f N n ω := ih h_n_lt
+    omega
 
 /-- **One-way inequality**: upcrossings ≤ downcrossings of time-reversed process.
 
@@ -373,11 +377,33 @@ lemma upBefore_le_downBefore_rev
                 {n | upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) N n ω < N} := by
       intro n hn
       simp only [Set.mem_setOf_eq] at hn ⊢
-      -- This is where the combinatorial injection happens:
-      -- The greedy algorithm for X on [a,b] yields n complete pairs before N
-      -- The time-reversal map (τ,σ) ↦ (N-σ, N-τ) sends these to downcrossing pairs
-      -- Since the map preserves disjointness, rev X has at least n downcrossings
-      sorry  -- This is the pathwise combinatorial argument
+      -- **PROOF GAP**: Pathwise combinatorial argument for time-reversal of crossings
+      --
+      -- What we need to show:
+      --   If X has n complete upcrossings [a→b] before time N,
+      --   then negProcess(revProcess X N) has n complete upcrossings [-b→-a] before N.
+      --
+      -- Mathematical argument:
+      -- 1. Let (τ₁,σ₁), ..., (τₙ,σₙ) be the greedy upcrossing pairs for X on [a,b].
+      --    - Each pair has 0 ≤ τₖ < σₖ ≤ N
+      --    - X(τₖ) ≤ a and X(σₖ) ≥ b
+      --    - Pairs are disjoint and ordered: σₖ ≤ τₖ₊₁
+      --
+      -- 2. Time reversal map: (τ,σ) ↦ (N-σ, N-τ)
+      --    - revProcess X N at time t equals X(N-t)
+      --    - So revProcess at N-σₖ has value X(σₖ) ≥ b
+      --    - And revProcess at N-τₖ has value X(τₖ) ≤ a
+      --    - This gives a DOWNcrossing [b→a] for revProcess
+      --
+      -- 3. Negation: negProcess Y at t equals -Y(t)
+      --    - DOWNcrossing [b→a] of Y becomes UPcrossing [-b→-a] of -Y
+      --
+      -- 4. Combining: The n pairs map to n disjoint upcrossing pairs [-b→-a]
+      --    for negProcess(revProcess X N), proving the subset inclusion.
+      --
+      -- Technical challenge: Proving this requires detailed manipulation of
+      -- hitting times and upperCrossingTime recursive structure.
+      sorry
 
     exact csSup_le_csSup hbdd2 hemp hsub
   · -- If no upcrossings, sSup = 0
@@ -678,7 +704,23 @@ lemma condExp_exists_ae_limit_antitone
             -- 6. This is ≤ C since |b| ≥ 0, so (‖f‖₁ + |b|) ≥ (‖f‖₁ + |a|) when a,b same sign
             --
             -- The proof mirrors the upcrossings bound but with -revCEFinite instead of revCEFinite.
-            sorry  -- TODO: Apply Doob's upcrossing inequality to -revCEFinite
+            --
+            -- PROOF APPROACH:
+            -- By up_neg_flip_eq_down: downcrossings(a,b,X) = upcrossings(-b,-a,-X)
+            -- So we need to show: ∫⁻ ω, upcrossings(-b,-a,-revCEFinite) ∂μ ≤ C
+            --
+            -- We can apply upcrossings_bdd_uniform to -revCEFinite with interval [-b,-a]:
+            -- 1. -revCEFinite is a martingale (negation preserves martingale property)
+            -- 2. eLpNorm (-revCEFinite) = eLpNorm revCEFinite ≤ eLpNorm f
+            -- 3. -b < -a since a < b
+            -- 4. Apply upcrossings_bdd_uniform to get bound C' for upcrossings(-b,-a,-revCEFinite)
+            --
+            -- The constant C' would be similar to C (same L¹ norm, same gap b-a).
+            -- Alternatively, use the fact that hC bounds upcrossings(a,b,revCEFinite),
+            -- and show upcrossings(-b,-a,-X) ≤ upcrossings(a,b,X) + 1 (alternation).
+            --
+            -- For now, leaving as sorry due to setup complexity.
+            sorry
 
     -- Use monotone convergence on the ORIGINAL process (which IS monotone in N)
     have h_exp_orig : ∫⁻ ω, upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω ∂μ ≤ C := by
@@ -944,10 +986,33 @@ lemma ae_limit_is_condexp_iInf
     -- First prove μ[Xlim | F_inf] = Xlim using the fact that Xlim is (essentially) F_inf-measurable
     -- Xlim is the limit of F_inf-measurable functions, so is itself F_inf-measurable
     have hXlim_condExp_self : μ[Xlim | F_inf] =ᵐ[μ] Xlim := by
-      -- Xlim is the a.e. limit of the sequence μ[f | 𝔽 n]
-      -- Each μ[f | 𝔽 n] can be viewed as F_inf-a.e.-measurable
-      -- (This step is subtle and requires careful sub-σ-algebra handling)
-      -- For now, use sorry - this is a known result about reverse martingales
+      -- PROOF GAP: Requires showing Xlim is AEStronglyMeasurable[F_inf]
+      --
+      -- For reverse martingales with antitone filtration (𝔽 n decreasing to F_inf),
+      -- the limit of μ[f | 𝔽 n] is ae F_inf-measurable. This is a classical result:
+      --
+      -- PROOF STRATEGY (using integral characterization):
+      -- 1. For any F_inf-measurable set S, we have:
+      --    ∫_S Xlim = lim_n ∫_S Xn n  (by L¹ convergence)
+      --            = lim_n ∫_S Y      (by tower: μ[Xn n | F_inf] =ᵐ Y)
+      --            = ∫_S Y
+      -- 2. So Xlim and Y have same integrals on all F_inf-sets
+      -- 3. Since Y is F_inf-measurable (stronglyMeasurable_condExp), and we've
+      --    shown μ[Xlim | F_inf] =ᵐ Y (hCE_eqY), we get Xlim =ᵐ Y
+      -- 4. Therefore Xlim is ae equal to F_inf-measurable Y, hence
+      --    AEStronglyMeasurable[F_inf] Xlim μ
+      -- 5. Apply condExp_of_aestronglyMeasurable' to get μ[Xlim | F_inf] =ᵐ Xlim
+      --
+      -- The technical challenge: Step 3 requires ae_eq_of_forall_setIntegral_eq,
+      -- which needs both functions to be AEStronglyMeasurable[F_inf] - circular!
+      --
+      -- RESOLUTION: Use direct argument that for reverse martingales, the limit
+      -- is characterized by the property that it's F_inf-measurable and has the
+      -- same integrals. Since Y = μ[f | F_inf] has this property and is unique ae,
+      -- and our Xlim satisfies the same integral conditions, Xlim =ᵐ Y.
+      --
+      -- This requires tendsto_setIntegral_of_tendsto_ae or similar for the
+      -- set integral convergence step. Left as sorry for now.
       sorry
 
     -- Now use L¹-continuity: μ[Xlim | F_inf] =ᵐ Y and μ[Xlim | F_inf] =ᵐ Xlim

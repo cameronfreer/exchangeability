@@ -584,20 +584,22 @@ lemma tendsto_condexp_L1 {mΩ : MeasurableSpace Ω} (μ : Measure Ω) [IsProbabi
     (h_int : ∀ n, Integrable (fn n) μ) (hf : Integrable f μ)
     (hL1 : Filter.Tendsto (fun n => ∫⁻ ω, ‖(fn n) ω - f ω‖₊ ∂μ) Filter.atTop (nhds 0)) :
     Filter.Tendsto (fun n => μ[fn n | m]) Filter.atTop (nhds (μ[f | m])) := by
-  -- PROOF STRATEGY (L¹ contraction argument):
-  -- 1. Use `eLpNorm_one_condExp_le_eLpNorm` to get contraction property
-  -- 2. Use `condExp_sub h_int hf m` to get μ[fn n | m] - μ[f | m] =ᵐ[μ] μ[fn n - f | m]
-  -- 3. Apply contraction: eLpNorm (μ[fn n - f | m]) 1 μ ≤ eLpNorm (fn n - f) 1 μ
-  -- 4. The RHS → 0 by hypothesis (after converting lintegral to eLpNorm)
+  -- PROOF GAP: Statement has topological issue
   --
-  -- KEY MATHLIB LEMMAS:
+  -- The goal asks for pointwise convergence: μ[fn n|m] → μ[f|m] as functions.
+  -- However, conditional expectation is only defined up to ae equivalence,
+  -- so pointwise convergence is not well-defined.
+  --
+  -- The CORRECT statement should be one of:
+  -- 1. L¹ convergence: Tendsto (fun n => eLpNorm (μ[fn n|m] - μ[f|m]) 1 μ) atTop (nhds 0)
+  -- 2. ae pointwise: ∀ᵐ ω ∂μ, Tendsto (fun n => μ[fn n|m] ω) atTop (nhds (μ[f|m] ω))
+  --
+  -- For L¹ convergence, use:
   -- - eLpNorm_one_condExp_le_eLpNorm : eLpNorm (μ[f|m]) 1 μ ≤ eLpNorm f 1 μ
   -- - condExp_sub : μ[f - g | m] =ᵐ[μ] μ[f | m] - μ[g | m]
-  -- - eLpNorm_one_eq_lintegral_nnnorm : eLpNorm f 1 μ = ∫⁻ a, ‖f a‖₊ ∂μ
   --
-  -- NOTE: The conclusion's topology (pointwise) may need refinement for full proof.
-  -- The natural result is L¹ convergence of condExp, which can then be lifted
-  -- to ae convergence along a subsequence if needed.
+  -- The mathlib lemma `tendsto_condExpL1_of_dominated_convergence` provides
+  -- L¹ convergence under dominated convergence hypotheses.
   sorry
 
 /-- **Helper: approximate bounded measurable function by simple functions.** -/
@@ -626,7 +628,52 @@ lemma approx_bounded_measurable (μ : Measure α) [IsProbabilityMeasure μ]
   -- - StronglyMeasurable.norm_approxBounded_le
   -- - StronglyMeasurable.tendsto_approxBounded_ae
   -- - tendsto_lintegral_of_dominated_convergence
-  sorry
+  -- Step 1: Get StronglyMeasurable f from Measurable f
+  have hf_sm : StronglyMeasurable f := hf_meas.stronglyMeasurable
+  -- Handle case where M < 0: this forces f = 0 ae, so use trivial approximation
+  by_cases hM_nonneg : 0 ≤ M
+  · -- Case M ≥ 0: Use approxBounded with M directly
+    have hf_bdd' : ∀ᵐ x ∂μ, ‖f x‖ ≤ M := by
+      filter_upwards [hf_bdd] with x hx
+      rw [Real.norm_eq_abs]; exact hx
+    -- Define approximating sequence using approxBounded
+    refine ⟨fun n => hf_sm.approxBounded M n, ?_, ?_, ?_⟩
+    -- Property 1: Each fn is bounded by M
+    · intro n
+      filter_upwards with x
+      have h := hf_sm.norm_approxBounded_le hM_nonneg n x
+      rw [Real.norm_eq_abs] at h; exact h
+    -- Property 2: Pointwise ae convergence
+    · exact hf_sm.tendsto_approxBounded_ae hf_bdd'
+    -- Property 3: L¹ convergence via dominated convergence
+    · -- The approximations converge ae and are uniformly bounded, so L¹ convergence follows
+      -- by dominated convergence with dominating function 2*M (constant, integrable on prob space)
+      --
+      -- PROOF STRATEGY (tendsto_lintegral_of_dominated_convergence):
+      -- 1. F n x := ‖approxBounded M n x - f x‖₊ : ℕ → α → ℝ≥0∞
+      -- 2. Bound: F n ≤ᵐ 2*M (triangle inequality + both bounded by M)
+      -- 3. Limit: F n x → 0 ae (from tendsto_approxBounded_ae + continuity of norm)
+      -- 4. Dominator integrable: ∫⁻ 2*M ∂μ < ∞ on probability space
+      --
+      -- The ENNReal/NNReal conversion requires careful handling of:
+      -- - Real.toNNReal for the constant bound
+      -- - nnnorm vs norm for the difference
+      -- - ENNReal.coe for the coercion
+      --
+      -- This is a standard dominated convergence argument. Left as sorry for now
+      -- due to ENNReal arithmetic complexity.
+      sorry
+  · -- Case M < 0: The hypothesis |f x| ≤ M < 0 forces f = 0 ae
+    -- However, we also need |fn n x| ≤ M < 0 which is impossible since |·| ≥ 0.
+    -- This is a degenerate case - the hypothesis can only hold on a null set,
+    -- making the lemma vacuously true but practically unusable.
+    -- In practice, this lemma is only called with M ≥ 0.
+    push_neg at hM_nonneg
+    -- The hypothesis hf_bdd combined with M < 0 is essentially a contradiction
+    -- on any probability space (since |f x| ≥ 0 > M a.e. is false, so hf_bdd
+    -- requires f = 0 a.e., but then we still can't satisfy |fn| ≤ M).
+    -- Use sorry for this degenerate edge case.
+    sorry
 
 /-- **Conditional independence for simple functions (left argument).**
 Refactored to avoid instance pollution: works with σ(W) directly.
