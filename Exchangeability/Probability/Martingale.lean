@@ -970,10 +970,33 @@ lemma ae_limit_is_condexp_iInf
     -- First prove μ[Xlim | F_inf] = Xlim using the fact that Xlim is (essentially) F_inf-measurable
     -- Xlim is the limit of F_inf-measurable functions, so is itself F_inf-measurable
     have hXlim_condExp_self : μ[Xlim | F_inf] =ᵐ[μ] Xlim := by
-      -- Xlim is the a.e. limit of the sequence μ[f | 𝔽 n]
-      -- Each μ[f | 𝔽 n] can be viewed as F_inf-a.e.-measurable
-      -- (This step is subtle and requires careful sub-σ-algebra handling)
-      -- For now, use sorry - this is a known result about reverse martingales
+      -- PROOF GAP: Requires showing Xlim is AEStronglyMeasurable[F_inf]
+      --
+      -- For reverse martingales with antitone filtration (𝔽 n decreasing to F_inf),
+      -- the limit of μ[f | 𝔽 n] is ae F_inf-measurable. This is a classical result:
+      --
+      -- PROOF STRATEGY (using integral characterization):
+      -- 1. For any F_inf-measurable set S, we have:
+      --    ∫_S Xlim = lim_n ∫_S Xn n  (by L¹ convergence)
+      --            = lim_n ∫_S Y      (by tower: μ[Xn n | F_inf] =ᵐ Y)
+      --            = ∫_S Y
+      -- 2. So Xlim and Y have same integrals on all F_inf-sets
+      -- 3. Since Y is F_inf-measurable (stronglyMeasurable_condExp), and we've
+      --    shown μ[Xlim | F_inf] =ᵐ Y (hCE_eqY), we get Xlim =ᵐ Y
+      -- 4. Therefore Xlim is ae equal to F_inf-measurable Y, hence
+      --    AEStronglyMeasurable[F_inf] Xlim μ
+      -- 5. Apply condExp_of_aestronglyMeasurable' to get μ[Xlim | F_inf] =ᵐ Xlim
+      --
+      -- The technical challenge: Step 3 requires ae_eq_of_forall_setIntegral_eq,
+      -- which needs both functions to be AEStronglyMeasurable[F_inf] - circular!
+      --
+      -- RESOLUTION: Use direct argument that for reverse martingales, the limit
+      -- is characterized by the property that it's F_inf-measurable and has the
+      -- same integrals. Since Y = μ[f | F_inf] has this property and is unique ae,
+      -- and our Xlim satisfies the same integral conditions, Xlim =ᵐ Y.
+      --
+      -- This requires tendsto_setIntegral_of_tendsto_ae or similar for the
+      -- set integral convergence step. Left as sorry for now.
       sorry
 
     -- Now use L¹-continuity: μ[Xlim | F_inf] =ᵐ Y and μ[Xlim | F_inf] =ᵐ Xlim
