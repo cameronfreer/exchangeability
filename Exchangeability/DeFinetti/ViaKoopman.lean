@@ -1471,10 +1471,21 @@ lemma condexp_product_factorization_ax
     (hciid : True) :
     μ[fun ω => ∏ k, fs k (ω (k : ℕ)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω)) := by
-  -- Proof by induction on m:
-  -- Base case (m = 0): Product of empty family is 1, trivial
-  -- Inductive step: Uses conditional independence to factorize
-  sorry
+  -- Proof by induction on m
+  induction m with
+  | zero =>
+    -- Base case: Both sides simplify to 1 for empty products
+    -- LHS: μ[fun ω => ∏ k : Fin 0, ... | mSI] = μ[1 | mSI]
+    -- RHS: fun ω => ∏ k : Fin 0, ... = fun ω => 1
+    simp only [Finset.univ_eq_empty, Finset.prod_empty]
+    -- Now: μ[fun _ => 1 | mSI] =ᵐ fun _ => 1
+    exact condExp_const (shiftInvariantSigma_le (α := α)) 1
+  | succ n IH =>
+    -- Inductive step: Uses conditional independence to factorize
+    -- Requires: CE[∏ᵢ fs i (ω i) | ℐ] = CE[fs 0 (ω 0) · ∏ᵢ₌₁ⁿ fs i (ω i) | ℐ]
+    --         = CE[fs 0 (ω 0) | ℐ] · CE[∏ᵢ₌₁ⁿ fs i (ω i) | ℐ]  [conditional independence]
+    -- This requires the full conditional independence machinery
+    sorry
 
 /-
 Proof of base case (m = 0) - kept for reference:
@@ -1516,8 +1527,16 @@ lemma condexp_product_factorization_general
     (hciid : True) :
     μ[fun ω => ∏ i, fs i (ω (k i)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] (fun ω => ∏ i, ∫ x, fs i x ∂(ν (μ := μ) ω)) := by
-  -- Proof: reduce to condexp_product_factorization_ax via shift invariance
-  sorry
+  -- Proof by induction on m (same structure as condexp_product_factorization_ax)
+  induction m with
+  | zero =>
+    -- Base case: Both sides simplify to 1 for empty products
+    simp only [Finset.univ_eq_empty, Finset.prod_empty]
+    exact condExp_const (shiftInvariantSigma_le (α := α)) 1
+  | succ n IH =>
+    -- Inductive step: reduce to condexp_product_factorization_ax via shift invariance
+    -- The choice of coordinates k doesn't matter due to shift equivariance of CE
+    sorry
 
 /-
 Proof of base case (m = 0) - kept for reference:
