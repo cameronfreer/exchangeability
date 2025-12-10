@@ -1,6 +1,6 @@
 # ViaKoopman.lean - Comprehensive Status
 
-**Updated: 2025-12-09 (Session 2)**
+**Updated: 2025-12-09 (Session 3)**
 
 ---
 
@@ -9,12 +9,11 @@
 | File | Axioms | Sorries | Status |
 |------|--------|---------|--------|
 | ViaKoopman.lean | 0 | ~22 | Main proof file |
-| ViaKoopman/Infrastructure.lean | 0 | 7 | Dependencies |
+| ViaKoopman/Infrastructure.lean | 0 | 5 | Dependencies (2 sorries proven!) |
 | TheoremViaKoopman.lean | 0 | 1 | Final theorem wrapper |
-| **Total** | **0** | **~30** | All axioms converted to sorries |
+| **Total** | **0** | **~28** | Incremental progress |
 
-**Major milestone**: All axioms in the ViaKoopman proof path have been converted to lemmas with sorry.
-This makes the proof structure explicit and allows incremental progress on each component.
+**Major milestone**: All axioms converted to lemmas with sorry, and two key lemmas now proven.
 
 ---
 
@@ -28,19 +27,43 @@ This makes the proof structure explicit and allows incremental progress on each 
 
 ## ViaKoopman/Infrastructure.lean - Sorries (formerly axioms)
 
-| Line | Name | Notes |
-|------|------|-------|
-| ~903 | `exists_naturalExtension` | Natural extension existence (construction needed) |
-| ~961 | `naturalExtension_condexp_pullback` | CE pullback property |
-| ~997 | `condexp_precomp_iterate_eq_twosided` | Two-sided iteration |
-| ~1011 | `condexp_precomp_shiftℤInv_eq` | Shift invariance |
-| ~1106 | `condexp_pair_lag_constant_twoSided` | Pair lag constant |
+| Line | Name | Status | Notes |
+|------|------|--------|-------|
+| ~491 | (commented out helper) | N/A | Dead code in comment block |
+| ~785 | `condexp_pullback_factor` | Sorry | AE strong measurability transfer |
+| ~903 | `exists_naturalExtension` | Sorry | Natural extension existence (Kolmogorov construction) |
+| ~961 | `naturalExtension_condexp_pullback` | Sorry | CE pullback property |
+| ~997 | `condexp_precomp_iterate_eq_twosided` | **PROVEN** | Two-sided iteration via induction |
+| ~1105 | `condexp_precomp_shiftℤInv_eq` | **PROVEN** | Inverse shift invariance |
+| ~1289 | `condexp_pair_lag_constant_twoSided` | Sorry | Requires deeper ergodic theory (lag independence) |
 
 **Note**: Several axioms remain commented out (lines 805, 1027) due to type class elaboration issues.
 
 ---
 
 ## Recently Completed Conversions
+
+### 2025-12-09 (Session 3) - Proving Sorries
+
+**Two Infrastructure.lean sorries proven:**
+
+- **`condexp_precomp_iterate_eq_twosided`**: Proved!
+  - E[f ∘ T^k | m] =ᵐ E[f | m] for measure-preserving T and T-invariant σ-algebra m
+  - Proof by induction on k using `ae_eq_condExp_of_forall_setIntegral_eq`
+  - Key insight: m-measurable sets satisfy T⁻¹' s = s by definition
+  - Uses indicator function approach for set integral rewriting
+
+- **`condexp_precomp_shiftℤInv_eq`**: Proved!
+  - E[f ∘ T⁻¹ | m] =ᵐ E[f | m] for the inverse shift
+  - Similar proof structure to iterate case
+  - Key insight: T⁻¹' s = s implies (T⁻¹)⁻¹' s = s for bijective T
+
+- **`condexp_pair_lag_constant_twoSided`**: Analyzed (still sorry)
+  - This lemma requires deeper ergodic theory than just shift-invariance
+  - The claim is that CE[f(ω₀)·g(ωₖ) | m] doesn't depend on k
+  - Shift-invariance only shows CE[F ∘ T^k | m] =ᵐ CE[F | m]
+  - But changing k changes the "lag" between coordinates, not just the starting point
+  - Proof likely needs mixing/ergodicity properties or conditional independence
 
 ### 2025-12-09 (Session 2) - Axiom Elimination
 
@@ -142,16 +165,16 @@ For kernel independence results:
 
 ## Recommended Next Steps
 
-All axioms are now sorries. Next steps are to fill in the actual proofs.
+Two sorries have been proven; remaining sorries are harder.
 
 ### High Value Targets (filling sorries)
 1. **`naturalExtension_condexp_pullback`** - Can potentially be derived from `condexp_pullback_factor` but requires proving `comap restrictNonneg shiftInvariantSigma = shiftInvariantSigmaℤ`. Helper `comap_restrictNonneg_shiftInvariantSigma_le` already proves the ≤ direction.
 2. **`condexp_product_factorization_ax`** - Needs conditional independence machinery for inductive step. Base case (m=0) is already sketched in comments.
-3. **`condexp_precomp_iterate_eq_twosided`** - Similar to `condexp_precomp_iterate_eq_of_invariant` but for ℤ indexing
+3. **`condexp_pullback_factor`** - AE strong measurability transfer; has a TODO note in comments about type class issues
 
 ### Lower Priority
 - `exists_naturalExtension` - Requires construction of natural two-sided extension (Kolmogorov extension)
-- `condexp_pair_lag_constant_twoSided` - Uses shift invariance + inverse shift argument
+- `condexp_pair_lag_constant_twoSided` - Requires deeper ergodic theory; shift-invariance alone is insufficient (see analysis in code comments)
 - `exchangeable_implies_ciid_modulo_bridge_ax` - Main theorem bridge (very hard, depends on all others)
 
 ---
