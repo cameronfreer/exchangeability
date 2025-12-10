@@ -3909,7 +3909,14 @@ private lemma condexp_pair_lag_constant
     refine h_pull_left.trans ?_
     refine h_two.trans ?_
     exact h_pull_right.symm
-  exact naturalExtension_pullback_ae (μ := μ) (α := α) ext h_chain
+  -- Conditional expectations are strongly measurable, hence AEMeasurable
+  have hFmeas : AEMeasurable (μ[Hk1 | shiftInvariantSigma (α := α)]) μ :=
+    StronglyMeasurable.aemeasurable (stronglyMeasurable_condExp.mono
+      (shiftInvariantSigma_le (α := α)))
+  have hGmeas : AEMeasurable (μ[Hk | shiftInvariantSigma (α := α)]) μ :=
+    StronglyMeasurable.aemeasurable (stronglyMeasurable_condExp.mono
+      (shiftInvariantSigma_le (α := α)))
+  exact naturalExtension_pullback_ae (μ := μ) (α := α) ext hFmeas hGmeas h_chain
 /-- **Tower property for products** (reverse tower law).
 
 For bounded measurable functions f, g, the conditional expectation satisfies:

@@ -172,6 +172,13 @@ lemma restrictNonneg_shiftℤInv (ω : Ωℤ[α]) :
   simp [restrictNonneg, shiftℤInv]
 
 @[measurability, fun_prop]
+lemma measurable_restrictNonneg : Measurable (restrictNonneg (α := α)) := by
+  apply measurable_pi_lambda
+  intro n
+  simp only [restrictNonneg]
+  exact measurable_pi_apply (Int.ofNat n)
+
+@[measurability, fun_prop]
 lemma measurable_shiftℤ : Measurable (shiftℤ (α := α)) := by
   measurability
 
@@ -902,18 +909,21 @@ axiom naturalExtension_condexp_pullback
 
 /-- Pulling an almost-everywhere equality back along the natural extension.
 
-**Can be derived from `ae_pullback_iff`** by specializing with:
-- `g := restrictNonneg`,
-- `μ' := ext.μhat`,
-- `hpush := ext.restrict_pushforward` -/
-axiom naturalExtension_pullback_ae
+**Proof**: Uses `ae_map_iff` from mathlib: since `μ = map restrictNonneg ext.μhat`,
+we have `(∀ᵐ ω ∂μ, F ω = G ω) ↔ (∀ᵐ ωhat ∂ext.μhat, F (restrictNonneg ωhat) = G (restrictNonneg ωhat))`.
+The hypothesis `h` gives the RHS, so we conclude the LHS. -/
+lemma naturalExtension_pullback_ae
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (ext : NaturalExtensionData (μ := μ))
-    {F G : Ω[α] → ℝ}
+    {F G : Ω[α] → ℝ} (hF : AEMeasurable F μ) (hG : AEMeasurable G μ)
     (h : (fun ωhat => F (restrictNonneg (α := α) ωhat))
         =ᵐ[ext.μhat]
         (fun ωhat => G (restrictNonneg (α := α) ωhat))) :
-    F =ᵐ[μ] G
+    F =ᵐ[μ] G := by
+  haveI := ext.μhat_isProb
+  rw [ae_pullback_iff (restrictNonneg (α := α)) measurable_restrictNonneg
+    ext.restrict_pushforward hF hG]
+  exact h
 
 /-- Two-sided version of `condexp_precomp_iterate_eq`.
 
