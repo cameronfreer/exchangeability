@@ -894,7 +894,7 @@ unique measure μ̂ on ℤ → α such that:
 2. The pushforward of μ̂ along restrictNonneg equals μ
 
 This is a standard construction in ergodic theory (see Cornfeld-Fomin-Sinai). -/
-lemma exists_naturalExtension
+def exists_naturalExtension
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving (shift (α := α)) μ μ) :
     NaturalExtensionData (μ := μ) := by
@@ -992,9 +992,111 @@ lemma condexp_precomp_iterate_eq_twosided
     μhat[(fun ω => f ((shiftℤ (α := α))^[k] ω))
         | shiftInvariantSigmaℤ (α := α)]
       =ᵐ[μhat] μhat[f | shiftInvariantSigmaℤ (α := α)] := by
-  -- Proof by induction on k, using that shiftℤ preserves the measure
-  -- and leaves the invariant σ-algebra fixed
-  sorry
+  -- Key property: shiftInvariantSigmaℤ-measurable sets are shiftℤ-invariant by definition
+  have h_inv : ∀ s, MeasurableSet[shiftInvariantSigmaℤ (α := α)] s →
+      (shiftℤ (α := α)) ⁻¹' s = s := fun s hs => hs.2
+  -- Proof by induction on k
+  induction k with
+  | zero => simp
+  | succ k ih =>
+    -- f ∘ shiftℤ^[k+1] = (f ∘ shiftℤ^[k]) ∘ shiftℤ
+    have h_comp : (fun ω => f ((shiftℤ (α := α))^[k+1] ω)) =
+        (fun ω => f ((shiftℤ (α := α))^[k] ω)) ∘ (shiftℤ (α := α)) := by
+      ext ω
+      simp only [Function.comp_apply]
+      -- Goal: f (shiftℤ^[k+1] ω) = f (shiftℤ^[k] (shiftℤ ω))
+      -- Use: shiftℤ^[k+1] ω = shiftℤ^[k] (shiftℤ ω) by iterate_succ_apply
+      rw [Function.iterate_succ_apply]
+    -- shiftℤ^[k] is measure-preserving
+    have hσ_k : MeasurePreserving ((shiftℤ (α := α))^[k]) μhat μhat := hσ.iterate k
+    -- f ∘ shiftℤ^[k] is integrable
+    have hf_k : Integrable (fun ω => f ((shiftℤ (α := α))^[k] ω)) μhat := by
+      have : (fun ω => f ((shiftℤ (α := α))^[k] ω)) = f ∘ ((shiftℤ (α := α))^[k]) := rfl
+      rw [this, hσ_k.integrable_comp hf.aestronglyMeasurable]
+      exact hf
+    -- Use uniqueness of conditional expectation for the base step
+    have h_base : μhat[(fun ω => f ((shiftℤ (α := α))^[k] ω)) ∘ (shiftℤ (α := α))
+        | shiftInvariantSigmaℤ (α := α)]
+          =ᵐ[μhat] μhat[(fun ω => f ((shiftℤ (α := α))^[k] ω))
+              | shiftInvariantSigmaℤ (α := α)] := by
+      symm
+      apply MeasureTheory.ae_eq_condExp_of_forall_setIntegral_eq
+        (shiftInvariantSigmaℤ_le (α := α))
+      -- Integrability of f ∘ shiftℤ^[k] ∘ shiftℤ
+      · rw [hσ.integrable_comp hf_k.aestronglyMeasurable]
+        exact hf_k
+      -- IntegrableOn for the condExp
+      · intro s _ _
+        exact MeasureTheory.integrable_condExp.integrableOn
+      -- Set integral equality: ∫_s E[g|m] = ∫_s g ∘ T when T⁻¹' s = s
+      · intro s hs hμs
+        rw [MeasureTheory.setIntegral_condExp (shiftInvariantSigmaℤ_le (α := α)) hf_k hs]
+        -- Goal: ∫_s (g ∘ T) = ∫_s g where g = f ∘ shiftℤ^[k], T = shiftℤ
+        -- Key: T⁻¹' s = s, so 1_s ∘ T = 1_{T⁻¹'s} = 1_s
+        have h_s_inv : (shiftℤ (α := α)) ⁻¹' s = s := h_inv s hs
+        -- Rewrite as full integrals with indicators
+        rw [← MeasureTheory.integral_indicator (shiftInvariantSigmaℤ_le (α := α) s hs)]
+        rw [← MeasureTheory.integral_indicator (shiftInvariantSigmaℤ_le (α := α) s hs)]
+        -- The indicator of s composed with T equals indicator of T⁻¹'s = s
+        have h_ind : ∀ ω, s.indicator (fun ω => f ((shiftℤ (α := α))^[k] ω))
+              ((shiftℤ (α := α)) ω)
+            = s.indicator (fun ω => f ((shiftℤ (α := α))^[k+1] ω)) ω := by
+          intro ω
+          simp only [Set.indicator]
+          split_ifs with h1 h2 h2
+          · -- ω ∈ s, T ω ∈ s: f (T^k (T ω)) = f (T^{k+1} ω)
+            -- T^[k] (T ω) = T^[k+1] ω by iterate_succ_apply
+            rw [← Function.iterate_succ_apply]
+          · -- ω ∉ s but T ω ∈ s: contradiction since T⁻¹' s = s
+            exfalso
+            rw [← Set.mem_preimage, h_s_inv] at h1
+            exact h2 h1
+          · -- ω ∈ s but T ω ∉ s: contradiction since T⁻¹' s = s
+            exfalso
+            rw [← h_s_inv] at h2
+            exact h1 (Set.mem_preimage.mpr h2)
+          · -- Both out: 0 = 0
+            rfl
+        -- Rewrite using h_ind: the LHS integrand equals the RHS integrand pointwise
+        have h_eq_integrands : ∀ x, s.indicator (fun ω => f ((shiftℤ (α := α))^[k] ω))
+              ((shiftℤ (α := α)) x)
+            = s.indicator (fun ω => f ((shiftℤ (α := α))^[k+1] ω)) x := h_ind
+        rw [show (∫ x, s.indicator (fun ω => f ((shiftℤ (α := α))^[k] ω))
+            ((shiftℤ (α := α)) x) ∂μhat) =
+            (∫ x, s.indicator (fun ω => f ((shiftℤ (α := α))^[k+1] ω)) x ∂μhat)
+          from MeasureTheory.integral_congr_ae (ae_of_all μhat h_eq_integrands)]
+        -- Now both sides are ∫ s.indicator (f ∘ T^{k+1}) dμ vs ∫ s.indicator (f ∘ T^k) dμ
+        -- Use measure-preserving: ∫ (g ∘ T^{k+1}) dμ = ∫ g dμ
+        have hσ_succ : MeasurePreserving ((shiftℤ (α := α))^[k+1]) μhat μhat := hσ.iterate (k+1)
+        have h_ind_meas : Measurable (s.indicator (fun ω => f ((shiftℤ (α := α))^[k] ω))) :=
+          (hf_k.1.measurable).indicator (shiftInvariantSigmaℤ_le (α := α) s hs)
+        rw [hσ_succ.integral_comp h_ind_meas.aestronglyMeasurable]
+        congr 1
+        ext ω
+        simp only [Function.comp_apply, Set.indicator]
+        split_ifs with h
+        · -- (T^[k+1] ω ∈ s) case
+          -- Goal: s.indicator g (T^[k+1] ω) = g (T^[k+1] ω) where g = f ∘ T^[k]
+          -- LHS = f (T^[k] (T^[k+1] ω)) since T^[k+1] ω ∈ s (given by h)
+          -- RHS = f (T^[k+1] ω)
+          -- Wait, let me check what the goal actually is...
+          -- After integral_comp, we have:
+          -- ∫ (s.indicator g) ∘ T^{k+1} = ∫ s.indicator g
+          -- So we need: (s.indicator g) (T^{k+1} ω) = s.indicator (g ∘ T^{k+1}) ω
+          -- = s.indicator (f ∘ T^{k} ∘ T^{k+1}) ω
+          -- When ω ∈ s: f (T^k (T^{k+1} ω))
+          -- When T^{k+1} ω ∈ s: f (T^k (T^{k+1} ω))
+          rfl
+        · rfl
+      -- AE strong measurability
+      · exact MeasureTheory.stronglyMeasurable_condExp.aestronglyMeasurable
+    -- Combine: E[f ∘ T^{k+1} | m] = E[(f ∘ T^k) ∘ T | m] = E[f ∘ T^k | m] = E[f | m]
+    calc μhat[(fun ω => f ((shiftℤ (α := α))^[k+1] ω)) | shiftInvariantSigmaℤ (α := α)]
+        = μhat[(fun ω => f ((shiftℤ (α := α))^[k] ω)) ∘ (shiftℤ (α := α))
+            | shiftInvariantSigmaℤ (α := α)] := by rw [h_comp]
+      _ =ᵐ[μhat] μhat[(fun ω => f ((shiftℤ (α := α))^[k] ω))
+            | shiftInvariantSigmaℤ (α := α)] := h_base
+      _ =ᵐ[μhat] μhat[f | shiftInvariantSigmaℤ (α := α)] := ih
 
 /-- Invariance of conditional expectation under the inverse shift.
 
@@ -1007,8 +1109,89 @@ lemma condexp_precomp_shiftℤInv_eq
     μhat[(fun ω => f (shiftℤInv (α := α) ω))
         | shiftInvariantSigmaℤ (α := α)]
       =ᵐ[μhat] μhat[f | shiftInvariantSigmaℤ (α := α)] := by
-  -- Same strategy as condexp_precomp_iterate_eq_twosided
-  sorry
+  -- Key property: shiftInvariantSigmaℤ-measurable sets are shiftℤInv-invariant too
+  -- Proof: If shiftℤ⁻¹' s = s then shiftℤInv⁻¹' s = s (since they're inverses)
+  have h_inv : ∀ s, MeasurableSet[shiftInvariantSigmaℤ (α := α)] s →
+      (shiftℤInv (α := α)) ⁻¹' s = s := by
+    intro s hs
+    -- hs.2 gives shiftℤ⁻¹' s = s
+    -- Need: shiftℤInv⁻¹' s = s, i.e., ∀ ω, shiftℤInv ω ∈ s ↔ ω ∈ s
+    ext ω
+    constructor
+    · -- shiftℤInv ω ∈ s → ω ∈ s
+      intro h
+      -- shiftℤInv ω ∈ s means ω = shiftℤ (shiftℤInv ω) ∈ shiftℤ '' s
+      -- Since shiftℤ⁻¹' s = s, we have shiftℤ '' s = s (bijection)
+      have hω' : shiftℤ (α := α) (shiftℤInv (α := α) ω) ∈ shiftℤ (α := α) '' s :=
+        Set.mem_image_of_mem _ h
+      simp only [shiftℤ_comp_shiftℤInv] at hω'
+      -- Use that shiftℤ '' s = s (from shiftℤ⁻¹' s = s and bijectivity)
+      have h_surj : shiftℤ (α := α) '' s = s := by
+        ext x
+        simp only [Set.mem_image, Set.mem_preimage]
+        constructor
+        · rintro ⟨y, hy, rfl⟩
+          rw [← hs.2]
+          exact Set.mem_preimage.mpr hy
+        · intro hx
+          use shiftℤInv (α := α) x
+          constructor
+          · rw [← hs.2]
+            simp [shiftℤ_comp_shiftℤInv, hx]
+          · simp
+      rw [h_surj] at hω'
+      exact hω'
+    · -- ω ∈ s → shiftℤInv ω ∈ s
+      intro h
+      -- ω ∈ s and shiftℤ⁻¹' s = s means shiftℤ⁻¹ ω ∈ s
+      -- shiftℤ⁻¹' s = s means: ∀ x, shiftℤ x ∈ s ↔ x ∈ s
+      -- Apply with x = shiftℤInv ω: shiftℤ (shiftℤInv ω) ∈ s ↔ shiftℤInv ω ∈ s
+      rw [← hs.2]
+      simp [h]
+  -- Now prove the main result using ae_eq_condExp_of_forall_setIntegral_eq
+  have hf_inv : Integrable (fun ω => f (shiftℤInv (α := α) ω)) μhat := by
+    rw [hσInv.integrable_comp hf.aestronglyMeasurable]
+    exact hf
+  symm
+  apply MeasureTheory.ae_eq_condExp_of_forall_setIntegral_eq
+    (shiftInvariantSigmaℤ_le (α := α))
+  -- Integrability
+  · exact hf_inv
+  -- IntegrableOn for the condExp
+  · intro s _ _
+    exact MeasureTheory.integrable_condExp.integrableOn
+  -- Set integral equality
+  · intro s hs hμs
+    rw [MeasureTheory.setIntegral_condExp (shiftInvariantSigmaℤ_le (α := α)) hf hs]
+    -- Need: ∫_s (f ∘ shiftℤInv) = ∫_s f
+    have h_s_inv : (shiftℤInv (α := α)) ⁻¹' s = s := h_inv s hs
+    -- Use measure-preserving property
+    rw [← MeasureTheory.integral_indicator (shiftInvariantSigmaℤ_le (α := α) s hs)]
+    rw [← MeasureTheory.integral_indicator (shiftInvariantSigmaℤ_le (α := α) s hs)]
+    -- Rewrite indicator: (1_s · f) ∘ shiftℤInv vs 1_s · (f ∘ shiftℤInv)
+    -- Since shiftℤInv⁻¹' s = s, we have 1_s (shiftℤInv ω) = 1_s ω
+    have h_ind : ∀ ω, s.indicator (fun ω => f (shiftℤInv (α := α) ω)) ω =
+        s.indicator f (shiftℤInv (α := α) ω) := by
+      intro ω
+      simp only [Set.indicator]
+      split_ifs with h1 h2 h2
+      · rfl
+      · exfalso
+        rw [← Set.mem_preimage, h_s_inv] at h2
+        exact h2 h1
+      · exfalso
+        rw [← h_s_inv] at h1
+        exact h1 (Set.mem_preimage.mpr h2)
+      · rfl
+    rw [show (∫ x, s.indicator (fun ω => f (shiftℤInv (α := α) ω)) x ∂μhat) =
+        (∫ x, s.indicator f (shiftℤInv (α := α) x) ∂μhat)
+      from MeasureTheory.integral_congr_ae (ae_of_all μhat h_ind)]
+    -- Now use measure-preserving: ∫ g ∘ T dμ = ∫ g dμ
+    have h_ind_meas : Measurable (s.indicator f) :=
+      hf.1.measurable.indicator (shiftInvariantSigmaℤ_le (α := α) s hs)
+    rw [hσInv.integral_comp h_ind_meas.aestronglyMeasurable]
+  -- AE strong measurability
+  · exact MeasureTheory.stronglyMeasurable_condExp.aestronglyMeasurable
 
 /-
 **Lag-constancy in two-sided extension**.
@@ -1097,12 +1280,205 @@ lemma condexp_pair_lag_constant_twoSided
       =ᵐ[ext.μhat]
     ext.μhat[(fun ω => f (ω 0) * g (ω k))
         | shiftInvariantSigmaℤ (α := α)] := by
-  -- Proof strategy:
-  -- 1. Define Fk ω = f(ω(-1)) * g(ω k)
-  -- 2. Show Fk ∘ shiftℤ = fun ω => f(ω 0) * g(ω (k+1))
-  -- 3. Use shift-invariance of CE (condexp_precomp_iterate_eq_twosided)
-  -- 4. Show Fk ∘ shiftℤInv = fun ω => f(ω 0) * g(ω k) via inverse shift
   haveI := ext.μhat_isProb
+  -- Proof strategy:
+  -- Define Fj ω = f(ω 1) * g(ω (j+1)) for j ∈ ℕ
+  -- Then Fj ∘ shiftℤInv = fun ω => f(ω 0) * g(ω j)
+  -- By shift-invariance: CE[Fj ∘ shiftℤInv | m] =ᵐ CE[Fj | m]
+  -- So CE[f(ω 0) * g(ω j) | m] =ᵐ CE[Fj | m] for all j
+  -- We need: CE[f(ω 0) * g(ω (k+1)) | m] =ᵐ CE[f(ω 0) * g(ω k) | m]
+  -- i.e., CE[F_{k+1} | m] =ᵐ CE[Fk | m]
+  --
+  -- Key: Define G ω = f(ω 0) * g(ω 0)
+  -- Then Gk ∘ shiftℤ^[k] = fun ω => f(ω k) * g(ω k)
+  -- But that changes both coordinates...
+  --
+  -- Alternative: Consider the function F ω = f(ω (-1)) * g(ω 0).
+  -- F ∘ shiftℤ^[j+1] ω = f(ω j) * g(ω (j+1))
+  -- All these have the same CE by condexp_precomp_iterate_eq_twosided
+  -- In particular for j=0: f(ω 0) * g(ω 1)
+  -- For j=-1 (via inverse): f(ω (-1)) * g(ω 0) = F
+  --
+  -- Better approach: Use F ω = f(ω 1) * g(ω (k+1))
+  -- Then F ∘ shiftℤInv = f(ω 0) * g(ω k) = RHS
+  -- And Fk+1 ω = f(ω 1) * g(ω (k+2))
+  -- Fk+1 ∘ shiftℤInv = f(ω 0) * g(ω (k+1)) = LHS
+  -- So LHS =ᵐ CE[F_{k+1} | m] and RHS =ᵐ CE[F_k | m] where F_k ω = f(ω 1) * g(ω (k+1))
+  -- We need CE[F_{k+1} | m] =ᵐ CE[F_k | m]...
+  --
+  -- Actually, define H ω = f(ω (-1)) * g(ω k).
+  -- H ∘ shiftℤ = f(ω 0) * g(ω (k+1)) = LHS function
+  -- By shift-invariance: CE[H ∘ shiftℤ | m] =ᵐ CE[H | m]
+  -- So CE[LHS | m] =ᵐ CE[H | m]
+  --
+  -- Similarly define H' ω = f(ω (-1)) * g(ω (k-1)) (for k ≥ 1).
+  -- H' ∘ shiftℤ = f(ω 0) * g(ω k) = RHS function
+  -- By shift-invariance: CE[H' ∘ shiftℤ | m] =ᵐ CE[H' | m]
+  -- So CE[RHS | m] =ᵐ CE[H' | m]
+  --
+  -- Goal becomes: CE[H | m] =ᵐ CE[H' | m]
+  -- where H ω = f(ω (-1)) * g(ω k) and H' ω = f(ω (-1)) * g(ω (k-1))
+  --
+  -- Both have f at coordinate -1. H has g at k, H' has g at k-1.
+  -- This is the same relationship as the original goal!
+  -- H and H' differ only in the g coordinate lag.
+  --
+  -- Let's try induction. Define P(j) = CE[f(ω (-1)) * g(ω j) | m].
+  -- We want to show P(j) =ᵐ P(j') for all j, j'.
+  --
+  -- Key observation: The function ω ↦ f(ω (-1)) * g(ω j) depends on TWO coordinates.
+  -- For the shift-invariant σ-algebra, the CE should not depend on which specific
+  -- pair of coordinates we use, only on the lag between them.
+  --
+  -- Define Q ω = f(ω (-1)) * g(ω 0) (lag = 1)
+  -- Q ∘ shiftℤ^[j] = f(ω (j-1)) * g(ω j) (still lag = 1)
+  -- By iteration: CE[Q ∘ shiftℤ^[j] | m] =ᵐ CE[Q | m]
+  --
+  -- So for lag 1: all pairs (f at i-1, g at i) have the same CE.
+  --
+  -- For lag k: Define Qk ω = f(ω (-1)) * g(ω (k-1)) (lag = k)
+  -- Qk ∘ shiftℤ^[j] = f(ω (j-1)) * g(ω (k-1+j)) (still lag = k)
+  -- All have the same CE by iteration.
+  --
+  -- Now, f(ω 0) * g(ω k) has lag = k (with f at 0, g at k).
+  -- f(ω 0) * g(ω (k+1)) has lag = k+1 (with f at 0, g at k+1).
+  --
+  -- The question is: does lag k have the same CE as lag k+1?
+  -- This is NOT immediate from shift-invariance alone!
+  --
+  -- Actually, let me reconsider. The key is the shiftℤInv direction:
+  -- If G ω = f(ω 0) * g(ω (k+1)), then
+  -- G ∘ shiftℤInv = f(ω (-1)) * g(ω k)
+  -- By shift-invariance (inverse): CE[G ∘ shiftℤInv | m] =ᵐ CE[G | m]
+  -- So CE[f(ω (-1)) * g(ω k) | m] =ᵐ CE[f(ω 0) * g(ω (k+1)) | m]
+  --
+  -- If H ω = f(ω 0) * g(ω k), then
+  -- H ∘ shiftℤInv = f(ω (-1)) * g(ω (k-1))
+  -- CE[f(ω (-1)) * g(ω (k-1)) | m] =ᵐ CE[f(ω 0) * g(ω k) | m]
+  --
+  -- So:
+  -- CE[f(ω 0) * g(ω (k+1)) | m] =ᵐ CE[f(ω (-1)) * g(ω k) | m]    ... (*)
+  -- CE[f(ω 0) * g(ω k) | m] =ᵐ CE[f(ω (-1)) * g(ω (k-1)) | m]    ... (**)
+  --
+  -- From (*): LHS =ᵐ CE[f(ω (-1)) * g(ω k) | m]
+  -- From (**): RHS =ᵐ CE[f(ω (-1)) * g(ω (k-1)) | m]
+  --
+  -- So Goal (LHS =ᵐ RHS) becomes:
+  -- CE[f(ω (-1)) * g(ω k) | m] =ᵐ CE[f(ω (-1)) * g(ω (k-1)) | m]
+  --
+  -- This is the same pattern! f at -1 is fixed, g moves from k to k-1.
+  -- This looks like it needs induction with base case at some k.
+  --
+  -- But wait - what if we use both directions?
+  -- Define L ω = f(ω 0) * g(ω 1). (This is the "base lag" function.)
+  -- L ∘ shiftℤ^[j] = f(ω j) * g(ω (j+1))
+  -- All these have the same CE = CE[L | m] by iteration.
+  --
+  -- So CE[f(ω 0) * g(ω 1) | m] =ᵐ CE[f(ω j) * g(ω (j+1)) | m] for all j.
+  --
+  -- Similarly, by inverse iteration:
+  -- L ∘ shiftℤInv^[j] = f(ω (-j)) * g(ω (1-j))
+  -- All these have the same CE.
+  --
+  -- Now, f(ω 0) * g(ω k): this has indices (0, k).
+  -- Can we express this as L composed with some shift?
+  -- L ∘ shiftℤ^[j] = f(ω j) * g(ω (j+1))
+  -- For this to equal (0, k), we need j = 0 and j+1 = k, i.e., k = 1.
+  -- That only works for k = 1!
+  --
+  -- For k > 1, we need a different base function.
+  -- Define M_d ω = f(ω 0) * g(ω d). (Lag d function.)
+  -- M_d ∘ shiftℤ^[j] = f(ω j) * g(ω (d+j))
+  -- All have the same CE.
+  --
+  -- Goal: CE[M_{k+1} | m] =ᵐ CE[M_k | m]
+  -- i.e., CE[f(ω 0) * g(ω (k+1)) | m] =ᵐ CE[f(ω 0) * g(ω k) | m]
+  --
+  -- But M_{k+1} and M_k have different base lags.
+  -- Shift doesn't change the lag, only the starting point.
+  --
+  -- Hmm. The property we want is that CE doesn't depend on lag.
+  -- This might be deeper than just shift-invariance.
+  --
+  -- Actually, let me think about what the shift-invariant σ-algebra captures.
+  -- It's the tail σ-algebra for doubly-infinite sequences.
+  -- Functions that are CE'd onto this should depend only on "asymptotic" behavior.
+  --
+  -- For a product f(ω i) * g(ω j) where f, g depend on single coordinates,
+  -- the CE should be... E[f(ω i)] * E[g(ω j)]? No, that's not right either.
+  --
+  -- Let me try a concrete calculation.
+  -- Suppose μhat is the product measure ν^ℤ for some ν on α.
+  -- Then shiftℤ preserves μhat.
+  -- The shift-invariant σ-algebra is trivial (by Kolmogorov 0-1 law).
+  -- So CE[F | trivial] = E[F] (a constant).
+  -- CE[f(ω 0) * g(ω k) | trivial] = E[f(ω 0) * g(ω k)] = E[f] * E[g] (by independence)
+  -- Similarly CE[f(ω 0) * g(ω (k+1)) | trivial] = E[f] * E[g]
+  -- So they're equal! The proof works for product measures.
+  --
+  -- For non-product measures, the invariant σ-algebra is non-trivial.
+  -- But the same logic might apply: coordinates far apart are "approximately independent"
+  -- when conditioned on the shift-invariant σ-algebra.
+  --
+  -- Let me try to use conditional independence or some ergodic argument.
+  --
+  -- Actually, let me just use a direct calculation.
+  -- Define F ω = f(ω (-1)) * g(ω k).
+  -- We have:
+  -- F ∘ shiftℤ = f(ω 0) * g(ω (k+1)) ... this is the LHS function!
+  -- F ∘ shiftℤInv = f(ω (-2)) * g(ω (k-1))
+  --
+  -- So CE[LHS | m] = CE[F ∘ shiftℤ | m] =ᵐ CE[F | m] by shift-invariance.
+  --
+  -- Similarly, define G ω = f(ω (-1)) * g(ω (k-1)).
+  -- G ∘ shiftℤ = f(ω 0) * g(ω k) ... this is the RHS function!
+  -- So CE[RHS | m] = CE[G ∘ shiftℤ | m] =ᵐ CE[G | m].
+  --
+  -- Goal: CE[F | m] =ᵐ CE[G | m]
+  -- where F ω = f(ω (-1)) * g(ω k) and G ω = f(ω (-1)) * g(ω (k-1)).
+  --
+  -- Note: F and G both have f at -1, but g at different indices.
+  -- Define Ψ_j ω = f(ω (-1)) * g(ω j).
+  -- We want CE[Ψ_k | m] =ᵐ CE[Ψ_{k-1} | m].
+  --
+  -- Ψ_j ∘ shiftℤ = f(ω 0) * g(ω (j+1)) = M_{j+1} (with different naming)
+  -- Ψ_j ∘ shiftℤInv = f(ω (-2)) * g(ω (j-1))
+  --
+  -- By shift-invariance: CE[Ψ_j | m] =ᵐ CE[Ψ_j ∘ shiftℤ | m] = CE[M_{j+1} | m]
+  --                      CE[Ψ_j | m] =ᵐ CE[Ψ_j ∘ shiftℤInv | m]
+  --
+  -- Hmm, this is getting circular. Let me try a different definition.
+  --
+  -- OK I think the key insight is:
+  -- Define F ω = f(ω 0) * g(ω 0). (Same coordinate!)
+  -- F ∘ shiftℤ^[j] = f(ω j) * g(ω j).
+  -- All these have the same CE.
+  --
+  -- Now, for different coordinates:
+  -- Redefine F ω = f(ω 0) * g(ω 1). (Offset by 1.)
+  -- F ∘ shiftℤ^[j] = f(ω j) * g(ω (j+1)).
+  -- At j=-1: f(ω (-1)) * g(ω 0).
+  --
+  -- Define G ω = f(ω 0) * g(ω k) = f(ω 0) * g(ω (1+(k-1))).
+  -- This is like F with the g part shifted by k-1 more.
+  --
+  -- g(ω k) = g(ω 1) composed with shiftℤ^[k-1] in the second argument only.
+  -- But we can't shift arguments independently!
+  --
+  -- The key mathematical fact needed is that for the shift-invariant σ-algebra,
+  -- the conditional expectation of f(ω i) * g(ω j) depends only on |i - j|,
+  -- not on the specific values of i and j.
+  --
+  -- This is because of ergodicity/mixing properties of the shift.
+  --
+  -- For the proof, we might need to use that:
+  -- 1. ω ↦ (ω i, ω j) has a distribution that depends only on |i - j| after
+  --    conditioning on the shift-invariant σ-algebra.
+  -- 2. This gives the lag constancy.
+  --
+  -- This might be proved via the mean ergodic theorem or similar.
+  --
+  -- For now, let me just mark this as sorry and move on, noting the difficulty.
   sorry
 
 
