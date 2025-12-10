@@ -1462,7 +1462,7 @@ lemma condExp_mul_of_indep
 This extends conditional independence from pairs to finite products.
 The inductive step requires full conditional independence infrastructure.
 -/
-axiom condexp_product_factorization_ax
+lemma condexp_product_factorization_ax
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
     (m : ℕ) (fs : Fin m → α → ℝ)
@@ -1470,7 +1470,11 @@ axiom condexp_product_factorization_ax
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
     (hciid : True) :
     μ[fun ω => ∏ k, fs k (ω (k : ℕ)) | shiftInvariantSigma (α := α)]
-      =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω))
+      =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω)) := by
+  -- Proof by induction on m:
+  -- Base case (m = 0): Product of empty family is 1, trivial
+  -- Inductive step: Uses conditional independence to factorize
+  sorry
 
 /-
 Proof of base case (m = 0) - kept for reference:
@@ -1503,7 +1507,7 @@ to arbitrary indices `ω (k 0), ω (k 1), ...`.
 For any coordinate selection `k : Fin m → ℕ`, we can relate it to the
 standard selection via shifts, then apply the shift equivariance of CE.
 -/
-axiom condexp_product_factorization_general
+lemma condexp_product_factorization_general
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
     (m : ℕ) (fs : Fin m → α → ℝ) (k : Fin m → ℕ)
@@ -1511,7 +1515,9 @@ axiom condexp_product_factorization_general
     (hbd : ∀ i, ∃ C, ∀ x, |fs i x| ≤ C)
     (hciid : True) :
     μ[fun ω => ∏ i, fs i (ω (k i)) | shiftInvariantSigma (α := α)]
-      =ᵐ[μ] (fun ω => ∏ i, ∫ x, fs i x ∂(ν (μ := μ) ω))
+      =ᵐ[μ] (fun ω => ∏ i, ∫ x, fs i x ∂(ν (μ := μ) ω)) := by
+  -- Proof: reduce to condexp_product_factorization_ax via shift invariance
+  sorry
 
 /-
 Proof of base case (m = 0) - kept for reference:
@@ -1841,10 +1847,13 @@ type-theoretic mismatch that can be resolved by:
 
 Axiomatized for now as this is purely administrative repackaging.
 -/
-axiom exchangeable_implies_ciid_modulo_bridge_ax
+lemma exchangeable_implies_ciid_modulo_bridge_ax
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ) :
-    Exchangeability.ConditionallyIID μ (fun i (ω : Ω[α]) => ω i)
+    Exchangeability.ConditionallyIID μ (fun i (ω : Ω[α]) => ω i) := by
+  -- Main bridge theorem: repackage ν as the directing measure
+  -- Requires: measurability of ν for arbitrary sets (type-theoretic issue)
+  sorry
 
 section MainConvergence
 
@@ -3909,7 +3918,14 @@ private lemma condexp_pair_lag_constant
     refine h_pull_left.trans ?_
     refine h_two.trans ?_
     exact h_pull_right.symm
-  exact naturalExtension_pullback_ae (μ := μ) (α := α) ext h_chain
+  -- Conditional expectations are strongly measurable, hence AEMeasurable
+  have hFmeas : AEMeasurable (μ[Hk1 | shiftInvariantSigma (α := α)]) μ :=
+    StronglyMeasurable.aemeasurable (stronglyMeasurable_condExp.mono
+      (shiftInvariantSigma_le (α := α)))
+  have hGmeas : AEMeasurable (μ[Hk | shiftInvariantSigma (α := α)]) μ :=
+    StronglyMeasurable.aemeasurable (stronglyMeasurable_condExp.mono
+      (shiftInvariantSigma_le (α := α)))
+  exact naturalExtension_pullback_ae (μ := μ) (α := α) ext hFmeas hGmeas h_chain
 /-- **Tower property for products** (reverse tower law).
 
 For bounded measurable functions f, g, the conditional expectation satisfies:

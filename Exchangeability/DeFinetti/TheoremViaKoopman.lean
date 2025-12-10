@@ -85,14 +85,16 @@ This is the three-way equivalence proved using the Mean Ergodic Theorem.
 
 **Reference**: Kallenberg (2005), Theorem 1.1 (page 26), "First proof".
 
-**Note**: This remains an axiom because the direction (Exchangeable → ConditionallyIID) requires
-the full ViaKoopman machinery, which depends on unproved axioms like `condindep_pair_given_tail`.
+**Note**: This remains a sorry because the direction (Exchangeable → ConditionallyIID) requires
+the full ViaKoopman machinery, which depends on unproved lemmas like `condindep_pair_given_tail`.
 -/
-axiom deFinetti_RyllNardzewski_equivalence_viaKoopman
+lemma deFinetti_RyllNardzewski_equivalence_viaKoopman
     (μ : Measure Ω) [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
     (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-    Contractable μ X ↔ Exchangeable μ X ∧ ConditionallyIID μ X
+    Contractable μ X ↔ Exchangeable μ X ∧ ConditionallyIID μ X := by
+  -- Requires: contractable_iff_exchangeable (easy), exchangeable_implies_ciid (hard)
+  sorry
 
 /-- **De Finetti's Theorem (Koopman proof)**: Exchangeable ⇒ ConditionallyIID.
 

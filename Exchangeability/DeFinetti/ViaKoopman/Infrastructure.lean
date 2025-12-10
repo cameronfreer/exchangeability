@@ -172,6 +172,13 @@ lemma restrictNonneg_shiftℤInv (ω : Ωℤ[α]) :
   simp [restrictNonneg, shiftℤInv]
 
 @[measurability, fun_prop]
+lemma measurable_restrictNonneg : Measurable (restrictNonneg (α := α)) := by
+  apply measurable_pi_lambda
+  intro n
+  simp only [restrictNonneg]
+  exact measurable_pi_apply (Int.ofNat n)
+
+@[measurability, fun_prop]
 lemma measurable_shiftℤ : Measurable (shiftℤ (α := α)) := by
   measurability
 
@@ -878,69 +885,130 @@ BLOCKERS:
 -/
 -/
 
-/-- Existence of a natural two-sided extension for a measure-preserving shift. -/
-axiom exists_naturalExtension
+/-- Existence of a natural two-sided extension for a measure-preserving shift.
+
+**Proof strategy**: Construct the natural extension via inverse limits.
+For a shift-invariant measure μ on ℕ → α, the natural extension is the
+unique measure μ̂ on ℤ → α such that:
+1. μ̂ is shift-invariant (both shiftℤ and shiftℤInv preserve μ̂)
+2. The pushforward of μ̂ along restrictNonneg equals μ
+
+This is a standard construction in ergodic theory (see Cornfeld-Fomin-Sinai). -/
+lemma exists_naturalExtension
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving (shift (α := α)) μ μ) :
-    NaturalExtensionData (μ := μ)
+    NaturalExtensionData (μ := μ) := by
+  -- Construction requires building the measure on ℤ → α via inverse limits
+  -- or using Kolmogorov extension theorem
+  sorry
+
+/-- The comap of shiftInvariantSigma along restrictNonneg is contained in shiftInvariantSigmaℤ.
+
+This follows from the fact that preimages of shift-invariant sets are shiftℤ-invariant,
+using `restrictNonneg_shiftℤ : restrictNonneg (shiftℤ ω) = shift (restrictNonneg ω)`. -/
+lemma comap_restrictNonneg_shiftInvariantSigma_le :
+    MeasurableSpace.comap (restrictNonneg (α := α)) (shiftInvariantSigma (α := α))
+      ≤ shiftInvariantSigmaℤ (α := α) := by
+  intro t ht
+  -- t is of the form restrictNonneg⁻¹' s for some s ∈ shiftInvariantSigma
+  rcases ht with ⟨s, hs, rfl⟩
+  -- hs : isShiftInvariant s, i.e., MeasurableSet s ∧ shift⁻¹' s = s
+  constructor
+  · -- Measurability: restrictNonneg⁻¹' s is measurable
+    exact measurable_restrictNonneg hs.1
+  · -- Shift-invariance: shiftℤ⁻¹' (restrictNonneg⁻¹' s) = restrictNonneg⁻¹' s
+    ext ω
+    simp only [Set.mem_preimage]
+    -- Goal: shiftℤ ω ∈ restrictNonneg⁻¹' s ↔ ω ∈ restrictNonneg⁻¹' s
+    -- i.e., restrictNonneg (shiftℤ ω) ∈ s ↔ restrictNonneg ω ∈ s
+    rw [restrictNonneg_shiftℤ]
+    -- Now: shift (restrictNonneg ω) ∈ s ↔ restrictNonneg ω ∈ s
+    -- This follows from s being shift-invariant
+    have h_inv : shift ⁻¹' s = s := hs.2
+    rw [← Set.mem_preimage, h_inv]
 
 /-- Pulling conditional expectation back to the two-sided extension.
 
-**Can be derived from `condexp_pullback_factor`** by specializing with:
-- `g := restrictNonneg`,
-- `μ' := ext.μhat`,
-- `m := shiftInvariantSigma` (pulls back to `shiftInvariantSigmaℤ`)
-- `hpush := ext.restrict_pushforward` -/
-axiom naturalExtension_condexp_pullback
+**Proof strategy**: Use `condexp_pullback_factor` to get
+`(μ[H | m] ∘ g) =ᵐ[μ'] μ'[(H ∘ g) | comap g m]`, then show the comap CE
+equals the shiftInvariantSigmaℤ CE. -/
+lemma naturalExtension_condexp_pullback
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (ext : NaturalExtensionData (μ := μ))
     {H : Ω[α] → ℝ} (hH : Integrable H μ) :
     (fun ωhat => μ[H | shiftInvariantSigma (α := α)] (restrictNonneg (α := α) ωhat))
       =ᵐ[ext.μhat]
         ext.μhat[(fun ωhat => H (restrictNonneg (α := α) ωhat))
-          | shiftInvariantSigmaℤ (α := α)]
+          | shiftInvariantSigmaℤ (α := α)] := by
+  haveI := ext.μhat_isProb
+  -- Step 1: Apply condexp_pullback_factor
+  have h_pullback := condexp_pullback_factor
+    (restrictNonneg (α := α))
+    measurable_restrictNonneg
+    ext.restrict_pushforward
+    hH
+    (shiftInvariantSigma (α := α))
+    (shiftInvariantSigma_le (α := α))
+  -- h_pullback : (μ[H | shiftInvariantSigma] ∘ restrictNonneg) =ᵐ[ext.μhat]
+  --              ext.μhat[(H ∘ restrictNonneg) | comap restrictNonneg shiftInvariantSigma]
+
+  -- Step 2: Need to show CE w.r.t. comap = CE w.r.t. shiftInvariantSigmaℤ
+  -- We have: comap restrictNonneg shiftInvariantSigma ≤ shiftInvariantSigmaℤ
+  -- For the two CEs to be equal, we'd need either:
+  -- (a) The σ-algebras to be equal (not true in general)
+  -- (b) Some property of the natural extension that makes them equal a.e.
+  -- This requires deeper analysis of the natural extension structure.
+  sorry
 
 /-- Pulling an almost-everywhere equality back along the natural extension.
 
-**Can be derived from `ae_pullback_iff`** by specializing with:
-- `g := restrictNonneg`,
-- `μ' := ext.μhat`,
-- `hpush := ext.restrict_pushforward` -/
-axiom naturalExtension_pullback_ae
+**Proof**: Uses `ae_map_iff` from mathlib: since `μ = map restrictNonneg ext.μhat`,
+we have `(∀ᵐ ω ∂μ, F ω = G ω) ↔ (∀ᵐ ωhat ∂ext.μhat, F (restrictNonneg ωhat) = G (restrictNonneg ωhat))`.
+The hypothesis `h` gives the RHS, so we conclude the LHS. -/
+lemma naturalExtension_pullback_ae
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (ext : NaturalExtensionData (μ := μ))
-    {F G : Ω[α] → ℝ}
+    {F G : Ω[α] → ℝ} (hF : AEMeasurable F μ) (hG : AEMeasurable G μ)
     (h : (fun ωhat => F (restrictNonneg (α := α) ωhat))
         =ᵐ[ext.μhat]
         (fun ωhat => G (restrictNonneg (α := α) ωhat))) :
-    F =ᵐ[μ] G
+    F =ᵐ[μ] G := by
+  haveI := ext.μhat_isProb
+  rw [ae_pullback_iff (restrictNonneg (α := α)) measurable_restrictNonneg
+    ext.restrict_pushforward hF hG]
+  exact h
 
 /-- Two-sided version of `condexp_precomp_iterate_eq`.
 
-**Can be derived from `condexp_precomp_iterate_eq_of_invariant`** by specializing with:
-- `T := shiftℤ`,
-- `m := shiftInvariantSigmaℤ`,
-- `h_inv := ` proof that `shiftℤ` leaves `shiftInvariantSigmaℤ` invariant -/
-axiom condexp_precomp_iterate_eq_twosided
+**Proof strategy**: For any k iterations of shiftℤ, the conditional expectation
+is unchanged because:
+1. shiftℤ^[k] is measure-preserving (composition of measure-preserving maps)
+2. shiftℤ^[k] leaves shiftInvariantSigmaℤ-measurable sets invariant
+3. Set-integrals over invariant sets are preserved by measure-preserving maps -/
+lemma condexp_precomp_iterate_eq_twosided
     {μhat : Measure (Ωℤ[α])} [IsProbabilityMeasure μhat]
     (hσ : MeasurePreserving (shiftℤ (α := α)) μhat μhat) {k : ℕ}
     {f : Ωℤ[α] → ℝ} (hf : Integrable f μhat) :
     μhat[(fun ω => f ((shiftℤ (α := α))^[k] ω))
         | shiftInvariantSigmaℤ (α := α)]
-      =ᵐ[μhat] μhat[f | shiftInvariantSigmaℤ (α := α)]
+      =ᵐ[μhat] μhat[f | shiftInvariantSigmaℤ (α := α)] := by
+  -- Proof by induction on k, using that shiftℤ preserves the measure
+  -- and leaves the invariant σ-algebra fixed
+  sorry
 
 /-- Invariance of conditional expectation under the inverse shift.
 
-**Can be derived from `condexp_precomp_iterate_eq_of_invariant`** by specializing with:
-- `T := shiftℤInv` (also measure-preserving and leaves invariant σ-algebra fixed)
-- Alternatively: use `shiftℤ` is an automorphism, so invariance under T implies invariance under T⁻¹ -/
-axiom condexp_precomp_shiftℤInv_eq
+**Proof strategy**: Similar to `condexp_precomp_iterate_eq_twosided`, but using
+that shiftℤInv also preserves the measure and leaves the invariant σ-algebra fixed. -/
+lemma condexp_precomp_shiftℤInv_eq
     {μhat : Measure (Ωℤ[α])} [IsProbabilityMeasure μhat]
     (hσInv : MeasurePreserving (shiftℤInv (α := α)) μhat μhat)
     {f : Ωℤ[α] → ℝ} (hf : Integrable f μhat) :
     μhat[(fun ω => f (shiftℤInv (α := α) ω))
         | shiftInvariantSigmaℤ (α := α)]
-      =ᵐ[μhat] μhat[f | shiftInvariantSigmaℤ (α := α)]
+      =ᵐ[μhat] μhat[f | shiftInvariantSigmaℤ (α := α)] := by
+  -- Same strategy as condexp_precomp_iterate_eq_twosided
+  sorry
 
 /-
 **Lag-constancy in two-sided extension**.
@@ -1017,7 +1085,7 @@ single finite coordinate, so their conditional expectations must be equal.
 
 **Status:** Standard result in ergodic theory. See Kallenberg (2005), Theorem 1.2.
 -/
-axiom condexp_pair_lag_constant_twoSided
+lemma condexp_pair_lag_constant_twoSided
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
     (ext : NaturalExtensionData (μ := μ))
     (f g : α → ℝ)
@@ -1028,7 +1096,14 @@ axiom condexp_pair_lag_constant_twoSided
         | shiftInvariantSigmaℤ (α := α)]
       =ᵐ[ext.μhat]
     ext.μhat[(fun ω => f (ω 0) * g (ω k))
-        | shiftInvariantSigmaℤ (α := α)]
+        | shiftInvariantSigmaℤ (α := α)] := by
+  -- Proof strategy:
+  -- 1. Define Fk ω = f(ω(-1)) * g(ω k)
+  -- 2. Show Fk ∘ shiftℤ = fun ω => f(ω 0) * g(ω (k+1))
+  -- 3. Use shift-invariance of CE (condexp_precomp_iterate_eq_twosided)
+  -- 4. Show Fk ∘ shiftℤInv = fun ω => f(ω 0) * g(ω k) via inverse shift
+  haveI := ext.μhat_isProb
+  sorry
 
 
 end Exchangeability.DeFinetti.ViaKoopman
