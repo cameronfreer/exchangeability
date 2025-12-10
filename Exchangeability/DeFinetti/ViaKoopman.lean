@@ -1826,34 +1826,34 @@ lemma indicator_product_bridge_ax
             exact IsMarkovKernel.isProbabilityMeasure ω
           exact ENNReal.ofReal_toReal (measure_ne_top _ _)
 
-/-- **Final bridge axiom** to the `ConditionallyIID` structure.
+/-- **Final bridge lemma** to the `ConditionallyIID` structure.
 
-**Proof Strategy**:
-This is the assembly step connecting all previous axioms to the `ConditionallyIID` definition.
+**Proof**: Apply `CommonEnding.conditional_iid_from_directing_measure` with:
+1. Measurability of coordinates: `measurable_pi_apply`
+2. Probability kernel ν: from `IsMarkovKernel.isProbabilityMeasure`
+3. Measurability of ν: from `ν_eval_measurable` (for measurable sets)
+4. Bridge condition: from `indicator_product_bridge_ax`
 
-The proof would apply `CommonEnding.conditional_iid_from_directing_measure` with:
-1. Measurability of coordinates (trivial: `measurable_pi_apply`)
-2. Probability kernel ν (established via `IsMarkovKernel.isProbabilityMeasure`)
-3. Measurability of ν (from `ν_eval_measurable`, which works for measurable sets)
-4. Bridge condition (from `indicator_product_bridge_ax`)
-
-The key technical issue is that `conditional_iid_from_directing_measure` requires
-`∀ s, Measurable (fun ω => ν ω s)` which appears to quantify over ALL sets, but
-in measure theory, `ν ω s` is only defined for measurable sets. This is a minor
-type-theoretic mismatch that can be resolved by:
-- Either reformulating `conditional_iid_from_directing_measure` to only require
-  measurability for measurable sets (which is the standard requirement)
-- Or providing a completion argument that extends ν to all sets
-
-Axiomatized for now as this is purely administrative repackaging.
+Note: `conditional_iid_from_directing_measure` was updated to only require
+measurability for measurable sets, matching what `ν_eval_measurable` provides.
 -/
 lemma exchangeable_implies_ciid_modulo_bridge_ax
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ) :
     Exchangeability.ConditionallyIID μ (fun i (ω : Ω[α]) => ω i) := by
-  -- Main bridge theorem: repackage ν as the directing measure
-  -- Requires: measurability of ν for arbitrary sets (type-theoretic issue)
-  sorry
+  -- Apply CommonEnding.conditional_iid_from_directing_measure
+  apply CommonEnding.conditional_iid_from_directing_measure
+  -- 1. Coordinates are measurable
+  · exact fun i => measurable_pi_apply i
+  -- 2. ν is a probability measure at each point
+  · intro ω
+    exact IsMarkovKernel.isProbabilityMeasure ω
+  -- 3. ν ω s is measurable in ω for each measurable set s
+  · intro s hs
+    exact ν_eval_measurable hs
+  -- 4. Bridge condition: product of indicators = product of measures
+  · intro m k B hB_meas
+    exact indicator_product_bridge_ax μ hσ m k B hB_meas
 
 section MainConvergence
 
