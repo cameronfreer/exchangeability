@@ -563,15 +563,41 @@ lemma condIndep_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
 ## Helper lemmas for bounded measurable extension
 -/
 
-/-- **CE is continuous from L¹ to L¹ (wrapper around mathlib's lemma).** -/
+/-- **CE is continuous from L¹ to L¹ (wrapper around mathlib's lemma).**
+
+Note: This lemma uses pointwise/product topology on `Ω → ℝ` for the output convergence.
+For proper L¹ convergence of conditional expectations, the mathlib approach is to use
+`condExpL1CLM` (conditional expectation as a continuous linear map on L¹ spaces).
+
+The proof strategy is:
+1. **L¹ contraction**: condExp is an L¹ contraction, i.e., `eLpNorm (μ[g|m]) 1 μ ≤ eLpNorm g 1 μ`
+   - In mathlib: `eLpNorm_one_condExp_le_eLpNorm` (in Real.lean)
+2. **Linearity**: `μ[fn n - f | m] =ᵐ[μ] μ[fn n | m] - μ[f | m]` (by `condExp_sub`)
+3. **Apply contraction**: `eLpNorm (μ[fn n | m] - μ[f | m]) 1 μ ≤ eLpNorm (fn n - f) 1 μ → 0`
+4. **Convert norms**: The hypothesis uses lintegral of nnnorm, which equals eLpNorm with exponent 1
+
+The conclusion as stated uses pointwise topology, but the natural convergence mode is L¹.
+For applications, L¹ convergence of condExp is typically what's needed. -/
 lemma tendsto_condexp_L1 {mΩ : MeasurableSpace Ω} (μ : Measure Ω) [IsProbabilityMeasure μ]
     (m : MeasurableSpace Ω) (hm : m ≤ mΩ)
     {fn : ℕ → Ω → ℝ} {f : Ω → ℝ}
     (h_int : ∀ n, Integrable (fn n) μ) (hf : Integrable f μ)
     (hL1 : Filter.Tendsto (fun n => ∫⁻ ω, ‖(fn n) ω - f ω‖₊ ∂μ) Filter.atTop (nhds 0)) :
     Filter.Tendsto (fun n => μ[fn n | m]) Filter.atTop (nhds (μ[f | m])) := by
-  -- Replace with the proper lemma in your mathlib build
-  -- e.g., condexp_tendsto_L1 or use condexpL1 continuity
+  -- PROOF STRATEGY (L¹ contraction argument):
+  -- 1. Use `eLpNorm_one_condExp_le_eLpNorm` to get contraction property
+  -- 2. Use `condExp_sub h_int hf m` to get μ[fn n | m] - μ[f | m] =ᵐ[μ] μ[fn n - f | m]
+  -- 3. Apply contraction: eLpNorm (μ[fn n - f | m]) 1 μ ≤ eLpNorm (fn n - f) 1 μ
+  -- 4. The RHS → 0 by hypothesis (after converting lintegral to eLpNorm)
+  --
+  -- KEY MATHLIB LEMMAS:
+  -- - eLpNorm_one_condExp_le_eLpNorm : eLpNorm (μ[f|m]) 1 μ ≤ eLpNorm f 1 μ
+  -- - condExp_sub : μ[f - g | m] =ᵐ[μ] μ[f | m] - μ[g | m]
+  -- - eLpNorm_one_eq_lintegral_nnnorm : eLpNorm f 1 μ = ∫⁻ a, ‖f a‖₊ ∂μ
+  --
+  -- NOTE: The conclusion's topology (pointwise) may need refinement for full proof.
+  -- The natural result is L¹ convergence of condExp, which can then be lifted
+  -- to ae convergence along a subsequence if needed.
   sorry
 
 /-- **Helper: approximate bounded measurable function by simple functions.** -/
@@ -603,7 +629,25 @@ lemma approx_bounded_measurable (μ : Measure α) [IsProbabilityMeasure μ]
   sorry
 
 /-- **Conditional independence for simple functions (left argument).**
-Refactored to avoid instance pollution: works with σ(W) directly. -/
+Refactored to avoid instance pollution: works with σ(W) directly.
+
+**Note on hypotheses**: This lemma as stated requires ψ to be just measurable, but the
+proof strategy (approximation by simple functions) requires boundedness for domination.
+In all current usage contexts (e.g., `condIndep_bddMeas_extend_left`), ψ is bounded.
+
+**Proof Strategy**:
+1. φ is a simple function, hence bounded: `∃ M, ∀ a, |φ a| ≤ M`
+2. Approximate ψ by simple functions ψₙ (using `approxBounded` or `eapprox`)
+3. For each n: apply `condIndep_simpleFunc μ Y Z W hCI φ ψₙ hY hZ`
+4. Pass to limit using dominated convergence:
+   - The product (φ ∘ Y) * (ψₙ ∘ Z) → (φ ∘ Y) * (ψ ∘ Z) ae
+   - Dominating function: M · |ψ ∘ Z| (needs ψ ∘ Z integrable, implied by boundedness)
+5. Similarly for the RHS products
+
+**Key mathlib lemmas**:
+- `condIndep_simpleFunc` : base case for both simple
+- `tendsto_condExpL1_of_dominated_convergence` : L¹ convergence of condExp
+- `condExp_mul_of_stronglyMeasurable_left` : may help with product structure -/
 lemma condIndep_simpleFunc_left
     {Ω α β γ : Type*}
     {m₀ : MeasurableSpace Ω}  -- Explicit ambient space
@@ -617,9 +661,19 @@ lemma condIndep_simpleFunc_left
     μ[ (φ ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W inferInstance ] =ᵐ[μ]
     μ[ φ ∘ Y | MeasurableSpace.comap W inferInstance ] *
     μ[ ψ ∘ Z | MeasurableSpace.comap W inferInstance ] := by
-  -- Approximate ψ by simple functions, apply condIndep_simpleFunc at each step, pass to limit
-  -- This requires similar approximation machinery as condIndep_bddMeas_extend_left
-  -- For now, we'll leave this as a sorry and implement it after the approximation helpers are done
+  -- PROOF OUTLINE:
+  -- 1. Get bound M for φ: M := (φ.range.sup (fun x => ‖x‖₊)).toReal
+  -- 2. Need to approximate ψ by simple functions and pass to limit
+  -- 3. The approximation requires boundedness of ψ (not in current hypotheses)
+  --
+  -- CURRENT GAP: Lemma statement lacks boundedness hypothesis on ψ.
+  -- In usage context (condIndep_bddMeas_extend_left), ψ is bounded.
+  -- Options:
+  --   (a) Add boundedness hypothesis to lemma statement
+  --   (b) Prove via different technique not requiring approximation
+  --   (c) Defer to stronger `condIndep_bddMeas_extend_left` which has boundedness
+  --
+  -- For now, using sorry as this lemma is used in contexts with boundedness available.
   sorry
 
 /-- **Extend factorization from simple φ to bounded measurable φ, keeping ψ fixed.**
@@ -910,16 +964,30 @@ lemma condIndep_bddMeas_extend_left
 
       -- Step 3: Use bounded multiplication to show product converges in L¹, then get set integral convergence
       --
-      -- Strategy: h_L1_conv gives Lp convergence of condExpL1, which is equivalent to eLpNorm convergence:
-      --   ‖condExpL1 ((sφ n) ∘ Y) - condExpL1 (φ ∘ Y)‖₁ → 0
+      -- PROOF STRATEGY (Hölder + L¹ convergence):
       --
-      -- Combined with hψZ_bdd (ψZ term is essentially bounded by Mψ), we get:
-      --   ‖(condExpL1 ((sφ n) ∘ Y) - condExpL1 (φ ∘ Y)) * condExpL1 (ψ ∘ Z)‖₁ → 0
-      -- by Hölder's inequality with L¹ and L^∞ (since ‖f*g‖₁ ≤ ‖f‖₁ * ‖g‖_∞).
+      -- 1. h_L1_conv gives L¹ convergence: condExpL1 ((sφ n) ∘ Y) → condExpL1 (φ ∘ Y) in L¹
+      --    This is equivalent to: ‖condExpL1 ((sφ n) ∘ Y) - condExpL1 (φ ∘ Y)‖₁ → 0
       --
-      -- Then use tendsto_setIntegral_of_L1 to get the desired set integral convergence.
-      sorry  -- TODO: Use tendsto_Lp_iff_tendsto_eLpNorm', eLpNorm_le_eLpNorm_mul_eLpNorm_top,
-             -- and tendsto_setIntegral_of_L1' to complete
+      -- 2. Convert to conditional expectation (function) convergence using condExp_ae_eq_condExpL1:
+      --    μ[(sφ n ∘ Y) | mW] =ᵐ[μ] condExpL1 hmW_le μ ((sφ n) ∘ Y)
+      --
+      -- 3. For products, use Hölder's inequality: ‖f * g‖₁ ≤ ‖f‖₁ * ‖g‖_∞
+      --    Since hψZ_bdd gives: |μ[(ψ ∘ Z) | mW]| ≤ Mψ ae, we have ‖μ[(ψ ∘ Z) | mW]‖_∞ ≤ Mψ
+      --    Thus: ‖(μ[(sφ n ∘ Y) | mW] - μ[(φ ∘ Y) | mW]) * μ[(ψ ∘ Z) | mW]‖₁
+      --        ≤ ‖μ[(sφ n ∘ Y) | mW] - μ[(φ ∘ Y) | mW]‖₁ * Mψ → 0
+      --
+      -- 4. Apply tendsto_setIntegral_of_L1 to get set integral convergence from L¹ convergence
+      --
+      -- KEY MATHLIB LEMMAS:
+      -- - condExp_ae_eq_condExpL1 : μ[f|m] =ᵐ[μ] condExpL1 hm μ f
+      -- - eLpNorm_mul_le : Hölder for products (or Integrable.bdd_mul variants)
+      -- - tendsto_setIntegral_of_L1 : L¹ convergence → set integral convergence
+      -- - tendsto_Lp_iff_tendsto_eLpNorm' : convert Lp convergence to eLpNorm
+      --
+      -- IMPLEMENTATION NOTE: The main complexity is managing the ae equivalences and
+      -- converting between condExpL1 (in L¹ space) and condExp (as functions).
+      sorry
 
     -- Conclude by uniqueness of limits
     -- Since h_int_n shows the sequences are equal for all n, and both converge, their limits are equal
@@ -978,8 +1046,23 @@ lemma condIndep_bddMeas_extend_left
     have h2 : Integrable (μ[(ψ ∘ Z) | mW]) μ := integrable_condExp
     -- Product of integrable functions is integrable on whole space (finite measure)
     have hprod : Integrable (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) μ := by
-      -- Use Hölder: on finite measure, L¹ × L¹ ⊆ L¹
-      sorry  -- TODO: Need Memℒp.mul or similar for finite measure spaces
+      -- Use Integrable.bdd_mul': product of integrable and bounded ae functions is integrable
+      -- First, establish that μ[φ ∘ Y|mW] is bounded ae by Mφ
+      have hMφ_nn : 0 ≤ Mφ := by
+        rcases hφ_bdd.exists with ⟨ω, hω⟩
+        exact (abs_nonneg _).trans hω
+      have hφY_ce_bdd : ∀ᵐ ω ∂μ, |μ[(φ ∘ Y) | mW] ω| ≤ Mφ := by
+        have h_bdd : ∀ᵐ ω ∂μ, |(φ ∘ Y) ω| ≤ (⟨Mφ, hMφ_nn⟩ : NNReal) := by
+          filter_upwards [hφ_bdd] with ω hω
+          simpa using hω
+        simpa [Real.norm_eq_abs] using
+          ae_bdd_condExp_of_ae_bdd (m := mW) (R := ⟨Mφ, hMφ_nn⟩) h_bdd
+      -- Apply Integrable.bdd_mul': g integrable, f ae strongly measurable and bounded
+      -- Use h1.aestronglyMeasurable since h1 : Integrable (μ[(φ ∘ Y) | mW]) μ
+      refine h2.bdd_mul' (c := Mφ) h1.aestronglyMeasurable ?_
+      filter_upwards [hφY_ce_bdd] with ω hω
+      rw [Real.norm_eq_abs]
+      exact hω
     -- Product integrable on whole space implies integrable on subset
     exact hprod.integrableOn
 

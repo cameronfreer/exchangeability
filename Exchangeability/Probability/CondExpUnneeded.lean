@@ -74,9 +74,9 @@ lemma tendsto_set_integral_mul_of_L1 {Ω : Type*} [MeasurableSpace Ω] {μ : Mea
 
 This wraps mathlib's lemma for L¹ continuity of conditional expectation,
 protecting against lemma name changes across mathlib versions. -/
-lemma tendsto_condexp_L1 {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
+lemma tendsto_condexp_L1 {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω}
     [IsProbabilityMeasure μ]
-    (m : MeasurableSpace Ω) (hm : m ≤ inferInstance)
+    (m : MeasurableSpace Ω) (hm : m ≤ mΩ)
     {fn : ℕ → Ω → ℝ} {f : Ω → ℝ}
     (h_int : ∀ n, Integrable (fn n) μ) (hf : Integrable f μ)
     (hL1 : Tendsto (fun n => ∫⁻ ω, ‖fn n ω - f ω‖₊ ∂μ) atTop (nhds 0)) :

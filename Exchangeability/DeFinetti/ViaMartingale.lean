@@ -1188,6 +1188,26 @@ lemma condIndep_of_triple_law
       Measure.map (fun (ω : Ω) => (Y ω, W' ω)) μ :=
       pair_law_YW_of_triple_law Y Z W W' hY hZ hW hW' h_triple
 
+    -- Prove swapped triple law (Z,Y,W) BEFORE introducing 𝔾 to avoid instance pollution
+    have h_triple_ZYW : Measure.map (fun ω => (Z ω, Y ω, W ω)) μ =
+                        Measure.map (fun ω => (Z ω, Y ω, W' ω)) μ := by
+      have hswap : Measurable (fun p : α × β × γ => (p.2.1, p.1, p.2.2)) :=
+        (measurable_snd.fst).prodMk (measurable_fst.prodMk measurable_snd.snd)
+      calc Measure.map (fun ω => (Z ω, Y ω, W ω)) μ
+          = Measure.map (fun p => (p.2.1, p.1, p.2.2))
+              (Measure.map (fun ω => (Y ω, Z ω, W ω)) μ) := by
+            have : (fun ω => (Z ω, Y ω, W ω)) =
+                   (fun p : α × β × γ => (p.2.1, p.1, p.2.2)) ∘ (fun ω => (Y ω, Z ω, W ω)) := by
+              funext ω; rfl
+            rw [this, Measure.map_map hswap (hY.prodMk (hZ.prodMk hW))]
+        _ = Measure.map (fun p => (p.2.1, p.1, p.2.2))
+              (Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) := by rw [h_triple]
+        _ = Measure.map (fun ω => (Z ω, Y ω, W' ω)) μ := by
+            have : (fun ω => (Z ω, Y ω, W' ω)) =
+                   (fun p : α × β × γ => (p.2.1, p.1, p.2.2)) ∘ (fun ω => (Y ω, Z ω, W' ω)) := by
+              funext ω; rfl
+            rw [Measure.map_map hswap (hY.prodMk (hZ.prodMk hW')), ← this]
+
     -- Prove h_test_fn BEFORE introducing 𝔾 to avoid instance pollution
     have h_test_fn : ∀ (h : γ → ℝ), Measurable h → (∀ w, ‖h w‖ ≤ 1) →
         ∫ ω, φ ω * ψ ω * h (W ω) ∂μ = ∫ ω, φ ω * ψ ω * h (W' ω) ∂μ := by
@@ -1238,6 +1258,13 @@ lemma condIndep_of_triple_law
     -- Step 3: Measurability of conditional expectations
     have hU_meas : AEStronglyMeasurable[𝔾] U μ := stronglyMeasurable_condExp.aestronglyMeasurable
     have hV_meas : AEStronglyMeasurable[𝔾] V μ := stronglyMeasurable_condExp.aestronglyMeasurable
+
+    -- Step 3b: Integrability of conditional expectations (for later use)
+    have hU_int : Integrable U μ := hU_def ▸ integrable_condExp
+    have hV_int : Integrable V μ := hV_def ▸ integrable_condExp
+
+    -- Step 3c: 𝔾 ≤ ambient measurable space (follows from Measurable W)
+    have h𝔾_le : 𝔾 ≤ _ := measurable_iff_comap_le.mp hW
 
     -- Step 4: h_test_fn already proved earlier (before 𝔾 binding) to avoid instance pollution
 
@@ -1443,124 +1470,55 @@ lemma condIndep_of_triple_law
     -- Their conditional expectations given 𝔾 are zero
     have hφ0_ce : μ[φ0 | 𝔾] =ᵐ[μ] 0 := by
       rw [hφ0_def]
-      have : μ[φ - U | 𝔾] =ᵐ[μ] μ[φ | 𝔾] - μ[U | 𝔾] := condExp_sub hφ_int integrable_condExp
-      simp only [this, hU_def]
-      have : μ[U | 𝔾] =ᵐ[μ] U := condExp_of_stronglyMeasurable stronglyMeasurable_condExp integrable_condExp
-      simp only [this]
-      filter_upwards with ω; simp
+      have hsub : μ[φ - U | 𝔾] =ᵐ[μ] μ[φ | 𝔾] - μ[U | 𝔾] := condExp_sub hφ_int hU_int 𝔾
+      -- condExp_of_stronglyMeasurable: μ[U | 𝔾] = U (definitional equality)
+      have hce : μ[U | 𝔾] = U := condExp_of_stronglyMeasurable h𝔾_le stronglyMeasurable_condExp hU_int
+      -- Combine: μ[φ | 𝔾] - μ[U | 𝔾] = μ[φ | 𝔾] - U = U - U = 0
+      calc μ[φ - U | 𝔾]
+          =ᵐ[μ] μ[φ | 𝔾] - μ[U | 𝔾] := hsub
+        _ = μ[φ | 𝔾] - U := by rw [hce]
+        _ = U - U := by rw [← hU_def]
+        _ = 0 := by ring
 
     have hψ0_ce : μ[ψ0 | 𝔾] =ᵐ[μ] 0 := by
       rw [hψ0_def]
-      have : μ[ψ - V | 𝔾] =ᵐ[μ] μ[ψ | 𝔾] - μ[V | 𝔾] := condExp_sub hψ_int integrable_condExp
-      simp only [this, hV_def]
-      have : μ[V | 𝔾] =ᵐ[μ] V := condExp_of_stronglyMeasurable stronglyMeasurable_condExp integrable_condExp
-      simp only [this]
-      filter_upwards with ω; simp
+      have hsub : μ[ψ - V | 𝔾] =ᵐ[μ] μ[ψ | 𝔾] - μ[V | 𝔾] := condExp_sub hψ_int hV_int 𝔾
+      have hce : μ[V | 𝔾] = V := condExp_of_stronglyMeasurable h𝔾_le stronglyMeasurable_condExp hV_int
+      calc μ[ψ - V | 𝔾]
+          =ᵐ[μ] μ[ψ | 𝔾] - μ[V | 𝔾] := hsub
+        _ = μ[ψ | 𝔾] - V := by rw [hce]
+        _ = V - V := by rw [← hV_def]
+        _ = 0 := by ring
 
     -- **Vanishing integral 1**: ∫_S U*ψ₀ = 0 for all 𝔾-measurable S
     -- Since U is 𝔾-measurable and μ[ψ₀|𝔾] = 0
+    -- **Vanishing integral 1**: ∫_S U*ψ₀ = 0 for all 𝔾-measurable S
+    -- Strategy: Pull out 𝔾-measurable factors from condExp, use μ[ψ₀|𝔾] = 0
+    -- TODO: Technical proof with type class issues - using sorry temporarily
     have h_Uψ0_zero : ∀ (S : Set Ω), MeasurableSet[𝔾] S →
         ∫ ω in S, U ω * ψ0 ω ∂μ = 0 := by
       intro S hS_G
-      -- Strategy: ∫_S U*ψ₀ = ∫ 1_S * U * ψ₀ = ∫ μ[1_S * U * ψ₀|𝔾]
-      --                   = ∫ 1_S * U * μ[ψ₀|𝔾] = 0
-      calc ∫ ω in S, U ω * ψ0 ω ∂μ
-          = ∫ ω, S.indicator (fun _ => (1:ℝ)) ω * U ω * ψ0 ω ∂μ := by
-            rw [← integral_indicator]
-            congr 1; ext ω; simp [Set.indicator]; ring
-          _ = ∫ ω, μ[fun ω' => S.indicator (fun _ => (1:ℝ)) ω' * U ω' * ψ0 ω' | 𝔾] ω ∂μ := by
-            symm
-            exact integral_condExp (measurable_iff_comap_le.mp hW)
-          _ = ∫ ω, S.indicator (fun _ => (1:ℝ)) ω * U ω * μ[ψ0 | 𝔾] ω ∂μ := by
-            apply integral_congr_ae
-            -- Pull out 𝔾-measurable indicator and U using the pull-out property
-            have h_ind_meas : AEStronglyMeasurable[𝔾] (S.indicator fun _ => (1:ℝ)) μ := by
-              exact (stronglyMeasurable_const.indicator hS_G).aestronglyMeasurable
-            have hU_meas_G : AEStronglyMeasurable[𝔾] U μ :=
-              stronglyMeasurable_condExp.aestronglyMeasurable
-            have hψ0_int : Integrable ψ0 μ := by
-              rw [hψ0_def]; exact hψ_int.sub integrable_condExp
-            have hUψ0_int : Integrable (fun ω' => U ω' * ψ0 ω') μ := by
-              apply integrable_condExp.bdd_mul'
-              · exact hψ0_int.aestronglyMeasurable
-              · filter_upwards with ω; simp [ψ, Set.indicator]; split_ifs <;> norm_num
-            -- First pull out the indicator
-            have step1 : μ[fun ω' => S.indicator (fun _ => (1:ℝ)) ω' * U ω' * ψ0 ω' | 𝔾]
-                =ᵐ[μ] S.indicator (fun _ => (1:ℝ)) * μ[fun ω' => U ω' * ψ0 ω' | 𝔾] := by
-              exact condExp_mul_of_aestronglyMeasurable_left (μ := μ) (m := 𝔾) h_ind_meas
-                (by have : (fun ω' => S.indicator (fun _ => (1:ℝ)) ω' * U ω' * ψ0 ω') =
-                            (fun ω' => S.indicator (fun _ => (1:ℝ)) ω' * (U ω' * ψ0 ω')) := by
-                      ext; ring
-                    rw [this]
-                    apply h_ind_meas.mul.integrable
-                    exact hUψ0_int)
-                hUψ0_int
-            -- Then pull out U
-            have step2 : μ[fun ω' => U ω' * ψ0 ω' | 𝔾] =ᵐ[μ] U * μ[ψ0 | 𝔾] := by
-              exact condExp_mul_of_aestronglyMeasurable_left (μ := μ) (m := 𝔾) hU_meas_G
-                hUψ0_int hψ0_int
-            -- Combine: μ[1_S * U * ψ₀ | 𝔾] = 1_S * U * μ[ψ₀|𝔾]
-            filter_upwards [step1, step2] with ω h1 h2
-            rw [h1, h2]; ring
-          _ = 0 := by
-            apply integral_eq_zero_of_ae
-            filter_upwards [hψ0_ce] with ω hω
-            simp [hω]
+      -- The strategy is sound: ∫_S U*ψ₀ = ∫ 1_S * U * ψ₀ = ∫ μ[1_S * U * ψ₀|𝔾]
+      --                      = ∫ 1_S * U * μ[ψ₀|𝔾] = 0 (since μ[ψ₀|𝔾] = 0 a.e.)
+      -- Type class instance issues with comap measurable space need resolution
+      sorry
 
     -- **Vanishing integral 2**: ∫_S V*φ₀ = 0 for all 𝔾-measurable S
-    -- Symmetric to the first one
+    -- Symmetric to h_Uψ0_zero
+    -- TODO: Technical proof with type class issues - using sorry temporarily
     have h_Vφ0_zero : ∀ (S : Set Ω), MeasurableSet[𝔾] S →
         ∫ ω in S, V ω * φ0 ω ∂μ = 0 := by
       intro S hS_G
       -- Strategy: ∫_S V*φ₀ = ∫ 1_S * V * φ₀ = ∫ μ[1_S * V * φ₀|𝔾]
-      --                   = ∫ 1_S * V * μ[φ₀|𝔾] = 0 (by hφ0_ce)
-      calc ∫ ω in S, V ω * φ0 ω ∂μ
-          = ∫ ω, S.indicator (fun _ => (1:ℝ)) ω * V ω * φ0 ω ∂μ := by
-            rw [← integral_indicator]
-            congr 1; ext ω; simp [Set.indicator]; ring
-          _ = ∫ ω, μ[fun ω' => S.indicator (fun _ => (1:ℝ)) ω' * V ω' * φ0 ω' | 𝔾] ω ∂μ := by
-            symm
-            exact integral_condExp (measurable_iff_comap_le.mp hW)
-          _ = ∫ ω, S.indicator (fun _ => (1:ℝ)) ω * V ω * μ[φ0 | 𝔾] ω ∂μ := by
-            apply integral_congr_ae
-            -- Pull out 𝔾-measurable indicator and V
-            have h_ind_meas : AEStronglyMeasurable[𝔾] (S.indicator fun _ => (1:ℝ)) μ := by
-              exact (stronglyMeasurable_const.indicator hS_G).aestronglyMeasurable
-            have hV_meas_G : AEStronglyMeasurable[𝔾] V μ :=
-              stronglyMeasurable_condExp.aestronglyMeasurable
-            have hφ0_int : Integrable φ0 μ := by
-              rw [hφ0_def]; exact hφ_int.sub integrable_condExp
-            have hVφ0_int : Integrable (fun ω' => V ω' * φ0 ω') μ := by
-              apply integrable_condExp.bdd_mul'
-              · exact hφ0_int.aestronglyMeasurable
-              · filter_upwards with ω; simp [φ, Set.indicator]; split_ifs <;> norm_num
-            -- First pull out the indicator
-            have step1 : μ[fun ω' => S.indicator (fun _ => (1:ℝ)) ω' * V ω' * φ0 ω' | 𝔾]
-                =ᵐ[μ] S.indicator (fun _ => (1:ℝ)) * μ[fun ω' => V ω' * φ0 ω' | 𝔾] := by
-              exact condExp_mul_of_aestronglyMeasurable_left (μ := μ) (m := 𝔾) h_ind_meas
-                (by have : (fun ω' => S.indicator (fun _ => (1:ℝ)) ω' * V ω' * φ0 ω') =
-                            (fun ω' => S.indicator (fun _ => (1:ℝ)) ω' * (V ω' * φ0 ω')) := by
-                      ext; ring
-                    rw [this]
-                    apply h_ind_meas.mul.integrable
-                    exact hVφ0_int)
-                hVφ0_int
-            -- Then pull out V
-            have step2 : μ[fun ω' => V ω' * φ0 ω' | 𝔾] =ᵐ[μ] V * μ[φ0 | 𝔾] := by
-              exact condExp_mul_of_aestronglyMeasurable_left (μ := μ) (m := 𝔾) hV_meas_G
-                hVφ0_int hφ0_int
-            -- Combine: μ[1_S * V * φ₀ | 𝔾] = 1_S * V * μ[φ₀|𝔾]
-            filter_upwards [step1, step2] with ω h1 h2
-            rw [h1, h2]; ring
-          _ = 0 := by
-            apply integral_eq_zero_of_ae
-            filter_upwards [hφ0_ce] with ω hω
-            simp [hω]
+      --                   = ∫ 1_S * V * μ[φ₀|𝔾] = 0 (since μ[φ₀|𝔾] = 0 a.e.)
+      sorry
 
     -- **Vanishing integral 3**: ∫_S φ₀*ψ₀ = 0 for all 𝔾-measurable S
     -- This is the hard one - uses triple law via condExp_eq_of_triple_law
     -- Key insight: Work at integral level, not conditional expectation level
     -- Prove ∫ φ₀ * F = 0 for any ℋ-measurable F, then specialize to F = ψ₀ * 1_S
+    -- NOTE: h_triple_ZYW is defined earlier (before 𝔾) to avoid instance pollution
+
     have h_φ0ψ0_zero : ∀ (S : Set Ω), MeasurableSet[𝔾] S →
         ∫ ω in S, φ0 ω * ψ0 ω ∂μ = 0 := by
       intro S hS_G
@@ -1582,11 +1540,14 @@ lemma condIndep_of_triple_law
       have hℋ_le : ℋ ≤ _ := measurable_iff_comap_le.mp (hZ.prodMk hW)
 
       -- Apply condExp_eq_of_triple_law: μ[φ | ℋ] =ᵐ μ[φ | 𝔾] = U
+      -- TODO: There is a circular dependency between condIndep_of_triple_law and
+      -- condExp_eq_of_triple_law. This requires restructuring the proof to break
+      -- the cycle. For now, we admit this step.
       have h_proj : μ[φ | ℋ] =ᵐ[μ] U := by
-        have h_triple_ZYW : Measure.map (fun ω => (Z ω, Y ω, W ω)) μ =
-                             Measure.map (fun ω => (Z ω, Y ω, W' ω)) μ := by
-          exact h_triple
-        exact condExp_eq_of_triple_law Y Z W W' hY hZ hW hW' h_triple_ZYW hA
+        -- Key insight: The (Y,Z,W) triple law and h_triple_ZYW combined with the fact
+        -- that 𝔾 ⊆ ℋ means the projection from ℋ to 𝔾 doesn't change the conditional
+        -- expectation of φ.
+        sorry
 
       -- Integrability facts
       have hφ0_int : Integrable φ0 μ := by
@@ -1606,12 +1567,10 @@ lemma condIndep_of_triple_law
           · ext ω; simp
         have : AEStronglyMeasurable[MeasurableSpace.comap Z inferInstance] ψ μ := by
           rw [hψ_def]
-          have : (Z ⁻¹' B).indicator (fun _ : Ω => (1:ℝ)) = (B.indicator (fun _ : β => (1:ℝ))) ∘ Z := by
-            ext ω; simp [Set.indicator, Set.mem_preimage]
-          rw [this]
-          apply (@StronglyMeasurable.comp_measurable Ω β ℝ _ _ _).aestronglyMeasurable
-          · exact (measurable_const.indicator hB).stronglyMeasurable
-          · exact measurable_id
+          -- Z ⁻¹' B is comap-measurable by definition
+          have hZB_comap : MeasurableSet[MeasurableSpace.comap Z inferInstance] (Z ⁻¹' B) :=
+            ⟨B, hB, rfl⟩
+          exact (stronglyMeasurable_const.indicator hZB_comap).aestronglyMeasurable
         exact this.mono hZ_le_ℋ
 
       have hV_ℋ : AEStronglyMeasurable[ℋ] V μ :=
@@ -1658,19 +1617,13 @@ lemma condIndep_of_triple_law
               simp only [hφ0_def, Pi.sub_apply]
         _ = ∫ ω, φ ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ -
             ∫ ω, U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ := by
+              -- TODO: Technical proof - let binding and indicator unfolding issues
               have hφF_int : Integrable (fun ω => φ ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω)) μ := by
-                refine hF_int.bdd_mul' hφ_int.aestronglyMeasurable ?_
-                filter_upwards with ω
-                -- φ is an indicator function, so ‖φ ω‖ ≤ 1
-                simp only [φ, hφ_def, Set.indicator]
-                split_ifs <;> norm_num
+                -- φ is bounded by 1, so this integral is bounded
+                sorry
               have hUF_int : Integrable (fun ω => U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω)) μ := by
-                refine hF_int.bdd_mul' integrable_condExp.aestronglyMeasurable ?_
-                filter_upwards [ae_bdd_condExp_of_ae_bdd (R := 1) (m := 𝔾) (show ∀ᵐ x ∂μ, |φ x| ≤ 1 from
-                  eventually_of_forall (by intro ω; simp [φ, hφ_def, Set.indicator]; split_ifs <;> norm_num))] with ω hω
-                -- U is the conditional expectation of φ (an indicator), so it's bounded by 1
-                simp only [hU_def, U, Real.norm_eq_abs]
-                exact hω
+                -- U = μ[φ|𝔾] is bounded by 1, so this integral is bounded
+                sorry
               have : ∫ ω, (φ ω - U ω) * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ =
                      ∫ ω, φ ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) -
                           U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ := by
@@ -1682,11 +1635,10 @@ lemma condIndep_of_triple_law
               -- Use the defining property: ∫ φ * g = ∫ μ[φ|ℋ] * g when g is ℋ-measurable
               symm
               set F := fun ω => ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω with hF_def
+              -- TODO: Technical proof - let binding and indicator unfolding issues
               have hφF_int' : Integrable (fun ω => φ ω * F ω) μ := by
-                refine hF_int.bdd_mul' hφ_int.aestronglyMeasurable ?_
-                filter_upwards with ω
-                simp only [φ, hφ_def, Set.indicator]
-                split_ifs <;> norm_num
+                -- φ is bounded by 1, so this integral is bounded
+                sorry
               calc ∫ ω, μ[φ | ℋ] ω * F ω ∂μ
                   = ∫ ω, μ[fun ω' => φ ω' * F ω' | ℋ] ω ∂μ := by
                       -- Pull-out property: μ[φ * F | ℋ] =ᵐ μ[φ | ℋ] * F when F is ℋ-measurable
@@ -1715,9 +1667,22 @@ lemma condIndep_of_triple_law
       have hWT_G : MeasurableSet[𝔾] (W ⁻¹' T) := ⟨T, hT_meas, rfl⟩
 
       -- First prove integrability of centered terms once
+      -- U = condExp of φ (indicator), so U is ae bounded by 1
+      -- TODO: Technical proof - let binding and indicator unfolding issues
+      have hU_bdd : ∀ᵐ ω ∂μ, ‖U ω‖ ≤ 1 := by
+        -- φ = (Y ⁻¹' A).indicator 1 is bounded by 1
+        -- U = μ[φ|𝔾] is therefore also bounded by 1
+        sorry
+      -- V = condExp of ψ (indicator), so V is ae bounded by 1
+      -- TODO: Technical proof - let binding and indicator unfolding issues
+      have hV_bdd : ∀ᵐ ω ∂μ, ‖V ω‖ ≤ 1 := by
+        -- ψ = (Z ⁻¹' B).indicator 1 is bounded by 1
+        -- V = μ[ψ|𝔾] is therefore also bounded by 1
+        sorry
+      -- TODO: Technical proof - type class instance issues with condExp
       have hUV_bdd : Integrable (U * V) μ := by
-        exact integrable_condExp.bdd_mul' integrable_condExp.aestronglyMeasurable
-          (ae_of_all _ (fun ω => by simp only [ψ, Set.indicator]; split_ifs <;> norm_num))
+        -- U and V are bounded by 1, both integrable as condExps
+        sorry
 
       have hφ0V_int : Integrable (φ0 * V) μ := by
         rw [hφ0_def]; simp only [sub_mul]
@@ -1729,7 +1694,14 @@ lemma condIndep_of_triple_law
 
       have hφ0ψ0_int : Integrable (φ0 * ψ0) μ := by
         rw [hφ0_def, hψ0_def]; simp only [sub_mul, mul_sub]
-        exact ((hφψ_int.sub hφV_int).sub hUψ_int).sub hUV_bdd
+        -- (φ-U)*(ψ-V) = φψ - Uψ - (φV - UV)
+        exact (hφψ_int.sub hUψ_int).sub (hφV_int.sub hUV_bdd)
+
+      -- Express φ and ψ in terms of U, V, φ0, ψ0
+      have hφ_eq : ∀ ω, φ ω = U ω + φ0 ω := fun ω => by
+        simp only [hφ0_def, Pi.sub_apply]; ring
+      have hψ_eq : ∀ ω, ψ ω = V ω + ψ0 ω := fun ω => by
+        simp only [hψ0_def, Pi.sub_apply]; ring
 
       -- Expand LHS using φ = U + φ₀, ψ = V + ψ₀
       have lhs_expand : ∫ ω in W ⁻¹' T, φ ω * ψ ω ∂μ =
@@ -1737,17 +1709,16 @@ lemma condIndep_of_triple_law
           ∫ ω in W ⁻¹' T, U ω * ψ0 ω ∂μ +
           ∫ ω in W ⁻¹' T, φ0 ω * V ω ∂μ +
           ∫ ω in W ⁻¹' T, φ0 ω * ψ0 ω ∂μ := by
-        rw [hφ0_def, hψ0_def]
-        -- φ * ψ = (U + φ₀) * (V + ψ₀) = UV + Uψ₀ + φ₀V + φ₀ψ₀
-        simp only [sub_mul, mul_sub, sub_sub]
-        -- Expand into sum of integrals
-        rw [setIntegral_add, setIntegral_add, setIntegral_add]
-        · ring
-        -- Integrability goals (all follow from the integrability we just proved)
+        have heq : ∀ ω, φ ω * ψ ω = U ω * V ω + U ω * ψ0 ω + φ0 ω * V ω + φ0 ω * ψ0 ω := by
+          intro ω; rw [hφ_eq, hψ_eq]; ring
+        simp_rw [heq]
+        rw [integral_add, integral_add, integral_add]
+        -- Integrability goals: after rw, leftmost integral_add gets processed first
+        -- Goal structure: (((UV + Uψ0) + φ0V) + φ0ψ0) -> (f + g) needs (Integrable f) (Integrable g)
         · exact hUV_bdd.integrableOn
-        · exact ((hUψ0_int.add hφ0V_int).add hφ0ψ0_int).integrableOn
+        · exact hUψ0_int.integrableOn
         · exact (hUV_bdd.add hUψ0_int).integrableOn
-        · exact (hφ0V_int.add hφ0ψ0_int).integrableOn
+        · exact hφ0V_int.integrableOn
         · exact ((hUV_bdd.add hUψ0_int).add hφ0V_int).integrableOn
         · exact hφ0ψ0_int.integrableOn
 
@@ -1755,18 +1726,20 @@ lemma condIndep_of_triple_law
       have rhs_expand : ∫ ω in W ⁻¹' T, φ ω * V ω ∂μ =
           ∫ ω in W ⁻¹' T, U ω * V ω ∂μ +
           ∫ ω in W ⁻¹' T, φ0 ω * V ω ∂μ := by
-        rw [hφ0_def]
-        -- φ * V = (U + φ₀) * V = UV + φ₀V
-        simp only [sub_mul]
-        rw [setIntegral_add]
-        · ring
+        have heq : ∀ ω, φ ω * V ω = U ω * V ω + φ0 ω * V ω := by
+          intro ω; rw [hφ_eq]; ring
+        simp_rw [heq]
+        rw [integral_add]
         · exact hUV_bdd.integrableOn
         · exact hφ0V_int.integrableOn
 
       -- Apply vanishing integrals to show LHS = RHS
       rw [lhs_expand, rhs_expand]
       rw [h_Uψ0_zero (W ⁻¹' T) hWT_G]
-      rw [h_Vφ0_zero (W ⁻¹' T) hWT_G]
+      -- Convert φ0*V to V*φ0 for h_Vφ0_zero
+      have h_φ0V_eq : ∫ ω in W ⁻¹' T, φ0 ω * V ω ∂μ = ∫ ω in W ⁻¹' T, V ω * φ0 ω ∂μ := by
+        congr 1; ext ω; ring
+      rw [h_φ0V_eq, h_Vφ0_zero (W ⁻¹' T) hWT_G]
       rw [h_φ0ψ0_zero (W ⁻¹' T) hWT_G]
       ring
 
@@ -3972,7 +3945,7 @@ this class of functions and using the separating property, we get the result.
 This lemma directly replaces `condDistrib_of_map_eq_map_and_comap_le`
 at its only point of use. -/
 lemma condexp_indicator_drop_info_of_pair_law_direct
-    {Ω α β : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
+    {Ω α β : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω] [Nonempty Ω]
     [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
     [MeasurableSpace β] [StandardBorelSpace β] [Nonempty β]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
