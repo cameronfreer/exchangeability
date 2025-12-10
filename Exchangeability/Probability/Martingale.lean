@@ -704,7 +704,23 @@ lemma condExp_exists_ae_limit_antitone
             -- 6. This is ≤ C since |b| ≥ 0, so (‖f‖₁ + |b|) ≥ (‖f‖₁ + |a|) when a,b same sign
             --
             -- The proof mirrors the upcrossings bound but with -revCEFinite instead of revCEFinite.
-            sorry  -- TODO: Apply Doob's upcrossing inequality to -revCEFinite
+            --
+            -- PROOF APPROACH:
+            -- By up_neg_flip_eq_down: downcrossings(a,b,X) = upcrossings(-b,-a,-X)
+            -- So we need to show: ∫⁻ ω, upcrossings(-b,-a,-revCEFinite) ∂μ ≤ C
+            --
+            -- We can apply upcrossings_bdd_uniform to -revCEFinite with interval [-b,-a]:
+            -- 1. -revCEFinite is a martingale (negation preserves martingale property)
+            -- 2. eLpNorm (-revCEFinite) = eLpNorm revCEFinite ≤ eLpNorm f
+            -- 3. -b < -a since a < b
+            -- 4. Apply upcrossings_bdd_uniform to get bound C' for upcrossings(-b,-a,-revCEFinite)
+            --
+            -- The constant C' would be similar to C (same L¹ norm, same gap b-a).
+            -- Alternatively, use the fact that hC bounds upcrossings(a,b,revCEFinite),
+            -- and show upcrossings(-b,-a,-X) ≤ upcrossings(a,b,X) + 1 (alternation).
+            --
+            -- For now, leaving as sorry due to setup complexity.
+            sorry
 
     -- Use monotone convergence on the ORIGINAL process (which IS monotone in N)
     have h_exp_orig : ∫⁻ ω, upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω ∂μ ≤ C := by
