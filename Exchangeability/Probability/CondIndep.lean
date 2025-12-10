@@ -663,17 +663,20 @@ lemma approx_bounded_measurable (μ : Measure α) [IsProbabilityMeasure μ]
       -- This is a standard dominated convergence argument. Left as sorry for now
       -- due to ENNReal arithmetic complexity.
       sorry
-  · -- Case M < 0: The hypothesis |f x| ≤ M < 0 forces f = 0 ae
-    -- However, we also need |fn n x| ≤ M < 0 which is impossible since |·| ≥ 0.
-    -- This is a degenerate case - the hypothesis can only hold on a null set,
-    -- making the lemma vacuously true but practically unusable.
-    -- In practice, this lemma is only called with M ≥ 0.
+  · -- Case M < 0: contradiction since |f x| ≥ 0 > M always
+    -- The hypothesis hf_bdd : ∀ᵐ x ∂μ, |f x| ≤ M with M < 0 is impossible
+    -- since |f x| ≥ 0 for all x. This implies μ = 0, contradicting probability measure.
     push_neg at hM_nonneg
-    -- The hypothesis hf_bdd combined with M < 0 is essentially a contradiction
-    -- on any probability space (since |f x| ≥ 0 > M a.e. is false, so hf_bdd
-    -- requires f = 0 a.e., but then we still can't satisfy |fn| ≤ M).
-    -- Use sorry for this degenerate edge case.
-    sorry
+    exfalso
+    have h_ae_false : ∀ᵐ x ∂μ, False := by
+      filter_upwards [hf_bdd] with x hx
+      have h_abs_nonneg : 0 ≤ |f x| := abs_nonneg _
+      linarith
+    rw [Filter.eventually_false_iff_eq_bot, ae_eq_bot] at h_ae_false
+    -- h_ae_false : μ = 0, but probability measure has μ univ = 1
+    have h_univ : μ Set.univ = 1 := measure_univ
+    rw [h_ae_false] at h_univ
+    simp at h_univ
 
 /-- **Conditional independence for simple functions (left argument).**
 Refactored to avoid instance pollution: works with σ(W) directly.
