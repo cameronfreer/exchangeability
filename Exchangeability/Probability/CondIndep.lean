@@ -646,15 +646,22 @@ lemma approx_bounded_measurable (μ : Measure α) [IsProbabilityMeasure μ]
     -- Property 2: Pointwise ae convergence
     · exact hf_sm.tendsto_approxBounded_ae hf_bdd'
     -- Property 3: L¹ convergence via dominated convergence
-    · -- PROOF OUTLINE using tendsto_lintegral_of_dominated_convergence:
-      -- F n x := (‖approxBounded M n x - f x‖₊ : ℝ≥0∞), bound = 2*M, limit = 0
-      -- 1. Measurability: F n measurable via .enorm
-      -- 2. ae bound: F n ≤ 2*M via triangle + both bounded by M
-      -- 3. ae limit: F n → 0 from tendsto_approxBounded_ae + norm continuity
-      -- 4. Dominator finite: ∫⁻ 2*M = 2*M*μ(univ) = 2*M < ⊤
-      -- Then ∫⁻ F n → ∫⁻ 0 = 0
-      -- Type coercions between ℝ/ℝ≥0/ℝ≥0∞ require careful handling.
-      sorry
+    --
+    -- PROOF STRATEGY using tendsto_lintegral_of_dominated_convergence:
+    -- - F n x := ‖approxBounded M n x - f x‖₊ (as ℝ≥0∞)
+    -- - Limit function: 0 (from pointwise ae convergence via tendsto_approxBounded_ae)
+    -- - Dominator: constant 2*M (since ‖fn - f‖ ≤ ‖fn‖ + ‖f‖ ≤ M + M)
+    -- - Dominator integrable: ∫ 2M dμ = 2M * μ(univ) = 2M < ∞ on probability space
+    --
+    -- Then tendsto_lintegral_of_dominated_convergence gives:
+    --   ∫⁻ ‖fn - f‖₊ → ∫⁻ 0 = 0
+    --
+    -- Key lemmas:
+    -- - hf_sm.tendsto_approxBounded_ae hf_bdd': fn → f pointwise ae
+    -- - hf_sm.norm_approxBounded_le hM_nonneg: ‖fn x‖ ≤ M
+    --
+    -- IMPLEMENTATION NOTE: Requires careful handling of ℝ ↔ ℝ≥0 ↔ ℝ≥0∞ coercions.
+    · sorry
   · -- Case M < 0: contradiction since |f x| ≥ 0 > M always
     -- The hypothesis hf_bdd : ∀ᵐ x ∂μ, |f x| ≤ M with M < 0 is impossible
     -- since |f x| ≥ 0 for all x. This implies μ = 0, contradicting probability measure.
