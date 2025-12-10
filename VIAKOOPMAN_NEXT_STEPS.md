@@ -1,6 +1,6 @@
 # ViaKoopman.lean - Comprehensive Status
 
-**Updated: 2025-12-04**
+**Updated: 2025-12-09**
 
 ---
 
@@ -8,57 +8,55 @@
 
 | File | Axioms | Sorries | Status |
 |------|--------|---------|--------|
-| ViaKoopman.lean | 4 | 5 | Main proof file |
-| ViaKoopman/Infrastructure.lean | 8 | 2 | Dependencies |
+| ViaKoopman.lean | 3 | 5 | Main proof file |
+| ViaKoopman/Infrastructure.lean | 5 | 1 | Dependencies |
 | TheoremViaKoopman.lean | 1 | 0 | Final theorem wrapper |
-| **Total** | **13** | **7** | |
+| **Total** | **9** | **6** | |
 
 ---
 
-## ViaKoopman.lean - 4 Axioms
+## ViaKoopman.lean - 3 Axioms
 
 | Line | Name | Difficulty | Notes |
 |------|------|------------|-------|
-| 296 | `Kernel.IndepFun.ae_measure_indepFun` | Medium | Conditional independence via kernels |
-| 1353 | `condexp_product_factorization_ax` | Medium | CE product factorization |
-| 1394 | `condexp_product_factorization_general` | Medium | General CE product |
-| 1732 | `exchangeable_implies_ciid_modulo_bridge_ax` | Hard | **Main bridge** to CIID |
+| 1465 | `condexp_product_factorization_ax` | Medium | CE product factorization |
+| 1506 | `condexp_product_factorization_general` | Medium | General CE product |
+| 1844 | `exchangeable_implies_ciid_modulo_bridge_ax` | Hard | **Main bridge** to CIID |
 
-## ViaKoopman.lean - 5 Sorries
-
-| Line | Context | Issue |
-|------|---------|-------|
-| 987 | `birkhoffAverage_tendsto_condexp_L2` | Type class synthesis issues |
-| 2409 | inside `condexp_product_factorization_ax` | Part of axiom body |
-| 2457 | inside `condexp_product_factorization_general` | Part of axiom body |
-| 4122 | `extreme_condexp_self` | May not be necessary |
-| 5527 | `condindep_components_given_invSubalgebra` | Kernel.IndepFun autoparam issues |
-
----
-
-## ViaKoopman/Infrastructure.lean - 8 Axioms
+## ViaKoopman/Infrastructure.lean - 5 Active Axioms
 
 | Line | Name | Notes |
 |------|------|-------|
-| 798 | `condexp_precomp_iterate_eq_of_invariant` | CE invariance under iteration |
-| 882 | `exists_naturalExtension` | Natural extension existence |
-| 894 | `naturalExtension_condexp_pullback` | CE pullback property |
-| 909 | `naturalExtension_pullback_ae` | AE pullback property |
-| 924 | `condexp_precomp_iterate_eq_twosided` | Two-sided iteration |
-| 937 | `condexp_precomp_shiftℤInv_eq` | Shift invariance |
-| 959 | `condexp_pair_lag_constant_twoSided` | Pair lag constant |
-| 1020 | `condexp_pair_lag_constant_twoSided` | (duplicate at different line) |
+| 889 | `exists_naturalExtension` | Natural extension existence (construction needed) |
+| 901 | `naturalExtension_condexp_pullback` | CE pullback property |
+| 934 | `condexp_precomp_iterate_eq_twosided` | Two-sided iteration |
+| 947 | `condexp_precomp_shiftℤInv_eq` | Shift invariance |
+| 1030 | `condexp_pair_lag_constant_twoSided` | Pair lag constant |
 
-## ViaKoopman/Infrastructure.lean - 2 Sorries
-
-| Line | Context |
-|------|---------|
-| 484 | Unknown |
-| 778 | Unknown |
+**Note**: Several axioms are commented out (lines 805, 969) due to type class elaboration issues.
 
 ---
 
 ## Recently Completed Conversions
+
+### 2025-12-09
+
+- **`Kernel.IndepFun.ae_measure_indepFun`**: Converted from axiom to lemma
+  - Proved kernel independence implies integral factorization
+  - Key techniques:
+    - π-λ theorem via `IndepSets.indep'` to extend from generators
+    - Rational intervals as generators for Borel σ-algebra
+    - `ae_all_iff` for countable rational quantification
+    - `IndepFun.integral_fun_mul_eq_mul_integral` for the final step
+  - Added `Measurable X` and `Measurable Y` hypotheses for measurability requirements
+
+- **`naturalExtension_pullback_ae`**: Converted from axiom to lemma
+  - Proves AE-equalities transport through the natural extension
+  - Key techniques:
+    - Added `measurable_restrictNonneg` to show restriction map is measurable
+    - Uses `ae_pullback_iff` (already proved in Infrastructure.lean)
+    - Added `AEMeasurable` hypotheses (hF, hG) for the functions
+    - Updated usage site with `stronglyMeasurable_condExp.mono` for CE measurability
 
 ### 2025-12-04
 
@@ -100,6 +98,14 @@ Lean's instance resolution can pick `m` instead of `mΩ` for methods like `.stro
 
 **Solution**: Use `StronglyMeasurable.mono hm` to convert from inferred `StronglyMeasurable[m]` to desired `StronglyMeasurable[mΩ]`.
 
+### π-λ Theorem for Independence Proofs
+
+For kernel independence results:
+1. Define π-systems (e.g., preimages of `{Iic q | q : ℚ}`)
+2. Prove `IndepSets` on the π-systems
+3. Use `IndepSets.indep'` to extend to generated σ-algebras
+4. Connect via `comap_generateFrom` and `borel_eq_generateFrom_Iic_rat`
+
 ### Useful Mathlib Lemmas for CE Proofs
 
 - `stronglyMeasurable_condExp`: CE is m-strongly measurable
@@ -107,18 +113,21 @@ Lean's instance resolution can pick `m` instead of `mΩ` for methods like `.stro
 - `integrable_condExp`: CE of integrable is integrable
 - `memLp_top_of_bound`: Bounded function is in L∞
 - `Integrable.mul_of_top_right`: L¹ × L∞ → L¹
+- `ae_all_iff`: `∀ᵐ x, ∀ i, P i x ↔ ∀ i, ∀ᵐ x, P i x` for countable i
+- `IndepFun.integral_fun_mul_eq_mul_integral`: Independence implies integral factorization
 
 ---
 
 ## Recommended Next Steps
 
-### High Value Targets
-1. **`condexp_product_factorization_ax`** (line 1353) - Has clear mathlib path via induction
-2. **`Kernel.IndepFun.ae_measure_indepFun`** (line 296) - Standard kernel independence result
+### High Value but Complex Targets
+1. **`naturalExtension_condexp_pullback`** - Can potentially be derived from `condexp_pullback_factor` but requires proving `comap restrictNonneg shiftInvariantSigma = shiftInvariantSigmaℤ`
+2. **`condexp_product_factorization_ax`** - Needs conditional independence machinery for inductive step
 
 ### Lower Priority
-- Infrastructure axioms (may need mathlib contributions)
-- `exchangeable_implies_ciid_modulo_bridge_ax` (main theorem bridge)
+- `exists_naturalExtension` - Requires construction of natural two-sided extension
+- `condexp_precomp_iterate_eq_twosided` - Depends on commented-out `condexp_precomp_iterate_eq_of_invariant`
+- `exchangeable_implies_ciid_modulo_bridge_ax` - Main theorem bridge (very hard)
 
 ---
 
