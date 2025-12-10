@@ -773,16 +773,15 @@ lemma condexp_pullback_factor
   · intro s hs _
     exact h_sets s hs
   -- 3) AEStronglyMeasurable for (μ[H | m] ∘ g) with respect to comap g m
-  · -- TODO: Transfer AE strong measurability along measure-preserving map
-    -- Strategy: Use stronglyMeasurable_condExp.aestronglyMeasurable.comp_measurable hg
-    -- Issue: Type class instance problem (TopologicalSpace metavariable)
-    -- Mathematical fact: condExp is strongly measurable → AE strongly measurable
-    -- and composition with measurable preserves this
-    -- Attempted: h_sm.measurable.comp hg, but fails with:
-    --   hg has type @Measurable Ω' Ω inst✝² inst g
-    --   but is expected to have type @Measurable Ω' Ω inst✝² m g
-    -- The issue is that g is measurable w.r.t. ambient σ-algebra, not sub-σ-algebra m
-    sorry
+  · -- Key: g is measurable from (Ω', comap g m) to (Ω, m) by definition of comap
+    have hf_meas_comap : @Measurable Ω' Ω (MeasurableSpace.comap g m) m g :=
+      fun s hs => ⟨s, hs, rfl⟩
+    -- condExp m μ H is strongly measurable w.r.t. m
+    have h_sm : StronglyMeasurable[m] (condExp m μ H) := stronglyMeasurable_condExp
+    -- Composition preserves strong measurability
+    have h_comp_sm : StronglyMeasurable[MeasurableSpace.comap g m] (condExp m μ H ∘ g) :=
+      h_sm.comp_measurable hf_meas_comap
+    exact h_comp_sm.aestronglyMeasurable
 
 /-
 **Invariance of conditional expectation under iterates**.
@@ -1131,8 +1130,10 @@ lemma condexp_precomp_shiftℤInv_eq
         simp only [Set.mem_image, Set.mem_preimage]
         constructor
         · rintro ⟨y, hy, rfl⟩
-          rw [← hs.2]
-          exact Set.mem_preimage.mpr hy
+          -- y ∈ s, want shiftℤ y ∈ s
+          -- hs.2 : shiftℤ⁻¹' s = s means y ∈ s ↔ y ∈ shiftℤ⁻¹' s ↔ shiftℤ y ∈ s
+          have h : y ∈ shiftℤ (α := α) ⁻¹' s := by rw [hs.2]; exact hy
+          exact Set.mem_preimage.mp h
         · intro hx
           use shiftℤInv (α := α) x
           constructor
@@ -1150,8 +1151,7 @@ lemma condexp_precomp_shiftℤInv_eq
       simp [h]
   -- Now prove the main result using ae_eq_condExp_of_forall_setIntegral_eq
   have hf_inv : Integrable (fun ω => f (shiftℤInv (α := α) ω)) μhat := by
-    rw [hσInv.integrable_comp hf.aestronglyMeasurable]
-    exact hf
+    exact hσInv.integrable_comp hf.aestronglyMeasurable hf
   symm
   apply MeasureTheory.ae_eq_condExp_of_forall_setIntegral_eq
     (shiftInvariantSigmaℤ_le (α := α))
@@ -1187,9 +1187,9 @@ lemma condexp_precomp_shiftℤInv_eq
         (∫ x, s.indicator f (shiftℤInv (α := α) x) ∂μhat)
       from MeasureTheory.integral_congr_ae (ae_of_all μhat h_ind)]
     -- Now use measure-preserving: ∫ g ∘ T dμ = ∫ g dμ
-    have h_ind_meas : Measurable (s.indicator f) :=
-      hf.1.measurable.indicator (shiftInvariantSigmaℤ_le (α := α) s hs)
-    rw [hσInv.integral_comp h_ind_meas.aestronglyMeasurable]
+    have h_ind_ae : AEStronglyMeasurable (s.indicator f) μhat :=
+      hf.aestronglyMeasurable.indicator (shiftInvariantSigmaℤ_le (α := α) s hs)
+    rw [hσInv.integral_comp h_ind_ae]
   -- AE strong measurability
   · exact MeasureTheory.stronglyMeasurable_condExp.aestronglyMeasurable
 
