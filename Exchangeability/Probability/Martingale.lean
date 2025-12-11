@@ -749,17 +749,27 @@ lemma condExp_exists_ae_limit_antitone
                 = ∫⁻ ω, upcrossings (-↑b) (-↑a) (negProcess (fun n => revCEFinite (μ := μ) f 𝔽 N n)) ω ∂μ := by
                     simp only [up_neg_flip_eq_down]
               _ = ∫⁻ ω, upcrossings (-↑b) (-↑a) (fun n => revCEFinite (μ := μ) (fun x => -f x) 𝔽 N n) ω ∂μ := by
-                    -- PROOF STRATEGY:
-                    -- Use lintegral_congr_ae: need to show upcrossings are ae equal
-                    -- This follows from: negProcess(revCEFinite f) =ᵐ revCEFinite(-f) at each time n
-                    --
-                    -- Key steps:
-                    -- 1. Use ae_all_iff for countable intersection over n
-                    -- 2. At each n: -(μ[f | 𝔽 (N - n)]) =ᵐ μ[-f | 𝔽 (N - n)] by condExp_neg
-                    -- 3. When processes agree ae at all times, upcrossings agree ae
-                    --
-                    -- The final step uses that upcrossings is deterministic given the process values
-                    sorry
+                    -- Use lintegral_congr_ae: processes agree ae at all times → upcrossings agree ae
+                    apply lintegral_congr_ae
+                    -- Get ae equality at each time index via countable intersection
+                    have h_ae_eq : ∀ᵐ ω ∂μ, ∀ n,
+                        negProcess (fun m => revCEFinite (μ := μ) f 𝔽 N m) n ω =
+                        revCEFinite (μ := μ) (fun x => -f x) 𝔽 N n ω := by
+                      rw [ae_all_iff]
+                      intro n
+                      simp only [negProcess, Pi.neg_apply, revCEFinite]
+                      exact (condExp_neg f (𝔽 (N - n))).symm
+                    filter_upwards [h_ae_eq] with ω hω
+                    -- upcrossings = ⨆ M, upcrossingsBefore M. Use that upcrossingsBefore_congr
+                    -- gives equality when processes agree pointwise.
+                    unfold upcrossings
+                    congr 1
+                    ext M
+                    congr 1
+                    -- Apply upcrossingsBefore_congr: need ∀ k ≤ M, processes agree
+                    apply upcrossingsBefore_congr
+                    intro k _
+                    exact hω k
               _ ≤ C_down := hC_down N
               _ ≤ C := le_max_right C_up C_down
 
