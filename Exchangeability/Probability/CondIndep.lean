@@ -1690,6 +1690,15 @@ lemma condIndep_indicator_of_dropInfoY
   --
   -- NOTE: The tower property requires showing that mW ≤ mZW, which holds
   -- because σ(W) ⊆ σ(Z, W).
+  --
+  -- IMPLEMENTATION BLOCKERS:
+  -- 1. The lemma statement uses abstract mW rather than MeasurableSpace.comap W
+  --    This prevents direct use of tower property since we can't verify mW ≤ mZW
+  -- 2. Need to add hypothesis that mW = MeasurableSpace.comap W inferInstance
+  -- 3. Indicator integrability needs careful handling of preimage measurability
+  --
+  -- The mathematical steps are clear (see comments above), but the Lean
+  -- formalization requires either refactoring the statement or adding hypotheses.
   sorry
 
 end KallenbergIndicator
