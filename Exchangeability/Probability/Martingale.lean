@@ -1059,6 +1059,12 @@ lemma ae_limit_is_condexp_iInf
     have : StronglyMeasurable[𝔽 n] (μ[f | 𝔽 n]) := stronglyMeasurable_condExp
     exact this.mono (h_le n) |>.aestronglyMeasurable
 
+  -- Prove Xlim is AEStronglyMeasurable[⨅ 𝔽] BEFORE introducing F_inf alias
+  -- This avoids type class unification issues between F_inf and ⨅ 𝔽
+  have hXlim_iInf_meas : AEStronglyMeasurable[⨅ n, 𝔽 n] Xlim μ :=
+    aestronglyMeasurable_iInf_of_tendsto_ae_antitone h_antitone h_le
+      (fun n => stronglyMeasurable_condExp) h_tendsto
+
   -- 3) Pass limit through condExp at F_inf := ⨅ n, 𝔽 n
   set F_inf := iInf 𝔽 with hF_inf_def
 
@@ -1158,17 +1164,9 @@ lemma ae_limit_is_condexp_iInf
       -- Step 2: Apply condExp_of_aestronglyMeasurable':
       -- If f is AEStronglyMeasurable[m] and integrable, then μ[f|m] =ᵐ f.
       --
-      -- Step 1: Xlim is AEStronglyMeasurable[F_inf] via the helper lemma
-      -- F_inf = iInf 𝔽 = ⨅ n, 𝔽 n definitionally
-      -- NOTE: aestronglyMeasurable_iInf_of_tendsto_ae_antitone proves this for ⨅ n, 𝔽 n.
-      -- WORKAROUND: Type class unification times out when applying the helper lemma here.
-      -- The mathematical proof is complete: Xlim is AEStronglyMeasurable[⨅ 𝔽] since:
-      --   - Each μ[f | 𝔽 n] is StronglyMeasurable[𝔽 n]
-      --   - The a.e. limit inherits this measurability property
-      --   - This is exactly what aestronglyMeasurable_iInf_of_tendsto_ae_antitone proves
-      -- This sorry is purely a Lean elaboration issue, not a mathematical gap.
-      have hXlim_F_inf_meas : AEStronglyMeasurable[F_inf] Xlim μ := by
-        sorry
+      -- Step 1: Xlim is AEStronglyMeasurable[F_inf] via hXlim_iInf_meas (proved before set F_inf)
+      -- F_inf = iInf 𝔽 = ⨅ n, 𝔽 n definitionally, so this is just type conversion
+      have hXlim_F_inf_meas : AEStronglyMeasurable[F_inf] Xlim μ := hXlim_iInf_meas
       -- Step 2: Apply condExp_of_aestronglyMeasurable': μ[Xlim | F_inf] =ᵐ Xlim
       exact condExp_of_aestronglyMeasurable' hF_inf_le hXlim_F_inf_meas hXlimint
 
