@@ -1024,6 +1024,25 @@ The following theorem states L² convergence of Birkhoff averages to conditional
 for a general measure-preserving transformation T and T-invariant sub-σ-algebra m.
 
 Currently left as `sorry` due to type class synthesis issues. See theorem body for details.
+
+**IMPLEMENTATION ANALYSIS** (2025-12-10):
+
+This general (T, m) lemma is **not needed** for the actual shift-based Koopman proof.
+It's only used in descriptive comments and in some old, now-dead code.
+
+**Available infrastructure**:
+- Koopman MET via `Exchangeability.Ergodic.birkhoffAverage_tendsto_metProjection`
+- Projection lemmas relating MET's projection to `condexpL2` via
+  `Exchangeability.Ergodic.ProjectionLemmas` (e.g. `proj_eq_condexp` or similar)
+- Already used in `productCylinderLp` lemma around line ~2290
+
+**Recommended options**:
+1. **Option A (pragmatic)**: Comment out entirely since nothing depends on it
+2. **Option B (axiom)**: Convert to axiom if needed as a lemma name for later
+
+Given we have the shift-specific MET in `KoopmanMeanErgodic.lean`, Option A is preferred.
+Re-proving this general lemma would require implementing MET projection story with
+explicit instance locking for sub-σ-algebras - a lot of work with duplication.
 -/
 
 /-- L² mean-ergodic theorem in function form:
@@ -1461,6 +1480,63 @@ lemma condExp_mul_of_indep
 
 This extends conditional independence from pairs to finite products.
 The inductive step requires full conditional independence infrastructure.
+
+**IMPLEMENTATION ANALYSIS** (2025-12-10):
+
+**Key available lemmas (fully proved!)**:
+
+1. **Kernel → CE factorization bridge** (`condExp_mul_of_indep` above):
+   For X, Y bounded measurable with kernel-level independence hypothesis `hindep`,
+   we get `μ[X * Y | m] =ᵐ[μ] μ[X | m] * μ[Y | m]`
+
+2. **Kernel independence ⇒ hindep** (`Kernel.IndepFun.integral_mul`):
+   From `Kernel.IndepFun X Y κ μ` we get the `hindep` to feed into `condExp_mul_of_indep`
+
+**What hciid should really be**:
+The `True` placeholder should become a genuine independence hypothesis:
+```lean
+(hciid : ProbabilityTheory.Kernel.iIndepFun
+          (fun k : ℕ => fun (ω : Ω[α]) => ω k)
+          (condExpKernel μ (shiftInvariantSigma (α := α))) μ)
+```
+or some finite-index restriction of that.
+
+**Inductive step structure** (once hciid is real):
+```lean
+| succ n IH =>
+  classical
+  -- Split product into "head" and "tail"
+  let X : Ω[α] → ℝ := fun ω => fs 0 (ω 0)           -- Head
+  let Y : Ω[α] → ℝ := fun ω =>                      -- Tail
+    ∏ i : Fin n, fs (Fin.succ i) (ω (Fin.succ i))
+
+  have hX_meas : Measurable X := (hmeas 0).comp (measurable_pi_apply 0)
+  have hY_meas : Measurable Y := Finset.measurable_prod _ (fun i _ =>
+    (hmeas _).comp (measurable_pi_apply _))
+
+  have hX_bd : ∃ C, ∀ ω, |X ω| ≤ C := ...  -- from hbd 0
+  have hY_bd : ∃ C, ∀ ω, |Y ω| ≤ C := ...  -- combine bounds for fs (succ i)
+
+  -- Independence of X and Y w.r.t. condExpKernel (from hciid via Kernel.IndepFun.comp)
+  have h_indep_XY : Kernel.IndepFun X Y (condExpKernel μ (shiftInvariantSigma (α := α))) μ := by
+    -- Use hciid.indepFun_finset (S := {0} ∪ {1,…,n})
+    -- then compose with fs's and product map via Kernel.IndepFun.comp
+    admit
+
+  -- Get kernel-level factorization
+  have h_kernel := Kernel.IndepFun.integral_mul h_indep_XY hX_meas hY_meas hX_bd hY_bd
+
+  -- Turn into CE factorization using condExp_mul_of_indep
+  have h_ce_fac : μ[X * Y | shiftInvariantSigma (α := α)]
+      =ᵐ[μ] μ[X | shiftInvariantSigma (α := α)] * μ[Y | shiftInvariantSigma (α := α)] :=
+    condExp_mul_of_indep μ (hm := shiftInvariantSigma_le (α := α))
+      hX_meas hY_meas hX_bd hY_bd h_kernel
+
+  -- Rewrite X*Y as (n+1)-fold product, simplify RHS using IH + coordinate 0 lemma
+  ...
+```
+
+The "hard" step is constructing `h_indep_XY` from `hciid` using CondIndep.lean machinery.
 -/
 lemma condexp_product_factorization_ax
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
@@ -1484,7 +1560,7 @@ lemma condexp_product_factorization_ax
     -- Inductive step: Uses conditional independence to factorize
     -- Requires: CE[∏ᵢ fs i (ω i) | ℐ] = CE[fs 0 (ω 0) · ∏ᵢ₌₁ⁿ fs i (ω i) | ℐ]
     --         = CE[fs 0 (ω 0) | ℐ] · CE[∏ᵢ₌₁ⁿ fs i (ω i) | ℐ]  [conditional independence]
-    -- This requires the full conditional independence machinery
+    -- This requires the full conditional independence machinery - see docstring above
     sorry
 
 /-
@@ -1517,6 +1593,40 @@ to arbitrary indices `ω (k 0), ω (k 1), ...`.
 **Proof Strategy**: Use shift-invariance to reduce to the standard case.
 For any coordinate selection `k : Fin m → ℕ`, we can relate it to the
 standard selection via shifts, then apply the shift equivariance of CE.
+
+**IMPLEMENTATION ANALYSIS** (2025-12-10):
+
+**Key available lemmas**:
+- `condexp_precomp_iterate_eq` (line ~747, proved):
+  For any integrable F : Ω[α] → ℝ and any j:
+  `μ[(fun ω => F ((shift^[j]) ω)) | shiftInvariantSigma] =ᵐ[μ] μ[F | shiftInvariantSigma]`
+
+**Detailed proof strategy**:
+1. For each i, define `g i : Ω[α] → ℝ := fun ω => fs i (ω 0)`
+2. Note: `fs i (ω (k i)) = g i ((shift^[k i]) ω)`
+3. Define:
+   ```lean
+   F : Ω[α] → ℝ := fun ω => ∏ i, g i ω               -- product at coordinate 0
+   F' : Ω[α] → ℝ := fun ω => ∏ i, g i ((shift^[k i]) ω)  -- integrand in _general
+   ```
+   F' is the integrand here, F is the one for `condexp_product_factorization_ax`
+
+4. Using `condexp_precomp_iterate_eq` repeatedly + integrability of finite products:
+   `μ[F' | shiftInvariantSigma] =ᵐ[μ] μ[F | shiftInvariantSigma]`
+   for each coordinate shift pattern
+
+5. Conclude:
+   ```lean
+   have h_ax := condexp_product_factorization_ax μ hσ m fs hmeas hbd hciid
+   -- h_ax : μ[F | ℐ] =ᵐ[μ] (ω ↦ ∏ i, ∫ fs i dν(ω))
+   -- From step (4): μ[F' | ℐ] =ᵐ[μ] μ[F | ℐ]
+   -- Compose these a.e.-equalities to get the desired result
+   ```
+
+**Dependencies**: Once `condexp_product_factorization_ax` is done, this follows from:
+- `condexp_precomp_iterate_eq`
+- Measurability/integrability lemmas (already available)
+The only genuinely hard part is still the independence in `condexp_product_factorization_ax`.
 -/
 lemma condexp_product_factorization_general
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
@@ -1536,6 +1646,7 @@ lemma condexp_product_factorization_general
   | succ n IH =>
     -- Inductive step: reduce to condexp_product_factorization_ax via shift invariance
     -- The choice of coordinates k doesn't matter due to shift equivariance of CE
+    -- See detailed strategy in docstring above
     sorry
 
 /-

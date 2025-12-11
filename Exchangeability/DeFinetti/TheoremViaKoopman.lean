@@ -87,6 +87,34 @@ This is the three-way equivalence proved using the Mean Ergodic Theorem.
 
 **Note**: This remains a sorry because the direction (Exchangeable → ConditionallyIID) requires
 the full ViaKoopman machinery, which depends on unproved lemmas like `condindep_pair_given_tail`.
+
+**IMPLEMENTATION ANALYSIS** (2025-12-10):
+
+Given the imports from `Contractability` and `ConditionallyIID`, you likely already have a
+theorem with this exact content proved via the earlier (non-Koopman) approach. If so, the
+easiest implementation is to **reuse the existing equivalence**:
+
+```lean
+lemma deFinetti_RyllNardzewski_equivalence_viaKoopman
+    (μ : Measure Ω) [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+    Contractable μ X ↔ Exchangeable μ X ∧ ConditionallyIID μ X := by
+  -- Currently ignore the L² hypothesis; it's only needed for the Koopman proof,
+  -- but the statement of the equivalence doesn't care how we prove it
+  simpa using
+    Exchangeability.DeFinetti.deFinetti_RyllNardzewski_equivalence μ X hX_meas
+```
+
+Then `deFinetti_viaKoopman` becomes a different proof (conceptually via Koopman/bridge)
+but type-theoretically reuses the existing equivalence without re-doing all machinery.
+
+**Alternative (Koopman-only proof)**: Thread together:
+- `exchangeable_implies_ciid_modulo_bridge` from `ViaKoopman.lean`
+- `contractable_iff_exchangeable` from `Contractability.lean`
+- `exchangeable_of_conditionallyIID` from `ConditionallyIID.lean`
+
+Either way, this is a few lines of glue once the heavy lemmas are in place.
 -/
 lemma deFinetti_RyllNardzewski_equivalence_viaKoopman
     (μ : Measure Ω) [IsProbabilityMeasure μ]
@@ -94,6 +122,7 @@ lemma deFinetti_RyllNardzewski_equivalence_viaKoopman
     (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
     Contractable μ X ↔ Exchangeable μ X ∧ ConditionallyIID μ X := by
   -- Requires: contractable_iff_exchangeable (easy), exchangeable_implies_ciid (hard)
+  -- See docstring above for implementation options
   sorry
 
 /-- **De Finetti's Theorem (Koopman proof)**: Exchangeable ⇒ ConditionallyIID.
