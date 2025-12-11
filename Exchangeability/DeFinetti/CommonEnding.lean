@@ -345,7 +345,7 @@ private lemma product_measure_on_rectangle {Ω α : Type*} [MeasurableSpace α]
 lemma fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
     (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
-    (_hν_meas : ∀ s, Measurable (fun ω => ν ω s))
+    (_hν_meas : ∀ s, MeasurableSet s → Measurable (fun ω => ν ω s))
     (m : ℕ) (k : Fin m → ℕ) (B : Fin m → Set α) (hB : ∀ i, MeasurableSet (B i))
     (h_bridge :
       ∫⁻ ω, ∏ i : Fin m,
@@ -402,7 +402,7 @@ Note: We use lintegral (∫⁻) for measure-valued integrals since measures are 
 This is a direct application of `Measure.bind_apply` from mathlib's Giry monad. -/
 lemma bind_pi_apply {μ : Measure Ω} [IsProbabilityMeasure μ]
     (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
-    (hν_meas : ∀ s, Measurable (fun ω => ν ω s))
+    (hν_meas : ∀ s, MeasurableSet s → Measurable (fun ω => ν ω s))
     (m : ℕ) (B : Set (Fin m → α)) (hB : MeasurableSet B) :
     (μ.bind fun ω => Measure.pi fun _ : Fin m => ν ω) B =
       ∫⁻ ω, (Measure.pi fun _ : Fin m => ν ω) B ∂μ := by
@@ -518,7 +518,7 @@ private lemma pi_of_prob_is_prob {μ : Measure Ω} [IsProbabilityMeasure μ]
 -- Bind of probability measure with probability kernels is probability
 private lemma bind_pi_isProbabilityMeasure {μ : Measure Ω} [IsProbabilityMeasure μ]
     (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
-    (hν_meas : ∀ s, Measurable (fun ω => ν ω s)) (m : ℕ) :
+    (hν_meas : ∀ s, MeasurableSet s → Measurable (fun ω => ν ω s)) (m : ℕ) :
     IsProbabilityMeasure (μ.bind fun ω => Measure.pi fun _ : Fin m => ν ω) := by
   constructor
   have h_ae_meas : AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ :=
@@ -541,7 +541,7 @@ theorem conditional_iid_from_directing_measure
     (hX_meas : ∀ i, Measurable (X i))
     (ν : Ω → Measure α)
     (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
-    (hν_meas : ∀ s, Measurable (fun ω => ν ω s))
+    (hν_meas : ∀ s, MeasurableSet s → Measurable (fun ω => ν ω s))
     (h_bridge : ∀ {m : ℕ} (k : Fin m → ℕ) (B : Fin m → Set α),
       (∀ i, MeasurableSet (B i)) →
         ∫⁻ ω, ∏ i : Fin m,
@@ -555,7 +555,7 @@ theorem conditional_iid_from_directing_measure
       --   (∀ B, MeasurableSet B → Measurable (fun ω => ν ω B)) ∧
       --   ∀ m k, StrictMono k → Measure.map (fun ω i => X (k i) ω) μ =
       --     μ.bind (fun ω => Measure.pi fun _ => ν ω)
-      use ν, hν_prob, (fun B _ => hν_meas B)
+      use ν, hν_prob, hν_meas
 
       intro m k _hk  -- _hk : StrictMono k (not used in proof, but required by definition)
 
@@ -677,7 +677,7 @@ theorem complete_from_directing_measure
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
     (_hX_contract : Contractable μ X)
     (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
-    (hν_meas : ∀ s, Measurable (fun ω => ν ω s))
+    (hν_meas : ∀ s, MeasurableSet s → Measurable (fun ω => ν ω s))
     (h_bridge : ∀ {m : ℕ} (k : Fin m → ℕ) (B : Fin m → Set α),
       (∀ i, MeasurableSet (B i)) →
         ∫⁻ ω, ∏ i : Fin m,

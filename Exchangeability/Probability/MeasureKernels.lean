@@ -207,15 +207,17 @@ lemma measurable_measure_pi {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpac
 This is the version originally proved in `CommonEnding.lean`. The measurable version
 `measurable_measure_pi` is stronger and generally more useful, but this AE version
 is kept for compatibility.
+
+Note: The hypothesis only requires measurability for **measurable** sets, matching
+what `Kernel.measurable_coe` provides. This is the standard requirement in measure theory.
 -/
 lemma aemeasurable_measure_pi {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     {μ : Measure Ω} {m : ℕ}
     (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
-    (hν_meas : ∀ s, Measurable (fun ω => ν ω s)) :
+    (hν_meas : ∀ s, MeasurableSet s → Measurable (fun ω => ν ω s)) :
     AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ := by
   -- The measurable version immediately implies AE-measurability
   have h_meas : Measurable fun ω => Measure.pi fun _ : Fin m => ν ω := by
     apply measurable_measure_pi ν hν_prob
-    intro s _
-    exact hν_meas s
+    exact hν_meas
   exact h_meas.aemeasurable

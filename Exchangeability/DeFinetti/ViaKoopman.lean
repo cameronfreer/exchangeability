@@ -1471,10 +1471,21 @@ lemma condexp_product_factorization_ax
     (hciid : True) :
     μ[fun ω => ∏ k, fs k (ω (k : ℕ)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω)) := by
-  -- Proof by induction on m:
-  -- Base case (m = 0): Product of empty family is 1, trivial
-  -- Inductive step: Uses conditional independence to factorize
-  sorry
+  -- Proof by induction on m
+  induction m with
+  | zero =>
+    -- Base case: Both sides simplify to 1 for empty products
+    -- LHS: μ[fun ω => ∏ k : Fin 0, ... | mSI] = μ[1 | mSI]
+    -- RHS: fun ω => ∏ k : Fin 0, ... = fun ω => 1
+    simp only [Finset.univ_eq_empty, Finset.prod_empty]
+    -- Now: μ[fun _ => 1 | mSI] =ᵐ fun _ => 1
+    exact condExp_const (shiftInvariantSigma_le (α := α)) 1
+  | succ n IH =>
+    -- Inductive step: Uses conditional independence to factorize
+    -- Requires: CE[∏ᵢ fs i (ω i) | ℐ] = CE[fs 0 (ω 0) · ∏ᵢ₌₁ⁿ fs i (ω i) | ℐ]
+    --         = CE[fs 0 (ω 0) | ℐ] · CE[∏ᵢ₌₁ⁿ fs i (ω i) | ℐ]  [conditional independence]
+    -- This requires the full conditional independence machinery
+    sorry
 
 /-
 Proof of base case (m = 0) - kept for reference:
@@ -1516,8 +1527,16 @@ lemma condexp_product_factorization_general
     (hciid : True) :
     μ[fun ω => ∏ i, fs i (ω (k i)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] (fun ω => ∏ i, ∫ x, fs i x ∂(ν (μ := μ) ω)) := by
-  -- Proof: reduce to condexp_product_factorization_ax via shift invariance
-  sorry
+  -- Proof by induction on m (same structure as condexp_product_factorization_ax)
+  induction m with
+  | zero =>
+    -- Base case: Both sides simplify to 1 for empty products
+    simp only [Finset.univ_eq_empty, Finset.prod_empty]
+    exact condExp_const (shiftInvariantSigma_le (α := α)) 1
+  | succ n IH =>
+    -- Inductive step: reduce to condexp_product_factorization_ax via shift invariance
+    -- The choice of coordinates k doesn't matter due to shift equivariance of CE
+    sorry
 
 /-
 Proof of base case (m = 0) - kept for reference:
@@ -1826,34 +1845,34 @@ lemma indicator_product_bridge_ax
             exact IsMarkovKernel.isProbabilityMeasure ω
           exact ENNReal.ofReal_toReal (measure_ne_top _ _)
 
-/-- **Final bridge axiom** to the `ConditionallyIID` structure.
+/-- **Final bridge lemma** to the `ConditionallyIID` structure.
 
-**Proof Strategy**:
-This is the assembly step connecting all previous axioms to the `ConditionallyIID` definition.
+**Proof**: Apply `CommonEnding.conditional_iid_from_directing_measure` with:
+1. Measurability of coordinates: `measurable_pi_apply`
+2. Probability kernel ν: from `IsMarkovKernel.isProbabilityMeasure`
+3. Measurability of ν: from `ν_eval_measurable` (for measurable sets)
+4. Bridge condition: from `indicator_product_bridge_ax`
 
-The proof would apply `CommonEnding.conditional_iid_from_directing_measure` with:
-1. Measurability of coordinates (trivial: `measurable_pi_apply`)
-2. Probability kernel ν (established via `IsMarkovKernel.isProbabilityMeasure`)
-3. Measurability of ν (from `ν_eval_measurable`, which works for measurable sets)
-4. Bridge condition (from `indicator_product_bridge_ax`)
-
-The key technical issue is that `conditional_iid_from_directing_measure` requires
-`∀ s, Measurable (fun ω => ν ω s)` which appears to quantify over ALL sets, but
-in measure theory, `ν ω s` is only defined for measurable sets. This is a minor
-type-theoretic mismatch that can be resolved by:
-- Either reformulating `conditional_iid_from_directing_measure` to only require
-  measurability for measurable sets (which is the standard requirement)
-- Or providing a completion argument that extends ν to all sets
-
-Axiomatized for now as this is purely administrative repackaging.
+Note: `conditional_iid_from_directing_measure` was updated to only require
+measurability for measurable sets, matching what `ν_eval_measurable` provides.
 -/
 lemma exchangeable_implies_ciid_modulo_bridge_ax
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ) :
     Exchangeability.ConditionallyIID μ (fun i (ω : Ω[α]) => ω i) := by
-  -- Main bridge theorem: repackage ν as the directing measure
-  -- Requires: measurability of ν for arbitrary sets (type-theoretic issue)
-  sorry
+  -- Apply CommonEnding.conditional_iid_from_directing_measure
+  apply CommonEnding.conditional_iid_from_directing_measure
+  -- 1. Coordinates are measurable
+  · exact fun i => measurable_pi_apply i
+  -- 2. ν is a probability measure at each point
+  · intro ω
+    exact IsMarkovKernel.isProbabilityMeasure ω
+  -- 3. ν ω s is measurable in ω for each measurable set s
+  · intro s hs
+    exact ν_eval_measurable hs
+  -- 4. Bridge condition: product of indicators = product of measures
+  · intro m k B hB_meas
+    exact indicator_product_bridge_ax μ hσ m k B hB_meas
 
 section MainConvergence
 
