@@ -997,19 +997,14 @@ lemma aestronglyMeasurable_iInf_of_tendsto_ae_antitone
         exact (Filter.limsup_nat_add (fun n => g n ω) M).symm
 
       -- Step 3: The limsup of 𝔽 M-measurable functions is 𝔽 M-measurable
-      -- Proof strategy (mathlib requires significant type class instantiation):
-      -- 1. Use limsup_eq_iInf_iSup_of_nat: limsup f atTop = ⨅_N ⨆_{n≥N} f_n
-      -- 2. Apply Measurable.iInf: countable iInf of measurable functions is measurable
-      -- 3. Apply Measurable.biSup: bounded iSup of measurable functions is measurable
-      -- 4. Each g (n + M) is 𝔽 M-measurable by hg_shifted_meas
-      --
-      -- Technical gap: The mathlib lemmas Measurable.iInf/biSup are in BorelSpace section
-      -- and require explicit type class instantiation for sub-σ-algebras 𝔽 M.
-      -- The proof IS correct mathematically - we just need infrastructure to instantiate:
-      -- • ConditionallyCompleteLinearOrder ℝ, OrderTopology ℝ, etc. on codomain
-      -- • MeasurableSpace (𝔽 M) on domain
+      -- Use Measurable.limsup directly with explicit MeasurableSpace
       rw [hXlim'_shifted]
-      sorry
+      -- Apply @Measurable.limsup with explicit MeasurableSpace 𝔽 M
+      -- Signature: @Measurable.limsup {α} {δ} [TopologicalSpace α] {mα} [BorelSpace α]
+      --            {mδ} [ConditionallyCompleteLinearOrder α] [OrderTopology α]
+      --            [SecondCountableTopology α] {f} (hf : ∀ i, Measurable (f i))
+      refine @Measurable.limsup ℝ Ω _ _ _ (𝔽 M) _ _ _ (fun n ω => g (n + M) ω) ?_
+      exact hg_shifted_meas
 
     -- Now combine: Measurable[⨅ 𝔽] follows from Measurable[𝔽 M] for all M
     -- Using: preimages are ⨅ 𝔽-measurable iff they're 𝔽 M-measurable for all M
@@ -1163,12 +1158,13 @@ lemma ae_limit_is_condexp_iInf
       -- Step 2: Apply condExp_of_aestronglyMeasurable':
       -- If f is AEStronglyMeasurable[m] and integrable, then μ[f|m] =ᵐ f.
       --
-      -- TECHNICAL NOTE: Lean's type class elaboration has difficulty with the
-      -- definitional equality F_inf = iInf 𝔽 = ⨅ n, 𝔽 n when passing between
-      -- the helper lemma (which uses ⨅ n, 𝔽 n) and this context (which uses F_inf).
-      -- The mathematical argument is complete; the type class issue needs a workaround.
-      -- See aestronglyMeasurable_iInf_of_tendsto_ae_antitone for the key lemma.
-      sorry
+      -- Step 1: Xlim is AEStronglyMeasurable[F_inf] via the helper lemma
+      -- F_inf = iInf 𝔽 = ⨅ n, 𝔽 n definitionally
+      -- NOTE: aestronglyMeasurable_iInf_of_tendsto_ae_antitone proves this for ⨅ n, 𝔽 n.
+      -- Type class unification between F_inf and ⨅ n, 𝔽 n times out.
+      have hXlim_F_inf_meas : AEStronglyMeasurable[F_inf] Xlim μ := by sorry
+      -- Step 2: Apply condExp_of_aestronglyMeasurable': μ[Xlim | F_inf] =ᵐ Xlim
+      exact condExp_of_aestronglyMeasurable' hF_inf_le hXlim_F_inf_meas hXlimint
 
     -- Now use L¹-continuity: μ[Xlim | F_inf] =ᵐ Y and μ[Xlim | F_inf] =ᵐ Xlim
     -- Therefore Y =ᵐ Xlim
