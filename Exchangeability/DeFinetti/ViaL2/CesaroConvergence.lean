@@ -77,6 +77,38 @@ lemma aestronglyMeasurable_iInf_antitone
   -- 6. Use Measurable.stronglyMeasurable for ℝ-valued functions
   sorry
 
+/-- AEStronglyMeasurable for a sub-σ-algebra is preserved under a.e. pointwise limits.
+
+If `f n` are all Measurable[m] where `m ≤ m₀`, and `f n → g` a.e. (wrt a measure on m₀),
+then `g` is AEStronglyMeasurable[m] (with the witness being the limsup, which is Measurable[m]).
+
+This is the key lemma for "closedness" of L²[m] under L² limits:
+we extract an a.e.-convergent subsequence and apply this. -/
+lemma aestronglyMeasurable_sub_of_tendsto_ae
+    {α : Type*} {m₀ : MeasurableSpace α} {μ : @MeasureTheory.Measure α m₀}
+    {m : MeasurableSpace α} (hm : m ≤ m₀)
+    {f : ℕ → α → ℝ} {g : α → ℝ}
+    (hf_meas : ∀ n, @Measurable α ℝ m _ (f n))
+    (hlim : ∀ᵐ x ∂μ, Filter.Tendsto (fun n => f n x) Filter.atTop (nhds (g x))) :
+    @MeasureTheory.AEStronglyMeasurable α ℝ _ m m₀ g μ := by
+  -- Strategy: construct h Measurable[m] with g =ᵐ[μ] h
+  -- Use limsup as the witness
+  let h := fun x => Filter.atTop.limsup (fun n => f n x)
+  -- h is Measurable[m] by Measurable.limsup
+  have h_meas : @Measurable α ℝ m _ h := by
+    haveI : MeasurableSpace α := m
+    exact Measurable.limsup hf_meas
+  -- h = g a.e. because on the convergence set, limsup = lim = g
+  have h_ae_eq : h =ᵐ[μ] g := by
+    filter_upwards [hlim] with x hx
+    exact Filter.Tendsto.limsup_eq hx
+  -- Convert Measurable[m] h to StronglyMeasurable[m] h (for ℝ)
+  have h_sm : @MeasureTheory.StronglyMeasurable α ℝ _ m h := by
+    haveI : MeasurableSpace α := m
+    exact h_meas.stronglyMeasurable
+  -- Conclude AEStronglyMeasurable[m] g using h as witness
+  exact ⟨h, h_sm, h_ae_eq.symm⟩
+
 namespace Exchangeability.DeFinetti.ViaL2
 
 open MeasureTheory ProbabilityTheory BigOperators Filter Topology
@@ -2624,14 +2656,33 @@ private lemma tail_measurability_of_blockAvg
     -- Each blockAvg f X N m is Measurable[tailFamily X N]
     -- By closedness of L²(tailFamily X N), the limit α_f is also in it
 
-    -- For now, we use the axiom indirectly by noting:
-    -- - blockAvg f X N m is Measurable[tailFamily X N] for all m
-    -- - These converge to α_f in L² (by blockAvg_shift_tendsto)
-    -- - The L² subspace of tailFamily-measurable functions is closed
-    -- This gives AEStronglyMeasurable[tailFamily X N] α_f
+    -- Step 1a: blockAvg f X N m is Measurable[tailFamily X N] for all m
+    have h_block_meas : ∀ m, @Measurable Ω ℝ (TailSigma.tailFamily X N) _ (blockAvg f X N m) :=
+      fun m => blockAvg_measurable_tailFamily hf_meas hX_meas N m
 
-    -- TODO: Complete this using isClosed_aestronglyMeasurable and blockAvg_shift_tendsto
-    sorry  -- Individual tailFamily N measurability (Step 1 of proof)
+    -- Step 1b: blockAvg f X N m → α_f in L² (by blockAvg_shift_tendsto)
+    have h_L2_conv := blockAvg_shift_tendsto f hf_meas hf_bdd hX_meas α_f hα_memLp hα_limit N
+
+    -- Step 1c: tailFamily X N ≤ ambient σ-algebra (for measure compatibility)
+    have h_tf_le : TailSigma.tailFamily X N ≤ (inferInstance : MeasurableSpace Ω) := by
+      refine iSup_le (fun k => ?_)
+      exact MeasurableSpace.comap_le_iff_le_map.mpr (hX_meas (N + k))
+
+    -- Step 1d: Convert L² convergence to convergence in measure
+    -- Note: α_f is AEStronglyMeasurable wrt ambient from MemLp
+    have h_α_aesm : AEStronglyMeasurable α_f μ := hα_memLp.aestronglyMeasurable
+    have h_block_aesm : ∀ m, AEStronglyMeasurable (blockAvg f X N m) μ :=
+      fun m => (blockAvg_measurable_tailFamily hf_meas hX_meas N m).aestronglyMeasurable.mono h_tf_le
+    have h_in_measure : TendstoInMeasure μ (blockAvg f X N) atTop α_f :=
+      tendstoInMeasure_of_tendsto_eLpNorm (by norm_num) h_block_aesm h_α_aesm h_L2_conv
+
+    -- Step 1e: Extract a.e.-convergent subsequence
+    obtain ⟨ns, hns_mono, h_ae_conv⟩ := h_in_measure.exists_seq_tendsto_ae
+
+    -- Step 1f: Apply the sub-σ-algebra measurability lemma
+    -- The subsequence blockAvg f X N (ns k) are all Measurable[tailFamily X N]
+    -- and converge a.e. to α_f, so α_f is AEStronglyMeasurable[tailFamily X N]
+    exact aestronglyMeasurable_sub_of_tendsto_ae h_tf_le (fun k => h_block_meas (ns k)) h_ae_conv
 
   -- Step 2: Apply the axiom to descend to the infimum
   have h_anti : Antitone (TailSigma.tailFamily X) := TailSigma.antitone_tailFamily X
@@ -2941,14 +2992,8 @@ lemma cesaro_to_condexp_L2
     -- ALTERNATIVE: Use existing results about conditional expectation
     --              and measurability of limits in Lp spaces if available
 
-    -- NOTE: This is a substantial proof requiring:
-    -- 1. Proving blockAvg f X m n is measurable w.r.t. tailFamily X m
-    -- 2. Constructing diagonal subsequence converging in L²
-    -- 3. Using projection fixed-point property of condExpL2
-    -- Infrastructure for this may not be readily available in current mathlib.
-    -- See `docs/implementation_guides/sorry3_detailed_guide_v2.md` for detailed plan.
-    -- See `docs/implementation_guides/sorry3_concrete_example_v2.lean` for exact code.
-    sorry
+    -- Use the helper lemma that proves tail measurability from L² convergence
+    exact tail_measurability_of_blockAvg f hf_meas hf_bdd hX_meas α_f hα_memLp hα_limit
 
   -- Step 4: Identify α_f = E[f(X_1)|tail] using tail-event integrals
   -- For any tail event A:
