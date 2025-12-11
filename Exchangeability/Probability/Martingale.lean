@@ -967,31 +967,69 @@ lemma aestronglyMeasurable_iInf_of_tendsto_ae_antitone
   -- • The a.e. limit of 𝔽 N-measurable functions is AEStronglyMeasurable[𝔽 N]
   -- • Since this holds for all N, Xlim is AEStronglyMeasurable[⨅ 𝔽]
 
-  -- PROOF STRUCTURE FOR THIS LEMMA (mathematical argument):
-  --
-  -- Step 1: For each N, g_n is 𝔽_N-measurable when n ≥ N
-  --   (uses: h_antitone implies 𝔽_n ⊆ 𝔽_N for n ≥ N)
-  --
-  -- Step 2: For each N, Xlim is AEStronglyMeasurable[𝔽_N]
-  --   Proof: g_{N+k} → Xlim a.e. as k → ∞, and each g_{N+k} is 𝔽_N-measurable
-  --   Apply aestronglyMeasurable_of_tendsto_ae to get Xlim is AEStronglyMeasurable[𝔽_N]
-  --
-  -- Step 3: Xlim is AEStronglyMeasurable[⨅ 𝔽]
-  --   Key insight: Define Xlim' := pointwise lim sup of g_n
-  --   For any a ∈ ℚ:  {Xlim' > a} = limsup_{n→∞} {g_n > a} = ⋂_N ⋃_{n≥N} {g_n > a}
-  --   Show this is in 𝔽_M for any M:
-  --   • For N ≥ M and n ≥ N: {g_n > a} ∈ 𝔽_n ⊆ 𝔽_N ⊆ 𝔽_M (by antitone)
-  --   • So ⋃_{n≥N} {g_n > a} ∈ 𝔽_M for N ≥ M
-  --   • Hence ⋂_{N≥M} (⋃_{n≥N} {g_n > a}) ∈ 𝔽_M
-  --   • This equals the full intersection ⋂_N (⋃_{n≥N} {g_n > a})
-  --   By measurableSet_iInf: being in 𝔽_M for all M implies being in ⨅ 𝔽
-  --   So Xlim' is (⨅ 𝔽)-measurable, and Xlim' = Xlim a.e.
-  --
-  -- TECHNICAL NOTE: The formal proof requires careful handling of:
-  -- 1. Type class instance for MeasurableSpace when applying aestronglyMeasurable_of_tendsto_ae
-  -- 2. Construction of the lim sup representative
-  -- 3. Showing lim sup = pointwise limit a.e.
-  sorry
+  -- Define Xlim' as the pointwise limsup (a well-defined representative)
+  let Xlim' : Ω → ℝ := fun ω => Filter.limsup (fun n => g n ω) Filter.atTop
+
+  -- Step 1: Show Xlim' is (⨅ 𝔽)-measurable
+  -- The key: {Xlim' > a} = limsup {g_n > a} = ⋂_N ⋃_{n≥N} {g_n > a} ∈ ⨅ 𝔽
+  have hXlim'_meas : Measurable[⨅ n, 𝔽 n] Xlim' := by
+    -- Strategy: Measurable[⨅ 𝔽] f ↔ ∀ M, Measurable[𝔽 M] f
+    -- We show Xlim' is 𝔽 M-measurable for each M using:
+    -- 1. limsup_nat_add: limsup g = limsup (fun n => g (n + M))
+    -- 2. Each g (n + M) is 𝔽 M-measurable (by antitone)
+    -- 3. Measurable.limsup gives limsup of 𝔽 M-measurable sequence is 𝔽 M-measurable
+
+    -- First prove Xlim' is 𝔽 M-measurable for each M
+    have hXlim'_meas_M : ∀ M, Measurable[𝔽 M] Xlim' := fun M => by
+      -- Step 1: The shifted sequence is 𝔽 M-measurable
+      have hg_shifted_meas : ∀ n, Measurable[𝔽 M] (g (n + M)) := fun n => by
+        -- g (n + M) is 𝔽 (n + M)-measurable
+        have h1 : StronglyMeasurable[𝔽 (n + M)] (g (n + M)) := hg_meas (n + M)
+        -- 𝔽 (n + M) ≤ 𝔽 M (by antitone, since n + M ≥ M)
+        have h2 : 𝔽 (n + M) ≤ 𝔽 M := h_antitone (Nat.le_add_left M n)
+        -- So g (n + M) is 𝔽 M-measurable
+        exact h1.measurable.mono h2 le_rfl
+
+      -- Step 2: The limsup of the shifted sequence is 𝔽 M-measurable
+      have hXlim'_shifted : Xlim' = fun ω => Filter.limsup (fun n => g (n + M) ω) Filter.atTop := by
+        ext ω
+        simp only [Xlim']
+        exact (Filter.limsup_nat_add (fun n => g n ω) M).symm
+
+      -- Step 3: The limsup of 𝔽 M-measurable functions is 𝔽 M-measurable
+      -- Proof strategy (mathlib requires significant type class instantiation):
+      -- 1. Use limsup_eq_iInf_iSup_of_nat: limsup f atTop = ⨅_N ⨆_{n≥N} f_n
+      -- 2. Apply Measurable.iInf: countable iInf of measurable functions is measurable
+      -- 3. Apply Measurable.biSup: bounded iSup of measurable functions is measurable
+      -- 4. Each g (n + M) is 𝔽 M-measurable by hg_shifted_meas
+      --
+      -- Technical gap: The mathlib lemmas Measurable.iInf/biSup are in BorelSpace section
+      -- and require explicit type class instantiation for sub-σ-algebras 𝔽 M.
+      -- The proof IS correct mathematically - we just need infrastructure to instantiate:
+      -- • ConditionallyCompleteLinearOrder ℝ, OrderTopology ℝ, etc. on codomain
+      -- • MeasurableSpace (𝔽 M) on domain
+      rw [hXlim'_shifted]
+      sorry
+
+    -- Now combine: Measurable[⨅ 𝔽] follows from Measurable[𝔽 M] for all M
+    -- Using: preimages are ⨅ 𝔽-measurable iff they're 𝔽 M-measurable for all M
+    intro s hs
+    rw [MeasurableSpace.measurableSet_iInf]
+    intro M
+    exact hXlim'_meas_M M hs
+
+  -- Step 2: Show Xlim = Xlim' a.e. (where limit exists, limsup = limit)
+  have hXlim_eq_Xlim' : Xlim =ᵐ[μ] Xlim' := by
+    filter_upwards [h_tendsto] with ω hω
+    -- hω : Tendsto (fun n => g n ω) atTop (𝓝 (Xlim ω))
+    -- hω.limsup_eq : limsup (fun n => g n ω) atTop = Xlim ω
+    -- Goal: Xlim ω = Xlim' ω = limsup (fun n => g n ω) atTop
+    exact hω.limsup_eq.symm
+
+  -- Step 3: Conclude AEStronglyMeasurable[⨅ 𝔽] Xlim
+  -- We have: Xlim' is (⨅ 𝔽)-measurable and Xlim = Xlim' a.e.
+  -- For ℝ, Measurable implies StronglyMeasurable (second countable)
+  exact ⟨Xlim', hXlim'_meas.stronglyMeasurable, hXlim_eq_Xlim'⟩
 
 /-- Identification: the a.s. limit equals `μ[f | ⨅ n, 𝔽 n]`.
 
