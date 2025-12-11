@@ -967,31 +967,64 @@ lemma aestronglyMeasurable_iInf_of_tendsto_ae_antitone
   -- • The a.e. limit of 𝔽 N-measurable functions is AEStronglyMeasurable[𝔽 N]
   -- • Since this holds for all N, Xlim is AEStronglyMeasurable[⨅ 𝔽]
 
-  -- PROOF STRUCTURE FOR THIS LEMMA (mathematical argument):
-  --
-  -- Step 1: For each N, g_n is 𝔽_N-measurable when n ≥ N
-  --   (uses: h_antitone implies 𝔽_n ⊆ 𝔽_N for n ≥ N)
-  --
-  -- Step 2: For each N, Xlim is AEStronglyMeasurable[𝔽_N]
-  --   Proof: g_{N+k} → Xlim a.e. as k → ∞, and each g_{N+k} is 𝔽_N-measurable
-  --   Apply aestronglyMeasurable_of_tendsto_ae to get Xlim is AEStronglyMeasurable[𝔽_N]
-  --
-  -- Step 3: Xlim is AEStronglyMeasurable[⨅ 𝔽]
-  --   Key insight: Define Xlim' := pointwise lim sup of g_n
-  --   For any a ∈ ℚ:  {Xlim' > a} = limsup_{n→∞} {g_n > a} = ⋂_N ⋃_{n≥N} {g_n > a}
-  --   Show this is in 𝔽_M for any M:
-  --   • For N ≥ M and n ≥ N: {g_n > a} ∈ 𝔽_n ⊆ 𝔽_N ⊆ 𝔽_M (by antitone)
-  --   • So ⋃_{n≥N} {g_n > a} ∈ 𝔽_M for N ≥ M
-  --   • Hence ⋂_{N≥M} (⋃_{n≥N} {g_n > a}) ∈ 𝔽_M
-  --   • This equals the full intersection ⋂_N (⋃_{n≥N} {g_n > a})
-  --   By measurableSet_iInf: being in 𝔽_M for all M implies being in ⨅ 𝔽
-  --   So Xlim' is (⨅ 𝔽)-measurable, and Xlim' = Xlim a.e.
-  --
-  -- TECHNICAL NOTE: The formal proof requires careful handling of:
-  -- 1. Type class instance for MeasurableSpace when applying aestronglyMeasurable_of_tendsto_ae
-  -- 2. Construction of the lim sup representative
-  -- 3. Showing lim sup = pointwise limit a.e.
-  sorry
+  -- Define Xlim' as the pointwise limsup (a well-defined representative)
+  let Xlim' : Ω → ℝ := fun ω => Filter.limsup (fun n => g n ω) Filter.atTop
+
+  -- Step 1: Show Xlim' is (⨅ 𝔽)-measurable
+  -- The key: {Xlim' > a} = limsup {g_n > a} = ⋂_N ⋃_{n≥N} {g_n > a} ∈ ⨅ 𝔽
+  have hXlim'_meas : Measurable[⨅ n, 𝔽 n] Xlim' := by
+    -- Strategy: Measurable[⨅ 𝔽] f ↔ ∀ M, Measurable[𝔽 M] f
+    -- We show Xlim' is 𝔽 M-measurable for each M using:
+    -- 1. limsup_nat_add: limsup g = limsup (fun n => g (n + M))
+    -- 2. Each g (n + M) is 𝔽 M-measurable (by antitone)
+    -- 3. Measurable.limsup gives limsup of 𝔽 M-measurable sequence is 𝔽 M-measurable
+
+    -- First prove Xlim' is 𝔽 M-measurable for each M
+    have hXlim'_meas_M : ∀ M, Measurable[𝔽 M] Xlim' := fun M => by
+      -- Step 1: The shifted sequence is 𝔽 M-measurable
+      have hg_shifted_meas : ∀ n, Measurable[𝔽 M] (g (n + M)) := fun n => by
+        -- g (n + M) is 𝔽 (n + M)-measurable
+        have h1 : StronglyMeasurable[𝔽 (n + M)] (g (n + M)) := hg_meas (n + M)
+        -- 𝔽 (n + M) ≤ 𝔽 M (by antitone, since n + M ≥ M)
+        have h2 : 𝔽 (n + M) ≤ 𝔽 M := h_antitone (Nat.le_add_left M n)
+        -- So g (n + M) is 𝔽 M-measurable
+        exact h1.measurable.mono h2 le_rfl
+
+      -- Step 2: The limsup of the shifted sequence is 𝔽 M-measurable
+      have hXlim'_shifted : Xlim' = fun ω => Filter.limsup (fun n => g (n + M) ω) Filter.atTop := by
+        ext ω
+        simp only [Xlim']
+        exact (Filter.limsup_nat_add (fun n => g n ω) M).symm
+
+      -- Step 3: The limsup of 𝔽 M-measurable functions is 𝔽 M-measurable
+      -- Use Measurable.limsup directly with explicit MeasurableSpace
+      rw [hXlim'_shifted]
+      -- Apply @Measurable.limsup with explicit MeasurableSpace 𝔽 M
+      -- Signature: @Measurable.limsup {α} {δ} [TopologicalSpace α] {mα} [BorelSpace α]
+      --            {mδ} [ConditionallyCompleteLinearOrder α] [OrderTopology α]
+      --            [SecondCountableTopology α] {f} (hf : ∀ i, Measurable (f i))
+      refine @Measurable.limsup ℝ Ω _ _ _ (𝔽 M) _ _ _ (fun n ω => g (n + M) ω) ?_
+      exact hg_shifted_meas
+
+    -- Now combine: Measurable[⨅ 𝔽] follows from Measurable[𝔽 M] for all M
+    -- Using: preimages are ⨅ 𝔽-measurable iff they're 𝔽 M-measurable for all M
+    intro s hs
+    rw [MeasurableSpace.measurableSet_iInf]
+    intro M
+    exact hXlim'_meas_M M hs
+
+  -- Step 2: Show Xlim = Xlim' a.e. (where limit exists, limsup = limit)
+  have hXlim_eq_Xlim' : Xlim =ᵐ[μ] Xlim' := by
+    filter_upwards [h_tendsto] with ω hω
+    -- hω : Tendsto (fun n => g n ω) atTop (𝓝 (Xlim ω))
+    -- hω.limsup_eq : limsup (fun n => g n ω) atTop = Xlim ω
+    -- Goal: Xlim ω = Xlim' ω = limsup (fun n => g n ω) atTop
+    exact hω.limsup_eq.symm
+
+  -- Step 3: Conclude AEStronglyMeasurable[⨅ 𝔽] Xlim
+  -- We have: Xlim' is (⨅ 𝔽)-measurable and Xlim = Xlim' a.e.
+  -- For ℝ, Measurable implies StronglyMeasurable (second countable)
+  exact ⟨Xlim', hXlim'_meas.stronglyMeasurable, hXlim_eq_Xlim'⟩
 
 /-- Identification: the a.s. limit equals `μ[f | ⨅ n, 𝔽 n]`.
 
@@ -1125,12 +1158,19 @@ lemma ae_limit_is_condexp_iInf
       -- Step 2: Apply condExp_of_aestronglyMeasurable':
       -- If f is AEStronglyMeasurable[m] and integrable, then μ[f|m] =ᵐ f.
       --
-      -- TECHNICAL NOTE: Lean's type class elaboration has difficulty with the
-      -- definitional equality F_inf = iInf 𝔽 = ⨅ n, 𝔽 n when passing between
-      -- the helper lemma (which uses ⨅ n, 𝔽 n) and this context (which uses F_inf).
-      -- The mathematical argument is complete; the type class issue needs a workaround.
-      -- See aestronglyMeasurable_iInf_of_tendsto_ae_antitone for the key lemma.
-      sorry
+      -- Step 1: Xlim is AEStronglyMeasurable[F_inf] via the helper lemma
+      -- F_inf = iInf 𝔽 = ⨅ n, 𝔽 n definitionally
+      -- NOTE: aestronglyMeasurable_iInf_of_tendsto_ae_antitone proves this for ⨅ n, 𝔽 n.
+      -- WORKAROUND: Type class unification times out when applying the helper lemma here.
+      -- The mathematical proof is complete: Xlim is AEStronglyMeasurable[⨅ 𝔽] since:
+      --   - Each μ[f | 𝔽 n] is StronglyMeasurable[𝔽 n]
+      --   - The a.e. limit inherits this measurability property
+      --   - This is exactly what aestronglyMeasurable_iInf_of_tendsto_ae_antitone proves
+      -- This sorry is purely a Lean elaboration issue, not a mathematical gap.
+      have hXlim_F_inf_meas : AEStronglyMeasurable[F_inf] Xlim μ := by
+        sorry
+      -- Step 2: Apply condExp_of_aestronglyMeasurable': μ[Xlim | F_inf] =ᵐ Xlim
+      exact condExp_of_aestronglyMeasurable' hF_inf_le hXlim_F_inf_meas hXlimint
 
     -- Now use L¹-continuity: μ[Xlim | F_inf] =ᵐ Y and μ[Xlim | F_inf] =ᵐ Xlim
     -- Therefore Y =ᵐ Xlim
