@@ -661,7 +661,19 @@ lemma approx_bounded_measurable (μ : Measure α) [IsProbabilityMeasure μ]
     -- - hf_sm.norm_approxBounded_le hM_nonneg: ‖fn x‖ ≤ M
     --
     -- IMPLEMENTATION NOTE: Requires careful handling of ℝ ↔ ℝ≥0 ↔ ℝ≥0∞ coercions.
-    · sorry
+    --
+    -- The proof structure is:
+    -- 1. h_ptwise := hf_sm.tendsto_approxBounded_ae hf_bdd' gives fn → f pointwise ae
+    -- 2. h_norm_bdd : ‖fn x‖ ≤ M from norm_approxBounded_le
+    -- 3. h_diff_bdd : ‖fn x - f x‖ ≤ 2M from triangle inequality
+    -- 4. Apply tendsto_lintegral_of_dominated_convergence with:
+    --    - F n x := ENNReal.ofReal ‖fn x - f x‖
+    --    - Limit: 0
+    --    - Dominator: ENNReal.ofReal (2 * M)
+    --    - h_fin: ∫⁻ 2M dμ = 2M < ⊤ (probability measure)
+    --    - h_lim: ae convergence from h_ptwise
+    -- 5. Convert from ENNReal.ofReal ‖·‖ to ‖·‖₊ using ENNReal.coe_toNNNorm
+    ·  sorry
   · -- Case M < 0: contradiction since |f x| ≥ 0 > M always
     -- The hypothesis hf_bdd : ∀ᵐ x ∂μ, |f x| ≤ M with M < 0 is impossible
     -- since |f x| ≥ 0 for all x. This implies μ = 0, contradicting probability measure.
