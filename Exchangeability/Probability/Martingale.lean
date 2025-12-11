@@ -413,17 +413,26 @@ lemma upBefore_le_downBefore_rev
           simp only [upperCrossingTime_zero]
           exact Nat.pos_of_ne_zero hN
         | k + 1 =>
-          -- Inductive case: need to use the recursive structure
-          -- **PROOF GAP**: The inductive step requires relating hitting times of X
-          -- to hitting times of negProcess(revProcess X N). This involves:
-          -- 1. Understanding how lowerCrossingTime transforms
-          -- 2. Tracking the hitting time correspondence under N ↦ N - t
-          -- 3. Using that neg swaps ≤a/≥b to ≤-b/≥-a
+          -- Inductive case: use the recursive structure of upperCrossingTime
+          -- We have: hn : upperCrossingTime a b X N (k+1) ω < N
+          -- Goal: upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) N (k+1) ω < N
+          have h_neg : -b < -a := by linarith
+          -- Get the k-th crossing bound from the (k+1)-th
+          have h_k : upperCrossingTime a b X N k ω < N := by
+            by_cases hk_eq : upperCrossingTime a b X N (k + 1) ω = N
+            · omega
+            · exact lt_trans (upperCrossingTime_lt_succ hab hk_eq) hn
+          -- Apply induction hypothesis to get the IH
+          have ih_k := ih k (Nat.lt_succ_self k) h_k
+          -- **PROOF GAP**: Lifting from k to k+1
+          -- The IH gives us that k crossings transform. To go to k+1:
+          -- - The (k+1)-th crossing for X starts after the k-th lower crossing time
+          -- - Under reversal, this maps to a crossing in the transformed process
+          -- - The bijection (τ,σ) ↦ (N-σ, N-τ) preserves crossing count
           --
-          -- The mathematical argument is sound (see comments above), but the
-          -- formalization requires a detailed analysis of the hitting time API
-          -- and how the recursive structure of upperCrossingTime/lowerCrossingTime
-          -- relates under these transformations.
+          -- Technical requirement: A helper lemma relating hitting times:
+          --   hitting X (Set.Ici b) t N ω ↦ hitting (negProcess (revProcess X N)) (Set.Ici (-a)) (N-t) N ω
+          -- This requires analyzing how Set.Ici/Iic transform under negation and reversal.
           sorry
 
     exact csSup_le_csSup hbdd2 hemp hsub
