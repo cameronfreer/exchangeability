@@ -1097,10 +1097,18 @@ lemma condexp_precomp_iterate_eq_twosided
       · intro s _ _
         exact MeasureTheory.integrable_condExp.integrableOn
       -- Set integral equality: ∫_s E[g|m] = ∫_s g ∘ T when T⁻¹' s = s
-      -- Note: MeasurePreserving.integral_comp API changed to require MeasurableEmbedding.
-      -- This lemma is not on the critical path (only referenced in comments).
       · intro s hs hμs
-        sorry
+        -- First use setIntegral_condExp: ∫_s E[g|m] dμ = ∫_s g dμ
+        rw [MeasureTheory.setIntegral_condExp (shiftInvariantSigmaℤ_le (α := α)) hf_k hs]
+        -- Now show: ∫_s g dμ = ∫_s (g ∘ T) dμ using T⁻¹'s = s and MeasurePreserving
+        let g := fun ω => f ((shiftℤ (α := α))^[k] ω)
+        have h_s_inv : (shiftℤ (α := α)) ⁻¹' s = s := h_inv s hs
+        -- Apply setIntegral_map_preimage in reverse with h_s_inv
+        have h_map_eq : Measure.map (shiftℤ (α := α)) μhat = μhat := hσ.map_eq
+        rw [← MeasureTheory.setIntegral_map_preimage (shiftℤ (α := α)) measurable_shiftℤ h_map_eq
+            g s (shiftInvariantSigmaℤ_le (α := α) s hs) hf_k.aemeasurable]
+        -- Now goal: ∫_s g = ∫_{T⁻¹'s} (g ∘ T), rewrite T⁻¹'s = s
+        rw [h_s_inv]
       -- AE strong measurability
       · exact MeasureTheory.stronglyMeasurable_condExp.aestronglyMeasurable
     -- Combine: E[f ∘ T^{k+1} | m] = E[(f ∘ T^k) ∘ T | m] = E[f ∘ T^k | m] = E[f | m]
@@ -1201,11 +1209,17 @@ lemma condexp_precomp_shiftℤInv_eq
         (∫ x, s.indicator f (shiftℤInv (α := α) x) ∂μhat)
       from MeasureTheory.integral_congr_ae (ae_of_all μhat h_ind)]
     -- Now use measure-preserving: ∫ g ∘ T dμ = ∫ g dμ
-    -- Note: MeasurePreserving.integral_comp API changed in mathlib to require MeasurableEmbedding.
-    -- Using sorry here as this lemma isn't on the critical path and has known API issues.
-    -- The mathematical fact is clear: since hσInv.map_eq : μhat.map shiftℤInv = μhat,
+    -- Since hσInv.map_eq : μhat.map shiftℤInv = μhat,
     -- we have ∫ g ∘ shiftℤInv dμhat = ∫ g d(μhat.map shiftℤInv) = ∫ g dμhat
-    sorry
+    -- This is exactly ∫ (s.indicator f) ∘ shiftℤInv dμhat = ∫ s.indicator f dμhat
+    have h_map_eq : Measure.map (shiftℤInv (α := α)) μhat = μhat := hσInv.map_eq
+    have h_ae : AEStronglyMeasurable (s.indicator f) μhat := by
+      refine (hf.aestronglyMeasurable.indicator ?_)
+      exact shiftInvariantSigmaℤ_le (α := α) s hs
+    -- Convert h_ae to AEStronglyMeasurable for the map measure
+    have h_ae_map : AEStronglyMeasurable (s.indicator f) (μhat.map (shiftℤInv (α := α))) := by
+      rw [h_map_eq]; exact h_ae
+    rw [← MeasureTheory.integral_map measurable_shiftℤInv.aemeasurable h_ae_map, h_map_eq]
   -- AE strong measurability
   · exact MeasureTheory.stronglyMeasurable_condExp.aestronglyMeasurable
 
