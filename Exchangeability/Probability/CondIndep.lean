@@ -1066,6 +1066,20 @@ lemma condIndep_bddMeas_extend_left
       --
       -- IMPLEMENTATION NOTE: The main complexity is managing the ae equivalences and
       -- converting between condExpL1 (in L¹ space) and condExp (as functions).
+      --
+      -- APPROACH: Need to show product of condExps converges.
+      -- Since h_L1_conv gives L¹ convergence of condExp (sφ n ∘ Y) → condExp (φ ∘ Y),
+      -- and hψZ_bdd gives the bounded second factor μ[ψ∘Z|mW], we can use
+      -- Integrable.tendsto_setIntegral_of_ae_tendsto_of_meas with product convergence.
+      --
+      -- The key steps:
+      -- 1. Convert h_L1_conv from Lp convergence to ae pointwise (extract subsequence)
+      -- 2. Use bounded multiplication: |condExp_n - condExp| * |bdd_factor| → 0 in L¹
+      -- 3. Apply tendsto_setIntegral_of_L1 for set integral convergence
+      --
+      -- ISSUE: L¹ convergence ≠ pointwise convergence. Need different approach.
+      -- Alternative: Use that h_int_n shows sequences equal, so if hLHS converges,
+      -- RHS also converges (to some limit). Combined with tendsto_nhds_unique below.
       sorry
 
     -- Conclude by uniqueness of limits
