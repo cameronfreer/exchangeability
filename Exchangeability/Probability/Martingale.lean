@@ -401,16 +401,30 @@ lemma upBefore_le_downBefore_rev
       -- 4. Combining: The n pairs map to n disjoint upcrossing pairs [-b→-a]
       --    for negProcess(revProcess X N), proving the subset inclusion.
       --
-      -- RECOMMENDED APPROACH: Factor out a helper lemma:
-      --
-      -- lemma upperCrossingTime_rev_neg_lt (X : ℕ → Ω → ℝ) {a b : ℝ} (hab : a < b) (N : ℕ)
-      --     (ω : Ω) (n : ℕ) (hn : upperCrossingTime a b X N n ω < N) :
-      --     upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) N n ω < N
-      --
-      -- Prove by induction on n using the recursive structure of upperCrossingTime.
-      -- The key insight: time reversal swaps "hit ≤a after hitting ≥b" with
-      -- "hit ≥b before hitting ≤a", and negation flips the thresholds.
-      sorry
+      -- Proof by strong induction on n
+      -- The key is to track how hitting times transform under reversal and negation
+      induction n using Nat.strong_induction_on with
+      | _ n ih =>
+        -- Case split on n
+        match n with
+        | 0 =>
+          -- Base case: upperCrossingTime at 0 is ⊥ = 0
+          -- Both sides reduce to 0 < N
+          simp only [upperCrossingTime_zero]
+          exact Nat.pos_of_ne_zero hN
+        | k + 1 =>
+          -- Inductive case: need to use the recursive structure
+          -- **PROOF GAP**: The inductive step requires relating hitting times of X
+          -- to hitting times of negProcess(revProcess X N). This involves:
+          -- 1. Understanding how lowerCrossingTime transforms
+          -- 2. Tracking the hitting time correspondence under N ↦ N - t
+          -- 3. Using that neg swaps ≤a/≥b to ≤-b/≥-a
+          --
+          -- The mathematical argument is sound (see comments above), but the
+          -- formalization requires a detailed analysis of the hitting time API
+          -- and how the recursive structure of upperCrossingTime/lowerCrossingTime
+          -- relates under these transformations.
+          sorry
 
     exact csSup_le_csSup hbdd2 hemp hsub
   · -- If no upcrossings, sSup = 0
