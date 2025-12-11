@@ -749,14 +749,17 @@ lemma condExp_exists_ae_limit_antitone
                 = ∫⁻ ω, upcrossings (-↑b) (-↑a) (negProcess (fun n => revCEFinite (μ := μ) f 𝔽 N n)) ω ∂μ := by
                     simp only [up_neg_flip_eq_down]
               _ = ∫⁻ ω, upcrossings (-↑b) (-↑a) (fun n => revCEFinite (μ := μ) (fun x => -f x) 𝔽 N n) ω ∂μ := by
-                    -- negProcess(revCEFinite f) = revCEFinite(-f) a.e. by condExp_neg
-                    -- The processes agree a.e., so their upcrossings agree a.e., hence integrals equal
-                    congr 1
-                    ext ω n
-                    simp only [negProcess, Pi.neg_apply, revCEFinite]
-                    -- Need: -(μ[f | 𝔽 (N - n)]) ω = μ[-f | 𝔽 (N - n)] ω
-                    -- This requires condExp_neg which gives a.e. equality
-                    sorry -- TODO: lift condExp_neg a.e. equality to upcrossings
+                    -- PROOF STRATEGY:
+                    -- Use lintegral_congr_ae: need to show upcrossings are ae equal
+                    -- This follows from: negProcess(revCEFinite f) =ᵐ revCEFinite(-f) at each time n
+                    --
+                    -- Key steps:
+                    -- 1. Use ae_all_iff for countable intersection over n
+                    -- 2. At each n: -(μ[f | 𝔽 (N - n)]) =ᵐ μ[-f | 𝔽 (N - n)] by condExp_neg
+                    -- 3. When processes agree ae at all times, upcrossings agree ae
+                    --
+                    -- The final step uses that upcrossings is deterministic given the process values
+                    sorry
               _ ≤ C_down := hC_down N
               _ ≤ C := le_max_right C_up C_down
 
