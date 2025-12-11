@@ -186,7 +186,7 @@ lemma deFinetti_RyllNardzewski_equivalence_viaKoopman
         have hσ : MeasurePreserving (Exchangeability.Ergodic.shift (α := ℝ))
                    (Exchangeability.Bridge.CesaroToCondExp.μ_path μ X)
                    (Exchangeability.Bridge.CesaroToCondExp.μ_path μ X) :=
-          Exchangeability.Bridge.CesaroToCondExp.measurePreserving_shift_path μ X hContract
+          Exchangeability.Bridge.CesaroToCondExp.measurePreserving_shift_path μ X hContract hX_meas
         -- Step 2: Apply ViaKoopman's main theorem on path space
         have h_path_ciid : ConditionallyIID (Exchangeability.Bridge.CesaroToCondExp.μ_path μ X)
                             (fun i (ω : ℕ → ℝ) => ω i) :=
@@ -199,7 +199,7 @@ lemma deFinetti_RyllNardzewski_equivalence_viaKoopman
       have hσ : MeasurePreserving (Exchangeability.Ergodic.shift (α := ℝ))
                  (Exchangeability.Bridge.CesaroToCondExp.μ_path μ X)
                  (Exchangeability.Bridge.CesaroToCondExp.μ_path μ X) :=
-        Exchangeability.Bridge.CesaroToCondExp.measurePreserving_shift_path μ X hContract
+        Exchangeability.Bridge.CesaroToCondExp.measurePreserving_shift_path μ X hContract hX_meas
       -- Step 2: Apply ViaKoopman's main theorem on path space
       have h_path_ciid : ConditionallyIID (Exchangeability.Bridge.CesaroToCondExp.μ_path μ X)
                           (fun i (ω : ℕ → ℝ) => ω i) :=
