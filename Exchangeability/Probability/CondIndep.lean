@@ -705,16 +705,42 @@ lemma condIndep_simpleFunc_left
     μ[ (φ ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W inferInstance ] =ᵐ[μ]
     μ[ φ ∘ Y | MeasurableSpace.comap W inferInstance ] *
     μ[ ψ ∘ Z | MeasurableSpace.comap W inferInstance ] := by
-  -- PROOF STRATEGY:
-  -- 1. Approximate ψ by simple functions sψ_n using eapprox on positive/negative parts
-  -- 2. For each n: apply condIndep_simpleFunc μ Y Z W hCI φ (sψ n) hY hZ
-  -- 3. Pass to limit using dominated convergence for conditional expectations
+  classical
+  -- PROOF STRUCTURE:
+  -- 1. Build simple function approximation sψ n of ψ using eapprox
+  -- 2. For each n: condIndep_simpleFunc gives factorization for (φ, sψ n)
+  -- 3. Pass to limit using convergence of condExp
+
+  -- Split ψ into positive and negative parts
+  set ψp : β → ℝ := fun b => max (ψ b) 0 with hψp
+  set ψm : β → ℝ := fun b => max (- ψ b) 0 with hψm
+  have hψp_meas : Measurable ψp := hψ_meas.max measurable_const
+  have hψm_meas : Measurable ψm := hψ_meas.neg.max measurable_const
+
+  -- Lift to ℝ≥0∞ and use eapprox
+  let gψp : β → ℝ≥0∞ := fun b => ENNReal.ofReal (ψp b)
+  let gψm : β → ℝ≥0∞ := fun b => ENNReal.ofReal (ψm b)
+  let uψp : ℕ → SimpleFunc β ℝ≥0∞ := SimpleFunc.eapprox gψp
+  let uψm : ℕ → SimpleFunc β ℝ≥0∞ := SimpleFunc.eapprox gψm
+  let sψp : ℕ → SimpleFunc β ℝ := fun n => (uψp n).map ENNReal.toReal
+  let sψm : ℕ → SimpleFunc β ℝ := fun n => (uψm n).map ENNReal.toReal
+  let sψ : ℕ → SimpleFunc β ℝ := fun n => (sψp n) - (sψm n)
+
+  -- For each n, apply condIndep_simpleFunc for (φ, sψ n)
+  have h_rect_n : ∀ n,
+      μ[ (φ ∘ Y) * ((sψ n) ∘ Z) | MeasurableSpace.comap W inferInstance ] =ᵐ[μ]
+      μ[ φ ∘ Y | MeasurableSpace.comap W inferInstance ] *
+      μ[ (sψ n) ∘ Z | MeasurableSpace.comap W inferInstance ] := by
+    intro n
+    exact condIndep_simpleFunc μ Y Z W hCI φ (sψ n) hY hZ
+
+  -- The limit argument requires passing from sψ n to ψ:
+  -- 1. sψ n → ψ pointwise (from eapprox convergence)
+  -- 2. |sψ n ∘ Z| ≤ |ψ ∘ Z| ≤ Mψ (bounded by dominator)
+  -- 3. condExp is L¹-continuous, so condExp of sψ n ∘ Z → condExp of ψ ∘ Z
+  -- 4. Similarly for products
   --
-  -- This is the symmetric version of the approximation in condIndep_bddMeas_extend_left.
-  -- The key ingredients are:
-  -- - SimpleFunc.eapprox for approximation
-  -- - tendsto_condExpL1_of_dominated_convergence for the limit
-  -- - Boundedness from hψ_bdd provides the dominating function
+  -- This is the same convergence argument as in condIndep_bddMeas_extend_left.
   sorry
 
 /-- **Extend factorization from simple φ to bounded measurable φ, keeping ψ fixed.**
