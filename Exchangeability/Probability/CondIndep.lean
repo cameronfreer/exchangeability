@@ -661,7 +661,19 @@ lemma approx_bounded_measurable (μ : Measure α) [IsProbabilityMeasure μ]
     -- - hf_sm.norm_approxBounded_le hM_nonneg: ‖fn x‖ ≤ M
     --
     -- IMPLEMENTATION NOTE: Requires careful handling of ℝ ↔ ℝ≥0 ↔ ℝ≥0∞ coercions.
-    · sorry
+    --
+    -- The proof structure is:
+    -- 1. h_ptwise := hf_sm.tendsto_approxBounded_ae hf_bdd' gives fn → f pointwise ae
+    -- 2. h_norm_bdd : ‖fn x‖ ≤ M from norm_approxBounded_le
+    -- 3. h_diff_bdd : ‖fn x - f x‖ ≤ 2M from triangle inequality
+    -- 4. Apply tendsto_lintegral_of_dominated_convergence with:
+    --    - F n x := ENNReal.ofReal ‖fn x - f x‖
+    --    - Limit: 0
+    --    - Dominator: ENNReal.ofReal (2 * M)
+    --    - h_fin: ∫⁻ 2M dμ = 2M < ⊤ (probability measure)
+    --    - h_lim: ae convergence from h_ptwise
+    -- 5. Convert from ENNReal.ofReal ‖·‖ to ‖·‖₊ using ENNReal.coe_toNNNorm
+    ·  sorry
   · -- Case M < 0: contradiction since |f x| ≥ 0 > M always
     -- The hypothesis hf_bdd : ∀ᵐ x ∂μ, |f x| ≤ M with M < 0 is impossible
     -- since |f x| ≥ 0 for all x. This implies μ = 0, contradicting probability measure.
@@ -705,16 +717,42 @@ lemma condIndep_simpleFunc_left
     μ[ (φ ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W inferInstance ] =ᵐ[μ]
     μ[ φ ∘ Y | MeasurableSpace.comap W inferInstance ] *
     μ[ ψ ∘ Z | MeasurableSpace.comap W inferInstance ] := by
-  -- PROOF STRATEGY:
-  -- 1. Approximate ψ by simple functions sψ_n using eapprox on positive/negative parts
-  -- 2. For each n: apply condIndep_simpleFunc μ Y Z W hCI φ (sψ n) hY hZ
-  -- 3. Pass to limit using dominated convergence for conditional expectations
+  classical
+  -- PROOF STRUCTURE:
+  -- 1. Build simple function approximation sψ n of ψ using eapprox
+  -- 2. For each n: condIndep_simpleFunc gives factorization for (φ, sψ n)
+  -- 3. Pass to limit using convergence of condExp
+
+  -- Split ψ into positive and negative parts
+  set ψp : β → ℝ := fun b => max (ψ b) 0 with hψp
+  set ψm : β → ℝ := fun b => max (- ψ b) 0 with hψm
+  have hψp_meas : Measurable ψp := hψ_meas.max measurable_const
+  have hψm_meas : Measurable ψm := hψ_meas.neg.max measurable_const
+
+  -- Lift to ℝ≥0∞ and use eapprox
+  let gψp : β → ℝ≥0∞ := fun b => ENNReal.ofReal (ψp b)
+  let gψm : β → ℝ≥0∞ := fun b => ENNReal.ofReal (ψm b)
+  let uψp : ℕ → SimpleFunc β ℝ≥0∞ := SimpleFunc.eapprox gψp
+  let uψm : ℕ → SimpleFunc β ℝ≥0∞ := SimpleFunc.eapprox gψm
+  let sψp : ℕ → SimpleFunc β ℝ := fun n => (uψp n).map ENNReal.toReal
+  let sψm : ℕ → SimpleFunc β ℝ := fun n => (uψm n).map ENNReal.toReal
+  let sψ : ℕ → SimpleFunc β ℝ := fun n => (sψp n) - (sψm n)
+
+  -- For each n, apply condIndep_simpleFunc for (φ, sψ n)
+  have h_rect_n : ∀ n,
+      μ[ (φ ∘ Y) * ((sψ n) ∘ Z) | MeasurableSpace.comap W inferInstance ] =ᵐ[μ]
+      μ[ φ ∘ Y | MeasurableSpace.comap W inferInstance ] *
+      μ[ (sψ n) ∘ Z | MeasurableSpace.comap W inferInstance ] := by
+    intro n
+    exact condIndep_simpleFunc μ Y Z W hCI φ (sψ n) hY hZ
+
+  -- The limit argument requires passing from sψ n to ψ:
+  -- 1. sψ n → ψ pointwise (from eapprox convergence)
+  -- 2. |sψ n ∘ Z| ≤ |ψ ∘ Z| ≤ Mψ (bounded by dominator)
+  -- 3. condExp is L¹-continuous, so condExp of sψ n ∘ Z → condExp of ψ ∘ Z
+  -- 4. Similarly for products
   --
-  -- This is the symmetric version of the approximation in condIndep_bddMeas_extend_left.
-  -- The key ingredients are:
-  -- - SimpleFunc.eapprox for approximation
-  -- - tendsto_condExpL1_of_dominated_convergence for the limit
-  -- - Boundedness from hψ_bdd provides the dominating function
+  -- This is the same convergence argument as in condIndep_bddMeas_extend_left.
   sorry
 
 /-- **Extend factorization from simple φ to bounded measurable φ, keeping ψ fixed.**
@@ -1028,6 +1066,20 @@ lemma condIndep_bddMeas_extend_left
       --
       -- IMPLEMENTATION NOTE: The main complexity is managing the ae equivalences and
       -- converting between condExpL1 (in L¹ space) and condExp (as functions).
+      --
+      -- APPROACH: Need to show product of condExps converges.
+      -- Since h_L1_conv gives L¹ convergence of condExp (sφ n ∘ Y) → condExp (φ ∘ Y),
+      -- and hψZ_bdd gives the bounded second factor μ[ψ∘Z|mW], we can use
+      -- Integrable.tendsto_setIntegral_of_ae_tendsto_of_meas with product convergence.
+      --
+      -- The key steps:
+      -- 1. Convert h_L1_conv from Lp convergence to ae pointwise (extract subsequence)
+      -- 2. Use bounded multiplication: |condExp_n - condExp| * |bdd_factor| → 0 in L¹
+      -- 3. Apply tendsto_setIntegral_of_L1 for set integral convergence
+      --
+      -- ISSUE: L¹ convergence ≠ pointwise convergence. Need different approach.
+      -- Alternative: Use that h_int_n shows sequences equal, so if hLHS converges,
+      -- RHS also converges (to some limit). Combined with tendsto_nhds_unique below.
       sorry
 
     -- Conclude by uniqueness of limits
@@ -1602,11 +1654,51 @@ lemma condIndep_indicator_of_dropInfoY
   (condExp mW μ (fun ω => Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω))
   *
   (condExp mW μ (fun ω => Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω)) := by
-  classical
-  set mZW := MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance with hmZW_def
-  
-  -- Simplified proof with sorries for infrastructure pieces
-  -- TODO: Complete with proper σ-algebra arguments and pull-out lemmas
+  -- PROOF STRATEGY (from Kallenberg 2005, Lemma 1.3):
+  --
+  -- Let indA := 1_A ∘ Y and indB := 1_B ∘ Z.
+  -- Define mZW := σ(Z, W) = MeasurableSpace.comap (Z, W) inferInstance.
+  --
+  -- Key observations:
+  -- 1. indB is mZW-measurable (since it depends only on Z)
+  -- 2. condExp mW (indA) is mW-measurable (by definition of condExp)
+  --
+  -- The proof proceeds as follows:
+  --
+  -- Step 1: Use pull-out for mZW
+  --   condExp mZW (indA * indB) =ᵐ condExp mZW (indA) * indB
+  --   (since indB is mZW-measurable, we can pull it out)
+  --
+  -- Step 2: Apply the dropY hypothesis
+  --   condExp mZW (indA) =ᵐ condExp mW (indA)
+  --   So: condExp mZW (indA * indB) =ᵐ condExp mW (indA) * indB
+  --
+  -- Step 3: Take condExp mW of both sides (tower property)
+  --   LHS: condExp mW (condExp mZW (indA * indB)) = condExp mW (indA * indB)
+  --        (tower property: condExp mW ∘ condExp mZW = condExp mW when mW ≤ mZW)
+  --
+  -- Step 4: Use pull-out for mW on RHS
+  --   condExp mW (condExp mW (indA) * indB)
+  --   = condExp mW (indA) * condExp mW (indB)
+  --   (since condExp mW (indA) is mW-measurable)
+  --
+  -- KEY MATHLIB LEMMAS NEEDED:
+  -- - condExp_mul_of_aestronglyMeasurable_right: the pull-out property
+  -- - Tower property for condExp (need mW ≤ mZW ≤ m₀)
+  -- - AEStronglyMeasurable[mZW] for indB
+  -- - Integrability of indicators (bounded by 1)
+  --
+  -- NOTE: The tower property requires showing that mW ≤ mZW, which holds
+  -- because σ(W) ⊆ σ(Z, W).
+  --
+  -- IMPLEMENTATION BLOCKERS:
+  -- 1. The lemma statement uses abstract mW rather than MeasurableSpace.comap W
+  --    This prevents direct use of tower property since we can't verify mW ≤ mZW
+  -- 2. Need to add hypothesis that mW = MeasurableSpace.comap W inferInstance
+  -- 3. Indicator integrability needs careful handling of preimage measurability
+  --
+  -- The mathematical steps are clear (see comments above), but the Lean
+  -- formalization requires either refactoring the statement or adding hypotheses.
   sorry
 
 end KallenbergIndicator
