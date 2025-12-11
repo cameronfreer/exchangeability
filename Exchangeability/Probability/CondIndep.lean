@@ -1628,11 +1628,42 @@ lemma condIndep_indicator_of_dropInfoY
   (condExp mW μ (fun ω => Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω))
   *
   (condExp mW μ (fun ω => Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω)) := by
-  classical
-  set mZW := MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance with hmZW_def
-  
-  -- Simplified proof with sorries for infrastructure pieces
-  -- TODO: Complete with proper σ-algebra arguments and pull-out lemmas
+  -- PROOF STRATEGY (from Kallenberg 2005, Lemma 1.3):
+  --
+  -- Let indA := 1_A ∘ Y and indB := 1_B ∘ Z.
+  -- Define mZW := σ(Z, W) = MeasurableSpace.comap (Z, W) inferInstance.
+  --
+  -- Key observations:
+  -- 1. indB is mZW-measurable (since it depends only on Z)
+  -- 2. condExp mW (indA) is mW-measurable (by definition of condExp)
+  --
+  -- The proof proceeds as follows:
+  --
+  -- Step 1: Use pull-out for mZW
+  --   condExp mZW (indA * indB) =ᵐ condExp mZW (indA) * indB
+  --   (since indB is mZW-measurable, we can pull it out)
+  --
+  -- Step 2: Apply the dropY hypothesis
+  --   condExp mZW (indA) =ᵐ condExp mW (indA)
+  --   So: condExp mZW (indA * indB) =ᵐ condExp mW (indA) * indB
+  --
+  -- Step 3: Take condExp mW of both sides (tower property)
+  --   LHS: condExp mW (condExp mZW (indA * indB)) = condExp mW (indA * indB)
+  --        (tower property: condExp mW ∘ condExp mZW = condExp mW when mW ≤ mZW)
+  --
+  -- Step 4: Use pull-out for mW on RHS
+  --   condExp mW (condExp mW (indA) * indB)
+  --   = condExp mW (indA) * condExp mW (indB)
+  --   (since condExp mW (indA) is mW-measurable)
+  --
+  -- KEY MATHLIB LEMMAS NEEDED:
+  -- - condExp_mul_of_aestronglyMeasurable_right: the pull-out property
+  -- - Tower property for condExp (need mW ≤ mZW ≤ m₀)
+  -- - AEStronglyMeasurable[mZW] for indB
+  -- - Integrability of indicators (bounded by 1)
+  --
+  -- NOTE: The tower property requires showing that mW ≤ mZW, which holds
+  -- because σ(W) ⊆ σ(Z, W).
   sorry
 
 end KallenbergIndicator
