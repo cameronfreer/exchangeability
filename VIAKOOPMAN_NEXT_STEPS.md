@@ -1,6 +1,6 @@
 # ViaKoopman.lean - Comprehensive Status
 
-**Updated: 2025-12-11 (Session 6)**
+**Updated: 2025-12-11 (Session 7)**
 
 ---
 
@@ -10,7 +10,7 @@
 |------|--------|---------|--------|
 | CesaroToCondExp.lean | 0 | **0** | **COMPLETE** |
 | ViaKoopman.lean | 0 | ~21 | Main proof file |
-| ViaKoopman/Infrastructure.lean | 0 | ~8 | Dependencies |
+| ViaKoopman/Infrastructure.lean | 0 | **~3** | Dependencies (2 sorries eliminated!) |
 | TheoremViaKoopman.lean | 0 | 1 | Final theorem wrapper |
 | **Total** | **0** | **~30** | Build successful! |
 
@@ -39,15 +39,27 @@
 | ~785 | `condexp_pullback_factor` | **PROVEN** | AE strong measurability transfer (Session 4) |
 | ~896 | `exists_naturalExtension` | Sorry | Natural extension existence (Kolmogorov construction) |
 | ~934 | `naturalExtension_condexp_pullback` | Sorry | CE pullback property |
-| ~997 | `condexp_precomp_iterate_eq_twosided` | **PROVEN** | Two-sided iteration via induction |
-| ~1105 | `condexp_precomp_shiftℤInv_eq` | **PROVEN** | Inverse shift invariance |
+| ~997 | `condexp_precomp_iterate_eq_twosided` | **PROVEN** | Two-sided iteration via induction (Session 7: API fixed!) |
+| ~1105 | `condexp_precomp_shiftℤInv_eq` | **PROVEN** | Inverse shift invariance (Session 7: API fixed!) |
 | ~1271 | `condexp_pair_lag_constant_twoSided` | Sorry | Requires deeper ergodic theory (lag independence) |
 
-**Note**: `condexp_precomp_iterate_eq_twosided` and `condexp_precomp_shiftℤInv_eq` are proven but commented out due to pre-existing build errors from mathlib API changes in `MeasurePreserving.integral_comp`. The lemma logic is correct but needs API updates. These lemmas are not currently used by ViaKoopman.lean.
+**Note**: `condexp_precomp_iterate_eq_twosided` and `condexp_precomp_shiftℤInv_eq` were previously blocked by mathlib API changes in `MeasurePreserving.integral_comp`. Session 7 fixed these using `setIntegral_map_preimage` and `integral_map` instead.
 
 ---
 
 ## Recently Completed Conversions
+
+### 2025-12-11 (Session 7) - API Workarounds for setIntegral Sorries
+
+**Fixed 2 sorries in Infrastructure.lean that were blocked by mathlib API changes**:
+
+- **`condexp_precomp_iterate_eq_twosided`** (line ~1103): Was sorry due to `MeasurePreserving.integral_comp` API change requiring `MeasurableEmbedding`. Fixed using `setIntegral_map_preimage` - shows ∫_s g dμ = ∫_{T⁻¹'s} (g∘T) d(T_*μ) when T⁻¹'s = s and T preserves μ.
+
+- **`condexp_precomp_shiftℤInv_eq`** (line ~1216): Same API issue. Fixed using `integral_map` with explicit AEStronglyMeasurable conversion - shows ∫ g∘T dμ = ∫ g d(μ.map T) = ∫ g dμ.
+
+**Key insight**: Avoided the problematic `MeasurePreserving.integral_comp` by using the more fundamental `setIntegral_map` and `integral_map` lemmas directly.
+
+Reduces Infrastructure.lean sorries from 5 to 3 (remaining: `exists_naturalExtension`, `naturalExtension_condexp_pullback`, `condexp_pair_lag_constant_twoSided`).
 
 ### 2025-12-11 (Session 6) - Bridge Lemma and API Fixes
 
