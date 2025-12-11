@@ -646,55 +646,51 @@ lemma approx_bounded_measurable (μ : Measure α) [IsProbabilityMeasure μ]
     -- Property 2: Pointwise ae convergence
     · exact hf_sm.tendsto_approxBounded_ae hf_bdd'
     -- Property 3: L¹ convergence via dominated convergence
-    · -- The approximations converge ae and are uniformly bounded, so L¹ convergence follows
-      -- by dominated convergence with dominating function 2*M (constant, integrable on prob space)
-      --
-      -- PROOF STRATEGY (tendsto_lintegral_of_dominated_convergence):
-      -- 1. F n x := ‖approxBounded M n x - f x‖₊ : ℕ → α → ℝ≥0∞
-      -- 2. Bound: F n ≤ᵐ 2*M (triangle inequality + both bounded by M)
-      -- 3. Limit: F n x → 0 ae (from tendsto_approxBounded_ae + continuity of norm)
-      -- 4. Dominator integrable: ∫⁻ 2*M ∂μ < ∞ on probability space
-      --
-      -- The ENNReal/NNReal conversion requires careful handling of:
-      -- - Real.toNNReal for the constant bound
-      -- - nnnorm vs norm for the difference
-      -- - ENNReal.coe for the coercion
-      --
-      -- This is a standard dominated convergence argument. Left as sorry for now
-      -- due to ENNReal arithmetic complexity.
-      sorry
-  · -- Case M < 0: The hypothesis |f x| ≤ M < 0 forces f = 0 ae
-    -- However, we also need |fn n x| ≤ M < 0 which is impossible since |·| ≥ 0.
-    -- This is a degenerate case - the hypothesis can only hold on a null set,
-    -- making the lemma vacuously true but practically unusable.
-    -- In practice, this lemma is only called with M ≥ 0.
+    --
+    -- PROOF STRATEGY using tendsto_lintegral_of_dominated_convergence:
+    -- - F n x := ‖approxBounded M n x - f x‖₊ (as ℝ≥0∞)
+    -- - Limit function: 0 (from pointwise ae convergence via tendsto_approxBounded_ae)
+    -- - Dominator: constant 2*M (since ‖fn - f‖ ≤ ‖fn‖ + ‖f‖ ≤ M + M)
+    -- - Dominator integrable: ∫ 2M dμ = 2M * μ(univ) = 2M < ∞ on probability space
+    --
+    -- Then tendsto_lintegral_of_dominated_convergence gives:
+    --   ∫⁻ ‖fn - f‖₊ → ∫⁻ 0 = 0
+    --
+    -- Key lemmas:
+    -- - hf_sm.tendsto_approxBounded_ae hf_bdd': fn → f pointwise ae
+    -- - hf_sm.norm_approxBounded_le hM_nonneg: ‖fn x‖ ≤ M
+    --
+    -- IMPLEMENTATION NOTE: Requires careful handling of ℝ ↔ ℝ≥0 ↔ ℝ≥0∞ coercions.
+    · sorry
+  · -- Case M < 0: contradiction since |f x| ≥ 0 > M always
+    -- The hypothesis hf_bdd : ∀ᵐ x ∂μ, |f x| ≤ M with M < 0 is impossible
+    -- since |f x| ≥ 0 for all x. This implies μ = 0, contradicting probability measure.
     push_neg at hM_nonneg
-    -- The hypothesis hf_bdd combined with M < 0 is essentially a contradiction
-    -- on any probability space (since |f x| ≥ 0 > M a.e. is false, so hf_bdd
-    -- requires f = 0 a.e., but then we still can't satisfy |fn| ≤ M).
-    -- Use sorry for this degenerate edge case.
-    sorry
+    exfalso
+    have h_ae_false : ∀ᵐ x ∂μ, False := by
+      filter_upwards [hf_bdd] with x hx
+      have h_abs_nonneg : 0 ≤ |f x| := abs_nonneg _
+      linarith
+    rw [Filter.eventually_false_iff_eq_bot, ae_eq_bot] at h_ae_false
+    -- h_ae_false : μ = 0, but probability measure has μ univ = 1
+    have h_univ : μ Set.univ = 1 := measure_univ
+    rw [h_ae_false] at h_univ
+    simp at h_univ
 
 /-- **Conditional independence for simple functions (left argument).**
 Refactored to avoid instance pollution: works with σ(W) directly.
 
-**Note on hypotheses**: This lemma as stated requires ψ to be just measurable, but the
-proof strategy (approximation by simple functions) requires boundedness for domination.
-In all current usage contexts (e.g., `condIndep_bddMeas_extend_left`), ψ is bounded.
+Given a simple function φ and bounded measurable function ψ with |ψ ∘ Z| ≤ Mψ a.e.,
+proves the factorization: μ[(φ ∘ Y) * (ψ ∘ Z) | σ(W)] = μ[φ ∘ Y | σ(W)] * μ[ψ ∘ Z | σ(W)].
 
 **Proof Strategy**:
-1. φ is a simple function, hence bounded: `∃ M, ∀ a, |φ a| ≤ M`
-2. Approximate ψ by simple functions ψₙ (using `approxBounded` or `eapprox`)
-3. For each n: apply `condIndep_simpleFunc μ Y Z W hCI φ ψₙ hY hZ`
-4. Pass to limit using dominated convergence:
-   - The product (φ ∘ Y) * (ψₙ ∘ Z) → (φ ∘ Y) * (ψ ∘ Z) ae
-   - Dominating function: M · |ψ ∘ Z| (needs ψ ∘ Z integrable, implied by boundedness)
-5. Similarly for the RHS products
+1. Approximate ψ by simple functions ψₙ (using eapprox on positive/negative parts)
+2. For each n: apply `condIndep_simpleFunc μ Y Z W hCI φ ψₙ hY hZ`
+3. Pass to limit using dominated convergence (dominator: Mφ · Mψ where Mφ bounds φ)
 
 **Key mathlib lemmas**:
 - `condIndep_simpleFunc` : base case for both simple
-- `tendsto_condExpL1_of_dominated_convergence` : L¹ convergence of condExp
-- `condExp_mul_of_stronglyMeasurable_left` : may help with product structure -/
+- `tendsto_condExpL1_of_dominated_convergence` : L¹ convergence of condExp -/
 lemma condIndep_simpleFunc_left
     {Ω α β γ : Type*}
     {m₀ : MeasurableSpace Ω}  -- Explicit ambient space
@@ -704,23 +700,21 @@ lemma condIndep_simpleFunc_left
     (hCI : @CondIndep Ω α β γ m₀ _ _ _ μ Y Z W)
     (φ : SimpleFunc α ℝ) {ψ : β → ℝ}
     (hY : @Measurable Ω α m₀ _ Y) (hZ : @Measurable Ω β m₀ _ Z)
-    (hψ_meas : Measurable ψ) :
+    (hψ_meas : Measurable ψ)
+    (Mψ : ℝ) (hψ_bdd : ∀ᵐ ω ∂μ, |ψ (Z ω)| ≤ Mψ) :
     μ[ (φ ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W inferInstance ] =ᵐ[μ]
     μ[ φ ∘ Y | MeasurableSpace.comap W inferInstance ] *
     μ[ ψ ∘ Z | MeasurableSpace.comap W inferInstance ] := by
-  -- PROOF OUTLINE:
-  -- 1. Get bound M for φ: M := (φ.range.sup (fun x => ‖x‖₊)).toReal
-  -- 2. Need to approximate ψ by simple functions and pass to limit
-  -- 3. The approximation requires boundedness of ψ (not in current hypotheses)
+  -- PROOF STRATEGY:
+  -- 1. Approximate ψ by simple functions sψ_n using eapprox on positive/negative parts
+  -- 2. For each n: apply condIndep_simpleFunc μ Y Z W hCI φ (sψ n) hY hZ
+  -- 3. Pass to limit using dominated convergence for conditional expectations
   --
-  -- CURRENT GAP: Lemma statement lacks boundedness hypothesis on ψ.
-  -- In usage context (condIndep_bddMeas_extend_left), ψ is bounded.
-  -- Options:
-  --   (a) Add boundedness hypothesis to lemma statement
-  --   (b) Prove via different technique not requiring approximation
-  --   (c) Defer to stronger `condIndep_bddMeas_extend_left` which has boundedness
-  --
-  -- For now, using sorry as this lemma is used in contexts with boundedness available.
+  -- This is the symmetric version of the approximation in condIndep_bddMeas_extend_left.
+  -- The key ingredients are:
+  -- - SimpleFunc.eapprox for approximation
+  -- - tendsto_condExpL1_of_dominated_convergence for the limit
+  -- - Boundedness from hψ_bdd provides the dominating function
   sorry
 
 /-- **Extend factorization from simple φ to bounded measurable φ, keeping ψ fixed.**
@@ -892,7 +886,7 @@ lemma condIndep_bddMeas_extend_left
       intro n
       -- Use the refactored lemma (now works directly with σ(W))
       -- mW is definitionally equal to MeasurableSpace.comap W inferInstance
-      exact condIndep_simpleFunc_left μ Y Z W hCI (sφ n) hY hZ hψ_meas
+      exact condIndep_simpleFunc_left μ Y Z W hCI (sφ n) hY hZ hψ_meas Mψ hψ_bdd
 
     -- Integrate both sides over C
     have h_int_n :

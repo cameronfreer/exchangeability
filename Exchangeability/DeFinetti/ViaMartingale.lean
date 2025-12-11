@@ -1607,6 +1607,18 @@ lemma condIndep_of_triple_law
       --           = 0
       haveI : SigmaFinite (μ.trim hℋ_le) := by infer_instance
 
+      -- U = μ[φ|𝔾] is bounded by 1 since φ is an indicator function
+      have hU_bdd : ∀ᵐ ω ∂μ, ‖U ω‖ ≤ 1 := by
+        have hφ_bdd : ∀ᵐ ω ∂μ, |φ ω| ≤ (1 : ℝ) := by
+          filter_upwards with ω
+          simp only [hφ_def]
+          rw [Set.indicator_apply]
+          split_ifs with h <;> simp [abs_of_nonneg]
+        have := ae_bdd_condExp_of_ae_bdd (m := 𝔾) (R := 1) hφ_bdd
+        filter_upwards [this] with ω hω
+        rw [Real.norm_eq_abs]
+        exact hω
+
       calc ∫ ω in W ⁻¹' T, φ0 ω * ψ0 ω ∂μ
           = ∫ ω, φ0 ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ := by
               rw [← integral_indicator (hW hT_meas)]
@@ -1617,13 +1629,24 @@ lemma condIndep_of_triple_law
               simp only [hφ0_def, Pi.sub_apply]
         _ = ∫ ω, φ ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ -
             ∫ ω, U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ := by
-              -- TODO: Technical proof - let binding and indicator unfolding issues
+              -- TODO: Technical proof - instance pollution from `set ℋ := ...` causes type mismatch.
+              -- The proof follows from: φ bounded by 1, ψ0 integrable, indicator bounded by 1.
+              -- Product of bounded by integrable is integrable via Integrable.bdd_mul'.
               have hφF_int : Integrable (fun ω => φ ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω)) μ := by
-                -- φ is bounded by 1, so this integral is bounded
-                sorry
+                sorry -- bounded × integrable integrability: φ bounded, ψ0*indicator integrable
               have hUF_int : Integrable (fun ω => U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω)) μ := by
-                -- U = μ[φ|𝔾] is bounded by 1, so this integral is bounded
-                sorry
+                -- U = μ[φ|𝔾] is bounded by 1, ψ0 is integrable, indicator bounded by 1
+                have hψ0_1S_int : Integrable (fun ω => ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) μ := by
+                  have h1 : Integrable (fun ω => (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω * ψ0 ω) μ := by
+                    refine hψ0_int.bdd_mul' (c := 1) ?_ ?_
+                    · exact (measurable_const.indicator (measurableSet_preimage hW hT_meas)).aestronglyMeasurable
+                    · filter_upwards with ω; rw [Real.norm_eq_abs]
+                      simp only [Set.indicator_apply]; split_ifs <;> simp [abs_of_nonneg]
+                  convert h1 using 1; ext ω; ring
+                refine hψ0_1S_int.bdd_mul' (c := 1) integrable_condExp.aestronglyMeasurable ?_
+                filter_upwards [hU_bdd] with ω hω
+                rw [Real.norm_eq_abs] at hω ⊢
+                simp only [hU_def]; exact hω
               have : ∫ ω, (φ ω - U ω) * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ =
                      ∫ ω, φ ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) -
                           U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) ∂μ := by
@@ -1635,10 +1658,10 @@ lemma condIndep_of_triple_law
               -- Use the defining property: ∫ φ * g = ∫ μ[φ|ℋ] * g when g is ℋ-measurable
               symm
               set F := fun ω => ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω with hF_def
-              -- TODO: Technical proof - let binding and indicator unfolding issues
+              -- TODO: Technical proof - instance pollution from `set ℋ := ...` causes type mismatch.
+              -- Proof: F = ψ0 * 1_S is integrable, φ bounded by 1, so φ*F integrable.
               have hφF_int' : Integrable (fun ω => φ ω * F ω) μ := by
-                -- φ is bounded by 1, so this integral is bounded
-                sorry
+                sorry -- bounded × integrable integrability
               calc ∫ ω, μ[φ | ℋ] ω * F ω ∂μ
                   = ∫ ω, μ[fun ω' => φ ω' * F ω' | ℋ] ω ∂μ := by
                       -- Pull-out property: μ[φ * F | ℋ] =ᵐ μ[φ | ℋ] * F when F is ℋ-measurable
@@ -1671,18 +1694,35 @@ lemma condIndep_of_triple_law
       -- TODO: Technical proof - let binding and indicator unfolding issues
       have hU_bdd : ∀ᵐ ω ∂μ, ‖U ω‖ ≤ 1 := by
         -- φ = (Y ⁻¹' A).indicator 1 is bounded by 1
-        -- U = μ[φ|𝔾] is therefore also bounded by 1
-        sorry
+        -- U = μ[φ|𝔾] is therefore also bounded by 1 by ae_bdd_condExp_of_ae_bdd
+        have hφ_bdd : ∀ᵐ ω ∂μ, |φ ω| ≤ (1 : ℝ) := by
+          filter_upwards with ω
+          simp only [hφ_def]
+          rw [Set.indicator_apply]
+          split_ifs with h <;> simp [abs_of_nonneg]
+        have := ae_bdd_condExp_of_ae_bdd (m := 𝔾) (R := 1) hφ_bdd
+        filter_upwards [this] with ω hω
+        rw [Real.norm_eq_abs]
+        exact hω
       -- V = condExp of ψ (indicator), so V is ae bounded by 1
       -- TODO: Technical proof - let binding and indicator unfolding issues
       have hV_bdd : ∀ᵐ ω ∂μ, ‖V ω‖ ≤ 1 := by
         -- ψ = (Z ⁻¹' B).indicator 1 is bounded by 1
-        -- V = μ[ψ|𝔾] is therefore also bounded by 1
-        sorry
-      -- TODO: Technical proof - type class instance issues with condExp
+        -- V = μ[ψ|𝔾] is therefore also bounded by 1 by ae_bdd_condExp_of_ae_bdd
+        have hψ_bdd : ∀ᵐ ω ∂μ, |ψ ω| ≤ (1 : ℝ) := by
+          filter_upwards with ω
+          simp only [hψ_def]
+          rw [Set.indicator_apply]
+          split_ifs with h <;> simp [abs_of_nonneg]
+        have := ae_bdd_condExp_of_ae_bdd (m := 𝔾) (R := 1) hψ_bdd
+        filter_upwards [this] with ω hω
+        rw [Real.norm_eq_abs]
+        exact hω
+      -- U and V are bounded by 1 and integrable as condExps, so U*V is integrable
       have hUV_bdd : Integrable (U * V) μ := by
-        -- U and V are bounded by 1, both integrable as condExps
-        sorry
+        have hU_int : Integrable U μ := integrable_condExp
+        have hV_int : Integrable V μ := integrable_condExp
+        exact hV_int.bdd_mul' hU_int.aestronglyMeasurable hU_bdd
 
       have hφ0V_int : Integrable (φ0 * V) μ := by
         rw [hφ0_def]; simp only [sub_mul]

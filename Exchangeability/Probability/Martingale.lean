@@ -401,8 +401,15 @@ lemma upBefore_le_downBefore_rev
       -- 4. Combining: The n pairs map to n disjoint upcrossing pairs [-b→-a]
       --    for negProcess(revProcess X N), proving the subset inclusion.
       --
-      -- Technical challenge: Proving this requires detailed manipulation of
-      -- hitting times and upperCrossingTime recursive structure.
+      -- RECOMMENDED APPROACH: Factor out a helper lemma:
+      --
+      -- lemma upperCrossingTime_rev_neg_lt (X : ℕ → Ω → ℝ) {a b : ℝ} (hab : a < b) (N : ℕ)
+      --     (ω : Ω) (n : ℕ) (hn : upperCrossingTime a b X N n ω < N) :
+      --     upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) N n ω < N
+      --
+      -- Prove by induction on n using the recursive structure of upperCrossingTime.
+      -- The key insight: time reversal swaps "hit ≤a after hitting ≥b" with
+      -- "hit ≥b before hitting ≤a", and negation flips the thresholds.
       sorry
 
     exact csSup_le_csSup hbdd2 hemp hsub
@@ -642,7 +649,17 @@ lemma condExp_exists_ae_limit_antitone
 
     -- Get uniform bound on expected upcrossings from time-reversed martingales
     have hab' : (↑a : ℝ) < (↑b : ℝ) := Rat.cast_lt.2 hab
-    obtain ⟨C, h_C_finite, hC⟩ := upcrossings_bdd_uniform h_antitone h_le f hf (↑a) (↑b) hab'
+    -- Get bound for upcrossings (forward direction)
+    obtain ⟨C_up, h_C_up_finite, hC_up⟩ := upcrossings_bdd_uniform h_antitone h_le f hf (↑a) (↑b) hab'
+    -- Get bound for downcrossings via negated process (backward direction)
+    have hab_neg : -(↑b : ℝ) < -(↑a : ℝ) := by linarith
+    obtain ⟨C_down, h_C_down_finite, hC_down⟩ := upcrossings_bdd_uniform h_antitone h_le
+        (fun ω => -f ω) hf.neg (-↑b) (-↑a) hab_neg
+    -- Use max of both bounds as the uniform constant
+    set C := max C_up C_down with hC_def
+    have h_C_finite : C < ⊤ := max_lt h_C_up_finite h_C_down_finite
+    have hC : ∀ N, ∫⁻ ω, (upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω) ∂μ ≤ C :=
+      fun N => (hC_up N).trans (le_max_left _ _)
 
     -- Establish relationship between original and reversed sequence upcrossings
     -- Key: upcrossingsBefore (original, N) ≤ upcrossings (reversed_at_N)
@@ -716,11 +733,32 @@ lemma condExp_exists_ae_limit_antitone
             -- 4. Apply upcrossings_bdd_uniform to get bound C' for upcrossings(-b,-a,-revCEFinite)
             --
             -- The constant C' would be similar to C (same L¹ norm, same gap b-a).
-            -- Alternatively, use the fact that hC bounds upcrossings(a,b,revCEFinite),
-            -- and show upcrossings(-b,-a,-X) ≤ upcrossings(a,b,X) + 1 (alternation).
             --
-            -- For now, leaving as sorry due to setup complexity.
-            sorry
+            -- Use the C_down bound obtained earlier from upcrossings_bdd_uniform for -f on [-b,-a]
+            -- downcrossings(a,b,X) = upcrossings(-b,-a,-X) by up_neg_flip_eq_down
+            -- negProcess(revCEFinite f) = revCEFinite(-f) by negProcess_revCEFinite_eq
+
+            -- Rewrite downcrossings as upcrossings of negated process
+            -- Key identity: downcrossings(a,b,X) = upcrossings(-b,-a,-X) by up_neg_flip_eq_down
+            -- And: negProcess(revCEFinite f) = revCEFinite(-f) a.e. by condExp_neg
+            --
+            -- Technical note: condExp_neg gives a.e. equality, so the processes may differ
+            -- on a null set. However, since upcrossings is measurable and the integrals agree
+            -- for a.e.-equal functions, the integral bound still holds.
+            calc ∫⁻ ω, downcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω ∂μ
+                = ∫⁻ ω, upcrossings (-↑b) (-↑a) (negProcess (fun n => revCEFinite (μ := μ) f 𝔽 N n)) ω ∂μ := by
+                    simp only [up_neg_flip_eq_down]
+              _ = ∫⁻ ω, upcrossings (-↑b) (-↑a) (fun n => revCEFinite (μ := μ) (fun x => -f x) 𝔽 N n) ω ∂μ := by
+                    -- negProcess(revCEFinite f) = revCEFinite(-f) a.e. by condExp_neg
+                    -- The processes agree a.e., so their upcrossings agree a.e., hence integrals equal
+                    congr 1
+                    ext ω n
+                    simp only [negProcess, Pi.neg_apply, revCEFinite]
+                    -- Need: -(μ[f | 𝔽 (N - n)]) ω = μ[-f | 𝔽 (N - n)] ω
+                    -- This requires condExp_neg which gives a.e. equality
+                    sorry -- TODO: lift condExp_neg a.e. equality to upcrossings
+              _ ≤ C_down := hC_down N
+              _ ≤ C := le_max_right C_up C_down
 
     -- Use monotone convergence on the ORIGINAL process (which IS monotone in N)
     have h_exp_orig : ∫⁻ ω, upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω ∂μ ≤ C := by
@@ -1011,8 +1049,22 @@ lemma ae_limit_is_condexp_iInf
       -- same integrals. Since Y = μ[f | F_inf] has this property and is unique ae,
       -- and our Xlim satisfies the same integral conditions, Xlim =ᵐ Y.
       --
-      -- This requires tendsto_setIntegral_of_tendsto_ae or similar for the
-      -- set integral convergence step. Left as sorry for now.
+      -- CLEANER APPROACH (avoiding circularity):
+      -- 1. Prove helper: L¹ convergence implies set integral convergence
+      --    lemma setIntegral_tendsto_of_L1 (hL1_conv : Tendsto ‖f - f_n‖₁ atTop (𝓝 0))
+      --        {A} (hA : MeasurableSet[F_inf] A) :
+      --        Tendsto (fun n => ∫ x in A, f_n x ∂μ) atTop (𝓝 (∫ x in A, f x ∂μ))
+      --    (via |∫_A (f_n - f)| ≤ ∫_A |f_n - f| ≤ ‖f_n - f‖₁)
+      --
+      -- 2. For any F_inf-set A, use tower property:
+      --    ∫_A Xn n = ∫_A μ[f|𝔽 n] = ∫_A Y  (since F_inf ≤ 𝔽 n)
+      --
+      -- 3. By step 1, ∫_A Xlim = lim ∫_A Xn n = ∫_A Y
+      --
+      -- 4. Apply ae_eq_of_forall_setIntegral_eq on (Ω, F_inf):
+      --    Xlim and Y have same integrals on all F_inf-sets, both integrable,
+      --    Y is F_inf-measurable, Xlim is AEStronglyMeasurable (from limit) ⇒ Xlim =ᵐ Y
+      --    (The trimmed measure uniqueness lemma doesn't require F_inf-measurability of Xlim!)
       sorry
 
     -- Now use L¹-continuity: μ[Xlim | F_inf] =ᵐ Y and μ[Xlim | F_inf] =ᵐ Xlim
