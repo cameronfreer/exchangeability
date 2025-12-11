@@ -432,9 +432,12 @@ lemma upBefore_le_downBefore_rev
           -- • X(σ) ≥ b at time σ ⟺ Y(N-σ) = -X(σ) ≤ -b
           -- So upcrossing [a→b] at (τ,σ) for X ↔ upcrossing [-b→-a] at (N-σ,N-τ) for Y.
           --
-          -- PROOF GAP: Requires lemma relating hitting times under reversal+negation:
-          --   hitting f s n m ω < k ↔ hitting (negProcess (revProcess f m)) (-s) (m-k) m ω < m
-          -- where -s = {-x : x ∈ s}. This would formalize the bijection above.
+          -- TODO: Complete this proof by developing hitting time reversal infrastructure.
+          -- Needs helper lemmas:
+          --   1. hitting_rev_neg: Relate hitting times under reversal+negation
+          --   2. upperCrossingTime_rev_neg: Show the k-th crossing transforms correctly
+          -- Alternative: Prove equality directly using finite counting argument
+          -- (both sides count the same set of crossing pairs via bijection).
           sorry
 
     exact csSup_le_csSup hbdd2 hemp hsub
