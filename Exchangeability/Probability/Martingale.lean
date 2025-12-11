@@ -960,24 +960,37 @@ lemma aestronglyMeasurable_iInf_of_tendsto_ae_antitone
     (hg_meas : ∀ n, StronglyMeasurable[𝔽 n] (g n))
     (h_tendsto : ∀ᵐ ω ∂μ, Tendsto (fun n => g n ω) atTop (𝓝 (Xlim ω))) :
     AEStronglyMeasurable[⨅ n, 𝔽 n] Xlim μ := by
-  set F_inf := ⨅ n, 𝔽 n with hF_inf_def
-  -- Strategy: Show Xlim is a.e. equal to an F_inf-strongly-measurable function.
-  -- The lim sup construction gives F_inf-measurability.
+  -- KEY PROPERTY OF ANTITONE FILTRATIONS:
+  -- For antitone 𝔽 (𝔽 n decreases as n increases):
+  -- • For n ≥ N: 𝔽 n ⊆ 𝔽 N (larger index = smaller σ-algebra)
+  -- • Each g_n is 𝔽 n-measurable, hence 𝔽 N-measurable for n ≥ N (by monotonicity)
+  -- • The a.e. limit of 𝔽 N-measurable functions is AEStronglyMeasurable[𝔽 N]
+  -- • Since this holds for all N, Xlim is AEStronglyMeasurable[⨅ 𝔽]
+
+  -- PROOF STRUCTURE FOR THIS LEMMA (mathematical argument):
   --
-  -- For antitone 𝔽:
-  -- • 𝔽 n ⊆ 𝔽 N when n ≥ N (σ-algebras decrease)
-  -- • Each {g n > a} ∈ 𝔽 n ⊆ 𝔽 N for n ≥ N
-  -- • lim sup {g n > a} = ⋂_N ⋃_{n≥N} {g n > a} ∈ ⋂_N 𝔽 N = F_inf
+  -- Step 1: For each N, g_n is 𝔽_N-measurable when n ≥ N
+  --   (uses: h_antitone implies 𝔽_n ⊆ 𝔽_N for n ≥ N)
   --
-  -- The standard argument uses that real-valued measurable functions with respect
-  -- to a σ-algebra are strongly measurable (ℝ is separable).
+  -- Step 2: For each N, Xlim is AEStronglyMeasurable[𝔽_N]
+  --   Proof: g_{N+k} → Xlim a.e. as k → ∞, and each g_{N+k} is 𝔽_N-measurable
+  --   Apply aestronglyMeasurable_of_tendsto_ae to get Xlim is AEStronglyMeasurable[𝔽_N]
   --
-  -- For now we use that the a.e. limit of a.e. strongly measurable functions
-  -- is a.e. strongly measurable, then show it's actually F_inf-measurable.
+  -- Step 3: Xlim is AEStronglyMeasurable[⨅ 𝔽]
+  --   Key insight: Define Xlim' := pointwise lim sup of g_n
+  --   For any a ∈ ℚ:  {Xlim' > a} = limsup_{n→∞} {g_n > a} = ⋂_N ⋃_{n≥N} {g_n > a}
+  --   Show this is in 𝔽_M for any M:
+  --   • For N ≥ M and n ≥ N: {g_n > a} ∈ 𝔽_n ⊆ 𝔽_N ⊆ 𝔽_M (by antitone)
+  --   • So ⋃_{n≥N} {g_n > a} ∈ 𝔽_M for N ≥ M
+  --   • Hence ⋂_{N≥M} (⋃_{n≥N} {g_n > a}) ∈ 𝔽_M
+  --   • This equals the full intersection ⋂_N (⋃_{n≥N} {g_n > a})
+  --   By measurableSet_iInf: being in 𝔽_M for all M implies being in ⨅ 𝔽
+  --   So Xlim' is (⨅ 𝔽)-measurable, and Xlim' = Xlim a.e.
   --
-  -- TECHNICAL NOTE: A fully rigorous proof requires showing the lim sup construction
-  -- produces an F_inf-measurable function. This is standard measure theory but
-  -- requires careful handling of null sets. We defer to a future PR.
+  -- TECHNICAL NOTE: The formal proof requires careful handling of:
+  -- 1. Type class instance for MeasurableSpace when applying aestronglyMeasurable_of_tendsto_ae
+  -- 2. Construction of the lim sup representative
+  -- 3. Showing lim sup = pointwise limit a.e.
   sorry
 
 /-- Identification: the a.s. limit equals `μ[f | ⨅ n, 𝔽 n]`.
