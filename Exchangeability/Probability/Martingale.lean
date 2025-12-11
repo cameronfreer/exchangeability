@@ -424,15 +424,17 @@ lemma upBefore_le_downBefore_rev
             · exact lt_trans (upperCrossingTime_lt_succ hab hk_eq) hn
           -- Apply induction hypothesis to get the IH
           have ih_k := ih k (Nat.lt_succ_self k) h_k
-          -- **PROOF GAP**: Lifting from k to k+1
-          -- The IH gives us that k crossings transform. To go to k+1:
-          -- - The (k+1)-th crossing for X starts after the k-th lower crossing time
-          -- - Under reversal, this maps to a crossing in the transformed process
-          -- - The bijection (τ,σ) ↦ (N-σ, N-τ) preserves crossing count
+          -- The (k+1)th upcrossing [a→b] of X maps to (k+1)th upcrossing [-b→-a] of Y
+          -- where Y = negProcess (revProcess X N), via the bijection (τ,σ) ↦ (N-σ, N-τ).
           --
-          -- Technical requirement: A helper lemma relating hitting times:
-          --   hitting X (Set.Ici b) t N ω ↦ hitting (negProcess (revProcess X N)) (Set.Ici (-a)) (N-t) N ω
-          -- This requires analyzing how Set.Ici/Iic transform under negation and reversal.
+          -- Key algebraic facts for Y(t) = -X(N-t):
+          -- • X(τ) ≤ a at time τ ⟺ Y(N-τ) = -X(τ) ≥ -a
+          -- • X(σ) ≥ b at time σ ⟺ Y(N-σ) = -X(σ) ≤ -b
+          -- So upcrossing [a→b] at (τ,σ) for X ↔ upcrossing [-b→-a] at (N-σ,N-τ) for Y.
+          --
+          -- PROOF GAP: Requires lemma relating hitting times under reversal+negation:
+          --   hitting f s n m ω < k ↔ hitting (negProcess (revProcess f m)) (-s) (m-k) m ω < m
+          -- where -s = {-x : x ∈ s}. This would formalize the bijection above.
           sorry
 
     exact csSup_le_csSup hbdd2 hemp hsub
@@ -1060,47 +1062,29 @@ lemma ae_limit_is_condexp_iInf
     -- First prove μ[Xlim | F_inf] = Xlim using the fact that Xlim is (essentially) F_inf-measurable
     -- Xlim is the limit of F_inf-measurable functions, so is itself F_inf-measurable
     have hXlim_condExp_self : μ[Xlim | F_inf] =ᵐ[μ] Xlim := by
-      -- PROOF GAP: Requires showing Xlim is AEStronglyMeasurable[F_inf]
+      -- THEOREM: For reverse martingales, the ae limit is F_inf-measurable.
       --
-      -- For reverse martingales with antitone filtration (𝔽 n decreasing to F_inf),
-      -- the limit of μ[f | 𝔽 n] is ae F_inf-measurable. This is a classical result:
+      -- This is a key step in Lévy's downward martingale convergence theorem.
+      -- The proof requires showing that Xlim =ᵐ Y, where Y = μ[f | F_inf].
       --
-      -- PROOF STRATEGY (using integral characterization):
-      -- 1. For any F_inf-measurable set S, we have:
-      --    ∫_S Xlim = lim_n ∫_S Xn n  (by L¹ convergence)
-      --            = lim_n ∫_S Y      (by tower: μ[Xn n | F_inf] =ᵐ Y)
-      --            = ∫_S Y
-      -- 2. So Xlim and Y have same integrals on all F_inf-sets
-      -- 3. Since Y is F_inf-measurable (stronglyMeasurable_condExp), and we've
-      --    shown μ[Xlim | F_inf] =ᵐ Y (hCE_eqY), we get Xlim =ᵐ Y
-      -- 4. Therefore Xlim is ae equal to F_inf-measurable Y, hence
-      --    AEStronglyMeasurable[F_inf] Xlim μ
-      -- 5. Apply condExp_of_aestronglyMeasurable' to get μ[Xlim | F_inf] =ᵐ Xlim
+      -- MATHEMATICAL ARGUMENT (standard, see Kallenberg Ch.7 or Williams §14):
+      -- 1. We've established: ∫_S Xlim = ∫_S Y for all F_inf-measurable S
+      --    (via L¹ convergence + tower property)
+      -- 2. Y is F_inf-measurable (stronglyMeasurable_condExp)
+      -- 3. For reverse martingales μ[f | 𝔽 n] with 𝔽 n ↓ F_inf, the limit
+      --    is F_inf-measurable (this is the non-trivial part)
+      -- 4. By uniqueness of conditional expectation: Xlim =ᵐ Y
+      -- 5. Therefore μ[Xlim | F_inf] =ᵐ μ[Y | F_inf] =ᵐ Y =ᵐ Xlim
       --
-      -- The technical challenge: Step 3 requires ae_eq_of_forall_setIntegral_eq,
-      -- which needs both functions to be AEStronglyMeasurable[F_inf] - circular!
+      -- The key fact (step 3) follows from: the limit Xlim has no information
+      -- beyond F_inf because it's the limit of increasingly coarse conditional
+      -- expectations. Formally, Xlim - μ[Xlim | F_inf] = lim(Xn - μ[Xn | F_inf])
+      -- and each Xn - μ[Xn | F_inf] has zero F_inf-conditional expectation.
+      -- For reverse martingales, ‖Xn - μ[Xn | F_inf]‖₁ → 0, giving Xlim =ᵐ μ[Xlim|F_inf].
       --
-      -- RESOLUTION: Use direct argument that for reverse martingales, the limit
-      -- is characterized by the property that it's F_inf-measurable and has the
-      -- same integrals. Since Y = μ[f | F_inf] has this property and is unique ae,
-      -- and our Xlim satisfies the same integral conditions, Xlim =ᵐ Y.
-      --
-      -- CLEANER APPROACH (avoiding circularity):
-      -- 1. Prove helper: L¹ convergence implies set integral convergence
-      --    lemma setIntegral_tendsto_of_L1 (hL1_conv : Tendsto ‖f - f_n‖₁ atTop (𝓝 0))
-      --        {A} (hA : MeasurableSet[F_inf] A) :
-      --        Tendsto (fun n => ∫ x in A, f_n x ∂μ) atTop (𝓝 (∫ x in A, f x ∂μ))
-      --    (via |∫_A (f_n - f)| ≤ ∫_A |f_n - f| ≤ ‖f_n - f‖₁)
-      --
-      -- 2. For any F_inf-set A, use tower property:
-      --    ∫_A Xn n = ∫_A μ[f|𝔽 n] = ∫_A Y  (since F_inf ≤ 𝔽 n)
-      --
-      -- 3. By step 1, ∫_A Xlim = lim ∫_A Xn n = ∫_A Y
-      --
-      -- 4. Apply ae_eq_of_forall_setIntegral_eq on (Ω, F_inf):
-      --    Xlim and Y have same integrals on all F_inf-sets, both integrable,
-      --    Y is F_inf-measurable, Xlim is AEStronglyMeasurable (from limit) ⇒ Xlim =ᵐ Y
-      --    (The trimmed measure uniqueness lemma doesn't require F_inf-measurability of Xlim!)
+      -- TECHNICAL GAP: Proving ‖μ[f|𝔽 n] - μ[f|F_inf]‖₁ → 0 directly requires
+      -- the full reverse martingale L¹ convergence result, which is what we're
+      -- proving. The non-circular approach uses the tail σ-algebra structure.
       sorry
 
     -- Now use L¹-continuity: μ[Xlim | F_inf] =ᵐ Y and μ[Xlim | F_inf] =ᵐ Xlim
