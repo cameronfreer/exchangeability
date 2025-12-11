@@ -6,6 +6,7 @@ Authors: Cameron Freer, Claude (Anthropic)
 import Exchangeability.Tail.TailSigma
 import Exchangeability.PathSpace.Shift
 import Exchangeability.Contractability
+import Exchangeability.Core
 
 /-!
 # Shift Invariance of Tail σ-Algebra for Exchangeable Sequences
@@ -89,27 +90,57 @@ lemma tailSigma_shift_invariant_for_contractable
     (X : ℕ → Ω → α)
     (hX : Exchangeability.Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i)) :
-    ∀ m : ℕ, Measure.map (fun ω i => X (1 + i) ω) μ =
-              Measure.map (fun ω i => X i ω) μ := by
-  intro m
+    Measure.map (fun ω i => X (1 + i) ω) μ =
+      Measure.map (fun ω i => X i ω) μ := by
+  -- Use measure_eq_of_fin_marginals_eq_prob: two probability measures on ℕ → α
+  -- are equal if all finite marginals agree
 
-  -- This follows from Contractable.shift_segment_eq
-  -- The key observation: shifting all indices by 1 is a special case of
-  -- selecting a strictly increasing subsequence
+  -- Define the two measures on ℕ → α
+  let ν₁ := Measure.map (fun ω i => X (1 + i) ω) μ
+  let ν₂ := Measure.map (fun ω i => X i ω) μ
 
-  have h_shift := Exchangeability.Contractable.shift_segment_eq hX m 1
+  -- Both are probability measures
+  have h_meas_shifted : Measurable (fun ω i => X (1 + i) ω) :=
+    measurable_pi_lambda _ (fun i => hX_meas (1 + i))
+  have h_meas_orig : Measurable (fun ω i => X i ω) :=
+    measurable_pi_lambda _ hX_meas
+  haveI : IsProbabilityMeasure ν₁ := Measure.isProbabilityMeasure_map h_meas_shifted.aemeasurable
+  haveI : IsProbabilityMeasure ν₂ := Measure.isProbabilityMeasure_map h_meas_orig.aemeasurable
 
-  -- The shift_segment_eq gives us exactly what we need for SEGMENTS:
-  -- (X_1, X_2, ..., X_m) has the same distribution as (X_0, X_1, ..., X_{m-1})
-  -- This is: Measure.map (fun ω (i : Fin m) => X (1 + ↑i) ω) μ = Measure.map (fun ω i => X (↑i) ω) μ
+  -- Apply finite marginals theorem
+  apply Exchangeability.measure_eq_of_fin_marginals_eq_prob (α := α)
 
-  -- But the GOAL asks for the FULL SEQUENCE shift invariance:
-  -- Measure.map (fun ω (i : ℕ) => X (1 + i) ω) μ = Measure.map (fun ω i => X i ω) μ
+  -- For each n, show finite marginals agree
+  intro n S hS
 
-  -- Issue: shift_segment_eq gives us Fin m → α, but goal needs ℕ → α
-  -- The lemma statement may need revision: either remove ∀ m, or make goal about projections to first m coords
+  -- Compute finite marginals via Measure.map_map
+  have h_prefix_meas : Measurable (Exchangeability.prefixProj (α := α) n) :=
+    Exchangeability.measurable_prefixProj (α := α) (n := n)
 
-  sorry  -- Type mismatch: h_shift is about segments of length m, goal is about full sequence
+  -- LHS: Measure.map (prefixProj n) (Measure.map (fun ω i => X (1 + i) ω) μ)
+  --    = Measure.map (prefixProj n ∘ (fun ω i => X (1 + i) ω)) μ
+  --    = Measure.map (fun ω (i : Fin n) => X (1 + i) ω) μ
+  rw [Measure.map_map h_prefix_meas h_meas_shifted]
+  rw [Measure.map_map h_prefix_meas h_meas_orig]
+
+  -- Now the goal is about Measure.map of two compositions
+  -- Show they're equal function compositions
+  have h_lhs : (Exchangeability.prefixProj (α := α) n ∘ fun ω i => X (1 + i) ω)
+      = (fun ω (i : Fin n) => X (1 + i.val) ω) := by
+    funext ω i
+    simp only [Function.comp_apply, Exchangeability.prefixProj]
+  have h_rhs : (Exchangeability.prefixProj (α := α) n ∘ fun ω i => X i ω)
+      = (fun ω (i : Fin n) => X i.val ω) := by
+    funext ω i
+    simp only [Function.comp_apply, Exchangeability.prefixProj]
+
+  rw [h_lhs, h_rhs]
+
+  -- Now apply shift_segment_eq
+  have h_shift := Exchangeability.Contractable.shift_segment_eq hX n 1
+  -- h_shift : Measure.map (fun ω (i : Fin n) => X (1 + i.val) ω) μ =
+  --           Measure.map (fun ω (i : Fin n) => X i.val ω) μ
+  rw [h_shift]
 
 /-- **AXIOM: Shift invariance of conditional expectation for contractable sequences.**
 
