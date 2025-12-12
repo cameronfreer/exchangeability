@@ -1607,13 +1607,20 @@ lemma condIndep_of_triple_law
       have hℋ_le : ℋ ≤ _ := measurable_iff_comap_le.mp (hZ.prodMk hW)
 
       -- Apply condExp_eq_of_triple_law: μ[φ | ℋ] =ᵐ μ[φ | 𝔾] = U
-      -- TODO: There is a circular dependency between condIndep_of_triple_law and
-      -- condExp_eq_of_triple_law. This requires restructuring the proof to break
-      -- the cycle. For now, we admit this step.
+      -- The triple law (Z,Y,W) ~ (Z,Y,W') implies: μ[φ | σ(Z,W)] =ᵐ μ[φ | σ(W)]
+      --
+      -- CIRCULAR DEPENDENCY NOTE:
+      -- This proof wants to use condExp_eq_of_triple_law (line ~1927), but:
+      --   - condExp_eq_of_triple_law calls condIndep_of_triple_law (line 2008)
+      --   - We ARE inside condIndep_of_triple_law here
+      -- Breaking this cycle requires either:
+      --   1. Proving h_proj directly from h_test_fn using L² orthogonality
+      --   2. Restructuring to prove condExp_eq_of_triple_law independently first
+      -- For now, admit this step pending refactoring.
       have h_proj : μ[φ | ℋ] =ᵐ[μ] U := by
-        -- Key insight: The (Y,Z,W) triple law and h_triple_ZYW combined with the fact
-        -- that 𝔾 ⊆ ℋ means the projection from ℋ to 𝔾 doesn't change the conditional
-        -- expectation of φ.
+        -- Key mathematical fact: The triple law (Z,Y,W) ~ (Z,Y,W') implies Y ⊥⊥ Z | W,
+        -- which in turn implies μ[φ | σ(Z,W)] = μ[φ | σ(W)] a.e.
+        -- The proof requires careful handling of the circular dependency.
         sorry
 
       -- Integrability facts
