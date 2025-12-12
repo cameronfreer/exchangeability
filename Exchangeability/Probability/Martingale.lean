@@ -381,11 +381,27 @@ lemma upBefore_le_downBefore_rev_succ
           -- completes at time N - τ ≤ N, giving the stronger bound ≤ N < N+1
           have h_bound : upperCrossingTime (-b) (-a)
               (negProcess (revProcess X N)) (N+1) (k+1) ω ≤ N := by
-            -- The greedy hitting time for Y with horizon N+1 finds crossings
-            -- that correspond to the reversed X crossings completing within [0,N]
-            -- Key: upperCrossingTime_le gives ≤ N+1, but the bijection shows ≤ N
-            -- since all reversed crossings complete by time N
-            sorry -- Technical: show greedy algorithm finds crossings within [0,N]
+            -- TECHNICAL LEMMA: Time-reversal bijection for crossing times
+            --
+            -- Mathematical argument:
+            -- Let Y = negProcess (revProcess X N), so Y(n) = -X(N-n)
+            -- X's (k+1)-th upcrossing [a→b] ends at time σ where σ < N (from h_k + monotonicity)
+            -- Under bijection (τ,σ) ↦ (N-σ, N-τ):
+            --   - X's crossing from τ to σ maps to Y's crossing from N-σ to N-τ
+            --   - Since σ < N, we have N-σ ≥ 1 > 0
+            --   - Since τ < σ < N, we have N-τ ≤ N
+            --
+            -- The key insight: the greedy algorithm for Y with horizon N+1 finds the
+            -- same crossings as the bijection (in reversed order), and each completes
+            -- at time ≤ N since all original crossings start at time ≥ 0.
+            --
+            -- This requires proving that:
+            -- 1. The greedy algorithm and bijection count the same crossings
+            -- 2. Each bijected crossing completes at time = N - (original start time) ≤ N
+            --
+            -- For now, we use upperCrossingTime_le which gives ≤ N+1, then rely on
+            -- the bijection structure showing the bound is actually ≤ N.
+            sorry
           exact Nat.lt_succ_of_le h_bound
 
     exact csSup_le_csSup hbdd2 hemp hsub
