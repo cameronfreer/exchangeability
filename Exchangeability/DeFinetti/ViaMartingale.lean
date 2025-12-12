@@ -1144,6 +1144,72 @@ lemma integral_mul_indicator_to_set {Ω : Type*} [MeasurableSpace Ω] (μ : Meas
     by_cases h : ω ∈ S <;> simp [h, Set.indicator_of_mem, Set.indicator_of_not_mem]
   simpa [this, integral_indicator, hS]
 
+/-! ### Direct Drop-Info Property from Triple Law
+
+**Key architectural note:** This lemma breaks the circular dependency between
+`condIndep_of_triple_law` and `condExp_eq_of_triple_law` by proving the "drop-info"
+property directly from the triple law without going through conditional independence.
+
+The equivalence is: Triple Law ⟺ Conditional Independence ⟺ Drop-Info Property
+
+The original architecture was:
+- `condExp_eq_of_triple_law` proves drop-info by: triple law → condIndep → drop-info
+- `condIndep_of_triple_law` proves condIndep by: triple law → ... → needs drop-info for h_proj!
+
+This lemma proves: triple law → drop-info directly, breaking the cycle.
+-/
+
+/-- **Direct drop-info property from triple law (Kallenberg 1.3).**
+
+Given the triple law (Z, Y, W) =^d (Z, Y, W'), conditioning φ = 1_A∘Y on σ(Z,W) is the
+same as conditioning on σ(W) alone. The additional information from Z doesn't help
+predict Y because the triple law implies Y ⊥⊥ Z | W.
+
+**Mathematical proof sketch:**
+1. Use `ae_eq_condExp_of_forall_setIntegral_eq` to characterize μ[φ | σ(Z,W)]
+2. Show U = μ[φ | σ(W)] satisfies the characterization:
+   - U is σ(W)-measurable, hence σ(Z,W)-measurable
+   - For all S ∈ σ(Z,W), need ∫_S φ = ∫_S U
+3. For product rectangles S = Z⁻¹'B_Z ∩ W⁻¹'B_W:
+   - Use triple law to relate integrals involving (Z,Y,W) to those with (Z,Y,W')
+   - Use pair law (Y,W) =^d (Y,W') to transfer the conditional expectation property
+4. Extend from π-system to full σ-algebra by monotone class theorem
+
+**Status:** This is the key lemma that breaks the circular dependency.
+The proof requires careful use of the triple law and regular conditional expectations.
+-/
+lemma condExp_eq_of_triple_law_direct
+    {Ω α β γ : Type*}
+    [MeasurableSpace Ω]
+    [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (Y : Ω → α) (Z : Ω → β) (W W' : Ω → γ)
+    (hY : Measurable Y) (hZ : Measurable Z) (hW : Measurable W) (hW' : Measurable W')
+    (h_triple : Measure.map (fun ω => (Z ω, Y ω, W ω)) μ =
+                Measure.map (fun ω => (Z ω, Y ω, W' ω)) μ)
+    {A : Set α} (hA : MeasurableSet A) :
+    μ[Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
+       | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance]
+      =ᵐ[μ]
+    μ[Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
+       | MeasurableSpace.comap W inferInstance] := by
+  -- This is the KEY lemma that breaks the circular dependency.
+  --
+  -- Strategy: Use ae_eq_condExp_of_forall_setIntegral_eq
+  -- Need to show U = μ[φ | σ(W)] satisfies the characterization for μ[φ | σ(Z,W)].
+  --
+  -- The proof involves:
+  -- 1. σ-algebra inclusions: σ(W) ⊆ σ(Z,W) ⊆ ambient
+  -- 2. U is σ(Z,W)-measurable (since it's σ(W)-measurable and σ(W) ⊆ σ(Z,W))
+  -- 3. For all σ(Z,W)-measurable S: ∫_S φ = ∫_S U
+  --    - By monotone class, suffices to check on product rectangles
+  --    - Use triple law to transfer integrals: (Z,Y,W) to (Z,Y,W')
+  --    - Use pair law (Y,W) =^d (Y,W') to show U "works" even with Z information
+  --
+  -- This is non-trivial and requires the full machinery of regular conditional distributions
+  -- or a careful L² orthogonality argument. For now, we admit this key step.
+  sorry
+
 lemma condIndep_of_triple_law
   {Ω α β γ : Type*}
   [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
@@ -1240,6 +1306,9 @@ lemma condIndep_of_triple_law
         _ = ∫ p, g p ∂(Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) := by rw [h_triple]
         _ = ∫ ω, g (Y ω, Z ω, W' ω) ∂μ :=
             integral_map hYZW'_meas.aemeasurable hg_ae_W'
+
+    -- Compute drop-info property BEFORE defining 𝔾 to avoid instance pollution
+    have h_drop_info := condExp_eq_of_triple_law_direct Y Z W W' hY hZ hW hW' h_triple_ZYW hA
 
     let 𝔾 : MeasurableSpace Ω := MeasurableSpace.comap W inferInstance
     set U := μ[φ | 𝔾] with hU_def
@@ -1608,20 +1677,8 @@ lemma condIndep_of_triple_law
 
       -- Apply condExp_eq_of_triple_law: μ[φ | ℋ] =ᵐ μ[φ | 𝔾] = U
       -- The triple law (Z,Y,W) ~ (Z,Y,W') implies: μ[φ | σ(Z,W)] =ᵐ μ[φ | σ(W)]
-      --
-      -- CIRCULAR DEPENDENCY NOTE:
-      -- This proof wants to use condExp_eq_of_triple_law (line ~1927), but:
-      --   - condExp_eq_of_triple_law calls condIndep_of_triple_law (line 2008)
-      --   - We ARE inside condIndep_of_triple_law here
-      -- Breaking this cycle requires either:
-      --   1. Proving h_proj directly from h_test_fn using L² orthogonality
-      --   2. Restructuring to prove condExp_eq_of_triple_law independently first
-      -- For now, admit this step pending refactoring.
-      have h_proj : μ[φ | ℋ] =ᵐ[μ] U := by
-        -- Key mathematical fact: The triple law (Z,Y,W) ~ (Z,Y,W') implies Y ⊥⊥ Z | W,
-        -- which in turn implies μ[φ | σ(Z,W)] = μ[φ | σ(W)] a.e.
-        -- The proof requires careful handling of the circular dependency.
-        sorry
+      -- Now uses h_drop_info defined BEFORE ℋ to avoid instance pollution.
+      have h_proj : μ[φ | ℋ] =ᵐ[μ] U := h_drop_info
 
       -- Integrability facts
       have hφ0_int : Integrable φ0 μ := by
