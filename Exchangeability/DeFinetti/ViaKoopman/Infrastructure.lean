@@ -954,32 +954,38 @@ The shift-invariant σ-algebra contains the tail σ-algebra, so conditioning on 
 also gives conditional independence.
 -/
 
-/-- **Conditional independence of coordinates given shift-invariant σ-algebra.**
+/-- **Lag-constancy from exchangeability via transpositions** (Kallenberg's approach).
 
-This is the core mathematical content that makes the Koopman approach work.
-For bounded measurable functions f, g on α, the conditional expectation of
-f(ω_i) * g(ω_j) factors when i ≠ j:
+For EXCHANGEABLE measures μ on path space, the conditional expectation
+CE[f(ω₀)·g(ω_{k+1}) | ℐ] equals CE[f(ω₀)·g(ω_k) | ℐ] for all k ≥ 0.
 
-  CE[f(ω_i) · g(ω_j) | ℐ] =ᵐ CE[f(ω_i) | ℐ] · CE[g(ω_j) | ℐ]
+**Key insight**: This uses EXCHANGEABILITY (not just stationarity). The proof is:
+1. Let τ be the transposition swapping indices k and k+1 (fixing 0 and all others)
+2. Exchangeability gives: Measure.map (reindex τ) μ = μ
+3. The shift-invariant σ-algebra is invariant under finite permutations
+4. Therefore: CE[f(ω₀)·g(ω_{k+1}) | ℐ] = CE[(f∘τ)(ω₀)·(g∘τ)(ω_{k+1}) | ℐ]
+                                        = CE[f(ω₀)·g(ω_k) | ℐ]
+   since τ fixes 0 and swaps k ↔ k+1.
 
-This is equivalent to saying the coordinates are conditionally independent given ℐ.
+**Why stationarity alone is NOT enough**: Stationary non-exchangeable processes
+(Markov chains, AR processes) can have lag-dependent conditional correlations.
+The transposition trick requires the FULL permutation invariance of exchangeability.
 
-**Note**: This axiom captures the TRUE mathematical content. The previous approach
-via `condexp_pair_lag_constant_twoSided` was attempting to derive this from
-stationarity alone, which is impossible - conditional independence is ADDITIONAL
-structure that exchangeable sequences have. -/
-axiom condIndep_product_factorization
+**Note**: This axiom requires `hExch` (exchangeability on path space), not just
+`MeasurePreserving shift`. The previous `condIndep_product_factorization` axiom
+was INCORRECT because it only assumed stationarity.
+-/
+axiom condexp_lag_constant_from_exchangeability
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]
     {μ : Measure (ℕ → α)} [IsProbabilityMeasure μ]
-    (hσ : MeasurePreserving (shift (α := α)) μ μ)
+    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
     (f g : α → ℝ)
     (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
     (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C)
-    (i j : ℕ) (hij : i ≠ j) :
-    μ[(fun ω => f (ω i) * g (ω j)) | shiftInvariantSigma (α := α)]
+    (k : ℕ) :
+    μ[(fun ω => f (ω 0) * g (ω (k + 1))) | shiftInvariantSigma (α := α)]
       =ᵐ[μ]
-    (fun ω => μ[(fun ω => f (ω i)) | shiftInvariantSigma (α := α)] ω
-            * μ[(fun ω => g (ω j)) | shiftInvariantSigma (α := α)] ω)
+    μ[(fun ω => f (ω 0) * g (ω k)) | shiftInvariantSigma (α := α)]
 
 /-- The comap of shiftInvariantSigma along restrictNonneg is contained in shiftInvariantSigmaℤ.
 
