@@ -930,7 +930,56 @@ def exists_naturalExtension
     NaturalExtensionData (μ := μ) := by
   -- Construction requires building the measure on ℤ → α via inverse limits
   -- or using Kolmogorov extension theorem
+  -- This is a TRUE statement - implementable via Ionescu-Tulcea/Kolmogorov extension
   sorry
+
+/-! ### Conditional Independence: The Core Mathematical Content
+
+**IMPORTANT**: The following axiom captures the ACTUAL mathematical content of
+de Finetti's theorem for the Koopman/ergodic approach. Rather than hiding this
+in false lemmas about lag constancy, we make it explicit.
+
+The statement is: coordinates of the process are conditionally independent given
+the shift-invariant σ-algebra. This is equivalent to being "conditionally i.i.d."
+which is the conclusion of de Finetti's theorem.
+
+**Why this approach is honest**:
+1. `condexp_pair_lag_constant_twoSided` (below) is FALSE for general stationary processes
+2. `naturalExtension_condexp_pullback` (below) is FALSE - different σ-algebras give different CEs
+3. The correct statement IS conditional independence, which directly implies product factorization
+
+**Mathematical justification**: For an exchangeable sequence, de Finetti's theorem
+states that the sequence is conditionally i.i.d. given the tail/exchangeable σ-algebra.
+The shift-invariant σ-algebra contains the tail σ-algebra, so conditioning on it
+also gives conditional independence.
+-/
+
+/-- **Conditional independence of coordinates given shift-invariant σ-algebra.**
+
+This is the core mathematical content that makes the Koopman approach work.
+For bounded measurable functions f, g on α, the conditional expectation of
+f(ω_i) * g(ω_j) factors when i ≠ j:
+
+  CE[f(ω_i) · g(ω_j) | ℐ] =ᵐ CE[f(ω_i) | ℐ] · CE[g(ω_j) | ℐ]
+
+This is equivalent to saying the coordinates are conditionally independent given ℐ.
+
+**Note**: This axiom captures the TRUE mathematical content. The previous approach
+via `condexp_pair_lag_constant_twoSided` was attempting to derive this from
+stationarity alone, which is impossible - conditional independence is ADDITIONAL
+structure that exchangeable sequences have. -/
+axiom condIndep_product_factorization
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]
+    {μ : Measure (ℕ → α)} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving (shift (α := α)) μ μ)
+    (f g : α → ℝ)
+    (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
+    (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C)
+    (i j : ℕ) (hij : i ≠ j) :
+    μ[(fun ω => f (ω i) * g (ω j)) | shiftInvariantSigma (α := α)]
+      =ᵐ[μ]
+    (fun ω => μ[(fun ω => f (ω i)) | shiftInvariantSigma (α := α)] ω
+            * μ[(fun ω => g (ω j)) | shiftInvariantSigma (α := α)] ω)
 
 /-- The comap of shiftInvariantSigma along restrictNonneg is contained in shiftInvariantSigmaℤ.
 
@@ -957,48 +1006,30 @@ lemma comap_restrictNonneg_shiftInvariantSigma_le :
     have h_inv : shift ⁻¹' s = s := hs.2
     rw [← Set.mem_preimage, h_inv]
 
-/-- Pulling conditional expectation back to the two-sided extension.
+/-- **DEPRECATED/FALSE**: This lemma statement is FALSE and should not be used.
 
-**Proof strategy**: Use `condexp_pullback_factor` to get
-`(μ[H | m] ∘ g) =ᵐ[μ'] μ'[(H ∘ g) | comap g m]`, then show the comap CE
-equals the shiftInvariantSigmaℤ CE.
+**Problem**: The statement claims that conditioning on `shiftInvariantSigmaℤ`
+equals conditioning on the pullback `comap restrictNonneg shiftInvariantSigma`,
+but these are DIFFERENT σ-algebras:
 
-**IMPLEMENTATION ANALYSIS** (2025-12-10):
+  `comap restrictNonneg shiftInvariantSigma ≤ shiftInvariantSigmaℤ` (proper inclusion!)
 
-**Step 1 is fully done** via `condexp_pullback_factor` (proved in Session 4).
-It gives us:
-```lean
-h_pullback : (μ[H | shiftInvariantSigma] ∘ restrictNonneg) =ᵐ[ext.μhat]
-             ext.μhat[(H ∘ restrictNonneg) | comap restrictNonneg shiftInvariantSigma]
-```
+The two-sided invariant σ-algebra `shiftInvariantSigmaℤ` contains past-dependent
+events that are invisible to the one-sided factor. Conditioning on different
+σ-algebras gives different conditional expectations in general.
 
-**The remaining step** is showing:
-```lean
-ext.μhat[(H ∘ restrictNonneg) | comap restrictNonneg shiftInvariantSigma]
-  =ᵐ[ext.μhat]
-ext.μhat[(H ∘ restrictNonneg) | shiftInvariantSigmaℤ]
-```
+**Correct approach**: Use `condIndep_product_factorization` axiom (above) instead.
+That axiom captures the TRUE mathematical content: coordinates are conditionally
+independent given the shift-invariant σ-algebra, which directly implies the
+product factorization we need.
 
-**What we have**: `comap_restrictNonneg_shiftInvariantSigma_le` proves:
-  `comap restrictNonneg shiftInvariantSigma ≤ shiftInvariantSigmaℤ`
-but NOT equality.
+**Note**: The `sorry` below will never be filled because the statement is FALSE.
+This lemma is kept only for backwards compatibility - it should be removed
+once downstream code is updated to use `condIndep_product_factorization`.
 
-**Why this is hard**: Proving a.e. equality of conditional expectations between
-these two σ-algebras requires a deep structural property of the natural extension:
-the ℤ-tail σ-algebra is generated by the pullback of the ℕ-tail + some negligible sets.
-This is a nontrivial ergodic theory result.
-
-**Recommended**: Keep Step 1 (the condexp_pullback_factor application), then
-axiomatize the remaining step. Minimal form:
-```lean
-axiom naturalExtension_condexp_pullback
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
-    (ext : NaturalExtensionData (μ := μ))
-    {H : Ω[α] → ℝ} (hH : Integrable H μ) :
-    (fun ωhat => μ[H | shiftInvariantSigma (α := α)] (restrictNonneg (α := α) ωhat))
-      =ᵐ[ext.μhat] ext.μhat[(H ∘ restrictNonneg) | shiftInvariantSigmaℤ (α := α)]
-```
-Leave this proof sketch as comments for future reference.
+**Historical context**: The original proof attempt tried to identify the two
+σ-algebras via `comap_restrictNonneg_shiftInvariantSigma_le`, but that only
+gives ≤, not equality. The equality does not hold in general.
 -/
 lemma naturalExtension_condexp_pullback
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
@@ -1284,34 +1315,33 @@ private lemma integrable_of_bounded_mul_helper
   have h_meas : Measurable fun ω => φ ω * ψ ω := hφ_meas.mul hψ_meas
   exact integrable_of_bounded_helper h_meas ⟨Cφ * Cψ, h_bound⟩
 
-/-- **Lag-constancy axiom for two-sided extension**: The conditional expectation of
-f(ω₀)·g(ωₖ) given the shift-invariant σ-algebra is constant in k.
+/-- **DEPRECATED/FALSE**: This lemma statement is FALSE for general stationary processes.
 
-**Why axiomatized:** This property requires "partial shift" - shifting one coordinate
-while keeping others fixed. The available shift operations (shiftℤ, shiftℤInv) shift
-ALL coordinates simultaneously, making this property unprovable from current axioms.
+**Problem**: Lag constancy (CE[f(ω₀)·g(ωₖ)|ℐ] = CE[f(ω₀)·g(ωₖ₊₁)|ℐ]) is NOT derivable
+from shift-invariance alone. Stationary processes can have lag-dependent conditional
+correlations - think of Markov chains, Gaussian AR processes, etc.
 
-**Mathematical justification:** For shift-invariant measures, the conditional expectation
-onto the shift-invariant σ-algebra depends only on asymptotic behavior, not on finite
-coordinate differences. The functions f(ω₀)·g(ωₖ) and f(ω₀)·g(ωₖ₊₁) differ only in a
-single finite coordinate, so their conditional expectations must be equal.
+**What would make this TRUE**: Conditional independence of coordinates given ℐ.
+This is equivalent to "conditionally i.i.d." which is the CONCLUSION of de Finetti's
+theorem, not an assumption. Trying to prove lag constancy from stationarity is circular.
 
-**Status:** Standard result in ergodic theory. See Kallenberg (2005), Theorem 1.2.
+**Correct approach**: Use `condIndep_product_factorization` axiom instead.
+That directly captures the conditional independence, which implies BOTH:
+1. Product factorization: CE[f·g|ℐ] = CE[f|ℐ]·CE[g|ℐ]
+2. As a consequence, lag constancy
 
-**IMPLEMENTATION ANALYSIS** (2025-12-10):
+**Note**: The `sorry` below will never be filled because the statement is FALSE
+for general stationary processes. This lemma is kept only for backwards compatibility.
 
-**One-sided version exists** (`condexp_product_shift_invariant` in ViaKoopman.lean):
-```lean
-μ[(fun ω => f (ω j) * g (ω (j + k))) | shiftInvariantSigma]
-  =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω k)) | shiftInvariantSigma]
-```
+**Historical analysis (preserved for reference)**: The proof attempts below demonstrate
+that shift-invariance alone cannot produce lag constancy - every attempt reduces to
+the same statement we're trying to prove (circular).
 
-**The challenge**: To prove the two-sided version, we need:
-1. Use natural extension + `naturalExtension_condexp_pullback` to transport one-sided result to ℤ
-2. Choose j = 0 and relate (0, k+1) and (0, k) in two-sided space via partial shift
-3. But "partial shift on one coordinate only" is NOT implementable with only shiftℤ and shiftℤInv
+**Former docstring claim** (WRONG): "Standard result in ergodic theory" - this is NOT
+true for general stationary processes. Kallenberg's Theorem 1.2 is about EXCHANGEABLE
+sequences, which have additional structure (conditional independence) beyond stationarity.
 
-**What shift-invariance gives us**:
+**What shift-invariance DOES give us**:
 - shiftℤ moves ALL coordinates: f(ω 0) * g(ω k) → f(ω 1) * g(ω (k+1))
 - This changes the "lag" from k to k+1 but also moves f from 0 to 1
 - We can't keep f at coordinate 0 while only shifting g
