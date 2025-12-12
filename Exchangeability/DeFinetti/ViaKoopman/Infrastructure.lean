@@ -1037,6 +1037,7 @@ once downstream code is updated to use `condIndep_product_factorization`.
 σ-algebras via `comap_restrictNonneg_shiftInvariantSigma_le`, but that only
 gives ≤, not equality. The equality does not hold in general.
 -/
+@[deprecated "This lemma is FALSE - CEs on different σ-algebras are not equal. Use condexp_lag_constant_from_exchangeability instead."]
 lemma naturalExtension_condexp_pullback
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (ext : NaturalExtensionData (μ := μ))
@@ -1368,6 +1369,7 @@ axiom condexp_pair_lag_constant_twoSided
 ```
 Keep the detailed proof attempt below as comments for future reference.
 -/
+@[deprecated "This lemma is FALSE - lag-constancy requires exchangeability, not just stationarity. Use condexp_lag_constant_from_exchangeability instead."]
 lemma condexp_pair_lag_constant_twoSided
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
     (ext : NaturalExtensionData (μ := μ))

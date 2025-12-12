@@ -3998,6 +3998,7 @@ then implies lag constancy as a CONSEQUENCE.
 FALSE lemmas it calls will never be filled. Use `condexp_pair_factorization_MET` instead,
 which uses the correct `condIndep_product_factorization` approach.
 -/
+@[deprecated "Uses FALSE lemmas. Use condexp_pair_factorization_MET with exchangeability instead."]
 private lemma condexp_pair_lag_constant
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
     (hσ : MeasurePreserving shift μ μ)
@@ -4077,6 +4078,7 @@ lemmas (`condexp_pair_lag_constant_twoSided` and `naturalExtension_condexp_pullb
 
 **Note**: This lemma is kept for backwards compatibility but should not be used in new code.
 -/
+@[deprecated "Uses FALSE lemmas via condexp_pair_lag_constant. Use condexp_pair_factorization_MET with exchangeability instead."]
 theorem condexp_tower_for_products
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
     (hσ : MeasurePreserving shift μ μ)
