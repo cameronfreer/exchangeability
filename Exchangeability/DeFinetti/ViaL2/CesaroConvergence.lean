@@ -3117,11 +3117,22 @@ lemma cesaro_to_condexp_L2
     --
     -- INFRASTRUCTURE REQUIREMENTS:
     -- 1. Contractable/Exchangeable → set integral invariance on tail events
-    -- 2. L² → L¹ conversion for probability measures
-    -- 3. Sigma-finite trimmed measure from IsProbabilityMeasure
+    --    Key: Use condExp_shift_eq_condExp axiom from ShiftInvariance.lean
+    --    ∫_A f(X_j) dμ = ∫ 1_A · μ[f(X_j)|tail] dμ = ∫ 1_A · μ[f(X_0)|tail] dμ = ∫_A f(X_0) dμ
+    -- 2. L² → set integral convergence (Hölder: |∫_A g dμ| ≤ μ(A)^{1/2} · ‖g‖₂)
+    --    Use: tendsto_setIntegral_of_L1 or norm_setIntegral_le_of_norm_le_const_ae
+    -- 3. Uniqueness: ae_eq_of_forall_setIntegral_eq_of_sigmaFinite
     --
-    -- NOTE: This proof depends on Sorry #3 (tail measurability of α_f).
-    -- Full implementation requires resolving both sorries together.
+    -- PROOF SKETCH (complete but requires substantial implementation):
+    -- have h_tail_aesm := tail_measurability_of_blockAvg f hf_meas hf_bdd hX_meas α_f hα_memLp hα_limit
+    -- have h_setint_eq : ∀ A, MeasurableSet[TailSigma.tailSigma X] A →
+    --     ∫ ω in A, α_f ω ∂μ = ∫ ω in A, f (X 0 ω) ∂μ := by
+    --   intro A hA
+    --   -- Step 1: ∫_A blockAvg f X 0 n dμ = ∫_A f(X_0) dμ (by exchangeability + linearity)
+    --   -- Step 2: ∫_A blockAvg f X 0 n dμ → ∫_A α_f dμ (by L² → set integral via Hölder)
+    --   -- Step 3: Therefore ∫_A α_f dμ = ∫_A f(X_0) dμ
+    --   sorry
+    -- exact ae_eq_of_forall_setIntegral_eq_of_sigmaFinite hm h_int_f h_int_α h_setint_eq h_tail_aesm
     sorry
 
 /-- **L¹ version via L² → L¹ conversion.**
