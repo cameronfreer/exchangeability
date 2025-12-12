@@ -432,12 +432,22 @@ lemma upBefore_le_downBefore_rev
           -- • X(σ) ≥ b at time σ ⟺ Y(N-σ) = -X(σ) ≤ -b
           -- So upcrossing [a→b] at (τ,σ) for X ↔ upcrossing [-b→-a] at (N-σ,N-τ) for Y.
           --
-          -- TODO: Complete this proof by developing hitting time reversal infrastructure.
-          -- Needs helper lemmas:
-          --   1. hitting_rev_neg: Relate hitting times under reversal+negation
-          --   2. upperCrossingTime_rev_neg: Show the k-th crossing transforms correctly
-          -- Alternative: Prove equality directly using finite counting argument
-          -- (both sides count the same set of crossing pairs via bijection).
+          -- PROOF GAP: This lemma may have a boundary issue.
+          --
+          -- The bijection (τ, σ) ↦ (N-σ, N-τ) maps X upcrossings to Y upcrossings, but:
+          -- - X upcrossing with τ = 0 and σ < N → Y upcrossing completing at N (not "before N")
+          -- - This creates asymmetry: #{Y before N} ≤ #{X before N}, not the other way
+          --
+          -- The reverse lemma `downBefore_rev_le_upBefore` IS correct because it applies
+          -- this lemma to a transformed process where the boundary effect differs.
+          --
+          -- For the main de Finetti proof, only downBefore_rev_le_upBefore is needed
+          -- for the inequality direction. The equality may need reformulation.
+          --
+          -- Potential fixes:
+          -- 1. Use ≤ N instead of < N in upcrossingsBefore definition
+          -- 2. Add hypothesis excluding τ = 0 cases
+          -- 3. Prove only the needed inequality direction
           sorry
 
     exact csSup_le_csSup hbdd2 hemp hsub
