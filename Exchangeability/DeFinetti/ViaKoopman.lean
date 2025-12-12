@@ -3979,119 +3979,6 @@ private theorem h_tower_of_lagConst
   filter_upwards [h_abs_zero] with ω hω
   exact sub_eq_zero.mp (abs_eq_zero.mp hω)
 
-/-- **DEPRECATED**: This lemma relies on FALSE lemmas and should not be used.
-
-This lemma attempted to prove lag-constancy from stationarity alone, but the proof
-uses `condexp_pair_lag_constant_twoSided` and `naturalExtension_condexp_pullback`,
-both of which are FALSE for general stationary processes.
-
-**What this claims**: CE[f(ω₀)·g(ωₖ₊₁) | ℐ] equals CE[f(ω₀)·g(ωₖ) | ℐ]
-
-**Why it's not derivable**: Lag constancy requires conditional independence, not just
-stationarity. Stationary processes can have lag-dependent conditional correlations.
-
-**Correct approach**: Use `condIndep_product_factorization` axiom (in Infrastructure.lean)
-which directly captures conditional independence. The factorization CE[f·g|ℐ] = CE[f|ℐ]·CE[g|ℐ]
-then implies lag constancy as a CONSEQUENCE.
-
-**Note**: This lemma is kept for backwards compatibility. The `sorry` implicit in the
-FALSE lemmas it calls will never be filled. Use `condexp_pair_factorization_MET` instead,
-which uses the correct `condIndep_product_factorization` approach.
--/
-@[deprecated "Uses FALSE lemmas. Use condexp_pair_factorization_MET with exchangeability instead."]
-private lemma condexp_pair_lag_constant
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
-    (hσ : MeasurePreserving shift μ μ)
-    (f g : α → ℝ)
-    (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
-    (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C)
-    (k : ℕ) :
-    μ[(fun ω => f (ω 0) * g (ω (k+1))) | shiftInvariantSigma (α := α)]
-      =ᵐ[μ]
-    μ[(fun ω => f (ω 0) * g (ω k)) | shiftInvariantSigma (α := α)] := by
-  classical
-  obtain ⟨Cf, hCf⟩ := hf_bd
-  obtain ⟨Cg, hCg⟩ := hg_bd
-  let Hk : Ω[α] → ℝ := fun ω => f (ω 0) * g (ω k)
-  let Hk1 : Ω[α] → ℝ := fun ω => f (ω 0) * g (ω (k + 1))
-  have hHk_int : Integrable Hk μ := by
-    have hφ_meas : Measurable (fun (ω : Ω[α]) => f (ω 0)) :=
-      hf_meas.comp (measurable_pi_apply 0)
-    have hψ_meas : Measurable (fun (ω : Ω[α]) => g (ω k)) :=
-      hg_meas.comp (measurable_pi_apply k)
-    have hφ_bd : ∃ C, ∀ (ω : Ω[α]), |f (ω 0)| ≤ C := ⟨Cf, fun ω => hCf _⟩
-    have hψ_bd : ∃ C, ∀ (ω : Ω[α]), |g (ω k)| ≤ C := ⟨Cg, fun ω => hCg _⟩
-    exact integrable_of_bounded_mul (μ := μ) hφ_meas hφ_bd hψ_meas hψ_bd
-  have hHk1_int : Integrable Hk1 μ := by
-    have hφ_meas : Measurable (fun (ω : Ω[α]) => f (ω 0)) :=
-      hf_meas.comp (measurable_pi_apply 0)
-    have hψ_meas : Measurable (fun (ω : Ω[α]) => g (ω (k + 1))) :=
-      hg_meas.comp (measurable_pi_apply (k + 1))
-    have hφ_bd : ∃ C, ∀ (ω : Ω[α]), |f (ω 0)| ≤ C := ⟨Cf, fun ω => hCf _⟩
-    have hψ_bd : ∃ C, ∀ (ω : Ω[α]), |g (ω (k + 1))| ≤ C := ⟨Cg, fun ω => hCg _⟩
-    exact integrable_of_bounded_mul (μ := μ) hφ_meas hφ_bd hψ_meas hψ_bd
-  -- Move to the natural two-sided extension
-  let ext := exists_naturalExtension (μ := μ) (α := α) hσ
-  have h_two :
-      ext.μhat[(fun ω => f (ω 0) * g (ω (k + 1)))
-        | shiftInvariantSigmaℤ (α := α)]
-        =ᵐ[ext.μhat]
-      ext.μhat[(fun ω => f (ω 0) * g (ω k))
-        | shiftInvariantSigmaℤ (α := α)] :=
-    condexp_pair_lag_constant_twoSided
-      (μ := μ) (α := α) ext f g hf_meas ⟨Cf, hCf⟩ hg_meas ⟨Cg, hCg⟩ k
-  -- Identify both sides with pullbacks of the one-sided conditional expectations
-  have h_pull_left := naturalExtension_condexp_pullback
-    (μ := μ) (α := α) ext (H := Hk1) hHk1_int
-  have h_pull_right := naturalExtension_condexp_pullback
-    (μ := μ) (α := α) ext (H := Hk) hHk_int
-  -- Combine the three a.e. equalities and push forward along restrictNonneg
-  -- to obtain the desired identity on Ω[α].
-  let Φ₁ :=
-    fun ωhat => μ[Hk1 | shiftInvariantSigma (α := α)]
-      (restrictNonneg (α := α) ωhat)
-  let Φ₂ :=
-    fun ωhat => μ[Hk | shiftInvariantSigma (α := α)]
-      (restrictNonneg (α := α) ωhat)
-  have h_chain : Φ₁ =ᵐ[ext.μhat] Φ₂ := by
-    refine h_pull_left.trans ?_
-    refine h_two.trans ?_
-    exact h_pull_right.symm
-  -- Conditional expectations are strongly measurable, hence AEMeasurable
-  have hFmeas : AEMeasurable (μ[Hk1 | shiftInvariantSigma (α := α)]) μ :=
-    StronglyMeasurable.aemeasurable (stronglyMeasurable_condExp.mono
-      (shiftInvariantSigma_le (α := α)))
-  have hGmeas : AEMeasurable (μ[Hk | shiftInvariantSigma (α := α)]) μ :=
-    StronglyMeasurable.aemeasurable (stronglyMeasurable_condExp.mono
-      (shiftInvariantSigma_le (α := α)))
-  exact naturalExtension_pullback_ae (μ := μ) (α := α) ext hFmeas hGmeas h_chain
-/-- **DEPRECATED**: This lemma relies on `condexp_pair_lag_constant` which uses FALSE lemmas.
-
-For bounded measurable functions f, g, this claims:
-  CE[f·g | mSI] = CE[f·CE[g| mSI] | mSI]
-
-**Why it's deprecated**: The proof calls `condexp_pair_lag_constant`, which relies on FALSE
-lemmas (`condexp_pair_lag_constant_twoSided` and `naturalExtension_condexp_pullback`).
-
-**Correct approach**: The factorization `condexp_pair_factorization_MET` now uses
-`condIndep_product_factorization` directly, bypassing this tower property entirely.
-
-**Note**: This lemma is kept for backwards compatibility but should not be used in new code.
--/
-@[deprecated "Uses FALSE lemmas via condexp_pair_lag_constant. Use condexp_pair_factorization_MET with exchangeability instead."]
-theorem condexp_tower_for_products
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
-    (hσ : MeasurePreserving shift μ μ)
-    (f g : α → ℝ)
-    (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
-    (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C) :
-    μ[(fun ω => f (ω 0) * g (ω 0)) | shiftInvariantSigma (α := α)]
-      =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | shiftInvariantSigma (α := α)] ω) | shiftInvariantSigma (α := α)] := by
-  apply h_tower_of_lagConst hσ f g hf_meas hf_bd hg_meas hg_bd
-  -- Apply lag-constancy lemma
-  exact fun k => condexp_pair_lag_constant hσ f g hf_meas hf_bd hg_meas hg_bd k
-
-
 set_option maxHeartbeats 1000000
 
 /-- **Pair factorization via MET + Exchangeability** (Kallenberg's approach).
@@ -4109,13 +3996,8 @@ conditional expectations.
    (CE[g(ω₀)|ℐ] is ℐ-measurable)
 
 **Key insight**: This requires EXCHANGEABILITY (via `hExch`), not just stationarity.
-The previous `condIndep_product_factorization` axiom was INCORRECT because it only
-assumed stationarity. Stationary non-exchangeable processes (Markov chains, AR processes)
-can have lag-dependent conditional correlations.
-
-**Historical note**: The original proof chain used FALSE lemmas:
-- `condexp_pair_lag_constant` → `condexp_pair_lag_constant_twoSided` → FALSE
-Those lemmas tried to derive lag-constancy from stationarity alone, which is impossible.
+Stationary non-exchangeable processes (Markov chains, AR processes) can have
+lag-dependent conditional correlations.
 -/
 private lemma condexp_pair_factorization_MET
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
@@ -4141,9 +4023,13 @@ private lemma condexp_pair_factorization_MET
 
   -- Step 2: Tower property from MET + Cesàro averaging
   -- CE[f(ω₀)·g(ω₀)|ℐ] = CE[f(ω₀)·CE[g(ω₀)|ℐ]|ℐ]
+  -- Note: We use h_tower_of_lagConst directly with exchangeability-derived lag constancy,
+  -- avoiding the deprecated condexp_tower_for_products which uses FALSE lemmas.
   have h_tower : μ[(fun ω => f (ω 0) * g (ω 0)) | mSI]
-      =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] :=
-    condexp_tower_for_products hσ f g hf_meas hf_bd hg_meas hg_bd
+      =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] := by
+    apply h_tower_of_lagConst hσ f g hf_meas hf_bd hg_meas hg_bd
+    -- Provide lag constancy for all k from exchangeability
+    exact fun k => condexp_lag_constant_from_exchangeability hExch f g hf_meas hf_bd hg_meas hg_bd k
 
   -- Step 3: Pull-out property (CE[g(ω₀)|ℐ] is ℐ-measurable)
   -- CE[f(ω₀)·CE[g(ω₀)|ℐ]|ℐ] = CE[g(ω₀)|ℐ]·CE[f(ω₀)|ℐ]
