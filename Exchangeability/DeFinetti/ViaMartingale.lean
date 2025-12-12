@@ -1633,7 +1633,12 @@ lemma condIndep_of_triple_law
               -- The proof follows from: φ bounded by 1, ψ0 integrable, indicator bounded by 1.
               -- Product of bounded by integrable is integrable via Integrable.bdd_mul'.
               have hφF_int : Integrable (fun ω => φ ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω)) μ := by
-                sorry -- bounded × integrable integrability: φ bounded, ψ0*indicator integrable
+                -- φ is bounded by 1 (indicator), ψ0*indicator is integrable (hF_int)
+                refine hF_int.bdd_mul' (c := 1) ?_ ?_
+                · rw [hφ_def]
+                  exact (measurable_const.indicator (hY hA)).aestronglyMeasurable
+                · filter_upwards with ω; rw [Real.norm_eq_abs]
+                  simp only [hφ_def, Set.indicator_apply]; split_ifs <;> simp [abs_of_nonneg]
               have hUF_int : Integrable (fun ω => U ω * (ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω)) μ := by
                 -- U = μ[φ|𝔾] is bounded by 1, ψ0 is integrable, indicator bounded by 1
                 have hψ0_1S_int : Integrable (fun ω => ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω) μ := by
@@ -1658,10 +1663,14 @@ lemma condIndep_of_triple_law
               -- Use the defining property: ∫ φ * g = ∫ μ[φ|ℋ] * g when g is ℋ-measurable
               symm
               set F := fun ω => ψ0 ω * (W ⁻¹' T).indicator (fun _ => (1:ℝ)) ω with hF_def
-              -- TODO: Technical proof - instance pollution from `set ℋ := ...` causes type mismatch.
-              -- Proof: F = ψ0 * 1_S is integrable, φ bounded by 1, so φ*F integrable.
+              -- F = ψ0 * 1_S is integrable, φ bounded by 1, so φ*F integrable
               have hφF_int' : Integrable (fun ω => φ ω * F ω) μ := by
-                sorry -- bounded × integrable integrability
+                -- F is integrable (hF_int), φ is bounded by 1
+                refine hF_int.bdd_mul' (c := 1) ?_ ?_
+                · rw [hφ_def]
+                  exact (measurable_const.indicator (hY hA)).aestronglyMeasurable
+                · filter_upwards with ω; rw [Real.norm_eq_abs]
+                  simp only [hφ_def, Set.indicator_apply]; split_ifs <;> simp [abs_of_nonneg]
               calc ∫ ω, μ[φ | ℋ] ω * F ω ∂μ
                   = ∫ ω, μ[fun ω' => φ ω' * F ω' | ℋ] ω ∂μ := by
                       -- Pull-out property: μ[φ * F | ℋ] =ᵐ μ[φ | ℋ] * F when F is ℋ-measurable

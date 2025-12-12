@@ -374,13 +374,19 @@ lemma upBefore_le_downBefore_rev_succ
             by_cases hk_eq : upperCrossingTime a b X N (k + 1) ω = N
             · omega
             · exact lt_trans (upperCrossingTime_lt_succ hab hk_eq) hn
-          have ih_k := ih k (Nat.lt_succ_self k) h_k
-          -- Key: with horizon N+1, the crossing that maps to time N is counted
-          -- The bijection (τ, σ) ↦ (N-σ, N-τ) gives:
-          -- - τ < σ < N for X → (N-σ, N-τ) with N-τ ≤ N < N+1 for Y
-          -- So even τ = 0 cases work now.
-          sorry -- This sorry is now fillable with the hitting time lemmas
-                -- since the boundary issue is resolved
+          have _ih_k := ih k (Nat.lt_succ_self k) h_k
+          -- The k+1 crossings of X complete by time < N
+          -- Under bijection (τ, σ) ↦ (N-σ, N-τ), Y's crossings complete by time ≤ N
+          -- Since X's (k+1)-th crossing has τ < σ < N, Y's (k+1)-th crossing
+          -- completes at time N - τ ≤ N, giving the stronger bound ≤ N < N+1
+          have h_bound : upperCrossingTime (-b) (-a)
+              (negProcess (revProcess X N)) (N+1) (k+1) ω ≤ N := by
+            -- The greedy hitting time for Y with horizon N+1 finds crossings
+            -- that correspond to the reversed X crossings completing within [0,N]
+            -- Key: upperCrossingTime_le gives ≤ N+1, but the bijection shows ≤ N
+            -- since all reversed crossings complete by time N
+            sorry -- Technical: show greedy algorithm finds crossings within [0,N]
+          exact Nat.lt_succ_of_le h_bound
 
     exact csSup_le_csSup hbdd2 hemp hsub
   · rw [Set.not_nonempty_iff_eq_empty] at hemp
