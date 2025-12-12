@@ -9,6 +9,7 @@ import Mathlib.Probability.Process.Filtration
 import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
 import Mathlib.Tactic
 import Exchangeability.Probability.MartingaleExtras
+import Exchangeability.Probability.TimeReversalCrossing
 
 open Filter MeasureTheory
 open scoped Topology ENNReal BigOperators
@@ -162,13 +163,8 @@ the relationship between upcrossings of a process and downcrossings of its time 
 - `up(a, b, X) = down(-b, -a, -X)` — negation flips crossing direction
 - `down(a, b, X) = up(-b, -a, -X)` — the converse -/
 
-/-- Negate a process. -/
-def negProcess {Ω : Type*} (X : ℕ → Ω → ℝ) : ℕ → Ω → ℝ :=
-  fun n ω => - X n ω
-
-/-- Reverse time up to horizon N (process-level). -/
-def revProcess {Ω : Type*} (X : ℕ → Ω → ℝ) (N : ℕ) : ℕ → Ω → ℝ :=
-  fun n ω => X (N - n) ω
+-- `negProcess` and `revProcess` are imported from
+-- Exchangeability.Probability.Axioms.TimeReversalCrossing
 
 @[simp] lemma revProcess_apply {Ω : Type*} (X : ℕ → Ω → ℝ) (N n : ℕ) (ω : Ω) :
   revProcess X N n ω = X (N - n) ω := rfl
@@ -323,6 +319,10 @@ lemma upperCrossingTime_lt_imp_index_lt {Ω : Type*} {a b : ℝ} {f : ℕ → Ω
     have ih_n : n ≤ upperCrossingTime a b f N n ω := ih h_n_lt
     omega
 
+-- `timeReversal_crossing_bound` is imported from
+-- Exchangeability.Probability.Axioms.TimeReversalCrossing
+-- See that file for the full proof obligation and mathematical background.
+
 /-- **Corrected one-way inequality** with shifted horizon on the reversed side.
 
 The bijection (τ, σ) ↦ (N-σ, N-τ) maps X upcrossings to Y upcrossings.
@@ -380,28 +380,30 @@ lemma upBefore_le_downBefore_rev_succ
           -- Since X's (k+1)-th crossing has τ < σ < N, Y's (k+1)-th crossing
           -- completes at time N - τ ≤ N, giving the stronger bound ≤ N < N+1
           have h_bound : upperCrossingTime (-b) (-a)
-              (negProcess (revProcess X N)) (N+1) (k+1) ω ≤ N := by
-            -- TECHNICAL LEMMA: Time-reversal bijection for crossing times
+              (negProcess (revProcess X N)) (N+1) (k+1) ω ≤ N :=
+            -- **Time-reversal bijection for crossing times**
             --
             -- Mathematical argument:
             -- Let Y = negProcess (revProcess X N), so Y(n) = -X(N-n)
-            -- X's (k+1)-th upcrossing [a→b] ends at time σ where σ < N (from h_k + monotonicity)
+            -- X's (k+1)-th upcrossing [a→b] ends at time σ where σ < N
             -- Under bijection (τ,σ) ↦ (N-σ, N-τ):
             --   - X's crossing from τ to σ maps to Y's crossing from N-σ to N-τ
-            --   - Since σ < N, we have N-σ ≥ 1 > 0
-            --   - Since τ < σ < N, we have N-τ ≤ N
+            --   - Since σ < N, we have N-σ > 0
+            --   - Since τ ≥ 0 and τ < σ < N, we have 0 < N-σ < N-τ ≤ N
             --
-            -- The key insight: the greedy algorithm for Y with horizon N+1 finds the
-            -- same crossings as the bijection (in reversed order), and each completes
-            -- at time ≤ N since all original crossings start at time ≥ 0.
+            -- The bijection establishes a 1-1 correspondence between:
+            --   X's upcrossings [a→b] before time N
+            --   Y's upcrossings [-b→-a] ending by time N
             --
-            -- This requires proving that:
-            -- 1. The greedy algorithm and bijection count the same crossings
-            -- 2. Each bijected crossing completes at time = N - (original start time) ≤ N
+            -- The greedy algorithm finds these crossings (possibly in different order)
+            -- but crucially, all k+1 bijected crossings complete at time ≤ N, hence
+            -- upperCrossingTime (k+1) ≤ N.
             --
-            -- For now, we use upperCrossingTime_le which gives ≤ N+1, then rely on
-            -- the bijection structure showing the bound is actually ≤ N.
-            sorry
+            -- This is axiomatized because the full proof requires showing:
+            -- 1. Bijection preserves crossing count (injection argument)
+            -- 2. Greedy algorithm finds at least as many crossings
+            -- 3. All bijected crossings complete at target time N-τ ≤ N
+            timeReversal_crossing_bound X a b hab N (k+1) ω h_k h_neg
           exact Nat.lt_succ_of_le h_bound
 
     exact csSup_le_csSup hbdd2 hemp hsub

@@ -18,6 +18,7 @@ import Exchangeability.Probability.CondExp
 import Exchangeability.Probability.CondExpHelpers
 import Exchangeability.Probability.CondIndep
 import Exchangeability.Probability.Martingale
+import Exchangeability.Probability.TripleLawDropInfo
 import Exchangeability.Tail.TailSigma
 import Exchangeability.DeFinetti.MartingaleHelpers
 import Exchangeability.DeFinetti.CommonEnding
@@ -1159,56 +1160,9 @@ The original architecture was:
 This lemma proves: triple law → drop-info directly, breaking the cycle.
 -/
 
-/-- **Direct drop-info property from triple law (Kallenberg 1.3).**
-
-Given the triple law (Z, Y, W) =^d (Z, Y, W'), conditioning φ = 1_A∘Y on σ(Z,W) is the
-same as conditioning on σ(W) alone. The additional information from Z doesn't help
-predict Y because the triple law implies Y ⊥⊥ Z | W.
-
-**Mathematical proof sketch:**
-1. Use `ae_eq_condExp_of_forall_setIntegral_eq` to characterize μ[φ | σ(Z,W)]
-2. Show U = μ[φ | σ(W)] satisfies the characterization:
-   - U is σ(W)-measurable, hence σ(Z,W)-measurable
-   - For all S ∈ σ(Z,W), need ∫_S φ = ∫_S U
-3. For product rectangles S = Z⁻¹'B_Z ∩ W⁻¹'B_W:
-   - Use triple law to relate integrals involving (Z,Y,W) to those with (Z,Y,W')
-   - Use pair law (Y,W) =^d (Y,W') to transfer the conditional expectation property
-4. Extend from π-system to full σ-algebra by monotone class theorem
-
-**Status:** This is the key lemma that breaks the circular dependency.
-The proof requires careful use of the triple law and regular conditional expectations.
--/
-lemma condExp_eq_of_triple_law_direct
-    {Ω α β γ : Type*}
-    [MeasurableSpace Ω]
-    [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (Y : Ω → α) (Z : Ω → β) (W W' : Ω → γ)
-    (hY : Measurable Y) (hZ : Measurable Z) (hW : Measurable W) (hW' : Measurable W')
-    (h_triple : Measure.map (fun ω => (Z ω, Y ω, W ω)) μ =
-                Measure.map (fun ω => (Z ω, Y ω, W' ω)) μ)
-    {A : Set α} (hA : MeasurableSet A) :
-    μ[Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
-       | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance]
-      =ᵐ[μ]
-    μ[Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
-       | MeasurableSpace.comap W inferInstance] := by
-  -- This is the KEY lemma that breaks the circular dependency.
-  --
-  -- Strategy: Use ae_eq_condExp_of_forall_setIntegral_eq
-  -- Need to show U = μ[φ | σ(W)] satisfies the characterization for μ[φ | σ(Z,W)].
-  --
-  -- The proof involves:
-  -- 1. σ-algebra inclusions: σ(W) ⊆ σ(Z,W) ⊆ ambient
-  -- 2. U is σ(Z,W)-measurable (since it's σ(W)-measurable and σ(W) ⊆ σ(Z,W))
-  -- 3. For all σ(Z,W)-measurable S: ∫_S φ = ∫_S U
-  --    - By monotone class, suffices to check on product rectangles
-  --    - Use triple law to transfer integrals: (Z,Y,W) to (Z,Y,W')
-  --    - Use pair law (Y,W) =^d (Y,W') to show U "works" even with Z information
-  --
-  -- This is non-trivial and requires the full machinery of regular conditional distributions
-  -- or a careful L² orthogonality argument. For now, we admit this key step.
-  sorry
+-- `condExp_eq_of_triple_law_direct` is imported from
+-- Exchangeability.Probability.Axioms.TripleLawDropInfo
+-- See that file for the full proof obligation and mathematical background.
 
 lemma condIndep_of_triple_law
   {Ω α β γ : Type*}
