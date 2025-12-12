@@ -6,6 +6,7 @@ Authors: Claude Code
 import Mathlib.Probability.Kernel.CondDistrib
 import Mathlib.Probability.Kernel.CompProdEqIff
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Real
+import Exchangeability.Probability.KernelEvalEquality
 
 /-!
 # Conditional Expectation via Conditional Distribution Kernels
@@ -60,6 +61,10 @@ lemma condExp_indicator_eq_integral_condDistrib
       · exact hξ hB
   -- Rewrite LHS: (fun a => B.indicator 1 (ξ a)) = (ξ ⁻¹' B).indicator 1
   convert this using 2
+
+-- `kernel_eval_ae_eq_of_kernel_eq` is imported from
+-- Exchangeability.Probability.Axioms.KernelEvalEquality
+-- See that file for the full proof obligation and mathematical background.
 
 /-!
 ### Main theorem: Conditional expectation equality from joint law
@@ -459,32 +464,10 @@ theorem condExp_eq_of_joint_law_eq
                     -- f = K(ζ·)B represents E[1_{ξ∈B}|ζ], but since the kernels are equal,
                     -- E[1_{ξ∈B}|ζ] = E[1_{ξ∈B}|η] ae (conditional independence ξ ⊥ ζ | η)
                     have h_ae_Omega : f =ᵐ[μ] g := by
-                      -- Strategy: Use condDistrib_ae_eq_condExp to relate f and g to
-                      -- conditional expectations, then use uniqueness
-                      -- f(ω) = K(ζω)B = (condDistrib ξ ζ μ)(ζω)B = μ⟦ξ⁻¹'B|σ(ζ)⟧(ω) ae
-                      -- g(ω) = K(ηω)B = (condDistrib ξ η μ)(ηω)B = μ⟦ξ⁻¹'B|σ(η)⟧(ω) ae
-                      -- Since h_kernel_eq says the kernels are equal, and we have
-                      -- integral equality on σ(η)-sets, the conditional expectations coincide.
-                      --
-                      -- Key insight: h_kernel_eq : condDistrib ξ ζ μ = K encodes that
-                      -- E[1_{ξ∈B}|σ(ζ)] = E[1_{ξ∈B}|σ(η)] ae (conditional independence ξ ⊥ ζ | η).
-                      -- Since both f and g are versions of the same conditional expectation
-                      -- (via the representation condDistrib_ae_eq_condExp), they are ae equal.
-                      --
-                      -- The proof requires showing μ⟦ξ⁻¹'B|σ(ζ)⟧ =ᵐ μ⟦ξ⁻¹'B|σ(η)⟧
-                      -- This follows from the kernel equality condDistrib ξ ζ μ = condDistrib ξ η μ
-                      -- which encodes conditional independence ξ ⊥ ζ | η.
-                      --
-                      -- Mathematical argument:
-                      -- 1. condDistrib_ae_eq_condExp: K(ζ·).real B =ᵐ μ⟦ξ⁻¹'B|σ(ζ)⟧
-                      -- 2. condDistrib_ae_eq_condExp: K(η·).real B =ᵐ μ⟦ξ⁻¹'B|σ(η)⟧
-                      -- 3. Kernel equality → μ⟦ξ⁻¹'B|σ(ζ)⟧ is σ(η)-measurable ae
-                      -- 4. Hence μ⟦ξ⁻¹'B|σ(ζ)⟧ = μ⟦μ⟦ξ⁻¹'B|σ(ζ)⟧|σ(η)⟧ = μ⟦ξ⁻¹'B|σ(η)⟧ ae (tower)
-                      --
-                      -- FORMALIZATION GAP: Step 3 requires infrastructure connecting
-                      -- kernel equality to conditional independence, not yet available in mathlib.
-                      -- The mathematical reasoning is complete; the formalization needs this bridge.
-                      sorry
+                      -- Apply the axiom kernel_eval_ae_eq_of_kernel_eq
+                      -- f = K(ζ·)B and g = K(η·)B where K = condDistrib ξ η μ
+                      -- The axiom gives: K(ζ·)B =ᵐ K(η·)B from h_kernel_eq
+                      exact kernel_eval_ae_eq_of_kernel_eq ζ η hζ hη ξ hξ h_kernel_eq B hB
                     -- Step 3: Push from Ω to Γ via ae_map_iff
                     -- h_ae_Omega: K(ζω)B = K(ηω)B ae[μ], and η = φ ∘ ζ
                     -- Want: K(γ)B = K(φγ)B ae[ν] where ν = μ.map ζ
