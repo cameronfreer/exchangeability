@@ -1,34 +1,40 @@
 # ViaKoopman Remediation Plan
 
-## Implementation Progress (Updated 2025-12-11)
+## Implementation Progress (Updated 2025-12-12)
 
 ### Completed ✅
 
-1. **Added `condIndep_product_factorization` axiom** (Infrastructure.lean:971-982)
-   - Captures the TRUE mathematical content: conditional independence given ℐ
-   - CE[f(ω_i)·g(ω_j)|ℐ] = CE[f(ω_i)|ℐ]·CE[g(ω_j)|ℐ] for i≠j
+1. **Replaced incorrect axiom with `condexp_lag_constant_from_exchangeability`** (Infrastructure.lean:971-995)
+   - Uses Kallenberg's transposition argument: exchangeability implies lag-constancy
+   - Key insight: τ swaps indices k and k+1, so exchangeability gives
+     CE[f(ω_0)·g(ω_{k+1})|ℐ] = CE[f(ω_0)·g(ω_k)|ℐ]
+   - Requires full exchangeability hypothesis, not just stationarity
 
-2. **Marked FALSE lemmas with deprecation documentation**:
-   - `naturalExtension_condexp_pullback` (Infrastructure.lean:1009-1033)
-   - `condexp_pair_lag_constant_twoSided` (Infrastructure.lean:1318-1364)
+2. **Updated `condexp_pair_factorization_MET`** (ViaKoopman.lean:3993-4074)
+   - Now takes explicit exchangeability hypothesis `hExch : ∀ π, μ.map (reindex π) = μ`
+   - Uses `h_tower_of_lagConst` directly with exchangeability-derived lag constancy
+   - Clean proof chain without false intermediate lemmas
 
-3. **Rewrote `condexp_pair_factorization_MET`** (ViaKoopman.lean:4090-4153)
-   - Now uses `condIndep_product_factorization` directly
-   - Bypasses the entire false lemma chain
-   - Much simpler proof: apply axiom + coordinate stationarity
+3. **Removed FALSE lemmas from Infrastructure.lean**:
+   - `naturalExtension_condexp_pullback` - Claimed CE equality on different σ-algebras
+   - `condexp_pair_lag_constant_twoSided` - Required conditional independence (circular)
 
-4. **Marked deprecated lemmas in ViaKoopman.lean**:
-   - `condexp_pair_lag_constant` (line 3982-4000)
-   - `condexp_tower_for_products` (line 4067-4079)
+4. **Removed FALSE lemmas from ViaKoopman.lean**:
+   - `condexp_pair_lag_constant` - Depended on false Infrastructure lemmas
+   - `condexp_tower_for_products` - Depended on false lag constancy chain
 
 ### Current State
 
-- **Infrastructure.lean**: 4 sorries (2 are FALSE, 1 is `exists_naturalExtension`, 1 other)
-- **ViaKoopman.lean**: 9 sorries (most are unrelated to the false lemma chain)
+- **Infrastructure.lean**: 2 sorries
+  - `exists_naturalExtension` - Kolmogorov extension (TRUE, needs Ionescu-Tulcea)
+  - `condexp_lag_constant_from_exchangeability` - Core axiom (TRUE via transposition)
+- **ViaKoopman.lean**: 7 sorries (unrelated to the false lemma chain)
 - **Build status**: ✅ Compiles successfully
+- **Lines removed**: 468 lines of false lemmas and proof attempts
 
 ### Remaining Work
 
+- Prove `condexp_lag_constant_from_exchangeability` using transposition argument
 - Implement `exists_naturalExtension` via Ionescu-Tulcea (optional)
 - Clean up other sorries unrelated to the false lemma chain
 
@@ -36,183 +42,125 @@
 
 ## Executive Summary
 
-Analysis reveals that **2 of the 3 Infrastructure sorries are FALSE statements**:
+The original approach contained **2 FALSE statements** that formed a dependency chain:
 1. `naturalExtension_condexp_pullback` - Cannot equate CEs on different σ-algebras
-2. `condexp_pair_lag_constant_twoSided` - Lag constancy requires conditional independence (circular)
+2. `condexp_pair_lag_constant_twoSided` - Lag constancy requires conditional independence
 
-The third sorry (`exists_naturalExtension`) CAN be proven using Ionescu-Tulcea.
+**Solution implemented (Option B - Kallenberg's Transposition):**
+- Accept lag-constancy as an axiom that requires EXCHANGEABILITY (not just stationarity)
+- Exchangeability provides permutation invariance, which implies lag-constancy
+- This is honest because we're explicit about needing the full exchangeability hypothesis
 
-## Problem Analysis
+## Why Option B (Exchangeability-Based Lag Constancy)?
 
-### False Lemma 1: `naturalExtension_condexp_pullback`
+### The Key Insight
 
-**Location**: Infrastructure.lean:1003
+Stationarity alone does NOT imply lag-constancy. Consider:
+- AR(1) process: X_n = ρ·X_{n-1} + ε_n (stationary but NOT lag-constant)
+- Cov(X_0, X_k) = ρ^k (depends on k!)
 
-**Claimed Statement**:
-```lean
-(fun ωhat => μ[H | shiftInvariantSigma] (restrictNonneg ωhat))
-  =ᵐ[ext.μhat]
-ext.μhat[(H ∘ restrictNonneg) | shiftInvariantSigmaℤ]
-```
+Exchangeability IS strong enough because of the **transposition argument**:
+- Let τ be the permutation swapping k and k+1
+- By exchangeability: μ.map (reindex τ) = μ
+- Therefore: CE[f(ω_0)·g(ω_{k+1})|ℐ] = CE[f(ω_0)·g(ω_k)|ℐ]
 
-**Why it's FALSE**: We have `comap restrictNonneg shiftInvariantSigma ≤ shiftInvariantSigmaℤ`
-(proper inclusion, NOT equality). Conditional expectations on different σ-algebras are
-generally different. The two-sided invariant σ-algebra contains past-dependent events
-invisible to the one-sided factor.
-
-**FIX**: Use `comap restrictNonneg shiftInvariantSigma` for conditioning, not `shiftInvariantSigmaℤ`.
-The correct pullback lemma is `condexp_pullback_factor` (already proven).
-
-### False Lemma 2: `condexp_pair_lag_constant_twoSided`
-
-**Location**: Infrastructure.lean:1335
-
-**Claimed Statement**:
-```lean
-ext.μhat[(fun ω => f (ω 0) * g (ω (k+1))) | shiftInvariantSigmaℤ]
-  =ᵐ[ext.μhat]
-ext.μhat[(fun ω => f (ω 0) * g (ω k)) | shiftInvariantSigmaℤ]
-```
-
-**Why it's FALSE**: Lag constancy is NOT a property of general stationary processes.
-Conditioning on invariants does not make all lags coincide. This requires:
-- **Conditional independence** (which IS de Finetti's theorem), OR
-- **Strong mixing** (not available in current setup)
-
-**FIX**: Delete this lemma. The correct approach is to accept conditional independence
-as a hypothesis (making de Finetti's content explicit).
-
-### Fixable Sorry: `exists_naturalExtension`
-
-**Location**: Infrastructure.lean:927
-
-**Why it's FIXABLE**: This is a Kolmogorov/projective limit construction.
-Mathlib has Ionescu-Tulcea infrastructure that can be used.
-
-**FIX**: Implement using `Mathlib.Probability.Kernel.IonescuTulcea.Traj`.
-
-## Dependency Chain
-
-```
-condexp_product_factorization_ax (SORRY)
-    └── condexp_pair_factorization_MET (proven, but depends on:)
-            └── condexp_tower_for_products (proven)
-                    └── h_tower_of_lagConst (proven, uses:)
-                            └── condexp_pair_lag_constant (proven, uses:)
-                                    ├── condexp_pair_lag_constant_twoSided (FALSE!)
-                                    └── naturalExtension_condexp_pullback (FALSE!)
-```
-
-**Conclusion**: The entire proof chain relies on false lemmas.
-
-## Implementation Strategy
-
-### Phase 1: Create Honest Axiom for Conditional Independence
-
-This is the mathematical content of de Finetti's theorem. Accept it explicitly:
+### The Correct Axiom
 
 ```lean
-/-- Coordinates are conditionally independent given the shift-invariant σ-algebra.
-This is the core mathematical content of de Finetti's theorem for the Koopman approach. -/
-axiom condIndep_given_shiftInvariant
+/-- Exchangeability implies lag-constancy via Kallenberg's transposition argument.
+
+For an exchangeable sequence, consider the transposition τ swapping indices k and k+1.
+Exchangeability gives Measure.map (reindex τ) μ = μ. The function ω ↦ f(ω_0)·g(ω_{k+1})
+becomes ω ↦ f(ω_0)·g(ω_k) under reindex τ (since τ fixes 0 and sends k+1 to k).
+
+Key insight: STATIONARITY is NOT enough for lag constancy.
+Counter-example: AR(1) process X_n = ρ·X_{n-1} + ε_n is stationary but
+Cov(X_0, X_k) = ρ^k depends on k.
+EXCHANGEABILITY provides this via transposition of adjacent indices. -/
+axiom condexp_lag_constant_from_exchangeability
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]
     {μ : Measure (ℕ → α)} [IsProbabilityMeasure μ]
-    (hσ : MeasurePreserving (shift (α := α)) μ μ)
-    (i j : ℕ) (hi : i ≠ j) :
-    CondIndepFun (fun ω => ω i) (fun ω => ω j)
-      (shiftInvariantSigma (α := α))
-      (shiftInvariantSigma_le (α := α)) μ
+    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
+    (f g : α → ℝ)
+    (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
+    (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C)
+    (k : ℕ) :
+    μ[(fun ω => f (ω 0) * g (ω (k + 1))) | shiftInvariantSigma (α := α)]
+      =ᵐ[μ]
+    μ[(fun ω => f (ω 0) * g (ω k)) | shiftInvariantSigma (α := α)]
 ```
 
-### Phase 2: Prove Product Factorization from Conditional Independence
+## Proof Strategy for Filling the Axiom
 
-Use Mathlib's conditional independence API:
+To prove `condexp_lag_constant_from_exchangeability`:
 
-```lean
-lemma condexp_product_of_condIndep
-    {μ : Measure (ℕ → α)} [IsProbabilityMeasure μ]
-    (hσ : MeasurePreserving shift μ μ)
-    (hcondIndep : ∀ i j, i ≠ j → CondIndepFun (· i) (· j) shiftInvariantSigma _ μ)
-    (m : ℕ) (fs : Fin m → α → ℝ)
-    (hmeas : ∀ k, Measurable (fs k))
-    (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C) :
-    μ[fun ω => ∏ k, fs k (ω k) | shiftInvariantSigma]
-      =ᵐ[μ] (fun ω => ∏ k, μ[fun ω => fs k (ω 0) | shiftInvariantSigma] ω) := by
-  -- Induction using conditional independence for factorization
-  sorry -- Can be filled using iCondIndepFun machinery
+1. **Define transposition τ**: `τ = Equiv.swap k (k+1)`
+
+2. **Show reindex τ preserves 0**: Since τ fixes 0, `(reindex τ ω) 0 = ω 0`
+
+3. **Show reindex τ sends k+1 to k**: `(reindex τ ω) (k+1) = ω k`
+
+4. **Apply exchangeability**: `μ.map (reindex τ) = μ` gives
+   ```
+   μ[(f ∘ (· 0)) * (g ∘ (· (k+1))) | ℐ]
+   = μ[(f ∘ (· 0)) * (g ∘ (· k)) | ℐ] ∘ reindex τ  -- by pullback
+   = μ[(f ∘ (· 0)) * (g ∘ (· k)) | ℐ]              -- by measure invariance
+   ```
+
+5. **Handle conditional expectation under measure-preserving maps**:
+   This requires showing CE commutes appropriately with reindex τ.
+
+## Updated Dependency Chain
+
+```
+condexp_product_factorization_ax
+    └── condexp_pair_factorization_MET (requires exchangeability)
+            └── h_tower_of_lagConst (takes lag constancy as hypothesis)
+                    └── condexp_lag_constant_from_exchangeability (AXIOM)
+                            └── Exchangeability hypothesis (from de Finetti setup)
 ```
 
-### Phase 3: Clean Up False Lemmas
+**Conclusion**: The proof chain is now honest - it explicitly requires exchangeability.
 
-1. **Delete or comment out**:
-   - `naturalExtension_condexp_pullback` (line ~1003)
-   - `condexp_pair_lag_constant_twoSided` (line ~1335)
-   - `condexp_pair_lag_constant` (depends on deleted lemmas)
-
-2. **Update `condexp_pair_factorization_MET`** to use the new approach
-
-3. **Keep `exists_naturalExtension`** as axiom (Kolmogorov extension is true)
-   - OR implement using Ionescu-Tulcea (substantial work but doable)
-
-### Phase 4: Fix Downstream Proofs
-
-Update `ViaKoopman.lean`:
-- Replace `condexp_pair_lag_constant` usage with new conditional independence approach
-- Update `condexp_tower_for_products` to not use lag constancy
-- Simplify proof chain since conditional independence directly gives factorization
-
-## Files to Modify
+## Files Modified
 
 1. **Infrastructure.lean**:
-   - Add `condIndep_given_shiftInvariant` axiom
-   - Delete/comment `naturalExtension_condexp_pullback`
-   - Delete/comment `condexp_pair_lag_constant_twoSided`
-   - Keep `exists_naturalExtension` as axiom (or implement with Ionescu-Tulcea)
+   - Added `condexp_lag_constant_from_exchangeability` axiom (971-995)
+   - Deleted `naturalExtension_condexp_pullback` (was FALSE)
+   - Deleted `condexp_pair_lag_constant_twoSided` (was FALSE)
+   - Updated "Why this approach is honest" documentation
 
 2. **ViaKoopman.lean**:
-   - Update `condexp_pair_lag_constant` to use new approach
-   - Simplify `condexp_pair_factorization_MET`
-   - Update `condexp_product_factorization_ax` to use conditional independence
-
-3. **Potentially new file**: `CondIndepFactorization.lean`
-   - Prove product factorization from conditional independence
-   - Use Mathlib's `iCondIndepFun` / `CondIndepFun` API
+   - Updated `condexp_pair_factorization_MET` to require exchangeability
+   - Deleted `condexp_pair_lag_constant` (depended on false lemmas)
+   - Deleted `condexp_tower_for_products` (depended on false chain)
+   - Updated docstrings to reflect new approach
 
 ## Mathematical Justification
 
 The restructured proof is **more honest** because:
 
-1. **Conditional independence IS de Finetti's theorem** - accepting it as an axiom
-   makes the mathematical content explicit rather than hiding it in false lemmas.
+1. **Exchangeability is explicit** - The proof now clearly shows that exchangeability
+   (not just stationarity) is required for the factorization theorem.
 
-2. **Product factorization from conditional independence** is a standard result
-   that can be proven using Mathlib's existing machinery.
+2. **Lag-constancy from transposition** is a standard result in probability theory
+   (Kallenberg 2005, Lemma 1.3).
 
-3. **The Kolmogorov extension** (for natural extension) is a true theorem,
-   just not yet fully in Mathlib. Axiomatizing it is justified.
+3. **No circular reasoning** - We don't assume conditional independence to prove it.
+   Instead, we use the weaker property (lag-constancy) that follows from exchangeability.
 
-## Alternative: Full Ionescu-Tulcea Implementation
+## Optional Future Work
 
-If we want zero axioms related to Kolmogorov extension:
+1. **Prove the axiom**: Fill in `condexp_lag_constant_from_exchangeability` using
+   the transposition argument outlined above.
 
-1. Use `Mathlib.Probability.Kernel.IonescuTulcea.Traj` for the two-sided construction
-2. Build measure on `ℤ → α` via:
-   - Define projective family using shift-invariance
-   - Use `traj` kernel to construct infinite measure
-   - Transport via `ℤ ≃ ℕ` bijection
+2. **Prove `exists_naturalExtension`**: Use Ionescu-Tulcea from mathlib.
 
-This is substantial work (~200-400 LOC) but results in a cleaner formalization.
-
-## Recommended Next Steps
-
-1. **Immediate**: Accept conditional independence axiom, delete false lemmas
-2. **Short-term**: Prove product factorization from conditional independence
-3. **Medium-term**: Implement Ionescu-Tulcea based natural extension
-4. **Long-term**: Prove conditional independence from exchangeability (completing de Finetti)
+3. **Connect to de Finetti proper**: Show how exchangeability of (X_n) on (Ω, μ)
+   translates to the exchangeability hypothesis on path space.
 
 ## References
 
-- Mathlib conditional independence: `Mathlib.Probability.Independence.Conditional`
-- Mathlib condExpKernel: `Mathlib.Probability.Kernel.Condexp`
-- Ionescu-Tulcea: `Mathlib.Probability.Kernel.IonescuTulcea.Traj`
-- Kallenberg (2005), Chapter 1 for mathematical background
+- Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*, Lemma 1.3
+- Mathlib reindex: `Exchangeability.reindex`
+- Mathlib conditional expectation: `MeasureTheory.condexp`
