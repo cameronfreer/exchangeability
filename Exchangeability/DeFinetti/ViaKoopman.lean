@@ -3979,131 +3979,30 @@ private theorem h_tower_of_lagConst
   filter_upwards [h_abs_zero] with ω hω
   exact sub_eq_zero.mp (abs_eq_zero.mp hω)
 
-/-- **Lag-constancy axiom**: Conditional expectation of products is constant in the lag.
-
-For shift-invariant probability measures and bounded measurable functions f, g,
-the conditional expectation CE[f(ω₀)·g(ωₖ₊₁) | ℐ] equals CE[f(ω₀)·g(ωₖ) | ℐ]
-for all k ≥ 0, where ℐ is the shift-invariant σ-algebra.
-
-**Why this is needed**: The key technical challenge in the pair factorization proof.
-
-The challenge: `condexp_precomp_iterate_eq` gives `CE[F∘shift|I] = CE[F|I]`, but applying
-shift moves ALL coordinates simultaneously. We need `f(ω₀)` to stay fixed while `g(ωₖ)`
-shifts to `g(ωₖ₊₁)`.
--/
-private lemma condexp_pair_lag_constant
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
-    (hσ : MeasurePreserving shift μ μ)
-    (f g : α → ℝ)
-    (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
-    (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C)
-    (k : ℕ) :
-    μ[(fun ω => f (ω 0) * g (ω (k+1))) | shiftInvariantSigma (α := α)]
-      =ᵐ[μ]
-    μ[(fun ω => f (ω 0) * g (ω k)) | shiftInvariantSigma (α := α)] := by
-  classical
-  obtain ⟨Cf, hCf⟩ := hf_bd
-  obtain ⟨Cg, hCg⟩ := hg_bd
-  let Hk : Ω[α] → ℝ := fun ω => f (ω 0) * g (ω k)
-  let Hk1 : Ω[α] → ℝ := fun ω => f (ω 0) * g (ω (k + 1))
-  have hHk_int : Integrable Hk μ := by
-    have hφ_meas : Measurable (fun (ω : Ω[α]) => f (ω 0)) :=
-      hf_meas.comp (measurable_pi_apply 0)
-    have hψ_meas : Measurable (fun (ω : Ω[α]) => g (ω k)) :=
-      hg_meas.comp (measurable_pi_apply k)
-    have hφ_bd : ∃ C, ∀ (ω : Ω[α]), |f (ω 0)| ≤ C := ⟨Cf, fun ω => hCf _⟩
-    have hψ_bd : ∃ C, ∀ (ω : Ω[α]), |g (ω k)| ≤ C := ⟨Cg, fun ω => hCg _⟩
-    exact integrable_of_bounded_mul (μ := μ) hφ_meas hφ_bd hψ_meas hψ_bd
-  have hHk1_int : Integrable Hk1 μ := by
-    have hφ_meas : Measurable (fun (ω : Ω[α]) => f (ω 0)) :=
-      hf_meas.comp (measurable_pi_apply 0)
-    have hψ_meas : Measurable (fun (ω : Ω[α]) => g (ω (k + 1))) :=
-      hg_meas.comp (measurable_pi_apply (k + 1))
-    have hφ_bd : ∃ C, ∀ (ω : Ω[α]), |f (ω 0)| ≤ C := ⟨Cf, fun ω => hCf _⟩
-    have hψ_bd : ∃ C, ∀ (ω : Ω[α]), |g (ω (k + 1))| ≤ C := ⟨Cg, fun ω => hCg _⟩
-    exact integrable_of_bounded_mul (μ := μ) hφ_meas hφ_bd hψ_meas hψ_bd
-  -- Move to the natural two-sided extension
-  let ext := exists_naturalExtension (μ := μ) (α := α) hσ
-  have h_two :
-      ext.μhat[(fun ω => f (ω 0) * g (ω (k + 1)))
-        | shiftInvariantSigmaℤ (α := α)]
-        =ᵐ[ext.μhat]
-      ext.μhat[(fun ω => f (ω 0) * g (ω k))
-        | shiftInvariantSigmaℤ (α := α)] :=
-    condexp_pair_lag_constant_twoSided
-      (μ := μ) (α := α) ext f g hf_meas ⟨Cf, hCf⟩ hg_meas ⟨Cg, hCg⟩ k
-  -- Identify both sides with pullbacks of the one-sided conditional expectations
-  have h_pull_left := naturalExtension_condexp_pullback
-    (μ := μ) (α := α) ext (H := Hk1) hHk1_int
-  have h_pull_right := naturalExtension_condexp_pullback
-    (μ := μ) (α := α) ext (H := Hk) hHk_int
-  -- Combine the three a.e. equalities and push forward along restrictNonneg
-  -- to obtain the desired identity on Ω[α].
-  let Φ₁ :=
-    fun ωhat => μ[Hk1 | shiftInvariantSigma (α := α)]
-      (restrictNonneg (α := α) ωhat)
-  let Φ₂ :=
-    fun ωhat => μ[Hk | shiftInvariantSigma (α := α)]
-      (restrictNonneg (α := α) ωhat)
-  have h_chain : Φ₁ =ᵐ[ext.μhat] Φ₂ := by
-    refine h_pull_left.trans ?_
-    refine h_two.trans ?_
-    exact h_pull_right.symm
-  -- Conditional expectations are strongly measurable, hence AEMeasurable
-  have hFmeas : AEMeasurable (μ[Hk1 | shiftInvariantSigma (α := α)]) μ :=
-    StronglyMeasurable.aemeasurable (stronglyMeasurable_condExp.mono
-      (shiftInvariantSigma_le (α := α)))
-  have hGmeas : AEMeasurable (μ[Hk | shiftInvariantSigma (α := α)]) μ :=
-    StronglyMeasurable.aemeasurable (stronglyMeasurable_condExp.mono
-      (shiftInvariantSigma_le (α := α)))
-  exact naturalExtension_pullback_ae (μ := μ) (α := α) ext hFmeas hGmeas h_chain
-/-- **Tower property for products** (reverse tower law).
-
-For bounded measurable functions f, g, the conditional expectation satisfies:
-  CE[f·g | mSI] = CE[f·CE[g| mSI] | mSI]
-
-This is the "reverse" direction of the tower property. The naive identity
-CE[X·CE[Y| mSI] | mSI] = CE[X·Y | mSI] is FALSE in general (fails for trivial σ-algebra),
-but this specific form with bounded f, g on path space does hold.
-
-**Proof strategy**: Use Mean Ergodic Theorem + Cesàro averaging + L¹-Lipschitz property.
-The key insight is that CE[f·A_n| mSI] is constant in n (by lag-constancy), while
-A_n → CE[g| mSI], allowing us to pass to the limit.
-
-**Status**: Proved via h_tower_of_lagConst using lag-constancy from condexp_pair_lag_constant.
--/
-theorem condexp_tower_for_products
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
-    (hσ : MeasurePreserving shift μ μ)
-    (f g : α → ℝ)
-    (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
-    (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C) :
-    μ[(fun ω => f (ω 0) * g (ω 0)) | shiftInvariantSigma (α := α)]
-      =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | shiftInvariantSigma (α := α)] ω) | shiftInvariantSigma (α := α)] := by
-  apply h_tower_of_lagConst hσ f g hf_meas hf_bd hg_meas hg_bd
-  -- Apply lag-constancy lemma
-  exact fun k => condexp_pair_lag_constant hσ f g hf_meas hf_bd hg_meas hg_bd k
-
-
 set_option maxHeartbeats 1000000
 
-/-- **Pair factorization via Mean Ergodic Theorem**: For bounded measurable f, g and any k ≥ 1,
-the conditional expectation of f(ω₀)·g(ωₖ) given the shift-invariant σ-algebra factors
-into the product of the individual conditional expectations.
+/-- **Pair factorization via MET + Exchangeability** (Kallenberg's approach).
 
-**This theorem bypasses both `condindep_pair_given_tail` AND `kernel_integral_product_factorization`!**
+For EXCHANGEABLE measures μ on path space, the conditional expectation of f(ω₀)·g(ω₁)
+given the shift-invariant σ-algebra factors into the product of the individual
+conditional expectations.
 
-**Proof strategy** (purely ergodic theory + basic measure theory):
-1. Show Hₖ := CE[f(ω₀)·g(ωₖ)|ℐ] is constant in k using shift invariance
-2. Therefore Hₖ equals its Cesàro average: H₁ = CE[f(ω₀)·Aₙ|ℐ] where Aₙ = (1/n)∑g(ωₖ)
-3. By Mean Ergodic Theorem: Aₙ → P(g(ω₀)) in L² hence in L¹
-4. By L¹-Lipschitz property of CE: CE[f(ω₀)·Aₙ|ℐ] → CE[f(ω₀)·P(g(ω₀))|ℐ]
-5. By pull-out property: CE[f(ω₀)·P(g(ω₀))|ℐ] = P(g(ω₀))·CE[f(ω₀)|ℐ]
-6. But P(g(ω₀)) = CE[g(ω₀)|ℐ], so we get the factorization!
+**Proof strategy** (matching Kallenberg):
+1. Use lag-constancy from exchangeability: CE[f(ω₀)·g(ω₁)|ℐ] = CE[f(ω₀)·g(ω₀)|ℐ]
+   (via transposition argument - requires EXCHANGEABILITY, not just stationarity)
+2. Apply tower property: CE[f(ω₀)·g(ω₀)|ℐ] = CE[f(ω₀)·CE[g(ω₀)|ℐ]|ℐ]
+   (uses MET + Cesàro averaging)
+3. Apply pull-out property: CE[f(ω₀)·CE[g(ω₀)|ℐ]|ℐ] = CE[g(ω₀)|ℐ]·CE[f(ω₀)|ℐ]
+   (CE[g(ω₀)|ℐ] is ℐ-measurable)
+
+**Key insight**: This requires EXCHANGEABILITY (via `hExch`), not just stationarity.
+Stationary non-exchangeable processes (Markov chains, AR processes) can have
+lag-dependent conditional correlations.
 -/
 private lemma condexp_pair_factorization_MET
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
     (hσ : MeasurePreserving shift μ μ)
+    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
     (f g : α → ℝ)
     (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
     (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C) :
@@ -4111,124 +4010,64 @@ private lemma condexp_pair_factorization_MET
     =ᵐ[μ]
   (fun ω => μ[fun ω => f (ω 0) | shiftInvariantSigma (α := α)] ω
           * μ[fun ω => g (ω 0) | shiftInvariantSigma (α := α)] ω) := by
-  set m := shiftInvariantSigma (α := α)
+  set mSI := shiftInvariantSigma (α := α)
 
-  -- Step 1: Show CE[f(ω₀)·g(ω₁)|ℐ] = CE[f(ω₀)·g(ω₀)|ℐ] by shift invariance
-  -- Key insight: shifting doesn't change the conditional expectation onto shift-invariant σ-algebra
-  have h_shift_inv : μ[(fun ω => f (ω 0) * g (ω 1)) | mSI] =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] := by
-    -- Apply lag-constancy with k=0: g(ω₁) = g(ω₀₊₁)
-    exact condexp_pair_lag_constant hσ f g hf_meas hf_bd hg_meas hg_bd 0
+  -- Step 1: Lag-constancy from exchangeability (via transposition argument)
+  -- CE[f(ω₀)·g(ω₁)|ℐ] = CE[f(ω₀)·g(ω₀)|ℐ]
+  have h_lag_const :
+      μ[(fun ω => f (ω 0) * g (ω 1)) | mSI]
+        =ᵐ[μ]
+      μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] := by
+    -- Apply the lag-constancy axiom with k=0: g(ω_{0+1}) = g(ω_1) → g(ω_0)
+    exact condexp_lag_constant_from_exchangeability hExch f g hf_meas hf_bd hg_meas hg_bd 0
 
-  -- Step 2 & 3: (Can skip - not needed for the direct proof)
+  -- Step 2: Tower property from MET + Cesàro averaging
+  -- CE[f(ω₀)·g(ω₀)|ℐ] = CE[f(ω₀)·CE[g(ω₀)|ℐ]|ℐ]
+  -- Note: We use h_tower_of_lagConst directly with exchangeability-derived lag constancy,
+  -- avoiding the deprecated condexp_tower_for_products which uses FALSE lemmas.
+  have h_tower : μ[(fun ω => f (ω 0) * g (ω 0)) | mSI]
+      =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] := by
+    apply h_tower_of_lagConst hσ f g hf_meas hf_bd hg_meas hg_bd
+    -- Provide lag constancy for all k from exchangeability
+    exact fun k => condexp_lag_constant_from_exchangeability hExch f g hf_meas hf_bd hg_meas hg_bd k
 
-  -- Step 4: The main factorization via pullout property
-  -- CE[f(ω₀)·CE[g(ω₀)|ℐ] | ℐ] = CE[g(ω₀)|ℐ]·CE[f(ω₀)|ℐ]
+  -- Step 3: Pull-out property (CE[g(ω₀)|ℐ] is ℐ-measurable)
+  -- CE[f(ω₀)·CE[g(ω₀)|ℐ]|ℐ] = CE[g(ω₀)|ℐ]·CE[f(ω₀)|ℐ]
   have h_pullout : μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI]
       =ᵐ[μ] (fun ω => μ[(fun ω => g (ω 0)) | mSI] ω * μ[(fun ω => f (ω 0)) | mSI] ω) := by
-    -- Z := CE[g(ω₀)| mSI]
     set Z := μ[(fun ω => g (ω 0)) | mSI]
-
-    -- Z is m-measurable (automatic from stronglyMeasurable_condExp)
-    have hZ_meas : Measurable[mSI] Z := by
-      exact stronglyMeasurable_condExp.measurable
-
-    -- Z is bounded: |CE[g| mSI]| ≤ C a.e. by Jensen's inequality
+    have hZ_meas : Measurable[mSI] Z := stronglyMeasurable_condExp.measurable
+    obtain ⟨Cg, hCg⟩ := hg_bd
     have hZ_bd : ∃ C, ∀ᵐ ω ∂μ, |Z ω| ≤ C := by
-      obtain ⟨Cg, hCg⟩ := hg_bd
       use Cg
-      -- Show g∘π₀ is integrable (same proof as hY_int)
       have hg_int : Integrable (fun ω => g (ω 0)) μ := by
         constructor
         · exact (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
-        · have h_bd : ∀ (ω : Ω[α]), |g (ω 0)| ≤ Cg := fun ω => hCg (ω 0)
-          exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
-      -- Apply condExp_abs_le_of_abs_le: |CE[g∘π₀| mSI]| ≤ Cg a.e.
-      -- Inline the proof to avoid type inference issues with 'set m := ...'
-      have h_bd' : ∀ (ω : Ω[α]), |g (ω 0)| ≤ Cg := fun ω => hCg (ω 0)
-      -- Cg ≥ 0 since |g x| ≤ Cg and |g x| ≥ 0
+        · exact HasFiniteIntegral.of_bounded (ae_of_all μ (fun ω => hCg (ω 0)))
       have hCg_nn : 0 ≤ Cg := le_trans (abs_nonneg _) (hCg (Classical.choice ‹Nonempty α›))
-      -- Convert pointwise bound to a.e. bound
-      have hCg_ae : ∀ᵐ ω ∂μ, |g (ω 0)| ≤ Cg := ae_of_all μ h_bd'
-      -- Convert to NNReal bound for ae_bdd_condExp_of_ae_bdd
       have hCg_ae' : ∀ᵐ ω ∂μ, |g (ω 0)| ≤ Cg.toNNReal := by
-        filter_upwards [hCg_ae] with ω hω
-        rwa [Real.coe_toNNReal _ hCg_nn]
-      -- Apply mathlib's ae_bdd_condExp_of_ae_bdd
+        filter_upwards with ω; rwa [Real.coe_toNNReal _ hCg_nn]
       have := ae_bdd_condExp_of_ae_bdd (m := mSI) hCg_ae'
-      -- Convert back from NNReal
-      filter_upwards [this] with ω hω
-      rwa [Real.coe_toNNReal _ hCg_nn] at hω
-
-    -- Y := f(ω₀) is integrable (bounded + measurable)
+      filter_upwards [this] with ω hω; rwa [Real.coe_toNNReal _ hCg_nn] at hω
+    obtain ⟨Cf, hCf⟩ := hf_bd
     have hY_int : Integrable (fun ω => f (ω 0)) μ := by
-      obtain ⟨Cf, hCf⟩ := hf_bd
-      -- Can't use integrable_of_bounded since it's defined later in the file
-      -- Manually construct: Integrable = AEStronglyMeasurable + HasFiniteIntegral
       constructor
       · exact (hf_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
-      · -- HasFiniteIntegral: ∫⁻ ω, ‖f (ω 0)‖₊ ∂μ < ∞
-        -- Bound: |f (ω 0)| ≤ Cf for all ω
-        -- Use HasFiniteIntegral.of_bounded
-        have h_bd : ∀ (ω : Ω[α]), |f (ω 0)| ≤ Cf := fun ω => hCf (ω 0)
-        exact HasFiniteIntegral.of_bounded (ae_of_all μ h_bd)
-
-    -- Apply condExp_mul_pullout: CE[Z·Y | mSI] = Z·CE[Y | mSI]
+      · exact HasFiniteIntegral.of_bounded (ae_of_all μ (fun ω => hCf (ω 0)))
     have h := condExp_mul_pullout hZ_meas hZ_bd hY_int
-    -- h gives: CE[Z * Y | mSI] = Z * CE[Y | mSI] where Y = f∘π₀
-    -- But goal needs: CE[Y * Z | mSI] = Z * CE[Y | mSI]
-    -- Use commutativity: Y * Z = Z * Y
     calc μ[(fun ω => f (ω 0) * Z ω) | mSI]
         =ᵐ[μ] μ[(fun ω => Z ω * f (ω 0)) | mSI] := by
-          -- Functions are equal since multiplication commutes
-          have : (fun ω => f (ω 0) * Z ω) = (fun ω => Z ω * f (ω 0)) := by
-            ext ω; ring
+          have : (fun ω => f (ω 0) * Z ω) = (fun ω => Z ω * f (ω 0)) := by ext ω; ring
           rw [this]
       _ =ᵐ[μ] (fun ω => Z ω * μ[(fun ω => f (ω 0)) | mSI] ω) := h
 
-  -- Step 5: CE[f(ω₀)·g(ω₀)|ℐ] = CE[f(ω₀)·CE[g(ω₀)|ℐ]|ℐ]
-  -- Use the tower property axiom (full proof exists but requires file reorg)
-  have h_tower : μ[(fun ω => f (ω 0) * g (ω 0)) | mSI]
-      =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] :=
-    condexp_tower_for_products hσ f g hf_meas hf_bd hg_meas hg_bd
-
-  /-
-  NOTE: The full proof (~600 LOC) uses Mean Ergodic Theorem + Cesàro averaging + L¹-Lipschitz.
-  It's temporarily axiomatized due to circular dependency with birkhoffAverage_tendsto_condexp.
-  The proof exists starting at line 1035 (commented out) and can be restored once file
-  organization allows birkhoffAverage_tendsto_condexp to be defined earlier.
-
-  **Proof strategy**: The key insight is that CE[f·A_n| mSI] is CONSTANT in n (by lag-constancy),
-  while A_n → CE[g| mSI]. Therefore:
-    CE[f·g| mSI] = CE[f·A_n| mSI] → CE[f·CE[g| mSI]| mSI]
-  where the left equality holds for all n, and the limit uses L¹-Lipschitz.
-
-  The full proof starts here (commented out for now):
-
-  -- Define Cesàro averages (pointwise for now, will connect to Birkhoff averages for MET)
-  -- let A (n : ℕ) : Ω[α] → ℝ := fun ω => (1 / (n + 1 : ℝ)) * (Finset.range (n + 1)).sum (fun k => g (ω k))
-
-  -- Extract bounds early so they're available throughout the entire h_tower proof
-  -- obtain ⟨Cf, hCf⟩ := hf_bd
-  -/
-
-  -- Final: Combine all the step equalities in the calc chain
+  -- Combine all steps
   calc μ[(fun ω => f (ω 0) * g (ω 1)) | mSI]
-      =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] := h_shift_inv
+      =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] := h_lag_const
     _ =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] := h_tower
     _ =ᵐ[μ] (fun ω => μ[(fun ω => g (ω 0)) | mSI] ω * μ[(fun ω => f (ω 0)) | mSI] ω) := h_pullout
     _ =ᵐ[μ] (fun ω => μ[(fun ω => f (ω 0)) | mSI] ω * μ[(fun ω => g (ω 0)) | mSI] ω) := by
-        filter_upwards with ω
-        ring
-  /-
-  Total: ~40 lines for the sorry'd steps, once helper lemmas are complete.
-  The key dependencies are:
-  - condexp_precomp_iterate_eq (already proved, line 1452)
-  - range_condexp_eq_fixedSubspace (already proved, line 1088)
-  - condExp_mul_pullout (needs completion)
-  - Standard CE properties (tower, measurability)
-  -/
-
-
+        filter_upwards with ω; ring
 
 end OptionB_L1Convergence
 

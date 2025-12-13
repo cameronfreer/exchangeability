@@ -78,13 +78,22 @@ lemma quantize_abs_le {C ε x : ℝ} (hC : 0 ≤ C) (hε : 0 < ε) (hε1 : ε �
 
 /-- Quantization converges pointwise as ε → 0.
 
-**Proof sketch**: Since |quantize C ε x - v| ≤ ε where v = max (-C) (min C x),
-and ε → 0 as ε → 0+ in nhdsWithin (Set.Ioi 0), the quantized value converges to v.
-The key is showing that for any δ > 0, the set {ε | 0 < ε < δ} is in nhdsWithin (Set.Ioi 0) 0.
-
-Axiomatized for now due to filter API complexity in Lean 4.24.
--/
-axiom quantize_tendsto {C x : ℝ} (hC : 0 ≤ C) :
-    Tendsto (fun ε => quantize C ε x) (nhdsWithin 0 (Set.Ioi (0 : ℝ))) (nhds (max (-C) (min C x)))
+Since |quantize C ε x - v| ≤ ε where v = max (-C) (min C x), the quantized value
+converges to v as ε → 0+. -/
+lemma quantize_tendsto {C x : ℝ} (_hC : 0 ≤ C) :
+    Tendsto (fun ε => quantize C ε x) (nhdsWithin 0 (Set.Ioi (0 : ℝ))) (nhds (max (-C) (min C x))) := by
+  rw [Metric.tendsto_nhdsWithin_nhds]
+  intro δ hδ
+  -- For any δ > 0, choose ε_0 = δ. Then for 0 < ε < δ, |quantize - v| ≤ ε < δ.
+  use δ, hδ
+  intro ε hε_pos hε_dist
+  -- hε_pos : ε ∈ Set.Ioi 0, i.e., 0 < ε
+  -- hε_dist : dist ε 0 < δ
+  rw [Real.dist_eq] at hε_dist ⊢
+  simp only [sub_zero] at hε_dist
+  have hε_lt : ε < δ := by rwa [abs_of_pos hε_pos] at hε_dist
+  calc |quantize C ε x - max (-C) (min C x)|
+      ≤ ε := quantize_err_le hε_pos
+    _ < δ := hε_lt
 
 end MeasureTheory

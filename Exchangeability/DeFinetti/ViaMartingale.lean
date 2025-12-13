@@ -18,6 +18,7 @@ import Exchangeability.Probability.CondExp
 import Exchangeability.Probability.CondExpHelpers
 import Exchangeability.Probability.CondIndep
 import Exchangeability.Probability.Martingale
+import Exchangeability.Probability.TripleLawDropInfo
 import Exchangeability.Tail.TailSigma
 import Exchangeability.DeFinetti.MartingaleHelpers
 import Exchangeability.DeFinetti.CommonEnding
@@ -1144,6 +1145,25 @@ lemma integral_mul_indicator_to_set {Ω : Type*} [MeasurableSpace Ω] (μ : Meas
     by_cases h : ω ∈ S <;> simp [h, Set.indicator_of_mem, Set.indicator_of_not_mem]
   simpa [this, integral_indicator, hS]
 
+/-! ### Direct Drop-Info Property from Triple Law
+
+**Key architectural note:** This lemma breaks the circular dependency between
+`condIndep_of_triple_law` and `condExp_eq_of_triple_law` by proving the "drop-info"
+property directly from the triple law without going through conditional independence.
+
+The equivalence is: Triple Law ⟺ Conditional Independence ⟺ Drop-Info Property
+
+The original architecture was:
+- `condExp_eq_of_triple_law` proves drop-info by: triple law → condIndep → drop-info
+- `condIndep_of_triple_law` proves condIndep by: triple law → ... → needs drop-info for h_proj!
+
+This lemma proves: triple law → drop-info directly, breaking the cycle.
+-/
+
+-- `condExp_eq_of_triple_law_direct` is imported from
+-- Exchangeability.Probability.Axioms.TripleLawDropInfo
+-- See that file for the full proof obligation and mathematical background.
+
 lemma condIndep_of_triple_law
   {Ω α β γ : Type*}
   [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
@@ -1240,6 +1260,9 @@ lemma condIndep_of_triple_law
         _ = ∫ p, g p ∂(Measure.map (fun ω => (Y ω, Z ω, W' ω)) μ) := by rw [h_triple]
         _ = ∫ ω, g (Y ω, Z ω, W' ω) ∂μ :=
             integral_map hYZW'_meas.aemeasurable hg_ae_W'
+
+    -- Compute drop-info property BEFORE defining 𝔾 to avoid instance pollution
+    have h_drop_info := condExp_eq_of_triple_law_direct Y Z W W' hY hZ hW hW' h_triple_ZYW hA
 
     let 𝔾 : MeasurableSpace Ω := MeasurableSpace.comap W inferInstance
     set U := μ[φ | 𝔾] with hU_def
@@ -1491,27 +1514,94 @@ lemma condIndep_of_triple_law
         _ = 0 := by ring
 
     -- **Vanishing integral 1**: ∫_S U*ψ₀ = 0 for all 𝔾-measurable S
-    -- Since U is 𝔾-measurable and μ[ψ₀|𝔾] = 0
-    -- **Vanishing integral 1**: ∫_S U*ψ₀ = 0 for all 𝔾-measurable S
     -- Strategy: Pull out 𝔾-measurable factors from condExp, use μ[ψ₀|𝔾] = 0
-    -- TODO: Technical proof with type class issues - using sorry temporarily
     have h_Uψ0_zero : ∀ (S : Set Ω), MeasurableSet[𝔾] S →
         ∫ ω in S, U ω * ψ0 ω ∂μ = 0 := by
       intro S hS_G
-      -- The strategy is sound: ∫_S U*ψ₀ = ∫ 1_S * U * ψ₀ = ∫ μ[1_S * U * ψ₀|𝔾]
-      --                      = ∫ 1_S * U * μ[ψ₀|𝔾] = 0 (since μ[ψ₀|𝔾] = 0 a.e.)
-      -- Type class instance issues with comap measurable space need resolution
-      sorry
+      -- Strategy: ∫_S (U * ψ0) = ∫_S μ[U * ψ0 | 𝔾] = ∫_S (U * μ[ψ0 | 𝔾]) = ∫_S (U * 0) = 0
+
+      -- ψ0 is integrable
+      have hψ0_int : Integrable ψ0 μ := hψ_int.sub hV_int
+
+      -- U = μ[φ | 𝔾] is bounded by 1 (φ is an indicator bounded by 1)
+      have hU_bdd : ∀ᵐ ω ∂μ, ‖U ω‖ ≤ 1 := by
+        have hφ_bdd : ∀ᵐ ω ∂μ, |φ ω| ≤ 1 := by
+          filter_upwards with ω
+          simp only [hφ_def, Set.indicator_apply]; split_ifs <;> simp [abs_of_nonneg]
+        have := ae_bdd_condExp_of_ae_bdd (m := 𝔾) (R := 1) hφ_bdd
+        filter_upwards [this] with ω hω
+        rw [Real.norm_eq_abs]; exact hω
+
+      -- U * ψ0 is integrable
+      have hUψ0_int : Integrable (fun ω => U ω * ψ0 ω) μ :=
+        hψ0_int.bdd_mul' integrable_condExp.aestronglyMeasurable hU_bdd
+
+      -- Pull-out: μ[U * ψ0 | 𝔾] =ᵐ U * μ[ψ0 | 𝔾]
+      have h_pullout : μ[fun ω => U ω * ψ0 ω | 𝔾] =ᵐ[μ] fun ω => U ω * μ[ψ0 | 𝔾] ω := by
+        have hU_𝔾 : AEStronglyMeasurable[𝔾] U μ := stronglyMeasurable_condExp.aestronglyMeasurable
+        exact condExp_mul_of_aestronglyMeasurable_left (μ := μ) (m := 𝔾) hU_𝔾 hUψ0_int hψ0_int
+
+      -- μ[ψ0 | 𝔾] =ᵐ 0, so U * μ[ψ0 | 𝔾] =ᵐ 0
+      have h_zero : (fun ω => U ω * μ[ψ0 | 𝔾] ω) =ᵐ[μ] 0 := by
+        filter_upwards [hψ0_ce] with ω hω
+        simp [hω]
+
+      -- So μ[U * ψ0 | 𝔾] =ᵐ 0
+      have h_ce_zero : μ[fun ω => U ω * ψ0 ω | 𝔾] =ᵐ[μ] 0 := h_pullout.trans h_zero
+
+      -- Use setIntegral_condExp: ∫_S f = ∫_S μ[f | 𝔾] for 𝔾-measurable S
+      calc ∫ ω in S, U ω * ψ0 ω ∂μ
+          = ∫ ω in S, μ[fun ω' => U ω' * ψ0 ω' | 𝔾] ω ∂μ := by
+              exact (setIntegral_condExp h𝔾_le hUψ0_int hS_G).symm
+        _ = ∫ ω in S, (0 : ℝ) ∂μ := by
+              refine setIntegral_congr_ae (h𝔾_le S hS_G) ?_
+              filter_upwards [h_ce_zero] with ω hω _
+              exact hω
+        _ = 0 := by simp
 
     -- **Vanishing integral 2**: ∫_S V*φ₀ = 0 for all 𝔾-measurable S
-    -- Symmetric to h_Uψ0_zero
-    -- TODO: Technical proof with type class issues - using sorry temporarily
+    -- Symmetric to h_Uψ0_zero: V is 𝔾-measurable, μ[φ0 | 𝔾] =ᵐ 0
     have h_Vφ0_zero : ∀ (S : Set Ω), MeasurableSet[𝔾] S →
         ∫ ω in S, V ω * φ0 ω ∂μ = 0 := by
       intro S hS_G
-      -- Strategy: ∫_S V*φ₀ = ∫ 1_S * V * φ₀ = ∫ μ[1_S * V * φ₀|𝔾]
-      --                   = ∫ 1_S * V * μ[φ₀|𝔾] = 0 (since μ[φ₀|𝔾] = 0 a.e.)
-      sorry
+      -- φ0 is integrable
+      have hφ0_int : Integrable φ0 μ := hφ_int.sub hU_int
+
+      -- V = μ[ψ | 𝔾] is bounded by 1 (ψ is an indicator bounded by 1)
+      have hV_bdd : ∀ᵐ ω ∂μ, ‖V ω‖ ≤ 1 := by
+        have hψ_bdd : ∀ᵐ ω ∂μ, |ψ ω| ≤ 1 := by
+          filter_upwards with ω
+          simp only [hψ_def, Set.indicator_apply]; split_ifs <;> simp [abs_of_nonneg]
+        have := ae_bdd_condExp_of_ae_bdd (m := 𝔾) (R := 1) hψ_bdd
+        filter_upwards [this] with ω hω
+        rw [Real.norm_eq_abs]; exact hω
+
+      -- V * φ0 is integrable
+      have hVφ0_int : Integrable (fun ω => V ω * φ0 ω) μ :=
+        hφ0_int.bdd_mul' integrable_condExp.aestronglyMeasurable hV_bdd
+
+      -- Pull-out: μ[V * φ0 | 𝔾] =ᵐ V * μ[φ0 | 𝔾]
+      have h_pullout : μ[fun ω => V ω * φ0 ω | 𝔾] =ᵐ[μ] fun ω => V ω * μ[φ0 | 𝔾] ω := by
+        have hV_𝔾 : AEStronglyMeasurable[𝔾] V μ := stronglyMeasurable_condExp.aestronglyMeasurable
+        exact condExp_mul_of_aestronglyMeasurable_left (μ := μ) (m := 𝔾) hV_𝔾 hVφ0_int hφ0_int
+
+      -- μ[φ0 | 𝔾] =ᵐ 0, so V * μ[φ0 | 𝔾] =ᵐ 0
+      have h_zero : (fun ω => V ω * μ[φ0 | 𝔾] ω) =ᵐ[μ] 0 := by
+        filter_upwards [hφ0_ce] with ω hω
+        simp [hω]
+
+      -- So μ[V * φ0 | 𝔾] =ᵐ 0
+      have h_ce_zero : μ[fun ω => V ω * φ0 ω | 𝔾] =ᵐ[μ] 0 := h_pullout.trans h_zero
+
+      -- Use setIntegral_condExp: ∫_S f = ∫_S μ[f | 𝔾] for 𝔾-measurable S
+      calc ∫ ω in S, V ω * φ0 ω ∂μ
+          = ∫ ω in S, μ[fun ω' => V ω' * φ0 ω' | 𝔾] ω ∂μ := by
+              exact (setIntegral_condExp h𝔾_le hVφ0_int hS_G).symm
+        _ = ∫ ω in S, (0 : ℝ) ∂μ := by
+              refine setIntegral_congr_ae (h𝔾_le S hS_G) ?_
+              filter_upwards [h_ce_zero] with ω hω _
+              exact hω
+        _ = 0 := by simp
 
     -- **Vanishing integral 3**: ∫_S φ₀*ψ₀ = 0 for all 𝔾-measurable S
     -- This is the hard one - uses triple law via condExp_eq_of_triple_law
@@ -1540,14 +1630,9 @@ lemma condIndep_of_triple_law
       have hℋ_le : ℋ ≤ _ := measurable_iff_comap_le.mp (hZ.prodMk hW)
 
       -- Apply condExp_eq_of_triple_law: μ[φ | ℋ] =ᵐ μ[φ | 𝔾] = U
-      -- TODO: There is a circular dependency between condIndep_of_triple_law and
-      -- condExp_eq_of_triple_law. This requires restructuring the proof to break
-      -- the cycle. For now, we admit this step.
-      have h_proj : μ[φ | ℋ] =ᵐ[μ] U := by
-        -- Key insight: The (Y,Z,W) triple law and h_triple_ZYW combined with the fact
-        -- that 𝔾 ⊆ ℋ means the projection from ℋ to 𝔾 doesn't change the conditional
-        -- expectation of φ.
-        sorry
+      -- The triple law (Z,Y,W) ~ (Z,Y,W') implies: μ[φ | σ(Z,W)] =ᵐ μ[φ | σ(W)]
+      -- Now uses h_drop_info defined BEFORE ℋ to avoid instance pollution.
+      have h_proj : μ[φ | ℋ] =ᵐ[μ] U := h_drop_info
 
       -- Integrability facts
       have hφ0_int : Integrable φ0 μ := by
