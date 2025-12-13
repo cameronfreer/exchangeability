@@ -2701,14 +2701,18 @@ noncomputable def directing_measure
 
 namespace Helpers
 
-/-- **AXIOM A3 (Probability measure from CDF):**
-The `directing_measure` built from the CDF is a probability measure. -/
-axiom directing_measure_isProbabilityMeasure
+/-- **Probability measure from CDF (TODO):**
+The `directing_measure` built from the CDF is a probability measure.
+
+This requires proving that `cdf_from_alpha` has the correct limits at ±∞.
+See `cdf_from_alpha_limits` in MoreL2Helpers.lean for the required property. -/
+lemma directing_measure_isProbabilityMeasure
   {Ω : Type*} [MeasurableSpace Ω]
   {μ : Measure Ω} [IsProbabilityMeasure μ]
-  (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
-  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-  ∀ ω, IsProbabilityMeasure (directing_measure X hX_contract hX_meas hX_L2 ω)
+  (X : ℕ → Ω → ℝ) (_hX_contract : Exchangeability.Contractable μ X)
+  (_hX_meas : ∀ i, Measurable (X i)) (_hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+  ∀ ω, IsProbabilityMeasure (directing_measure X _hX_contract _hX_meas _hX_L2 ω) := by
+  sorry
 
 end Helpers
 

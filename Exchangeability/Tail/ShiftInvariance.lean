@@ -142,7 +142,7 @@ lemma tailSigma_shift_invariant_for_contractable
   --           Measure.map (fun ω (i : Fin n) => X i.val ω) μ
   rw [h_shift]
 
-/-- **AXIOM: Shift invariance of conditional expectation for contractable sequences.**
+/-- **Shift invariance of conditional expectation for contractable sequences (TODO).**
 
 For a contractable sequence X and integrable function f, the conditional expectation
 of f∘X_n given the tail σ-algebra does not depend on n.
@@ -153,19 +153,20 @@ The proof requires ergodic theory machinery:
 - Conditional expectations are preserved under this identification
 - Uses Contractable.shift_segment_eq as foundation
 
-We axiomatize this temporarily until the full ergodic theory infrastructure is developed.
+Currently left as sorry until the full ergodic theory infrastructure is developed.
 -/
-axiom condExp_shift_eq_condExp
+lemma condExp_shift_eq_condExp
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α)
-    (hX_contract : Exchangeability.Contractable μ X)
-    (hX_meas : ∀ i, Measurable (X i))
+    (_hX_contract : Exchangeability.Contractable μ X)
+    (_hX_meas : ∀ i, Measurable (X i))
     (f : α → ℝ)
-    (hf_meas : Measurable f)
-    (hf_int : Integrable (f ∘ X 0) μ)
+    (_hf_meas : Measurable f)
+    (_hf_int : Integrable (f ∘ X 0) μ)
     (n : ℕ) :
-    μ[f ∘ X n | Exchangeability.Tail.tailProcess X] =ᵐ[μ] μ[f ∘ X 0 | Exchangeability.Tail.tailProcess X]
+    μ[f ∘ X n | Exchangeability.Tail.tailProcess X] =ᵐ[μ] μ[f ∘ X 0 | Exchangeability.Tail.tailProcess X] := by
+  sorry
 
 /-! ## Application to Cesàro Averages
 

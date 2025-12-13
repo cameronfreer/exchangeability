@@ -1600,9 +1600,12 @@ theorem subseq_ae_of_L1
   -- Step 3: Extract almost-everywhere convergent subsequence
   exact h_tendstoInMeasure.exists_seq_tendsto_ae
 
-/-- **AXIOM A10 (Step 5 packaging):** packaged existence of a directing kernel
-with the pointwise identification for a given bounded measurable `f`. -/
-axiom alpha_is_conditional_expectation_packaged
+/-- **Step 5 packaging (TODO):** packaged existence of a directing kernel
+with the pointwise identification for a given bounded measurable `f`.
+
+This requires completing the construction in MainConvergence.lean that builds
+the directing measure from the CDF limits. -/
+lemma alpha_is_conditional_expectation_packaged
   {Ω : Type*} [MeasurableSpace Ω]
   {μ : Measure Ω} [IsProbabilityMeasure μ]
   (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
@@ -1611,5 +1614,6 @@ axiom alpha_is_conditional_expectation_packaged
   ∃ (nu : Ω → Measure ℝ),
     (∀ ω, IsProbabilityMeasure (nu ω)) ∧
     Measurable (fun ω => nu ω (Set.univ)) ∧
-    (∀ n, ∀ᵐ ω ∂μ, alpha n ω = ∫ x, f x ∂(nu ω))
+    (∀ n, ∀ᵐ ω ∂μ, alpha n ω = ∫ x, f x ∂(nu ω)) := by
+  sorry
 
