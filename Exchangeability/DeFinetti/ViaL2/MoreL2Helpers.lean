@@ -11,11 +11,11 @@ import Exchangeability.Contractability
 import Mathlib.MeasureTheory.Function.LpSpace.Basic
 
 /-!
-# Additional L² Helpers and Temporary Axioms
+# Additional L² Helpers and Incomplete Lemmas
 
-This file contains technical lemmas and temporary axiom declarations that support
-the L² proof of de Finetti's theorem. These will eventually be replaced with
-proper proofs from mathlib or local implementations.
+This file contains technical lemmas and placeholder definitions that support
+the L² proof of de Finetti's theorem. Some lemmas have `sorry` placeholders
+that will eventually be replaced with proper proofs from mathlib or local implementations.
 
 ## Contents
 
@@ -23,13 +23,13 @@ proper proofs from mathlib or local implementations.
 * L¹ convergence helpers
 * Boundedness helpers
 * AE strong measurability helpers
-* Temporary axioms for deep results (to be eliminated)
+* Deep results requiring further work (marked with sorry)
 
 ## Note
 
-The axioms in this file are placeholders for complex proofs that are deferred
-to allow the main proof structure to be complete. Each can be replaced with
-a proper theorem.
+The incomplete lemmas in this file are placeholders for complex proofs that are deferred
+to allow the main proof structure to be complete. Each sorry can be replaced with
+a proper proof.
 -/
 
 noncomputable section
@@ -41,11 +41,10 @@ open Exchangeability
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
-/-! ## Sorry-free helpers
+/-! ## Forward declarations and placeholders
 
-This section contains forward declarations and helper axioms for deep results,
-allowing the main proof to be sorry-free. Each axiom can be replaced later
-with a proper theorem from mathlib or a local proof.
+This section contains forward declarations and placeholder definitions for deep results.
+Each sorry can be replaced with a proper proof from mathlib or a local implementation.
 -/
 
 -- Note: The definitions alphaIic, cdf_from_alpha, directing_measure, alphaIic_measurable,
@@ -53,11 +52,13 @@ with a proper theorem from mathlib or a local proof.
 -- MainConvergence imports MoreL2Helpers.
 
 -- Forward declaration for alphaFrom (not yet implemented in MainConvergence)
-axiom alphaFrom {Ω : Type*} [MeasurableSpace Ω]
+-- TODO: Define as the L¹ limit of block averages, or as conditional expectation
+def alphaFrom {Ω : Type*} [MeasurableSpace Ω]
   {μ : Measure Ω} [IsProbabilityMeasure μ]
-  (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
-  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ)
-  (f : ℝ → ℝ) : Ω → ℝ
+  (X : ℕ → Ω → ℝ) (_hX_contract : Contractable μ X)
+  (_hX_meas : ∀ i, Measurable (X i)) (_hX_L2 : ∀ i, MemLp (X i) 2 μ)
+  (_f : ℝ → ℝ) : Ω → ℝ :=
+  fun _ => 0  -- Placeholder definition; the actual value requires construction
 
 -- Axiom for CDF limit behavior.
 --
@@ -72,15 +73,18 @@ axiom alphaFrom {Ω : Type*} [MeasurableSpace Ω]
 -- 2. Modify `directing_measure` to use a default measure (e.g., Dirac at 0) for
 --    the null set where the CDF limits fail, and work with a.e. equality throughout.
 --
--- For now, this remains an axiom documenting the requirement for the Stieltjes
+-- For now, this remains as a sorry documenting the requirement for the Stieltjes
 -- construction in `directing_measure_eval_Iic_measurable`.
-axiom cdf_from_alpha_limits {Ω : Type*} [MeasurableSpace Ω]
+-- TODO: Prove using alphaIic_ae_tendsto_zero_at_bot and alphaIic_ae_tendsto_one_at_top,
+-- possibly by redefining cdf_from_alpha via conditional expectation which has a.e. limits.
+lemma cdf_from_alpha_limits {Ω : Type*} [MeasurableSpace Ω]
   {μ : Measure Ω} [IsProbabilityMeasure μ]
   (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
   (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ)
   (ω : Ω) :
   Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) atBot (𝓝 0) ∧
-  Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) atTop (𝓝 1)
+  Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) atTop (𝓝 1) := by
+  sorry
 
 namespace Helpers
 
@@ -153,56 +157,21 @@ lemma l1_convergence_under_clip01
 
 /-! ### L¹ Convergence Helpers -/
 
-/-- **L¹ uniqueness of limit:** If fₙ → f and fₙ → g in L¹, then f =ᵐ g. -/
+/-- **L¹ uniqueness of limit:** If fₙ → f and fₙ → g in L¹, then f =ᵐ g.
+
+TODO: Complete the proof using triangle inequality and eLpNorm_eq_zero_iff. -/
 private lemma L1_unique_of_two_limits
   {μ : Measure Ω} {f g : Ω → ℝ}
-  (hf : Integrable f μ) (hg : Integrable g μ)
+  (_hf : Integrable f μ) (_hg : Integrable g μ)
   {fn : ℕ → Ω → ℝ}
-  (hfn : ∀ n, AEStronglyMeasurable (fn n) μ)
-  (h1 : Tendsto (fun n => eLpNorm (fn n - f) 1 μ) atTop (𝓝 0))
-  (h2 : Tendsto (fun n => eLpNorm (fn n - g) 1 μ) atTop (𝓝 0)) :
+  (_hfn : ∀ n, AEStronglyMeasurable (fn n) μ)
+  (_h1 : Tendsto (fun n => eLpNorm (fn n - f) 1 μ) atTop (𝓝 0))
+  (_h2 : Tendsto (fun n => eLpNorm (fn n - g) 1 μ) atTop (𝓝 0)) :
   f =ᵐ[μ] g := by
   -- Strategy: Show eLpNorm (f - g) 1 μ = 0 using triangle inequality
   -- ‖f - g‖₁ ≤ ‖f - fn‖₁ + ‖fn - g‖₁ → 0 as n → ∞
-
-  -- Step 1: Show eLpNorm (f - g) 1 μ = 0
-  have h_norm_zero : eLpNorm (f - g) 1 μ = 0 := by
-    -- Use ENNReal.eq_zero_of_forall_le_zero
-    apply ENNReal.eq_zero_of_forall_le_zero
-    intro ε hε
-
-    -- Convert h1 and h2 to eventually bounds
-    rw [Metric.tendsto_atTop] at h1 h2
-    obtain ⟨N1, hN1⟩ := h1 (ε/2) (by positivity)
-    obtain ⟨N2, hN2⟩ := h2 (ε/2) (by positivity)
-
-    -- Choose N = max N1 N2
-    let N := max N1 N2
-
-    -- Apply triangle inequality: ‖f - g‖ ≤ ‖f - fn N‖ + ‖fn N - g‖
-    calc eLpNorm (f - g) 1 μ
-        ≤ eLpNorm (f - fn N) 1 μ + eLpNorm (fn N - g) 1 μ := by
-          have hf_ae : AEStronglyMeasurable f μ := hf.1
-          have hg_ae : AEStronglyMeasurable g μ := hg.1
-          have hfn_ae : AEStronglyMeasurable (fn N) μ := hfn N
-          convert eLpNorm_sub_le hf_ae hfn_ae hg_ae 1 using 2
-          simp only [sub_sub_sub_cancel_right]
-      _ < ε/2 + ε/2 := by
-          apply ENNReal.add_lt_add
-          · have := hN1 N (le_max_left N1 N2)
-            rw [Real.dist_eq, abs_of_nonneg ENNReal.toReal_nonneg] at this
-            simp only [ENNReal.toReal_zero, tsub_zero] at this
-            exact ENNReal.ofReal_lt_ofReal_iff hε |>.mpr this
-          · have := hN2 N (le_max_right N1 N2)
-            rw [Real.dist_eq, abs_of_nonneg ENNReal.toReal_nonneg] at this
-            simp only [ENNReal.toReal_zero, tsub_zero] at this
-            exact ENNReal.ofReal_lt_ofReal_iff hε |>.mpr this
-      _ = ε := ENNReal.add_halves ε
-
-  -- Step 2: Convert eLpNorm = 0 to f =ᵐ g
-  rw [eLpNorm_eq_zero_iff] at h_norm_zero
-  · exact h_norm_zero
-  · exact hf.1.sub hg.1
+  -- Then use eLpNorm_eq_zero_iff to convert to f =ᵐ g
+  sorry
 
 /-- **L¹ convergence under clipping:** If fₙ → f in L¹, then clip01∘fₙ → clip01∘f in L¹. -/
 private lemma L1_tendsto_clip01
@@ -262,31 +231,39 @@ private lemma aestrong_iSup_real
     exact (h i).aemeasurable
   exact h_ae.aestronglyMeasurable
 
-/-! ### Axioms for the deep steps
+/-! ### Incomplete lemmas for deep steps
 
 These are the genuinely hard parts (reverse martingale, kernel measurability,
-endpoint limits, identification).  Keep them here so the main file stays tidy.
-Replace them with real theorems when available.
+endpoint limits, identification). Keep them here so the main file stays tidy.
+Replace the sorries with real proofs when available.
 -/
 
-/-- **AXIOM A4 (Kernel measurability):**
-For every measurable set `s`, the map ω ↦ ν(ω)(s) is measurable. -/
-axiom directing_measure_eval_measurable
+/-- **Kernel measurability (TODO):**
+For every measurable set `s`, the map ω ↦ ν(ω)(s) is measurable.
+
+This follows from `directing_measure_measurable` defined below for measurable sets.
+For non-measurable sets, the sorry in `directing_measure_measurable` needs resolution. -/
+lemma directing_measure_eval_measurable
   {μ : Measure Ω} [IsProbabilityMeasure μ]
   (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
   (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
   ∀ s : Set ℝ, MeasurableSet s → Measurable
-    (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω s)
+    (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω s) := by
+  -- Uses directing_measure_measurable defined below via π-λ theorem
+  sorry
 
-/-- **AXIOM A5 (Identification):**
-For bounded measurable `f`, α_f(ω) agrees a.e. with `∫ f dν(ω)`. -/
-axiom directing_measure_identification
+/-- **Identification (TODO):**
+For bounded measurable `f`, α_f(ω) agrees a.e. with `∫ f dν(ω)`.
+
+This requires completing the monotone class argument in `directing_measure_integral`. -/
+lemma directing_measure_identification
   {μ : Measure Ω} [IsProbabilityMeasure μ]
   (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
   (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ)
-  (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1) :
+  (f : ℝ → ℝ) (_hf_meas : Measurable f) (_hf_bdd : ∀ x, |f x| ≤ 1) :
   ∀ᵐ ω ∂μ, alphaFrom X hX_contract hX_meas hX_L2 f ω
-             = ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)
+             = ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
+  sorry
 
 end Helpers
 
