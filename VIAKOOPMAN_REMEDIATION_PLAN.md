@@ -1,5 +1,58 @@
 # ViaKoopman Remediation Plan
 
+## Critical Finding (2025-12-12 Session)
+
+### Issue with k=0 Case of Lag Constancy Axiom
+
+**Problem**: The axiom `condexp_lag_constant_from_exchangeability` claims:
+```
+CE[f(ω₀)·g(ω_{k+1}) | ℐ] = CE[f(ω₀)·g(ω_k) | ℐ]  for ALL k ≥ 0
+```
+
+**Analysis**:
+- **k ≥ 1**: TRUE via transposition. τ = swap(k, k+1) fixes 0, so the argument works.
+- **k = 0**: POTENTIALLY FALSE. τ = swap(0, 1) does NOT fix 0.
+
+**Counterexample for k=0**: For i.i.d. Bernoulli(1/2) (which is exchangeable):
+- CE[ω₀·ω₁ | ℐ] = E[ω₀]·E[ω₁] = 1/4 (by independence)
+- CE[ω₀² | ℐ] = E[ω₀] = 1/2 (since ω₀² = ω₀ for Bernoulli)
+- These are NOT equal!
+
+### CRITICAL CORRECTION: Proof Restructuring to Avoid k=0
+
+**The k=0 case is FALSE and cannot be proven.** The axiom's docstring incorrectly claims
+τ = swap(k, k+1) fixes 0 for all k, but for k=0, τ = swap(0, 1) does NOT fix 0.
+
+**Current proof flow** (BROKEN at step 1):
+```
+Step 1: CE[f·g₁] = CE[f·g₀]  ← Uses k=0 lag constancy (FALSE!)
+Step 2: CE[f·g₀] = CE[f·CE[g₀|ℐ]]  (h_tower_of_lagConst)
+Step 3: = CE[f|ℐ]·CE[g₀|ℐ]  (pullout)
+```
+
+**Restructured proof** (VALID, avoids k=0):
+```
+Step 1: Define A'_n = (1/n)·Σ_{j=1}^n g(ω_j)  ← Cesàro starting from j=1
+Step 2: CE[f·A'_n] = CE[f·g₁] for all n  ← Uses only k≥1 lag constancy!
+        (Because: CE[f·g_j] = CE[f·g_1] via induction using k=j-1 ≥ 1)
+Step 3: A'_n → CE[g₀|ℐ] in L¹  ← MET + shift invariance
+Step 4: L¹-Lipschitz: CE[f·A'_n] → CE[f·CE[g₀|ℐ]]
+Step 5: ∴ CE[f·g₁] = CE[f·CE[g₀|ℐ]] (limit)
+Step 6: = CE[f|ℐ]·CE[g₀|ℐ]  (pullout)
+Step 7: = CE[f|ℐ]·CE[g₁|ℐ]  (shift invariance: CE[g₀|ℐ] = CE[g₁|ℐ])
+```
+
+**Why this works**:
+- `product_ce_constant_of_lag_const` currently uses induction that terminates at g₀
+- Modified to terminate at g₁ instead, avoiding the k=0 step
+- The MET convergence A'_n → CE[g₀|ℐ] still holds by shift invariance
+
+**Conclusion**: The final product factorization CE[f·g₁|ℐ] = CE[f|ℐ]·CE[g₁|ℐ] IS TRUE,
+but the proof path must be restructured to avoid k=0. The axiom should be restricted
+to k ≥ 1 (or renamed to make this explicit).
+
+---
+
 ## Implementation Progress (Updated 2025-12-12)
 
 ### Completed ✅
@@ -34,7 +87,15 @@
 
 ### Remaining Work
 
-- Prove `condexp_lag_constant_from_exchangeability` using transposition argument
+**HIGH PRIORITY (k=0 fix)**:
+1. Modify axiom to require `k ≥ 1` (add `hk : 0 < k` hypothesis)
+2. Restructure `condexp_pair_factorization_MET` to avoid k=0:
+   - Modify `h_tower_of_lagConst` to use Cesàro from index 1
+   - Update `product_ce_constant_of_lag_const` to terminate at g₁ not g₀
+   - Remove direct usage of k=0 lag constancy
+3. Prove the modified axiom (k≥1 only) using transposition argument
+
+**MEDIUM PRIORITY**:
 - Implement `exists_naturalExtension` via Ionescu-Tulcea (optional)
 - Clean up other sorries unrelated to the false lemma chain
 
@@ -64,7 +125,9 @@ Exchangeability IS strong enough because of the **transposition argument**:
 - By exchangeability: μ.map (reindex τ) = μ
 - Therefore: CE[f(ω_0)·g(ω_{k+1})|ℐ] = CE[f(ω_0)·g(ω_k)|ℐ]
 
-### The Correct Axiom
+### The Corrected Axiom (k ≥ 1 only)
+
+**NOTE**: The original axiom allowed k=0, which is FALSE. The corrected version requires k ≥ 1.
 
 ```lean
 /-- Exchangeability implies lag-constancy via Kallenberg's transposition argument.
@@ -73,10 +136,12 @@ For an exchangeable sequence, consider the transposition τ swapping indices k a
 Exchangeability gives Measure.map (reindex τ) μ = μ. The function ω ↦ f(ω_0)·g(ω_{k+1})
 becomes ω ↦ f(ω_0)·g(ω_k) under reindex τ (since τ fixes 0 and sends k+1 to k).
 
+**CRITICAL**: This only works for k ≥ 1. For k=0, τ = swap(0,1) does NOT fix 0.
+
 Key insight: STATIONARITY is NOT enough for lag constancy.
 Counter-example: AR(1) process X_n = ρ·X_{n-1} + ε_n is stationary but
 Cov(X_0, X_k) = ρ^k depends on k.
-EXCHANGEABILITY provides this via transposition of adjacent indices. -/
+EXCHANGEABILITY provides this via transposition of adjacent indices (for k≥1). -/
 axiom condexp_lag_constant_from_exchangeability
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]
     {μ : Measure (ℕ → α)} [IsProbabilityMeasure μ]
@@ -84,7 +149,7 @@ axiom condexp_lag_constant_from_exchangeability
     (f g : α → ℝ)
     (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
     (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C)
-    (k : ℕ) :
+    (k : ℕ) (hk : 0 < k) :  -- ← ADDED: k must be positive
     μ[(fun ω => f (ω 0) * g (ω (k + 1))) | shiftInvariantSigma (α := α)]
       =ᵐ[μ]
     μ[(fun ω => f (ω 0) * g (ω k)) | shiftInvariantSigma (α := α)]
@@ -92,13 +157,18 @@ axiom condexp_lag_constant_from_exchangeability
 
 ## Proof Strategy for Filling the Axiom
 
-To prove `condexp_lag_constant_from_exchangeability`:
+**IMPORTANT**: This strategy only works for k ≥ 1. The k=0 case is FALSE (see Critical Finding above).
+
+To prove `condexp_lag_constant_from_exchangeability` for **k ≥ 1**:
 
 1. **Define transposition τ**: `τ = Equiv.swap k (k+1)`
 
-2. **Show reindex τ preserves 0**: Since τ fixes 0, `(reindex τ ω) 0 = ω 0`
+2. **Show reindex τ preserves 0**: Since k ≥ 1, τ fixes 0:
+   - `Equiv.swap_apply_of_ne_of_ne : k ≠ 0 → k+1 ≠ 0 → τ 0 = 0`
+   - Therefore `(reindex τ ω) 0 = ω (τ 0) = ω 0` ✓
 
-3. **Show reindex τ sends k+1 to k**: `(reindex τ ω) (k+1) = ω k`
+3. **Show reindex τ sends k+1 to k**: `(reindex τ ω) (k+1) = ω (τ (k+1)) = ω k`
+   - `Equiv.swap_apply_right : τ (k+1) = k`
 
 4. **Apply exchangeability**: `μ.map (reindex τ) = μ` gives
    ```
@@ -109,6 +179,8 @@ To prove `condexp_lag_constant_from_exchangeability`:
 
 5. **Handle conditional expectation under measure-preserving maps**:
    This requires showing CE commutes appropriately with reindex τ.
+
+**Why k=0 fails**: When k=0, τ = swap(0, 1) does NOT fix 0 (τ 0 = 1), so step 2 fails.
 
 ## Updated Dependency Chain
 

@@ -4014,11 +4014,16 @@ private lemma condexp_pair_factorization_MET
 
   -- Step 1: Lag-constancy from exchangeability (via transposition argument)
   -- CE[f(ω₀)·g(ω₁)|ℐ] = CE[f(ω₀)·g(ω₀)|ℐ]
+  -- ⚠️ WARNING: This uses k=0 which is MATHEMATICALLY FALSE!
+  -- The transposition τ = swap(0,1) does NOT fix 0, so the proof breaks for k=0.
+  -- See Infrastructure.lean and VIAKOOPMAN_REMEDIATION_PLAN.md for the correct approach.
+  -- TODO: Restructure this proof to avoid k=0 by using Cesàro from index 1.
   have h_lag_const :
       μ[(fun ω => f (ω 0) * g (ω 1)) | mSI]
         =ᵐ[μ]
       μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] := by
     -- Apply the lag-constancy axiom with k=0: g(ω_{0+1}) = g(ω_1) → g(ω_0)
+    -- ⚠️ k=0 is FALSE - see axiom docstring for counterexample
     exact condexp_lag_constant_from_exchangeability hExch f g hf_meas hf_bd hg_meas hg_bd 0
 
   -- Step 2: Tower property from MET + Cesàro averaging

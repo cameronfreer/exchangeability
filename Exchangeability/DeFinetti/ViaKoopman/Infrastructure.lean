@@ -957,15 +957,28 @@ also gives conditional independence.
 /-- **Lag-constancy from exchangeability via transpositions** (Kallenberg's approach).
 
 For EXCHANGEABLE measures μ on path space, the conditional expectation
-CE[f(ω₀)·g(ω_{k+1}) | ℐ] equals CE[f(ω₀)·g(ω_k) | ℐ] for all k ≥ 0.
+CE[f(ω₀)·g(ω_{k+1}) | ℐ] equals CE[f(ω₀)·g(ω_k) | ℐ] for k ≥ 0.
+
+⚠️ **WARNING: The k=0 case of this axiom is MATHEMATICALLY FALSE!**
+The transposition argument only works for k ≥ 1 (see below).
+The current proof in condexp_pair_factorization_MET uses k=0 and is therefore unsound.
+See VIAKOOPMAN_REMEDIATION_PLAN.md for the correct restructured proof approach.
 
 **Key insight**: This uses EXCHANGEABILITY (not just stationarity). The proof is:
-1. Let τ be the transposition swapping indices k and k+1 (fixing 0 and all others)
+1. Let τ be the transposition swapping indices k and k+1
 2. Exchangeability gives: Measure.map (reindex τ) μ = μ
 3. The shift-invariant σ-algebra is invariant under finite permutations
 4. Therefore: CE[f(ω₀)·g(ω_{k+1}) | ℐ] = CE[(f∘τ)(ω₀)·(g∘τ)(ω_{k+1}) | ℐ]
                                         = CE[f(ω₀)·g(ω_k) | ℐ]
-   since τ fixes 0 and swaps k ↔ k+1.
+   **BUT ONLY IF τ fixes 0, i.e., only if k ≥ 1!**
+
+**Why k=0 fails (CRITICAL)**:
+- When k=0, τ = swap(0, 1) does NOT fix 0 (τ sends 0 ↦ 1)
+- So (f∘τ)(ω₀) = f(ω₁) ≠ f(ω₀)
+- Counterexample: i.i.d. Bernoulli(1/2):
+  * CE[ω₀·ω₁ | ℐ] = E[ω₀]·E[ω₁] = 1/4
+  * CE[ω₀² | ℐ] = E[ω₀²] = 1/2 (since ω₀ ∈ {0,1})
+  * These are NOT equal!
 
 **Why stationarity alone is NOT enough**: Stationary non-exchangeable processes
 (Markov chains, AR processes) can have lag-dependent conditional correlations.
@@ -974,6 +987,11 @@ The transposition trick requires the FULL permutation invariance of exchangeabil
 **Note**: This axiom requires `hExch` (exchangeability on path space), not just
 `MeasurePreserving shift`. The previous `condIndep_product_factorization` axiom
 was INCORRECT because it only assumed stationarity.
+
+**TODO**: Restructure the proof to avoid k=0:
+1. Modify h_tower_of_lagConst to prove CE[f·g₁] = CE[f·CE[g₀|ℐ]] directly
+2. Use Cesàro averages starting from index 1: A'_n = (1/n)·Σ_{j=1}^n g(ω_j)
+3. Only use lag constancy for k ≥ 1 (which is TRUE via transposition)
 -/
 axiom condexp_lag_constant_from_exchangeability
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]
