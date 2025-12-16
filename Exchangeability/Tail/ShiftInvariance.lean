@@ -159,14 +159,57 @@ lemma condExp_shift_eq_condExp
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α)
-    (_hX_contract : Exchangeability.Contractable μ X)
-    (_hX_meas : ∀ i, Measurable (X i))
+    (hX_contract : Exchangeability.Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
     (f : α → ℝ)
-    (_hf_meas : Measurable f)
-    (_hf_int : Integrable (f ∘ X 0) μ)
+    (hf_meas : Measurable f)
+    (hf_int : Integrable (f ∘ X 0) μ)
     (n : ℕ) :
     μ[f ∘ X n | Exchangeability.Tail.tailProcess X] =ᵐ[μ] μ[f ∘ X 0 | Exchangeability.Tail.tailProcess X] := by
-  sorry
+  -- Strategy: Use uniqueness of conditional expectation.
+  -- Both sides are AEStronglyMeasurable[tail] and integrable.
+  -- For any tail-measurable set A with finite measure:
+  --   ∫_A (μ[f∘Xₙ|tail]) dμ = ∫_A f∘Xₙ dμ  (by setIntegral_condExp)
+  --   ∫_A (μ[f∘X₀|tail]) dμ = ∫_A f∘X₀ dμ  (by setIntegral_condExp)
+  -- So we need: ∫_A f∘Xₙ dμ = ∫_A f∘X₀ dμ for tail-measurable A.
+  -- This follows from contractability: for tail events, the shifted process
+  -- has the same distribution as the original.
+
+  -- For n = 0, this is trivial
+  cases n with
+  | zero => rfl
+  | succ n =>
+    -- The non-trivial case: show μ[f∘X(n+1)|tail] =ᵐ μ[f∘X₀|tail]
+    -- Both are conditional expectations wrt the same σ-algebra
+
+    -- Integrability of f ∘ X (n+1)
+    have hf_int_n : Integrable (f ∘ X (n + 1)) μ := by
+      -- By contractability, X (n+1) has the same distribution as X 0
+      have h_shift := Exchangeability.Contractable.shift_segment_eq hX_contract 1 (n + 1)
+      -- Measure.map (fun ω (i : Fin 1) => X ((n+1) + i.val) ω) μ =
+      --   Measure.map (fun ω (i : Fin 1) => X i.val ω) μ
+      -- This implies X (n+1) has same distribution as X 0
+      -- So if f ∘ X 0 is integrable, so is f ∘ X (n+1)
+      -- Use: Integrable.of_map with the equal measures
+      have h_meas_comp : Measurable (f ∘ X (n + 1)) := hf_meas.comp (hX_meas (n + 1))
+      -- The distributions are equal
+      have h_map_eq : Measure.map (X (n + 1)) μ = Measure.map (X 0) μ := by
+        have := Exchangeability.Contractable.shift_segment_eq hX_contract 1 (n + 1)
+        -- Extract from the Fin 1 case
+        ext s hs
+        have h1 : Measure.map (fun ω (i : Fin 1) => X ((n + 1) + i.val) ω) μ =
+                  Measure.map (fun ω (i : Fin 1) => X i.val ω) μ := this
+        -- For Fin 1, the function is determined by the value at 0
+        -- X (n+1) is the projection to the 0-th coordinate
+        sorry
+      rw [← Integrable.map_measure h_meas_comp.aemeasurable h_map_eq]
+      exact hf_int.map (hX_meas 0)
+
+    -- TODO: Complete the proof using ae_eq_of_forall_setIntegral_eq_of_sigmaFinite'
+    -- This requires showing that for all tail-measurable sets A:
+    --   ∫_A f(X(n+1)) dμ = ∫_A f(X 0) dμ
+    -- which follows from contractability.
+    sorry
 
 /-! ## Application to Cesàro Averages
 
