@@ -159,19 +159,56 @@ lemma l1_convergence_under_clip01
 
 /-- **L¹ uniqueness of limit:** If fₙ → f and fₙ → g in L¹, then f =ᵐ g.
 
-TODO: Complete the proof using triangle inequality and eLpNorm_eq_zero_iff. -/
+Uses triangle inequality and `eLpNorm_eq_zero_iff`. -/
 private lemma L1_unique_of_two_limits
   {μ : Measure Ω} {f g : Ω → ℝ}
-  (_hf : Integrable f μ) (_hg : Integrable g μ)
+  (hf : Integrable f μ) (hg : Integrable g μ)
   {fn : ℕ → Ω → ℝ}
-  (_hfn : ∀ n, AEStronglyMeasurable (fn n) μ)
-  (_h1 : Tendsto (fun n => eLpNorm (fn n - f) 1 μ) atTop (𝓝 0))
-  (_h2 : Tendsto (fun n => eLpNorm (fn n - g) 1 μ) atTop (𝓝 0)) :
+  (hfn : ∀ n, AEStronglyMeasurable (fn n) μ)
+  (h1 : Tendsto (fun n => eLpNorm (fn n - f) 1 μ) atTop (𝓝 0))
+  (h2 : Tendsto (fun n => eLpNorm (fn n - g) 1 μ) atTop (𝓝 0)) :
   f =ᵐ[μ] g := by
   -- Strategy: Show eLpNorm (f - g) 1 μ = 0 using triangle inequality
   -- ‖f - g‖₁ ≤ ‖f - fn‖₁ + ‖fn - g‖₁ → 0 as n → ∞
   -- Then use eLpNorm_eq_zero_iff to convert to f =ᵐ g
-  sorry
+
+  -- Get AEStronglyMeasurable for f and g from Integrable
+  have hf_aesm : AEStronglyMeasurable f μ := hf.aestronglyMeasurable
+  have hg_aesm : AEStronglyMeasurable g μ := hg.aestronglyMeasurable
+
+  -- Key: eLpNorm (f - g) 1 μ ≤ eLpNorm (f - fn n) 1 μ + eLpNorm (fn n - g) 1 μ for all n
+  -- And both terms on the right go to 0
+  have h_bound : ∀ n, eLpNorm (f - g) 1 μ ≤ eLpNorm (fn n - f) 1 μ + eLpNorm (fn n - g) 1 μ := by
+    intro n
+    calc eLpNorm (f - g) 1 μ
+        = eLpNorm ((f - fn n) + (fn n - g)) 1 μ := by ring_nf
+      _ ≤ eLpNorm (f - fn n) 1 μ + eLpNorm (fn n - g) 1 μ :=
+          eLpNorm_add_le (hf_aesm.sub (hfn n)) ((hfn n).sub hg_aesm) (by norm_num : (1 : ℕ∞) ≥ 1)
+      _ = eLpNorm (fn n - f) 1 μ + eLpNorm (fn n - g) 1 μ := by
+          rw [← eLpNorm_neg (f - fn n)]
+          simp only [neg_sub]
+
+  -- The sum eLpNorm (fn n - f) 1 μ + eLpNorm (fn n - g) 1 μ → 0
+  have h_sum_tendsto : Tendsto (fun n => eLpNorm (fn n - f) 1 μ + eLpNorm (fn n - g) 1 μ) atTop (𝓝 0) := by
+    convert h1.add h2
+    simp only [add_zero]
+
+  -- Since eLpNorm (f - g) 1 μ is constant and bounded by something going to 0, it must be 0
+  have h_zero : eLpNorm (f - g) 1 μ = 0 := by
+    by_contra h_ne
+    have h_pos : 0 < eLpNorm (f - g) 1 μ := pos_iff_ne_zero.mpr h_ne
+    -- The bound goes to 0, so eventually it's < eLpNorm (f - g) 1 μ
+    have := (ENNReal.tendsto_atTop (f := fun n => eLpNorm (fn n - f) 1 μ + eLpNorm (fn n - g) 1 μ)).mp
+              h_sum_tendsto (eLpNorm (f - g) 1 μ) h_pos
+    obtain ⟨N, hN⟩ := this
+    -- At n = N, we have h_bound N and hN N (le_refl N)
+    have h_lt : eLpNorm (fn N - f) 1 μ + eLpNorm (fn N - g) 1 μ < eLpNorm (f - g) 1 μ := hN N (le_refl N)
+    have h_le : eLpNorm (f - g) 1 μ ≤ eLpNorm (fn N - f) 1 μ + eLpNorm (fn N - g) 1 μ := h_bound N
+    exact (lt_irrefl _ (lt_of_le_of_lt h_le h_lt))
+
+  -- Apply eLpNorm_eq_zero_iff to conclude f - g =ᵐ 0
+  rw [eLpNorm_eq_zero_iff (hf_aesm.sub hg_aesm) (by norm_num : (1 : ℕ∞) ≠ 0)] at h_zero
+  exact sub_ae_eq_zero.mp h_zero
 
 /-- **L¹ convergence under clipping:** If fₙ → f in L¹, then clip01∘fₙ → clip01∘f in L¹. -/
 private lemma L1_tendsto_clip01
