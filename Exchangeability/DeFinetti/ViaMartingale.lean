@@ -1143,9 +1143,39 @@ The original architecture was:
 This lemma proves: triple law → drop-info directly, breaking the cycle.
 -/
 
--- `condExp_eq_of_triple_law_direct` is imported from
--- Exchangeability.Probability.Axioms.TripleLawDropInfo
--- See that file for the full proof obligation and mathematical background.
+/-! ### ARCHITECTURAL ISSUE: Invalid Mathematical Claim
+
+`condExp_eq_of_triple_law_direct` is imported from `Exchangeability.Probability.TripleLawDropInfo`.
+
+**CRITICAL BUG DISCOVERED:** The proof below at line 1618 claims:
+```
+have h_proj : μ[φ | ℋ] =ᵐ[μ] U := h_drop_info
+```
+where ℋ = σ(Z,W) and U = E[φ | σ(W)].
+
+This asserts: E[φ | σ(Z,W)] = E[φ | σ(W)] (dropping Z from conditioning).
+
+**This claim is INVALID in general.**
+
+Kallenberg Lemma 1.3 (implemented in `TripleLawDropInfo.lean`) says:
+- If (X,W) =^d (X,W') AND σ(W) ⊆ σ(W'), THEN E[φ|σ(W')] = E[φ|σ(W)]
+
+The key requirement is the *contraction* hypothesis σ(W) ⊆ σ(W').
+You can only drop from a *finer* σ-algebra to a *coarser* one with matching pair laws.
+
+**What we have:** law(Y,Z,W) = law(Y,Z,W') and σ(W) ⊆ σ(Z,W).
+**What we need to apply Kallenberg 1.3:** law(Y,W) = law(Y,(Z,W)) — which is FALSE in general.
+
+The triple law only tells us that the joint distribution of (Y,Z,W) equals (Y,Z,W').
+It does NOT imply that conditioning on (Z,W) vs just W gives the same result for φ(Y).
+
+**Options to fix:**
+1. Find a different proof path that doesn't need this invalid drop-info property
+2. Establish that there IS a valid contraction relationship in this specific context
+3. Use alternative characterization of conditional independence
+
+See plan file at /Users/freer/.claude/plans/silly-baking-marble.md for details.
+-/
 
 lemma condIndep_of_triple_law
   {Ω α β γ : Type*}
@@ -1245,7 +1275,17 @@ lemma condIndep_of_triple_law
             integral_map hYZW'_meas.aemeasurable hg_ae_W'
 
     -- Compute drop-info property BEFORE defining 𝔾 to avoid instance pollution
-    have h_drop_info := condExp_eq_of_triple_law_direct Y Z W W' hY hZ hW hW' h_triple_ZYW hA
+    -- TODO: ARCHITECTURAL BUG - see comment block at line 1146
+    -- The original lemma claimed: E[φ | σ(Z,W)] = E[φ | σ(W)] from triple law
+    -- But this is INVALID. Kallenberg 1.3 requires a contraction hypothesis
+    -- that doesn't hold here. This proof needs fundamental restructuring.
+    -- For now, we use sorry to preserve proof structure while documenting the issue.
+    --
+    -- The type we need is: E[φ | σ(Z,W)] =ᵐ E[φ | σ(W)] (used at line ~1655)
+    -- But this claim cannot be derived from triple law alone.
+    have h_drop_info : μ[φ | MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance] =ᵐ[μ]
+                       μ[φ | MeasurableSpace.comap W inferInstance] := by
+      sorry  -- INVALID: See architectural issue at line 1146
 
     let 𝔾 : MeasurableSpace Ω := MeasurableSpace.comap W inferInstance
     set U := μ[φ | 𝔾] with hU_def
