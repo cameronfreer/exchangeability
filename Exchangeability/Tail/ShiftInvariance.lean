@@ -240,12 +240,32 @@ lemma setIntegral_comp_shift_eq
 
     -- Proof: ∫_B g dν = ∫_B g d(T_* ν) = ∫_{T⁻¹(B)} (g ∘ T) dν = ∫_B (g ∘ T) dν
 
-    -- The formal implementation requires:
-    -- 1. Showing tailProcess X ≤ comap π (tailShift α) (done in TailSigma.lean)
-    -- 2. Showing B is T-invariant when A is tail-measurable
-    -- 3. Change of variables formula
+    -- Alternative proof using finite-dimensional contractability directly:
+    -- For A ∈ tailProcess X ⊆ tailFamily X N for any N, pick N = k + 2 > k + 1.
+    -- A depends only on (X_N, X_{N+1}, ...).
+    -- By contractability, for strictly increasing sequences of indices:
+    --   Law(X_{k+1}, X_N, X_{N+1}, ..., X_{N+M}) = Law(X_0, X_1, ..., X_{M+1})
+    --   Law(X_0, X_N, X_{N+1}, ..., X_{N+M}) = Law(X_0, X_1, ..., X_{M+1})
+    -- These have the SAME law because both are strictly increasing sequences of length M+2.
+    -- Therefore: ∫_A f(X_{k+1}) dμ = ∫_A f(X_0) dμ
+    --
+    -- Detailed argument:
+    -- For any cylinder set C = {ω : (X_N(ω), ..., X_{N+M}(ω)) ∈ D} with N > k+1:
+    --   ∫_C f(X_{k+1}) dμ = ∫ f(X_{k+1}) · 1_D(X_N, ..., X_{N+M}) dμ
+    --                     = 𝔼[g(X_{k+1}, X_N, ..., X_{N+M})]
+    --                     = 𝔼[g(X_0, X_1, ..., X_{M+1})]  (by contractability)
+    --                     = 𝔼[g(X_0, X_N, ..., X_{N+M})]  (by contractability)
+    --                     = ∫_C f(X_0) dμ
+    -- where g(z_0, z_1, ...) = f(z_0) · 1_D(z_1, ..., z_{M+1}).
+    --
+    -- The equality extends to all sets in σ(X_N, X_{N+1}, ...) by π-λ theorem,
+    -- and A ∈ tailFamily X N for N = k + 2 > k + 1.
 
-    -- TODO: Complete the formal proof using the above strategy
+    -- The formal implementation of this argument requires:
+    -- 1. A lemma stating contractability for non-contiguous strictly increasing sequences
+    -- 2. The π-λ / monotone class extension
+    -- Both are mathematically routine but technically involved.
+
     sorry
 
 /-- **Shift invariance of conditional expectation for contractable sequences (TODO).**
