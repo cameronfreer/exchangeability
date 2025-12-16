@@ -66,16 +66,66 @@ lemma aestronglyMeasurable_iInf_antitone
     (f : α → ℝ)
     (hf : ∀ N, @MeasureTheory.AEStronglyMeasurable α ℝ _ (m N) m₀ f μ) :
     @MeasureTheory.AEStronglyMeasurable α ℝ _ (⨅ N, m N) m₀ f μ := by
-  -- The proof requires constructing a common strongly measurable representative
-  -- from the a.e.-equal witnesses g_N for each σ-algebra m N.
-  -- Key steps:
-  -- 1. Pick g_0 as base representative (StronglyMeasurable[m 0] g_0, f =ᵐ g_0)
-  -- 2. For each N, g_N =ᵐ g_0 (since both =ᵐ f)
-  -- 3. Define S = ⋃ N, {g_0 ≠ g_N} (countable union of null sets = null)
-  -- 4. Construct g agreeing with all g_N outside S
-  -- 5. Show g is Measurable[m N] for each N, hence Measurable[⨅ N, m N]
-  -- 6. Use Measurable.stronglyMeasurable for ℝ-valued functions
-  sorry
+  -- Strategy: Use liminf of witnesses to construct a common representative
+  -- that is measurable with respect to ⨅ N, m N.
+
+  -- Step 1: Extract strongly measurable representatives for each N
+  let g : ℕ → α → ℝ := fun N => (hf N).mk f
+  have hg_sm : ∀ N, @MeasureTheory.StronglyMeasurable α ℝ _ (m N) (g N) :=
+    fun N => (hf N).stronglyMeasurable_mk
+  have hg_meas : ∀ N, @Measurable α ℝ (m N) _ (g N) :=
+    fun N => (hg_sm N).measurable
+  have hg_ae : ∀ N, f =ᵐ[μ] g N := fun N => (hf N).ae_eq_mk
+
+  -- Step 2: Define h as the liminf of the g N
+  let h : α → ℝ := fun x => Filter.liminf (fun N => g N x) Filter.atTop
+
+  -- Step 3: Show h is Measurable[⨅ N, m N]
+  -- This means: for each N, h is Measurable[m N]
+  have h_meas_each : ∀ N, @Measurable α ℝ (m N) _ h := by
+    intro N
+    -- Key: liminf (g n) = liminf (g (n + N)) by Filter.liminf_nat_add
+    -- And for n ≥ 0, g (n + N) is Measurable[m (n + N)] ≤ Measurable[m N] (by antitonicity)
+    have h_shift : h = fun x => Filter.liminf (fun n => g (n + N) x) Filter.atTop := by
+      funext x
+      exact (Filter.liminf_nat_add (fun n => g n x) N).symm
+    rw [h_shift]
+    -- Now show liminf of g (n + N) is Measurable[m N]
+    -- Each g (n + N) is Measurable[m (n + N)], and m (n + N) ≤ m N by antitonicity
+    have hg_meas_shifted : ∀ n, @Measurable α ℝ (m N) _ (g (n + N)) := by
+      intro n
+      have h_le_N : m (n + N) ≤ m N := h_anti (Nat.le_add_left N n)
+      exact Measurable.mono (hg_meas (n + N)) h_le_N le_rfl
+    haveI : MeasurableSpace α := m N
+    exact Measurable.liminf hg_meas_shifted
+
+  -- Now conclude Measurable[⨅ N, m N] h
+  have h_meas : @Measurable α ℝ (⨅ N, m N) _ h := by
+    rw [measurable_iInf]
+    exact h_meas_each
+
+  -- Step 4: Show f =ᵐ h
+  -- On the set where f = g N for all N, we have h = f
+  have h_ae_eq : f =ᵐ[μ] h := by
+    -- Countable intersection of full-measure sets is full-measure
+    have h_all_eq : ∀ᵐ x ∂μ, ∀ N, f x = g N x := by
+      rw [ae_all_iff]
+      intro N
+      exact hg_ae N
+    filter_upwards [h_all_eq] with x hx
+    -- At x, f x = g N x for all N, so liminf (g N x) = f x
+    simp only [h]
+    have h_const : ∀ N, g N x = f x := fun N => (hx N).symm
+    simp_rw [h_const]
+    exact Filter.liminf_const (f x)
+
+  -- Step 5: Convert Measurable to StronglyMeasurable (for ℝ)
+  have h_sm : @MeasureTheory.StronglyMeasurable α ℝ _ (⨅ N, m N) h := by
+    haveI : MeasurableSpace α := ⨅ N, m N
+    exact h_meas.stronglyMeasurable
+
+  -- Step 6: Conclude AEStronglyMeasurable
+  exact ⟨h, h_sm, h_ae_eq.symm⟩
 
 /-- AEStronglyMeasurable for a sub-σ-algebra is preserved under a.e. pointwise limits.
 
