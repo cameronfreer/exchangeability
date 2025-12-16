@@ -159,21 +159,84 @@ private lemma setIntegral_cylinder_eq
     (hf_meas : Measurable f)
     (_hf_int : Integrable (f ∘ X 0) μ)
     (k N M : ℕ) (hN : k + 1 < N)
-    (S : Set (Fin (M + 2) → α)) (hS : MeasurableSet S) :
+    (S : Set (Fin (M + 2) → α)) (_hS : MeasurableSet S) :
     let C : Set Ω := {ω | (fun i => X (N + i.val) ω) ∈ S}
     ∫ ω in C, f (X (k + 1) ω) ∂μ = ∫ ω in C, f (X 0 ω) ∂μ := by
-  -- The proof uses contractability on strictly increasing sequences.
-  -- For N > k+1, the sequence (k+1, N, N+1, ..., N+M+1) is strictly increasing.
-  -- By Contractable, it has the same law as (0, 1, 2, ..., M+2).
-  -- Similarly, (0, N, N+1, ..., N+M+1) has the same law.
-  -- Both equal the same reference law, so:
-  -- Law(X_{k+1}, X_N, ..., X_{N+M+1}) = Law(X_0, X_N, ..., X_{N+M+1})
+  -- PROOF STRATEGY:
+  -- Define index sequences σ, τ : Fin (M+3) → ℕ where:
+  --   σ(0) = k+1, σ(i+1) = N+i  (for i = 0, ..., M+1)
+  --   τ(0) = 0,   τ(i+1) = N+i  (for i = 0, ..., M+1)
+  -- Both are strictly increasing (since k+1 < N and 0 < N).
+  -- By contractability, both Measure.map (fun ω i => X (σ i) ω) μ and
+  -- Measure.map (fun ω i => X (τ i) ω) μ equal Measure.map (fun ω i => X i.val ω) μ.
+  -- Therefore they're equal to each other.
   --
-  -- For the cylinder C = {ω : (X_N(ω), ..., X_{N+M+1}(ω)) ∈ S}:
-  -- ∫_C f(X_{k+1}) dμ = E[g(X_{k+1}, X_N, ..., X_{N+M+1})]
-  -- where g(z) = f(z_0) · 1_S(z_1, ..., z_{M+2})
-  --            = E[g(X_0, X_N, ..., X_{N+M+1})]  (by equal joint law)
-  --            = ∫_C f(X_0) dμ
+  -- Define g : (Fin (M+3) → α) → ℝ by g(z) = f(z 0) · S.indicator 1 (fun i => z ⟨i+1, _⟩).
+  -- Then:
+  --   ∫_C f(X_{k+1}) dμ = ∫ g(fun i => X (σ i) ω) dμ
+  --                     = ∫ g dν₁  where ν₁ = (fun ω i => X (σ i) ω)_* μ
+  --   ∫_C f(X_0) dμ     = ∫ g(fun i => X (τ i) ω) dμ
+  --                     = ∫ g dν₂  where ν₂ = (fun ω i => X (τ i) ω)_* μ
+  -- Since ν₁ = ν₂ by contractability, the integrals are equal.
+
+  -- Define the index sequences
+  let σ : Fin (M + 3) → ℕ := fun i => if i.val = 0 then k + 1 else N + (i.val - 1)
+  let τ : Fin (M + 3) → ℕ := fun i => if i.val = 0 then 0 else N + (i.val - 1)
+
+  -- σ is strictly increasing
+  have hσ_strictMono : StrictMono σ := by
+    intro i j hij
+    simp only [σ]
+    rcases Nat.eq_or_gt_of_le (Nat.zero_le i.val) with hi | hi
+    · -- i.val = 0
+      simp only [← hi, ↓reduceIte]
+      have hj_pos : 0 < j.val := hij
+      simp only [Nat.ne_of_gt hj_pos, ↓reduceIte]
+      -- Need: k + 1 < N + (j.val - 1)
+      omega
+    · -- i.val > 0
+      simp only [Nat.ne_of_gt hi, ↓reduceIte]
+      have hj_pos : 0 < j.val := Nat.lt_trans hi hij
+      simp only [Nat.ne_of_gt hj_pos, ↓reduceIte]
+      -- Need: N + (i.val - 1) < N + (j.val - 1)
+      omega
+
+  -- τ is strictly increasing
+  have hτ_strictMono : StrictMono τ := by
+    intro i j hij
+    simp only [τ]
+    rcases Nat.eq_or_gt_of_le (Nat.zero_le i.val) with hi | hi
+    · -- i.val = 0
+      simp only [← hi, ↓reduceIte]
+      have hj_pos : 0 < j.val := hij
+      simp only [Nat.ne_of_gt hj_pos, ↓reduceIte]
+      -- Need: 0 < N + (j.val - 1), which is true since N > 0 (from hN)
+      omega
+    · -- i.val > 0
+      simp only [Nat.ne_of_gt hi, ↓reduceIte]
+      have hj_pos : 0 < j.val := Nat.lt_trans hi hij
+      simp only [Nat.ne_of_gt hj_pos, ↓reduceIte]
+      -- Need: N + (i.val - 1) < N + (j.val - 1)
+      omega
+
+  -- By contractability, both push-forward measures equal the reference measure
+  have h_eq_σ := hX_contract (M + 3) σ hσ_strictMono
+  have h_eq_τ := hX_contract (M + 3) τ hτ_strictMono
+
+  -- Therefore σ and τ give the same push-forward measure
+  have h_eq : Measure.map (fun ω i => X (σ i) ω) μ = Measure.map (fun ω i => X (τ i) ω) μ := by
+    rw [h_eq_σ, h_eq_τ]
+
+  -- Now express the integrals using these measures
+  -- The key is that σ and τ agree on indices 1, ..., M+2 (both give N, N+1, ..., N+M+1)
+  -- and only differ at index 0 (σ gives k+1, τ gives 0)
+
+  -- For the set C: ω ∈ C ↔ (fun i => X (N + i.val) ω) ∈ S
+  --                     ↔ (fun i : Fin (M+2) => X (σ ⟨i+1, _⟩) ω) ∈ S  [since σ(i+1) = N+i]
+  --                     ↔ (fun i : Fin (M+2) => X (τ ⟨i+1, _⟩) ω) ∈ S  [since τ(i+1) = N+i]
+
+  -- The formal calculation requires careful handling of indicator functions and
+  -- the integral_map lemma. This is technically routine but notationally involved.
   sorry
 
 /-- **Key lemma: Set integrals over tail-measurable sets are shift-invariant.**
