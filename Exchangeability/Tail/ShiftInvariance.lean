@@ -178,29 +178,74 @@ lemma setIntegral_comp_shift_eq
   -- Measurability of π
   have hπ_meas : Measurable π := measurable_pi_lambda _ hX_meas
 
-  -- By induction on k, it suffices to show the k=1 case (shift by 1)
-  induction k with
+  -- The key insight: A ∈ tailProcess X = iInf (tailFamily X),
+  -- so A ∈ tailFamily X N for all N, including N > k.
+  -- For such N, the sequences (k, N, N+1, ...) and (0, N, N+1, ...)
+  -- are both strictly increasing, so by contractability they have
+  -- the same joint law. This implies the set integrals are equal.
+
+  -- We prove directly that for any k, the integral equals the k=0 case.
+  -- The argument uses contractability on finite-dimensional marginals.
+
+  -- Strategy: A is in tailFamily X N for all N. For N > k, express the
+  -- integral in terms of the joint distribution of (X_k, X_N, X_{N+1}, ...)
+  -- and use contractability.
+
+  -- For k = 0, trivial
+  cases k with
   | zero => rfl
-  | succ k ih =>
-    -- Need: ∫_A f(X(k+1)) = ∫_A f(X k) = ∫_A f(X 0)
-    rw [ih]
-    -- Now show ∫_A f(X(k+1)) = ∫_A f(X k)
+  | succ k =>
+    -- Show ∫_A f(X(k+1)) = ∫_A f(X 0)
+    -- A ∈ tailFamily X N for N = k + 2
+    -- The sequences (k+1, k+2, k+3, ...) and (0, 1, 2, ...) are both strictly increasing
+    -- So by contractability, Law(X(k+1), X(k+2), X(k+3), ...) = Law(X 0, X 1, X 2, ...)
 
-    -- This requires showing that shifting preserves the integral over tail sets.
-    -- The mathematical argument is:
-    -- - The measure ν = π_* μ is shift-invariant by tailSigma_shift_invariant_for_contractable
-    -- - The set B = π(A) is tail-measurable, hence shift-invariant: T⁻¹(B) = B
-    -- - By invariance: ∫_B g dν = ∫_B (g ∘ T) dν
-    -- - Taking g = f ∘ π_k gives: ∫_B f(y_k) dν = ∫_B f(y_{k+1}) dν
-    -- - Translating back: ∫_A f(X_k) dμ = ∫_A f(X_{k+1}) dμ
+    -- This means: for any bounded measurable g : (ℕ → α) → ℝ,
+    -- ∫ g(X(k+1), X(k+2), ...) dμ = ∫ g(X 0, X 1, ...) dμ
 
-    -- The formal proof requires:
-    -- 1. Infrastructure connecting tailProcess X with tailShift α via comap
-    -- 2. Proof that tail sets in path space are shift-invariant
-    -- 3. Careful handling of integration under pushforward
+    -- In particular, taking g(y) = f(y 0) · 1_{A'}(y) where A' = π(A) in path space:
+    -- ∫_A f(X(k+1)) dμ = ∫_A f(X 0) dμ
 
-    -- For now, we leave this step as sorry.
-    -- The mathematical correctness is established above.
+    -- The measure equality from shift invariance
+    have h_shift := tailSigma_shift_invariant_for_contractable X hX_contract hX_meas
+    -- h_shift : Measure.map (fun ω i => X (1 + i) ω) μ = Measure.map (fun ω i => X i ω) μ
+
+    -- By iterating shift invariance k+1 times, we get:
+    -- Measure.map (fun ω i => X ((k+1) + i) ω) μ = Measure.map (fun ω i => X i ω) μ
+
+    -- Since A is tail-measurable, it's determined by coordinates ≥ some N.
+    -- Under the shift by k+1, the indicator becomes 1_A(shifted) which equals 1_A
+    -- because tail events don't depend on finite initial segments.
+
+    -- The formal argument:
+    -- Let Φ_j : Ω → (ℕ → α) by Φ_j(ω)_i = X(j+i)(ω)
+    -- Then A = Φ_0⁻¹(B) for some B ∈ tailShift α (tail σ-algebra on path space)
+    -- By tailProcess_eq_comap_path or similar.
+
+    -- For tail-measurable B:
+    -- - B is shift-invariant: T⁻¹(B) = B
+    -- - So Φ_j⁻¹(B) = Φ_0⁻¹(B) = A for all j
+
+    -- Therefore:
+    -- ∫_A f(X(k+1)) dμ = ∫_{Φ_0⁻¹(B)} f(X(k+1)) dμ
+    --                  = ∫_B f(y_{k+1}) d(Φ_0_* μ)(y)
+    --                  = ∫_B f((T^{k+1} y)_0) d(Φ_0_* μ)(y)
+    --                  = ∫_B f(y_0) d((T^{k+1})_* Φ_0_* μ)(y)  [change of vars]
+    --                  = ∫_B f(y_0) d(Φ_0_* μ)(y)  [since (T^{k+1})_* ν = ν]
+    --                  = ∫_A f(X 0) dμ
+
+    -- The change of variables for non-invertible T requires:
+    -- For ν-integrable g and B with T⁻¹(B) = B:
+    -- ∫_B g dν = ∫_B (g ∘ T) dν (when T_* ν = ν)
+
+    -- Proof: ∫_B g dν = ∫_B g d(T_* ν) = ∫_{T⁻¹(B)} (g ∘ T) dν = ∫_B (g ∘ T) dν
+
+    -- The formal implementation requires:
+    -- 1. Showing tailProcess X ≤ comap π (tailShift α) (done in TailSigma.lean)
+    -- 2. Showing B is T-invariant when A is tail-measurable
+    -- 3. Change of variables formula
+
+    -- TODO: Complete the formal proof using the above strategy
     sorry
 
 /-- **Shift invariance of conditional expectation for contractable sequences (TODO).**
