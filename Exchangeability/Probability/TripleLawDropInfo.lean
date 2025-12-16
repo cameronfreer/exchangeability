@@ -199,21 +199,26 @@ lemma condExp_indicator_eq_of_law_eq_of_comap_le
   -- Step 4b: E[μ₁²] = E[μ₂²] from the pair law (X,W) =^d (X,W')
   -- This is the key step using the law equality hypothesis
   have h_sq_eq : ∫ ω, μ₁ ω * μ₁ ω ∂μ = ∫ ω, μ₂ ω * μ₂ ω ∂μ := by
-    -- The pair law (X,W) =^d (X,W') implies that the conditional probabilities
-    -- P[X ∈ A | W] and P[X ∈ A | W'] have the same distribution when viewed
-    -- as random variables. Since μ₁ = E[φ|mW] is measurable w.r.t. W and
-    -- μ₂ = E[φ|mW'] is measurable w.r.t. W', and the pair laws match,
-    -- any symmetric function of these (like x²) integrates to the same value.
+    -- Key insight: (X,W) =^d (X,W') implies:
+    -- 1. law(W) = law(W') (project to second component)
+    -- 2. law(φ, W) = law(φ, W') (since φ is a function of X)
+    -- 3. The conditional expectation E[φ|W] pushed forward by W equals
+    --    E[φ|W'] pushed forward by W' (both are the "conditional probability
+    --    of φ given the conditioning variable" with the same law)
     --
-    -- Formally: law(μ₁) = law(μ₂) as measures on ℝ, hence E[f∘μ₁] = E[f∘μ₂]
-    -- for all bounded measurable f.
+    -- More precisely:
+    -- - μ₁ = E[φ|σ(W)] = g₁ ∘ W for some measurable g₁ (Doob-Dynkin)
+    -- - μ₂ = E[φ|σ(W')] = g₂ ∘ W' for some measurable g₂
+    -- - The pair law equality gives: for all measurable B,
+    --   ∫_B g₁ d(law W) = μ(φ=1, W∈B) = μ(φ=1, W'∈B) = ∫_B g₂ d(law W')
+    -- - Also law(W) = law(W') from the pair law marginal
+    -- - So g₁ = g₂ (law W)-a.e.
+    -- - Thus ∫ g₁² d(law W) = ∫ g₂² d(law W')
+    -- - Thus ∫ μ₁² dμ = ∫ μ₂² dμ
     --
-    -- The proof requires showing that μ₁ = g₁ ∘ W and μ₂ = g₂ ∘ W' for some
-    -- measurable functions g₁, g₂, and that the pair law equality gives
-    -- law(φ, W) = law(φ, W') which implies the distributional equality of
-    -- the conditional expectations.
-    --
-    -- This is the technical heart of Kallenberg 1.3.
+    -- This requires disintegration / regular conditional probability theory
+    -- which is deep in mathlib. For now, we accept this as the mathematical
+    -- content of Kallenberg 1.3.
     sorry
 
   -- Step 5: Conclude via L² = 0 implies a.e. equality
