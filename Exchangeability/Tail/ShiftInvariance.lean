@@ -526,10 +526,21 @@ lemma setIntegral_comp_shift_eq
     -- 2. `induction_on_inter` for extending from π-systems (mathlib has this)
     -- 3. Set integral additivity on disjoint unions (mathlib has this)
 
-    -- Implementation note: The full formalization requires expressing tailFamily X N as
-    -- generateFrom of cylinder sets and applying induction_on_inter. This is routine
-    -- but requires setting up the cylinder set infrastructure explicitly.
-
+    -- Implementation note: The full formalization requires π-λ extension from cylinders.
+    -- The key components already proved:
+    -- ✓ setIntegral_cylinder_eq: Integral equality holds on finite-dimensional cylinders
+    -- ✓ tailSigma_shift_invariant_for_contractable: Path space law is shift-invariant
+    --
+    -- Required infrastructure for π-λ extension:
+    -- 1. Show tailFamily X N = generateFrom {cylinder sets based on (X_N, X_{N+1}, ...)}
+    -- 2. Show cylinder sets form a π-system (closed under finite intersections)
+    -- 3. Apply induction_on_inter with the λ-system defined by:
+    --    P(A) := "∫_A f(X_{k+1}) dμ = ∫_A f(X_0) dμ"
+    --    - P(∅): Both integrals are 0 ✓
+    --    - P(A) → P(Aᶜ): By linearity ∫_{Aᶜ} = ∫_Ω - ∫_A
+    --    - Disjoint union: ∫_{⋃ Aᵢ} = ∑ ∫_{Aᵢ} by countable additivity
+    --
+    -- The mathematical argument is sound; formal infrastructure is non-trivial.
     sorry
 
 /-- **Shift invariance of conditional expectation for contractable sequences (TODO).**
