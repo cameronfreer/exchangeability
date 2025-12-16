@@ -187,16 +187,16 @@ private lemma setIntegral_cylinder_eq
   have hσ_strictMono : StrictMono σ := by
     intro i j hij
     simp only [σ]
-    rcases Nat.eq_or_gt_of_le (Nat.zero_le i.val) with hi | hi
+    by_cases hi : i.val = 0
     · -- i.val = 0
-      simp only [← hi, ↓reduceIte]
-      have hj_pos : 0 < j.val := hij
+      simp only [hi, ↓reduceIte]
+      have hj_pos : 0 < j.val := by omega
       simp only [Nat.ne_of_gt hj_pos, ↓reduceIte]
       -- Need: k + 1 < N + (j.val - 1)
       omega
     · -- i.val > 0
-      simp only [Nat.ne_of_gt hi, ↓reduceIte]
-      have hj_pos : 0 < j.val := Nat.lt_trans hi hij
+      simp only [hi, ↓reduceIte]
+      have hj_pos : 0 < j.val := by omega
       simp only [Nat.ne_of_gt hj_pos, ↓reduceIte]
       -- Need: N + (i.val - 1) < N + (j.val - 1)
       omega
@@ -205,16 +205,16 @@ private lemma setIntegral_cylinder_eq
   have hτ_strictMono : StrictMono τ := by
     intro i j hij
     simp only [τ]
-    rcases Nat.eq_or_gt_of_le (Nat.zero_le i.val) with hi | hi
+    by_cases hi : i.val = 0
     · -- i.val = 0
-      simp only [← hi, ↓reduceIte]
-      have hj_pos : 0 < j.val := hij
+      simp only [hi, ↓reduceIte]
+      have hj_pos : 0 < j.val := by omega
       simp only [Nat.ne_of_gt hj_pos, ↓reduceIte]
       -- Need: 0 < N + (j.val - 1), which is true since N > 0 (from hN)
       omega
     · -- i.val > 0
-      simp only [Nat.ne_of_gt hi, ↓reduceIte]
-      have hj_pos : 0 < j.val := Nat.lt_trans hi hij
+      simp only [hi, ↓reduceIte]
+      have hj_pos : 0 < j.val := by omega
       simp only [Nat.ne_of_gt hj_pos, ↓reduceIte]
       -- Need: N + (i.val - 1) < N + (j.val - 1)
       omega
@@ -235,9 +235,157 @@ private lemma setIntegral_cylinder_eq
   --                     ↔ (fun i : Fin (M+2) => X (σ ⟨i+1, _⟩) ω) ∈ S  [since σ(i+1) = N+i]
   --                     ↔ (fun i : Fin (M+2) => X (τ ⟨i+1, _⟩) ω) ∈ S  [since τ(i+1) = N+i]
 
-  -- The formal calculation requires careful handling of indicator functions and
-  -- the integral_map lemma. This is technically routine but notationally involved.
-  sorry
+  -- Define the joint function g : (Fin (M+3) → α) → ℝ
+  -- g(z) = f(z 0) · indicator for (z_1, z_2, ..., z_{M+2}) ∈ S
+  let g : (Fin (M + 3) → α) → ℝ := fun z =>
+    f (z ⟨0, by omega⟩) * (S.indicator 1 (fun i : Fin (M + 2) => z ⟨i.val + 1, by omega⟩))
+
+  -- The integrals can be expressed as:
+  -- ∫_C f(X_{k+1}) dμ = ∫ g(fun i => X (σ i) ω) dμ
+  -- ∫_C f(X_0) dμ     = ∫ g(fun i => X (τ i) ω) dμ
+
+  -- This follows because:
+  -- 1. σ(0) = k+1 and τ(0) = 0, so z 0 is X_{k+1} vs X_0
+  -- 2. σ(i+1) = τ(i+1) = N + i, so the indicator part is the same (both equal 1_C)
+
+  -- Verify σ and τ agree on tail indices
+  have h_agree : ∀ i : Fin (M + 2), σ ⟨i.val + 1, by omega⟩ = τ ⟨i.val + 1, by omega⟩ := by
+    intro i
+    simp only [σ, τ, Nat.add_one_ne_zero, ↓reduceIte, Nat.add_sub_cancel]
+
+  -- Express C' (the actual set) in terms of σ (or equivalently τ)
+  let C' : Set Ω := {ω | (fun i => X (N + i.val) ω) ∈ S}
+  -- C' and C are definitionally equal since C is defined by let
+  have hC_C' : C' = {ω | (fun i => X (N + i.val) ω) ∈ S} := rfl
+
+  -- Now use the measure equality to relate the integrals
+  -- The remaining step is to apply integral_map twice and use h_eq
+  -- This is technically involved due to the indicator function handling
+
+  -- For measurability of the maps
+  have hσ_meas : Measurable (fun ω i => X (σ i) ω) :=
+    measurable_pi_lambda _ (fun i => hX_meas (σ i))
+  have hτ_meas : Measurable (fun ω i => X (τ i) ω) :=
+    measurable_pi_lambda _ (fun i => hX_meas (τ i))
+
+  -- The final step uses that g composed with the σ-indexed process equals
+  -- the integrand on one side, and g composed with τ-indexed process equals
+  -- the integrand on the other side. The measure equality gives the result.
+
+  -- First show that σ(0) = k+1 and τ(0) = 0
+  have hσ_0 : σ ⟨0, by omega⟩ = k + 1 := by simp only [σ, ↓reduceIte]
+  have hτ_0 : τ ⟨0, by omega⟩ = 0 := by simp only [τ, ↓reduceIte]
+
+  -- Show that σ and τ agree on indices 1, ..., M+2 (give N+i for index i+1)
+  have hσ_tail : ∀ i : Fin (M + 2), σ ⟨i.val + 1, by omega⟩ = N + i.val := by
+    intro i
+    simp only [σ, Nat.add_one_ne_zero, ↓reduceIte, Nat.add_sub_cancel]
+
+  have hτ_tail : ∀ i : Fin (M + 2), τ ⟨i.val + 1, by omega⟩ = N + i.val := by
+    intro i
+    simp only [τ, Nat.add_one_ne_zero, ↓reduceIte, Nat.add_sub_cancel]
+
+  -- Key observation: σ-indexed tail is the same as C' membership condition
+  have hS_σ : ∀ ω, ((fun i : Fin (M + 2) => X (σ ⟨i.val + 1, by omega⟩) ω) ∈ S) ↔ ω ∈ C' := by
+    intro ω
+    simp only [Set.mem_setOf_eq, C']
+    constructor
+    · intro h; convert h using 1
+    · intro h; convert h using 1
+
+  have hS_τ : ∀ ω, ((fun i : Fin (M + 2) => X (τ ⟨i.val + 1, by omega⟩) ω) ∈ S) ↔ ω ∈ C' := by
+    intro ω
+    simp only [Set.mem_setOf_eq, C']
+    constructor
+    · intro h; convert h using 1
+    · intro h; convert h using 1
+
+  -- Key: g composed with σ-indexed process gives f(X_{k+1}) * 1_C
+  have hg_σ : ∀ ω, g (fun i => X (σ i) ω) = f (X (k + 1) ω) * (C'.indicator 1 ω) := by
+    intro ω
+    simp only [g, hσ_0]
+    -- g's indicator is S.indicator on (fun i => X (σ ⟨i+1, _⟩) ω)
+    -- C'.indicator is on ω
+    -- They agree because (hS_σ ω)
+    by_cases hω : ω ∈ C'
+    · -- Both indicators are 1
+      have hS_mem : (fun i : Fin (M + 2) => X (σ ⟨i.val + 1, by omega⟩) ω) ∈ S := (hS_σ ω).mpr hω
+      rw [Set.indicator_of_mem hω, Set.indicator_of_mem hS_mem]
+      simp only [Pi.one_apply, mul_one]
+    · -- Both indicators are 0
+      have hS_nmem : (fun i : Fin (M + 2) => X (σ ⟨i.val + 1, by omega⟩) ω) ∉ S :=
+        fun h => hω ((hS_σ ω).mp h)
+      rw [Set.indicator_of_notMem hω, Set.indicator_of_notMem hS_nmem]
+
+  -- Similarly for τ
+  have hg_τ : ∀ ω, g (fun i => X (τ i) ω) = f (X 0 ω) * (C'.indicator 1 ω) := by
+    intro ω
+    simp only [g, hτ_0]
+    by_cases hω : ω ∈ C'
+    · have hS_mem : (fun i : Fin (M + 2) => X (τ ⟨i.val + 1, by omega⟩) ω) ∈ S := (hS_τ ω).mpr hω
+      rw [Set.indicator_of_mem hω, Set.indicator_of_mem hS_mem]
+      simp only [Pi.one_apply, mul_one]
+    · have hS_nmem : (fun i : Fin (M + 2) => X (τ ⟨i.val + 1, by omega⟩) ω) ∉ S :=
+        fun h => hω ((hS_τ ω).mp h)
+      rw [Set.indicator_of_notMem hω, Set.indicator_of_notMem hS_nmem]
+
+  -- The set C' is measurable (preimage of S under measurable map)
+  have hC'_meas : MeasurableSet C' := by
+    apply MeasurableSet.preimage _hS
+    exact measurable_pi_lambda _ (fun i => hX_meas (N + i.val))
+
+  -- Helper: indicator of f equals f * indicator of 1
+  have h_ind_eq : ∀ (h : α → ℝ) (ω : Ω),
+      C'.indicator (fun ω => h (X 0 ω)) ω = h (X 0 ω) * (C'.indicator 1 ω) := by
+    intro h ω
+    by_cases hω : ω ∈ C'
+    · simp [Set.indicator_of_mem hω]
+    · simp [Set.indicator_of_notMem hω]
+
+  have h_ind_eq_k : ∀ (ω : Ω),
+      C'.indicator (fun ω => f (X (k + 1) ω)) ω = f (X (k + 1) ω) * (C'.indicator 1 ω) := by
+    intro ω
+    by_cases hω : ω ∈ C'
+    · simp [Set.indicator_of_mem hω]
+    · simp [Set.indicator_of_notMem hω]
+
+  -- Express set integrals using indicator functions
+  -- ∫_C f(X_{k+1}) dμ = ∫ f(X_{k+1}) * 1_C dμ = ∫ g(σ-process) dμ
+  calc ∫ ω in C', f (X (k + 1) ω) ∂μ
+      = ∫ ω, C'.indicator (fun ω => f (X (k + 1) ω)) ω ∂μ := by
+          rw [← integral_indicator hC'_meas]
+    _ = ∫ ω, f (X (k + 1) ω) * (C'.indicator 1 ω) ∂μ := by
+          apply integral_congr_ae
+          filter_upwards with ω
+          exact h_ind_eq_k ω
+    _ = ∫ ω, g (fun i => X (σ i) ω) ∂μ := by
+          apply integral_congr_ae
+          filter_upwards with ω
+          rw [hg_σ]
+    _ = ∫ z, g z ∂(Measure.map (fun ω i => X (σ i) ω) μ) := by
+          rw [integral_map hσ_meas.aemeasurable]
+          apply Measurable.aestronglyMeasurable
+          apply Measurable.mul
+          · exact hf_meas.comp (measurable_pi_apply _)
+          · apply Measurable.indicator measurable_const
+            exact MeasurableSet.preimage _hS (measurable_pi_lambda _ (fun i => measurable_pi_apply _))
+    _ = ∫ z, g z ∂(Measure.map (fun ω i => X (τ i) ω) μ) := by rw [h_eq]
+    _ = ∫ ω, g (fun i => X (τ i) ω) ∂μ := by
+          rw [← integral_map hτ_meas.aemeasurable]
+          apply Measurable.aestronglyMeasurable
+          apply Measurable.mul
+          · exact hf_meas.comp (measurable_pi_apply _)
+          · apply Measurable.indicator measurable_const
+            exact MeasurableSet.preimage _hS (measurable_pi_lambda _ (fun i => measurable_pi_apply _))
+    _ = ∫ ω, f (X 0 ω) * (C'.indicator 1 ω) ∂μ := by
+          apply integral_congr_ae
+          filter_upwards with ω
+          rw [hg_τ]
+    _ = ∫ ω, C'.indicator (fun ω => f (X 0 ω)) ω ∂μ := by
+          apply integral_congr_ae
+          filter_upwards with ω
+          exact (h_ind_eq f ω).symm
+    _ = ∫ ω in C', f (X 0 ω) ∂μ := by rw [← integral_indicator hC'_meas]
 
 /-- **Key lemma: Set integrals over tail-measurable sets are shift-invariant.**
 
@@ -468,27 +616,41 @@ lemma condExp_shift_eq_condExp
         simp only [Measure.coe_toOuterMeasure] at h_eq
         rw [Measure.map_apply h_meas_n1 hS, Measure.map_apply h_meas_0 hS] at h_eq
         exact h_eq
-      rw [← Integrable.map_measure h_meas_comp.aemeasurable h_map_eq]
-      exact hf_int.map (hX_meas 0)
+      -- Use integrable_map_measure to transfer integrability across equal measures
+      -- Step 1: hf_int : Integrable (f ∘ X 0) μ
+      -- Step 2: By integrable_map_measure, Integrable f (Measure.map (X 0) μ)
+      -- Step 3: Since Measure.map (X (n+1)) μ = Measure.map (X 0) μ by h_map_eq,
+      --         Integrable f (Measure.map (X (n+1)) μ)
+      -- Step 4: By integrable_map_measure again, Integrable (f ∘ X (n+1)) μ
+      have hf_aesm_0 : AEStronglyMeasurable f (Measure.map (X 0) μ) :=
+        hf_meas.aestronglyMeasurable
+      have h_int_map : Integrable f (Measure.map (X 0) μ) :=
+        (integrable_map_measure hf_aesm_0 (hX_meas 0).aemeasurable).mpr hf_int
+      rw [← h_map_eq] at h_int_map
+      have hf_aesm_n1 : AEStronglyMeasurable f (Measure.map (X (n + 1)) μ) :=
+        hf_meas.aestronglyMeasurable
+      exact (integrable_map_measure hf_aesm_n1 (hX_meas (n + 1)).aemeasurable).mp h_int_map
 
     -- Apply uniqueness of conditional expectation
     -- We'll show μ[f ∘ X (n+1) | tail] satisfies the defining property of μ[f ∘ X 0 | tail]
     -- by showing ∫_A f(X(n+1)) dμ = ∫_A f(X 0) dμ for all tail-measurable A.
 
     -- The sub-σ-algebra condition
-    have h_le : tailProcess X ≤ inferInstance := iInf_le_of_le 0 (by
+    have h_le : tailProcess X ≤ (inferInstance : MeasurableSpace Ω) := iInf_le_of_le 0 (by
       simp only [tailFamily]
       apply iSup_le
       intro k
-      exact MeasurableSpace.comap_le_iff_le_map.mpr (hX_meas k).le)
+      -- tailFamily uses X (0 + k), which equals X k
+      have h_eq : (fun ω => X (0 + k) ω) = X k := by simp only [Nat.zero_add]
+      rw [h_eq]
+      exact (hX_meas k).comap_le)
 
     -- σ-finiteness of trimmed measure (automatic for probability measures)
-    haveI : SigmaFinite (μ.trim h_le) := by
-      have : IsFiniteMeasure (μ.trim h_le) := by
-        constructor
-        rw [trim_measurableSet_eq h_le MeasurableSet.univ]
-        exact measure_lt_top μ Set.univ
-      exact IsFiniteMeasure.toSigmaFinite
+    haveI h_finite : IsFiniteMeasure (μ.trim h_le) := by
+      constructor
+      rw [trim_measurableSet_eq h_le MeasurableSet.univ]
+      exact measure_lt_top μ Set.univ
+    haveI : SigmaFinite (μ.trim h_le) := @IsFiniteMeasure.toSigmaFinite _ _ _ h_finite
 
     -- Use ae_eq_condExp_of_forall_setIntegral_eq
     -- g = μ[f ∘ X (n+1) | tail], f = f ∘ X 0
