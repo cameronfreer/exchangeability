@@ -142,6 +142,40 @@ lemma tailSigma_shift_invariant_for_contractable
   --           Measure.map (fun ω (i : Fin n) => X i.val ω) μ
   rw [h_shift]
 
+/-- **Key helper: Integral equality on cylinder sets via contractability.**
+
+For indices k+1 < N ≤ N+M (forming a strictly increasing sequence), the integral
+∫_{C} f(X_{k+1}) dμ equals ∫_{C} f(X_0) dμ where C = {ω : (X_N(ω), ..., X_{N+M}(ω)) ∈ S}.
+
+This follows because both sequences (k+1, N, ..., N+M) and (0, N, ..., N+M) are strictly
+increasing, so by contractability both have the same law as (0, 1, ..., M+1). -/
+private lemma setIntegral_cylinder_eq
+    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → α)
+    (hX_contract : Exchangeability.Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (f : α → ℝ)
+    (hf_meas : Measurable f)
+    (_hf_int : Integrable (f ∘ X 0) μ)
+    (k N M : ℕ) (hN : k + 1 < N)
+    (S : Set (Fin (M + 2) → α)) (hS : MeasurableSet S) :
+    let C : Set Ω := {ω | (fun i => X (N + i.val) ω) ∈ S}
+    ∫ ω in C, f (X (k + 1) ω) ∂μ = ∫ ω in C, f (X 0 ω) ∂μ := by
+  -- The proof uses contractability on strictly increasing sequences.
+  -- For N > k+1, the sequence (k+1, N, N+1, ..., N+M+1) is strictly increasing.
+  -- By Contractable, it has the same law as (0, 1, 2, ..., M+2).
+  -- Similarly, (0, N, N+1, ..., N+M+1) has the same law.
+  -- Both equal the same reference law, so:
+  -- Law(X_{k+1}, X_N, ..., X_{N+M+1}) = Law(X_0, X_N, ..., X_{N+M+1})
+  --
+  -- For the cylinder C = {ω : (X_N(ω), ..., X_{N+M+1}(ω)) ∈ S}:
+  -- ∫_C f(X_{k+1}) dμ = E[g(X_{k+1}, X_N, ..., X_{N+M+1})]
+  -- where g(z) = f(z_0) · 1_S(z_1, ..., z_{M+2})
+  --            = E[g(X_0, X_N, ..., X_{N+M+1})]  (by equal joint law)
+  --            = ∫_C f(X_0) dμ
+  sorry
+
 /-- **Key lemma: Set integrals over tail-measurable sets are shift-invariant.**
 
 For a contractable sequence X and tail-measurable set A, the integral ∫_A f(X_k) dμ
