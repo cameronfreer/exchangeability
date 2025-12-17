@@ -3485,18 +3485,19 @@ lemma cesaro_to_condexp_L1
   exact (Finset.sum_range (fun i => f (X i ω))).symm
 
 /-- **THEOREM (Indicator integral continuity at fixed threshold):**
-If `Xₙ → X` a.e. and each `Xₙ`, `X` is measurable, then
-`∫ 1_{(-∞,t]}(Xₙ) dμ → ∫ 1_{(-∞,t]}(X) dμ`.
+If `Xₙ → X` a.e. and each `Xₙ`, `X` is measurable, and `t` is a continuity set
+(meaning μ(X⁻¹'{t}) = 0), then `∫ 1_{(-∞,t]}(Xₙ) dμ → ∫ 1_{(-∞,t]}(X) dμ`.
 
 This is the Dominated Convergence Theorem: indicator functions are bounded by 1,
-and converge pointwise a.e. (except possibly at the single point where X ω = t,
-which has measure zero for continuous distributions). -/
+and converge pointwise a.e. The continuity set assumption ensures we avoid the
+boundary case where convergence can fail (when X ω = t and Xn oscillates around t). -/
 theorem tendsto_integral_indicator_Iic
   {Ω : Type*} [MeasurableSpace Ω]
   {μ : Measure Ω} [IsProbabilityMeasure μ]
   (Xn : ℕ → Ω → ℝ) (X : Ω → ℝ) (t : ℝ)
   (hXn_meas : ∀ n, Measurable (Xn n)) (hX_meas : Measurable (X))
-  (hae : ∀ᵐ ω ∂μ, Tendsto (fun n => Xn n ω) atTop (𝓝 (X ω))) :
+  (hae : ∀ᵐ ω ∂μ, Tendsto (fun n => Xn n ω) atTop (𝓝 (X ω)))
+  (h_cont : μ (X ⁻¹' {t}) = 0) :
   Tendsto (fun n => ∫ ω, (Set.Iic t).indicator (fun _ => (1 : ℝ)) (Xn n ω) ∂μ)
           atTop
           (𝓝 (∫ ω, (Set.Iic t).indicator (fun _ => (1 : ℝ)) (X ω) ∂μ)) := by
@@ -3519,20 +3520,18 @@ theorem tendsto_integral_indicator_Iic
   -- 4. Pointwise convergence of indicators
   · -- Need: 1_{≤t}(Xn ω) → 1_{≤t}(X ω) for a.e. ω
     --
-    -- Strategy: Indicators converge when X ω ≠ t (away from the boundary)
-    -- The set {ω : X ω = t} may have positive measure, so we need to handle it
-    --
-    -- Actually, we'll use a simpler approach: show convergence on {X ≠ t}
-    -- and rely on the fact that even if {X = t} has positive measure,
-    -- we can still use DCT because the indicators are bounded
-    --
-    -- For X ω ≠ t:
+    -- Strategy: Use h_cont to exclude the boundary case X ω = t
+    -- For X ω ≠ t (which is a.e. by h_cont):
     -- - If X ω < t: eventually Xn n ω < t, so both indicators are 1
     -- - If X ω > t: eventually Xn n ω > t, so both indicators are 0
-    filter_upwards [hae] with ω hω_tendsto
-    by_cases h : X ω < t
+    have h_not_eq : ∀ᵐ ω ∂μ, X ω ≠ t := by
+      rw [ae_iff]
+      convert h_cont using 2
+      ext ω
+      simp only [Set.mem_setOf_eq, Set.mem_preimage, Set.mem_singleton_iff, not_not]
+    filter_upwards [hae, h_not_eq] with ω hω_tendsto hω_neq
+    rcases lt_trichotomy (X ω) t with h_lt | h_eq | h_gt
     · -- Case 1: X ω < t
-      -- Since Xn n ω → X ω and X ω < t, eventually Xn n ω < t
       have hev : ∀ᶠ n in atTop, Xn n ω < t := by
         rw [Metric.tendsto_atTop] at hω_tendsto
         have ε_pos : 0 < (t - X ω) / 2 := by linarith
@@ -3540,86 +3539,28 @@ theorem tendsto_integral_indicator_Iic
         refine Filter.eventually_atTop.mpr ⟨N, fun n hn => ?_⟩
         have := hN n hn
         rw [Real.dist_eq] at this
-        -- |Xn n ω - X ω| < (t - X ω)/2 means Xn n ω - X ω < (t - X ω)/2
-        -- So Xn n ω < X ω + (t - X ω)/2 = (X ω + t)/2 < t
         have : Xn n ω - X ω < (t - X ω) / 2 := abs_sub_lt_iff.mp this |>.1
         linarith
-      -- So the indicators are eventually equal to 1
       apply Filter.Tendsto.congr' (EventuallyEq.symm _) tendsto_const_nhds
       filter_upwards [hev] with n hn
       simp only [Set.indicator, Set.mem_Iic]
-      rw [if_pos (le_of_lt hn), if_pos (le_of_lt h)]
-    · -- Case 2: X ω ≥ t
-      by_cases heq : X ω = t
-      · -- Subcase: X ω = t (boundary case)
-        -- We need: indicator(Xn n ω) → indicator(t) = 1
-        rw [heq]
-        simp only [Set.indicator, Set.mem_Iic, le_refl, ite_true]
-
-        -- The indicator is 1 when Xn n ω ≤ t, and 0 when Xn n ω > t
-        -- As Xn n ω → t, we need to show the indicator → 1
-        --
-        -- Strategy: Prove that NOT eventually (Xn n ω > t)
-        -- If Xn n ω → t, then it can't stay strictly above t forever
-        --
-        -- Proof by contradiction: Suppose ∃N, ∀n≥N: Xn n ω > t
-        -- Then Xn n ω ≥ Xn N ω > t for all n ≥ N
-        -- So Xn n ω is bounded below by Xn N ω > t
-        -- But Xn n ω → t means: ∀ε>0, eventually |Xn n ω - t| < ε
-        -- Take ε := (Xn N ω - t) / 2 > 0
-        -- Then eventually |Xn n ω - t| < (Xn N ω - t) / 2
-        -- So eventually Xn n ω < t + (Xn N ω - t) / 2 = (t + Xn N ω) / 2 < Xn N ω
-        -- Contradiction with Xn n ω ≥ Xn N ω! □
-        --
-        -- So we have: ¬(eventually Xn n ω > t)
-        -- Which means: frequently (Xn n ω ≤ t)
-        --
-        -- Combined with convergence to t, this gives us: eventually (Xn n ω ≤ t)
-        -- (because if Xn → t and we can't stay > t, we must eventually be ≤ t)
-        --
-        -- Hmm, "frequently ≤ t" doesn't immediately give "eventually ≤ t"...
-        -- Let me think differently.
-        --
-        -- Actually, the easiest approach: use that limsup Xn n ω = t and liminf Xn n ω = t
-        -- Since they're equal, we have convergence
-        -- And t ∈ Set.Iic t, so the indicator at t is 1
-        -- By upper semicontinuity of indicator for Iic... wait, that doesn't work either
-        --
-        -- Let me try: Xn n ω → t means for ε = any δ > 0, eventually Xn n ω ∈ (t-δ, t+δ)
-        -- But elements of (t-δ, t] have indicator 1, elements of (t, t+δ) have indicator 0
-        -- So we can't conclude...
-        --
-        -- OK here's the KEY insight I was missing:
-        -- We don't need pointwise convergence at every single ω!
-        -- We only need it for a.e. ω
-        -- And the set {ω : X ω = t AND Xn · ω oscillates around t} might have measure zero!
-        --
-        -- However, proving this requires more structure on X (e.g., continuous distribution)
-        -- For a general proof without that assumption, we'd need portmanteau or similar
-        --
-        -- For this formalization, I'll leave this as a documented gap
-        sorry
-      · -- Subcase: X ω > t
-        push_neg at h
-        have hgt : t < X ω := by
-          cases (Ne.lt_or_gt heq) <;> [linarith; assumption]
-        -- Since Xn n ω → X ω and X ω > t, eventually Xn n ω > t
-        have hev : ∀ᶠ n in atTop, t < Xn n ω := by
-          rw [Metric.tendsto_atTop] at hω_tendsto
-          have ε_pos : 0 < (X ω - t) / 2 := by linarith
-          obtain ⟨N, hN⟩ := hω_tendsto ((X ω - t) / 2) ε_pos
-          refine Filter.eventually_atTop.mpr ⟨N, fun n hn => ?_⟩
-          have := hN n hn
-          rw [Real.dist_eq] at this
-          -- |Xn n ω - X ω| < (X ω - t)/2 means X ω - Xn n ω < (X ω - t)/2
-          -- So Xn n ω > X ω - (X ω - t)/2 = (X ω + t)/2 > t
-          have : X ω - Xn n ω < (X ω - t) / 2 := abs_sub_lt_iff.mp this |>.2
-          linarith
-        -- So the indicators are eventually equal to 0
-        apply Filter.Tendsto.congr' (EventuallyEq.symm _) tendsto_const_nhds
-        filter_upwards [hev] with n hn
-        simp only [Set.indicator, Set.mem_Iic]
-        rw [if_neg (not_le.mpr hn), if_neg (not_le.mpr hgt)]
+      rw [if_pos (le_of_lt hn), if_pos (le_of_lt h_lt)]
+    · -- Case 2: X ω = t (excluded by continuity assumption)
+      exact absurd h_eq hω_neq
+    · -- Case 3: X ω > t
+      have hev : ∀ᶠ n in atTop, t < Xn n ω := by
+        rw [Metric.tendsto_atTop] at hω_tendsto
+        have ε_pos : 0 < (X ω - t) / 2 := by linarith
+        obtain ⟨N, hN⟩ := hω_tendsto ((X ω - t) / 2) ε_pos
+        refine Filter.eventually_atTop.mpr ⟨N, fun n hn => ?_⟩
+        have := hN n hn
+        rw [Real.dist_eq] at this
+        have : X ω - Xn n ω < (X ω - t) / 2 := abs_sub_lt_iff.mp this |>.2
+        linarith
+      apply Filter.Tendsto.congr' (EventuallyEq.symm _) tendsto_const_nhds
+      filter_upwards [hev] with n hn
+      simp only [Set.indicator, Set.mem_Iic]
+      rw [if_neg (not_le.mpr hn), if_neg (not_le.mpr h_gt)]
 
 end Exchangeability.DeFinetti.ViaL2
 
