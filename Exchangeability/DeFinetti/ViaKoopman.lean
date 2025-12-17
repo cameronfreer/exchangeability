@@ -4277,11 +4277,60 @@ private theorem h_tower_of_lagConst_from_one
       Tendsto (fun n =>
         ∫ ω, |A' (n + 1) ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ)
               atTop (𝓝 0) := by
-    -- A'_{n+1} = (1/(n+1)) * Σ_{j=0}^n g(ω_{j+1})
-    -- = (1/(n+1)) * Σ_{j=0}^n g((shift ω)_j) = A_n(shift ω)
-    -- By shift invariance of μ, this has the same L¹ convergence as A_n
-    -- The Mean Ergodic Theorem gives A_n → CE[g(ω₀)|mSI] in L¹
-    sorry
+    -- Key insight: A'_{n+1} = A_n ∘ shift where A is the standard Cesàro average
+    -- Define A as in L1_cesaro_convergence_bounded
+    let A := fun n : ℕ => fun ω => (1 / ((n + 1) : ℝ)) *
+                            (Finset.range (n + 1)).sum (fun j => g (ω j))
+    -- A' (n+1) ω = A n (shift ω)
+    have h_A'_eq_A_shift : ∀ n, A' (n + 1) = A n ∘ shift := by
+      intro n
+      ext ω
+      simp only [A', A, Function.comp_apply, if_neg (Nat.succ_ne_zero n)]
+      congr 1
+      apply Finset.sum_congr rfl
+      intro j _
+      rw [shift_apply]
+    -- CE[g(ω_0)|mSI] is shift-invariant (it's mSI-measurable)
+    have h_CE_shift_inv : ∀ ω, μ[(fun ω => g (ω 0)) | mSI] (shift ω)
+                             = μ[(fun ω => g (ω 0)) | mSI] ω := by
+      intro ω
+      -- CE[g(ω_0)|mSI] is measurable w.r.t. shiftInvariantSigma
+      -- Functions measurable w.r.t. shift-invariant σ-algebra are shift-invariant
+      have hCE_meas : Measurable[mSI] (μ[(fun ω => g (ω 0)) | mSI]) :=
+        stronglyMeasurable_condExp.measurable
+      -- shift-invariant σ-algebra membership means f(shift ω) = f(ω)
+      have h := shiftInvariant_of_measurable_shiftInvariantSigma hCE_meas ω
+      exact h
+    -- Now rewrite the integral
+    have h_integral_eq : ∀ n,
+        ∫ ω, |A' (n + 1) ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ
+        = ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
+      intro n
+      rw [h_A'_eq_A_shift]
+      -- Change of variables via shift
+      have h1 : ∫ ω, |A n (shift ω) - μ[(fun ω => g (ω 0)) | mSI] (shift ω)| ∂μ
+              = ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂(μ.map shift) := by
+        rw [MeasureTheory.integral_map hσ.measurable.aemeasurable]
+        · rfl
+        · apply Measurable.aestronglyMeasurable
+          apply Measurable.abs
+          apply Measurable.sub
+          · -- A n is measurable
+            apply Measurable.mul measurable_const
+            apply Finset.measurable_sum
+            intro j _
+            exact hg_meas.comp (measurable_pi_apply j)
+          · exact stronglyMeasurable_condExp.measurable
+      -- μ.map shift = μ
+      have h2 : μ.map shift = μ := hσ.map_eq
+      rw [← h2, ← h1]
+      congr 1
+      ext ω
+      rw [h_CE_shift_inv]
+    -- Use L1_cesaro_convergence_bounded
+    have h_base := L1_cesaro_convergence_bounded hσ g hg_meas hg_bd
+    simp only [h_integral_eq]
+    exact h_base
 
   ------------------------------------------------------------------
   -- (4) L¹-Lipschitz for CE + |f| bounded pulls the convergence through CE
@@ -4291,8 +4340,79 @@ private theorem h_tower_of_lagConst_from_one
         ∫ ω, |μ[(fun ω' => f (ω' 0) * A' (n + 1) ω') | mSI] ω
              - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ)
         atTop (𝓝 0) := by
-    -- Similar to ce_lipschitz_convergence but with A'
-    sorry
+    -- Strategy: Use CE contraction and bounded f to reduce to h_L1_An_to_CE
+    -- |CE[f*A' - f*CE[g|mSI]] | mSI]| ≤ CE[|f|*|A' - CE[g|mSI]| | mSI]
+    -- Integrate both sides, use tower property, bound |f| by Cf
+    obtain ⟨Cf, hCf⟩ := hf_bd
+    have hCf_nn : 0 ≤ Cf := le_trans (abs_nonneg _) (hCf 0)
+    -- Bound: ∫ |CE[...] - CE[...]| ≤ Cf * ∫ |A' - CE[g|mSI]|
+    have h_bound : ∀ n, ∫ ω, |μ[(fun ω' => f (ω' 0) * A' (n + 1) ω') | mSI] ω
+             - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ
+        ≤ Cf * ∫ ω, |A' (n + 1) ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
+      intro n
+      -- Integrability of the functions involved
+      have hA'_int : Integrable (fun ω => A' (n + 1) ω) μ := by
+        simp only [A', if_neg (Nat.succ_ne_zero n)]
+        apply Integrable.const_mul
+        apply integrable_finset_sum
+        intro j _
+        obtain ⟨Cg, hCg⟩ := hg_bd
+        exact integrable_of_bounded_measurable
+          (hg_meas.comp (measurable_pi_apply (j + 1))) Cg (fun ω => hCg (ω (j + 1)))
+      have hCE_g_int : Integrable (μ[(fun ω => g (ω 0)) | mSI]) μ := integrable_condExp
+      have hfA'_int : Integrable (fun ω' => f (ω' 0) * A' (n + 1) ω') μ := by
+        apply Integrable.of_abs_bounded hA'_int Cf
+        · intro ω
+          calc |f (ω 0) * A' (n + 1) ω|
+              = |f (ω 0)| * |A' (n + 1) ω| := abs_mul _ _
+            _ ≤ Cf * |A' (n + 1) ω| := by apply mul_le_mul_of_nonneg_right (hCf _) (abs_nonneg _)
+        · apply (hf_meas.comp (measurable_pi_apply 0)).mul
+          simp only [A', if_neg (Nat.succ_ne_zero n)]
+          apply Measurable.const_mul
+          apply Finset.measurable_sum
+          intro j _
+          exact hg_meas.comp (measurable_pi_apply (j + 1))
+      have hfCE_int : Integrable (fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω') μ := by
+        apply Integrable.of_abs_bounded hCE_g_int Cf
+        · intro ω
+          calc |f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω|
+              = |f (ω 0)| * |μ[(fun ω => g (ω 0)) | mSI] ω| := abs_mul _ _
+            _ ≤ Cf * |μ[(fun ω => g (ω 0)) | mSI] ω| := by
+                apply mul_le_mul_of_nonneg_right (hCf _) (abs_nonneg _)
+        · apply (hf_meas.comp (measurable_pi_apply 0)).mul
+          exact stronglyMeasurable_condExp.measurable
+      -- Use CE linearity and contraction
+      have h_diff_eq : (fun ω' => f (ω' 0) * A' (n + 1) ω')
+                     - (fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω')
+                     = (fun ω' => f (ω' 0) * (A' (n + 1) ω' - μ[(fun ω => g (ω 0)) | mSI] ω')) := by
+        ext ω; ring
+      calc ∫ ω, |μ[(fun ω' => f (ω' 0) * A' (n + 1) ω') | mSI] ω
+               - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ
+          = ∫ ω, |μ[(fun ω' => f (ω' 0) * A' (n + 1) ω')
+               - (fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ := by
+              congr 1; ext ω
+              congr 1
+              exact (condExp_sub hfA'_int hfCE_int mSI).symm
+        _ = ∫ ω, |μ[(fun ω' => f (ω' 0) * (A' (n + 1) ω' - μ[(fun ω => g (ω 0)) | mSI] ω')) | mSI] ω| ∂μ := by
+              simp only [h_diff_eq]
+        _ ≤ ∫ ω, |f (ω 0) * (A' (n + 1) ω - μ[(fun ω => g (ω 0)) | mSI] ω)| ∂μ := by
+              apply integral_abs_condExp_le
+        _ = ∫ ω, |f (ω 0)| * |A' (n + 1) ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
+              congr 1; ext ω; exact abs_mul _ _
+        _ ≤ ∫ ω, Cf * |A' (n + 1) ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
+              apply integral_mono
+              · exact (hfA'_int.sub hfCE_int).abs
+              · apply Integrable.const_mul
+                exact (hA'_int.sub hCE_g_int).abs
+              · intro ω
+                apply mul_le_mul_of_nonneg_right (hCf _) (abs_nonneg _)
+        _ = Cf * ∫ ω, |A' (n + 1) ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
+              rw [integral_mul_left]
+    -- Squeeze to 0
+    apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds
+      (h_L1_An_to_CE.const_mul Cf)
+    · intro n; exact integral_nonneg (fun ω => abs_nonneg _)
+    · intro n; exact h_bound n
 
   ------------------------------------------------------------------
   -- (5) The constant sequence's L¹ limit is 0 ⇒ a.e. equality
