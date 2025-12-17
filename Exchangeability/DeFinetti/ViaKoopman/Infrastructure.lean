@@ -19,6 +19,7 @@ import Exchangeability.DeFinetti.MartingaleHelpers
 import Exchangeability.ConditionallyIID
 import Exchangeability.Probability.CondExp
 import Exchangeability.PathSpace.Shift
+import Exchangeability.Core
 import Mathlib.Tactic
 import Mathlib.Tactic.FieldSimp
 
@@ -957,25 +958,19 @@ also gives conditional independence.
 /-- **Lag-constancy from exchangeability via transpositions** (Kallenberg's approach).
 
 For EXCHANGEABLE measures μ on path space, the conditional expectation
-CE[f(ω₀)·g(ω_{k+1}) | ℐ] equals CE[f(ω₀)·g(ω_k) | ℐ] for k ≥ 0.
-
-⚠️ **WARNING: The k=0 case of this axiom is MATHEMATICALLY FALSE!**
-The transposition argument only works for k ≥ 1 (see below).
-The current proof in condexp_pair_factorization_MET uses k=0 and is therefore unsound.
-See VIAKOOPMAN_REMEDIATION_PLAN.md for the correct restructured proof approach.
+CE[f(ω₀)·g(ω_{k+1}) | ℐ] equals CE[f(ω₀)·g(ω_k) | ℐ] for k ≥ 1.
 
 **Key insight**: This uses EXCHANGEABILITY (not just stationarity). The proof is:
 1. Let τ be the transposition swapping indices k and k+1
 2. Exchangeability gives: Measure.map (reindex τ) μ = μ
-3. The shift-invariant σ-algebra is invariant under finite permutations
+3. Since k ≥ 1, τ fixes 0: τ(0) = 0
 4. Therefore: CE[f(ω₀)·g(ω_{k+1}) | ℐ] = CE[(f∘τ)(ω₀)·(g∘τ)(ω_{k+1}) | ℐ]
                                         = CE[f(ω₀)·g(ω_k) | ℐ]
-   **BUT ONLY IF τ fixes 0, i.e., only if k ≥ 1!**
 
-**Why k=0 fails (CRITICAL)**:
+**Why k ≥ 1 is required (CRITICAL)**:
 - When k=0, τ = swap(0, 1) does NOT fix 0 (τ sends 0 ↦ 1)
-- So (f∘τ)(ω₀) = f(ω₁) ≠ f(ω₀)
-- Counterexample: i.i.d. Bernoulli(1/2):
+- So (f∘τ)(ω₀) = f(ω₁) ≠ f(ω₀), breaking the argument
+- Counterexample for k=0: i.i.d. Bernoulli(1/2):
   * CE[ω₀·ω₁ | ℐ] = E[ω₀]·E[ω₁] = 1/4
   * CE[ω₀² | ℐ] = E[ω₀²] = 1/2 (since ω₀ ∈ {0,1})
   * These are NOT equal!
@@ -985,14 +980,7 @@ See VIAKOOPMAN_REMEDIATION_PLAN.md for the correct restructured proof approach.
 The transposition trick requires the FULL permutation invariance of exchangeability.
 
 **Note**: This axiom requires `hExch` (exchangeability on path space), not just
-`MeasurePreserving shift`. The previous `condIndep_product_factorization` axiom
-was INCORRECT because it only assumed stationarity.
-
-**TODO**: Restructure the proof to avoid k=0:
-1. Modify h_tower_of_lagConst to prove CE[f·g₁] = CE[f·CE[g₀|ℐ]] directly
-2. Use Cesàro averages starting from index 1: A'_n = (1/n)·Σ_{j=1}^n g(ω_j)
-3. Only use lag constancy for k ≥ 1 (which is TRUE via transposition)
--/
+`MeasurePreserving shift`. -/
 axiom condexp_lag_constant_from_exchangeability
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]
     {μ : Measure (ℕ → α)} [IsProbabilityMeasure μ]
@@ -1000,7 +988,7 @@ axiom condexp_lag_constant_from_exchangeability
     (f g : α → ℝ)
     (hf_meas : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C)
     (hg_meas : Measurable g) (hg_bd : ∃ C, ∀ x, |g x| ≤ C)
-    (k : ℕ) :
+    (k : ℕ) (hk : 0 < k) :
     μ[(fun ω => f (ω 0) * g (ω (k + 1))) | shiftInvariantSigma (α := α)]
       =ᵐ[μ]
     μ[(fun ω => f (ω 0) * g (ω k)) | shiftInvariantSigma (α := α)]

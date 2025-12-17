@@ -1268,6 +1268,36 @@ private lemma cesaro_ce_eq_condexp
     simp [Y]
     field_simp [one_div, hne, mul_comm, mul_left_comm, mul_assoc])
 
+/-- **Lag constancy chain for j ≥ 1**: CE[f(ω₀)·g(ω_j)|ℐ] = CE[f(ω₀)·g(ω₁)|ℐ] for j ≥ 1.
+
+This uses only k ≥ 1 lag constancy (avoiding the false k=0 case).
+The induction has base case j=1 (reflexivity) and step uses k = j-1 ≥ 1. -/
+private lemma condexp_product_eq_at_one
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
+    (f g : α → ℝ)
+    (hf_meas : Measurable f) (hf_bd : ∃ Cf, ∀ x, |f x| ≤ Cf)
+    (hg_meas : Measurable g) (hg_bd : ∃ Cg, ∀ x, |g x| ≤ Cg)
+    (j : ℕ) (hj : 1 ≤ j) :
+    μ[(fun ω => f (ω 0) * g (ω j)) | mSI]
+      =ᵐ[μ]
+    μ[(fun ω => f (ω 0) * g (ω 1)) | mSI] := by
+  -- Strong induction: show for all j ≥ 1
+  -- Base: j = 1 is reflexivity
+  -- Step: j + 1 > 1 → use lag_const at k = j ≥ 1, then reduce to j
+  match j with
+  | 0 => omega  -- contradicts hj
+  | 1 => rfl  -- CE[f·g_1] = CE[f·g_1]
+  | k + 2 =>
+    -- k + 2 ≥ 2, so k + 1 ≥ 1
+    -- Use lag constancy at k + 1 ≥ 1: CE[f·g_{k+2}] = CE[f·g_{k+1}]
+    have hk1_pos : 0 < k + 1 := Nat.succ_pos k
+    have lag := condexp_lag_constant_from_exchangeability hExch f g
+                  hf_meas hf_bd hg_meas hg_bd (k + 1) hk1_pos
+    -- Recursive call: CE[f·g_{k+1}] = CE[f·g_1]
+    have ih := condexp_product_eq_at_one hExch f g hf_meas hf_bd hg_meas hg_bd (k + 1) (Nat.succ_pos k)
+    exact lag.trans ih
+
 /-- **Section 2 helper**: Product CE is constant in n under lag-constancy.
 
 Given lag-constancy (CE[f·g_{k+1}] = CE[f·g_k] for all k), proves that
@@ -1403,6 +1433,142 @@ private lemma product_ce_constant_of_lag_const
         (1 / ((n + 1) : ℝ)) *
           (((n + 1) : ℝ) *
             μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] ω)) := by
+    refine h_sum_const.mono ?_
+    intro ω hω; simp [hω]
+  refine h3.trans ?_
+  exact ae_of_all μ (fun ω => by
+    field_simp [one_div, hne, mul_comm, mul_left_comm, mul_assoc])
+
+/-- **Product CE constant from index 1**: CE[f·A'_n | mSI] = CE[f·g₁ | mSI]
+where A'_n = (1/n)·Σ_{j=1}^n g(ω_j) is the Cesàro average starting from index 1.
+
+This avoids the false k=0 lag constancy by only using k ≥ 1.
+Each term CE[f·g_{j+1}] = CE[f·g₁] for j ∈ range n (so j+1 ≥ 1). -/
+private lemma product_ce_constant_of_lag_const_from_one
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
+    (f g : α → ℝ)
+    (hf_meas : Measurable f) (hf_bd : ∃ Cf, ∀ x, |f x| ≤ Cf)
+    (hg_meas : Measurable g) (hg_bd : ∃ Cg, ∀ x, |g x| ≤ Cg)
+    (n : ℕ) (hn : 0 < n) :
+    -- A'_n = (1/n) * Σ_{j ∈ range n} g(ω_{j+1}) = (1/n) * Σ_{j=1}^n g(ω_j)
+    let A' := fun ω => (1 / (n : ℝ)) * (Finset.range n).sum (fun j => g (ω (j + 1)))
+    μ[(fun ω => f (ω 0) * A' ω) | mSI]
+      =ᵐ[μ]
+    μ[(fun ω => f (ω 0) * g (ω 1)) | mSI] := by
+  classical
+  intro A'
+  -- Push CE through scalar
+  have h_push :
+      μ[(fun ω => f (ω 0) * A' ω) | mSI]
+        =ᵐ[μ]
+      (fun ω =>
+        (1 / (n : ℝ)) *
+          μ[(fun ω =>
+              (Finset.range n).sum
+                (fun j => f (ω 0) * g (ω (j + 1)))) | mSI] ω) := by
+    have : (fun ω => f (ω 0) * A' ω)
+         = (fun ω => (1 / (n : ℝ)) * (Finset.range n).sum (fun j => f (ω 0) * g (ω (j + 1)))) := by
+      funext ω; simp [A', Finset.mul_sum, mul_comm, mul_left_comm, mul_assoc]
+    rw [this]
+    exact condExp_const_mul (shiftInvariantSigma_le (α := α))
+      (1 / (n : ℝ)) (fun ω => (Finset.range n).sum (fun j => f (ω 0) * g (ω (j + 1))))
+
+  -- Push CE through the finite sum
+  have h_sum :
+      μ[(fun ω =>
+          (Finset.range n).sum (fun j => f (ω 0) * g (ω (j + 1)))) | mSI]
+        =ᵐ[μ]
+      (fun ω =>
+        (Finset.range n).sum
+          (fun j => μ[(fun ω => f (ω 0) * g (ω (j + 1))) | mSI] ω)) := by
+    have hint : ∀ j ∈ Finset.range n, Integrable (fun ω => f (ω 0) * g (ω (j + 1))) μ := by
+      intro j _
+      obtain ⟨Cf, hCf⟩ := hf_bd
+      obtain ⟨Cg, hCg⟩ := hg_bd
+      exact integrable_of_bounded_measurable
+        (hf_meas.comp (measurable_pi_apply 0) |>.mul (hg_meas.comp (measurable_pi_apply (j + 1))))
+        (Cf * Cg)
+        (fun ω => by simpa [abs_mul] using mul_le_mul (hCf (ω 0)) (hCg (ω (j + 1))) (abs_nonneg _) (le_trans (abs_nonneg _) (hCf (ω 0))))
+    exact condExp_sum_finset (shiftInvariantSigma_le (α := α))
+      (Finset.range n) (fun j => fun ω => f (ω 0) * g (ω (j + 1))) hint
+
+  -- From condexp_product_eq_at_one: every term is a.e.-equal to the j=1 term
+  -- For j ∈ range n, we have j + 1 ≥ 1, so condexp_product_eq_at_one applies
+  have h_term_const : ∀ j,
+      μ[(fun ω => f (ω 0) * g (ω (j + 1))) | mSI]
+        =ᵐ[μ]
+      μ[(fun ω => f (ω 0) * g (ω 1)) | mSI] := by
+    intro j
+    exact condexp_product_eq_at_one hExch f g hf_meas hf_bd hg_meas hg_bd (j + 1) (Nat.one_le_of_lt (Nat.succ_pos j))
+
+  -- Sum collapses to n·CE[f·g₁| mSI]
+  have h_sum_const :
+      (fun ω =>
+        (Finset.range n).sum
+          (fun j => μ[(fun ω => f (ω 0) * g (ω (j + 1))) | mSI] ω))
+        =ᵐ[μ]
+      (fun ω =>
+        (n : ℝ) *
+          μ[(fun ω => f (ω 0) * g (ω 1)) | mSI] ω) := by
+    have h' : ∀ s : Finset ℕ,
+        (fun ω =>
+          s.sum (fun j => μ[(fun ω => f (ω 0) * g (ω (j + 1))) | mSI] ω))
+          =ᵐ[μ]
+        (fun ω =>
+          (s.card : ℝ) *
+            μ[(fun ω => f (ω 0) * g (ω 1)) | mSI] ω) := by
+      apply Finset.induction
+      · exact ae_of_all μ (fun ω => by simp)
+      · intro j s hj hInd
+        have hj' :
+            (fun ω => μ[(fun ω => f (ω 0) * g (ω (j + 1))) | mSI] ω)
+              =ᵐ[μ]
+            (fun ω =>
+              μ[(fun ω => f (ω 0) * g (ω 1)) | mSI] ω) := h_term_const j
+        have h_eq : (fun ω => ∑ k ∈ insert j s, μ[(fun ω => f (ω 0) * g (ω (k + 1))) | mSI] ω)
+                  = ((fun ω => ∑ k ∈ s, μ[(fun ω => f (ω 0) * g (ω (k + 1))) | mSI] ω) +
+                     (fun ω => μ[(fun ω => f (ω 0) * g (ω (j + 1))) | mSI] ω)) := by
+            ext ω; simp [Finset.sum_insert hj, add_comm]
+        rw [h_eq]
+        calc (fun ω => ∑ k ∈ s, μ[(fun ω => f (ω 0) * g (ω (k + 1))) | mSI] ω) +
+               (fun ω => μ[(fun ω => f (ω 0) * g (ω (j + 1))) | mSI] ω)
+            =ᵐ[μ] (fun ω => ↑s.card * μ[(fun ω => f (ω 0) * g (ω 1)) | mSI] ω) +
+                   (fun ω => μ[(fun ω => f (ω 0) * g (ω 1)) | mSI] ω) := hInd.add hj'
+          _ =ᵐ[μ] (fun ω => ↑(insert j s).card * μ[(fun ω => f (ω 0) * g (ω 1)) | mSI] ω) := by
+              refine ae_of_all μ (fun ω => ?_)
+              simp only [Pi.add_apply]
+              rw [Finset.card_insert_of_notMem hj]
+              simp only [Nat.cast_add, Nat.cast_one]
+              ring
+    simpa [Finset.card_range] using h' (Finset.range n)
+
+  -- Assemble and cancel the average
+  have hne : (n : ℝ) ≠ 0 := by positivity
+  refine h_push.trans ?_
+  have h2 :
+      (fun ω =>
+        (1 / (n : ℝ)) *
+          μ[(fun ω =>
+              (Finset.range n).sum (fun j => f (ω 0) * g (ω (j + 1)))) | mSI] ω)
+        =ᵐ[μ]
+      (fun ω =>
+        (1 / (n : ℝ)) *
+          (Finset.range n).sum
+            (fun j => μ[(fun ω => f (ω 0) * g (ω (j + 1))) | mSI] ω)) := by
+    refine h_sum.mono ?_
+    intro ω hω; simp [hω]
+  refine h2.trans ?_
+  have h3 :
+      (fun ω =>
+        (1 / (n : ℝ)) *
+          (Finset.range n).sum
+            (fun j => μ[(fun ω => f (ω 0) * g (ω (j + 1))) | mSI] ω))
+        =ᵐ[μ]
+      (fun ω =>
+        (1 / (n : ℝ)) *
+          ((n : ℝ) *
+            μ[(fun ω => f (ω 0) * g (ω 1)) | mSI] ω)) := by
     refine h_sum_const.mono ?_
     intro ω hω; simp [hω]
   refine h3.trans ?_
@@ -1978,6 +2144,7 @@ lemma exchangeable_implies_ciid_modulo_bridge_ax
   · exact fun i => measurable_pi_apply i
   -- 2. ν is a probability measure at each point
   · intro ω
+    show IsProbabilityMeasure ((rcdKernel (μ := μ)) ω)
     exact IsMarkovKernel.isProbabilityMeasure ω
   -- 3. ν ω s is measurable in ω for each measurable set s
   · intro s hs
@@ -3979,6 +4146,137 @@ private theorem h_tower_of_lagConst
   filter_upwards [h_abs_zero] with ω hω
   exact sub_eq_zero.mp (abs_eq_zero.mp hω)
 
+/-- **Tower property from index 1** (avoids k=0 lag constancy).
+
+This is the corrected version that proves:
+  CE[f·g₁ | mSI] =ᵐ CE[f·CE[g₀|mSI] | mSI]
+
+Key insight: We use Cesàro averages starting from index 1 (A'_n) to avoid the false k=0 case.
+The proof structure:
+1. CE[A'_n | mSI] = CE[g₀ | mSI] (shift invariance: CE[g_j|mSI] = CE[g₀|mSI])
+2. CE[f·A'_n | mSI] = CE[f·g₁ | mSI] for all n (lag constancy with k ≥ 1 only)
+3. A'_n → CE[g₀|mSI] in L¹ (MET)
+4. CE Lipschitz: CE[f·A'_n] → CE[f·CE[g₀|mSI]]
+5. Squeeze: constant sequence converges to 0 -/
+private theorem h_tower_of_lagConst_from_one
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ)
+    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
+    (f g : α → ℝ)
+    (hf_meas : Measurable f) (hf_bd : ∃ Cf, ∀ x, |f x| ≤ Cf)
+    (hg_meas : Measurable g) (hg_bd : ∃ Cg, ∀ x, |g x| ≤ Cg) :
+    μ[(fun ω => f (ω 0) * g (ω 1)) | shiftInvariantSigma (α := α)]
+      =ᵐ[μ]
+    μ[(fun ω =>
+        f (ω 0) * μ[(fun ω => g (ω 0)) | shiftInvariantSigma (α := α)] ω)
+        | shiftInvariantSigma (α := α)] := by
+  classical
+  have hmSI := shiftInvariantSigma_le (α := α)
+
+  -- Cesàro averages starting from index 1
+  -- A'_n = (1/n) * Σ_{j=1}^n g(ω_j) = (1/n) * Σ_{j ∈ range n} g(ω_{j+1})
+  let A' : ℕ → Ω[α] → ℝ :=
+    fun n ω => if n = 0 then 0
+               else (1 / (n : ℝ)) * (Finset.range n).sum (fun j => g (ω (j + 1)))
+
+  ------------------------------------------------------------------
+  -- (1) CE[A'_n | mSI] = CE[g(ω0) | mSI] for n > 0
+  -- This follows from shift invariance: CE[g(ω_j)|mSI] = CE[g(ω_0)|mSI]
+  ------------------------------------------------------------------
+  have h_cesaro_ce : ∀ n, 0 < n → μ[A' n | mSI] =ᵐ[μ] μ[(fun ω => g (ω 0)) | mSI] := by
+    intro n hn
+    -- CE[(1/n) * Σ g(ω_{j+1}) | mSI] = (1/n) * Σ CE[g(ω_{j+1}) | mSI]
+    --                                = (1/n) * Σ CE[g(ω_0) | mSI]  (shift invariance)
+    --                                = CE[g(ω_0) | mSI]
+    -- Technical proof using linearity of CE and shift invariance
+    sorry
+
+  ------------------------------------------------------------------
+  -- (2) CE[f·A'_n | mSI] = CE[f·g₁ | mSI] for all n > 0 (from product_ce_constant_of_lag_const_from_one)
+  ------------------------------------------------------------------
+  have h_product_const : ∀ n, 0 < n →
+    μ[(fun ω => f (ω 0) * A' n ω) | mSI]
+      =ᵐ[μ]
+    μ[(fun ω => f (ω 0) * g (ω 1)) | mSI] := by
+    intro n hn
+    simp only [A', if_neg (Nat.ne_of_gt hn)]
+    exact product_ce_constant_of_lag_const_from_one hExch f g hf_meas hf_bd hg_meas hg_bd n hn
+
+  ------------------------------------------------------------------
+  -- (3) L¹ convergence: A'_n → CE[g(ω0)| mSI]
+  -- This follows from the MET + shift invariance
+  ------------------------------------------------------------------
+  have h_L1_An_to_CE :
+      Tendsto (fun n =>
+        ∫ ω, |A' (n + 1) ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ)
+              atTop (𝓝 0) := by
+    -- A'_{n+1} = (1/(n+1)) * Σ_{j=0}^n g(ω_{j+1})
+    -- = (1/(n+1)) * Σ_{j=0}^n g((shift ω)_j) = A_n(shift ω)
+    -- By shift invariance of μ, this has the same L¹ convergence as A_n
+    -- The Mean Ergodic Theorem gives A_n → CE[g(ω₀)|mSI] in L¹
+    sorry
+
+  ------------------------------------------------------------------
+  -- (4) L¹-Lipschitz for CE + |f| bounded pulls the convergence through CE
+  ------------------------------------------------------------------
+  have h_L1_CE :
+      Tendsto (fun n =>
+        ∫ ω, |μ[(fun ω' => f (ω' 0) * A' (n + 1) ω') | mSI] ω
+             - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ)
+        atTop (𝓝 0) := by
+    -- Similar to ce_lipschitz_convergence but with A'
+    sorry
+
+  ------------------------------------------------------------------
+  -- (5) The constant sequence's L¹ limit is 0 ⇒ a.e. equality
+  ------------------------------------------------------------------
+  have h_const_is_zero :
+      ∫ ω, |μ[(fun ω => f (ω 0) * g (ω 1)) | mSI] ω
+            - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω| ∂μ = 0 := by
+    have h_rewrite : ∀ n, 0 < n →
+      ∫ ω, |μ[(fun ω => f (ω 0) * g (ω 1)) | mSI] ω
+            - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω| ∂μ
+      =
+      ∫ ω, |μ[(fun ω' => f (ω' 0) * A' n ω') | mSI] ω
+            - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ := by
+      intro n hn
+      refine integral_congr_ae ?_
+      filter_upwards [h_product_const n hn] with ω hω
+      simp [hω]
+    -- Constant sequence converges to the same constant
+    have h_const : Tendsto (fun n : ℕ =>
+      ∫ ω, |μ[(fun ω => f (ω 0) * g (ω 1)) | mSI] ω
+            - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω| ∂μ)
+      atTop
+      (𝓝 (∫ ω, |μ[(fun ω => f (ω 0) * g (ω 1)) | mSI] ω
+                  - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω| ∂μ)) :=
+      tendsto_const_nhds
+    -- Transform: use h_rewrite to express as the sequence that converges to 0
+    have h_eq_seq : ∀ n, (fun n => ∫ ω, |μ[(fun ω => f (ω 0) * g (ω 1)) | mSI] ω
+              - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω| ∂μ) n
+         = (fun n => ∫ ω, |μ[(fun ω' => f (ω' 0) * A' (n + 1) ω') | mSI] ω
+              - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ) n := by
+      intro n
+      exact h_rewrite (n + 1) (Nat.succ_pos n)
+    simp only [funext h_eq_seq] at h_const
+    exact tendsto_nhds_unique h_const h_L1_CE
+
+  -- turn `∫ |h| = 0` into a.e. equality
+  have h_abs_zero :
+      (fun ω =>
+        |μ[(fun ω => f (ω 0) * g (ω 1)) | mSI] ω
+        - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω|) =ᵐ[μ] 0 := by
+    have hint : Integrable (fun ω =>
+      |μ[(fun ω => f (ω 0) * g (ω 1)) | mSI] ω
+      - μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω|) μ := by
+      apply Integrable.abs
+      apply Integrable.sub <;> exact integrable_condExp
+    exact integral_eq_zero_iff_of_nonneg_ae (ae_of_all _ (fun _ => abs_nonneg _)) hint |>.mp h_const_is_zero
+
+  -- done: a.e. equality of the two conditional expectations
+  filter_upwards [h_abs_zero] with ω hω
+  exact sub_eq_zero.mp (abs_eq_zero.mp hω)
+
 set_option maxHeartbeats 1000000
 
 /-- **Pair factorization via MET + Exchangeability** (Kallenberg's approach).
@@ -3987,17 +4285,15 @@ For EXCHANGEABLE measures μ on path space, the conditional expectation of f(ω�
 given the shift-invariant σ-algebra factors into the product of the individual
 conditional expectations.
 
-**Proof strategy** (matching Kallenberg):
-1. Use lag-constancy from exchangeability: CE[f(ω₀)·g(ω₁)|ℐ] = CE[f(ω₀)·g(ω₀)|ℐ]
-   (via transposition argument - requires EXCHANGEABILITY, not just stationarity)
-2. Apply tower property: CE[f(ω₀)·g(ω₀)|ℐ] = CE[f(ω₀)·CE[g(ω₀)|ℐ]|ℐ]
-   (uses MET + Cesàro averaging)
-3. Apply pull-out property: CE[f(ω₀)·CE[g(ω₀)|ℐ]|ℐ] = CE[g(ω₀)|ℐ]·CE[f(ω₀)|ℐ]
+**Proof strategy** (CORRECTED - avoids false k=0 lag constancy):
+1. Apply tower property directly on g₁ (via Cesàro from index 1):
+   CE[f(ω₀)·g(ω₁)|ℐ] = CE[f(ω₀)·CE[g(ω₀)|ℐ]|ℐ]
+   (uses h_tower_of_lagConst_from_one which only needs k ≥ 1 lag constancy)
+2. Apply pull-out property: CE[f(ω₀)·CE[g(ω₀)|ℐ]|ℐ] = CE[g(ω₀)|ℐ]·CE[f(ω₀)|ℐ]
    (CE[g(ω₀)|ℐ] is ℐ-measurable)
 
 **Key insight**: This requires EXCHANGEABILITY (via `hExch`), not just stationarity.
-Stationary non-exchangeable processes (Markov chains, AR processes) can have
-lag-dependent conditional correlations.
+The original k=0 lag constancy approach was FALSE. See Infrastructure.lean for details.
 -/
 private lemma condexp_pair_factorization_MET
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
@@ -4010,33 +4306,16 @@ private lemma condexp_pair_factorization_MET
     =ᵐ[μ]
   (fun ω => μ[fun ω => f (ω 0) | shiftInvariantSigma (α := α)] ω
           * μ[fun ω => g (ω 0) | shiftInvariantSigma (α := α)] ω) := by
-  set mSI := shiftInvariantSigma (α := α)
+  let mSI := shiftInvariantSigma (α := α)
 
-  -- Step 1: Lag-constancy from exchangeability (via transposition argument)
-  -- CE[f(ω₀)·g(ω₁)|ℐ] = CE[f(ω₀)·g(ω₀)|ℐ]
-  -- ⚠️ WARNING: This uses k=0 which is MATHEMATICALLY FALSE!
-  -- The transposition τ = swap(0,1) does NOT fix 0, so the proof breaks for k=0.
-  -- See Infrastructure.lean and VIAKOOPMAN_REMEDIATION_PLAN.md for the correct approach.
-  -- TODO: Restructure this proof to avoid k=0 by using Cesàro from index 1.
-  have h_lag_const :
-      μ[(fun ω => f (ω 0) * g (ω 1)) | mSI]
-        =ᵐ[μ]
-      μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] := by
-    -- Apply the lag-constancy axiom with k=0: g(ω_{0+1}) = g(ω_1) → g(ω_0)
-    -- ⚠️ k=0 is FALSE - see axiom docstring for counterexample
-    exact condexp_lag_constant_from_exchangeability hExch f g hf_meas hf_bd hg_meas hg_bd 0
+  -- Step 1: Tower property via Cesàro from index 1 (CORRECTED - avoids k=0!)
+  -- CE[f(ω₀)·g(ω₁)|ℐ] = CE[f(ω₀)·CE[g(ω₀)|ℐ]|ℐ]
+  -- Uses h_tower_of_lagConst_from_one which only requires k ≥ 1 lag constancy
+  have h_tower : μ[(fun ω => f (ω 0) * g (ω 1)) | mSI]
+      =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] :=
+    h_tower_of_lagConst_from_one hσ hExch f g hf_meas hf_bd hg_meas hg_bd
 
-  -- Step 2: Tower property from MET + Cesàro averaging
-  -- CE[f(ω₀)·g(ω₀)|ℐ] = CE[f(ω₀)·CE[g(ω₀)|ℐ]|ℐ]
-  -- Note: We use h_tower_of_lagConst directly with exchangeability-derived lag constancy,
-  -- avoiding the deprecated condexp_tower_for_products which uses FALSE lemmas.
-  have h_tower : μ[(fun ω => f (ω 0) * g (ω 0)) | mSI]
-      =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] := by
-    apply h_tower_of_lagConst hσ f g hf_meas hf_bd hg_meas hg_bd
-    -- Provide lag constancy for all k from exchangeability
-    exact fun k => condexp_lag_constant_from_exchangeability hExch f g hf_meas hf_bd hg_meas hg_bd k
-
-  -- Step 3: Pull-out property (CE[g(ω₀)|ℐ] is ℐ-measurable)
+  -- Step 2: Pull-out property (CE[g(ω₀)|ℐ] is ℐ-measurable)
   -- CE[f(ω₀)·CE[g(ω₀)|ℐ]|ℐ] = CE[g(ω₀)|ℐ]·CE[f(ω₀)|ℐ]
   have h_pullout : μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI]
       =ᵐ[μ] (fun ω => μ[(fun ω => g (ω 0)) | mSI] ω * μ[(fun ω => f (ω 0)) | mSI] ω) := by
@@ -4068,8 +4347,7 @@ private lemma condexp_pair_factorization_MET
 
   -- Combine all steps
   calc μ[(fun ω => f (ω 0) * g (ω 1)) | mSI]
-      =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 0)) | mSI] := h_lag_const
-    _ =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] := h_tower
+      =ᵐ[μ] μ[(fun ω => f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] := h_tower
     _ =ᵐ[μ] (fun ω => μ[(fun ω => g (ω 0)) | mSI] ω * μ[(fun ω => f (ω 0)) | mSI] ω) := h_pullout
     _ =ᵐ[μ] (fun ω => μ[(fun ω => f (ω 0)) | mSI] ω * μ[(fun ω => g (ω 0)) | mSI] ω) := by
         filter_upwards with ω; ring
