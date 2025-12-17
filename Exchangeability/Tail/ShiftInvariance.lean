@@ -697,22 +697,51 @@ lemma setIntegral_comp_shift_eq
     -- These are finite intersections of preimages: ⋂_{i ∈ p} {ω | X (N+kᵢ) ω ∈ Sᵢ}
     -- The integral equality follows from contractability (same argument as setIntegral_cylinder_eq)
     · intro t ht
-      -- t ∈ piiUnionInter means t = ⋂_{j ∈ p} (X (N+jₖ))⁻¹(Sₖ) for finite p ⊆ ℕ
-      -- The sequences (k+1, N+j₁, ..., N+jₘ) and (0, N+j₁, ..., N+jₘ) are strictly increasing
-      -- since k+1 < N ≤ N + min{jₖ}.
-      --
-      -- By contractability both have the same law, so ∫_t f(X_{k+1}) = ∫_t f(X_0).
-      --
-      -- This is the same argument as setIntegral_cylinder_eq but for non-consecutive
-      -- indices. The proof structure is identical:
-      -- 1. Define σ, τ : Fin (|p|+1) → ℕ with σ(0) = k+1, τ(0) = 0, and
-      --    σ(i+1) = τ(i+1) = N + jᵢ for the sorted indices in p
-      -- 2. Both are strictly increasing, so by contractability they have equal law
-      -- 3. Express the integrals via a joint function g and use the measure equality
-      --
-      -- TODO: Prove by generalizing setIntegral_cylinder_eq to arbitrary finite index sets
-      -- or by directly instantiating the argument here using piiUnionInter structure
-      sorry
+      -- Extract the structure: t = ⋂_{j ∈ pt} ft j where ft j ∈ {s | MeasurableSet[m j] s}
+      rcases ht with ⟨pt, _, ft, ht_m, rfl⟩
+
+      -- If pt is empty, t = univ and we use h_full
+      by_cases hpt_empty : pt = ∅
+      · simp only [hpt_empty, Finset.notMem_empty, Set.iInter_of_empty, Set.iInter_univ]
+        simp only [setIntegral_univ]
+        exact h_full
+
+      -- pt is nonempty, so t is a proper finite intersection
+      -- Get the sorted list of indices in pt
+      let indices : List ℕ := pt.sort (· ≤ ·)
+      have h_sorted : indices.Sorted (· < ·) := Finset.sort_sorted_lt pt
+      have h_nodup : indices.Nodup := Finset.sort_nodup (· ≤ ·) pt
+      have h_indices_ne : indices ≠ [] := by
+        simp only [indices, ne_eq, List.eq_nil_iff_forall_not_mem]
+        intro h
+        apply hpt_empty
+        ext x
+        simp only [Finset.notMem_empty, iff_false]
+        intro hx
+        exact h x ((Finset.mem_sort _).mpr hx)
+
+      -- The minimum index in pt
+      let min_idx := indices.head h_indices_ne
+
+      -- Key fact: k + 1 < N ≤ N + min_idx, so prepending k+1 or 0 preserves strict monotonicity
+      -- Since min_idx ≥ 0 and N = k + 2, we have N + min_idx ≥ k + 2 > k + 1 > 0
+
+      -- For now, we use the direct approach:
+      -- The integral over t only depends on the joint law of (X (k+1), X (N+j₁), ..., X (N+jₘ))
+      -- and (X 0, X (N+j₁), ..., X (N+jₘ)). By contractability, both have the same law.
+
+      -- Technical note: The full proof would:
+      -- 1. Express t as a preimage under the joint map (X (N+j₁), ..., X (N+jₘ))
+      -- 2. Define g(z) = f(z 0) · indicator(...) as in setIntegral_cylinder_eq
+      -- 3. Apply contractability to get equal push-forward measures
+      -- 4. Use integral_map to conclude
+
+      -- For now, we note that this follows by the same pattern as setIntegral_cylinder_eq
+      -- The key difference is that the indices (N+j₁, ..., N+jₘ) may not be consecutive,
+      -- but this doesn't affect the argument since contractability works for any
+      -- strictly increasing sequence.
+
+      sorry -- Technical: needs setIntegral_cylinder_eq generalized to non-consecutive indices
 
     -- Case 3: Complement
     · intro t ht h_eq
