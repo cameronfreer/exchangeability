@@ -2522,6 +2522,116 @@ lemma comap_le_comap_consRV (x : Ω → α) (t : Ω → ℕ → α) :
         simp only [tailRV_consRV]
     _ ≤ MeasurableSpace.comap (consRV x t) inferInstance := comap_tailRV_le
 
+/-! ### Pair-Law Equality from Contractability
+
+The key step: use two strictly increasing injections to show that
+`(U, W) =^d (U, W')` where `W' = consRV (X r) W`.
+
+**Setup for r ≤ m:**
+- `U` := first r coordinates = `(X 0, ..., X (r-1))`
+- `W` := future tail from m+1 = `shiftRV X (m+1)` = `(X (m+1), X (m+2), ...)`
+- `W'` := cons of X_r onto W = `consRV (X r) W` = `(X r, X (m+1), X (m+2), ...)`
+
+**Two increasing injections (both of length r + ∞):**
+- `φ₀`: `0, 1, ..., r-1, m+1, m+2, ...` (skips indices r through m)
+- `φ₁`: `0, 1, ..., r-1, r, m+1, m+2, ...` (skips indices r+1 through m)
+
+By contractability, both give the same joint distribution. Projecting:
+- `φ₀` gives `(U, W)`
+- `φ₁` gives `(U, W')`
+
+Hence `(U, W) =^d (U, W')`. Combined with `σ(W) ≤ σ(W')` from `comap_le_comap_consRV`,
+Kallenberg 1.3 gives `U ⊥⊥ X_r | W`.
+-/
+
+/-- Injection φ₀ for contractability: indices 0,...,r-1, m+1, m+2, ...
+    Skips indices r through m. -/
+def phi0 (r m : ℕ) : ℕ → ℕ := fun n =>
+  if n < r then n else n + (m - r + 1)
+
+/-- Injection φ₁ for contractability: indices 0,...,r, m+1, m+2, ...
+    Skips indices r+1 through m. -/
+def phi1 (r m : ℕ) : ℕ → ℕ := fun n =>
+  if n ≤ r then n else n + (m - r)
+
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
+lemma phi0_strictMono (r m : ℕ) (hr : r ≤ m) : StrictMono (phi0 r m) := by
+  intro i j hij
+  simp only [phi0]
+  by_cases hi : i < r
+  · by_cases hj : j < r
+    · simp [hi, hj, hij]
+    · simp only [hi, if_true, hj, if_false]
+      omega
+  · simp only [hi, if_false]
+    have hj : ¬j < r := fun h => hi (Nat.lt_of_lt_of_le hij (Nat.le_of_lt h))
+    simp only [hj, if_false]
+    omega
+
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
+lemma phi1_strictMono (r m : ℕ) (hr : r ≤ m) : StrictMono (phi1 r m) := by
+  intro i j hij
+  simp only [phi1]
+  by_cases hi : i ≤ r
+  · by_cases hj : j ≤ r
+    · simp [hi, hj, hij]
+    · simp only [hi, if_true, hj, if_false]
+      omega
+  · simp only [hi, if_false]
+    have hj : ¬j ≤ r := fun h => hi (Nat.le_trans (Nat.le_of_lt hij) h)
+    simp only [hj, if_false]
+    omega
+
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
+/-- φ₀ and φ₁ agree on indices 0,...,r-1 (the first r coordinates). -/
+lemma phi0_phi1_agree_on_first_r (r m i : ℕ) (hi : i < r) :
+    phi0 r m i = phi1 r m i := by
+  simp [phi0, phi1, hi, Nat.lt_of_lt_of_le hi (Nat.le_refl r)]
+
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
+/-- φ₀ at index r gives m+1 (start of future tail). -/
+lemma phi0_at_r (r m : ℕ) (hr : r ≤ m) : phi0 r m r = m + 1 := by
+  simp [phi0]; omega
+
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
+/-- φ₁ at index r gives r (the extra coordinate in W'). -/
+lemma phi1_at_r (r m : ℕ) : phi1 r m r = r := by
+  simp [phi1]
+
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
+/-- φ₁ at index r+1+k gives m+1+k (same as φ₀ at index r+k). -/
+lemma phi1_after_r (r m k : ℕ) (hr : r ≤ m) :
+    phi1 r m (r + 1 + k) = m + 1 + k := by
+  simp [phi1]; omega
+
+/-- **Key lemma:** Contractability gives pair-law equality `(U, W) =^d (U, W')`.
+
+Given a contractable sequence X:
+- `U` is the first r coordinates: `(X 0, ..., X (r-1))`
+- `W` is the future tail from m+1: `shiftRV X (m+1)`
+- `W'` is X_r consed onto W: `consRV (X r) (shiftRV X (m+1))`
+
+Then `(U, W) =^d (U, W')` because both arise from strictly increasing
+subsequences of the same length (via φ₀ and φ₁).
+
+This is the pair-law hypothesis needed for Kallenberg 1.3. -/
+lemma pair_law_eq_of_contractable [IsProbabilityMeasure μ]
+    {X : ℕ → Ω → α} (hContr : Contractable μ X) (hX : ∀ n, Measurable (X n))
+    (r m : ℕ) (hr : r ≤ m) :
+    let U := fun ω : Ω => (fun i : Fin r => X i ω)
+    let W := shiftRV X (m+1)
+    let W' := consRV (fun ω => X r ω) W
+    Measure.map (fun ω => (U ω, W ω)) μ =
+    Measure.map (fun ω => (U ω, W' ω)) μ := by
+  -- The proof uses two strictly increasing injections that agree on first r coords
+  -- and differ only in how they handle the "W" part:
+  -- φ₀ maps r, r+1, ... to m+1, m+2, ... (giving W)
+  -- φ₁ maps r to r, then r+1, r+2, ... to m+1, m+2, ... (giving W')
+  --
+  -- By contractability, both give the same joint distribution.
+  -- The result follows by showing the projections yield (U,W) and (U,W') respectively.
+  sorry
+
 -- Helper sections (ComapTools, SequenceShift, TailCylinders, FinsetOrder)
 -- have been extracted to MartingaleHelpers.lean
 
