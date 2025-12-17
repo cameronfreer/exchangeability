@@ -67,16 +67,17 @@ def alphaFrom {Ω : Type*} [MeasurableSpace Ω]
 -- - `alphaIic_ae_tendsto_zero_at_bot` in MainConvergence.lean
 -- - `alphaIic_ae_tendsto_one_at_top` in MainConvergence.lean
 --
--- To properly fix this, one should either:
--- 1. Redefine `cdf_from_alpha` using `alphaIicCE` (conditional expectation version)
---    which has the endpoint limits a.e. directly from conditional expectation properties.
--- 2. Modify `directing_measure` to use a default measure (e.g., Dirac at 0) for
---    the null set where the CDF limits fail, and work with a.e. equality throughout.
+-- **REQUIRED FIX:** One of:
+-- 1. Use mathlib's `IsMeasurableRatCDF` structure from `MeasurableStieltjes.lean` which
+--    bundles the endpoint limits and handles the null set properly via `defaultRatCDF`.
+-- 2. Redefine `cdf_from_alpha` to use a default CDF (e.g., Dirac at 0) on the null set
+--    where limits fail: `if ω ∈ goodSet then cdf_from_alpha ω else defaultCDF`.
+-- 3. Modify `directing_measure` itself to use `Measure.dirac 0` on the bad set.
 --
--- For now, this remains as a sorry documenting the requirement for the Stieltjes
--- construction in `directing_measure_eval_Iic_measurable`.
--- TODO: Prove using alphaIic_ae_tendsto_zero_at_bot and alphaIic_ae_tendsto_one_at_top,
--- possibly by redefining cdf_from_alpha via conditional expectation which has a.e. limits.
+-- The key insight: bounded monotone functions always have limits at ±∞, but those
+-- limits may not be 0 and 1 on a null set. The fix "patches" this null set.
+--
+-- For now, this remains as a sorry blocking `directing_measure_isProbabilityMeasure`.
 lemma cdf_from_alpha_limits {Ω : Type*} [MeasurableSpace Ω]
   {μ : Measure Ω} [IsProbabilityMeasure μ]
   (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
