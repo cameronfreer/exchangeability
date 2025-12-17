@@ -934,27 +934,179 @@ def exists_naturalExtension
   -- This is a TRUE statement - implementable via Ionescu-Tulcea/Kolmogorov extension
   sorry
 
-/-! ### Conditional Independence: The Core Mathematical Content
+/-! ### Lag-Constancy from Exchangeability: The Transposition Argument
 
-**IMPORTANT**: The following axiom captures the ACTUAL mathematical content of
-de Finetti's theorem for the Koopman/ergodic approach. Rather than hiding this
-in false lemmas about lag constancy, we make it explicit.
+This section proves that exchangeability implies lag-constancy for conditional
+expectations. The proof uses Kallenberg's transposition argument:
 
-The statement is: coordinates of the process are conditionally independent given
-the shift-invariant σ-algebra. This is equivalent to being "conditionally i.i.d."
-which is the conclusion of de Finetti's theorem.
+1. For k ≥ 1, the transposition τ = swap(k, k+1) fixes index 0
+2. Exchangeability gives measure invariance under reindex τ
+3. Shift-invariant sets are preserved by reindex τ (they depend only on tails)
+4. Therefore CE[f(ω₀)·g(ω_{k+1}) | ℐ] = CE[f(ω₀)·g(ω_k) | ℐ]
 
-**Why this approach is honest**:
-1. Lag-constancy from stationarity alone is FALSE (would be circular reasoning)
-2. Exchangeability provides the missing ingredient via finite permutation invariance
-3. The correct statement IS conditional independence, which directly implies product factorization
-
-**Mathematical justification**: For an exchangeable sequence, de Finetti's theorem
-states that the sequence is conditionally i.i.d. given the tail/exchangeable σ-algebra.
-The shift-invariant σ-algebra contains the tail σ-algebra, so conditioning on it
-also gives conditional independence.
+**Key lemmas:**
+- `shift_reindex_swap_eq`: For m > k+1, shift^m ∘ reindex τ = shift^m
+- `reindex_swap_preimage_shiftInvariant`: Shift-invariant sets are τ-invariant
+- `condexp_lag_constant_from_exchangeability`: The main result
 -/
 
+section LagConstancyProof
+
+variable {α : Type*} [MeasurableSpace α]
+
+/-- Shift^m applied to reindex (swap k (k+1)) ω equals shift^m applied to ω when m > k + 1.
+
+This is because the swap only affects coordinates k and k+1, which are "shifted away"
+after m iterations of shift when m > k + 1. -/
+-- Helper: iterated shift satisfies shift^[j] ξ n = ξ (n + j)
+private lemma shift_iterate_apply (j n : ℕ) (ξ : ℕ → α) :
+    ((shift (α := α))^[j] ξ) n = ξ (n + j) := by
+  induction j generalizing n with
+  | zero => simp
+  | succ j ih =>
+    simp only [Function.iterate_succ', Function.comp_apply, shift_apply]
+    rw [ih]
+    congr 1
+    omega
+
+private lemma shift_iterate_reindex_swap_eq (k m : ℕ) (hm : k + 1 < m) (ω : ℕ → α) :
+    shift^[m] (Exchangeability.reindex (Equiv.swap k (k + 1)) ω) = shift^[m] ω := by
+  ext n
+  rw [shift_iterate_apply, shift_iterate_apply, Exchangeability.reindex_apply]
+  -- Need to show: ω (swap k (k+1) (n + m)) = ω (n + m)
+  -- Since n + m ≥ m > k + 1, we have n + m ≠ k and n + m ≠ k + 1
+  have h1 : n + m ≠ k := by omega
+  have h2 : n + m ≠ k + 1 := by omega
+  rw [Equiv.swap_apply_of_ne_of_ne h1 h2]
+
+/-- Preimages of shift-invariant sets under reindex (swap k (k+1)) are the same set.
+
+**Proof strategy**: A set s is shift-invariant iff membership depends only on tails.
+Since swap k (k+1) only affects coordinates k and k+1, for any n > k+1,
+the n-tail of ω equals the n-tail of (reindex τ ω). By shift-invariance,
+membership in s is determined by any tail, hence ω ∈ s ↔ (reindex τ ω) ∈ s. -/
+private lemma reindex_swap_preimage_shiftInvariant (k : ℕ) (s : Set (ℕ → α))
+    (hs : isShiftInvariant (α := α) s) :
+    (Exchangeability.reindex (Equiv.swap k (k + 1))) ⁻¹' s = s := by
+  ext ω
+  simp only [Set.mem_preimage]
+  -- Use that s is shift-invariant: ω ∈ s ↔ shift^[m] ω ∈ s for any m
+  obtain ⟨_, hs_shift⟩ := hs
+  -- Key: shift⁻¹' s = s means ω ∈ s ↔ shift ω ∈ s, hence ω ∈ s ↔ shift^m ω ∈ s
+  have h_iter : ∀ m, (shift (α := α))^[m] ⁻¹' s = s := by
+    intro m
+    induction m with
+    | zero => simp
+    | succ n ih =>
+      calc shift^[n + 1] ⁻¹' s = shift^[n] ⁻¹' (shift ⁻¹' s) := by
+              simp only [Function.iterate_succ', Set.preimage_comp]
+        _ = shift^[n] ⁻¹' s := by rw [hs_shift]
+        _ = s := ih
+  -- Choose m = k + 2 > k + 1
+  have hm : k + 1 < k + 2 := Nat.lt_succ_self _
+  -- The key: shift^[k+2] (reindex τ ω) = shift^[k+2] ω
+  have h_eq := shift_iterate_reindex_swap_eq k (k + 2) hm ω
+  -- Use that s is shift^[k+2]-invariant: ω ∈ s ↔ shift^[k+2] ω ∈ s
+  have h_iter_k2 := h_iter (k + 2)
+  -- ω ∈ shift^[m] ⁻¹' s ↔ shift^[m] ω ∈ s, and h_iter_k2 says shift^[k+2] ⁻¹' s = s
+  -- h_iter_k2 means: ξ ∈ s ↔ ξ ∈ shift^[k+2] ⁻¹' s ↔ shift^[k+2] ξ ∈ s
+  constructor
+  · -- Assume reindex τ ω ∈ s, show ω ∈ s
+    intro h
+    -- Step 1: reindex τ ω ∈ s → shift^[k+2] (reindex τ ω) ∈ s (using h_iter_k2 backwards)
+    have h1 : (Exchangeability.reindex (Equiv.swap k (k + 1)) ω) ∈ (shift (α := α))^[k + 2] ⁻¹' s := by
+      rw [h_iter_k2]; exact h
+    -- Step 2: shift^[k+2] (reindex τ ω) ∈ s (by definition of preimage)
+    simp only [Set.mem_preimage] at h1
+    -- Step 3: By h_eq, shift^[k+2] (reindex τ ω) = shift^[k+2] ω
+    rw [h_eq] at h1
+    -- Step 4: shift^[k+2] ω ∈ s → ω ∈ s (using h_iter_k2)
+    have h2 : ω ∈ (shift (α := α))^[k + 2] ⁻¹' s := by simp only [Set.mem_preimage]; exact h1
+    rw [h_iter_k2] at h2; exact h2
+  · -- Assume ω ∈ s, show reindex τ ω ∈ s
+    intro h
+    -- Step 1: ω ∈ s → shift^[k+2] ω ∈ s (using h_iter_k2 backwards)
+    have h1 : ω ∈ (shift (α := α))^[k + 2] ⁻¹' s := by rw [h_iter_k2]; exact h
+    simp only [Set.mem_preimage] at h1
+    -- Step 2: By h_eq (reversed), shift^[k+2] ω = shift^[k+2] (reindex τ ω)
+    rw [← h_eq] at h1
+    -- Step 3: shift^[k+2] (reindex τ ω) ∈ s → reindex τ ω ∈ s (using h_iter_k2)
+    have h2 : (Exchangeability.reindex (Equiv.swap k (k + 1)) ω) ∈ (shift (α := α))^[k + 2] ⁻¹' s := by
+      simp only [Set.mem_preimage]; exact h1
+    rw [h_iter_k2] at h2; exact h2
+
+/-- The function f(ω 0) * g(ω (k+1)) composed with reindex τ gives f(ω 0) * g(ω k)
+when τ = swap k (k+1) and k ≥ 1 (so τ fixes 0). -/
+private lemma product_reindex_swap_eq (f g : α → ℝ) (k : ℕ) (hk : 0 < k) :
+    (fun ω => f (ω 0) * g (ω (k + 1))) ∘ Exchangeability.reindex (Equiv.swap k (k + 1))
+    = fun ω => f (ω 0) * g (ω k) := by
+  ext ω
+  simp only [Function.comp_apply, Exchangeability.reindex_apply]
+  congr 1
+  · -- Show: ω (swap k (k+1) 0) = ω 0
+    have h1 : (0 : ℕ) ≠ k := by omega
+    have h2 : (0 : ℕ) ≠ k + 1 := by omega
+    rw [Equiv.swap_apply_of_ne_of_ne h1 h2]
+  · -- Show: ω (swap k (k+1) (k+1)) = ω k
+    rw [Equiv.swap_apply_right]
+
+end LagConstancyProof
+
+/-- For exchangeable measures, set integrals are equal for functions that agree on reindexing.
+This is a key step in proving lag-constancy: ∫_s F = ∫_s G when F ∘ reindex τ = G
+and the set s is shift-invariant (hence also reindex-invariant). -/
+private lemma setIntegral_eq_of_reindex_eq
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]
+    {μ : Measure (ℕ → α)} [IsProbabilityMeasure μ]
+    (τ : Equiv.Perm ℕ)
+    (hμ_inv : Measure.map (Exchangeability.reindex τ) μ = μ)
+    (F G : (ℕ → α) → ℝ)
+    (hFG : F ∘ Exchangeability.reindex τ = G)
+    (hF_meas : Measurable F)
+    (s : Set (ℕ → α))
+    (hs_meas : MeasurableSet s)
+    (h_preimage : (Exchangeability.reindex τ) ⁻¹' s = s) :
+    ∫ ω in s, F ω ∂μ = ∫ ω in s, G ω ∂μ := by
+  have hτ_meas : Measurable (Exchangeability.reindex (α := α) τ) :=
+    Exchangeability.measurable_reindex (α := α) (π := τ)
+  have hF' : AEStronglyMeasurable F (Measure.map (Exchangeability.reindex τ) μ) := by
+    rw [hμ_inv]; exact hF_meas.aestronglyMeasurable
+  calc ∫ ω in s, F ω ∂μ
+      = ∫ ω in s, F ω ∂(Measure.map (Exchangeability.reindex τ) μ) := by rw [hμ_inv]
+    _ = ∫ ω in (Exchangeability.reindex τ) ⁻¹' s, F ((Exchangeability.reindex τ) ω) ∂μ :=
+        setIntegral_map hs_meas hF' hτ_meas.aemeasurable
+    _ = ∫ ω in s, F ((Exchangeability.reindex τ) ω) ∂μ := by rw [h_preimage]
+    _ = ∫ ω in s, G ω ∂μ := by congr 1
+
+/-- If ∫_s (F - G) = 0 for all s in sub-σ-algebra, then CE[F|m] = CE[G|m] a.e. -/
+private lemma condExp_ae_eq_of_setIntegral_diff_eq_zero
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]
+    {μ : Measure (ℕ → α)} [IsProbabilityMeasure μ]
+    {F G : (ℕ → α) → ℝ}
+    (hF_int : Integrable F μ)
+    (hG_int : Integrable G μ)
+    (h_diff_zero : ∀ s, MeasurableSet[shiftInvariantSigma (α := α)] s → μ s < ⊤ →
+        ∫ ω in s, (F - G) ω ∂μ = 0) :
+    μ[F | shiftInvariantSigma (α := α)] =ᵐ[μ] μ[G | shiftInvariantSigma (α := α)] := by
+  have hm := shiftInvariantSigma_le (α := α)
+  have hFG_int : Integrable (F - G) μ := hF_int.sub hG_int
+  -- Step 1: 0 =ᵐ CE[F-G|mSI] since both have same integrals over mSI-sets
+  have h_zero_eq_ce : (0 : (ℕ → α) → ℝ) =ᵐ[μ] μ[F - G | shiftInvariantSigma (α := α)] :=
+    ae_eq_condExp_of_forall_setIntegral_eq hm hFG_int
+      (fun _ _ _ => integrableOn_zero)
+      (fun s hs hμs => by simp only [Pi.zero_apply, integral_zero, h_diff_zero s hs hμs])
+      aestronglyMeasurable_zero
+  -- Step 2: CE[F-G|mSI] = 0 a.e.
+  have h_ce_diff_zero : μ[F - G | shiftInvariantSigma (α := α)] =ᵐ[μ] 0 := h_zero_eq_ce.symm
+  -- Step 3: CE[F-G|mSI] = CE[F|mSI] - CE[G|mSI] by linearity
+  have h_ce_sub : μ[F - G | shiftInvariantSigma (α := α)] =ᵐ[μ]
+      μ[F | shiftInvariantSigma (α := α)] - μ[G | shiftInvariantSigma (α := α)] :=
+    condExp_sub hF_int hG_int (shiftInvariantSigma (α := α))
+  -- Step 4: Combine to get CE[F|mSI] - CE[G|mSI] = 0, hence CE[F|mSI] = CE[G|mSI]
+  have h_eq := h_ce_sub.symm.trans h_ce_diff_zero
+  exact h_eq.mono fun ω hω => sub_eq_zero.mp hω
+
+set_option maxHeartbeats 600000 in
 /-- **Lag-constancy from exchangeability via transpositions** (Kallenberg's approach).
 
 For EXCHANGEABLE measures μ on path space, the conditional expectation
@@ -977,11 +1129,8 @@ CE[f(ω₀)·g(ω_{k+1}) | ℐ] equals CE[f(ω₀)·g(ω_k) | ℐ] for k ≥ 1.
 
 **Why stationarity alone is NOT enough**: Stationary non-exchangeable processes
 (Markov chains, AR processes) can have lag-dependent conditional correlations.
-The transposition trick requires the FULL permutation invariance of exchangeability.
-
-**Note**: This axiom requires `hExch` (exchangeability on path space), not just
-`MeasurePreserving shift`. -/
-axiom condexp_lag_constant_from_exchangeability
+The transposition trick requires the FULL permutation invariance of exchangeability. -/
+lemma condexp_lag_constant_from_exchangeability
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]
     {μ : Measure (ℕ → α)} [IsProbabilityMeasure μ]
     (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
@@ -991,7 +1140,54 @@ axiom condexp_lag_constant_from_exchangeability
     (k : ℕ) (hk : 0 < k) :
     μ[(fun ω => f (ω 0) * g (ω (k + 1))) | shiftInvariantSigma (α := α)]
       =ᵐ[μ]
-    μ[(fun ω => f (ω 0) * g (ω k)) | shiftInvariantSigma (α := α)]
+    μ[(fun ω => f (ω 0) * g (ω k)) | shiftInvariantSigma (α := α)] := by
+  -- Define the transposition τ = swap k (k+1)
+  let τ := Equiv.swap k (k + 1)
+  -- Define the two functions
+  let F := fun ω : ℕ → α => f (ω 0) * g (ω (k + 1))
+  let G := fun ω : ℕ → α => f (ω 0) * g (ω k)
+  -- Key fact 1: F ∘ reindex τ = G
+  have hFG : F ∘ Exchangeability.reindex τ = G := product_reindex_swap_eq f g k hk
+  -- Key fact 2: μ.map (reindex τ) = μ (exchangeability)
+  have hμ_inv : Measure.map (Exchangeability.reindex τ) μ = μ := hExch τ
+  -- Key fact 3: reindex τ is measurable
+  have hτ_meas : Measurable (Exchangeability.reindex (α := α) τ) :=
+    Exchangeability.measurable_reindex (α := α) (π := τ)
+  -- Both F and G are integrable (bounded measurable on probability space)
+  obtain ⟨Cf, hCf⟩ := hf_bd
+  obtain ⟨Cg, hCg⟩ := hg_bd
+  have hF_meas : Measurable F := (hf_meas.comp (measurable_pi_apply 0)).mul
+                                  (hg_meas.comp (measurable_pi_apply (k + 1)))
+  have hG_meas : Measurable G := (hf_meas.comp (measurable_pi_apply 0)).mul
+                                  (hg_meas.comp (measurable_pi_apply k))
+  have hF_bd : ∀ ω, ‖F ω‖ ≤ Cf * Cg := fun ω => by
+    simp only [Real.norm_eq_abs]
+    calc |F ω| = |f (ω 0) * g (ω (k + 1))| := rfl
+      _ = |f (ω 0)| * |g (ω (k + 1))| := abs_mul _ _
+      _ ≤ Cf * Cg := mul_le_mul (hCf _) (hCg _) (abs_nonneg _)
+                       (le_trans (abs_nonneg _) (hCf (ω 0)))
+  have hG_bd : ∀ ω, ‖G ω‖ ≤ Cf * Cg := fun ω => by
+    simp only [Real.norm_eq_abs]
+    calc |G ω| = |f (ω 0) * g (ω k)| := rfl
+      _ = |f (ω 0)| * |g (ω k)| := abs_mul _ _
+      _ ≤ Cf * Cg := mul_le_mul (hCf _) (hCg _) (abs_nonneg _)
+                       (le_trans (abs_nonneg _) (hCf (ω 0)))
+  have hF_int : Integrable F μ := Integrable.of_bound hF_meas.aestronglyMeasurable (Cf * Cg)
+    (Filter.Eventually.of_forall hF_bd)
+  have hG_int : Integrable G μ := Integrable.of_bound hG_meas.aestronglyMeasurable (Cf * Cg)
+    (Filter.Eventually.of_forall hG_bd)
+  -- Strategy: Show ∫_s F = ∫_s G for all s ∈ mSI, then μ[F|mSI] = μ[G|mSI]
+  have h_int_eq : ∀ s, MeasurableSet[shiftInvariantSigma (α := α)] s → μ s < ⊤ →
+      ∫ ω in s, F ω ∂μ = ∫ ω in s, G ω ∂μ := fun s hs _ => by
+    have hs_inv : isShiftInvariant (α := α) s := (mem_shiftInvariantSigma_iff (α := α)).mp hs
+    exact setIntegral_eq_of_reindex_eq τ hμ_inv F G hFG hF_meas s hs_inv.1
+      (reindex_swap_preimage_shiftInvariant k s hs_inv)
+  -- Show ∫_s (F - G) = 0 for all s ∈ mSI, then use helper lemma
+  have h_diff_zero : ∀ s, MeasurableSet[shiftInvariantSigma (α := α)] s → μ s < ⊤ →
+      ∫ ω in s, (F - G) ω ∂μ = 0 := fun s hs hμs => by
+    simp only [Pi.sub_apply, integral_sub hF_int.integrableOn hG_int.integrableOn,
+               h_int_eq s hs hμs, sub_self]
+  exact condExp_ae_eq_of_setIntegral_diff_eq_zero hF_int hG_int h_diff_zero
 
 /-- The comap of shiftInvariantSigma along restrictNonneg is contained in shiftInvariantSigmaℤ.
 
