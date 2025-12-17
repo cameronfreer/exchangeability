@@ -2599,12 +2599,49 @@ lemma condexp_product_factorization_general
                   have h2 := ih hj' (by omega)
                   exact h1.symm.trans h2
           exact h_chain kn (le_refl kn) (le_of_lt hM_gt_kn)
-        · -- Case: kn ≤ some k'(i), need coordinate reordering (structural change needed)
+        · -- Case: kn ≤ some k'(i), need to use max coordinate as "last" factor
           push_neg at h_kn_large
-          -- This case requires restructuring the induction to split off max coord.
-          -- The mathematical fact is true (RHS is coord-independent), but current proof
-          -- structure doesn't handle it directly.
-          sorry
+          obtain ⟨i_bad, h_i_bad⟩ := h_kn_large
+          -- Key insight: the RHS (∏ ∫ fs'_i dν) · (∫ g dν) doesn't depend on coordinates.
+          -- We'll show both LHS and CE[P·g(ω_M)|mSI] equal this RHS.
+          --
+          -- For CE[P·g(ω_M)|mSI], we already have h_tower + h_pullout + h_final giving the RHS.
+          -- For CE[P·g(ω_{kn})|mSI], we use that the product is symmetric:
+          --   P·g(ω_{kn}) = (∏_{i<n} fs'_i(ω_{k'(i)})) · g(ω_{kn})
+          --              = g(ω_{kn}) · (∏_{i<n} fs'_i(ω_{k'(i)}))  [commutativity]
+          --              = ... reorder so max coord is last ...
+          --
+          -- Since both equal the same RHS (which is coord-independent), they are equal a.e.
+          -- The formal argument: we show both equal (∏ ∫ fs'_i dν) · (∫ g dν).
+          --
+          -- For now, we use h_ax which gives the result for consecutive coordinates,
+          -- and the fact that single-coordinate CEs are shift-invariant (h_single_indep).
+          --
+          -- TECHNICAL NOTE: A complete proof would find i_max = argmax k(i) and split off
+          -- that factor. Since k(i_max) > all other coords, the tower argument applies.
+          -- The result for other orderings follows by commutativity and induction.
+          --
+          -- Workaround: Use that both LHS and RHS are expressions that don't actually
+          -- depend on the specific ordering - the goal follows from coordinate-independence.
+          have h_goal_is_coord_indep : μ[(fun ω => P ω * g (ω kn)) | mSI]
+              =ᵐ[μ] (fun ω => (∏ i : Fin n, ∫ x, fs' i x ∂(ν (μ := μ) ω)) *
+                              (∫ x, g x ∂(ν (μ := μ) ω))) := by
+            -- The full product ∏_{i≤n} fs_i(ω_{k(i)}) factorizes regardless of coord order
+            -- This follows from the general fact that exchangeable sequences are CI given mSI
+            -- TODO: Complete with exchangeability-based argument or max-coord restructuring
+            sorry
+          -- Now connect to CE[P·g(ω_M)|mSI] via the RHS
+          calc μ[(fun ω => P ω * g (ω kn)) | mSI]
+              =ᵃᵉ[μ] (fun ω => (∏ i : Fin n, ∫ x, fs' i x ∂(ν (μ := μ) ω)) *
+                              (∫ x, g x ∂(ν (μ := μ) ω))) := h_goal_is_coord_indep
+            _ =ᵃᵉ[μ] (fun ω => (∫ x, g x ∂(ν (μ := μ) ω)) *
+                              (∏ i : Fin n, ∫ x, fs' i x ∂(ν (μ := μ) ω))) := by
+                exact ae_of_all μ (fun ω => mul_comm _ _)
+            _ =ᵃᵉ[μ] (fun ω => μ[(fun ω => g (ω 0)) | mSI] ω * μ[P | mSI] ω) := by
+                filter_upwards [h_g_kernel, hP_eq_IH] with ω hω1 hω2
+                simp only at hω1 hω2; rw [hω1, hω2]
+            _ =ᵃᵉ[μ] μ[(fun ω => P ω * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] := h_pullout.symm
+            _ =ᵃᵉ[μ] μ[(fun ω => P ω * g (ω M)) | mSI] := h_tower.symm
 
       -- Step 4: Tower property via Cesàro + MET
       -- CE[P·g(ω_M)|mSI] = CE[P·CE[g(ω_0)|mSI]|mSI]
