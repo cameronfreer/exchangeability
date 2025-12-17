@@ -1573,5 +1573,129 @@ lemma condexp_lag_constant_product
 
   exact condExp_ae_eq_of_setIntegral_diff_eq_zero hF_int hG_int h_diff_zero
 
+/-- **Generalized lag constancy for products at arbitrary coordinates**.
+
+This extends `condexp_lag_constant_product` to products at general coordinates k_0, ..., k_{n-1}.
+For j, j+1 both larger than all k_i, the transposition τ = swap(j, j+1) fixes all coordinates
+in the product, so the conditional expectation is unchanged.
+
+**Key observation**: If M = max(k_i) + 1, then for all j ≥ M:
+- τ = swap(j, j+1) fixes all indices 0, 1, ..., j-1
+- In particular, τ fixes all k_i (since k_i < M ≤ j)
+- Therefore P ∘ reindex τ = P
+- And the lag constancy argument applies -/
+lemma condexp_lag_constant_product_general
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]
+    {μ : Measure (ℕ → α)} [IsProbabilityMeasure μ]
+    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
+    (n : ℕ) (fs : Fin n → α → ℝ) (coords : Fin n → ℕ)
+    (hfs_meas : ∀ i, Measurable (fs i))
+    (hfs_bd : ∀ i, ∃ C, ∀ x, |fs i x| ≤ C)
+    (g : α → ℝ) (hg_meas : Measurable g) (hg_bd : ∃ Cg, ∀ x, |g x| ≤ Cg)
+    (j : ℕ) (hj : ∀ i : Fin n, coords i < j) :
+    μ[(fun ω => (∏ i : Fin n, fs i (ω (coords i))) * g (ω (j + 1))) | shiftInvariantSigma (α := α)]
+      =ᵐ[μ]
+    μ[(fun ω => (∏ i : Fin n, fs i (ω (coords i))) * g (ω j)) | shiftInvariantSigma (α := α)] := by
+  -- Define the transposition τ = swap j (j+1)
+  let τ := Equiv.swap j (j + 1)
+  -- Define the product P at coordinates
+  let P : (ℕ → α) → ℝ := fun ω => ∏ i : Fin n, fs i (ω (coords i))
+  let F := fun ω : ℕ → α => P ω * g (ω (j + 1))
+  let G := fun ω : ℕ → α => P ω * g (ω j)
+
+  -- Key fact 1: τ fixes all coords(i) (since coords(i) < j and τ swaps j, j+1)
+  have hτ_fix : ∀ i : Fin n, τ (coords i) = coords i := by
+    intro i
+    have hi : coords i < j := hj i
+    have hne1 : coords i ≠ j := by omega
+    have hne2 : coords i ≠ j + 1 := by omega
+    exact Equiv.swap_apply_of_ne_of_ne hne1 hne2
+
+  -- Key fact 2: P ∘ reindex τ = P (product unchanged since τ fixes all coords)
+  have hP_inv : (P ∘ Exchangeability.reindex τ) = P := by
+    ext ω
+    simp only [Function.comp_apply, P, Exchangeability.reindex]
+    apply Finset.prod_congr rfl
+    intro i _
+    congr 1
+    exact hτ_fix i
+
+  -- Key fact 3: τ(j+1) = j and τ(j) = j+1
+  have hτ_j1 : τ (j + 1) = j := Equiv.swap_apply_right j (j + 1)
+  have hτ_j : τ j = j + 1 := Equiv.swap_apply_left j (j + 1)
+
+  -- Key fact 4: F ∘ reindex τ = G
+  have hFG : (F ∘ Exchangeability.reindex τ) = G := by
+    ext ω
+    simp only [Function.comp_apply, F, G, Exchangeability.reindex]
+    congr 1
+    · -- P part
+      simp only [P]
+      apply Finset.prod_congr rfl
+      intro i _
+      congr 1
+      exact hτ_fix i
+    · -- g part
+      congr 1
+      exact hτ_j1
+
+  -- Integrability bounds
+  have hP_bd : ∃ Cp, ∀ ω, |P ω| ≤ Cp := by
+    choose Cs hCs using hfs_bd
+    use ∏ i : Fin n, Cs i
+    intro ω
+    calc |P ω| = |∏ i : Fin n, fs i (ω (coords i))| := rfl
+      _ ≤ ∏ i : Fin n, |fs i (ω (coords i))| := abs_prod_le_prod_abs _ _
+      _ ≤ ∏ i : Fin n, Cs i := by
+          apply Finset.prod_le_prod
+          · intro i _; exact abs_nonneg _
+          · intro i _; exact hCs i (ω (coords i))
+
+  obtain ⟨Cp, hCp⟩ := hP_bd
+  obtain ⟨Cg, hCg⟩ := hg_bd
+
+  have hP_meas : Measurable P := by
+    apply Finset.measurable_prod
+    intro i _
+    exact (hfs_meas i).comp (measurable_pi_apply (coords i))
+
+  have hF_int : Integrable F μ := by
+    apply integrable_mul_of_bounded hP_meas (hg_meas.comp (measurable_pi_apply (j + 1))) Cp
+    · exact hCp
+    · intro ω; exact hCg _
+
+  have hG_int : Integrable G μ := by
+    apply integrable_mul_of_bounded hP_meas (hg_meas.comp (measurable_pi_apply j)) Cp
+    · exact hCp
+    · intro ω; exact hCg _
+
+  -- Now apply the exchange argument
+  have h_int_eq : ∀ (s : Set (ℕ → α)), MeasurableSet[shiftInvariantSigma (α := α)] s
+      → μ s < ⊤ → ∫ ω in s, F ω ∂μ = ∫ ω in s, G ω ∂μ := by
+    intro s hs hμs
+    -- Reindex τ preserves sets in the shift-invariant σ-algebra
+    have hs_inv : s = Exchangeability.reindex τ ⁻¹' s := by
+      ext ω
+      simp only [Set.mem_preimage]
+      have h_shiftInv_inv := shiftInvariantSigma_inv_reindex_swap (α := α) j s hs
+      exact h_shiftInv_inv ω
+    calc ∫ ω in s, F ω ∂μ
+        = ∫ ω in Exchangeability.reindex τ ⁻¹' s, F ω ∂μ := by rw [← hs_inv]
+      _ = ∫ ω in s, F (Exchangeability.reindex τ ω) ∂(μ.map (Exchangeability.reindex τ)) := by
+          rw [MeasureTheory.integral_map_equiv (Exchangeability.reindex τ)]
+          congr 1
+          ext ω
+          simp only [Set.indicator_apply, Set.mem_preimage]
+      _ = ∫ ω in s, G ω ∂μ := by
+          rw [hExch τ, hFG]
+
+  have h_diff_zero : ∀ (s : Set (ℕ → α)), MeasurableSet[shiftInvariantSigma (α := α)] s
+      → μ s < ⊤ →
+      ∫ ω in s, (F - G) ω ∂μ = 0 := fun s hs hμs => by
+    simp only [Pi.sub_apply, integral_sub hF_int.integrableOn hG_int.integrableOn,
+               h_int_eq s hs hμs, sub_self]
+
+  exact condExp_ae_eq_of_setIntegral_diff_eq_zero hF_int hG_int h_diff_zero
+
 end Exchangeability.DeFinetti.ViaKoopman
 
