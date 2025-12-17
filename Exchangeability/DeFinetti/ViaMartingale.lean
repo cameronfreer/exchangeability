@@ -12,6 +12,7 @@ import Mathlib.Probability.Martingale.Basic
 import Mathlib.Probability.Kernel.CondDistrib
 import Mathlib.Probability.Kernel.Condexp
 import Mathlib.Probability.Kernel.Composition.Comp
+import Exchangeability.Core
 import Exchangeability.Contractability
 import Exchangeability.ConditionallyIID
 import Exchangeability.Probability.CondExp
@@ -2627,13 +2628,26 @@ lemma pair_law_eq_of_contractable [IsProbabilityMeasure μ]
     let W' := consRV (fun ω => X r ω) W
     Measure.map (fun ω => (U ω, W ω)) μ =
     Measure.map (fun ω => (U ω, W' ω)) μ := by
-  -- The proof uses two strictly increasing injections that agree on first r coords
-  -- and differ only in how they handle the "W" part:
-  -- φ₀ maps r, r+1, ... to m+1, m+2, ... (giving W)
-  -- φ₁ maps r to r, then r+1, r+2, ... to m+1, m+2, ... (giving W')
-  --
-  -- By contractability, both give the same joint distribution.
-  -- The result follows by showing the projections yield (U,W) and (U,W') respectively.
+  /-
+  **Proof Strategy:**
+
+  The proof uses two strictly increasing injections:
+  - φ₀: 0,...,r-1, m+1, m+2, ... (giving (U, W))
+  - φ₁: 0,...,r-1, r, m+1, m+2, ... (giving (U, W'))
+
+  **Key insight:** Both (U, W) and (U, W') can be viewed as projections from
+  an infinite sequence indexed by ℕ:
+  - (U, W) corresponds to: X₀, ..., X_{r-1}, X_{m+1}, X_{m+2}, ...
+  - (U, W') corresponds to: X₀, ..., X_{r-1}, X_r, X_{m+1}, X_{m+2}, ...
+
+  **Proof steps:**
+  1. Define concat : (Fin r → α) × (ℕ → α) → (ℕ → α) that glues prefix and tail
+  2. Show concat ∘ (U, W) = fun ω n => X (φ₀(n)) ω
+  3. Show concat ∘ (U, W') = fun ω n => X (φ₁(n)) ω
+  4. By Contractable.allStrictMono_eq, finite marginals of both agree
+  5. By measure_eq_of_fin_marginals_eq, pushforwards through concat are equal
+  6. Since concat is a bijection with inverse split, (U, W) =^d (U, W')
+  -/
   sorry
 
 /-- **Conditional expectation drop-info via true contraction (Kallenberg 1.3).**
