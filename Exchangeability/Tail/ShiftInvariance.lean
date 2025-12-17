@@ -7,6 +7,7 @@ import Exchangeability.Tail.TailSigma
 import Exchangeability.PathSpace.Shift
 import Exchangeability.Contractability
 import Exchangeability.Core
+import Mathlib.MeasureTheory.PiSystem
 
 /-!
 # Shift Invariance of Tail σ-Algebra for Exchangeable Sequences
@@ -645,34 +646,144 @@ lemma setIntegral_comp_shift_eq
     -- This forms a π-system (intersection of cylinders is a cylinder) and generates
     -- tailFamily X N by definition as iSup of coordinate comaps.
 
-    -- Apply the Dynkin system theorem via measure uniqueness argument.
-    --
-    -- Strategy: Show that the two signed measures A ↦ ∫_A f(X_{k+1}) and A ↦ ∫_A f(X_0)
-    -- agree on a π-system generating tailFamily X N, hence agree on all measurable sets.
-    --
-    -- The π-system is: piiUnionInter (fun j => {s | MeasurableSet[comap (X (N+j)) α] s}) Set.univ
-    -- Elements are finite intersections of preimages: ∩_{i ∈ p} {ω | X (N+kᵢ) ω ∈ Sᵢ}
-    --
-    -- On these cylinder sets, the integral equality follows from contractability:
-    -- Both (k+1, N+k₁, ..., N+kₘ) and (0, N+k₁, ..., N+kₘ) are strictly increasing
-    -- (since k+1 < N ≤ N+k_min), so they have the same joint law.
-    --
-    -- The Dynkin closure properties (complement, disjoint union) are proved using:
-    -- - setIntegral_compl: ∫_{Aᶜ} g = ∫ g - ∫_A g
-    -- - integral_iUnion: ∫_{⋃ Aᵢ} g = ∑ ∫_{Aᵢ} g for disjoint Aᵢ
-    -- Both follow from mathlib's set integral API.
-    --
-    -- Technical note: The full formalization requires:
-    -- 1. Expressing tailFamily X N = generateFrom (piiUnionInter ...) using
-    --    generateFrom_piiUnionInter_measurableSet
-    -- 2. Proving isPiSystem via isPiSystem_piiUnionInter
-    -- 3. Generalizing setIntegral_cylinder_eq to non-consecutive index cylinders
-    -- 4. Applying MeasurableSpace.induction_on_inter
-    --
-    -- The mathematical content is complete; the remaining work is the Lean mechanization.
-    -- For now, we accept this as the standard π-λ extension argument.
+    -- === π-λ EXTENSION via induction_on_inter ===
+    -- Structure: Apply MeasurableSpace.induction_on_inter
+    -- - tailFamily X N = generateFrom (piiUnionInter ...) by generateFrom_piiUnionInter_measurableSet
+    -- - piiUnionInter is a π-system by isPiSystem_piiUnionInter
+    -- - Property "∫_A f(X_{k+1}) = ∫_A f(X_0)" is proved on generators and Dynkin-closed
 
-    sorry
+    -- Define the coordinate σ-algebras
+    let m : ℕ → MeasurableSpace Ω := fun j => MeasurableSpace.comap (fun ω => X (N + j) ω) inferInstance
+
+    -- tailFamily X N = iSup m = ⨆ j ∈ Set.univ, m j
+    have h_tailFam_eq_iSup : tailFamily X N = ⨆ j, m j := by
+      simp only [tailFamily, m]
+
+    -- The generating π-system
+    let π : Set (Set Ω) := piiUnionInter (fun j => {s | MeasurableSet[m j] s}) Set.univ
+
+    -- π is a π-system
+    have hπ_isPiSystem : IsPiSystem π := by
+      exact isPiSystem_piiUnionInter (fun j => {s | MeasurableSet[m j] s})
+        (fun j => @MeasurableSpace.isPiSystem_measurableSet Ω (m j)) Set.univ
+
+    -- tailFamily X N = generateFrom π
+    have h_gen : tailFamily X N = MeasurableSpace.generateFrom π := by
+      rw [h_tailFam_eq_iSup]
+      have := generateFrom_piiUnionInter_measurableSet m Set.univ
+      simp only [Set.mem_univ, iSup_true] at this
+      exact this.symm
+
+    -- Measurability wrt tailFamily X N implies measurability wrt the ambient space
+    have h_meas_le : tailFamily X N ≤ (inferInstance : MeasurableSpace Ω) := by
+      apply iSup_le
+      intro j
+      exact (hX_meas (N + j)).comap_le
+
+    -- A is measurable in tailFamily X N (we proved hA_tailFam earlier)
+    -- Express the proof goal using induction_on_inter
+
+    -- The property we want to prove
+    let P : (s : Set Ω) → MeasurableSet[tailFamily X N] s → Prop :=
+      fun s _ => ∫ ω in s, f (X (k + 1) ω) ∂μ = ∫ ω in s, f (X 0 ω) ∂μ
+
+    -- Apply induction_on_inter
+    refine MeasurableSpace.induction_on_inter h_gen hπ_isPiSystem ?_ ?_ ?_ ?_ A hA_tailFam
+
+    -- Case 1: Empty set
+    · simp only [setIntegral_empty]
+
+    -- Case 2: Basic (elements of the π-system)
+    -- These are finite intersections of preimages: ⋂_{i ∈ p} {ω | X (N+kᵢ) ω ∈ Sᵢ}
+    -- The integral equality follows from contractability (same argument as setIntegral_cylinder_eq)
+    · intro t ht
+      -- Extract the structure: t = ⋂_{j ∈ pt} ft j where ft j ∈ {s | MeasurableSet[m j] s}
+      rcases ht with ⟨pt, _, ft, ht_m, rfl⟩
+
+      -- If pt is empty, t = univ and we use h_full
+      by_cases hpt_empty : pt = ∅
+      · simp only [hpt_empty, Finset.notMem_empty, Set.iInter_of_empty, Set.iInter_univ]
+        simp only [setIntegral_univ]
+        exact h_full
+
+      -- pt is nonempty, so t is a proper finite intersection
+      -- Get the sorted list of indices in pt
+      let indices : List ℕ := pt.sort (· ≤ ·)
+      have h_sorted : indices.Sorted (· < ·) := Finset.sort_sorted_lt pt
+      have h_nodup : indices.Nodup := Finset.sort_nodup (· ≤ ·) pt
+      have h_indices_ne : indices ≠ [] := by
+        simp only [indices, ne_eq, List.eq_nil_iff_forall_not_mem]
+        intro h
+        apply hpt_empty
+        ext x
+        simp only [Finset.notMem_empty, iff_false]
+        intro hx
+        exact h x ((Finset.mem_sort _).mpr hx)
+
+      -- The minimum index in pt
+      let min_idx := indices.head h_indices_ne
+
+      -- Key fact: k + 1 < N ≤ N + min_idx, so prepending k+1 or 0 preserves strict monotonicity
+      -- Since min_idx ≥ 0 and N = k + 2, we have N + min_idx ≥ k + 2 > k + 1 > 0
+
+      -- The proof follows setIntegral_cylinder_eq but for non-consecutive indices.
+      -- The mathematical content is identical: contractability gives equal joint laws
+      -- for any strictly increasing index sequence.
+
+      -- Define the number of coordinates in pt
+      let d := pt.card
+
+      -- The goal is to show both integrals are equal.
+      -- We express both as integrals over a pushforward measure and use measure equality.
+
+      -- The set t = ⋂ j ∈ pt, ft j where ft j ∈ {s | MeasurableSet[m j] s}.
+      -- Each ft j is a preimage: ft j = (X (N + j))⁻¹(Tⱼ) for some measurable Tⱼ ⊆ α.
+
+      -- To extract this structure, we use the fact that MeasurableSet[comap f m] s
+      -- implies s = f⁻¹(s') for some MeasurableSet[m] s'.
+
+      -- However, this extraction is technically involved. For now we leave this as sorry
+      -- and note the mathematical argument:
+      --
+      -- 1. Both sequences (k+1, N+j₁, ..., N+jₘ) and (0, N+j₁, ..., N+jₘ) are strictly
+      --    increasing since k+1 < N ≤ N + min(pt) and 0 < N ≤ N + min(pt).
+      -- 2. By contractability, both have the same joint law.
+      -- 3. The integrals ∫_t f(X_{k+1}) and ∫_t f(X_0) can be expressed as integrals
+      --    over these joint laws.
+      -- 4. Since the laws are equal, the integrals are equal.
+      --
+      -- The proof is structurally identical to setIntegral_cylinder_eq (lines 153-387)
+      -- but needs to handle non-consecutive indices (N+j₁, N+j₂, ...) instead of
+      -- consecutive ones (N, N+1, N+2, ...).
+
+      sorry -- Generalized cylinder integral equality for non-consecutive indices
+
+    -- Case 3: Complement
+    · intro t ht h_eq
+      -- ∫_{tᶜ} g = ∫ g - ∫_t g
+      -- ht : MeasurableSet[tailFamily X N] t, convert to ambient space using h_meas_le
+      have h_meas_t : MeasurableSet t := h_meas_le t ht
+      -- Use setIntegral_compl: ∫_tᶜ f = ∫ f - ∫_t f
+      have hc1 := setIntegral_compl h_meas_t hf_int_k1
+      have hc0 := setIntegral_compl h_meas_t hf_int
+      simp only [Function.comp_apply] at hc1 hc0
+      rw [hc1, hc0, h_full, h_eq]
+
+    -- Case 4: Disjoint union
+    · intro s h_disj h_meas h_eq
+      -- ∫_{⋃ sᵢ} g = ∑ ∫_{sᵢ} g
+      -- h_meas i : MeasurableSet[tailFamily X N] (s i), convert to ambient space using h_meas_le
+      have h_meas' : ∀ i, MeasurableSet (s i) := fun i => h_meas_le (s i) (h_meas i)
+      -- IntegrableOn on the union follows from integrability on the full space
+      have h_int_k1_on : IntegrableOn (fun ω => f (X (k + 1) ω)) (⋃ i, s i) μ :=
+        hf_int_k1.integrableOn
+      have h_int_0_on : IntegrableOn (fun ω => f (X 0 ω)) (⋃ i, s i) μ :=
+        hf_int.integrableOn
+      rw [integral_iUnion h_meas' h_disj h_int_k1_on]
+      rw [integral_iUnion h_meas' h_disj h_int_0_on]
+      congr 1
+      ext i
+      exact h_eq i
 
 /-- **Shift invariance of conditional expectation for contractable sequences (TODO).**
 
