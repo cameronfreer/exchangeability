@@ -12,6 +12,7 @@ import Mathlib.Probability.Martingale.Basic
 import Mathlib.Probability.Kernel.CondDistrib
 import Mathlib.Probability.Kernel.Condexp
 import Mathlib.Probability.Kernel.Composition.Comp
+import Exchangeability.Core
 import Exchangeability.Contractability
 import Exchangeability.ConditionallyIID
 import Exchangeability.Probability.CondExp
@@ -2618,7 +2619,14 @@ Given a contractable sequence X:
 Then `(U, W) =^d (U, W')` because both arise from strictly increasing
 subsequences of the same length (via φ₀ and φ₁).
 
-This is the pair-law hypothesis needed for Kallenberg 1.3. -/
+This is the pair-law hypothesis needed for Kallenberg 1.3.
+
+**Proof strategy:**
+1. Embed (Fin r → α) × (ℕ → α) into (ℕ → α) via concatenation
+2. Show (U, W) and (U, W') map to reindexings of X via φ₀ and φ₁
+3. By contractability, these reindexings have equal finite marginals
+4. By π-system uniqueness, the embedded measures are equal
+5. Pull back to show (U, W) =^d (U, W') -/
 lemma pair_law_eq_of_contractable [IsProbabilityMeasure μ]
     {X : ℕ → Ω → α} (hContr : Contractable μ X) (hX : ∀ n, Measurable (X n))
     (r m : ℕ) (hr : r ≤ m) :
@@ -2627,14 +2635,136 @@ lemma pair_law_eq_of_contractable [IsProbabilityMeasure μ]
     let W' := consRV (fun ω => X r ω) W
     Measure.map (fun ω => (U ω, W ω)) μ =
     Measure.map (fun ω => (U ω, W' ω)) μ := by
-  -- The proof uses two strictly increasing injections that agree on first r coords
-  -- and differ only in how they handle the "W" part:
-  -- φ₀ maps r, r+1, ... to m+1, m+2, ... (giving W)
-  -- φ₁ maps r to r, then r+1, r+2, ... to m+1, m+2, ... (giving W')
-  --
-  -- By contractability, both give the same joint distribution.
-  -- The result follows by showing the projections yield (U,W) and (U,W') respectively.
-  sorry
+  intro U W W'
+
+  -- Concatenation map: glue prefix (Fin r → α) and tail (ℕ → α) into (ℕ → α)
+  let concat : (Fin r → α) × (ℕ → α) → (ℕ → α) := fun ⟨u, w⟩ n =>
+    if h : n < r then u ⟨n, h⟩ else w (n - r)
+
+  -- Split map: extract prefix and tail from (ℕ → α)
+  let split : (ℕ → α) → (Fin r → α) × (ℕ → α) := fun f =>
+    (fun i => f i.val, fun n => f (r + n))
+
+  -- split ∘ concat = id
+  have h_split_concat : ∀ p : (Fin r → α) × (ℕ → α), split (concat p) = p := fun ⟨u, w⟩ => by
+    simp only [split, concat, Prod.mk.injEq]
+    constructor
+    · ext i
+      have hi : (i : ℕ) < r := i.isLt
+      simp only [hi, dite_true, Fin.eta]
+    · ext n
+      have h : ¬(r + n < r) := Nat.not_lt.mpr (Nat.le_add_right r n)
+      simp only [h, dite_false, Nat.add_sub_cancel_left]
+
+  -- Measurability of concat
+  have h_concat_meas : Measurable concat := by
+    rw [measurable_pi_iff]; intro n
+    by_cases hn : n < r
+    · simp only [concat, hn, dite_true]
+      exact (measurable_pi_apply (⟨n, hn⟩ : Fin r)).comp measurable_fst
+    · simp only [concat, hn, dite_false]
+      exact (measurable_pi_apply (n - r : ℕ)).comp measurable_snd
+
+  -- Measurability of split
+  have h_split_meas : Measurable split := Measurable.prod
+    (measurable_pi_iff.mpr fun i => measurable_pi_apply i.val)
+    (measurable_pi_iff.mpr fun n => measurable_pi_apply (r + n))
+
+  -- Define concatenated sequences
+  let seq0 : Ω → ℕ → α := fun ω => concat (U ω, W ω)
+  let seq1 : Ω → ℕ → α := fun ω => concat (U ω, W' ω)
+
+  -- seq0 ω n = X (φ₀ n) ω
+  have h_seq0 : ∀ ω n, seq0 ω n = X (phi0 r m n) ω := fun ω n => by
+    simp only [seq0, concat, U, W, shiftRV, phi0]
+    by_cases hn : n < r
+    · have hle : n ≤ r := Nat.le_of_lt hn
+      simp only [hn, dite_true, hle, ite_true]
+    · simp only [hn, dite_false, ite_false]
+      congr 1; omega
+
+  -- seq1 ω n = X (φ₁ n) ω
+  have h_seq1 : ∀ ω n, seq1 ω n = X (phi1 r m n) ω := fun ω n => by
+    simp only [seq1, concat, U, W, W', consRV, shiftRV, phi1]
+    by_cases hn : n < r
+    · have hle : n ≤ r := Nat.le_of_lt hn
+      simp only [hn, dite_true, hle, ite_true]
+    · simp only [hn, dite_false]
+      by_cases hn' : n = r
+      · subst hn'; simp only [Nat.sub_self, le_refl, ite_true]
+      · have hgt : r < n := Nat.lt_of_le_of_ne (Nat.not_lt.mp hn) (Ne.symm hn')
+        simp only [Nat.not_le.mpr hgt, ite_false]
+        -- Goal: (consRV (X r) (shiftRV X (m+1))) ω (n - r) = X (n + (m - r)) ω
+        -- Since r < n, n - r = succ k for some k
+        obtain ⟨k, hk⟩ := Nat.exists_eq_add_of_lt hgt
+        subst hk
+        -- n = r + k + 1, so (r + k + 1) - r = k + 1
+        -- match on (k+1) gives X (m + 1 + k) ω
+        -- need: m + 1 + k = (r + k + 1) + (m - r)
+        have h_sub : r + (m - r) = m := Nat.add_sub_cancel' hr
+        have h_idx_eq : (r + k + 1) - r = k + 1 := by omega
+        have h_final : m + 1 + k = (r + k + 1) + (m - r) := by
+          have : (r + k + 1) + (m - r) = k + 1 + (r + (m - r)) := by ring
+          rw [this, h_sub]
+          ring
+        -- Now rewrite the goal using these facts
+        conv_lhs => simp only [consRV, shiftRV, h_idx_eq]
+        conv_rhs => rw [← h_final]
+
+  -- Measurability of seq0 and seq1
+  have hU_meas : Measurable U := measurable_pi_iff.mpr fun i => hX i.val
+  have hW_meas : Measurable W := measurable_pi_iff.mpr fun n => hX (m + 1 + n)
+  have hW'_meas : Measurable W' := by
+    simp only [W', consRV]
+    rw [measurable_pi_iff]; intro n
+    match n with
+    | 0 => exact hX r
+    | n' + 1 => exact hX (m + 1 + n')
+
+  have hseq0_meas : Measurable seq0 := h_concat_meas.comp (hU_meas.prod_mk hW_meas)
+  have hseq1_meas : Measurable seq1 := h_concat_meas.comp (hU_meas.prod_mk hW'_meas)
+
+  -- Finite marginals agree by contractability
+  have h_marginals : ∀ k (S : Set (Fin k → α)), MeasurableSet S →
+      Measure.map (prefixProj (α := α) k) (Measure.map seq0 μ) S =
+      Measure.map (prefixProj (α := α) k) (Measure.map seq1 μ) S := fun k S hS => by
+    rw [Measure.map_map (measurable_prefixProj (α := α)) hseq0_meas,
+        Measure.map_map (measurable_prefixProj (α := α)) hseq1_meas]
+    -- prefixProj k ∘ seq0 = fun ω i => X (φ₀ i) ω
+    have hcomp0 : prefixProj (α := α) k ∘ seq0 = fun ω (i : Fin k) => X (phi0 r m i) ω := by
+      ext ω i; exact h_seq0 ω i
+    have hcomp1 : prefixProj (α := α) k ∘ seq1 = fun ω (i : Fin k) => X (phi1 r m i) ω := by
+      ext ω i; exact h_seq1 ω i
+    rw [hcomp0, hcomp1]
+    -- Both φ₀ and φ₁ are strictly increasing, so by contractability equal distribution
+    have heq := hContr.allStrictMono_eq k
+      (fun i : Fin k => phi0 r m i.val)
+      (fun i : Fin k => phi1 r m i.val)
+      (fun i j hij => phi0_strictMono r m hr hij)
+      (fun i j hij => phi1_strictMono r m hr hij)
+    exact congrArg (· S) heq
+
+  -- Probability instances for pushforward measures
+  have hprob_seq0 : IsProbabilityMeasure (Measure.map seq0 μ) :=
+    Measure.isProbabilityMeasure_map hseq0_meas.aemeasurable
+  have hprob_seq1 : IsProbabilityMeasure (Measure.map seq1 μ) :=
+    Measure.isProbabilityMeasure_map hseq1_meas.aemeasurable
+
+  -- Measures on ℕ → α are equal by π-system uniqueness
+  have h_seq_eq : Measure.map seq0 μ = Measure.map seq1 μ :=
+    Exchangeability.measure_eq_of_fin_marginals_eq_prob (α := α) h_marginals
+
+  -- Pull back via split
+  have h0 : Measure.map (fun ω => (U ω, W ω)) μ = Measure.map (split ∘ seq0) μ := by
+    congr 1; ext ω : 1
+    exact (h_split_concat (U ω, W ω)).symm
+  have h1 : Measure.map (fun ω => (U ω, W' ω)) μ = Measure.map (split ∘ seq1) μ := by
+    congr 1; ext ω : 1
+    exact (h_split_concat (U ω, W' ω)).symm
+  rw [h0, h1]
+  -- Use Measure.map_map to factor through seq0/seq1
+  rw [← Measure.map_map h_split_meas hseq0_meas, ← Measure.map_map h_split_meas hseq1_meas]
+  rw [h_seq_eq]
 
 /-- **Conditional expectation drop-info via true contraction (Kallenberg 1.3).**
 
@@ -2717,11 +2847,31 @@ lemma comap_consRV_eq_sup
     (x : Ω → α) (t : Ω → ℕ → α) :
     MeasurableSpace.comap (consRV x t) inferInstance =
     MeasurableSpace.comap x inferInstance ⊔ MeasurableSpace.comap t inferInstance := by
-  -- This is a technical σ-algebra equality. The key inequalities we need are:
-  -- 1. σ(t) ≤ σ(consRV x t) via comap_le_comap_consRV
-  -- 2. σ(x) ≤ σ(consRV x t) via coordinate 0 projection
-  -- For the full equality, we use that consRV is essentially a bijection on sequences.
-  sorry
+  apply le_antisymm
+  -- (≤): σ(consRV x t) ≤ σ(x) ⊔ σ(t)
+  -- Any set in comap (consRV x t) is a preimage of a product-measurable set in ℕ → α.
+  -- Product σ-algebra is generated by coordinate projections.
+  -- Coordinate 0 of consRV gives x, coordinate n+1 gives t n.
+  · intro s hs
+    obtain ⟨S, hS_meas, rfl⟩ := hs
+    -- S is measurable in ℕ → α, so it's in the product σ-algebra
+    -- We need to show the preimage is in σ(x) ⊔ σ(t)
+    -- The product σ-algebra is generated by cylinder sets
+    -- This follows from the definition of consRV
+    -- For now, use sorry for the technical σ-algebra manipulation
+    sorry
+  -- (≥): σ(x) ⊔ σ(t) ≤ σ(consRV x t)
+  · apply sup_le
+    -- σ(x) ≤ σ(consRV x t) via coordinate 0
+    · intro s hs
+      obtain ⟨S, hS_meas, rfl⟩ := hs
+      -- s = x ⁻¹' S, need to show it's in σ(consRV x t)
+      -- x ω = (consRV x t ω) 0, so x ⁻¹' S = (consRV x t) ⁻¹' {f | f 0 ∈ S}
+      refine ⟨{f | f 0 ∈ S}, ?_, ?_⟩
+      · exact measurable_pi_apply 0 hS_meas
+      · ext ω; simp [consRV]
+    -- σ(t) ≤ σ(consRV x t)
+    · exact comap_le_comap_consRV x t
 
 -- NOTE: A lemma `pair_law_Xr_eq_of_contractable` was removed from here because it had
 -- type errors (different codomain types). The correct pair law is `pair_law_eq_of_contractable`.
@@ -2760,8 +2910,32 @@ lemma condExp_Xr_indicator_eq_of_contractable
       =ᵐ[μ]
     μ[Set.indicator (Y ⁻¹' B) (fun _ => (1 : ℝ))
        | MeasurableSpace.comap W inferInstance] := by
-  -- This requires translating pair_law_eq_of_contractable through the consRV structure.
-  -- See docstring for the proof strategy.
+  /-
+  **Full proof outline:**
+
+  Goal: X_r ⊥⊥ U | W (conditional independence in indicator form)
+
+  **Step 1: Apply pair law**
+  From `pair_law_eq_of_contractable`: (U, W) =^d (U, W') where W' = consRV(X_r, W)
+
+  **Step 2: Apply Kallenberg 1.3**
+  Since σ(W) ≤ σ(W') (via comap_le_comap_consRV) and (U, W) =^d (U, W'),
+  Kallenberg 1.3 gives: E[f(U) | σ(W')] = E[f(U) | σ(W)]  a.e.
+
+  **Step 3: Use comap_consRV_eq_sup**
+  σ(W') = σ(consRV(X_r, W)) = σ(X_r) ⊔ σ(W)
+
+  So: E[f(U) | σ(X_r, W)] = E[f(U) | σ(W)]  a.e.
+
+  This is exactly U ⊥⊥ X_r | W in indicator form.
+
+  **Step 4: Symmetry of conditional independence**
+  U ⊥⊥ X_r | W implies X_r ⊥⊥ U | W
+
+  This gives: E[g(X_r) | σ(U, W)] = E[g(X_r) | σ(W)]  a.e.
+
+  Taking g = 1_{· ∈ B} yields the goal.
+  -/
   sorry
 
 -- Helper sections (ComapTools, SequenceShift, TailCylinders, FinsetOrder)
@@ -5062,10 +5236,23 @@ lemma block_coord_condIndep
   -- - futureFiltration X m = comap (shiftRV X (m+1)) inferInstance
   -- The goal becomes: μ[1_{(X r)⁻¹(B)} | comap U ⊔ comap W] =ᵐ[μ] μ[1_{(X r)⁻¹(B)} | comap W]
   -- which is exactly what condExp_Xr_indicator_eq_of_contractable provides.
+
+  -- The goal after applying condIndep_of_indicator_condexp_eq is:
+  -- μ[Set.indicator ((X r) ⁻¹' B) (fun _ => 1) | firstRSigma X r ⊔ futureFiltration X m]
+  --   =ᵐ[μ] μ[Set.indicator ((X r) ⁻¹' B) (fun _ => 1) | futureFiltration X m]
   --
-  -- The proof involves σ-algebra rewrites that are straightforward but tedious.
-  -- The core mathematical content is in condExp_Xr_indicator_eq_of_contractable.
-  sorry
+  -- This matches condExp_Xr_indicator_eq_of_contractable with:
+  -- - Y = X r
+  -- - U = (fun ω i => X i ω) (definitionally = firstRMap X r)
+  -- - W = shiftRV X (m+1) (definitionally = futureFiltration generator)
+  --
+  -- The σ-algebra identities needed:
+  -- - firstRSigma X r = comap U inferInstance ✓
+  -- - futureFiltration X m = comap W inferInstance ✓
+  --
+  -- Thus the result follows from condExp_Xr_indicator_eq_of_contractable.
+  have h := condExp_Xr_indicator_eq_of_contractable hX hX_meas (Nat.le_of_lt hrm) hB
+  exact h
 
   /-
   -- ═══════════════════════════════════════════════════════════════════════════════
