@@ -726,22 +726,37 @@ lemma setIntegral_comp_shift_eq
       -- Key fact: k + 1 < N ≤ N + min_idx, so prepending k+1 or 0 preserves strict monotonicity
       -- Since min_idx ≥ 0 and N = k + 2, we have N + min_idx ≥ k + 2 > k + 1 > 0
 
-      -- For now, we use the direct approach:
-      -- The integral over t only depends on the joint law of (X (k+1), X (N+j₁), ..., X (N+jₘ))
-      -- and (X 0, X (N+j₁), ..., X (N+jₘ)). By contractability, both have the same law.
+      -- The proof follows setIntegral_cylinder_eq but for non-consecutive indices.
+      -- The mathematical content is identical: contractability gives equal joint laws
+      -- for any strictly increasing index sequence.
 
-      -- Technical note: The full proof would:
-      -- 1. Express t as a preimage under the joint map (X (N+j₁), ..., X (N+jₘ))
-      -- 2. Define g(z) = f(z 0) · indicator(...) as in setIntegral_cylinder_eq
-      -- 3. Apply contractability to get equal push-forward measures
-      -- 4. Use integral_map to conclude
+      -- Define the number of coordinates in pt
+      let d := pt.card
 
-      -- For now, we note that this follows by the same pattern as setIntegral_cylinder_eq
-      -- The key difference is that the indices (N+j₁, ..., N+jₘ) may not be consecutive,
-      -- but this doesn't affect the argument since contractability works for any
-      -- strictly increasing sequence.
+      -- The goal is to show both integrals are equal.
+      -- We express both as integrals over a pushforward measure and use measure equality.
 
-      sorry -- Technical: needs setIntegral_cylinder_eq generalized to non-consecutive indices
+      -- The set t = ⋂ j ∈ pt, ft j where ft j ∈ {s | MeasurableSet[m j] s}.
+      -- Each ft j is a preimage: ft j = (X (N + j))⁻¹(Tⱼ) for some measurable Tⱼ ⊆ α.
+
+      -- To extract this structure, we use the fact that MeasurableSet[comap f m] s
+      -- implies s = f⁻¹(s') for some MeasurableSet[m] s'.
+
+      -- However, this extraction is technically involved. For now we leave this as sorry
+      -- and note the mathematical argument:
+      --
+      -- 1. Both sequences (k+1, N+j₁, ..., N+jₘ) and (0, N+j₁, ..., N+jₘ) are strictly
+      --    increasing since k+1 < N ≤ N + min(pt) and 0 < N ≤ N + min(pt).
+      -- 2. By contractability, both have the same joint law.
+      -- 3. The integrals ∫_t f(X_{k+1}) and ∫_t f(X_0) can be expressed as integrals
+      --    over these joint laws.
+      -- 4. Since the laws are equal, the integrals are equal.
+      --
+      -- The proof is structurally identical to setIntegral_cylinder_eq (lines 153-387)
+      -- but needs to handle non-consecutive indices (N+j₁, N+j₂, ...) instead of
+      -- consecutive ones (N, N+1, N+2, ...).
+
+      sorry -- Generalized cylinder integral equality for non-consecutive indices
 
     -- Case 3: Complement
     · intro t ht h_eq
