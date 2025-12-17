@@ -1177,7 +1177,40 @@ It does NOT imply that conditioning on (Z,W) vs just W gives the same result for
 See plan file at /Users/freer/.claude/plans/silly-baking-marble.md for details.
 -/
 
-lemma condIndep_of_triple_law
+/-! ### QUARANTINED: Mathematically False Lemma
+
+The lemma `condIndep_of_triple_law` below is **mathematically false** as stated.
+
+**Counterexample:** Take W' = W. Then the triple law hypothesis
+  `(Y, Z, W) =^d (Y, Z, W')`
+holds trivially (both sides are identical), but Y and Z can be arbitrarily
+dependent given W.
+
+For example: Let Y = Z = X for some non-constant random variable X, and W = 0.
+Then (Y, Z, W) = (X, X, 0) trivially equals (Y, Z, W') = (X, X, 0), but
+Y ⊥⊥ Z | W is false since Y = Z almost surely.
+
+**The fundamental issue:** The claim "drop Z from conditioning on σ(Z,W) to σ(W)"
+is *equivalent to* conditional independence Y ⊥⊥ Z | W. You cannot derive CI
+from a hypothesis that doesn't imply it.
+
+**Correct approach:** Use Kallenberg 1.3 with a *true contraction* where
+W' = cons(X_r, W) and σ(W) ⊆ σ(W'). See `block_coord_condIndep_of_contractable`
+for the corrected proof structure.
+
+This lemma is kept here (with `sorry`) only for reference. DO NOT USE.
+-/
+
+section Quarantined
+
+/-- **INVALID LEMMA - DO NOT USE**
+
+This lemma is mathematically false. See comment block above for counterexample.
+
+The triple law hypothesis `(Y,Z,W) =^d (Y,Z,W')` does NOT imply `Y ⊥⊥ Z | W`.
+Counterexample: W' = W satisfies the hypothesis trivially.
+-/
+lemma condIndep_of_triple_law_INVALID
   {Ω α β γ : Type*}
   [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
   {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -1954,6 +1987,8 @@ lemma condIndep_of_triple_law
   -- Apply the rectangle factorization criterion
   exact condIndep_of_rect_factorization μ Y Z W h_rect
 
+end Quarantined
+
 /-- **Combined lemma:** Conditional expectation projection from triple distributional equality.
 
 This combines Kallenberg 1.3 with the projection property: if the triple distribution
@@ -2037,8 +2072,11 @@ lemma condExp_eq_of_triple_law
           rw [Measure.map_map h_perm (hZ.prodMk (hY.prodMk hW')), ← this]
 
   -- Step 2: Derive conditional independence from the triple law (Kallenberg Lemma 1.3)
+  -- WARNING: This uses the INVALID lemma. See `section Quarantined` above.
+  -- The triple law hypothesis does NOT actually imply conditional independence.
+  -- This proof path needs restructuring per the plan in silly-baking-marble.md
   have h_condIndep : CondIndep μ Y Z W :=
-    condIndep_of_triple_law Y Z W W' hY hZ hW hW' h_triple_reordered
+    condIndep_of_triple_law_INVALID Y Z W W' hY hZ hW hW' h_triple_reordered
 
   -- Step 3: Apply the projection property from conditional independence
   exact condIndep_project μ Y Z W hY hZ hW h_condIndep hB
