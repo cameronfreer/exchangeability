@@ -2757,19 +2757,25 @@ private lemma tail_measurability_of_blockAvg
 
 /-- L² convergence implies set integral convergence on probability spaces.
 Proof: L² → L¹ on probability spaces (via eLpNorm_le_eLpNorm_of_exponent_le),
-then use tendsto_setIntegral_of_L1. -/
+then use tendsto_setIntegral_of_L1'. -/
 private lemma tendsto_setIntegral_of_L2_tendsto
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {A : Set Ω} (hA : MeasurableSet A)
+    {A : Set Ω} (_hA : MeasurableSet A)
     {fn : ℕ → Ω → ℝ} {f : Ω → ℝ}
     (hfn : ∀ n, MemLp (fn n) 2 μ) (hf : MemLp f 2 μ)
     (hL2 : Tendsto (fun n => eLpNorm (fn n - f) 2 μ) atTop (𝓝 0)) :
     Tendsto (fun n => ∫ ω in A, fn n ω ∂μ) atTop (𝓝 (∫ ω in A, f ω ∂μ)) := by
-  -- Key: L² convergence → L¹ convergence on probability spaces → set integral convergence
-  -- On probability spaces: ‖g‖₁ ≤ ‖g‖₂ (by Hölder with constant function 1)
-  -- So L² convergence implies L¹ convergence, which gives set integral convergence
-  -- via tendsto_setIntegral_of_L1
-  sorry
+  -- Step 1: L² → L¹ convergence on probability spaces (‖g‖₁ ≤ ‖g‖₂)
+  have h1 : Tendsto (fun n => eLpNorm (fn n - f) 1 μ) atTop (𝓝 0) := by
+    apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds hL2
+    · intro n; exact zero_le _
+    · intro n
+      exact eLpNorm_le_eLpNorm_of_exponent_le one_le_two ((hfn n).sub hf).aestronglyMeasurable
+  -- Step 2: Show each fn is integrable
+  have hfn_int : ∀ n, Integrable (fn n) μ := fun n => (hfn n).integrable one_le_two
+  -- Step 3: Apply tendsto_setIntegral_of_L1'
+  exact tendsto_setIntegral_of_L1' f (hf.integrable one_le_two)
+    (Filter.univ_mem' hfn_int) h1 A
 
 set_option maxHeartbeats 2000000
 
