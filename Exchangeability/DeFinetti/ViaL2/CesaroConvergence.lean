@@ -15,6 +15,7 @@ import Exchangeability.Tail.ShiftInvariance
 import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
 import Mathlib.MeasureTheory.Function.LpSpace.Basic
+import Mathlib.MeasureTheory.Integral.SetIntegral
 import Mathlib.Analysis.InnerProductSpace.MeanErgodic
 import Canonical
 
@@ -101,15 +102,16 @@ lemma aestronglyMeasurable_iInf_antitone
 
   -- Now conclude Measurable[⨅ N, m N] h
   have h_meas : @Measurable α ℝ (⨅ N, m N) _ h := by
-    rw [measurable_iInf]
-    exact h_meas_each
+    intro s hs
+    rw [MeasurableSpace.measurableSet_iInf]
+    exact fun N => h_meas_each N hs
 
   -- Step 4: Show f =ᵐ h
   -- On the set where f = g N for all N, we have h = f
   have h_ae_eq : f =ᵐ[μ] h := by
     -- Countable intersection of full-measure sets is full-measure
     have h_all_eq : ∀ᵐ x ∂μ, ∀ N, f x = g N x := by
-      rw [ae_all_iff]
+      rw [MeasureTheory.ae_all_iff]
       intro N
       exact hg_ae N
     filter_upwards [h_all_eq] with x hx
@@ -117,7 +119,7 @@ lemma aestronglyMeasurable_iInf_antitone
     simp only [h]
     have h_const : ∀ N, g N x = f x := fun N => (hx N).symm
     simp_rw [h_const]
-    exact Filter.liminf_const (f x)
+    exact (Filter.liminf_const (f x)).symm
 
   -- Step 5: Convert Measurable to StronglyMeasurable (for ℝ)
   have h_sm : @MeasureTheory.StronglyMeasurable α ℝ _ (⨅ N, m N) h := by
@@ -125,7 +127,7 @@ lemma aestronglyMeasurable_iInf_antitone
     exact h_meas.stronglyMeasurable
 
   -- Step 6: Conclude AEStronglyMeasurable
-  exact ⟨h, h_sm, h_ae_eq.symm⟩
+  exact ⟨h, h_sm, h_ae_eq⟩
 
 /-- AEStronglyMeasurable for a sub-σ-algebra is preserved under a.e. pointwise limits.
 
@@ -2753,6 +2755,22 @@ private lemma tail_measurability_of_blockAvg
   rw [h_eq]
   exact aestronglyMeasurable_iInf_antitone h_anti h_le α_f h_aesm_each
 
+/-- L² convergence implies set integral convergence on probability spaces.
+Proof: L² → L¹ on probability spaces (via eLpNorm_le_eLpNorm_of_exponent_le),
+then use tendsto_setIntegral_of_L1. -/
+private lemma tendsto_setIntegral_of_L2_tendsto
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {A : Set Ω} (hA : MeasurableSet A)
+    {fn : ℕ → Ω → ℝ} {f : Ω → ℝ}
+    (hfn : ∀ n, MemLp (fn n) 2 μ) (hf : MemLp f 2 μ)
+    (hL2 : Tendsto (fun n => eLpNorm (fn n - f) 2 μ) atTop (𝓝 0)) :
+    Tendsto (fun n => ∫ ω in A, fn n ω ∂μ) atTop (𝓝 (∫ ω in A, f ω ∂μ)) := by
+  -- Key: L² convergence → L¹ convergence on probability spaces → set integral convergence
+  -- On probability spaces: ‖g‖₁ ≤ ‖g‖₂ (by Hölder with constant function 1)
+  -- So L² convergence implies L¹ convergence, which gives set integral convergence
+  -- via tendsto_setIntegral_of_L1
+  sorry
+
 set_option maxHeartbeats 2000000
 
 /-- **Cesàro averages converge in L² to a tail-measurable limit.**
@@ -3173,17 +3191,141 @@ lemma cesaro_to_condexp_L2
     --    Use: tendsto_setIntegral_of_L1 or norm_setIntegral_le_of_norm_le_const_ae
     -- 3. Uniqueness: ae_eq_of_forall_setIntegral_eq_of_sigmaFinite
     --
-    -- PROOF SKETCH (complete but requires substantial implementation):
-    -- have h_tail_aesm := tail_measurability_of_blockAvg f hf_meas hf_bdd hX_meas α_f hα_memLp hα_limit
-    -- have h_setint_eq : ∀ A, MeasurableSet[TailSigma.tailSigma X] A →
-    --     ∫ ω in A, α_f ω ∂μ = ∫ ω in A, f (X 0 ω) ∂μ := by
-    --   intro A hA
-    --   -- Step 1: ∫_A blockAvg f X 0 n dμ = ∫_A f(X_0) dμ (by exchangeability + linearity)
-    --   -- Step 2: ∫_A blockAvg f X 0 n dμ → ∫_A α_f dμ (by L² → set integral via Hölder)
-    --   -- Step 3: Therefore ∫_A α_f dμ = ∫_A f(X_0) dμ
-    --   sorry
-    -- exact ae_eq_of_forall_setIntegral_eq_of_sigmaFinite hm h_int_f h_int_α h_setint_eq h_tail_aesm
-    sorry
+    -- === PROOF STRUCTURE ===
+    -- Goal: α_f =ᵐ[μ] μ[(f ∘ X 0) | TailSigma.tailSigma X]
+    -- Strategy: Show equal set integrals on tail events, then invoke uniqueness
+    --
+    -- Key lemmas used:
+    -- 1. setIntegral_comp_shift_eq: ∫_A f(X_k) = ∫_A f(X_0) for tail sets A
+    -- 2. ae_eq_condExp_of_forall_setIntegral_eq: uniqueness of conditional expectation
+    -- 3. tendsto_setIntegral_of_L1': L² → L¹ → set integral convergence
+    --
+    -- Step 1: Sub-σ-algebra condition
+    -- Step 2: Set up SigmaFinite for trimmed measure
+    -- Step 3: Show integrability conditions
+    -- Step 4: Show set integral equality via:
+    --   (a) ∫_A blockAvg_n = ∫_A f(X_0) (by setIntegral_comp_shift_eq + linearity)
+    --   (b) ∫_A blockAvg_n → ∫_A α_f (by L² → set integral convergence)
+    -- Step 5: Apply uniqueness lemma
+
+    -- The key relationship: TailSigma.tailSigma X = tailProcess X
+    -- This follows from the re-export in BlockAverages.lean
+
+    -- Step 1: Sub-σ-algebra condition
+    have hm : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
+      TailSigma.tailSigma_le X hX_meas
+
+    -- Step 2: SigmaFinite for trimmed measure (automatic for probability measures)
+    haveI h_finite : IsFiniteMeasure (μ.trim hm) := by
+      constructor
+      rw [trim_measurableSet_eq hm MeasurableSet.univ]
+      exact measure_lt_top μ Set.univ
+    haveI : SigmaFinite (μ.trim hm) := @IsFiniteMeasure.toSigmaFinite _ _ _ h_finite
+
+    -- Step 3: Integrability of f ∘ X 0 (bounded function on probability space)
+    have hfX0_int : Integrable (f ∘ X 0) μ := by
+      -- Bounded functions on probability spaces are integrable
+      have h_memLp2 : MemLp (f ∘ X 0) 2 μ := by
+        apply MemLp.of_bound (hf_meas.comp (hX_meas 0)).aestronglyMeasurable 1
+        filter_upwards with ω
+        simp only [Real.norm_eq_abs, Function.comp_apply]
+        exact hf_bdd (X 0 ω)
+      -- MemLp 2 → MemLp 1 on probability spaces (since 1 ≤ 2)
+      have h_memLp1 : MemLp (f ∘ X 0) 1 μ := h_memLp2.mono_exponent one_le_two
+      exact memLp_one_iff_integrable.mp h_memLp1
+
+    -- Apply uniqueness lemma: ae_eq_condExp_of_forall_setIntegral_eq
+    -- This shows α_f = condExp if they have equal set integrals and α_f is tail-measurable
+    apply ae_eq_condExp_of_forall_setIntegral_eq hm hfX0_int
+
+    -- Condition 1: α_f is integrable on finite-measure tail sets
+    · intro s hs hμs
+      exact (hα_memLp.integrable one_le_two).integrableOn
+
+    -- Condition 2: Set integrals are equal
+    · intro A hA hμA
+      -- Convert MeasurableSet from TailSigma.tailSigma to tailProcess
+      -- (They are definitionally equal via the re-export in BlockAverages.lean)
+      have hA_tail : MeasurableSet[Exchangeability.Tail.tailProcess X] A := hA
+
+      -- Step (a): Show ∫_A f(X k) = ∫_A f(X 0) for all k using setIntegral_comp_shift_eq
+      have h_shift_eq : ∀ k, ∫ ω in A, f (X k ω) ∂μ = ∫ ω in A, f (X 0 ω) ∂μ :=
+        fun k => Exchangeability.Tail.ShiftInvariance.setIntegral_comp_shift_eq X hX_contract hX_meas f hf_meas hA_tail hfX0_int k
+
+      -- Step (b): Show ∫_A blockAvg n = ∫_A f(X 0) for all n > 0
+      -- blockAvg f X 0 n ω = (1/n) * ∑ k : Fin n, f (X k ω)
+      -- By linearity: ∫_A (1/n * ∑ f(X k)) = (1/n) * ∑ ∫_A f(X k) = (1/n) * n * ∫_A f(X 0) = ∫_A f(X 0)
+      have h_blockAvg_eq : ∀ n > 0, ∫ ω in A, blockAvg f X 0 n ω ∂μ = ∫ ω in A, f (X 0 ω) ∂μ := by
+        intro n hn
+        -- Each f ∘ X k is integrable (bounded function on probability space)
+        have hfXk_int : ∀ k, Integrable (fun ω => f (X k ω)) μ := fun k => by
+          have h_memLp2 : MemLp (fun ω => f (X k ω)) 2 μ := by
+            apply MemLp.of_bound (hf_meas.comp (hX_meas k)).aestronglyMeasurable 1
+            filter_upwards with ω
+            simp only [Real.norm_eq_abs]
+            exact hf_bdd (X k ω)
+          exact (h_memLp2.mono_exponent one_le_two).integrable le_rfl
+        -- Unfold blockAvg: blockAvg f X 0 n ω = (n:ℝ)⁻¹ * ∑_{k∈range n} f(X (0+k) ω)
+        -- For m = 0, this is (n:ℝ)⁻¹ * ∑_{k∈range n} f(X k ω)
+        simp only [blockAvg, zero_add]
+        -- Rewrite using scalar multiplication
+        have h_scalar : ∫ ω in A, (↑n : ℝ)⁻¹ * ∑ k ∈ Finset.range n, f (X k ω) ∂μ =
+            (↑n : ℝ)⁻¹ * ∫ ω in A, ∑ k ∈ Finset.range n, f (X k ω) ∂μ := by
+          simp_rw [← smul_eq_mul]
+          exact MeasureTheory.integral_smul _ _
+        rw [h_scalar]
+        -- Sum pullout: ∫_A (∑ ...) = ∑ ∫_A ...
+        rw [MeasureTheory.integral_finset_sum _ (fun k _ => (hfXk_int k).integrableOn.integrable)]
+        -- Apply shift invariance: ∑ ∫_A f(X k) = ∑ ∫_A f(X 0) = n * ∫_A f(X 0)
+        simp_rw [h_shift_eq]
+        rw [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+        -- Simplify: n⁻¹ * (n * ∫_A f(X 0)) = ∫_A f(X 0) (since n > 0)
+        field_simp
+
+      -- Step (c): Show ∫_A blockAvg n → ∫_A α_f using L² convergence
+      -- Use Hölder: |∫_A (g - h)| ≤ μ(A)^(1/2) * ‖g - h‖₂
+      -- L² convergence + bounded measure gives set integral convergence
+      have h_setInt_tendsto : Tendsto (fun n => ∫ ω in A, blockAvg f X 0 n ω ∂μ)
+          atTop (𝓝 (∫ ω in A, α_f ω ∂μ)) := by
+        -- Need MemLp for each blockAvg n (bounded functions on probability spaces)
+        have h_blockAvg_memLp : ∀ n, MemLp (blockAvg f X 0 n) 2 μ := fun n => by
+          apply MemLp.of_bound (blockAvg_measurable f X hf_meas hX_meas 0 n).aestronglyMeasurable 1
+          filter_upwards with ω
+          simp only [Real.norm_eq_abs, blockAvg]
+          -- |n⁻¹ * ∑ f(X k)| ≤ n⁻¹ * n = 1
+          rw [abs_mul, abs_of_nonneg (inv_nonneg.mpr (Nat.cast_nonneg n))]
+          calc (n : ℝ)⁻¹ * |(Finset.range n).sum (fun k => f (X (0 + k) ω))|
+              ≤ (n : ℝ)⁻¹ * n := by
+                apply mul_le_mul_of_nonneg_left _ (inv_nonneg.mpr (Nat.cast_nonneg n))
+                calc |(Finset.range n).sum (fun k => f (X (0 + k) ω))|
+                    ≤ (Finset.range n).sum (fun k => |f (X (0 + k) ω)|) :=
+                      Finset.abs_sum_le_sum_abs _ _
+                  _ ≤ (Finset.range n).sum (fun _ => 1) := by
+                      apply Finset.sum_le_sum; intro k _
+                      simp only [zero_add]; exact hf_bdd (X k ω)
+                  _ = n := by simp only [Finset.sum_const, Finset.card_range, nsmul_one]
+            _ ≤ 1 := by by_cases hn : n = 0 <;> simp [hn]
+        -- Use auxiliary lemma
+        have hA_meas : MeasurableSet A := hm A hA
+        exact tendsto_setIntegral_of_L2_tendsto hA_meas h_blockAvg_memLp hα_memLp hα_limit
+
+      -- Step (d): Combine: constant sequence converges to unique limit
+      -- From (b): the sequence ∫_A blockAvg n is eventually constant at ∫_A f(X 0)
+      -- From (c): it converges to ∫_A α_f
+      -- Therefore ∫_A α_f = ∫_A f(X 0)
+      have h_const : ∀ᶠ n in atTop, ∫ ω in A, blockAvg f X 0 n ω ∂μ = ∫ ω in A, f (X 0 ω) ∂μ := by
+        filter_upwards [eventually_gt_atTop 0] with n hn
+        exact h_blockAvg_eq n hn
+      -- The limit of an eventually constant sequence equals that constant
+      have h_lim_eq_const : Tendsto (fun n => ∫ ω in A, blockAvg f X 0 n ω ∂μ)
+          atTop (𝓝 (∫ ω in A, f (X 0 ω) ∂μ)) := by
+        apply tendsto_const_nhds.congr'
+        filter_upwards [h_const] with n hn
+        exact hn.symm
+      exact tendsto_nhds_unique h_setInt_tendsto h_lim_eq_const
+
+    -- Condition 3: α_f is tail-measurable
+    · exact tail_measurability_of_blockAvg f hf_meas hf_bdd hX_meas α_f hα_memLp hα_limit
 
 /-- **L¹ version via L² → L¹ conversion.**
 

@@ -183,7 +183,7 @@ private lemma L1_unique_of_two_limits
     calc eLpNorm (f - g) 1 μ
         = eLpNorm ((f - fn n) + (fn n - g)) 1 μ := by ring_nf
       _ ≤ eLpNorm (f - fn n) 1 μ + eLpNorm (fn n - g) 1 μ :=
-          eLpNorm_add_le (hf_aesm.sub (hfn n)) ((hfn n).sub hg_aesm) (by norm_num : (1 : ℕ∞) ≥ 1)
+          eLpNorm_add_le (hf_aesm.sub (hfn n)) ((hfn n).sub hg_aesm) le_rfl
       _ = eLpNorm (fn n - f) 1 μ + eLpNorm (fn n - g) 1 μ := by
           rw [← eLpNorm_neg (f - fn n)]
           simp only [neg_sub]
@@ -198,17 +198,18 @@ private lemma L1_unique_of_two_limits
     by_contra h_ne
     have h_pos : 0 < eLpNorm (f - g) 1 μ := pos_iff_ne_zero.mpr h_ne
     -- The bound goes to 0, so eventually it's < eLpNorm (f - g) 1 μ
-    have := (ENNReal.tendsto_atTop (f := fun n => eLpNorm (fn n - f) 1 μ + eLpNorm (fn n - g) 1 μ)).mp
-              h_sum_tendsto (eLpNorm (f - g) 1 μ) h_pos
-    obtain ⟨N, hN⟩ := this
-    -- At n = N, we have h_bound N and hN N (le_refl N)
-    have h_lt : eLpNorm (fn N - f) 1 μ + eLpNorm (fn N - g) 1 μ < eLpNorm (f - g) 1 μ := hN N (le_refl N)
+    -- Use that if a sequence tends to 0 and ε > 0, eventually the sequence is < ε
+    have h_ev : ∀ᶠ n in atTop, eLpNorm (fn n - f) 1 μ + eLpNorm (fn n - g) 1 μ < eLpNorm (f - g) 1 μ :=
+      (tendsto_order.mp h_sum_tendsto).2 _ h_pos
+    obtain ⟨N, hN⟩ := h_ev.exists
+    -- At n = N, we have h_bound N and hN
+    have h_lt : eLpNorm (fn N - f) 1 μ + eLpNorm (fn N - g) 1 μ < eLpNorm (f - g) 1 μ := hN
     have h_le : eLpNorm (f - g) 1 μ ≤ eLpNorm (fn N - f) 1 μ + eLpNorm (fn N - g) 1 μ := h_bound N
     exact (lt_irrefl _ (lt_of_le_of_lt h_le h_lt))
 
   -- Apply eLpNorm_eq_zero_iff to conclude f - g =ᵐ 0
-  rw [eLpNorm_eq_zero_iff (hf_aesm.sub hg_aesm) (by norm_num : (1 : ℕ∞) ≠ 0)] at h_zero
-  exact sub_ae_eq_zero.mp h_zero
+  rw [eLpNorm_eq_zero_iff (hf_aesm.sub hg_aesm) (one_ne_zero)] at h_zero
+  filter_upwards [h_zero] with x hx using sub_eq_zero.mp hx
 
 /-- **L¹ convergence under clipping:** If fₙ → f in L¹, then clip01∘fₙ → clip01∘f in L¹. -/
 private lemma L1_tendsto_clip01
