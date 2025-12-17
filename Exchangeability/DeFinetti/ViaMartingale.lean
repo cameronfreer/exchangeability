@@ -2438,6 +2438,90 @@ def path (X : ℕ → Ω → α) : Ω → (ℕ → α) := fun ω n => X n ω
 def shiftRV (X : ℕ → Ω → α) (m : ℕ) : Ω → (ℕ → α) :=
   fun ω n => X (m + n) ω
 
+/-! ### Cons and Tail Operations for Sequences
+
+These are used for the correct Kallenberg 1.3 application:
+- `consRV x t` prepends value x to sequence t
+- `tailRV t` drops the first element of sequence t
+- Key property: `σ(tailRV t) ≤ σ(t)` gives the contraction for Kallenberg 1.3
+-/
+
+/-- Cons a value onto a sequence: `consRV x t` produces `[x, t(0), t(1), ...]`. -/
+def consRV (x : Ω → α) (t : Ω → ℕ → α) : Ω → ℕ → α
+| ω, 0 => x ω
+| ω, (n+1) => t ω n
+
+/-- Tail of a sequence: drops index 0, so `tailRV t n = t (n+1)`. -/
+def tailRV (t : Ω → ℕ → α) : Ω → ℕ → α := fun ω n => t ω (n+1)
+
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
+@[simp]
+lemma consRV_zero (x : Ω → α) (t : Ω → ℕ → α) (ω : Ω) : consRV x t ω 0 = x ω := rfl
+
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
+@[simp]
+lemma consRV_succ (x : Ω → α) (t : Ω → ℕ → α) (ω : Ω) (n : ℕ) :
+    consRV x t ω (n+1) = t ω n := rfl
+
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
+@[simp]
+lemma tailRV_apply (t : Ω → ℕ → α) (ω : Ω) (n : ℕ) : tailRV t ω n = t ω (n+1) := rfl
+
+omit [MeasurableSpace Ω] [MeasurableSpace α] in
+@[simp]
+lemma tailRV_consRV (x : Ω → α) (t : Ω → ℕ → α) : tailRV (consRV x t) = t := by
+  funext ω n; rfl
+
+/-- Tail is measurable when the original sequence is measurable. -/
+lemma measurable_tailRV {t : Ω → ℕ → α} (ht : Measurable t) : Measurable (tailRV t) := by
+  -- tailRV t = t ∘ (·, · + 1), which is measurable
+  have h : tailRV t = (fun p : Ω × ℕ => t p.1 (p.2 + 1)) ∘ (fun ω => (ω, 0)) := by
+    funext ω n
+    simp [tailRV]
+    -- This doesn't quite work, let's use a different approach
+  -- Actually, for Ω → (ℕ → α), measurability is at each coordinate
+  sorry
+
+/-- The contraction property: σ(tailRV t) ≤ σ(t).
+
+This is the key property for Kallenberg 1.3: tail gives a coarser σ-algebra. -/
+lemma comap_tailRV_le {t : Ω → ℕ → α} :
+    MeasurableSpace.comap (tailRV t) inferInstance ≤
+    MeasurableSpace.comap t inferInstance := by
+  -- For any set S in σ(tailRV t), we have S = (tailRV t)⁻¹' A for some measurable A
+  -- But (tailRV t)⁻¹' A = t⁻¹' (tail⁻¹' A) where tail : (ℕ → α) → (ℕ → α) is the sequence tail
+  -- Since tail is measurable on (ℕ → α), tail⁻¹' A is measurable, so S ∈ σ(t)
+  intro S hS
+  obtain ⟨A, hA, rfl⟩ := hS
+  -- Need: t⁻¹'(some set) = (tailRV t)⁻¹' A
+  -- tailRV t = tail ∘ t where tail : (ℕ → α) → (ℕ → α) is n ↦ (n+1)
+  use (fun s : ℕ → α => (fun n => s (n+1))) ⁻¹' A
+  constructor
+  · -- Measurability: the "tail" function on (ℕ → α) is measurable
+    -- Specifically, {s | tail(s) ∈ A} is measurable in the product σ-algebra
+    apply MeasurableSet.preimage
+    · exact hA
+    · -- tail : (ℕ → α) → (ℕ → α) is measurable
+      -- This is measurable because each coordinate (n ↦ s(n+1)) is measurable
+      sorry
+  · -- (tailRV t)⁻¹' A = t⁻¹' (tail⁻¹' A)
+    ext ω
+    simp only [Set.mem_preimage, tailRV]
+    rfl
+
+/-- For W' = consRV x W, we have σ(W) ≤ σ(W').
+
+This is the contraction for Kallenberg 1.3 when W' = cons(X_r, W). -/
+lemma comap_le_comap_consRV (x : Ω → α) (t : Ω → ℕ → α) :
+    MeasurableSpace.comap t inferInstance ≤
+    MeasurableSpace.comap (consRV x t) inferInstance := by
+  -- σ(t) ≤ σ(cons x t) because t = tail(cons x t)
+  -- So any set in σ(t) is also in σ(cons x t) via the tail projection
+  calc MeasurableSpace.comap t inferInstance
+      = MeasurableSpace.comap (tailRV (consRV x t)) inferInstance := by
+        simp only [tailRV_consRV]
+    _ ≤ MeasurableSpace.comap (consRV x t) inferInstance := comap_tailRV_le
+
 -- Helper sections (ComapTools, SequenceShift, TailCylinders, FinsetOrder)
 -- have been extracted to MartingaleHelpers.lean
 
