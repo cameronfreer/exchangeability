@@ -1442,5 +1442,136 @@ private lemma integrable_of_bounded_mul_helper
   have h_meas : Measurable fun ω => φ ω * ψ ω := hφ_meas.mul hψ_meas
   exact integrable_of_bounded_helper h_meas ⟨Cφ * Cψ, h_bound⟩
 
+/-- **Generalized lag-constancy for products** (extends `condexp_lag_constant_from_exchangeability`).
+
+For EXCHANGEABLE measures μ on path space, if P = ∏_{i<n} f_i(ω_i) is a product of
+the first n coordinates and g : α → ℝ is bounded measurable, then for k ≥ n:
+  CE[P · g(ω_{k+1}) | mSI] = CE[P · g(ω_k) | mSI]
+
+**Proof**: Uses transposition τ = swap(k, k+1). Since k ≥ n, τ fixes all indices < n.
+Therefore P is unchanged by reindex τ, while g(ω_{k+1}) becomes g(ω_k).
+Exchangeability then gives the result.
+
+**Key insight**: This generalizes the pair case where P = f(ω_0) and n = 1. -/
+lemma condexp_lag_constant_product
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]
+    {μ : Measure (ℕ → α)} [IsProbabilityMeasure μ]
+    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
+    (n : ℕ) (fs : Fin n → α → ℝ)
+    (hfs_meas : ∀ i, Measurable (fs i))
+    (hfs_bd : ∀ i, ∃ C, ∀ x, |fs i x| ≤ C)
+    (g : α → ℝ) (hg_meas : Measurable g) (hg_bd : ∃ Cg, ∀ x, |g x| ≤ Cg)
+    (k : ℕ) (hk : n ≤ k) :
+    μ[(fun ω => (∏ i : Fin n, fs i (ω i)) * g (ω (k + 1))) | shiftInvariantSigma (α := α)]
+      =ᵐ[μ]
+    μ[(fun ω => (∏ i : Fin n, fs i (ω i)) * g (ω k)) | shiftInvariantSigma (α := α)] := by
+  -- Define the transposition τ = swap k (k+1)
+  let τ := Equiv.swap k (k + 1)
+  -- Define the two functions
+  let P : (ℕ → α) → ℝ := fun ω => ∏ i : Fin n, fs i (ω i)
+  let F := fun ω : ℕ → α => P ω * g (ω (k + 1))
+  let G := fun ω : ℕ → α => P ω * g (ω k)
+
+  -- Key fact 1: τ fixes all indices < n (since k ≥ n implies k, k+1 > n-1)
+  have hτ_fix : ∀ i : Fin n, τ (i : ℕ) = i := by
+    intro i
+    have hi : (i : ℕ) < n := Fin.is_lt i
+    have hik : (i : ℕ) ≠ k := by omega
+    have hik1 : (i : ℕ) ≠ k + 1 := by omega
+    exact Equiv.swap_apply_of_ne_of_ne hik hik1
+
+  -- Key fact 2: P ∘ reindex τ = P (product unchanged since τ fixes all indices < n)
+  have hP_inv : (P ∘ Exchangeability.reindex τ) = P := by
+    ext ω
+    simp only [Function.comp_apply, P, Exchangeability.reindex]
+    apply Finset.prod_congr rfl
+    intro i _
+    -- Goal: fs i (ω (τ ↑i)) = fs i (ω ↑i)
+    -- From hτ_fix: τ ↑i = ↑i
+    congr 1
+    exact hτ_fix i
+
+  -- Key fact 3: F ∘ reindex τ = G
+  have hFG : F ∘ Exchangeability.reindex τ = G := by
+    ext ω
+    simp only [Function.comp_apply, F, G, Exchangeability.reindex]
+    congr 1
+    · -- P part: unchanged
+      apply Finset.prod_congr rfl
+      intro i _
+      -- Need: fs i (ω (τ i)) = fs i (ω i)
+      -- Since τ fixes i: τ (i : ℕ) = i
+      congr 1
+      exact hτ_fix i
+    · -- g part: ω (τ (k+1)) = ω k
+      rw [Equiv.swap_apply_right]
+
+  -- Key fact 4: μ.map (reindex τ) = μ (exchangeability)
+  have hμ_inv : Measure.map (Exchangeability.reindex τ) μ = μ := hExch τ
+
+  -- Both F and G are integrable (products of bounded measurable functions)
+  have hP_meas : Measurable P :=
+    Finset.measurable_prod _ (fun i _ => (hfs_meas i).comp (measurable_pi_apply (i : ℕ)))
+
+  -- Bound for the product P
+  let CP := ∏ i : Fin n, (hfs_bd i).choose
+  have hCP : ∀ ω, |P ω| ≤ CP := fun ω => by
+    calc |P ω| = |∏ i : Fin n, fs i (ω i)| := rfl
+      _ = ∏ i : Fin n, |fs i (ω i)| := Finset.abs_prod _ _
+      _ ≤ ∏ i : Fin n, (hfs_bd i).choose := by
+          apply Finset.prod_le_prod
+          · intro i _; exact abs_nonneg _
+          · intro i _; exact (hfs_bd i).choose_spec (ω i)
+
+  obtain ⟨Cg, hCg⟩ := hg_bd
+
+  have hF_meas : Measurable F := hP_meas.mul (hg_meas.comp (measurable_pi_apply (k + 1)))
+  have hG_meas : Measurable G := hP_meas.mul (hg_meas.comp (measurable_pi_apply k))
+
+  have hCP_nonneg : 0 ≤ CP := by
+    -- CP = ∏ (hfs_bd i).choose ≥ 0 since each bound is ≥ 0
+    -- Each (hfs_bd i).choose bounds |fs i x| ≥ 0, so it must be ≥ 0
+    -- Need some element of α to instantiate x
+    haveI : Nonempty (ℕ → α) := ProbabilityMeasure.nonempty ⟨μ, inferInstance⟩
+    have ω : ℕ → α := Classical.choice ‹Nonempty (ℕ → α)›
+    apply Finset.prod_nonneg
+    intro i _
+    exact le_trans (abs_nonneg _) ((hfs_bd i).choose_spec (ω 0))
+
+  have hF_bd : ∀ ω, ‖F ω‖ ≤ CP * Cg := fun ω => by
+    simp only [Real.norm_eq_abs]
+    calc |F ω| = |P ω * g (ω (k + 1))| := rfl
+      _ = |P ω| * |g (ω (k + 1))| := abs_mul _ _
+      _ ≤ CP * Cg := mul_le_mul (hCP _) (hCg _) (abs_nonneg _) hCP_nonneg
+
+  have hG_bd : ∀ ω, ‖G ω‖ ≤ CP * Cg := fun ω => by
+    simp only [Real.norm_eq_abs]
+    calc |G ω| = |P ω * g (ω k)| := rfl
+      _ = |P ω| * |g (ω k)| := abs_mul _ _
+      _ ≤ CP * Cg := mul_le_mul (hCP _) (hCg _) (abs_nonneg _) hCP_nonneg
+
+  have hF_int : Integrable F μ := Integrable.of_bound hF_meas.aestronglyMeasurable (CP * Cg)
+    (Filter.Eventually.of_forall hF_bd)
+  have hG_int : Integrable G μ := Integrable.of_bound hG_meas.aestronglyMeasurable (CP * Cg)
+    (Filter.Eventually.of_forall hG_bd)
+
+  -- Strategy: Show ∫_s F = ∫_s G for all s ∈ mSI, then μ[F|mSI] = μ[G|mSI]
+  have hτ_meas : Measurable (Exchangeability.reindex (α := α) τ) :=
+    Exchangeability.measurable_reindex (α := α) (π := τ)
+
+  have h_int_eq : ∀ s, MeasurableSet[shiftInvariantSigma (α := α)] s → μ s < ⊤ →
+      ∫ ω in s, F ω ∂μ = ∫ ω in s, G ω ∂μ := fun s hs _ => by
+    have hs_inv : isShiftInvariant (α := α) s := (mem_shiftInvariantSigma_iff (α := α)).mp hs
+    exact setIntegral_eq_of_reindex_eq τ hμ_inv F G hFG hF_meas s hs_inv.1
+      (reindex_swap_preimage_shiftInvariant k s hs_inv)
+
+  -- Show ∫_s (F - G) = 0 for all s ∈ mSI
+  have h_diff_zero : ∀ s, MeasurableSet[shiftInvariantSigma (α := α)] s → μ s < ⊤ →
+      ∫ ω in s, (F - G) ω ∂μ = 0 := fun s hs hμs => by
+    simp only [Pi.sub_apply, integral_sub hF_int.integrableOn hG_int.integrableOn,
+               h_int_eq s hs hμs, sub_self]
+
+  exact condExp_ae_eq_of_setIntegral_diff_eq_zero hF_int hG_int h_diff_zero
+
 end Exchangeability.DeFinetti.ViaKoopman
 
