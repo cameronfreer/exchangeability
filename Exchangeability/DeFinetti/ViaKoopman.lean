@@ -4188,8 +4188,75 @@ private theorem h_tower_of_lagConst_from_one
     -- CE[(1/n) * Σ g(ω_{j+1}) | mSI] = (1/n) * Σ CE[g(ω_{j+1}) | mSI]
     --                                = (1/n) * Σ CE[g(ω_0) | mSI]  (shift invariance)
     --                                = CE[g(ω_0) | mSI]
-    -- Technical proof using linearity of CE and shift invariance
-    sorry
+    -- Simplify A' n since n > 0
+    have hA'_eq : A' n = fun ω => (1 / (n : ℝ)) * (Finset.range n).sum (fun j => g (ω (j + 1))) := by
+      ext ω; simp only [A', if_neg (Nat.ne_of_gt hn)]
+    rw [hA'_eq]
+    -- Integrability of each g(ω_{j+1})
+    have hg_int : ∀ j, Integrable (fun ω => g (ω (j + 1))) μ := by
+      intro j
+      obtain ⟨Cg, hCg⟩ := hg_bd
+      exact integrable_of_bounded_measurable
+        (hg_meas.comp (measurable_pi_apply (j + 1))) Cg (fun ω => hCg (ω (j + 1)))
+    have hg_0_int : Integrable (fun ω => g (ω 0)) μ := by
+      obtain ⟨Cg, hCg⟩ := hg_bd
+      exact integrable_of_bounded_measurable
+        (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
+    -- CE of sum = sum of CEs
+    have h_ce_sum : μ[(fun ω => (Finset.range n).sum (fun j => g (ω (j + 1)))) | mSI]
+        =ᵐ[μ] (fun ω => (Finset.range n).sum (fun j => μ[(fun ω => g (ω (j + 1))) | mSI] ω)) := by
+      exact condExp_sum_finset hmSI (Finset.range n) (fun j => fun ω => g (ω (j + 1)))
+        (fun j _ => hg_int j)
+    -- Each CE[g(ω_{j+1})|mSI] = CE[g(ω_0)|mSI] by shift invariance
+    have h_shift_inv : ∀ j, μ[(fun ω => g (ω (j + 1))) | mSI]
+        =ᵐ[μ] μ[(fun ω => g (ω 0)) | mSI] := by
+      intro j
+      have h := condexp_precomp_iterate_eq (μ := μ) hσ (k := j + 1) (hf := hg_0_int)
+      have h_shift : (fun ω => g (shift^[j + 1] ω 0)) = (fun ω => g (ω (j + 1))) := by
+        ext ω; congr 1; rw [shift_iterate_apply]; simp
+      rw [← h_shift]; exact h
+    -- Sum of identical terms
+    have h_sum_eq : (fun ω => (Finset.range n).sum (fun j => μ[(fun ω => g (ω (j + 1))) | mSI] ω))
+        =ᵐ[μ] (fun ω => (n : ℝ) * μ[(fun ω => g (ω 0)) | mSI] ω) := by
+      -- Collect a.e. equalities for all j in the finite set
+      have h_combined : ∀ᵐ ω ∂μ, ∀ j ∈ Finset.range n,
+          μ[(fun ω => g (ω (j + 1))) | mSI] ω = μ[(fun ω => g (ω 0)) | mSI] ω := by
+        apply ae_ball_range_mpr μ
+        intro j _
+        exact h_shift_inv j
+      filter_upwards [h_combined] with ω hω
+      simp only [Finset.sum_congr rfl (fun j hj => hω j hj), Finset.sum_const, Finset.card_range,
+        smul_eq_mul, nsmul_eq_mul]
+    -- Put it together: CE[(1/n) * sum] = (1/n) * CE[sum] = (1/n) * n * CE[g(ω_0)]
+    have h1 : μ[(fun ω => (1 / (n : ℝ)) * (Finset.range n).sum (fun j => g (ω (j + 1)))) | mSI]
+        =ᵐ[μ] (fun ω => (1 / (n : ℝ)) * μ[(fun ω => (Finset.range n).sum
+            (fun j => g (ω (j + 1)))) | mSI] ω) := by
+      have hsum_int : Integrable (fun ω => (Finset.range n).sum (fun j => g (ω (j + 1)))) μ := by
+        apply integrable_finset_sum
+        intro j _
+        exact hg_int j
+      have h := condExp_smul (c := 1 / (n : ℝ)) (f := fun ω => (Finset.range n).sum
+            (fun j => g (ω (j + 1)))) (m := mSI) (μ := μ)
+      simp only [smul_eq_mul, Pi.smul_apply] at h
+      exact h.symm
+    have h2 : (fun ω => (1 / (n : ℝ)) * μ[(fun ω => (Finset.range n).sum
+            (fun j => g (ω (j + 1)))) | mSI] ω)
+        =ᵐ[μ] (fun ω => (1 / (n : ℝ)) * (Finset.range n).sum
+            (fun j => μ[(fun ω => g (ω (j + 1))) | mSI] ω)) := by
+      filter_upwards [h_ce_sum] with ω hω
+      rw [hω]
+    have h3 : (fun ω => (1 / (n : ℝ)) * (Finset.range n).sum
+            (fun j => μ[(fun ω => g (ω (j + 1))) | mSI] ω))
+        =ᵐ[μ] (fun ω => (1 / (n : ℝ)) * ((n : ℝ) * μ[(fun ω => g (ω 0)) | mSI] ω)) := by
+      filter_upwards [h_sum_eq] with ω hω
+      rw [hω]
+    have h4 : (fun ω => (1 / (n : ℝ)) * ((n : ℝ) * μ[(fun ω => g (ω 0)) | mSI] ω))
+        =ᵐ[μ] (fun ω => μ[(fun ω => g (ω 0)) | mSI] ω) := by
+      apply ae_of_all
+      intro ω
+      have hn_ne : (n : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp hn)
+      field_simp
+    exact h1.trans (h2.trans (h3.trans h4))
 
   ------------------------------------------------------------------
   -- (2) CE[f·A'_n | mSI] = CE[f·g₁ | mSI] for all n > 0 (from product_ce_constant_of_lag_const_from_one)
