@@ -2552,28 +2552,53 @@ lemma condexp_product_factorization_general
       -- A complete proof would restructure the induction to always split off the maximum coordinate.
       have h_kn_to_M : μ[(fun ω => P ω * g (ω kn)) | mSI]
           =ᵐ[μ] μ[(fun ω => P ω * g (ω M)) | mSI] := by
-        -- Check if kn ≥ max(k'(i)) + 1, in which case h_const applies
+        -- Check if kn > all k'(i), in which case lag constancy applies from kn
         by_cases h_kn_large : ∀ i : Fin n, k' i < kn
-        · -- Case: kn > all k'(i), so lag constancy applies directly from kn to M
-          -- In this case M = kn + 1, so we just need one step
-          -- Actually M = 1 + max(kn, max(k'(i))) = 1 + kn when kn > all k'(i)
-          have hM_eq : M = kn + 1 := by
-            simp only [M, allCoords]
-            have h_fold : (kn :: List.ofFn k').foldl max 0 = kn := by
-              rw [List.foldl_cons]
-              have : List.foldl max (max 0 kn) (List.ofFn k') = kn := by
-                induction (List.ofFn k') with
-                | nil => simp [max_eq_left (Nat.zero_le kn)]
-                | cons x xs ih =>
-                  simp only [List.foldl_cons]
-                  have hx : x ∈ List.ofFn k' := List.mem_of_mem_head? rfl
-                  sorry -- Need to extract that x < kn from h_kn_large
-              simp [max_eq_right (Nat.zero_le kn)]
-              sorry
-            omega
-          -- With M = kn + 1, we need CE[P·g(ω_{kn})|mSI] = CE[P·g(ω_{kn+1})|mSI]
-          rw [hM_eq]
-          exact (h_lag kn (by omega)).symm
+        · -- Case: kn > all k'(i), so lag constancy applies for any j ≥ kn
+          -- Key: when j ≥ kn > all k'(i), we have j > all coords in P
+          have h_lag_from_kn : ∀ j, kn ≤ j →
+              μ[(fun ω => P ω * g (ω (j + 1))) | mSI]
+                =ᵐ[μ] μ[(fun ω => P ω * g (ω j)) | mSI] := by
+            intro j hj
+            have hj_gt : ∀ i : Fin n, k' i < j := fun i => Nat.lt_of_lt_of_le (h_kn_large i) hj
+            exact condexp_lag_constant_product_general hExch n fs' k' hmeas' hbd' g
+              (hmeas (Fin.last n)) hg_bd j hj_gt
+          -- Chain from kn to M using h_lag_from_kn
+          have h_chain : ∀ j, kn ≤ j → j ≤ M →
+              μ[(fun ω => P ω * g (ω j)) | mSI]
+                =ᵐ[μ] μ[(fun ω => P ω * g (ω M)) | mSI] := by
+            intro j hj_lo hj_hi
+            induction j with
+            | zero =>
+              have : kn = 0 := Nat.le_zero.mp hj_lo
+              subst this
+              have hM0 : M = 0 := by omega
+              subst hM0; rfl
+            | succ j' ih =>
+              by_cases hj' : j' < kn
+              · have : j' + 1 = kn := by omega
+                subst this
+                -- Need to show CE[P·g(ω_{kn})|mSI] = CE[P·g(ω_M)|mSI]
+                -- Chain: kn → kn+1 → ... → M
+                clear ih
+                -- Use induction on M - kn
+                have h_gap : kn ≤ M := by omega
+                obtain ⟨d, hd⟩ : ∃ d, M = kn + d := ⟨M - kn, by omega⟩
+                subst hd
+                induction d with
+                | zero => simp
+                | succ d' ih =>
+                  have h1 := h_lag_from_kn (kn + d') (by omega)
+                  have h2 := ih (by omega)
+                  exact h2.trans h1.symm
+              · push_neg at hj'
+                by_cases hj'_eq : j' + 1 = M
+                · subst hj'_eq; rfl
+                · have : j' + 1 < M := by omega
+                  have h1 := h_lag_from_kn j' hj'
+                  have h2 := ih hj' (by omega)
+                  exact h1.symm.trans h2
+          exact h_chain kn (le_refl kn) (le_of_lt hM_gt_kn)
         · -- Case: kn ≤ some k'(i), need coordinate reordering (structural change needed)
           push_neg at h_kn_large
           -- This case requires restructuring the induction to split off max coord.
