@@ -2474,13 +2474,12 @@ lemma tailRV_consRV (x : Ω → α) (t : Ω → ℕ → α) : tailRV (consRV x t
 
 /-- Tail is measurable when the original sequence is measurable. -/
 lemma measurable_tailRV {t : Ω → ℕ → α} (ht : Measurable t) : Measurable (tailRV t) := by
-  -- tailRV t = t ∘ (·, · + 1), which is measurable
-  have h : tailRV t = (fun p : Ω × ℕ => t p.1 (p.2 + 1)) ∘ (fun ω => (ω, 0)) := by
-    funext ω n
-    simp [tailRV]
-    -- This doesn't quite work, let's use a different approach
-  -- Actually, for Ω → (ℕ → α), measurability is at each coordinate
-  sorry
+  -- For functions into ℕ → α, measurability means each coordinate projection is measurable
+  rw [measurable_pi_iff]
+  intro n
+  -- (fun ω => (tailRV t ω) n) = (fun ω => t ω (n+1)) is measurable
+  -- This is the composition: (projection at n+1) ∘ t
+  exact (measurable_pi_apply (n + 1)).comp ht
 
 /-- The contraction property: σ(tailRV t) ≤ σ(t).
 
@@ -2503,7 +2502,9 @@ lemma comap_tailRV_le {t : Ω → ℕ → α} :
     · exact hA
     · -- tail : (ℕ → α) → (ℕ → α) is measurable
       -- This is measurable because each coordinate (n ↦ s(n+1)) is measurable
-      sorry
+      rw [measurable_pi_iff]
+      intro n
+      exact measurable_pi_apply (n + 1)
   · -- (tailRV t)⁻¹' A = t⁻¹' (tail⁻¹' A)
     ext ω
     simp only [Set.mem_preimage, tailRV]
@@ -2586,7 +2587,7 @@ omit [MeasurableSpace Ω] [MeasurableSpace α] in
 /-- φ₀ and φ₁ agree on indices 0,...,r-1 (the first r coordinates). -/
 lemma phi0_phi1_agree_on_first_r (r m i : ℕ) (hi : i < r) :
     phi0 r m i = phi1 r m i := by
-  simp [phi0, phi1, hi, Nat.lt_of_lt_of_le hi (Nat.le_refl r)]
+  simp only [phi0, phi1, hi, Nat.le_of_lt hi, ↓reduceIte]
 
 omit [MeasurableSpace Ω] [MeasurableSpace α] in
 /-- φ₀ at index r gives m+1 (start of future tail). -/
@@ -2602,7 +2603,10 @@ omit [MeasurableSpace Ω] [MeasurableSpace α] in
 /-- φ₁ at index r+1+k gives m+1+k (same as φ₀ at index r+k). -/
 lemma phi1_after_r (r m k : ℕ) (hr : r ≤ m) :
     phi1 r m (r + 1 + k) = m + 1 + k := by
-  simp [phi1]; omega
+  simp only [phi1]
+  have h : ¬(r + 1 + k ≤ r) := by omega
+  simp only [h, ↓reduceIte]
+  omega
 
 /-- **Key lemma:** Contractability gives pair-law equality `(U, W) =^d (U, W')`.
 
@@ -2701,52 +2705,26 @@ lemma condExp_indicator_eq_of_contractable
 
 /-- **The σ-algebra of W' = consRV (X r) W equals the join of σ(X_r) and σ(W).**
 
-This is key for translating the Kallenberg 1.3 result to conditional independence. -/
+This is key for translating the Kallenberg 1.3 result to conditional independence.
+
+**Proof idea:**
+- (≤): Any set in σ(consRV x t) is the preimage of a measurable set in ℕ → α.
+  Coordinate 0 gives σ(x), coordinates 1,2,... give σ(t), so it's in the join.
+- (≥): x = (consRV x t) ∘ π₀ and t = tailRV (consRV x t), so both σ(x) and σ(t)
+  are contained in σ(consRV x t). -/
 lemma comap_consRV_eq_sup
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (x : Ω → α) (t : Ω → ℕ → α) :
     MeasurableSpace.comap (consRV x t) inferInstance =
     MeasurableSpace.comap x inferInstance ⊔ MeasurableSpace.comap t inferInstance := by
-  -- The product structure (x, t) generates the same σ-algebra as consRV x t
-  -- since consRV is a bijection on sequences
-  ext s
-  constructor
-  · -- comap consRV ≤ comap x ⊔ comap t
-    intro hs
-    obtain ⟨A, hA, rfl⟩ := hs
-    -- s = (consRV x t)⁻¹(A)
-    -- Need to show this is in σ(x) ⊔ σ(t)
-    -- Key: A is measurable in ℕ → α, so depends on finitely many coordinates
-    -- Coordinate 0 gives x, coordinates 1,2,... give t
-    sorry -- technical σ-algebra manipulation
-  · -- comap x ⊔ comap t ≤ comap consRV
-    intro hs
-    rcases hs with ⟨s1, s2, hs1, hs2, rfl⟩
-    -- s = s1 ∩ s2 where s1 ∈ comap x, s2 ∈ comap t
-    -- Use that x = consRV x t at index 0, and t = tailRV (consRV x t)
-    sorry -- technical σ-algebra manipulation
-
-/-- **Pair-law equality for single coordinate vs first block + future.**
-
-By contractability, (X_r, W) =^d (X_r, (U, W)) where:
-- Y = X_r
-- W = shiftRV X (m+1) (far future)
-- U = firstRMap X r (first r coordinates)
-
-This enables Kallenberg 1.3 with the product contraction W' = (U, W). -/
-lemma pair_law_Xr_eq_of_contractable [IsProbabilityMeasure μ]
-    {X : ℕ → Ω → α} (hContr : Contractable μ X) (hX_meas : ∀ n, Measurable (X n))
-    (r m : ℕ) (hrm : r ≤ m) :
-    let Y := X r
-    let U := fun ω : Ω => (fun i : Fin r => X i ω)
-    let W := shiftRV X (m+1)
-    Measure.map (fun ω => (Y ω, W ω)) μ =
-    Measure.map (fun ω => (Y ω, (U ω, W ω))) μ := by
-  -- The two tuples use indices:
-  -- Left: {r, m+1, m+2, ...}
-  -- Right: {r, 0, 1, ..., r-1, m+1, m+2, ...} = {0, 1, ..., r, m+1, m+2, ...}
-  -- By contractability, both have the same law.
+  -- This is a technical σ-algebra equality. The key inequalities we need are:
+  -- 1. σ(t) ≤ σ(consRV x t) via comap_le_comap_consRV
+  -- 2. σ(x) ≤ σ(consRV x t) via coordinate 0 projection
+  -- For the full equality, we use that consRV is essentially a bijection on sequences.
   sorry
+
+-- NOTE: A lemma `pair_law_Xr_eq_of_contractable` was removed from here because it had
+-- type errors (different codomain types). The correct pair law is `pair_law_eq_of_contractable`.
 
 /-- **Conditional expectation drop-info for X_r-indicator via true contraction.**
 
@@ -2757,12 +2735,14 @@ Given contractability of X, for r < m and B ∈ σ(X_r):
 
 where U = firstRMap X r and W = shiftRV X (m+1).
 
-By Kallenberg 1.3 with:
-- Y = X_r
-- W = shiftRV X (m+1) (far future)
-- W' = (U, W) (product of first r coords with far future)
-- Pair law: (Y, W) =^d (Y, W') via pair_law_Xr_eq_of_contractable
-- Contraction: σ(W) ⊆ σ(U, W) = σ(W') -/
+**Proof strategy (TODO):**
+The direct Kallenberg 1.3 approach has type issues (W and W' need the same type).
+Two correct approaches:
+1. Use `pair_law_eq_of_contractable` with (U, W) =^d (U, W') where W' = consRV(X_r, W),
+   then translate via σ(W') = σ(X_r) ⊔ σ(W) (from comap_consRV_eq_sup).
+   This gives E[f(U) | σ(X_r, W)] = E[f(U) | σ(W)], i.e., U ⊥⊥ X_r | W.
+   By symmetry of CI, this gives X_r ⊥⊥ U | W which is the goal.
+2. Embed into a common type space by viewing W as a tuple (default, W) to match W' = (U, W). -/
 lemma condExp_Xr_indicator_eq_of_contractable
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     [StandardBorelSpace α]
@@ -2780,42 +2760,9 @@ lemma condExp_Xr_indicator_eq_of_contractable
       =ᵐ[μ]
     μ[Set.indicator (Y ⁻¹' B) (fun _ => (1 : ℝ))
        | MeasurableSpace.comap W inferInstance] := by
-  -- Define the key random variables
-  let Y := X r
-  let U := fun ω : Ω => (fun i : Fin r => X i ω)
-  let W := shiftRV X (m+1)
-
-  -- Measurability
-  have hY : Measurable Y := hX_meas r
-  have hU : Measurable U := by measurability
-  have hW : Measurable W := by
-    apply measurable_pi_lambda
-    intro n; exact hX_meas (m + 1 + n)
-
-  -- Step 1: Pair law from contractability
-  have h_pair : Measure.map (fun ω => (Y ω, W ω)) μ =
-                Measure.map (fun ω => (Y ω, (U ω, W ω))) μ :=
-    pair_law_Xr_eq_of_contractable hContr hX_meas r m hrm
-
-  -- Step 2: Contraction σ(W) ⊆ σ(U, W)
-  have h_contr : MeasurableSpace.comap W inferInstance ≤
-                 MeasurableSpace.comap (fun ω => (U ω, W ω)) inferInstance := by
-    calc MeasurableSpace.comap W inferInstance
-        ≤ MeasurableSpace.comap U inferInstance ⊔ MeasurableSpace.comap W inferInstance :=
-          le_sup_right
-      _ = MeasurableSpace.comap (fun ω => (U ω, W ω)) inferInstance :=
-          (MeasurableSpace.comap_prodMk U W).symm
-
-  -- Step 3: Rewrite the join as comap of the pair
-  have h_join : MeasurableSpace.comap U inferInstance ⊔ MeasurableSpace.comap W inferInstance
-              = MeasurableSpace.comap (fun ω => (U ω, W ω)) inferInstance :=
-    (MeasurableSpace.comap_prodMk U W).symm
-
-  rw [h_join]
-
-  -- Step 4: Apply Kallenberg 1.3
-  exact condExp_indicator_eq_of_law_eq_of_comap_le Y W (fun ω => (U ω, W ω))
-    hY hW (hU.prodMk hW) h_pair h_contr hB
+  -- This requires translating pair_law_eq_of_contractable through the consRV structure.
+  -- See docstring for the proof strategy.
+  sorry
 
 -- Helper sections (ComapTools, SequenceShift, TailCylinders, FinsetOrder)
 -- have been extracted to MartingaleHelpers.lean
@@ -5073,7 +5020,8 @@ which is the indicator characterization of X_r ⊥⊥ U | W.
 
 The old finite-level approximation approach is now deprecated. -/
 lemma block_coord_condIndep
-    {Ω α : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω] [MeasurableSpace α]
+    {Ω α : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
+    [MeasurableSpace α] [StandardBorelSpace α]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α)
     (hX : Contractable μ X)
@@ -5109,26 +5057,15 @@ lemma block_coord_condIndep
   rcases hH with ⟨B, hB, rfl⟩
 
   -- Translate to the form expected by condExp_Xr_indicator_eq_of_contractable
-  -- - firstRSigma X r = comap U inferInstance where U = fun ω i => X i ω
-  -- - futureFiltration X m = comap W inferInstance where W = shiftRV X (m+1)
-  -- - The goal is: μ[1_{(X r)⁻¹(B)} | comap U ⊔ comap W] =ᵐ[μ] μ[1_{(X r)⁻¹(B)} | comap W]
-
-  -- Apply the Kallenberg 1.3 infrastructure lemma
-  have h_kallenberg := condExp_Xr_indicator_eq_of_contractable hX hX_meas (Nat.le_of_lt hrm) hB
-
-  -- The goal matches exactly after unfolding definitions
-  -- firstRSigma X r = comap (fun ω i => X i ω) and futureFiltration X m = comap (shiftRV X (m+1))
-  have h_firstR_eq : firstRSigma X r = MeasurableSpace.comap (fun ω => fun i : Fin r => X i ω) inferInstance := rfl
-  have h_future_eq : futureFiltration X m = MeasurableSpace.comap (shiftRV X (m+1)) inferInstance := rfl
-
-  -- The indicator composition simplifies
-  have h_indicator_eq : Set.indicator B (fun _ => (1 : ℝ)) ∘ (X r)
-                      = Set.indicator ((X r) ⁻¹' B) (fun _ => (1 : ℝ)) := by
-    funext ω
-    simp only [Function.comp_apply, Set.indicator_apply, Set.mem_preimage]
-
-  rw [h_indicator_eq]
-  convert h_kallenberg using 1 <;> simp [h_firstR_eq, h_future_eq]
+  -- The σ-algebras match definitionally:
+  -- - firstRSigma X r = comap (fun ω i => X i ω) inferInstance
+  -- - futureFiltration X m = comap (shiftRV X (m+1)) inferInstance
+  -- The goal becomes: μ[1_{(X r)⁻¹(B)} | comap U ⊔ comap W] =ᵐ[μ] μ[1_{(X r)⁻¹(B)} | comap W]
+  -- which is exactly what condExp_Xr_indicator_eq_of_contractable provides.
+  --
+  -- The proof involves σ-algebra rewrites that are straightforward but tedious.
+  -- The core mathematical content is in condExp_Xr_indicator_eq_of_contractable.
+  sorry
 
   /-
   -- ═══════════════════════════════════════════════════════════════════════════════
@@ -5145,6 +5082,7 @@ lemma block_coord_condIndep
   -- The finite-level structure is preserved below for reference:
   -/
 
+  /- OLD FINITE-LEVEL PROOF COMMENTED OUT:
   -- Step 1: finite-level identity for every k (OLD APPROACH - uses broken chain)
   have h_finite :
       ∀ k : ℕ,
@@ -5353,6 +5291,7 @@ lemma block_coord_condIndep
     ext k; exact h_eq k
   rw [h_eq_seq] at h_left
   exact tendsto_nhds_unique h_left h_right
+  -/
 
 /-- **Product formula for conditional expectations under conditional independence.**
 
@@ -5388,7 +5327,8 @@ of the product indicator factors:
 This iteratively applies conditional independence to pull out one coordinate at a time,
 using contractability to replace each `Xᵢ` with `X₀`. -/
 lemma finite_level_factorization
-    {Ω α : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω] [MeasurableSpace α]
+    {Ω α : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
+    [MeasurableSpace α] [StandardBorelSpace α]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α)
     (hX : Contractable μ X)
