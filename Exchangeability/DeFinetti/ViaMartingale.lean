@@ -2794,8 +2794,32 @@ lemma condExp_Xr_indicator_eq_of_contractable
       =ᵐ[μ]
     μ[Set.indicator (Y ⁻¹' B) (fun _ => (1 : ℝ))
        | MeasurableSpace.comap W inferInstance] := by
-  -- This requires translating pair_law_eq_of_contractable through the consRV structure.
-  -- See docstring for the proof strategy.
+  /-
+  **Full proof outline:**
+
+  Goal: X_r ⊥⊥ U | W (conditional independence in indicator form)
+
+  **Step 1: Apply pair law**
+  From `pair_law_eq_of_contractable`: (U, W) =^d (U, W') where W' = consRV(X_r, W)
+
+  **Step 2: Apply Kallenberg 1.3**
+  Since σ(W) ≤ σ(W') (via comap_le_comap_consRV) and (U, W) =^d (U, W'),
+  Kallenberg 1.3 gives: E[f(U) | σ(W')] = E[f(U) | σ(W)]  a.e.
+
+  **Step 3: Use comap_consRV_eq_sup**
+  σ(W') = σ(consRV(X_r, W)) = σ(X_r) ⊔ σ(W)
+
+  So: E[f(U) | σ(X_r, W)] = E[f(U) | σ(W)]  a.e.
+
+  This is exactly U ⊥⊥ X_r | W in indicator form.
+
+  **Step 4: Symmetry of conditional independence**
+  U ⊥⊥ X_r | W implies X_r ⊥⊥ U | W
+
+  This gives: E[g(X_r) | σ(U, W)] = E[g(X_r) | σ(W)]  a.e.
+
+  Taking g = 1_{· ∈ B} yields the goal.
+  -/
   sorry
 
 -- Helper sections (ComapTools, SequenceShift, TailCylinders, FinsetOrder)
@@ -5096,10 +5120,23 @@ lemma block_coord_condIndep
   -- - futureFiltration X m = comap (shiftRV X (m+1)) inferInstance
   -- The goal becomes: μ[1_{(X r)⁻¹(B)} | comap U ⊔ comap W] =ᵐ[μ] μ[1_{(X r)⁻¹(B)} | comap W]
   -- which is exactly what condExp_Xr_indicator_eq_of_contractable provides.
+
+  -- The goal after applying condIndep_of_indicator_condexp_eq is:
+  -- μ[Set.indicator ((X r) ⁻¹' B) (fun _ => 1) | firstRSigma X r ⊔ futureFiltration X m]
+  --   =ᵐ[μ] μ[Set.indicator ((X r) ⁻¹' B) (fun _ => 1) | futureFiltration X m]
   --
-  -- The proof involves σ-algebra rewrites that are straightforward but tedious.
-  -- The core mathematical content is in condExp_Xr_indicator_eq_of_contractable.
-  sorry
+  -- This matches condExp_Xr_indicator_eq_of_contractable with:
+  -- - Y = X r
+  -- - U = (fun ω i => X i ω) (definitionally = firstRMap X r)
+  -- - W = shiftRV X (m+1) (definitionally = futureFiltration generator)
+  --
+  -- The σ-algebra identities needed:
+  -- - firstRSigma X r = comap U inferInstance ✓
+  -- - futureFiltration X m = comap W inferInstance ✓
+  --
+  -- Thus the result follows from condExp_Xr_indicator_eq_of_contractable.
+  have h := condExp_Xr_indicator_eq_of_contractable hX hX_meas (Nat.le_of_lt hrm) hB
+  exact h
 
   /-
   -- ═══════════════════════════════════════════════════════════════════════════════
