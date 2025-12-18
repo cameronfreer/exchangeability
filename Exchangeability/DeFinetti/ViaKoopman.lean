@@ -1707,10 +1707,10 @@ The "hard" step is constructing `h_indep_XY` from `hciid` using CondIndep.lean m
 lemma condexp_product_factorization_ax
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
+    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
     (m : ℕ) (fs : Fin m → α → ℝ)
     (hmeas : ∀ k, Measurable (fs k))
-    (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
-    (hciid : True) :
+    (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C) :
     μ[fun ω => ∏ k, fs k (ω (k : ℕ)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω)) := by
   -- Proof by induction on m
@@ -1724,11 +1724,479 @@ lemma condexp_product_factorization_ax
     -- condExp_const gives equality, convert to a.e. equality
     exact Filter.EventuallyEq.of_eq (condExp_const (shiftInvariantSigma_le (α := α)) (1 : ℝ))
   | succ n IH =>
-    -- Inductive step: Uses conditional independence to factorize
-    -- Requires: CE[∏ᵢ fs i (ω i) | ℐ] = CE[fs 0 (ω 0) · ∏ᵢ₌₁ⁿ fs i (ω i) | ℐ]
-    --         = CE[fs 0 (ω 0) | ℐ] · CE[∏ᵢ₌₁ⁿ fs i (ω i) | ℐ]  [conditional independence]
-    -- This requires the full conditional independence machinery - see docstring above
-    sorry
+    -- Inductive step: Split product as P · f_n(ω_n), apply tower + pullout + IH
+    -- where P = ∏_{k : Fin n} f_k(ω_k) depends on coordinates 0, ..., n-1
+    classical
+    let mSI := shiftInvariantSigma (α := α)
+    let P : Ω[α] → ℝ := fun ω => ∏ k : Fin n, fs k.castSucc (ω k)
+    let g : α → ℝ := fs (Fin.last n)
+
+    -- Step 1: Split the product ∏_{k : Fin (n+1)} = P · g(ω_n)
+    have h_split : (fun ω => ∏ k : Fin (n + 1), fs k (ω k))
+                 = (fun ω => P ω * g (ω n)) := by
+      ext ω
+      rw [Fin.prod_univ_castSucc]
+      simp only [P, g, Fin.coe_last, Fin.coe_castSucc]
+
+    -- Step 2: Properties of P and g for integrability
+    have hP_meas : Measurable P := by
+      apply Finset.measurable_prod
+      intro k _
+      exact (hmeas (k.castSucc)).comp (measurable_pi_apply k)
+
+    have hg_meas : Measurable g := hmeas (Fin.last n)
+    have hg_bd : ∃ C, ∀ x, |g x| ≤ C := hbd (Fin.last n)
+
+    -- Bound for P
+    have hP_bd : ∃ C, ∀ ω, |P ω| ≤ C := by
+      use ∏ k : Fin n, (hbd k.castSucc).choose
+      intro ω
+      calc |P ω| = |∏ k : Fin n, fs k.castSucc (ω k)| := rfl
+        _ = ∏ k : Fin n, |fs k.castSucc (ω k)| := Finset.abs_prod _ _
+        _ ≤ ∏ k : Fin n, (hbd k.castSucc).choose := by
+            apply Finset.prod_le_prod
+            · intro k _; exact abs_nonneg _
+            · intro k _; exact (hbd k.castSucc).choose_spec (ω k)
+
+    -- Step 3: Apply generalized tower + pullout
+    -- CE[P · g(ω_n) | mSI] =ᵃᵉ CE[g(ω_0)|mSI] · CE[P | mSI]
+    -- This uses condexp_lag_constant_product for the tower step
+    have h_factor : μ[(fun ω => P ω * g (ω n)) | mSI]
+        =ᵐ[μ] (fun ω => μ[(fun ω => g (ω 0)) | mSI] ω * μ[P | mSI] ω) := by
+      -- Step 3a: Tower property via Cesàro + lag constancy
+      -- CE[P · g(ω_n) | mSI] = CE[P · CE[g(ω_0)|mSI] | mSI]
+      have h_tower : μ[(fun ω => P ω * g (ω n)) | mSI]
+          =ᵐ[μ] μ[(fun ω => P ω * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] := by
+        -- Uses condexp_lag_constant_product + Cesàro + L¹ convergence
+        -- Key idea: CE[P·g(ω_j)|mSI] is constant for j ≥ n by lag constancy
+        -- Then Cesàro from index n converges to CE[g(ω_0)|mSI]
+        --
+        -- Apply condexp_lag_constant_product with:
+        -- - fs' = fun k => fs k.castSucc (gives product over coordinates 0,...,n-1)
+        -- - g = fs (Fin.last n)
+        -- - k ≥ n for lag constancy
+        have hfs'_meas : ∀ i : Fin n, Measurable (fun x => fs i.castSucc x) :=
+          fun i => hmeas i.castSucc
+        have hfs'_bd : ∀ i : Fin n, ∃ C, ∀ x, |fs i.castSucc x| ≤ C :=
+          fun i => hbd i.castSucc
+        -- Lag constancy: CE[P·g(ω_{k+1})|mSI] = CE[P·g(ω_k)|mSI] for k ≥ n
+        have h_lag : ∀ k, n ≤ k →
+            μ[(fun ω => P ω * g (ω (k + 1))) | mSI]
+              =ᵐ[μ] μ[(fun ω => P ω * g (ω k)) | mSI] := by
+          intro k hk
+          have := condexp_lag_constant_product hExch n
+                    (fun i => fs i.castSucc) hfs'_meas hfs'_bd g hg_meas hg_bd k hk
+          -- P matches the product structure in condexp_lag_constant_product
+          simp only [P, Fin.coe_castSucc] at this ⊢
+          exact this
+        -- By repeated application, CE[P·g(ω_j)|mSI] = CE[P·g(ω_n)|mSI] for all j ≥ n
+        have h_const : ∀ j, n ≤ j →
+            μ[(fun ω => P ω * g (ω j)) | mSI]
+              =ᵐ[μ] μ[(fun ω => P ω * g (ω n)) | mSI] := by
+          intro j hj
+          induction j with
+          | zero => omega
+          | succ k ih =>
+            by_cases hk : k < n
+            · have : k + 1 = n := by omega
+              subst this; rfl
+            · push_neg at hk
+              have hk_le : n ≤ k := hk
+              have h1 := (h_lag k hk_le).symm  -- CE[P·g(ω_k)] = CE[P·g(ω_{k+1})]
+              have h2 := ih hk_le             -- CE[P·g(ω_k)] = CE[P·g(ω_n)]
+              exact h1.trans h2
+
+        -- Cesàro averages from index n: A_m = (1/m) Σ_{j=n}^{n+m-1} g(ω_j)
+        let A : ℕ → Ω[α] → ℝ := fun m ω =>
+          if m = 0 then 0
+          else (1 / (m : ℝ)) * (Finset.range m).sum (fun j => g (ω (n + j)))
+
+        -- CE[P·A_m|mSI] = CE[P·g(ω_n)|mSI] for all m > 0
+        have hPA_eq : ∀ m, 0 < m →
+            μ[(fun ω => P ω * A m ω) | mSI]
+              =ᵐ[μ] μ[(fun ω => P ω * g (ω n)) | mSI] := by
+          intro m hm
+          simp only [A, if_neg (Nat.ne_of_gt hm)]
+          -- CE[P · (1/m) * Σ g(ω_{n+j})] = (1/m) * CE[Σ P*g(ω_{n+j})]
+          --                             = (1/m) * m * CE[P·g(ω_n)]
+          --                             = CE[P·g(ω_n)]
+          obtain ⟨Cg, hCg⟩ := hg_bd
+          obtain ⟨CP', hCP'⟩ := hP_bd
+
+          -- Push CE through scalar
+          have h_push :
+              μ[(fun ω => P ω * ((1 / (m : ℝ)) * (Finset.range m).sum (fun j => g (ω (n + j))))) | mSI]
+                =ᵐ[μ]
+              (fun ω => (1 / (m : ℝ)) *
+                μ[(fun ω => (Finset.range m).sum (fun j => P ω * g (ω (n + j)))) | mSI] ω) := by
+            have h_rewrite : (fun ω => P ω * ((1 / (m : ℝ)) * (Finset.range m).sum (fun j => g (ω (n + j)))))
+                           = (fun ω => (1 / (m : ℝ)) * (Finset.range m).sum (fun j => P ω * g (ω (n + j)))) := by
+              funext ω; simp [Finset.mul_sum, mul_comm, mul_left_comm, mul_assoc]
+            rw [h_rewrite]
+            exact condExp_const_mul (shiftInvariantSigma_le (α := α))
+              (1 / (m : ℝ)) (fun ω => (Finset.range m).sum (fun j => P ω * g (ω (n + j))))
+
+          -- Push CE through the sum
+          have h_sum :
+              μ[(fun ω => (Finset.range m).sum (fun j => P ω * g (ω (n + j)))) | mSI]
+                =ᵐ[μ]
+              (fun ω => (Finset.range m).sum (fun j => μ[(fun ω => P ω * g (ω (n + j))) | mSI] ω)) := by
+            have hint : ∀ j ∈ Finset.range m, Integrable (fun ω => P ω * g (ω (n + j))) μ := by
+              intro j _
+              apply integrable_mul_of_bounded hP_meas (hg_meas.comp (measurable_pi_apply (n + j))) CP'
+              · exact hCP'
+              · intro ω; exact hCg (ω (n + j))
+            exact condExp_sum_finset (shiftInvariantSigma_le (α := α))
+              (Finset.range m) (fun j => fun ω => P ω * g (ω (n + j))) hint
+
+          -- Each term CE[P·g(ω_{n+j})|mSI] = CE[P·g(ω_n)|mSI] by h_const
+          have h_term_const : ∀ j,
+              μ[(fun ω => P ω * g (ω (n + j))) | mSI]
+                =ᵐ[μ]
+              μ[(fun ω => P ω * g (ω n)) | mSI] := by
+            intro j
+            exact h_const (n + j) (Nat.le_add_right n j)
+
+          -- Sum collapses to m * CE[P·g(ω_n)|mSI]
+          have h_sum_const :
+              (fun ω => (Finset.range m).sum (fun j => μ[(fun ω => P ω * g (ω (n + j))) | mSI] ω))
+                =ᵐ[μ]
+              (fun ω => (m : ℝ) * μ[(fun ω => P ω * g (ω n)) | mSI] ω) := by
+            have h' : ∀ s : Finset ℕ,
+                (fun ω => s.sum (fun j => μ[(fun ω => P ω * g (ω (n + j))) | mSI] ω))
+                  =ᵐ[μ]
+                (fun ω => (s.card : ℝ) * μ[(fun ω => P ω * g (ω n)) | mSI] ω) := by
+              apply Finset.induction
+              · exact ae_of_all μ (fun ω => by simp)
+              · intro j s hj hInd
+                have hj' := h_term_const j
+                have h_eq : (fun ω => ∑ k ∈ insert j s, μ[(fun ω => P ω * g (ω (n + k))) | mSI] ω)
+                          = ((fun ω => ∑ k ∈ s, μ[(fun ω => P ω * g (ω (n + k))) | mSI] ω) +
+                             (fun ω => μ[(fun ω => P ω * g (ω (n + j))) | mSI] ω)) := by
+                  ext ω; simp [Finset.sum_insert hj, add_comm]
+                rw [h_eq]
+                calc (fun ω => ∑ k ∈ s, μ[(fun ω => P ω * g (ω (n + k))) | mSI] ω) +
+                       (fun ω => μ[(fun ω => P ω * g (ω (n + j))) | mSI] ω)
+                    =ᵐ[μ] (fun ω => ↑s.card * μ[(fun ω => P ω * g (ω n)) | mSI] ω) +
+                           (fun ω => μ[(fun ω => P ω * g (ω n)) | mSI] ω) := hInd.add hj'
+                  _ =ᵐ[μ] (fun ω => ↑(insert j s).card * μ[(fun ω => P ω * g (ω n)) | mSI] ω) := by
+                      refine ae_of_all μ (fun ω => ?_)
+                      simp only [Pi.add_apply]
+                      rw [Finset.card_insert_of_notMem hj]
+                      simp only [Nat.cast_add, Nat.cast_one]
+                      ring
+            simpa [Finset.card_range] using h' (Finset.range m)
+
+          -- Assemble and cancel
+          have hne : (m : ℝ) ≠ 0 := by positivity
+          refine h_push.trans ?_
+          have h2 : (fun ω => (1 / (m : ℝ)) *
+                      μ[(fun ω => (Finset.range m).sum (fun j => P ω * g (ω (n + j)))) | mSI] ω)
+                      =ᵐ[μ]
+                    (fun ω => (1 / (m : ℝ)) *
+                      (Finset.range m).sum (fun j => μ[(fun ω => P ω * g (ω (n + j))) | mSI] ω)) := by
+            refine h_sum.mono ?_; intro ω hω; simp [hω]
+          refine h2.trans ?_
+          have h3 : (fun ω => (1 / (m : ℝ)) *
+                      (Finset.range m).sum (fun j => μ[(fun ω => P ω * g (ω (n + j))) | mSI] ω))
+                      =ᵐ[μ]
+                    (fun ω => (1 / (m : ℝ)) * ((m : ℝ) * μ[(fun ω => P ω * g (ω n)) | mSI] ω)) := by
+            refine h_sum_const.mono ?_; intro ω hω; simp [hω]
+          refine h3.trans ?_
+          exact ae_of_all μ (fun ω => by field_simp [hne])
+
+        -- A_m → CE[g(ω_0)|mSI] in L¹
+        -- This uses MET + shift invariance: A_{m+1} = A'_m ∘ shift^n where
+        -- A'_m is the standard Cesàro average from index 0
+        have hA_L1_conv :
+            Tendsto (fun m => ∫ ω, |A (m+1) ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ)
+                    atTop (𝓝 0) := by
+          -- Define standard Cesàro average A' at index 0
+          let A' := fun m : ℕ => fun ω => (1 / ((m + 1) : ℝ)) *
+                      (Finset.range (m + 1)).sum (fun j => g (ω j))
+
+          -- Key: A_{m+1} ω = A'_m (shift^n ω)
+          have hA_shift : ∀ m ω, A (m + 1) ω = A' m (shift^[n] ω) := by
+            intro m ω
+            simp only [A, A', if_neg (Nat.succ_ne_zero m), Nat.add_sub_cancel]
+            congr 1
+            apply Finset.sum_congr rfl
+            intro j _
+            rw [shift_iterate_apply]; simp
+
+          -- CE[g(ω_0)|mSI] is shift-invariant
+          have hCE_shift_inv : ∀ ω, μ[(fun ω => g (ω 0)) | mSI] (shift^[n] ω)
+                                 = μ[(fun ω => g (ω 0)) | mSI] ω := by
+            intro ω
+            have hCE_meas : Measurable[mSI] (μ[(fun ω => g (ω 0)) | mSI]) :=
+              stronglyMeasurable_condExp.measurable
+            -- Iterate n times: f(shift^n ω) = f(ω) for mSI-measurable f
+            induction n with
+            | zero => simp
+            | succ k ih =>
+              rw [Function.iterate_succ', Function.comp_apply]
+              rw [shiftInvariant_of_measurable_shiftInvariantSigma hCE_meas]
+              exact ih
+
+          -- Change of variables via shift^n
+          have hσ_n : MeasurePreserving (shift^[n]) μ μ := hσ.iterate n
+
+          have h_integral_eq : ∀ m,
+              ∫ ω, |A (m + 1) ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ
+              = ∫ ω, |A' m ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
+            intro m
+            calc ∫ ω, |A (m + 1) ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ
+                = ∫ ω, |A' m (shift^[n] ω) - μ[(fun ω => g (ω 0)) | mSI] (shift^[n] ω)| ∂μ := by
+                    congr 1; ext ω; rw [hA_shift, hCE_shift_inv]
+              _ = ∫ ω, |A' m ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂(μ.map (shift^[n])) := by
+                    rw [MeasureTheory.integral_map hσ_n.measurable.aemeasurable]
+                    apply Measurable.aestronglyMeasurable
+                    apply Measurable.abs
+                    apply Measurable.sub
+                    · apply Measurable.mul measurable_const
+                      apply Finset.measurable_sum; intro j _
+                      exact hg_meas.comp (measurable_pi_apply j)
+                    · exact stronglyMeasurable_condExp.measurable
+              _ = ∫ ω, |A' m ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
+                    rw [hσ_n.map_eq]
+
+          -- Use L1_cesaro_convergence_bounded
+          have h_base := L1_cesaro_convergence_bounded hσ g hg_meas hg_bd
+          simp only [h_integral_eq]
+          exact h_base
+
+        -- P bounded + L¹ convergence of A → L¹ convergence of P·A
+        -- CE is L¹ continuous, so CE[P·A_m] → CE[P·CE[g|mSI]]
+        -- But CE[P·A_m] = CE[P·g(ω_n)] (constant)
+        -- Therefore CE[P·g(ω_n)] = CE[P·CE[g|mSI]]
+        obtain ⟨CP, hCP⟩ := hP_bd
+        obtain ⟨Cg, hCg⟩ := hg_bd
+        have hCg_nn : 0 ≤ Cg := le_trans (abs_nonneg _) (hCg 0)
+
+        -- Integrability of P·A_m and P·CE[g|mSI]
+        have hP_int : Integrable P μ :=
+          integrable_of_bounded_measurable hP_meas CP hCP
+
+        have hPg_int : ∀ j, Integrable (fun ω => P ω * g (ω j)) μ := by
+          intro j
+          apply integrable_mul_of_bounded hP_meas (hg_meas.comp (measurable_pi_apply j)) CP
+          · exact hCP
+          · intro ω; exact hCg (ω j)
+
+        have hPCE_int : Integrable (fun ω => P ω * μ[(fun ω => g (ω 0)) | mSI] ω) μ := by
+          apply integrable_mul_of_bounded hP_meas stronglyMeasurable_condExp.measurable CP
+          · exact hCP
+          · have hZ_bd : ∀ᵐ ω ∂μ, |μ[(fun ω => g (ω 0)) | mSI] ω| ≤ Cg := by
+              have hg_int : Integrable (fun ω => g (ω 0)) μ :=
+                integrable_of_bounded_measurable (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
+              have hCg_ae' : ∀ᵐ ω ∂μ, |g (ω 0)| ≤ Cg.toNNReal := by
+                filter_upwards with ω; rwa [Real.coe_toNNReal _ hCg_nn]
+              have := ae_bdd_condExp_of_ae_bdd (m := mSI) hCg_ae'
+              filter_upwards [this] with ω hω; rwa [Real.coe_toNNReal _ hCg_nn] at hω
+            intro ω
+            by_cases h : |μ[(fun ω => g (ω 0)) | mSI] ω| ≤ Cg
+            · exact h
+            · -- Use ae bound almost everywhere
+              exact Cg.le_abs_self.trans (le_of_not_le h).le
+
+        -- The squeeze argument: constant sequence converges
+        -- CE[P·A_m|mSI] = CE[P·g(ω_n)|mSI] (constant) and
+        -- CE[P·A_m|mSI] → CE[P·CE[g|mSI]|mSI] (L¹ convergence)
+        -- Therefore CE[P·g(ω_n)|mSI] = CE[P·CE[g|mSI]|mSI] a.e.
+
+        -- L¹ convergence: P·A_m → P·CE[g|mSI]
+        have hCP_nonneg : 0 ≤ CP := le_trans (abs_nonneg (P 0)) (hCP 0)
+        have h_L1_PA :
+            Tendsto (fun m => ∫ ω, |P ω * A (m + 1) ω - P ω * μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ)
+                    atTop (𝓝 0) := by
+          have h_bound : ∀ m, ∫ ω, |P ω * A (m + 1) ω - P ω * μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ
+                       ≤ CP * ∫ ω, |A (m + 1) ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
+            intro m
+            calc ∫ ω, |P ω * A (m + 1) ω - P ω * μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ
+                = ∫ ω, |P ω| * |A (m + 1) ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
+                    congr 1; ext ω; rw [← abs_mul]; congr 1; ring
+              _ ≤ ∫ ω, CP * |A (m + 1) ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
+                    apply integral_mono
+                    · apply Integrable.abs; apply Integrable.sub
+                      · -- P*A is integrable (bounded)
+                        apply integrable_of_bounded_measurable
+                        · apply hP_meas.mul
+                          apply Measurable.mul measurable_const
+                          apply Finset.measurable_sum; intro j _
+                          exact hg_meas.comp (measurable_pi_apply (n + j))
+                        · use CP * Cg
+                          intro ω
+                          simp only [A, if_neg (Nat.succ_ne_zero _)]
+                          rw [abs_mul]
+                          apply mul_le_mul (hCP ω) _ (abs_nonneg _) hCP_nonneg
+                          rw [abs_mul]
+                          calc |1 / (↑(m + 1) : ℝ)| * |(Finset.range (m + 1)).sum (fun j => g (ω (n + j)))|
+                              ≤ 1 * (m + 1) * Cg := by
+                                  rw [abs_of_nonneg (by positivity : 0 ≤ 1 / (↑(m + 1) : ℝ))]
+                                  apply mul_le_mul _ _ (abs_nonneg _) (by positivity)
+                                  · simp [div_le_one (by positivity : (0 : ℝ) < m + 1)]
+                                  · calc |(Finset.range (m + 1)).sum (fun j => g (ω (n + j)))|
+                                        ≤ (Finset.range (m + 1)).sum (fun j => |g (ω (n + j))|) :=
+                                            Finset.abs_sum_le_sum_abs _ _
+                                      _ ≤ (Finset.range (m + 1)).sum (fun _ => Cg) := by
+                                            apply Finset.sum_le_sum; intro j _; exact hCg _
+                                      _ = (m + 1) * Cg := by simp [Finset.sum_const, Finset.card_range]
+                            _ = Cg := by ring
+                      · exact hPCE_int
+                    · apply Integrable.const_mul
+                      apply Integrable.abs; apply Integrable.sub
+                      · -- A is integrable
+                        apply integrable_of_bounded_measurable
+                        · apply Measurable.mul measurable_const
+                          apply Finset.measurable_sum; intro j _
+                          exact hg_meas.comp (measurable_pi_apply (n + j))
+                        · use Cg; intro ω
+                          simp only [A, if_neg (Nat.succ_ne_zero _)]
+                          rw [abs_mul, abs_of_nonneg (by positivity)]
+                          calc 1 / ↑(m + 1) * |(Finset.range (m + 1)).sum (fun j => g (ω (n + j)))|
+                              ≤ 1 / ↑(m + 1) * ((m + 1) * Cg) := by
+                                  apply mul_le_mul_of_nonneg_left _ (by positivity)
+                                  calc |(Finset.range (m + 1)).sum (fun j => g (ω (n + j)))|
+                                      ≤ (m + 1) * Cg := by
+                                          calc |(Finset.range (m + 1)).sum (fun j => g (ω (n + j)))|
+                                              ≤ (Finset.range (m + 1)).sum (fun j => |g (ω (n + j))|) :=
+                                                  Finset.abs_sum_le_sum_abs _ _
+                                            _ ≤ (Finset.range (m + 1)).sum (fun _ => Cg) := by
+                                                  apply Finset.sum_le_sum; intro j _; exact hCg _
+                                            _ = (m + 1) * Cg := by simp [Finset.sum_const, Finset.card_range]
+                            _ = Cg := by field_simp
+                      · exact integrable_condExp
+                    · intro ω; apply mul_le_mul_of_nonneg_right (hCP ω) (abs_nonneg _)
+              _ = CP * ∫ ω, |A (m + 1) ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
+                    rw [integral_mul_left]
+          apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds
+            (hA_L1_conv.const_mul CP)
+          · intro m; exact integral_nonneg (fun ω => abs_nonneg _)
+          · intro m; exact h_bound m
+
+        -- CE is L¹ continuous
+        have h_L1_CE :
+            Tendsto (fun m =>
+              ∫ ω, |μ[(fun ω' => P ω' * A (m + 1) ω') | mSI] ω
+                   - μ[(fun ω' => P ω' * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ)
+              atTop (𝓝 0) := by
+          refine Tendsto.of_tendsto_of_le_of_le tendsto_const_nhds h_L1_PA ?_ ?_
+          · intro m; exact integral_nonneg (fun ω => abs_nonneg _)
+          · intro m
+            calc ∫ ω, |μ[(fun ω' => P ω' * A (m + 1) ω') | mSI] ω
+                       - μ[(fun ω' => P ω' * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ
+                ≤ ∫ ω, |P ω * A (m + 1) ω - P ω * μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
+                    apply integral_abs_condExp_le
+
+        -- Constant sequence converges to same value
+        have h_const_is_zero :
+            ∫ ω, |μ[(fun ω => P ω * g (ω n)) | mSI] ω
+                  - μ[(fun ω => P ω * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω| ∂μ = 0 := by
+          have h_rewrite : ∀ m, 0 < m →
+            ∫ ω, |μ[(fun ω => P ω * g (ω n)) | mSI] ω
+                  - μ[(fun ω => P ω * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω| ∂μ
+            =
+            ∫ ω, |μ[(fun ω' => P ω' * A m ω') | mSI] ω
+                  - μ[(fun ω' => P ω' * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ := by
+            intro m hm
+            refine integral_congr_ae ?_
+            filter_upwards [hPA_eq m hm] with ω hω
+            simp [hω]
+          have h_const : Tendsto (fun m : ℕ =>
+            ∫ ω, |μ[(fun ω => P ω * g (ω n)) | mSI] ω
+                  - μ[(fun ω => P ω * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω| ∂μ)
+            atTop
+            (𝓝 (∫ ω, |μ[(fun ω => P ω * g (ω n)) | mSI] ω
+                        - μ[(fun ω => P ω * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω| ∂μ)) :=
+            tendsto_const_nhds
+          have h_eq_seq : ∀ m, (fun m => ∫ ω, |μ[(fun ω => P ω * g (ω n)) | mSI] ω
+                    - μ[(fun ω => P ω * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω| ∂μ) m
+               = (fun m => ∫ ω, |μ[(fun ω' => P ω' * A (m + 1) ω') | mSI] ω
+                    - μ[(fun ω' => P ω' * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ) m := by
+            intro m
+            exact h_rewrite (m + 1) (Nat.succ_pos m)
+          simp only [funext h_eq_seq] at h_const
+          exact tendsto_nhds_unique h_const h_L1_CE
+
+        -- Turn ∫|h| = 0 into a.e. equality
+        have h_abs_zero :
+            (fun ω =>
+              |μ[(fun ω => P ω * g (ω n)) | mSI] ω
+              - μ[(fun ω => P ω * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω|) =ᵐ[μ] 0 := by
+          have hint : Integrable (fun ω =>
+            |μ[(fun ω => P ω * g (ω n)) | mSI] ω
+            - μ[(fun ω => P ω * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω|) μ := by
+            apply Integrable.abs
+            apply Integrable.sub <;> exact integrable_condExp
+          exact integral_eq_zero_iff_of_nonneg_ae (ae_of_all _ (fun _ => abs_nonneg _)) hint |>.mp h_const_is_zero
+
+        filter_upwards [h_abs_zero] with ω hω
+        exact sub_eq_zero.mp (abs_eq_zero.mp hω)
+
+      -- Step 3b: Pullout property
+      -- CE[P · Z | mSI] = Z · CE[P | mSI] when Z is mSI-measurable
+      have h_pullout : μ[(fun ω => P ω * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI]
+          =ᵐ[μ] (fun ω => μ[(fun ω => g (ω 0)) | mSI] ω * μ[P | mSI] ω) := by
+        set Z := μ[(fun ω => g (ω 0)) | mSI]
+        have hZ_meas : Measurable[mSI] Z := stronglyMeasurable_condExp.measurable
+        -- Z is a.e. bounded since g is bounded
+        obtain ⟨Cg, hCg⟩ := hg_bd
+        have hZ_bd : ∃ C, ∀ᵐ ω ∂μ, |Z ω| ≤ C := by
+          use Cg
+          have hg_int : Integrable (fun ω => g (ω 0)) μ :=
+            integrable_of_bounded_measurable (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
+          have hCg_nn : 0 ≤ Cg := le_trans (abs_nonneg _) (hCg 0)
+          have hCg_ae' : ∀ᵐ ω ∂μ, |g (ω 0)| ≤ Cg.toNNReal := by
+            filter_upwards with ω; rwa [Real.coe_toNNReal _ hCg_nn]
+          have := ae_bdd_condExp_of_ae_bdd (m := mSI) hCg_ae'
+          filter_upwards [this] with ω hω; rwa [Real.coe_toNNReal _ hCg_nn] at hω
+        -- P is integrable
+        obtain ⟨CP, hCP⟩ := hP_bd
+        have hP_int : Integrable P μ :=
+          integrable_of_bounded_measurable hP_meas CP hCP
+        -- Apply pullout: CE[P·Z|mSI] = Z·CE[P|mSI]
+        have h := condExp_mul_pullout hZ_meas hZ_bd hP_int
+        calc μ[(fun ω => P ω * Z ω) | mSI]
+            =ᵐ[μ] μ[(fun ω => Z ω * P ω) | mSI] := by
+              have : (fun ω => P ω * Z ω) = (fun ω => Z ω * P ω) := by ext ω; ring
+              rw [this]
+          _ =ᵐ[μ] (fun ω => Z ω * μ[P | mSI] ω) := h
+
+      -- Combine tower + pullout
+      exact h_tower.trans h_pullout
+
+    -- Step 4: Apply IH to CE[P | mSI]
+    -- CE[P | mSI] = CE[∏_{k : Fin n} f_{k.castSucc}(ω_k) | mSI]
+    --            =ᵃᵉ ∏_{k : Fin n} ∫ f_{k.castSucc} dν
+    have h_IH : μ[P | mSI] =ᵐ[μ] (fun ω => ∏ k : Fin n, ∫ x, fs k.castSucc x ∂(ν (μ := μ) ω)) := by
+      -- Apply IH with fs' k = fs (k.castSucc)
+      have := IH (fun k => fs k.castSucc)
+                 (fun k => hmeas k.castSucc)
+                 (fun k => hbd k.castSucc)
+      simp only [P, Fin.coe_castSucc]
+      exact this
+
+    -- Step 5: Connect CE[g(ω_0)|mSI] with ∫ g dν via kernel property
+    have h_kernel : μ[(fun ω => g (ω 0)) | mSI]
+        =ᵐ[μ] (fun ω => ∫ x, g x ∂(ν (μ := μ) ω)) := by
+      have hg_int : Integrable (fun ω => g (ω 0)) μ := by
+        obtain ⟨Cg, hCg⟩ := hg_bd
+        exact integrable_of_bounded_measurable (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
+      exact condExp_eq_kernel_integral (shiftInvariantSigma_le (α := α)) hg_int
+
+    -- Step 6: Combine all pieces
+    rw [h_split]
+    calc μ[(fun ω => P ω * g (ω n)) | mSI]
+        =ᵐ[μ] (fun ω => μ[(fun ω => g (ω 0)) | mSI] ω * μ[P | mSI] ω) := h_factor
+      _ =ᵐ[μ] (fun ω => (∫ x, g x ∂(ν (μ := μ) ω)) *
+                        (∏ k : Fin n, ∫ x, fs k.castSucc x ∂(ν (μ := μ) ω))) := by
+          filter_upwards [h_kernel, h_IH] with ω hω1 hω2
+          simp only [hω1, hω2]
+      _ =ᵐ[μ] (fun ω => ∏ k : Fin (n + 1), ∫ x, fs k x ∂(ν (μ := μ) ω)) := by
+          apply ae_of_all
+          intro ω
+          rw [Fin.prod_univ_castSucc]
+          simp only [g, Fin.coe_castSucc, Fin.coe_last, mul_comm]
 
 /-
 Proof of base case (m = 0) - kept for reference:
@@ -1784,7 +2252,7 @@ standard selection via shifts, then apply the shift equivariance of CE.
 
 5. Conclude:
    ```lean
-   have h_ax := condexp_product_factorization_ax μ hσ m fs hmeas hbd hciid
+   have h_ax := condexp_product_factorization_ax μ hσ hExch m fs hmeas hbd
    -- h_ax : μ[F | ℐ] =ᵐ[μ] (ω ↦ ∏ i, ∫ fs i dν(ω))
    -- From step (4): μ[F' | ℐ] =ᵐ[μ] μ[F | ℐ]
    -- Compose these a.e.-equalities to get the desired result
@@ -1798,10 +2266,11 @@ The only genuinely hard part is still the independence in `condexp_product_facto
 lemma condexp_product_factorization_general
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
+    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
     (m : ℕ) (fs : Fin m → α → ℝ) (k : Fin m → ℕ)
+    (hk : Function.Injective k)
     (hmeas : ∀ i, Measurable (fs i))
-    (hbd : ∀ i, ∃ C, ∀ x, |fs i x| ≤ C)
-    (hciid : True) :
+    (hbd : ∀ i, ∃ C, ∀ x, |fs i x| ≤ C) :
     μ[fun ω => ∏ i, fs i (ω (k i)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] (fun ω => ∏ i, ∫ x, fs i x ∂(ν (μ := μ) ω)) := by
   -- Proof by induction on m (same structure as condexp_product_factorization_ax)
@@ -1811,10 +2280,637 @@ lemma condexp_product_factorization_general
     simp only [Finset.univ_eq_empty, Finset.prod_empty]
     exact Filter.EventuallyEq.of_eq (condExp_const (shiftInvariantSigma_le (α := α)) (1 : ℝ))
   | succ n IH =>
-    -- Inductive step: reduce to condexp_product_factorization_ax via shift invariance
-    -- The choice of coordinates k doesn't matter due to shift equivariance of CE
-    -- See detailed strategy in docstring above
-    sorry
+    -- Inductive step: Use condexp_product_factorization_ax with a relabeling argument
+    -- Key insight: The RHS doesn't depend on k, so we just need to show LHS equals RHS
+    --
+    -- Strategy:
+    -- 1. Apply ax for consecutive coordinates (0, 1, ..., n)
+    -- 2. Show LHS with arbitrary k equals LHS with consecutive coords via exchangeability
+    --
+    -- Step 1: Define gs : Fin (n+1) → α → ℝ (same functions)
+    let gs : Fin (n + 1) → α → ℝ := fs
+
+    -- Step 2: Product at CONSECUTIVE coordinates equals RHS
+    have h_ax := condexp_product_factorization_ax μ hσ hExch (n + 1) gs hmeas hbd
+    -- h_ax : CE[∏_i gs_i(ω_i) | mSI] =ᵃᵉ ∏_i ∫ gs_i dν
+
+    -- Step 3: Show product at coordinates k has same CE as product at consecutive coords
+    -- This uses exchangeability: permute the sequence so that positions k_i become position i
+    --
+    -- For now, we prove this via shift composition (works when coordinates are distinct)
+    -- The key is that CE factorizes for ANY set of distinct coordinates (by CI)
+
+    -- First, establish that each single-coordinate CE doesn't depend on which coordinate
+    have h_single_indep : ∀ i, μ[(fun ω => fs i (ω (k i))) | shiftInvariantSigma (α := α)]
+        =ᵐ[μ] μ[(fun ω => fs i (ω 0)) | shiftInvariantSigma (α := α)] := by
+      intro i
+      obtain ⟨C, hC⟩ := hbd i
+      have h_int : Integrable (fun ω : Ω[α] => fs i (ω 0)) μ :=
+        integrable_of_bounded_measurable ((hmeas i).comp (measurable_pi_apply 0))
+          C (fun ω => hC (ω 0))
+      have h := condexp_precomp_iterate_eq (μ := μ) hσ (k := k i) h_int
+      have h_eq : (fun ω => fs i (shift^[k i] ω 0)) = (fun ω => fs i (ω (k i))) := by
+        ext ω; congr 1; rw [shift_iterate_apply]; simp
+      rw [← h_eq]; exact h
+
+    -- Now for the product, we use that the tower+pullout structure works for any coordinates
+    -- The proof follows the same pattern as ax but with general k
+
+    -- ═══════════════════════════════════════════════════════════════════════════
+    -- RESTRUCTURED: Split off MAXIMUM coordinate (not last enumerated)
+    -- This ensures kn > all k'(i), so lag constancy always applies from kn
+    -- ═══════════════════════════════════════════════════════════════════════════
+
+    classical
+    have huniv : (Finset.univ : Finset (Fin (n + 1))).Nonempty := by simp
+
+    -- Find the maximum coordinate value
+    let kn : ℕ := (Finset.univ.image k).max' (huniv.image k)
+    have hkn_mem : kn ∈ Finset.univ.image k := Finset.max'_mem _ (huniv.image k)
+
+    -- Pick an index achieving the maximum
+    obtain ⟨i_max, -, hk_i_max : k i_max = kn⟩ := Finset.mem_image.mp hkn_mem
+
+    -- The function at the max coordinate
+    let g := fs i_max
+
+    -- Split product using Fin.prod_univ_succAbove (splits at i_max)
+    have h_split : (fun ω => ∏ i : Fin (n + 1), fs i (ω (k i)))
+        = (fun ω => (∏ i : Fin n, fs (Fin.succAbove i_max i) (ω (k (Fin.succAbove i_max i)))) *
+                    fs i_max (ω (k i_max))) := by
+      ext ω
+      rw [Fin.prod_univ_succAbove (fun j => fs j (ω (k j))) i_max]
+      ring
+
+    -- Define the sub-product (reindexed by succAbove i_max)
+    let P : Ω[α] → ℝ := fun ω => ∏ i : Fin n, fs (Fin.succAbove i_max i) (ω (k (Fin.succAbove i_max i)))
+
+    -- Restricted functions and coordinates
+    let fs' : Fin n → α → ℝ := fun i => fs (Fin.succAbove i_max i)
+    let k' : Fin n → ℕ := fun i => k (Fin.succAbove i_max i)
+
+    -- Injectivity of k' (inherited from hk)
+    have hk' : Function.Injective k' := by
+      intro a b hab
+      have h1 := (Fin.succAbove i_max).injective
+      apply h1
+      apply hk
+      simpa [k'] using hab
+
+    have hmeas' : ∀ i, Measurable (fs' i) := fun i => hmeas (Fin.succAbove i_max i)
+    have hbd' : ∀ i, ∃ C, ∀ x, |fs' i x| ≤ C := fun i => hbd (Fin.succAbove i_max i)
+
+    -- Bounds for P and g
+    have hP_bd : ∃ Cp, ∀ ω, |P ω| ≤ Cp := by
+      have := fun i => hbd (Fin.succAbove i_max i)
+      choose Cs hCs using this
+      use ∏ i : Fin n, Cs i
+      intro ω
+      calc |P ω| = |∏ i : Fin n, fs (Fin.succAbove i_max i) (ω (k (Fin.succAbove i_max i)))| := rfl
+        _ ≤ ∏ i : Fin n, |fs (Fin.succAbove i_max i) (ω (k (Fin.succAbove i_max i)))| := abs_prod_le_prod_abs _ _
+        _ ≤ ∏ i : Fin n, Cs i := by
+            apply Finset.prod_le_prod
+            · intro i _; exact abs_nonneg _
+            · intro i _; exact hCs i (ω (k (Fin.succAbove i_max i)))
+
+    have hg_bd : ∃ Cg, ∀ x, |g x| ≤ Cg := hbd i_max
+
+    -- Apply IH to the sub-product (now with injectivity)
+    have h_IH := IH fs' k' hk' hmeas' hbd'
+    -- h_IH : CE[∏_i fs'_i(ω_{k'_i}) | mSI] =ᵃᵉ ∏_i ∫ fs'_i dν
+
+    -- KEY FACT: kn is strictly greater than all k'(i)
+    -- This is the whole point of splitting off max coordinate!
+    have hk_le_kn : ∀ j : Fin (n + 1), k j ≤ kn := by
+      intro j
+      have : k j ∈ Finset.univ.image k := Finset.mem_image.mpr ⟨j, Finset.mem_univ j, rfl⟩
+      exact Finset.le_max' _ _ this
+
+    have h_kn_large : ∀ i : Fin n, k' i < kn := by
+      intro i
+      have hle : k' i ≤ kn := hk_le_kn (Fin.succAbove i_max i)
+      have hne : k' i ≠ kn := by
+        intro hEq
+        have h1 : k (Fin.succAbove i_max i) = k i_max := by
+          simp only [k', hk_i_max] at hEq ⊢
+          exact hEq
+        have h2 : Fin.succAbove i_max i = i_max := hk h1
+        exact Fin.succAbove_ne i_max i h2
+      exact Nat.lt_of_le_of_ne hle hne
+
+    -- Integrability of g at coordinate 0
+    obtain ⟨Cg, hCg⟩ := hg_bd
+    have hg_0_int : Integrable (fun ω : Ω[α] => g (ω 0)) μ :=
+      integrable_of_bounded_measurable ((hmeas i_max).comp (measurable_pi_apply 0))
+        Cg (fun ω => hCg (ω 0))
+
+    -- CE[g(ω_{kn}) | mSI] = CE[g(ω_0) | mSI] by shift invariance
+    have h_g_shift : μ[(fun ω => g (ω kn)) | shiftInvariantSigma (α := α)]
+        =ᵐ[μ] μ[(fun ω => g (ω 0)) | shiftInvariantSigma (α := α)] := by
+      have h := condexp_precomp_iterate_eq (μ := μ) hσ (k := kn) hg_0_int
+      have h_eq : (fun ω => g (shift^[kn] ω 0)) = (fun ω => g (ω kn)) := by
+        ext ω; congr 1; rw [shift_iterate_apply]; simp
+      rw [← h_eq]; exact h
+
+    -- CE[g(ω_0) | mSI] = ∫ g dν by kernel representation
+    have h_g_kernel : μ[(fun ω => g (ω 0)) | shiftInvariantSigma (α := α)]
+        =ᵐ[μ] fun ω => ∫ x, g x ∂(ν (μ := μ) ω) := by
+      have h := condExp_ae_eq_integral_condExpKernel (shiftInvariantSigma_le (α := α)) hg_0_int
+      refine h.trans ?_
+      filter_upwards with ω
+      exact (integral_ν_eq_integral_condExpKernel ω (hmeas i_max)).symm
+
+    -- Now chain: CE[P · g(ω_{kn}) | mSI] needs tower + pullout
+    -- We use the pullout property directly (skipping tower since g(ω_{kn}) reduces to ∫g dν)
+
+    -- The key fact: CE[P · Z | mSI] = Z · CE[P | mSI] when Z is mSI-measurable
+    -- Here Z = CE[g(ω_0) | mSI] = ∫ g dν is mSI-measurable
+
+    -- First show P · g(ω_{kn}) has same CE as P · (∫ g dν)
+    have hP_meas : Measurable P := by
+      apply Finset.measurable_prod
+      intro i _
+      exact (hmeas (Fin.succAbove i_max i)).comp (measurable_pi_apply _)
+
+    obtain ⟨Cp, hCp⟩ := hP_bd
+    have hP_int : Integrable P μ :=
+      ⟨hP_meas.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hCp)⟩
+
+    -- CE[P | mSI] =ᵃᵉ ∏_i ∫ fs'_i dν (by IH)
+    have hP_eq_IH : μ[P | shiftInvariantSigma (α := α)]
+        =ᵐ[μ] (fun ω => ∏ i : Fin n, ∫ x, fs' i x ∂(ν (μ := μ) ω)) := by
+      exact h_IH
+
+    -- The key step: for exchangeable sequences, we have conditional independence
+    -- CE[P · g(ω_{kn}) | mSI] = CE[P | mSI] · CE[g(ω_{kn}) | mSI]
+    -- This follows from the tower+pullout proof structure used in ax
+
+    -- We prove this directly using the pullout property + L1 convergence argument
+    -- (Same structure as the h_tower proof in condexp_product_factorization_ax)
+
+    -- For simplicity, we observe that the final result follows from ax + coordinate relabeling
+    -- The RHS is: ∏_{i : Fin (n+1)} ∫ fs i dν
+    -- Which splits as: (∏_{i : Fin n} ∫ fs' i dν) · (∫ g dν)
+    -- The LHS CE[P · g(ω_{kn}) | mSI] factorizes by conditional independence
+
+    -- Use the structure: CE[f·h | mSI] = CE[f | mSI] · CE[h | mSI] for CI variables
+    -- Here f = P (function of coordinates k_0,...,k_{n-1}) and h = g(ω_{kn})
+
+    -- The factorization follows from conditional independence given the tail σ-algebra
+    -- which is a consequence of exchangeability (this is de Finetti's theorem!)
+
+    -- Apply the product factorization directly using the exchange-based argument
+    -- We use that h_ax already establishes factorization for consecutive coordinates
+    -- and shift invariance gives the same result for any coordinates
+
+    -- Final assembly: chain the a.e. equalities
+    have h_rhs_split : (fun ω => ∏ i : Fin (n + 1), ∫ x, fs i x ∂(ν (μ := μ) ω))
+        = (fun ω => (∏ i : Fin n, ∫ x, fs (Fin.succAbove i_max i) x ∂(ν (μ := μ) ω)) *
+                    (∫ x, fs i_max x ∂(ν (μ := μ) ω))) := by
+      ext ω
+      rw [Fin.prod_univ_succAbove (fun j => ∫ x, fs j x ∂(ν (μ := μ) ω)) i_max]
+      ring
+
+    -- Use ax directly - the proof shows factorization holds for consecutive coordinates
+    -- and by exchange/shift, this extends to any coordinates
+    -- The formal argument uses that μ is exchangeable:
+    -- For any permutation π with π(i) = k_i, the measure is preserved under reindex π
+    -- So CE[∏_i fs_i(ω_{k_i}) | mSI] computed under μ
+    -- = CE[∏_i fs_i(ω_i) | mSI] computed under μ.map(reindex π^{-1})
+    -- = CE[∏_i fs_i(ω_i) | mSI] computed under μ (by exchangeability)
+
+    -- For a complete formal proof, we would construct the permutation π explicitly
+    -- and show the CE is preserved. For now, we use the established pattern:
+
+    -- The product splits and each factor is handled by shift invariance
+    rw [h_split, h_rhs_split]
+
+    -- CE of product = product of integrals (needs CI factorization)
+    -- This is the key step that uses the tower+pullout machinery from ax
+    -- We apply it via the structure established there
+
+    -- For the formal proof, we observe that this follows from iterating the
+    -- single-factor case n times, using IH for the prefix and shift invariance for the last term
+
+    -- Show: CE[P · g(ω_{kn}) | mSI] =ᵃᵉ (∏_i ∫ fs'_i dν) · (∫ g dν)
+    have h_full : μ[(fun ω => P ω * g (ω kn)) | shiftInvariantSigma (α := α)]
+        =ᵐ[μ] (fun ω => (∏ i : Fin n, ∫ x, fs' i x ∂(ν (μ := μ) ω)) *
+                        (∫ x, g x ∂(ν (μ := μ) ω))) := by
+      -- Use the tower+pullout argument from ax, adapted to general coordinates
+      -- The key is that kn is distinct from k_0, ..., k_{n-1} (assuming k is injective)
+      -- or use the general CI structure for exchangeable sequences
+
+      -- For now, we apply the direct factorization using pullout on the kernel integral
+      -- CE[P · g(ω_{kn}) | mSI] = CE[P · CE[g(ω_0) | mSI] | mSI] (tower)
+      --                        = CE[g(ω_0) | mSI] · CE[P | mSI] (pullout)
+      --                        = (∫ g dν) · (∏ ∫ fs'_i dν) (by h_g_kernel and IH)
+
+      -- The tower step uses Cesàro convergence (same argument as in ax)
+      -- Here we use that h_g_shift + h_g_kernel + h_IH give us all pieces
+
+      -- We apply pullout directly with Z = ∫ g dν (mSI-measurable)
+      -- CE[P · Z | mSI] = Z · CE[P | mSI]
+      have hZ : StronglyMeasurable[shiftInvariantSigma (α := α)]
+          (fun ω => ∫ x, g x ∂(ν (μ := μ) ω)) := by
+        exact ν_integral_stronglyMeasurable (hmeas i_max)
+
+      have hZ_bd : ∃ Cz, ∀ ω, |∫ x, g x ∂(ν (μ := μ) ω)| ≤ Cz := by
+        use Cg
+        intro ω
+        calc |∫ x, g x ∂(ν (μ := μ) ω)|
+            ≤ ∫ x, |g x| ∂(ν (μ := μ) ω) := norm_integral_le_integral_norm _
+          _ ≤ ∫ x, Cg ∂(ν (μ := μ) ω) := by
+              apply integral_mono_of_nonneg
+              · exact ae_of_all _ (fun _ => abs_nonneg _)
+              · exact integrable_const Cg
+              · exact ae_of_all _ (fun x => hCg x)
+          _ = Cg := by simp [measure_univ]
+
+      -- ═══════════════════════════════════════════════════════════════════════
+      -- TOWER + PULLOUT PROOF (adapting the structure from condexp_product_factorization_ax)
+      -- ═══════════════════════════════════════════════════════════════════════
+      --
+      -- Goal: CE[P · g(ω_{kn}) | mSI] = (∏ ∫ fs'_i dν) · (∫ g dν)
+      --
+      -- Strategy:
+      -- 1. Define M = 1 + max(kn, max of k'(i)) so all coordinates are < M
+      -- 2. Use condexp_lag_constant_product_general for lag constancy at indices ≥ M
+      -- 3. Cesàro average from M converges to CE[g(ω_0)|mSI] by MET
+      -- 4. Pass to limit: CE[P·g(ω_M)|mSI] = CE[P·CE[g(ω_0)|mSI]|mSI]
+      -- 5. Apply pullout: = CE[g(ω_0)|mSI] · CE[P|mSI]
+      -- 6. Use h_IH and h_g_kernel to get the result
+      -- 7. Chain from kn to M if kn < M
+
+      -- Step 1: Define M to be larger than all coordinates used
+      let allCoords : List ℕ := kn :: (List.ofFn k')
+      let M := 1 + allCoords.foldl max 0
+
+      have hM_gt_kn : kn < M := by
+        simp only [M, allCoords]
+        have : kn ≤ (kn :: List.ofFn k').foldl max 0 := List.le_foldl_max (List.mem_cons_self _ _)
+        omega
+
+      have hM_gt_k' : ∀ i : Fin n, k' i < M := by
+        intro i
+        simp only [M, allCoords]
+        have : k' i ∈ List.ofFn k' := List.mem_ofFn k' i
+        have hmem : k' i ∈ kn :: List.ofFn k' := List.mem_cons_of_mem kn this
+        have : k' i ≤ (kn :: List.ofFn k').foldl max 0 := List.le_foldl_max hmem
+        omega
+
+      -- Step 2: Lag constancy: for j ≥ M, CE[P·g(ω_{j+1})|mSI] = CE[P·g(ω_j)|mSI]
+      have h_lag : ∀ j, M ≤ j →
+          μ[(fun ω => P ω * g (ω (j + 1))) | mSI]
+            =ᵐ[μ] μ[(fun ω => P ω * g (ω j)) | mSI] := by
+        intro j hj
+        have hj_gt : ∀ i : Fin n, k' i < j := fun i => Nat.lt_of_lt_of_le (hM_gt_k' i) hj
+        exact condexp_lag_constant_product_general hExch n fs' k' hmeas' hbd' g
+          (hmeas i_max) hg_bd j hj_gt
+
+      -- Step 3: Chain to show CE[P·g(ω_j)|mSI] = CE[P·g(ω_M)|mSI] for all j ≥ M
+      have h_const : ∀ j, M ≤ j →
+          μ[(fun ω => P ω * g (ω j)) | mSI]
+            =ᵐ[μ] μ[(fun ω => P ω * g (ω M)) | mSI] := by
+        intro j hj
+        induction j with
+        | zero => omega
+        | succ j' ih =>
+          by_cases hj' : j' < M
+          · have : j' + 1 = M := by omega
+            subst this; rfl
+          · push_neg at hj'
+            have h1 := (h_lag j' hj').symm
+            have h2 := ih hj'
+            exact h1.trans h2
+
+      -- SIMPLIFIED: Since we split off max coordinate, h_kn_large is always true!
+      -- (This was the whole point of restructuring to find i_max = argmax k(i))
+      -- So lag constancy applies directly from kn to M.
+      have h_kn_to_M : μ[(fun ω => P ω * g (ω kn)) | mSI]
+          =ᵐ[μ] μ[(fun ω => P ω * g (ω M)) | mSI] := by
+        -- Lag constancy applies for any j ≥ kn since kn > all k'(i)
+        have h_lag_from_kn : ∀ j, kn ≤ j →
+            μ[(fun ω => P ω * g (ω (j + 1))) | mSI]
+              =ᵐ[μ] μ[(fun ω => P ω * g (ω j)) | mSI] := by
+          intro j hj
+          have hj_gt : ∀ i : Fin n, k' i < j := fun i => Nat.lt_of_lt_of_le (h_kn_large i) hj
+          exact condexp_lag_constant_product_general hExch n fs' k' hmeas' hbd' g
+            (hmeas i_max) hg_bd j hj_gt
+        -- Chain from kn to M using h_lag_from_kn
+        have h_chain : ∀ j, kn ≤ j → j ≤ M →
+            μ[(fun ω => P ω * g (ω j)) | mSI]
+              =ᵐ[μ] μ[(fun ω => P ω * g (ω M)) | mSI] := by
+          intro j hj_lo hj_hi
+          induction j with
+          | zero =>
+            have : kn = 0 := Nat.le_zero.mp hj_lo
+            subst this
+            have hM0 : M = 0 := by omega
+            subst hM0; rfl
+          | succ j' ih =>
+            by_cases hj' : j' < kn
+            · have : j' + 1 = kn := by omega
+              subst this
+              -- Need to show CE[P·g(ω_{kn})|mSI] = CE[P·g(ω_M)|mSI]
+              -- Chain: kn → kn+1 → ... → M
+              clear ih
+              -- Use induction on M - kn
+              have h_gap : kn ≤ M := by omega
+              obtain ⟨d, hd⟩ : ∃ d, M = kn + d := ⟨M - kn, by omega⟩
+              subst hd
+              induction d with
+              | zero => simp
+              | succ d' ih =>
+                have h1 := h_lag_from_kn (kn + d') (by omega)
+                have h2 := ih (by omega)
+                exact h2.trans h1.symm
+            · push_neg at hj'
+              by_cases hj'_eq : j' + 1 = M
+              · subst hj'_eq; rfl
+              · have : j' + 1 < M := by omega
+                have h1 := h_lag_from_kn j' hj'
+                have h2 := ih hj' (by omega)
+                exact h1.symm.trans h2
+        exact h_chain kn (le_refl kn) (le_of_lt hM_gt_kn)
+
+      -- Step 4: Tower property via Cesàro + MET
+      -- CE[P·g(ω_M)|mSI] = CE[P·CE[g(ω_0)|mSI]|mSI]
+      have h_tower : μ[(fun ω => P ω * g (ω M)) | mSI]
+          =ᵐ[μ] μ[(fun ω => P ω * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] := by
+        -- This follows the same Cesàro + MET pattern as in condexp_product_factorization_ax
+        -- Define A_m = (1/m) Σ_{j=0}^{m-1} g(ω_{M+j})
+        let A := fun m : ℕ => fun ω => if m = 0 then 0
+          else (1 / (m : ℝ)) * (Finset.range m).sum (fun j => g (ω (M + j)))
+
+        obtain ⟨CP, hCP⟩ := hP_bd
+        obtain ⟨Cg', hCg'⟩ := hg_bd
+        have hCP_nn : 0 ≤ CP := le_trans (abs_nonneg _) (hCP 0)
+        have hCg_nn : 0 ≤ Cg' := le_trans (abs_nonneg _) (hCg' 0)
+
+        -- Step 4a: CE[P·A_m|mSI] = CE[P·g(ω_M)|mSI] for m > 0
+        -- Uses linearity of CE and h_const
+        have hPA_eq : ∀ m, 0 < m →
+            μ[(fun ω => P ω * A m ω) | mSI] =ᵐ[μ] μ[(fun ω => P ω * g (ω M)) | mSI] := by
+          intro m hm
+          have hne : (m : ℝ) ≠ 0 := by positivity
+          simp only [A, if_neg (Nat.ne_of_gt hm)]
+          -- P · A_m = (1/m) · Σⱼ P · g(ω_{M+j})
+          have h_rewrite : (fun ω => P ω * ((1 / m) * (Finset.range m).sum (fun j => g (ω (M + j)))))
+              = (fun ω => (1 / m) * (Finset.range m).sum (fun j => P ω * g (ω (M + j)))) := by
+            ext ω; ring
+          rw [h_rewrite]
+          -- CE[(1/m) · Σⱼ P·g(ω_{M+j})] = (1/m) · Σⱼ CE[P·g(ω_{M+j})]
+          have h_linear := condExp_sum_mul_const (m := mSI) (μ := μ)
+            (fun j => fun ω => P ω * g (ω (M + j))) (1 / m) (Finset.range m)
+            (fun j _ => by
+              apply integrable_mul_of_bounded hP_meas
+                (hmeas i_max |>.comp (measurable_pi_apply (M + j))) CP
+              · exact hCP
+              · intro ω; exact hCg' _)
+          refine h_linear.trans ?_
+          -- Each CE[P·g(ω_{M+j})] = CE[P·g(ω_M)] for j ∈ range m (since M+j ≥ M)
+          have h_sum_const : (fun ω => (1 / (m : ℝ)) *
+                  (Finset.range m).sum (fun j => μ[(fun ω => P ω * g (ω (M + j))) | mSI] ω))
+              =ᵐ[μ]
+              (fun ω => (1 / (m : ℝ)) * ((m : ℝ) * μ[(fun ω => P ω * g (ω M)) | mSI] ω)) := by
+            have h_each : ∀ j ∈ Finset.range m,
+                μ[(fun ω => P ω * g (ω (M + j))) | mSI]
+                  =ᵐ[μ] μ[(fun ω => P ω * g (ω M)) | mSI] := by
+              intro j _
+              exact h_const (M + j) (Nat.le_add_right M j)
+            have h_sum := Filter.EventuallyEq.finset_sum h_each
+            filter_upwards [h_sum] with ω hω
+            simp only [mul_comm (1 / (m : ℝ)), ← Finset.sum_mul]
+            congr 1
+            rw [hω, Finset.sum_const, Finset.card_range, smul_eq_mul]
+          refine h_sum_const.mono ?_; intro ω hω; simp [hω]; field_simp [hne]
+
+        -- Step 4b: A_m → CE[g(ω_0)|mSI] in L¹
+        have hA_L1_conv :
+            Tendsto (fun m => ∫ ω, |A (m+1) ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ)
+                    atTop (𝓝 0) := by
+          -- Define standard Cesàro A' at index 0
+          let A' := fun m : ℕ => fun ω => (1 / ((m + 1) : ℝ)) *
+                      (Finset.range (m + 1)).sum (fun j => g (ω j))
+          -- Key: A_{m+1} ω = A'_m (shift^M ω)
+          have hA_shift : ∀ m ω, A (m + 1) ω = A' m (shift^[M] ω) := by
+            intro m ω
+            simp only [A, A', if_neg (Nat.succ_ne_zero m), Nat.add_sub_cancel]
+            congr 1
+            apply Finset.sum_congr rfl
+            intro j _
+            rw [shift_iterate_apply]; simp
+          -- CE[g(ω_0)|mSI] is shift-invariant
+          have hCE_shift_inv : ∀ ω, μ[(fun ω => g (ω 0)) | mSI] (shift^[M] ω)
+                                 = μ[(fun ω => g (ω 0)) | mSI] ω := by
+            intro ω
+            have hCE_meas : Measurable[mSI] (μ[(fun ω => g (ω 0)) | mSI]) :=
+              stronglyMeasurable_condExp.measurable
+            induction M with
+            | zero => simp
+            | succ k ih =>
+              rw [Function.iterate_succ', Function.comp_apply]
+              rw [shiftInvariant_of_measurable_shiftInvariantSigma hCE_meas]
+              exact ih
+          -- Change of variables via shift^M
+          have hσ_M : MeasurePreserving (shift^[M]) μ μ := hσ.iterate M
+          have h_integral_eq : ∀ m,
+              ∫ ω, |A (m + 1) ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ
+              = ∫ ω, |A' m ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
+            intro m
+            calc ∫ ω, |A (m + 1) ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ
+                = ∫ ω, |A' m (shift^[M] ω) - μ[(fun ω => g (ω 0)) | mSI] (shift^[M] ω)| ∂μ := by
+                    congr 1; ext ω; rw [hA_shift, hCE_shift_inv]
+              _ = ∫ ω, |A' m ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂(μ.map (shift^[M])) := by
+                    rw [MeasureTheory.integral_map hσ_M.measurable.aemeasurable]
+                    apply Measurable.aestronglyMeasurable
+                    apply Measurable.abs
+                    apply Measurable.sub
+                    · apply Measurable.mul measurable_const
+                      apply Finset.measurable_sum; intro j _
+                      exact hmeas i_max |>.comp (measurable_pi_apply j)
+                    · exact stronglyMeasurable_condExp.measurable
+              _ = ∫ ω, |A' m ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
+                    rw [hσ_M.map_eq]
+          -- Use L1_cesaro_convergence_bounded
+          have h_base := L1_cesaro_convergence_bounded hσ g (hmeas i_max) hg_bd
+          simp only [h_integral_eq]
+          exact h_base
+
+        -- Step 4c: Integrability lemmas
+        have hP_int : Integrable P μ :=
+          integrable_of_bounded_measurable hP_meas CP hCP
+        have hPCE_int : Integrable (fun ω => P ω * μ[(fun ω => g (ω 0)) | mSI] ω) μ := by
+          apply integrable_mul_of_bounded hP_meas stronglyMeasurable_condExp.measurable CP
+          · exact hCP
+          · have hZ_bd : ∀ᵐ ω ∂μ, |μ[(fun ω => g (ω 0)) | mSI] ω| ≤ Cg' := by
+              have hg_int : Integrable (fun ω => g (ω 0)) μ :=
+                integrable_of_bounded_measurable (hmeas i_max |>.comp (measurable_pi_apply 0))
+                  Cg' (fun ω => hCg' (ω 0))
+              have hCg_ae' : ∀ᵐ ω ∂μ, |g (ω 0)| ≤ Cg'.toNNReal := by
+                filter_upwards with ω; rwa [Real.coe_toNNReal _ hCg_nn]
+              have := ae_bdd_condExp_of_ae_bdd (m := mSI) hCg_ae'
+              filter_upwards [this] with ω hω; rwa [Real.coe_toNNReal _ hCg_nn] at hω
+            intro ω
+            by_cases h : |μ[(fun ω => g (ω 0)) | mSI] ω| ≤ Cg'
+            · exact h
+            · exact Cg'.le_abs_self.trans (le_of_not_le h).le
+
+        -- Step 4d: L¹ convergence: P·A_m → P·CE[g|mSI]
+        have h_L1_PA :
+            Tendsto (fun m => ∫ ω, |P ω * A (m + 1) ω - P ω * μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ)
+                    atTop (𝓝 0) := by
+          have h_bound : ∀ m, ∫ ω, |P ω * A (m + 1) ω - P ω * μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ
+                       ≤ CP * ∫ ω, |A (m + 1) ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
+            intro m
+            calc ∫ ω, |P ω * A (m + 1) ω - P ω * μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ
+                = ∫ ω, |P ω| * |A (m + 1) ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
+                    congr 1; ext ω; rw [← abs_mul]; congr 1; ring
+              _ ≤ ∫ ω, CP * |A (m + 1) ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
+                    apply integral_mono
+                    · apply Integrable.abs; apply Integrable.sub
+                      · apply integrable_of_bounded_measurable
+                        · apply hP_meas.mul
+                          apply Measurable.mul measurable_const
+                          apply Finset.measurable_sum; intro j _
+                          exact hmeas i_max |>.comp (measurable_pi_apply (M + j))
+                        · use CP * Cg'
+                          intro ω
+                          simp only [A, if_neg (Nat.succ_ne_zero _)]
+                          rw [abs_mul]
+                          apply mul_le_mul (hCP ω) _ (abs_nonneg _) hCP_nn
+                          rw [abs_mul]
+                          calc |1 / (↑(m + 1) : ℝ)| * |(Finset.range (m + 1)).sum (fun j => g (ω (M + j)))|
+                              ≤ 1 * (m + 1) * Cg' := by
+                                  rw [abs_of_nonneg (by positivity : 0 ≤ 1 / (↑(m + 1) : ℝ))]
+                                  apply mul_le_mul _ _ (abs_nonneg _) (by positivity)
+                                  · simp [div_le_one (by positivity : (0 : ℝ) < m + 1)]
+                                  · calc |(Finset.range (m + 1)).sum (fun j => g (ω (M + j)))|
+                                        ≤ (Finset.range (m + 1)).sum (fun j => |g (ω (M + j))|) :=
+                                            Finset.abs_sum_le_sum_abs _ _
+                                      _ ≤ (Finset.range (m + 1)).sum (fun _ => Cg') := by
+                                            apply Finset.sum_le_sum; intro j _; exact hCg' _
+                                      _ = (m + 1) * Cg' := by simp [Finset.sum_const, Finset.card_range]
+                            _ = Cg' := by ring
+                      · exact hPCE_int
+                    · apply Integrable.const_mul
+                      apply Integrable.abs; apply Integrable.sub
+                      · apply integrable_of_bounded_measurable
+                        · apply Measurable.mul measurable_const
+                          apply Finset.measurable_sum; intro j _
+                          exact hmeas i_max |>.comp (measurable_pi_apply (M + j))
+                        · use Cg'; intro ω
+                          simp only [A, if_neg (Nat.succ_ne_zero _)]
+                          rw [abs_mul, abs_of_nonneg (by positivity)]
+                          calc 1 / ↑(m + 1) * |(Finset.range (m + 1)).sum (fun j => g (ω (M + j)))|
+                              ≤ 1 / ↑(m + 1) * ((m + 1) * Cg') := by
+                                  apply mul_le_mul_of_nonneg_left _ (by positivity)
+                                  calc |(Finset.range (m + 1)).sum (fun j => g (ω (M + j)))|
+                                      ≤ (m + 1) * Cg' := by
+                                          calc |(Finset.range (m + 1)).sum (fun j => g (ω (M + j)))|
+                                              ≤ (Finset.range (m + 1)).sum (fun j => |g (ω (M + j))|) :=
+                                                  Finset.abs_sum_le_sum_abs _ _
+                                            _ ≤ (Finset.range (m + 1)).sum (fun _ => Cg') := by
+                                                  apply Finset.sum_le_sum; intro j _; exact hCg' _
+                                            _ = (m + 1) * Cg' := by simp [Finset.sum_const, Finset.card_range]
+                            _ = Cg' := by field_simp
+                      · exact integrable_condExp
+                    · intro ω; apply mul_le_mul_of_nonneg_right (hCP ω) (abs_nonneg _)
+              _ = CP * ∫ ω, |A (m + 1) ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
+                    rw [integral_mul_left]
+          apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds
+            (hA_L1_conv.const_mul CP)
+          · intro m; exact integral_nonneg (fun ω => abs_nonneg _)
+          · intro m; exact h_bound m
+
+        -- Step 4e: CE is L¹ continuous
+        have h_L1_CE :
+            Tendsto (fun m =>
+              ∫ ω, |μ[(fun ω' => P ω' * A (m + 1) ω') | mSI] ω
+                   - μ[(fun ω' => P ω' * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ)
+              atTop (𝓝 0) := by
+          refine Tendsto.of_tendsto_of_le_of_le tendsto_const_nhds h_L1_PA ?_ ?_
+          · intro m; exact integral_nonneg (fun ω => abs_nonneg _)
+          · intro m
+            calc ∫ ω, |μ[(fun ω' => P ω' * A (m + 1) ω') | mSI] ω
+                       - μ[(fun ω' => P ω' * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ
+                ≤ ∫ ω, |P ω * A (m + 1) ω - P ω * μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
+                    apply integral_abs_condExp_le
+
+        -- Step 4f: Constant sequence converges to same value
+        have h_const_is_zero :
+            ∫ ω, |μ[(fun ω => P ω * g (ω M)) | mSI] ω
+                  - μ[(fun ω => P ω * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω| ∂μ = 0 := by
+          have h_rewrite : ∀ m, 0 < m →
+            ∫ ω, |μ[(fun ω => P ω * g (ω M)) | mSI] ω
+                  - μ[(fun ω => P ω * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω| ∂μ
+            =
+            ∫ ω, |μ[(fun ω' => P ω' * A m ω') | mSI] ω
+                  - μ[(fun ω' => P ω' * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ := by
+            intro m hm
+            refine integral_congr_ae ?_
+            filter_upwards [hPA_eq m hm] with ω hω
+            simp [hω]
+          have h_const_seq : Tendsto (fun m : ℕ =>
+            ∫ ω, |μ[(fun ω => P ω * g (ω M)) | mSI] ω
+                  - μ[(fun ω => P ω * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω| ∂μ)
+            atTop
+            (𝓝 (∫ ω, |μ[(fun ω => P ω * g (ω M)) | mSI] ω
+                        - μ[(fun ω => P ω * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω| ∂μ)) :=
+            tendsto_const_nhds
+          have h_eq_seq : ∀ m, (fun m => ∫ ω, |μ[(fun ω => P ω * g (ω M)) | mSI] ω
+                    - μ[(fun ω => P ω * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω| ∂μ) m
+               = (fun m => ∫ ω, |μ[(fun ω' => P ω' * A (m + 1) ω') | mSI] ω
+                    - μ[(fun ω' => P ω' * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ) m := by
+            intro m
+            exact h_rewrite (m + 1) (Nat.succ_pos m)
+          simp only [funext h_eq_seq] at h_const_seq
+          exact tendsto_nhds_unique h_const_seq h_L1_CE
+
+        -- Turn ∫|h| = 0 into a.e. equality
+        have h_abs_zero :
+            (fun ω =>
+              |μ[(fun ω => P ω * g (ω M)) | mSI] ω
+              - μ[(fun ω => P ω * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω|) =ᵐ[μ] 0 := by
+          have hint : Integrable (fun ω =>
+            |μ[(fun ω => P ω * g (ω M)) | mSI] ω
+            - μ[(fun ω => P ω * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] ω|) μ := by
+            apply Integrable.abs
+            apply Integrable.sub <;> exact integrable_condExp
+          exact integral_eq_zero_iff_of_nonneg_ae (ae_of_all _ (fun _ => abs_nonneg _)) hint |>.mp h_const_is_zero
+
+        filter_upwards [h_abs_zero] with ω hω
+        exact sub_eq_zero.mp (abs_eq_zero.mp hω)
+
+      -- Step 5: Apply pullout
+      -- CE[P·CE[g(ω_0)|mSI]|mSI] = CE[g(ω_0)|mSI] · CE[P|mSI]
+      have h_pullout : μ[(fun ω => P ω * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI]
+          =ᵐ[μ] (fun ω => μ[(fun ω => g (ω 0)) | mSI] ω * μ[P | mSI] ω) := by
+        exact condexp_mul_condexp (shiftInvariantSigma_le (α := α))
+          hP_meas hP_bd hg_0_int
+
+      -- Step 6: Assemble using h_IH and h_g_kernel
+      -- CE[g(ω_0)|mSI] · CE[P|mSI] = (∫ g dν) · (∏ ∫ fs'_i dν)
+      have h_final : (fun ω => μ[(fun ω => g (ω 0)) | mSI] ω * μ[P | mSI] ω)
+          =ᵐ[μ] (fun ω => (∫ x, g x ∂(ν (μ := μ) ω)) *
+                          (∏ i : Fin n, ∫ x, fs' i x ∂(ν (μ := μ) ω))) := by
+        have h1 := h_g_kernel  -- CE[g(ω_0)|mSI] =ᵃᵉ ∫ g dν
+        have h2 := hP_eq_IH     -- CE[P|mSI] =ᵃᵉ ∏ ∫ fs'_i dν
+        filter_upwards [h1, h2] with ω hω1 hω2
+        simp only at hω1 hω2
+        rw [hω1, hω2]
+
+      -- Chain: swap order in the product
+      have h_swap : (fun ω => (∫ x, g x ∂(ν (μ := μ) ω)) *
+                             (∏ i : Fin n, ∫ x, fs' i x ∂(ν (μ := μ) ω)))
+          =ᵐ[μ] (fun ω => (∏ i : Fin n, ∫ x, fs' i x ∂(ν (μ := μ) ω)) *
+                          (∫ x, g x ∂(ν (μ := μ) ω))) := by
+        exact ae_of_all μ (fun ω => mul_comm _ _)
+
+      -- Full chain
+      exact h_kn_to_M.trans (h_tower.trans (h_pullout.trans (h_final.trans h_swap)))
+
+    exact h_full
 
 /-
 Proof of base case (m = 0) - kept for reference:
@@ -2010,7 +3106,8 @@ private lemma kernel_measure_product_properties
 lemma indicator_product_bridge_ax
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
-    (m : ℕ) (k : Fin m → ℕ) (B : Fin m → Set α)
+    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
+    (m : ℕ) (k : Fin m → ℕ) (hk : Function.Injective k) (B : Fin m → Set α)
     (hB_meas : ∀ i, MeasurableSet (B i)) :
     ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
       = ∫⁻ ω, ∏ i : Fin m, (ν (μ := μ) ω) (B i) ∂μ := by
@@ -2050,7 +3147,7 @@ lemma indicator_product_bridge_ax
       by_cases h : x ∈ B i <;> simp [fs, h]
 
     -- Use the generalized factorization for arbitrary coordinates k
-    have h_factor := condexp_product_factorization_general μ hσ m fs k fs_meas fs_bd trivial
+    have h_factor := condexp_product_factorization_general μ hσ hExch m fs k hk fs_meas fs_bd
 
     -- h_factor gives: CE[∏ i, fs i (ω (k i)) | 𝓘] =ᵐ (∏ i, ∫ fs i dν)
     -- This is exactly: CE[F | 𝓘] =ᵐ G
@@ -2136,7 +3233,8 @@ measurability for measurable sets, matching what `ν_eval_measurable` provides.
 -/
 lemma exchangeable_implies_ciid_modulo_bridge_ax
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
-    (hσ : MeasurePreserving shift μ μ) :
+    (hσ : MeasurePreserving shift μ μ)
+    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ) :
     Exchangeability.ConditionallyIID μ (fun i (ω : Ω[α]) => ω i) := by
   -- Apply CommonEnding.conditional_iid_from_directing_measure
   apply CommonEnding.conditional_iid_from_directing_measure
@@ -2150,8 +3248,8 @@ lemma exchangeable_implies_ciid_modulo_bridge_ax
   · intro s hs
     exact ν_eval_measurable hs
   -- 4. Bridge condition: product of indicators = product of measures
-  · intro m k B hB_meas
-    exact indicator_product_bridge_ax μ hσ m k B hB_meas
+  · intro m k hk B hB_meas
+    exact indicator_product_bridge_ax μ hσ hExch m k hk B hB_meas
 
 section MainConvergence
 
@@ -6374,11 +7472,12 @@ needed by CommonEnding.
 theorem indicator_product_bridge
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
-    (m : ℕ) (k : Fin m → ℕ) (B : Fin m → Set α)
+    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
+    (m : ℕ) (k : Fin m → ℕ) (hk : Function.Injective k) (B : Fin m → Set α)
     (hB_meas : ∀ i, MeasurableSet (B i)) :
     ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
       = ∫⁻ ω, ∏ i : Fin m, (ν (μ := μ) ω) (B i) ∂μ :=
-  indicator_product_bridge_ax μ hσ m k B hB_meas
+  indicator_product_bridge_ax μ hσ hExch m k hk B hB_meas
 
 /-! ### Exchangeable implies ConditionallyIID (modulo the bridge axiom)
 
@@ -6397,8 +7496,9 @@ conditional independence, which must come from ergodic theory or martingale theo
 /-- Final wrapper to `ConditionallyIID` (kept modular behind an axiom). -/
 theorem exchangeable_implies_ciid_modulo_bridge
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
-    (hσ : MeasurePreserving shift μ μ) :
+    (hσ : MeasurePreserving shift μ μ)
+    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ) :
     Exchangeability.ConditionallyIID μ (fun i (ω : Ω[α]) => ω i) :=
-  exchangeable_implies_ciid_modulo_bridge_ax (μ := μ) (α := α) hσ
+  exchangeable_implies_ciid_modulo_bridge_ax (μ := μ) (α := α) hσ hExch
 
 end Exchangeability.DeFinetti.ViaKoopman
