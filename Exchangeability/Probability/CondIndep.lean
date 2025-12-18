@@ -12,6 +12,8 @@ import Mathlib.MeasureTheory.Measure.Typeclasses.Probability
 import Exchangeability.Probability.CondExpHelpers
 import Exchangeability.Probability.CondExp
 
+open scoped Classical
+
 /-!
 # Conditional Independence
 
@@ -374,7 +376,6 @@ lemma condIndep_indicator (μ : Measure Ω) [IsProbabilityMeasure μ]
       = (c * d) • (((Y ⁻¹' A).indicator (fun _ => 1)) * ((Z ⁻¹' B).indicator (fun _ => 1))) := by
     ext ω
     simp [Set.indicator, Function.comp_apply]
-    by_cases hA : Y ω ∈ A <;> by_cases hB : Z ω ∈ B <;> simp [hA, hB] <;> ring
 
   -- Apply CondIndep to unit indicators
   have h_unit : μ[ ((Y ⁻¹' A).indicator (fun _ => (1 : ℝ))) * ((Z ⁻¹' B).indicator (fun _ => (1 : ℝ))) | mW ]
@@ -1635,16 +1636,18 @@ E[ 1_A(Y) 1_B(Z) | σ(W) ]
 = E[ 1_A(Y) | σ(W) ] * E[ 1_B(Z) | σ(W) ] a.e.
 -/
 lemma condIndep_indicator_of_dropInfoY
-  {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
+  {Ω : Type*} [inst_mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
   {Y Z W : Ω → ℝ}
   {mW : MeasurableSpace Ω}
+  (hmW_le : mW ≤ inst_mΩ)  -- mW is a sub-σ-algebra of the ambient space
+  (hmW_le_mZW : mW ≤ MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance)  -- mW ≤ σ(Z,W)
   (dropY :
     ∀ A : Set ℝ, MeasurableSet A →
       condExp (MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance) μ
         (fun ω => Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω)
       =ᵐ[μ]
       condExp mW μ (fun ω => Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω))
-  (hZ : Measurable Z)
+  (hY : @Measurable Ω ℝ inst_mΩ _ Y) (hZ : @Measurable Ω ℝ inst_mΩ _ Z) (hW : @Measurable Ω ℝ inst_mΩ _ W)
   {A B : Set ℝ} (hA : MeasurableSet A) (hB : MeasurableSet B) :
   condExp mW μ
     (fun ω =>
@@ -1654,52 +1657,125 @@ lemma condIndep_indicator_of_dropInfoY
   (condExp mW μ (fun ω => Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω))
   *
   (condExp mW μ (fun ω => Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω)) := by
-  -- PROOF STRATEGY (from Kallenberg 2005, Lemma 1.3):
-  --
-  -- Let indA := 1_A ∘ Y and indB := 1_B ∘ Z.
-  -- Define mZW := σ(Z, W) = MeasurableSpace.comap (Z, W) inferInstance.
-  --
-  -- Key observations:
-  -- 1. indB is mZW-measurable (since it depends only on Z)
-  -- 2. condExp mW (indA) is mW-measurable (by definition of condExp)
-  --
-  -- The proof proceeds as follows:
-  --
-  -- Step 1: Use pull-out for mZW
-  --   condExp mZW (indA * indB) =ᵐ condExp mZW (indA) * indB
-  --   (since indB is mZW-measurable, we can pull it out)
-  --
-  -- Step 2: Apply the dropY hypothesis
-  --   condExp mZW (indA) =ᵐ condExp mW (indA)
-  --   So: condExp mZW (indA * indB) =ᵐ condExp mW (indA) * indB
-  --
-  -- Step 3: Take condExp mW of both sides (tower property)
-  --   LHS: condExp mW (condExp mZW (indA * indB)) = condExp mW (indA * indB)
-  --        (tower property: condExp mW ∘ condExp mZW = condExp mW when mW ≤ mZW)
-  --
-  -- Step 4: Use pull-out for mW on RHS
-  --   condExp mW (condExp mW (indA) * indB)
-  --   = condExp mW (indA) * condExp mW (indB)
-  --   (since condExp mW (indA) is mW-measurable)
-  --
-  -- KEY MATHLIB LEMMAS NEEDED:
-  -- - condExp_mul_of_aestronglyMeasurable_right: the pull-out property
-  -- - Tower property for condExp (need mW ≤ mZW ≤ m₀)
-  -- - AEStronglyMeasurable[mZW] for indB
-  -- - Integrability of indicators (bounded by 1)
-  --
-  -- NOTE: The tower property requires showing that mW ≤ mZW, which holds
-  -- because σ(W) ⊆ σ(Z, W).
-  --
-  -- IMPLEMENTATION BLOCKERS:
-  -- 1. The lemma statement uses abstract mW rather than MeasurableSpace.comap W
-  --    This prevents direct use of tower property since we can't verify mW ≤ mZW
-  -- 2. Need to add hypothesis that mW = MeasurableSpace.comap W inferInstance
-  -- 3. Indicator integrability needs careful handling of preimage measurability
-  --
-  -- The mathematical steps are clear (see comments above), but the Lean
-  -- formalization requires either refactoring the statement or adding hypotheses.
-  sorry
+  /-
+  **Proof (from Kallenberg 2005, Lemma 1.3):**
+
+  Let indA := 1_A ∘ Y and indB := 1_B ∘ Z.
+  Define mZW := σ(Z, W) = MeasurableSpace.comap (Z, W) inferInstance.
+
+  Step 1: Pull-out for mZW (indB is mZW-measurable)
+    condExp mZW (indA * indB) =ᵐ condExp mZW (indA) * indB
+
+  Step 2: Apply dropY hypothesis
+    condExp mZW (indA) =ᵐ condExp mW (indA)
+    So: condExp mZW (indA * indB) =ᵐ condExp mW (indA) * indB
+
+  Step 3: Tower property (mW ≤ mZW)
+    condExp mW (condExp mZW (indA * indB)) = condExp mW (indA * indB)
+    Applying condExp mW to step 2:
+    condExp mW (indA * indB) =ᵐ condExp mW (condExp mW (indA) * indB)
+
+  Step 4: Pull-out for mW (condExp mW (indA) is mW-measurable)
+    condExp mW (condExp mW (indA) * indB)
+    = condExp mW (indA) * condExp mW (indB)
+  -/
+  -- Notation
+  let mZW := MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance
+  let indA := fun ω => Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ)) ω
+  let indB := fun ω => Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω
+
+  -- σ-algebra relationship for mZW
+  have hmZW_le : mZW ≤ inst_mΩ := by
+    intro s hs
+    obtain ⟨S, hS_meas, rfl⟩ := hs
+    exact hS_meas.preimage (hZ.prodMk hW)
+
+  -- SigmaFinite instances for trim (needed for condExp lemmas)
+  haveI hσW : SigmaFinite (μ.trim hmW_le) := sigmaFinite_trim_of_le μ hmW_le
+  haveI hσZW : SigmaFinite (μ.trim hmZW_le) := sigmaFinite_trim_of_le μ hmZW_le
+
+  -- Integrability of indicators (bounded by 1)
+  have hIndA_int : Integrable indA μ := (integrable_const 1).indicator (hA.preimage hY)
+  have hIndB_int : Integrable indB μ := (integrable_const 1).indicator (hB.preimage hZ)
+  have hProd_int : Integrable (indA * indB) μ := by
+    -- indA is bounded by 1, so we can use bdd_mul with indB integrable
+    have hIndA_bdd : ∃ C, ∀ x, ‖indA x‖ ≤ C := by
+      use 1; intro x
+      simp only [indA, Real.norm_eq_abs]
+      rw [Set.indicator_apply]
+      by_cases h : x ∈ Y ⁻¹' A <;> simp [h]
+    exact hIndB_int.bdd_mul hIndA_int.aestronglyMeasurable hIndA_bdd
+
+  -- indB is mZW-measurable (depends only on Z)
+  -- Key: indB = (indicator B 1) ∘ Prod.fst ∘ (Z, W), and (Z,W) is mZW-measurable
+  have hIndB_mZW_meas : @Measurable Ω ℝ mZW inferInstance indB := by
+    -- Z is mZW-measurable: Z = Prod.fst ∘ (Z,W) where (Z,W) is the identity on comap
+    have hZW_meas : @Measurable Ω (ℝ × ℝ) mZW _ (fun ω => (Z ω, W ω)) :=
+      measurable_iff_comap_le.mpr le_rfl
+    have hZ_mZW : @Measurable Ω ℝ mZW _ Z := measurable_fst.comp hZW_meas
+    -- indicator B 1 : ℝ → ℝ is measurable
+    have h_ind_meas : Measurable (Set.indicator B (fun _ => (1 : ℝ))) :=
+      measurable_const.indicator hB
+    -- indB = (indicator B 1) ∘ Z
+    have h_eq : indB = (Set.indicator B (fun _ => (1 : ℝ))) ∘ Z := by
+      ext ω; simp only [Function.comp_apply, indB, Set.indicator]; rfl
+    rw [h_eq]
+    exact h_ind_meas.comp hZ_mZW
+
+  -- Step 1-2: Use dropY to get condExp mZW (indA) =ᵐ condExp mW (indA)
+  have h_drop : μ[indA | mZW] =ᵐ[μ] μ[indA | mW] := dropY A hA
+
+  -- Step 3: Tower property: condExp mW (condExp mZW f) = condExp mW f
+  have h_tower_prod : μ[μ[indA * indB | mZW] | mW] =ᵐ[μ] μ[indA * indB | mW] :=
+    condExp_condExp_of_le hmW_le_mZW hmZW_le
+
+  -- Step 1: Pull-out for mZW: condExp mZW (indA * indB) =ᵐ condExp mZW (indA) * indB
+  -- (because indB is mZW-measurable)
+  have hIndB_stronglyMeas_mZW : StronglyMeasurable[mZW] indB :=
+    hIndB_mZW_meas.stronglyMeasurable
+  have h_step1 : μ[indA * indB | mZW] =ᵐ[μ] μ[indA | mZW] * indB :=
+    condExp_mul_of_stronglyMeasurable_right hIndB_stronglyMeas_mZW hProd_int hIndA_int
+
+  -- Step 2: From h_drop, substitute condExp mW (indA) for condExp mZW (indA)
+  have h_step2 : μ[indA | mZW] * indB =ᵐ[μ] μ[indA | mW] * indB := by
+    filter_upwards [h_drop] with ω hω
+    simp only [Pi.mul_apply]
+    rw [hω]
+
+  -- Combine step 1 and step 2
+  have h_step12 : μ[indA * indB | mZW] =ᵐ[μ] μ[indA | mW] * indB :=
+    h_step1.trans h_step2
+
+  -- Step 3: Apply condExp mW to both sides (using h_tower_prod)
+  -- condExp mW (condExp mZW (indA * indB)) =ᵐ condExp mW (indA * indB) by tower
+  -- So: condExp mW (indA * indB) =ᵐ condExp mW (condExp mW (indA) * indB)
+  have h_step3a : μ[μ[indA * indB | mZW] | mW] =ᵐ[μ] μ[μ[indA | mW] * indB | mW] := by
+    apply condExp_congr_ae h_step12
+  have h_step3 : μ[indA * indB | mW] =ᵐ[μ] μ[μ[indA | mW] * indB | mW] :=
+    h_tower_prod.symm.trans h_step3a
+
+  -- Step 4: Pull-out for mW: condExp mW (condExp mW (indA) * indB) =ᵐ condExp mW (indA) * condExp mW (indB)
+  -- (because condExp mW (indA) is mW-measurable)
+  have hCondExpA_stronglyMeas : StronglyMeasurable[mW] (μ[indA | mW]) :=
+    stronglyMeasurable_condExp
+  have h_prod_condA_indB_int : Integrable (μ[indA | mW] * indB) μ := by
+    -- indB is bounded by 1, and condExp is integrable
+    have hIndB_bdd : ∃ C, ∀ x, ‖indB x‖ ≤ C := by
+      use 1; intro x
+      simp only [indB, Real.norm_eq_abs]
+      rw [Set.indicator_apply]
+      by_cases h : x ∈ Z ⁻¹' B <;> simp [h]
+    -- bdd_mul gives Integrable (indB * condExp) μ, convert using commutativity
+    have h : Integrable (indB * (μ[indA | mW])) μ :=
+      integrable_condExp.bdd_mul hIndB_int.aestronglyMeasurable hIndB_bdd
+    convert h using 1
+    ext ω
+    exact mul_comm _ _
+  have h_step4 : μ[μ[indA | mW] * indB | mW] =ᵐ[μ] μ[indA | mW] * μ[indB | mW] :=
+    condExp_mul_of_stronglyMeasurable_left hCondExpA_stronglyMeas h_prod_condA_indB_int hIndB_int
+
+  -- Combine step 3 and step 4 to get the conclusion
+  exact h_step3.trans h_step4
 
 end KallenbergIndicator
 
