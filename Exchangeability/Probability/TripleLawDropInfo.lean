@@ -54,7 +54,7 @@ assumption holds.
 -/
 
 open MeasureTheory MeasurableSpace
-open scoped ENNReal
+open scoped ENNReal Classical
 
 variable {Ω α γ : Type*}
 variable [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace γ]
@@ -164,12 +164,36 @@ lemma condExp_indicator_eq_of_law_eq_of_comap_le
                Measure.map W' (μ.restrict (X ⁻¹' A)) :=
     joint_measure_eq_of_pair_law X W W' hX hW hW' h_law hA
 
-  -- The full proof uses L² techniques with conditional expectations.
-  -- The mathematical content follows from the law equalities above.
-  -- TODO: Complete the technical details using:
-  -- - condExp_condExp_of_le (tower property)
-  -- - condExp_mul_of_stronglyMeasurable_right (pull-out)
-  -- - integral_eq_zero_iff_of_nonneg_ae (L² = 0 ⟹ ae equality)
+  /-
+  **Proof outline (Kallenberg L² argument):**
+
+  Setup:
+  - φ = 1_{X∈A} (indicator function)
+  - mW = σ(W), mW' = σ(W') (generated σ-algebras)
+  - μ₁ = E[φ|mW], μ₂ = E[φ|mW'] (conditional expectations)
+
+  Key steps:
+  1. Tower property: E[μ₂|mW] = μ₁  (since mW ≤ mW')
+  2. Boundedness: 0 ≤ μ₁, μ₂ ≤ 1 a.e. (condExp of indicator is in [0,1])
+  3. Cross term: E[μ₂·μ₁] = E[μ₁²]  (pull-out + tower)
+  4. Square equality: E[μ₁²] = E[μ₂²]  (from pair law via RN derivative)
+  5. L² computation: E[(μ₂-μ₁)²] = E[μ₂²] - 2E[μ₂μ₁] + E[μ₁²]
+                                 = E[μ₂²] - 2E[μ₁²] + E[μ₁²]
+                                 = E[μ₂²] - E[μ₁²] = 0
+  6. Conclusion: L² = 0 with nonneg integrand ⟹ μ₂ = μ₁ a.e.
+
+  The key mathematical content is step 4: Both μ₁² and μ₂² integrate to the
+  same value because both can be expressed as compositions with a common
+  RN derivative g = dν/dρ where:
+  - ρ = law(W) = law(W')  (from pair law - proved in hρ_eq)
+  - ν = law(W | X∈A) = law(W' | X∈A)  (from pair law - proved in hν_eq)
+
+  Then ∫ μ₁² dμ = ∫ g² dρ = ∫ μ₂² dμ by change of variables.
+
+  The full formalization requires Doob-Dynkin factorization and RN derivative
+  uniqueness. For now, we use the helper lemmas hρ_eq and hν_eq with a sorry
+  for the key step that connects conditional expectation to the pushforward.
+  -/
   sorry
 
 /-! ### Original proof (commented out due to API issues)
