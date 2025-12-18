@@ -15,6 +15,7 @@ import Exchangeability.Tail.ShiftInvariance
 import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
 import Mathlib.MeasureTheory.Function.LpSpace.Basic
+import Mathlib.MeasureTheory.Integral.SetIntegral
 import Mathlib.Analysis.InnerProductSpace.MeanErgodic
 import Canonical
 
@@ -101,15 +102,16 @@ lemma aestronglyMeasurable_iInf_antitone
 
   -- Now conclude Measurable[⨅ N, m N] h
   have h_meas : @Measurable α ℝ (⨅ N, m N) _ h := by
-    rw [measurable_iInf]
-    exact h_meas_each
+    intro s hs
+    rw [MeasurableSpace.measurableSet_iInf]
+    exact fun N => h_meas_each N hs
 
   -- Step 4: Show f =ᵐ h
   -- On the set where f = g N for all N, we have h = f
   have h_ae_eq : f =ᵐ[μ] h := by
     -- Countable intersection of full-measure sets is full-measure
     have h_all_eq : ∀ᵐ x ∂μ, ∀ N, f x = g N x := by
-      rw [ae_all_iff]
+      rw [MeasureTheory.ae_all_iff]
       intro N
       exact hg_ae N
     filter_upwards [h_all_eq] with x hx
@@ -117,7 +119,7 @@ lemma aestronglyMeasurable_iInf_antitone
     simp only [h]
     have h_const : ∀ N, g N x = f x := fun N => (hx N).symm
     simp_rw [h_const]
-    exact Filter.liminf_const (f x)
+    exact (Filter.liminf_const (f x)).symm
 
   -- Step 5: Convert Measurable to StronglyMeasurable (for ℝ)
   have h_sm : @MeasureTheory.StronglyMeasurable α ℝ _ (⨅ N, m N) h := by
@@ -125,7 +127,7 @@ lemma aestronglyMeasurable_iInf_antitone
     exact h_meas.stronglyMeasurable
 
   -- Step 6: Conclude AEStronglyMeasurable
-  exact ⟨h, h_sm, h_ae_eq.symm⟩
+  exact ⟨h, h_sm, h_ae_eq⟩
 
 /-- AEStronglyMeasurable for a sub-σ-algebra is preserved under a.e. pointwise limits.
 
@@ -2753,6 +2755,28 @@ private lemma tail_measurability_of_blockAvg
   rw [h_eq]
   exact aestronglyMeasurable_iInf_antitone h_anti h_le α_f h_aesm_each
 
+/-- L² convergence implies set integral convergence on probability spaces.
+Proof: L² → L¹ on probability spaces (via eLpNorm_le_eLpNorm_of_exponent_le),
+then use tendsto_setIntegral_of_L1'. -/
+private lemma tendsto_setIntegral_of_L2_tendsto
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {A : Set Ω} (_hA : MeasurableSet A)
+    {fn : ℕ → Ω → ℝ} {f : Ω → ℝ}
+    (hfn : ∀ n, MemLp (fn n) 2 μ) (hf : MemLp f 2 μ)
+    (hL2 : Tendsto (fun n => eLpNorm (fn n - f) 2 μ) atTop (𝓝 0)) :
+    Tendsto (fun n => ∫ ω in A, fn n ω ∂μ) atTop (𝓝 (∫ ω in A, f ω ∂μ)) := by
+  -- Step 1: L² → L¹ convergence on probability spaces (‖g‖₁ ≤ ‖g‖₂)
+  have h1 : Tendsto (fun n => eLpNorm (fn n - f) 1 μ) atTop (𝓝 0) := by
+    apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds hL2
+    · intro n; exact zero_le _
+    · intro n
+      exact eLpNorm_le_eLpNorm_of_exponent_le one_le_two ((hfn n).sub hf).aestronglyMeasurable
+  -- Step 2: Show each fn is integrable
+  have hfn_int : ∀ n, Integrable (fn n) μ := fun n => (hfn n).integrable one_le_two
+  -- Step 3: Apply tendsto_setIntegral_of_L1'
+  exact tendsto_setIntegral_of_L1' f (hf.integrable one_le_two)
+    (Filter.univ_mem' hfn_int) h1 A
+
 set_option maxHeartbeats 2000000
 
 /-- **Cesàro averages converge in L² to a tail-measurable limit.**
@@ -3173,17 +3197,141 @@ lemma cesaro_to_condexp_L2
     --    Use: tendsto_setIntegral_of_L1 or norm_setIntegral_le_of_norm_le_const_ae
     -- 3. Uniqueness: ae_eq_of_forall_setIntegral_eq_of_sigmaFinite
     --
-    -- PROOF SKETCH (complete but requires substantial implementation):
-    -- have h_tail_aesm := tail_measurability_of_blockAvg f hf_meas hf_bdd hX_meas α_f hα_memLp hα_limit
-    -- have h_setint_eq : ∀ A, MeasurableSet[TailSigma.tailSigma X] A →
-    --     ∫ ω in A, α_f ω ∂μ = ∫ ω in A, f (X 0 ω) ∂μ := by
-    --   intro A hA
-    --   -- Step 1: ∫_A blockAvg f X 0 n dμ = ∫_A f(X_0) dμ (by exchangeability + linearity)
-    --   -- Step 2: ∫_A blockAvg f X 0 n dμ → ∫_A α_f dμ (by L² → set integral via Hölder)
-    --   -- Step 3: Therefore ∫_A α_f dμ = ∫_A f(X_0) dμ
-    --   sorry
-    -- exact ae_eq_of_forall_setIntegral_eq_of_sigmaFinite hm h_int_f h_int_α h_setint_eq h_tail_aesm
-    sorry
+    -- === PROOF STRUCTURE ===
+    -- Goal: α_f =ᵐ[μ] μ[(f ∘ X 0) | TailSigma.tailSigma X]
+    -- Strategy: Show equal set integrals on tail events, then invoke uniqueness
+    --
+    -- Key lemmas used:
+    -- 1. setIntegral_comp_shift_eq: ∫_A f(X_k) = ∫_A f(X_0) for tail sets A
+    -- 2. ae_eq_condExp_of_forall_setIntegral_eq: uniqueness of conditional expectation
+    -- 3. tendsto_setIntegral_of_L1': L² → L¹ → set integral convergence
+    --
+    -- Step 1: Sub-σ-algebra condition
+    -- Step 2: Set up SigmaFinite for trimmed measure
+    -- Step 3: Show integrability conditions
+    -- Step 4: Show set integral equality via:
+    --   (a) ∫_A blockAvg_n = ∫_A f(X_0) (by setIntegral_comp_shift_eq + linearity)
+    --   (b) ∫_A blockAvg_n → ∫_A α_f (by L² → set integral convergence)
+    -- Step 5: Apply uniqueness lemma
+
+    -- The key relationship: TailSigma.tailSigma X = tailProcess X
+    -- This follows from the re-export in BlockAverages.lean
+
+    -- Step 1: Sub-σ-algebra condition
+    have hm : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
+      TailSigma.tailSigma_le X hX_meas
+
+    -- Step 2: SigmaFinite for trimmed measure (automatic for probability measures)
+    haveI h_finite : IsFiniteMeasure (μ.trim hm) := by
+      constructor
+      rw [trim_measurableSet_eq hm MeasurableSet.univ]
+      exact measure_lt_top μ Set.univ
+    haveI : SigmaFinite (μ.trim hm) := @IsFiniteMeasure.toSigmaFinite _ _ _ h_finite
+
+    -- Step 3: Integrability of f ∘ X 0 (bounded function on probability space)
+    have hfX0_int : Integrable (f ∘ X 0) μ := by
+      -- Bounded functions on probability spaces are integrable
+      have h_memLp2 : MemLp (f ∘ X 0) 2 μ := by
+        apply MemLp.of_bound (hf_meas.comp (hX_meas 0)).aestronglyMeasurable 1
+        filter_upwards with ω
+        simp only [Real.norm_eq_abs, Function.comp_apply]
+        exact hf_bdd (X 0 ω)
+      -- MemLp 2 → MemLp 1 on probability spaces (since 1 ≤ 2)
+      have h_memLp1 : MemLp (f ∘ X 0) 1 μ := h_memLp2.mono_exponent one_le_two
+      exact memLp_one_iff_integrable.mp h_memLp1
+
+    -- Apply uniqueness lemma: ae_eq_condExp_of_forall_setIntegral_eq
+    -- This shows α_f = condExp if they have equal set integrals and α_f is tail-measurable
+    apply ae_eq_condExp_of_forall_setIntegral_eq hm hfX0_int
+
+    -- Condition 1: α_f is integrable on finite-measure tail sets
+    · intro s hs hμs
+      exact (hα_memLp.integrable one_le_two).integrableOn
+
+    -- Condition 2: Set integrals are equal
+    · intro A hA hμA
+      -- Convert MeasurableSet from TailSigma.tailSigma to tailProcess
+      -- (They are definitionally equal via the re-export in BlockAverages.lean)
+      have hA_tail : MeasurableSet[Exchangeability.Tail.tailProcess X] A := hA
+
+      -- Step (a): Show ∫_A f(X k) = ∫_A f(X 0) for all k using setIntegral_comp_shift_eq
+      have h_shift_eq : ∀ k, ∫ ω in A, f (X k ω) ∂μ = ∫ ω in A, f (X 0 ω) ∂μ :=
+        fun k => Exchangeability.Tail.ShiftInvariance.setIntegral_comp_shift_eq X hX_contract hX_meas f hf_meas hA_tail hfX0_int k
+
+      -- Step (b): Show ∫_A blockAvg n = ∫_A f(X 0) for all n > 0
+      -- blockAvg f X 0 n ω = (1/n) * ∑ k : Fin n, f (X k ω)
+      -- By linearity: ∫_A (1/n * ∑ f(X k)) = (1/n) * ∑ ∫_A f(X k) = (1/n) * n * ∫_A f(X 0) = ∫_A f(X 0)
+      have h_blockAvg_eq : ∀ n > 0, ∫ ω in A, blockAvg f X 0 n ω ∂μ = ∫ ω in A, f (X 0 ω) ∂μ := by
+        intro n hn
+        -- Each f ∘ X k is integrable (bounded function on probability space)
+        have hfXk_int : ∀ k, Integrable (fun ω => f (X k ω)) μ := fun k => by
+          have h_memLp2 : MemLp (fun ω => f (X k ω)) 2 μ := by
+            apply MemLp.of_bound (hf_meas.comp (hX_meas k)).aestronglyMeasurable 1
+            filter_upwards with ω
+            simp only [Real.norm_eq_abs]
+            exact hf_bdd (X k ω)
+          exact (h_memLp2.mono_exponent one_le_two).integrable le_rfl
+        -- Unfold blockAvg: blockAvg f X 0 n ω = (n:ℝ)⁻¹ * ∑_{k∈range n} f(X (0+k) ω)
+        -- For m = 0, this is (n:ℝ)⁻¹ * ∑_{k∈range n} f(X k ω)
+        simp only [blockAvg, zero_add]
+        -- Rewrite using scalar multiplication
+        have h_scalar : ∫ ω in A, (↑n : ℝ)⁻¹ * ∑ k ∈ Finset.range n, f (X k ω) ∂μ =
+            (↑n : ℝ)⁻¹ * ∫ ω in A, ∑ k ∈ Finset.range n, f (X k ω) ∂μ := by
+          simp_rw [← smul_eq_mul]
+          exact MeasureTheory.integral_smul _ _
+        rw [h_scalar]
+        -- Sum pullout: ∫_A (∑ ...) = ∑ ∫_A ...
+        rw [MeasureTheory.integral_finset_sum _ (fun k _ => (hfXk_int k).integrableOn.integrable)]
+        -- Apply shift invariance: ∑ ∫_A f(X k) = ∑ ∫_A f(X 0) = n * ∫_A f(X 0)
+        simp_rw [h_shift_eq]
+        rw [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+        -- Simplify: n⁻¹ * (n * ∫_A f(X 0)) = ∫_A f(X 0) (since n > 0)
+        field_simp
+
+      -- Step (c): Show ∫_A blockAvg n → ∫_A α_f using L² convergence
+      -- Use Hölder: |∫_A (g - h)| ≤ μ(A)^(1/2) * ‖g - h‖₂
+      -- L² convergence + bounded measure gives set integral convergence
+      have h_setInt_tendsto : Tendsto (fun n => ∫ ω in A, blockAvg f X 0 n ω ∂μ)
+          atTop (𝓝 (∫ ω in A, α_f ω ∂μ)) := by
+        -- Need MemLp for each blockAvg n (bounded functions on probability spaces)
+        have h_blockAvg_memLp : ∀ n, MemLp (blockAvg f X 0 n) 2 μ := fun n => by
+          apply MemLp.of_bound (blockAvg_measurable f X hf_meas hX_meas 0 n).aestronglyMeasurable 1
+          filter_upwards with ω
+          simp only [Real.norm_eq_abs, blockAvg]
+          -- |n⁻¹ * ∑ f(X k)| ≤ n⁻¹ * n = 1
+          rw [abs_mul, abs_of_nonneg (inv_nonneg.mpr (Nat.cast_nonneg n))]
+          calc (n : ℝ)⁻¹ * |(Finset.range n).sum (fun k => f (X (0 + k) ω))|
+              ≤ (n : ℝ)⁻¹ * n := by
+                apply mul_le_mul_of_nonneg_left _ (inv_nonneg.mpr (Nat.cast_nonneg n))
+                calc |(Finset.range n).sum (fun k => f (X (0 + k) ω))|
+                    ≤ (Finset.range n).sum (fun k => |f (X (0 + k) ω)|) :=
+                      Finset.abs_sum_le_sum_abs _ _
+                  _ ≤ (Finset.range n).sum (fun _ => 1) := by
+                      apply Finset.sum_le_sum; intro k _
+                      simp only [zero_add]; exact hf_bdd (X k ω)
+                  _ = n := by simp only [Finset.sum_const, Finset.card_range, nsmul_one]
+            _ ≤ 1 := by by_cases hn : n = 0 <;> simp [hn]
+        -- Use auxiliary lemma
+        have hA_meas : MeasurableSet A := hm A hA
+        exact tendsto_setIntegral_of_L2_tendsto hA_meas h_blockAvg_memLp hα_memLp hα_limit
+
+      -- Step (d): Combine: constant sequence converges to unique limit
+      -- From (b): the sequence ∫_A blockAvg n is eventually constant at ∫_A f(X 0)
+      -- From (c): it converges to ∫_A α_f
+      -- Therefore ∫_A α_f = ∫_A f(X 0)
+      have h_const : ∀ᶠ n in atTop, ∫ ω in A, blockAvg f X 0 n ω ∂μ = ∫ ω in A, f (X 0 ω) ∂μ := by
+        filter_upwards [eventually_gt_atTop 0] with n hn
+        exact h_blockAvg_eq n hn
+      -- The limit of an eventually constant sequence equals that constant
+      have h_lim_eq_const : Tendsto (fun n => ∫ ω in A, blockAvg f X 0 n ω ∂μ)
+          atTop (𝓝 (∫ ω in A, f (X 0 ω) ∂μ)) := by
+        apply tendsto_const_nhds.congr'
+        filter_upwards [h_const] with n hn
+        exact hn.symm
+      exact tendsto_nhds_unique h_setInt_tendsto h_lim_eq_const
+
+    -- Condition 3: α_f is tail-measurable
+    · exact tail_measurability_of_blockAvg f hf_meas hf_bdd hX_meas α_f hα_memLp hα_limit
 
 /-- **L¹ version via L² → L¹ conversion.**
 
@@ -3337,18 +3485,19 @@ lemma cesaro_to_condexp_L1
   exact (Finset.sum_range (fun i => f (X i ω))).symm
 
 /-- **THEOREM (Indicator integral continuity at fixed threshold):**
-If `Xₙ → X` a.e. and each `Xₙ`, `X` is measurable, then
-`∫ 1_{(-∞,t]}(Xₙ) dμ → ∫ 1_{(-∞,t]}(X) dμ`.
+If `Xₙ → X` a.e. and each `Xₙ`, `X` is measurable, and `t` is a continuity set
+(meaning μ(X⁻¹'{t}) = 0), then `∫ 1_{(-∞,t]}(Xₙ) dμ → ∫ 1_{(-∞,t]}(X) dμ`.
 
 This is the Dominated Convergence Theorem: indicator functions are bounded by 1,
-and converge pointwise a.e. (except possibly at the single point where X ω = t,
-which has measure zero for continuous distributions). -/
+and converge pointwise a.e. The continuity set assumption ensures we avoid the
+boundary case where convergence can fail (when X ω = t and Xn oscillates around t). -/
 theorem tendsto_integral_indicator_Iic
   {Ω : Type*} [MeasurableSpace Ω]
   {μ : Measure Ω} [IsProbabilityMeasure μ]
   (Xn : ℕ → Ω → ℝ) (X : Ω → ℝ) (t : ℝ)
   (hXn_meas : ∀ n, Measurable (Xn n)) (hX_meas : Measurable (X))
-  (hae : ∀ᵐ ω ∂μ, Tendsto (fun n => Xn n ω) atTop (𝓝 (X ω))) :
+  (hae : ∀ᵐ ω ∂μ, Tendsto (fun n => Xn n ω) atTop (𝓝 (X ω)))
+  (h_cont : μ (X ⁻¹' {t}) = 0) :
   Tendsto (fun n => ∫ ω, (Set.Iic t).indicator (fun _ => (1 : ℝ)) (Xn n ω) ∂μ)
           atTop
           (𝓝 (∫ ω, (Set.Iic t).indicator (fun _ => (1 : ℝ)) (X ω) ∂μ)) := by
@@ -3371,20 +3520,18 @@ theorem tendsto_integral_indicator_Iic
   -- 4. Pointwise convergence of indicators
   · -- Need: 1_{≤t}(Xn ω) → 1_{≤t}(X ω) for a.e. ω
     --
-    -- Strategy: Indicators converge when X ω ≠ t (away from the boundary)
-    -- The set {ω : X ω = t} may have positive measure, so we need to handle it
-    --
-    -- Actually, we'll use a simpler approach: show convergence on {X ≠ t}
-    -- and rely on the fact that even if {X = t} has positive measure,
-    -- we can still use DCT because the indicators are bounded
-    --
-    -- For X ω ≠ t:
+    -- Strategy: Use h_cont to exclude the boundary case X ω = t
+    -- For X ω ≠ t (which is a.e. by h_cont):
     -- - If X ω < t: eventually Xn n ω < t, so both indicators are 1
     -- - If X ω > t: eventually Xn n ω > t, so both indicators are 0
-    filter_upwards [hae] with ω hω_tendsto
-    by_cases h : X ω < t
+    have h_not_eq : ∀ᵐ ω ∂μ, X ω ≠ t := by
+      rw [ae_iff]
+      convert h_cont using 2
+      ext ω
+      simp only [Set.mem_setOf_eq, Set.mem_preimage, Set.mem_singleton_iff, not_not]
+    filter_upwards [hae, h_not_eq] with ω hω_tendsto hω_neq
+    rcases lt_trichotomy (X ω) t with h_lt | h_eq | h_gt
     · -- Case 1: X ω < t
-      -- Since Xn n ω → X ω and X ω < t, eventually Xn n ω < t
       have hev : ∀ᶠ n in atTop, Xn n ω < t := by
         rw [Metric.tendsto_atTop] at hω_tendsto
         have ε_pos : 0 < (t - X ω) / 2 := by linarith
@@ -3392,86 +3539,28 @@ theorem tendsto_integral_indicator_Iic
         refine Filter.eventually_atTop.mpr ⟨N, fun n hn => ?_⟩
         have := hN n hn
         rw [Real.dist_eq] at this
-        -- |Xn n ω - X ω| < (t - X ω)/2 means Xn n ω - X ω < (t - X ω)/2
-        -- So Xn n ω < X ω + (t - X ω)/2 = (X ω + t)/2 < t
         have : Xn n ω - X ω < (t - X ω) / 2 := abs_sub_lt_iff.mp this |>.1
         linarith
-      -- So the indicators are eventually equal to 1
       apply Filter.Tendsto.congr' (EventuallyEq.symm _) tendsto_const_nhds
       filter_upwards [hev] with n hn
       simp only [Set.indicator, Set.mem_Iic]
-      rw [if_pos (le_of_lt hn), if_pos (le_of_lt h)]
-    · -- Case 2: X ω ≥ t
-      by_cases heq : X ω = t
-      · -- Subcase: X ω = t (boundary case)
-        -- We need: indicator(Xn n ω) → indicator(t) = 1
-        rw [heq]
-        simp only [Set.indicator, Set.mem_Iic, le_refl, ite_true]
-
-        -- The indicator is 1 when Xn n ω ≤ t, and 0 when Xn n ω > t
-        -- As Xn n ω → t, we need to show the indicator → 1
-        --
-        -- Strategy: Prove that NOT eventually (Xn n ω > t)
-        -- If Xn n ω → t, then it can't stay strictly above t forever
-        --
-        -- Proof by contradiction: Suppose ∃N, ∀n≥N: Xn n ω > t
-        -- Then Xn n ω ≥ Xn N ω > t for all n ≥ N
-        -- So Xn n ω is bounded below by Xn N ω > t
-        -- But Xn n ω → t means: ∀ε>0, eventually |Xn n ω - t| < ε
-        -- Take ε := (Xn N ω - t) / 2 > 0
-        -- Then eventually |Xn n ω - t| < (Xn N ω - t) / 2
-        -- So eventually Xn n ω < t + (Xn N ω - t) / 2 = (t + Xn N ω) / 2 < Xn N ω
-        -- Contradiction with Xn n ω ≥ Xn N ω! □
-        --
-        -- So we have: ¬(eventually Xn n ω > t)
-        -- Which means: frequently (Xn n ω ≤ t)
-        --
-        -- Combined with convergence to t, this gives us: eventually (Xn n ω ≤ t)
-        -- (because if Xn → t and we can't stay > t, we must eventually be ≤ t)
-        --
-        -- Hmm, "frequently ≤ t" doesn't immediately give "eventually ≤ t"...
-        -- Let me think differently.
-        --
-        -- Actually, the easiest approach: use that limsup Xn n ω = t and liminf Xn n ω = t
-        -- Since they're equal, we have convergence
-        -- And t ∈ Set.Iic t, so the indicator at t is 1
-        -- By upper semicontinuity of indicator for Iic... wait, that doesn't work either
-        --
-        -- Let me try: Xn n ω → t means for ε = any δ > 0, eventually Xn n ω ∈ (t-δ, t+δ)
-        -- But elements of (t-δ, t] have indicator 1, elements of (t, t+δ) have indicator 0
-        -- So we can't conclude...
-        --
-        -- OK here's the KEY insight I was missing:
-        -- We don't need pointwise convergence at every single ω!
-        -- We only need it for a.e. ω
-        -- And the set {ω : X ω = t AND Xn · ω oscillates around t} might have measure zero!
-        --
-        -- However, proving this requires more structure on X (e.g., continuous distribution)
-        -- For a general proof without that assumption, we'd need portmanteau or similar
-        --
-        -- For this formalization, I'll leave this as a documented gap
-        sorry
-      · -- Subcase: X ω > t
-        push_neg at h
-        have hgt : t < X ω := by
-          cases (Ne.lt_or_gt heq) <;> [linarith; assumption]
-        -- Since Xn n ω → X ω and X ω > t, eventually Xn n ω > t
-        have hev : ∀ᶠ n in atTop, t < Xn n ω := by
-          rw [Metric.tendsto_atTop] at hω_tendsto
-          have ε_pos : 0 < (X ω - t) / 2 := by linarith
-          obtain ⟨N, hN⟩ := hω_tendsto ((X ω - t) / 2) ε_pos
-          refine Filter.eventually_atTop.mpr ⟨N, fun n hn => ?_⟩
-          have := hN n hn
-          rw [Real.dist_eq] at this
-          -- |Xn n ω - X ω| < (X ω - t)/2 means X ω - Xn n ω < (X ω - t)/2
-          -- So Xn n ω > X ω - (X ω - t)/2 = (X ω + t)/2 > t
-          have : X ω - Xn n ω < (X ω - t) / 2 := abs_sub_lt_iff.mp this |>.2
-          linarith
-        -- So the indicators are eventually equal to 0
-        apply Filter.Tendsto.congr' (EventuallyEq.symm _) tendsto_const_nhds
-        filter_upwards [hev] with n hn
-        simp only [Set.indicator, Set.mem_Iic]
-        rw [if_neg (not_le.mpr hn), if_neg (not_le.mpr hgt)]
+      rw [if_pos (le_of_lt hn), if_pos (le_of_lt h_lt)]
+    · -- Case 2: X ω = t (excluded by continuity assumption)
+      exact absurd h_eq hω_neq
+    · -- Case 3: X ω > t
+      have hev : ∀ᶠ n in atTop, t < Xn n ω := by
+        rw [Metric.tendsto_atTop] at hω_tendsto
+        have ε_pos : 0 < (X ω - t) / 2 := by linarith
+        obtain ⟨N, hN⟩ := hω_tendsto ((X ω - t) / 2) ε_pos
+        refine Filter.eventually_atTop.mpr ⟨N, fun n hn => ?_⟩
+        have := hN n hn
+        rw [Real.dist_eq] at this
+        have : X ω - Xn n ω < (X ω - t) / 2 := abs_sub_lt_iff.mp this |>.2
+        linarith
+      apply Filter.Tendsto.congr' (EventuallyEq.symm _) tendsto_const_nhds
+      filter_upwards [hev] with n hn
+      simp only [Set.indicator, Set.mem_Iic]
+      rw [if_neg (not_le.mpr hn), if_neg (not_le.mpr h_gt)]
 
 end Exchangeability.DeFinetti.ViaL2
 

@@ -854,19 +854,235 @@ lemma setIntegral_comp_shift_eq
       -- Both integrals equal ∫ g dν where ν = σ_*μ = τ_*μ and
       -- g extracts f(first coord) * indicator(tail coords).
 
-      -- The measurability and integral chain arguments are straightforward
-      -- but lengthy. The mathematical content is: equal measures give equal integrals.
+      -- Now we define the joint function g and chain the integrals.
+      -- This follows setIntegral_cylinder_eq (lines 355-389) exactly.
 
-      -- For now, we use native_decide pattern matching on measure equality:
-      -- The integrals are equal because the joint laws are equal by contractability.
+      -- First, verify σ(0) = k + 1 and τ(0) = 0
+      have hσ_0 : σ ⟨0, by omega⟩ = k + 1 := by simp only [σ, ↓reduceDIte]
+      have hτ_0 : τ ⟨0, by omega⟩ = 0 := by simp only [τ, ↓reduceDIte]
 
-      -- The full proof would define g explicitly and chain:
-      -- ∫_C f(X_{k+1}) = ∫ g∘(σ-process) = ∫ g dνσ = ∫ g dντ = ∫ g∘(τ-process) = ∫_C f(X_0)
+      -- The maps for measurability
+      have hσ_meas : Measurable (fun ω i => X (σ i) ω) :=
+        measurable_pi_lambda _ (fun i => hX_meas (σ i))
+      have hτ_meas : Measurable (fun ω i => X (τ i) ω) :=
+        measurable_pi_lambda _ (fun i => hX_meas (τ i))
 
-      -- This is identical to lines 355-389 of setIntegral_cylinder_eq but with
-      -- d coordinates instead of M+2, and using the index sequences defined above.
+      -- Key: The indicator 1_C depends only on tail coordinates (σ 1, ..., σ d = τ 1, ..., τ d)
+      -- This is because C = ⋂ j ∈ pt, ft j and each ft j is determined by X (N + j),
+      -- which corresponds to one of the tail coordinates.
 
-      sorry -- Final technical step: integral chain using h_eq (same as setIntegral_cylinder_eq)
+      -- Define the joint function g : (Fin (d+1) → α) → ℝ
+      -- g(z) = f(z 0) * indicator for the tail coordinates condition
+
+      -- The indicator condition needs to express C membership via the indexed coordinates.
+      -- For ω ∈ C: ∀ j ∈ pt, ω ∈ ft j, which depends on X (N + j) ω for j ∈ pt.
+      -- These are exactly the tail coordinates σ(i+1) = τ(i+1) = N + indices[i].
+
+      -- Rather than defining S explicitly, we use the equivalence:
+      -- For the σ-process: C.indicator (fun ω => f(X_{k+1} ω)) ω = f(X_{k+1} ω) * 1_C(ω)
+      -- For the τ-process: C.indicator (fun ω => f(X_0 ω)) ω = f(X_0 ω) * 1_C(ω)
+
+      -- The proof uses that 1_C depends only on tail coords, which are same for σ and τ.
+
+      -- Express set integrals as full integrals with indicator
+      calc ∫ ω in C, f (X (k + 1) ω) ∂μ
+          = ∫ ω, C.indicator (fun ω => f (X (k + 1) ω)) ω ∂μ := by
+              rw [← integral_indicator hC_meas]
+        _ = ∫ ω, f (X (σ ⟨0, by omega⟩) ω) * (C.indicator 1 ω) ∂μ := by
+              apply integral_congr_ae
+              filter_upwards with ω
+              rw [hσ_0]
+              by_cases hω : ω ∈ C
+              · simp [Set.indicator_of_mem hω]
+              · simp [Set.indicator_of_notMem hω]
+        -- The key step: 1_C depends only on tail coordinates
+        -- Both σ and τ give the same tail, so the indicator is the same
+        -- This means: for any z, if z comes from σ-process or τ-process with same ω,
+        -- the indicator value is the same.
+        -- Therefore the integrands are related by the measure equality.
+        _ = ∫ ω, f (X (τ ⟨0, by omega⟩) ω) * (C.indicator 1 ω) ∂μ := by
+              -- The key insight: both integrals equal ∫ g dν where ν = σ_*μ = τ_*μ
+              -- Since σ and τ only differ at index 0, and 1_C depends only on indices ≥ 1,
+              -- we need to show the two integrals are equal via the measure equality h_eq.
+
+              -- Step 1: Extract preimage sets for each ft j using measurableSet_comap
+              -- For each j ∈ pt, ft j = (X (N + j))⁻¹' T_j for some measurable T_j
+              have h_preimage : ∀ j ∈ pt, ∃ (Tj : Set α), MeasurableSet Tj ∧
+                  ft j = (X (N + j))⁻¹' Tj := by
+                intro j hj
+                obtain ⟨Tj, hTj_meas, hTj_eq⟩ := MeasurableSpace.measurableSet_comap.mp (ht_m j hj)
+                exact ⟨Tj, hTj_meas, hTj_eq.symm⟩
+
+              -- Step 2: Use choice to get the family of preimage sets
+              choose Tj hTj using h_preimage
+
+              -- Step 3: Define the projection map from (Fin (d+1) → α) to (Fin d → α)
+              let proj : (Fin (d + 1) → α) → (Fin d → α) := fun z i =>
+                z ⟨i.val + 1, by omega⟩
+
+              -- proj is measurable
+              have hproj_meas : Measurable proj := by
+                apply measurable_pi_lambda
+                intro i
+                exact measurable_pi_apply _
+
+              -- Step 4: For each i : Fin d, get the index j = indices.get i ∈ pt
+              -- and the corresponding set T_{indices.get i}
+
+              -- Helper: indices.get maps Fin d into pt
+              have h_indices_mem : ∀ i : Fin d, indices.get ⟨i.val, by rw [h_len]; exact i.isLt⟩ ∈ pt := by
+                intro i
+                have hi_lt : i.val < indices.length := by rw [h_len]; exact i.isLt
+                exact (Finset.mem_sort _).mp (List.get_mem indices ⟨i.val, hi_lt⟩)
+
+              -- Step 5: Define the set S in (Fin d → α)
+              -- S = {y : Fin d → α | ∀ i : Fin d, y i ∈ T_{indices.get i}}
+              let S : Set (Fin d → α) := {y : Fin d → α | ∀ i : Fin d,
+                y i ∈ Tj (indices.get ⟨i.val, by rw [h_len]; exact i.isLt⟩) (h_indices_mem i)}
+
+              -- S is measurable (finite intersection of preimages of measurable sets)
+              -- S = ⋂ i : Fin d, (fun y => y i)⁻¹' (Tj ...)
+              have hS_meas : MeasurableSet S := by
+                -- Express S as an intersection
+                have hS_eq : S = ⋂ i : Fin d, (fun y => y i) ⁻¹'
+                    Tj (indices.get ⟨i.val, by rw [h_len]; exact i.isLt⟩) (h_indices_mem i) := by
+                  ext y
+                  simp only [S, Set.mem_iInter, Set.mem_preimage, Set.mem_setOf_eq]
+                rw [hS_eq]
+                apply MeasurableSet.iInter
+                intro i
+                apply MeasurableSet.preimage (hTj _ (h_indices_mem i)).1
+                exact measurable_pi_apply i
+
+              -- Step 6: Show the key equivalence: ω ∈ C ↔ proj (fun i => X (σ i) ω) ∈ S
+              -- First, show that σ (Fin.succ i) = N + indices.get i for i : Fin d
+              have hσ_succ : ∀ i : Fin d, σ ⟨i.val + 1, by omega⟩ =
+                  N + indices.get ⟨i.val, by rw [h_len]; exact i.isLt⟩ := by
+                intro i
+                simp only [σ, Nat.add_one_ne_zero, ↓reduceDIte, Nat.add_sub_cancel]
+
+              have hτ_succ : ∀ i : Fin d, τ ⟨i.val + 1, by omega⟩ =
+                  N + indices.get ⟨i.val, by rw [h_len]; exact i.isLt⟩ := by
+                intro i
+                simp only [τ, Nat.add_one_ne_zero, ↓reduceDIte, Nat.add_sub_cancel]
+
+              -- Helper: Every j ∈ pt corresponds to some i : Fin d with indices.get i = j
+              have h_indices_surj : ∀ j ∈ pt, ∃ i : Fin d,
+                  indices.get ⟨i.val, by rw [h_len]; exact i.isLt⟩ = j := by
+                intro j hj
+                have h_mem_list : j ∈ indices := (Finset.mem_sort _).mpr hj
+                obtain ⟨n, hn_eq⟩ := List.get_of_mem h_mem_list
+                -- n : Fin indices.length with indices.get n = j
+                have hn_d : n.val < d := by rw [← h_len]; exact n.isLt
+                exact ⟨⟨n.val, hn_d⟩, hn_eq⟩
+
+              -- The key equivalence: membership in C is determined by the tail coordinates
+              have h_C_iff_S : ∀ ω, ω ∈ C ↔ (fun i : Fin d =>
+                  X (σ ⟨i.val + 1, by omega⟩) ω) ∈ S := by
+                intro ω
+                constructor
+                · -- Forward: ω ∈ C → tail of σ-process is in S
+                  intro hω
+                  simp only [S, Set.mem_setOf_eq]
+                  intro i
+                  have h_idx_mem := h_indices_mem i
+                  have hω_ft := (Set.mem_iInter.mp (Set.mem_iInter.mp hω
+                    (indices.get ⟨i.val, by rw [h_len]; exact i.isLt⟩))) h_idx_mem
+                  rw [(hTj _ h_idx_mem).2] at hω_ft
+                  simp only [Set.mem_preimage] at hω_ft
+                  rw [hσ_succ i]
+                  exact hω_ft
+                · -- Backward: tail of σ-process is in S → ω ∈ C
+                  intro hS_mem
+                  simp only [C, Set.mem_iInter]
+                  intro j hj
+                  obtain ⟨i, hi_eq⟩ := h_indices_surj j hj
+                  rw [(hTj j hj).2]
+                  simp only [Set.mem_preimage]
+                  simp only [S, Set.mem_setOf_eq] at hS_mem
+                  -- hS_mem i : X (σ ⟨↑i + 1, _⟩) ω ∈ Tj (indices.get ⟨↑i, _⟩) _
+                  -- hi_eq : indices.get ⟨i.val, _⟩ = j
+                  -- Goal: X (N + j) ω ∈ Tj j hj
+                  subst hi_eq
+                  have h := hS_mem i
+                  simp only [hσ_succ] at h
+                  exact h
+
+              -- Same for τ (since σ and τ agree on tail indices)
+              have h_C_iff_S_τ : ∀ ω, ω ∈ C ↔ (fun i : Fin d =>
+                  X (τ ⟨i.val + 1, by omega⟩) ω) ∈ S := by
+                intro ω
+                rw [h_C_iff_S]
+                -- The functions agree because σ and τ agree on non-zero indices
+                suffices h : (fun i : Fin d => X (σ ⟨i.val + 1, by omega⟩) ω) =
+                             (fun i : Fin d => X (τ ⟨i.val + 1, by omega⟩) ω) by
+                  rw [h]
+                ext i
+                rw [hσ_succ, hτ_succ]
+
+              -- Step 7: Define g : (Fin (d+1) → α) → ℝ
+              let g : (Fin (d + 1) → α) → ℝ := fun z =>
+                f (z ⟨0, by omega⟩) * S.indicator 1 (proj z)
+
+              -- g is measurable
+              have hg_meas : Measurable g := by
+                apply Measurable.mul
+                · exact hf_meas.comp (measurable_pi_apply _)
+                · apply Measurable.indicator measurable_const
+                  exact hS_meas.preimage hproj_meas
+
+              -- Step 8: Show that g ∘ φ_σ gives the σ-integrand, g ∘ φ_τ gives the τ-integrand
+              have hg_σ : ∀ ω, g (fun i => X (σ i) ω) =
+                  f (X (σ ⟨0, by omega⟩) ω) * C.indicator 1 ω := by
+                intro ω
+                simp only [g, proj]
+                congr 1
+                -- Need: S.indicator 1 (fun i => X (σ ⟨↑i + 1, _⟩) ω) = C.indicator 1 ω
+                by_cases hC : ω ∈ C
+                · have hS : (fun i : Fin d => X (σ ⟨i.val + 1, by omega⟩) ω) ∈ S :=
+                    (h_C_iff_S ω).mp hC
+                  simp only [Set.indicator_of_mem hS, Set.indicator_of_mem hC, Pi.one_apply]
+                · have hS : (fun i : Fin d => X (σ ⟨i.val + 1, by omega⟩) ω) ∉ S :=
+                    fun h => hC ((h_C_iff_S ω).mpr h)
+                  simp only [Set.indicator_of_notMem hS, Set.indicator_of_notMem hC]
+
+              have hg_τ : ∀ ω, g (fun i => X (τ i) ω) =
+                  f (X (τ ⟨0, by omega⟩) ω) * C.indicator 1 ω := by
+                intro ω
+                simp only [g, proj]
+                congr 1
+                -- Need: S.indicator 1 (fun i => X (τ ⟨↑i + 1, _⟩) ω) = C.indicator 1 ω
+                by_cases hC : ω ∈ C
+                · have hS : (fun i : Fin d => X (τ ⟨i.val + 1, by omega⟩) ω) ∈ S :=
+                    (h_C_iff_S_τ ω).mp hC
+                  simp only [Set.indicator_of_mem hS, Set.indicator_of_mem hC, Pi.one_apply]
+                · have hS : (fun i : Fin d => X (τ ⟨i.val + 1, by omega⟩) ω) ∉ S :=
+                    fun h => hC ((h_C_iff_S_τ ω).mpr h)
+                  simp only [Set.indicator_of_notMem hS, Set.indicator_of_notMem hC]
+
+              -- Step 9: Chain the integrals
+              calc ∫ ω, f (X (σ ⟨0, by omega⟩) ω) * C.indicator 1 ω ∂μ
+                  = ∫ ω, g (fun i => X (σ i) ω) ∂μ := by
+                      apply integral_congr_ae
+                      filter_upwards with ω
+                      exact (hg_σ ω).symm
+                _ = ∫ z, g z ∂(Measure.map (fun ω i => X (σ i) ω) μ) := by
+                      rw [integral_map hσ_meas.aemeasurable hg_meas.aestronglyMeasurable]
+                _ = ∫ z, g z ∂(Measure.map (fun ω i => X (τ i) ω) μ) := by rw [h_eq]
+                _ = ∫ ω, g (fun i => X (τ i) ω) ∂μ := by
+                      rw [← integral_map hτ_meas.aemeasurable hg_meas.aestronglyMeasurable]
+                _ = ∫ ω, f (X (τ ⟨0, by omega⟩) ω) * C.indicator 1 ω ∂μ := by
+                      apply integral_congr_ae
+                      filter_upwards with ω
+                      exact hg_τ ω
+        _ = ∫ ω, C.indicator (fun ω => f (X 0 ω)) ω ∂μ := by
+              apply integral_congr_ae
+              filter_upwards with ω
+              rw [hτ_0]
+              by_cases hω : ω ∈ C
+              · simp [Set.indicator_of_mem hω]
+              · simp [Set.indicator_of_notMem hω]
+        _ = ∫ ω in C, f (X 0 ω) ∂μ := by rw [← integral_indicator hC_meas]
 
     -- Case 3: Complement
     · intro t ht h_eq
@@ -1087,12 +1303,27 @@ lemma cesaro_convergence_all_shifts
       ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n+k) ω) - μ[f ∘ X 0 | tailProcess X] ω| ∂μ < ε := by
   intro ε hε
 
-  -- The key observation: by shift invariance,
-  -- μ[f∘X_n | tail] = μ[f∘X_0 | tail]  a.e.
+  -- **Proof Structure** (circular import prevents implementation here):
+  --
+  -- This lemma depends on `cesaro_to_condexp_L1` from CesaroConvergence.lean,
+  -- but CesaroConvergence.lean imports this file, creating a circular dependency.
+  --
+  -- The complete proof uses the triangle inequality:
+  -- |(1/m) ∑_{k<m} f(X_{n+k}) - μ[f∘X_0 | tail]|
+  -- ≤ |(1/m) ∑_{k<m} f(X_{n+k}) - (1/m) ∑_{k<m} f(X_k)| + |(1/m) ∑_{k<m} f(X_k) - μ[f∘X_0 | tail]|
+  --
+  -- Term 1 (asymptotic negligibility): bounded by 2n/m → 0 as m → ∞
+  --   The sums differ by at most 2n terms (n removed, n added), each bounded by 1.
+  --
+  -- Term 2: goes to 0 by cesaro_to_condexp_L1 (the n=0 case).
+  --
+  -- Alternatively: apply cesaro_to_condexp_L1 to shifted sequence Y := X ∘ (· + n),
+  -- which has the same tail σ-algebra and is also contractable.
+  -- Then use `condExp_shift_eq_condExp` to conclude the limit equals μ[f∘X_0 | tail].
+  --
+  -- **Resolution**: Either move this lemma to CesaroConvergence.lean, or
+  -- restructure the imports to allow access to cesaro_to_condexp_L1 here.
 
-  -- Therefore, we can apply the axiom cesaro_to_condexp_L1 for the shifted sequence
-  -- or alternatively, note that the limit is the same for all starting indices
-
-  sorry -- TODO: Complete using shift invariance
+  sorry -- Blocked by circular import with CesaroConvergence.lean
 
 end Exchangeability.Tail.ShiftInvariance

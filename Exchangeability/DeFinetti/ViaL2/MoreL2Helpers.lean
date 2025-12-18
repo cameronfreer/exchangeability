@@ -67,16 +67,17 @@ def alphaFrom {Ω : Type*} [MeasurableSpace Ω]
 -- - `alphaIic_ae_tendsto_zero_at_bot` in MainConvergence.lean
 -- - `alphaIic_ae_tendsto_one_at_top` in MainConvergence.lean
 --
--- To properly fix this, one should either:
--- 1. Redefine `cdf_from_alpha` using `alphaIicCE` (conditional expectation version)
---    which has the endpoint limits a.e. directly from conditional expectation properties.
--- 2. Modify `directing_measure` to use a default measure (e.g., Dirac at 0) for
---    the null set where the CDF limits fail, and work with a.e. equality throughout.
+-- **REQUIRED FIX:** One of:
+-- 1. Use mathlib's `IsMeasurableRatCDF` structure from `MeasurableStieltjes.lean` which
+--    bundles the endpoint limits and handles the null set properly via `defaultRatCDF`.
+-- 2. Redefine `cdf_from_alpha` to use a default CDF (e.g., Dirac at 0) on the null set
+--    where limits fail: `if ω ∈ goodSet then cdf_from_alpha ω else defaultCDF`.
+-- 3. Modify `directing_measure` itself to use `Measure.dirac 0` on the bad set.
 --
--- For now, this remains as a sorry documenting the requirement for the Stieltjes
--- construction in `directing_measure_eval_Iic_measurable`.
--- TODO: Prove using alphaIic_ae_tendsto_zero_at_bot and alphaIic_ae_tendsto_one_at_top,
--- possibly by redefining cdf_from_alpha via conditional expectation which has a.e. limits.
+-- The key insight: bounded monotone functions always have limits at ±∞, but those
+-- limits may not be 0 and 1 on a null set. The fix "patches" this null set.
+--
+-- For now, this remains as a sorry blocking `directing_measure_isProbabilityMeasure`.
 lemma cdf_from_alpha_limits {Ω : Type*} [MeasurableSpace Ω]
   {μ : Measure Ω} [IsProbabilityMeasure μ]
   (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
@@ -183,7 +184,7 @@ private lemma L1_unique_of_two_limits
     calc eLpNorm (f - g) 1 μ
         = eLpNorm ((f - fn n) + (fn n - g)) 1 μ := by ring_nf
       _ ≤ eLpNorm (f - fn n) 1 μ + eLpNorm (fn n - g) 1 μ :=
-          eLpNorm_add_le (hf_aesm.sub (hfn n)) ((hfn n).sub hg_aesm) (by norm_num : (1 : ℕ∞) ≥ 1)
+          eLpNorm_add_le (hf_aesm.sub (hfn n)) ((hfn n).sub hg_aesm) le_rfl
       _ = eLpNorm (fn n - f) 1 μ + eLpNorm (fn n - g) 1 μ := by
           rw [← eLpNorm_neg (f - fn n)]
           simp only [neg_sub]
@@ -198,17 +199,18 @@ private lemma L1_unique_of_two_limits
     by_contra h_ne
     have h_pos : 0 < eLpNorm (f - g) 1 μ := pos_iff_ne_zero.mpr h_ne
     -- The bound goes to 0, so eventually it's < eLpNorm (f - g) 1 μ
-    have := (ENNReal.tendsto_atTop (f := fun n => eLpNorm (fn n - f) 1 μ + eLpNorm (fn n - g) 1 μ)).mp
-              h_sum_tendsto (eLpNorm (f - g) 1 μ) h_pos
-    obtain ⟨N, hN⟩ := this
-    -- At n = N, we have h_bound N and hN N (le_refl N)
-    have h_lt : eLpNorm (fn N - f) 1 μ + eLpNorm (fn N - g) 1 μ < eLpNorm (f - g) 1 μ := hN N (le_refl N)
+    -- Use that if a sequence tends to 0 and ε > 0, eventually the sequence is < ε
+    have h_ev : ∀ᶠ n in atTop, eLpNorm (fn n - f) 1 μ + eLpNorm (fn n - g) 1 μ < eLpNorm (f - g) 1 μ :=
+      (tendsto_order.mp h_sum_tendsto).2 _ h_pos
+    obtain ⟨N, hN⟩ := h_ev.exists
+    -- At n = N, we have h_bound N and hN
+    have h_lt : eLpNorm (fn N - f) 1 μ + eLpNorm (fn N - g) 1 μ < eLpNorm (f - g) 1 μ := hN
     have h_le : eLpNorm (f - g) 1 μ ≤ eLpNorm (fn N - f) 1 μ + eLpNorm (fn N - g) 1 μ := h_bound N
     exact (lt_irrefl _ (lt_of_le_of_lt h_le h_lt))
 
   -- Apply eLpNorm_eq_zero_iff to conclude f - g =ᵐ 0
-  rw [eLpNorm_eq_zero_iff (hf_aesm.sub hg_aesm) (by norm_num : (1 : ℕ∞) ≠ 0)] at h_zero
-  exact sub_ae_eq_zero.mp h_zero
+  rw [eLpNorm_eq_zero_iff (hf_aesm.sub hg_aesm) (one_ne_zero)] at h_zero
+  filter_upwards [h_zero] with x hx using sub_eq_zero.mp hx
 
 /-- **L¹ convergence under clipping:** If fₙ → f in L¹, then clip01∘fₙ → clip01∘f in L¹. -/
 private lemma L1_tendsto_clip01
