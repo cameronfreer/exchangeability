@@ -67,17 +67,13 @@ def alphaFrom {Ω : Type*} [MeasurableSpace Ω]
 -- - `alphaIic_ae_tendsto_zero_at_bot` in MainConvergence.lean
 -- - `alphaIic_ae_tendsto_one_at_top` in MainConvergence.lean
 --
--- **REQUIRED FIX:** One of:
--- 1. Use mathlib's `IsMeasurableRatCDF` structure from `MeasurableStieltjes.lean` which
---    bundles the endpoint limits and handles the null set properly via `defaultRatCDF`.
--- 2. Redefine `cdf_from_alpha` to use a default CDF (e.g., Dirac at 0) on the null set
---    where limits fail: `if ω ∈ goodSet then cdf_from_alpha ω else defaultCDF`.
--- 3. Modify `directing_measure` itself to use `Measure.dirac 0` on the bad set.
---
--- The key insight: bounded monotone functions always have limits at ±∞, but those
--- limits may not be 0 and 1 on a null set. The fix "patches" this null set.
---
--- For now, this remains as a sorry blocking `directing_measure_isProbabilityMeasure`.
+/-- CDF limits at ±∞: F(t) → 0 as t → -∞ and F(t) → 1 as t → +∞.
+
+This is now trivial because `cdf_from_alpha` is defined via `stieltjesOfMeasurableRat`,
+which guarantees these limits for ALL ω (not just a.e.) by construction.
+
+The `stieltjesOfMeasurableRat` construction automatically patches the null set where
+the raw L¹ limit `alphaIic` would fail to have proper CDF limits. -/
 lemma cdf_from_alpha_limits {Ω : Type*} [MeasurableSpace Ω]
   {μ : Measure Ω} [IsProbabilityMeasure μ]
   (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
@@ -85,7 +81,11 @@ lemma cdf_from_alpha_limits {Ω : Type*} [MeasurableSpace Ω]
   (ω : Ω) :
   Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) atBot (𝓝 0) ∧
   Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) atTop (𝓝 1) := by
-  sorry
+  constructor
+  · exact ProbabilityTheory.tendsto_stieltjesOfMeasurableRat_atBot
+      (measurable_alphaIicRat X hX_contract hX_meas hX_L2) ω
+  · exact ProbabilityTheory.tendsto_stieltjesOfMeasurableRat_atTop
+      (measurable_alphaIicRat X hX_contract hX_meas hX_L2) ω
 
 namespace Helpers
 
@@ -315,41 +315,20 @@ lemma directing_measure_eval_Iic_measurable
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (t : ℝ) :
     Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω (Set.Iic t)) := by
-  -- ν(ω)(Iic t) = F_ω(t) by definition of Measure.ofCDF
-  -- Measurability follows from measurability of cdf_from_alpha in ω
-  have hmeas : Measurable (fun ω => cdf_from_alpha X hX_contract hX_meas hX_L2 ω t) := by
-    classical
-    -- cdf_from_alpha ω t = iInf over countable set of measurable functions
-    -- Each term alphaIic X ... (q : ℝ) is measurable in ω
-    have hq : Countable {q : ℚ // t < (q : ℝ)} := inferInstance
-    have hterm : ∀ q : {q : ℚ // t < (q : ℝ)},
-        Measurable (fun ω => alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω) := by
-      intro q
-      exact alphaIic_measurable X hX_contract hX_meas hX_L2 (q : ℝ)
-    -- Measurable iInf over countable index
-    -- Use Measurable.iInf for countable types
-    -- The function ω ↦ iInf_q f(ω, q) is measurable if each ω ↦ f(ω, q) is measurable
-    -- cdf_from_alpha is defined as an iInf by definition, so we use Measurable.iInf
-    unfold cdf_from_alpha
-    exact Measurable.iInf hterm
-  -- Identify with the CDF evaluation using StieltjesFunction.measure_Iic
-  -- directing_measure ω (Iic t) = F_ω.measure (Iic t)
-  --                              = ofReal (F_ω t - 0)  [by StieltjesFunction.measure_Iic with limit 0 at bot]
-  --                              = ofReal (cdf_from_alpha ω t)
-  -- Since ω ↦ ofReal (cdf_from_alpha ω t) is measurable (ENNReal.ofReal ∘ measurable function),
-  -- we have ω ↦ directing_measure ω (Iic t) is measurable
+  -- With the new definition via stieltjesOfMeasurableRat, measurability comes directly
+  -- from ProbabilityTheory.measurable_stieltjesOfMeasurableRat
+  have hmeas : Measurable (fun ω => cdf_from_alpha X hX_contract hX_meas hX_L2 ω t) :=
+    ProbabilityTheory.measurable_stieltjesOfMeasurableRat
+      (measurable_alphaIicRat X hX_contract hX_meas hX_L2) t
+  -- directing_measure ω (Iic t) = F_ω.measure (Iic t) = ofReal (F_ω t)
+  -- where F_ω is the StieltjesFunction from stieltjesOfMeasurableRat with limit 0 at -∞
   have h_eq : ∀ ω, directing_measure X hX_contract hX_meas hX_L2 ω (Set.Iic t) =
       ENNReal.ofReal (cdf_from_alpha X hX_contract hX_meas hX_L2 ω t) := by
     intro ω
-    -- directing_measure ω is defined as F_ω.measure where F_ω is the StieltjesFunction
-    -- with toFun = cdf_from_alpha X ... ω
-    -- By StieltjesFunction.measure_Iic, F.measure (Iic t) = ofReal (F t - l)
-    -- where l is the limit at -∞, which is 0 by cdf_from_alpha_limits
     have h_lim := (cdf_from_alpha_limits X hX_contract hX_meas hX_L2 ω).1
-    unfold directing_measure
-    simp only
+    unfold directing_measure cdf_from_alpha
     rw [StieltjesFunction.measure_Iic _ h_lim t]
-    simp
+    simp only [sub_zero]
   simp_rw [h_eq]
   exact ENNReal.measurable_ofReal.comp hmeas
 
@@ -409,7 +388,7 @@ lemma directing_measure_measurable
           -- directing_measure ω is a measure (StieltjesFunction.measure), so measure_compl applies
           -- Need IsFiniteMeasure instance - follows from IsProbabilityMeasure (once that's proved)
           haveI : IsFiniteMeasure (directing_measure X hX_contract hX_meas hX_L2 ω) := by
-            haveI := Helpers.directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+            haveI := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
             infer_instance
           rw [measure_compl hs_meas (measure_ne_top _ s)]
         simp_rw [h_univ_s]
@@ -418,7 +397,7 @@ lemma directing_measure_measurable
         -- Their difference is measurable
         have h_univ_const : ∀ ω, directing_measure X hX_contract hX_meas hX_L2 ω Set.univ = 1 := by
           intro ω
-          have hprob := Helpers.directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+          have hprob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
           simpa using hprob.measure_univ
         simp_rw [h_univ_const]
         -- (fun ω => 1 - ν(ω)(s)) is measurable
@@ -614,6 +593,30 @@ lemma directing_measure_integral
   -- - MonotoneClass theorem (may need to prove variant or use existing API)
   sorry
 
+/-- The integral of `alphaIic` equals the marginal probability.
+
+By the L¹ convergence property of the Cesàro averages and contractability
+(which implies all marginals are equal), we have:
+  ∫ alphaIic(t, ω) dμ = μ(X_0 ∈ Iic t)
+
+This is a key step in proving the bridge property.
+
+**Proof outline**:
+1. alphaIic is the clipped L¹ limit of Cesàro averages of 1_{Iic t}(X_i)
+2. By L¹ convergence: ∫ (limit) dμ = lim ∫ (Cesàro average) dμ
+3. By contractability: each μ(X_i ∈ Iic t) = μ(X_0 ∈ Iic t)
+4. Therefore: ∫ alphaIic dμ = μ(X_0 ∈ Iic t)
+-/
+lemma integral_alphaIic_eq_marginal
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (t : ℝ) :
+    ∫ ω, alphaIic X hX_contract hX_meas hX_L2 t ω ∂μ =
+      (μ (X 0 ⁻¹' Set.Iic t)).toReal := by
+  sorry
+
 /-- The bridge property: E[∏ᵢ 𝟙_{Bᵢ}(X_{k(i)})] = E[∏ᵢ ν(·)(Bᵢ)].
 
 This is the key property needed for complete_from_directing_measure.
@@ -684,4 +687,42 @@ lemma directing_measure_bridge
       -- - ENNReal.lintegral_const_mul: factor out measurable functions
       -- - Contractable.reindex: permutation invariance (may need to prove)
       sorry
+
+/-- **Main packaging theorem for L² proof.**
+
+This theorem packages all the directing measure properties needed by
+`CommonEnding.complete_from_directing_measure`:
+
+1. `ν` is a probability measure for all ω
+2. `ω ↦ ν(ω)(s)` is measurable for all measurable sets s
+3. The bridge property: E[∏ᵢ 1_{Bᵢ}(X_{k(i)})] = E[∏ᵢ ν(·)(Bᵢ)]
+
+This enables the final step of the L² proof of de Finetti's theorem.
+-/
+theorem directing_measure_satisfies_requirements
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
+    (hX_contract : Contractable μ X)
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+    ∃ (ν : Ω → Measure ℝ),
+      (∀ ω, IsProbabilityMeasure (ν ω)) ∧
+      (∀ s, MeasurableSet s → Measurable (fun ω => ν ω s)) ∧
+      (∀ {m : ℕ} (k : Fin m → ℕ) (B : Fin m → Set ℝ),
+        (∀ i, MeasurableSet (B i)) →
+          ∫⁻ ω, ∏ i : Fin m,
+              ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) ∂μ
+            = ∫⁻ ω, ∏ i : Fin m, ν ω (B i) ∂μ) := by
+  -- Use the directing measure constructed via stieltjesOfMeasurableRat
+  let ν := directing_measure X hX_contract hX_meas hX_L2
+  refine ⟨ν, ?_, ?_, ?_⟩
+  -- Property 1: ν(ω) is a probability measure for all ω
+  · exact directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2
+  -- Property 2: ω ↦ ν(ω)(s) is measurable for measurable s
+  · intro s hs
+    exact directing_measure_measurable X hX_contract hX_meas hX_L2 s
+  -- Property 3: Bridge property
+  · intro m k B hB
+    exact directing_measure_bridge X hX_contract hX_meas hX_L2 k B hB
+
+end Exchangeability.DeFinetti.ViaL2
 
