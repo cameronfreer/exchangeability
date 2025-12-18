@@ -4,6 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer, Claude (Anthropic)
 -/
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
+import Mathlib.MeasureTheory.Function.ConditionalExpectation.Real
+import Mathlib.MeasureTheory.Measure.Decomposition.RadonNikodym
+import Exchangeability.Probability.CondExpBasic
 
 /-!
 # Kallenberg Lemma 1.3: Drop-Info Property via Contraction
@@ -56,6 +59,49 @@ open scoped ENNReal
 variable {Ω α γ : Type*}
 variable [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace γ]
 
+/-! ### Helper Lemmas for RN-Derivative Approach -/
+
+/-- From pair law equality `(X,W) =^d (X,W')`, extract marginal law equality `W =^d W'`. -/
+lemma marginal_law_eq_of_pair_law
+    {μ : Measure Ω}
+    (X : Ω → α) (W W' : Ω → γ)
+    (hX : Measurable X) (hW : Measurable W) (hW' : Measurable W')
+    (h_law : Measure.map (fun ω => (X ω, W ω)) μ = Measure.map (fun ω => (X ω, W' ω)) μ) :
+    Measure.map W μ = Measure.map W' μ := by
+  have h1 : Measure.map W μ = Measure.map Prod.snd (Measure.map (fun ω => (X ω, W ω)) μ) := by
+    rw [Measure.map_map measurable_snd (hX.prodMk hW)]; rfl
+  have h2 : Measure.map W' μ = Measure.map Prod.snd (Measure.map (fun ω => (X ω, W' ω)) μ) := by
+    rw [Measure.map_map measurable_snd (hX.prodMk hW')]; rfl
+  rw [h1, h_law, ← h2]
+
+/-- From pair law equality, derive joint measure equality on the conditioning space.
+
+If `(X,W) =^d (X,W')`, then `map W (μ.restrict (X ⁻¹' A)) = map W' (μ.restrict (X ⁻¹' A))`.
+
+Intuitively: "the law of W restricted to {X ∈ A}" equals "the law of W' restricted to {X ∈ A}". -/
+lemma joint_measure_eq_of_pair_law
+    {μ : Measure Ω}
+    (X : Ω → α) (W W' : Ω → γ)
+    (hX : Measurable X) (hW : Measurable W) (hW' : Measurable W')
+    (h_law : Measure.map (fun ω => (X ω, W ω)) μ = Measure.map (fun ω => (X ω, W' ω)) μ)
+    {A : Set α} (hA : MeasurableSet A) :
+    Measure.map W (μ.restrict (X ⁻¹' A)) = Measure.map W' (μ.restrict (X ⁻¹' A)) := by
+  ext B hB
+  -- ν(B) = μ((X ⁻¹' A) ∩ (W ⁻¹' B)) = law(X,W)(A ×ˢ B)
+  rw [Measure.map_apply hW hB, Measure.map_apply hW' hB]
+  rw [Measure.restrict_apply (hW hB), Measure.restrict_apply (hW' hB)]
+  -- Note: restrict_apply gives (W ⁻¹' B) ∩ (X ⁻¹' A), so use commutativity
+  rw [Set.inter_comm (W ⁻¹' B), Set.inter_comm (W' ⁻¹' B)]
+  -- Show both equal (map (X,W) μ)(A ×ˢ B)
+  have h1 : (X ⁻¹' A) ∩ (W ⁻¹' B) = (fun ω => (X ω, W ω)) ⁻¹' (A ×ˢ B) := by
+    ext ω; simp [Set.mem_prod]
+  have h2 : (X ⁻¹' A) ∩ (W' ⁻¹' B) = (fun ω => (X ω, W' ω)) ⁻¹' (A ×ˢ B) := by
+    ext ω; simp [Set.mem_prod]
+  rw [h1, h2]
+  rw [← Measure.map_apply (hX.prodMk hW) (hA.prod hB)]
+  rw [← Measure.map_apply (hX.prodMk hW') (hA.prod hB)]
+  rw [h_law]
+
 /-- **Kallenberg Lemma 1.3 (Contraction-Independence).**
 
 If `(X,W) =^d (X,W')` (pair laws equal) and `σ(W) ⊆ σ(W')` (W is a contraction of W'),
@@ -84,13 +130,46 @@ lemma condExp_indicator_eq_of_law_eq_of_comap_le
     μ[Set.indicator (X ⁻¹' A) (fun _ => (1 : ℝ)) | MeasurableSpace.comap W' inferInstance]
       =ᵐ[μ]
     μ[Set.indicator (X ⁻¹' A) (fun _ => (1 : ℝ)) | MeasurableSpace.comap W inferInstance] := by
-  -- TODO: Full L²/martingale proof requires fixing mathlib API issues.
-  -- The proof strategy is documented in the module header.
-  -- Key steps:
-  -- 1. Tower property: E[μ₂|mW] = μ₁
-  -- 2. Pull-out: E[μ₂·μ₁] = E[μ₁²]
-  -- 3. Law equality: E[μ₁²] = E[μ₂²] (from pair law)
-  -- 4. L² = 0 implies a.e. equality
+  /-
+  **Proof outline (Kallenberg L² argument):**
+
+  Setup:
+  - φ = 1_{X∈A} (indicator function)
+  - mW = σ(W), mW' = σ(W') (generated σ-algebras)
+  - μ₁ = E[φ|mW], μ₂ = E[φ|mW'] (conditional expectations)
+
+  Key steps:
+  1. Tower property: E[μ₂|mW] = μ₁  (since mW ≤ mW')
+  2. Boundedness: 0 ≤ μ₁, μ₂ ≤ 1 a.e. (condExp of indicator is in [0,1])
+  3. Cross term: E[μ₂·μ₁] = E[μ₁²]  (pull-out + tower)
+  4. Square equality: E[μ₁²] = E[μ₂²]  (from pair law via RN derivative)
+  5. L² computation: E[(μ₂-μ₁)²] = E[μ₂²] - 2E[μ₂μ₁] + E[μ₁²]
+                                 = E[μ₂²] - 2E[μ₁²] + E[μ₁²]
+                                 = E[μ₂²] - E[μ₁²] = 0
+  6. Conclusion: L² = 0 with nonneg integrand ⟹ μ₂ = μ₁ a.e.
+
+  The key mathematical content is step 4: Both μ₁² and μ₂² integrate to the
+  same value because both can be expressed as compositions with a common
+  RN derivative g = dν/dρ where:
+  - ρ = law(W) = law(W')  (from pair law)
+  - ν = law(W | X∈A) = law(W' | X∈A)  (from pair law)
+
+  Then ∫ μ₁² dμ = ∫ g² dρ = ∫ μ₂² dμ by change of variables.
+  -/
+
+  -- Setup: helper measures from pair law
+  have hρ_eq : Measure.map W μ = Measure.map W' μ :=
+    marginal_law_eq_of_pair_law X W W' hX hW hW' h_law
+  have hν_eq : Measure.map W (μ.restrict (X ⁻¹' A)) =
+               Measure.map W' (μ.restrict (X ⁻¹' A)) :=
+    joint_measure_eq_of_pair_law X W W' hX hW hW' h_law hA
+
+  -- The full proof uses L² techniques with conditional expectations.
+  -- The mathematical content follows from the law equalities above.
+  -- TODO: Complete the technical details using:
+  -- - condExp_condExp_of_le (tower property)
+  -- - condExp_mul_of_stronglyMeasurable_right (pull-out)
+  -- - integral_eq_zero_iff_of_nonneg_ae (L² = 0 ⟹ ae equality)
   sorry
 
 /-! ### Original proof (commented out due to API issues)
@@ -128,8 +207,7 @@ Keeping for reference.
   -- Step 1: Tower property: E[μ₂|mW] = E[φ|mW] = μ₁
   have h_tower : μ[μ₂ | mW] =ᵐ[μ] μ₁ := by
     -- Need SigmaFinite for trim
-    have hσfW' : SigmaFinite (μ.trim hmW'_le) := by
-      exact sigmaFinite_trim_of_isFiniteMeasure hmW'_le
+    haveI hσfW' : SigmaFinite (μ.trim hmW'_le) := sigmaFinite_trim_of_le μ hmW'_le
     exact condExp_condExp_of_le h_le hmW'_le
 
   -- Step 2: μ₁ and μ₂ are both bounded [0,1] indicators
@@ -139,12 +217,12 @@ Keeping for reference.
         with ω hω using hω
     have h2 : ∀ᵐ ω ∂μ, μ₁ ω ≤ 1 := by
       have hφ_le : ∀ ω, φ ω ≤ 1 := fun ω => by
-        simp only [Set.indicator]
+        unfold Set.indicator
         split_ifs <;> linarith
-      filter_upwards [condExp_mono (ae_of_all μ hφ_le) hφ_int (integrable_const 1),
-                      condExp_const hmW_le (1 : ℝ)] with ω h1 h2
-      simp only at h2
-      linarith
+      have hc := condExp_const hmW_le (1 : ℝ)
+      filter_upwards [condExp_mono (ae_of_all μ hφ_le) hφ_int (integrable_const 1)] with ω h1
+      calc μ₁ ω ≤ μ[(fun _ => (1 : ℝ))|mW] ω := h1
+        _ = 1 := congrFun hc ω
     filter_upwards [h1, h2] with ω h1 h2
     exact ⟨h1, h2⟩
 
@@ -154,12 +232,12 @@ Keeping for reference.
         with ω hω using hω
     have h2 : ∀ᵐ ω ∂μ, μ₂ ω ≤ 1 := by
       have hφ_le : ∀ ω, φ ω ≤ 1 := fun ω => by
-        simp only [Set.indicator]
+        unfold Set.indicator
         split_ifs <;> linarith
-      filter_upwards [condExp_mono (ae_of_all μ hφ_le) hφ_int (integrable_const 1),
-                      condExp_const hmW'_le (1 : ℝ)] with ω h1 h2
-      simp only at h2
-      linarith
+      have hc := condExp_const hmW'_le (1 : ℝ)
+      filter_upwards [condExp_mono (ae_of_all μ hφ_le) hφ_int (integrable_const 1)] with ω h1
+      calc μ₂ ω ≤ μ[(fun _ => (1 : ℝ))|mW'] ω := h1
+        _ = 1 := congrFun hc ω
     filter_upwards [h1, h2] with ω h1 h2
     exact ⟨h1, h2⟩
 
@@ -291,9 +369,17 @@ lemma pair_law_of_triple_law {β : Type*} [MeasurableSpace β]
               = Measure.map (fun ω => (X ω, Y ω, W' ω)) μ) :
     Measure.map (fun ω => ((X ω, Y ω), W ω)) μ
       = Measure.map (fun ω => ((X ω, Y ω), W' ω)) μ := by
-  -- This is just reassociation: α × β × γ ≃ (α × β) × γ
-  -- The equality follows from h_triple via Equiv.prodAssoc
-  sorry
+  -- Reassociation via the isomorphism (α × β) × γ ≃ α × (β × γ)
+  have h_assoc : Measurable (fun t : α × β × γ => ((t.1, t.2.1), t.2.2)) :=
+    (measurable_fst.prodMk measurable_snd.fst).prodMk measurable_snd.snd
+  have h1 : (fun ω => ((X ω, Y ω), W ω)) =
+            (fun t : α × β × γ => ((t.1, t.2.1), t.2.2)) ∘ (fun ω => (X ω, Y ω, W ω)) := rfl
+  have h2 : (fun ω => ((X ω, Y ω), W' ω)) =
+            (fun t : α × β × γ => ((t.1, t.2.1), t.2.2)) ∘ (fun ω => (X ω, Y ω, W' ω)) := rfl
+  rw [h1, h2]
+  rw [← Measure.map_map h_assoc (hX.prodMk (hY.prodMk hW))]
+  rw [← Measure.map_map h_assoc (hX.prodMk (hY.prodMk hW'))]
+  rw [h_triple]
 
 /-- Legacy wrapper: the old `condExp_eq_of_triple_law_direct` interface.
 
@@ -325,6 +411,19 @@ lemma condExp_eq_of_triple_law_direct
       =ᵐ[μ]
     μ[Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
        | MeasurableSpace.comap W inferInstance] := by
-  -- Extract pair law (Y,W) =^d (Y,W') from triple law
-  -- Then apply condExp_indicator_eq_of_law_eq_of_comap_le
-  sorry
+  -- Extract pair law (Y,W) =^d (Y,W') from triple law by projecting out Z
+  have h_pair : Measure.map (fun ω => (Y ω, W ω)) μ
+              = Measure.map (fun ω => (Y ω, W' ω)) μ := by
+    -- Project triple law (Z,Y,W) to (Y,W) by dropping Z
+    have h_proj : Measurable (fun t : β × α × γ => (t.2.1, t.2.2)) :=
+      measurable_snd.fst.prodMk measurable_snd.snd
+    have h1 : (fun ω => (Y ω, W ω)) =
+              (fun t : β × α × γ => (t.2.1, t.2.2)) ∘ (fun ω => (Z ω, Y ω, W ω)) := rfl
+    have h2 : (fun ω => (Y ω, W' ω)) =
+              (fun t : β × α × γ => (t.2.1, t.2.2)) ∘ (fun ω => (Z ω, Y ω, W' ω)) := rfl
+    rw [h1, h2]
+    rw [← Measure.map_map h_proj (hZ.prodMk (hY.prodMk hW))]
+    rw [← Measure.map_map h_proj (hZ.prodMk (hY.prodMk hW'))]
+    rw [h_triple]
+  -- Apply the main Kallenberg 1.3 lemma
+  exact condExp_indicator_eq_of_law_eq_of_comap_le Y W W' hY hW hW' h_pair h_contraction hA
