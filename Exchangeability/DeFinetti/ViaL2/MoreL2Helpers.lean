@@ -615,7 +615,98 @@ lemma integral_alphaIic_eq_marginal
     (t : ℝ) :
     ∫ ω, alphaIic X hX_contract hX_meas hX_L2 t ω ∂μ =
       (μ (X 0 ⁻¹' Set.Iic t)).toReal := by
-  sorry
+  -- Define local indicator (same as private indIic in MainConvergence.lean)
+  let ind : ℝ → ℝ := (Set.Iic t).indicator (fun _ => (1 : ℝ))
+  have ind_meas : Measurable ind := measurable_const.indicator measurableSet_Iic
+  have ind_bdd : ∀ x, |ind x| ≤ 1 := by
+    intro x; by_cases hx : x ≤ t <;> simp [ind, Set.indicator, hx, abs_of_nonneg]
+
+  -- Get the L¹ limit from weighted_sums_converge_L1
+  let limit := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
+      ind ind_meas ⟨1, ind_bdd⟩).choose
+  have h_spec := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
+      ind ind_meas ⟨1, ind_bdd⟩).choose_spec
+  have h_meas_limit : Measurable limit := h_spec.1
+  have _h_L1 : MemLp limit 1 μ := h_spec.2.1
+  have h_conv : ∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m : ℕ, m ≥ M →
+      ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, ind (X (n + k.val + 1) ω) - limit ω| ∂μ < ε :=
+    h_spec.2.2
+
+  -- Step 1: alphaIic = max 0 (min 1 limit), which equals limit a.e. since limit ∈ [0,1] a.e.
+  -- Since the limit is constructed from the same indicator function, the two .choose
+  -- values are equal (both are *the same* existential witness)
+  have h_alphaIic_eq : ∀ᵐ ω ∂μ, alphaIic X hX_contract hX_meas hX_L2 t ω = limit ω := by
+    -- alphaIic is defined as max 0 (min 1 limit'), and limit' =ᵐ limit
+    -- Since limit ∈ [0,1] a.e. (as L¹ limit of averages in [0,1]), clipping has no effect
+    -- For now, we prove this with a sorry pending the boundedness argument
+    sorry
+
+  -- Step 2: Show ∫ limit = μ(X_0 ∈ Iic t).toReal
+  -- The Cesàro average integrates to the marginal probability
+  have h_cesaro_integral : ∀ n m : ℕ, m > 0 →
+      ∫ ω, (1/(m:ℝ)) * ∑ k : Fin m, ind (X (n + k.val + 1) ω) ∂μ =
+        (μ (X 0 ⁻¹' Set.Iic t)).toReal := by
+    intro n m hm
+    -- The integral of the average = average of the integrals
+    have h_int_sum : ∫ ω, (1/(m:ℝ)) * ∑ k : Fin m, ind (X (n + k.val + 1) ω) ∂μ =
+        (1/(m:ℝ)) * ∑ k : Fin m, ∫ ω, ind (X (n + k.val + 1) ω) ∂μ := by
+      rw [integral_mul_left]
+      congr 1
+      rw [integral_finset_sum]
+      intro k _
+      -- ind is bounded by 1 and measurable, so it's integrable
+      have h_meas_comp : Measurable (fun ω => ind (X (n + k.val + 1) ω)) :=
+        ind_meas.comp (hX_meas _)
+      have h_bdd : ∀ ω, ‖ind (X (n + k.val + 1) ω)‖ ≤ 1 := by
+        intro ω
+        rw [Real.norm_eq_abs]
+        exact ind_bdd _
+      exact Integrable.of_bound h_meas_comp.aestronglyMeasurable 1 (Filter.Eventually.of_forall h_bdd)
+    rw [h_int_sum]
+    -- Each integral equals μ(X_j ∈ Iic t)
+    have h_each : ∀ k : Fin m, ∫ ω, ind (X (n + k.val + 1) ω) ∂μ =
+        (μ (X (n + k.val + 1) ⁻¹' Set.Iic t)).toReal := by
+      intro k
+      -- integral of indicator = measure of set
+      -- ind x = 1 if x ≤ t, 0 otherwise
+      -- So ∫ ind(X_j ω) dμ = ∫_{X_j ≤ t} 1 dμ = μ{X_j ≤ t}
+      have h_ind_eq : ∀ ω, ind (X (n + k.val + 1) ω) =
+          (X (n + k.val + 1) ⁻¹' Set.Iic t).indicator (fun _ => (1 : ℝ)) ω := by
+        intro ω
+        simp only [ind, Set.indicator, Set.mem_Iic, Set.mem_preimage]
+      simp_rw [h_ind_eq]
+      rw [integral_indicator (hX_meas (n + k.val + 1) measurableSet_Iic)]
+      -- ∫ 1 dμ.restrict S = μ(S).toReal
+      rw [setIntegral_const, smul_eq_mul, mul_one]
+      -- μ.real s = (μ s).toReal by definition
+      rfl
+    simp_rw [h_each]
+    -- By contractability, all marginals are equal
+    have h_marginal_eq : ∀ j : ℕ, μ (X j ⁻¹' Set.Iic t) = μ (X 0 ⁻¹' Set.Iic t) := by
+      intro j
+      have h_map := L2Helpers.contractable_map_single X hX_contract hX_meas (i := j)
+      -- μ(X j ⁻¹' S) = (map X_j μ)(S) = (map X_0 μ)(S) = μ(X 0 ⁻¹' S)
+      rw [← Measure.map_apply (hX_meas j) measurableSet_Iic]
+      rw [h_map]
+      rw [Measure.map_apply (hX_meas 0) measurableSet_Iic]
+    simp_rw [h_marginal_eq]
+    -- Sum of m copies of the same value
+    simp only [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
+    field_simp
+
+  -- Step 3: Use L¹ convergence to show ∫ limit = ∫ Cesàro (which = marginal)
+  have h_limit_integral : ∫ ω, limit ω ∂μ = (μ (X 0 ⁻¹' Set.Iic t)).toReal := by
+    -- The Cesàro average has constant integral, and converges to limit in L¹
+    -- By the continuity of integral under L¹ convergence, ∫ limit = limit of ∫ Cesàro
+    -- Since all ∫ Cesàro = μ(X_0 ∈ Iic t), we get ∫ limit = μ(X_0 ∈ Iic t)
+    sorry
+
+  -- Step 4: Combine: ∫ alphaIic = ∫ limit = μ(X_0 ∈ Iic t)
+  calc ∫ ω, alphaIic X hX_contract hX_meas hX_L2 t ω ∂μ
+      = ∫ ω, limit ω ∂μ := by
+        refine integral_congr_ae ?_
+        exact h_alphaIic_eq
+    _ = (μ (X 0 ⁻¹' Set.Iic t)).toReal := h_limit_integral
 
 /-- The bridge property: E[∏ᵢ 𝟙_{Bᵢ}(X_{k(i)})] = E[∏ᵢ ν(·)(Bᵢ)].
 
@@ -707,7 +798,7 @@ theorem directing_measure_satisfies_requirements
     ∃ (ν : Ω → Measure ℝ),
       (∀ ω, IsProbabilityMeasure (ν ω)) ∧
       (∀ s, MeasurableSet s → Measurable (fun ω => ν ω s)) ∧
-      (∀ {m : ℕ} (k : Fin m → ℕ) (B : Fin m → Set ℝ),
+      (∀ {m : ℕ} (k : Fin m → ℕ), Function.Injective k → ∀ (B : Fin m → Set ℝ),
         (∀ i, MeasurableSet (B i)) →
           ∫⁻ ω, ∏ i : Fin m,
               ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) ∂μ
@@ -720,8 +811,8 @@ theorem directing_measure_satisfies_requirements
   -- Property 2: ω ↦ ν(ω)(s) is measurable for measurable s
   · intro s hs
     exact directing_measure_measurable X hX_contract hX_meas hX_L2 s
-  -- Property 3: Bridge property
-  · intro m k B hB
+  -- Property 3: Bridge property (injectivity not actually needed)
+  · intro m k _hk_inj B hB
     exact directing_measure_bridge X hX_contract hX_meas hX_L2 k B hB
 
 end Exchangeability.DeFinetti.ViaL2
