@@ -1488,8 +1488,7 @@ lemma condexp_lag_constant_product
     intro i _
     -- Goal: fs i (ω (τ ↑i)) = fs i (ω ↑i)
     -- From hτ_fix: τ ↑i = ↑i
-    congr 1
-    exact hτ_fix i
+    simp only [hτ_fix i]
 
   -- Key fact 3: F ∘ reindex τ = G
   have hFG : F ∘ Exchangeability.reindex τ = G := by
@@ -1501,8 +1500,8 @@ lemma condexp_lag_constant_product
       intro i _
       -- Need: fs i (ω (τ i)) = fs i (ω i)
       -- Since τ fixes i: τ (i : ℕ) = i
-      congr 1
-      exact hτ_fix i
+      show fs i (ω (τ i)) = fs i (ω i)
+      rw [hτ_fix i]
     · -- g part: ω (τ (k+1)) = ω k
       rw [Equiv.swap_apply_right]
 
@@ -1617,8 +1616,7 @@ lemma condexp_lag_constant_product_general
     simp only [Function.comp_apply, P, Exchangeability.reindex]
     apply Finset.prod_congr rfl
     intro i _
-    congr 1
-    exact hτ_fix i
+    simp only [hτ_fix i]
 
   -- Key fact 3: τ(j+1) = j and τ(j) = j+1
   have hτ_j1 : τ (j + 1) = j := Equiv.swap_apply_right j (j + 1)
@@ -1633,11 +1631,11 @@ lemma condexp_lag_constant_product_general
       simp only [P]
       apply Finset.prod_congr rfl
       intro i _
-      congr 1
-      exact hτ_fix i
+      show fs i (ω (τ (coords i))) = fs i (ω (coords i))
+      rw [hτ_fix i]
     · -- g part
-      congr 1
-      exact hτ_j1
+      show g (ω (τ (j + 1))) = g (ω j)
+      rw [hτ_j1]
 
   -- Integrability bounds
   have hP_bd : ∃ Cp, ∀ ω, |P ω| ≤ Cp := by
@@ -1645,7 +1643,7 @@ lemma condexp_lag_constant_product_general
     use ∏ i : Fin n, Cs i
     intro ω
     calc |P ω| = |∏ i : Fin n, fs i (ω (coords i))| := rfl
-      _ ≤ ∏ i : Fin n, |fs i (ω (coords i))| := abs_prod_le_prod_abs _ _
+      _ = ∏ i : Fin n, |fs i (ω (coords i))| := Finset.abs_prod _ _
       _ ≤ ∏ i : Fin n, Cs i := by
           apply Finset.prod_le_prod
           · intro i _; exact abs_nonneg _
@@ -1659,35 +1657,36 @@ lemma condexp_lag_constant_product_general
     intro i _
     exact (hfs_meas i).comp (measurable_pi_apply (coords i))
 
-  have hF_int : Integrable F μ := by
-    apply integrable_mul_of_bounded hP_meas (hg_meas.comp (measurable_pi_apply (j + 1))) Cp
-    · exact hCp
-    · intro ω; exact hCg _
+  have hCp_nonneg : 0 ≤ Cp := by
+    haveI : Nonempty (ℕ → α) := ProbabilityMeasure.nonempty ⟨μ, inferInstance⟩
+    have ω : ℕ → α := Classical.choice ‹Nonempty (ℕ → α)›
+    exact le_trans (abs_nonneg _) (hCp ω)
 
-  have hG_int : Integrable G μ := by
-    apply integrable_mul_of_bounded hP_meas (hg_meas.comp (measurable_pi_apply j)) Cp
-    · exact hCp
-    · intro ω; exact hCg _
+  have hF_meas : Measurable F := hP_meas.mul (hg_meas.comp (measurable_pi_apply (j + 1)))
+  have hF_bd : ∀ ω, ‖F ω‖ ≤ Cp * Cg := fun ω => by
+    simp only [Real.norm_eq_abs, F]
+    calc |P ω * g (ω (j + 1))| = |P ω| * |g (ω (j + 1))| := abs_mul _ _
+      _ ≤ Cp * Cg := mul_le_mul (hCp _) (hCg _) (abs_nonneg _) hCp_nonneg
+  have hF_int : Integrable F μ := Integrable.of_bound hF_meas.aestronglyMeasurable (Cp * Cg)
+    (Filter.Eventually.of_forall hF_bd)
 
-  -- Now apply the exchange argument
-  have h_int_eq : ∀ (s : Set (ℕ → α)), MeasurableSet[shiftInvariantSigma (α := α)] s
-      → μ s < ⊤ → ∫ ω in s, F ω ∂μ = ∫ ω in s, G ω ∂μ := by
-    intro s hs hμs
-    -- Reindex τ preserves sets in the shift-invariant σ-algebra
-    have hs_inv : s = Exchangeability.reindex τ ⁻¹' s := by
-      ext ω
-      simp only [Set.mem_preimage]
-      have h_shiftInv_inv := shiftInvariantSigma_inv_reindex_swap (α := α) j s hs
-      exact h_shiftInv_inv ω
-    calc ∫ ω in s, F ω ∂μ
-        = ∫ ω in Exchangeability.reindex τ ⁻¹' s, F ω ∂μ := by rw [← hs_inv]
-      _ = ∫ ω in s, F (Exchangeability.reindex τ ω) ∂(μ.map (Exchangeability.reindex τ)) := by
-          rw [MeasureTheory.integral_map_equiv (Exchangeability.reindex τ)]
-          congr 1
-          ext ω
-          simp only [Set.indicator_apply, Set.mem_preimage]
-      _ = ∫ ω in s, G ω ∂μ := by
-          rw [hExch τ, hFG]
+  have hG_meas : Measurable G := hP_meas.mul (hg_meas.comp (measurable_pi_apply j))
+  have hG_bd : ∀ ω, ‖G ω‖ ≤ Cp * Cg := fun ω => by
+    simp only [Real.norm_eq_abs, G]
+    calc |P ω * g (ω j)| = |P ω| * |g (ω j)| := abs_mul _ _
+      _ ≤ Cp * Cg := mul_le_mul (hCp _) (hCg _) (abs_nonneg _) hCp_nonneg
+  have hG_int : Integrable G μ := Integrable.of_bound hG_meas.aestronglyMeasurable (Cp * Cg)
+    (Filter.Eventually.of_forall hG_bd)
+
+  -- μ.map (reindex τ) = μ (exchangeability)
+  have hμ_inv : Measure.map (Exchangeability.reindex τ) μ = μ := hExch τ
+
+  -- Now apply the exchange argument (same pattern as condexp_lag_constant_product)
+  have h_int_eq : ∀ s, MeasurableSet[shiftInvariantSigma (α := α)] s → μ s < ⊤ →
+      ∫ ω in s, F ω ∂μ = ∫ ω in s, G ω ∂μ := fun s hs _ => by
+    have hs_inv : isShiftInvariant (α := α) s := (mem_shiftInvariantSigma_iff (α := α)).mp hs
+    exact setIntegral_eq_of_reindex_eq τ hμ_inv F G hFG hF_meas s hs_inv.1
+      (reindex_swap_preimage_shiftInvariant j s hs_inv)
 
   have h_diff_zero : ∀ (s : Set (ℕ → α)), MeasurableSet[shiftInvariantSigma (α := α)] s
       → μ s < ⊤ →
