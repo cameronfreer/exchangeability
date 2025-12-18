@@ -542,7 +542,7 @@ theorem conditional_iid_from_directing_measure
     (ν : Ω → Measure α)
     (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
     (hν_meas : ∀ s, MeasurableSet s → Measurable (fun ω => ν ω s))
-    (h_bridge : ∀ {m : ℕ} (k : Fin m → ℕ) (B : Fin m → Set α),
+    (h_bridge : ∀ {m : ℕ} (k : Fin m → ℕ), Function.Injective k → ∀ (B : Fin m → Set α),
       (∀ i, MeasurableSet (B i)) →
         ∫⁻ ω, ∏ i : Fin m,
             ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) ∂μ
@@ -557,7 +557,7 @@ theorem conditional_iid_from_directing_measure
       --     μ.bind (fun ω => Measure.pi fun _ => ν ω)
       use ν, hν_prob, hν_meas
 
-      intro m k _hk  -- _hk : StrictMono k (not used in proof, but required by definition)
+      intro m k hk_strict  -- hk_strict : StrictMono k gives injectivity for h_bridge
 
       -- STEP 2: Show the finite-dimensional distributions match
       -- Need: Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
@@ -611,7 +611,7 @@ theorem conditional_iid_from_directing_measure
 
       -- Apply fidi_eq_avg_product using the bridging hypothesis
       exact fidi_eq_avg_product X hX_meas ν hν_prob hν_meas m k B hB_meas
-        (h_bridge (k := k) (B := B) hB_meas)
+        (h_bridge (k := k) hk_strict.injective (B := B) hB_meas)
 
 /-- **FMP 1.1: Monotone Class Theorem (Sierpiński)** = Dynkin's π-λ theorem.
 
@@ -678,7 +678,7 @@ theorem complete_from_directing_measure
     (_hX_contract : Contractable μ X)
     (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
     (hν_meas : ∀ s, MeasurableSet s → Measurable (fun ω => ν ω s))
-    (h_bridge : ∀ {m : ℕ} (k : Fin m → ℕ) (B : Fin m → Set α),
+    (h_bridge : ∀ {m : ℕ} (k : Fin m → ℕ), Function.Injective k → ∀ (B : Fin m → Set α),
       (∀ i, MeasurableSet (B i)) →
         ∫⁻ ω, ∏ i : Fin m,
             ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) ∂μ

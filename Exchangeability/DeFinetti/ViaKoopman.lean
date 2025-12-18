@@ -2268,6 +2268,7 @@ lemma condexp_product_factorization_general
     (hσ : MeasurePreserving shift μ μ)
     (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
     (m : ℕ) (fs : Fin m → α → ℝ) (k : Fin m → ℕ)
+    (hk : Function.Injective k)
     (hmeas : ∀ i, Measurable (fs i))
     (hbd : ∀ i, ∃ C, ∀ x, |fs i x| ≤ C) :
     μ[fun ω => ∏ i, fs i (ω (k i)) | shiftInvariantSigma (α := α)]
@@ -2315,47 +2316,92 @@ lemma condexp_product_factorization_general
     -- Now for the product, we use that the tower+pullout structure works for any coordinates
     -- The proof follows the same pattern as ax but with general k
 
-    -- We use the tower property: CE[P·g(ω_{k_n}) | mSI] = CE[P·CE[g(ω_0)|mSI] | mSI]
-    -- Split product
-    have h_split : (fun ω => ∏ i : Fin (n + 1), fs i (ω (k i)))
-        = (fun ω => (∏ i : Fin n, fs (Fin.castSucc i) (ω (k (Fin.castSucc i)))) *
-                    fs (Fin.last n) (ω (k (Fin.last n)))) := by
-      ext ω
-      rw [Fin.prod_univ_castSucc]
+    -- ═══════════════════════════════════════════════════════════════════════════
+    -- RESTRUCTURED: Split off MAXIMUM coordinate (not last enumerated)
+    -- This ensures kn > all k'(i), so lag constancy always applies from kn
+    -- ═══════════════════════════════════════════════════════════════════════════
 
-    -- Define the sub-product
-    let P : Ω[α] → ℝ := fun ω => ∏ i : Fin n, fs (Fin.castSucc i) (ω (k (Fin.castSucc i)))
-    let g := fs (Fin.last n)
-    let kn := k (Fin.last n)
+    classical
+    have huniv : (Finset.univ : Finset (Fin (n + 1))).Nonempty := by simp
+
+    -- Find the maximum coordinate value
+    let kn : ℕ := (Finset.univ.image k).max' (huniv.image k)
+    have hkn_mem : kn ∈ Finset.univ.image k := Finset.max'_mem _ (huniv.image k)
+
+    -- Pick an index achieving the maximum
+    obtain ⟨i_max, -, hk_i_max : k i_max = kn⟩ := Finset.mem_image.mp hkn_mem
+
+    -- The function at the max coordinate
+    let g := fs i_max
+
+    -- Split product using Fin.prod_univ_succAbove (splits at i_max)
+    have h_split : (fun ω => ∏ i : Fin (n + 1), fs i (ω (k i)))
+        = (fun ω => (∏ i : Fin n, fs (Fin.succAbove i_max i) (ω (k (Fin.succAbove i_max i)))) *
+                    fs i_max (ω (k i_max))) := by
+      ext ω
+      rw [Fin.prod_univ_succAbove (fun j => fs j (ω (k j))) i_max]
+      ring
+
+    -- Define the sub-product (reindexed by succAbove i_max)
+    let P : Ω[α] → ℝ := fun ω => ∏ i : Fin n, fs (Fin.succAbove i_max i) (ω (k (Fin.succAbove i_max i)))
+
+    -- Restricted functions and coordinates
+    let fs' : Fin n → α → ℝ := fun i => fs (Fin.succAbove i_max i)
+    let k' : Fin n → ℕ := fun i => k (Fin.succAbove i_max i)
+
+    -- Injectivity of k' (inherited from hk)
+    have hk' : Function.Injective k' := by
+      intro a b hab
+      have h1 := (Fin.succAbove i_max).injective
+      apply h1
+      apply hk
+      simpa [k'] using hab
+
+    have hmeas' : ∀ i, Measurable (fs' i) := fun i => hmeas (Fin.succAbove i_max i)
+    have hbd' : ∀ i, ∃ C, ∀ x, |fs' i x| ≤ C := fun i => hbd (Fin.succAbove i_max i)
 
     -- Bounds for P and g
     have hP_bd : ∃ Cp, ∀ ω, |P ω| ≤ Cp := by
-      have := fun i => hbd (Fin.castSucc i)
+      have := fun i => hbd (Fin.succAbove i_max i)
       choose Cs hCs using this
       use ∏ i : Fin n, Cs i
       intro ω
-      calc |P ω| = |∏ i : Fin n, fs (Fin.castSucc i) (ω (k (Fin.castSucc i)))| := rfl
-        _ ≤ ∏ i : Fin n, |fs (Fin.castSucc i) (ω (k (Fin.castSucc i)))| := abs_prod_le_prod_abs _ _
+      calc |P ω| = |∏ i : Fin n, fs (Fin.succAbove i_max i) (ω (k (Fin.succAbove i_max i)))| := rfl
+        _ ≤ ∏ i : Fin n, |fs (Fin.succAbove i_max i) (ω (k (Fin.succAbove i_max i)))| := abs_prod_le_prod_abs _ _
         _ ≤ ∏ i : Fin n, Cs i := by
             apply Finset.prod_le_prod
             · intro i _; exact abs_nonneg _
-            · intro i _; exact hCs i (ω (k (Fin.castSucc i)))
+            · intro i _; exact hCs i (ω (k (Fin.succAbove i_max i)))
 
-    have hg_bd : ∃ Cg, ∀ x, |g x| ≤ Cg := hbd (Fin.last n)
+    have hg_bd : ∃ Cg, ∀ x, |g x| ≤ Cg := hbd i_max
 
-    -- Apply IH to the sub-product with restricted coordinates
-    let fs' : Fin n → α → ℝ := fun i => fs (Fin.castSucc i)
-    let k' : Fin n → ℕ := fun i => k (Fin.castSucc i)
-    have hmeas' : ∀ i, Measurable (fs' i) := fun i => hmeas (Fin.castSucc i)
-    have hbd' : ∀ i, ∃ C, ∀ x, |fs' i x| ≤ C := fun i => hbd (Fin.castSucc i)
-
-    have h_IH := IH fs' k' hmeas' hbd'
+    -- Apply IH to the sub-product (now with injectivity)
+    have h_IH := IH fs' k' hk' hmeas' hbd'
     -- h_IH : CE[∏_i fs'_i(ω_{k'_i}) | mSI] =ᵃᵉ ∏_i ∫ fs'_i dν
+
+    -- KEY FACT: kn is strictly greater than all k'(i)
+    -- This is the whole point of splitting off max coordinate!
+    have hk_le_kn : ∀ j : Fin (n + 1), k j ≤ kn := by
+      intro j
+      have : k j ∈ Finset.univ.image k := Finset.mem_image.mpr ⟨j, Finset.mem_univ j, rfl⟩
+      exact Finset.le_max' _ _ this
+
+    have h_kn_large : ∀ i : Fin n, k' i < kn := by
+      intro i
+      have hle : k' i ≤ kn := hk_le_kn (Fin.succAbove i_max i)
+      have hne : k' i ≠ kn := by
+        intro hEq
+        have h1 : k (Fin.succAbove i_max i) = k i_max := by
+          simp only [k', hk_i_max] at hEq ⊢
+          exact hEq
+        have h2 : Fin.succAbove i_max i = i_max := hk h1
+        exact Fin.succAbove_ne i_max i h2
+      exact Nat.lt_of_le_of_ne hle hne
 
     -- Integrability of g at coordinate 0
     obtain ⟨Cg, hCg⟩ := hg_bd
     have hg_0_int : Integrable (fun ω : Ω[α] => g (ω 0)) μ :=
-      integrable_of_bounded_measurable ((hmeas (Fin.last n)).comp (measurable_pi_apply 0))
+      integrable_of_bounded_measurable ((hmeas i_max).comp (measurable_pi_apply 0))
         Cg (fun ω => hCg (ω 0))
 
     -- CE[g(ω_{kn}) | mSI] = CE[g(ω_0) | mSI] by shift invariance
@@ -2372,7 +2418,7 @@ lemma condexp_product_factorization_general
       have h := condExp_ae_eq_integral_condExpKernel (shiftInvariantSigma_le (α := α)) hg_0_int
       refine h.trans ?_
       filter_upwards with ω
-      exact (integral_ν_eq_integral_condExpKernel ω (hmeas (Fin.last n))).symm
+      exact (integral_ν_eq_integral_condExpKernel ω (hmeas i_max)).symm
 
     -- Now chain: CE[P · g(ω_{kn}) | mSI] needs tower + pullout
     -- We use the pullout property directly (skipping tower since g(ω_{kn}) reduces to ∫g dν)
@@ -2384,7 +2430,7 @@ lemma condexp_product_factorization_general
     have hP_meas : Measurable P := by
       apply Finset.measurable_prod
       intro i _
-      exact (hmeas (Fin.castSucc i)).comp (measurable_pi_apply _)
+      exact (hmeas (Fin.succAbove i_max i)).comp (measurable_pi_apply _)
 
     obtain ⟨Cp, hCp⟩ := hP_bd
     have hP_int : Integrable P μ :=
@@ -2419,10 +2465,11 @@ lemma condexp_product_factorization_general
 
     -- Final assembly: chain the a.e. equalities
     have h_rhs_split : (fun ω => ∏ i : Fin (n + 1), ∫ x, fs i x ∂(ν (μ := μ) ω))
-        = (fun ω => (∏ i : Fin n, ∫ x, fs (Fin.castSucc i) x ∂(ν (μ := μ) ω)) *
-                    (∫ x, fs (Fin.last n) x ∂(ν (μ := μ) ω))) := by
+        = (fun ω => (∏ i : Fin n, ∫ x, fs (Fin.succAbove i_max i) x ∂(ν (μ := μ) ω)) *
+                    (∫ x, fs i_max x ∂(ν (μ := μ) ω))) := by
       ext ω
-      rw [Fin.prod_univ_castSucc]
+      rw [Fin.prod_univ_succAbove (fun j => ∫ x, fs j x ∂(ν (μ := μ) ω)) i_max]
+      ring
 
     -- Use ax directly - the proof shows factorization holds for consecutive coordinates
     -- and by exchange/shift, this extends to any coordinates
@@ -2465,7 +2512,7 @@ lemma condexp_product_factorization_general
       -- CE[P · Z | mSI] = Z · CE[P | mSI]
       have hZ : StronglyMeasurable[shiftInvariantSigma (α := α)]
           (fun ω => ∫ x, g x ∂(ν (μ := μ) ω)) := by
-        exact ν_integral_stronglyMeasurable (hmeas (Fin.last n))
+        exact ν_integral_stronglyMeasurable (hmeas i_max)
 
       have hZ_bd : ∃ Cz, ∀ ω, |∫ x, g x ∂(ν (μ := μ) ω)| ≤ Cz := by
         use Cg
@@ -2518,7 +2565,7 @@ lemma condexp_product_factorization_general
         intro j hj
         have hj_gt : ∀ i : Fin n, k' i < j := fun i => Nat.lt_of_lt_of_le (hM_gt_k' i) hj
         exact condexp_lag_constant_product_general hExch n fs' k' hmeas' hbd' g
-          (hmeas (Fin.last n)) hg_bd j hj_gt
+          (hmeas i_max) hg_bd j hj_gt
 
       -- Step 3: Chain to show CE[P·g(ω_j)|mSI] = CE[P·g(ω_M)|mSI] for all j ≥ M
       have h_const : ∀ j, M ≤ j →
@@ -2536,112 +2583,55 @@ lemma condexp_product_factorization_general
             have h2 := ih hj'
             exact h1.trans h2
 
-      -- Also need to relate kn to M
-      -- ISSUE: When kn < max(k'(i)), intermediate indices j ∈ (kn, M) might equal some k'(i),
-      -- so lag constancy doesn't apply directly.
-      --
-      -- SOLUTION: The RHS is coordinate-independent (only depends on functions fs, not coords).
-      -- Both CE[P·g(ω_{kn})|mSI] and CE[P·g(ω_M)|mSI] equal the same RHS.
-      -- So instead of chaining kn → M, we show both equal the RHS directly.
-      --
-      -- For kn ≥ M' = 1 + max(k'(i)): kn > all k'(i), so h_const applies directly.
-      -- For kn < M': The maximum coordinate k(i_max) should be processed "last" instead of kn.
-      --              This requires restructuring the induction to split off max coord, not last index.
-      --
-      -- Current workaround: This sorry represents the case where coordinates need reordering.
-      -- A complete proof would restructure the induction to always split off the maximum coordinate.
+      -- SIMPLIFIED: Since we split off max coordinate, h_kn_large is always true!
+      -- (This was the whole point of restructuring to find i_max = argmax k(i))
+      -- So lag constancy applies directly from kn to M.
       have h_kn_to_M : μ[(fun ω => P ω * g (ω kn)) | mSI]
           =ᵐ[μ] μ[(fun ω => P ω * g (ω M)) | mSI] := by
-        -- Check if kn > all k'(i), in which case lag constancy applies from kn
-        by_cases h_kn_large : ∀ i : Fin n, k' i < kn
-        · -- Case: kn > all k'(i), so lag constancy applies for any j ≥ kn
-          -- Key: when j ≥ kn > all k'(i), we have j > all coords in P
-          have h_lag_from_kn : ∀ j, kn ≤ j →
-              μ[(fun ω => P ω * g (ω (j + 1))) | mSI]
-                =ᵐ[μ] μ[(fun ω => P ω * g (ω j)) | mSI] := by
-            intro j hj
-            have hj_gt : ∀ i : Fin n, k' i < j := fun i => Nat.lt_of_lt_of_le (h_kn_large i) hj
-            exact condexp_lag_constant_product_general hExch n fs' k' hmeas' hbd' g
-              (hmeas (Fin.last n)) hg_bd j hj_gt
-          -- Chain from kn to M using h_lag_from_kn
-          have h_chain : ∀ j, kn ≤ j → j ≤ M →
-              μ[(fun ω => P ω * g (ω j)) | mSI]
-                =ᵐ[μ] μ[(fun ω => P ω * g (ω M)) | mSI] := by
-            intro j hj_lo hj_hi
-            induction j with
-            | zero =>
-              have : kn = 0 := Nat.le_zero.mp hj_lo
+        -- Lag constancy applies for any j ≥ kn since kn > all k'(i)
+        have h_lag_from_kn : ∀ j, kn ≤ j →
+            μ[(fun ω => P ω * g (ω (j + 1))) | mSI]
+              =ᵐ[μ] μ[(fun ω => P ω * g (ω j)) | mSI] := by
+          intro j hj
+          have hj_gt : ∀ i : Fin n, k' i < j := fun i => Nat.lt_of_lt_of_le (h_kn_large i) hj
+          exact condexp_lag_constant_product_general hExch n fs' k' hmeas' hbd' g
+            (hmeas i_max) hg_bd j hj_gt
+        -- Chain from kn to M using h_lag_from_kn
+        have h_chain : ∀ j, kn ≤ j → j ≤ M →
+            μ[(fun ω => P ω * g (ω j)) | mSI]
+              =ᵐ[μ] μ[(fun ω => P ω * g (ω M)) | mSI] := by
+          intro j hj_lo hj_hi
+          induction j with
+          | zero =>
+            have : kn = 0 := Nat.le_zero.mp hj_lo
+            subst this
+            have hM0 : M = 0 := by omega
+            subst hM0; rfl
+          | succ j' ih =>
+            by_cases hj' : j' < kn
+            · have : j' + 1 = kn := by omega
               subst this
-              have hM0 : M = 0 := by omega
-              subst hM0; rfl
-            | succ j' ih =>
-              by_cases hj' : j' < kn
-              · have : j' + 1 = kn := by omega
-                subst this
-                -- Need to show CE[P·g(ω_{kn})|mSI] = CE[P·g(ω_M)|mSI]
-                -- Chain: kn → kn+1 → ... → M
-                clear ih
-                -- Use induction on M - kn
-                have h_gap : kn ≤ M := by omega
-                obtain ⟨d, hd⟩ : ∃ d, M = kn + d := ⟨M - kn, by omega⟩
-                subst hd
-                induction d with
-                | zero => simp
-                | succ d' ih =>
-                  have h1 := h_lag_from_kn (kn + d') (by omega)
-                  have h2 := ih (by omega)
-                  exact h2.trans h1.symm
-              · push_neg at hj'
-                by_cases hj'_eq : j' + 1 = M
-                · subst hj'_eq; rfl
-                · have : j' + 1 < M := by omega
-                  have h1 := h_lag_from_kn j' hj'
-                  have h2 := ih hj' (by omega)
-                  exact h1.symm.trans h2
-          exact h_chain kn (le_refl kn) (le_of_lt hM_gt_kn)
-        · -- Case: kn ≤ some k'(i), need to use max coordinate as "last" factor
-          push_neg at h_kn_large
-          obtain ⟨i_bad, h_i_bad⟩ := h_kn_large
-          -- Key insight: the RHS (∏ ∫ fs'_i dν) · (∫ g dν) doesn't depend on coordinates.
-          -- We'll show both LHS and CE[P·g(ω_M)|mSI] equal this RHS.
-          --
-          -- For CE[P·g(ω_M)|mSI], we already have h_tower + h_pullout + h_final giving the RHS.
-          -- For CE[P·g(ω_{kn})|mSI], we use that the product is symmetric:
-          --   P·g(ω_{kn}) = (∏_{i<n} fs'_i(ω_{k'(i)})) · g(ω_{kn})
-          --              = g(ω_{kn}) · (∏_{i<n} fs'_i(ω_{k'(i)}))  [commutativity]
-          --              = ... reorder so max coord is last ...
-          --
-          -- Since both equal the same RHS (which is coord-independent), they are equal a.e.
-          -- The formal argument: we show both equal (∏ ∫ fs'_i dν) · (∫ g dν).
-          --
-          -- For now, we use h_ax which gives the result for consecutive coordinates,
-          -- and the fact that single-coordinate CEs are shift-invariant (h_single_indep).
-          --
-          -- TECHNICAL NOTE: A complete proof would find i_max = argmax k(i) and split off
-          -- that factor. Since k(i_max) > all other coords, the tower argument applies.
-          -- The result for other orderings follows by commutativity and induction.
-          --
-          -- Workaround: Use that both LHS and RHS are expressions that don't actually
-          -- depend on the specific ordering - the goal follows from coordinate-independence.
-          have h_goal_is_coord_indep : μ[(fun ω => P ω * g (ω kn)) | mSI]
-              =ᵐ[μ] (fun ω => (∏ i : Fin n, ∫ x, fs' i x ∂(ν (μ := μ) ω)) *
-                              (∫ x, g x ∂(ν (μ := μ) ω))) := by
-            -- The full product ∏_{i≤n} fs_i(ω_{k(i)}) factorizes regardless of coord order
-            -- This follows from the general fact that exchangeable sequences are CI given mSI
-            -- TODO: Complete with exchangeability-based argument or max-coord restructuring
-            sorry
-          -- Now connect to CE[P·g(ω_M)|mSI] via the RHS
-          calc μ[(fun ω => P ω * g (ω kn)) | mSI]
-              =ᵃᵉ[μ] (fun ω => (∏ i : Fin n, ∫ x, fs' i x ∂(ν (μ := μ) ω)) *
-                              (∫ x, g x ∂(ν (μ := μ) ω))) := h_goal_is_coord_indep
-            _ =ᵃᵉ[μ] (fun ω => (∫ x, g x ∂(ν (μ := μ) ω)) *
-                              (∏ i : Fin n, ∫ x, fs' i x ∂(ν (μ := μ) ω))) := by
-                exact ae_of_all μ (fun ω => mul_comm _ _)
-            _ =ᵃᵉ[μ] (fun ω => μ[(fun ω => g (ω 0)) | mSI] ω * μ[P | mSI] ω) := by
-                filter_upwards [h_g_kernel, hP_eq_IH] with ω hω1 hω2
-                simp only at hω1 hω2; rw [hω1, hω2]
-            _ =ᵃᵉ[μ] μ[(fun ω => P ω * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] := h_pullout.symm
-            _ =ᵃᵉ[μ] μ[(fun ω => P ω * g (ω M)) | mSI] := h_tower.symm
+              -- Need to show CE[P·g(ω_{kn})|mSI] = CE[P·g(ω_M)|mSI]
+              -- Chain: kn → kn+1 → ... → M
+              clear ih
+              -- Use induction on M - kn
+              have h_gap : kn ≤ M := by omega
+              obtain ⟨d, hd⟩ : ∃ d, M = kn + d := ⟨M - kn, by omega⟩
+              subst hd
+              induction d with
+              | zero => simp
+              | succ d' ih =>
+                have h1 := h_lag_from_kn (kn + d') (by omega)
+                have h2 := ih (by omega)
+                exact h2.trans h1.symm
+            · push_neg at hj'
+              by_cases hj'_eq : j' + 1 = M
+              · subst hj'_eq; rfl
+              · have : j' + 1 < M := by omega
+                have h1 := h_lag_from_kn j' hj'
+                have h2 := ih hj' (by omega)
+                exact h1.symm.trans h2
+        exact h_chain kn (le_refl kn) (le_of_lt hM_gt_kn)
 
       -- Step 4: Tower property via Cesàro + MET
       -- CE[P·g(ω_M)|mSI] = CE[P·CE[g(ω_0)|mSI]|mSI]
@@ -2674,7 +2664,7 @@ lemma condexp_product_factorization_general
             (fun j => fun ω => P ω * g (ω (M + j))) (1 / m) (Finset.range m)
             (fun j _ => by
               apply integrable_mul_of_bounded hP_meas
-                (hmeas (Fin.last n) |>.comp (measurable_pi_apply (M + j))) CP
+                (hmeas i_max |>.comp (measurable_pi_apply (M + j))) CP
               · exact hCP
               · intro ω; exact hCg' _)
           refine h_linear.trans ?_
@@ -2738,12 +2728,12 @@ lemma condexp_product_factorization_general
                     apply Measurable.sub
                     · apply Measurable.mul measurable_const
                       apply Finset.measurable_sum; intro j _
-                      exact hmeas (Fin.last n) |>.comp (measurable_pi_apply j)
+                      exact hmeas i_max |>.comp (measurable_pi_apply j)
                     · exact stronglyMeasurable_condExp.measurable
               _ = ∫ ω, |A' m ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
                     rw [hσ_M.map_eq]
           -- Use L1_cesaro_convergence_bounded
-          have h_base := L1_cesaro_convergence_bounded hσ g (hmeas (Fin.last n)) hg_bd
+          have h_base := L1_cesaro_convergence_bounded hσ g (hmeas i_max) hg_bd
           simp only [h_integral_eq]
           exact h_base
 
@@ -2755,7 +2745,7 @@ lemma condexp_product_factorization_general
           · exact hCP
           · have hZ_bd : ∀ᵐ ω ∂μ, |μ[(fun ω => g (ω 0)) | mSI] ω| ≤ Cg' := by
               have hg_int : Integrable (fun ω => g (ω 0)) μ :=
-                integrable_of_bounded_measurable (hmeas (Fin.last n) |>.comp (measurable_pi_apply 0))
+                integrable_of_bounded_measurable (hmeas i_max |>.comp (measurable_pi_apply 0))
                   Cg' (fun ω => hCg' (ω 0))
               have hCg_ae' : ∀ᵐ ω ∂μ, |g (ω 0)| ≤ Cg'.toNNReal := by
                 filter_upwards with ω; rwa [Real.coe_toNNReal _ hCg_nn]
@@ -2783,7 +2773,7 @@ lemma condexp_product_factorization_general
                         · apply hP_meas.mul
                           apply Measurable.mul measurable_const
                           apply Finset.measurable_sum; intro j _
-                          exact hmeas (Fin.last n) |>.comp (measurable_pi_apply (M + j))
+                          exact hmeas i_max |>.comp (measurable_pi_apply (M + j))
                         · use CP * Cg'
                           intro ω
                           simp only [A, if_neg (Nat.succ_ne_zero _)]
@@ -2808,7 +2798,7 @@ lemma condexp_product_factorization_general
                       · apply integrable_of_bounded_measurable
                         · apply Measurable.mul measurable_const
                           apply Finset.measurable_sum; intro j _
-                          exact hmeas (Fin.last n) |>.comp (measurable_pi_apply (M + j))
+                          exact hmeas i_max |>.comp (measurable_pi_apply (M + j))
                         · use Cg'; intro ω
                           simp only [A, if_neg (Nat.succ_ne_zero _)]
                           rw [abs_mul, abs_of_nonneg (by positivity)]
@@ -3117,7 +3107,7 @@ lemma indicator_product_bridge_ax
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
     (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
-    (m : ℕ) (k : Fin m → ℕ) (B : Fin m → Set α)
+    (m : ℕ) (k : Fin m → ℕ) (hk : Function.Injective k) (B : Fin m → Set α)
     (hB_meas : ∀ i, MeasurableSet (B i)) :
     ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
       = ∫⁻ ω, ∏ i : Fin m, (ν (μ := μ) ω) (B i) ∂μ := by
@@ -3157,7 +3147,7 @@ lemma indicator_product_bridge_ax
       by_cases h : x ∈ B i <;> simp [fs, h]
 
     -- Use the generalized factorization for arbitrary coordinates k
-    have h_factor := condexp_product_factorization_general μ hσ hExch m fs k fs_meas fs_bd
+    have h_factor := condexp_product_factorization_general μ hσ hExch m fs k hk fs_meas fs_bd
 
     -- h_factor gives: CE[∏ i, fs i (ω (k i)) | 𝓘] =ᵐ (∏ i, ∫ fs i dν)
     -- This is exactly: CE[F | 𝓘] =ᵐ G
@@ -3258,8 +3248,8 @@ lemma exchangeable_implies_ciid_modulo_bridge_ax
   · intro s hs
     exact ν_eval_measurable hs
   -- 4. Bridge condition: product of indicators = product of measures
-  · intro m k B hB_meas
-    exact indicator_product_bridge_ax μ hσ hExch m k B hB_meas
+  · intro m k hk B hB_meas
+    exact indicator_product_bridge_ax μ hσ hExch m k hk B hB_meas
 
 section MainConvergence
 
@@ -7483,11 +7473,11 @@ theorem indicator_product_bridge
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
     (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
-    (m : ℕ) (k : Fin m → ℕ) (B : Fin m → Set α)
+    (m : ℕ) (k : Fin m → ℕ) (hk : Function.Injective k) (B : Fin m → Set α)
     (hB_meas : ∀ i, MeasurableSet (B i)) :
     ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
       = ∫⁻ ω, ∏ i : Fin m, (ν (μ := μ) ω) (B i) ∂μ :=
-  indicator_product_bridge_ax μ hσ hExch m k B hB_meas
+  indicator_product_bridge_ax μ hσ hExch m k hk B hB_meas
 
 /-! ### Exchangeable implies ConditionallyIID (modulo the bridge axiom)
 
