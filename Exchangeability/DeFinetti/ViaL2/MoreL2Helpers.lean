@@ -792,8 +792,8 @@ lemma directing_measure_bridge
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
-    {m : ℕ} (k : Fin m → ℕ) (B : Fin m → Set ℝ)
-    (hB : ∀ i, MeasurableSet (B i)) :
+    {m : ℕ} (k : Fin m → ℕ) (hk : Function.Injective k)
+    (B : Fin m → Set ℝ) (hB : ∀ i, MeasurableSet (B i)) :
     ∫⁻ ω, ∏ i : Fin m,
         ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) ∂μ
       = ∫⁻ ω, ∏ i : Fin m,
@@ -885,9 +885,9 @@ theorem directing_measure_satisfies_requirements
   -- Property 2: ω ↦ ν(ω)(s) is measurable for measurable s
   · intro s hs
     exact directing_measure_measurable X hX_contract hX_meas hX_L2 s
-  -- Property 3: Bridge property (injectivity not actually needed)
-  · intro m k _hk_inj B hB
-    exact directing_measure_bridge X hX_contract hX_meas hX_L2 k B hB
+  -- Property 3: Bridge property (requires injectivity of k)
+  · intro m k hk_inj B hB
+    exact directing_measure_bridge X hX_contract hX_meas hX_L2 k hk_inj B hB
 
 end Exchangeability.DeFinetti.ViaL2
 
