@@ -55,7 +55,7 @@ noncomputable section
 /-! ### Reusable micro-lemmas for Steps 4b–4c -/
 
 /-- `ae_ball_iff` in the direction we need on a finite index set (`Finset.range n`). -/
-private lemma ae_ball_range_mpr
+lemma ae_ball_range_mpr
   {Ω : Type _} [MeasurableSpace Ω] (μ : Measure Ω) {n : ℕ}
   {P : ℕ → Ω → Prop}
   (h : ∀ k ∈ Finset.range n, ∀ᵐ ω ∂ μ, P k ω) :
