@@ -1393,6 +1393,28 @@ private lemma integrable_of_bounded_mul_helper
   have h_meas : Measurable fun ω => φ ω * ψ ω := hφ_meas.mul hψ_meas
   exact integrable_of_bounded_helper h_meas ⟨Cφ * Cψ, h_bound⟩
 
+/-- Integrability of `f * g` when `g` is integrable and `|f| ≤ C`.
+
+This shows that multiplying an integrable function by a bounded function preserves integrability.
+The bound `|f * g| ≤ C * |g|` follows from `|f| ≤ C`. -/
+lemma Integrable.of_abs_bounded {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
+    {f g : Ω → ℝ} (hg : Integrable g μ) (C : ℝ) (hC : 0 ≤ C)
+    (h_bound : ∀ ω, |f ω| ≤ C)
+    (hfg_meas : AEStronglyMeasurable (fun ω => f ω * g ω) μ) :
+    Integrable (fun ω => f ω * g ω) μ := by
+  have h_norm_bound : ∀ᵐ ω ∂μ, ‖f ω * g ω‖ ≤ C * ‖g ω‖ := by
+    apply Filter.Eventually.of_forall
+    intro ω
+    simp only [Real.norm_eq_abs]
+    calc |f ω * g ω| = |f ω| * |g ω| := abs_mul _ _
+      _ ≤ C * |g ω| := mul_le_mul_of_nonneg_right (h_bound ω) (abs_nonneg _)
+  -- Use Integrable.mono' with dominating function C * |g|
+  refine Integrable.mono' (hg.norm.const_mul C) hfg_meas ?_
+  filter_upwards with ω
+  simp only [Real.norm_eq_abs, Pi.mul_apply, abs_of_nonneg hC]
+  calc |f ω * g ω| = |f ω| * |g ω| := abs_mul _ _
+    _ ≤ C * |g ω| := mul_le_mul_of_nonneg_right (h_bound ω) (abs_nonneg _)
+
 /-- **Generalized lag-constancy for products** (extends `condexp_lag_constant_from_exchangeability`).
 
 For EXCHANGEABLE measures μ on path space, if P = ∏_{i<n} f_i(ω_i) is a product of
