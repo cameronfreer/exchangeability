@@ -862,6 +862,77 @@ lemma injective_implies_strictMono_perm {m : ℕ}
   -- sorted is an OrderIso, so it's strictly monotone
   exact sorted.strictMono hij
 
+/-! ### Collision Bound for Route B
+
+The key estimate for Route B: the fraction of non-injective maps φ : Fin m → Fin N
+tends to 0 as N → ∞, with rate O(m²/N).
+-/
+
+/-- The number of non-injective maps φ : Fin m → Fin N is at most m² * N^(m-1).
+
+**Proof:** A non-injective map has some pair (i, j) with i < j and φ(i) = φ(j).
+By union bound over the (m choose 2) ≤ m²/2 pairs, and for each pair there are
+at most N^(m-1) maps (φ is determined on m-2 free coordinates plus the collision).
+-/
+lemma card_nonInjective_le (m N : ℕ) (hN : 0 < N) :
+    Fintype.card {φ : Fin m → Fin N // ¬Function.Injective φ} ≤ m * m * N^(m - 1) := by
+  classical
+  -- A non-injective map has φ(i) = φ(j) for some i < j
+  -- Count: for each pair (i,j) with i < j, maps with φ(i) = φ(j)
+  -- There are (m choose 2) ≤ m²/2 such pairs
+  -- For each pair, there are N^(m-1) such maps (one constraint)
+  -- Total ≤ m² * N^(m-1)
+  sorry
+
+/-- The fraction of non-injective maps tends to 0 as N → ∞.
+
+For fixed m, the fraction (# non-injective) / N^m ≤ m²/N → 0.
+-/
+lemma nonInjective_fraction_tendsto_zero (m : ℕ) :
+    Tendsto (fun N => (Fintype.card {φ : Fin m → Fin N // ¬Function.Injective φ} : ℝ) / (N : ℝ)^m)
+            atTop (𝓝 0) := by
+  -- Use card_nonInjective_le: count ≤ m² * N^(m-1)
+  -- So fraction ≤ m² * N^(m-1) / N^m = m² / N → 0
+  --
+  -- PROOF SKETCH:
+  -- 1. For N ≥ 1: fraction ≤ m² * N^(m-1) / N^m = m² / N
+  -- 2. m² / N → 0 as N → ∞ (by tendsto_const_div_atTop_nhds_zero_nat)
+  -- 3. Apply squeeze theorem with lower bound 0, upper bound m²/N
+  --
+  -- The key combinatorial estimate is in card_nonInjective_le.
+  -- The limit argument is standard.
+  sorry
+
+/-! ### Product L¹ Convergence
+
+For Route B, we need: if each factor converges in L¹, then the product converges in L¹
+(under boundedness assumptions).
+-/
+
+/-- Product of L¹-convergent bounded sequences converges in L¹.
+
+If f_n(i) → g(i) in L¹ for each i, and all functions are bounded by 1,
+then ∏_i f_n(i) → ∏_i g(i) in L¹.
+
+**Proof:** Telescoping. Write
+  ∏_i f_n(i) - ∏_i g(i) = ∑_j (∏_{i<j} f_n(i)) (f_n(j) - g(j)) (∏_{i>j} g(i))
+Each term has L¹ norm bounded by ‖f_n(j) - g(j)‖_L¹ (since other factors ≤ 1).
+Sum over j gives ∑_j ‖f_n(j) - g(j)‖_L¹ → 0.
+-/
+lemma prod_tendsto_L1_of_L1_tendsto
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {m : ℕ} (f : ℕ → Fin m → Ω → ℝ) (g : Fin m → Ω → ℝ)
+    (hf_bdd : ∀ n i ω, |f n i ω| ≤ 1)
+    (hg_bdd : ∀ i ω, |g i ω| ≤ 1)
+    (hf_meas : ∀ n i, AEStronglyMeasurable (f n i) μ)
+    (hg_meas : ∀ i, AEStronglyMeasurable (g i) μ)
+    (h_conv : ∀ i, Tendsto (fun n => ∫ ω, |f n i ω - g i ω| ∂μ) atTop (𝓝 0)) :
+    Tendsto (fun n => ∫ ω, |∏ i : Fin m, f n i ω - ∏ i : Fin m, g i ω| ∂μ) atTop (𝓝 0) := by
+  -- Telescoping argument:
+  -- |∏ f - ∏ g| ≤ ∑_j |f_j - g_j| (when all factors bounded by 1)
+  -- Then ∫ |∏ f - ∏ g| ≤ ∑_j ∫ |f_j - g_j| → 0
+  sorry
+
 /-- The bridge property: E[∏ᵢ 𝟙_{Bᵢ}(X_{k(i)})] = E[∏ᵢ ν(·)(Bᵢ)].
 
 This is the key property needed for complete_from_directing_measure.
