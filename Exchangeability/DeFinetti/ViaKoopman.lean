@@ -860,8 +860,8 @@ currently broken due to Lean 4's type class synthesis with sub-σ-algebras. Even
 the naming pattern `[mΩ : MeasurableSpace Ω]` and `hm : m ≤ mΩ`, mathlib lemmas
 synthesize `m` when they should infer `mΩ`, causing 18+ type class errors.
 
-These lemmas are kept for reference but commented out. See the documentation in
-`birkhoffAverage_tendsto_condexp_L2` below for details.
+These lemmas are kept for reference but commented out. See `MET_IMPLEMENTATION_FINDINGS.md`
+in the deprecated docs for details on the type class synthesis issues.
 -/
 
 /-
@@ -1018,74 +1018,6 @@ private theorem birkhoffAverage_condexp_m_constant
     _ = MeasureTheory.condExp m μ f := rfl
 -/
 
-/-! ### Mean Ergodic Theorem for General (T, m)
-
-The following theorem states L² convergence of Birkhoff averages to conditional expectation
-for a general measure-preserving transformation T and T-invariant sub-σ-algebra m.
-
-Currently left as `sorry` due to type class synthesis issues. See theorem body for details.
-
-**IMPLEMENTATION ANALYSIS** (2025-12-10):
-
-This general (T, m) lemma is **not needed** for the actual shift-based Koopman proof.
-It's only used in descriptive comments and in some old, now-dead code.
-
-**Available infrastructure**:
-- Koopman MET via `Exchangeability.Ergodic.birkhoffAverage_tendsto_metProjection`
-- Projection lemmas relating MET's projection to `condexpL2` via
-  `Exchangeability.Ergodic.ProjectionLemmas` (e.g. `proj_eq_condexp` or similar)
-- Already used in `productCylinderLp` lemma around line ~2290
-
-**Recommended options**:
-1. **Option A (pragmatic)**: Comment out entirely since nothing depends on it
-2. **Option B (axiom)**: Convert to axiom if needed as a lemma name for later
-
-Given we have the shift-specific MET in `KoopmanMeanErgodic.lean`, Option A is preferred.
-Re-proving this general lemma would require implementing MET projection story with
-explicit instance locking for sub-σ-algebras - a lot of work with duplication.
--/
-
-/-- L² mean-ergodic theorem in function form:
-the Cesàro averages of `f ∘ T^[j]` converge in L² to `condExp m μ f`, provided
-`m` is `T`-invariant.  This is a thin wrapper around mathlib's L² MET.
--/
-private theorem birkhoffAverage_tendsto_condexp_L2
-    {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (T : Ω → Ω) (hT_meas : Measurable T) (hT_pres : MeasurePreserving T μ μ)
-    {m : MeasurableSpace Ω} (hm : m ≤ mΩ)
-    (h_inv : ∀ s, MeasurableSet[m] s → T ⁻¹' s = s)
-    (f : Ω → ℝ) (hf_int : Integrable f μ) :
-    Tendsto (fun n =>
-      eLpNorm
-        (fun ω =>
-          (1 / ((n : ℕ) + 1 : ℝ)) *
-              (Finset.range ((n : ℕ) + 1)).sum (fun j => f (T^[j] ω))
-          - MeasureTheory.condExp m μ f ω) 2 μ)
-      atTop (𝓝 0) := by
-  /-
-    **BLOCKER**: Type class synthesis issues with sub-σ-algebras
-
-    **Attempted approach (Option A)**: "Project first, then average"
-    Key insight: For T-invariant m, conditional expectation commutes with T, so:
-      𝔼[Birkhoff average_n | m] = 𝔼[f | m]  for all n
-
-    This would make convergence trivial, but the implementation is blocked by Lean 4's
-    type class synthesis for sub-σ-algebras. Even with the naming pattern:
-      `[mΩ : MeasurableSpace Ω]` with `hm : m ≤ mΩ`
-    Lean still synthesizes `m` when it should infer `mΩ` in mathlib lemmas.
-
-    **The supporting lemmas** (`condexp_comp_T_eq_condexp`, etc.) have 18+ type class errors.
-
-    **Alternative approaches**:
-    - Option B (Koopman): Use existing MET infrastructure from `KoopmanMeanErgodic.lean`,
-      but this requires connecting ambient σ-algebra Koopman operator with sub-σ-algebra
-      conditional expectation (see `MET_IMPLEMENTATION_FINDINGS.md`)
-    - Direct proof: Prove MET for sub-σ-algebras without Koopman (2-3 weeks effort)
-
-    **For now**: Leave as sorry to unblock downstream work. The general (T, m) version
-    is not needed for the main shift-based proof which works correctly.
-  -/
-  sorry
 /-- Helper: shift^[k] y n = y (n + k) -/
 private lemma shift_iterate_apply (k n : ℕ) (y : Ω[α]) :
     (shift (α := α))^[k] y n = y (n + k) := by
@@ -1124,7 +1056,7 @@ This proof has 5 clear sections that could be extracted as helper lemmas:
    - Could extract as: `product_ce_constant_of_lag_const`
 
 3. **h_L1_An_to_CE** (lines ~1895-2017): L² MET ⇒ L¹ convergence of Cesàro averages
-   - Currently has `sorry` at line ~1925 pending `birkhoffAverage_tendsto_condexp_L2`
+   - Now uses shift-specific MET from `KoopmanMeanErgodic.lean` instead
    - Could extract as: `L1_cesaro_convergence`
 
 4. **h_L1_CE** (lines ~2021-2144): Pull convergence through CE using L¹-Lipschitz property
@@ -1134,8 +1066,8 @@ This proof has 5 clear sections that could be extracted as helper lemmas:
 5. **Final assembly** (lines ~2148-2197): Constant sequence = 0 ⇒ a.e. equality
    - Short, should stay in main theorem
 
-Current decision: Leave as-is. The proof is well-commented and the `sorry` at line ~1925 blocks
-extraction. Revisit subdivision after the ergodic theory machinery is complete.
+Current decision: Leave as-is. The proof is well-commented. The shift-specific MET from
+`KoopmanMeanErgodic.lean` is now used instead of a general (T, m) version.
 -/
 
 /-- **Section 1 helper**: Cesàro averages have constant conditional expectation.
@@ -7155,13 +7087,14 @@ and refined. No immediate subdivision needed - the inductive structure is natura
 theorem condexp_product_factorization
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
+    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
     (m : ℕ) (fs : Fin m → α → ℝ)
     (hmeas : ∀ k, Measurable (fs k))
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
     (hciid : True) :
     μ[fun ω => ∏ k, fs k (ω (k : ℕ)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω)) :=
-  condexp_product_factorization_ax μ hσ m fs hmeas hbd hciid
+  condexp_product_factorization_ax μ hσ hExch m fs hmeas hbd
   /-
   · -- Inductive step: split product into (product of first m factors) * (last factor)
     -- Reindex: product over Fin (m + 1) splits into product over Fin m and the m-th term
@@ -7437,7 +7370,8 @@ in a standard Borel space α, then there exists a regular conditional distributi
 -/
 theorem deFinetti_viaKoopman
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
-    (hσ : MeasurePreserving shift μ μ) :
+    (hσ : MeasurePreserving shift μ μ)
+    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ) :
     ∃ (ν : Ω[α] → Measure α),
       (∀ᵐ ω ∂μ, IsProbabilityMeasure (ν ω)) ∧
       (∀ (m : ℕ) (fs : Fin m → α → ℝ),
@@ -7456,7 +7390,7 @@ theorem deFinetti_viaKoopman
     intro m fs hmeas hbd
     -- Apply condexp_product_factorization
     -- (which currently has sorry, pending conditional independence setup)
-    exact condexp_product_factorization hσ m fs hmeas hbd True.intro
+    exact condexp_product_factorization hσ hExch m fs hmeas hbd True.intro
 
 /-! ### Bridge Lemma: Connect conditional expectation factorization to measure products
 
