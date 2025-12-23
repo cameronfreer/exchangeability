@@ -200,15 +200,35 @@ def ConditionallyIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
 /-- A random sequence ξ is a **mixture of i.i.d.** sequences if its distribution is a mixture of
 i.i.d. distributions: P{ξ ∈ ·} = E[ν^∞] = ∫ m^∞ P(ν ∈ dm).
 
-This is obtained by taking expectations in the conditionally i.i.d. definition.
+This kernel-based definition uses the same directing kernel ν : Ω → Measure α as ConditionallyIID,
+but expresses the property via finite-dimensional marginals: for distinct indices k, the joint
+distribution factors as a product under the kernel ν(ω).
 
-TODO: Full definition requires integration over the space of measures and
-product measure construction. For now, we use a simplified placeholder. -/
-def MixtureOfIID (_μ : Measure Ω) (_X : ℕ → Ω → α) : Prop :=
-  ∃ (ν : Measure (Measure α)),
-    IsProbabilityMeasure ν ∧
-    -- Placeholder: full definition needs integration over measure spaces
-    True
+**Equivalence with ConditionallyIID**: By definition, MixtureOfIID is equivalent to ConditionallyIID.
+Both assert the existence of a measurable probability kernel ν such that finite-dimensional
+marginals are products of ν(ω). The names emphasize different perspectives:
+- "ConditionallyIID" emphasizes conditional independence given the directing random measure
+- "MixtureOfIID" emphasizes that the overall distribution is a mixture over directing measures
+
+**Reference:** Kallenberg (2005), Theorem 1.1 (page 27-28). -/
+def MixtureOfIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
+  ∃ ν : Ω → Measure α,
+    (∀ ω, IsProbabilityMeasure (ν ω)) ∧
+    (∀ B, MeasurableSet B → Measurable (fun ω => ν ω B)) ∧
+      ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
+        Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
+          = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)
+
+/-- ConditionallyIID and MixtureOfIID are definitionally equivalent.
+
+Both properties assert the existence of a measurable probability kernel ν : Ω → Measure α
+such that finite-dimensional marginals are products under ν. The two names emphasize
+different interpretations of de Finetti's theorem:
+- "ConditionallyIID" emphasizes conditional independence given the directing measure
+- "MixtureOfIID" emphasizes the mixture representation of exchangeable sequences -/
+theorem conditionallyIID_iff_mixtureOfIID {μ : Measure Ω} {X : ℕ → Ω → α} :
+    ConditionallyIID μ X ↔ MixtureOfIID μ X :=
+  Iff.rfl
 
 /-- Helper lemma: Permuting coordinates after taking a product is the same as taking the product
 and then permuting. -/
