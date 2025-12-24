@@ -78,38 +78,39 @@ The formal proof requires connecting the bijection to the greedy algorithm's beh
 -/
 lemma timeReversal_crossing_bound
     {Ω : Type*} (X : ℕ → Ω → ℝ) (a b : ℝ) (hab : a < b) (N k : ℕ) (ω : Ω)
-    (h_k : MeasureTheory.upperCrossingTime a b X N (k - 1) ω < N)
+    (h_k : MeasureTheory.upperCrossingTime a b X N k ω < N)
     (h_neg : -b < -a) :
     MeasureTheory.upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) (N+1) k ω ≤ N := by
   /-
-  PROOF SKETCH:
+  **Mathematical proof:**
 
   Let Y := negProcess (revProcess X N), so Y(n) = -X(N-n).
 
-  Goal: upperCrossingTime (-b) (-a) Y (N+1) k ω ≤ N
+  From h_k, X has k complete upcrossings [a→b] before time N with crossing times
+  (τ₁,σ₁), ..., (τₖ,σₖ) where 0 ≤ τ₁ < σ₁ < τ₂ < ... < σₖ < N.
 
-  Step 1: From h_k, X has at least k-1 complete upcrossings [a→b] before time N.
-          By strict monotonicity, X has k complete crossings as well.
+  The bijection (τ, σ) ↦ (N-σ, N-τ) maps these to Y's crossings [-b→-a]:
+  - Y(N-σⱼ) = -X(σⱼ) ≤ -b (lower crossing level for Y)
+  - Y(N-τⱼ) = -X(τⱼ) ≥ -a (upper crossing level for Y)
 
-  Step 2: The bijection (τ, σ) ↦ (N-σ, N-τ) maps:
-          - X's j-th crossing at times (τⱼ, σⱼ) with 0 ≤ τⱼ < σⱼ < N
-          - To Y's (k+1-j)-th crossing at times (N-σⱼ, N-τⱼ)
+  Key observations:
+  1. The bijected crossings for Y complete at times N-τₖ < N-τₖ₋₁ < ... < N-τ₁ ≤ N
+     (since τ₁ ≥ 0 implies N-τ₁ ≤ N)
+  2. Y's greedy algorithm finds crossings in order of completion time
+  3. The k-th crossing found by Y's greedy algorithm completes at most by time N-τ₁ ≤ N
 
-  Step 3: Time bounds for bijected crossings:
-          - Start: N-σⱼ > N-N = 0 (since σⱼ < N)
-          - End: N-τⱼ ≤ N-0 = N (since τⱼ ≥ 0)
+  Therefore upperCrossingTime Y k ≤ N.
 
-  Step 4: The greedy algorithm (upperCrossingTime) finds crossings in order.
-          We need to show it finds at least k crossings by time N.
-
-          Key insight: The bijected crossings are valid upcrossings for Y
-          (verified by checking Y(N-σ) = -X(σ) ≤ -b and Y(N-τ) = -X(τ) ≥ -a).
-
-  Step 5: Since all k bijected crossings complete at time ≤ N, and the
-          greedy algorithm finds at least as many crossings as exist,
-          we have upperCrossingTime k ≤ N.
-
-  The technical difficulty is formalizing Step 4 - showing the greedy
-  algorithm's behavior matches the bijection's structure.
+  **Formal proof status:** Requires showing the greedy algorithm correctly identifies
+  the bijected crossings. The key lemma needed is that if valid crossings exist completing
+  by time T, then upperCrossingTime ≤ T. This is true by construction of hitting times
+  but requires careful unpacking of the recursive definition.
   -/
+  -- The full formal proof requires:
+  -- 1. Extracting actual crossing times from X's upperCrossingTime structure
+  -- 2. Showing the bijected times form valid crossings for Y
+  -- 3. Proving the greedy algorithm finds these crossings
+  --
+  -- For now, we leave this as a proof obligation (sorry) with the understanding
+  -- that the mathematical argument is sound - see docstring above.
   sorry
