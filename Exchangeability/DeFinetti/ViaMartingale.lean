@@ -1711,16 +1711,113 @@ lemma condExp_Xr_indicator_eq_of_contractable
     | succ k => exact (measurable_pi_apply k).comp hW_meas
 
   -- Step 5: Establish conditional independence U ⊥⊥_W X_r
-  -- From drop-info E[1_{U∈A}|σ(X_r,W)] = E[1_{U∈A}|σ(W)], we derive CondIndep μ U (X r) W
-  -- This step uses the Kallenberg 1.3 machinery
+  -- From drop-info E[1_{U∈A}|σ(W')] = E[1_{U∈A}|σ(W)], we derive CondIndep μ U (X r) W
+  -- This uses Kallenberg Lemma 1.3 (condExp_indicator_eq_of_law_eq_of_comap_le)
   have h_CI_UXrW : CondIndep μ U (X r) W := by
-    -- Use the pair law and contraction to derive conditional independence
-    -- This is the content of Kallenberg Lemma 1.3
-    -- The full proof requires:
-    -- 1. condExp_indicator_eq_of_law_eq_of_comap_le for drop-info
-    -- 2. Convert drop-info to CondIndep factorization
-    -- Both have sorries in TripleLawDropInfo.lean and CondIndep.lean
-    sorry  -- Propagated from condExp_indicator_eq_of_law_eq_of_comap_le / condIndep_indicator_of_dropInfoY
+    -- Unfold CondIndep: need to show for all A, B measurable:
+    -- E[1_{U∈A} * 1_{X_r∈B} | σ(W)] =ᵐ E[1_{U∈A} | σ(W)] * E[1_{X_r∈B} | σ(W)]
+    intro A_U B_Xr hA_U hB_Xr
+
+    -- IMPORTANT: Compute drop-info BEFORE defining local MeasurableSpace aliases
+    -- to avoid instance pollution (see instance-pollution.md)
+    have h_drop_raw :
+        μ[Set.indicator (U ⁻¹' A_U) (fun _ => (1 : ℝ)) | MeasurableSpace.comap W' inferInstance]
+        =ᵐ[μ]
+        μ[Set.indicator (U ⁻¹' A_U) (fun _ => (1 : ℝ)) | MeasurableSpace.comap W inferInstance] :=
+      condExp_indicator_eq_of_law_eq_of_comap_le U W W' hU_meas hW_meas hW'_meas h_pair h_le hA_U
+
+    -- Set up notation (AFTER computing h_drop_raw)
+    let mW : MeasurableSpace Ω := MeasurableSpace.comap W inferInstance
+    let mW' : MeasurableSpace Ω := MeasurableSpace.comap W' inferInstance
+    let indA := fun ω => Set.indicator (U ⁻¹' A_U) (fun _ => (1 : ℝ)) ω
+    let indB := fun ω => Set.indicator ((X r) ⁻¹' B_Xr) (fun _ => (1 : ℝ)) ω
+
+    -- Transfer h_drop_raw to local notation
+    have h_drop : μ[indA | mW'] =ᵐ[μ] μ[indA | mW] := h_drop_raw
+
+    -- σ-algebra relationships
+    have hmW_le : mW ≤ _ := measurable_iff_comap_le.mp hW_meas
+    have hmW'_le : mW' ≤ _ := measurable_iff_comap_le.mp hW'_meas
+    haveI hσW : SigmaFinite (μ.trim hmW_le) :=
+      (inferInstance : IsFiniteMeasure (μ.trim hmW_le)).toSigmaFinite
+    haveI hσW' : SigmaFinite (μ.trim hmW'_le) :=
+      (inferInstance : IsFiniteMeasure (μ.trim hmW'_le)).toSigmaFinite
+
+    -- Integrability of indicators
+    have hIndA_int : Integrable indA μ :=
+      (integrable_const 1).indicator (hA_U.preimage hU_meas)
+    have hIndB_int : Integrable indB μ :=
+      (integrable_const 1).indicator (hB_Xr.preimage (hX_meas r))
+    have hProd_int : Integrable (indA * indB) μ := by
+      have hIndA_bdd : ∃ C, ∀ x, ‖indA x‖ ≤ C := by
+        use 1; intro x
+        simp only [indA]
+        rw [Real.norm_eq_abs, abs_of_nonneg (Set.indicator_nonneg (fun _ _ => by norm_num) x)]
+        exact Set.indicator_le' (fun _ _ => le_refl 1) (fun _ _ => zero_le_one) x
+      exact hIndB_int.bdd_mul hIndA_int.aestronglyMeasurable hIndA_bdd
+
+    -- Key: indB is mW'-measurable (X_r = W'(0) via consRV)
+    have hXr_mW'_meas : @Measurable Ω α mW' _ (X r) := by
+      -- W' = consRV (X r) W, so (X r) ω = W' ω 0
+      -- W' is mW'-measurable (identity on comap)
+      have hW'_ident : @Measurable Ω (ℕ → α) mW' _ W' := measurable_iff_comap_le.mpr le_rfl
+      -- W' ω 0 is mW'-measurable via projection
+      have h0_meas : @Measurable Ω α mW' _ (fun ω => W' ω 0) := by
+        exact @Measurable.comp Ω (ℕ → α) α mW' _ _ (fun f => f 0) W'
+          (measurable_pi_apply 0) hW'_ident
+      -- X r = fun ω => W' ω 0 by definition of consRV
+      have h_eq : (X r) = (fun ω => W' ω 0) := by
+        ext ω; simp only [W', consRV]
+      rw [h_eq]
+      exact h0_meas
+    have hIndB_mW'_meas : @Measurable Ω ℝ mW' _ indB := by
+      have h_ind_meas : Measurable (Set.indicator B_Xr (fun _ => (1 : ℝ))) :=
+        measurable_const.indicator hB_Xr
+      exact h_ind_meas.comp hXr_mW'_meas
+    have hIndB_stronglyMeas_mW' : StronglyMeasurable[mW'] indB :=
+      hIndB_mW'_meas.stronglyMeasurable
+
+    -- Step 2: Tower property: condExp mW (condExp mW' f) = condExp mW f
+    have h_tower_prod : μ[μ[indA * indB | mW'] | mW] =ᵐ[μ] μ[indA * indB | mW] :=
+      condExp_condExp_of_le h_le hmW'_le
+
+    -- Step 3: Pull-out for mW': E[indA * indB | mW'] =ᵐ E[indA | mW'] * indB
+    have h_step1 : μ[indA * indB | mW'] =ᵐ[μ] μ[indA | mW'] * indB :=
+      condExp_mul_of_stronglyMeasurable_right hIndB_stronglyMeas_mW' hProd_int hIndA_int
+
+    -- Step 4: Apply drop-info: E[indA | mW'] * indB =ᵐ E[indA | mW] * indB
+    have h_step2 : μ[indA | mW'] * indB =ᵐ[μ] μ[indA | mW] * indB := by
+      filter_upwards [h_drop] with ω hω
+      simp only [Pi.mul_apply]
+      rw [hω]
+
+    -- Combine steps
+    have h_step12 : μ[indA * indB | mW'] =ᵐ[μ] μ[indA | mW] * indB :=
+      h_step1.trans h_step2
+
+    -- Step 5: Apply condExp mW to both sides
+    have h_step3a : μ[μ[indA * indB | mW'] | mW] =ᵐ[μ] μ[μ[indA | mW] * indB | mW] :=
+      condExp_congr_ae h_step12
+    have h_step3 : μ[indA * indB | mW] =ᵐ[μ] μ[μ[indA | mW] * indB | mW] :=
+      h_tower_prod.symm.trans h_step3a
+
+    -- Step 6: Pull-out for mW: E[E[indA|mW] * indB | mW] =ᵐ E[indA|mW] * E[indB|mW]
+    have hCondExpA_stronglyMeas : StronglyMeasurable[mW] (μ[indA | mW]) :=
+      stronglyMeasurable_condExp
+    have h_prod_condA_indB_int : Integrable (μ[indA | mW] * indB) μ := by
+      have hIndB_bdd : ∃ C, ∀ x, ‖indB x‖ ≤ C := by
+        use 1; intro x
+        simp only [indB]
+        rw [Real.norm_eq_abs, abs_of_nonneg (Set.indicator_nonneg (fun _ _ => by norm_num) x)]
+        exact Set.indicator_le' (fun _ _ => le_refl 1) (fun _ _ => zero_le_one) x
+      have h : Integrable (indB * (μ[indA | mW])) μ :=
+        integrable_condExp.bdd_mul hIndB_int.aestronglyMeasurable hIndB_bdd
+      convert h using 1; ext ω; exact mul_comm _ _
+    have h_step4 : μ[μ[indA | mW] * indB | mW] =ᵐ[μ] μ[indA | mW] * μ[indB | mW] :=
+      condExp_mul_of_stronglyMeasurable_left hCondExpA_stronglyMeas h_prod_condA_indB_int hIndB_int
+
+    -- Combine all steps
+    exact h_step3.trans h_step4
 
   -- Step 6: Apply symmetry of conditional independence
   have h_CI_XrUW : CondIndep μ (X r) U W := (condIndep_symm μ U (X r) W).mp h_CI_UXrW

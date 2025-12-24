@@ -9,6 +9,7 @@ import Exchangeability.DeFinetti.ViaL2.MainConvergence
 import Exchangeability.DeFinetti.L2Helpers
 import Exchangeability.Contractability
 import Mathlib.MeasureTheory.Function.LpSpace.Basic
+import Mathlib.Data.Finset.Sort
 
 /-!
 # Additional L² Helpers and Incomplete Lemmas
@@ -782,6 +783,85 @@ lemma integral_alphaIic_eq_marginal
         exact h_alphaIic_eq
     _ = (μ (X 0 ⁻¹' Set.Iic t)).toReal := h_limit_integral
 
+/-! ### Injective to StrictMono via Sorting
+
+For the bridge property, we need to convert an injective function `k : Fin m → ℕ`
+to a strictly monotone one. This is done by sorting the image of k.
+-/
+
+/-- Any injective function `k : Fin m → ℕ` can be composed with a permutation
+to become strictly monotone.
+
+**Construction:** Let `s := image k univ` (the image of k as a finset of ℕ).
+Since k is injective, `s.card = m`. The `orderIsoOfFin` gives the sorted
+enumeration of s. We define σ to map i to the position of k(i) in the sorted order.
+
+**Key property:** `(fun i => k (σ i))` is strictly increasing (sorted order). -/
+lemma injective_implies_strictMono_perm {m : ℕ}
+    (k : Fin m → ℕ) (hk : Function.Injective k) :
+    ∃ (σ : Equiv.Perm (Fin m)), StrictMono (fun i => k (σ i)) := by
+  classical
+  -- Define the image of k as a finset
+  let s : Finset ℕ := Finset.image k Finset.univ
+  -- By injectivity, s has cardinality m
+  have hs : s.card = m := by
+    simp only [s, Finset.card_image_of_injective Finset.univ hk, Finset.card_univ, Fintype.card_fin]
+  -- Get the sorted enumeration of s
+  let sorted : Fin m ≃o ↑s := Finset.orderIsoOfFin s hs
+  -- For each i : Fin m, k(i) is in s, so we can find its sorted position
+  have hk_mem : ∀ i : Fin m, k i ∈ s := by
+    intro i
+    simp only [s, Finset.mem_image, Finset.mem_univ, true_and]
+    exact ⟨i, rfl⟩
+  -- Define σ: for each position j in sorted order, find which i : Fin m maps to it
+  -- sorted j gives the j-th smallest element of s
+  -- We want σ such that k (σ j) = sorted j
+  -- Define σ⁻¹ first: σ⁻¹(i) = sorted position of k(i)
+  let σ_inv : Fin m → Fin m := fun i =>
+    sorted.symm ⟨k i, hk_mem i⟩
+  -- σ_inv is injective because sorted.symm and k are both injective
+  have hσ_inv_inj : Function.Injective σ_inv := by
+    intro i j hij
+    simp only [σ_inv] at hij
+    have h := sorted.symm.injective hij
+    simp only [Subtype.mk.injEq] at h
+    exact hk h
+  -- Since σ_inv : Fin m → Fin m is injective, it's a bijection (by Fintype.bijective_iff_injective_and_card)
+  have hσ_inv_bij : Function.Bijective σ_inv := by
+    rw [Fintype.bijective_iff_injective_and_card]
+    exact ⟨hσ_inv_inj, rfl⟩
+  -- Convert to an Equiv.Perm
+  let σ : Equiv.Perm (Fin m) := Equiv.ofBijective σ_inv hσ_inv_bij
+  -- Now σ.symm is the permutation we want
+  use σ.symm
+  -- Show k ∘ σ.symm is strictly monotone
+  intro i j hij
+  -- σ.symm(i) is the unique index such that σ_inv(σ.symm(i)) = i
+  -- i.e., sorted position of k(σ.symm(i)) is i
+  -- So k(σ.symm(i)) = sorted(i) (the i-th smallest element)
+  have h_eq_i : k (σ.symm i) = ↑(sorted i) := by
+    have h1 : σ_inv (σ.symm i) = i := by
+      simp only [σ, Equiv.ofBijective_apply_symm_apply]
+    simp only [σ_inv] at h1
+    have h2 : sorted.symm ⟨k (σ.symm i), hk_mem (σ.symm i)⟩ = i := h1
+    have h3 := sorted.apply_symm_apply ⟨k (σ.symm i), hk_mem (σ.symm i)⟩
+    rw [h2] at h3
+    exact Subtype.ext_iff.mp h3.symm
+  have h_eq_j : k (σ.symm j) = ↑(sorted j) := by
+    have h1 : σ_inv (σ.symm j) = j := by
+      simp only [σ, Equiv.ofBijective_apply_symm_apply]
+    simp only [σ_inv] at h1
+    have h2 : sorted.symm ⟨k (σ.symm j), hk_mem (σ.symm j)⟩ = j := h1
+    have h3 := sorted.apply_symm_apply ⟨k (σ.symm j), hk_mem (σ.symm j)⟩
+    rw [h2] at h3
+    exact Subtype.ext_iff.mp h3.symm
+  -- Goal: (fun i => k (σ.symm i)) i < (fun i => k (σ.symm i)) j
+  -- This simplifies to: k (σ.symm i) < k (σ.symm j)
+  simp only
+  rw [h_eq_i, h_eq_j]
+  -- sorted is an OrderIso, so it's strictly monotone
+  exact sorted.strictMono hij
+
 /-- The bridge property: E[∏ᵢ 𝟙_{Bᵢ}(X_{k(i)})] = E[∏ᵢ ν(·)(Bᵢ)].
 
 This is the key property needed for complete_from_directing_measure.
@@ -792,66 +872,86 @@ lemma directing_measure_bridge
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
-    {m : ℕ} (k : Fin m → ℕ) (B : Fin m → Set ℝ)
-    (hB : ∀ i, MeasurableSet (B i)) :
+    {m : ℕ} (k : Fin m → ℕ) (hk : Function.Injective k)
+    (B : Fin m → Set ℝ) (hB : ∀ i, MeasurableSet (B i)) :
     ∫⁻ ω, ∏ i : Fin m,
         ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) ∂μ
       = ∫⁻ ω, ∏ i : Fin m,
         directing_measure X hX_contract hX_meas hX_L2 ω (B i) ∂μ := by
   classical
-  -- Proof by induction on m (number of factors)
-  induction m with
-  | zero =>
-      -- Base case: empty product = 1
-      simp [Finset.prod_empty]
-  | succ m IH =>
-      -- TODO: Complete bridge property inductive step
-      --
-      -- INDUCTIVE STEP STRATEGY (5 steps):
-      --
-      -- STEP 1: Reorder to make k(m) maximal
-      -- Let N = max_{i ≤ m} k(i), and assume k(m) = N (WLOG by contractability).
-      -- If not, use contractability to permute indices: since μ is contractable,
-      -- we can swap k(j) ↔ k(m) for any j without changing the distribution.
-      -- This requires:
-      -- - Identifying the maximum index
-      -- - Constructing an appropriate permutation σ with σ(m) giving max
-      -- - Applying contractability: μ ∘ X_σ⁻¹ = μ ∘ X
-      --
-      -- STEP 2: Factor the product
-      -- Write:
-      --   ∏_{i : Fin (m+1)} 1_{B_i}(X_{k(i)}) = H · 1_{B_m}(X_N)
-      -- where H := ∏_{i : Fin m} 1_{B_i}(X_{k(i)}) is the product of first m terms.
-      -- Similarly factor the directing measure product:
-      --   ∏_{i : Fin (m+1)} ν(·)(B_i) = (∏_{i : Fin m} ν(·)(B_i)) · ν(·)(B_m)
-      --
-      -- STEP 3: Use directing_measure_integral for the last factor
-      -- From directing_measure_integral applied to f = 1_{B_m}:
-      --   ∀ᵐ ω, α_{1_{B_m}}(ω) = ∫ 1_{B_m} d(ν(ω)) = ν(ω)(B_m)
-      -- where α_{1_{B_m}} is the L¹ limit of blockAvg (1_{B_m}) X n k.
-      -- By the L¹ convergence property, we can replace 1_{B_m}(X_N(ω))
-      -- with ν(ω)(B_m) in expectation (up to approximation).
-      --
-      -- STEP 4: Apply tower property (iterated conditioning)
-      -- H is measurable w.r.t. σ(X_j | j ≤ N-1) (the "past").
-      -- X_N is "future" relative to this σ-algebra.
-      -- By contractability/exchangeability:
-      --   E[H · 1_{B_m}(X_N)] = E[H · E[1_{B_m}(X_N) | σ(X_j, j ≤ N-1)]]
-      --                       = E[H · ν(·)(B_m)]
-      -- This uses the tower property of conditional expectation:
-      --   E[Y·Z | ℱ] = Y · E[Z | ℱ] when Y is ℱ-measurable
-      --
-      -- STEP 5: Apply induction hypothesis
-      -- By IH applied to the product of m terms:
-      --   ∫⁻ ω, H ω · ν(ω)(B_m) ∂μ = ∫⁻ ω, (∏_{i : Fin m} ν(ω)(B_i)) · ν(ω)(B_m) ∂μ
-      -- Combining Steps 2-5 gives the result.
-      --
-      -- REQUIRED MATHLIB LEMMAS:
-      -- - Finset.prod_bij: bijection between products (for reindexing)
-      -- - MeasureTheory.condExp_of_stronglyMeasurable: tower property
-      -- - ENNReal.lintegral_const_mul: factor out measurable functions
-      -- - Contractable.reindex: permutation invariance (may need to prove)
-      sorry
+  -- PROOF STRATEGY (using injective_implies_strictMono_perm + contractability):
+  --
+  -- STEP 1: Reduce to the strictly monotone case
+  -- By injective_implies_strictMono_perm, ∃ σ : Perm (Fin m) with k ∘ σ strictly monotone.
+  -- Reindexing: ∏_i 1_{B_i}(X_{k_i}) = ∏_j 1_{B_{σ j}}(X_{(k∘σ) j})
+  -- (Same product, different enumeration of factors)
+  --
+  -- STEP 2: Apply contractability
+  -- Since k ∘ σ is strictly monotone, by Contractable.allStrictMono_eq:
+  --   E[f(X_{(k∘σ) 0}, ..., X_{(k∘σ)(m-1)})] = E[f(X_0, ..., X_{m-1})]
+  -- Applied to f = ∏_j 1_{B_{σ j}}:
+  --   E[∏_j 1_{B_{σ j}}(X_{(k∘σ) j})] = E[∏_j 1_{B_{σ j}}(X_j)]
+  --
+  -- STEP 3: Similarly for RHS
+  -- ∏_i ν(·)(B_i) = ∏_j ν(·)(B_{σ j}) (same product, reindexed)
+  --
+  -- STEP 4: Prove the identity case (k = id)
+  -- Need: E[∏_j 1_{B_j}(X_j)] = E[∏_j ν(·)(B_j)]
+  -- This is the core reconstruction theorem requiring:
+  -- - Route B: U-statistic expansion with collision bound
+  -- - Or: Tower property with conditional independence
+  --
+  -- For now, we implement the reduction and leave the identity case as sorry.
+
+  -- Handle trivial case m = 0
+  cases m with
+  | zero => simp
+  | succ n =>
+    -- Step 1: Get the sorting permutation
+    obtain ⟨σ, hσ_mono⟩ := injective_implies_strictMono_perm k hk
+
+    -- Step 2: Reindex LHS
+    -- The product ∏_i f(i) equals ∏_j f(σ j) for any permutation σ
+    -- Since σ is a bijection, this is just (Equiv.prod_comp σ _).symm
+    have h_lhs_reindex : ∀ ω,
+        ∏ i : Fin (n + 1), ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω))
+      = ∏ j : Fin (n + 1), ENNReal.ofReal ((B (σ j)).indicator (fun _ => (1 : ℝ)) (X (k (σ j)) ω)) := by
+      intro ω
+      exact (Equiv.prod_comp σ _).symm
+    simp_rw [h_lhs_reindex]
+
+    -- Step 3: Reindex RHS similarly
+    have h_rhs_reindex : ∀ ω,
+        ∏ i : Fin (n + 1), directing_measure X hX_contract hX_meas hX_L2 ω (B i)
+      = ∏ j : Fin (n + 1), directing_measure X hX_contract hX_meas hX_L2 ω (B (σ j)) := by
+      intro ω
+      exact (Equiv.prod_comp σ _).symm
+    simp_rw [h_rhs_reindex]
+
+    -- Now k ∘ σ is strictly monotone. Let k' = k ∘ σ and B' = B ∘ σ.
+    -- We need to prove:
+    --   E[∏_j 1_{B'_j}(X_{k'_j})] = E[∏_j ν(·)(B'_j)]
+    -- where k' is strictly monotone.
+    --
+    -- By contractability (Contractable.allStrictMono_eq):
+    --   Distribution of (X_{k'_0}, ..., X_{k'_{n}}) = Distribution of (X_0, ..., X_n)
+    -- This means: E[∏_j 1_{B'_j}(X_{k'_j})] = E[∏_j 1_{B'_j}(X_j)]
+    --
+    -- So we reduce to proving the IDENTITY CASE:
+    --   E[∏_j 1_{B_j}(X_j)] = E[∏_j ν(·)(B_j)]
+    --
+    -- This requires proving that the finite-dimensional marginals of X
+    -- match those of the product measure ν(ω)^⊗m.
+    --
+    -- ROUTE B (U-statistic/collision bound) proves this directly:
+    -- 1. Define p_N(j)(ω) = (1/N) ∑_{i<N} 1_{B_j}(X_i ω)
+    -- 2. Show p_N(j) → ν(·)(B_j) in L¹ (from weighted_sums_converge_L1)
+    -- 3. Show ∏_j p_N(j) → ∏_j ν(·)(B_j) in L¹ (bounded product)
+    -- 4. Expand E[∏_j p_N(j)] as sum over maps φ : Fin m → Fin N
+    -- 5. Injective φ: use contractability (same distribution as identity)
+    -- 6. Non-injective φ: collision bound O(m²/N) → 0
+    -- 7. Take limit: E[∏_j 1_{B_j}(X_j)] = E[∏_j ν(·)(B_j)]
+    sorry
 
 /-- **Main packaging theorem for L² proof.**
 
@@ -885,9 +985,9 @@ theorem directing_measure_satisfies_requirements
   -- Property 2: ω ↦ ν(ω)(s) is measurable for measurable s
   · intro s hs
     exact directing_measure_measurable X hX_contract hX_meas hX_L2 s
-  -- Property 3: Bridge property (injectivity not actually needed)
-  · intro m k _hk_inj B hB
-    exact directing_measure_bridge X hX_contract hX_meas hX_L2 k B hB
+  -- Property 3: Bridge property (requires injectivity of k)
+  · intro m k hk_inj B hB
+    exact directing_measure_bridge X hX_contract hX_meas hX_L2 k hk_inj B hB
 
 end Exchangeability.DeFinetti.ViaL2
 
