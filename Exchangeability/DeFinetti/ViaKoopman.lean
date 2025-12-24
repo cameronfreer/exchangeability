@@ -1996,7 +1996,7 @@ lemma condexp_product_factorization_ax
                                             _ ≤ (Finset.range (m + 1)).sum (fun _ => Cg) := by
                                                   apply Finset.sum_le_sum; intro j _; exact hCg _
                                             _ = (m + 1) * Cg := by simp [Finset.sum_const, Finset.card_range]
-                            _ = Cg := by field_simp
+                              _ = Cg := by field_simp
                       · exact integrable_condExp
                     · intro ω; apply mul_le_mul_of_nonneg_right (hCP ω) (abs_nonneg _)
               _ = CP * ∫ ω, |A (m + 1) ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
@@ -2745,7 +2745,7 @@ lemma condexp_product_factorization_general
                                             _ ≤ (Finset.range (m + 1)).sum (fun _ => Cg') := by
                                                   apply Finset.sum_le_sum; intro j _; exact hCg' _
                                             _ = (m + 1) * Cg' := by simp [Finset.sum_const, Finset.card_range]
-                            _ = Cg' := by field_simp
+                              _ = Cg' := by field_simp
                       · exact integrable_condExp
                     · intro ω; apply mul_le_mul_of_nonneg_right (hCP ω) (abs_nonneg _)
               _ = CP * ∫ ω, |A (m + 1) ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := by
@@ -5391,26 +5391,18 @@ private theorem h_tower_of_lagConst_from_one
           (hg_meas.comp (measurable_pi_apply (j + 1))) Cg (fun ω => hCg (ω (j + 1)))
       have hCE_g_int : Integrable (μ[(fun ω => g (ω 0)) | mSI]) μ := integrable_condExp
       have hfA'_int : Integrable (fun ω' => f (ω' 0) * A' (n + 1) ω') μ := by
-        apply Integrable.of_abs_bounded hA'_int Cf
-        · intro ω
-          calc |f (ω 0) * A' (n + 1) ω|
-              = |f (ω 0)| * |A' (n + 1) ω| := abs_mul _ _
-            _ ≤ Cf * |A' (n + 1) ω| := by apply mul_le_mul_of_nonneg_right (hCf _) (abs_nonneg _)
-        · apply (hf_meas.comp (measurable_pi_apply 0)).mul
+        have hA'_meas : Measurable (fun ω => A' (n + 1) ω) := by
           simp only [A', if_neg (Nat.succ_ne_zero n)]
           apply Measurable.const_mul
           apply Finset.measurable_sum
           intro j _
           exact hg_meas.comp (measurable_pi_apply (j + 1))
+        exact Integrable.of_abs_bounded hA'_int Cf hCf_nn (fun ω => hCf (ω 0))
+          ((hf_meas.comp (measurable_pi_apply 0)).mul hA'_meas).aestronglyMeasurable
       have hfCE_int : Integrable (fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω') μ := by
-        apply Integrable.of_abs_bounded hCE_g_int Cf
-        · intro ω
-          calc |f (ω 0) * μ[(fun ω => g (ω 0)) | mSI] ω|
-              = |f (ω 0)| * |μ[(fun ω => g (ω 0)) | mSI] ω| := abs_mul _ _
-            _ ≤ Cf * |μ[(fun ω => g (ω 0)) | mSI] ω| := by
-                apply mul_le_mul_of_nonneg_right (hCf _) (abs_nonneg _)
-        · apply (hf_meas.comp (measurable_pi_apply 0)).mul
-          exact stronglyMeasurable_condExp.measurable
+        exact Integrable.of_abs_bounded hCE_g_int Cf hCf_nn (fun ω => hCf (ω 0))
+          ((hf_meas.comp (measurable_pi_apply 0)).mul
+            stronglyMeasurable_condExp.measurable).aestronglyMeasurable
       -- Use CE linearity and contraction
       have h_diff_eq : (fun ω' => f (ω' 0) * A' (n + 1) ω')
                      - (fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω')

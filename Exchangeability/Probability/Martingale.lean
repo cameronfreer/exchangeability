@@ -370,40 +370,24 @@ lemma upBefore_le_downBefore_rev_succ
           exact Nat.zero_lt_succ N
         | k + 1 =>
           have h_neg : -b < -a := by linarith
-          have h_k : upperCrossingTime a b X N k ω < N := by
-            by_cases hk_eq : upperCrossingTime a b X N (k + 1) ω = N
-            · omega
-            · exact lt_trans (upperCrossingTime_lt_succ hab hk_eq) hn
-          have _ih_k := ih k (Nat.lt_succ_self k) h_k
-          -- The k+1 crossings of X complete by time < N
-          -- Under bijection (τ, σ) ↦ (N-σ, N-τ), Y's crossings complete by time ≤ N
-          -- Since X's (k+1)-th crossing has τ < σ < N, Y's (k+1)-th crossing
-          -- completes at time N - τ ≤ N, giving the stronger bound ≤ N < N+1
+          -- hn tells us X has k+1 complete crossings (upperCrossingTime (k+1) < N)
+          -- The bijection maps these to Y having k+1 crossings by time N
           have h_bound : upperCrossingTime (-b) (-a)
               (negProcess (revProcess X N)) (N+1) (k+1) ω ≤ N :=
             -- **Time-reversal bijection for crossing times**
             --
             -- Mathematical argument:
             -- Let Y = negProcess (revProcess X N), so Y(n) = -X(N-n)
-            -- X's (k+1)-th upcrossing [a→b] ends at time σ where σ < N
+            -- X has k+1 upcrossings [a→b] with times (τ₁,σ₁),...,(τₖ₊₁,σₖ₊₁)
+            -- where 0 ≤ τ₁ < σ₁ < τ₂ < ... < τₖ₊₁ < σₖ₊₁ < N
+            --
             -- Under bijection (τ,σ) ↦ (N-σ, N-τ):
-            --   - X's crossing from τ to σ maps to Y's crossing from N-σ to N-τ
-            --   - Since σ < N, we have N-σ > 0
-            --   - Since τ ≥ 0 and τ < σ < N, we have 0 < N-σ < N-τ ≤ N
+            --   - X's j-th crossing at (τⱼ, σⱼ) maps to Y's crossing at (N-σⱼ, N-τⱼ)
+            --   - Y's crossings complete in reverse order at times N-τₖ₊₁, ..., N-τ₁
+            --   - All complete by time N-τ₁ ≤ N (since τ₁ ≥ 0)
             --
-            -- The bijection establishes a 1-1 correspondence between:
-            --   X's upcrossings [a→b] before time N
-            --   Y's upcrossings [-b→-a] ending by time N
-            --
-            -- The greedy algorithm finds these crossings (possibly in different order)
-            -- but crucially, all k+1 bijected crossings complete at time ≤ N, hence
-            -- upperCrossingTime (k+1) ≤ N.
-            --
-            -- This is axiomatized because the full proof requires showing:
-            -- 1. Bijection preserves crossing count (injection argument)
-            -- 2. Greedy algorithm finds at least as many crossings
-            -- 3. All bijected crossings complete at target time N-τ ≤ N
-            timeReversal_crossing_bound X a b hab N (k+1) ω h_k h_neg
+            -- The greedy algorithm finds at least k+1 crossings for Y by time N.
+            timeReversal_crossing_bound X a b hab N (k+1) ω hn h_neg
           exact Nat.lt_succ_of_le h_bound
 
     exact csSup_le_csSup hbdd2 hemp hsub
