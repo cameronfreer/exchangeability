@@ -904,23 +904,49 @@ lemma condIndep_simpleFunc_left
                     μ[ φ ∘ Y | mW ] * μ[ (sψ n) ∘ Z | mW ] := by
     intro n
     exact @condIndep_simpleFunc Ω α β γ m₀ _ _ _ μ _ Y Z W hCI φ (sψ n) hY hZ
-  -- Step 4: Final step - pass ae equality through L¹ limits
-  --
-  -- Infrastructure built above:
-  -- - sψ : ℕ → SimpleFunc β ℝ (simple function approximations of ψ)
-  -- - h_sψ_tendsto : sψ n → ψ pointwise
-  -- - h_sψ_bdd : |sψ n| ≤ |ψ|
-  -- - h_base : ∀ n, μ[(φ ∘ Y) * (sψ n ∘ Z) | mW] =ᵐ μ[φ ∘ Y | mW] * μ[sψ n ∘ Z | mW]
-  --
-  -- Remaining proof steps (to be filled):
-  -- 1. L¹ convergence: (φY)(sψn Z) → (φY)(ψZ) in L¹
-  --    - Use dominated convergence with dominator Mφ * Mψ
-  --    - Mφ = (φ.range.sup nnnorm).toReal bounds φ
-  -- 2. Apply tendsto_condexp_L1: μ[(φY)(sψn Z)|mW] → μ[(φY)(ψZ)|mW] in L¹
-  -- 3. L¹ convergence of RHS: μ[φY|mW] * μ[sψn Z|mW] → μ[φY|mW] * μ[ψZ|mW] in L¹
-  --    - Since μ[φY|mW] is bounded by Mφ and μ[sψn Z|mW] → μ[ψZ|mW] in L¹
-  -- 4. ae_eq passes through L¹ limits: if fn =ᵐ gn and both converge in L¹, limits are ae-equal
-  --    - Proof: ∫|f-g| ≤ ∫|f-fn| + ∫|fn-gn| + ∫|gn-g| → 0
+  -- Step 4: L¹ convergence of sψ n ∘ Z → ψ ∘ Z
+  have h_sψZ_L1 : Filter.Tendsto (fun n => ∫ ω, |sψ n (Z ω) - ψ (Z ω)| ∂μ) Filter.atTop (nhds 0) := by
+    -- Use dominated convergence with dominator 2Mψ (bounded, integrable on prob space)
+    -- Bound: |sψ n ∘ Z - ψ ∘ Z| ≤ |sψ n ∘ Z| + |ψ ∘ Z| ≤ |ψ ∘ Z| + |ψ ∘ Z| ≤ 2Mψ ae
+    -- Limit: sψ n → ψ pointwise, so |sψ n ∘ Z - ψ ∘ Z| → 0 pointwise
+    -- By DCT: ∫|sψ n ∘ Z - ψ ∘ Z| → 0
+    sorry
+  -- Step 5: Apply tendsto_condexp_L1
+  have h_CE_sψZ_L1 : Filter.Tendsto (fun n => ∫ ω, |μ[sψ n ∘ Z | mW] ω - μ[ψ ∘ Z | mW] ω| ∂μ)
+                     Filter.atTop (nhds 0) := by
+    -- Use tendsto_condexp_L1 from h_sψZ_L1
+    -- Need integrability of sψ n ∘ Z and ψ ∘ Z
+    sorry
+  -- Step 6: L¹ convergence of products (using boundedness of φ)
+  have h_prod_L1 : Filter.Tendsto (fun n => ∫ ω, |(φ (Y ω)) * (sψ n (Z ω)) - (φ (Y ω)) * (ψ (Z ω))| ∂μ)
+                   Filter.atTop (nhds 0) := by
+    -- |φ| ≤ Mφ := (φ.range.sup nnnorm).toReal
+    -- |(φY)(sψn Z) - (φY)(ψZ)| = |φY||sψn Z - ψZ| ≤ Mφ|sψn Z - ψZ|
+    -- So ∫|...| ≤ Mφ * ∫|sψn Z - ψZ| → 0
+    sorry
+  -- Step 7: CE of product converges in L¹
+  have h_CE_prod_L1 : Filter.Tendsto
+      (fun n => ∫ ω, |μ[(φ ∘ Y) * (sψ n ∘ Z) | mW] ω - μ[(φ ∘ Y) * (ψ ∘ Z) | mW] ω| ∂μ)
+      Filter.atTop (nhds 0) := by
+    -- Apply tendsto_condexp_L1 to h_prod_L1
+    sorry
+  -- Step 8: RHS product converges in L¹
+  -- μ[φY|mW] * μ[sψn Z|mW] → μ[φY|mW] * μ[ψZ|mW] in L¹
+  -- Use: |μ[φY|mW]| ≤ Mφ ae (Jensen) and μ[sψn Z|mW] → μ[ψZ|mW] in L¹
+  have h_RHS_L1 : Filter.Tendsto
+      (fun n => ∫ ω, |μ[φ ∘ Y | mW] ω * μ[sψ n ∘ Z | mW] ω - μ[φ ∘ Y | mW] ω * μ[ψ ∘ Z | mW] ω| ∂μ)
+      Filter.atTop (nhds 0) := by
+    -- |CE[φY] * (CE[sψn Z] - CE[ψZ])| ≤ Mφ * |CE[sψn Z] - CE[ψZ]|
+    -- Integrate: ≤ Mφ * ∫|CE[sψn Z] - CE[ψZ]| → 0 by h_CE_sψZ_L1
+    sorry
+  -- Step 9: Conclude by ae equality passing through L¹ limits
+  -- We have: h_base n : LHS_n =ᵐ RHS_n
+  -- We have: LHS_n → LHS in L¹ (h_CE_prod_L1)
+  -- We have: RHS_n → RHS in L¹ (h_RHS_L1)
+  -- Claim: LHS =ᵐ RHS
+  -- Proof: ∫|LHS - RHS| ≤ ∫|LHS - LHS_n| + ∫|LHS_n - RHS_n| + ∫|RHS_n - RHS|
+  --        The first and third terms → 0, the middle term = 0 (since LHS_n =ᵐ RHS_n)
+  --        Hence ∫|LHS - RHS| = 0, so LHS =ᵐ RHS
   sorry
 
 /-- **Extend factorization from simple φ to bounded measurable φ, keeping ψ fixed.**
