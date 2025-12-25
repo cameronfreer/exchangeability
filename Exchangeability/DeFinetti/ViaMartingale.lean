@@ -4302,21 +4302,9 @@ lemma directingMeasure_measurable_eval
       Measurable (fun ω => directingMeasure (μ := μ) X hX ω B) := by
   intro B hB
   classical
-  -- Preimage of a measurable set under `X 0` is measurable in `Ω`.
   have hS : MeasurableSet ((X 0) ⁻¹' B) := (hX 0) hB
-  -- Abbreviation for the conditional expectation kernel on the tail σ-algebra.
   let κ := ProbabilityTheory.condExpKernel μ (tailSigma X)
-  -- Evaluate: map-apply reduces evaluation on `B` to evaluation on the preimage.
-  have h_eval :
-      (fun ω => directingMeasure (μ := μ) X hX ω B)
-        = fun ω => κ ω ((X 0) ⁻¹' B) := by
-    funext ω
-    -- `Measure.map_apply` expects `hB`, and uses `(hX 0)` for measurability of `X 0`.
-    simp only [directingMeasure]
-    rw [Measure.map_apply (hX 0) hB]
-  -- Kernel evaluation at a fixed measurable set is measurable in the parameter.
-  -- We lift from tailSigma to the full σ-algebra using tailSigma_le.
-  rw [h_eval]
+  simp only [directingMeasure, Measure.map_apply (hX 0) hB]
   exact (ProbabilityTheory.Kernel.measurable_coe κ hS).mono (tailSigma_le X hX) le_rfl
 
 /-- The directing measure is (pointwise) a probability measure.
