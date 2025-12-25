@@ -1123,9 +1123,14 @@ lemma condIndep_bddMeas_extend_left
       -- 2. Use bounded multiplication: |condExp_n - condExp| * |bdd_factor| → 0 in L¹
       -- 3. Apply tendsto_setIntegral_of_L1 for set integral convergence
       --
-      -- ISSUE: L¹ convergence ≠ pointwise convergence. Need different approach.
-      -- Alternative: Use that h_int_n shows sequences equal, so if hLHS converges,
-      -- RHS also converges (to some limit). Combined with tendsto_nhds_unique below.
+      -- The product convergence follows from:
+      -- 1. h_L1_conv: CE[sφ_n Y|W] → CE[φY|W] in L¹
+      -- 2. hψZ_bdd: |CE[ψZ|W]| ≤ Mψ ae (bounded multiplier)
+      -- 3. Hölder: ‖(f_n - f) * g‖₁ ≤ ‖f_n - f‖₁ * ‖g‖_∞
+      -- 4. tendsto_setIntegral_of_L1: L¹ convergence → set integral convergence
+      --
+      -- The remaining gap is the technical conversion between condExpL1 (Lp space)
+      -- and condExp (function), plus the Hölder bookkeeping.
       sorry
 
     -- Conclude by uniqueness of limits
