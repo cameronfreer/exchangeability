@@ -580,28 +580,28 @@ The proof strategy is:
 The conclusion as stated uses pointwise topology, but the natural convergence mode is L¹.
 For applications, L¹ convergence of condExp is typically what's needed. -/
 lemma tendsto_condexp_L1 {mΩ : MeasurableSpace Ω} (μ : Measure Ω) [IsProbabilityMeasure μ]
-    (m : MeasurableSpace Ω) (hm : m ≤ mΩ)
+    (m : MeasurableSpace Ω) (_hm : m ≤ mΩ)
     {fn : ℕ → Ω → ℝ} {f : Ω → ℝ}
     (h_int : ∀ n, Integrable (fn n) μ) (hf : Integrable f μ)
-    (hL1 : Filter.Tendsto (fun n => ∫⁻ ω, ‖(fn n) ω - f ω‖₊ ∂μ) Filter.atTop (nhds 0)) :
-    Filter.Tendsto (fun n => μ[fn n | m]) Filter.atTop (nhds (μ[f | m])) := by
-  -- PROOF GAP: Statement has topological issue
-  --
-  -- The goal asks for pointwise convergence: μ[fn n|m] → μ[f|m] as functions.
-  -- However, conditional expectation is only defined up to ae equivalence,
-  -- so pointwise convergence is not well-defined.
-  --
-  -- The CORRECT statement should be one of:
-  -- 1. L¹ convergence: Tendsto (fun n => eLpNorm (μ[fn n|m] - μ[f|m]) 1 μ) atTop (nhds 0)
-  -- 2. ae pointwise: ∀ᵐ ω ∂μ, Tendsto (fun n => μ[fn n|m] ω) atTop (nhds (μ[f|m] ω))
-  --
-  -- For L¹ convergence, use:
-  -- - eLpNorm_one_condExp_le_eLpNorm : eLpNorm (μ[f|m]) 1 μ ≤ eLpNorm f 1 μ
-  -- - condExp_sub : μ[f - g | m] =ᵐ[μ] μ[f | m] - μ[g | m]
-  --
-  -- The mathlib lemma `tendsto_condExpL1_of_dominated_convergence` provides
-  -- L¹ convergence under dominated convergence hypotheses.
-  sorry
+    (hL1 : Filter.Tendsto (fun n => ∫ ω, |fn n ω - f ω| ∂μ) Filter.atTop (nhds 0)) :
+    Filter.Tendsto (fun n => ∫ ω, |μ[fn n | m] ω - μ[f | m] ω| ∂μ) Filter.atTop (nhds 0) := by
+  -- Use squeeze theorem: 0 ≤ ∫|CE[fn]-CE[f]| ≤ ∫|fn-f| → 0
+  refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds hL1 ?_ ?_
+  · -- Lower bound: 0 ≤ ∫|CE[fn]-CE[f]|
+    intro n
+    exact integral_nonneg (fun ω => abs_nonneg _)
+  · -- Upper bound: ∫|CE[fn]-CE[f]| ≤ ∫|fn-f|
+    intro n
+    -- Step 1: CE[fn - f] =ᵐ CE[fn] - CE[f]
+    have h_sub : μ[fn n - f | m] =ᵐ[μ] μ[fn n | m] - μ[f | m] :=
+      condExp_sub (h_int n) hf m
+    -- Step 2: Rewrite and apply L¹ contraction
+    calc ∫ ω, |μ[fn n | m] ω - μ[f | m] ω| ∂μ
+        = ∫ ω, |μ[fn n - f | m] ω| ∂μ := by
+            refine integral_congr_ae ?_
+            filter_upwards [h_sub] with ω hω
+            simp [hω]
+      _ ≤ ∫ ω, |fn n ω - f ω| ∂μ := integral_abs_condExp_le (fn n - f)
 
 /-- **Helper: approximate bounded measurable function by simple functions.** -/
 lemma approx_bounded_measurable (μ : Measure α) [IsProbabilityMeasure μ]
@@ -674,7 +674,53 @@ lemma approx_bounded_measurable (μ : Measure α) [IsProbabilityMeasure μ]
     --    - h_fin: ∫⁻ 2M dμ = 2M < ⊤ (probability measure)
     --    - h_lim: ae convergence from h_ptwise
     -- 5. Convert from ENNReal.ofReal ‖·‖ to ‖·‖₊ using ENNReal.coe_toNNNorm
-    ·  sorry
+    · -- Get pointwise ae convergence
+      have h_ptwise : ∀ᵐ x ∂μ, Filter.Tendsto (fun n => (hf_sm.approxBounded M n) x)
+          Filter.atTop (nhds (f x)) := hf_sm.tendsto_approxBounded_ae hf_bdd'
+      -- Get bound: ‖fn x - f x‖ ≤ 2M
+      have h_bdd_diff : ∀ n, ∀ᵐ x ∂μ, ‖(hf_sm.approxBounded M n) x - f x‖ ≤ 2 * M := by
+        intro n
+        filter_upwards [hf_bdd'] with x hfx
+        calc ‖(hf_sm.approxBounded M n) x - f x‖
+            ≤ ‖(hf_sm.approxBounded M n) x‖ + ‖f x‖ := norm_sub_le _ _
+          _ ≤ M + M := add_le_add (hf_sm.norm_approxBounded_le hM_nonneg n x) hfx
+          _ = 2 * M := by ring
+      -- Apply dominated convergence: ∫⁻ ‖fn - f‖₊ → 0
+      have h_lim_zero : ∀ᵐ x ∂μ, Filter.Tendsto (fun n => (‖(hf_sm.approxBounded M n) x - f x‖₊ : ℝ≥0∞))
+          Filter.atTop (nhds 0) := by
+        filter_upwards [h_ptwise] with x hx
+        have htend : Filter.Tendsto (fun n => (hf_sm.approxBounded M n) x - f x)
+            Filter.atTop (nhds 0) := by
+          convert Filter.Tendsto.sub hx tendsto_const_nhds using 1
+          simp
+        have h1 : Filter.Tendsto (fun n => ‖(hf_sm.approxBounded M n) x - f x‖₊)
+            Filter.atTop (nhds ‖(0 : ℝ)‖₊) := (continuous_nnnorm.tendsto 0).comp htend
+        simp only [nnnorm_zero] at h1
+        exact ENNReal.tendsto_coe.mpr h1
+      -- Dominator is integrable on probability space
+      have h_dom_int : ∫⁻ _, (2 * M).toNNReal ∂μ ≠ ⊤ := by
+        simp only [lintegral_const, ne_eq]
+        exact ENNReal.mul_ne_top (by simp) (measure_ne_top μ _)
+      -- Define the functions explicitly for measurability
+      let F := fun n x => (‖(hf_sm.approxBounded M n) x - f x‖₊ : ℝ≥0∞)
+      have hF_meas : ∀ n, Measurable (F n) := fun n =>
+        ((hf_sm.approxBounded M n).measurable.sub hf_meas).nnnorm.coe_nnreal_ennreal
+      have h_lim_ae : ∀ᵐ x ∂μ, Filter.Tendsto (fun n => F n x) Filter.atTop (nhds 0) := h_lim_zero
+      have h_result := tendsto_lintegral_of_dominated_convergence (fun _ => (2 * M).toNNReal)
+        hF_meas ?_ h_dom_int h_lim_ae
+      · -- Convert from ∫⁻ 0 = 0 to the goal
+        simp only [lintegral_zero] at h_result
+        exact h_result
+      -- Bound condition
+      · intro n
+        filter_upwards [h_bdd_diff n] with x hx
+        simp only [F, ENNReal.coe_le_coe]
+        have h2M_nn : 0 ≤ 2 * M := by linarith
+        -- Goal: ‖...‖₊ ≤ (2*M).toNNReal as NNReal
+        -- We have hx : ‖...‖ ≤ 2*M as Real
+        -- Use: x ≤ y ↔ (x : ℝ) ≤ (y : ℝ) for NNReal x y
+        rw [← NNReal.coe_le_coe, coe_nnnorm, Real.coe_toNNReal _ h2M_nn]
+        exact hx
   · -- Case M < 0: contradiction since |f x| ≥ 0 > M always
     -- The hypothesis hf_bdd : ∀ᵐ x ∂μ, |f x| ≤ M with M < 0 is impossible
     -- since |f x| ≥ 0 for all x. This implies μ = 0, contradicting probability measure.
