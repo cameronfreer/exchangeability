@@ -4743,30 +4743,21 @@ lemma finite_product_formula_id
         -- ν · (C i) is measurable by hν_meas, and toReal is continuous hence measurable
         exact Measurable.ennreal_toReal (hν_meas (C i) (hC i))
 
-      -- Step 2: Show integrability (bounded by 1)
+      -- Step 2: Show integrability (bounded by 1) via integrable_of_bounded_on_prob
       have h_integrable : Integrable f μ := by
-        refine ⟨h_meas.aestronglyMeasurable, ?_⟩
-        -- Show has finite integral via boundedness
-        apply HasFiniteIntegral.of_bounded
-        apply ae_of_all
-        intro ω
-        -- Each factor satisfies 0 ≤ (ν ω (C i)).toReal ≤ 1
-        have h_bound : ∀ i : Fin m, (ν ω (C i)).toReal ≤ 1 := by
-          intro i
+        apply integrable_of_bounded_on_prob h_meas
+        apply ae_of_all μ; intro ω
+        have h_nonneg_ω : 0 ≤ f ω :=
+          Finset.prod_nonneg (fun i _ => ENNReal.toReal_nonneg (a := ν ω (C i)))
+        rw [Real.norm_of_nonneg h_nonneg_ω]
+        have h_bound : ∀ i : Fin m, (ν ω (C i)).toReal ≤ 1 := fun i => by
           have h1 : ν ω (C i) ≤ 1 := prob_le_one
-          have hfin : ν ω (C i) ≠ ⊤ := ne_of_lt (lt_of_le_of_lt h1 ENNReal.one_lt_top)
           rw [← ENNReal.toReal_one]
-          exact (ENNReal.toReal_le_toReal hfin ENNReal.one_ne_top).mpr h1
-        -- Product of factors ≤ 1 is ≤ 1
-        have h_prod_le : f ω ≤ 1 := by
-          calc f ω = ∏ i : Fin m, (ν ω (C i)).toReal := rfl
-            _ ≤ ∏ i : Fin m, (1 : ℝ) := Finset.prod_le_prod
-                (fun i _ => ENNReal.toReal_nonneg) (fun i _ => h_bound i)
-            _ = 1 := by simp
-        -- Since f ω ≥ 0, we have ‖f ω‖ = f ω ≤ 1
-        calc ‖f ω‖ = f ω :=
-              Real.norm_of_nonneg (Finset.prod_nonneg (fun i _ => ENNReal.toReal_nonneg))
-          _ ≤ 1 := h_prod_le
+          exact (ENNReal.toReal_le_toReal (ne_top_of_le_ne_top ENNReal.one_ne_top h1)
+            ENNReal.one_ne_top).mpr h1
+        calc f ω ≤ ∏ _i : Fin m, (1 : ℝ) :=
+                Finset.prod_le_prod (fun i _ => ENNReal.toReal_nonneg) (fun i _ => h_bound i)
+          _ = 1 := by simp
 
       -- Step 3: Apply ofReal_integral_eq_lintegral_ofReal
       symm
