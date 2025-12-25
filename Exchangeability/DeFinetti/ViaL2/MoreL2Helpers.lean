@@ -995,13 +995,44 @@ lemma nonInjective_fraction_tendsto_zero (m : ℕ) :
     simp only [h, Nat.cast_zero]
     exact tendsto_const_nhds
   | succ n =>
-    -- For m ≥ 1, use the bound and squeeze theorem
-    -- PROOF STRATEGY:
-    -- 1. card_nonInjective_le: count ≤ m² * N^(m-1)
-    -- 2. So fraction ≤ m² * N^(m-1) / N^m = m² / N
-    -- 3. m² / N → 0 as N → ∞ (by tendsto_const_mul_inv_atTop)
-    -- 4. Apply squeeze theorem
-    sorry
+    -- For m = n+1 ≥ 1, use the bound and squeeze theorem
+    -- Upper bound: fraction ≤ (n+1)² * N^n / N^(n+1) = (n+1)² / N → 0
+    have h_bound : ∀ᶠ N in atTop, (Fintype.card {φ : Fin (n+1) → Fin N // ¬Function.Injective φ} : ℝ)
+        / (N : ℝ)^(n+1) ≤ ((n+1)^2 : ℕ) / (N : ℝ) := by
+      filter_upwards [eventually_gt_atTop 0] with N hN
+      have hN_pos : (0 : ℕ) < N := hN
+      have hN_real : (0 : ℝ) < N := Nat.cast_pos.mpr hN
+      -- Apply card_nonInjective_le
+      have h_card : Fintype.card {φ : Fin (n+1) → Fin N // ¬Function.Injective φ}
+          ≤ (n+1) * (n+1) * N^n := card_nonInjective_le (n+1) N hN_pos
+      -- Convert to reals and divide
+      calc (Fintype.card {φ : Fin (n+1) → Fin N // ¬Function.Injective φ} : ℝ) / (N : ℝ)^(n+1)
+          ≤ ((n+1) * (n+1) * N^n : ℕ) / (N : ℝ)^(n+1) := by
+            apply div_le_div_of_nonneg_right
+            · exact Nat.cast_le.mpr h_card
+            · exact le_of_lt (pow_pos hN_real (n+1))
+        _ = ((n+1)^2 : ℕ) * (N : ℝ)^n / (N : ℝ)^(n+1) := by
+            congr 1
+            push_cast
+            ring
+        _ = ((n+1)^2 : ℕ) / (N : ℝ) := by
+            have hN_ne : (N : ℝ) ≠ 0 := ne_of_gt hN_real
+            have hN_pow_ne : (N : ℝ)^n ≠ 0 := pow_ne_zero n hN_ne
+            rw [pow_succ]
+            field_simp
+            ring
+    -- Lower bound
+    have h_nonneg : ∀ᶠ N in atTop, 0 ≤ (Fintype.card {φ : Fin (n+1) → Fin N // ¬Function.Injective φ} : ℝ)
+        / (N : ℝ)^(n+1) := by
+      filter_upwards [eventually_gt_atTop 0] with N hN
+      apply div_nonneg
+      · exact Nat.cast_nonneg _
+      · exact pow_nonneg (Nat.cast_nonneg N) (n+1)
+    -- Upper bound limit
+    have h_lim : Tendsto (fun N : ℕ => ((n+1)^2 : ℕ) / (N : ℝ)) atTop (𝓝 0) :=
+      tendsto_const_div_atTop_nhds_zero_nat _
+    -- Apply squeeze
+    exact tendsto_of_tendsto_of_tendsto_of_le_of_le' tendsto_const_nhds h_lim h_nonneg h_bound
 
 /-! ### Product L¹ Convergence
 
