@@ -906,10 +906,13 @@ lemma condIndep_simpleFunc_left
     exact @condIndep_simpleFunc Ω α β γ m₀ _ _ _ μ _ Y Z W hCI φ (sψ n) hY hZ
   -- Step 4: L¹ convergence of sψ n ∘ Z → ψ ∘ Z
   have h_sψZ_L1 : Filter.Tendsto (fun n => ∫ ω, |sψ n (Z ω) - ψ (Z ω)| ∂μ) Filter.atTop (nhds 0) := by
-    -- Use dominated convergence with dominator 2Mψ (bounded, integrable on prob space)
-    -- Bound: |sψ n ∘ Z - ψ ∘ Z| ≤ |sψ n ∘ Z| + |ψ ∘ Z| ≤ |ψ ∘ Z| + |ψ ∘ Z| ≤ 2Mψ ae
-    -- Limit: sψ n → ψ pointwise, so |sψ n ∘ Z - ψ ∘ Z| → 0 pointwise
-    -- By DCT: ∫|sψ n ∘ Z - ψ ∘ Z| → 0
+    -- Use tendsto_integral_of_dominated_convergence with:
+    -- - Bound: 2|Mψ| (integrable on prob space)
+    -- - Measurability: (sψ n).measurable.comp hZ).sub (hψ_meas.comp hZ)|.aestronglyMeasurable
+    -- - Bound condition: |sψ n (Z ω) - ψ (Z ω)| ≤ |sψ n ∘ Z| + |ψ ∘ Z| ≤ 2|ψ ∘ Z| ≤ 2Mψ ae
+    --   Uses h_sψ_bdd: |sψ n| ≤ |ψ| and hψ_bdd: |ψ ∘ Z| ≤ Mψ ae
+    -- - Limit: h_sψ_tendsto gives sψ n → ψ pointwise, so |sψ n ∘ Z - ψ ∘ Z| → 0 pointwise
+    -- - DCT gives ∫|sψ n ∘ Z - ψ ∘ Z| → ∫ 0 = 0
     sorry
   -- Step 5: Apply tendsto_condexp_L1
   have h_CE_sψZ_L1 : Filter.Tendsto (fun n => ∫ ω, |μ[sψ n ∘ Z | mW] ω - μ[ψ ∘ Z | mW] ω| ∂μ)
