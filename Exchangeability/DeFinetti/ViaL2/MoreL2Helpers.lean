@@ -1009,28 +1009,54 @@ For Route B, we need: if each factor converges in L¹, then the product converge
 (under boundedness assumptions).
 -/
 
+/-- Telescoping bound: |∏ f - ∏ g| ≤ ∑ |f_j - g_j| when factors are bounded by 1.
+
+This is a standard result proved by induction using the identity:
+  ∏_{i≤n} f_i - ∏_{i≤n} g_i = f_n * (∏_{i<n} f_i - ∏_{i<n} g_i) + (f_n - g_n) * ∏_{i<n} g_i
+-/
+lemma abs_prod_sub_prod_le {m : ℕ} (f g : Fin m → ℝ)
+    (hf : ∀ i, |f i| ≤ 1) (hg : ∀ i, |g i| ≤ 1) :
+    |∏ i, f i - ∏ i, g i| ≤ ∑ i, |f i - g i| := by
+  -- Induction on m, using the telescoping identity
+  sorry
+
 /-- Product of L¹-convergent bounded sequences converges in L¹.
 
 If f_n(i) → g(i) in L¹ for each i, and all functions are bounded by 1,
 then ∏_i f_n(i) → ∏_i g(i) in L¹.
 
-**Proof:** Telescoping. Write
-  ∏_i f_n(i) - ∏_i g(i) = ∑_j (∏_{i<j} f_n(i)) (f_n(j) - g(j)) (∏_{i>j} g(i))
-Each term has L¹ norm bounded by ‖f_n(j) - g(j)‖_L¹ (since other factors ≤ 1).
-Sum over j gives ∑_j ‖f_n(j) - g(j)‖_L¹ → 0.
+**Proof:** By `abs_prod_sub_prod_le`, we have pointwise:
+  |∏_i f_n(i) - ∏_i g(i)| ≤ ∑_j |f_n(j) - g(j)|
+
+Integrating and using Fubini:
+  ∫ |∏ f - ∏ g| ≤ ∫ ∑_j |f_j - g_j| = ∑_j ∫ |f_j - g_j|
+
+The RHS tends to 0 by h_conv and `tendsto_finset_sum`.
 -/
 lemma prod_tendsto_L1_of_L1_tendsto
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {m : ℕ} (f : ℕ → Fin m → Ω → ℝ) (g : Fin m → Ω → ℝ)
     (hf_bdd : ∀ n i ω, |f n i ω| ≤ 1)
     (hg_bdd : ∀ i ω, |g i ω| ≤ 1)
-    (hf_meas : ∀ n i, AEStronglyMeasurable (f n i) μ)
-    (hg_meas : ∀ i, AEStronglyMeasurable (g i) μ)
+    (_hf_meas : ∀ n i, AEStronglyMeasurable (f n i) μ)
+    (_hg_meas : ∀ i, AEStronglyMeasurable (g i) μ)
     (h_conv : ∀ i, Tendsto (fun n => ∫ ω, |f n i ω - g i ω| ∂μ) atTop (𝓝 0)) :
     Tendsto (fun n => ∫ ω, |∏ i : Fin m, f n i ω - ∏ i : Fin m, g i ω| ∂μ) atTop (𝓝 0) := by
-  -- Telescoping argument:
-  -- |∏ f - ∏ g| ≤ ∑_j |f_j - g_j| (when all factors bounded by 1)
-  -- Then ∫ |∏ f - ∏ g| ≤ ∑_j ∫ |f_j - g_j| → 0
+  -- Step 1: Pointwise bound from abs_prod_sub_prod_le
+  have h_pointwise : ∀ n ω, |∏ i : Fin m, f n i ω - ∏ i : Fin m, g i ω|
+      ≤ ∑ i : Fin m, |f n i ω - g i ω| := fun n ω =>
+    abs_prod_sub_prod_le (fun i => f n i ω) (fun i => g i ω)
+      (fun i => hf_bdd n i ω) (fun i => hg_bdd i ω)
+
+  -- Step 2: Sum of L¹ norms tends to 0
+  have h_sum_tendsto : Tendsto (fun n => ∑ i : Fin m, ∫ ω, |f n i ω - g i ω| ∂μ) atTop (𝓝 0) := by
+    rw [show (0 : ℝ) = ∑ _i : Fin m, (0 : ℝ) by simp]
+    apply tendsto_finset_sum
+    intro i _
+    exact h_conv i
+
+  -- Step 3: Apply squeeze theorem (with integration details as sorry)
+  -- PROOF: Use h_pointwise to bound ∫|∏f-∏g| ≤ ∫∑|f-g| = ∑∫|f-g| → 0
   sorry
 
 /-- The bridge property: E[∏ᵢ 𝟙_{Bᵢ}(X_{k(i)})] = E[∏ᵢ ν(·)(Bᵢ)].
