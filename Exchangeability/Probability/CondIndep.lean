@@ -799,6 +799,128 @@ lemma condIndep_simpleFunc_left
   - `tendsto_condexp_L1`: L¹ convergence passes through conditional expectation
   - `condIndep_simpleFunc`: base case for both simple functions
   -/
+  classical
+  -- Define mW := σ(W) for cleaner notation
+  set mW := MeasurableSpace.comap W (inferInstance : MeasurableSpace γ) with hmW_def
+  -- Step 1: Build simple function approximations of ψ on β using eapprox
+  -- positive/negative parts of ψ
+  set ψp : β → ℝ := fun b => max (ψ b) 0 with hψp_def
+  set ψm : β → ℝ := fun b => max (- ψ b) 0 with hψm_def
+  have hψp_nn : ∀ b, 0 ≤ ψp b := fun b => le_max_right _ _
+  have hψm_nn : ∀ b, 0 ≤ ψm b := fun b => le_max_right _ _
+  have hψp_meas : Measurable ψp := hψ_meas.max measurable_const
+  have hψm_meas : Measurable ψm := hψ_meas.neg.max measurable_const
+  -- lift to ℝ≥0∞
+  let gψp : β → ℝ≥0∞ := fun b => ENNReal.ofReal (ψp b)
+  let gψm : β → ℝ≥0∞ := fun b => ENNReal.ofReal (ψm b)
+  -- eapprox sequences
+  let uψp : ℕ → SimpleFunc β ℝ≥0∞ := SimpleFunc.eapprox gψp
+  let uψm : ℕ → SimpleFunc β ℝ≥0∞ := SimpleFunc.eapprox gψm
+  -- back to ℝ
+  let sψp : ℕ → SimpleFunc β ℝ := fun n => (uψp n).map ENNReal.toReal
+  let sψm : ℕ → SimpleFunc β ℝ := fun n => (uψm n).map ENNReal.toReal
+  -- final approximation: sψ n = sψp n - sψm n
+  let sψ : ℕ → SimpleFunc β ℝ := fun n => sψp n - sψm n
+  -- Step 2: Key properties of the approximation
+  -- sψp n → ψp pointwise (and similarly sψm n → ψm)
+  have h_sψp_tendsto : ∀ b, Filter.Tendsto (fun n => sψp n b) Filter.atTop (nhds (ψp b)) := by
+    intro b
+    simp only [sψp, uψp, gψp, SimpleFunc.map_apply]
+    have h := SimpleFunc.tendsto_eapprox (hψp_meas.ennreal_ofReal) b
+    -- eapprox converges to gψp b = ofReal (ψp b)
+    -- Need: toReal (eapprox gψp n b) → toReal (ofReal (ψp b)) = ψp b
+    have h_finite : gψp b ≠ ⊤ := ENNReal.ofReal_ne_top
+    have h_toReal : ENNReal.toReal (gψp b) = ψp b := ENNReal.toReal_ofReal (hψp_nn b)
+    rw [← h_toReal]
+    exact ENNReal.tendsto_toReal h_finite |>.comp h
+  have h_sψm_tendsto : ∀ b, Filter.Tendsto (fun n => sψm n b) Filter.atTop (nhds (ψm b)) := by
+    intro b
+    simp only [sψm, uψm, gψm, SimpleFunc.map_apply]
+    have h := SimpleFunc.tendsto_eapprox (hψm_meas.ennreal_ofReal) b
+    have h_finite : gψm b ≠ ⊤ := ENNReal.ofReal_ne_top
+    have h_toReal : ENNReal.toReal (gψm b) = ψm b := ENNReal.toReal_ofReal (hψm_nn b)
+    rw [← h_toReal]
+    exact ENNReal.tendsto_toReal h_finite |>.comp h
+  -- sψ n → ψ pointwise (since ψ = ψp - ψm)
+  have h_sψ_tendsto : ∀ b, Filter.Tendsto (fun n => sψ n b) Filter.atTop (nhds (ψ b)) := by
+    intro b
+    have hψ_eq : ψ b = ψp b - ψm b := by simp [ψp, ψm]
+    rw [hψ_eq]
+    exact (h_sψp_tendsto b).sub (h_sψm_tendsto b)
+  -- |sψ n| ≤ |ψ| pointwise (from eapprox_le: eapprox f n ≤ f)
+  have h_sψ_bdd : ∀ n b, |sψ n b| ≤ |ψ b| := by
+    intro n b
+    -- sψ n b = sψp n b - sψm n b
+    -- |sψ n b| ≤ max (sψp n b) (sψm n b) ≤ max (ψp b) (ψm b) = |ψ b|
+    have hp_le : sψp n b ≤ ψp b := by
+      simp only [sψp, uψp, gψp, SimpleFunc.map_apply]
+      have h := SimpleFunc.eapprox_le (hψp_meas.ennreal_ofReal) n b
+      have h_nn : 0 ≤ ψp b := hψp_nn b
+      calc ENNReal.toReal (SimpleFunc.eapprox (fun b => ENNReal.ofReal (ψp b)) n b)
+          ≤ ENNReal.toReal (ENNReal.ofReal (ψp b)) :=
+            ENNReal.toReal_mono ENNReal.ofReal_ne_top h
+        _ = ψp b := ENNReal.toReal_ofReal h_nn
+    have hm_le : sψm n b ≤ ψm b := by
+      simp only [sψm, uψm, gψm, SimpleFunc.map_apply]
+      have h := SimpleFunc.eapprox_le (hψm_meas.ennreal_ofReal) n b
+      have h_nn : 0 ≤ ψm b := hψm_nn b
+      calc ENNReal.toReal (SimpleFunc.eapprox (fun b => ENNReal.ofReal (ψm b)) n b)
+          ≤ ENNReal.toReal (ENNReal.ofReal (ψm b)) :=
+            ENNReal.toReal_mono ENNReal.ofReal_ne_top h
+        _ = ψm b := ENNReal.toReal_ofReal h_nn
+    have hp_nn : 0 ≤ sψp n b := by
+      simp only [sψp, SimpleFunc.map_apply]
+      exact ENNReal.toReal_nonneg
+    have hm_nn : 0 ≤ sψm n b := by
+      simp only [sψm, SimpleFunc.map_apply]
+      exact ENNReal.toReal_nonneg
+    -- |ψ b| = max (ψp b) (ψm b) and |sψ n b| ≤ max (sψp n b) (sψm n b)
+    have h_abs_ψ : |ψ b| = max (ψp b) (ψm b) := by
+      simp only [ψp, ψm]
+      -- Goal: |ψ b| = max (max (ψ b) 0) (max (-ψ b) 0)
+      rcases le_or_lt 0 (ψ b) with hnn | hneg
+      · -- ψ b ≥ 0
+        have h1 : max (ψ b) 0 = ψ b := max_eq_left hnn
+        have h2 : max (-ψ b) 0 = 0 := max_eq_right (neg_nonpos.mpr hnn)
+        have h3 : |ψ b| = ψ b := abs_of_nonneg hnn
+        simp [h1, h2, h3]
+      · -- ψ b < 0
+        have h1 : max (ψ b) 0 = 0 := max_eq_right (le_of_lt hneg)
+        have h2 : max (-ψ b) 0 = -ψ b := max_eq_left (neg_nonneg.mpr (le_of_lt hneg))
+        have h3 : |ψ b| = -ψ b := abs_of_neg hneg
+        have h4 : max 0 (-ψ b) = -ψ b := max_eq_right (neg_nonneg.mpr (le_of_lt hneg))
+        simp only [h1, h2, h3, h4]
+    rw [h_abs_ψ]
+    calc |sψ n b| = |sψp n b - sψm n b| := rfl
+      _ ≤ max (sψp n b) (sψm n b) := by
+          rw [abs_le]; constructor
+          · calc -(max (sψp n b) (sψm n b)) ≤ -sψm n b := neg_le_neg (le_max_right _ _)
+              _ ≤ sψp n b - sψm n b := by linarith [hp_nn]
+          · calc sψp n b - sψm n b ≤ sψp n b := by linarith [hm_nn]
+              _ ≤ max (sψp n b) (sψm n b) := le_max_left _ _
+      _ ≤ max (ψp b) (ψm b) := max_le_max hp_le hm_le
+  -- Step 3: For each n, apply condIndep_simpleFunc
+  have h_base : ∀ n, μ[ (φ ∘ Y) * ((sψ n) ∘ Z) | mW ] =ᵐ[μ]
+                    μ[ φ ∘ Y | mW ] * μ[ (sψ n) ∘ Z | mW ] := by
+    intro n
+    exact @condIndep_simpleFunc Ω α β γ m₀ _ _ _ μ _ Y Z W hCI φ (sψ n) hY hZ
+  -- Step 4: Final step - pass ae equality through L¹ limits
+  --
+  -- Infrastructure built above:
+  -- - sψ : ℕ → SimpleFunc β ℝ (simple function approximations of ψ)
+  -- - h_sψ_tendsto : sψ n → ψ pointwise
+  -- - h_sψ_bdd : |sψ n| ≤ |ψ|
+  -- - h_base : ∀ n, μ[(φ ∘ Y) * (sψ n ∘ Z) | mW] =ᵐ μ[φ ∘ Y | mW] * μ[sψ n ∘ Z | mW]
+  --
+  -- Remaining proof steps (to be filled):
+  -- 1. L¹ convergence: (φY)(sψn Z) → (φY)(ψZ) in L¹
+  --    - Use dominated convergence with dominator Mφ * Mψ
+  --    - Mφ = (φ.range.sup nnnorm).toReal bounds φ
+  -- 2. Apply tendsto_condexp_L1: μ[(φY)(sψn Z)|mW] → μ[(φY)(ψZ)|mW] in L¹
+  -- 3. L¹ convergence of RHS: μ[φY|mW] * μ[sψn Z|mW] → μ[φY|mW] * μ[ψZ|mW] in L¹
+  --    - Since μ[φY|mW] is bounded by Mφ and μ[sψn Z|mW] → μ[ψZ|mW] in L¹
+  -- 4. ae_eq passes through L¹ limits: if fn =ᵐ gn and both converge in L¹, limits are ae-equal
+  --    - Proof: ∫|f-g| ≤ ∫|f-fn| + ∫|fn-gn| + ∫|gn-g| → 0
   sorry
 
 /-- **Extend factorization from simple φ to bounded measurable φ, keeping ψ fixed.**
