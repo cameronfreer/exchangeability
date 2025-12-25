@@ -868,21 +868,108 @@ The key estimate for Route B: the fraction of non-injective maps φ : Fin m → 
 tends to 0 as N → ∞, with rate O(m²/N).
 -/
 
+/-- Cardinality of {φ | φ i = φ j} equals N^(m-1).
+The constraint φ i = φ j reduces the degrees of freedom by 1. -/
+lemma card_collision_set (m N : ℕ) (i j : Fin m) (hij : i ≠ j) :
+    Fintype.card {φ : Fin m → Fin N // φ i = φ j} = N^(m - 1) := by
+  -- Proof: There is a bijection between {φ | φ i = φ j} and (Fin (m-1) → Fin N)
+  -- Given ψ : Fin (m-1) → Fin N, define φ by:
+  --   φ k = ψ (pred_of_ne_j k) if k ≠ j
+  --   φ j = φ i
+  -- This is a bijection.
+  sorry
+
+/-- The set of ordered pairs (i, j) with i ≠ j. -/
+def collisionPairs (m : ℕ) : Finset (Fin m × Fin m) :=
+  Finset.filter (fun ij => ij.1 ≠ ij.2) Finset.univ
+
+/-- The number of collision pairs is at most m². -/
+lemma card_collisionPairs_le (m : ℕ) : (collisionPairs m).card ≤ m * m := by
+  simp only [collisionPairs]
+  calc (Finset.filter (fun ij : Fin m × Fin m => ij.1 ≠ ij.2) Finset.univ).card
+      ≤ (Finset.univ : Finset (Fin m × Fin m)).card := Finset.card_filter_le _ _
+    _ = Fintype.card (Fin m × Fin m) := by rw [Finset.card_univ]
+    _ = Fintype.card (Fin m) * Fintype.card (Fin m) := Fintype.card_prod _ _
+    _ = m * m := by simp [Fintype.card_fin]
+
+/-- For each pair (i, j), the set of maps with collision φ i = φ j. -/
+def mapsWithCollision (m N : ℕ) (ij : Fin m × Fin m) : Finset (Fin m → Fin N) :=
+  Finset.filter (fun φ => φ ij.1 = φ ij.2) Finset.univ
+
 /-- The number of non-injective maps φ : Fin m → Fin N is at most m² * N^(m-1).
 
-**Proof:** A non-injective map has some pair (i, j) with i < j and φ(i) = φ(j).
-By union bound over the (m choose 2) ≤ m²/2 pairs, and for each pair there are
-at most N^(m-1) maps (φ is determined on m-2 free coordinates plus the collision).
+**Proof:** A non-injective map has some pair (i, j) with i ≠ j and φ(i) = φ(j).
+By union bound over the m² pairs, and for each pair there are at most N^(m-1) maps.
 -/
-lemma card_nonInjective_le (m N : ℕ) (hN : 0 < N) :
+lemma card_nonInjective_le (m N : ℕ) (_hN : 0 < N) :
     Fintype.card {φ : Fin m → Fin N // ¬Function.Injective φ} ≤ m * m * N^(m - 1) := by
   classical
-  -- A non-injective map has φ(i) = φ(j) for some i < j
-  -- Count: for each pair (i,j) with i < j, maps with φ(i) = φ(j)
-  -- There are (m choose 2) ≤ m²/2 such pairs
-  -- For each pair, there are N^(m-1) such maps (one constraint)
-  -- Total ≤ m² * N^(m-1)
-  sorry
+  -- For m = 0 or m = 1, there are no non-injective maps
+  cases m with
+  | zero =>
+    have : IsEmpty {φ : Fin 0 → Fin N // ¬Function.Injective φ} := by
+      constructor
+      intro ⟨φ, hφ⟩
+      simp only [Function.Injective] at hφ
+      push_neg at hφ
+      obtain ⟨i, _, _, _⟩ := hφ
+      exact Fin.elim0 i
+    simp [Fintype.card_eq_zero]
+  | succ n =>
+    cases n with
+    | zero =>
+      have : IsEmpty {φ : Fin 1 → Fin N // ¬Function.Injective φ} := by
+        constructor
+        intro ⟨φ, hφ⟩
+        simp only [Function.Injective] at hφ
+        push_neg at hφ
+        obtain ⟨i, j, _, hij⟩ := hφ
+        exact absurd (Subsingleton.elim i j) hij
+      simp [Fintype.card_eq_zero]
+    | succ k =>
+      -- m = k + 2 ≥ 2
+      -- Key: non-injective ↔ has collision at some pair (i,j)
+      have h_subset : (Finset.univ.filter (fun φ : Fin (k+2) → Fin N => ¬Function.Injective φ))
+          ⊆ (collisionPairs (k+2)).biUnion (mapsWithCollision (k+2) N) := by
+        intro φ hφ
+        simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hφ
+        simp only [Finset.mem_biUnion, mapsWithCollision, Finset.mem_filter, Finset.mem_univ,
+                   true_and, collisionPairs]
+        -- φ is not injective, so ∃ i ≠ j with φ i = φ j
+        simp only [Function.Injective] at hφ
+        push_neg at hφ
+        obtain ⟨i, j, heq, hne⟩ := hφ
+        refine ⟨(i, j), ?_, heq⟩
+        simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+        exact hne
+
+      -- Each collision set has cardinality ≤ N^(m-1)
+      have h_each : ∀ ij ∈ collisionPairs (k+2), (mapsWithCollision (k+2) N ij).card ≤ N^(k + 1) := by
+        intro ij hij_mem
+        obtain ⟨i, j⟩ := ij
+        simp only [collisionPairs, Finset.mem_filter, Finset.mem_univ, true_and] at hij_mem
+        simp only [mapsWithCollision]
+        have h_eq : (Finset.filter (fun φ : Fin (k+2) → Fin N => φ i = φ j) Finset.univ).card
+            = Fintype.card {φ : Fin (k+2) → Fin N // φ i = φ j} := by
+          rw [Fintype.card_subtype]
+        rw [h_eq, card_collision_set (k+2) N i j hij_mem]
+        -- k + 2 - 1 = k + 1 in ℕ
+        have harith : k + 2 - 1 = k + 1 := by omega
+        rw [harith]
+
+      -- Combine using biUnion bound
+      calc Fintype.card {φ : Fin (k+2) → Fin N // ¬Function.Injective φ}
+          = (Finset.univ.filter (fun φ : Fin (k+2) → Fin N => ¬Function.Injective φ)).card := by
+            rw [Fintype.card_subtype]
+        _ ≤ ((collisionPairs (k+2)).biUnion (mapsWithCollision (k+2) N)).card :=
+            Finset.card_le_card h_subset
+        _ ≤ ∑ ij ∈ collisionPairs (k+2), (mapsWithCollision (k+2) N ij).card :=
+            Finset.card_biUnion_le
+        _ ≤ ∑ _ij ∈ collisionPairs (k+2), N^(k + 1) := Finset.sum_le_sum h_each
+        _ = (collisionPairs (k+2)).card * N^(k + 1) := by rw [Finset.sum_const, smul_eq_mul]
+        _ ≤ (k + 2) * (k + 2) * N^(k + 1) := by
+            apply Nat.mul_le_mul_right
+            exact card_collisionPairs_le (k + 2)
 
 /-- The fraction of non-injective maps tends to 0 as N → ∞.
 
@@ -891,17 +978,30 @@ For fixed m, the fraction (# non-injective) / N^m ≤ m²/N → 0.
 lemma nonInjective_fraction_tendsto_zero (m : ℕ) :
     Tendsto (fun N => (Fintype.card {φ : Fin m → Fin N // ¬Function.Injective φ} : ℝ) / (N : ℝ)^m)
             atTop (𝓝 0) := by
-  -- Use card_nonInjective_le: count ≤ m² * N^(m-1)
-  -- So fraction ≤ m² * N^(m-1) / N^m = m² / N → 0
-  --
-  -- PROOF SKETCH:
-  -- 1. For N ≥ 1: fraction ≤ m² * N^(m-1) / N^m = m² / N
-  -- 2. m² / N → 0 as N → ∞ (by tendsto_const_div_atTop_nhds_zero_nat)
-  -- 3. Apply squeeze theorem with lower bound 0, upper bound m²/N
-  --
-  -- The key combinatorial estimate is in card_nonInjective_le.
-  -- The limit argument is standard.
-  sorry
+  -- Handle m = 0 specially
+  cases m with
+  | zero =>
+    simp only [pow_zero, div_one]
+    -- For m = 0, the set is empty (all functions are vacuously injective)
+    have h : ∀ N, Fintype.card {φ : Fin 0 → Fin N // ¬Function.Injective φ} = 0 := by
+      intro N
+      rw [Fintype.card_eq_zero_iff]
+      constructor
+      intro ⟨φ, hφ⟩
+      simp only [Function.Injective] at hφ
+      push_neg at hφ
+      obtain ⟨i, _, _, _⟩ := hφ
+      exact Fin.elim0 i
+    simp only [h, Nat.cast_zero]
+    exact tendsto_const_nhds
+  | succ n =>
+    -- For m ≥ 1, use the bound and squeeze theorem
+    -- PROOF STRATEGY:
+    -- 1. card_nonInjective_le: count ≤ m² * N^(m-1)
+    -- 2. So fraction ≤ m² * N^(m-1) / N^m = m² / N
+    -- 3. m² / N → 0 as N → ∞ (by tendsto_const_mul_inv_atTop)
+    -- 4. Apply squeeze theorem
+    sorry
 
 /-! ### Product L¹ Convergence
 
