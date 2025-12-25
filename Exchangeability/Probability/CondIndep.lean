@@ -764,42 +764,32 @@ lemma condIndep_simpleFunc_left
     μ[ (φ ∘ Y) * (ψ ∘ Z) | MeasurableSpace.comap W inferInstance ] =ᵐ[μ]
     μ[ φ ∘ Y | MeasurableSpace.comap W inferInstance ] *
     μ[ ψ ∘ Z | MeasurableSpace.comap W inferInstance ] := by
-  classical
-  -- PROOF STRUCTURE:
-  -- 1. Build simple function approximation sψ n of ψ using eapprox
-  -- 2. For each n: condIndep_simpleFunc gives factorization for (φ, sψ n)
-  -- 3. Pass to limit using convergence of condExp
+  /-
+  PROOF OUTLINE (to be filled in with correct mathlib4 API):
 
-  -- Split ψ into positive and negative parts
-  set ψp : β → ℝ := fun b => max (ψ b) 0 with hψp
-  set ψm : β → ℝ := fun b => max (- ψ b) 0 with hψm
-  have hψp_meas : Measurable ψp := hψ_meas.max measurable_const
-  have hψm_meas : Measurable ψm := hψ_meas.neg.max measurable_const
+  1. **Simple function approximation of ψ**:
+     Split ψ = ψ⁺ - ψ⁻ into positive/negative parts, lift to ℝ≥0∞, use SimpleFunc.eapprox.
+     Define sψ n := (eapprox gψ⁺ n).map toReal - (eapprox gψ⁻ n).map toReal
 
-  -- Lift to ℝ≥0∞ and use eapprox
-  let gψp : β → ℝ≥0∞ := fun b => ENNReal.ofReal (ψp b)
-  let gψm : β → ℝ≥0∞ := fun b => ENNReal.ofReal (ψm b)
-  let uψp : ℕ → SimpleFunc β ℝ≥0∞ := SimpleFunc.eapprox gψp
-  let uψm : ℕ → SimpleFunc β ℝ≥0∞ := SimpleFunc.eapprox gψm
-  let sψp : ℕ → SimpleFunc β ℝ := fun n => (uψp n).map ENNReal.toReal
-  let sψm : ℕ → SimpleFunc β ℝ := fun n => (uψm n).map ENNReal.toReal
-  let sψ : ℕ → SimpleFunc β ℝ := fun n => (sψp n) - (sψm n)
+  2. **Base case** (for each n): Apply condIndep_simpleFunc for (φ, sψ n):
+     μ[(φ ∘ Y) * ((sψ n) ∘ Z) | σ(W)] =ᵐ μ[φ ∘ Y | σ(W)] * μ[(sψ n) ∘ Z | σ(W)]
 
-  -- For each n, apply condIndep_simpleFunc for (φ, sψ n)
-  have h_rect_n : ∀ n,
-      μ[ (φ ∘ Y) * ((sψ n) ∘ Z) | MeasurableSpace.comap W inferInstance ] =ᵐ[μ]
-      μ[ φ ∘ Y | MeasurableSpace.comap W inferInstance ] *
-      μ[ (sψ n) ∘ Z | MeasurableSpace.comap W inferInstance ] := by
-    intro n
-    exact condIndep_simpleFunc μ Y Z W hCI φ (sψ n) hY hZ
+  3. **Convergence properties**:
+     - sψ n → ψ pointwise (from tendsto_eapprox + ENNReal.tendsto_toReal)
+     - |sψ n| ≤ |ψ| (from monotonicity of eapprox: eapprox f n ≤ ⨆ m, eapprox f m = f)
+     - L¹ convergence via tendsto_integral_of_dominated_convergence with dominator 2|ψ|
 
-  -- The limit argument requires passing from sψ n to ψ:
-  -- 1. sψ n → ψ pointwise (from eapprox convergence)
-  -- 2. |sψ n ∘ Z| ≤ |ψ ∘ Z| ≤ Mψ (bounded by dominator)
-  -- 3. condExp is L¹-continuous, so condExp of sψ n ∘ Z → condExp of ψ ∘ Z
-  -- 4. Similarly for products
-  --
-  -- This is the same convergence argument as in condIndep_bddMeas_extend_left.
+  4. **Apply tendsto_condexp_L1** to pass limits through conditional expectation:
+     - LHS: CE[(φY)(sψn Z)] → CE[(φY)(ψZ)] in L¹
+     - RHS: CE[φY] * CE[sψn Z] → CE[φY] * CE[ψZ] in L¹ (since CE[φY] is bounded by Mφ)
+
+  5. **Conclude by L¹ uniqueness**: If fₙ =ᵐ gₙ and both converge in L¹, then limit f =ᵐ limit g.
+
+  KEY MISSING PIECES:
+  - eapprox_le_self: eapprox f n a ≤ f a (derive from le_iSup + iSup_eapprox_apply)
+  - Integrable.of_norm_le (or similar) for integrability from norm bounds
+  - condExp_mono_ae (or derive from integral characterization)
+  -/
   sorry
 
 /-- **Extend factorization from simple φ to bounded measurable φ, keeping ψ fixed.**
