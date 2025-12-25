@@ -1051,6 +1051,12 @@ lemma abs_prod_sub_prod_le {m : ℕ} (f g : Fin m → ℝ)
                    (fun i => hf i.succ) (fun i => hg i.succ)
       _ = |f 0 - g 0| + ∑ i : Fin n, |f i.succ - g i.succ| := by ring
 
+/-- Helper: |a - b| ≤ |a| + |b|. -/
+lemma abs_sub_le_abs_add (a b : ℝ) : |a - b| ≤ |a| + |b| := by
+  calc |a - b| = |a + (-b)| := by ring_nf
+    _ ≤ |a| + |-b| := abs_add_le a (-b)
+    _ = |a| + |b| := by rw [abs_neg]
+
 /-- Product of L¹-convergent bounded sequences converges in L¹.
 
 If f_n(i) → g(i) in L¹ for each i, and all functions are bounded by 1,
@@ -1069,8 +1075,8 @@ lemma prod_tendsto_L1_of_L1_tendsto
     {m : ℕ} (f : ℕ → Fin m → Ω → ℝ) (g : Fin m → Ω → ℝ)
     (hf_bdd : ∀ n i ω, |f n i ω| ≤ 1)
     (hg_bdd : ∀ i ω, |g i ω| ≤ 1)
-    (_hf_meas : ∀ n i, AEStronglyMeasurable (f n i) μ)
-    (_hg_meas : ∀ i, AEStronglyMeasurable (g i) μ)
+    (hf_meas : ∀ n i, AEStronglyMeasurable (f n i) μ)
+    (hg_meas : ∀ i, AEStronglyMeasurable (g i) μ)
     (h_conv : ∀ i, Tendsto (fun n => ∫ ω, |f n i ω - g i ω| ∂μ) atTop (𝓝 0)) :
     Tendsto (fun n => ∫ ω, |∏ i : Fin m, f n i ω - ∏ i : Fin m, g i ω| ∂μ) atTop (𝓝 0) := by
   -- Step 1: Pointwise bound from abs_prod_sub_prod_le
@@ -1086,9 +1092,41 @@ lemma prod_tendsto_L1_of_L1_tendsto
     intro i _
     exact h_conv i
 
-  -- Step 3: Apply squeeze theorem (with integration details as sorry)
-  -- PROOF: Use h_pointwise to bound ∫|∏f-∏g| ≤ ∫∑|f-g| = ∑∫|f-g| → 0
-  sorry
+  -- Helper: |f n i - g i| is integrable
+  have h_diff_int : ∀ n i, Integrable (fun ω => |f n i ω - g i ω|) μ := by
+    intro n i
+    apply Integrable.abs
+    apply Integrable.of_bound (C := 2)
+    · exact (hf_meas n i).sub (hg_meas i)
+    · apply ae_of_all μ
+      intro ω
+      calc ‖f n i ω - g i ω‖ = |f n i ω - g i ω| := Real.norm_eq_abs _
+        _ ≤ |f n i ω| + |g i ω| := abs_sub_le_abs_add _ _
+        _ ≤ 1 + 1 := add_le_add (hf_bdd n i ω) (hg_bdd i ω)
+        _ = 2 := by ring
+
+  -- Step 3: Apply squeeze_zero
+  apply squeeze_zero
+  · -- Lower bound: ∫|...| ≥ 0
+    intro n
+    exact integral_nonneg (fun ω => abs_nonneg _)
+  · -- Upper bound: ∫|∏f-∏g| ≤ ∑∫|f-g|
+    intro n
+    have h_int_bound : ∫ ω, |∏ i : Fin m, f n i ω - ∏ i : Fin m, g i ω| ∂μ
+        ≤ ∫ ω, ∑ i : Fin m, |f n i ω - g i ω| ∂μ := by
+      apply integral_mono_of_nonneg
+      · exact ae_of_all μ (fun ω => abs_nonneg _)
+      · apply integrable_finset_sum
+        intro i _
+        exact h_diff_int n i
+      · exact ae_of_all μ (h_pointwise n)
+    calc ∫ ω, |∏ i : Fin m, f n i ω - ∏ i : Fin m, g i ω| ∂μ
+        ≤ ∫ ω, ∑ i : Fin m, |f n i ω - g i ω| ∂μ := h_int_bound
+      _ = ∑ i : Fin m, ∫ ω, |f n i ω - g i ω| ∂μ := by
+          rw [integral_finset_sum]
+          intro i _
+          exact h_diff_int n i
+  · exact h_sum_tendsto
 
 /-- The bridge property: E[∏ᵢ 𝟙_{Bᵢ}(X_{k(i)})] = E[∏ᵢ ν(·)(Bᵢ)].
 
