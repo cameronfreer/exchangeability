@@ -63,24 +63,24 @@ Theorem and Koopman operator. This proof has the **heaviest dependencies**.
 
 **Active sorries** (4 total):
 
-1. **Line 1661** - `condexp_product_factorization_ax` inductive step
+1. **Line 1626** - `condexp_product_factorization_ax` inductive step
    - Needs conditional independence for product factorization
    - Strategy: Use `condIndep_simpleFunc` from CondIndep.lean
 
-2. **Line 1748** - `condexp_product_factorization_general` inductive step
+2. **Line 1713** - `condexp_product_factorization_general` inductive step
    - Depends on `condexp_product_factorization_ax`
    - Once ax is done, this follows from shift invariance
 
-3. **Line 4482** - `ce_lipschitz_convergence`
+3. **Line 4460** - `ce_lipschitz_convergence`
    - L¹-Lipschitz property of CE for products
-   - Strategy: Use `integral_abs_condExp_le` (Jensen/contraction)
+   - Detailed proof outline in comments (squeeze theorem + CE Lipschitz)
 
-4. **Line 4742** - `h_tower_of_lagConst_from_one`
+4. **Line 4720** - `h_tower_of_lagConst_from_one`
    - Tower property via Cesàro averaging
    - Avoids false k=0 lag constancy, uses indices from 1
 
 **Commented-out sorries** (not blocking, for reference only):
-- Line 1682, 2407, 5234 - In comment blocks, not active code
+- Lines 1647, 2372, 5212 - In comment blocks, not active code
 
 ## Dependencies
 
@@ -4442,8 +4442,21 @@ private lemma ce_lipschitz_convergence
       ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | mSI] ω
            - μ[(fun ω' => f (ω' 0) * μ[(fun ω => g (ω 0)) | mSI] ω') | mSI] ω| ∂μ)
       atTop (𝓝 0) := by
-  -- Proof uses L¹-Lipschitz property of condExp, bounded f to pull out constant,
-  -- and squeeze theorem with MET L¹ convergence. Currently has type mismatches.
+  /-
+  PROOF OUTLINE (well-typed, mathlib-compatible):
+
+  1. **Setup**: Define Y = CE[g(ω₀)|mSI], Z n = f(ω₀)·A(n), W = f(ω₀)·Y
+  2. **Integrability**: Z n and W are integrable via integrable_mul_of_ae_bdd_left
+  3. **CE Lipschitz bound**: Apply condExp_L1_lipschitz to get
+     ∫|CE[Z n] - CE[W]| ≤ ∫|Z n - W| = ∫|f(ω₀)|·|A n - Y| ≤ Cf·∫|A n - Y|
+  4. **Squeeze**: Since Cf·∫|A n - Y| → 0 by hypothesis h_L1_An_to_CE, the conclusion follows
+
+  Key lemmas used:
+  - `condExp_L1_lipschitz`: ∫|CE[Z] - CE[W]| ≤ ∫|Z - W| (line 550)
+  - `integrable_mul_of_ae_bdd_left`: bounded × integrable → integrable (line 533)
+  - `squeeze_zero`: 0 ≤ f n ≤ g n, g → 0 ⟹ f → 0
+  - `Tendsto.const_mul`: Cf · (f n → 0) ⟹ Cf · f n → 0
+  -/
   sorry
 
 /-
