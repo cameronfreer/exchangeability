@@ -4580,31 +4580,19 @@ lemma finite_product_formula_id
   let Rectangles : Set (Set (Fin m → α)) :=
     {S | ∃ (C : Fin m → Set α), (∀ i, MeasurableSet (C i)) ∧ S = Set.univ.pi C}
 
+  -- Characterization: Rectangles = {S | ∃ B, ...} (used multiple times below)
+  have Rectangles_def : Rectangles = {S : Set (Fin m → α) | ∃ (B : Fin m → Set α),
+      (∀ i, MeasurableSet (B i)) ∧ S = {x | ∀ i, x i ∈ B i}} := by
+    ext S; simp only [Rectangles, Set.mem_setOf_eq]
+    constructor <;> (intro ⟨B, hB, hS⟩; refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp)
+
   -- 1) Rectangles form a π-system and generate the Π σ-algebra
   have h_pi : IsPiSystem Rectangles := by
-    have : Rectangles = {S : Set (Fin m → α) | ∃ (B : Fin m → Set α),
-        (∀ i, MeasurableSet (B i)) ∧ S = {x | ∀ i, x i ∈ B i}} := by
-      ext S; simp only [Rectangles, Set.mem_setOf_eq]
-      constructor
-      · intro ⟨B, hB, hS⟩
-        refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp
-      · intro ⟨B, hB, hS⟩
-        refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp
-    rw [this]
-    exact rectangles_isPiSystem (m := m) (α := α)
+    rw [Rectangles_def]; exact rectangles_isPiSystem (m := m) (α := α)
 
   have h_gen : (inferInstance : MeasurableSpace (Fin m → α))
       = MeasurableSpace.generateFrom Rectangles := by
-    have : Rectangles = {S : Set (Fin m → α) | ∃ (B : Fin m → Set α),
-        (∀ i, MeasurableSet (B i)) ∧ S = {x | ∀ i, x i ∈ B i}} := by
-      ext S; simp only [Rectangles, Set.mem_setOf_eq]
-      constructor
-      · intro ⟨B, hB, hS⟩
-        refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp
-      · intro ⟨B, hB, hS⟩
-        refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp
-    rw [this]
-    exact rectangles_generate_pi_sigma (m := m) (α := α)
+    rw [Rectangles_def]; exact rectangles_generate_pi_sigma (m := m) (α := α)
 
   -- 2) Show both measures agree on rectangles
   have h_agree :
@@ -4821,46 +4809,23 @@ lemma finite_product_formula_id
       -- Strategy: bind of constant 1 over probability measure μ equals 1
       -- First need AEMeasurability of the kernel
       have h_aemeas : AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ := by
-        -- Reuse the AEMeasurability proof from bind_apply_univ_pi (line 2447)
-        -- Key: verify measurability on the rectangular π-system and extend via Giry monad
+        -- Measurability via π-system characterization of product σ-algebra
         classical
         let κ : Ω → Measure (Fin m → α) := fun ω => Measure.pi fun _ : Fin m => ν ω
-        let Rectangles : Set (Set (Fin m → α)) :=
+        let Rects : Set (Set (Fin m → α)) :=
           {S | ∃ (B : Fin m → Set α), (∀ i, MeasurableSet (B i)) ∧ S = Set.univ.pi B}
-
-        have h_gen : (inferInstance : MeasurableSpace (Fin m → α)) = MeasurableSpace.generateFrom Rectangles := by
-          have : Rectangles = {S : Set (Fin m → α) | ∃ (B : Fin m → Set α),
-              (∀ i, MeasurableSet (B i)) ∧ S = {x | ∀ i, x i ∈ B i}} := by
-            ext S; simp only [Rectangles, Set.mem_setOf_eq]
-            constructor
-            · intro ⟨B, hB, hS⟩
-              refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp
-            · intro ⟨B, hB, hS⟩
-              refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp
-          rw [this]
-          exact rectangles_generate_pi_sigma (m := m) (α := α)
-
-        have h_pi : IsPiSystem Rectangles := by
-          have : Rectangles = {S : Set (Fin m → α) | ∃ (B : Fin m → Set α),
-              (∀ i, MeasurableSet (B i)) ∧ S = {x | ∀ i, x i ∈ B i}} := by
-            ext S; simp only [Rectangles, Set.mem_setOf_eq]
-            constructor
-            · intro ⟨B, hB, hS⟩
-              refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp
-            · intro ⟨B, hB, hS⟩
-              refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp
-          rw [this]
-          exact rectangles_isPiSystem (m := m) (α := α)
-
-        have h_rect : ∀ t ∈ Rectangles, Measurable fun ω => κ ω t := by
-          intro t ht
-          obtain ⟨B, hB, rfl⟩ := ht
-          have : (fun ω => κ ω (Set.univ.pi B)) = fun ω => ∏ i : Fin m, ν ω (B i) := by
-            funext ω; simp only [κ]; exact measure_pi_univ_pi (fun _ => ν ω) B
-          rw [this]
-          apply Finset.measurable_prod
-          intro i _; exact hν_meas (B i) (hB i)
-
+        have Rects_def : Rects = {S : Set (Fin m → α) | ∃ (B : Fin m → Set α),
+            (∀ i, MeasurableSet (B i)) ∧ S = {x | ∀ i, x i ∈ B i}} := by
+          ext S; simp only [Rects, Set.mem_setOf_eq]
+          constructor <;> (intro ⟨B, hB, hS⟩; refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp)
+        have h_gen : (inferInstance : MeasurableSpace (Fin m → α)) = MeasurableSpace.generateFrom Rects := by
+          rw [Rects_def]; exact rectangles_generate_pi_sigma (m := m) (α := α)
+        have h_pi : IsPiSystem Rects := by
+          rw [Rects_def]; exact rectangles_isPiSystem (m := m) (α := α)
+        have h_rect : ∀ t ∈ Rects, Measurable fun ω => κ ω t := by
+          intro t ht; obtain ⟨B, hB, rfl⟩ := ht
+          simp only [κ, measure_pi_univ_pi]
+          exact Finset.measurable_prod _ fun i _ => hν_meas (B i) (hB i)
         have h_meas : Measurable κ := by
           haveI : ∀ ω, IsProbabilityMeasure (κ ω) := fun ω => inferInstance
           exact Measurable.measure_of_isPiSystem_of_isProbabilityMeasure h_gen h_pi h_rect
