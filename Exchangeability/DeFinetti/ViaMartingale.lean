@@ -957,7 +957,7 @@ lemma test_fn_pair_law
   have h := integral_eq_of_map_eq hT hT' hg_test_int h_pair
 
   -- Simplify: g_test ∘ (Y,W) = f∘Y * g∘W
-  convert h using 1 <;> simp [g_test]
+  convert h using 1
 
 /-! **Kallenberg Lemma 1.3 (Contraction-Independence)**: If the triple distribution
 satisfies (Y, Z, W) =^d (Y, Z, W'), then Y and Z are conditionally independent given W.
@@ -1117,7 +1117,7 @@ lemma indicator_comp_preimage_one
   =
   Set.indicator (W ⁻¹' T) (fun _ : Ω => (1 : ℝ)) := by
   funext ω
-  by_cases h : W ω ∈ T <;> simp [Set.indicator_of_mem, Set.indicator_of_not_mem, h]
+  by_cases h : W ω ∈ T <;> simp [Set.indicator_of_mem, Set.indicator_of_notMem, h]
 
 lemma integral_mul_indicator_to_set {Ω : Type*} [MeasurableSpace Ω] (μ : Measure Ω)
   {S : Set Ω} (hS : MeasurableSet S) (f : Ω → ℝ) :
@@ -1126,8 +1126,8 @@ lemma integral_mul_indicator_to_set {Ω : Type*} [MeasurableSpace Ω] (μ : Meas
   have : (fun ω => f ω * Set.indicator S (fun _ : Ω => (1 : ℝ)) ω)
        = Set.indicator S (fun ω => f ω) := by
     funext ω
-    by_cases h : ω ∈ S <;> simp [h, Set.indicator_of_mem, Set.indicator_of_not_mem]
-  simpa [this, integral_indicator, hS]
+    by_cases h : ω ∈ S <;> simp [h, Set.indicator_of_mem, Set.indicator_of_notMem]
+  simp [this, integral_indicator, hS]
 
 
 end ConditionalIndependence
@@ -1190,6 +1190,7 @@ lemma measurable_tailRV {t : Ω → ℕ → α} (ht : Measurable t) : Measurable
   -- This is the composition: (projection at n+1) ∘ t
   exact (measurable_pi_apply (n + 1)).comp ht
 
+set_option linter.unusedSectionVars false in
 /-- The contraction property: σ(tailRV t) ≤ σ(t).
 
 This is the key property for Kallenberg 1.3: tail gives a coarser σ-algebra. -/
@@ -1216,9 +1217,10 @@ lemma comap_tailRV_le {t : Ω → ℕ → α} :
       exact measurable_pi_apply (n + 1)
   · -- (tailRV t)⁻¹' A = t⁻¹' (tail⁻¹' A)
     ext ω
-    simp only [Set.mem_preimage, tailRV]
+    simp only [Set.mem_preimage]
     rfl
 
+set_option linter.unusedSectionVars false in
 /-- For W' = consRV x W, we have σ(W) ≤ σ(W').
 
 This is the contraction for Kallenberg 1.3 when W' = cons(X_r, W). -/
@@ -1265,7 +1267,7 @@ def phi1 (r m : ℕ) : ℕ → ℕ := fun n =>
   if n ≤ r then n else n + (m - r)
 
 omit [MeasurableSpace Ω] [MeasurableSpace α] in
-lemma phi0_strictMono (r m : ℕ) (hr : r ≤ m) : StrictMono (phi0 r m) := by
+lemma phi0_strictMono (r m : ℕ) (_hr : r ≤ m) : StrictMono (phi0 r m) := by
   intro i j hij
   simp only [phi0]
   by_cases hi : i < r
@@ -1279,7 +1281,7 @@ lemma phi0_strictMono (r m : ℕ) (hr : r ≤ m) : StrictMono (phi0 r m) := by
     omega
 
 omit [MeasurableSpace Ω] [MeasurableSpace α] in
-lemma phi1_strictMono (r m : ℕ) (hr : r ≤ m) : StrictMono (phi1 r m) := by
+lemma phi1_strictMono (r m : ℕ) (_hr : r ≤ m) : StrictMono (phi1 r m) := by
   intro i j hij
   simp only [phi1]
   by_cases hi : i ≤ r
@@ -1386,8 +1388,7 @@ lemma pair_law_eq_of_contractable [IsProbabilityMeasure μ]
   have h_seq0 : ∀ ω n, seq0 ω n = X (phi0 r m n) ω := fun ω n => by
     simp only [seq0, concat, U, W, shiftRV, phi0]
     by_cases hn : n < r
-    · have hle : n ≤ r := Nat.le_of_lt hn
-      simp only [hn, dite_true, hle, ite_true]
+    · simp only [hn, dite_true, ite_true]
     · simp only [hn, dite_false, ite_false]
       congr 1; omega
 
@@ -1423,14 +1424,14 @@ lemma pair_law_eq_of_contractable [IsProbabilityMeasure μ]
   have hU_meas : Measurable U := measurable_pi_iff.mpr fun i => hX i.val
   have hW_meas : Measurable W := measurable_pi_iff.mpr fun n => hX (m + 1 + n)
   have hW'_meas : Measurable W' := by
-    simp only [W', consRV]
+    simp only [W']
     rw [measurable_pi_iff]; intro n
     match n with
     | 0 => exact hX r
     | n' + 1 => exact hX (m + 1 + n')
 
-  have hseq0_meas : Measurable seq0 := h_concat_meas.comp (hU_meas.prod_mk hW_meas)
-  have hseq1_meas : Measurable seq1 := h_concat_meas.comp (hU_meas.prod_mk hW'_meas)
+  have hseq0_meas : Measurable seq0 := h_concat_meas.comp (hU_meas.prodMk hW_meas)
+  have hseq1_meas : Measurable seq1 := h_concat_meas.comp (hU_meas.prodMk hW'_meas)
 
   -- Finite marginals agree by contractability
   have h_marginals : ∀ k (S : Set (Fin k → α)), MeasurableSet S →
