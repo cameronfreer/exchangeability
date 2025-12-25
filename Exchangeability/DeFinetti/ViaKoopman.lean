@@ -54,56 +54,33 @@ Theorem and Koopman operator. This proof has the **heaviest dependencies**.
 * `deFinetti_viaKoopman`: **Main theorem** - contractable implies conditionally i.i.d.
 * Supporting lemmas for Birkhoff averages and conditional expectations
 
-## Current Status
+## Current Status (updated 2025-12-25)
 
-✅ **Compiles successfully** with structured sorries (h_tower proof outlined)
-✅ **Helper lemmas proved** using mathlib (shift properties, condexp_precomp_iterate_eq)
-✅ **Linter warnings fixed** - all unused variable warnings resolved
-✅ **Key technical lemma complete**: `integral_ν_eq_integral_condExpKernel` ✅
-✅ **identicalConditionalMarginals_integral proved** - ae integral equality established ✅
-✅ **Refactored to integral-level proofs** - avoids kernel uniqueness complexity
-✅ **Infrastructure documented** - all mathlib connections identified with file/line references
-✅ **Kernel.IndepFun.integral_mul - STEPS A & B COMPLETE** - full proof structure implemented
-✅ **Minor proof fix applied** - rfl simplification in indicator proof
-✅ **ν_eval_tailMeasurable proved** - kernel measurability property established
-✅ **h_tower proof structured** - 6-step MET/Cesàro averaging proof outlined with clear dependencies
+✅ **Compiles successfully**
+✅ **All infrastructure sections complete** - no sorries in Sections 1, 2, 5, 7, 9
+✅ **Major proofs complete** - L¹ Cesàro convergence, cylinder functions, main theorem
+✅ **Only 4 active sorries remain** - all in Sections 3-4 (MET/factorization)
 
-**Completed proofs**:
-1. ✅ `integral_ν_eq_integral_condExpKernel` - proved using Kernel.map_apply + integral_map
-2. ✅ `identicalConditionalMarginals_integral` - full proof via ae equality chaining through CE
-3. ✅ `Kernel.IndepFun.integral_mul` - **STRUCTURE COMPLETE**: Step A (simple functions) + Step B (bounded approximation)
-4. ✅ `ν_eval_tailMeasurable` - proved using condExpKernel tail-measurability + Kernel.map
-5. ✅ `integral_indicator_const` - helper for weighted indicator integrals
-6. ✅ `condexp_pair_factorization_MET` - **PROOF STRUCTURE**: 6 steps with Cesàro averages defined
+**Active sorries** (4 total):
 
-**Remaining sorries** (14 total: 6 in h_tower MET proof + 2 inductive steps + 6 deprecated/infrastructure):
+1. **Line 1661** - `condexp_product_factorization_ax` inductive step
+   - Needs conditional independence for product factorization
+   - Strategy: Use `condIndep_simpleFunc` from CondIndep.lean
 
-**Category 1: h_tower MET/Cesàro proof** (condexp_pair_factorization_MET, lines 644-708):
-1. Line 644: `h_cesaro_ce` - CE[A_n| mSI] = CE[g(ω₀)| mSI] via linearity + shift invariance
-2. Line 662: `h_product_const` - CE[f·A_n| mSI] = CE[f·g(ω₀)| mSI] via lag-constancy axiom
-3. Line 673: `h_met_convergence` - A_n → CE[g| mSI] ae via birkhoffAverage_tendsto_condexp
-4. Line 686: `h_product_convergence` - f·A_n → f·CE[g| mSI] in L¹ via boundedness
-5. Line 696: `h_ce_limit` - CE[f·A_n| mSI] → CE[f·CE[g| mSI]| mSI] via condExp_L1_lipschitz
-6. Line 708: `h_const_limit` - constant sequence equals its limit (key insight!)
+2. **Line 1748** - `condexp_product_factorization_general` inductive step
+   - Depends on `condexp_product_factorization_ax`
+   - Once ax is done, this follows from shift invariance
 
-**Category 2: Inductive steps requiring conditional independence**:
-7. Line 837: `condexp_product_factorization_ax` succ case - needs conditional independence
-8. Line 885: `condexp_product_factorization` succ case - needs conditional independence
+3. **Line 4482** - `ce_lipschitz_convergence`
+   - L¹-Lipschitz property of CE for products
+   - Strategy: Use `integral_abs_condExp_le` (Jensen/contraction)
 
-**Category 3: DEPRECATED (preserved for reference, not needed for main proof)**:
-9. Line 733: `ν_ae_shiftInvariant` - DEPRECATED, superseded by integral-level proofs
-10. Line 803: `identicalConditionalMarginals` - DEPRECATED kernel version
+4. **Line 4742** - `h_tower_of_lagConst_from_one`
+   - Tower property via Cesàro averaging
+   - Avoids false k=0 lag constancy, uses indices from 1
 
-**Category 4: Kernel independence infrastructure** (MECHANICAL, all math complete):
-11. Line 1008: Kernel independence lemma lookup (~2 lines)
-12. Line 1025-1049: integral_mul_simple helpers (~35 lines total)
-13. Line 1148: Step B bounded approximation (~60 lines: SimpleFunc.approx + DCT)
-14. Line 1152: Conditional independence assumption - **core axiom**
-
-**Summary**: 6 h_tower steps (MET/Cesàro averaging) + 2 inductive steps (cond. indep.) + 6 infrastructure = 14 total
-
-**Key insight**: Working at integral level (what proofs actually use) avoids kernel uniqueness
-and π-system extension complexity. Cleaner, more direct proofs.
+**Commented-out sorries** (not blocking, for reference only):
+- Line 1682, 2407, 5234 - In comment blocks, not active code
 
 ## Dependencies
 
@@ -133,50 +110,38 @@ modular files to improve navigability and enable parallel development.
 - **Status**: Complete
 - **Planned file**: Can merge into Infrastructure.lean
 
-### Section 3: Mean Ergodic Theorem (Lines 1904-2275) ⚠️ 1 sorry
-- General (T, m) Mean Ergodic Theorem
-- `birkhoffAverage_tendsto_condexp` for general measure-preserving systems
-- **Status**: Line 1952 has sorry (type class synthesis issues)
-- **Planned file**: `ViaKoopman/MeanErgodicTheorem.lean`
+### Section 3: Product Factorization (Lines ~1600-1900) ⚠️ 2 sorries
+- `condexp_product_factorization_ax` - product of bounded functions factorizes
+- `condexp_product_factorization_general` - generalization to arbitrary indices
+- **Status**: Lines 1661, 1748 have sorries (inductive steps need CI)
+- **Key dependency**: `condIndep_simpleFunc` from CondIndep.lean
 
-### Section 4: Option B - Density Approach (Lines 2276-3101) ⚠️ 1 sorry
-- L¹ Cesàro convergence (bounded and unbounded versions)
-- `L1_cesaro_convergence_bounded` ✅ complete
-- `L1_cesaro_convergence` ⚠️ has sorry at line 2403 (truncation strategy documented)
-- **Status**: Main lemma needs implementation
-- **Planned file**: `ViaKoopman/OptionB_DensityUI.lean`
+### Section 4: L¹ Cesàro Convergence (Lines ~1900-3100) ✅ COMPLETE
+- `L1_cesaro_convergence_bounded` - bounded case ✅
+- `L1_cesaro_convergence` - general case ✅
+- **Status**: No sorries
 
-### Section 5: Cylinder Functions (Lines 3102-3543) ✅ COMPLETE
+### Section 5: Cylinder Functions (Lines ~3100-3543) ✅ COMPLETE
 - Helper lemmas for indicator_product_bridge_ax
 - MeasureTheory namespace extensions
-- CylinderFunctions section
 - **Status**: No sorries
-- **Planned file**: `ViaKoopman/CylinderFunctions.lean`
 
-### Section 6: Main Convergence (Lines 3545-3896) ⚠️ 1 sorry
+### Section 6: Main Convergence (Lines ~3545-4000) ✅ COMPLETE
 - `birkhoffAverage_tendsto_condexp` specialized for shift
 - Helper lemmas for condexpL2_koopman_comm
-- **Status**: Line 3934 has sorry (condexpL2_ae_eq_condExp - lpMeas subtype)
-- **Planned file**: `ViaKoopman/MainConvergence.lean`
+- **Status**: No sorries
 
-### Section 7: Option B - L¹ Convergence (Lines 3898-4637) ⚠️ 2 sorries
-- L¹ convergence via cylinder functions
-- **Status**:
-  - Line 4043 h_meas ✅ PROVED (Strategy 2, 2025-11-16)
-  - Line 4065 h_le ⚠️ needs Strategy 1 bridge (coercion mismatch)
-  - Line 4081 h_toNorm ⚠️ needs Strategy 1 bridge (coercion mismatch)
-- **Blockers**: Need `birkhoffAverage_lp_eq_birkhoffAvgCLM` and `birkhoffAverage_coerce_eq_ae`
-- **Planned file**: `ViaKoopman/OptionB_L1Convergence.lean`
+### Section 7: Tower Property & Lipschitz (Lines ~4000-4800) ⚠️ 2 sorries
+- `ce_lipschitz_convergence` - L¹-Lipschitz property of CE
+- `h_tower_of_lagConst_from_one` - tower property via Cesàro
+- **Status**: Lines 4482, 4742 have sorries
+- **Strategy**: Use `integral_abs_condExp_le` (Jensen/contraction)
 
-### Section 8: Extreme Members (Lines 4639-6554) ⚠️ 1 sorry
-- **LARGEST SECTION** (1916 lines, 29% of file!)
+### Section 8: Extreme Members (Lines ~4800-6554) ✅ COMPLETE
 - Mathlib infrastructure for conditional independence
 - Kernel independence and integral factorization
-- OLD PROOF (kept for reference)
 - Pair factorization for conditional expectation
-- Use axiomatized product factorization
-- **Status**: Line 6165 has sorry (Kernel.IndepFun autoparam issues)
-- **Planned file**: `ViaKoopman/ExtremeMembers.lean`
+- **Status**: No sorries
 
 ### Section 9: Main Theorem (Lines 6609-6650) ✅ COMPLETE
 - Bridge Lemma connecting conditional expectation factorization to measure products
