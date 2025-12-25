@@ -1129,6 +1129,13 @@ lemma integral_mul_indicator_to_set {Ω : Type*} [MeasurableSpace Ω] (μ : Meas
     by_cases h : ω ∈ S <;> simp [h, Set.indicator_of_mem, Set.indicator_of_notMem]
   simp [this, integral_indicator, hS]
 
+/-- Indicator functions `Set.indicator S (1 : _ → ℝ)` are bounded by 1 in norm. -/
+lemma norm_indicator_one_le {α : Type*} (S : Set α) (x : α) :
+    ‖Set.indicator S (fun _ : α => (1 : ℝ)) x‖ ≤ 1 := by
+  simp only [Real.norm_eq_abs]
+  by_cases h : x ∈ S
+  · simp [Set.indicator_of_mem h]
+  · simp [Set.indicator_of_notMem h]
 
 end ConditionalIndependence
 
@@ -1410,13 +1417,8 @@ lemma pair_law_eq_of_contractable [IsProbabilityMeasure μ]
         -- n = r + k + 1, so (r + k + 1) - r = k + 1
         -- match on (k+1) gives X (m + 1 + k) ω
         -- need: m + 1 + k = (r + k + 1) + (m - r)
-        have h_sub : r + (m - r) = m := Nat.add_sub_cancel' hr
         have h_idx_eq : (r + k + 1) - r = k + 1 := by omega
-        have h_final : m + 1 + k = (r + k + 1) + (m - r) := by
-          have : (r + k + 1) + (m - r) = k + 1 + (r + (m - r)) := by ring
-          rw [this, h_sub]
-          ring
-        -- Now rewrite the goal using these facts
+        have h_final : m + 1 + k = (r + k + 1) + (m - r) := by omega
         conv_lhs => simp only [consRV, shiftRV, h_idx_eq]
         conv_rhs => rw [← h_final]
 
@@ -1750,11 +1752,7 @@ lemma condExp_Xr_indicator_eq_of_contractable
     have hIndB_int : Integrable indB μ :=
       (integrable_const 1).indicator (hB_Xr.preimage (hX_meas r))
     have hProd_int : Integrable (indA * indB) μ := by
-      have hIndA_bdd : ∃ C, ∀ x, ‖indA x‖ ≤ C := by
-        use 1; intro x
-        simp only [indA]
-        rw [Real.norm_eq_abs, abs_of_nonneg (Set.indicator_nonneg (fun _ _ => by norm_num) x)]
-        exact Set.indicator_le' (fun _ _ => le_refl 1) (fun _ _ => zero_le_one) x
+      have hIndA_bdd : ∃ C, ∀ x, ‖indA x‖ ≤ C := ⟨1, fun x => norm_indicator_one_le _ x⟩
       exact hIndB_int.bdd_mul hIndA_int.aestronglyMeasurable hIndA_bdd
 
     -- Key: indB is mW'-measurable (X_r = W'(0) via consRV)
@@ -1805,15 +1803,10 @@ lemma condExp_Xr_indicator_eq_of_contractable
     -- Step 6: Pull-out for mW: E[E[indA|mW] * indB | mW] =ᵐ E[indA|mW] * E[indB|mW]
     have hCondExpA_stronglyMeas : StronglyMeasurable[mW] (μ[indA | mW]) :=
       stronglyMeasurable_condExp
+    have hIndB_bdd : ∃ C, ∀ x, ‖indB x‖ ≤ C := ⟨1, fun x => norm_indicator_one_le _ x⟩
     have h_prod_condA_indB_int : Integrable (μ[indA | mW] * indB) μ := by
-      have hIndB_bdd : ∃ C, ∀ x, ‖indB x‖ ≤ C := by
-        use 1; intro x
-        simp only [indB]
-        rw [Real.norm_eq_abs, abs_of_nonneg (Set.indicator_nonneg (fun _ _ => by norm_num) x)]
-        exact Set.indicator_le' (fun _ _ => le_refl 1) (fun _ _ => zero_le_one) x
-      have h : Integrable (indB * (μ[indA | mW])) μ :=
-        integrable_condExp.bdd_mul hIndB_int.aestronglyMeasurable hIndB_bdd
-      convert h using 1; ext ω; exact mul_comm _ _
+      convert integrable_condExp.bdd_mul hIndB_int.aestronglyMeasurable hIndB_bdd using 2
+      exact mul_comm _ _
     have h_step4 : μ[μ[indA | mW] * indB | mW] =ᵐ[μ] μ[indA | mW] * μ[indB | mW] :=
       condExp_mul_of_stronglyMeasurable_left hCondExpA_stronglyMeas h_prod_condA_indB_int hIndB_int
 
@@ -2653,8 +2646,7 @@ lemma measure_ext_of_future_rectangles
         by_cases h2 : (i : ℕ) < r₂
         · simp [C, h1, h2] at this
           exact this.1
-        · simp [C, h1, h2] at this
-          exact this
+        · simpa [C, h1, h2] using this
       · intro i
         have hi : (i : ℕ) < r := lt_of_lt_of_le i.2 (Nat.le_max_right r₁ r₂)
         have := hC' ⟨i, hi⟩
@@ -2663,8 +2655,7 @@ lemma measure_ext_of_future_rectangles
         by_cases h1 : (i : ℕ) < r₁
         · simp [C, h1, h2] at this
           exact this.2
-        · simp [C, h1, h2] at this
-          exact this
+        · simpa [C, h1, h2] using this
 
   -- Show that S generates the product σ-algebra
   have h_gen : (inferInstance : MeasurableSpace (α × (ℕ → α)))
