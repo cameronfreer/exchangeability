@@ -2217,27 +2217,12 @@ omit [MeasurableSpace Ω] in
 
 lemma tailSigmaFuture_eq_tailSigma (X : ℕ → Ω → α) :
     tailSigmaFuture X = tailSigma X := by
-  classical
-  have hfut : tailSigmaFuture X = ⨅ n, revFiltration X (n + 1) := by
-    simp [tailSigmaFuture, futureFiltration_eq_rev_succ]
-  have htail : tailSigma X = ⨅ n, revFiltration X n := rfl
-  refine le_antisymm ?_ ?_
-  · -- `tailSigmaFuture ≤ tailSigma`
-    refine (hfut ▸ ?_)
-    refine le_iInf ?_
-    intro n
-    have h1 : (⨅ m, revFiltration X (m + 1)) ≤ revFiltration X (n + 1) :=
-      iInf_le (fun m => revFiltration X (m + 1)) n
-    have h2 : revFiltration X (n + 1) ≤ revFiltration X n :=
-      revFiltration_antitone X (Nat.le_succ n)
-    exact h1.trans h2
-  · -- `tailSigma ≤ tailSigmaFuture`
-    refine (htail ▸ ?_)
-    refine le_iInf ?_
-    intro n
-    have h1 : (⨅ m, revFiltration X m) ≤ revFiltration X (n + 1) :=
-      iInf_le (fun m => revFiltration X m) (n + 1)
-    simpa [futureFiltration_eq_rev_succ] using h1
+  -- Both are infima of antitone sequences: ⨅ n, revFiltration X (n+1) vs ⨅ n, revFiltration X n
+  -- These are equal because shifting by 1 doesn't change infimum of antitone sequence
+  simp only [tailSigmaFuture, tailSigma, futureFiltration_eq_rev_succ]
+  apply le_antisymm
+  · exact iInf_mono fun n => revFiltration_antitone X (Nat.le_succ n)
+  · exact le_iInf fun n => iInf_le _ (n + 1)
 
 /-! ### Helper lemmas for tail σ-algebra -/
 
