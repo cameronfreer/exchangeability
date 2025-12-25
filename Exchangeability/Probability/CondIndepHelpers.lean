@@ -52,29 +52,8 @@ variable [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β] [Measura
 ### L¹ Convergence of Conditional Expectations
 -/
 
-/-- **L¹ convergence of conditional expectations.**
-
-If `fn → f` in L¹, then `μ[fn | m] → μ[f | m]` in the appropriate topology.
-
-**Proof obligation:**
-
-The proof uses the L¹ contraction property of conditional expectation:
-1. `eLpNorm (μ[g|m]) 1 μ ≤ eLpNorm g 1 μ`
-2. `μ[fn - f | m] =ᵐ[μ] μ[fn | m] - μ[f | m]` (linearity)
-3. Combine: `eLpNorm (μ[fn | m] - μ[f | m]) 1 μ ≤ eLpNorm (fn - f) 1 μ → 0`
-
-**Note:** The statement has a topological issue - conditional expectation is only
-defined up to ae equivalence, so pointwise convergence requires care.
-The correct formulation should use L¹ convergence:
-`Tendsto (fun n => eLpNorm (μ[fn n|m] - μ[f|m]) 1 μ) atTop (nhds 0)`
--/
-lemma tendsto_condexp_L1_proof {mΩ : MeasurableSpace Ω} (μ : Measure Ω) [IsProbabilityMeasure μ]
-    (m : MeasurableSpace Ω) (_hm : m ≤ mΩ)
-    {fn : ℕ → Ω → ℝ} {f : Ω → ℝ}
-    (_h_int : ∀ n, Integrable (fn n) μ) (_hf : Integrable f μ)
-    (_hL1 : Tendsto (fun n => ∫⁻ ω, ‖(fn n) ω - f ω‖₊ ∂μ) atTop (nhds 0)) :
-    Tendsto (fun n => μ[fn n | m]) atTop (nhds (μ[f | m])) := by
-  sorry
+-- Note: `tendsto_condexp_L1` is now defined and proved in `CondIndep.lean`
+-- with the correct L¹ formulation. Use `tendsto_condexp_L1` directly from there.
 
 /-!
 ### Simple Function Approximation
