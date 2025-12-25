@@ -736,6 +736,14 @@ lemma approx_bounded_measurable (μ : Measure α) [IsProbabilityMeasure μ]
     rw [h_ae_false] at h_univ
     simp at h_univ
 
+/-- Helper: eapprox values are bounded by the target function.
+This follows from monotonicity of eapprox and the fact that its supremum equals the target. -/
+lemma SimpleFunc.eapprox_le {α : Type*} [MeasurableSpace α] {f : α → ℝ≥0∞}
+    (hf : Measurable f) (n : ℕ) (a : α) : SimpleFunc.eapprox f n a ≤ f a := by
+  calc SimpleFunc.eapprox f n a
+      ≤ ⨆ m, SimpleFunc.eapprox f m a := le_iSup (fun m => SimpleFunc.eapprox f m a) n
+    _ = f a := SimpleFunc.iSup_eapprox_apply hf a
+
 /-- **Conditional independence for simple functions (left argument).**
 Refactored to avoid instance pollution: works with σ(W) directly.
 
@@ -785,10 +793,11 @@ lemma condIndep_simpleFunc_left
 
   5. **Conclude by L¹ uniqueness**: If fₙ =ᵐ gₙ and both converge in L¹, then limit f =ᵐ limit g.
 
-  KEY MISSING PIECES:
-  - eapprox_le_self: eapprox f n a ≤ f a (derive from le_iSup + iSup_eapprox_apply)
-  - Integrable.of_norm_le (or similar) for integrability from norm bounds
-  - condExp_mono_ae (or derive from integral characterization)
+  The key infrastructure is:
+  - `SimpleFunc.eapprox_le` (helper lemma above): eapprox f n a ≤ f a
+  - `SimpleFunc.tendsto_eapprox`: eapprox converges pointwise to target
+  - `tendsto_condexp_L1`: L¹ convergence passes through conditional expectation
+  - `condIndep_simpleFunc`: base case for both simple functions
   -/
   sorry
 
