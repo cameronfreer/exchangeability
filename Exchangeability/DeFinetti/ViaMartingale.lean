@@ -957,7 +957,7 @@ lemma test_fn_pair_law
   have h := integral_eq_of_map_eq hT hT' hg_test_int h_pair
 
   -- Simplify: g_test ∘ (Y,W) = f∘Y * g∘W
-  convert h using 1 <;> simp [g_test]
+  convert h using 1
 
 /-! **Kallenberg Lemma 1.3 (Contraction-Independence)**: If the triple distribution
 satisfies (Y, Z, W) =^d (Y, Z, W'), then Y and Z are conditionally independent given W.
@@ -1117,7 +1117,7 @@ lemma indicator_comp_preimage_one
   =
   Set.indicator (W ⁻¹' T) (fun _ : Ω => (1 : ℝ)) := by
   funext ω
-  by_cases h : W ω ∈ T <;> simp [Set.indicator_of_mem, Set.indicator_of_not_mem, h]
+  by_cases h : W ω ∈ T <;> simp [Set.indicator_of_mem, Set.indicator_of_notMem, h]
 
 lemma integral_mul_indicator_to_set {Ω : Type*} [MeasurableSpace Ω] (μ : Measure Ω)
   {S : Set Ω} (hS : MeasurableSet S) (f : Ω → ℝ) :
@@ -1126,9 +1126,16 @@ lemma integral_mul_indicator_to_set {Ω : Type*} [MeasurableSpace Ω] (μ : Meas
   have : (fun ω => f ω * Set.indicator S (fun _ : Ω => (1 : ℝ)) ω)
        = Set.indicator S (fun ω => f ω) := by
     funext ω
-    by_cases h : ω ∈ S <;> simp [h, Set.indicator_of_mem, Set.indicator_of_not_mem]
-  simpa [this, integral_indicator, hS]
+    by_cases h : ω ∈ S <;> simp [h, Set.indicator_of_mem, Set.indicator_of_notMem]
+  simp [this, integral_indicator, hS]
 
+/-- Indicator functions `Set.indicator S (1 : _ → ℝ)` are bounded by 1 in norm. -/
+lemma norm_indicator_one_le {α : Type*} (S : Set α) (x : α) :
+    ‖Set.indicator S (fun _ : α => (1 : ℝ)) x‖ ≤ 1 := by
+  simp only [Real.norm_eq_abs]
+  by_cases h : x ∈ S
+  · simp [Set.indicator_of_mem h]
+  · simp [Set.indicator_of_notMem h]
 
 end ConditionalIndependence
 
@@ -1190,6 +1197,7 @@ lemma measurable_tailRV {t : Ω → ℕ → α} (ht : Measurable t) : Measurable
   -- This is the composition: (projection at n+1) ∘ t
   exact (measurable_pi_apply (n + 1)).comp ht
 
+set_option linter.unusedSectionVars false in
 /-- The contraction property: σ(tailRV t) ≤ σ(t).
 
 This is the key property for Kallenberg 1.3: tail gives a coarser σ-algebra. -/
@@ -1216,9 +1224,10 @@ lemma comap_tailRV_le {t : Ω → ℕ → α} :
       exact measurable_pi_apply (n + 1)
   · -- (tailRV t)⁻¹' A = t⁻¹' (tail⁻¹' A)
     ext ω
-    simp only [Set.mem_preimage, tailRV]
+    simp only [Set.mem_preimage]
     rfl
 
+set_option linter.unusedSectionVars false in
 /-- For W' = consRV x W, we have σ(W) ≤ σ(W').
 
 This is the contraction for Kallenberg 1.3 when W' = cons(X_r, W). -/
@@ -1265,7 +1274,7 @@ def phi1 (r m : ℕ) : ℕ → ℕ := fun n =>
   if n ≤ r then n else n + (m - r)
 
 omit [MeasurableSpace Ω] [MeasurableSpace α] in
-lemma phi0_strictMono (r m : ℕ) (hr : r ≤ m) : StrictMono (phi0 r m) := by
+lemma phi0_strictMono (r m : ℕ) (_hr : r ≤ m) : StrictMono (phi0 r m) := by
   intro i j hij
   simp only [phi0]
   by_cases hi : i < r
@@ -1279,7 +1288,7 @@ lemma phi0_strictMono (r m : ℕ) (hr : r ≤ m) : StrictMono (phi0 r m) := by
     omega
 
 omit [MeasurableSpace Ω] [MeasurableSpace α] in
-lemma phi1_strictMono (r m : ℕ) (hr : r ≤ m) : StrictMono (phi1 r m) := by
+lemma phi1_strictMono (r m : ℕ) (_hr : r ≤ m) : StrictMono (phi1 r m) := by
   intro i j hij
   simp only [phi1]
   by_cases hi : i ≤ r
@@ -1386,8 +1395,7 @@ lemma pair_law_eq_of_contractable [IsProbabilityMeasure μ]
   have h_seq0 : ∀ ω n, seq0 ω n = X (phi0 r m n) ω := fun ω n => by
     simp only [seq0, concat, U, W, shiftRV, phi0]
     by_cases hn : n < r
-    · have hle : n ≤ r := Nat.le_of_lt hn
-      simp only [hn, dite_true, hle, ite_true]
+    · simp only [hn, dite_true, ite_true]
     · simp only [hn, dite_false, ite_false]
       congr 1; omega
 
@@ -1409,13 +1417,8 @@ lemma pair_law_eq_of_contractable [IsProbabilityMeasure μ]
         -- n = r + k + 1, so (r + k + 1) - r = k + 1
         -- match on (k+1) gives X (m + 1 + k) ω
         -- need: m + 1 + k = (r + k + 1) + (m - r)
-        have h_sub : r + (m - r) = m := Nat.add_sub_cancel' hr
         have h_idx_eq : (r + k + 1) - r = k + 1 := by omega
-        have h_final : m + 1 + k = (r + k + 1) + (m - r) := by
-          have : (r + k + 1) + (m - r) = k + 1 + (r + (m - r)) := by ring
-          rw [this, h_sub]
-          ring
-        -- Now rewrite the goal using these facts
+        have h_final : m + 1 + k = (r + k + 1) + (m - r) := by omega
         conv_lhs => simp only [consRV, shiftRV, h_idx_eq]
         conv_rhs => rw [← h_final]
 
@@ -1423,14 +1426,14 @@ lemma pair_law_eq_of_contractable [IsProbabilityMeasure μ]
   have hU_meas : Measurable U := measurable_pi_iff.mpr fun i => hX i.val
   have hW_meas : Measurable W := measurable_pi_iff.mpr fun n => hX (m + 1 + n)
   have hW'_meas : Measurable W' := by
-    simp only [W', consRV]
+    simp only [W']
     rw [measurable_pi_iff]; intro n
     match n with
     | 0 => exact hX r
     | n' + 1 => exact hX (m + 1 + n')
 
-  have hseq0_meas : Measurable seq0 := h_concat_meas.comp (hU_meas.prod_mk hW_meas)
-  have hseq1_meas : Measurable seq1 := h_concat_meas.comp (hU_meas.prod_mk hW'_meas)
+  have hseq0_meas : Measurable seq0 := h_concat_meas.comp (hU_meas.prodMk hW_meas)
+  have hseq1_meas : Measurable seq1 := h_concat_meas.comp (hU_meas.prodMk hW'_meas)
 
   -- Finite marginals agree by contractability
   have h_marginals : ∀ k (S : Set (Fin k → α)), MeasurableSet S →
@@ -1749,11 +1752,7 @@ lemma condExp_Xr_indicator_eq_of_contractable
     have hIndB_int : Integrable indB μ :=
       (integrable_const 1).indicator (hB_Xr.preimage (hX_meas r))
     have hProd_int : Integrable (indA * indB) μ := by
-      have hIndA_bdd : ∃ C, ∀ x, ‖indA x‖ ≤ C := by
-        use 1; intro x
-        simp only [indA]
-        rw [Real.norm_eq_abs, abs_of_nonneg (Set.indicator_nonneg (fun _ _ => by norm_num) x)]
-        exact Set.indicator_le' (fun _ _ => le_refl 1) (fun _ _ => zero_le_one) x
+      have hIndA_bdd : ∃ C, ∀ x, ‖indA x‖ ≤ C := ⟨1, fun x => norm_indicator_one_le _ x⟩
       exact hIndB_int.bdd_mul hIndA_int.aestronglyMeasurable hIndA_bdd
 
     -- Key: indB is mW'-measurable (X_r = W'(0) via consRV)
@@ -1804,15 +1803,10 @@ lemma condExp_Xr_indicator_eq_of_contractable
     -- Step 6: Pull-out for mW: E[E[indA|mW] * indB | mW] =ᵐ E[indA|mW] * E[indB|mW]
     have hCondExpA_stronglyMeas : StronglyMeasurable[mW] (μ[indA | mW]) :=
       stronglyMeasurable_condExp
+    have hIndB_bdd : ∃ C, ∀ x, ‖indB x‖ ≤ C := ⟨1, fun x => norm_indicator_one_le _ x⟩
     have h_prod_condA_indB_int : Integrable (μ[indA | mW] * indB) μ := by
-      have hIndB_bdd : ∃ C, ∀ x, ‖indB x‖ ≤ C := by
-        use 1; intro x
-        simp only [indB]
-        rw [Real.norm_eq_abs, abs_of_nonneg (Set.indicator_nonneg (fun _ _ => by norm_num) x)]
-        exact Set.indicator_le' (fun _ _ => le_refl 1) (fun _ _ => zero_le_one) x
-      have h : Integrable (indB * (μ[indA | mW])) μ :=
-        integrable_condExp.bdd_mul hIndB_int.aestronglyMeasurable hIndB_bdd
-      convert h using 1; ext ω; exact mul_comm _ _
+      convert integrable_condExp.bdd_mul hIndB_int.aestronglyMeasurable hIndB_bdd using 2
+      exact mul_comm _ _
     have h_step4 : μ[μ[indA | mW] * indB | mW] =ᵐ[μ] μ[indA | mW] * μ[indB | mW] :=
       condExp_mul_of_stronglyMeasurable_left hCondExpA_stronglyMeas h_prod_condA_indB_int hIndB_int
 
@@ -2223,27 +2217,12 @@ omit [MeasurableSpace Ω] in
 
 lemma tailSigmaFuture_eq_tailSigma (X : ℕ → Ω → α) :
     tailSigmaFuture X = tailSigma X := by
-  classical
-  have hfut : tailSigmaFuture X = ⨅ n, revFiltration X (n + 1) := by
-    simp [tailSigmaFuture, futureFiltration_eq_rev_succ]
-  have htail : tailSigma X = ⨅ n, revFiltration X n := rfl
-  refine le_antisymm ?_ ?_
-  · -- `tailSigmaFuture ≤ tailSigma`
-    refine (hfut ▸ ?_)
-    refine le_iInf ?_
-    intro n
-    have h1 : (⨅ m, revFiltration X (m + 1)) ≤ revFiltration X (n + 1) :=
-      iInf_le (fun m => revFiltration X (m + 1)) n
-    have h2 : revFiltration X (n + 1) ≤ revFiltration X n :=
-      revFiltration_antitone X (Nat.le_succ n)
-    exact h1.trans h2
-  · -- `tailSigma ≤ tailSigmaFuture`
-    refine (htail ▸ ?_)
-    refine le_iInf ?_
-    intro n
-    have h1 : (⨅ m, revFiltration X m) ≤ revFiltration X (n + 1) :=
-      iInf_le (fun m => revFiltration X m) (n + 1)
-    simpa [futureFiltration_eq_rev_succ] using h1
+  -- Both are infima of antitone sequences: ⨅ n, revFiltration X (n+1) vs ⨅ n, revFiltration X n
+  -- These are equal because shifting by 1 doesn't change infimum of antitone sequence
+  simp only [tailSigmaFuture, tailSigma, futureFiltration_eq_rev_succ]
+  apply le_antisymm
+  · exact iInf_mono fun n => revFiltration_antitone X (Nat.le_succ n)
+  · exact le_iInf fun n => iInf_le _ (n + 1)
 
 /-! ### Helper lemmas for tail σ-algebra -/
 
@@ -2652,8 +2631,7 @@ lemma measure_ext_of_future_rectangles
         by_cases h2 : (i : ℕ) < r₂
         · simp [C, h1, h2] at this
           exact this.1
-        · simp [C, h1, h2] at this
-          exact this
+        · simpa [C, h1, h2] using this
       · intro i
         have hi : (i : ℕ) < r := lt_of_lt_of_le i.2 (Nat.le_max_right r₁ r₂)
         have := hC' ⟨i, hi⟩
@@ -2662,8 +2640,7 @@ lemma measure_ext_of_future_rectangles
         by_cases h1 : (i : ℕ) < r₁
         · simp [C, h1, h2] at this
           exact this.2
-        · simp [C, h1, h2] at this
-          exact this
+        · simpa [C, h1, h2] using this
 
   -- Show that S generates the product σ-algebra
   have h_gen : (inferInstance : MeasurableSpace (α × (ℕ → α)))
@@ -4310,21 +4287,9 @@ lemma directingMeasure_measurable_eval
       Measurable (fun ω => directingMeasure (μ := μ) X hX ω B) := by
   intro B hB
   classical
-  -- Preimage of a measurable set under `X 0` is measurable in `Ω`.
   have hS : MeasurableSet ((X 0) ⁻¹' B) := (hX 0) hB
-  -- Abbreviation for the conditional expectation kernel on the tail σ-algebra.
   let κ := ProbabilityTheory.condExpKernel μ (tailSigma X)
-  -- Evaluate: map-apply reduces evaluation on `B` to evaluation on the preimage.
-  have h_eval :
-      (fun ω => directingMeasure (μ := μ) X hX ω B)
-        = fun ω => κ ω ((X 0) ⁻¹' B) := by
-    funext ω
-    -- `Measure.map_apply` expects `hB`, and uses `(hX 0)` for measurability of `X 0`.
-    simp only [directingMeasure]
-    rw [Measure.map_apply (hX 0) hB]
-  -- Kernel evaluation at a fixed measurable set is measurable in the parameter.
-  -- We lift from tailSigma to the full σ-algebra using tailSigma_le.
-  rw [h_eval]
+  simp only [directingMeasure, Measure.map_apply (hX 0) hB]
   exact (ProbabilityTheory.Kernel.measurable_coe κ hS).mono (tailSigma_le X hX) le_rfl
 
 /-- The directing measure is (pointwise) a probability measure.
@@ -4357,51 +4322,25 @@ lemma directingMeasure_X0_marginal
     =ᵐ[μ]
   μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] := by
   classical
-  -- Integrability of the indicator through X 0
-  have hInt : Integrable (fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (X 0 ω))) μ := by
-    apply Integrable.indicator
-    · exact integrable_const (1 : ℝ)
-    · exact (hX 0) hB
+  have hInt : Integrable (fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (X 0 ω))) μ :=
+    (integrable_const 1).indicator ((hX 0) hB)
+  let κ := ProbabilityTheory.condExpKernel μ (tailSigma X)
 
   -- Conditional expectation equals kernel integral a.e.
-  have hAE :
-    μ[ (fun ω => Set.indicator B (fun _ => (1 : ℝ)) (X 0 ω)) | tailSigma X]
-      =ᵐ[μ]
-    (fun ω => ∫ x, (Set.indicator B (fun _ => (1 : ℝ)) (X 0 x))
-                   ∂ ProbabilityTheory.condExpKernel μ (tailSigma X) ω) := by
-    exact ProbabilityTheory.condExp_ae_eq_integral_condExpKernel (tailSigma_le X hX) hInt
+  have hAE := ProbabilityTheory.condExp_ae_eq_integral_condExpKernel (tailSigma_le X hX) hInt
 
   -- Identify the kernel integral with evaluation of `directingMeasure` on `B`
-  have hId :
-    (fun ω => ∫ x, (Set.indicator B (fun _ => (1 : ℝ)) (X 0 x))
-                   ∂ ProbabilityTheory.condExpKernel μ (tailSigma X) ω)
-    =
-    (fun ω => (directingMeasure (μ := μ) X hX ω B).toReal) := by
+  have hId : (fun ω => ∫ x, (Set.indicator B (fun _ => (1 : ℝ)) (X 0 x)) ∂κ ω) =
+             (fun ω => (directingMeasure (μ := μ) X hX ω B).toReal) := by
     funext ω
-    -- The integral of an indicator equals the measure of the set
-    let κ := ProbabilityTheory.condExpKernel μ (tailSigma X)
-    have : ∫ x, (Set.indicator B (fun _ => (1 : ℝ)) (X 0 x)) ∂κ ω
-          = ((κ ω) ((X 0) ⁻¹' B)).toReal := by
-      -- Rewrite indicator in terms of preimage
-      have h_eq : (fun x => Set.indicator B (fun _ => (1 : ℝ)) (X 0 x))
-                = Set.indicator ((X 0) ⁻¹' B) (fun _ => (1 : ℝ)) := by
-        ext x; simp [Set.indicator, Set.mem_preimage]
-      rw [h_eq]
-      -- Use integral_indicator_one
-      have h_int_one := @MeasureTheory.integral_indicator_one _ _ (κ ω) ((X 0) ⁻¹' B)
-        ((hX 0) hB)
-      simp only [MeasureTheory.Measure.real] at h_int_one
-      exact h_int_one
-    calc ∫ x, (Set.indicator B (fun _ => (1 : ℝ)) (X 0 x)) ∂κ ω
-        = ((κ ω) ((X 0) ⁻¹' B)).toReal := this
-      _ = (directingMeasure (μ := μ) X hX ω B).toReal := by
-          simp [directingMeasure, κ]
-          rw [Measure.map_apply (hX 0) hB]
+    have h_eq : (fun x => Set.indicator B (fun _ => (1 : ℝ)) (X 0 x)) =
+                Set.indicator ((X 0) ⁻¹' B) (fun _ => (1 : ℝ)) := by ext x; simp [Set.indicator]
+    simp only [h_eq, directingMeasure, Measure.map_apply (hX 0) hB]
+    exact MeasureTheory.integral_indicator_one ((hX 0) hB)
 
-  -- Combine using EventuallyEq: rewrite with hId then apply hAE
+  -- Combine: rewrite with hId then apply hAE
   calc (fun ω => (directingMeasure (μ := μ) X hX ω B).toReal)
-      = (fun ω => ∫ x, (Set.indicator B (fun _ => (1 : ℝ)) (X 0 x))
-                     ∂ ProbabilityTheory.condExpKernel μ (tailSigma X) ω) := hId.symm
+      = (fun ω => ∫ x, (Set.indicator B (fun _ => (1 : ℝ)) (X 0 x)) ∂κ ω) := hId.symm
     _ =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] := hAE.symm
 
 end Directing
@@ -4588,31 +4527,19 @@ lemma finite_product_formula_id
   let Rectangles : Set (Set (Fin m → α)) :=
     {S | ∃ (C : Fin m → Set α), (∀ i, MeasurableSet (C i)) ∧ S = Set.univ.pi C}
 
+  -- Characterization: Rectangles = {S | ∃ B, ...} (used multiple times below)
+  have Rectangles_def : Rectangles = {S : Set (Fin m → α) | ∃ (B : Fin m → Set α),
+      (∀ i, MeasurableSet (B i)) ∧ S = {x | ∀ i, x i ∈ B i}} := by
+    ext S; simp only [Rectangles, Set.mem_setOf_eq]
+    constructor <;> (intro ⟨B, hB, hS⟩; refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp)
+
   -- 1) Rectangles form a π-system and generate the Π σ-algebra
   have h_pi : IsPiSystem Rectangles := by
-    have : Rectangles = {S : Set (Fin m → α) | ∃ (B : Fin m → Set α),
-        (∀ i, MeasurableSet (B i)) ∧ S = {x | ∀ i, x i ∈ B i}} := by
-      ext S; simp only [Rectangles, Set.mem_setOf_eq]
-      constructor
-      · intro ⟨B, hB, hS⟩
-        refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp
-      · intro ⟨B, hB, hS⟩
-        refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp
-    rw [this]
-    exact rectangles_isPiSystem (m := m) (α := α)
+    rw [Rectangles_def]; exact rectangles_isPiSystem (m := m) (α := α)
 
   have h_gen : (inferInstance : MeasurableSpace (Fin m → α))
       = MeasurableSpace.generateFrom Rectangles := by
-    have : Rectangles = {S : Set (Fin m → α) | ∃ (B : Fin m → Set α),
-        (∀ i, MeasurableSet (B i)) ∧ S = {x | ∀ i, x i ∈ B i}} := by
-      ext S; simp only [Rectangles, Set.mem_setOf_eq]
-      constructor
-      · intro ⟨B, hB, hS⟩
-        refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp
-      · intro ⟨B, hB, hS⟩
-        refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp
-    rw [this]
-    exact rectangles_generate_pi_sigma (m := m) (α := α)
+    rw [Rectangles_def]; exact rectangles_generate_pi_sigma (m := m) (α := α)
 
   -- 2) Show both measures agree on rectangles
   have h_agree :
@@ -4763,30 +4690,21 @@ lemma finite_product_formula_id
         -- ν · (C i) is measurable by hν_meas, and toReal is continuous hence measurable
         exact Measurable.ennreal_toReal (hν_meas (C i) (hC i))
 
-      -- Step 2: Show integrability (bounded by 1)
+      -- Step 2: Show integrability (bounded by 1) via integrable_of_bounded_on_prob
       have h_integrable : Integrable f μ := by
-        refine ⟨h_meas.aestronglyMeasurable, ?_⟩
-        -- Show has finite integral via boundedness
-        apply HasFiniteIntegral.of_bounded
-        apply ae_of_all
-        intro ω
-        -- Each factor satisfies 0 ≤ (ν ω (C i)).toReal ≤ 1
-        have h_bound : ∀ i : Fin m, (ν ω (C i)).toReal ≤ 1 := by
-          intro i
+        apply integrable_of_bounded_on_prob h_meas
+        apply ae_of_all μ; intro ω
+        have h_nonneg_ω : 0 ≤ f ω :=
+          Finset.prod_nonneg (fun i _ => ENNReal.toReal_nonneg (a := ν ω (C i)))
+        rw [Real.norm_of_nonneg h_nonneg_ω]
+        have h_bound : ∀ i : Fin m, (ν ω (C i)).toReal ≤ 1 := fun i => by
           have h1 : ν ω (C i) ≤ 1 := prob_le_one
-          have hfin : ν ω (C i) ≠ ⊤ := ne_of_lt (lt_of_le_of_lt h1 ENNReal.one_lt_top)
           rw [← ENNReal.toReal_one]
-          exact (ENNReal.toReal_le_toReal hfin ENNReal.one_ne_top).mpr h1
-        -- Product of factors ≤ 1 is ≤ 1
-        have h_prod_le : f ω ≤ 1 := by
-          calc f ω = ∏ i : Fin m, (ν ω (C i)).toReal := rfl
-            _ ≤ ∏ i : Fin m, (1 : ℝ) := Finset.prod_le_prod
-                (fun i _ => ENNReal.toReal_nonneg) (fun i _ => h_bound i)
-            _ = 1 := by simp
-        -- Since f ω ≥ 0, we have ‖f ω‖ = f ω ≤ 1
-        calc ‖f ω‖ = f ω :=
-              Real.norm_of_nonneg (Finset.prod_nonneg (fun i _ => ENNReal.toReal_nonneg))
-          _ ≤ 1 := h_prod_le
+          exact (ENNReal.toReal_le_toReal (ne_top_of_le_ne_top ENNReal.one_ne_top h1)
+            ENNReal.one_ne_top).mpr h1
+        calc f ω ≤ ∏ _i : Fin m, (1 : ℝ) :=
+                Finset.prod_le_prod (fun i _ => ENNReal.toReal_nonneg) (fun i _ => h_bound i)
+          _ = 1 := by simp
 
       -- Step 3: Apply ofReal_integral_eq_lintegral_ofReal
       symm
@@ -4829,46 +4747,23 @@ lemma finite_product_formula_id
       -- Strategy: bind of constant 1 over probability measure μ equals 1
       -- First need AEMeasurability of the kernel
       have h_aemeas : AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ := by
-        -- Reuse the AEMeasurability proof from bind_apply_univ_pi (line 2447)
-        -- Key: verify measurability on the rectangular π-system and extend via Giry monad
+        -- Measurability via π-system characterization of product σ-algebra
         classical
         let κ : Ω → Measure (Fin m → α) := fun ω => Measure.pi fun _ : Fin m => ν ω
-        let Rectangles : Set (Set (Fin m → α)) :=
+        let Rects : Set (Set (Fin m → α)) :=
           {S | ∃ (B : Fin m → Set α), (∀ i, MeasurableSet (B i)) ∧ S = Set.univ.pi B}
-
-        have h_gen : (inferInstance : MeasurableSpace (Fin m → α)) = MeasurableSpace.generateFrom Rectangles := by
-          have : Rectangles = {S : Set (Fin m → α) | ∃ (B : Fin m → Set α),
-              (∀ i, MeasurableSet (B i)) ∧ S = {x | ∀ i, x i ∈ B i}} := by
-            ext S; simp only [Rectangles, Set.mem_setOf_eq]
-            constructor
-            · intro ⟨B, hB, hS⟩
-              refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp
-            · intro ⟨B, hB, hS⟩
-              refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp
-          rw [this]
-          exact rectangles_generate_pi_sigma (m := m) (α := α)
-
-        have h_pi : IsPiSystem Rectangles := by
-          have : Rectangles = {S : Set (Fin m → α) | ∃ (B : Fin m → Set α),
-              (∀ i, MeasurableSet (B i)) ∧ S = {x | ∀ i, x i ∈ B i}} := by
-            ext S; simp only [Rectangles, Set.mem_setOf_eq]
-            constructor
-            · intro ⟨B, hB, hS⟩
-              refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp
-            · intro ⟨B, hB, hS⟩
-              refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp
-          rw [this]
-          exact rectangles_isPiSystem (m := m) (α := α)
-
-        have h_rect : ∀ t ∈ Rectangles, Measurable fun ω => κ ω t := by
-          intro t ht
-          obtain ⟨B, hB, rfl⟩ := ht
-          have : (fun ω => κ ω (Set.univ.pi B)) = fun ω => ∏ i : Fin m, ν ω (B i) := by
-            funext ω; simp only [κ]; exact measure_pi_univ_pi (fun _ => ν ω) B
-          rw [this]
-          apply Finset.measurable_prod
-          intro i _; exact hν_meas (B i) (hB i)
-
+        have Rects_def : Rects = {S : Set (Fin m → α) | ∃ (B : Fin m → Set α),
+            (∀ i, MeasurableSet (B i)) ∧ S = {x | ∀ i, x i ∈ B i}} := by
+          ext S; simp only [Rects, Set.mem_setOf_eq]
+          constructor <;> (intro ⟨B, hB, hS⟩; refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp)
+        have h_gen : (inferInstance : MeasurableSpace (Fin m → α)) = MeasurableSpace.generateFrom Rects := by
+          rw [Rects_def]; exact rectangles_generate_pi_sigma (m := m) (α := α)
+        have h_pi : IsPiSystem Rects := by
+          rw [Rects_def]; exact rectangles_isPiSystem (m := m) (α := α)
+        have h_rect : ∀ t ∈ Rects, Measurable fun ω => κ ω t := by
+          intro t ht; obtain ⟨B, hB, rfl⟩ := ht
+          simp only [κ, measure_pi_univ_pi]
+          exact Finset.measurable_prod _ fun i _ => hν_meas (B i) (hB i)
         have h_meas : Measurable κ := by
           haveI : ∀ ω, IsProbabilityMeasure (κ ω) := fun ω => inferInstance
           exact Measurable.measure_of_isPiSystem_of_isProbabilityMeasure h_gen h_pi h_rect

@@ -8,9 +8,8 @@ import Mathlib.Probability.Martingale.Upcrossing
 /-!
 # Time-Reversal Crossing Bound
 
-This file contains the proof obligation for the time-reversal crossing bound,
-which establishes that upcrossings in a reversed/negated process complete
-within the expected time bound.
+This file proves that upcrossings in a time-reversed and negated process complete
+within the expected time bound, which is key to martingale convergence proofs.
 
 ## Main Results
 
@@ -26,12 +25,13 @@ negated reversed process Y = -X(N-·). The key bound is:
 
 Since τ ≥ 0, we have N-τ ≤ N, giving the desired bound.
 
-## Implementation Status
+The proof uses induction on the crossing index m, tracking that Y's m-th crossing
+completes by time N - lowerCrossingTime X (k-m), which is ≤ N for m = k.
 
-This file contains the proof obligation as a `sorry`. The proof requires:
-1. Establishing the bijection preserves crossing structure
-2. Showing the greedy upcrossing algorithm finds at least as many crossings
-3. Proving each bijected crossing completes at target time N-τ ≤ N
+## Key Technique
+
+The proof relies on `hitting_le_of_mem` to bound hitting times: if the target set
+is reached at time t with the search starting at s ≤ t ≤ horizon, then hitting ≤ t.
 
 ## References
 
@@ -50,67 +50,162 @@ def negProcess {Ω : Type*} (X : ℕ → Ω → ℝ) : ℕ → Ω → ℝ :=
 def revProcess {Ω : Type*} (X : ℕ → Ω → ℝ) (N : ℕ) : ℕ → Ω → ℝ :=
   fun n ω => X (N - n) ω
 
+/-- Strict inequality between lower and upper crossing times when crossing completes before N. -/
+private lemma lowerCrossingTime_lt_upperCrossingTime_succ' {Ω : Type*} {a b : ℝ} {f : ℕ → Ω → ℝ}
+    {N n : ℕ} {ω : Ω} (hab : a < b)
+    (h : upperCrossingTime a b f N (n+1) ω < N) :
+    lowerCrossingTime a b f N n ω < upperCrossingTime a b f N (n+1) ω := by
+  have h_neq : upperCrossingTime a b f N (n+1) ω ≠ N := Nat.ne_of_lt h
+  have h_le : lowerCrossingTime a b f N n ω ≤ upperCrossingTime a b f N (n+1) ω :=
+    lowerCrossingTime_le_upperCrossingTime_succ
+  by_contra hge
+  push_neg at hge
+  have h_eq : lowerCrossingTime a b f N n ω = upperCrossingTime a b f N (n+1) ω :=
+    le_antisymm h_le hge
+  have h_neq' : lowerCrossingTime a b f N n ω ≠ N := h_eq ▸ h_neq
+  have h_le_a : stoppedValue f (lowerCrossingTime a b f N n) ω ≤ a :=
+    stoppedValue_lowerCrossingTime h_neq'
+  have h_ge_b : b ≤ stoppedValue f (upperCrossingTime a b f N (n+1)) ω :=
+    stoppedValue_upperCrossingTime h_neq
+  simp only [stoppedValue, h_eq] at h_le_a h_ge_b
+  linarith
+
+/-- Strong version tracking the bijection explicitly.
+
+For m ≤ k with X's k-th crossing completing before N:
+  upperCrossingTime Y (N+1) m ≤ N - lowerCrossingTime X (k-m)
+
+This captures that Y's m-th crossing corresponds to X's (k-m+1)-th crossing (reversed order),
+with Y's crossing ending at time N - τ where τ is the start of X's crossing.
+-/
+private lemma timeReversal_crossing_bound_strong
+    {Ω : Type*} (X : ℕ → Ω → ℝ) (a b : ℝ) (hab : a < b) (N k m : ℕ) (ω : Ω)
+    (hm : m ≤ k)
+    (h_k : upperCrossingTime a b X N k ω < N) :
+    upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) (N+1) m ω
+      ≤ N - lowerCrossingTime a b X N (k - m) ω := by
+  set Y := negProcess (revProcess X N) with hY_def
+
+  -- All of X's crossing times are < N
+  have h_j : ∀ j ≤ k, upperCrossingTime a b X N j ω < N := by
+    intro j hj
+    calc upperCrossingTime a b X N j ω
+        ≤ upperCrossingTime a b X N k ω := upperCrossingTime_mono hj
+      _ < N := h_k
+
+  have h_τ_lt : ∀ j < k, lowerCrossingTime a b X N j ω < N := by
+    intro j hj
+    have h_j1 : j + 1 ≤ k := hj
+    have h_uct : upperCrossingTime a b X N (j+1) ω < N := h_j (j+1) h_j1
+    exact lt_trans (lowerCrossingTime_lt_upperCrossingTime_succ' hab h_uct) h_uct
+
+  induction m with
+  | zero =>
+    simp only [upperCrossingTime_zero, Nat.sub_zero]
+    exact Nat.zero_le _
+  | succ m' ih =>
+    have hm'_lt_k : m' < k := Nat.lt_of_succ_le hm
+    have hm' : m' ≤ k := Nat.le_of_lt hm'_lt_k
+
+    set j := k - m' with hj_def
+    have hj_pos : 1 ≤ j := by omega
+    have hj_le_k : j ≤ k := Nat.sub_le k m'
+    have h_km1_eq : k - (m' + 1) = j - 1 := by omega
+
+    have ih' := ih hm'
+
+    -- X's j-th crossing times
+    set σ := upperCrossingTime a b X N j ω with hσ_def
+    set τ := lowerCrossingTime a b X N (j-1) ω with hτ_def
+
+    have hσ_lt_N : σ < N := h_j j hj_le_k
+    have hτ_lt_N : τ < N := by
+      have h : j - 1 < k := by omega
+      exact h_τ_lt (j-1) h
+
+    -- τ < σ : lowerCrossingTime (j-1) < upperCrossingTime j
+    have hτ_lt_σ : τ < σ := by
+      have h_j_eq : j = (j - 1) + 1 := by omega
+      have h_uct_lt : upperCrossingTime a b X N ((j-1)+1) ω < N := by
+        simp only [← h_j_eq]; exact hσ_lt_N
+      have := lowerCrossingTime_lt_upperCrossingTime_succ' hab h_uct_lt
+      simp only [← hτ_def, ← hσ_def, ← h_j_eq] at this
+      exact this
+
+    rw [h_km1_eq]
+
+    -- X's level conditions
+    have h_neq_σ : σ ≠ N := Nat.ne_of_lt hσ_lt_N
+    have h_neq_τ : τ ≠ N := Nat.ne_of_lt hτ_lt_N
+
+    have hX_σ_ge_b : b ≤ X σ ω := by
+      have h_j_eq : j = (j - 1) + 1 := by omega
+      have h_neq_σ' : upperCrossingTime a b X N ((j-1)+1) ω ≠ N := by simp only [← h_j_eq]; exact h_neq_σ
+      have := stoppedValue_upperCrossingTime (f := X) (n := j - 1) h_neq_σ'
+      simp only [stoppedValue, ← h_j_eq] at this
+      exact this
+
+    have hX_τ_le_a : X τ ω ≤ a := by
+      have := stoppedValue_lowerCrossingTime (f := X) (n := j - 1) h_neq_τ
+      simp only [stoppedValue] at this
+      exact this
+
+    -- Y's level conditions at bijected times
+    have hY_Nσ_le_negb : Y (N - σ) ω ≤ -b := by
+      simp only [hY_def, negProcess, revProcess, Nat.sub_sub_self (Nat.le_of_lt hσ_lt_N)]
+      linarith
+
+    have hY_Nτ_ge_nega : Y (N - τ) ω ≥ -a := by
+      simp only [hY_def, negProcess, revProcess, Nat.sub_sub_self (Nat.le_of_lt hτ_lt_N)]
+      linarith
+
+    -- lowerCrossingTime X j ≥ σ (hitting starts from σ)
+    have h_lct_ge : lowerCrossingTime a b X N j ω ≥ σ := by
+      simp only [lowerCrossingTime, hσ_def]
+      exact le_hitting (Nat.le_of_lt hσ_lt_N) ω
+
+    -- From IH: upperCrossingTime Y m' ≤ N - lowerCrossingTime X j ≤ N - σ
+    have h_uct_le_Nσ : upperCrossingTime (-b) (-a) Y (N+1) m' ω ≤ N - σ := by
+      calc upperCrossingTime (-b) (-a) Y (N+1) m' ω
+          ≤ N - lowerCrossingTime a b X N j ω := ih'
+        _ ≤ N - σ := Nat.sub_le_sub_left h_lct_ge N
+
+    -- lowerCrossingTime Y m' ≤ N - σ (by hitting_le_of_mem)
+    have h_Nσ_le_N1 : N - σ ≤ N + 1 := Nat.le_succ_of_le (Nat.sub_le N σ)
+    have hY_Nσ_in_Iic : Y (N - σ) ω ∈ Set.Iic (-b) := hY_Nσ_le_negb
+
+    have h_lctY_le_Nσ : lowerCrossingTime (-b) (-a) Y (N+1) m' ω ≤ N - σ := by
+      simp only [lowerCrossingTime]
+      exact hitting_le_of_mem h_uct_le_Nσ h_Nσ_le_N1 hY_Nσ_in_Iic
+
+    -- N - σ < N - τ and lowerCrossingTime Y m' < N - τ
+    have hNσ_lt_Nτ : N - σ < N - τ := Nat.sub_lt_sub_left hτ_lt_N hτ_lt_σ
+    have h_lctY_le_Nτ : lowerCrossingTime (-b) (-a) Y (N+1) m' ω ≤ N - τ :=
+      Nat.le_of_lt (lt_of_le_of_lt h_lctY_le_Nσ hNσ_lt_Nτ)
+
+    have h_Nτ_le_N1 : N - τ ≤ N + 1 := Nat.le_succ_of_le (Nat.sub_le N τ)
+    have hY_Nτ_in_Ici : Y (N - τ) ω ∈ Set.Ici (-a) := hY_Nτ_ge_nega
+
+    -- Final: upperCrossingTime Y (m'+1) ≤ N - τ
+    calc upperCrossingTime (-b) (-a) Y (N+1) (m'+1) ω
+        = hitting Y (Set.Ici (-a)) (lowerCrossingTime (-b) (-a) Y (N+1) m' ω) (N+1) ω := by
+          simp only [upperCrossingTime, lowerCrossingTime]; rfl
+      _ ≤ N - τ := hitting_le_of_mem h_lctY_le_Nτ h_Nτ_le_N1 hY_Nτ_in_Ici
+
 /-- **Time-reversal crossing bound.**
 
-For a process X with upcrossings [a→b] before time N, the time-reversed negated process
-Y = negProcess (revProcess X N) has its corresponding upcrossings [-b→-a] completing
-at time ≤ N.
+For a process X with k upcrossings [a→b] completing before time N, the time-reversed
+negated process Y = negProcess (revProcess X N) has its k upcrossings [-b→-a]
+completing at time ≤ N.
 
-**Proof obligation:**
-
-The bijection (τ, σ) ↦ (N-σ, N-τ) establishes a 1-1 correspondence between:
-- X's upcrossings [a→b] before time N
-- Y's upcrossings [-b→-a] ending by time N
-
-The key steps are:
-1. **Bijection structure:** If X crosses up from a to b at times (τ, σ),
-   then Y = -X(N-·) crosses up from -b to -a at times (N-σ, N-τ).
-
-2. **Time bound:** Since τ ≥ 0 and τ < σ < N:
-   - N-σ > 0 (start time is positive)
-   - N-τ ≤ N (end time is at most N)
-
-3. **Greedy algorithm:** The mathlib `upperCrossingTime` uses a greedy algorithm.
-   We need to show it finds at least k crossings by time N if X has k crossings
-   before time N.
-
-The formal proof requires connecting the bijection to the greedy algorithm's behavior.
--/
+The proof uses the bijection (τ, σ) ↦ (N-σ, N-τ) which maps X's crossings to Y's
+crossings in reverse order. The greedy upcrossing algorithm finds these crossings
+with completion times bounded by `hitting_le_of_mem`. -/
 lemma timeReversal_crossing_bound
     {Ω : Type*} (X : ℕ → Ω → ℝ) (a b : ℝ) (hab : a < b) (N k : ℕ) (ω : Ω)
-    (h_k : MeasureTheory.upperCrossingTime a b X N k ω < N)
-    (h_neg : -b < -a) :
-    MeasureTheory.upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) (N+1) k ω ≤ N := by
-  /-
-  **Mathematical proof:**
-
-  Let Y := negProcess (revProcess X N), so Y(n) = -X(N-n).
-
-  From h_k, X has k complete upcrossings [a→b] before time N with crossing times
-  (τ₁,σ₁), ..., (τₖ,σₖ) where 0 ≤ τ₁ < σ₁ < τ₂ < ... < σₖ < N.
-
-  The bijection (τ, σ) ↦ (N-σ, N-τ) maps these to Y's crossings [-b→-a]:
-  - Y(N-σⱼ) = -X(σⱼ) ≤ -b (lower crossing level for Y)
-  - Y(N-τⱼ) = -X(τⱼ) ≥ -a (upper crossing level for Y)
-
-  Key observations:
-  1. The bijected crossings for Y complete at times N-τₖ < N-τₖ₋₁ < ... < N-τ₁ ≤ N
-     (since τ₁ ≥ 0 implies N-τ₁ ≤ N)
-  2. Y's greedy algorithm finds crossings in order of completion time
-  3. The k-th crossing found by Y's greedy algorithm completes at most by time N-τ₁ ≤ N
-
-  Therefore upperCrossingTime Y k ≤ N.
-
-  **Formal proof status:** Requires showing the greedy algorithm correctly identifies
-  the bijected crossings. The key lemma needed is that if valid crossings exist completing
-  by time T, then upperCrossingTime ≤ T. This is true by construction of hitting times
-  but requires careful unpacking of the recursive definition.
-  -/
-  -- The full formal proof requires:
-  -- 1. Extracting actual crossing times from X's upperCrossingTime structure
-  -- 2. Showing the bijected times form valid crossings for Y
-  -- 3. Proving the greedy algorithm finds these crossings
-  --
-  -- For now, we leave this as a proof obligation (sorry) with the understanding
-  -- that the mathematical argument is sound - see docstring above.
-  sorry
+    (h_k : upperCrossingTime a b X N k ω < N)
+    (_h_neg : -b < -a) :
+    upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) (N+1) k ω ≤ N := by
+  have h := timeReversal_crossing_bound_strong X a b hab N k k ω (le_refl k) h_k
+  simp only [Nat.sub_self] at h
+  exact le_trans h (Nat.sub_le N _)
