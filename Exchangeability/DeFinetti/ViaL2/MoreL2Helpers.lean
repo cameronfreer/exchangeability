@@ -1362,7 +1362,30 @@ lemma directing_measure_bridge
         -- and μ.real s = (μ s).toReal definitionally
         convert MeasureTheory.integral_indicator_one (hB (σ i)) using 1
 
-    -- Step 3: Obtain limiting functions from h_coord_conv
+    -- Step 3: Use contractability to reduce LHS to identity case
+    -- Since k ∘ σ is strictly monotone, by Contractable.allStrictMono_eq:
+    -- Distribution of (X_{(k∘σ)(0)}, ..., X_{(k∘σ)(n)}) = Distribution of (X_0, ..., X_n)
+
+    -- Define the strictly monotone k' = k ∘ σ
+    let k' : Fin (n + 1) → ℕ := k ∘ σ
+
+    -- k' is strictly monotone
+    have hk'_mono : StrictMono k' := hσ_mono
+
+    -- The identity function on Fin (n+1) is strictly monotone
+    have hid_mono : StrictMono (fun i : Fin (n + 1) => (i : ℕ)) := fun i j hij => hij
+
+    -- By contractability, the measures are equal
+    have h_map_eq := hX_contract.allStrictMono_eq (n + 1) k' (fun i => i.val) hk'_mono hid_mono
+
+    -- This gives us that for any measurable function f:
+    -- ∫ f(X_{k'(0)}, ..., X_{k'(n)}) dμ = ∫ f(X_0, ..., X_n) dμ
+
+    -- Apply this to reduce LHS to identity case
+    -- Goal becomes: ∫⁻ ∏_i 1_{B(σi)}(X_i) dμ = ∫⁻ ∏_i ν(·)(B(σi)) dμ
+    -- which is the identity case with B' i = B (σ i)
+
+    -- Step 4: Obtain limiting functions from h_coord_conv
     -- For each i, we have α_i → ν(·)(B' i) a.e.
     -- We need to apply prod_tendsto_L1_of_L1_tendsto
 
