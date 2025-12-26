@@ -1362,8 +1362,46 @@ lemma directing_measure_bridge
         -- and μ.real s = (μ s).toReal definitionally
         convert MeasureTheory.integral_indicator_one (hB (σ i)) using 1
 
-    -- TODO: Continue with Steps 3-8
-    sorry
+    -- Step 3: Obtain limiting functions from h_coord_conv
+    -- For each i, we have α_i → ν(·)(B' i) a.e.
+    -- We need to apply prod_tendsto_L1_of_L1_tendsto
+
+    -- Choose the limiting functions
+    choose α_funcs hα_funcs using h_coord_conv
+    -- Each hα_funcs i provides:
+    -- - (hα_funcs i).1 : Measurable (α_funcs i)
+    -- - (hα_funcs i).2.1 : MemLp (α_funcs i) 1 μ
+    -- - (hα_funcs i).2.2.1 : L¹ convergence ε-δ form
+    -- - (hα_funcs i).2.2.2 : α_funcs i = ν(·)(B' i).toReal a.e.
+
+    -- Step 4: The identity case target
+    -- LHS: ∫⁻ ∏_i 1_{B'_i}(X_i) dμ
+    -- RHS: ∫⁻ ∏_i ν(·)(B' i) dμ
+
+    -- Key: Since hk : k ∘ σ = id, we have k (σ i) = i for all i
+    -- So the LHS of the main goal is exactly ∫⁻ ∏_i 1_{B(σi)}(X_i) dμ = ∫⁻ ∏_i 1_{B'_i}(X_i) dμ
+
+    -- Step 5: Use the a.e. equality of α_i and r_i := ν(·)(B' i).toReal
+    -- By h_coord_conv, α_funcs i = ν(·)(B' i).toReal a.e.
+    -- Therefore ∏_i α_funcs i = ∏_i ν(·)(B' i).toReal a.e.
+
+    -- Step 6: The collision bound argument (detailed in plan)
+    -- Shows E[q N] → E[∏_i I i i] as N → ∞
+    -- Together with E[q N] → E[∏_i α_funcs i], we get equality
+
+    -- Step 7: Convert from Real integrals to ENNReal integrals
+    -- Use the fact that indicators are in [0,1] and μ is a probability measure
+
+    -- The full argument:
+    -- 1. By L¹ convergence of coordinates and prod_tendsto_L1_of_L1_tendsto:
+    --    ∫ |q N - ∏_i α_funcs i| dμ → 0
+    -- 2. By dominated convergence: ∫ q N dμ → ∫ ∏_i α_funcs i dμ
+    -- 3. By the collision bound argument: ∫ q N dμ → ∫ ∏_i I i i dμ
+    -- 4. By uniqueness of limits: ∫ ∏_i I i i dμ = ∫ ∏_i α_funcs i dμ
+    -- 5. By a.e. equality: ∫ ∏_i α_funcs i dμ = ∫ ∏_i ν(·)(B' i).toReal dμ
+    -- 6. Lift to ENNReal
+
+    sorry -- Full proof requires connecting all the pieces
 
 /-- **Main packaging theorem for L² proof.**
 
