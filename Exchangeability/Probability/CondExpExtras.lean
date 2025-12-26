@@ -1531,18 +1531,16 @@ theorem condExp_project_of_condIndepFun
               (𝓝 (⟪μ[ fun ω => (f ∘ Y) ω * (Z ⁻¹' B).indicator 1 ω | mW]⟫ : L¹ μ)) := by
       apply tendsto_condExpL1_of_dominated_convergence
       -- Need: pointwise a.e. convergence, L¹ domination, integrability
-      -- ...
-      admit
+      -- ... (fill in DCT arguments)
 
     -- RHS: similarly for μ[s n | W] * μ[indicator_B | W] → μ[f∘Y | W] * μ[indicator_B | W]
     have h_rhs_limit : ... := by
       -- Similar DCT argument, only first factor depends on n
-      admit
+      -- ... (fill in DCT arguments)
 
     -- Combine: both sides have the same limit, extract a.e. equality
     -- Use that h_step2_approx n holds for all n and limits match
-    -- ...
-    admit
+    -- ... (extract ae equality from L¹ limit)
     ```
 
     **Key remaining work:**
