@@ -1412,19 +1412,37 @@ lemma directing_measure_bridge
     -- Shows E[q N] → E[∏_i I i i] as N → ∞
     -- Together with E[q N] → E[∏_i α_funcs i], we get equality
 
-    -- Step 7: Convert from Real integrals to ENNReal integrals
-    -- Use the fact that indicators are in [0,1] and μ is a probability measure
+    -- Step 7: Use h_map_eq to rewrite LHS as identity case
+    -- Define the measurable function on (Fin (n+1) → ℝ)
+    let f : (Fin (n + 1) → ℝ) → ENNReal := fun x =>
+      ∏ j : Fin (n + 1), ENNReal.ofReal ((B (σ j)).indicator (fun _ => (1 : ℝ)) (x j))
 
-    -- The full argument:
-    -- 1. By L¹ convergence of coordinates and prod_tendsto_L1_of_L1_tendsto:
-    --    ∫ |q N - ∏_i α_funcs i| dμ → 0
-    -- 2. By dominated convergence: ∫ q N dμ → ∫ ∏_i α_funcs i dμ
-    -- 3. By the collision bound argument: ∫ q N dμ → ∫ ∏_i I i i dμ
-    -- 4. By uniqueness of limits: ∫ ∏_i I i i dμ = ∫ ∏_i α_funcs i dμ
-    -- 5. By a.e. equality: ∫ ∏_i α_funcs i dμ = ∫ ∏_i ν(·)(B' i).toReal dμ
-    -- 6. Lift to ENNReal
+    -- LHS = ∫ f ∘ (fun ω j => X (k' j) ω) dμ
+    --     = ∫ f d(Measure.map (fun ω j => X (k' j) ω) μ)  by change of variables
+    -- Identity case = ∫ f ∘ (fun ω j => X j ω) dμ
+    --               = ∫ f d(Measure.map (fun ω j => X j ω) μ)  by change of variables
+    -- Since h_map_eq says these measures are equal, LHS = Identity case
 
-    sorry -- Full proof requires connecting all the pieces
+    -- The key theorem: by h_map_eq and lintegral_map_equiv or similar,
+    -- ∫⁻ ∏_j 1_{B(σj)}(X_{k'(j)}) dμ = ∫⁻ ∏_j 1_{B(σj)}(X_j) dμ
+
+    -- So our goal reduces to proving the IDENTITY CASE:
+    -- ∫⁻ ∏_j 1_{B(σj)}(X_j) dμ = ∫⁻ ∏_j ν(·)(B(σj)) dμ
+
+    -- Step 8: The identity case
+    -- By the U-statistic/collision bound argument:
+    -- - E[q N] → E[∏_i I i i] = E[∏_j 1_{B(σj)}(X_j)] (collision bound)
+    -- - E[q N] → E[∏_i α_funcs i] = E[∏_j ν(·)(B(σj)).toReal] (L¹ convergence)
+    -- - By uniqueness of limits: E[∏_j 1_{B(σj)}(X_j)] = E[∏_j ν(·)(B(σj)).toReal]
+    -- - Lift to ENNReal: the ENNReal integrals are equal
+
+    -- The full proof requires:
+    -- 1. Applying h_map_eq via lintegral_map to reduce to identity case
+    -- 2. The U-statistic expansion and collision bound argument
+    -- 3. Connecting L¹ convergence to integral equality
+    -- Each step is standard but involves significant bookkeeping
+
+    sorry -- Identity case: requires U-statistic expansion + collision bound
 
 /-- **Main packaging theorem for L² proof.**
 
