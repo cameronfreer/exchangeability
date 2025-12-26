@@ -61,12 +61,8 @@ Therefore, applying Lévy's upward theorem to the OrderDual filtration would giv
 convergence to μ[f | F 0], not μ[f | ⨅ n, F n]. -/
 lemma iSup_ofAntitone_eq_F0
     (F : ℕ → MeasurableSpace Ω) (hF : Antitone F) :
-    (⨆ i : OrderDual ℕ, F i.ofDual) = F 0 := by
-  refine le_antisymm ?_ ?_
-  · refine iSup_le (fun i => ?_)
-    have : (0 : ℕ) ≤ i.ofDual := Nat.zero_le _
-    exact hF this
-  · have : F 0 ≤ F (OrderDual.ofDual (OrderDual.toDual 0)) := le_rfl
-    simpa using (le_iSup_of_le (OrderDual.toDual 0) this)
+    (⨆ i : OrderDual ℕ, F i.ofDual) = F 0 :=
+  le_antisymm (iSup_le fun _ => hF (Nat.zero_le _))
+    (le_iSup (F ·.ofDual) (OrderDual.toDual 0))
 
 end Exchangeability.Probability

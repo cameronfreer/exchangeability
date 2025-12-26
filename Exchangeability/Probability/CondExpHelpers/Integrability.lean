@@ -40,35 +40,7 @@ lemma integrable_mul_of_bound_one
   (hf : Integrable f μ)
   (hg_meas : AEStronglyMeasurable g μ)
   (hbound : ∀ᵐ ω ∂μ, ‖g ω‖ ≤ (1 : ℝ)) :
-  Integrable (fun ω => g ω * f ω) μ := by
-  classical
-  -- measurability
-  refine ⟨hg_meas.mul hf.aestronglyMeasurable, ?_⟩
-  -- pointwise bound: ‖g⋅f‖ ≤ ‖f‖
-  have hle : ∀ᵐ ω ∂μ, ‖g ω * f ω‖ ≤ ‖f ω‖ := by
-    filter_upwards [hbound] with ω hω
-    have : ‖g ω * f ω‖ = ‖g ω‖ * ‖f ω‖ := norm_mul _ _
-    calc
-      ‖g ω * f ω‖ = ‖g ω‖ * ‖f ω‖ := this
-      _ ≤ 1 * ‖f ω‖ := by exact mul_le_mul_of_nonneg_right hω (norm_nonneg _)
-      _ = ‖f ω‖ := by simp
-  -- lintegral monotonicity + integrability of ‖f‖
-  have hle_int :
-      ∫⁻ ω, ‖g ω * f ω‖₊ ∂μ ≤ ∫⁻ ω, ‖f ω‖₊ ∂μ := by
-    refine lintegral_mono_ae ?_
-    filter_upwards [hle, hbound] with ω hω_prod hω_bound
-    simp only [nnnorm_mul]
-    calc (‖g ω‖₊ : ℝ≥0∞) * ‖f ω‖₊
-        ≤ (1 : ℝ≥0∞) * ‖f ω‖₊ := by
-          gcongr
-          -- ‖g ω‖₊ ≤ 1 from hω_bound : ‖g ω‖ ≤ 1
-          have : (‖g ω‖₊ : ℝ) ≤ 1 := by
-            simp only [coe_nnnorm]
-            exact hω_bound
-          norm_cast
-      _ = ‖f ω‖₊ := by simp
-  have hf_fin : (∫⁻ ω, ‖f ω‖₊ ∂μ) < ∞ := hf.hasFiniteIntegral
-  exact lt_of_le_of_lt hle_int hf_fin
+  Integrable (fun ω => g ω * f ω) μ := hf.bdd_mul' hg_meas hbound
 
 /-- **Jensen's inequality for conditional expectation**: the absolute value of a conditional
 expectation is a.e. bounded by the conditional expectation of the absolute value.
@@ -117,12 +89,10 @@ lemma condExp_indicator_ae_bound_one
           (fun ω => (Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω)) ω ≤ 1 := by
   classical
   -- Pointwise bounds for the integrand: 0 ≤ 1_B ≤ 1.
-  have h0 : ∀ᵐ ω ∂μ, (0 : ℝ) ≤ Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω := by
-    apply Filter.Eventually.of_forall; intro ω
-    by_cases h : Z ω ∈ B <;> simp [Set.indicator, h]
-  have h1 : ∀ᵐ ω ∂μ, Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω ≤ (1 : ℝ) := by
-    apply Filter.Eventually.of_forall; intro ω
-    by_cases h : Z ω ∈ B <;> simp [Set.indicator, h]
+  have h0 : ∀ᵐ ω ∂μ, (0 : ℝ) ≤ Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω :=
+    .of_forall fun ω => Set.indicator_nonneg (fun _ _ => zero_le_one) ω
+  have h1 : ∀ᵐ ω ∂μ, Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω ≤ (1 : ℝ) :=
+    .of_forall fun ω => Set.indicator_le_self' (fun _ _ => zero_le_one) ω
   -- Integrability of the indicator
   have h_ind_int : Integrable (Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ))) μ := by
     have : @MeasurableSet Ω m0 (Z ⁻¹' B) := hZ hB
@@ -132,20 +102,10 @@ lemma condExp_indicator_ae_bound_one
     condExp_mono (integrable_const _) h_ind_int h0
   have hCE1 : μ[Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) | mW] ≤ᵐ[μ] μ[fun _ => (1 : ℝ) | mW] :=
     condExp_mono h_ind_int (integrable_const _) h1
-  -- Conditional expectation of constants
-  have hCE_const0 : μ[fun _ => (0 : ℝ) | mW] = fun _ => (0 : ℝ) := condExp_const hm (0 : ℝ)
-  have hCE_const1 : μ[fun _ => (1 : ℝ) | mW] = fun _ => (1 : ℝ) := condExp_const hm (1 : ℝ)
-  -- Pack the two inequalities into `[0,1]`
+  -- Pack using condExp_const to simplify constant expectations
   filter_upwards [hCE0, hCE1] with ω h0' h1'
-  constructor
-  · -- 0 ≤ CE(1_B)
-    calc (0 : ℝ)
-        = μ[fun _ => (0 : ℝ) | mW] ω := by simp [hCE_const0]
-      _ ≤ μ[Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) | mW] ω := h0'
-  · -- CE(1_B) ≤ 1
-    calc μ[Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) | mW] ω
-        ≤ μ[fun _ => (1 : ℝ) | mW] ω := h1'
-      _ = (1 : ℝ) := by simp [hCE_const1]
+  simp only [condExp_const hm (0 : ℝ), condExp_const hm (1 : ℝ)] at h0' h1'
+  exact ⟨h0', h1'⟩
 
 /-- **Uniqueness of the conditional expectation via L¹**:
 if the underlying integrands agree a.e., then `condExp` agrees a.e.
