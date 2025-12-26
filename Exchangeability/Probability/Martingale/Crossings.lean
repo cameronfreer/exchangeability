@@ -69,27 +69,17 @@ noncomputable def downcrossings {Ω : Type*} (a b : ℝ) (X : ℕ → Ω → ℝ
 Negation flips crossing direction: up(-b, -a, -X) = down(a, b, X). -/
 lemma up_neg_flip_eq_down {Ω : Type*} (a b : ℝ) (X : ℕ → Ω → ℝ) :
   upcrossings (-b) (-a) (negProcess X) = downcrossings a b X := by
-  funext ω
-  simp [upcrossings, downcrossings, downcrossingsBefore, negProcess]
+  funext ω; simp [upcrossings, downcrossings, downcrossingsBefore]
+
+/-- Double negation is identity. -/
+@[simp] lemma negProcess_negProcess {Ω : Type*} (X : ℕ → Ω → ℝ) :
+    negProcess (negProcess X) = X := by ext; simp [negProcess]
 
 /-- **Identity 2:** Downcrossings of negated process = upcrossings of original.
 Negation flips crossing direction: down(-b, -a, -X) = up(a, b, X). -/
 lemma down_neg_flip_eq_up {Ω : Type*} (a b : ℝ) (X : ℕ → Ω → ℝ) :
   downcrossings (-b) (-a) (negProcess X) = upcrossings a b X := by
-  funext ω
-  simp only [upcrossings, downcrossings, downcrossingsBefore, negProcess, neg_neg]
-  -- The goal is now: ⨆ N, ↑(upcrossingsBefore a b (negProcess (negProcess X)) N ω) = ⨆ N, ↑(upcrossingsBefore a b X N ω)
-  -- Simplify negProcess (negProcess X) n ω = -(-(X n ω)) = X n ω
-  congr with N
-  congr with N'
-  simp only [negProcess, neg_neg]
-
-/-- Double negation is identity. -/
-lemma negProcess_negProcess {Ω : Type*} (X : ℕ → Ω → ℝ) :
-    negProcess (negProcess X) = X := by
-  funext n ω
-  simp only [negProcess]
-  ring
+  unfold downcrossings downcrossingsBefore upcrossings; simp
 
 /-- Double reversal is identity when applied within bounds. -/
 lemma revProcess_revProcess {Ω : Type*} (X : ℕ → Ω → ℝ) (N n : ℕ) (hn : n ≤ N) (ω : Ω) :
@@ -223,7 +213,7 @@ lemma upBefore_le_downBefore_rev_succ
   simp only [downcrossingsBefore, upcrossingsBefore]
 
   by_cases hN : N = 0
-  · simp [hN, upperCrossingTime_zero]
+  · simp [hN]
 
   by_cases hemp : {n | upperCrossingTime a b X N n ω < N}.Nonempty
   · have hbdd1 : BddAbove {n | upperCrossingTime a b X N n ω < N} := by
@@ -560,7 +550,7 @@ lemma condExp_exists_ae_limit_antitone
                         revCEFinite (μ := μ) (fun x => -f x) 𝔽 N n ω := by
                       rw [ae_all_iff]
                       intro n
-                      simp only [negProcess, Pi.neg_apply, revCEFinite]
+                      simp only [negProcess, revCEFinite]
                       exact (condExp_neg f (𝔽 (N - n))).symm
                     filter_upwards [h_ae_eq] with ω hω
                     -- upcrossings = ⨆ M, upcrossingsBefore M. Use that upcrossingsBefore_congr

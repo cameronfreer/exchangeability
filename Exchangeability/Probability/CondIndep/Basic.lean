@@ -101,16 +101,7 @@ If Y ⊥⊥_W Z, then Z ⊥⊥_W Y. This follows immediately from commutativity 
 theorem condIndep_symm (μ : Measure Ω) [IsProbabilityMeasure μ]
     (Y : Ω → α) (Z : Ω → β) (W : Ω → γ) :
     CondIndep μ Y Z W ↔ CondIndep μ Z Y W := by
-  constructor <;> intro h A B hA hB
-  · -- Y ⊥⊥_W Z implies Z ⊥⊥_W Y
-    have := h B A hB hA
-    -- Swap multiplication order
-    simp only [mul_comm] at this ⊢
-    exact this
-  · -- Z ⊥⊥_W Y implies Y ⊥⊥_W Z (same proof by symmetry)
-    have := h B A hB hA
-    simp only [mul_comm] at this ⊢
-    exact this
+  constructor <;> (intro h A B hA hB; simpa [mul_comm] using h B A hB hA)
 
 /-!
 ## Helper lemmas for independence and conditional expectation
@@ -163,19 +154,11 @@ lemma condExp_const_of_indepFun (μ : Measure Ω) [IsProbabilityMeasure μ]
 /-- Extract independence of first component from pair independence. -/
 lemma IndepFun.of_comp_left_fst {Y : Ω → α} {Z : Ω → β} {W : Ω → γ}
     (h : IndepFun (fun ω => (Y ω, Z ω)) W μ) :
-    IndepFun Y W μ := by
-  -- Y = Prod.fst ∘ (fun ω => (Y ω, Z ω))
-  -- So Y ⊥ W follows from (Y,Z) ⊥ W by composition
-  have : Y = Prod.fst ∘ (fun ω => (Y ω, Z ω)) := by rfl
-  rw [this]
-  exact h.comp measurable_fst measurable_id
+    IndepFun Y W μ :=
+  h.comp measurable_fst measurable_id
 
 /-- Extract independence of second component from pair independence. -/
 lemma IndepFun.of_comp_left_snd {Y : Ω → α} {Z : Ω → β} {W : Ω → γ}
     (h : IndepFun (fun ω => (Y ω, Z ω)) W μ) :
-    IndepFun Z W μ := by
-  -- Z = Prod.snd ∘ (fun ω => (Y ω, Z ω))
-  -- So Z ⊥ W follows from (Y,Z) ⊥ W by composition
-  have : Z = Prod.snd ∘ (fun ω => (Y ω, Z ω)) := by rfl
-  rw [this]
-  exact h.comp measurable_snd measurable_id
+    IndepFun Z W μ :=
+  h.comp measurable_snd measurable_id
