@@ -1349,11 +1349,23 @@ lemma directing_measure_bridge
         -- The sum ∑_{k < m} I i k.val uses indices 0, 1, ..., m-1
         -- The sum from directing_measure_integral (n=0) uses indices 1, 2, ..., m
         -- i.e., (0 + k.val + 1) = k.val + 1 for k : Fin m
-        -- Difference: I i 0 - I i m, bounded by 2 since |I| ≤ 1
-        -- Key: Cesàro averages differ by O(1/m) → 0, standard analysis argument
-        -- |(1/m) ∑_{k<m} I k - α| ≤ |(1/m) ∑_{k<m} I k - (1/m) ∑_{k<m} I (k+1)| + |(1/m) ∑_{k<m} I (k+1) - α|
-        --                       ≤ 2/m + ε/2 < ε for large m
-        sorry -- Cesàro index shift: can be filled in later
+
+        -- Key insight: the two Cesàro averages differ by O(1/m)
+        -- Our avg: (1/m) ∑_{k<m} I i k = (1/m)(I i 0 + I i 1 + ... + I i (m-1))
+        -- Their avg: (1/m) ∑_{k<m} I i (k+1) = (1/m)(I i 1 + I i 2 + ... + I i m)
+        -- Difference = (1/m)(I i 0 - I i m), bounded by 2/m
+
+        -- By triangle inequality:
+        -- ∫|our_avg - α| ≤ ∫|our_avg - their_avg| + ∫|their_avg - α|
+        --                ≤ 2/m + ε/2 < ε  for m ≥ max(M₁, M₂)
+
+        -- The argument is standard but the bookkeeping is tedious
+        -- Key facts used:
+        -- 1. |I i j ω| ≤ 1 for all i, j, ω
+        -- 2. hM₁: ∫|their_avg - α| < ε/2 for m ≥ M₁
+        -- 3. hM₂: 2/m < ε/2 for m ≥ M₂
+
+        sorry -- Cesàro shift: standard analysis, integrability bookkeeping
       · -- Identification: ∫ 1_B dν = ν(B)
         filter_upwards [hα_eq] with ω hω
         rw [hω]
